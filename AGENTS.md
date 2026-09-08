@@ -2,11 +2,12 @@
 
 Read only what the current task needs.
 
-Canonical documents:
-- `MASTER_SPEC.md` — product/system scope.
-- `HEXAGONAL_ARCHITECTURE.md` — dependency direction, ports/adapters, repository ownership.
-- `GO_BEST_PRACTICES.md` — mandatory Go engineering rules.
-- `AI_TOKEN_OPTIMIZATION.md` — context/token discipline.
+All canonical specs, rules, and agent-facing data live in [`.agent/`](.agent/DOCUMENT_INDEX.md):
+- `.agent/MASTER_SPEC.md` — product/system scope.
+- `.agent/HEXAGONAL_ARCHITECTURE.md` — dependency direction, ports/adapters, repository ownership.
+- `.agent/GO_BEST_PRACTICES.md` — mandatory Go engineering rules.
+- `.agent/AI_TOKEN_OPTIMIZATION.md` — context/token discipline.
+- `.agent/handoffs/` — per-task AI handoff records.
 
 Non-negotiable rules:
 - Dependencies point inward: adapters → application → domain.
@@ -20,7 +21,7 @@ Non-negotiable rules:
 - Run relevant tests and benchmarks.
 - Do not weaken tests to pass CI.
 - Do not copy proprietary code, assets, text, or balancing data.
-- Every scoped task must leave a concise handoff.
+- Every scoped task must leave a concise handoff in `.agent/handoffs/`.
 
 ## Repository-specific override: commits
 

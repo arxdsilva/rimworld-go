@@ -152,9 +152,9 @@ It should link to canonical docs rather than duplicate them.
 Example:
 
 ```text
-Architecture: docs/architecture/HEXAGONAL_ARCHITECTURE.md
-Go rules: docs/GO_BEST_PRACTICES.md
-Token rules: docs/AI_TOKEN_OPTIMIZATION.md
+Architecture: .agent/HEXAGONAL_ARCHITECTURE.md
+Go rules: .agent/GO_BEST_PRACTICES.md
+Token rules: .agent/AI_TOKEN_OPTIMIZATION.md
 ```
 
 ---
@@ -216,7 +216,7 @@ When another agent depends on a package, prefer a generated/summarized interface
 Example:
 
 ```text
-docs/ai-agents/interfaces/pathing.md
+.agent/interfaces/pathing.md
 ```
 
 Contains:
@@ -238,7 +238,7 @@ This can save thousands of tokens.
 Create:
 
 ```text
-docs/ai-agents/CONTEXT_INDEX.md
+.agent/CONTEXT_INDEX.md
 ```
 
 It maps tasks/subsystems to canonical files.
@@ -250,7 +250,7 @@ Pathfinding:
 - internal/domain/ai/pathing/AGENTS.md
 - docs/systems/pathfinding.md
 - docs/adr/0007-hierarchical-pathfinding.md
-- docs/ai-agents/interfaces/pathing.md
+- .agent/interfaces/pathing.md
 ```
 
 Agents should consult the index before broad repository search.
@@ -415,7 +415,7 @@ Do not create alternatives such as `ActorID`, `SimTick`, `GridPos`, etc. unless 
 Maintain a lightweight generated file:
 
 ```text
-docs/ai-agents/REPO_MAP.md
+.agent/REPO_MAP.md
 ```
 
 Example:
@@ -497,7 +497,7 @@ Otherwise context/merge cost exceeds benefit.
 Maintain:
 
 ```text
-docs/ai-agents/TASK_GRAPH.md
+.agent/TASK_GRAPH.md
 ```
 
 Example:
@@ -813,7 +813,7 @@ Potential commands:
 ```bash
 go run ./tools/contextpack --task PATH-021
 go run ./tools/repomap
-go run ./tools/handofflint docs/ai-agents/handoffs/PATH-021.md
+go run ./tools/handofflint .agent/handoffs/PATH-021.md
 ```
 
 `contextpack` can output exactly the files/summaries an agent should receive.
@@ -830,7 +830,7 @@ always:
   - internal/domain/ai/pathing/AGENTS.md
   - docs/systems/pathfinding.md
 interfaces:
-  - docs/ai-agents/interfaces/pathing.md
+  - .agent/interfaces/pathing.md
 adrs:
   - docs/adr/0007-hierarchical-pathfinding.md
 ```
