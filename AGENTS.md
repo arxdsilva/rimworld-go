@@ -26,6 +26,7 @@ Non-negotiable rules:
 - Do not copy proprietary code, assets, text, or balancing data.
 - Every scoped task must leave a concise handoff in `.agent/handoffs/`.
 - Whenever work satisfies (fully or partially) an item in `.agent/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` or `.agent/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`, update that item's checkbox in the same change: `[x]` only when its full acceptance criteria are met, `[-]` when partially done (state what's missing in a short trailing note), `[!]` when blocked (state why). Never leave completed work unreflected in the checklists.
+- Any newly implemented domain/application behavior that is player-observable per `.agent/MASTER_SPEC.md` or `.agent/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` must ship with a corresponding HUD/UI representation (read-only, via `Snapshot()`/read models, never a direct domain reference) in the same change. If no sensible on-screen representation exists yet (e.g. a pure internal primitive with no player-facing effect), state why in the handoff instead of adding one.
 
 ## Repository-specific override: commits
 

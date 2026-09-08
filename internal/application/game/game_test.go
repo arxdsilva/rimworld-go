@@ -1,12 +1,26 @@
 package game
 
-import "testing"
+import (
+	"testing"
+
+	"rimworld-go/internal/domain/sim/clock"
+)
 
 func TestWidthHeightReflectConfig(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 7, Height: 4})
 
 	if g.Width() != 7 || g.Height() != 4 {
 		t.Fatalf("Width()/Height() = %d/%d, want 7/4", g.Width(), g.Height())
+	}
+}
+
+func TestDateMatchesTick(t *testing.T) {
+	g := New(Config{Seed: 1, Width: 5, Height: 5})
+	g.Step(clock.TicksPerDay + clock.TicksPerHour*3)
+
+	want := clock.DateAt(g.Tick())
+	if got := g.Date(); got != want {
+		t.Fatalf("Date() = %+v, want %+v", got, want)
 	}
 }
 

@@ -29,3 +29,51 @@ func TestAdvanceIgnoresNonPositive(t *testing.T) {
 		t.Fatalf("Now() = %d, want 0 (clock must never move backward)", got)
 	}
 }
+
+func TestDateAtZero(t *testing.T) {
+	got := DateAt(0)
+	want := Date{Year: 0, Quadrum: 0, Day: 0, Hour: 0}
+	if got != want {
+		t.Fatalf("DateAt(0) = %+v, want %+v", got, want)
+	}
+}
+
+func TestDateAtBoundaries(t *testing.T) {
+	cases := []struct {
+		name string
+		tick Tick
+		want Date
+	}{
+		{"one hour", TicksPerHour, Date{Hour: 1}},
+		{"last hour of day", TicksPerDay - TicksPerHour, Date{Hour: HoursPerDay - 1}},
+		{"one day", TicksPerDay, Date{Day: 1}},
+		{"one quadrum", TicksPerQuadrum, Date{Quadrum: 1}},
+		{"one year", TicksPerYear, Date{Year: 1}},
+		{"mid-year", TicksPerYear + TicksPerQuadrum + TicksPerDay + TicksPerHour,
+			Date{Year: 1, Quadrum: 1, Day: 1, Hour: 1}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := DateAt(c.tick); got != c.want {
+				t.Fatalf("DateAt(%d) = %+v, want %+v", c.tick, got, c.want)
+			}
+		})
+	}
+}
+
+func TestClockDateMatchesNow(t *testing.T) {
+	c := New()
+	c.Advance(TicksPerDay + TicksPerHour*3)
+	want := DateAt(c.Now())
+	if got := c.Date(); got != want {
+		t.Fatalf("Date() = %+v, want %+v", got, want)
+	}
+}
+
+func TestDateString(t *testing.T) {
+	d := Date{Year: 2, Quadrum: 1, Day: 5, Hour: 14}
+	want := "Year 2, Quadrum 1, Day 5, Hour 14"
+	if got := d.String(); got != want {
+		t.Fatalf("String() = %q, want %q", got, want)
+	}
+}

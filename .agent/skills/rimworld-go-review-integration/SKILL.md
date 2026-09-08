@@ -30,6 +30,7 @@ Open more source only when needed.
 9. Go API/readability;
 10. documentation/handoff.
 11. matching checklist checkbox updated in `.agent/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` or `.agent/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`, if the change satisfies (fully or partially) a listed item.
+12. player-observable behavior has a corresponding read-only HUD/UI representation, or the PR states why none applies yet.
 
 ## Reject patterns
 

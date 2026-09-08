@@ -26,13 +26,14 @@ Load broader architecture or master spec only when needed.
 4. Write or update the failing behavioral test first when practical.
 5. Implement the smallest complete domain change.
 6. Add application/adapter wiring only when the feature crosses a port.
-7. Verify determinism impact.
-8. Verify save/mod impact.
-9. Run targeted tests.
-10. Run broader tests appropriate to the changed dependency surface.
-11. Benchmark if any hot path changed.
-12. Update the matching checklist item's checkbox (`[x]`/`[-]`/`[!]`) in `.agent/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` or `.agent/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` when the task maps to one.
-13. Produce a concise handoff.
+7. If the behavior is player-observable, add or extend a HUD/UI representation (read-only, via `Snapshot()`/read models) in the same change; if none makes sense yet, note why in the handoff.
+8. Verify determinism impact.
+9. Verify save/mod impact.
+10. Run targeted tests.
+11. Run broader tests appropriate to the changed dependency surface.
+12. Benchmark if any hot path changed.
+13. Update the matching checklist item's checkbox (`[x]`/`[-]`/`[!]`) in `.agent/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` or `.agent/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` when the task maps to one.
+14. Produce a concise handoff.
 
 ## Domain placement
 

@@ -219,8 +219,8 @@ func (r *Renderer) Draw(screen *ebiten.Image) {
 
 func (r *Renderer) drawHUD(screen *ebiten.Image) {
 	ebitenutil.DebugPrint(screen, fmt.Sprintf(
-		"tick=%d [%s]  space=pause 1/2/3=speed  wasd/arrows=pan +/-=zoom",
-		r.game.Tick(), r.speed.label()))
+		"tick=%d %s [%s]  space=pause 1/2/3=speed  wasd/arrows=pan +/-=zoom",
+		r.game.Tick(), r.game.Date(), r.speed.label()))
 
 	if !r.hasSelect {
 		return

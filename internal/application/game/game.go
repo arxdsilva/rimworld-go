@@ -65,6 +65,11 @@ func (g *Game) Tick() clock.Tick {
 	return g.clock.Now()
 }
 
+// Date returns the calendar date for the current simulation tick.
+func (g *Game) Date() clock.Date {
+	return g.clock.Date()
+}
+
 // Width returns the map width in tiles.
 func (g *Game) Width() int { return g.grid.Width() }
 

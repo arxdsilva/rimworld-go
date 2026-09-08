@@ -54,7 +54,7 @@ vanilla system depends on them.
 
 ## 1.1 Simulation clock
 
--   [-] **Discrete simulation ticks** (ticks/Advance/Step implemented and tested; hour/day/quadrum/year conversion helpers still missing)
+-   [x] **Discrete simulation ticks**
     -   Maintain authoritative game time as integer ticks.
     -   Support deterministic advancement independent of renderer frame
         rate.
