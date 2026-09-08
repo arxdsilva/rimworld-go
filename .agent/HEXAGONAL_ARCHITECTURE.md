@@ -340,6 +340,12 @@ Examples:
 
 A port should usually be defined by the code that **needs** it.
 
+**Mandatory rule:** any code that depends on an adapter (Ebitengine, filesystem, protobuf, CLI, worker pool, future network, etc.) must depend on a narrow interface describing the *behavior* it needs, never on the adapter's concrete type. The concrete adapter type is constructed once, at the composition root (`cmd/*`, or the top of an adapter package that wires a sibling application type), and is passed around only as the interface it satisfies. This is the Dependency Inversion Principle (DIP) applied at the architecture boundary: the interface is the abstraction both sides depend on, so any adapter implementation can be swapped (real vs. fake vs. future replacement) without touching its consumers.
+
+This also applies in the inward direction: an adapter (e.g. `internal/adapters/inbound/ebiten`) must not hold a concrete `*application.Game`-style pointer merely because that is what exists today. Define a small interface, owned by the adapter package, listing only the methods the adapter actually calls (e.g. `Step`, `Snapshot`, `Width`, `Height`). The application's concrete type satisfies it implicitly; nothing else needs to change when the interface is introduced.
+
+Keep every such interface small and single-purpose (Interface Segregation Principle — ISP): do not force a consumer to depend on methods it never calls. Prefer several narrow interfaces over one wide one, and never add a method to an existing port "just in case."
+
 Bad:
 
 ```go
@@ -364,7 +370,7 @@ type SnapshotWriter interface {
 
 Keep interfaces small.
 
-Do not create an interface merely because a concrete type exists.
+Do not create an interface merely because a concrete type exists — but do create one wherever a package boundary is crossed (adapter ↔ application, application ↔ domain-facing port), even if today there is only one implementation. The point is substitutability and testability, not ceremony.
 
 ---
 

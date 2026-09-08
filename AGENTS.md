@@ -19,6 +19,7 @@ Non-negotiable rules:
 - Search before creating shared primitives.
 - All external mutations enter as typed commands.
 - UI/rendering never mutates domain state directly.
+- Any code that depends on an adapter, or an adapter that depends on the application layer, must depend on a small, consumer-owned interface (the behavior it needs), never the concrete type directly — construct concrete types only at the composition root. This is SOLID's Dependency Inversion Principle; keep each such interface single-purpose per the Interface Segregation Principle. See `.agent/HEXAGONAL_ARCHITECTURE.md` §6.
 - No global RNG or wall-clock time in authoritative gameplay.
 - Avoid global scans; use indexes, batching, sleeping, and invalidation.
 - Run relevant tests and benchmarks.

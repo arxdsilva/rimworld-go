@@ -104,6 +104,8 @@ Use interfaces at real behavioral boundaries.
 
 Prefer small consumer-defined interfaces.
 
+This is SOLID's Dependency Inversion Principle (depend on an abstraction owned by the consumer, not on a concrete implementation) combined with the Interface Segregation Principle (no consumer should depend on methods it does not call). At every adapter/application/domain boundary, the caller defines the minimal interface it needs and the concrete type is only ever constructed at the composition root. See `.agent/HEXAGONAL_ARCHITECTURE.md` §6 for the enforced project-wide rule.
+
 Good:
 
 ```go

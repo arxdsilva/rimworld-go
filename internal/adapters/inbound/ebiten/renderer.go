@@ -13,8 +13,23 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 )
+
+// Simulation is the behavior this renderer needs from the application
+// game. It is consumer-owned (defined here, not by package game) so the
+// renderer depends on an abstraction rather than a concrete type — any
+// implementation satisfying it can be swapped in without touching this
+// adapter.
+type Simulation interface {
+	Step(ticks int)
+	Snapshot() []game.PawnView
+	Width() int
+	Height() int
+	Tick() clock.Tick
+	Date() clock.Date
+}
 
 const (
 	baseTileSize = 24
@@ -69,9 +84,9 @@ type camera struct {
 	zoom             float64
 }
 
-// Renderer drives an Ebitengine window from a running Game.
+// Renderer drives an Ebitengine window from a running Simulation.
 type Renderer struct {
-	game  *game.Game
+	game  Simulation
 	speed speed
 	cam   camera
 
@@ -82,10 +97,10 @@ type Renderer struct {
 	selectClr color.RGBA
 }
 
-// New returns a Renderer for g.
-func New(g *game.Game) *Renderer {
+// New returns a Renderer for sim.
+func New(sim Simulation) *Renderer {
 	return &Renderer{
-		game:      g,
+		game:      sim,
 		speed:     speedNormal,
 		cam:       camera{zoom: 1},
 		gridClr:   color.RGBA{R: 40, G: 40, B: 40, A: 255},
