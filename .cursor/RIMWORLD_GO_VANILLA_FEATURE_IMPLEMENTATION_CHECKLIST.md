@@ -170,11 +170,11 @@ The first playable surface.
 
 ## 2.2 Rendering
 
--   [-] **Tile rendering** (grid lines drawn each frame via Ebitengine; no terrain types, culling, or chunk-aware caching yet)
+-   [-] **Tile rendering** (vendor ground/rock tiles plus grid; camera culling of off-screen cells; no domain terrain types or chunk-aware caching yet)
     -   Draw visible terrain only.
     -   Camera culling.
     -   Chunk-aware redraw/cache strategy.
--   [-] **Entity rendering** (pawns drawn from read-only snapshots; items/plants/buildings/corpses/projectiles do not exist yet)
+-   [-] **Entity rendering** (pawns drawn from read-only snapshots using the vendor CC0 character pack; items/plants/buildings/corpses/projectiles do not exist yet)
     -   Draw pawns, items, plants, buildings, corpses, projectiles.
     -   Presentation uses read-only simulation snapshots.
 -   [-] **Camera controls** (pan, zoom, and screen-to-world conversion implemented; center-on-selection not implemented)
@@ -182,7 +182,7 @@ The first playable surface.
     -   Zoom.
     -   Center on selected entity/event.
     -   Screen-to-world tile conversion.
--   [-] **Selection** (single click-to-select pawn with overlay implemented; drag-select multiple not implemented)
+-   [-] **Selection** (single click-to-select pawn with vendor crosshair overlay; drag-select multiple not implemented)
     -   Click entity/tile.
     -   Drag-select multiple player pawns.
     -   Selection overlays.

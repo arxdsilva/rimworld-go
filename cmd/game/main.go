@@ -15,6 +15,7 @@ func main() {
 	width := flag.Int("width", 20, "map width in tiles")
 	height := flag.Int("height", 20, "map height in tiles")
 	pawns := flag.Int("pawns", 5, "number of pawns to spawn")
+	assets := flag.String("assets", "", "sprite pack directory (default: locate from cwd)")
 	flag.Parse()
 
 	g := game.New(game.Config{Seed: *seed, Width: *width, Height: *height})
@@ -26,7 +27,17 @@ func main() {
 	}
 
 	renderer := uiadapter.New(g)
-	ebiten.SetWindowSize(*width*24, *height*24)
+	var loadErr error
+	if *assets != "" {
+		loadErr = renderer.LoadPack(*assets)
+	} else {
+		loadErr = renderer.LoadDefaultPack()
+	}
+	if loadErr != nil {
+		log.Printf("sprite pack: %v (drawing placeholders)", loadErr)
+	}
+
+	ebiten.SetWindowSize(*width*uiadapter.TileSize, *height*uiadapter.TileSize)
 	ebiten.SetWindowTitle("rimworld-go")
 	if err := ebiten.RunGame(renderer); err != nil {
 		log.Fatal(err)
