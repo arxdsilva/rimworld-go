@@ -5,13 +5,13 @@ alwaysApply: true
 
 # Main UI screens recognition
 
-Player-facing screens, windows, overlays, HUD layout, and navigation follow `.agent/MAIN_UI_SCREENS_SPECIFICATION.md`.
+Player-facing screens, windows, overlays, HUD layout, and navigation follow `.cursor/MAIN_UI_SCREENS_SPECIFICATION.md`.
 
 When that work is in scope:
 
-1. Use skill `rimworld-go-ui-screens` (canonical playbook: `.agent/skills/rimworld-go-ui-screens/SKILL.md`).
+1. Use skill `rimworld-go-ui-screens` (canonical playbook: `.cursor/skills/rimworld-go-ui-screens/SKILL.md`).
 2. Load only the spec sections that skill names for the screen — not the whole file by default.
-3. Also use `.agent/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` for ordered backlog/acceptance.
+3. Also use `.cursor/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` for ordered backlog/acceptance.
 4. Screens consume read models and emit typed commands; they never mutate domain state.
 5. Honor §58 (screen vs window vs overlay) and Wave UI-0 before later-wave screens.
 6. Update matching screen-wave and DoD checkboxes (`[x]` / `[-]` / `[!]`).

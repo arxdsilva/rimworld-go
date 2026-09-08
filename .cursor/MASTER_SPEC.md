@@ -1965,7 +1965,7 @@ Acceptance:
 Every completed task creates:
 
 ```text
-.agent/handoffs/<TASK-ID>.md
+.cursor/handoffs/<TASK-ID>.md
 ```
 
 Template:
@@ -2246,7 +2246,7 @@ Do not start aggressive parallelization until shared primitives and ownership co
 You are implementing rimworld-go.
 
 Read:
-- .agent/MASTER_SPEC.md
+- .cursor/MASTER_SPEC.md
 - package AGENTS.md
 - relevant docs/systems/*
 - accepted ADRs

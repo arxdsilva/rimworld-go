@@ -5,11 +5,11 @@ alwaysApply: true
 
 # Art direction recognition
 
-Player-visible sprites, icons, UI chrome, renderer presentation, palettes, pivots, atlases, and asset-pipeline tooling follow `.agent/ART_DIRECTION_AND_ASSET_PIPELINE.md`.
+Player-visible sprites, icons, UI chrome, renderer presentation, palettes, pivots, atlases, and asset-pipeline tooling follow `.cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md`.
 
 When that work is in scope:
 
-1. Use skill `rimworld-go-art-assets` (canonical playbook: `.agent/skills/rimworld-go-art-assets/SKILL.md`).
+1. Use skill `rimworld-go-art-assets` (canonical playbook: `.cursor/skills/rimworld-go-art-assets/SKILL.md`).
 2. Load only the spec sections that skill names for the asset family — not the whole file by default.
 3. Keep pixels, texture handles, camera, and animation in presentation adapters; domain stays headless.
 4. Never trace, extract, or reconstruct proprietary RimWorld art.

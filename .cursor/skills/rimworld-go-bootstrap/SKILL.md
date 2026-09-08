@@ -24,8 +24,8 @@ Use for foundation/setup work, especially before parallel feature agents begin.
 13. CI;
 14. initial ADRs;
 15. package `AGENTS.md` as packages become real;
-16. `assets/` layout, palettes, and metadata schema only when renderer/art work begins — follow `.agent/ART_DIRECTION_AND_ASSET_PIPELINE.md` Wave 0 via `rimworld-go-art-assets`;
-17. UI primitives, snapshot boundary, and command gateway only when player-facing screens begin — follow `.agent/MAIN_UI_SCREENS_SPECIFICATION.md` Wave UI-0 via `rimworld-go-ui-screens`.
+16. `assets/` layout, palettes, and metadata schema only when renderer/art work begins — follow `.cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md` Wave 0 via `rimworld-go-art-assets`;
+17. UI primitives, snapshot boundary, and command gateway only when player-facing screens begin — follow `.cursor/MAIN_UI_SCREENS_SPECIFICATION.md` Wave UI-0 via `rimworld-go-ui-screens`.
 
 Do not generate dozens of empty packages just to match a diagram.
 

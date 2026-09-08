@@ -19,8 +19,8 @@
 > appropriate, and visual identity.
 >
 > **Agent loading:** This file is *not* default context. Route via
-> `.agent/skills/rimworld-go-router/SKILL.md` and follow
-> `.agent/skills/rimworld-go-ui-screens/SKILL.md`. Load §0, §58, §59, and
+> `.cursor/skills/rimworld-go-router/SKILL.md` and follow
+> `.cursor/skills/rimworld-go-ui-screens/SKILL.md`. Load §0, §58, §59, and
 > only the named screen section for the task. Tick Wave UI / architecture
 > / DoD checkboxes in this file using `[x]` / `[-]` / `[!]`.
 

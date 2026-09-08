@@ -1,5 +1,6 @@
 README.md
 rimworld-go-ai-jobs/SKILL.md
+rimworld-go-art-assets/SKILL.md
 rimworld-go-bootstrap/SKILL.md
 rimworld-go-content-modding/SKILL.md
 rimworld-go-debugging/SKILL.md
@@ -13,5 +14,6 @@ rimworld-go-persistence-replay/SKILL.md
 rimworld-go-review-integration/SKILL.md
 rimworld-go-router/SKILL.md
 rimworld-go-testing/SKILL.md
+rimworld-go-ui-screens/SKILL.md
 _templates/TASK_PACKET.md
 _templates/HANDOFF.md

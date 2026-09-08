@@ -15,8 +15,8 @@
 > principles and gameplay readability---not proprietary artwork.
 >
 > **Agent loading:** This file is *not* default context. Route via
-> `.agent/skills/rimworld-go-router/SKILL.md` and follow
-> `.agent/skills/rimworld-go-art-assets/SKILL.md`. Load §1, §2, §35, and
+> `.cursor/skills/rimworld-go-router/SKILL.md` and follow
+> `.cursor/skills/rimworld-go-art-assets/SKILL.md`. Load §1, §2, §35, and
 > only the category/pipeline sections that skill names for the task.
 > Tick ART wave / prototype-gate / acceptance checkboxes in this file
 > using `[x]` / `[-]` / `[!]` when work lands. For UI chrome that belongs

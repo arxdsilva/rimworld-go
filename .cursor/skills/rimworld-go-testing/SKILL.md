@@ -31,7 +31,7 @@ over tests tied to private helper call counts.
 
 Domain/application tests must not require renderer initialization.
 
-Asset/metadata validators (`assettool`, `contentlint`) should run without launching the renderer. Visual QA (screenshot scenes, contact sheets, in-game review) is additional for art tasks per `.agent/ART_DIRECTION_AND_ASSET_PIPELINE.md` §29. Screen/controller tests should cover view-model behavior without requiring a full GPU path where practical; named screens also need a visual acceptance screenshot/scenario per `.agent/MAIN_UI_SCREENS_SPECIFICATION.md` §59.
+Asset/metadata validators (`assettool`, `contentlint`) should run without launching the renderer. Visual QA (screenshot scenes, contact sheets, in-game review) is additional for art tasks per `.cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md` §29. Screen/controller tests should cover view-model behavior without requiring a full GPU path where practical; named screens also need a visual acceptance screenshot/scenario per `.cursor/MAIN_UI_SCREENS_SPECIFICATION.md` §59.
 
 ## Sim test DSL
 

@@ -8,18 +8,19 @@ description: Create or update rimworld-go ADRs, system design documents, package
 ## Canonical ownership
 
 ```text
-.agent/MASTER_SPEC.md              product/game scope
-.agent/HEXAGONAL_ARCHITECTURE.md   architecture/dependency model
-.agent/GO_BEST_PRACTICES.md        Go engineering standard
-.agent/AI_TOKEN_OPTIMIZATION.md    context/token policy
-.agent/ART_DIRECTION_AND_ASSET_PIPELINE.md   visual production / asset pipeline
-.agent/MAIN_UI_SCREENS_SPECIFICATION.md      per-screen layout / navigation / commands
-.agent/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md   ordered gameplay feature backlog
-.agent/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md             ordered UI/UX backlog
+.cursor/MASTER_SPEC.md              product/game scope
+.cursor/HEXAGONAL_ARCHITECTURE.md   architecture/dependency model
+.cursor/GO_BEST_PRACTICES.md        Go engineering standard
+.cursor/AI_TOKEN_OPTIMIZATION.md    context/token policy
+.cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md   visual production / asset pipeline
+.cursor/MAIN_UI_SCREENS_SPECIFICATION.md      per-screen layout / navigation / commands
+.cursor/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md   ordered gameplay feature backlog
+.cursor/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md             ordered UI/UX backlog
+.cursor/rules/*                     Cursor always-on recognition
 docs/systems/*              subsystem behavior
 docs/adr/*                  cross-cutting decisions
 package AGENTS.md           package-local constraints
-.agent/handoffs/*                  completed-task deltas
+.cursor/handoffs/*                  completed-task deltas
 ```
 
 Do not copy long canonical sections into multiple files.

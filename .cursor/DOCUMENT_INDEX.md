@@ -1,6 +1,6 @@
 # Documentation Index
 
-All paths below are relative to this `.agent/` folder unless noted.
+All paths below are relative to this `.cursor/` folder unless noted.
 
 | Need | Read |
 |---|---|
@@ -14,6 +14,7 @@ All paths below are relative to this `.agent/` folder unless noted.
 | Ordered player-facing UI/UX backlog | `RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` |
 | Per-task AI handoffs | `handoffs/` |
 | Task-specific playbooks (start here for any new task) | `skills/rimworld-go-router/SKILL.md` |
+| Cursor always-on recognition rules | `rules/` |
 | Global contributor rules | `../AGENTS.md` |
 
 Recommended agent loading order:

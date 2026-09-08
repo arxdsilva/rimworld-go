@@ -158,11 +158,11 @@ It should link to canonical docs rather than duplicate them.
 Example:
 
 ```text
-Architecture: .agent/HEXAGONAL_ARCHITECTURE.md
-Go rules: .agent/GO_BEST_PRACTICES.md
-Token rules: .agent/AI_TOKEN_OPTIMIZATION.md
-Art/assets: .agent/ART_DIRECTION_AND_ASSET_PIPELINE.md
-Screens: .agent/MAIN_UI_SCREENS_SPECIFICATION.md
+Architecture: .cursor/HEXAGONAL_ARCHITECTURE.md
+Go rules: .cursor/GO_BEST_PRACTICES.md
+Token rules: .cursor/AI_TOKEN_OPTIMIZATION.md
+Art/assets: .cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md
+Screens: .cursor/MAIN_UI_SCREENS_SPECIFICATION.md
 ```
 
 ---
@@ -224,7 +224,7 @@ When another agent depends on a package, prefer a generated/summarized interface
 Example:
 
 ```text
-.agent/interfaces/pathing.md
+.cursor/interfaces/pathing.md
 ```
 
 Contains:
@@ -246,7 +246,7 @@ This can save thousands of tokens.
 Create:
 
 ```text
-.agent/CONTEXT_INDEX.md
+.cursor/CONTEXT_INDEX.md
 ```
 
 It maps tasks/subsystems to canonical files.
@@ -258,7 +258,7 @@ Pathfinding:
 - internal/domain/ai/pathing/AGENTS.md
 - docs/systems/pathfinding.md
 - docs/adr/0007-hierarchical-pathfinding.md
-- .agent/interfaces/pathing.md
+- .cursor/interfaces/pathing.md
 ```
 
 Agents should consult the index before broad repository search.
@@ -424,7 +424,7 @@ Do not create alternatives such as `ActorID`, `SimTick`, `GridPos`, etc. unless 
 Maintain a lightweight generated file:
 
 ```text
-.agent/REPO_MAP.md
+.cursor/REPO_MAP.md
 ```
 
 Example:
@@ -506,7 +506,7 @@ Otherwise context/merge cost exceeds benefit.
 Maintain:
 
 ```text
-.agent/TASK_GRAPH.md
+.cursor/TASK_GRAPH.md
 ```
 
 Example:
@@ -825,7 +825,7 @@ Potential commands:
 ```bash
 go run ./tools/contextpack --task PATH-021
 go run ./tools/repomap
-go run ./tools/handofflint .agent/handoffs/PATH-021.md
+go run ./tools/handofflint .cursor/handoffs/PATH-021.md
 ```
 
 `contextpack` can output exactly the files/summaries an agent should receive.
@@ -842,7 +842,7 @@ always:
   - internal/domain/ai/pathing/AGENTS.md
   - docs/systems/pathfinding.md
 interfaces:
-  - .agent/interfaces/pathing.md
+  - .cursor/interfaces/pathing.md
 adrs:
   - docs/adr/0007-hierarchical-pathfinding.md
 ```
@@ -878,9 +878,9 @@ Use:
 - named ART_DIRECTION sections plus neighboring reference assets, never the whole art bible plus an atlas dump;
 - named MAIN_UI_SCREENS sections for the screen under work, never the whole 50-screen spec.
 
-For visual tasks, follow `rimworld-go-art-assets` section routing instead of pasting `.agent/ART_DIRECTION_AND_ASSET_PIPELINE.md` in full.
+For visual tasks, follow `rimworld-go-art-assets` section routing instead of pasting `.cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md` in full.
 
-For screen tasks, follow `rimworld-go-ui-screens` section routing instead of pasting `.agent/MAIN_UI_SCREENS_SPECIFICATION.md` in full.
+For screen tasks, follow `rimworld-go-ui-screens` section routing instead of pasting `.cursor/MAIN_UI_SCREENS_SPECIFICATION.md` in full.
 
 ---
 

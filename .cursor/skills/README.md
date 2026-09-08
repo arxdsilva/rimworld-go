@@ -2,11 +2,9 @@
 
 This package contains reusable `SKILL.md` playbooks for AI coding agents working on rimworld-go.
 
-## Recommended installation
+## Location
 
-Copy the individual skill directories into the skill directory supported by your agent environment, or keep this folder inside the repository and instruct agents to read the relevant `SKILL.md`.
-
-Do not load all skills into every task. Start with `rimworld-go-router`.
+These playbooks live in `.cursor/skills/` so Cursor auto-discovers them. Do not load all skills into every task. Start with `rimworld-go-router`.
 
 ## Skills
 
@@ -32,11 +30,11 @@ Do not load all skills into every task. Start with `rimworld-go-router`.
 ## Suggested repo layout
 
 ```text
-.agent/
-├── skills/
-│   ├── rimworld-go-router/
-│   │   └── SKILL.md
-│   └── ...
+.cursor/
+├── rules/          # always-on Cursor recognition
+├── skills/         # task playbooks (this folder)
+├── handoffs/
+├── DOCUMENT_INDEX.md
 ├── MASTER_SPEC.md
 ├── HEXAGONAL_ARCHITECTURE.md
 ├── GO_BEST_PRACTICES.md
@@ -44,16 +42,12 @@ Do not load all skills into every task. Start with `rimworld-go-router`.
 ├── ART_DIRECTION_AND_ASSET_PIPELINE.md
 ├── MAIN_UI_SCREENS_SPECIFICATION.md
 ├── RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md
-├── RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md
-├── DOCUMENT_INDEX.md
-└── handoffs/
+└── RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md
 
 docs/
 ├── adr/
 └── systems/
 ```
-
-You can alternatively use `.cursor/skills`, `.codex/skills`, `.claude/skills`, or another tool-specific location if your agent supports it. This repo also ships thin Cursor entries at `.cursor/skills/rimworld-go-art-assets/` and `.cursor/skills/rimworld-go-ui-screens/` pointing at the canonical `.agent` playbooks.
 
 ## Global context rule
 

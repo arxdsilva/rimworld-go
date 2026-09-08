@@ -93,9 +93,9 @@ UI receives immutable/read snapshots and emits typed commands.
 
 UI never receives writable entity stores.
 
-Player-visible sprites, icons, and UI chrome follow `.agent/ART_DIRECTION_AND_ASSET_PIPELINE.md`; presentation adapters consume generated assets, they do not become domain types.
+Player-visible sprites, icons, and UI chrome follow `.cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md`; presentation adapters consume generated assets, they do not become domain types.
 
-Named screens, windows, overlays, and HUD layout follow `.agent/MAIN_UI_SCREENS_SPECIFICATION.md`; they consume read models and emit typed commands.
+Named screens, windows, overlays, and HUD layout follow `.cursor/MAIN_UI_SCREENS_SPECIFICATION.md`; they consume read models and emit typed commands.
 
 ## Persistence rule
 

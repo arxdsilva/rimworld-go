@@ -23,15 +23,15 @@ Read in this order only as needed:
 4. relevant tests
 5. relevant `docs/systems/*.md`
 6. relevant `docs/adr/*.md`
-7. `.agent/HEXAGONAL_ARCHITECTURE.md`
-8. `.agent/GO_BEST_PRACTICES.md`
-9. `.agent/MASTER_SPEC.md` only when broader product intent is required
-10. `.agent/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` when scoping/ordering a gameplay feature
-11. `.agent/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` when scoping/ordering a UI feature
-12. `.agent/MAIN_UI_SCREENS_SPECIFICATION.md` when implementing or changing a player-facing screen, window, overlay, or HUD layout (via skill `rimworld-go-ui-screens`; load named sections only)
-13. `.agent/ART_DIRECTION_AND_ASSET_PIPELINE.md` when the task produces or changes player-visible art, renderer presentation, UI chrome, or asset-pipeline tooling (via skill `rimworld-go-art-assets`; load named sections only)
+7. `.cursor/HEXAGONAL_ARCHITECTURE.md`
+8. `.cursor/GO_BEST_PRACTICES.md`
+9. `.cursor/MASTER_SPEC.md` only when broader product intent is required
+10. `.cursor/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` when scoping/ordering a gameplay feature
+11. `.cursor/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` when scoping/ordering a UI feature
+12. `.cursor/MAIN_UI_SCREENS_SPECIFICATION.md` when implementing or changing a player-facing screen, window, overlay, or HUD layout (via skill `rimworld-go-ui-screens`; load named sections only)
+13. `.cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md` when the task produces or changes player-visible art, renderer presentation, UI chrome, or asset-pipeline tooling (via skill `rimworld-go-art-assets`; load named sections only)
 
-Token/context policy is defined by `.agent/AI_TOKEN_OPTIMIZATION.md`.
+Token/context policy is defined by `.cursor/AI_TOKEN_OPTIMIZATION.md`.
 
 ## Routing table
 

@@ -42,11 +42,11 @@ For every item:
 8.  Update mod/content definitions if the feature is data-driven.
 9.  If the item includes sprites, icons, UI chrome, renderer
     presentation, or asset files, follow
-    `.agent/ART_DIRECTION_AND_ASSET_PIPELINE.md` via
+    `.cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md` via
     `rimworld-go-art-assets` and update matching ART wave checkboxes
     there.
 10. If the item is player-observable as a named screen, window, overlay,
-    or HUD layout, follow `.agent/MAIN_UI_SCREENS_SPECIFICATION.md` via
+    or HUD layout, follow `.cursor/MAIN_UI_SCREENS_SPECIFICATION.md` via
     `rimworld-go-ui-screens` and update matching screen-wave checkboxes
     there.
 11. Tick the item only after its acceptance criteria pass.

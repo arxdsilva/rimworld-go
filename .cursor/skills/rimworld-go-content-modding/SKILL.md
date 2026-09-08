@@ -60,9 +60,9 @@ Reject:
 
 `contentlint` should perform validation without launching the renderer.
 
-Plugin/core visual assets (sprites, icons, UI chrome, palettes, metadata) use the same namespaced IDs and validators as definitions, and must follow `.agent/ART_DIRECTION_AND_ASSET_PIPELINE.md` via `rimworld-go-art-assets`. Plugins never mutate generated core art.
+Plugin/core visual assets (sprites, icons, UI chrome, palettes, metadata) use the same namespaced IDs and validators as definitions, and must follow `.cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md` via `rimworld-go-art-assets`. Plugins never mutate generated core art.
 
-Plugin Manager, Load Order, Plugin Settings, and Content Error screens follow `.agent/MAIN_UI_SCREENS_SPECIFICATION.md` §45–§48 via `rimworld-go-ui-screens`.
+Plugin Manager, Load Order, Plugin Settings, and Content Error screens follow `.cursor/MAIN_UI_SCREENS_SPECIFICATION.md` §45–§48 via `rimworld-go-ui-screens`.
 
 ## Scripting
 
