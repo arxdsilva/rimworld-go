@@ -2,7 +2,7 @@
 
 > **Status:** Authoritative architecture guide  
 > **Audience:** Human contributors, coding agents, reviewers, integration agents  
-> **Companion documents:** `AI_TOKEN_OPTIMIZATION.md`, `GO_BEST_PRACTICES.md`, `MASTER_SPEC.md`
+> **Companion documents:** `AI_TOKEN_OPTIMIZATION.md`, `GO_BEST_PRACTICES.md`, `MASTER_SPEC.md`, `RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md`, `RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`
 
 ---
 

@@ -39,6 +39,8 @@ Do not load all skills into every task. Start with `rimworld-go-router`.
 ├── HEXAGONAL_ARCHITECTURE.md
 ├── GO_BEST_PRACTICES.md
 ├── AI_TOKEN_OPTIMIZATION.md
+├── RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md
+├── RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md
 ├── DOCUMENT_INDEX.md
 └── handoffs/
 

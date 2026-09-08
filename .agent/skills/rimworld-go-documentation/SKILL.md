@@ -12,6 +12,8 @@ description: Create or update rimworld-go ADRs, system design documents, package
 .agent/HEXAGONAL_ARCHITECTURE.md   architecture/dependency model
 .agent/GO_BEST_PRACTICES.md        Go engineering standard
 .agent/AI_TOKEN_OPTIMIZATION.md    context/token policy
+.agent/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md   ordered gameplay feature backlog
+.agent/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md             ordered UI/UX backlog
 docs/systems/*              subsystem behavior
 docs/adr/*                  cross-cutting decisions
 package AGENTS.md           package-local constraints

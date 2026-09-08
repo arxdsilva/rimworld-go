@@ -1,0 +1,3194 @@
+# rimworld-go --- Vanilla Feature Implementation Checklist
+
+> **Purpose:** Authoritative, implementation-ordered feature backlog for
+> AI agents building `rimworld-go`.
+>
+> **Scope:** The target experience is the **base/vanilla RimWorld colony
+> simulator**, excluding expansion-only systems from Royalty, Ideology,
+> Biotech, Anomaly, and Odyssey. The exception is the **plugin/mod
+> system**, which is explicitly part of this project.
+>
+> **Important:** This is a behavioral reference and implementation plan,
+> not a directive to copy RimWorld source code, copyrighted text,
+> artwork, sounds, names, exact balance values, or proprietary data.
+> Implement equivalent *classes of gameplay behavior* independently,
+> using original content and naming where public distribution requires
+> it.
+>
+> **Checklist rule:** Agents may tick `[x]` only when the feature's
+> acceptance criteria, tests, deterministic behavior, persistence
+> impact, and relevant documentation are complete.
+
+------------------------------------------------------------------------
+
+# 0. How Agents Must Use This File
+
+Implementation order is intentional. Later phases assume earlier
+contracts exist.
+
+For every item:
+
+1.  Read root `AGENTS.md`.
+2.  Read the nearest package `AGENTS.md`.
+3.  Load only the relevant project skill(s).
+4.  Search for existing canonical types before creating new ones.
+5.  Implement tests with the feature.
+6.  Preserve deterministic authoritative simulation.
+7.  Update save/replay support if authoritative state changes.
+8.  Update mod/content definitions if the feature is data-driven.
+9.  Tick the item only after its acceptance criteria pass.
+
+**Status notation**
+
+-   `[ ]` not started
+-   `[-]` in progress
+-   `[x]` complete
+-   `[!]` blocked; add a short reason immediately after the item
+
+------------------------------------------------------------------------
+
+# PHASE 1 --- Executable Game and Deterministic Simulation Foundation
+
+These are not player-facing RimWorld features by themselves, but every
+vanilla system depends on them.
+
+## 1.1 Simulation clock
+
+-   [ ] **Discrete simulation ticks**
+    -   Maintain authoritative game time as integer ticks.
+    -   Support deterministic advancement independent of renderer frame
+        rate.
+    -   Provide conversion helpers for game hours, days,
+        quadrums/seasons, and years.
+    -   Game speed changes the number/rate of processed ticks, never
+        simulation rules.
+    -   **Done when:** identical seed + commands produces identical
+        state after N ticks at every game speed.
+-   [ ] **Pause and game-speed controls**
+    -   Paused, normal, fast, and very-fast simulation modes.
+    -   Threats or important events may optionally force/prompt speed
+        reduction at presentation level.
+    -   Headless simulation must be able to ignore real-time pacing.
+-   [ ] **Simulation phase pipeline**
+    -   Explicit ordered phases for commands, AI, jobs, movement,
+        combat, health, environment, production, social/mood, incidents,
+        cleanup, derived-state invalidation, and snapshot publication.
+    -   Phase order must be documented and deterministic.
+
+## 1.2 Entity foundation
+
+-   [ ] **Stable EntityID lifecycle**
+    -   Unique IDs for pawns, animals, items, buildings, projectiles,
+        plants, corpses, etc.
+    -   IDs are never pointer addresses.
+    -   Destruction is queued and committed safely outside active
+        iteration.
+-   [ ] **Component/entity storage**
+    -   Efficient dense iteration for hot components.
+    -   Stable lookup by EntityID.
+    -   No reflection-heavy runtime ECS requirement.
+    -   Removal must not accidentally make gameplay depend on
+        swap-remove order.
+-   [ ] **Canonical coordinates**
+    -   Tile/cell coordinate.
+    -   Map identifier.
+    -   Chunk coordinate.
+    -   World tile coordinate.
+    -   Distance helpers and neighbor iteration.
+
+## 1.3 Determinism
+
+-   [ ] **Deterministic RNG streams**
+    -   RNG keyed by stable inputs such as seed, tick, entity,
+        operation, and local sequence.
+    -   No global `math/rand` for gameplay.
+    -   Unrelated random operations should not unnecessarily perturb
+        other systems.
+-   [ ] **Stable command ordering**
+    -   All player/AI external authoritative mutations have stable
+        target tick and sequence.
+    -   Equal-tick commands resolve predictably.
+-   [ ] **Canonical state hashing**
+    -   Hash authoritative state in stable order.
+    -   Support whole-simulation and subsystem/entity hashes for
+        debugging.
+-   [ ] **Replay command stream**
+    -   Re-run seed/scenario + ordered commands.
+    -   Verify state hashes at checkpoints.
+
+## 1.4 Headless execution
+
+-   [ ] **Headless simulation executable**
+    -   Create/start a colony without renderer/audio.
+    -   Advance a requested number of ticks.
+    -   Emit metrics and final state hash.
+-   [ ] **Deterministic benchmark runner**
+    -   Fixed scenarios for 3, 20, 100, 500, and 1,000 colonist-scale
+        testing.
+    -   Record tick cost and allocations.
+
+------------------------------------------------------------------------
+
+# PHASE 2 --- Map, Terrain, Camera, Selection, and Basic Presentation
+
+The first playable surface.
+
+## 2.1 Local map grid
+
+-   [ ] **Finite tile map**
+    -   Rectangular local map.
+    -   Every cell can hold terrain and spatial occupants.
+    -   Efficient cell queries.
+-   [ ] **Chunk partitioning**
+    -   Partition maps into chunks for spatial indexing, rendering,
+        sleeping, dirty flags, and localized rebuilds.
+-   [ ] **Terrain definitions**
+    -   Soil/fertility-bearing ground.
+    -   Rough natural terrain.
+    -   Stone/rock terrain.
+    -   Water or otherwise impassable terrain.
+    -   Constructed floors later plug into the same terrain model.
+    -   Terrain exposes walkability, movement cost, fertility,
+        beauty/cleanability, build support, flammability where
+        applicable.
+-   [ ] **Map edges and valid placement**
+    -   Out-of-bounds handling.
+    -   Edge cells usable for arrivals/departures where allowed.
+
+## 2.2 Rendering
+
+-   [ ] **Tile rendering**
+    -   Draw visible terrain only.
+    -   Camera culling.
+    -   Chunk-aware redraw/cache strategy.
+-   [ ] **Entity rendering**
+    -   Draw pawns, items, plants, buildings, corpses, projectiles.
+    -   Presentation uses read-only simulation snapshots.
+-   [ ] **Camera controls**
+    -   Pan.
+    -   Zoom.
+    -   Center on selected entity/event.
+    -   Screen-to-world tile conversion.
+-   [ ] **Selection**
+    -   Click entity/tile.
+    -   Drag-select multiple player pawns.
+    -   Selection overlays.
+    -   Selection state remains presentation-only.
+
+## 2.3 Inspect UI
+
+-   [ ] **Generic inspect panel**
+    -   Label/type.
+    -   Hit points/condition where relevant.
+    -   Position.
+    -   Basic description.
+    -   Context-sensitive tabs supplied by entity capabilities.
+-   [ ] **Pawn inspect panel**
+    -   Name.
+    -   Current job/activity.
+    -   Draft status.
+    -   Health summary.
+    -   Needs/mood summary.
+    -   Equipment.
+    -   Skills.
+    -   Social information as systems become available.
+
+------------------------------------------------------------------------
+
+# PHASE 3 --- Pawn Generation and Character Model
+
+RimWorld's colonists are individually simulated characters rather than
+interchangeable workers.
+
+## 3.1 Pawn identity
+
+-   [ ] **Human pawn definition**
+    -   Name.
+    -   Biological/chronological age representation.
+    -   Sex/gender field as required by game mechanics.
+    -   Faction.
+    -   Player-control state.
+    -   Story/character metadata.
+-   [ ] **Procedural pawn generation**
+    -   Generate coherent pawn data from seed.
+    -   Skills, passions, traits, backstories, age, health, and
+        relationships use deterministic generation.
+    -   Scenario generation can constrain generated pawns.
+
+## 3.2 Backstories
+
+-   [ ] **Childhood and adulthood background system**
+    -   Backgrounds modify starting skills/stats.
+    -   Backgrounds may prohibit categories of work.
+    -   Adults can have both childhood and adulthood histories; younger
+        characters may have only childhood.
+    -   Definitions must be data-driven and moddable.
+    -   Use original writing/content rather than copying RimWorld
+        backstory text.
+
+## 3.3 Traits
+
+-   [ ] **Permanent trait system**
+    -   Traits modify statistics, needs, mood behavior, work behavior,
+        social behavior, combat, movement, or mental-break tendencies.
+    -   Trait definitions declare modifiers rather than hardcoding all
+        trait effects.
+    -   Support mutually exclusive/conflicting traits.
+-   [ ] **Trait-aware stat calculation**
+    -   Fixed deterministic modifier pipeline:
+        `base -> body/health -> skills -> traits -> equipment -> environment -> temporary effects`.
+
+## 3.4 Skills
+
+-   [ ] **Core skill set**
+    -   Shooting.
+    -   Melee.
+    -   Construction.
+    -   Mining.
+    -   Cooking.
+    -   Plants.
+    -   Animals.
+    -   Crafting.
+    -   Artistic.
+    -   Medical.
+    -   Social.
+    -   Intellectual/research.
+-   [ ] **Skill levels**
+    -   Numeric proficiency.
+    -   Skill influences speed, quality, success chance, accuracy,
+        yield, or other system-specific outcomes.
+-   [ ] **Passions**
+    -   No passion / minor passion / major passion equivalents.
+    -   Passion changes learning speed and can affect enjoyment/mood
+        while performing relevant work.
+-   [ ] **Skill XP**
+    -   Work and relevant activities grant XP.
+    -   Skill progression is deterministic.
+    -   Add skill decay only if the chosen vanilla target version
+        requires it.
+
+## 3.5 Work incapabilities
+
+-   [ ] **Disabled work categories**
+    -   Pawn history/traits/condition may prohibit categories such as
+        violence, skilled labor, caring, dumb labor, etc.
+    -   Work UI clearly shows unavailable work.
+    -   Job search never assigns prohibited work.
+
+------------------------------------------------------------------------
+
+# PHASE 4 --- Navigation and Pawn Movement
+
+## 4.1 Walkability
+
+-   [ ] **Walkable/blocked cells**
+    -   Terrain, walls, doors, buildings, hazards, and map boundaries
+        contribute to traversal rules.
+-   [ ] **Movement cost**
+    -   Terrain and conditions influence movement time.
+    -   Pawn movement speed stat affects traversal.
+
+## 4.2 Pathfinding
+
+-   [ ] **Deterministic A**\*
+    -   Exact tile pathfinding.
+    -   Stable tie-breaking.
+    -   No dependence on map iteration.
+-   [ ] **Region graph**
+    -   Build connected walkable regions.
+    -   Rebuild only dirty local topology.
+    -   Use region reachability to reject impossible jobs cheaply.
+-   [ ] **Hierarchical long-distance pathing**
+    -   Region-level route followed by local tile paths.
+    -   Designed to scale beyond original RimWorld colony sizes.
+-   [ ] **Path worker pool**
+    -   Pure snapshot-based path computation.
+    -   Sequence/revision tagged results.
+    -   Ordered authoritative commit.
+
+## 4.3 Movement
+
+-   [ ] **Follow path**
+    -   Pawns traverse cell paths over time rather than teleporting.
+    -   Movement updates position at deterministic tick boundaries.
+-   [ ] **Pawn collision and occupancy**
+    -   Prevent invalid stacking where gameplay requires exclusivity.
+    -   Handle passing and temporary congestion.
+-   [ ] **Deterministic movement conflict arbitration**
+    -   Multiple pawns attempting same cell resolve with stable
+        priority/tie-break.
+-   [ ] **Local congestion avoidance**
+    -   Avoid constant global repathing.
+    -   Optional short-lived congestion cost.
+
+------------------------------------------------------------------------
+
+# PHASE 5 --- Jobs, Work Priorities, Scheduling, and Player Orders
+
+This is the heart of autonomous colony behavior.
+
+## 5.1 Job engine
+
+-   [ ] **Single current job per pawn**
+    -   Job type.
+    -   Targets.
+    -   State.
+    -   progress.
+    -   failure reason.
+    -   reservations.
+    -   interruptibility.
+-   [ ] **Explicit job state machines**
+    -   Go to target.
+    -   Wait/work.
+    -   Carry/use/operate.
+    -   Complete.
+    -   Fail/cancel.
+    -   Every transition is deterministic and testable.
+-   [ ] **Job interruption**
+    -   Player order.
+    -   Drafting.
+    -   danger.
+    -   critical need.
+    -   target destroyed.
+    -   reservation lost.
+    -   medical emergency.
+    -   mental state.
+
+## 5.2 Reservations
+
+-   [ ] **Entity reservation**
+-   [ ] **Tile reservation**
+-   [ ] **Item quantity reservation**
+-   [ ] **Bed/patient reservation**
+-   [ ] **Workstation reservation**
+-   [ ] **Automatic reservation cleanup**
+    -   Completion.
+    -   cancellation.
+    -   death/downing.
+    -   target deletion.
+    -   job replacement.
+
+## 5.3 Work settings
+
+-   [ ] **Work types**
+    -   Firefight.
+    -   Patient.
+    -   Doctor.
+    -   Bed rest.
+    -   Basic/general maintenance.
+    -   Warden/prisoner interaction.
+    -   Handle animals.
+    -   Cook.
+    -   Hunt.
+    -   Construct.
+    -   Grow.
+    -   Mine.
+    -   Plant cut.
+    -   Smith/craft/tailor categories or equivalent production
+        categories.
+    -   Art.
+    -   Haul.
+    -   Clean.
+    -   Research.
+-   [ ] **Simple work enable/disable**
+    -   Pawn either performs a work type or does not.
+-   [ ] **Manual priorities**
+    -   Multiple priority levels.
+    -   Lower numeric priority means more urgent, equivalent to
+        RimWorld's 1--4 behavior.
+    -   Work-type ordering resolves equal priorities.
+-   [ ] **Work capability display**
+    -   Skill level.
+    -   passion.
+    -   incapable work.
+    -   current assignment.
+
+## 5.4 Indexed work discovery
+
+-   [ ] **Work opportunity indexes**
+    -   Do not scan every target for every pawn.
+    -   Index construction, hauling, growing, mining, cleaning,
+        doctoring, etc. by local region/chunk/type.
+-   [ ] **Candidate scoring**
+    -   Work priority.
+    -   urgency.
+    -   distance approximation.
+    -   skill suitability where appropriate.
+    -   reservation state.
+    -   allowed area.
+    -   exact path only for finalists.
+
+## 5.5 Forced orders
+
+-   [ ] **Right-click/context forced work**
+    -   Player can tell a selected pawn to perform a valid specific
+        action immediately.
+-   [ ] **Queued forced jobs**
+    -   Support shift-style job queuing.
+    -   Queue shown in pawn UI.
+    -   Invalid queued tasks fail gracefully.
+
+## 5.6 Daily schedule
+
+-   [ ] **24-hour schedule grid**
+    -   Anything.
+    -   Work.
+    -   Sleep.
+    -   Recreation.
+-   [ ] **Schedule-aware intent**
+    -   Schedule biases/limits autonomous intent but emergencies and
+        critical needs can override appropriately.
+
+## 5.7 Allowed areas
+
+-   [ ] **Named allowed areas**
+    -   Paint cells.
+    -   invert/clear.
+    -   assign pawn.
+-   [ ] **Area-aware AI**
+    -   Pawn chooses work/destinations inside assigned area.
+    -   Path traversal semantics should emulate vanilla's distinction
+        between allowed destination and traversal where appropriate.
+
+------------------------------------------------------------------------
+
+# PHASE 6 --- Items, Carrying, Inventory, Stockpiles, and Hauling
+
+## 6.1 Item system
+
+-   [ ] **Item definitions**
+    -   Resource/material.
+    -   food.
+    -   medicine.
+    -   weapon.
+    -   apparel.
+    -   drug.
+    -   manufactured component.
+    -   corpse/product categories.
+-   [ ] **Stackable items**
+    -   Quantity.
+    -   stack limit.
+    -   merge/split.
+    -   no negative or duplicated quantity.
+-   [ ] **Item quality**
+    -   Quality tiers for relevant crafted
+        items/buildings/apparel/weapons/art.
+    -   Quality affected by creator skill and other factors.
+    -   Exact RimWorld probabilities need not be copied.
+-   [ ] **Item hit points/deterioration**
+    -   Items can take damage.
+    -   Outdoor/unroofed or unsuitable storage can cause deterioration
+        where applicable.
+-   [ ] **Item forbidden state**
+    -   Player can forbid/unforbid items.
+    -   Autonomous hauling/use ignores forbidden targets unless
+        explicitly ordered where appropriate.
+
+## 6.2 Carrying/inventory
+
+-   [ ] **Pawn carry tracker**
+    -   Pawn can carry an item stack while performing jobs.
+-   [ ] **Personal inventory**
+    -   Support carried consumables/medicine/other inventory where
+        vanilla behavior needs it.
+    -   Inventory distinct from equipped weapon and worn apparel.
+
+## 6.3 Stockpile zones
+
+-   [ ] **Stockpile creation**
+    -   Paint storage cells.
+-   [ ] **Storage filters**
+    -   Category tree.
+    -   allowed/disallowed definitions.
+    -   quality/condition filters where appropriate.
+-   [ ] **Storage priorities**
+    -   Multiple priority levels.
+    -   Haulers move goods from lower-priority to higher-priority valid
+        storage.
+-   [ ] **Storage capacity/index**
+    -   Efficiently find valid free cells.
+    -   Avoid map-wide storage scans.
+
+## 6.4 Hauling
+
+-   [ ] **Haul loose item to storage**
+-   [ ] **Haul construction resources**
+-   [ ] **Haul production ingredients**
+-   [ ] **Haul finished products**
+-   [ ] **Haul corpses**
+-   [ ] **Opportunistic/batched hauling where compatible**
+    -   Performance-conscious without changing core player expectations.
+
+------------------------------------------------------------------------
+
+# PHASE 7 --- Designations, Construction, Buildings, Rooms, and Zones
+
+## 7.1 Designation system
+
+-   [ ] **Build designation**
+-   [ ] **Deconstruct designation**
+-   [ ] **Mine designation**
+-   [ ] **Cut plant designation**
+-   [ ] **Harvest designation**
+-   [ ] **Hunt designation**
+-   [ ] **Cancel designation**
+-   [ ] **Forbid/unforbid designation/action**
+
+## 7.2 Construction lifecycle
+
+-   [ ] **Blueprint**
+    -   Placement preview.
+    -   Validate terrain, occupancy, research, material, and support
+        requirements.
+-   [ ] **Material selection**
+    -   Stuff/material-based buildings where relevant.
+    -   Different materials influence HP, beauty, flammability,
+        work/material cost, etc.
+-   [ ] **Resource delivery**
+    -   Haulers/builders deliver required materials.
+-   [ ] **Construction frame**
+    -   Delivered materials are committed to a partially constructed
+        entity.
+-   [ ] **Construction work**
+    -   Construction skill affects speed and result.
+    -   Failed construction may waste resources if independently chosen
+        balance supports it.
+-   [ ] **Completed building**
+    -   Replace frame with functional building.
+    -   Invalidate navigation/rooms/power/etc. only as needed.
+-   [ ] **Repair**
+    -   Damaged player structures become repair work.
+-   [ ] **Deconstruction**
+    -   Work removes building and yields appropriate salvage.
+
+## 7.3 Core structures
+
+-   [ ] **Walls**
+    -   Block movement/vision/projectiles.
+    -   Define rooms.
+    -   Material-dependent stats.
+-   [ ] **Doors**
+    -   Open/closed states.
+    -   Opening delay.
+    -   faction/permission interaction.
+    -   affect pathing and room boundaries.
+-   [ ] **Floors**
+    -   Construct/remove.
+    -   movement, beauty, cleanliness, flammability attributes.
+-   [ ] **Roofs**
+    -   Roof cells.
+    -   roof construction/removal jobs.
+    -   support rules.
+    -   roof affects weather, temperature, light, deterioration, toxic
+        fallout.
+-   [ ] **Furniture**
+    -   Beds.
+    -   tables.
+    -   chairs/stools.
+    -   recreation furniture.
+    -   shelves/storage furniture if target version includes vanilla
+        shelf behavior.
+
+## 7.4 Rooms
+
+-   [ ] **Room detection**
+    -   Enclosed connected spaces bounded by walls/doors.
+    -   Outdoor/unroofed semantics.
+-   [ ] **Room statistics**
+    -   Space.
+    -   beauty.
+    -   cleanliness.
+    -   wealth/value.
+    -   impressiveness derived from room properties.
+-   [ ] **Room roles**
+    -   Bedroom.
+    -   barracks.
+    -   dining room.
+    -   recreation room.
+    -   hospital.
+    -   workshop.
+    -   prison cell/barracks.
+    -   storage/freezer is emergent rather than necessarily a formal
+        role.
+-   [ ] **Room stat caching/invalidation**
+    -   Recalculate only affected rooms.
+
+## 7.5 Specialized zones
+
+-   [ ] **Growing zones**
+-   [ ] **Home area**
+    -   Influences firefighting/cleaning/repair behavior.
+-   [ ] **Roof build/remove areas**
+-   [ ] **Allowed areas**
+    -   Already introduced in Phase 5 but integrated with zone UI.
+
+------------------------------------------------------------------------
+
+# PHASE 8 --- Food, Hunger, Farming, Cooking, and Survival
+
+## 8.1 Nutrition
+
+-   [ ] **Nutrition values**
+    -   Foods provide nutrition.
+    -   Pawns consume an amount based on hunger/body needs.
+-   [ ] **Food need**
+    -   Hunger decays over time.
+    -   Thresholds affect behavior/mood.
+    -   Severe hunger causes malnutrition/starvation and can kill.
+-   [ ] **Food search**
+    -   Prefer valid edible food according to restrictions and
+        availability.
+    -   Reserve food before fetching it.
+    -   Respect forbidden/allowed area rules.
+-   [ ] **Eating job**
+    -   Fetch.
+    -   choose table/seat when reasonable.
+    -   ingest over time.
+    -   gain nutrition.
+    -   generate context-dependent thought later.
+
+## 8.2 Raw food
+
+-   [ ] **Plant food**
+-   [ ] **Meat**
+-   [ ] **Animal products**
+    -   Milk/eggs where species definitions support them.
+-   [ ] **Food categories and diet compatibility**
+
+## 8.3 Cooking
+
+-   [ ] **Cooking workstation**
+-   [ ] **Meal recipes**
+    -   Simple/standard meal classes sufficient to recreate vanilla
+        progression.
+    -   Ingredient filters.
+    -   nutrition conversion.
+    -   work amount.
+-   [ ] **Food poisoning**
+    -   Chance influenced by cook skill and cleanliness/conditions.
+    -   Health effect and mood consequences.
+-   [ ] **Butchering**
+    -   Corpse -\> meat + leather/other products.
+    -   Yield affected by species and skill/stat.
+
+## 8.4 Farming
+
+-   [ ] **Fertility**
+    -   Terrain fertility affects plant growth.
+-   [ ] **Crop definitions**
+    -   Growth time.
+    -   fertility sensitivity.
+    -   yield.
+    -   minimum sowing skill.
+    -   temperature/light requirements.
+-   [ ] **Sowing**
+    -   Growers plant designated crops in growing zones.
+-   [ ] **Plant growth**
+    -   Analytical/bucketed growth.
+    -   Depends on temperature, light, fertility, plant health.
+-   [ ] **Harvest maturity**
+    -   Mature plants generate harvest work.
+    -   Skill can affect yield/failure.
+-   [ ] **Wild plants**
+    -   Map generation creates harvestable/non-harvestable vegetation.
+
+## 8.5 Food spoilage
+
+-   [ ] **Rot progression**
+    -   Perishable food/corpses rot based on temperature and elapsed
+        time.
+-   [ ] **Frozen/refrigerated preservation**
+    -   Cold slows or stops rot according to independently selected
+        balance.
+-   [ ] **Rotten state**
+    -   No longer normal edible food.
+    -   Corpse rot affects handling/visual state.
+
+------------------------------------------------------------------------
+
+# PHASE 9 --- Rest, Beds, Comfort, Recreation, Beauty, and Mood
+
+Vanilla RimWorld's characters react psychologically to their
+surroundings and experiences. Basic needs include food and rest; human
+colonists additionally care about recreation, beauty, comfort, and being
+outdoors, while some traits create chemical-related needs. Mood is
+derived from thoughts and traits and low mood creates mental-break risk.
+citeturn1search0turn1search5
+
+## 9.1 Rest
+
+-   [ ] **Rest need**
+    -   Decays while awake.
+    -   Replenishes while sleeping.
+    -   Severe exhaustion can force sleep.
+    -   Tiredness affects mood and performance.
+-   [ ] **Sleep intent**
+    -   Schedule-aware.
+    -   Select owned/assigned bed if available.
+    -   Fall back to available sleeping location.
+-   [ ] **Beds**
+    -   Assign ownership.
+    -   sleeping slots.
+    -   rest effectiveness.
+    -   comfort.
+    -   medical/prisoner designation later.
+
+## 9.2 Comfort
+
+-   [ ] **Comfort need**
+    -   Current furniture/bed comfort drives a slowly changing need.
+    -   Comfortable beds/chairs create positive psychological effect.
+
+## 9.3 Beauty
+
+-   [ ] **Tile beauty**
+    -   Buildings, items, filth, natural objects, art, and terrain
+        contribute.
+-   [ ] **Perceived beauty**
+    -   Pawn samples local surroundings.
+    -   Cached/low-frequency evaluation.
+-   [ ] **Beauty need**
+    -   Gradually trends toward environmental perception.
+    -   Generates positive/negative thoughts at thresholds.
+
+## 9.4 Outdoors
+
+-   [ ] **Outdoors need**
+    -   Tracks time spent roofed/indoors versus outdoors.
+    -   Trait modifiers can alter preference.
+
+## 9.5 Recreation
+
+-   [ ] **Recreation need**
+    -   Decays.
+    -   Pawns seek recreation during suitable schedule/idle time.
+-   [ ] **Recreation types**
+    -   Solitary relaxation.
+    -   social interaction.
+    -   dexterity-style play.
+    -   cerebral/game-style play.
+    -   telescope/television/other technology-gated categories as
+        vanilla-equivalent content is added.
+    -   chemical/food enjoyment where appropriate.
+-   [ ] **Recreation tolerance/variety**
+    -   Repeating one recreation category reduces its effectiveness.
+    -   Encourage multiple recreation sources.
+-   [ ] **Recreation jobs/buildings**
+    -   Basic no-building recreation.
+    -   horseshoe-like dexterity object.
+    -   chess/game table equivalent.
+    -   television-like electronic recreation.
+    -   telescope-like late recreation.
+    -   social relaxation.
+
+## 9.6 Thoughts/memories
+
+-   [ ] **Thought definition system**
+    -   Mood offset.
+    -   duration.
+    -   stacking rules.
+    -   situational versus memory-based.
+-   [ ] **Situational thoughts**
+    -   Hungry/tired.
+    -   environment beauty.
+    -   room quality.
+    -   ate without table.
+    -   slept on ground.
+    -   darkness/environment.
+    -   pain.
+    -   observed corpse/ugliness.
+    -   comfort/recreation satisfaction.
+    -   expectations.
+-   [ ] **Memory thoughts**
+    -   Death of relation.
+    -   social interaction.
+    -   wedding/relationship events.
+    -   combat/trauma where applicable.
+    -   impressive meal/room/event equivalents.
+-   [ ] **Thought expiry**
+    -   Memories expire deterministically after defined duration.
+
+## 9.7 Mood
+
+-   [ ] **Mood target**
+    -   Sum baseline, expectations, thoughts, traits, health, social
+        effects, environment.
+-   [ ] **Smoothed current mood**
+    -   Current mood trends toward target rather than instantaneously
+        matching it.
+-   [ ] **Break-risk thresholds**
+    -   Minor/major/extreme risk zones exposed to UI.
+-   [ ] **Mood UI**
+    -   Show current mood, target, active positive/negative thoughts,
+        and break risk.
+
+------------------------------------------------------------------------
+
+# PHASE 10 --- Mental States, Breaks, Inspirations, and Autonomous Social Behavior
+
+## 10.1 Mental breaks
+
+-   [ ] **Mental break eligibility**
+    -   Low mood sustained below thresholds.
+    -   Break severity influenced by current threshold/traits.
+-   [ ] **Mental state framework**
+    -   Temporarily replaces normal work/player control.
+    -   Explicit start/end.
+    -   May select targets.
+    -   Save/replay safe.
+-   [ ] **Minor break behaviors**
+    -   Sad wandering.
+    -   food binge.
+    -   drug binge where available.
+    -   hide-in-room style isolation.
+-   [ ] **Destructive/aggressive breaks**
+    -   Insulting spree.
+    -   tantrum/object destruction.
+    -   berserk/aggression.
+    -   prisoner-like escape behavior where relevant.
+-   [ ] **Catatonic/extreme shutdown equivalent**
+    -   Pawn becomes temporarily unavailable and requires care.
+-   [ ] **Recovery**
+    -   End state.
+    -   mood catharsis/recovery thought if desired by independent
+        balance.
+
+## 10.2 Inspirations
+
+-   [ ] **High-mood inspiration chance**
+    -   Positive temporary state after sustained good mood.
+-   [ ] **Inspiration types**
+    -   Inspired creativity/quality.
+    -   inspired recruitment.
+    -   inspired trade.
+    -   inspired taming.
+    -   inspired surgery/work equivalents as supported.
+
+## 10.3 Social interactions
+
+-   [ ] **Periodic social interaction**
+    -   Nearby awake pawns may chat, insult, compliment, etc.
+    -   Sparse event-driven relationships, never all-pairs every tick.
+-   [ ] **Opinion**
+    -   Pawn A's opinion of Pawn B is directional.
+    -   Influenced by relationship, traits, memories, social
+        interactions.
+-   [ ] **Social fight**
+    -   Negative interaction can escalate to non-lethal melee conflict.
+
+## 10.4 Relationships
+
+-   [ ] **Family relationships**
+    -   Parent/child.
+    -   sibling.
+    -   spouse/partner.
+    -   other close-family links needed for social thoughts.
+-   [ ] **Romance**
+    -   Attraction/compatibility.
+    -   romance attempt.
+    -   lover relationship.
+    -   rejection memories.
+-   [ ] **Marriage**
+    -   Proposal/engagement.
+    -   marriage ceremony/event.
+    -   relationship/mood consequences.
+-   [ ] **Breakups**
+    -   Relationship can end.
+    -   social/mood memories.
+-   [ ] **Relationship death reactions**
+    -   Death of friend/lover/spouse/family creates stronger memories.
+
+------------------------------------------------------------------------
+
+# PHASE 11 --- Health, Anatomy, Damage, Disease, Medicine, and Death
+
+RimWorld models injuries and conditions on individual body parts; damage
+to specific parts changes capacities, and prosthetics/transplants can
+replace missing functionality. Diseases, infection, pain, consciousness,
+treatment, and surgery are major colony-management systems.
+citeturn2search3turn2search11
+
+## 11.1 Anatomy
+
+-   [ ] **Species anatomy tree**
+    -   Body -\> torso/head -\> limbs -\> hands/feet -\> digits, organs,
+        etc.
+    -   Species can define different anatomy.
+-   [ ] **Body-part health**
+    -   Each part has maximum health.
+    -   Damage can destroy/remove a part.
+
+## 11.2 Capacities
+
+-   [ ] **Pawn capacities**
+    -   Consciousness.
+    -   Moving.
+    -   Manipulation.
+    -   Sight.
+    -   Hearing.
+    -   Talking.
+    -   Breathing.
+    -   blood filtration/circulation/metabolism equivalents as needed.
+-   [ ] **Capacity derivation**
+    -   Relevant body parts and health effects combine into functional
+        capacity.
+    -   Capacity influences work/combat/movement/social/medical
+        performance.
+
+## 11.3 Injuries
+
+-   [ ] **Damage types**
+    -   Blunt.
+    -   sharp.
+    -   burn.
+    -   explosion-derived damage.
+    -   bite/scratch may map to sharp/blunt variants.
+-   [ ] **Wounds**
+    -   Injury assigned to body part.
+    -   severity.
+    -   bleeding rate.
+    -   pain.
+    -   tendability.
+-   [ ] **Bleeding**
+    -   Blood loss accumulation.
+    -   severe blood loss -\> downing/death.
+    -   tending reduces/stops bleeding.
+-   [ ] **Pain**
+    -   Derived from injuries/conditions.
+    -   affects consciousness/mood/performance.
+    -   extreme pain can down pawn.
+-   [ ] **Downed state**
+    -   Pawn cannot normally act.
+    -   can be rescued/captured.
+    -   not equivalent to death.
+-   [ ] **Death**
+    -   Vital part destruction or lethal capacity/condition.
+    -   create corpse.
+    -   release jobs/reservations.
+    -   trigger social/story events.
+
+## 11.4 Healing
+
+-   [ ] **Natural wound healing**
+    -   Healing over time based on pawn state and care.
+-   [ ] **Scars/permanent injury**
+    -   Some wounds heal into lasting impairment/pain.
+
+## 11.5 Medical care
+
+-   [ ] **Medical care policy**
+    -   No care.
+    -   no medicine.
+    -   herbal-equivalent.
+    -   industrial-equivalent.
+    -   best medicine-equivalent.
+-   [ ] **Tending**
+    -   Doctor reserves patient.
+    -   fetches medicine if policy allows.
+    -   performs treatment.
+    -   quality depends on skill, medicine, environment, capacities.
+-   [ ] **Self-tend**
+    -   Optional with reduced effectiveness.
+-   [ ] **Medical beds**
+    -   Mark beds for medical use.
+    -   injured/sick pawns seek treatment/rest.
+-   [ ] **Rescue**
+    -   Carry downed friendly pawn to valid bed.
+
+## 11.6 Infection
+
+-   [ ] **Wound infection chance**
+    -   Eligible untreated/poorly treated wounds can become infected.
+-   [ ] **Infection progression vs immunity**
+    -   Disease severity progresses.
+    -   immunity grows based on treatment/rest/health.
+    -   reaching immunity first allows recovery; severity first can
+        kill.
+
+## 11.7 Diseases
+
+-   [ ] **Disease framework**
+    -   Severity over time.
+    -   stages.
+    -   symptoms/stat modifiers.
+    -   tendable conditions.
+    -   immunity where appropriate.
+-   [ ] **Representative vanilla disease classes**
+    -   flu-like disease.
+    -   plague-like severe disease.
+    -   malaria-like tropical disease.
+    -   sleeping-sickness-like disease.
+    -   food poisoning.
+    -   heatstroke.
+    -   hypothermia.
+    -   toxic buildup.
+
+## 11.8 Age/chronic conditions
+
+-   [ ] **Biological aging**
+    -   Age increases.
+    -   age can influence health/stat factors.
+-   [ ] **Age-related chronic conditions**
+    -   Bad back/frailty/cataract-like conditions.
+    -   Data-driven health effects.
+
+## 11.9 Surgery
+
+-   [ ] **Operation bills**
+    -   Add/remove scheduled medical operations.
+-   [ ] **Anesthesia**
+    -   Required for appropriate surgery.
+-   [ ] **Surgery success/failure**
+    -   Doctor skill.
+    -   medicine.
+    -   manipulation/sight.
+    -   room cleanliness/bed factors.
+    -   failure can injure nearby/body parts.
+-   [ ] **Organ extraction/transplant**
+    -   Removable organs.
+    -   harvested organ becomes item.
+    -   missing vital organs can kill.
+    -   transplant restores/replaces functionality.
+-   [ ] **Prosthetics/bionics**
+    -   Replace missing/damaged body parts with artificial parts of
+        varying efficiency.
+
+## 11.10 Corpses
+
+-   [ ] **Corpse entity**
+    -   Stores deceased pawn identity/body.
+    -   can rot.
+    -   can be butchered where allowed.
+    -   can be hauled.
+-   [ ] **Graves**
+    -   Bury corpse.
+    -   grave stores occupant.
+-   [ ] **Cremation**
+    -   Production job destroys corpses.
+
+------------------------------------------------------------------------
+
+# PHASE 12 --- Temperature, Weather, Seasons, Light, Fire, and Environment
+
+## 12.1 Temperature
+
+-   [ ] **Outdoor temperature**
+    -   Driven by world tile climate, latitude/elevation/season/time,
+        and weather.
+-   [ ] **Indoor room temperature**
+    -   Rooms have thermal state.
+    -   Exchange heat with outdoors and neighboring rooms through
+        openings/structures.
+    -   Use efficient region/room approximation rather than per-cell
+        fluid simulation.
+-   [ ] **Heat sources/sinks**
+    -   Campfire/heater-like source.
+    -   cooler/air-conditioner-like device.
+    -   passive cooler equivalent.
+-   [ ] **Pawn temperature comfort**
+    -   Apparel and species stats define safe/comfortable range.
+    -   extreme heat -\> heatstroke.
+    -   extreme cold -\> hypothermia.
+
+## 12.2 Seasons/calendar
+
+-   [ ] **Year and quadrum/season cycle**
+    -   Seasonal temperature/growing changes.
+    -   Hemisphere/world position can affect seasons.
+-   [ ] **Growing period**
+    -   World tile communicates expected crop-growing season.
+
+## 12.3 Weather
+
+-   [ ] **Weather state machine**
+    -   Clear.
+    -   rain.
+    -   fog.
+    -   snow where climate supports it.
+    -   thunderstorm/flashstorm-like weather.
+-   [ ] **Weather effects**
+    -   light.
+    -   temperature.
+    -   fire suppression.
+    -   movement/accuracy where appropriate.
+    -   solar generation.
+
+## 12.4 Lighting
+
+-   [ ] **Day/night light**
+-   [ ] **Roof/indoor darkness**
+-   [ ] **Artificial lights**
+-   [ ] **Light affects plants**
+-   [ ] **Light can affect work/mood/accuracy where appropriate**
+
+## 12.5 Fire
+
+-   [ ] **Flammability**
+    -   Terrain/buildings/items/plants define flammability.
+-   [ ] **Ignition**
+    -   Weapon/explosion/lightning/random event/overheat sources.
+-   [ ] **Fire spread**
+    -   Active-set simulation only.
+    -   nearby flammable objects.
+    -   weather/rain influences.
+-   [ ] **Fire damage**
+    -   Buildings/items/plants/pawns take burn damage.
+-   [ ] **Firefighting work**
+    -   Pawns extinguish fire in home area/urgent contexts.
+-   [ ] **Automatic rain after major fire**
+    -   Optional vanilla-equivalent storyteller/environment behavior.
+
+## 12.6 Environmental events
+
+-   [ ] **Heat wave**
+-   [ ] **Cold snap**
+-   [ ] **Eclipse**
+    -   Reduces sunlight and solar generation; affects crops.
+-   [ ] **Solar flare**
+    -   Temporarily disables relevant electrical devices.
+-   [ ] **Toxic fallout**
+    -   Outdoor exposure builds toxic condition; damages/kills plants
+        over time.
+-   [ ] **Flashstorm**
+    -   Lightning/fire threat.
+
+------------------------------------------------------------------------
+
+# PHASE 13 --- Cleaning, Filth, Deterioration, and Colony Maintenance
+
+-   [ ] **Filth entities/layers**
+    -   Dirt, blood, vomit, trash-like filth.
+    -   Created by movement/events/injuries/animals as appropriate.
+-   [ ] **Cleanliness**
+    -   Room cleanliness derived from filth/floor properties.
+    -   Influences medical/cooking/research or other vanilla-equivalent
+        systems.
+-   [ ] **Cleaning work**
+    -   Home-area filth becomes indexed cleaning work.
+-   [ ] **Blood trails**
+    -   Bleeding moving pawns can create blood filth.
+-   [ ] **Outdoor deterioration**
+    -   Eligible items deteriorate when exposed.
+    -   Roof/storage protection matters.
+-   [ ] **Building breakdown**
+    -   Selected electrical/mechanical buildings can break down.
+    -   Requires maintenance components/work if matching target vanilla
+        behavior.
+-   [ ] **Repair work**
+    -   Damaged colony structures automatically become repair
+        candidates.
+
+------------------------------------------------------------------------
+
+# PHASE 14 --- Production, Recipes, Bills, Crafting, Art, and Quality
+
+## 14.1 Generic workbench system
+
+-   [ ] **Workstation**
+    -   Supported recipes.
+    -   interaction cell.
+    -   power requirement where applicable.
+    -   facility/environment modifiers.
+-   [ ] **Recipe definition**
+    -   ingredients.
+    -   filters.
+    -   work amount.
+    -   skill.
+    -   products.
+    -   research requirement.
+    -   quality eligibility.
+
+## 14.2 Bills
+
+-   [ ] **Bill queue**
+    -   Multiple ordered bills per workstation.
+-   [ ] **Bill modes**
+    -   Do X times.
+    -   Do forever.
+    -   Do until X inventory count.
+-   [ ] **Ingredient radius**
+    -   Limit ingredient search area.
+-   [ ] **Ingredient filters**
+    -   Restrict materials/categories.
+-   [ ] **Worker restrictions**
+    -   Skill range/specific pawn if desired for parity.
+-   [ ] **Product destination**
+    -   Drop on floor.
+    -   take to best stockpile.
+    -   specific storage destination where supported.
+
+## 14.3 Crafting
+
+-   [ ] **Stone cutting**
+-   [ ] **Butchering**
+-   [ ] **Cooking**
+-   [ ] **Tailoring/apparel production**
+-   [ ] **Smithing/weapon production**
+-   [ ] **Machining/advanced fabrication equivalents**
+-   [ ] **Drug production**
+-   [ ] **Component production in late tech**
+
+## 14.4 Quality
+
+-   [ ] **Craft quality generation**
+    -   Skill/inspiration influence.
+    -   Quality affects market value and relevant item stats.
+
+## 14.5 Art
+
+-   [ ] **Artistic work**
+    -   Sculptures/art objects.
+    -   quality.
+    -   beauty.
+    -   creator attribution.
+-   [ ] **Art descriptions**
+    -   Generate original procedural descriptions from structured
+        events/grammar.
+    -   Do not copy RimWorld text.
+
+------------------------------------------------------------------------
+
+# PHASE 15 --- Power and Electrical Infrastructure
+
+## 15.1 Power network
+
+-   [ ] **Power producers**
+    -   Fuel-based generator.
+    -   solar.
+    -   wind.
+    -   geothermal-like late generator.
+-   [ ] **Power consumers**
+    -   Workstations.
+    -   lights.
+    -   coolers/heaters.
+    -   communications.
+    -   defensive/utility equipment where applicable.
+-   [ ] **Power conduits/network**
+    -   Connected graph.
+    -   Topology recalculated only when changed.
+-   [ ] **Power availability**
+    -   Producers feed network.
+    -   consumers activate only with sufficient supply.
+
+## 15.2 Batteries
+
+-   [ ] **Energy storage**
+    -   Charge/discharge.
+    -   capacity.
+-   [ ] **Battery discharge event**
+    -   Short-circuit/Zzztt-like event can release stored energy and
+        start fire.
+    -   Implement independently without copying exact balance.
+
+## 15.3 Variable generation
+
+-   [ ] **Solar day/weather output**
+-   [ ] **Wind turbine output**
+    -   Wind state and obstruction rules.
+-   [ ] **Fuel consumption**
+    -   Refuel jobs for generators/devices.
+
+------------------------------------------------------------------------
+
+# PHASE 16 --- Apparel, Equipment, Weapons, and Loadout Policies
+
+## 16.1 Equipment
+
+-   [ ] **Single equipped primary weapon**
+    -   Equip/drop.
+    -   weapon stats.
+    -   melee fallback for ranged weapons.
+-   [ ] **Equipment jobs**
+    -   Player order to equip.
+    -   dropped weapon can be hauled/stored.
+
+## 16.2 Apparel
+
+-   [ ] **Wearable apparel**
+    -   Body-part/layer coverage.
+    -   material.
+    -   armor.
+    -   insulation.
+    -   quality.
+    -   hit points.
+-   [ ] **Apparel compatibility**
+    -   Conflicting body layers/slots cannot be worn together.
+-   [ ] **Apparel deterioration**
+    -   Worn apparel can lose condition.
+-   [ ] **Apparel policy**
+    -   Allowed categories.
+    -   minimum condition.
+    -   quality filters.
+    -   pawn automatically changes apparel when safe/appropriate.
+-   [ ] **Tainted apparel**
+    -   Apparel from a corpse can carry negative social/mood semantics
+        for ordinary colonists.
+
+## 16.3 Weapon categories
+
+-   [ ] **Melee weapons**
+    -   Multiple attack verbs/damage profiles.
+-   [ ] **Ranged weapons**
+    -   Range.
+    -   warmup.
+    -   cooldown.
+    -   accuracy by distance.
+    -   burst count where applicable.
+    -   projectile definition.
+-   [ ] **Thrown/explosive weapons**
+    -   Grenade-like projectile.
+    -   blast radius.
+-   [ ] **Single-use launchers**
+    -   Consumable weapon/equipment class if desired for vanilla parity.
+-   [ ] **No ammunition for ordinary guns**
+    -   Base RimWorld's standard ranged weapons do not require ammo;
+        preserve this experience unless a plugin changes it.
+        citeturn2search1
+
+------------------------------------------------------------------------
+
+# PHASE 17 --- Drafting, Combat, Cover, Armor, Projectiles, and Explosions
+
+## 17.1 Drafting
+
+-   [ ] **Draft/undraft**
+    -   Drafted colonists stop autonomous work and accept tactical
+        orders.
+-   [ ] **Drafted movement order**
+-   [ ] **Attack target order**
+-   [ ] **Hold/fire-at-will behavior**
+-   [ ] **Drafted field tending**
+    -   Allow emergency tending under appropriate conditions.
+
+## 17.2 Line of sight
+
+-   [ ] **Projectile LOS**
+    -   Walls/solid obstacles block.
+    -   Adjacent wall leaning/corner firing equivalent where needed for
+        familiar tactical behavior.
+
+## 17.3 Cover
+
+-   [ ] **Cover objects**
+    -   Walls, barricade/sandbag equivalents, chunks, trees, etc.
+    -   Cover affects incoming ranged hit chance.
+-   [ ] **Cover calculation**
+    -   Relative shooter-target-cover geometry.
+    -   Stable deterministic resolution.
+
+## 17.4 Ranged attack
+
+-   [ ] **Target acquisition**
+-   [ ] **Warmup**
+-   [ ] **Accuracy**
+    -   Shooting skill.
+    -   weapon.
+    -   distance.
+    -   target size.
+    -   weather/light if modeled.
+    -   cover.
+-   [ ] **Projectile flight**
+    -   Logical projectile entity or deterministic trajectory.
+    -   Can miss intended target and impact another valid cell/entity
+        where design supports it.
+-   [ ] **Burst fire**
+-   [ ] **Cooldown**
+
+## 17.5 Melee
+
+-   [ ] **Adjacent melee combat**
+    -   Pawns next to hostile target use melee even if holding ranged
+        weapon, matching vanilla's core behavior. citeturn2search1
+-   [ ] **Melee hit chance**
+-   [ ] **Weapon/body attacks**
+-   [ ] **Melee cooldown**
+
+## 17.6 Armor
+
+-   [ ] **Armor coverage**
+    -   Apparel covers body parts.
+-   [ ] **Armor categories**
+    -   Sharp/blunt/heat-style protection.
+-   [ ] **Armor resolution**
+    -   Attack penetration vs armor.
+    -   Can reduce/deflect damage.
+    -   Damage ultimately applies to selected anatomy.
+
+## 17.7 Explosions
+
+-   [ ] **Blast cells**
+-   [ ] **Radial damage**
+-   [ ] **Fire chance**
+-   [ ] **Building/item/pawn damage**
+-   [ ] **Chain reaction support for explosive content**
+
+## 17.8 Combat AI
+
+-   [ ] **Hostile target selection**
+-   [ ] **Approach/ranged engagement**
+-   [ ] **Melee closing**
+-   [ ] **Basic cover seeking**
+-   [ ] **Flee behavior for appropriate human enemies**
+
+------------------------------------------------------------------------
+
+# PHASE 18 --- Animals, Wildlife, Hunting, Taming, Training, and Pens
+
+Base-game animal simulation should include wild populations, hunting,
+taming, training, animal products, predators, manhunter behavior, and
+domestic management. Where modern base-game RimWorld uses pens for farm
+animals, support the equivalent without pulling in DLC-only genetics or
+children systems.
+
+## 18.1 Species definitions
+
+-   [ ] **Animal species**
+    -   Anatomy.
+    -   body size.
+    -   movement.
+    -   diet.
+    -   wildness.
+    -   trainability.
+    -   combat stats.
+    -   leather/meat yield.
+    -   temperature range.
+    -   reproduction/product properties if enabled.
+
+## 18.2 Wildlife
+
+-   [ ] **Biome wildlife population**
+    -   Spawn species appropriate to biome/climate.
+-   [ ] **Animal hunger/rest**
+    -   Simpler needs than humans.
+-   [ ] **Grazing/foraging**
+-   [ ] **Predation**
+    -   Predators select prey and hunt.
+-   [ ] **Wild animal flee/fight response**
+
+## 18.3 Hunting
+
+-   [ ] **Hunt designation**
+-   [ ] **Hunter requires suitable ranged weapon**
+-   [ ] **Stalk/approach/fire job**
+-   [ ] **Animal retaliation/manhunter chance**
+-   [ ] **Corpse hauling/butchering integration**
+
+## 18.4 Taming
+
+-   [ ] **Tame designation**
+-   [ ] **Animal-handling interaction**
+-   [ ] **Food requirement**
+-   [ ] **Success chance based on skill/wildness**
+-   [ ] **Tame animal joins colony**
+
+## 18.5 Training
+
+-   [ ] **Trainability**
+-   [ ] **Obedience**
+-   [ ] **Release/attack training**
+-   [ ] **Rescue**
+-   [ ] **Hauling**
+    -   Only species capable of relevant training.
+-   [ ] **Training decay/maintenance**
+    -   Skills can require reinforcement if matching target behavior.
+
+## 18.6 Animal zones/pens
+
+-   [ ] **Animal allowed areas for zonable animals**
+-   [ ] **Pen system for appropriate livestock**
+    -   Pen markers/boundaries.
+    -   rope/lead jobs.
+    -   enclosure validity.
+    -   nutrition/grazing information.
+
+## 18.7 Animal products
+
+-   [ ] **Milk production**
+-   [ ] **Wool production**
+-   [ ] **Egg laying**
+    -   Data-driven species components.
+
+## 18.8 Reproduction
+
+-   [ ] **Mating/pregnancy**
+-   [ ] **Birth/hatching**
+-   [ ] **Population control policies if included in target vanilla
+    version**
+
+## 18.9 Manhunter/scaria-like state
+
+-   [ ] **Manhunter**
+    -   Hostile animal mental state.
+    -   Can result from damage/event.
+-   [ ] **Manhunter pack incident**
+    -   Storyteller-generated group attack.
+
+------------------------------------------------------------------------
+
+# PHASE 19 --- Prisoners, Capture, Recruitment, and Colony Population Growth
+
+## 19.1 Capture
+
+-   [ ] **Capture downed hostile**
+    -   Carry to prisoner-designated bed/room.
+-   [ ] **Prisoner state**
+    -   Faction remains distinct until recruited.
+    -   Restricted movement/escape behavior.
+
+## 19.2 Prisoner needs
+
+-   [ ] **Food/rest/health/mood**
+    -   Prisoners remain simulated pawns with reduced player control.
+-   [ ] **Prisoner feeding**
+-   [ ] **Prisoner medical care**
+
+## 19.3 Warden interactions
+
+-   [ ] **Prisoner interaction mode**
+    -   No interaction.
+    -   reduce resistance.
+    -   recruit.
+    -   release.
+    -   execute/medical operations if allowed by game rules.
+-   [ ] **Resistance/recruitment difficulty**
+    -   Warden social skill and prisoner mood influence progress.
+-   [ ] **Recruitment**
+    -   Successful recruit joins player's faction.
+
+## 19.4 Prison breaks
+
+-   [ ] **Escape attempt**
+    -   Prisoner(s) can attempt to break out based on conditions.
+
+## 19.5 Other recruitment
+
+-   [ ] **Rescue/recovery join chance**
+-   [ ] **Wanderer/migrant joins event**
+-   [ ] **Refugee/visitor join opportunity where part of base event
+    set**
+-   [ ] **Quest-related joins when quest system is implemented**
+
+------------------------------------------------------------------------
+
+# PHASE 20 --- Factions, Goodwill, Visitors, Traders, and Trade
+
+Factions drive NPC interaction. Depending on faction type and
+relationship, members can visit, trade, assist, or raid; goodwill can
+change relationships, and settlements exist on the world map.
+citeturn2search0turn2search9
+
+## 20.1 Faction definitions
+
+-   [ ] **Faction types**
+    -   Player colony.
+    -   tribal-level human factions.
+    -   industrial/outlander-like factions.
+    -   pirate/permanently hostile faction.
+    -   mechanoid faction.
+    -   insect faction.
+    -   ancients/neutral special faction as required.
+-   [ ] **Faction tech level**
+    -   Influences equipment, settlements, trader inventory, raid
+        methods.
+-   [ ] **Faction naming**
+    -   Original procedural faction/settlement names.
+
+## 20.2 Goodwill
+
+-   [ ] **Relationship score**
+    -   Hostile / neutral / ally states derived from goodwill/rules.
+-   [ ] **Goodwill changes**
+    -   Gifts.
+    -   attacks.
+    -   harming visitors.
+    -   quest outcomes.
+    -   assistance.
+    -   settlement proximity if included.
+-   [ ] **Permanent hostility**
+    -   Some factions cannot become friendly.
+
+## 20.3 Visitors
+
+-   [ ] **Friendly visitor group**
+    -   Enters map.
+    -   wanders/stays.
+    -   leaves.
+    -   reacts to danger.
+
+## 20.4 Trade caravans
+
+-   [ ] **Trader arrival**
+    -   Group with trader pawn and pack animals/inventory.
+-   [ ] **Trade interaction**
+    -   Select social-capable colonist.
+    -   Open trade screen.
+-   [ ] **Buy/sell**
+    -   Colony stored eligible items available.
+    -   Trader inventory and silver/currency.
+    -   Purchased goods delivered/dropped.
+-   [ ] **Trade price**
+    -   Social skill and faction/trader factors influence price.
+-   [ ] **Trader types**
+    -   Different inventories such as bulk goods, combat/exotic, slave
+        trader if included for historical vanilla parity, etc.
+    -   Use original names/content.
+
+## 20.5 Orbital trade
+
+-   [ ] **Communications console**
+-   [ ] **Orbital trade beacon**
+    -   Defines tradeable nearby storage.
+-   [ ] **Orbital trader event**
+-   [ ] **Remote faction communication**
+    -   Request caravans/help where relationship allows.
+
+------------------------------------------------------------------------
+
+# PHASE 21 --- Research and Technology Progression
+
+Research is the main technology progression mechanism: colonists work at
+research benches to accumulate research toward projects, most projects
+have prerequisites, and technologies unlock buildings/gear.
+citeturn0search12
+
+## 21.1 Research definitions
+
+-   [ ] **Research project**
+    -   Cost.
+    -   prerequisites.
+    -   tech level.
+    -   required bench/facilities.
+    -   unlocked definitions.
+-   [ ] **Research DAG**
+    -   Validate no invalid cycles.
+    -   UI layout can derive from prerequisite graph.
+
+## 21.2 Research work
+
+-   [ ] **Simple research bench**
+-   [ ] **Advanced research bench**
+-   [ ] **Research job**
+    -   Intellectual skill.
+    -   bench speed.
+    -   room/environment modifiers as appropriate.
+-   [ ] **Research progress**
+    -   Player selects active project.
+    -   Researchers contribute points.
+    -   completion unlocks content.
+
+## 21.3 Tech progression categories
+
+Implement original content equivalents covering the vanilla functional
+progression:
+
+-   [ ] **Electricity**
+-   [ ] **Battery/storage**
+-   [ ] **Cooling/temperature control**
+-   [ ] **Stoneworking**
+-   [ ] **Complex furniture**
+-   [ ] **Drug production**
+-   [ ] **Microelectronics/communications**
+-   [ ] **Advanced fabrication**
+-   [ ] **Weapon technologies**
+-   [ ] **Armor/apparel technologies**
+-   [ ] **Geothermal/advanced power**
+-   [ ] **Hospital/medical technology**
+-   [ ] **Transport pods**
+-   [ ] **Ship/endgame technologies**
+
+------------------------------------------------------------------------
+
+# PHASE 22 --- World Generation, Biomes, Local Map Generation, and Settlements
+
+RimWorld generates a seeded planet with world tiles, biomes, rainfall,
+temperature, elevation, latitude, terrain type, growing period, and
+faction settlements; players choose a landing tile before generating the
+local colony map. citeturn1search4
+
+## 22.1 Planet
+
+-   [ ] **Seeded world generation**
+-   [ ] **World tile graph**
+    -   Hex-like adjacency or an independently implemented equivalent
+        supporting travel.
+-   [ ] **Latitude**
+-   [ ] **Elevation**
+-   [ ] **Rainfall**
+-   [ ] **Temperature**
+-   [ ] **Seasonality**
+-   [ ] **Movement difficulty**
+-   [ ] **Roads**
+-   [ ] **Rivers**
+    -   If part of chosen base-game target.
+
+## 22.2 Biomes
+
+Implement functional equivalents for vanilla biome classes, with
+original assets/content:
+
+-   [ ] **Temperate forest**
+-   [ ] **Boreal forest**
+-   [ ] **Tropical rainforest**
+-   [ ] **Arid shrubland**
+-   [ ] **Desert**
+-   [ ] **Extreme desert**
+-   [ ] **Tundra**
+-   [ ] **Ice sheet**
+-   [ ] **Sea ice**
+-   [ ] **Temperate swamp**
+-   [ ] **Tropical swamp**
+-   [ ] **Cold bog**
+
+Each biome defines: - terrain mix; - plant density/species; -
+wildlife; - rainfall; - temperature profile; - disease frequency; -
+forage; - local map appearance.
+
+## 22.3 Terrain topology
+
+-   [ ] **Flat**
+-   [ ] **Small hills**
+-   [ ] **Large hills**
+-   [ ] **Mountainous**
+
+## 22.4 Local map generation
+
+-   [ ] **Terrain from biome/topology**
+-   [ ] **Rock/mountain mass**
+-   [ ] **Ore/resource deposits**
+-   [ ] **Water**
+-   [ ] **Wild vegetation**
+-   [ ] **Wildlife**
+-   [ ] **Ancient ruins/debris**
+-   [ ] **Starting clear/landing area**
+
+## 22.5 Faction settlements
+
+-   [ ] **Settlement placement**
+-   [ ] **Faction territory distribution**
+-   [ ] **Settlement trade inventory**
+-   [ ] **Hostile settlement attack map**
+-   [ ] **Settlement destruction**
+    -   Destroying all settlements can eliminate a faction's world
+        presence.
+
+## 22.6 Landing-site UI
+
+-   [ ] **Inspect world tile**
+    -   Biome.
+    -   terrain.
+    -   temperature.
+    -   rainfall.
+    -   growing period.
+    -   movement difficulty.
+    -   nearby factions.
+-   [ ] **Choose starting tile**
+-   [ ] **Generate colony map from world tile**
+
+------------------------------------------------------------------------
+
+# PHASE 23 --- Scenarios, Starting Pawns, Difficulty, and Storytellers
+
+Base RimWorld uses starting scenarios and three major storyteller
+personalities: Cassandra Classic, Phoebe Chillax, and Randy Random.
+Storytellers control event pacing rather than directly controlling
+colonists. citeturn1search8turn1search9
+
+## 23.1 Scenario system
+
+-   [ ] **Scenario definition**
+    -   Starting pawn count.
+    -   pawn constraints.
+    -   starting research.
+    -   starting items.
+    -   starting animals.
+    -   initial conditions.
+    -   recurring/permanent scenario effects.
+-   [ ] **Crashlanded-like standard start**
+    -   Three colonists.
+    -   practical starting supplies/weapons.
+    -   basic technology.
+-   [ ] **Single-survivor difficult start**
+-   [ ] **Tribal/low-tech group start**
+-   [ ] **Rich solo high-tech start**
+    -   Use original scenario names and prose.
+-   [ ] **Scenario editor**
+    -   Optional but important vanilla feature.
+    -   Add/remove scenario parts and conditions.
+    -   Save custom scenarios.
+
+## 23.2 Pawn selection
+
+-   [ ] **Starting pawn roster generation**
+-   [ ] **Reroll/randomize candidates**
+-   [ ] **Display skills/traits/incapabilities/health/relationships**
+
+## 23.3 Difficulty
+
+-   [ ] **Difficulty profile**
+    -   Threat scaling.
+    -   economy/yields.
+    -   disease.
+    -   mood.
+    -   adaptation.
+    -   death/downing behavior as appropriate.
+-   [ ] **Custom difficulty**
+    -   Expose major multipliers/toggles.
+
+## 23.4 Storyteller framework
+
+-   [ ] **Storyteller component**
+    -   Reads colony state.
+    -   schedules incidents.
+    -   tracks cooldowns/threat pacing.
+    -   deterministic from storyteller RNG stream.
+-   [ ] **Paced storyteller**
+    -   Regular pressure and recovery cadence.
+-   [ ] **Relaxed storyteller**
+    -   Longer building/recovery windows.
+-   [ ] **Random storyteller**
+    -   Less predictable event timing/type.
+
+Use original names rather than copying RimWorld storyteller characters.
+
+------------------------------------------------------------------------
+
+# PHASE 24 --- Wealth, Threat Scaling, Raids, Sieges, Infestations, and Major Threats
+
+## 24.1 Colony wealth
+
+-   [ ] **Wealth calculation**
+    -   Items.
+    -   buildings.
+    -   pawns/animals where appropriate.
+    -   Expose wealth history.
+-   [ ] **Threat points**
+    -   Storyteller converts colony state, population, wealth, time,
+        adaptation/difficulty into threat budget.
+    -   Exact RimWorld formula is not required and should not be copied.
+
+## 24.2 Raid generation
+
+-   [ ] **Select hostile faction**
+-   [ ] **Generate raider group from point budget**
+-   [ ] **Generate equipment based on faction/tech**
+-   [ ] **Map-edge arrival**
+-   [ ] **Immediate attack**
+-   [ ] **Prepare-before-attack behavior**
+
+## 24.3 Raid tactics
+
+-   [ ] **Basic assault**
+-   [ ] **Sappers/breachers equivalent**
+    -   Attack walls/alternate route instead of blindly using normal
+        entrance.
+-   [ ] **Drop-pod assault**
+    -   Industrial factions can arrive from above.
+-   [ ] **Center/scatter drop variants**
+-   [ ] **Siege**
+    -   Raiders establish temporary siege position, receive/build
+        artillery/supplies, bombard colony, then assault.
+
+## 24.4 Raider morale
+
+-   [ ] **Human raider flee threshold**
+    -   Group may flee after sufficient casualties/damage.
+-   [ ] **Kidnap behavior**
+    -   Raiders can carry downed colonists away under suitable
+        circumstances.
+-   [ ] **Steal behavior**
+    -   Raiders may steal valuable reachable items when
+        retreating/meeting goals.
+
+## 24.5 Mechanoid threats
+
+-   [ ] **Mechanoid pawn types**
+    -   Machine enemies with different weapon/range roles.
+    -   No human mood/needs.
+-   [ ] **Mechanoid raid**
+    -   Persistent hostile behavior; does not use ordinary human morale.
+-   [ ] **Crashed ship-part threat**
+    -   Psychic/defoliator-like hostile world object.
+    -   Dormant/guarding mechanoids.
+    -   Persistent map effect until destroyed.
+    -   Use original content/names.
+
+## 24.6 Insects
+
+-   [ ] **Insect species**
+-   [ ] **Hive**
+    -   Spawns/maintains insect population.
+-   [ ] **Infestation incident**
+    -   Can emerge in valid under-mountain/dark/warm areas according to
+        independently implemented rules.
+-   [ ] **Hive reproduction**
+-   [ ] **Insect hostile AI**
+
+## 24.7 Manhunter threat
+
+-   [ ] **Manhunter pack incident**
+    -   Storyteller selects suitable animal species and group size.
+    -   Animals enter map hostile to humans.
+
+------------------------------------------------------------------------
+
+# PHASE 25 --- Incident and Story Event Catalog
+
+The storyteller creates both threats and opportunities. Base-game event
+classes include raids, infestations, manhunter packs, crashed ship
+parts, weather/environmental events, traders, visitors, resource events,
+and other colony incidents. citeturn2search2turn2search7
+
+## 25.1 Incident framework
+
+-   [ ] **Incident definition**
+    -   Category.
+    -   eligibility.
+    -   weight.
+    -   cooldown.
+    -   target map/world object.
+    -   point budget.
+    -   execute function.
+-   [ ] **Incident queue**
+    -   Scheduled delayed incidents.
+    -   Save/load safe.
+
+## 25.2 Positive/neutral incidents
+
+-   [ ] **Trader caravan**
+-   [ ] **Orbital trader**
+-   [ ] **Friendly visitors**
+-   [ ] **Wanderer joins**
+-   [ ] **Transport pod crash / downed stranger**
+-   [ ] **Resource meteorite**
+-   [ ] **Cargo pod drop**
+-   [ ] **Animal joins**
+-   [ ] **Farm animals wander in**
+-   [ ] **Rare self-tame animal**
+-   [ ] **Wild animal migration**
+-   [ ] **Party**
+-   [ ] **Marriage**
+-   [ ] **Psychic soothe-like temporary positive mood event**
+    -   Original presentation/content.
+
+## 25.3 Negative incidents
+
+-   [ ] **Raid**
+-   [ ] **Infestation**
+-   [ ] **Manhunter pack**
+-   [ ] **Animal insanity**
+-   [ ] **Disease outbreak**
+-   [ ] **Blight**
+    -   Crop disease spreads/destroys plants.
+-   [ ] **Toxic fallout**
+-   [ ] **Heat wave**
+-   [ ] **Cold snap**
+-   [ ] **Eclipse**
+-   [ ] **Solar flare**
+-   [ ] **Flashstorm**
+-   [ ] **Dry thunderstorm**
+-   [ ] **Psychic drone-like mood event**
+-   [ ] **Volcanic-winter-like long climate event if part of target base
+    version**
+-   [ ] **Crashed hostile ship part**
+-   [ ] **Short circuit/battery discharge**
+-   [ ] **Animal predator hunts colonist**
+    -   May be AI-driven rather than storyteller incident.
+
+## 25.4 Letters/messages
+
+-   [ ] **Event letter system**
+    -   Positive/neutral/negative/threat categories.
+    -   Camera jump target.
+    -   relevant entities.
+    -   optional choices.
+-   [ ] **Message system**
+    -   Short transient notices.
+    -   Rate-limit repeated low-value messages.
+-   [ ] **Alert system**
+    -   Persistent colony problems:
+        -   low food;
+        -   colonist needs rescue;
+        -   medical emergency;
+        -   break risk;
+        -   no research;
+        -   idle colonists;
+        -   unburied colonist;
+        -   dangerous temperature;
+        -   missing beds;
+        -   animal starvation;
+        -   major threat.
+
+------------------------------------------------------------------------
+
+# PHASE 26 --- Drugs, Alcohol, Addiction, Tolerance, and Policies
+
+## 26.1 Drug definitions
+
+-   [ ] **Consumable drug**
+    -   immediate effects.
+    -   health effects.
+    -   mood effects.
+    -   consciousness/movement/pain modifiers.
+    -   tolerance.
+    -   addiction chance.
+    -   overdose/toxicity where appropriate.
+-   [ ] **Representative functional categories**
+    -   beer/alcohol.
+    -   smokeleaf-like relaxant.
+    -   psychite tea-like mild stimulant.
+    -   wake-up-like stimulant.
+    -   go-juice-like combat stimulant.
+    -   hard euphoric drug.
+    -   Use original names/assets.
+
+## 26.2 Tolerance
+
+-   [ ] **Drug tolerance**
+    -   Repeated use builds tolerance.
+    -   Tolerance reduces effect and/or increases health risk depending
+        on definition.
+    -   Decays with abstinence.
+
+## 26.3 Addiction
+
+-   [ ] **Addiction chance**
+-   [ ] **Addiction need**
+    -   Becomes a pawn need.
+-   [ ] **Withdrawal**
+    -   Health/mood/stat effects.
+    -   Resolves after sufficient abstinence for recoverable addictions.
+
+## 26.4 Drug policy
+
+-   [ ] **Policy definitions**
+    -   Allowed drugs.
+    -   recreational use.
+    -   scheduled use.
+    -   mood threshold.
+    -   recreation threshold.
+    -   carry quantity.
+-   [ ] **Autonomous drug use**
+    -   Pawn follows policy unless mental state/trait overrides.
+
+## 26.5 Chemical traits
+
+-   [ ] **Chemical-interest/fascination equivalent**
+    -   Alters drug desire/autonomous behavior and chemical need.
+
+------------------------------------------------------------------------
+
+# PHASE 27 --- Clothing Assignment, Food Restrictions, Medical Policies, and Colony Management UI
+
+## 27.1 Assign tab
+
+-   [ ] **Food restriction policy**
+    -   Allowed food categories/items.
+    -   Pawn food search respects policy.
+-   [ ] **Apparel policy**
+    -   Already implemented functionally; expose colony-wide policy
+        editor.
+-   [ ] **Drug policy**
+    -   Already implemented functionally; expose editor.
+-   [ ] **Medical care policy**
+    -   Per pawn maximum medicine/care level.
+
+## 27.2 Animal management
+
+-   [ ] **Animals tab**
+    -   Master assignment if supported.
+    -   training.
+    -   allowed area/pen.
+    -   slaughter.
+    -   medical settings.
+
+## 27.3 Wildlife tab
+
+-   [ ] **Wildlife list**
+    -   species.
+    -   count.
+    -   predator status.
+    -   hunt designation.
+    -   tameness-related information.
+
+## 27.4 Work tab
+
+-   [ ] **Scalable work-priority matrix**
+    -   Sorting/filtering.
+    -   manual priority toggle.
+    -   skill/passions visible.
+
+## 27.5 Schedule tab
+
+-   [ ] **Schedule matrix**
+    -   Paint schedule blocks across multiple pawns.
+
+## 27.6 History/statistics
+
+-   [ ] **Colony wealth graph**
+-   [ ] **Population history**
+-   [ ] **Major event history**
+-   [ ] **Pawn records**
+    -   kills, work, damage, time, etc. where meaningful.
+
+------------------------------------------------------------------------
+
+# PHASE 28 --- Caravans and World Travel
+
+Caravans are groups of colonists/animals/prisoners that leave a local
+map and travel across the world for trade, quests, attacks, or
+relocation. citeturn2search12
+
+## 28.1 Caravan formation
+
+-   [ ] **Form caravan dialog**
+    -   Select colonists.
+    -   animals.
+    -   prisoners.
+    -   items.
+    -   food.
+    -   destination.
+-   [ ] **Mass/carry capacity**
+    -   Pawns and pack animals carry limited mass.
+-   [ ] **Travel supplies**
+    -   Estimate food and travel time.
+-   [ ] **Gather/loading phase**
+    -   Pawns collect assigned cargo before departure.
+-   [ ] **Exit map**
+    -   Caravan becomes world object.
+
+## 28.2 World movement
+
+-   [ ] **World pathfinding**
+    -   Route across world tiles.
+    -   Terrain/roads affect movement.
+-   [ ] **Travel speed**
+    -   Pawn/animal capacities.
+    -   mass.
+    -   terrain.
+    -   road.
+    -   weather/season where appropriate.
+-   [ ] **Foraging**
+    -   Caravan can gain food from suitable tiles based on skills/biome.
+-   [ ] **Rest**
+    -   Caravan pauses/rests according to travel cycle.
+
+## 28.3 Caravan needs
+
+-   [ ] **Food consumption**
+-   [ ] **Health/disease progression**
+-   [ ] **Mood effects**
+-   [ ] **Animal feeding**
+-   [ ] **Prisoner handling**
+
+Use aggregated/analytical updates rather than simulating local-map jobs.
+
+## 28.4 Caravan interactions
+
+-   [ ] **Visit friendly settlement**
+    -   Trade.
+    -   gifts.
+-   [ ] **Attack hostile settlement**
+-   [ ] **Enter event/quest map**
+-   [ ] **Ambush encounter**
+-   [ ] **Return to colony**
+-   [ ] **Settle new colony**
+    -   If multiple colonies are supported by target scope.
+
+## 28.5 Transport pods
+
+-   [ ] **Pod launcher**
+-   [ ] **Fuel**
+-   [ ] **Load pawns/items**
+-   [ ] **World-range targeting**
+-   [ ] **Launch**
+-   [ ] **Arrival at map/settlement**
+    -   Trade/attack/reinforce/gift depending target.
+
+------------------------------------------------------------------------
+
+# PHASE 29 --- Quests and Temporary World Sites
+
+Base-game factions can generate quests, often asking the player to
+travel, rescue, fight, deliver, or interact with a temporary site in
+exchange for rewards. citeturn2search0
+
+## 29.1 Quest framework
+
+-   [ ] **Quest state**
+    -   offered.
+    -   accepted.
+    -   active.
+    -   succeeded.
+    -   failed.
+    -   expired.
+-   [ ] **Quest choice/reward**
+    -   One or more reward options where appropriate.
+-   [ ] **Quest timers**
+    -   Offer expiry.
+    -   completion deadline.
+    -   delayed follow-up.
+-   [ ] **Quest-generated world object**
+    -   Temporary site.
+    -   map generated on arrival.
+    -   cleanup after resolution.
+
+## 29.2 Base quest archetypes
+
+-   [ ] **Rescue downed/captured person**
+-   [ ] **Prisoner rescue**
+-   [ ] **Item stash**
+-   [ ] **Bandit/outpost attack**
+-   [ ] **Trade request**
+-   [ ] **Deliver requested items**
+-   [ ] **Hospitality/refugee-style temporary guests if base-version
+    appropriate**
+-   [ ] **Peace talks/diplomatic site**
+-   [ ] **AI persona/core-style rare objective**
+-   [ ] **Distress signal/ambush variant**
+
+Use original narrative text and generated names.
+
+## 29.3 Rewards
+
+-   [ ] **Items/silver**
+-   [ ] **Goodwill**
+-   [ ] **Joiner/recruit**
+-   [ ] **Rare technology/item reward**
+
+------------------------------------------------------------------------
+
+# PHASE 30 --- Advanced Enemy AI and Tactical Variety
+
+-   [ ] **Raid group lord/controller**
+
+    -   Group objective controls broad behavior.
+    -   Individual pawns use local jobs.
+
+-   [ ] **Staging**
+
+    -   Raiders wait at rally area before attack.
+
+-   [ ] **Assault trigger**
+
+    -   Time, damage, player proximity, or storyteller condition.
+
+-   [ ] **Target priority**
+
+    -   Reachable colonists.
+    -   defensive structures.
+    -   valuable colony objects.
+    -   power/doors depending tactic.
+
+-   [ ] **Breach logic**
+
+    -   Select wall/door targets when normal route unsuitable.
+
+-   [ ] **Siege construction**
+
+-   [ ] **Siege bombardment**
+
+-   [ ] **Siege assault transition**
+
+-   [ ] **Retreat**
+
+    -   Human raid morale.
+    -   carry stolen goods/kidnapped pawn if feasible.
+
+-   [ ] **Faction-on-faction hostility**
+
+    -   NPC groups from hostile factions can fight each other when
+        simultaneously present.
+
+------------------------------------------------------------------------
+
+# PHASE 31 --- Advanced Economy, Market Value, Traders, and Colony Wealth
+
+-   [ ] **Market value**
+    -   Every tradeable item/pawn/animal has value derived from
+        definition, quality, condition, material, etc.
+-   [ ] **Buy/sell price modifiers**
+    -   Trader markup.
+    -   social skill.
+    -   faction relationship where desired.
+-   [ ] **Silver/currency**
+    -   Physical stackable currency.
+    -   Used in trade.
+-   [ ] **Trader inventory generation**
+    -   Category.
+    -   tech level.
+    -   wealth.
+    -   random stock.
+    -   deterministic generation.
+-   [ ] **Restocking settlements**
+    -   Inventory refreshes after time.
+-   [ ] **Gifts**
+    -   Give goods to faction for goodwill.
+-   [ ] **Wealth-driven expectations**
+    -   Pawn expectation thought scales with colony development.
+-   [ ] **Wealth-driven threats**
+    -   Storyteller threat budget uses colony wealth plus other pacing
+        variables.
+
+------------------------------------------------------------------------
+
+# PHASE 32 --- Endgame: Ship Construction, Reactor Defense, and Escape
+
+Vanilla RimWorld's classic endgame is to reach/build a ship, activate
+its reactor, survive a sustained period of intensified attacks, place
+colonists into cryptosleep caskets, and launch/escape. Implement the
+experience with original names/assets/text.
+
+## 32.1 Ship technology
+
+-   [ ] **Endgame research chain**
+-   [ ] **Ship structural components**
+-   [ ] **Ship computer/core**
+-   [ ] **Reactor**
+-   [ ] **Cryptosleep caskets**
+-   [ ] **Engine components**
+
+## 32.2 Ship validation
+
+-   [ ] **Connected valid ship**
+    -   Required components connected.
+    -   enough caskets for intended passengers.
+
+## 32.3 Reactor startup
+
+-   [ ] **Start reactor**
+    -   Explicit player action.
+    -   Starts long activation countdown.
+-   [ ] **Endgame threat escalation**
+    -   Storyteller generates frequent/high-pressure raids during
+        startup.
+    -   Deterministic incident schedule from campaign state.
+
+## 32.4 Launch
+
+-   [ ] **Load colonists into caskets**
+-   [ ] **Launch command**
+-   [ ] **Victory state**
+    -   Escaping pawns recorded.
+    -   colony story may continue if pawns remain, depending chosen
+        behavior.
+-   [ ] **Credits/story summary**
+    -   Original presentation and music/assets.
+
+## 32.5 Alternative ship objective
+
+-   [ ] **Distant pre-existing ship world quest**
+    -   Optional vanilla-equivalent path: travel across world to a known
+        ship and activate it.
+
+------------------------------------------------------------------------
+
+# PHASE 33 --- Save/Load, Autosave, Multiple Saves, and Campaign Continuity
+
+Although foundational persistence exists earlier, this phase completes
+the player-facing system.
+
+-   [ ] **Manual save**
+-   [ ] **Load game**
+-   [ ] **Save metadata**
+    -   Colony.
+    -   world seed.
+    -   tick/date.
+    -   version.
+    -   enabled plugins.
+    -   content hash.
+-   [ ] **Autosave**
+    -   Configurable cadence.
+    -   Consistent snapshot without long simulation stall.
+-   [ ] **Rotating autosaves**
+-   [ ] **Save naming/overwrite**
+-   [ ] **Ironman/commitment-style save mode**
+    -   Restricts ordinary save-scumming behavior if selected.
+-   [ ] **Schema migration**
+-   [ ] **Corruption validation**
+-   [ ] **Safe atomic writes**
+-   [ ] **Save/replay deterministic equality tests**
+
+------------------------------------------------------------------------
+
+# PHASE 34 --- Full UI, Overlays, Alerts, Architect Menus, and Quality of Life
+
+## 34.1 Architect/build menu
+
+-   [ ] **Orders**
+-   [ ] **Zone/area**
+-   [ ] **Structure**
+-   [ ] **Production**
+-   [ ] **Furniture**
+-   [ ] **Power**
+-   [ ] **Security**
+-   [ ] **Misc/ship**
+    -   Categories may use original naming.
+
+## 34.2 Overlays
+
+-   [ ] **Roof overlay**
+-   [ ] **Power grid**
+-   [ ] **Beauty**
+-   [ ] **Room stats**
+-   [ ] **Fertility**
+-   [ ] **Terrain/path cost debug**
+-   [ ] **Home area**
+-   [ ] **Allowed areas**
+-   [ ] **Storage zones**
+-   [ ] **Growing zones**
+-   [ ] **Temperature**
+
+## 34.3 Pawn tabs
+
+-   [ ] **Needs**
+-   [ ] **Health**
+-   [ ] **Gear**
+-   [ ] **Social**
+-   [ ] **Character/bio**
+-   [ ] **Records**
+
+## 34.4 Global tabs
+
+-   [ ] **Architect**
+-   [ ] **Work**
+-   [ ] **Schedule**
+-   [ ] **Assign**
+-   [ ] **Animals**
+-   [ ] **Wildlife**
+-   [ ] **Research**
+-   [ ] **World**
+-   [ ] **History**
+-   [ ] **Factions**
+-   [ ] **Quests**
+
+## 34.5 Notifications
+
+-   [ ] **Top-priority alerts**
+-   [ ] **Event letters**
+-   [ ] **Messages**
+-   [ ] **Jump-to-location**
+-   [ ] **Pause-on-major-threat option**
+
+## 34.6 Input
+
+-   [ ] **Keyboard shortcuts**
+-   [ ] **Control groups**
+-   [ ] **Shift command queue**
+-   [ ] **Double-click select same type**
+-   [ ] **Drag designation**
+-   [ ] **Cancel tool**
+-   [ ] **Rebindable controls where practical**
+
+------------------------------------------------------------------------
+
+# PHASE 35 --- Audio, Visual Feedback, Animation, and Game Feel
+
+-   [ ] **Sound event system**
+    -   Domain emits semantic events; audio adapter selects assets.
+-   [ ] **Ambient biome audio**
+-   [ ] **Weather audio**
+-   [ ] **Construction/work sounds**
+-   [ ] **Weapon sounds**
+-   [ ] **Impact/explosion sounds**
+-   [ ] **UI feedback sounds**
+-   [ ] **Music system**
+    -   Contextual but not authoritative.
+-   [ ] **Pawn facing/aiming**
+-   [ ] **Simple movement interpolation**
+-   [ ] **Muzzle/projectile effects**
+-   [ ] **Damage/fire effects**
+-   [ ] **Selection/targeting feedback**
+-   [ ] **Weather visual effects**
+-   [ ] **Day/night presentation**
+
+All assets must be original or appropriately licensed.
+
+------------------------------------------------------------------------
+
+# PHASE 36 --- Tutorial, Learning Helper, Tooltips, and Discoverability
+
+RimWorld includes a tutorial/learning-helper approach that introduces UI
+and survival concepts progressively. citeturn0search7turn1search8
+
+-   [ ] **Contextual learning helper**
+    -   Detect first encounter with major mechanics.
+    -   Show short instructional card.
+    -   Track dismissed/learned concepts.
+-   [ ] **Interactive tutorial scenario**
+    -   Camera/selection.
+    -   stockpile.
+    -   building.
+    -   growing.
+    -   work priorities.
+    -   combat/drafting.
+    -   medical care.
+-   [ ] **Rich tooltips**
+    -   Explain stats and modifiers.
+    -   Show calculation breakdown for important values.
+-   [ ] **Inspect explanations**
+    -   Why pawn cannot do job.
+    -   why room is invalid.
+    -   why path fails.
+    -   why building has no power.
+    -   why plant is not growing.
+-   [ ] **Difficulty descriptions**
+-   [ ] **Scenario descriptions**
+-   [ ] **World-tile explanations**
+
+------------------------------------------------------------------------
+
+# PHASE 37 --- Plugin/Mod System Foundation
+
+RimWorld's mod ecosystem is strongly data-driven: definitions describe
+content such as weapons, apparel, plants, recipes, research and terrain;
+mods can also include localization, textures, sounds, patches and custom
+code. RimWorld itself does not expose a formal narrow mod API, and
+community mods commonly use runtime patching such as Harmony. For
+`rimworld-go`, we should preserve the *power and extensibility* while
+providing a safer, intentional plugin API instead of reproducing runtime
+method patching.
+citeturn0search4turn0search5turn0search8turn0search10
+
+## 37.1 Plugin manifest
+
+-   [ ] **Plugin metadata**
+    -   Unique namespaced ID.
+    -   display name.
+    -   author(s).
+    -   version.
+    -   game compatibility.
+    -   description.
+    -   optional homepage/source.
+    -   dependencies.
+    -   load-before/load-after hints.
+    -   incompatibilities.
+
+RimWorld's current mod metadata similarly identifies package ID, name,
+authors, description, supported versions, dependencies, and load-order
+hints. citeturn0search2
+
+## 37.2 Plugin discovery
+
+-   [ ] **Plugin directories**
+    -   Discover installed plugins from configured directories.
+-   [ ] **Enable/disable list**
+    -   Player chooses active plugins.
+-   [ ] **Deterministic load order**
+    -   Resolve dependencies.
+    -   topological ordering.
+    -   stable tie-break.
+    -   explicit errors for cycles.
+-   [ ] **Compatibility validation**
+    -   Missing dependency.
+    -   incompatible version.
+    -   duplicate plugin ID.
+    -   incompatible plugin pair.
+
+## 37.3 Data definitions
+
+-   [ ] **Definition registry**
+    -   Namespaced stable IDs.
+    -   Immutable after game start.
+-   [ ] **Definition classes**
+    -   Item.
+    -   material.
+    -   terrain.
+    -   building.
+    -   pawn/species.
+    -   plant.
+    -   weapon.
+    -   apparel.
+    -   recipe.
+    -   research.
+    -   trait.
+    -   backstory.
+    -   thought.
+    -   health effect.
+    -   incident.
+    -   faction.
+    -   biome.
+    -   trader.
+    -   scenario.
+    -   recreation.
+    -   drug.
+-   [ ] **Human-readable definition format**
+    -   YAML or JSON.
+    -   Strong schema validation.
+    -   Convert strings to compact runtime indexes.
+-   [ ] **Definition inheritance/templates**
+    -   Allow reusable parent/template definitions without runtime
+        reflection-heavy behavior.
+
+## 37.4 Patching definitions
+
+-   [ ] **Declarative patch operations**
+    -   Add.
+    -   remove.
+    -   replace.
+    -   merge.
+    -   conditional patch based on another plugin.
+-   [ ] **Patch ordering**
+    -   Deterministic.
+    -   diagnostics show which plugin changed a definition.
+-   [ ] **Conflict diagnostics**
+    -   Detect/describe conflicting patches where possible.
+
+RimWorld mods use patch operations to alter definitions without
+replacing entire definition files; `rimworld-go` should offer the same
+class of capability with an intentionally designed schema.
+citeturn0search5
+
+## 37.5 Content validation
+
+-   [ ] **`contentlint`**
+    -   Parse all active plugin definitions.
+    -   validate schema.
+    -   validate references.
+    -   validate dependency graph.
+    -   validate ranges.
+    -   validate assets.
+    -   report provenance of every error.
+-   [ ] **Config errors**
+    -   Human-readable startup diagnostics.
+
+## 37.6 Plugin assets
+
+-   [ ] **Textures/sprites**
+-   [ ] **Audio**
+-   [ ] **Localization**
+-   [ ] **Optional shader/render resources**
+    -   Adapter-level only.
+-   [ ] **Namespaced asset paths**
+    -   Prevent collisions.
+-   [ ] **Safe path handling**
+    -   No traversal outside plugin root.
+
+## 37.7 Localization
+
+-   [ ] **Localization keys**
+-   [ ] **Language packs**
+-   [ ] **Definition label/description translation**
+-   [ ] **Generated grammar/word lists**
+-   [ ] **Fallback language**
+
+------------------------------------------------------------------------
+
+# PHASE 38 --- Plugin Behavior API and Sandboxed Scripting
+
+RimWorld mods can use custom C# and Harmony to alter almost any
+behavior. citeturn0search0turn0search3 `rimworld-go` should achieve
+comparable extensibility through stable extension points rather than
+allowing arbitrary mutation of internal Go functions.
+
+## 38.1 Stable extension API
+
+-   [ ] **Plugin API version**
+-   [ ] **Capability declaration**
+-   [ ] **Read-only world query API**
+-   [ ] **Command submission API**
+-   [ ] **Definition registration hooks**
+-   [ ] **Event subscription**
+-   [ ] **Custom validation hooks**
+-   [ ] **Custom UI panels/actions where safe**
+-   [ ] **Custom incident behavior**
+-   [ ] **Custom job/intent providers**
+-   [ ] **Custom stat modifiers**
+-   [ ] **Custom health-effect behavior**
+-   [ ] **Custom recipe/building components**
+-   [ ] **Custom world-generation hooks**
+
+## 38.2 Event hooks
+
+Expose typed, deterministic semantic hooks such as:
+
+-   [ ] Pawn spawned.
+-   [ ] Pawn died.
+-   [ ] Damage resolved.
+-   [ ] Job started/completed/failed.
+-   [ ] Building constructed/destroyed.
+-   [ ] Item produced/consumed.
+-   [ ] Research completed.
+-   [ ] Incident started/resolved.
+-   [ ] Relationship changed.
+-   [ ] New day/quadrum/year.
+-   [ ] Caravan entered/left.
+-   [ ] Faction goodwill changed.
+
+Hooks must have documented ordering.
+
+## 38.3 Sandboxed scripting
+
+-   [ ] **Choose scripting runtime**
+    -   Starlark or WASM preferred candidates.
+    -   No arbitrary native Go plugin loading for untrusted community
+        mods.
+-   [ ] **Deterministic host API**
+    -   Simulation tick, not wall clock.
+    -   deterministic RNG service.
+    -   stable entity handles.
+    -   typed commands.
+-   [ ] **Resource limits**
+    -   CPU/instruction budget.
+    -   memory limits where runtime permits.
+    -   recursion/stack protection.
+-   [ ] **No unrestricted OS access**
+    -   No arbitrary filesystem.
+    -   no network.
+    -   no process execution.
+-   [ ] **Script error isolation**
+    -   Plugin failure reports plugin ID and hook.
+    -   Avoid corrupting authoritative state.
+
+## 38.4 Save support for plugins
+
+-   [ ] **Plugin-owned persistent state**
+    -   Namespaced versioned blob/schema.
+    -   Deterministic serialization.
+-   [ ] **Plugin migration API**
+-   [ ] **Missing-plugin save diagnostics**
+-   [ ] **Plugin set stored in save metadata**
+-   [ ] **Content hash/replay compatibility**
+
+## 38.5 Plugin UI
+
+-   [ ] **Plugin manager**
+    -   Installed.
+    -   enabled.
+    -   version.
+    -   dependencies.
+    -   conflicts.
+    -   load order.
+-   [ ] **Plugin settings**
+    -   Typed settings schema.
+    -   UI generated from schema where possible.
+-   [ ] **Restart/reload requirements**
+    -   Clearly communicate when content registry changes require new
+        session/restart.
+
+------------------------------------------------------------------------
+
+# PHASE 39 --- Developer Mode, Debugging, Profiling, and Mod Author Tools
+
+RimWorld exposes development/debug facilities and modding documentation
+commonly relies on debug actions and configuration errors. `rimworld-go`
+should make these first-class because the project is open source and
+agent-developed. citeturn0search4
+
+-   [ ] **Developer mode**
+-   [ ] **Spawn entity/item/pawn**
+-   [ ] **Trigger incident**
+-   [ ] **Set weather**
+-   [ ] **Set time**
+-   [ ] **Damage/heal pawn**
+-   [ ] **Add/remove health condition**
+-   [ ] **Finish research**
+-   [ ] **Change goodwill**
+-   [ ] **Teleport pawn**
+-   [ ] **Reveal path**
+-   [ ] **Inspect reservations**
+-   [ ] **Inspect current intent/job**
+-   [ ] **Inspect component state**
+-   [ ] **Inspect room/region/chunk IDs**
+-   [ ] **Navigation overlay**
+-   [ ] **Temperature overlay**
+-   [ ] **Power network overlay**
+-   [ ] **Incident/storyteller debug panel**
+-   [ ] **RNG stream diagnostics**
+-   [ ] **State hash inspector**
+-   [ ] **Tick profiler**
+-   [ ] **System timing profiler**
+-   [ ] **Entity/chunk activity profiler**
+-   [ ] **Pathfinding metrics**
+-   [ ] **Job candidate metrics**
+-   [ ] **Heap/allocation metrics**
+-   [ ] **Plugin provenance inspector**
+    -   Show which plugin supplied/patched a definition.
+
+------------------------------------------------------------------------
+
+# PHASE 40 --- Performance Scaling Beyond Vanilla
+
+The project goal is not merely feature parity; it is to support
+substantially larger colonies and maps with lower resource usage.
+
+## 40.1 Sleeping and activity levels
+
+-   [ ] **Chunk activity states**
+    -   Sleeping.
+    -   background.
+    -   active.
+    -   critical.
+-   [ ] **Entity sleeping**
+    -   Inactive plants/items/buildings do not tick every frame.
+
+## 40.2 Analytical progression
+
+-   [ ] **Plants**
+    -   Advance growth from elapsed ticks.
+-   [ ] **Rot/deterioration**
+-   [ ] **Needs where safe**
+-   [ ] **Disease/health effects where safe**
+-   [ ] **World settlements/caravans**
+    -   Aggregate simulation rather than local entity simulation.
+
+## 40.3 Invalidation
+
+-   [ ] **Navigation dirty regions**
+-   [ ] **Room dirty regions**
+-   [ ] **Power topology dirty**
+-   [ ] **Temperature topology dirty**
+-   [ ] **Beauty dirty**
+-   [ ] **Storage dirty**
+-   [ ] **Cover dirty**
+-   [ ] **Lighting dirty**
+-   [ ] **Roof dirty**
+
+## 40.4 Spatial indexes
+
+-   [ ] **Entities at cell**
+-   [ ] **Pawns in chunk/region**
+-   [ ] **Items by category/region**
+-   [ ] **Work opportunities**
+-   [ ] **Storage destinations**
+-   [ ] **Hostiles**
+-   [ ] **Haulables**
+-   [ ] **Medical patients**
+-   [ ] **Fires**
+-   [ ] **Plants ready for work**
+
+## 40.5 Large-colony UX
+
+-   [ ] **Pawn groups**
+-   [ ] **Group work presets**
+-   [ ] **Group schedules**
+-   [ ] **Group allowed areas**
+-   [ ] **Bulk policy assignment**
+-   [ ] **Virtualized pawn lists**
+-   [ ] **Aggregated alerts**
+-   [ ] **Search/filter all management screens**
+
+## 40.6 Performance acceptance
+
+-   [ ] **100-colonist benchmark**
+-   [ ] **500-colonist benchmark**
+-   [ ] **1,000-colonist benchmark**
+-   [ ] **100k item/plant benchmark**
+-   [ ] **1024×1024 map benchmark**
+-   [ ] **Long-run heap stability**
+-   [ ] **No goroutine-per-pawn/entity**
+-   [ ] **No hidden full-world scans in hot phases**
+
+------------------------------------------------------------------------
+
+# PHASE 41 --- Final Vanilla-Parity Audit
+
+Do not call the vanilla milestone complete until this audit passes.
+
+## 41.1 Colony survival loop
+
+-   [ ] Start with generated colonists and supplies.
+-   [ ] Build shelter.
+-   [ ] Assign beds.
+-   [ ] Create stockpile.
+-   [ ] Grow crops.
+-   [ ] Hunt animals.
+-   [ ] Cook food.
+-   [ ] Survive hunger/rest/temperature.
+-   [ ] Treat injuries/disease.
+-   [ ] Manage mood.
+-   [ ] Survive mental breaks.
+-   [ ] Produce equipment.
+-   [ ] Research technology.
+-   [ ] Generate power.
+-   [ ] Refrigerate food.
+-   [ ] Trade.
+-   [ ] Recruit prisoners.
+-   [ ] Tame/train animals.
+-   [ ] Defend raids.
+-   [ ] Survive environmental events.
+-   [ ] Form caravans.
+-   [ ] Complete world quests.
+-   [ ] Build/activate endgame ship.
+-   [ ] Survive final assault period.
+-   [ ] Escape.
+
+## 41.2 Emergent-story audit
+
+-   [ ] Pawns have meaningfully different skills/traits.
+-   [ ] Pawns form opinions and relationships.
+-   [ ] Relationships create gameplay consequences.
+-   [ ] Injuries have anatomically meaningful consequences.
+-   [ ] Mood responds to environment and memories.
+-   [ ] Low mood creates autonomous disruptive behavior.
+-   [ ] High mood can create positive opportunities.
+-   [ ] Storyteller alternates pressure/opportunity/recovery.
+-   [ ] Enemy factions behave differently by tech/tactic.
+-   [ ] Colony wealth increases stakes.
+-   [ ] Deaths and disasters remain visible in colony history.
+-   [ ] The game can produce interesting stories without scripted
+    campaign missions.
+
+## 41.3 Simulation integrity audit
+
+-   [ ] Same seed + same commands = same authoritative result.
+-   [ ] Renderer FPS does not change result.
+-   [ ] Worker count does not change result.
+-   [ ] Save/load preserves canonical hash.
+-   [ ] Replay preserves canonical hash.
+-   [ ] Plugin load order is deterministic.
+-   [ ] No stale reservations after long-run simulation.
+-   [ ] No negative/duplicated item quantities.
+-   [ ] No references to destroyed entities.
+-   [ ] No invalid room/power/navigation cache after topology changes.
+
+## 41.4 Architecture audit
+
+-   [ ] Domain imports no renderer.
+-   [ ] Domain imports no filesystem persistence implementation.
+-   [ ] Domain imports no generated serialization DTOs.
+-   [ ] UI mutates game only through commands/application ports.
+-   [ ] Plugin scripts cannot directly mutate internal stores.
+-   [ ] External input is validated at boundaries.
+-   [ ] Canonical types are not duplicated.
+
+## 41.5 Go quality audit
+
+-   [ ] `gofmt` clean.
+-   [ ] `go vet ./...`.
+-   [ ] `staticcheck ./...`.
+-   [ ] `go test ./...`.
+-   [ ] Race tests for concurrent infrastructure.
+-   [ ] Fuzz targets for unsafe/untrusted parsers and critical
+    transitions.
+-   [ ] Hot benchmarks report allocations.
+-   [ ] No unexplained `unsafe`.
+-   [ ] No global mutable simulation state.
+
+------------------------------------------------------------------------
+
+# PHASE 42 --- Release Definition
+
+## Vanilla Alpha
+
+Can be called **Vanilla Alpha** when:
+
+-   [ ] Phases 1--17 are substantially complete.
+-   [ ] Basic storyteller raids/events exist.
+-   [ ] Save/load works.
+-   [ ] A colony can survive indefinitely.
+-   [ ] Combat, health, mood, farming, construction, research, and power
+    form a coherent loop.
+
+## Vanilla Beta
+
+Can be called **Vanilla Beta** when:
+
+-   [ ] Animals/prisoners/factions/trade are complete.
+-   [ ] World generation/caravans/quests work.
+-   [ ] Major raid types and incident catalog work.
+-   [ ] Endgame is completable.
+-   [ ] Full management UI is usable.
+-   [ ] Plugin data definitions are usable.
+
+## Vanilla 1.0
+
+Can be called **Vanilla 1.0** when:
+
+-   [ ] Phase 41 parity audit passes.
+-   [ ] Plugin behavior API is stable/versioned.
+-   [ ] Save migrations are tested.
+-   [ ] Large-colony performance targets have reproducible benchmarks.
+-   [ ] Tutorial/onboarding exists.
+-   [ ] Crash/replay diagnostics are production-ready.
+-   [ ] Original or properly licensed art/audio/content is sufficient
+    for distribution.
+
+------------------------------------------------------------------------
+
+# Appendix A --- Explicitly Out of Scope: DLC Systems
+
+Do **not** accidentally pull these into vanilla implementation unless
+they later become separate optional plugins/expansions.
+
+## Royalty-style expansion systems
+
+-   Psychic powers/psylinks.
+-   Imperial honor/title hierarchy.
+-   Nobility throne-room requirements.
+-   Permits.
+-   Royal court mechanics.
+-   Mech clusters that specifically depend on expansion content.
+-   Techprint-specific expansion progression.
+
+## Ideology-style expansion systems
+
+-   Ideoligions.
+-   Memes/precepts.
+-   Rituals.
+-   Roles.
+-   Relics.
+-   Slavery as the expansion's full management system.
+-   Biosculpters.
+-   Dryads/Gauranlen trees.
+-   Ideology-specific apparel/food/mood rules.
+
+## Biotech-style expansion systems
+
+-   Children/babies/growth moments.
+-   Pregnancy system as implemented by Biotech for humans.
+-   Genes/xenotypes.
+-   Mechanitor/player-controlled mech system.
+-   Pollution/wastepacks.
+-   Sanguophages.
+-   Gene extraction/implantation.
+
+## Anomaly-style expansion systems
+
+-   Monolith progression.
+-   Entities/anomaly containment.
+-   Dark research.
+-   Ritual anomaly system.
+-   Anomaly-specific storyteller threats.
+
+## Odyssey-style expansion systems
+
+-   Expansion-specific travel/vehicle/space systems.
+-   Expansion biomes.
+-   Expansion-specific exploration systems.
+
+If a modern base-game mechanic has changed because of a free update,
+agents should document the target behavior before implementing it rather
+than silently importing DLC-only dependencies.
+
+------------------------------------------------------------------------
+
+# Appendix B --- Cross-Cutting Definition Types Required by the Plugin System
+
+The plugin system should ultimately be able to define or extend at
+least:
+
+-   [ ] `ThingDef`-equivalent generic entity/item/building definition.
+-   [ ] Item definitions.
+-   [ ] Material/stuff definitions.
+-   [ ] Terrain definitions.
+-   [ ] Building definitions.
+-   [ ] Plant definitions.
+-   [ ] Pawn/species definitions.
+-   [ ] Body/anatomy definitions.
+-   [ ] Health-effect definitions.
+-   [ ] Weapon/projectile definitions.
+-   [ ] Apparel definitions.
+-   [ ] Recipe definitions.
+-   [ ] Workstation definitions.
+-   [ ] Research definitions.
+-   [ ] Trait definitions.
+-   [ ] Backstory definitions.
+-   [ ] Thought definitions.
+-   [ ] Need definitions where safely extensible.
+-   [ ] Recreation definitions.
+-   [ ] Drug definitions.
+-   [ ] Faction definitions.
+-   [ ] Trader definitions.
+-   [ ] Biome definitions.
+-   [ ] World-generation definitions.
+-   [ ] Incident definitions.
+-   [ ] Storyteller definitions.
+-   [ ] Scenario definitions.
+-   [ ] Quest archetype/content definitions.
+-   [ ] Sound-event mappings.
+-   [ ] Localization.
+-   [ ] UI icons/textures.
+-   [ ] Stat definitions/modifiers where stable API permits.
+
+------------------------------------------------------------------------
+
+# Appendix C --- Definition of Done for Every Checkbox
+
+An agent must **not** tick a feature merely because code compiles.
+
+A checkbox is complete only when all applicable conditions are true:
+
+-   [ ] Player-visible behavior exists.
+-   [ ] Domain behavior has automated tests.
+-   [ ] Deterministic ordering is defined.
+-   [ ] RNG uses deterministic project RNG.
+-   [ ] Hot-path complexity is acceptable.
+-   [ ] No avoidable global scan was introduced.
+-   [ ] Save/load includes new authoritative state.
+-   [ ] Replay/state hash includes relevant state.
+-   [ ] Plugin/content surface is data-driven where appropriate.
+-   [ ] Debug tooling can inspect the feature where practical.
+-   [ ] UI explains important failures/states.
+-   [ ] Relevant package `AGENTS.md` remains correct.
+-   [ ] Relevant system doc/ADR is updated.
+-   [ ] `gofmt`, `go vet`, `staticcheck`, and tests pass.
+-   [ ] Benchmarks are added/updated for performance-sensitive systems.
+-   [ ] Task handoff is written.
+
+------------------------------------------------------------------------
+
+# Appendix D --- Research Basis and Version Caveat
+
+This checklist was prepared against the current RimWorld Wiki material
+available in September 2026, with DLC-marked mechanics excluded from the
+vanilla target. The wiki documents the core game as a generated-world
+colony story simulator with individually modeled colonists, needs/mood,
+work priorities, body-part health, factions/trade, research, world
+travel, storyteller incidents, and a broad data/code mod ecosystem.
+
+Important implementation references used when constructing the checklist
+include the RimWorld Wiki pages for:
+
+-   Basics and Quickstart Guides.
+-   About RimWorld / PC edition.
+-   Characters.
+-   Needs, Mood, Beauty, and Recreation.
+-   Work.
+-   Combat.
+-   Health.
+-   Research.
+-   World generation.
+-   Factions, Trade, and Caravans.
+-   Events.
+-   Modding Tutorials.
+-   XML Defs.
+-   About.xml / mod metadata.
+-   Mod folder structure.
+-   Writing custom code and Harmony.
+
+Because RimWorld continues to receive free base-game updates alongside
+expansions, a mechanic that appears on a current wiki page may be marked
+as requiring a DLC. Those DLC-marked portions are **not** part of this
+checklist unless the underlying mechanic is independently present in the
+base game.
+
+When uncertainty exists, agents must record it as a backlog
+clarification rather than silently implementing expansion behavior.
+
+------------------------------------------------------------------------
+
+# Final Agent Directive
+
+The objective is not to reproduce RimWorld's implementation.
+
+The objective is to reproduce the **depth of the vanilla
+colony-simulation experience**:
+
+> autonomous individual colonists + survival + work + construction +
+> production + psychology + relationships + health + combat +
+> environment + factions + world travel + storyteller-driven adversity +
+> emergent stories,
+
+while making the implementation:
+
+-   deterministic;
+-   open;
+-   moddable;
+-   much more scalable;
+-   resource efficient;
+-   idiomatic Go;
+-   headless-testable;
+-   safe for multiple AI agents to develop concurrently.
+
+When parity conflicts with scalability, preserve the **player-visible
+behavior** while improving the underlying algorithm.

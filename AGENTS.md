@@ -7,6 +7,8 @@ All canonical specs, rules, and agent-facing data live in [`.agent/`](.agent/DOC
 - `.agent/HEXAGONAL_ARCHITECTURE.md` — dependency direction, ports/adapters, repository ownership.
 - `.agent/GO_BEST_PRACTICES.md` — mandatory Go engineering rules.
 - `.agent/AI_TOKEN_OPTIMIZATION.md` — context/token discipline.
+- `.agent/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` — ordered vanilla gameplay feature backlog.
+- `.agent/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` — ordered player-facing UI/UX backlog.
 - `.agent/handoffs/` — per-task AI handoff records.
 - `.agent/skills/` — task playbooks; start with `.agent/skills/rimworld-go-router/SKILL.md`.
 

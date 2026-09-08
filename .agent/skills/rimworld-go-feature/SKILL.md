@@ -13,7 +13,8 @@ Read:
 - nearest package `AGENTS.md`;
 - current public contracts;
 - existing tests for the behavior;
-- relevant system doc.
+- relevant system doc;
+- the matching item(s) in `.agent/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` or `.agent/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` when the task maps to a checklist entry.
 
 Load broader architecture or master spec only when needed.
 

@@ -26,6 +26,8 @@ Read in this order only as needed:
 7. `.agent/HEXAGONAL_ARCHITECTURE.md`
 8. `.agent/GO_BEST_PRACTICES.md`
 9. `.agent/MASTER_SPEC.md` only when broader product intent is required
+10. `.agent/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` when scoping/ordering a gameplay feature
+11. `.agent/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` when scoping/ordering a UI feature
 
 Token/context policy is defined by `.agent/AI_TOKEN_OPTIMIZATION.md`.
 

@@ -8,6 +8,8 @@ All paths below are relative to this `.agent/` folder unless noted.
 | Hexagonal architecture and repo boundaries | `HEXAGONAL_ARCHITECTURE.md` |
 | Go standards/performance/concurrency | `GO_BEST_PRACTICES.md` |
 | Efficient AI context usage | `AI_TOKEN_OPTIMIZATION.md` |
+| Ordered vanilla gameplay feature backlog | `RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` |
+| Ordered player-facing UI/UX backlog | `RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` |
 | Per-task AI handoffs | `handoffs/` |
 | Task-specific playbooks (start here for any new task) | `skills/rimworld-go-router/SKILL.md` |
 | Global contributor rules | `../AGENTS.md` |

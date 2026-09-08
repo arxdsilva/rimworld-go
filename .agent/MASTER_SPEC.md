@@ -11,6 +11,8 @@ The project must be an original implementation. Do not copy commercial source co
 
 The primary differentiator is scale: the architecture should ultimately support colonies with **1,000+ active settlers**, very large maps, tens or hundreds of thousands of world objects, headless simulation, deterministic replay, extensive modding, and lower CPU/RAM use than conventional simulation-heavy games.
 
+For the ordered, checkbox-tracked feature and UI/UX backlog derived from this spec, see `RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` and `RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`.
+
 
 # 1. Product Pillars
 
