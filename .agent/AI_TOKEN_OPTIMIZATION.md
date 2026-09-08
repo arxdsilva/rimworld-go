@@ -42,7 +42,8 @@ Agents should load context in this order:
 6. Relevant system doc
 7. Relevant ADRs
 8. Recent dependency handoffs
-9. MASTER_SPEC only if needed
+9. ART_DIRECTION sections named by rimworld-go-art-assets, only if visual/asset work
+10. MASTER_SPEC only if needed
 ```
 
 Do **not** feed the full master specification by default once package-level guidance exists.
@@ -70,6 +71,8 @@ relevant interfaces
 tests
 one system document
 ```
+
+When the task produces sprites, icons, UI chrome, or asset-pipeline tooling, also load the `rimworld-go-art-assets` skill and only the named sections of `ART_DIRECTION_AND_ASSET_PIPELINE.md`.
 
 ## Level C — Only if architectural question arises
 
@@ -155,6 +158,7 @@ Example:
 Architecture: .agent/HEXAGONAL_ARCHITECTURE.md
 Go rules: .agent/GO_BEST_PRACTICES.md
 Token rules: .agent/AI_TOKEN_OPTIMIZATION.md
+Art/assets: .agent/ART_DIRECTION_AND_ASSET_PIPELINE.md
 ```
 
 ---
@@ -334,6 +338,7 @@ phase order
 RNG rules
 save schema policy
 dependency direction
+tile scale / pivots / palettes (art spec)
 ```
 
 All other docs link there.
@@ -759,6 +764,7 @@ product scope → MASTER_SPEC
 architecture → HEXAGONAL_ARCHITECTURE
 Go rules → GO_BEST_PRACTICES
 token/context → AI_TOKEN_OPTIMIZATION
+visual production / asset pipeline → ART_DIRECTION_AND_ASSET_PIPELINE
 subsystem behavior → docs/systems/*
 design decisions → docs/adr/*
 package-specific constraints → package AGENTS.md
@@ -862,7 +868,10 @@ Do not feed large content packs/assets.
 Use:
 - definition schemas;
 - small fixture;
-- specific content ID.
+- specific content ID;
+- named ART_DIRECTION sections plus neighboring reference assets, never the whole art bible plus an atlas dump.
+
+For visual tasks, follow `rimworld-go-art-assets` section routing instead of pasting `.agent/ART_DIRECTION_AND_ASSET_PIPELINE.md` in full.
 
 ---
 

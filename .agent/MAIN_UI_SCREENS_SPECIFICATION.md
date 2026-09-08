@@ -1,0 +1,2051 @@
+# rimworld-go --- Main UI Screens Specification
+
+> **Purpose:** Canonical build specification for every major
+> player-facing screen in `rimworld-go`.
+>
+> **Companion documents:**
+> `RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`,
+> `RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md`,
+> `HEXAGONAL_ARCHITECTURE.md`, and
+> `ART_DIRECTION_AND_ASSET_PIPELINE.md`.
+>
+> **Architecture:** UI is an inbound adapter. Screens consume read-only
+> presentation models and emit typed commands. No screen may directly
+> mutate authoritative simulation state.
+>
+> **Design target:** Deliver the information density, discoverability,
+> and management capabilities expected from a deep vanilla colony
+> simulator while using original layouts, artwork, terminology where
+> appropriate, and visual identity.
+
+------------------------------------------------------------------------
+
+# 0. Screen Architecture
+
+Every screen specification uses:
+
+-   **Purpose** --- why the screen exists.
+-   **Entry** --- how the player reaches it.
+-   **Primary regions** --- major layout areas.
+-   **Information** --- data the player needs.
+-   **Actions** --- interactions available.
+-   **Commands** --- authoritative requests sent to the application.
+-   **States** --- empty/error/disabled/special states.
+-   **Dependencies** --- systems required before implementation.
+-   **Scale requirements** --- behavior for large colonies.
+
+Global rules:
+
+-   [ ] Escape closes the topmost modal/panel before opening the game
+    menu.
+-   [ ] Screens preserve useful scroll/filter/sort state.
+-   [ ] Entity references can select/jump to the entity when meaningful.
+-   [ ] Disabled actions explain why.
+-   [ ] Tables with potentially hundreds of rows are virtualized.
+-   [ ] Search/filtering happens against presentation data, not world
+    scans each frame.
+-   [ ] Screen animations never affect simulation.
+-   [ ] Plugin-provided content appears through registries rather than
+    hardcoded switches.
+
+------------------------------------------------------------------------
+
+# 1. Boot / Loading Screen
+
+## Purpose
+
+Provide immediate feedback while configuration, plugins, definitions,
+assets, saves, and renderer resources initialize.
+
+## Primary regions
+
+-   game logo/branding;
+-   build/version;
+-   loading phase;
+-   progress indicator;
+-   current operation;
+-   recoverable warnings.
+
+## Loading phases
+
+-   configuration;
+-   plugin discovery;
+-   dependency resolution;
+-   content definitions;
+-   asset manifests/atlases;
+-   localization;
+-   renderer;
+-   main-menu transition.
+
+## Required states
+
+-   [ ] normal loading;
+-   [ ] content warnings;
+-   [ ] plugin dependency failure;
+-   [ ] fatal initialization error;
+-   [ ] safe/recovery mode where supported.
+
+------------------------------------------------------------------------
+
+# 2. Main Menu
+
+## Purpose
+
+Primary entry point for a play session.
+
+## Primary actions
+
+-   [ ] New Game
+-   [ ] Load Game
+-   [ ] Continue
+-   [ ] Plugins
+-   [ ] Options
+-   [ ] Tutorial/Help
+-   [ ] Credits
+-   [ ] Quit
+
+## Information
+
+Show game version/build and, in development builds, commit identifier.
+
+`Continue` should identify the most recent compatible save without
+loading it blindly.
+
+## Background
+
+May display a lightweight animated or generated colony scene, but menu
+presentation must not require an active authoritative simulation.
+
+------------------------------------------------------------------------
+
+# 3. New Game --- Scenario Selection
+
+## Purpose
+
+Choose the fundamental starting situation.
+
+## Layout
+
+**Left:** scenario list/search.\
+**Center:** selected scenario description.\
+**Right:** starting conditions summary.\
+**Bottom:** Back / Next.
+
+## Information
+
+For each scenario: - starting pawn count; - starting technology; -
+starting resources/equipment; - special conditions; - difficulty
+character; - original narrative description.
+
+## Actions
+
+-   [ ] choose scenario;
+-   [ ] inspect details;
+-   [ ] create/edit custom scenario;
+-   [ ] load custom scenario;
+-   [ ] continue.
+
+Plugins may register scenarios.
+
+------------------------------------------------------------------------
+
+# 4. Scenario Editor
+
+## Purpose
+
+Create data-driven custom starting rules without modifying code.
+
+## Regions
+
+-   scenario metadata;
+-   ordered scenario-part list;
+-   add-part browser;
+-   selected-part editor;
+-   validation panel.
+
+## Actions
+
+-   add/remove/reorder parts;
+-   configure starting pawns/items/research;
+-   configure recurring/permanent conditions where supported;
+-   save/load;
+-   reset;
+-   validate.
+
+Invalid combinations must identify the offending part rather than
+failing when the game starts.
+
+------------------------------------------------------------------------
+
+# 5. Storyteller & Difficulty Screen
+
+## Purpose
+
+Choose incident pacing and challenge.
+
+## Storyteller region
+
+Original storyteller cards representing: - paced escalating; -
+relaxed/forgiving; - highly random.
+
+Each explains behavior qualitatively without exposing formulas
+unnecessarily.
+
+## Difficulty region
+
+-   preset list;
+-   custom difficulty.
+
+Custom settings can expose threat scale, economy, mood, disease,
+adaptation, resource yield and other supported parameters.
+
+## Actions
+
+-   [ ] select storyteller;
+-   [ ] select preset;
+-   [ ] customize;
+-   [ ] reset;
+-   [ ] continue.
+
+------------------------------------------------------------------------
+
+# 6. World Generation Screen
+
+## Purpose
+
+Configure and generate the campaign world.
+
+## Controls
+
+-   seed;
+-   world coverage/size;
+-   temperature;
+-   rainfall;
+-   faction/population density where supported;
+-   Generate.
+
+## During generation
+
+Show phase/progress while keeping UI responsive.
+
+## Result
+
+Transition into landing-site selection without discarding generated
+world state.
+
+------------------------------------------------------------------------
+
+# 7. Landing Site Selection / World Preview
+
+## Purpose
+
+Allow informed choice of colony location.
+
+## Main region
+
+Interactive planet/world map.
+
+## Selected-tile panel
+
+Show: - biome; - terrain/hilliness; - elevation; - temperature; -
+rainfall; - growing period; - movement difficulty; - roads/rivers; -
+forage; - useful known resources; - nearby settlements/factions.
+
+## Actions
+
+-   inspect tiles;
+-   search/find features where supported;
+-   choose tile;
+-   regenerate/back;
+-   continue.
+
+The player should be able to understand why one tile is easier or harder
+than another.
+
+------------------------------------------------------------------------
+
+# 8. Starting Pawn Selection
+
+## Purpose
+
+Choose the initial colonists and understand team strengths/weaknesses.
+
+## Layout
+
+**Top/left:** candidate roster.\
+**Center:** selected pawn.\
+**Right:** detailed bio/skills/health.\
+**Bottom:** team warnings and Start.
+
+## Pawn information
+
+-   name;
+-   age;
+-   traits;
+-   childhood/adulthood;
+-   skills;
+-   passions;
+-   work incapabilities;
+-   health;
+-   relationships;
+-   starting gear if applicable.
+
+## Actions
+
+-   select roster;
+-   reroll/randomize candidates according to scenario rules;
+-   inspect pawn;
+-   rename where permitted;
+-   start game.
+
+## Team analysis
+
+Warn about important capability gaps such as no doctor, cook, grower,
+constructor, researcher, or violence-capable pawn.
+
+------------------------------------------------------------------------
+
+# 9. Main Colony Screen
+
+## Purpose
+
+The central gameplay screen. Nearly all colony play begins here.
+
+## Major layout regions
+
+``` text
+┌──────────────────────────────────────────────────────────┐
+│ resources / date-weather / alerts                        │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│                    WORLD VIEWPORT                        │
+│                                                          │
+│                                            alerts/letters │
+│                                                          │
+├──────────────────────────────────────────────────────────┤
+│ colonist bar                                             │
+├──────────────────────────────────────────────────────────┤
+│ global tabs       contextual inspector/actions    speeds │
+└──────────────────────────────────────────────────────────┘
+```
+
+Exact visual arrangement should be original and responsive.
+
+## Core responsibilities
+
+-   map rendering;
+-   camera;
+-   selection;
+-   time controls;
+-   colonist bar;
+-   resources;
+-   messages;
+-   alerts;
+-   event letters;
+-   contextual inspector;
+-   contextual actions;
+-   global management tabs;
+-   Architect access;
+-   overlays.
+
+## Camera
+
+-   pan;
+-   zoom;
+-   center selected;
+-   jump from alert/event;
+-   far-zoom LOD.
+
+## Selection
+
+-   single;
+-   drag-select;
+-   additive/subtractive;
+-   multi-selection;
+-   cycle stacked entities;
+-   double-click same category where useful.
+
+## Time
+
+-   pause;
+-   normal;
+-   fast;
+-   very fast;
+-   current game time/date/season.
+
+This screen is implemented incrementally throughout the project rather
+than in one task.
+
+------------------------------------------------------------------------
+
+# 10. Generic Selection Inspector
+
+## Purpose
+
+Answer: **"What is this, what state is it in, and what can I do with
+it?"**
+
+## Header
+
+-   name;
+-   icon/portrait;
+-   category;
+-   faction/ownership;
+-   concise condition.
+
+## Body
+
+Varies by entity: - description; - material; - quality; - hit points; -
+room; - temperature; - power; - fuel; - growth; - contents; - current
+work; - etc.
+
+## Tabs
+
+Entity types can register applicable inspector tabs: - General; -
+Character; - Needs; - Health; - Social; - Gear; - Prisoner; - Bills; -
+Contents; - Power; - Stats.
+
+## Action bar
+
+Only valid contextual commands appear.
+
+Disabled commands show reason.
+
+------------------------------------------------------------------------
+
+# 11. Detailed Stats Screen
+
+## Purpose
+
+Explain simulation values instead of forcing players to guess.
+
+## Features
+
+-   searchable stat list;
+-   categories;
+-   base value;
+-   modifiers;
+-   final value;
+-   units;
+-   explanatory text.
+
+## Breakdown
+
+A calculated stat should show its derivation when useful.
+
+Example:
+
+``` text
+Movement Speed
+Base                       4.60
+Health capacity           ×0.82
+Apparel                   ×0.96
+Environment               ×0.90
+--------------------------------
+Final                      3.26
+```
+
+This screen becomes a universal debugging/explainability tool for
+players.
+
+------------------------------------------------------------------------
+
+# 12. Pawn Character / Bio Screen
+
+## Purpose
+
+Explain who a pawn is and what they are capable of.
+
+## Sections
+
+-   identity;
+-   age;
+-   faction/origin;
+-   backstories;
+-   traits;
+-   skills;
+-   passions;
+-   incapabilities;
+-   relationships summary.
+
+## Skills
+
+Show level, XP progress, passion and learning rate.
+
+Click/hover explains gameplay effects.
+
+------------------------------------------------------------------------
+
+# 13. Pawn Needs & Mood Screen
+
+## Purpose
+
+Explain current psychological state and likely mental-break risk.
+
+## Need bars
+
+-   food;
+-   rest;
+-   recreation;
+-   comfort;
+-   beauty;
+-   outdoors;
+-   chemical/addiction needs when present.
+
+Show value, thresholds and trend.
+
+## Mood
+
+-   current mood;
+-   break thresholds;
+-   trend;
+-   risk severity.
+
+## Thoughts
+
+Separate positive/negative effects and show: - description; - mood
+contribution; - duration; - stacking; - cause where appropriate.
+
+## Special states
+
+Show active mental state or inspiration prominently.
+
+------------------------------------------------------------------------
+
+# 14. Pawn Health Screen
+
+## Purpose
+
+Make anatomy, injury, illness and treatment understandable.
+
+## Overview
+
+-   pain;
+-   consciousness;
+-   moving;
+-   manipulation;
+-   sight/hearing/etc.;
+-   blood loss;
+-   bleeding;
+-   downed state.
+
+## Body tree
+
+Hierarchical anatomy with injuries/effects attached to relevant body
+parts.
+
+## Conditions
+
+Show: - severity; - stage; - progression; - immunity; - tend quality; -
+duration where knowable.
+
+## Medical controls
+
+-   maximum medicine;
+-   self-tend;
+-   operations.
+
+## Operations
+
+Add/cancel/reorder valid procedures and show required materials/medicine
+and relevant risks.
+
+------------------------------------------------------------------------
+
+# 15. Pawn Social Screen
+
+## Purpose
+
+Explain relationships and social opinion.
+
+## Information
+
+-   family;
+-   partner/ex-partner;
+-   friends/rivals where modeled;
+-   directional opinion;
+-   important social memories;
+-   off-map relationships.
+
+Opinion breakdown distinguishes A→B from B→A.
+
+------------------------------------------------------------------------
+
+# 16. Pawn Gear / Inventory Screen
+
+## Purpose
+
+Manage and inspect equipment, apparel and carried items.
+
+## Sections
+
+-   equipped weapon;
+-   worn apparel;
+-   inventory;
+-   carrying capacity/mass where applicable.
+
+## Actions
+
+-   equip;
+-   wear;
+-   drop;
+-   consume/use;
+-   inspect.
+
+Weapon/apparel entries expose relevant combat, armor, insulation,
+quality and condition stats.
+
+------------------------------------------------------------------------
+
+# 17. Architect Screen / Build Palette
+
+## Purpose
+
+Primary interface for changing the colony's physical environment.
+
+## Categories
+
+-   Orders;
+-   Zones/Areas;
+-   Structure;
+-   Furniture;
+-   Production;
+-   Power;
+-   Security;
+-   Miscellaneous;
+-   endgame categories when unlocked.
+
+## Build cards
+
+Show: - icon; - name; - resource cost; - research lock; - short
+description.
+
+## Placement mode
+
+Show: - ghost; - footprint; - rotation; - interaction cells; -
+material/stuff; - validity; - failure reason; - estimated resource
+requirement.
+
+Support point, line, rectangle and paint placement depending on tool.
+
+------------------------------------------------------------------------
+
+# 18. Zone / Area Manager
+
+## Purpose
+
+Create spatial rules for storage, growing, pawn movement and colony
+maintenance.
+
+## Zone modes
+
+-   stockpile;
+-   growing;
+-   home;
+-   allowed areas.
+
+## Area manager
+
+-   create;
+-   rename;
+-   delete;
+-   clear;
+-   invert;
+-   choose overlay.
+
+## Stockpile settings
+
+-   priority;
+-   hierarchical item filters;
+-   quality;
+-   condition;
+-   freshness/taint/etc.;
+-   copy/paste.
+
+## Growing settings
+
+-   crop;
+-   sowing toggle;
+-   plant requirements;
+-   growth/yield information.
+
+------------------------------------------------------------------------
+
+# 19. Work Screen
+
+## Purpose
+
+Control autonomous labor priorities.
+
+## Layout
+
+Rows = pawns.\
+Columns = work types.
+
+## Modes
+
+-   simple enabled/disabled;
+-   manual priorities equivalent to 1--4.
+
+## Cells
+
+Display: - priority; - relevant skill; - passion; - incapability.
+
+## Interaction
+
+-   click cycle;
+-   drag paint;
+-   bulk selection;
+-   sort/filter;
+-   copy profile.
+
+## Scale
+
+Must remain usable with 1,000 pawns through virtualization, grouping,
+filtering and bulk operations.
+
+------------------------------------------------------------------------
+
+# 20. Schedule Screen
+
+## Purpose
+
+Control when pawns sleep, work, recreate or choose freely.
+
+## Grid
+
+Rows = pawns.\
+Columns = 24 game hours.
+
+## Modes
+
+-   Anything;
+-   Work;
+-   Sleep;
+-   Recreation.
+
+## Actions
+
+-   paint cells;
+-   copy schedule;
+-   apply to multiple pawns;
+-   use group preset.
+
+Current hour is visibly highlighted.
+
+------------------------------------------------------------------------
+
+# 21. Assign / Policies Screen
+
+## Purpose
+
+Centralize per-pawn behavioral policies.
+
+## Columns
+
+-   food;
+-   apparel;
+-   drugs;
+-   medical care;
+-   allowed area where appropriate.
+
+## Actions
+
+-   assign existing policy;
+-   create;
+-   duplicate;
+-   rename;
+-   edit;
+-   delete;
+-   bulk assign.
+
+Individual overrides should remain visible when group policies are
+introduced.
+
+------------------------------------------------------------------------
+
+# 22. Policy Editor
+
+## Purpose
+
+Edit reusable colony policies.
+
+## Food
+
+Hierarchical allowed-food filter.
+
+## Apparel
+
+Allowed items plus quality/condition/tainted constraints.
+
+## Drugs
+
+Per drug: - recreational permission; - schedule; - mood threshold; -
+recreation threshold; - carry amount.
+
+## Medical
+
+Maximum medicine/care tier.
+
+Policies are data-driven and plugin-extensible.
+
+------------------------------------------------------------------------
+
+# 23. Production / Bills Screen
+
+## Purpose
+
+Control what a workstation produces and under what conditions.
+
+## Bill stack
+
+-   add;
+-   reorder;
+-   suspend;
+-   delete;
+-   copy/paste.
+
+## Bill modes
+
+-   Do X;
+-   Forever;
+-   Until X.
+
+## Configuration
+
+-   ingredients;
+-   material filters;
+-   ingredient radius;
+-   quality/condition;
+-   worker;
+-   skill range;
+-   output destination;
+-   target count.
+
+## Feedback
+
+Explain why a bill cannot run: - no ingredients; - no worker; - no
+power; - research lock; - inaccessible materials.
+
+------------------------------------------------------------------------
+
+# 24. Research Screen
+
+## Purpose
+
+Understand and control technological progression.
+
+## Main region
+
+Zoomable/pannable technology graph.
+
+## Node states
+
+-   locked;
+-   available;
+-   selected;
+-   researching;
+-   completed.
+
+## Detail panel
+
+-   description;
+-   prerequisites;
+-   research cost;
+-   required bench/facilities;
+-   unlocks.
+
+## Features
+
+-   search;
+-   jump to prerequisite;
+-   plugin-added technologies;
+-   dynamically manageable graph layout.
+
+------------------------------------------------------------------------
+
+# 25. Animals Screen
+
+## Purpose
+
+Manage owned animals efficiently.
+
+## Table
+
+-   name;
+-   species;
+-   sex;
+-   age;
+-   health;
+-   master;
+-   allowed area/pen;
+-   training;
+-   slaughter;
+-   medical care.
+
+## Training
+
+Expose supported training categories and progress.
+
+## Actions
+
+-   rename;
+-   assign master;
+-   assign area;
+-   designate training;
+-   designate slaughter;
+-   set medicine.
+
+------------------------------------------------------------------------
+
+# 26. Wildlife Screen
+
+## Purpose
+
+Survey wild animals and manage hunting/taming.
+
+## Table
+
+-   species;
+-   count;
+-   predator status;
+-   hunt risk;
+-   wildness;
+-   tame chance;
+-   body size/yield context.
+
+## Actions
+
+-   hunt;
+-   tame where supported;
+-   select/jump;
+-   sort/filter.
+
+------------------------------------------------------------------------
+
+# 27. Prisoner Screen
+
+## Purpose
+
+Manage captured pawns.
+
+## Information
+
+-   faction;
+-   health;
+-   mood;
+-   resistance;
+-   recruitment difficulty;
+-   current interaction.
+
+## Interaction policies
+
+-   none;
+-   reduce resistance;
+-   recruit;
+-   release;
+-   execute where supported.
+
+Show recent warden progress and explain missing warden/food/bed
+problems.
+
+------------------------------------------------------------------------
+
+# 28. Trade Screen
+
+## Purpose
+
+Perform a transaction with a visiting/orbital/faction trader.
+
+## Layout
+
+Large two-sided inventory table.
+
+Columns: - item; - colony quantity; - transaction amount; - trader
+quantity; - buy/sell price; - quality; - condition.
+
+## Controls
+
+-   search;
+-   category filters;
+-   sort;
+-   quantity;
+-   reset;
+-   gift mode;
+-   accept;
+-   cancel.
+
+## Summary
+
+-   colony currency;
+-   transaction total;
+-   resulting balance;
+-   negotiator;
+-   trade modifier;
+-   projected goodwill in gift mode.
+
+Validation handles affordability and stock changes.
+
+------------------------------------------------------------------------
+
+# 29. Factions Screen
+
+## Purpose
+
+Understand geopolitical relationships.
+
+## Faction list
+
+-   emblem;
+-   name;
+-   technology level;
+-   goodwill;
+-   relationship state;
+-   permanent hostility.
+
+## Detail
+
+-   description;
+-   known settlements;
+-   relationship history;
+-   recent goodwill changes.
+
+## Communication actions
+
+Where available: - call; - request trader; - request aid; - offer gift.
+
+Costs and unavailable reasons must be explicit.
+
+------------------------------------------------------------------------
+
+# 30. History / Records Screen
+
+## Purpose
+
+Provide a long-term record of the colony.
+
+## Tabs
+
+### Timeline
+
+Major events by game date.
+
+### Graphs
+
+-   wealth;
+-   population;
+-   animal population;
+-   threats/events;
+-   other useful colony metrics.
+
+### Records
+
+Pawn-specific statistics such as kills, damage, production, research and
+notable accomplishments.
+
+Long graphs require downsampling rather than rendering every sample.
+
+------------------------------------------------------------------------
+
+# 31. Quest Screen
+
+## Purpose
+
+Track available, active and completed structured opportunities.
+
+## Quest list
+
+-   available;
+-   active;
+-   completed;
+-   failed.
+
+## Detail
+
+-   original narrative;
+-   source/faction;
+-   objectives;
+-   known threats;
+-   world targets;
+-   deadline;
+-   reward choices;
+-   goodwill consequences.
+
+## Actions
+
+-   accept;
+-   decline;
+-   choose reward;
+-   jump to target.
+
+Active quests show objective progress and countdowns.
+
+------------------------------------------------------------------------
+
+# 32. Alerts & Event Letters
+
+## Purpose
+
+Surface simulation events requiring awareness or action.
+
+## Alerts
+
+Persistent conditions such as: - low food; - medical emergency; - break
+risk; - no bed; - dangerous temperature; - idle colonists; - animal
+starvation; - no research; - hostile threat.
+
+Repeated alerts aggregate.
+
+## Letters
+
+Persistent event notifications with: - title; - narrative; -
+entities/faction; - severity; - location; - choices where required.
+
+Actions can jump to relevant map/world target.
+
+------------------------------------------------------------------------
+
+# 33. World Map Screen
+
+## Purpose
+
+Manage the campaign beyond the local colony map.
+
+## Main view
+
+Interactive generated world.
+
+## Objects
+
+-   colony;
+-   settlements;
+-   caravans;
+-   quest sites;
+-   temporary sites;
+-   encounter sites;
+-   endgame targets.
+
+## Selected tile
+
+Show biome, terrain, weather/climate, growing period, roads/rivers,
+movement cost, forage and ownership.
+
+## Routing
+
+Show path, travel time, terrain cost and invalid route reasons.
+
+------------------------------------------------------------------------
+
+# 34. Form Caravan Screen
+
+## Purpose
+
+Build an expedition and verify it can survive the journey.
+
+## Sections
+
+-   destination;
+-   colonists;
+-   prisoners;
+-   animals;
+-   items;
+-   food;
+-   medicine;
+-   currency.
+
+## Summary
+
+-   mass/capacity;
+-   movement speed;
+-   estimated travel time;
+-   food duration;
+-   forage;
+-   temperature concerns.
+
+## Warnings
+
+-   overload;
+-   insufficient food;
+-   immobile pawn;
+-   dangerous climate;
+-   missing capability.
+
+## Actions
+
+-   select contents;
+-   send;
+-   cancel.
+
+------------------------------------------------------------------------
+
+# 35. Caravan Inspector
+
+## Purpose
+
+Manage an active world-traveling group.
+
+## Information
+
+-   members;
+-   health/mood;
+-   animals;
+-   inventory;
+-   food;
+-   carrying capacity;
+-   speed;
+-   current route;
+-   arrival estimate;
+-   rest/forage.
+
+## Actions
+
+-   change destination;
+-   enter settlement/site;
+-   trade;
+-   attack;
+-   settle;
+-   return/reform where appropriate.
+
+------------------------------------------------------------------------
+
+# 36. Transport Pod Loading / Targeting Screen
+
+## Purpose
+
+Load and launch transport systems.
+
+## Loading
+
+-   launchers;
+-   fuel;
+-   pawns;
+-   items;
+-   mass/capacity;
+-   loading progress.
+
+## Targeting
+
+World map displays: - range; - valid targets; - destination; - estimated
+result.
+
+## Actions
+
+-   launch;
+-   cancel;
+-   select landing/attack/gift/reinforcement behavior where supported.
+
+------------------------------------------------------------------------
+
+# 37. Endgame Ship Screen
+
+## Purpose
+
+Explain endgame readiness and launch sequence.
+
+## Information
+
+-   required components;
+-   connectivity;
+-   reactor;
+-   missing components;
+-   caskets;
+-   occupants;
+-   countdown;
+-   launch readiness.
+
+## Actions
+
+-   start reactor;
+-   load/unload caskets;
+-   launch.
+
+Reactor activation requires explicit warning about the major defense
+phase.
+
+------------------------------------------------------------------------
+
+# 38. Victory / Campaign Summary
+
+## Purpose
+
+Close the campaign and reflect the emergent story back to the player.
+
+## Content
+
+-   outcome;
+-   surviving/escaped pawns;
+-   colony age;
+-   population history;
+-   major events;
+-   deaths;
+-   relationships;
+-   research;
+-   wealth;
+-   notable records;
+-   final colony image where practical.
+
+## Actions
+
+-   continue viewing colony if supported;
+-   main menu;
+-   credits;
+-   export/share summary later.
+
+------------------------------------------------------------------------
+
+# 39. In-Game Pause Menu
+
+## Purpose
+
+Session-level controls.
+
+## Actions
+
+-   Resume
+-   Save
+-   Load
+-   Options
+-   Help
+-   Return to Main Menu
+-   Quit
+
+Destructive session exits require confirmation when unsaved progress
+exists.
+
+------------------------------------------------------------------------
+
+# 40. Save Game Screen
+
+## Purpose
+
+Create and manage saves.
+
+## List information
+
+-   name;
+-   real timestamp;
+-   game date;
+-   colony;
+-   version;
+-   plugin summary.
+
+## Actions
+
+-   create save;
+-   overwrite;
+-   delete;
+-   cancel.
+
+Show save progress and errors without freezing indefinitely.
+
+Commitment/ironman-like modes may restrict controls.
+
+------------------------------------------------------------------------
+
+# 41. Load Game Screen
+
+## Purpose
+
+Choose a campaign safely.
+
+## Information
+
+-   save name;
+-   colony;
+-   game date;
+-   version;
+-   required plugins;
+-   compatibility.
+
+## States
+
+-   compatible;
+-   migration required;
+-   missing plugin;
+-   incompatible version;
+-   corrupt.
+
+Never silently load a materially incompatible save.
+
+------------------------------------------------------------------------
+
+# 42. Options Screen
+
+## Tabs
+
+### Graphics
+
+-   resolution/window;
+-   VSync/frame cap;
+-   UI scale;
+-   effects/detail;
+-   far-zoom detail.
+
+### Audio
+
+-   master;
+-   music;
+-   effects;
+-   ambience;
+-   UI.
+
+### Gameplay
+
+-   pause on threat;
+-   autosave;
+-   edge scrolling;
+-   speed behavior;
+-   confirmations;
+-   learning helper.
+
+### Controls
+
+-   bindings;
+-   rebinding;
+-   conflicts;
+-   reset.
+
+### Accessibility
+
+-   text/UI scale;
+-   color-vision support;
+-   reduced effects/flashing;
+-   tooltip delay;
+-   other supported accessibility options.
+
+------------------------------------------------------------------------
+
+# 43. Tutorial / Learning Helper
+
+## Purpose
+
+Teach mechanics contextually without requiring a separate scripted
+campaign for everything.
+
+## Features
+
+-   lesson cards;
+-   contextual triggers;
+-   highlighted control/entity;
+-   action completion detection;
+-   lesson history;
+-   dismiss;
+-   mark learned;
+-   reopen.
+
+The helper should stop interrupting players who demonstrate familiarity.
+
+------------------------------------------------------------------------
+
+# 44. Help / Encyclopedia Screen
+
+## Purpose
+
+Provide searchable in-game reference.
+
+## Content
+
+-   mechanics;
+-   controls;
+-   stats;
+-   work types;
+-   health;
+-   combat;
+-   construction;
+-   research;
+-   factions;
+-   caravans;
+-   plugins.
+
+Plugin content may register help entries.
+
+Avoid duplicating every tooltip verbatim; provide conceptual
+explanations.
+
+------------------------------------------------------------------------
+
+# 45. Plugin Manager
+
+## Purpose
+
+Make mod/plugin management a first-class product capability.
+
+## List
+
+-   name;
+-   author;
+-   version;
+-   ID;
+-   enabled;
+-   compatibility;
+-   error state.
+
+## Detail
+
+-   description;
+-   dependencies;
+-   incompatibilities;
+-   capabilities;
+-   source/homepage metadata;
+-   settings availability.
+
+## Actions
+
+-   enable/disable;
+-   search/filter;
+-   inspect dependency;
+-   configure;
+-   resolve/review load order.
+
+------------------------------------------------------------------------
+
+# 46. Plugin Load Order / Dependency Screen
+
+## Purpose
+
+Explain exactly how enabled plugins resolve.
+
+## Information
+
+-   resolved order;
+-   dependencies;
+-   load-before/after constraints;
+-   cycles;
+-   conflicts;
+-   missing dependencies.
+
+## Actions
+
+Manual ordering should exist only where the plugin model permits it.
+
+The UI should explain **why** a plugin occupies a position rather than
+presenting an unexplained list.
+
+------------------------------------------------------------------------
+
+# 47. Plugin Settings Screen
+
+## Purpose
+
+Expose plugin configuration without bespoke UI code for every plugin.
+
+## Schema-driven controls
+
+-   boolean;
+-   number;
+-   enum;
+-   string;
+-   safe key binding.
+
+Clearly distinguish: - global; - per-save; - requires restart; -
+requires new game.
+
+Actions: - apply; - reset; - cancel.
+
+------------------------------------------------------------------------
+
+# 48. Content / Plugin Error Screen
+
+## Purpose
+
+Turn content failures into actionable diagnostics.
+
+## Error information
+
+-   plugin;
+-   definition;
+-   source file;
+-   field/path;
+-   validation message;
+-   dependency/provenance.
+
+## Actions
+
+-   copy diagnostics;
+-   inspect plugin;
+-   disable plugin when safe;
+-   continue in recovery mode when safe;
+-   quit.
+
+Recoverable definition errors should not produce an opaque crash.
+
+------------------------------------------------------------------------
+
+# 49. Developer Mode Main Panel
+
+## Purpose
+
+Provide first-class development tools for an open-source simulation.
+
+## Sections
+
+-   debug actions;
+-   overlays;
+-   entity inspector;
+-   incident tools;
+-   content inspector;
+-   profiler;
+-   replay/determinism tools.
+
+Developer controls are visually unmistakable from normal gameplay UI.
+
+------------------------------------------------------------------------
+
+# 50. Developer Entity Inspector
+
+## Purpose
+
+Explain authoritative state deeply enough to debug AI/simulation
+problems.
+
+## Information
+
+-   EntityID;
+-   components;
+-   position;
+-   current intent;
+-   job/state;
+-   reservations;
+-   path;
+-   needs;
+-   mood;
+-   health;
+-   faction;
+-   relevant revisions;
+-   RNG identity/streams where useful;
+-   state hash/debug information.
+
+## Actions
+
+Development-only mutation tools may spawn, destroy, teleport, damage,
+heal, set needs, force jobs, etc., through explicit debug commands.
+
+------------------------------------------------------------------------
+
+# 51. Debug Overlay Screen
+
+## Purpose
+
+Visualize invisible simulation structures.
+
+Toggleable overlays: - coordinates; - chunks/activity; - regions; -
+rooms; - walkability; - path cost; - paths; - reservations; - work
+candidates; - storage indexes; - temperature; - power networks; -
+light; - beauty; - cover; - roof; - fire active set.
+
+Overlay computation must not accidentally become an expensive
+every-frame world scan.
+
+------------------------------------------------------------------------
+
+# 52. Definition / Content Inspector
+
+## Purpose
+
+Debug data-driven content and plugins.
+
+## Features
+
+-   search all definitions;
+-   type filter;
+-   resolved fields;
+-   DefID/DefIndex;
+-   source plugin;
+-   inheritance;
+-   patch history;
+-   references.
+
+This screen should make it possible to answer: **"Why does this
+definition have this value?"**
+
+------------------------------------------------------------------------
+
+# 53. Performance Profiler Screen
+
+## Purpose
+
+Measure whether the simulation meets project scaling goals.
+
+## Top metrics
+
+-   TPS;
+-   average tick;
+-   p50/p95/p99;
+-   heap;
+-   allocations;
+-   goroutines;
+-   active/sleeping entities.
+
+## System breakdown
+
+-   scheduler;
+-   pawn AI;
+-   job discovery;
+-   pathfinding;
+-   combat;
+-   health;
+-   rooms;
+-   temperature;
+-   power;
+-   incidents;
+-   rendering;
+-   UI;
+-   plugins.
+
+## Drill-down
+
+Show requests, nodes expanded, cache hit rates, dirty rebuilds, active
+sets and other subsystem metrics.
+
+------------------------------------------------------------------------
+
+# 54. Large-Colony Management Screen
+
+## Purpose
+
+Provide a management layer specifically for hundreds or thousands of
+colonists.
+
+This is a `rimworld-go` differentiator rather than simply reproducing
+vanilla-scale UI.
+
+## Regions
+
+### Groups
+
+-   create/rename/delete;
+-   membership;
+-   group icon/color;
+-   hierarchy if later justified.
+
+### Strategic overview
+
+-   pawn count;
+-   working/idle;
+-   injured;
+-   break risk;
+-   drafted;
+-   food;
+-   medicine;
+-   beds;
+-   production bottlenecks;
+-   critical alerts.
+
+### Bulk policies
+
+-   work preset;
+-   schedule;
+-   area;
+-   food;
+-   apparel;
+-   drugs;
+-   medicine.
+
+### Search
+
+Find a pawn/group by name, skill, state, job or policy.
+
+## Requirements
+
+The player must be able to move from: **"42 colonists are medically
+compromised"** to the relevant subgroup without manually inspecting 42
+portraits.
+
+------------------------------------------------------------------------
+
+# 55. Global Search / Command Palette
+
+## Purpose
+
+Make a very large game navigable quickly.
+
+Potential searchable targets: - pawns; - animals; - buildings; -
+items; - stockpiles; - research; - architect commands; - world sites; -
+quests; - factions; - plugins; - help; - developer entities.
+
+Results should support actions such as select, jump, open screen, or
+activate command.
+
+This becomes increasingly valuable at large colony scale.
+
+------------------------------------------------------------------------
+
+# 56. Screen Implementation Order
+
+Agents should implement screens approximately in this dependency order.
+
+## Wave UI-0 --- Framework
+
+-   [ ] UI primitives
+-   [ ] input/focus
+-   [ ] window/modal system
+-   [ ] tooltips
+-   [ ] virtual lists/tables
+-   [ ] presentation snapshot boundary
+-   [ ] typed command gateway
+
+## Wave UI-1 --- First interactive simulation
+
+-   [ ] Boot
+-   [ ] Main Menu
+-   [ ] Main Colony
+-   [ ] camera
+-   [ ] time controls
+-   [ ] selection
+-   [ ] Generic Inspector
+-   [ ] colonist bar
+-   [ ] contextual commands
+
+## Wave UI-2 --- Build a colony
+
+-   [ ] Architect
+-   [ ] placement
+-   [ ] zones
+-   [ ] stockpile settings
+-   [ ] growing settings
+-   [ ] Work
+-   [ ] Schedule
+-   [ ] Area Manager
+
+## Wave UI-3 --- Understand pawns
+
+-   [ ] Character
+-   [ ] Needs/Mood
+-   [ ] Health
+-   [ ] Social
+-   [ ] Gear
+-   [ ] Detailed Stats
+-   [ ] Alerts/Letters
+
+## Wave UI-4 --- Production and defense
+
+-   [ ] Bills
+-   [ ] Research
+-   [ ] Assign/Policies
+-   [ ] combat controls/targeting on Main Colony
+-   [ ] environmental overlays
+
+## Wave UI-5 --- Colony ecosystem
+
+-   [ ] Animals
+-   [ ] Wildlife
+-   [ ] Prisoner
+-   [ ] Trade
+-   [ ] Factions
+-   [ ] History
+
+## Wave UI-6 --- Complete new-game flow
+
+-   [ ] Scenario
+-   [ ] Scenario Editor
+-   [ ] Storyteller/Difficulty
+-   [ ] World Generation
+-   [ ] Landing Site
+-   [ ] Starting Pawns
+
+These can begin earlier once their underlying definitions exist, but are
+required before a polished external build.
+
+## Wave UI-7 --- World gameplay
+
+-   [ ] World Map
+-   [ ] Caravan Formation
+-   [ ] Caravan Inspector
+-   [ ] Quest
+-   [ ] Transport Pod
+
+## Wave UI-8 --- Campaign completion
+
+-   [ ] Endgame Ship
+-   [ ] Victory
+-   [ ] Save
+-   [ ] Load
+-   [ ] Pause Menu
+-   [ ] Options
+-   [ ] Tutorial
+-   [ ] Help
+
+## Wave UI-9 --- Modding platform
+
+-   [ ] Plugin Manager
+-   [ ] Load Order
+-   [ ] Plugin Settings
+-   [ ] Content Error
+-   [ ] Definition Inspector
+
+## Wave UI-10 --- Developer/scaling
+
+-   [ ] Developer Panel
+-   [ ] Entity Inspector
+-   [ ] Debug Overlays
+-   [ ] Profiler
+-   [ ] Large-Colony Management
+-   [ ] Global Search/Command Palette
+
+------------------------------------------------------------------------
+
+# 57. Shared Screen Navigation Model
+
+Recommended conceptual navigation:
+
+``` text
+BOOT
+  ↓
+MAIN MENU
+  ├── Continue ───────────────→ COLONY
+  ├── Load ─→ LOAD ──────────→ COLONY
+  ├── New Game
+  │     ↓
+  │   Scenario
+  │     ↓
+  │   Storyteller/Difficulty
+  │     ↓
+  │   World Generation
+  │     ↓
+  │   Landing Site
+  │     ↓
+  │   Starting Pawns
+  │     ↓
+  │   COLONY
+  │
+  ├── Plugins
+  └── Options
+
+COLONY
+  ├── Inspector
+  │    ├── Character
+  │    ├── Needs
+  │    ├── Health
+  │    ├── Social
+  │    ├── Gear
+  │    └── Stats
+  │
+  ├── Architect
+  ├── Work
+  ├── Schedule
+  ├── Assign
+  ├── Animals
+  ├── Wildlife
+  ├── Research
+  ├── Factions
+  ├── History
+  ├── Quests
+  ├── World Map
+  └── Menu
+```
+
+Not every conceptual screen must become a full-screen route. Pawn
+screens, bills and similar surfaces may be tabs/windows inside the main
+colony UI.
+
+------------------------------------------------------------------------
+
+# 58. Screen vs Window vs Overlay Rule
+
+Use **full screens** when the player's primary context changes: - main
+menu; - new-game steps; - world map; - major management tables where
+screen space is necessary; - plugin manager; - options.
+
+Use **windows/panels** for focused inspection/configuration: - entity
+inspector; - bill editor; - policy editor; - trade; - quest details; -
+caravan formation; - health operations.
+
+Use **overlays** for spatial information: - power; - temperature; -
+roof; - fertility; - beauty; - room; - path/debug data.
+
+Use **modal confirmation** sparingly for destructive/irreversible
+actions.
+
+------------------------------------------------------------------------
+
+# 59. Screen Definition of Done
+
+A main screen is complete only when:
+
+-   [ ] its underlying gameplay feature exists;
+-   [ ] it consumes read models/snapshots;
+-   [ ] all authoritative mutations are typed commands;
+-   [ ] navigation works;
+-   [ ] Escape/back behavior works;
+-   [ ] keyboard focus works;
+-   [ ] disabled actions explain why;
+-   [ ] empty states exist;
+-   [ ] stale EntityIDs are handled safely;
+-   [ ] loading/error states exist where applicable;
+-   [ ] search/sort/filter work where specified;
+-   [ ] large lists virtualize;
+-   [ ] supported resolutions/UI scales work;
+-   [ ] important information is not color-only;
+-   [ ] tooltips explain non-obvious mechanics;
+-   [ ] no full-world scan occurs every render frame;
+-   [ ] controller/view-model behavior has tests where practical;
+-   [ ] a visual acceptance screenshot/scenario exists;
+-   [ ] plugin-provided content works where extension is intended;
+-   [ ] relevant documentation is updated.
+
+------------------------------------------------------------------------
+
+# 60. Final Screen Inventory
+
+The major interfaces defined by this specification are:
+
+1.  Boot / Loading
+2.  Main Menu
+3.  Scenario Selection
+4.  Scenario Editor
+5.  Storyteller & Difficulty
+6.  World Generation
+7.  Landing Site
+8.  Starting Pawns
+9.  Main Colony
+10. Generic Inspector
+11. Detailed Stats
+12. Character/Bio
+13. Needs/Mood
+14. Health
+15. Social
+16. Gear/Inventory
+17. Architect
+18. Zones/Areas
+19. Work
+20. Schedule
+21. Assign/Policies
+22. Policy Editor
+23. Production/Bills
+24. Research
+25. Animals
+26. Wildlife
+27. Prisoners
+28. Trade
+29. Factions
+30. History/Records
+31. Quests
+32. Alerts/Event Letters
+33. World Map
+34. Form Caravan
+35. Caravan Inspector
+36. Transport Pod
+37. Endgame Ship
+38. Victory/Campaign Summary
+39. Pause Menu
+40. Save
+41. Load
+42. Options
+43. Tutorial/Learning Helper
+44. Help/Encyclopedia
+45. Plugin Manager
+46. Plugin Load Order
+47. Plugin Settings
+48. Content/Plugin Errors
+49. Developer Mode
+50. Developer Entity Inspector
+51. Debug Overlays
+52. Definition/Content Inspector
+53. Performance Profiler
+54. Large-Colony Management
+55. Global Search / Command Palette
+
+The objective is not to maximize the number of windows. Several of these
+should share navigation and reusable components. The objective is to
+ensure **every major player workflow has an explicitly designed home**
+before implementation becomes fragmented across agents.

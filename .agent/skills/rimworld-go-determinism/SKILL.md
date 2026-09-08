@@ -110,4 +110,5 @@ Run the same scenario under varying `GOMAXPROCS` where concurrency can affect co
 - channel receive order determining outcomes;
 - worker directly mutating components;
 - renderer-fed float coordinates becoming authoritative;
+- visual/presentation RNG feeding authoritative simulation;
 - hash of raw structs with padding/pointers.

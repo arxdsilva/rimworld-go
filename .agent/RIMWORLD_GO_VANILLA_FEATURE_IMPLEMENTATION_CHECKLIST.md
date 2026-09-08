@@ -15,6 +15,9 @@
 > using original content and naming where public distribution requires
 > it.
 >
+> For player-visible sprites, icons, UI chrome, and the asset pipeline,
+> also follow `ART_DIRECTION_AND_ASSET_PIPELINE.md`.
+>
 > **Checklist rule:** Agents may tick `[x]` only when the feature's
 > acceptance criteria, tests, deterministic behavior, persistence
 > impact, and relevant documentation are complete.
@@ -36,7 +39,12 @@ For every item:
 6.  Preserve deterministic authoritative simulation.
 7.  Update save/replay support if authoritative state changes.
 8.  Update mod/content definitions if the feature is data-driven.
-9.  Tick the item only after its acceptance criteria pass.
+9.  If the item includes sprites, icons, UI chrome, renderer
+    presentation, or asset files, follow
+    `.agent/ART_DIRECTION_AND_ASSET_PIPELINE.md` via
+    `rimworld-go-art-assets` and update matching ART wave checkboxes
+    there.
+10. Tick the item only after its acceptance criteria pass.
 
 **Status notation**
 

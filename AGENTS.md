@@ -7,6 +7,7 @@ All canonical specs, rules, and agent-facing data live in [`.agent/`](.agent/DOC
 - `.agent/HEXAGONAL_ARCHITECTURE.md` — dependency direction, ports/adapters, repository ownership.
 - `.agent/GO_BEST_PRACTICES.md` — mandatory Go engineering rules.
 - `.agent/AI_TOKEN_OPTIMIZATION.md` — context/token discipline.
+- `.agent/ART_DIRECTION_AND_ASSET_PIPELINE.md` — visual production, sprites, icons, UI chrome, and asset pipeline (load only when that work is in scope; playbook: `.agent/skills/rimworld-go-art-assets/SKILL.md`).
 - `.agent/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` — ordered vanilla gameplay feature backlog.
 - `.agent/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` — ordered player-facing UI/UX backlog.
 - `.agent/handoffs/` — per-task AI handoff records.
@@ -26,8 +27,9 @@ Non-negotiable rules:
 - Do not weaken tests to pass CI.
 - Do not copy proprietary code, assets, text, or balancing data.
 - Every scoped task must leave a concise handoff in `.agent/handoffs/`.
-- Whenever work satisfies (fully or partially) an item in `.agent/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` or `.agent/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`, update that item's checkbox in the same change: `[x]` only when its full acceptance criteria are met, `[-]` when partially done (state what's missing in a short trailing note), `[!]` when blocked (state why). Never leave completed work unreflected in the checklists.
+- Whenever work satisfies (fully or partially) an item in `.agent/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md`, `.agent/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`, or `.agent/ART_DIRECTION_AND_ASSET_PIPELINE.md`, update that item's checkbox in the same change: `[x]` only when its full acceptance criteria are met, `[-]` when partially done (state what's missing in a short trailing note), `[!]` when blocked (state why). Never leave completed work unreflected in the checklists.
 - Any newly implemented domain/application behavior that is player-observable per `.agent/MASTER_SPEC.md` or `.agent/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` must ship with a corresponding HUD/UI representation (read-only, via `Snapshot()`/read models, never a direct domain reference) in the same change. If no sensible on-screen representation exists yet (e.g. a pure internal primitive with no player-facing effect), state why in the handoff instead of adding one.
+- Player-visible sprites, icons, UI chrome, renderer presentation, palettes, pivots, atlases, and asset-pipeline tooling must follow `.agent/ART_DIRECTION_AND_ASSET_PIPELINE.md` via skill `rimworld-go-art-assets`. Load only the sections that skill names for the asset family. Domain stays headless: pixels, texture handles, camera, and animation stay in presentation adapters. Never trace, extract, or reconstruct proprietary RimWorld art. Skip that spec for headless simulation-only work with no visual output.
 
 ## Repository-specific override: commits
 

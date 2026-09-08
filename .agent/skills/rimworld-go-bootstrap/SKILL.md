@@ -23,7 +23,8 @@ Use for foundation/setup work, especially before parallel feature agents begin.
 12. architecture lint;
 13. CI;
 14. initial ADRs;
-15. package `AGENTS.md` as packages become real.
+15. package `AGENTS.md` as packages become real;
+16. `assets/` layout, palettes, and metadata schema only when renderer/art work begins — follow `.agent/ART_DIRECTION_AND_ASSET_PIPELINE.md` Wave 0 via `rimworld-go-art-assets`.
 
 Do not generate dozens of empty packages just to match a diagram.
 

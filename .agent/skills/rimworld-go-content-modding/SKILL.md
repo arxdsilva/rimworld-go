@@ -60,6 +60,8 @@ Reject:
 
 `contentlint` should perform validation without launching the renderer.
 
+Plugin/core visual assets (sprites, icons, UI chrome, palettes, metadata) use the same namespaced IDs and validators as definitions, and must follow `.agent/ART_DIRECTION_AND_ASSET_PIPELINE.md` via `rimworld-go-art-assets`. Plugins never mutate generated core art.
+
 ## Scripting
 
 Do not allow arbitrary native Go plugins from untrusted mods.
@@ -82,4 +84,5 @@ Cover:
 - missing dependency;
 - invalid path;
 - roundtrip/fixture validation;
-- mod set reflected in save metadata.
+- mod set reflected in save metadata;
+- plugin asset ID/path/namespace validation when assets exist.

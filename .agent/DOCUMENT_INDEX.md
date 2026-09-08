@@ -8,6 +8,7 @@ All paths below are relative to this `.agent/` folder unless noted.
 | Hexagonal architecture and repo boundaries | `HEXAGONAL_ARCHITECTURE.md` |
 | Go standards/performance/concurrency | `GO_BEST_PRACTICES.md` |
 | Efficient AI context usage | `AI_TOKEN_OPTIMIZATION.md` |
+| Visual production, sprites, icons, UI chrome, asset pipeline | `ART_DIRECTION_AND_ASSET_PIPELINE.md` (playbook: `skills/rimworld-go-art-assets/SKILL.md`) |
 | Ordered vanilla gameplay feature backlog | `RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` |
 | Ordered player-facing UI/UX backlog | `RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` |
 | Per-task AI handoffs | `handoffs/` |
@@ -21,4 +22,5 @@ Recommended agent loading order:
 3. package `AGENTS.md`;
 4. interfaces/tests;
 5. relevant system doc/ADR;
-6. only then broader documents.
+6. named `ART_DIRECTION_AND_ASSET_PIPELINE.md` sections when visual/asset work is in scope;
+7. only then broader documents.

@@ -19,6 +19,8 @@ Benchmarks:
 
 ## Save / Mod Impact
 
+## Art / Visual Impact
+
 ## Known Limitations
 
 ## Follow-ups

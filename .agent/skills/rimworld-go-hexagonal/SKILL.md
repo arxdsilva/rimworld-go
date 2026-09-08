@@ -93,6 +93,8 @@ UI receives immutable/read snapshots and emits typed commands.
 
 UI never receives writable entity stores.
 
+Player-visible sprites, icons, and UI chrome follow `.agent/ART_DIRECTION_AND_ASSET_PIPELINE.md`; presentation adapters consume generated assets, they do not become domain types.
+
 ## Persistence rule
 
 Runtime domain types are not the external save schema.

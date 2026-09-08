@@ -29,6 +29,10 @@ Benchmark:
 ## Persistence / Modding
 Impact:
 
+## Art / Visual
+Impact:
+Skill/sections:
+
 ## Verification
 Tests:
 Commands:
