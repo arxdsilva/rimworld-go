@@ -1796,7 +1796,7 @@ Agents should implement screens approximately in this dependency order.
 -   [ ] Main Menu
 -   [ ] Main Colony
 -   [ ] camera
--   [ ] time controls
+-   [-] time controls (pause/speed keys and date/period HUD; no dedicated time chrome widget yet)
 -   [ ] selection
 -   [ ] Generic Inspector
 -   [ ] colonist bar

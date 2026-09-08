@@ -72,8 +72,58 @@ func TestClockDateMatchesNow(t *testing.T) {
 
 func TestDateString(t *testing.T) {
 	d := Date{Year: 2, Quadrum: 1, Day: 5, Hour: 14}
-	want := "Year 2, Quadrum 1, Day 5, Hour 14"
+	want := "Year 2, Quadrum 1, Day 5, afternoon 14:00"
 	if got := d.String(); got != want {
 		t.Fatalf("String() = %q, want %q", got, want)
+	}
+}
+
+func TestDateAtHalfHour(t *testing.T) {
+	got := DateAt(TicksPerHour / 2)
+	if got.Hour != 0 || got.Minute != 30 {
+		t.Fatalf("DateAt(half hour) = %+v, want Hour=0 Minute=30", got)
+	}
+}
+
+func TestPeriodAtHours(t *testing.T) {
+	cases := []struct {
+		hour int
+		want Period
+	}{
+		{0, Night},
+		{5, Night},
+		{6, Morning},
+		{11, Morning},
+		{12, Afternoon},
+		{16, Afternoon},
+		{17, Evening},
+		{19, Evening},
+		{20, Night},
+		{23, Night},
+	}
+	for _, tc := range cases {
+		if got := PeriodAt(tc.hour); got != tc.want {
+			t.Fatalf("PeriodAt(%d) = %s, want %s", tc.hour, got, tc.want)
+		}
+	}
+}
+
+func TestHourOfDayWraps(t *testing.T) {
+	if got := HourOfDay(0); got != 0 {
+		t.Fatalf("HourOfDay(0) = %v", got)
+	}
+	if got := HourOfDay(TicksPerHour); got != 1 {
+		t.Fatalf("HourOfDay(1h) = %v", got)
+	}
+	if got := HourOfDay(TicksPerDay); got != 0 {
+		t.Fatalf("HourOfDay(1d) = %v, want 0", got)
+	}
+}
+
+func TestNewAtAndStartingMorning(t *testing.T) {
+	c := NewAt(StartingMorning())
+	d := c.Date()
+	if d.Hour != StartHour || d.Period() != Morning {
+		t.Fatalf("starting morning = %+v period %s", d, d.Period())
 	}
 }

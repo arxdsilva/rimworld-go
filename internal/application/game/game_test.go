@@ -52,12 +52,23 @@ func TestSpawnPawnRejectsOutOfBounds(t *testing.T) {
 	}
 }
 
+func TestStartsInTheMorning(t *testing.T) {
+	g := New(Config{Seed: 1, Width: 5, Height: 5})
+	if g.Tick() != clock.StartingMorning() {
+		t.Fatalf("Tick() = %d, want %d", g.Tick(), clock.StartingMorning())
+	}
+	if got := g.Date().Period(); got != clock.Morning {
+		t.Fatalf("Period() = %s, want morning", got)
+	}
+}
+
 func TestStepAdvancesClock(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 5, Height: 5})
 
 	g.Step(10)
-	if g.Tick() != 10 {
-		t.Fatalf("Tick() = %d, want 10", g.Tick())
+	want := clock.StartingMorning() + 10
+	if g.Tick() != want {
+		t.Fatalf("Tick() = %d, want %d", g.Tick(), want)
 	}
 }
 

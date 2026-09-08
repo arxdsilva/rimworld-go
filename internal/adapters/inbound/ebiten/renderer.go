@@ -321,7 +321,16 @@ func (r *Renderer) Draw(screen *ebiten.Image) {
 		}
 	}
 
+	r.drawDaylight(screen, sw, sh)
 	r.drawHUD(screen)
+}
+
+func (r *Renderer) drawDaylight(screen *ebiten.Image, sw, sh int) {
+	c := skyOverlay(r.game.Tick())
+	if c.A == 0 {
+		return
+	}
+	vector.FillRect(screen, 0, 0, float32(sw), float32(sh), c, false)
 }
 
 func (r *Renderer) drawTerrain(screen *ebiten.Image, sw, sh int, tile float64) {

@@ -1128,7 +1128,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 12.4 Lighting
 
--   [ ] **Day/night light**
+-   [-] **Day/night light** (outdoor level is a pure function of tick; indoor/roofed and artificial lights not yet)
 -   [ ] **Roof/indoor darkness**
 -   [ ] **Artificial lights**
 -   [ ] **Light affects plants**
@@ -2507,12 +2507,12 @@ the player-facing system.
 -   [ ] **Music system**
     -   Contextual but not authoritative.
 -   [ ] **Pawn facing/aiming**
--   [ ] **Simple movement interpolation**
+-   [x] **Simple movement interpolation**
 -   [ ] **Muzzle/projectile effects**
 -   [ ] **Damage/fire effects**
 -   [ ] **Selection/targeting feedback**
 -   [ ] **Weather visual effects**
--   [ ] **Day/night presentation**
+-   [-] **Day/night presentation** (soft fullscreen sky veil from outdoor light + hour; no indoor darkness)
 
 All assets must be original or appropriately licensed.
 

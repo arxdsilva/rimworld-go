@@ -256,7 +256,7 @@ This is the minimum UI required to interact with a running simulation.
 -   [x] **Fast speed** (key `2`; 1 sim tick / 6 Update frames)
 -   [x] **Very-fast speed** (key `3`; 1 sim tick / 2 Update frames)
 -   [x] **Keyboard speed shortcuts**
--   [ ] **Current date/time display**
+-   [-] **Current date/time display** (HUD shows year/quadrum/day, period, and HH:MM; no temperature/weather yet)
     -   Local game hour.
     -   day.
     -   quadrum/season.

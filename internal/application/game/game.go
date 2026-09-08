@@ -41,7 +41,7 @@ type Game struct {
 // New builds a Game from cfg. Width/Height must be positive.
 func New(cfg Config) *Game {
 	return &Game{
-		clock:     clock.New(),
+		clock:     clock.NewAt(clock.StartingMorning()),
 		grid:      grid.New(cfg.Width, cfg.Height),
 		entities:  entity.NewAllocator(),
 		positions: component.NewStore[Position](),
