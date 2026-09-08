@@ -1,7 +1,8 @@
 # rimworld-go --- UI/UX Implementation Specification & Checklist
 
 > **Companion to:**
-> `RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` and
+> `RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md`,
+> `MAIN_UI_SCREENS_SPECIFICATION.md` (per-screen layout/commands), and
 > `ART_DIRECTION_AND_ASSET_PIPELINE.md` (icons, chrome, overlays).
 >
 > **Purpose:** Define every major player-facing interface required to
@@ -47,11 +48,14 @@ For every UI task:
 7.  Add keyboard/mouse behavior and failure feedback.
 8.  Verify large-colony behavior; lists must not become unusable at
     500--1,000 pawns.
-9.  If the task includes icons, chrome, overlays, portraits, or other
+9.  If the task is a named screen, window, overlay, or HUD layout, follow
+    `MAIN_UI_SCREENS_SPECIFICATION.md` via `rimworld-go-ui-screens`
+    (named section plus §0/§58/§59).
+10. If the task includes icons, chrome, overlays, portraits, or other
     visual presentation, follow `ART_DIRECTION_AND_ASSET_PIPELINE.md`
     via `rimworld-go-art-assets` (original visual design; do not copy
     RimWorld panel art or iconography).
-10. Tick the checkbox only after the UI is functionally complete.
+11. Tick the checkbox only after the UI is functionally complete.
 
 ## Status
 

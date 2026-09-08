@@ -51,6 +51,7 @@ Also load:
 
 - `assets/AGENTS.md` when that package exists;
 - matching item(s) in `.agent/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` (rendering/content) or `.agent/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` (UI chrome/icons);
+- matching named screen in `.agent/MAIN_UI_SCREENS_SPECIFICATION.md` when chrome/icons belong to a player-facing screen;
 - existing templates, palettes, and neighboring assets in the same family.
 
 ## Clean-room

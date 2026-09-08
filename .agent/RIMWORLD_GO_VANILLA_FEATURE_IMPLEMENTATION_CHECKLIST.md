@@ -16,7 +16,8 @@
 > it.
 >
 > For player-visible sprites, icons, UI chrome, and the asset pipeline,
-> also follow `ART_DIRECTION_AND_ASSET_PIPELINE.md`.
+> also follow `ART_DIRECTION_AND_ASSET_PIPELINE.md`. For named
+> player-facing screens, also follow `MAIN_UI_SCREENS_SPECIFICATION.md`.
 >
 > **Checklist rule:** Agents may tick `[x]` only when the feature's
 > acceptance criteria, tests, deterministic behavior, persistence
@@ -44,7 +45,11 @@ For every item:
     `.agent/ART_DIRECTION_AND_ASSET_PIPELINE.md` via
     `rimworld-go-art-assets` and update matching ART wave checkboxes
     there.
-10. Tick the item only after its acceptance criteria pass.
+10. If the item is player-observable as a named screen, window, overlay,
+    or HUD layout, follow `.agent/MAIN_UI_SCREENS_SPECIFICATION.md` via
+    `rimworld-go-ui-screens` and update matching screen-wave checkboxes
+    there.
+11. Tick the item only after its acceptance criteria pass.
 
 **Status notation**
 

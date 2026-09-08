@@ -23,6 +23,7 @@ Do not load all skills into every task. Start with `rimworld-go-router`.
 | rimworld-go-persistence-replay | Saves, migrations, replay |
 | rimworld-go-content-modding | Definitions and mods |
 | rimworld-go-art-assets | Sprites, icons, UI chrome, palettes, pivots, atlases, renderer presentation, asset pipeline |
+| rimworld-go-ui-screens | Player-facing screens, windows, overlays, HUD layout, navigation, inspectors |
 | rimworld-go-testing | Tests, fuzz, benchmarks, long runs |
 | rimworld-go-debugging | Reproduce and fix simulation bugs |
 | rimworld-go-review-integration | PR review and multi-agent merge |
@@ -41,6 +42,7 @@ Do not load all skills into every task. Start with `rimworld-go-router`.
 ├── GO_BEST_PRACTICES.md
 ├── AI_TOKEN_OPTIMIZATION.md
 ├── ART_DIRECTION_AND_ASSET_PIPELINE.md
+├── MAIN_UI_SCREENS_SPECIFICATION.md
 ├── RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md
 ├── RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md
 ├── DOCUMENT_INDEX.md
@@ -51,7 +53,7 @@ docs/
 └── systems/
 ```
 
-You can alternatively use `.cursor/skills`, `.codex/skills`, `.claude/skills`, or another tool-specific location if your agent supports it. This repo also ships a thin Cursor entry at `.cursor/skills/rimworld-go-art-assets/` pointing at the canonical `.agent` playbook.
+You can alternatively use `.cursor/skills`, `.codex/skills`, `.claude/skills`, or another tool-specific location if your agent supports it. This repo also ships thin Cursor entries at `.cursor/skills/rimworld-go-art-assets/` and `.cursor/skills/rimworld-go-ui-screens/` pointing at the canonical `.agent` playbooks.
 
 ## Global context rule
 
@@ -66,10 +68,11 @@ relevant interface/types
 tests
 one system doc/ADR when necessary
 named ART_DIRECTION sections when visual/asset work is in scope
+named MAIN_UI_SCREENS sections when a player-facing screen is in scope
 ```
 
 The full master spec should not be injected into every coding task.
 
 ## Source of truth
 
-These skills operationalize the project's existing architecture, token optimization, Go best practices, art direction, and master specification; they do not replace those documents.
+These skills operationalize the project's existing architecture, token optimization, Go best practices, art direction, screen specifications, and master specification; they do not replace those documents.

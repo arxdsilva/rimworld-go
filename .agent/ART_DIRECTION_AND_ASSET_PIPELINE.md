@@ -19,7 +19,8 @@
 > `.agent/skills/rimworld-go-art-assets/SKILL.md`. Load §1, §2, §35, and
 > only the category/pipeline sections that skill names for the task.
 > Tick ART wave / prototype-gate / acceptance checkboxes in this file
-> using `[x]` / `[-]` / `[!]` when work lands.
+> using `[x]` / `[-]` / `[!]` when work lands. For UI chrome that belongs
+> to a named screen, also follow `MAIN_UI_SCREENS_SPECIFICATION.md`.
 
 ## 1. Agent Definition of Done
 

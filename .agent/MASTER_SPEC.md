@@ -11,7 +11,7 @@ The project must be an original implementation. Do not copy commercial source co
 
 The primary differentiator is scale: the architecture should ultimately support colonies with **1,000+ active settlers**, very large maps, tens or hundreds of thousands of world objects, headless simulation, deterministic replay, extensive modding, and lower CPU/RAM use than conventional simulation-heavy games.
 
-For the ordered, checkbox-tracked feature and UI/UX backlog derived from this spec, see `RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` and `RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`. For player-visible art, sprites, icons, UI chrome, and the asset pipeline, see `ART_DIRECTION_AND_ASSET_PIPELINE.md` (agent playbook: `skills/rimworld-go-art-assets/SKILL.md`).
+For the ordered, checkbox-tracked feature and UI/UX backlog derived from this spec, see `RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` and `RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`. For per-screen layout, navigation, commands, and states, see `MAIN_UI_SCREENS_SPECIFICATION.md` (agent playbook: `skills/rimworld-go-ui-screens/SKILL.md`). For player-visible art, sprites, icons, UI chrome, and the asset pipeline, see `ART_DIRECTION_AND_ASSET_PIPELINE.md` (agent playbook: `skills/rimworld-go-art-assets/SKILL.md`).
 
 
 # 1. Product Pillars

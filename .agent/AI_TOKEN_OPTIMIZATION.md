@@ -43,7 +43,8 @@ Agents should load context in this order:
 7. Relevant ADRs
 8. Recent dependency handoffs
 9. ART_DIRECTION sections named by rimworld-go-art-assets, only if visual/asset work
-10. MASTER_SPEC only if needed
+10. MAIN_UI_SCREENS sections named by rimworld-go-ui-screens, only if a player-facing screen is in scope
+11. MASTER_SPEC only if needed
 ```
 
 Do **not** feed the full master specification by default once package-level guidance exists.
@@ -73,6 +74,8 @@ one system document
 ```
 
 When the task produces sprites, icons, UI chrome, or asset-pipeline tooling, also load the `rimworld-go-art-assets` skill and only the named sections of `ART_DIRECTION_AND_ASSET_PIPELINE.md`.
+
+When the task implements or changes a player-facing screen, window, overlay, or HUD layout, also load the `rimworld-go-ui-screens` skill and only the named sections of `MAIN_UI_SCREENS_SPECIFICATION.md`.
 
 ## Level C — Only if architectural question arises
 
@@ -159,6 +162,7 @@ Architecture: .agent/HEXAGONAL_ARCHITECTURE.md
 Go rules: .agent/GO_BEST_PRACTICES.md
 Token rules: .agent/AI_TOKEN_OPTIMIZATION.md
 Art/assets: .agent/ART_DIRECTION_AND_ASSET_PIPELINE.md
+Screens: .agent/MAIN_UI_SCREENS_SPECIFICATION.md
 ```
 
 ---
@@ -765,6 +769,8 @@ architecture → HEXAGONAL_ARCHITECTURE
 Go rules → GO_BEST_PRACTICES
 token/context → AI_TOKEN_OPTIMIZATION
 visual production / asset pipeline → ART_DIRECTION_AND_ASSET_PIPELINE
+per-screen layout / navigation → MAIN_UI_SCREENS_SPECIFICATION
+ordered UI/UX backlog → RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST
 subsystem behavior → docs/systems/*
 design decisions → docs/adr/*
 package-specific constraints → package AGENTS.md
@@ -869,9 +875,12 @@ Use:
 - definition schemas;
 - small fixture;
 - specific content ID;
-- named ART_DIRECTION sections plus neighboring reference assets, never the whole art bible plus an atlas dump.
+- named ART_DIRECTION sections plus neighboring reference assets, never the whole art bible plus an atlas dump;
+- named MAIN_UI_SCREENS sections for the screen under work, never the whole 50-screen spec.
 
 For visual tasks, follow `rimworld-go-art-assets` section routing instead of pasting `.agent/ART_DIRECTION_AND_ASSET_PIPELINE.md` in full.
+
+For screen tasks, follow `rimworld-go-ui-screens` section routing instead of pasting `.agent/MAIN_UI_SCREENS_SPECIFICATION.md` in full.
 
 ---
 

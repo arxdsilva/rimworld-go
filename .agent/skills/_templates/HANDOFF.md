@@ -21,6 +21,8 @@ Benchmarks:
 
 ## Art / Visual Impact
 
+## Screen / UI Impact
+
 ## Known Limitations
 
 ## Follow-ups

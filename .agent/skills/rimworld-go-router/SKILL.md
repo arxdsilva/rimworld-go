@@ -28,7 +28,8 @@ Read in this order only as needed:
 9. `.agent/MASTER_SPEC.md` only when broader product intent is required
 10. `.agent/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` when scoping/ordering a gameplay feature
 11. `.agent/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` when scoping/ordering a UI feature
-12. `.agent/ART_DIRECTION_AND_ASSET_PIPELINE.md` when the task produces or changes player-visible art, renderer presentation, UI chrome, or asset-pipeline tooling (via skill `rimworld-go-art-assets`; load named sections only)
+12. `.agent/MAIN_UI_SCREENS_SPECIFICATION.md` when implementing or changing a player-facing screen, window, overlay, or HUD layout (via skill `rimworld-go-ui-screens`; load named sections only)
+13. `.agent/ART_DIRECTION_AND_ASSET_PIPELINE.md` when the task produces or changes player-visible art, renderer presentation, UI chrome, or asset-pipeline tooling (via skill `rimworld-go-art-assets`; load named sections only)
 
 Token/context policy is defined by `.agent/AI_TOKEN_OPTIMIZATION.md`.
 
@@ -45,6 +46,7 @@ Token/context policy is defined by `.agent/AI_TOKEN_OPTIMIZATION.md`.
 | Save/load, schema, snapshots, replay | `rimworld-go-persistence-replay` |
 | Definitions, YAML/JSON content, mods | `rimworld-go-content-modding` |
 | Sprites, icons, UI chrome, palettes, pivots, atlases, renderer presentation, asset pipeline | `rimworld-go-art-assets` |
+| Player-facing screens, windows, overlays, HUD layout, navigation, inspectors, management tables | `rimworld-go-ui-screens` |
 | Tests, fuzz, benchmarks, long simulations | `rimworld-go-testing` |
 | Regression/bug/replay investigation | `rimworld-go-debugging` |
 | PR review, merge wave, architecture compliance | `rimworld-go-review-integration` |
@@ -65,6 +67,7 @@ Determine:
 - Does persistence/mod compatibility change?
 - Does the task span more than one architectural layer?
 - Does this produce or change player-visible art, sprites, icons, UI chrome, renderer presentation, or the asset pipeline?
+- Does this implement or change a player-facing screen, window, overlay, HUD layout, or navigation flow?
 
 ## Output before coding
 
@@ -83,6 +86,7 @@ Benchmarks:
 Determinism impact:
 Save/mod impact:
 Art/visual impact:
+Screen/UI impact:
 ```
 
 Keep it concise.
@@ -95,6 +99,7 @@ Do not implement yet if:
 - a task requires violating dependency direction;
 - a canonical primitive appears to need duplication;
 - an existing ADR explicitly conflicts with the requested implementation;
-- bulk art production is requested before ART Wave 0 contracts or the §34 prototype gate exist.
+- bulk art production is requested before ART Wave 0 contracts or the §34 prototype gate exist;
+- a later UI screen wave is requested before Wave UI-0 framework (primitives, snapshot boundary, command gateway) exists.
 
 In those cases, invoke the architecture/documentation workflow and resolve the contract first.

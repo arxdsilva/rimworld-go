@@ -2,7 +2,7 @@
 
 > **Status:** Authoritative architecture guide  
 > **Audience:** Human contributors, coding agents, reviewers, integration agents  
-> **Companion documents:** `AI_TOKEN_OPTIMIZATION.md`, `GO_BEST_PRACTICES.md`, `MASTER_SPEC.md`, `ART_DIRECTION_AND_ASSET_PIPELINE.md`, `RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md`, `RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`
+> **Companion documents:** `AI_TOKEN_OPTIMIZATION.md`, `GO_BEST_PRACTICES.md`, `MASTER_SPEC.md`, `ART_DIRECTION_AND_ASSET_PIPELINE.md`, `MAIN_UI_SCREENS_SPECIFICATION.md`, `RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md`, `RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`
 
 ---
 
@@ -689,7 +689,7 @@ UI-only intent
 
 Renderer never calls entity stores to mutate game state.
 
-Renderer-specific data such as sprite handles, camera transforms, screen pixels, and animation interpolation stay outside domain packages. Visual production (scale, pivots, palettes, sprites, icons, UI chrome, atlases) follows `ART_DIRECTION_AND_ASSET_PIPELINE.md`; that spec does not move art ownership into the domain.
+Renderer-specific data such as sprite handles, camera transforms, screen pixels, and animation interpolation stay outside domain packages. Visual production (scale, pivots, palettes, sprites, icons, UI chrome, atlases) follows `ART_DIRECTION_AND_ASSET_PIPELINE.md`; named screens, windows, overlays, and HUD layout follow `MAIN_UI_SCREENS_SPECIFICATION.md`. Those specs do not move presentation ownership into the domain.
 
 ---
 

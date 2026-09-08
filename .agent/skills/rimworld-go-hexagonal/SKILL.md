@@ -95,6 +95,8 @@ UI never receives writable entity stores.
 
 Player-visible sprites, icons, and UI chrome follow `.agent/ART_DIRECTION_AND_ASSET_PIPELINE.md`; presentation adapters consume generated assets, they do not become domain types.
 
+Named screens, windows, overlays, and HUD layout follow `.agent/MAIN_UI_SCREENS_SPECIFICATION.md`; they consume read models and emit typed commands.
+
 ## Persistence rule
 
 Runtime domain types are not the external save schema.

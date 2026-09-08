@@ -13,6 +13,7 @@ description: Create or update rimworld-go ADRs, system design documents, package
 .agent/GO_BEST_PRACTICES.md        Go engineering standard
 .agent/AI_TOKEN_OPTIMIZATION.md    context/token policy
 .agent/ART_DIRECTION_AND_ASSET_PIPELINE.md   visual production / asset pipeline
+.agent/MAIN_UI_SCREENS_SPECIFICATION.md      per-screen layout / navigation / commands
 .agent/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md   ordered gameplay feature backlog
 .agent/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md             ordered UI/UX backlog
 docs/systems/*              subsystem behavior

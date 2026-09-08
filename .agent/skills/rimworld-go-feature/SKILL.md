@@ -15,6 +15,7 @@ Read:
 - existing tests for the behavior;
 - relevant system doc;
 - the matching item(s) in `.agent/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` or `.agent/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` when the task maps to a checklist entry;
+- `.agent/MAIN_UI_SCREENS_SPECIFICATION.md` via skill `rimworld-go-ui-screens` when the feature includes a player-facing screen, window, overlay, or HUD layout;
 - `.agent/ART_DIRECTION_AND_ASSET_PIPELINE.md` via skill `rimworld-go-art-assets` when the feature includes sprites, icons, UI chrome, renderer presentation, or asset-pipeline tooling.
 
 Load broader architecture or master spec only when needed.
@@ -27,14 +28,14 @@ Load broader architecture or master spec only when needed.
 4. Write or update the failing behavioral test first when practical.
 5. Implement the smallest complete domain change.
 6. Add application/adapter wiring only when the feature crosses a port.
-7. If the behavior is player-observable, add or extend a HUD/UI representation (read-only, via `Snapshot()`/read models) in the same change; if none makes sense yet, note why in the handoff.
+7. If the behavior is player-observable, add or extend a HUD/UI representation (read-only, via `Snapshot()`/read models) in the same change; if that representation is a named screen, follow `rimworld-go-ui-screens`; if none makes sense yet, note why in the handoff.
 8. If the change includes player-visible art, follow `rimworld-go-art-assets` (original assets, canonical scale/pivots/palette, in-game review).
 9. Verify determinism impact.
 10. Verify save/mod impact.
 11. Run targeted tests.
 12. Run broader tests appropriate to the changed dependency surface.
 13. Benchmark if any hot path changed.
-14. Update the matching checklist item's checkbox (`[x]`/`[-]`/`[!]`) in `.agent/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md`, `.agent/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`, and/or `.agent/ART_DIRECTION_AND_ASSET_PIPELINE.md` when the task maps to one.
+14. Update the matching checklist item's checkbox (`[x]`/`[-]`/`[!]`) in `.agent/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md`, `.agent/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`, `.agent/ART_DIRECTION_AND_ASSET_PIPELINE.md`, and/or `.agent/MAIN_UI_SCREENS_SPECIFICATION.md` when the task maps to one.
 15. Produce a concise handoff.
 
 ## Domain placement
@@ -64,6 +65,7 @@ Persistence:
 Mod/content surface:
 Debug visibility:
 Art / presentation:
+Screen / HUD:
 ```
 
 ## Avoid
@@ -77,7 +79,8 @@ Art / presentation:
 - wall-clock-dependent gameplay;
 - order-sensitive map iteration;
 - generic frameworks introduced for one feature;
-- independent camera, light, palette, or pivot conventions when art/visual work is in scope.
+- independent camera, light, palette, or pivot conventions when art/visual work is in scope;
+- independent screen navigation, window/overlay rules, or HUD layout when a named screen exists in `MAIN_UI_SCREENS_SPECIFICATION.md`.
 
 ## Completion gate
 
@@ -91,4 +94,5 @@ A feature is complete only when:
 - save/mod compatibility is addressed;
 - benchmarks exist or remain valid for hot changes;
 - player-visible art, if any, meets `rimworld-go-art-assets` acceptance;
+- named screens, if any, meet `rimworld-go-ui-screens` / §59 acceptance;
 - handoff is written.
