@@ -31,7 +31,8 @@ Load broader architecture or master spec only when needed.
 9. Run targeted tests.
 10. Run broader tests appropriate to the changed dependency surface.
 11. Benchmark if any hot path changed.
-12. Produce a concise handoff.
+12. Update the matching checklist item's checkbox (`[x]`/`[-]`/`[!]`) in `.agent/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` or `.agent/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` when the task maps to one.
+13. Produce a concise handoff.
 
 ## Domain placement
 

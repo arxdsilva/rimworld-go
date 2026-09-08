@@ -29,6 +29,7 @@ Open more source only when needed.
 8. tests;
 9. Go API/readability;
 10. documentation/handoff.
+11. matching checklist checkbox updated in `.agent/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` or `.agent/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`, if the change satisfies (fully or partially) a listed item.
 
 ## Reject patterns
 

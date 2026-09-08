@@ -198,18 +198,18 @@ This is the minimum UI required to interact with a running simulation.
 
 ## 2.1 Main game viewport
 
--   [ ] **Map viewport**
+-   [-] **Map viewport** (draws grid and pawns from read-only snapshots each frame; no roofs/visibility treatment, effects, or off-screen culling yet)
     -   Occupies the central play area.
     -   Draw terrain, roofs/visibility treatment, structures, items,
         plants, pawns, effects and selection markers.
     -   Culls off-screen content.
     -   UI panels overlay or reserve space without changing
         authoritative map geometry.
--   [ ] **Camera pan**
+-   [-] **Camera pan** (keyboard WASD/arrow pan implemented, presentation-only; mouse edge/drag pan and smoothing not implemented)
     -   Mouse edge/drag and keyboard movement.
     -   Smooth presentation movement.
     -   Camera position is presentation-only.
--   [ ] **Camera zoom**
+-   [-] **Camera zoom** (keyboard/wheel zoom clamped 0.5x-3x implemented; zoom-toward-cursor and far-zoom detail simplification not implemented)
     -   Multiple useful zoom levels from tactical detail to colony
         overview.
     -   At far zoom, simplify sprites/details rather than drawing
@@ -222,7 +222,7 @@ This is the minimum UI required to interact with a running simulation.
 
 ## 2.2 Selection interaction
 
--   [ ] **Single-click selection**
+-   [-] **Single-click selection** (click selects the pawn on that tile, click on empty ground clears selection; entity-priority tie-breaking not needed yet with only pawns present)
     -   Prioritize sensible entity under cursor.
     -   Clicking empty terrain selects tile or clears selection
         depending interaction state.
@@ -235,18 +235,18 @@ This is the minimum UI required to interact with a running simulation.
 -   [ ] **Double-click same-type selection**
     -   Select visible entities of the same relevant type, useful for
         pawns/animals/items.
--   [ ] **Selection markers**
+-   [-] **Selection markers** (yellow outline on the selected pawn; no multi-selection/hostile/friendly differentiation yet)
     -   Clear original visual indicator.
     -   Differentiate single/multiple selection and hostile/friendly if
         needed.
 
 ## 2.3 Time controls
 
--   [ ] **Pause button**
--   [ ] **Normal speed**
--   [ ] **Fast speed**
--   [ ] **Very-fast speed**
--   [ ] **Keyboard speed shortcuts**
+-   [x] **Pause button** (`Space` toggles pause)
+-   [x] **Normal speed** (key `1`)
+-   [x] **Fast speed** (key `2`)
+-   [x] **Very-fast speed** (key `3`)
+-   [x] **Keyboard speed shortcuts**
 -   [ ] **Current date/time display**
     -   Local game hour.
     -   day.

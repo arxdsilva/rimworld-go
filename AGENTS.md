@@ -25,6 +25,7 @@ Non-negotiable rules:
 - Do not weaken tests to pass CI.
 - Do not copy proprietary code, assets, text, or balancing data.
 - Every scoped task must leave a concise handoff in `.agent/handoffs/`.
+- Whenever work satisfies (fully or partially) an item in `.agent/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` or `.agent/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`, update that item's checkbox in the same change: `[x]` only when its full acceptance criteria are met, `[-]` when partially done (state what's missing in a short trailing note), `[!]` when blocked (state why). Never leave completed work unreflected in the checklists.
 
 ## Repository-specific override: commits
 

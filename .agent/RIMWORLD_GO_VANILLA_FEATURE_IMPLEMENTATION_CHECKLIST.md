@@ -54,7 +54,7 @@ vanilla system depends on them.
 
 ## 1.1 Simulation clock
 
--   [ ] **Discrete simulation ticks**
+-   [-] **Discrete simulation ticks** (ticks/Advance/Step implemented and tested; hour/day/quadrum/year conversion helpers still missing)
     -   Maintain authoritative game time as integer ticks.
     -   Support deterministic advancement independent of renderer frame
         rate.
@@ -64,7 +64,7 @@ vanilla system depends on them.
         simulation rules.
     -   **Done when:** identical seed + commands produces identical
         state after N ticks at every game speed.
--   [ ] **Pause and game-speed controls**
+-   [x] **Pause and game-speed controls**
     -   Paused, normal, fast, and very-fast simulation modes.
     -   Threats or important events may optionally force/prompt speed
         reduction at presentation level.
@@ -77,19 +77,19 @@ vanilla system depends on them.
 
 ## 1.2 Entity foundation
 
--   [ ] **Stable EntityID lifecycle**
+-   [-] **Stable EntityID lifecycle** (allocation implemented and tested; queued destruction not yet implemented)
     -   Unique IDs for pawns, animals, items, buildings, projectiles,
         plants, corpses, etc.
     -   IDs are never pointer addresses.
     -   Destruction is queued and committed safely outside active
         iteration.
--   [ ] **Component/entity storage**
+-   [x] **Component/entity storage**
     -   Efficient dense iteration for hot components.
     -   Stable lookup by EntityID.
     -   No reflection-heavy runtime ECS requirement.
     -   Removal must not accidentally make gameplay depend on
         swap-remove order.
--   [ ] **Canonical coordinates**
+-   [-] **Canonical coordinates** (only a local tile/cell coordinate exists; map ID, chunk coordinate, world tile coordinate, and distance/neighbor helpers are missing)
     -   Tile/cell coordinate.
     -   Map identifier.
     -   Chunk coordinate.
@@ -98,7 +98,7 @@ vanilla system depends on them.
 
 ## 1.3 Determinism
 
--   [ ] **Deterministic RNG streams**
+-   [-] **Deterministic RNG streams** (seeded, non-global RNG implemented; not yet keyed by tick/entity/operation/sequence into separate streams)
     -   RNG keyed by stable inputs such as seed, tick, entity,
         operation, and local sequence.
     -   No global `math/rand` for gameplay.
@@ -118,7 +118,7 @@ vanilla system depends on them.
 
 ## 1.4 Headless execution
 
--   [ ] **Headless simulation executable**
+-   [-] **Headless simulation executable** (`cmd/simulate` creates a colony and advances N ticks; does not yet emit a state hash)
     -   Create/start a colony without renderer/audio.
     -   Advance a requested number of ticks.
     -   Emit metrics and final state hash.
@@ -135,7 +135,7 @@ The first playable surface.
 
 ## 2.1 Local map grid
 
--   [ ] **Finite tile map**
+-   [-] **Finite tile map** (rectangular grid with walkability implemented and tested; cell occupant queries are not indexed)
     -   Rectangular local map.
     -   Every cell can hold terrain and spatial occupants.
     -   Efficient cell queries.
@@ -151,25 +151,25 @@ The first playable surface.
     -   Terrain exposes walkability, movement cost, fertility,
         beauty/cleanability, build support, flammability where
         applicable.
--   [ ] **Map edges and valid placement**
+-   [-] **Map edges and valid placement** (out-of-bounds handling implemented and tested; arrival/departure edge semantics not applicable yet)
     -   Out-of-bounds handling.
     -   Edge cells usable for arrivals/departures where allowed.
 
 ## 2.2 Rendering
 
--   [ ] **Tile rendering**
+-   [-] **Tile rendering** (grid lines drawn each frame via Ebitengine; no terrain types, culling, or chunk-aware caching yet)
     -   Draw visible terrain only.
     -   Camera culling.
     -   Chunk-aware redraw/cache strategy.
--   [ ] **Entity rendering**
+-   [-] **Entity rendering** (pawns drawn from read-only snapshots; items/plants/buildings/corpses/projectiles do not exist yet)
     -   Draw pawns, items, plants, buildings, corpses, projectiles.
     -   Presentation uses read-only simulation snapshots.
--   [ ] **Camera controls**
+-   [-] **Camera controls** (pan, zoom, and screen-to-world conversion implemented; center-on-selection not implemented)
     -   Pan.
     -   Zoom.
     -   Center on selected entity/event.
     -   Screen-to-world tile conversion.
--   [ ] **Selection**
+-   [-] **Selection** (single click-to-select pawn with overlay implemented; drag-select multiple not implemented)
     -   Click entity/tile.
     -   Drag-select multiple player pawns.
     -   Selection overlays.
@@ -177,7 +177,7 @@ The first playable surface.
 
 ## 2.3 Inspect UI
 
--   [ ] **Generic inspect panel**
+-   [-] **Generic inspect panel** (minimal panel shows selected pawn ID/position; label/type, description, and context tabs not implemented)
     -   Label/type.
     -   Hit points/condition where relevant.
     -   Position.
