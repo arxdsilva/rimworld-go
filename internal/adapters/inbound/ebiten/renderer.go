@@ -13,6 +13,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -29,6 +30,7 @@ type Simulation interface {
 	Height() int
 	Tick() clock.Tick
 	Date() clock.Date
+	Activity() schedule.Activity
 }
 
 // TileSize is the on-screen pixel size of one logical tile at zoom 1,
@@ -62,14 +64,14 @@ const (
 	speedVeryFast
 )
 
-func (s speed) framesPerTick() int {
+func (s speed) ticksPerFrame() int {
 	switch s {
 	case speedNormal:
-		return 15
+		return 1
 	case speedFast:
-		return 6
+		return 3
 	case speedVeryFast:
-		return 2
+		return 6
 	default:
 		return 0
 	}
@@ -82,10 +84,17 @@ func (s speed) label() string {
 	case speedFast:
 		return "fast"
 	case speedVeryFast:
-		return "very fast"
+		return "superfast"
 	default:
 		return "paused"
 	}
+}
+
+func (s speed) rate() string {
+	if n := s.ticksPerFrame(); n > 0 {
+		return fmt.Sprintf("%s %dx", s.label(), n)
+	}
+	return "paused"
 }
 
 // camera is presentation-only state: it never affects authoritative
@@ -100,7 +109,7 @@ type pawnVisual struct {
 	fromX, fromY int
 	flip         bool
 	lastMove     uint64
-	atTick       clock.Tick
+	moveTick     clock.Tick
 }
 
 // Renderer drives an Ebitengine window from a running Simulation.
@@ -111,11 +120,8 @@ type Renderer struct {
 	pack  *atlas
 
 	// present is a presentation-only frame counter. Animation reads it;
-	// simulation never does. sinceTick / moveT lerp sprites toward the
-	// current snapshot between ticks.
+	// simulation never does. Tile lerp uses sim ticks vs moveTick.
 	present   uint64
-	sinceTick int
-	moveT     float64
 	selected  entity.EntityID
 	hasSelect bool
 	last      map[entity.EntityID]pawnVisual
@@ -170,13 +176,8 @@ func (r *Renderer) Update() error {
 	r.handleCameraInput()
 
 	r.present++
-	if period := r.speed.framesPerTick(); period > 0 {
-		r.sinceTick++
-		if r.sinceTick >= period {
-			r.sinceTick = 0
-			r.game.Step(1)
-		}
-		r.moveT = moveProgress(r.sinceTick, period)
+	if n := r.speed.ticksPerFrame(); n > 0 {
+		r.game.Step(n)
 	}
 	r.syncPawns()
 	r.handleSelectionInput()
@@ -277,7 +278,8 @@ func (r *Renderer) interpWorld(p game.PawnView) (float64, float64) {
 	if !ok {
 		return float64(p.X), float64(p.Y)
 	}
-	return lerp(vis.fromX, p.X, r.moveT), lerp(vis.fromY, p.Y, r.moveT)
+	t := moveProgress(int(r.game.Tick()-vis.moveTick), game.TicksPerCell)
+	return lerp(vis.fromX, p.X, t), lerp(vis.fromY, p.Y, t)
 }
 
 func (r *Renderer) worldToScreen(wx, wy int) (float32, float32) {
@@ -365,24 +367,25 @@ func (r *Renderer) drawGrid(screen *ebiten.Image) {
 }
 
 func nextVisual(prev pawnVisual, seen bool, x, y int, tick clock.Tick, present uint64) pawnVisual {
-	v := pawnVisual{x: x, y: y, flip: prev.flip, lastMove: prev.lastMove, atTick: tick}
+	v := pawnVisual{x: x, y: y, flip: prev.flip, lastMove: prev.lastMove, moveTick: prev.moveTick}
 	if !seen {
 		v.fromX, v.fromY = x, y
+		v.moveTick = tick
 		return v
 	}
 	if prev.x != x || prev.y != y {
 		v.fromX, v.fromY = prev.x, prev.y
+		v.moveTick = tick
 		v.lastMove = present
 		if x != prev.x {
 			v.flip = x < prev.x
 		}
 		return v
 	}
-	if prev.atTick != tick {
-		v.fromX, v.fromY = x, y
-		return v
-	}
 	v.fromX, v.fromY = prev.fromX, prev.fromY
+	if tick-prev.moveTick >= clock.Tick(game.TicksPerCell) {
+		v.fromX, v.fromY = x, y
+	}
 	return v
 }
 
@@ -448,8 +451,8 @@ func (r *Renderer) drawSelection(screen *ebiten.Image, sx, sy float32, tile floa
 
 func (r *Renderer) drawHUD(screen *ebiten.Image) {
 	ebitenutil.DebugPrint(screen, fmt.Sprintf(
-		"tick=%d %s [%s]  space=pause 1/2/3=speed  wasd/arrows=pan +/-=zoom",
-		r.game.Tick(), r.game.Date(), r.speed.label()))
+		"%s\n[%s]  schedule=%s  space=pause 1=normal 2=fast 3=superfast  wasd=pan +/-=zoom",
+		r.game.Date(), r.speed.rate(), r.game.Activity()))
 
 	if !r.hasSelect {
 		return
@@ -458,7 +461,7 @@ func (r *Renderer) drawHUD(screen *ebiten.Image) {
 		if p.ID != r.selected {
 			continue
 		}
-		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("selected pawn %d\nposition (%d, %d)", p.ID, p.X, p.Y), 8, 32)
+		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("selected pawn %d\nposition (%d, %d)  %s", p.ID, p.X, p.Y, p.Activity), 8, 40)
 		if ss := r.pack.colonist(p.ID); ss != nil {
 			if img := animFrame(ss.idle, r.present, uint64(idleAnimPeriod)); img != nil {
 				drawImage(screen, img, 8, 64, 48, 72, false)

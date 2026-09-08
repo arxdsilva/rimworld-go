@@ -164,7 +164,8 @@ rimworld-go/
 │   │   │   ├── mood/
 │   │   │   ├── memory/
 │   │   │   ├── social/
-│   │   │   └── inventory/
+│   │   │   ├── inventory/
+│   │   │   └── schedule/
 │   │   │
 │   │   ├── ai/
 │   │   │   ├── intent/

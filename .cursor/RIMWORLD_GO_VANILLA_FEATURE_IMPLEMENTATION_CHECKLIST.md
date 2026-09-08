@@ -443,7 +443,7 @@ This is the heart of autonomous colony behavior.
 
 ## 5.6 Daily schedule
 
--   [ ] **24-hour schedule grid**
+-   [-] **24-hour schedule grid** (shared DefaultColony grid; Anything/Work/Recreation/Sleep; no per-pawn paint or schedule screen yet)
     -   Anything.
     -   Work.
     -   Sleep.

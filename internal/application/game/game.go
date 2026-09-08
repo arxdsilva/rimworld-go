@@ -5,12 +5,17 @@ package game
 import (
 	"fmt"
 
+	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/component"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/grid"
 	"rimworld-go/pkg/randx"
 )
+
+// TicksPerCell is how long a prototype pawn occupies one tile (~4
+// cells/s at 1x). The clock still advances every tick.
+const TicksPerCell = clock.TicksPerSecond / 4
 
 // Position is a pawn's location on the grid.
 type Position struct {
@@ -25,8 +30,9 @@ type Config struct {
 
 // PawnView is a read-only snapshot of a single pawn.
 type PawnView struct {
-	ID   entity.EntityID
-	X, Y int
+	ID       entity.EntityID
+	X, Y     int
+	Activity schedule.Activity
 }
 
 // Game holds all authoritative simulation state for the minimal slice.
@@ -35,6 +41,7 @@ type Game struct {
 	grid      *grid.Grid
 	entities  *entity.Allocator
 	positions *component.Store[Position]
+	sched     schedule.Grid
 	rng       *randx.Rand
 }
 
@@ -45,6 +52,7 @@ func New(cfg Config) *Game {
 		grid:      grid.New(cfg.Width, cfg.Height),
 		entities:  entity.NewAllocator(),
 		positions: component.NewStore[Position](),
+		sched:     schedule.DefaultColony(),
 		rng:       randx.New(cfg.Seed),
 	}
 }
@@ -70,20 +78,30 @@ func (g *Game) Date() clock.Date {
 	return g.clock.Date()
 }
 
+// Activity is the shared colony schedule block for the current hour.
+func (g *Game) Activity() schedule.Activity {
+	return g.sched.At(g.Date().Hour)
+}
+
 // Width returns the map width in tiles.
 func (g *Game) Width() int { return g.grid.Width() }
 
 // Height returns the map height in tiles.
 func (g *Game) Height() int { return g.grid.Height() }
 
-// Step advances the simulation by n ticks. Each tick, every pawn attempts
-// one random single-step move; blocked or out-of-bounds moves are skipped.
-// Pawns are processed in a fixed (insertion) order for determinism.
+// Step advances the simulation by n ticks. Each tick, pawns whose
+// cadence is due attempt one random single-step move; blocked or
+// out-of-bounds moves are skipped. Pawns are processed in a fixed
+// (insertion) order for determinism.
 func (g *Game) Step(n int) {
 	for i := 0; i < n; i++ {
 		g.stepOnce()
 		g.clock.Advance(1)
 	}
+}
+
+func (g *Game) dueToMove(id entity.EntityID) bool {
+	return (uint64(g.clock.Now())+uint64(id))%uint64(TicksPerCell) == 0
 }
 
 func (g *Game) stepOnce() {
@@ -96,6 +114,9 @@ func (g *Game) stepOnce() {
 	var moves []move
 
 	g.positions.All(func(id entity.EntityID, pos Position) {
+		if !g.dueToMove(id) {
+			return
+		}
 		dx := deltas[g.rng.IntN(len(deltas))]
 		dy := deltas[g.rng.IntN(len(deltas))]
 		next := Position{X: pos.X + dx, Y: pos.Y + dy}
@@ -112,8 +133,9 @@ func (g *Game) stepOnce() {
 // Snapshot returns a read-only view of every pawn, in insertion order.
 func (g *Game) Snapshot() []PawnView {
 	views := make([]PawnView, 0, g.positions.Len())
+	act := g.Activity()
 	g.positions.All(func(id entity.EntityID, pos Position) {
-		views = append(views, PawnView{ID: id, X: pos.X, Y: pos.Y})
+		views = append(views, PawnView{ID: id, X: pos.X, Y: pos.Y, Activity: act})
 	})
 	return views
 }

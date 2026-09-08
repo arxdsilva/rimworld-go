@@ -8,6 +8,7 @@ import (
 
 	uiadapter "rimworld-go/internal/adapters/inbound/ebiten"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/sim/clock"
 )
 
 func main() {
@@ -37,6 +38,7 @@ func main() {
 		log.Printf("sprite pack: %v (drawing placeholders)", loadErr)
 	}
 
+	ebiten.SetTPS(clock.TicksPerSecond)
 	ebiten.SetWindowSize(*width*uiadapter.TileSize, *height*uiadapter.TileSize)
 	ebiten.SetWindowTitle("rimworld-go")
 	if err := ebiten.RunGame(renderer); err != nil {

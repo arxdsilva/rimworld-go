@@ -60,6 +60,19 @@ func TestStartsInTheMorning(t *testing.T) {
 	if got := g.Date().Period(); got != clock.Morning {
 		t.Fatalf("Period() = %s, want morning", got)
 	}
+	if got := g.Activity(); got.String() != "work" && got.String() != "anything" {
+		t.Fatalf("morning activity = %s", got)
+	}
+}
+
+func TestMorningEightIsWork(t *testing.T) {
+	g := New(Config{Seed: 1, Width: 5, Height: 5})
+	if g.Date().Hour != clock.StartHour {
+		t.Fatalf("hour = %d, want %d", g.Date().Hour, clock.StartHour)
+	}
+	if got := g.Activity(); got.String() != "work" {
+		t.Fatalf("08:00 activity = %s, want work", got)
+	}
 }
 
 func TestStepAdvancesClock(t *testing.T) {
@@ -87,6 +100,26 @@ func TestStepKeepsPawnsInBounds(t *testing.T) {
 		if p.X < 0 || p.X >= 5 || p.Y < 0 || p.Y >= 5 {
 			t.Fatalf("pawn %d escaped grid bounds: %+v", p.ID, p)
 		}
+	}
+}
+
+func TestPawnsRelocateAtMostOncePerCell(t *testing.T) {
+	g := New(Config{Seed: 1, Width: 8, Height: 8})
+	if _, err := g.SpawnPawn(3, 3); err != nil {
+		t.Fatalf("SpawnPawn: %v", err)
+	}
+	pos := g.Snapshot()[0]
+	moves := 0
+	for i := 0; i < TicksPerCell; i++ {
+		g.Step(1)
+		next := g.Snapshot()[0]
+		if next.X != pos.X || next.Y != pos.Y {
+			moves++
+			pos = next
+		}
+	}
+	if moves > 1 {
+		t.Fatalf("pawn moved %d times in %d ticks, want at most 1", moves, TicksPerCell)
 	}
 }
 

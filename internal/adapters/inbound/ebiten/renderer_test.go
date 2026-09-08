@@ -1,22 +1,30 @@
 package ebiten
 
-import "testing"
+import (
+	"testing"
 
-func TestSpeedFramesPerTick(t *testing.T) {
+	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/sim/clock"
+)
+
+func TestSpeedTicksPerFrame(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		s    speed
 		want int
 	}{
 		{speedPaused, 0},
-		{speedNormal, 15},
-		{speedFast, 6},
-		{speedVeryFast, 2},
+		{speedNormal, 1},
+		{speedFast, 3},
+		{speedVeryFast, 6},
 	}
 	for _, tc := range cases {
-		if got := tc.s.framesPerTick(); got != tc.want {
-			t.Fatalf("%s framesPerTick = %d, want %d", tc.s.label(), got, tc.want)
+		if got := tc.s.ticksPerFrame(); got != tc.want {
+			t.Fatalf("%s ticksPerFrame = %d, want %d", tc.s.label(), got, tc.want)
 		}
+	}
+	if speedNormal.label() != "normal" || speedFast.label() != "fast" || speedVeryFast.label() != "superfast" {
+		t.Fatalf("speed labels = %s/%s/%s", speedNormal.label(), speedFast.label(), speedVeryFast.label())
 	}
 }
 
@@ -75,9 +83,14 @@ func TestNextVisualLerpsThenSettles(t *testing.T) {
 		t.Fatalf("same tick must keep lerp origin, from=%d,%d", sameTick.fromX, sameTick.fromY)
 	}
 
-	settled := nextVisual(sameTick, true, 3, 3, 3, 40)
+	mid := nextVisual(sameTick, true, 3, 3, 3, 22)
+	if mid.fromX != 2 || mid.fromY != 3 {
+		t.Fatalf("in-progress walk must keep lerp origin, from=%d,%d", mid.fromX, mid.fromY)
+	}
+
+	settled := nextVisual(mid, true, 3, 3, 2+clock.Tick(game.TicksPerCell), 40)
 	if settled.fromX != 3 || settled.fromY != 3 {
-		t.Fatalf("idle tick should settle, from=%d,%d", settled.fromX, settled.fromY)
+		t.Fatalf("walk should settle after TicksPerCell, from=%d,%d", settled.fromX, settled.fromY)
 	}
 
 	left := nextVisual(settled, true, 2, 3, 4, 50)

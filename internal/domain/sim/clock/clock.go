@@ -46,27 +46,40 @@ func (c *Clock) Date() Date {
 	return DateAt(c.tick)
 }
 
-// Calendar constants define the original rimworld-go time convention.
-// A day has 24 hours, a quadrum (quarter-year) has 15 days, and a year
-// has 4 quadrums.
+// Calendar constants. At 1x, TicksPerSecond ticks elapse per real second.
+// An hour is TicksPerHour ticks (~42 real seconds at 1x). A day is 24
+// hours (~17 real minutes at 1x). A year is 4 quadrums of 15 days.
 const (
-	TicksPerHour    = 1000
-	HoursPerDay     = 24
-	TicksPerDay     = TicksPerHour * HoursPerDay
-	DaysPerQuadrum  = 15
-	TicksPerQuadrum = TicksPerDay * DaysPerQuadrum
-	QuadrumsPerYear = 4
-	TicksPerYear    = TicksPerQuadrum * QuadrumsPerYear
+	TicksPerSecond      = 60
+	MinutesPerHour      = 60
+	SecondsPerMinute    = 60
+	ClockSecondsPerHour = MinutesPerHour * SecondsPerMinute
+	TicksPerHour        = 2500
+	HoursPerDay         = 24
+	TicksPerDay         = TicksPerHour * HoursPerDay
+	DaysPerQuadrum      = 15
+	TicksPerQuadrum     = TicksPerDay * DaysPerQuadrum
+	QuadrumsPerYear     = 4
+	DaysPerYear         = DaysPerQuadrum * QuadrumsPerYear
+	TicksPerYear        = TicksPerQuadrum * QuadrumsPerYear
 )
 
+// RealSecondsPerHour is how long one game hour lasts at 1x.
+func RealSecondsPerHour() float64 {
+	return float64(TicksPerHour) / float64(TicksPerSecond)
+}
+
 // Date is a human-readable calendar date derived from an authoritative
-// tick count. Year, Quadrum, Day, and Hour are 0-based. Minute is 0–59.
+// tick count. Year, Quadrum, Day, and Hour are 0-based. Minute and
+// Second are clock-face fields (0–59), mapped from the 2500-tick hour
+// onto a 60-minute display. They are not 60-tick simulation seconds.
 type Date struct {
 	Year    int
 	Quadrum int
 	Day     int
 	Hour    int
 	Minute  int
+	Second  int
 }
 
 // DateAt converts an authoritative tick into a calendar Date.
@@ -78,8 +91,20 @@ func DateAt(t Tick) Date {
 	totalQuadrums := totalDays / DaysPerQuadrum
 	quadrum := totalQuadrums % QuadrumsPerYear
 	year := totalQuadrums / QuadrumsPerYear
-	minute := int(t%TicksPerHour) * 60 / TicksPerHour
-	return Date{Year: year, Quadrum: quadrum, Day: day, Hour: hour, Minute: minute}
+	minute, second := clockFace(t)
+	return Date{Year: year, Quadrum: quadrum, Day: day, Hour: hour, Minute: minute, Second: second}
+}
+
+func clockFace(t Tick) (minute, second int) {
+	ticksInHour := int(t % TicksPerHour)
+	face := ticksInHour * ClockSecondsPerHour / TicksPerHour
+	return face / SecondsPerMinute, face % SecondsPerMinute
+}
+
+// SimSeconds is elapsed simulation seconds (tick / TicksPerSecond).
+// At 1x this matches real seconds.
+func SimSeconds(t Tick) uint64 {
+	return uint64(t) / TicksPerSecond
 }
 
 // Period returns the named part of the day for this date.
@@ -92,8 +117,9 @@ func HourOfDay(t Tick) float64 {
 	return float64(t%TicksPerDay) / float64(TicksPerHour)
 }
 
-// String renders the date with period and clock time.
+// String renders a player-facing date. Year, quadrum, and day are
+// shown 1-based; Hour stays 0–23.
 func (d Date) String() string {
-	return fmt.Sprintf("Year %d, Quadrum %d, Day %d, %s %02d:%02d",
-		d.Year, d.Quadrum, d.Day, d.Period(), d.Hour, d.Minute)
+	return fmt.Sprintf("Year %d, Quadrum %d, Day %d, %s %02d:%02d:%02d",
+		d.Year+1, d.Quadrum+1, d.Day+1, d.Period(), d.Hour, d.Minute, d.Second)
 }

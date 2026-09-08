@@ -252,11 +252,11 @@ This is the minimum UI required to interact with a running simulation.
 ## 2.3 Time controls
 
 -   [x] **Pause button** (`Space` toggles pause)
--   [x] **Normal speed** (key `1`; 1 sim tick / 15 Update frames)
--   [x] **Fast speed** (key `2`; 1 sim tick / 6 Update frames)
--   [x] **Very-fast speed** (key `3`; 1 sim tick / 2 Update frames)
+-   [x] **Normal speed** (key `1`; 1x = 60 ticks / real second)
+-   [x] **Fast speed** (key `2`; 3x)
+-   [x] **Very-fast speed** (key `3`; superfast 6x)
 -   [x] **Keyboard speed shortcuts**
--   [-] **Current date/time display** (HUD shows year/quadrum/day, period, and HH:MM; no temperature/weather yet)
+-   [-] **Current date/time display** (HUD shows 1-based year/quadrum/day, period, HH:MM:SS, and schedule block; no temperature/weather yet)
     -   Local game hour.
     -   day.
     -   quadrum/season.
@@ -583,7 +583,7 @@ interfaces.
 -   [ ] **Tooltip for each mode**
     -   Explain that schedule influences autonomous intent rather than
         being a hard script in emergencies.
--   [ ] **Current pawn schedule in inspector**
+-   [-] **Current pawn schedule in inspector** (selected pawn shows the current hour's activity; no full schedule grid yet)
 -   [ ] **Group schedule presets**
     -   Later large-colony feature.
 

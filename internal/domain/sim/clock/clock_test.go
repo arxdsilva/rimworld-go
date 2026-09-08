@@ -72,7 +72,7 @@ func TestClockDateMatchesNow(t *testing.T) {
 
 func TestDateString(t *testing.T) {
 	d := Date{Year: 2, Quadrum: 1, Day: 5, Hour: 14}
-	want := "Year 2, Quadrum 1, Day 5, afternoon 14:00"
+	want := "Year 3, Quadrum 2, Day 6, afternoon 14:00:00"
 	if got := d.String(); got != want {
 		t.Fatalf("String() = %q, want %q", got, want)
 	}
@@ -80,8 +80,14 @@ func TestDateString(t *testing.T) {
 
 func TestDateAtHalfHour(t *testing.T) {
 	got := DateAt(TicksPerHour / 2)
-	if got.Hour != 0 || got.Minute != 30 {
-		t.Fatalf("DateAt(half hour) = %+v, want Hour=0 Minute=30", got)
+	if got.Hour != 0 || got.Minute != 30 || got.Second != 0 {
+		t.Fatalf("DateAt(half hour) = %+v, want Hour=0 Minute=30 Second=0", got)
+	}
+}
+
+func TestSimSecondsMatchesTicksPerSecond(t *testing.T) {
+	if SimSeconds(2*TicksPerSecond) != 2 {
+		t.Fatalf("SimSeconds(2s) = %d", SimSeconds(2*TicksPerSecond))
 	}
 }
 
@@ -117,6 +123,19 @@ func TestHourOfDayWraps(t *testing.T) {
 	}
 	if got := HourOfDay(TicksPerDay); got != 0 {
 		t.Fatalf("HourOfDay(1d) = %v, want 0", got)
+	}
+}
+
+func TestOneXRealTimeConversions(t *testing.T) {
+	if TicksPerDay != 60_000 {
+		t.Fatalf("TicksPerDay = %d, want 60000", TicksPerDay)
+	}
+	if DaysPerYear != 60 {
+		t.Fatalf("DaysPerYear = %d, want 60", DaysPerYear)
+	}
+	sec := RealSecondsPerHour()
+	if sec < 41.6 || sec > 41.7 {
+		t.Fatalf("RealSecondsPerHour() = %v, want ~41.67", sec)
 	}
 }
 
