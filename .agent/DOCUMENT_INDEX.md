@@ -9,6 +9,7 @@ All paths below are relative to this `.agent/` folder unless noted.
 | Go standards/performance/concurrency | `GO_BEST_PRACTICES.md` |
 | Efficient AI context usage | `AI_TOKEN_OPTIMIZATION.md` |
 | Per-task AI handoffs | `handoffs/` |
+| Task-specific playbooks (start here for any new task) | `skills/rimworld-go-router/SKILL.md` |
 | Global contributor rules | `../AGENTS.md` |
 
 Recommended agent loading order:

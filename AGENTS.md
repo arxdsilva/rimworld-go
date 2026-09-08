@@ -8,6 +8,7 @@ All canonical specs, rules, and agent-facing data live in [`.agent/`](.agent/DOC
 - `.agent/GO_BEST_PRACTICES.md` — mandatory Go engineering rules.
 - `.agent/AI_TOKEN_OPTIMIZATION.md` — context/token discipline.
 - `.agent/handoffs/` — per-task AI handoff records.
+- `.agent/skills/` — task playbooks; start with `.agent/skills/rimworld-go-router/SKILL.md`.
 
 Non-negotiable rules:
 - Dependencies point inward: adapters → application → domain.
