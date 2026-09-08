@@ -21,3 +21,7 @@ Non-negotiable rules:
 - Do not weaken tests to pass CI.
 - Do not copy proprietary code, assets, text, or balancing data.
 - Every scoped task must leave a concise handoff.
+
+## Repository-specific override: commits
+
+In this repository only, the global rule forbidding agents from running `git add`/`git commit` does not apply. Agents may stage and commit their own changes here, following the message style and safety rules in the global git workflow guidance (no `--force`, no `--no-verify`, no rewriting published history, never push without explicit request).
