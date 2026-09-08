@@ -207,7 +207,7 @@ This is the minimum UI required to interact with a running simulation.
 
 ## 2.1 Main game viewport
 
--   [-] **Map viewport** (draws grid and pawns from read-only snapshots each frame; no roofs/visibility treatment, effects, or off-screen culling yet)
+-   [-] **Map viewport** (draws grid and pawns from read-only snapshots each frame; pawn sprites lerp between ticks; no roofs/visibility treatment or effects yet)
     -   Occupies the central play area.
     -   Draw terrain, roofs/visibility treatment, structures, items,
         plants, pawns, effects and selection markers.

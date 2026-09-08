@@ -96,9 +96,11 @@ type camera struct {
 }
 
 type pawnVisual struct {
-	x, y     int
-	flip     bool
-	lastMove uint64
+	x, y         int
+	fromX, fromY int
+	flip         bool
+	lastMove     uint64
+	atTick       clock.Tick
 }
 
 // Renderer drives an Ebitengine window from a running Simulation.
@@ -109,9 +111,11 @@ type Renderer struct {
 	pack  *atlas
 
 	// present is a presentation-only frame counter. Animation reads it;
-	// simulation never does.
+	// simulation never does. sinceTick / moveT lerp sprites toward the
+	// current snapshot between ticks.
 	present   uint64
-	tickWait  int
+	sinceTick int
+	moveT     float64
 	selected  entity.EntityID
 	hasSelect bool
 	last      map[entity.EntityID]pawnVisual
@@ -164,19 +168,27 @@ func (r *Renderer) LoadDefaultPack() error {
 func (r *Renderer) Update() error {
 	r.handleSpeedInput()
 	r.handleCameraInput()
-	r.handleSelectionInput()
 
 	r.present++
 	if period := r.speed.framesPerTick(); period > 0 {
-		r.tickWait++
-		if r.tickWait >= period {
-			r.tickWait = 0
+		r.sinceTick++
+		if r.sinceTick >= period {
+			r.sinceTick = 0
 			r.game.Step(1)
 		}
-	} else {
-		r.tickWait = 0
+		r.moveT = moveProgress(r.sinceTick, period)
 	}
+	r.syncPawns()
+	r.handleSelectionInput()
 	return nil
+}
+
+func (r *Renderer) syncPawns() {
+	tick := r.game.Tick()
+	for _, p := range r.game.Snapshot() {
+		prev, seen := r.last[p.ID]
+		r.last[p.ID] = nextVisual(prev, seen, p.X, p.Y, tick, r.present)
+	}
 }
 
 func (r *Renderer) handleSpeedInput() {
@@ -236,10 +248,18 @@ func (r *Renderer) handleSelectionInput() {
 		return
 	}
 	mx, my := ebiten.CursorPosition()
-	wx, wy := r.screenToWorldTile(mx, my)
+	wx, wy := r.screenToWorld(mx, my)
 
 	for _, p := range r.game.Snapshot() {
-		if p.X == wx && p.Y == wy {
+		px, py := r.interpWorld(p)
+		if wx >= px && wx < px+1 && wy >= py && wy < py+1 {
+			r.selected, r.hasSelect = p.ID, true
+			return
+		}
+	}
+	tx, ty := int(wx), int(wy)
+	for _, p := range r.game.Snapshot() {
+		if p.X == tx && p.Y == ty {
 			r.selected, r.hasSelect = p.ID, true
 			return
 		}
@@ -247,17 +267,27 @@ func (r *Renderer) handleSelectionInput() {
 	r.hasSelect = false
 }
 
-func (r *Renderer) screenToWorldTile(sx, sy int) (int, int) {
+func (r *Renderer) screenToWorld(sx, sy int) (float64, float64) {
 	tile := float64(TileSize) * r.cam.zoom
-	wx := (float64(sx) + r.cam.offsetX) / tile
-	wy := (float64(sy) + r.cam.offsetY) / tile
-	return int(wx), int(wy)
+	return (float64(sx) + r.cam.offsetX) / tile, (float64(sy) + r.cam.offsetY) / tile
+}
+
+func (r *Renderer) interpWorld(p game.PawnView) (float64, float64) {
+	vis, ok := r.last[p.ID]
+	if !ok {
+		return float64(p.X), float64(p.Y)
+	}
+	return lerp(vis.fromX, p.X, r.moveT), lerp(vis.fromY, p.Y, r.moveT)
 }
 
 func (r *Renderer) worldToScreen(wx, wy int) (float32, float32) {
+	return r.worldToScreenF(float64(wx), float64(wy))
+}
+
+func (r *Renderer) worldToScreenF(wx, wy float64) (float32, float32) {
 	tile := float64(TileSize) * r.cam.zoom
-	sx := float64(wx)*tile - r.cam.offsetX
-	sy := float64(wy)*tile - r.cam.offsetY
+	sx := wx*tile - r.cam.offsetX
+	sy := wy*tile - r.cam.offsetY
 	return float32(sx), float32(sy)
 }
 
@@ -280,7 +310,8 @@ func (r *Renderer) Draw(screen *ebiten.Image) {
 	r.drawGrid(screen)
 
 	for _, p := range r.game.Snapshot() {
-		sx, sy := r.worldToScreen(p.X, p.Y)
+		wx, wy := r.interpWorld(p)
+		sx, sy := r.worldToScreenF(wx, wy)
 		if !visible(sx, sy, float32(tile), float32(tile)*2, sw, sh) {
 			continue
 		}
@@ -324,19 +355,55 @@ func (r *Renderer) drawGrid(screen *ebiten.Image) {
 	}
 }
 
+func nextVisual(prev pawnVisual, seen bool, x, y int, tick clock.Tick, present uint64) pawnVisual {
+	v := pawnVisual{x: x, y: y, flip: prev.flip, lastMove: prev.lastMove, atTick: tick}
+	if !seen {
+		v.fromX, v.fromY = x, y
+		return v
+	}
+	if prev.x != x || prev.y != y {
+		v.fromX, v.fromY = prev.x, prev.y
+		v.lastMove = present
+		if x != prev.x {
+			v.flip = x < prev.x
+		}
+		return v
+	}
+	if prev.atTick != tick {
+		v.fromX, v.fromY = x, y
+		return v
+	}
+	v.fromX, v.fromY = prev.fromX, prev.fromY
+	return v
+}
+
+func moveProgress(sinceTick, period int) float64 {
+	if period <= 0 {
+		return 1
+	}
+	if sinceTick <= 0 {
+		return 0
+	}
+	if sinceTick >= period {
+		return 1
+	}
+	return float64(sinceTick) / float64(period)
+}
+
+func lerp(a, b int, t float64) float64 {
+	if t <= 0 {
+		return float64(a)
+	}
+	if t >= 1 {
+		return float64(b)
+	}
+	return float64(a) + (float64(b)-float64(a))*t
+}
+
 func (r *Renderer) drawPawn(screen *ebiten.Image, p game.PawnView, sx, sy float32, tile float64) {
 	ss := r.pack.colonist(p.ID)
-	prev, seen := r.last[p.ID]
-	moved := seen && (prev.x != p.X || prev.y != p.Y)
-	flip := prev.flip
-	if moved && p.X != prev.x {
-		flip = p.X < prev.x
-	}
-	lastMove := prev.lastMove
-	if moved {
-		lastMove = r.present
-	}
-	r.last[p.ID] = pawnVisual{x: p.X, y: p.Y, flip: flip, lastMove: lastMove}
+	vis := r.last[p.ID]
+	inTransit := vis.fromX != p.X || vis.fromY != p.Y
 
 	if ss == nil {
 		vector.FillRect(screen, sx+2, sy+2, float32(tile)-4, float32(tile)-4, r.pawnClr, false)
@@ -344,7 +411,7 @@ func (r *Renderer) drawPawn(screen *ebiten.Image, p game.PawnView, sx, sy float3
 	}
 	frames := ss.idle
 	period := uint64(idleAnimPeriod)
-	if len(ss.walk) > 0 && walkHold(r.present, lastMove, walkSustainFrames) {
+	if len(ss.walk) > 0 && (inTransit || walkHold(r.present, vis.lastMove, walkSustainFrames)) {
 		frames = ss.walk
 		period = uint64(walkAnimPeriod)
 	}
@@ -358,7 +425,7 @@ func (r *Renderer) drawPawn(screen *ebiten.Image, p game.PawnView, sx, sy float3
 	w := h * float64(img.Bounds().Dx()) / float64(img.Bounds().Dy())
 	x := float64(sx) + (tile-w)/2
 	y := float64(sy) + tile - h
-	drawImage(screen, img, x, y, w, h, flip)
+	drawImage(screen, img, x, y, w, h, vis.flip)
 }
 
 func (r *Renderer) drawSelection(screen *ebiten.Image, sx, sy float32, tile float64) {
