@@ -2,6 +2,14 @@ package game
 
 import "testing"
 
+func TestWidthHeightReflectConfig(t *testing.T) {
+	g := New(Config{Seed: 1, Width: 7, Height: 4})
+
+	if g.Width() != 7 || g.Height() != 4 {
+		t.Fatalf("Width()/Height() = %d/%d, want 7/4", g.Width(), g.Height())
+	}
+}
+
 func TestSpawnPawnAssignsPosition(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 5, Height: 5})
 

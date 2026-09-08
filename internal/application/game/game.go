@@ -65,6 +65,12 @@ func (g *Game) Tick() clock.Tick {
 	return g.clock.Now()
 }
 
+// Width returns the map width in tiles.
+func (g *Game) Width() int { return g.grid.Width() }
+
+// Height returns the map height in tiles.
+func (g *Game) Height() int { return g.grid.Height() }
+
 // Step advances the simulation by n ticks. Each tick, every pawn attempts
 // one random single-step move; blocked or out-of-bounds moves are skipped.
 // Pawns are processed in a fixed (insertion) order for determinism.
