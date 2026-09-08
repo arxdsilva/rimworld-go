@@ -203,6 +203,10 @@ func (a *atlas) rockAt(x, y int) *ebiten.Image {
 	return a.rocks[int(h%uint64(len(a.rocks)))]
 }
 
+func walkHold(present, lastMove uint64, sustain uint64) bool {
+	return lastMove > 0 && present-lastMove < sustain
+}
+
 func animFrame(frames []*ebiten.Image, tick uint64, period uint64) *ebiten.Image {
 	if len(frames) == 0 {
 		return nil

@@ -42,9 +42,17 @@ const (
 	zoomStep  = 0.1
 )
 
-// speed is a presentation-only game-speed tier. It controls how many
-// simulation ticks are stepped per rendered frame; it never changes
-// simulation rules.
+// Presentation animation is paced by Update frames (Ebitengine default
+// 60 TPS), never by authoritative simulation ticks. Periods are chosen
+// so a full idle/walk cycle is about a second at normal zoom.
+const (
+	idleAnimPeriod    = 12
+	walkAnimPeriod    = 8
+	walkSustainFrames = 20
+)
+
+// speed is a presentation-only game-speed tier. It controls how often
+// the simulation advances; it never changes simulation rules.
 type speed int
 
 const (
@@ -54,14 +62,14 @@ const (
 	speedVeryFast
 )
 
-func (s speed) ticksPerFrame() int {
+func (s speed) framesPerTick() int {
 	switch s {
 	case speedNormal:
-		return 1
+		return 15
 	case speedFast:
-		return 3
-	case speedVeryFast:
 		return 6
+	case speedVeryFast:
+		return 2
 	default:
 		return 0
 	}
@@ -88,8 +96,9 @@ type camera struct {
 }
 
 type pawnVisual struct {
-	x, y int
-	flip bool
+	x, y     int
+	flip     bool
+	lastMove uint64
 }
 
 // Renderer drives an Ebitengine window from a running Simulation.
@@ -99,6 +108,10 @@ type Renderer struct {
 	cam   camera
 	pack  *atlas
 
+	// present is a presentation-only frame counter. Animation reads it;
+	// simulation never does.
+	present   uint64
+	tickWait  int
 	selected  entity.EntityID
 	hasSelect bool
 	last      map[entity.EntityID]pawnVisual
@@ -153,8 +166,15 @@ func (r *Renderer) Update() error {
 	r.handleCameraInput()
 	r.handleSelectionInput()
 
-	if n := r.speed.ticksPerFrame(); n > 0 {
-		r.game.Step(n)
+	r.present++
+	if period := r.speed.framesPerTick(); period > 0 {
+		r.tickWait++
+		if r.tickWait >= period {
+			r.tickWait = 0
+			r.game.Step(1)
+		}
+	} else {
+		r.tickWait = 0
 	}
 	return nil
 }
@@ -255,7 +275,6 @@ func (r *Renderer) Draw(screen *ebiten.Image) {
 
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
 	tile := r.tilePx()
-	tick := uint64(r.game.Tick())
 
 	r.drawTerrain(screen, sw, sh, tile)
 	r.drawGrid(screen)
@@ -265,7 +284,7 @@ func (r *Renderer) Draw(screen *ebiten.Image) {
 		if !visible(sx, sy, float32(tile), float32(tile)*2, sw, sh) {
 			continue
 		}
-		r.drawPawn(screen, p, sx, sy, tile, tick)
+		r.drawPawn(screen, p, sx, sy, tile)
 		if r.hasSelect && p.ID == r.selected {
 			r.drawSelection(screen, sx, sy, tile)
 		}
@@ -305,7 +324,7 @@ func (r *Renderer) drawGrid(screen *ebiten.Image) {
 	}
 }
 
-func (r *Renderer) drawPawn(screen *ebiten.Image, p game.PawnView, sx, sy float32, tile float64, tick uint64) {
+func (r *Renderer) drawPawn(screen *ebiten.Image, p game.PawnView, sx, sy float32, tile float64) {
 	ss := r.pack.colonist(p.ID)
 	prev, seen := r.last[p.ID]
 	moved := seen && (prev.x != p.X || prev.y != p.Y)
@@ -313,19 +332,23 @@ func (r *Renderer) drawPawn(screen *ebiten.Image, p game.PawnView, sx, sy float3
 	if moved && p.X != prev.x {
 		flip = p.X < prev.x
 	}
-	r.last[p.ID] = pawnVisual{x: p.X, y: p.Y, flip: flip}
+	lastMove := prev.lastMove
+	if moved {
+		lastMove = r.present
+	}
+	r.last[p.ID] = pawnVisual{x: p.X, y: p.Y, flip: flip, lastMove: lastMove}
 
 	if ss == nil {
 		vector.FillRect(screen, sx+2, sy+2, float32(tile)-4, float32(tile)-4, r.pawnClr, false)
 		return
 	}
 	frames := ss.idle
-	period := uint64(10)
-	if moved && len(ss.walk) > 0 {
+	period := uint64(idleAnimPeriod)
+	if len(ss.walk) > 0 && walkHold(r.present, lastMove, walkSustainFrames) {
 		frames = ss.walk
-		period = 6
+		period = uint64(walkAnimPeriod)
 	}
-	img := animFrame(frames, tick, period)
+	img := animFrame(frames, r.present, period)
 	if img == nil {
 		vector.FillRect(screen, sx+2, sy+2, float32(tile)-4, float32(tile)-4, r.pawnClr, false)
 		return
@@ -360,8 +383,10 @@ func (r *Renderer) drawHUD(screen *ebiten.Image) {
 			continue
 		}
 		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("selected pawn %d\nposition (%d, %d)", p.ID, p.X, p.Y), 8, 32)
-		if ss := r.pack.colonist(p.ID); ss != nil && len(ss.idle) > 0 {
-			drawImage(screen, ss.idle[0], 8, 64, 48, 72, false)
+		if ss := r.pack.colonist(p.ID); ss != nil {
+			if img := animFrame(ss.idle, r.present, uint64(idleAnimPeriod)); img != nil {
+				drawImage(screen, img, 8, 64, 48, 72, false)
+			}
 		}
 		return
 	}

@@ -652,7 +652,7 @@ resolve metadata conflicts, and update the catalog.
 -   [-] soil/stone/water (vendor ground/rock tiles drawn presentation-only; no domain terrain types)
 -   [ ] wall/door/floor
 -   [ ] blueprint/frame
--   [-] pawn base (vendor CC0 side-view full-body idle/walk in the ebiten adapter; original top-down compositional pawns not yet)
+-   [-] pawn base (vendor CC0 side-view full-body idle/walk in the ebiten adapter, presentation-clocked; original top-down compositional pawns not yet)
 -   [ ] first hair/apparel
 -   [ ] basic resources/items
 -   [-] selection/designation markers (vendor crosshair on selected pawn; no designation overlays)

@@ -174,7 +174,7 @@ The first playable surface.
     -   Draw visible terrain only.
     -   Camera culling.
     -   Chunk-aware redraw/cache strategy.
--   [-] **Entity rendering** (pawns drawn from read-only snapshots using the vendor CC0 character pack; items/plants/buildings/corpses/projectiles do not exist yet)
+-   [-] **Entity rendering** (pawns drawn from read-only snapshots using the vendor CC0 character pack; idle/walk paced by a presentation clock, not sim ticks; items/plants/buildings/corpses/projectiles do not exist yet)
     -   Draw pawns, items, plants, buildings, corpses, projectiles.
     -   Presentation uses read-only simulation snapshots.
 -   [-] **Camera controls** (pan, zoom, and screen-to-world conversion implemented; center-on-selection not implemented)

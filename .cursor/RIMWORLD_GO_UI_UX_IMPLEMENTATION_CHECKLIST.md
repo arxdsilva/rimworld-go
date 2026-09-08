@@ -252,9 +252,9 @@ This is the minimum UI required to interact with a running simulation.
 ## 2.3 Time controls
 
 -   [x] **Pause button** (`Space` toggles pause)
--   [x] **Normal speed** (key `1`)
--   [x] **Fast speed** (key `2`)
--   [x] **Very-fast speed** (key `3`)
+-   [x] **Normal speed** (key `1`; 1 sim tick / 15 Update frames)
+-   [x] **Fast speed** (key `2`; 1 sim tick / 6 Update frames)
+-   [x] **Very-fast speed** (key `3`; 1 sim tick / 2 Update frames)
 -   [x] **Keyboard speed shortcuts**
 -   [ ] **Current date/time display**
     -   Local game hour.
