@@ -1,0 +1,454 @@
+package ebiten
+
+import (
+	"fmt"
+
+	ebiten "github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/vector"
+)
+
+const (
+	// DefaultWindowWidth is the initial interactive client width in pixels.
+	DefaultWindowWidth = 1280
+	// DefaultWindowHeight is the initial interactive client height in pixels.
+	DefaultWindowHeight = 720
+
+	bootFramesPerPhase = 8
+	bootAssetPhase     = 4 // "asset manifests/atlases"
+)
+
+var bootPhases = []string{
+	"configuration",
+	"plugin discovery",
+	"dependency resolution",
+	"content definitions",
+	"asset manifests/atlases",
+	"localization",
+	"renderer",
+	"main-menu transition",
+}
+
+// SimFactory constructs a headless simulation when the player starts a
+// game. The adapter never calls game.New itself; the composition root
+// supplies the factory.
+type SimFactory func() (Simulation, error)
+
+// AppConfig is the composition-root wiring for the interactive client.
+type AppConfig struct {
+	Version  string
+	Assets   string // empty: locate the vendor pack from cwd
+	NewSim   SimFactory
+	LoadPack func() (*atlas, error)
+}
+
+// App is the ebiten.Game shell: screen routing, widgets, and (once
+// started) the colony renderer. Menus do not own or step a simulation.
+type App struct {
+	cfg AppConfig
+	nav nav
+
+	sw, sh     int
+	bootFrames int
+	packTried  bool
+	pack       *atlas
+	packWarn   string
+	sessionErr string
+	hint       string
+	shouldQuit bool
+
+	scenario    int
+	storyteller int
+	difficulty  int
+
+	simsStarted int
+	renderer    *Renderer
+}
+
+// NewApp returns an App on the boot screen. Simulation is not created
+// until Start is pressed.
+func NewApp(cfg AppConfig) *App {
+	if cfg.Version == "" {
+		cfg.Version = "dev"
+	}
+	if cfg.LoadPack == nil {
+		assets := cfg.Assets
+		cfg.LoadPack = func() (*atlas, error) {
+			if assets != "" {
+				return loadAtlasFromRoot(assets)
+			}
+			root, err := LocatePack()
+			if err != nil {
+				return nil, err
+			}
+			return loadAtlasFromRoot(root)
+		}
+	}
+	return &App{
+		cfg: cfg,
+		nav: newNav(),
+		sw:  DefaultWindowWidth,
+		sh:  DefaultWindowHeight,
+	}
+}
+
+func loadAtlasFromRoot(root string) (*atlas, error) {
+	p, err := DiscoverPack(root)
+	if err != nil {
+		return nil, err
+	}
+	return loadAtlas(p)
+}
+
+// Update routes input, advances boot/colony, and applies screen intents.
+func (a *App) Update() error {
+	if a.shouldQuit {
+		return ebiten.Termination
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+		a.apply(a.nav.escapeIntent())
+		if a.shouldQuit {
+			return ebiten.Termination
+		}
+	}
+
+	sw, sh := a.size()
+	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+		if a.nav.screen() == screenBoot {
+			a.finishBoot()
+		} else {
+			mx, my := ebiten.CursorPosition()
+			if b, ok := hitButton(a.layoutButtons(sw, sh), mx, my); ok {
+				if b.disabled {
+					a.hint = b.reason
+				} else {
+					a.hint = ""
+					a.applyClick(b.id)
+				}
+			}
+		}
+	}
+
+	if a.nav.screen() == screenColony && a.nav.overlay() == overlayNone && a.renderer != nil {
+		a.renderer.handleInput()
+	}
+	a.tick()
+	if a.shouldQuit {
+		return ebiten.Termination
+	}
+	return nil
+}
+
+func (a *App) size() (int, int) {
+	sw, sh := a.sw, a.sh
+	if sw < 1 {
+		sw = DefaultWindowWidth
+	}
+	if sh < 1 {
+		sh = DefaultWindowHeight
+	}
+	return sw, sh
+}
+
+func (a *App) tick() {
+	switch a.nav.screen() {
+	case screenBoot:
+		a.tickBoot()
+	case screenColony:
+		if a.nav.overlay() == overlayNone && a.renderer != nil {
+			a.renderer.advance()
+		}
+	}
+}
+
+func (a *App) tickBoot() {
+	a.bootFrames++
+	phase := a.bootPhase()
+	if phase >= bootAssetPhase && !a.packTried {
+		a.loadPack()
+	}
+	if phase >= len(bootPhases) {
+		a.finishBoot()
+	}
+}
+
+func (a *App) bootPhase() int {
+	return a.bootFrames / bootFramesPerPhase
+}
+
+func (a *App) loadPack() {
+	a.packTried = true
+	if a.cfg.LoadPack == nil {
+		return
+	}
+	p, err := a.cfg.LoadPack()
+	if err != nil {
+		a.packWarn = err.Error()
+		return
+	}
+	a.pack = p
+}
+
+func (a *App) finishBoot() {
+	if !a.packTried {
+		a.loadPack()
+	}
+	a.nav.reset(frame{screen: screenMainMenu})
+}
+
+func (a *App) applyClick(id string) {
+	switch id {
+	case "scenario.0":
+		a.scenario = 0
+	case "scenario.1":
+		a.scenario = 1
+	case "scenario.2":
+		a.scenario = 2
+	case "storyteller.0":
+		a.storyteller = 0
+	case "storyteller.1":
+		a.storyteller = 1
+	case "storyteller.2":
+		a.storyteller = 2
+	case "difficulty.0":
+		a.difficulty = 0
+	case "difficulty.1":
+		a.difficulty = 1
+	case "difficulty.2":
+		a.difficulty = 2
+	default:
+		a.apply(a.clickIntent(id))
+	}
+}
+
+func (a *App) clickIntent(id string) intent {
+	switch id {
+	case "menu.newgame":
+		return intent{kind: intentPush, screen: screenScenario}
+	case "menu.load":
+		return intent{kind: intentPush, screen: screenLoad}
+	case "menu.options":
+		return intent{kind: intentPush, screen: screenOptions}
+	case "menu.credits":
+		return intent{kind: intentPush, screen: screenCredits}
+	case "menu.quit", "pause.quit":
+		return intent{kind: intentQuit}
+	case "wizard.back", "options.back", "load.back", "credits.back":
+		return intent{kind: intentBack}
+	case "wizard.next":
+		return intent{kind: intentPush, screen: wizardNext(a.nav.screen())}
+	case "wizard.start":
+		return intent{kind: intentStartGame}
+	case "pause.resume":
+		return intent{kind: intentResume}
+	case "pause.options":
+		return intent{kind: intentPush, screen: screenOptions}
+	case "pause.menu":
+		return intent{kind: intentReturnToMenu}
+	default:
+		return intent{}
+	}
+}
+
+func (a *App) apply(in intent) {
+	switch in.kind {
+	case intentPush:
+		a.nav.push(frame{screen: in.screen})
+	case intentBack:
+		a.nav.pop()
+	case intentStartGame:
+		a.startGame()
+	case intentQuit:
+		a.shouldQuit = true
+	case intentReturnToMenu:
+		a.dropSession()
+		a.nav.reset(frame{screen: screenMainMenu})
+	case intentResume:
+		a.nav.setOverlay(overlayNone)
+	case intentPause:
+		a.nav.setOverlay(overlayPause)
+	case intentFinishBoot:
+		a.finishBoot()
+	}
+}
+
+func (a *App) startGame() {
+	if a.cfg.NewSim == nil {
+		a.sessionErr = "no simulation factory"
+		return
+	}
+	sim, err := a.cfg.NewSim()
+	if err != nil {
+		a.sessionErr = err.Error()
+		return
+	}
+	a.sessionErr = ""
+	a.simsStarted++
+	a.renderer = New(sim)
+	a.renderer.pack = a.pack
+	a.nav.reset(frame{screen: screenColony})
+}
+
+func (a *App) dropSession() {
+	a.renderer = nil
+}
+
+// Draw paints the current full screen and any overlay.
+func (a *App) Draw(screen *ebiten.Image) {
+	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
+	a.sw, a.sh = sw, sh
+
+	switch a.nav.screen() {
+	case screenBoot:
+		a.drawBoot(screen, sw, sh)
+	case screenMainMenu:
+		a.drawMainMenu(screen, sw, sh)
+	case screenScenario:
+		a.drawScenario(screen, sw, sh)
+	case screenStoryteller:
+		a.drawStoryteller(screen, sw, sh)
+	case screenWorldGen:
+		a.drawWorldGen(screen, sw, sh)
+	case screenLanding:
+		a.drawLanding(screen, sw, sh)
+	case screenPawns:
+		a.drawPawns(screen, sw, sh)
+	case screenColony:
+		if a.renderer != nil {
+			a.renderer.Draw(screen)
+		} else {
+			screen.Fill(uiBg)
+		}
+		if a.nav.overlay() == overlayPause {
+			a.drawPause(screen, sw, sh)
+		}
+	case screenOptions:
+		a.drawOptions(screen, sw, sh)
+	case screenLoad:
+		a.drawLoad(screen, sw, sh)
+	case screenCredits:
+		a.drawCredits(screen, sw, sh)
+	default:
+		screen.Fill(uiBg)
+	}
+
+	a.drawHoverHint(screen, sw, sh)
+}
+
+func (a *App) drawHoverHint(screen *ebiten.Image, sw, sh int) {
+	mx, my := ebiten.CursorPosition()
+	if b, ok := hitButton(a.layoutButtons(sw, sh), mx, my); ok && b.disabled && b.reason != "" {
+		ebitenutil.DebugPrintAt(screen, b.reason, 16, sh-22)
+		return
+	}
+	if a.hint != "" {
+		ebitenutil.DebugPrintAt(screen, a.hint, 16, sh-22)
+	}
+	if a.packWarn != "" && a.nav.screen() == screenMainMenu {
+		ebitenutil.DebugPrintAt(screen, "asset warning: "+a.packWarn, 16, sh-40)
+	}
+}
+
+func (a *App) layoutButtons(sw, sh int) []button {
+	if a.nav.overlay() == overlayPause {
+		return a.pauseButtons(sw, sh)
+	}
+	switch a.nav.screen() {
+	case screenMainMenu:
+		return a.mainMenuButtons(sw, sh)
+	case screenScenario:
+		return a.scenarioButtons(sw, sh)
+	case screenStoryteller:
+		return a.storytellerButtons(sw, sh)
+	case screenWorldGen:
+		return a.worldGenButtons(sw, sh)
+	case screenLanding:
+		return a.landingButtons(sw, sh)
+	case screenPawns:
+		return a.pawnButtons(sw, sh)
+	case screenOptions:
+		return a.optionsButtons(sw, sh)
+	case screenLoad:
+		return a.loadButtons(sw, sh)
+	case screenCredits:
+		return a.creditsButtons(sw, sh)
+	default:
+		return nil
+	}
+}
+
+func (a *App) drawButtons(screen *ebiten.Image, buttons []button, mx, my int) {
+	for _, b := range buttons {
+		drawButton(screen, b, b.contains(mx, my))
+	}
+}
+
+func (a *App) fillMenu(screen *ebiten.Image, sw, sh int, title string, body []string) {
+	screen.Fill(uiBg)
+	drawPanel(screen, 40, 24, float32(sw-80), 56)
+	drawLabel(screen, 56, 44, title)
+	if len(body) == 0 {
+		return
+	}
+	drawPanel(screen, 40, 96, float32(sw-80), float32(sh-180))
+	y := 112
+	for _, line := range body {
+		drawLabel(screen, 56, y, line)
+		y += 16
+	}
+}
+
+func (a *App) footer(sw, sh int, nextLabel, nextID string) []button {
+	y := float32(sh - 64)
+	out := []button{{
+		id:    "wizard.back",
+		label: "Back",
+		x:     40,
+		y:     y,
+		w:     140,
+		h:     36,
+	}}
+	if nextID != "" {
+		out = append(out, button{
+			id:    nextID,
+			label: nextLabel,
+			x:     float32(sw - 180),
+			y:     y,
+			w:     140,
+			h:     36,
+		})
+	}
+	return out
+}
+
+// Layout uses the window size so menus and the colony viewport share one surface.
+func (a *App) Layout(outsideWidth, outsideHeight int) (int, int) {
+	if outsideWidth < 1 {
+		outsideWidth = DefaultWindowWidth
+	}
+	if outsideHeight < 1 {
+		outsideHeight = DefaultWindowHeight
+	}
+	a.sw, a.sh = outsideWidth, outsideHeight
+	return outsideWidth, outsideHeight
+}
+
+func formatVersion(v string) string {
+	return fmt.Sprintf("rimworld-go  %s", v)
+}
+
+func (a *App) currentCursor() (int, int) {
+	return ebiten.CursorPosition()
+}
+
+func (a *App) paintMenu(screen *ebiten.Image, sw, sh int, title string, body []string, buttons []button) {
+	a.fillMenu(screen, sw, sh, title, body)
+	mx, my := a.currentCursor()
+	a.drawButtons(screen, buttons, mx, my)
+}
+
+func drawDim(screen *ebiten.Image, sw, sh int) {
+	vector.FillRect(screen, 0, 0, float32(sw), float32(sh), uiDim, false)
+}

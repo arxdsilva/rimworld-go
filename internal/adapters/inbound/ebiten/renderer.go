@@ -1,6 +1,7 @@
-// Package ebiten adapts the headless application game to an interactive,
-// on-screen renderer using Ebitengine. It never mutates domain state
-// directly; it only calls the application game's Step/Snapshot surface.
+// Package ebiten adapts the headless application game to an interactive
+// Ebitengine client: screen routing plus a colony map viewport. It never
+// mutates domain state directly; it only calls the application game's
+// Step/Snapshot surface.
 package ebiten
 
 import (
@@ -169,19 +170,18 @@ func (r *Renderer) LoadDefaultPack() error {
 	return r.LoadPack(root)
 }
 
-// Update advances the simulation according to the current speed tier and
-// handles camera, speed, and selection input. It satisfies ebiten.Game.
-func (r *Renderer) Update() error {
+func (r *Renderer) handleInput() {
 	r.handleSpeedInput()
 	r.handleCameraInput()
+	r.handleSelectionInput()
+}
 
+func (r *Renderer) advance() {
 	r.present++
 	if n := r.speed.ticksPerFrame(); n > 0 {
 		r.game.Step(n)
 	}
 	r.syncPawns()
-	r.handleSelectionInput()
-	return nil
 }
 
 func (r *Renderer) syncPawns() {
@@ -451,7 +451,7 @@ func (r *Renderer) drawSelection(screen *ebiten.Image, sx, sy float32, tile floa
 
 func (r *Renderer) drawHUD(screen *ebiten.Image) {
 	ebitenutil.DebugPrint(screen, fmt.Sprintf(
-		"%s\n[%s]  schedule=%s  space=pause 1=normal 2=fast 3=superfast  wasd=pan +/-=zoom",
+		"%s\n[%s]  schedule=%s  space=pause 1=normal 2=fast 3=superfast  wasd=pan +/-=zoom  esc=menu",
 		r.game.Date(), r.speed.rate(), r.game.Activity()))
 
 	if !r.hasSelect {
@@ -470,9 +470,4 @@ func (r *Renderer) drawHUD(screen *ebiten.Image) {
 		return
 	}
 	r.hasSelect = false
-}
-
-// Layout satisfies ebiten.Game.
-func (r *Renderer) Layout(outsideWidth, outsideHeight int) (int, int) {
-	return r.game.Width() * TileSize, r.game.Height() * TileSize
 }

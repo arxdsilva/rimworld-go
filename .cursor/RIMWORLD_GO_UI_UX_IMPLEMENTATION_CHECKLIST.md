@@ -73,7 +73,7 @@ use these primitives.
 
 ## 1.1 Presentation architecture
 
--   [ ] **Read-only presentation snapshot**
+-   [-] **Read-only presentation snapshot** (colony PawnView snapshots; menus are headless)
     -   Create a compact presentation model published by the
         application/simulation boundary.
     -   UI reads entities, map state, alerts, jobs, needs, selections,
@@ -82,14 +82,14 @@ use these primitives.
         stores.
     -   Snapshot IDs must remain stable enough for selection and
         inspector continuity.
--   [ ] **Typed UI command gateway**
+-   [-] **Typed UI command gateway** (session intents StartGame/Quit/ReturnToMenu only; no gameplay command catalog)
     -   Every gameplay mutation becomes a typed command: move, draft,
         designate, build, assign work, change policy, set bill, trade,
         form caravan, etc.
     -   Commands carry enough information for domain-side validation.
     -   UI may optimistically preview actions but authoritative success
         comes from simulation state.
--   [ ] **Presentation-only state store**
+-   [-] **Presentation-only state store** (screen stack, pause overlay, camera, selection, hover/hint; no architect/bindings store)
     -   Camera.
     -   current selection.
     -   hovered tile/entity.
@@ -146,9 +146,9 @@ use these primitives.
 
 ## 1.3 Core widgets
 
--   [ ] **Button**
-    -   Normal, hover, pressed, disabled, selected/toggled states.
-    -   Tooltip and shortcut label.
+-   [-] **Button**
+    -   Normal, hover, pressed, disabled, selected/toggled states. (hover/disabled/selected; no pressed-frame or shortcut label)
+    -   Tooltip and shortcut label. (disabled-reason line only)
 -   [ ] **Icon button**
 -   [ ] **Checkbox**
 -   [ ] **Radio/select option**
@@ -182,12 +182,12 @@ use these primitives.
 
 ## 1.4 Input routing
 
--   [ ] **Mouse hit testing**
-    -   UI consumes pointer before map interaction.
+-   [-] **Mouse hit testing**
+    -   UI consumes pointer before map interaction. (menus and pause overlay)
     -   Map receives pointer only when not blocked by a panel/modal.
--   [ ] **Keyboard focus**
-    -   Text fields capture typing without triggering game hotkeys.
-    -   Escape backs out one interaction level at a time.
+-   [-] **Keyboard focus**
+    -   Text fields capture typing without triggering game hotkeys. (no text fields yet)
+    -   Escape backs out one interaction level at a time. (overlay, then stack, then pause)
 -   [ ] **Shortcut manager**
     -   Named actions rather than hardcoded keys.
     -   Display shortcut in tooltips.
@@ -1359,17 +1359,17 @@ the player what just happened and what requires attention.
 
 ## 26.1 New-world setup
 
--   [ ] **World seed input**
--   [ ] **Planet coverage/size option**
--   [ ] **Temperature/rainfall/population options where supported**
--   [ ] **Generate button**
+-   [-] **World seed input** (placeholder label)
+-   [-] **Planet coverage/size option** (placeholder label)
+-   [-] **Temperature/rainfall/population options where supported** (placeholder labels)
+-   [-] **Generate button** (visible, disabled)
 -   [ ] **Generation progress**
     -   UI remains responsive.
 
 ## 26.2 Landing-site selection
 
 -   [ ] **Select world tile**
--   [ ] **Detailed tile card**
+-   [-] **Detailed tile card** (static placeholder; no map)
     -   biome.
     -   temperature range.
     -   growing period.
@@ -1380,8 +1380,8 @@ the player what just happened and what requires attention.
     -   nearby factions.
 -   [ ] **Search/find world features**
     -   Optional high-value usability feature.
--   [ ] **Settle/start command**
--   [ ] **Back/regenerate**
+-   [-] **Settle/start command** (Next to pawns; Start is on the pawn screen)
+-   [-] **Back/regenerate** (Back only; Generate disabled)
 
 ------------------------------------------------------------------------
 
@@ -1389,29 +1389,29 @@ the player what just happened and what requires attention.
 
 ## 27.1 Main menu
 
--   [ ] **New game**
--   [ ] **Load game**
--   [ ] **Options**
--   [ ] **Plugins**
--   [ ] **Credits**
--   [ ] **Quit**
--   [ ] **Version/build identifier**
+-   [-] **New game** (opens scenario stub)
+-   [-] **Load game** (empty stub)
+-   [-] **Options** (stub)
+-   [-] **Plugins** (disabled)
+-   [-] **Credits** (stub)
+-   [x] **Quit**
+-   [-] **Version/build identifier** (shows `dev` / AppConfig.Version; no commit id)
 
 ## 27.2 Scenario selection
 
--   [ ] **Scenario list**
+-   [-] **Scenario list** (3 hardcoded names; not data-driven)
     -   Standard crash start.
     -   tribal/low-tech.
     -   difficult solo.
     -   rich solo/high-tech.
     -   custom scenarios.
--   [ ] **Scenario detail**
+-   [-] **Scenario detail** (placeholder description/summary)
     -   Starting people.
     -   equipment.
     -   research.
     -   special rules.
     -   original narrative description.
--   [ ] **Scenario editor entry**
+-   [-] **Scenario editor entry** (disabled button)
 
 ## 27.3 Scenario editor
 
@@ -1424,18 +1424,18 @@ the player what just happened and what requires attention.
 
 ## 27.4 Storyteller selection
 
--   [ ] **Storyteller cards**
+-   [-] **Storyteller cards** (3 placeholder names; no art)
     -   Paced.
     -   relaxed.
     -   random.
     -   original characters/names/art.
--   [ ] **Behavior description**
+-   [-] **Behavior description** (one-line placeholder text)
     -   Explain pacing differences without revealing unnecessary
         implementation formulas.
 
 ## 27.5 Difficulty
 
--   [ ] **Preset difficulties**
+-   [-] **Preset difficulties** (Forgiving/Standard/Harsh labels)
 -   [ ] **Custom difficulty**
     -   Threat scale.
     -   economy.
@@ -1448,9 +1448,9 @@ the player what just happened and what requires attention.
 
 ## 27.6 Starting pawn screen
 
--   [ ] **Candidate pawn cards**
+-   [-] **Candidate pawn cards** (3 fake roster lines)
 -   [ ] **Select starting roster**
--   [ ] **Randomize/reroll**
+-   [-] **Randomize/reroll** (disabled)
 -   [ ] **Character details**
     -   age.
     -   skills/passions.
@@ -1465,7 +1465,7 @@ the player what just happened and what requires attention.
     -   no constructor.
     -   no cook.
     -   no violence-capable pawn, etc.
--   [ ] **Start colony**
+-   [x] **Start colony** (creates sim via SimFactory; roster is still a placeholder)
 
 ------------------------------------------------------------------------
 
@@ -1601,12 +1601,12 @@ the player what just happened and what requires attention.
 
 ## 33.1 In-game menu
 
--   [ ] **Resume**
--   [ ] **Save**
--   [ ] **Load**
--   [ ] **Options**
--   [ ] **Return to main menu**
--   [ ] **Quit**
+-   [x] **Resume**
+-   [-] **Save** (disabled)
+-   [-] **Load** (disabled from pause; empty stub from main menu)
+-   [-] **Options** (opens stub, Back returns to pause)
+-   [x] **Return to main menu**
+-   [x] **Quit**
 
 ## 33.2 Save dialog
 

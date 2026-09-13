@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -19,29 +20,26 @@ func main() {
 	assets := flag.String("assets", "", "sprite pack directory (default: locate from cwd)")
 	flag.Parse()
 
-	g := game.New(game.Config{Seed: *seed, Width: *width, Height: *height})
-	for i := 0; i < *pawns; i++ {
-		x, y := i%*width, (i*7)%*height
-		if _, err := g.SpawnPawn(x, y); err != nil {
-			log.Fatalf("spawn pawn %d: %v", i, err)
-		}
-	}
-
-	renderer := uiadapter.New(g)
-	var loadErr error
-	if *assets != "" {
-		loadErr = renderer.LoadPack(*assets)
-	} else {
-		loadErr = renderer.LoadDefaultPack()
-	}
-	if loadErr != nil {
-		log.Printf("sprite pack: %v (drawing placeholders)", loadErr)
-	}
+	app := uiadapter.NewApp(uiadapter.AppConfig{
+		Version: "dev",
+		Assets:  *assets,
+		NewSim: func() (uiadapter.Simulation, error) {
+			g := game.New(game.Config{Seed: *seed, Width: *width, Height: *height})
+			for i := 0; i < *pawns; i++ {
+				x, y := i%*width, (i*7)%*height
+				if _, err := g.SpawnPawn(x, y); err != nil {
+					return nil, fmt.Errorf("spawn pawn %d: %w", i, err)
+				}
+			}
+			return g, nil
+		},
+	})
 
 	ebiten.SetTPS(clock.TicksPerSecond)
-	ebiten.SetWindowSize(*width*uiadapter.TileSize, *height*uiadapter.TileSize)
+	ebiten.SetWindowSize(uiadapter.DefaultWindowWidth, uiadapter.DefaultWindowHeight)
+	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 	ebiten.SetWindowTitle("rimworld-go")
-	if err := ebiten.RunGame(renderer); err != nil {
+	if err := ebiten.RunGame(app); err != nil {
 		log.Fatal(err)
 	}
 }

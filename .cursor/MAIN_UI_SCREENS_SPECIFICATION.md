@@ -42,11 +42,11 @@ Every screen specification uses:
 
 Global rules:
 
--   [ ] Escape closes the topmost modal/panel before opening the game
-    menu.
+-   [-] Escape closes the topmost modal/panel before opening the game
+    menu. (pause overlay then screen stack; no generic window manager)
 -   [ ] Screens preserve useful scroll/filter/sort state.
 -   [ ] Entity references can select/jump to the entity when meaningful.
--   [ ] Disabled actions explain why.
+-   [-] Disabled actions explain why. (footer/hover reason string; no rich tooltips)
 -   [ ] Tables with potentially hundreds of rows are virtualized.
 -   [ ] Search/filtering happens against presentation data, not world
     scans each frame.
@@ -85,8 +85,8 @@ assets, saves, and renderer resources initialize.
 
 ## Required states
 
--   [ ] normal loading;
--   [ ] content warnings;
+-   [-] normal loading; (phase list + pack load; no plugin/fatal recovery)
+-   [-] content warnings; (pack-load warning on boot/menu only)
 -   [ ] plugin dependency failure;
 -   [ ] fatal initialization error;
 -   [ ] safe/recovery mode where supported.
@@ -101,14 +101,14 @@ Primary entry point for a play session.
 
 ## Primary actions
 
--   [ ] New Game
--   [ ] Load Game
--   [ ] Continue
--   [ ] Plugins
--   [ ] Options
--   [ ] Tutorial/Help
--   [ ] Credits
--   [ ] Quit
+-   [-] New Game (opens scenario stub; no live scenario defs)
+-   [-] Load Game (empty stub; no persistence)
+-   [-] Continue (visible, disabled: no saves yet)
+-   [-] Plugins (visible, disabled)
+-   [-] Options (stub tabs; settings not wired)
+-   [-] Tutorial/Help (visible, disabled)
+-   [-] Credits (stub screen)
+-   [x] Quit
 
 ## Information
 
@@ -145,11 +145,11 @@ character; - original narrative description.
 
 ## Actions
 
--   [ ] choose scenario;
--   [ ] inspect details;
+-   [-] choose scenario; (3 hardcoded names)
+-   [-] inspect details; (placeholder description/summary)
 -   [ ] create/edit custom scenario;
 -   [ ] load custom scenario;
--   [ ] continue.
+-   [-] continue. (Next only)
 
 Plugins may register scenarios.
 
@@ -207,11 +207,11 @@ adaptation, resource yield and other supported parameters.
 
 ## Actions
 
--   [ ] select storyteller;
--   [ ] select preset;
+-   [-] select storyteller; (3 placeholder cards)
+-   [-] select preset; (Forgiving/Standard/Harsh labels)
 -   [ ] customize;
 -   [ ] reset;
--   [ ] continue.
+-   [-] continue. (Next only)
 
 ------------------------------------------------------------------------
 
@@ -1782,22 +1782,22 @@ Agents should implement screens approximately in this dependency order.
 
 ## Wave UI-0 --- Framework
 
--   [ ] UI primitives
--   [ ] input/focus
--   [ ] window/modal system
--   [ ] tooltips
+-   [-] UI primitives (button/label/panel; no sliders, text fields, virtual lists)
+-   [-] input/focus (mouse hit-test + Escape; no focus ring or shortcut manager)
+-   [-] window/modal system (full-screen stack + pause overlay)
+-   [-] tooltips (disabled-reason line only)
 -   [ ] virtual lists/tables
--   [ ] presentation snapshot boundary
--   [ ] typed command gateway
+-   [-] presentation snapshot boundary (colony PawnView; menus are headless)
+-   [-] typed command gateway (StartGame/Quit/ReturnToMenu only)
 
 ## Wave UI-1 --- First interactive simulation
 
--   [ ] Boot
--   [ ] Main Menu
--   [ ] Main Colony
--   [ ] camera
+-   [-] Boot (phase list + pack load; no plugin/fatal recovery)
+-   [-] Main Menu (navigation shell; Continue/Plugins/Tutorial disabled)
+-   [-] Main Colony (existing viewport after Start; HUD still debug overlay)
+-   [-] camera (WASD/arrows pan, keyboard/wheel zoom; no edge pan)
 -   [-] time controls (pause / normal 1x / fast 3x / superfast 6x, date/period/clock, current schedule block; no dedicated chrome widget yet)
--   [ ] selection
+-   [-] selection (click pawn; no inspector)
 -   [ ] Generic Inspector
 -   [ ] colonist bar
 -   [ ] contextual commands
@@ -1842,12 +1842,12 @@ Agents should implement screens approximately in this dependency order.
 
 ## Wave UI-6 --- Complete new-game flow
 
--   [ ] Scenario
+-   [-] Scenario (hardcoded list + Next/Back; no editor/plugins)
 -   [ ] Scenario Editor
--   [ ] Storyteller/Difficulty
--   [ ] World Generation
--   [ ] Landing Site
--   [ ] Starting Pawns
+-   [-] Storyteller/Difficulty (3 cards + presets; no custom sliders)
+-   [-] World Generation (placeholder controls; Generate disabled)
+-   [-] Landing Site (placeholder tile card; no world map)
+-   [-] Starting Pawns (fake roster + Start; no reroll)
 
 These can begin earlier once their underlying definitions exist, but are
 required before a polished external build.
@@ -1865,9 +1865,9 @@ required before a polished external build.
 -   [ ] Endgame Ship
 -   [ ] Victory
 -   [ ] Save
--   [ ] Load
--   [ ] Pause Menu
--   [ ] Options
+-   [-] Load (empty stub from main menu; pause Load disabled)
+-   [-] Pause Menu (Resume/Options/Main Menu/Quit; Save/Load/Help disabled)
+-   [-] Options (tab labels + Back; settings not wired)
 -   [ ] Tutorial
 -   [ ] Help
 
