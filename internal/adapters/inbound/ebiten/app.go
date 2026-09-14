@@ -319,7 +319,7 @@ func (a *App) Draw(screen *ebiten.Image) {
 		if a.renderer != nil {
 			a.renderer.Draw(screen)
 		} else {
-			screen.Fill(uiBg)
+			screen.Fill(uiSpace)
 		}
 		if a.nav.overlay() == overlayPause {
 			a.drawPause(screen, sw, sh)
@@ -331,7 +331,7 @@ func (a *App) Draw(screen *ebiten.Image) {
 	case screenCredits:
 		a.drawCredits(screen, sw, sh)
 	default:
-		screen.Fill(uiBg)
+		screen.Fill(uiSpace)
 	}
 
 	a.drawHoverHint(screen, sw, sh)
@@ -386,7 +386,7 @@ func (a *App) drawButtons(screen *ebiten.Image, buttons []button, mx, my int) {
 }
 
 func (a *App) fillMenu(screen *ebiten.Image, sw, sh int, title string, body []string) {
-	screen.Fill(uiBg)
+	drawMenuBackdrop(screen, sw, sh)
 	drawPanel(screen, 40, 24, float32(sw-80), 56)
 	drawLabel(screen, 56, 44, title)
 	if len(body) == 0 {

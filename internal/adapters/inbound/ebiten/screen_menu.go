@@ -18,7 +18,7 @@ func (a *App) mainMenuButtons(sw, sh int) []button {
 }
 
 func (a *App) drawMainMenu(screen *ebiten.Image, sw, sh int) {
-	screen.Fill(uiBg)
+	drawMenuBackdrop(screen, sw, sh)
 	drawPanel(screen, 40, 24, float32(sw-80), 72)
 	drawLabel(screen, 56, 40, "rimworld-go")
 	drawLabel(screen, 56, 60, formatVersion(a.cfg.Version))

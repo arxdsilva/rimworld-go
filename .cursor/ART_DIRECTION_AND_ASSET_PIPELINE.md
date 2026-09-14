@@ -745,6 +745,10 @@ Use semantic names (`steel.base`, `wood.shadow`) rather than `gray1`.
 Exact colors must come from original visual prototyping rather than
 copying another game's palette.
 
+-   [-] `assets/palettes/ui.yaml` (menu/pause chrome tokens; Go adapter
+    mirrors the hexes). `base.yaml`, `materials.yaml`, and
+    `factions.yaml` are not started.
+
 ## 34. Mandatory Style Prototype Gate
 
 Before hundreds of assets are created, build one vertical-slice scene

@@ -15,6 +15,7 @@ code does not import this package.
 
 - `App` — `ebiten.Game` shell, screen stack, overlay (pause)
 - widgets: panel, label, button (hover/disabled)
+- UI chrome tokens (`assets/palettes/ui.yaml`, mirrored in Go)
 - `Renderer` — colony camera, speed tiers, selection, sprite draw
 - vendor sprite atlas load
 - presentation animation / tile lerp clocks
@@ -52,6 +53,7 @@ code does not import this package.
 - Sprite animation uses a presentation frame counter, not sim ticks, to
   pick frames. Tile lerp may use sim ticks vs `moveTick`.
 - UI hit-testing consumes the pointer before the map.
+- Menu chrome colors must match `assets/palettes/ui.yaml`.
 
 ## Hot paths
 
@@ -67,8 +69,9 @@ the simulation the factory created; speed tiers only change how often
 ## Tests
 
 `nav_test.go` and `app_test.go` cover routing, disabled clicks, Start
-creating a sim, and pause blocking `Step`. They must not open a window.
-Existing renderer unit tests stay headless.
+creating a sim, and pause blocking `Step`. `widgets_test.go` checks UI
+palette hexes against `assets/palettes/ui.yaml`. They must not open a
+window. Existing renderer unit tests stay headless.
 
 ## Benchmarks
 

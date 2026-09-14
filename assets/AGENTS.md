@@ -33,6 +33,8 @@ and never written back to the domain.
 ```text
 assets/
 ├── AGENTS.md
+├── palettes/
+│   └── ui.yaml          # menu/pause chrome tokens (ART §33)
 ├── Free 2D Animated Vector Game Character Sprites/   # vendor source
 └── .gitkeep
 ```

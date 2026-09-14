@@ -122,7 +122,7 @@ use these primitives.
     -   alert.
     -   disabled/help text.
     -   Numeric columns should align predictably.
--   [ ] **Semantic colors**
+-   [-] **Semantic colors** (menu/pause chrome: space, dust, leather button, selected gold, disabled, dim; health/mood/power/hostile not yet)
     -   Positive.
     -   warning.
     -   danger.

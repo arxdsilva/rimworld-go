@@ -1,0 +1,19 @@
+# Original rimworld-go UI chrome palette.
+# Warm dust against a cold void. Semantic names per ART_DIRECTION §33.
+# These hexes were prototyped for this project; they are not sampled
+# from another game. Alpha is the last two digits (00–FF).
+#
+# Consumed by internal/adapters/inbound/ebiten (hardcoded to match).
+
+ui.space: "#0A1018FF"
+ui.dust: "#8C4A2EFF"
+ui.horizon: "#A85C32FF"
+ui.panel: "#2A1E16E6"
+ui.panel_border: "#6B5340FF"
+ui.button: "#5C4030FF"
+ui.button_hover: "#6E4E3AFF"
+ui.button_selected: "#8B5A2BFF"
+ui.button_disabled: "#3A2E28FF"
+ui.button_border: "#8A6A48FF"
+ui.accent: "#E8C070FF"
+ui.dim: "#000000A0"
