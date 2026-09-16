@@ -267,3 +267,70 @@ func TestScenarioSelectionStaysOnScreen(t *testing.T) {
 		t.Fatalf("select scenario 2: idx=%d screen=%s", a.scenario, a.nav.screen())
 	}
 }
+
+func TestBodyOriginClearsLeftRail(t *testing.T) {
+	t.Parallel()
+	a := testApp(&stubSim{w: 4, h: 4})
+	a.finishBoot()
+	click(t, a, "menu.newgame")
+
+	x, y := bodyOrigin(a.scenarioButtons(a.sw, a.sh), a.sh)
+	if y != bodyDefaultY {
+		t.Fatalf("scenario body y=%d, want %d", y, bodyDefaultY)
+	}
+	if x <= 56+260 {
+		t.Fatalf("scenario body x=%d, want right of 260px rail", x)
+	}
+
+	click(t, a, "wizard.next")
+	x, _ = bodyOrigin(a.storytellerButtons(a.sw, a.sh), a.sh)
+	if x <= 56+280 {
+		t.Fatalf("storyteller body x=%d, want right of 280px rail", x)
+	}
+
+	click(t, a, "wizard.back")
+	click(t, a, "wizard.back")
+	click(t, a, "menu.load")
+	x, _ = bodyOrigin(a.loadButtons(a.sw, a.sh), a.sh)
+	if x != bodyDefaultX {
+		t.Fatalf("load body x=%d, want %d (footer only)", x, bodyDefaultX)
+	}
+	click(t, a, "load.back")
+	click(t, a, "menu.options")
+	x, _ = bodyOrigin(a.optionsButtons(a.sw, a.sh), a.sh)
+	if x != bodyDefaultX {
+		t.Fatalf("options body x=%d, want %d", x, bodyDefaultX)
+	}
+}
+
+func TestWorldGenerateStaysInFooter(t *testing.T) {
+	t.Parallel()
+	a := testApp(&stubSim{w: 4, h: 4})
+	a.finishBoot()
+	click(t, a, "menu.newgame")
+	click(t, a, "wizard.next")
+	click(t, a, "wizard.next")
+	if a.nav.screen() != screenWorldGen {
+		t.Fatalf("screen = %s, want world_gen", a.nav.screen())
+	}
+	found := false
+	for _, b := range a.worldGenButtons(a.sw, a.sh) {
+		if b.id != "world.generate" {
+			continue
+		}
+		found = true
+		if !isFooterButton(b, a.sh) {
+			t.Fatalf("Generate at y=%v should be in the footer", b.y)
+		}
+		if !b.disabled {
+			t.Fatal("Generate should stay disabled")
+		}
+	}
+	if !found {
+		t.Fatal("missing world.generate")
+	}
+	x, _ := bodyOrigin(a.worldGenButtons(a.sw, a.sh), a.sh)
+	if x != bodyDefaultX {
+		t.Fatalf("world gen body x=%d, want %d after Generate moved to footer", x, bodyDefaultX)
+	}
+}

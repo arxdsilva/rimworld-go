@@ -7,7 +7,7 @@ func (a *App) optionsButtons(sw, sh int) []button {
 		id:    "options.back",
 		label: "Back",
 		x:     40,
-		y:     float32(sh - 64),
+		y:     footerY(sh),
 		w:     140,
 		h:     36,
 	}}

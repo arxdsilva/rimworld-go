@@ -31,7 +31,7 @@ func (a *App) loadButtons(sw, sh int) []button {
 		id:    "load.back",
 		label: "Back",
 		x:     40,
-		y:     float32(sh - 64),
+		y:     footerY(sh),
 		w:     140,
 		h:     36,
 	}}
@@ -51,7 +51,7 @@ func (a *App) creditsButtons(sw, sh int) []button {
 		id:    "credits.back",
 		label: "Back",
 		x:     40,
-		y:     float32(sh - 64),
+		y:     footerY(sh),
 		w:     140,
 		h:     36,
 	}}

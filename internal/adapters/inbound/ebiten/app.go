@@ -17,6 +17,11 @@ const (
 
 	bootFramesPerPhase = 8
 	bootAssetPhase     = 4 // "asset manifests/atlases"
+
+	bodyDefaultX = 56
+	bodyDefaultY = 112
+	bodyRailGap  = 16
+	footerYOff   = 64
 )
 
 var bootPhases = []string{
@@ -385,23 +390,53 @@ func (a *App) drawButtons(screen *ebiten.Image, buttons []button, mx, my int) {
 	}
 }
 
-func (a *App) fillMenu(screen *ebiten.Image, sw, sh int, title string, body []string) {
+func footerY(sh int) float32 {
+	return float32(sh - footerYOff)
+}
+
+func isFooterButton(b button, sh int) bool {
+	return b.y >= footerY(sh)-1
+}
+
+// bodyOrigin puts copy to the right of left-rail buttons so it is not
+// drawn under them. Footer Back/Next are ignored.
+func bodyOrigin(buttons []button, sh int) (x, y int) {
+	x, y = bodyDefaultX, bodyDefaultY
+	maxRight := 0
+	for _, b := range buttons {
+		if isFooterButton(b, sh) {
+			continue
+		}
+		if right := int(b.x + b.w); right > maxRight {
+			maxRight = right
+		}
+	}
+	if maxRight > 0 {
+		x = maxRight + bodyRailGap
+	}
+	return x, y
+}
+
+func (a *App) fillMenu(screen *ebiten.Image, sw, sh int, title string, body []string, bodyX int) {
 	drawMenuBackdrop(screen, sw, sh)
 	drawPanel(screen, 40, 24, float32(sw-80), 56)
 	drawLabel(screen, 56, 44, title)
 	if len(body) == 0 {
 		return
 	}
+	if bodyX < 1 {
+		bodyX = bodyDefaultX
+	}
 	drawPanel(screen, 40, 96, float32(sw-80), float32(sh-180))
-	y := 112
+	y := bodyDefaultY
 	for _, line := range body {
-		drawLabel(screen, 56, y, line)
+		drawLabel(screen, bodyX, y, line)
 		y += 16
 	}
 }
 
 func (a *App) footer(sw, sh int, nextLabel, nextID string) []button {
-	y := float32(sh - 64)
+	y := footerY(sh)
 	out := []button{{
 		id:    "wizard.back",
 		label: "Back",
@@ -444,7 +479,8 @@ func (a *App) currentCursor() (int, int) {
 }
 
 func (a *App) paintMenu(screen *ebiten.Image, sw, sh int, title string, body []string, buttons []button) {
-	a.fillMenu(screen, sw, sh, title, body)
+	bx, _ := bodyOrigin(buttons, sh)
+	a.fillMenu(screen, sw, sh, title, body, bx)
 	mx, my := a.currentCursor()
 	a.drawButtons(screen, buttons, mx, my)
 }

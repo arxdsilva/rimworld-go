@@ -16,7 +16,7 @@ func (a *App) drawBoot(screen *ebiten.Image, sw, sh int) {
 	if a.packWarn != "" {
 		body = append(body, "", "warning: "+a.packWarn)
 	}
-	a.fillMenu(screen, sw, sh, "rimworld-go", body)
+	a.fillMenu(screen, sw, sh, "rimworld-go", body, bodyDefaultX)
 	drawLabel(screen, 56, sh-40, "escape to skip")
 }
 

@@ -66,10 +66,7 @@ func (a *App) scenarioButtons(sw, sh int) []button {
 func (a *App) drawScenario(screen *ebiten.Image, sw, sh int) {
 	s := scenarios[a.scenario]
 	a.paintMenu(screen, sw, sh, "New Game — Scenario", []string{
-		"Left: choose a starting situation. Center: description.",
-		"Right: starting conditions. Plugins may register scenarios later.",
-		"",
-		"Selected: " + s.name,
+		s.name,
 		s.desc,
 		s.summary,
 	}, a.scenarioButtons(sw, sh))
@@ -121,17 +118,17 @@ func (a *App) drawStoryteller(screen *ebiten.Image, sw, sh int) {
 }
 
 func (a *App) worldGenButtons(sw, sh int) []button {
-	btns := []button{{
+	btns := a.footer(sw, sh, "Next", "wizard.next")
+	return append(btns, button{
 		id:       "world.generate",
 		label:    "Generate",
-		x:        56,
-		y:        280,
-		w:        180,
+		x:        196,
+		y:        footerY(sh),
+		w:        140,
 		h:        36,
 		disabled: true,
 		reason:   "world generation not implemented",
-	}}
-	return append(btns, a.footer(sw, sh, "Next", "wizard.next")...)
+	})
 }
 
 func (a *App) drawWorldGen(screen *ebiten.Image, sw, sh int) {
@@ -161,28 +158,10 @@ func (a *App) drawLanding(screen *ebiten.Image, sw, sh int) {
 }
 
 func (a *App) pawnButtons(sw, sh int) []button {
-	btns := []button{
-		{
-			id:       "pawns.reroll",
-			label:    "Reroll",
-			x:        56,
-			y:        300,
-			w:        140,
-			h:        32,
-			disabled: true,
-			reason:   "not implemented",
-		},
-		{
-			id:       "pawns.rename",
-			label:    "Rename",
-			x:        208,
-			y:        300,
-			w:        140,
-			h:        32,
-			disabled: true,
-			reason:   "not implemented",
-		},
-	}
+	btns := stackButtons(56, 120, 140, 32, 8, []buttonSpec{
+		{id: "pawns.reroll", label: "Reroll", disabled: true, reason: "not implemented"},
+		{id: "pawns.rename", label: "Rename", disabled: true, reason: "not implemented"},
+	})
 	return append(btns, a.footer(sw, sh, "Start", "wizard.start")...)
 }
 
