@@ -3,9 +3,9 @@ package ebiten
 import ebiten "github.com/hajimehoshi/ebiten/v2"
 
 func (a *App) mainMenuButtons(sw, sh int) []button {
-	cx := float32(sw)/2 - 150
+	cx := menuRailX(sw)
 	y := float32(140)
-	return stackButtons(cx, y, 300, 36, 10, []buttonSpec{
+	return stackButtons(cx, y, menuRailW, 36, 10, []buttonSpec{
 		{id: "menu.newgame", label: "New Game"},
 		{id: "menu.continue", label: "Continue", disabled: true, reason: "no saves yet"},
 		{id: "menu.load", label: "Load Game"},
@@ -19,9 +19,10 @@ func (a *App) mainMenuButtons(sw, sh int) []button {
 
 func (a *App) drawMainMenu(screen *ebiten.Image, sw, sh int) {
 	drawMenuBackdrop(screen, sw, sh)
-	drawPanel(screen, 40, 24, float32(sw-80), 72)
-	drawLabel(screen, 56, 40, "rimworld-go")
-	drawLabel(screen, 56, 60, formatVersion(a.cfg.Version))
+	a.drawMenuSplash(screen, sw, sh)
+	drawLabel(screen, menuTitleX(sw, "rimworld-go"), 28, "rimworld-go")
+	cx := menuRailX(sw)
+	drawLabel(screen, int(cx)+16, 108, formatVersion(a.cfg.Version))
 	mx, my := a.currentCursor()
 	a.drawButtons(screen, a.mainMenuButtons(sw, sh), mx, my)
 }

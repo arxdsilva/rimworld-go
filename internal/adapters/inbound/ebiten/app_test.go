@@ -3,6 +3,8 @@ package ebiten
 import (
 	"testing"
 
+	ebiten "github.com/hajimehoshi/ebiten/v2"
+
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/clock"
@@ -32,6 +34,9 @@ func testApp(sim Simulation) *App {
 	return NewApp(AppConfig{
 		Version: "test",
 		LoadPack: func() (*atlas, error) {
+			return nil, nil
+		},
+		LoadSplash: func() (*ebiten.Image, error) {
 			return nil, nil
 		},
 		NewSim: func() (Simulation, error) {

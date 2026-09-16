@@ -35,10 +35,19 @@ assets/
 ├── AGENTS.md
 ├── palettes/
 │   └── ui.yaml          # menu/pause chrome tokens (ART §33)
+├── source/
+│   └── raster/
+│       └── ui/
+│           └── main_menu_colonist.png   # original main-menu bust
 ├── Free 2D Animated Vector Game Character Sprites/   # vendor source
 └── .gitkeep
 ```
 
-Canonical `source/` / `generated/` / `metadata/` layout from the art
-spec lands when original art production starts. Do not hand-patch
-vendor PNGs; treat the pack as immutable source.
+`source/raster/ui/main_menu_colonist.png` is original title art (cel-shaded
+colonist bust with raven, RGBA cutout). It is not vendor pack art and is
+not a reconstruction of proprietary RimWorld screenshots. The brief that
+produced it lives at repo-root `ai-bg-rimworld`.
+
+Canonical `generated/` / `metadata/` layout from the art spec lands when
+original gameplay-sprite production starts. Do not hand-patch vendor
+PNGs; treat the pack as immutable source.

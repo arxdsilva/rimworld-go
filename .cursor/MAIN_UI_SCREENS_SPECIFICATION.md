@@ -119,8 +119,11 @@ loading it blindly.
 
 ## Background
 
-May display a lightweight animated or generated colony scene, but menu
-presentation must not require an active authoritative simulation.
+-   [-] original colonist bust splash on the left over the existing menu
+    backdrop; title and actions sit on a right rail. No live simulation.
+
+May later display a lightweight animated or generated colony scene, but
+menu presentation must not require an active authoritative simulation.
 
 ------------------------------------------------------------------------
 
@@ -1793,7 +1796,7 @@ Agents should implement screens approximately in this dependency order.
 ## Wave UI-1 --- First interactive simulation
 
 -   [-] Boot (phase list + pack load; no plugin/fatal recovery)
--   [-] Main Menu (navigation shell; Continue/Plugins/Tutorial disabled)
+-   [-] Main Menu (navigation shell; Continue/Plugins/Tutorial disabled; original colonist splash left, actions right rail)
 -   [-] Main Colony (viewport plus resource/time strip, colonist bar, bottom tabs after Start; no alerts/architect/economy)
 -   [-] camera (WASD/arrows pan, keyboard/wheel zoom; no edge pan)
 -   [-] time controls (pause / normal 1x / fast 3x / superfast 6x, date/period/clock, current schedule block in top chrome; no temperature/weather)

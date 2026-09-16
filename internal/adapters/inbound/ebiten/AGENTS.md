@@ -17,6 +17,7 @@ the colony viewport with HUD chrome. Screens consume read models
 - widgets: panel, label, button (hover/disabled)
 - UI chrome tokens (`assets/palettes/ui.yaml`, mirrored in Go)
 - colony HUD: resource/time strip, colonist bar, bottom tabs, inspector, Work overlay
+- main-menu colonist splash (original PNG, left of the action rail)
 - `Renderer` — colony camera, speed tiers, selection, sprite draw
 - vendor sprite atlas load
 - presentation animation / tile lerp clocks
@@ -28,7 +29,7 @@ the colony viewport with HUD chrome. Screens consume read models
   `Activity`)
 - `internal/domain` types that appear on that read model (`clock`,
   `entity`, `schedule`)
-- Ebitengine, image/png, OS path lookup for the vendor pack
+- Ebitengine, image/png, OS path lookup for the vendor pack and menu splash
 
 ## Forbidden dependencies
 
@@ -56,6 +57,8 @@ the colony viewport with HUD chrome. Screens consume read models
   pick frames. Tile lerp may use sim ticks vs `moveTick`.
 - UI hit-testing consumes the pointer before the map.
 - Menu chrome colors must match `assets/palettes/ui.yaml`.
+- Main-menu splash is presentation-only; a missing PNG still shows the
+  backdrop and right-rail buttons.
 
 ## Hot paths
 
@@ -72,7 +75,8 @@ the simulation the factory created; speed tiers only change how often
 
 `nav_test.go` and `app_test.go` cover routing, disabled clicks, Start
 creating a sim, and pause blocking `Step`. `hud_test.go` covers colonist
-bar select, Work overlay, Escape order, and HUD hit-testing. `widgets_test.go`
+bar select, Work overlay, Escape order, and HUD hit-testing. `splash_test.go`
+covers the right-rail menu and PNG decode. `widgets_test.go`
 checks UI palette hexes against `assets/palettes/ui.yaml`. They must not
 open a window. Existing renderer unit tests stay headless.
 

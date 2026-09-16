@@ -46,10 +46,11 @@ type SimFactory func() (Simulation, error)
 
 // AppConfig is the composition-root wiring for the interactive client.
 type AppConfig struct {
-	Version  string
-	Assets   string // empty: locate the vendor pack from cwd
-	NewSim   SimFactory
-	LoadPack func() (*atlas, error)
+	Version    string
+	Assets     string // empty: locate the vendor pack from cwd
+	NewSim     SimFactory
+	LoadPack   func() (*atlas, error)
+	LoadSplash func() (*ebiten.Image, error)
 }
 
 // App is the ebiten.Game shell: screen routing, widgets, and (once
@@ -63,6 +64,7 @@ type App struct {
 	packTried  bool
 	pack       *atlas
 	packWarn   string
+	splash     *ebiten.Image
 	sessionErr string
 	hint       string
 	shouldQuit bool
@@ -93,6 +95,15 @@ func NewApp(cfg AppConfig) *App {
 				return nil, err
 			}
 			return loadAtlasFromRoot(root)
+		}
+	}
+	if cfg.LoadSplash == nil {
+		cfg.LoadSplash = func() (*ebiten.Image, error) {
+			path, err := LocateMenuSplash()
+			if err != nil {
+				return nil, err
+			}
+			return loadPNG(path)
 		}
 	}
 	return &App{
@@ -221,15 +232,15 @@ func (a *App) bootPhase() int {
 
 func (a *App) loadPack() {
 	a.packTried = true
-	if a.cfg.LoadPack == nil {
-		return
+	if a.cfg.LoadPack != nil {
+		p, err := a.cfg.LoadPack()
+		if err != nil {
+			a.packWarn = err.Error()
+		} else {
+			a.pack = p
+		}
 	}
-	p, err := a.cfg.LoadPack()
-	if err != nil {
-		a.packWarn = err.Error()
-		return
-	}
-	a.pack = p
+	a.loadSplash()
 }
 
 func (a *App) finishBoot() {

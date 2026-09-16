@@ -1,0 +1,77 @@
+package ebiten
+
+import (
+	"image/png"
+	"os"
+	"strings"
+	"testing"
+)
+
+func TestMainMenuButtonsRightRail(t *testing.T) {
+	t.Parallel()
+	a := testApp(&stubSim{w: 4, h: 4})
+	a.finishBoot()
+	mid := float32(a.sw) / 2
+	found := 0
+	for _, b := range a.mainMenuButtons(a.sw, a.sh) {
+		if !strings.HasPrefix(b.id, "menu.") {
+			continue
+		}
+		found++
+		if b.x <= mid {
+			t.Fatalf("%s x=%v, want > %v", b.id, b.x, mid)
+		}
+	}
+	if found < 8 {
+		t.Fatalf("menu buttons = %d, want at least 8", found)
+	}
+}
+
+func TestMenuTitleCentered(t *testing.T) {
+	t.Parallel()
+	title := "rimworld-go"
+	sw := DefaultWindowWidth
+	x := menuTitleX(sw, title)
+	mid := sw / 2
+	textMid := x + (len(title)*debugCharW)/2
+	if textMid < mid-1 || textMid > mid+1 {
+		t.Fatalf("title midpoint %d, want ~%d (x=%d)", textMid, mid, x)
+	}
+}
+
+func TestMenuSplashPNGDecodes(t *testing.T) {
+	t.Parallel()
+	path, err := LocateMenuSplash()
+	if err != nil {
+		t.Fatal(err)
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	img, err := png.Decode(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := img.Bounds()
+	if b.Dx() < 64 || b.Dy() < 64 {
+		t.Fatalf("splash size %dx%d, want a usable bust", b.Dx(), b.Dy())
+	}
+	if b.Dy() <= b.Dx() {
+		t.Fatalf("splash %dx%d, want portrait", b.Dx(), b.Dy())
+	}
+	transparent := false
+	for y := b.Min.Y; y < b.Max.Y && !transparent; y++ {
+		for x := b.Min.X; x < b.Max.X; x++ {
+			_, _, _, a := img.At(x, y).RGBA()
+			if a == 0 {
+				transparent = true
+				break
+			}
+		}
+	}
+	if !transparent {
+		t.Fatal("splash PNG should have transparent pixels so the menu backdrop shows through")
+	}
+}
