@@ -7,15 +7,16 @@ authoritative simulation stores.
 ## Purpose
 
 Host the player-facing session: boot, menus, new-game stubs, pause, and
-the existing colony renderer. Screens consume read models (`Snapshot()`)
-and emit session intents (`StartGame`, `Quit`, `ReturnToMenu`). Domain
-code does not import this package.
+the colony viewport with HUD chrome. Screens consume read models
+(`Snapshot()`) and emit session intents (`StartGame`, `Quit`,
+`ReturnToMenu`). Domain code does not import this package.
 
 ## Owned concepts
 
-- `App` — `ebiten.Game` shell, screen stack, overlay (pause)
+- `App` — `ebiten.Game` shell, screen stack, overlay (pause), HUD
 - widgets: panel, label, button (hover/disabled)
 - UI chrome tokens (`assets/palettes/ui.yaml`, mirrored in Go)
+- colony HUD: resource/time strip, colonist bar, bottom tabs, inspector, Work overlay
 - `Renderer` — colony camera, speed tiers, selection, sprite draw
 - vendor sprite atlas load
 - presentation animation / tile lerp clocks
@@ -42,10 +43,11 @@ code does not import this package.
   Start. Menus must run with `renderer == nil`.
 - Return to main menu drops the renderer so the menu stays headless.
 - Pause overlay skips `Renderer.advance` and map input.
-- Escape closes the top overlay, then pops the screen stack, then opens
-  pause from the colony.
+- HUD, inspector, and Work consume pointer hits before map selection.
+- Escape on colony: Work overlay, then inspector selection, then pause.
 - Disabled buttons do not navigate; they expose a reason string.
 - `Layout` follows the window size; camera/zoom stay presentation-only.
+- Work table cells are display-only placeholders; they do not `Step`.
 
 ## Invariants
 
@@ -69,9 +71,10 @@ the simulation the factory created; speed tiers only change how often
 ## Tests
 
 `nav_test.go` and `app_test.go` cover routing, disabled clicks, Start
-creating a sim, and pause blocking `Step`. `widgets_test.go` checks UI
-palette hexes against `assets/palettes/ui.yaml`. They must not open a
-window. Existing renderer unit tests stay headless.
+creating a sim, and pause blocking `Step`. `hud_test.go` covers colonist
+bar select, Work overlay, Escape order, and HUD hit-testing. `widgets_test.go`
+checks UI palette hexes against `assets/palettes/ui.yaml`. They must not
+open a window. Existing renderer unit tests stay headless.
 
 ## Benchmarks
 

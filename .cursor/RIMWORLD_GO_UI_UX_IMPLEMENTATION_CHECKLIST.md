@@ -267,7 +267,7 @@ This is the minimum UI required to interact with a running simulation.
 
 ## 2.4 Minimal top-level HUD
 
--   [ ] **Current game state indicator**
+-   [-] **Current game state indicator** (top chrome shows date, schedule activity, and speed label; no world/dev-mode indicator)
     -   Paused/speed.
     -   map/world context.
     -   developer mode indicator if enabled.
@@ -286,19 +286,19 @@ building, item, plant, animal, corpse or tile.
 
 ## 3.1 Generic selection panel
 
--   [ ] **Selected entity header**
+-   [-] **Selected entity header** (pawn: stub name `Colonist N`, category colonist, activity; no faction/health)
     -   Display label/name.
     -   entity category.
     -   faction/ownership where relevant.
     -   health/condition summary.
     -   concise current state.
--   [ ] **Entity portrait/icon**
+-   [-] **Entity portrait/icon** (vendor idle frame when pack loaded; otherwise empty)
     -   Original presentation.
     -   For pawns, portrait or representative pawn rendering.
 -   [ ] **Description**
     -   Data-driven description.
     -   Plugins can provide localization.
--   [ ] **Location and environment**
+-   [-] **Location and environment** (tile coordinates from `PawnView`; no room/temperature/terrain/roof)
     -   Cell.
     -   room/outdoors.
     -   temperature.
@@ -350,7 +350,7 @@ building, item, plant, animal, corpse or tile.
 
 ## 4.1 Colonist bar
 
--   [ ] **Always-visible colonist portraits**
+-   [-] **Always-visible colonist portraits** (snapshot slots, click selects, vendor idle portrait; no double-click center or status icons)
     -   Compact representation of each colonist.
     -   Click selects; double-click centers.
     -   Preserve identity at a glance.
@@ -363,7 +363,7 @@ building, item, plant, animal, corpse or tile.
     -   caravan/off-map.
     -   break risk.
     -   Icons must remain readable without opening inspector.
--   [ ] **Ordering**
+-   [-] **Ordering** (snapshot insertion order; no groups or custom sort)
     -   Stable default ordering.
     -   Later allow groups/custom ordering.
 -   [ ] **Large-colony scaling**
@@ -373,7 +373,7 @@ building, item, plant, animal, corpse or tile.
 
 ## 4.2 Pawn summary
 
--   [ ] **Current activity/job**
+-   [-] **Current activity/job** (inspector shows `PawnView.Activity` and tile; no job/draft/health)
 -   [ ] **Draft state**
 -   [ ] **Faction**
 -   [ ] **Immediate health state**
@@ -526,11 +526,11 @@ interfaces.
 
 ## 7.1 Work table
 
--   [ ] **Pawn rows**
+-   [-] **Pawn rows** (snapshot rows, stub name `Colonist N`; no portraits/status/sort in the table)
     -   Name/portrait.
     -   relevant status.
     -   sortable.
--   [ ] **Work-type columns**
+-   [-] **Work-type columns** (abbreviated stub headers FF/Doc/Grow/…; display-only `1`/`-`; no tooltips or mutation)
     -   Firefight, patient, doctor, bed rest, basic, warden, handle,
         cook, hunt, construct, grow, mine, plant cut, craft categories,
         art, haul, clean, research.

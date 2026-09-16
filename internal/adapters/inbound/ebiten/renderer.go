@@ -9,7 +9,6 @@ import (
 	"image/color"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
@@ -170,12 +169,6 @@ func (r *Renderer) LoadDefaultPack() error {
 	return r.LoadPack(root)
 }
 
-func (r *Renderer) handleInput() {
-	r.handleSpeedInput()
-	r.handleCameraInput()
-	r.handleSelectionInput()
-}
-
 func (r *Renderer) advance() {
 	r.present++
 	if n := r.speed.ticksPerFrame(); n > 0 {
@@ -301,7 +294,7 @@ func visible(x, y, w, h float32, sw, sh int) bool {
 	return x+w >= 0 && y+h >= 0 && x < float32(sw) && y < float32(sh)
 }
 
-// Draw renders terrain, pawns, selection, and the HUD.
+// Draw renders terrain, pawns, and selection. HUD chrome is App-owned.
 func (r *Renderer) Draw(screen *ebiten.Image) {
 	screen.Fill(color.RGBA{R: 28, G: 42, B: 32, A: 255})
 
@@ -324,7 +317,6 @@ func (r *Renderer) Draw(screen *ebiten.Image) {
 	}
 
 	r.drawDaylight(screen, sw, sh)
-	r.drawHUD(screen)
 }
 
 func (r *Renderer) drawDaylight(screen *ebiten.Image, sw, sh int) {
@@ -449,25 +441,26 @@ func (r *Renderer) drawSelection(screen *ebiten.Image, sx, sy float32, tile floa
 	vector.StrokeRect(screen, sx+1, sy+1, float32(tile)-2, float32(tile)-2, 2, r.selectClr, false)
 }
 
-func (r *Renderer) drawHUD(screen *ebiten.Image) {
-	ebitenutil.DebugPrint(screen, fmt.Sprintf(
-		"%s\n[%s]  schedule=%s  space=pause 1=normal 2=fast 3=superfast  wasd=pan +/-=zoom  esc=menu",
-		r.game.Date(), r.speed.rate(), r.game.Activity()))
+// Select marks id as the presentation selection.
+func (r *Renderer) Select(id entity.EntityID) {
+	r.selected, r.hasSelect = id, true
+}
 
-	if !r.hasSelect {
-		return
-	}
-	for _, p := range r.game.Snapshot() {
-		if p.ID != r.selected {
-			continue
-		}
-		ebitenutil.DebugPrintAt(screen, fmt.Sprintf("selected pawn %d\nposition (%d, %d)  %s", p.ID, p.X, p.Y, p.Activity), 8, 40)
-		if ss := r.pack.colonist(p.ID); ss != nil {
-			if img := animFrame(ss.idle, r.present, uint64(idleAnimPeriod)); img != nil {
-				drawImage(screen, img, 8, 64, 48, 72, false)
-			}
-		}
-		return
-	}
+// ClearSelect drops the presentation selection.
+func (r *Renderer) ClearSelect() {
 	r.hasSelect = false
 }
+
+// HasSelect reports whether a pawn is selected.
+func (r *Renderer) HasSelect() bool { return r.hasSelect }
+
+// Selected is the current presentation selection. Valid only if HasSelect.
+func (r *Renderer) Selected() entity.EntityID { return r.selected }
+
+func (r *Renderer) snapshot() []game.PawnView { return r.game.Snapshot() }
+
+func (r *Renderer) date() clock.Date { return r.game.Date() }
+
+func (r *Renderer) activity() schedule.Activity { return r.game.Activity() }
+
+func (r *Renderer) speedRate() string { return r.speed.rate() }

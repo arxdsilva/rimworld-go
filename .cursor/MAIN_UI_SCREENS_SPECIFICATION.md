@@ -1794,13 +1794,13 @@ Agents should implement screens approximately in this dependency order.
 
 -   [-] Boot (phase list + pack load; no plugin/fatal recovery)
 -   [-] Main Menu (navigation shell; Continue/Plugins/Tutorial disabled)
--   [-] Main Colony (existing viewport after Start; HUD still debug overlay)
+-   [-] Main Colony (viewport plus resource/time strip, colonist bar, bottom tabs after Start; no alerts/architect/economy)
 -   [-] camera (WASD/arrows pan, keyboard/wheel zoom; no edge pan)
--   [-] time controls (pause / normal 1x / fast 3x / superfast 6x, date/period/clock, current schedule block; no dedicated chrome widget yet)
--   [-] selection (click pawn; no inspector)
--   [ ] Generic Inspector
--   [ ] colonist bar
--   [ ] contextual commands
+-   [-] time controls (pause / normal 1x / fast 3x / superfast 6x, date/period/clock, current schedule block in top chrome; no temperature/weather)
+-   [-] selection (click pawn or colonist bar; inspector is a Character-tab shell)
+-   [-] Generic Inspector (pawn window: name stub, activity, tile; Needs/Health/Social/Gear disabled; no command catalog)
+-   [-] colonist bar (snapshot slots, click selects, idle portrait; no status icons, no double-click center)
+-   [-] contextual commands (bottom tabs present; Work and Menu live; others disabled `not implemented`; no selection command bar)
 
 ## Wave UI-2 --- Build a colony
 
@@ -1809,7 +1809,7 @@ Agents should implement screens approximately in this dependency order.
 -   [ ] zones
 -   [ ] stockpile settings
 -   [ ] growing settings
--   [ ] Work
+-   [-] Work (overlay grid from snapshot rows; stub columns; cells display-only placeholders; not virtualized)
 -   [ ] Schedule
 -   [ ] Area Manager
 

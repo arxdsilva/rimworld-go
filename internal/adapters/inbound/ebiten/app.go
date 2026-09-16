@@ -2,11 +2,15 @@ package ebiten
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+
+	"rimworld-go/internal/domain/sim/entity"
 )
 
 const (
@@ -69,6 +73,7 @@ type App struct {
 
 	simsStarted int
 	renderer    *Renderer
+	workOpen    bool
 }
 
 // NewApp returns an App on the boot screen. Simulation is not created
@@ -113,37 +118,68 @@ func (a *App) Update() error {
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
-		a.apply(a.nav.escapeIntent())
+		a.pressEscape()
 		if a.shouldQuit {
 			return ebiten.Termination
 		}
 	}
 
 	sw, sh := a.size()
+	consumed := false
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		if a.nav.screen() == screenBoot {
 			a.finishBoot()
+			consumed = true
 		} else {
 			mx, my := ebiten.CursorPosition()
 			if b, ok := hitButton(a.layoutButtons(sw, sh), mx, my); ok {
+				consumed = true
 				if b.disabled {
 					a.hint = b.reason
 				} else {
 					a.hint = ""
 					a.applyClick(b.id)
 				}
+			} else if a.nav.screen() == screenColony && a.nav.overlay() == overlayNone && a.colonyChromeHit(mx, my, sw, sh) {
+				consumed = true
 			}
 		}
 	}
 
 	if a.nav.screen() == screenColony && a.nav.overlay() == overlayNone && a.renderer != nil {
-		a.renderer.handleInput()
+		a.renderer.handleSpeedInput()
+		a.renderer.handleCameraInput()
+		if !consumed {
+			a.renderer.handleSelectionInput()
+		}
 	}
 	a.tick()
 	if a.shouldQuit {
 		return ebiten.Termination
 	}
 	return nil
+}
+
+func (a *App) pressEscape() {
+	if a.handleColonyEscape() {
+		return
+	}
+	a.apply(a.nav.escapeIntent())
+}
+
+func (a *App) handleColonyEscape() bool {
+	if a.nav.screen() != screenColony || a.nav.overlay() != overlayNone {
+		return false
+	}
+	if a.workOpen {
+		a.workOpen = false
+		return true
+	}
+	if a.renderer != nil && a.renderer.HasSelect() {
+		a.renderer.ClearSelect()
+		return true
+	}
+	return false
 }
 
 func (a *App) size() (int, int) {
@@ -204,24 +240,39 @@ func (a *App) finishBoot() {
 }
 
 func (a *App) applyClick(id string) {
-	switch id {
-	case "scenario.0":
+	switch {
+	case strings.HasPrefix(id, "bar.pawn."):
+		n, err := strconv.ParseUint(strings.TrimPrefix(id, "bar.pawn."), 10, 64)
+		if err == nil && a.renderer != nil {
+			a.renderer.Select(entity.EntityID(n))
+		}
+	case id == "tab.work":
+		a.workOpen = !a.workOpen
+	case id == "tab.menu":
+		a.apply(intent{kind: intentPause})
+	case id == "inspector.close":
+		if a.renderer != nil {
+			a.renderer.ClearSelect()
+		}
+	case id == "inspector.character":
+		return
+	case id == "scenario.0":
 		a.scenario = 0
-	case "scenario.1":
+	case id == "scenario.1":
 		a.scenario = 1
-	case "scenario.2":
+	case id == "scenario.2":
 		a.scenario = 2
-	case "storyteller.0":
+	case id == "storyteller.0":
 		a.storyteller = 0
-	case "storyteller.1":
+	case id == "storyteller.1":
 		a.storyteller = 1
-	case "storyteller.2":
+	case id == "storyteller.2":
 		a.storyteller = 2
-	case "difficulty.0":
+	case id == "difficulty.0":
 		a.difficulty = 0
-	case "difficulty.1":
+	case id == "difficulty.1":
 		a.difficulty = 1
-	case "difficulty.2":
+	case id == "difficulty.2":
 		a.difficulty = 2
 	default:
 		a.apply(a.clickIntent(id))
@@ -291,6 +342,7 @@ func (a *App) startGame() {
 	}
 	a.sessionErr = ""
 	a.simsStarted++
+	a.workOpen = false
 	a.renderer = New(sim)
 	a.renderer.pack = a.pack
 	a.nav.reset(frame{screen: screenColony})
@@ -298,6 +350,7 @@ func (a *App) startGame() {
 
 func (a *App) dropSession() {
 	a.renderer = nil
+	a.workOpen = false
 }
 
 // Draw paints the current full screen and any overlay.
@@ -326,6 +379,7 @@ func (a *App) Draw(screen *ebiten.Image) {
 		} else {
 			screen.Fill(uiSpace)
 		}
+		a.drawColonyHUD(screen, sw, sh)
 		if a.nav.overlay() == overlayPause {
 			a.drawPause(screen, sw, sh)
 		}
@@ -379,6 +433,8 @@ func (a *App) layoutButtons(sw, sh int) []button {
 		return a.loadButtons(sw, sh)
 	case screenCredits:
 		return a.creditsButtons(sw, sh)
+	case screenColony:
+		return a.colonyButtons(sw, sh)
 	default:
 		return nil
 	}
