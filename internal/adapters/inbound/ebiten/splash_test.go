@@ -74,4 +74,16 @@ func TestMenuSplashPNGDecodes(t *testing.T) {
 	if !transparent {
 		t.Fatal("splash PNG should have transparent pixels so the menu backdrop shows through")
 	}
+	lastY := b.Max.Y - 1
+	bottomOpaque := false
+	for x := b.Min.X; x < b.Max.X; x++ {
+		_, _, _, a := img.At(x, lastY).RGBA()
+		if a != 0 {
+			bottomOpaque = true
+			break
+		}
+	}
+	if !bottomOpaque {
+		t.Fatal("splash PNG last row should meet the bust, not empty transparency")
+	}
 }

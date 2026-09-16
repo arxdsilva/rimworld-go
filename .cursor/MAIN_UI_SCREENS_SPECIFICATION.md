@@ -120,7 +120,8 @@ loading it blindly.
 ## Background
 
 -   [-] original colonist bust splash on the left over the existing menu
-    backdrop; title and actions sit on a right rail. No live simulation.
+    backdrop (bust flush to PNG bottom edge); title and actions sit on a
+    right rail. No live simulation.
 
 May later display a lightweight animated or generated colony scene, but
 menu presentation must not require an active authoritative simulation.

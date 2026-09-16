@@ -2512,7 +2512,7 @@ the player-facing system.
 -   [ ] **Damage/fire effects**
 -   [ ] **Selection/targeting feedback**
 -   [ ] **Weather visual effects**
--   [-] **Day/night presentation** (soft fullscreen sky veil from outdoor light + hour; no indoor darkness)
+-   [-] **Day/night presentation** (dusk/night fullscreen sky veil from outdoor light + hour; daytime ungraded; no indoor darkness)
 
 All assets must be original or appropriately licensed.
 
