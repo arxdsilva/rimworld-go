@@ -50,7 +50,7 @@ None.
 
 ## Art / Visual Impact
 
-One original RGBA PNG under `assets/source/raster/ui/` (padded bust, keyed background). Vendor pack unchanged. §34 prototype gate still blocks bulk gameplay-sprite production.
+One original RGBA PNG under `assets/source/raster/ui/` (left rifle/glove fully in frame; pink field keyed to alpha; magenta fringe cleaned to black cel outlines). Vendor pack unchanged. §34 prototype gate still blocks bulk gameplay-sprite production.
 
 ## Screen / UI Impact
 
@@ -59,7 +59,7 @@ Main Menu (§2): alpha splash left, centered title, actions right. Wave UI-1 Mai
 ## Known Limitations
 
 - Splash is a still image, not an animated colony scene.
-- A thin dark-red cel fringe may remain from chroma-keying the generator's pink field.
+- Bust is a cutout (torso ends at the frame); rifle, glove, raven wing, and pauldron are fully in frame with a clean alpha edge.
 - No metadata sidecar yet.
 
 ## Follow-ups
