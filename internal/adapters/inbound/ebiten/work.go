@@ -1,9 +1,12 @@
 package ebiten
 
 import (
+	"strconv"
+
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
-	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/sim/command"
 )
 
 var workColumns = []string{"FF", "Doc", "Grow", "Cook", "Bld", "Hunt", "Haul", "Cln", "Rsh"}
@@ -27,11 +30,67 @@ func workRect(sw, sh int) button {
 	}
 }
 
-func workStubCell(id entity.EntityID, col int) string {
-	if (uint64(id)+uint64(col))%5 == 0 {
+func workCellValue(p game.PawnView, col int) string {
+	on := false
+	live := false
+	switch col {
+	case 2:
+		on, live = p.WorkGrow, true
+	case 4:
+		on, live = p.WorkConstruct, true
+	case 6:
+		on, live = p.WorkHaul, true
+	}
+	if !live {
 		return "-"
 	}
-	return "1"
+	if on {
+		return "Y"
+	}
+	return "-"
+}
+
+func (a *App) workButtons() []button {
+	if a.renderer == nil || !a.workOpen {
+		return nil
+	}
+	r := workRect(a.sw, a.sh)
+	hx := int(r.x) + 12 + workNameW
+	pawns := a.renderer.snapshot()
+	out := make([]button, 0)
+	for row, p := range pawns {
+		y := int(r.y) + 48 + row*workRowH
+		if y > int(r.y+r.h)-20 {
+			break
+		}
+		for col := range workColumns {
+			if _, ok := workTypeForCol(col); !ok {
+				continue
+			}
+			out = append(out, button{
+				id:    "work.cell." + strconv.FormatUint(uint64(p.ID), 10) + "." + strconv.Itoa(col),
+				label: "",
+				x:     float32(hx + col*workCellW),
+				y:     float32(y),
+				w:     float32(workCellW - 4),
+				h:     float32(workRowH - 2),
+			})
+		}
+	}
+	return out
+}
+
+func workTypeForCol(col int) (command.WorkType, bool) {
+	switch col {
+	case 2:
+		return command.WorkGrow, true
+	case 4:
+		return command.WorkConstruct, true
+	case 6:
+		return command.WorkHaul, true
+	default:
+		return 0, false
+	}
 }
 
 func (a *App) drawWork(screen *ebiten.Image, sw, sh int) {
@@ -40,7 +99,7 @@ func (a *App) drawWork(screen *ebiten.Image, sw, sh int) {
 	}
 	r := workRect(sw, sh)
 	drawPanel(screen, r.x, r.y, r.w, r.h)
-	drawLabel(screen, int(r.x)+12, int(r.y)+10, "Work  (placeholders; does not change simulation)")
+	drawLabel(screen, int(r.x)+12, int(r.y)+10, "Work  (Y = enabled; click Grow / Bld / Haul)")
 	hx := int(r.x) + 12 + workNameW
 	for i, col := range workColumns {
 		drawLabel(screen, hx+i*workCellW, int(r.y)+28, col)
@@ -51,9 +110,11 @@ func (a *App) drawWork(screen *ebiten.Image, sw, sh int) {
 		if y > int(r.y+r.h)-20 {
 			break
 		}
-		drawLabel(screen, int(r.x)+12, y, pawnLabel(p.ID))
+		drawLabel(screen, int(r.x)+12, y, pawnLabel(p))
 		for col := range workColumns {
-			drawLabel(screen, hx+col*workCellW, y, workStubCell(p.ID, col))
+			drawLabel(screen, hx+col*workCellW, y, workCellValue(p, col))
 		}
 	}
+	mx, my := a.currentCursor()
+	a.drawButtons(screen, a.workButtons(), mx, my)
 }

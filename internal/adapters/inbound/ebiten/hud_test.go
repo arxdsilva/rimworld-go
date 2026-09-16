@@ -66,9 +66,9 @@ func TestWorkTabOpensOverlay(t *testing.T) {
 func TestDisabledTabsDoNotNavigate(t *testing.T) {
 	t.Parallel()
 	a, _, _ := liveColony(t, 0)
-	click(t, a, "tab.architect")
-	if a.workOpen {
-		t.Fatal("disabled Architect tab opened Work")
+	click(t, a, "tab.schedule")
+	if a.workOpen || a.archOpen {
+		t.Fatal("disabled Schedule tab opened a colony overlay")
 	}
 	if a.nav.screen() != screenColony || a.nav.overlay() != overlayNone {
 		t.Fatalf("disabled tab navigated to %s/%s", a.nav.screen(), a.nav.overlay())
@@ -126,11 +126,6 @@ func TestWorkCellsDoNotStep(t *testing.T) {
 	if g.Tick() != before {
 		t.Fatalf("opening Work stepped %d -> %d", before, g.Tick())
 	}
-	for _, b := range a.layoutButtons(a.sw, a.sh) {
-		if len(b.id) >= 4 && b.id[:4] == "work" && b.id != "tab.work" {
-			t.Fatalf("Work cells must not be buttons, got %q", b.id)
-		}
-	}
 	a.tick()
 	if g.Tick() != before+1 {
 		t.Fatalf("one colony tick after Work open = %d, want %d", g.Tick(), before+1)
@@ -174,6 +169,123 @@ func TestInspectorCloseClearsSelect(t *testing.T) {
 	click(t, a, "inspector.close")
 	if a.renderer.HasSelect() {
 		t.Fatal("inspector close should clear selection")
+	}
+}
+
+func TestArchitectTabOpens(t *testing.T) {
+	t.Parallel()
+	a, _, _ := liveColony(t, 0)
+	click(t, a, "tab.architect")
+	if !a.archOpen {
+		t.Fatal("Architect tab should open")
+	}
+	if len(a.architectButtons()) == 0 {
+		t.Fatal("architect tools should be visible")
+	}
+}
+
+func TestInspectorShowsNameAndJob(t *testing.T) {
+	t.Parallel()
+	a, g, id := liveColony(t, 0)
+	a.renderer.Select(id)
+	p := g.Snapshot()[0]
+	if p.Name == "" {
+		t.Fatal("expected display name")
+	}
+	if p.Job == "" {
+		t.Fatal("expected job line")
+	}
+	found := false
+	for _, b := range a.inspectorButtons() {
+		if b.id == "inspector.needs" && !b.disabled {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("Needs tab should be enabled")
+	}
+}
+
+func TestArchitectTabOpensPalette(t *testing.T) {
+	t.Parallel()
+	a, _, _ := liveColony(t, 0)
+	click(t, a, "tab.architect")
+	if !a.archOpen {
+		t.Fatal("Architect tab should open the palette")
+	}
+	found := map[string]bool{}
+	for _, b := range a.architectButtons() {
+		found[b.id] = true
+	}
+	for _, id := range []string{"arch.tool.wall", "arch.tool.bed", "arch.tool.stockpile", "arch.tool.harvest", "arch.tool.cancel"} {
+		if !found[id] {
+			t.Fatalf("missing architect tool %s", id)
+		}
+	}
+	click(t, a, "arch.tool.harvest")
+	if a.archTool != "harvest" {
+		t.Fatalf("archTool = %q, want harvest", a.archTool)
+	}
+}
+
+func TestEscapeClosesArchitectBeforePause(t *testing.T) {
+	t.Parallel()
+	a, _, _ := liveColony(t, 0)
+	click(t, a, "tab.architect")
+	a.pressEscape()
+	if a.archOpen {
+		t.Fatal("Escape should close Architect")
+	}
+	if a.nav.overlay() != overlayNone {
+		t.Fatal("closing Architect should not pause")
+	}
+}
+
+func TestInspectorShowsNameJobAndNeeds(t *testing.T) {
+	t.Parallel()
+	g := game.New(game.Config{Seed: 1, Width: 16, Height: 16})
+	id, err := g.SpawnNamedPawn(2, 2, "Ada")
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := testApp(g)
+	a.finishBoot()
+	a.startGame()
+	click(t, a, barID(id))
+	p, ok := a.selectedPawn()
+	if !ok || p.Name != "Ada" {
+		t.Fatalf("selected = %+v ok=%v", p, ok)
+	}
+	if p.Job == "" {
+		t.Fatal("inspector job line should be set")
+	}
+	if p.Hunger != 100 || p.Rest != 100 {
+		t.Fatalf("need percents hunger=%d rest=%d, want 100", p.Hunger, p.Rest)
+	}
+}
+
+func TestWorkCellTogglesHaulWithoutExtraStep(t *testing.T) {
+	t.Parallel()
+	a, g, id := liveColony(t, 0)
+	before := g.Tick()
+	click(t, a, "tab.work")
+	cell := fmt.Sprintf("work.cell.%d.6", id)
+	click(t, a, cell)
+	if g.Tick() != before {
+		t.Fatalf("toggling Haul stepped %d -> %d", before, g.Tick())
+	}
+	g.Step(1)
+	found := false
+	for _, p := range g.Snapshot() {
+		if p.ID == id {
+			found = true
+			if p.WorkHaul {
+				t.Fatal("Haul should toggle off after the next sim tick")
+			}
+		}
+	}
+	if !found {
+		t.Fatal("pawn missing")
 	}
 }
 

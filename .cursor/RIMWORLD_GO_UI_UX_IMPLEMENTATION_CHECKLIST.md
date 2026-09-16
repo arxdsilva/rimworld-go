@@ -82,14 +82,14 @@ use these primitives.
         stores.
     -   Snapshot IDs must remain stable enough for selection and
         inspector continuity.
--   [-] **Typed UI command gateway** (session intents StartGame/Quit/ReturnToMenu only; no gameplay command catalog)
+-   [-] **Typed UI command gateway** (session intents plus `Enqueue` MovePawn/designations/SetWorkEnabled; no draft/bills/trade/caravan)
     -   Every gameplay mutation becomes a typed command: move, draft,
         designate, build, assign work, change policy, set bill, trade,
         form caravan, etc.
     -   Commands carry enough information for domain-side validation.
     -   UI may optimistically preview actions but authoritative success
         comes from simulation state.
--   [-] **Presentation-only state store** (screen stack, pause overlay, camera, selection, hover/hint; no architect/bindings store)
+-   [-] **Presentation-only state store** (screen stack, pause, camera, selection, hover/hint, Architect/Work overlays; no bindings/search store)
     -   Camera.
     -   current selection.
     -   hovered tile/entity.
@@ -207,7 +207,7 @@ This is the minimum UI required to interact with a running simulation.
 
 ## 2.1 Main game viewport
 
--   [-] **Map viewport** (draws grid and pawns from read-only snapshots each frame; pawn sprites lerp between ticks; no roofs/visibility treatment or effects yet)
+-   [-] **Map viewport** (grid, pawns, stockpiles, plants, items, frames, buildings from read models; pawn lerp; no roofs/visibility/effects)
     -   Occupies the central play area.
     -   Draw terrain, roofs/visibility treatment, structures, items,
         plants, pawns, effects and selection markers.
@@ -267,7 +267,7 @@ This is the minimum UI required to interact with a running simulation.
 
 ## 2.4 Minimal top-level HUD
 
--   [-] **Current game state indicator** (top chrome shows date, schedule activity, and speed label; no world/dev-mode indicator)
+-   [-] **Current game state indicator** (top chrome: Food/Wood counts, date, schedule activity, speed; no weather/dev-mode)
     -   Paused/speed.
     -   map/world context.
     -   developer mode indicator if enabled.
@@ -286,7 +286,7 @@ building, item, plant, animal, corpse or tile.
 
 ## 3.1 Generic selection panel
 
--   [-] **Selected entity header** (pawn: stub name `Colonist N`, category colonist, activity; no faction/health)
+-   [-] **Selected entity header** (pawn display name, colonist, job, status alive/downed/dead, reason `no food`/`no bed`)
     -   Display label/name.
     -   entity category.
     -   faction/ownership where relevant.
@@ -350,7 +350,7 @@ building, item, plant, animal, corpse or tile.
 
 ## 4.1 Colonist bar
 
--   [-] **Always-visible colonist portraits** (snapshot slots, click selects, vendor idle portrait; no double-click center or status icons)
+-   [-] **Always-visible colonist portraits** (snapshot slots, click selects, vendor idle portrait, display name; no double-click center or status icons)
     -   Compact representation of each colonist.
     -   Click selects; double-click centers.
     -   Preserve identity at a glance.
@@ -373,10 +373,10 @@ building, item, plant, animal, corpse or tile.
 
 ## 4.2 Pawn summary
 
--   [-] **Current activity/job** (inspector shows `PawnView.Activity` and tile; no job/draft/health)
+-   [-] **Current activity/job** (inspector job line + schedule activity + tile; no draft)
 -   [ ] **Draft state**
 -   [ ] **Faction**
--   [ ] **Immediate health state**
+-   [-] **Immediate health state** (alive/downed/dead + reason; no injury tree)
 -   [ ] **Immediate mood state**
 -   [ ] **Current need warnings**
 
@@ -389,7 +389,7 @@ the player's primary world-editing command surface.
 
 ## 5.1 Architect root
 
--   [ ] **Architect button/tab**
+-   [-] **Architect button/tab** (opens Wall/Bed/Stockpile/Harvest/Cancel; no category tree)
     -   Opens build/designation categories.
     -   Remembers last category optionally.
 -   [ ] **Category navigation**
@@ -412,7 +412,7 @@ the player's primary world-editing command surface.
 
 ## 5.2 Placement preview
 
--   [ ] **Ghost blueprint**
+-   [-] **Ghost blueprint** (vector cell outline while dragging; no validity colors)
     -   Show exact occupied cells before command submission.
 -   [ ] **Validity visualization**
     -   Valid/invalid placement.
@@ -424,10 +424,10 @@ the player's primary world-editing command surface.
     -   Show available amount and relevant stat differences.
 -   [ ] **Rotation**
     -   Rotate directional buildings before placement.
--   [ ] **Single-cell placement**
+-   [-] **Single-cell placement** (wall/bed per cell in drag rect)
 -   [ ] **Line placement**
     -   Walls/conduits.
--   [ ] **Rectangle/area placement**
+-   [-] **Rectangle/area placement** (stockpile/harvest/cancel drag)
     -   Floors/zones/roof designations where appropriate.
 -   [ ] **Drag continuous placement**
 
@@ -435,10 +435,10 @@ the player's primary world-editing command surface.
 
 -   [ ] **Mine**
 -   [ ] **Cut plants**
--   [ ] **Harvest**
+-   [-] **Harvest** (wild plants via Architect; no grow-zone/cut-plants)
 -   [ ] **Hunt**
 -   [ ] **Deconstruct**
--   [ ] **Cancel**
+-   [-] **Cancel**
 -   [ ] **Forbid/unforbid**
 -   [ ] **Remove floor**
 -   [ ] **Remove roof**
@@ -459,7 +459,7 @@ the player's primary world-editing command surface.
 
 ## 6.1 Zone tool
 
--   [ ] **Create stockpile**
+-   [-] **Create stockpile** (Architect paint; food+wood; no grow-zone)
 -   [ ] **Create growing zone**
 -   [ ] **Expand zone**
 -   [ ] **Shrink/delete zone**
@@ -526,17 +526,17 @@ interfaces.
 
 ## 7.1 Work table
 
--   [-] **Pawn rows** (snapshot rows, stub name `Colonist N`; no portraits/status/sort in the table)
+-   [-] **Pawn rows** (snapshot rows with display names; no portraits/status/sort in the table)
     -   Name/portrait.
     -   relevant status.
     -   sortable.
--   [-] **Work-type columns** (abbreviated stub headers FF/Doc/Grow/…; display-only `1`/`-`; no tooltips or mutation)
+-   [-] **Work-type columns** (Grow/Bld/Haul clickable Y/-; other columns `-`)
     -   Firefight, patient, doctor, bed rest, basic, warden, handle,
         cook, hunt, construct, grow, mine, plant cut, craft categories,
         art, haul, clean, research.
     -   Column header icon/name.
     -   Tooltip explains work category.
--   [ ] **Simple priorities mode**
+-   [-] **Simple priorities mode** (toggle Haul/Construct/Grow via `SetWorkEnabled`; no 1–4)
     -   Toggle work type on/off.
 -   [ ] **Manual priorities mode**
     -   Priority values equivalent to 1--4.
@@ -593,7 +593,7 @@ interfaces.
 
 ## 9.1 Needs tab
 
--   [ ] **Need bars**
+-   [-] **Need bars** (food and rest 0–100; no recreation/comfort/beauty/outdoors)
     -   Food.
     -   rest.
     -   recreation.
@@ -2056,13 +2056,13 @@ colonists and control time.
 
 Complete:
 
--   [ ] Architect.
--   [ ] Placement preview.
--   [ ] Orders.
--   [ ] Zones.
+-   [-] Architect.
+-   [-] Placement preview.
+-   [-] Orders.
+-   [-] Zones.
 -   [ ] Stockpile settings.
 -   [ ] Growing-zone settings.
--   [ ] Work.
+-   [-] Work.
 -   [ ] Schedule.
 -   [ ] Allowed areas.
 

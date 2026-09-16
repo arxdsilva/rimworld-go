@@ -7,7 +7,6 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
-	"rimworld-go/internal/domain/sim/entity"
 )
 
 const (
@@ -18,21 +17,11 @@ const (
 	barSlot = 52
 )
 
-var stubResources = []struct {
-	name string
-	n    int
-}{
-	{"Food", 80},
-	{"Wood", 30},
-	{"Steel", 12},
-	{"Silver", 0},
-}
-
 var hudTabSpecs = []struct {
 	id, label string
 	enabled   bool
 }{
-	{"tab.architect", "Architect", false},
+	{"tab.architect", "Architect", true},
 	{"tab.work", "Work", true},
 	{"tab.schedule", "Schedule", false},
 	{"tab.assign", "Assign", false},
@@ -48,8 +37,11 @@ func hudTabY(sh int) float32 { return float32(sh - hudTabH) }
 
 func hudBarY(sh int) float32 { return float32(sh - hudTabH - hudBarH) }
 
-func pawnLabel(id entity.EntityID) string {
-	return fmt.Sprintf("Colonist %d", id)
+func pawnLabel(p game.PawnView) string {
+	if p.Name != "" {
+		return p.Name
+	}
+	return fmt.Sprintf("Colonist %d", p.ID)
 }
 
 func (a *App) hudTabButtons(sw, sh int) []button {
@@ -74,6 +66,9 @@ func (a *App) hudTabButtons(sw, sh int) []button {
 			b.reason = "not implemented"
 		}
 		if t.id == "tab.work" && a.workOpen {
+			b.selected = true
+		}
+		if t.id == "tab.architect" && a.archOpen {
 			b.selected = true
 		}
 		out = append(out, b)
@@ -107,6 +102,8 @@ func (a *App) colonyButtons(sw, sh int) []button {
 	out := a.hudTabButtons(sw, sh)
 	out = append(out, a.colonistBarButtons(sw, sh)...)
 	out = append(out, a.inspectorButtons()...)
+	out = append(out, a.architectButtons()...)
+	out = append(out, a.workButtons()...)
 	return out
 }
 
@@ -116,10 +113,10 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 	}
 	drawPanel(screen, 0, 0, float32(sw), hudTopH)
 	x := hudPad
-	for _, r := range stubResources {
-		drawLabel(screen, x, 10, fmt.Sprintf("%s %d", r.name, r.n))
-		x += 90
-	}
+	wld := a.renderer.world()
+	drawLabel(screen, x, 10, fmt.Sprintf("Food %d", wld.Food))
+	x += 90
+	drawLabel(screen, x, 10, fmt.Sprintf("Wood %d", wld.Wood))
 	time := fmt.Sprintf("%s  %s  %s", a.renderer.date(), a.renderer.speedRate(), a.renderer.activity())
 	drawLabel(screen, sw-len(time)*7-hudPad, 10, time)
 
@@ -129,6 +126,8 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 	a.drawButtons(screen, a.colonistBarButtons(sw, sh), mx, my)
 	a.drawColonistPortraits(screen, sh)
 	a.drawInspector(screen)
+	a.drawArchitect(screen)
+	a.drawArchitectGhost(screen)
 	if a.workOpen {
 		a.drawWork(screen, sw, sh)
 	}
@@ -140,7 +139,7 @@ func (a *App) drawColonistPortraits(screen *ebiten.Image, sh int) {
 	for i, p := range pawns {
 		x := float64(hudPad + i*barSlot + 6)
 		a.drawPawnPortrait(screen, p, x, y, 40, 48)
-		drawLabel(screen, int(x), int(hudBarY(sh))+hudBarH-14, pawnLabel(p.ID))
+		drawLabel(screen, int(x), int(hudBarY(sh))+hudBarH-14, pawnLabel(p))
 	}
 }
 
@@ -166,7 +165,10 @@ func (a *App) colonyChromeHit(mx, my, sw, sh int) bool {
 	if a.workOpen && workRect(sw, sh).contains(mx, my) {
 		return true
 	}
-	if a.renderer != nil && a.renderer.HasSelect() && inspectorRect().contains(mx, my) {
+	if a.archOpen && architectRect().contains(mx, my) {
+		return true
+	}
+	if a.renderer != nil && a.renderer.HasSelect() && !a.workOpen && inspectorRect().contains(mx, my) {
 		return true
 	}
 	return false

@@ -43,7 +43,7 @@ Every screen specification uses:
 Global rules:
 
 -   [-] Escape closes the topmost modal/panel before opening the game
-    menu. (pause overlay then screen stack; no generic window manager)
+    menu. (Architect, then Work, then inspector selection, then pause; no generic window manager)
 -   [ ] Screens preserve useful scroll/filter/sort state.
 -   [ ] Entity references can select/jump to the entity when meaningful.
 -   [-] Disabled actions explain why. (footer/hover reason string; no rich tooltips)
@@ -1791,35 +1791,35 @@ Agents should implement screens approximately in this dependency order.
 -   [-] tooltips (disabled-reason line only)
 -   [ ] virtual lists/tables
 -   [-] presentation snapshot boundary (colony PawnView; menus are headless)
--   [-] typed command gateway (StartGame/Quit/ReturnToMenu only)
+-   [-] typed command gateway (session intents plus `Enqueue` gameplay: MovePawn, designations, SetWorkEnabled)
 
 ## Wave UI-1 --- First interactive simulation
 
 -   [-] Boot (phase list + pack load; no plugin/fatal recovery)
 -   [-] Main Menu (navigation shell; Continue/Plugins/Tutorial disabled; original colonist splash left, actions right rail)
--   [-] Main Colony (viewport plus resource/time strip, colonist bar, bottom tabs after Start; no alerts/architect/economy)
+-   [-] Main Colony (viewport plus Food/Wood/time strip, colonist names, Architect/Work/Menu; no alerts)
 -   [-] camera (WASD/arrows pan, keyboard/wheel zoom; no edge pan)
 -   [-] time controls (pause / normal 1x / fast 3x / superfast 6x, date/period/clock, current schedule block in top chrome; no temperature/weather)
--   [-] selection (click pawn or colonist bar; inspector is a Character-tab shell)
--   [-] Generic Inspector (pawn window: name stub, activity, tile; Needs/Health/Social/Gear disabled; no command catalog)
--   [-] colonist bar (snapshot slots, click selects, idle portrait; no status icons, no double-click center)
--   [-] contextual commands (bottom tabs present; Work and Menu live; others disabled `not implemented`; no selection command bar)
+-   [-] selection (click pawn or colonist bar; inspector Character/Needs)
+-   [-] Generic Inspector (name, job, status, reason, food/rest bars; Health/Social/Gear disabled)
+-   [-] colonist bar (snapshot slots, click selects, idle portrait, display name; no status icons, no double-click center)
+-   [-] contextual commands (Architect + Work + Menu live; others disabled `not implemented`; no selection command bar)
 
 ## Wave UI-2 --- Build a colony
 
--   [ ] Architect
--   [ ] placement
--   [ ] zones
+-   [-] Architect (Wall/Bed/Stockpile/Harvest/Cancel + drag ghosts; no categories/cost cards)
+-   [-] placement (drag rect; walls/beds per cell; no rotation/validity colors)
+-   [-] zones (stockpile paint food+wood; no grow-zone/home/allowed)
 -   [ ] stockpile settings
 -   [ ] growing settings
--   [-] Work (overlay grid from snapshot rows; stub columns; cells display-only placeholders; not virtualized)
+-   [-] Work (overlay from snapshot; Grow/Bld/Haul toggle Y/-; not virtualized)
 -   [ ] Schedule
 -   [ ] Area Manager
 
 ## Wave UI-3 --- Understand pawns
 
 -   [ ] Character
--   [ ] Needs/Mood
+-   [-] Needs/Mood (food/rest bars; no recreation/mood/thoughts)
 -   [ ] Health
 -   [ ] Social
 -   [ ] Gear

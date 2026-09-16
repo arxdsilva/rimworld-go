@@ -1,7 +1,7 @@
 // Package ebiten adapts the headless application game to an interactive
 // Ebitengine client: screen routing plus a colony map viewport. It never
-// mutates domain state directly; it only calls the application game's
-// Step/Snapshot surface.
+// mutates domain state directly; it only calls Step/Snapshot/World and
+// Enqueue on a consumer-owned Simulation interface.
 package ebiten
 
 import (
@@ -15,6 +15,7 @@ import (
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/clock"
+	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -26,12 +27,16 @@ import (
 type Simulation interface {
 	Step(ticks int)
 	Snapshot() []game.PawnView
+	World() game.WorldView
+	Enqueue(command.Command)
 	Width() int
 	Height() int
 	Tick() clock.Tick
 	Date() clock.Date
 	Activity() schedule.Activity
 }
+
+var _ Simulation = (*game.Game)(nil)
 
 // TileSize is the on-screen pixel size of one logical tile at zoom 1,
 // matching the art-spec reference of 64 px/tile.
@@ -302,6 +307,7 @@ func (r *Renderer) Draw(screen *ebiten.Image) {
 	tile := r.tilePx()
 
 	r.drawTerrain(screen, sw, sh, tile)
+	r.drawWorld(screen, sw, sh, tile)
 	r.drawGrid(screen)
 
 	for _, p := range r.game.Snapshot() {
@@ -459,8 +465,105 @@ func (r *Renderer) Selected() entity.EntityID { return r.selected }
 
 func (r *Renderer) snapshot() []game.PawnView { return r.game.Snapshot() }
 
+func (r *Renderer) world() game.WorldView { return r.game.World() }
+
 func (r *Renderer) date() clock.Date { return r.game.Date() }
 
 func (r *Renderer) activity() schedule.Activity { return r.game.Activity() }
 
 func (r *Renderer) speedRate() string { return r.speed.rate() }
+
+func (r *Renderer) enqueue(c command.Command) { r.game.Enqueue(c) }
+
+// TileAt converts a screen pixel to a map tile.
+func (r *Renderer) TileAt(sx, sy int) (int, int) {
+	wx, wy := r.screenToWorld(sx, sy)
+	return int(wx), int(wy)
+}
+
+func (r *Renderer) drawWorld(screen *ebiten.Image, sw, sh int, tile float64) {
+	w := r.game.World()
+	stockClr := color.RGBA{R: 220, G: 200, B: 80, A: 70}
+	for _, z := range w.Stockpiles {
+		for y := z.MinY; y <= z.MaxY; y++ {
+			for x := z.MinX; x <= z.MaxX; x++ {
+				sx, sy := r.worldToScreen(x, y)
+				if visible(sx, sy, float32(tile), float32(tile), sw, sh) {
+					vector.FillRect(screen, sx, sy, float32(tile), float32(tile), stockClr, false)
+				}
+			}
+		}
+	}
+	plantClr := color.RGBA{R: 70, G: 150, B: 70, A: 220}
+	desigClr := color.RGBA{R: 240, G: 220, B: 40, A: 200}
+	for _, p := range w.Plants {
+		sx, sy := r.worldToScreen(p.X, p.Y)
+		if !visible(sx, sy, float32(tile), float32(tile), sw, sh) {
+			continue
+		}
+		pad := float32(tile) * 0.25
+		vector.FillRect(screen, sx+pad, sy+pad, float32(tile)-2*pad, float32(tile)-2*pad, plantClr, false)
+		if p.Designated {
+			vector.StrokeRect(screen, sx+2, sy+2, float32(tile)-4, float32(tile)-4, 2, desigClr, false)
+		}
+	}
+	foodClr := color.RGBA{R: 200, G: 90, B: 40, A: 255}
+	woodClr := color.RGBA{R: 140, G: 90, B: 40, A: 255}
+	for _, it := range w.Items {
+		if it.Carried {
+			continue
+		}
+		sx, sy := r.worldToScreen(it.X, it.Y)
+		if !visible(sx, sy, float32(tile), float32(tile), sw, sh) {
+			continue
+		}
+		c := foodClr
+		if it.Kind == "wood" {
+			c = woodClr
+		}
+		pad := float32(tile) * 0.3
+		vector.FillRect(screen, sx+pad, sy+pad, float32(tile)-2*pad, float32(tile)-2*pad, c, false)
+	}
+	ghostClr := color.RGBA{R: 90, G: 180, B: 220, A: 120}
+	for _, f := range w.Frames {
+		sx, sy := r.worldToScreen(f.X, f.Y)
+		if visible(sx, sy, float32(tile), float32(tile), sw, sh) {
+			vector.StrokeRect(screen, sx+3, sy+3, float32(tile)-6, float32(tile)-6, 2, ghostClr, false)
+		}
+	}
+	wallClr := color.RGBA{R: 90, G: 90, B: 95, A: 255}
+	bedClr := color.RGBA{R: 70, G: 90, B: 160, A: 255}
+	for _, b := range w.Buildings {
+		sx, sy := r.worldToScreen(b.X, b.Y)
+		if !visible(sx, sy, float32(tile), float32(tile), sw, sh) {
+			continue
+		}
+		c := wallClr
+		if b.Kind == "bed" {
+			c = bedClr
+		}
+		vector.FillRect(screen, sx+4, sy+4, float32(tile)-8, float32(tile)-8, c, false)
+	}
+}
+
+func (r *Renderer) drawGhostRect(screen *ebiten.Image, x0, y0, x1, y1 int) {
+	ghostClr := color.RGBA{R: 90, G: 180, B: 220, A: 180}
+	minX, maxX := x0, x1
+	if maxX < minX {
+		minX, maxX = maxX, minX
+	}
+	minY, maxY := y0, y1
+	if maxY < minY {
+		minY, maxY = maxY, minY
+	}
+	tile := r.tilePx()
+	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
+	for y := minY; y <= maxY; y++ {
+		for x := minX; x <= maxX; x++ {
+			sx, sy := r.worldToScreen(x, y)
+			if visible(sx, sy, float32(tile), float32(tile), sw, sh) {
+				vector.StrokeRect(screen, sx+2, sy+2, float32(tile)-4, float32(tile)-4, 2, ghostClr, false)
+			}
+		}
+	}
+}

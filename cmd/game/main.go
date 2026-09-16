@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -16,7 +15,6 @@ func main() {
 	seed := flag.Uint64("seed", 1, "deterministic RNG seed")
 	width := flag.Int("width", 20, "map width in tiles")
 	height := flag.Int("height", 20, "map height in tiles")
-	pawns := flag.Int("pawns", 5, "number of pawns to spawn")
 	assets := flag.String("assets", "", "sprite pack directory (default: locate from cwd)")
 	flag.Parse()
 
@@ -24,13 +22,7 @@ func main() {
 		Version: "dev",
 		Assets:  *assets,
 		NewSim: func() (uiadapter.Simulation, error) {
-			g := game.New(game.Config{Seed: *seed, Width: *width, Height: *height})
-			for i := 0; i < *pawns; i++ {
-				x, y := i%*width, (i*7)%*height
-				if _, err := g.SpawnPawn(x, y); err != nil {
-					return nil, fmt.Errorf("spawn pawn %d: %w", i, err)
-				}
-			}
+			g := game.NewColony(game.Config{Seed: *seed, Width: *width, Height: *height})
 			return g, nil
 		},
 	})

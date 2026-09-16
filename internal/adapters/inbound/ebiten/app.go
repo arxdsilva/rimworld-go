@@ -10,6 +10,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
+	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -73,9 +74,14 @@ type App struct {
 	storyteller int
 	difficulty  int
 
-	simsStarted int
-	renderer    *Renderer
-	workOpen    bool
+	simsStarted                    int
+	renderer                       *Renderer
+	workOpen                       bool
+	archOpen                       bool
+	archTool                       string
+	archDrag                       bool
+	archX0, archY0, archX1, archY1 int
+	inspectTab                     string
 }
 
 // NewApp returns an App on the boot screen. Simulation is not created
@@ -160,8 +166,10 @@ func (a *App) Update() error {
 	if a.nav.screen() == screenColony && a.nav.overlay() == overlayNone && a.renderer != nil {
 		a.renderer.handleSpeedInput()
 		a.renderer.handleCameraInput()
-		if !consumed {
+		a.handleArchitectDrag(consumed)
+		if !consumed && !a.archOpen {
 			a.renderer.handleSelectionInput()
+			a.handleMoveOrder()
 		}
 	}
 	a.tick()
@@ -181,6 +189,12 @@ func (a *App) pressEscape() {
 func (a *App) handleColonyEscape() bool {
 	if a.nav.screen() != screenColony || a.nav.overlay() != overlayNone {
 		return false
+	}
+	if a.archOpen {
+		a.archOpen = false
+		a.archTool = ""
+		a.archDrag = false
+		return true
 	}
 	if a.workOpen {
 		a.workOpen = false
@@ -259,6 +273,26 @@ func (a *App) applyClick(id string) {
 		}
 	case id == "tab.work":
 		a.workOpen = !a.workOpen
+		if a.workOpen {
+			a.archOpen = false
+			a.archTool = ""
+			a.archDrag = false
+		}
+	case id == "tab.architect":
+		a.archOpen = !a.archOpen
+		if a.archOpen {
+			a.workOpen = false
+			if a.archTool == "" {
+				a.archTool = "wall"
+			}
+		} else {
+			a.archTool = ""
+			a.archDrag = false
+		}
+	case strings.HasPrefix(id, "arch.tool."):
+		a.archTool = strings.TrimPrefix(id, "arch.tool.")
+	case strings.HasPrefix(id, "work.cell."):
+		a.toggleWorkCell(id)
 	case id == "tab.menu":
 		a.apply(intent{kind: intentPause})
 	case id == "inspector.close":
@@ -266,7 +300,9 @@ func (a *App) applyClick(id string) {
 			a.renderer.ClearSelect()
 		}
 	case id == "inspector.character":
-		return
+		a.inspectTab = "character"
+	case id == "inspector.needs":
+		a.inspectTab = "needs"
 	case id == "scenario.0":
 		a.scenario = 0
 	case id == "scenario.1":
@@ -354,6 +390,10 @@ func (a *App) startGame() {
 	a.sessionErr = ""
 	a.simsStarted++
 	a.workOpen = false
+	a.archOpen = false
+	a.archTool = "wall"
+	a.archDrag = false
+	a.inspectTab = "character"
 	a.renderer = New(sim)
 	a.renderer.pack = a.pack
 	a.nav.reset(frame{screen: screenColony})
@@ -362,6 +402,10 @@ func (a *App) startGame() {
 func (a *App) dropSession() {
 	a.renderer = nil
 	a.workOpen = false
+	a.archOpen = false
+	a.archTool = ""
+	a.archDrag = false
+	a.inspectTab = "character"
 }
 
 // Draw paints the current full screen and any overlay.
@@ -554,4 +598,142 @@ func (a *App) paintMenu(screen *ebiten.Image, sw, sh int, title string, body []s
 
 func drawDim(screen *ebiten.Image, sw, sh int) {
 	vector.FillRect(screen, 0, 0, float32(sw), float32(sh), uiDim, false)
+}
+
+func (a *App) handleMoveOrder() {
+	if a.renderer == nil || !a.renderer.HasSelect() {
+		return
+	}
+	if !inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
+		return
+	}
+	mx, my := ebiten.CursorPosition()
+	tx, ty := a.renderer.TileAt(mx, my)
+	a.renderer.enqueue(command.Command{
+		Kind: command.MovePawn,
+		Pawn: uint64(a.renderer.Selected()),
+		X:    tx,
+		Y:    ty,
+	})
+}
+
+func (a *App) handleArchitectDrag(chromeConsumed bool) {
+	if !a.archOpen || a.archTool == "" || a.renderer == nil {
+		return
+	}
+	mx, my := ebiten.CursorPosition()
+	sw, sh := a.size()
+	onMap := !a.colonyChromeHit(mx, my, sw, sh)
+	tx, ty := a.renderer.TileAt(mx, my)
+	if !chromeConsumed && onMap && inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+		a.archDrag = true
+		a.archX0, a.archY0 = tx, ty
+		a.archX1, a.archY1 = tx, ty
+	}
+	if a.archDrag && ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && onMap {
+		a.archX1, a.archY1 = tx, ty
+	}
+	if a.archDrag && inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft) {
+		if onMap {
+			a.archX1, a.archY1 = tx, ty
+		}
+		a.submitArchitect()
+		a.archDrag = false
+	}
+}
+
+func (a *App) submitArchitect() {
+	if a.renderer == nil {
+		return
+	}
+	x0, y0, x1, y1 := a.archX0, a.archY0, a.archX1, a.archY1
+	kind := command.None
+	switch a.archTool {
+	case "wall":
+		kind = command.DesignateWall
+	case "bed":
+		kind = command.DesignateBed
+	case "stockpile":
+		kind = command.DesignateStockpile
+	case "harvest":
+		kind = command.DesignateHarvest
+	case "cancel":
+		kind = command.DesignateCancel
+	}
+	if kind == command.None {
+		return
+	}
+	if kind == command.DesignateWall || kind == command.DesignateBed {
+		minX, maxX := x0, x1
+		if maxX < minX {
+			minX, maxX = maxX, minX
+		}
+		minY, maxY := y0, y1
+		if maxY < minY {
+			minY, maxY = maxY, minY
+		}
+		for y := minY; y <= maxY; y++ {
+			for x := minX; x <= maxX; x++ {
+				a.renderer.enqueue(command.Command{Kind: kind, X: x, Y: y})
+			}
+		}
+		return
+	}
+	a.renderer.enqueue(command.Command{Kind: kind, X: x0, Y: y0, X2: x1, Y2: y1})
+}
+
+func (a *App) toggleWorkCell(id string) {
+	if a.renderer == nil {
+		return
+	}
+	rest := strings.TrimPrefix(id, "work.cell.")
+	parts := strings.Split(rest, ".")
+	if len(parts) != 2 {
+		return
+	}
+	pawnN, err := strconv.ParseUint(parts[0], 10, 64)
+	if err != nil {
+		return
+	}
+	col, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return
+	}
+	wt, ok := workCommand(col)
+	if !ok {
+		return
+	}
+	on := true
+	for _, p := range a.renderer.snapshot() {
+		if uint64(p.ID) != pawnN {
+			continue
+		}
+		switch col {
+		case 2:
+			on = !p.WorkGrow
+		case 4:
+			on = !p.WorkConstruct
+		case 6:
+			on = !p.WorkHaul
+		}
+	}
+	a.renderer.enqueue(command.Command{
+		Kind:    command.SetWorkEnabled,
+		Pawn:    pawnN,
+		Work:    wt,
+		Enabled: on,
+	})
+}
+
+func workCommand(col int) (command.WorkType, bool) {
+	switch col {
+	case 2:
+		return command.WorkGrow, true
+	case 4:
+		return command.WorkConstruct, true
+	case 6:
+		return command.WorkHaul, true
+	default:
+		return command.WorkNone, false
+	}
 }

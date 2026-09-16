@@ -82,7 +82,7 @@ vanilla system depends on them.
     -   Threats or important events may optionally force/prompt speed
         reduction at presentation level.
     -   Headless simulation must be able to ignore real-time pacing.
--   [ ] **Simulation phase pipeline**
+-   [-] **Simulation phase pipeline** (commands → needs/health → AI/jobs → movement → clock; no combat/environment/incidents/snapshot-hash phases)
     -   Explicit ordered phases for commands, AI, jobs, movement,
         combat, health, environment, production, social/mood, incidents,
         cleanup, derived-state invalidation, and snapshot publication.
@@ -174,7 +174,7 @@ The first playable surface.
     -   Draw visible terrain only.
     -   Camera culling.
     -   Chunk-aware redraw/cache strategy.
--   [-] **Entity rendering** (pawns drawn from read-only snapshots using the vendor CC0 character pack; idle/walk paced by a presentation clock; draw position lerps between ticks; items/plants/buildings/corpses/projectiles do not exist yet)
+-   [-] **Entity rendering** (pawns from snapshots + vendor pack lerp; vector items/plants/frames/walls/beds; no corpses/projectiles)
     -   Draw pawns, items, plants, buildings, corpses, projectiles.
     -   Presentation uses read-only simulation snapshots.
 -   [-] **Camera controls** (pan, zoom, and screen-to-world conversion implemented; center-on-selection not implemented)
@@ -190,13 +190,13 @@ The first playable surface.
 
 ## 2.3 Inspect UI
 
--   [-] **Generic inspect panel** (minimal panel shows selected pawn ID/position; label/type, description, and context tabs not implemented)
+-   [-] **Generic inspect panel** (name, job, status/reason, tile, food/rest bars; Health/Social/Gear tabs disabled)
     -   Label/type.
     -   Hit points/condition where relevant.
     -   Position.
     -   Basic description.
     -   Context-sensitive tabs supplied by entity capabilities.
--   [ ] **Pawn inspect panel**
+-   [-] **Pawn inspect panel** (name, job/activity, food/rest; no draft/mood/gear/skills/social)
     -   Name.
     -   Current job/activity.
     -   Draft status.
@@ -215,7 +215,7 @@ interchangeable workers.
 
 ## 3.1 Pawn identity
 
--   [ ] **Human pawn definition**
+-   [-] **Human pawn definition** (display name only: Ada/Bo/Cora or `Colonist N`; no age/gender/faction/backstory)
     -   Name.
     -   Biological/chronological age representation.
     -   Sex/gender field as required by game mechanics.
@@ -294,7 +294,7 @@ interchangeable workers.
 
 ## 4.1 Walkability
 
--   [ ] **Walkable/blocked cells**
+-   [-] **Walkable/blocked cells** (grid bounds + completed walls set unwalkable; no doors/terrain/hazards)
     -   Terrain, walls, doors, buildings, hazards, and map boundaries
         contribute to traversal rules.
 -   [ ] **Movement cost**
@@ -303,7 +303,7 @@ interchangeable workers.
 
 ## 4.2 Pathfinding
 
--   [ ] **Deterministic A**\*
+-   [-] **Deterministic A**\* (8-connected Chebyshev on `grid.Grid`; f/g/y/x tie-break; no region graph)
     -   Exact tile pathfinding.
     -   Stable tie-breaking.
     -   No dependence on map iteration.
@@ -321,7 +321,7 @@ interchangeable workers.
 
 ## 4.3 Movement
 
--   [ ] **Follow path**
+-   [-] **Follow path** (A* path, `TicksPerCell` occupancy; no pawn-pawn collision)
     -   Pawns traverse cell paths over time rather than teleporting.
     -   Movement updates position at deterministic tick boundaries.
 -   [ ] **Pawn collision and occupancy**
@@ -342,7 +342,7 @@ This is the heart of autonomous colony behavior.
 
 ## 5.1 Job engine
 
--   [ ] **Single current job per pawn**
+-   [-] **Single current job per pawn** (`job.Record` kind/state/target/path/reservations; Move/Eat/Sleep/Haul/Construct/Harvest)
     -   Job type.
     -   Targets.
     -   State.
@@ -350,14 +350,14 @@ This is the heart of autonomous colony behavior.
     -   failure reason.
     -   reservations.
     -   interruptibility.
--   [ ] **Explicit job state machines**
+-   [-] **Explicit job state machines** (Goto/Do/Complete/Fail; no draft/medical/mental states)
     -   Go to target.
     -   Wait/work.
     -   Carry/use/operate.
     -   Complete.
     -   Fail/cancel.
     -   Every transition is deterministic and testable.
--   [ ] **Job interruption**
+-   [-] **Job interruption** (player `MovePawn`, critical hunger/rest, target gone, reservation fail; no draft/danger/mental)
     -   Player order.
     -   Drafting.
     -   danger.
@@ -369,12 +369,12 @@ This is the heart of autonomous colony behavior.
 
 ## 5.2 Reservations
 
--   [ ] **Entity reservation**
--   [ ] **Tile reservation**
+-   [-] **Entity reservation** (exclusive pawn→entity; no quantity splits)
+-   [-] **Tile reservation** (haul dest / move target)
 -   [ ] **Item quantity reservation**
--   [ ] **Bed/patient reservation**
+-   [-] **Bed/patient reservation** (bed `Claimant` for Sleep; no patient/medical)
 -   [ ] **Workstation reservation**
--   [ ] **Automatic reservation cleanup**
+-   [-] **Automatic reservation cleanup** (complete/cancel/replace/death; no target-deletion index)
     -   Completion.
     -   cancellation.
     -   death/downing.
@@ -383,7 +383,7 @@ This is the heart of autonomous colony behavior.
 
 ## 5.3 Work settings
 
--   [ ] **Work types**
+-   [-] **Work types** (Haul/Construct/Grow wired; other columns are UI stubs)
     -   Firefight.
     -   Patient.
     -   Doctor.
@@ -403,7 +403,7 @@ This is the heart of autonomous colony behavior.
     -   Haul.
     -   Clean.
     -   Research.
--   [ ] **Simple work enable/disable**
+-   [-] **Simple work enable/disable** (`SetWorkEnabled` for Haul/Construct/Grow)
     -   Pawn either performs a work type or does not.
 -   [ ] **Manual priorities**
     -   Multiple priority levels.
@@ -433,7 +433,7 @@ This is the heart of autonomous colony behavior.
 
 ## 5.5 Forced orders
 
--   [ ] **Right-click/context forced work**
+-   [-] **Right-click/context forced work** (`MovePawn` on selected pawn; no context harvest/haul/eat)
     -   Player can tell a selected pawn to perform a valid specific
         action immediately.
 -   [ ] **Queued forced jobs**
@@ -469,7 +469,7 @@ This is the heart of autonomous colony behavior.
 
 ## 6.1 Item system
 
--   [ ] **Item definitions**
+-   [-] **Item definitions** (food and wood stacks only)
     -   Resource/material.
     -   food.
     -   medicine.
@@ -478,7 +478,7 @@ This is the heart of autonomous colony behavior.
     -   drug.
     -   manufactured component.
     -   corpse/product categories.
--   [ ] **Stackable items**
+-   [-] **Stackable items** (qty + limit 75, merge/take, no negatives; food/wood only)
     -   Quantity.
     -   stack limit.
     -   merge/split.
@@ -499,7 +499,7 @@ This is the heart of autonomous colony behavior.
 
 ## 6.2 Carrying/inventory
 
--   [ ] **Pawn carry tracker**
+-   [-] **Pawn carry tracker** (haul `Carrier`; no personal inventory)
     -   Pawn can carry an item stack while performing jobs.
 -   [ ] **Personal inventory**
     -   Support carried consumables/medicine/other inventory where
@@ -508,9 +508,9 @@ This is the heart of autonomous colony behavior.
 
 ## 6.3 Stockpile zones
 
--   [ ] **Stockpile creation**
+-   [-] **Stockpile creation** (paint rectangle; food+wood filter)
     -   Paint storage cells.
--   [ ] **Storage filters**
+-   [-] **Storage filters** (food and wood allowed; no category tree/quality)
     -   Category tree.
     -   allowed/disallowed definitions.
     -   quality/condition filters where appropriate.
@@ -524,8 +524,8 @@ This is the heart of autonomous colony behavior.
 
 ## 6.4 Hauling
 
--   [ ] **Haul loose item to storage**
--   [ ] **Haul construction resources**
+-   [-] **Haul loose item to storage** (food/wood to empty stockpile cell)
+-   [-] **Haul construction resources** (wood to wall/bed frame)
 -   [ ] **Haul production ingredients**
 -   [ ] **Haul finished products**
 -   [ ] **Haul corpses**
@@ -538,18 +538,18 @@ This is the heart of autonomous colony behavior.
 
 ## 7.1 Designation system
 
--   [ ] **Build designation**
+-   [-] **Build designation** (wall/bed frames via Architect)
 -   [ ] **Deconstruct designation**
 -   [ ] **Mine designation**
 -   [ ] **Cut plant designation**
--   [ ] **Harvest designation**
+-   [-] **Harvest designation** (wild plants; Grow work type; no grow-zone)
 -   [ ] **Hunt designation**
--   [ ] **Cancel designation**
+-   [-] **Cancel designation** (frames, harvest marks, overlapping stockpiles)
 -   [ ] **Forbid/unforbid designation/action**
 
 ## 7.2 Construction lifecycle
 
--   [ ] **Blueprint**
+-   [-] **Blueprint** (frame ghost on map + Architect drag preview; no research/support checks)
     -   Placement preview.
     -   Validate terrain, occupancy, research, material, and support
         requirements.
@@ -557,16 +557,16 @@ This is the heart of autonomous colony behavior.
     -   Stuff/material-based buildings where relevant.
     -   Different materials influence HP, beauty, flammability,
         work/material cost, etc.
--   [ ] **Resource delivery**
+-   [-] **Resource delivery** (wood hauled to frame until `Need`)
     -   Haulers/builders deliver required materials.
--   [ ] **Construction frame**
+-   [-] **Construction frame**
     -   Delivered materials are committed to a partially constructed
         entity.
--   [ ] **Construction work**
+-   [-] **Construction work** (fixed WorkTicks; no skill)
     -   Construction skill affects speed and result.
     -   Failed construction may waste resources if independently chosen
         balance supports it.
--   [ ] **Completed building**
+-   [-] **Completed building** (wall unwalkable; bed claimable; no room/power invalidate)
     -   Replace frame with functional building.
     -   Invalidate navigation/rooms/power/etc. only as needed.
 -   [ ] **Repair**
@@ -576,7 +576,7 @@ This is the heart of autonomous colony behavior.
 
 ## 7.3 Core structures
 
--   [ ] **Walls**
+-   [-] **Walls** (block pathing; no vision/rooms/material stats)
     -   Block movement/vision/projectiles.
     -   Define rooms.
     -   Material-dependent stats.
@@ -594,7 +594,7 @@ This is the heart of autonomous colony behavior.
     -   support rules.
     -   roof affects weather, temperature, light, deterioration, toxic
         fallout.
--   [ ] **Furniture**
+-   [-] **Furniture** (beds claimed for Sleep; no tables/chairs/comfort)
     -   Beds.
     -   tables.
     -   chairs/stools.
@@ -641,19 +641,19 @@ This is the heart of autonomous colony behavior.
 
 ## 8.1 Nutrition
 
--   [ ] **Nutrition values**
+-   [-] **Nutrition values** (Eat restores a fixed permille; no per-def table)
     -   Foods provide nutrition.
     -   Pawns consume an amount based on hunger/body needs.
--   [ ] **Food need**
+-   [-] **Food need** (permille decay; 0 downs then starvation death; no mood)
     -   Hunger decays over time.
     -   Thresholds affect behavior/mood.
     -   Severe hunger causes malnutrition/starvation and can kill.
--   [ ] **Food search**
+-   [-] **Food search** (nearest edible stack; entity reserved; no diet/forbidden)
     -   Prefer valid edible food according to restrictions and
         availability.
     -   Reserve food before fetching it.
     -   Respect forbidden/allowed area rules.
--   [ ] **Eating job**
+-   [-] **Eating job** (Goto + Do ingest; no table/seat)
     -   Fetch.
     -   choose table/seat when reasonable.
     -   ingest over time.
@@ -662,7 +662,7 @@ This is the heart of autonomous colony behavior.
 
 ## 8.2 Raw food
 
--   [ ] **Plant food**
+-   [-] **Plant food** (harvest yield stacks; no meat/diet categories)
 -   [ ] **Meat**
 -   [ ] **Animal products**
     -   Milk/eggs where species definitions support them.
@@ -699,10 +699,10 @@ This is the heart of autonomous colony behavior.
 -   [ ] **Plant growth**
     -   Analytical/bucketed growth.
     -   Depends on temperature, light, fertility, plant health.
--   [ ] **Harvest maturity**
+-   [-] **Harvest maturity** (start-kit plants are already harvestable; no growth)
     -   Mature plants generate harvest work.
     -   Skill can affect yield/failure.
--   [ ] **Wild plants**
+-   [-] **Wild plants** (start kit only; no mapgen variety)
     -   Map generation creates harvestable/non-harvestable vegetation.
 
 ## 8.5 Food spoilage
@@ -730,16 +730,16 @@ derived from thoughts and traits and low mood creates mental-break risk.
 
 ## 9.1 Rest
 
--   [ ] **Rest need**
+-   [-] **Rest need** (awake decay, sleep restore, exhaustion forces ground sleep; hunger 0 downs, not rest)
     -   Decays while awake.
     -   Replenishes while sleeping.
     -   Severe exhaustion can force sleep.
     -   Tiredness affects mood and performance.
--   [ ] **Sleep intent**
+-   [-] **Sleep intent** (owned bed else current tile; schedule Sleep/Work)
     -   Schedule-aware.
     -   Select owned/assigned bed if available.
     -   Fall back to available sleeping location.
--   [ ] **Beds**
+-   [-] **Beds** (claim on Sleep; no comfort/medical/prisoner)
     -   Assign ownership.
     -   sleeping slots.
     -   rest effectiveness.
@@ -970,11 +970,11 @@ treatment, and surgery are major colony-management systems.
     -   Derived from injuries/conditions.
     -   affects consciousness/mood/performance.
     -   extreme pain can down pawn.
--   [ ] **Downed state**
+-   [-] **Downed state** (hunger at 0; no rescue/capture; rest 0 forces sleep instead of downing)
     -   Pawn cannot normally act.
     -   can be rescued/captured.
     -   not equivalent to death.
--   [ ] **Death**
+-   [-] **Death** (starvation after downed-from-hunger; no corpse/social)
     -   Vital part destruction or lethal capacity/condition.
     -   create corpse.
     -   release jobs/reservations.
@@ -2899,14 +2899,14 @@ Do not call the vanilla milestone complete until this audit passes.
 
 ## 41.1 Colony survival loop
 
--   [ ] Start with generated colonists and supplies.
--   [ ] Build shelter.
--   [ ] Assign beds.
--   [ ] Create stockpile.
+-   [-] Start with generated colonists and supplies. (Ada/Bo/Cora + food/wood/plants; wizard does not change kit)
+-   [-] Build shelter. (wood walls; no rooms/roofs)
+-   [-] Assign beds. (claim on Sleep)
+-   [-] Create stockpile. (food+wood paint)
 -   [ ] Grow crops.
 -   [ ] Hunt animals.
 -   [ ] Cook food.
--   [ ] Survive hunger/rest/temperature.
+-   [-] Survive hunger/rest/temperature. (hunger/rest downed+starve/exhaustion; no temperature)
 -   [ ] Treat injuries/disease.
 -   [ ] Manage mood.
 -   [ ] Survive mental breaks.

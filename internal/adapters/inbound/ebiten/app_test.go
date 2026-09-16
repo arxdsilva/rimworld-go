@@ -8,6 +8,7 @@ import (
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/clock"
+	"rimworld-go/internal/domain/sim/command"
 )
 
 type stubSim struct {
@@ -29,6 +30,9 @@ func (s *stubSim) Date() clock.Date          { return clock.DateAt(s.tick) }
 func (s *stubSim) Activity() schedule.Activity {
 	return schedule.Work
 }
+func (s *stubSim) World() game.WorldView   { return game.WorldView{} }
+func (s *stubSim) Apply(command.Command)   {}
+func (s *stubSim) Enqueue(command.Command) {}
 
 func testApp(sim Simulation) *App {
 	return NewApp(AppConfig{
