@@ -33,13 +33,40 @@ func TestDefsAreConsistent(t *testing.T) {
 
 func TestRefundAndFacing(t *testing.T) {
 	t.Parallel()
-	if Refund(Bed) != 1 || Refund(Floor) != 0 {
-		t.Fatalf("refund bed=%d floor=%d", Refund(Bed), Refund(Floor))
+	if Refund(Cot) != 1 || Refund(Bed) != 2 || Refund(Floor) != 0 {
+		t.Fatalf("refund cot=%d bed=%d floor=%d", Refund(Cot), Refund(Bed), Refund(Floor))
 	}
 	if ParseFacing(9) != South || ParseFacing(uint8(West)) != West {
 		t.Fatal("facing parse")
 	}
 	if West.String() != "west" {
 		t.Fatal("facing string")
+	}
+}
+
+func TestFootprintRotation(t *testing.T) {
+	t.Parallel()
+	cells, spot, ok := Footprint(Workbench, South, 5, 5)
+	if len(cells) != 2 || cells[0] != [2]int{5, 5} || cells[1] != [2]int{6, 5} || !ok || spot != [2]int{5, 6} {
+		t.Fatalf("south bench cells=%v spot=%v", cells, spot)
+	}
+	cells, spot, _ = Footprint(Workbench, East, 5, 5)
+	// vertical 1x2, front faces east
+	if len(cells) != 2 || !Covers(Workbench, East, 5, 5, 5, 6) || spot[0] != 6 {
+		t.Fatalf("east bench cells=%v spot=%v", cells, spot)
+	}
+	_, spot, _ = Footprint(Workbench, North, 5, 5)
+	if spot[1] != 4 {
+		t.Fatalf("north bench spot=%v", spot)
+	}
+	_, spot, _ = Footprint(Workbench, West, 5, 5)
+	if spot[0] != 4 {
+		t.Fatalf("west bench spot=%v", spot)
+	}
+	if c, _, ok := Footprint(Wall, East, 2, 3); len(c) != 1 || c[0] != [2]int{2, 3} || ok {
+		t.Fatal("walls are 1x1 without a spot")
+	}
+	if c, _, _ := Footprint(Bed, East, 0, 0); len(c) != 2 || c[1][0] != 1 {
+		t.Fatalf("east bed = %v", c)
 	}
 }

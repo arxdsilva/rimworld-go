@@ -81,5 +81,28 @@ def _meal():
     return S.render_asset("item", "meal_simple", zmax=0.2, extra={"item": "meal", "stack": True})
 
 
+def _club():
+    import math
+    from mathutils import Matrix
+    S.cyl("shaft", 0, 0, 0.045, 0.0, 0.55, "wood", segs=10, r_top=0.07, bevel=0.01)
+    S.objects()[-1].matrix_world = Matrix.Translation((0.20, -0.55, 0.06)) @ Matrix.Rotation(math.radians(90), 4, "Y") @ Matrix.Rotation(math.radians(-20), 4, "X")
+    S.ellipsoid("head", 0.78, -0.48, 0.09, 0.12, 0.09, 0.08, "bark", segs=12, rings=8)
+    S.box("grip", 0.18, -0.60, 0.02, 0.32, -0.50, 0.10, "leather", bevel=0.02)
+    return S.render_asset("item", "club_wood", zmax=0.2, extra={"item": "club"})
+
+
+def _rifle_item():
+    import math
+    from mathutils import Matrix
+    y = -0.5
+    S.box("stock", 0.06, y - 0.045, 0.0, 0.30, y + 0.045, 0.06, "wood", bevel=0.02)
+    S.box("receiver", 0.28, y - 0.04, 0.0, 0.58, y + 0.04, 0.07, "metal_dark", bevel=0.012)
+    S.box("mag", 0.44, y - 0.13, 0.0, 0.51, y - 0.03, 0.045, "metal_dark", bevel=0.01)
+    S.box("guard", 0.56, y - 0.035, 0.0, 0.74, y + 0.035, 0.055, "wood", bevel=0.012)
+    S.cyl("barrel", 0, 0, 0.018, 0.0, 0.22, "steel", segs=8, bevel=0.0)
+    S.objects()[-1].matrix_world = Matrix.Translation((0.72, y, 0.03)) @ Matrix.Rotation(math.radians(90), 4, "Y")
+    return S.render_asset("item", "rifle_ground", zmax=0.12, extra={"item": "rifle"})
+
+
 def build():
-    return [_wood(), _food(), _steel(), _stone(), _berries(), _ration(), _meat(), _meal()]
+    return [_wood(), _food(), _steel(), _stone(), _berries(), _ration(), _meat(), _meal(), _club(), _rifle_item()]

@@ -824,26 +824,26 @@ understandable.
 ## 14.1 Workbench inspector
 
 -   [ ] **Power/operational state**
--   [ ] **Interaction status**
+-   [-] **Interaction status** (work spot outlined on selection)
 -   [ ] **Current worker/progress**
--   [ ] **Bills list**
+-   [x] **Bills list** (select a bench: bills with count/mode/status)
 
 ## 14.2 Bill stack
 
--   [ ] **Add bill**
+-   [-] **Add bill** (one button per recipe for that bench; no search)
     -   Search/filter recipes.
     -   show research/material constraints.
 -   [ ] **Reorder bills**
--   [ ] **Suspend bill**
--   [ ] **Delete bill**
+-   [x] **Suspend bill**
+-   [x] **Delete bill**
 -   [ ] **Copy/paste bills**
 
 ## 14.3 Bill configuration
 
--   [ ] **Do X times**
--   [ ] **Do forever**
--   [ ] **Do until X**
--   [ ] **Target count**
+-   [x] **Do X times**
+-   [x] **Do forever**
+-   [x] **Do until X**
+-   [x] **Target count** (-/+ buttons)
 -   [ ] **Pause/resume thresholds if supported**
 -   [ ] **Ingredient filter tree**
 -   [ ] **Ingredient search radius**

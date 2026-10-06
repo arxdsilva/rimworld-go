@@ -15,6 +15,9 @@ const (
 	Table
 	Chair
 	Lamp
+	Cot
+	Workbench
+	Stove
 	kindCount
 )
 
@@ -36,6 +39,13 @@ type Def struct {
 	BlocksMove bool // completed building makes its tile unwalkable
 	Rotatable  bool
 	StoneOK    bool // may be built from stone blocks instead of wood
+	// Size is the footprint (w, h) when facing south; zero means 1x1.
+	Size [2]int
+	// Spot is the interaction cell relative to the footprint's top-left
+	// when facing south (e.g. where a cook stands); HasSpot gates it.
+	Spot    [2]int
+	HasSpot bool
+	Bench   bool // a workstation that runs bills
 }
 
 // StoneWorkPct is the work multiplier (percent) for stone construction.
@@ -43,12 +53,83 @@ const StoneWorkPct = 160
 
 var defs = [kindCount]Def{
 	Wall:  {Kind: Wall, Name: "wall", Wood: 2, Work: 40, Layer: LayerObject, BlocksMove: true, StoneOK: true},
-	Bed:   {Kind: Bed, Name: "bed", Wood: 3, Work: 60, Layer: LayerObject, Rotatable: true},
+	Bed:   {Kind: Bed, Name: "bed", Wood: 5, Work: 90, Layer: LayerObject, Rotatable: true, Size: [2]int{1, 2}},
 	Door:  {Kind: Door, Name: "door", Wood: 2, Work: 50, Layer: LayerObject},
 	Floor: {Kind: Floor, Name: "floor", Wood: 1, Work: 20, Layer: LayerFloor, StoneOK: true},
 	Table: {Kind: Table, Name: "table", Wood: 3, Work: 50, Layer: LayerObject},
 	Chair: {Kind: Chair, Name: "chair", Wood: 2, Work: 40, Layer: LayerObject, Rotatable: true},
 	Lamp:  {Kind: Lamp, Name: "lamp", Wood: 2, Work: 40, Layer: LayerObject},
+	Cot:   {Kind: Cot, Name: "cot", Wood: 3, Work: 60, Layer: LayerObject, Rotatable: true},
+	Workbench: {Kind: Workbench, Name: "workbench", Wood: 6, Work: 160, Layer: LayerObject, BlocksMove: true,
+		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
+	Stove: {Kind: Stove, Name: "stove", Wood: 5, Work: 140, Layer: LayerObject, BlocksMove: true,
+		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
+}
+
+// Sleeps reports whether k is something to sleep in.
+func (k Kind) Sleeps() bool { return k == Bed || k == Cot }
+
+// rotate maps a south-frame point to facing f (screen coords, y down),
+// matching the art: east = (x, y) -> (y, -x).
+func rotate(f Facing, x, y int) (int, int) {
+	switch f {
+	case East:
+		return y, -x
+	case North:
+		return -x, -y
+	case West:
+		return -y, x
+	}
+	return x, y
+}
+
+// Footprint returns the covered cells and the interaction spot (absolute,
+// ok=false if none) for kind k with its top-left at (x, y) facing f.
+func Footprint(k Kind, f Facing, x, y int) (cells [][2]int, spot [2]int, ok bool) {
+	d := DefOf(k)
+	w, h := d.Size[0], d.Size[1]
+	if w <= 0 || h <= 0 {
+		w, h = 1, 1
+	}
+	if !d.Rotatable {
+		f = South
+	}
+	type pt struct{ x, y int }
+	var raw []pt
+	for cy := 0; cy < h; cy++ {
+		for cx := 0; cx < w; cx++ {
+			rx, ry := rotate(f, cx, cy)
+			raw = append(raw, pt{rx, ry})
+		}
+	}
+	minX, minY := raw[0].x, raw[0].y
+	for _, p := range raw {
+		if p.x < minX {
+			minX = p.x
+		}
+		if p.y < minY {
+			minY = p.y
+		}
+	}
+	for _, p := range raw {
+		cells = append(cells, [2]int{x + p.x - minX, y + p.y - minY})
+	}
+	if d.HasSpot {
+		sx, sy := rotate(f, d.Spot[0], d.Spot[1])
+		return cells, [2]int{x + sx - minX, y + sy - minY}, true
+	}
+	return cells, [2]int{}, false
+}
+
+// Covers reports whether (px, py) is inside k's footprint at (x, y, f).
+func Covers(k Kind, f Facing, x, y, px, py int) bool {
+	cells, _, _ := Footprint(k, f, x, y)
+	for _, c := range cells {
+		if c[0] == px && c[1] == py {
+			return true
+		}
+	}
+	return false
 }
 
 // DefOf returns the definition for k.

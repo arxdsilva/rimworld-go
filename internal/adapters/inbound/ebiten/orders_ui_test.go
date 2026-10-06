@@ -215,3 +215,65 @@ func TestGrowingZoneToolSendsCrop(t *testing.T) {
 		t.Fatalf("zones = %+v", z)
 	}
 }
+
+func TestBenchBillsPanel(t *testing.T) {
+	t.Parallel()
+	a, g, _ := liveColony(t, 0)
+	stove, _ := kindID("stove")
+	g.Enqueue(command.Command{Kind: command.DesignateBuild, Build: stove, X: 6, Y: 6})
+	g.Step(1)
+	if len(g.World().Frames) != 1 {
+		t.Fatal("stove frame")
+	}
+	// finish it through the fixture-free path: supply + work
+	g.SpawnStack(item.Wood, 10, 5, 5)
+	for i := 0; i < 40 && len(g.World().Buildings) == 0; i++ {
+		g.Step(game.TicksPerCell * 10)
+	}
+	if len(g.World().Buildings) != 1 {
+		t.Fatalf("stove not built: %+v", g.World().Frames)
+	}
+	if !a.selectBuildingAt(7, 6) { // second cell of the 2x1 stove
+		t.Fatal("clicking any stove cell selects it")
+	}
+	var add string
+	for _, b := range a.buildingButtons() {
+		if strings.HasPrefix(b.id, "bill.add.") {
+			add = b.id
+		}
+	}
+	if add == "" {
+		t.Fatal("stove should offer a recipe")
+	}
+	click(t, a, add)
+	g.Step(1)
+	b, _ := a.selectedBuilding()
+	if len(b.Bills) != 1 || b.Bills[0].Target != 1 {
+		t.Fatalf("bills = %+v", b.Bills)
+	}
+	click(t, a, "bill.plus.0")
+	g.Step(1)
+	click(t, a, "bill.mode.0")
+	g.Step(1)
+	b, _ = a.selectedBuilding()
+	if b.Bills[0].Target != 2 || b.Bills[0].Mode != "forever" {
+		t.Fatalf("after +/mode: %+v", b.Bills[0])
+	}
+	if !strings.Contains(billLine(b.Bills[0]), "forever") {
+		t.Fatalf("line = %q", billLine(b.Bills[0]))
+	}
+	click(t, a, "bill.del.0")
+	g.Step(1)
+	if b, _ = a.selectedBuilding(); len(b.Bills) != 0 {
+		t.Fatal("delete removes the bill")
+	}
+	click(t, a, "bldg.deconstruct")
+	g.Step(1)
+	if b, _ = a.selectedBuilding(); !b.Deconstruct {
+		t.Fatal("deconstruct button marks the building")
+	}
+	a.pressEscape()
+	if a.hasBuilding {
+		t.Fatal("Escape clears the building selection")
+	}
+}

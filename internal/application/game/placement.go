@@ -19,6 +19,7 @@ const (
 	ReasonRock     = "rock in the way"
 	ReasonTree     = "tree in the way"
 	ReasonStuff    = "cannot be built from that"
+	ReasonSpot     = "work spot is blocked"
 )
 
 // BuildableView is the read model of one buildable definition.
@@ -31,6 +32,8 @@ type BuildableView struct {
 	Floor     bool // floor layer: can sit under furniture
 	Blocks    bool // completed building blocks movement
 	StoneOK   bool // can be built from stone blocks
+	W, H      int  // footprint facing south
+	Bench     bool // runs bills
 }
 
 // Buildables lists every buildable in catalog order.
@@ -41,6 +44,7 @@ func Buildables() []BuildableView {
 		out = append(out, BuildableView{
 			ID: uint8(d.Kind), Kind: d.Name, Wood: d.Wood, Work: d.Work, Rotatable: d.Rotatable,
 			Floor: d.Layer == construction.LayerFloor, Blocks: d.BlocksMove, StoneOK: d.StoneOK,
+			W: max1(d.Size[0]), H: max1(d.Size[1]), Bench: d.Bench,
 		})
 	}
 	return out
@@ -55,14 +59,86 @@ func StuffID(name string) (uint8, bool) {
 	return uint8(k), true
 }
 
-// CanPlace reports whether a blueprint of kind could be placed at (x, y)
-// now, and why not. The Architect preview and DesignateBuild share it.
+func max1(v int) int {
+	if v < 1 {
+		return 1
+	}
+	return v
+}
+
+// CanPlace reports whether a south-facing blueprint of kind could be
+// placed with its top-left at (x, y) now, and why not.
 func (g *Game) CanPlace(kind string, x, y int) (bool, string) {
 	k, ok := construction.Parse(kind)
 	if !ok {
 		return false, ReasonUnknown
 	}
-	return g.canPlace(k, x, y)
+	return g.canPlaceAt(k, construction.South, x, y)
+}
+
+// CanPlaceAt is the full placement rule the Architect preview and
+// DesignateBuild share: material, facing and every footprint cell.
+func (g *Game) CanPlaceAt(kind, stuff, facing string, x, y int) (bool, string) {
+	k, ok := construction.Parse(kind)
+	if !ok {
+		return false, ReasonUnknown
+	}
+	s, ok := item.ParseKind(stuff)
+	if !ok || !construction.StuffOK(k, s) {
+		return false, ReasonStuff
+	}
+	return g.canPlaceAt(k, parseFacingName(facing), x, y)
+}
+
+func parseFacingName(f string) construction.Facing {
+	for v := construction.South; v <= construction.West; v++ {
+		if v.String() == f {
+			return v
+		}
+	}
+	return construction.South
+}
+
+func (g *Game) canPlaceAt(k construction.Kind, f construction.Facing, x, y int) (bool, string) {
+	cells, spot, hasSpot := construction.Footprint(k, f, x, y)
+	for _, c := range cells {
+		if ok, r := g.canPlace(k, c[0], c[1]); !ok {
+			return false, r
+		}
+	}
+	if hasSpot {
+		sx, sy := spot[0], spot[1]
+		if !g.grid.InBounds(sx, sy) || !g.grid.Walkable(sx, sy) || g.blockingFrameAt(sx, sy) != 0 {
+			return false, ReasonSpot
+		}
+	}
+	// a new blocker must not cover an existing bench's work spot
+	if construction.DefOf(k).BlocksMove {
+		for _, c := range cells {
+			if g.isWorkSpot(c[0], c[1]) {
+				return false, ReasonSpot
+			}
+		}
+	}
+	return true, ""
+}
+
+func (g *Game) isWorkSpot(x, y int) bool {
+	check := func(k construction.Kind, f construction.Facing, bx, by int) bool {
+		_, s, ok := construction.Footprint(k, f, bx, by)
+		return ok && s[0] == x && s[1] == y
+	}
+	for _, id := range g.bldgIDs {
+		if b, ok := g.bldgs.Get(id); ok && check(b.Kind, b.Facing, b.X, b.Y) {
+			return true
+		}
+	}
+	for _, id := range g.frameIDs {
+		if fr, ok := g.frames.Get(id); ok && check(fr.Kind, fr.Facing, fr.X, fr.Y) {
+			return true
+		}
+	}
+	return false
 }
 
 func (g *Game) canPlace(k construction.Kind, x, y int) (bool, string) {
@@ -114,11 +190,11 @@ func (g *Game) placeFrameStuff(kind construction.Kind, stuff item.Kind, f constr
 	if !kind.Valid() || !construction.StuffOK(kind, stuff) {
 		return
 	}
-	if ok, _ := g.canPlace(kind, x, y); !ok {
-		return
-	}
 	if !construction.DefOf(kind).Rotatable {
 		f = construction.South
+	}
+	if ok, _ := g.canPlaceAt(kind, f, x, y); !ok {
+		return
 	}
 	id := g.entities.Next()
 	g.frameIDs = append(g.frameIDs, id)
@@ -136,18 +212,18 @@ func (g *Game) placeFrameStuff(kind construction.Kind, stuff item.Kind, f constr
 func (g *Game) layerFrameAt(x, y int, layer construction.Layer) entity.EntityID {
 	for _, id := range g.frameIDs {
 		fr, ok := g.frames.Get(id)
-		if ok && fr.X == x && fr.Y == y && construction.DefOf(fr.Kind).Layer == layer {
+		if ok && construction.DefOf(fr.Kind).Layer == layer && construction.Covers(fr.Kind, fr.Facing, fr.X, fr.Y, x, y) {
 			return id
 		}
 	}
 	return 0
 }
 
-// layerBlockerAt is a completed movement-blocking building at (x, y).
+// layerBlockerAt is a completed movement-blocking building covering (x, y).
 func (g *Game) layerBlockerAt(x, y int) entity.EntityID {
 	for _, id := range g.bldgIDs {
 		b, ok := g.bldgs.Get(id)
-		if ok && b.X == x && b.Y == y && construction.DefOf(b.Kind).BlocksMove {
+		if ok && construction.DefOf(b.Kind).BlocksMove && construction.Covers(b.Kind, b.Facing, b.X, b.Y, x, y) {
 			return id
 		}
 	}
@@ -157,7 +233,19 @@ func (g *Game) layerBlockerAt(x, y int) entity.EntityID {
 func (g *Game) layerBldgAt(x, y int, layer construction.Layer) entity.EntityID {
 	for _, id := range g.bldgIDs {
 		b, ok := g.bldgs.Get(id)
-		if ok && b.X == x && b.Y == y && construction.DefOf(b.Kind).Layer == layer {
+		if ok && construction.DefOf(b.Kind).Layer == layer && construction.Covers(b.Kind, b.Facing, b.X, b.Y, x, y) {
+			return id
+		}
+	}
+	return 0
+}
+
+// blockingFrameAt is a planned movement-blocking object covering (x, y)
+// (so interaction spots are not planned under future benches/walls).
+func (g *Game) blockingFrameAt(x, y int) entity.EntityID {
+	for _, id := range g.frameIDs {
+		fr, ok := g.frames.Get(id)
+		if ok && construction.DefOf(fr.Kind).BlocksMove && construction.Covers(fr.Kind, fr.Facing, fr.X, fr.Y, x, y) {
 			return id
 		}
 	}
@@ -226,8 +314,12 @@ func (g *Game) removeBuilding(id entity.EntityID) {
 	}
 	g.bldgIDs = kept
 	if construction.DefOf(b.Kind).BlocksMove {
-		g.grid.SetWalkable(b.X, b.Y, true)
+		cells, _, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
+		for _, c := range cells {
+			g.grid.SetWalkable(c[0], c[1], g.terr.At(c[0], c[1]).Walkable())
+		}
 	}
+	delete(g.bills, id)
 	if b.Claimant != 0 {
 		delete(g.sleptAt, entity.EntityID(b.Claimant))
 	}

@@ -90,6 +90,8 @@ type App struct {
 	archStuff                      string // "wood" or "stone" for tools that allow both
 	float                          floatMenu
 	cursor                         *[2]int // capture-only synthetic cursor
+	selBuilding                    entity.EntityID
+	hasBuilding                    bool
 	archDrag                       bool
 	archX0, archY0, archX1, archY1 int
 	inspectTab                     string
@@ -193,8 +195,14 @@ func (a *App) Update() error {
 		}
 		a.handleArchitectInput(consumed)
 		if a.archTool == "" {
-			if !consumed {
+			if !consumed && inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 				a.renderer.handleSelectionInput()
+				if a.renderer.HasSelect() {
+					a.clearBuilding()
+				} else {
+					mx, my := a.currentCursor()
+					a.selectBuildingAt(a.renderer.TileAt(mx, my))
+				}
 			}
 			a.handleOrders()
 		}
@@ -236,6 +244,10 @@ func (a *App) handleColonyEscape() bool {
 	}
 	if a.workOpen {
 		a.workOpen = false
+		return true
+	}
+	if a.hasBuilding {
+		a.clearBuilding()
 		return true
 	}
 	if a.renderer != nil && a.renderer.HasSelect() {
@@ -318,6 +330,7 @@ func (a *App) applyClick(id string) {
 		n, err := strconv.ParseUint(strings.TrimPrefix(id, "bar.pawn."), 10, 64)
 		if err == nil && a.renderer != nil {
 			a.renderer.Select(entity.EntityID(n))
+			a.clearBuilding()
 		}
 	case id == "tab.work":
 		a.workOpen = !a.workOpen
@@ -341,6 +354,8 @@ func (a *App) applyClick(id string) {
 		a.chooseFloat(id)
 	case id == "pawn.draft":
 		a.toggleDraft()
+	case strings.HasPrefix(id, "bldg.") || strings.HasPrefix(id, "bill."):
+		a.applyBuildingClick(id)
 	case strings.HasPrefix(id, "work.cell."):
 		a.toggleWorkCell(id)
 	case id == "tab.menu":

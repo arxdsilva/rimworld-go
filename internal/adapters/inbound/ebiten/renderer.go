@@ -34,8 +34,9 @@ type Simulation interface {
 	Tick() clock.Tick
 	Date() clock.Date
 	Activity() schedule.Activity
-	// CanPlace is the read-only placement rule the Architect previews.
-	CanPlace(kind string, x, y int) (bool, string)
+	// CanPlaceAt is the read-only placement rule the Architect previews
+	// (material, facing and every footprint cell).
+	CanPlaceAt(kind, stuff, facing string, x, y int) (bool, string)
 	// OrdersAt lists what a pawn can be ordered to do at a tile.
 	OrdersAt(pawn entity.EntityID, x, y int) []game.OrderOption
 }

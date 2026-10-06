@@ -11,6 +11,7 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/pawn/schedule"
@@ -57,6 +58,7 @@ type PawnView struct {
 	WorkMine      bool
 	WorkCook      bool
 	WorkHunt      bool
+	WorkCraft     bool
 	Ate           bool
 	LastMeal      string // kind name of the last food eaten, "" if none
 	SleptInBed    bool
@@ -83,6 +85,7 @@ type FrameView struct {
 	Facing   string
 	Floor    bool
 	Stuff    string
+	W, H     int
 }
 
 // BuildingView is a completed wall or bed.
@@ -95,6 +98,12 @@ type BuildingView struct {
 	Floor       bool
 	Deconstruct bool
 	Stuff       string
+	W, H        int // footprint in tiles (after facing)
+	HasSpot     bool
+	SpotX       int
+	SpotY       int
+	Bench       bool
+	Bills       []BillView
 }
 
 // PlantView is a wild plant.
@@ -166,6 +175,7 @@ type Game struct {
 	stockpiles []zone.Stockpile
 	growZones  []zone.GrowZone
 	lastMeal   map[entity.EntityID]item.Kind
+	bills      map[entity.EntityID][]recipe.Bill
 	reserve    *reservation.Table
 	pending    []command.Command
 
@@ -195,6 +205,7 @@ func New(cfg Config) *Game {
 		terr:      terrain.NewMap(cfg.Width, cfg.Height),
 		mines:     make(map[[2]int]bool),
 		lastMeal:  make(map[entity.EntityID]item.Kind),
+		bills:     make(map[entity.EntityID][]recipe.Bill),
 		reserve:   reservation.NewTable(),
 		ateAt:     make(map[entity.EntityID]bool),
 		draft:     make(map[entity.EntityID]bool),
@@ -373,6 +384,7 @@ func (g *Game) Snapshot() []PawnView {
 			WorkMine:      m.Enabled(work.Mine),
 			WorkCook:      m.Enabled(work.Cook),
 			WorkHunt:      m.Enabled(work.Hunt),
+			WorkCraft:     m.Enabled(work.Craft),
 			Ate:           g.ateAt[id],
 			LastMeal:      lastMealName(g, id),
 			SleptInBed:    g.sleptAt[id] != 0,
@@ -424,6 +436,8 @@ func (g *Game) World() WorldView {
 			Facing: fr.Facing.String(), Floor: construction.DefOf(fr.Kind).Layer == construction.LayerFloor,
 			Stuff: fr.Stuff.String(),
 		})
+		fv := &w.Frames[len(w.Frames)-1]
+		fv.W, fv.H, _, _, _ = footprintView(fr.Kind, fr.Facing, fr.X, fr.Y)
 	}
 	for _, id := range g.bldgIDs {
 		b, ok := g.bldgs.Get(id)
@@ -434,7 +448,10 @@ func (g *Game) World() WorldView {
 			ID: id, Kind: b.Kind.String(), X: b.X, Y: b.Y, Claimant: entity.EntityID(b.Claimant),
 			Facing: b.Facing.String(), Floor: construction.DefOf(b.Kind).Layer == construction.LayerFloor,
 			Deconstruct: b.Deconstruct, Stuff: b.Stuff.String(),
+			Bench: construction.DefOf(b.Kind).Bench, Bills: g.billViews(id),
 		})
+		bv := &w.Buildings[len(w.Buildings)-1]
+		bv.W, bv.H, bv.SpotX, bv.SpotY, bv.HasSpot = footprintView(b.Kind, b.Facing, b.X, b.Y)
 	}
 	for _, id := range g.plantIDs {
 		p, ok := g.plants.Get(id)
@@ -469,4 +486,18 @@ func lastMealName(g *Game, id entity.EntityID) string {
 		return k.String()
 	}
 	return ""
+}
+
+func footprintView(k construction.Kind, f construction.Facing, x, y int) (w, h, sx, sy int, has bool) {
+	cells, spot, ok := construction.Footprint(k, f, x, y)
+	maxX, maxY := x, y
+	for _, c := range cells {
+		if c[0] > maxX {
+			maxX = c[0]
+		}
+		if c[1] > maxY {
+			maxY = c[1]
+		}
+	}
+	return maxX - x + 1, maxY - y + 1, spot[0], spot[1], ok
 }

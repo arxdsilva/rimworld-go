@@ -46,6 +46,8 @@ func captureOrders(cx, cy int) []command.Command {
 			out = append(out, command.Command{Kind: command.DesignateBuild, Build: id, Facing: f, X: x, Y: y})
 		}
 	}
+	bk("stove", 0, cx+1, cy+6)
+	bk("workbench", 0, cx+4, cy+6)
 	x0, y0, x1, y1 := cx-5, cy-1, cx-1, cy+3
 	for x := x0; x <= x1; x++ {
 		for _, y := range []int{y0, y1} {
@@ -65,7 +67,7 @@ func captureOrders(cx, cy int) []command.Command {
 			bk("floor", 0, x, y)
 		}
 	}
-	bk("bed", 0, x0+1, y0+1)
+	bk("cot", 0, x0+1, y0+1)
 	bk("bed", 0, x0+3, y0+1)
 	bk("table", 0, x0+2, y0+2)
 	bk("chair", 1, x0+1, y0+2)
@@ -131,6 +133,19 @@ func (a *App) captureUI(ui string) {
 		return int(sx), int(sy)
 	}
 	switch ui {
+	case "bills":
+		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
+		a.renderer.enqueue(command.Command{Kind: command.AddBill, X: cx + 1, Y: cy + 6, Recipe: 0, Mode: billModeForever, Count: 1})
+		for i := 0; i < 50; i++ {
+			a.renderer.game.Step(60)
+			a.renderer.syncPawns()
+		}
+		a.selectBuildingAt(cx+1, cy+6)
+		tile := a.renderer.tilePx()
+		a.renderer.cam.offsetX = float64(cx+1)*tile - float64(a.sw)/2 + 180
+		a.renderer.cam.offsetY = float64(cy+5)*tile - float64(a.sh)/2
+		x, y := at(cx+1, cy+6)
+		a.cursor = &[2]int{x, y}
 	case "architect":
 		a.openArchitect()
 		a.selectArchCategory("structure")

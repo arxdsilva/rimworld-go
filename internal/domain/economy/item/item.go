@@ -14,10 +14,15 @@ const (
 	Amberroot // raw, farmed
 	Meat      // raw, hunted
 	Meal      // cooked
+	Club      // melee weapon
+	Rifle     // ranged weapon
 	numKinds
 )
 
-var kindNames = [numKinds]string{"food", "wood", "stone", "berries", "amberroot", "meat", "meal"}
+var kindNames = [numKinds]string{"food", "wood", "stone", "berries", "amberroot", "meat", "meal", "club", "rifle"}
+
+// IsWeapon reports whether k can be equipped.
+func (k Kind) IsWeapon() bool { return k == Club || k == Rifle }
 
 // nutrition is hunger restored per unit eaten (needs.Full = 10000).
 var nutrition = [numKinds]int{Food: 4000, Berries: 1500, Amberroot: 2000, Meat: 2200, Meal: 6000}

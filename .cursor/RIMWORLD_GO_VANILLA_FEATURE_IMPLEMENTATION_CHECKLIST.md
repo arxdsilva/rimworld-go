@@ -670,8 +670,8 @@ This is the heart of autonomous colony behavior.
 
 ## 8.3 Cooking
 
--   [ ] **Cooking workstation**
--   [ ] **Meal recipes**
+-   [x] **Cooking workstation** (stove)
+-   [-] **Meal recipes** (simple meal only)
     -   Simple/standard meal classes sufficient to recreate vanilla
         progression.
     -   Ingredient filters.
@@ -1197,12 +1197,12 @@ treatment, and surgery are major colony-management systems.
 
 ## 14.1 Generic workbench system
 
--   [ ] **Workstation**
+-   [-] **Workstation** (workbench and stove: 2x1 rotatable footprints with interaction cell, block movement; no power/facilities)
     -   Supported recipes.
     -   interaction cell.
     -   power requirement where applicable.
     -   facility/environment modifiers.
--   [ ] **Recipe definition**
+-   [-] **Recipe definition** (inputs incl. any-raw-food, work, work type, product; no research/quality)
     -   ingredients.
     -   filters.
     -   work amount.
@@ -1213,9 +1213,9 @@ treatment, and surgery are major colony-management systems.
 
 ## 14.2 Bills
 
--   [ ] **Bill queue**
+-   [x] **Bill queue** (ordered bills per bench; first runnable bill wins)
     -   Multiple ordered bills per workstation.
--   [ ] **Bill modes**
+-   [x] **Bill modes** (do X, forever, until you have X; suspend)
     -   Do X times.
     -   Do forever.
     -   Do until X inventory count.
@@ -1234,9 +1234,9 @@ treatment, and surgery are major colony-management systems.
 
 -   [ ] **Stone cutting**
 -   [ ] **Butchering**
--   [ ] **Cooking**
+-   [x] **Cooking** (stove: 2 raw food -> 1 simple meal)
 -   [ ] **Tailoring/apparel production**
--   [ ] **Smithing/weapon production**
+-   [-] **Smithing/weapon production** (workbench: 4 wood -> wooden club)
 -   [ ] **Machining/advanced fabrication equivalents**
 -   [ ] **Drug production**
 -   [ ] **Component production in late tech**

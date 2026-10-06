@@ -29,6 +29,12 @@ const (
 	DesignateMine
 	// DesignateGrowZone paints a growing zone sowing crop Build (plant species id).
 	DesignateGrowZone
+	// AddBill adds recipe Recipe with Mode/Count to the bench covering X, Y.
+	AddBill
+	// SetBill updates bill Index on the bench at X, Y (Mode, Count, Enabled=suspended).
+	SetBill
+	// RemoveBill deletes bill Index on the bench at X, Y.
+	RemoveBill
 )
 
 // WorkType is a compact work-column id for SetWorkEnabled.
@@ -42,6 +48,7 @@ const (
 	WorkMine
 	WorkCook
 	WorkHunt
+	WorkCraft
 )
 
 // Order is a player-forced job for Prioritize.
@@ -74,4 +81,8 @@ type Command struct {
 	Order   Order
 	Layer   uint8 // construction layer for Prioritize build/supply on shared tiles
 	Stuff   uint8 // item kind used as building material for DesignateBuild; 0 = wood
+	Recipe  uint8 // recipe id for AddBill
+	Index   int   // bill index for SetBill/RemoveBill
+	Mode    uint8 // recipe.Mode for AddBill/SetBill
+	Count   int   // bill target for AddBill/SetBill
 }

@@ -15,6 +15,7 @@ const (
 	Clean
 	Research
 	Mine
+	Craft
 	NumTypes
 )
 
@@ -30,6 +31,7 @@ func DefaultColonist() Mask {
 	m = m.Set(Mine, true)
 	m = m.Set(Cook, true)
 	m = m.Set(Hunt, true)
+	m = m.Set(Craft, true)
 	return m
 }
 

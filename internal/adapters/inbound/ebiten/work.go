@@ -9,19 +9,20 @@ import (
 	"rimworld-go/internal/domain/sim/command"
 )
 
-var workColumns = []string{"FF", "Doc", "Grow", "Cook", "Bld", "Hunt", "Haul", "Cln", "Rsh", "Mine"}
+var workColumns = []string{"FF", "Doc", "Grow", "Cook", "Bld", "Hunt", "Haul", "Cln", "Rsh", "Mine", "Crft"}
 
 // workLive maps live work columns to their command and pawn flag.
 var workLive = map[int]struct {
 	cmd command.WorkType
 	on  func(game.PawnView) bool
 }{
-	2: {command.WorkGrow, func(p game.PawnView) bool { return p.WorkGrow }},
-	3: {command.WorkCook, func(p game.PawnView) bool { return p.WorkCook }},
-	4: {command.WorkConstruct, func(p game.PawnView) bool { return p.WorkConstruct }},
-	5: {command.WorkHunt, func(p game.PawnView) bool { return p.WorkHunt }},
-	6: {command.WorkHaul, func(p game.PawnView) bool { return p.WorkHaul }},
-	9: {command.WorkMine, func(p game.PawnView) bool { return p.WorkMine }},
+	2:  {command.WorkGrow, func(p game.PawnView) bool { return p.WorkGrow }},
+	3:  {command.WorkCook, func(p game.PawnView) bool { return p.WorkCook }},
+	4:  {command.WorkConstruct, func(p game.PawnView) bool { return p.WorkConstruct }},
+	5:  {command.WorkHunt, func(p game.PawnView) bool { return p.WorkHunt }},
+	6:  {command.WorkHaul, func(p game.PawnView) bool { return p.WorkHaul }},
+	9:  {command.WorkMine, func(p game.PawnView) bool { return p.WorkMine }},
+	10: {command.WorkCraft, func(p game.PawnView) bool { return p.WorkCraft }},
 }
 
 const (

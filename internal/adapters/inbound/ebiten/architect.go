@@ -291,7 +291,7 @@ func (a *App) previewCells() (archTool, []ghostCell) {
 	}
 	out := make([]ghostCell, 0, len(cells))
 	for _, c := range cells {
-		ok, reason := a.renderer.game.CanPlace(t.build, c[0], c[1])
+		ok, reason := a.renderer.game.CanPlaceAt(t.build, a.toolStuff(t), facingNames[a.archFacing], c[0], c[1])
 		out = append(out, ghostCell{x: c[0], y: c[1], ok: ok, reason: reason})
 	}
 	return t, out

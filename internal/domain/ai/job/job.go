@@ -47,6 +47,7 @@ const (
 	Cut
 	Mine
 	Sow
+	Bill
 )
 
 func (k Kind) String() string {
@@ -71,6 +72,8 @@ func (k Kind) String() string {
 		return "mine"
 	case Sow:
 		return "sow"
+	case Bill:
+		return "work at bench"
 	default:
 		return "idle"
 	}
@@ -123,6 +126,8 @@ type Record struct {
 	// Forced marks a player-prioritized job: tiredness does not
 	// interrupt it.
 	Forced bool
+	// BillIndex is the bench bill a Bill job works on.
+	BillIndex int
 }
 
 // Line is the inspector job summary.

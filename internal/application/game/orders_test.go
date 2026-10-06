@@ -183,9 +183,9 @@ func TestPrioritizeOverridesCurrentJobAndTiredness(t *testing.T) {
 	g.SpawnStack(item.Food, 3, 10, 2)
 	g.SpawnStack(item.Wood, 6, 1, 3)
 	g.Enqueue(command.Command{Kind: command.DesignateStockpile, X: 0, Y: 0, X2: 1, Y2: 0})
-	build(g, construction.Bed, construction.South, 6, 4)
+	build(g, construction.Bed, construction.South, 6, 2) // 1x2: covers (6,2) and (6,3)
 	g.Step(1)
-	g.Enqueue(command.Command{Kind: command.Prioritize, Pawn: uint64(id), Order: command.OrderSupply, X: 6, Y: 4})
+	g.Enqueue(command.Command{Kind: command.Prioritize, Pawn: uint64(id), Order: command.OrderSupply, X: 6, Y: 3})
 	g.Step(2)
 	if p := pawn(t, g, id); !strings.HasPrefix(p.Job, "haul") {
 		t.Fatalf("prioritized supply should start a haul, job=%s", p.Job)

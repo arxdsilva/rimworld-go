@@ -199,7 +199,7 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 	case command.OrderSleep:
 		bid := g.layerBldgAt(x, y, construction.LayerObject)
 		b, ok := g.bldgs.Get(bid)
-		if !ok || b.Kind != construction.Bed {
+		if !ok || !b.Kind.Sleeps() {
 			return job.Record{}, ReasonUnknown
 		}
 		if b.Claimant != 0 && entity.EntityID(b.Claimant) != id {
@@ -208,7 +208,7 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		if r := g.busyBy(id, bid); r != "" {
 			return job.Record{}, r
 		}
-		return job.Record{Kind: job.Sleep, Target: bid, TX: x, TY: y, WorkLeft: needs.SleepWorkMin}, ""
+		return job.Record{Kind: job.Sleep, Target: bid, TX: b.X, TY: b.Y, WorkLeft: needs.SleepWorkMin}, ""
 	case command.OrderEat:
 		iid := g.itemAt(x, y)
 		st, ok := g.stacks.Get(iid)
@@ -403,8 +403,8 @@ func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 			if b.Deconstruct {
 				add("Prioritize deconstructing "+b.Kind.String(), command.OrderDeconstruct, layer)
 			}
-			if b.Kind == construction.Bed {
-				add("Sleep in bed", command.OrderSleep, layer)
+			if b.Kind.Sleeps() {
+				add("Sleep in "+b.Kind.String(), command.OrderSleep, layer)
 			}
 		}
 	}

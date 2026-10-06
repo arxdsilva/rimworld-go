@@ -37,7 +37,7 @@ func (s *stubSim) Activity() schedule.Activity {
 func (s *stubSim) World() game.WorldView     { return game.WorldView{} }
 func (s *stubSim) Apply(command.Command)     {}
 func (s *stubSim) Enqueue(c command.Command) { s.cmds = append(s.cmds, c) }
-func (s *stubSim) CanPlace(kind string, x, y int) (bool, string) {
+func (s *stubSim) CanPlaceAt(kind, stuff, facing string, x, y int) (bool, string) {
 	if x < 0 || y < 0 || x >= s.w || y >= s.h {
 		return false, "outside the map"
 	}

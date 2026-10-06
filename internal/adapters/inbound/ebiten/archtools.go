@@ -35,6 +35,7 @@ var archCategories = []struct{ id, label string }{
 	{"zones", "Zones"},
 	{"structure", "Structure"},
 	{"furniture", "Furniture"},
+	{"production", "Production"},
 }
 
 var archTools = []archTool{
@@ -59,13 +60,19 @@ var archTools = []archTool{
 	{id: "floor", label: "Wood floor", category: "structure", icon: "floor", mode: placeFill, build: "floor",
 		desc: "Drag to cover an area. Furniture can stand on it."},
 	{id: "bed", label: "Bed", category: "furniture", icon: "bed", mode: placeSingle, build: "bed",
-		desc: "Colonists sleep better in a bed. Q/E rotates."},
+		desc: "A proper two-tile bed. Q/E rotates."},
+	{id: "cot", label: "Cot", category: "furniture", icon: "cot", mode: placeSingle, build: "cot",
+		desc: "A cheap one-tile bed. Q/E rotates."},
 	{id: "table", label: "Table", category: "furniture", icon: "table", mode: placeSingle, build: "table",
 		desc: "A place to eat and work."},
 	{id: "chair", label: "Chair", category: "furniture", icon: "chair", mode: placeSingle, build: "chair",
 		desc: "Seat for a table. Q/E rotates."},
 	{id: "lamp", label: "Lamp", category: "furniture", icon: "lamp", mode: placeSingle, build: "lamp",
-		desc: "Decorative light (power comes later)."},
+		desc: "Lights its room at night."},
+	{id: "workbench", label: "Workbench", category: "production", icon: "workbench", mode: placeSingle, build: "workbench",
+		desc: "Crafting station (2x1). Select it to add bills. Q/E rotates."},
+	{id: "stove", label: "Stove", category: "production", icon: "stove", mode: placeSingle, build: "stove",
+		desc: "Cooks meals from raw food (2x1). Select it to add bills."},
 }
 
 func toolByID(id string) (archTool, bool) {
@@ -182,7 +189,13 @@ func buildSprite(kind, facing string, mask int, ew, open bool) string {
 	case "floor":
 		return "structure/floor_wood"
 	case "bed":
+		return "furniture/bed_basic_" + facingOr(facing)
+	case "cot":
 		return "furniture/bed_cot_" + facingOr(facing)
+	case "workbench":
+		return "furniture/workbench_basic_" + facingOr(facing)
+	case "stove":
+		return "furniture/stove_basic_" + facingOr(facing)
 	case "table":
 		return "furniture/table_small"
 	case "chair":

@@ -161,10 +161,10 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 		mask := wallMask(walls, b.X, b.Y)
 		key := buildSpriteStuff(b.Kind, b.Stuff, b.Facing, mask, mask&(wallE|wallW) != 0, occupied[[2]int{b.X, b.Y}])
 		t := none
-		if b.Kind == "bed" && len(cloth) > 0 {
+		if (b.Kind == "bed" || b.Kind == "cot") && len(cloth) > 0 {
 			t = r.art.tint("cloth", cloth[mix64(uint64(b.ID))%uint64(len(cloth))])
 		}
-		add(float64(b.Y), float64(b.X), func() {
+		add(float64(b.Y+max(b.H, 1)-1), float64(b.X), func() {
 			r.drawSprite(screen, key, t, float64(b.X), float64(b.Y), tile, sw, sh)
 			if b.Deconstruct {
 				r.drawSprite(screen, "overlay/designation_deconstruct", none, float64(b.X), float64(b.Y), tile, sw, sh)
@@ -188,7 +188,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 		}
 		pm := wallMask(planned, f.X, f.Y)
 		key := buildSpriteStuff(f.Kind, f.Stuff, f.Facing, pm, pm&(wallE|wallW) != 0, false)
-		add(float64(f.Y), float64(f.X), func() {
+		add(float64(f.Y+max(f.H, 1)-1), float64(f.X), func() {
 			if f.Wood > 0 {
 				r.drawSprite(screen, "structure/frame_1x1", none, float64(f.X), float64(f.Y), tile, sw, sh)
 			}
@@ -270,6 +270,10 @@ func itemSprite(kind string) string {
 		return "item/meal_simple"
 	case "steel":
 		return "item/steel_bars"
+	case "club":
+		return "item/club_wood"
+	case "rifle":
+		return "item/rifle_ground"
 	case "stone", "stone_blocks":
 		return "item/stone_blocks"
 	}

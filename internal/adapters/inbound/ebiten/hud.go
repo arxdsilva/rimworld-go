@@ -103,6 +103,7 @@ func (a *App) colonyButtons(sw, sh int) []button {
 	out = append(out, a.hudTabButtons(sw, sh)...)
 	out = append(out, a.colonistBarButtons(sw, sh)...)
 	out = append(out, a.inspectorButtons()...)
+	out = append(out, a.buildingButtons()...)
 	out = append(out, a.architectButtons()...)
 	out = append(out, a.workButtons()...)
 	return out
@@ -130,6 +131,7 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 	a.drawButtons(screen, a.colonistBarButtons(sw, sh), mx, my)
 	a.drawColonistPortraits(screen, sh)
 	a.drawInspector(screen)
+	a.drawBuildingInspector(screen)
 	a.drawArchitect(screen)
 	if a.workOpen {
 		a.drawWork(screen, sw, sh)
@@ -182,6 +184,9 @@ func (a *App) colonyChromeHit(mx, my, sw, sh int) bool {
 		return true
 	}
 	if a.renderer != nil && a.renderer.HasSelect() && !a.workOpen && inspectorRect().contains(mx, my) {
+		return true
+	}
+	if a.hasBuilding && !a.workOpen && !a.archOpen && buildingRect().contains(mx, my) {
 		return true
 	}
 	return false

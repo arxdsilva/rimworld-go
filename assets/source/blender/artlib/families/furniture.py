@@ -69,6 +69,23 @@ def _workbench():
     return (2, 1), 1.05
 
 
+def _stove():
+    # 2 x 1, the cook stands on the south side.
+    S.box("body", 0.06, -0.92, 0.0, 1.94, -0.10, 0.62, "metal_dark", bevel=0.04)
+    S.box("top", 0.04, -0.94, 0.62, 1.96, -0.08, 0.68, "steel", bevel=0.03)
+    for i, (cx, cy) in enumerate([(0.45, -0.48), (1.0, -0.48)]):
+        S.cyl("ring%d" % i, cx, cy, 0.17, 0.68, 0.71, "metal_dark", segs=20, bevel=0.0)
+        S.cyl("glow%d" % i, cx, cy, 0.10, 0.70, 0.715, "lamp_warm", segs=20, bevel=0.0)
+    S.cyl("pot", 0.45, -0.48, 0.15, 0.71, 0.86, "steel", r_top=0.16, segs=18)
+    S.cyl("stew", 0.45, -0.48, 0.13, 0.855, 0.865, "crop_fruit", segs=18, bevel=0.0)
+    S.box("board", 1.40, -0.72, 0.68, 1.86, -0.26, 0.72, "wood_plank", bevel=0.015)
+    S.ellipsoid("veg", 1.55, -0.45, 0.76, 0.06, 0.06, 0.05, "crop_fruit", segs=10, rings=6)
+    S.box("door", 0.20, -0.935, 0.12, 1.00, -0.90, 0.48, "steel", bevel=0.015)
+    S.box("handle", 0.30, -0.95, 0.40, 0.90, -0.93, 0.43, "metal_dark", bevel=0.005)
+    S.box("pipe", 1.70, -0.20, 0.68, 1.84, -0.10, 1.10, "metal_dark", bevel=0.02)
+    return (2, 1), 1.10
+
+
 def _lamp():
     S.cyl("base", 0.5, -0.5, 0.22, 0.0, 0.06, "metal_dark", segs=20)
     S.cyl("pole", 0.5, -0.5, 0.035, 0.06, 1.25, "steel", segs=10)
@@ -84,8 +101,9 @@ BUILDERS = {
     "chair_basic": (_chair, {"attachments": {"seat": [0.5, 0.52]}}),
     "workbench_basic": (_workbench, {"attachments": {"worker": [0.5, 1.15]}}),
     "lamp_standing": (_lamp, {"emissive": "lamp_warm", "light_radius": 6}),
+    "stove_basic": (_stove, {"attachments": {"cook": [0.25, 1.5]}}),
 }
-ROTATABLE = {"bed_basic", "bed_cot", "chair_basic", "workbench_basic"}
+ROTATABLE = {"bed_basic", "bed_cot", "chair_basic", "workbench_basic", "stove_basic"}
 
 
 def build():

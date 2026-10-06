@@ -60,6 +60,8 @@ func (g *Game) applyOne(c command.Command) {
 		g.markCut(c.X, c.Y, c.X2, c.Y2, true)
 	case command.DesignateMine:
 		g.markMine(c.X, c.Y, c.X2, c.Y2, true)
+	case command.AddBill, command.SetBill, command.RemoveBill:
+		g.applyBill(c)
 	case command.DesignateGrowZone:
 		g.addGrowZone(c.X, c.Y, c.X2, c.Y2, c.Build)
 	case command.DesignateDeconstruct:
@@ -88,6 +90,8 @@ func (g *Game) applyOne(c command.Command) {
 			t = work.Cook
 		case command.WorkHunt:
 			t = work.Hunt
+		case command.WorkCraft:
+			t = work.Craft
 		default:
 			return
 		}
@@ -303,6 +307,9 @@ func (g *Game) phaseAI() {
 		if m.Enabled(work.Construct) && g.assignConstruct(id) {
 			continue
 		}
+		if g.assignBill(id, m) {
+			continue
+		}
 		if m.Enabled(work.Grow) && (g.assignHarvest(id) || g.assignSow(id) || g.assignCut(id)) {
 			continue
 		}
@@ -440,7 +447,7 @@ func (g *Game) assignSleep(id entity.EntityID) {
 	var bx, by int
 	for _, bid := range g.bldgIDs {
 		b, ok := g.bldgs.Get(bid)
-		if !ok || b.Kind != construction.Bed {
+		if !ok || !b.Kind.Sleeps() {
 			continue
 		}
 		if b.Claimant != 0 && entity.EntityID(b.Claimant) != id {
@@ -712,6 +719,8 @@ func (g *Game) phaseJobs() {
 			g.doMine(id, j)
 		case job.Sow:
 			g.doSow(id, j)
+		case job.Bill:
+			g.doBill(id, j)
 		default:
 			j.State = job.Complete
 			g.jobs.Set(id, j)
@@ -877,12 +886,20 @@ func (g *Game) completeFrame(id entity.EntityID, fr construction.Frame) {
 	g.frameIDs = kept
 	g.bldgIDs = append(g.bldgIDs, id)
 	g.bldgs.Set(id, construction.Building{Kind: fr.Kind, Stuff: fr.Stuff, Facing: fr.Facing, X: fr.X, Y: fr.Y})
-	if pid := g.plantAt(fr.X, fr.Y); pid != 0 {
-		g.removePlant(pid) // bushes and crops are cleared by building over them
+	// bushes and crops under the footprint are cleared below
+	cells, _, _ := construction.Footprint(fr.Kind, fr.Facing, fr.X, fr.Y)
+	for _, c := range cells {
+		if pid := g.plantAt(c[0], c[1]); pid != 0 {
+			g.removePlant(pid)
+		}
 	}
 	if construction.DefOf(fr.Kind).BlocksMove {
-		g.grid.SetWalkable(fr.X, fr.Y, false)
-		g.ejectPawns(fr.X, fr.Y)
+		for _, c := range cells {
+			g.grid.SetWalkable(c[0], c[1], false)
+		}
+		for _, c := range cells {
+			g.ejectPawns(c[0], c[1])
+		}
 	}
 }
 
