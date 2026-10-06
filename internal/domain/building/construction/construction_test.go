@@ -13,8 +13,8 @@ func TestDefsAreConsistent(t *testing.T) {
 			t.Fatalf("def %d: empty or duplicate name %q", i, d.Name)
 		}
 		seen[d.Name] = true
-		if d.Wood <= 0 || d.Work <= 0 {
-			t.Fatalf("%s: cost and work must be positive", d.Name)
+		if (d.Wood <= 0 || d.Work <= 0) && !d.Kind.Instant() {
+			t.Fatalf("%s: cost and work must be positive (or both zero for an instant marking)", d.Name)
 		}
 		if k, ok := Parse(d.Name); !ok || k != d.Kind {
 			t.Fatalf("Parse(%q) = %v %v", d.Name, k, ok)
@@ -33,8 +33,11 @@ func TestDefsAreConsistent(t *testing.T) {
 
 func TestRefundAndFacing(t *testing.T) {
 	t.Parallel()
-	if Refund(Cot) != 1 || Refund(Bed) != 2 || Refund(Floor) != 0 {
-		t.Fatalf("refund cot=%d bed=%d floor=%d", Refund(Cot), Refund(Bed), Refund(Floor))
+	if Refund(SleepingSpot) != 0 || Refund(Bed) != 2 || Refund(Floor) != 0 {
+		t.Fatalf("refund spot=%d bed=%d floor=%d", Refund(SleepingSpot), Refund(Bed), Refund(Floor))
+	}
+	if !SleepingSpot.Instant() || Bed.Instant() || !SleepingSpot.Sleeps() {
+		t.Fatal("sleeping spots are instant sleeping places")
 	}
 	if ParseFacing(9) != South || ParseFacing(uint8(West)) != West {
 		t.Fatal("facing parse")

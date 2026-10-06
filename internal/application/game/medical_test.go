@@ -9,13 +9,14 @@ import (
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/pawn/health"
+	"rimworld-go/internal/domain/sim/command"
 )
 
 func TestDoctorRescuesToBedAndTends(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 20, Height: 12})
 	patient, _ := g.SpawnNamedPawn(14, 6, "Patient")
 	doc, _ := g.SpawnNamedPawn(4, 6, "Doc")
-	placeBuilt(t, g, construction.Cot, construction.South, 2, 2)
+	placeBuilt(t, g, construction.SleepingSpot, construction.South, 2, 2)
 	g.hurt(patient, health.DownedInjury+10, 0)
 	start := g.VitalOf(patient).Injury
 
@@ -57,7 +58,7 @@ func TestRescueCarriesPatient(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 20, Height: 12})
 	patient, _ := g.SpawnNamedPawn(12, 6, "Patient")
 	doc, _ := g.SpawnNamedPawn(10, 6, "Doc")
-	placeBuilt(t, g, construction.Cot, construction.South, 2, 6)
+	placeBuilt(t, g, construction.SleepingSpot, construction.South, 2, 6)
 	g.hurt(patient, health.DownedInjury+10, 0)
 	for i := 0; i < 400; i++ {
 		g.Step(1)
@@ -118,5 +119,28 @@ func TestUnarmedColonistFleesArmedFightsBack(t *testing.T) {
 	g2.Step(2)
 	if j, _ := g2.jobs.Get(fighter); j.Kind != job.Attack || j.Target != wolf2 {
 		t.Fatalf("armed colonist should fight back, job %+v", j)
+	}
+}
+
+func TestSleepingSpotIsInstantAndFree(t *testing.T) {
+	g := New(Config{Seed: 1, Width: 10, Height: 8})
+	sleeper, _ := g.SpawnNamedPawn(2, 2, "Sleeper")
+	g.Apply(command.Command{Kind: command.DesignateBuild, Build: uint8(construction.SleepingSpot), X: 5, Y: 4})
+	g.Step(1)
+	w := g.World()
+	if len(w.Frames) != 0 || len(w.Buildings) != 1 || w.Buildings[0].Kind != "sleeping spot" {
+		t.Fatalf("spot should exist at once with no frame: frames %+v buildings %+v", w.Frames, w.Buildings)
+	}
+	g.SetNeeds(sleeper, 1<<20, 1500) // tired, not yet collapsed
+	for i := 0; i < 60 && !g.inBed(sleeper); i++ {
+		g.Step(10)
+	}
+	if !g.inBed(sleeper) {
+		t.Fatal("a tired colonist sleeps on the spot")
+	}
+	g.Apply(command.Command{Kind: command.DesignateDeconstruct, X: 5, Y: 4, X2: 5, Y2: 4})
+	g.Step(1)
+	if len(g.World().Buildings) != 0 {
+		t.Fatal("deconstructing a spot erases it immediately")
 	}
 }

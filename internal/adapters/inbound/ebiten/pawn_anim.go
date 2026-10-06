@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
 )
@@ -109,6 +110,7 @@ func (r *Renderer) drawLyingPawn(screen *ebiten.Image, p game.PawnView, vis pawn
 			return
 		}
 	}
+	// on the bare ground
 	k := easeOut(float64(r.present-vis.lyingSince) / fallFrames)
 	side := 1.0
 	if vis.facing == faceWest {
@@ -130,7 +132,7 @@ func (r *Renderer) drawLyingPawn(screen *ebiten.Image, p game.PawnView, vis pawn
 // bedUnder is the sleeping furniture covering tile (x, y).
 func bedUnder(w game.WorldView, x, y int) (game.BuildingView, bool) {
 	for _, b := range w.Buildings {
-		if b.Kind != "bed" && b.Kind != "cot" {
+		if b.Kind != "bed" && b.Kind != "sleeping spot" {
 			continue
 		}
 		bw, bh := max(b.W, 1), max(b.H, 1)
@@ -145,34 +147,49 @@ func bedUnder(w game.WorldView, x, y int) (game.BuildingView, bool) {
 // corner (measured on pawn/body_south: head rows 81..140, tile top 153).
 const headPivotX, headPivotY = 0.5, -0.34
 
-// drawInBed lays the figure along the bed with its head on the pillow,
-// breathing slowly, then draws the blanket over it.
+// drawInBed lays the figure along the bed (or sleeping spot) with its
+// head on the pillow, breathing slowly; a bed then draws its blanket over
+// it, while on a floor marking the figure lies flatter in the open.
 func (r *Renderer) drawInBed(screen *ebiten.Image, p game.PawnView, b game.BuildingView, tile float64, cs colorScale) {
 	bw, bh := float64(max(b.W, 1)), float64(max(b.H, 1))
 	x0, y0 := float64(b.X), float64(b.Y)
 	// pillow centre on screen (from the furniture geometry: pillow y and
 	// height under the 0.5 shear); the blanket's fold starts ~0.2 tile
 	// below it, so the face stays above the covers
-	in := 0.1 // cot
-	if b.Kind == "bed" {
-		in = 0.2
-	}
-	hx, hy, rot := x0+0.5, y0+in, 0.0
-	switch b.Facing {
-	case "east":
+	spot := b.Kind == "sleeping spot"
+	// pillow centre on screen. Bed: 0.36 in from the head end and raised
+	// by the shear; spot: the painted pillow, flat, 0.27 in from the end.
+	hx, hy, rot := x0+0.5, y0+0.2, 0.0
+	switch {
+	case spot && b.Facing == "east":
+		hx, hy, rot = x0+0.27, y0+0.5, -math.Pi/2
+	case spot && b.Facing == "west":
+		hx, hy, rot = x0+bw-0.27, y0+0.5, math.Pi/2
+	case spot && b.Facing == "north":
+		hx, hy, rot = x0+0.5, y0+bh-0.27, math.Pi
+	case spot:
+		hy = y0 + 0.27
+	case b.Facing == "east":
 		hx, hy, rot = x0+0.36, y0+0.3, -math.Pi/2
-	case "west":
+	case b.Facing == "west":
 		hx, hy, rot = x0+bw-0.36, y0+0.3, math.Pi/2
-	case "north":
-		hx, hy, rot = x0+0.5, y0+bh-0.36-0.2, math.Pi
+	case b.Facing == "north":
+		hx, hy, rot = x0+0.5, y0+bh-0.56, math.Pi
 	}
 	breath := 1 + 0.025*math.Sin(2*math.Pi*float64(r.present+uint64(p.ID)*37)/170)
-	ps := pose{px: headPivotX, py: headPivotY, rot: rot, sx: 0.85, sy: 0.85 * breath, cs: cs}
-	r.drawFigure(screen, p, hx-headPivotX, hy-headPivotY, tile, ps)
-	key := "furniture/bed_basic_blanket_" + facingOr(b.Facing)
-	if b.Kind == "cot" {
-		key = "furniture/bed_cot_blanket_" + facingOr(b.Facing)
+	sy := 0.85
+	if spot && (b.Facing == "" || b.Facing == "south" || b.Facing == "north") {
+		sy = 0.72 // lying flat along the floor, seen from above
 	}
+	ps := pose{px: headPivotX, py: headPivotY, rot: rot, sx: 0.85, sy: sy * breath, cs: cs}
+	r.drawFigure(screen, p, hx-headPivotX, hy-headPivotY, tile, ps)
+	if p.Status == "alive" {
+		defer r.drawSnore(screen, p, hx, hy, tile)
+	}
+	if spot {
+		return
+	}
+	key := "furniture/bed_basic_blanket_" + facingOr(b.Facing)
 	r.drawSpritePose(screen, key, r.bedTint(b), x0, y0, tile, pose{cs: cs})
 }
 
@@ -276,4 +293,22 @@ func (r *Renderer) drawTool(screen *ebiten.Image, key string, f facing, suffix s
 	g.Translate(bx+hand[0]*s, by+hand[1]*s)
 	g.Concat(ps.geo(float64(sx), float64(sy), tile))
 	screen.DrawImage(img, &ebiten.DrawImageOptions{GeoM: g, Filter: ebiten.FilterLinear})
+}
+
+// drawSnore floats small "z"s up and away from a sleeper's head.
+func (r *Renderer) drawSnore(screen *ebiten.Image, p game.PawnView, hx, hy, tile float64) {
+	const period = 75
+	for i := 0; i < 3; i++ {
+		t := float64((r.present+uint64(p.ID)*29+uint64(i*period/3))%period) / period
+		size := tile * (0.07 + 0.06*t)
+		x := hx + 0.18 + 0.28*t + 0.04*math.Sin(t*6)
+		y := hy - 0.25 - 0.55*t
+		sx, sy := r.worldToScreenF(x, y)
+		c := fade(color.RGBA{238, 240, 250, 255}, 0.9*math.Sin(math.Pi*t))
+		w := float32(size)
+		lw := float32(math.Max(1.5, tile*0.022))
+		vector.StrokeLine(screen, sx, sy, sx+w, sy, lw, c, true)
+		vector.StrokeLine(screen, sx+w, sy, sx, sy+w, lw, c, true)
+		vector.StrokeLine(screen, sx, sy+w, sx+w, sy+w, lw, c, true)
+	}
 }

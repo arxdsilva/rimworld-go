@@ -63,8 +63,8 @@ var archTools = []archTool{
 		desc: "Drag to cover an area. Furniture can stand on it."},
 	{id: "bed", label: "Bed", category: "furniture", icon: "bed", mode: placeSingle, build: "bed",
 		desc: "A proper two-tile bed. Q/E rotates."},
-	{id: "cot", label: "Cot", category: "furniture", icon: "cot", mode: placeSingle, build: "cot",
-		desc: "A cheap one-tile bed. Q/E rotates."},
+	{id: "spot", label: "Sleeping spot", category: "furniture", icon: "sleeping_spot", mode: placeSingle, build: "sleeping spot",
+		desc: "Marks a bed-sized place to sleep on the floor. Free and instant; a bed is more comfortable. Q/E rotates."},
 	{id: "table", label: "Table", category: "furniture", icon: "table", mode: placeSingle, build: "table",
 		desc: "A place to eat and work."},
 	{id: "chair", label: "Chair", category: "furniture", icon: "chair", mode: placeSingle, build: "chair",
@@ -194,8 +194,8 @@ func buildSprite(kind, facing string, mask int, ew, open bool) string {
 		return "structure/floor_wood"
 	case "bed":
 		return "furniture/bed_basic_" + facingOr(facing)
-	case "cot":
-		return "furniture/bed_cot_" + facingOr(facing)
+	case "sleeping spot":
+		return "overlay/sleeping_spot_" + facingOr(facing)
 	case "workbench":
 		return "furniture/workbench_basic_" + facingOr(facing)
 	case "stove":

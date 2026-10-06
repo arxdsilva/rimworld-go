@@ -135,6 +135,11 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 			r.drawTile(screen, buildSpriteStuff("floor", b.Stuff, "", 0, false, false), float64(b.X), float64(b.Y), tile, sw, sh, noCS)
 		}
 	}
+	for _, b := range w.Buildings { // floor markings lie on the floor
+		if b.Kind == "sleeping spot" {
+			r.drawSprite(screen, buildSprite(b.Kind, b.Facing, 0, false, false), none, float64(b.X), float64(b.Y), tile, sw, sh)
+		}
+	}
 	for _, f := range w.Frames {
 		if f.Floor {
 			r.drawSpriteCS(screen, buildSpriteStuff("floor", f.Stuff, "", 0, false, false), none, float64(f.X), float64(f.Y), tile, sw, sh, blueprintCS)
@@ -157,13 +162,13 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	cloth := r.art.tintNames("cloth")
 	for _, b := range w.Buildings {
 		b := b
-		if b.Floor {
+		if b.Floor || b.Kind == "sleeping spot" {
 			continue
 		}
 		mask := wallMask(walls, b.X, b.Y)
 		key := buildSpriteStuff(b.Kind, b.Stuff, b.Facing, mask, mask&(wallE|wallW) != 0, occupied[[2]int{b.X, b.Y}])
 		t := none
-		if (b.Kind == "bed" || b.Kind == "cot") && len(cloth) > 0 {
+		if b.Kind == "bed" && len(cloth) > 0 {
 			t = r.art.tint("cloth", cloth[mix64(uint64(b.ID))%uint64(len(cloth))])
 		}
 		add(float64(b.Y+max(b.H, 1)-1), float64(b.X), func() {

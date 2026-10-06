@@ -124,6 +124,49 @@ def _g_draft(xx, yy, c):  # upward chevrons
     return np.minimum(d, d2)
 
 
+SPOT_FACINGS = ("south", "east", "north", "west")
+
+
+def _sleeping_spot(facing):
+    """A bed-sized sleeping place marked on the floor: a dashed bedroll
+    outline with a pillow mark at the head end, in pale chalk. 1x2 facing
+    south/north, 2x1 on its side; like a bed, the sleeper's feet point to
+    the facing, so the pillow is at the opposite end."""
+    w, h = (2, 1) if facing in ("east", "west") else (1, 2)
+    W, H = w * N, h * N
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32) + 0.5
+    img = np.zeros((H, W, 4), np.float32)
+    chalk = (0.93, 0.89, 0.80)
+
+    def rrect(cx, cy, hw, hh, r):
+        qx = np.abs(xx - cx) - (hw - r)
+        qy = np.abs(yy - cy) - (hh - r)
+        return np.hypot(np.maximum(qx, 0), np.maximum(qy, 0)) + np.minimum(np.maximum(qx, qy), 0) - r, qx, qy
+
+    inset = 12.0
+    outside, qx, qy = rrect(W / 2, H / 2, W / 2 - inset, H / 2 - inset, 16)
+    ring = np.abs(outside)
+    t = np.where(qy > qx, xx, yy)  # run the dashes along each side
+    dash = (np.floor(t / 12.0) % 2) == 0
+    _paint(img, _cov(outside), (0.10, 0.09, 0.08), 0.16)            # faint ground shade
+    _paint(img, _cov(ring - 2.6) * dash, (0.10, 0.09, 0.08), 0.45)  # halo
+    _paint(img, _cov(ring - 1.8) * dash, chalk, 0.9)
+    # pillow at the head end (opposite the facing)
+    head = {"south": (W / 2, 34), "north": (W / 2, H - 34), "east": (34, H / 2), "west": (W - 34, H / 2)}[facing]
+    pw, ph = (26, 15) if facing in ("south", "north") else (15, 26)
+    pill, _, _ = rrect(head[0], head[1], pw, ph, 8)
+    _paint(img, _cov(pill), chalk, 0.5)
+    _paint(img, _cov(np.abs(pill) - 1.4), chalk, 0.9)
+    name = "sleeping_spot_" + facing
+    path = S.out_path("overlay", name)
+    S.write_png(img, path)
+    meta.write("overlay", name, {"image": "generated/world/overlay/%s.png" % name, "scale": C.SCALE,
+                                 "canvas": [W, H], "footprint": [w, h], "origin_px": [0, 0],
+                                 "overlay": "sleeping_spot", "marking": True, "facing": facing,
+                                 "rotatable": True})
+    return path
+
+
 def _g_hunt(xx, yy, c):  # crosshair: ring + four ticks
     d = np.abs(np.hypot(xx - c, yy - c) - 13)
     for ax, ay, bx, by in ((c - 24, c, c - 9, c), (c + 9, c, c + 24, c), (c, c - 24, c, c - 9), (c, c + 9, c, c + 24)):
@@ -204,7 +247,7 @@ ICONS = {
     "steel": ("item", "steel_bars"),
     "stone": ("item", "stone_blocks"),
     "bed": ("furniture", "bed_basic_south"),
-    "cot": ("furniture", "bed_cot_south"),
+    "sleeping_spot": ("overlay", "sleeping_spot_south"),
     "stove": ("furniture", "stove_basic_south"),
     "club": ("item", "club_wood"),
     "rifle": ("item", "rifle_ground"),
@@ -268,7 +311,7 @@ def build():
            _designation("designation_harvest", t, _g_harvest), _designation("designation_mine", t, _g_mine),
            _designation("designation_deconstruct", t, _g_deconstruct),
            _designation("designation_hunt", t, _g_hunt),
-           _stockpile(t), _blueprint(t), _grow_zone(t)]
+           _stockpile(t), _blueprint(t), _grow_zone(t)] + [_sleeping_spot(f) for f in SPOT_FACINGS]
     out += [_badge_icon("order_harvest", t, _g_harvest, t["designation"]),
             _badge_icon("order_deconstruct", t, _g_deconstruct, t["danger"]),
             _badge_icon("order_cancel", t, _g_cancel, t["selection"]),

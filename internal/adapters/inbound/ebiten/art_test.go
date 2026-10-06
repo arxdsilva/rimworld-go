@@ -211,7 +211,9 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 		"overlay/designation_deconstruct", "ui_icon/draft", "overlay/designation_hunt",
 		"weapon/rifle_basic", "ui_icon/dustbuck", "ui_icon/ridgewolf",
 		itemSprite("dustbuck corpse"), itemSprite("ridgewolf corpse"),
-		"tool/hammer", "tool/axe", "tool/pickaxe")
+		"tool/hammer", "tool/axe", "tool/pickaxe",
+		"overlay/sleeping_spot_south", "overlay/sleeping_spot_east", "overlay/sleeping_spot_north",
+		"overlay/sleeping_spot_west", "ui_icon/sleeping_spot")
 	for _, sp := range []string{"dustbuck", "ridgewolf"} {
 		for f := faceSouth; f <= faceWest; f++ {
 			keys = append(keys, "animal/"+sp+"_"+f.String())
@@ -249,7 +251,7 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 				keys = append(keys, "pawn/"+l+"_"+f.String()+fr)
 			}
 		}
-		for _, bed := range []string{"bed_basic", "bed_cot"} {
+		for _, bed := range []string{"bed_basic"} {
 			keys = append(keys, "furniture/"+bed+"_blanket_"+f.String())
 		}
 		for _, h := range hairStyles {
@@ -266,7 +268,7 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 			t.Errorf("no %s tint presets in palettes/base.yaml", g)
 		}
 	}
-	for _, k := range []string{"pawn/body_south", "pawn/hair_bun_east", "furniture/bed_cot_west"} {
+	for _, k := range []string{"pawn/body_south", "pawn/hair_bun_east", "furniture/bed_basic_west"} {
 		sp := c.sprite(k)
 		if sp.mask == nil || sp.meta.TintGroup == "" {
 			t.Errorf("%s should be tintable", k)

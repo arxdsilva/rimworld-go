@@ -15,7 +15,10 @@ const (
 	Table
 	Chair
 	Lamp
-	Cot
+	// SleepingSpot is a bed-sized (1x2, 2x1 on its side) marking on the
+	// floor: free, placed instantly, slept on like the ground. The Bed is
+	// the built upgrade with the same footprint.
+	SleepingSpot
 	Workbench
 	Stove
 	ButcherTable
@@ -53,14 +56,14 @@ type Def struct {
 const StoneWorkPct = 160
 
 var defs = [kindCount]Def{
-	Wall:  {Kind: Wall, Name: "wall", Wood: 2, Work: 40, Layer: LayerObject, BlocksMove: true, StoneOK: true},
-	Bed:   {Kind: Bed, Name: "bed", Wood: 5, Work: 90, Layer: LayerObject, Rotatable: true, Size: [2]int{1, 2}},
-	Door:  {Kind: Door, Name: "door", Wood: 2, Work: 50, Layer: LayerObject},
-	Floor: {Kind: Floor, Name: "floor", Wood: 1, Work: 20, Layer: LayerFloor, StoneOK: true},
-	Table: {Kind: Table, Name: "table", Wood: 3, Work: 50, Layer: LayerObject},
-	Chair: {Kind: Chair, Name: "chair", Wood: 2, Work: 40, Layer: LayerObject, Rotatable: true},
-	Lamp:  {Kind: Lamp, Name: "lamp", Wood: 2, Work: 40, Layer: LayerObject},
-	Cot:   {Kind: Cot, Name: "cot", Wood: 3, Work: 60, Layer: LayerObject, Rotatable: true},
+	Wall:         {Kind: Wall, Name: "wall", Wood: 2, Work: 40, Layer: LayerObject, BlocksMove: true, StoneOK: true},
+	Bed:          {Kind: Bed, Name: "bed", Wood: 5, Work: 90, Layer: LayerObject, Rotatable: true, Size: [2]int{1, 2}},
+	Door:         {Kind: Door, Name: "door", Wood: 2, Work: 50, Layer: LayerObject},
+	Floor:        {Kind: Floor, Name: "floor", Wood: 1, Work: 20, Layer: LayerFloor, StoneOK: true},
+	Table:        {Kind: Table, Name: "table", Wood: 3, Work: 50, Layer: LayerObject},
+	Chair:        {Kind: Chair, Name: "chair", Wood: 2, Work: 40, Layer: LayerObject, Rotatable: true},
+	Lamp:         {Kind: Lamp, Name: "lamp", Wood: 2, Work: 40, Layer: LayerObject},
+	SleepingSpot: {Kind: SleepingSpot, Name: "sleeping spot", Layer: LayerObject, Rotatable: true, Size: [2]int{1, 2}},
 	Workbench: {Kind: Workbench, Name: "workbench", Wood: 6, Work: 160, Layer: LayerObject, BlocksMove: true,
 		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
 	Stove: {Kind: Stove, Name: "stove", Wood: 5, Work: 140, Layer: LayerObject, BlocksMove: true,
@@ -70,7 +73,14 @@ var defs = [kindCount]Def{
 }
 
 // Sleeps reports whether k is something to sleep in.
-func (k Kind) Sleeps() bool { return k == Bed || k == Cot }
+func (k Kind) Sleeps() bool { return k == Bed || k == SleepingSpot }
+
+// Instant kinds need no materials or work: designating one places it,
+// and deconstructing removes it on the spot.
+func (k Kind) Instant() bool {
+	d := DefOf(k)
+	return d.Wood == 0 && d.Work == 0
+}
 
 // rotate maps a south-frame point to facing f (screen coords, y down),
 // matching the art: east = (x, y) -> (y, -x).

@@ -1,4 +1,5 @@
-"""Furniture family (ART spec §12-§14): bed, table, chair, workbench, lamp.
+"""Furniture family (ART spec §12-§14): bed, table, chair, workbench, stove,
+butcher table, lamp. (Sleeping spots are floor markings: overlay family.)
 
 Geometry is authored facing SOUTH (the side a user approaches from /
 the sleeper's feet point to) and rotated with stage.face().
@@ -18,17 +19,6 @@ def _bed():
     S.box("blanket", 0.10, -1.90, 0.30, 0.90, -0.72, 0.43, "cloth", bevel=0.05, segments=2)
     S.box("fold", 0.10, -0.84, 0.34, 0.90, -0.64, 0.47, "cloth", bevel=0.06, segments=2)
     return (1, 2), 0.58
-
-
-def _cot():
-    """1x1 sleeping cot for single-cell beds (current domain footprint)."""
-    S.box("frame", 0.12, -0.96, 0.0, 0.88, -0.04, 0.20, "wood", bevel=0.03)
-    S.box("head", 0.10, -0.15, 0.0, 0.90, -0.03, 0.42, "wood", bevel=0.035)
-    S.box("mat", 0.16, -0.92, 0.16, 0.84, -0.12, 0.28, "ceramic", bevel=0.05, segments=2)
-    S.box("pillow", 0.24, -0.36, 0.26, 0.76, -0.15, 0.35, "ceramic", bevel=0.05, segments=2)
-    S.box("blanket", 0.15, -0.94, 0.22, 0.85, -0.44, 0.33, "cloth", bevel=0.045, segments=2)
-    S.box("fold", 0.15, -0.52, 0.25, 0.85, -0.38, 0.36, "cloth", bevel=0.05, segments=2)
-    return (1, 1), 0.42
 
 
 def _table():
@@ -117,7 +107,6 @@ def _lamp():
 
 BUILDERS = {
     "bed_basic": (_bed, {"attachments": {"sleeper": [0.5, 0.42]}}),
-    "bed_cot": (_cot, {"attachments": {"sleeper": [0.5, 0.45]}}),
     "table_small": (_table, {}),
     "chair_basic": (_chair, {"attachments": {"seat": [0.5, 0.52]}}),
     "workbench_basic": (_workbench, {"attachments": {"worker": [0.5, 1.15]}}),
@@ -125,13 +114,12 @@ BUILDERS = {
     "stove_basic": (_stove, {"attachments": {"cook": [0.25, 1.5]}}),
     "butcher_table": (_butcher_table, {"attachments": {"worker": [0.5, 1.15]}}),
 }
-ROTATABLE = {"bed_basic", "bed_cot", "chair_basic", "workbench_basic", "stove_basic", "butcher_table"}
+ROTATABLE = {"bed_basic", "chair_basic", "workbench_basic", "stove_basic", "butcher_table"}
 
 
 # Blanket overlays: drawn over a sleeper so they read as tucked in. The
 # rest of the bed is a holdout, so the overlay lines up pixel for pixel.
-BLANKETS = {"bed_basic": (_bed, {"blanket", "fold", "post_l", "post_r"}),
-            "bed_cot": (_cot, {"blanket", "fold"})}
+BLANKETS = {"bed_basic": (_bed, {"blanket", "fold", "post_l", "post_r"})}
 
 
 def _blankets():

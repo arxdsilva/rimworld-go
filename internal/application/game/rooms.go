@@ -162,7 +162,11 @@ func (g *Game) moodOf(id entity.EntityID) int { return mood.Level(g.thoughts(id)
 func (g *Game) afterSleep(id entity.EntityID) {
 	pos, _ := g.positions.Get(id)
 	r := g.roomAt(pos.X, pos.Y)
-	if g.sleptAt[id] == 0 {
+	onFloor := g.sleptAt[id] == 0
+	if b, ok := g.bldgs.Get(g.sleptAt[id]); ok && b.Kind == construction.SleepingSpot {
+		onFloor = true
+	}
+	if onFloor {
 		if r < 0 {
 			g.remember(id, mood.SleptOutside)
 		} else {

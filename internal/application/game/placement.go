@@ -198,7 +198,7 @@ func (g *Game) placeFrameStuff(kind construction.Kind, stuff item.Kind, f constr
 	}
 	id := g.entities.Next()
 	g.frameIDs = append(g.frameIDs, id)
-	g.frames.Set(id, construction.Frame{
+	fr := construction.Frame{
 		Kind:     kind,
 		Stuff:    stuff,
 		Facing:   f,
@@ -206,7 +206,11 @@ func (g *Game) placeFrameStuff(kind construction.Kind, stuff item.Kind, f constr
 		Y:        y,
 		Need:     construction.WoodCost(kind),
 		WorkLeft: construction.WorkFor(kind, stuff),
-	})
+	}
+	g.frames.Set(id, fr)
+	if kind.Instant() {
+		g.completeFrame(id, fr) // a marking: nothing to haul or build
+	}
 }
 
 func (g *Game) layerFrameAt(x, y int, layer construction.Layer) entity.EntityID {
@@ -272,12 +276,22 @@ func (g *Game) ejectPawns(x, y int) {
 
 func (g *Game) markDeconstruct(x1, y1, x2, y2 int, on bool) {
 	minX, minY, maxX, maxY := normalizeRect(x1, y1, x2, y2)
+	var erase []entity.EntityID
+	defer func() {
+		for _, id := range erase {
+			g.removeBuilding(id) // markings are simply erased
+		}
+	}()
 	for _, id := range g.bldgIDs {
 		b, ok := g.bldgs.Get(id)
 		if !ok || b.X < minX || b.X > maxX || b.Y < minY || b.Y > maxY {
 			continue
 		}
 		if b.Deconstruct == on {
+			continue
+		}
+		if on && b.Kind.Instant() {
+			erase = append(erase, id)
 			continue
 		}
 		b.Deconstruct = on

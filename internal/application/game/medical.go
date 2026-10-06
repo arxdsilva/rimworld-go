@@ -250,6 +250,9 @@ func (g *Game) BuildNow(kind, stuff, facing string, x, y int) bool {
 		return false
 	}
 	g.placeFrameStuff(b, st, f, x, y)
+	if b.Instant() {
+		return g.layerBldgAt(x, y, construction.DefOf(b).Layer) != 0
+	}
 	fid := g.layerFrameAt(x, y, construction.DefOf(b).Layer)
 	fr, ok := g.frames.Get(fid)
 	if !ok {

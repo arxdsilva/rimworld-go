@@ -76,7 +76,7 @@ func captureOrders(cx, cy int) []command.Command {
 			bk("floor", 0, x, y)
 		}
 	}
-	bk("cot", 0, x0+1, y0+1)
+	bk("sleeping spot", 0, x0+1, y0+1)
 	bk("bed", 0, x0+3, y0+1)
 	bk("table", 0, x0+2, y0+2)
 	bk("chair", 1, x0+1, y0+2)

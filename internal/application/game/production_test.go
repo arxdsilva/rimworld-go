@@ -15,6 +15,9 @@ func placeBuilt(t *testing.T, g *Game, k construction.Kind, f construction.Facin
 	t.Helper()
 	g.Enqueue(command.Command{Kind: command.DesignateBuild, Build: uint8(k), Facing: uint8(f), X: x, Y: y})
 	g.Step(1)
+	if k.Instant() {
+		return // placed on designation
+	}
 	fid := g.layerFrameAt(x, y, construction.DefOf(k).Layer)
 	fr, ok := g.frames.Get(fid)
 	if !ok {
