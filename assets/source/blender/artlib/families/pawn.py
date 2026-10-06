@@ -108,6 +108,51 @@ def _apply_modifiers():
             bpy.data.meshes.remove(old)
 
 
+# Walk cycle (ART spec §27): 8 presentation frames per facing,
+#   neutral, w1, w2, w1, neutral, w3, w4, w3
+# where w1/w2 swing the left leg forward by WALK_DEG/2 and WALK_DEG (right
+# arm forward with it), and w3/w4 mirror that. Only layers that cover
+# limbs get frames; hair rides the head (bobbed in the renderer).
+WALK_DEG = 26.0
+WALK_FRAMES = {"walk1": 0.5, "walk2": 1.0, "walk3": -0.5, "walk4": -1.0}
+WALK_LAYERS = ("body", "pants_basic", "shirt_basic", "vest_utility")
+HIP_Z, SHOULDER_Z = 0.33, 0.60
+
+
+def _mean_x(ob):
+    vs = ob.data.vertices
+    return sum((ob.matrix_world @ v.co).x for v in vs) / max(len(vs), 1)
+
+
+def _rot_x(deg, pz):
+    import math
+    from mathutils import Matrix
+    return (Matrix.Translation((0, CY, pz)) @ Matrix.Rotation(math.radians(deg), 4, "X")
+            @ Matrix.Translation((0, -CY, -pz)))
+
+
+def _pose(swing):
+    """Swing limbs for a walk frame: swing in [-1, 1]. Positive moves the
+    left (-X) leg forward (towards -Y, the facing) and the right arm with
+    it. Applied to every object (holdout body included) before facing."""
+    if swing == 0:
+        return
+    a = WALK_DEG * swing
+    for ob in S.objects():
+        n = ob.name.split(".")[0]
+        side = -1 if _mean_x(ob) < CX else 1
+        if n in ("leg", "pleg"):
+            # left leg (side -1) forward: rotate so the foot moves to -Y
+            ob.matrix_world = _rot_x(a * side, HIP_Z) @ ob.matrix_world
+        elif n in ("arm", "hand", "sleeve"):
+            ob.matrix_world = _rot_x(-a * side * 0.8, SHOULDER_Z) @ ob.matrix_world
+
+
+def _arm_angle(swing):
+    """Right-arm (hand attachment side) swing in degrees for a frame."""
+    return -WALK_DEG * swing * 0.8
+
+
 def _lean_matrix():
     import math
     from mathutils import Matrix
@@ -141,30 +186,33 @@ HAND = {  # where held equipment's grip goes, per facing (Blender coords before 
 }
 
 
-def _hand(facing):
+def _hand(facing, swing=0.0):
     import math
     from mathutils import Matrix, Vector
     deg = S.FACINGS[facing]
     m = (Matrix.Translation((0.5, -0.5, 0)) @ Matrix.Rotation(math.radians(deg), 4, "Z")
          @ Matrix.Translation((-0.5, 0.5, 0)))
-    return _lean_matrix() @ m @ Vector(HAND["south"])
+    return _lean_matrix() @ m @ _rot_x(_arm_angle(swing), SHOULDER_Z) @ Vector(HAND["south"])
 
 
-def _layer(name, facing, builder, body_holdout=True):
+def _layer(name, facing, builder, body_holdout=True, frame=None):
     if body_holdout:
         objs = _body()
         S.holdout(objs)
     builder()
     _apply_modifiers()
+    swing = WALK_FRAMES.get(frame, 0.0)
+    _pose(swing)
     _figure(facing)
     zm = _zmax_screen()
     top = int(-(-((C.SHEAR_K * zm + MARGINS[2]) * C.PPT) // 1))
     origin = (int(round(MARGINS[0] * C.PPT)), top)
-    h = _hand(facing)
-    return S.render_asset("pawn", "%s_%s" % (name, facing), zmax=zm, margins=MARGINS,
-                          shadow=(name == "body"),
-                          extra={"layer": name, "facing": facing,
-                                 "attachments": {"hand": _project(h.x, h.y, h.z, origin)}})
+    h = _hand(facing, swing)
+    sprite = "%s_%s" % (name, facing) + ("_" + frame if frame else "")
+    extra = {"layer": name, "facing": facing, "attachments": {"hand": _project(h.x, h.y, h.z, origin)}}
+    if frame:
+        extra["frame"] = frame
+    return S.render_asset("pawn", sprite, zmax=zm, margins=MARGINS, shadow=(name == "body"), extra=extra)
 
 
 LAYERS = {
@@ -198,20 +246,20 @@ def _rifle():
                                                  "muzzle": _project(0.5 + (0.96 - 0.5) * 0.8, y, 0.024, m)}})
 
 
-def build():
+def build(walk_only=False):
     out = []
     for f in FACINGS:
-        _body()
-        _apply_modifiers()
-        _figure(f)
-        zm = _zmax_screen()
-        top = int(-(-((C.SHEAR_K * zm + MARGINS[2]) * C.PPT) // 1))
-        origin = (int(round(MARGINS[0] * C.PPT)), top)
-        h = _hand(f)
-        out.append(S.render_asset("pawn", "body_%s" % f, zmax=zm, margins=MARGINS,
-                                  extra={"layer": "body", "facing": f,
-                                         "attachments": {"hand": _project(h.x, h.y, h.z, origin)}}))
+        frames = list(WALK_FRAMES) if walk_only else [None] + list(WALK_FRAMES)
+        for fr in frames:
+            out.append(_body_sprite(f, fr))
         for name, fn in LAYERS.items():
-            out.append(_layer(name, f, fn))
-    out.append(_rifle())
+            for fr in ([None] if not walk_only else []) + (list(WALK_FRAMES) if name in WALK_LAYERS else []):
+                out.append(_layer(name, f, fn, frame=fr))
+    if not walk_only:
+        out.append(_rifle())
     return out
+
+
+def _body_sprite(facing, frame):
+    """The skin layer: the body itself (no holdout), with a shadow."""
+    return _layer("body", facing, _body, body_holdout=False, frame=frame)

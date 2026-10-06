@@ -6,11 +6,13 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
+	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
+	"rimworld-go/internal/domain/sim/entity"
 )
 
 // Capture is a developer screenshot run (ART Wave 1 "screenshot test
@@ -25,6 +27,9 @@ type Capture struct {
 	// UI opens a UI state for the shot: "" (none), "architect" (furniture
 	// card + placement ghost) or "orders" (a pawn's right-click menu).
 	UI string
+	// Frames > 0 records that many consecutive frames at normal speed
+	// (Path gets a _NNN suffix per frame) instead of one still.
+	Frames int
 }
 
 // captureFrames lets presentation state (lerp, walk bob) settle.
@@ -33,6 +38,9 @@ const captureFrames = 30
 type captureState struct {
 	started bool
 	frames  int
+	saved   int  // sequence frames written
+	pending bool // a sequence frame is waiting to be drawn
+	follow  entity.EntityID
 	done    bool
 	err     error
 }
@@ -124,6 +132,21 @@ func (a *App) tickCapture() {
 		a.renderer.settleVisuals()
 		return
 	}
+	if c.Frames > 0 && a.capture.frames >= captureFrames {
+		if a.capture.pending {
+			return // wait until this frame is on disk
+		}
+		a.renderer.speed = speedNormal
+		a.renderer.advance()
+		for _, p := range a.renderer.snapshot() {
+			if p.ID == a.capture.follow { // keep the followed colonist mid-screen
+				wx, wy := a.renderer.interpWorld(p)
+				a.renderer.centerOn(wx+0.5, wy+0.3, a.sw, a.sh)
+			}
+		}
+		a.capture.pending = true
+		return
+	}
 	a.renderer.present++
 	a.capture.frames++
 }
@@ -185,8 +208,26 @@ func (a *App) captureUI(ui string) {
 		a.renderer.cam.offsetY = float64(shot.FromY+shot.ToY+1)/2*tile - float64(a.sh)/2
 		for _, p := range a.renderer.snapshot() {
 			if p.X == shot.FromX && p.Y == shot.FromY {
-				a.renderer.Select(p.ID)
+				if a.cfg.Capture.Frames > 0 {
+					a.capture.follow = p.ID
+				} else {
+					a.renderer.Select(p.ID)
+				}
 			}
+		}
+	case "follow":
+		// run on until a colonist is doing hands-on work, then follow it
+		for i := 0; i < 600; i++ {
+			for _, p := range a.renderer.snapshot() {
+				if strings.HasPrefix(p.Job, "rescue") || (p.Acting != "" && p.Acting != "eat" && a.capture.follow == 0) {
+					a.capture.follow = p.ID
+				}
+			}
+			if a.capture.follow != 0 {
+				break
+			}
+			a.renderer.game.Step(10)
+			a.renderer.syncPawns()
 		}
 	case "pawn":
 		if snap := a.renderer.snapshot(); len(snap) > 0 {
@@ -213,15 +254,30 @@ func (a *App) drawCapture(screen *ebiten.Image) {
 	if c == nil || a.capture.done || !a.capture.started || a.capture.frames < captureFrames {
 		return
 	}
-	a.capture.done, a.shouldQuit = true, true
+	path := c.Path
+	if c.Frames > 0 {
+		if !a.capture.pending {
+			return
+		}
+		a.capture.pending = false
+		n := a.capture.saved
+		a.capture.saved++
+		if a.capture.saved >= c.Frames {
+			a.capture.done, a.shouldQuit = true, true
+		}
+		ext := filepath.Ext(path)
+		path = fmt.Sprintf("%s_%03d%s", strings.TrimSuffix(path, ext), n, ext)
+	} else {
+		a.capture.done, a.shouldQuit = true, true
+	}
 	b := screen.Bounds()
 	img := image.NewRGBA(b)
 	screen.ReadPixels(img.Pix)
-	if err := os.MkdirAll(filepath.Dir(c.Path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		a.capture.err = err
 		return
 	}
-	f, err := os.Create(c.Path)
+	f, err := os.Create(path)
 	if err != nil {
 		a.capture.err = err
 		return

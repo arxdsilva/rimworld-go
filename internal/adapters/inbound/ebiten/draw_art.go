@@ -108,6 +108,7 @@ func (r *Renderer) drawPlacementGhost(screen *ebiten.Image, kind, stuff, facing 
 func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	none := color.NRGBA{}
 	w := r.game.World()
+	r.drawW, r.drawPawns = w, r.game.Snapshot()
 
 	r.drawTerrainArt(screen, w, sw, sh, tile)
 	for _, z := range w.GrowZones {
@@ -199,8 +200,16 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	for _, p := range w.Plants {
 		p := p
 		key, scale := plantSprite(p)
+		amount := 0.035
+		switch p.Species {
+		case "tree":
+			amount = 0.022
+		case "amberroot":
+			amount = 0.06
+		}
 		add(float64(p.Y), float64(p.X), func() {
-			r.drawSpriteScaled(screen, key, none, float64(p.X), float64(p.Y), tile, sw, sh, noCS, scale)
+			ps := pose{px: 0.5, py: 1, sx: scale, sy: scale, skew: r.sway(p.X, p.Y, amount)}
+			r.drawSpritePose(screen, key, none, float64(p.X), float64(p.Y), tile, ps)
 		})
 	}
 	for _, it := range w.Items {
@@ -216,14 +225,20 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 				vector.FillRect(screen, sx+pad, sy+pad, float32(tile)-2*pad, float32(tile)-2*pad, color.RGBA{200, 90, 40, 255}, false)
 				return
 			}
-			r.drawSprite(screen, key, none, float64(it.X), float64(it.Y), tile, sw, sh)
+			r.drawSpriteScaled(screen, key, none, float64(it.X), float64(it.Y), tile, sw, sh, noCS, r.itemPop(it.ID))
 		})
 	}
 	r.addAnimalDraws(w, add, screen, tile, sw, sh)
-	for _, p := range r.game.Snapshot() {
+	for _, p := range r.drawPawns {
 		p := p
 		wx, wy := r.interpWorld(p)
-		add(wy+0.01, wx, func() { r.drawPawnArt(screen, p, wx, wy, tile, sw, sh) })
+		row := wy + 0.01
+		if p.Lying && p.InBed {
+			if b, ok := bedUnder(w, p.X, p.Y); ok {
+				row = float64(b.Y+max(b.H, 1)-1) + 0.02 // over its bed
+			}
+		}
+		add(row, wx, func() { r.drawPawnArt(screen, p, wx, wy, tile, sw, sh) })
 	}
 	sort.SliceStable(draws, func(i, j int) bool {
 		if draws[i].row != draws[j].row {
@@ -234,6 +249,8 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	for _, d := range draws {
 		d.fn()
 	}
+	r.drawWorkGlow(screen, tile)
+	r.drawParticles(screen, tile)
 
 	for _, p := range w.Plants {
 		switch {
@@ -251,7 +268,8 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 		for _, p := range r.game.Snapshot() {
 			if p.ID == r.selected {
 				wx, wy := r.interpWorld(p)
-				r.drawSprite(screen, "overlay/selection", none, wx, wy, tile, sw, sh)
+				k := 1 + 0.045*math.Sin(float64(r.present)/7)
+				r.drawSpritePose(screen, "overlay/selection", none, wx, wy, tile, pose{px: 0.5, py: 0.5, sx: k, sy: k})
 			}
 		}
 	}
@@ -328,30 +346,6 @@ func (r *Renderer) pawnLayers(l pawnLook, f facing) []struct {
 		tint color.NRGBA
 	}{"pawn/" + l.HairStyle + "_" + fs, r.art.tint("hair", l.Hair)})
 	return out
-}
-
-func (r *Renderer) drawPawnArt(screen *ebiten.Image, p game.PawnView, wx, wy, tile float64, sw, sh int) {
-	vis := r.last[p.ID]
-	moving := vis.fromX != p.X || vis.fromY != p.Y || walkHold(r.present, vis.lastMove, walkSustainFrames)
-	bob := 0.0
-	if moving {
-		bob = -math.Abs(math.Sin(float64(r.present)*math.Pi/float64(walkAnimPeriod))) * pawnBobPx
-	}
-	if vis.facing == faceNorth {
-		r.drawHeldWeapon(screen, p, vis.facing, wx, wy+bob, tile) // carried in front, hidden behind the body
-	}
-	for _, ly := range r.pawnLayers(r.look(p), vis.facing) {
-		r.drawSprite(screen, ly.key, ly.tint, wx, wy+bob, tile, sw, sh)
-	}
-	if vis.facing != faceNorth {
-		r.drawHeldWeapon(screen, p, vis.facing, wx, wy+bob, tile)
-	}
-	if p.Drafted {
-		if img := r.art.image("ui_icon/draft", color.NRGBA{}); img != nil {
-			sx, sy := r.worldToScreenF(wx+0.62, wy-0.95)
-			drawIcon(screen, img, float64(sx), float64(sy), tile*0.3)
-		}
-	}
 }
 
 // drawPawnPortrait draws the layered pawn (facing south) fitted into a

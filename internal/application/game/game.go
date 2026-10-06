@@ -78,6 +78,11 @@ type PawnView struct {
 	InBed     bool
 	CarriedBy entity.EntityID
 	Tended    bool
+	// Acting names the hands-on work being done right now ("cut",
+	// "mine", "construct", "work at bench", ...), "" otherwise; ActX/ActY
+	// is the tile being worked (presentation: facing, swings, particles).
+	Acting     string
+	ActX, ActY int
 }
 
 // ItemView is a ground stack.
@@ -443,10 +448,11 @@ func (g *Game) Snapshot() []PawnView {
 		pv.Mood, pv.MoodLabel, pv.Thoughts = mood.Level(ts), mood.Label(mood.Level(ts)), thoughtViews(ts)
 		pv.Health = v.HP() * 100 / health.MaxHP
 		pv.Weapon = weaponDefOf(g, id).Name
-		pv.Lying = v.Status != health.Alive || (j.Kind == job.Sleep && j.State == job.Do)
+		pv.Lying = v.Status != health.Alive || (j.Kind == job.Sleep && (j.State == job.Do || j.State == job.Complete))
 		pv.InBed = g.inBed(id)
 		pv.CarriedBy = g.carriedBy(id)
 		pv.Tended = g.tended(id)
+		pv.Acting, pv.ActX, pv.ActY = g.acting(id, j)
 	}
 	return views
 }

@@ -2,7 +2,9 @@ package game
 
 import (
 	"rimworld-go/internal/domain/ai/job"
+	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
@@ -99,12 +101,19 @@ func (g *Game) assignDoctor(id entity.EntityID) bool {
 		switch {
 		case !g.inBed(pid):
 			if _, ok := g.freeBedFor(pid, pp); ok {
-				rec = job.Record{Kind: job.Rescue, Target: pid, TX: pp.X, TY: pp.Y}
+				rec = job.Record{Kind: job.Rescue, Target: pid}
 			} else if !g.tended(pid) {
-				rec = job.Record{Kind: job.Tend, Target: pid, TX: pp.X, TY: pp.Y, WorkLeft: TendWork}
+				rec = job.Record{Kind: job.Tend, Target: pid, WorkLeft: TendWork}
 			}
 		case !g.tended(pid):
-			rec = job.Record{Kind: job.Tend, Target: pid, TX: pp.X, TY: pp.Y, WorkLeft: TendWork}
+			rec = job.Record{Kind: job.Tend, Target: pid, WorkLeft: TendWork}
+		}
+		if rec.Kind != job.None {
+			sx, sy, ok := g.besideSpot(id, pp.X, pp.Y)
+			if !ok {
+				continue
+			}
+			rec.TX, rec.TY = sx, sy
 		}
 		if rec.Kind == job.None {
 			continue
@@ -137,14 +146,18 @@ func (g *Game) doRescue(id entity.EntityID, j job.Record) {
 			return
 		}
 		b, _ := g.bldgs.Get(bid)
-		path, ok := g.pathTo(id, b.X, b.Y)
+		sx, sy, ok := g.besideSpot(id, b.X, b.Y)
+		var path []pathing.Point
+		if ok {
+			path, ok = g.pathTo(id, sx, sy)
+		}
 		if !ok {
 			j.State, j.Fail = job.Fail, job.Unreachable
 			g.jobs.Set(id, j)
 			return
 		}
 		g.carrying[id] = j.Target
-		j.Dest, j.TX, j.TY, j.Path, j.PathI = bid, b.X, b.Y, path, 0
+		j.Dest, j.TX, j.TY, j.Path, j.PathI = bid, sx, sy, path, 0
 		j.State = job.Goto
 		if len(path) == 0 {
 			j.State = job.Do
@@ -216,4 +229,71 @@ func (g *Game) doTend(id entity.EntityID, j job.Record) {
 	g.tendedUntil[j.Target] = uint64(g.clock.Now()) + TendTicks
 	j.State = job.Complete
 	g.jobs.Set(id, j)
+}
+
+// Injure deals damage to a colonist as if from an attack (dev scenarios
+// and fixtures).
+func (g *Game) Injure(id entity.EntityID, dmg int) { g.hurt(id, dmg, 0) }
+
+// BuildNow places a finished building (dev scenarios and fixtures).
+func (g *Game) BuildNow(kind, stuff, facing string, x, y int) bool {
+	b, ok := buildableByName(kind)
+	if !ok {
+		return false
+	}
+	st := item.Wood
+	if stuff == "stone" {
+		st = item.Stone
+	}
+	f := parseFacingName(facing)
+	if ok, _ := g.canPlaceAt(b, f, x, y); !ok {
+		return false
+	}
+	g.placeFrameStuff(b, st, f, x, y)
+	fid := g.layerFrameAt(x, y, construction.DefOf(b).Layer)
+	fr, ok := g.frames.Get(fid)
+	if !ok {
+		return false
+	}
+	g.completeFrame(fid, fr)
+	return true
+}
+
+func buildableByName(name string) (construction.Kind, bool) {
+	for _, b := range Buildables() {
+		if b.Kind == name {
+			return construction.Kind(b.ID), true
+		}
+	}
+	return 0, false
+}
+
+// besideSpot is the reachable walkable tile next to (x, y), nearest to
+// pawn id, that is not under a bed (doctors stand beside patients).
+func (g *Game) besideSpot(id entity.EntityID, x, y int) (int, int, bool) {
+	pos, _ := g.positions.Get(id)
+	best, bx, by := 1<<30, 0, 0
+	for _, d := range [][2]int{{0, 1}, {1, 0}, {-1, 0}, {0, -1}, {1, 1}, {-1, 1}, {1, -1}, {-1, -1}} {
+		nx, ny := x+d[0], y+d[1]
+		if !g.grid.Walkable(nx, ny) || g.bedCovering(nx, ny) {
+			continue
+		}
+		dd := manhattan(pos.X, pos.Y, nx, ny)
+		if dd < best && g.reachable(id, nx, ny) {
+			best, bx, by = dd, nx, ny
+		}
+	}
+	if best == 1<<30 {
+		return x, y, g.reachable(id, x, y)
+	}
+	return bx, by, true
+}
+
+func (g *Game) bedCovering(x, y int) bool {
+	for _, bid := range g.bldgIDs {
+		if b, ok := g.bldgs.Get(bid); ok && b.Kind.Sleeps() && construction.Covers(b.Kind, b.Facing, b.X, b.Y, x, y) {
+			return true
+		}
+	}
+	return false
 }

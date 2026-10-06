@@ -106,13 +106,36 @@ def check_autotile():
             err("structure/wall_%s: missing masks %s" % (mat, missing))
 
 
+WALK_FRAMES = ("walk1", "walk2", "walk3", "walk4")
+WALK_LAYERS = ("body", "pants_basic", "shirt_basic", "vest_utility")
+
+
 def check_pawn_layers():
     d = os.path.join(GEN, "pawn")
     sizes = {}
     for f in os.listdir(d):
-        m = re.match(r"^(\w+)_(south|east|north|west)\.png$", f)
+        m = re.match(r"^(\w+?)_(south|east|north|west)(?:_walk\d)?\.png$", f)
         if m and not f.endswith("_mask.png"):
             sizes.setdefault(m.group(2), set()).add(Image.open(os.path.join(d, f)).size)
+    # every animated layer has the full walk cycle (frames share a canvas)
+    for layer in WALK_LAYERS:
+        for facing in ("south", "east", "north", "west"):
+            for fr in WALK_FRAMES:
+                if not os.path.exists(os.path.join(d, "%s_%s_%s.png" % (layer, facing, fr))):
+                    err("pawn/%s_%s: missing walk frame %s" % (layer, facing, fr))
+    ad = os.path.join(GEN, "animal")
+    if os.path.isdir(ad):
+        for f in os.listdir(ad):
+            m = re.match(r"^(\w+?)_(south|east|north|west)\.png$", f)
+            if not m:
+                continue
+            base = Image.open(os.path.join(ad, f)).size
+            for fr in WALK_FRAMES:
+                p = os.path.join(ad, "%s_%s_%s.png" % (m.group(1), m.group(2), fr))
+                if not os.path.exists(p):
+                    err("animal/%s: missing trot frame %s" % (f[:-4], fr))
+                elif Image.open(p).size != base:
+                    err("animal/%s_%s: canvas differs from the standing frame" % (f[:-4], fr))
     for facing, s in sizes.items():
         if len(s) != 1:
             err("pawn/%s: layers disagree on canvas %s" % (facing, sorted(s)))

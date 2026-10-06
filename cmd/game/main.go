@@ -19,12 +19,14 @@ func main() {
 	capture := flag.String("capture", "", "dev: save one colony frame to this PNG and exit")
 	captureTicks := flag.Int("capture-ticks", 5400, "dev: simulation ticks to run before -capture")
 	captureZoom := flag.Float64("capture-zoom", 1, "dev: camera zoom for -capture")
-	captureUI := flag.String("capture-ui", "", "dev: UI state for -capture: architect | orders | bills | pawn | combat | melee")
+	scenario := flag.String("scenario", "", "dev: start scenario: rescue (a colonist starts badly hurt) | beds (one bed per facing)")
+	captureFrames := flag.Int("capture-frames", 0, "dev: record this many consecutive frames (PATH_NNN.png) instead of one still")
+	captureUI := flag.String("capture-ui", "", "dev: UI state for -capture: architect | orders | bills | pawn | combat | melee | follow")
 	flag.Parse()
 
 	var shot *uiadapter.Capture
 	if *capture != "" {
-		shot = &uiadapter.Capture{Path: *capture, Ticks: *captureTicks, Zoom: *captureZoom, UI: *captureUI}
+		shot = &uiadapter.Capture{Path: *capture, Ticks: *captureTicks, Zoom: *captureZoom, UI: *captureUI, Frames: *captureFrames}
 	}
 
 	app := uiadapter.NewApp(uiadapter.AppConfig{
@@ -33,6 +35,20 @@ func main() {
 		Capture: shot,
 		NewSim: func() (uiadapter.Simulation, error) {
 			g := game.NewColony(game.Config{Seed: *seed, Width: *width, Height: *height})
+			if *scenario == "beds" {
+				cx, cy := *width/2, *height/2
+				g.BuildNow("bed", "wood", "east", cx-9, cy-1)
+				g.BuildNow("bed", "wood", "west", cx-9, cy+1)
+				g.BuildNow("bed", "wood", "north", cx-7, cy+3)
+			}
+			if *scenario == "rescue" {
+				if snap := g.Snapshot(); len(snap) > 1 {
+					g.Injure(snap[1].ID, 75)
+				}
+				cx, cy := *width/2, *height/2
+				g.BuildNow("cot", "wood", "south", cx-4, cy+1)
+				g.BuildNow("bed", "wood", "east", cx-4, cy+3)
+			}
 			return g, nil
 		},
 	})

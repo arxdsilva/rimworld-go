@@ -442,7 +442,7 @@ Create and freeze templates before bulk production:
 -   [x] furniture
 -   [x] weapon
 -   [x] pawn body/head/hair/apparel
--   [ ] animal
+-   [x] animal
 -   [x] plant
 -   [x] item
 -   [-] UI icon (cut from world renders; no dedicated icon template yet)
@@ -645,14 +645,14 @@ resolve metadata conflicts, and update the catalog.
 -   [ ] atlas/manifest
 -   [x] contact sheets (`make art-preview`)
 -   [x] screenshot test scene (`bin/game -capture out.png` / `make art-capture` renders a scripted colony in the real renderer; `compose_scene.py` for the full §34 set)
--   [-] building/item/terrain/icon/pawn templates (`template.blend` + per-family builders; 2×2/3×N, animal, decal not yet)
+-   [-] building/item/terrain/icon/pawn templates (`template.blend` + per-family builders; animal family with trot frames; 2×2/3×N and decal not yet)
 
 ### ART Wave 2 --- First playable
 
 -   [-] soil/stone/water (domain terrain drawn in-game: soil/rich soil/gravel/stone variants with soft edge transitions, 16-mask natural rock walls; water missing)
 -   [-] wall/door/floor (16-mask wood wall autotile drawn in-game; doors and wood floor generated but the domain has no doors/floors yet)
 -   [x] blueprint/frame (blueprint overlay on every frame, scaffold once wood is delivered)
--   [-] pawn base (vendor CC0 side-view full-body idle/walk in the ebiten adapter, presentation-clocked with tile-to-tile lerp; original compositional pawns now drawn in-game: body/pants/shirt/vest/hair layers, 4 facings from movement, EntityID-stable tints, walk bob; vendor pack kept as fallback)
+-   [x] pawn base: original compositional pawns (body/pants/shirt/vest/hair layers, 4 facings, EntityID-stable tints) with an 8-frame Blender walk cycle synced to tile progress, idle breathing, work swings, lying/in-bed/carried poses; vendor pack kept as fallback
 -   [x] first hair/apparel (3 hairstyles, pants/shirt/vest, runtime tint masks, in-game)
 -   [-] basic resources/items (wood/food drawn in-game; steel/stone generated, no domain items yet)
 -   [x] selection/designation markers (original selection brackets, harvest designation, stockpile zone in-game; cut/mine glyphs ready for when those orders exist)
@@ -663,7 +663,7 @@ resolve metadata conflicts, and update the catalog.
 -   [-] food/crops/wild plants/trees (berry bush ± harvestable, grass and food crate in-game; amberroot stages and trees generated, no domain crops/trees yet)
 -   [ ] stove/butcher workstation
 -   [ ] medicine
--   [ ] blood/injury effects
+-   [x] blood/injury effects
 
 ### ART Wave 4 --- Production
 
@@ -678,7 +678,7 @@ resolve metadata conflicts, and update the catalog.
 -   [ ] melee family
 -   [ ] pistol/rifle/shotgun/long-range weapon
 -   [ ] armor/helmets
--   [ ] projectiles/muzzle flash/impact/explosion
+-   [-] projectiles/muzzle flash/impact/explosion
 -   [ ] fire/smoke
 -   [ ] turret/defenses
 
@@ -688,7 +688,7 @@ resolve metadata conflicts, and update the catalog.
 -   [ ] hair/facial hair library
 -   [ ] apparel/armor library
 -   [ ] tint validation
--   [ ] sleeping/downed/dead presentation
+-   [x] sleeping/downed/dead presentation
 
 ### ART Wave 7 --- Animals/biomes
 

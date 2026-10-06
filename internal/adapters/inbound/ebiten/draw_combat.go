@@ -19,7 +19,11 @@ func (r *Renderer) syncAnimals(w game.WorldView) {
 	tick := r.game.Tick()
 	for _, an := range w.Animals {
 		prev, seen := r.last[an.ID]
-		r.last[an.ID] = faceAttack(nextVisualStep(prev, seen, an.X, an.Y, tick, r.present, an.StepTicks), w.Traces, an.X, an.Y)
+		v := faceAttack(nextVisualStep(prev, seen, an.X, an.Y, tick, r.present, an.StepTicks), w.Traces, an.X, an.Y)
+		if seen && v.steps != prev.steps && an.Mode != "wandering" {
+			r.footstep(an.X, an.Y, uint64(an.ID)^v.steps, true)
+		}
+		r.last[an.ID] = v
 	}
 }
 
@@ -49,14 +53,14 @@ func (r *Renderer) addAnimalDraws(w game.WorldView, add func(row, col float64, f
 		an := an
 		wx, wy := r.interpAnimal(an)
 		add(wy+0.01, wx, func() {
-			f := r.last[an.ID].facing
-			key := "animal/" + an.Species + "_" + f.String()
+			vis := r.last[an.ID]
+			key := "animal/" + an.Species + "_" + vis.facing.String()
 			if !r.art.has(key) {
 				sx, sy := r.worldToScreenF(wx, wy)
 				vector.FillCircle(screen, sx+float32(tile)/2, sy+float32(tile)/2, float32(tile)*0.3, color.RGBA{150, 120, 80, 255}, false)
 				return
 			}
-			r.drawSprite(screen, key, color.NRGBA{}, wx, wy, tile, sw, sh)
+			r.drawSpritePose(screen, r.framed(key, r.animalFrame(vis, an)), color.NRGBA{}, wx, wy, tile, r.animalPose(an, vis, w.Traces))
 		})
 	}
 }
@@ -66,7 +70,8 @@ func (r *Renderer) drawAnimalOverlays(screen *ebiten.Image, w game.WorldView, ti
 	for _, an := range w.Animals {
 		wx, wy := r.interpAnimal(an)
 		if an.Designated {
-			r.drawSpriteScaled(screen, "overlay/designation_hunt", color.NRGBA{}, wx, wy-1.2, tile, sw, sh, noCS, 0.5)
+			spin := pose{px: 0.5, py: 0.5, sx: 0.5, sy: 0.5, rot: float64(r.present) * 0.035}
+			r.drawSpritePose(screen, "overlay/designation_hunt", color.NRGBA{}, wx, wy-0.95, tile, spin)
 		}
 		if an.Health < 100 {
 			sx, sy := r.worldToScreenF(wx+0.15, wy-0.32)
@@ -156,57 +161,6 @@ func (r *Renderer) drawTraces(screen *ebiten.Image, w game.WorldView, tile float
 	}
 }
 
-// heldWeaponKey maps a wielded weapon to a sprite and how it is held.
-func heldWeaponKey(weapon string) (key string, scale float64, ok bool) {
-	switch weapon {
-	case "rifle":
-		return "weapon/rifle_basic", 0.62, true
-	case "club":
-		return "item/club_wood", 0.5, true
-	}
-	return "", 0, false
-}
-
-// drawHeldWeapon draws the wielded weapon with its grip at the body's
-// hand attachment, pointing along the pawn's facing.
-func (r *Renderer) drawHeldWeapon(screen *ebiten.Image, p game.PawnView, f facing, wx, wy, tile float64) {
-	key, k, ok := heldWeaponKey(p.Weapon)
-	if !ok {
-		return
-	}
-	body := r.art.sprite("pawn/body_" + f.String())
-	wsp := r.art.sprite(key)
-	img := r.art.image(key, color.NRGBA{})
-	if body == nil || wsp == nil || img == nil {
-		return
-	}
-	hand, okH := body.meta.Attach["hand"]
-	if !okH {
-		return
-	}
-	sx, sy := r.worldToScreenF(wx, wy)
-	bx, by, s := artOrigin(body.meta, float64(sx), float64(sy), tile)
-	hx, hy := bx+hand[0]*s, by+hand[1]*s
-	grip, okG := wsp.meta.Attach["grip"]
-	if !okG {
-		grip = [2]float64{float64(wsp.meta.Canvas[0]) / 2, float64(wsp.meta.Canvas[1]) / 2}
-	}
-	op := &ebiten.DrawImageOptions{}
-	op.GeoM.Translate(-grip[0], -grip[1])
-	switch f {
-	case faceWest:
-		op.GeoM.Scale(-1, 1)
-	case faceSouth:
-		op.GeoM.Rotate(math.Pi / 2.6)
-	case faceNorth:
-		op.GeoM.Rotate(-math.Pi / 2.6)
-	}
-	op.GeoM.Scale(s*k, s*k)
-	op.GeoM.Translate(hx, hy)
-	op.Filter = ebiten.FilterLinear
-	screen.DrawImage(img, op)
-}
-
 // nextVisualStep is nextVisual for movers with their own pace.
 func nextVisualStep(prev pawnVisual, seen bool, x, y int, tick clock.Tick, present uint64, step int) pawnVisual {
 	v := nextVisual(prev, seen, x, y, tick, present)
@@ -223,4 +177,33 @@ func (r *Renderer) settleVisuals() {
 		v.fromX, v.fromY = v.x, v.y
 		r.last[id] = v
 	}
+}
+
+// animalFrame is the trot frame for a moving animal.
+func (r *Renderer) animalFrame(vis pawnVisual, an game.AnimalView) string {
+	if vis.fromX == an.X && vis.fromY == an.Y {
+		return ""
+	}
+	t := moveProgress(int(r.game.Tick()-vis.moveTick), max(an.StepTicks, 1))
+	return walkFrame(walkPhase(vis, t))
+}
+
+// animalPose: a light bounce while moving (more when running), idle
+// breathing, bite lunges and hit reactions.
+func (r *Renderer) animalPose(an game.AnimalView, vis pawnVisual, traces []game.TraceView) pose {
+	ps := pose{px: figurePivotX, py: figurePivotY}
+	if vis.fromX != an.X || vis.fromY != an.Y {
+		t := moveProgress(int(r.game.Tick()-vis.moveTick), max(an.StepTicks, 1))
+		ph := walkPhase(vis, t)
+		amp := 0.03
+		if an.Mode != "wandering" {
+			amp = 0.055
+		}
+		ps.dy = -math.Abs(math.Sin(ph*math.Pi)) * amp
+	} else {
+		ps.sy = 1 + 0.015*math.Sin(2*math.Pi*float64(r.present+uint64(an.ID)*29)/120)
+	}
+	dx, dy, fl := attackReaction(traces, an.X, an.Y)
+	ps.dx, ps.dy, ps.flash = ps.dx+dx, ps.dy+dy, fl
+	return ps
 }

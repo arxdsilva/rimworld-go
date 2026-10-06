@@ -232,6 +232,19 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 	for f := faceSouth; f <= faceWest; f++ {
 		for _, l := range []string{"body", "pants_basic", "shirt_basic", "vest_utility"} {
 			keys = append(keys, "pawn/"+l+"_"+f.String())
+			for _, fr := range walkCycle {
+				if fr != "" {
+					keys = append(keys, "pawn/"+l+"_"+f.String()+fr)
+				}
+			}
+		}
+		for _, sp := range []string{"dustbuck", "ridgewolf"} {
+			for _, fr := range walkCycle {
+				keys = append(keys, "animal/"+sp+"_"+f.String()+fr)
+			}
+		}
+		for _, bed := range []string{"bed_basic", "bed_cot"} {
+			keys = append(keys, "furniture/"+bed+"_blanket_"+f.String())
 		}
 		for _, h := range hairStyles {
 			keys = append(keys, "pawn/"+h+"_"+f.String())

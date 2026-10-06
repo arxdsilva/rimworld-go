@@ -59,6 +59,34 @@ def _ridgewolf():
 
 
 SPECIES = {"dustbuck": (_dustbuck, 0.74), "ridgewolf": (_ridgewolf, 0.7)}
+HIP_Z = {"dustbuck": 0.27, "ridgewolf": 0.29}
+
+# Trot (ART spec §27): diagonal leg pairs swing together. Same 8-frame
+# cycle as pawns: neutral, w1, w2, w1, neutral, w3, w4, w3.
+TROT_DEG = 30.0
+WALK_FRAMES = {"walk1": 0.5, "walk2": 1.0, "walk3": -0.5, "walk4": -1.0}
+
+
+def _mean(ob, axis):
+    vs = ob.data.vertices
+    return sum((ob.matrix_world @ v.co)[axis] for v in vs) / max(len(vs), 1)
+
+
+def _pose(species, swing):
+    from mathutils import Matrix
+    if swing == 0:
+        return
+    pz = HIP_Z[species]
+    for ob in S.objects():
+        if ob.name.split(".")[0] not in ("leg", "hoof"):
+            continue
+        side = -1 if _mean(ob, 0) < CX else 1
+        front = 1 if _mean(ob, 1) < CY else -1
+        a = math.radians(TROT_DEG * swing * side * front)
+        py = _mean(ob, 1)
+        m = (Matrix.Translation((0, py, pz)) @ Matrix.Rotation(a, 4, "X")
+             @ Matrix.Translation((0, -py, -pz)))
+        ob.matrix_world = m @ ob.matrix_world
 
 
 def _lean_matrix():
@@ -100,9 +128,14 @@ def build():
                                   extra={"item": "%s corpse" % species, "species": species}))
     for species, (builder, height) in SPECIES.items():
         for f in FACINGS:
-            builder()
-            S.face(S.objects(), f, (1, 1))
-            S.transform(S.objects(), _lean_matrix())
-            out.append(S.render_asset("animal", "%s_%s" % (species, f), zmax=_zmax_screen(height),
-                                      margins=MARGINS, extra={"species": species, "facing": f}))
+            for fr in [None] + list(WALK_FRAMES):
+                builder()
+                _pose(species, WALK_FRAMES.get(fr, 0.0))
+                S.face(S.objects(), f, (1, 1))
+                S.transform(S.objects(), _lean_matrix())
+                extra = {"species": species, "facing": f}
+                if fr:
+                    extra["frame"] = fr
+                name = "%s_%s" % (species, f) + ("_" + fr if fr else "")
+                out.append(S.render_asset("animal", name, zmax=_zmax_screen(height), margins=MARGINS, extra=extra))
     return out

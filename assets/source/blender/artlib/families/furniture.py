@@ -128,8 +128,27 @@ BUILDERS = {
 ROTATABLE = {"bed_basic", "bed_cot", "chair_basic", "workbench_basic", "stove_basic", "butcher_table"}
 
 
-def build():
+# Blanket overlays: drawn over a sleeper so they read as tucked in. The
+# rest of the bed is a holdout, so the overlay lines up pixel for pixel.
+BLANKETS = {"bed_basic": (_bed, {"blanket", "fold", "post_l", "post_r"}),
+            "bed_cot": (_cot, {"blanket", "fold"})}
+
+
+def _blankets():
     out = []
+    for name, (fn, keep) in BLANKETS.items():
+        for f in FACINGS:
+            fp, zmax = fn()
+            hold = [o for o in S.objects() if o.name.split(".")[0] not in keep]
+            S.holdout(hold)
+            fp = S.face(S.objects(), f, fp)
+            out.append(S.render_asset("furniture", "%s_blanket_%s" % (name, f), footprint=fp, zmax=zmax,
+                                      shadow=False, extra={"overlay": "blanket", "facing": f}))
+    return out
+
+
+def build():
+    out = _blankets()
     for name, (fn, extra) in BUILDERS.items():
         facings = FACINGS if name in ROTATABLE else ("south",)
         for f in facings:

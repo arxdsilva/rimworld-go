@@ -121,6 +121,9 @@ type pawnVisual struct {
 	lastMove     uint64
 	moveTick     clock.Tick
 	facing       facing
+	steps        uint64 // tiles walked (walk-cycle phase)
+	lying        bool
+	lyingSince   uint64 // present frame when it went down
 }
 
 // Renderer drives an Ebitengine window from a running Simulation.
@@ -138,6 +141,14 @@ type Renderer struct {
 	hasSelect bool
 	last      map[entity.EntityID]pawnVisual
 
+	// animation state (presentation only)
+	parts     []particle
+	seenTrace map[[3]uint64]bool
+	itemBorn  map[entity.EntityID]uint64
+	itemsInit bool
+	drawW     game.WorldView  // world for the frame being drawn
+	drawPawns []game.PawnView // pawns for the frame being drawn
+
 	gridClr   color.RGBA
 	pawnClr   color.RGBA
 	selectClr color.RGBA
@@ -151,6 +162,7 @@ func New(sim Simulation) *Renderer {
 		speed:     speedNormal,
 		cam:       camera{zoom: 1},
 		last:      map[entity.EntityID]pawnVisual{},
+		seenTrace: map[[3]uint64]bool{},
 		gridClr:   color.RGBA{R: 40, G: 40, B: 40, A: 180},
 		pawnClr:   color.RGBA{R: 220, G: 60, B: 60, A: 255},
 		selectClr: color.RGBA{R: 250, G: 220, B: 60, A: 255},
@@ -183,10 +195,12 @@ func (r *Renderer) LoadDefaultPack() error {
 
 func (r *Renderer) advance() {
 	r.present++
-	if n := r.speed.ticksPerFrame(); n > 0 {
+	n := r.speed.ticksPerFrame()
+	if n > 0 {
 		r.game.Step(n)
 	}
 	r.syncPawns()
+	r.animate(r.game.World(), r.game.Snapshot(), n > 0)
 }
 
 func (r *Renderer) syncPawns() {
@@ -194,9 +208,21 @@ func (r *Renderer) syncPawns() {
 	w := r.game.World()
 	for _, p := range r.game.Snapshot() {
 		prev, seen := r.last[p.ID]
-		r.last[p.ID] = faceAttack(nextVisual(prev, seen, p.X, p.Y, tick, r.present), w.Traces, p.X, p.Y)
+		v := faceAttack(nextVisual(prev, seen, p.X, p.Y, tick, r.present), w.Traces, p.X, p.Y)
+		if p.Acting != "" && (p.ActX != p.X || p.ActY != p.Y) {
+			v.facing = facingFor(p.ActX-p.X, p.ActY-p.Y, v.facing)
+		}
+		if p.Lying && !v.lying {
+			v.lyingSince = r.present
+		}
+		v.lying = p.Lying
+		if seen && v.steps != prev.steps && p.CarriedBy == 0 {
+			r.footstep(p.X, p.Y, uint64(p.ID)^v.steps, false)
+		}
+		r.last[p.ID] = v
 	}
 	r.syncAnimals(w)
+	r.syncItems(w)
 }
 
 func (r *Renderer) handleSpeedInput() {
@@ -387,10 +413,12 @@ func nextVisual(prev pawnVisual, seen bool, x, y int, tick clock.Tick, present u
 		v.moveTick = tick
 		return v
 	}
+	v.steps, v.lying, v.lyingSince = prev.steps, prev.lying, prev.lyingSince
 	if prev.x != x || prev.y != y {
 		v.fromX, v.fromY = prev.x, prev.y
 		v.moveTick = tick
 		v.lastMove = present
+		v.steps++
 		if x != prev.x {
 			v.flip = x < prev.x
 		}

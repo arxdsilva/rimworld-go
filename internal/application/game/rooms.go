@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/mood"
@@ -215,4 +216,32 @@ func thoughtViews(ts []mood.Thought) []ThoughtView {
 		out[i] = ThoughtView{Label: t.Label, Value: t.Value}
 	}
 	return out
+}
+
+// acting reports the hands-on work a pawn is doing and the worked tile.
+func (g *Game) acting(id entity.EntityID, j job.Record) (string, int, int) {
+	if j.State != job.Do || !g.alive(id) {
+		return "", 0, 0
+	}
+	switch j.Kind {
+	case job.Construct, job.Deconstruct, job.Cut, job.Harvest, job.Sow:
+		return j.Kind.String(), j.TX, j.TY
+	case job.Mine:
+		return j.Kind.String(), j.DestX, j.DestY
+	case job.Bill:
+		if j.Carry == 0 { // picking the ingredient up, not working yet
+			return "", 0, 0
+		}
+		if b, ok := g.bldgs.Get(j.Dest); ok {
+			return "work at " + b.Kind.String(), b.X, b.Y
+		}
+	case job.Tend:
+		if p, ok := g.positions.Get(j.Target); ok {
+			return j.Kind.String(), p.X, p.Y
+		}
+	case job.Eat:
+		pos, _ := g.positions.Get(id)
+		return j.Kind.String(), pos.X, pos.Y
+	}
+	return "", 0, 0
 }

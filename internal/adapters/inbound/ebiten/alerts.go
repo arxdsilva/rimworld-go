@@ -3,7 +3,7 @@ package ebiten
 import (
 	"fmt"
 	"image/color"
-	"strconv"
+	"math"
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -34,13 +34,6 @@ const (
 )
 
 var warnClr = color.RGBA{R: 0xE0, G: 0xA8, B: 0x40, A: 0xFF}
-
-func plural(n int, one, many string) string {
-	if n == 1 {
-		return one
-	}
-	return strconv.Itoa(n) + " " + many
-}
 
 // buildAlerts derives the current alerts from pawns and the world.
 func buildAlerts(pawns []game.PawnView, w game.WorldView) []alert {
@@ -138,7 +131,8 @@ func (a *App) drawAlerts(screen *ebiten.Image, sw int) {
 		edge := warnClr
 		bg := color.RGBA{48, 36, 22, 230}
 		if al.danger {
-			edge, bg = alertClr, color.RGBA{60, 18, 14, 235}
+			pulse := 0.55 + 0.45*math.Sin(float64(a.renderer.present)/9)
+			edge, bg = fade(alertClr, pulse), color.RGBA{60, 18, 14, 235}
 		}
 		vector.FillRect(screen, r.x, r.y, r.w, r.h, bg, false)
 		vector.FillRect(screen, r.x, r.y, 4, r.h, edge, false)

@@ -493,7 +493,7 @@ the player's primary world-editing command surface.
     -   expected yield.
     -   current research lock.
 -   [ ] **Allow sowing toggle**
--   [ ] **Plant-cut/harvest behavior feedback**
+-   [x] **Plant-cut/harvest behavior feedback**
 
 ## 6.4 Home area
 
@@ -812,7 +812,7 @@ understandable.
 
 -   [ ] **Damage indicators**
 -   [x] **Projectile/impact feedback**
--   [ ] **Downed/death feedback**
+-   [x] **Downed/death feedback**
 -   [-] **Threat markers**
 -   [ ] **Hostile faction coloring/icons**
 -   [ ] **Pause-on-threat option**

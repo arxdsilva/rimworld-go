@@ -803,7 +803,8 @@ func (g *Game) doSleep(id entity.EntityID, j job.Record, now uint64) {
 	}
 	j.WorkLeft--
 	act := g.Activity()
-	done := n.Rest >= needs.Full
+	// fully rested sleepers stay in bed through scheduled sleep hours
+	done := n.Rest >= needs.Full && !needs.SleepScheduled(act)
 	if !n.Exhausted() && needs.WorkScheduled(act) && n.Rest > needs.CriticalRest && j.WorkLeft <= 0 {
 		done = true
 	}
