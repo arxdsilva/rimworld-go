@@ -365,6 +365,9 @@ func (g *Game) phaseAI() {
 			continue
 		}
 		if !needs.WorkScheduled(act) {
+			if g.assignWear(id) {
+				continue
+			}
 			if !j.Kind.IsIdle() || !j.Active() {
 				g.assignIdle(id) // recreation: free time
 			}
@@ -396,6 +399,9 @@ func (g *Game) phaseAI() {
 			continue
 		}
 		if m.Enabled(work.Mine) && g.assignMine(id) {
+			continue
+		}
+		if g.assignWear(id) {
 			continue
 		}
 		if !j.Kind.IsIdle() || !j.Active() {
@@ -657,6 +663,8 @@ func allows(s zone.Stockpile, k item.Kind) bool {
 		return s.AllowWood
 	case k == item.Stone:
 		return s.AllowStone
+	case k == item.Leather, k.IsApparel(), k.IsWeapon():
+		return true // goods: always welcome
 	}
 	return false
 }

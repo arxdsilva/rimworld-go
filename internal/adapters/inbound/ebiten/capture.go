@@ -188,6 +188,15 @@ func (a *App) captureUI(ui string) {
 			a.renderer.cam.offsetX, a.renderer.cam.offsetY = -1e6, -1e6
 		}
 		a.renderer.clampCamera(v)
+	case "dressed":
+		// centre on the first colonist with its Gear tab open
+		if pawns := a.renderer.snapshot(); len(pawns) > 0 {
+			p := pawns[0]
+			a.renderer.selected, a.renderer.hasSelect = p.ID, true
+			a.inspectTab = "gear"
+			sw, sh := a.size()
+			a.renderer.centerOn(float64(p.X)-2, float64(p.Y)+0.5, sw, sh)
+		}
 	case "queue":
 		// first colonist: go somewhere, then (queued) grab the rifle and
 		// walk on

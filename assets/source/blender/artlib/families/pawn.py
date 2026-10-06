@@ -59,6 +59,34 @@ def _vest():
               "leather", bevel=0.008)
 
 
+def _parka():
+    """Leather parka over the shirt: padded body to the hips, sleeves, and
+    a fur ruff around the neck."""
+    S.box("parka", CX - 0.182, CY - 0.132, 0.26, CX + 0.182, CY + 0.132, 0.655, "leather", bevel=0.075, segments=2)
+    for sx in (-1, 1):
+        S.cyl("psleeve", CX + sx * 0.195, CY, 0.068, 0.33, 0.63, "leather", segs=12)
+        S.cyl("pcuff", CX + sx * 0.195, CY, 0.072, 0.33, 0.37, "fur_cream", segs=12)
+    S.cyl("ruff", CX, CY, 0.11, 0.62, 0.70, "fur_cream", segs=14)
+    S.box("hem", CX - 0.186, CY - 0.136, 0.26, CX + 0.186, CY + 0.136, 0.30, "fur_cream", bevel=0.03)
+
+
+def _duster():
+    """Long leather duster: open coat down past the knees, wide lapels."""
+    S.box("duster", CX - 0.176, CY - 0.126, 0.12, CX + 0.176, CY + 0.126, 0.645, "leather", bevel=0.06, segments=2)
+    for sx in (-1, 1):
+        S.cyl("dsleeve", CX + sx * 0.193, CY, 0.064, 0.36, 0.63, "leather", segs=12)
+        S.box("lapel", CX + sx * 0.06 - 0.04, CY - 0.14, 0.44, CX + sx * 0.06 + 0.04, CY - 0.12, 0.64, "bark",
+              bevel=0.01)
+    S.box("dbelt", CX - 0.18, CY - 0.13, 0.36, CX + 0.18, CY + 0.13, 0.40, "bark", bevel=0.015)
+
+
+def _tuque():
+    """Knitted tuque: a snug cap with a rolled cuff and a bobble on top."""
+    _hair_shell("tuque", 0.04, lambda x, y, z: z > HEAD_Z + 0.02, mat="cloth")
+    S.cyl("tcuff", CX, CY, 0.215, HEAD_Z + 0.01, HEAD_Z + 0.07, "fur_tan", segs=20)
+    S.ellipsoid("bobble", CX, CY, HEAD_Z + 0.25, 0.055, 0.055, 0.055, "fur_cream", segs=10, rings=6)
+
+
 def _cut(ob, keep):
     """Delete vertices of a mesh for which keep(x, y, z) is False."""
     bm = bmesh.new()
@@ -70,8 +98,8 @@ def _cut(ob, keep):
     ob.data.update()
 
 
-def _hair_shell(name, grow, keep):
-    ob = S.ellipsoid(name, CX, CY, HEAD_Z, 0.19 + grow, 0.175 + grow, 0.19 + grow, "hair", segs=28, rings=16)
+def _hair_shell(name, grow, keep, mat="hair"):
+    ob = S.ellipsoid(name, CX, CY, HEAD_Z, 0.19 + grow, 0.175 + grow, 0.19 + grow, mat, segs=28, rings=16)
     _cut(ob, keep)
     # give the shell thickness so the outline has a body to follow
     sol = ob.modifiers.new("solid", "SOLIDIFY")
@@ -115,7 +143,7 @@ def _apply_modifiers():
 # limbs get frames; hair rides the head (bobbed in the renderer).
 WALK_DEG = 26.0
 WALK_FRAMES = {"walk1": 0.5, "walk2": 1.0, "walk3": -0.5, "walk4": -1.0}
-WALK_LAYERS = ("body", "pants_basic", "shirt_basic", "vest_utility")
+WALK_LAYERS = ("body", "pants_basic", "shirt_basic", "vest_utility", "parka_leather", "duster_leather")
 HIP_Z, SHOULDER_Z = 0.33, 0.60
 
 # Work swing (ART spec §27): arm poses for hands-on work (hammering,
@@ -128,7 +156,7 @@ HIP_Z, SHOULDER_Z = 0.33, 0.60
 # the "hand" attachment is the tool hand. Only layers
 # that cover the arms get these frames.
 WORK_FRAMES = {"work1": (-155.0, -148.0), "work2": (-95.0, -90.0), "work3": (-38.0, -34.0)}
-WORK_LAYERS = ("body", "shirt_basic")
+WORK_LAYERS = ("body", "shirt_basic", "parka_leather", "duster_leather")
 
 
 def _mean_x(ob):
@@ -246,6 +274,9 @@ LAYERS = {
     "pants_basic": _pants,
     "shirt_basic": _shirt,
     "vest_utility": _vest,
+    "parka_leather": _parka,
+    "duster_leather": _duster,
+    "tuque_knit": _tuque,
     "hair_short": lambda: _hair("hair_short"),
     "hair_crop": lambda: _hair("hair_crop"),
     "hair_bun": lambda: _hair("hair_bun"),

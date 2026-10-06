@@ -70,6 +70,10 @@ func main() {
 				g.BuildNow("campfire", "wood", "south", cx+8, cy+3)
 				g.FuelCampfire(cx+8, cy+3)
 				g.BuildNow("campfire", "wood", "south", cx+15, cy+3)
+				g.BuildNow("tailoring bench", "wood", "south", cx+9, cy+1+1)
+				_, _ = g.SpawnStack(item.Parka, 2, cx+3, cy+2)
+				_, _ = g.SpawnStack(item.Tuque, 3, cx+4, cy+2)
+				_, _ = g.SpawnStack(item.Leather, 20, cx+5, cy+2)
 			}
 			if *scenario == "drying" {
 				cx, cy := *width/2, *height/2

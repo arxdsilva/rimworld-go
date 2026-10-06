@@ -166,6 +166,41 @@ def _pumpkins():
     return S.render_asset("item", "pumpkins", zmax=0.32, extra={"item": "pumpkins", "stack": True})
 
 
+def _leather():
+    """A stack of tanned hides, edges uneven."""
+    for k, (x, y, z, w) in enumerate([(0.22, -0.74, 0.0, 0.56), (0.26, -0.70, 0.045, 0.50), (0.20, -0.72, 0.09, 0.54)]):
+        S.box("hide%d" % k, x, y, z, x + w, y + 0.40, z + 0.045, "leather", bevel=0.02)
+    S.box("cord", 0.46, -0.76, 0.0, 0.52, -0.28, 0.15, "straw", bevel=0.01)
+    return S.render_asset("item", "leather_hides", zmax=0.18, extra={"item": "leather", "stack": True})
+
+
+def _parka():
+    """A folded leather parka with a fur-lined hood."""
+    S.box("body", 0.18, -0.78, 0.0, 0.82, -0.30, 0.12, "leather", bevel=0.05, segments=2)
+    S.box("fold", 0.22, -0.74, 0.12, 0.78, -0.40, 0.18, "leather", bevel=0.04)
+    S.ellipsoid("hood", 0.50, -0.30, 0.14, 0.22, 0.10, 0.08, "fur_cream", segs=14, rings=8)
+    for k, x in enumerate([0.36, 0.50, 0.64]):
+        S.cyl("toggle%d" % k, x, -0.60, 0.018, 0.17, 0.20, "horn", segs=8, bevel=0.0)
+    return S.render_asset("item", "parka_folded", zmax=0.24, extra={"item": "parka"})
+
+
+def _tuque():
+    """A knitted wool tuque with a rolled cuff and a bobble."""
+    S.ellipsoid("crown", 0.5, -0.55, 0.06, 0.20, 0.20, 0.17, "cloth", segs=18, rings=10)
+    S.cyl("cuff", 0.5, -0.55, 0.205, 0.0, 0.07, "fur_tan", segs=18)
+    S.ellipsoid("bobble", 0.5, -0.55, 0.24, 0.06, 0.06, 0.06, "fur_cream", segs=10, rings=6)
+    return S.render_asset("item", "tuque", zmax=0.30, extra={"item": "tuque"})
+
+
+def _duster():
+    """A long leather duster, folded lengthwise."""
+    S.box("coat", 0.16, -0.86, 0.0, 0.84, -0.24, 0.09, "leather", bevel=0.04, segments=2)
+    S.box("lapel", 0.30, -0.36, 0.09, 0.70, -0.26, 0.13, "bark", bevel=0.02)
+    S.box("belt", 0.16, -0.62, 0.09, 0.84, -0.56, 0.11, "bark", bevel=0.01)
+    return S.render_asset("item", "duster_folded", zmax=0.16, extra={"item": "duster"})
+
+
 def build():
     return [_wood(), _food(), _steel(), _stone(), _berries(), _ration(), _meat(), _meal(), _club(), _rifle_item(),
-            _potatoes(), _corn(), _wheat(), _beans(), _lettuce(), _radishes(), _pumpkins()]
+            _potatoes(), _corn(), _wheat(), _beans(), _lettuce(), _radishes(), _pumpkins(),
+            _leather(), _parka(), _tuque(), _duster()]

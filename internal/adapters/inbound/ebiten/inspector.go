@@ -20,11 +20,11 @@ func (a *App) inspectorButtons() []button {
 	}
 	r := inspectorRect()
 	tabs := []buttonSpec{
-		{id: "inspector.character", label: "Character", selected: a.inspectTab != "needs", w: 72, h: 22},
+		{id: "inspector.character", label: "Character", selected: a.inspectTab != "needs" && a.inspectTab != "gear", w: 72, h: 22},
 		{id: "inspector.needs", label: "Needs", selected: a.inspectTab == "needs", w: 56, h: 22},
 		{id: "inspector.health", label: "Health", disabled: true, reason: "not implemented", w: 56, h: 22},
 		{id: "inspector.social", label: "Social", disabled: true, reason: "not implemented", w: 56, h: 22},
-		{id: "inspector.gear", label: "Gear", disabled: true, reason: "not implemented", w: 48, h: 22},
+		{id: "inspector.gear", label: "Gear", selected: a.inspectTab == "gear", w: 48, h: 22},
 	}
 	out := inspectorTabRow(r, tabs)
 	if p, ok := a.selectedPawn(); ok {
@@ -108,6 +108,12 @@ func (a *App) drawInspector(screen *ebiten.Image) {
 	drawLabel(screen, int(r.x)+72, int(r.y)+72, fmt.Sprintf("activity  %s", p.Activity))
 	drawLabel(screen, int(r.x)+72, int(r.y)+88, fmt.Sprintf("tile      (%d, %d)  %s", p.X, p.Y, fmtTemp(p.Temp)))
 	drawLabel(screen, int(r.x)+72, int(r.y)+104, fmt.Sprintf("weapon    %s", p.Weapon))
+	if a.inspectTab == "gear" {
+		drawGear(screen, p, int(r.x)+12, int(r.y)+126)
+		mx, my := a.currentCursor()
+		a.drawButtons(screen, a.inspectorButtons(), mx, my)
+		return
+	}
 	drawNeedBar(screen, int(r.x)+12, int(r.y)+126, 300, 14, p.Health, "health")
 	drawNeedBar(screen, int(r.x)+12, int(r.y)+150, 300, 14, p.Hunger, "food")
 	drawNeedBar(screen, int(r.x)+12, int(r.y)+174, 300, 14, p.Rest, "rest")
@@ -190,4 +196,33 @@ func healthColor(pct int) color.RGBA {
 	default:
 		return color.RGBA{R: 90, G: 170, B: 80, A: 255}
 	}
+}
+
+// drawGear lists what the colonist carries and wears and the comfortable
+// temperature range that gives it.
+func drawGear(screen *ebiten.Image, p game.PawnView, x, y int) {
+	drawLabel(screen, x, y, "Weapon")
+	drawLabel(screen, x+12, y+16, p.Weapon)
+	drawLabel(screen, x, y+40, "Wearing")
+	ly := y + 56
+	drawLabel(screen, x+12, ly, "everyday clothes")
+	for _, a := range p.Apparel {
+		ly += 16
+		drawLabel(screen, x+12, ly, gearLine(a))
+	}
+	drawLabel(screen, x, ly+28, fmt.Sprintf("Comfortable  %s to %s", fmtTemp(p.ComfortMin), fmtTemp(p.ComfortMax)))
+	drawLabel(screen, x, ly+48, "Order a colonist to Wear clothes from the")
+	drawLabel(screen, x, ly+62, "right-click menu, or let it dress itself.")
+}
+
+func gearLine(a string) string {
+	switch a {
+	case "parka":
+		return "leather parka  (much warmer, hot in summer)"
+	case "tuque":
+		return "knitted tuque  (warmer)"
+	case "duster":
+		return "leather duster (cooler in heat)"
+	}
+	return a
 }

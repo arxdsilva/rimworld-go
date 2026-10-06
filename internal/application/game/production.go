@@ -255,6 +255,9 @@ func (g *Game) doBill(id entity.EntityID, j job.Record) {
 	} else {
 		g.deleteItem(j.Carry)
 		g.dropStack(d.Output, d.OutQty, j.DestX, j.DestY)
+		if d.ExtraQty > 0 {
+			g.dropStack(d.Extra, d.ExtraQty, j.DestX, j.DestY)
+		}
 	}
 	j.Carry = 0
 	bl.Done++

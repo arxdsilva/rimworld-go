@@ -247,7 +247,7 @@ func (g *Game) expose() {
 		pos, _ := g.positions.Get(id)
 		t := int(g.temperatureAt(pos.X, pos.Y))
 		e := g.exposure[id]
-		e.hypo, e.heat = exposure.Step(e.hypo, e.heat, t, climateInterval)
+		e.hypo, e.heat = exposure.Step(e.hypo, e.heat, t, climateInterval, g.bandsOf(id))
 		g.exposure[id] = e
 		switch {
 		case e.hypo >= exposure.Fatal:
@@ -282,7 +282,8 @@ func (g *Game) needsComfort(id entity.EntityID) bool {
 	e := g.exposure[id]
 	pos, _ := g.positions.Get(id)
 	t := int(g.temperatureAt(pos.X, pos.Y))
-	return e.hypo >= exposure.Mild && t < exposure.ComfortMin || e.heat >= exposure.Mild && t > exposure.ComfortMax
+	b := g.bandsOf(id)
+	return e.hypo >= exposure.Mild && t < b.Min || e.heat >= exposure.Mild && t > b.Max
 }
 
 // assignWarm walks a colonist suffering exposure to the nearest reachable
@@ -291,15 +292,16 @@ func (g *Game) assignWarm(id entity.EntityID) bool {
 	g.ensureRooms()
 	pos, _ := g.positions.Get(id)
 	cold := g.exposure[id].hypo >= g.exposure[id].heat
+	bands := g.bandsOf(id)
 	ok := func(r int) bool {
 		if r < 0 || r >= len(g.roomTemps) {
 			return false
 		}
 		t := int(g.roomTemps[r])
 		if cold {
-			return t >= exposure.ComfortMin
+			return t >= bands.Min
 		}
-		return t <= exposure.ComfortMax
+		return t <= bands.Max
 	}
 	type spot struct{ x, y, d int }
 	var spots []spot

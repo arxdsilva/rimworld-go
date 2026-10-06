@@ -338,8 +338,14 @@ func (g *Game) assignEquip(id entity.EntityID, k item.Kind) bool {
 // doEquip takes one weapon from the stack and drops the old one.
 func (g *Game) doEquip(id entity.EntityID, j job.Record) {
 	st, ok := g.stacks.Get(j.Target)
-	if !ok || st.Qty <= 0 || st.Carrier != 0 || !st.Kind.IsWeapon() {
+	if !ok || st.Qty <= 0 || st.Carrier != 0 || !st.Kind.IsWeapon() && !st.Kind.IsApparel() {
 		j.State, j.Fail = job.Fail, job.TargetGone
+		g.jobs.Set(id, j)
+		return
+	}
+	if st.Kind.IsApparel() {
+		g.wear(id, j.Target, st)
+		j.State = job.Complete
 		g.jobs.Set(id, j)
 		return
 	}

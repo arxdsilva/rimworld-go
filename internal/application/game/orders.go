@@ -262,7 +262,7 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 	case command.OrderEquip:
 		iid := g.itemAt(x, y)
 		st, ok := g.stacks.Get(iid)
-		if !ok || !st.Kind.IsWeapon() {
+		if !ok || !st.Kind.IsWeapon() && !st.Kind.IsApparel() {
 			return job.Record{}, ReasonGone
 		}
 		if r := g.busyBy(id, iid); r != "" {
@@ -478,6 +478,9 @@ func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 		st, _ := g.stacks.Get(iid)
 		if st.Kind.IsWeapon() {
 			add(fmt.Sprintf("Equip %s", st.Kind), command.OrderEquip, construction.LayerObject)
+		}
+		if st.Kind.IsApparel() {
+			add(fmt.Sprintf("Wear %s", st.Kind), command.OrderEquip, construction.LayerObject)
 		}
 		if st.Kind.IsFood() {
 			add(fmt.Sprintf("Eat %s", st.Kind), command.OrderEat, construction.LayerObject)

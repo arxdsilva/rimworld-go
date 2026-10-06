@@ -1099,7 +1099,7 @@ treatment, and surgery are major colony-management systems.
     -   Campfire/heater-like source.
     -   cooler/air-conditioner-like device.
     -   passive cooler equivalent.
--   [-] **Pawn temperature comfort** (8-28C comfort band, cold/freezing/hot/sweltering thoughts, hypothermia/heatstroke down and kill, colonists seek a bearable room; no apparel)
+-   [x] **Pawn temperature comfort** (per-colonist comfort band from worn apparel; cold/freezing/hot/sweltering thoughts, hypothermia/heatstroke down and kill, colonists seek a bearable room)
     -   Apparel and species stats define safe/comfortable range.
     -   extreme heat -\> heatstroke.
     -   extreme cold -\> hypothermia.
@@ -1236,7 +1236,7 @@ treatment, and surgery are major colony-management systems.
 -   [ ] **Stone cutting**
 -   [x] **Butchering**
 -   [x] **Cooking** (stove: 2 raw food -> 1 simple meal)
--   [ ] **Tailoring/apparel production**
+-   [x] **Tailoring/apparel production** (tailoring bench sews leather parkas, tuques and dusters; butchering yields leather)
 -   [-] **Smithing/weapon production** (workbench: 4 wood -> wooden club)
 -   [ ] **Machining/advanced fabrication equivalents**
 -   [ ] **Drug production**
@@ -1318,7 +1318,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 16.2 Apparel
 
--   [ ] **Wearable apparel**
+-   [-] **Wearable apparel** (body and head slots over everyday clothes; insulation shifts the comfort band; Wear order; Gear tab)
     -   Body-part/layer coverage.
     -   material.
     -   armor.
@@ -1329,7 +1329,7 @@ treatment, and surgery are major colony-management systems.
     -   Conflicting body layers/slots cannot be worn together.
 -   [ ] **Apparel deterioration**
     -   Worn apparel can lose condition.
--   [ ] **Apparel policy**
+-   [-] **Apparel policy** (colonists put on free garments that suit the season and take off ones that don't; no player policy screen)
     -   Allowed categories.
     -   minimum condition.
     -   quality filters.

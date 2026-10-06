@@ -138,6 +138,25 @@ def _drying_rack():
     return (2, 1), 1.05
 
 
+def _tailoring_bench():
+    """2 x 1 tailor's table: a cutting top with a spread hide, a bolt of
+    cloth, shears and a spool. The tailor stands on the south side."""
+    for i, x in enumerate([0.12, 1.88]):
+        for j, y in enumerate([-0.18, -0.82]):
+            S.box("leg%d%d" % (i, j), x - 0.05, y - 0.05, 0.0, x + 0.05, y + 0.05, 0.52, "wood", bevel=0.015)
+    S.box("stretcher", 0.10, -0.55, 0.14, 1.90, -0.45, 0.19, "wood", bevel=0.01)
+    S.box("top", 0.04, -0.94, 0.52, 1.96, -0.06, 0.60, "wood_plank", bevel=0.03)
+    S.box("hide", 0.18, -0.80, 0.60, 0.98, -0.22, 0.615, "leather", bevel=0.01)
+    S.cyl("bolt", 1.40, -0.30, 0.09, 0.60, 0.62, "cloth", segs=14, ry=0.09)
+    S.box("bolt_body", 1.10, -0.39, 0.60, 1.70, -0.21, 0.70, "cloth", bevel=0.05)
+    S.cyl("spool", 1.58, -0.70, 0.05, 0.60, 0.70, "wood", segs=12)
+    S.cyl("thread", 1.58, -0.70, 0.045, 0.62, 0.68, "food_red", segs=12, bevel=0.0)
+    S.box("shear_a", 1.10, -0.74, 0.60, 1.34, -0.71, 0.62, "steel", bevel=0.004)
+    S.box("shear_b", 1.12, -0.66, 0.60, 1.34, -0.69, 0.62, "steel", bevel=0.004)
+    S.cyl("ring", 1.36, -0.69, 0.03, 0.60, 0.625, "metal_dark", segs=10, bevel=0.0)
+    return (2, 1), 0.72
+
+
 def _campfire():
     """1 x 1 fire pit: a ring of field stones around ash and a log-cabin
     stack of split logs. The flame itself is drawn live by the game."""
@@ -175,10 +194,11 @@ BUILDERS = {
     "stove_basic": (_stove, {"attachments": {"cook": [0.25, 1.5]}}),
     "butcher_table": (_butcher_table, {"attachments": {"worker": [0.5, 1.15]}}),
     "campfire": (_campfire, {}),
+    "tailoring_bench": (_tailoring_bench, {"attachments": {"worker": [0.5, 1.15]}}),
     "drying_rack": (_drying_rack, {"attachments": {"worker": [0.5, 1.15]}}),
 }
 ROTATABLE = {"bed_basic", "bed_double", "chair_basic", "workbench_basic", "stove_basic", "butcher_table",
-             "drying_rack"}
+             "drying_rack", "tailoring_bench"}
 
 
 # Blanket overlays: drawn over a sleeper so they read as tucked in. The

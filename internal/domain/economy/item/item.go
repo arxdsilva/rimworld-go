@@ -29,11 +29,17 @@ const (
 	Lettuce
 	Radishes
 	Pumpkins
+	// Leather comes from butchering; tailors make clothes from it.
+	Leather
+	// Clothes (apparel) are worn: see Slot and Insulation.
+	Parka
+	Tuque
+	Duster
 	numKinds
 )
 
 var kindNames = [numKinds]string{"food", "wood", "stone", "berries", "potatoes", "meat", "meal", "club", "rifle", "dustbuck corpse", "ridgewolf corpse",
-	"corn", "wheat", "beans", "lettuce", "radishes", "pumpkins"}
+	"corn", "wheat", "beans", "lettuce", "radishes", "pumpkins", "leather", "parka", "tuque", "duster"}
 
 // IsWeapon reports whether k can be equipped.
 func (k Kind) IsWeapon() bool { return k == Club || k == Rifle }
@@ -95,6 +101,62 @@ func ParseKind(name string) (Kind, bool) {
 
 // IsFood reports whether k can be eaten.
 func (k Kind) IsFood() bool { return k.Nutrition() > 0 }
+
+// Slot is where a piece of apparel is worn.
+type Slot uint8
+
+const (
+	NoSlot Slot = iota
+	Body        // outer layer over the shirt: parka, duster
+	Head
+)
+
+func (s Slot) String() string {
+	switch s {
+	case Body:
+		return "body"
+	case Head:
+		return "head"
+	}
+	return ""
+}
+
+// apparel: slot, cold insulation and heat insulation in tenths of a
+// degree C. Cold insulation lowers the bottom of the wearer's comfortable
+// range; heat insulation raises the top (negative: the garment is hot to
+// wear). A leather parka is serious winter gear but sweltering in summer;
+// a knitted tuque keeps the head warm; a long leather duster shades the
+// wearer in heat and cuts the wind a little.
+var apparel = [numKinds]struct {
+	slot       Slot
+	cold, heat int
+}{
+	Parka:  {Body, 200, -30},
+	Tuque:  {Head, 60, 0},
+	Duster: {Body, 40, 80},
+}
+
+// IsApparel reports clothing that can be worn.
+func (k Kind) IsApparel() bool { return k < numKinds && apparel[k].slot != NoSlot }
+
+// Slot is where apparel k is worn (NoSlot for non-apparel).
+func (k Kind) Slot() Slot {
+	if k >= numKinds {
+		return NoSlot
+	}
+	return apparel[k].slot
+}
+
+// Insulation is apparel k's cold and heat insulation (tenths of a degree).
+func (k Kind) Insulation() (cold, heat int) {
+	if k >= numKinds {
+		return 0, 0
+	}
+	return apparel[k].cold, apparel[k].heat
+}
+
+// Apparel lists every wearable kind.
+func Apparel() []Kind { return []Kind{Parka, Tuque, Duster} }
 
 // IsStuff reports whether k is a building material.
 func (k Kind) IsStuff() bool { return k == Wood || k == Stone }

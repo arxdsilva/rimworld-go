@@ -76,6 +76,10 @@ type PawnView struct {
 	// air temperature where the colonist is (tenths of a degree C).
 	Hypothermia, Heatstroke int
 	Temp                    int
+	// Apparel is what the colonist wears over everyday clothes; ComfortMin
+	// and ComfortMax its comfortable range (tenths of a degree C).
+	Apparel                []string
+	ComfortMin, ComfortMax int
 	// QueuedOrders are orders waiting behind the current one, in order.
 	QueuedOrders []QueuedOrderView
 	// HasOrder: following a player order whose target tile is OrderX, OrderY.
@@ -247,6 +251,7 @@ type Game struct {
 	exposure   map[entity.EntityID]exposureState
 	noComfort  map[entity.EntityID]uint64 // no warm/cool spot found until this tick
 	orderQueue map[entity.EntityID][]queuedOrder
+	apparel    map[entity.EntityID]worn
 	roomTemps  []temperature.Temp // per room id, kept across rebuilds
 	memories   map[entity.EntityID]mood.Memories
 	roomGrid   []int
@@ -296,6 +301,7 @@ func New(cfg Config) *Game {
 		exposure:    make(map[entity.EntityID]exposureState),
 		noComfort:   make(map[entity.EntityID]uint64),
 		orderQueue:  make(map[entity.EntityID][]queuedOrder),
+		apparel:     make(map[entity.EntityID]worn),
 		memories:    make(map[entity.EntityID]mood.Memories),
 		roomDirty:   true,
 		reserve:     reservation.NewTable(),
@@ -504,6 +510,9 @@ func (g *Game) Snapshot() []PawnView {
 		pv.Tended = g.tended(id)
 		pv.Hypothermia, pv.Heatstroke = g.exposure[id].hypo, g.exposure[id].heat
 		pv.Temperament = g.temperamentOf(id).String()
+		pv.Apparel = g.Wearing(id)
+		b := g.bandsOf(id)
+		pv.ComfortMin, pv.ComfortMax = b.Min, b.Max
 		if j, _ := g.jobs.Get(id); j.Forced && j.Active() {
 			pv.HasOrder, pv.OrderX, pv.OrderY = true, j.TX, j.TY
 			if j.Kind == job.Bill || j.Kind == job.Refuel || j.Carry != 0 {

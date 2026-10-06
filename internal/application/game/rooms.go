@@ -4,7 +4,6 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
-	"rimworld-go/internal/domain/pawn/exposure"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/room"
@@ -164,14 +163,15 @@ func (g *Game) thoughts(id entity.EntityID) []mood.Thought {
 		states = append(states, mood.Tired)
 	}
 	pos, _ := g.positions.Get(id)
+	b := g.bandsOf(id)
 	switch t := int(g.temperatureAt(pos.X, pos.Y)); {
-	case t < exposure.Freezing:
+	case t < b.Freezing():
 		states = append(states, mood.Freezing)
-	case t < exposure.ComfortMin:
+	case t < b.Min:
 		states = append(states, mood.Cold)
-	case t > exposure.Sweltering:
+	case t > b.Sweltering():
 		states = append(states, mood.Sweltering)
-	case t > exposure.ComfortMax:
+	case t > b.Max:
 		states = append(states, mood.Hot)
 	}
 	return mood.Active(g.memories[id].Prune(uint64(g.clock.Now())), states...)

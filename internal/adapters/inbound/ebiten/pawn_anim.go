@@ -72,7 +72,7 @@ func (r *Renderer) drawPawnArt(screen *ebiten.Image, p game.PawnView, wx, wy, ti
 	if vis.facing == faceNorth {
 		held() // in front, hidden by the body
 	}
-	for _, ly := range r.pawnLayers(r.look(p), vis.facing) {
+	for _, ly := range r.pawnLayers(r.look(p), vis.facing, p.Apparel...) {
 		r.drawSpritePose(screen, r.framed(ly.key, suffix), ly.tint, wx, wy, tile, ps)
 	}
 	if vis.facing != faceNorth {
@@ -93,7 +93,7 @@ func (r *Renderer) drawPawnArt(screen *ebiten.Image, p game.PawnView, wx, wy, ti
 
 // layersSouth draws the figure facing south with a pose.
 func (r *Renderer) drawFigure(screen *ebiten.Image, p game.PawnView, wx, wy, tile float64, ps pose) {
-	for _, ly := range r.pawnLayers(r.look(p), faceSouth) {
+	for _, ly := range r.pawnLayers(r.look(p), faceSouth, p.Apparel...) {
 		r.drawSpritePose(screen, ly.key, ly.tint, wx, wy, tile, ps)
 	}
 }

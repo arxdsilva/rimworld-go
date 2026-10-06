@@ -353,6 +353,14 @@ func itemSprite(kind string) string {
 		return "item/pumpkins"
 	case "meat":
 		return "item/meat_pile"
+	case "leather":
+		return "item/leather_hides"
+	case "parka":
+		return "item/parka_folded"
+	case "tuque":
+		return "item/tuque"
+	case "duster":
+		return "item/duster_folded"
 	case "meal":
 		return "item/meal_simple"
 	case "steel":
@@ -388,7 +396,7 @@ func (r *Renderer) look(p game.PawnView) pawnLook {
 }
 
 // pawnLayers lists (sprite key, tint) in draw order for one facing.
-func (r *Renderer) pawnLayers(l pawnLook, f facing) []struct {
+func (r *Renderer) pawnLayers(l pawnLook, f facing, apparel ...string) []struct {
 	key  string
 	tint color.NRGBA
 } {
@@ -407,10 +415,25 @@ func (r *Renderer) pawnLayers(l pawnLook, f facing) []struct {
 			tint color.NRGBA
 		}{"pawn/vest_utility_" + fs, r.art.tint("cloth", l.Vest)})
 	}
-	out = append(out, struct {
+	type layer = struct {
 		key  string
 		tint color.NRGBA
-	}{"pawn/" + l.HairStyle + "_" + fs, r.art.tint("hair", l.Hair)})
+	}
+	hat := ""
+	for _, a := range apparel { // outer garments go over shirt and vest
+		switch a {
+		case "parka":
+			out = append(out, layer{"pawn/parka_leather_" + fs, color.NRGBA{}})
+		case "duster":
+			out = append(out, layer{"pawn/duster_leather_" + fs, color.NRGBA{}})
+		case "tuque":
+			hat = "pawn/tuque_knit_" + fs
+		}
+	}
+	out = append(out, layer{"pawn/" + l.HairStyle + "_" + fs, r.art.tint("hair", l.Hair)})
+	if hat != "" {
+		out = append(out, layer{hat, r.art.tint("cloth", l.Pants)})
+	}
 	return out
 }
 
@@ -425,7 +448,7 @@ func (r *Renderer) drawPawnPortraitArt(screen *ebiten.Image, p game.PawnView, x,
 	s := math.Min(w/cw, h/ch)
 	ox := x + (w-cw*s)/2
 	oy := y + (h-ch*s)/2
-	for _, ly := range r.pawnLayers(r.look(p), faceSouth) {
+	for _, ly := range r.pawnLayers(r.look(p), faceSouth, p.Apparel...) {
 		img := r.art.image(ly.key, ly.tint)
 		if img == nil {
 			continue

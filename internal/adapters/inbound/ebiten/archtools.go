@@ -81,6 +81,8 @@ var archTools = []archTool{
 		desc: "Butchers hunted carcasses into meat (2x1). Starts with butcher bills."},
 	{id: "campfire", label: "Campfire", category: "furniture", icon: "campfire", mode: placeSingle, build: "campfire",
 		desc: "Burns wood to heat and light its room. Haulers keep it fuelled (about 10 wood a day)."},
+	{id: "tailor", label: "Tailoring bench", category: "production", icon: "tailoring_bench", mode: placeSingle, build: "tailoring bench",
+		desc: "Sews leather into parkas, tuques and dusters (2x1). Select it to add bills."},
 	{id: "drying", label: "Drying rack", category: "production", icon: "drying_rack", mode: placeSingle, build: "drying rack",
 		desc: "Dries up to 25 perishable food at a time so it never rots (2x1). Starts with a Dry food bill."},
 }
@@ -212,6 +214,8 @@ func buildSprite(kind, facing string, mask int, ew, open bool) string {
 		return "furniture/butcher_table_" + facingOr(facing)
 	case "campfire":
 		return "furniture/campfire"
+	case "tailoring bench":
+		return "furniture/tailoring_bench_" + facingOr(facing)
 	case "drying rack":
 		return "furniture/drying_rack_" + facingOr(facing)
 	case "table":

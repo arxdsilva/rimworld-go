@@ -389,6 +389,8 @@ func (a *App) applyClick(id string) {
 		a.inspectTab = "character"
 	case id == "inspector.needs":
 		a.inspectTab = "needs"
+	case id == "inspector.gear":
+		a.inspectTab = "gear"
 	case id == "scenario.0":
 		a.scenario = 0
 	case id == "scenario.1":

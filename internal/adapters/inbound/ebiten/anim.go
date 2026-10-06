@@ -233,6 +233,8 @@ func styleFor(act string) (actStyle, bool) {
 		return actStyle{period: 30, reach: 0.05, burst: partShaving, count: 2, motion: motionSwing, tool: "tool/hammer"}, true
 	case "refuel":
 		return actStyle{period: 40, reach: 0.06, burst: partChip, count: 1, motion: motionReach}, true
+	case "work at tailoring bench":
+		return actStyle{period: 44, reach: 0.05, burst: partShaving, count: 1, motion: motionReach}, true
 	case "work at drying rack":
 		return actStyle{period: 52, reach: 0.06, burst: partLeaf, count: 1, motion: motionReach}, true
 	case "work at butcher table":
