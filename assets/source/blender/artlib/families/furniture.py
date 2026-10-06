@@ -86,6 +86,27 @@ def _stove():
     return (2, 1), 1.10
 
 
+def _butcher_table():
+    # 2 x 1, the butcher stands on the south side.
+    for i, x in enumerate([0.14, 1.86]):
+        for j, y in enumerate([-0.2, -0.8]):
+            S.box("leg%d%d" % (i, j), x - 0.07, y - 0.07, 0.0, x + 0.07, y + 0.07, 0.5, "wood", bevel=0.02)
+    S.box("stretcher", 0.12, -0.56, 0.12, 1.88, -0.44, 0.18, "wood", bevel=0.015)
+    S.box("slab", 0.04, -0.94, 0.50, 1.96, -0.06, 0.66, "wood_plank", bevel=0.04, segments=2)
+    S.box("block", 0.12, -0.86, 0.66, 0.86, -0.18, 0.74, "wood", bevel=0.03)
+    for i, y in enumerate([-0.34, -0.52, -0.70]):
+        S.box("groove%d" % i, 0.16, y - 0.008, 0.738, 0.82, y + 0.008, 0.744, "bark", bevel=0.0)
+    S.box("blade", 1.05, -0.70, 0.66, 1.42, -0.48, 0.69, "steel", bevel=0.01)
+    S.box("handle", 1.42, -0.62, 0.66, 1.62, -0.56, 0.70, "metal_dark", bevel=0.01)
+    S.ellipsoid("cut", 1.62, -0.30, 0.71, 0.13, 0.09, 0.05, "food_red", segs=14, rings=8)
+    S.ellipsoid("bone", 1.62, -0.30, 0.74, 0.05, 0.03, 0.02, "ceramic", segs=10, rings=6)
+    S.box("rail", 0.06, -0.10, 0.66, 1.94, -0.04, 1.02, "wood", bevel=0.02)
+    for i, x in enumerate([0.40, 0.80, 1.20]):
+        S.cyl("hook%d" % i, x, -0.12, 0.012, 0.86, 1.0, "steel", segs=6, bevel=0.0)
+    S.ellipsoid("hang", 1.20, -0.13, 0.78, 0.07, 0.04, 0.09, "food_red", segs=12, rings=8)
+    return (2, 1), 1.02
+
+
 def _lamp():
     S.cyl("base", 0.5, -0.5, 0.22, 0.0, 0.06, "metal_dark", segs=20)
     S.cyl("pole", 0.5, -0.5, 0.035, 0.06, 1.25, "steel", segs=10)
@@ -102,8 +123,9 @@ BUILDERS = {
     "workbench_basic": (_workbench, {"attachments": {"worker": [0.5, 1.15]}}),
     "lamp_standing": (_lamp, {"emissive": "lamp_warm", "light_radius": 6}),
     "stove_basic": (_stove, {"attachments": {"cook": [0.25, 1.5]}}),
+    "butcher_table": (_butcher_table, {"attachments": {"worker": [0.5, 1.15]}}),
 }
-ROTATABLE = {"bed_basic", "bed_cot", "chair_basic", "workbench_basic", "stove_basic"}
+ROTATABLE = {"bed_basic", "bed_cot", "chair_basic", "workbench_basic", "stove_basic", "butcher_table"}
 
 
 def build():

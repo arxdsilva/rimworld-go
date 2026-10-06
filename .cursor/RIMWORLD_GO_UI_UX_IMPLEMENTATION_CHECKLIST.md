@@ -173,7 +173,7 @@ use these primitives.
 -   [ ] **Confirmation dialog**
 -   [ ] **Modal window**
 -   [ ] **Toast/message**
--   [-] **Persistent alert card**
+-   [x] **Persistent alert card**
 -   [ ] **Tooltip**
 -   [ ] **Rich tooltip/stat breakdown**
 -   [ ] **Drag painting tool**
@@ -273,7 +273,7 @@ This is the minimum UI required to interact with a running simulation.
     -   developer mode indicator if enabled.
 -   [ ] **Message feed anchor**
     -   Short transient messages appear without obscuring play.
--   [ ] **Alert anchor**
+-   [x] **Alert anchor**
     -   Reserve a consistent edge of the HUD for persistent colony
         alerts.
 
@@ -1244,7 +1244,7 @@ the player what just happened and what requires attention.
 
 ## 23.3 Alerts
 
--   [ ] **Persistent alert list**
+-   [x] **Persistent alert list**
     -   Critical issues remain until resolved.
 -   [ ] **Severity ordering**
 -   [ ] **Expandable details**
@@ -1265,7 +1265,7 @@ the player what just happened and what requires attention.
 
 ## 23.4 Alert scalability
 
--   [-] **Aggregate repeated alerts**
+-   [x] **Aggregate repeated alerts**
     -   "27 colonists need treatment" rather than 27 cards.
 -   [ ] **Search/group in large colonies**
 -   [ ] **Do not recompute expensive alert queries in UI every frame**
@@ -1913,7 +1913,7 @@ source and intended for AI-assisted development.
 -   [ ] **Temperature**
 -   [ ] **Power**
 -   [ ] **Rendering**
--   [ ] **Alerts**
+-   [x] **Alerts**
 -   [ ] **Plugins**
 
 ## 39.3 Timeline capture
@@ -1972,7 +1972,7 @@ manageable beyond vanilla-scale colonies.
 
 ## 40.5 Aggregation
 
--   [ ] **Aggregated alerts**
+-   [x] **Aggregated alerts**
 -   [ ] **Aggregated health warnings**
 -   [ ] **Idle pawn groups**
 -   [ ] **Food/medicine strategic summaries**

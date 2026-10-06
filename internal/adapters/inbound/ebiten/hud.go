@@ -106,6 +106,7 @@ func (a *App) colonyButtons(sw, sh int) []button {
 	out = append(out, a.inspectorButtons()...)
 	out = append(out, a.buildingButtons()...)
 	out = append(out, a.animalButtons()...)
+	out = append(out, a.alertButtons(sw)...)
 	out = append(out, a.architectButtons()...)
 	out = append(out, a.workButtons()...)
 	return out
@@ -135,7 +136,7 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 	a.drawInspector(screen)
 	a.drawBuildingInspector(screen)
 	a.drawAnimalInspector(screen)
-	a.drawHostileAlert(screen, sw)
+	a.drawAlerts(screen, sw)
 	a.drawArchitect(screen)
 	if a.workOpen {
 		a.drawWork(screen, sw, sh)

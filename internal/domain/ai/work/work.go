@@ -32,6 +32,7 @@ func DefaultColonist() Mask {
 	m = m.Set(Cook, true)
 	m = m.Set(Hunt, true)
 	m = m.Set(Craft, true)
+	m = m.Set(Doctor, true)
 	return m
 }
 

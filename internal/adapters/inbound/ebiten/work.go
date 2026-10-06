@@ -16,6 +16,7 @@ var workLive = map[int]struct {
 	cmd command.WorkType
 	on  func(game.PawnView) bool
 }{
+	1:  {command.WorkDoctor, func(p game.PawnView) bool { return p.WorkDoctor }},
 	2:  {command.WorkGrow, func(p game.PawnView) bool { return p.WorkGrow }},
 	3:  {command.WorkCook, func(p game.PawnView) bool { return p.WorkCook }},
 	4:  {command.WorkConstruct, func(p game.PawnView) bool { return p.WorkConstruct }},

@@ -16,13 +16,19 @@ const (
 	Meal      // cooked
 	Club      // melee weapon
 	Rifle     // ranged weapon
+	// Corpses are butchered into meat at a butcher table.
+	CorpseDustbuck
+	CorpseRidgewolf
 	numKinds
 )
 
-var kindNames = [numKinds]string{"food", "wood", "stone", "berries", "amberroot", "meat", "meal", "club", "rifle"}
+var kindNames = [numKinds]string{"food", "wood", "stone", "berries", "amberroot", "meat", "meal", "club", "rifle", "dustbuck corpse", "ridgewolf corpse"}
 
 // IsWeapon reports whether k can be equipped.
 func (k Kind) IsWeapon() bool { return k == Club || k == Rifle }
+
+// IsCorpse reports an animal carcass.
+func (k Kind) IsCorpse() bool { return k == CorpseDustbuck || k == CorpseRidgewolf }
 
 // nutrition is hunger restored per unit eaten (needs.Full = 10000).
 var nutrition = [numKinds]int{Food: 4000, Berries: 1500, Amberroot: 2000, Meat: 2200, Meal: 6000}

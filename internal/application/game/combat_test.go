@@ -11,10 +11,10 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 )
 
-func meatOnGround(g *Game) int {
+func itemsOnGround(g *Game, kind string) int {
 	n := 0
 	for _, it := range g.World().Items {
-		if it.Kind == "meat" && !it.Carried {
+		if it.Kind == kind && !it.Carried {
 			n += it.Qty
 		}
 	}
@@ -47,8 +47,8 @@ func TestHunterFetchesRifleAndBringsDownDustbuck(t *testing.T) {
 	if g.Equipped(p) != "rifle" {
 		t.Fatalf("hunter should have picked up the rifle, has %q", g.Equipped(p))
 	}
-	if got := meatOnGround(g); got != animal.DefOf(animal.Dustbuck).Meat {
-		t.Fatalf("meat = %d, want %d", got, animal.DefOf(animal.Dustbuck).Meat)
+	if got := itemsOnGround(g, "dustbuck corpse"); got != 1 {
+		t.Fatalf("dustbuck corpses = %d, want 1", got)
 	}
 }
 
@@ -78,8 +78,8 @@ func TestHungryWolfAttacksAndDraftedRiflemanKillsIt(t *testing.T) {
 		a, _ := g.animals.Get(wolf)
 		t.Fatalf("drafted rifleman should auto-engage the wolf: wolf %+v", a)
 	}
-	if got := meatOnGround(g); got != animal.DefOf(animal.Ridgewolf).Meat {
-		t.Fatalf("wolf meat = %d", got)
+	if got := itemsOnGround(g, "ridgewolf corpse"); got != 1 {
+		t.Fatalf("wolf corpses = %d", got)
 	}
 	if g.VitalOf(victim).Status == health.Dead {
 		t.Fatal("victim should survive a short fight")

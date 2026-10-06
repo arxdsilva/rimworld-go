@@ -94,6 +94,7 @@ type App struct {
 	hasBuilding                    bool
 	selAnimal                      entity.EntityID
 	hasAnimal                      bool
+	alertCycle                     map[string]int
 	archDrag                       bool
 	archX0, archY0, archX1, archY1 int
 	inspectTab                     string
@@ -362,6 +363,8 @@ func (a *App) applyClick(id string) {
 		a.toggleDraft()
 	case strings.HasPrefix(id, "animal."):
 		a.applyAnimalClick(id)
+	case strings.HasPrefix(id, "alert."):
+		a.focusAlert(id)
 	case strings.HasPrefix(id, "bldg.") || strings.HasPrefix(id, "bill."):
 		a.applyBuildingClick(id)
 	case strings.HasPrefix(id, "work.cell."):

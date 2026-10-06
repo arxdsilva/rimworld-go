@@ -94,6 +94,8 @@ func (g *Game) applyOne(c command.Command) {
 			t = work.Hunt
 		case command.WorkCraft:
 			t = work.Craft
+		case command.WorkDoctor:
+			t = work.Doctor
 		default:
 			return
 		}
@@ -219,6 +221,7 @@ func (g *Game) interrupt(id entity.EntityID, reason job.FailReason) {
 		return
 	}
 	g.dropCarry(id)
+	g.dropPatient(id)
 	g.reserve.ReleaseOwner(id)
 	if j.Kind != job.None && j.State != job.Idle && j.State != job.Complete {
 		j.State = job.Fail
@@ -264,6 +267,7 @@ func (g *Game) phaseAI() {
 		j, _ := g.jobs.Get(id)
 		if j.State == job.Complete || j.State == job.Fail {
 			g.dropCarry(id)
+			g.dropPatient(id)
 			g.reserve.ReleaseOwner(id)
 			g.jobs.Set(id, job.Record{})
 			j = job.Record{}
@@ -274,6 +278,9 @@ func (g *Game) phaseAI() {
 			if j.Kind == job.None || j.State == job.Idle {
 				g.autoEngage(id)
 			}
+			continue
+		}
+		if g.defend(id, j) {
 			continue
 		}
 		n, _ := g.need.Get(id)
@@ -308,6 +315,9 @@ func (g *Game) phaseAI() {
 			continue
 		}
 		m, _ := g.labor.Get(id)
+		if m.Enabled(work.Doctor) && g.assignDoctor(id) {
+			continue
+		}
 		if m.Enabled(work.Haul) && g.assignHaul(id) {
 			continue
 		}
@@ -577,7 +587,7 @@ func (g *Game) filterMatches(k item.Kind) bool {
 
 func allows(s zone.Stockpile, k item.Kind) bool {
 	switch {
-	case k.IsFood():
+	case k.IsFood(), k.IsCorpse():
 		return s.AllowFood
 	case k == item.Wood:
 		return s.AllowWood
@@ -739,6 +749,10 @@ func (g *Game) phaseJobs() {
 			g.doBill(id, j)
 		case job.Equip:
 			g.doEquip(id, j)
+		case job.Rescue:
+			g.doRescue(id, j)
+		case job.Tend:
+			g.doTend(id, j)
 		default:
 			j.State = job.Complete
 			g.jobs.Set(id, j)
@@ -911,6 +925,7 @@ func (g *Game) completeFrame(id entity.EntityID, fr construction.Frame) {
 	g.bldgIDs = append(g.bldgIDs, id)
 	g.bldgs.Set(id, construction.Building{Kind: fr.Kind, Stuff: fr.Stuff, Facing: fr.Facing, X: fr.X, Y: fr.Y})
 	g.markRoomsDirty()
+	g.defaultBills(id, fr.Kind)
 	// bushes and crops under the footprint are cleared below
 	cells, _, _ := construction.Footprint(fr.Kind, fr.Facing, fr.X, fr.Y)
 	for _, c := range cells {
@@ -1033,6 +1048,7 @@ func (g *Game) phaseMovement() {
 			}
 		}
 	}
+	g.followCarriers()
 }
 
 func (g *Game) arrive(id entity.EntityID, j job.Record) {

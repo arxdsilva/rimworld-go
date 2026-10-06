@@ -62,6 +62,7 @@ type PawnView struct {
 	WorkCook      bool
 	WorkHunt      bool
 	WorkCraft     bool
+	WorkDoctor    bool
 	Ate           bool
 	LastMeal      string // kind name of the last food eaten, "" if none
 	SleptInBed    bool
@@ -71,6 +72,12 @@ type PawnView struct {
 	Thoughts      []ThoughtView
 	Health        int    // hit points left, percent
 	Weapon        string // wielded weapon name ("fists" when unarmed)
+	// Lying: downed or asleep. InBed: lying in its claimed bed.
+	// CarriedBy: the rescuer carrying it (0 when not carried).
+	Lying     bool
+	InBed     bool
+	CarriedBy entity.EntityID
+	Tended    bool
 }
 
 // ItemView is a ground stack.
@@ -208,38 +215,43 @@ type Game struct {
 	equip     map[entity.EntityID]item.Kind // wielded weapon; absent = fists
 	traces    []projectile.Trace
 	wild      bool // wildlife migrates in (generated colonies)
+
+	carrying    map[entity.EntityID]entity.EntityID // rescuer -> patient
+	tendedUntil map[entity.EntityID]uint64
 }
 
 // New builds a Game from cfg. Width/Height must be positive.
 func New(cfg Config) *Game {
 	return &Game{
-		clock:     clock.NewAt(clock.StartingMorning()),
-		grid:      grid.New(cfg.Width, cfg.Height),
-		entities:  entity.NewAllocator(),
-		rng:       randx.New(cfg.Seed),
-		sched:     schedule.DefaultColony(),
-		positions: component.NewStore[Position](),
-		names:     component.NewStore[string](),
-		jobs:      component.NewStore[job.Record](),
-		need:      component.NewStore[needs.Pair](),
-		vital:     component.NewStore[health.Record](),
-		labor:     component.NewStore[work.Mask](),
-		stacks:    component.NewStore[item.Stack](),
-		frames:    component.NewStore[construction.Frame](),
-		bldgs:     component.NewStore[construction.Building](),
-		plants:    component.NewStore[plant.Wild](),
-		terr:      terrain.NewMap(cfg.Width, cfg.Height),
-		mines:     make(map[[2]int]bool),
-		lastMeal:  make(map[entity.EntityID]item.Kind),
-		bills:     make(map[entity.EntityID][]recipe.Bill),
-		memories:  make(map[entity.EntityID]mood.Memories),
-		roomDirty: true,
-		reserve:   reservation.NewTable(),
-		ateAt:     make(map[entity.EntityID]bool),
-		draft:     make(map[entity.EntityID]bool),
-		sleptAt:   make(map[entity.EntityID]entity.EntityID),
-		animals:   component.NewStore[animal.State](),
-		equip:     make(map[entity.EntityID]item.Kind),
+		clock:       clock.NewAt(clock.StartingMorning()),
+		grid:        grid.New(cfg.Width, cfg.Height),
+		entities:    entity.NewAllocator(),
+		rng:         randx.New(cfg.Seed),
+		sched:       schedule.DefaultColony(),
+		positions:   component.NewStore[Position](),
+		names:       component.NewStore[string](),
+		jobs:        component.NewStore[job.Record](),
+		need:        component.NewStore[needs.Pair](),
+		vital:       component.NewStore[health.Record](),
+		labor:       component.NewStore[work.Mask](),
+		stacks:      component.NewStore[item.Stack](),
+		frames:      component.NewStore[construction.Frame](),
+		bldgs:       component.NewStore[construction.Building](),
+		plants:      component.NewStore[plant.Wild](),
+		terr:        terrain.NewMap(cfg.Width, cfg.Height),
+		mines:       make(map[[2]int]bool),
+		lastMeal:    make(map[entity.EntityID]item.Kind),
+		bills:       make(map[entity.EntityID][]recipe.Bill),
+		memories:    make(map[entity.EntityID]mood.Memories),
+		roomDirty:   true,
+		reserve:     reservation.NewTable(),
+		ateAt:       make(map[entity.EntityID]bool),
+		draft:       make(map[entity.EntityID]bool),
+		sleptAt:     make(map[entity.EntityID]entity.EntityID),
+		animals:     component.NewStore[animal.State](),
+		equip:       make(map[entity.EntityID]item.Kind),
+		carrying:    make(map[entity.EntityID]entity.EntityID),
+		tendedUntil: make(map[entity.EntityID]uint64),
 	}
 }
 
@@ -420,6 +432,7 @@ func (g *Game) Snapshot() []PawnView {
 			WorkCook:      m.Enabled(work.Cook),
 			WorkHunt:      m.Enabled(work.Hunt),
 			WorkCraft:     m.Enabled(work.Craft),
+			WorkDoctor:    m.Enabled(work.Doctor),
 			Ate:           g.ateAt[id],
 			LastMeal:      lastMealName(g, id),
 			SleptInBed:    g.sleptAt[id] != 0,
@@ -430,6 +443,10 @@ func (g *Game) Snapshot() []PawnView {
 		pv.Mood, pv.MoodLabel, pv.Thoughts = mood.Level(ts), mood.Label(mood.Level(ts)), thoughtViews(ts)
 		pv.Health = v.HP() * 100 / health.MaxHP
 		pv.Weapon = weaponDefOf(g, id).Name
+		pv.Lying = v.Status != health.Alive || (j.Kind == job.Sleep && j.State == job.Do)
+		pv.InBed = g.inBed(id)
+		pv.CarriedBy = g.carriedBy(id)
+		pv.Tended = g.tended(id)
 	}
 	return views
 }

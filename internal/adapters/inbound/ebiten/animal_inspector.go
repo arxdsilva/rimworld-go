@@ -1,12 +1,10 @@
 package ebiten
 
 import (
-	"fmt"
 	"image/color"
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
@@ -131,28 +129,4 @@ func (a *App) applyAnimalClick(id string) {
 		}
 		a.renderer.enqueue(command.Command{Kind: kind, X: an.X, Y: an.Y, X2: an.X, Y2: an.Y})
 	}
-}
-
-// drawHostileAlert shows a banner while any animal attacks a colonist.
-func (a *App) drawHostileAlert(screen *ebiten.Image, sw int) {
-	n := 0
-	species := ""
-	for _, an := range a.renderer.world().Animals {
-		if an.Hostile {
-			n++
-			species = an.Species
-		}
-	}
-	if n == 0 {
-		return
-	}
-	msg := fmt.Sprintf("A %s is attacking! Draft colonists (R) and right-click it.", species)
-	if n > 1 {
-		msg = fmt.Sprintf("%d animals are attacking! Draft colonists (R).", n)
-	}
-	w := float32(len(msg)*7 + 24)
-	x := (float32(sw) - w) / 2
-	vector.FillRect(screen, x, hudTopH+6, w, 24, color.RGBA{60, 18, 14, 230}, false)
-	vector.StrokeRect(screen, x, hudTopH+6, w, 24, 2, alertClr, false)
-	drawLabel(screen, int(x)+12, int(hudTopH)+12, msg)
 }

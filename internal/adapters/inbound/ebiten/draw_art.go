@@ -277,6 +277,10 @@ func itemSprite(kind string) string {
 		return "item/club_wood"
 	case "rifle":
 		return "item/rifle_ground"
+	case "dustbuck corpse":
+		return "item/corpse_dustbuck"
+	case "ridgewolf corpse":
+		return "item/corpse_ridgewolf"
 	case "stone", "stone_blocks":
 		return "item/stone_blocks"
 	}

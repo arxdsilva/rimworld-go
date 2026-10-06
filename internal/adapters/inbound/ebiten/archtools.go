@@ -75,6 +75,8 @@ var archTools = []archTool{
 		desc: "Crafting station (2x1). Select it to add bills. Q/E rotates."},
 	{id: "stove", label: "Stove", category: "production", icon: "stove", mode: placeSingle, build: "stove",
 		desc: "Cooks meals from raw food (2x1). Select it to add bills."},
+	{id: "butcher", label: "Butcher table", category: "production", icon: "butcher_table", mode: placeSingle, build: "butcher table",
+		desc: "Butchers hunted carcasses into meat (2x1). Starts with butcher bills."},
 }
 
 func toolByID(id string) (archTool, bool) {
@@ -198,6 +200,8 @@ func buildSprite(kind, facing string, mask int, ew, open bool) string {
 		return "furniture/workbench_basic_" + facingOr(facing)
 	case "stove":
 		return "furniture/stove_basic_" + facingOr(facing)
+	case "butcher table":
+		return "furniture/butcher_table_" + facingOr(facing)
 	case "table":
 		return "furniture/table_small"
 	case "chair":

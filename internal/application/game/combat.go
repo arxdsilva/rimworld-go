@@ -203,9 +203,14 @@ func (g *Game) heal(id entity.EntityID, v *health.Record, now uint64) {
 	every := uint64(health.HealTicks)
 	j, _ := g.jobs.Get(id)
 	switch {
+	case g.inBed(id):
+		every /= 2
 	case v.Status == health.Downed:
 		every *= 2
 	case j.Kind == job.Sleep && j.State == job.Do && g.sleptAt[id] != 0:
+		every /= 2
+	}
+	if g.tended(id) {
 		every /= 2
 	}
 	if (now+uint64(id))%every != 0 {
@@ -372,4 +377,64 @@ func (g *Game) traceViews() []TraceView {
 			Age: int(now - t.Tick), Hit: t.Hit, Melee: t.Melee})
 	}
 	return out
+}
+
+// defend reacts to an animal attacking an undrafted colonist: armed
+// colonists fight back, unarmed ones run. It reports whether it acted.
+func (g *Game) defend(id entity.EntityID, j job.Record) bool {
+	pos, _ := g.positions.Get(id)
+	var threat entity.EntityID
+	var tp Position
+	best := 4
+	for _, aid := range g.animalIDs {
+		a, ok := g.animals.Get(aid)
+		if !ok || a.Mode != animal.Attack || a.Target != id {
+			continue
+		}
+		ap, _ := g.positions.Get(aid)
+		if d := weapon.Distance(pos.X, pos.Y, ap.X, ap.Y); d < best {
+			threat, tp, best = aid, ap, d
+		}
+	}
+	if threat == 0 {
+		return false
+	}
+	if _, armed := g.equip[id]; armed {
+		if j.Kind == job.Attack && j.Target == threat && j.State != job.Fail {
+			return true
+		}
+		g.interrupt(id, job.Interrupted)
+		g.startJob(id, job.Record{Kind: job.Attack, Target: threat, TX: tp.X, TY: tp.Y, WorkLeft: aimTicks(weaponDefOf(g, id))})
+		return true
+	}
+	now := uint64(g.clock.Now())
+	if j.Kind == job.Move && j.State == job.Goto && (now+uint64(id))%30 != 0 {
+		return true // keep running
+	}
+	fx, fy := animal.FleeGoal(pos.X, pos.Y, tp.X, tp.Y, 7)
+	fx, fy, ok := g.walkableNear(fx, fy, 3)
+	if !ok {
+		return false
+	}
+	g.interrupt(id, job.Interrupted)
+	g.startJob(id, job.Record{Kind: job.Move, TX: fx, TY: fy})
+	return true
+}
+
+// walkableNear clamps (x, y) to the map and finds a walkable tile within
+// r of it.
+func (g *Game) walkableNear(x, y, r int) (int, int, bool) {
+	x, y = clampInt(x, 0, g.grid.Width()-1), clampInt(y, 0, g.grid.Height()-1)
+	for d := 0; d <= r; d++ {
+		for dy := -d; dy <= d; dy++ {
+			for dx := -d; dx <= d; dx++ {
+				if g.grid.Walkable(x+dx, y+dy) {
+					if _, taken := g.reserve.TileOwner(x+dx, y+dy); !taken {
+						return x + dx, y + dy, true
+					}
+				}
+			}
+		}
+	}
+	return 0, 0, false
 }

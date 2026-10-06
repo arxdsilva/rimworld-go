@@ -51,6 +51,7 @@ const (
 	WorkCook
 	WorkHunt
 	WorkCraft
+	WorkDoctor
 )
 
 // Order is a player-forced job for Prioritize.

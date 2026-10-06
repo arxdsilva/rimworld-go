@@ -75,8 +75,29 @@ def _zmax_screen(height):
     return hgt * (math.sin(t) / C.SHEAR_K + math.cos(t)) + 0.05
 
 
+def _corpse(builder):
+    """The species model rolled onto its side, lying across the tile,
+    over a small dark pool."""
+    from mathutils import Matrix, Vector
+    builder()
+    objs = S.objects()
+    S.face(objs, "east", (1, 1))
+    pivot = Vector((0.5, -0.5, 0.0))
+    S.transform(objs, Matrix.Translation(pivot) @ Matrix.Rotation(math.radians(100), 4, "X")
+                @ Matrix.Scale(0.82, 4) @ Matrix.Translation(-pivot))
+    zmin = min((ob.matrix_world @ v.co).z for ob in objs for v in ob.data.vertices)
+    S.transform(objs, Matrix.Translation((0, 0, -zmin)))
+    zmax = max((ob.matrix_world @ v.co).z for ob in objs for v in ob.data.vertices)
+    S.ellipsoid("pool", 0.5, -0.66, 0.0, 0.26, 0.1, 0.01, "food_red", segs=20, rings=6)
+    return zmax
+
+
 def build():
     out = []
+    for species, (builder, _h) in SPECIES.items():
+        zmax = _corpse(builder)
+        out.append(S.render_asset("item", "corpse_%s" % species, zmax=zmax + 0.05,
+                                  extra={"item": "%s corpse" % species, "species": species}))
     for species, (builder, height) in SPECIES.items():
         for f in FACINGS:
             builder()

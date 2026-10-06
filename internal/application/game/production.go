@@ -279,3 +279,14 @@ func (g *Game) billViews(bid entity.EntityID) []BillView {
 	}
 	return out
 }
+
+// defaultBills gives new benches the bills nearly everyone wants: a
+// butcher table butchers every carcass type, forever.
+func (g *Game) defaultBills(id entity.EntityID, k construction.Kind) {
+	if k != construction.ButcherTable {
+		return
+	}
+	for _, d := range recipe.For(k) {
+		g.bills[id] = append(g.bills[id], recipe.Bill{Recipe: d.ID, Mode: recipe.Forever, Target: 1})
+	}
+}

@@ -12,6 +12,8 @@ type ID uint8
 const (
 	SimpleMeal ID = iota
 	Club
+	ButcherDustbuck
+	ButcherRidgewolf
 	numRecipes
 )
 
@@ -40,6 +42,10 @@ var defs = [numRecipes]Def{
 		Input: Input{AnyRaw: true, Qty: 2}, Output: item.Meal, OutQty: 1, Work: 120, Skill: work.Cook},
 	Club: {ID: Club, Name: "club", Label: "Make wooden club", Bench: construction.Workbench,
 		Input: Input{Kind: item.Wood, Qty: 4}, Output: item.Club, OutQty: 1, Work: 240, Skill: work.Craft},
+	ButcherDustbuck: {ID: ButcherDustbuck, Name: "butcher_dustbuck", Label: "Butcher dustbuck", Bench: construction.ButcherTable,
+		Input: Input{Kind: item.CorpseDustbuck, Qty: 1}, Output: item.Meat, OutQty: 12, Work: 200, Skill: work.Cook},
+	ButcherRidgewolf: {ID: ButcherRidgewolf, Name: "butcher_ridgewolf", Label: "Butcher ridgewolf", Bench: construction.ButcherTable,
+		Input: Input{Kind: item.CorpseRidgewolf, Qty: 1}, Output: item.Meat, OutQty: 6, Work: 200, Skill: work.Cook},
 }
 
 // DefOf returns the recipe definition.

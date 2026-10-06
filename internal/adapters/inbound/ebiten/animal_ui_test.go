@@ -33,7 +33,7 @@ func TestAnimalInspectorTogglesHunt(t *testing.T) {
 	// drawing the inspector and the world must not panic without art
 	screen := ebiten.NewImage(640, 480)
 	a.drawAnimalInspector(screen)
-	a.drawHostileAlert(screen, 640)
+	a.drawAlerts(screen, 640)
 	click(t, a, "animal.hunt")
 	g.Step(1)
 	if an, _ := a.selectedAnimal(); an.Designated {

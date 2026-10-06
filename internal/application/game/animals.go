@@ -8,7 +8,6 @@ import (
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
-	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -346,16 +345,13 @@ func (g *Game) killAnimal(id, by entity.EntityID) {
 		return
 	}
 	pos, _ := g.positions.Get(id)
-	meat := animal.DefOf(a.Species).Meat
 	if k, ok := g.animals.Get(by); ok && animal.DefOf(k.Species).Predator {
-		meat /= 2
+		// the predator feeds on the kill; the carcass is left behind
 		k.Hunger, k.Target, k.Mode, k.Attacker = 0, 0, animal.Wander, 0
 		g.animals.Set(by, k)
 	}
 	g.removeAnimal(id)
-	if meat > 0 {
-		g.dropStack(item.Meat, meat, pos.X, pos.Y)
-	}
+	g.dropStack(animal.DefOf(a.Species).Corpse, 1, pos.X, pos.Y)
 }
 
 func (g *Game) removeAnimal(id entity.EntityID) {

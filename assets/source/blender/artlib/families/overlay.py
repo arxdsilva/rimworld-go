@@ -219,6 +219,9 @@ ICONS = {
     "crop": ("plant", "crop_harvestable"),
     "colonist": ("pawn", "body_south"),
     "dustbuck": ("animal", "dustbuck_east"),
+    "butcher_table": ("furniture", "butcher_table_south"),
+    "corpse_dustbuck": ("item", "corpse_dustbuck"),
+    "corpse_ridgewolf": ("item", "corpse_ridgewolf"),
     "ridgewolf": ("animal", "ridgewolf_east"),
 }
 ICON_PX = 128          # @2x of a 64 px icon

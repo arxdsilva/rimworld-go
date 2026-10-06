@@ -3,6 +3,7 @@ package animal
 import (
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/combat/weapon"
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -40,7 +41,9 @@ func ParseSpecies(name string) (Species, bool) {
 
 // Def is a species definition. Step ticks are per tile moved.
 type Def struct {
-	MaxHP     int
+	MaxHP int
+	// Corpse is the item left on death (meat comes from butchering it).
+	Corpse    item.Kind
 	StepTicks int
 	FleeStep  int
 	Meat      int
@@ -59,9 +62,9 @@ type Def struct {
 }
 
 var defs = [numSpecies]Def{
-	Dustbuck: {MaxHP: 40, StepTicks: 18, FleeStep: 10, Meat: 12, Attack: weapon.Kick,
+	Dustbuck: {MaxHP: 40, Corpse: item.CorpseDustbuck, StepTicks: 18, FleeStep: 10, Meat: 12, Attack: weapon.Kick,
 		Skittish: true, FleeRadius: 5, WanderRadius: 4},
-	Ridgewolf: {MaxHP: 60, StepTicks: 14, FleeStep: 14, Meat: 6, Attack: weapon.Bite,
+	Ridgewolf: {MaxHP: 60, Corpse: item.CorpseRidgewolf, StepTicks: 14, FleeStep: 14, Meat: 6, Attack: weapon.Bite,
 		Predator: true, AggroRadius: 5, HungerTicks: 90000, HuntRadius: 22, WanderRadius: 6},
 }
 

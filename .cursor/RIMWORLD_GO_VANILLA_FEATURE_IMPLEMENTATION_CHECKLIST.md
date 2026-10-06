@@ -528,7 +528,7 @@ This is the heart of autonomous colony behavior.
 -   [-] **Haul construction resources** (wood to wall/bed frame)
 -   [ ] **Haul production ingredients**
 -   [ ] **Haul finished products**
--   [ ] **Haul corpses**
+-   [x] **Haul corpses**
 -   [ ] **Opportunistic/batched hauling where compatible**
     -   Performance-conscious without changing core player expectations.
 
@@ -680,7 +680,7 @@ This is the heart of autonomous colony behavior.
 -   [ ] **Food poisoning**
     -   Chance influenced by cook skill and cleanliness/conditions.
     -   Health effect and mood consequences.
--   [ ] **Butchering**
+-   [x] **Butchering**
     -   Corpse -\> meat + leather/other products.
     -   Yield affected by species and skill/stat.
 
@@ -995,17 +995,17 @@ treatment, and surgery are major colony-management systems.
     -   herbal-equivalent.
     -   industrial-equivalent.
     -   best medicine-equivalent.
--   [ ] **Tending**
+-   [x] **Tending**
     -   Doctor reserves patient.
     -   fetches medicine if policy allows.
     -   performs treatment.
     -   quality depends on skill, medicine, environment, capacities.
 -   [ ] **Self-tend**
     -   Optional with reduced effectiveness.
--   [ ] **Medical beds**
+-   [-] **Medical beds**
     -   Mark beds for medical use.
     -   injured/sick pawns seek treatment/rest.
--   [ ] **Rescue**
+-   [x] **Rescue**
     -   Carry downed friendly pawn to valid bed.
 
 ## 11.6 Infection
@@ -1068,7 +1068,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 11.10 Corpses
 
--   [ ] **Corpse entity**
+-   [-] **Corpse entity**
     -   Stores deceased pawn identity/body.
     -   can rot.
     -   can be butchered where allowed.
@@ -1233,7 +1233,7 @@ treatment, and surgery are major colony-management systems.
 ## 14.3 Crafting
 
 -   [ ] **Stone cutting**
--   [ ] **Butchering**
+-   [x] **Butchering**
 -   [x] **Cooking** (stove: 2 raw food -> 1 simple meal)
 -   [ ] **Tailoring/apparel production**
 -   [-] **Smithing/weapon production** (workbench: 4 wood -> wooden club)
@@ -1484,7 +1484,7 @@ children systems.
 -   [x] **Hunter requires suitable ranged weapon**
 -   [ ] **Stalk/approach/fire job**
 -   [-] **Animal retaliation/manhunter chance**
--   [ ] **Corpse hauling/butchering integration**
+-   [x] **Corpse hauling/butchering integration**
 
 ## 18.4 Taming
 
@@ -1499,7 +1499,7 @@ children systems.
 -   [ ] **Trainability**
 -   [ ] **Obedience**
 -   [ ] **Release/attack training**
--   [ ] **Rescue**
+-   [x] **Rescue**
 -   [ ] **Hauling**
     -   Only species capable of relevant training.
 -   [ ] **Training decay/maintenance**

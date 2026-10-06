@@ -51,6 +51,8 @@ const (
 	Hunt
 	Attack
 	Equip
+	Rescue
+	Tend
 )
 
 func (k Kind) String() string {
@@ -83,6 +85,10 @@ func (k Kind) String() string {
 		return "attack"
 	case Equip:
 		return "equip"
+	case Rescue:
+		return "rescue"
+	case Tend:
+		return "tend"
 	default:
 		return "idle"
 	}
