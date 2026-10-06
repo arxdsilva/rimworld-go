@@ -76,7 +76,10 @@ type PawnView struct {
 	// air temperature where the colonist is (tenths of a degree C).
 	Hypothermia, Heatstroke int
 	Temp                    int
-	Weapon                  string // wielded weapon name ("fists" when unarmed)
+	// Temperament is the colonist's free-time leaning
+	// (wanderer, social, homebody).
+	Temperament string
+	Weapon      string // wielded weapon name ("fists" when unarmed)
 	// Lying: downed or asleep. InBed: lying in its claimed bed.
 	// CarriedBy: the rescuer carrying it (0 when not carried).
 	Lying     bool
@@ -493,6 +496,7 @@ func (g *Game) Snapshot() []PawnView {
 		pv.CarriedBy = g.carriedBy(id)
 		pv.Tended = g.tended(id)
 		pv.Hypothermia, pv.Heatstroke = g.exposure[id].hypo, g.exposure[id].heat
+		pv.Temperament = g.temperamentOf(id).String()
 		if pos, ok := g.positions.Get(id); ok {
 			pv.Temp = int(g.temperatureAt(pos.X, pos.Y))
 		}

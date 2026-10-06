@@ -57,7 +57,15 @@ const (
 	Refuel
 	// Warm walks a freezing (or overheating) pawn somewhere bearable.
 	Warm
+	// Idle behaviours: free time with nothing designated to do.
+	Wander
+	Chat
+	Relax    // sit on a chair
+	FireSide // warm hands by a burning campfire
 )
+
+// IsIdle reports a free-time behaviour that any real work may replace.
+func (k Kind) IsIdle() bool { return k == Wander || k == Chat || k == Relax || k == FireSide }
 
 func (k Kind) String() string {
 	switch k {
@@ -97,6 +105,14 @@ func (k Kind) String() string {
 		return "refuel"
 	case Warm:
 		return "seek warmth"
+	case Wander:
+		return "wander"
+	case Chat:
+		return "chat"
+	case Relax:
+		return "relax"
+	case FireSide:
+		return "warm up by the fire"
 	default:
 		return "idle"
 	}

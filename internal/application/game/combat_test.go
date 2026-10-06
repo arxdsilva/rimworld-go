@@ -62,7 +62,9 @@ func TestHungryWolfAttacksAndDraftedRiflemanKillsIt(t *testing.T) {
 	a.Hunger = animal.DefOf(animal.Ridgewolf).HungerTicks
 	g.animals.Set(wolf, a)
 
-	g.Step(200)
+	for i := 0; i < 10 && g.VitalOf(victim).Injury == 0; i++ {
+		g.Step(100) // the bait may wander off; the wolf runs it down
+	}
 	if v := g.VitalOf(victim); v.Injury == 0 {
 		a, _ := g.animals.Get(wolf)
 		t.Fatalf("hungry wolf should have bitten the nearby colonist: %+v", a)

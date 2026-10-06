@@ -98,6 +98,9 @@ func (a *App) drawInspector(screen *ebiten.Image) {
 	if p.Heatstroke > 0 {
 		status += fmt.Sprintf("  heatstroke %d%%", p.Heatstroke/10)
 	}
+	if p.Temperament != "" {
+		status += "  (" + p.Temperament + ")"
+	}
 	drawLabel(screen, int(r.x)+12, int(r.y)+32, status)
 	a.drawPawnPortrait(screen, p, float64(r.x)+12, float64(r.y)+52, 48, 64)
 	drawLabel(screen, int(r.x)+72, int(r.y)+56, fmt.Sprintf("job       %s", p.Job))

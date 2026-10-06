@@ -448,7 +448,7 @@ This is the heart of autonomous colony behavior.
     -   Work.
     -   Sleep.
     -   Recreation.
--   [ ] **Schedule-aware intent**
+-   [-] **Schedule-aware intent** (bedtime overrides any job or prioritized order except drafting, eating first if hungry; recreation and idle time run free-time behaviours)
     -   Schedule biases/limits autonomous intent but emergencies and
         critical needs can override appropriately.
 

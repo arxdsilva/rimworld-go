@@ -304,6 +304,27 @@ func (g *Game) phaseAI() {
 		n, _ := g.need.Get(id)
 
 		busy := j.Kind != job.None && j.State != job.Idle
+		// The schedule comes first: at bedtime a colonist drops whatever it
+		// is doing (even a prioritized order) and goes to bed, eating first
+		// if it is hungry. Only drafting overrides it.
+		if needs.SleepScheduled(act) && j.Kind != job.Sleep && j.Kind != job.Eat && j.Kind != job.Warm {
+			if busy {
+				g.interrupt(id, job.Interrupted)
+			}
+			if n.Hungry() && g.hasEdible() {
+				g.assignEat(id)
+			} else {
+				g.assignSleep(id)
+			}
+			continue
+		}
+		if busy && j.Kind.IsIdle() {
+			needy := n.Hungry() && g.hasEdible() || n.Tired() || n.Exhausted()
+			if !needy && (uint64(g.clock.Now())+uint64(id))%idleRecheck != 0 {
+				continue // keep idling; look for real work now and then
+			}
+			busy = false
+		}
 		if busy && j.Forced && !n.Exhausted() {
 			continue // player-prioritized: finish it first
 		}
@@ -330,6 +351,9 @@ func (g *Game) phaseAI() {
 			continue
 		}
 		if !needs.WorkScheduled(act) {
+			if !j.Kind.IsIdle() || !j.Active() {
+				g.assignIdle(id) // recreation: free time
+			}
 			continue
 		}
 		m, _ := g.labor.Get(id)
@@ -359,6 +383,9 @@ func (g *Game) phaseAI() {
 		}
 		if m.Enabled(work.Mine) && g.assignMine(id) {
 			continue
+		}
+		if !j.Kind.IsIdle() || !j.Active() {
+			g.assignIdle(id) // nothing to do: free time
 		}
 	}
 }
@@ -787,6 +814,8 @@ func (g *Game) phaseJobs() {
 			g.doRefuel(id, j)
 		case job.Warm:
 			g.doWarm(id, j)
+		case job.Wander, job.Chat, job.Relax, job.FireSide:
+			g.doIdle(id, j)
 		default:
 			j.State = job.Complete
 			g.jobs.Set(id, j)
