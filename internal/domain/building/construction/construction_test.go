@@ -73,3 +73,33 @@ func TestFootprintRotation(t *testing.T) {
 		t.Fatalf("east bed = %v", c)
 	}
 }
+
+func TestDoubleBedHoldsTwo(t *testing.T) {
+	b := Building{Kind: DoubleBed}
+	b = b.Claim(7)
+	if !b.CanClaim(9) {
+		t.Fatal("second slot is free")
+	}
+	b = b.Claim(9)
+	if b.CanClaim(11) || b.SlotOf(7) != 0 || b.SlotOf(9) != 1 || b.Owner(11) != 7 {
+		t.Fatalf("full double bed: %+v", b)
+	}
+	b = b.Release(7)
+	if !b.CanClaim(11) || b.SlotOf(9) != 1 {
+		t.Fatal("releasing frees exactly that slot")
+	}
+	single := Building{Kind: Bed}.Claim(7)
+	if single.CanClaim(9) || single.Claim(9).SlotOf(9) != -1 {
+		t.Fatal("a single bed holds one")
+	}
+	x0, y0 := SleepCell(DoubleBed, South, 4, 4, 0)
+	x1, y1 := SleepCell(DoubleBed, South, 4, 4, 1)
+	if x0 != 4 || y0 != 4 || x1 != 5 || y1 != 4 {
+		t.Fatalf("south slots side by side at the head row: %d,%d %d,%d", x0, y0, x1, y1)
+	}
+	x0, y0 = SleepCell(DoubleBed, East, 4, 4, 0)
+	x1, y1 = SleepCell(DoubleBed, East, 4, 4, 1)
+	if x0 != x1 || y0 == y1 {
+		t.Fatalf("east-facing slots share the head column: %d,%d %d,%d", x0, y0, x1, y1)
+	}
+}

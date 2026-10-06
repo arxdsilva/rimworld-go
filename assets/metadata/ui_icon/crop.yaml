@@ -4,4 +4,4 @@ id: "core:ui_icon/crop"
 image: generated/ui/icons/crop.png
 scale: 2
 canvas: [128, 128]
-source: "core:plant/crop_harvestable"
+source: "core:plant/potato_harvestable"

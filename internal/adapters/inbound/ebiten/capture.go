@@ -84,7 +84,12 @@ func captureOrders(cx, cy int) []command.Command {
 	out = append(out,
 		command.Command{Kind: command.DesignateStockpile, X: cx + 1, Y: cy + 3, X2: cx + 3, Y2: cy + 4},
 		command.Command{Kind: command.DesignateHarvest, X: cx + 2, Y: cy - 4, X2: cx + 5, Y2: cy - 4},
-		command.Command{Kind: command.DesignateGrowZone, X: cx + 1, Y: cy - 2, X2: cx + 4, Y2: cy},
+	)
+	for i, crop := range []string{"radish", "lettuce", "corn", "wheat"} {
+		id, _ := game.CropID(crop)
+		out = append(out, command.Command{Kind: command.DesignateGrowZone, X: cx + 1 + i, Y: cy - 2, X2: cx + 1 + i, Y2: cy, Build: id})
+	}
+	out = append(out,
 		command.Command{Kind: command.DesignateCut, X: cx + 6, Y: cy - 12, X2: cx + 20, Y2: cy + 10},
 		command.Command{Kind: command.DesignateCut, X: cx - 20, Y: cy - 4, X2: cx - 8, Y2: cy + 10},
 		command.Command{Kind: command.DesignateMine, X: cx - 14, Y: cy - 8, X2: cx - 9, Y2: cy + 2},
@@ -171,6 +176,16 @@ func (a *App) captureUI(ui string) {
 		a.renderer.cam.offsetX = float64(cx+1)*tile - float64(a.sw)/2 + 180
 		a.renderer.cam.offsetY = float64(cy+5)*tile - float64(a.sh)/2
 		x, y := at(cx+1, cy+6)
+		a.cursor = &[2]int{x, y}
+	case "grow":
+		a.openArchitect()
+		a.selectArchCategory("zones")
+		a.selectArchTool("grow")
+		a.archCrop = "corn"
+		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
+		a.archDrag = true
+		a.archX0, a.archY0, a.archX1, a.archY1 = cx+6, cy-2, cx+8, cy
+		x, y := at(cx+8, cy)
 		a.cursor = &[2]int{x, y}
 	case "architect":
 		a.openArchitect()

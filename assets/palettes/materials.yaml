@@ -29,6 +29,12 @@ materials:
   fur_grey:    {light: "#9aa1a8", base: "#767d86", shadow: "#525860"}
   fur_dark:    {light: "#5b5550", base: "#433e3a", shadow: "#2c2826"}
   horn:        {light: "#e8dcc0", base: "#c4b393", shadow: "#8f8169"}
+  leaf_light:  {light: "#cde58a", base: "#a8c766", shadow: "#7a9748"}
+  tuber:       {light: "#d9b47e", base: "#b88f58", shadow: "#86653c"}
+  corn_yellow: {light: "#fbe27a", base: "#e8bf3e", shadow: "#b28a24"}
+  straw:       {light: "#f0d58c", base: "#d2b062", shadow: "#9c7f40"}
+  pumpkin:     {light: "#f5a04a", base: "#dc7a26", shadow: "#a4551a"}
+  blossom:     {light: "#f6f0ff", base: "#d9cdee", shadow: "#a596c2"}
   # neutral, tinted at runtime
   cloth:       {light: "#f4f4f4", base: "#d2d2d2", shadow: "#a2a2a2", tint: true}
   skin:        {light: "#f6f6f6", base: "#dadada", shadow: "#adadad", tint: true}

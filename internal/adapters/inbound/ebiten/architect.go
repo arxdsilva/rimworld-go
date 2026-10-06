@@ -23,17 +23,62 @@ const (
 	archMaxGhost = 400
 )
 
-func architectRect() button {
-	rows := 2
-	h := archTop + rows*(archCardH+archCardGap) + archInfoH
+// Crop picker (growing-zone tool): 4 crops per row, then a stats line.
+const (
+	archCropCols = 4
+	archCropBtnW = 62
+	archCropBtnH = 22
+	archCropH    = 2*(archCropBtnH+4) + 40
+)
+
+// archCardRows is the card rows the current category needs (min 2).
+func (a *App) archCardRows() int {
+	rows := (len(toolsIn(a.archCat)) + 1) / 2
+	if rows < 2 {
+		rows = 2
+	}
+	return rows
+}
+
+// archCropOpen reports the selected tool sows a crop.
+func (a *App) archCropOpen() bool {
+	t, ok := toolByID(a.archTool)
+	return ok && t.crop != ""
+}
+
+func (a *App) selectedCrop() game.CropView {
+	crops := game.Crops()
+	for _, c := range crops {
+		if c.Name == a.archCrop {
+			return c
+		}
+	}
+	for _, c := range crops {
+		if c.Name == "potato" {
+			return c
+		}
+	}
+	return crops[0]
+}
+
+func (a *App) architectRect() button {
+	h := archTop + a.archCardRows()*(archCardH+archCardGap) + archInfoH
+	if a.archCropOpen() {
+		h += archCropH
+	}
 	return button{x: hudPad, y: hudTopH + hudPad, w: archW, h: float32(h)}
+}
+
+// archCropTop is the y of the crop picker block.
+func (a *App) archCropTop(r button) float32 {
+	return r.y + archTop + float32(a.archCardRows()*(archCardH+archCardGap))
 }
 
 func (a *App) architectButtons() []button {
 	if !a.archOpen {
 		return nil
 	}
-	r := architectRect()
+	r := a.architectRect()
 	out := make([]button, 0, len(archCategories)+6)
 	cx := r.x + 10
 	for _, c := range archCategories {
@@ -53,6 +98,18 @@ func (a *App) architectButtons() []button {
 			w:  archCardW, h: archCardH,
 			selected: a.archTool == t.id,
 		})
+	}
+	if a.archCropOpen() {
+		sel := a.selectedCrop().Name
+		top := a.archCropTop(r)
+		for i, c := range game.Crops() {
+			col, row := i%archCropCols, i/archCropCols
+			out = append(out, button{
+				id: "arch.crop." + c.Name, label: strings.ToUpper(c.Name[:1]) + c.Name[1:],
+				x: r.x + 10 + float32(col)*(archCropBtnW+2), y: top + float32(row)*(archCropBtnH+4),
+				w: archCropBtnW, h: archCropBtnH, selected: c.Name == sel,
+			})
+		}
 	}
 	if t, ok := toolByID(a.archTool); ok {
 		if bv, ok := buildable(t.build); ok && bv.StoneOK {
@@ -136,7 +193,7 @@ func (a *App) drawArchitect(screen *ebiten.Image) {
 	if !a.archOpen {
 		return
 	}
-	r := architectRect()
+	r := a.architectRect()
 	drawPanel(screen, r.x, r.y, r.w, r.h)
 	drawLabel(screen, int(r.x)+12, int(r.y)+8, "Architect")
 	mx, my := a.currentCursor()
@@ -147,10 +204,6 @@ func (a *App) drawArchitect(screen *ebiten.Image) {
 	var hover *archTool
 	for _, b := range a.architectButtons() {
 		if !strings.HasPrefix(b.id, "arch.tool.") {
-			if strings.HasPrefix(b.id, "arch.stuff.") {
-				drawButton(screen, b, b.contains(mx, my))
-				continue
-			}
 			drawButton(screen, b, b.contains(mx, my))
 			continue
 		}
@@ -167,6 +220,12 @@ func (a *App) drawArchitect(screen *ebiten.Image) {
 			tt := t
 			hover = &tt
 		}
+	}
+	if a.archCropOpen() {
+		c := a.selectedCrop()
+		y := int(a.archCropTop(r)) + 2*(archCropBtnH+4) + 2
+		drawLabel(screen, int(r.x)+12, y, fmt.Sprintf("%s: %.1f days, %d %s per plant", strings.ToUpper(c.Name[:1])+c.Name[1:], c.Days, c.Yield, c.Label))
+		drawLabel(screen, int(r.x)+12, y+16, fmt.Sprintf("rich %.1fd  gravel %.1fd  food %d each", c.RichDays, c.GravelDay, c.Nutrition))
 	}
 	iy := int(r.y+r.h) - archInfoH + 6
 	stone := 0
@@ -308,7 +367,7 @@ func (a *App) submitArchitect() {
 	if t.mode == placeArea {
 		c := command.Command{Kind: t.cmd, X: a.archX0, Y: a.archY0, X2: a.archX1, Y2: a.archY1}
 		if t.crop != "" {
-			c.Build, _ = game.CropID(t.crop)
+			c.Build, _ = game.CropID(a.selectedCrop().Name)
 		}
 		a.renderer.enqueue(c)
 		return

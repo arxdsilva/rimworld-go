@@ -202,12 +202,21 @@ func (g *Game) down(id entity.EntityID, cause health.Cause) {
 func (g *Game) releaseBed(id entity.EntityID) {
 	for _, bid := range g.bldgIDs {
 		b, ok := g.bldgs.Get(bid)
-		if !ok || entity.EntityID(b.Claimant) != id {
+		if !ok || b.SlotOf(uint64(id)) < 0 {
 			continue
 		}
-		b.Claimant = 0
-		g.bldgs.Set(bid, b)
+		g.bldgs.Set(bid, b.Release(uint64(id)))
 	}
+}
+
+// sleepCellFor is where pawn id lies in bed b: its own slot's head cell
+// (the slot it holds, else the slot it would get).
+func (g *Game) sleepCellFor(id entity.EntityID, b construction.Building) (int, int) {
+	slot := b.SlotOf(uint64(id))
+	if slot < 0 {
+		slot = b.Claim(uint64(id)).SlotOf(uint64(id))
+	}
+	return construction.SleepCell(b.Kind, b.Facing, b.X, b.Y, slot)
 }
 
 func (g *Game) alive(id entity.EntityID) bool {
@@ -341,7 +350,7 @@ func (g *Game) phaseAI() {
 
 func (g *Game) startJob(id entity.EntityID, rec job.Record) bool {
 	g.reserve.ReleaseOwner(id)
-	if rec.Target != 0 && rec.Kind != job.Attack && !g.reserve.TryEntity(id, rec.Target) {
+	if rec.Target != 0 && rec.Kind != job.Attack && rec.Kind != job.Sleep && !g.reserve.TryEntity(id, rec.Target) {
 		rec.State = job.Fail
 		rec.Fail = job.Reserved
 		g.jobs.Set(id, rec)
@@ -464,31 +473,30 @@ func (g *Game) assignSleep(id entity.EntityID) {
 	pos, _ := g.positions.Get(id)
 	var best entity.EntityID
 	bestD := 1 << 30
-	var bx, by int
 	for _, bid := range g.bldgIDs {
 		b, ok := g.bldgs.Get(bid)
-		if !ok || !b.Kind.Sleeps() {
-			continue
-		}
-		if b.Claimant != 0 && entity.EntityID(b.Claimant) != id {
-			continue
-		}
-		if owner, taken := g.reserve.EntityOwner(bid); taken && owner != id {
+		if !ok || !b.Kind.Sleeps() || !b.CanClaim(uint64(id)) {
 			continue
 		}
 		d := pathing.Dist(pos.X, pos.Y, b.X, b.Y)
+		if b.SlotOf(uint64(id)) >= 0 {
+			d = -1 // its own bed first
+		}
 		if d < bestD || (d == bestD && bid < best) {
-			best, bestD, bx, by = bid, d, b.X, b.Y
+			best, bestD = bid, d
 		}
 	}
 	if best != 0 {
 		b, _ := g.bldgs.Get(best)
-		b.Claimant = uint64(id)
+		if b.SlotOf(uint64(id)) < 0 {
+			g.releaseBed(id) // moving to a new bed gives up the old one
+		}
+		b = b.Claim(uint64(id))
 		g.bldgs.Set(best, b)
 		g.sleptAt[id] = best
-		if !g.startJob(id, job.Record{Kind: job.Sleep, Target: best, TX: bx, TY: by, WorkLeft: needs.SleepWorkMin}) {
-			b.Claimant = 0
-			g.bldgs.Set(best, b)
+		sx, sy := g.sleepCellFor(id, b)
+		if !g.startJob(id, job.Record{Kind: job.Sleep, Target: best, TX: sx, TY: sy, WorkLeft: needs.SleepWorkMin}) {
+			g.bldgs.Set(best, b.Release(uint64(id)))
 			g.sleptAt[id] = 0
 		}
 		return
@@ -609,7 +617,30 @@ func (g *Game) inMatchingStockpile(st item.Stack) bool {
 	return false
 }
 
+// emptyStockpileCell is where a load of kind k goes: a stockpile cell
+// whose same-kind stack still has room (topping up), else an empty cell.
 func (g *Game) emptyStockpileCell(k item.Kind) (int, int, bool) {
+	for _, s := range g.stockpiles {
+		if !allows(s, k) {
+			continue
+		}
+		for y := s.MinY; y <= s.MaxY; y++ {
+			for x := s.MinX; x <= s.MaxX; x++ {
+				oid := g.itemAt(x, y)
+				if oid == 0 {
+					continue
+				}
+				o, _ := g.stacks.Get(oid)
+				if o.Kind != k || o.Qty+item.CarryLimit > item.StackLimit {
+					continue
+				}
+				if _, taken := g.reserve.TileOwner(x, y); taken {
+					continue
+				}
+				return x, y, true
+			}
+		}
+	}
 	for _, s := range g.stockpiles {
 		if !allows(s, k) {
 			continue
@@ -773,14 +804,22 @@ func (g *Game) doEat(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
-	st.Qty--
+	// eat portions until satisfied (several lettuces make a meal; one
+	// ration does), never past full by more than half a portion
+	n, _ := g.need.Get(id)
+	nut := st.Kind.Nutrition()
+	for eaten := 0; st.Qty > 0 && eaten < 12; eaten++ {
+		st.Qty--
+		n.Hunger += nut
+		if n.Hunger+nut/2 > needs.Full {
+			break
+		}
+	}
 	if st.Qty <= 0 {
 		g.deleteItem(j.Target)
 	} else {
 		g.stacks.Set(j.Target, st)
 	}
-	n, _ := g.need.Get(id)
-	n.Hunger += st.Kind.Nutrition()
 	g.lastMeal[id] = st.Kind
 	g.afterEat(id, st.Kind)
 	if n.Hunger > needs.Full {
@@ -828,14 +867,32 @@ func (g *Game) doHaul(id entity.EntityID, j job.Record) {
 			g.jobs.Set(id, j)
 			return
 		}
+		take := st.Qty
+		if take > item.CarryLimit {
+			take = item.CarryLimit
+		}
+		if fr, ok := g.frames.Get(j.Dest); ok && j.Dest != 0 {
+			if need := fr.Need - fr.Wood; need > 0 && take > need {
+				take = need
+			}
+		}
+		carry := j.Target
+		if take < st.Qty { // split off one load, leave the rest
+			st.Qty -= take
+			g.stacks.Set(j.Target, st)
+			carry = g.entities.Next()
+			g.itemIDs = append(g.itemIDs, carry)
+			st = item.Stack{Kind: st.Kind, Qty: take, X: st.X, Y: st.Y}
+		}
 		st.Carrier = id
-		g.stacks.Set(j.Target, st)
-		j.Carry = j.Target
+		g.stacks.Set(carry, st)
+		j.Carry = carry
 		path, ok := g.pathTo(id, j.DestX, j.DestY)
 		if !ok {
 			st.Carrier = 0
 			st.X, st.Y = pos.X, pos.Y
-			g.stacks.Set(j.Target, st)
+			g.mergeOrSet(carry, st)
+			j.Carry = 0
 			j.State = job.Fail
 			j.Fail = job.Unreachable
 			g.jobs.Set(id, j)
@@ -1082,23 +1139,85 @@ func (g *Game) deleteItem(id entity.EntityID) {
 	g.itemIDs = kept
 }
 
+// mergeOrSet puts stack id down at st's tile, merging into a same-kind
+// stack there up to StackLimit; any overflow spills to a nearby tile.
 func (g *Game) mergeOrSet(id entity.EntityID, st item.Stack) {
 	for _, oid := range g.itemIDs {
 		if oid == id {
 			continue
 		}
 		other, ok := g.stacks.Get(oid)
-		if !ok {
+		if !ok || !item.CanMerge(st, other) {
 			continue
 		}
-		if item.CanMerge(st, other) {
-			other.Qty = item.Add(other.Qty, st.Qty)
+		room := item.StackLimit - other.Qty
+		if room <= 0 {
+			break
+		}
+		if st.Qty <= room {
+			other.Qty += st.Qty
 			g.stacks.Set(oid, other)
 			g.deleteItem(id)
 			return
 		}
+		other.Qty = item.StackLimit
+		g.stacks.Set(oid, other)
+		st.Qty -= room
+		break
+	}
+	if g.otherStackAt(id, st.X, st.Y) {
+		if x, y, ok := g.spillTile(st.Kind, st.X, st.Y); ok {
+			st.X, st.Y = x, y
+			g.mergeOrSet(id, st)
+			return
+		}
 	}
 	g.stacks.Set(id, st)
+}
+
+func (g *Game) otherStackAt(id entity.EntityID, x, y int) bool {
+	for _, oid := range g.itemIDs {
+		if oid == id {
+			continue
+		}
+		if o, ok := g.stacks.Get(oid); ok && o.Carrier == 0 && o.X == x && o.Y == y {
+			return true
+		}
+	}
+	return false
+}
+
+// spillTile is the nearest walkable tile around (x, y) with no stack or
+// a same-kind stack that still has room.
+func (g *Game) spillTile(k item.Kind, x, y int) (int, int, bool) {
+	for r := 1; r <= 4; r++ {
+		for dy := -r; dy <= r; dy++ {
+			for dx := -r; dx <= r; dx++ {
+				if max(abs(dx), abs(dy)) != r {
+					continue
+				}
+				nx, ny := x+dx, y+dy
+				if !g.grid.Walkable(nx, ny) {
+					continue
+				}
+				oid := g.itemAt(nx, ny)
+				if oid == 0 {
+					return nx, ny, true
+				}
+				if o, _ := g.stacks.Get(oid); o.Kind == k && o.Qty < item.StackLimit {
+					return nx, ny, true
+				}
+			}
+		}
+	}
+	return 0, 0, false
+}
+
+func abs(v int) int {
+	if v < 0 {
+		return -v
+	}
+	return v
 }
 
 // Ate reports whether the pawn completed an Eat job (fixture helper).

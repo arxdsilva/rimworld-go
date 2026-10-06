@@ -19,9 +19,9 @@ func main() {
 	capture := flag.String("capture", "", "dev: save one colony frame to this PNG and exit")
 	captureTicks := flag.Int("capture-ticks", 5400, "dev: simulation ticks to run before -capture")
 	captureZoom := flag.Float64("capture-zoom", 1, "dev: camera zoom for -capture")
-	scenario := flag.String("scenario", "", "dev: start scenario: rescue (a colonist starts badly hurt) | beds (sleeping spots in the other facings)")
+	scenario := flag.String("scenario", "", "dev: start scenario: rescue (a colonist starts badly hurt) | beds (sleeping spots in the other facings) | double (a double bed by the start)")
 	captureFrames := flag.Int("capture-frames", 0, "dev: record this many consecutive frames (PATH_NNN.png) instead of one still")
-	captureUI := flag.String("capture-ui", "", "dev: UI state for -capture: architect | orders | bills | pawn | combat | melee | follow")
+	captureUI := flag.String("capture-ui", "", "dev: UI state for -capture: architect | orders | bills | pawn | combat | melee | follow | grow")
 	flag.Parse()
 
 	var shot *uiadapter.Capture
@@ -41,6 +41,13 @@ func main() {
 					for dy := 0; dy < 8 && !g.BuildNow("sleeping spot", "wood", f, cx+6+dy, cy-6+3*i); dy++ {
 					}
 				}
+			}
+			if *scenario == "beds" {
+				for dy := 0; dy < 6 && !g.BuildNow("double bed", "wood", "south", *width/2+6, *height/2+1+dy); dy++ {
+				}
+			}
+			if *scenario == "double" {
+				g.BuildNow("double bed", "wood", "south", *width/2-1, *height/2+1)
 			}
 			if *scenario == "rescue" {
 				if snap := g.Snapshot(); len(snap) > 1 {

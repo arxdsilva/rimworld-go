@@ -13,35 +13,36 @@ func TestGrowZoneSowsGrowsAndHarvests(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 12, Height: 6})
 	id, _ := g.SpawnNamedPawn(1, 1, "Ada")
 	g.SetNeeds(id, needs.Full, needs.Full)
-	crop, ok := CropID("amberroot")
+	crop, ok := CropID("radish")
 	if !ok {
-		t.Fatal("amberroot is a crop")
+		t.Fatal("radish is a crop")
 	}
 	if _, ok := CropID("tree"); ok {
 		t.Fatal("trees are not crops")
 	}
 	g.Enqueue(command.Command{Kind: command.DesignateGrowZone, X: 4, Y: 2, X2: 5, Y2: 3, Build: crop})
-	g.Step(TicksPerCell*40 + 4*SowWork)
+	g.Step(TicksPerCell*40 + 4*plant.DefOf(plant.Radish).SowWork)
 	w := g.World()
-	if len(w.GrowZones) != 1 || w.GrowZones[0].Crop != "amberroot" {
+	if len(w.GrowZones) != 1 || w.GrowZones[0].Crop != "radish" {
 		t.Fatalf("zones = %+v", w.GrowZones)
 	}
 	sown := 0
 	for _, p := range w.Plants {
-		if p.Species == "amberroot" {
+		if p.Species == "radish" {
 			sown++
 		}
 	}
 	if sown != 4 {
 		t.Fatalf("sown = %d, want 4", sown)
 	}
-	// let them ripen and be harvested (keep the pawn fed and rested)
-	for i := 0; i < 20; i++ {
+	// let them ripen (daylight only, about two days) and be harvested,
+	// keeping the pawn fed and rested
+	for i := 0; i < 40; i++ {
 		g.SetNeeds(id, needs.Full, needs.Full)
-		g.Step(plant.DefOf(plant.Amberroot).GrowTicks / 10)
+		g.Step(plant.DefOf(plant.Radish).GrowTicks / 10)
 	}
-	if got := g.World().FoodByKind["amberroot"]; got < plant.DefOf(plant.Amberroot).Yield {
-		t.Fatalf("amberroot harvested = %d", got)
+	if got := g.World().FoodByKind["radishes"]; got < plant.DefOf(plant.Radish).Yield {
+		t.Fatalf("radishes harvested = %d", got)
 	}
 }
 
@@ -91,7 +92,7 @@ func TestOrdersAtOffersSowOnEmptyZoneCell(t *testing.T) {
 	opts := g.OrdersAt(id, 5, 1)
 	found := false
 	for _, o := range opts {
-		if o.Label == "Sow amberroot" && !o.Disabled {
+		if o.Label == "Sow potato" && !o.Disabled {
 			found = true
 		}
 	}

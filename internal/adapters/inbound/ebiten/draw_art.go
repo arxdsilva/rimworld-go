@@ -168,7 +168,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 		mask := wallMask(walls, b.X, b.Y)
 		key := buildSpriteStuff(b.Kind, b.Stuff, b.Facing, mask, mask&(wallE|wallW) != 0, occupied[[2]int{b.X, b.Y}])
 		t := none
-		if b.Kind == "bed" && len(cloth) > 0 {
+		if (b.Kind == "bed" || b.Kind == "double bed") && len(cloth) > 0 {
 			t = r.art.tint("cloth", cloth[mix64(uint64(b.ID))%uint64(len(cloth))])
 		}
 		add(float64(b.Y+max(b.H, 1)-1), float64(b.X), func() {
@@ -209,8 +209,10 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 		switch p.Species {
 		case "tree":
 			amount = 0.022
-		case "amberroot":
-			amount = 0.06
+		case "wheat", "corn":
+			amount = 0.07
+		case "radish", "lettuce", "potato", "beans", "pumpkin":
+			amount = 0.04
 		}
 		add(float64(p.Y), float64(p.X), func() {
 			ps := pose{px: 0.5, py: 1, sx: scale, sy: scale, skew: r.sway(p.X, p.Y, amount)}
@@ -288,8 +290,20 @@ func itemSprite(kind string) string {
 		return "item/ration_pack"
 	case "berries":
 		return "item/berries_basket"
-	case "amberroot":
-		return "item/food_crate"
+	case "potatoes":
+		return "item/potatoes"
+	case "corn":
+		return "item/corn_pile"
+	case "wheat":
+		return "item/wheat_sheaf"
+	case "beans":
+		return "item/beans_sack"
+	case "lettuce":
+		return "item/lettuce_heads"
+	case "radishes":
+		return "item/radish_bunch"
+	case "pumpkins":
+		return "item/pumpkins"
 	case "meat":
 		return "item/meat_pile"
 	case "meal":
@@ -489,8 +503,11 @@ func plantSprite(p game.PlantView) (string, float64) {
 	case "tree":
 		k := 0.45 + 0.55*float64(p.Growth)/100
 		return artKey("plant", "tree", int(tileHash(p.X, p.Y)%3)), k
-	case "amberroot":
-		return "plant/crop_" + [...]string{"sown", "young", "mature", "harvestable"}[clampStage(p.Stage)], 1
+	case "radish", "lettuce", "beans", "potato", "corn", "wheat", "pumpkin":
+		if st := clampStage(p.Stage); st > 0 {
+			return "plant/" + p.Species + "_" + [...]string{"", "young", "mature", "harvestable"}[st], 1
+		}
+		return "plant/crop_sown", 1
 	default:
 		key := artKey("plant", "bush", int(tileHash(p.X, p.Y)%2))
 		if p.Harvestable {

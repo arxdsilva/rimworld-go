@@ -88,6 +88,7 @@ type App struct {
 	archTool                       string
 	archFacing                     uint8
 	archStuff                      string // "wood" or "stone" for tools that allow both
+	archCrop                       string // crop the growing-zone tool sows
 	float                          floatMenu
 	cursor                         *[2]int // capture-only synthetic cursor
 	selBuilding                    entity.EntityID
@@ -355,6 +356,8 @@ func (a *App) applyClick(id string) {
 		a.selectArchCategory(strings.TrimPrefix(id, "arch.cat."))
 	case strings.HasPrefix(id, "arch.stuff."):
 		a.archStuff = strings.TrimPrefix(id, "arch.stuff.")
+	case strings.HasPrefix(id, "arch.crop."):
+		a.archCrop = strings.TrimPrefix(id, "arch.crop.")
 	case strings.HasPrefix(id, "arch.tool."):
 		a.selectArchTool(strings.TrimPrefix(id, "arch.tool."))
 	case strings.HasPrefix(id, "float."):

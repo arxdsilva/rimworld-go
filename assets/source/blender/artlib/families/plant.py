@@ -62,34 +62,152 @@ def _leaf(name, x, y, ang, length, z, mat="vegetation", width=0.07):
     S.prism(name, pts, z, z + 0.02, mat, bevel=0.0)
 
 
-def _crop(stage):
-    """Original crop 'amberroot': rosette of leaves, amber bulbs when ripe."""
+def _mound():
     S.cyl("mound", 0.5, -0.52, 0.30, 0.0, 0.05, "soil_rich", segs=20, r_top=0.24, bevel=0.0)
-    if stage == "sown":
-        for k, (x, y) in enumerate([(0.38, -0.40), (0.62, -0.60), (0.58, -0.36)]):
-            S.cyl("sprout%d" % k, x, y, 0.025, 0.05, 0.12, "vegetation", segs=6, r_top=0.01, bevel=0.0)
-        zmax = 0.12
-    else:
-        n, length, z = {"young": (5, 0.22, 0.08), "mature": (7, 0.36, 0.12), "harvestable": (8, 0.40, 0.13)}[stage]
-        for k in range(n):
-            a = 2 * math.pi * k / n + 0.3
-            _leaf("leaf%d" % k, 0.5, -0.5, a, length, z + 0.02 * (k % 2),
-                  "foliage" if k % 2 else "vegetation", width=0.07 + length * 0.12)
-        S.cyl("heart", 0.5, -0.5, 0.06 + length * 0.1, 0.05, z + 0.08, "vegetation", segs=8, r_top=0.03)
-        zmax = z + 0.10
-        if stage == "harvestable":
-            for k in range(3):
-                a = 2 * math.pi * k / 3 + 1.0
-                S.ellipsoid("bulb%d" % k, 0.5 + math.cos(a) * 0.17, -0.5 + math.sin(a) * 0.17, 0.12,
-                            0.09, 0.09, 0.08, "crop_fruit", segs=12, rings=8)
-            zmax = 0.25
-    return S.render_asset("plant", "crop_%s" % stage, zmax=zmax,
-                          extra={"species": "amberroot", "growth": stage})
+
+
+def _sown():
+    """Shared first stage: a tilled mound with seedlings."""
+    _mound()
+    for k, (x, y) in enumerate([(0.38, -0.40), (0.62, -0.60), (0.58, -0.36)]):
+        S.cyl("sprout%d" % k, x, y, 0.025, 0.05, 0.12, "vegetation", segs=6, r_top=0.01, bevel=0.0)
+    return S.render_asset("plant", "crop_sown", zmax=0.12, extra={"growth": "sown"})
+
+
+def _rosette(n, length, z, mats=("vegetation", "foliage"), width=None, cx=0.5, cy=-0.5, rot=0.3):
+    for k in range(n):
+        a = 2 * math.pi * k / n + rot
+        _leaf("leaf%d" % k, cx, cy, a, length, z + 0.02 * (k % 2), mats[k % len(mats)],
+              width=width or (0.07 + length * 0.12))
+
+
+def _radish(k):
+    """Radish: a low rosette of leaves; red roots crown at the soil when ripe."""
+    _mound()
+    size = (0.5, 0.85, 1.0)[k]
+    _rosette(6, 0.26 * size, 0.07, ("vegetation", "foliage"))
+    S.cyl("heart", 0.5, -0.5, 0.05, 0.05, 0.12 * size + 0.05, "vegetation", segs=8, r_top=0.02)
+    if k == 2:
+        for i, (x, y) in enumerate([(0.38, -0.60), (0.62, -0.58), (0.50, -0.36)]):
+            S.ellipsoid("root%d" % i, x, y, 0.07, 0.07, 0.07, 0.065, "food_red", segs=12, rings=8)
+    return 0.22 * size + 0.08
+
+
+def _lettuce(k):
+    """Lettuce: broad pale leaves closing into a round head."""
+    _mound()
+    size = (0.5, 0.85, 1.05)[k]
+    _rosette(7, 0.30 * size, 0.06, ("leaf_light", "vegetation"), width=0.11 * size + 0.03)
+    S.ellipsoid("head", 0.5, -0.5, 0.10 * size + 0.04, 0.16 * size, 0.16 * size, 0.11 * size,
+                "leaf_light", segs=16, rings=10)
+    if k >= 1:
+        S.ellipsoid("heart", 0.5, -0.5, 0.16 * size + 0.04, 0.08 * size, 0.08 * size, 0.06 * size,
+                    "vegetation", segs=12, rings=8)
+    return 0.30 * size + 0.06
+
+
+def _beans(k):
+    """Bush beans: a leafy little shrub; pods hang from it when ripe."""
+    _mound()
+    size = (0.5, 0.9, 1.0)[k]
+    S.blob("bush", 0.5, -0.5, 0.05, 0.26 * size, "foliage", seed=81, lumps=0.28, squash=0.9)
+    S.blob("bush2", 0.40, -0.42, 0.10, 0.16 * size, "vegetation", seed=82, lumps=0.3, squash=0.9)
+    S.blob("bush3", 0.62, -0.58, 0.08, 0.15 * size, "vegetation", seed=83, lumps=0.3, squash=0.9)
+    if k == 2:
+        # ripe dry pods (tan) hang all round the bush, on top of the leaves
+        for i in range(8):
+            a = 2 * math.pi * i / 8 + 0.2
+            x, y = 0.5 + math.cos(a) * 0.22, -0.5 + math.sin(a) * 0.22
+            S.ellipsoid("pod%d" % i, x, y, 0.22 + 0.04 * (i % 2), 0.035, 0.035, 0.09, "straw", segs=8, rings=6)
+    return 0.30 * size + 0.12
+
+
+def _potato(k):
+    """Potato: a sprawling leafy plant that flowers; tubers show when dug."""
+    _mound()
+    size = (0.5, 0.9, 1.0)[k]
+    S.blob("haulm", 0.5, -0.5, 0.06, 0.28 * size, "vegetation", seed=91, lumps=0.25, squash=0.8)
+    S.blob("haulm2", 0.38, -0.40, 0.08, 0.18 * size, "foliage", seed=92, lumps=0.28, squash=0.85)
+    if k >= 1:
+        for i, (x, y) in enumerate([(0.45, -0.45), (0.58, -0.55), (0.52, -0.38)]):
+            S.ellipsoid("flower%d" % i, x, y, 0.30 * size + 0.04, 0.035, 0.035, 0.02, "blossom", segs=8, rings=5)
+    if k == 2:
+        for i, (x, y) in enumerate([(0.26, -0.70), (0.72, -0.72), (0.76, -0.40)]):
+            S.ellipsoid("tuber%d" % i, x, y, 0.05, 0.075, 0.06, 0.05, "tuber", segs=12, rings=8)
+    return 0.30 * size + 0.10
+
+
+def _corn(k):
+    """Corn: tall stalks with long arching leaves, yellow cobs and tassels."""
+    _mound()
+    h = (0.35, 0.95, 1.10)[k]
+    for i, (x, y) in enumerate([(0.42, -0.46), (0.60, -0.56)]):
+        S.cyl("stalk%d" % i, x, y, 0.035, 0.03, h, "vegetation", segs=8, r_top=0.022, bevel=0.0)
+        for j in range(3 if k else 2):
+            z = h * (0.35 + 0.22 * j)
+            a = 0.8 + 2.2 * j + 1.4 * i
+            _leaf("cleaf%d%d" % (i, j), x, y, a, 0.32 * (h / 1.1) + 0.06, z, "foliage" if j % 2 else "vegetation",
+                  width=0.05)
+        if k == 2:
+            S.ellipsoid("cob%d" % i, x + 0.06, y - 0.03, h * 0.55, 0.045, 0.045, 0.11, "corn_yellow", segs=10, rings=8)
+            S.ellipsoid("husk%d" % i, x + 0.07, y - 0.035, h * 0.50, 0.05, 0.05, 0.08, "leaf_light", segs=10, rings=6)
+            S.cyl("tassel%d" % i, x, y, 0.03, h, h + 0.12, "straw", segs=6, r_top=0.004, bevel=0.0)
+    return h + (0.14 if k == 2 else 0.04)
+
+
+def _wheat(k):
+    """Wheat: a dense clump of thin stalks, green, then golden with heads."""
+    _mound()
+    h = (0.28, 0.62, 0.70)[k]
+    stalk = "straw" if k == 2 else "vegetation"
+    import random
+    rnd = random.Random(11)
+    for i in range(14):
+        x, y = 0.5 + rnd.uniform(-0.2, 0.2), -0.5 + rnd.uniform(-0.2, 0.2)
+        hh = h * rnd.uniform(0.85, 1.05)
+        S.cyl("stem%d" % i, x, y, 0.014, 0.03, hh, stalk if i % 3 else ("foliage" if k < 2 else "straw"),
+              segs=5, r_top=0.008, bevel=0.0)
+        if k >= 1:
+            S.ellipsoid("ear%d" % i, x, y, hh + 0.05, 0.022, 0.022, 0.06,
+                        "straw" if k == 2 else "leaf_light", segs=6, rings=5)
+    return h + 0.12
+
+
+def _pumpkin(k):
+    """Pumpkin: big flat leaves on a sprawling vine; orange fruit when ripe."""
+    _mound()
+    size = (0.5, 0.95, 1.0)[k]
+    for i in range(5):
+        a = 2 * math.pi * i / 5 + 0.5
+        _leaf("pleaf%d" % i, 0.5, -0.5, a, 0.36 * size, 0.05 + 0.02 * (i % 2),
+              "foliage" if i % 2 else "vegetation", width=0.15 * size)
+    S.cyl("vine", 0.5, -0.5, 0.04, 0.04, 0.10, "vegetation", segs=8)
+    if k >= 1:
+        S.ellipsoid("bloom", 0.62, -0.40, 0.12, 0.04, 0.04, 0.03, "corn_yellow", segs=8, rings=5)
+    if k == 2:
+        for i, (x, y, r) in enumerate([(0.36, -0.62, 0.15), (0.66, -0.66, 0.12)]):
+            S.ellipsoid("pumpkin%d" % i, x, y, r * 0.75, r, r * 0.95, r * 0.75, "pumpkin", segs=16, rings=10)
+            S.cyl("stem%d" % i, x, y, 0.015, r * 1.4, r * 1.65, "bark", segs=6, bevel=0.0)
+        return 0.30
+    return 0.16 * size + 0.08
+
+
+CROPS = {"radish": _radish, "lettuce": _lettuce, "beans": _beans, "potato": _potato,
+         "corn": _corn, "wheat": _wheat, "pumpkin": _pumpkin}
+STAGES = ("young", "mature", "harvestable")
+
+
+def _crop(species, k):
+    zmax = CROPS[species](k)
+    return S.render_asset("plant", "%s_%s" % (species, STAGES[k]), zmax=zmax,
+                          margins=(0.125, 0.125, 0.12, 0.125),
+                          extra={"species": species, "growth": STAGES[k]})
 
 
 def build():
     out = [_tree(i) for i in range(3)]
     out += [_bush(0, False), _bush(0, True), _bush(1, False), _bush(1, True)]
     out += [_grass(0), _grass(1)]
-    out += [_crop(s) for s in ("sown", "young", "mature", "harvestable")]
+    out.append(_sown())
+    out += [_crop(sp, k) for sp in CROPS for k in range(3)]
     return out

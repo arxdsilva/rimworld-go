@@ -186,3 +186,69 @@ func TestColonyStartsWithWildlifeAndARifle(t *testing.T) {
 		t.Fatalf("start kit rifles = %d", rifles)
 	}
 }
+
+func TestBigStacksHaulInLoadsAndTopUp(t *testing.T) {
+	g := New(Config{Seed: 1, Width: 16, Height: 8})
+	if _, err := g.SpawnNamedPawn(2, 4, "Hauler"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := g.SpawnStack(item.Wood, 900, 3, 4); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := g.SpawnStack(item.Wood, 100, 12, 2); err != nil { // already stored
+		t.Fatal(err)
+	}
+	g.Apply(command.Command{Kind: command.DesignateStockpile, X: 12, Y: 2, X2: 13, Y2: 3})
+	g.Step(1)
+	maxCarried := 0
+	for i := 0; i < 400 && itemsOnGround(g, "wood") > 0; i++ {
+		g.Step(20)
+		for _, it := range g.World().Items {
+			if it.Carried && it.Qty > maxCarried {
+				maxCarried = it.Qty
+			}
+		}
+		stored := 0
+		for _, it := range g.World().Items {
+			if it.Kind == "wood" && !it.Carried && it.X >= 12 && it.Y >= 2 && it.X <= 13 && it.Y <= 3 {
+				stored += it.Qty
+			}
+		}
+		if stored == 1000 {
+			break
+		}
+	}
+	if maxCarried == 0 || maxCarried > item.CarryLimit {
+		t.Fatalf("hauls go in loads of at most %d, saw %d", item.CarryLimit, maxCarried)
+	}
+	total, stacks := 0, 0
+	for _, it := range g.World().Items {
+		if it.Kind == "wood" {
+			total += it.Qty
+			stacks++
+			if it.Qty > item.StackLimit {
+				t.Fatalf("stack over the limit: %d", it.Qty)
+			}
+		}
+	}
+	if total != 1000 {
+		t.Fatalf("no wood lost or created: %d", total)
+	}
+	if stacks > 2 {
+		t.Fatalf("loads top up the stored stack instead of spreading: %d stacks", stacks)
+	}
+}
+
+func TestMergeOverflowSpills(t *testing.T) {
+	g := New(Config{Seed: 1, Width: 8, Height: 8})
+	g.SpawnStack(item.Wood, 990, 4, 4)
+	g.dropStack(item.Wood, 30, 4, 4)
+	total, stacks := 0, 0
+	for _, it := range g.World().Items {
+		total += it.Qty
+		stacks++
+	}
+	if total != 1020 || stacks != 2 {
+		t.Fatalf("overflow spills to a neighbour: total %d stacks %d", total, stacks)
+	}
+}

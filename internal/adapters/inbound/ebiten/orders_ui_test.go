@@ -195,8 +195,11 @@ func TestPlantSpriteScalesWithGrowth(t *testing.T) {
 	if !(young < grown) || grown != 1 || !strings.HasPrefix(key, "plant/tree_") {
 		t.Fatalf("tree scale young=%v grown=%v key=%s", young, grown, key)
 	}
-	if k, _ := plantSprite(game.PlantView{Species: "amberroot", Stage: 3}); k != "plant/crop_harvestable" {
+	if k, _ := plantSprite(game.PlantView{Species: "potato", Stage: 3}); k != "plant/potato_harvestable" {
 		t.Fatalf("ripe crop sprite = %s", k)
+	}
+	if k, _ := plantSprite(game.PlantView{Species: "corn", Stage: 0}); k != "plant/crop_sown" {
+		t.Fatalf("freshly sown crops share the sown sprite, got %s", k)
 	}
 }
 
@@ -211,8 +214,18 @@ func TestGrowingZoneToolSendsCrop(t *testing.T) {
 	a.submitArchitect()
 	g.Step(1)
 	z := g.World().GrowZones
-	if len(z) != 1 || z[0].Crop != "amberroot" || z[0].MaxX != 8 {
+	if len(z) != 1 || z[0].Crop != "potato" || z[0].MaxX != 8 {
 		t.Fatalf("zones = %+v", z)
+	}
+	// the crop picker changes what the next zone sows
+	click(t, a, "arch.crop.corn")
+	a.archDrag = true
+	a.archX0, a.archY0, a.archX1, a.archY1 = 10, 6, 11, 7
+	a.submitArchitect()
+	g.Step(1)
+	z = g.World().GrowZones
+	if len(z) != 2 || z[1].Crop != "corn" {
+		t.Fatalf("picked corn: zones = %+v", z)
 	}
 }
 

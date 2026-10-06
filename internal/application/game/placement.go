@@ -335,8 +335,10 @@ func (g *Game) removeBuilding(id entity.EntityID) {
 	}
 	delete(g.bills, id)
 	g.markRoomsDirty()
-	if b.Claimant != 0 {
-		delete(g.sleptAt, entity.EntityID(b.Claimant))
+	for _, c := range []uint64{b.Claimant, b.Claimant2} {
+		if c != 0 {
+			delete(g.sleptAt, entity.EntityID(c))
+		}
 	}
 	if r := construction.Refund(b.Kind); r > 0 {
 		g.dropStack(b.Stuff, r, b.X, b.Y)

@@ -17,7 +17,7 @@ func TestRecipesAndBills(t *testing.T) {
 		t.Fatal("meals take any raw food")
 	}
 	// cooking multiplies nutrition
-	if meal.OutQty*item.Meal.Nutrition() <= meal.Input.Qty*item.Amberroot.Nutrition() {
+	if meal.OutQty*item.Meal.Nutrition() <= meal.Input.Qty*item.Potatoes.Nutrition() {
 		t.Fatal("a meal must be worth more than its raw inputs")
 	}
 	if !(Bill{Mode: DoCount, Target: 2, Done: 1}).Wants(0) || (Bill{Mode: DoCount, Target: 2, Done: 2}).Wants(0) {

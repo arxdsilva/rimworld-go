@@ -144,3 +144,27 @@ func TestSleepingSpotIsInstantAndFree(t *testing.T) {
 		t.Fatal("deconstructing a spot erases it immediately")
 	}
 }
+
+func TestTwoColonistsShareADoubleBed(t *testing.T) {
+	g := New(Config{Seed: 1, Width: 12, Height: 10})
+	a, _ := g.SpawnNamedPawn(2, 7, "A")
+	b, _ := g.SpawnNamedPawn(3, 7, "B")
+	placeBuilt(t, g, construction.DoubleBed, construction.South, 5, 2)
+	g.SetNeeds(a, 1<<20, 1500)
+	g.SetNeeds(b, 1<<20, 1500)
+	for i := 0; i < 100 && !(g.inBed(a) && g.inBed(b)); i++ {
+		g.Step(10)
+	}
+	if !g.inBed(a) || !g.inBed(b) {
+		t.Fatalf("both should sleep in the double bed: a=%v b=%v", g.inBed(a), g.inBed(b))
+	}
+	pa, _ := g.positions.Get(a)
+	pb, _ := g.positions.Get(b)
+	if pa == pb || pa.Y != 2 || pb.Y != 2 {
+		t.Fatalf("side by side at the pillows: %+v %+v", pa, pb)
+	}
+	w := g.World()
+	if w.Buildings[0].Claimant == 0 || w.Buildings[0].Claimant2 == 0 {
+		t.Fatalf("both slots claimed: %+v", w.Buildings[0])
+	}
+}

@@ -54,7 +54,7 @@ var archTools = []archTool{
 	{id: "stockpile", label: "Stockpile", category: "zones", icon: "zone_stockpile", mode: placeArea, cmd: command.DesignateStockpile,
 		desc: "Storage area. Haulers bring food and wood here."},
 	{id: "grow", label: "Growing zone", category: "zones", icon: "zone_grow", mode: placeArea, cmd: command.DesignateGrowZone,
-		crop: "amberroot", desc: "Colonists sow amberroot here and harvest it when ripe. Rich soil grows faster."},
+		crop: "potato", desc: "Pick a crop below. Colonists sow it and harvest when ripe; crops grow in daylight, faster on rich soil."},
 	{id: "wall", label: "Wall", category: "structure", icon: "wall", mode: placeLine, build: "wall",
 		desc: "Blocks movement. Drag to draw a line."},
 	{id: "door", label: "Door", category: "structure", icon: "door", mode: placeSingle, build: "door",
@@ -63,6 +63,8 @@ var archTools = []archTool{
 		desc: "Drag to cover an area. Furniture can stand on it."},
 	{id: "bed", label: "Bed", category: "furniture", icon: "bed", mode: placeSingle, build: "bed",
 		desc: "A proper two-tile bed. Q/E rotates."},
+	{id: "double_bed", label: "Double bed", category: "furniture", icon: "double_bed", mode: placeSingle, build: "double bed",
+		desc: "A 2x2 bed two colonists share side by side. Q/E rotates."},
 	{id: "spot", label: "Sleeping spot", category: "furniture", icon: "sleeping_spot", mode: placeSingle, build: "sleeping spot",
 		desc: "Marks a bed-sized place to sleep on the floor. Free and instant; a bed is more comfortable. Q/E rotates."},
 	{id: "table", label: "Table", category: "furniture", icon: "table", mode: placeSingle, build: "table",
@@ -192,6 +194,8 @@ func buildSprite(kind, facing string, mask int, ew, open bool) string {
 		return "structure/door_wood_" + axis + "_" + state
 	case "floor":
 		return "structure/floor_wood"
+	case "double bed":
+		return "furniture/bed_double_" + facingOr(facing)
 	case "bed":
 		return "furniture/bed_basic_" + facingOr(facing)
 	case "sleeping spot":

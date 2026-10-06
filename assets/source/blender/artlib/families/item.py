@@ -104,5 +104,68 @@ def _rifle_item():
     return S.render_asset("item", "rifle_ground", zmax=0.12, extra={"item": "rifle"})
 
 
+# --- farm produce ----------------------------------------------------------
+
+def _potatoes():
+    for k, (x, y, z, r) in enumerate([(0.36, -0.58, 0.0, 0.10), (0.56, -0.62, 0.0, 0.11), (0.66, -0.44, 0.0, 0.09),
+                                       (0.44, -0.42, 0.0, 0.09), (0.50, -0.52, 0.12, 0.09)]):
+        S.blob("potato%d" % k, x, y, z, r, "tuber", seed=120 + k, lumps=0.18, squash=0.8)
+    return S.render_asset("item", "potatoes", zmax=0.24, extra={"item": "potatoes", "stack": True})
+
+
+def _corn():
+    import math
+    from mathutils import Matrix
+    for k, (x, y, z, a) in enumerate([(0.30, -0.62, 0.05, 8), (0.30, -0.46, 0.05, -6), (0.36, -0.54, 0.14, 2)]):
+        S.ellipsoid("cob%d" % k, 0, 0, 0, 0.26, 0.065, 0.065, "corn_yellow", segs=14, rings=8)
+        S.objects()[-1].matrix_world = Matrix.Translation((x + 0.2, y, z + 0.06)) @ Matrix.Rotation(math.radians(a), 4, "Z")
+        S.ellipsoid("husk%d" % k, 0, 0, 0, 0.12, 0.07, 0.06, "leaf_light", segs=10, rings=6)
+        S.objects()[-1].matrix_world = Matrix.Translation((x + 0.44, y, z + 0.06)) @ Matrix.Rotation(math.radians(a), 4, "Z")
+    return S.render_asset("item", "corn_pile", zmax=0.28, extra={"item": "corn", "stack": True})
+
+
+def _wheat():
+    import random
+    rnd = random.Random(5)
+    for i in range(22):
+        x, y = 0.5 + rnd.uniform(-0.12, 0.12), -0.5 + rnd.uniform(-0.1, 0.1)
+        S.cyl("straw%d" % i, x, y, 0.02, 0.0, 0.46, "straw", segs=5, bevel=0.0)
+        S.ellipsoid("ear%d" % i, x + rnd.uniform(-0.08, 0.08), y, 0.52, 0.04, 0.04, 0.09, "corn_yellow",
+                    segs=6, rings=5)
+    S.cyl("tie", 0.5, -0.5, 0.15, 0.18, 0.24, "leather", segs=16, bevel=0.005)
+    return S.render_asset("item", "wheat_sheaf", zmax=0.64, extra={"item": "wheat", "stack": True})
+
+
+def _beans():
+    S.cyl("sack", 0.5, -0.55, 0.22, 0.0, 0.26, "leather", r_top=0.18, segs=16)
+    S.cyl("mouth", 0.5, -0.55, 0.19, 0.25, 0.29, "bark", segs=16, bevel=0.01)
+    for k, (x, y) in enumerate([(0.44, -0.52), (0.54, -0.50), (0.50, -0.60), (0.58, -0.58), (0.42, -0.60),
+                                (0.48, -0.46)]):
+        S.ellipsoid("bean%d" % k, x, y, 0.29, 0.035, 0.022, 0.02, "ceramic" if k % 2 else "tuber", segs=8, rings=5)
+    return S.render_asset("item", "beans_sack", zmax=0.32, extra={"item": "beans", "stack": True})
+
+
+def _lettuce():
+    for k, (x, y, r) in enumerate([(0.38, -0.56, 0.15), (0.62, -0.54, 0.14)]):
+        S.ellipsoid("head%d" % k, x, y, r * 0.8, r, r, r * 0.8, "leaf_light", segs=16, rings=10)
+        S.ellipsoid("outer%d" % k, x, y - 0.02, r * 0.5, r * 1.15, r * 1.1, r * 0.55, "vegetation", segs=16, rings=8)
+    return S.render_asset("item", "lettuce_heads", zmax=0.28, extra={"item": "lettuce", "stack": True})
+
+
+def _radishes():
+    for k, (x, y) in enumerate([(0.40, -0.60), (0.52, -0.56), (0.62, -0.62), (0.48, -0.68)]):
+        S.ellipsoid("radish%d" % k, x, y, 0.06, 0.065, 0.065, 0.06, "food_red", segs=12, rings=8)
+        S.cyl("leaves%d" % k, x - 0.02, y + 0.10, 0.03, 0.04, 0.10, "vegetation", segs=6, r_top=0.05, bevel=0.0)
+    return S.render_asset("item", "radish_bunch", zmax=0.18, extra={"item": "radishes", "stack": True})
+
+
+def _pumpkins():
+    for k, (x, y, r) in enumerate([(0.40, -0.58, 0.17), (0.64, -0.50, 0.13)]):
+        S.ellipsoid("pumpkin%d" % k, x, y, r * 0.75, r, r * 0.95, r * 0.75, "pumpkin", segs=18, rings=10)
+        S.cyl("stem%d" % k, x, y, 0.018, r * 1.4, r * 1.7, "bark", segs=6, bevel=0.0)
+    return S.render_asset("item", "pumpkins", zmax=0.32, extra={"item": "pumpkins", "stack": True})
+
+
 def build():
-    return [_wood(), _food(), _steel(), _stone(), _berries(), _ration(), _meat(), _meal(), _club(), _rifle_item()]
+    return [_wood(), _food(), _steel(), _stone(), _berries(), _ration(), _meat(), _meal(), _club(), _rifle_item(),
+            _potatoes(), _corn(), _wheat(), _beans(), _lettuce(), _radishes(), _pumpkins()]

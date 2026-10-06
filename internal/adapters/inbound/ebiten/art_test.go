@@ -3,6 +3,7 @@ package ebiten
 import (
 	"image"
 	"image/color"
+	"rimworld-go/internal/application/game"
 	"testing"
 )
 
@@ -202,8 +203,8 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 	}
 	keys = append(keys, "plant/grass_00", "plant/grass_01", "plant/bush_00", "plant/bush_01",
 		"plant/bush_00_harvestable", "plant/bush_01_harvestable", "overlay/grow_zone",
-		"plant/crop_sown", "plant/crop_young", "plant/crop_mature", "plant/crop_harvestable",
-		itemSprite("food"), itemSprite("berries"), itemSprite("amberroot"), itemSprite("meat"),
+		"plant/crop_sown",
+		itemSprite("food"), itemSprite("berries"), itemSprite("meat"),
 		itemSprite("meal"), itemSprite("stone"), "rock/rock_wall_15", "terrain/stone_edge_15",
 		"structure/wall_stone_15", "structure/floor_stone",
 		"structure/frame_1x1", "item/wood_pile", "item/food_crate", "overlay/stockpile",
@@ -214,6 +215,12 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 		"tool/hammer", "tool/axe", "tool/pickaxe",
 		"overlay/sleeping_spot_south", "overlay/sleeping_spot_east", "overlay/sleeping_spot_north",
 		"overlay/sleeping_spot_west", "ui_icon/sleeping_spot")
+	for _, c := range game.Crops() {
+		for _, st := range []string{"young", "mature", "harvestable"} {
+			keys = append(keys, "plant/"+c.Name+"_"+st)
+		}
+		keys = append(keys, itemSprite(c.Label), "ui_icon/"+c.Label)
+	}
 	for _, sp := range []string{"dustbuck", "ridgewolf"} {
 		for f := faceSouth; f <= faceWest; f++ {
 			keys = append(keys, "animal/"+sp+"_"+f.String())

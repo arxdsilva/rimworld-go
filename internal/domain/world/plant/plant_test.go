@@ -4,11 +4,11 @@ import "testing"
 
 func TestPlantStagesAndYields(t *testing.T) {
 	t.Parallel()
-	p := Plant{Species: Amberroot}
+	p := Plant{Species: Potato}
 	if p.Ripe() || p.Stage() != 0 {
 		t.Fatal("fresh crop is not ripe")
 	}
-	p.Growth = DefOf(Amberroot).GrowTicks
+	p.Growth = DefOf(Potato).GrowTicks
 	if !p.Harvestable() || p.Stage() != 3 || p.Percent() != 100 {
 		t.Fatal("full growth is ripe")
 	}
@@ -23,7 +23,7 @@ func TestPlantStagesAndYields(t *testing.T) {
 
 func TestGrowRespectsFertility(t *testing.T) {
 	t.Parallel()
-	normal, rich, barren := Plant{Species: Amberroot}, Plant{Species: Amberroot}, Plant{Species: Amberroot}
+	normal, rich, barren := Plant{Species: Potato}, Plant{Species: Potato}, Plant{Species: Potato}
 	for tick := uint64(1); tick <= 1000; tick++ {
 		normal = normal.Grow(100, tick)
 		rich = rich.Grow(140, tick)
@@ -31,5 +31,35 @@ func TestGrowRespectsFertility(t *testing.T) {
 	}
 	if normal.Growth != 1000 || rich.Growth != 1400 || barren.Growth != 0 {
 		t.Fatalf("growth normal=%d rich=%d barren=%d", normal.Growth, rich.Growth, barren.Growth)
+	}
+}
+
+func TestCropsGrowLikeTheRealThing(t *testing.T) {
+	t.Parallel()
+	// order of maturity matches real crops: radish < lettuce < beans <
+	// potato < corn < pumpkin < wheat
+	prev := 0.0
+	for _, c := range Crops() {
+		d := GrowDays(c, 100)
+		if d <= prev {
+			t.Fatalf("%s matures in %.1f days, not after the previous crop (%.1f)", c, d, prev)
+		}
+		prev = d
+		if !DefOf(c).Crop || DefOf(c).Yield <= 0 || DefOf(c).Yields.Nutrition() <= 0 {
+			t.Fatalf("%s must be an edible crop", c)
+		}
+	}
+	if GrowDays(Potato, 100) != 7.5 || GrowDays(Radish, 100) != 2 {
+		t.Fatalf("potato %.2f radish %.2f days", GrowDays(Potato, 100), GrowDays(Radish, 100))
+	}
+	// potatoes barely care about poor soil; corn suffers on gravel
+	if Rate(Potato, 70) <= Rate(Corn, 70) || Rate(Corn, 70) != 70 || Rate(Potato, 70) != 91 {
+		t.Fatalf("gravel rates: potato %d corn %d", Rate(Potato, 70), Rate(Corn, 70))
+	}
+	if Rate(Corn, 140) != 140 || Rate(Potato, 0) != 0 {
+		t.Fatal("rich soil helps sensitive crops most; barren grows nothing")
+	}
+	if !GrowingHour(6) || GrowingHour(20) || GrowingHour(2) {
+		t.Fatal("daylight growth hours")
 	}
 }

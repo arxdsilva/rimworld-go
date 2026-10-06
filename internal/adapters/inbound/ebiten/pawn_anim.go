@@ -132,7 +132,7 @@ func (r *Renderer) drawLyingPawn(screen *ebiten.Image, p game.PawnView, vis pawn
 // bedUnder is the sleeping furniture covering tile (x, y).
 func bedUnder(w game.WorldView, x, y int) (game.BuildingView, bool) {
 	for _, b := range w.Buildings {
-		if b.Kind != "bed" && b.Kind != "sleeping spot" {
+		if b.Kind != "bed" && b.Kind != "double bed" && b.Kind != "sleeping spot" {
 			continue
 		}
 		bw, bh := max(b.W, 1), max(b.H, 1)
@@ -153,28 +153,28 @@ const headPivotX, headPivotY = 0.5, -0.34
 func (r *Renderer) drawInBed(screen *ebiten.Image, p game.PawnView, b game.BuildingView, tile float64, cs colorScale) {
 	bw, bh := float64(max(b.W, 1)), float64(max(b.H, 1))
 	x0, y0 := float64(b.X), float64(b.Y)
-	// pillow centre on screen (from the furniture geometry: pillow y and
-	// height under the 0.5 shear); the blanket's fold starts ~0.2 tile
-	// below it, so the face stays above the covers
 	spot := b.Kind == "sleeping spot"
-	// pillow centre on screen. Bed: 0.36 in from the head end and raised
-	// by the shear; spot: the painted pillow, flat, 0.27 in from the end.
-	hx, hy, rot := x0+0.5, y0+0.2, 0.0
+	// pillow centre on screen: along the bed it sits at the head end
+	// (bed: 0.36 in and raised by the shear; spot: the flat painted
+	// pillow, 0.27 in); across the bed it is the sleeper's own column or
+	// row, so two can share a double bed.
+	cx, cy := float64(p.X)+0.5, float64(p.Y)
+	hx, hy, rot := cx, y0+0.2, 0.0
 	switch {
 	case spot && b.Facing == "east":
-		hx, hy, rot = x0+0.27, y0+0.5, -math.Pi/2
+		hx, hy, rot = x0+0.27, cy+0.5, -math.Pi/2
 	case spot && b.Facing == "west":
-		hx, hy, rot = x0+bw-0.27, y0+0.5, math.Pi/2
+		hx, hy, rot = x0+bw-0.27, cy+0.5, math.Pi/2
 	case spot && b.Facing == "north":
-		hx, hy, rot = x0+0.5, y0+bh-0.27, math.Pi
+		hx, hy, rot = cx, y0+bh-0.27, math.Pi
 	case spot:
 		hy = y0 + 0.27
 	case b.Facing == "east":
-		hx, hy, rot = x0+0.36, y0+0.3, -math.Pi/2
+		hx, hy, rot = x0+0.36, cy+0.3, -math.Pi/2
 	case b.Facing == "west":
-		hx, hy, rot = x0+bw-0.36, y0+0.3, math.Pi/2
+		hx, hy, rot = x0+bw-0.36, cy+0.3, math.Pi/2
 	case b.Facing == "north":
-		hx, hy, rot = x0+0.5, y0+bh-0.56, math.Pi
+		hx, hy, rot = cx, y0+bh-0.56, math.Pi
 	}
 	breath := 1 + 0.025*math.Sin(2*math.Pi*float64(r.present+uint64(p.ID)*37)/170)
 	sy := 0.85
@@ -190,6 +190,9 @@ func (r *Renderer) drawInBed(screen *ebiten.Image, p game.PawnView, b game.Build
 		return
 	}
 	key := "furniture/bed_basic_blanket_" + facingOr(b.Facing)
+	if b.Kind == "double bed" {
+		key = "furniture/bed_double_blanket_" + facingOr(b.Facing)
+	}
 	r.drawSpritePose(screen, key, r.bedTint(b), x0, y0, tile, pose{cs: cs})
 }
 

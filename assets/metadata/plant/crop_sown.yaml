@@ -8,5 +8,4 @@ footprint: [1, 1]
 origin_px: [16, 24]
 projection:
   shear_k: 0.5
-species: amberroot
 growth: sown

@@ -34,7 +34,7 @@ func (g *Game) bedUnder(id entity.EntityID) entity.EntityID {
 	pos, _ := g.positions.Get(id)
 	for _, bid := range g.bldgIDs {
 		b, ok := g.bldgs.Get(bid)
-		if !ok || !b.Kind.Sleeps() || entity.EntityID(b.Claimant) != id {
+		if !ok || !b.Kind.Sleeps() || b.SlotOf(uint64(id)) < 0 {
 			continue
 		}
 		if construction.Covers(b.Kind, b.Facing, b.X, b.Y, pos.X, pos.Y) {
@@ -68,7 +68,7 @@ func (g *Game) freeBedFor(patient entity.EntityID, from Position) (entity.Entity
 		if !ok || !b.Kind.Sleeps() {
 			continue
 		}
-		if b.Claimant != 0 && entity.EntityID(b.Claimant) != patient {
+		if !b.CanClaim(uint64(patient)) {
 			continue
 		}
 		if owner, taken := g.reserve.EntityOwner(bid); taken && owner != patient {
@@ -167,17 +167,19 @@ func (g *Game) doRescue(id entity.EntityID, j job.Record) {
 			return
 		}
 	}
-	b, ok := g.bldgs.Get(j.Dest)
-	if !ok {
+	if _, ok := g.bldgs.Get(j.Dest); !ok {
 		g.dropPatient(id)
 		j.State, j.Fail = job.Fail, job.TargetGone
 		g.jobs.Set(id, j)
 		return
 	}
-	b.Claimant = uint64(j.Target)
+	g.releaseBed(j.Target)
+	b, _ := g.bldgs.Get(j.Dest)
+	b = b.Claim(uint64(j.Target))
 	g.bldgs.Set(j.Dest, b)
 	delete(g.carrying, id)
-	g.positions.Set(j.Target, Position{X: b.X, Y: b.Y})
+	cx, cy := g.sleepCellFor(j.Target, b)
+	g.positions.Set(j.Target, Position{X: cx, Y: cy})
 	g.sleptAt[j.Target] = j.Dest
 	j.State = job.Complete
 	g.jobs.Set(id, j)

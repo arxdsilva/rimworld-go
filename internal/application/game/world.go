@@ -76,13 +76,16 @@ func (g *Game) removePlant(id entity.EntityID) {
 
 // phasePlants grows every plant on fertile ground.
 func (g *Game) phasePlants() {
+	if !plant.GrowingHour(g.Date().Hour) {
+		return // plants grow in daylight only
+	}
 	now := uint64(g.clock.Now())
 	for _, id := range g.plantIDs {
 		p, ok := g.plants.Get(id)
 		if !ok || p.Ripe() {
 			continue
 		}
-		p = p.Grow(g.terr.At(p.X, p.Y).Fertility(), now)
+		p = p.Grow(plant.Rate(p.Species, g.terr.At(p.X, p.Y).Fertility()), now)
 		g.plants.Set(id, p)
 	}
 }

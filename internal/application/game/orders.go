@@ -202,13 +202,11 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		if !ok || !b.Kind.Sleeps() {
 			return job.Record{}, ReasonUnknown
 		}
-		if b.Claimant != 0 && entity.EntityID(b.Claimant) != id {
-			return job.Record{}, ReasonOwned + g.name(entity.EntityID(b.Claimant))
+		if !b.CanClaim(uint64(id)) {
+			return job.Record{}, ReasonOwned + g.name(entity.EntityID(b.Owner(uint64(id))))
 		}
-		if r := g.busyBy(id, bid); r != "" {
-			return job.Record{}, r
-		}
-		return job.Record{Kind: job.Sleep, Target: bid, TX: b.X, TY: b.Y, WorkLeft: needs.SleepWorkMin}, ""
+		sx, sy := g.sleepCellFor(id, b)
+		return job.Record{Kind: job.Sleep, Target: bid, TX: sx, TY: sy, WorkLeft: needs.SleepWorkMin}, ""
 	case command.OrderEat:
 		iid := g.itemAt(x, y)
 		st, ok := g.stacks.Get(iid)
@@ -371,9 +369,9 @@ func (g *Game) prioritize(id entity.EntityID, o command.Order, x, y int, layer c
 		}
 	}
 	if o == command.OrderSleep {
+		g.releaseBed(id)
 		b, _ := g.bldgs.Get(rec.Target)
-		b.Claimant = uint64(id)
-		g.bldgs.Set(rec.Target, b)
+		g.bldgs.Set(rec.Target, b.Claim(uint64(id)))
 		g.sleptAt[id] = rec.Target
 	}
 	g.interrupt(id, job.Cancelled)

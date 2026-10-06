@@ -114,6 +114,7 @@ type BuildingView struct {
 	Kind        string
 	X, Y        int
 	Claimant    entity.EntityID
+	Claimant2   entity.EntityID // second sleeper of a double bed
 	Facing      string
 	Floor       bool
 	Deconstruct bool
@@ -508,7 +509,7 @@ func (g *Game) World() WorldView {
 			continue
 		}
 		w.Buildings = append(w.Buildings, BuildingView{
-			ID: id, Kind: b.Kind.String(), X: b.X, Y: b.Y, Claimant: entity.EntityID(b.Claimant),
+			ID: id, Kind: b.Kind.String(), X: b.X, Y: b.Y, Claimant: entity.EntityID(b.Claimant), Claimant2: entity.EntityID(b.Claimant2),
 			Facing: b.Facing.String(), Floor: construction.DefOf(b.Kind).Layer == construction.LayerFloor,
 			Deconstruct: b.Deconstruct, Stuff: b.Stuff.String(),
 			Bench: construction.DefOf(b.Kind).Bench, Bills: g.billViews(id),

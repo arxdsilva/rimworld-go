@@ -21,6 +21,21 @@ def _bed():
     return (1, 2), 0.58
 
 
+def _bed_double():
+    """2x2 bed for two: one wide frame, two pillows, a shared blanket."""
+    S.box("frame", 0.07, -1.96, 0.0, 1.93, -0.04, 0.26, "wood", bevel=0.04)
+    S.box("headboard", 0.05, -0.17, 0.0, 1.95, -0.02, 0.62, "wood", bevel=0.045)
+    S.box("crest", 0.70, -0.15, 0.58, 1.30, -0.04, 0.70, "wood", bevel=0.04)
+    S.box("post_l", 0.05, -1.96, 0.0, 0.17, -1.84, 0.34, "wood", bevel=0.03)
+    S.box("post_r", 1.83, -1.96, 0.0, 1.95, -1.84, 0.34, "wood", bevel=0.03)
+    S.box("mattress", 0.12, -1.88, 0.20, 1.88, -0.15, 0.36, "ceramic", bevel=0.06, segments=2)
+    for k, x in enumerate((0.18, 1.06)):
+        S.box("pillow%d" % k, x, -0.52, 0.34, x + 0.76, -0.21, 0.46, "ceramic", bevel=0.07, segments=2)
+    S.box("blanket", 0.10, -1.90, 0.30, 1.90, -0.72, 0.43, "cloth", bevel=0.05, segments=2)
+    S.box("fold", 0.10, -0.84, 0.34, 1.90, -0.64, 0.47, "cloth", bevel=0.06, segments=2)
+    return (2, 2), 0.70
+
+
 def _table():
     for i, (x, y) in enumerate([(0.12, -0.12), (0.88, -0.12), (0.12, -0.88), (0.88, -0.88)]):
         S.box("leg%d" % i, x - 0.05, y - 0.05, 0.0, x + 0.05, y + 0.05, 0.50, "wood", bevel=0.015)
@@ -107,6 +122,7 @@ def _lamp():
 
 BUILDERS = {
     "bed_basic": (_bed, {"attachments": {"sleeper": [0.5, 0.42]}}),
+    "bed_double": (_bed_double, {"attachments": {"sleeper": [0.5, 0.42], "sleeper2": [1.5, 0.42]}}),
     "table_small": (_table, {}),
     "chair_basic": (_chair, {"attachments": {"seat": [0.5, 0.52]}}),
     "workbench_basic": (_workbench, {"attachments": {"worker": [0.5, 1.15]}}),
@@ -114,12 +130,13 @@ BUILDERS = {
     "stove_basic": (_stove, {"attachments": {"cook": [0.25, 1.5]}}),
     "butcher_table": (_butcher_table, {"attachments": {"worker": [0.5, 1.15]}}),
 }
-ROTATABLE = {"bed_basic", "chair_basic", "workbench_basic", "stove_basic", "butcher_table"}
+ROTATABLE = {"bed_basic", "bed_double", "chair_basic", "workbench_basic", "stove_basic", "butcher_table"}
 
 
 # Blanket overlays: drawn over a sleeper so they read as tucked in. The
 # rest of the bed is a holdout, so the overlay lines up pixel for pixel.
-BLANKETS = {"bed_basic": (_bed, {"blanket", "fold", "post_l", "post_r"})}
+BLANKETS = {"bed_basic": (_bed, {"blanket", "fold", "post_l", "post_r"}),
+            "bed_double": (_bed_double, {"blanket", "fold", "post_l", "post_r"})}
 
 
 def _blankets():

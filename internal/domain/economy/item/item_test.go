@@ -26,7 +26,7 @@ func TestFoodKinds(t *testing.T) {
 	if !Meal.IsFood() || Wood.IsFood() || Stone.IsFood() {
 		t.Fatal("food classification")
 	}
-	if !(Meal.Nutrition() > Amberroot.Nutrition() && Amberroot.Nutrition() > Berries.Nutrition()) {
+	if !(Meal.Nutrition() > Potatoes.Nutrition() && Potatoes.Nutrition() > Berries.Nutrition() && Wheat.Nutrition() > Lettuce.Nutrition()) {
 		t.Fatal("meals are the most nourishing, berries the least")
 	}
 	if !(Meal.Preference() > Food.Preference() && Food.Preference() > Meat.Preference()) {

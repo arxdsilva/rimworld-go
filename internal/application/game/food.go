@@ -8,6 +8,7 @@ import (
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
+	"rimworld-go/internal/domain/world/terrain"
 )
 
 // SowWork is the labour to sow one cell of a growing zone.
@@ -31,7 +32,7 @@ func CropID(name string) (uint8, bool) {
 func (g *Game) addGrowZone(x1, y1, x2, y2 int, crop uint8) {
 	s := plant.Species(crop)
 	if !plant.DefOf(s).Crop {
-		s = plant.Amberroot
+		s = plant.Potato
 	}
 	minX, minY, maxX, maxY := normalizeRect(x1, y1, x2, y2)
 	g.growZones = append(g.growZones, zone.GrowZone{MinX: minX, MinY: minY, MaxX: maxX, MaxY: maxY, Crop: uint8(s)})
@@ -94,7 +95,11 @@ func (g *Game) assignSow(id entity.EntityID) bool {
 	if !found {
 		return false
 	}
-	return g.startJob(id, job.Record{Kind: job.Sow, TX: bx, TY: by, WorkLeft: SowWork})
+	work := SowWork
+	if z, ok := g.zoneAt(bx, by); ok && plant.DefOf(plant.Species(z.Crop)).SowWork > 0 {
+		work = plant.DefOf(plant.Species(z.Crop)).SowWork
+	}
+	return g.startJob(id, job.Record{Kind: job.Sow, TX: bx, TY: by, WorkLeft: work})
 }
 
 func (g *Game) doSow(id entity.EntityID, j job.Record) {
@@ -162,4 +167,30 @@ func (g *Game) growZoneViews() []GrowZoneView {
 func (g *Game) lastMealKind(id entity.EntityID) (item.Kind, bool) {
 	k, ok := g.lastMeal[id]
 	return k, ok
+}
+
+// CropView describes a sowable crop for the UI (crop picker, hover).
+type CropView struct {
+	Name      string  // species name (zone crop / CropID key)
+	Label     string  // produce name
+	Days      float64 // days to harvest on plain soil, daylight growth
+	GravelDay float64 // days on poor (gravel) soil
+	RichDays  float64 // days on rich soil
+	Yield     int     // items per plant
+	Nutrition int     // per item (a colonist eats about 5000 a day)
+	Sens      int     // soil sensitivity, percent
+}
+
+// Crops lists the sowable crops, fastest first.
+func Crops() []CropView {
+	var out []CropView
+	for _, s := range plant.Crops() {
+		d := plant.DefOf(s)
+		out = append(out, CropView{
+			Name: d.Name, Label: d.Label, Days: plant.GrowDays(s, terrain.Soil.Fertility()),
+			GravelDay: plant.GrowDays(s, terrain.Gravel.Fertility()), RichDays: plant.GrowDays(s, terrain.RichSoil.Fertility()),
+			Yield: d.Yield, Nutrition: d.Yields.Nutrition(), Sens: d.Sens,
+		})
+	}
+	return out
 }

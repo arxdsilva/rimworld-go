@@ -22,6 +22,8 @@ const (
 	Workbench
 	Stove
 	ButcherTable
+	// DoubleBed is a 2x2 bed for two sleepers side by side.
+	DoubleBed
 	kindCount
 )
 
@@ -68,12 +70,35 @@ var defs = [kindCount]Def{
 		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
 	Stove: {Kind: Stove, Name: "stove", Wood: 5, Work: 140, Layer: LayerObject, BlocksMove: true,
 		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
+	DoubleBed: {Kind: DoubleBed, Name: "double bed", Wood: 9, Work: 150, Layer: LayerObject, Rotatable: true,
+		Size: [2]int{2, 2}},
 	ButcherTable: {Kind: ButcherTable, Name: "butcher table", Wood: 5, Work: 120, Layer: LayerObject, BlocksMove: true,
 		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
 }
 
 // Sleeps reports whether k is something to sleep in.
-func (k Kind) Sleeps() bool { return k == Bed || k == SleepingSpot }
+func (k Kind) Sleeps() bool { return k == Bed || k == SleepingSpot || k == DoubleBed }
+
+// Sleepers is how many pawns a sleeping place holds side by side.
+func (k Kind) Sleepers() int {
+	switch {
+	case k == DoubleBed:
+		return 2
+	case k.Sleeps():
+		return 1
+	}
+	return 0
+}
+
+// SleepCell is the head-end cell of sleeping slot `slot` (pillow side by
+// side across the bed's width; the sleeper's feet point to the facing).
+func SleepCell(k Kind, f Facing, x, y, slot int) (int, int) {
+	cells, _, _ := Footprint(k, f, x, y)
+	if slot < 0 || slot >= len(cells) || slot >= k.Sleepers() {
+		slot = 0
+	}
+	return cells[slot][0], cells[slot][1]
+}
 
 // Instant kinds need no materials or work: designating one places it,
 // and deconstructing removes it on the spot.
@@ -266,6 +291,63 @@ type Building struct {
 	Facing      Facing
 	X, Y        int
 	Claimant    uint64 // EntityID of the pawn who claimed a bed; 0 if free
+	Claimant2   uint64 // second sleeper of a double bed
 	Deconstruct bool   // designated for removal
 	WorkLeft    int    // remaining deconstruct work once started
+}
+
+// SlotOf is the sleeping slot pawn id holds here, or -1.
+func (b Building) SlotOf(id uint64) int {
+	switch {
+	case id == 0:
+		return -1
+	case b.Claimant == id:
+		return 0
+	case b.Claimant2 == id && b.Kind.Sleepers() > 1:
+		return 1
+	}
+	return -1
+}
+
+// CanClaim reports whether pawn id may sleep here (it already holds a
+// slot, or one is free).
+func (b Building) CanClaim(id uint64) bool {
+	if b.SlotOf(id) >= 0 {
+		return true
+	}
+	return b.Claimant == 0 || (b.Kind.Sleepers() > 1 && b.Claimant2 == 0)
+}
+
+// Claim gives pawn id a slot (keeping one it already holds).
+func (b Building) Claim(id uint64) Building {
+	switch {
+	case b.SlotOf(id) >= 0:
+	case b.Claimant == 0:
+		b.Claimant = id
+	case b.Kind.Sleepers() > 1 && b.Claimant2 == 0:
+		b.Claimant2 = id
+	}
+	return b
+}
+
+// Release frees pawn id's slot.
+func (b Building) Release(id uint64) Building {
+	if b.Claimant == id {
+		b.Claimant = 0
+	}
+	if b.Claimant2 == id {
+		b.Claimant2 = 0
+	}
+	return b
+}
+
+// Owner is the first claimant that is not id (for "owned by" reasons).
+func (b Building) Owner(id uint64) uint64 {
+	if b.Claimant != 0 && b.Claimant != id {
+		return b.Claimant
+	}
+	if b.Claimant2 != id {
+		return b.Claimant2
+	}
+	return 0
 }

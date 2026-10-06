@@ -3,6 +3,7 @@ package ebiten
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
@@ -187,7 +188,7 @@ func (a *App) colonyChromeHit(mx, my, sw, sh int) bool {
 	if a.workOpen && workRect(sw, sh).contains(mx, my) {
 		return true
 	}
-	if a.archOpen && architectRect().contains(mx, my) {
+	if a.archOpen && a.architectRect().contains(mx, my) {
 		return true
 	}
 	if a.renderer != nil && a.renderer.HasSelect() && !a.workOpen && inspectorRect().contains(mx, my) {
@@ -210,7 +211,45 @@ func (a *App) drawHoverRoom(screen *ebiten.Image, sh int) {
 		return
 	}
 	tx, ty := a.renderer.TileAt(mx, my)
-	if lbl := roomLabelAt(a.renderer.world(), tx, ty); lbl != "" {
-		drawLabel(screen, sw-len(lbl)*6-hudPad-4, int(hudBarY(sh))-18, lbl)
+	w := a.renderer.world()
+	y := int(hudBarY(sh)) - 18
+	if lbl := roomLabelAt(w, tx, ty); lbl != "" {
+		drawLabel(screen, sw-len(lbl)*6-hudPad-4, y, lbl)
+		y -= 16
 	}
+	if lbl := plantLabelAt(w, tx, ty); lbl != "" {
+		drawLabel(screen, sw-len(lbl)*6-hudPad-4, y, lbl)
+		y -= 16
+	}
+	if lbl := itemLabelAt(w, tx, ty); lbl != "" {
+		drawLabel(screen, sw-len(lbl)*6-hudPad-4, y, lbl)
+	}
+}
+
+// plantLabelAt describes the plant on a tile ("Corn, 62% grown").
+func plantLabelAt(w game.WorldView, x, y int) string {
+	for _, p := range w.Plants {
+		if p.X != x || p.Y != y {
+			continue
+		}
+		name := strings.ReplaceAll(p.Species, "_", " ")
+		name = strings.ToUpper(name[:1]) + name[1:]
+		switch {
+		case p.Harvestable:
+			return name + ", ready to harvest"
+		default:
+			return fmt.Sprintf("%s, %d%% grown", name, p.Growth)
+		}
+	}
+	return ""
+}
+
+// itemLabelAt describes the ground stack on a tile ("Potatoes x 240").
+func itemLabelAt(w game.WorldView, x, y int) string {
+	for _, it := range w.Items {
+		if it.X == x && it.Y == y && !it.Carried {
+			return fmt.Sprintf("%s%s x %d", strings.ToUpper(it.Kind[:1]), it.Kind[1:], it.Qty)
+		}
+	}
+	return ""
 }
