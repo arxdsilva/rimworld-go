@@ -219,6 +219,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 			r.drawSprite(screen, key, none, float64(it.X), float64(it.Y), tile, sw, sh)
 		})
 	}
+	r.addAnimalDraws(w, add, screen, tile, sw, sh)
 	for _, p := range r.game.Snapshot() {
 		p := p
 		wx, wy := r.interpWorld(p)
@@ -245,6 +246,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	for _, m := range w.Mines {
 		r.drawSprite(screen, "overlay/designation_mine", none, float64(m[0]), float64(m[1]), tile, sw, sh)
 	}
+	r.drawAnimalOverlays(screen, w, tile, sw, sh)
 	if r.hasSelect {
 		for _, p := range r.game.Snapshot() {
 			if p.ID == r.selected {
@@ -331,8 +333,14 @@ func (r *Renderer) drawPawnArt(screen *ebiten.Image, p game.PawnView, wx, wy, ti
 	if moving {
 		bob = -math.Abs(math.Sin(float64(r.present)*math.Pi/float64(walkAnimPeriod))) * pawnBobPx
 	}
+	if vis.facing == faceNorth {
+		r.drawHeldWeapon(screen, p, vis.facing, wx, wy+bob, tile) // carried in front, hidden behind the body
+	}
 	for _, ly := range r.pawnLayers(r.look(p), vis.facing) {
 		r.drawSprite(screen, ly.key, ly.tint, wx, wy+bob, tile, sw, sh)
+	}
+	if vis.facing != faceNorth {
+		r.drawHeldWeapon(screen, p, vis.facing, wx, wy+bob, tile)
 	}
 	if p.Drafted {
 		if img := r.art.image("ui_icon/draft", color.NRGBA{}); img != nil {

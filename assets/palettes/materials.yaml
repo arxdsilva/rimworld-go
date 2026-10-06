@@ -24,6 +24,11 @@ materials:
   crop_fruit:  {light: "#f2b94f", base: "#d99530", shadow: "#a86c21"}
   food_red:    {light: "#d9735a", base: "#b9533f", shadow: "#863a2d"}
   glass:       {light: "#cbe7ef", base: "#9fcadb", shadow: "#6d9aab"}
+  fur_tan:     {light: "#d6ad78", base: "#b48653", shadow: "#82603b"}
+  fur_cream:   {light: "#f1e4c8", base: "#d8c6a2", shadow: "#a8987a"}
+  fur_grey:    {light: "#9aa1a8", base: "#767d86", shadow: "#525860"}
+  fur_dark:    {light: "#5b5550", base: "#433e3a", shadow: "#2c2826"}
+  horn:        {light: "#e8dcc0", base: "#c4b393", shadow: "#8f8169"}
   # neutral, tinted at runtime
   cloth:       {light: "#f4f4f4", base: "#d2d2d2", shadow: "#a2a2a2", tint: true}
   skin:        {light: "#f6f6f6", base: "#dadada", shadow: "#adadad", tint: true}

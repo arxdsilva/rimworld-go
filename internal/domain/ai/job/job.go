@@ -48,6 +48,9 @@ const (
 	Mine
 	Sow
 	Bill
+	Hunt
+	Attack
+	Equip
 )
 
 func (k Kind) String() string {
@@ -74,6 +77,12 @@ func (k Kind) String() string {
 		return "sow"
 	case Bill:
 		return "work at bench"
+	case Hunt:
+		return "hunt"
+	case Attack:
+		return "attack"
+	case Equip:
+		return "equip"
 	default:
 		return "idle"
 	}

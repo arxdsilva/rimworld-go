@@ -66,6 +66,8 @@ func (g *Game) applyOne(c command.Command) {
 		g.addGrowZone(c.X, c.Y, c.X2, c.Y2, c.Build)
 	case command.DesignateDeconstruct:
 		g.markDeconstruct(c.X, c.Y, c.X2, c.Y2, true)
+	case command.DesignateHunt:
+		g.markHunt(c.X, c.Y, c.X2, c.Y2, true)
 	case command.DraftPawn:
 		g.setDraft(entity.EntityID(c.Pawn), c.Enabled)
 	case command.Prioritize:
@@ -126,6 +128,7 @@ func (g *Game) cancelRect(x1, y1, x2, y2 int) {
 	g.markDeconstruct(x1, y1, x2, y2, false)
 	g.markCut(x1, y1, x2, y2, false)
 	g.markMine(x1, y1, x2, y2, false)
+	g.markHunt(x1, y1, x2, y2, false)
 	g.cancelGrowZones(minX, minY, maxX, maxY)
 
 	for _, id := range g.plantIDs {
@@ -155,6 +158,7 @@ func (g *Game) phaseNeeds() {
 		if v.Status == health.Dead {
 			continue
 		}
+		g.heal(id, &v, now)
 		if v.Status == health.Downed {
 			n, _ := g.need.Get(id)
 			if n.Starving() && v.Cause != health.CauseNoFood {
@@ -188,11 +192,9 @@ func (g *Game) phaseNeeds() {
 
 func (g *Game) down(id entity.EntityID, cause health.Cause) {
 	g.interrupt(id, job.Cancelled)
-	g.vital.Set(id, health.Record{
-		Status:     health.Downed,
-		Cause:      cause,
-		DownedTick: uint64(g.clock.Now()),
-	})
+	v, _ := g.vital.Get(id)
+	v.Status, v.Cause, v.DownedTick = health.Downed, cause, uint64(g.clock.Now())
+	g.vital.Set(id, v)
 }
 
 func (g *Game) releaseBed(id entity.EntityID) {
@@ -267,7 +269,12 @@ func (g *Game) phaseAI() {
 			j = job.Record{}
 		}
 		if g.drafted(id) {
-			continue // drafted pawns only follow direct orders
+			// drafted pawns only follow direct orders, but fire at
+			// hostiles in range when standing idle
+			if j.Kind == job.None || j.State == job.Idle {
+				g.autoEngage(id)
+			}
+			continue
 		}
 		n, _ := g.need.Get(id)
 
@@ -310,6 +317,9 @@ func (g *Game) phaseAI() {
 		if g.assignBill(id, m) {
 			continue
 		}
+		if m.Enabled(work.Hunt) && g.assignHunt(id) {
+			continue
+		}
 		if m.Enabled(work.Grow) && (g.assignHarvest(id) || g.assignSow(id) || g.assignCut(id)) {
 			continue
 		}
@@ -321,7 +331,7 @@ func (g *Game) phaseAI() {
 
 func (g *Game) startJob(id entity.EntityID, rec job.Record) bool {
 	g.reserve.ReleaseOwner(id)
-	if rec.Target != 0 && !g.reserve.TryEntity(id, rec.Target) {
+	if rec.Target != 0 && rec.Kind != job.Attack && !g.reserve.TryEntity(id, rec.Target) {
 		rec.State = job.Fail
 		rec.Fail = job.Reserved
 		g.jobs.Set(id, rec)
@@ -694,6 +704,12 @@ func (g *Game) phaseJobs() {
 			continue
 		}
 		j, _ := g.jobs.Get(id)
+		if j.Kind == job.Hunt || j.Kind == job.Attack {
+			if v.Status == health.Alive && (j.State == job.Goto || j.State == job.Do) {
+				g.doCombat(id, j, now)
+			}
+			continue
+		}
 		if j.State != job.Do {
 			continue
 		}
@@ -721,6 +737,8 @@ func (g *Game) phaseJobs() {
 			g.doSow(id, j)
 		case job.Bill:
 			g.doBill(id, j)
+		case job.Equip:
+			g.doEquip(id, j)
 		default:
 			j.State = job.Complete
 			g.jobs.Set(id, j)

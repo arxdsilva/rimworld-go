@@ -35,6 +35,8 @@ const (
 	SetBill
 	// RemoveBill deletes bill Index on the bench at X, Y.
 	RemoveBill
+	// DesignateHunt marks animals in X,Y..X2,Y2 for hunting.
+	DesignateHunt
 )
 
 // WorkType is a compact work-column id for SetWorkEnabled.
@@ -66,6 +68,9 @@ const (
 	OrderCut
 	OrderMine
 	OrderSow
+	OrderHunt   // hunt the animal at X, Y
+	OrderAttack // drafted: attack the animal at X, Y
+	OrderEquip  // pick up and wield the weapon at X, Y
 )
 
 // Command is applied on a simulation tick, never by the UI directly.

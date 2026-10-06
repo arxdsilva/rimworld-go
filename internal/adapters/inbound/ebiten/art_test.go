@@ -208,7 +208,13 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 		"structure/wall_stone_15", "structure/floor_stone",
 		"structure/frame_1x1", "item/wood_pile", "item/food_crate", "overlay/stockpile",
 		"overlay/blueprint", "overlay/selection", "overlay/designation_harvest",
-		"overlay/designation_deconstruct", "ui_icon/draft")
+		"overlay/designation_deconstruct", "ui_icon/draft", "overlay/designation_hunt",
+		"weapon/rifle_basic", "ui_icon/dustbuck", "ui_icon/ridgewolf")
+	for _, sp := range []string{"dustbuck", "ridgewolf"} {
+		for f := faceSouth; f <= faceWest; f++ {
+			keys = append(keys, "animal/"+sp+"_"+f.String())
+		}
+	}
 	for _, t := range archTools {
 		keys = append(keys, "ui_icon/"+t.icon)
 		if t.build == "" {

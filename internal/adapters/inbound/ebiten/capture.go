@@ -9,6 +9,7 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 )
 
@@ -120,6 +121,7 @@ func (a *App) tickCapture() {
 		}
 		a.capture.started = true
 		a.captureUI(c.UI)
+		a.renderer.settleVisuals()
 		return
 	}
 	a.renderer.present++
@@ -157,6 +159,35 @@ func (a *App) captureUI(ui string) {
 		a.archX0, a.archY0, a.archX1, a.archY1 = cx+1, cy-2, cx+5, cy-2
 		x, y := at(cx+5, cy-2)
 		a.cursor = &[2]int{x, y}
+	case "combat", "melee":
+		melee := ui == "melee"
+		g := a.renderer.game
+		a.renderer.enqueue(command.Command{Kind: command.DesignateHunt, X: 0, Y: 0, X2: g.Width() - 1, Y2: g.Height() - 1})
+		var shot game.TraceView
+		found := false
+		for i := 0; i < 20000 && !found; i++ {
+			g.Step(1)
+			if i%15 == 0 {
+				a.renderer.syncPawns()
+			}
+			for _, t := range g.World().Traces {
+				if t.Melee == melee && t.Age == 1 {
+					shot, found = t, true
+				}
+			}
+		}
+		a.renderer.syncPawns()
+		if !found {
+			return
+		}
+		tile := a.renderer.tilePx()
+		a.renderer.cam.offsetX = float64(shot.FromX+shot.ToX+1)/2*tile - float64(a.sw)/2
+		a.renderer.cam.offsetY = float64(shot.FromY+shot.ToY+1)/2*tile - float64(a.sh)/2
+		for _, p := range a.renderer.snapshot() {
+			if p.X == shot.FromX && p.Y == shot.FromY {
+				a.renderer.Select(p.ID)
+			}
+		}
 	case "pawn":
 		if snap := a.renderer.snapshot(); len(snap) > 0 {
 			a.renderer.Select(snap[0].ID)

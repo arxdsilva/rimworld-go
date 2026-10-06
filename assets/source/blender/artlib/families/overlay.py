@@ -124,6 +124,13 @@ def _g_draft(xx, yy, c):  # upward chevrons
     return np.minimum(d, d2)
 
 
+def _g_hunt(xx, yy, c):  # crosshair: ring + four ticks
+    d = np.abs(np.hypot(xx - c, yy - c) - 13)
+    for ax, ay, bx, by in ((c - 24, c, c - 9, c), (c + 9, c, c + 24, c), (c, c - 24, c, c - 9), (c, c + 9, c, c + 24)):
+        d = np.minimum(d, _seg(xx, yy, ax, ay, bx, by))
+    return d
+
+
 def _badge_icon(name, t, glyph, rgb):
     """Order/action icon: dark disc + coloured glyph, @2x of a 64 px icon."""
     xx, yy = _grid()
@@ -211,6 +218,8 @@ ICONS = {
     "tree": ("plant", "tree_00"),
     "crop": ("plant", "crop_harvestable"),
     "colonist": ("pawn", "body_south"),
+    "dustbuck": ("animal", "dustbuck_east"),
+    "ridgewolf": ("animal", "ridgewolf_east"),
 }
 ICON_PX = 128          # @2x of a 64 px icon
 ICON_PAD = 10
@@ -255,6 +264,7 @@ def build():
     out = [_selection(t), _designation("designation_cut", t, _g_cut),
            _designation("designation_harvest", t, _g_harvest), _designation("designation_mine", t, _g_mine),
            _designation("designation_deconstruct", t, _g_deconstruct),
+           _designation("designation_hunt", t, _g_hunt),
            _stockpile(t), _blueprint(t), _grow_zone(t)]
     out += [_badge_icon("order_harvest", t, _g_harvest, t["designation"]),
             _badge_icon("order_deconstruct", t, _g_deconstruct, t["danger"]),
@@ -263,6 +273,7 @@ def build():
             _badge_icon("draft", t, _g_draft, t["danger"]),
             _badge_icon("order_cut", t, _g_cut, t["designation"]),
             _badge_icon("order_mine", t, _g_mine, t["designation"]),
+            _badge_icon("order_hunt", t, _g_hunt, t["danger"]),
             _badge_icon("zone_grow", t, _g_sprout, (0.45, 0.78, 0.36))]
     for name, (fam, spr) in ICONS.items():
         p = _icon(name, fam, spr)

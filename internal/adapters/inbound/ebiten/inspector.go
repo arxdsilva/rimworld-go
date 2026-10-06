@@ -86,6 +86,9 @@ func (a *App) drawInspector(screen *ebiten.Image) {
 	drawPanel(screen, r.x, r.y, r.w, r.h)
 	drawLabel(screen, int(r.x)+12, int(r.y)+12, pawnLabel(p))
 	status := "colonist  " + p.Status
+	if p.Reason != "" {
+		status += " (" + p.Reason + ")"
+	}
 	if p.Drafted {
 		status += "  drafted"
 	}
@@ -94,14 +97,13 @@ func (a *App) drawInspector(screen *ebiten.Image) {
 	drawLabel(screen, int(r.x)+72, int(r.y)+56, fmt.Sprintf("job       %s", p.Job))
 	drawLabel(screen, int(r.x)+72, int(r.y)+72, fmt.Sprintf("activity  %s", p.Activity))
 	drawLabel(screen, int(r.x)+72, int(r.y)+88, fmt.Sprintf("tile      (%d, %d)", p.X, p.Y))
-	if p.Reason != "" {
-		drawLabel(screen, int(r.x)+72, int(r.y)+104, "reason    "+p.Reason)
-	}
-	drawNeedBar(screen, int(r.x)+12, int(r.y)+140, 300, 14, p.Hunger, "food")
-	drawNeedBar(screen, int(r.x)+12, int(r.y)+164, 300, 14, p.Rest, "rest")
-	drawNeedBar(screen, int(r.x)+12, int(r.y)+188, 300, 14, p.Mood, "mood")
-	drawLabel(screen, int(r.x)+12, int(r.y)+208, "feels "+p.MoodLabel)
-	ty := int(r.y) + 228
+	drawLabel(screen, int(r.x)+72, int(r.y)+104, fmt.Sprintf("weapon    %s", p.Weapon))
+	drawNeedBar(screen, int(r.x)+12, int(r.y)+126, 300, 14, p.Health, "health")
+	drawNeedBar(screen, int(r.x)+12, int(r.y)+150, 300, 14, p.Hunger, "food")
+	drawNeedBar(screen, int(r.x)+12, int(r.y)+174, 300, 14, p.Rest, "rest")
+	drawNeedBar(screen, int(r.x)+12, int(r.y)+198, 300, 14, p.Mood, "mood")
+	drawLabel(screen, int(r.x)+12, int(r.y)+218, "feels "+p.MoodLabel)
+	ty := int(r.y) + 238
 	for i, th := range p.Thoughts {
 		if i >= 6 {
 			break
@@ -137,10 +139,13 @@ func drawNeedBar(screen *ebiten.Image, x, y, w, h, pct int, label string) {
 		fill = color.RGBA{R: 70, G: 110, B: 180, A: 255}
 	case "mood":
 		fill = moodColor(pct)
+	case "health":
+		fill = healthColor(pct)
 	}
-	vector.FillRect(screen, float32(x+50), float32(y), float32(w-50), float32(h), bg, false)
-	fw := float32(w-50) * float32(pct) / 100
-	vector.FillRect(screen, float32(x+50), float32(y), fw, float32(h), fill, false)
+	const lw = 84 // label column ("health  100")
+	vector.FillRect(screen, float32(x+lw), float32(y), float32(w-lw), float32(h), bg, false)
+	fw := float32(w-lw) * float32(pct) / 100
+	vector.FillRect(screen, float32(x+lw), float32(y), fw, float32(h), fill, false)
 }
 
 func (a *App) selectedPawn() (game.PawnView, bool) {
@@ -164,4 +169,15 @@ func moodColor(pct int) color.RGBA {
 		return color.RGBA{R: 210, G: 170, B: 70, A: 255}
 	}
 	return color.RGBA{R: 100, G: 180, B: 90, A: 255}
+}
+
+func healthColor(pct int) color.RGBA {
+	switch {
+	case pct < 30:
+		return color.RGBA{R: 200, G: 60, B: 50, A: 255}
+	case pct < 70:
+		return color.RGBA{R: 210, G: 160, B: 60, A: 255}
+	default:
+		return color.RGBA{R: 90, G: 170, B: 80, A: 255}
+	}
 }

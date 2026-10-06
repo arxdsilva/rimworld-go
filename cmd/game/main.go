@@ -19,7 +19,7 @@ func main() {
 	capture := flag.String("capture", "", "dev: save one colony frame to this PNG and exit")
 	captureTicks := flag.Int("capture-ticks", 5400, "dev: simulation ticks to run before -capture")
 	captureZoom := flag.Float64("capture-zoom", 1, "dev: camera zoom for -capture")
-	captureUI := flag.String("capture-ui", "", "dev: UI state for -capture: architect | orders | bills | pawn")
+	captureUI := flag.String("capture-ui", "", "dev: UI state for -capture: architect | orders | bills | pawn | combat | melee")
 	flag.Parse()
 
 	var shot *uiadapter.Capture

@@ -173,7 +173,7 @@ use these primitives.
 -   [ ] **Confirmation dialog**
 -   [ ] **Modal window**
 -   [ ] **Toast/message**
--   [ ] **Persistent alert card**
+-   [-] **Persistent alert card**
 -   [ ] **Tooltip**
 -   [ ] **Rich tooltip/stat breakdown**
 -   [ ] **Drag painting tool**
@@ -436,7 +436,7 @@ the player's primary world-editing command surface.
 -   [ ] **Mine**
 -   [ ] **Cut plants**
 -   [x] **Harvest** (wild plants via Architect; zone crops automatic)
--   [ ] **Hunt**
+-   [x] **Hunt**
 -   [x] **Deconstruct**
 -   [x] **Cancel** (blueprints, harvest and deconstruct marks, zones)
 -   [ ] **Forbid/unforbid**
@@ -742,7 +742,7 @@ understandable.
 
 ## 12.1 Gear tab
 
--   [ ] **Equipped weapon**
+-   [x] **Equipped weapon**
     -   Name.
     -   quality.
     -   condition.
@@ -760,7 +760,7 @@ understandable.
 ## 12.2 Gear actions
 
 -   [ ] **Drop**
--   [ ] **Equip**
+-   [x] **Equip**
 -   [ ] **Wear**
 -   [ ] **Consume/use where valid**
 -   [ ] **Inspect item**
@@ -788,10 +788,10 @@ understandable.
 
 -   [x] **Move order** (drafted: right-click moves and holds)
     -   Right-click valid destination.
--   [ ] **Attack order**
+-   [x] **Attack order**
     -   Hostile target.
--   [ ] **Melee attack**
--   [ ] **Ranged attack**
+-   [x] **Melee attack**
+-   [x] **Ranged attack**
 -   [ ] **Fire-at-will toggle**
 -   [ ] **Hold position behavior if implemented**
 -   [ ] **Emergency tend**
@@ -811,9 +811,9 @@ understandable.
 ## 13.4 Combat feedback
 
 -   [ ] **Damage indicators**
--   [ ] **Projectile/impact feedback**
+-   [x] **Projectile/impact feedback**
 -   [ ] **Downed/death feedback**
--   [ ] **Threat markers**
+-   [-] **Threat markers**
 -   [ ] **Hostile faction coloring/icons**
 -   [ ] **Pause-on-threat option**
 
@@ -1100,7 +1100,7 @@ This screen centralizes per-pawn behavioral policies.
 -   [ ] **Hunt risk**
 -   [ ] **Tame chance/wildness**
 -   [ ] **Body size/meat yield context**
--   [ ] **Hunt designation toggle**
+-   [x] **Hunt designation toggle**
 -   [ ] **Sort/filter**
 
 ------------------------------------------------------------------------
@@ -1114,7 +1114,7 @@ This screen centralizes per-pawn behavioral policies.
 -   [ ] **Resistance**
 -   [ ] **Recruitment difficulty**
 -   [ ] **Mood**
--   [ ] **Health**
+-   [x] **Health**
 -   [ ] **Interaction mode**
 
 ## 20.2 Interaction modes
@@ -1265,7 +1265,7 @@ the player what just happened and what requires attention.
 
 ## 23.4 Alert scalability
 
--   [ ] **Aggregate repeated alerts**
+-   [-] **Aggregate repeated alerts**
     -   "27 colonists need treatment" rather than 27 cards.
 -   [ ] **Search/group in large colonies**
 -   [ ] **Do not recompute expensive alert queries in UI every frame**

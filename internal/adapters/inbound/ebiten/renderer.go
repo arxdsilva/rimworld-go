@@ -191,10 +191,12 @@ func (r *Renderer) advance() {
 
 func (r *Renderer) syncPawns() {
 	tick := r.game.Tick()
+	w := r.game.World()
 	for _, p := range r.game.Snapshot() {
 		prev, seen := r.last[p.ID]
-		r.last[p.ID] = nextVisual(prev, seen, p.X, p.Y, tick, r.present)
+		r.last[p.ID] = faceAttack(nextVisual(prev, seen, p.X, p.Y, tick, r.present), w.Traces, p.X, p.Y)
 	}
+	r.syncAnimals(w)
 }
 
 func (r *Renderer) handleSpeedInput() {
@@ -316,6 +318,7 @@ func (r *Renderer) Draw(screen *ebiten.Image) {
 	if r.art != nil {
 		r.drawArt(screen, sw, sh, tile)
 		r.drawDaylightRooms(screen, sw, sh)
+		r.drawTraces(screen, r.game.World(), tile)
 		return
 	}
 

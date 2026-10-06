@@ -239,6 +239,37 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 			return job.Record{}, r
 		}
 		return job.Record{Kind: job.Haul, Target: iid, TX: x, TY: y, DestX: dx, DestY: dy}, ""
+	case command.OrderHunt:
+		aid := g.animalAt(x, y)
+		if aid == 0 {
+			return job.Record{}, ReasonUnknown
+		}
+		if !m.Enabled(work.Hunt) {
+			return job.Record{}, ReasonNoHunt
+		}
+		if !g.hasRanged(id) {
+			return job.Record{}, ReasonNoRanged
+		}
+		if r := g.busyBy(id, aid); r != "" {
+			return job.Record{}, r
+		}
+		return job.Record{Kind: job.Hunt, Target: aid, TX: x, TY: y, WorkLeft: aimTicks(weaponDefOf(g, id))}, ""
+	case command.OrderAttack:
+		aid := g.animalAt(x, y)
+		if aid == 0 {
+			return job.Record{}, ReasonUnknown
+		}
+		return job.Record{Kind: job.Attack, Target: aid, TX: x, TY: y, WorkLeft: aimTicks(weaponDefOf(g, id))}, ""
+	case command.OrderEquip:
+		iid := g.itemAt(x, y)
+		st, ok := g.stacks.Get(iid)
+		if !ok || !st.Kind.IsWeapon() {
+			return job.Record{}, ReasonUnknown
+		}
+		if r := g.busyBy(id, iid); r != "" {
+			return job.Record{}, r
+		}
+		return job.Record{Kind: job.Equip, Target: iid, TX: x, TY: y}, ""
 	}
 	return job.Record{}, ReasonUnknown
 }
@@ -326,6 +357,12 @@ func (g *Game) prioritize(id entity.EntityID, o command.Order, x, y int, layer c
 		g.mines[[2]int{x, y}] = true
 		g.startMine(id, x, y, true)
 		return
+	}
+	if o == command.OrderHunt {
+		if a, ok := g.animals.Get(rec.Target); ok {
+			a.Designated = true
+			g.animals.Set(rec.Target, a)
+		}
 	}
 	if o == command.OrderCut {
 		if p, ok := g.plants.Get(rec.Target); ok {
@@ -426,8 +463,23 @@ func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 		}
 		add(verb+name, command.OrderCut, construction.LayerObject)
 	}
+	if aid := g.animalAt(x, y); aid != 0 {
+		a, _ := g.animals.Get(aid)
+		if g.drafted(pawn) {
+			verb := "Melee attack "
+			if g.hasRanged(pawn) {
+				verb = "Shoot "
+			}
+			add(verb+a.Species.String(), command.OrderAttack, construction.LayerObject)
+		} else {
+			add("Hunt "+a.Species.String(), command.OrderHunt, construction.LayerObject)
+		}
+	}
 	if iid := g.itemAt(x, y); iid != 0 {
 		st, _ := g.stacks.Get(iid)
+		if st.Kind.IsWeapon() {
+			add(fmt.Sprintf("Equip %s", st.Kind), command.OrderEquip, construction.LayerObject)
+		}
 		if st.Kind.IsFood() {
 			add(fmt.Sprintf("Eat %s", st.Kind), command.OrderEat, construction.LayerObject)
 		}

@@ -8,8 +8,10 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/reservation"
 	"rimworld-go/internal/domain/ai/work"
+	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/zone"
+	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/pawn/health"
@@ -67,6 +69,8 @@ type PawnView struct {
 	Mood          int
 	MoodLabel     string
 	Thoughts      []ThoughtView
+	Health        int    // hit points left, percent
+	Weapon        string // wielded weapon name ("fists" when unarmed)
 }
 
 // ItemView is a ground stack.
@@ -151,6 +155,10 @@ type WorldView struct {
 	// outdoors, -2 a wall. Rooms indexes by id.
 	RoomGrid []int
 	Rooms    []RoomView
+	// Animals are the living wild animals; Traces are recent attacks
+	// (tracers and swings) for presentation.
+	Animals []AnimalView
+	Traces  []TraceView
 }
 
 // Game holds all authoritative simulation state.
@@ -194,6 +202,12 @@ type Game struct {
 	ateAt   map[entity.EntityID]bool
 	draft   map[entity.EntityID]bool
 	sleptAt map[entity.EntityID]entity.EntityID // pawn -> bed, 0 = ground
+
+	animalIDs []entity.EntityID
+	animals   *component.Store[animal.State]
+	equip     map[entity.EntityID]item.Kind // wielded weapon; absent = fists
+	traces    []projectile.Trace
+	wild      bool // wildlife migrates in (generated colonies)
 }
 
 // New builds a Game from cfg. Width/Height must be positive.
@@ -224,6 +238,8 @@ func New(cfg Config) *Game {
 		ateAt:     make(map[entity.EntityID]bool),
 		draft:     make(map[entity.EntityID]bool),
 		sleptAt:   make(map[entity.EntityID]entity.EntityID),
+		animals:   component.NewStore[animal.State](),
+		equip:     make(map[entity.EntityID]item.Kind),
 	}
 }
 
@@ -235,6 +251,7 @@ func NewColony(cfg Config) *Game {
 	if err := g.LoadStartKit(); err != nil {
 		panic(err)
 	}
+	g.spawnWildlife()
 	return g
 }
 
@@ -298,6 +315,9 @@ func (g *Game) LoadStartKit() error {
 	if _, err := g.SpawnStack(item.Wood, 30, cx+2, cy+3); err != nil {
 		return err
 	}
+	if _, err := g.SpawnStack(item.Rifle, 1, cx-2, cy+2); err != nil {
+		return err
+	}
 	for i := 0; i < 4; i++ {
 		if _, err := g.SpawnPlant(cx+2+i, cy-4); err != nil {
 			return err
@@ -357,6 +377,7 @@ func (g *Game) Step(n int) {
 		g.phaseNeeds()
 		g.phaseAI()
 		g.phaseJobs()
+		g.phaseAnimals()
 		g.phaseMovement()
 		g.clock.Advance(1)
 	}
@@ -407,6 +428,8 @@ func (g *Game) Snapshot() []PawnView {
 		ts := g.thoughts(id)
 		pv := &views[len(views)-1]
 		pv.Mood, pv.MoodLabel, pv.Thoughts = mood.Level(ts), mood.Label(mood.Level(ts)), thoughtViews(ts)
+		pv.Health = v.HP() * 100 / health.MaxHP
+		pv.Weapon = weaponDefOf(g, id).Name
 	}
 	return views
 }
@@ -490,6 +513,8 @@ func (g *Game) World() WorldView {
 	g.ensureRooms()
 	w.RoomGrid = append([]int(nil), g.roomGrid...)
 	w.Rooms = g.roomViews()
+	w.Animals = g.animalViews()
+	w.Traces = g.traceViews()
 	return w
 }
 

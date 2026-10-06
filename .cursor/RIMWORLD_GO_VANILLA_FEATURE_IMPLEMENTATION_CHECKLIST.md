@@ -543,7 +543,7 @@ This is the heart of autonomous colony behavior.
 -   [x] **Mine designation** (Architect Orders rectangle over rock; Mine work type; cancel clears)
 -   [x] **Cut plant designation** (trees drop wood scaled by growth; bushes cleared)
 -   [x] **Harvest designation** (wild plants by order; zone crops harvest automatically; Grow work type)
--   [ ] **Hunt designation**
+-   [x] **Hunt designation**
 -   [-] **Cancel designation** (frames, harvest marks, deconstruct marks, overlapping stockpiles)
 -   [ ] **Forbid/unforbid designation/action**
 
@@ -663,7 +663,7 @@ This is the heart of autonomous colony behavior.
 ## 8.2 Raw food
 
 -   [-] **Plant food** (harvest yield stacks; no meat/diet categories)
--   [ ] **Meat**
+-   [x] **Meat**
 -   [ ] **Animal products**
     -   Milk/eggs where species definitions support them.
 -   [ ] **Food categories and diet compatibility**
@@ -982,7 +982,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 11.4 Healing
 
--   [ ] **Natural wound healing**
+-   [x] **Natural wound healing**
     -   Healing over time based on pawn state and care.
 -   [ ] **Scars/permanent injury**
     -   Some wounds heal into lasting impairment/pain.
@@ -1307,11 +1307,11 @@ treatment, and surgery are major colony-management systems.
 
 ## 16.1 Equipment
 
--   [ ] **Single equipped primary weapon**
+-   [x] **Single equipped primary weapon**
     -   Equip/drop.
     -   weapon stats.
     -   melee fallback for ranged weapons.
--   [ ] **Equipment jobs**
+-   [x] **Equipment jobs**
     -   Player order to equip.
     -   dropped weapon can be hauled/stored.
 
@@ -1339,9 +1339,9 @@ treatment, and surgery are major colony-management systems.
 
 ## 16.3 Weapon categories
 
--   [ ] **Melee weapons**
+-   [x] **Melee weapons**
     -   Multiple attack verbs/damage profiles.
--   [ ] **Ranged weapons**
+-   [x] **Ranged weapons**
     -   Range.
     -   warmup.
     -   cooldown.
@@ -1364,18 +1364,18 @@ treatment, and surgery are major colony-management systems.
 
 ## 17.1 Drafting
 
--   [ ] **Draft/undraft**
+-   [x] **Draft/undraft**
     -   Drafted colonists stop autonomous work and accept tactical
         orders.
--   [ ] **Drafted movement order**
--   [ ] **Attack target order**
+-   [x] **Drafted movement order**
+-   [x] **Attack target order**
 -   [ ] **Hold/fire-at-will behavior**
 -   [ ] **Drafted field tending**
     -   Allow emergency tending under appropriate conditions.
 
 ## 17.2 Line of sight
 
--   [ ] **Projectile LOS**
+-   [x] **Projectile LOS**
     -   Walls/solid obstacles block.
     -   Adjacent wall leaning/corner firing equivalent where needed for
         familiar tactical behavior.
@@ -1393,14 +1393,14 @@ treatment, and surgery are major colony-management systems.
 
 -   [ ] **Target acquisition**
 -   [ ] **Warmup**
--   [ ] **Accuracy**
+-   [x] **Accuracy**
     -   Shooting skill.
     -   weapon.
     -   distance.
     -   target size.
     -   weather/light if modeled.
     -   cover.
--   [ ] **Projectile flight**
+-   [-] **Projectile flight**
     -   Logical projectile entity or deterministic trajectory.
     -   Can miss intended target and impact another valid cell/entity
         where design supports it.
@@ -1409,12 +1409,12 @@ treatment, and surgery are major colony-management systems.
 
 ## 17.5 Melee
 
--   [ ] **Adjacent melee combat**
+-   [x] **Adjacent melee combat**
     -   Pawns next to hostile target use melee even if holding ranged
         weapon, matching vanilla's core behavior. citeturn2search1
--   [ ] **Melee hit chance**
--   [ ] **Weapon/body attacks**
--   [ ] **Melee cooldown**
+-   [x] **Melee hit chance**
+-   [-] **Weapon/body attacks**
+-   [x] **Melee cooldown**
 
 ## 17.6 Armor
 
@@ -1438,8 +1438,8 @@ treatment, and surgery are major colony-management systems.
 ## 17.8 Combat AI
 
 -   [ ] **Hostile target selection**
--   [ ] **Approach/ranged engagement**
--   [ ] **Melee closing**
+-   [x] **Approach/ranged engagement**
+-   [x] **Melee closing**
 -   [ ] **Basic cover seeking**
 -   [ ] **Flee behavior for appropriate human enemies**
 
@@ -1455,7 +1455,7 @@ children systems.
 
 ## 18.1 Species definitions
 
--   [ ] **Animal species**
+-   [x] **Animal species**
     -   Anatomy.
     -   body size.
     -   movement.
@@ -1469,21 +1469,21 @@ children systems.
 
 ## 18.2 Wildlife
 
--   [ ] **Biome wildlife population**
+-   [-] **Biome wildlife population**
     -   Spawn species appropriate to biome/climate.
--   [ ] **Animal hunger/rest**
+-   [-] **Animal hunger/rest**
     -   Simpler needs than humans.
 -   [ ] **Grazing/foraging**
 -   [ ] **Predation**
     -   Predators select prey and hunt.
--   [ ] **Wild animal flee/fight response**
+-   [x] **Wild animal flee/fight response**
 
 ## 18.3 Hunting
 
--   [ ] **Hunt designation**
--   [ ] **Hunter requires suitable ranged weapon**
+-   [x] **Hunt designation**
+-   [x] **Hunter requires suitable ranged weapon**
 -   [ ] **Stalk/approach/fire job**
--   [ ] **Animal retaliation/manhunter chance**
+-   [-] **Animal retaliation/manhunter chance**
 -   [ ] **Corpse hauling/butchering integration**
 
 ## 18.4 Taming
@@ -1770,7 +1770,7 @@ forage; - local map appearance.
 -   [ ] **Ore/resource deposits**
 -   [ ] **Water**
 -   [x] **Wild vegetation** (trees, berry bushes; grass decals presentation-only)
--   [ ] **Wildlife**
+-   [-] **Wildlife**
 -   [ ] **Ancient ruins/debris**
 -   [ ] **Starting clear/landing area**
 
@@ -1977,7 +1977,7 @@ and other colony incidents. citeturn2search2turn2search7
 -   [ ] **Animal joins**
 -   [ ] **Farm animals wander in**
 -   [ ] **Rare self-tame animal**
--   [ ] **Wild animal migration**
+-   [x] **Wild animal migration**
 -   [ ] **Party**
 -   [ ] **Marriage**
 -   [ ] **Psychic soothe-like temporary positive mood event**
@@ -2004,7 +2004,7 @@ and other colony incidents. citeturn2search2turn2search7
     version**
 -   [ ] **Crashed hostile ship part**
 -   [ ] **Short circuit/battery discharge**
--   [ ] **Animal predator hunts colonist**
+-   [x] **Animal predator hunts colonist**
     -   May be AI-driven rather than storyteller incident.
 
 ## 25.4 Letters/messages

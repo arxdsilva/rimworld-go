@@ -49,6 +49,8 @@ var archTools = []archTool{
 		desc: "Chop trees for wood or clear bushes."},
 	{id: "mine", label: "Mine", category: "orders", icon: "order_mine", mode: placeArea, cmd: command.DesignateMine,
 		desc: "Dig out rock. Each tile drops stone blocks."},
+	{id: "hunt", label: "Hunt", category: "orders", icon: "order_hunt", mode: placeArea, cmd: command.DesignateHunt,
+		desc: "Mark animals for hunters. Hunters need a rifle; kills drop meat."},
 	{id: "stockpile", label: "Stockpile", category: "zones", icon: "zone_stockpile", mode: placeArea, cmd: command.DesignateStockpile,
 		desc: "Storage area. Haulers bring food and wood here."},
 	{id: "grow", label: "Growing zone", category: "zones", icon: "zone_grow", mode: placeArea, cmd: command.DesignateGrowZone,

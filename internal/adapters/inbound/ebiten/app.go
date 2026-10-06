@@ -92,6 +92,8 @@ type App struct {
 	cursor                         *[2]int // capture-only synthetic cursor
 	selBuilding                    entity.EntityID
 	hasBuilding                    bool
+	selAnimal                      entity.EntityID
+	hasAnimal                      bool
 	archDrag                       bool
 	archX0, archY0, archX1, archY1 int
 	inspectTab                     string
@@ -199,9 +201,13 @@ func (a *App) Update() error {
 				a.renderer.handleSelectionInput()
 				if a.renderer.HasSelect() {
 					a.clearBuilding()
+					a.clearAnimal()
 				} else {
 					mx, my := a.currentCursor()
-					a.selectBuildingAt(a.renderer.TileAt(mx, my))
+					tx, ty := a.renderer.TileAt(mx, my)
+					if !a.selectAnimalAt(tx, ty) {
+						a.selectBuildingAt(tx, ty)
+					}
 				}
 			}
 			a.handleOrders()
@@ -354,6 +360,8 @@ func (a *App) applyClick(id string) {
 		a.chooseFloat(id)
 	case id == "pawn.draft":
 		a.toggleDraft()
+	case strings.HasPrefix(id, "animal."):
+		a.applyAnimalClick(id)
 	case strings.HasPrefix(id, "bldg.") || strings.HasPrefix(id, "bill."):
 		a.applyBuildingClick(id)
 	case strings.HasPrefix(id, "work.cell."):
