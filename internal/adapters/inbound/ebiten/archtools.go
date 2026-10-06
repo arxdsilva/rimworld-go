@@ -43,6 +43,10 @@ var archTools = []archTool{
 		desc: "Take buildings down. Refunds half the wood."},
 	{id: "cancel", label: "Cancel", category: "orders", icon: "order_cancel", mode: placeArea, cmd: command.DesignateCancel,
 		desc: "Remove blueprints, zones and orders in an area."},
+	{id: "cut", label: "Cut plants", category: "orders", icon: "order_cut", mode: placeArea, cmd: command.DesignateCut,
+		desc: "Chop trees for wood or clear bushes."},
+	{id: "mine", label: "Mine", category: "orders", icon: "order_mine", mode: placeArea, cmd: command.DesignateMine,
+		desc: "Dig out rock. Each tile drops stone blocks."},
 	{id: "stockpile", label: "Stockpile", category: "zones", icon: "zone_stockpile", mode: placeArea, cmd: command.DesignateStockpile,
 		desc: "Storage area. Haulers bring food and wood here."},
 	{id: "wall", label: "Wall", category: "structure", icon: "wall", mode: placeLine, build: "wall",
@@ -142,6 +146,19 @@ var facingNames = [...]string{"south", "east", "north", "west"}
 
 func rotateFacing(f uint8, dir int) uint8 {
 	return uint8((int(f) + dir + 4) % 4)
+}
+
+// buildSpriteStuff is buildSprite with a material (walls and floors).
+func buildSpriteStuff(kind, stuff, facing string, mask int, ew, open bool) string {
+	if stuff == "stone" {
+		switch kind {
+		case "wall":
+			return "structure/wall_stone_" + twoDigits(mask)
+		case "floor":
+			return "structure/floor_stone"
+		}
+	}
+	return buildSprite(kind, facing, mask, ew, open)
 }
 
 // buildSprite is the world sprite for a building kind; neighbours only

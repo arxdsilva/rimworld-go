@@ -20,8 +20,11 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/grid"
 	"rimworld-go/internal/domain/world/plant"
+	"rimworld-go/internal/domain/world/terrain"
 	"rimworld-go/pkg/randx"
 )
+
+var errSpawn = fmt.Errorf("spawn: tile out of bounds or occupied")
 
 // TicksPerCell is how long a pawn occupies one tile (~4 cells/s at 1x).
 const TicksPerCell = clock.TicksPerSecond / 4
@@ -51,6 +54,9 @@ type PawnView struct {
 	WorkHaul      bool
 	WorkConstruct bool
 	WorkGrow      bool
+	WorkMine      bool
+	WorkCook      bool
+	WorkHunt      bool
 	Ate           bool
 	SleptInBed    bool
 	Drafted       bool
@@ -75,6 +81,7 @@ type FrameView struct {
 	WorkLeft int
 	Facing   string
 	Floor    bool
+	Stuff    string
 }
 
 // BuildingView is a completed wall or bed.
@@ -86,6 +93,7 @@ type BuildingView struct {
 	Facing      string
 	Floor       bool
 	Deconstruct bool
+	Stuff       string
 }
 
 // PlantView is a wild plant.
@@ -94,12 +102,16 @@ type PlantView struct {
 	X, Y        int
 	Designated  bool
 	Harvestable bool
+	Species     string
+	Growth      int // percent
+	Stage       int // 0 sown .. 3 ripe
+	Cut         bool
 }
 
 // StockpileView is a storage rectangle.
 type StockpileView struct {
-	MinX, MinY, MaxX, MaxY int
-	AllowFood, AllowWood   bool
+	MinX, MinY, MaxX, MaxY           int
+	AllowFood, AllowWood, AllowStone bool
 }
 
 // WorldView is the non-pawn read model for HUD and the map.
@@ -110,6 +122,13 @@ type WorldView struct {
 	Plants     []PlantView
 	Stockpiles []StockpileView
 	Food, Wood int
+	Stone      int
+	// Terrain is the ground type per tile, row-major, TerrainW wide;
+	// codes index TerrainNames().
+	Terrain  []uint8
+	TerrainW int
+	// Mines are tiles designated for mining.
+	Mines [][2]int
 }
 
 // Game holds all authoritative simulation state.
@@ -136,6 +155,8 @@ type Game struct {
 	bldgs    *component.Store[construction.Building]
 	plantIDs []entity.EntityID
 	plants   *component.Store[plant.Wild]
+	terr     terrain.Map
+	mines    map[[2]int]bool
 
 	stockpiles []zone.Stockpile
 	reserve    *reservation.Table
@@ -164,6 +185,8 @@ func New(cfg Config) *Game {
 		frames:    component.NewStore[construction.Frame](),
 		bldgs:     component.NewStore[construction.Building](),
 		plants:    component.NewStore[plant.Wild](),
+		terr:      terrain.NewMap(cfg.Width, cfg.Height),
+		mines:     make(map[[2]int]bool),
 		reserve:   reservation.NewTable(),
 		ateAt:     make(map[entity.EntityID]bool),
 		draft:     make(map[entity.EntityID]bool),
@@ -171,9 +194,11 @@ func New(cfg Config) *Game {
 	}
 }
 
-// NewColony builds a map with the first-playable start kit.
+// NewColony builds a generated map (terrain, trees, bushes) with the
+// first-playable start kit in its open centre.
 func NewColony(cfg Config) *Game {
 	g := New(cfg)
+	g.generate(cfg.Seed)
 	if err := g.LoadStartKit(); err != nil {
 		panic(err)
 	}
@@ -215,37 +240,33 @@ func (g *Game) SpawnStack(kind item.Kind, qty, x, y int) (entity.EntityID, error
 	return id, nil
 }
 
-// SpawnPlant places a harvestable wild plant.
+// SpawnPlant places a ripe wild berry bush.
 func (g *Game) SpawnPlant(x, y int) (entity.EntityID, error) {
-	if !g.grid.InBounds(x, y) {
-		return 0, fmt.Errorf("spawn plant")
-	}
-	id := g.entities.Next()
-	g.plantIDs = append(g.plantIDs, id)
-	g.plants.Set(id, plant.Wild{X: x, Y: y, Harvestable: true})
-	return id, nil
+	return g.spawnPlant(plant.BerryBush, x, y, plant.DefOf(plant.BerryBush).GrowTicks)
 }
 
-// LoadStartKit places three named colonists, food, wood, and wild plants.
+// LoadStartKit places three named colonists, food, wood, and ripe berry
+// bushes around the map centre.
 func (g *Game) LoadStartKit() error {
+	cx, cy := g.grid.Width()/2, g.grid.Height()/2
 	names := []string{"Ada", "Bo", "Cora"}
-	spots := []Position{{5, 5}, {6, 5}, {7, 5}}
+	spots := []Position{{cx - 1, cy}, {cx, cy}, {cx + 1, cy}}
 	for i, n := range names {
 		if _, err := g.SpawnNamedPawn(spots[i].X, spots[i].Y, n); err != nil {
 			return err
 		}
 	}
-	if _, err := g.SpawnStack(item.Food, 20, 8, 6); err != nil {
+	if _, err := g.SpawnStack(item.Food, 20, cx+2, cy+1); err != nil {
 		return err
 	}
-	if _, err := g.SpawnStack(item.Food, 10, 9, 6); err != nil {
+	if _, err := g.SpawnStack(item.Food, 10, cx+3, cy+1); err != nil {
 		return err
 	}
-	if _, err := g.SpawnStack(item.Wood, 30, 8, 8); err != nil {
+	if _, err := g.SpawnStack(item.Wood, 30, cx+2, cy+3); err != nil {
 		return err
 	}
-	for i, x := 0, 12; i < 4; i++ {
-		if _, err := g.SpawnPlant(x+i, 4); err != nil {
+	for i := 0; i < 4; i++ {
+		if _, err := g.SpawnPlant(cx+2+i, cy-4); err != nil {
 			return err
 		}
 	}
@@ -299,6 +320,7 @@ func (g *Game) SetWork(id entity.EntityID, t work.Type, on bool) {
 func (g *Game) Step(n int) {
 	for i := 0; i < n; i++ {
 		g.phaseCommands()
+		g.phasePlants()
 		g.phaseNeeds()
 		g.phaseAI()
 		g.phaseJobs()
@@ -340,6 +362,9 @@ func (g *Game) Snapshot() []PawnView {
 			WorkHaul:      m.Enabled(work.Haul),
 			WorkConstruct: m.Enabled(work.Construct),
 			WorkGrow:      m.Enabled(work.Grow),
+			WorkMine:      m.Enabled(work.Mine),
+			WorkCook:      m.Enabled(work.Cook),
+			WorkHunt:      m.Enabled(work.Hunt),
 			Ate:           g.ateAt[id],
 			SleptInBed:    g.sleptAt[id] != 0,
 			Drafted:       g.draft[id],
@@ -366,10 +391,13 @@ func (g *Game) World() WorldView {
 			ID: id, Kind: st.Kind.String(), Qty: st.Qty, X: st.X, Y: st.Y, Carried: st.Carrier != 0,
 		})
 		if st.Carrier == 0 {
-			if st.Kind == item.Food {
+			switch {
+			case st.Kind.IsFood():
 				w.Food += st.Qty
-			} else {
+			case st.Kind == item.Wood:
 				w.Wood += st.Qty
+			case st.Kind == item.Stone:
+				w.Stone += st.Qty
 			}
 		}
 	}
@@ -381,6 +409,7 @@ func (g *Game) World() WorldView {
 		w.Frames = append(w.Frames, FrameView{
 			ID: id, Kind: fr.Kind.String(), X: fr.X, Y: fr.Y, Wood: fr.Wood, Need: fr.Need, WorkLeft: fr.WorkLeft,
 			Facing: fr.Facing.String(), Floor: construction.DefOf(fr.Kind).Layer == construction.LayerFloor,
+			Stuff: fr.Stuff.String(),
 		})
 	}
 	for _, id := range g.bldgIDs {
@@ -391,7 +420,7 @@ func (g *Game) World() WorldView {
 		w.Buildings = append(w.Buildings, BuildingView{
 			ID: id, Kind: b.Kind.String(), X: b.X, Y: b.Y, Claimant: entity.EntityID(b.Claimant),
 			Facing: b.Facing.String(), Floor: construction.DefOf(b.Kind).Layer == construction.LayerFloor,
-			Deconstruct: b.Deconstruct,
+			Deconstruct: b.Deconstruct, Stuff: b.Stuff.String(),
 		})
 	}
 	for _, id := range g.plantIDs {
@@ -399,15 +428,24 @@ func (g *Game) World() WorldView {
 		if !ok {
 			continue
 		}
-		w.Plants = append(w.Plants, PlantView{ID: id, X: p.X, Y: p.Y, Designated: p.Designated, Harvestable: p.Harvestable})
+		w.Plants = append(w.Plants, PlantView{
+			ID: id, X: p.X, Y: p.Y, Designated: p.Designated, Harvestable: p.Harvestable(),
+			Species: p.Species.String(), Growth: p.Percent(), Stage: p.Stage(), Cut: p.Cut,
+		})
 	}
+	w.TerrainW = g.terr.W
+	w.Terrain = make([]uint8, len(g.terr.Cells))
+	for i, t := range g.terr.Cells {
+		w.Terrain[i] = uint8(t)
+	}
+	w.Mines = g.mineList()
 	return w
 }
 
 func stockpileViews(z []zone.Stockpile) []StockpileView {
 	out := make([]StockpileView, len(z))
 	for i, s := range z {
-		out[i] = StockpileView{s.MinX, s.MinY, s.MaxX, s.MaxY, s.AllowFood, s.AllowWood}
+		out[i] = StockpileView{s.MinX, s.MinY, s.MaxX, s.MaxY, s.AllowFood, s.AllowWood, s.AllowStone}
 	}
 	return out
 }

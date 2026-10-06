@@ -40,12 +40,23 @@ func (r *Renderer) drawSprite(screen *ebiten.Image, key string, tint color.NRGBA
 }
 
 func (r *Renderer) drawSpriteCS(screen *ebiten.Image, key string, tint color.NRGBA, wx, wy, tile float64, sw, sh int, cs colorScale) {
+	r.drawSpriteScaled(screen, key, tint, wx, wy, tile, sw, sh, cs, 1)
+}
+
+// drawSpriteScaled draws a sprite scaled by k about its footprint's
+// bottom-centre (ground origin), e.g. young trees.
+func (r *Renderer) drawSpriteScaled(screen *ebiten.Image, key string, tint color.NRGBA, wx, wy, tile float64, sw, sh int, cs colorScale, k float64) {
 	sp := r.art.sprite(key)
 	if sp == nil {
 		return
 	}
 	sx, sy := r.worldToScreenF(wx, wy)
 	x, y, s := artOrigin(sp.meta, float64(sx), float64(sy), tile)
+	if k != 1 {
+		px := float64(sx) + float64(sp.meta.Footprint[0])*tile/2
+		py := float64(sy) + float64(sp.meta.Footprint[1])*tile
+		x, y, s = px+(x-px)*k, py+(y-py)*k, s*k
+	}
 	w, h := float64(sp.meta.Canvas[0])*s, float64(sp.meta.Canvas[1])*s
 	if !visible(float32(x), float32(y), float32(w), float32(h), sw, sh) {
 		return
@@ -66,7 +77,7 @@ func (r *Renderer) drawSpriteCS(screen *ebiten.Image, key string, tint color.NRG
 
 // drawPlacementGhost previews a build tool: the real sprite per cell,
 // green when placeable, red when not. Walls autotile among the ghosts.
-func (r *Renderer) drawPlacementGhost(screen *ebiten.Image, kind, facing string, cells []ghostCell) {
+func (r *Renderer) drawPlacementGhost(screen *ebiten.Image, kind, stuff, facing string, cells []ghostCell) {
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
 	tile := r.tilePx()
 	set := map[[2]int]bool{}
@@ -88,7 +99,7 @@ func (r *Renderer) drawPlacementGhost(screen *ebiten.Image, kind, facing string,
 			continue
 		}
 		mask := wallMask(set, c.x, c.y)
-		key := buildSprite(kind, facing, mask, mask&(wallE|wallW) != 0, false)
+		key := buildSpriteStuff(kind, stuff, facing, mask, mask&(wallE|wallW) != 0, false)
 		r.drawSpriteCS(screen, key, color.NRGBA{}, float64(c.x), float64(c.y), tile, sw, sh, cs)
 	}
 }
@@ -97,20 +108,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	none := color.NRGBA{}
 	w := r.game.World()
 
-	// terrain: the domain has no terrain types yet, so soil variants only
-	for y := 0; y < r.game.Height(); y++ {
-		for x := 0; x < r.game.Width(); x++ {
-			h := tileHash(x, y)
-			r.drawSprite(screen, artKey("terrain", "soil", int(h%soilVariants)), none, float64(x), float64(y), tile, sw, sh)
-		}
-	}
-	for y := 0; y < r.game.Height(); y++ {
-		for x := 0; x < r.game.Width(); x++ {
-			if h := tileHash(x, y) >> 8; h%grassEvery == 0 {
-				r.drawSprite(screen, artKey("plant", "grass", int(h/grassEvery%2)), none, float64(x), float64(y), tile, sw, sh)
-			}
-		}
-	}
+	r.drawTerrainArt(screen, w, sw, sh, tile)
 	for _, z := range w.Stockpiles {
 		for y := z.MinY; y <= z.MaxY; y++ {
 			for x := z.MinX; x <= z.MaxX; x++ {
@@ -125,12 +123,12 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	// floors (and planned floors) sit under everything else
 	for _, b := range w.Buildings {
 		if b.Floor {
-			r.drawSprite(screen, "structure/floor_wood", none, float64(b.X), float64(b.Y), tile, sw, sh)
+			r.drawSprite(screen, buildSpriteStuff("floor", b.Stuff, "", 0, false, false), none, float64(b.X), float64(b.Y), tile, sw, sh)
 		}
 	}
 	for _, f := range w.Frames {
 		if f.Floor {
-			r.drawSpriteCS(screen, "structure/floor_wood", none, float64(f.X), float64(f.Y), tile, sw, sh, blueprintCS)
+			r.drawSpriteCS(screen, buildSpriteStuff("floor", f.Stuff, "", 0, false, false), none, float64(f.X), float64(f.Y), tile, sw, sh, blueprintCS)
 		}
 	}
 
@@ -146,6 +144,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	}
 	var draws []artDraw
 	add := func(row, col float64, fn func()) { draws = append(draws, artDraw{row, col, fn}) }
+	r.addRockDraws(w, add, screen, sw, sh, tile)
 	cloth := r.art.tintNames("cloth")
 	for _, b := range w.Buildings {
 		b := b
@@ -153,7 +152,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 			continue
 		}
 		mask := wallMask(walls, b.X, b.Y)
-		key := buildSprite(b.Kind, b.Facing, mask, mask&(wallE|wallW) != 0, occupied[[2]int{b.X, b.Y}])
+		key := buildSpriteStuff(b.Kind, b.Stuff, b.Facing, mask, mask&(wallE|wallW) != 0, occupied[[2]int{b.X, b.Y}])
 		t := none
 		if b.Kind == "bed" && len(cloth) > 0 {
 			t = r.art.tint("cloth", cloth[mix64(uint64(b.ID))%uint64(len(cloth))])
@@ -181,7 +180,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 			continue
 		}
 		pm := wallMask(planned, f.X, f.Y)
-		key := buildSprite(f.Kind, f.Facing, pm, pm&(wallE|wallW) != 0, false)
+		key := buildSpriteStuff(f.Kind, f.Stuff, f.Facing, pm, pm&(wallE|wallW) != 0, false)
 		add(float64(f.Y), float64(f.X), func() {
 			if f.Wood > 0 {
 				r.drawSprite(screen, "structure/frame_1x1", none, float64(f.X), float64(f.Y), tile, sw, sh)
@@ -191,12 +190,9 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	}
 	for _, p := range w.Plants {
 		p := p
-		name := artKey("plant", "bush", int(tileHash(p.X, p.Y)%2))
-		if p.Harvestable {
-			name += "_harvestable"
-		}
+		key, scale := plantSprite(p)
 		add(float64(p.Y), float64(p.X), func() {
-			r.drawSprite(screen, name, none, float64(p.X), float64(p.Y), tile, sw, sh)
+			r.drawSpriteScaled(screen, key, none, float64(p.X), float64(p.Y), tile, sw, sh, noCS, scale)
 		})
 	}
 	for _, it := range w.Items {
@@ -231,9 +227,15 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	}
 
 	for _, p := range w.Plants {
-		if p.Designated {
+		switch {
+		case p.Cut:
+			r.drawSprite(screen, "overlay/designation_cut", none, float64(p.X), float64(p.Y), tile, sw, sh)
+		case p.Designated:
 			r.drawSprite(screen, "overlay/designation_harvest", none, float64(p.X), float64(p.Y), tile, sw, sh)
 		}
+	}
+	for _, m := range w.Mines {
+		r.drawSprite(screen, "overlay/designation_mine", none, float64(m[0]), float64(m[1]), tile, sw, sh)
 	}
 	if r.hasSelect {
 		for _, p := range r.game.Snapshot() {
@@ -343,4 +345,116 @@ func (r *Renderer) drawPawnPortraitArt(screen *ebiten.Image, p game.PawnView, x,
 		screen.DrawImage(img, op)
 	}
 	return true
+}
+
+// terrainPriority: a higher index draws its soft edge over lower ones.
+var terrainPriority = map[string]int{"soil": 0, "rich_soil": 1, "gravel": 2, "stone": 3, "rock": 3}
+
+var terrainSprite = map[string]string{"soil": "soil", "rich_soil": "soil_rich", "gravel": "gravel", "stone": "stone", "rock": "stone"}
+
+func (r *Renderer) terrainName(w game.WorldView, x, y int) string {
+	if w.TerrainW <= 0 || x < 0 || y < 0 || x >= w.TerrainW {
+		return ""
+	}
+	i := y*w.TerrainW + x
+	if i >= len(w.Terrain) {
+		return ""
+	}
+	names := game.TerrainNames()
+	return names[w.Terrain[i]]
+}
+
+func (r *Renderer) drawTerrainArt(screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
+	none := color.NRGBA{}
+	byPri := []string{"soil", "rich_soil", "gravel", "stone"}
+	for y := 0; y < r.game.Height(); y++ {
+		for x := 0; x < r.game.Width(); x++ {
+			t := r.terrainName(w, x, y)
+			if t == "" {
+				t = "soil"
+			}
+			base := terrainSprite[t]
+			r.drawSprite(screen, artKey("terrain", base, int(tileHash(x, y)%soilVariants)), none, float64(x), float64(y), tile, sw, sh)
+			pri := terrainPriority[t]
+			for p := pri + 1; p < len(byPri); p++ {
+				mask := 0
+				for _, n := range [...]struct{ dx, dy, bit int }{{0, -1, wallN}, {1, 0, wallE}, {0, 1, wallS}, {-1, 0, wallW}} {
+					if nt := r.terrainName(w, x+n.dx, y+n.dy); nt != "" && terrainPriority[nt] == p {
+						mask |= n.bit
+					}
+				}
+				if mask != 0 {
+					r.drawSprite(screen, "terrain/"+terrainSprite[byPri[p]]+"_edge_"+twoDigits(mask), none, float64(x), float64(y), tile, sw, sh)
+				}
+			}
+			if (t == "soil" || t == "rich_soil") && (tileHash(x, y)>>8)%grassEvery == 0 {
+				h := tileHash(x, y) >> 8
+				r.drawSprite(screen, artKey("plant", "grass", int(h/grassEvery%2)), none, float64(x), float64(y), tile, sw, sh)
+			}
+		}
+	}
+}
+
+// addRockDraws queues natural rock walls (autotiled among rock tiles).
+func (r *Renderer) addRockDraws(w game.WorldView, add func(row, col float64, fn func()), screen *ebiten.Image, sw, sh int, tile float64) {
+	rocks := map[[2]int]bool{}
+	for y := 0; y < r.game.Height(); y++ {
+		for x := 0; x < r.game.Width(); x++ {
+			if r.terrainName(w, x, y) == "rock" {
+				rocks[[2]int{x, y}] = true
+			}
+		}
+	}
+	// map edges count as rock so outcrops run cleanly off the map
+	for k := range rocks {
+		x, y := k[0], k[1]
+		mask := wallMask(rocks, x, y)
+		if y == 0 {
+			mask |= wallN
+		}
+		if x == r.game.Width()-1 {
+			mask |= wallE
+		}
+		if y == r.game.Height()-1 {
+			mask |= wallS
+		}
+		if x == 0 {
+			mask |= wallW
+		}
+		key := "rock/rock_wall_" + twoDigits(mask)
+		add(float64(y), float64(x), func() {
+			r.drawSprite(screen, key, color.NRGBA{}, float64(x), float64(y), tile, sw, sh)
+		})
+	}
+}
+
+// plantSprite picks the sprite and growth scale for a plant.
+func plantSprite(p game.PlantView) (string, float64) {
+	switch p.Species {
+	case "tree":
+		k := 0.45 + 0.55*float64(p.Growth)/100
+		return artKey("plant", "tree", int(tileHash(p.X, p.Y)%3)), k
+	case "amberroot":
+		return "plant/crop_" + [...]string{"sown", "young", "mature", "harvestable"}[clampStage(p.Stage)], 1
+	default:
+		key := artKey("plant", "bush", int(tileHash(p.X, p.Y)%2))
+		if p.Harvestable {
+			key += "_harvestable"
+		}
+		k := 0.6 + 0.4*float64(p.Growth)/100
+		if k > 1 {
+			k = 1
+		}
+		return key, k
+	}
+}
+
+func clampStage(s int) int {
+	if s < 0 {
+		return 0
+	}
+	if s > 3 {
+		return 3
+	}
+	return s
 }

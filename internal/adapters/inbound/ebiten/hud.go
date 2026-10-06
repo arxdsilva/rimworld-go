@@ -119,6 +119,8 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 	drawLabel(screen, x, 10, fmt.Sprintf("Food %d", wld.Food))
 	x += 90
 	drawLabel(screen, x, 10, fmt.Sprintf("Wood %d", wld.Wood))
+	x += 90
+	drawLabel(screen, x, 10, fmt.Sprintf("Stone %d", wld.Stone))
 	time := fmt.Sprintf("%s  %s  %s", a.renderer.date(), a.renderer.speedRate(), a.renderer.activity())
 	drawLabel(screen, sw-len(time)*7-hudPad, 10, time)
 

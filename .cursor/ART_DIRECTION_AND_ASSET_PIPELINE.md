@@ -649,7 +649,7 @@ resolve metadata conflicts, and update the catalog.
 
 ### ART Wave 2 --- First playable
 
--   [-] soil/stone/water (original soil/rich soil/gravel/stone tiles + rock chunks generated; renderer draws soil variants — domain has no terrain types yet; water and terrain transitions missing)
+-   [-] soil/stone/water (domain terrain drawn in-game: soil/rich soil/gravel/stone variants with soft edge transitions, 16-mask natural rock walls; water missing)
 -   [-] wall/door/floor (16-mask wood wall autotile drawn in-game; doors and wood floor generated but the domain has no doors/floors yet)
 -   [x] blueprint/frame (blueprint overlay on every frame, scaffold once wood is delivered)
 -   [-] pawn base (vendor CC0 side-view full-body idle/walk in the ebiten adapter, presentation-clocked with tile-to-tile lerp; original compositional pawns now drawn in-game: body/pants/shirt/vest/hair layers, 4 facings from movement, EntityID-stable tints, walk bob; vendor pack kept as fallback)
@@ -667,7 +667,7 @@ resolve metadata conflicts, and update the catalog.
 
 ### ART Wave 4 --- Production
 
--   [ ] material variants
+-   [-] material variants (wood/stone walls and floors; doors/furniture wood only)
 -   [ ] furniture families
 -   [ ] production/research benches
 -   [ ] storage
@@ -696,7 +696,7 @@ resolve metadata conflicts, and update the catalog.
 -   [ ] wildlife/predators
 -   [ ] juvenile variants
 -   [ ] biome plants
--   [ ] rock/resource variants
+-   [-] rock/resource variants (natural rock walls 16-mask, rock chunks, stone blocks item; no ore)
 -   [ ] snow/weather
 
 ### ART Wave 8 --- World/factions

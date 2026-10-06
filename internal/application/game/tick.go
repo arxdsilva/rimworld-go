@@ -30,7 +30,7 @@ func (g *Game) applyOne(c command.Command) {
 		minX, minY, maxX, maxY := zone.Normalize(c.X, c.Y, c.X2, c.Y2)
 		g.stockpiles = append(g.stockpiles, zone.Stockpile{
 			MinX: minX, MinY: minY, MaxX: maxX, MaxY: maxY,
-			AllowFood: true, AllowWood: true,
+			AllowFood: true, AllowWood: true, AllowStone: true,
 		})
 	case command.DesignateWall:
 		g.placeFrame(construction.Wall, c.X, c.Y)
@@ -40,7 +40,7 @@ func (g *Game) applyOne(c command.Command) {
 		minX, minY, maxX, maxY := zone.Normalize(c.X, c.Y, c.X2, c.Y2)
 		for _, id := range g.plantIDs {
 			p, ok := g.plants.Get(id)
-			if !ok || !p.Harvestable {
+			if !ok || !p.Harvestable() {
 				continue
 			}
 			if p.X >= minX && p.X <= maxX && p.Y >= minY && p.Y <= maxY {
@@ -51,7 +51,15 @@ func (g *Game) applyOne(c command.Command) {
 	case command.DesignateCancel:
 		g.cancelRect(c.X, c.Y, c.X2, c.Y2)
 	case command.DesignateBuild:
-		g.placeFrameFacing(construction.Kind(c.Build), construction.ParseFacing(c.Facing), c.X, c.Y)
+		stuff := item.Kind(c.Stuff)
+		if !stuff.IsStuff() {
+			stuff = item.Wood // zero value: default material
+		}
+		g.placeFrameStuff(construction.Kind(c.Build), stuff, construction.ParseFacing(c.Facing), c.X, c.Y)
+	case command.DesignateCut:
+		g.markCut(c.X, c.Y, c.X2, c.Y2, true)
+	case command.DesignateMine:
+		g.markMine(c.X, c.Y, c.X2, c.Y2, true)
 	case command.DesignateDeconstruct:
 		g.markDeconstruct(c.X, c.Y, c.X2, c.Y2, true)
 	case command.DraftPawn:
@@ -72,6 +80,12 @@ func (g *Game) applyOne(c command.Command) {
 			t = work.Construct
 		case command.WorkGrow:
 			t = work.Grow
+		case command.WorkMine:
+			t = work.Mine
+		case command.WorkCook:
+			t = work.Cook
+		case command.WorkHunt:
+			t = work.Hunt
 		default:
 			return
 		}
@@ -104,6 +118,8 @@ func (g *Game) cancelRect(x1, y1, x2, y2 int) {
 	}
 	g.frameIDs = keptFrames
 	g.markDeconstruct(x1, y1, x2, y2, false)
+	g.markCut(x1, y1, x2, y2, false)
+	g.markMine(x1, y1, x2, y2, false)
 
 	for _, id := range g.plantIDs {
 		p, ok := g.plants.Get(id)
@@ -284,7 +300,10 @@ func (g *Game) phaseAI() {
 		if m.Enabled(work.Construct) && g.assignConstruct(id) {
 			continue
 		}
-		if m.Enabled(work.Grow) && g.assignHarvest(id) {
+		if m.Enabled(work.Grow) && (g.assignHarvest(id) || g.assignCut(id)) {
+			continue
+		}
+		if m.Enabled(work.Mine) && g.assignMine(id) {
 			continue
 		}
 	}
@@ -486,7 +505,7 @@ func (g *Game) haulToFrame(id entity.EntityID, pos Position) (job.Record, bool) 
 		}
 		for _, iid := range g.itemIDs {
 			st, ok := g.stacks.Get(iid)
-			if !ok || st.Kind != item.Wood || st.Qty <= 0 || st.Carrier != 0 {
+			if !ok || st.Kind != fr.Stuff || st.Qty <= 0 || st.Carrier != 0 {
 				continue
 			}
 			if _, taken := g.reserve.EntityOwner(iid); taken {
@@ -545,12 +564,21 @@ func (g *Game) haulToStockpile(id entity.EntityID, pos Position) bool {
 
 func (g *Game) filterMatches(k item.Kind) bool {
 	for _, s := range g.stockpiles {
-		if k == item.Food && s.AllowFood {
+		if allows(s, k) {
 			return true
 		}
-		if k == item.Wood && s.AllowWood {
-			return true
-		}
+	}
+	return false
+}
+
+func allows(s zone.Stockpile, k item.Kind) bool {
+	switch {
+	case k.IsFood():
+		return s.AllowFood
+	case k == item.Wood:
+		return s.AllowWood
+	case k == item.Stone:
+		return s.AllowStone
 	}
 	return false
 }
@@ -560,10 +588,7 @@ func (g *Game) inMatchingStockpile(st item.Stack) bool {
 		if !s.Contains(st.X, st.Y) {
 			continue
 		}
-		if st.Kind == item.Food && s.AllowFood {
-			return true
-		}
-		if st.Kind == item.Wood && s.AllowWood {
+		if allows(s, st.Kind) {
 			return true
 		}
 	}
@@ -572,10 +597,7 @@ func (g *Game) inMatchingStockpile(st item.Stack) bool {
 
 func (g *Game) emptyStockpileCell(k item.Kind) (int, int, bool) {
 	for _, s := range g.stockpiles {
-		if k == item.Food && !s.AllowFood {
-			continue
-		}
-		if k == item.Wood && !s.AllowWood {
+		if !allows(s, k) {
 			continue
 		}
 		for y := s.MinY; y <= s.MaxY; y++ {
@@ -650,7 +672,7 @@ func (g *Game) assignHarvest(id entity.EntityID) bool {
 	var bx, by int
 	for _, pid := range g.plantIDs {
 		p, ok := g.plants.Get(pid)
-		if !ok || !p.Harvestable || !p.Designated {
+		if !ok || !p.Harvestable() || !p.Designated {
 			continue
 		}
 		if _, taken := g.reserve.EntityOwner(pid); taken {
@@ -664,8 +686,9 @@ func (g *Game) assignHarvest(id entity.EntityID) bool {
 	if best == 0 {
 		return false
 	}
+	bp, _ := g.plants.Get(best)
 	return g.startJob(id, job.Record{
-		Kind: job.Harvest, Target: best, TX: bx, TY: by, WorkLeft: plant.HarvestWork,
+		Kind: job.Harvest, Target: best, TX: bx, TY: by, WorkLeft: plant.DefOf(bp.Species).HarvestWork,
 	})
 }
 
@@ -696,6 +719,10 @@ func (g *Game) phaseJobs() {
 			g.doHarvest(id, j)
 		case job.Deconstruct:
 			g.doDeconstruct(id, j)
+		case job.Cut:
+			g.doCut(id, j)
+		case job.Mine:
+			g.doMine(id, j)
 		default:
 			j.State = job.Complete
 			g.jobs.Set(id, j)
@@ -805,7 +832,7 @@ func (g *Game) finishHaulDrop(id entity.EntityID, j job.Record) {
 	st.X, st.Y = j.DestX, j.DestY
 	fid := j.Dest
 	fr, isFrame := g.frames.Get(fid)
-	if fid != 0 && isFrame && st.Kind == item.Wood {
+	if fid != 0 && isFrame && st.Kind == fr.Stuff {
 		need := fr.Need - fr.Wood
 		give := st.Qty
 		if give > need {
@@ -859,7 +886,10 @@ func (g *Game) completeFrame(id entity.EntityID, fr construction.Frame) {
 	}
 	g.frameIDs = kept
 	g.bldgIDs = append(g.bldgIDs, id)
-	g.bldgs.Set(id, construction.Building{Kind: fr.Kind, Facing: fr.Facing, X: fr.X, Y: fr.Y})
+	g.bldgs.Set(id, construction.Building{Kind: fr.Kind, Stuff: fr.Stuff, Facing: fr.Facing, X: fr.X, Y: fr.Y})
+	if pid := g.plantAt(fr.X, fr.Y); pid != 0 {
+		g.removePlant(pid) // bushes and crops are cleared by building over them
+	}
 	if construction.DefOf(fr.Kind).BlocksMove {
 		g.grid.SetWalkable(fr.X, fr.Y, false)
 		g.ejectPawns(fr.X, fr.Y)
@@ -900,15 +930,15 @@ func (g *Game) doHarvest(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
-	_, _ = g.SpawnStack(item.Food, plant.HarvestYield, p.X, p.Y)
-	g.plants.Delete(j.Target)
-	kept := g.plantIDs[:0]
-	for _, pid := range g.plantIDs {
-		if pid != j.Target {
-			kept = append(kept, pid)
-		}
+	d := plant.DefOf(p.Species)
+	g.dropStack(item.Food, d.Yield, p.X, p.Y)
+	if d.Regrows {
+		p.Growth = d.GrowTicks * d.RegrowTo / 100
+		p.Designated = false
+		g.plants.Set(j.Target, p)
+	} else {
+		g.removePlant(j.Target)
 	}
-	g.plantIDs = kept
 	j.State = job.Complete
 	g.jobs.Set(id, j)
 }

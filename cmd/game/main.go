@@ -13,8 +13,8 @@ import (
 
 func main() {
 	seed := flag.Uint64("seed", 1, "deterministic RNG seed")
-	width := flag.Int("width", 20, "map width in tiles")
-	height := flag.Int("height", 20, "map height in tiles")
+	width := flag.Int("width", 48, "map width in tiles")
+	height := flag.Int("height", 40, "map height in tiles")
 	assets := flag.String("assets", "", "sprite pack directory (default: locate from cwd)")
 	capture := flag.String("capture", "", "dev: save one colony frame to this PNG and exit")
 	captureTicks := flag.Int("capture-ticks", 5400, "dev: simulation ticks to run before -capture")

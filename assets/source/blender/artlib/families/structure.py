@@ -32,9 +32,14 @@ def _wall(mask, body, cap, trim):
         S.box("rim_e", x1 - rim, y0, top - 0.02, x1, y1, WALL_H, cap, bevel=0.02)
     if not con:
         pass
-    if "S" not in con:  # visible front face: horizontal plank seams
+    if "S" not in con:  # visible front face: horizontal seams (+ block joints for stone)
         for z in (0.30, 0.60):
             S.box("seam", x0 + 0.02, y0 - 0.012, z, x1 - 0.02, y0 + 0.01, z + 0.03, trim, bevel=0.0)
+        if body == "stone":
+            for i, (zl, zh) in enumerate(((0.0, 0.30), (0.33, 0.60), (0.63, WALL_H - 0.06))):
+                for xs in ((0.35, 0.72) if i % 2 == 0 else (0.18, 0.55, 0.9)):
+                    if x0 < xs < x1:
+                        S.box("joint", xs - 0.012, y0 - 0.012, zl, xs + 0.012, y0 + 0.01, zh, trim, bevel=0.0)
     return con
 
 
@@ -60,6 +65,19 @@ def _door(axis, open_, frame, leaf):
         b("handle_w", 0.42, -0.60, 0.42, 0.47, -0.40, 0.56, "metal_dark", bevel=0.005)
         b("handle_e", 0.53, -0.60, 0.42, 0.58, -0.40, 0.56, "metal_dark", bevel=0.005)
     return ("W", "E") if axis == "ew" else ("N", "S")
+
+
+def _floor_stone():
+    # Flagstones on a 2x2 grid per tile with a staggered second row.
+    for r in range(-1, 3):
+        y1 = -r / 2
+        y0 = y1 - 0.5
+        off = 0.25 if r % 2 else 0.0
+        for k in range(-1, 3):
+            x0 = k / 2 + off
+            S.box("flag", x0 + 0.018, y0 + 0.018, -0.035, x0 + 0.5 - 0.018, y1 - 0.018, 0.0,
+                  "stone" if (r + k) % 3 else "gravel", bevel=0.02)
+    S.box("under", -1, -2, -0.08, 2, 1, -0.035, "stone_dark", bevel=0.0)
 
 
 def _floor_wood():
@@ -92,11 +110,12 @@ def _frame():
 
 def build():
     out = []
-    for mask in range(16):
-        con = _wall(mask, "wood_plank", "wood", "bark")
-        out.append(S.render_asset("structure", "wall_wood_%02d" % mask, zmax=WALL_H,
-                                  clip=tuple(con), extra={"autotile": "wall", "mask": mask,
-                                                          "material": "wood"}))
+    for mat, body, cap, trim in (("wood", "wood_plank", "wood", "bark"), ("stone", "stone", "stone", "stone_dark")):
+        for mask in range(16):
+            con = _wall(mask, body, cap, trim)
+            out.append(S.render_asset("structure", "wall_%s_%02d" % (mat, mask), zmax=WALL_H,
+                                      clip=tuple(con), extra={"autotile": "wall", "mask": mask,
+                                                              "material": mat}))
     for axis in ("ew", "ns"):
         for open_ in (False, True):
             con = _door(axis, open_, "wood", "wood_plank")
@@ -105,6 +124,9 @@ def build():
                                       extra={"axis": axis, "state": "open" if open_ else "closed"}))
     _floor_wood()
     out.append(S.render_asset("structure", "floor_wood", zmax=0.0, margins=(0, 0, 0, 0),
+                              outline=False, shadow=False, extra={"tileable": True}))
+    _floor_stone()
+    out.append(S.render_asset("structure", "floor_stone", zmax=0.0, margins=(0, 0, 0, 0),
                               outline=False, shadow=False, extra={"tileable": True}))
     _frame()
     out.append(S.render_asset("structure", "frame_1x1", zmax=0.76, extra={"stage": "frame"}))

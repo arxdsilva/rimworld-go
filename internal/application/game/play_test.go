@@ -72,7 +72,7 @@ func TestFirstPlayableHaulBedEatSleep(t *testing.T) {
 		g.SetNeeds(p.ID, 4000, 8500)
 	}
 	g.Enqueue(command.Command{Kind: command.DesignateStockpile, X: 10, Y: 5, X2: 12, Y2: 7})
-	g.Enqueue(command.Command{Kind: command.DesignateBed, X: 4, Y: 7})
+	g.Enqueue(command.Command{Kind: command.DesignateBed, X: 6, Y: 7}) // inside the open start area
 	g.Step(80000)
 
 	world := g.World()

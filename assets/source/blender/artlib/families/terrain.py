@@ -98,6 +98,24 @@ SPECS = {
 }
 
 
+def _tile_img(name, v):
+    mats, _ = S.pal()
+    mat, cells, (lo, hi), deco = SPECS[name]
+    p = mats[mat]
+    border = 1000 + sum(map(ord, name))
+    seed = border * 31 + v
+    field = 0.70 * _noise(cells, border, seed) + 0.30 * _noise(cells * 2, border + 7, seed + 7)
+    img = _bands(field, p, lo, hi)
+    rng = np.random.RandomState(seed + 99)
+    if "clods" in deco:
+        _stamp(img, rng, *deco["clods"], p)
+    if "pebbles" in deco:
+        _stamp(img, rng, *deco["pebbles"], mats["stone"] if name == "gravel" else p)
+    if "cracks" in deco:
+        _cracks(img, rng, deco["cracks"], p)
+    return img
+
+
 def _tile(name, v):
     mats, _ = S.pal()
     mat, cells, (lo, hi), deco = SPECS[name]
@@ -124,6 +142,44 @@ def _tile(name, v):
     return path
 
 
+# Ground transitions: a higher-priority terrain draws a soft, noisy edge
+# over its lower-priority neighbours. Mask bits N=1, E=2, S=4, W=8 say
+# which sides of the lower tile touch the higher terrain.
+PRIORITY = ("soil", "soil_rich", "gravel", "stone")
+EDGE_DEPTH = 30.0   # px @2x
+EDGE_WOBBLE = 9.0
+
+
+def _edge(name, mask):
+    mats, _ = S.pal()
+    mat, cells, (lo, hi), deco = SPECS[name]
+    border = 1000 + sum(map(ord, name))
+    base = _tile_img(name, 0)
+    wob = _noise(6, border + 13, border * 7 + mask) * EDGE_WOBBLE
+    yy, xx = np.mgrid[0:N, 0:N].astype(np.float32) + 0.5
+    dist = np.full((N, N), 1e9, np.float32)
+    if mask & 1:
+        dist = np.minimum(dist, yy)
+    if mask & 2:
+        dist = np.minimum(dist, N - xx)
+    if mask & 4:
+        dist = np.minimum(dist, N - yy)
+    if mask & 8:
+        dist = np.minimum(dist, xx)
+    a = np.clip((EDGE_DEPTH + wob - dist) / 6.0, 0.0, 1.0)
+    img = base.copy()
+    img[..., 3] = a
+    out = "%s_edge_%02d" % (name, mask)
+    path = S.out_path("terrain", out)
+    S.write_png(img, path)
+    meta.write("terrain", out, {
+        "image": "generated/world/terrain/%s.png" % out, "scale": C.SCALE,
+        "canvas": [N, N], "footprint": [1, 1], "origin_px": [0, 0],
+        "transition": name, "mask": mask,
+    })
+    return path
+
+
 def _rock(i):
     seeds = (11, 23, 37)
     sizes = (0.30, 0.22, 0.26)
@@ -142,4 +198,7 @@ def build():
             out.append(_tile(name, v))
     for i in range(3):
         out.append(_rock(i))
+    for name in PRIORITY[1:]:
+        for mask in range(1, 16):
+            out.append(_edge(name, mask))
     return out

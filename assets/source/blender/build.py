@@ -16,7 +16,7 @@ if HERE not in sys.path:
 
 import artlib  # noqa: E402
 
-FAMILIES = ["terrain", "structure", "furniture", "plant", "item", "pawn", "overlay"]
+FAMILIES = ["terrain", "rock", "structure", "furniture", "plant", "item", "pawn", "overlay"]
 
 
 def _reload():

@@ -9,6 +9,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
+	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 )
 
@@ -18,7 +19,7 @@ const (
 	archCardH    = 58
 	archCardGap  = 8
 	archTop      = 64 // cards start below header + category row
-	archInfoH    = 58
+	archInfoH    = 84
 	archMaxGhost = 400
 )
 
@@ -53,7 +54,26 @@ func (a *App) architectButtons() []button {
 			selected: a.archTool == t.id,
 		})
 	}
+	if t, ok := toolByID(a.archTool); ok {
+		if bv, ok := buildable(t.build); ok && bv.StoneOK {
+			y := r.y + r.h - 28
+			for i, s := range []struct{ id, label string }{{"wood", "Wood"}, {"stone", "Stone"}} {
+				out = append(out, button{
+					id: "arch.stuff." + s.id, label: s.label, x: r.x + 10 + float32(i)*70, y: y, w: 64, h: 22,
+					selected: a.toolStuff(t) == s.id,
+				})
+			}
+		}
+	}
 	return out
+}
+
+// toolStuff is the material the tool will build with.
+func (a *App) toolStuff(t archTool) string {
+	if bv, ok := buildable(t.build); ok && bv.StoneOK && a.archStuff == "stone" {
+		return "stone"
+	}
+	return "wood"
 }
 
 func (a *App) openArchitect() {
@@ -127,6 +147,10 @@ func (a *App) drawArchitect(screen *ebiten.Image) {
 	var hover *archTool
 	for _, b := range a.architectButtons() {
 		if !strings.HasPrefix(b.id, "arch.tool.") {
+			if strings.HasPrefix(b.id, "arch.stuff.") {
+				drawButton(screen, b, b.contains(mx, my))
+				continue
+			}
 			drawButton(screen, b, b.contains(mx, my))
 			continue
 		}
@@ -135,7 +159,7 @@ func (a *App) drawArchitect(screen *ebiten.Image) {
 		drawIcon(screen, a.icon(t.icon), float64(b.x)+6, float64(b.y)+8, 40)
 		drawLabel(screen, int(b.x)+50, int(b.y)+10, t.label)
 		if bv, ok := buildable(t.build); ok {
-			drawLabel(screen, int(b.x)+50, int(b.y)+30, fmt.Sprintf("%d wood", bv.Wood))
+			drawLabel(screen, int(b.x)+50, int(b.y)+30, fmt.Sprintf("%d %s", bv.Wood, a.toolStuff(t)))
 		} else {
 			drawLabel(screen, int(b.x)+50, int(b.y)+30, map[placeMode]string{placeArea: "drag area"}[t.mode])
 		}
@@ -145,7 +169,11 @@ func (a *App) drawArchitect(screen *ebiten.Image) {
 		}
 	}
 	iy := int(r.y+r.h) - archInfoH + 6
-	drawLabel(screen, int(r.x)+12, iy, fmt.Sprintf("Wood available: %d", wood))
+	stone := 0
+	if a.renderer != nil {
+		stone = a.renderer.world().Stone
+	}
+	drawLabel(screen, int(r.x)+12, iy, fmt.Sprintf("Wood %d   Stone %d", wood, stone))
 	if t, ok := toolByID(a.archTool); ok {
 		hint := map[placeMode]string{
 			placeSingle: "Click to place",
@@ -157,7 +185,9 @@ func (a *App) drawArchitect(screen *ebiten.Image) {
 			hint += "  Q/E rotate (" + facingNames[a.archFacing] + ")"
 		}
 		drawLabel(screen, int(r.x)+12, iy+16, hint)
-		drawLabel(screen, int(r.x)+12, iy+32, "Right-click: stop placing")
+		if bv, ok := buildable(t.build); !ok || !bv.StoneOK {
+			drawLabel(screen, int(r.x)+12, iy+32, "Right-click: stop placing")
+		}
 	} else {
 		drawLabel(screen, int(r.x)+12, iy+16, "Pick something to place")
 	}
@@ -283,9 +313,10 @@ func (a *App) submitArchitect() {
 	if !ok {
 		return
 	}
+	stuff, _ := game.StuffID(a.toolStuff(t))
 	for _, c := range cells {
 		if c.ok {
-			a.renderer.enqueue(command.Command{Kind: command.DesignateBuild, Build: id, Facing: a.archFacing, X: c.x, Y: c.y})
+			a.renderer.enqueue(command.Command{Kind: command.DesignateBuild, Build: id, Facing: a.archFacing, Stuff: stuff, X: c.x, Y: c.y})
 		}
 	}
 }
@@ -304,7 +335,7 @@ func (a *App) drawArchitectGhost(screen *ebiten.Image) {
 		a.renderer.drawGhostRect(screen, cells[0].x, cells[0].y, cells[1].x, cells[1].y)
 		return
 	}
-	a.renderer.drawPlacementGhost(screen, t.build, facingNames[a.archFacing], cells)
+	a.renderer.drawPlacementGhost(screen, t.build, a.toolStuff(t), facingNames[a.archFacing], cells)
 	valid, firstBad := 0, ""
 	for _, c := range cells {
 		if c.ok {
@@ -314,7 +345,7 @@ func (a *App) drawArchitectGhost(screen *ebiten.Image) {
 		}
 	}
 	bv, _ := buildable(t.build)
-	msg := fmt.Sprintf("%s x%d  %d wood", t.label, valid, valid*bv.Wood)
+	msg := fmt.Sprintf("%s x%d  %d %s", t.label, valid, valid*bv.Wood, a.toolStuff(t))
 	if firstBad != "" {
 		msg += "   can't place: " + firstBad
 	}

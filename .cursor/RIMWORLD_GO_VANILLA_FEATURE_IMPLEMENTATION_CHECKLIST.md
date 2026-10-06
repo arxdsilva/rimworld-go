@@ -155,7 +155,7 @@ The first playable surface.
 -   [ ] **Chunk partitioning**
     -   Partition maps into chunks for spatial indexing, rendering,
         sleeping, dirty flags, and localized rebuilds.
--   [ ] **Terrain definitions**
+-   [-] **Terrain definitions** (soil, rich soil, gravel, rough stone, natural rock with walkability + fertility; no water)
     -   Soil/fertility-bearing ground.
     -   Rough natural terrain.
     -   Stone/rock terrain.
@@ -540,8 +540,8 @@ This is the heart of autonomous colony behavior.
 
 -   [-] **Build designation** (`DesignateBuild` for wall/door/floor/bed/table/chair/lamp with facing; 1×1 footprints only)
 -   [x] **Deconstruct designation** (Architect Orders rectangle; cancel clears it)
--   [ ] **Mine designation**
--   [ ] **Cut plant designation**
+-   [x] **Mine designation** (Architect Orders rectangle over rock; Mine work type; cancel clears)
+-   [x] **Cut plant designation** (trees drop wood scaled by growth; bushes cleared)
 -   [-] **Harvest designation** (wild plants; Grow work type; no grow-zone)
 -   [ ] **Hunt designation**
 -   [-] **Cancel designation** (frames, harvest marks, deconstruct marks, overlapping stockpiles)
@@ -553,7 +553,7 @@ This is the heart of autonomous colony behavior.
     -   Placement preview.
     -   Validate terrain, occupancy, research, material, and support
         requirements.
--   [ ] **Material selection**
+-   [-] **Material selection** (walls/floors from wood or stone; stone costs no wood, +60% work; no HP/beauty/flammability yet)
     -   Stuff/material-based buildings where relevant.
     -   Different materials influence HP, beauty, flammability,
         work/material cost, etc.
@@ -696,13 +696,13 @@ This is the heart of autonomous colony behavior.
     -   temperature/light requirements.
 -   [ ] **Sowing**
     -   Growers plant designated crops in growing zones.
--   [ ] **Plant growth**
+-   [-] **Plant growth** (integer per-tick growth scaled by terrain fertility; no temperature/light/health)
     -   Analytical/bucketed growth.
     -   Depends on temperature, light, fertility, plant health.
--   [-] **Harvest maturity** (start-kit plants are already harvestable; no growth)
+-   [x] **Harvest maturity** (plants ripen at GrowTicks; berry bushes regrow to 35% after harvest)
     -   Mature plants generate harvest work.
     -   Skill can affect yield/failure.
--   [-] **Wild plants** (start kit only; no mapgen variety)
+-   [x] **Wild plants** (seeded generation scatters trees and berry bushes on fertile ground)
     -   Map generation creates harvestable/non-harvestable vegetation.
 
 ## 8.5 Food spoilage
@@ -1766,10 +1766,10 @@ forage; - local map appearance.
 ## 22.4 Local map generation
 
 -   [ ] **Terrain from biome/topology**
--   [ ] **Rock/mountain mass**
+-   [-] **Rock/mountain mass** (noise outcrops biased to map edges, stone ground ring, open start area; no ore)
 -   [ ] **Ore/resource deposits**
 -   [ ] **Water**
--   [ ] **Wild vegetation**
+-   [x] **Wild vegetation** (trees, berry bushes; grass decals presentation-only)
 -   [ ] **Wildlife**
 -   [ ] **Ancient ruins/debris**
 -   [ ] **Starting clear/landing area**

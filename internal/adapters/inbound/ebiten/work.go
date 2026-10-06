@@ -9,7 +9,20 @@ import (
 	"rimworld-go/internal/domain/sim/command"
 )
 
-var workColumns = []string{"FF", "Doc", "Grow", "Cook", "Bld", "Hunt", "Haul", "Cln", "Rsh"}
+var workColumns = []string{"FF", "Doc", "Grow", "Cook", "Bld", "Hunt", "Haul", "Cln", "Rsh", "Mine"}
+
+// workLive maps live work columns to their command and pawn flag.
+var workLive = map[int]struct {
+	cmd command.WorkType
+	on  func(game.PawnView) bool
+}{
+	2: {command.WorkGrow, func(p game.PawnView) bool { return p.WorkGrow }},
+	3: {command.WorkCook, func(p game.PawnView) bool { return p.WorkCook }},
+	4: {command.WorkConstruct, func(p game.PawnView) bool { return p.WorkConstruct }},
+	5: {command.WorkHunt, func(p game.PawnView) bool { return p.WorkHunt }},
+	6: {command.WorkHaul, func(p game.PawnView) bool { return p.WorkHaul }},
+	9: {command.WorkMine, func(p game.PawnView) bool { return p.WorkMine }},
+}
 
 const (
 	workRowH  = 22
@@ -31,20 +44,11 @@ func workRect(sw, sh int) button {
 }
 
 func workCellValue(p game.PawnView, col int) string {
-	on := false
-	live := false
-	switch col {
-	case 2:
-		on, live = p.WorkGrow, true
-	case 4:
-		on, live = p.WorkConstruct, true
-	case 6:
-		on, live = p.WorkHaul, true
-	}
+	w, live := workLive[col]
 	if !live {
 		return "-"
 	}
-	if on {
+	if w.on(p) {
 		return "Y"
 	}
 	return "-"
@@ -81,16 +85,8 @@ func (a *App) workButtons() []button {
 }
 
 func workTypeForCol(col int) (command.WorkType, bool) {
-	switch col {
-	case 2:
-		return command.WorkGrow, true
-	case 4:
-		return command.WorkConstruct, true
-	case 6:
-		return command.WorkHaul, true
-	default:
-		return 0, false
-	}
+	w, ok := workLive[col]
+	return w.cmd, ok
 }
 
 func (a *App) drawWork(screen *ebiten.Image, sw, sh int) {
@@ -99,7 +95,7 @@ func (a *App) drawWork(screen *ebiten.Image, sw, sh int) {
 	}
 	r := workRect(sw, sh)
 	drawPanel(screen, r.x, r.y, r.w, r.h)
-	drawLabel(screen, int(r.x)+12, int(r.y)+10, "Work  (Y = enabled; click Grow / Bld / Haul)")
+	drawLabel(screen, int(r.x)+12, int(r.y)+10, "Work  (Y = enabled; click a cell to toggle)")
 	hx := int(r.x) + 12 + workNameW
 	for i, col := range workColumns {
 		drawLabel(screen, hx+i*workCellW, int(r.y)+28, col)

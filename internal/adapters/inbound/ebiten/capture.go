@@ -36,43 +36,45 @@ type captureState struct {
 	err     error
 }
 
-// captureOrders is a small colony layout built from the start kit:
-// a walled room with a door gap and two beds, a stockpile, and harvest
-// orders on the wild plants.
-func captureOrders() []command.Command {
+// captureOrders is a small colony layout around the map centre (cx, cy):
+// a walled room with a door, floor and furniture, a stockpile, harvest
+// orders on the start bushes, and cut/mine orders nearby.
+func captureOrders(cx, cy int) []command.Command {
 	var out []command.Command
 	bk := func(kind string, f uint8, x, y int) {
 		if id, ok := kindID(kind); ok {
 			out = append(out, command.Command{Kind: command.DesignateBuild, Build: id, Facing: f, X: x, Y: y})
 		}
 	}
-	bk("door", 0, 4, 12)
-	bk("bed", 0, 3, 9)
-	bk("bed", 0, 5, 9)
-	bk("table", 0, 4, 10)
-	bk("chair", 1, 3, 10)
-	bk("lamp", 0, 5, 11)
-	for y := 9; y <= 11; y++ {
-		for x := 3; x <= 5; x++ {
-			bk("floor", 0, x, y)
-		}
-	}
-	x0, y0, x1, y1 := 2, 8, 6, 12
+	x0, y0, x1, y1 := cx-5, cy-1, cx-1, cy+3
 	for x := x0; x <= x1; x++ {
 		for _, y := range []int{y0, y1} {
-			if x == 4 && y == y1 {
-				continue // door gap
+			if x == x0+2 && y == y1 {
+				bk("door", 0, x, y)
+				continue
 			}
-			out = append(out, command.Command{Kind: command.DesignateWall, X: x, Y: y})
+			bk("wall", 0, x, y)
 		}
 	}
 	for y := y0 + 1; y < y1; y++ {
-		out = append(out, command.Command{Kind: command.DesignateWall, X: x0, Y: y},
-			command.Command{Kind: command.DesignateWall, X: x1, Y: y})
+		bk("wall", 0, x0, y)
+		bk("wall", 0, x1, y)
 	}
+	for y := y0 + 1; y < y1; y++ {
+		for x := x0 + 1; x < x1; x++ {
+			bk("floor", 0, x, y)
+		}
+	}
+	bk("bed", 0, x0+1, y0+1)
+	bk("bed", 0, x0+3, y0+1)
+	bk("table", 0, x0+2, y0+2)
+	bk("chair", 1, x0+1, y0+2)
+	bk("lamp", 0, x0+3, y0+2)
 	out = append(out,
-		command.Command{Kind: command.DesignateStockpile, X: 9, Y: 9, X2: 11, Y2: 10},
-		command.Command{Kind: command.DesignateHarvest, X: 12, Y: 4, X2: 15, Y2: 4},
+		command.Command{Kind: command.DesignateStockpile, X: cx + 1, Y: cy + 3, X2: cx + 3, Y2: cy + 4},
+		command.Command{Kind: command.DesignateHarvest, X: cx + 2, Y: cy - 4, X2: cx + 5, Y2: cy - 4},
+		command.Command{Kind: command.DesignateCut, X: cx + 6, Y: cy - 6, X2: cx + 10, Y2: cy - 1},
+		command.Command{Kind: command.DesignateMine, X: cx - 14, Y: cy - 8, X2: cx - 9, Y2: cy + 2},
 	)
 	return out
 }
@@ -96,11 +98,12 @@ func (a *App) tickCapture() {
 		if c.Zoom > 0 {
 			a.renderer.cam.zoom = clampZoom(c.Zoom)
 		}
-		// centre the camera on the colony (tile 8, 8)
+		// centre the camera on the colony
 		tile := a.renderer.tilePx()
-		a.renderer.cam.offsetX = 8.5*tile - float64(a.sw)/2
-		a.renderer.cam.offsetY = 8*tile - float64(a.sh)/2
-		for _, cmd := range captureOrders() {
+		a.renderer.cam.offsetX = (float64(a.renderer.game.Width())/2+0.5)*tile - float64(a.sw)/2
+		a.renderer.cam.offsetY = (float64(a.renderer.game.Height())/2)*tile - float64(a.sh)/2
+		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
+		for _, cmd := range captureOrders(cx, cy) {
 			a.renderer.enqueue(cmd)
 		}
 		for left := c.Ticks; left > 0; left -= 60 {
@@ -129,10 +132,13 @@ func (a *App) captureUI(ui string) {
 	switch ui {
 	case "architect":
 		a.openArchitect()
-		a.selectArchCategory("furniture")
-		a.selectArchTool("bed")
-		a.archFacing = 1
-		x, y := at(8, 6)
+		a.selectArchCategory("structure")
+		a.selectArchTool("wall")
+		a.archStuff = "stone"
+		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
+		a.archDrag = true
+		a.archX0, a.archY0, a.archX1, a.archY1 = cx+1, cy-2, cx+5, cy-2
+		x, y := at(cx+5, cy-2)
 		a.cursor = &[2]int{x, y}
 	case "orders":
 		snap := a.renderer.snapshot()
@@ -140,7 +146,7 @@ func (a *App) captureUI(ui string) {
 			return
 		}
 		a.renderer.Select(snap[0].ID)
-		tx, ty := 9, 10 // a food crate in the stockpile
+		tx, ty := a.renderer.game.Width()/2+8, a.renderer.game.Height()/2-3 // near the cut orders
 		x, y := at(tx, ty)
 		a.cursor = &[2]int{x + 20, y}
 		a.openOrders(tx, ty, float32(x), float32(y))

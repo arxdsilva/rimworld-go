@@ -87,6 +87,7 @@ type App struct {
 	archCat                        string
 	archTool                       string
 	archFacing                     uint8
+	archStuff                      string // "wood" or "stone" for tools that allow both
 	float                          floatMenu
 	cursor                         *[2]int // capture-only synthetic cursor
 	archDrag                       bool
@@ -332,6 +333,8 @@ func (a *App) applyClick(id string) {
 		}
 	case strings.HasPrefix(id, "arch.cat."):
 		a.selectArchCategory(strings.TrimPrefix(id, "arch.cat."))
+	case strings.HasPrefix(id, "arch.stuff."):
+		a.archStuff = strings.TrimPrefix(id, "arch.stuff.")
 	case strings.HasPrefix(id, "arch.tool."):
 		a.selectArchTool(strings.TrimPrefix(id, "arch.tool."))
 	case strings.HasPrefix(id, "float."):
@@ -679,13 +682,8 @@ func (a *App) toggleWorkCell(id string) {
 		if uint64(p.ID) != pawnN {
 			continue
 		}
-		switch col {
-		case 2:
-			on = !p.WorkGrow
-		case 4:
-			on = !p.WorkConstruct
-		case 6:
-			on = !p.WorkHaul
+		if w, ok := workLive[col]; ok {
+			on = !w.on(p)
 		}
 	}
 	a.renderer.enqueue(command.Command{
@@ -697,14 +695,5 @@ func (a *App) toggleWorkCell(id string) {
 }
 
 func workCommand(col int) (command.WorkType, bool) {
-	switch col {
-	case 2:
-		return command.WorkGrow, true
-	case 4:
-		return command.WorkConstruct, true
-	case 6:
-		return command.WorkHaul, true
-	default:
-		return command.WorkNone, false
-	}
+	return workTypeForCol(col)
 }

@@ -12,7 +12,18 @@ import (
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
+	"rimworld-go/internal/domain/world/terrain"
 )
+
+func plantLabel(s plant.Species) string {
+	switch s {
+	case plant.BerryBush:
+		return "berry bush"
+	case plant.Tree:
+		return "tree"
+	}
+	return s.String()
+}
 
 // OrderOption is one entry of a pawn's right-click menu at a tile. When
 // Disabled, Reason says why; Cmd is still the command it would issue.
@@ -38,6 +49,8 @@ const (
 	ReasonStored      = "already stored"
 	ReasonBusyTarget  = "in use by "
 	ReasonIncapable   = "not able to act"
+	ReasonNoStone     = "no free stone"
+	ReasonNoMine      = "mining disabled"
 )
 
 func (g *Game) drafted(id entity.EntityID) bool { return g.draft[id] }
@@ -103,8 +116,11 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		if fr.Ready() {
 			return job.Record{}, ReasonSupplied
 		}
-		wid, wx, wy := g.nearestFree(id, item.Wood)
+		wid, wx, wy := g.nearestFree(id, fr.Stuff)
 		if wid == 0 {
+			if fr.Stuff == item.Stone {
+				return job.Record{}, ReasonNoStone
+			}
 			return job.Record{}, ReasonNoWood
 		}
 		return job.Record{Kind: job.Haul, Target: wid, TX: wx, TY: wy, DestX: x, DestY: y, Dest: fid}, ""
@@ -131,13 +147,41 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		if !m.Enabled(work.Grow) {
 			return job.Record{}, ReasonNoGrow
 		}
-		if !p.Harvestable {
+		if !p.Harvestable() {
 			return job.Record{}, ReasonNotRipe
 		}
 		if r := g.busyBy(id, pid); r != "" {
 			return job.Record{}, r
 		}
-		return job.Record{Kind: job.Harvest, Target: pid, TX: x, TY: y, WorkLeft: plant.HarvestWork}, ""
+		return job.Record{Kind: job.Harvest, Target: pid, TX: x, TY: y, WorkLeft: plant.DefOf(p.Species).HarvestWork}, ""
+	case command.OrderCut:
+		pid := g.plantAt(x, y)
+		p, ok := g.plants.Get(pid)
+		if !ok {
+			return job.Record{}, ReasonUnknown
+		}
+		if !m.Enabled(work.Grow) {
+			return job.Record{}, ReasonNoGrow
+		}
+		if r := g.busyBy(id, pid); r != "" {
+			return job.Record{}, r
+		}
+		return job.Record{Kind: job.Cut, Target: pid, TX: x, TY: y, WorkLeft: plant.DefOf(p.Species).CutWork}, ""
+	case command.OrderMine:
+		if g.terr.At(x, y) != terrain.Rock {
+			return job.Record{}, ReasonUnknown
+		}
+		if !m.Enabled(work.Mine) {
+			return job.Record{}, ReasonNoMine
+		}
+		if owner, taken := g.reserve.TileOwner(x, y); taken && owner != id {
+			return job.Record{}, ReasonBusyTarget + g.name(owner)
+		}
+		tx, ty, ok := g.reachableSpot(id, x, y)
+		if !ok {
+			return job.Record{}, ReasonUnreachable
+		}
+		return job.Record{Kind: job.Mine, TX: tx, TY: ty, DestX: x, DestY: y, WorkLeft: MineWork}, ""
 	case command.OrderSleep:
 		bid := g.layerBldgAt(x, y, construction.LayerObject)
 		b, ok := g.bldgs.Get(bid)
@@ -154,7 +198,7 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 	case command.OrderEat:
 		iid := g.itemAt(x, y)
 		st, ok := g.stacks.Get(iid)
-		if !ok || st.Kind != item.Food {
+		if !ok || !st.Kind.IsFood() {
 			return job.Record{}, ReasonUnknown
 		}
 		if r := g.busyBy(id, iid); r != "" {
@@ -263,6 +307,18 @@ func (g *Game) prioritize(id entity.EntityID, o command.Order, x, y int, layer c
 			g.plants.Set(rec.Target, p)
 		}
 	}
+	if o == command.OrderMine {
+		g.interrupt(id, job.Cancelled)
+		g.mines[[2]int{x, y}] = true
+		g.startMine(id, x, y, true)
+		return
+	}
+	if o == command.OrderCut {
+		if p, ok := g.plants.Get(rec.Target); ok {
+			p.Cut = true
+			g.plants.Set(rec.Target, p)
+		}
+	}
 	if o == command.OrderSleep {
 		b, _ := g.bldgs.Get(rec.Target)
 		b.Claimant = uint64(id)
@@ -287,7 +343,9 @@ func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 	reach := g.reachable(pawn, x, y)
 	var out []OrderOption
 	move := OrderOption{Label: "Go here", Cmd: command.Command{Kind: command.MovePawn, Pawn: uint64(pawn), X: x, Y: y}}
-	if !g.grid.Walkable(x, y) {
+	if g.terr.At(x, y) == terrain.Rock {
+		move.Disabled, move.Reason = true, ReasonRock
+	} else if !g.grid.Walkable(x, y) {
 		move.Disabled, move.Reason = true, ReasonBlocked
 	} else if !reach {
 		move.Disabled, move.Reason = true, ReasonUnreachable
@@ -301,10 +359,13 @@ func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 		}}
 		if reason == "" {
 			tx, ty := x, y
-			if o == command.OrderDeconstruct {
+			switch o {
+			case command.OrderDeconstruct:
 				tx, ty = g.workSpot(pawn, x, y)
+			case command.OrderMine:
+				tx, ty = -1, -1 // forcedJob already checked a reachable spot
 			}
-			if !g.reachable(pawn, tx, ty) {
+			if tx >= 0 && !g.reachable(pawn, tx, ty) {
 				reason = ReasonUnreachable
 			}
 		}
@@ -320,7 +381,7 @@ func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 			if fr.Ready() {
 				add("Prioritize building "+fr.Kind.String(), command.OrderBuild, layer)
 			} else {
-				add(fmt.Sprintf("Haul wood to %s (%d/%d)", fr.Kind, fr.Wood, fr.Need), command.OrderSupply, layer)
+				add(fmt.Sprintf("Haul %s to %s (%d/%d)", fr.Stuff, fr.Kind, fr.Wood, fr.Need), command.OrderSupply, layer)
 			}
 		}
 		if bid := g.layerBldgAt(x, y, layer); bid != 0 {
@@ -333,12 +394,24 @@ func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 			}
 		}
 	}
+	if g.terr.At(x, y) == terrain.Rock {
+		add("Mine rock", command.OrderMine, construction.LayerObject)
+	}
 	if pid := g.plantAt(x, y); pid != 0 {
-		add("Harvest berry bush", command.OrderHarvest, construction.LayerObject)
+		p, _ := g.plants.Get(pid)
+		name := plantLabel(p.Species)
+		if plant.DefOf(p.Species).Yield > 0 {
+			add("Harvest "+name, command.OrderHarvest, construction.LayerObject)
+		}
+		verb := "Cut "
+		if p.Species == plant.Tree {
+			verb = "Chop "
+		}
+		add(verb+name, command.OrderCut, construction.LayerObject)
 	}
 	if iid := g.itemAt(x, y); iid != 0 {
 		st, _ := g.stacks.Get(iid)
-		if st.Kind == item.Food {
+		if st.Kind.IsFood() {
 			add(fmt.Sprintf("Eat %s", st.Kind), command.OrderEat, construction.LayerObject)
 		}
 		add(fmt.Sprintf("Haul %d %s to stockpile", st.Qty, st.Kind), command.OrderHaul, construction.LayerObject)

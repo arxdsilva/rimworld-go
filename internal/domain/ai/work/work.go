@@ -14,6 +14,7 @@ const (
 	Haul
 	Clean
 	Research
+	Mine
 	NumTypes
 )
 
@@ -26,6 +27,9 @@ func DefaultColonist() Mask {
 	m = m.Set(Haul, true)
 	m = m.Set(Construct, true)
 	m = m.Set(Grow, true)
+	m = m.Set(Mine, true)
+	m = m.Set(Cook, true)
+	m = m.Set(Hunt, true)
 	return m
 }
 

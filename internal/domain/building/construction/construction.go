@@ -2,6 +2,8 @@
 // accept wood then work) and completed buildings.
 package construction
 
+import "rimworld-go/internal/domain/economy/item"
+
 // Kind is a buildable structure.
 type Kind uint8
 
@@ -33,13 +35,17 @@ type Def struct {
 	Layer      Layer
 	BlocksMove bool // completed building makes its tile unwalkable
 	Rotatable  bool
+	StoneOK    bool // may be built from stone blocks instead of wood
 }
 
+// StoneWorkPct is the work multiplier (percent) for stone construction.
+const StoneWorkPct = 160
+
 var defs = [kindCount]Def{
-	Wall:  {Kind: Wall, Name: "wall", Wood: 2, Work: 40, Layer: LayerObject, BlocksMove: true},
+	Wall:  {Kind: Wall, Name: "wall", Wood: 2, Work: 40, Layer: LayerObject, BlocksMove: true, StoneOK: true},
 	Bed:   {Kind: Bed, Name: "bed", Wood: 3, Work: 60, Layer: LayerObject, Rotatable: true},
 	Door:  {Kind: Door, Name: "door", Wood: 2, Work: 50, Layer: LayerObject},
-	Floor: {Kind: Floor, Name: "floor", Wood: 1, Work: 20, Layer: LayerFloor},
+	Floor: {Kind: Floor, Name: "floor", Wood: 1, Work: 20, Layer: LayerFloor, StoneOK: true},
 	Table: {Kind: Table, Name: "table", Wood: 3, Work: 50, Layer: LayerObject},
 	Chair: {Kind: Chair, Name: "chair", Wood: 2, Work: 40, Layer: LayerObject, Rotatable: true},
 	Lamp:  {Kind: Lamp, Name: "lamp", Wood: 2, Work: 40, Layer: LayerObject},
@@ -91,8 +97,28 @@ func WorkTicks(k Kind) int { return DefOf(k).Work }
 // DeconstructTicks is the labor to take a building down.
 func DeconstructTicks(k Kind) int { return (DefOf(k).Work + 1) / 2 }
 
-// Refund is the wood returned by deconstruction (half, rounded down).
+// Refund is the material returned by deconstruction (half, rounded down).
 func Refund(k Kind) int { return DefOf(k).Wood / 2 }
+
+// StuffOK reports whether k may be built from material s.
+func StuffOK(k Kind, s item.Kind) bool {
+	switch s {
+	case item.Wood:
+		return true
+	case item.Stone:
+		return DefOf(k).StoneOK
+	}
+	return false
+}
+
+// WorkFor is the construct work for k built from s.
+func WorkFor(k Kind, s item.Kind) int {
+	w := DefOf(k).Work
+	if s == item.Stone {
+		w = w * StoneWorkPct / 100
+	}
+	return w
+}
 
 // Facing is the orientation of a rotatable building.
 type Facing uint8
@@ -128,6 +154,7 @@ func ParseFacing(v uint8) Facing {
 // Frame is a blueprint that accepts wood then construct work.
 type Frame struct {
 	Kind     Kind
+	Stuff    item.Kind
 	Facing   Facing
 	X, Y     int
 	Wood     int
@@ -141,6 +168,7 @@ func (f Frame) Ready() bool { return f.Wood >= f.Need }
 // Building is a completed structure.
 type Building struct {
 	Kind        Kind
+	Stuff       item.Kind
 	Facing      Facing
 	X, Y        int
 	Claimant    uint64 // EntityID of the pawn who claimed a bed; 0 if free

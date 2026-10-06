@@ -164,3 +164,38 @@ func TestEscapeClosesOrderMenuFirst(t *testing.T) {
 }
 
 func floatID(i int) string { return "float." + string(rune('0'+i)) }
+
+func TestStoneMaterialReachesBlueprint(t *testing.T) {
+	t.Parallel()
+	a, g, _ := liveColony(t, 0)
+	click(t, a, "tab.architect")
+	click(t, a, "arch.cat.structure")
+	click(t, a, "arch.tool.wall")
+	click(t, a, "arch.stuff.stone")
+	if a.toolStuff(archTool{build: "wall"}) != "stone" {
+		t.Fatal("stone should be selected for walls")
+	}
+	if a.toolStuff(archTool{build: "door"}) != "wood" {
+		t.Fatal("doors cannot be stone; they fall back to wood")
+	}
+	a.archDrag = true
+	a.archX0, a.archY0, a.archX1, a.archY1 = 6, 6, 7, 6
+	a.submitArchitect()
+	g.Step(1)
+	f := g.World().Frames
+	if len(f) != 2 || f[0].Stuff != "stone" {
+		t.Fatalf("frames = %+v", f)
+	}
+}
+
+func TestPlantSpriteScalesWithGrowth(t *testing.T) {
+	t.Parallel()
+	_, young := plantSprite(game.PlantView{Species: "tree", Growth: 10})
+	key, grown := plantSprite(game.PlantView{Species: "tree", Growth: 100})
+	if !(young < grown) || grown != 1 || !strings.HasPrefix(key, "plant/tree_") {
+		t.Fatalf("tree scale young=%v grown=%v key=%s", young, grown, key)
+	}
+	if k, _ := plantSprite(game.PlantView{Species: "amberroot", Stage: 3}); k != "plant/crop_harvestable" {
+		t.Fatalf("ripe crop sprite = %s", k)
+	}
+}

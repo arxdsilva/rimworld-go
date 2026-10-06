@@ -233,7 +233,9 @@ def build():
             _badge_icon("order_deconstruct", t, _g_deconstruct, t["danger"]),
             _badge_icon("order_cancel", t, _g_cancel, t["selection"]),
             _badge_icon("zone_stockpile", t, _g_stockpile, t["stockpile"]),
-            _badge_icon("draft", t, _g_draft, t["danger"])]
+            _badge_icon("draft", t, _g_draft, t["danger"]),
+            _badge_icon("order_cut", t, _g_cut, t["designation"]),
+            _badge_icon("order_mine", t, _g_mine, t["designation"])]
     for name, (fam, spr) in ICONS.items():
         p = _icon(name, fam, spr)
         if p:

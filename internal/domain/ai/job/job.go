@@ -44,6 +44,8 @@ const (
 	Construct
 	Harvest
 	Deconstruct
+	Cut
+	Mine
 )
 
 func (k Kind) String() string {
@@ -62,6 +64,10 @@ func (k Kind) String() string {
 		return "harvest"
 	case Deconstruct:
 		return "deconstruct"
+	case Cut:
+		return "cut"
+	case Mine:
+		return "mine"
 	default:
 		return "idle"
 	}

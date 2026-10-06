@@ -6,6 +6,7 @@ type Stockpile struct {
 	MinX, MinY, MaxX, MaxY int
 	AllowFood              bool
 	AllowWood              bool
+	AllowStone             bool
 }
 
 // Normalize orders the corners.

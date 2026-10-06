@@ -4,6 +4,8 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/plant"
+	"rimworld-go/internal/domain/world/terrain"
 )
 
 // Placement reasons are player-facing strings shown by the build preview.
@@ -14,6 +16,9 @@ const (
 	ReasonPlanned  = "already planned here"
 	ReasonItem     = "items in the way"
 	ReasonUnknown  = "unknown building"
+	ReasonRock     = "rock in the way"
+	ReasonTree     = "tree in the way"
+	ReasonStuff    = "cannot be built from that"
 )
 
 // BuildableView is the read model of one buildable definition.
@@ -25,6 +30,7 @@ type BuildableView struct {
 	Rotatable bool
 	Floor     bool // floor layer: can sit under furniture
 	Blocks    bool // completed building blocks movement
+	StoneOK   bool // can be built from stone blocks
 }
 
 // Buildables lists every buildable in catalog order.
@@ -34,10 +40,19 @@ func Buildables() []BuildableView {
 	for _, d := range defs {
 		out = append(out, BuildableView{
 			ID: uint8(d.Kind), Kind: d.Name, Wood: d.Wood, Work: d.Work, Rotatable: d.Rotatable,
-			Floor: d.Layer == construction.LayerFloor, Blocks: d.BlocksMove,
+			Floor: d.Layer == construction.LayerFloor, Blocks: d.BlocksMove, StoneOK: d.StoneOK,
 		})
 	}
 	return out
+}
+
+// StuffID is the command value (command.Command.Stuff) for a material name.
+func StuffID(name string) (uint8, bool) {
+	k, ok := item.ParseKind(name)
+	if !ok || !k.IsStuff() {
+		return 0, false
+	}
+	return uint8(k), true
 }
 
 // CanPlace reports whether a blueprint of kind could be placed at (x, y)
@@ -61,8 +76,16 @@ func (g *Game) canPlace(k construction.Kind, x, y int) (bool, string) {
 	if g.layerFrameAt(x, y, layer) != 0 {
 		return false, ReasonPlanned
 	}
+	if g.terr.At(x, y) == terrain.Rock {
+		return false, ReasonRock
+	}
 	if !g.grid.Walkable(x, y) {
 		return false, ReasonBlocked
+	}
+	if pid := g.plantAt(x, y); pid != 0 {
+		if p, _ := g.plants.Get(pid); p.Species == plant.Tree {
+			return false, ReasonTree
+		}
 	}
 	if construction.DefOf(k).BlocksMove && g.itemAt(x, y) != 0 {
 		return false, ReasonItem
@@ -71,11 +94,24 @@ func (g *Game) canPlace(k construction.Kind, x, y int) (bool, string) {
 }
 
 func (g *Game) placeFrame(kind construction.Kind, x, y int) {
-	g.placeFrameFacing(kind, construction.South, x, y)
+	g.placeFrameStuff(kind, item.Wood, construction.South, x, y)
 }
 
-func (g *Game) placeFrameFacing(kind construction.Kind, f construction.Facing, x, y int) {
-	if !kind.Valid() {
+// CanPlaceStuff is CanPlace plus the material check.
+func (g *Game) CanPlaceStuff(kind, stuff string, x, y int) (bool, string) {
+	k, ok := construction.Parse(kind)
+	if !ok {
+		return false, ReasonUnknown
+	}
+	s, ok := item.ParseKind(stuff)
+	if !ok || !construction.StuffOK(k, s) {
+		return false, ReasonStuff
+	}
+	return g.canPlace(k, x, y)
+}
+
+func (g *Game) placeFrameStuff(kind construction.Kind, stuff item.Kind, f construction.Facing, x, y int) {
+	if !kind.Valid() || !construction.StuffOK(kind, stuff) {
 		return
 	}
 	if ok, _ := g.canPlace(kind, x, y); !ok {
@@ -88,11 +124,12 @@ func (g *Game) placeFrameFacing(kind construction.Kind, f construction.Facing, x
 	g.frameIDs = append(g.frameIDs, id)
 	g.frames.Set(id, construction.Frame{
 		Kind:     kind,
+		Stuff:    stuff,
 		Facing:   f,
 		X:        x,
 		Y:        y,
 		Need:     construction.WoodCost(kind),
-		WorkLeft: construction.WorkTicks(kind),
+		WorkLeft: construction.WorkFor(kind, stuff),
 	})
 }
 
@@ -100,6 +137,17 @@ func (g *Game) layerFrameAt(x, y int, layer construction.Layer) entity.EntityID 
 	for _, id := range g.frameIDs {
 		fr, ok := g.frames.Get(id)
 		if ok && fr.X == x && fr.Y == y && construction.DefOf(fr.Kind).Layer == layer {
+			return id
+		}
+	}
+	return 0
+}
+
+// layerBlockerAt is a completed movement-blocking building at (x, y).
+func (g *Game) layerBlockerAt(x, y int) entity.EntityID {
+	for _, id := range g.bldgIDs {
+		b, ok := g.bldgs.Get(id)
+		if ok && b.X == x && b.Y == y && construction.DefOf(b.Kind).BlocksMove {
 			return id
 		}
 	}
@@ -184,10 +232,6 @@ func (g *Game) removeBuilding(id entity.EntityID) {
 		delete(g.sleptAt, entity.EntityID(b.Claimant))
 	}
 	if r := construction.Refund(b.Kind); r > 0 {
-		if sid, err := g.SpawnStack(item.Wood, r, b.X, b.Y); err == nil {
-			if st, ok := g.stacks.Get(sid); ok {
-				g.mergeOrSet(sid, st)
-			}
-		}
+		g.dropStack(b.Stuff, r, b.X, b.Y)
 	}
 }

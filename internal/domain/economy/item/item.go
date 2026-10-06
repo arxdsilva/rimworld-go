@@ -9,14 +9,34 @@ type Kind uint8
 const (
 	Food Kind = iota
 	Wood
+	Stone // stone blocks
+	numKinds
 )
 
+var kindNames = [numKinds]string{"food", "wood", "stone"}
+
 func (k Kind) String() string {
-	if k == Wood {
-		return "wood"
+	if k >= numKinds {
+		return "unknown"
 	}
-	return "food"
+	return kindNames[k]
 }
+
+// ParseKind returns the kind for a name.
+func ParseKind(name string) (Kind, bool) {
+	for i, n := range kindNames {
+		if n == name {
+			return Kind(i), true
+		}
+	}
+	return 0, false
+}
+
+// IsFood reports whether k can be eaten.
+func (k Kind) IsFood() bool { return k == Food }
+
+// IsStuff reports whether k is a building material.
+func (k Kind) IsStuff() bool { return k == Wood || k == Stone }
 
 const StackLimit = 75
 
