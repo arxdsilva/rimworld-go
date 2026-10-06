@@ -53,6 +53,7 @@ type PawnView struct {
 	WorkGrow      bool
 	Ate           bool
 	SleptInBed    bool
+	Drafted       bool
 }
 
 // ItemView is a ground stack.
@@ -72,14 +73,19 @@ type FrameView struct {
 	Wood     int
 	Need     int
 	WorkLeft int
+	Facing   string
+	Floor    bool
 }
 
 // BuildingView is a completed wall or bed.
 type BuildingView struct {
-	ID       entity.EntityID
-	Kind     string
-	X, Y     int
-	Claimant entity.EntityID
+	ID          entity.EntityID
+	Kind        string
+	X, Y        int
+	Claimant    entity.EntityID
+	Facing      string
+	Floor       bool
+	Deconstruct bool
 }
 
 // PlantView is a wild plant.
@@ -136,6 +142,7 @@ type Game struct {
 	pending    []command.Command
 
 	ateAt   map[entity.EntityID]bool
+	draft   map[entity.EntityID]bool
 	sleptAt map[entity.EntityID]entity.EntityID // pawn -> bed, 0 = ground
 }
 
@@ -159,6 +166,7 @@ func New(cfg Config) *Game {
 		plants:    component.NewStore[plant.Wild](),
 		reserve:   reservation.NewTable(),
 		ateAt:     make(map[entity.EntityID]bool),
+		draft:     make(map[entity.EntityID]bool),
 		sleptAt:   make(map[entity.EntityID]entity.EntityID),
 	}
 }
@@ -334,6 +342,7 @@ func (g *Game) Snapshot() []PawnView {
 			WorkGrow:      m.Enabled(work.Grow),
 			Ate:           g.ateAt[id],
 			SleptInBed:    g.sleptAt[id] != 0,
+			Drafted:       g.draft[id],
 		})
 	}
 	return views
@@ -371,6 +380,7 @@ func (g *Game) World() WorldView {
 		}
 		w.Frames = append(w.Frames, FrameView{
 			ID: id, Kind: fr.Kind.String(), X: fr.X, Y: fr.Y, Wood: fr.Wood, Need: fr.Need, WorkLeft: fr.WorkLeft,
+			Facing: fr.Facing.String(), Floor: construction.DefOf(fr.Kind).Layer == construction.LayerFloor,
 		})
 	}
 	for _, id := range g.bldgIDs {
@@ -380,6 +390,8 @@ func (g *Game) World() WorldView {
 		}
 		w.Buildings = append(w.Buildings, BuildingView{
 			ID: id, Kind: b.Kind.String(), X: b.X, Y: b.Y, Claimant: entity.EntityID(b.Claimant),
+			Facing: b.Facing.String(), Floor: construction.DefOf(b.Kind).Layer == construction.LayerFloor,
+			Deconstruct: b.Deconstruct,
 		})
 	}
 	for _, id := range g.plantIDs {

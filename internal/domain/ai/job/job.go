@@ -43,6 +43,7 @@ const (
 	Haul
 	Construct
 	Harvest
+	Deconstruct
 )
 
 func (k Kind) String() string {
@@ -59,6 +60,8 @@ func (k Kind) String() string {
 		return "construct"
 	case Harvest:
 		return "harvest"
+	case Deconstruct:
+		return "deconstruct"
 	default:
 		return "idle"
 	}
@@ -106,6 +109,11 @@ type Record struct {
 	PathI    int
 	WorkLeft int
 	Fail     FailReason
+	// Dest is the entity a haul delivers into (a frame); 0 = drop on tile.
+	Dest entity.EntityID
+	// Forced marks a player-prioritized job: tiredness does not
+	// interrupt it.
+	Forced bool
 }
 
 // Line is the inspector job summary.

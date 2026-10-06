@@ -50,6 +50,14 @@ func (g *Game) applyOne(c command.Command) {
 		}
 	case command.DesignateCancel:
 		g.cancelRect(c.X, c.Y, c.X2, c.Y2)
+	case command.DesignateBuild:
+		g.placeFrameFacing(construction.Kind(c.Build), construction.ParseFacing(c.Facing), c.X, c.Y)
+	case command.DesignateDeconstruct:
+		g.markDeconstruct(c.X, c.Y, c.X2, c.Y2, true)
+	case command.DraftPawn:
+		g.setDraft(entity.EntityID(c.Pawn), c.Enabled)
+	case command.Prioritize:
+		g.prioritize(entity.EntityID(c.Pawn), c.Order, c.X, c.Y, construction.Layer(c.Layer))
 	case command.SetWorkEnabled:
 		id := entity.EntityID(c.Pawn)
 		m, ok := g.labor.Get(id)
@@ -80,24 +88,6 @@ func (g *Game) cmdMove(id entity.EntityID, x, y int) {
 	g.startJob(id, rec)
 }
 
-func (g *Game) placeFrame(kind construction.Kind, x, y int) {
-	if !g.grid.Walkable(x, y) {
-		return
-	}
-	if g.frameAt(x, y) != 0 || g.bldgAt(x, y) != 0 {
-		return
-	}
-	id := g.entities.Next()
-	g.frameIDs = append(g.frameIDs, id)
-	g.frames.Set(id, construction.Frame{
-		Kind:     kind,
-		X:        x,
-		Y:        y,
-		Need:     construction.WoodCost(kind),
-		WorkLeft: construction.WorkTicks(kind),
-	})
-}
-
 func (g *Game) cancelRect(x1, y1, x2, y2 int) {
 	minX, minY, maxX, maxY := zone.Normalize(x1, y1, x2, y2)
 	keptFrames := g.frameIDs[:0]
@@ -113,6 +103,7 @@ func (g *Game) cancelRect(x1, y1, x2, y2 int) {
 		keptFrames = append(keptFrames, id)
 	}
 	g.frameIDs = keptFrames
+	g.markDeconstruct(x1, y1, x2, y2, false)
 
 	for _, id := range g.plantIDs {
 		p, ok := g.plants.Get(id)
@@ -252,9 +243,15 @@ func (g *Game) phaseAI() {
 			g.jobs.Set(id, job.Record{})
 			j = job.Record{}
 		}
+		if g.drafted(id) {
+			continue // drafted pawns only follow direct orders
+		}
 		n, _ := g.need.Get(id)
 
 		busy := j.Kind != job.None && j.State != job.Idle
+		if busy && j.Forced && !n.Exhausted() {
+			continue // player-prioritized: finish it first
+		}
 		if busy {
 			if n.Hungry() && j.Kind != job.Eat && g.hasEdible() {
 				g.interrupt(id, job.Interrupted)
@@ -476,7 +473,7 @@ func (g *Game) assignHaul(id entity.EntityID) bool {
 }
 
 func (g *Game) haulToFrame(id entity.EntityID, pos Position) (job.Record, bool) {
-	var bestWood entity.EntityID
+	var bestWood, bestFrame entity.EntityID
 	bestD := 1 << 30
 	var wx, wy, fx, fy int
 	for _, fid := range g.frameIDs {
@@ -497,7 +494,7 @@ func (g *Game) haulToFrame(id entity.EntityID, pos Position) (job.Record, bool) 
 			}
 			d := pathing.Dist(pos.X, pos.Y, st.X, st.Y)
 			if d < bestD || (d == bestD && iid < bestWood) {
-				bestD, bestWood = d, iid
+				bestD, bestWood, bestFrame = d, iid, fid
 				wx, wy, fx, fy = st.X, st.Y, fr.X, fr.Y
 			}
 		}
@@ -506,7 +503,7 @@ func (g *Game) haulToFrame(id entity.EntityID, pos Position) (job.Record, bool) 
 		return job.Record{}, false
 	}
 	return job.Record{
-		Kind: job.Haul, Target: bestWood, TX: wx, TY: wy, DestX: fx, DestY: fy,
+		Kind: job.Haul, Target: bestWood, TX: wx, TY: wy, DestX: fx, DestY: fy, Dest: bestFrame,
 	}, true
 }
 
@@ -586,7 +583,8 @@ func (g *Game) emptyStockpileCell(k item.Kind) (int, int, bool) {
 				if !g.grid.Walkable(x, y) {
 					continue
 				}
-				if g.itemAt(x, y) != 0 || g.frameAt(x, y) != 0 || g.bldgAt(x, y) != 0 {
+				if g.itemAt(x, y) != 0 || g.layerFrameAt(x, y, construction.LayerObject) != 0 ||
+					g.layerBldgAt(x, y, construction.LayerObject) != 0 {
 					continue
 				}
 				if _, taken := g.reserve.TileOwner(x, y); taken {
@@ -617,8 +615,27 @@ func (g *Game) assignConstruct(id entity.EntityID) bool {
 			best, bestD, bx, by = fid, d, fr.X, fr.Y
 		}
 	}
+	for _, bid := range g.bldgIDs {
+		b, ok := g.bldgs.Get(bid)
+		if !ok || !b.Deconstruct {
+			continue
+		}
+		if _, taken := g.reserve.EntityOwner(bid); taken {
+			continue
+		}
+		d := pathing.Dist(pos.X, pos.Y, b.X, b.Y)
+		if d < bestD || (d == bestD && bid < best) {
+			best, bestD, bx, by = bid, d, b.X, b.Y
+		}
+	}
 	if best == 0 {
 		return false
+	}
+	if b, ok := g.bldgs.Get(best); ok {
+		tx, ty := g.workSpot(id, bx, by)
+		return g.startJob(id, job.Record{
+			Kind: job.Deconstruct, Target: best, TX: tx, TY: ty, WorkLeft: b.WorkLeft,
+		})
 	}
 	fr, _ := g.frames.Get(best)
 	return g.startJob(id, job.Record{
@@ -677,6 +694,8 @@ func (g *Game) phaseJobs() {
 			g.doConstruct(id, j)
 		case job.Harvest:
 			g.doHarvest(id, j)
+		case job.Deconstruct:
+			g.doDeconstruct(id, j)
 		default:
 			j.State = job.Complete
 			g.jobs.Set(id, j)
@@ -784,8 +803,9 @@ func (g *Game) finishHaulDrop(id entity.EntityID, j job.Record) {
 	}
 	st.Carrier = 0
 	st.X, st.Y = j.DestX, j.DestY
-	if fid := g.frameAt(j.DestX, j.DestY); fid != 0 && st.Kind == item.Wood {
-		fr, _ := g.frames.Get(fid)
+	fid := j.Dest
+	fr, isFrame := g.frames.Get(fid)
+	if fid != 0 && isFrame && st.Kind == item.Wood {
 		need := fr.Need - fr.Wood
 		give := st.Qty
 		if give > need {
@@ -839,10 +859,32 @@ func (g *Game) completeFrame(id entity.EntityID, fr construction.Frame) {
 	}
 	g.frameIDs = kept
 	g.bldgIDs = append(g.bldgIDs, id)
-	g.bldgs.Set(id, construction.Building{Kind: fr.Kind, X: fr.X, Y: fr.Y})
-	if fr.Kind == construction.Wall {
+	g.bldgs.Set(id, construction.Building{Kind: fr.Kind, Facing: fr.Facing, X: fr.X, Y: fr.Y})
+	if construction.DefOf(fr.Kind).BlocksMove {
 		g.grid.SetWalkable(fr.X, fr.Y, false)
+		g.ejectPawns(fr.X, fr.Y)
 	}
+}
+
+func (g *Game) doDeconstruct(id entity.EntityID, j job.Record) {
+	b, ok := g.bldgs.Get(j.Target)
+	if !ok || !b.Deconstruct {
+		j.State = job.Fail
+		j.Fail = job.TargetGone
+		g.jobs.Set(id, j)
+		return
+	}
+	b.WorkLeft--
+	j.WorkLeft = b.WorkLeft
+	if b.WorkLeft > 0 {
+		g.bldgs.Set(j.Target, b)
+		g.jobs.Set(id, j)
+		return
+	}
+	g.reserve.ReleaseOwner(id)
+	g.removeBuilding(j.Target)
+	j.State = job.Complete
+	g.jobs.Set(id, j)
 }
 
 func (g *Game) doHarvest(id entity.EntityID, j job.Record) {
@@ -936,26 +978,6 @@ func (g *Game) itemAt(x, y int) entity.EntityID {
 	for _, id := range g.itemIDs {
 		st, ok := g.stacks.Get(id)
 		if ok && st.Carrier == 0 && st.X == x && st.Y == y {
-			return id
-		}
-	}
-	return 0
-}
-
-func (g *Game) frameAt(x, y int) entity.EntityID {
-	for _, id := range g.frameIDs {
-		fr, ok := g.frames.Get(id)
-		if ok && fr.X == x && fr.Y == y {
-			return id
-		}
-	}
-	return 0
-}
-
-func (g *Game) bldgAt(x, y int) entity.EntityID {
-	for _, id := range g.bldgIDs {
-		b, ok := g.bldgs.Get(id)
-		if ok && b.X == x && b.Y == y {
 			return id
 		}
 	}

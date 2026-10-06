@@ -196,7 +196,7 @@ The first playable surface.
     -   Position.
     -   Basic description.
     -   Context-sensitive tabs supplied by entity capabilities.
--   [-] **Pawn inspect panel** (name, job/activity, food/rest; no draft/mood/gear/skills/social)
+-   [-] **Pawn inspect panel** (name, job/activity, food/rest, drafted state + Draft button; no mood/gear/skills/social)
     -   Name.
     -   Current job/activity.
     -   Draft status.
@@ -294,7 +294,7 @@ interchangeable workers.
 
 ## 4.1 Walkability
 
--   [-] **Walkable/blocked cells** (grid bounds + completed walls set unwalkable; no doors/terrain/hazards)
+-   [-] **Walkable/blocked cells** (grid bounds; completed walls block, doors/floors/furniture walkable via construction defs; builder ejected from a finished wall; no terrain/hazards)
     -   Terrain, walls, doors, buildings, hazards, and map boundaries
         contribute to traversal rules.
 -   [ ] **Movement cost**
@@ -350,14 +350,14 @@ This is the heart of autonomous colony behavior.
     -   failure reason.
     -   reservations.
     -   interruptibility.
--   [-] **Explicit job state machines** (Goto/Do/Complete/Fail; no draft/medical/mental states)
+-   [-] **Explicit job state machines** (Goto/Do/Complete/Fail incl. deconstruct; drafted pawns hold; no medical/mental states)
     -   Go to target.
     -   Wait/work.
     -   Carry/use/operate.
     -   Complete.
     -   Fail/cancel.
     -   Every transition is deterministic and testable.
--   [-] **Job interruption** (player `MovePawn`, critical hunger/rest, target gone, reservation fail; no draft/danger/mental)
+-   [-] **Job interruption** (player `MovePawn`/`Prioritize`/`DraftPawn`, critical hunger/rest, target gone, reservation fail; prioritized jobs ignore tiredness; no danger/mental)
     -   Player order.
     -   Drafting.
     -   danger.
@@ -433,7 +433,7 @@ This is the heart of autonomous colony behavior.
 
 ## 5.5 Forced orders
 
--   [-] **Right-click/context forced work** (`MovePawn` on selected pawn; no context harvest/haul/eat)
+-   [x] **Right-click/context forced work** (`OrdersAt` menu: go here, build, supply wood, deconstruct, harvest, sleep in bed, eat, haul to stockpile; disabled entries give the reason; `Prioritize` command)
     -   Player can tell a selected pawn to perform a valid specific
         action immediately.
 -   [ ] **Queued forced jobs**
@@ -538,18 +538,18 @@ This is the heart of autonomous colony behavior.
 
 ## 7.1 Designation system
 
--   [-] **Build designation** (wall/bed frames via Architect)
--   [ ] **Deconstruct designation**
+-   [-] **Build designation** (`DesignateBuild` for wall/door/floor/bed/table/chair/lamp with facing; 1×1 footprints only)
+-   [x] **Deconstruct designation** (Architect Orders rectangle; cancel clears it)
 -   [ ] **Mine designation**
 -   [ ] **Cut plant designation**
 -   [-] **Harvest designation** (wild plants; Grow work type; no grow-zone)
 -   [ ] **Hunt designation**
--   [-] **Cancel designation** (frames, harvest marks, overlapping stockpiles)
+-   [-] **Cancel designation** (frames, harvest marks, deconstruct marks, overlapping stockpiles)
 -   [ ] **Forbid/unforbid designation/action**
 
 ## 7.2 Construction lifecycle
 
--   [-] **Blueprint** (frame ghost on map + Architect drag preview; no research/support checks)
+-   [-] **Blueprint** (`CanPlace` shared by preview and sim: bounds, layer occupancy, blocked, items under walls; floor + object layers share a tile; no research/support checks)
     -   Placement preview.
     -   Validate terrain, occupancy, research, material, and support
         requirements.
@@ -566,12 +566,12 @@ This is the heart of autonomous colony behavior.
     -   Construction skill affects speed and result.
     -   Failed construction may waste resources if independently chosen
         balance supports it.
--   [-] **Completed building** (wall unwalkable; bed claimable; no room/power invalidate)
+-   [-] **Completed building** (blocking defs set unwalkable and eject pawns; beds claimable; facing kept; no room/power invalidate)
     -   Replace frame with functional building.
     -   Invalidate navigation/rooms/power/etc. only as needed.
 -   [ ] **Repair**
     -   Damaged player structures become repair work.
--   [ ] **Deconstruction**
+-   [x] **Deconstruction** (construct work type; half the wood refunded; tile and bed claim freed)
     -   Work removes building and yields appropriate salvage.
 
 ## 7.3 Core structures
@@ -580,12 +580,12 @@ This is the heart of autonomous colony behavior.
     -   Block movement/vision/projectiles.
     -   Define rooms.
     -   Material-dependent stats.
--   [ ] **Doors**
+-   [-] **Doors** (buildable, walkable, count as wall neighbours, drawn open when occupied; no opening delay/permissions/rooms)
     -   Open/closed states.
     -   Opening delay.
     -   faction/permission interaction.
     -   affect pathing and room boundaries.
--   [ ] **Floors**
+-   [-] **Floors** (buildable/deconstructable separate layer; no movement/beauty/cleanliness stats)
     -   Construct/remove.
     -   movement, beauty, cleanliness, flammability attributes.
 -   [ ] **Roofs**
@@ -594,7 +594,7 @@ This is the heart of autonomous colony behavior.
     -   support rules.
     -   roof affects weather, temperature, light, deterioration, toxic
         fallout.
--   [-] **Furniture** (beds claimed for Sleep; no tables/chairs/comfort)
+-   [-] **Furniture** (bed (rotatable, claimed for Sleep), table, chair (rotatable), lamp buildable; no comfort/joy/light effects)
     -   Beds.
     -   tables.
     -   chairs/stools.
