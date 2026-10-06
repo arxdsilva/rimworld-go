@@ -51,6 +51,7 @@ const (
 	ReasonIncapable   = "not able to act"
 	ReasonNoStone     = "no free stone"
 	ReasonNoMine      = "mining disabled"
+	ReasonNotSowable  = "cannot sow here"
 )
 
 func (g *Game) drafted(id entity.EntityID) bool { return g.draft[id] }
@@ -154,6 +155,19 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 			return job.Record{}, r
 		}
 		return job.Record{Kind: job.Harvest, Target: pid, TX: x, TY: y, WorkLeft: plant.DefOf(p.Species).HarvestWork}, ""
+	case command.OrderSow:
+		z, ok := g.zoneAt(x, y)
+		if !ok {
+			return job.Record{}, ReasonUnknown
+		}
+		_ = z
+		if !m.Enabled(work.Grow) {
+			return job.Record{}, ReasonNoGrow
+		}
+		if !g.sowable(x, y) {
+			return job.Record{}, ReasonNotSowable
+		}
+		return job.Record{Kind: job.Sow, TX: x, TY: y, WorkLeft: SowWork}, ""
 	case command.OrderCut:
 		pid := g.plantAt(x, y)
 		p, ok := g.plants.Get(pid)
@@ -396,6 +410,9 @@ func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 	}
 	if g.terr.At(x, y) == terrain.Rock {
 		add("Mine rock", command.OrderMine, construction.LayerObject)
+	}
+	if z, ok := g.zoneAt(x, y); ok && g.plantAt(x, y) == 0 {
+		add("Sow "+plant.Species(z.Crop).String(), command.OrderSow, construction.LayerObject)
 	}
 	if pid := g.plantAt(x, y); pid != 0 {
 		p, _ := g.plants.Get(pid)

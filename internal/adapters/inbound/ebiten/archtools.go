@@ -27,6 +27,7 @@ type archTool struct {
 	mode     placeMode
 	build    string       // construction kind for buildables
 	cmd      command.Kind // area command for zones/orders
+	crop     string       // crop for growing zones
 }
 
 var archCategories = []struct{ id, label string }{
@@ -49,6 +50,8 @@ var archTools = []archTool{
 		desc: "Dig out rock. Each tile drops stone blocks."},
 	{id: "stockpile", label: "Stockpile", category: "zones", icon: "zone_stockpile", mode: placeArea, cmd: command.DesignateStockpile,
 		desc: "Storage area. Haulers bring food and wood here."},
+	{id: "grow", label: "Growing zone", category: "zones", icon: "zone_grow", mode: placeArea, cmd: command.DesignateGrowZone,
+		crop: "amberroot", desc: "Colonists sow amberroot here and harvest it when ripe. Rich soil grows faster."},
 	{id: "wall", label: "Wall", category: "structure", icon: "wall", mode: placeLine, build: "wall",
 		desc: "Blocks movement. Drag to draw a line."},
 	{id: "door", label: "Door", category: "structure", icon: "door", mode: placeSingle, build: "door",

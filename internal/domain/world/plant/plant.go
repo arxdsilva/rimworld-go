@@ -2,6 +2,8 @@
 // Growth is an integer tick counter; a plant is ripe at GrowTicks.
 package plant
 
+import "rimworld-go/internal/domain/economy/item"
+
 // Species is a plant kind.
 type Species uint8
 
@@ -16,9 +18,10 @@ const (
 type Def struct {
 	Species     Species
 	Name        string
-	GrowTicks   int  // ticks from sown to ripe at 100% fertility
-	HarvestWork int  // ticks to harvest when ripe
-	Yield       int  // food from a ripe harvest
+	GrowTicks   int // ticks from sown to ripe at 100% fertility
+	HarvestWork int // ticks to harvest when ripe
+	Yield       int // food units from a ripe harvest
+	Yields      item.Kind
 	CutWork     int  // ticks to cut down
 	Wood        int  // wood from cutting a fully grown plant
 	Regrows     bool // harvest resets growth instead of removing the plant
@@ -27,10 +30,10 @@ type Def struct {
 }
 
 var defs = [numSpecies]Def{
-	BerryBush: {Species: BerryBush, Name: "berry_bush", GrowTicks: 12000, HarvestWork: 30, Yield: 5,
+	BerryBush: {Species: BerryBush, Name: "berry_bush", GrowTicks: 12000, HarvestWork: 30, Yield: 5, Yields: item.Berries,
 		CutWork: 20, Regrows: true, RegrowTo: 35},
 	Tree: {Species: Tree, Name: "tree", GrowTicks: 60000, CutWork: 90, Wood: 8},
-	Amberroot: {Species: Amberroot, Name: "amberroot", GrowTicks: 15000, HarvestWork: 25, Yield: 8,
+	Amberroot: {Species: Amberroot, Name: "amberroot", GrowTicks: 15000, HarvestWork: 25, Yield: 8, Yields: item.Amberroot,
 		CutWork: 10, Crop: true},
 }
 

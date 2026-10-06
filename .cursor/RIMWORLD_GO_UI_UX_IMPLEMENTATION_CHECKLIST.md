@@ -435,7 +435,7 @@ the player's primary world-editing command surface.
 
 -   [ ] **Mine**
 -   [ ] **Cut plants**
--   [-] **Harvest** (wild plants via Architect; no grow-zone/cut-plants)
+-   [x] **Harvest** (wild plants via Architect; zone crops automatic)
 -   [ ] **Hunt**
 -   [x] **Deconstruct**
 -   [x] **Cancel** (blueprints, harvest and deconstruct marks, zones)
@@ -485,7 +485,7 @@ the player's primary world-editing command surface.
 
 ## 6.3 Growing-zone configuration
 
--   [ ] **Crop selector**
+-   [-] **Crop selector** (growing-zone tool sows amberroot; no picker until more crops exist)
     -   Searchable plant list.
     -   required skill.
     -   growth time.

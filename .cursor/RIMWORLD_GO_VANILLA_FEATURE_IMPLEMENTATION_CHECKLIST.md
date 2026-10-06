@@ -542,7 +542,7 @@ This is the heart of autonomous colony behavior.
 -   [x] **Deconstruct designation** (Architect Orders rectangle; cancel clears it)
 -   [x] **Mine designation** (Architect Orders rectangle over rock; Mine work type; cancel clears)
 -   [x] **Cut plant designation** (trees drop wood scaled by growth; bushes cleared)
--   [-] **Harvest designation** (wild plants; Grow work type; no grow-zone)
+-   [x] **Harvest designation** (wild plants by order; zone crops harvest automatically; Grow work type)
 -   [ ] **Hunt designation**
 -   [-] **Cancel designation** (frames, harvest marks, deconstruct marks, overlapping stockpiles)
 -   [ ] **Forbid/unforbid designation/action**
@@ -628,7 +628,7 @@ This is the heart of autonomous colony behavior.
 
 ## 7.5 Specialized zones
 
--   [ ] **Growing zones**
+-   [x] **Growing zones** (painted rectangles sowing amberroot; cancel removes; resow after harvest)
 -   [ ] **Home area**
     -   Influences firefighting/cleaning/repair behavior.
 -   [ ] **Roof build/remove areas**
@@ -641,7 +641,7 @@ This is the heart of autonomous colony behavior.
 
 ## 8.1 Nutrition
 
--   [-] **Nutrition values** (Eat restores a fixed permille; no per-def table)
+-   [x] **Nutrition values** (per-kind table: ration 4000, berries 1500, amberroot 2000, meat 2200, meal 6000)
     -   Foods provide nutrition.
     -   Pawns consume an amount based on hunger/body needs.
 -   [-] **Food need** (permille decay; 0 downs then starvation death; no mood)
@@ -688,13 +688,13 @@ This is the heart of autonomous colony behavior.
 
 -   [ ] **Fertility**
     -   Terrain fertility affects plant growth.
--   [ ] **Crop definitions**
+-   [-] **Crop definitions** (amberroot crop def with grow ticks, yield, harvest work; one crop so far)
     -   Growth time.
     -   fertility sensitivity.
     -   yield.
     -   minimum sowing skill.
     -   temperature/light requirements.
--   [ ] **Sowing**
+-   [x] **Sowing** (Grow work sows empty fertile zone cells; prioritizable from the order menu)
     -   Growers plant designated crops in growing zones.
 -   [-] **Plant growth** (integer per-tick growth scaled by terrain fertility; no temperature/light/health)
     -   Analytical/bucketed growth.

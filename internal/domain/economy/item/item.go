@@ -3,17 +3,49 @@ package item
 
 import "rimworld-go/internal/domain/sim/entity"
 
-// Kind is a stack category. Only food and wood exist in this slice.
+// Kind is a stack category.
 type Kind uint8
 
 const (
-	Food Kind = iota
+	Food Kind = iota // packaged survival ration
 	Wood
-	Stone // stone blocks
+	Stone     // stone blocks
+	Berries   // raw, foraged
+	Amberroot // raw, farmed
+	Meat      // raw, hunted
+	Meal      // cooked
 	numKinds
 )
 
-var kindNames = [numKinds]string{"food", "wood", "stone"}
+var kindNames = [numKinds]string{"food", "wood", "stone", "berries", "amberroot", "meat", "meal"}
+
+// nutrition is hunger restored per unit eaten (needs.Full = 10000).
+var nutrition = [numKinds]int{Food: 4000, Berries: 1500, Amberroot: 2000, Meat: 2200, Meal: 6000}
+
+// preference ranks food choice: higher is eaten first.
+var preference = [numKinds]int{Meal: 4, Food: 3, Amberroot: 2, Berries: 2, Meat: 1}
+
+// Nutrition is the hunger restored by eating one unit of k (0 if inedible).
+func (k Kind) Nutrition() int {
+	if k >= numKinds {
+		return 0
+	}
+	return nutrition[k]
+}
+
+// Preference ranks edible kinds; higher is chosen first.
+func (k Kind) Preference() int {
+	if k >= numKinds {
+		return 0
+	}
+	return preference[k]
+}
+
+// Raw reports uncooked food (eating it is unpleasant).
+func (k Kind) Raw() bool { return k == Berries || k == Amberroot || k == Meat }
+
+// Foods lists every edible kind.
+func Foods() []Kind { return []Kind{Food, Berries, Amberroot, Meat, Meal} }
 
 func (k Kind) String() string {
 	if k >= numKinds {
@@ -33,7 +65,7 @@ func ParseKind(name string) (Kind, bool) {
 }
 
 // IsFood reports whether k can be eaten.
-func (k Kind) IsFood() bool { return k == Food }
+func (k Kind) IsFood() bool { return k.Nutrition() > 0 }
 
 // IsStuff reports whether k is a building material.
 func (k Kind) IsStuff() bool { return k == Wood || k == Stone }

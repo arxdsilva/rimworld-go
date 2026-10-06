@@ -58,6 +58,7 @@ type PawnView struct {
 	WorkCook      bool
 	WorkHunt      bool
 	Ate           bool
+	LastMeal      string // kind name of the last food eaten, "" if none
 	SleptInBed    bool
 	Drafted       bool
 }
@@ -129,6 +130,10 @@ type WorldView struct {
 	TerrainW int
 	// Mines are tiles designated for mining.
 	Mines [][2]int
+	// GrowZones are painted growing areas.
+	GrowZones []GrowZoneView
+	// FoodByKind is ground food per kind name.
+	FoodByKind map[string]int
 }
 
 // Game holds all authoritative simulation state.
@@ -159,6 +164,8 @@ type Game struct {
 	mines    map[[2]int]bool
 
 	stockpiles []zone.Stockpile
+	growZones  []zone.GrowZone
+	lastMeal   map[entity.EntityID]item.Kind
 	reserve    *reservation.Table
 	pending    []command.Command
 
@@ -187,6 +194,7 @@ func New(cfg Config) *Game {
 		plants:    component.NewStore[plant.Wild](),
 		terr:      terrain.NewMap(cfg.Width, cfg.Height),
 		mines:     make(map[[2]int]bool),
+		lastMeal:  make(map[entity.EntityID]item.Kind),
 		reserve:   reservation.NewTable(),
 		ateAt:     make(map[entity.EntityID]bool),
 		draft:     make(map[entity.EntityID]bool),
@@ -366,6 +374,7 @@ func (g *Game) Snapshot() []PawnView {
 			WorkCook:      m.Enabled(work.Cook),
 			WorkHunt:      m.Enabled(work.Hunt),
 			Ate:           g.ateAt[id],
+			LastMeal:      lastMealName(g, id),
 			SleptInBed:    g.sleptAt[id] != 0,
 			Drafted:       g.draft[id],
 		})
@@ -394,6 +403,10 @@ func (g *Game) World() WorldView {
 			switch {
 			case st.Kind.IsFood():
 				w.Food += st.Qty
+				if w.FoodByKind == nil {
+					w.FoodByKind = map[string]int{}
+				}
+				w.FoodByKind[st.Kind.String()] += st.Qty
 			case st.Kind == item.Wood:
 				w.Wood += st.Qty
 			case st.Kind == item.Stone:
@@ -439,6 +452,7 @@ func (g *Game) World() WorldView {
 		w.Terrain[i] = uint8(t)
 	}
 	w.Mines = g.mineList()
+	w.GrowZones = g.growZoneViews()
 	return w
 }
 
@@ -448,4 +462,11 @@ func stockpileViews(z []zone.Stockpile) []StockpileView {
 		out[i] = StockpileView{s.MinX, s.MinY, s.MaxX, s.MaxY, s.AllowFood, s.AllowWood, s.AllowStone}
 	}
 	return out
+}
+
+func lastMealName(g *Game, id entity.EntityID) string {
+	if k, ok := g.lastMealKind(id); ok {
+		return k.String()
+	}
+	return ""
 }

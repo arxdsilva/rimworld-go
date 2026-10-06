@@ -4,4 +4,4 @@ id: "core:ui_icon/food"
 image: generated/ui/icons/food.png
 scale: 2
 canvas: [128, 128]
-source: "core:item/food_crate"
+source: "core:item/ration_pack"

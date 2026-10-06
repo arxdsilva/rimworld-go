@@ -60,6 +60,8 @@ func (g *Game) applyOne(c command.Command) {
 		g.markCut(c.X, c.Y, c.X2, c.Y2, true)
 	case command.DesignateMine:
 		g.markMine(c.X, c.Y, c.X2, c.Y2, true)
+	case command.DesignateGrowZone:
+		g.addGrowZone(c.X, c.Y, c.X2, c.Y2, c.Build)
 	case command.DesignateDeconstruct:
 		g.markDeconstruct(c.X, c.Y, c.X2, c.Y2, true)
 	case command.DraftPawn:
@@ -120,6 +122,7 @@ func (g *Game) cancelRect(x1, y1, x2, y2 int) {
 	g.markDeconstruct(x1, y1, x2, y2, false)
 	g.markCut(x1, y1, x2, y2, false)
 	g.markMine(x1, y1, x2, y2, false)
+	g.cancelGrowZones(minX, minY, maxX, maxY)
 
 	for _, id := range g.plantIDs {
 		p, ok := g.plants.Get(id)
@@ -300,7 +303,7 @@ func (g *Game) phaseAI() {
 		if m.Enabled(work.Construct) && g.assignConstruct(id) {
 			continue
 		}
-		if m.Enabled(work.Grow) && (g.assignHarvest(id) || g.assignCut(id)) {
+		if m.Enabled(work.Grow) && (g.assignHarvest(id) || g.assignSow(id) || g.assignCut(id)) {
 			continue
 		}
 		if m.Enabled(work.Mine) && g.assignMine(id) {
@@ -399,7 +402,7 @@ func (g *Game) pathTo(id entity.EntityID, tx, ty int) ([]pathing.Point, bool) {
 func (g *Game) hasEdible() bool {
 	for _, id := range g.itemIDs {
 		st, ok := g.stacks.Get(id)
-		if !ok || st.Kind != item.Food || st.Qty <= 0 || st.Carrier != 0 {
+		if !ok || !st.Kind.IsFood() || st.Qty <= 0 || st.Carrier != 0 {
 			continue
 		}
 		if _, taken := g.reserve.EntityOwner(id); taken {
@@ -411,23 +414,7 @@ func (g *Game) hasEdible() bool {
 }
 
 func (g *Game) assignEat(id entity.EntityID) {
-	pos, _ := g.positions.Get(id)
-	var best entity.EntityID
-	bestD := 1 << 30
-	var bx, by int
-	for _, iid := range g.itemIDs {
-		st, ok := g.stacks.Get(iid)
-		if !ok || st.Kind != item.Food || st.Qty <= 0 || st.Carrier != 0 {
-			continue
-		}
-		if _, taken := g.reserve.EntityOwner(iid); taken {
-			continue
-		}
-		d := pathing.Dist(pos.X, pos.Y, st.X, st.Y)
-		if d < bestD || (d == bestD && iid < best) {
-			best, bestD, bx, by = iid, d, st.X, st.Y
-		}
-	}
+	best, bx, by := g.bestFood(id)
 	if best == 0 {
 		return
 	}
@@ -672,7 +659,7 @@ func (g *Game) assignHarvest(id entity.EntityID) bool {
 	var bx, by int
 	for _, pid := range g.plantIDs {
 		p, ok := g.plants.Get(pid)
-		if !ok || !p.Harvestable() || !p.Designated {
+		if !ok || !wantsHarvest(p) {
 			continue
 		}
 		if _, taken := g.reserve.EntityOwner(pid); taken {
@@ -723,6 +710,8 @@ func (g *Game) phaseJobs() {
 			g.doCut(id, j)
 		case job.Mine:
 			g.doMine(id, j)
+		case job.Sow:
+			g.doSow(id, j)
 		default:
 			j.State = job.Complete
 			g.jobs.Set(id, j)
@@ -750,7 +739,8 @@ func (g *Game) doEat(id entity.EntityID, j job.Record) {
 		g.stacks.Set(j.Target, st)
 	}
 	n, _ := g.need.Get(id)
-	n.Hunger += needs.EatRestore
+	n.Hunger += st.Kind.Nutrition()
+	g.lastMeal[id] = st.Kind
 	if n.Hunger > needs.Full {
 		n.Hunger = needs.Full
 	}
@@ -931,7 +921,7 @@ func (g *Game) doHarvest(id entity.EntityID, j job.Record) {
 		return
 	}
 	d := plant.DefOf(p.Species)
-	g.dropStack(item.Food, d.Yield, p.X, p.Y)
+	g.dropStack(d.Yields, d.Yield, p.X, p.Y)
 	if d.Regrows {
 		p.Growth = d.GrowTicks * d.RegrowTo / 100
 		p.Designated = false

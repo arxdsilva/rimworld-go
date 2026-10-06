@@ -199,3 +199,19 @@ func TestPlantSpriteScalesWithGrowth(t *testing.T) {
 		t.Fatalf("ripe crop sprite = %s", k)
 	}
 }
+
+func TestGrowingZoneToolSendsCrop(t *testing.T) {
+	t.Parallel()
+	a, g, _ := liveColony(t, 0)
+	click(t, a, "tab.architect")
+	click(t, a, "arch.cat.zones")
+	click(t, a, "arch.tool.grow")
+	a.archDrag = true
+	a.archX0, a.archY0, a.archX1, a.archY1 = 6, 6, 8, 7
+	a.submitArchitect()
+	g.Step(1)
+	z := g.World().GrowZones
+	if len(z) != 1 || z[0].Crop != "amberroot" || z[0].MaxX != 8 {
+		t.Fatalf("zones = %+v", z)
+	}
+}

@@ -46,6 +46,7 @@ const (
 	Deconstruct
 	Cut
 	Mine
+	Sow
 )
 
 func (k Kind) String() string {
@@ -68,6 +69,8 @@ func (k Kind) String() string {
 		return "cut"
 	case Mine:
 		return "mine"
+	case Sow:
+		return "sow"
 	default:
 		return "idle"
 	}

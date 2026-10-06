@@ -109,6 +109,13 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	w := r.game.World()
 
 	r.drawTerrainArt(screen, w, sw, sh, tile)
+	for _, z := range w.GrowZones {
+		for y := z.MinY; y <= z.MaxY; y++ {
+			for x := z.MinX; x <= z.MaxX; x++ {
+				r.drawSprite(screen, "overlay/grow_zone", none, float64(x), float64(y), tile, sw, sh)
+			}
+		}
+	}
 	for _, z := range w.Stockpiles {
 		for y := z.MinY; y <= z.MaxY; y++ {
 			for x := z.MinX; x <= z.MaxX; x++ {
@@ -123,7 +130,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	// floors (and planned floors) sit under everything else
 	for _, b := range w.Buildings {
 		if b.Floor {
-			r.drawSprite(screen, buildSpriteStuff("floor", b.Stuff, "", 0, false, false), none, float64(b.X), float64(b.Y), tile, sw, sh)
+			r.drawTile(screen, buildSpriteStuff("floor", b.Stuff, "", 0, false, false), float64(b.X), float64(b.Y), tile, sw, sh, noCS)
 		}
 	}
 	for _, f := range w.Frames {
@@ -252,7 +259,15 @@ func itemSprite(kind string) string {
 	case "wood":
 		return "item/wood_pile"
 	case "food":
+		return "item/ration_pack"
+	case "berries":
+		return "item/berries_basket"
+	case "amberroot":
 		return "item/food_crate"
+	case "meat":
+		return "item/meat_pile"
+	case "meal":
+		return "item/meal_simple"
 	case "steel":
 		return "item/steel_bars"
 	case "stone", "stone_blocks":
@@ -347,6 +362,30 @@ func (r *Renderer) drawPawnPortraitArt(screen *ebiten.Image, p game.PawnView, x,
 	return true
 }
 
+// drawTile draws an opaque, tileable 1x1 sprite snapped to whole pixels
+// with a 1 px overlap, so fractional zoom never shows seams between tiles.
+func (r *Renderer) drawTile(screen *ebiten.Image, key string, wx, wy, tile float64, sw, sh int, cs colorScale) {
+	sx, sy := r.worldToScreenF(wx, wy)
+	x0, y0 := math.Floor(float64(sx)), math.Floor(float64(sy))
+	size := math.Ceil(float64(sx)+tile) - x0 + 1
+	if !visible(float32(x0), float32(y0), float32(size), float32(size), sw, sh) {
+		return
+	}
+	img := r.art.image(key, color.NRGBA{})
+	if img == nil {
+		return
+	}
+	k := size / float64(img.Bounds().Dx())
+	op := &ebiten.DrawImageOptions{}
+	op.GeoM.Scale(k, k)
+	op.GeoM.Translate(x0, y0)
+	op.Filter = ebiten.FilterLinear
+	if cs != noCS {
+		op.ColorScale.Scale(cs[0]*cs[3], cs[1]*cs[3], cs[2]*cs[3], cs[3])
+	}
+	screen.DrawImage(img, op)
+}
+
 // terrainPriority: a higher index draws its soft edge over lower ones.
 var terrainPriority = map[string]int{"soil": 0, "rich_soil": 1, "gravel": 2, "stone": 3, "rock": 3}
 
@@ -374,7 +413,7 @@ func (r *Renderer) drawTerrainArt(screen *ebiten.Image, w game.WorldView, sw, sh
 				t = "soil"
 			}
 			base := terrainSprite[t]
-			r.drawSprite(screen, artKey("terrain", base, int(tileHash(x, y)%soilVariants)), none, float64(x), float64(y), tile, sw, sh)
+			r.drawTile(screen, artKey("terrain", base, int(tileHash(x, y)%soilVariants)), float64(x), float64(y), tile, sw, sh, noCS)
 			pri := terrainPriority[t]
 			for p := pri + 1; p < len(byPri); p++ {
 				mask := 0

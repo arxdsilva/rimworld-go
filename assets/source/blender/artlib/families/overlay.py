@@ -156,6 +156,25 @@ def _stockpile(t):
     return _save("stockpile", img, {"overlay": "zone", "tileable": True})
 
 
+def _grow_zone(t):
+    xx, yy = _grid()
+    img = np.zeros((N, N, 4), np.float32)
+    green = (0.45, 0.78, 0.36)
+    _paint(img, np.ones((N, N), np.float32), green, 0.14)
+    rows = ((yy % 32) < 3)
+    border = (xx < 4) | (yy < 4) | (xx > N - 4) | (yy > N - 4)
+    _paint(img, (rows & ~border).astype(np.float32), green, 0.35)
+    _paint(img, ((((xx + yy) % 24) < 3) & border).astype(np.float32), green, 0.8)
+    return _save("grow_zone", img, {"overlay": "zone", "tileable": True})
+
+
+def _g_sprout(xx, yy, c):
+    stem = _seg(xx, yy, c, c + 18, c, c - 4)
+    leaf1 = np.abs(np.hypot((xx - c + 10) / 1.6, yy - c + 6) - 8)
+    leaf2 = np.abs(np.hypot((xx - c - 10) / 1.6, yy - c + 12) - 8)
+    return np.minimum(stem, np.minimum(leaf1, leaf2))
+
+
 def _blueprint(t):
     xx, yy = _grid()
     img = np.zeros((N, N, 4), np.float32)
@@ -170,7 +189,11 @@ def _blueprint(t):
 ICONS = {
     # icon name: (family, sprite)
     "wood": ("item", "wood_pile"),
-    "food": ("item", "food_crate"),
+    "food": ("item", "ration_pack"),
+    "berries": ("item", "berries_basket"),
+    "amberroot": ("item", "food_crate"),
+    "meat": ("item", "meat_pile"),
+    "meal": ("item", "meal_simple"),
     "steel": ("item", "steel_bars"),
     "stone": ("item", "stone_blocks"),
     "bed": ("furniture", "bed_cot_south"),
@@ -228,14 +251,15 @@ def build():
     out = [_selection(t), _designation("designation_cut", t, _g_cut),
            _designation("designation_harvest", t, _g_harvest), _designation("designation_mine", t, _g_mine),
            _designation("designation_deconstruct", t, _g_deconstruct),
-           _stockpile(t), _blueprint(t)]
+           _stockpile(t), _blueprint(t), _grow_zone(t)]
     out += [_badge_icon("order_harvest", t, _g_harvest, t["designation"]),
             _badge_icon("order_deconstruct", t, _g_deconstruct, t["danger"]),
             _badge_icon("order_cancel", t, _g_cancel, t["selection"]),
             _badge_icon("zone_stockpile", t, _g_stockpile, t["stockpile"]),
             _badge_icon("draft", t, _g_draft, t["danger"]),
             _badge_icon("order_cut", t, _g_cut, t["designation"]),
-            _badge_icon("order_mine", t, _g_mine, t["designation"])]
+            _badge_icon("order_mine", t, _g_mine, t["designation"]),
+            _badge_icon("zone_grow", t, _g_sprout, (0.45, 0.78, 0.36))]
     for name, (fam, spr) in ICONS.items():
         p = _icon(name, fam, spr)
         if p:

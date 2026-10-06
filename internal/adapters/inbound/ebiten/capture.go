@@ -73,6 +73,7 @@ func captureOrders(cx, cy int) []command.Command {
 	out = append(out,
 		command.Command{Kind: command.DesignateStockpile, X: cx + 1, Y: cy + 3, X2: cx + 3, Y2: cy + 4},
 		command.Command{Kind: command.DesignateHarvest, X: cx + 2, Y: cy - 4, X2: cx + 5, Y2: cy - 4},
+		command.Command{Kind: command.DesignateGrowZone, X: cx + 1, Y: cy - 2, X2: cx + 4, Y2: cy},
 		command.Command{Kind: command.DesignateCut, X: cx + 6, Y: cy - 6, X2: cx + 10, Y2: cy - 1},
 		command.Command{Kind: command.DesignateMine, X: cx - 14, Y: cy - 8, X2: cx - 9, Y2: cy + 2},
 	)

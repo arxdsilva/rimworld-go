@@ -201,7 +201,11 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 		keys = append(keys, "structure/wall_wood_"+twoDigits(m))
 	}
 	keys = append(keys, "plant/grass_00", "plant/grass_01", "plant/bush_00", "plant/bush_01",
-		"plant/bush_00_harvestable", "plant/bush_01_harvestable",
+		"plant/bush_00_harvestable", "plant/bush_01_harvestable", "overlay/grow_zone",
+		"plant/crop_sown", "plant/crop_young", "plant/crop_mature", "plant/crop_harvestable",
+		itemSprite("food"), itemSprite("berries"), itemSprite("amberroot"), itemSprite("meat"),
+		itemSprite("meal"), itemSprite("stone"), "rock/rock_wall_15", "terrain/stone_edge_15",
+		"structure/wall_stone_15", "structure/floor_stone",
 		"structure/frame_1x1", "item/wood_pile", "item/food_crate", "overlay/stockpile",
 		"overlay/blueprint", "overlay/selection", "overlay/designation_harvest",
 		"overlay/designation_deconstruct", "ui_icon/draft")

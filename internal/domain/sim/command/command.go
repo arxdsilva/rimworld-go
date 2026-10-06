@@ -27,6 +27,8 @@ const (
 	DesignateCut
 	// DesignateMine marks rock tiles in the rectangle for mining.
 	DesignateMine
+	// DesignateGrowZone paints a growing zone sowing crop Build (plant species id).
+	DesignateGrowZone
 )
 
 // WorkType is a compact work-column id for SetWorkEnabled.
@@ -56,6 +58,7 @@ const (
 	OrderHaul // carry the stack at X, Y to a stockpile
 	OrderCut
 	OrderMine
+	OrderSow
 )
 
 // Command is applied on a simulation tick, never by the UI directly.

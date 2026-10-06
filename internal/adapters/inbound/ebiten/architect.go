@@ -306,7 +306,11 @@ func (a *App) submitArchitect() {
 		return
 	}
 	if t.mode == placeArea {
-		a.renderer.enqueue(command.Command{Kind: t.cmd, X: a.archX0, Y: a.archY0, X2: a.archX1, Y2: a.archY1})
+		c := command.Command{Kind: t.cmd, X: a.archX0, Y: a.archY0, X2: a.archX1, Y2: a.archY1}
+		if t.crop != "" {
+			c.Build, _ = game.CropID(t.crop)
+		}
+		a.renderer.enqueue(c)
 		return
 	}
 	id, ok := kindID(t.build)
