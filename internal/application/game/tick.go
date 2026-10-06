@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/needs"
+	"rimworld-go/internal/domain/pawn/recreation"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
@@ -23,6 +24,11 @@ func (g *Game) phaseCommands() {
 }
 
 func (g *Game) applyOne(c command.Command) {
+	if c.Kind == command.MovePawn || c.Kind == command.Prioritize || c.Kind == command.DraftPawn {
+		if _, breaking := g.breaks[entity.EntityID(c.Pawn)]; breaking {
+			return // a colonist in a mental break won't take orders
+		}
+	}
 	if c.Kind == command.MovePawn || c.Kind == command.Prioritize {
 		id := entity.EntityID(c.Pawn)
 		if c.Queue {
@@ -191,6 +197,9 @@ func (g *Game) phaseNeeds() {
 		if j.Kind != job.Sleep || j.State != job.Do {
 			n = needs.Decay(n, now)
 			g.need.Set(id, n)
+			if now%recreation.DrainPeriod == 0 && g.joy[id] > 0 {
+				g.joy[id]--
+			}
 		}
 		if n.Starving() {
 			g.down(id, health.CauseNoFood)
@@ -290,6 +299,9 @@ func (g *Game) phaseAI() {
 			g.reserve.ReleaseOwner(id)
 			g.jobs.Set(id, job.Record{})
 			j = job.Record{}
+		}
+		if g.mentalBreakTick(id, j) {
+			continue // acting out: no orders, no work
 		}
 		if len(g.orderQueue[id]) > 0 && !g.followingOrder(id) && (g.drafted(id) || !needs.SleepScheduled(act)) {
 			g.nextOrder(id)
@@ -836,7 +848,7 @@ func (g *Game) phaseJobs() {
 			g.doRefuel(id, j)
 		case job.Warm:
 			g.doWarm(id, j)
-		case job.Wander, job.Chat, job.Relax, job.FireSide:
+		case job.Wander, job.Chat, job.Relax, job.FireSide, job.Horseshoes, job.Hide:
 			g.doIdle(id, j)
 		default:
 			j.State = job.Complete
@@ -871,6 +883,9 @@ func (g *Game) doEat(id entity.EntityID, j job.Record) {
 	for eaten := 0; st.Qty > 0 && eaten < 12; eaten++ {
 		st.Qty--
 		n.Hunger += nut
+		if j.Count == bingeEat && eaten < 2 {
+			continue // binge: stuffs itself well past full
+		}
 		if n.Hunger+nut/2 > needs.Full {
 			break
 		}

@@ -71,6 +71,8 @@ var archTools = []archTool{
 		desc: "A place to eat and work."},
 	{id: "chair", label: "Chair", category: "furniture", icon: "chair", mode: placeSingle, build: "chair",
 		desc: "Seat for a table. Q/E rotates."},
+	{id: "horseshoes", label: "Horseshoe pin", category: "furniture", icon: "horseshoe_pin", mode: placeSingle, build: "horseshoe pin",
+		desc: "A game of horseshoes: the best free-time fun, keeps colonists from getting bored."},
 	{id: "lamp", label: "Lamp", category: "furniture", icon: "lamp", mode: placeSingle, build: "lamp",
 		desc: "Lights its room at night."},
 	{id: "workbench", label: "Workbench", category: "production", icon: "workbench", mode: placeSingle, build: "workbench",
@@ -214,6 +216,8 @@ func buildSprite(kind, facing string, mask int, ew, open bool) string {
 		return "furniture/butcher_table_" + facingOr(facing)
 	case "campfire":
 		return "furniture/campfire"
+	case "horseshoe pin":
+		return "furniture/horseshoe_pin"
 	case "tailoring bench":
 		return "furniture/tailoring_bench_" + facingOr(facing)
 	case "drying rack":

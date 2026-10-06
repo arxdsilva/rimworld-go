@@ -30,6 +30,8 @@ const (
 	Campfire
 	// TailoringBench is a 2x1 table where clothes are sewn.
 	TailoringBench
+	// HorseshoePin is a stake in a patch of sand for pitching horseshoes.
+	HorseshoePin
 	kindCount
 )
 
@@ -80,6 +82,7 @@ var defs = [kindCount]Def{
 		Size: [2]int{2, 2}},
 	ButcherTable: {Kind: ButcherTable, Name: "butcher table", Wood: 5, Work: 120, Layer: LayerObject, BlocksMove: true,
 		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
+	HorseshoePin: {Kind: HorseshoePin, Name: "horseshoe pin", Wood: 3, Work: 50, Layer: LayerObject},
 	TailoringBench: {Kind: TailoringBench, Name: "tailoring bench", Wood: 7, Work: 150, Layer: LayerObject, BlocksMove: true,
 		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
 	// A campfire is also a (slow) cooking spot; the cook stands south of it.

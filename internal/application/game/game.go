@@ -17,6 +17,7 @@ import (
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/needs"
+	"rimworld-go/internal/domain/pawn/recreation"
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
@@ -76,6 +77,10 @@ type PawnView struct {
 	// air temperature where the colonist is (tenths of a degree C).
 	Hypothermia, Heatstroke int
 	Temp                    int
+	// Recreation is the recreation need, percent; MentalBreak names a
+	// break in progress ("" when none).
+	Recreation  int
+	MentalBreak string
 	// Apparel is what the colonist wears over everyday clothes; ComfortMin
 	// and ComfortMax its comfortable range (tenths of a degree C).
 	Apparel                []string
@@ -252,6 +257,8 @@ type Game struct {
 	noComfort  map[entity.EntityID]uint64 // no warm/cool spot found until this tick
 	orderQueue map[entity.EntityID][]queuedOrder
 	apparel    map[entity.EntityID]worn
+	joy        map[entity.EntityID]int // recreation need, 0..recreation.Full
+	breaks     map[entity.EntityID]breakState
 	roomTemps  []temperature.Temp // per room id, kept across rebuilds
 	memories   map[entity.EntityID]mood.Memories
 	roomGrid   []int
@@ -302,6 +309,8 @@ func New(cfg Config) *Game {
 		noComfort:   make(map[entity.EntityID]uint64),
 		orderQueue:  make(map[entity.EntityID][]queuedOrder),
 		apparel:     make(map[entity.EntityID]worn),
+		joy:         make(map[entity.EntityID]int),
+		breaks:      make(map[entity.EntityID]breakState),
 		memories:    make(map[entity.EntityID]mood.Memories),
 		roomDirty:   true,
 		reserve:     reservation.NewTable(),
@@ -348,6 +357,7 @@ func (g *Game) SpawnNamedPawn(x, y int, name string) (entity.EntityID, error) {
 	g.need.Set(id, needs.NewFull())
 	g.vital.Set(id, health.Record{Status: health.Alive})
 	g.labor.Set(id, work.DefaultColonist())
+	g.joy[id] = recreation.Start
 	return id, nil
 }
 
@@ -511,6 +521,10 @@ func (g *Game) Snapshot() []PawnView {
 		pv.Hypothermia, pv.Heatstroke = g.exposure[id].hypo, g.exposure[id].heat
 		pv.Temperament = g.temperamentOf(id).String()
 		pv.Apparel = g.Wearing(id)
+		pv.Recreation = g.joy[id] * 100 / recreation.Full
+		if b, ok := g.breaks[id]; ok {
+			pv.MentalBreak = b.kind.String()
+		}
 		b := g.bandsOf(id)
 		pv.ComfortMin, pv.ComfortMax = b.Min, b.Max
 		if j, _ := g.jobs.Get(id); j.Forced && j.Active() {

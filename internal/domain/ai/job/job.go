@@ -62,10 +62,15 @@ const (
 	Chat
 	Relax    // sit on a chair
 	FireSide // warm hands by a burning campfire
+	Horseshoes
+	// Hide: a mental break spent shut away in a room.
+	Hide
 )
 
 // IsIdle reports a free-time behaviour that any real work may replace.
-func (k Kind) IsIdle() bool { return k == Wander || k == Chat || k == Relax || k == FireSide }
+func (k Kind) IsIdle() bool {
+	return k == Wander || k == Chat || k == Relax || k == FireSide || k == Horseshoes
+}
 
 func (k Kind) String() string {
 	switch k {
@@ -113,6 +118,10 @@ func (k Kind) String() string {
 		return "relax"
 	case FireSide:
 		return "warm up by the fire"
+	case Horseshoes:
+		return "play horseshoes"
+	case Hide:
+		return "hide in room"
 	default:
 		return "idle"
 	}

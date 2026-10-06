@@ -1,6 +1,7 @@
 package game
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -146,7 +147,11 @@ func TestYearProbe(t *testing.T) {
 			}
 		}
 		hutT := float64(g.temperatureAt(cx-10, cy+5)) / 10
-		t.Logf("day %2d %-6s out %5.1fC hut %5.1fC wood %3d food %4d alive %d plants %d", day+1, w.Season, float64(w.OutdoorTemp)/10, hutT, w.Wood, w.Food, alive, len(w.Plants))
+		var moods []string
+		for _, p := range g.Snapshot() {
+			moods = append(moods, fmt.Sprintf("%s:%d/%d%s", p.Name, p.Mood, p.Recreation, map[bool]string{true: "!" + p.MentalBreak, false: ""}[p.MentalBreak != ""]))
+		}
+		t.Logf("day %2d %-6s out %5.1fC hut %5.1fC wood %3d food %4d alive %d moods %v", day+1, w.Season, float64(w.OutdoorTemp)/10, hutT, w.Wood, w.Food, alive, moods)
 	}
 	for _, m := range g.World().Messages {
 		t.Logf("msg %d: %s", m.Tick/clock.TicksPerDay, m.Text)

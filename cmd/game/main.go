@@ -9,6 +9,7 @@ import (
 	uiadapter "rimworld-go/internal/adapters/inbound/ebiten"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/pawn/mentalbreak"
 	"rimworld-go/internal/domain/sim/clock"
 )
 
@@ -74,6 +75,15 @@ func main() {
 				_, _ = g.SpawnStack(item.Parka, 2, cx+3, cy+2)
 				_, _ = g.SpawnStack(item.Tuque, 3, cx+4, cy+2)
 				_, _ = g.SpawnStack(item.Leather, 20, cx+5, cy+2)
+			}
+			if *scenario == "fun" {
+				// a horseshoe pin by the start, and Bo in a sad wander
+				cx, cy := *width/2, *height/2
+				g.ClearPlants(cx+4, cy-2, cx+9, cy+4)
+				g.BuildNow("horseshoe pin", "wood", "south", cx+6, cy+1)
+				if snap := g.Snapshot(); len(snap) > 1 {
+					g.ForceBreak(snap[1].ID, mentalbreak.SadWander)
+				}
 			}
 			if *scenario == "drying" {
 				cx, cy := *width/2, *height/2

@@ -773,10 +773,10 @@ derived from thoughts and traits and low mood creates mental-break risk.
 
 ## 9.5 Recreation
 
--   [ ] **Recreation need**
+-   [x] **Recreation need** (drains ~4300/day awake, refilled by free-time activities; bored/starved/entertained thoughts)
     -   Decays.
     -   Pawns seek recreation during suitable schedule/idle time.
--   [ ] **Recreation types**
+-   [-] **Recreation types** (wander, chat, relax on a chair, fireside, horseshoes; no cerebral/tech types)
     -   Solitary relaxation.
     -   social interaction.
     -   dexterity-style play.
@@ -787,7 +787,7 @@ derived from thoughts and traits and low mood creates mental-break risk.
 -   [ ] **Recreation tolerance/variety**
     -   Repeating one recreation category reduces its effectiveness.
     -   Encourage multiple recreation sources.
--   [ ] **Recreation jobs/buildings**
+-   [-] **Recreation jobs/buildings** (no-building activities plus the horseshoe pin)
     -   Basic no-building recreation.
     -   horseshoe-like dexterity object.
     -   chess/game table equivalent.
@@ -842,15 +842,15 @@ derived from thoughts and traits and low mood creates mental-break risk.
 
 ## 10.1 Mental breaks
 
--   [ ] **Mental break eligibility**
+-   [-] **Mental break eligibility** (hourly roll below mood 20, 2% per point; no severity tiers/traits)
     -   Low mood sustained below thresholds.
     -   Break severity influenced by current threshold/traits.
--   [ ] **Mental state framework**
+-   [x] **Mental state framework** (break replaces work, schedule, orders and drafting; explicit start/end; needs still met when critical)
     -   Temporarily replaces normal work/player control.
     -   Explicit start/end.
     -   May select targets.
     -   Save/replay safe.
--   [ ] **Minor break behaviors**
+-   [x] **Minor break behaviors** (sad wander, food binge, hide in room)
     -   Sad wandering.
     -   food binge.
     -   drug binge where available.
@@ -862,7 +862,7 @@ derived from thoughts and traits and low mood creates mental-break risk.
     -   prisoner-like escape behavior where relevant.
 -   [ ] **Catatonic/extreme shutdown equivalent**
     -   Pawn becomes temporarily unavailable and requires care.
--   [ ] **Recovery**
+-   [x] **Recovery** (break ends after its duration with a day of catharsis +30)
     -   End state.
     -   mood catharsis/recovery thought if desired by independent
         balance.

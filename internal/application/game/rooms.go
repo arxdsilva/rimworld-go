@@ -5,6 +5,7 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/mood"
+	"rimworld-go/internal/domain/pawn/recreation"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/room"
 	"rimworld-go/internal/domain/world/terrain"
@@ -162,6 +163,14 @@ func (g *Game) thoughts(id entity.EntityID) []mood.Thought {
 	if n.Tired() {
 		states = append(states, mood.Tired)
 	}
+	switch joy := g.joy[id]; {
+	case joy < recreation.Starved:
+		states = append(states, mood.RecreationStarved)
+	case joy < recreation.Bored:
+		states = append(states, mood.Bored)
+	case joy >= recreation.Entertained:
+		states = append(states, mood.Entertained)
+	}
 	pos, _ := g.positions.Get(id)
 	b := g.bandsOf(id)
 	switch t := int(g.temperatureAt(pos.X, pos.Y)); {
@@ -267,6 +276,8 @@ func (g *Game) acting(id entity.EntityID, j job.Record) (string, int, int) {
 		if b, ok := g.bldgs.Get(j.Dest); ok {
 			return "refuel", b.X, b.Y
 		}
+	case job.Horseshoes:
+		return "play horseshoes", j.DestX, j.DestY
 	case job.Tend:
 		if p, ok := g.positions.Get(j.Target); ok {
 			return j.Kind.String(), p.X, p.Y

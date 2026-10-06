@@ -96,6 +96,9 @@ func (a *App) drawInspector(screen *ebiten.Image) {
 	if p.Drafted {
 		status += "  drafted"
 	}
+	if p.MentalBreak != "" {
+		status = "MENTAL BREAK: " + p.MentalBreak
+	}
 	if p.Hypothermia > 0 {
 		status += fmt.Sprintf("  hypothermia %d%%", p.Hypothermia/10)
 	}
@@ -114,14 +117,15 @@ func (a *App) drawInspector(screen *ebiten.Image) {
 		a.drawButtons(screen, a.inspectorButtons(), mx, my)
 		return
 	}
-	drawNeedBar(screen, int(r.x)+12, int(r.y)+126, 300, 14, p.Health, "health")
-	drawNeedBar(screen, int(r.x)+12, int(r.y)+150, 300, 14, p.Hunger, "food")
-	drawNeedBar(screen, int(r.x)+12, int(r.y)+174, 300, 14, p.Rest, "rest")
-	drawNeedBar(screen, int(r.x)+12, int(r.y)+198, 300, 14, p.Mood, "mood")
-	drawLabel(screen, int(r.x)+12, int(r.y)+218, "feels "+p.MoodLabel)
-	ty := int(r.y) + 238
+	drawNeedBar(screen, int(r.x)+12, int(r.y)+126, 300, 13, p.Health, "health")
+	drawNeedBar(screen, int(r.x)+12, int(r.y)+146, 300, 13, p.Hunger, "food")
+	drawNeedBar(screen, int(r.x)+12, int(r.y)+166, 300, 13, p.Rest, "rest")
+	drawNeedBar(screen, int(r.x)+12, int(r.y)+186, 300, 13, p.Recreation, "fun")
+	drawNeedBar(screen, int(r.x)+12, int(r.y)+206, 300, 13, p.Mood, "mood")
+	drawLabel(screen, int(r.x)+12, int(r.y)+224, "feels "+p.MoodLabel)
+	ty := int(r.y) + 242
 	for i, th := range p.Thoughts {
-		if i >= 6 {
+		if i >= 5 {
 			break
 		}
 		sign := "+"
@@ -133,7 +137,8 @@ func (a *App) drawInspector(screen *ebiten.Image) {
 	}
 	if a.renderer != nil {
 		if lbl := roomLabelAt(a.renderer.world(), p.X, p.Y); lbl != "" {
-			drawLabel(screen, int(r.x)+150, int(r.y)+32, lbl)
+			// right-aligned on the title row, clear of the status line
+			drawLabel(screen, int(r.x+r.w)-36-len(lbl)*6, int(r.y)+12, lbl)
 		}
 	}
 	mx, my := a.currentCursor()
@@ -155,6 +160,8 @@ func drawNeedBar(screen *ebiten.Image, x, y, w, h, pct int, label string) {
 		fill = color.RGBA{R: 70, G: 110, B: 180, A: 255}
 	case "mood":
 		fill = moodColor(pct)
+	case "fun":
+		fill = color.RGBA{R: 170, G: 120, B: 190, A: 255}
 	case "health":
 		fill = healthColor(pct)
 	}

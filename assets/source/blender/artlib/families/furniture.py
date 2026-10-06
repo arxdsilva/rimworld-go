@@ -157,6 +157,22 @@ def _tailoring_bench():
     return (2, 1), 0.72
 
 
+def _horseshoe_pin():
+    """1 x 1 horseshoe pitch: a raked sand patch, an iron stake and a few
+    horseshoes thrown around it."""
+    import math
+    S.cyl("sand", 0.5, -0.5, 0.42, 0.0, 0.025, "straw", segs=24, bevel=0.0)
+    S.cyl("stake", 0.5, -0.5, 0.04, 0.0, 0.34, "metal_dark", segs=10, bevel=0.01)
+    S.cyl("hole", 0.5, -0.5, 0.10, 0.02, 0.03, "soil", segs=16, bevel=0.0)
+    for k, (cx, cy, a) in enumerate([(0.30, -0.36, 0.4), (0.70, -0.66, 2.4), (0.50, -0.50, 1.2)]):
+        z = 0.03 + (0.12 if k == 2 else 0.0)  # one ringer round the stake
+        for seg in range(5):
+            t = a + (seg / 4.0 - 0.5) * 4.4
+            x, y = cx + 0.11 * math.cos(t), cy + 0.11 * math.sin(t)
+            S.box("shoe%d_%d" % (k, seg), x - 0.04, y - 0.04, z, x + 0.04, y + 0.04, z + 0.035, "steel", bevel=0.012)
+    return (1, 1), 0.32
+
+
 def _campfire():
     """1 x 1 fire pit: a ring of field stones around ash and a log-cabin
     stack of split logs. The flame itself is drawn live by the game."""
@@ -194,6 +210,7 @@ BUILDERS = {
     "stove_basic": (_stove, {"attachments": {"cook": [0.25, 1.5]}}),
     "butcher_table": (_butcher_table, {"attachments": {"worker": [0.5, 1.15]}}),
     "campfire": (_campfire, {}),
+    "horseshoe_pin": (_horseshoe_pin, {}),
     "tailoring_bench": (_tailoring_bench, {"attachments": {"worker": [0.5, 1.15]}}),
     "drying_rack": (_drying_rack, {"attachments": {"worker": [0.5, 1.15]}}),
 }

@@ -96,6 +96,18 @@ func buildAlerts(pawns []game.PawnView, w game.WorldView) []alert {
 	if alive > 0 && w.Food < lowFoodPerColonist*alive {
 		out = append(out, alert{key: "food", label: fmt.Sprintf("Low food (%d left)", w.Food)})
 	}
+	var breaking []game.PawnView
+	for _, p := range pawns {
+		if p.MentalBreak != "" && p.Status != "dead" {
+			breaking = append(breaking, p)
+		}
+	}
+	if len(breaking) == 1 {
+		p := breaking[0]
+		out = append(out, alert{key: "break", danger: true, label: p.Name + ": mental break (" + p.MentalBreak + ")", targets: [][2]int{{p.X, p.Y}}})
+	} else if len(breaking) > 1 {
+		group("break", true, breaking, func(n string) string { return n }, "colonists are having mental breaks")
+	}
 	var hypo, heat []game.PawnView
 	for _, p := range pawns {
 		if p.Status == "dead" {

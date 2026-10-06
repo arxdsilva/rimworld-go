@@ -110,11 +110,14 @@ func (a *App) drawMessages(screen *ebiten.Image) {
 	if len(live) > messageShown {
 		live = live[len(live)-messageShown:]
 	}
+	// centred under the top bar, clear of the side panels and alerts
+	sw, _ := a.size()
 	y := hudTopH + hudPad
 	for _, m := range live {
-		w := float32(len(m.Text)*6 + 16)
-		vector.FillRect(screen, float32(hudPad), float32(y), w, 20, color.RGBA{20, 16, 12, 200}, false)
-		drawLabel(screen, hudPad+8, y+3, m.Text)
+		w := len(m.Text)*6 + 16
+		x := (sw - w) / 2
+		vector.FillRect(screen, float32(x), float32(y), float32(w), 20, color.RGBA{20, 16, 12, 200}, false)
+		drawLabel(screen, x+8, y+3, m.Text)
 		y += 24
 	}
 }

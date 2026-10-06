@@ -21,6 +21,10 @@ const (
 	Freezing
 	Hot
 	Sweltering
+	RecreationStarved
+	Bored
+	Entertained
+	Catharsis
 	numKinds
 )
 
@@ -45,21 +49,25 @@ const (
 const day = uint64(clock.TicksPerDay)
 
 var defs = [numKinds]Def{
-	SleptOutside:     {"slept outside", -6, day, groupSleepPlace},
-	SleptOnGround:    {"slept on the ground", -4, day, groupSleepPlace},
-	SleptInBed:       {"slept in a bed", 2, day, groupSleepPlace},
-	SleptInAwfulRoom: {"slept in an awful room", -4, day, groupSleepRoom},
-	SleptInNiceRoom:  {"slept in a nice room", 5, day, groupSleepRoom},
-	AteMeal:          {"ate a cooked meal", 4, day, groupMealKind},
-	AteRaw:           {"ate raw food", -5, day, groupMealKind},
-	AteAtTable:       {"ate at a table", 3, day, groupMealTable},
-	AteWithoutTable:  {"ate without a table", -3, day, groupMealTable},
-	Hungry:           {"hungry", -8, 0, groupNone},
-	Tired:            {"tired", -5, 0, groupNone},
-	Cold:             {"cold", -4, 0, groupNone},
-	Freezing:         {"freezing", -10, 0, groupNone},
-	Hot:              {"hot", -4, 0, groupNone},
-	Sweltering:       {"sweltering", -10, 0, groupNone},
+	SleptOutside:      {"slept outside", -6, day, groupSleepPlace},
+	SleptOnGround:     {"slept on the ground", -4, day, groupSleepPlace},
+	SleptInBed:        {"slept in a bed", 2, day, groupSleepPlace},
+	SleptInAwfulRoom:  {"slept in an awful room", -4, day, groupSleepRoom},
+	SleptInNiceRoom:   {"slept in a nice room", 5, day, groupSleepRoom},
+	AteMeal:           {"ate a cooked meal", 4, day, groupMealKind},
+	AteRaw:            {"ate raw food", -5, day, groupMealKind},
+	AteAtTable:        {"ate at a table", 3, day, groupMealTable},
+	AteWithoutTable:   {"ate without a table", -3, day, groupMealTable},
+	Hungry:            {"hungry", -8, 0, groupNone},
+	Tired:             {"tired", -5, 0, groupNone},
+	Cold:              {"cold", -4, 0, groupNone},
+	Freezing:          {"freezing", -10, 0, groupNone},
+	Hot:               {"hot", -4, 0, groupNone},
+	Sweltering:        {"sweltering", -10, 0, groupNone},
+	RecreationStarved: {"recreation-starved", -12, 0, groupNone},
+	Bored:             {"bored", -5, 0, groupNone},
+	Entertained:       {"entertained", 4, 0, groupNone},
+	Catharsis:         {"catharsis", 30, day, groupNone},
 }
 
 // DefOf returns the thought definition.

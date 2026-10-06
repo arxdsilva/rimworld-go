@@ -188,6 +188,15 @@ func (a *App) captureUI(ui string) {
 			a.renderer.cam.offsetX, a.renderer.cam.offsetY = -1e6, -1e6
 		}
 		a.renderer.clampCamera(v)
+	case "fun":
+		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
+		pawns := a.renderer.snapshot()
+		sw, sh := a.size()
+		a.renderer.centerOn(float64(cx)+4, float64(cy)+1, sw, sh)
+		if len(pawns) > 1 {
+			a.renderer.selected, a.renderer.hasSelect = pawns[1].ID, true
+			a.renderer.centerOn(float64(pawns[1].X)-3, float64(pawns[1].Y), sw, sh)
+		}
 	case "dressed":
 		// centre on the first colonist with its Gear tab open
 		if pawns := a.renderer.snapshot(); len(pawns) > 0 {
