@@ -28,17 +28,59 @@ Appearance is assigned from `EntityID` in the renderer (stable, not
 RNG). Animation frame is derived from simulation tick in the adapter
 and never written back to the domain.
 
+## Original art pipeline (ART Wave 0/1, §34 prototype)
+
+Original world art is rendered from code in Blender. One command
+rebuilds everything:
+
+```text
+make art           # headless Blender -> generated/ + metadata/, then validate
+make art-check     # validator only (python3 + Pillow)
+make art-preview   # generated/contact_sheet.png + generated/prototype_scene.png
+```
+
+Rules:
+
+- Edit `source/blender/artlib/families/*.py` or the palettes, then
+  `make art`. Never hand-edit `generated/` or `metadata/`.
+- Camera, light, outlines, scale and canvas math live only in
+  `source/blender/artlib/contracts.py` + `stage.py`. Families build
+  geometry and call `stage.render_asset()`; they never add cameras/lights.
+- Colours come only from `palettes/materials.yaml` (three toon bands per
+  material). Cloth/skin/hair are neutral greys with a `_mask.png`; the
+  renderer multiplies a tint from `palettes/base.yaml` `tints`.
+- Placement: draw a sprite at `tile * 64 - origin_px / 2` (sprites are
+  @2x). Draw order: terrain → floors → zones → objects by footprint
+  bottom row (north → south, then west → east) → overlays.
+- Walls: pick `wall_<mat>_<mask>` with mask N=1, E=2, S=4, W=8 (doors
+  count as wall neighbours).
+- Pawns: draw `body`, `pants_*`, `shirt_*`, `vest_*`, `hair_*` for the
+  same facing at the same anchor; held weapons attach their `grip` to the
+  body's `hand` attachment (behind the body when facing north).
+- Renders are reproducible to ±1/255 per channel (GPU float noise).
+
 ## Layout
 
 ```text
 assets/
 ├── AGENTS.md
 ├── palettes/
+│   ├── base.yaml        # outline/shadow/overlay tokens, runtime tint presets
+│   ├── materials.yaml   # 3-band toon colours per material (ART §7, §33)
+│   ├── factions.yaml    # faction accents (placeholder)
 │   └── ui.yaml          # menu/pause chrome tokens (ART §33)
 ├── source/
-│   └── raster/
-│       └── ui/
-│           └── main_menu_colonist.png   # original main-menu bust
+│   ├── blender/
+│   │   ├── build.py     # entry point (headless or live via Blender MCP)
+│   │   ├── template.blend
+│   │   └── artlib/      # contracts, stage, post-pass, metadata, families/
+│   ├── tools/           # validate_assets.py, contact_sheet.py, compose_scene.py
+│   └── raster/ui/main_menu_colonist.png
+├── generated/
+│   ├── world/<family>/<name>.png (+ _mask.png)   # @2x sprites
+│   ├── ui/icons/*.png
+│   ├── contact_sheet.png, prototype_scene*.png, pawn_sheet.png  # review aids
+├── metadata/<family>/<name>.yaml   # footprint, origin_px, attachments, tint
 ├── Free 2D Animated Vector Game Character Sprites/   # vendor source
 └── .gitkeep
 ```
@@ -48,6 +90,7 @@ colonist bust with raven, RGBA cutout). It is not vendor pack art and is
 not a reconstruction of proprietary RimWorld screenshots. The brief that
 produced it lives at repo-root `ai-bg-rimworld`.
 
-Canonical `generated/` / `metadata/` layout from the art spec lands when
-original gameplay-sprite production starts. Do not hand-patch vendor
-PNGs; treat the pack as immutable source.
+The renderer draws the original set (ART-006). The vendor pack is only a
+fallback when `metadata/` is missing. Do not hand-patch vendor PNGs; treat
+the pack as immutable source. `generated/ingame_capture.png` comes from
+`make art-capture` (real renderer).

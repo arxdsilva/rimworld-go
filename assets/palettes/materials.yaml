@@ -1,0 +1,33 @@
+# rimworld-go material palette (ART spec §7, §33). Original colours.
+# Every lit material resolves to exactly three toon bands:
+#   light  - faces turned to the upper-left key light, bevel highlights
+#   base   - top faces and neutral planes
+#   shadow - faces turned away, cast shadows
+# Tintable materials (tint: true) are authored as neutral greys and are
+# multiplied by a runtime tint from base.yaml `tints`.
+version: 1
+materials:
+  soil:        {light: "#a08667", base: "#86704f", shadow: "#64543f"}
+  soil_rich:   {light: "#76604a", base: "#5c4a37", shadow: "#42362a"}
+  gravel:      {light: "#a59d90", base: "#8a8376", shadow: "#6a645a"}
+  stone:       {light: "#9a9da3", base: "#7b7f86", shadow: "#565a62"}
+  stone_dark:  {light: "#6d7078", base: "#555860", shadow: "#3b3e45"}
+  wood:        {light: "#c0915c", base: "#9a6e42", shadow: "#6e4e30"}
+  wood_plank:  {light: "#b48a5f", base: "#93704b", shadow: "#6c5237"}
+  bark:        {light: "#7d5f45", base: "#604834", shadow: "#443326"}
+  steel:       {light: "#bcc5cd", base: "#919ca7", shadow: "#626c77"}
+  metal_dark:  {light: "#6e7780", base: "#4f575f", shadow: "#363c42"}
+  leather:     {light: "#91684a", base: "#714f37", shadow: "#513828"}
+  ceramic:     {light: "#ebe6db", base: "#cdc6b7", shadow: "#9e9687"}
+  vegetation:  {light: "#93b25d", base: "#708f47", shadow: "#4f6836"}
+  foliage:     {light: "#73a056", base: "#577f42", shadow: "#3d5c30"}
+  crop_fruit:  {light: "#f2b94f", base: "#d99530", shadow: "#a86c21"}
+  food_red:    {light: "#d9735a", base: "#b9533f", shadow: "#863a2d"}
+  glass:       {light: "#cbe7ef", base: "#9fcadb", shadow: "#6d9aab"}
+  # neutral, tinted at runtime
+  cloth:       {light: "#f4f4f4", base: "#d2d2d2", shadow: "#a2a2a2", tint: true}
+  skin:        {light: "#f6f6f6", base: "#dadada", shadow: "#adadad", tint: true}
+  hair:        {light: "#efefef", base: "#c4c4c4", shadow: "#8e8e8e", tint: true}
+emissive:
+  lamp_warm:   "#ffd98a"
+  indicator:   "#7fe3ff"
