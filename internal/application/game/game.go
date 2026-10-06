@@ -13,6 +13,7 @@ import (
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/pawn/health"
+	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/clock"
@@ -63,6 +64,9 @@ type PawnView struct {
 	LastMeal      string // kind name of the last food eaten, "" if none
 	SleptInBed    bool
 	Drafted       bool
+	Mood          int
+	MoodLabel     string
+	Thoughts      []ThoughtView
 }
 
 // ItemView is a ground stack.
@@ -143,6 +147,10 @@ type WorldView struct {
 	GrowZones []GrowZoneView
 	// FoodByKind is ground food per kind name.
 	FoodByKind map[string]int
+	// RoomGrid is the room id per tile (row-major, TerrainW wide); -1 is
+	// outdoors, -2 a wall. Rooms indexes by id.
+	RoomGrid []int
+	Rooms    []RoomView
 }
 
 // Game holds all authoritative simulation state.
@@ -176,6 +184,10 @@ type Game struct {
 	growZones  []zone.GrowZone
 	lastMeal   map[entity.EntityID]item.Kind
 	bills      map[entity.EntityID][]recipe.Bill
+	memories   map[entity.EntityID]mood.Memories
+	roomGrid   []int
+	rooms      []roomStats
+	roomDirty  bool
 	reserve    *reservation.Table
 	pending    []command.Command
 
@@ -206,6 +218,8 @@ func New(cfg Config) *Game {
 		mines:     make(map[[2]int]bool),
 		lastMeal:  make(map[entity.EntityID]item.Kind),
 		bills:     make(map[entity.EntityID][]recipe.Bill),
+		memories:  make(map[entity.EntityID]mood.Memories),
+		roomDirty: true,
 		reserve:   reservation.NewTable(),
 		ateAt:     make(map[entity.EntityID]bool),
 		draft:     make(map[entity.EntityID]bool),
@@ -390,6 +404,9 @@ func (g *Game) Snapshot() []PawnView {
 			SleptInBed:    g.sleptAt[id] != 0,
 			Drafted:       g.draft[id],
 		})
+		ts := g.thoughts(id)
+		pv := &views[len(views)-1]
+		pv.Mood, pv.MoodLabel, pv.Thoughts = mood.Level(ts), mood.Label(mood.Level(ts)), thoughtViews(ts)
 	}
 	return views
 }
@@ -470,6 +487,9 @@ func (g *Game) World() WorldView {
 	}
 	w.Mines = g.mineList()
 	w.GrowZones = g.growZoneViews()
+	g.ensureRooms()
+	w.RoomGrid = append([]int(nil), g.roomGrid...)
+	w.Rooms = g.roomViews()
 	return w
 }
 

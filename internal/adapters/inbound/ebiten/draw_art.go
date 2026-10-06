@@ -4,6 +4,7 @@ import (
 	"image/color"
 	"math"
 	"sort"
+	"strconv"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
@@ -498,6 +499,88 @@ func clampStage(s int) int {
 	}
 	if s > 3 {
 		return 3
+	}
+	return s
+}
+
+// drawDaylightRooms is the night veil, lifted inside lit rooms (a lamp
+// lights its whole room) with a faint warm glow.
+func (r *Renderer) drawDaylightRooms(screen *ebiten.Image, sw, sh int) {
+	c := skyOverlay(r.game.Tick())
+	if c.A == 0 {
+		return
+	}
+	w := r.game.World()
+	lit := map[int]bool{}
+	for _, rm := range w.Rooms {
+		if rm.Lit {
+			lit[rm.ID] = true
+		}
+	}
+	if len(lit) == 0 || w.TerrainW <= 0 {
+		vector.FillRect(screen, 0, 0, float32(sw), float32(sh), c, false)
+		return
+	}
+	// outside the map
+	mx0, my0 := r.worldToScreen(0, 0)
+	mx1, my1 := r.worldToScreen(r.game.Width(), r.game.Height())
+	vector.FillRect(screen, 0, 0, float32(sw), my0, c, false)
+	vector.FillRect(screen, 0, my1, float32(sw), float32(sh)-my1, c, false)
+	vector.FillRect(screen, 0, my0, mx0, my1-my0, c, false)
+	vector.FillRect(screen, mx1, my0, float32(sw)-mx1, my1-my0, c, false)
+	dim := color.RGBA{R: c.R / 5, G: c.G / 5, B: c.B / 5, A: c.A / 5}
+	glow := color.RGBA{R: 40, G: 28, B: 8, A: 22}
+	// Fill horizontal runs of equal state with exact edges: overlapping
+	// translucent rects would double the veil along tile seams.
+	litAt := func(x, y int) bool {
+		i := y*w.TerrainW + x
+		return i < len(w.RoomGrid) && lit[w.RoomGrid[i]]
+	}
+	for y := 0; y < r.game.Height(); y++ {
+		_, sy0 := r.worldToScreen(0, y)
+		_, sy1 := r.worldToScreen(0, y+1)
+		if sy1 < 0 || sy0 > float32(sh) {
+			continue
+		}
+		for x := 0; x < r.game.Width(); {
+			l := litAt(x, y)
+			end := x + 1
+			for end < r.game.Width() && litAt(end, y) == l {
+				end++
+			}
+			sx0, _ := r.worldToScreen(x, y)
+			sx1, _ := r.worldToScreen(end, y)
+			if l {
+				vector.FillRect(screen, sx0, sy0, sx1-sx0, sy1-sy0, dim, false)
+				vector.FillRect(screen, sx0, sy0, sx1-sx0, sy1-sy0, glow, false)
+			} else {
+				vector.FillRect(screen, sx0, sy0, sx1-sx0, sy1-sy0, c, false)
+			}
+			x = end
+		}
+	}
+}
+
+// roomLabelAt describes the room at a tile for HUD/inspectors.
+func roomLabelAt(w game.WorldView, x, y int) string {
+	if w.TerrainW <= 0 || x < 0 || y < 0 || x >= w.TerrainW {
+		return ""
+	}
+	i := y*w.TerrainW + x
+	if i >= len(w.RoomGrid) {
+		return ""
+	}
+	id := w.RoomGrid[i]
+	if id < 0 || id >= len(w.Rooms) {
+		if id == -1 {
+			return "Outdoors"
+		}
+		return ""
+	}
+	rm := w.Rooms[id]
+	s := "Room: " + rm.Role + ", " + rm.Label + " (" + strconv.Itoa(rm.Score) + ")"
+	if rm.Lit {
+		s += ", lit"
 	}
 	return s
 }

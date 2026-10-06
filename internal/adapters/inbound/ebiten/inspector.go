@@ -11,7 +11,7 @@ import (
 )
 
 func inspectorRect() button {
-	return button{x: hudPad, y: hudTopH + hudPad, w: 340, h: 280}
+	return button{x: hudPad, y: hudTopH + hudPad, w: 340, h: 390}
 }
 
 func (a *App) inspectorButtons() []button {
@@ -99,6 +99,25 @@ func (a *App) drawInspector(screen *ebiten.Image) {
 	}
 	drawNeedBar(screen, int(r.x)+12, int(r.y)+140, 300, 14, p.Hunger, "food")
 	drawNeedBar(screen, int(r.x)+12, int(r.y)+164, 300, 14, p.Rest, "rest")
+	drawNeedBar(screen, int(r.x)+12, int(r.y)+188, 300, 14, p.Mood, "mood")
+	drawLabel(screen, int(r.x)+12, int(r.y)+208, "feels "+p.MoodLabel)
+	ty := int(r.y) + 228
+	for i, th := range p.Thoughts {
+		if i >= 6 {
+			break
+		}
+		sign := "+"
+		if th.Value < 0 {
+			sign = ""
+		}
+		drawLabel(screen, int(r.x)+20, ty, fmt.Sprintf("%s%d  %s", sign, th.Value, th.Label))
+		ty += 15
+	}
+	if a.renderer != nil {
+		if lbl := roomLabelAt(a.renderer.world(), p.X, p.Y); lbl != "" {
+			drawLabel(screen, int(r.x)+150, int(r.y)+32, lbl)
+		}
+	}
 	mx, my := a.currentCursor()
 	a.drawButtons(screen, a.inspectorButtons(), mx, my)
 }
@@ -113,8 +132,11 @@ func drawNeedBar(screen *ebiten.Image, x, y, w, h, pct int, label string) {
 	drawLabel(screen, x, y-2, fmt.Sprintf("%s  %d", label, pct))
 	bg := color.RGBA{R: 40, G: 30, B: 24, A: 255}
 	fill := color.RGBA{R: 180, G: 90, B: 50, A: 255}
-	if label == "rest" {
+	switch label {
+	case "rest":
 		fill = color.RGBA{R: 70, G: 110, B: 180, A: 255}
+	case "mood":
+		fill = moodColor(pct)
 	}
 	vector.FillRect(screen, float32(x+50), float32(y), float32(w-50), float32(h), bg, false)
 	fw := float32(w-50) * float32(pct) / 100
@@ -132,4 +154,14 @@ func (a *App) selectedPawn() (game.PawnView, bool) {
 		}
 	}
 	return game.PawnView{}, false
+}
+
+func moodColor(pct int) color.RGBA {
+	switch {
+	case pct < 30:
+		return color.RGBA{R: 200, G: 70, B: 60, A: 255}
+	case pct < 55:
+		return color.RGBA{R: 210, G: 170, B: 70, A: 255}
+	}
+	return color.RGBA{R: 100, G: 180, B: 90, A: 255}
 }

@@ -136,6 +136,9 @@ func (a *App) drawBuildingInspector(screen *ebiten.Image) {
 	if b.Deconstruct {
 		state += "   marked for deconstruction"
 	}
+	if lbl := roomLabelAt(a.renderer.world(), b.X, b.Y); lbl != "" {
+		state += "   " + lbl
+	}
 	drawLabel(screen, int(r.x)+12, int(r.y)+28, state)
 	if b.Bench {
 		drawLabel(screen, int(r.x)+12, int(r.y)+46, "Bills")

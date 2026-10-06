@@ -377,7 +377,7 @@ building, item, plant, animal, corpse or tile.
 -   [x] **Draft state** (inspector status + Draft/Undraft button)
 -   [ ] **Faction**
 -   [-] **Immediate health state** (alive/downed/dead + reason; no injury tree)
--   [ ] **Immediate mood state**
+-   [x] **Immediate mood state**
 -   [ ] **Current need warnings**
 
 ------------------------------------------------------------------------
@@ -608,7 +608,7 @@ interfaces.
 
 ## 9.2 Mood
 
--   [ ] **Mood bar**
+-   [x] **Mood bar**
     -   Current mood.
     -   target mood if smoothed.
     -   break-risk thresholds.
@@ -617,9 +617,9 @@ interfaces.
 
 ## 9.3 Thought list
 
--   [ ] **Positive thoughts**
--   [ ] **Negative thoughts**
--   [ ] **Mood contribution**
+-   [x] **Positive thoughts**
+-   [x] **Negative thoughts**
+-   [x] **Mood contribution**
 -   [ ] **Remaining duration for memories where appropriate**
 -   [ ] **Stacking/count**
 -   [ ] **Situational explanation**
@@ -949,17 +949,17 @@ understandable.
 
 -   [ ] **Beauty values**
 -   [ ] **Selected pawn perceived beauty**
--   [ ] **Room beauty/impressiveness**
+-   [x] **Room beauty/impressiveness**
 
 ## 16.7 Room overlay
 
 -   [ ] **Room boundary**
--   [ ] **Room role**
+-   [x] **Room role**
 -   [ ] **Space**
 -   [ ] **beauty**
 -   [ ] **cleanliness**
 -   [ ] **wealth**
--   [ ] **impressiveness**
+-   [x] **impressiveness**
 
 ------------------------------------------------------------------------
 

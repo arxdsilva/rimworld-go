@@ -604,16 +604,16 @@ This is the heart of autonomous colony behavior.
 
 ## 7.4 Rooms
 
--   [ ] **Room detection**
+-   [x] **Room detection**
     -   Enclosed connected spaces bounded by walls/doors.
     -   Outdoor/unroofed semantics.
--   [ ] **Room statistics**
+-   [x] **Room statistics**
     -   Space.
     -   beauty.
     -   cleanliness.
     -   wealth/value.
     -   impressiveness derived from room properties.
--   [ ] **Room roles**
+-   [x] **Room roles**
     -   Bedroom.
     -   barracks.
     -   dining room.
@@ -623,7 +623,7 @@ This is the heart of autonomous colony behavior.
     -   prison cell/barracks.
     -   storage/freezer is emergent rather than necessarily a formal
         role.
--   [ ] **Room stat caching/invalidation**
+-   [x] **Room stat caching/invalidation**
     -   Recalculate only affected rooms.
 
 ## 7.5 Specialized zones
@@ -796,12 +796,12 @@ derived from thoughts and traits and low mood creates mental-break risk.
 
 ## 9.6 Thoughts/memories
 
--   [ ] **Thought definition system**
+-   [x] **Thought definition system**
     -   Mood offset.
     -   duration.
     -   stacking rules.
     -   situational versus memory-based.
--   [ ] **Situational thoughts**
+-   [x] **Situational thoughts**
     -   Hungry/tired.
     -   environment beauty.
     -   room quality.
@@ -812,18 +812,18 @@ derived from thoughts and traits and low mood creates mental-break risk.
     -   observed corpse/ugliness.
     -   comfort/recreation satisfaction.
     -   expectations.
--   [ ] **Memory thoughts**
+-   [x] **Memory thoughts**
     -   Death of relation.
     -   social interaction.
     -   wedding/relationship events.
     -   combat/trauma where applicable.
     -   impressive meal/room/event equivalents.
--   [ ] **Thought expiry**
+-   [x] **Thought expiry**
     -   Memories expire deterministically after defined duration.
 
 ## 9.7 Mood
 
--   [ ] **Mood target**
+-   [x] **Mood target**
     -   Sum baseline, expectations, thoughts, traits, health, social
         effects, environment.
 -   [ ] **Smoothed current mood**
@@ -831,7 +831,7 @@ derived from thoughts and traits and low mood creates mental-break risk.
         matching it.
 -   [ ] **Break-risk thresholds**
     -   Minor/major/extreme risk zones exposed to UI.
--   [ ] **Mood UI**
+-   [x] **Mood UI**
     -   Show current mood, target, active positive/negative thoughts,
         and break risk.
 
@@ -1130,9 +1130,9 @@ treatment, and surgery are major colony-management systems.
 
 -   [-] **Day/night light** (outdoor level is a pure function of tick; indoor/roofed and artificial lights not yet)
 -   [ ] **Roof/indoor darkness**
--   [ ] **Artificial lights**
+-   [x] **Artificial lights**
 -   [ ] **Light affects plants**
--   [ ] **Light can affect work/mood/accuracy where appropriate**
+-   [-] **Light can affect work/mood/accuracy where appropriate**
 
 ## 12.5 Fire
 
@@ -2847,7 +2847,7 @@ substantially larger colonies and maps with lower resource usage.
 ## 40.3 Invalidation
 
 -   [ ] **Navigation dirty regions**
--   [ ] **Room dirty regions**
+-   [-] **Room dirty regions**
 -   [ ] **Power topology dirty**
 -   [ ] **Temperature topology dirty**
 -   [ ] **Beauty dirty**
@@ -2908,7 +2908,7 @@ Do not call the vanilla milestone complete until this audit passes.
 -   [ ] Cook food.
 -   [-] Survive hunger/rest/temperature. (hunger/rest downed+starve/exhaustion; no temperature)
 -   [ ] Treat injuries/disease.
--   [ ] Manage mood.
+-   [-] Manage mood.
 -   [ ] Survive mental breaks.
 -   [ ] Produce equipment.
 -   [ ] Research technology.
@@ -2931,7 +2931,7 @@ Do not call the vanilla milestone complete until this audit passes.
 -   [ ] Pawns form opinions and relationships.
 -   [ ] Relationships create gameplay consequences.
 -   [ ] Injuries have anatomically meaningful consequences.
--   [ ] Mood responds to environment and memories.
+-   [x] Mood responds to environment and memories.
 -   [ ] Low mood creates autonomous disruptive behavior.
 -   [ ] High mood can create positive opportunities.
 -   [ ] Storyteller alternates pressure/opportunity/recovery.

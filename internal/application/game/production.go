@@ -234,6 +234,10 @@ func (g *Game) doBill(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
+	if !g.workTick(id) {
+		g.jobs.Set(id, j)
+		return
+	}
 	j.WorkLeft--
 	if j.WorkLeft > 0 {
 		g.jobs.Set(id, j)

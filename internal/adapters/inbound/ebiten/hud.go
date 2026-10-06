@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
 )
@@ -137,6 +138,7 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 		a.drawWork(screen, sw, sh)
 	}
 	a.drawFloat(screen)
+	a.drawHoverRoom(screen, sh)
 }
 
 func (a *App) drawColonistPortraits(screen *ebiten.Image, sh int) {
@@ -148,6 +150,7 @@ func (a *App) drawColonistPortraits(screen *ebiten.Image, sh int) {
 		if p.Drafted {
 			drawIcon(screen, a.icon("draft"), x+24, y-2, 18)
 		}
+		vector.FillRect(screen, float32(x), float32(y)+46, 40*float32(p.Mood)/100, 3, moodColor(p.Mood), false)
 		drawLabel(screen, int(x), int(hudBarY(sh))+hudBarH-14, pawnLabel(p))
 	}
 }
@@ -190,4 +193,20 @@ func (a *App) colonyChromeHit(mx, my, sw, sh int) bool {
 		return true
 	}
 	return false
+}
+
+// drawHoverRoom shows the room under the cursor above the colonist bar.
+func (a *App) drawHoverRoom(screen *ebiten.Image, sh int) {
+	if a.renderer == nil {
+		return
+	}
+	mx, my := a.currentCursor()
+	sw, _ := a.size()
+	if a.colonyChromeHit(mx, my, sw, sh) {
+		return
+	}
+	tx, ty := a.renderer.TileAt(mx, my)
+	if lbl := roomLabelAt(a.renderer.world(), tx, ty); lbl != "" {
+		drawLabel(screen, sw-len(lbl)*6-hudPad-4, int(hudBarY(sh))-18, lbl)
+	}
 }

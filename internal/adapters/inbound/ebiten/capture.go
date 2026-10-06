@@ -71,12 +71,13 @@ func captureOrders(cx, cy int) []command.Command {
 	bk("bed", 0, x0+3, y0+1)
 	bk("table", 0, x0+2, y0+2)
 	bk("chair", 1, x0+1, y0+2)
-	bk("lamp", 0, x0+3, y0+2)
+	bk("lamp", 0, x0+3, y0+3)
 	out = append(out,
 		command.Command{Kind: command.DesignateStockpile, X: cx + 1, Y: cy + 3, X2: cx + 3, Y2: cy + 4},
 		command.Command{Kind: command.DesignateHarvest, X: cx + 2, Y: cy - 4, X2: cx + 5, Y2: cy - 4},
 		command.Command{Kind: command.DesignateGrowZone, X: cx + 1, Y: cy - 2, X2: cx + 4, Y2: cy},
-		command.Command{Kind: command.DesignateCut, X: cx + 6, Y: cy - 6, X2: cx + 10, Y2: cy - 1},
+		command.Command{Kind: command.DesignateCut, X: cx + 6, Y: cy - 12, X2: cx + 20, Y2: cy + 10},
+		command.Command{Kind: command.DesignateCut, X: cx - 20, Y: cy - 4, X2: cx - 8, Y2: cy + 10},
 		command.Command{Kind: command.DesignateMine, X: cx - 14, Y: cy - 8, X2: cx - 9, Y2: cy + 2},
 	)
 	return out
@@ -156,6 +157,12 @@ func (a *App) captureUI(ui string) {
 		a.archX0, a.archY0, a.archX1, a.archY1 = cx+1, cy-2, cx+5, cy-2
 		x, y := at(cx+5, cy-2)
 		a.cursor = &[2]int{x, y}
+	case "pawn":
+		if snap := a.renderer.snapshot(); len(snap) > 0 {
+			a.renderer.Select(snap[0].ID)
+			x, y := at(snap[0].X, snap[0].Y)
+			a.cursor = &[2]int{x, y}
+		}
 	case "orders":
 		snap := a.renderer.snapshot()
 		if len(snap) == 0 {

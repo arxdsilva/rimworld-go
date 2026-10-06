@@ -315,7 +315,7 @@ func (r *Renderer) Draw(screen *ebiten.Image) {
 
 	if r.art != nil {
 		r.drawArt(screen, sw, sh, tile)
-		r.drawDaylight(screen, sw, sh)
+		r.drawDaylightRooms(screen, sw, sh)
 		return
 	}
 

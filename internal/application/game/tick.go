@@ -750,6 +750,7 @@ func (g *Game) doEat(id entity.EntityID, j job.Record) {
 	n, _ := g.need.Get(id)
 	n.Hunger += st.Kind.Nutrition()
 	g.lastMeal[id] = st.Kind
+	g.afterEat(id, st.Kind)
 	if n.Hunger > needs.Full {
 		n.Hunger = needs.Full
 	}
@@ -779,6 +780,7 @@ func (g *Game) doSleep(id entity.EntityID, j job.Record, now uint64) {
 	}
 	if done {
 		j.State = job.Complete
+		g.afterSleep(id)
 	}
 	g.jobs.Set(id, j)
 }
@@ -863,6 +865,10 @@ func (g *Game) doConstruct(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
+	if !g.workTick(id) {
+		g.jobs.Set(id, j)
+		return
+	}
 	fr.WorkLeft--
 	j.WorkLeft = fr.WorkLeft
 	if fr.WorkLeft > 0 {
@@ -886,6 +892,7 @@ func (g *Game) completeFrame(id entity.EntityID, fr construction.Frame) {
 	g.frameIDs = kept
 	g.bldgIDs = append(g.bldgIDs, id)
 	g.bldgs.Set(id, construction.Building{Kind: fr.Kind, Stuff: fr.Stuff, Facing: fr.Facing, X: fr.X, Y: fr.Y})
+	g.markRoomsDirty()
 	// bushes and crops under the footprint are cleared below
 	cells, _, _ := construction.Footprint(fr.Kind, fr.Facing, fr.X, fr.Y)
 	for _, c := range cells {
@@ -911,6 +918,10 @@ func (g *Game) doDeconstruct(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
+	if !g.workTick(id) {
+		g.jobs.Set(id, j)
+		return
+	}
 	b.WorkLeft--
 	j.WorkLeft = b.WorkLeft
 	if b.WorkLeft > 0 {
@@ -929,6 +940,10 @@ func (g *Game) doHarvest(id entity.EntityID, j job.Record) {
 	if !ok {
 		j.State = job.Fail
 		j.Fail = job.TargetGone
+		g.jobs.Set(id, j)
+		return
+	}
+	if !g.workTick(id) {
 		g.jobs.Set(id, j)
 		return
 	}

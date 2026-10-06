@@ -37,6 +37,7 @@ func (g *Game) generate(seed uint64) generation.Result {
 
 func (g *Game) setTerrain(x, y int, t terrain.Type) {
 	g.terr.Set(x, y, t)
+	g.markRoomsDirty()
 	g.grid.SetWalkable(x, y, t.Walkable() && g.layerBlockerAt(x, y) == 0)
 }
 
@@ -161,6 +162,10 @@ func (g *Game) doCut(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
+	if !g.workTick(id) {
+		g.jobs.Set(id, j)
+		return
+	}
 	j.WorkLeft--
 	if j.WorkLeft > 0 {
 		g.jobs.Set(id, j)
@@ -210,6 +215,10 @@ func (g *Game) startMine(id entity.EntityID, rx, ry int, forced bool) bool {
 func (g *Game) doMine(id entity.EntityID, j job.Record) {
 	if g.terr.At(j.DestX, j.DestY) != terrain.Rock {
 		j.State, j.Fail = job.Fail, job.TargetGone
+		g.jobs.Set(id, j)
+		return
+	}
+	if !g.workTick(id) {
 		g.jobs.Set(id, j)
 		return
 	}

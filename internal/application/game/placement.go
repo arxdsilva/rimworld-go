@@ -320,6 +320,7 @@ func (g *Game) removeBuilding(id entity.EntityID) {
 		}
 	}
 	delete(g.bills, id)
+	g.markRoomsDirty()
 	if b.Claimant != 0 {
 		delete(g.sleptAt, entity.EntityID(b.Claimant))
 	}
