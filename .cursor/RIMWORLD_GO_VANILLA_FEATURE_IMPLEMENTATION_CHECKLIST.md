@@ -686,7 +686,7 @@ This is the heart of autonomous colony behavior.
 
 ## 8.4 Farming
 
--   [ ] **Fertility**
+-   [x] **Fertility**
     -   Terrain fertility affects plant growth.
 -   [-] **Crop definitions** (amberroot crop def with grow ticks, yield, harvest work; one crop so far)
     -   Growth time.
@@ -2443,7 +2443,7 @@ the player-facing system.
 -   [ ] **Power grid**
 -   [ ] **Beauty**
 -   [ ] **Room stats**
--   [ ] **Fertility**
+-   [x] **Fertility**
 -   [ ] **Terrain/path cost debug**
 -   [ ] **Home area**
 -   [ ] **Allowed areas**
@@ -2903,7 +2903,7 @@ Do not call the vanilla milestone complete until this audit passes.
 -   [-] Build shelter. (wood walls; no rooms/roofs)
 -   [-] Assign beds. (claim on Sleep)
 -   [-] Create stockpile. (food+wood paint)
--   [ ] Grow crops.
+-   [x] Grow crops.
 -   [ ] Hunt animals.
 -   [ ] Cook food.
 -   [-] Survive hunger/rest/temperature. (hunger/rest downed+starve/exhaustion; no temperature)
