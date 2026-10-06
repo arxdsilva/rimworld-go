@@ -200,7 +200,8 @@ func (a *App) colonyChromeHit(mx, my, sw, sh int) bool {
 	return false
 }
 
-// drawHoverRoom shows the room under the cursor above the colonist bar.
+// drawHoverRoom shows what is under the cursor (soil, room, plant, items)
+// as a panel in the bottom-right corner, above the colonist bar.
 func (a *App) drawHoverRoom(screen *ebiten.Image, sh int) {
 	if a.renderer == nil {
 		return
@@ -212,18 +213,66 @@ func (a *App) drawHoverRoom(screen *ebiten.Image, sh int) {
 	}
 	tx, ty := a.renderer.TileAt(mx, my)
 	w := a.renderer.world()
-	y := int(hudBarY(sh)) - 18
-	if lbl := roomLabelAt(w, tx, ty); lbl != "" {
-		drawLabel(screen, sw-len(lbl)*6-hudPad-4, y, lbl)
-		y -= 16
+	lines := soilLines(w, tx, ty)
+	if len(lines) == 0 {
+		return
 	}
-	if lbl := plantLabelAt(w, tx, ty); lbl != "" {
-		drawLabel(screen, sw-len(lbl)*6-hudPad-4, y, lbl)
-		y -= 16
+	for _, lbl := range []string{roomLabelAt(w, tx, ty), plantLabelAt(w, tx, ty), itemLabelAt(w, tx, ty)} {
+		if lbl != "" {
+			lines = append(lines, lbl)
+		}
 	}
-	if lbl := itemLabelAt(w, tx, ty); lbl != "" {
-		drawLabel(screen, sw-len(lbl)*6-hudPad-4, y, lbl)
+	drawHoverPanel(screen, sw, int(hudBarY(sh)), lines)
+}
+
+// drawHoverPanel draws lines in a right-aligned panel whose bottom edge sits
+// just above bottomY. The first line is the title.
+func drawHoverPanel(screen *ebiten.Image, sw, bottomY int, lines []string) {
+	const lineH, pad = 16, 8
+	wid := 0
+	for _, l := range lines {
+		if n := len(l) * 6; n > wid {
+			wid = n
+		}
 	}
+	pw, ph := wid+pad*2, len(lines)*lineH+pad*2-4
+	px, py := sw-pw-hudPad, bottomY-ph-hudPad
+	drawPanel(screen, float32(px), float32(py), float32(pw), float32(ph))
+	for i, l := range lines {
+		drawLabel(screen, px+pad, py+pad-2+i*lineH, l)
+	}
+}
+
+// soilLines describes the ground on a tile: its type, fertility and whether
+// crops can be grown there.
+func soilLines(w game.WorldView, x, y int) []string {
+	if w.TerrainW <= 0 || x < 0 || y < 0 || x >= w.TerrainW {
+		return nil
+	}
+	i := y*w.TerrainW + x
+	if i >= len(w.Terrain) {
+		return nil
+	}
+	soils := game.Soils()
+	c := int(w.Terrain[i])
+	if c >= len(soils) {
+		return nil
+	}
+	s := soils[c]
+	lines := []string{s.Label, fmt.Sprintf("Fertility %d%%", s.Fertility)}
+	switch {
+	case !s.Walkable:
+		lines = append(lines, "Impassable, mine to clear")
+	case !s.Farmable:
+		lines = append(lines, "Not farmable")
+	case s.Fertility > 100:
+		lines = append(lines, fmt.Sprintf("Farmable, crops grow %d%% faster", s.Fertility-100))
+	case s.Fertility < 100:
+		lines = append(lines, fmt.Sprintf("Farmable, crops grow %d%% slower", 100-s.Fertility))
+	default:
+		lines = append(lines, "Farmable, normal growth")
+	}
+	return lines
 }
 
 // plantLabelAt describes the plant on a tile ("Corn, 62% grown").

@@ -177,6 +177,11 @@ func (a *App) captureUI(ui string) {
 		a.renderer.cam.offsetY = float64(cy+5)*tile - float64(a.sh)/2
 		x, y := at(cx+1, cy+6)
 		a.cursor = &[2]int{x, y}
+	case "hover":
+		// hover a sown crop tile so the soil readout shows with plant info
+		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
+		x, y := at(cx+3, cy-1)
+		a.cursor = &[2]int{x, y}
 	case "grow":
 		a.openArchitect()
 		a.selectArchCategory("zones")

@@ -261,3 +261,29 @@ func (g *Game) dropStack(k item.Kind, qty, x, y int) {
 		g.mergeOrSet(sid, st)
 	}
 }
+
+// SoilView describes a ground type for the hover readout.
+type SoilView struct {
+	Name      string // terrain code name, e.g. "rich_soil"
+	Label     string // display name, e.g. "Rich soil"
+	Fertility int    // growth rate in percent; 0 = nothing grows
+	Farmable  bool   // growing zones may be placed here
+	Walkable  bool
+}
+
+var soilLabels = map[string]string{
+	"soil": "Soil", "rich_soil": "Rich soil", "gravel": "Gravel",
+	"stone": "Rough stone", "rock": "Rock wall",
+}
+
+// Soils lists every ground type, indexed by the WorldView.Terrain code.
+func Soils() []SoilView {
+	names := terrain.Names()
+	out := make([]SoilView, len(names))
+	for i, n := range names {
+		t := terrain.Type(i)
+		out[i] = SoilView{Name: n, Label: soilLabels[n], Fertility: t.Fertility(),
+			Farmable: t.Fertility() > 0, Walkable: t.Walkable()}
+	}
+	return out
+}
