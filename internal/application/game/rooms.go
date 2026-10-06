@@ -219,7 +219,7 @@ func (g *Game) afterEat(id entity.EntityID, k item.Kind) {
 		g.remember(id, mood.AteRaw)
 	}
 	pos, _ := g.positions.Get(id)
-	if r := g.roomAt(pos.X, pos.Y); r >= 0 && g.rooms[r].contents.Tables > 0 {
+	if g.nextToTable(pos.X, pos.Y) {
 		g.remember(id, mood.AteAtTable)
 	} else {
 		g.remember(id, mood.AteWithoutTable)

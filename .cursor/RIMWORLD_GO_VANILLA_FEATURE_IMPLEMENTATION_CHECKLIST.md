@@ -653,7 +653,7 @@ This is the heart of autonomous colony behavior.
         availability.
     -   Reserve food before fetching it.
     -   Respect forbidden/allowed area rules.
--   [-] **Eating job** (Goto + Do ingest; no table/seat)
+-   [x] **Eating job** (fetch the portions needed, carry them to a table seat - chair preferred - within 30 tiles, ingest, table/raw/meal thoughts)
     -   Fetch.
     -   choose table/seat when reasonable.
     -   ingest over time.
@@ -671,7 +671,7 @@ This is the heart of autonomous colony behavior.
 ## 8.3 Cooking
 
 -   [x] **Cooking workstation** (stove)
--   [-] **Meal recipes** (simple meal only)
+-   [-] **Meal recipes** (simple meal at the stove, or slower over a fuelled campfire; no fine meal / multi-ingredient recipes yet)
     -   Simple/standard meal classes sufficient to recreate vanilla
         progression.
     -   Ingredient filters.

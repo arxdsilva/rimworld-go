@@ -80,7 +80,7 @@ var archTools = []archTool{
 	{id: "butcher", label: "Butcher table", category: "production", icon: "butcher_table", mode: placeSingle, build: "butcher table",
 		desc: "Butchers hunted carcasses into meat (2x1). Starts with butcher bills."},
 	{id: "campfire", label: "Campfire", category: "furniture", icon: "campfire", mode: placeSingle, build: "campfire",
-		desc: "Burns wood to heat and light its room. Haulers keep it fuelled (about 10 wood a day)."},
+		desc: "Burns wood to heat and light its room, and cooks simple meals (slowly). Haulers keep it fuelled."},
 	{id: "tailor", label: "Tailoring bench", category: "production", icon: "tailoring_bench", mode: placeSingle, build: "tailoring bench",
 		desc: "Sews leather into parkas, tuques and dusters (2x1). Select it to add bills."},
 	{id: "drying", label: "Drying rack", category: "production", icon: "drying_rack", mode: placeSingle, build: "drying rack",

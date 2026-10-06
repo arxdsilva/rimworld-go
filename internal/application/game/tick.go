@@ -846,6 +846,12 @@ func (g *Game) phaseJobs() {
 }
 
 func (g *Game) doEat(id entity.EntityID, j job.Record) {
+	if j.Count == 0 && j.Carry == 0 {
+		if g.carryToTable(id, j) {
+			return // walking to a table with the food
+		}
+		j.Count = 2 // no table in reach: eat right here
+	}
 	j.WorkLeft--
 	if j.WorkLeft > 0 {
 		g.jobs.Set(id, j)
@@ -871,8 +877,9 @@ func (g *Game) doEat(id entity.EntityID, j job.Record) {
 	}
 	if st.Qty <= 0 {
 		g.deleteItem(j.Target)
+		j.Carry = 0
 	} else {
-		g.stacks.Set(j.Target, st)
+		g.stacks.Set(j.Target, st) // leftovers: dropped where it ate
 	}
 	g.lastMeal[id] = st.Kind
 	g.afterEat(id, st.Kind)

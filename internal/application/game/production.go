@@ -16,6 +16,7 @@ const (
 	BillActive     = ""
 	BillNoInput    = "waiting for ingredients"
 	BillDrying     = "drying a batch"
+	BillNoFuel     = "fire needs wood"
 	BillDone       = "done"
 	BillSuspended  = "suspended"
 	BillHaveEnough = "have enough"
@@ -175,6 +176,9 @@ func (g *Game) assignBill(id entity.EntityID, m work.Mask) bool {
 			if d.Dry && g.racks[bid].Qty > 0 {
 				continue // still drying the last batch
 			}
+			if b.Kind == construction.Campfire && g.fuel[bid] <= 0 {
+				continue // no fire to cook over
+			}
 			sid, st := g.ingredientFor(id, d.Input)
 			if sid == 0 {
 				continue
@@ -283,6 +287,8 @@ func (g *Game) billViews(bid entity.EntityID) []BillView {
 			st = BillHaveEnough
 		case d.Dry && g.racks[bid].Qty > 0:
 			st = BillDrying
+		case d.Bench == construction.Campfire && g.fuel[bid] <= 0:
+			st = BillNoFuel
 		default:
 			if sid, _ := g.ingredientFor(0, d.Input); sid == 0 {
 				st = BillNoInput
@@ -298,8 +304,12 @@ func (g *Game) billViews(bid entity.EntityID) []BillView {
 
 // defaultBills gives new benches the bills nearly everyone wants: a
 // butcher table butchers every carcass type and a drying rack dries any
-// perishable food, forever.
+// perishable food, forever; a campfire cooks until there are 10 meals.
 func (g *Game) defaultBills(id entity.EntityID, k construction.Kind) {
+	if k == construction.Campfire {
+		g.bills[id] = append(g.bills[id], recipe.Bill{Recipe: recipe.CampfireMeal, Mode: recipe.UntilHave, Target: 10})
+		return
+	}
 	if k != construction.ButcherTable && k != construction.DryingRack {
 		return
 	}

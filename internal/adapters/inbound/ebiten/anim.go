@@ -245,6 +245,8 @@ func styleFor(act string) (actStyle, bool) {
 		return actStyle{period: 48, reach: 0.05, burst: partSoil, count: 3, motion: motionReach}, true
 	case "work at stove":
 		return actStyle{period: 40, reach: 0.04, burst: partSteam, count: 1, motion: motionReach}, true
+	case "work at campfire":
+		return actStyle{period: 40, reach: 0.04, burst: partSteam, count: 1, motion: motionReach}, true
 	case "tend":
 		return actStyle{period: 60, reach: 0.05, motion: motionReach}, true
 	case "eat":
@@ -455,6 +457,8 @@ func (r *Renderer) animate(w game.WorldView, pawns []game.PawnView, running bool
 		switch p.Acting {
 		case "work at stove":
 			x, y = float64(p.ActX)+0.7, float64(p.ActY)-0.1
+		case "work at campfire":
+			x, y = float64(p.ActX)+0.5, float64(p.ActY)-0.1
 		case "sow", "eat":
 			x, y = float64(p.X)+0.5, float64(p.Y)+0.6
 		}

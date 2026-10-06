@@ -18,6 +18,7 @@ const (
 	MakeParka
 	MakeTuque
 	MakeDuster
+	CampfireMeal
 	numRecipes
 )
 
@@ -70,6 +71,10 @@ var defs = [numRecipes]Def{
 	ButcherRidgewolf: {ID: ButcherRidgewolf, Name: "butcher_ridgewolf", Label: "Butcher ridgewolf", Bench: construction.ButcherTable,
 		Input: Input{Kind: item.CorpseRidgewolf, Qty: 1}, Output: item.Meat, OutQty: 6, Work: 200, Skill: work.Cook,
 		Extra: item.Leather, ExtraQty: 4},
+	// Cooking over an open fire is half again as slow as at a stove.
+	CampfireMeal: {ID: CampfireMeal, Name: "simple_meal_campfire", Label: "Cook simple meal over the fire",
+		Bench: construction.Campfire, Input: Input{AnyRaw: true, Qty: 2}, Output: item.Meal, OutQty: 1,
+		Work: 180, Skill: work.Cook},
 	// Tailoring: a parka takes the hides of about three dustbucks.
 	MakeParka: {ID: MakeParka, Name: "make_parka", Label: "Sew leather parka", Bench: construction.TailoringBench,
 		Input: Input{Kind: item.Leather, Qty: 14}, Output: item.Parka, OutQty: 1, Work: 900, Skill: work.Craft},
