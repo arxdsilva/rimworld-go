@@ -137,27 +137,45 @@ func (g *Game) mineList() [][2]int {
 }
 
 func (g *Game) assignCut(id entity.EntityID) bool {
-	pos, _ := g.positions.Get(id)
-	var best entity.EntityID
-	bestD := 1 << 30
-	for _, pid := range g.plantIDs {
-		p, ok := g.plants.Get(pid)
-		if !ok || !p.Cut {
-			continue
-		}
-		if _, taken := g.reserve.EntityOwner(pid); taken {
-			continue
-		}
-		d := pathing.Dist(pos.X, pos.Y, p.X, p.Y)
-		if d < bestD || (d == bestD && pid < best) {
-			best, bestD = pid, d
-		}
-	}
+	best := g.nearestPlant(id, func(p plant.Plant) bool { return p.Cut })
 	if best == 0 {
 		return false
 	}
 	p, _ := g.plants.Get(best)
 	return g.startJob(id, job.Record{Kind: job.Cut, Target: best, TX: p.X, TY: p.Y, WorkLeft: plant.DefOf(p.Species).CutWork})
+}
+
+// nearestPlant is the closest unreserved plant matching want that pawn id
+// can actually walk to (0 if none). Plants walled in by rock are skipped
+// so colonists don't retry an unreachable one all day.
+func (g *Game) nearestPlant(id entity.EntityID, want func(plant.Plant) bool) entity.EntityID {
+	pos, _ := g.positions.Get(id)
+	type cand struct {
+		id entity.EntityID
+		d  int
+	}
+	var cs []cand
+	for _, pid := range g.plantIDs {
+		p, ok := g.plants.Get(pid)
+		if !ok || !want(p) {
+			continue
+		}
+		if _, taken := g.reserve.EntityOwner(pid); taken {
+			continue
+		}
+		cs = append(cs, cand{pid, pathing.Dist(pos.X, pos.Y, p.X, p.Y)})
+	}
+	sort.Slice(cs, func(i, j int) bool { return cs[i].d < cs[j].d || cs[i].d == cs[j].d && cs[i].id < cs[j].id })
+	for i, c := range cs {
+		if i >= 16 {
+			break
+		}
+		p, _ := g.plants.Get(c.id)
+		if g.reachable(id, p.X, p.Y) {
+			return c.id
+		}
+	}
+	return 0
 }
 
 func (g *Game) doCut(id entity.EntityID, j job.Record) {

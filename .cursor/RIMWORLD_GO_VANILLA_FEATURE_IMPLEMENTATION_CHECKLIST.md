@@ -1089,17 +1089,17 @@ treatment, and surgery are major colony-management systems.
 -   [-] **Outdoor temperature** (temperate calendar: yearly triangle wave 9C +-15C peaking day 15, +-6C day/night swing; no weather/latitude)
     -   Driven by world tile climate, latitude/elevation/season/time,
         and weather.
--   [-] **Indoor room temperature** (enclosed rooms hold the day's mean +3C with no day/night swing; no per-room heat exchange)
+-   [-] **Indoor room temperature** (per-room temperature drifting toward outside air by room size, kept across room rebuilds; no room-to-room or open-door exchange)
     -   Rooms have thermal state.
     -   Exchange heat with outdoors and neighboring rooms through
         openings/structures.
     -   Use efficient region/room approximation rather than per-cell
         fluid simulation.
--   [ ] **Heat sources/sinks**
+-   [-] **Heat sources/sinks** (wood campfire heats its room and banks at 16C; haulers refuel it; no powered heater/cooler)
     -   Campfire/heater-like source.
     -   cooler/air-conditioner-like device.
     -   passive cooler equivalent.
--   [ ] **Pawn temperature comfort**
+-   [-] **Pawn temperature comfort** (8-28C comfort band, cold/freezing/hot/sweltering thoughts, hypothermia/heatstroke down and kill, colonists seek a bearable room; no apparel)
     -   Apparel and species stats define safe/comfortable range.
     -   extreme heat -\> heatstroke.
     -   extreme cold -\> hypothermia.

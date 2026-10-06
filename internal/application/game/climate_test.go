@@ -118,6 +118,18 @@ func TestYearProbe(t *testing.T) {
 	g.Enqueue(command.Command{Kind: command.DesignateStockpile, X: cx + 1, Y: cy + 3, X2: cx + 4, Y2: cy + 5})
 	g.Enqueue(command.Command{Kind: command.DesignateHarvest, X: 0, Y: 0, X2: g.Width() - 1, Y2: g.Height() - 1})
 	g.Enqueue(command.Command{Kind: command.DesignateHunt, X: 0, Y: 0, X2: g.Width() - 1, Y2: g.Height() - 1})
+	// a hut with three beds and a campfire, and wood cutting for the fire
+	g.ClearPlants(cx-14, cy+3, cx-6, cy+9)
+	hut(t, g, cx-14, cy+3, cx-7, cy+9)
+	for i := 0; i < 3; i++ {
+		if !g.BuildNow("bed", "wood", "south", cx-13+2*i, cy+4) {
+			t.Fatalf("bed %d", i)
+		}
+	}
+	if !g.BuildNow("campfire", "wood", "south", cx-10, cy+7) {
+		t.Fatal("campfire")
+	}
+	g.Enqueue(command.Command{Kind: command.DesignateCut, X: 0, Y: 0, X2: g.Width() - 1, Y2: cy - 8})
 	for i, c := range []string{"potato", "corn", "wheat", "beans", "radish", "pumpkin", "lettuce"} {
 		id, _ := CropID(c)
 		x := cx - 9 + (i%4)*3
@@ -133,7 +145,8 @@ func TestYearProbe(t *testing.T) {
 				alive++
 			}
 		}
-		t.Logf("day %2d %-6s out %4.1fC  food %4d %v alive %d plants %d", day+1, w.Season, float64(w.OutdoorTemp)/10, w.Food, w.FoodByKind, alive, len(w.Plants))
+		hutT := float64(g.temperatureAt(cx-10, cy+5)) / 10
+		t.Logf("day %2d %-6s out %5.1fC hut %5.1fC wood %3d food %4d alive %d plants %d", day+1, w.Season, float64(w.OutdoorTemp)/10, hutT, w.Wood, w.Food, alive, len(w.Plants))
 	}
 	for _, m := range g.World().Messages {
 		t.Logf("msg %d: %s", m.Tick/clock.TicksPerDay, m.Text)

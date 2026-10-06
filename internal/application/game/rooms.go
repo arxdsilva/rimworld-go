@@ -4,6 +4,7 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/pawn/exposure"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/room"
@@ -18,6 +19,7 @@ type RoomView struct {
 	Score int
 	Label string // awful .. impressive
 	Lit   bool   // has a lamp
+	Temp  int    // air temperature, tenths of a degree C
 }
 
 // ThoughtView is one line of a pawn's mood.
@@ -107,6 +109,7 @@ func (g *Game) ensureRooms() {
 		stats[i].role = room.RoleOf(stats[i].contents)
 		stats[i].lit = stats[i].contents.Lamps > 0
 	}
+	g.roomTemps = g.remapRoomTemps(grid, len(stats))
 	g.roomGrid, g.rooms, g.roomDirty = grid, stats, false
 }
 
@@ -124,7 +127,14 @@ func (g *Game) roomViews() []RoomView {
 	out := make([]RoomView, len(g.rooms))
 	for i, r := range g.rooms {
 		out[i] = RoomView{ID: i, Cells: r.contents.Cells, Role: r.role.String(), Score: r.score,
-			Label: room.Label(r.score), Lit: r.lit}
+			Label: room.Label(r.score), Lit: r.lit, Temp: int(g.roomTemps[i])}
+	}
+	for _, bid := range g.bldgIDs { // a fire with wood lights its room
+		if b, ok := g.bldgs.Get(bid); ok && b.Kind == construction.Campfire && g.fuel[bid] > 0 {
+			if r := g.roomAt(b.X, b.Y); r >= 0 && r < len(out) {
+				out[r].Lit = true
+			}
+		}
 	}
 	return out
 }
@@ -152,6 +162,17 @@ func (g *Game) thoughts(id entity.EntityID) []mood.Thought {
 	}
 	if n.Tired() {
 		states = append(states, mood.Tired)
+	}
+	pos, _ := g.positions.Get(id)
+	switch t := int(g.temperatureAt(pos.X, pos.Y)); {
+	case t < exposure.Freezing:
+		states = append(states, mood.Freezing)
+	case t < exposure.ComfortMin:
+		states = append(states, mood.Cold)
+	case t > exposure.Sweltering:
+		states = append(states, mood.Sweltering)
+	case t > exposure.ComfortMax:
+		states = append(states, mood.Hot)
 	}
 	return mood.Active(g.memories[id].Prune(uint64(g.clock.Now())), states...)
 }
@@ -238,6 +259,13 @@ func (g *Game) acting(id entity.EntityID, j job.Record) (string, int, int) {
 		}
 		if b, ok := g.bldgs.Get(j.Dest); ok {
 			return "work at " + b.Kind.String(), b.X, b.Y
+		}
+	case job.Refuel:
+		if j.Carry == 0 {
+			return "", 0, 0
+		}
+		if b, ok := g.bldgs.Get(j.Dest); ok {
+			return "refuel", b.X, b.Y
 		}
 	case job.Tend:
 		if p, ok := g.positions.Get(j.Target); ok {

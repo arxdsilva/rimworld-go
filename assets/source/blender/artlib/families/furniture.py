@@ -1,5 +1,5 @@
 """Furniture family (ART spec §12-§14): bed, table, chair, workbench, stove,
-butcher table, drying rack, lamp. (Sleeping spots are floor markings: overlay family.)
+butcher table, drying rack, campfire, lamp. (Sleeping spots are floor markings: overlay family.)
 
 Geometry is authored facing SOUTH (the side a user approaches from /
 the sleeper's feet point to) and rotated with stage.face().
@@ -138,6 +138,25 @@ def _drying_rack():
     return (2, 1), 1.05
 
 
+def _campfire():
+    """1 x 1 fire pit: a ring of field stones around ash and a log-cabin
+    stack of split logs. The flame itself is drawn live by the game."""
+    import math
+    S.cyl("ash", 0.5, -0.5, 0.30, 0.0, 0.03, "stone_dark", segs=20, bevel=0.0)
+    for k in range(9):
+        a = k / 9 * 2 * math.pi + 0.2
+        r = 0.36 + 0.02 * ((k * 7) % 3)
+        S.ellipsoid("stone%d" % k, 0.5 + r * math.cos(a), -0.5 + r * math.sin(a), 0.06,
+                    0.085, 0.07, 0.07 + 0.01 * (k % 2), "stone" if k % 3 else "stone_dark", segs=10, rings=6)
+    # two layers of logs, crosswise
+    for i, x in enumerate([0.36, 0.64]):
+        S.box("log_a%d" % i, x - 0.05, -0.76, 0.03, x + 0.05, -0.24, 0.12, "bark", bevel=0.03)
+    for i, y in enumerate([-0.36, -0.64]):
+        S.box("log_b%d" % i, 0.24, y - 0.05, 0.12, 0.76, y + 0.05, 0.21, "wood", bevel=0.03)
+    S.ellipsoid("cinders", 0.5, -0.5, 0.05, 0.14, 0.14, 0.04, "stone_dark", segs=14, rings=6)
+    return (1, 1), 0.30
+
+
 def _lamp():
     S.cyl("base", 0.5, -0.5, 0.22, 0.0, 0.06, "metal_dark", segs=20)
     S.cyl("pole", 0.5, -0.5, 0.035, 0.06, 1.25, "steel", segs=10)
@@ -155,6 +174,7 @@ BUILDERS = {
     "lamp_standing": (_lamp, {"emissive": "lamp_warm", "light_radius": 6}),
     "stove_basic": (_stove, {"attachments": {"cook": [0.25, 1.5]}}),
     "butcher_table": (_butcher_table, {"attachments": {"worker": [0.5, 1.15]}}),
+    "campfire": (_campfire, {}),
     "drying_rack": (_drying_rack, {"attachments": {"worker": [0.5, 1.15]}}),
 }
 ROTATABLE = {"bed_basic", "bed_double", "chair_basic", "workbench_basic", "stove_basic", "butcher_table",

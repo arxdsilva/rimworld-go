@@ -300,6 +300,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 		d.fn()
 	}
 	r.drawWorkGlow(screen, tile)
+	r.drawFires(screen, w, tile)
 	r.drawParticles(screen, tile)
 
 	for _, p := range w.Plants {

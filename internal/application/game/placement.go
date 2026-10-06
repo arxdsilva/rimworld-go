@@ -320,6 +320,7 @@ func (g *Game) removeBuilding(id entity.EntityID) {
 		return
 	}
 	g.bldgs.Delete(id)
+	delete(g.fuel, id)
 	if b.Kind == construction.DryingRack {
 		_, spot, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
 		g.emptyRack(id, spot[0], spot[1])

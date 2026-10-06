@@ -17,6 +17,10 @@ const (
 	AteWithoutTable
 	Hungry
 	Tired
+	Cold
+	Freezing
+	Hot
+	Sweltering
 	numKinds
 )
 
@@ -52,6 +56,10 @@ var defs = [numKinds]Def{
 	AteWithoutTable:  {"ate without a table", -3, day, groupMealTable},
 	Hungry:           {"hungry", -8, 0, groupNone},
 	Tired:            {"tired", -5, 0, groupNone},
+	Cold:             {"cold", -4, 0, groupNone},
+	Freezing:         {"freezing", -10, 0, groupNone},
+	Hot:              {"hot", -4, 0, groupNone},
+	Sweltering:       {"sweltering", -10, 0, groupNone},
 }
 
 // DefOf returns the thought definition.

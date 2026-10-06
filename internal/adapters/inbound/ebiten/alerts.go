@@ -31,6 +31,8 @@ const (
 	// lowFoodPerColonist: fewer ground food items per colonist than
 	// this raises "Low food".
 	lowFoodPerColonist = 4
+	// exposureAlert: hypothermia/heatstroke (permille) worth an alert.
+	exposureAlert = 200
 )
 
 var warnClr = color.RGBA{R: 0xE0, G: 0xA8, B: 0x40, A: 0xFF}
@@ -93,6 +95,29 @@ func buildAlerts(pawns []game.PawnView, w game.WorldView) []alert {
 	group("collapsed", false, collapsed, func(n string) string { return n + " collapsed from exhaustion" }, "colonists collapsed")
 	if alive > 0 && w.Food < lowFoodPerColonist*alive {
 		out = append(out, alert{key: "food", label: fmt.Sprintf("Low food (%d left)", w.Food)})
+	}
+	var hypo, heat []game.PawnView
+	for _, p := range pawns {
+		if p.Status == "dead" {
+			continue
+		}
+		if p.Hypothermia >= exposureAlert {
+			hypo = append(hypo, p)
+		}
+		if p.Heatstroke >= exposureAlert {
+			heat = append(heat, p)
+		}
+	}
+	group("hypothermia", true, hypo, func(n string) string { return n + " has hypothermia" }, "colonists have hypothermia")
+	group("heatstroke", true, heat, func(n string) string { return n + " has heatstroke" }, "colonists have heatstroke")
+	var cold [][2]int
+	for _, b := range w.Buildings {
+		if b.Fuel && b.FuelPct == 0 {
+			cold = append(cold, [2]int{b.X, b.Y})
+		}
+	}
+	if len(cold) > 0 {
+		out = append(out, alert{key: "nofuel", label: "Campfire out of wood", targets: cold})
 	}
 	if al, ok := spoilingAlert(w); ok {
 		out = append(out, al)

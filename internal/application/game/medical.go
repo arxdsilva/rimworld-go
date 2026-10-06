@@ -26,7 +26,8 @@ const (
 // injuredDowned: a colonist lying down from injury.
 func (g *Game) injuredDowned(id entity.EntityID) bool {
 	v, ok := g.vital.Get(id)
-	return ok && v.Status == health.Downed && v.Cause == health.CauseInjury
+	return ok && v.Status == health.Downed &&
+		(v.Cause == health.CauseInjury || v.Cause == health.CauseHypothermia || v.Cause == health.CauseHeatstroke)
 }
 
 // bedUnder is the bed covering a pawn's tile that it has claimed.
@@ -107,6 +108,9 @@ func (g *Game) assignDoctor(id entity.EntityID) bool {
 			}
 		case !g.tended(pid):
 			rec = job.Record{Kind: job.Tend, Target: pid, WorkLeft: TendWork}
+		}
+		if pv, _ := g.vital.Get(pid); rec.Kind == job.Tend && pv.Injury <= 0 {
+			continue // exposure needs a bed, not a bandage
 		}
 		if rec.Kind != job.None {
 			sx, sy, ok := g.besideSpot(id, pp.X, pp.Y)

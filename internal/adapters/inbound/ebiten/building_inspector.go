@@ -139,6 +139,16 @@ func (a *App) drawBuildingInspector(screen *ebiten.Image) {
 	if lbl := roomLabelAt(a.renderer.world(), b.X, b.Y); lbl != "" {
 		state += "   " + lbl
 	}
+	if b.Fuel {
+		switch {
+		case b.FuelPct == 0:
+			state += "   out of fuel"
+		case b.Burning:
+			state += fmt.Sprintf("   burning, fuel %d%%", b.FuelPct)
+		default:
+			state += fmt.Sprintf("   banked (warm enough), fuel %d%%", b.FuelPct)
+		}
+	}
 	if b.DryQty > 0 {
 		state += fmt.Sprintf("   drying %d %s, %d%%", b.DryQty, b.DryKind, b.DryPct)
 	}

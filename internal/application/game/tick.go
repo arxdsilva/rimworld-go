@@ -292,6 +292,15 @@ func (g *Game) phaseAI() {
 		if g.defend(id, j) {
 			continue
 		}
+		if j.Kind != job.Warm && j.Kind != job.Eat && g.needsComfort(id) && !g.noComfortUntil(id) {
+			if j.Kind != job.None && j.State != job.Idle {
+				g.interrupt(id, job.Interrupted)
+			}
+			if g.assignWarm(id) {
+				continue
+			}
+			g.noComfort[id] = uint64(g.clock.Now()) + warmRetry
+		}
 		n, _ := g.need.Get(id)
 
 		busy := j.Kind != job.None && j.State != job.Idle
@@ -327,6 +336,9 @@ func (g *Game) phaseAI() {
 		if m.Enabled(work.Doctor) && g.assignDoctor(id) {
 			continue
 		}
+		if m.Enabled(work.Haul) && g.assignRefuel(id) {
+			continue
+		}
 		if m.Enabled(work.Haul) && g.assignHaul(id) {
 			continue
 		}
@@ -338,6 +350,9 @@ func (g *Game) phaseAI() {
 		}
 		if m.Enabled(work.Hunt) && g.assignHunt(id) {
 			continue
+		}
+		if m.Enabled(work.Grow) && g.woodLow() && g.assignCut(id) {
+			continue // short of wood: designated trees come first
 		}
 		if m.Enabled(work.Grow) && (g.assignHarvest(id) || g.assignSow(id) || g.assignCut(id)) {
 			continue
@@ -711,29 +726,13 @@ func (g *Game) assignConstruct(id entity.EntityID) bool {
 }
 
 func (g *Game) assignHarvest(id entity.EntityID) bool {
-	pos, _ := g.positions.Get(id)
-	var best entity.EntityID
-	bestD := 1 << 30
-	var bx, by int
-	for _, pid := range g.plantIDs {
-		p, ok := g.plants.Get(pid)
-		if !ok || !wantsHarvest(p) {
-			continue
-		}
-		if _, taken := g.reserve.EntityOwner(pid); taken {
-			continue
-		}
-		d := pathing.Dist(pos.X, pos.Y, p.X, p.Y)
-		if d < bestD || (d == bestD && pid < best) {
-			best, bestD, bx, by = pid, d, p.X, p.Y
-		}
-	}
+	best := g.nearestPlant(id, wantsHarvest)
 	if best == 0 {
 		return false
 	}
 	bp, _ := g.plants.Get(best)
 	return g.startJob(id, job.Record{
-		Kind: job.Harvest, Target: best, TX: bx, TY: by, WorkLeft: plant.DefOf(bp.Species).HarvestWork,
+		Kind: job.Harvest, Target: best, TX: bp.X, TY: bp.Y, WorkLeft: plant.DefOf(bp.Species).HarvestWork,
 	})
 }
 
@@ -784,6 +783,10 @@ func (g *Game) phaseJobs() {
 			g.doRescue(id, j)
 		case job.Tend:
 			g.doTend(id, j)
+		case job.Refuel:
+			g.doRefuel(id, j)
+		case job.Warm:
+			g.doWarm(id, j)
 		default:
 			j.State = job.Complete
 			g.jobs.Set(id, j)

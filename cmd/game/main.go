@@ -47,6 +47,30 @@ func main() {
 				for dy := 0; dy < 6 && !g.BuildNow("double bed", "wood", "south", *width/2+6, *height/2+1+dy); dy++ {
 				}
 			}
+			if *scenario == "winter" {
+				// a heated hut and an unheated one on a winter evening
+				g.SkipTo(44, 17)
+				cx, cy := *width/2, *height/2
+				g.ClearPlants(cx+5, cy, cx+18, cy+7)
+				for _, h := range [][4]int{{cx + 6, cy + 1, cx + 11, cy + 6}, {cx + 13, cy + 1, cx + 17, cy + 6}} {
+					for x := h[0]; x <= h[2]; x++ {
+						for _, y := range []int{h[1], h[3]} {
+							kind := "wall"
+							if y == h[3] && x == (h[0]+h[2])/2 {
+								kind = "door"
+							}
+							g.BuildNow(kind, "wood", "south", x, y)
+						}
+					}
+					for y := h[1] + 1; y < h[3]; y++ {
+						g.BuildNow("wall", "wood", "south", h[0], y)
+						g.BuildNow("wall", "wood", "south", h[2], y)
+					}
+				}
+				g.BuildNow("campfire", "wood", "south", cx+8, cy+3)
+				g.FuelCampfire(cx+8, cy+3)
+				g.BuildNow("campfire", "wood", "south", cx+15, cy+3)
+			}
 			if *scenario == "drying" {
 				cx, cy := *width/2, *height/2
 				for dx := 0; dx < 6 && !g.BuildNow("drying rack", "wood", "south", cx+6+dx, cy+2); dx++ {

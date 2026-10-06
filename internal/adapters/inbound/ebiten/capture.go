@@ -188,6 +188,12 @@ func (a *App) captureUI(ui string) {
 			a.renderer.cam.offsetX, a.renderer.cam.offsetY = -1e6, -1e6
 		}
 		a.renderer.clampCamera(v)
+	case "winter":
+		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
+		sw, sh := a.size()
+		a.renderer.centerOn(float64(cx)+12, float64(cy)+3.5, sw, sh)
+		x, y := at(cx+9, cy+4)
+		a.cursor = &[2]int{x, y}
 	case "drying":
 		// the -scenario drying racks, with the cursor on the first one
 		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2

@@ -26,6 +26,8 @@ const (
 	DoubleBed
 	// DryingRack is a 2x1 wooden frame food is laid out on to dry.
 	DryingRack
+	// Campfire burns wood to heat (and light) its room.
+	Campfire
 	kindCount
 )
 
@@ -76,6 +78,7 @@ var defs = [kindCount]Def{
 		Size: [2]int{2, 2}},
 	ButcherTable: {Kind: ButcherTable, Name: "butcher table", Wood: 5, Work: 120, Layer: LayerObject, BlocksMove: true,
 		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
+	Campfire: {Kind: Campfire, Name: "campfire", Wood: 5, Work: 60, Layer: LayerObject, BlocksMove: true},
 	DryingRack: {Kind: DryingRack, Name: "drying rack", Wood: 6, Work: 100, Layer: LayerObject, BlocksMove: true,
 		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
 }

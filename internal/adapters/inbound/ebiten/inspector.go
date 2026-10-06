@@ -92,11 +92,17 @@ func (a *App) drawInspector(screen *ebiten.Image) {
 	if p.Drafted {
 		status += "  drafted"
 	}
+	if p.Hypothermia > 0 {
+		status += fmt.Sprintf("  hypothermia %d%%", p.Hypothermia/10)
+	}
+	if p.Heatstroke > 0 {
+		status += fmt.Sprintf("  heatstroke %d%%", p.Heatstroke/10)
+	}
 	drawLabel(screen, int(r.x)+12, int(r.y)+32, status)
 	a.drawPawnPortrait(screen, p, float64(r.x)+12, float64(r.y)+52, 48, 64)
 	drawLabel(screen, int(r.x)+72, int(r.y)+56, fmt.Sprintf("job       %s", p.Job))
 	drawLabel(screen, int(r.x)+72, int(r.y)+72, fmt.Sprintf("activity  %s", p.Activity))
-	drawLabel(screen, int(r.x)+72, int(r.y)+88, fmt.Sprintf("tile      (%d, %d)", p.X, p.Y))
+	drawLabel(screen, int(r.x)+72, int(r.y)+88, fmt.Sprintf("tile      (%d, %d)  %s", p.X, p.Y, fmtTemp(p.Temp)))
 	drawLabel(screen, int(r.x)+72, int(r.y)+104, fmt.Sprintf("weapon    %s", p.Weapon))
 	drawNeedBar(screen, int(r.x)+12, int(r.y)+126, 300, 14, p.Health, "health")
 	drawNeedBar(screen, int(r.x)+12, int(r.y)+150, 300, 14, p.Hunger, "food")

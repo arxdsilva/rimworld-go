@@ -231,6 +231,8 @@ func styleFor(act string) (actStyle, bool) {
 		return actStyle{period: 50, reach: 0.12, burst: partDust, count: 5, motion: motionSwing, tool: "tool/pickaxe"}, true
 	case "work at workbench":
 		return actStyle{period: 30, reach: 0.05, burst: partShaving, count: 2, motion: motionSwing, tool: "tool/hammer"}, true
+	case "refuel":
+		return actStyle{period: 40, reach: 0.06, burst: partChip, count: 1, motion: motionReach}, true
 	case "work at drying rack":
 		return actStyle{period: 52, reach: 0.06, burst: partLeaf, count: 1, motion: motionReach}, true
 	case "work at butcher table":
@@ -336,6 +338,7 @@ const (
 	partShaving
 	partStep
 	partSmoke
+	partEmber
 )
 
 type particle struct {
@@ -362,6 +365,7 @@ var partColors = map[partKind][]color.RGBA{
 	partShaving: {{214, 178, 120, 255}, {190, 196, 204, 255}},
 	partStep:    {{168, 148, 116, 255}},
 	partSmoke:   {{200, 196, 186, 255}},
+	partEmber:   {{255, 190, 80, 255}, {255, 140, 50, 255}, {255, 220, 130, 255}},
 }
 
 // burst spawns n particles of a kind at (x, y), deterministic in seed.
@@ -395,6 +399,9 @@ func (r *Renderer) burst(kind partKind, x, y float64, n int, seed uint64) {
 		case partStep:
 			p.vx, p.vy = (h(2)-0.5)*0.01, -0.004
 			p.life, p.size, p.grow = 18, 0.05, 0.004
+		case partEmber:
+			p.vx, p.vy, p.g = (h(2)-0.5)*0.012, -0.016-h(3)*0.01, -0.0001
+			p.life, p.size = 36+uint64(h(4)*24), 0.014
 		}
 		r.parts = append(r.parts, p)
 	}
@@ -436,6 +443,7 @@ func (r *Renderer) animate(w game.WorldView, pawns []game.PawnView, running bool
 	if !running {
 		return
 	}
+	r.emitFireParticles(w)
 	for _, p := range pawns {
 		st, ok := styleFor(p.Acting)
 		if !ok || st.count == 0 || !workStrike(r.present, uint64(p.ID), st.period) {

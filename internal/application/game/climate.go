@@ -26,11 +26,10 @@ type MessageView struct {
 // temperatureAt is the air temperature on a tile: enclosed rooms hold the
 // day's mean plus a little shelter warmth, everywhere else is outdoors.
 func (g *Game) temperatureAt(x, y int) temperature.Temp {
-	now := g.clock.Now()
-	if g.roomAt(x, y) >= 0 {
-		return temperature.Indoor(now)
+	if r := g.roomAt(x, y); r >= 0 && r < len(g.roomTemps) {
+		return g.roomTemps[r]
 	}
-	return temperature.Outdoor(now)
+	return temperature.Outdoor(g.clock.Now())
 }
 
 // sowMinMean is the lowest daily mean temperature (tenths of a degree C)
@@ -41,10 +40,9 @@ const sowMinMean = 30
 // day's mean there (outdoors, or the room's temperature) is above
 // sowMinMean.
 func (g *Game) growingSeason(x, y int) bool {
-	now := g.clock.Now()
-	mean := temperature.DailyMean(now)
-	if g.roomAt(x, y) >= 0 {
-		mean = temperature.Indoor(now)
+	mean := temperature.DailyMean(g.clock.Now())
+	if r := g.roomAt(x, y); r >= 0 && r < len(g.roomTemps) {
+		mean = g.roomTemps[r]
 	}
 	return mean > sowMinMean
 }
@@ -64,6 +62,8 @@ func (g *Game) phaseClimate() {
 	if uint64(g.clock.Now())%climateInterval != 0 {
 		return
 	}
+	g.heatRooms()
+	g.expose()
 	g.rotItems()
 	g.frostCrops()
 	g.dryRacks()

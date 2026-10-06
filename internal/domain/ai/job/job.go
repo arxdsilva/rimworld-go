@@ -53,6 +53,10 @@ const (
 	Equip
 	Rescue
 	Tend
+	// Refuel carries wood to a campfire.
+	Refuel
+	// Warm walks a freezing (or overheating) pawn somewhere bearable.
+	Warm
 )
 
 func (k Kind) String() string {
@@ -89,6 +93,10 @@ func (k Kind) String() string {
 		return "rescue"
 	case Tend:
 		return "tend"
+	case Refuel:
+		return "refuel"
+	case Warm:
+		return "seek warmth"
 	default:
 		return "idle"
 	}
@@ -136,6 +144,8 @@ type Record struct {
 	PathI    int
 	WorkLeft int
 	Fail     FailReason
+	// Count is how many items the job fetches (refuelling).
+	Count int
 	// Dest is the entity a haul delivers into (a frame); 0 = drop on tile.
 	Dest entity.EntityID
 	// Forced marks a player-prioritized job: tiredness does not

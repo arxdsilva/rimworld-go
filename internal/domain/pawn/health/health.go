@@ -29,6 +29,8 @@ const (
 	CauseNoFood
 	CauseNoBed
 	CauseInjury
+	CauseHypothermia
+	CauseHeatstroke
 )
 
 func (c Cause) String() string {
@@ -39,6 +41,10 @@ func (c Cause) String() string {
 		return "no bed"
 	case CauseInjury:
 		return "injured"
+	case CauseHypothermia:
+		return "hypothermia"
+	case CauseHeatstroke:
+		return "heatstroke"
 	default:
 		return ""
 	}

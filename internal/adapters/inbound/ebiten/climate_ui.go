@@ -23,8 +23,10 @@ func fmtTemp(tenths int) string {
 // indoor temperature, everything else is outdoors.
 func tileTemp(w game.WorldView, x, y int) (int, bool) {
 	if w.TerrainW > 0 && x >= 0 && y >= 0 && x < w.TerrainW {
-		if i := y*w.TerrainW + x; i < len(w.RoomGrid) && w.RoomGrid[i] >= 0 {
-			return w.IndoorTemp, true
+		if i := y*w.TerrainW + x; i < len(w.RoomGrid) {
+			if r := w.RoomGrid[i]; r >= 0 && r < len(w.Rooms) {
+				return w.Rooms[r].Temp, true
+			}
 		}
 	}
 	return w.OutdoorTemp, false

@@ -71,8 +71,12 @@ type PawnView struct {
 	Mood          int
 	MoodLabel     string
 	Thoughts      []ThoughtView
-	Health        int    // hit points left, percent
-	Weapon        string // wielded weapon name ("fists" when unarmed)
+	Health        int // hit points left, percent
+	// Exposure: Hypothermia and Heatstroke severity in permille, and the
+	// air temperature where the colonist is (tenths of a degree C).
+	Hypothermia, Heatstroke int
+	Temp                    int
+	Weapon                  string // wielded weapon name ("fists" when unarmed)
 	// Lying: downed or asleep. InBed: lying in its claimed bed.
 	// CarriedBy: the rescuer carrying it (0 when not carried).
 	Lying     bool
@@ -138,6 +142,10 @@ type BuildingView struct {
 	DryKind string
 	DryQty  int
 	DryPct  int
+	// Campfire: FuelPct of capacity left, Burning when lit (not banked).
+	Fuel    bool
+	FuelPct int
+	Burning bool
 }
 
 // PlantView is a wild plant.
@@ -227,6 +235,10 @@ type Game struct {
 	lastMeal   map[entity.EntityID]item.Kind
 	bills      map[entity.EntityID][]recipe.Bill
 	racks      map[entity.EntityID]dryBatch // what each drying rack holds
+	fuel       map[entity.EntityID]int      // campfire fuel, ticks of burning
+	exposure   map[entity.EntityID]exposureState
+	noComfort  map[entity.EntityID]uint64 // no warm/cool spot found until this tick
+	roomTemps  []temperature.Temp         // per room id, kept across rebuilds
 	memories   map[entity.EntityID]mood.Memories
 	roomGrid   []int
 	rooms      []roomStats
@@ -271,6 +283,9 @@ func New(cfg Config) *Game {
 		lastMeal:    make(map[entity.EntityID]item.Kind),
 		bills:       make(map[entity.EntityID][]recipe.Bill),
 		racks:       make(map[entity.EntityID]dryBatch),
+		fuel:        make(map[entity.EntityID]int),
+		exposure:    make(map[entity.EntityID]exposureState),
+		noComfort:   make(map[entity.EntityID]uint64),
 		memories:    make(map[entity.EntityID]mood.Memories),
 		roomDirty:   true,
 		reserve:     reservation.NewTable(),
@@ -477,6 +492,10 @@ func (g *Game) Snapshot() []PawnView {
 		pv.InBed = g.inBed(id)
 		pv.CarriedBy = g.carriedBy(id)
 		pv.Tended = g.tended(id)
+		pv.Hypothermia, pv.Heatstroke = g.exposure[id].hypo, g.exposure[id].heat
+		if pos, ok := g.positions.Get(id); ok {
+			pv.Temp = int(g.temperatureAt(pos.X, pos.Y))
+		}
 		pv.Acting, pv.ActX, pv.ActY = g.acting(id, j)
 	}
 	return views
@@ -545,6 +564,9 @@ func (g *Game) World() WorldView {
 			Bench: construction.DefOf(b.Kind).Bench, Bills: g.billViews(id),
 		})
 		bv := &w.Buildings[len(w.Buildings)-1]
+		if b.Kind == construction.Campfire {
+			bv.Fuel, bv.FuelPct, bv.Burning = true, g.fuel[id]*100/(CampfireCapacity*TicksPerWood), g.burning(id, b)
+		}
 		if rb := g.racks[id]; rb.Qty > 0 {
 			bv.DryKind, bv.DryQty, bv.DryPct = rb.Kind.String(), rb.Qty, rb.percent()
 		}
