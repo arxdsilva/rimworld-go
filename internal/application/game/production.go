@@ -142,7 +142,7 @@ func (g *Game) ingredientFor(id entity.EntityID, in recipe.Input) (entity.Entity
 	bestD := 1 << 30
 	for _, iid := range g.itemIDs {
 		st, ok := g.stacks.Get(iid)
-		if !ok || st.Carrier != 0 || st.Qty < in.Qty || !in.Accepts(st.Kind) {
+		if !ok || st.Carrier != 0 || st.Qty < in.Qty || !in.Accepts(st.Kind) || st.Rotten() {
 			continue
 		}
 		if owner, taken := g.reserve.EntityOwner(iid); taken && owner != id {
@@ -213,7 +213,7 @@ func (g *Game) doBill(id entity.EntityID, j job.Record) {
 			g.stacks.Set(j.Target, st)
 			nid := g.entities.Next()
 			g.itemIDs = append(g.itemIDs, nid)
-			g.stacks.Set(nid, item.Stack{Kind: st.Kind, Qty: d.Input.Qty, X: st.X, Y: st.Y, Carrier: id})
+			g.stacks.Set(nid, item.Stack{Kind: st.Kind, Qty: d.Input.Qty, X: st.X, Y: st.Y, Carrier: id, Rot: st.Rot})
 			carry = nid
 		} else {
 			st.Carrier = id

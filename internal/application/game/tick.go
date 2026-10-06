@@ -882,7 +882,7 @@ func (g *Game) doHaul(id entity.EntityID, j job.Record) {
 			g.stacks.Set(j.Target, st)
 			carry = g.entities.Next()
 			g.itemIDs = append(g.itemIDs, carry)
-			st = item.Stack{Kind: st.Kind, Qty: take, X: st.X, Y: st.Y}
+			st = item.Stack{Kind: st.Kind, Qty: take, X: st.X, Y: st.Y, Rot: st.Rot}
 		}
 		st.Carrier = id
 		g.stacks.Set(carry, st)
@@ -1155,11 +1155,13 @@ func (g *Game) mergeOrSet(id entity.EntityID, st item.Stack) {
 			break
 		}
 		if st.Qty <= room {
+			other.Rot = item.MergeRot(other.Qty, other.Rot, st.Qty, st.Rot)
 			other.Qty += st.Qty
 			g.stacks.Set(oid, other)
 			g.deleteItem(id)
 			return
 		}
+		other.Rot = item.MergeRot(other.Qty, other.Rot, room, st.Rot)
 		other.Qty = item.StackLimit
 		g.stacks.Set(oid, other)
 		st.Qty -= room

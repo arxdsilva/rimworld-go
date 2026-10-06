@@ -126,6 +126,10 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 	drawLabel(screen, x, 10, fmt.Sprintf("Wood %d", wld.Wood))
 	x += 90
 	drawLabel(screen, x, 10, fmt.Sprintf("Stone %d", wld.Stone))
+	x += 90
+	if wld.Season != "" {
+		drawLabel(screen, x, 10, fmt.Sprintf("%s  %s outside", wld.Season, fmtTemp(wld.OutdoorTemp)))
+	}
 	time := fmt.Sprintf("%s  %s  %s", a.renderer.date(), a.renderer.speedRate(), a.renderer.activity())
 	drawLabel(screen, sw-len(time)*7-hudPad, 10, time)
 
@@ -143,6 +147,7 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 		a.drawWork(screen, sw, sh)
 	}
 	a.drawFloat(screen)
+	a.drawMessages(screen)
 	a.drawHoverRoom(screen, sh)
 }
 
@@ -216,6 +221,11 @@ func (a *App) drawHoverRoom(screen *ebiten.Image, sh int) {
 	lines := soilLines(w, tx, ty)
 	if len(lines) == 0 {
 		return
+	}
+	if t, indoors := tileTemp(w, tx, ty); indoors {
+		lines = append(lines, "Temperature "+fmtTemp(t)+" (indoors)")
+	} else {
+		lines = append(lines, "Temperature "+fmtTemp(t))
 	}
 	for _, lbl := range []string{roomLabelAt(w, tx, ty), plantLabelAt(w, tx, ty), itemLabelAt(w, tx, ty)} {
 		if lbl != "" {
@@ -297,7 +307,11 @@ func plantLabelAt(w game.WorldView, x, y int) string {
 func itemLabelAt(w game.WorldView, x, y int) string {
 	for _, it := range w.Items {
 		if it.X == x && it.Y == y && !it.Carried {
-			return fmt.Sprintf("%s%s x %d", strings.ToUpper(it.Kind[:1]), it.Kind[1:], it.Qty)
+			s := fmt.Sprintf("%s%s x %d", strings.ToUpper(it.Kind[:1]), it.Kind[1:], it.Qty)
+			if f := freshLabel(it); f != "" {
+				s += ", " + f
+			}
+			return s
 		}
 	}
 	return ""

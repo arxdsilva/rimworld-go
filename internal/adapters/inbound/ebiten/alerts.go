@@ -94,6 +94,9 @@ func buildAlerts(pawns []game.PawnView, w game.WorldView) []alert {
 	if alive > 0 && w.Food < lowFoodPerColonist*alive {
 		out = append(out, alert{key: "food", label: fmt.Sprintf("Low food (%d left)", w.Food)})
 	}
+	if al, ok := spoilingAlert(w); ok {
+		out = append(out, al)
+	}
 	group("unhappy", false, unhappy, func(n string) string { return n + " is unhappy" }, "colonists are unhappy")
 	return out
 }

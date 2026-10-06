@@ -63,3 +63,15 @@ func TestCropsGrowLikeTheRealThing(t *testing.T) {
 		t.Fatal("daylight growth hours")
 	}
 }
+
+func TestTemperatureEffects(t *testing.T) {
+	if TempFactor(-30) != 0 || TempFactor(50) != 500 || TempFactor(200) != 1000 || TempFactor(400) != 500 {
+		t.Error("growth temperature curve wrong")
+	}
+	if !Frostbitten(Corn, -20) || Frostbitten(Wheat, -20) {
+		t.Error("corn dies at -2C, wheat survives")
+	}
+	if Frostbitten(Tree, -300) || Frostbitten(BerryBush, -300) {
+		t.Error("wild plants only go dormant")
+	}
+}

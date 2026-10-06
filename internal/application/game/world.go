@@ -85,7 +85,9 @@ func (g *Game) phasePlants() {
 		if !ok || p.Ripe() {
 			continue
 		}
-		p = p.Grow(plant.Rate(p.Species, g.terr.At(p.X, p.Y).Fertility()), now)
+		rate := plant.Rate(p.Species, g.terr.At(p.X, p.Y).Fertility())
+		rate = rate * plant.TempFactor(int(g.temperatureAt(p.X, p.Y))) / 1000
+		p = p.Grow(rate, now)
 		g.plants.Set(id, p)
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/terrain"
@@ -53,7 +54,7 @@ func (g *Game) sowable(x, y int) bool {
 	if g.terr.At(x, y).Fertility() <= 0 || !g.grid.Walkable(x, y) {
 		return false
 	}
-	if g.plantAt(x, y) != 0 {
+	if g.plantAt(x, y) != 0 || !g.growingSeason(x, y) {
 		return false
 	}
 	if g.layerBldgAt(x, y, construction.LayerObject) != 0 || g.layerBldgAt(x, y, construction.LayerFloor) != 0 ||
@@ -179,6 +180,11 @@ type CropView struct {
 	Yield     int     // items per plant
 	Nutrition int     // per item (a colonist eats about 5000 a day)
 	Sens      int     // soil sensitivity, percent
+	// FrostKill is the air temperature (tenths of a degree C) that kills
+	// the crop; ShelfDays how long the produce keeps at room temperature
+	// (0 = forever). Days assume growing weather (10 C or warmer).
+	FrostKill int
+	ShelfDays float64
 }
 
 // Crops lists the sowable crops, fastest first.
@@ -190,6 +196,7 @@ func Crops() []CropView {
 			Name: d.Name, Label: d.Label, Days: plant.GrowDays(s, terrain.Soil.Fertility()),
 			GravelDay: plant.GrowDays(s, terrain.Gravel.Fertility()), RichDays: plant.GrowDays(s, terrain.RichSoil.Fertility()),
 			Yield: d.Yield, Nutrition: d.Yields.Nutrition(), Sens: d.Sens,
+			FrostKill: d.FrostKill, ShelfDays: float64(d.Yields.ShelfTicks()) / clock.TicksPerDay,
 		})
 	}
 	return out

@@ -24,6 +24,7 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/grid"
 	"rimworld-go/internal/domain/world/plant"
+	"rimworld-go/internal/domain/world/temperature"
 	"rimworld-go/internal/domain/world/terrain"
 	"rimworld-go/pkg/randx"
 )
@@ -92,6 +93,12 @@ type ItemView struct {
 	Qty     int
 	X, Y    int
 	Carried bool
+	// FreshDays is how long the stack keeps at room temperature before it
+	// spoils; -1 means it never spoils. Rotten marks a spoiled corpse.
+	FreshDays float64
+	Rotten    bool
+	// RotRate is the current rot speed in permille (0 = frozen).
+	RotRate int
 }
 
 // FrameView is a construction blueprint.
@@ -172,6 +179,12 @@ type WorldView struct {
 	// (tracers and swings) for presentation.
 	Animals []AnimalView
 	Traces  []TraceView
+	// Climate: OutdoorTemp and IndoorTemp (enclosed rooms) in tenths of a
+	// degree C, and the season name.
+	OutdoorTemp, IndoorTemp int
+	Season                  string
+	// Messages are recent event notices, oldest first.
+	Messages []MessageView
 }
 
 // Game holds all authoritative simulation state.
@@ -181,6 +194,8 @@ type Game struct {
 	entities *entity.Allocator
 	rng      *randx.Rand
 	sched    schedule.Grid
+
+	messages []MessageView
 
 	pawnIDs   []entity.EntityID
 	positions *component.Store[Position]
@@ -392,6 +407,7 @@ func (g *Game) Step(n int) {
 	for i := 0; i < n; i++ {
 		g.phaseCommands()
 		g.phasePlants()
+		g.phaseClimate()
 		g.phaseNeeds()
 		g.phaseAI()
 		g.phaseJobs()
@@ -461,11 +477,15 @@ func (g *Game) Snapshot() []PawnView {
 // World returns the non-pawn read model.
 func (g *Game) World() WorldView {
 	w := WorldView{
-		Items:      make([]ItemView, 0, len(g.itemIDs)),
-		Frames:     make([]FrameView, 0, len(g.frameIDs)),
-		Buildings:  make([]BuildingView, 0, len(g.bldgIDs)),
-		Plants:     make([]PlantView, 0, len(g.plantIDs)),
-		Stockpiles: append([]StockpileView(nil), stockpileViews(g.stockpiles)...),
+		Items:       make([]ItemView, 0, len(g.itemIDs)),
+		Frames:      make([]FrameView, 0, len(g.frameIDs)),
+		Buildings:   make([]BuildingView, 0, len(g.bldgIDs)),
+		Plants:      make([]PlantView, 0, len(g.plantIDs)),
+		Stockpiles:  append([]StockpileView(nil), stockpileViews(g.stockpiles)...),
+		OutdoorTemp: int(temperature.Outdoor(g.clock.Now())),
+		IndoorTemp:  int(temperature.Indoor(g.clock.Now())),
+		Season:      temperature.Season(g.clock.Now()),
+		Messages:    append([]MessageView(nil), g.messages...),
 	}
 	for _, id := range g.itemIDs {
 		st, ok := g.stacks.Get(id)
@@ -474,6 +494,8 @@ func (g *Game) World() WorldView {
 		}
 		w.Items = append(w.Items, ItemView{
 			ID: id, Kind: st.Kind.String(), Qty: st.Qty, X: st.X, Y: st.Y, Carried: st.Carrier != 0,
+			FreshDays: freshDays(st), Rotten: st.Rotten(),
+			RotRate: item.RotRate(int(g.temperatureAt(st.X, st.Y))),
 		})
 		if st.Carrier == 0 {
 			switch {

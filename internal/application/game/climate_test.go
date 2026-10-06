@@ -1,0 +1,141 @@
+package game
+
+import (
+	"os"
+	"strings"
+	"testing"
+
+	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/economy/recipe"
+	"rimworld-go/internal/domain/sim/clock"
+	"rimworld-go/internal/domain/sim/command"
+	"rimworld-go/internal/domain/world/plant"
+)
+
+// jumpTo moves the clock to day (0-based) at hour without simulating.
+func jumpTo(g *Game, day, hour int) {
+	target := clock.Tick(day*clock.TicksPerDay + hour*clock.TicksPerHour)
+	g.clock.Advance(int(target - g.clock.Now()))
+}
+
+func stackOf(g *Game, k item.Kind) (item.Stack, bool) {
+	for _, id := range g.itemIDs {
+		if st, ok := g.stacks.Get(id); ok && st.Kind == k {
+			return st, true
+		}
+	}
+	return item.Stack{}, false
+}
+
+func TestMeatRotsAwayInSummer(t *testing.T) {
+	g := New(Config{Seed: 1, Width: 8, Height: 6})
+	jumpTo(g, 15, 0) // mid-summer
+	if _, err := g.SpawnStack(item.Meat, 20, 2, 2); err != nil {
+		t.Fatal(err)
+	}
+	g.Step(clock.TicksPerDay)
+	st, ok := stackOf(g, item.Meat)
+	if !ok || st.Rot == 0 {
+		t.Fatalf("meat should be rotting: %+v %v", st, ok)
+	}
+	g.Step(2 * clock.TicksPerDay)
+	if _, ok := stackOf(g, item.Meat); ok {
+		t.Fatal("meat should have rotted away after three summer days")
+	}
+	w := g.World()
+	if len(w.Messages) == 0 || !strings.Contains(w.Messages[len(w.Messages)-1].Text, "meat rotted away") {
+		t.Fatalf("messages = %+v", w.Messages)
+	}
+}
+
+func TestWinterFreezesFoodAndKillsCrops(t *testing.T) {
+	g := New(Config{Seed: 1, Width: 8, Height: 6})
+	jumpTo(g, 45, 0) // mid-winter
+	if _, err := g.SpawnStack(item.Meat, 20, 2, 2); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := g.SpawnPlantSpecies("corn", 4, 3, 100); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := g.SpawnPlantSpecies("tree", 5, 3, 100); err != nil {
+		t.Fatal(err)
+	}
+	g.Step(clock.TicksPerDay)
+	if st, ok := stackOf(g, item.Meat); !ok || st.Rot != 0 {
+		t.Fatalf("frozen meat should not rot: %+v %v", st, ok)
+	}
+	corn, tree := 0, 0
+	for _, id := range g.plantIDs {
+		p, _ := g.plants.Get(id)
+		switch p.Species {
+		case plant.Corn:
+			corn++
+		case plant.Tree:
+			tree++
+		}
+	}
+	if corn != 0 || tree != 1 {
+		t.Fatalf("corn=%d tree=%d: frost kills crops, not trees", corn, tree)
+	}
+}
+
+func TestNoSowingInWinter(t *testing.T) {
+	g := New(Config{Seed: 1, Width: 8, Height: 6})
+	if !g.sowable(3, 3) {
+		t.Fatal("spring soil should be sowable")
+	}
+	jumpTo(g, 45, 12)
+	if g.sowable(3, 3) {
+		t.Fatal("frozen mid-winter soil should not be sown")
+	}
+}
+
+func TestRottenCorpseIsNotButchered(t *testing.T) {
+	g := New(Config{Seed: 1, Width: 8, Height: 6})
+	if _, err := g.SpawnStack(item.CorpseDustbuck, 1, 2, 2); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range g.itemIDs {
+		st, _ := g.stacks.Get(id)
+		st.Rot = item.CorpseDustbuck.ShelfTicks()
+		g.stacks.Set(id, st)
+	}
+	if id, _ := g.ingredientFor(0, recipe.DefOf(recipe.ButcherDustbuck).Input); id != 0 {
+		t.Fatal("rotten corpse offered as butchering ingredient")
+	}
+}
+
+// TestYearProbe runs a generated colony through a full year and logs how it
+// fares. Set RIMWORLD_PROBE=1 to run.
+func TestYearProbe(t *testing.T) {
+	if os.Getenv("RIMWORLD_PROBE") == "" {
+		t.Skip("set RIMWORLD_PROBE=1")
+	}
+	g := NewColony(Config{Seed: 7, Width: 48, Height: 40})
+	// play it like a player would: a stockpile, berry picking, hunting and
+	// a field of every crop
+	cx, cy := g.Width()/2, g.Height()/2
+	g.Enqueue(command.Command{Kind: command.DesignateStockpile, X: cx + 1, Y: cy + 3, X2: cx + 4, Y2: cy + 5})
+	g.Enqueue(command.Command{Kind: command.DesignateHarvest, X: 0, Y: 0, X2: g.Width() - 1, Y2: g.Height() - 1})
+	g.Enqueue(command.Command{Kind: command.DesignateHunt, X: 0, Y: 0, X2: g.Width() - 1, Y2: g.Height() - 1})
+	for i, c := range []string{"potato", "corn", "wheat", "beans", "radish", "pumpkin", "lettuce"} {
+		id, _ := CropID(c)
+		x := cx - 9 + (i%4)*3
+		y := cy - 6 + (i/4)*3
+		g.Enqueue(command.Command{Kind: command.DesignateGrowZone, X: x, Y: y, X2: x + 2, Y2: y + 2, Build: id})
+	}
+	for day := 0; day < clock.DaysPerYear; day++ {
+		g.Step(clock.TicksPerDay)
+		w := g.World()
+		alive := 0
+		for _, p := range g.Snapshot() {
+			if p.Status != "dead" {
+				alive++
+			}
+		}
+		t.Logf("day %2d %-6s out %4.1fC  food %4d %v alive %d plants %d", day+1, w.Season, float64(w.OutdoorTemp)/10, w.Food, w.FoodByKind, alive, len(w.Plants))
+	}
+	for _, m := range g.World().Messages {
+		t.Logf("msg %d: %s", m.Tick/clock.TicksPerDay, m.Text)
+	}
+}

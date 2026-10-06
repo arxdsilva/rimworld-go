@@ -43,6 +43,11 @@ type Def struct {
 	Sens    int
 	SowWork int    // ticks to sow one cell
 	Label   string // player-facing produce name
+	// FrostKill is the air temperature (tenths of a degree C) below which a
+	// crop dies. Tender summer crops die at the first frost; hardy ones
+	// shrug off a few degrees. Only crops die of frost: wild trees and bushes
+	// go dormant.
+	FrostKill int
 }
 
 // Plants grow only in daylight, GrowFromHour to GrowToHour.
@@ -76,19 +81,50 @@ var defs = [numSpecies]Def{
 	//   pumpkin      100        8.5       12        70%
 	//   wheat        120       10          8        80%
 	Potato: {Species: Potato, Name: "potato", Label: "potatoes", GrowTicks: growDays(7.5), HarvestWork: 35, Yield: 8,
-		Yields: item.Potatoes, CutWork: 10, Crop: true, Sens: 30, SowWork: 30},
+		Yields: item.Potatoes, CutWork: 10, Crop: true, Sens: 30, SowWork: 30, FrostKill: -20},
 	Corn: {Species: Corn, Name: "corn", Label: "corn", GrowTicks: growDays(8), HarvestWork: 40, Yield: 7,
-		Yields: item.Corn, CutWork: 14, Crop: true, Sens: 100, SowWork: 25},
+		Yields: item.Corn, CutWork: 14, Crop: true, Sens: 100, SowWork: 25, FrostKill: -10},
 	Wheat: {Species: Wheat, Name: "wheat", Label: "wheat", GrowTicks: growDays(10), HarvestWork: 35, Yield: 8,
-		Yields: item.Wheat, CutWork: 10, Crop: true, Sens: 80, SowWork: 20},
+		Yields: item.Wheat, CutWork: 10, Crop: true, Sens: 80, SowWork: 20, FrostKill: -80},
 	Beans: {Species: Beans, Name: "beans", Label: "beans", GrowTicks: growDays(5), HarvestWork: 30, Yield: 4,
-		Yields: item.Beans, CutWork: 10, Crop: true, Sens: 60, SowWork: 25},
+		Yields: item.Beans, CutWork: 10, Crop: true, Sens: 60, SowWork: 25, FrostKill: -10},
 	Lettuce: {Species: Lettuce, Name: "lettuce", Label: "lettuce", GrowTicks: growDays(3.75), HarvestWork: 18, Yield: 4,
-		Yields: item.Lettuce, CutWork: 8, Crop: true, Sens: 90, SowWork: 20},
+		Yields: item.Lettuce, CutWork: 8, Crop: true, Sens: 90, SowWork: 20, FrostKill: -30},
 	Radish: {Species: Radish, Name: "radish", Label: "radishes", GrowTicks: growDays(2), HarvestWork: 15, Yield: 3,
-		Yields: item.Radishes, CutWork: 8, Crop: true, Sens: 40, SowWork: 15},
+		Yields: item.Radishes, CutWork: 8, Crop: true, Sens: 40, SowWork: 15, FrostKill: -50},
 	Pumpkin: {Species: Pumpkin, Name: "pumpkin", Label: "pumpkins", GrowTicks: growDays(8.5), HarvestWork: 30, Yield: 12,
-		Yields: item.Pumpkins, CutWork: 12, Crop: true, Sens: 70, SowWork: 30},
+		Yields: item.Pumpkins, CutWork: 12, Crop: true, Sens: 70, SowWork: 30, FrostKill: -10},
+}
+
+// Growth temperature, tenths of a degree C: nothing grows at or below
+// growMinTemp, growth ramps up to full speed at growFullTemp, holds there
+// to growHotTemp and fades out by growMaxTemp in extreme heat.
+const (
+	growMinTemp  = 0
+	growFullTemp = 100
+	growHotTemp  = 350
+	growMaxTemp  = 450
+)
+
+// TempFactor is growth speed in permille at air temperature tenthsC.
+func TempFactor(tenthsC int) int {
+	switch {
+	case tenthsC <= growMinTemp || tenthsC >= growMaxTemp:
+		return 0
+	case tenthsC < growFullTemp:
+		return (tenthsC - growMinTemp) * 1000 / (growFullTemp - growMinTemp)
+	case tenthsC <= growHotTemp:
+		return 1000
+	default:
+		return (growMaxTemp - tenthsC) * 1000 / (growMaxTemp - growHotTemp)
+	}
+}
+
+// Frostbitten reports whether a crop of species s dies at air temperature
+// tenthsC.
+func Frostbitten(s Species, tenthsC int) bool {
+	d := DefOf(s)
+	return d.Crop && tenthsC < d.FrostKill
 }
 
 // Crops lists the farm crops in menu order (fastest first).

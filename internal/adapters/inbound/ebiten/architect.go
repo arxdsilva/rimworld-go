@@ -28,7 +28,7 @@ const (
 	archCropCols = 4
 	archCropBtnW = 62
 	archCropBtnH = 22
-	archCropH    = 2*(archCropBtnH+4) + 40
+	archCropH    = 2*(archCropBtnH+4) + 56
 )
 
 // archCardRows is the card rows the current category needs (min 2).
@@ -226,6 +226,11 @@ func (a *App) drawArchitect(screen *ebiten.Image) {
 		y := int(a.archCropTop(r)) + 2*(archCropBtnH+4) + 2
 		drawLabel(screen, int(r.x)+12, y, fmt.Sprintf("%s: %.1f days, %d %s per plant", strings.ToUpper(c.Name[:1])+c.Name[1:], c.Days, c.Yield, c.Label))
 		drawLabel(screen, int(r.x)+12, y+16, fmt.Sprintf("rich %.1fd  gravel %.1fd  food %d each", c.RichDays, c.GravelDay, c.Nutrition))
+		keeps := "keeps forever"
+		if c.ShelfDays > 0 {
+			keeps = fmt.Sprintf("keeps %.0f days", c.ShelfDays)
+		}
+		drawLabel(screen, int(r.x)+12, y+32, fmt.Sprintf("frost kills below %s, %s", fmtTemp(c.FrostKill), keeps))
 	}
 	iy := int(r.y+r.h) - archInfoH + 6
 	stone := 0

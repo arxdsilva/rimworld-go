@@ -688,7 +688,7 @@ This is the heart of autonomous colony behavior.
 
 -   [x] **Fertility**
     -   Terrain fertility affects plant growth.
--   [-] **Crop definitions** (amberroot crop def with grow ticks, yield, harvest work; one crop so far)
+-   [-] **Crop definitions** (7 crops: grow days, yield, soil sensitivity, frost-kill temperature, shelf life; no minimum skill)
     -   Growth time.
     -   fertility sensitivity.
     -   yield.
@@ -696,7 +696,7 @@ This is the heart of autonomous colony behavior.
     -   temperature/light requirements.
 -   [x] **Sowing** (Grow work sows empty fertile zone cells; prioritizable from the order menu)
     -   Growers plant designated crops in growing zones.
--   [-] **Plant growth** (integer per-tick growth scaled by terrain fertility; no temperature/light/health)
+-   [-] **Plant growth** (integer per-tick growth scaled by fertility x soil sensitivity x temperature; daylight only; frost kills crops; no plant health)
     -   Analytical/bucketed growth.
     -   Depends on temperature, light, fertility, plant health.
 -   [x] **Harvest maturity** (plants ripen at GrowTicks; berry bushes regrow to 35% after harvest)
@@ -707,13 +707,13 @@ This is the heart of autonomous colony behavior.
 
 ## 8.5 Food spoilage
 
--   [ ] **Rot progression**
+-   [x] **Rot progression** (per-stack rot ticks; full speed from 10C, slower when cool, none at 0C or below; merges average by quantity)
     -   Perishable food/corpses rot based on temperature and elapsed
         time.
--   [ ] **Frozen/refrigerated preservation**
+-   [-] **Frozen/refrigerated preservation** (winter and cold rooms freeze food; no cooler/freezer building yet)
     -   Cold slows or stops rot according to independently selected
         balance.
--   [ ] **Rotten state**
+-   [x] **Rotten state** (spoiled food is destroyed with a message; rotten corpses can't be butchered and decay away)
     -   No longer normal edible food.
     -   Corpse rot affects handling/visual state.
 
@@ -1085,10 +1085,10 @@ treatment, and surgery are major colony-management systems.
 
 ## 12.1 Temperature
 
--   [ ] **Outdoor temperature**
+-   [-] **Outdoor temperature** (temperate calendar: yearly triangle wave 9C +-15C peaking day 15, +-6C day/night swing; no weather/latitude)
     -   Driven by world tile climate, latitude/elevation/season/time,
         and weather.
--   [ ] **Indoor room temperature**
+-   [-] **Indoor room temperature** (enclosed rooms hold the day's mean +3C with no day/night swing; no per-room heat exchange)
     -   Rooms have thermal state.
     -   Exchange heat with outdoors and neighboring rooms through
         openings/structures.
@@ -1105,7 +1105,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 12.2 Seasons/calendar
 
--   [ ] **Year and quadrum/season cycle**
+-   [-] **Year and quadrum/season cycle** (seasons centred on the temperature curve; crops grow 0-10C ramp, full 10-35C, frost kills tender crops)
     -   Seasonal temperature/growing changes.
     -   Hemisphere/world position can affect seasons.
 -   [ ] **Growing period**

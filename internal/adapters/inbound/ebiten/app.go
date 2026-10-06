@@ -100,6 +100,7 @@ type App struct {
 	archX0, archY0, archX1, archY1 int
 	inspectTab                     string
 	capture                        captureState
+	msgSeen                        map[string]uint64 // message key -> frame first shown
 }
 
 // NewApp returns an App on the boot screen. Simulation is not created

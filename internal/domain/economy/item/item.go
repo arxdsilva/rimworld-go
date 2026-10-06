@@ -1,7 +1,10 @@
 // Package item is ground (and carried) resource stacks.
 package item
 
-import "rimworld-go/internal/domain/sim/entity"
+import (
+	"rimworld-go/internal/domain/sim/clock"
+	"rimworld-go/internal/domain/sim/entity"
+)
 
 // Kind is a stack category.
 type Kind uint8
@@ -108,11 +111,73 @@ type Stack struct {
 	Qty     int
 	X, Y    int
 	Carrier entity.EntityID // 0 = on ground or in a frame
+	// Rot is spoilage accumulated so far, in ticks at full rot speed. The
+	// stack spoils when Rot reaches Kind.ShelfTicks().
+	Rot int
 }
 
 // CanMerge reports whether a and b may combine on the same tile.
+// Rotten corpses never merge with fresh ones.
 func CanMerge(a, b Stack) bool {
-	return a.Kind == b.Kind && a.Carrier == 0 && b.Carrier == 0 && a.X == b.X && a.Y == b.Y
+	return a.Kind == b.Kind && a.Carrier == 0 && b.Carrier == 0 && a.X == b.X && a.Y == b.Y &&
+		a.Rotten() == b.Rotten()
+}
+
+// MergeRot is the spoilage of a stack of qa items with rot ra combined with
+// qb items with rot rb: the quantity-weighted average.
+func MergeRot(qa, ra, qb, rb int) int {
+	if qa+qb <= 0 {
+		return 0
+	}
+	return (qa*ra + qb*rb) / (qa + qb)
+}
+
+// shelfDays is how long food keeps at room temperature (10 C or warmer)
+// before it spoils; 0 never spoils. Calibrated to real produce, squeezed for
+// play: fresh meat and cooked meals go off in days, greens in a week, roots
+// and squash keep a season, and dried grain and beans keep indefinitely.
+var shelfDays = [numKinds]float64{Meat: 2, Meal: 4, CorpseDustbuck: 2.5, CorpseRidgewolf: 2.5,
+	Berries: 10, Lettuce: 6, Radishes: 14, Potatoes: 30, Corn: 40, Pumpkins: 50}
+
+// ShelfTicks is how many full-speed rot ticks k survives (0 = never rots).
+func (k Kind) ShelfTicks() int {
+	if k >= numKinds {
+		return 0
+	}
+	return int(shelfDays[k] * clock.TicksPerDay)
+}
+
+// Perishable reports whether k rots.
+func (k Kind) Perishable() bool { return k.ShelfTicks() > 0 }
+
+// Rotten reports a stack that has spoiled. Rotten food is destroyed; a
+// rotten corpse lingers but can no longer be butchered.
+func (s Stack) Rotten() bool {
+	sh := s.Kind.ShelfTicks()
+	return sh > 0 && s.Rot >= sh
+}
+
+// FreshTicks is how many full-speed rot ticks remain before s spoils.
+func (s Stack) FreshTicks() int {
+	sh := s.Kind.ShelfTicks()
+	if sh == 0 || s.Rot >= sh {
+		return 0
+	}
+	return sh - s.Rot
+}
+
+// RotRate is the rot speed in permille at air temperature tenthsC (tenths
+// of a degree C): frozen food (0 C or below) doesn't rot, cool food rots
+// proportionally slower, and from 10 C up it rots at full speed.
+func RotRate(tenthsC int) int {
+	switch {
+	case tenthsC <= 0:
+		return 0
+	case tenthsC >= 100:
+		return 1000
+	default:
+		return tenthsC * 10
+	}
 }
 
 // Add returns qty after adding n, capped, and whether the result is still positive.
