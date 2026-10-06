@@ -192,7 +192,9 @@ func (a *App) Update() error {
 
 	if a.nav.screen() == screenColony && a.nav.overlay() == overlayNone && a.renderer != nil {
 		a.renderer.handleSpeedInput()
-		a.renderer.handleCameraInput()
+		if a.cfg.Capture == nil { // captures frame the camera themselves
+			a.renderer.handleCameraInput(colonyViewport(sw, sh))
+		}
 		if a.float.open && !consumed && inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 			a.closeFloat() // click outside the order menu just closes it
 			consumed = true

@@ -7,6 +7,7 @@ package ebiten
 import (
 	"fmt"
 	"image/color"
+	"math"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -49,7 +50,7 @@ const TileSize = 64
 
 const (
 	panPixels = 8
-	minZoom   = 0.5
+	minZoom   = 0.1 // absolute floor; the map-fit limit is minZoomFor
 	maxZoom   = 3.0
 	zoomStep  = 0.1
 )
@@ -112,6 +113,7 @@ func (s speed) rate() string {
 type camera struct {
 	offsetX, offsetY float64
 	zoom             float64
+	placed           bool // clampCamera has centred it on the map once
 }
 
 type pawnVisual struct {
@@ -242,7 +244,7 @@ func (r *Renderer) handleSpeedInput() {
 	}
 }
 
-func (r *Renderer) handleCameraInput() {
+func (r *Renderer) handleCameraInput(v viewport) {
 	if ebiten.IsKeyPressed(ebiten.KeyLeft) || ebiten.IsKeyPressed(ebiten.KeyA) {
 		r.cam.offsetX -= panPixels
 	}
@@ -256,15 +258,18 @@ func (r *Renderer) handleCameraInput() {
 		r.cam.offsetY += panPixels
 	}
 
+	cx, cy := (v.x0+v.x1)/2, (v.y0+v.y1)/2
 	if inpututil.IsKeyJustPressed(ebiten.KeyEqual) {
-		r.cam.zoom = clampZoom(r.cam.zoom + zoomStep)
+		r.zoomAt(r.cam.zoom*(1+zoomStep), v, cx, cy)
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyMinus) {
-		r.cam.zoom = clampZoom(r.cam.zoom - zoomStep)
+		r.zoomAt(r.cam.zoom/(1+zoomStep), v, cx, cy)
 	}
 	if _, dy := ebiten.Wheel(); dy != 0 {
-		r.cam.zoom = clampZoom(r.cam.zoom + dy*zoomStep)
+		mx, my := ebiten.CursorPosition()
+		r.zoomAt(r.cam.zoom*math.Pow(1+zoomStep, dy), v, float64(mx), float64(my))
 	}
+	r.clampCamera(v)
 }
 
 func clampZoom(z float64) float64 {

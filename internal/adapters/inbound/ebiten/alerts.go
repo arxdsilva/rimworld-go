@@ -163,4 +163,5 @@ func (r *Renderer) centerOn(wx, wy float64, sw, sh int) {
 	tile := r.tilePx()
 	r.cam.offsetX = wx*tile - float64(sw)/2
 	r.cam.offsetY = wy*tile - float64(sh)/2
+	r.clampCamera(colonyViewport(sw, sh))
 }

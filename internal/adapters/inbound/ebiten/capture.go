@@ -177,6 +177,17 @@ func (a *App) captureUI(ui string) {
 		a.renderer.cam.offsetY = float64(cy+5)*tile - float64(a.sh)/2
 		x, y := at(cx+1, cy+6)
 		a.cursor = &[2]int{x, y}
+	case "zoomout", "zoomedge":
+		// furthest zoom-out, centred, or pushed to the top-left limit
+		v := colonyViewport(a.sw, a.sh)
+		a.renderer.cam.zoom = a.renderer.minZoomFor(v)
+		a.renderer.cam.placed = false
+		if ui == "zoomedge" {
+			a.renderer.cam.zoom *= 1.6
+			a.renderer.clampCamera(v)
+			a.renderer.cam.offsetX, a.renderer.cam.offsetY = -1e6, -1e6
+		}
+		a.renderer.clampCamera(v)
 	case "hover":
 		// hover a sown crop tile so the soil readout shows with plant info
 		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
