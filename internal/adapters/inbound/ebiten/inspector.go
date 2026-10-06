@@ -27,6 +27,17 @@ func (a *App) inspectorButtons() []button {
 		{id: "inspector.gear", label: "Gear", disabled: true, reason: "not implemented", w: 48, h: 22},
 	}
 	out := inspectorTabRow(r, tabs)
+	if p, ok := a.selectedPawn(); ok {
+		label := "Draft (R)"
+		if p.Drafted {
+			label = "Undraft (R)"
+		}
+		dead := p.Status != "alive"
+		out = append(out, button{
+			id: "pawn.draft", label: label, x: r.x + 12, y: r.y + r.h - 62, w: 120, h: 24,
+			selected: p.Drafted, disabled: dead, reason: "not able to act",
+		})
+	}
 	out = append(out, button{
 		id:    "inspector.close",
 		label: "X",
@@ -74,7 +85,11 @@ func (a *App) drawInspector(screen *ebiten.Image) {
 	r := inspectorRect()
 	drawPanel(screen, r.x, r.y, r.w, r.h)
 	drawLabel(screen, int(r.x)+12, int(r.y)+12, pawnLabel(p))
-	drawLabel(screen, int(r.x)+12, int(r.y)+32, "colonist  "+p.Status)
+	status := "colonist  " + p.Status
+	if p.Drafted {
+		status += "  drafted"
+	}
+	drawLabel(screen, int(r.x)+12, int(r.y)+32, status)
 	a.drawPawnPortrait(screen, p, float64(r.x)+12, float64(r.y)+52, 48, 64)
 	drawLabel(screen, int(r.x)+72, int(r.y)+56, fmt.Sprintf("job       %s", p.Job))
 	drawLabel(screen, int(r.x)+72, int(r.y)+72, fmt.Sprintf("activity  %s", p.Activity))

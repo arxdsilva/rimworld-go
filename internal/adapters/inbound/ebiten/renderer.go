@@ -34,6 +34,10 @@ type Simulation interface {
 	Tick() clock.Tick
 	Date() clock.Date
 	Activity() schedule.Activity
+	// CanPlace is the read-only placement rule the Architect previews.
+	CanPlace(kind string, x, y int) (bool, string)
+	// OrdersAt lists what a pawn can be ordered to do at a tile.
+	OrdersAt(pawn entity.EntityID, x, y int) []game.OrderOption
 }
 
 var _ Simulation = (*game.Game)(nil)
@@ -115,6 +119,7 @@ type pawnVisual struct {
 	flip         bool
 	lastMove     uint64
 	moveTick     clock.Tick
+	facing       facing
 }
 
 // Renderer drives an Ebitengine window from a running Simulation.
@@ -123,6 +128,7 @@ type Renderer struct {
 	speed speed
 	cam   camera
 	pack  *atlas
+	art   *artCatalog
 
 	// present is a presentation-only frame counter. Animation reads it;
 	// simulation never does. Tile lerp uses sim ticks vs moveTick.
@@ -306,6 +312,12 @@ func (r *Renderer) Draw(screen *ebiten.Image) {
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
 	tile := r.tilePx()
 
+	if r.art != nil {
+		r.drawArt(screen, sw, sh, tile)
+		r.drawDaylight(screen, sw, sh)
+		return
+	}
+
 	r.drawTerrain(screen, sw, sh, tile)
 	r.drawWorld(screen, sw, sh, tile)
 	r.drawGrid(screen)
@@ -365,7 +377,7 @@ func (r *Renderer) drawGrid(screen *ebiten.Image) {
 }
 
 func nextVisual(prev pawnVisual, seen bool, x, y int, tick clock.Tick, present uint64) pawnVisual {
-	v := pawnVisual{x: x, y: y, flip: prev.flip, lastMove: prev.lastMove, moveTick: prev.moveTick}
+	v := pawnVisual{x: x, y: y, flip: prev.flip, lastMove: prev.lastMove, moveTick: prev.moveTick, facing: prev.facing}
 	if !seen {
 		v.fromX, v.fromY = x, y
 		v.moveTick = tick
@@ -378,6 +390,7 @@ func nextVisual(prev pawnVisual, seen bool, x, y int, tick clock.Tick, present u
 		if x != prev.x {
 			v.flip = x < prev.x
 		}
+		v.facing = facingFor(x-prev.x, y-prev.y, prev.facing)
 		return v
 	}
 	v.fromX, v.fromY = prev.fromX, prev.fromY

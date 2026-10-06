@@ -9,12 +9,16 @@ import (
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
+	"rimworld-go/internal/domain/sim/entity"
 )
 
 type stubSim struct {
-	steps int
-	w, h  int
-	tick  clock.Tick
+	cmds   []command.Command
+	pawns  []game.PawnView
+	orders []game.OrderOption
+	steps  int
+	w, h   int
+	tick   clock.Tick
 }
 
 func (s *stubSim) Step(n int) {
@@ -22,7 +26,7 @@ func (s *stubSim) Step(n int) {
 	s.tick += clock.Tick(n)
 }
 
-func (s *stubSim) Snapshot() []game.PawnView { return nil }
+func (s *stubSim) Snapshot() []game.PawnView { return s.pawns }
 func (s *stubSim) Width() int                { return s.w }
 func (s *stubSim) Height() int               { return s.h }
 func (s *stubSim) Tick() clock.Tick          { return s.tick }
@@ -30,14 +34,26 @@ func (s *stubSim) Date() clock.Date          { return clock.DateAt(s.tick) }
 func (s *stubSim) Activity() schedule.Activity {
 	return schedule.Work
 }
-func (s *stubSim) World() game.WorldView   { return game.WorldView{} }
-func (s *stubSim) Apply(command.Command)   {}
-func (s *stubSim) Enqueue(command.Command) {}
+func (s *stubSim) World() game.WorldView     { return game.WorldView{} }
+func (s *stubSim) Apply(command.Command)     {}
+func (s *stubSim) Enqueue(c command.Command) { s.cmds = append(s.cmds, c) }
+func (s *stubSim) CanPlace(kind string, x, y int) (bool, string) {
+	if x < 0 || y < 0 || x >= s.w || y >= s.h {
+		return false, "outside the map"
+	}
+	return true, ""
+}
+func (s *stubSim) OrdersAt(pawn entity.EntityID, x, y int) []game.OrderOption {
+	return s.orders
+}
 
 func testApp(sim Simulation) *App {
 	return NewApp(AppConfig{
 		Version: "test",
 		LoadPack: func() (*atlas, error) {
+			return nil, nil
+		},
+		LoadArt: func() (*artCatalog, error) {
 			return nil, nil
 		},
 		LoadSplash: func() (*ebiten.Image, error) {

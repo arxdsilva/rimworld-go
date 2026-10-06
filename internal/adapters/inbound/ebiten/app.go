@@ -47,11 +47,16 @@ type SimFactory func() (Simulation, error)
 
 // AppConfig is the composition-root wiring for the interactive client.
 type AppConfig struct {
-	Version    string
-	Assets     string // empty: locate the vendor pack from cwd
-	NewSim     SimFactory
-	LoadPack   func() (*atlas, error)
+	Version  string
+	Assets   string // empty: locate the vendor pack from cwd
+	NewSim   SimFactory
+	LoadPack func() (*atlas, error)
+	// LoadArt loads the original generated sprites (assets/metadata).
+	// Nil: locate from cwd. When it fails the vendor pack is used.
+	LoadArt    func() (*artCatalog, error)
 	LoadSplash func() (*ebiten.Image, error)
+	// Capture, when set, runs a scripted screenshot session and quits.
+	Capture *Capture
 }
 
 // App is the ebiten.Game shell: screen routing, widgets, and (once
@@ -64,6 +69,7 @@ type App struct {
 	bootFrames int
 	packTried  bool
 	pack       *atlas
+	art        *artCatalog
 	packWarn   string
 	splash     *ebiten.Image
 	sessionErr string
@@ -78,10 +84,15 @@ type App struct {
 	renderer                       *Renderer
 	workOpen                       bool
 	archOpen                       bool
+	archCat                        string
 	archTool                       string
+	archFacing                     uint8
+	float                          floatMenu
+	cursor                         *[2]int // capture-only synthetic cursor
 	archDrag                       bool
 	archX0, archY0, archX1, archY1 int
 	inspectTab                     string
+	capture                        captureState
 }
 
 // NewApp returns an App on the boot screen. Simulation is not created
@@ -101,6 +112,15 @@ func NewApp(cfg AppConfig) *App {
 				return nil, err
 			}
 			return loadAtlasFromRoot(root)
+		}
+	}
+	if cfg.LoadArt == nil {
+		cfg.LoadArt = func() (*artCatalog, error) {
+			root, err := LocateArt()
+			if err != nil {
+				return nil, err
+			}
+			return loadArtCatalog(root)
 		}
 	}
 	if cfg.LoadSplash == nil {
@@ -166,14 +186,24 @@ func (a *App) Update() error {
 	if a.nav.screen() == screenColony && a.nav.overlay() == overlayNone && a.renderer != nil {
 		a.renderer.handleSpeedInput()
 		a.renderer.handleCameraInput()
-		a.handleArchitectDrag(consumed)
-		if !consumed && !a.archOpen {
-			a.renderer.handleSelectionInput()
-			a.handleMoveOrder()
+		if a.float.open && !consumed && inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+			a.closeFloat() // click outside the order menu just closes it
+			consumed = true
+		}
+		a.handleArchitectInput(consumed)
+		if a.archTool == "" {
+			if !consumed {
+				a.renderer.handleSelectionInput()
+			}
+			a.handleOrders()
 		}
 	}
-	a.tick()
-	if a.shouldQuit {
+	if a.cfg.Capture != nil {
+		a.tickCapture()
+	} else {
+		a.tick()
+	}
+	if a.shouldQuit && (a.cfg.Capture == nil || a.capture.done) {
 		return ebiten.Termination
 	}
 	return nil
@@ -190,10 +220,17 @@ func (a *App) handleColonyEscape() bool {
 	if a.nav.screen() != screenColony || a.nav.overlay() != overlayNone {
 		return false
 	}
-	if a.archOpen {
-		a.archOpen = false
+	if a.float.open {
+		a.closeFloat()
+		return true
+	}
+	if a.archOpen && a.archTool != "" {
 		a.archTool = ""
 		a.archDrag = false
+		return true
+	}
+	if a.archOpen {
+		a.closeArchitect()
 		return true
 	}
 	if a.workOpen {
@@ -254,6 +291,16 @@ func (a *App) loadPack() {
 			a.pack = p
 		}
 	}
+	if a.cfg.LoadArt != nil {
+		art, err := a.cfg.LoadArt()
+		if err != nil {
+			if a.packWarn == "" {
+				a.packWarn = err.Error()
+			}
+		} else {
+			a.art = art
+		}
+	}
 	a.loadSplash()
 }
 
@@ -274,23 +321,23 @@ func (a *App) applyClick(id string) {
 	case id == "tab.work":
 		a.workOpen = !a.workOpen
 		if a.workOpen {
-			a.archOpen = false
-			a.archTool = ""
-			a.archDrag = false
+			a.closeArchitect()
+			a.closeFloat()
 		}
 	case id == "tab.architect":
-		a.archOpen = !a.archOpen
 		if a.archOpen {
-			a.workOpen = false
-			if a.archTool == "" {
-				a.archTool = "wall"
-			}
+			a.closeArchitect()
 		} else {
-			a.archTool = ""
-			a.archDrag = false
+			a.openArchitect()
 		}
+	case strings.HasPrefix(id, "arch.cat."):
+		a.selectArchCategory(strings.TrimPrefix(id, "arch.cat."))
 	case strings.HasPrefix(id, "arch.tool."):
-		a.archTool = strings.TrimPrefix(id, "arch.tool.")
+		a.selectArchTool(strings.TrimPrefix(id, "arch.tool."))
+	case strings.HasPrefix(id, "float."):
+		a.chooseFloat(id)
+	case id == "pawn.draft":
+		a.toggleDraft()
 	case strings.HasPrefix(id, "work.cell."):
 		a.toggleWorkCell(id)
 	case id == "tab.menu":
@@ -390,12 +437,14 @@ func (a *App) startGame() {
 	a.sessionErr = ""
 	a.simsStarted++
 	a.workOpen = false
-	a.archOpen = false
-	a.archTool = "wall"
-	a.archDrag = false
+	a.closeArchitect()
+	a.archCat = ""
+	a.archFacing = 0
+	a.closeFloat()
 	a.inspectTab = "character"
 	a.renderer = New(sim)
 	a.renderer.pack = a.pack
+	a.renderer.art = a.art
 	a.nav.reset(frame{screen: screenColony})
 }
 
@@ -449,6 +498,7 @@ func (a *App) Draw(screen *ebiten.Image) {
 	}
 
 	a.drawHoverHint(screen, sw, sh)
+	a.drawCapture(screen)
 }
 
 func (a *App) drawHoverHint(screen *ebiten.Image, sw, sh int) {
@@ -586,6 +636,9 @@ func formatVersion(v string) string {
 }
 
 func (a *App) currentCursor() (int, int) {
+	if a.cursor != nil {
+		return a.cursor[0], a.cursor[1]
+	}
 	return ebiten.CursorPosition()
 }
 
@@ -598,88 +651,6 @@ func (a *App) paintMenu(screen *ebiten.Image, sw, sh int, title string, body []s
 
 func drawDim(screen *ebiten.Image, sw, sh int) {
 	vector.FillRect(screen, 0, 0, float32(sw), float32(sh), uiDim, false)
-}
-
-func (a *App) handleMoveOrder() {
-	if a.renderer == nil || !a.renderer.HasSelect() {
-		return
-	}
-	if !inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
-		return
-	}
-	mx, my := ebiten.CursorPosition()
-	tx, ty := a.renderer.TileAt(mx, my)
-	a.renderer.enqueue(command.Command{
-		Kind: command.MovePawn,
-		Pawn: uint64(a.renderer.Selected()),
-		X:    tx,
-		Y:    ty,
-	})
-}
-
-func (a *App) handleArchitectDrag(chromeConsumed bool) {
-	if !a.archOpen || a.archTool == "" || a.renderer == nil {
-		return
-	}
-	mx, my := ebiten.CursorPosition()
-	sw, sh := a.size()
-	onMap := !a.colonyChromeHit(mx, my, sw, sh)
-	tx, ty := a.renderer.TileAt(mx, my)
-	if !chromeConsumed && onMap && inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-		a.archDrag = true
-		a.archX0, a.archY0 = tx, ty
-		a.archX1, a.archY1 = tx, ty
-	}
-	if a.archDrag && ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && onMap {
-		a.archX1, a.archY1 = tx, ty
-	}
-	if a.archDrag && inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft) {
-		if onMap {
-			a.archX1, a.archY1 = tx, ty
-		}
-		a.submitArchitect()
-		a.archDrag = false
-	}
-}
-
-func (a *App) submitArchitect() {
-	if a.renderer == nil {
-		return
-	}
-	x0, y0, x1, y1 := a.archX0, a.archY0, a.archX1, a.archY1
-	kind := command.None
-	switch a.archTool {
-	case "wall":
-		kind = command.DesignateWall
-	case "bed":
-		kind = command.DesignateBed
-	case "stockpile":
-		kind = command.DesignateStockpile
-	case "harvest":
-		kind = command.DesignateHarvest
-	case "cancel":
-		kind = command.DesignateCancel
-	}
-	if kind == command.None {
-		return
-	}
-	if kind == command.DesignateWall || kind == command.DesignateBed {
-		minX, maxX := x0, x1
-		if maxX < minX {
-			minX, maxX = maxX, minX
-		}
-		minY, maxY := y0, y1
-		if maxY < minY {
-			minY, maxY = maxY, minY
-		}
-		for y := minY; y <= maxY; y++ {
-			for x := minX; x <= maxX; x++ {
-				a.renderer.enqueue(command.Command{Kind: kind, X: x, Y: y})
-			}
-		}
-		return
-	}
-	a.renderer.enqueue(command.Command{Kind: kind, X: x0, Y: y0, X2: x1, Y2: y1})
 }
 
 func (a *App) toggleWorkCell(id string) {

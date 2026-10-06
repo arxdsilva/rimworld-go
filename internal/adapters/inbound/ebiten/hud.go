@@ -99,7 +99,8 @@ func (a *App) colonistBarButtons(sw, sh int) []button {
 }
 
 func (a *App) colonyButtons(sw, sh int) []button {
-	out := a.hudTabButtons(sw, sh)
+	out := a.floatButtons() // topmost first: hit-testing takes the first match
+	out = append(out, a.hudTabButtons(sw, sh)...)
 	out = append(out, a.colonistBarButtons(sw, sh)...)
 	out = append(out, a.inspectorButtons()...)
 	out = append(out, a.architectButtons()...)
@@ -111,6 +112,7 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 	if a.renderer == nil {
 		return
 	}
+	a.drawArchitectGhost(screen)
 	drawPanel(screen, 0, 0, float32(sw), hudTopH)
 	x := hudPad
 	wld := a.renderer.world()
@@ -127,10 +129,10 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 	a.drawColonistPortraits(screen, sh)
 	a.drawInspector(screen)
 	a.drawArchitect(screen)
-	a.drawArchitectGhost(screen)
 	if a.workOpen {
 		a.drawWork(screen, sw, sh)
 	}
+	a.drawFloat(screen)
 }
 
 func (a *App) drawColonistPortraits(screen *ebiten.Image, sh int) {
@@ -139,11 +141,17 @@ func (a *App) drawColonistPortraits(screen *ebiten.Image, sh int) {
 	for i, p := range pawns {
 		x := float64(hudPad + i*barSlot + 6)
 		a.drawPawnPortrait(screen, p, x, y, 40, 48)
+		if p.Drafted {
+			drawIcon(screen, a.icon("draft"), x+24, y-2, 18)
+		}
 		drawLabel(screen, int(x), int(hudBarY(sh))+hudBarH-14, pawnLabel(p))
 	}
 }
 
 func (a *App) drawPawnPortrait(screen *ebiten.Image, p game.PawnView, x, y, w, h float64) {
+	if a.renderer.art != nil && a.renderer.drawPawnPortraitArt(screen, p, x, y, w, h) {
+		return
+	}
 	if a.renderer.pack == nil {
 		return
 	}
@@ -157,6 +165,9 @@ func (a *App) drawPawnPortrait(screen *ebiten.Image, p game.PawnView, x, y, w, h
 
 func (a *App) colonyChromeHit(mx, my, sw, sh int) bool {
 	if my < hudTopH {
+		return true
+	}
+	if a.float.open && a.floatRect().contains(mx, my) {
 		return true
 	}
 	if my >= int(hudBarY(sh)) {

@@ -206,25 +206,41 @@ func TestInspectorShowsNameAndJob(t *testing.T) {
 	}
 }
 
-func TestArchitectTabOpensPalette(t *testing.T) {
+func TestArchitectCategoriesListEveryTool(t *testing.T) {
 	t.Parallel()
 	a, _, _ := liveColony(t, 0)
 	click(t, a, "tab.architect")
-	if !a.archOpen {
-		t.Fatal("Architect tab should open the palette")
+	if !a.archOpen || a.archCat == "" {
+		t.Fatal("Architect tab should open on a category")
 	}
-	found := map[string]bool{}
-	for _, b := range a.architectButtons() {
-		found[b.id] = true
-	}
-	for _, id := range []string{"arch.tool.wall", "arch.tool.bed", "arch.tool.stockpile", "arch.tool.harvest", "arch.tool.cancel"} {
-		if !found[id] {
-			t.Fatalf("missing architect tool %s", id)
+	seen := map[string]bool{}
+	for _, c := range archCategories {
+		click(t, a, "arch.cat."+c.id)
+		if a.archCat != c.id {
+			t.Fatalf("category %s not selected", c.id)
+		}
+		for _, b := range a.architectButtons() {
+			seen[b.id] = true
 		}
 	}
+	for _, tool := range archTools {
+		if !seen["arch.tool."+tool.id] {
+			t.Fatalf("tool %s is not reachable from any category", tool.id)
+		}
+		if tool.build != "" {
+			if _, ok := buildable(tool.build); !ok {
+				t.Fatalf("tool %s builds unknown kind %q", tool.id, tool.build)
+			}
+		}
+	}
+	click(t, a, "arch.cat.orders")
 	click(t, a, "arch.tool.harvest")
 	if a.archTool != "harvest" {
 		t.Fatalf("archTool = %q, want harvest", a.archTool)
+	}
+	click(t, a, "arch.tool.harvest")
+	if a.archTool != "" {
+		t.Fatal("clicking the selected card should deselect it")
 	}
 }
 

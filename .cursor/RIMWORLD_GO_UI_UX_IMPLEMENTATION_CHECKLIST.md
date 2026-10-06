@@ -307,7 +307,7 @@ building, item, plant, animal, corpse or tile.
 
 ## 3.2 Context command bar
 
--   [ ] **Context-sensitive actions**
+-   [-] **Context-sensitive actions** (Draft/Undraft button + R; right-click menu: go here, build, supply, deconstruct, harvest, sleep, eat, haul; no forbid/hunt/equip/arrest)
     -   Draft.
     -   forbid.
     -   hunt.
@@ -323,7 +323,7 @@ building, item, plant, animal, corpse or tile.
     -   set owner.
     -   etc.
     -   Only show actions relevant to selection.
--   [ ] **Disabled action explanation**
+-   [x] **Disabled action explanation** (order menu and placement preview show reasons from the simulation)
     -   Disabled command must explain *why*: incapable, unreachable,
         reserved, missing material, wrong faction, research missing,
         unsafe, etc.
@@ -350,11 +350,11 @@ building, item, plant, animal, corpse or tile.
 
 ## 4.1 Colonist bar
 
--   [-] **Always-visible colonist portraits** (snapshot slots, click selects, vendor idle portrait, display name; no double-click center or status icons)
+-   [-] **Always-visible colonist portraits** (snapshot slots, click selects, layered original portrait, display name; no double-click center)
     -   Compact representation of each colonist.
     -   Click selects; double-click centers.
     -   Preserve identity at a glance.
--   [ ] **Status indicators**
+-   [-] **Status indicators** (drafted badge on bar and over the pawn; others missing)
     -   Downed.
     -   drafted.
     -   mental state.
@@ -374,7 +374,7 @@ building, item, plant, animal, corpse or tile.
 ## 4.2 Pawn summary
 
 -   [-] **Current activity/job** (inspector job line + schedule activity + tile; no draft)
--   [ ] **Draft state**
+-   [x] **Draft state** (inspector status + Draft/Undraft button)
 -   [ ] **Faction**
 -   [-] **Immediate health state** (alive/downed/dead + reason; no injury tree)
 -   [ ] **Immediate mood state**
@@ -389,10 +389,10 @@ the player's primary world-editing command surface.
 
 ## 5.1 Architect root
 
--   [-] **Architect button/tab** (opens Wall/Bed/Stockpile/Harvest/Cancel; no category tree)
+-   [x] **Architect button/tab** (opens on last category)
     -   Opens build/designation categories.
     -   Remembers last category optionally.
--   [ ] **Category navigation**
+-   [x] **Category navigation** (Orders, Zones, Structure, Furniture — only categories with content)
     -   Orders.
     -   Zone/Area.
     -   Structure.
@@ -402,7 +402,7 @@ the player's primary world-editing command surface.
     -   Security.
     -   Miscellaneous/endgame.
     -   Categories appear only when content exists/unlocked.
--   [ ] **Build option cards/buttons**
+-   [-] **Build option cards/buttons** (icon, name, wood cost, hover tooltip with work and shortage; no research lock/material)
     -   Icon.
     -   name.
     -   material requirement.
@@ -412,9 +412,9 @@ the player's primary world-editing command surface.
 
 ## 5.2 Placement preview
 
--   [-] **Ghost blueprint** (vector cell outline while dragging; no validity colors)
+-   [x] **Ghost blueprint** (real sprite per cell, walls autotile among ghosts, hover preview before dragging)
     -   Show exact occupied cells before command submission.
--   [ ] **Validity visualization**
+-   [-] **Validity visualization** (green/red ghosts, first failure reason, count and wood total; reasons: outside, blocked, occupied, planned, items)
     -   Valid/invalid placement.
     -   Reasons: occupied, impassable, unsupported, missing research,
         wrong terrain, blocked interaction cell, roof/support
@@ -422,12 +422,12 @@ the player's primary world-editing command surface.
 -   [ ] **Material/stuff selector**
     -   For buildings that can be made from different materials.
     -   Show available amount and relevant stat differences.
--   [ ] **Rotation**
+-   [x] **Rotation** (Q/E for bed and chair; facing reaches the blueprint and building)
     -   Rotate directional buildings before placement.
--   [-] **Single-cell placement** (wall/bed per cell in drag rect)
--   [ ] **Line placement**
+-   [x] **Single-cell placement** (door, furniture)
+-   [x] **Line placement** (walls along the dominant drag axis)
     -   Walls/conduits.
--   [-] **Rectangle/area placement** (stockpile/harvest/cancel drag)
+-   [x] **Rectangle/area placement** (floor fill; stockpile/harvest/deconstruct/cancel areas)
     -   Floors/zones/roof designations where appropriate.
 -   [ ] **Drag continuous placement**
 
@@ -437,8 +437,8 @@ the player's primary world-editing command surface.
 -   [ ] **Cut plants**
 -   [-] **Harvest** (wild plants via Architect; no grow-zone/cut-plants)
 -   [ ] **Hunt**
--   [ ] **Deconstruct**
--   [-] **Cancel**
+-   [x] **Deconstruct**
+-   [x] **Cancel** (blueprints, harvest and deconstruct marks, zones)
 -   [ ] **Forbid/unforbid**
 -   [ ] **Remove floor**
 -   [ ] **Remove roof**
@@ -447,10 +447,10 @@ the player's primary world-editing command surface.
 
 ## 5.4 Designation feedback
 
--   [ ] **Designation overlay**
+-   [x] **Designation overlay** (blueprints are translucent blue ghosts, scaffold once wood arrives; deconstruct marker on buildings)
     -   Clearly distinguish planned work from completed structures.
--   [ ] **Resource requirement feedback**
--   [ ] **Cancel designation interaction**
+-   [-] **Resource requirement feedback** (card cost + colony wood, placement total, `Haul wood to X (n/m)` in the order menu; no frame inspector)
+-   [x] **Cancel designation interaction** (Orders → Cancel area)
 -   [ ] **Selection inspector for blueprint/frame**
 
 ------------------------------------------------------------------------
@@ -779,14 +779,14 @@ understandable.
 
 ## 13.1 Draft controls
 
--   [ ] **Draft toggle**
+-   [x] **Draft toggle** (inspector button + R)
     -   Prominent when colonist selected.
--   [ ] **Draft state in colonist bar**
+-   [x] **Draft state in colonist bar**
 -   [ ] **Multi-draft**
 
 ## 13.2 Tactical orders
 
--   [ ] **Move order**
+-   [x] **Move order** (drafted: right-click moves and holds)
     -   Right-click valid destination.
 -   [ ] **Attack order**
     -   Hostile target.
