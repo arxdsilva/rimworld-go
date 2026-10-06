@@ -52,6 +52,21 @@ Presentation-only animation across pawns, animals, combat, work and the world. N
 - `-capture-ui follow` follows a working or rescuing colonist.
 - `-scenario rescue|beds`, plus `Game.Injure` and `Game.BuildNow` helpers.
 
+## Follow-up: work arm animation
+
+- Blender arm frames `work1` (wind-up overhead), `work2` (mid-swing) and `work3` (strike, low and forward) for the body and shirt layers in 4 facings. It is a two-handed grip so it reads in every facing, and the hand attachment follows the tool arm.
+- Tool sprites `tool/hammer`, `tool/axe` and `tool/pickaxe` (grip and head attachments, pointing east).
+- Swing schedule: mid, wind-up hold, a fast snap to the strike at 48% of the swing, recover.
+  - The body leans back on the wind-up and forward on the strike.
+  - Impact particles land on the strike frame.
+- Tools by job:
+  - hammer: construct, deconstruct, workbench
+  - axe: cut
+  - pickaxe: mine
+  - bare-hand chop: butcher
+- Low reaching (work3/work2) for harvest, sow, stove and tend.
+- While working, the tool replaces the held weapon.
+
 ## Verification
 
 - `go test -race ./...` green; vet and staticcheck clean, apart from the known SA4000s.
@@ -67,7 +82,6 @@ Presentation-only animation across pawns, animals, combat, work and the world. N
 
 ## Known Limitations
 
-- No dedicated per-tool work frames: arms don't change pose for hammering or chopping; the whole figure leans and bobs.
 - No body-part animation for animals (tail, head).
 - Particles are drawn under the night veil, so they dim at night (fine for dust, less so for sparks).
 - No animation LOD at far zoom yet.

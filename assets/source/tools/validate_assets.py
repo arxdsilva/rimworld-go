@@ -108,13 +108,15 @@ def check_autotile():
 
 WALK_FRAMES = ("walk1", "walk2", "walk3", "walk4")
 WALK_LAYERS = ("body", "pants_basic", "shirt_basic", "vest_utility")
+WORK_FRAMES = ("work1", "work2", "work3")
+WORK_LAYERS = ("body", "shirt_basic")
 
 
 def check_pawn_layers():
     d = os.path.join(GEN, "pawn")
     sizes = {}
     for f in os.listdir(d):
-        m = re.match(r"^(\w+?)_(south|east|north|west)(?:_walk\d)?\.png$", f)
+        m = re.match(r"^(\w+?)_(south|east|north|west)(?:_(?:walk|work)\d)?\.png$", f)
         if m and not f.endswith("_mask.png"):
             sizes.setdefault(m.group(2), set()).add(Image.open(os.path.join(d, f)).size)
     # every animated layer has the full walk cycle (frames share a canvas)
@@ -123,6 +125,11 @@ def check_pawn_layers():
             for fr in WALK_FRAMES:
                 if not os.path.exists(os.path.join(d, "%s_%s_%s.png" % (layer, facing, fr))):
                     err("pawn/%s_%s: missing walk frame %s" % (layer, facing, fr))
+    for layer in WORK_LAYERS:
+        for facing in ("south", "east", "north", "west"):
+            for fr in WORK_FRAMES:
+                if not os.path.exists(os.path.join(d, "%s_%s_%s.png" % (layer, facing, fr))):
+                    err("pawn/%s_%s: missing work frame %s" % (layer, facing, fr))
     ad = os.path.join(GEN, "animal")
     if os.path.isdir(ad):
         for f in os.listdir(ad):

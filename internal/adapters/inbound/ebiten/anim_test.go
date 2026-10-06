@@ -48,8 +48,15 @@ func TestAttackReactions(t *testing.T) {
 func TestWorkSwingAndStrike(t *testing.T) {
 	t.Parallel()
 	st, ok := styleFor("cut")
-	if !ok || st.burst != partChip {
-		t.Fatal("cutting throws chips")
+	if !ok || st.burst != partChip || st.tool != "tool/axe" || st.motion != motionSwing {
+		t.Fatal("cutting swings an axe and throws chips")
+	}
+	// the strike lands on the strike arm frame
+	if workArms(motionSwing, strikeAt) != "_work3" || workArms(motionSwing, 0.25) != "_work1" {
+		t.Fatal("wind-up then strike frames")
+	}
+	if toolAngle(faceWest, "_work1") != -toolAngle(faceEast, "_work1") {
+		t.Fatal("west mirrors east")
 	}
 	strikes, peak := 0, 0.0
 	for f := uint64(0); f < uint64(st.period)*3; f++ {

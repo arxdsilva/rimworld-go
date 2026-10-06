@@ -118,6 +118,18 @@ WALK_FRAMES = {"walk1": 0.5, "walk2": 1.0, "walk3": -0.5, "walk4": -1.0}
 WALK_LAYERS = ("body", "pants_basic", "shirt_basic", "vest_utility")
 HIP_Z, SHOULDER_Z = 0.33, 0.60
 
+# Work swing (ART spec §27): arm poses for hands-on work (hammering,
+# chopping, digging), as (right arm, left arm) shoulder rotations in
+# degrees; negative swings the hand forward (towards the facing) and up.
+#   work1: wind-up, tool raised overhead
+#   work2: mid-swing
+#   work3: strike, arm forward and low at the worked tile
+# Both hands grip the tool (a two-handed swing reads in every facing);
+# the "hand" attachment is the tool hand. Only layers
+# that cover the arms get these frames.
+WORK_FRAMES = {"work1": (-155.0, -148.0), "work2": (-95.0, -90.0), "work3": (-38.0, -34.0)}
+WORK_LAYERS = ("body", "shirt_basic")
+
 
 def _mean_x(ob):
     vs = ob.data.vertices
@@ -129,6 +141,15 @@ def _rot_x(deg, pz):
     from mathutils import Matrix
     return (Matrix.Translation((0, CY, pz)) @ Matrix.Rotation(math.radians(deg), 4, "X")
             @ Matrix.Translation((0, -CY, -pz)))
+
+
+def _pose_work(frame):
+    """Arms for a work frame (legs stay planted)."""
+    rdeg, ldeg = WORK_FRAMES[frame]
+    for ob in S.objects():
+        if ob.name.split(".")[0] in ("arm", "hand", "sleeve"):
+            deg = rdeg if _mean_x(ob) >= CX else ldeg
+            ob.matrix_world = _rot_x(deg, SHOULDER_Z) @ ob.matrix_world
 
 
 def _pose(swing):
@@ -186,13 +207,14 @@ HAND = {  # where held equipment's grip goes, per facing (Blender coords before 
 }
 
 
-def _hand(facing, swing=0.0):
+def _hand(facing, swing=0.0, arm=None):
     import math
     from mathutils import Matrix, Vector
     deg = S.FACINGS[facing]
     m = (Matrix.Translation((0.5, -0.5, 0)) @ Matrix.Rotation(math.radians(deg), 4, "Z")
          @ Matrix.Translation((-0.5, 0.5, 0)))
-    return _lean_matrix() @ m @ _rot_x(_arm_angle(swing), SHOULDER_Z) @ Vector(HAND["south"])
+    a = _arm_angle(swing) if arm is None else arm
+    return _lean_matrix() @ m @ _rot_x(a, SHOULDER_Z) @ Vector(HAND["south"])
 
 
 def _layer(name, facing, builder, body_holdout=True, frame=None):
@@ -202,12 +224,17 @@ def _layer(name, facing, builder, body_holdout=True, frame=None):
     builder()
     _apply_modifiers()
     swing = WALK_FRAMES.get(frame, 0.0)
-    _pose(swing)
+    arm = None
+    if frame in WORK_FRAMES:
+        _pose_work(frame)
+        arm = WORK_FRAMES[frame][0]
+    else:
+        _pose(swing)
     _figure(facing)
     zm = _zmax_screen()
     top = int(-(-((C.SHEAR_K * zm + MARGINS[2]) * C.PPT) // 1))
     origin = (int(round(MARGINS[0] * C.PPT)), top)
-    h = _hand(facing, swing)
+    h = _hand(facing, swing, arm)
     sprite = "%s_%s" % (name, facing) + ("_" + frame if frame else "")
     extra = {"layer": name, "facing": facing, "attachments": {"hand": _project(h.x, h.y, h.z, origin)}}
     if frame:
@@ -246,17 +273,63 @@ def _rifle():
                                                  "muzzle": _project(0.5 + (0.96 - 0.5) * 0.8, y, 0.024, m)}})
 
 
-def build(walk_only=False):
+def build(walk_only=False, work_only=False):
     out = []
     for f in FACINGS:
-        frames = list(WALK_FRAMES) if walk_only else [None] + list(WALK_FRAMES)
+        frames = [None] + list(WALK_FRAMES) + list(WORK_FRAMES)
+        if walk_only:
+            frames = list(WALK_FRAMES)
+        if work_only:
+            frames = list(WORK_FRAMES)
         for fr in frames:
             out.append(_body_sprite(f, fr))
         for name, fn in LAYERS.items():
-            for fr in ([None] if not walk_only else []) + (list(WALK_FRAMES) if name in WALK_LAYERS else []):
-                out.append(_layer(name, f, fn, frame=fr))
-    if not walk_only:
+            for fr in frames:
+                if fr is None or (fr in WALK_FRAMES and name in WALK_LAYERS) or (fr in WORK_FRAMES and name in WORK_LAYERS):
+                    out.append(_layer(name, f, fn, frame=fr))
+    if not walk_only and not work_only:
         out.append(_rifle())
+    if not walk_only:
+        out += _tools()
+    return out
+
+
+def _tool_render(name, length, grip_x):
+    """Render the staged tool lying flat, pointing east (head at +X)."""
+    m = (int(round(0.125 * C.PPT)), int(-(-((C.SHEAR_K * 0.12 + 0.125) * C.PPT) // 1)))
+    return S.render_asset("tool", name, zmax=0.12,
+                          extra={"tool": name, "rotatable": True, "points": "east",
+                                 "attachments": {"grip": _project(grip_x, -0.5, 0.02, m),
+                                                 "head": _project(grip_x + length, -0.5, 0.04, m)}})
+
+
+def _tools():
+    """Hand tools held during work: hammer (building), axe (chopping),
+    pickaxe (mining). Lying flat, pointing east, like the rifle."""
+    import math
+    from mathutils import Matrix
+    y = -0.5
+    out = []
+
+    def handle(x0, x1):
+        S.cyl("handle", 0, 0, 0.022, 0.0, x1 - x0, "wood", segs=8, bevel=0.0)
+        S.objects()[-1].matrix_world = Matrix.Translation((x0, y, 0.03)) @ Matrix.Rotation(math.radians(90), 4, "Y")
+
+    handle(0.18, 0.74)
+    S.box("head", 0.70, y - 0.10, 0.0, 0.80, y + 0.07, 0.07, "steel", bevel=0.012)
+    S.box("claw", 0.72, y + 0.07, 0.01, 0.78, y + 0.13, 0.05, "metal_dark", bevel=0.008)
+    out.append(_tool_render("hammer", 0.56, 0.26))
+
+    handle(0.14, 0.82)
+    S.prism("blade", [(0.70, y - 0.03), (0.86, y - 0.03), (0.90, y - 0.17), (0.66, y - 0.15)], 0.0, 0.05,
+            "steel", bevel=0.01)
+    S.box("poll", 0.74, y - 0.03, 0.0, 0.84, y + 0.05, 0.06, "metal_dark", bevel=0.01)
+    out.append(_tool_render("axe", 0.64, 0.22))
+
+    handle(0.16, 0.80)
+    S.prism("pick", [(0.78, y + 0.20), (0.84, y + 0.02), (0.84, y - 0.02), (0.78, y - 0.20),
+                     (0.74, y - 0.04), (0.74, y + 0.04)], 0.0, 0.05, "steel", bevel=0.008)
+    out.append(_tool_render("pickaxe", 0.62, 0.24))
     return out
 
 

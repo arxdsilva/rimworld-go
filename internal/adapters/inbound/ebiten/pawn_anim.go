@@ -3,6 +3,7 @@ package ebiten
 import (
 	"image/color"
 	"math"
+	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
@@ -37,6 +38,7 @@ func (r *Renderer) standingPose(p game.PawnView, vis pawnVisual, traces []game.T
 		ps.sy = 1 + 0.012*b
 	}
 	if st, ok := styleFor(p.Acting); ok && !moving {
+		suffix = workArms(st.motion, swingPhase(r.present, uint64(p.ID), st.period))
 		k := workSwing(r.present, uint64(p.ID), st.period)
 		ux, uy := unit(float64(p.ActX-p.X), float64(p.ActY-p.Y))
 		if ux == 0 && uy == 0 {
@@ -61,14 +63,19 @@ func (r *Renderer) drawPawnArt(screen *ebiten.Image, p game.PawnView, wx, wy, ti
 		return
 	}
 	ps, suffix := r.standingPose(p, vis, r.drawW.Traces)
+	held := func() { r.drawHeldWeapon(screen, p, vis.facing, suffix, wx, wy, tile, ps) }
+	if st, ok := styleFor(p.Acting); ok && st.motion != motionNone && strings.HasPrefix(suffix, "_work") {
+		// working: the tool (or bare hands) replaces the weapon
+		held = func() { r.drawTool(screen, st.tool, vis.facing, suffix, wx, wy, tile, ps) }
+	}
 	if vis.facing == faceNorth {
-		r.drawHeldWeapon(screen, p, vis.facing, suffix, wx, wy, tile, ps) // in front, hidden by the body
+		held() // in front, hidden by the body
 	}
 	for _, ly := range r.pawnLayers(r.look(p), vis.facing) {
 		r.drawSpritePose(screen, r.framed(ly.key, suffix), ly.tint, wx, wy, tile, ps)
 	}
 	if vis.facing != faceNorth {
-		r.drawHeldWeapon(screen, p, vis.facing, suffix, wx, wy, tile, ps)
+		held()
 	}
 	if p.Drafted {
 		if img := r.art.image("ui_icon/draft", color.NRGBA{}); img != nil {
@@ -235,4 +242,38 @@ func (r *Renderer) drawHeldWeapon(screen *ebiten.Image, p game.PawnView, f facin
 	g.Concat(ps.geo(float64(sx), float64(sy), tile))
 	op := &ebiten.DrawImageOptions{GeoM: g, Filter: ebiten.FilterLinear}
 	screen.DrawImage(img, op)
+}
+
+// drawTool draws a work tool with its grip in the tool hand of the
+// current arm frame, angled for the swing.
+func (r *Renderer) drawTool(screen *ebiten.Image, key string, f facing, suffix string, wx, wy, tile float64, ps pose) {
+	if key == "" {
+		return
+	}
+	body := r.art.sprite(r.framed("pawn/body_"+f.String(), suffix))
+	tsp := r.art.sprite(key)
+	img := r.art.image(key, color.NRGBA{})
+	if body == nil || tsp == nil || img == nil {
+		return
+	}
+	hand, ok := body.meta.Attach["hand"]
+	if !ok {
+		return
+	}
+	grip, ok := tsp.meta.Attach["grip"]
+	if !ok {
+		grip = [2]float64{float64(tsp.meta.Canvas[0]) / 2, float64(tsp.meta.Canvas[1]) / 2}
+	}
+	sx, sy := r.worldToScreenF(wx, wy)
+	bx, by, s := artOrigin(body.meta, float64(sx), float64(sy), tile)
+	g := ebiten.GeoM{}
+	g.Translate(-grip[0], -grip[1])
+	if f == faceWest {
+		g.Scale(-1, 1)
+	}
+	g.Rotate(toolAngle(f, suffix))
+	g.Scale(s*0.62, s*0.62)
+	g.Translate(bx+hand[0]*s, by+hand[1]*s)
+	g.Concat(ps.geo(float64(sx), float64(sy), tile))
+	screen.DrawImage(img, &ebiten.DrawImageOptions{GeoM: g, Filter: ebiten.FilterLinear})
 }

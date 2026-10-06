@@ -210,7 +210,8 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 		"overlay/blueprint", "overlay/selection", "overlay/designation_harvest",
 		"overlay/designation_deconstruct", "ui_icon/draft", "overlay/designation_hunt",
 		"weapon/rifle_basic", "ui_icon/dustbuck", "ui_icon/ridgewolf",
-		itemSprite("dustbuck corpse"), itemSprite("ridgewolf corpse"))
+		itemSprite("dustbuck corpse"), itemSprite("ridgewolf corpse"),
+		"tool/hammer", "tool/axe", "tool/pickaxe")
 	for _, sp := range []string{"dustbuck", "ridgewolf"} {
 		for f := faceSouth; f <= faceWest; f++ {
 			keys = append(keys, "animal/"+sp+"_"+f.String())
@@ -241,6 +242,11 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 		for _, sp := range []string{"dustbuck", "ridgewolf"} {
 			for _, fr := range walkCycle {
 				keys = append(keys, "animal/"+sp+"_"+f.String()+fr)
+			}
+		}
+		for _, l := range []string{"body", "shirt_basic"} {
+			for _, fr := range []string{"_work1", "_work2", "_work3"} {
+				keys = append(keys, "pawn/"+l+"_"+f.String()+fr)
 			}
 		}
 		for _, bed := range []string{"bed_basic", "bed_cot"} {

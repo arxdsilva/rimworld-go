@@ -205,49 +205,118 @@ type actStyle struct {
 	reach  float64 // lean towards the worked tile, tiles
 	burst  partKind
 	count  int
+	motion motion
+	tool   string // sprite key of the held tool, "" for bare hands
 }
+
+// motion is the arm pattern for a kind of work.
+type motion uint8
+
+const (
+	motionNone  motion = iota // no arm frames (eating)
+	motionSwing               // overhead: wind-up, strike, recover
+	motionReach               // hands working low in front
+)
+
+// strikeAt is where in a swing the tool lands (phase 0..1).
+const strikeAt = 0.48
 
 func styleFor(act string) (actStyle, bool) {
 	switch act {
 	case "cut":
-		return actStyle{period: 34, reach: 0.12, burst: partChip, count: 4}, true
+		return actStyle{period: 46, reach: 0.1, burst: partChip, count: 4, motion: motionSwing, tool: "tool/axe"}, true
 	case "construct", "deconstruct":
-		return actStyle{period: 26, reach: 0.09, burst: partChip, count: 3}, true
+		return actStyle{period: 34, reach: 0.08, burst: partChip, count: 3, motion: motionSwing, tool: "tool/hammer"}, true
 	case "mine":
-		return actStyle{period: 38, reach: 0.14, burst: partDust, count: 5}, true
-	case "harvest":
-		return actStyle{period: 44, reach: 0.07, burst: partLeaf, count: 3}, true
-	case "sow":
-		return actStyle{period: 48, reach: 0.05, burst: partSoil, count: 3}, true
-	case "work at stove":
-		return actStyle{period: 40, reach: 0.04, burst: partSteam, count: 1}, true
-	case "work at butcher table":
-		return actStyle{period: 30, reach: 0.08, burst: partBlood, count: 2}, true
+		return actStyle{period: 50, reach: 0.12, burst: partDust, count: 5, motion: motionSwing, tool: "tool/pickaxe"}, true
 	case "work at workbench":
-		return actStyle{period: 24, reach: 0.06, burst: partShaving, count: 2}, true
+		return actStyle{period: 30, reach: 0.05, burst: partShaving, count: 2, motion: motionSwing, tool: "tool/hammer"}, true
+	case "work at butcher table":
+		return actStyle{period: 36, reach: 0.06, burst: partBlood, count: 2, motion: motionSwing}, true
+	case "harvest":
+		return actStyle{period: 44, reach: 0.07, burst: partLeaf, count: 3, motion: motionReach}, true
+	case "sow":
+		return actStyle{period: 48, reach: 0.05, burst: partSoil, count: 3, motion: motionReach}, true
+	case "work at stove":
+		return actStyle{period: 40, reach: 0.04, burst: partSteam, count: 1, motion: motionReach}, true
 	case "tend":
-		return actStyle{period: 60, reach: 0.05}, true
+		return actStyle{period: 60, reach: 0.05, motion: motionReach}, true
 	case "eat":
 		return actStyle{period: 50, reach: 0.03}, true
 	}
 	return actStyle{}, false
 }
 
-// workSwing is 0..1 within a swing (sharp strike, slow recovery).
-func workSwing(present, id uint64, period int) float64 {
+// swingPhase is the 0..1 position within the current swing.
+func swingPhase(present, id uint64, period int) float64 {
 	if period <= 0 {
 		return 0
 	}
-	ph := float64((present+id*13)%uint64(period)) / float64(period)
-	if ph < 0.25 {
-		return easeOut(ph / 0.25)
-	}
-	return 1 - easeOut((ph-0.25)/0.75)
+	return float64((present+id*13)%uint64(period)) / float64(period)
 }
 
-// workStrike reports the frame of the swing's impact.
+// workArms is the arm frame suffix for a motion at a swing phase:
+// swings wind up (work1), snap down to the strike (work3) and recover;
+// reaching alternates low (work3) and mid (work2).
+func workArms(m motion, ph float64) string {
+	switch m {
+	case motionSwing:
+		switch {
+		case ph < 0.12:
+			return "_work2"
+		case ph < 0.40:
+			return "_work1"
+		case ph < strikeAt:
+			return "_work2"
+		case ph < 0.78:
+			return "_work3"
+		default:
+			return "_work2"
+		}
+	case motionReach:
+		if ph < 0.55 {
+			return "_work3"
+		}
+		return "_work2"
+	}
+	return ""
+}
+
+// workSwing is the body lean for a swing phase: back a little while
+// winding up, hard forward on the strike, easing out.
+func workSwing(present, id uint64, period int) float64 {
+	ph := swingPhase(present, id, period)
+	switch {
+	case ph < 0.40:
+		return -0.3 * easeOut(ph/0.40)
+	case ph < strikeAt:
+		return -0.3 + 1.3*easeOut((ph-0.40)/(strikeAt-0.40))
+	default:
+		return 1 - easeOut((ph-strikeAt)/(1-strikeAt))
+	}
+}
+
+// workStrike reports the frame where the tool lands.
 func workStrike(present, id uint64, period int) bool {
-	return period > 0 && (present+id*13)%uint64(period) == uint64(period)/4
+	return period > 0 && (present+id*13)%uint64(period) == uint64(float64(period)*strikeAt)
+}
+
+// toolAngle is the held tool's screen rotation (radians, clockwise; the
+// sprite points east) for a facing and arm frame.
+func toolAngle(f facing, frame string) float64 {
+	type key struct {
+		f  facing
+		fr string
+	}
+	a := map[key]float64{
+		{faceEast, "_work1"}: -2.0, {faceEast, "_work2"}: -0.7, {faceEast, "_work3"}: 0.55,
+		{faceSouth, "_work1"}: -1.57, {faceSouth, "_work2"}: -0.45, {faceSouth, "_work3"}: 1.1,
+		{faceNorth, "_work1"}: -1.57, {faceNorth, "_work2"}: -0.9, {faceNorth, "_work3"}: 0.9,
+	}
+	if f == faceWest {
+		return -a[key{faceEast, frame}]
+	}
+	return a[key{f, frame}]
 }
 
 // --- particles ----------------------------------------------------------
