@@ -188,6 +188,22 @@ func (a *App) captureUI(ui string) {
 			a.renderer.cam.offsetX, a.renderer.cam.offsetY = -1e6, -1e6
 		}
 		a.renderer.clampCamera(v)
+	case "queue":
+		// first colonist: go somewhere, then (queued) grab the rifle and
+		// walk on
+		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
+		pawns := a.renderer.snapshot()
+		if len(pawns) > 0 {
+			id := uint64(pawns[0].ID)
+			a.renderer.selected, a.renderer.hasSelect = pawns[0].ID, true
+			a.renderer.enqueue(command.Command{Kind: command.MovePawn, Pawn: id, X: cx - 6, Y: cy - 3})
+			a.renderer.enqueue(command.Command{Kind: command.Prioritize, Pawn: id, Order: command.OrderEquip, X: cx - 2, Y: cy + 2, Queue: true})
+			a.renderer.enqueue(command.Command{Kind: command.MovePawn, Pawn: id, X: cx + 3, Y: cy + 1, Queue: true})
+			a.renderer.game.Step(2)
+			a.renderer.syncPawns()
+		}
+		sw, sh := a.size()
+		a.renderer.centerOn(float64(cx)-1, float64(cy), sw, sh)
 	case "winter":
 		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
 		sw, sh := a.size()

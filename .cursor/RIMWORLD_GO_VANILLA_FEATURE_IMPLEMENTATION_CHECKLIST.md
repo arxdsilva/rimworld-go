@@ -436,7 +436,7 @@ This is the heart of autonomous colony behavior.
 -   [x] **Right-click/context forced work** (`OrdersAt` menu: go here, build, supply wood, deconstruct, harvest, sleep in bed, eat, haul to stockpile; disabled entries give the reason; `Prioritize` command)
     -   Player can tell a selected pawn to perform a valid specific
         action immediately.
--   [ ] **Queued forced jobs**
+-   [x] **Queued forced jobs** (Shift queues up to 3 orders behind the current one; queue panel with Clear and numbered route on the map; invalid orders skipped with a message)
     -   Support shift-style job queuing.
     -   Queue shown in pawn UI.
     -   Invalid queued tasks fail gracefully.

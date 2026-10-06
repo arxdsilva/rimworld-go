@@ -37,6 +37,8 @@ const (
 	RemoveBill
 	// DesignateHunt marks animals in X,Y..X2,Y2 for hunting.
 	DesignateHunt
+	// ClearOrders drops a pawn's queued orders.
+	ClearOrders
 )
 
 // WorkType is a compact work-column id for SetWorkEnabled.
@@ -91,4 +93,7 @@ type Command struct {
 	Index   int   // bill index for SetBill/RemoveBill
 	Mode    uint8 // recipe.Mode for AddBill/SetBill
 	Count   int   // bill target for AddBill/SetBill
+	// Queue adds a MovePawn/Prioritize order behind the pawn's current
+	// order instead of replacing it.
+	Queue bool
 }

@@ -76,6 +76,11 @@ type PawnView struct {
 	// air temperature where the colonist is (tenths of a degree C).
 	Hypothermia, Heatstroke int
 	Temp                    int
+	// QueuedOrders are orders waiting behind the current one, in order.
+	QueuedOrders []QueuedOrderView
+	// HasOrder: following a player order whose target tile is OrderX, OrderY.
+	HasOrder       bool
+	OrderX, OrderY int
 	// Temperament is the colonist's free-time leaning
 	// (wanderer, social, homebody).
 	Temperament string
@@ -241,7 +246,8 @@ type Game struct {
 	fuel       map[entity.EntityID]int      // campfire fuel, ticks of burning
 	exposure   map[entity.EntityID]exposureState
 	noComfort  map[entity.EntityID]uint64 // no warm/cool spot found until this tick
-	roomTemps  []temperature.Temp         // per room id, kept across rebuilds
+	orderQueue map[entity.EntityID][]queuedOrder
+	roomTemps  []temperature.Temp // per room id, kept across rebuilds
 	memories   map[entity.EntityID]mood.Memories
 	roomGrid   []int
 	rooms      []roomStats
@@ -289,6 +295,7 @@ func New(cfg Config) *Game {
 		fuel:        make(map[entity.EntityID]int),
 		exposure:    make(map[entity.EntityID]exposureState),
 		noComfort:   make(map[entity.EntityID]uint64),
+		orderQueue:  make(map[entity.EntityID][]queuedOrder),
 		memories:    make(map[entity.EntityID]mood.Memories),
 		roomDirty:   true,
 		reserve:     reservation.NewTable(),
@@ -497,6 +504,15 @@ func (g *Game) Snapshot() []PawnView {
 		pv.Tended = g.tended(id)
 		pv.Hypothermia, pv.Heatstroke = g.exposure[id].hypo, g.exposure[id].heat
 		pv.Temperament = g.temperamentOf(id).String()
+		if j, _ := g.jobs.Get(id); j.Forced && j.Active() {
+			pv.HasOrder, pv.OrderX, pv.OrderY = true, j.TX, j.TY
+			if j.Kind == job.Bill || j.Kind == job.Refuel || j.Carry != 0 {
+				pv.OrderX, pv.OrderY = j.DestX, j.DestY
+			}
+		}
+		for _, q := range g.orderQueue[id] {
+			pv.QueuedOrders = append(pv.QueuedOrders, QueuedOrderView{Label: q.label, X: q.cmd.X, Y: q.cmd.Y})
+		}
 		if pos, ok := g.positions.Get(id); ok {
 			pv.Temp = int(g.temperatureAt(pos.X, pos.Y))
 		}

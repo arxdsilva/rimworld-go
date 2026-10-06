@@ -367,6 +367,10 @@ func (a *App) applyClick(id string) {
 		a.chooseFloat(id)
 	case id == "pawn.draft":
 		a.toggleDraft()
+	case id == "pawn.clearorders":
+		if p, ok := a.selectedPawn(); ok {
+			a.renderer.enqueue(command.Command{Kind: command.ClearOrders, Pawn: uint64(p.ID)})
+		}
 	case strings.HasPrefix(id, "animal."):
 		a.applyAnimalClick(id)
 	case strings.HasPrefix(id, "alert."):

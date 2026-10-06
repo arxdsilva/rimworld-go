@@ -84,7 +84,11 @@ func (a *App) drawInspector(screen *ebiten.Image) {
 	}
 	r := inspectorRect()
 	drawPanel(screen, r.x, r.y, r.w, r.h)
-	drawLabel(screen, int(r.x)+12, int(r.y)+12, pawnLabel(p))
+	title := pawnLabel(p)
+	if p.Temperament != "" {
+		title += "  - " + p.Temperament
+	}
+	drawLabel(screen, int(r.x)+12, int(r.y)+12, title)
 	status := "colonist  " + p.Status
 	if p.Reason != "" {
 		status += " (" + p.Reason + ")"
@@ -97,9 +101,6 @@ func (a *App) drawInspector(screen *ebiten.Image) {
 	}
 	if p.Heatstroke > 0 {
 		status += fmt.Sprintf("  heatstroke %d%%", p.Heatstroke/10)
-	}
-	if p.Temperament != "" {
-		status += "  (" + p.Temperament + ")"
 	}
 	drawLabel(screen, int(r.x)+12, int(r.y)+32, status)
 	a.drawPawnPortrait(screen, p, float64(r.x)+12, float64(r.y)+52, 48, 64)

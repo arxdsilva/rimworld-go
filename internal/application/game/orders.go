@@ -52,6 +52,7 @@ const (
 	ReasonNoStone     = "no free stone"
 	ReasonNoMine      = "mining disabled"
 	ReasonNotSowable  = "cannot sow here"
+	ReasonGone        = "no longer there"
 )
 
 func (g *Game) drafted(id entity.EntityID) bool { return g.draft[id] }
@@ -93,7 +94,7 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		fid := g.layerFrameAt(x, y, layer)
 		fr, ok := g.frames.Get(fid)
 		if !ok {
-			return job.Record{}, ReasonUnknown
+			return job.Record{}, ReasonGone
 		}
 		if !m.Enabled(work.Construct) {
 			return job.Record{}, ReasonNoConstruct
@@ -109,7 +110,7 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		fid := g.layerFrameAt(x, y, layer)
 		fr, ok := g.frames.Get(fid)
 		if !ok {
-			return job.Record{}, ReasonUnknown
+			return job.Record{}, ReasonGone
 		}
 		if !m.Enabled(work.Haul) {
 			return job.Record{}, ReasonNoHaul
@@ -129,7 +130,7 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		bid := g.layerBldgAt(x, y, layer)
 		b, ok := g.bldgs.Get(bid)
 		if !ok || !b.Deconstruct {
-			return job.Record{}, ReasonUnknown
+			return job.Record{}, ReasonGone
 		}
 		if !m.Enabled(work.Construct) {
 			return job.Record{}, ReasonNoConstruct
@@ -143,7 +144,7 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		pid := g.plantAt(x, y)
 		p, ok := g.plants.Get(pid)
 		if !ok {
-			return job.Record{}, ReasonUnknown
+			return job.Record{}, ReasonGone
 		}
 		if !m.Enabled(work.Grow) {
 			return job.Record{}, ReasonNoGrow
@@ -158,7 +159,7 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 	case command.OrderSow:
 		z, ok := g.zoneAt(x, y)
 		if !ok {
-			return job.Record{}, ReasonUnknown
+			return job.Record{}, ReasonGone
 		}
 		_ = z
 		if !m.Enabled(work.Grow) {
@@ -172,7 +173,7 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		pid := g.plantAt(x, y)
 		p, ok := g.plants.Get(pid)
 		if !ok {
-			return job.Record{}, ReasonUnknown
+			return job.Record{}, ReasonGone
 		}
 		if !m.Enabled(work.Grow) {
 			return job.Record{}, ReasonNoGrow
@@ -183,7 +184,7 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		return job.Record{Kind: job.Cut, Target: pid, TX: x, TY: y, WorkLeft: plant.DefOf(p.Species).CutWork}, ""
 	case command.OrderMine:
 		if g.terr.At(x, y) != terrain.Rock {
-			return job.Record{}, ReasonUnknown
+			return job.Record{}, ReasonGone
 		}
 		if !m.Enabled(work.Mine) {
 			return job.Record{}, ReasonNoMine
@@ -200,7 +201,7 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		bid := g.layerBldgAt(x, y, construction.LayerObject)
 		b, ok := g.bldgs.Get(bid)
 		if !ok || !b.Kind.Sleeps() {
-			return job.Record{}, ReasonUnknown
+			return job.Record{}, ReasonGone
 		}
 		if !b.CanClaim(uint64(id)) {
 			return job.Record{}, ReasonOwned + g.name(entity.EntityID(b.Owner(uint64(id))))
@@ -211,7 +212,7 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		iid := g.itemAt(x, y)
 		st, ok := g.stacks.Get(iid)
 		if !ok || !st.Kind.IsFood() {
-			return job.Record{}, ReasonUnknown
+			return job.Record{}, ReasonGone
 		}
 		if r := g.busyBy(id, iid); r != "" {
 			return job.Record{}, r
@@ -221,7 +222,7 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		iid := g.itemAt(x, y)
 		st, ok := g.stacks.Get(iid)
 		if !ok {
-			return job.Record{}, ReasonUnknown
+			return job.Record{}, ReasonGone
 		}
 		if !m.Enabled(work.Haul) {
 			return job.Record{}, ReasonNoHaul
@@ -240,7 +241,7 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 	case command.OrderHunt:
 		aid := g.animalAt(x, y)
 		if aid == 0 {
-			return job.Record{}, ReasonUnknown
+			return job.Record{}, ReasonGone
 		}
 		if !m.Enabled(work.Hunt) {
 			return job.Record{}, ReasonNoHunt
@@ -255,21 +256,21 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 	case command.OrderAttack:
 		aid := g.animalAt(x, y)
 		if aid == 0 {
-			return job.Record{}, ReasonUnknown
+			return job.Record{}, ReasonGone
 		}
 		return job.Record{Kind: job.Attack, Target: aid, TX: x, TY: y, WorkLeft: aimTicks(weaponDefOf(g, id))}, ""
 	case command.OrderEquip:
 		iid := g.itemAt(x, y)
 		st, ok := g.stacks.Get(iid)
 		if !ok || !st.Kind.IsWeapon() {
-			return job.Record{}, ReasonUnknown
+			return job.Record{}, ReasonGone
 		}
 		if r := g.busyBy(id, iid); r != "" {
 			return job.Record{}, r
 		}
 		return job.Record{Kind: job.Equip, Target: iid, TX: x, TY: y}, ""
 	}
-	return job.Record{}, ReasonUnknown
+	return job.Record{}, ReasonGone
 }
 
 func (g *Game) busyBy(id, target entity.EntityID) string {

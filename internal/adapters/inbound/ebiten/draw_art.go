@@ -303,6 +303,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	r.drawFires(screen, w, tile)
 	r.drawStackCounts(screen, w, tile)
 	r.drawChatBubbles(screen, tile)
+	r.drawOrderRoute(screen, tile)
 	r.drawParticles(screen, tile)
 
 	for _, p := range w.Plants {

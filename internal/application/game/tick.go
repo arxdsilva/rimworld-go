@@ -23,7 +23,17 @@ func (g *Game) phaseCommands() {
 }
 
 func (g *Game) applyOne(c command.Command) {
+	if c.Kind == command.MovePawn || c.Kind == command.Prioritize {
+		id := entity.EntityID(c.Pawn)
+		if c.Queue {
+			g.queueOrder(id, c)
+			return
+		}
+		delete(g.orderQueue, id) // a plain order replaces the queue
+	}
 	switch c.Kind {
+	case command.ClearOrders:
+		delete(g.orderQueue, entity.EntityID(c.Pawn))
 	case command.MovePawn:
 		g.cmdMove(entity.EntityID(c.Pawn), c.X, c.Y)
 	case command.DesignateStockpile:
@@ -108,7 +118,7 @@ func (g *Game) cmdMove(id entity.EntityID, x, y int) {
 		return
 	}
 	g.interrupt(id, job.Cancelled)
-	rec := job.Record{Kind: job.Move, TX: x, TY: y}
+	rec := job.Record{Kind: job.Move, TX: x, TY: y, Forced: true}
 	g.startJob(id, rec)
 }
 
@@ -280,6 +290,10 @@ func (g *Game) phaseAI() {
 			g.reserve.ReleaseOwner(id)
 			g.jobs.Set(id, job.Record{})
 			j = job.Record{}
+		}
+		if len(g.orderQueue[id]) > 0 && !g.followingOrder(id) && (g.drafted(id) || !needs.SleepScheduled(act)) {
+			g.nextOrder(id)
+			continue
 		}
 		if g.drafted(id) {
 			// drafted pawns only follow direct orders, but fire at
