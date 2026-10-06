@@ -64,3 +64,27 @@ func TestRot(t *testing.T) {
 		t.Error("rotten and fresh corpses must not merge")
 	}
 }
+
+func TestDried(t *testing.T) {
+	s := Stack{Kind: Meat, Qty: 5, Dried: true, Rot: 10 * Meat.ShelfTicks()}
+	if s.Shelf() != 0 || s.Rotten() || s.Dryable() {
+		t.Error("dried meat keeps and can't be dried again")
+	}
+	for _, k := range Foods() {
+		if k.Perishable() && !(Stack{Kind: k, Qty: 1}).Dryable() {
+			t.Errorf("%s should be dryable", k)
+		}
+		if k.Perishable() && k.DryTicks() <= 0 {
+			t.Errorf("%s has no drying time", k)
+		}
+	}
+	if (Stack{Kind: Wheat, Qty: 1}).Dryable() || (Stack{Kind: CorpseDustbuck, Qty: 1}).Dryable() {
+		t.Error("grain is already dry; corpses are butchered")
+	}
+	if CanMerge(Stack{Kind: Meat, Qty: 1}, Stack{Kind: Meat, Qty: 1, Dried: true}) {
+		t.Error("dried and fresh meat must not merge")
+	}
+	if DryRate(250) != 1000 || DryRate(-50) != 250 || DryRate(100) != 625 {
+		t.Error("dry rate curve wrong")
+	}
+}

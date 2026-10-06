@@ -99,6 +99,8 @@ type ItemView struct {
 	Rotten    bool
 	// RotRate is the current rot speed in permille (0 = frozen).
 	RotRate int
+	// Dried food came off a drying rack and never spoils.
+	Dried bool
 }
 
 // FrameView is a construction blueprint.
@@ -132,6 +134,10 @@ type BuildingView struct {
 	SpotY       int
 	Bench       bool
 	Bills       []BillView
+	// Drying rack contents: DryQty items of DryKind, DryPct percent dry.
+	DryKind string
+	DryQty  int
+	DryPct  int
 }
 
 // PlantView is a wild plant.
@@ -220,6 +226,7 @@ type Game struct {
 	growZones  []zone.GrowZone
 	lastMeal   map[entity.EntityID]item.Kind
 	bills      map[entity.EntityID][]recipe.Bill
+	racks      map[entity.EntityID]dryBatch // what each drying rack holds
 	memories   map[entity.EntityID]mood.Memories
 	roomGrid   []int
 	rooms      []roomStats
@@ -263,6 +270,7 @@ func New(cfg Config) *Game {
 		mines:       make(map[[2]int]bool),
 		lastMeal:    make(map[entity.EntityID]item.Kind),
 		bills:       make(map[entity.EntityID][]recipe.Bill),
+		racks:       make(map[entity.EntityID]dryBatch),
 		memories:    make(map[entity.EntityID]mood.Memories),
 		roomDirty:   true,
 		reserve:     reservation.NewTable(),
@@ -494,7 +502,7 @@ func (g *Game) World() WorldView {
 		}
 		w.Items = append(w.Items, ItemView{
 			ID: id, Kind: st.Kind.String(), Qty: st.Qty, X: st.X, Y: st.Y, Carried: st.Carrier != 0,
-			FreshDays: freshDays(st), Rotten: st.Rotten(),
+			FreshDays: freshDays(st), Rotten: st.Rotten(), Dried: st.Dried,
 			RotRate: item.RotRate(int(g.temperatureAt(st.X, st.Y))),
 		})
 		if st.Carrier == 0 {
@@ -537,6 +545,9 @@ func (g *Game) World() WorldView {
 			Bench: construction.DefOf(b.Kind).Bench, Bills: g.billViews(id),
 		})
 		bv := &w.Buildings[len(w.Buildings)-1]
+		if rb := g.racks[id]; rb.Qty > 0 {
+			bv.DryKind, bv.DryQty, bv.DryPct = rb.Kind.String(), rb.Qty, rb.percent()
+		}
 		bv.W, bv.H, bv.SpotX, bv.SpotY, bv.HasSpot = footprintView(b.Kind, b.Facing, b.X, b.Y)
 	}
 	for _, id := range g.plantIDs {

@@ -79,6 +79,8 @@ var archTools = []archTool{
 		desc: "Cooks meals from raw food (2x1). Select it to add bills."},
 	{id: "butcher", label: "Butcher table", category: "production", icon: "butcher_table", mode: placeSingle, build: "butcher table",
 		desc: "Butchers hunted carcasses into meat (2x1). Starts with butcher bills."},
+	{id: "drying", label: "Drying rack", category: "production", icon: "drying_rack", mode: placeSingle, build: "drying rack",
+		desc: "Dries up to 25 perishable food at a time so it never rots (2x1). Starts with a Dry food bill."},
 }
 
 func toolByID(id string) (archTool, bool) {
@@ -206,6 +208,8 @@ func buildSprite(kind, facing string, mask int, ew, open bool) string {
 		return "furniture/stove_basic_" + facingOr(facing)
 	case "butcher table":
 		return "furniture/butcher_table_" + facingOr(facing)
+	case "drying rack":
+		return "furniture/drying_rack_" + facingOr(facing)
 	case "table":
 		return "furniture/table_small"
 	case "chair":

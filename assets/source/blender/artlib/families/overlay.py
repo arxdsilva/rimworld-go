@@ -270,6 +270,7 @@ ICONS = {
     "colonist": ("pawn", "body_south"),
     "dustbuck": ("animal", "dustbuck_east"),
     "butcher_table": ("furniture", "butcher_table_south"),
+    "drying_rack": ("furniture", "drying_rack_south"),
     "corpse_dustbuck": ("item", "corpse_dustbuck"),
     "corpse_ridgewolf": ("item", "corpse_ridgewolf"),
     "ridgewolf": ("animal", "ridgewolf_east"),

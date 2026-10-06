@@ -33,6 +33,8 @@ func tileTemp(w game.WorldView, x, y int) (int, bool) {
 // freshLabel describes how long a stack keeps where it lies.
 func freshLabel(it game.ItemView) string {
 	switch {
+	case it.Dried:
+		return "keeps forever"
 	case it.Rotten:
 		return "rotten"
 	case it.FreshDays < 0:

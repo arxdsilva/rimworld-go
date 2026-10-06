@@ -307,7 +307,11 @@ func plantLabelAt(w game.WorldView, x, y int) string {
 func itemLabelAt(w game.WorldView, x, y int) string {
 	for _, it := range w.Items {
 		if it.X == x && it.Y == y && !it.Carried {
-			s := fmt.Sprintf("%s%s x %d", strings.ToUpper(it.Kind[:1]), it.Kind[1:], it.Qty)
+			name := it.Kind
+			if it.Dried {
+				name = "dried " + name
+			}
+			s := fmt.Sprintf("%s%s x %d", strings.ToUpper(name[:1]), name[1:], it.Qty)
 			if f := freshLabel(it); f != "" {
 				s += ", " + f
 			}

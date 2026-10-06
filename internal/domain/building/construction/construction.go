@@ -24,6 +24,8 @@ const (
 	ButcherTable
 	// DoubleBed is a 2x2 bed for two sleepers side by side.
 	DoubleBed
+	// DryingRack is a 2x1 wooden frame food is laid out on to dry.
+	DryingRack
 	kindCount
 )
 
@@ -73,6 +75,8 @@ var defs = [kindCount]Def{
 	DoubleBed: {Kind: DoubleBed, Name: "double bed", Wood: 9, Work: 150, Layer: LayerObject, Rotatable: true,
 		Size: [2]int{2, 2}},
 	ButcherTable: {Kind: ButcherTable, Name: "butcher table", Wood: 5, Work: 120, Layer: LayerObject, BlocksMove: true,
+		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
+	DryingRack: {Kind: DryingRack, Name: "drying rack", Wood: 6, Work: 100, Layer: LayerObject, BlocksMove: true,
 		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
 }
 

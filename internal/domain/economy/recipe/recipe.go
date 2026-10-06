@@ -14,14 +14,27 @@ const (
 	Club
 	ButcherDustbuck
 	ButcherRidgewolf
+	DryFood
 	numRecipes
 )
 
-// Input is what a recipe consumes. AnyRaw accepts any raw food kind.
+// Input is what a recipe consumes. AnyRaw accepts any raw food kind;
+// AnyDryable any perishable food that isn't dried yet. Qty is the least a
+// stack must hold; Max, when set, takes up to that many from one stack.
 type Input struct {
-	Kind   item.Kind
-	AnyRaw bool
-	Qty    int
+	Kind       item.Kind
+	AnyRaw     bool
+	AnyDryable bool
+	Qty        int
+	Max        int
+}
+
+// Take is how many items the input takes from a stack of qty.
+func (in Input) Take(qty int) int {
+	if in.Max > 0 {
+		return min(qty, in.Max)
+	}
+	return in.Qty
 }
 
 // Def is one recipe.
@@ -35,6 +48,9 @@ type Def struct {
 	OutQty int
 	Work   int
 	Skill  work.Type // work type that does it
+	// Dry recipes don't produce on the spot: the work lays the batch out on
+	// the rack, which dries it over time into a dried stack of the same kind.
+	Dry bool
 }
 
 var defs = [numRecipes]Def{
@@ -46,7 +62,12 @@ var defs = [numRecipes]Def{
 		Input: Input{Kind: item.CorpseDustbuck, Qty: 1}, Output: item.Meat, OutQty: 12, Work: 200, Skill: work.Cook},
 	ButcherRidgewolf: {ID: ButcherRidgewolf, Name: "butcher_ridgewolf", Label: "Butcher ridgewolf", Bench: construction.ButcherTable,
 		Input: Input{Kind: item.CorpseRidgewolf, Qty: 1}, Output: item.Meat, OutQty: 6, Work: 200, Skill: work.Cook},
+	DryFood: {ID: DryFood, Name: "dry_food", Label: "Dry food", Bench: construction.DryingRack,
+		Input: Input{AnyDryable: true, Qty: 1, Max: RackCapacity}, Work: 90, Skill: work.Cook, Dry: true},
 }
+
+// RackCapacity is how many items one drying rack holds.
+const RackCapacity = 25
 
 // DefOf returns the recipe definition.
 func DefOf(id ID) Def {
@@ -72,10 +93,22 @@ func For(bench construction.Kind) []Def {
 
 // Accepts reports whether stack kind k can feed input in.
 func (in Input) Accepts(k item.Kind) bool {
-	if in.AnyRaw {
+	switch {
+	case in.AnyRaw:
 		return k.Raw()
+	case in.AnyDryable:
+		return k.Dryable()
 	}
 	return k == in.Kind
+}
+
+// AcceptsStack is Accepts plus per-stack state: a dry recipe skips stacks
+// already dried or spoiled.
+func (in Input) AcceptsStack(s item.Stack) bool {
+	if in.AnyDryable {
+		return s.Dryable()
+	}
+	return in.Accepts(s.Kind)
 }
 
 // Mode is how many times a bill repeats.

@@ -320,6 +320,10 @@ func (g *Game) removeBuilding(id entity.EntityID) {
 		return
 	}
 	g.bldgs.Delete(id)
+	if b.Kind == construction.DryingRack {
+		_, spot, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
+		g.emptyRack(id, spot[0], spot[1])
+	}
 	kept := g.bldgIDs[:0]
 	for _, bid := range g.bldgIDs {
 		if bid != id {

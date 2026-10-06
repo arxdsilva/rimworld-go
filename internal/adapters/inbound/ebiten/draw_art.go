@@ -34,7 +34,47 @@ var (
 	blueprintCS = colorScale{0.55, 0.85, 1.25, 0.5}
 	ghostOKCS   = colorScale{0.7, 1.25, 0.7, 0.65}
 	ghostBadCS  = colorScale{1.3, 0.45, 0.4, 0.6}
+	// driedCS browns and darkens food that came off a drying rack;
+	// rottenCS sickens a rotten corpse.
+	driedCS  = colorScale{0.86, 0.68, 0.48, 1}
+	rottenCS = colorScale{0.62, 0.74, 0.5, 1}
 )
+
+// drawRackLoad lays a drying batch along the rack's slats, browning as it
+// dries.
+func (r *Renderer) drawRackLoad(screen *ebiten.Image, b game.BuildingView, tile float64, sw, sh int) {
+	key := itemSprite(b.DryKind)
+	cs := lerpCS(noCS, driedCS, float64(b.DryPct)/100)
+	w, h := max(b.W, 1), max(b.H, 1)
+	for dy := 0; dy < h; dy++ {
+		for dx := 0; dx < w; dx++ {
+			r.drawSpriteScaled(screen, key, color.NRGBA{}, float64(b.X+dx), float64(b.Y+dy)-rackSlatLift, tile, sw, sh, cs, 0.55)
+		}
+	}
+}
+
+// rackSlatLift raises rack contents (in tiles) to sit on the slats.
+const rackSlatLift = 0.3
+
+// itemCS is the colour treatment for a ground stack.
+func itemCS(it game.ItemView) colorScale {
+	switch {
+	case it.Dried:
+		return driedCS
+	case it.Rotten:
+		return rottenCS
+	}
+	return noCS
+}
+
+// lerpCS blends from a to b by t in [0, 1].
+func lerpCS(a, b colorScale, t float64) colorScale {
+	var out colorScale
+	for i := range out {
+		out[i] = a[i] + (b[i]-a[i])*float32(t)
+	}
+	return out
+}
 
 func (r *Renderer) drawSprite(screen *ebiten.Image, key string, tint color.NRGBA, wx, wy, tile float64, sw, sh int) {
 	r.drawSpriteCS(screen, key, tint, wx, wy, tile, sw, sh, noCS)
@@ -173,6 +213,9 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 		}
 		add(float64(b.Y+max(b.H, 1)-1), float64(b.X), func() {
 			r.drawSprite(screen, key, t, float64(b.X), float64(b.Y), tile, sw, sh)
+			if b.DryQty > 0 {
+				r.drawRackLoad(screen, b, tile, sw, sh)
+			}
 			if b.Deconstruct {
 				r.drawSprite(screen, "overlay/designation_deconstruct", none, float64(b.X), float64(b.Y), tile, sw, sh)
 			}
@@ -232,7 +275,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 				vector.FillRect(screen, sx+pad, sy+pad, float32(tile)-2*pad, float32(tile)-2*pad, color.RGBA{200, 90, 40, 255}, false)
 				return
 			}
-			r.drawSpriteScaled(screen, key, none, float64(it.X), float64(it.Y), tile, sw, sh, noCS, r.itemPop(it.ID))
+			r.drawSpriteScaled(screen, key, none, float64(it.X), float64(it.Y), tile, sw, sh, itemCS(it), r.itemPop(it.ID))
 		})
 	}
 	r.addAnimalDraws(w, add, screen, tile, sw, sh)

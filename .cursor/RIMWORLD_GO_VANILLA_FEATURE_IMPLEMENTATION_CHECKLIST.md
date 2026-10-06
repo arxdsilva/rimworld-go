@@ -711,6 +711,7 @@ This is the heart of autonomous colony behavior.
     -   Perishable food/corpses rot based on temperature and elapsed
         time.
 -   [-] **Frozen/refrigerated preservation** (winter and cold rooms freeze food; no cooler/freezer building yet)
+-   [x] **Drying** (drying rack dries up to 25 of any perishable food per batch over ~1-2.5 days; dried food never rots)
     -   Cold slows or stops rot according to independently selected
         balance.
 -   [x] **Rotten state** (spoiled food is destroyed with a message; rotten corpses can't be butchered and decay away)

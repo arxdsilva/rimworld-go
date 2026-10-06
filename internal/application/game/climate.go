@@ -66,6 +66,7 @@ func (g *Game) phaseClimate() {
 	}
 	g.rotItems()
 	g.frostCrops()
+	g.dryRacks()
 }
 
 // rotItems advances spoilage by the local temperature. Spoiled food is
@@ -81,7 +82,7 @@ func (g *Game) rotItems() {
 	var order []item.Kind
 	for _, id := range append([]entity.EntityID(nil), g.itemIDs...) {
 		st, ok := g.stacks.Get(id)
-		if !ok || !st.Kind.Perishable() {
+		if !ok || st.Shelf() == 0 {
 			continue
 		}
 		x, y := st.X, st.Y
@@ -92,7 +93,7 @@ func (g *Game) rotItems() {
 		}
 		st.Rot += climateInterval * item.RotRate(int(g.temperatureAt(x, y))) / 1000
 		g.stacks.Set(id, st)
-		gone := st.Rotten() && !st.Kind.IsCorpse() || st.Kind.IsCorpse() && st.Rot >= 2*st.Kind.ShelfTicks()
+		gone := st.Rotten() && !st.Kind.IsCorpse() || st.Kind.IsCorpse() && st.Rot >= 2*st.Shelf()
 		if !gone || st.Carrier != 0 {
 			continue
 		}
@@ -145,7 +146,7 @@ func (g *Game) frostCrops() {
 // FreshDays is how many days a perishable stack keeps at full rot speed
 // (room temperature); -1 for food that never spoils.
 func freshDays(st item.Stack) float64 {
-	if !st.Kind.Perishable() {
+	if st.Shelf() == 0 {
 		return -1
 	}
 	return float64(st.FreshTicks()) / float64(clock.TicksPerDay)

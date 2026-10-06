@@ -8,6 +8,7 @@ import (
 
 	uiadapter "rimworld-go/internal/adapters/inbound/ebiten"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/clock"
 )
 
@@ -45,6 +46,15 @@ func main() {
 			if *scenario == "beds" {
 				for dy := 0; dy < 6 && !g.BuildNow("double bed", "wood", "south", *width/2+6, *height/2+1+dy); dy++ {
 				}
+			}
+			if *scenario == "drying" {
+				cx, cy := *width/2, *height/2
+				for dx := 0; dx < 6 && !g.BuildNow("drying rack", "wood", "south", cx+6+dx, cy+2); dx++ {
+				}
+				for dx := 0; dx < 6 && !g.BuildNow("drying rack", "wood", "south", cx+6+dx, cy+4); dx++ {
+				}
+				_, _ = g.SpawnStack(item.Meat, 40, cx+5, cy+6)
+				_, _ = g.SpawnStack(item.Berries, 20, cx+6, cy+6)
 			}
 			if *scenario == "double" {
 				g.BuildNow("double bed", "wood", "south", *width/2-1, *height/2+1)

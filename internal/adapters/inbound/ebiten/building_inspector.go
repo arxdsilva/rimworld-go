@@ -139,6 +139,9 @@ func (a *App) drawBuildingInspector(screen *ebiten.Image) {
 	if lbl := roomLabelAt(a.renderer.world(), b.X, b.Y); lbl != "" {
 		state += "   " + lbl
 	}
+	if b.DryQty > 0 {
+		state += fmt.Sprintf("   drying %d %s, %d%%", b.DryQty, b.DryKind, b.DryPct)
+	}
 	drawLabel(screen, int(r.x)+12, int(r.y)+28, state)
 	if b.Bench {
 		drawLabel(screen, int(r.x)+12, int(r.y)+46, "Bills")

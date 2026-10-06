@@ -112,15 +112,59 @@ type Stack struct {
 	X, Y    int
 	Carrier entity.EntityID // 0 = on ground or in a frame
 	// Rot is spoilage accumulated so far, in ticks at full rot speed. The
-	// stack spoils when Rot reaches Kind.ShelfTicks().
+	// stack spoils when Rot reaches Shelf().
 	Rot int
+	// Dried food (from a drying rack) keeps indefinitely.
+	Dried bool
+}
+
+// Shelf is how many full-speed rot ticks the stack keeps (0 = forever).
+func (s Stack) Shelf() int {
+	if s.Dried {
+		return 0
+	}
+	return s.Kind.ShelfTicks()
+}
+
+// Dryable reports whether s can go on a drying rack: perishable food that
+// isn't dried or spoiled yet.
+func (s Stack) Dryable() bool { return s.Kind.Dryable() && !s.Dried && !s.Rotten() }
+
+// Dryable reports perishable food kinds (corpses are butchered, not dried).
+func (k Kind) Dryable() bool { return k.IsFood() && k.Perishable() }
+
+// dryDays is how long a rack batch takes to dry in warm air: thin meat
+// strips and leaves dry in about a day, juicy fruit, sliced roots and
+// squash take longer, and cooked meals are dried into hard travel cakes.
+var dryDays = [numKinds]float64{Meat: 1, Meal: 1, Lettuce: 0.75, Berries: 2, Radishes: 1.5,
+	Potatoes: 2, Corn: 1.5, Pumpkins: 2.5}
+
+// DryTicks is how long a batch of k takes to dry at full speed.
+func (k Kind) DryTicks() int {
+	if k >= numKinds {
+		return 0
+	}
+	return int(dryDays[k] * clock.TicksPerDay)
+}
+
+// DryRate is drying speed in permille at air temperature tenthsC: full
+// speed from 20 C, slower in cool air, and a slow freeze-dry below 0 C.
+func DryRate(tenthsC int) int {
+	switch {
+	case tenthsC >= 200:
+		return 1000
+	case tenthsC <= 0:
+		return 250
+	default:
+		return 250 + 750*tenthsC/200
+	}
 }
 
 // CanMerge reports whether a and b may combine on the same tile.
 // Rotten corpses never merge with fresh ones.
 func CanMerge(a, b Stack) bool {
 	return a.Kind == b.Kind && a.Carrier == 0 && b.Carrier == 0 && a.X == b.X && a.Y == b.Y &&
-		a.Rotten() == b.Rotten()
+		a.Rotten() == b.Rotten() && a.Dried == b.Dried
 }
 
 // MergeRot is the spoilage of a stack of qa items with rot ra combined with
@@ -153,13 +197,13 @@ func (k Kind) Perishable() bool { return k.ShelfTicks() > 0 }
 // Rotten reports a stack that has spoiled. Rotten food is destroyed; a
 // rotten corpse lingers but can no longer be butchered.
 func (s Stack) Rotten() bool {
-	sh := s.Kind.ShelfTicks()
+	sh := s.Shelf()
 	return sh > 0 && s.Rot >= sh
 }
 
 // FreshTicks is how many full-speed rot ticks remain before s spoils.
 func (s Stack) FreshTicks() int {
-	sh := s.Kind.ShelfTicks()
+	sh := s.Shelf()
 	if sh == 0 || s.Rot >= sh {
 		return 0
 	}

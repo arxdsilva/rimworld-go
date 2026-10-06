@@ -15,6 +15,7 @@ import (
 const (
 	BillActive     = ""
 	BillNoInput    = "waiting for ingredients"
+	BillDrying     = "drying a batch"
 	BillDone       = "done"
 	BillSuspended  = "suspended"
 	BillHaveEnough = "have enough"
@@ -142,7 +143,7 @@ func (g *Game) ingredientFor(id entity.EntityID, in recipe.Input) (entity.Entity
 	bestD := 1 << 30
 	for _, iid := range g.itemIDs {
 		st, ok := g.stacks.Get(iid)
-		if !ok || st.Carrier != 0 || st.Qty < in.Qty || !in.Accepts(st.Kind) || st.Rotten() {
+		if !ok || st.Carrier != 0 || st.Qty < in.Qty || !in.AcceptsStack(st) || st.Rotten() {
 			continue
 		}
 		if owner, taken := g.reserve.EntityOwner(iid); taken && owner != id {
@@ -168,8 +169,11 @@ func (g *Game) assignBill(id entity.EntityID, m work.Mask) bool {
 		_, spot, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
 		for i, bl := range g.bills[bid] {
 			d := recipe.DefOf(bl.Recipe)
-			if !m.Enabled(d.Skill) || !bl.Wants(g.stockOf(d.Output)) {
+			if !m.Enabled(d.Skill) || !bl.Wants(g.billStock(d)) {
 				continue
+			}
+			if d.Dry && g.racks[bid].Qty > 0 {
+				continue // still drying the last batch
 			}
 			sid, st := g.ingredientFor(id, d.Input)
 			if sid == 0 {
@@ -208,12 +212,12 @@ func (g *Game) doBill(id entity.EntityID, j job.Record) {
 			return
 		}
 		carry := j.Target
-		if st.Qty > d.Input.Qty {
-			st.Qty -= d.Input.Qty
+		if take := d.Input.Take(st.Qty); st.Qty > take {
+			st.Qty -= take
 			g.stacks.Set(j.Target, st)
 			nid := g.entities.Next()
 			g.itemIDs = append(g.itemIDs, nid)
-			g.stacks.Set(nid, item.Stack{Kind: st.Kind, Qty: d.Input.Qty, X: st.X, Y: st.Y, Carrier: id, Rot: st.Rot})
+			g.stacks.Set(nid, item.Stack{Kind: st.Kind, Qty: take, X: st.X, Y: st.Y, Carrier: id, Rot: st.Rot, Dried: st.Dried})
 			carry = nid
 		} else {
 			st.Carrier = id
@@ -243,9 +247,16 @@ func (g *Game) doBill(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
-	g.deleteItem(j.Carry)
+	if d.Dry {
+		if st, ok := g.stacks.Get(j.Carry); ok {
+			g.racks[j.Dest] = dryBatch{Kind: st.Kind, Qty: st.Qty, Rot: st.Rot, Left: st.Kind.DryTicks()}
+		}
+		g.deleteItem(j.Carry)
+	} else {
+		g.deleteItem(j.Carry)
+		g.dropStack(d.Output, d.OutQty, j.DestX, j.DestY)
+	}
 	j.Carry = 0
-	g.dropStack(d.Output, d.OutQty, j.DestX, j.DestY)
 	bl.Done++
 	bills[j.BillIndex] = bl
 	g.bills[j.Dest] = bills
@@ -259,7 +270,7 @@ func (g *Game) billViews(bid entity.EntityID) []BillView {
 	for _, bl := range g.bills[bid] {
 		d := recipe.DefOf(bl.Recipe)
 		st := BillActive
-		stock := g.stockOf(d.Output)
+		stock := g.billStock(d)
 		switch {
 		case bl.Suspended:
 			st = BillSuspended
@@ -267,6 +278,8 @@ func (g *Game) billViews(bid entity.EntityID) []BillView {
 			st = BillDone
 		case !bl.Wants(stock):
 			st = BillHaveEnough
+		case d.Dry && g.racks[bid].Qty > 0:
+			st = BillDrying
 		default:
 			if sid, _ := g.ingredientFor(0, d.Input); sid == 0 {
 				st = BillNoInput
@@ -281,9 +294,10 @@ func (g *Game) billViews(bid entity.EntityID) []BillView {
 }
 
 // defaultBills gives new benches the bills nearly everyone wants: a
-// butcher table butchers every carcass type, forever.
+// butcher table butchers every carcass type and a drying rack dries any
+// perishable food, forever.
 func (g *Game) defaultBills(id entity.EntityID, k construction.Kind) {
-	if k != construction.ButcherTable {
+	if k != construction.ButcherTable && k != construction.DryingRack {
 		return
 	}
 	for _, d := range recipe.For(k) {

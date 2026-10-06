@@ -882,7 +882,7 @@ func (g *Game) doHaul(id entity.EntityID, j job.Record) {
 			g.stacks.Set(j.Target, st)
 			carry = g.entities.Next()
 			g.itemIDs = append(g.itemIDs, carry)
-			st = item.Stack{Kind: st.Kind, Qty: take, X: st.X, Y: st.Y, Rot: st.Rot}
+			st = item.Stack{Kind: st.Kind, Qty: take, X: st.X, Y: st.Y, Rot: st.Rot, Dried: st.Dried}
 		}
 		st.Carrier = id
 		g.stacks.Set(carry, st)

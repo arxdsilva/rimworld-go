@@ -1,5 +1,5 @@
 """Furniture family (ART spec §12-§14): bed, table, chair, workbench, stove,
-butcher table, lamp. (Sleeping spots are floor markings: overlay family.)
+butcher table, drying rack, lamp. (Sleeping spots are floor markings: overlay family.)
 
 Geometry is authored facing SOUTH (the side a user approaches from /
 the sleeper's feet point to) and rotated with stage.face().
@@ -112,6 +112,32 @@ def _butcher_table():
     return (2, 1), 1.02
 
 
+def _drying_rack():
+    """2 x 1 drying rack: two trestle ends carry a slatted tray at waist
+    height, with a ridge pole and twine for hanging strips above it. The
+    worker stands on the south side; the batch is drawn on the tray."""
+    for i, x in enumerate([0.10, 1.90]):
+        for j, (y0, y1) in enumerate([(-0.86, -0.50), (-0.14, -0.50)]):
+            # splayed trestle legs meeting under the ridge
+            S.box("leg%d%d" % (i, j), x - 0.05, min(y0, y1) + 0.02, 0.0, x + 0.05, max(y0, y1) - 0.02, 0.06,
+                  "wood", bevel=0.01)
+        S.box("post%d" % i, x - 0.05, -0.55, 0.0, x + 0.05, -0.45, 1.02, "wood", bevel=0.02)
+        S.box("foot%d" % i, x - 0.07, -0.90, 0.0, x + 0.07, -0.10, 0.07, "wood", bevel=0.015)
+    S.box("ridge", 0.04, -0.54, 0.98, 1.96, -0.46, 1.05, "wood", bevel=0.015)
+    S.box("rail_n", 0.08, -0.16, 0.46, 1.92, -0.10, 0.52, "wood", bevel=0.01)
+    S.box("rail_s", 0.08, -0.90, 0.46, 1.92, -0.84, 0.52, "wood", bevel=0.01)
+    for k in range(9):
+        x = 0.14 + k * 0.215
+        S.box("slat%d" % k, x - 0.03, -0.88, 0.52, x + 0.03, -0.12, 0.55, "wood_plank", bevel=0.006)
+    for k, y in enumerate([-0.70, -0.50, -0.30]):
+        # woven cross-slats make the tray read as a mesh, not a fence
+        S.box("weave%d" % k, 0.10, y - 0.025, 0.55, 1.90, y + 0.025, 0.575, "straw", bevel=0.004)
+    for k, x in enumerate([0.45, 0.85, 1.25, 1.65]):
+        S.cyl("twine%d" % k, x, -0.50, 0.008, 0.80, 0.98, "straw", segs=6, bevel=0.0)
+        S.box("strip%d" % k, x - 0.035, -0.52, 0.66, x + 0.035, -0.48, 0.82, "food_red", bevel=0.01)
+    return (2, 1), 1.05
+
+
 def _lamp():
     S.cyl("base", 0.5, -0.5, 0.22, 0.0, 0.06, "metal_dark", segs=20)
     S.cyl("pole", 0.5, -0.5, 0.035, 0.06, 1.25, "steel", segs=10)
@@ -129,8 +155,10 @@ BUILDERS = {
     "lamp_standing": (_lamp, {"emissive": "lamp_warm", "light_radius": 6}),
     "stove_basic": (_stove, {"attachments": {"cook": [0.25, 1.5]}}),
     "butcher_table": (_butcher_table, {"attachments": {"worker": [0.5, 1.15]}}),
+    "drying_rack": (_drying_rack, {"attachments": {"worker": [0.5, 1.15]}}),
 }
-ROTATABLE = {"bed_basic", "bed_double", "chair_basic", "workbench_basic", "stove_basic", "butcher_table"}
+ROTATABLE = {"bed_basic", "bed_double", "chair_basic", "workbench_basic", "stove_basic", "butcher_table",
+             "drying_rack"}
 
 
 # Blanket overlays: drawn over a sleeper so they read as tucked in. The
