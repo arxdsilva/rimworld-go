@@ -21,6 +21,8 @@ const (
 	Lettuce
 	Radish
 	Pumpkin
+	// Healroot is a medicinal herb: harvested as herbal medicine.
+	Healroot
 	numSpecies
 )
 
@@ -94,6 +96,9 @@ var defs = [numSpecies]Def{
 		Yields: item.Radishes, CutWork: 8, Crop: true, Sens: 40, SowWork: 15, FrostKill: -50},
 	Pumpkin: {Species: Pumpkin, Name: "pumpkin", Label: "pumpkins", GrowTicks: growDays(8.5), HarvestWork: 30, Yield: 12,
 		Yields: item.Pumpkins, CutWork: 12, Crop: true, Sens: 70, SowWork: 30, FrostKill: -10},
+	// Healroot: slow and fussy about soil, two doses of medicine a plant.
+	Healroot: {Species: Healroot, Name: "healroot", Label: "herbal medicine", GrowTicks: growDays(6.5), HarvestWork: 40,
+		Yield: 2, Yields: item.HerbalMedicine, CutWork: 8, Crop: true, Sens: 80, SowWork: 35, FrostKill: -20},
 }
 
 // Growth temperature, tenths of a degree C: nothing grows at or below
@@ -128,7 +133,9 @@ func Frostbitten(s Species, tenthsC int) bool {
 }
 
 // Crops lists the farm crops in menu order (fastest first).
-func Crops() []Species { return []Species{Radish, Lettuce, Beans, Potato, Corn, Pumpkin, Wheat} }
+func Crops() []Species {
+	return []Species{Radish, Lettuce, Beans, Healroot, Potato, Corn, Pumpkin, Wheat}
+}
 
 // Rate is the growth speed in percent on soil of the given fertility
 // (percent), scaled by how sensitive species s is to soil.

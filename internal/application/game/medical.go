@@ -82,7 +82,11 @@ func (g *Game) freeBedFor(patient entity.EntityID, from Position) (entity.Entity
 	return best, best != 0
 }
 
-// assignDoctor picks the nearest patient that needs a rescue or a tend.
+// assignDoctor picks the nearest patient that needs a rescue or a tend:
+// downed colonists first get carried to bed; anyone lying down (downed,
+// in bed or asleep) with an open wound or an infection gets tended, with
+// herbal medicine when there is some. With no other doctor around, a
+// colonist tends its own wounds.
 func (g *Game) assignDoctor(id entity.EntityID) bool {
 	pos, _ := g.positions.Get(id)
 	type cand struct {
@@ -91,7 +95,11 @@ func (g *Game) assignDoctor(id entity.EntityID) bool {
 	}
 	var best *cand
 	for _, pid := range g.pawnIDs {
-		if pid == id || !g.injuredDowned(pid) || g.carriedBy(pid) != 0 {
+		if pid == id || g.carriedBy(pid) != 0 {
+			continue
+		}
+		downed := g.injuredDowned(pid)
+		if !downed && !(g.lyingForCare(pid) && g.needsTending(pid)) {
 			continue
 		}
 		if _, taken := g.reserve.EntityOwner(pid); taken {
@@ -100,7 +108,7 @@ func (g *Game) assignDoctor(id entity.EntityID) bool {
 		pp, _ := g.positions.Get(pid)
 		var rec job.Record
 		switch {
-		case !g.inBed(pid):
+		case downed && !g.inBed(pid):
 			if _, ok := g.freeBedFor(pid, pp); ok {
 				rec = job.Record{Kind: job.Rescue, Target: pid}
 			} else if !g.tended(pid) {
@@ -109,27 +117,40 @@ func (g *Game) assignDoctor(id entity.EntityID) bool {
 		case !g.tended(pid):
 			rec = job.Record{Kind: job.Tend, Target: pid, WorkLeft: TendWork}
 		}
-		if pv, _ := g.vital.Get(pid); rec.Kind == job.Tend && pv.Injury <= 0 {
+		if pv, _ := g.vital.Get(pid); rec.Kind == job.Tend && pv.Injury <= 0 && g.wounds[pid].Infection == 0 {
 			continue // exposure needs a bed, not a bandage
-		}
-		if rec.Kind != job.None {
-			sx, sy, ok := g.besideSpot(id, pp.X, pp.Y)
-			if !ok {
-				continue
-			}
-			rec.TX, rec.TY = sx, sy
 		}
 		if rec.Kind == job.None {
 			continue
 		}
+		sx, sy, ok := g.besideSpot(id, pp.X, pp.Y)
+		if !ok {
+			continue
+		}
+		rec.TX, rec.TY = sx, sy
 		if d := manhattan(pos.X, pos.Y, pp.X, pp.Y); best == nil || d < best.d {
 			best = &cand{rec, d}
 		}
 	}
-	if best == nil {
+	var rec job.Record
+	switch {
+	case best != nil:
+		rec = best.rec
+	case g.needsTending(id) && !g.otherDoctor(id):
+		rec = job.Record{Kind: job.Tend, Target: id, TX: pos.X, TY: pos.Y, WorkLeft: TendWork * 3 / 2}
+	default:
 		return false
 	}
-	return g.startJob(id, best.rec)
+	if rec.Kind == job.Tend {
+		rec = g.withMedicine(id, rec)
+	}
+	if !g.startJob(id, rec) {
+		return false
+	}
+	if rec.Kind == job.Tend && rec.Dest != 0 {
+		g.reserve.TryEntity(id, rec.Dest)
+	}
+	return true
 }
 
 // doRescue: on reaching the patient pick them up and head for a bed; on
@@ -211,12 +232,24 @@ func (g *Game) followCarriers() {
 
 func (g *Game) doTend(id entity.EntityID, j job.Record) {
 	v, ok := g.vital.Get(j.Target)
-	if !ok || v.Status == health.Dead || v.Injury <= 0 {
+	if !ok || v.Status == health.Dead || v.Injury <= 0 && g.wounds[j.Target].Infection == 0 {
 		j.State = job.Complete
 		g.jobs.Set(id, j)
 		return
 	}
+	if j.Dest != 0 && j.Carry == 0 && !g.pickUpMedicine(id, &j) {
+		return // walking to the patient (or the job ended)
+	}
+	if j.Target != id {
+		pos, _ := g.positions.Get(id)
+		if pp, _ := g.positions.Get(j.Target); abs(pp.X-pos.X) > 1 || abs(pp.Y-pos.Y) > 1 {
+			j.State, j.Fail = job.Fail, job.TargetGone // the patient got up and left
+			g.jobs.Set(id, j)
+			return
+		}
+	}
 	if !g.workTick(id) {
+		g.jobs.Set(id, j)
 		return
 	}
 	j.WorkLeft--
@@ -224,15 +257,18 @@ func (g *Game) doTend(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
-	v.Injury -= TendHeal
-	if v.Injury < 0 {
-		v.Injury = 0
+	care := g.tendCare(id, j.Target, j)
+	if j.Carry != 0 {
+		g.deleteItem(j.Carry)
+		j.Carry = 0
 	}
+	v.Injury = max(0, v.Injury-tendHeal(care))
 	if v.Status == health.Downed && v.Cause == health.CauseInjury && v.Injury <= health.RecoverInjury {
 		v.Status, v.Cause = health.Alive, health.CauseNone
 	}
 	g.vital.Set(j.Target, v)
 	g.tendedUntil[j.Target] = uint64(g.clock.Now()) + TendTicks
+	g.closeWound(j.Target, care)
 	j.State = job.Complete
 	g.jobs.Set(id, j)
 }

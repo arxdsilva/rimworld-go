@@ -4,6 +4,7 @@ import (
 	"image"
 	"image/color"
 	"rimworld-go/internal/application/game"
+	"strings"
 	"testing"
 )
 
@@ -219,7 +220,7 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 		for _, st := range []string{"young", "mature", "harvestable"} {
 			keys = append(keys, "plant/"+c.Name+"_"+st)
 		}
-		keys = append(keys, itemSprite(c.Label), "ui_icon/"+c.Label)
+		keys = append(keys, itemSprite(c.Label), "ui_icon/"+strings.ReplaceAll(c.Label, " ", "_"))
 	}
 	for _, sp := range []string{"dustbuck", "ridgewolf"} {
 		for f := faceSouth; f <= faceWest; f++ {

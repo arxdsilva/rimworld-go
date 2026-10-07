@@ -254,7 +254,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 			amount = 0.022
 		case "wheat", "corn":
 			amount = 0.07
-		case "radish", "lettuce", "potato", "beans", "pumpkin":
+		case "radish", "lettuce", "potato", "beans", "pumpkin", "healroot":
 			amount = 0.04
 		}
 		add(float64(p.Y), float64(p.X), func() {
@@ -354,6 +354,8 @@ func itemSprite(kind string) string {
 		return "item/radish_bunch"
 	case "pumpkins":
 		return "item/pumpkins"
+	case "herbal medicine":
+		return "item/herbal_medicine"
 	case "meat":
 		return "item/meat_pile"
 	case "leather":
@@ -595,7 +597,7 @@ func plantSprite(p game.PlantView) (string, float64) {
 	case "tree":
 		k := 0.45 + 0.55*float64(p.Growth)/100
 		return artKey("plant", "tree", int(tileHash(p.X, p.Y)%3)), k
-	case "radish", "lettuce", "beans", "potato", "corn", "wheat", "pumpkin":
+	case "radish", "lettuce", "beans", "potato", "corn", "wheat", "pumpkin", "healroot":
 		if st := clampStage(p.Stage); st > 0 {
 			return "plant/" + p.Species + "_" + [...]string{"", "young", "mature", "harvestable"}[st], 1
 		}

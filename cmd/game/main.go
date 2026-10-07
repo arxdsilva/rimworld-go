@@ -82,6 +82,20 @@ func main() {
 			if *scenario == "raid" {
 				g.Raid(3)
 			}
+			if *scenario == "medic" {
+				// a healroot patch at every stage, medicine in store and
+				// Bo down with an infection in a bed nearby
+				cx, cy := *width/2, *height/2
+				g.ClearPlants(cx-1, cy-11, cx+7, cy-5)
+				for i, growth := range []int{50000, 110000, 170000, 240000, 240000, 240000} {
+					_, _ = g.SpawnPlantSpecies("healroot", cx+i%3, cy-10+i/3, growth)
+				}
+				_, _ = g.SpawnStack(item.HerbalMedicine, 6, cx+1, cy-7)
+				g.BuildNow("bed", "wood", "south", cx+5, cy-10)
+				if snap := g.Snapshot(); len(snap) > 1 {
+					g.Infect(snap[1].ID, 45)
+				}
+			}
 			if *scenario == "defense" {
 				// a sandbag ring with spike traps outside it, a battered
 				// wall, then a raid

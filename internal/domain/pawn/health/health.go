@@ -31,6 +31,7 @@ const (
 	CauseInjury
 	CauseHypothermia
 	CauseHeatstroke
+	CauseInfection
 )
 
 func (c Cause) String() string {
@@ -45,6 +46,8 @@ func (c Cause) String() string {
 		return "hypothermia"
 	case CauseHeatstroke:
 		return "heatstroke"
+	case CauseInfection:
+		return "infection"
 	default:
 		return ""
 	}

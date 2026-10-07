@@ -996,12 +996,12 @@ treatment, and surgery are major colony-management systems.
     -   herbal-equivalent.
     -   industrial-equivalent.
     -   best medicine-equivalent.
--   [x] **Tending**
+-   [x] **Tending** (doctor fetches herbal medicine when there is some; patients down, in bed or asleep)
     -   Doctor reserves patient.
     -   fetches medicine if policy allows.
     -   performs treatment.
     -   quality depends on skill, medicine, environment, capacities.
--   [ ] **Self-tend**
+-   [x] **Self-tend** (only when no other doctor; weaker care)
     -   Optional with reduced effectiveness.
 -   [-] **Medical beds**
     -   Mark beds for medical use.
@@ -1011,9 +1011,9 @@ treatment, and surgery are major colony-management systems.
 
 ## 11.6 Infection
 
--   [ ] **Wound infection chance**
+-   [x] **Wound infection chance** (untended 8h: 40%; self-tended 20%, tended 12%, herbal medicine 3%)
     -   Eligible untreated/poorly treated wounds can become infected.
--   [ ] **Infection progression vs immunity**
+-   [-] **Infection progression vs immunity** (hourly severity: +4 untreated, -5 tended, -9 with medicine; fatal at 100; no immunity race)
     -   Disease severity progresses.
     -   immunity grows based on treatment/rest/health.
     -   reaching immunity first allows recovery; severity first can

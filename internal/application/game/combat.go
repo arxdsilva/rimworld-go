@@ -188,6 +188,7 @@ func (g *Game) hurt(target entity.EntityID, dmg int, by entity.EntityID) {
 	}
 	v.Injury += dmg
 	g.vital.Set(target, v)
+	g.woundOpened(target)
 	switch {
 	case v.Injury >= health.MaxHP:
 		g.die(target, health.CauseInjury)

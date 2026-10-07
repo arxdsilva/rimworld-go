@@ -200,7 +200,19 @@ def _duster():
     return S.render_asset("item", "duster_folded", zmax=0.16, extra={"item": "duster"})
 
 
+def _herbal_medicine():
+    """Herbal medicine: bundles of dried healroot bound with twine, a few
+    knobbly roots beside them."""
+    for k, (x, y, a) in enumerate([(0.42, -0.56, 0.0), (0.58, -0.50, 0.0)]):
+        S.box("bundle%d" % k, x - 0.07, y - 0.20, 0.0, x + 0.07, y + 0.12, 0.09, "vegetation", bevel=0.035, segments=2)
+        S.box("tips%d" % k, x - 0.08, y + 0.10, 0.01, x + 0.08, y + 0.20, 0.08, "leaf_light", bevel=0.03)
+        S.box("twine%d" % k, x - 0.075, y - 0.06, 0.0, x + 0.075, y - 0.02, 0.10, "straw", bevel=0.01)
+    for k, (x, y) in enumerate([(0.30, -0.72), (0.70, -0.74)]):
+        S.blob("root%d" % k, x, y, 0.02, 0.055, "tuber", seed=120 + k, lumps=0.3, squash=0.6)
+    return S.render_asset("item", "herbal_medicine", zmax=0.14, extra={"item": "herbal medicine", "stack": True})
+
+
 def build():
     return [_wood(), _food(), _steel(), _stone(), _berries(), _ration(), _meat(), _meal(), _club(), _rifle_item(),
             _potatoes(), _corn(), _wheat(), _beans(), _lettuce(), _radishes(), _pumpkins(),
-            _leather(), _parka(), _tuque(), _duster()]
+            _leather(), _parka(), _tuque(), _duster(), _herbal_medicine()]

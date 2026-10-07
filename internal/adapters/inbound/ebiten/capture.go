@@ -209,6 +209,13 @@ func (a *App) captureUI(ui string) {
 				a.renderer.syncPawns()
 			}
 		}
+	case "medic":
+		cx, cy := float64(a.renderer.game.Width())/2, float64(a.renderer.game.Height())/2
+		sw, sh := a.size()
+		a.renderer.centerOn(cx+2, cy-8, sw, sh)
+		if pawns := a.renderer.snapshot(); len(pawns) > 1 {
+			a.renderer.Select(pawns[1].ID)
+		}
 	case "defense":
 		cx, cy := float64(a.renderer.game.Width())/2, float64(a.renderer.game.Height())/2
 		sw, sh := a.size()

@@ -1,6 +1,10 @@
 package plant
 
-import "testing"
+import (
+	"testing"
+
+	"rimworld-go/internal/domain/economy/item"
+)
 
 func TestPlantStagesAndYields(t *testing.T) {
 	t.Parallel()
@@ -37,7 +41,7 @@ func TestGrowRespectsFertility(t *testing.T) {
 func TestCropsGrowLikeTheRealThing(t *testing.T) {
 	t.Parallel()
 	// order of maturity matches real crops: radish < lettuce < beans <
-	// potato < corn < pumpkin < wheat
+	// (healroot) < potato < corn < pumpkin < wheat
 	prev := 0.0
 	for _, c := range Crops() {
 		d := GrowDays(c, 100)
@@ -45,8 +49,9 @@ func TestCropsGrowLikeTheRealThing(t *testing.T) {
 			t.Fatalf("%s matures in %.1f days, not after the previous crop (%.1f)", c, d, prev)
 		}
 		prev = d
-		if !DefOf(c).Crop || DefOf(c).Yield <= 0 || DefOf(c).Yields.Nutrition() <= 0 {
-			t.Fatalf("%s must be an edible crop", c)
+		medicinal := DefOf(c).Yields == item.HerbalMedicine
+		if !DefOf(c).Crop || DefOf(c).Yield <= 0 || DefOf(c).Yields.Nutrition() <= 0 && !medicinal {
+			t.Fatalf("%s must be an edible (or medicinal) crop", c)
 		}
 	}
 	if GrowDays(Potato, 100) != 7.5 || GrowDays(Radish, 100) != 2 {

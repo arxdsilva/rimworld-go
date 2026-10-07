@@ -105,6 +105,15 @@ func (a *App) drawInspector(screen *ebiten.Image) {
 	if p.Heatstroke > 0 {
 		status += fmt.Sprintf("  heatstroke %d%%", p.Heatstroke/10)
 	}
+	switch {
+	case p.Infection > 0:
+		status += fmt.Sprintf("  infection %d%%", p.Infection)
+	case p.Wounded:
+		status += "  wound untended"
+	}
+	if p.Tended && (p.Infection > 0 || p.Health < 100) {
+		status += "  (tended)"
+	}
 	drawLabel(screen, int(r.x)+12, int(r.y)+32, status)
 	a.drawPawnPortrait(screen, p, float64(r.x)+12, float64(r.y)+52, 48, 64)
 	drawLabel(screen, int(r.x)+72, int(r.y)+56, fmt.Sprintf("job       %s", p.Job))

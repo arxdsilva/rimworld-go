@@ -192,8 +192,31 @@ def _pumpkin(k):
     return 0.16 * size + 0.08
 
 
+def _healroot(k):
+    """Healroot: a low rosette of pointed, pale-veined leaves; tiny white
+    flowers and the knobbly root pushing up through the soil when ripe."""
+    _mound()
+    size = (0.55, 0.9, 1.0)[k]
+    for i in range(7):
+        a = 2 * math.pi * i / 7 + 0.3
+        _leaf("hleaf%d" % i, 0.5, -0.5, a, 0.30 * size, 0.04 + 0.03 * (i % 3),
+              "leaf_light" if i % 2 else "foliage", width=0.06 * size)
+    S.cyl("heart", 0.5, -0.5, 0.05, 0.03, 0.12 * size, "vegetation", segs=8, r_top=0.02)
+    if k >= 1:
+        for i in range(4):
+            a = 2 * math.pi * i / 4 + 0.9
+            x, y = 0.5 + 0.09 * math.cos(a), -0.5 + 0.09 * math.sin(a)
+            S.cyl("stalk%d" % i, x, y, 0.01, 0.05, 0.22, "vegetation", segs=5, bevel=0.0)
+            S.ellipsoid("flower%d" % i, x, y, 0.23, 0.035, 0.035, 0.025, "blossom", segs=8, rings=5)
+    if k == 2:
+        for i, (x, y) in enumerate([(0.28, -0.70), (0.72, -0.68), (0.30, -0.30)]):
+            S.blob("root%d" % i, x, y, 0.03, 0.095, "tuber", seed=90 + i, lumps=0.3, squash=0.7)
+        return 0.28
+    return 0.12 * size + 0.12 * (k >= 1)
+
+
 CROPS = {"radish": _radish, "lettuce": _lettuce, "beans": _beans, "potato": _potato,
-         "corn": _corn, "wheat": _wheat, "pumpkin": _pumpkin}
+         "corn": _corn, "wheat": _wheat, "pumpkin": _pumpkin, "healroot": _healroot}
 STAGES = ("young", "mature", "harvestable")
 
 

@@ -316,6 +316,13 @@ func (g *Game) phaseAI() {
 			}
 			g.noComfort[id] = uint64(g.clock.Now()) + warmRetry
 		}
+		if j.Kind != job.Sleep && j.Kind != job.Eat && !j.Forced && g.patientRest(id) {
+			if j.Kind != job.None && j.State != job.Idle {
+				g.interrupt(id, job.Interrupted)
+			}
+			g.assignSleep(id) // lie down and wait for a doctor
+			continue
+		}
 		n, _ := g.need.Get(id)
 
 		busy := j.Kind != job.None && j.State != job.Idle
@@ -640,7 +647,7 @@ func allows(s zone.Stockpile, k item.Kind) bool {
 		return s.AllowWood
 	case k == item.Stone:
 		return s.AllowStone
-	case k == item.Leather, k.IsApparel(), k.IsWeapon():
+	case k == item.Leather, k == item.HerbalMedicine, k.IsApparel(), k.IsWeapon():
 		return true // goods: always welcome
 	}
 	return false
@@ -889,6 +896,9 @@ func (g *Game) doSleep(id entity.EntityID, j job.Record, now uint64) {
 	done := n.Rest >= needs.Full && !needs.SleepScheduled(act)
 	if !n.Exhausted() && needs.WorkScheduled(act) && n.Rest > needs.CriticalRest && j.WorkLeft <= 0 {
 		done = true
+	}
+	if done && g.patientRest(id) && j.WorkLeft > -patientWait {
+		done = false // stay put: a doctor is coming
 	}
 	if n.Hungry() && g.hasEdible() {
 		done = true

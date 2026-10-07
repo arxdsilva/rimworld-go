@@ -4,6 +4,7 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/pawn/infection"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/recreation"
 	"rimworld-go/internal/domain/sim/entity"
@@ -170,6 +171,12 @@ func (g *Game) thoughts(id entity.EntityID) []mood.Thought {
 		states = append(states, mood.Bored)
 	case joy >= recreation.Entertained:
 		states = append(states, mood.Entertained)
+	}
+	if g.wounds[id].Infection >= infection.Sick {
+		states = append(states, mood.Sick)
+	}
+	if v, _ := g.vital.Get(id); v.Injury >= painInjury {
+		states = append(states, mood.InPain)
 	}
 	pos, _ := g.positions.Get(id)
 	b := g.bandsOf(id)

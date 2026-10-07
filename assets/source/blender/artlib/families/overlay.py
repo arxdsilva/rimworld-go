@@ -248,6 +248,7 @@ ICONS = {
     "lettuce": ("item", "lettuce_heads"),
     "radishes": ("item", "radish_bunch"),
     "pumpkins": ("item", "pumpkins"),
+    "herbal_medicine": ("item", "herbal_medicine"),
     "meat": ("item", "meat_pile"),
     "meal": ("item", "meal_simple"),
     "steel": ("item", "steel_bars"),

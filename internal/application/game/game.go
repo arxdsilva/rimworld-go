@@ -73,6 +73,9 @@ type PawnView struct {
 	MoodLabel     string
 	Thoughts      []ThoughtView
 	Health        int // hit points left, percent
+	// Infection severity (0-100, 0: none); Wounded: an open, untended wound.
+	Infection int
+	Wounded   bool
 	// Exposure: Hypothermia and Heatstroke severity in permille, and the
 	// air temperature where the colonist is (tenths of a degree C).
 	Hypothermia, Heatstroke int
@@ -296,6 +299,8 @@ type Game struct {
 
 	carrying    map[entity.EntityID]entity.EntityID // rescuer -> patient
 	tendedUntil map[entity.EntityID]uint64
+	// wounds: open wounds and infections of colonists.
+	wounds map[entity.EntityID]wound
 }
 
 // New builds a Game from cfg. Width/Height must be positive.
@@ -341,6 +346,7 @@ func New(cfg Config) *Game {
 		equip:       make(map[entity.EntityID]item.Kind),
 		carrying:    make(map[entity.EntityID]entity.EntityID),
 		tendedUntil: make(map[entity.EntityID]uint64),
+		wounds:      make(map[entity.EntityID]wound),
 	}
 }
 
@@ -480,6 +486,7 @@ func (g *Game) Step(n int) {
 		g.phaseCommands()
 		g.phasePlants()
 		g.phaseClimate()
+		g.phaseInfection()
 		g.phaseNeeds()
 		g.phaseAI()
 		g.phaseJobs()
@@ -537,6 +544,7 @@ func (g *Game) Snapshot() []PawnView {
 		pv := &views[len(views)-1]
 		pv.Mood, pv.MoodLabel, pv.Thoughts = mood.Level(ts), mood.Label(mood.Level(ts)), thoughtViews(ts)
 		pv.Health = v.HP() * 100 / health.MaxHP
+		pv.Infection, pv.Wounded = g.wounds[id].Infection, g.wounds[id].At != 0 && v.Injury > 0
 		pv.Weapon = weaponDefOf(g, id).Name
 		pv.Lying = v.Status != health.Alive || (j.Kind == job.Sleep && (j.State == job.Do || j.State == job.Complete))
 		pv.InBed = g.inBed(id)

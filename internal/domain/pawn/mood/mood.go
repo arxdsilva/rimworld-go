@@ -25,6 +25,9 @@ const (
 	Bored
 	Entertained
 	Catharsis
+	// Sick: fighting an infection. InPain: badly hurt.
+	Sick
+	InPain
 	numKinds
 )
 
@@ -68,6 +71,8 @@ var defs = [numKinds]Def{
 	Bored:             {"bored", -5, 0, groupNone},
 	Entertained:       {"entertained", 4, 0, groupNone},
 	Catharsis:         {"catharsis", 30, day, groupNone},
+	Sick:              {"sick", -8, 0, groupNone},
+	InPain:            {"in pain", -6, 0, groupNone},
 }
 
 // DefOf returns the thought definition.

@@ -35,11 +35,13 @@ const (
 	Parka
 	Tuque
 	Duster
+	// HerbalMedicine is dried healroot: doctors tend wounds with it.
+	HerbalMedicine
 	numKinds
 )
 
 var kindNames = [numKinds]string{"food", "wood", "stone", "berries", "potatoes", "meat", "meal", "club", "rifle", "dustbuck corpse", "ridgewolf corpse",
-	"corn", "wheat", "beans", "lettuce", "radishes", "pumpkins", "leather", "parka", "tuque", "duster"}
+	"corn", "wheat", "beans", "lettuce", "radishes", "pumpkins", "leather", "parka", "tuque", "duster", "herbal medicine"}
 
 // IsWeapon reports whether k can be equipped.
 func (k Kind) IsWeapon() bool { return k == Club || k == Rifle }
