@@ -4,6 +4,7 @@ package game
 
 import (
 	"fmt"
+	"rimworld-go/internal/domain/research"
 
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/reservation"
@@ -65,6 +66,7 @@ type PawnView struct {
 	WorkHunt      bool
 	WorkCraft     bool
 	WorkDoctor    bool
+	WorkResearch  bool
 	Ate           bool
 	LastMeal      string // kind name of the last food eaten, "" if none
 	SleptInBed    bool
@@ -229,6 +231,11 @@ type WorldView struct {
 	Messages []MessageView
 	// Schedule is the colony default schedule (new colonists get a copy).
 	Schedule []schedule.Activity
+	// Research projects (Research tab) and still-locked unlock keys
+	// ("build:<kind>", "crop:<plant>", "recipe:<name>") mapped to the
+	// project that opens them.
+	Research []ResearchView
+	Locked   map[string]string
 }
 
 // Game holds all authoritative simulation state.
@@ -301,6 +308,10 @@ type Game struct {
 	tendedUntil map[entity.EntityID]uint64
 	// wounds: open wounds and infections of colonists.
 	wounds map[entity.EntityID]wound
+	// research progress and the current project (researchSet: one is picked)
+	research    research.Progress
+	researchCur research.Project
+	researchSet bool
 }
 
 // New builds a Game from cfg. Width/Height must be positive.
@@ -347,6 +358,7 @@ func New(cfg Config) *Game {
 		carrying:    make(map[entity.EntityID]entity.EntityID),
 		tendedUntil: make(map[entity.EntityID]uint64),
 		wounds:      make(map[entity.EntityID]wound),
+		research:    research.Complete(), // sandbox: everything known
 	}
 }
 
@@ -360,6 +372,7 @@ func NewColony(cfg Config) *Game {
 	}
 	g.spawnWildlife()
 	g.scheduleThreats()
+	g.research = research.Progress{} // a new colony knows nothing yet
 	return g
 }
 
@@ -535,6 +548,7 @@ func (g *Game) Snapshot() []PawnView {
 			WorkHunt:      m.Enabled(work.Hunt),
 			WorkCraft:     m.Enabled(work.Craft),
 			WorkDoctor:    m.Enabled(work.Doctor),
+			WorkResearch:  m.Enabled(work.Research),
 			Ate:           g.ateAt[id],
 			LastMeal:      lastMealName(g, id),
 			SleptInBed:    g.sleptAt[id] != 0,
@@ -595,6 +609,8 @@ func (g *Game) World() WorldView {
 		IndoorTemp:  int(temperature.Indoor(g.clock.Now())),
 		Season:      temperature.Season(g.clock.Now()),
 		Messages:    append([]MessageView(nil), g.messages...),
+		Research:    g.researchViews(),
+		Locked:      g.lockedKeys(),
 		Schedule:    append([]schedule.Activity(nil), g.sched[:]...),
 	}
 	for _, id := range g.itemIDs {

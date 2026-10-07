@@ -173,6 +173,31 @@ def _horseshoe_pin():
     return (1, 1), 0.32
 
 
+def _research_bench():
+    """2 x 1 research desk: a plank top on trestles, stacked books, an open
+    journal, a glass flask on a stand and a candle. The researcher sits on
+    the south side."""
+    import math
+    for i, x in enumerate([0.12, 1.88]):
+        for j, y in enumerate([-0.18, -0.82]):
+            S.box("leg%d%d" % (i, j), x - 0.05, y - 0.05, 0.0, x + 0.05, y + 0.05, 0.52, "wood", bevel=0.015)
+    S.box("top", 0.04, -0.96, 0.52, 1.96, -0.04, 0.60, "wood_plank", bevel=0.03)
+    S.box("shelf", 0.10, -0.90, 0.16, 1.90, -0.60, 0.20, "wood", bevel=0.015)
+    for k, (h, mat) in enumerate([(0.06, "leather"), (0.05, "food_red"), (0.07, "bark")]):
+        z = 0.60 + sum((0.06, 0.05, 0.07)[:k])
+        S.box("book%d" % k, 0.16 + 0.01 * k, -0.86, z, 0.46 - 0.02 * k, -0.62, z + h, mat, bevel=0.012)
+    S.box("journal_l", 0.70, -0.56, 0.60, 0.92, -0.26, 0.625, "ceramic", bevel=0.008)
+    S.box("journal_r", 0.93, -0.56, 0.60, 1.15, -0.26, 0.625, "ceramic", bevel=0.008)
+    S.box("spine", 0.915, -0.57, 0.595, 0.935, -0.25, 0.63, "leather", bevel=0.004)
+    S.cyl("stand", 1.55, -0.70, 0.10, 0.60, 0.64, "metal_dark", segs=10)
+    S.ellipsoid("flask", 1.55, -0.70, 0.74, 0.09, 0.09, 0.09, "glass", segs=14, rings=8)
+    S.cyl("neck", 1.55, -0.70, 0.03, 0.80, 0.92, "glass", segs=8, bevel=0.0)
+    S.cyl("candle", 1.78, -0.30, 0.035, 0.60, 0.72, "ceramic", segs=8)
+    S.cyl("flame", 1.78, -0.30, 0.015, 0.72, 0.76, "lamp_warm", segs=6, r_top=0.002, bevel=0.0)
+    S.cyl("quill", 1.20, -0.40, 0.008, 0.62, 0.64, "fur_cream", segs=4, bevel=0.0)
+    return (2, 1), 0.92
+
+
 def _sandbags():
     """1 x 1 waist-high bank of burlap sacks: two staggered courses of
     pillow-shaped bags, tied off at one end."""
@@ -255,12 +280,13 @@ BUILDERS = {
     "campfire": (_campfire, {}),
     "horseshoe_pin": (_horseshoe_pin, {}),
     "sandbags": (_sandbags, {}),
+    "research_bench": (_research_bench, {"attachments": {"worker": [0.5, 1.15]}}),
     "spike_trap": (_spike_trap, {}),
     "tailoring_bench": (_tailoring_bench, {"attachments": {"worker": [0.5, 1.15]}}),
     "drying_rack": (_drying_rack, {"attachments": {"worker": [0.5, 1.15]}}),
 }
 ROTATABLE = {"bed_basic", "bed_double", "chair_basic", "workbench_basic", "stove_basic", "butcher_table",
-             "drying_rack", "tailoring_bench"}
+             "drying_rack", "tailoring_bench", "research_bench"}
 
 
 # Blanket overlays: drawn over a sleeper so they read as tucked in. The

@@ -117,8 +117,12 @@ func (a *App) buildingButtons() []button {
 	}
 	y += 8
 	for _, rc := range a.recipesFor(b.Kind) {
-		out = append(out, button{id: "bill.add." + strconv.Itoa(int(rc.ID)), label: "+ " + rc.Label,
-			x: r.x + 12, y: y, w: 230, h: 22})
+		add := button{id: "bill.add." + strconv.Itoa(int(rc.ID)), label: "+ " + rc.Label,
+			x: r.x + 12, y: y, w: 230, h: 22}
+		if p := a.lockedBy("recipe:" + rc.Name); p != "" {
+			add.disabled, add.reason, add.label, add.quiet = true, "Needs research: "+p, rc.Label+" (locked)", true
+		}
+		out = append(out, add)
 		y += 26
 	}
 	return out

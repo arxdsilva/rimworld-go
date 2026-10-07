@@ -25,6 +25,7 @@ var workLive = map[int]struct {
 	4:  {command.WorkConstruct, func(p game.PawnView) bool { return p.WorkConstruct }},
 	5:  {command.WorkHunt, func(p game.PawnView) bool { return p.WorkHunt }},
 	6:  {command.WorkHaul, func(p game.PawnView) bool { return p.WorkHaul }},
+	8:  {command.WorkResearch, func(p game.PawnView) bool { return p.WorkResearch }},
 	9:  {command.WorkMine, func(p game.PawnView) bool { return p.WorkMine }},
 	10: {command.WorkCraft, func(p game.PawnView) bool { return p.WorkCraft }},
 }
@@ -84,6 +85,9 @@ func (a *App) workButtons() []button {
 	if a.panelMode == "schedule" {
 		return a.scheduleButtons()
 	}
+	if a.panelMode == "research" {
+		return a.researchButtons()
+	}
 	r := workRect(a.sw, a.sh)
 	hx := int(r.x) + 12 + workNameW
 	pawns := a.renderer.snapshot()
@@ -121,6 +125,10 @@ func (a *App) drawWork(screen *ebiten.Image, sw, sh int) {
 	}
 	if a.panelMode == "schedule" {
 		a.drawSchedule(screen, sw, sh)
+		return
+	}
+	if a.panelMode == "research" {
+		a.drawResearch(screen, sw, sh)
 		return
 	}
 	r := workRect(sw, sh)

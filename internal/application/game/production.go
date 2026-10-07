@@ -108,7 +108,7 @@ func (g *Game) applyBill(c command.Command) {
 	switch c.Kind {
 	case command.AddBill:
 		d := recipe.DefOf(recipe.ID(c.Recipe))
-		if d.Name == "" || d.Bench != b.Kind {
+		if d.Name == "" || d.Bench != b.Kind || g.recipeLocked(d.ID) {
 			return
 		}
 		target := c.Count

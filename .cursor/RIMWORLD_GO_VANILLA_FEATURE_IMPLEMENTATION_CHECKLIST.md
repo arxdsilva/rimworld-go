@@ -1667,25 +1667,25 @@ have prerequisites, and technologies unlock buildings/gear.
 
 ## 21.1 Research definitions
 
--   [ ] **Research project**
+-   [x] **Research project** (5 projects: food preservation, herbalism, tailoring, traps, gunsmithing)
     -   Cost.
     -   prerequisites.
     -   tech level.
     -   required bench/facilities.
     -   unlocked definitions.
--   [ ] **Research DAG**
+-   [x] **Research DAG** (prerequisites; gunsmithing after traps)
     -   Validate no invalid cycles.
     -   UI layout can derive from prerequisite graph.
 
 ## 21.2 Research work
 
--   [ ] **Simple research bench**
+-   [x] **Simple research bench**
 -   [ ] **Advanced research bench**
--   [ ] **Research job**
+-   [x] **Research job** (Research work type; two-hour sittings at the nearest free bench)
     -   Intellectual skill.
     -   bench speed.
     -   room/environment modifiers as appropriate.
--   [ ] **Research progress**
+-   [x] **Research progress** (one point per working tick; finish message; saved)
     -   Player selects active project.
     -   Researchers contribute points.
     -   completion unlocks content.

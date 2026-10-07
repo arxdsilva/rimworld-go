@@ -33,6 +33,7 @@ func DefaultColonist() Mask {
 	m = m.Set(Hunt, true)
 	m = m.Set(Craft, true)
 	m = m.Set(Doctor, true)
+	m = m.Set(Research, true)
 	return m
 }
 
@@ -91,4 +92,4 @@ func (p Priorities) Set(t Type, v int) Priorities {
 }
 
 // Order is the tie-break among work types sharing a priority.
-var Order = []Type{Doctor, Haul, Construct, Cook, Craft, Hunt, Grow, Mine}
+var Order = []Type{Doctor, Haul, Construct, Cook, Craft, Hunt, Grow, Mine, Research}

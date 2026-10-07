@@ -188,7 +188,7 @@ func (a *App) captureUI(ui string) {
 			a.renderer.cam.offsetX, a.renderer.cam.offsetY = -1e6, -1e6
 		}
 		a.renderer.clampCamera(v)
-	case "work", "schedule":
+	case "work", "schedule", "research":
 		a.workOpen, a.panelMode = true, ui
 		if ui == "schedule" {
 			a.schedBrush = 3

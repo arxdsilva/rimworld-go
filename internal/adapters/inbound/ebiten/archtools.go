@@ -88,6 +88,8 @@ var archTools = []archTool{
 		desc: "Sews leather into parkas, tuques and dusters (2x1). Select it to add bills."},
 	{id: "drying", label: "Drying rack", category: "production", icon: "drying_rack", mode: placeSingle, build: "drying rack",
 		desc: "Dries up to 25 perishable food at a time so it never rots (2x1). Starts with a Dry food bill."},
+	{id: "research", label: "Research bench", category: "production", icon: "research_bench", mode: placeSingle, build: "research bench",
+		desc: "A desk to study at (2x1). Pick a project in the Research tab; colonists with Research work sit here. Q/E rotates."},
 	{id: "sandbags", label: "Sandbags", category: "security", icon: "sandbags", mode: placeLine, build: "sandbags",
 		desc: "Waist-high cover. Colonists right behind them are much harder to shoot. Drag to draw a line."},
 	{id: "spike_trap", label: "Spike trap", category: "security", icon: "spike_trap", mode: placeSingle, build: "spike trap",
@@ -225,6 +227,8 @@ func buildSprite(kind, facing string, mask int, ew, open bool) string {
 		return "furniture/horseshoe_pin"
 	case "sandbags":
 		return "furniture/sandbags"
+	case "research bench":
+		return "furniture/research_bench_" + facingOr(facing)
 	case "spike trap":
 		return "furniture/spike_trap"
 	case "tailoring bench":

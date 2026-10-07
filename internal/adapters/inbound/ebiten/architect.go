@@ -91,24 +91,34 @@ func (a *App) architectButtons() []button {
 	}
 	for i, t := range toolsIn(a.archCat) {
 		col, row := i%2, i/2
-		out = append(out, button{
+		b := button{
 			id: "arch.tool." + t.id,
 			x:  r.x + 10 + float32(col)*(archCardW+archCardGap),
 			y:  r.y + archTop + float32(row)*(archCardH+archCardGap),
 			w:  archCardW, h: archCardH,
 			selected: a.archTool == t.id,
-		})
+		}
+		if t.build != "" {
+			if p := a.lockedBy("build:" + t.build); p != "" {
+				b.disabled, b.reason, b.selected, b.quiet = true, "Needs research: "+p, false, true
+			}
+		}
+		out = append(out, b)
 	}
 	if a.archCropOpen() {
 		sel := a.selectedCrop().Name
 		top := a.archCropTop(r)
 		for i, c := range game.Crops() {
 			col, row := i%archCropCols, i/archCropCols
-			out = append(out, button{
+			b := button{
 				id: "arch.crop." + c.Name, label: strings.ToUpper(c.Name[:1]) + c.Name[1:],
 				x: r.x + 10 + float32(col)*(archCropBtnW+2), y: top + float32(row)*(archCropBtnH+4),
 				w: archCropBtnW, h: archCropBtnH, selected: c.Name == sel,
-			})
+			}
+			if p := a.lockedBy("crop:" + c.Name); p != "" {
+				b.disabled, b.reason, b.selected, b.quiet = true, "Needs research: "+p, false, true
+			}
+			out = append(out, b)
 		}
 	}
 	if t, ok := toolByID(a.archTool); ok {
@@ -211,7 +221,9 @@ func (a *App) drawArchitect(screen *ebiten.Image) {
 		drawButton(screen, b, b.contains(mx, my))
 		drawIcon(screen, a.icon(t.icon), float64(b.x)+6, float64(b.y)+8, 40)
 		drawLabel(screen, int(b.x)+50, int(b.y)+10, t.label)
-		if bv, ok := buildable(t.build); ok {
+		if b.disabled {
+			drawLabel(screen, int(b.x)+50, int(b.y)+30, "needs research")
+		} else if bv, ok := buildable(t.build); ok {
 			drawLabel(screen, int(b.x)+50, int(b.y)+30, fmt.Sprintf("%d %s", bv.Wood, a.toolStuff(t)))
 		} else {
 			drawLabel(screen, int(b.x)+50, int(b.y)+30, map[placeMode]string{placeArea: "drag area"}[t.mode])

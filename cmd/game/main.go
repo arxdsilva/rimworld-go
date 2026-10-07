@@ -82,6 +82,14 @@ func main() {
 			if *scenario == "raid" {
 				g.Raid(3)
 			}
+			if *scenario == "research" {
+				cx, cy := *width/2, *height/2
+				g.ClearPlants(cx+4, cy-3, cx+8, cy)
+				g.BuildNow("research bench", "wood", "south", cx+5, cy-2)
+				g.AddResearch("food_preservation", 2000)
+				g.AddResearch("traps", 1600)
+				g.PickResearch("traps")
+			}
 			if *scenario == "medic" {
 				// a healroot patch at every stage, medicine in store and
 				// Bo down with an infection in a bed nearby

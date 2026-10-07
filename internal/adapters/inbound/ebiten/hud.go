@@ -28,7 +28,7 @@ var hudTabSpecs = []struct {
 	{"tab.schedule", "Schedule", true},
 	{"tab.assign", "Assign", false},
 	{"tab.animals", "Animals", false},
-	{"tab.research", "Research", false},
+	{"tab.research", "Research", true},
 	{"tab.world", "World", false},
 	{"tab.history", "History", false},
 	{"tab.factions", "Factions", false},
@@ -67,7 +67,10 @@ func (a *App) hudTabButtons(sw, sh int) []button {
 			b.disabled = true
 			b.reason = "not implemented"
 		}
-		if t.id == "tab.work" && a.workOpen && a.panelMode != "schedule" {
+		if t.id == "tab.work" && a.workOpen && a.panelMode != "schedule" && a.panelMode != "research" {
+			b.selected = true
+		}
+		if t.id == "tab.research" && a.workOpen && a.panelMode == "research" {
 			b.selected = true
 		}
 		if t.id == "tab.schedule" && a.workOpen && a.panelMode == "schedule" {

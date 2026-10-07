@@ -69,6 +69,8 @@ const (
 	Breach
 	// Repair: a builder mending a damaged building.
 	Repair
+	// Research: studying at a research bench.
+	Research
 )
 
 // IsIdle reports a free-time behaviour that any real work may replace.
@@ -130,6 +132,8 @@ func (k Kind) String() string {
 		return "break through"
 	case Repair:
 		return "repair"
+	case Research:
+		return "research"
 	default:
 		return "idle"
 	}

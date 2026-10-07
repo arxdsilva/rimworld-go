@@ -43,6 +43,8 @@ const (
 	SetWorkPriority
 	// SetSchedule sets Pawn's hour Index to activity Mode (Pawn 0: everyone).
 	SetSchedule
+	// SetResearch picks research project Build as the current project.
+	SetResearch
 )
 
 // WorkType is a compact work-column id for SetWorkEnabled.
@@ -58,6 +60,7 @@ const (
 	WorkHunt
 	WorkCraft
 	WorkDoctor
+	WorkResearch
 )
 
 // Order is a player-forced job for Prioritize.

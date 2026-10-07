@@ -38,6 +38,8 @@ const (
 	// SpikeTrap is a hidden frame of sharpened stakes that springs on
 	// hostiles walking over it, then has to be rebuilt.
 	SpikeTrap
+	// ResearchBench is a 2x1 desk where colonists research.
+	ResearchBench
 	kindCount
 )
 
@@ -93,6 +95,8 @@ var defs = [kindCount]Def{
 		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
 	Sandbags:  {Kind: Sandbags, Name: "sandbags", Wood: 2, Work: 60, Layer: LayerObject, StoneOK: true},
 	SpikeTrap: {Kind: SpikeTrap, Name: "spike trap", Wood: 4, Work: 80, Layer: LayerObject},
+	ResearchBench: {Kind: ResearchBench, Name: "research bench", Wood: 8, Work: 180, Layer: LayerObject, BlocksMove: true,
+		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true},
 	// A campfire is also a (slow) cooking spot; the cook stands south of it.
 	Campfire: {Kind: Campfire, Name: "campfire", Wood: 5, Work: 60, Layer: LayerObject, BlocksMove: true,
 		Spot: [2]int{0, 1}, HasSpot: true, Bench: true},

@@ -11,6 +11,7 @@ import (
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/pawn/recreation"
 	"rimworld-go/internal/domain/pawn/schedule"
+	"rimworld-go/internal/domain/research"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
@@ -72,7 +73,9 @@ func (g *Game) applyOne(c command.Command) {
 		if !stuff.IsStuff() {
 			stuff = item.Wood // zero value: default material
 		}
-		g.placeFrameStuff(construction.Kind(c.Build), stuff, construction.ParseFacing(c.Facing), c.X, c.Y)
+		if !g.buildLocked(construction.Kind(c.Build)) {
+			g.placeFrameStuff(construction.Kind(c.Build), stuff, construction.ParseFacing(c.Facing), c.X, c.Y)
+		}
 	case command.DesignateCut:
 		g.markCut(c.X, c.Y, c.X2, c.Y2, true)
 	case command.DesignateMine:
@@ -80,7 +83,11 @@ func (g *Game) applyOne(c command.Command) {
 	case command.AddBill, command.SetBill, command.RemoveBill:
 		g.applyBill(c)
 	case command.DesignateGrowZone:
-		g.addGrowZone(c.X, c.Y, c.X2, c.Y2, c.Build)
+		if !g.cropLocked(plant.Species(c.Build)) {
+			g.addGrowZone(c.X, c.Y, c.X2, c.Y2, c.Build)
+		}
+	case command.SetResearch:
+		g.setResearch(research.Project(c.Build))
 	case command.DesignateDeconstruct:
 		g.markDeconstruct(c.X, c.Y, c.X2, c.Y2, true)
 	case command.DesignateHunt:
@@ -822,6 +829,8 @@ func (g *Game) phaseJobs() {
 			g.doWarm(id, j)
 		case job.Repair:
 			g.doRepair(id, j)
+		case job.Research:
+			g.doResearch(id, j)
 		case job.Wander, job.Chat, job.Relax, job.FireSide, job.Horseshoes, job.Hide:
 			g.doIdle(id, j)
 		default:

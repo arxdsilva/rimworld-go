@@ -19,6 +19,7 @@ const (
 	MakeTuque
 	MakeDuster
 	CampfireMeal
+	MakeRifle
 	numRecipes
 )
 
@@ -82,6 +83,9 @@ var defs = [numRecipes]Def{
 		Input: Input{Kind: item.Leather, Qty: 4}, Output: item.Tuque, OutQty: 1, Work: 300, Skill: work.Craft},
 	MakeDuster: {ID: MakeDuster, Name: "make_duster", Label: "Sew leather duster", Bench: construction.TailoringBench,
 		Input: Input{Kind: item.Leather, Qty: 10}, Output: item.Duster, OutQty: 1, Work: 700, Skill: work.Craft},
+	// A crude rifle: a long, careful job (needs Gunsmithing research).
+	MakeRifle: {ID: MakeRifle, Name: "make_rifle", Label: "Make crude rifle", Bench: construction.Workbench,
+		Input: Input{Kind: item.Wood, Qty: 12}, Output: item.Rifle, OutQty: 1, Work: 1500, Skill: work.Craft},
 	DryFood: {ID: DryFood, Name: "dry_food", Label: "Dry food", Bench: construction.DryingRack,
 		Input: Input{AnyDryable: true, Qty: 1, Max: RackCapacity}, Work: 90, Skill: work.Cook, Dry: true},
 }

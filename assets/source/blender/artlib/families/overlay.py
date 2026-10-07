@@ -275,6 +275,7 @@ ICONS = {
     "campfire": ("furniture", "campfire"),
     "horseshoe_pin": ("furniture", "horseshoe_pin"),
     "sandbags": ("furniture", "sandbags"),
+    "research_bench": ("furniture", "research_bench_south"),
     "spike_trap": ("furniture", "spike_trap"),
     "tailoring_bench": ("furniture", "tailoring_bench_south"),
     "corpse_dustbuck": ("item", "corpse_dustbuck"),

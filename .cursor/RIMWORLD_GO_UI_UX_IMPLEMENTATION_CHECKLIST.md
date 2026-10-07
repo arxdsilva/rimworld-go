@@ -861,7 +861,7 @@ understandable.
 -   [ ] **Missing ingredient reason**
 -   [ ] **No valid worker reason**
 -   [ ] **No power reason**
--   [ ] **Research locked reason**
+-   [x] **Research locked reason** (architect tools, crops and bills greyed with "Needs research: X" on hover)
 -   [ ] **Output-count explanation**
 
 ------------------------------------------------------------------------
@@ -876,7 +876,7 @@ understandable.
     -   dependency lines.
     -   zoom/pan.
     -   search.
--   [ ] **Research project states**
+-   [x] **Research project states** (done / researching / available / needs X, progress bar)
     -   locked.
     -   available.
     -   selected.
@@ -897,7 +897,7 @@ understandable.
     -   recipes.
     -   items.
     -   systems.
--   [ ] **Select research command**
+-   [x] **Select research command** (click a project in the Research tab)
 
 ## 15.3 Plugin support
 

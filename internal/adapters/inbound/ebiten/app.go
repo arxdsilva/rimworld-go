@@ -357,7 +357,9 @@ func (a *App) applyClick(id string) {
 			a.renderer.Select(entity.EntityID(n))
 			a.clearBuilding()
 		}
-	case id == "tab.work", id == "tab.schedule":
+	case strings.HasPrefix(id, "research.pick."):
+		a.pickResearch(id)
+	case id == "tab.work", id == "tab.schedule", id == "tab.research":
 		mode := strings.TrimPrefix(id, "tab.")
 		if a.workOpen && a.panelMode == mode {
 			a.workOpen = false

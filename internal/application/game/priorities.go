@@ -30,6 +30,8 @@ func workTypeOf(c command.WorkType) (work.Type, bool) {
 		return work.Craft, true
 	case command.WorkDoctor:
 		return work.Doctor, true
+	case command.WorkResearch:
+		return work.Research, true
 	}
 	return 0, false
 }
@@ -91,6 +93,8 @@ func (g *Game) assignWorkType(id entity.EntityID, t work.Type) bool {
 		return g.assignHarvest(id) || g.assignSow(id) || g.assignCut(id)
 	case work.Mine:
 		return g.assignMine(id)
+	case work.Research:
+		return g.assignResearch(id)
 	}
 	return false
 }

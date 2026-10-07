@@ -82,6 +82,7 @@ type button struct {
 	disabled bool
 	reason   string
 	selected bool
+	quiet    bool // disabled without the "(disabled)" suffix (the reason shows on hover)
 }
 
 func (b button) contains(mx, my int) bool {
@@ -146,7 +147,7 @@ func drawButton(dst *ebiten.Image, b button, hover bool) {
 	}
 	vector.StrokeRect(dst, b.x, b.y, b.w, b.h, 1, border, false)
 	label := b.label
-	if b.disabled {
+	if b.disabled && label != "" && !b.quiet {
 		label = label + "  (disabled)"
 	}
 	ebitenutil.DebugPrintAt(dst, label, int(b.x)+12, int(b.y)+int(b.h)/2-7)
