@@ -209,6 +209,10 @@ func (a *App) captureUI(ui string) {
 				a.renderer.syncPawns()
 			}
 		}
+	case "defense":
+		cx, cy := float64(a.renderer.game.Width())/2, float64(a.renderer.game.Height())/2
+		sw, sh := a.size()
+		a.renderer.centerOn(cx+1, cy, sw, sh)
 	case "raid":
 		// centre on the leading raider
 		cx, cy := float64(a.renderer.game.Width())/2, float64(a.renderer.game.Height())/2

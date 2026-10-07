@@ -32,6 +32,12 @@ const (
 	TailoringBench
 	// HorseshoePin is a stake in a patch of sand for pitching horseshoes.
 	HorseshoePin
+	// Sandbags are a waist-high line of sacks: walkable, and cover for
+	// anyone crouched behind them.
+	Sandbags
+	// SpikeTrap is a hidden frame of sharpened stakes that springs on
+	// hostiles walking over it, then has to be rebuilt.
+	SpikeTrap
 	kindCount
 )
 
@@ -85,11 +91,44 @@ var defs = [kindCount]Def{
 	HorseshoePin: {Kind: HorseshoePin, Name: "horseshoe pin", Wood: 3, Work: 50, Layer: LayerObject},
 	TailoringBench: {Kind: TailoringBench, Name: "tailoring bench", Wood: 7, Work: 150, Layer: LayerObject, BlocksMove: true,
 		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
+	Sandbags:  {Kind: Sandbags, Name: "sandbags", Wood: 2, Work: 60, Layer: LayerObject, StoneOK: true},
+	SpikeTrap: {Kind: SpikeTrap, Name: "spike trap", Wood: 4, Work: 80, Layer: LayerObject},
 	// A campfire is also a (slow) cooking spot; the cook stands south of it.
 	Campfire: {Kind: Campfire, Name: "campfire", Wood: 5, Work: 60, Layer: LayerObject, BlocksMove: true,
 		Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
 	DryingRack: {Kind: DryingRack, Name: "drying rack", Wood: 6, Work: 100, Layer: LayerObject, BlocksMove: true,
 		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
+}
+
+// MaxHP is how much damage a building takes before it is destroyed.
+func MaxHP(k Kind, s item.Kind) int {
+	hp := 60
+	switch k {
+	case Wall:
+		hp = 160
+	case Door:
+		hp = 110
+	case Sandbags:
+		hp = 140
+	case SpikeTrap:
+		hp = 40
+	}
+	if s == item.Stone {
+		hp = hp * 2
+	}
+	return hp
+}
+
+// CoverPct is how much a building on the shooter's side of a target cuts
+// the chance to hit it (percent).
+func CoverPct(k Kind) int {
+	switch k {
+	case Sandbags:
+		return 55
+	case Wall, Door:
+		return 40 // a corner peeked around
+	}
+	return 0
 }
 
 // Sleeps reports whether k is something to sleep in.
@@ -310,7 +349,11 @@ type Building struct {
 	Claimant2   uint64 // second sleeper of a double bed
 	Deconstruct bool   // designated for removal
 	WorkLeft    int    // remaining deconstruct work once started
+	Damage      int    // damage taken (raiders bashing, bullets); repaired by builders
 }
+
+// HP is the building's remaining hit points.
+func (b Building) HP() int { return max(0, MaxHP(b.Kind, b.Stuff)-b.Damage) }
 
 // SlotOf is the sleeping slot pawn id holds here, or -1.
 func (b Building) SlotOf(id uint64) int {

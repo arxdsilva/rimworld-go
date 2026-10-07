@@ -36,6 +36,7 @@ var archCategories = []struct{ id, label string }{
 	{"structure", "Structure"},
 	{"furniture", "Furniture"},
 	{"production", "Production"},
+	{"security", "Security"},
 }
 
 var archTools = []archTool{
@@ -87,6 +88,10 @@ var archTools = []archTool{
 		desc: "Sews leather into parkas, tuques and dusters (2x1). Select it to add bills."},
 	{id: "drying", label: "Drying rack", category: "production", icon: "drying_rack", mode: placeSingle, build: "drying rack",
 		desc: "Dries up to 25 perishable food at a time so it never rots (2x1). Starts with a Dry food bill."},
+	{id: "sandbags", label: "Sandbags", category: "security", icon: "sandbags", mode: placeLine, build: "sandbags",
+		desc: "Waist-high cover. Colonists right behind them are much harder to shoot. Drag to draw a line."},
+	{id: "spike_trap", label: "Spike trap", category: "security", icon: "spike_trap", mode: placeSingle, build: "spike trap",
+		desc: "Springs on raiders and predators that walk over it, then is re-laid as a blueprint. Colonists step around it safely."},
 }
 
 func toolByID(id string) (archTool, bool) {
@@ -218,6 +223,10 @@ func buildSprite(kind, facing string, mask int, ew, open bool) string {
 		return "furniture/campfire"
 	case "horseshoe pin":
 		return "furniture/horseshoe_pin"
+	case "sandbags":
+		return "furniture/sandbags"
+	case "spike trap":
+		return "furniture/spike_trap"
 	case "tailoring bench":
 		return "furniture/tailoring_bench_" + facingOr(facing)
 	case "drying rack":

@@ -273,6 +273,8 @@ ICONS = {
     "drying_rack": ("furniture", "drying_rack_south"),
     "campfire": ("furniture", "campfire"),
     "horseshoe_pin": ("furniture", "horseshoe_pin"),
+    "sandbags": ("furniture", "sandbags"),
+    "spike_trap": ("furniture", "spike_trap"),
     "tailoring_bench": ("furniture", "tailoring_bench_south"),
     "corpse_dustbuck": ("item", "corpse_dustbuck"),
     "corpse_ridgewolf": ("item", "corpse_ridgewolf"),

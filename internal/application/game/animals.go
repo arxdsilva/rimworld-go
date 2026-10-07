@@ -150,6 +150,9 @@ func (g *Game) phaseAnimals() {
 			continue
 		}
 		g.stepAnimal(id, &a, now)
+		if _, still := g.animals.Get(id); !still {
+			continue // a trap killed it
+		}
 		g.animals.Set(id, a)
 	}
 }
@@ -307,7 +310,7 @@ func (g *Game) animalGoTo(id entity.EntityID, a *animal.State, gx, gy int) {
 		a.Path, a.PathI = nil, 0
 		return
 	}
-	path, ok := pathing.Find(g.grid, pos.X, pos.Y, gx, gy)
+	path, ok := pathing.Find(g.hostileMap(), pos.X, pos.Y, gx, gy)
 	if !ok {
 		return
 	}
@@ -329,12 +332,19 @@ func (g *Game) stepAnimal(id entity.EntityID, a *animal.State, now uint64) {
 		return
 	}
 	next := a.Path[a.PathI]
-	if !g.grid.Walkable(next.X, next.Y) {
+	if !g.grid.Walkable(next.X, next.Y) || g.doorAt(next.X, next.Y) {
 		a.Path, a.PathI = nil, 0
 		return
 	}
 	g.positions.Set(id, Position{X: next.X, Y: next.Y})
 	a.PathI++
+	if trapVictim(*a) && g.hasTraps() && g.trapAt(next.X, next.Y) != 0 {
+		g.animals.Set(id, *a)
+		g.springTrap(id, next.X, next.Y)
+		if b, ok := g.animals.Get(id); ok {
+			*a = b
+		}
+	}
 }
 
 // killAnimal drops its meat and removes it. A predator that made the

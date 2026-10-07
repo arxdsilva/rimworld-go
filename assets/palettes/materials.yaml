@@ -34,6 +34,7 @@ materials:
   corn_yellow: {light: "#fbe27a", base: "#e8bf3e", shadow: "#b28a24"}
   straw:       {light: "#f0d58c", base: "#d2b062", shadow: "#9c7f40"}
   pumpkin:     {light: "#f5a04a", base: "#dc7a26", shadow: "#a4551a"}
+  burlap:      {light: "#cdb68b", base: "#a99169", shadow: "#7a684a"}
   blossom:     {light: "#f6f0ff", base: "#d9cdee", shadow: "#a596c2"}
   # neutral, tinted at runtime
   cloth:       {light: "#f4f4f4", base: "#d2d2d2", shadow: "#a2a2a2", tint: true}

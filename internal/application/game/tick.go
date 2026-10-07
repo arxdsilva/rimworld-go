@@ -436,8 +436,9 @@ func (g *Game) pathTo(id entity.EntityID, tx, ty int) ([]pathing.Point, bool) {
 	if pos.X == tx && pos.Y == ty {
 		return nil, true
 	}
-	if g.grid.Walkable(tx, ty) {
-		return pathing.Find(g.grid, pos.X, pos.Y, tx, ty)
+	q := g.pathQuery(id)
+	if q.Walkable(tx, ty) {
+		return pathing.Find(q, pos.X, pos.Y, tx, ty)
 	}
 	if pathing.Adjacent(pos.X, pos.Y, tx, ty) {
 		return nil, true
@@ -452,10 +453,10 @@ func (g *Game) pathTo(id entity.EntityID, tx, ty int) ([]pathing.Point, bool) {
 				continue
 			}
 			ax, ay := tx+dx, ty+dy
-			if !g.grid.Walkable(ax, ay) {
+			if !q.Walkable(ax, ay) {
 				continue
 			}
-			p, ok := pathing.Find(g.grid, pos.X, pos.Y, ax, ay)
+			p, ok := pathing.Find(q, pos.X, pos.Y, ax, ay)
 			if !ok {
 				continue
 			}
@@ -812,6 +813,8 @@ func (g *Game) phaseJobs() {
 			g.doRefuel(id, j)
 		case job.Warm:
 			g.doWarm(id, j)
+		case job.Repair:
+			g.doRepair(id, j)
 		case job.Wander, job.Chat, job.Relax, job.FireSide, job.Horseshoes, job.Hide:
 			g.doIdle(id, j)
 		default:
@@ -1115,7 +1118,7 @@ func (g *Game) phaseMovement() {
 			continue
 		}
 		next := j.Path[j.PathI]
-		if !g.grid.Walkable(next.X, next.Y) {
+		if !g.grid.Walkable(next.X, next.Y) || g.isRaider(id) && g.doorAt(next.X, next.Y) {
 			path, ok := g.pathTo(id, j.TX, j.TY)
 			if !ok {
 				j.State = job.Fail
@@ -1141,8 +1144,12 @@ func (g *Game) phaseMovement() {
 		}
 		g.jobs.Set(id, j)
 	}
+	var raiders []entity.EntityID
 	for _, m := range moves {
 		g.positions.Set(m.id, m.pos)
+		if g.isRaider(m.id) {
+			raiders = append(raiders, m.id)
+		}
 		if j, ok := g.jobs.Get(m.id); ok && j.Carry != 0 {
 			if st, ok := g.stacks.Get(j.Carry); ok {
 				st.X, st.Y = m.pos.X, m.pos.Y
@@ -1151,6 +1158,7 @@ func (g *Game) phaseMovement() {
 		}
 	}
 	g.followCarriers()
+	g.trapsUnderfoot(raiders)
 }
 
 func (g *Game) arrive(id entity.EntityID, j job.Record) {

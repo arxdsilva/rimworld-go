@@ -243,6 +243,15 @@ func (g *Game) thinkRaider(id entity.EntityID, now uint64) {
 			g.doCombat(id, j, now)
 			return
 		}
+		if j.Kind == job.Breach && j.Active() {
+			// keep bashing unless a colonist comes into reach (re-planning
+			// now and then in case a way in opened up)
+			_, tp, ok := g.nearestColonist(pos)
+			if (now+uint64(id))%300 != 0 && (!ok || !g.canHit(pos, weaponDefOf(g, id), tp)) {
+				g.doBreach(id, j)
+				return
+			}
+		}
 		target, tp, ok := g.nearestColonist(pos)
 		if !ok {
 			if r.Idle == 0 {
@@ -255,8 +264,9 @@ func (g *Game) thinkRaider(id entity.EntityID, now uint64) {
 		if r.Mode == raidArrive && weapon.Distance(pos.X, pos.Y, tp.X, tp.Y) > sightRange {
 			// walk in towards the colony
 			if !j.Active() || (now+uint64(id))%180 == 0 {
-				if x, y, ok := g.walkableNear(tp.X, tp.Y, 4); ok {
-					g.startJob(id, job.Record{Kind: job.Move, TX: x, TY: y})
+				if x, y, ok := g.walkableNear(tp.X, tp.Y, 4); ok &&
+					!g.startJob(id, job.Record{Kind: job.Move, TX: x, TY: y}) && g.unreachable(id) {
+					g.startBreach(id, tp)
 				}
 			}
 			g.raiders[id] = r
@@ -264,8 +274,24 @@ func (g *Game) thinkRaider(id entity.EntityID, now uint64) {
 		}
 		r.Mode = raidAssault
 		g.raiders[id] = r
-		g.startJob(id, job.Record{Kind: job.Attack, Target: target, TX: tp.X, TY: tp.Y, WorkLeft: aimTicks(weaponDefOf(g, id))})
+		d := weaponDefOf(g, id)
+		rec := job.Record{Kind: job.Attack, Target: target, TX: tp.X, TY: tp.Y, WorkLeft: aimTicks(d)}
+		if g.canHit(pos, d, tp) { // already in reach: no walking needed
+			g.reserve.ReleaseOwner(id)
+			rec.State = job.Do
+			g.jobs.Set(id, rec)
+			return
+		}
+		if !g.startJob(id, rec) && g.unreachable(id) {
+			g.startBreach(id, tp)
+		}
 	}
+}
+
+// unreachable reports that a mover's last job failed for want of a path.
+func (g *Game) unreachable(id entity.EntityID) bool {
+	j, _ := g.jobs.Get(id)
+	return j.State == job.Fail && j.Fail == job.Unreachable
 }
 
 func nearestEdge(p Position, w, h int) (int, int) {

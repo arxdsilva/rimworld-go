@@ -65,6 +65,10 @@ const (
 	Horseshoes
 	// Hide: a mental break spent shut away in a room.
 	Hide
+	// Breach: a raider bashing through a door or wall.
+	Breach
+	// Repair: a builder mending a damaged building.
+	Repair
 )
 
 // IsIdle reports a free-time behaviour that any real work may replace.
@@ -122,6 +126,10 @@ func (k Kind) String() string {
 		return "play horseshoes"
 	case Hide:
 		return "hide in room"
+	case Breach:
+		return "break through"
+	case Repair:
+		return "repair"
 	default:
 		return "idle"
 	}

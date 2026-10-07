@@ -82,6 +82,26 @@ func main() {
 			if *scenario == "raid" {
 				g.Raid(3)
 			}
+			if *scenario == "defense" {
+				// a sandbag ring with spike traps outside it, a battered
+				// wall, then a raid
+				cx, cy := *width/2, *height/2
+				g.ClearPlants(cx-8, cy-7, cx+8, cy+7)
+				for d := -5; d <= 5; d++ {
+					g.BuildNow("sandbags", "wood", "south", cx-6, cy+d)
+					g.BuildNow("sandbags", "wood", "south", cx+6, cy+d)
+					g.BuildNow("sandbags", "wood", "south", cx+d, cy-6)
+				}
+				for _, d := range []int{-3, 0, 3} {
+					g.BuildNow("spike trap", "wood", "south", cx+8, cy+d)
+					g.BuildNow("spike trap", "wood", "south", cx-8, cy+d)
+				}
+				for d := 2; d <= 4; d++ {
+					g.BuildNow("wall", "wood", "south", cx+d, cy+4)
+				}
+				g.DamageAt(cx+3, cy+4, 90)
+				g.Raid(3)
+			}
 			if *scenario == "fun" {
 				// a horseshoe pin by the start, and Bo in a sad wander
 				cx, cy := *width/2, *height/2

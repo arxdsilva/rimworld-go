@@ -91,3 +91,25 @@ func (r *Renderer) drawHostileMarker(screen *ebiten.Image, p game.PawnView, wx, 
 	vector.StrokeLine(screen, sx-w, sy-h, sx, sy+h, th, c, true)
 	vector.StrokeLine(screen, sx, sy+h, sx+w, sy-h, th, c, true)
 }
+
+// drawBuildingDamage puts a small health bar under damaged buildings.
+func (r *Renderer) drawBuildingDamage(screen *ebiten.Image, w game.WorldView, tile float64) {
+	for _, b := range w.Buildings {
+		if b.Floor || b.HPPct >= 100 || b.HPPct <= 0 {
+			continue
+		}
+		sx, sy := r.worldToScreen(b.X, b.Y)
+		bw := float32(tile) * float32(max(1, b.W)) * 0.8
+		x := sx + (float32(tile)*float32(max(1, b.W))-bw)/2
+		y := sy + float32(tile)*float32(max(1, b.H)) - 7
+		vector.FillRect(screen, x-1, y-1, bw+2, 6, color.RGBA{16, 12, 8, 210}, false)
+		c := color.RGBA{120, 200, 90, 255}
+		switch {
+		case b.HPPct < 35:
+			c = color.RGBA{224, 81, 60, 255}
+		case b.HPPct < 70:
+			c = color.RGBA{230, 190, 70, 255}
+		}
+		vector.FillRect(screen, x, y, bw*float32(b.HPPct)/100, 4, c, false)
+	}
+}

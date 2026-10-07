@@ -569,7 +569,7 @@ This is the heart of autonomous colony behavior.
 -   [-] **Completed building** (blocking defs set unwalkable and eject pawns; beds claimable; facing kept; no room/power invalidate)
     -   Replace frame with functional building.
     -   Invalidate navigation/rooms/power/etc. only as needed.
--   [ ] **Repair**
+-   [x] **Repair** (builders mend damaged buildings once no raiders are standing)
     -   Damaged player structures become repair work.
 -   [x] **Deconstruction** (construct work type; half the wood refunded; tile and bed claim freed)
     -   Work removes building and yields appropriate salvage.
@@ -580,7 +580,7 @@ This is the heart of autonomous colony behavior.
     -   Block movement/vision/projectiles.
     -   Define rooms.
     -   Material-dependent stats.
--   [-] **Doors** (buildable, walkable, count as wall neighbours, drawn open when occupied; no opening delay/permissions/rooms)
+-   [-] **Doors** (buildable, walkable for colonists, shut to raiders and wild animals, count as wall neighbours, drawn open when occupied; no opening delay)
     -   Open/closed states.
     -   Opening delay.
     -   faction/permission interaction.
@@ -1188,7 +1188,7 @@ treatment, and surgery are major colony-management systems.
     -   Selected electrical/mechanical buildings can break down.
     -   Requires maintenance components/work if matching target vanilla
         behavior.
--   [ ] **Repair work**
+-   [x] **Repair work** (Construction work type)
     -   Damaged colony structures automatically become repair
         candidates.
 
@@ -1383,10 +1383,10 @@ treatment, and surgery are major colony-management systems.
 
 ## 17.3 Cover
 
--   [ ] **Cover objects**
+-   [x] **Cover objects** (sandbags 55%, wall/door corners 40%)
     -   Walls, barricade/sandbag equivalents, chunks, trees, etc.
     -   Cover affects incoming ranged hit chance.
--   [ ] **Cover calculation**
+-   [-] **Cover calculation** (best cover on the cells beside the target facing the shooter; ranged shots only)
     -   Relative shooter-target-cover geometry.
     -   Stable deterministic resolution.
 
@@ -2293,7 +2293,7 @@ Use original narrative text and generated names.
     -   valuable colony objects.
     -   power/doors depending tactic.
 
--   [ ] **Breach logic**
+-   [x] **Breach logic** (raiders shut out plan through walls and doors and bash the first one; buildings have hit points)
 
     -   Select wall/door targets when normal route unsuitable.
 

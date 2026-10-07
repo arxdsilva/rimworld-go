@@ -79,7 +79,7 @@ func (g *Game) assignWorkType(id entity.EntityID, t work.Type) bool {
 	case work.Haul:
 		return g.assignRefuel(id) || g.assignHaul(id)
 	case work.Construct:
-		return g.assignConstruct(id)
+		return g.assignConstruct(id) || g.assignRepair(id)
 	case work.Cook, work.Craft:
 		return g.assignBill(id, work.Mask(0).Set(t, true))
 	case work.Hunt:

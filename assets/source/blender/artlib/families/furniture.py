@@ -173,6 +173,49 @@ def _horseshoe_pin():
     return (1, 1), 0.32
 
 
+def _sandbags():
+    """1 x 1 waist-high bank of burlap sacks: two staggered courses of
+    pillow-shaped bags, tied off at one end."""
+    courses = [(0.0, (0.0, 0.50), 0.0), (0.15, (0.25,), -0.06), (0.15, (-0.25, 0.75), -0.06)]
+    for row, (z, xs, dy) in enumerate(courses):
+        for k, x0 in enumerate(xs):
+            for depth, y in enumerate((-0.22, -0.56)):
+                if row and depth:
+                    continue
+                a, b = max(0.0, x0 + 0.02), min(1.0, x0 + 0.48)
+                if b - a < 0.2:
+                    continue
+                y0 = y + dy
+                S.box("sack%d_%d_%d" % (row, k, depth), a, y0 - 0.30, z, b, y0, z + 0.17, "burlap",
+                      bevel=0.075, segments=3)
+                S.box("tie%d_%d_%d" % (row, k, depth), b - 0.05, y0 - 0.19, z + 0.05, b - 0.02, y0 - 0.11,
+                      z + 0.13, "straw", bevel=0.01)
+    return (1, 1), 0.34
+
+
+def _spike_trap():
+    """1 x 1 spike trap: a low timber frame in the dirt bristling with
+    sharpened stakes leaning every which way."""
+    import math
+    S.box("pit", 0.08, -0.92, 0.0, 0.92, -0.08, 0.02, "soil", bevel=0.0)
+    for i, (x0, y0, x1, y1) in enumerate([(0.08, -0.20, 0.92, -0.10), (0.08, -0.90, 0.92, -0.80),
+                                          (0.08, -0.80, 0.18, -0.20), (0.82, -0.80, 0.92, -0.20)]):
+        S.box("rail%d" % i, x0, y0, 0.0, x1, y1, 0.07, "wood", bevel=0.015)
+    k = 0
+    for gx in range(3):
+        for gy in range(3):
+            cx, cy = 0.28 + gx * 0.22, -0.30 - gy * 0.20
+            lean = ((gx * 7 + gy * 3) % 5 - 2) * 6.0
+            st = S.cyl("stake%d" % k, cx, cy, 0.045, 0.02, 0.44 + 0.05 * ((gx + gy) % 2), "wood",
+                  r_top=0.004, segs=6, bevel=0.0)
+            from mathutils import Matrix
+            tilt = (Matrix.Translation((cx, cy, 0.02)) @ Matrix.Rotation(math.radians(lean), 4, "X")
+                    @ Matrix.Rotation(math.radians(-lean * 0.7), 4, "Y") @ Matrix.Translation((-cx, -cy, -0.02)))
+            S.transform([st], tilt)
+            k += 1
+    return (1, 1), 0.34
+
+
 def _campfire():
     """1 x 1 fire pit: a ring of field stones around ash and a log-cabin
     stack of split logs. The flame itself is drawn live by the game."""
@@ -211,6 +254,8 @@ BUILDERS = {
     "butcher_table": (_butcher_table, {"attachments": {"worker": [0.5, 1.15]}}),
     "campfire": (_campfire, {}),
     "horseshoe_pin": (_horseshoe_pin, {}),
+    "sandbags": (_sandbags, {}),
+    "spike_trap": (_spike_trap, {}),
     "tailoring_bench": (_tailoring_bench, {"attachments": {"worker": [0.5, 1.15]}}),
     "drying_rack": (_drying_rack, {"attachments": {"worker": [0.5, 1.15]}}),
 }

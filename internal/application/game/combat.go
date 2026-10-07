@@ -147,7 +147,11 @@ func (g *Game) strike(attacker, target entity.EntityID, wk weapon.Kind) {
 		return
 	}
 	dist := weapon.Distance(ap.X, ap.Y, tp.X, tp.Y)
-	hit := g.rng.IntN(100) < weapon.HitChance(d, dist)
+	chance := weapon.HitChance(d, dist)
+	if d.Ranged {
+		chance = chance * (100 - g.coverFor(ap, tp)) / 100
+	}
+	hit := g.rng.IntN(100) < chance
 	g.traces = append(g.traces, projectile.Trace{
 		FromX: ap.X, FromY: ap.Y, ToX: tp.X, ToY: tp.Y,
 		Tick: uint64(g.clock.Now()), Hit: hit, Melee: !d.Ranged,

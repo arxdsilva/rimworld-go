@@ -169,6 +169,8 @@ type BuildingView struct {
 	Fuel    bool
 	FuelPct int
 	Burning bool
+	// HPPct is the building's health (percent); below 100 it is damaged.
+	HPPct int
 }
 
 // PlantView is a wild plant.
@@ -637,6 +639,7 @@ func (g *Game) World() WorldView {
 			Bench: construction.DefOf(b.Kind).Bench, Bills: g.billViews(id),
 		})
 		bv := &w.Buildings[len(w.Buildings)-1]
+		bv.HPPct = b.HP() * 100 / max(1, construction.MaxHP(b.Kind, b.Stuff))
 		if b.Kind == construction.Campfire {
 			bv.Fuel, bv.FuelPct, bv.Burning = true, g.fuel[id]*100/(CampfireCapacity*TicksPerWood), g.burning(id, b)
 		}
