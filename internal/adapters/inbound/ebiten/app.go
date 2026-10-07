@@ -359,7 +359,9 @@ func (a *App) applyClick(id string) {
 		}
 	case strings.HasPrefix(id, "research.pick."):
 		a.pickResearch(id)
-	case id == "tab.work", id == "tab.schedule", id == "tab.research":
+	case strings.HasPrefix(id, "animals."):
+		a.applyAnimalsTab(id)
+	case id == "tab.work", id == "tab.schedule", id == "tab.research", id == "tab.animals":
 		mode := strings.TrimPrefix(id, "tab.")
 		if a.workOpen && a.panelMode == mode {
 			a.workOpen = false

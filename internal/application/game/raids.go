@@ -86,9 +86,13 @@ func (g *Game) scheduleThreats() {
 
 func (g *Game) fireThreat(now uint64) {
 	day := int(now / clock.TicksPerDay)
-	if temperature.Season(clock.Tick(now)) == "Winter" && g.rng.IntN(2) == 0 {
+	winter := temperature.Season(clock.Tick(now)) == "Winter"
+	switch roll := g.rng.IntN(4); {
+	case winter && roll < 2:
 		g.wolfPack(2 + g.rng.IntN(2))
-	} else {
+	case !winter && roll == 0 && day >= 8:
+		g.manhunterPack(3 + g.rng.IntN(3))
+	default:
 		n := min(maxRaiders, 1+day/10)
 		g.Raid(n)
 	}

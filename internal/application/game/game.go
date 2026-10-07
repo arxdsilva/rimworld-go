@@ -236,6 +236,8 @@ type WorldView struct {
 	// project that opens them.
 	Research []ResearchView
 	Locked   map[string]string
+	// Pens are animal pen zones (x1, y1, x2, y2 inclusive).
+	Pens [][4]int
 }
 
 // Game holds all authoritative simulation state.
@@ -309,7 +311,9 @@ type Game struct {
 	// wounds: open wounds and infections of colonists.
 	wounds map[entity.EntityID]wound
 	// research progress and the current project (researchSet: one is picked)
-	research    research.Progress
+	research research.Progress
+	// pens are animal pen zones.
+	pens        []pen
 	researchCur research.Project
 	researchSet bool
 }
@@ -610,6 +614,7 @@ func (g *Game) World() WorldView {
 		Season:      temperature.Season(g.clock.Now()),
 		Messages:    append([]MessageView(nil), g.messages...),
 		Research:    g.researchViews(),
+		Pens:        g.penViews(),
 		Locked:      g.lockedKeys(),
 		Schedule:    append([]schedule.Activity(nil), g.sched[:]...),
 	}

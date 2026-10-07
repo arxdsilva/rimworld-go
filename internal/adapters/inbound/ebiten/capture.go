@@ -188,7 +188,7 @@ func (a *App) captureUI(ui string) {
 			a.renderer.cam.offsetX, a.renderer.cam.offsetY = -1e6, -1e6
 		}
 		a.renderer.clampCamera(v)
-	case "work", "schedule", "research":
+	case "work", "schedule", "research", "animals":
 		a.workOpen, a.panelMode = true, ui
 		if ui == "schedule" {
 			a.schedBrush = 3
@@ -209,6 +209,10 @@ func (a *App) captureUI(ui string) {
 				a.renderer.syncPawns()
 			}
 		}
+	case "pen":
+		cx, cy := float64(a.renderer.game.Width())/2, float64(a.renderer.game.Height())/2
+		sw, sh := a.size()
+		a.renderer.centerOn(cx+5, cy-2, sw, sh)
 	case "medic":
 		cx, cy := float64(a.renderer.game.Width())/2, float64(a.renderer.game.Height())/2
 		sw, sh := a.size()

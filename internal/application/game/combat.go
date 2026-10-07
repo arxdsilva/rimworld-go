@@ -173,9 +173,10 @@ func (g *Game) hurt(target entity.EntityID, dmg int, by entity.EntityID) {
 	if a, ok := g.animals.Get(target); ok {
 		a.Injury += dmg
 		a.Attacker = by
-		if animal.DefOf(a.Species).Skittish {
+		if animal.DefOf(a.Species).Skittish && !a.Tame {
 			a.Mode, a.FleeUntil, a.Path = animal.Flee, now+900, nil
 		}
+		g.provoked(target, &a, by)
 		g.animals.Set(target, a)
 		if a.Dead() {
 			g.killAnimal(target, by)
@@ -316,7 +317,7 @@ func (g *Game) autoEngage(id entity.EntityID) {
 
 // hostile: an animal currently attacking a colonist.
 func (g *Game) hostile(a animal.State) bool {
-	return a.Mode == animal.Attack && a.Target != 0 && g.isPawn(a.Target)
+	return !a.Tame && a.Mode == animal.Attack && a.Target != 0 && g.isPawn(a.Target) && !g.isRaider(a.Target)
 }
 
 // assignHunt sends a hunter after the nearest designated animal, first

@@ -274,8 +274,11 @@ func (g *Game) trapsUnderfoot(movers []entity.EntityID) {
 	}
 }
 
-// trapVictim reports animals that spring traps: predators.
-func trapVictim(a animal.State) bool { return animal.DefOf(a.Species).Predator }
+// trapVictim reports animals that spring traps: wild predators and
+// manhunters.
+func (g *Game) trapVictim(a animal.State) bool {
+	return !a.Tame && (animal.DefOf(a.Species).Predator || a.Enraged(uint64(g.clock.Now())))
+}
 
 // assignRepair sends a builder to mend the nearest damaged building, but
 // not while raiders are still on their feet.

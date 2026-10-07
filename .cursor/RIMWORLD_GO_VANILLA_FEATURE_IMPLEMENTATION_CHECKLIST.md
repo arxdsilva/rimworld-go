@@ -1489,17 +1489,17 @@ children systems.
 
 ## 18.4 Taming
 
--   [ ] **Tame designation**
+-   [x] **Tame designation** (Orders > Tame or the animal inspector; hunters tame)
 -   [ ] **Animal-handling interaction**
 -   [ ] **Food requirement**
 -   [ ] **Success chance based on skill/wildness**
--   [ ] **Tame animal joins colony**
+-   [x] **Tame animal joins colony** (named; dustbuck 60%, wolf 25% a try; a botched try may enrage it)
 
 ## 18.5 Training
 
 -   [ ] **Trainability**
 -   [ ] **Obedience**
--   [ ] **Release/attack training**
+-   [-] **Release/attack training** (release; tame wolves guard against raiders and hostile animals untrained)
 -   [x] **Rescue**
 -   [ ] **Hauling**
     -   Only species capable of relevant training.
@@ -1509,7 +1509,7 @@ children systems.
 ## 18.6 Animal zones/pens
 
 -   [ ] **Animal allowed areas for zonable animals**
--   [ ] **Pen system for appropriate livestock**
+-   [-] **Pen system for appropriate livestock** (pen zones; tame animals keep inside or stay near the colony; no fences)
     -   Pen markers/boundaries.
     -   rope/lead jobs.
     -   enclosure validity.
@@ -1531,10 +1531,10 @@ children systems.
 
 ## 18.9 Manhunter/scaria-like state
 
--   [ ] **Manhunter**
+-   [x] **Manhunter** (wild animals hurt by colonists may enrage for a day: dustbuck 10%, wolf 45%)
     -   Hostile animal mental state.
     -   Can result from damage/event.
--   [-] **Manhunter pack incident** (winter wolf packs from the threat storyteller; no manhunter state)
+-   [x] **Manhunter pack incident** (storyteller: manhunter dustbuck packs outside winter, wolf packs in winter)
     -   Storyteller-generated group attack.
 
 ------------------------------------------------------------------------
@@ -1939,7 +1939,7 @@ Use original names rather than copying RimWorld storyteller characters.
 
 ## 24.7 Manhunter threat
 
--   [ ] **Manhunter pack incident**
+-   [x] **Manhunter pack incident**
     -   Storyteller selects suitable animal species and group size.
     -   Animals enter map hostile to humans.
 
@@ -1988,7 +1988,7 @@ and other colony incidents. citeturn2search2turn2search7
 
 -   [x] **Raid** (edge arrival, assault nearest colonist, flee, bleed out, dropped weapons; saved)
 -   [ ] **Infestation**
--   [ ] **Manhunter pack**
+-   [x] **Manhunter pack**
 -   [ ] **Animal insanity**
 -   [ ] **Disease outbreak**
 -   [ ] **Blight**
@@ -2108,7 +2108,7 @@ and other colony incidents. citeturn2search2turn2search7
 
 ## 27.2 Animal management
 
--   [ ] **Animals tab**
+-   [x] **Animals tab** (tame animals, slaughter, release)
     -   Master assignment if supported.
     -   training.
     -   allowed area/pen.

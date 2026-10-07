@@ -150,6 +150,7 @@ type saveState struct {
 	Research    research.Progress
 	ResearchCur research.Project
 	ResearchSet bool
+	Pens        []pen
 }
 
 // Info describes the game for a save header.
@@ -188,7 +189,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 		AteAt: g.ateAt, Draft: g.draft, SleptAt: g.sleptAt,
 		AnimalIDs: g.animalIDs, Animals: exportStore(g.animals), Equip: g.equip, Traces: g.traces, Wild: g.wild,
 		Carrying: g.carrying, TendedUntil: g.tendedUntil, Wounds: g.wounds,
-		Research: g.research, ResearchCur: g.researchCur, ResearchSet: g.researchSet,
+		Research: g.research, ResearchCur: g.researchCur, ResearchSet: g.researchSet, Pens: g.pens,
 	}
 	for id, e := range g.exposure {
 		s.Exposure[id] = [2]int{e.hypo, e.heat}
@@ -289,6 +290,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	setMap(&g.tendedUntil, s.TendedUntil)
 	setMap(&g.wounds, s.Wounds)
 	g.research, g.researchCur, g.researchSet = s.Research, s.ResearchCur, s.ResearchSet
+	g.pens = s.Pens
 	for id, e := range s.Exposure {
 		g.exposure[id] = exposureState{e[0], e[1]}
 	}

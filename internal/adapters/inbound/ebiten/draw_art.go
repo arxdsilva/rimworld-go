@@ -158,6 +158,14 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 			}
 		}
 	}
+	for _, p := range w.Pens {
+		for y := p[1]; y <= p[3]; y++ {
+			for x := p[0]; x <= p[2]; x++ {
+				r.drawSprite(screen, "overlay/pen_zone", none, float64(x), float64(y), tile, sw, sh)
+			}
+		}
+		r.drawPenFence(screen, p, tile)
+	}
 	for _, z := range w.Stockpiles {
 		for y := z.MinY; y <= z.MaxY; y++ {
 			for x := z.MinX; x <= z.MaxX; x++ {

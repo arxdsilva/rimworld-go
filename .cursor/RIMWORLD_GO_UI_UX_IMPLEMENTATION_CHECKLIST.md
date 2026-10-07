@@ -1068,7 +1068,7 @@ This screen centralizes per-pawn behavioral policies.
     -   area/pen.
     -   training.
     -   pregnancy/product state where applicable.
--   [ ] **Slaughter toggle**
+-   [x] **Slaughter toggle**
 -   [ ] **Medical care**
 -   [ ] **Rename**
 -   [ ] **Master assignment**
@@ -1076,7 +1076,7 @@ This screen centralizes per-pawn behavioral policies.
 ## 19.2 Training matrix
 
 -   [ ] **Obedience**
--   [ ] **Release**
+-   [x] **Release**
 -   [ ] **Rescue**
 -   [ ] **Haul**
 -   [ ] **Current training progress**
@@ -1085,7 +1085,7 @@ This screen centralizes per-pawn behavioral policies.
 ## 19.3 Pen UI
 
 -   [ ] **Pen marker inspector**
--   [ ] **Pen boundary visualization**
+-   [x] **Pen boundary visualization** (brown wash, fence rails and posts)
 -   [ ] **Enclosure validity**
 -   [ ] **Assigned species**
 -   [ ] **Nutrition/grazing capacity**

@@ -59,13 +59,30 @@ type Def struct {
 	// HuntRadius: how far a hungry predator looks for prey.
 	HuntRadius   int
 	WanderRadius int
+	// TameChance: percent chance a taming attempt succeeds.
+	TameChance int
+	// Revenge: percent chance a wild animal hurt by a colonist goes
+	// manhunter; TameRevenge the same for a botched taming.
+	Revenge     int
+	TameRevenge int
 }
+
+// Taming and manhunters.
+const (
+	// TameWork is the ticks a handler spends coaxing an animal.
+	TameWork = 300
+	// ManhunterTicks is how long an enraged animal hunts colonists (a day).
+	ManhunterTicks = 60000
+	// TameRetryTicks: after a failed attempt, the animal is left alone this long.
+	TameRetryTicks = 5000
+)
 
 var defs = [numSpecies]Def{
 	Dustbuck: {MaxHP: 40, Corpse: item.CorpseDustbuck, StepTicks: 18, FleeStep: 10, Meat: 12, Attack: weapon.Kick,
-		Skittish: true, FleeRadius: 5, WanderRadius: 4},
+		Skittish: true, FleeRadius: 5, WanderRadius: 4, TameChance: 60, Revenge: 10, TameRevenge: 5},
 	Ridgewolf: {MaxHP: 60, Corpse: item.CorpseRidgewolf, StepTicks: 14, FleeStep: 14, Meat: 6, Attack: weapon.Bite,
-		Predator: true, AggroRadius: 5, HungerTicks: 90000, HuntRadius: 22, WanderRadius: 6},
+		Predator: true, AggroRadius: 5, HungerTicks: 90000, HuntRadius: 22, WanderRadius: 6,
+		TameChance: 25, Revenge: 45, TameRevenge: 30},
 }
 
 // DefOf returns the definition for s.
@@ -114,7 +131,18 @@ type State struct {
 	PathI      int
 	GoalX      int
 	GoalY      int
+	// Tame animals belong to the colony and have a name. TameMark: marked
+	// for taming; TameRetry: no new attempt before this tick. Manhunter:
+	// enraged, hunting colonists until this tick (0: calm).
+	Tame      bool
+	Name      string
+	TameMark  bool
+	TameRetry uint64
+	Manhunter uint64
 }
+
+// Enraged reports a manhunter at tick now.
+func (s State) Enraged(now uint64) bool { return s.Manhunter != 0 && now < s.Manhunter }
 
 // HP is remaining hit points.
 func (s State) HP() int {

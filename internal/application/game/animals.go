@@ -22,6 +22,12 @@ type AnimalView struct {
 	Designated bool
 	Hostile    bool // attacking a colonist
 	StepTicks  int  // ticks per tile at the current pace (for lerp)
+	// Tame animals belong to the colony and have a Name; TameMark: marked
+	// for taming; Manhunter: enraged, hunting colonists.
+	Tame      bool
+	Name      string
+	TameMark  bool
+	Manhunter bool
 }
 
 // Wildlife at colony start and the daily top-up.
@@ -160,6 +166,17 @@ func (g *Game) phaseAnimals() {
 func (g *Game) thinkAnimal(id entity.EntityID, a *animal.State, now uint64) {
 	def := animal.DefOf(a.Species)
 	pos, _ := g.positions.Get(id)
+	if g.thinkManhunter(id, a, now) {
+		return
+	}
+	if g.beingTamed(id) { // holds still for the handler
+		a.Path, a.PathI, a.Mode = nil, 0, animal.Wander
+		return
+	}
+	if a.Tame {
+		g.thinkTame(id, a, now)
+		return
+	}
 	switch {
 	case def.Skittish:
 		tp, threat := g.nearestThreat(id, pos, def.FleeRadius)
@@ -187,23 +204,7 @@ func (g *Game) thinkAnimal(id entity.EntityID, a *animal.State, now uint64) {
 			a.Target = g.findPrey(id, pos, def)
 		}
 		if a.Target != 0 {
-			a.Mode = animal.Attack
-			tp, _ := g.positions.Get(a.Target)
-			if weapon.Distance(pos.X, pos.Y, tp.X, tp.Y) <= 1 {
-				a.Path, a.PathI = nil, 0
-				if a.Cooldown == 0 {
-					a.Cooldown = weapon.DefOf(def.Attack).Cooldown
-					g.animals.Set(id, *a)
-					g.strike(id, a.Target, def.Attack)
-					if cur, ok := g.animals.Get(id); ok {
-						*a = cur // a kill updates this predator (hunger, target)
-					}
-				}
-				return
-			}
-			if a.PathI >= len(a.Path) || weapon.Distance(a.GoalX, a.GoalY, tp.X, tp.Y) > 1 || (now+uint64(id))%30 == 0 {
-				g.animalGoTo(id, a, tp.X, tp.Y)
-			}
+			g.chase(id, a, now)
 			return
 		}
 		a.Attacker = 0
@@ -251,7 +252,7 @@ func (g *Game) validPrey(self, t entity.EntityID) bool {
 	}
 	if o, ok := g.animals.Get(t); ok {
 		me, _ := g.animals.Get(self)
-		return !o.Dead() && o.Species != me.Species
+		return !o.Dead() && (o.Species != me.Species || o.Tame != me.Tame)
 	}
 	return g.standingPawn(t)
 }
@@ -310,7 +311,11 @@ func (g *Game) animalGoTo(id entity.EntityID, a *animal.State, gx, gy int) {
 		a.Path, a.PathI = nil, 0
 		return
 	}
-	path, ok := pathing.Find(g.hostileMap(), pos.X, pos.Y, gx, gy)
+	var q pathing.Query = g.hostileMap()
+	if a.Tame {
+		q = g.grid // the colony's own animals use its doors
+	}
+	path, ok := pathing.Find(q, pos.X, pos.Y, gx, gy)
 	if !ok {
 		return
 	}
@@ -332,13 +337,13 @@ func (g *Game) stepAnimal(id entity.EntityID, a *animal.State, now uint64) {
 		return
 	}
 	next := a.Path[a.PathI]
-	if !g.grid.Walkable(next.X, next.Y) || g.doorAt(next.X, next.Y) {
+	if !g.grid.Walkable(next.X, next.Y) || !a.Tame && g.doorAt(next.X, next.Y) {
 		a.Path, a.PathI = nil, 0
 		return
 	}
 	g.positions.Set(id, Position{X: next.X, Y: next.Y})
 	a.PathI++
-	if trapVictim(*a) && g.hasTraps() && g.trapAt(next.X, next.Y) != 0 {
+	if g.trapVictim(*a) && g.hasTraps() && g.trapAt(next.X, next.Y) != 0 {
 		g.animals.Set(id, *a)
 		g.springTrap(id, next.X, next.Y)
 		if b, ok := g.animals.Get(id); ok {
@@ -355,6 +360,9 @@ func (g *Game) killAnimal(id, by entity.EntityID) {
 		return
 	}
 	pos, _ := g.positions.Get(id)
+	if a.Tame {
+		g.message(pos.X, pos.Y, "%s the %s has died.", a.Name, a.Species)
+	}
 	if k, ok := g.animals.Get(by); ok && animal.DefOf(k.Species).Predator {
 		// the predator feeds on the kill; the carcass is left behind
 		k.Hunger, k.Target, k.Mode, k.Attacker = 0, 0, animal.Wander, 0
@@ -425,8 +433,12 @@ func (g *Game) animalViews() []AnimalView {
 			Health:     a.HP() * 100 / animal.DefOf(a.Species).MaxHP,
 			Mode:       a.Mode.String(),
 			Designated: a.Designated,
-			Hostile:    g.hostile(a),
+			Hostile:    g.hostile(a) || a.Enraged(uint64(g.clock.Now())),
 			StepTicks:  a.Step(),
+			Tame:       a.Tame,
+			Name:       a.Name,
+			TameMark:   a.TameMark,
+			Manhunter:  a.Enraged(uint64(g.clock.Now())),
 		})
 	}
 	return out

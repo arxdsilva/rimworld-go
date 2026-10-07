@@ -60,17 +60,35 @@ func (a *App) animalButtons() []button {
 	}
 	r := animalRect()
 	label := "Hunt"
-	if an.Designated {
+	switch {
+	case an.Designated:
 		label = "Cancel hunt"
+	case an.Tame:
+		label = "Slaughter"
 	}
-	return []button{
+	out := []button{
 		{id: "animal.close", label: "X", x: r.x + r.w - 28, y: r.y + 6, w: 22, h: 22},
 		{id: "animal.hunt", label: label, x: r.x + 12, y: r.y + r.h - 34, w: 120, h: 24, selected: an.Designated},
 	}
+	switch {
+	case an.Tame:
+		out = append(out, button{id: "animal.release", label: "Release", x: r.x + 140, y: r.y + r.h - 34, w: 100, h: 24})
+	case !an.Manhunter:
+		tl := "Tame"
+		if an.TameMark {
+			tl = "Cancel tame"
+		}
+		out = append(out, button{id: "animal.tame", label: tl, x: r.x + 140, y: r.y + r.h - 34, w: 100, h: 24, selected: an.TameMark})
+	}
+	return out
 }
 
 func animalTitle(an game.AnimalView) string {
-	return strings.ToUpper(an.Species[:1]) + an.Species[1:]
+	s := strings.ToUpper(an.Species[:1]) + an.Species[1:]
+	if an.Tame && an.Name != "" {
+		return an.Name + " (tame " + an.Species + ")"
+	}
+	return s
 }
 
 func animalBlurb(species string) string {
@@ -97,8 +115,13 @@ func (a *App) drawAnimalInspector(screen *ebiten.Image) {
 	}
 	drawLabel(screen, int(r.x)+60, int(r.y)+12, animalTitle(an))
 	state := an.Mode
-	if an.Hostile {
+	switch {
+	case an.Manhunter:
+		state = "MANHUNTER: hunting colonists!"
+	case an.Hostile:
 		state = "attacking a colonist!"
+	case an.TameMark:
+		state += ", marked for taming"
 	}
 	drawLabel(screen, int(r.x)+60, int(r.y)+30, state)
 	drawLabel(screen, int(r.x)+12, int(r.y)+58, animalBlurb(an.Species))
@@ -128,5 +151,13 @@ func (a *App) applyAnimalClick(id string) {
 			kind = command.DesignateCancel
 		}
 		a.renderer.enqueue(command.Command{Kind: kind, X: an.X, Y: an.Y, X2: an.X, Y2: an.Y})
+	case "animal.tame":
+		kind := command.DesignateTame
+		if an.TameMark {
+			kind = command.DesignateCancel
+		}
+		a.renderer.enqueue(command.Command{Kind: kind, X: an.X, Y: an.Y, X2: an.X, Y2: an.Y})
+	case "animal.release":
+		a.renderer.enqueue(command.Command{Kind: command.ReleaseAnimal, Pawn: uint64(an.ID)})
 	}
 }

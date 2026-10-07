@@ -88,6 +88,9 @@ func (a *App) workButtons() []button {
 	if a.panelMode == "research" {
 		return a.researchButtons()
 	}
+	if a.panelMode == "animals" {
+		return a.animalsTabButtons()
+	}
 	r := workRect(a.sw, a.sh)
 	hx := int(r.x) + 12 + workNameW
 	pawns := a.renderer.snapshot()
@@ -129,6 +132,10 @@ func (a *App) drawWork(screen *ebiten.Image, sw, sh int) {
 	}
 	if a.panelMode == "research" {
 		a.drawResearch(screen, sw, sh)
+		return
+	}
+	if a.panelMode == "animals" {
+		a.drawAnimalsTab(screen, sw, sh)
 		return
 	}
 	r := workRect(sw, sh)

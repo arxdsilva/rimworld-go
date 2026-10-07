@@ -13,6 +13,7 @@ import (
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/mentalbreak"
 	"rimworld-go/internal/domain/sim/clock"
+	"rimworld-go/internal/domain/sim/command"
 )
 
 func main() {
@@ -81,6 +82,22 @@ func main() {
 			}
 			if *scenario == "raid" {
 				g.Raid(3)
+			}
+			if *scenario == "animals" {
+				// a pen with two tame animals, a wild dustbuck marked for
+				// taming, and a manhunter on its way
+				cx, cy := *width/2, *height/2
+				g.ClearPlants(cx+4, cy-6, cx+12, cy+2)
+				g.Enqueue(command.Command{Kind: command.DesignatePen, X: cx + 5, Y: cy - 5, X2: cx + 11, Y2: cy + 1})
+				if id, err := g.SpawnAnimal("ridgewolf", cx+7, cy-3); err == nil {
+					g.TameAnimal(id, "Ash")
+				}
+				if id, err := g.SpawnAnimal("dustbuck", cx+9, cy-1); err == nil {
+					g.TameAnimal(id, "Clover")
+				}
+				if _, err := g.SpawnAnimal("dustbuck", cx-6, cy-5); err == nil {
+					g.Enqueue(command.Command{Kind: command.DesignateTame, X: cx - 6, Y: cy - 5, X2: cx - 6, Y2: cy - 5})
+				}
 			}
 			if *scenario == "research" {
 				cx, cy := *width/2, *height/2

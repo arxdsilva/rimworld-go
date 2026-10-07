@@ -218,6 +218,30 @@ def _grow_zone(t):
     return _save("grow_zone", img, {"overlay": "zone", "tileable": True})
 
 
+def _pen_zone(t):
+    """Animal pen fill: a warm brown wash (the fence around the pen's edge
+    is drawn by the game)."""
+    img = np.zeros((N, N, 4), np.float32)
+    _paint(img, np.ones((N, N), np.float32), (0.78, 0.55, 0.32), 0.13)
+    return _save("pen_zone", img, {"overlay": "zone", "tileable": True})
+
+
+def _g_tame(xx, yy, c):  # heart
+    a = np.abs(np.hypot(xx - (c - 8), yy - (c - 5)) - 9)
+    b = np.abs(np.hypot(xx - (c + 8), yy - (c - 5)) - 9)
+    v = np.minimum(_seg(xx, yy, c - 16, c + 0, c, c + 17), _seg(xx, yy, c + 16, c + 0, c, c + 17))
+    return np.minimum(np.minimum(a, b), v)
+
+
+def _g_pen(xx, yy, c):  # fence: three posts, two rails
+    d = np.full(xx.shape, 1e9, np.float32)
+    for ox in (-16, 0, 16):
+        d = np.minimum(d, _seg(xx, yy, c + ox, c - 16, c + ox, c + 16))
+    for oy in (-7, 7):
+        d = np.minimum(d, _seg(xx, yy, c - 22, c + oy, c + 22, c + oy))
+    return d
+
+
 def _g_sprout(xx, yy, c):
     stem = _seg(xx, yy, c, c + 18, c, c - 4)
     leaf1 = np.abs(np.hypot((xx - c + 10) / 1.6, yy - c + 6) - 8)
@@ -326,6 +350,7 @@ def build():
            _designation("designation_harvest", t, _g_harvest), _designation("designation_mine", t, _g_mine),
            _designation("designation_deconstruct", t, _g_deconstruct),
            _designation("designation_hunt", t, _g_hunt),
+           _designation("designation_tame", t, _g_tame), _pen_zone(t),
            _stockpile(t), _blueprint(t), _grow_zone(t)] + [_sleeping_spot(f) for f in SPOT_FACINGS]
     out += [_badge_icon("order_harvest", t, _g_harvest, t["designation"]),
             _badge_icon("order_deconstruct", t, _g_deconstruct, t["danger"]),
@@ -335,6 +360,8 @@ def build():
             _badge_icon("order_cut", t, _g_cut, t["designation"]),
             _badge_icon("order_mine", t, _g_mine, t["designation"]),
             _badge_icon("order_hunt", t, _g_hunt, t["danger"]),
+            _badge_icon("order_tame", t, _g_tame, (0.95, 0.55, 0.62)),
+            _badge_icon("zone_pen", t, _g_pen, (0.78, 0.55, 0.32)),
             _badge_icon("zone_grow", t, _g_sprout, (0.45, 0.78, 0.36))]
     for name, (fam, spr) in ICONS.items():
         p = _icon(name, fam, spr)

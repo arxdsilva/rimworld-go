@@ -88,6 +88,12 @@ func (g *Game) applyOne(c command.Command) {
 		}
 	case command.SetResearch:
 		g.setResearch(research.Project(c.Build))
+	case command.DesignateTame:
+		g.markTame(c.X, c.Y, c.X2, c.Y2, true)
+	case command.DesignatePen:
+		g.addPen(c.X, c.Y, c.X2, c.Y2)
+	case command.ReleaseAnimal:
+		g.releaseAnimal(entity.EntityID(c.Pawn))
 	case command.DesignateDeconstruct:
 		g.markDeconstruct(c.X, c.Y, c.X2, c.Y2, true)
 	case command.DesignateHunt:
@@ -143,6 +149,8 @@ func (g *Game) cancelRect(x1, y1, x2, y2 int) {
 	g.markCut(x1, y1, x2, y2, false)
 	g.markMine(x1, y1, x2, y2, false)
 	g.markHunt(x1, y1, x2, y2, false)
+	g.markTame(x1, y1, x2, y2, false)
+	g.cancelPens(x1, y1, x2, y2)
 	g.cancelGrowZones(minX, minY, maxX, maxY)
 
 	for _, id := range g.plantIDs {
@@ -831,6 +839,8 @@ func (g *Game) phaseJobs() {
 			g.doRepair(id, j)
 		case job.Research:
 			g.doResearch(id, j)
+		case job.Tame:
+			g.doTame(id, j)
 		case job.Wander, job.Chat, job.Relax, job.FireSide, job.Horseshoes, job.Hide:
 			g.doIdle(id, j)
 		default:

@@ -45,6 +45,12 @@ const (
 	SetSchedule
 	// SetResearch picks research project Build as the current project.
 	SetResearch
+	// DesignateTame marks animals in the rectangle for taming.
+	DesignateTame
+	// DesignatePen paints an animal pen over the rectangle.
+	DesignatePen
+	// ReleaseAnimal lets the tame animal Pawn (an animal id) go wild.
+	ReleaseAnimal
 )
 
 // WorkType is a compact work-column id for SetWorkEnabled.

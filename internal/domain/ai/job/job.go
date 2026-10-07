@@ -71,6 +71,8 @@ const (
 	Repair
 	// Research: studying at a research bench.
 	Research
+	// Tame: coaxing a wild animal into the colony.
+	Tame
 )
 
 // IsIdle reports a free-time behaviour that any real work may replace.
@@ -134,6 +136,8 @@ func (k Kind) String() string {
 		return "repair"
 	case Research:
 		return "research"
+	case Tame:
+		return "tame"
 	default:
 		return "idle"
 	}
