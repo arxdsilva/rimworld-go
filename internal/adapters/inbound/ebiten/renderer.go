@@ -289,7 +289,7 @@ func (r *Renderer) handleSelectionInput() {
 	mx, my := ebiten.CursorPosition()
 	wx, wy := r.screenToWorld(mx, my)
 
-	for _, p := range r.game.Snapshot() {
+	for _, p := range r.snapshot() {
 		px, py := r.interpWorld(p)
 		if wx >= px && wx < px+1 && wy >= py && wy < py+1 {
 			r.selected, r.hasSelect = p.ID, true
@@ -297,7 +297,7 @@ func (r *Renderer) handleSelectionInput() {
 		}
 	}
 	tx, ty := int(wx), int(wy)
-	for _, p := range r.game.Snapshot() {
+	for _, p := range r.snapshot() {
 		if p.X == tx && p.Y == ty {
 			r.selected, r.hasSelect = p.ID, true
 			return
@@ -513,7 +513,29 @@ func (r *Renderer) HasSelect() bool { return r.hasSelect }
 // Selected is the current presentation selection. Valid only if HasSelect.
 func (r *Renderer) Selected() entity.EntityID { return r.selected }
 
-func (r *Renderer) snapshot() []game.PawnView { return r.game.Snapshot() }
+// snapshot is the player's colonists (raiders are left out: they are only
+// drawn, never listed, selected or ordered).
+func (r *Renderer) snapshot() []game.PawnView {
+	all := r.game.Snapshot()
+	out := all[:0:0]
+	for _, p := range all {
+		if !p.Hostile {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+// hostiles is the raiders on the map.
+func (r *Renderer) hostiles() []game.PawnView {
+	var out []game.PawnView
+	for _, p := range r.game.Snapshot() {
+		if p.Hostile {
+			out = append(out, p)
+		}
+	}
+	return out
+}
 
 func (r *Renderer) world() game.WorldView { return r.game.World() }
 

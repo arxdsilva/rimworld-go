@@ -1534,7 +1534,7 @@ children systems.
 -   [ ] **Manhunter**
     -   Hostile animal mental state.
     -   Can result from damage/event.
--   [ ] **Manhunter pack incident**
+-   [-] **Manhunter pack incident** (winter wolf packs from the threat storyteller; no manhunter state)
     -   Storyteller-generated group attack.
 
 ------------------------------------------------------------------------
@@ -1850,7 +1850,7 @@ colonists. citeturn1search8turn1search9
 
 ## 23.4 Storyteller framework
 
--   [ ] **Storyteller component**
+-   [-] **Storyteller component** (deterministic threat schedule: first threat day 5, then every 5 to 9 days)
     -   Reads colony state.
     -   schedules incidents.
     -   tracks cooldowns/threat pacing.
@@ -1883,7 +1883,7 @@ Use original names rather than copying RimWorld storyteller characters.
 ## 24.2 Raid generation
 
 -   [ ] **Select hostile faction**
--   [ ] **Generate raider group from point budget**
+-   [-] **Generate raider group from point budget** (size grows with colony age, capped at 5; rifle or club)
 -   [ ] **Generate equipment based on faction/tech**
 -   [ ] **Map-edge arrival**
 -   [ ] **Immediate attack**
@@ -1904,7 +1904,7 @@ Use original names rather than copying RimWorld storyteller characters.
 
 ## 24.4 Raider morale
 
--   [ ] **Human raider flee threshold**
+-   [x] **Human raider flee threshold** (badly hurt raiders, or a group that has lost half its members, flee to the edge)
     -   Group may flee after sufficient casualties/damage.
 -   [ ] **Kidnap behavior**
     -   Raiders can carry downed colonists away under suitable
@@ -1986,7 +1986,7 @@ and other colony incidents. citeturn2search2turn2search7
 
 ## 25.3 Negative incidents
 
--   [ ] **Raid**
+-   [x] **Raid** (edge arrival, assault nearest colonist, flee, bleed out, dropped weapons; saved)
 -   [ ] **Infestation**
 -   [ ] **Manhunter pack**
 -   [ ] **Animal insanity**
@@ -2273,7 +2273,7 @@ Use original narrative text and generated names.
 
 # PHASE 30 --- Advanced Enemy AI and Tactical Variety
 
--   [ ] **Raid group lord/controller**
+-   [-] **Raid group lord/controller** (shared group mode arrive/assault/flee; no siege or sapper logic)
 
     -   Group objective controls broad behavior.
     -   Individual pawns use local jobs.

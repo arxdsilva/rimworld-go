@@ -199,7 +199,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	var draws []artDraw
 	add := func(row, col float64, fn func()) { draws = append(draws, artDraw{row, col, fn}) }
 	r.addRockDraws(w, add, screen, sw, sh, tile)
-	cloth := r.art.tintNames("cloth")
+	cloth := r.colonyCloths()
 	for _, b := range w.Buildings {
 		b := b
 		if b.Floor || b.Kind == "sleeping spot" {
@@ -393,8 +393,27 @@ func twoDigits(n int) string {
 
 // look returns the stable appearance for a pawn.
 func (r *Renderer) look(p game.PawnView) pawnLook {
-	return lookFor(uint64(p.ID), r.art.tintNames("skin"), r.art.tintNames("hair"), r.art.tintNames("cloth"))
+	l := lookFor(uint64(p.ID), r.art.tintNames("skin"), r.art.tintNames("hair"), r.colonyCloths())
+	if p.Hostile { // raiders wear dark maroon
+		l.Shirt, l.Vest, l.Pants = raiderCloth, raiderCloth, "slate"
+	}
+	return l
 }
+
+// colonyCloths lists the cloth tints colonists and their beds may use; the
+// raider tint is held back so hostiles stand out.
+func (r *Renderer) colonyCloths() []string {
+	var cloths []string
+	for _, c := range r.art.tintNames("cloth") {
+		if c != raiderCloth {
+			cloths = append(cloths, c)
+		}
+	}
+	return cloths
+}
+
+// raiderCloth is the tint reserved for raider clothing.
+const raiderCloth = "raider"
 
 // pawnLayers lists (sprite key, tint) in draw order for one facing.
 func (r *Renderer) pawnLayers(l pawnLook, f facing, apparel ...string) []struct {

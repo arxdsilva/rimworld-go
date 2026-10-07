@@ -77,3 +77,17 @@ func (r *Renderer) drawBreakClouds(screen *ebiten.Image, tile float64) {
 		}
 	}
 }
+
+// drawHostileMarker floats a red chevron over a raider (orange while it
+// flees).
+func (r *Renderer) drawHostileMarker(screen *ebiten.Image, p game.PawnView, wx, wy, tile float64) {
+	c := color.RGBA{220, 50, 40, 240}
+	if p.Fleeing {
+		c = color.RGBA{230, 150, 50, 220}
+	}
+	sx, sy := r.worldToScreenF(wx+0.5, wy-0.95)
+	w, h := float32(tile*0.13), float32(tile*0.1)
+	th := float32(tile * 0.06)
+	vector.StrokeLine(screen, sx-w, sy-h, sx, sy+h, th, c, true)
+	vector.StrokeLine(screen, sx, sy+h, sx+w, sy-h, th, c, true)
+}

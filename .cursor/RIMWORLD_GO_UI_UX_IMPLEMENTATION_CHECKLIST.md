@@ -813,8 +813,8 @@ understandable.
 -   [ ] **Damage indicators**
 -   [x] **Projectile/impact feedback**
 -   [x] **Downed/death feedback**
--   [-] **Threat markers**
--   [ ] **Hostile faction coloring/icons**
+-   [x] **Threat markers** (red chevron over raiders, orange while fleeing; Raid alert and arrival message)
+-   [-] **Hostile faction coloring/icons** (raiders wear a reserved maroon cloth tint)
 -   [ ] **Pause-on-threat option**
 
 ------------------------------------------------------------------------

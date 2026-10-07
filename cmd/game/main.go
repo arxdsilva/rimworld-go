@@ -79,6 +79,9 @@ func main() {
 				_, _ = g.SpawnStack(item.Tuque, 3, cx+4, cy+2)
 				_, _ = g.SpawnStack(item.Leather, 20, cx+5, cy+2)
 			}
+			if *scenario == "raid" {
+				g.Raid(3)
+			}
 			if *scenario == "fun" {
 				// a horseshoe pin by the start, and Bo in a sad wander
 				cx, cy := *width/2, *height/2

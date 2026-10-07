@@ -94,6 +94,8 @@ type PawnView struct {
 	// HasOrder: following a player order whose target tile is OrderX, OrderY.
 	HasOrder       bool
 	OrderX, OrderY int
+	// Hostile marks a raider (not a colonist); Fleeing a raider running off.
+	Hostile, Fleeing bool
 	// Temperament is the colonist's free-time leaning
 	// (wanderer, social, homebody).
 	Temperament string
@@ -264,6 +266,11 @@ type Game struct {
 	orderQueue map[entity.EntityID][]queuedOrder
 	apparel    map[entity.EntityID]worn
 	prio       map[entity.EntityID]work.Priorities
+	raiderIDs  []entity.EntityID
+	raiders    map[entity.EntityID]raiderState
+	raidGroups []raidGroup
+	nextThreat uint64
+	threatsOn  bool
 	scheds     map[entity.EntityID]schedule.Grid
 	joy        map[entity.EntityID]int // recreation need, 0..recreation.Full
 	breaks     map[entity.EntityID]breakState
@@ -318,6 +325,7 @@ func New(cfg Config) *Game {
 		orderQueue:  make(map[entity.EntityID][]queuedOrder),
 		apparel:     make(map[entity.EntityID]worn),
 		prio:        make(map[entity.EntityID]work.Priorities),
+		raiders:     make(map[entity.EntityID]raiderState),
 		scheds:      make(map[entity.EntityID]schedule.Grid),
 		joy:         make(map[entity.EntityID]int),
 		breaks:      make(map[entity.EntityID]breakState),
@@ -343,6 +351,7 @@ func NewColony(cfg Config) *Game {
 		panic(err)
 	}
 	g.spawnWildlife()
+	g.scheduleThreats()
 	return g
 }
 
@@ -473,6 +482,7 @@ func (g *Game) Step(n int) {
 		g.phaseAI()
 		g.phaseJobs()
 		g.phaseAnimals()
+		g.phaseThreats()
 		g.phaseMovement()
 		g.clock.Advance(1)
 	}
@@ -560,7 +570,7 @@ func (g *Game) Snapshot() []PawnView {
 		}
 		pv.Acting, pv.ActX, pv.ActY = g.acting(id, j)
 	}
-	return views
+	return append(views, g.raiderViews()...)
 }
 
 // World returns the non-pawn read model.

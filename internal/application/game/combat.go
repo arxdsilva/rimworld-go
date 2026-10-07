@@ -286,6 +286,16 @@ func (g *Game) autoEngage(id entity.EntityID) {
 			best, bestD = aid, dist
 		}
 	}
+	for _, rid := range g.raiderIDs {
+		if !g.standingRaider(rid) {
+			continue
+		}
+		rp, _ := g.positions.Get(rid)
+		dist := weapon.Distance(pos.X, pos.Y, rp.X, rp.Y)
+		if dist < bestD && g.canHit(pos, d, rp) {
+			best, bestD = rid, dist
+		}
+	}
 	if best == 0 {
 		return
 	}
@@ -400,6 +410,16 @@ func (g *Game) defend(id entity.EntityID, j job.Record) bool {
 		ap, _ := g.positions.Get(aid)
 		if d := weapon.Distance(pos.X, pos.Y, ap.X, ap.Y); d < best {
 			threat, tp, best = aid, ap, d
+		}
+	}
+	for _, rid := range g.raiderIDs { // raiders shoot from further off
+		rj, _ := g.jobs.Get(rid)
+		if !g.standingRaider(rid) || rj.Kind != job.Attack || rj.Target != id {
+			continue
+		}
+		rp, _ := g.positions.Get(rid)
+		if d := weapon.Distance(pos.X, pos.Y, rp.X, rp.Y); d < 14 && (threat == 0 || d < best) {
+			threat, tp, best = rid, rp, d
 		}
 	}
 	if threat == 0 {

@@ -1102,7 +1102,11 @@ func (g *Game) phaseMovement() {
 		pos Position
 	}
 	var moves []move
-	for _, id := range g.pawnIDs {
+	movers := g.pawnIDs
+	if len(g.raiderIDs) > 0 {
+		movers = append(append([]entity.EntityID(nil), g.pawnIDs...), g.raiderIDs...)
+	}
+	for _, id := range movers {
 		if !g.alive(id) || !g.dueToMove(id) {
 			continue
 		}

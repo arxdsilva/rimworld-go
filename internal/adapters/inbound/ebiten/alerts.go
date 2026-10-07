@@ -40,6 +40,18 @@ var warnClr = color.RGBA{R: 0xE0, G: 0xA8, B: 0x40, A: 0xFF}
 // buildAlerts derives the current alerts from pawns and the world.
 func buildAlerts(pawns []game.PawnView, w game.WorldView) []alert {
 	var out []alert
+	// raiders are listed with the colonists; split them off first
+	var raiders [][2]int
+	colonists := pawns[:0:0]
+	for _, p := range pawns {
+		switch {
+		case !p.Hostile:
+			colonists = append(colonists, p)
+		case !p.Lying && !p.Fleeing:
+			raiders = append(raiders, [2]int{p.X, p.Y})
+		}
+	}
+	pawns = colonists
 	group := func(key string, danger bool, who []game.PawnView, one func(string) string, many string) {
 		if len(who) == 0 {
 			return
@@ -96,6 +108,14 @@ func buildAlerts(pawns []game.PawnView, w game.WorldView) []alert {
 	if alive > 0 && w.Food < lowFoodPerColonist*alive {
 		out = append(out, alert{key: "food", label: fmt.Sprintf("Low food (%d left)", w.Food)})
 	}
+
+	if len(raiders) > 0 {
+		label := "Raid: 1 raider"
+		if len(raiders) > 1 {
+			label = fmt.Sprintf("Raid: %d raiders", len(raiders))
+		}
+		out = append(out, alert{key: "raid", label: label, danger: true, targets: raiders})
+	}
 	var breaking []game.PawnView
 	for _, p := range pawns {
 		if p.MentalBreak != "" && p.Status != "dead" {
@@ -142,7 +162,7 @@ func (a *App) currentAlerts() []alert {
 	if a.renderer == nil {
 		return nil
 	}
-	return buildAlerts(a.renderer.snapshot(), a.renderer.world())
+	return buildAlerts(append(a.renderer.snapshot(), a.renderer.hostiles()...), a.renderer.world())
 }
 
 func alertRect(sw, i int) button {

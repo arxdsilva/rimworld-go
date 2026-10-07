@@ -119,6 +119,11 @@ type saveState struct {
 	OrderQueue map[entity.EntityID][]savedOrder
 	Apparel    map[entity.EntityID]worn
 	Prio       map[entity.EntityID]work.Priorities
+	RaiderIDs  []entity.EntityID
+	Raiders    map[entity.EntityID]raiderState
+	RaidGroups []raidGroup
+	NextThreat uint64
+	ThreatsOn  bool
 	Scheds     map[entity.EntityID]schedule.Grid
 	Joy        map[entity.EntityID]int
 	Breaks     map[entity.EntityID]savedBreak
@@ -172,6 +177,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 		Exposure: map[entity.EntityID][2]int{}, NoComfort: g.noComfort,
 		OrderQueue: map[entity.EntityID][]savedOrder{}, Apparel: g.apparel, Joy: g.joy,
 		Prio: g.prio, Scheds: g.scheds,
+		RaiderIDs: g.raiderIDs, Raiders: g.raiders, RaidGroups: g.raidGroups, NextThreat: g.nextThreat, ThreatsOn: g.threatsOn,
 		Breaks: map[entity.EntityID]savedBreak{}, RoomGrid: g.roomGrid, RoomTemps: g.roomTemps,
 		Memories: g.memories, Claims: g.reserve.Export(), Pending: g.pending,
 		AteAt: g.ateAt, Draft: g.draft, SleptAt: g.sleptAt,
@@ -264,6 +270,8 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	setMap(&g.noComfort, s.NoComfort)
 	setMap(&g.apparel, s.Apparel)
 	setMap(&g.prio, s.Prio)
+	setMap(&g.raiders, s.Raiders)
+	g.raiderIDs, g.raidGroups, g.nextThreat, g.threatsOn = s.RaiderIDs, s.RaidGroups, s.NextThreat, s.ThreatsOn
 	setMap(&g.scheds, s.Scheds)
 	setMap(&g.joy, s.Joy)
 	setMap(&g.memories, s.Memories)

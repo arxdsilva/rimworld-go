@@ -78,6 +78,9 @@ func (r *Renderer) drawPawnArt(screen *ebiten.Image, p game.PawnView, wx, wy, ti
 	if vis.facing != faceNorth {
 		held()
 	}
+	if p.Hostile && !p.Lying {
+		r.drawHostileMarker(screen, p, wx+ps.dx, wy+ps.dy, tile)
+	}
 	if p.Drafted {
 		if img := r.art.image("ui_icon/draft", color.NRGBA{}); img != nil {
 			sx, sy := r.worldToScreenF(wx+0.62+ps.dx, wy-0.95+ps.dy)
@@ -198,7 +201,7 @@ func (r *Renderer) drawInBed(screen *ebiten.Image, p game.PawnView, b game.Build
 
 // bedTint is the per-bed blanket colour (stable by building id).
 func (r *Renderer) bedTint(b game.BuildingView) color.NRGBA {
-	cloth := r.art.tintNames("cloth")
+	cloth := r.colonyCloths()
 	if len(cloth) == 0 {
 		return color.NRGBA{}
 	}

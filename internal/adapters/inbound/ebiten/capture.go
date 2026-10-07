@@ -209,6 +209,14 @@ func (a *App) captureUI(ui string) {
 				a.renderer.syncPawns()
 			}
 		}
+	case "raid":
+		// centre on the leading raider
+		cx, cy := float64(a.renderer.game.Width())/2, float64(a.renderer.game.Height())/2
+		if hs := a.renderer.hostiles(); len(hs) > 0 {
+			cx, cy = float64(hs[0].X), float64(hs[0].Y)
+		}
+		sw, sh := a.size()
+		a.renderer.centerOn(cx, cy, sw, sh)
 	case "fun":
 		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
 		pawns := a.renderer.snapshot()

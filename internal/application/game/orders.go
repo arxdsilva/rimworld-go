@@ -256,6 +256,11 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 	case command.OrderAttack:
 		aid := g.animalAt(x, y)
 		if aid == 0 {
+			if rid := g.raiderAt(x, y); rid != 0 && g.standingRaider(rid) {
+				aid = rid
+			}
+		}
+		if aid == 0 {
 			return job.Record{}, ReasonGone
 		}
 		return job.Record{Kind: job.Attack, Target: aid, TX: x, TY: y, WorkLeft: aimTicks(weaponDefOf(g, id))}, ""
@@ -473,6 +478,13 @@ func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 		} else {
 			add("Hunt "+a.Species.String(), command.OrderHunt, construction.LayerObject)
 		}
+	}
+	if rid := g.raiderAt(x, y); rid != 0 && g.standingRaider(rid) && g.drafted(pawn) {
+		verb := "Melee attack "
+		if g.hasRanged(pawn) {
+			verb = "Shoot "
+		}
+		add(verb+"raider "+g.name(rid), command.OrderAttack, construction.LayerObject)
 	}
 	if iid := g.itemAt(x, y); iid != 0 {
 		st, _ := g.stacks.Get(iid)
