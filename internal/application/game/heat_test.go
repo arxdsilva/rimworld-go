@@ -170,3 +170,31 @@ func TestUnreachableTreeIsSkipped(t *testing.T) {
 		t.Fatal("the reachable tree should be cut instead of retrying the walled-in one")
 	}
 }
+
+func TestBreachedRoomCoolsOverHours(t *testing.T) {
+	g := New(Config{Seed: 1, Width: 20, Height: 10})
+	jumpTo(g, 45, 0)
+	hut(t, g, 1, 1, 7, 7)
+	if !g.BuildNow("campfire", "wood", "south", 4, 3) {
+		t.Fatal("build campfire")
+	}
+	g.FuelCampfire(4, 3)
+	g.Step(clock.TicksPerDay / 4)
+	warm := int(g.temperatureAt(3, 5))
+	out := int(temperature.Outdoor(g.clock.Now()))
+	if warm-out < 100 {
+		t.Fatalf("heated hut %d vs outside %d", warm, out)
+	}
+	g.DamageAt(1, 4, 1000) // knock a wall down
+	if g.roomAt(3, 5) >= 0 {
+		t.Fatal("the hut is open now")
+	}
+	if now := int(g.temperatureAt(3, 5)); warm-now > 20 {
+		t.Fatalf("a breached room doesn't freeze at once: %d -> %d", warm, now)
+	}
+	g.Step(4 * clock.TicksPerHour)
+	out = int(temperature.Outdoor(g.clock.Now()))
+	if now := int(g.temperatureAt(3, 5)); now-out > (warm-out)/3 {
+		t.Fatalf("after a few hours it is close to the outside air: %d (outside %d)", now, out)
+	}
+}

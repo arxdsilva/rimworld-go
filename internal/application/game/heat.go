@@ -34,6 +34,9 @@ const (
 	refuelWork  = 30
 	// warmWait is the longest a cold colonist waits in a warm spot.
 	warmWait = 2500
+	// residualLeak (permille per climate interval): a breached room's air
+	// loses about half its difference from the outside in an hour.
+	residualLeak = 60
 )
 
 // --- room temperature ----------------------------------------------------
@@ -53,16 +56,29 @@ func (g *Game) remapRoomTemps(newGrid []int, n int) []temperature.Temp {
 	sum := make([]int, n)
 	cnt := make([]int, n)
 	outside := int(temperature.Outdoor(now))
+	if g.residual == nil {
+		g.residual = map[int]temperature.Temp{}
+	}
 	for i, r := range newGrid {
+		old := room.Outdoors
+		if i < len(g.roomGrid) {
+			old = g.roomGrid[i]
+		}
 		if r < 0 {
+			// a breached room keeps its air for a while
+			if r == room.Outdoors && old >= 0 && old < len(g.roomTemps) {
+				g.residual[i] = g.roomTemps[old]
+			}
 			continue
 		}
 		t := outside
-		if i < len(g.roomGrid) {
-			if old := g.roomGrid[i]; old >= 0 && old < len(g.roomTemps) {
-				t = int(g.roomTemps[old])
-			}
+		switch {
+		case old >= 0 && old < len(g.roomTemps):
+			t = int(g.roomTemps[old])
+		case g.residual[i] != 0:
+			t = int(g.residual[i])
 		}
+		delete(g.residual, i)
 		sum[r] += t
 		cnt[r]++
 	}
@@ -111,6 +127,16 @@ func (g *Game) heatRooms() {
 		if r := g.roomAt(b.X, b.Y); r >= 0 && r < len(heat) {
 			heat[r] += campfireHeat
 		}
+	}
+	// breached rooms' air mixes with the outside over a few hours
+	raw := temperature.Outdoor(now)
+	for i, t := range g.residual {
+		t += (raw - t) * residualLeak / 1000
+		if d := t - raw; d < 5 && d > -5 {
+			delete(g.residual, i)
+			continue
+		}
+		g.residual[i] = t
 	}
 	for r := range g.roomTemps {
 		cells := max(1, g.rooms[r].contents.Cells)

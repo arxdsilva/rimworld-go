@@ -137,9 +137,18 @@ func TestYearProbe(t *testing.T) {
 		y := cy - 6 + (i/4)*3
 		g.Enqueue(command.Command{Kind: command.DesignateGrowZone, X: x, Y: y, X2: x + 2, Y2: y + 2, Build: id})
 	}
+	var seen uint64
 	for day := 0; day < clock.DaysPerYear; day++ {
 		g.Step(clock.TicksPerDay)
 		w := g.World()
+		for _, m := range w.Messages {
+			if m.Tick > seen {
+				t.Logf("  msg: %s", m.Text)
+			}
+		}
+		if n := len(w.Messages); n > 0 {
+			seen = w.Messages[n-1].Tick
+		}
 		alive := 0
 		for _, p := range g.Snapshot() {
 			if p.Status != "dead" {
@@ -152,8 +161,14 @@ func TestYearProbe(t *testing.T) {
 			moods = append(moods, fmt.Sprintf("%s:%d/%d%s", p.Name, p.Mood, p.Recreation, map[bool]string{true: "!" + p.MentalBreak, false: ""}[p.MentalBreak != ""]))
 		}
 		t.Logf("day %2d %-6s out %5.1fC hut %5.1fC wood %3d food %4d alive %d moods %v", day+1, w.Season, float64(w.OutdoorTemp)/10, hutT, w.Wood, w.Food, alive, moods)
-	}
-	for _, m := range g.World().Messages {
-		t.Logf("msg %d: %s", m.Tick/clock.TicksPerDay, m.Text)
+		if os.Getenv("RIMWORLD_PROBE") == "raiders" {
+			for _, rid := range g.raiderIDs {
+				p, _ := g.positions.Get(rid)
+				j, _ := g.jobs.Get(rid)
+				v, _ := g.vital.Get(rid)
+				r := g.raiders[rid]
+				t.Logf("  raider %d at %v %v job %v/%v fail %v target %v tx %d,%d mode %v retry %d idle %d", rid, p, v.Status, j.Kind, j.State, j.Fail, j.Target, j.TX, j.TY, r.Mode, r.RetryAt, r.Idle)
+			}
+		}
 	}
 }

@@ -32,6 +32,9 @@ func (g *Game) temperatureAt(x, y int) temperature.Temp {
 	if r := g.roomAt(x, y); r >= 0 && r < len(g.roomTemps) {
 		return g.roomTemps[r]
 	}
+	if t, ok := g.residual[y*g.grid.Width()+x]; ok {
+		return t // a freshly breached room still holds some warmth
+	}
 	return temperature.Outdoor(g.clock.Now())
 }
 

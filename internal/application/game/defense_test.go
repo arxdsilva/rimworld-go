@@ -126,4 +126,7 @@ func TestBuildersRepairDamage(t *testing.T) {
 	if _, ok := g.bldgs.Get(wall); ok || !g.grid.Walkable(10, 5) {
 		t.Fatal("a wall at zero hp is destroyed and the tile opens up")
 	}
+	if g.layerFrameAt(10, 5, construction.LayerObject) == 0 {
+		t.Fatal("a smashed building leaves a blueprint to rebuild it")
+	}
 }

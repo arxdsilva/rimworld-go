@@ -23,7 +23,12 @@ type pen struct{ X1, Y1, X2, Y2 int }
 
 func (p pen) contains(x, y int) bool { return x >= p.X1 && x <= p.X2 && y >= p.Y1 && y <= p.Y2 }
 
-const guardRadius = 10
+const (
+	guardRadius = 10
+	// pathRetry: after a failed path search an animal waits this long
+	// before searching again.
+	pathRetry = 90
+)
 
 var petNames = []string{"Biscuit", "Pepper", "Juniper", "Ash", "Clover", "Moss", "Tansy", "Rook", "Sorrel",
 	"Bramble", "Fennel", "Hazel", "Ember", "Thistle", "Burr", "Wren"}
@@ -208,6 +213,9 @@ func (g *Game) chase(id entity.EntityID, a *animal.State, now uint64) {
 			}
 		}
 		return
+	}
+	if now < a.RetryAt && a.PathI >= len(a.Path) {
+		return // backing off after a failed path search
 	}
 	if a.PathI >= len(a.Path) || weapon.Distance(a.GoalX, a.GoalY, tp.X, tp.Y) > 1 || (now+uint64(id))%30 == 0 {
 		g.animalGoTo(id, a, tp.X, tp.Y)

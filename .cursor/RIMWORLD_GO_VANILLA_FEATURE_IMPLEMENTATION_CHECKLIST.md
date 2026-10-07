@@ -1883,7 +1883,7 @@ Use original names rather than copying RimWorld storyteller characters.
 ## 24.2 Raid generation
 
 -   [ ] **Select hostile faction**
--   [-] **Generate raider group from point budget** (size grows with colony age, capped at 5; rifle or club)
+-   [x] **Generate raider group from point budget** (wealth/40 + 30 per standing colonist + 2 per day; clubs 60, rifles 90; up to 8)
 -   [ ] **Generate equipment based on faction/tech**
 -   [ ] **Map-edge arrival**
 -   [ ] **Immediate attack**
@@ -1892,13 +1892,13 @@ Use original names rather than copying RimWorld storyteller characters.
 ## 24.3 Raid tactics
 
 -   [ ] **Basic assault**
--   [ ] **Sappers/breachers equivalent**
+-   [x] **Sappers/breachers equivalent** (against an enclosed colony from day 10: tunnel through walls, doors and rock, step around traps)
     -   Attack walls/alternate route instead of blindly using normal
         entrance.
 -   [ ] **Drop-pod assault**
     -   Industrial factions can arrive from above.
 -   [ ] **Center/scatter drop variants**
--   [ ] **Siege**
+-   [x] **Siege** (from day 12: camp 18 tiles out, sandbags, shoot from cover, storm after 5h)
     -   Raiders establish temporary siege position, receive/build
         artillery/supplies, bombard colony, then assault.
 
@@ -2273,7 +2273,7 @@ Use original narrative text and generated names.
 
 # PHASE 30 --- Advanced Enemy AI and Tactical Variety
 
--   [-] **Raid group lord/controller** (shared group mode arrive/assault/flee; no siege or sapper logic)
+-   [x] **Raid group lord/controller** (group plan assault / siege / sappers; siege camp, dig-in, storm; flee)
 
     -   Group objective controls broad behavior.
     -   Individual pawns use local jobs.
@@ -2297,7 +2297,7 @@ Use original narrative text and generated names.
 
     -   Select wall/door targets when normal route unsuitable.
 
--   [ ] **Siege construction**
+-   [-] **Siege construction** (sandbags in front of each besieger; no mortars)
 
 -   [ ] **Siege bombardment**
 

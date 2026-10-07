@@ -317,6 +317,9 @@ func (g *Game) animalGoTo(id entity.EntityID, a *animal.State, gx, gy int) {
 	}
 	path, ok := pathing.Find(q, pos.X, pos.Y, gx, gy)
 	if !ok {
+		// no way there (a shut door, say): don't search again for a while
+		a.Path, a.PathI = nil, 0
+		a.RetryAt = uint64(g.clock.Now()) + pathRetry
 		return
 	}
 	a.Path, a.PathI, a.GoalX, a.GoalY = path, 0, gx, gy

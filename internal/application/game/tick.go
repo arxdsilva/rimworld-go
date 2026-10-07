@@ -595,6 +595,9 @@ func (g *Game) haulToFrame(id entity.EntityID, pos Position) (job.Record, bool) 
 				continue
 			}
 			d := pathing.Dist(pos.X, pos.Y, st.X, st.Y)
+			if fr.Rebuild {
+				d -= rebuildFirst
+			}
 			if d < bestD || (d == bestD && iid < bestWood) {
 				bestD, bestWood, bestFrame = d, iid, fid
 				wx, wy, fx, fy = st.X, st.Y, fr.X, fr.Y
@@ -741,6 +744,9 @@ func (g *Game) assignConstruct(id entity.EntityID) bool {
 			continue
 		}
 		d := pathing.Dist(pos.X, pos.Y, fr.X, fr.Y)
+		if fr.Rebuild {
+			d -= rebuildFirst
+		}
 		if d < bestD || (d == bestD && fid < best) {
 			best, bestD, bx, by = fid, d, fr.X, fr.Y
 		}

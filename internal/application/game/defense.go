@@ -8,6 +8,7 @@ import (
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/terrain"
 )
 
 // Defences. Buildings take damage and break. Raiders and wild animals
@@ -26,6 +27,9 @@ const (
 	trapChance = 75
 	// repairPerTick is the hit points a builder mends per work tick.
 	repairPerTick = 1
+	// rebuildFirst: rebuild blueprints count as this many tiles closer
+	// when builders and haulers pick their next job.
+	rebuildFirst = 1000
 )
 
 // tileSet is a set of map cells (index y*w+x) built once per query.
@@ -88,7 +92,10 @@ func (b breachMap) Walkable(x, y int) bool {
 
 // pathQuery is the walkability a mover plans with.
 func (g *Game) pathQuery(id entity.EntityID) pathing.Query {
-	if g.isRaider(id) {
+	switch {
+	case g.sapper(id):
+		return sapperMap{hostileMap: g.hostileMap(), traps: g.buildingCells(construction.SpikeTrap)}
+	case g.isRaider(id):
 		return g.hostileMap()
 	}
 	return g.grid
@@ -108,20 +115,24 @@ func (g *Game) doorAt(x, y int) bool {
 // a route as if walls and doors were gone and attacks the first one on it.
 func (g *Game) startBreach(id entity.EntityID, tp Position) bool {
 	pos, _ := g.positions.Get(id)
-	bm := breachMap{g: g, breaks: g.buildingCells(construction.Wall, construction.Door)}
+	breaks := g.buildingCells(construction.Wall, construction.Door)
+	if g.sapper(id) {
+		breaks = g.sapperBreaks() // sappers tunnel through rock too
+	}
+	bm := breachMap{g: g, breaks: breaks}
 	path, ok := pathing.Find(bm, pos.X, pos.Y, tp.X, tp.Y)
 	if !ok {
 		return false
 	}
-	hm := g.hostileMap()
+	q := g.pathQuery(id)
 	sx, sy := pos.X, pos.Y
 	for _, p := range path {
-		if !hm.Walkable(p.X, p.Y) {
+		if !q.Walkable(p.X, p.Y) {
 			bid := g.layerBldgAt(p.X, p.Y, construction.LayerObject)
-			if bid == 0 {
-				return false
+			if bid == 0 && g.terr.At(p.X, p.Y) != terrain.Rock {
+				return false // a trap in the way: plan again later
 			}
-			rec := job.Record{Kind: job.Breach, Target: bid, TX: sx, TY: sy, WorkLeft: breachCooldown}
+			rec := job.Record{Kind: job.Breach, Target: bid, DestX: p.X, DestY: p.Y, TX: sx, TY: sy, WorkLeft: breachCooldown}
 			return g.startJob(id, rec)
 		}
 		sx, sy = p.X, p.Y
@@ -131,6 +142,10 @@ func (g *Game) startBreach(id entity.EntityID, tp Position) bool {
 
 // doBreach: a raider beside a door or wall hits it on cooldown.
 func (g *Game) doBreach(id entity.EntityID, j job.Record) {
+	if j.Target == 0 {
+		g.doDig(id, j)
+		return
+	}
 	b, ok := g.bldgs.Get(j.Target)
 	if !ok {
 		j.State = job.Complete
@@ -162,6 +177,35 @@ func (g *Game) doBreach(id entity.EntityID, j job.Record) {
 	g.damageBuilding(j.Target, dmg)
 }
 
+// doDig: a sapper beside a rock tile hacks at it on cooldown.
+func (g *Game) doDig(id entity.EntityID, j job.Record) {
+	if g.terr.At(j.DestX, j.DestY) != terrain.Rock {
+		j.State = job.Complete
+		g.jobs.Set(id, j)
+		return
+	}
+	if j.State == job.Goto {
+		return
+	}
+	pos, _ := g.positions.Get(id)
+	if abs(pos.X-j.DestX) > 1 || abs(pos.Y-j.DestY) > 1 {
+		j.State, j.Fail = job.Fail, job.Unreachable
+		g.jobs.Set(id, j)
+		return
+	}
+	if j.WorkLeft > 0 {
+		j.WorkLeft--
+		g.jobs.Set(id, j)
+		return
+	}
+	j.WorkLeft = breachCooldown
+	g.jobs.Set(id, j)
+	dmg := max(10, weapon.DefOf(g.weaponOf(id)).Damage)
+	g.traces = append(g.traces, projectile.Trace{FromX: pos.X, FromY: pos.Y, ToX: j.DestX, ToY: j.DestY,
+		Tick: uint64(g.clock.Now()), Hit: true, Melee: true, Damage: dmg, Building: true})
+	g.digRock(j.DestX, j.DestY, dmg)
+}
+
 // touches reports p standing next to (or on) a building's footprint.
 func (g *Game) touches(p Position, b construction.Building) bool {
 	cells, _, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
@@ -186,6 +230,55 @@ func (g *Game) damageBuilding(id entity.EntityID, dmg int) {
 	}
 	g.message(b.X, b.Y, "The %s was smashed down.", b.Kind)
 	g.removeBuilding(id)
+	// leave a blueprint to rebuild it, as it was (the salvage is set aside)
+	cells, _, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
+	for _, c := range cells {
+		g.clearItemsFrom(c[0], c[1], cells)
+	}
+	g.placeFrameStuff(b.Kind, b.Stuff, b.Facing, b.X, b.Y)
+	if fid := g.layerFrameAt(b.X, b.Y, construction.DefOf(b.Kind).Layer); fid != 0 {
+		fr, _ := g.frames.Get(fid)
+		fr.Rebuild = true
+		g.frames.Set(fid, fr)
+	}
+}
+
+// clearItemsFrom moves loose stacks off (x, y) to the nearest free tile
+// outside the given cells.
+func (g *Game) clearItemsFrom(x, y int, cells [][2]int) {
+	for {
+		sid := g.itemAt(x, y)
+		if sid == 0 {
+			return
+		}
+		st, _ := g.stacks.Get(sid)
+		moved := false
+		for r := 1; r <= 3 && !moved; r++ {
+			for dy := -r; dy <= r && !moved; dy++ {
+				for dx := -r; dx <= r && !moved; dx++ {
+					nx, ny := x+dx, y+dy
+					if !g.grid.Walkable(nx, ny) || g.itemAt(nx, ny) != 0 || covers(cells, nx, ny) {
+						continue
+					}
+					g.deleteItem(sid)
+					g.dropStack(st.Kind, st.Qty, nx, ny)
+					moved = true
+				}
+			}
+		}
+		if !moved {
+			return
+		}
+	}
+}
+
+func covers(cells [][2]int, x, y int) bool {
+	for _, c := range cells {
+		if c[0] == x && c[1] == y {
+			return true
+		}
+	}
+	return false
 }
 
 // coverFor is the cover (percent) the target at tp has against a shot

@@ -139,6 +139,8 @@ type State struct {
 	TameMark  bool
 	TameRetry uint64
 	Manhunter uint64
+	// RetryAt: after a failed path search, no new search before this tick.
+	RetryAt uint64
 }
 
 // Enraged reports a manhunter at tick now.

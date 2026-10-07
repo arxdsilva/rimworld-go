@@ -83,6 +83,12 @@ func main() {
 			if *scenario == "raid" {
 				g.Raid(3)
 			}
+			if *scenario == "siege" {
+				g.Siege(3)
+			}
+			if *scenario == "sappers" {
+				g.Sappers(2)
+			}
 			if *scenario == "animals" {
 				// a pen with two tame animals, a wild dustbuck marked for
 				// taming, and a manhunter on its way

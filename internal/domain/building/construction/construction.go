@@ -338,6 +338,9 @@ type Frame struct {
 	Wood     int
 	Need     int
 	WorkLeft int
+	// Rebuild marks the blueprint of a smashed building: builders and
+	// haulers see to it before anything else.
+	Rebuild bool
 }
 
 // Ready reports materials are in place.

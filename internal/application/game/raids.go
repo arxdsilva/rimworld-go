@@ -2,7 +2,9 @@ package game
 
 import (
 	"rimworld-go/internal/domain/ai/job"
+	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
+	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/health"
@@ -32,17 +34,27 @@ type raiderState struct {
 	Downed uint64 // tick it went down (0 = standing)
 	Idle   uint64 // tick it last had no one to fight
 	Dead   uint64 // tick it died (removed a little later)
+	// RetryAt: no way in was found; don't plan again before this tick.
+	RetryAt uint64
+	// Arrived is when the raider came onto the map: after raiderGiveUp
+	// it gives up and goes home.
+	Arrived uint64
 }
 
 type raidGroup struct {
 	Size int
+	Plan raidPlan
+	// Siege camp: where it digs in, whether it has, when it started out,
+	// when it storms (Until) and whether it has.
+	CampX, CampY    int
+	Camped, Stormed bool
+	Started, Until  uint64
 }
 
 const (
 	firstRaidDay  = 5
 	raidGapMin    = 5 // days
 	raidGapSpread = 5 // days, added at random
-	maxRaiders    = 5
 	// bleedOut is how long a downed raider lasts.
 	bleedOut = 4 * clock.TicksPerHour
 	// raiderLeaveIdle: raiders with no one left to fight for this long go home.
@@ -52,6 +64,10 @@ const (
 	corpseLinger = clock.TicksPerHour / 2
 	// sightRange: colonists this close pull arriving raiders into the fight.
 	sightRange = 18
+	// raiderRetry: a raider that found no way in waits this long to re-plan.
+	raiderRetry = 120
+	// raiderGiveUp: raiders still on the map after this long go home.
+	raiderGiveUp = clock.TicksPerDay
 )
 
 var raiderNames = []string{"Krell", "Vasha", "Dorn", "Mira", "Tobias", "Ilse", "Grit", "Sable", "Hask", "Rook", "Nessa", "Brann"}
@@ -93,15 +109,23 @@ func (g *Game) fireThreat(now uint64) {
 	case !winter && roll == 0 && day >= 8:
 		g.manhunterPack(3 + g.rng.IntN(3))
 	default:
-		n := min(maxRaiders, 1+day/10)
-		g.Raid(n)
+		g.scaledRaid(day)
 	}
 	g.nextThreat = now + uint64((raidGapMin+g.rng.IntN(raidGapSpread))*clock.TicksPerDay+g.rng.IntN(clock.TicksPerDay))
 }
 
-// edgeTile is a random walkable tile on the map edge.
+// edgeTile is a random walkable tile on the map edge from which the
+// colony can be reached (breaking through its walls and doors if need
+// be), so nothing arrives stuck in a cut-off pocket.
 func (g *Game) edgeTile() (int, int, bool) {
 	w, h := g.grid.Width(), g.grid.Height()
+	hx, hy := g.home()
+	if x, y, ok := g.walkableNear(hx, hy, 6); ok {
+		hx, hy = x, y
+	}
+	bm := breachMap{g: g, breaks: g.buildingCells(construction.Wall, construction.Door)}
+	var fx, fy int
+	found, checks := false, 0
 	for try := 0; try < 200; try++ {
 		var x, y int
 		switch g.rng.IntN(4) {
@@ -114,20 +138,38 @@ func (g *Game) edgeTile() (int, int, bool) {
 		default:
 			x, y = w-1, g.rng.IntN(h)
 		}
-		if g.grid.Walkable(x, y) {
+		if !g.grid.Walkable(x, y) {
+			continue
+		}
+		if !found {
+			fx, fy, found = x, y, true // fallback: any walkable edge tile
+		}
+		if checks++; checks > 12 {
+			break
+		}
+		if _, ok := pathing.Find(bm, x, y, hx, hy); ok {
 			return x, y, true
 		}
 	}
-	return 0, 0, false
+	return fx, fy, found
 }
 
-// Raid sends n raiders in from one map edge (also a dev hook).
-func (g *Game) Raid(n int) {
+// Raid sends n raiders in from one map edge to assault the colony (also
+// a dev hook).
+func (g *Game) Raid(n int) { g.raidWith(g.kitOf(n), planAssault) }
+
+// raidWith sends one raider per weapon in kit, following plan.
+func (g *Game) raidWith(kit []item.Kind, plan raidPlan) {
 	ex, ey, ok := g.edgeTile()
+	n := len(kit)
 	if !ok || n <= 0 {
 		return
 	}
-	g.raidGroups = append(g.raidGroups, raidGroup{Size: n})
+	grp := raidGroup{Size: n, Plan: plan}
+	if plan == planSiege {
+		grp.CampX, grp.CampY = g.campSpot(ex, ey)
+	}
+	g.raidGroups = append(g.raidGroups, grp)
 	group := len(g.raidGroups) - 1
 	spawned := 0
 	for i := 0; i < n*6 && spawned < n; i++ {
@@ -142,20 +184,24 @@ func (g *Game) Raid(n int) {
 		g.jobs.Set(id, job.Record{})
 		g.need.Set(id, needs.NewFull())
 		g.vital.Set(id, health.Record{Status: health.Alive})
-		if g.rng.IntN(2) == 0 {
-			g.equip[id] = item.Rifle
-		} else {
-			g.equip[id] = item.Club
-		}
-		g.raiders[id] = raiderState{Group: group}
+		g.equip[id] = kit[spawned]
+		g.raiders[id] = raiderState{Group: group, Arrived: uint64(g.clock.Now())}
 		spawned++
 	}
 	g.raidGroups[group].Size = spawned
-	if spawned > 0 {
-		word := "raiders are"
-		if spawned == 1 {
-			word = "raider is"
-		}
+	if spawned == 0 {
+		return
+	}
+	word := "raiders are"
+	if spawned == 1 {
+		word = "raider is"
+	}
+	switch plan {
+	case planSiege:
+		g.threat(ex, ey, "Raid! %d %s coming. They look ready to dig in for a siege.", spawned, word)
+	case planSappers:
+		g.threat(ex, ey, "Sappers! %d %s tunnelling in through the walls.", spawned, word)
+	default:
 		g.threat(ex, ey, "Raid! %d %s coming for the colony.", spawned, word)
 	}
 }
@@ -221,8 +267,11 @@ func (g *Game) thinkRaider(id entity.EntityID, now uint64) {
 		return
 	}
 	j, _ := g.jobs.Get(id)
+	if r.Arrived == 0 {
+		r.Arrived = now // raiders from before this field existed
+	}
 	if r.Mode != raidFlee && (v.Injury >= health.MaxHP/2 || g.groupBroken(r.Group) ||
-		r.Idle != 0 && now-r.Idle >= raiderLeaveIdle) {
+		r.Idle != 0 && now-r.Idle >= raiderLeaveIdle || now-r.Arrived >= raiderGiveUp) {
 		r.Mode = raidFlee
 		g.raiders[id] = r
 		g.interrupt(id, job.Cancelled)
@@ -243,6 +292,9 @@ func (g *Game) thinkRaider(id entity.EntityID, now uint64) {
 			}
 		}
 	default:
+		if g.thinkSiege(id, r, now) {
+			return
+		}
 		if j.Kind == job.Attack && j.Active() {
 			g.doCombat(id, j, now)
 			return
@@ -255,6 +307,9 @@ func (g *Game) thinkRaider(id entity.EntityID, now uint64) {
 				g.doBreach(id, j)
 				return
 			}
+		}
+		if now < r.RetryAt && !j.Active() {
+			return // no way in last time: wait before planning again
 		}
 		target, tp, ok := g.nearestColonist(pos)
 		if !ok {
@@ -269,8 +324,8 @@ func (g *Game) thinkRaider(id entity.EntityID, now uint64) {
 			// walk in towards the colony
 			if !j.Active() || (now+uint64(id))%180 == 0 {
 				if x, y, ok := g.walkableNear(tp.X, tp.Y, 4); ok &&
-					!g.startJob(id, job.Record{Kind: job.Move, TX: x, TY: y}) && g.unreachable(id) {
-					g.startBreach(id, tp)
+					!g.startJob(id, job.Record{Kind: job.Move, TX: x, TY: y}) && g.unreachable(id) && !g.startBreach(id, tp) {
+					r.RetryAt = now + raiderRetry
 				}
 			}
 			g.raiders[id] = r
@@ -286,8 +341,9 @@ func (g *Game) thinkRaider(id entity.EntityID, now uint64) {
 			g.jobs.Set(id, rec)
 			return
 		}
-		if !g.startJob(id, rec) && g.unreachable(id) {
-			g.startBreach(id, tp)
+		if !g.startJob(id, rec) && g.unreachable(id) && !g.startBreach(id, tp) {
+			r.RetryAt = now + raiderRetry
+			g.raiders[id] = r
 		}
 	}
 }
@@ -374,7 +430,11 @@ func (g *Game) raiderViews() []PawnView {
 		name, _ := g.names.Get(id)
 		j, _ := g.jobs.Get(id)
 		v, _ := g.vital.Get(id)
-		out = append(out, PawnView{ID: id, Name: name, X: pos.X, Y: pos.Y, Job: j.Line(),
+		plan := ""
+		if gi := g.raiders[id].Group; gi < len(g.raidGroups) {
+			plan = g.raidGroups[gi].Plan.String()
+		}
+		out = append(out, PawnView{ID: id, Name: name, X: pos.X, Y: pos.Y, Job: j.Line(), RaidPlan: plan,
 			Status: v.Status.String(), Reason: v.Cause.String(), Health: v.HP() * 100 / health.MaxHP,
 			Weapon: weaponDefOf(g, id).Name, Lying: v.Status != health.Alive, Hostile: true,
 			Fleeing: g.raiders[id].Mode == raidFlee})

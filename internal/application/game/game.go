@@ -75,6 +75,8 @@ type PawnView struct {
 	MoodLabel     string
 	Thoughts      []ThoughtView
 	Health        int // hit points left, percent
+	// RaidPlan is a raider\'s raid plan: "assault", "siege" or "sappers".
+	RaidPlan string
 	// Infection severity (0-100, 0: none); Wounded: an open, untended wound.
 	Infection int
 	Wounded   bool
@@ -313,7 +315,11 @@ type Game struct {
 	// research progress and the current project (researchSet: one is picked)
 	research research.Progress
 	// pens are animal pen zones.
-	pens        []pen
+	pens []pen
+	// rockDamage: rock tiles sappers are hacking through.
+	rockDamage map[[2]int]int
+	// residual: air temperature of cells of a freshly breached room.
+	residual    map[int]temperature.Temp
 	researchCur research.Project
 	researchSet bool
 }
@@ -362,6 +368,7 @@ func New(cfg Config) *Game {
 		carrying:    make(map[entity.EntityID]entity.EntityID),
 		tendedUntil: make(map[entity.EntityID]uint64),
 		wounds:      make(map[entity.EntityID]wound),
+		rockDamage:  make(map[[2]int]int),
 		research:    research.Complete(), // sandbox: everything known
 	}
 }

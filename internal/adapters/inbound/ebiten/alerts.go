@@ -42,6 +42,7 @@ func buildAlerts(pawns []game.PawnView, w game.WorldView) []alert {
 	var out []alert
 	// raiders are listed with the colonists; split them off first
 	var raiders [][2]int
+	plan := ""
 	colonists := pawns[:0:0]
 	for _, p := range pawns {
 		switch {
@@ -49,6 +50,7 @@ func buildAlerts(pawns []game.PawnView, w game.WorldView) []alert {
 			colonists = append(colonists, p)
 		case !p.Lying && !p.Fleeing:
 			raiders = append(raiders, [2]int{p.X, p.Y})
+			plan = p.RaidPlan
 		}
 	}
 	pawns = colonists
@@ -113,6 +115,12 @@ func buildAlerts(pawns []game.PawnView, w game.WorldView) []alert {
 		label := "Raid: 1 raider"
 		if len(raiders) > 1 {
 			label = fmt.Sprintf("Raid: %d raiders", len(raiders))
+		}
+		switch plan {
+		case "siege":
+			label = fmt.Sprintf("Siege: %d raiders", len(raiders))
+		case "sappers":
+			label = fmt.Sprintf("Sappers: %d raiders", len(raiders))
 		}
 		out = append(out, alert{key: "raid", label: label, danger: true, targets: raiders})
 	}
