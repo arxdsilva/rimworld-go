@@ -293,6 +293,29 @@ func (a *App) captureUI(ui string) {
 		a.archX0, a.archY0, a.archX1, a.archY1 = cx+1, cy-2, cx+5, cy-2
 		x, y := at(cx+5, cy-2)
 		a.cursor = &[2]int{x, y}
+	case "hits":
+		// run until a blow lands, then show it with its damage number
+		g := a.renderer.game
+		var hit game.TraceView
+		found := false
+		for i := 0; i < 20000 && !found; i++ {
+			g.Step(1)
+			if i%15 == 0 {
+				a.renderer.syncPawns()
+			}
+			for _, t := range g.World().Traces {
+				if t.Hit && t.Damage > 0 && t.Age == 1 {
+					hit, found = t, true
+				}
+			}
+		}
+		a.renderer.syncPawns()
+		for k := 0; k < 3; k++ { // the number has drifted up a little
+			a.renderer.present++
+			a.renderer.animate(g.World(), g.Snapshot(), true)
+		}
+		sw, sh := a.size()
+		a.renderer.centerOn(float64(hit.ToX)+0.5, float64(hit.ToY), sw, sh)
 	case "combat", "melee":
 		melee := ui == "melee"
 		g := a.renderer.game

@@ -323,8 +323,8 @@ func TestBodyOriginClearsLeftRail(t *testing.T) {
 	click(t, a, "load.back")
 	click(t, a, "menu.options")
 	x, _ = bodyOrigin(a.optionsButtons(a.sw, a.sh), a.sh)
-	if x != bodyDefaultX {
-		t.Fatalf("options body x=%d, want %d", x, bodyDefaultX)
+	if x < 280 {
+		t.Fatalf("options body x=%d, want right of the toggle", x)
 	}
 }
 

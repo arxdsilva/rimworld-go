@@ -7,6 +7,9 @@ type Trace struct {
 	Tick         uint64
 	Hit          bool
 	Melee        bool
+	// Damage dealt when it hit; Building marks a blow on a structure.
+	Damage   int
+	Building bool
 }
 
 // Lifetime is how many ticks a trace stays visible.

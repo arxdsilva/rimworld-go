@@ -154,20 +154,29 @@ type Renderer struct {
 	gridClr   color.RGBA
 	pawnClr   color.RGBA
 	selectClr color.RGBA
+
+	// threats: pause when one arrives (option), remembering the newest
+	// danger message already handled.
+	pauseOnThreat bool
+	threatPaused  bool
+	dangerInit    bool
+	lastDanger    uint64
+	floaters      []floater
 }
 
 // New returns a Renderer for sim. Sprites are optional: call LoadPack
 // after New. Without a pack, pawns fall back to colored rectangles.
 func New(sim Simulation) *Renderer {
 	return &Renderer{
-		game:      sim,
-		speed:     speedNormal,
-		cam:       camera{zoom: 1},
-		last:      map[entity.EntityID]pawnVisual{},
-		seenTrace: map[[3]uint64]bool{},
-		gridClr:   color.RGBA{R: 40, G: 40, B: 40, A: 180},
-		pawnClr:   color.RGBA{R: 220, G: 60, B: 60, A: 255},
-		selectClr: color.RGBA{R: 250, G: 220, B: 60, A: 255},
+		game:          sim,
+		speed:         speedNormal,
+		cam:           camera{zoom: 1},
+		pauseOnThreat: true,
+		last:          map[entity.EntityID]pawnVisual{},
+		seenTrace:     map[[3]uint64]bool{},
+		gridClr:       color.RGBA{R: 40, G: 40, B: 40, A: 180},
+		pawnClr:       color.RGBA{R: 220, G: 60, B: 60, A: 255},
+		selectClr:     color.RGBA{R: 250, G: 220, B: 60, A: 255},
 	}
 }
 
@@ -202,7 +211,9 @@ func (r *Renderer) advance() {
 		r.game.Step(n)
 	}
 	r.syncPawns()
-	r.animate(r.game.World(), r.game.Snapshot(), n > 0)
+	w := r.game.World()
+	r.animate(w, r.game.Snapshot(), n > 0)
+	r.watchThreats(w)
 }
 
 func (r *Renderer) syncPawns() {
@@ -542,8 +553,6 @@ func (r *Renderer) world() game.WorldView { return r.game.World() }
 func (r *Renderer) date() clock.Date { return r.game.Date() }
 
 func (r *Renderer) activity() schedule.Activity { return r.game.Activity() }
-
-func (r *Renderer) speedRate() string { return r.speed.rate() }
 
 func (r *Renderer) enqueue(c command.Command) { r.game.Enqueue(c) }
 

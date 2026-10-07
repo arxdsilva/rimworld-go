@@ -158,7 +158,7 @@ func (g *Game) doBreach(id entity.EntityID, j job.Record) {
 		dmg = 7 // rifle butt
 	}
 	g.traces = append(g.traces, projectile.Trace{FromX: pos.X, FromY: pos.Y, ToX: b.X, ToY: b.Y,
-		Tick: uint64(g.clock.Now()), Hit: true, Melee: true})
+		Tick: uint64(g.clock.Now()), Hit: true, Melee: true, Damage: dmg, Building: true})
 	g.damageBuilding(j.Target, dmg)
 }
 
@@ -254,6 +254,8 @@ func (g *Game) springTrap(victim entity.EntityID, x, y int) {
 		who = "a " + a.Species.String()
 	}
 	g.message(x, y, "A spike trap caught %s.", who)
+	g.traces = append(g.traces, projectile.Trace{FromX: x, FromY: y, ToX: x, ToY: y,
+		Tick: uint64(g.clock.Now()), Hit: true, Melee: true, Damage: trapDamage})
 	g.removeBuilding(tid)
 	g.placeFrameStuff(construction.SpikeTrap, t.Stuff, construction.South, x, y) // re-lay it
 	g.hurt(victim, trapDamage, 0)

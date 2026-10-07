@@ -31,6 +31,8 @@ type TraceView struct {
 	Age          int
 	Hit          bool
 	Melee        bool
+	Damage       int  // dealt on a hit
+	Building     bool // a blow on a door or wall
 }
 
 func weaponKindOf(k item.Kind) weapon.Kind {
@@ -152,10 +154,14 @@ func (g *Game) strike(attacker, target entity.EntityID, wk weapon.Kind) {
 		chance = chance * (100 - g.coverFor(ap, tp)) / 100
 	}
 	hit := g.rng.IntN(100) < chance
-	g.traces = append(g.traces, projectile.Trace{
+	tr := projectile.Trace{
 		FromX: ap.X, FromY: ap.Y, ToX: tp.X, ToY: tp.Y,
 		Tick: uint64(g.clock.Now()), Hit: hit, Melee: !d.Ranged,
-	})
+	}
+	if hit {
+		tr.Damage = d.Damage
+	}
+	g.traces = append(g.traces, tr)
 	if hit {
 		g.hurt(target, d.Damage, attacker)
 	}
@@ -394,7 +400,7 @@ func (g *Game) traceViews() []TraceView {
 			continue
 		}
 		out = append(out, TraceView{FromX: t.FromX, FromY: t.FromY, ToX: t.ToX, ToY: t.ToY,
-			Age: int(now - t.Tick), Hit: t.Hit, Melee: t.Melee})
+			Age: int(now - t.Tick), Hit: t.Hit, Melee: t.Melee, Damage: t.Damage, Building: t.Building})
 	}
 	return out
 }

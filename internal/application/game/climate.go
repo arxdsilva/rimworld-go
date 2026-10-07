@@ -21,6 +21,9 @@ type MessageView struct {
 	Tick uint64
 	Text string
 	X, Y int // where it happened, for jumping the camera
+	// Danger marks a threat arriving (raids, predator packs): the UI may
+	// pause the game for it.
+	Danger bool
 }
 
 // temperatureAt is the air temperature on a tile: enclosed rooms hold the
@@ -51,7 +54,16 @@ func (g *Game) growingSeason(x, y int) bool {
 func (g *Game) TemperatureAt(x, y int) int { return int(g.temperatureAt(x, y)) }
 
 func (g *Game) message(x, y int, format string, args ...any) {
-	g.messages = append(g.messages, MessageView{Tick: uint64(g.clock.Now()), Text: fmt.Sprintf(format, args...), X: x, Y: y})
+	g.post(MessageView{Tick: uint64(g.clock.Now()), Text: fmt.Sprintf(format, args...), X: x, Y: y})
+}
+
+// threat posts a danger message: a threat has arrived.
+func (g *Game) threat(x, y int, format string, args ...any) {
+	g.post(MessageView{Tick: uint64(g.clock.Now()), Text: fmt.Sprintf(format, args...), X: x, Y: y, Danger: true})
+}
+
+func (g *Game) post(m MessageView) {
+	g.messages = append(g.messages, m)
 	if n := len(g.messages); n > maxMessages {
 		g.messages = append(g.messages[:0:0], g.messages[n-maxMessages:]...)
 	}

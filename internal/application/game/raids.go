@@ -152,7 +152,7 @@ func (g *Game) Raid(n int) {
 		if spawned == 1 {
 			word = "raider is"
 		}
-		g.message(ex, ey, "Raid! %d %s coming for the colony.", spawned, word)
+		g.threat(ex, ey, "Raid! %d %s coming for the colony.", spawned, word)
 	}
 }
 
@@ -176,7 +176,7 @@ func (g *Game) wolfPack(n int) {
 			}
 		}
 	}
-	g.message(ex, ey, "A pack of %d starving ridgewolves is prowling near the colony.", n)
+	g.threat(ex, ey, "A pack of %d starving ridgewolves is prowling near the colony.", n)
 }
 
 // groupBroken: half or more of a raid group is down, dead or gone.

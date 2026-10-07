@@ -81,7 +81,9 @@ type App struct {
 
 	scenario    int
 	storyteller int
-	difficulty  int
+	// noThreatPause turns off pausing when a threat arrives (Options).
+	noThreatPause bool
+	difficulty    int
 
 	simsStarted                    int
 	renderer                       *Renderer
@@ -420,6 +422,11 @@ func (a *App) applyClick(id string) {
 		a.toggleWorkCell(id)
 	case id == "tab.menu":
 		a.apply(intent{kind: intentPause})
+	case id == "options.pausethreat":
+		a.noThreatPause = !a.noThreatPause
+		if a.renderer != nil {
+			a.renderer.pauseOnThreat = !a.noThreatPause
+		}
 	case id == "inspector.close":
 		if a.renderer != nil {
 			a.renderer.ClearSelect()
@@ -532,6 +539,7 @@ func (a *App) startSession(sim Simulation) {
 	a.renderer = New(sim)
 	a.renderer.pack = a.pack
 	a.renderer.art = a.art
+	a.renderer.pauseOnThreat = !a.noThreatPause
 	a.nav.reset(frame{screen: screenColony})
 }
 

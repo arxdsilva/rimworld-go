@@ -307,6 +307,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	r.drawBreakClouds(screen, tile)
 	r.drawOrderRoute(screen, tile)
 	r.drawParticles(screen, tile)
+	r.drawFloaters(screen, tile)
 
 	for _, p := range w.Plants {
 		switch {

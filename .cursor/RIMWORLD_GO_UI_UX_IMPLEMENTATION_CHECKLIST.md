@@ -810,12 +810,12 @@ understandable.
 
 ## 13.4 Combat feedback
 
--   [ ] **Damage indicators**
+-   [x] **Damage indicators** (floating -N over hit pawns, animals and buildings; "miss" for missed shots)
 -   [x] **Projectile/impact feedback**
 -   [x] **Downed/death feedback**
 -   [x] **Threat markers** (red chevron over raiders, orange while fleeing; Raid alert and arrival message)
 -   [-] **Hostile faction coloring/icons** (raiders wear a reserved maroon cloth tint)
--   [ ] **Pause-on-threat option**
+-   [x] **Pause-on-threat option** (on by default, Options screen toggle; HUD reads "paused (threat)")
 
 ------------------------------------------------------------------------
 

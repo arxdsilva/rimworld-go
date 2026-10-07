@@ -474,7 +474,11 @@ func (r *Renderer) animate(w game.WorldView, pawns []game.PawnView, running bool
 			continue
 		}
 		r.seenTrace[key] = true
-		if t.Hit {
+		r.floatTrace(t, key[0]^key[1]^key[2])
+		switch {
+		case t.Hit && t.Building:
+			r.burst(partChip, float64(t.ToX)+0.5, float64(t.ToY)+0.4, 5, key[0]^key[1]^key[2])
+		case t.Hit:
 			r.burst(partBlood, float64(t.ToX)+0.5, float64(t.ToY)+0.35, 5, key[0]^key[1]^key[2])
 		}
 		if !t.Melee {
