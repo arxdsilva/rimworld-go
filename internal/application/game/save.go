@@ -118,6 +118,8 @@ type saveState struct {
 	NoComfort  map[entity.EntityID]uint64
 	OrderQueue map[entity.EntityID][]savedOrder
 	Apparel    map[entity.EntityID]worn
+	Prio       map[entity.EntityID]work.Priorities
+	Scheds     map[entity.EntityID]schedule.Grid
 	Joy        map[entity.EntityID]int
 	Breaks     map[entity.EntityID]savedBreak
 	RoomGrid   []int
@@ -169,6 +171,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 		LastMeal: g.lastMeal, Bills: g.bills, Racks: g.racks, Fuel: g.fuel,
 		Exposure: map[entity.EntityID][2]int{}, NoComfort: g.noComfort,
 		OrderQueue: map[entity.EntityID][]savedOrder{}, Apparel: g.apparel, Joy: g.joy,
+		Prio: g.prio, Scheds: g.scheds,
 		Breaks: map[entity.EntityID]savedBreak{}, RoomGrid: g.roomGrid, RoomTemps: g.roomTemps,
 		Memories: g.memories, Claims: g.reserve.Export(), Pending: g.pending,
 		AteAt: g.ateAt, Draft: g.draft, SleptAt: g.sleptAt,
@@ -260,6 +263,8 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	setMap(&g.fuel, s.Fuel)
 	setMap(&g.noComfort, s.NoComfort)
 	setMap(&g.apparel, s.Apparel)
+	setMap(&g.prio, s.Prio)
+	setMap(&g.scheds, s.Scheds)
 	setMap(&g.joy, s.Joy)
 	setMap(&g.memories, s.Memories)
 	setMap(&g.ateAt, s.AteAt)

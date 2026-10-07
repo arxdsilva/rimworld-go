@@ -188,6 +188,27 @@ func (a *App) captureUI(ui string) {
 			a.renderer.cam.offsetX, a.renderer.cam.offsetY = -1e6, -1e6
 		}
 		a.renderer.clampCamera(v)
+	case "work", "schedule":
+		a.workOpen, a.panelMode = true, ui
+		if ui == "schedule" {
+			a.schedBrush = 3
+			pawns := a.renderer.snapshot()
+			if len(pawns) > 1 { // give Bo a night-owl schedule to show
+				for h := 0; h < 24; h++ {
+					act := uint8(1)
+					switch {
+					case h >= 4 && h < 12:
+						act = 3
+					case h >= 12 && h < 15:
+						act = 2
+					}
+					a.renderer.enqueue(command.Command{Kind: command.SetSchedule, Pawn: uint64(pawns[1].ID), Index: h, Mode: act})
+				}
+				a.renderer.enqueue(command.Command{Kind: command.SetWorkPriority, Pawn: uint64(pawns[0].ID), Work: command.WorkGrow, Count: 1})
+				a.renderer.game.Step(1)
+				a.renderer.syncPawns()
+			}
+		}
 	case "fun":
 		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
 		pawns := a.renderer.snapshot()

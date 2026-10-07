@@ -85,6 +85,10 @@ type PawnView struct {
 	// and ComfortMax its comfortable range (tenths of a degree C).
 	Apparel                []string
 	ComfortMin, ComfortMax int
+	// Priorities is the work priority per work.Type (0 off, 1 first .. 4);
+	// Schedule the activity per hour.
+	Priorities []int
+	Schedule   []schedule.Activity
 	// QueuedOrders are orders waiting behind the current one, in order.
 	QueuedOrders []QueuedOrderView
 	// HasOrder: following a player order whose target tile is OrderX, OrderY.
@@ -216,6 +220,8 @@ type WorldView struct {
 	Season                  string
 	// Messages are recent event notices, oldest first.
 	Messages []MessageView
+	// Schedule is the colony default schedule (new colonists get a copy).
+	Schedule []schedule.Activity
 }
 
 // Game holds all authoritative simulation state.
@@ -257,6 +263,8 @@ type Game struct {
 	noComfort  map[entity.EntityID]uint64 // no warm/cool spot found until this tick
 	orderQueue map[entity.EntityID][]queuedOrder
 	apparel    map[entity.EntityID]worn
+	prio       map[entity.EntityID]work.Priorities
+	scheds     map[entity.EntityID]schedule.Grid
 	joy        map[entity.EntityID]int // recreation need, 0..recreation.Full
 	breaks     map[entity.EntityID]breakState
 	roomTemps  []temperature.Temp // per room id, kept across rebuilds
@@ -309,6 +317,8 @@ func New(cfg Config) *Game {
 		noComfort:   make(map[entity.EntityID]uint64),
 		orderQueue:  make(map[entity.EntityID][]queuedOrder),
 		apparel:     make(map[entity.EntityID]worn),
+		prio:        make(map[entity.EntityID]work.Priorities),
+		scheds:      make(map[entity.EntityID]schedule.Grid),
 		joy:         make(map[entity.EntityID]int),
 		breaks:      make(map[entity.EntityID]breakState),
 		memories:    make(map[entity.EntityID]mood.Memories),
@@ -356,7 +366,9 @@ func (g *Game) SpawnNamedPawn(x, y int, name string) (entity.EntityID, error) {
 	g.jobs.Set(id, job.Record{})
 	g.need.Set(id, needs.NewFull())
 	g.vital.Set(id, health.Record{Status: health.Alive})
-	g.labor.Set(id, work.DefaultColonist())
+	g.prio[id] = work.DefaultPriorities()
+	g.labor.Set(id, g.prio[id].Mask())
+	g.scheds[id] = g.sched
 	g.joy[id] = recreation.Start
 	return id, nil
 }
@@ -520,6 +532,13 @@ func (g *Game) Snapshot() []PawnView {
 		pv.Tended = g.tended(id)
 		pv.Hypothermia, pv.Heatstroke = g.exposure[id].hypo, g.exposure[id].heat
 		pv.Temperament = g.temperamentOf(id).String()
+		pr := g.prioOf(id)
+		for _, v := range pr {
+			pv.Priorities = append(pv.Priorities, int(v))
+		}
+		sg := g.scheduleOf(id)
+		pv.Schedule = append([]schedule.Activity(nil), sg[:]...)
+		pv.Activity = g.activityOf(id)
 		pv.Apparel = g.Wearing(id)
 		pv.Recreation = g.joy[id] * 100 / recreation.Full
 		if b, ok := g.breaks[id]; ok {
@@ -556,6 +575,7 @@ func (g *Game) World() WorldView {
 		IndoorTemp:  int(temperature.Indoor(g.clock.Now())),
 		Season:      temperature.Season(g.clock.Now()),
 		Messages:    append([]MessageView(nil), g.messages...),
+		Schedule:    append([]schedule.Activity(nil), g.sched[:]...),
 	}
 	for _, id := range g.itemIDs {
 		st, ok := g.stacks.Get(id)

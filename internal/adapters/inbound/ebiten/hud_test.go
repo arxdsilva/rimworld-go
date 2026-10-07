@@ -66,9 +66,9 @@ func TestWorkTabOpensOverlay(t *testing.T) {
 func TestDisabledTabsDoNotNavigate(t *testing.T) {
 	t.Parallel()
 	a, _, _ := liveColony(t, 0)
-	click(t, a, "tab.schedule")
+	click(t, a, "tab.assign")
 	if a.workOpen || a.archOpen {
-		t.Fatal("disabled Schedule tab opened a colony overlay")
+		t.Fatal("disabled Assign tab opened a colony overlay")
 	}
 	if a.nav.screen() != screenColony || a.nav.overlay() != overlayNone {
 		t.Fatalf("disabled tab navigated to %s/%s", a.nav.screen(), a.nav.overlay())
@@ -286,10 +286,12 @@ func TestWorkCellTogglesHaulWithoutExtraStep(t *testing.T) {
 	before := g.Tick()
 	click(t, a, "tab.work")
 	cell := fmt.Sprintf("work.cell.%d.6", id)
-	click(t, a, cell)
+	click(t, a, cell) // 3 -> 4
 	if g.Tick() != before {
 		t.Fatalf("toggling Haul stepped %d -> %d", before, g.Tick())
 	}
+	g.Step(1)
+	click(t, a, cell) // 4 -> off
 	g.Step(1)
 	found := false
 	for _, p := range g.Snapshot() {
@@ -323,5 +325,22 @@ func TestRendererSelectAPI(t *testing.T) {
 	r.ClearSelect()
 	if r.HasSelect() {
 		t.Fatal("ClearSelect should drop selection")
+	}
+}
+
+func TestSchedulePainting(t *testing.T) {
+	t.Parallel()
+	a, g, id := liveColony(t, 0)
+	click(t, a, "tab.schedule")
+	if !a.workOpen || a.panelMode != "schedule" {
+		t.Fatal("Schedule tab should open the schedule panel")
+	}
+	click(t, a, "sched.brush.3") // sleep
+	click(t, a, fmt.Sprintf("sched.cell.%d.14", id))
+	g.Step(1)
+	for _, p := range g.Snapshot() {
+		if p.ID == id && p.Schedule[14].String() != "sleep" {
+			t.Fatalf("hour 14 = %s, want sleep", p.Schedule[14])
+		}
 	}
 }

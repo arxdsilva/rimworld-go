@@ -39,6 +39,10 @@ const (
 	DesignateHunt
 	// ClearOrders drops a pawn's queued orders.
 	ClearOrders
+	// SetWorkPriority sets Pawn's Work column to priority Count (0 = off).
+	SetWorkPriority
+	// SetSchedule sets Pawn's hour Index to activity Mode (Pawn 0: everyone).
+	SetSchedule
 )
 
 // WorkType is a compact work-column id for SetWorkEnabled.

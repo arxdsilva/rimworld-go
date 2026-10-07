@@ -1,4 +1,4 @@
-// Package work is colonist work-type enable flags (not 1–4 priorities).
+// Package work is colonist work types: enable flags and 1-4 priorities.
 package work
 
 // Type is a labor column. Only Haul, Construct, and Grow are wired.
@@ -49,3 +49,46 @@ func (m Mask) Set(t Type, on bool) Mask {
 	}
 	return m &^ bit
 }
+
+// Priorities are per-work-type priorities: 1 is done first, 4 last, 0
+// is off. Within one priority, work types go in Order.
+type Priorities [NumTypes]uint8
+
+// Lowest is the lowest (last-done) priority.
+const Lowest = 4
+
+// DefaultPriority is what a newly enabled work type gets.
+const DefaultPriority = 3
+
+// DefaultPriorities enables the default colonist work at priority 3.
+func DefaultPriorities() Priorities {
+	var p Priorities
+	m := DefaultColonist()
+	for t := Type(0); t < NumTypes; t++ {
+		if m.Enabled(t) {
+			p[t] = DefaultPriority
+		}
+	}
+	return p
+}
+
+// Mask is the enabled set (priority > 0).
+func (p Priorities) Mask() Mask {
+	var m Mask
+	for t := Type(0); t < NumTypes; t++ {
+		m = m.Set(t, p[t] > 0)
+	}
+	return m
+}
+
+// Set returns a copy with t at priority v (clamped to 0..Lowest).
+func (p Priorities) Set(t Type, v int) Priorities {
+	if t >= NumTypes {
+		return p
+	}
+	p[t] = uint8(max(0, min(Lowest, v)))
+	return p
+}
+
+// Order is the tie-break among work types sharing a priority.
+var Order = []Type{Doctor, Haul, Construct, Cook, Craft, Hunt, Grow, Mine}

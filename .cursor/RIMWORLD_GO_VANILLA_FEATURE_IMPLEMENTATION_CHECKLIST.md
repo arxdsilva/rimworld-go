@@ -405,7 +405,7 @@ This is the heart of autonomous colony behavior.
     -   Research.
 -   [-] **Simple work enable/disable** (`SetWorkEnabled` for Haul/Construct/Grow)
     -   Pawn either performs a work type or does not.
--   [ ] **Manual priorities**
+-   [x] **Manual priorities** (per-colonist 1-4 or off per work type; AI tries priority 1 work first; ties follow work.Order)
     -   Multiple priority levels.
     -   Lower numeric priority means more urgent, equivalent to
         RimWorld's 1--4 behavior.
@@ -443,7 +443,7 @@ This is the heart of autonomous colony behavior.
 
 ## 5.6 Daily schedule
 
--   [-] **24-hour schedule grid** (shared DefaultColony grid; Anything/Work/Recreation/Sleep; no per-pawn paint or schedule screen yet)
+-   [x] **24-hour schedule grid** (per-colonist grid, copied from the colony default; Anything/Work/Recreation/Sleep; painted in the Schedule tab)
     -   Anything.
     -   Work.
     -   Sleep.

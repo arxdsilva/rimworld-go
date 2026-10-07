@@ -10,6 +10,7 @@ import (
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/pawn/recreation"
+	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
@@ -89,33 +90,21 @@ func (g *Game) applyOne(c command.Command) {
 	case command.Prioritize:
 		g.prioritize(entity.EntityID(c.Pawn), c.Order, c.X, c.Y, construction.Layer(c.Layer))
 	case command.SetWorkEnabled:
-		id := entity.EntityID(c.Pawn)
-		m, ok := g.labor.Get(id)
+		t, ok := workTypeOf(c.Work)
 		if !ok {
 			return
 		}
-		var t work.Type
-		switch c.Work {
-		case command.WorkHaul:
-			t = work.Haul
-		case command.WorkConstruct:
-			t = work.Construct
-		case command.WorkGrow:
-			t = work.Grow
-		case command.WorkMine:
-			t = work.Mine
-		case command.WorkCook:
-			t = work.Cook
-		case command.WorkHunt:
-			t = work.Hunt
-		case command.WorkCraft:
-			t = work.Craft
-		case command.WorkDoctor:
-			t = work.Doctor
-		default:
-			return
+		v := 0
+		if c.Enabled {
+			v = work.DefaultPriority
 		}
-		g.labor.Set(id, m.Set(t, c.Enabled))
+		g.setPriority(entity.EntityID(c.Pawn), t, v)
+	case command.SetWorkPriority:
+		if t, ok := workTypeOf(c.Work); ok {
+			g.setPriority(entity.EntityID(c.Pawn), t, c.Count)
+		}
+	case command.SetSchedule:
+		g.setSchedule(entity.EntityID(c.Pawn), c.Index, schedule.Activity(c.Mode))
 	}
 }
 
@@ -278,8 +267,8 @@ func (g *Game) dropCarry(id entity.EntityID) {
 }
 
 func (g *Game) phaseAI() {
-	act := g.Activity()
 	for _, id := range g.pawnIDs {
+		act := g.activityOf(id)
 		v, _ := g.vital.Get(id)
 		if v.Status == health.Dead {
 			g.reserve.ReleaseOwner(id)
@@ -385,32 +374,7 @@ func (g *Game) phaseAI() {
 			}
 			continue
 		}
-		m, _ := g.labor.Get(id)
-		if m.Enabled(work.Doctor) && g.assignDoctor(id) {
-			continue
-		}
-		if m.Enabled(work.Haul) && g.assignRefuel(id) {
-			continue
-		}
-		if m.Enabled(work.Haul) && g.assignHaul(id) {
-			continue
-		}
-		if m.Enabled(work.Construct) && g.assignConstruct(id) {
-			continue
-		}
-		if g.assignBill(id, m) {
-			continue
-		}
-		if m.Enabled(work.Hunt) && g.assignHunt(id) {
-			continue
-		}
-		if m.Enabled(work.Grow) && g.woodLow() && g.assignCut(id) {
-			continue // short of wood: designated trees come first
-		}
-		if m.Enabled(work.Grow) && (g.assignHarvest(id) || g.assignSow(id) || g.assignCut(id)) {
-			continue
-		}
-		if m.Enabled(work.Mine) && g.assignMine(id) {
+		if g.assignWorkByPriority(id) {
 			continue
 		}
 		if g.assignWear(id) {
@@ -917,7 +881,7 @@ func (g *Game) doSleep(id entity.EntityID, j job.Record, now uint64) {
 		g.vital.Set(id, v)
 	}
 	j.WorkLeft--
-	act := g.Activity()
+	act := g.activityOf(id)
 	// fully rested sleepers stay in bed through scheduled sleep hours
 	done := n.Rest >= needs.Full && !needs.SleepScheduled(act)
 	if !n.Exhausted() && needs.WorkScheduled(act) && n.Rest > needs.CriticalRest && j.WorkLeft <= 0 {

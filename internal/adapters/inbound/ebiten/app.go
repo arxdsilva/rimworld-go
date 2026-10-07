@@ -10,6 +10,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
+	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -107,6 +108,9 @@ type App struct {
 	autosaveDay                    int               // in-game day of the last autosave
 	slots                          []SaveSlot        // load screen list
 	slotsRead                      bool              // main menu read the list once
+	panelMode                      string            // "work" or "schedule" while workOpen
+	schedBrush                     schedule.Activity // activity the schedule paints
+	lastPainted                    string            // schedule cell last painted by a drag
 }
 
 // NewApp returns an App on the boot screen. Simulation is not created
@@ -202,6 +206,7 @@ func (a *App) Update() error {
 		if a.cfg.Capture == nil { // captures frame the camera themselves
 			a.renderer.handleCameraInput(colonyViewport(sw, sh))
 		}
+		a.handleScheduleDrag()
 		if a.float.open && !consumed && inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 			a.closeFloat() // click outside the order menu just closes it
 			consumed = true
@@ -350,12 +355,21 @@ func (a *App) applyClick(id string) {
 			a.renderer.Select(entity.EntityID(n))
 			a.clearBuilding()
 		}
-	case id == "tab.work":
-		a.workOpen = !a.workOpen
-		if a.workOpen {
+	case id == "tab.work", id == "tab.schedule":
+		mode := strings.TrimPrefix(id, "tab.")
+		if a.workOpen && a.panelMode == mode {
+			a.workOpen = false
+		} else {
+			a.workOpen, a.panelMode = true, mode
 			a.closeArchitect()
 			a.closeFloat()
 		}
+	case strings.HasPrefix(id, "sched.brush."):
+		if v, err := strconv.Atoi(strings.TrimPrefix(id, "sched.brush.")); err == nil {
+			a.schedBrush = schedule.Activity(v)
+		}
+	case strings.HasPrefix(id, "sched.cell."):
+		a.paintSchedule(id)
 	case id == "tab.architect":
 		if a.archOpen {
 			a.closeArchitect()
@@ -747,22 +761,16 @@ func (a *App) toggleWorkCell(id string) {
 	if !ok {
 		return
 	}
-	on := true
+	next := work3
 	for _, p := range a.renderer.snapshot() {
-		if uint64(p.ID) != pawnN {
-			continue
-		}
-		if w, ok := workLive[col]; ok {
-			on = !w.on(p)
+		if uint64(p.ID) == pawnN {
+			next = nextPriority(workPriority(p, col))
 		}
 	}
-	a.renderer.enqueue(command.Command{
-		Kind:    command.SetWorkEnabled,
-		Pawn:    pawnN,
-		Work:    wt,
-		Enabled: on,
-	})
+	a.renderer.enqueue(command.Command{Kind: command.SetWorkPriority, Pawn: pawnN, Work: wt, Count: next})
 }
+
+const work3 = 3
 
 func workCommand(col int) (command.WorkType, bool) {
 	return workTypeForCol(col)

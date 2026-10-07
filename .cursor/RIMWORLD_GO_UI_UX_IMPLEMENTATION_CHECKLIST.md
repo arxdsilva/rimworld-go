@@ -536,9 +536,9 @@ interfaces.
         art, haul, clean, research.
     -   Column header icon/name.
     -   Tooltip explains work category.
--   [-] **Simple priorities mode** (toggle Haul/Construct/Grow via `SetWorkEnabled`; no 1–4)
+-   [-] **Simple priorities mode** (superseded by manual priorities; `SetWorkEnabled` still maps on/off to 3/off)
     -   Toggle work type on/off.
--   [ ] **Manual priorities mode**
+-   [x] **Manual priorities mode** (Work tab cells cycle off/1/2/3/4, shaded by urgency)
     -   Priority values equivalent to 1--4.
     -   Click cycles values.
     -   Drag paints a priority across cells.
@@ -567,12 +567,12 @@ interfaces.
 
 -   [ ] **24-hour columns**
 -   [ ] **Pawn rows**
--   [ ] **Schedule modes**
+-   [x] **Schedule modes** (anything, work, recreation, sleep brushes)
     -   Anything.
     -   Work.
     -   Sleep.
     -   Recreation.
--   [ ] **Paint schedule**
+-   [x] **Paint schedule** (click or drag across hour cells, per colonist or Everyone; current hour outlined)
     -   Select mode then drag cells.
 -   [ ] **Copy schedule**
 -   [ ] **Multi-pawn painting**
