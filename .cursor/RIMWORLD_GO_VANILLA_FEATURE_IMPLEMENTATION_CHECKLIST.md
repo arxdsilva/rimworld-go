@@ -2401,26 +2401,26 @@ experience with original names/assets/text.
 Although foundational persistence exists earlier, this phase completes
 the player-facing system.
 
--   [ ] **Manual save**
--   [ ] **Load game**
--   [ ] **Save metadata**
+-   [x] **Manual save** (pause > Save writes the colony's slot)
+-   [x] **Load game** (pause > Load and main menu Load/Continue)
+-   [-] **Save metadata** (slot name, in-game date, day, colonists, format version; no seed/plugins/content hash)
     -   Colony.
     -   world seed.
     -   tick/date.
     -   version.
     -   enabled plugins.
     -   content hash.
--   [ ] **Autosave**
+-   [-] **Autosave** (every in-game morning at 06:00 to <slot>-autosave; cadence not configurable)
     -   Configurable cadence.
     -   Consistent snapshot without long simulation stall.
 -   [ ] **Rotating autosaves**
--   [ ] **Save naming/overwrite**
+-   [-] **Save naming/overwrite** (one slot per colony, named at start, overwritten on save; no name prompt)
 -   [ ] **Ironman/commitment-style save mode**
     -   Restricts ordinary save-scumming behavior if selected.
 -   [ ] **Schema migration**
--   [ ] **Corruption validation**
--   [ ] **Safe atomic writes**
--   [ ] **Save/replay deterministic equality tests**
+-   [-] **Corruption validation** (unreadable or wrong-version files listed but not loadable)
+-   [x] **Safe atomic writes** (temp file + rename)
+-   [x] **Save/replay deterministic equality tests** (save mid-game, load, run both in lock step: identical)
 
 ------------------------------------------------------------------------
 

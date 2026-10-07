@@ -15,6 +15,17 @@ func NewAllocator() *Allocator {
 	return &Allocator{next: 1}
 }
 
+// Peek is the ID Next would return (saved games).
+func (a *Allocator) Peek() EntityID { return a.next }
+
+// Resume continues allocating from next (loading a saved game).
+func Resume(next EntityID) *Allocator {
+	if next < 1 {
+		next = 1
+	}
+	return &Allocator{next: next}
+}
+
 // Next allocates and returns the next unique EntityID.
 func (a *Allocator) Next() EntityID {
 	id := a.next

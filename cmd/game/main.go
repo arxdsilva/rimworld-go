@@ -2,11 +2,13 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	uiadapter "rimworld-go/internal/adapters/inbound/ebiten"
+	"rimworld-go/internal/adapters/outbound/filesave"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/mentalbreak"
@@ -35,6 +37,7 @@ func main() {
 		Version: "dev",
 		Assets:  *assets,
 		Capture: shot,
+		Saves:   saveHooks(),
 		NewSim: func() (uiadapter.Simulation, error) {
 			g := game.NewColony(game.Config{Seed: *seed, Width: *width, Height: *height})
 			if *scenario == "beds" {
@@ -118,5 +121,44 @@ func main() {
 	}
 	if err := app.CaptureErr(); err != nil {
 		log.Fatal(err)
+	}
+}
+
+// saveHooks wires the UI's save/load to the per-user saves folder.
+func saveHooks() uiadapter.SaveHooks {
+	store, err := filesave.Default()
+	if err != nil {
+		log.Printf("saving disabled: %v", err)
+		return uiadapter.SaveHooks{}
+	}
+	return uiadapter.SaveHooks{
+		Save: func(sim uiadapter.Simulation, slot string) error {
+			g, ok := sim.(*game.Game)
+			if !ok {
+				return fmt.Errorf("this simulation can't be saved")
+			}
+			_, err := store.Save(g, slot)
+			return err
+		},
+		List: func() ([]uiadapter.SaveSlot, error) {
+			slots, err := store.List()
+			out := make([]uiadapter.SaveSlot, 0, len(slots))
+			for _, sl := range slots {
+				s := uiadapter.SaveSlot{Name: sl.Name, Path: sl.Path, Date: sl.Info.Date,
+					Colonists: sl.Info.Colonists, Modified: sl.Modified}
+				if sl.Err != nil {
+					s.Err = sl.Err.Error()
+				}
+				out = append(out, s)
+			}
+			return out, err
+		},
+		Load: func(path string) (uiadapter.Simulation, string, error) {
+			g, info, err := store.Load(path)
+			if err != nil {
+				return nil, "", err
+			}
+			return g, info.Name, nil
+		},
 	}
 }

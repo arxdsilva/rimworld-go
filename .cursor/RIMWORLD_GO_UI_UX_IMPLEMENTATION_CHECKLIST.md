@@ -1602,8 +1602,8 @@ the player what just happened and what requires attention.
 ## 33.1 In-game menu
 
 -   [x] **Resume**
--   [-] **Save** (disabled)
--   [-] **Load** (disabled from pause; empty stub from main menu)
+-   [x] **Save** (writes the colony's slot, "saved <slot>" hint)
+-   [x] **Load** (pause and main menu open the save list; main menu Continue loads the newest)
 -   [-] **Options** (opens stub, Back returns to pause)
 -   [x] **Return to main menu**
 -   [x] **Quit**
@@ -1621,15 +1621,15 @@ the player what just happened and what requires attention.
 
 ## 33.3 Load dialog
 
--   [ ] **Save list**
+-   [x] **Save list** (newest first: slot, game date, colonists, file time)
 -   [ ] **Version**
--   [ ] **Game date**
+-   [x] **Game date**
 -   [ ] **Colony**
 -   [ ] **Plugin set**
 -   [ ] **Compatibility warning**
 -   [ ] **Missing plugin warning**
 -   [ ] **Migration warning/error**
--   [ ] **Corrupt save handling**
+-   [x] **Corrupt save handling** (listed disabled with the reason)
 -   [ ] **Delete save confirmation**
 
 ## 33.4 Autosave feedback

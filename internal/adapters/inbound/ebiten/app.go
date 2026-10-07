@@ -57,6 +57,8 @@ type AppConfig struct {
 	LoadSplash func() (*ebiten.Image, error)
 	// Capture, when set, runs a scripted screenshot session and quits.
 	Capture *Capture
+	// Saves connects save/load to storage (zero value: disabled).
+	Saves SaveHooks
 }
 
 // App is the ebiten.Game shell: screen routing, widgets, and (once
@@ -101,6 +103,10 @@ type App struct {
 	inspectTab                     string
 	capture                        captureState
 	msgSeen                        map[string]uint64 // message key -> frame first shown
+	saveSlot                       string            // current colony's save slot
+	autosaveDay                    int               // in-game day of the last autosave
+	slots                          []SaveSlot        // load screen list
+	slotsRead                      bool              // main menu read the list once
 }
 
 // NewApp returns an App on the boot screen. Simulation is not created
@@ -286,6 +292,7 @@ func (a *App) tick() {
 	case screenColony:
 		if a.nav.overlay() == overlayNone && a.renderer != nil {
 			a.renderer.advance()
+			a.tickAutosave()
 		}
 	}
 }
@@ -365,6 +372,24 @@ func (a *App) applyClick(id string) {
 		a.selectArchTool(strings.TrimPrefix(id, "arch.tool."))
 	case strings.HasPrefix(id, "float."):
 		a.chooseFloat(id)
+	case strings.HasPrefix(id, "load.slot."):
+		if i, err := strconv.Atoi(strings.TrimPrefix(id, "load.slot.")); err == nil {
+			a.loadSlot(i)
+		}
+	case id == "pause.save":
+		a.saveNow(a.saveSlot)
+		a.apply(intent{kind: intentResume})
+	case id == "pause.load", id == "menu.load":
+		a.refreshSlots()
+		a.apply(intent{kind: intentPush, screen: screenLoad})
+	case id == "menu.continue":
+		a.refreshSlots()
+		for i, sl := range a.slots {
+			if sl.Err == "" {
+				a.loadSlot(i)
+				break
+			}
+		}
 	case id == "pawn.draft":
 		a.toggleDraft()
 	case id == "pawn.clearorders":
@@ -475,6 +500,13 @@ func (a *App) startGame() {
 		a.sessionErr = err.Error()
 		return
 	}
+	a.startSession(sim)
+	a.saveSlot = newSlotName()
+	a.autosaveDay = 0
+}
+
+// startSession installs a simulation (new or loaded) as the colony.
+func (a *App) startSession(sim Simulation) {
 	a.sessionErr = ""
 	a.simsStarted++
 	a.workOpen = false

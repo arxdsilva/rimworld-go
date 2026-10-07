@@ -1,5 +1,7 @@
 package grid
 
+import "sort"
+
 // Grid is a 2D tile grid. Tiles are walkable by default.
 type Grid struct {
 	width, height int
@@ -49,4 +51,25 @@ func (g *Grid) SetWalkable(x, y int, walkable bool) {
 
 func (g *Grid) index(x, y int) int {
 	return y*g.width + x
+}
+
+// Blocked lists the blocked cell indexes in ascending order (saved games).
+func (g *Grid) Blocked() []int {
+	out := make([]int, 0, len(g.blocked))
+	for i, b := range g.blocked {
+		if b {
+			out = append(out, i)
+		}
+	}
+	sort.Ints(out)
+	return out
+}
+
+// Restore rebuilds a grid from Blocked output.
+func Restore(width, height int, blocked []int) *Grid {
+	g := New(width, height)
+	for _, i := range blocked {
+		g.blocked[i] = true
+	}
+	return g
 }
