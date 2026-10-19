@@ -43,7 +43,42 @@ const (
 	Haul
 	Construct
 	Harvest
+	Deconstruct
+	Cut
+	Mine
+	Sow
+	Bill
+	Hunt
+	Attack
+	Equip
+	Rescue
+	Tend
+	// Refuel carries wood to a campfire.
+	Refuel
+	// Warm walks a freezing (or overheating) pawn somewhere bearable.
+	Warm
+	// Idle behaviours: free time with nothing designated to do.
+	Wander
+	Chat
+	Relax    // sit on a chair
+	FireSide // warm hands by a burning campfire
+	Horseshoes
+	// Hide: a mental break spent shut away in a room.
+	Hide
+	// Breach: a raider bashing through a door or wall.
+	Breach
+	// Repair: a builder mending a damaged building.
+	Repair
+	// Research: studying at a research bench.
+	Research
+	// Tame: coaxing a wild animal into the colony.
+	Tame
 )
+
+// IsIdle reports a free-time behaviour that any real work may replace.
+func (k Kind) IsIdle() bool {
+	return k == Wander || k == Chat || k == Relax || k == FireSide || k == Horseshoes
+}
 
 func (k Kind) String() string {
 	switch k {
@@ -59,6 +94,50 @@ func (k Kind) String() string {
 		return "construct"
 	case Harvest:
 		return "harvest"
+	case Deconstruct:
+		return "deconstruct"
+	case Cut:
+		return "cut"
+	case Mine:
+		return "mine"
+	case Sow:
+		return "sow"
+	case Bill:
+		return "work at bench"
+	case Hunt:
+		return "hunt"
+	case Attack:
+		return "attack"
+	case Equip:
+		return "equip"
+	case Rescue:
+		return "rescue"
+	case Tend:
+		return "tend"
+	case Refuel:
+		return "refuel"
+	case Warm:
+		return "seek warmth"
+	case Wander:
+		return "wander"
+	case Chat:
+		return "chat"
+	case Relax:
+		return "relax"
+	case FireSide:
+		return "warm up by the fire"
+	case Horseshoes:
+		return "play horseshoes"
+	case Hide:
+		return "hide in room"
+	case Breach:
+		return "break through"
+	case Repair:
+		return "repair"
+	case Research:
+		return "research"
+	case Tame:
+		return "tame"
 	default:
 		return "idle"
 	}
@@ -106,6 +185,15 @@ type Record struct {
 	PathI    int
 	WorkLeft int
 	Fail     FailReason
+	// Count is how many items the job fetches (refuelling).
+	Count int
+	// Dest is the entity a haul delivers into (a frame); 0 = drop on tile.
+	Dest entity.EntityID
+	// Forced marks a player-prioritized job: tiredness does not
+	// interrupt it.
+	Forced bool
+	// BillIndex is the bench bill a Bill job works on.
+	BillIndex int
 }
 
 // Line is the inspector job summary.

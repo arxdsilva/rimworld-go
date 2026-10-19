@@ -173,7 +173,7 @@ use these primitives.
 -   [ ] **Confirmation dialog**
 -   [ ] **Modal window**
 -   [ ] **Toast/message**
--   [ ] **Persistent alert card**
+-   [x] **Persistent alert card**
 -   [ ] **Tooltip**
 -   [ ] **Rich tooltip/stat breakdown**
 -   [ ] **Drag painting tool**
@@ -273,7 +273,7 @@ This is the minimum UI required to interact with a running simulation.
     -   developer mode indicator if enabled.
 -   [ ] **Message feed anchor**
     -   Short transient messages appear without obscuring play.
--   [ ] **Alert anchor**
+-   [x] **Alert anchor**
     -   Reserve a consistent edge of the HUD for persistent colony
         alerts.
 
@@ -307,7 +307,7 @@ building, item, plant, animal, corpse or tile.
 
 ## 3.2 Context command bar
 
--   [ ] **Context-sensitive actions**
+-   [-] **Context-sensitive actions** (Draft/Undraft button + R; right-click menu: go here, build, supply, deconstruct, harvest, sleep, eat, haul; no forbid/hunt/equip/arrest)
     -   Draft.
     -   forbid.
     -   hunt.
@@ -323,7 +323,7 @@ building, item, plant, animal, corpse or tile.
     -   set owner.
     -   etc.
     -   Only show actions relevant to selection.
--   [ ] **Disabled action explanation**
+-   [x] **Disabled action explanation** (order menu and placement preview show reasons from the simulation)
     -   Disabled command must explain *why*: incapable, unreachable,
         reserved, missing material, wrong faction, research missing,
         unsafe, etc.
@@ -350,11 +350,11 @@ building, item, plant, animal, corpse or tile.
 
 ## 4.1 Colonist bar
 
--   [-] **Always-visible colonist portraits** (snapshot slots, click selects, vendor idle portrait, display name; no double-click center or status icons)
+-   [-] **Always-visible colonist portraits** (snapshot slots, click selects, layered original portrait, display name; no double-click center)
     -   Compact representation of each colonist.
     -   Click selects; double-click centers.
     -   Preserve identity at a glance.
--   [ ] **Status indicators**
+-   [-] **Status indicators** (drafted badge on bar and over the pawn; others missing)
     -   Downed.
     -   drafted.
     -   mental state.
@@ -374,10 +374,10 @@ building, item, plant, animal, corpse or tile.
 ## 4.2 Pawn summary
 
 -   [-] **Current activity/job** (inspector job line + schedule activity + tile; no draft)
--   [ ] **Draft state**
+-   [x] **Draft state** (inspector status + Draft/Undraft button)
 -   [ ] **Faction**
 -   [-] **Immediate health state** (alive/downed/dead + reason; no injury tree)
--   [ ] **Immediate mood state**
+-   [x] **Immediate mood state**
 -   [ ] **Current need warnings**
 
 ------------------------------------------------------------------------
@@ -389,10 +389,10 @@ the player's primary world-editing command surface.
 
 ## 5.1 Architect root
 
--   [-] **Architect button/tab** (opens Wall/Bed/Stockpile/Harvest/Cancel; no category tree)
+-   [x] **Architect button/tab** (opens on last category)
     -   Opens build/designation categories.
     -   Remembers last category optionally.
--   [ ] **Category navigation**
+-   [x] **Category navigation** (Orders, Zones, Structure, Furniture — only categories with content)
     -   Orders.
     -   Zone/Area.
     -   Structure.
@@ -402,7 +402,7 @@ the player's primary world-editing command surface.
     -   Security.
     -   Miscellaneous/endgame.
     -   Categories appear only when content exists/unlocked.
--   [ ] **Build option cards/buttons**
+-   [-] **Build option cards/buttons** (icon, name, wood cost, hover tooltip with work and shortage; no research lock/material)
     -   Icon.
     -   name.
     -   material requirement.
@@ -412,9 +412,9 @@ the player's primary world-editing command surface.
 
 ## 5.2 Placement preview
 
--   [-] **Ghost blueprint** (vector cell outline while dragging; no validity colors)
+-   [x] **Ghost blueprint** (real sprite per cell, walls autotile among ghosts, hover preview before dragging)
     -   Show exact occupied cells before command submission.
--   [ ] **Validity visualization**
+-   [-] **Validity visualization** (green/red ghosts, first failure reason, count and wood total; reasons: outside, blocked, occupied, planned, items)
     -   Valid/invalid placement.
     -   Reasons: occupied, impassable, unsupported, missing research,
         wrong terrain, blocked interaction cell, roof/support
@@ -422,12 +422,12 @@ the player's primary world-editing command surface.
 -   [ ] **Material/stuff selector**
     -   For buildings that can be made from different materials.
     -   Show available amount and relevant stat differences.
--   [ ] **Rotation**
+-   [x] **Rotation** (Q/E for bed and chair; facing reaches the blueprint and building)
     -   Rotate directional buildings before placement.
--   [-] **Single-cell placement** (wall/bed per cell in drag rect)
--   [ ] **Line placement**
+-   [x] **Single-cell placement** (door, furniture)
+-   [x] **Line placement** (walls along the dominant drag axis)
     -   Walls/conduits.
--   [-] **Rectangle/area placement** (stockpile/harvest/cancel drag)
+-   [x] **Rectangle/area placement** (floor fill; stockpile/harvest/deconstruct/cancel areas)
     -   Floors/zones/roof designations where appropriate.
 -   [ ] **Drag continuous placement**
 
@@ -435,10 +435,10 @@ the player's primary world-editing command surface.
 
 -   [ ] **Mine**
 -   [ ] **Cut plants**
--   [-] **Harvest** (wild plants via Architect; no grow-zone/cut-plants)
--   [ ] **Hunt**
--   [ ] **Deconstruct**
--   [-] **Cancel**
+-   [x] **Harvest** (wild plants via Architect; zone crops automatic)
+-   [x] **Hunt**
+-   [x] **Deconstruct**
+-   [x] **Cancel** (blueprints, harvest and deconstruct marks, zones)
 -   [ ] **Forbid/unforbid**
 -   [ ] **Remove floor**
 -   [ ] **Remove roof**
@@ -447,10 +447,10 @@ the player's primary world-editing command surface.
 
 ## 5.4 Designation feedback
 
--   [ ] **Designation overlay**
+-   [x] **Designation overlay** (blueprints are translucent blue ghosts, scaffold once wood arrives; deconstruct marker on buildings)
     -   Clearly distinguish planned work from completed structures.
--   [ ] **Resource requirement feedback**
--   [ ] **Cancel designation interaction**
+-   [-] **Resource requirement feedback** (card cost + colony wood, placement total, `Haul wood to X (n/m)` in the order menu; no frame inspector)
+-   [x] **Cancel designation interaction** (Orders → Cancel area)
 -   [ ] **Selection inspector for blueprint/frame**
 
 ------------------------------------------------------------------------
@@ -485,7 +485,7 @@ the player's primary world-editing command surface.
 
 ## 6.3 Growing-zone configuration
 
--   [ ] **Crop selector**
+-   [-] **Crop selector** (growing-zone tool sows amberroot; no picker until more crops exist)
     -   Searchable plant list.
     -   required skill.
     -   growth time.
@@ -493,7 +493,7 @@ the player's primary world-editing command surface.
     -   expected yield.
     -   current research lock.
 -   [ ] **Allow sowing toggle**
--   [ ] **Plant-cut/harvest behavior feedback**
+-   [x] **Plant-cut/harvest behavior feedback**
 
 ## 6.4 Home area
 
@@ -536,9 +536,9 @@ interfaces.
         art, haul, clean, research.
     -   Column header icon/name.
     -   Tooltip explains work category.
--   [-] **Simple priorities mode** (toggle Haul/Construct/Grow via `SetWorkEnabled`; no 1–4)
+-   [-] **Simple priorities mode** (superseded by manual priorities; `SetWorkEnabled` still maps on/off to 3/off)
     -   Toggle work type on/off.
--   [ ] **Manual priorities mode**
+-   [x] **Manual priorities mode** (Work tab cells cycle off/1/2/3/4, shaded by urgency)
     -   Priority values equivalent to 1--4.
     -   Click cycles values.
     -   Drag paints a priority across cells.
@@ -567,12 +567,12 @@ interfaces.
 
 -   [ ] **24-hour columns**
 -   [ ] **Pawn rows**
--   [ ] **Schedule modes**
+-   [x] **Schedule modes** (anything, work, recreation, sleep brushes)
     -   Anything.
     -   Work.
     -   Sleep.
     -   Recreation.
--   [ ] **Paint schedule**
+-   [x] **Paint schedule** (click or drag across hour cells, per colonist or Everyone; current hour outlined)
     -   Select mode then drag cells.
 -   [ ] **Copy schedule**
 -   [ ] **Multi-pawn painting**
@@ -608,7 +608,7 @@ interfaces.
 
 ## 9.2 Mood
 
--   [ ] **Mood bar**
+-   [x] **Mood bar**
     -   Current mood.
     -   target mood if smoothed.
     -   break-risk thresholds.
@@ -617,9 +617,9 @@ interfaces.
 
 ## 9.3 Thought list
 
--   [ ] **Positive thoughts**
--   [ ] **Negative thoughts**
--   [ ] **Mood contribution**
+-   [x] **Positive thoughts**
+-   [x] **Negative thoughts**
+-   [x] **Mood contribution**
 -   [ ] **Remaining duration for memories where appropriate**
 -   [ ] **Stacking/count**
 -   [ ] **Situational explanation**
@@ -742,7 +742,7 @@ understandable.
 
 ## 12.1 Gear tab
 
--   [ ] **Equipped weapon**
+-   [x] **Equipped weapon**
     -   Name.
     -   quality.
     -   condition.
@@ -760,7 +760,7 @@ understandable.
 ## 12.2 Gear actions
 
 -   [ ] **Drop**
--   [ ] **Equip**
+-   [x] **Equip**
 -   [ ] **Wear**
 -   [ ] **Consume/use where valid**
 -   [ ] **Inspect item**
@@ -779,19 +779,19 @@ understandable.
 
 ## 13.1 Draft controls
 
--   [ ] **Draft toggle**
+-   [x] **Draft toggle** (inspector button + R)
     -   Prominent when colonist selected.
--   [ ] **Draft state in colonist bar**
+-   [x] **Draft state in colonist bar**
 -   [ ] **Multi-draft**
 
 ## 13.2 Tactical orders
 
--   [ ] **Move order**
+-   [x] **Move order** (drafted: right-click moves and holds)
     -   Right-click valid destination.
--   [ ] **Attack order**
+-   [x] **Attack order**
     -   Hostile target.
--   [ ] **Melee attack**
--   [ ] **Ranged attack**
+-   [x] **Melee attack**
+-   [x] **Ranged attack**
 -   [ ] **Fire-at-will toggle**
 -   [ ] **Hold position behavior if implemented**
 -   [ ] **Emergency tend**
@@ -810,12 +810,12 @@ understandable.
 
 ## 13.4 Combat feedback
 
--   [ ] **Damage indicators**
--   [ ] **Projectile/impact feedback**
--   [ ] **Downed/death feedback**
--   [ ] **Threat markers**
--   [ ] **Hostile faction coloring/icons**
--   [ ] **Pause-on-threat option**
+-   [x] **Damage indicators** (floating -N over hit pawns, animals and buildings; "miss" for missed shots)
+-   [x] **Projectile/impact feedback**
+-   [x] **Downed/death feedback**
+-   [x] **Threat markers** (red chevron over raiders, orange while fleeing; Raid alert and arrival message)
+-   [-] **Hostile faction coloring/icons** (raiders wear a reserved maroon cloth tint)
+-   [x] **Pause-on-threat option** (on by default, Options screen toggle; HUD reads "paused (threat)")
 
 ------------------------------------------------------------------------
 
@@ -824,26 +824,26 @@ understandable.
 ## 14.1 Workbench inspector
 
 -   [ ] **Power/operational state**
--   [ ] **Interaction status**
+-   [-] **Interaction status** (work spot outlined on selection)
 -   [ ] **Current worker/progress**
--   [ ] **Bills list**
+-   [x] **Bills list** (select a bench: bills with count/mode/status)
 
 ## 14.2 Bill stack
 
--   [ ] **Add bill**
+-   [-] **Add bill** (one button per recipe for that bench; no search)
     -   Search/filter recipes.
     -   show research/material constraints.
 -   [ ] **Reorder bills**
--   [ ] **Suspend bill**
--   [ ] **Delete bill**
+-   [x] **Suspend bill**
+-   [x] **Delete bill**
 -   [ ] **Copy/paste bills**
 
 ## 14.3 Bill configuration
 
--   [ ] **Do X times**
--   [ ] **Do forever**
--   [ ] **Do until X**
--   [ ] **Target count**
+-   [x] **Do X times**
+-   [x] **Do forever**
+-   [x] **Do until X**
+-   [x] **Target count** (-/+ buttons)
 -   [ ] **Pause/resume thresholds if supported**
 -   [ ] **Ingredient filter tree**
 -   [ ] **Ingredient search radius**
@@ -861,7 +861,7 @@ understandable.
 -   [ ] **Missing ingredient reason**
 -   [ ] **No valid worker reason**
 -   [ ] **No power reason**
--   [ ] **Research locked reason**
+-   [x] **Research locked reason** (architect tools, crops and bills greyed with "Needs research: X" on hover)
 -   [ ] **Output-count explanation**
 
 ------------------------------------------------------------------------
@@ -876,7 +876,7 @@ understandable.
     -   dependency lines.
     -   zoom/pan.
     -   search.
--   [ ] **Research project states**
+-   [x] **Research project states** (done / researching / available / needs X, progress bar)
     -   locked.
     -   available.
     -   selected.
@@ -897,7 +897,7 @@ understandable.
     -   recipes.
     -   items.
     -   systems.
--   [ ] **Select research command**
+-   [x] **Select research command** (click a project in the Research tab)
 
 ## 15.3 Plugin support
 
@@ -949,17 +949,17 @@ understandable.
 
 -   [ ] **Beauty values**
 -   [ ] **Selected pawn perceived beauty**
--   [ ] **Room beauty/impressiveness**
+-   [x] **Room beauty/impressiveness**
 
 ## 16.7 Room overlay
 
 -   [ ] **Room boundary**
--   [ ] **Room role**
+-   [x] **Room role**
 -   [ ] **Space**
 -   [ ] **beauty**
 -   [ ] **cleanliness**
 -   [ ] **wealth**
--   [ ] **impressiveness**
+-   [x] **impressiveness**
 
 ------------------------------------------------------------------------
 
@@ -1068,7 +1068,7 @@ This screen centralizes per-pawn behavioral policies.
     -   area/pen.
     -   training.
     -   pregnancy/product state where applicable.
--   [ ] **Slaughter toggle**
+-   [x] **Slaughter toggle**
 -   [ ] **Medical care**
 -   [ ] **Rename**
 -   [ ] **Master assignment**
@@ -1076,7 +1076,7 @@ This screen centralizes per-pawn behavioral policies.
 ## 19.2 Training matrix
 
 -   [ ] **Obedience**
--   [ ] **Release**
+-   [x] **Release**
 -   [ ] **Rescue**
 -   [ ] **Haul**
 -   [ ] **Current training progress**
@@ -1085,7 +1085,7 @@ This screen centralizes per-pawn behavioral policies.
 ## 19.3 Pen UI
 
 -   [ ] **Pen marker inspector**
--   [ ] **Pen boundary visualization**
+-   [x] **Pen boundary visualization** (brown wash, fence rails and posts)
 -   [ ] **Enclosure validity**
 -   [ ] **Assigned species**
 -   [ ] **Nutrition/grazing capacity**
@@ -1100,7 +1100,7 @@ This screen centralizes per-pawn behavioral policies.
 -   [ ] **Hunt risk**
 -   [ ] **Tame chance/wildness**
 -   [ ] **Body size/meat yield context**
--   [ ] **Hunt designation toggle**
+-   [x] **Hunt designation toggle**
 -   [ ] **Sort/filter**
 
 ------------------------------------------------------------------------
@@ -1114,7 +1114,7 @@ This screen centralizes per-pawn behavioral policies.
 -   [ ] **Resistance**
 -   [ ] **Recruitment difficulty**
 -   [ ] **Mood**
--   [ ] **Health**
+-   [x] **Health**
 -   [ ] **Interaction mode**
 
 ## 20.2 Interaction modes
@@ -1244,7 +1244,7 @@ the player what just happened and what requires attention.
 
 ## 23.3 Alerts
 
--   [ ] **Persistent alert list**
+-   [x] **Persistent alert list**
     -   Critical issues remain until resolved.
 -   [ ] **Severity ordering**
 -   [ ] **Expandable details**
@@ -1265,7 +1265,7 @@ the player what just happened and what requires attention.
 
 ## 23.4 Alert scalability
 
--   [ ] **Aggregate repeated alerts**
+-   [x] **Aggregate repeated alerts**
     -   "27 colonists need treatment" rather than 27 cards.
 -   [ ] **Search/group in large colonies**
 -   [ ] **Do not recompute expensive alert queries in UI every frame**
@@ -1602,8 +1602,8 @@ the player what just happened and what requires attention.
 ## 33.1 In-game menu
 
 -   [x] **Resume**
--   [-] **Save** (disabled)
--   [-] **Load** (disabled from pause; empty stub from main menu)
+-   [x] **Save** (writes the colony's slot, "saved <slot>" hint)
+-   [x] **Load** (pause and main menu open the save list; main menu Continue loads the newest)
 -   [-] **Options** (opens stub, Back returns to pause)
 -   [x] **Return to main menu**
 -   [x] **Quit**
@@ -1621,15 +1621,15 @@ the player what just happened and what requires attention.
 
 ## 33.3 Load dialog
 
--   [ ] **Save list**
+-   [x] **Save list** (newest first: slot, game date, colonists, file time)
 -   [ ] **Version**
--   [ ] **Game date**
+-   [x] **Game date**
 -   [ ] **Colony**
 -   [ ] **Plugin set**
 -   [ ] **Compatibility warning**
 -   [ ] **Missing plugin warning**
 -   [ ] **Migration warning/error**
--   [ ] **Corrupt save handling**
+-   [x] **Corrupt save handling** (listed disabled with the reason)
 -   [ ] **Delete save confirmation**
 
 ## 33.4 Autosave feedback
@@ -1913,7 +1913,7 @@ source and intended for AI-assisted development.
 -   [ ] **Temperature**
 -   [ ] **Power**
 -   [ ] **Rendering**
--   [ ] **Alerts**
+-   [x] **Alerts**
 -   [ ] **Plugins**
 
 ## 39.3 Timeline capture
@@ -1972,7 +1972,7 @@ manageable beyond vanilla-scale colonies.
 
 ## 40.5 Aggregation
 
--   [ ] **Aggregated alerts**
+-   [x] **Aggregated alerts**
 -   [ ] **Aggregated health warnings**
 -   [ ] **Idle pawn groups**
 -   [ ] **Food/medicine strategic summaries**

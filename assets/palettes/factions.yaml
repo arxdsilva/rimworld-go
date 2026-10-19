@@ -1,0 +1,7 @@
+# rimworld-go faction accents (ART spec §18, §33). Saturated colour is
+# reserved for faction identity; apply as tints on accent regions.
+version: 1
+factions:
+  player:   {accent: "#3f8fd0"}
+  outlander: {accent: "#c9a03a"}
+  pirate:   {accent: "#c2413a"}

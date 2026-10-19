@@ -1,6 +1,7 @@
 package game
 
 import (
+	"reflect"
 	"testing"
 
 	"rimworld-go/internal/domain/sim/clock"
@@ -140,7 +141,7 @@ func TestStepIsDeterministicForSameSeed(t *testing.T) {
 		t.Fatalf("snapshot length mismatch: %d != %d", len(a), len(b))
 	}
 	for i := range a {
-		if a[i] != b[i] {
+		if !reflect.DeepEqual(a[i], b[i]) {
 			t.Fatalf("snapshot[%d] diverged: %+v != %+v", i, a[i], b[i])
 		}
 	}

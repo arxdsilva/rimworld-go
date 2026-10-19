@@ -9,7 +9,7 @@ import (
 
 // skyOverlayMaxAlpha is the night-time veil. Keep it low so sprites
 // stay readable; the grade is a hint, not a filter.
-const skyOverlayMaxAlpha = 48
+const skyOverlayMaxAlpha = 96
 
 // skyOverlay is a presentation-only grade over the world. Morning and
 // afternoon stay clear. Evening and night raise alpha as outdoor light
@@ -26,7 +26,10 @@ func skyOverlay(t clock.Tick) color.RGBA {
 	rgb := skyHue(clock.HourOfDay(t))
 	level := float64(lighting.Outdoor(t))
 	a := uint8((1 - level) * skyOverlayMaxAlpha)
-	return color.RGBA{R: rgb[0], G: rgb[1], B: rgb[2], A: a}
+	// color.RGBA is alpha-premultiplied: un-premultiplied sky RGB would
+	// add light instead of tinting the scene darker.
+	pm := func(v uint8) uint8 { return uint8(uint16(v) * uint16(a) / 255) }
+	return color.RGBA{R: pm(rgb[0]), G: pm(rgb[1]), B: pm(rgb[2]), A: a}
 }
 
 func skyHue(h float64) [3]uint8 {

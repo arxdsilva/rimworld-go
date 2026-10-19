@@ -19,7 +19,9 @@ commands via `Enqueue`. Domain code does not import this package.
 - colony HUD: Food/Wood/time strip, colonist bar, Architect, Work, inspector
 - main-menu colonist splash (original PNG, left of the action rail)
 - `Renderer` — colony camera, speed tiers, selection, world draw, `Enqueue`
-- vendor sprite atlas load
+- original art catalog (`assets/metadata` + generated PNGs, tint masks) and
+  its draw path (`art.go`, `draw_art.go`); vendor sprite atlas as fallback
+- dev screenshot capture (`capture.go`, `game -capture`)
 - presentation animation / tile lerp clocks
 
 ## Allowed dependencies
@@ -29,7 +31,7 @@ commands via `Enqueue`. Domain code does not import this package.
   `Tick`, `Date`, `Activity`)
 - `internal/domain` types that appear on that read model (`clock`,
   `entity`, `schedule`, `command`)
-- Ebitengine, image/png, OS path lookup for the vendor pack and menu splash
+- Ebitengine, image/png, OS path lookup for generated art, the vendor pack and menu splash
 
 ## Forbidden dependencies
 
@@ -50,8 +52,19 @@ commands via `Enqueue`. Domain code does not import this package.
 - Escape on colony: Architect, then Work, then inspector selection, then pause.
 - Disabled buttons do not navigate; they expose a reason string.
 - `Layout` follows the window size; camera/zoom stay presentation-only.
-- Architect tools emit `DesignateWall/Bed/Stockpile/Harvest/Cancel`.
-- Work Grow/Bld/Haul cells emit `SetWorkEnabled`. Right-click emits `MovePawn`.
+- Architect (`architect.go`, `archtools.go`): categories Orders/Zones/
+  Structure/Furniture; cards read costs from `game.Buildables()`; build
+  tools emit `DesignateBuild` (kind id + facing) only for cells where
+  `Simulation.CanPlace` is ok; area tools emit one rectangle command
+  (`DesignateStockpile/Harvest/Deconstruct/Cancel`). Q/E rotate,
+  right-click or Escape leaves the tool.
+- Work Grow/Bld/Haul cells emit `SetWorkEnabled`.
+- Pawn orders (`orders.go`): Draft button / R emits `DraftPawn`. Right-click
+  with a pawn selected: drafted -> `MovePawn`; undrafted -> menu built from
+  `Simulation.OrdersAt` (each entry carries its command or a disabled
+  reason). Escape closes the menu first.
+- The `Simulation` interface also exposes read-only `CanPlace` and
+  `OrdersAt`; the adapter never re-implements placement or order rules.
 
 ## Invariants
 
@@ -87,3 +100,20 @@ open a window. Existing renderer unit tests stay headless.
 ## Benchmarks
 
 None yet. Add them when colony draw or UI layout shows up in profiles.
+
+## Original art (ART-006)
+
+- When `assets/metadata` exists the renderer draws generated art only
+  (`drawArt`); the vendor pack is used only if art loading fails.
+- Placement: sprite top-left = footprint top-left - `origin_px` * (tile/128).
+- Draw order: terrain -> grass decals -> stockpile/blueprint -> objects
+  and pawns sorted by row then column -> designations -> selection -> daylight.
+- Walls pick `wall_wood_<mask>` (N=1 E=2 S=4 W=8). Beds draw `bed_cot`
+  (domain beds are single-cell). Frames draw scaffold once wood arrives.
+- Pawn look (skin/hair/style/clothes) is a pure function of EntityID;
+  facing comes from the last tile step. Both are presentation-only.
+- Tinted textures are baked once per (sprite, tint) on the CPU and cached.
+- `TestGeneratedArtCoversRenderer` fails if the renderer asks for a sprite
+  that `make art` does not produce.
+- `game -capture out.png` boots, starts a colony, enqueues a fixed set of
+  ordinary commands, steps the sim and writes one frame (`make art-capture`).

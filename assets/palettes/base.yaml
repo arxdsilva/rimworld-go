@@ -1,0 +1,20 @@
+# rimworld-go base palette and global visual tokens (ART spec §6, §33).
+version: 1
+outline:
+  darken: 0.32          # outline = adjacent sprite colour * darken (chromatic, not black)
+  width_px_1x: 2
+shadow:
+  rgb: "#1a1714"
+  alpha: 0.30
+  offset_px_1x: [2.5, 3]  # lower-right
+overlay:
+  selection:   "#f2f2e6"
+  designation: "#f0d43c"
+  blueprint:   "#5ab4dc"
+  stockpile:   "#dcc850"
+  danger:      "#e0513c"
+# Runtime tint presets for neutral (tint: true) materials.
+tints:
+  skin:  {pale: "#f0d3be", light: "#dcb08e", tan: "#bf8a62", brown: "#8f5f3f", dark: "#5e3d29"}
+  hair:  {black: "#2b2522", brown: "#5a3b26", auburn: "#8a4a2c", blond: "#d6b46e", grey: "#a7a39d"}
+  cloth: {sand: "#cbb48c", olive: "#7a8150", navy: "#3f5170", rust: "#a2593a", slate: "#6b7480", cream: "#e3dccb", raider: "#4b2626"}

@@ -1,2 +1,2 @@
-// Package terrain TODO: document package responsibility.
+// Package terrain is the per-tile ground type of the map.
 package terrain

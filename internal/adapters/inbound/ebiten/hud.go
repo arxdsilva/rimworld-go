@@ -3,8 +3,10 @@ package ebiten
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
 )
@@ -23,10 +25,10 @@ var hudTabSpecs = []struct {
 }{
 	{"tab.architect", "Architect", true},
 	{"tab.work", "Work", true},
-	{"tab.schedule", "Schedule", false},
+	{"tab.schedule", "Schedule", true},
 	{"tab.assign", "Assign", false},
-	{"tab.animals", "Animals", false},
-	{"tab.research", "Research", false},
+	{"tab.animals", "Animals", true},
+	{"tab.research", "Research", true},
 	{"tab.world", "World", false},
 	{"tab.history", "History", false},
 	{"tab.factions", "Factions", false},
@@ -65,7 +67,16 @@ func (a *App) hudTabButtons(sw, sh int) []button {
 			b.disabled = true
 			b.reason = "not implemented"
 		}
-		if t.id == "tab.work" && a.workOpen {
+		if t.id == "tab.work" && a.workOpen && (a.panelMode == "work" || a.panelMode == "") {
+			b.selected = true
+		}
+		if t.id == "tab.animals" && a.workOpen && a.panelMode == "animals" {
+			b.selected = true
+		}
+		if t.id == "tab.research" && a.workOpen && a.panelMode == "research" {
+			b.selected = true
+		}
+		if t.id == "tab.schedule" && a.workOpen && a.panelMode == "schedule" {
 			b.selected = true
 		}
 		if t.id == "tab.architect" && a.archOpen {
@@ -99,9 +110,14 @@ func (a *App) colonistBarButtons(sw, sh int) []button {
 }
 
 func (a *App) colonyButtons(sw, sh int) []button {
-	out := a.hudTabButtons(sw, sh)
+	out := a.floatButtons() // topmost first: hit-testing takes the first match
+	out = append(out, a.hudTabButtons(sw, sh)...)
 	out = append(out, a.colonistBarButtons(sw, sh)...)
 	out = append(out, a.inspectorButtons()...)
+	out = append(out, a.orderQueueButtons()...)
+	out = append(out, a.buildingButtons()...)
+	out = append(out, a.animalButtons()...)
+	out = append(out, a.alertButtons(sw)...)
 	out = append(out, a.architectButtons()...)
 	out = append(out, a.workButtons()...)
 	return out
@@ -111,12 +127,19 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 	if a.renderer == nil {
 		return
 	}
+	a.drawArchitectGhost(screen)
 	drawPanel(screen, 0, 0, float32(sw), hudTopH)
 	x := hudPad
 	wld := a.renderer.world()
 	drawLabel(screen, x, 10, fmt.Sprintf("Food %d", wld.Food))
 	x += 90
 	drawLabel(screen, x, 10, fmt.Sprintf("Wood %d", wld.Wood))
+	x += 90
+	drawLabel(screen, x, 10, fmt.Sprintf("Stone %d", wld.Stone))
+	x += 90
+	if wld.Season != "" {
+		drawLabel(screen, x, 10, fmt.Sprintf("%s  %s outside", wld.Season, fmtTemp(wld.OutdoorTemp)))
+	}
 	time := fmt.Sprintf("%s  %s  %s", a.renderer.date(), a.renderer.speedRate(), a.renderer.activity())
 	drawLabel(screen, sw-len(time)*7-hudPad, 10, time)
 
@@ -126,11 +149,17 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 	a.drawButtons(screen, a.colonistBarButtons(sw, sh), mx, my)
 	a.drawColonistPortraits(screen, sh)
 	a.drawInspector(screen)
+	a.drawOrderQueue(screen)
+	a.drawBuildingInspector(screen)
+	a.drawAnimalInspector(screen)
+	a.drawAlerts(screen, sw)
 	a.drawArchitect(screen)
-	a.drawArchitectGhost(screen)
 	if a.workOpen {
 		a.drawWork(screen, sw, sh)
 	}
+	a.drawFloat(screen)
+	a.drawMessages(screen)
+	a.drawHoverRoom(screen, sh)
 }
 
 func (a *App) drawColonistPortraits(screen *ebiten.Image, sh int) {
@@ -139,11 +168,18 @@ func (a *App) drawColonistPortraits(screen *ebiten.Image, sh int) {
 	for i, p := range pawns {
 		x := float64(hudPad + i*barSlot + 6)
 		a.drawPawnPortrait(screen, p, x, y, 40, 48)
+		if p.Drafted {
+			drawIcon(screen, a.icon("draft"), x+24, y-2, 18)
+		}
+		vector.FillRect(screen, float32(x), float32(y)+46, 40*float32(p.Mood)/100, 3, moodColor(p.Mood), false)
 		drawLabel(screen, int(x), int(hudBarY(sh))+hudBarH-14, pawnLabel(p))
 	}
 }
 
 func (a *App) drawPawnPortrait(screen *ebiten.Image, p game.PawnView, x, y, w, h float64) {
+	if a.renderer.art != nil && a.renderer.drawPawnPortraitArt(screen, p, x, y, w, h) {
+		return
+	}
 	if a.renderer.pack == nil {
 		return
 	}
@@ -159,17 +195,142 @@ func (a *App) colonyChromeHit(mx, my, sw, sh int) bool {
 	if my < hudTopH {
 		return true
 	}
+	if a.float.open && a.floatRect().contains(mx, my) {
+		return true
+	}
 	if my >= int(hudBarY(sh)) {
 		return true
 	}
 	if a.workOpen && workRect(sw, sh).contains(mx, my) {
 		return true
 	}
-	if a.archOpen && architectRect().contains(mx, my) {
+	if a.archOpen && a.architectRect().contains(mx, my) {
 		return true
 	}
 	if a.renderer != nil && a.renderer.HasSelect() && !a.workOpen && inspectorRect().contains(mx, my) {
 		return true
 	}
+	if p, ok := a.selectedPawn(); ok && len(p.QueuedOrders) > 0 && !a.workOpen && orderQueueRect(len(p.QueuedOrders)).contains(mx, my) {
+		return true
+	}
+	if a.hasBuilding && !a.workOpen && !a.archOpen && buildingRect().contains(mx, my) {
+		return true
+	}
 	return false
+}
+
+// drawHoverRoom shows what is under the cursor (soil, room, plant, items)
+// as a panel in the bottom-right corner, above the colonist bar.
+func (a *App) drawHoverRoom(screen *ebiten.Image, sh int) {
+	if a.renderer == nil {
+		return
+	}
+	mx, my := a.currentCursor()
+	sw, _ := a.size()
+	if a.colonyChromeHit(mx, my, sw, sh) {
+		return
+	}
+	tx, ty := a.renderer.TileAt(mx, my)
+	w := a.renderer.world()
+	lines := soilLines(w, tx, ty)
+	if len(lines) == 0 {
+		return
+	}
+	if t, indoors := tileTemp(w, tx, ty); indoors {
+		lines = append(lines, "Temperature "+fmtTemp(t)+" (indoors)")
+	} else {
+		lines = append(lines, "Temperature "+fmtTemp(t))
+	}
+	for _, lbl := range []string{roomLabelAt(w, tx, ty), plantLabelAt(w, tx, ty), itemLabelAt(w, tx, ty)} {
+		if lbl != "" {
+			lines = append(lines, lbl)
+		}
+	}
+	drawHoverPanel(screen, sw, int(hudBarY(sh)), lines)
+}
+
+// drawHoverPanel draws lines in a right-aligned panel whose bottom edge sits
+// just above bottomY. The first line is the title.
+func drawHoverPanel(screen *ebiten.Image, sw, bottomY int, lines []string) {
+	const lineH, pad = 16, 8
+	wid := 0
+	for _, l := range lines {
+		if n := len(l) * 6; n > wid {
+			wid = n
+		}
+	}
+	pw, ph := wid+pad*2, len(lines)*lineH+pad*2-4
+	px, py := sw-pw-hudPad, bottomY-ph-hudPad
+	drawPanel(screen, float32(px), float32(py), float32(pw), float32(ph))
+	for i, l := range lines {
+		drawLabel(screen, px+pad, py+pad-2+i*lineH, l)
+	}
+}
+
+// soilLines describes the ground on a tile: its type, fertility and whether
+// crops can be grown there.
+func soilLines(w game.WorldView, x, y int) []string {
+	if w.TerrainW <= 0 || x < 0 || y < 0 || x >= w.TerrainW {
+		return nil
+	}
+	i := y*w.TerrainW + x
+	if i >= len(w.Terrain) {
+		return nil
+	}
+	soils := game.Soils()
+	c := int(w.Terrain[i])
+	if c >= len(soils) {
+		return nil
+	}
+	s := soils[c]
+	lines := []string{s.Label, fmt.Sprintf("Fertility %d%%", s.Fertility)}
+	switch {
+	case !s.Walkable:
+		lines = append(lines, "Impassable, mine to clear")
+	case !s.Farmable:
+		lines = append(lines, "Not farmable")
+	case s.Fertility > 100:
+		lines = append(lines, fmt.Sprintf("Farmable, crops grow %d%% faster", s.Fertility-100))
+	case s.Fertility < 100:
+		lines = append(lines, fmt.Sprintf("Farmable, crops grow %d%% slower", 100-s.Fertility))
+	default:
+		lines = append(lines, "Farmable, normal growth")
+	}
+	return lines
+}
+
+// plantLabelAt describes the plant on a tile ("Corn, 62% grown").
+func plantLabelAt(w game.WorldView, x, y int) string {
+	for _, p := range w.Plants {
+		if p.X != x || p.Y != y {
+			continue
+		}
+		name := strings.ReplaceAll(p.Species, "_", " ")
+		name = strings.ToUpper(name[:1]) + name[1:]
+		switch {
+		case p.Harvestable:
+			return name + ", ready to harvest"
+		default:
+			return fmt.Sprintf("%s, %d%% grown", name, p.Growth)
+		}
+	}
+	return ""
+}
+
+// itemLabelAt describes the ground stack on a tile ("Potatoes x 240").
+func itemLabelAt(w game.WorldView, x, y int) string {
+	for _, it := range w.Items {
+		if it.X == x && it.Y == y && !it.Carried {
+			name := it.Kind
+			if it.Dried {
+				name = "dried " + name
+			}
+			s := fmt.Sprintf("%s%s x %d", strings.ToUpper(name[:1]), name[1:], it.Qty)
+			if f := freshLabel(it); f != "" {
+				s += ", " + f
+			}
+			return s
+		}
+	}
+	return ""
 }

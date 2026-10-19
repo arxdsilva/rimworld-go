@@ -10,6 +10,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
+	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -47,11 +48,18 @@ type SimFactory func() (Simulation, error)
 
 // AppConfig is the composition-root wiring for the interactive client.
 type AppConfig struct {
-	Version    string
-	Assets     string // empty: locate the vendor pack from cwd
-	NewSim     SimFactory
-	LoadPack   func() (*atlas, error)
+	Version  string
+	Assets   string // empty: locate the vendor pack from cwd
+	NewSim   SimFactory
+	LoadPack func() (*atlas, error)
+	// LoadArt loads the original generated sprites (assets/metadata).
+	// Nil: locate from cwd. When it fails the vendor pack is used.
+	LoadArt    func() (*artCatalog, error)
 	LoadSplash func() (*ebiten.Image, error)
+	// Capture, when set, runs a scripted screenshot session and quits.
+	Capture *Capture
+	// Saves connects save/load to storage (zero value: disabled).
+	Saves SaveHooks
 }
 
 // App is the ebiten.Game shell: screen routing, widgets, and (once
@@ -64,6 +72,7 @@ type App struct {
 	bootFrames int
 	packTried  bool
 	pack       *atlas
+	art        *artCatalog
 	packWarn   string
 	splash     *ebiten.Image
 	sessionErr string
@@ -72,16 +81,38 @@ type App struct {
 
 	scenario    int
 	storyteller int
-	difficulty  int
+	// noThreatPause turns off pausing when a threat arrives (Options).
+	noThreatPause bool
+	difficulty    int
 
 	simsStarted                    int
 	renderer                       *Renderer
 	workOpen                       bool
 	archOpen                       bool
+	archCat                        string
 	archTool                       string
+	archFacing                     uint8
+	archStuff                      string // "wood" or "stone" for tools that allow both
+	archCrop                       string // crop the growing-zone tool sows
+	float                          floatMenu
+	cursor                         *[2]int // capture-only synthetic cursor
+	selBuilding                    entity.EntityID
+	hasBuilding                    bool
+	selAnimal                      entity.EntityID
+	hasAnimal                      bool
+	alertCycle                     map[string]int
 	archDrag                       bool
 	archX0, archY0, archX1, archY1 int
 	inspectTab                     string
+	capture                        captureState
+	msgSeen                        map[string]uint64 // message key -> frame first shown
+	saveSlot                       string            // current colony's save slot
+	autosaveDay                    int               // in-game day of the last autosave
+	slots                          []SaveSlot        // load screen list
+	slotsRead                      bool              // main menu read the list once
+	panelMode                      string            // "work" or "schedule" while workOpen
+	schedBrush                     schedule.Activity // activity the schedule paints
+	lastPainted                    string            // schedule cell last painted by a drag
 }
 
 // NewApp returns an App on the boot screen. Simulation is not created
@@ -101,6 +132,15 @@ func NewApp(cfg AppConfig) *App {
 				return nil, err
 			}
 			return loadAtlasFromRoot(root)
+		}
+	}
+	if cfg.LoadArt == nil {
+		cfg.LoadArt = func() (*artCatalog, error) {
+			root, err := LocateArt()
+			if err != nil {
+				return nil, err
+			}
+			return loadArtCatalog(root)
 		}
 	}
 	if cfg.LoadSplash == nil {
@@ -165,15 +205,38 @@ func (a *App) Update() error {
 
 	if a.nav.screen() == screenColony && a.nav.overlay() == overlayNone && a.renderer != nil {
 		a.renderer.handleSpeedInput()
-		a.renderer.handleCameraInput()
-		a.handleArchitectDrag(consumed)
-		if !consumed && !a.archOpen {
-			a.renderer.handleSelectionInput()
-			a.handleMoveOrder()
+		if a.cfg.Capture == nil { // captures frame the camera themselves
+			a.renderer.handleCameraInput(colonyViewport(sw, sh))
+		}
+		a.handleScheduleDrag()
+		if a.float.open && !consumed && inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+			a.closeFloat() // click outside the order menu just closes it
+			consumed = true
+		}
+		a.handleArchitectInput(consumed)
+		if a.archTool == "" {
+			if !consumed && inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+				a.renderer.handleSelectionInput()
+				if a.renderer.HasSelect() {
+					a.clearBuilding()
+					a.clearAnimal()
+				} else {
+					mx, my := a.currentCursor()
+					tx, ty := a.renderer.TileAt(mx, my)
+					if !a.selectAnimalAt(tx, ty) {
+						a.selectBuildingAt(tx, ty)
+					}
+				}
+			}
+			a.handleOrders()
 		}
 	}
-	a.tick()
-	if a.shouldQuit {
+	if a.cfg.Capture != nil {
+		a.tickCapture()
+	} else {
+		a.tick()
+	}
+	if a.shouldQuit && (a.cfg.Capture == nil || a.capture.done) {
 		return ebiten.Termination
 	}
 	return nil
@@ -190,14 +253,25 @@ func (a *App) handleColonyEscape() bool {
 	if a.nav.screen() != screenColony || a.nav.overlay() != overlayNone {
 		return false
 	}
-	if a.archOpen {
-		a.archOpen = false
+	if a.float.open {
+		a.closeFloat()
+		return true
+	}
+	if a.archOpen && a.archTool != "" {
 		a.archTool = ""
 		a.archDrag = false
 		return true
 	}
+	if a.archOpen {
+		a.closeArchitect()
+		return true
+	}
 	if a.workOpen {
 		a.workOpen = false
+		return true
+	}
+	if a.hasBuilding {
+		a.clearBuilding()
 		return true
 	}
 	if a.renderer != nil && a.renderer.HasSelect() {
@@ -225,6 +299,7 @@ func (a *App) tick() {
 	case screenColony:
 		if a.nav.overlay() == overlayNone && a.renderer != nil {
 			a.renderer.advance()
+			a.tickAutosave()
 		}
 	}
 }
@@ -254,6 +329,16 @@ func (a *App) loadPack() {
 			a.pack = p
 		}
 	}
+	if a.cfg.LoadArt != nil {
+		art, err := a.cfg.LoadArt()
+		if err != nil {
+			if a.packWarn == "" {
+				a.packWarn = err.Error()
+			}
+		} else {
+			a.art = art
+		}
+	}
 	a.loadSplash()
 }
 
@@ -270,31 +355,82 @@ func (a *App) applyClick(id string) {
 		n, err := strconv.ParseUint(strings.TrimPrefix(id, "bar.pawn."), 10, 64)
 		if err == nil && a.renderer != nil {
 			a.renderer.Select(entity.EntityID(n))
+			a.clearBuilding()
 		}
-	case id == "tab.work":
-		a.workOpen = !a.workOpen
-		if a.workOpen {
-			a.archOpen = false
-			a.archTool = ""
-			a.archDrag = false
-		}
-	case id == "tab.architect":
-		a.archOpen = !a.archOpen
-		if a.archOpen {
+	case strings.HasPrefix(id, "research.pick."):
+		a.pickResearch(id)
+	case strings.HasPrefix(id, "animals."):
+		a.applyAnimalsTab(id)
+	case id == "tab.work", id == "tab.schedule", id == "tab.research", id == "tab.animals":
+		mode := strings.TrimPrefix(id, "tab.")
+		if a.workOpen && a.panelMode == mode {
 			a.workOpen = false
-			if a.archTool == "" {
-				a.archTool = "wall"
-			}
 		} else {
-			a.archTool = ""
-			a.archDrag = false
+			a.workOpen, a.panelMode = true, mode
+			a.closeArchitect()
+			a.closeFloat()
 		}
+	case strings.HasPrefix(id, "sched.brush."):
+		if v, err := strconv.Atoi(strings.TrimPrefix(id, "sched.brush.")); err == nil {
+			a.schedBrush = schedule.Activity(v)
+		}
+	case strings.HasPrefix(id, "sched.cell."):
+		a.paintSchedule(id)
+	case id == "tab.architect":
+		if a.archOpen {
+			a.closeArchitect()
+		} else {
+			a.openArchitect()
+		}
+	case strings.HasPrefix(id, "arch.cat."):
+		a.selectArchCategory(strings.TrimPrefix(id, "arch.cat."))
+	case strings.HasPrefix(id, "arch.stuff."):
+		a.archStuff = strings.TrimPrefix(id, "arch.stuff.")
+	case strings.HasPrefix(id, "arch.crop."):
+		a.archCrop = strings.TrimPrefix(id, "arch.crop.")
 	case strings.HasPrefix(id, "arch.tool."):
-		a.archTool = strings.TrimPrefix(id, "arch.tool.")
+		a.selectArchTool(strings.TrimPrefix(id, "arch.tool."))
+	case strings.HasPrefix(id, "float."):
+		a.chooseFloat(id)
+	case strings.HasPrefix(id, "load.slot."):
+		if i, err := strconv.Atoi(strings.TrimPrefix(id, "load.slot.")); err == nil {
+			a.loadSlot(i)
+		}
+	case id == "pause.save":
+		a.saveNow(a.saveSlot)
+		a.apply(intent{kind: intentResume})
+	case id == "pause.load", id == "menu.load":
+		a.refreshSlots()
+		a.apply(intent{kind: intentPush, screen: screenLoad})
+	case id == "menu.continue":
+		a.refreshSlots()
+		for i, sl := range a.slots {
+			if sl.Err == "" {
+				a.loadSlot(i)
+				break
+			}
+		}
+	case id == "pawn.draft":
+		a.toggleDraft()
+	case id == "pawn.clearorders":
+		if p, ok := a.selectedPawn(); ok {
+			a.renderer.enqueue(command.Command{Kind: command.ClearOrders, Pawn: uint64(p.ID)})
+		}
+	case strings.HasPrefix(id, "animal."):
+		a.applyAnimalClick(id)
+	case strings.HasPrefix(id, "alert."):
+		a.focusAlert(id)
+	case strings.HasPrefix(id, "bldg.") || strings.HasPrefix(id, "bill."):
+		a.applyBuildingClick(id)
 	case strings.HasPrefix(id, "work.cell."):
 		a.toggleWorkCell(id)
 	case id == "tab.menu":
 		a.apply(intent{kind: intentPause})
+	case id == "options.pausethreat":
+		a.noThreatPause = !a.noThreatPause
+		if a.renderer != nil {
+			a.renderer.pauseOnThreat = !a.noThreatPause
+		}
 	case id == "inspector.close":
 		if a.renderer != nil {
 			a.renderer.ClearSelect()
@@ -303,6 +439,8 @@ func (a *App) applyClick(id string) {
 		a.inspectTab = "character"
 	case id == "inspector.needs":
 		a.inspectTab = "needs"
+	case id == "inspector.gear":
+		a.inspectTab = "gear"
 	case id == "scenario.0":
 		a.scenario = 0
 	case id == "scenario.1":
@@ -387,15 +525,25 @@ func (a *App) startGame() {
 		a.sessionErr = err.Error()
 		return
 	}
+	a.startSession(sim)
+	a.saveSlot = newSlotName()
+	a.autosaveDay = 0
+}
+
+// startSession installs a simulation (new or loaded) as the colony.
+func (a *App) startSession(sim Simulation) {
 	a.sessionErr = ""
 	a.simsStarted++
 	a.workOpen = false
-	a.archOpen = false
-	a.archTool = "wall"
-	a.archDrag = false
+	a.closeArchitect()
+	a.archCat = ""
+	a.archFacing = 0
+	a.closeFloat()
 	a.inspectTab = "character"
 	a.renderer = New(sim)
 	a.renderer.pack = a.pack
+	a.renderer.art = a.art
+	a.renderer.pauseOnThreat = !a.noThreatPause
 	a.nav.reset(frame{screen: screenColony})
 }
 
@@ -449,6 +597,7 @@ func (a *App) Draw(screen *ebiten.Image) {
 	}
 
 	a.drawHoverHint(screen, sw, sh)
+	a.drawCapture(screen)
 }
 
 func (a *App) drawHoverHint(screen *ebiten.Image, sw, sh int) {
@@ -586,6 +735,9 @@ func formatVersion(v string) string {
 }
 
 func (a *App) currentCursor() (int, int) {
+	if a.cursor != nil {
+		return a.cursor[0], a.cursor[1]
+	}
 	return ebiten.CursorPosition()
 }
 
@@ -598,88 +750,6 @@ func (a *App) paintMenu(screen *ebiten.Image, sw, sh int, title string, body []s
 
 func drawDim(screen *ebiten.Image, sw, sh int) {
 	vector.FillRect(screen, 0, 0, float32(sw), float32(sh), uiDim, false)
-}
-
-func (a *App) handleMoveOrder() {
-	if a.renderer == nil || !a.renderer.HasSelect() {
-		return
-	}
-	if !inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
-		return
-	}
-	mx, my := ebiten.CursorPosition()
-	tx, ty := a.renderer.TileAt(mx, my)
-	a.renderer.enqueue(command.Command{
-		Kind: command.MovePawn,
-		Pawn: uint64(a.renderer.Selected()),
-		X:    tx,
-		Y:    ty,
-	})
-}
-
-func (a *App) handleArchitectDrag(chromeConsumed bool) {
-	if !a.archOpen || a.archTool == "" || a.renderer == nil {
-		return
-	}
-	mx, my := ebiten.CursorPosition()
-	sw, sh := a.size()
-	onMap := !a.colonyChromeHit(mx, my, sw, sh)
-	tx, ty := a.renderer.TileAt(mx, my)
-	if !chromeConsumed && onMap && inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-		a.archDrag = true
-		a.archX0, a.archY0 = tx, ty
-		a.archX1, a.archY1 = tx, ty
-	}
-	if a.archDrag && ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && onMap {
-		a.archX1, a.archY1 = tx, ty
-	}
-	if a.archDrag && inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft) {
-		if onMap {
-			a.archX1, a.archY1 = tx, ty
-		}
-		a.submitArchitect()
-		a.archDrag = false
-	}
-}
-
-func (a *App) submitArchitect() {
-	if a.renderer == nil {
-		return
-	}
-	x0, y0, x1, y1 := a.archX0, a.archY0, a.archX1, a.archY1
-	kind := command.None
-	switch a.archTool {
-	case "wall":
-		kind = command.DesignateWall
-	case "bed":
-		kind = command.DesignateBed
-	case "stockpile":
-		kind = command.DesignateStockpile
-	case "harvest":
-		kind = command.DesignateHarvest
-	case "cancel":
-		kind = command.DesignateCancel
-	}
-	if kind == command.None {
-		return
-	}
-	if kind == command.DesignateWall || kind == command.DesignateBed {
-		minX, maxX := x0, x1
-		if maxX < minX {
-			minX, maxX = maxX, minX
-		}
-		minY, maxY := y0, y1
-		if maxY < minY {
-			minY, maxY = maxY, minY
-		}
-		for y := minY; y <= maxY; y++ {
-			for x := minX; x <= maxX; x++ {
-				a.renderer.enqueue(command.Command{Kind: kind, X: x, Y: y})
-			}
-		}
-		return
-	}
-	a.renderer.enqueue(command.Command{Kind: kind, X: x0, Y: y0, X2: x1, Y2: y1})
 }
 
 func (a *App) toggleWorkCell(id string) {
@@ -703,37 +773,17 @@ func (a *App) toggleWorkCell(id string) {
 	if !ok {
 		return
 	}
-	on := true
+	next := work3
 	for _, p := range a.renderer.snapshot() {
-		if uint64(p.ID) != pawnN {
-			continue
-		}
-		switch col {
-		case 2:
-			on = !p.WorkGrow
-		case 4:
-			on = !p.WorkConstruct
-		case 6:
-			on = !p.WorkHaul
+		if uint64(p.ID) == pawnN {
+			next = nextPriority(workPriority(p, col))
 		}
 	}
-	a.renderer.enqueue(command.Command{
-		Kind:    command.SetWorkEnabled,
-		Pawn:    pawnN,
-		Work:    wt,
-		Enabled: on,
-	})
+	a.renderer.enqueue(command.Command{Kind: command.SetWorkPriority, Pawn: pawnN, Work: wt, Count: next})
 }
 
+const work3 = 3
+
 func workCommand(col int) (command.WorkType, bool) {
-	switch col {
-	case 2:
-		return command.WorkGrow, true
-	case 4:
-		return command.WorkConstruct, true
-	case 6:
-		return command.WorkHaul, true
-	default:
-		return command.WorkNone, false
-	}
+	return workTypeForCol(col)
 }

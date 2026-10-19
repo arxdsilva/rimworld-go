@@ -21,3 +21,70 @@ func TestAddRespectsLimit(t *testing.T) {
 		t.Fatalf("qty=%d", got)
 	}
 }
+
+func TestFoodKinds(t *testing.T) {
+	if !Meal.IsFood() || Wood.IsFood() || Stone.IsFood() {
+		t.Fatal("food classification")
+	}
+	if !(Meal.Nutrition() > Potatoes.Nutrition() && Potatoes.Nutrition() > Berries.Nutrition() && Wheat.Nutrition() > Lettuce.Nutrition()) {
+		t.Fatal("meals are the most nourishing, berries the least")
+	}
+	if !(Meal.Preference() > Food.Preference() && Food.Preference() > Meat.Preference()) {
+		t.Fatal("preference: meal > ration > raw meat")
+	}
+	if !Meat.Raw() || Meal.Raw() || Food.Raw() {
+		t.Fatal("raw classification")
+	}
+	for _, k := range Foods() {
+		if got, ok := ParseKind(k.String()); !ok || got != k {
+			t.Fatalf("parse %s", k)
+		}
+	}
+}
+
+func TestRot(t *testing.T) {
+	if Wheat.Perishable() || Beans.Perishable() || Food.Perishable() || Wood.Perishable() {
+		t.Error("dried grain, beans, rations and materials should keep")
+	}
+	if !Meat.Perishable() || Meat.ShelfTicks() >= Potatoes.ShelfTicks() {
+		t.Error("meat should spoil before potatoes")
+	}
+	if RotRate(-50) != 0 || RotRate(0) != 0 || RotRate(50) != 500 || RotRate(250) != 1000 {
+		t.Error("rot rate curve wrong")
+	}
+	s := Stack{Kind: Meat, Qty: 5, Rot: Meat.ShelfTicks()}
+	if !s.Rotten() || s.FreshTicks() != 0 {
+		t.Error("meat at shelf life should be rotten")
+	}
+	if got := MergeRot(10, 0, 30, 100); got != 75 {
+		t.Errorf("merge rot = %d, want 75", got)
+	}
+	fresh, rotten := Stack{Kind: CorpseDustbuck, Qty: 1}, Stack{Kind: CorpseDustbuck, Qty: 1, Rot: CorpseDustbuck.ShelfTicks()}
+	if CanMerge(fresh, rotten) {
+		t.Error("rotten and fresh corpses must not merge")
+	}
+}
+
+func TestDried(t *testing.T) {
+	s := Stack{Kind: Meat, Qty: 5, Dried: true, Rot: 10 * Meat.ShelfTicks()}
+	if s.Shelf() != 0 || s.Rotten() || s.Dryable() {
+		t.Error("dried meat keeps and can't be dried again")
+	}
+	for _, k := range Foods() {
+		if k.Perishable() && !(Stack{Kind: k, Qty: 1}).Dryable() {
+			t.Errorf("%s should be dryable", k)
+		}
+		if k.Perishable() && k.DryTicks() <= 0 {
+			t.Errorf("%s has no drying time", k)
+		}
+	}
+	if (Stack{Kind: Wheat, Qty: 1}).Dryable() || (Stack{Kind: CorpseDustbuck, Qty: 1}).Dryable() {
+		t.Error("grain is already dry; corpses are butchered")
+	}
+	if CanMerge(Stack{Kind: Meat, Qty: 1}, Stack{Kind: Meat, Qty: 1, Dried: true}) {
+		t.Error("dried and fresh meat must not merge")
+	}
+	if DryRate(250) != 1000 || DryRate(-50) != 250 || DryRate(100) != 625 {
+		t.Error("dry rate curve wrong")
+	}
+}

@@ -155,7 +155,7 @@ The first playable surface.
 -   [ ] **Chunk partitioning**
     -   Partition maps into chunks for spatial indexing, rendering,
         sleeping, dirty flags, and localized rebuilds.
--   [ ] **Terrain definitions**
+-   [-] **Terrain definitions** (soil, rich soil, gravel, rough stone, natural rock with walkability + fertility; no water)
     -   Soil/fertility-bearing ground.
     -   Rough natural terrain.
     -   Stone/rock terrain.
@@ -196,7 +196,7 @@ The first playable surface.
     -   Position.
     -   Basic description.
     -   Context-sensitive tabs supplied by entity capabilities.
--   [-] **Pawn inspect panel** (name, job/activity, food/rest; no draft/mood/gear/skills/social)
+-   [-] **Pawn inspect panel** (name, job/activity, food/rest, drafted state + Draft button; no mood/gear/skills/social)
     -   Name.
     -   Current job/activity.
     -   Draft status.
@@ -294,7 +294,7 @@ interchangeable workers.
 
 ## 4.1 Walkability
 
--   [-] **Walkable/blocked cells** (grid bounds + completed walls set unwalkable; no doors/terrain/hazards)
+-   [-] **Walkable/blocked cells** (grid bounds; completed walls block, doors/floors/furniture walkable via construction defs; builder ejected from a finished wall; no terrain/hazards)
     -   Terrain, walls, doors, buildings, hazards, and map boundaries
         contribute to traversal rules.
 -   [ ] **Movement cost**
@@ -350,14 +350,14 @@ This is the heart of autonomous colony behavior.
     -   failure reason.
     -   reservations.
     -   interruptibility.
--   [-] **Explicit job state machines** (Goto/Do/Complete/Fail; no draft/medical/mental states)
+-   [-] **Explicit job state machines** (Goto/Do/Complete/Fail incl. deconstruct; drafted pawns hold; no medical/mental states)
     -   Go to target.
     -   Wait/work.
     -   Carry/use/operate.
     -   Complete.
     -   Fail/cancel.
     -   Every transition is deterministic and testable.
--   [-] **Job interruption** (player `MovePawn`, critical hunger/rest, target gone, reservation fail; no draft/danger/mental)
+-   [-] **Job interruption** (player `MovePawn`/`Prioritize`/`DraftPawn`, critical hunger/rest, target gone, reservation fail; prioritized jobs ignore tiredness; no danger/mental)
     -   Player order.
     -   Drafting.
     -   danger.
@@ -405,7 +405,7 @@ This is the heart of autonomous colony behavior.
     -   Research.
 -   [-] **Simple work enable/disable** (`SetWorkEnabled` for Haul/Construct/Grow)
     -   Pawn either performs a work type or does not.
--   [ ] **Manual priorities**
+-   [x] **Manual priorities** (per-colonist 1-4 or off per work type; AI tries priority 1 work first; ties follow work.Order)
     -   Multiple priority levels.
     -   Lower numeric priority means more urgent, equivalent to
         RimWorld's 1--4 behavior.
@@ -433,22 +433,22 @@ This is the heart of autonomous colony behavior.
 
 ## 5.5 Forced orders
 
--   [-] **Right-click/context forced work** (`MovePawn` on selected pawn; no context harvest/haul/eat)
+-   [x] **Right-click/context forced work** (`OrdersAt` menu: go here, build, supply wood, deconstruct, harvest, sleep in bed, eat, haul to stockpile; disabled entries give the reason; `Prioritize` command)
     -   Player can tell a selected pawn to perform a valid specific
         action immediately.
--   [ ] **Queued forced jobs**
+-   [x] **Queued forced jobs** (Shift queues up to 3 orders behind the current one; queue panel with Clear and numbered route on the map; invalid orders skipped with a message)
     -   Support shift-style job queuing.
     -   Queue shown in pawn UI.
     -   Invalid queued tasks fail gracefully.
 
 ## 5.6 Daily schedule
 
--   [-] **24-hour schedule grid** (shared DefaultColony grid; Anything/Work/Recreation/Sleep; no per-pawn paint or schedule screen yet)
+-   [x] **24-hour schedule grid** (per-colonist grid, copied from the colony default; Anything/Work/Recreation/Sleep; painted in the Schedule tab)
     -   Anything.
     -   Work.
     -   Sleep.
     -   Recreation.
--   [ ] **Schedule-aware intent**
+-   [-] **Schedule-aware intent** (bedtime overrides any job or prioritized order except drafting, eating first if hungry; recreation and idle time run free-time behaviours)
     -   Schedule biases/limits autonomous intent but emergencies and
         critical needs can override appropriately.
 
@@ -528,7 +528,7 @@ This is the heart of autonomous colony behavior.
 -   [-] **Haul construction resources** (wood to wall/bed frame)
 -   [ ] **Haul production ingredients**
 -   [ ] **Haul finished products**
--   [ ] **Haul corpses**
+-   [x] **Haul corpses**
 -   [ ] **Opportunistic/batched hauling where compatible**
     -   Performance-conscious without changing core player expectations.
 
@@ -538,22 +538,22 @@ This is the heart of autonomous colony behavior.
 
 ## 7.1 Designation system
 
--   [-] **Build designation** (wall/bed frames via Architect)
--   [ ] **Deconstruct designation**
--   [ ] **Mine designation**
--   [ ] **Cut plant designation**
--   [-] **Harvest designation** (wild plants; Grow work type; no grow-zone)
--   [ ] **Hunt designation**
--   [-] **Cancel designation** (frames, harvest marks, overlapping stockpiles)
+-   [-] **Build designation** (`DesignateBuild` for wall/door/floor/bed/table/chair/lamp with facing; 1×1 footprints only)
+-   [x] **Deconstruct designation** (Architect Orders rectangle; cancel clears it)
+-   [x] **Mine designation** (Architect Orders rectangle over rock; Mine work type; cancel clears)
+-   [x] **Cut plant designation** (trees drop wood scaled by growth; bushes cleared)
+-   [x] **Harvest designation** (wild plants by order; zone crops harvest automatically; Grow work type)
+-   [x] **Hunt designation**
+-   [-] **Cancel designation** (frames, harvest marks, deconstruct marks, overlapping stockpiles)
 -   [ ] **Forbid/unforbid designation/action**
 
 ## 7.2 Construction lifecycle
 
--   [-] **Blueprint** (frame ghost on map + Architect drag preview; no research/support checks)
+-   [-] **Blueprint** (`CanPlace` shared by preview and sim: bounds, layer occupancy, blocked, items under walls; floor + object layers share a tile; no research/support checks)
     -   Placement preview.
     -   Validate terrain, occupancy, research, material, and support
         requirements.
--   [ ] **Material selection**
+-   [-] **Material selection** (walls/floors from wood or stone; stone costs no wood, +60% work; no HP/beauty/flammability yet)
     -   Stuff/material-based buildings where relevant.
     -   Different materials influence HP, beauty, flammability,
         work/material cost, etc.
@@ -566,12 +566,12 @@ This is the heart of autonomous colony behavior.
     -   Construction skill affects speed and result.
     -   Failed construction may waste resources if independently chosen
         balance supports it.
--   [-] **Completed building** (wall unwalkable; bed claimable; no room/power invalidate)
+-   [-] **Completed building** (blocking defs set unwalkable and eject pawns; beds claimable; facing kept; no room/power invalidate)
     -   Replace frame with functional building.
     -   Invalidate navigation/rooms/power/etc. only as needed.
--   [ ] **Repair**
+-   [x] **Repair** (builders mend damaged buildings once no raiders are standing)
     -   Damaged player structures become repair work.
--   [ ] **Deconstruction**
+-   [x] **Deconstruction** (construct work type; half the wood refunded; tile and bed claim freed)
     -   Work removes building and yields appropriate salvage.
 
 ## 7.3 Core structures
@@ -580,12 +580,12 @@ This is the heart of autonomous colony behavior.
     -   Block movement/vision/projectiles.
     -   Define rooms.
     -   Material-dependent stats.
--   [ ] **Doors**
+-   [-] **Doors** (buildable, walkable for colonists, shut to raiders and wild animals, count as wall neighbours, drawn open when occupied; no opening delay)
     -   Open/closed states.
     -   Opening delay.
     -   faction/permission interaction.
     -   affect pathing and room boundaries.
--   [ ] **Floors**
+-   [-] **Floors** (buildable/deconstructable separate layer; no movement/beauty/cleanliness stats)
     -   Construct/remove.
     -   movement, beauty, cleanliness, flammability attributes.
 -   [ ] **Roofs**
@@ -594,7 +594,7 @@ This is the heart of autonomous colony behavior.
     -   support rules.
     -   roof affects weather, temperature, light, deterioration, toxic
         fallout.
--   [-] **Furniture** (beds claimed for Sleep; no tables/chairs/comfort)
+-   [-] **Furniture** (bed (rotatable, claimed for Sleep), table, chair (rotatable), lamp buildable; no comfort/joy/light effects)
     -   Beds.
     -   tables.
     -   chairs/stools.
@@ -604,16 +604,16 @@ This is the heart of autonomous colony behavior.
 
 ## 7.4 Rooms
 
--   [ ] **Room detection**
+-   [x] **Room detection**
     -   Enclosed connected spaces bounded by walls/doors.
     -   Outdoor/unroofed semantics.
--   [ ] **Room statistics**
+-   [x] **Room statistics**
     -   Space.
     -   beauty.
     -   cleanliness.
     -   wealth/value.
     -   impressiveness derived from room properties.
--   [ ] **Room roles**
+-   [x] **Room roles**
     -   Bedroom.
     -   barracks.
     -   dining room.
@@ -623,12 +623,12 @@ This is the heart of autonomous colony behavior.
     -   prison cell/barracks.
     -   storage/freezer is emergent rather than necessarily a formal
         role.
--   [ ] **Room stat caching/invalidation**
+-   [x] **Room stat caching/invalidation**
     -   Recalculate only affected rooms.
 
 ## 7.5 Specialized zones
 
--   [ ] **Growing zones**
+-   [x] **Growing zones** (painted rectangles sowing amberroot; cancel removes; resow after harvest)
 -   [ ] **Home area**
     -   Influences firefighting/cleaning/repair behavior.
 -   [ ] **Roof build/remove areas**
@@ -641,7 +641,7 @@ This is the heart of autonomous colony behavior.
 
 ## 8.1 Nutrition
 
--   [-] **Nutrition values** (Eat restores a fixed permille; no per-def table)
+-   [x] **Nutrition values** (per-kind table: ration 4000, berries 1500, amberroot 2000, meat 2200, meal 6000)
     -   Foods provide nutrition.
     -   Pawns consume an amount based on hunger/body needs.
 -   [-] **Food need** (permille decay; 0 downs then starvation death; no mood)
@@ -653,7 +653,7 @@ This is the heart of autonomous colony behavior.
         availability.
     -   Reserve food before fetching it.
     -   Respect forbidden/allowed area rules.
--   [-] **Eating job** (Goto + Do ingest; no table/seat)
+-   [x] **Eating job** (fetch the portions needed, carry them to a table seat - chair preferred - within 30 tiles, ingest, table/raw/meal thoughts)
     -   Fetch.
     -   choose table/seat when reasonable.
     -   ingest over time.
@@ -663,15 +663,15 @@ This is the heart of autonomous colony behavior.
 ## 8.2 Raw food
 
 -   [-] **Plant food** (harvest yield stacks; no meat/diet categories)
--   [ ] **Meat**
+-   [x] **Meat**
 -   [ ] **Animal products**
     -   Milk/eggs where species definitions support them.
 -   [ ] **Food categories and diet compatibility**
 
 ## 8.3 Cooking
 
--   [ ] **Cooking workstation**
--   [ ] **Meal recipes**
+-   [x] **Cooking workstation** (stove)
+-   [-] **Meal recipes** (simple meal at the stove, or slower over a fuelled campfire; no fine meal / multi-ingredient recipes yet)
     -   Simple/standard meal classes sufficient to recreate vanilla
         progression.
     -   Ingredient filters.
@@ -680,40 +680,41 @@ This is the heart of autonomous colony behavior.
 -   [ ] **Food poisoning**
     -   Chance influenced by cook skill and cleanliness/conditions.
     -   Health effect and mood consequences.
--   [ ] **Butchering**
+-   [x] **Butchering**
     -   Corpse -\> meat + leather/other products.
     -   Yield affected by species and skill/stat.
 
 ## 8.4 Farming
 
--   [ ] **Fertility**
+-   [x] **Fertility**
     -   Terrain fertility affects plant growth.
--   [ ] **Crop definitions**
+-   [-] **Crop definitions** (7 crops: grow days, yield, soil sensitivity, frost-kill temperature, shelf life; no minimum skill)
     -   Growth time.
     -   fertility sensitivity.
     -   yield.
     -   minimum sowing skill.
     -   temperature/light requirements.
--   [ ] **Sowing**
+-   [x] **Sowing** (Grow work sows empty fertile zone cells; prioritizable from the order menu)
     -   Growers plant designated crops in growing zones.
--   [ ] **Plant growth**
+-   [-] **Plant growth** (integer per-tick growth scaled by fertility x soil sensitivity x temperature; daylight only; frost kills crops; no plant health)
     -   Analytical/bucketed growth.
     -   Depends on temperature, light, fertility, plant health.
--   [-] **Harvest maturity** (start-kit plants are already harvestable; no growth)
+-   [x] **Harvest maturity** (plants ripen at GrowTicks; berry bushes regrow to 35% after harvest)
     -   Mature plants generate harvest work.
     -   Skill can affect yield/failure.
--   [-] **Wild plants** (start kit only; no mapgen variety)
+-   [x] **Wild plants** (seeded generation scatters trees and berry bushes on fertile ground)
     -   Map generation creates harvestable/non-harvestable vegetation.
 
 ## 8.5 Food spoilage
 
--   [ ] **Rot progression**
+-   [x] **Rot progression** (per-stack rot ticks; full speed from 10C, slower when cool, none at 0C or below; merges average by quantity)
     -   Perishable food/corpses rot based on temperature and elapsed
         time.
--   [ ] **Frozen/refrigerated preservation**
+-   [-] **Frozen/refrigerated preservation** (winter and cold rooms freeze food; no cooler/freezer building yet)
+-   [x] **Drying** (drying rack dries up to 25 of any perishable food per batch over ~1-2.5 days; dried food never rots)
     -   Cold slows or stops rot according to independently selected
         balance.
--   [ ] **Rotten state**
+-   [x] **Rotten state** (spoiled food is destroyed with a message; rotten corpses can't be butchered and decay away)
     -   No longer normal edible food.
     -   Corpse rot affects handling/visual state.
 
@@ -772,10 +773,10 @@ derived from thoughts and traits and low mood creates mental-break risk.
 
 ## 9.5 Recreation
 
--   [ ] **Recreation need**
+-   [x] **Recreation need** (drains ~4300/day awake, refilled by free-time activities; bored/starved/entertained thoughts)
     -   Decays.
     -   Pawns seek recreation during suitable schedule/idle time.
--   [ ] **Recreation types**
+-   [-] **Recreation types** (wander, chat, relax on a chair, fireside, horseshoes; no cerebral/tech types)
     -   Solitary relaxation.
     -   social interaction.
     -   dexterity-style play.
@@ -786,7 +787,7 @@ derived from thoughts and traits and low mood creates mental-break risk.
 -   [ ] **Recreation tolerance/variety**
     -   Repeating one recreation category reduces its effectiveness.
     -   Encourage multiple recreation sources.
--   [ ] **Recreation jobs/buildings**
+-   [-] **Recreation jobs/buildings** (no-building activities plus the horseshoe pin)
     -   Basic no-building recreation.
     -   horseshoe-like dexterity object.
     -   chess/game table equivalent.
@@ -796,12 +797,12 @@ derived from thoughts and traits and low mood creates mental-break risk.
 
 ## 9.6 Thoughts/memories
 
--   [ ] **Thought definition system**
+-   [x] **Thought definition system**
     -   Mood offset.
     -   duration.
     -   stacking rules.
     -   situational versus memory-based.
--   [ ] **Situational thoughts**
+-   [x] **Situational thoughts**
     -   Hungry/tired.
     -   environment beauty.
     -   room quality.
@@ -812,18 +813,18 @@ derived from thoughts and traits and low mood creates mental-break risk.
     -   observed corpse/ugliness.
     -   comfort/recreation satisfaction.
     -   expectations.
--   [ ] **Memory thoughts**
+-   [x] **Memory thoughts**
     -   Death of relation.
     -   social interaction.
     -   wedding/relationship events.
     -   combat/trauma where applicable.
     -   impressive meal/room/event equivalents.
--   [ ] **Thought expiry**
+-   [x] **Thought expiry**
     -   Memories expire deterministically after defined duration.
 
 ## 9.7 Mood
 
--   [ ] **Mood target**
+-   [x] **Mood target**
     -   Sum baseline, expectations, thoughts, traits, health, social
         effects, environment.
 -   [ ] **Smoothed current mood**
@@ -831,7 +832,7 @@ derived from thoughts and traits and low mood creates mental-break risk.
         matching it.
 -   [ ] **Break-risk thresholds**
     -   Minor/major/extreme risk zones exposed to UI.
--   [ ] **Mood UI**
+-   [x] **Mood UI**
     -   Show current mood, target, active positive/negative thoughts,
         and break risk.
 
@@ -841,15 +842,15 @@ derived from thoughts and traits and low mood creates mental-break risk.
 
 ## 10.1 Mental breaks
 
--   [ ] **Mental break eligibility**
+-   [-] **Mental break eligibility** (hourly roll below mood 20, 2% per point; no severity tiers/traits)
     -   Low mood sustained below thresholds.
     -   Break severity influenced by current threshold/traits.
--   [ ] **Mental state framework**
+-   [x] **Mental state framework** (break replaces work, schedule, orders and drafting; explicit start/end; needs still met when critical)
     -   Temporarily replaces normal work/player control.
     -   Explicit start/end.
     -   May select targets.
     -   Save/replay safe.
--   [ ] **Minor break behaviors**
+-   [x] **Minor break behaviors** (sad wander, food binge, hide in room)
     -   Sad wandering.
     -   food binge.
     -   drug binge where available.
@@ -861,7 +862,7 @@ derived from thoughts and traits and low mood creates mental-break risk.
     -   prisoner-like escape behavior where relevant.
 -   [ ] **Catatonic/extreme shutdown equivalent**
     -   Pawn becomes temporarily unavailable and requires care.
--   [ ] **Recovery**
+-   [x] **Recovery** (break ends after its duration with a day of catharsis +30)
     -   End state.
     -   mood catharsis/recovery thought if desired by independent
         balance.
@@ -982,7 +983,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 11.4 Healing
 
--   [ ] **Natural wound healing**
+-   [x] **Natural wound healing**
     -   Healing over time based on pawn state and care.
 -   [ ] **Scars/permanent injury**
     -   Some wounds heal into lasting impairment/pain.
@@ -995,24 +996,24 @@ treatment, and surgery are major colony-management systems.
     -   herbal-equivalent.
     -   industrial-equivalent.
     -   best medicine-equivalent.
--   [ ] **Tending**
+-   [x] **Tending** (doctor fetches herbal medicine when there is some; patients down, in bed or asleep)
     -   Doctor reserves patient.
     -   fetches medicine if policy allows.
     -   performs treatment.
     -   quality depends on skill, medicine, environment, capacities.
--   [ ] **Self-tend**
+-   [x] **Self-tend** (only when no other doctor; weaker care)
     -   Optional with reduced effectiveness.
--   [ ] **Medical beds**
+-   [-] **Medical beds**
     -   Mark beds for medical use.
     -   injured/sick pawns seek treatment/rest.
--   [ ] **Rescue**
+-   [x] **Rescue**
     -   Carry downed friendly pawn to valid bed.
 
 ## 11.6 Infection
 
--   [ ] **Wound infection chance**
+-   [x] **Wound infection chance** (untended 8h: 40%; self-tended 20%, tended 12%, herbal medicine 3%)
     -   Eligible untreated/poorly treated wounds can become infected.
--   [ ] **Infection progression vs immunity**
+-   [-] **Infection progression vs immunity** (hourly severity: +4 untreated, -5 tended, -9 with medicine; fatal at 100; no immunity race)
     -   Disease severity progresses.
     -   immunity grows based on treatment/rest/health.
     -   reaching immunity first allows recovery; severity first can
@@ -1068,7 +1069,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 11.10 Corpses
 
--   [ ] **Corpse entity**
+-   [-] **Corpse entity**
     -   Stores deceased pawn identity/body.
     -   can rot.
     -   can be butchered where allowed.
@@ -1085,27 +1086,27 @@ treatment, and surgery are major colony-management systems.
 
 ## 12.1 Temperature
 
--   [ ] **Outdoor temperature**
+-   [-] **Outdoor temperature** (temperate calendar: yearly triangle wave 9C +-15C peaking day 15, +-6C day/night swing; no weather/latitude)
     -   Driven by world tile climate, latitude/elevation/season/time,
         and weather.
--   [ ] **Indoor room temperature**
+-   [-] **Indoor room temperature** (per-room temperature drifting toward outside air by room size, kept across room rebuilds; no room-to-room or open-door exchange)
     -   Rooms have thermal state.
     -   Exchange heat with outdoors and neighboring rooms through
         openings/structures.
     -   Use efficient region/room approximation rather than per-cell
         fluid simulation.
--   [ ] **Heat sources/sinks**
+-   [-] **Heat sources/sinks** (wood campfire heats its room and banks at 16C; haulers refuel it; no powered heater/cooler)
     -   Campfire/heater-like source.
     -   cooler/air-conditioner-like device.
     -   passive cooler equivalent.
--   [ ] **Pawn temperature comfort**
+-   [x] **Pawn temperature comfort** (per-colonist comfort band from worn apparel; cold/freezing/hot/sweltering thoughts, hypothermia/heatstroke down and kill, colonists seek a bearable room)
     -   Apparel and species stats define safe/comfortable range.
     -   extreme heat -\> heatstroke.
     -   extreme cold -\> hypothermia.
 
 ## 12.2 Seasons/calendar
 
--   [ ] **Year and quadrum/season cycle**
+-   [-] **Year and quadrum/season cycle** (seasons centred on the temperature curve; crops grow 0-10C ramp, full 10-35C, frost kills tender crops)
     -   Seasonal temperature/growing changes.
     -   Hemisphere/world position can affect seasons.
 -   [ ] **Growing period**
@@ -1130,9 +1131,9 @@ treatment, and surgery are major colony-management systems.
 
 -   [-] **Day/night light** (outdoor level is a pure function of tick; indoor/roofed and artificial lights not yet)
 -   [ ] **Roof/indoor darkness**
--   [ ] **Artificial lights**
+-   [x] **Artificial lights**
 -   [ ] **Light affects plants**
--   [ ] **Light can affect work/mood/accuracy where appropriate**
+-   [-] **Light can affect work/mood/accuracy where appropriate**
 
 ## 12.5 Fire
 
@@ -1187,7 +1188,7 @@ treatment, and surgery are major colony-management systems.
     -   Selected electrical/mechanical buildings can break down.
     -   Requires maintenance components/work if matching target vanilla
         behavior.
--   [ ] **Repair work**
+-   [x] **Repair work** (Construction work type)
     -   Damaged colony structures automatically become repair
         candidates.
 
@@ -1197,12 +1198,12 @@ treatment, and surgery are major colony-management systems.
 
 ## 14.1 Generic workbench system
 
--   [ ] **Workstation**
+-   [-] **Workstation** (workbench and stove: 2x1 rotatable footprints with interaction cell, block movement; no power/facilities)
     -   Supported recipes.
     -   interaction cell.
     -   power requirement where applicable.
     -   facility/environment modifiers.
--   [ ] **Recipe definition**
+-   [-] **Recipe definition** (inputs incl. any-raw-food, work, work type, product; no research/quality)
     -   ingredients.
     -   filters.
     -   work amount.
@@ -1213,9 +1214,9 @@ treatment, and surgery are major colony-management systems.
 
 ## 14.2 Bills
 
--   [ ] **Bill queue**
+-   [x] **Bill queue** (ordered bills per bench; first runnable bill wins)
     -   Multiple ordered bills per workstation.
--   [ ] **Bill modes**
+-   [x] **Bill modes** (do X, forever, until you have X; suspend)
     -   Do X times.
     -   Do forever.
     -   Do until X inventory count.
@@ -1233,10 +1234,10 @@ treatment, and surgery are major colony-management systems.
 ## 14.3 Crafting
 
 -   [ ] **Stone cutting**
--   [ ] **Butchering**
--   [ ] **Cooking**
--   [ ] **Tailoring/apparel production**
--   [ ] **Smithing/weapon production**
+-   [x] **Butchering**
+-   [x] **Cooking** (stove: 2 raw food -> 1 simple meal)
+-   [x] **Tailoring/apparel production** (tailoring bench sews leather parkas, tuques and dusters; butchering yields leather)
+-   [-] **Smithing/weapon production** (workbench: 4 wood -> wooden club)
 -   [ ] **Machining/advanced fabrication equivalents**
 -   [ ] **Drug production**
 -   [ ] **Component production in late tech**
@@ -1307,17 +1308,17 @@ treatment, and surgery are major colony-management systems.
 
 ## 16.1 Equipment
 
--   [ ] **Single equipped primary weapon**
+-   [x] **Single equipped primary weapon**
     -   Equip/drop.
     -   weapon stats.
     -   melee fallback for ranged weapons.
--   [ ] **Equipment jobs**
+-   [x] **Equipment jobs**
     -   Player order to equip.
     -   dropped weapon can be hauled/stored.
 
 ## 16.2 Apparel
 
--   [ ] **Wearable apparel**
+-   [-] **Wearable apparel** (body and head slots over everyday clothes; insulation shifts the comfort band; Wear order; Gear tab)
     -   Body-part/layer coverage.
     -   material.
     -   armor.
@@ -1328,7 +1329,7 @@ treatment, and surgery are major colony-management systems.
     -   Conflicting body layers/slots cannot be worn together.
 -   [ ] **Apparel deterioration**
     -   Worn apparel can lose condition.
--   [ ] **Apparel policy**
+-   [-] **Apparel policy** (colonists put on free garments that suit the season and take off ones that don't; no player policy screen)
     -   Allowed categories.
     -   minimum condition.
     -   quality filters.
@@ -1339,9 +1340,9 @@ treatment, and surgery are major colony-management systems.
 
 ## 16.3 Weapon categories
 
--   [ ] **Melee weapons**
+-   [x] **Melee weapons**
     -   Multiple attack verbs/damage profiles.
--   [ ] **Ranged weapons**
+-   [x] **Ranged weapons**
     -   Range.
     -   warmup.
     -   cooldown.
@@ -1364,28 +1365,28 @@ treatment, and surgery are major colony-management systems.
 
 ## 17.1 Drafting
 
--   [ ] **Draft/undraft**
+-   [x] **Draft/undraft**
     -   Drafted colonists stop autonomous work and accept tactical
         orders.
--   [ ] **Drafted movement order**
--   [ ] **Attack target order**
+-   [x] **Drafted movement order**
+-   [x] **Attack target order**
 -   [ ] **Hold/fire-at-will behavior**
 -   [ ] **Drafted field tending**
     -   Allow emergency tending under appropriate conditions.
 
 ## 17.2 Line of sight
 
--   [ ] **Projectile LOS**
+-   [x] **Projectile LOS**
     -   Walls/solid obstacles block.
     -   Adjacent wall leaning/corner firing equivalent where needed for
         familiar tactical behavior.
 
 ## 17.3 Cover
 
--   [ ] **Cover objects**
+-   [x] **Cover objects** (sandbags 55%, wall/door corners 40%)
     -   Walls, barricade/sandbag equivalents, chunks, trees, etc.
     -   Cover affects incoming ranged hit chance.
--   [ ] **Cover calculation**
+-   [-] **Cover calculation** (best cover on the cells beside the target facing the shooter; ranged shots only)
     -   Relative shooter-target-cover geometry.
     -   Stable deterministic resolution.
 
@@ -1393,14 +1394,14 @@ treatment, and surgery are major colony-management systems.
 
 -   [ ] **Target acquisition**
 -   [ ] **Warmup**
--   [ ] **Accuracy**
+-   [x] **Accuracy**
     -   Shooting skill.
     -   weapon.
     -   distance.
     -   target size.
     -   weather/light if modeled.
     -   cover.
--   [ ] **Projectile flight**
+-   [-] **Projectile flight**
     -   Logical projectile entity or deterministic trajectory.
     -   Can miss intended target and impact another valid cell/entity
         where design supports it.
@@ -1409,12 +1410,12 @@ treatment, and surgery are major colony-management systems.
 
 ## 17.5 Melee
 
--   [ ] **Adjacent melee combat**
+-   [x] **Adjacent melee combat**
     -   Pawns next to hostile target use melee even if holding ranged
         weapon, matching vanilla's core behavior. citeturn2search1
--   [ ] **Melee hit chance**
--   [ ] **Weapon/body attacks**
--   [ ] **Melee cooldown**
+-   [x] **Melee hit chance**
+-   [-] **Weapon/body attacks**
+-   [x] **Melee cooldown**
 
 ## 17.6 Armor
 
@@ -1438,8 +1439,8 @@ treatment, and surgery are major colony-management systems.
 ## 17.8 Combat AI
 
 -   [ ] **Hostile target selection**
--   [ ] **Approach/ranged engagement**
--   [ ] **Melee closing**
+-   [x] **Approach/ranged engagement**
+-   [x] **Melee closing**
 -   [ ] **Basic cover seeking**
 -   [ ] **Flee behavior for appropriate human enemies**
 
@@ -1455,7 +1456,7 @@ children systems.
 
 ## 18.1 Species definitions
 
--   [ ] **Animal species**
+-   [x] **Animal species**
     -   Anatomy.
     -   body size.
     -   movement.
@@ -1469,37 +1470,37 @@ children systems.
 
 ## 18.2 Wildlife
 
--   [ ] **Biome wildlife population**
+-   [-] **Biome wildlife population**
     -   Spawn species appropriate to biome/climate.
--   [ ] **Animal hunger/rest**
+-   [-] **Animal hunger/rest**
     -   Simpler needs than humans.
 -   [ ] **Grazing/foraging**
 -   [ ] **Predation**
     -   Predators select prey and hunt.
--   [ ] **Wild animal flee/fight response**
+-   [x] **Wild animal flee/fight response**
 
 ## 18.3 Hunting
 
--   [ ] **Hunt designation**
--   [ ] **Hunter requires suitable ranged weapon**
+-   [x] **Hunt designation**
+-   [x] **Hunter requires suitable ranged weapon**
 -   [ ] **Stalk/approach/fire job**
--   [ ] **Animal retaliation/manhunter chance**
--   [ ] **Corpse hauling/butchering integration**
+-   [-] **Animal retaliation/manhunter chance**
+-   [x] **Corpse hauling/butchering integration**
 
 ## 18.4 Taming
 
--   [ ] **Tame designation**
+-   [x] **Tame designation** (Orders > Tame or the animal inspector; hunters tame)
 -   [ ] **Animal-handling interaction**
 -   [ ] **Food requirement**
 -   [ ] **Success chance based on skill/wildness**
--   [ ] **Tame animal joins colony**
+-   [x] **Tame animal joins colony** (named; dustbuck 60%, wolf 25% a try; a botched try may enrage it)
 
 ## 18.5 Training
 
 -   [ ] **Trainability**
 -   [ ] **Obedience**
--   [ ] **Release/attack training**
--   [ ] **Rescue**
+-   [-] **Release/attack training** (release; tame wolves guard against raiders and hostile animals untrained)
+-   [x] **Rescue**
 -   [ ] **Hauling**
     -   Only species capable of relevant training.
 -   [ ] **Training decay/maintenance**
@@ -1508,7 +1509,7 @@ children systems.
 ## 18.6 Animal zones/pens
 
 -   [ ] **Animal allowed areas for zonable animals**
--   [ ] **Pen system for appropriate livestock**
+-   [-] **Pen system for appropriate livestock** (pen zones; tame animals keep inside or stay near the colony; no fences)
     -   Pen markers/boundaries.
     -   rope/lead jobs.
     -   enclosure validity.
@@ -1530,10 +1531,10 @@ children systems.
 
 ## 18.9 Manhunter/scaria-like state
 
--   [ ] **Manhunter**
+-   [x] **Manhunter** (wild animals hurt by colonists may enrage for a day: dustbuck 10%, wolf 45%)
     -   Hostile animal mental state.
     -   Can result from damage/event.
--   [ ] **Manhunter pack incident**
+-   [x] **Manhunter pack incident** (storyteller: manhunter dustbuck packs outside winter, wolf packs in winter)
     -   Storyteller-generated group attack.
 
 ------------------------------------------------------------------------
@@ -1666,25 +1667,25 @@ have prerequisites, and technologies unlock buildings/gear.
 
 ## 21.1 Research definitions
 
--   [ ] **Research project**
+-   [x] **Research project** (5 projects: food preservation, herbalism, tailoring, traps, gunsmithing)
     -   Cost.
     -   prerequisites.
     -   tech level.
     -   required bench/facilities.
     -   unlocked definitions.
--   [ ] **Research DAG**
+-   [x] **Research DAG** (prerequisites; gunsmithing after traps)
     -   Validate no invalid cycles.
     -   UI layout can derive from prerequisite graph.
 
 ## 21.2 Research work
 
--   [ ] **Simple research bench**
+-   [x] **Simple research bench**
 -   [ ] **Advanced research bench**
--   [ ] **Research job**
+-   [x] **Research job** (Research work type; two-hour sittings at the nearest free bench)
     -   Intellectual skill.
     -   bench speed.
     -   room/environment modifiers as appropriate.
--   [ ] **Research progress**
+-   [x] **Research progress** (one point per working tick; finish message; saved)
     -   Player selects active project.
     -   Researchers contribute points.
     -   completion unlocks content.
@@ -1766,11 +1767,11 @@ forage; - local map appearance.
 ## 22.4 Local map generation
 
 -   [ ] **Terrain from biome/topology**
--   [ ] **Rock/mountain mass**
+-   [-] **Rock/mountain mass** (noise outcrops biased to map edges, stone ground ring, open start area; no ore)
 -   [ ] **Ore/resource deposits**
 -   [ ] **Water**
--   [ ] **Wild vegetation**
--   [ ] **Wildlife**
+-   [x] **Wild vegetation** (trees, berry bushes; grass decals presentation-only)
+-   [-] **Wildlife**
 -   [ ] **Ancient ruins/debris**
 -   [ ] **Starting clear/landing area**
 
@@ -1849,7 +1850,7 @@ colonists. citeturn1search8turn1search9
 
 ## 23.4 Storyteller framework
 
--   [ ] **Storyteller component**
+-   [-] **Storyteller component** (deterministic threat schedule: first threat day 5, then every 5 to 9 days)
     -   Reads colony state.
     -   schedules incidents.
     -   tracks cooldowns/threat pacing.
@@ -1882,7 +1883,7 @@ Use original names rather than copying RimWorld storyteller characters.
 ## 24.2 Raid generation
 
 -   [ ] **Select hostile faction**
--   [ ] **Generate raider group from point budget**
+-   [x] **Generate raider group from point budget** (wealth/40 + 30 per standing colonist + 2 per day; clubs 60, rifles 90; up to 8)
 -   [ ] **Generate equipment based on faction/tech**
 -   [ ] **Map-edge arrival**
 -   [ ] **Immediate attack**
@@ -1891,19 +1892,19 @@ Use original names rather than copying RimWorld storyteller characters.
 ## 24.3 Raid tactics
 
 -   [ ] **Basic assault**
--   [ ] **Sappers/breachers equivalent**
+-   [x] **Sappers/breachers equivalent** (against an enclosed colony from day 10: tunnel through walls, doors and rock, step around traps)
     -   Attack walls/alternate route instead of blindly using normal
         entrance.
 -   [ ] **Drop-pod assault**
     -   Industrial factions can arrive from above.
 -   [ ] **Center/scatter drop variants**
--   [ ] **Siege**
+-   [x] **Siege** (from day 12: camp 18 tiles out, sandbags, shoot from cover, storm after 5h)
     -   Raiders establish temporary siege position, receive/build
         artillery/supplies, bombard colony, then assault.
 
 ## 24.4 Raider morale
 
--   [ ] **Human raider flee threshold**
+-   [x] **Human raider flee threshold** (badly hurt raiders, or a group that has lost half its members, flee to the edge)
     -   Group may flee after sufficient casualties/damage.
 -   [ ] **Kidnap behavior**
     -   Raiders can carry downed colonists away under suitable
@@ -1938,7 +1939,7 @@ Use original names rather than copying RimWorld storyteller characters.
 
 ## 24.7 Manhunter threat
 
--   [ ] **Manhunter pack incident**
+-   [x] **Manhunter pack incident**
     -   Storyteller selects suitable animal species and group size.
     -   Animals enter map hostile to humans.
 
@@ -1977,7 +1978,7 @@ and other colony incidents. citeturn2search2turn2search7
 -   [ ] **Animal joins**
 -   [ ] **Farm animals wander in**
 -   [ ] **Rare self-tame animal**
--   [ ] **Wild animal migration**
+-   [x] **Wild animal migration**
 -   [ ] **Party**
 -   [ ] **Marriage**
 -   [ ] **Psychic soothe-like temporary positive mood event**
@@ -1985,9 +1986,9 @@ and other colony incidents. citeturn2search2turn2search7
 
 ## 25.3 Negative incidents
 
--   [ ] **Raid**
+-   [x] **Raid** (edge arrival, assault nearest colonist, flee, bleed out, dropped weapons; saved)
 -   [ ] **Infestation**
--   [ ] **Manhunter pack**
+-   [x] **Manhunter pack**
 -   [ ] **Animal insanity**
 -   [ ] **Disease outbreak**
 -   [ ] **Blight**
@@ -2004,7 +2005,7 @@ and other colony incidents. citeturn2search2turn2search7
     version**
 -   [ ] **Crashed hostile ship part**
 -   [ ] **Short circuit/battery discharge**
--   [ ] **Animal predator hunts colonist**
+-   [x] **Animal predator hunts colonist**
     -   May be AI-driven rather than storyteller incident.
 
 ## 25.4 Letters/messages
@@ -2107,7 +2108,7 @@ and other colony incidents. citeturn2search2turn2search7
 
 ## 27.2 Animal management
 
--   [ ] **Animals tab**
+-   [x] **Animals tab** (tame animals, slaughter, release)
     -   Master assignment if supported.
     -   training.
     -   allowed area/pen.
@@ -2272,7 +2273,7 @@ Use original narrative text and generated names.
 
 # PHASE 30 --- Advanced Enemy AI and Tactical Variety
 
--   [ ] **Raid group lord/controller**
+-   [x] **Raid group lord/controller** (group plan assault / siege / sappers; siege camp, dig-in, storm; flee)
 
     -   Group objective controls broad behavior.
     -   Individual pawns use local jobs.
@@ -2292,11 +2293,11 @@ Use original narrative text and generated names.
     -   valuable colony objects.
     -   power/doors depending tactic.
 
--   [ ] **Breach logic**
+-   [x] **Breach logic** (raiders shut out plan through walls and doors and bash the first one; buildings have hit points)
 
     -   Select wall/door targets when normal route unsuitable.
 
--   [ ] **Siege construction**
+-   [-] **Siege construction** (sandbags in front of each besieger; no mortars)
 
 -   [ ] **Siege bombardment**
 
@@ -2400,26 +2401,26 @@ experience with original names/assets/text.
 Although foundational persistence exists earlier, this phase completes
 the player-facing system.
 
--   [ ] **Manual save**
--   [ ] **Load game**
--   [ ] **Save metadata**
+-   [x] **Manual save** (pause > Save writes the colony's slot)
+-   [x] **Load game** (pause > Load and main menu Load/Continue)
+-   [-] **Save metadata** (slot name, in-game date, day, colonists, format version; no seed/plugins/content hash)
     -   Colony.
     -   world seed.
     -   tick/date.
     -   version.
     -   enabled plugins.
     -   content hash.
--   [ ] **Autosave**
+-   [-] **Autosave** (every in-game morning at 06:00 to <slot>-autosave; cadence not configurable)
     -   Configurable cadence.
     -   Consistent snapshot without long simulation stall.
 -   [ ] **Rotating autosaves**
--   [ ] **Save naming/overwrite**
+-   [-] **Save naming/overwrite** (one slot per colony, named at start, overwritten on save; no name prompt)
 -   [ ] **Ironman/commitment-style save mode**
     -   Restricts ordinary save-scumming behavior if selected.
 -   [ ] **Schema migration**
--   [ ] **Corruption validation**
--   [ ] **Safe atomic writes**
--   [ ] **Save/replay deterministic equality tests**
+-   [-] **Corruption validation** (unreadable or wrong-version files listed but not loadable)
+-   [x] **Safe atomic writes** (temp file + rename)
+-   [x] **Save/replay deterministic equality tests** (save mid-game, load, run both in lock step: identical)
 
 ------------------------------------------------------------------------
 
@@ -2443,7 +2444,7 @@ the player-facing system.
 -   [ ] **Power grid**
 -   [ ] **Beauty**
 -   [ ] **Room stats**
--   [ ] **Fertility**
+-   [x] **Fertility**
 -   [ ] **Terrain/path cost debug**
 -   [ ] **Home area**
 -   [ ] **Allowed areas**
@@ -2847,7 +2848,7 @@ substantially larger colonies and maps with lower resource usage.
 ## 40.3 Invalidation
 
 -   [ ] **Navigation dirty regions**
--   [ ] **Room dirty regions**
+-   [-] **Room dirty regions**
 -   [ ] **Power topology dirty**
 -   [ ] **Temperature topology dirty**
 -   [ ] **Beauty dirty**
@@ -2903,12 +2904,12 @@ Do not call the vanilla milestone complete until this audit passes.
 -   [-] Build shelter. (wood walls; no rooms/roofs)
 -   [-] Assign beds. (claim on Sleep)
 -   [-] Create stockpile. (food+wood paint)
--   [ ] Grow crops.
+-   [x] Grow crops.
 -   [ ] Hunt animals.
 -   [ ] Cook food.
 -   [-] Survive hunger/rest/temperature. (hunger/rest downed+starve/exhaustion; no temperature)
 -   [ ] Treat injuries/disease.
--   [ ] Manage mood.
+-   [-] Manage mood.
 -   [ ] Survive mental breaks.
 -   [ ] Produce equipment.
 -   [ ] Research technology.
@@ -2931,7 +2932,7 @@ Do not call the vanilla milestone complete until this audit passes.
 -   [ ] Pawns form opinions and relationships.
 -   [ ] Relationships create gameplay consequences.
 -   [ ] Injuries have anatomically meaningful consequences.
--   [ ] Mood responds to environment and memories.
+-   [x] Mood responds to environment and memories.
 -   [ ] Low mood creates autonomous disruptive behavior.
 -   [ ] High mood can create positive opportunities.
 -   [ ] Storyteller alternates pressure/opportunity/recovery.

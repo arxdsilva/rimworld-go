@@ -11,7 +11,7 @@ import (
 )
 
 func inspectorRect() button {
-	return button{x: hudPad, y: hudTopH + hudPad, w: 340, h: 280}
+	return button{x: hudPad, y: hudTopH + hudPad, w: 340, h: 390}
 }
 
 func (a *App) inspectorButtons() []button {
@@ -20,13 +20,24 @@ func (a *App) inspectorButtons() []button {
 	}
 	r := inspectorRect()
 	tabs := []buttonSpec{
-		{id: "inspector.character", label: "Character", selected: a.inspectTab != "needs", w: 72, h: 22},
+		{id: "inspector.character", label: "Character", selected: a.inspectTab != "needs" && a.inspectTab != "gear", w: 72, h: 22},
 		{id: "inspector.needs", label: "Needs", selected: a.inspectTab == "needs", w: 56, h: 22},
 		{id: "inspector.health", label: "Health", disabled: true, reason: "not implemented", w: 56, h: 22},
 		{id: "inspector.social", label: "Social", disabled: true, reason: "not implemented", w: 56, h: 22},
-		{id: "inspector.gear", label: "Gear", disabled: true, reason: "not implemented", w: 48, h: 22},
+		{id: "inspector.gear", label: "Gear", selected: a.inspectTab == "gear", w: 48, h: 22},
 	}
 	out := inspectorTabRow(r, tabs)
+	if p, ok := a.selectedPawn(); ok {
+		label := "Draft (R)"
+		if p.Drafted {
+			label = "Undraft (R)"
+		}
+		dead := p.Status != "alive"
+		out = append(out, button{
+			id: "pawn.draft", label: label, x: r.x + 12, y: r.y + r.h - 62, w: 120, h: 24,
+			selected: p.Drafted, disabled: dead, reason: "not able to act",
+		})
+	}
 	out = append(out, button{
 		id:    "inspector.close",
 		label: "X",
@@ -73,17 +84,72 @@ func (a *App) drawInspector(screen *ebiten.Image) {
 	}
 	r := inspectorRect()
 	drawPanel(screen, r.x, r.y, r.w, r.h)
-	drawLabel(screen, int(r.x)+12, int(r.y)+12, pawnLabel(p))
-	drawLabel(screen, int(r.x)+12, int(r.y)+32, "colonist  "+p.Status)
+	title := pawnLabel(p)
+	if p.Temperament != "" {
+		title += "  - " + p.Temperament
+	}
+	drawLabel(screen, int(r.x)+12, int(r.y)+12, title)
+	status := "colonist  " + p.Status
+	if p.Reason != "" {
+		status += " (" + p.Reason + ")"
+	}
+	if p.Drafted {
+		status += "  drafted"
+	}
+	if p.MentalBreak != "" {
+		status = "MENTAL BREAK: " + p.MentalBreak
+	}
+	if p.Hypothermia > 0 {
+		status += fmt.Sprintf("  hypothermia %d%%", p.Hypothermia/10)
+	}
+	if p.Heatstroke > 0 {
+		status += fmt.Sprintf("  heatstroke %d%%", p.Heatstroke/10)
+	}
+	switch {
+	case p.Infection > 0:
+		status += fmt.Sprintf("  infection %d%%", p.Infection)
+	case p.Wounded:
+		status += "  wound untended"
+	}
+	if p.Tended && (p.Infection > 0 || p.Health < 100) {
+		status += "  (tended)"
+	}
+	drawLabel(screen, int(r.x)+12, int(r.y)+32, status)
 	a.drawPawnPortrait(screen, p, float64(r.x)+12, float64(r.y)+52, 48, 64)
 	drawLabel(screen, int(r.x)+72, int(r.y)+56, fmt.Sprintf("job       %s", p.Job))
 	drawLabel(screen, int(r.x)+72, int(r.y)+72, fmt.Sprintf("activity  %s", p.Activity))
-	drawLabel(screen, int(r.x)+72, int(r.y)+88, fmt.Sprintf("tile      (%d, %d)", p.X, p.Y))
-	if p.Reason != "" {
-		drawLabel(screen, int(r.x)+72, int(r.y)+104, "reason    "+p.Reason)
+	drawLabel(screen, int(r.x)+72, int(r.y)+88, fmt.Sprintf("tile      (%d, %d)  %s", p.X, p.Y, fmtTemp(p.Temp)))
+	drawLabel(screen, int(r.x)+72, int(r.y)+104, fmt.Sprintf("weapon    %s", p.Weapon))
+	if a.inspectTab == "gear" {
+		drawGear(screen, p, int(r.x)+12, int(r.y)+126)
+		mx, my := a.currentCursor()
+		a.drawButtons(screen, a.inspectorButtons(), mx, my)
+		return
 	}
-	drawNeedBar(screen, int(r.x)+12, int(r.y)+140, 300, 14, p.Hunger, "food")
-	drawNeedBar(screen, int(r.x)+12, int(r.y)+164, 300, 14, p.Rest, "rest")
+	drawNeedBar(screen, int(r.x)+12, int(r.y)+126, 300, 13, p.Health, "health")
+	drawNeedBar(screen, int(r.x)+12, int(r.y)+146, 300, 13, p.Hunger, "food")
+	drawNeedBar(screen, int(r.x)+12, int(r.y)+166, 300, 13, p.Rest, "rest")
+	drawNeedBar(screen, int(r.x)+12, int(r.y)+186, 300, 13, p.Recreation, "fun")
+	drawNeedBar(screen, int(r.x)+12, int(r.y)+206, 300, 13, p.Mood, "mood")
+	drawLabel(screen, int(r.x)+12, int(r.y)+224, "feels "+p.MoodLabel)
+	ty := int(r.y) + 242
+	for i, th := range p.Thoughts {
+		if i >= 5 {
+			break
+		}
+		sign := "+"
+		if th.Value < 0 {
+			sign = ""
+		}
+		drawLabel(screen, int(r.x)+20, ty, fmt.Sprintf("%s%d  %s", sign, th.Value, th.Label))
+		ty += 15
+	}
+	if a.renderer != nil {
+		if lbl := roomLabelAt(a.renderer.world(), p.X, p.Y); lbl != "" {
+			// right-aligned on the title row, clear of the status line
+			drawLabel(screen, int(r.x+r.w)-36-len(lbl)*6, int(r.y)+12, lbl)
+		}
+	}
 	mx, my := a.currentCursor()
 	a.drawButtons(screen, a.inspectorButtons(), mx, my)
 }
@@ -98,12 +164,20 @@ func drawNeedBar(screen *ebiten.Image, x, y, w, h, pct int, label string) {
 	drawLabel(screen, x, y-2, fmt.Sprintf("%s  %d", label, pct))
 	bg := color.RGBA{R: 40, G: 30, B: 24, A: 255}
 	fill := color.RGBA{R: 180, G: 90, B: 50, A: 255}
-	if label == "rest" {
+	switch label {
+	case "rest":
 		fill = color.RGBA{R: 70, G: 110, B: 180, A: 255}
+	case "mood":
+		fill = moodColor(pct)
+	case "fun":
+		fill = color.RGBA{R: 170, G: 120, B: 190, A: 255}
+	case "health":
+		fill = healthColor(pct)
 	}
-	vector.FillRect(screen, float32(x+50), float32(y), float32(w-50), float32(h), bg, false)
-	fw := float32(w-50) * float32(pct) / 100
-	vector.FillRect(screen, float32(x+50), float32(y), fw, float32(h), fill, false)
+	const lw = 84 // label column ("health  100")
+	vector.FillRect(screen, float32(x+lw), float32(y), float32(w-lw), float32(h), bg, false)
+	fw := float32(w-lw) * float32(pct) / 100
+	vector.FillRect(screen, float32(x+lw), float32(y), fw, float32(h), fill, false)
 }
 
 func (a *App) selectedPawn() (game.PawnView, bool) {
@@ -117,4 +191,54 @@ func (a *App) selectedPawn() (game.PawnView, bool) {
 		}
 	}
 	return game.PawnView{}, false
+}
+
+func moodColor(pct int) color.RGBA {
+	switch {
+	case pct < 30:
+		return color.RGBA{R: 200, G: 70, B: 60, A: 255}
+	case pct < 55:
+		return color.RGBA{R: 210, G: 170, B: 70, A: 255}
+	}
+	return color.RGBA{R: 100, G: 180, B: 90, A: 255}
+}
+
+func healthColor(pct int) color.RGBA {
+	switch {
+	case pct < 30:
+		return color.RGBA{R: 200, G: 60, B: 50, A: 255}
+	case pct < 70:
+		return color.RGBA{R: 210, G: 160, B: 60, A: 255}
+	default:
+		return color.RGBA{R: 90, G: 170, B: 80, A: 255}
+	}
+}
+
+// drawGear lists what the colonist carries and wears and the comfortable
+// temperature range that gives it.
+func drawGear(screen *ebiten.Image, p game.PawnView, x, y int) {
+	drawLabel(screen, x, y, "Weapon")
+	drawLabel(screen, x+12, y+16, p.Weapon)
+	drawLabel(screen, x, y+40, "Wearing")
+	ly := y + 56
+	drawLabel(screen, x+12, ly, "everyday clothes")
+	for _, a := range p.Apparel {
+		ly += 16
+		drawLabel(screen, x+12, ly, gearLine(a))
+	}
+	drawLabel(screen, x, ly+28, fmt.Sprintf("Comfortable  %s to %s", fmtTemp(p.ComfortMin), fmtTemp(p.ComfortMax)))
+	drawLabel(screen, x, ly+48, "Order a colonist to Wear clothes from the")
+	drawLabel(screen, x, ly+62, "right-click menu, or let it dress itself.")
+}
+
+func gearLine(a string) string {
+	switch a {
+	case "parka":
+		return "leather parka  (much warmer, hot in summer)"
+	case "tuque":
+		return "knitted tuque  (warmer)"
+	case "duster":
+		return "leather duster (cooler in heat)"
+	}
+	return a
 }

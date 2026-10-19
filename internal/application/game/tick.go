@@ -9,6 +9,9 @@ import (
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/needs"
+	"rimworld-go/internal/domain/pawn/recreation"
+	"rimworld-go/internal/domain/pawn/schedule"
+	"rimworld-go/internal/domain/research"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
@@ -23,14 +26,29 @@ func (g *Game) phaseCommands() {
 }
 
 func (g *Game) applyOne(c command.Command) {
+	if c.Kind == command.MovePawn || c.Kind == command.Prioritize || c.Kind == command.DraftPawn {
+		if _, breaking := g.breaks[entity.EntityID(c.Pawn)]; breaking {
+			return // a colonist in a mental break won't take orders
+		}
+	}
+	if c.Kind == command.MovePawn || c.Kind == command.Prioritize {
+		id := entity.EntityID(c.Pawn)
+		if c.Queue {
+			g.queueOrder(id, c)
+			return
+		}
+		delete(g.orderQueue, id) // a plain order replaces the queue
+	}
 	switch c.Kind {
+	case command.ClearOrders:
+		delete(g.orderQueue, entity.EntityID(c.Pawn))
 	case command.MovePawn:
 		g.cmdMove(entity.EntityID(c.Pawn), c.X, c.Y)
 	case command.DesignateStockpile:
 		minX, minY, maxX, maxY := zone.Normalize(c.X, c.Y, c.X2, c.Y2)
 		g.stockpiles = append(g.stockpiles, zone.Stockpile{
 			MinX: minX, MinY: minY, MaxX: maxX, MaxY: maxY,
-			AllowFood: true, AllowWood: true,
+			AllowFood: true, AllowWood: true, AllowStone: true,
 		})
 	case command.DesignateWall:
 		g.placeFrame(construction.Wall, c.X, c.Y)
@@ -40,7 +58,7 @@ func (g *Game) applyOne(c command.Command) {
 		minX, minY, maxX, maxY := zone.Normalize(c.X, c.Y, c.X2, c.Y2)
 		for _, id := range g.plantIDs {
 			p, ok := g.plants.Get(id)
-			if !ok || !p.Harvestable {
+			if !ok || !p.Harvestable() {
 				continue
 			}
 			if p.X >= minX && p.X <= maxX && p.Y >= minY && p.Y <= maxY {
@@ -50,24 +68,56 @@ func (g *Game) applyOne(c command.Command) {
 		}
 	case command.DesignateCancel:
 		g.cancelRect(c.X, c.Y, c.X2, c.Y2)
+	case command.DesignateBuild:
+		stuff := item.Kind(c.Stuff)
+		if !stuff.IsStuff() {
+			stuff = item.Wood // zero value: default material
+		}
+		if !g.buildLocked(construction.Kind(c.Build)) {
+			g.placeFrameStuff(construction.Kind(c.Build), stuff, construction.ParseFacing(c.Facing), c.X, c.Y)
+		}
+	case command.DesignateCut:
+		g.markCut(c.X, c.Y, c.X2, c.Y2, true)
+	case command.DesignateMine:
+		g.markMine(c.X, c.Y, c.X2, c.Y2, true)
+	case command.AddBill, command.SetBill, command.RemoveBill:
+		g.applyBill(c)
+	case command.DesignateGrowZone:
+		if !g.cropLocked(plant.Species(c.Build)) {
+			g.addGrowZone(c.X, c.Y, c.X2, c.Y2, c.Build)
+		}
+	case command.SetResearch:
+		g.setResearch(research.Project(c.Build))
+	case command.DesignateTame:
+		g.markTame(c.X, c.Y, c.X2, c.Y2, true)
+	case command.DesignatePen:
+		g.addPen(c.X, c.Y, c.X2, c.Y2)
+	case command.ReleaseAnimal:
+		g.releaseAnimal(entity.EntityID(c.Pawn))
+	case command.DesignateDeconstruct:
+		g.markDeconstruct(c.X, c.Y, c.X2, c.Y2, true)
+	case command.DesignateHunt:
+		g.markHunt(c.X, c.Y, c.X2, c.Y2, true)
+	case command.DraftPawn:
+		g.setDraft(entity.EntityID(c.Pawn), c.Enabled)
+	case command.Prioritize:
+		g.prioritize(entity.EntityID(c.Pawn), c.Order, c.X, c.Y, construction.Layer(c.Layer))
 	case command.SetWorkEnabled:
-		id := entity.EntityID(c.Pawn)
-		m, ok := g.labor.Get(id)
+		t, ok := workTypeOf(c.Work)
 		if !ok {
 			return
 		}
-		var t work.Type
-		switch c.Work {
-		case command.WorkHaul:
-			t = work.Haul
-		case command.WorkConstruct:
-			t = work.Construct
-		case command.WorkGrow:
-			t = work.Grow
-		default:
-			return
+		v := 0
+		if c.Enabled {
+			v = work.DefaultPriority
 		}
-		g.labor.Set(id, m.Set(t, c.Enabled))
+		g.setPriority(entity.EntityID(c.Pawn), t, v)
+	case command.SetWorkPriority:
+		if t, ok := workTypeOf(c.Work); ok {
+			g.setPriority(entity.EntityID(c.Pawn), t, c.Count)
+		}
+	case command.SetSchedule:
+		g.setSchedule(entity.EntityID(c.Pawn), c.Index, schedule.Activity(c.Mode))
 	}
 }
 
@@ -76,26 +126,8 @@ func (g *Game) cmdMove(id entity.EntityID, x, y int) {
 		return
 	}
 	g.interrupt(id, job.Cancelled)
-	rec := job.Record{Kind: job.Move, TX: x, TY: y}
+	rec := job.Record{Kind: job.Move, TX: x, TY: y, Forced: true}
 	g.startJob(id, rec)
-}
-
-func (g *Game) placeFrame(kind construction.Kind, x, y int) {
-	if !g.grid.Walkable(x, y) {
-		return
-	}
-	if g.frameAt(x, y) != 0 || g.bldgAt(x, y) != 0 {
-		return
-	}
-	id := g.entities.Next()
-	g.frameIDs = append(g.frameIDs, id)
-	g.frames.Set(id, construction.Frame{
-		Kind:     kind,
-		X:        x,
-		Y:        y,
-		Need:     construction.WoodCost(kind),
-		WorkLeft: construction.WorkTicks(kind),
-	})
 }
 
 func (g *Game) cancelRect(x1, y1, x2, y2 int) {
@@ -113,6 +145,13 @@ func (g *Game) cancelRect(x1, y1, x2, y2 int) {
 		keptFrames = append(keptFrames, id)
 	}
 	g.frameIDs = keptFrames
+	g.markDeconstruct(x1, y1, x2, y2, false)
+	g.markCut(x1, y1, x2, y2, false)
+	g.markMine(x1, y1, x2, y2, false)
+	g.markHunt(x1, y1, x2, y2, false)
+	g.markTame(x1, y1, x2, y2, false)
+	g.cancelPens(x1, y1, x2, y2)
+	g.cancelGrowZones(minX, minY, maxX, maxY)
 
 	for _, id := range g.plantIDs {
 		p, ok := g.plants.Get(id)
@@ -141,6 +180,7 @@ func (g *Game) phaseNeeds() {
 		if v.Status == health.Dead {
 			continue
 		}
+		g.heal(id, &v, now)
 		if v.Status == health.Downed {
 			n, _ := g.need.Get(id)
 			if n.Starving() && v.Cause != health.CauseNoFood {
@@ -161,6 +201,9 @@ func (g *Game) phaseNeeds() {
 		if j.Kind != job.Sleep || j.State != job.Do {
 			n = needs.Decay(n, now)
 			g.need.Set(id, n)
+			if now%recreation.DrainPeriod == 0 && g.joy[id] > 0 {
+				g.joy[id]--
+			}
 		}
 		if n.Starving() {
 			g.down(id, health.CauseNoFood)
@@ -174,22 +217,29 @@ func (g *Game) phaseNeeds() {
 
 func (g *Game) down(id entity.EntityID, cause health.Cause) {
 	g.interrupt(id, job.Cancelled)
-	g.vital.Set(id, health.Record{
-		Status:     health.Downed,
-		Cause:      cause,
-		DownedTick: uint64(g.clock.Now()),
-	})
+	v, _ := g.vital.Get(id)
+	v.Status, v.Cause, v.DownedTick = health.Downed, cause, uint64(g.clock.Now())
+	g.vital.Set(id, v)
 }
 
 func (g *Game) releaseBed(id entity.EntityID) {
 	for _, bid := range g.bldgIDs {
 		b, ok := g.bldgs.Get(bid)
-		if !ok || entity.EntityID(b.Claimant) != id {
+		if !ok || b.SlotOf(uint64(id)) < 0 {
 			continue
 		}
-		b.Claimant = 0
-		g.bldgs.Set(bid, b)
+		g.bldgs.Set(bid, b.Release(uint64(id)))
 	}
+}
+
+// sleepCellFor is where pawn id lies in bed b: its own slot's head cell
+// (the slot it holds, else the slot it would get).
+func (g *Game) sleepCellFor(id entity.EntityID, b construction.Building) (int, int) {
+	slot := b.SlotOf(uint64(id))
+	if slot < 0 {
+		slot = b.Claim(uint64(id)).SlotOf(uint64(id))
+	}
+	return construction.SleepCell(b.Kind, b.Facing, b.X, b.Y, slot)
 }
 
 func (g *Game) alive(id entity.EntityID) bool {
@@ -203,6 +253,7 @@ func (g *Game) interrupt(id entity.EntityID, reason job.FailReason) {
 		return
 	}
 	g.dropCarry(id)
+	g.dropPatient(id)
 	g.reserve.ReleaseOwner(id)
 	if j.Kind != job.None && j.State != job.Idle && j.State != job.Complete {
 		j.State = job.Fail
@@ -231,8 +282,8 @@ func (g *Game) dropCarry(id entity.EntityID) {
 }
 
 func (g *Game) phaseAI() {
-	act := g.Activity()
 	for _, id := range g.pawnIDs {
+		act := g.activityOf(id)
 		v, _ := g.vital.Get(id)
 		if v.Status == health.Dead {
 			g.reserve.ReleaseOwner(id)
@@ -248,13 +299,72 @@ func (g *Game) phaseAI() {
 		j, _ := g.jobs.Get(id)
 		if j.State == job.Complete || j.State == job.Fail {
 			g.dropCarry(id)
+			g.dropPatient(id)
 			g.reserve.ReleaseOwner(id)
 			g.jobs.Set(id, job.Record{})
 			j = job.Record{}
 		}
+		if g.mentalBreakTick(id, j) {
+			continue // acting out: no orders, no work
+		}
+		if len(g.orderQueue[id]) > 0 && !g.followingOrder(id) && (g.drafted(id) || !needs.SleepScheduled(act)) {
+			g.nextOrder(id)
+			continue
+		}
+		if g.drafted(id) {
+			// drafted pawns only follow direct orders, but fire at
+			// hostiles in range when standing idle
+			if j.Kind == job.None || j.State == job.Idle {
+				g.autoEngage(id)
+			}
+			continue
+		}
+		if g.defend(id, j) {
+			continue
+		}
+		if j.Kind != job.Warm && j.Kind != job.Eat && g.needsComfort(id) && !g.noComfortUntil(id) {
+			if j.Kind != job.None && j.State != job.Idle {
+				g.interrupt(id, job.Interrupted)
+			}
+			if g.assignWarm(id) {
+				continue
+			}
+			g.noComfort[id] = uint64(g.clock.Now()) + warmRetry
+		}
+		if j.Kind != job.Sleep && j.Kind != job.Eat && !j.Forced && g.patientRest(id) {
+			if j.Kind != job.None && j.State != job.Idle {
+				g.interrupt(id, job.Interrupted)
+			}
+			g.assignSleep(id) // lie down and wait for a doctor
+			continue
+		}
 		n, _ := g.need.Get(id)
 
 		busy := j.Kind != job.None && j.State != job.Idle
+		// The schedule comes first: at bedtime a colonist drops whatever it
+		// is doing (even a prioritized order) and goes to bed, eating first
+		// if it is hungry. Only drafting overrides it.
+		if needs.SleepScheduled(act) && j.Kind != job.Sleep && j.Kind != job.Eat && j.Kind != job.Warm {
+			if busy {
+				g.interrupt(id, job.Interrupted)
+			}
+			if n.Hungry() && g.hasEdible() {
+				g.assignEat(id)
+			} else {
+				g.assignSleep(id)
+			}
+			continue
+		}
+		if busy && j.Kind.IsIdle() {
+			needy := n.Hungry() && g.hasEdible() || n.Tired() || n.Exhausted()
+			if !needy && (uint64(g.clock.Now())+uint64(id))%idleRecheck != 0 {
+				continue // keep idling; look for real work now and then
+			}
+			busy = false
+		}
+		if busy && j.Forced && !n.Exhausted() {
+			continue // player-prioritized: finish it first
+		}
 		if busy {
 			if n.Hungry() && j.Kind != job.Eat && g.hasEdible() {
 				g.interrupt(id, job.Interrupted)
@@ -278,24 +388,29 @@ func (g *Game) phaseAI() {
 			continue
 		}
 		if !needs.WorkScheduled(act) {
+			if g.assignWear(id) {
+				continue
+			}
+			if !j.Kind.IsIdle() || !j.Active() {
+				g.assignIdle(id) // recreation: free time
+			}
 			continue
 		}
-		m, _ := g.labor.Get(id)
-		if m.Enabled(work.Haul) && g.assignHaul(id) {
+		if g.assignWorkByPriority(id) {
 			continue
 		}
-		if m.Enabled(work.Construct) && g.assignConstruct(id) {
+		if g.assignWear(id) {
 			continue
 		}
-		if m.Enabled(work.Grow) && g.assignHarvest(id) {
-			continue
+		if !j.Kind.IsIdle() || !j.Active() {
+			g.assignIdle(id) // nothing to do: free time
 		}
 	}
 }
 
 func (g *Game) startJob(id entity.EntityID, rec job.Record) bool {
 	g.reserve.ReleaseOwner(id)
-	if rec.Target != 0 && !g.reserve.TryEntity(id, rec.Target) {
+	if rec.Target != 0 && rec.Kind != job.Attack && rec.Kind != job.Sleep && !g.reserve.TryEntity(id, rec.Target) {
 		rec.State = job.Fail
 		rec.Fail = job.Reserved
 		g.jobs.Set(id, rec)
@@ -343,8 +458,9 @@ func (g *Game) pathTo(id entity.EntityID, tx, ty int) ([]pathing.Point, bool) {
 	if pos.X == tx && pos.Y == ty {
 		return nil, true
 	}
-	if g.grid.Walkable(tx, ty) {
-		return pathing.Find(g.grid, pos.X, pos.Y, tx, ty)
+	q := g.pathQuery(id)
+	if q.Walkable(tx, ty) {
+		return pathing.Find(q, pos.X, pos.Y, tx, ty)
 	}
 	if pathing.Adjacent(pos.X, pos.Y, tx, ty) {
 		return nil, true
@@ -359,10 +475,10 @@ func (g *Game) pathTo(id entity.EntityID, tx, ty int) ([]pathing.Point, bool) {
 				continue
 			}
 			ax, ay := tx+dx, ty+dy
-			if !g.grid.Walkable(ax, ay) {
+			if !q.Walkable(ax, ay) {
 				continue
 			}
-			p, ok := pathing.Find(g.grid, pos.X, pos.Y, ax, ay)
+			p, ok := pathing.Find(q, pos.X, pos.Y, ax, ay)
 			if !ok {
 				continue
 			}
@@ -383,7 +499,7 @@ func (g *Game) pathTo(id entity.EntityID, tx, ty int) ([]pathing.Point, bool) {
 func (g *Game) hasEdible() bool {
 	for _, id := range g.itemIDs {
 		st, ok := g.stacks.Get(id)
-		if !ok || st.Kind != item.Food || st.Qty <= 0 || st.Carrier != 0 {
+		if !ok || !st.Kind.IsFood() || st.Qty <= 0 || st.Carrier != 0 {
 			continue
 		}
 		if _, taken := g.reserve.EntityOwner(id); taken {
@@ -395,23 +511,7 @@ func (g *Game) hasEdible() bool {
 }
 
 func (g *Game) assignEat(id entity.EntityID) {
-	pos, _ := g.positions.Get(id)
-	var best entity.EntityID
-	bestD := 1 << 30
-	var bx, by int
-	for _, iid := range g.itemIDs {
-		st, ok := g.stacks.Get(iid)
-		if !ok || st.Kind != item.Food || st.Qty <= 0 || st.Carrier != 0 {
-			continue
-		}
-		if _, taken := g.reserve.EntityOwner(iid); taken {
-			continue
-		}
-		d := pathing.Dist(pos.X, pos.Y, st.X, st.Y)
-		if d < bestD || (d == bestD && iid < best) {
-			best, bestD, bx, by = iid, d, st.X, st.Y
-		}
-	}
+	best, bx, by := g.bestFood(id)
 	if best == 0 {
 		return
 	}
@@ -434,31 +534,30 @@ func (g *Game) assignSleep(id entity.EntityID) {
 	pos, _ := g.positions.Get(id)
 	var best entity.EntityID
 	bestD := 1 << 30
-	var bx, by int
 	for _, bid := range g.bldgIDs {
 		b, ok := g.bldgs.Get(bid)
-		if !ok || b.Kind != construction.Bed {
-			continue
-		}
-		if b.Claimant != 0 && entity.EntityID(b.Claimant) != id {
-			continue
-		}
-		if owner, taken := g.reserve.EntityOwner(bid); taken && owner != id {
+		if !ok || !b.Kind.Sleeps() || !b.CanClaim(uint64(id)) {
 			continue
 		}
 		d := pathing.Dist(pos.X, pos.Y, b.X, b.Y)
+		if b.SlotOf(uint64(id)) >= 0 {
+			d = -1 // its own bed first
+		}
 		if d < bestD || (d == bestD && bid < best) {
-			best, bestD, bx, by = bid, d, b.X, b.Y
+			best, bestD = bid, d
 		}
 	}
 	if best != 0 {
 		b, _ := g.bldgs.Get(best)
-		b.Claimant = uint64(id)
+		if b.SlotOf(uint64(id)) < 0 {
+			g.releaseBed(id) // moving to a new bed gives up the old one
+		}
+		b = b.Claim(uint64(id))
 		g.bldgs.Set(best, b)
 		g.sleptAt[id] = best
-		if !g.startJob(id, job.Record{Kind: job.Sleep, Target: best, TX: bx, TY: by, WorkLeft: needs.SleepWorkMin}) {
-			b.Claimant = 0
-			g.bldgs.Set(best, b)
+		sx, sy := g.sleepCellFor(id, b)
+		if !g.startJob(id, job.Record{Kind: job.Sleep, Target: best, TX: sx, TY: sy, WorkLeft: needs.SleepWorkMin}) {
+			g.bldgs.Set(best, b.Release(uint64(id)))
 			g.sleptAt[id] = 0
 		}
 		return
@@ -476,7 +575,7 @@ func (g *Game) assignHaul(id entity.EntityID) bool {
 }
 
 func (g *Game) haulToFrame(id entity.EntityID, pos Position) (job.Record, bool) {
-	var bestWood entity.EntityID
+	var bestWood, bestFrame entity.EntityID
 	bestD := 1 << 30
 	var wx, wy, fx, fy int
 	for _, fid := range g.frameIDs {
@@ -489,15 +588,18 @@ func (g *Game) haulToFrame(id entity.EntityID, pos Position) (job.Record, bool) 
 		}
 		for _, iid := range g.itemIDs {
 			st, ok := g.stacks.Get(iid)
-			if !ok || st.Kind != item.Wood || st.Qty <= 0 || st.Carrier != 0 {
+			if !ok || st.Kind != fr.Stuff || st.Qty <= 0 || st.Carrier != 0 {
 				continue
 			}
 			if _, taken := g.reserve.EntityOwner(iid); taken {
 				continue
 			}
 			d := pathing.Dist(pos.X, pos.Y, st.X, st.Y)
+			if fr.Rebuild {
+				d -= rebuildFirst
+			}
 			if d < bestD || (d == bestD && iid < bestWood) {
-				bestD, bestWood = d, iid
+				bestD, bestWood, bestFrame = d, iid, fid
 				wx, wy, fx, fy = st.X, st.Y, fr.X, fr.Y
 			}
 		}
@@ -506,7 +608,7 @@ func (g *Game) haulToFrame(id entity.EntityID, pos Position) (job.Record, bool) 
 		return job.Record{}, false
 	}
 	return job.Record{
-		Kind: job.Haul, Target: bestWood, TX: wx, TY: wy, DestX: fx, DestY: fy,
+		Kind: job.Haul, Target: bestWood, TX: wx, TY: wy, DestX: fx, DestY: fy, Dest: bestFrame,
 	}, true
 }
 
@@ -548,12 +650,23 @@ func (g *Game) haulToStockpile(id entity.EntityID, pos Position) bool {
 
 func (g *Game) filterMatches(k item.Kind) bool {
 	for _, s := range g.stockpiles {
-		if k == item.Food && s.AllowFood {
+		if allows(s, k) {
 			return true
 		}
-		if k == item.Wood && s.AllowWood {
-			return true
-		}
+	}
+	return false
+}
+
+func allows(s zone.Stockpile, k item.Kind) bool {
+	switch {
+	case k.IsFood(), k.IsCorpse():
+		return s.AllowFood
+	case k == item.Wood:
+		return s.AllowWood
+	case k == item.Stone:
+		return s.AllowStone
+	case k == item.Leather, k == item.HerbalMedicine, k.IsApparel(), k.IsWeapon():
+		return true // goods: always welcome
 	}
 	return false
 }
@@ -563,22 +676,39 @@ func (g *Game) inMatchingStockpile(st item.Stack) bool {
 		if !s.Contains(st.X, st.Y) {
 			continue
 		}
-		if st.Kind == item.Food && s.AllowFood {
-			return true
-		}
-		if st.Kind == item.Wood && s.AllowWood {
+		if allows(s, st.Kind) {
 			return true
 		}
 	}
 	return false
 }
 
+// emptyStockpileCell is where a load of kind k goes: a stockpile cell
+// whose same-kind stack still has room (topping up), else an empty cell.
 func (g *Game) emptyStockpileCell(k item.Kind) (int, int, bool) {
 	for _, s := range g.stockpiles {
-		if k == item.Food && !s.AllowFood {
+		if !allows(s, k) {
 			continue
 		}
-		if k == item.Wood && !s.AllowWood {
+		for y := s.MinY; y <= s.MaxY; y++ {
+			for x := s.MinX; x <= s.MaxX; x++ {
+				oid := g.itemAt(x, y)
+				if oid == 0 {
+					continue
+				}
+				o, _ := g.stacks.Get(oid)
+				if o.Kind != k || o.Qty+item.CarryLimit > item.StackLimit {
+					continue
+				}
+				if _, taken := g.reserve.TileOwner(x, y); taken {
+					continue
+				}
+				return x, y, true
+			}
+		}
+	}
+	for _, s := range g.stockpiles {
+		if !allows(s, k) {
 			continue
 		}
 		for y := s.MinY; y <= s.MaxY; y++ {
@@ -586,7 +716,8 @@ func (g *Game) emptyStockpileCell(k item.Kind) (int, int, bool) {
 				if !g.grid.Walkable(x, y) {
 					continue
 				}
-				if g.itemAt(x, y) != 0 || g.frameAt(x, y) != 0 || g.bldgAt(x, y) != 0 {
+				if g.itemAt(x, y) != 0 || g.layerFrameAt(x, y, construction.LayerObject) != 0 ||
+					g.layerBldgAt(x, y, construction.LayerObject) != 0 {
 					continue
 				}
 				if _, taken := g.reserve.TileOwner(x, y); taken {
@@ -613,12 +744,34 @@ func (g *Game) assignConstruct(id entity.EntityID) bool {
 			continue
 		}
 		d := pathing.Dist(pos.X, pos.Y, fr.X, fr.Y)
+		if fr.Rebuild {
+			d -= rebuildFirst
+		}
 		if d < bestD || (d == bestD && fid < best) {
 			best, bestD, bx, by = fid, d, fr.X, fr.Y
 		}
 	}
+	for _, bid := range g.bldgIDs {
+		b, ok := g.bldgs.Get(bid)
+		if !ok || !b.Deconstruct {
+			continue
+		}
+		if _, taken := g.reserve.EntityOwner(bid); taken {
+			continue
+		}
+		d := pathing.Dist(pos.X, pos.Y, b.X, b.Y)
+		if d < bestD || (d == bestD && bid < best) {
+			best, bestD, bx, by = bid, d, b.X, b.Y
+		}
+	}
 	if best == 0 {
 		return false
+	}
+	if b, ok := g.bldgs.Get(best); ok {
+		tx, ty := g.workSpot(id, bx, by)
+		return g.startJob(id, job.Record{
+			Kind: job.Deconstruct, Target: best, TX: tx, TY: ty, WorkLeft: b.WorkLeft,
+		})
 	}
 	fr, _ := g.frames.Get(best)
 	return g.startJob(id, job.Record{
@@ -627,28 +780,13 @@ func (g *Game) assignConstruct(id entity.EntityID) bool {
 }
 
 func (g *Game) assignHarvest(id entity.EntityID) bool {
-	pos, _ := g.positions.Get(id)
-	var best entity.EntityID
-	bestD := 1 << 30
-	var bx, by int
-	for _, pid := range g.plantIDs {
-		p, ok := g.plants.Get(pid)
-		if !ok || !p.Harvestable || !p.Designated {
-			continue
-		}
-		if _, taken := g.reserve.EntityOwner(pid); taken {
-			continue
-		}
-		d := pathing.Dist(pos.X, pos.Y, p.X, p.Y)
-		if d < bestD || (d == bestD && pid < best) {
-			best, bestD, bx, by = pid, d, p.X, p.Y
-		}
-	}
+	best := g.nearestPlant(id, wantsHarvest)
 	if best == 0 {
 		return false
 	}
+	bp, _ := g.plants.Get(best)
 	return g.startJob(id, job.Record{
-		Kind: job.Harvest, Target: best, TX: bx, TY: by, WorkLeft: plant.HarvestWork,
+		Kind: job.Harvest, Target: best, TX: bp.X, TY: bp.Y, WorkLeft: plant.DefOf(bp.Species).HarvestWork,
 	})
 }
 
@@ -660,6 +798,12 @@ func (g *Game) phaseJobs() {
 			continue
 		}
 		j, _ := g.jobs.Get(id)
+		if j.Kind == job.Hunt || j.Kind == job.Attack {
+			if v.Status == health.Alive && (j.State == job.Goto || j.State == job.Do) {
+				g.doCombat(id, j, now)
+			}
+			continue
+		}
 		if j.State != job.Do {
 			continue
 		}
@@ -677,6 +821,34 @@ func (g *Game) phaseJobs() {
 			g.doConstruct(id, j)
 		case job.Harvest:
 			g.doHarvest(id, j)
+		case job.Deconstruct:
+			g.doDeconstruct(id, j)
+		case job.Cut:
+			g.doCut(id, j)
+		case job.Mine:
+			g.doMine(id, j)
+		case job.Sow:
+			g.doSow(id, j)
+		case job.Bill:
+			g.doBill(id, j)
+		case job.Equip:
+			g.doEquip(id, j)
+		case job.Rescue:
+			g.doRescue(id, j)
+		case job.Tend:
+			g.doTend(id, j)
+		case job.Refuel:
+			g.doRefuel(id, j)
+		case job.Warm:
+			g.doWarm(id, j)
+		case job.Repair:
+			g.doRepair(id, j)
+		case job.Research:
+			g.doResearch(id, j)
+		case job.Tame:
+			g.doTame(id, j)
+		case job.Wander, job.Chat, job.Relax, job.FireSide, job.Horseshoes, job.Hide:
+			g.doIdle(id, j)
 		default:
 			j.State = job.Complete
 			g.jobs.Set(id, j)
@@ -685,6 +857,12 @@ func (g *Game) phaseJobs() {
 }
 
 func (g *Game) doEat(id entity.EntityID, j job.Record) {
+	if j.Count == 0 && j.Carry == 0 {
+		if g.carryToTable(id, j) {
+			return // walking to a table with the food
+		}
+		j.Count = 2 // no table in reach: eat right here
+	}
 	j.WorkLeft--
 	if j.WorkLeft > 0 {
 		g.jobs.Set(id, j)
@@ -697,14 +875,28 @@ func (g *Game) doEat(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
-	st.Qty--
+	// eat portions until satisfied (several lettuces make a meal; one
+	// ration does), never past full by more than half a portion
+	n, _ := g.need.Get(id)
+	nut := st.Kind.Nutrition()
+	for eaten := 0; st.Qty > 0 && eaten < 12; eaten++ {
+		st.Qty--
+		n.Hunger += nut
+		if j.Count == bingeEat && eaten < 2 {
+			continue // binge: stuffs itself well past full
+		}
+		if n.Hunger+nut/2 > needs.Full {
+			break
+		}
+	}
 	if st.Qty <= 0 {
 		g.deleteItem(j.Target)
+		j.Carry = 0
 	} else {
-		g.stacks.Set(j.Target, st)
+		g.stacks.Set(j.Target, st) // leftovers: dropped where it ate
 	}
-	n, _ := g.need.Get(id)
-	n.Hunger += needs.EatRestore
+	g.lastMeal[id] = st.Kind
+	g.afterEat(id, st.Kind)
 	if n.Hunger > needs.Full {
 		n.Hunger = needs.Full
 	}
@@ -724,16 +916,21 @@ func (g *Game) doSleep(id entity.EntityID, j job.Record, now uint64) {
 		g.vital.Set(id, v)
 	}
 	j.WorkLeft--
-	act := g.Activity()
-	done := n.Rest >= needs.Full
+	act := g.activityOf(id)
+	// fully rested sleepers stay in bed through scheduled sleep hours
+	done := n.Rest >= needs.Full && !needs.SleepScheduled(act)
 	if !n.Exhausted() && needs.WorkScheduled(act) && n.Rest > needs.CriticalRest && j.WorkLeft <= 0 {
 		done = true
+	}
+	if done && g.patientRest(id) && j.WorkLeft > -patientWait {
+		done = false // stay put: a doctor is coming
 	}
 	if n.Hungry() && g.hasEdible() {
 		done = true
 	}
 	if done {
 		j.State = job.Complete
+		g.afterSleep(id)
 	}
 	g.jobs.Set(id, j)
 }
@@ -748,14 +945,32 @@ func (g *Game) doHaul(id entity.EntityID, j job.Record) {
 			g.jobs.Set(id, j)
 			return
 		}
+		take := st.Qty
+		if take > item.CarryLimit {
+			take = item.CarryLimit
+		}
+		if fr, ok := g.frames.Get(j.Dest); ok && j.Dest != 0 {
+			if need := fr.Need - fr.Wood; need > 0 && take > need {
+				take = need
+			}
+		}
+		carry := j.Target
+		if take < st.Qty { // split off one load, leave the rest
+			st.Qty -= take
+			g.stacks.Set(j.Target, st)
+			carry = g.entities.Next()
+			g.itemIDs = append(g.itemIDs, carry)
+			st = item.Stack{Kind: st.Kind, Qty: take, X: st.X, Y: st.Y, Rot: st.Rot, Dried: st.Dried}
+		}
 		st.Carrier = id
-		g.stacks.Set(j.Target, st)
-		j.Carry = j.Target
+		g.stacks.Set(carry, st)
+		j.Carry = carry
 		path, ok := g.pathTo(id, j.DestX, j.DestY)
 		if !ok {
 			st.Carrier = 0
 			st.X, st.Y = pos.X, pos.Y
-			g.stacks.Set(j.Target, st)
+			g.mergeOrSet(carry, st)
+			j.Carry = 0
 			j.State = job.Fail
 			j.Fail = job.Unreachable
 			g.jobs.Set(id, j)
@@ -784,8 +999,9 @@ func (g *Game) finishHaulDrop(id entity.EntityID, j job.Record) {
 	}
 	st.Carrier = 0
 	st.X, st.Y = j.DestX, j.DestY
-	if fid := g.frameAt(j.DestX, j.DestY); fid != 0 && st.Kind == item.Wood {
-		fr, _ := g.frames.Get(fid)
+	fid := j.Dest
+	fr, isFrame := g.frames.Get(fid)
+	if fid != 0 && isFrame && st.Kind == fr.Stuff {
 		need := fr.Need - fr.Wood
 		give := st.Qty
 		if give > need {
@@ -817,6 +1033,10 @@ func (g *Game) doConstruct(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
+	if !g.workTick(id) {
+		g.jobs.Set(id, j)
+		return
+	}
 	fr.WorkLeft--
 	j.WorkLeft = fr.WorkLeft
 	if fr.WorkLeft > 0 {
@@ -839,10 +1059,49 @@ func (g *Game) completeFrame(id entity.EntityID, fr construction.Frame) {
 	}
 	g.frameIDs = kept
 	g.bldgIDs = append(g.bldgIDs, id)
-	g.bldgs.Set(id, construction.Building{Kind: fr.Kind, X: fr.X, Y: fr.Y})
-	if fr.Kind == construction.Wall {
-		g.grid.SetWalkable(fr.X, fr.Y, false)
+	g.bldgs.Set(id, construction.Building{Kind: fr.Kind, Stuff: fr.Stuff, Facing: fr.Facing, X: fr.X, Y: fr.Y})
+	g.markRoomsDirty()
+	g.defaultBills(id, fr.Kind)
+	// bushes and crops under the footprint are cleared below
+	cells, _, _ := construction.Footprint(fr.Kind, fr.Facing, fr.X, fr.Y)
+	for _, c := range cells {
+		if pid := g.plantAt(c[0], c[1]); pid != 0 {
+			g.removePlant(pid)
+		}
 	}
+	if construction.DefOf(fr.Kind).BlocksMove {
+		for _, c := range cells {
+			g.grid.SetWalkable(c[0], c[1], false)
+		}
+		for _, c := range cells {
+			g.ejectPawns(c[0], c[1])
+		}
+	}
+}
+
+func (g *Game) doDeconstruct(id entity.EntityID, j job.Record) {
+	b, ok := g.bldgs.Get(j.Target)
+	if !ok || !b.Deconstruct {
+		j.State = job.Fail
+		j.Fail = job.TargetGone
+		g.jobs.Set(id, j)
+		return
+	}
+	if !g.workTick(id) {
+		g.jobs.Set(id, j)
+		return
+	}
+	b.WorkLeft--
+	j.WorkLeft = b.WorkLeft
+	if b.WorkLeft > 0 {
+		g.bldgs.Set(j.Target, b)
+		g.jobs.Set(id, j)
+		return
+	}
+	g.reserve.ReleaseOwner(id)
+	g.removeBuilding(j.Target)
+	j.State = job.Complete
+	g.jobs.Set(id, j)
 }
 
 func (g *Game) doHarvest(id entity.EntityID, j job.Record) {
@@ -853,20 +1112,24 @@ func (g *Game) doHarvest(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
+	if !g.workTick(id) {
+		g.jobs.Set(id, j)
+		return
+	}
 	j.WorkLeft--
 	if j.WorkLeft > 0 {
 		g.jobs.Set(id, j)
 		return
 	}
-	_, _ = g.SpawnStack(item.Food, plant.HarvestYield, p.X, p.Y)
-	g.plants.Delete(j.Target)
-	kept := g.plantIDs[:0]
-	for _, pid := range g.plantIDs {
-		if pid != j.Target {
-			kept = append(kept, pid)
-		}
+	d := plant.DefOf(p.Species)
+	g.dropStack(d.Yields, d.Yield, p.X, p.Y)
+	if d.Regrows {
+		p.Growth = d.GrowTicks * d.RegrowTo / 100
+		p.Designated = false
+		g.plants.Set(j.Target, p)
+	} else {
+		g.removePlant(j.Target)
 	}
-	g.plantIDs = kept
 	j.State = job.Complete
 	g.jobs.Set(id, j)
 }
@@ -877,7 +1140,11 @@ func (g *Game) phaseMovement() {
 		pos Position
 	}
 	var moves []move
-	for _, id := range g.pawnIDs {
+	movers := g.pawnIDs
+	if len(g.raiderIDs) > 0 {
+		movers = append(append([]entity.EntityID(nil), g.pawnIDs...), g.raiderIDs...)
+	}
+	for _, id := range movers {
 		if !g.alive(id) || !g.dueToMove(id) {
 			continue
 		}
@@ -886,7 +1153,7 @@ func (g *Game) phaseMovement() {
 			continue
 		}
 		next := j.Path[j.PathI]
-		if !g.grid.Walkable(next.X, next.Y) {
+		if !g.grid.Walkable(next.X, next.Y) || g.isRaider(id) && g.doorAt(next.X, next.Y) {
 			path, ok := g.pathTo(id, j.TX, j.TY)
 			if !ok {
 				j.State = job.Fail
@@ -912,8 +1179,12 @@ func (g *Game) phaseMovement() {
 		}
 		g.jobs.Set(id, j)
 	}
+	var raiders []entity.EntityID
 	for _, m := range moves {
 		g.positions.Set(m.id, m.pos)
+		if g.isRaider(m.id) {
+			raiders = append(raiders, m.id)
+		}
 		if j, ok := g.jobs.Get(m.id); ok && j.Carry != 0 {
 			if st, ok := g.stacks.Get(j.Carry); ok {
 				st.X, st.Y = m.pos.X, m.pos.Y
@@ -921,6 +1192,8 @@ func (g *Game) phaseMovement() {
 			}
 		}
 	}
+	g.followCarriers()
+	g.trapsUnderfoot(raiders)
 }
 
 func (g *Game) arrive(id entity.EntityID, j job.Record) {
@@ -942,26 +1215,6 @@ func (g *Game) itemAt(x, y int) entity.EntityID {
 	return 0
 }
 
-func (g *Game) frameAt(x, y int) entity.EntityID {
-	for _, id := range g.frameIDs {
-		fr, ok := g.frames.Get(id)
-		if ok && fr.X == x && fr.Y == y {
-			return id
-		}
-	}
-	return 0
-}
-
-func (g *Game) bldgAt(x, y int) entity.EntityID {
-	for _, id := range g.bldgIDs {
-		b, ok := g.bldgs.Get(id)
-		if ok && b.X == x && b.Y == y {
-			return id
-		}
-	}
-	return 0
-}
-
 func (g *Game) deleteItem(id entity.EntityID) {
 	g.stacks.Delete(id)
 	kept := g.itemIDs[:0]
@@ -973,23 +1226,87 @@ func (g *Game) deleteItem(id entity.EntityID) {
 	g.itemIDs = kept
 }
 
+// mergeOrSet puts stack id down at st's tile, merging into a same-kind
+// stack there up to StackLimit; any overflow spills to a nearby tile.
 func (g *Game) mergeOrSet(id entity.EntityID, st item.Stack) {
 	for _, oid := range g.itemIDs {
 		if oid == id {
 			continue
 		}
 		other, ok := g.stacks.Get(oid)
-		if !ok {
+		if !ok || !item.CanMerge(st, other) {
 			continue
 		}
-		if item.CanMerge(st, other) {
-			other.Qty = item.Add(other.Qty, st.Qty)
+		room := item.StackLimit - other.Qty
+		if room <= 0 {
+			break
+		}
+		if st.Qty <= room {
+			other.Rot = item.MergeRot(other.Qty, other.Rot, st.Qty, st.Rot)
+			other.Qty += st.Qty
 			g.stacks.Set(oid, other)
 			g.deleteItem(id)
 			return
 		}
+		other.Rot = item.MergeRot(other.Qty, other.Rot, room, st.Rot)
+		other.Qty = item.StackLimit
+		g.stacks.Set(oid, other)
+		st.Qty -= room
+		break
+	}
+	if g.otherStackAt(id, st.X, st.Y) {
+		if x, y, ok := g.spillTile(st.Kind, st.X, st.Y); ok {
+			st.X, st.Y = x, y
+			g.mergeOrSet(id, st)
+			return
+		}
 	}
 	g.stacks.Set(id, st)
+}
+
+func (g *Game) otherStackAt(id entity.EntityID, x, y int) bool {
+	for _, oid := range g.itemIDs {
+		if oid == id {
+			continue
+		}
+		if o, ok := g.stacks.Get(oid); ok && o.Carrier == 0 && o.X == x && o.Y == y {
+			return true
+		}
+	}
+	return false
+}
+
+// spillTile is the nearest walkable tile around (x, y) with no stack or
+// a same-kind stack that still has room.
+func (g *Game) spillTile(k item.Kind, x, y int) (int, int, bool) {
+	for r := 1; r <= 4; r++ {
+		for dy := -r; dy <= r; dy++ {
+			for dx := -r; dx <= r; dx++ {
+				if max(abs(dx), abs(dy)) != r {
+					continue
+				}
+				nx, ny := x+dx, y+dy
+				if !g.grid.Walkable(nx, ny) {
+					continue
+				}
+				oid := g.itemAt(nx, ny)
+				if oid == 0 {
+					return nx, ny, true
+				}
+				if o, _ := g.stacks.Get(oid); o.Kind == k && o.Qty < item.StackLimit {
+					return nx, ny, true
+				}
+			}
+		}
+	}
+	return 0, 0, false
+}
+
+func abs(v int) int {
+	if v < 0 {
+		return -v
+	}
+	return v
 }
 
 // Ate reports whether the pawn completed an Eat job (fixture helper).

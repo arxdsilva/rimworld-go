@@ -1,2 +1,2 @@
-// Package recipe TODO: document package responsibility.
+// Package recipe defines what workbenches make: inputs, output, work.
 package recipe

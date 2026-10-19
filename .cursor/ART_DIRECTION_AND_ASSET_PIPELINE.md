@@ -435,18 +435,18 @@ complex backgrounds, or copyrighted game assets.
 
 Create and freeze templates before bulk production:
 
--   [ ] building 1×1
--   [ ] building 1×2
+-   [x] building 1×1
+-   [x] building 1×2
 -   [ ] building 2×2
 -   [ ] building 3×1 / 3×2
--   [ ] furniture
--   [ ] weapon
--   [ ] pawn body/head/hair/apparel
--   [ ] animal
--   [ ] plant
--   [ ] item
--   [ ] UI icon
--   [ ] terrain
+-   [x] furniture
+-   [x] weapon
+-   [x] pawn body/head/hair/apparel
+-   [x] animal
+-   [x] plant
+-   [x] item
+-   [-] UI icon (cut from world renders; no dedicated icon template yet)
+-   [x] terrain
 -   [ ] decal
 
 Each template marks logical tile bounds, safe visual bounds, pivot,
@@ -628,46 +628,46 @@ resolve metadata conflicts, and update the catalog.
 
 ### ART Wave 0 --- Freeze contracts
 
--   [ ] tile reference scale
--   [ ] camera/perspective
--   [ ] pivots
--   [ ] outlines
--   [ ] base/material palettes
--   [ ] light direction
--   [ ] naming
--   [ ] metadata schema
--   [ ] source/generated rules
+-   [x] tile reference scale (64 px/tile @1x, exported @2x; `artlib/contracts.py`)
+-   [x] camera/perspective (orthographic top-down + oblique shear k=0.5; figures leaned 55° — category rule in `contracts.py`)
+-   [x] pivots (`origin_px` = footprint top-left; named `attachments`)
+-   [x] outlines (post-pass chromatic contour, 2 px @1x)
+-   [x] base/material palettes (`palettes/base.yaml`, `palettes/materials.yaml`)
+-   [x] light direction (upper-left key, 3 toon bands, lower-right contact shadow)
+-   [x] naming (`core:<family>/<name>`, lowercase snake_case, facing/variant suffixes)
+-   [x] metadata schema (`assets/metadata/<family>/<name>.yaml`, version 1)
+-   [x] source/generated rules (`assets/source/blender` → `make art` → `assets/generated`; never hand-patch)
 
 ### ART Wave 1 --- Tooling/templates
 
--   [ ] validator
--   [ ] raster export
+-   [x] validator (`assets/source/tools/validate_assets.py`, `make art-check`; Go port pending)
+-   [x] raster export (`make art`, headless Blender; reproducible to ±1/255 GPU noise)
 -   [ ] atlas/manifest
--   [ ] contact sheets
--   [ ] screenshot test scene
--   [ ] building/item/terrain/icon/pawn templates
+-   [x] contact sheets (`make art-preview`)
+-   [x] screenshot test scene (`bin/game -capture out.png` / `make art-capture` renders a scripted colony in the real renderer; `compose_scene.py` for the full §34 set)
+-   [-] building/item/terrain/icon/pawn templates (`template.blend` + per-family builders; animal family with trot frames; 2×2/3×N and decal not yet)
 
 ### ART Wave 2 --- First playable
 
--   [-] soil/stone/water (vendor ground/rock tiles drawn presentation-only; no domain terrain types)
--   [ ] wall/door/floor
--   [ ] blueprint/frame
--   [-] pawn base (vendor CC0 side-view full-body idle/walk in the ebiten adapter, presentation-clocked with tile-to-tile lerp; original top-down compositional pawns not yet)
--   [ ] first hair/apparel
--   [ ] basic resources/items
--   [-] selection/designation markers (vendor crosshair on selected pawn; no designation overlays)
+-   [-] soil/stone/water (domain terrain drawn in-game: soil/rich soil/gravel/stone variants with soft edge transitions, 16-mask natural rock walls; water missing)
+-   [-] wall/door/floor (16-mask wood wall autotile drawn in-game; doors and wood floor generated but the domain has no doors/floors yet)
+-   [x] blueprint/frame (blueprint overlay on every frame, scaffold once wood is delivered)
+-   [x] pawn base: original compositional pawns (body/pants/shirt/vest/hair layers, 4 facings, EntityID-stable tints) with an 8-frame Blender walk cycle synced to tile progress, idle breathing, work swings, lying/in-bed/carried poses; vendor pack kept as fallback
+-   [x] first hair/apparel (3 hairstyles, pants/shirt/vest, runtime tint masks, in-game)
+-   [-] basic resources/items (wood/food drawn in-game; steel/stone generated, no domain items yet)
+-   [x] selection/designation markers (original selection brackets, harvest designation, stockpile zone in-game; cut/mine glyphs ready for when those orders exist)
 
 ### ART Wave 3 --- Survival
 
--   [ ] bed/table/chair
--   [ ] food/crops/wild plants/trees
+-   [-] bed/table/chair (1×1 cot drawn in-game for the current single-cell bed; 1×2 bed, table, chair generated in 4 facings for when the domain has footprints/furniture)
+-   [-] food/crops/wild plants/trees (berry bush ± harvestable, grass and food crate in-game; amberroot stages and trees generated, no domain crops/trees yet)
 -   [ ] stove/butcher workstation
 -   [ ] medicine
--   [ ] blood/injury effects
+-   [x] blood/injury effects
 
 ### ART Wave 4 --- Production
 
--   [ ] material variants
+-   [-] material variants (wood/stone walls and floors; doors/furniture wood only)
 -   [ ] furniture families
 -   [ ] production/research benches
 -   [ ] storage
@@ -678,7 +678,7 @@ resolve metadata conflicts, and update the catalog.
 -   [ ] melee family
 -   [ ] pistol/rifle/shotgun/long-range weapon
 -   [ ] armor/helmets
--   [ ] projectiles/muzzle flash/impact/explosion
+-   [-] projectiles/muzzle flash/impact/explosion
 -   [ ] fire/smoke
 -   [ ] turret/defenses
 
@@ -688,7 +688,7 @@ resolve metadata conflicts, and update the catalog.
 -   [ ] hair/facial hair library
 -   [ ] apparel/armor library
 -   [ ] tint validation
--   [ ] sleeping/downed/dead presentation
+-   [x] sleeping/downed/dead presentation
 
 ### ART Wave 7 --- Animals/biomes
 
@@ -696,7 +696,7 @@ resolve metadata conflicts, and update the catalog.
 -   [ ] wildlife/predators
 -   [ ] juvenile variants
 -   [ ] biome plants
--   [ ] rock/resource variants
+-   [-] rock/resource variants (natural rock walls 16-mask, rock chunks, stone blocks item; no ore)
 -   [ ] snow/weather
 
 ### ART Wave 8 --- World/factions
@@ -746,27 +746,36 @@ Exact colors must come from original visual prototyping rather than
 copying another game's palette.
 
 -   [-] `assets/palettes/ui.yaml` (menu/pause chrome tokens; Go adapter
-    mirrors the hexes). `base.yaml`, `materials.yaml`, and
-    `factions.yaml` are not started.
+    mirrors the hexes), `base.yaml` (outline/shadow/overlay tokens +
+    runtime tint presets) and `materials.yaml` (3 toon bands per material)
+    are in use by the Blender pipeline. `factions.yaml` has placeholder
+    accents only.
 
 ## 34. Mandatory Style Prototype Gate
 
 Before hundreds of assets are created, build one vertical-slice scene
 containing:
 
--   [ ] one pawn
--   [ ] three hairstyles
--   [ ] two apparel layers
--   [ ] one rifle
--   [ ] one tree and crop
--   [ ] soil and stone
--   [ ] wall, door, floor
--   [ ] bed, table, chair
--   [ ] workbench and lamp
--   [ ] representative UI icons
--   [ ] selection/designation overlays
+-   [x] one pawn
+-   [x] three hairstyles
+-   [x] two apparel layers
+-   [x] one rifle
+-   [x] one tree and crop
+-   [x] soil and stone
+-   [x] wall, door, floor
+-   [x] bed, table, chair
+-   [x] workbench and lamp
+-   [x] representative UI icons
+-   [x] selection/designation overlays
 
 Render everything together in one representative colony screenshot.
+
+> Status: every element exists and is composed in
+> `assets/generated/prototype_scene.png` (offline, renderer placement
+> rules). Owner signed off on the visual identity 2026-10-05. The
+> in-game subset (terrain, walls, blueprint/frame, cot, bushes, items,
+> layered pawns, overlays) is drawn by the real renderer
+> (`make art-capture`, ART-006). Bulk production may proceed.
 
 **Do not begin bulk art production until this scene establishes a
 coherent original visual identity.**

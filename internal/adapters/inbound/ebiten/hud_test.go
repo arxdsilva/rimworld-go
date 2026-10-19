@@ -66,9 +66,9 @@ func TestWorkTabOpensOverlay(t *testing.T) {
 func TestDisabledTabsDoNotNavigate(t *testing.T) {
 	t.Parallel()
 	a, _, _ := liveColony(t, 0)
-	click(t, a, "tab.schedule")
+	click(t, a, "tab.assign")
 	if a.workOpen || a.archOpen {
-		t.Fatal("disabled Schedule tab opened a colony overlay")
+		t.Fatal("disabled Assign tab opened a colony overlay")
 	}
 	if a.nav.screen() != screenColony || a.nav.overlay() != overlayNone {
 		t.Fatalf("disabled tab navigated to %s/%s", a.nav.screen(), a.nav.overlay())
@@ -206,25 +206,41 @@ func TestInspectorShowsNameAndJob(t *testing.T) {
 	}
 }
 
-func TestArchitectTabOpensPalette(t *testing.T) {
+func TestArchitectCategoriesListEveryTool(t *testing.T) {
 	t.Parallel()
 	a, _, _ := liveColony(t, 0)
 	click(t, a, "tab.architect")
-	if !a.archOpen {
-		t.Fatal("Architect tab should open the palette")
+	if !a.archOpen || a.archCat == "" {
+		t.Fatal("Architect tab should open on a category")
 	}
-	found := map[string]bool{}
-	for _, b := range a.architectButtons() {
-		found[b.id] = true
-	}
-	for _, id := range []string{"arch.tool.wall", "arch.tool.bed", "arch.tool.stockpile", "arch.tool.harvest", "arch.tool.cancel"} {
-		if !found[id] {
-			t.Fatalf("missing architect tool %s", id)
+	seen := map[string]bool{}
+	for _, c := range archCategories {
+		click(t, a, "arch.cat."+c.id)
+		if a.archCat != c.id {
+			t.Fatalf("category %s not selected", c.id)
+		}
+		for _, b := range a.architectButtons() {
+			seen[b.id] = true
 		}
 	}
+	for _, tool := range archTools {
+		if !seen["arch.tool."+tool.id] {
+			t.Fatalf("tool %s is not reachable from any category", tool.id)
+		}
+		if tool.build != "" {
+			if _, ok := buildable(tool.build); !ok {
+				t.Fatalf("tool %s builds unknown kind %q", tool.id, tool.build)
+			}
+		}
+	}
+	click(t, a, "arch.cat.orders")
 	click(t, a, "arch.tool.harvest")
 	if a.archTool != "harvest" {
 		t.Fatalf("archTool = %q, want harvest", a.archTool)
+	}
+	click(t, a, "arch.tool.harvest")
+	if a.archTool != "" {
+		t.Fatal("clicking the selected card should deselect it")
 	}
 }
 
@@ -270,10 +286,12 @@ func TestWorkCellTogglesHaulWithoutExtraStep(t *testing.T) {
 	before := g.Tick()
 	click(t, a, "tab.work")
 	cell := fmt.Sprintf("work.cell.%d.6", id)
-	click(t, a, cell)
+	click(t, a, cell) // 3 -> 4
 	if g.Tick() != before {
 		t.Fatalf("toggling Haul stepped %d -> %d", before, g.Tick())
 	}
+	g.Step(1)
+	click(t, a, cell) // 4 -> off
 	g.Step(1)
 	found := false
 	for _, p := range g.Snapshot() {
@@ -307,5 +325,22 @@ func TestRendererSelectAPI(t *testing.T) {
 	r.ClearSelect()
 	if r.HasSelect() {
 		t.Fatal("ClearSelect should drop selection")
+	}
+}
+
+func TestSchedulePainting(t *testing.T) {
+	t.Parallel()
+	a, g, id := liveColony(t, 0)
+	click(t, a, "tab.schedule")
+	if !a.workOpen || a.panelMode != "schedule" {
+		t.Fatal("Schedule tab should open the schedule panel")
+	}
+	click(t, a, "sched.brush.3") // sleep
+	click(t, a, fmt.Sprintf("sched.cell.%d.14", id))
+	g.Step(1)
+	for _, p := range g.Snapshot() {
+		if p.ID == id && p.Schedule[14].String() != "sleep" {
+			t.Fatalf("hour 14 = %s, want sleep", p.Schedule[14])
+		}
 	}
 }

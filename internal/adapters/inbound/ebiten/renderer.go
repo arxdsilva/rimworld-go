@@ -7,6 +7,7 @@ package ebiten
 import (
 	"fmt"
 	"image/color"
+	"math"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -34,6 +35,11 @@ type Simulation interface {
 	Tick() clock.Tick
 	Date() clock.Date
 	Activity() schedule.Activity
+	// CanPlaceAt is the read-only placement rule the Architect previews
+	// (material, facing and every footprint cell).
+	CanPlaceAt(kind, stuff, facing string, x, y int) (bool, string)
+	// OrdersAt lists what a pawn can be ordered to do at a tile.
+	OrdersAt(pawn entity.EntityID, x, y int) []game.OrderOption
 }
 
 var _ Simulation = (*game.Game)(nil)
@@ -44,7 +50,7 @@ const TileSize = 64
 
 const (
 	panPixels = 8
-	minZoom   = 0.5
+	minZoom   = 0.1 // absolute floor; the map-fit limit is minZoomFor
 	maxZoom   = 3.0
 	zoomStep  = 0.1
 )
@@ -107,6 +113,7 @@ func (s speed) rate() string {
 type camera struct {
 	offsetX, offsetY float64
 	zoom             float64
+	placed           bool // clampCamera has centred it on the map once
 }
 
 type pawnVisual struct {
@@ -115,6 +122,10 @@ type pawnVisual struct {
 	flip         bool
 	lastMove     uint64
 	moveTick     clock.Tick
+	facing       facing
+	steps        uint64 // tiles walked (walk-cycle phase)
+	lying        bool
+	lyingSince   uint64 // present frame when it went down
 }
 
 // Renderer drives an Ebitengine window from a running Simulation.
@@ -123,6 +134,7 @@ type Renderer struct {
 	speed speed
 	cam   camera
 	pack  *atlas
+	art   *artCatalog
 
 	// present is a presentation-only frame counter. Animation reads it;
 	// simulation never does. Tile lerp uses sim ticks vs moveTick.
@@ -131,22 +143,40 @@ type Renderer struct {
 	hasSelect bool
 	last      map[entity.EntityID]pawnVisual
 
+	// animation state (presentation only)
+	parts     []particle
+	seenTrace map[[3]uint64]bool
+	itemBorn  map[entity.EntityID]uint64
+	itemsInit bool
+	drawW     game.WorldView  // world for the frame being drawn
+	drawPawns []game.PawnView // pawns for the frame being drawn
+
 	gridClr   color.RGBA
 	pawnClr   color.RGBA
 	selectClr color.RGBA
+
+	// threats: pause when one arrives (option), remembering the newest
+	// danger message already handled.
+	pauseOnThreat bool
+	threatPaused  bool
+	dangerInit    bool
+	lastDanger    uint64
+	floaters      []floater
 }
 
 // New returns a Renderer for sim. Sprites are optional: call LoadPack
 // after New. Without a pack, pawns fall back to colored rectangles.
 func New(sim Simulation) *Renderer {
 	return &Renderer{
-		game:      sim,
-		speed:     speedNormal,
-		cam:       camera{zoom: 1},
-		last:      map[entity.EntityID]pawnVisual{},
-		gridClr:   color.RGBA{R: 40, G: 40, B: 40, A: 180},
-		pawnClr:   color.RGBA{R: 220, G: 60, B: 60, A: 255},
-		selectClr: color.RGBA{R: 250, G: 220, B: 60, A: 255},
+		game:          sim,
+		speed:         speedNormal,
+		cam:           camera{zoom: 1},
+		pauseOnThreat: true,
+		last:          map[entity.EntityID]pawnVisual{},
+		seenTrace:     map[[3]uint64]bool{},
+		gridClr:       color.RGBA{R: 40, G: 40, B: 40, A: 180},
+		pawnClr:       color.RGBA{R: 220, G: 60, B: 60, A: 255},
+		selectClr:     color.RGBA{R: 250, G: 220, B: 60, A: 255},
 	}
 }
 
@@ -176,18 +206,36 @@ func (r *Renderer) LoadDefaultPack() error {
 
 func (r *Renderer) advance() {
 	r.present++
-	if n := r.speed.ticksPerFrame(); n > 0 {
+	n := r.speed.ticksPerFrame()
+	if n > 0 {
 		r.game.Step(n)
 	}
 	r.syncPawns()
+	w := r.game.World()
+	r.animate(w, r.game.Snapshot(), n > 0)
+	r.watchThreats(w)
 }
 
 func (r *Renderer) syncPawns() {
 	tick := r.game.Tick()
+	w := r.game.World()
 	for _, p := range r.game.Snapshot() {
 		prev, seen := r.last[p.ID]
-		r.last[p.ID] = nextVisual(prev, seen, p.X, p.Y, tick, r.present)
+		v := faceAttack(nextVisual(prev, seen, p.X, p.Y, tick, r.present), w.Traces, p.X, p.Y)
+		if p.Acting != "" && (p.ActX != p.X || p.ActY != p.Y) {
+			v.facing = facingFor(p.ActX-p.X, p.ActY-p.Y, v.facing)
+		}
+		if p.Lying && !v.lying {
+			v.lyingSince = r.present
+		}
+		v.lying = p.Lying
+		if seen && v.steps != prev.steps && p.CarriedBy == 0 {
+			r.footstep(p.X, p.Y, uint64(p.ID)^v.steps, false)
+		}
+		r.last[p.ID] = v
 	}
+	r.syncAnimals(w)
+	r.syncItems(w)
 }
 
 func (r *Renderer) handleSpeedInput() {
@@ -207,7 +255,7 @@ func (r *Renderer) handleSpeedInput() {
 	}
 }
 
-func (r *Renderer) handleCameraInput() {
+func (r *Renderer) handleCameraInput(v viewport) {
 	if ebiten.IsKeyPressed(ebiten.KeyLeft) || ebiten.IsKeyPressed(ebiten.KeyA) {
 		r.cam.offsetX -= panPixels
 	}
@@ -221,15 +269,18 @@ func (r *Renderer) handleCameraInput() {
 		r.cam.offsetY += panPixels
 	}
 
+	cx, cy := (v.x0+v.x1)/2, (v.y0+v.y1)/2
 	if inpututil.IsKeyJustPressed(ebiten.KeyEqual) {
-		r.cam.zoom = clampZoom(r.cam.zoom + zoomStep)
+		r.zoomAt(r.cam.zoom*(1+zoomStep), v, cx, cy)
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyMinus) {
-		r.cam.zoom = clampZoom(r.cam.zoom - zoomStep)
+		r.zoomAt(r.cam.zoom/(1+zoomStep), v, cx, cy)
 	}
 	if _, dy := ebiten.Wheel(); dy != 0 {
-		r.cam.zoom = clampZoom(r.cam.zoom + dy*zoomStep)
+		mx, my := ebiten.CursorPosition()
+		r.zoomAt(r.cam.zoom*math.Pow(1+zoomStep, dy), v, float64(mx), float64(my))
 	}
+	r.clampCamera(v)
 }
 
 func clampZoom(z float64) float64 {
@@ -249,7 +300,7 @@ func (r *Renderer) handleSelectionInput() {
 	mx, my := ebiten.CursorPosition()
 	wx, wy := r.screenToWorld(mx, my)
 
-	for _, p := range r.game.Snapshot() {
+	for _, p := range r.snapshot() {
 		px, py := r.interpWorld(p)
 		if wx >= px && wx < px+1 && wy >= py && wy < py+1 {
 			r.selected, r.hasSelect = p.ID, true
@@ -257,7 +308,7 @@ func (r *Renderer) handleSelectionInput() {
 		}
 	}
 	tx, ty := int(wx), int(wy)
-	for _, p := range r.game.Snapshot() {
+	for _, p := range r.snapshot() {
 		if p.X == tx && p.Y == ty {
 			r.selected, r.hasSelect = p.ID, true
 			return
@@ -305,6 +356,13 @@ func (r *Renderer) Draw(screen *ebiten.Image) {
 
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
 	tile := r.tilePx()
+
+	if r.art != nil {
+		r.drawArt(screen, sw, sh, tile)
+		r.drawDaylightRooms(screen, sw, sh)
+		r.drawTraces(screen, r.game.World(), tile)
+		return
+	}
 
 	r.drawTerrain(screen, sw, sh, tile)
 	r.drawWorld(screen, sw, sh, tile)
@@ -365,19 +423,22 @@ func (r *Renderer) drawGrid(screen *ebiten.Image) {
 }
 
 func nextVisual(prev pawnVisual, seen bool, x, y int, tick clock.Tick, present uint64) pawnVisual {
-	v := pawnVisual{x: x, y: y, flip: prev.flip, lastMove: prev.lastMove, moveTick: prev.moveTick}
+	v := pawnVisual{x: x, y: y, flip: prev.flip, lastMove: prev.lastMove, moveTick: prev.moveTick, facing: prev.facing}
 	if !seen {
 		v.fromX, v.fromY = x, y
 		v.moveTick = tick
 		return v
 	}
+	v.steps, v.lying, v.lyingSince = prev.steps, prev.lying, prev.lyingSince
 	if prev.x != x || prev.y != y {
 		v.fromX, v.fromY = prev.x, prev.y
 		v.moveTick = tick
 		v.lastMove = present
+		v.steps++
 		if x != prev.x {
 			v.flip = x < prev.x
 		}
+		v.facing = facingFor(x-prev.x, y-prev.y, prev.facing)
 		return v
 	}
 	v.fromX, v.fromY = prev.fromX, prev.fromY
@@ -463,15 +524,35 @@ func (r *Renderer) HasSelect() bool { return r.hasSelect }
 // Selected is the current presentation selection. Valid only if HasSelect.
 func (r *Renderer) Selected() entity.EntityID { return r.selected }
 
-func (r *Renderer) snapshot() []game.PawnView { return r.game.Snapshot() }
+// snapshot is the player's colonists (raiders are left out: they are only
+// drawn, never listed, selected or ordered).
+func (r *Renderer) snapshot() []game.PawnView {
+	all := r.game.Snapshot()
+	out := all[:0:0]
+	for _, p := range all {
+		if !p.Hostile {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+// hostiles is the raiders on the map.
+func (r *Renderer) hostiles() []game.PawnView {
+	var out []game.PawnView
+	for _, p := range r.game.Snapshot() {
+		if p.Hostile {
+			out = append(out, p)
+		}
+	}
+	return out
+}
 
 func (r *Renderer) world() game.WorldView { return r.game.World() }
 
 func (r *Renderer) date() clock.Date { return r.game.Date() }
 
 func (r *Renderer) activity() schedule.Activity { return r.game.Activity() }
-
-func (r *Renderer) speedRate() string { return r.speed.rate() }
 
 func (r *Renderer) enqueue(c command.Command) { r.game.Enqueue(c) }
 
