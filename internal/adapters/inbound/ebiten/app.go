@@ -2,8 +2,10 @@ package ebiten
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
+	"time"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -113,6 +115,8 @@ type App struct {
 	panelMode                      string            // "work" or "schedule" while workOpen
 	schedBrush                     schedule.Activity // activity the schedule paints
 	lastPainted                    string            // schedule cell last painted by a drag
+	now                            func() time.Time  // wall clock for alpha (injectable for tests)
+	lastTick                       time.Time         // when the renderer last advanced
 }
 
 // NewApp returns an App on the boot screen. Simulation is not created
@@ -154,6 +158,7 @@ func NewApp(cfg AppConfig) *App {
 	}
 	return &App{
 		cfg: cfg,
+		now: time.Now,
 		nav: newNav(),
 		sw:  DefaultWindowWidth,
 		sh:  DefaultWindowHeight,
@@ -299,6 +304,7 @@ func (a *App) tick() {
 	case screenColony:
 		if a.nav.overlay() == overlayNone && a.renderer != nil {
 			a.renderer.advance()
+			a.markUpdate()
 			a.tickAutosave()
 		}
 	}
@@ -515,6 +521,24 @@ func (a *App) apply(in intent) {
 	}
 }
 
+// markUpdate stamps the renderer advance that Draw interpolates from.
+func (a *App) markUpdate() { a.lastTick = a.now() }
+
+// frameAlpha is the fraction of the update interval elapsed since the
+// renderer last advanced (C7), in [0, 1). The wall clock stays in the
+// adapter; captures use 0 so their frames are deterministic.
+func (a *App) frameAlpha() float64 {
+	if a.cfg.Capture != nil || a.lastTick.IsZero() {
+		return 0
+	}
+	tps := ebiten.TPS()
+	if tps <= 0 {
+		tps = 60
+	}
+	f := float64(a.now().Sub(a.lastTick)) / float64(time.Second/time.Duration(tps))
+	return math.Max(0, math.Min(f, alphaMax))
+}
+
 func (a *App) startGame() {
 	if a.cfg.NewSim == nil {
 		a.sessionErr = "no simulation factory"
@@ -578,6 +602,7 @@ func (a *App) Draw(screen *ebiten.Image) {
 		a.drawPawns(screen, sw, sh)
 	case screenColony:
 		if a.renderer != nil {
+			a.renderer.setAlpha(a.frameAlpha())
 			a.renderer.Draw(screen)
 		} else {
 			screen.Fill(uiSpace)

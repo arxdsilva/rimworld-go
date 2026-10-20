@@ -150,6 +150,9 @@ type Renderer struct {
 	itemsInit bool
 	drawW     game.WorldView  // world for the frame being drawn
 	drawPawns []game.PawnView // pawns for the frame being drawn
+	mo        motionState     // per-creature motion and the animT clock (motion.go)
+	anims     *animState      // body-animation bookkeeping (anim.go)
+	smooth    camSmooth       // eased pan and zoom (camera_smooth.go)
 
 	gridClr   color.RGBA
 	pawnClr   color.RGBA
@@ -207,6 +210,7 @@ func (r *Renderer) LoadDefaultPack() error {
 func (r *Renderer) advance() {
 	r.present++
 	n := r.speed.ticksPerFrame()
+	r.mo.stepped = n
 	if n > 0 {
 		r.game.Step(n)
 	}
@@ -219,23 +223,29 @@ func (r *Renderer) advance() {
 func (r *Renderer) syncPawns() {
 	tick := r.game.Tick()
 	w := r.game.World()
+	r.mo.beginSync(tick)
+	running := r.mo.stepped > 0
 	for _, p := range r.game.Snapshot() {
 		prev, seen := r.last[p.ID]
-		v := faceAttack(nextVisual(prev, seen, p.X, p.Y, tick, r.present), w.Traces, p.X, p.Y)
-		if p.Acting != "" && (p.ActX != p.X || p.ActY != p.Y) {
-			v.facing = facingFor(p.ActX-p.X, p.ActY-p.Y, v.facing)
+		v := nextVisual(prev, seen, p.X, p.Y, tick, r.present)
+		k := r.mo.observe(p.ID, pawnMoView(p), v.facing)
+		want, moving := k.wantFacing(r.mo.ref)
+		if !moving { // standing: attacks and work turn it
+			want = faceAttack(pawnVisual{facing: want}, w.Traces, p.X, p.Y).facing
+			if p.Acting != "" && (p.ActX != p.X || p.ActY != p.Y) {
+				want = facingFor(p.ActX-p.X, p.ActY-p.Y, want)
+			}
 		}
+		v.facing = k.turn(want, p.ID, running)
 		if p.Lying && !v.lying {
 			v.lyingSince = r.present
 		}
 		v.lying = p.Lying
-		if seen && v.steps != prev.steps && p.CarriedBy == 0 {
-			r.footstep(p.X, p.Y, uint64(p.ID)^v.steps, false)
-		}
 		r.last[p.ID] = v
 	}
 	r.syncAnimals(w)
 	r.syncItems(w)
+	r.mo.endSync()
 }
 
 func (r *Renderer) handleSpeedInput() {
@@ -256,31 +266,34 @@ func (r *Renderer) handleSpeedInput() {
 }
 
 func (r *Renderer) handleCameraInput(v viewport) {
+	var dx, dy float64
 	if ebiten.IsKeyPressed(ebiten.KeyLeft) || ebiten.IsKeyPressed(ebiten.KeyA) {
-		r.cam.offsetX -= panPixels
+		dx--
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyRight) || ebiten.IsKeyPressed(ebiten.KeyD) {
-		r.cam.offsetX += panPixels
+		dx++
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyUp) || ebiten.IsKeyPressed(ebiten.KeyW) {
-		r.cam.offsetY -= panPixels
+		dy--
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyDown) || ebiten.IsKeyPressed(ebiten.KeyS) {
-		r.cam.offsetY += panPixels
+		dy++
 	}
+	r.smooth.pushPan(dx, dy)
 
 	cx, cy := (v.x0+v.x1)/2, (v.y0+v.y1)/2
 	if inpututil.IsKeyJustPressed(ebiten.KeyEqual) {
-		r.zoomAt(r.cam.zoom*(1+zoomStep), v, cx, cy)
+		r.smooth.zoomAt(1+zoomStep, cx, cy)
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyMinus) {
-		r.zoomAt(r.cam.zoom/(1+zoomStep), v, cx, cy)
+		r.smooth.zoomAt(1/(1+zoomStep), cx, cy)
 	}
-	if _, dy := ebiten.Wheel(); dy != 0 {
+	if _, wy := ebiten.Wheel(); wy != 0 {
 		mx, my := ebiten.CursorPosition()
-		r.zoomAt(r.cam.zoom*math.Pow(1+zoomStep, dy), v, float64(mx), float64(my))
+		r.smooth.zoomAt(math.Pow(1+zoomStep, wy), float64(mx), float64(my))
 	}
-	r.clampCamera(v)
+	r.clampCamera(v) // first-call centring and min-zoom guard
+	r.smooth.step(1/float64(ebiten.TPS()), &r.cam, r.camLimits(v))
 }
 
 func clampZoom(z float64) float64 {
@@ -322,13 +335,14 @@ func (r *Renderer) screenToWorld(sx, sy int) (float64, float64) {
 	return (float64(sx) + r.cam.offsetX) / tile, (float64(sy) + r.cam.offsetY) / tile
 }
 
+// interpWorld is where a pawn is drawn: its motion at animT (ART §27.1),
+// or its tile before the first sync.
 func (r *Renderer) interpWorld(p game.PawnView) (float64, float64) {
-	vis, ok := r.last[p.ID]
+	m, ok := r.motionOf(p.ID)
 	if !ok {
 		return float64(p.X), float64(p.Y)
 	}
-	t := moveProgress(int(r.game.Tick()-vis.moveTick), game.TicksPerCell)
-	return lerp(vis.fromX, p.X, t), lerp(vis.fromY, p.Y, t)
+	return m.X, m.Y
 }
 
 func (r *Renderer) worldToScreen(wx, wy int) (float32, float32) {

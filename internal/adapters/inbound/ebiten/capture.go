@@ -35,6 +35,17 @@ type Capture struct {
 	Speed int
 }
 
+// speed is the game speed tier a frame sequence records at.
+func (c *Capture) speed() speed {
+	switch c.Speed {
+	case 2:
+		return speedFast
+	case 3:
+		return speedVeryFast
+	}
+	return speedNormal
+}
+
 // captureFrames lets presentation state (lerp, walk bob) settle.
 const captureFrames = 30
 
@@ -144,7 +155,7 @@ func (a *App) tickCapture() {
 		if a.capture.pending {
 			return // wait until this frame is on disk
 		}
-		a.renderer.speed = speedNormal
+		a.renderer.speed = c.speed()
 		a.renderer.advance()
 		for _, p := range a.renderer.snapshot() {
 			if p.ID == a.capture.follow { // keep the followed colonist mid-screen

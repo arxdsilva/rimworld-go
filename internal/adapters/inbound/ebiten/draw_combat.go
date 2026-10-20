@@ -1,29 +1,38 @@
 package ebiten
 
 import (
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"cmp"
 	"image/color"
 	"math"
+	"slices"
+
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/clock"
+	"rimworld-go/internal/domain/sim/entity"
 )
 
 // Presentation of animals, held weapons and attack traces. Everything
 // here reads the WorldView/PawnView; nothing writes back.
 
-// syncAnimals advances per-animal presentation state (lerp, facing).
+// syncAnimals advances per-animal presentation state (motion, facing).
+// Footstep dust comes from animate, at the feet on contact frames.
 func (r *Renderer) syncAnimals(w game.WorldView) {
 	tick := r.game.Tick()
+	running := r.mo.stepped > 0
 	for _, an := range w.Animals {
 		prev, seen := r.last[an.ID]
-		v := faceAttack(nextVisualStep(prev, seen, an.X, an.Y, tick, r.present, an.StepTicks), w.Traces, an.X, an.Y)
-		if seen && v.steps != prev.steps && an.Mode != "wandering" {
-			r.footstep(an.X, an.Y, uint64(an.ID)^v.steps, true)
+		v := nextVisualStep(prev, seen, an.X, an.Y, tick, r.present, an.StepTicks)
+		k := r.mo.observe(an.ID, animalMoView(an), v.facing)
+		want, moving := k.wantFacing(r.mo.ref)
+		if !moving {
+			want = faceAttack(pawnVisual{facing: want}, w.Traces, an.X, an.Y).facing
 		}
+		v.facing = k.turn(want, an.ID, running)
 		r.last[an.ID] = v
 	}
 }
@@ -39,13 +48,14 @@ func faceAttack(v pawnVisual, traces []game.TraceView, x, y int) pawnVisual {
 	return v
 }
 
+// interpAnimal is where an animal is drawn: its motion at animT, or its
+// tile before the first sync.
 func (r *Renderer) interpAnimal(an game.AnimalView) (float64, float64) {
-	vis, ok := r.last[an.ID]
+	m, ok := r.motionOf(an.ID)
 	if !ok {
 		return float64(an.X), float64(an.Y)
 	}
-	t := moveProgress(int(r.game.Tick()-vis.moveTick), max(an.StepTicks, 1))
-	return lerp(vis.fromX, an.X, t), lerp(vis.fromY, an.Y, t)
+	return m.X, m.Y
 }
 
 // addAnimalDraws queues animals into the depth-sorted object pass.
@@ -61,7 +71,7 @@ func (r *Renderer) addAnimalDraws(w game.WorldView, add func(row, col float64, f
 				vector.FillCircle(screen, sx+float32(tile)/2, sy+float32(tile)/2, float32(tile)*0.3, color.RGBA{150, 120, 80, 255}, false)
 				return
 			}
-			r.drawSpritePose(screen, r.framed(key, r.animalFrame(vis, an)), color.NRGBA{}, wx, wy, tile, r.animalPose(an, vis, w.Traces))
+			r.drawSpritePose(screen, r.framed(key, r.animalFrame(an)), color.NRGBA{}, wx, wy, tile, r.animalPose(an))
 		})
 	}
 }
@@ -113,16 +123,94 @@ func fade(c color.RGBA, k float64) color.RGBA {
 	return color.RGBA{uint8(float64(c.R) * k), uint8(float64(c.G) * k), uint8(float64(c.B) * k), uint8(float64(c.A) * k)}
 }
 
+// Trace effect durations in sim ticks; each also lasts at least
+// minReactionFrames present frames (C7).
+const (
+	tracerTicks = 6
+	flashTicks  = 3
+	swingTicks  = 10
+	bloodTicks  = 12
+	puffTicks   = 14
+)
+
+// traceAge is the age an effect of dur ticks is drawn at.
+func traceAge(rt reactTrace, dur float64) float64 { return reactionAge(rt.sim, rt.frames, dur) }
+
+// traceList is the traces to draw: the tracked ones (kept on screen after
+// the sim drops them), or the sim's own when none are tracked (captures).
+// Oldest first (newest on top), in a stable order so overlapping effects
+// blend the same every frame.
+func (r *Renderer) traceList(w game.WorldView) []reactTrace {
+	rs := r.animState().reactions(r.present, nil)
+	if len(rs) == 0 {
+		for _, t := range w.Traces {
+			rs = append(rs, reactTrace{TraceView: t, sim: float64(t.Age), frames: math.Inf(1)})
+		}
+	}
+	slices.SortFunc(rs, func(a, b reactTrace) int {
+		ka := [6]float64{-a.sim, -a.frames, float64(a.FromX), float64(a.FromY), float64(a.ToX), float64(a.ToY)}
+		kb := [6]float64{-b.sim, -b.frames, float64(b.FromX), float64(b.FromY), float64(b.ToX), float64(b.ToY)}
+		for i := range ka {
+			if c := cmp.Compare(ka[i], kb[i]); c != 0 {
+				return c
+			}
+		}
+		return 0
+	})
+	return rs
+}
+
+// traceSpots maps each occupied cell to where its creature is drawn.
+func (r *Renderer) traceSpots(w game.WorldView) map[[2]int]vec {
+	spots := map[[2]int]vec{}
+	put := func(x, y int, id entity.EntityID) {
+		if m, ok := r.motionOf(id); ok {
+			spots[[2]int{x, y}] = vec{m.X, m.Y}
+		}
+	}
+	for _, p := range r.game.Snapshot() {
+		if p.CarriedBy == 0 && !p.Lying {
+			put(p.X, p.Y, p.ID)
+		}
+	}
+	for _, an := range w.Animals {
+		put(an.X, an.Y, an.ID)
+	}
+	return spots
+}
+
+// traceEnds is where a trace starts and lands in world tiles: at the drawn
+// (interpolated) shooter and target when a creature stands on the cell.
+func traceEnds(spots map[[2]int]vec, tr game.TraceView) (from, to vec) {
+	from, ok := spots[[2]int{tr.FromX, tr.FromY}]
+	if !ok {
+		from = vec{float64(tr.FromX), float64(tr.FromY)}
+	}
+	to, ok = spots[[2]int{tr.ToX, tr.ToY}]
+	if !ok {
+		to = vec{float64(tr.ToX), float64(tr.ToY)}
+	}
+	return vec{from.x + 0.5, from.y + 0.3}, vec{to.x + 0.5, to.y + 0.4}
+}
+
 // drawTraces renders recent attacks: rifle tracers with a muzzle flash
-// and a hit puff, or a short swing arc for melee.
+// and a hit puff, or a short swing arc for melee. They start at the drawn
+// shooter and stay visible for at least minReactionFrames frames.
 func (r *Renderer) drawTraces(screen *ebiten.Image, w game.WorldView, tile float64) {
 	t := float32(tile)
-	for _, tr := range w.Traces {
-		fx, fy := r.worldToScreenF(float64(tr.FromX)+0.5, float64(tr.FromY)+0.3)
-		tx, ty := r.worldToScreenF(float64(tr.ToX)+0.5, float64(tr.ToY)+0.4)
+	rs := r.traceList(w)
+	if len(rs) == 0 {
+		return
+	}
+	spots := r.traceSpots(w)
+	for _, rt := range rs {
+		tr := rt.TraceView
+		from, to := traceEnds(spots, tr)
+		fx, fy := r.worldToScreenF(from.x, from.y)
+		tx, ty := r.worldToScreenF(to.x, to.y)
 		if tr.Melee {
-			if tr.Age < 10 {
-				k := 1 - float64(tr.Age)/10
+			if age := traceAge(rt, swingTicks); age < swingTicks {
+				k := 1 - age/swingTicks
 				a0 := math.Atan2(float64(ty-fy), float64(tx-fx)) - 0.9
 				for i := 0; i < 3; i++ {
 					a1, a2 := a0+float64(i)*0.6, a0+float64(i+1)*0.6
@@ -133,8 +221,8 @@ func (r *Renderer) drawTraces(screen *ebiten.Image, w game.WorldView, tile float
 						3, fade(swingClr, k), true)
 				}
 			}
-			if tr.Hit && tr.Age < 12 {
-				vector.FillCircle(screen, tx, ty, t*0.08*float32(1+tr.Age/4), fade(bloodClr, 1-float64(tr.Age)/12), true)
+			if age := traceAge(rt, bloodTicks); tr.Hit && age < bloodTicks {
+				vector.FillCircle(screen, tx, ty, t*0.08*float32(1+math.Floor(age/4)), fade(bloodClr, 1-age/bloodTicks), true)
 			}
 			continue
 		}
@@ -153,23 +241,24 @@ func (r *Renderer) drawTraces(screen *ebiten.Image, w game.WorldView, tile float
 			ex, ey = tx+ux*t*0.8-uy*t*0.35*side, ty+uy*t*0.8+ux*t*0.35*side
 		}
 		mx, my := fx+ux*t*0.5, fy+uy*t*0.5 // muzzle
-		if tr.Age < 6 {
-			k := 1 - float64(tr.Age)/6
+		if age := traceAge(rt, tracerTicks); age < tracerTicks {
+			k := 1 - age/tracerTicks
 			// a short bright streak travelling along the line
-			p := float32(tr.Age+1) / 6
+			p := float32(age+1) / tracerTicks
 			sx, sy := mx+(ex-mx)*(p-0.25), my+(ey-my)*(p-0.25)
 			if p < 0.25 {
 				sx, sy = mx, my
 			}
+			p = min(p, 1)
 			vector.StrokeLine(screen, mx, my, ex, ey, 1, fade(tracerClr, k*0.35), true)
 			vector.StrokeLine(screen, sx, sy, mx+(ex-mx)*p, my+(ey-my)*p, 3, fade(tracerClr, k), true)
 		}
-		if tr.Age < 3 {
-			vector.FillCircle(screen, mx, my, t*0.1, fade(flashClr, 1-float64(tr.Age)/3), true)
+		if age := traceAge(rt, flashTicks); age < flashTicks {
+			vector.FillCircle(screen, mx, my, t*0.1, fade(flashClr, 1-age/flashTicks), true)
 		}
-		if tr.Hit && tr.Age >= 3 && tr.Age < 14 {
-			k := 1 - float64(tr.Age-3)/11
-			vector.FillCircle(screen, tx, ty, t*(0.05+0.012*float32(tr.Age)), fade(bloodClr, k), true)
+		if age := traceAge(rt, puffTicks); tr.Hit && age >= 3 && age < puffTicks {
+			k := 1 - (age-3)/(puffTicks-3)
+			vector.FillCircle(screen, tx, ty, t*(0.05+0.012*float32(age)), fade(bloodClr, k), true)
 		}
 	}
 }
@@ -183,40 +272,34 @@ func nextVisualStep(prev pawnVisual, seen bool, x, y int, tick clock.Tick, prese
 	return v
 }
 
-// settleVisuals finishes every in-flight step lerp. Captures freeze the
-// simulation, so without this a mover is drawn where its last step began.
+// settleVisuals finishes every in-flight step. Captures freeze the
+// simulation, so without this a mover is drawn mid-step.
 func (r *Renderer) settleVisuals() {
 	for id, v := range r.last {
 		v.fromX, v.fromY = v.x, v.y
 		r.last[id] = v
 	}
-}
-
-// animalFrame is the trot frame for a moving animal.
-func (r *Renderer) animalFrame(vis pawnVisual, an game.AnimalView) string {
-	if vis.fromX == an.X && vis.fromY == an.Y {
-		return ""
+	for _, k := range r.mo.tracks {
+		k.settle()
 	}
-	t := moveProgress(int(r.game.Tick()-vis.moveTick), max(an.StepTicks, 1))
-	return walkFrame(walkPhase(vis, t))
 }
 
-// animalPose: a light bounce while moving (more when running), idle
-// breathing, bite lunges and hit reactions.
-func (r *Renderer) animalPose(an game.AnimalView, vis pawnVisual, traces []game.TraceView) pose {
+// animalFrame is the trot frame for a moving animal ("" standing).
+func (r *Renderer) animalFrame(an game.AnimalView) string {
+	return trotSuffix(r.animalMotion(an.ID))
+}
+
+// animalPose: a trot bob (more when running), idle breathing, bite
+// lunges and hit reactions.
+func (r *Renderer) animalPose(an game.AnimalView) pose {
 	ps := pose{px: figurePivotX, py: figurePivotY}
-	if vis.fromX != an.X || vis.fromY != an.Y {
-		t := moveProgress(int(r.game.Tick()-vis.moveTick), max(an.StepTicks, 1))
-		ph := walkPhase(vis, t)
-		amp := 0.03
-		if an.Mode != "wandering" {
-			amp = 0.055
-		}
-		ps.dy = -math.Abs(math.Sin(ph*math.Pi)) * amp
+	m := r.animalMotion(an.ID)
+	if m.Blend >= minBlend {
+		ps.dy = -trotBob(m, an.Mode != "wandering")
 	} else {
 		ps.sy = 1 + 0.015*math.Sin(2*math.Pi*float64(r.present+uint64(an.ID)*29)/120)
 	}
-	dx, dy, fl := attackReaction(traces, an.X, an.Y)
+	dx, dy, fl := r.reaction(an.X, an.Y)
 	ps.dx, ps.dy, ps.flash = ps.dx+dx, ps.dy+dy, fl
 	return ps
 }

@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"rimworld-go/internal/application/game"
@@ -241,22 +242,18 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 		}
 	}
 	for f := faceSouth; f <= faceWest; f++ {
-		for _, l := range []string{"body", "pants_basic", "shirt_basic", "vest_utility"} {
+		for _, l := range []string{"body", "pants_basic", "shirt_basic", "vest_utility", "parka_leather", "duster_leather"} {
 			keys = append(keys, "pawn/"+l+"_"+f.String())
-			for _, fr := range walkCycle {
-				if fr != "" {
-					keys = append(keys, "pawn/"+l+"_"+f.String()+fr)
-				}
+			for i := 1; i <= walkFrames; i++ {
+				keys = append(keys, fmt.Sprintf("pawn/%s_%s_walk%02d", l, f, i))
+			}
+			for i := 1; i <= workFrames; i++ {
+				keys = append(keys, fmt.Sprintf("pawn/%s_%s_work%d", l, f, i))
 			}
 		}
 		for _, sp := range []string{"dustbuck", "ridgewolf"} {
-			for _, fr := range walkCycle {
-				keys = append(keys, "animal/"+sp+"_"+f.String()+fr)
-			}
-		}
-		for _, l := range []string{"body", "shirt_basic"} {
-			for _, fr := range []string{"_work1", "_work2", "_work3"} {
-				keys = append(keys, "pawn/"+l+"_"+f.String()+fr)
+			for i := 1; i <= trotFrames; i++ {
+				keys = append(keys, fmt.Sprintf("animal/%s_%s_walk%02d", sp, f, i))
 			}
 		}
 		for _, bed := range []string{"bed_basic"} {
@@ -284,5 +281,35 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 		if sp.pix.Bounds().Dx() != sp.meta.Canvas[0] || sp.pix.Bounds().Dy() != sp.meta.Canvas[1] {
 			t.Errorf("%s: png %v != canvas %v", k, sp.pix.Bounds().Size(), sp.meta.Canvas)
 		}
+	}
+}
+
+func TestArtFrameNames(t *testing.T) {
+	t.Parallel()
+	if walkFrames != 12 || workFrames != 6 || trotFrames != 8 {
+		t.Fatal("C5: 12 walk, 6 work, 8 trot frames")
+	}
+	m, err := parseArtMeta(sampleMeta + "  head: [96.5, 60.0]\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m.Attach["head"] != [2]float64{96.5, 60} || m.Attach["hand"] != [2]float64{103, 176.4} {
+		t.Fatalf("head attaches beside hand: %v", m.Attach)
+	}
+	// frames from before the head attachment still parse; head is simply absent
+	old, err := parseArtMeta(sampleMeta)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := old.Attach["head"]; ok {
+		t.Fatal("no head in old metadata")
+	}
+	c := &artCatalog{sprites: map[string]*artSprite{"pawn/body_south": {}, "pawn/body_south_walk03": {}}}
+	r := &Renderer{art: c}
+	if r.framed("pawn/body_south", "_walk03") != "pawn/body_south_walk03" {
+		t.Fatal("new frame names resolve")
+	}
+	if r.framed("pawn/body_south", "_walk04") != "pawn/body_south" {
+		t.Fatal("missing frames fall back to the static pose")
 	}
 }

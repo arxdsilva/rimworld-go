@@ -40,16 +40,6 @@ func (r *Renderer) minZoomFor(v viewport) float64 {
 	return math.Max(0.1, math.Min(z, 1))
 }
 
-// zoomAt sets the zoom, keeping the world point under screen (ax, ay) fixed.
-func (r *Renderer) zoomAt(z float64, v viewport, ax, ay float64) {
-	z = math.Max(r.minZoomFor(v), math.Min(maxZoom, z))
-	old := r.tilePx()
-	wx, wy := (ax+r.cam.offsetX)/old, (ay+r.cam.offsetY)/old
-	r.cam.zoom = z
-	t := r.tilePx()
-	r.cam.offsetX, r.cam.offsetY = wx*t-ax, wy*t-ay
-}
-
 // clampCamera keeps the zoom in range and the map in view. Each map edge
 // may be scrolled at most edgeSlack of the viewport inside it; on an axis
 // where the map is smaller than that it is centred instead. The first call
@@ -82,4 +72,9 @@ func clampAxis(off, m, v0, v1, slack float64) float64 {
 		return (lo + hi) / 2
 	}
 	return math.Max(lo, math.Min(hi, off))
+}
+
+// camLimits are the smoothing bounds for this map and viewport.
+func (r *Renderer) camLimits(v viewport) camLimits {
+	return camLimits{v: v, mapW: float64(r.game.Width()), mapH: float64(r.game.Height()), minZoom: r.minZoomFor(v)}
 }
