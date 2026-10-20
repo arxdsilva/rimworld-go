@@ -91,6 +91,22 @@ def _club():
     return S.render_asset("item", "club_wood", zmax=0.2, extra={"item": "club"})
 
 
+def _knife_item():
+    """A flint knife lying on the ground, angled."""
+    from .gear import _knife_geo
+    _knife_geo()
+    S.rotate_z(S.objects(), -22)
+    return S.render_asset("item", "knife", zmax=0.12, extra={"item": "knife"})
+
+
+def _spear_item():
+    """A stone-tipped spear lying on the ground, angled."""
+    from .gear import _spear_geo
+    _spear_geo()
+    S.rotate_z(S.objects(), 24)
+    return S.render_asset("item", "spear", zmax=0.12, extra={"item": "spear"})
+
+
 def _rifle_item():
     import math
     from mathutils import Matrix
@@ -213,6 +229,6 @@ def _herbal_medicine():
 
 
 def build():
-    return [_wood(), _food(), _steel(), _stone(), _berries(), _ration(), _meat(), _meal(), _club(), _rifle_item(),
+    return [_wood(), _food(), _steel(), _stone(), _berries(), _ration(), _meat(), _meal(), _club(), _rifle_item(), _knife_item(), _spear_item(),
             _potatoes(), _corn(), _wheat(), _beans(), _lettuce(), _radishes(), _pumpkins(),
             _leather(), _parka(), _tuque(), _duster(), _herbal_medicine()]

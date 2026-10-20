@@ -107,6 +107,88 @@ def _pose(species, frame):
         ob.matrix_world = m @ ob.matrix_world
 
 
+# --- action poses (ART §27.2) -----------------------------------------------
+# Hand-authored keyframes, built on the same species model and canvas as the
+# standing frame. Angles in degrees. Rotation about X: a leg's positive angle
+# swings the foot back (toward the tail); a head's positive angle pitches the
+# nose down; a body's positive pitch drops the front.
+#   ty: body shift along Y (negative = forward)   bz: body drop (legs shorten)
+#   pitch: torso pitch   fl/hl: front/hind leg swing   hlift: hind leg lift
+#   head: neck pitch   yaw: head turn   jaw/up: lower/upper jaw opening (wolf)
+POSES = {
+    "dustbuck": {
+        "kick1": dict(ty=-0.02, bz=0.02, pitch=7, fl=-10, hl=6, head=8),
+        "kick2": dict(ty=-0.02, bz=0.0, pitch=12, fl=-6, hl=38, hlift=0.03, head=14),
+        "kick3": dict(ty=-0.01, bz=-0.01, pitch=17, fl=-4, hl=78, hlift=0.08, head=-6),
+        "kick4": dict(ty=0.0, bz=0.015, pitch=4, fl=2, hl=14, head=4),
+        "graze1": dict(ty=-0.02, pitch=4, fl=-8, hl=4, head=40),
+        "graze2": dict(ty=-0.03, pitch=6, fl=-10, hl=4, head=62),
+        "flinch1": dict(ty=0.05, bz=0.02, pitch=-7, fl=-14, hl=10, head=-20, yaw=18),
+        "flinch2": dict(ty=0.025, bz=0.01, pitch=-3, fl=-6, hl=5, head=-9, yaw=8),
+    },
+    "ridgewolf": {
+        "bite1": dict(ty=0.02, bz=0.07, pitch=11, fl=-14, hl=14, head=6),
+        "bite2": dict(ty=-0.05, bz=0.03, pitch=7, fl=-34, hl=36, hlift=0.01, head=-6, jaw=58, up=22),
+        "bite3": dict(ty=-0.06, bz=0.05, pitch=12, fl=-42, hl=44, hlift=0.02, head=8, jaw=8, up=2),
+        "bite4": dict(ty=-0.03, bz=0.03, pitch=5, fl=-12, hl=14, head=2),
+        "graze1": dict(ty=-0.02, pitch=4, fl=-8, hl=4, head=42),
+        "graze2": dict(ty=-0.03, pitch=6, fl=-10, hl=4, head=64),
+        "flinch1": dict(ty=0.05, bz=0.03, pitch=-7, fl=-14, hl=10, head=-20, yaw=18),
+        "flinch2": dict(ty=0.025, bz=0.015, pitch=-3, fl=-6, hl=5, head=-9, yaw=8),
+    },
+}
+ACTION_FRAMES = {sp: list(p) for sp, p in POSES.items()}
+JAW_HINGE = {"ridgewolf": (CY - 0.33, 0.5)}
+UPPER_JAW = ("snout", "nose", "fang_u")
+LOWER_JAW = ("jaw", "fang_l")
+
+
+def _add_jaws():
+    """Lower jaw and fangs for the bite set (ridgewolf only)."""
+    S.ellipsoid("jaw", CX, CY - 0.39, 0.447, 0.038, 0.08, 0.024, "fur_cream", segs=12, rings=8)
+    for sx in (-1, 1):
+        S.cyl("fang_u", CX + sx * 0.025, CY - 0.45, 0.002, 0.435, 0.475, "ceramic", segs=6, r_top=0.009, bevel=0.0)
+        S.cyl("fang_l", CX + sx * 0.022, CY - 0.43, 0.008, 0.45, 0.49, "ceramic", segs=6, r_top=0.002, bevel=0.0)
+
+
+def _pose_action(species, p):
+    from mathutils import Matrix
+    pz = HIP_Z[species]
+    ny, nz = NECK_PIVOT[species]
+    ty, bz = p.get("ty", 0.0), p.get("bz", 0.0)
+    shrink = (pz - bz) / pz
+    body = (Matrix.Translation((0, ty, -bz)) @ Matrix.Translation((0, CY + 0.2, pz))
+            @ Matrix.Rotation(math.radians(p.get("pitch", 0.0)), 4, "X") @ Matrix.Translation((0, -(CY + 0.2), -pz)))
+    head = (Matrix.Translation((0, ny, nz)) @ Matrix.Rotation(math.radians(p.get("yaw", 0.0)), 4, "Z")
+            @ Matrix.Rotation(math.radians(p.get("head", 0.0)), 4, "X") @ Matrix.Translation((0, -ny, -nz)))
+    jy, jz = JAW_HINGE.get(species, (ny, nz))
+
+    def hinge(deg):
+        return Matrix.Translation((0, jy, jz)) @ Matrix.Rotation(math.radians(deg), 4, "X") @ Matrix.Translation((0, -jy, -jz))
+
+    for ob in S.objects():
+        n = ob.name.split(".")[0]
+        if n in ("leg", "hoof"):
+            front = _mean(ob, 1) < CY
+            py = _mean(ob, 1)
+            a = p.get("fl", 0.0) if front else p.get("hl", 0.0)
+            lift = 0.0 if front else p.get("hlift", 0.0)
+            hip = shrink * pz
+            m = (Matrix.Translation((0, ty, lift)) @ Matrix.Translation((0, py, hip))
+                 @ Matrix.Rotation(math.radians(a), 4, "X") @ Matrix.Translation((0, -py, -hip))
+                 @ Matrix.Scale(shrink, 4, (0, 0, 1)))
+            ob.matrix_world = m @ ob.matrix_world
+            continue
+        m = body
+        if n in HEAD_PARTS or n in UPPER_JAW or n in LOWER_JAW:
+            m = m @ head
+            if n in UPPER_JAW:
+                m = m @ hinge(-p.get("up", 0.0))
+            elif n in LOWER_JAW:
+                m = m @ hinge(p.get("jaw", 0.0))
+        ob.matrix_world = m @ ob.matrix_world
+
+
 def _lean_matrix():
     from mathutils import Matrix
     t = math.radians(LEAN_DEG)
@@ -146,10 +228,14 @@ def build():
                                   extra={"item": "%s corpse" % species, "species": species}))
     for species, (builder, height) in SPECIES.items():
         for f in FACINGS:
-            for fr in [None] + list(WALK_FRAMES):
+            for fr in [None] + list(WALK_FRAMES) + ACTION_FRAMES[species]:
                 builder()
-                if fr:
+                if fr in WALK_FRAMES:
                     _pose(species, fr)
+                elif fr:
+                    if species == "ridgewolf" and fr.startswith("bite"):
+                        _add_jaws()
+                    _pose_action(species, POSES[species][fr])
                 S.face(S.objects(), f, (1, 1))
                 S.transform(S.objects(), _lean_matrix())
                 extra = {"species": species, "facing": f}
