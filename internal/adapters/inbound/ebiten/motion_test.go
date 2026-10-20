@@ -7,6 +7,7 @@ import (
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/clock"
+	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -651,5 +652,74 @@ func TestTracerFromInterpolatedShooter(t *testing.T) {
 	}
 	if to.x != 9.5 || to.y != 9.4 {
 		t.Fatalf("empty target cell: %+v", to)
+	}
+}
+
+// TestRealSimStraightWalkConstantSpeed drives the real application game
+// the way a capture does (alpha 0). The real sim stamps StepTick before the
+// clock advances, so a step is first seen one tick later than in the fake.
+func TestRealSimStraightWalkConstantSpeed(t *testing.T) {
+	t.Parallel()
+	for _, tpf := range []int{1, 3, 6} {
+		// a walled 1-wide corridor (as -scenario corridor) so the path is straight
+		g := game.NewColony(game.Config{Seed: 1, Width: 48, Height: 40})
+		cx, cy := 24, 9
+		g.ClearPlants(cx-10, cy-3, cx+10, cy+3)
+		for x := cx - 6; x <= cx+6; x++ {
+			g.BuildNow("wall", "wood", "south", x, cy-1)
+			g.BuildNow("wall", "wood", "south", x, cy+1)
+		}
+		p := g.Snapshot()[0]
+		g.Enqueue(command.Command{Kind: command.MovePawn, Pawn: uint64(p.ID), X: cx - 8, Y: cy})
+		g.Enqueue(command.Command{Kind: command.MovePawn, Pawn: uint64(p.ID), X: cx + 8, Y: cy, Queue: true})
+		p.X, p.Y = cx-8, cy
+		r := New(g)
+		type frame struct {
+			m    moveState
+			view game.PawnView
+		}
+		var fs []frame
+		for i := 0; i < 900/tpf; i++ {
+			r.speed = speedFor(tpf)
+			r.advance()
+			r.setAlpha(0)
+			for _, q := range g.Snapshot() {
+				if q.ID == p.ID {
+					fs = append(fs, frame{r.pawnMotion(p.ID), q})
+				}
+			}
+		}
+		// cruise: two tiles after the start until two tiles before the goal,
+		// on the row, unblocked
+		var dx, ds []float64
+		for i := 1; i < len(fs); i++ {
+			a, b := fs[i-1], fs[i]
+			if a.view.Y != cy || a.m.X < float64(cx-5) || b.m.X > float64(cx+5) || b.m.X < a.m.X {
+				continue
+			}
+			if b.view.Y != p.Y || b.view.BlockedBy != 0 {
+				t.Fatalf("%dx: walk left the row or was blocked: %+v", tpf, b.view)
+			}
+			dx = append(dx, b.m.X-a.m.X)
+			ds = append(ds, b.m.Stride-a.m.Stride)
+			if b.m.Blend < 1 || !b.m.Moving {
+				t.Fatalf("%dx: walk blend dips mid-walk: blend %.3f at x=%.3f", tpf, b.m.Blend, b.m.X)
+			}
+		}
+		if len(dx) < 8/tpf+4 {
+			t.Fatalf("%dx: only %d cruise frames", tpf, len(dx))
+		}
+		for name, xs := range map[string][]float64{"position": dx, "stride": ds} {
+			mean, cv := meanCV(xs)
+			if cv > 0.05 {
+				t.Fatalf("%dx: %s per frame CV %.4f > 5%%", tpf, name, cv)
+			}
+			for _, d := range xs {
+				if d > 1.5*mean {
+					t.Fatalf("%dx: %s jump %.4f > 1.5x mean %.4f", tpf, name, d, mean)
+				}
+			}
+			t.Logf("%dx: %s %.5f tiles/frame, CV %.5f", tpf, name, mean, cv)
+		}
 	}
 }

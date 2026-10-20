@@ -468,13 +468,18 @@ func (k *moTrack) model(t float64) moSample {
 	if !ok {
 		return done
 	}
-	// look-ahead only (facing): a predicted step that ends at rest
+	// The walk goes on into the planned step. Normally only look-ahead
+	// (facing) reaches here, but the real sim's step is first seen one tick
+	// after it starts, so the previous draw ended exactly on s.end(): the
+	// sample there must match the step that follows, walk blend included.
 	vs := moSeg{fx: s.tx, fy: s.ty, tx: nx, ty: ny, start: s.end(), dur: nd, base: done.stride,
 		cont: true, px: s.fx, py: s.fy, pdur: s.dur, final: true}
 	if t >= vs.end() {
 		return moSample{x: float64(nx), y: float64(ny), stride: vs.base}
 	}
-	return segGeom(&vs, 0, 0, 0, false).eval(&vs, t)
+	smp := segGeom(&vs, 0, 0, 0, false).eval(&vs, t)
+	smp.blend = smoothstep01((smp.stride - s.runStart) / blendTiles)
+	return smp
 }
 
 // next is the step after segs[i] when the walk continues into it: the
