@@ -331,6 +331,14 @@ type Game struct {
 	residual    map[int]temperature.Temp
 	researchCur research.Project
 	researchSet bool
+
+	// motion: per-creature step timing (motion_store.go); moverBuf is
+	// scratch for the ascending-ID mover list.
+	motion   *component.Store[motionRec]
+	moverBuf []mover
+	occ      occupancy // movement blocking index (occupancy.go), transient
+	// enterHook, when set (tests only), replaces enter's verdicts.
+	enterHook func(id entity.EntityID, from, to Position) (stepVerdict, Position)
 }
 
 // New builds a Game from cfg. Width/Height must be positive.
@@ -379,6 +387,7 @@ func New(cfg Config) *Game {
 		wounds:      make(map[entity.EntityID]wound),
 		rockDamage:  make(map[[2]int]int),
 		research:    research.Complete(), // sandbox: everything known
+		motion:      component.NewStore[motionRec](),
 	}
 }
 
@@ -530,10 +539,6 @@ func (g *Game) Step(n int) {
 	}
 }
 
-func (g *Game) dueToMove(id entity.EntityID) bool {
-	return (uint64(g.clock.Now())+uint64(id))%uint64(TicksPerCell) == 0
-}
-
 // Snapshot returns a read-only view of every pawn, in insertion order.
 func (g *Game) Snapshot() []PawnView {
 	act := g.Activity()
@@ -614,7 +619,11 @@ func (g *Game) Snapshot() []PawnView {
 		}
 		pv.Acting, pv.ActX, pv.ActY = g.acting(id, j)
 	}
-	return append(views, g.raiderViews()...)
+	views = append(views, g.raiderViews()...)
+	for i := range views {
+		g.fillPawnMotion(&views[i])
+	}
+	return views
 }
 
 // World returns the non-pawn read model.

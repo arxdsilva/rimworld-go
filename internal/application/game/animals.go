@@ -160,11 +160,7 @@ func (g *Game) phaseAnimals() {
 		if _, still := g.animals.Get(id); !still {
 			continue
 		}
-		g.stepAnimal(id, &a, now)
-		if _, still := g.animals.Get(id); !still {
-			continue // a trap killed it
-		}
-		g.animals.Set(id, a)
+		g.animals.Set(id, a) // it steps in phaseMovement
 	}
 }
 
@@ -191,7 +187,8 @@ func (g *Game) thinkAnimal(id entity.EntityID, a *animal.State, now uint64) {
 			}
 		}
 		if threat {
-			if a.Mode != animal.Flee || a.PathI >= len(a.Path) || (now+uint64(id))%40 == 0 {
+			lost := a.PathI >= len(a.Path) && now >= a.RetryAt
+			if a.Mode != animal.Flee || lost || (now+uint64(id))%40 == 0 {
 				a.Mode = animal.Flee
 				fx, fy := animal.FleeGoal(pos.X, pos.Y, tp.X, tp.Y, 8)
 				g.animalGoTo(id, a, fx, fy)
@@ -340,23 +337,75 @@ func clampInt(v, lo, hi int) int {
 	return v
 }
 
-func (g *Game) stepAnimal(id entity.EntityID, a *animal.State, now uint64) {
-	if a.PathI >= len(a.Path) || (now+uint64(id))%uint64(a.Step()) != 0 {
+// moveAnimal takes an animal's next path step if it is due and the way
+// is clear (the animal half of phaseMovement; m, its record, says it
+// is due).
+func (g *Game) moveAnimal(id entity.EntityID, m motionRec, now uint64) {
+	a, ok := g.animals.Get(id)
+	if !ok {
+		return // removed earlier this tick
+	}
+	if a.PathI >= len(a.Path) {
+		if m.BlockedTicks != 0 || m.BlockedBy != 0 {
+			m.BlockedTicks, m.BlockedBy = 0, 0
+			g.motion.Set(id, m)
+		}
 		return
 	}
 	next := a.Path[a.PathI]
 	if !g.grid.Walkable(next.X, next.Y) || !a.Tame && g.doorAt(next.X, next.Y) {
 		a.Path, a.PathI = nil, 0
+		g.animals.Set(id, a)
 		return
 	}
-	g.positions.Set(id, Position{X: next.X, Y: next.Y})
-	a.PathI++
-	if g.trapVictim(*a) && g.hasTraps() && g.trapAt(next.X, next.Y) != 0 {
-		g.animals.Set(id, *a)
-		g.springTrap(id, next.X, next.Y)
-		if b, ok := g.animals.Get(id); ok {
-			*a = b
+	from, _ := g.positions.Get(id)
+	to := Position{X: next.X, Y: next.Y}
+	v, alt := g.decide(id, from, to)
+	switch v {
+	case stepGo:
+		a.PathI++
+		g.stepAnimal(id, &a, &m, from, to, now)
+		return
+	case stepSidestep:
+		g.positions.Set(id, alt) // replan from the new cell
+		g.animalGoTo(id, &a, a.GoalX, a.GoalY)
+		g.stepAnimal(id, &a, &m, from, alt, now)
+		return
+	case stepArriveNear:
+		a.Path, a.PathI = nil, 0
+		if alt != from {
+			g.stepAnimal(id, &a, &m, from, alt, now)
+			return
 		}
+		a.RetryAt = now + uint64(a.Step()) // stood still: pause a step before replanning
+		g.animals.Set(id, a)
+		return
+	}
+	// stepWait or stepRepath: stay put and try again next tick
+	m.BlockedTicks++
+	m.BlockedBy, _ = g.occupantAt(to.X, to.Y)
+	if v == stepRepath {
+		if path, ok := g.pathAround(id, a.GoalX, a.GoalY); ok {
+			a.Path, a.PathI = path, 0
+		}
+	}
+	if m.BlockedTicks > blockedFailTicks {
+		a.Path, a.PathI = nil, 0 // give up; it thinks of something else
+		m.BlockedTicks, m.BlockedBy = 0, 0
+	}
+	g.animals.Set(id, a)
+	g.motion.Set(id, m)
+}
+
+// stepAnimal moves an animal from -> to at tick now and springs a trap
+// there if it is a trap victim.
+func (g *Game) stepAnimal(id entity.EntityID, a *animal.State, m *motionRec, from, to Position, now uint64) {
+	g.positions.Set(id, to)
+	m.stepped(now, a.StepCost(isDiagonal(from, to)))
+	g.motion.Set(id, *m)
+	g.animals.Set(id, *a)
+	if g.trapVictim(*a) && g.hasTraps() && g.trapAt(to.X, to.Y) != 0 {
+		g.springTrap(id, to.X, to.Y)
 	}
 }
 
@@ -442,12 +491,18 @@ func (g *Game) animalViews() []AnimalView {
 			Mode:       a.Mode.String(),
 			Designated: a.Designated,
 			Hostile:    g.hostile(a) || a.Enraged(uint64(g.clock.Now())),
-			StepTicks:  a.Step(),
 			Tame:       a.Tame,
 			Name:       a.Name,
 			TameMark:   a.TameMark,
 			Manhunter:  a.Enraged(uint64(g.clock.Now())),
 		})
+		av := &out[len(out)-1]
+		m := g.motionOf(id)
+		av.StepTick, av.StepTicks = m.StepTick, m.StepTicks
+		if a.PathI < len(a.Path) {
+			av.NextX, av.NextY, av.HasNext = a.Path[a.PathI].X, a.Path[a.PathI].Y, true
+			av.BlockedBy = m.BlockedBy
+		}
 	}
 	return out
 }

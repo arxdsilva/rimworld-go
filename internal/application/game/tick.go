@@ -1134,41 +1134,64 @@ func (g *Game) doHarvest(id entity.EntityID, j job.Record) {
 	g.jobs.Set(id, j)
 }
 
+// phaseMovement steps every due creature (colonists, raiders, animals)
+// in ascending ID, applying each move at once so the occupancy index
+// sees earlier moves of the same tick (SIM-014).
 func (g *Game) phaseMovement() {
-	type move struct {
-		id  entity.EntityID
-		pos Position
-	}
-	var moves []move
-	movers := g.pawnIDs
-	if len(g.raiderIDs) > 0 {
-		movers = append(append([]entity.EntityID(nil), g.pawnIDs...), g.raiderIDs...)
-	}
-	for _, id := range movers {
-		if !g.alive(id) || !g.dueToMove(id) {
-			continue
+	now := uint64(g.clock.Now())
+	movers := g.movers()
+	g.pruneMotion(movers)
+	g.buildOccupancy()
+	var raiders []entity.EntityID
+	for _, mv := range movers {
+		m := g.motionOf(mv.id)
+		if now < m.NextMoveAt {
+			continue // mid-step
 		}
-		j, _ := g.jobs.Get(id)
-		if j.State != job.Goto || j.PathI >= len(j.Path) {
-			continue
+		if mv.animal {
+			g.moveAnimal(mv.id, m, now)
+		} else if g.alive(mv.id) && g.movePawn(mv.id, m, now) && g.isRaider(mv.id) {
+			raiders = append(raiders, mv.id)
 		}
-		next := j.Path[j.PathI]
-		if !g.grid.Walkable(next.X, next.Y) || g.isRaider(id) && g.doorAt(next.X, next.Y) {
-			path, ok := g.pathTo(id, j.TX, j.TY)
-			if !ok {
-				j.State = job.Fail
-				j.Fail = job.Unreachable
-				g.jobs.Set(id, j)
-				continue
-			}
-			j.Path, j.PathI = path, 0
+	}
+	g.followCarriers()
+	g.trapsUnderfoot(raiders)
+}
+
+// movePawn takes a colonist's or raider's next path step if it is due
+// (m, its record, says it is due) and the way is clear; it reports
+// whether the pawn changed cell.
+func (g *Game) movePawn(id entity.EntityID, m motionRec, now uint64) bool {
+	j, _ := g.jobs.Get(id)
+	if j.State != job.Goto || j.PathI >= len(j.Path) {
+		if m.BlockedTicks != 0 || m.BlockedBy != 0 {
+			m.BlockedTicks, m.BlockedBy = 0, 0
+			g.motion.Set(id, m)
+		}
+		return false
+	}
+	next := j.Path[j.PathI]
+	tx, ty := walkTarget(j)
+	if !g.grid.Walkable(next.X, next.Y) || g.isRaider(id) && g.doorAt(next.X, next.Y) {
+		path, ok := g.pathTo(id, tx, ty)
+		if !ok {
+			j.State = job.Fail
+			j.Fail = job.Unreachable
 			g.jobs.Set(id, j)
-			if len(path) == 0 {
-				g.arrive(id, j)
-			}
-			continue
+			return false
 		}
-		moves = append(moves, move{id: id, pos: Position{X: next.X, Y: next.Y}})
+		j.Path, j.PathI = path, 0
+		g.jobs.Set(id, j)
+		if len(path) == 0 {
+			g.arrive(id, j)
+		}
+		return false
+	}
+	from, _ := g.positions.Get(id)
+	to := Position{X: next.X, Y: next.Y}
+	v, alt := g.decide(id, from, to)
+	switch v {
+	case stepGo:
 		j.PathI++
 		if j.PathI >= len(j.Path) {
 			if j.Kind == job.Move {
@@ -1178,22 +1201,64 @@ func (g *Game) phaseMovement() {
 			}
 		}
 		g.jobs.Set(id, j)
-	}
-	var raiders []entity.EntityID
-	for _, m := range moves {
-		g.positions.Set(m.id, m.pos)
-		if g.isRaider(m.id) {
-			raiders = append(raiders, m.id)
+		g.stepPawn(id, &m, j.Carry, from, to, now)
+		return true
+	case stepSidestep:
+		g.stepPawn(id, &m, j.Carry, from, alt, now)
+		path, ok := g.pathTo(id, tx, ty)
+		if !ok {
+			j.State, j.Fail = job.Fail, job.Unreachable
+			g.jobs.Set(id, j)
+			return true
 		}
-		if j, ok := g.jobs.Get(m.id); ok && j.Carry != 0 {
-			if st, ok := g.stacks.Get(j.Carry); ok {
-				st.X, st.Y = m.pos.X, m.pos.Y
-				g.stacks.Set(j.Carry, st)
+		j.Path, j.PathI = path, 0
+		g.jobs.Set(id, j)
+		if len(path) == 0 {
+			g.arrive(id, j)
+		}
+		return true
+	case stepArriveNear:
+		moved := alt != from
+		if moved {
+			g.stepPawn(id, &m, j.Carry, from, alt, now)
+		}
+		g.arrive(id, j)
+		return moved
+	}
+	// stepWait or stepRepath: stay put and try again next tick
+	m.BlockedTicks++
+	m.BlockedBy, _ = g.occupantAt(to.X, to.Y)
+	if v == stepRepath {
+		if path, ok := g.pathAround(id, tx, ty); ok {
+			j.Path, j.PathI = path, 0
+			g.jobs.Set(id, j)
+			if len(path) == 0 {
+				g.arrive(id, j)
 			}
 		}
 	}
-	g.followCarriers()
-	g.trapsUnderfoot(raiders)
+	if m.BlockedTicks > blockedFailTicks {
+		if j, _ := g.jobs.Get(id); j.State == job.Goto {
+			j.State, j.Fail = job.Fail, job.Blocked
+			g.jobs.Set(id, j)
+		}
+		m.BlockedTicks, m.BlockedBy = 0, 0
+	}
+	g.motion.Set(id, m)
+	return false
+}
+
+// stepPawn moves a pawn (and what it carries) from -> to at tick now.
+func (g *Game) stepPawn(id entity.EntityID, m *motionRec, carry entity.EntityID, from, to Position, now uint64) {
+	g.positions.Set(id, to)
+	m.stepped(now, pawnStepCost(from, to))
+	g.motion.Set(id, *m)
+	if carry != 0 {
+		if st, ok := g.stacks.Get(carry); ok {
+			st.X, st.Y = to.X, to.Y
+			g.stacks.Set(carry, st)
+		}
+	}
 }
 
 func (g *Game) arrive(id entity.EntityID, j job.Record) {

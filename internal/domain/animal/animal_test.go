@@ -39,3 +39,24 @@ func TestFleeGoalPointsAway(t *testing.T) {
 		t.Fatalf("flee up-left from a down-right threat: got %d,%d", x, y)
 	}
 }
+
+func TestStepCostScalesDiagonals(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		s          State
+		straight   int
+		diagonally int
+	}{
+		{State{Species: Dustbuck}, 18, 25},             // round(18 * 1.414)
+		{State{Species: Ridgewolf}, 14, 20},            // round(14 * 1.414)
+		{State{Species: Dustbuck, Mode: Flee}, 10, 14}, // round(10 * 1.414)
+	}
+	for _, c := range cases {
+		if got := c.s.StepCost(false); got != c.straight {
+			t.Errorf("%v straight: %d, want %d", c.s.Species, got, c.straight)
+		}
+		if got := c.s.StepCost(true); got != c.diagonally {
+			t.Errorf("%v diagonal: %d, want %d", c.s.Species, got, c.diagonally)
+		}
+	}
+}

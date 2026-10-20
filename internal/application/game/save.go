@@ -153,6 +153,9 @@ type saveState struct {
 	Pens        []pen
 	RockDamage  map[[2]int]int
 	Residual    map[int]temperature.Temp
+	// Motion: step timing per creature on the map (absent in older saves,
+	// which default to due-now straight steps).
+	Motion []entry[motionRec]
 }
 
 // Info describes the game for a save header.
@@ -192,6 +195,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 		AnimalIDs: g.animalIDs, Animals: exportStore(g.animals), Equip: g.equip, Traces: g.traces, Wild: g.wild,
 		Carrying: g.carrying, TendedUntil: g.tendedUntil, Wounds: g.wounds,
 		Research: g.research, ResearchCur: g.researchCur, ResearchSet: g.researchSet, Pens: g.pens, RockDamage: g.rockDamage, Residual: g.residual,
+		Motion: g.exportMotion(),
 	}
 	for id, e := range g.exposure {
 		s.Exposure[id] = [2]int{e.hypo, e.heat}
@@ -295,6 +299,8 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.pens = s.Pens
 	setMap(&g.rockDamage, s.RockDamage)
 	g.residual = s.Residual
+	g.motion = importStore(s.Motion)
+	g.defaultMotion()
 	for id, e := range s.Exposure {
 		g.exposure[id] = exposureState{e[0], e[1]}
 	}
