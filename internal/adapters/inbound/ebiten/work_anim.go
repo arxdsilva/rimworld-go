@@ -76,8 +76,13 @@ var workTable = map[string]actionDef{
 	game.ActionTend:        {set: "_tend", frames: 4, strike: 2, period: 60, reach: 0.05, lean: 0.06, squash: 0.16, tool: "tool/bandage", stance: stanceUpright, kneel: true, fallback: motionReach},
 	game.ActionTame:        {set: "_offer", frames: 2, strike: 2, period: 64, reach: 0.04, lean: 0.04, squash: 0.12, fallback: motionReach},
 	// Spoon in the right hand, bowl level in the left (hand_l).
-	game.ActionEat:        {set: "_eat", frames: 4, strike: 3, period: 50, reach: 0.02, tool: "tool/spoon", stance: stanceUpright, off: "tool/bowl"},
-	game.ActionRefuel:     {set: "_bench", frames: 4, strike: 2, period: 40, reach: 0.06, lean: 0.04, fallback: motionReach, parts: []partSpec{{partChip, 1}}},
+	game.ActionEat:    {set: "_eat", frames: 4, strike: 3, period: 50, reach: 0.02, tool: "tool/spoon", stance: stanceUpright, off: "tool/bowl"},
+	game.ActionRefuel: {set: "_bench", frames: 4, strike: 2, period: 40, reach: 0.06, lean: 0.04, fallback: motionReach, parts: []partSpec{{partChip, 1}}},
+	// Burial (SIM-017): shovel on the mine frames, kneeling bare-handed
+	// to fill the grave, the bench frames at the pyre.
+	game.ActionDig:        {set: "_mine", frames: 6, strike: 4, period: 56, reach: 0.10, lean: 0.14, squash: 0.04, tool: "tool/shovel", stance: stanceHands, fallback: motionSwing, parts: []partSpec{{partSoil, 4}}},
+	game.ActionBury:       {set: "_pick", frames: 4, strike: 3, period: 48, reach: 0.06, lean: 0.05, squash: 0.12, kneel: true, fallback: motionReach, parts: []partSpec{{partSoil, 3}}},
+	game.ActionCremate:    {set: "_bench", frames: 4, strike: 2, period: 44, reach: 0.04, lean: 0.03, fallback: motionReach, parts: []partSpec{{partEmber, 2}, {partSmoke, 1}}},
 	game.ActionHorseshoes: {period: 70, reach: 0.04, lean: 0.03, fallback: motionSwing, parts: []partSpec{{partDust, 3}}},
 }
 
@@ -189,6 +194,11 @@ func workStrikeAt(prev, cur float64, id uint64, period int) bool {
 func (r *Renderer) animateWork(w game.WorldView, pawns []game.PawnView) {
 	st := r.animState()
 	t := r.animT() // swings run on sim-scaled time
+	for _, b := range w.Buildings {
+		if b.Kind == "funeral pyre" {
+			r.emitPyre(b)
+		}
+	}
 	acting := map[entity.EntityID]bool{}
 	for _, p := range pawns {
 		if p.Lying || p.CarriedBy != 0 {

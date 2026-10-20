@@ -18,7 +18,7 @@ import (
 const (
 	soilVariants = 4
 	pawnBobPx    = 0.035 // of a tile
-	grassEvery   = 11
+	grassEvery   = 5
 )
 
 type artDraw struct {
@@ -284,7 +284,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 		if it.Carried {
 			continue
 		}
-		key := itemSprite(it.Kind)
+		key := itemSpriteAt(it.Kind, it.X, it.Y)
 		add(float64(it.Y), float64(it.X), func() {
 			if it.Kind == "human corpse" || it.Kind == "bones" {
 				r.drawCorpseItem(screen, it, tile, sw, sh)
@@ -405,6 +405,10 @@ func itemSprite(kind string) string {
 		return "item/corpse_ridgewolf"
 	case "stone", "stone_blocks":
 		return "item/stone_blocks"
+	case "human corpse":
+		return corpseCarrySprite
+	case "bones":
+		return bonesSprite(0, 0)
 	}
 	return "item/" + kind
 }
@@ -576,8 +580,7 @@ func (r *Renderer) drawTerrainArt(screen *ebiten.Image, w game.WorldView, sw, sh
 				}
 			}
 			if (t == "soil" || t == "rich_soil") && (tileHash(x, y)>>8)%grassEvery == 0 {
-				h := tileHash(x, y) >> 8
-				r.drawSpritePose(screen, artKey("plant", "grass", int(h/grassEvery%2)), none, float64(x), float64(y), tile, r.plantPose(x, y, kindGrass, 0.05, 1))
+				r.drawSpritePose(screen, grassKey(t, tileHash(x, y)), none, float64(x), float64(y), tile, r.plantPose(x, y, kindGrass, 0.05, 1))
 			}
 		}
 	}
@@ -616,28 +619,53 @@ func (r *Renderer) addRockDraws(w game.WorldView, add func(row, col float64, fn 
 	}
 }
 
-// plantSprite picks the sprite and growth scale for a plant.
+// grassKeys are the tuft sprites: short tufts (some flowering) on soil,
+// tall meadow grass mixed in on rich soil (ART §9).
+var (
+	grassKeys     = keysOf("plant/grass_", 8)
+	tallGrassKeys = keysOf("plant/grass_tall_", 4)
+)
+
+func keysOf(prefix string, n int) []string {
+	out := make([]string, n)
+	for i := range out {
+		out[i] = prefix + twoDigits(i)
+	}
+	return out
+}
+
+// grassKey picks a tile's tuft by its hash; rich soil grows tall grass
+// on half its tufts.
+func grassKey(terrain string, h uint64) string {
+	h >>= 12
+	if terrain == "rich_soil" && h%2 == 0 {
+		return tallGrassKeys[(h/2)%uint64(len(tallGrassKeys))]
+	}
+	return grassKeys[h%uint64(len(grassKeys))]
+}
+
+// plantSprite picks the sprite and growth scale for a plant: tree
+// species, bush and crop variants by tileHash, crops by drawn stage
+// (ART §9, §28). Keys come from a prebuilt table; seasonKey then picks the
+// seasonal look and falls back to older art.
 func plantSprite(p game.PlantView) (string, float64) {
+	h := tileHash(p.X, p.Y)
+	if ks, ok := plantKeys.crops[p.Species]; ok {
+		return ks[cropStage(p)][h%3], 1
+	}
 	switch p.Species {
 	case "tree":
 		k := 0.45 + 0.55*float64(p.Growth)/100
-		return artKey("plant", "tree", int(tileHash(p.X, p.Y)%3)), k
-	case "radish", "lettuce", "beans", "potato", "corn", "wheat", "pumpkin", "healroot":
-		if st := clampStage(p.Stage); st > 0 {
-			return "plant/" + p.Species + "_" + [...]string{"", "young", "mature", "harvestable"}[st], 1
-		}
-		return "plant/crop_sown", 1
+		return plantKeys.trees[treeSpeciesAt(h)][h%3], k
+	case "berry_bush":
+		return plantKeys.berry[h%3][boolIdx(p.Harvestable)], bushScale(p)
 	default:
-		key := artKey("plant", "bush", int(tileHash(p.X, p.Y)%2))
-		if p.Harvestable {
-			key += "_harvestable"
-		}
-		k := 0.6 + 0.4*float64(p.Growth)/100
-		if k > 1 {
-			k = 1
-		}
-		return key, k
+		return plantKeys.bushes[h%4][boolIdx(p.Harvestable)], bushScale(p)
 	}
+}
+
+func bushScale(p game.PlantView) float64 {
+	return min(0.6+0.4*float64(p.Growth)/100, 1)
 }
 
 func clampStage(s int) int {

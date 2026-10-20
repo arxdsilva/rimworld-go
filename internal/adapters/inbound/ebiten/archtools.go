@@ -88,6 +88,10 @@ var archTools = []archTool{
 		desc: "Butchers hunted carcasses into meat (2x1). Starts with butcher bills."},
 	{id: "campfire", label: "Campfire", category: "furniture", icon: "campfire", mode: placeSingle, build: "campfire",
 		desc: "Burns wood to heat and light its room, and cooks simple meals (slowly). Haulers keep it fuelled."},
+	{id: "grave", label: "Grave", category: "furniture", icon: "stone", mode: placeSingle, build: "grave",
+		desc: "Dig a grave: colonists bury the dead here."},
+	{id: "pyre", label: "Funeral pyre", category: "furniture", icon: "campfire", mode: placeSingle, build: "funeral pyre",
+		desc: "Funeral pyre: burn the dead (2 wood per body)."},
 	{id: "tailor", label: "Tailoring bench", category: "production", icon: "tailoring_bench", mode: placeSingle, build: "tailoring bench",
 		desc: "Sews leather into parkas, tuques and dusters (2x1). Select it to add bills."},
 	{id: "drying", label: "Drying rack", category: "production", icon: "drying_rack", mode: placeSingle, build: "drying rack",
@@ -227,6 +231,10 @@ func buildSprite(kind, facing string, mask int, ew, open bool) string {
 		return "furniture/butcher_table_" + facingOr(facing)
 	case "campfire":
 		return "furniture/campfire"
+	case "grave":
+		return "furniture/grave_dug_" + map[bool]string{true: "east", false: "south"}[facing == "east" || facing == "west"]
+	case "funeral pyre":
+		return "furniture/pyre"
 	case "horseshoe pin":
 		return "furniture/horseshoe_pin"
 	case "sandbags":

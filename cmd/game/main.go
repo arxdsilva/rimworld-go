@@ -177,11 +177,11 @@ func main() {
 				lateGame(g)
 			}
 			if *scenario == "rain" {
-				g.SkipTo(30, 12)
+				g.SkipTo(30, 13) // just past a 6-hour weather block, so the storm holds
 				g.SetWeather(weather.Storm, 1)
 			}
 			if *scenario == "snow" {
-				g.SkipTo(45, 10)
+				g.SkipTo(45, 7) // just past a 6-hour weather block, so the snow holds
 				g.SetWeather(weather.Snow, 0.7)
 			}
 			if *scenario == "armory" {
@@ -307,7 +307,7 @@ func saveHooks() uiadapter.SaveHooks {
 
 // lateGame builds the -scenario lategame colony (cmd only: dev hooks).
 func lateGame(g *game.Game) {
-	g.SkipTo(30, 10)
+	g.SkipTo(30, 7) // just past a 6-hour weather block, so the rain holds
 	g.SetWeather(weather.Rain, 0.5)
 	g.ClearPlants(12, 4, 47, 24)
 	// the compound: stone walls x 26..40, y 5..15, split in three rooms
@@ -379,9 +379,13 @@ func lateGame(g *game.Game) {
 		spot := [][2]int{{28, 12}, {29, 12}, {30, 12}, {34, 13}}[i]
 		_, _ = g.SpawnNamedPawn(spot[0], spot[1], n)
 	}
-	kinds := []item.Kind{item.Rifle, item.Spear, item.Knife, item.Club, item.Rifle, item.Knife, item.Spear}
+	// four armed colonists hold the line, drafted; the rest keep working
+	kinds := []item.Kind{item.Rifle, item.Spear, item.Knife, item.Rifle, item.Club, item.Knife, item.Spear}
 	for i, p := range g.Snapshot() {
 		g.Arm(p.ID, kinds[i%len(kinds)])
+		if i < 4 {
+			g.Enqueue(command.Command{Kind: command.DraftPawn, Pawn: uint64(p.ID), Enabled: true})
+		}
 	}
-	g.RaidArmed(item.Knife, item.Spear, item.Club, item.Rifle, item.Rifle)
+	g.RaidArmed(item.Knife, item.Spear, item.Rifle)
 }

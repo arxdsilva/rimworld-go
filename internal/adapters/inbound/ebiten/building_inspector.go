@@ -157,6 +157,9 @@ func (a *App) drawBuildingInspector(screen *ebiten.Image) {
 		state += fmt.Sprintf("   drying %d %s, %d%%", b.DryQty, b.DryKind, b.DryPct)
 	}
 	drawLabel(screen, int(r.x)+12, int(r.y)+28, state)
+	for i, ln := range graveLines(b) {
+		drawLabel(screen, int(r.x)+12, int(r.y)+46+i*18, ln)
+	}
 	if b.Bench {
 		drawLabel(screen, int(r.x)+12, int(r.y)+46, "Bills")
 		y := int(r.y) + 64
@@ -175,6 +178,22 @@ func (a *App) drawBuildingInspector(screen *ebiten.Image) {
 	mx, my := a.currentCursor()
 	a.drawButtons(screen, a.buildingButtons(), mx, my)
 	a.drawBuildingSelection(screen, b)
+}
+
+// graveLines is a grave's inspector text: who lies there and the
+// epitaph, or "Empty grave". Nil for other buildings.
+func graveLines(b game.BuildingView) []string {
+	if b.Kind != "grave" {
+		return nil
+	}
+	if b.Occupant == "" {
+		return []string{"Empty grave"}
+	}
+	lines := []string{"Here lies " + b.Occupant}
+	if b.Epitaph != "" {
+		lines = append(lines, b.Epitaph)
+	}
+	return lines
 }
 
 func billLine(bl game.BillView) string {
