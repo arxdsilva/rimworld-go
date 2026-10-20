@@ -499,7 +499,7 @@ This is the heart of autonomous colony behavior.
 
 ## 6.2 Carrying/inventory
 
--   [-] **Pawn carry tracker** (haul `Carrier`; no personal inventory)
+-   [-] **Pawn carry tracker** (haul `Carrier`, shown as a load in both arms; no personal inventory)
     -   Pawn can carry an item stack while performing jobs.
 -   [ ] **Personal inventory**
     -   Support carried consumables/medicine/other inventory where
@@ -1237,7 +1237,7 @@ treatment, and surgery are major colony-management systems.
 -   [x] **Butchering**
 -   [x] **Cooking** (stove: 2 raw food -> 1 simple meal)
 -   [x] **Tailoring/apparel production** (tailoring bench sews leather parkas, tuques and dusters; butchering yields leather)
--   [-] **Smithing/weapon production** (workbench: 4 wood -> wooden club)
+-   [-] **Smithing/weapon production** (workbench: 4 wood -> wooden club, 3 stone -> knife, 5 wood -> spear)
 -   [ ] **Machining/advanced fabrication equivalents**
 -   [ ] **Drug production**
 -   [ ] **Component production in late tech**
@@ -2507,10 +2507,10 @@ the player-facing system.
 -   [ ] **UI feedback sounds**
 -   [ ] **Music system**
     -   Contextual but not authoritative.
--   [-] **Pawn facing/aiming** (smoothed facing with hysteresis, faces work/attack target and blockers; no aiming pose)
+-   [x] **Pawn facing/aiming** (smoothed facing with hysteresis; turns to the work tile, attack target and blockers; rifles held at ready, raised to aim and turned towards the target)
 -   [x] **Simple movement interpolation**
--   [ ] **Muzzle/projectile effects**
--   [ ] **Damage/fire effects**
+-   [x] **Muzzle/projectile effects** (muzzle flash and smoke at the rifle muzzle, ejected casing, tracer from the muzzle, impact puff)
+-   [-] **Damage/fire effects** (hit flash, flinch and stagger away from the attacker, directional blood, falls; burning-building fire not implemented)
 -   [ ] **Selection/targeting feedback**
 -   [ ] **Weather visual effects**
 -   [-] **Day/night presentation** (dusk/night fullscreen sky veil from outdoor light + hour; daytime ungraded; no indoor darkness)

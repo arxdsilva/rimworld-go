@@ -97,6 +97,8 @@ clips:  ## README animated WebP clips in docs/clips (needs python3 + Pillow)
 	$(call clip,combat,-capture-ui combat -capture-frames 180)
 	$(call clip,raid,-scenario raid -capture-ui raid -capture-ticks 500 -capture-frames 300)
 	$(call clip,animals,-scenario animals -capture-ui pen -capture-frames 240)
+	$(call clip,melee,-scenario armory -capture-ui raid -capture-zoom 1.6 -capture-ticks 560 -capture-frames 240)
+	$(call clip,chores,-scenario chores -capture-ui follow -capture-zoom 1.8 -capture-ticks 4000 -capture-frames 240)
 
 .PHONY: clean
 clean:

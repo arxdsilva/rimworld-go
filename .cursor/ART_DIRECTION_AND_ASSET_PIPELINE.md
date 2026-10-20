@@ -784,10 +784,10 @@ resolve metadata conflicts, and update the catalog.
 
 ### ART Wave 5 --- Combat
 
--   [ ] melee family
--   [ ] pistol/rifle/shotgun/long-range weapon
+-   [x] melee family (knife, spear, club; stab, thrust, swing and punch pose sets)
+-   [-] pistol/rifle/shotgun/long-range weapon (rifle with ready/aim/fire poses and a slung variant; no pistol, shotgun or long rifle)
 -   [ ] armor/helmets
--   [-] projectiles/muzzle flash/impact/explosion
+-   [-] projectiles/muzzle flash/impact/explosion (tracer, muzzle flash, smoke, casing, impact puff and blood; no explosions)
 -   [ ] fire/smoke
 -   [ ] turret/defenses
 
