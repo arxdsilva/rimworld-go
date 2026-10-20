@@ -256,7 +256,7 @@ This is the minimum UI required to interact with a running simulation.
 -   [x] **Fast speed** (key `2`; 3x)
 -   [x] **Very-fast speed** (key `3`; superfast 6x)
 -   [x] **Keyboard speed shortcuts**
--   [-] **Current date/time display** (HUD shows 1-based year/quadrum/day, period, HH:MM:SS, and schedule block; no temperature/weather yet)
+-   [x] **Current date/time display** (HUD shows 1-based year/quadrum/day, period, HH:MM:SS and schedule block, plus season, outdoor temperature, weather and wind)
     -   Local game hour.
     -   day.
     -   quadrum/season.
@@ -267,7 +267,7 @@ This is the minimum UI required to interact with a running simulation.
 
 ## 2.4 Minimal top-level HUD
 
--   [-] **Current game state indicator** (top chrome: Food/Wood counts, date, schedule activity, speed; no weather/dev-mode)
+-   [-] **Current game state indicator** (top chrome: Food/Wood/Stone counts, season and temperature, weather and wind, date, schedule activity, speed; no dev-mode)
     -   Paused/speed.
     -   map/world context.
     -   developer mode indicator if enabled.

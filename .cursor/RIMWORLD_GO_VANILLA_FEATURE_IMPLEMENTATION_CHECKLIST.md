@@ -975,7 +975,7 @@ treatment, and surgery are major colony-management systems.
     -   Pawn cannot normally act.
     -   can be rescued/captured.
     -   not equivalent to death.
--   [-] **Death** (starvation after downed-from-hunger; no corpse/social)
+-   [-] **Death** (starvation, injury, infection, exposure; leaves a corpse and drops the weapon; colonists mourn; no social relations)
     -   Vital part destruction or lethal capacity/condition.
     -   create corpse.
     -   release jobs/reservations.
@@ -1069,15 +1069,15 @@ treatment, and surgery are major colony-management systems.
 
 ## 11.10 Corpses
 
--   [-] **Corpse entity**
+-   [x] **Corpse entity** (human corpse item remembers who it was and when they died; rots to bones; hauled to graves and pyres; animal corpses butchered)
     -   Stores deceased pawn identity/body.
     -   can rot.
     -   can be butchered where allowed.
     -   can be hauled.
--   [ ] **Graves**
+-   [x] **Graves** (dug, no materials; haulers carry and bury the nearest body; the grave keeps name, cause and days under a headstone)
     -   Bury corpse.
     -   grave stores occupant.
--   [ ] **Cremation**
+-   [x] **Cremation** (funeral pyre bench: Cremate corpse bill burns a body and 2 wood)
     -   Production job destroys corpses.
 
 ------------------------------------------------------------------------
@@ -1114,13 +1114,13 @@ treatment, and surgery are major colony-management systems.
 
 ## 12.3 Weather
 
--   [ ] **Weather state machine**
+-   [-] **Weather state machine** (deterministic 6-hour blocks: clear, cloudy, rain, storm, snow, blizzard by season and temperature; wind; snow depth and wetness; no fog kind)
     -   Clear.
     -   rain.
     -   fog.
     -   snow where climate supports it.
     -   thunderstorm/flashstorm-like weather.
--   [ ] **Weather effects**
+-   [-] **Weather effects** (outdoor chill in snow, outdoor campfires doused, slower walking in rain and snow, soaked/snow-day thoughts; light only darkens visually)
     -   light.
     -   temperature.
     -   fire suppression.

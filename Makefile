@@ -67,13 +67,14 @@ art-preview:  ## contact sheet + ART §34 prototype scene
 # ---- README media (docs/media, docs/clips): animated WebP only -------------
 SHOT := $(BIN_DIR)/game -capture
 
-# $(call webp,DIR,NAME,FLAGS): record frames to bin/clips/NAME, encode DIR/NAME.webp
+# $(call webp,DIR,NAME,FLAGS[,ENCODER ARGS]): record frames to bin/clips/NAME,
+# encode DIR/NAME.webp (default quality 60, budget 1.4 MB; ENCODER ARGS may override)
 define webp
 	rm -rf $(BIN_DIR)/clips/$(2)
 	$(SHOT) $(BIN_DIR)/clips/$(2)/f.png $(3)
-	python3 scripts/frames_to_webp.py --frames '$(BIN_DIR)/clips/$(2)/f_*.png' --out $(1)/$(2).webp --max-bytes 950000
+	python3 scripts/frames_to_webp.py --frames '$(BIN_DIR)/clips/$(2)/f_*.png' --out $(1)/$(2).webp --quality 60 --max-bytes 1400000 $(4)
 endef
-clip = $(call webp,docs/clips,$(1),$(2))
+clip = $(call webp,docs/clips,$(1),$(2),$(3))
 still = $(call webp,docs/media,$(1),$(2))
 
 .PHONY: media
@@ -94,7 +95,7 @@ media:  ## README gallery as short animated WebPs in docs/media (needs python3 +
 .PHONY: clips
 clips:  ## README animated WebP clips in docs/clips (needs python3 + Pillow)
 	go build -o $(BIN_DIR)/game ./cmd/game
-	$(call clip,lategame,-scenario lategame -capture-ui lategame -capture-ticks 1200 -capture-frames 360)
+	$(call clip,lategame,-scenario lategame -capture-ui lategame -capture-ticks 1200 -capture-frames 360,--step 3 --fps 20 --quality 45 --max-bytes 2600000)
 	$(call clip,colony_life,-capture-ui follow -capture-frames 240)
 	$(call clip,building,-capture-ticks 600 -capture-zoom 1.5 -capture-frames 240)
 	$(call clip,combat,-capture-ui combat -capture-frames 180)
@@ -102,7 +103,7 @@ clips:  ## README animated WebP clips in docs/clips (needs python3 + Pillow)
 	$(call clip,animals,-scenario animals -capture-ui pen -capture-frames 240)
 	$(call clip,melee,-scenario armory -capture-ui raid -capture-zoom 1.6 -capture-ticks 560 -capture-frames 240)
 	$(call clip,chores,-scenario chores -capture-ui follow -capture-zoom 1.8 -capture-ticks 4000 -capture-frames 240)
-	$(call clip,rain,-scenario rain -capture-ui weather -capture-zoom 1.4 -capture-frames 240)
+	$(call clip,rain,-scenario rain -capture-ui weather -capture-zoom 1.4 -capture-frames 240,--quality 50)
 	$(call clip,snow,-scenario snow -capture-ui weather -capture-zoom 1.4 -capture-ticks 12000 -capture-frames 240)
 	$(call clip,grass,-capture-ui grass -capture-zoom 2 -capture-ticks 600 -capture-frames 240)
 	$(call clip,burial,-scenario burial -capture-ui burial -capture-zoom 1.6 -capture-ticks 30 -capture-frames 300 -capture-speed 3)

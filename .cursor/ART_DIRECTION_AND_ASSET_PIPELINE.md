@@ -827,7 +827,7 @@ resolve metadata conflicts, and update the catalog.
 ### ART Wave 3 --- Survival
 
 -   [-] bed/table/chair (1×1 cot drawn in-game for the current single-cell bed; 1×2 bed, table, chair generated in 4 facings for when the domain has footprints/furniture)
--   [-] food/crops/wild plants/trees (berry bush ± harvestable, grass and food crate in-game; amberroot stages and trees generated, no domain crops/trees yet)
+-   [x] food/crops/wild plants/trees (oak, birch and pine in 3 variants with autumn and bare winter looks; bushes and berry bushes; 12 grass tufts; 8 crops × 6 stages × 3 variants)
 -   [ ] stove/butcher workstation
 -   [ ] medicine
 -   [x] blood/injury effects
@@ -864,7 +864,7 @@ resolve metadata conflicts, and update the catalog.
 -   [ ] juvenile variants
 -   [ ] biome plants
 -   [-] rock/resource variants (natural rock walls 16-mask, rock chunks, stone blocks item; no ore)
--   [ ] snow/weather
+-   [x] snow/weather (rain, storm and snow particles; snow cover, drifts, puddles and frost; wind-driven plant motion)
 
 ### ART Wave 8 --- World/factions
 
