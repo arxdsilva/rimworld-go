@@ -2,6 +2,8 @@ package game
 
 import (
 	"rimworld-go/internal/domain/ai/job"
+	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -30,3 +32,13 @@ func (g *Game) doBury(id entity.EntityID, j job.Record) {}
 
 // afterLoadBurial gives dead colonists from older saves their corpses.
 func (g *Game) afterLoadBurial() {}
+
+// fillPawnDeath sets PawnView.Embodied.
+func (g *Game) fillPawnDeath(pv *PawnView) {}
+
+// fillCorpseView sets ItemView.Of and OfName for a human corpse or bones.
+func (g *Game) fillCorpseView(iv *ItemView, st item.Stack) {}
+
+// fillGraveView sets a grave's occupant, epitaph and headstone, and a
+// pyre's Burning.
+func (g *Game) fillGraveView(bv *BuildingView, id entity.EntityID, b construction.Building) {}

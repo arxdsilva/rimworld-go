@@ -2,6 +2,7 @@ package game
 
 import (
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/temperature"
 	"rimworld-go/internal/domain/world/weather"
 )
@@ -31,3 +32,12 @@ func (g *Game) SetWeather(k weather.Kind, intensity float64) {
 
 // Weather is the current outdoor weather.
 func (g *Game) Weather() weather.State { return g.weather }
+
+// fillWorldWeather copies the weather into the world view.
+func (g *Game) fillWorldWeather(w *WorldView) {}
+
+// fillPawnWeather sets PawnView.Soaked.
+func (g *Game) fillPawnWeather(pv *PawnView) {}
+
+// fillPlantWeather sets PlantView.Wilted.
+func (g *Game) fillPlantWeather(pv *PlantView, p plant.Plant) {}

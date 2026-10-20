@@ -669,6 +669,8 @@ func (g *Game) Snapshot() []PawnView {
 	views = append(views, g.raiderViews()...)
 	for i := range views {
 		g.fillPawnMotion(&views[i])
+		g.fillPawnDeath(&views[i])   // burial.go
+		g.fillPawnWeather(&views[i]) // weather.go
 	}
 	return views
 }
@@ -700,6 +702,7 @@ func (g *Game) World() WorldView {
 			FreshDays: freshDays(st), Rotten: st.Rotten(), Dried: st.Dried,
 			RotRate: item.RotRate(int(g.temperatureAt(st.X, st.Y))),
 		})
+		g.fillCorpseView(&w.Items[len(w.Items)-1], st) // burial.go
 		if st.Carrier == 0 {
 			switch {
 			case st.Kind.IsFood():
@@ -748,6 +751,7 @@ func (g *Game) World() WorldView {
 			bv.DryKind, bv.DryQty, bv.DryPct = rb.Kind.String(), rb.Qty, rb.percent()
 		}
 		bv.W, bv.H, bv.SpotX, bv.SpotY, bv.HasSpot = footprintView(b.Kind, b.Facing, b.X, b.Y)
+		g.fillGraveView(bv, id, b) // burial.go
 	}
 	for _, id := range g.plantIDs {
 		p, ok := g.plants.Get(id)
@@ -758,6 +762,7 @@ func (g *Game) World() WorldView {
 			ID: id, X: p.X, Y: p.Y, Designated: p.Designated, Harvestable: p.Harvestable(),
 			Species: p.Species.String(), Growth: p.Percent(), Stage: p.Stage(), Cut: p.Cut,
 		})
+		g.fillPlantWeather(&w.Plants[len(w.Plants)-1], p) // weather.go
 	}
 	w.TerrainW = g.terr.W
 	w.Terrain = make([]uint8, len(g.terr.Cells))
@@ -771,6 +776,7 @@ func (g *Game) World() WorldView {
 	w.Rooms = g.roomViews()
 	w.Animals = g.animalViews()
 	w.Traces = g.traceViews()
+	g.fillWorldWeather(&w) // weather.go
 	return w
 }
 
