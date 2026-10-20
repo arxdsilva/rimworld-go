@@ -51,6 +51,7 @@ Token/context policy is defined by `.cursor/AI_TOKEN_OPTIMIZATION.md`.
 | Regression/bug/replay investigation | `rimworld-go-debugging` |
 | PR review, merge wave, architecture compliance | `rimworld-go-review-integration` |
 | ADR/system/package docs | `rimworld-go-documentation` |
+| Task spans 2+ areas (domain, sim, ports, renderer, adapters, cmd, art, content, docs) or the user asks for parallel agents | `parallel-work` |
 
 A normal task should use **1–3 skills**, not the full catalog.
 
@@ -65,7 +66,7 @@ Determine:
 - Is this a hot path?
 - Does a public interface change?
 - Does persistence/mod compatibility change?
-- Does the task span more than one architectural layer?
+- Does the task span more than one architectural layer? (If so, plan it with `parallel-work`.)
 - Does this produce or change player-visible art, sprites, icons, UI chrome, renderer presentation, or the asset pipeline?
 - Does this implement or change a player-facing screen, window, overlay, HUD layout, or navigation flow?
 
