@@ -138,8 +138,11 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 	drawLabel(screen, x, 10, fmt.Sprintf("Stone %d", wld.Stone))
 	x += 90
 	if wld.Season != "" {
-		drawLabel(screen, x, 10, fmt.Sprintf("%s  %s outside", wld.Season, fmtTemp(wld.OutdoorTemp)))
+		season := fmt.Sprintf("%s  %s outside", wld.Season, fmtTemp(wld.OutdoorTemp))
+		drawLabel(screen, x, 10, season)
+		x += (len(season) + 3) * 6
 	}
+	drawWeatherLabel(screen, x, 10, wld)
 	time := fmt.Sprintf("%s  %s  %s", a.renderer.date(), a.renderer.speedRate(), a.renderer.activity())
 	drawLabel(screen, sw-len(time)*7-hudPad, 10, time)
 

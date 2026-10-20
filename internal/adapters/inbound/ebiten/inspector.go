@@ -8,6 +8,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/sim/entity"
 )
 
 func inspectorRect() button {
@@ -95,6 +96,9 @@ func (a *App) drawInspector(screen *ebiten.Image) {
 	}
 	if p.Drafted {
 		status += "  drafted"
+	}
+	if line := waitingForLine(p.BlockedBy, a.creatureName); line != "" {
+		status += "  " + line
 	}
 	if p.MentalBreak != "" {
 		status = "MENTAL BREAK: " + p.MentalBreak
@@ -241,4 +245,38 @@ func gearLine(a string) string {
 		return "leather duster (cooler in heat)"
 	}
 	return a
+}
+
+// waitingForLine is the read-only status fragment shown while a colonist is
+// held up by another creature standing in its next cell.
+func waitingForLine(blockedBy entity.EntityID, name func(entity.EntityID) string) string {
+	if blockedBy == 0 {
+		return ""
+	}
+	n := name(blockedBy)
+	if n == "" {
+		n = "something"
+	}
+	return "waiting for " + n
+}
+
+// creatureName resolves a pawn's or animal's display name from the snapshot.
+func (a *App) creatureName(id entity.EntityID) string {
+	if a.renderer == nil {
+		return ""
+	}
+	for _, p := range a.renderer.game.Snapshot() {
+		if p.ID == id {
+			return pawnLabel(p)
+		}
+	}
+	for _, an := range a.renderer.world().Animals {
+		if an.ID == id {
+			if an.Name != "" {
+				return an.Name
+			}
+			return an.Species
+		}
+	}
+	return ""
 }

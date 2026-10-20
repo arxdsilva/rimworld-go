@@ -173,7 +173,9 @@ func (g *Game) doBreach(id entity.EntityID, j job.Record) {
 		dmg = 7 // rifle butt
 	}
 	g.traces = append(g.traces, projectile.Trace{FromX: pos.X, FromY: pos.Y, ToX: b.X, ToY: b.Y,
-		Tick: uint64(g.clock.Now()), Hit: true, Melee: true, Damage: dmg, Building: true})
+		Tick: uint64(g.clock.Now()), Hit: true, Melee: true, Damage: dmg, Building: true,
+		Attacker: id, Weapon: weaponDefOf(g, id).Name})
+	g.lastStrike[id] = strikeRec{Tick: uint64(g.clock.Now())}
 	g.damageBuilding(j.Target, dmg)
 }
 
@@ -202,7 +204,9 @@ func (g *Game) doDig(id entity.EntityID, j job.Record) {
 	g.jobs.Set(id, j)
 	dmg := max(10, weapon.DefOf(g.weaponOf(id)).Damage)
 	g.traces = append(g.traces, projectile.Trace{FromX: pos.X, FromY: pos.Y, ToX: j.DestX, ToY: j.DestY,
-		Tick: uint64(g.clock.Now()), Hit: true, Melee: true, Damage: dmg, Building: true})
+		Tick: uint64(g.clock.Now()), Hit: true, Melee: true, Damage: dmg, Building: true,
+		Attacker: id, Weapon: weaponDefOf(g, id).Name})
+	g.lastStrike[id] = strikeRec{Tick: uint64(g.clock.Now())}
 	g.digRock(j.DestX, j.DestY, dmg)
 }
 

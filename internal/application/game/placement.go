@@ -297,6 +297,9 @@ func (g *Game) markDeconstruct(x1, y1, x2, y2 int, on bool) {
 			erase = append(erase, id)
 			continue
 		}
+		if on && g.graveFilled(id) {
+			continue // someone lies there (burial.go)
+		}
 		b.Deconstruct = on
 		if on {
 			b.WorkLeft = construction.DeconstructTicks(b.Kind)

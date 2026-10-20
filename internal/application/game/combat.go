@@ -33,12 +33,20 @@ type TraceView struct {
 	Melee        bool
 	Damage       int  // dealt on a hit
 	Building     bool // a blow on a door or wall
+	// Attacker and Target are the creatures involved (0 for a building
+	// target); Weapon is the attacker's weapon name.
+	Attacker, Target entity.EntityID
+	Weapon           string
 }
 
 func weaponKindOf(k item.Kind) weapon.Kind {
 	switch k {
 	case item.Club:
 		return weapon.Club
+	case item.Knife:
+		return weapon.Knife
+	case item.Spear:
+		return weapon.Spear
 	case item.Rifle:
 		return weapon.Rifle
 	}
@@ -157,12 +165,15 @@ func (g *Game) strike(attacker, target entity.EntityID, wk weapon.Kind) {
 	tr := projectile.Trace{
 		FromX: ap.X, FromY: ap.Y, ToX: tp.X, ToY: tp.Y,
 		Tick: uint64(g.clock.Now()), Hit: hit, Melee: !d.Ranged,
+		Attacker: attacker, Target: target, Weapon: d.Name,
 	}
 	if hit {
 		tr.Damage = d.Damage
 	}
 	g.traces = append(g.traces, tr)
+	g.lastStrike[attacker] = strikeRec{Target: target, Tick: tr.Tick}
 	if hit {
+		g.lastHit[target] = hitRec{Tick: tr.Tick, FromX: ap.X, FromY: ap.Y, Damage: d.Damage}
 		g.hurt(target, d.Damage, attacker)
 	}
 }
@@ -205,6 +216,9 @@ func (g *Game) die(id entity.EntityID, cause health.Cause) {
 	v, _ := g.vital.Get(id)
 	v.Status, v.Cause = health.Dead, cause
 	g.vital.Set(id, v)
+	g.spawnCorpse(id)
+	g.dropRaiderGear(id) // the weapon falls beside the body
+	g.mourn(id)
 }
 
 // heal regenerates injury over time and stands injured pawns back up.
@@ -402,7 +416,8 @@ func (g *Game) traceViews() []TraceView {
 			continue
 		}
 		out = append(out, TraceView{FromX: t.FromX, FromY: t.FromY, ToX: t.ToX, ToY: t.ToY,
-			Age: int(now - t.Tick), Hit: t.Hit, Melee: t.Melee, Damage: t.Damage, Building: t.Building})
+			Age: int(now - t.Tick), Hit: t.Hit, Melee: t.Melee, Damage: t.Damage, Building: t.Building,
+			Attacker: t.Attacker, Target: t.Target, Weapon: t.Weapon})
 	}
 	return out
 }

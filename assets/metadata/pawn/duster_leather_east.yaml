@@ -12,3 +12,4 @@ layer: duster_leather
 facing: east
 attachments:
   hand: [89.4, 171.1]
+  hand_l: [89.4, 178.7]

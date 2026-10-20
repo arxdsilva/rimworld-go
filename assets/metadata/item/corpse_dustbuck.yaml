@@ -10,3 +10,4 @@ projection:
   shear_k: 0.5
 item: dustbuck corpse
 species: dustbuck
+alias: corpse_dustbuck_v0

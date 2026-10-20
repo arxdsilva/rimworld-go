@@ -173,6 +173,17 @@ func (s State) Step() int {
 	return d.StepTicks
 }
 
+// StepCost is the ticks for one step in the current mode: Step()
+// straight, Step() * 1.414 (rounded) diagonally, so diagonals are no
+// faster than straights.
+func (s State) StepCost(diagonal bool) int {
+	st := s.Step()
+	if diagonal {
+		return (st*1414 + 500) / 1000
+	}
+	return st
+}
+
 // FleeGoal is a point dist tiles from (x, y) directly away from the
 // threat at (tx, ty). The caller clamps it to the map and finds a
 // walkable tile near it.

@@ -28,6 +28,12 @@ const (
 	// Sick: fighting an infection. InPain: badly hurt.
 	Sick
 	InPain
+	// Death and burial (SIM-017) and weather (SIM-016).
+	ColonistDied
+	UnburiedCorpse
+	LaidToRest
+	Soaked
+	SnowDay
 	numKinds
 )
 
@@ -46,6 +52,9 @@ const (
 	groupSleepRoom
 	groupMealKind
 	groupMealTable
+	groupLaidToRest
+	groupSoaked
+	groupSnowDay
 )
 
 // day: remembered thoughts last one in-game day.
@@ -73,6 +82,11 @@ var defs = [numKinds]Def{
 	Catharsis:         {"catharsis", 30, day, groupNone},
 	Sick:              {"sick", -8, 0, groupNone},
 	InPain:            {"in pain", -6, 0, groupNone},
+	ColonistDied:      {"a colonist died", -6, 3 * day, groupNone},
+	UnburiedCorpse:    {"unburied corpse nearby", -2, 0, groupNone},
+	LaidToRest:        {"laid a friend to rest", 3, day, groupLaidToRest},
+	Soaked:            {"soaked", -3, day / 4, groupSoaked},
+	SnowDay:           {"snow day", 2, day, groupSnowDay},
 }
 
 // DefOf returns the thought definition.

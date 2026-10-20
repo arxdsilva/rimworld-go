@@ -1,5 +1,7 @@
 package projectile
 
+import "rimworld-go/internal/domain/sim/entity"
+
 // Trace is one resolved attack.
 type Trace struct {
 	FromX, FromY int
@@ -10,6 +12,10 @@ type Trace struct {
 	// Damage dealt when it hit; Building marks a blow on a structure.
 	Damage   int
 	Building bool
+	// Attacker and Target are the creatures involved (Target 0 for a
+	// building or a trap); Weapon is the attacker's weapon name.
+	Attacker, Target entity.EntityID
+	Weapon           string
 }
 
 // Lifetime is how many ticks a trace stays visible.

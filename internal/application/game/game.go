@@ -28,6 +28,7 @@ import (
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/temperature"
 	"rimworld-go/internal/domain/world/terrain"
+	"rimworld-go/internal/domain/world/weather"
 	"rimworld-go/pkg/randx"
 )
 
@@ -118,6 +119,34 @@ type PawnView struct {
 	// is the tile being worked (presentation: facing, swings, particles).
 	Acting     string
 	ActX, ActY int
+	// Motion (presentation lerp, see ART §27): StepTick is the tick the
+	// current cell was entered, StepTicks how long that step lasts;
+	// NextX/NextY is the next planned cell when HasNext; BlockedBy is the
+	// creature in the way of the next step (0 when not blocked).
+	StepTick     uint64
+	StepTicks    int
+	NextX, NextY int
+	HasNext      bool
+	BlockedBy    entity.EntityID
+	// Action (presentation, ART §27.2): Action is the canonical action
+	// (actions.go, "" when idle or walking); ActionProgress the job's
+	// progress 0..1 (-1 unknown); ActTarget the creature acted on (attack,
+	// tend, tame, rescue); AttackCycle 0..1 through the current aim or
+	// cooldown, 1 on the strike tick; Carrying the item kind held in the
+	// arms ("pawn" while rescuing). HitTick/HitFromX,Y/HitDamage describe
+	// the last hit taken (HitTick 0: never).
+	Action             string
+	ActionProgress     float64
+	ActTarget          entity.EntityID
+	AttackCycle        float64
+	Carrying           string
+	HitTick            uint64
+	HitFromX, HitFromY int
+	HitDamage          int
+	// Embodied: dead, and the body is now a human corpse item (SIM-017).
+	// Soaked: out in the rain.
+	Embodied bool
+	Soaked   bool
 }
 
 // ItemView is a ground stack.
@@ -135,6 +164,9 @@ type ItemView struct {
 	RotRate int
 	// Dried food came off a drying rack and never spoils.
 	Dried bool
+	// Of/OfName: whose body a human corpse (or bones) is (SIM-017).
+	Of     entity.EntityID
+	OfName string
 }
 
 // FrameView is a construction blueprint.
@@ -178,6 +210,12 @@ type BuildingView struct {
 	Burning bool
 	// HPPct is the building's health (percent); below 100 it is damaged.
 	HPPct int
+	// Grave (SIM-017): Occupant is who lies there ("" while empty),
+	// Epitaph the headstone line, Headstone the headstone style 0..3.
+	// A pyre reports Burning while it cremates.
+	Occupant  string
+	Epitaph   string
+	Headstone int
 }
 
 // PlantView is a wild plant.
@@ -190,6 +228,7 @@ type PlantView struct {
 	Growth      int // percent
 	Stage       int // 0 sown .. 3 ripe
 	Cut         bool
+	Wilted      bool // a crop suffering frost or stalled growth (SIM-016)
 }
 
 // StockpileView is a storage rectangle.
@@ -229,6 +268,13 @@ type WorldView struct {
 	// degree C, and the season name.
 	OutdoorTemp, IndoorTemp int
 	Season                  string
+	// Weather (SIM-016): Weather is the kind ("clear", "rain", ...),
+	// WeatherIntensity 0..1, WindX/WindY the wind in tiles per second,
+	// SnowDepth and Wetness 0..1 what lies on open ground.
+	Weather            string
+	WeatherIntensity   float64
+	WindX, WindY       float64
+	SnowDepth, Wetness float64
 	// Messages are recent event notices, oldest first.
 	Messages []MessageView
 	// Schedule is the colony default schedule (new colonists get a copy).
@@ -277,6 +323,8 @@ type Game struct {
 	bills      map[entity.EntityID][]recipe.Bill
 	racks      map[entity.EntityID]dryBatch // what each drying rack holds
 	fuel       map[entity.EntityID]int      // campfire fuel, ticks of burning
+	weather    weather.State                // outdoor weather (weather.go, SIM-016)
+	graves     map[entity.EntityID]graveRec // who lies in each filled grave (burial.go, SIM-017)
 	exposure   map[entity.EntityID]exposureState
 	noComfort  map[entity.EntityID]uint64 // no warm/cool spot found until this tick
 	orderQueue map[entity.EntityID][]queuedOrder
@@ -306,7 +354,11 @@ type Game struct {
 	animals   *component.Store[animal.State]
 	equip     map[entity.EntityID]item.Kind // wielded weapon; absent = fists
 	traces    []projectile.Trace
-	wild      bool // wildlife migrates in (generated colonies)
+	// lastStrike and lastHit are transient presentation stamps (see
+	// action_view.go); the simulation never reads them.
+	lastStrike map[entity.EntityID]strikeRec
+	lastHit    map[entity.EntityID]hitRec
+	wild       bool // wildlife migrates in (generated colonies)
 
 	carrying    map[entity.EntityID]entity.EntityID // rescuer -> patient
 	tendedUntil map[entity.EntityID]uint64
@@ -322,6 +374,14 @@ type Game struct {
 	residual    map[int]temperature.Temp
 	researchCur research.Project
 	researchSet bool
+
+	// motion: per-creature step timing (motion_store.go); moverBuf is
+	// scratch for the ascending-ID mover list.
+	motion   *component.Store[motionRec]
+	moverBuf []mover
+	occ      occupancy // movement blocking index (occupancy.go), transient
+	// enterHook, when set (tests only), replaces enter's verdicts.
+	enterHook func(id entity.EntityID, from, to Position) (stepVerdict, Position)
 }
 
 // New builds a Game from cfg. Width/Height must be positive.
@@ -370,6 +430,9 @@ func New(cfg Config) *Game {
 		wounds:      make(map[entity.EntityID]wound),
 		rockDamage:  make(map[[2]int]int),
 		research:    research.Complete(), // sandbox: everything known
+		motion:      component.NewStore[motionRec](),
+		lastStrike:  make(map[entity.EntityID]strikeRec),
+		lastHit:     make(map[entity.EntityID]hitRec),
 	}
 }
 
@@ -516,13 +579,10 @@ func (g *Game) Step(n int) {
 		g.phaseJobs()
 		g.phaseAnimals()
 		g.phaseThreats()
+		g.phaseWeather()
 		g.phaseMovement()
 		g.clock.Advance(1)
 	}
-}
-
-func (g *Game) dueToMove(id entity.EntityID) bool {
-	return (uint64(g.clock.Now())+uint64(id))%uint64(TicksPerCell) == 0
 }
 
 // Snapshot returns a read-only view of every pawn, in insertion order.
@@ -604,8 +664,15 @@ func (g *Game) Snapshot() []PawnView {
 			pv.Temp = int(g.temperatureAt(pos.X, pos.Y))
 		}
 		pv.Acting, pv.ActX, pv.ActY = g.acting(id, j)
+		g.fillPawnAction(pv, id, j)
 	}
-	return append(views, g.raiderViews()...)
+	views = append(views, g.raiderViews()...)
+	for i := range views {
+		g.fillPawnMotion(&views[i])
+		g.fillPawnDeath(&views[i])   // burial.go
+		g.fillPawnWeather(&views[i]) // weather.go
+	}
+	return views
 }
 
 // World returns the non-pawn read model.
@@ -635,6 +702,7 @@ func (g *Game) World() WorldView {
 			FreshDays: freshDays(st), Rotten: st.Rotten(), Dried: st.Dried,
 			RotRate: item.RotRate(int(g.temperatureAt(st.X, st.Y))),
 		})
+		g.fillCorpseView(&w.Items[len(w.Items)-1], st) // burial.go
 		if st.Carrier == 0 {
 			switch {
 			case st.Kind.IsFood():
@@ -683,6 +751,7 @@ func (g *Game) World() WorldView {
 			bv.DryKind, bv.DryQty, bv.DryPct = rb.Kind.String(), rb.Qty, rb.percent()
 		}
 		bv.W, bv.H, bv.SpotX, bv.SpotY, bv.HasSpot = footprintView(b.Kind, b.Facing, b.X, b.Y)
+		g.fillGraveView(bv, id, b) // burial.go
 	}
 	for _, id := range g.plantIDs {
 		p, ok := g.plants.Get(id)
@@ -693,6 +762,7 @@ func (g *Game) World() WorldView {
 			ID: id, X: p.X, Y: p.Y, Designated: p.Designated, Harvestable: p.Harvestable(),
 			Species: p.Species.String(), Growth: p.Percent(), Stage: p.Stage(), Cut: p.Cut,
 		})
+		g.fillPlantWeather(&w.Plants[len(w.Plants)-1], p) // weather.go
 	}
 	w.TerrainW = g.terr.W
 	w.Terrain = make([]uint8, len(g.terr.Cells))
@@ -706,6 +776,7 @@ func (g *Game) World() WorldView {
 	w.Rooms = g.roomViews()
 	w.Animals = g.animalViews()
 	w.Traces = g.traceViews()
+	g.fillWorldWeather(&w) // weather.go
 	return w
 }
 

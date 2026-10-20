@@ -42,8 +42,8 @@ func TestRaidersAttackAndArmedColonistFightsBack(t *testing.T) {
 	for i := 0; i < 60; i++ {
 		g.Step(100)
 		g.SetNeeds(uint64ToID(ada), needs.Full, needs.Full)
-		if _, n := g.Raiders(); n == 0 {
-			break
+		if s, _ := g.Raiders(); s == 0 {
+			break // dead raiders now stay as bodies: stop once none stands
 		}
 	}
 	if s, _ := g.Raiders(); s != 0 {
@@ -77,9 +77,12 @@ func TestDownedRaiderBleedsOutAndDropsWeapon(t *testing.T) {
 	rid := g.raiderIDs[0]
 	weapon := g.equip[rid]
 	g.hurt(rid, health.DownedInjury, 0)
-	g.Step(bleedOut + corpseLinger + 10)
-	if len(g.raiderIDs) != 0 {
-		t.Fatal("a downed raider should bleed out and be cleared away")
+	g.Step(bleedOut + clock.TicksPerHour)
+	if v, _ := g.vital.Get(rid); v.Status != health.Dead {
+		t.Fatal("a downed raider should bleed out")
+	}
+	if st, ok := stackOf(g, item.CorpseHuman); !ok || st.Of != rid {
+		t.Fatal("its body stays as a corpse until buried (SIM-017)")
 	}
 	if _, ok := stackOf(g, weapon); !ok {
 		t.Fatalf("its %s should be left behind", weapon)

@@ -106,30 +106,60 @@ def check_autotile():
             err("structure/wall_%s: missing masks %s" % (mat, missing))
 
 
-WALK_FRAMES = ("walk1", "walk2", "walk3", "walk4")
-WALK_LAYERS = ("body", "pants_basic", "shirt_basic", "vest_utility")
-WORK_FRAMES = ("work1", "work2", "work3")
-WORK_LAYERS = ("body", "shirt_basic")
+# ART §27.1: one 12-pose gait cycle, a 6-pose work swing, an 8-pose trot.
+WALK_FRAMES = tuple("walk%02d" % i for i in range(1, 13))
+WORK_FRAMES = tuple("work%d" % i for i in range(1, 7))
+TROT_FRAMES = tuple("walk%02d" % i for i in range(1, 9))
+ANIM_LAYERS = ("body", "pants_basic", "shirt_basic", "vest_utility", "parka_leather", "duster_leather")
+
+
+def _set(name, n):
+    return tuple("%s%d" % (name, i) for i in range(1, n + 1))
+
+
+# ART §27.2: action pose sets on every animated layer.
+ACTION_FRAMES = (("ready", "aim", "kneel", "carry") + _set("fire", 3) + _set("stab", 6) +
+                 _set("thrust", 6) + _set("swing", 6) + _set("punch", 4) + _set("chop", 6) +
+                 _set("mine", 6) + _set("hammer", 4) + _set("plant", 4) + _set("pick", 4) +
+                 _set("bench", 4) + _set("tend", 4) + _set("eat", 4) + _set("flinch", 3) +
+                 _set("fall", 4) + _set("offer", 2) +
+                 tuple("carry_walk%02d" % i for i in range(1, 13)))
+ANIMAL_ACTIONS = {"dustbuck": _set("kick", 4), "ridgewolf": _set("bite", 4)}
+ANIMAL_COMMON = _set("graze", 2) + _set("flinch", 2)
+# held gear: two-handed items need a support point towards the working end
+GEAR_END = {"weapon": ("muzzle", "tip"), "tool": ("head",)}
+# held level in the off hand, not pointed along an axis
+GEAR_LEVEL = {"tool/bowl"}
 
 
 def check_pawn_layers():
     d = os.path.join(GEN, "pawn")
     sizes = {}
     for f in os.listdir(d):
-        m = re.match(r"^(\w+?)_(south|east|north|west)(?:_(?:walk|work)\d)?\.png$", f)
+        m = re.match(r"^(\w+?)_(south|east|north|west)(?:_[a-z_]+\d*)?\.png$", f)
         if m and not f.endswith("_mask.png"):
             sizes.setdefault(m.group(2), set()).add(Image.open(os.path.join(d, f)).size)
     # every animated layer has the full walk cycle (frames share a canvas)
-    for layer in WALK_LAYERS:
+    for layer in ANIM_LAYERS:
         for facing in ("south", "east", "north", "west"):
             for fr in WALK_FRAMES:
                 if not os.path.exists(os.path.join(d, "%s_%s_%s.png" % (layer, facing, fr))):
                     err("pawn/%s_%s: missing walk frame %s" % (layer, facing, fr))
-    for layer in WORK_LAYERS:
-        for facing in ("south", "east", "north", "west"):
             for fr in WORK_FRAMES:
                 if not os.path.exists(os.path.join(d, "%s_%s_%s.png" % (layer, facing, fr))):
                     err("pawn/%s_%s: missing work frame %s" % (layer, facing, fr))
+            for fr in ACTION_FRAMES:
+                if not os.path.exists(os.path.join(d, "%s_%s_%s.png" % (layer, facing, fr))):
+                    err("pawn/%s_%s: missing action frame %s" % (layer, facing, fr))
+    # hair and hats follow the body's head anchor (ART §27.1)
+    md = os.path.join(META, "pawn")
+    for f in sorted(os.listdir(md)) if os.path.isdir(md) else ():
+        if f.startswith("body_") and f.endswith(".yaml"):
+            with open(os.path.join(md, f)) as fh:
+                text = fh.read()
+                for key in ("head", "hand", "hand_l"):
+                    if not re.search(r"^\s+%s:\s*\[" % key, text, re.M):
+                        err("pawn/%s: missing %s attachment" % (f[:-5], key))
     ad = os.path.join(GEN, "animal")
     if os.path.isdir(ad):
         for f in os.listdir(ad):
@@ -137,10 +167,16 @@ def check_pawn_layers():
             if not m:
                 continue
             base = Image.open(os.path.join(ad, f)).size
-            for fr in WALK_FRAMES:
+            for fr in TROT_FRAMES:
                 p = os.path.join(ad, "%s_%s_%s.png" % (m.group(1), m.group(2), fr))
                 if not os.path.exists(p):
                     err("animal/%s: missing trot frame %s" % (f[:-4], fr))
+                elif Image.open(p).size != base:
+                    err("animal/%s_%s: canvas differs from the standing frame" % (f[:-4], fr))
+            for fr in ANIMAL_ACTIONS.get(m.group(1), ()) + ANIMAL_COMMON:
+                p = os.path.join(ad, "%s_%s_%s.png" % (m.group(1), m.group(2), fr))
+                if not os.path.exists(p):
+                    err("animal/%s: missing action frame %s" % (f[:-4], fr))
                 elif Image.open(p).size != base:
                     err("animal/%s_%s: canvas differs from the standing frame" % (f[:-4], fr))
     for facing, s in sizes.items():
@@ -148,6 +184,33 @@ def check_pawn_layers():
             err("pawn/%s: layers disagree on canvas %s" % (facing, sorted(s)))
     if set(sizes) != {"south", "east", "north", "west"}:
         err("pawn: need all four facings, got %s" % sorted(sizes))
+
+
+def _attach(text, key):
+    m = re.search(r"^\s+%s:\s*\[([-\d.]+),\s*([-\d.]+)\]" % key, text, re.M)
+    return (float(m.group(1)), float(m.group(2))) if m else None
+
+
+def check_gear():
+    """Rotatable held gear points east: grip, then support, then the
+    working end (ART §15, §27.2)."""
+    for family, ends in GEAR_END.items():
+        md = os.path.join(META, family)
+        for f in sorted(os.listdir(md)) if os.path.isdir(md) else ():
+            text = open(os.path.join(md, f)).read()
+            if not re.search(r"^rotatable:\s*true", text, re.M):
+                continue
+            name = "%s/%s" % (family, f[:-5])
+            if name in GEAR_LEVEL:
+                continue
+            grip, sup = _attach(text, "grip"), _attach(text, "support")
+            end = next((_attach(text, k) for k in ends if _attach(text, k)), None)
+            if not grip or not sup or not end:
+                err("%s: needs grip, support and one of %s" % (name, "/".join(ends)))
+                continue
+            if not grip[0] < sup[0] <= end[0]:
+                err("%s: support must lie between grip and the working end (x %.0f, %.0f, %.0f)"
+                    % (name, grip[0], sup[0], end[0]))
 
 
 def main():
@@ -166,6 +229,7 @@ def main():
     check_terrain_seams()
     check_autotile()
     check_pawn_layers()
+    check_gear()
     for e in errors:
         print("ERROR", e)
     print("%d sprites checked, %d errors" % (count, len(errors)))

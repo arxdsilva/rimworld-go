@@ -169,6 +169,22 @@ exceed one tile visually but retain a clear ground origin. Crop species
 should be recognizable at maturity; wild plants can use more silhouette
 variation.
 
+Vegetation set (family `plant`):
+
+- Trees: `tree_{oak,birch,pine}_00..02`. Oak and birch also have
+  `_autumn` (amber/red/gold canopy) and `_bare` (winter branches with a
+  light snow cap); pine is evergreen. Metadata `sway: {trunk, canopy}`.
+- Bushes: `bush_00..03`; berry bushes `berry_bush_00..02` with
+  `_harvestable` (berries visible).
+- Grass: `grass_00..07` (tufts, some with small flowers or clover) and
+  `grass_tall_00..03` (meadow grass on rich soil).
+- Crops: `<species>_<stage>_v0..v2` with stages `sown`, `sprout`,
+  `young`, `mature`, `harvestable` (ripe produce visible) and `wilted`
+  (frost or stalled growth). Variants change leaf count, angle and
+  height, not just colour.
+- Cozy rule: warm, slightly desaturated greens; soft value steps; no
+  pure saturated primaries.
+
 ## 10. Pawn Visual System
 
 Pawns are compositional, not one flattened sprite per colonist.
@@ -270,6 +286,15 @@ grip: [0.31, 0.55]
 muzzle: [0.94, 0.48]
 ```
 
+Held gear (family `gear`: `weapon/*`, `tool/*`) is one east-pointing
+sprite per item, rotated by the renderer, with image-px attachments:
+`grip` (main hand), `support` (off hand, so two-handed items sit in both
+hands), `muzzle` (firearms), `tip` (blades: knife, spear) and `head`
+(tools). Melee set: `weapon/knife`, `weapon/spear`, `weapon/club`;
+firearms: `weapon/rifle_basic` (+ `stock`) and `weapon/rifle_slung` (worn
+on the back). Tools: axe, pickaxe, hammer, trowel, sickle, bandage, bowl,
+spoon.
+
 Apparel uses shared body templates, body layers, tint regions, covered
 regions, and offsets.
 
@@ -290,6 +315,26 @@ Fire, smoke, rain, snow, explosions, muzzle flashes, projectiles,
 impacts, and similar visuals are presentation effects. Keep them
 brief/readable and never let animation timing determine simulation
 outcomes.
+
+Weather (family `weather`, driven by `WorldView.Weather`,
+`WeatherIntensity`, `WindX/WindY`, `SnowDepth`, `Wetness`):
+
+- Rain: thin streaks angled by the wind, density by intensity, small
+  splash sprites where drops land, ripples on puddles. Storms darken the
+  scene and flash rare lightning.
+- Snow: flakes of a few sizes that flutter and drift with the wind,
+  settling into snow cover; blizzards cut visibility.
+- Ground: `snow_cover_00..05` and `snow_drift_00..03` by `SnowDepth`,
+  `puddle_00..05` by `Wetness`, `frost_00..03` on freezing mornings, each
+  picked per tile by hash.
+- Particle textures: `raindrop`, `splash_00..02`, `snowflake_00..03`.
+
+Corpses: animal corpses `item/corpse_<species>_v0..v2` (different lying
+poses); human corpses are drawn from the deceased's own pawn layers,
+lying, with the dead tint and the rot tint as they spoil; fully rotted
+bodies become `item/bones_00..01`. Graves (`furniture/grave_dug_*`,
+`grave_filled_*`, `headstone_00..03`) and the funeral pyre
+(`furniture/pyre`, `pyre_burning`) belong to the furniture family.
 
 ## 17. UI Art
 
@@ -544,6 +589,124 @@ For 1,000+ pawns use atlases, bounded texture counts, tinting, culling,
 animation LOD, effect-density limits, and cached composited pawn
 appearances when appearance has not changed.
 
+### 27.1 Movement and body motion (normative)
+
+Frames (rendered in Blender, one set per facing):
+
+| Set | Frames | Layers | Notes |
+|---|---|---|---|
+| Pawn walk | `walk01`..`walk12` | body, pants, shirt, vest, parka, duster (+ masks) | one full gait cycle: 01 right heel contact, 02 loading, 03 mid-stance, 04 terminal stance, 05 pre-swing, 06 swing; 07-12 mirror for the left foot |
+| Pawn work | `work1`..`work6` | same layers | 1-2 wind-up, 3-4 swing, 5 strike, 6 recover; smoothstep eased |
+| Animal trot | `walk01`..`walk08` | per species | diagonal leg pairs, body bob, head nod |
+
+Every pawn body frame carries `hand` and `head` attachments (canvas px).
+Hair and hats are drawn at the body's `head` offset for that frame; held
+tools and weapons at its `hand` point.
+
+Clocks:
+
+- `animT` (sim ticks plus the elapsed fraction of the current frame):
+  movement, walk cycle, work swings, combat reactions. It freezes when
+  paused and scales with game speed.
+- `present` (real frames): breathing, wind, fire, particles, UI pulses.
+- Tracers, recoil, hit flashes and floaters stay visible for at least
+  `max(sim duration, 8 frames)` so they read at 3x.
+- Draw interpolates between simulation updates; screenshots and capture
+  sequences use no interpolation so they stay deterministic.
+
+Path and gait:
+
+- Positions follow the simulation's step timing exactly (step start tick
+  and duration, diagonal steps longer than straight ones), so speed is
+  constant on screen at every game speed.
+- Corners are drawn as a quadratic curve between the midpoints of the
+  incoming and outgoing steps, through the shared tile centre.
+- Starting from rest and stopping (arrival or blocked) ease with
+  smoothstep; the walk pose blends in and out over 0.3 tiles.
+- The walk cycle advances with distance travelled along the drawn path:
+  one 12-frame cycle per 1.6 tiles, so feet don't slide on diagonals.
+- Bob peaks once per footfall (frames 01 and 07); sway (north/south
+  facing) and forward lean (east/west) scale with speed; a short
+  lean-back on deceleration.
+- Facing uses the smoothed velocity with 20% axis hysteresis; a
+  north/south reversal passes through a side facing for 4 frames.
+- A blocked creature eases to a stop, faces the creature in its way and
+  shows the idle pose.
+- Getting into bed and being picked up ease over 12 frames.
+
+### 27.2 Action animation (normative)
+
+Pose sets (Blender, every facing; body, pants, shirt, vest, parka and
+duster layers; hair and hats follow `head`):
+
+| Set | Frames | Pose |
+|---|---|---|
+| `ready` | 1 | rifle at low ready, both hands, elbows bent |
+| `aim` | 1 | rifle shouldered, cheek on stock, support arm out, slight lean in |
+| `fire1..3` | 3 | recoil: shoulder driven back, muzzle rise, recover |
+| `stab1..6` | 6 | knife: guard, chamber, step-thrust, full extension, withdraw, guard |
+| `thrust1..6` | 6 | spear, two hands: rear hand at the butt, lunge, full reach, recover |
+| `swing1..6` | 6 | club, one hand: cock over the shoulder, twist, diagonal strike, follow-through |
+| `punch1..4` | 4 | guard, jab, cross, guard |
+| `chop1..6` | 6 | axe, two hands: raise over the far shoulder, diagonal drive, rebound |
+| `mine1..6` | 6 | pickaxe, two hands: high overhead, vertical drive, knees bent, pry |
+| `hammer1..4` | 4 | hammer in the right hand, left hand steadying, short arcs |
+| `kneel`, `plant1..4` | 5 | one knee down; dig, place the seed, press the soil |
+| `pick1..4` | 4 | crouch, both hands into the plant, pull, drop into the bag |
+| `bench1..4` | 4 | hands at waist height working a bench (craft, cook, tailor, research) |
+| `tend1..4` | 4 | kneeling, both hands bandaging low in front |
+| `eat1..4` | 4 | bowl in the left hand at the chest, spoon to the mouth and back |
+| `carry`, `carry_walk01..12` | 13 | forearms forward and level holding a load; legs as in the walk |
+| `flinch1..3` | 3 | hit: torso snaps back, arms up, head turns away |
+| `fall1..4` | 4 | knees buckle, torso folds, hands out; the renderer finishes lying down |
+| `offer1..2` | 2 | crouched, hand held out low (taming) |
+
+Animals: dustbuck `kick1..4`, ridgewolf `bite1..4`, both `graze1..2` and
+`flinch1..2`.
+
+Every pawn body frame carries `hand` (right), `hand_l` (left) and `head`.
+
+Holding: a two-handed item puts its `grip` on `hand` and turns so its
+`support` lies on the line to `hand_l`; one-handed items hang from `hand`
+along the forearm. Off duty (not drafted, not attacking) the rifle is
+slung on the back, the knife rides on the belt (not drawn), the spear is
+carried upright in the right hand and the club stays in hand. Working
+swaps the weapon for the job's tool.
+
+Timing (with §27.1 clocks):
+
+- Aiming blends `ready` to `aim` over the first 60% of the attack cycle
+  (`PawnView.AttackCycle`); strike frames (`fire1`, the stab, thrust,
+  swing and punch peaks, animal bite and kick) land on the tick the
+  attack's trace appears (`TraceView.Attacker`, age 0).
+- A hit (`PawnView.HitTick`, `HitFromX/Y`) plays `flinch1..3` and
+  staggers 0.12 tile away from the attacker over 10 sim ticks; blood
+  sprays away from the attacker. A pawn going down plays `fall1..4`, then
+  lies down falling away from the last hit.
+- Work loops run on `animT` with a per-action period; each strike throws
+  that action's particles: chop wood chips, mine sparks and rock dust,
+  build sawdust, sow soil, harvest leaves, cook steam, butcher blood.
+  Each shot throws muzzle flash and smoke at `muzzle` and a shell casing.
+- Everything keeps the §27.1 minimum of 8 visible frames.
+
+### 27.3 Environment motion (normative)
+
+- Wind field: world wind (`WindX/WindY`) plus two travelling gust fronts
+  (wavelength 9-14 tiles, moving downwind at 1.2x the wind) plus a small
+  per-plant phase, so visible waves roll across grass and crops.
+- Each plant leans with the local wind through a damped spring
+  (stiffness k=38, damping ratio 0.35). Lean limits: grass 0.35 rad,
+  crops 0.22, bushes 0.12, tree canopy 0.06 over a 0.02 trunk with the
+  canopy lagging the trunk.
+- Contact: a creature moving within 0.6 tile pushes a plant away from it
+  (0.9 x its speed, capped); the plant springs back when it has passed.
+  Trees shake briefly when brushed and, in fall, drop a leaf or two.
+- Clocks: ambient waving on `present` (the world keeps breathing while
+  paused); contact reads creature positions from the motion API.
+- Budget: only visible plants; contact only within 1.5 tiles of a moving
+  creature; no per-frame string building; weather particles in their own
+  capped pool.
+
 ## 28. Deterministic Visual Variation
 
 Visual randomness should be stable using keys such as world seed, tile
@@ -551,6 +714,10 @@ coordinate, EntityID, and variant category. Terrain variants, plant
 rotation, rock variants, and decals must not shuffle between
 frames/loads. Visual RNG must never feed back into authoritative
 simulation.
+
+Plant and decal variants are picked by `tileHash(x, y)`; seasonal looks
+by the world's season; human corpses take the deceased's look from its
+EntityID.
 
 ## 29. Tests and Visual QA
 
@@ -660,7 +827,7 @@ resolve metadata conflicts, and update the catalog.
 ### ART Wave 3 --- Survival
 
 -   [-] bed/table/chair (1×1 cot drawn in-game for the current single-cell bed; 1×2 bed, table, chair generated in 4 facings for when the domain has footprints/furniture)
--   [-] food/crops/wild plants/trees (berry bush ± harvestable, grass and food crate in-game; amberroot stages and trees generated, no domain crops/trees yet)
+-   [x] food/crops/wild plants/trees (oak, birch and pine in 3 variants with autumn and bare winter looks; bushes and berry bushes; 12 grass tufts; 8 crops × 6 stages × 3 variants)
 -   [ ] stove/butcher workstation
 -   [ ] medicine
 -   [x] blood/injury effects
@@ -675,10 +842,10 @@ resolve metadata conflicts, and update the catalog.
 
 ### ART Wave 5 --- Combat
 
--   [ ] melee family
--   [ ] pistol/rifle/shotgun/long-range weapon
+-   [x] melee family (knife, spear, club; stab, thrust, swing and punch pose sets)
+-   [-] pistol/rifle/shotgun/long-range weapon (rifle with ready/aim/fire poses and a slung variant; no pistol, shotgun or long rifle)
 -   [ ] armor/helmets
--   [-] projectiles/muzzle flash/impact/explosion
+-   [-] projectiles/muzzle flash/impact/explosion (tracer, muzzle flash, smoke, casing, impact puff and blood; no explosions)
 -   [ ] fire/smoke
 -   [ ] turret/defenses
 
@@ -697,7 +864,7 @@ resolve metadata conflicts, and update the catalog.
 -   [ ] juvenile variants
 -   [ ] biome plants
 -   [-] rock/resource variants (natural rock walls 16-mask, rock chunks, stone blocks item; no ore)
--   [ ] snow/weather
+-   [x] snow/weather (rain, storm and snow particles; snow cover, drifts, puddles and frost; wind-driven plant motion)
 
 ### ART Wave 8 --- World/factions
 

@@ -144,7 +144,8 @@ func (g *Game) ingredientFor(id entity.EntityID, in recipe.Input) (entity.Entity
 	bestD := 1 << 30
 	for _, iid := range g.itemIDs {
 		st, ok := g.stacks.Get(iid)
-		if !ok || st.Carrier != 0 || st.Qty < in.Qty || !in.AcceptsStack(st) || st.Rotten() {
+		// a rotten body still burns on a pyre
+		if !ok || st.Carrier != 0 || st.Qty < in.Qty || !in.AcceptsStack(st) || st.Rotten() && st.Kind != item.CorpseHuman {
 			continue
 		}
 		if owner, taken := g.reserve.EntityOwner(iid); taken && owner != id {
@@ -178,6 +179,9 @@ func (g *Game) assignBill(id entity.EntityID, m work.Mask) bool {
 			}
 			if b.Kind == construction.Campfire && g.fuel[bid] <= 0 {
 				continue // no fire to cook over
+			}
+			if d.ID == recipe.Cremate && g.freeWood() < d.ExtraQty {
+				continue // no wood to burn the body with
 			}
 			sid, st := g.ingredientFor(id, d.Input)
 			if sid == 0 {
@@ -221,7 +225,8 @@ func (g *Game) doBill(id entity.EntityID, j job.Record) {
 			g.stacks.Set(j.Target, st)
 			nid := g.entities.Next()
 			g.itemIDs = append(g.itemIDs, nid)
-			g.stacks.Set(nid, item.Stack{Kind: st.Kind, Qty: take, X: st.X, Y: st.Y, Carrier: id, Rot: st.Rot, Dried: st.Dried})
+			g.stacks.Set(nid, item.Stack{Kind: st.Kind, Qty: take, X: st.X, Y: st.Y, Carrier: id, Rot: st.Rot, Dried: st.Dried,
+				Of: st.Of, DiedAt: st.DiedAt})
 			carry = nid
 		} else {
 			st.Carrier = id
@@ -256,6 +261,8 @@ func (g *Game) doBill(id entity.EntityID, j job.Record) {
 			g.racks[j.Dest] = dryBatch{Kind: st.Kind, Qty: st.Qty, Rot: st.Rot, Left: st.Kind.DryTicks()}
 		}
 		g.deleteItem(j.Carry)
+	} else if d.ID == recipe.Cremate {
+		g.cremate(j.Dest, j.Carry, d) // burns the body and its wood (burial.go)
 	} else {
 		g.deleteItem(j.Carry)
 		g.dropStack(d.Output, d.OutQty, j.DestX, j.DestY)
@@ -287,7 +294,8 @@ func (g *Game) billViews(bid entity.EntityID) []BillView {
 			st = BillHaveEnough
 		case d.Dry && g.racks[bid].Qty > 0:
 			st = BillDrying
-		case d.Bench == construction.Campfire && g.fuel[bid] <= 0:
+		case d.Bench == construction.Campfire && g.fuel[bid] <= 0,
+			d.ID == recipe.Cremate && g.freeWood() < d.ExtraQty:
 			st = BillNoFuel
 		default:
 			if sid, _ := g.ingredientFor(0, d.Input); sid == 0 {
@@ -304,8 +312,13 @@ func (g *Game) billViews(bid entity.EntityID) []BillView {
 
 // defaultBills gives new benches the bills nearly everyone wants: a
 // butcher table butchers every carcass type and a drying rack dries any
-// perishable food, forever; a campfire cooks until there are 10 meals.
+// perishable food, forever; a campfire cooks until there are 10 meals; a
+// funeral pyre cremates every body brought to it.
 func (g *Game) defaultBills(id entity.EntityID, k construction.Kind) {
+	if k == construction.Pyre {
+		g.bills[id] = append(g.bills[id], recipe.Bill{Recipe: recipe.Cremate, Mode: recipe.Forever, Target: 1})
+		return
+	}
 	if k == construction.Campfire {
 		g.bills[id] = append(g.bills[id], recipe.Bill{Recipe: recipe.CampfireMeal, Mode: recipe.UntilHave, Target: 10})
 		return

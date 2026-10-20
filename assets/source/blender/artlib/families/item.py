@@ -91,6 +91,22 @@ def _club():
     return S.render_asset("item", "club_wood", zmax=0.2, extra={"item": "club"})
 
 
+def _knife_item():
+    """A flint knife lying on the ground, angled."""
+    from .gear import _knife_geo
+    _knife_geo()
+    S.rotate_z(S.objects(), -22)
+    return S.render_asset("item", "knife", zmax=0.12, extra={"item": "knife"})
+
+
+def _spear_item():
+    """A stone-tipped spear lying on the ground, angled."""
+    from .gear import _spear_geo
+    _spear_geo()
+    S.rotate_z(S.objects(), 24)
+    return S.render_asset("item", "spear", zmax=0.12, extra={"item": "spear"})
+
+
 def _rifle_item():
     import math
     from mathutils import Matrix
@@ -212,7 +228,57 @@ def _herbal_medicine():
     return S.render_asset("item", "herbal_medicine", zmax=0.14, extra={"item": "herbal medicine", "stack": True})
 
 
+def _bones(variant):
+    """Bleached remains half sunk in the turf: a skull and a fan of ribs
+    off a short spine, with grass tufts closing over the low parts."""
+    import math
+    y0 = -0.5
+    sx = 1.0 if variant == 0 else -1.0
+    x = lambda v: 0.5 + sx * v
+    S.ellipsoid("turf", 0.5, y0, 0.0, 0.40, 0.30, 0.02, "vegetation", segs=18, rings=6)
+    # spine: a row of small vertebrae
+    for k in range(6):
+        S.ellipsoid("vert", x(-0.18 + 0.065 * k), y0 + 0.02 - 0.012 * k, 0.03, 0.03, 0.026, 0.026, "horn",
+                    segs=8, rings=5)
+    # ribs: curved strips arching away from the spine, curling toward the skull end
+    for k in range(5):
+        bx = -0.14 + 0.065 * k
+        for side in (-1, 1):
+            r = 0.19 - 0.018 * abs(k - 2)
+            cl = []
+            for i in range(9):
+                t = i / 8.0
+                a = math.radians(160 * t)
+                cl.append((x(bx + 0.05 * t * t * 1.4), y0 + 0.02 - 0.012 * k + side * r * math.sin(a * 0.95)))
+            left, right = [], []
+            for i, (px, py) in enumerate(cl):
+                qx, qy = cl[min(i + 1, 8)][0] - cl[max(i - 1, 0)][0], cl[min(i + 1, 8)][1] - cl[max(i - 1, 0)][1]
+                ln = math.hypot(qx, qy) or 1.0
+                nx_, ny_ = -qy / ln, qx / ln
+                w = 0.020 * (1 - 0.4 * i / 8)
+                left.append((px + nx_ * w, py + ny_ * w))
+                right.append((px - nx_ * w, py - ny_ * w))
+            strip = left + right[::-1]
+            if (side * sx) < 0:
+                strip = strip[::-1]
+            S.prism("rib", strip, 0.0, 0.04, "horn", bevel=0.006)
+    # skull: cranium, jaw and dark sockets
+    sk = x(0.27)
+    S.ellipsoid("cranium", sk, y0 - 0.02, 0.05, 0.085, 0.10, 0.065, "ceramic", segs=16, rings=10)
+    S.ellipsoid("jaw", x(0.35), y0 - 0.02, 0.03, 0.06, 0.055, 0.035, "horn", segs=12, rings=8)
+    for sy in (-1, 1):
+        S.ellipsoid("socket", x(0.31), y0 - 0.02 + sy * 0.04, 0.085, 0.026, 0.022, 0.02, "fur_dark", segs=8, rings=6)
+    S.ellipsoid("horn_stub", sk - sx * 0.02, y0 - 0.1, 0.075, 0.025, 0.02, 0.02, "horn", segs=8, rings=5)
+    # grass sunk over the remains
+    for k, (gx, gy, gr) in enumerate([(-0.28, -0.07, 0.06), (-0.08, 0.1, 0.05), (0.08, -0.1, 0.05),
+                                      (0.18, 0.1, 0.055), (0.40, 0.03, 0.06), (-0.12, -0.12, 0.05),
+                                      (0.33, -0.16, 0.05), (0.0, 0.14, 0.045)]):
+        S.ellipsoid("tuft", x(gx), y0 + gy, 0.03, gr, gr * 0.8, 0.07, "foliage" if k % 2 else "vegetation",
+                    segs=8, rings=5)
+    return S.render_asset("item", "bones_%02d" % variant, zmax=0.14, extra={"item": "bones", "variant": variant})
+
+
 def build():
-    return [_wood(), _food(), _steel(), _stone(), _berries(), _ration(), _meat(), _meal(), _club(), _rifle_item(),
+    return [_wood(), _food(), _steel(), _stone(), _berries(), _ration(), _meat(), _meal(), _club(), _rifle_item(), _knife_item(), _spear_item(),
             _potatoes(), _corn(), _wheat(), _beans(), _lettuce(), _radishes(), _pumpkins(),
-            _leather(), _parka(), _tuque(), _duster(), _herbal_medicine()]
+            _leather(), _parka(), _tuque(), _duster(), _herbal_medicine(), _bones(0), _bones(1)]

@@ -14,6 +14,7 @@ All canonical specs, rules, and agent-facing data live in [`.cursor/`](.cursor/D
 - `.cursor/handoffs/` — per-task AI handoff records.
 - `.cursor/skills/` — task playbooks; start with `.cursor/skills/rimworld-go-router/SKILL.md`.
 - `.cursor/rules/` — Cursor always-on recognition (art direction, UI screens).
+- `.cursor/PARALLEL_WORK.md` — how multi-area tasks fan out to parallel subagents (playbook: `.cursor/skills/parallel-work/SKILL.md`).
 
 Non-negotiable rules:
 - Dependencies point inward: adapters → application → domain.
@@ -29,6 +30,7 @@ Non-negotiable rules:
 - Do not weaken tests to pass CI.
 - Do not copy proprietary code, assets, text, or balancing data.
 - Every scoped task must leave a concise handoff in `.cursor/handoffs/`.
+- Multi-area tasks follow `.cursor/PARALLEL_WORK.md` (skill `parallel-work`): contract first, disjoint file ownership, lead-only shared config, phased verification.
 - Whenever work satisfies (fully or partially) an item in `.cursor/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md`, `.cursor/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`, `.cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md`, or `.cursor/MAIN_UI_SCREENS_SPECIFICATION.md`, update that item's checkbox in the same change: `[x]` only when its full acceptance criteria are met, `[-]` when partially done (state what's missing in a short trailing note), `[!]` when blocked (state why). Never leave completed work unreflected in the checklists.
 - Any newly implemented domain/application behavior that is player-observable per `.cursor/MASTER_SPEC.md` or `.cursor/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` must ship with a corresponding HUD/UI representation (read-only, via `Snapshot()`/read models, never a direct domain reference) in the same change. If that representation is a named screen, follow `.cursor/MAIN_UI_SCREENS_SPECIFICATION.md` via skill `rimworld-go-ui-screens`. If no sensible on-screen representation exists yet (e.g. a pure internal primitive with no player-facing effect), state why in the handoff instead of adding one.
 - Player-facing screens, windows, overlays, HUD layout, and navigation must follow `.cursor/MAIN_UI_SCREENS_SPECIFICATION.md` via skill `rimworld-go-ui-screens`. Load only the sections that skill names for the screen. Use `.cursor/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` for ordered backlog/acceptance. Screens consume read models and emit typed commands; they never mutate domain state. Skip that spec for headless simulation-only work with no screen.

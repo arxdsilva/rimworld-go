@@ -21,6 +21,12 @@ materials:
   ceramic:     {light: "#ebe6db", base: "#cdc6b7", shadow: "#9e9687"}
   vegetation:  {light: "#93b25d", base: "#708f47", shadow: "#4f6836"}
   foliage:     {light: "#73a056", base: "#577f42", shadow: "#3d5c30"}
+  leaf_pine:   {light: "#4d7a62", base: "#3a6150", shadow: "#2a4639"}
+  leaf_pine_hi: {light: "#5f8c70", base: "#47715d", shadow: "#33523f"}
+  leaf_autumn_red:   {light: "#cf7458", base: "#b05540", shadow: "#80392b"}
+  leaf_autumn_amber: {light: "#eaa550", base: "#d28530", shadow: "#9c5f20"}
+  bark_birch:  {light: "#ece6d8", base: "#cfc7b6", shadow: "#a09886"}
+  snow:        {light: "#fbfdff", base: "#e3ebf3", shadow: "#b4c3d6"}
   crop_fruit:  {light: "#f2b94f", base: "#d99530", shadow: "#a86c21"}
   food_red:    {light: "#d9735a", base: "#b9533f", shadow: "#863a2d"}
   glass:       {light: "#cbe7ef", base: "#9fcadb", shadow: "#6d9aab"}

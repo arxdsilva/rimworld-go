@@ -120,8 +120,8 @@ func (g *Game) heatRooms() {
 		if !ok || b.Kind != construction.Campfire || g.fuel[bid] <= 0 {
 			continue
 		}
-		if g.temperatureAt(b.X, b.Y) >= campfireBank {
-			continue // banked
+		if !g.burning(bid, b) {
+			continue // banked, or doused by rain or snow
 		}
 		g.fuel[bid] = max(0, g.fuel[bid]-climateInterval)
 		if r := g.roomAt(b.X, b.Y); r >= 0 && r < len(heat) {
@@ -149,7 +149,7 @@ func (g *Game) heatRooms() {
 
 // burning reports a campfire with fuel that is actually burning now.
 func (g *Game) burning(bid entity.EntityID, b construction.Building) bool {
-	return g.fuel[bid] > 0 && g.temperatureAt(b.X, b.Y) < campfireBank
+	return g.fuel[bid] > 0 && !g.doused(bid) && g.temperatureAt(b.X, b.Y) < campfireBank
 }
 
 // --- refuelling ------------------------------------------------------------

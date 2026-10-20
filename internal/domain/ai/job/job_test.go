@@ -23,3 +23,9 @@ func TestActiveOnlyGotoOrDo(t *testing.T) {
 		t.Fatal("goto must be active")
 	}
 }
+
+func TestBuryIsAJob(t *testing.T) {
+	if Bury.String() != "bury" || Bury.IsIdle() {
+		t.Fatal("bury is real work named bury")
+	}
+}

@@ -2,35 +2,52 @@
 
 A RimWorld-inspired colony simulation written in Go with Ebitengine, built in public on YouTube. Original Blender-rendered art; no proprietary RimWorld code, art or data.
 
-<p align="center"><img src="docs/clips/colony_life.webp" width="100%" alt="Colonists going about their work"></p>
+<p align="center"><img src="docs/clips/lategame.webp" width="100%" alt="Late game: a stone compound in autumn rain, fields at every stage, a raid met at the sandbags, and a graveyard"></p>
+<p align="center"><sub>Late game: a stone compound in autumn rain, fields at every stage, a raid met at the sandbags, and a graveyard</sub></p>
 
 ## See it move
 
 <table>
   <tr>
+    <td width="50%"><img src="docs/clips/colony_life.webp" width="100%" alt="Colonists going about their work"><br><sub>Colonists going about their work</sub></td>
     <td width="50%"><img src="docs/clips/building.webp" width="100%" alt="The first hut going up from its blueprint"><br><sub>The first hut going up from its blueprint</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/clips/melee.webp" width="100%" alt="Knife, spear, club and rifle in a close fight"><br><sub>Knife, spear, club and rifle in a close fight</sub></td>
     <td width="50%"><img src="docs/clips/combat.webp" width="100%" alt="A firefight, followed shot by shot"><br><sub>A firefight, followed shot by shot</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/clips/raid.webp" width="100%" alt="Raiders advance on the colony"><br><sub>Raiders advance on the colony</sub></td>
+    <td width="50%"><img src="docs/clips/chores.webp" width="100%" alt="Chopping with a two-handed axe, then on to the next tree"><br><sub>Chopping with a two-handed axe, then on to the next tree</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/clips/rain.webp" width="100%" alt="A fall storm: wind-slanted rain, puddles and swaying trees"><br><sub>A fall storm: wind-slanted rain, puddles and swaying trees</sub></td>
+    <td width="50%"><img src="docs/clips/snow.webp" width="100%" alt="Snow drifting in on the wind and settling on the ground"><br><sub>Snow drifting in on the wind and settling on the ground</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/clips/grass.webp" width="100%" alt="Grass and flowers waving in the wind as a colonist walks by"><br><sub>Grass and flowers waving in the wind as a colonist walks by</sub></td>
+    <td width="50%"><img src="docs/clips/burial.webp" width="100%" alt="Laying the dead to rest: graves, headstones and a funeral pyre"><br><sub>Laying the dead to rest: graves, headstones and a funeral pyre</sub></td>
+  </tr>
+  <tr>
     <td width="50%"><img src="docs/clips/animals.webp" width="100%" alt="Tamed animals in their pen"><br><sub>Tamed animals in their pen</sub></td>
+    <td width="50%"></td>
   </tr>
 </table>
 
 ## Progress
 
-Media updated 2026-10-19 · regenerate with `make screenshots clips`
+Media updated 2026-10-19 · regenerate with `make media clips`
 
 ### Building
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/screenshots/colony.png" width="100%" alt="A young colony: colonists, a hut, stockpile and wild land"><br><sub>A young colony: colonists, a hut, stockpile and wild land</sub></td>
-    <td width="50%"><img src="docs/screenshots/architect.png" width="100%" alt="Architect menu: placing stone walls"><br><sub>Architect menu: placing stone walls</sub></td>
+    <td width="50%"><img src="docs/media/colony.webp" width="100%" alt="A young colony: colonists, a hut, stockpile and wild land"><br><sub>A young colony: colonists, a hut, stockpile and wild land</sub></td>
+    <td width="50%"><img src="docs/media/architect.webp" width="100%" alt="Architect menu: placing stone walls"><br><sub>Architect menu: placing stone walls</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/screenshots/farm.png" width="100%" alt="Growing zones and the crop picker"><br><sub>Growing zones and the crop picker</sub></td>
-    <td width="50%"><img src="docs/screenshots/bills.png" width="100%" alt="Workbenches and production bills"><br><sub>Workbenches and production bills</sub></td>
+    <td width="50%"><img src="docs/media/farm.webp" width="100%" alt="Growing zones and the crop picker"><br><sub>Growing zones and the crop picker</sub></td>
+    <td width="50%"><img src="docs/media/bills.webp" width="100%" alt="Workbenches and production bills"><br><sub>Workbenches and production bills</sub></td>
   </tr>
 </table>
 
@@ -38,11 +55,11 @@ Media updated 2026-10-19 · regenerate with `make screenshots clips`
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/screenshots/siege.png" width="100%" alt="Raiders dig in for a siege"><br><sub>Raiders dig in for a siege</sub></td>
-    <td width="50%"><img src="docs/screenshots/defense.png" width="100%" alt="A sandbag ring and spike traps as a raid arrives"><br><sub>A sandbag ring and spike traps as a raid arrives</sub></td>
+    <td width="50%"><img src="docs/media/siege.webp" width="100%" alt="Raiders dig in for a siege"><br><sub>Raiders dig in for a siege</sub></td>
+    <td width="50%"><img src="docs/media/defense.webp" width="100%" alt="A sandbag ring and spike traps as a raid arrives"><br><sub>A sandbag ring and spike traps as a raid arrives</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/screenshots/combat.png" width="100%" alt="A colonist with a rifle fights off an attacking ridgewolf"><br><sub>A colonist with a rifle fights off an attacking ridgewolf</sub></td>
+    <td width="50%"><img src="docs/media/combat.webp" width="100%" alt="Armed colonists hold the line against a raid"><br><sub>Armed colonists hold the line against a raid</sub></td>
     <td width="50%"></td>
   </tr>
 </table>
@@ -51,12 +68,12 @@ Media updated 2026-10-19 · regenerate with `make screenshots clips`
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/screenshots/animals.png" width="100%" alt="A pen of tamed animals; a guard wolf"><br><sub>A pen of tamed animals; a guard wolf</sub></td>
-    <td width="50%"><img src="docs/screenshots/research.png" width="100%" alt="Research bench and the project list"><br><sub>Research bench and the project list</sub></td>
+    <td width="50%"><img src="docs/media/animals.webp" width="100%" alt="A pen of tamed animals; a guard wolf"><br><sub>A pen of tamed animals; a guard wolf</sub></td>
+    <td width="50%"><img src="docs/media/research.webp" width="100%" alt="Research bench and the project list"><br><sub>Research bench and the project list</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/screenshots/medic.png" width="100%" alt="A tended infection and a healroot crop at each growth stage"><br><sub>A tended infection and a healroot crop at each growth stage</sub></td>
-    <td width="50%"><img src="docs/screenshots/winter.png" width="100%" alt="Winter night: a heated hut vs a cold one"><br><sub>Winter night: a heated hut vs a cold one</sub></td>
+    <td width="50%"><img src="docs/media/medic.webp" width="100%" alt="A tended infection and a healroot crop at each growth stage"><br><sub>A tended infection and a healroot crop at each growth stage</sub></td>
+    <td width="50%"><img src="docs/media/winter.webp" width="100%" alt="Winter night: a heated hut vs a cold one"><br><sub>Winter night: a heated hut vs a cold one</sub></td>
   </tr>
 </table>
 
@@ -72,6 +89,9 @@ Media updated 2026-10-19 · regenerate with `make screenshots clips`
 - Health: injuries, rescue and tending, infections, herbal medicine and a healroot crop.
 - Animals: hunting, butchering, taming, pens, guard wolves and manhunters.
 - Research: a research bench with five projects that unlock buildings and work.
+- Weather: rain, storms, snow and blizzards with wind, puddles and snow cover; rain douses outdoor fires, snow chills the air, and colonists get soaked.
+- A living world: grass, crops and trees wave in gusting wind and part around anyone walking through; trees turn in autumn and stand bare and snowy in winter.
+- Death and burial: the dead leave bodies that rot to bones; colonists mourn, dig graves with headstones, bury their own, or cremate on a funeral pyre.
 - Save and load, with a daily autosave.
 
 The full backlogs are in the [vanilla feature checklist](.cursor/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md) and the [UI/UX checklist](.cursor/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md).
@@ -89,7 +109,7 @@ make simulate       # headless simulation run for quick checks
 
 ### Refreshing the README media
 
-- `make screenshots`: renders the still images through the game's `-capture` flag.
+- `make media`: records the gallery as short animated WebPs through the game's `-capture` flag.
 - `make clips`: captures frame sequences and packs them into animated WebP with `scripts/frames_to_webp.py`. Needs python3 and Pillow.
 
 ## Project layout & contributing

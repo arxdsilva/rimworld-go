@@ -41,6 +41,8 @@ func (p raidPlan) String() string {
 const (
 	maxScaledRaiders = 8
 	clubCost         = 60
+	knifeCost        = 50
+	spearCost        = 70
 	rifleCost        = 90
 	// siegeHold is how long a siege camp holds before it storms the colony.
 	siegeHold = 5 * clock.TicksPerHour
@@ -87,17 +89,34 @@ func (g *Game) raidPoints(day int) int {
 	return g.Wealth()/40 + colonists*30 + day*2
 }
 
+// meleeKit is what a raider without a rifle may carry.
+var meleeKit = []item.Kind{item.Club, item.Knife, item.Spear}
+
+func meleeCost(k item.Kind) int {
+	switch k {
+	case item.Knife:
+		return knifeCost
+	case item.Spear:
+		return spearCost
+	}
+	return clubCost
+}
+
 // raidKit spends points on raiders' weapons (at least one raider).
 func (g *Game) raidKit(points int) []item.Kind {
 	var kit []item.Kind
-	for len(kit) < maxScaledRaiders && (points >= clubCost || len(kit) == 0) {
+	for len(kit) < maxScaledRaiders && (points >= knifeCost || len(kit) == 0) {
 		if points >= rifleCost && g.rng.IntN(100) < 55 {
 			kit = append(kit, item.Rifle)
 			points -= rifleCost
-		} else {
-			kit = append(kit, item.Club)
-			points -= clubCost
+			continue
 		}
+		k := meleeKit[g.rng.IntN(len(meleeKit))]
+		if cost := meleeCost(k); cost > points && len(kit) > 0 {
+			k = item.Knife // the cheapest blade fits what is left
+		}
+		kit = append(kit, k)
+		points -= meleeCost(k)
 	}
 	return kit
 }
@@ -146,8 +165,13 @@ func (g *Game) kitOf(n int) []item.Kind {
 	kit := make([]item.Kind, n)
 	for i := range kit {
 		kit[i] = item.Club
-		if g.rng.IntN(2) == 0 {
+		switch g.rng.IntN(4) {
+		case 0, 1:
 			kit[i] = item.Rifle
+		case 2:
+			kit[i] = item.Knife
+		case 3:
+			kit[i] = item.Spear
 		}
 	}
 	return kit

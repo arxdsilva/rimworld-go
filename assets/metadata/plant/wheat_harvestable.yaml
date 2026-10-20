@@ -3,10 +3,11 @@ version: 1
 id: "core:plant/wheat_harvestable"
 image: generated/world/plant/wheat_harvestable.png
 scale: 2
-canvas: [160, 212]
+canvas: [166, 244]
 footprint: [1, 1]
-origin_px: [16, 68]
+origin_px: [19, 97]
 projection:
   shear_k: 0.5
 species: wheat
 growth: harvestable
+variant: 1

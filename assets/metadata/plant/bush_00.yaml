@@ -3,11 +3,10 @@ version: 1
 id: "core:plant/bush_00"
 image: generated/world/plant/bush_00.png
 scale: 2
-canvas: [160, 187]
+canvas: [180, 189]
 footprint: [1, 1]
-origin_px: [16, 43]
+origin_px: [26, 42]
 projection:
   shear_k: 0.5
-species: berry_bush
+species: bush
 variant: 0
-harvestable: false

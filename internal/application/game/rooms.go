@@ -4,6 +4,7 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/infection"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/recreation"
@@ -189,6 +190,9 @@ func (g *Game) thoughts(id entity.EntityID) []mood.Thought {
 		states = append(states, mood.Sweltering)
 	case t > b.Max:
 		states = append(states, mood.Hot)
+	}
+	if v, _ := g.vital.Get(id); v.Status != health.Dead && g.unburiedNear(pos) {
+		states = append(states, mood.UnburiedCorpse)
 	}
 	return mood.Active(g.memories[id].Prune(uint64(g.clock.Now())), states...)
 }

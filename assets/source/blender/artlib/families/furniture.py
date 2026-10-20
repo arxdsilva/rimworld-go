@@ -268,6 +268,169 @@ def _lamp():
     return (1, 1), 1.40
 
 
+# ------------------------------------------------------------ burial (W6)
+def _log(name, p0, p1, r, mat, end_mat="wood", z=None):
+    """A round log from p0 to p1 (x,y,z each), lying free, end grain lit."""
+    import math
+    from mathutils import Matrix, Vector
+    a, b = Vector(p0), Vector(p1)
+    d = b - a
+    ln = d.length
+    M = Matrix.Translation(a) @ d.to_track_quat("Z", "Y").to_matrix().to_4x4()
+    S.cyl(name, 0, 0, r, 0.0, ln, mat, segs=10, bevel=0.012)
+    S.objects()[-1].matrix_world = M
+    if end_mat:
+        S.cyl(name + "_end", 0, 0, r * 0.82, ln, ln + 0.012, end_mat, segs=10, bevel=0.0)
+        S.objects()[-1].matrix_world = M
+        S.cyl(name + "_beg", 0, 0, r * 0.82, -0.012, 0.0, end_mat, segs=10, bevel=0.0)
+        S.objects()[-1].matrix_world = M
+
+
+def _grass_edge(cx, cy, rx, ry, n, seed=0):
+    """Soft tufts ringed around an ellipse."""
+    import math
+    for k in range(n):
+        a = k / n * 2 * math.pi + 0.3 * seed
+        j = 1.0 + 0.10 * (((k * 5 + seed) % 4) - 1.5)
+        S.ellipsoid("tuft", cx + rx * j * math.cos(a), cy + ry * j * math.sin(a), 0.02,
+                    0.075 + 0.015 * (k % 3), 0.06 + 0.01 * (k % 2), 0.07 + 0.015 * ((k + seed) % 3),
+                    "foliage" if k % 3 else "vegetation", segs=8, rings=5)
+
+
+def _grave_dug():
+    """1 x 2 (head north): an open pit ringed by raised earth, a heap at the
+    foot with a shovel standing in it."""
+    import math
+    from mathutils import Matrix
+    # raised rim
+    S.box("rim_n", 0.2, -0.28, 0.0, 0.8, -0.14, 0.09, "soil", bevel=0.04)
+    S.box("rim_w", 0.16, -1.52, 0.0, 0.30, -0.20, 0.09, "soil", bevel=0.04)
+    S.box("rim_e", 0.70, -1.52, 0.0, 0.84, -0.20, 0.09, "soil", bevel=0.04)
+    S.box("rim_s", 0.2, -1.60, 0.0, 0.8, -1.46, 0.09, "soil", bevel=0.04)
+    # the hole: dark floor inside the rim
+    S.box("floor", 0.29, -1.47, 0.0, 0.71, -0.29, 0.012, "soil_rich", bevel=0.0)
+    S.box("floor_deep", 0.34, -1.42, 0.0, 0.66, -0.34, 0.014, "soil_rich", bevel=0.0)
+    S.box("wall_lip", 0.29, -1.47, 0.0, 0.34, -0.29, 0.06, "soil_rich", bevel=0.0)
+    # the heap
+    S.ellipsoid("heap", 0.5, -1.78, 0.0, 0.34, 0.20, 0.26, "soil", segs=18, rings=10)
+    S.ellipsoid("heap_hi", 0.43, -1.74, 0.12, 0.17, 0.10, 0.14, "soil", segs=14, rings=8)
+    for k, (cx, cy, r) in enumerate([(0.2, -1.62, 0.05), (0.78, -1.64, 0.045), (0.64, -1.92, 0.05)]):
+        S.ellipsoid("clod", cx, cy, 0.03, r, r * 0.8, r * 0.7, "soil_rich", segs=8, rings=5)
+    # shovel stuck blade-down in the heap, leaning toward the viewer-right
+    base = (0.52, -1.78, 0.16)
+    S.cyl("shaft", 0, 0, 0.03, 0.0, 0.80, "wood", r_top=0.026, segs=8, bevel=0.0)
+    S.box("d_grip", -0.09, -0.04, 0.78, 0.09, 0.04, 0.86, "wood", bevel=0.015)
+    S.box("blade", -0.10, -0.02, -0.22, 0.10, 0.02, 0.0, "steel", bevel=0.008)
+    for ob in S.objects()[-3:]:
+        ob.matrix_world = (Matrix.Translation(base) @ Matrix.Rotation(math.radians(-12), 4, "Y")
+                           @ Matrix.Rotation(math.radians(6), 4, "X")) @ ob.matrix_world
+    _grass_edge(0.5, -1.0, 0.46, 0.92, 14)
+    return (1, 2), 1.02
+
+
+def _grave_filled():
+    """1 x 2 (head north): a mounded plot of settled earth edged with grass."""
+    S.ellipsoid("mound_base", 0.5, -1.0, 0.0, 0.36, 0.78, 0.17, "soil", segs=24, rings=10)
+    S.ellipsoid("mound_top", 0.47, -1.0, 0.06, 0.25, 0.60, 0.15, "soil", segs=22, rings=10)
+    S.ellipsoid("mound_hi", 0.44, -0.86, 0.12, 0.11, 0.30, 0.08, "soil", segs=14, rings=8)
+    for k, (cx, cy, r) in enumerate([(0.62, -1.4, 0.04), (0.38, -0.6, 0.035), (0.6, -0.75, 0.03)]):
+        S.ellipsoid("clod", cx, cy, 0.1, r, r * 0.8, r * 0.7, "soil_rich", segs=8, rings=5)
+    _grass_edge(0.5, -1.0, 0.40, 0.82, 16, seed=1)
+    _grass_edge(0.5, -1.0, 0.30, 0.70, 10, seed=3)
+    return (1, 2), 0.34
+
+
+def _stone_cap(name, cx, y, w, z0, z1, mat):
+    """A tall slab with a rounded top (half cylinder lying along Y)."""
+    import math
+    from mathutils import Matrix
+    S.box(name + "_slab", cx - w / 2, y - 0.045, z0, cx + w / 2, y + 0.045, z1 - w / 2, mat, bevel=0.015)
+    S.cyl(name + "_arch", 0, 0, w / 2, -0.045, 0.045, mat, segs=16, bevel=0.012)
+    S.objects()[-1].matrix_world = Matrix.Translation((cx, y, z1 - w / 2)) @ Matrix.Rotation(math.radians(-90), 4, "X")
+
+
+def _headstone_00():
+    S.ellipsoid("moss", 0.5, -0.5, 0.0, 0.2, 0.1, 0.03, "vegetation", segs=12, rings=5)
+    S.box("plinth", 0.30, -0.58, 0.0, 0.70, -0.42, 0.06, "stone_dark", bevel=0.015)
+    _stone_cap("rounded", 0.5, -0.5, 0.30, 0.05, 0.50, "stone")
+    S.box("etch", 0.45, -0.552, 0.27, 0.55, -0.545, 0.285, "stone_dark", bevel=0.0)
+    S.box("etch2", 0.42, -0.552, 0.22, 0.58, -0.545, 0.235, "stone_dark", bevel=0.0)
+    return (1, 1), 0.50
+
+
+def _headstone_01():
+    S.box("plinth", 0.32, -0.58, 0.0, 0.68, -0.42, 0.06, "stone_dark", bevel=0.015)
+    S.box("post", 0.455, -0.55, 0.05, 0.545, -0.45, 0.62, "stone", bevel=0.02)
+    S.box("arm", 0.32, -0.55, 0.38, 0.68, -0.45, 0.46, "stone", bevel=0.02)
+    S.ellipsoid("moss", 0.54, -0.5, 0.05, 0.07, 0.06, 0.03, "vegetation", segs=8, rings=5)
+    return (1, 1), 0.62
+
+
+def _headstone_02():
+    import math
+    from mathutils import Matrix
+    S.ellipsoid("mound", 0.5, -0.5, 0.0, 0.17, 0.12, 0.04, "soil", segs=12, rings=5)
+    S.cyl("stake", 0.5, -0.5, 0.032, 0.0, 0.42, "wood", r_top=0.03, segs=8, bevel=0.0)
+    S.box("board", 0.30, -0.535, 0.28, 0.70, -0.465, 0.40, "wood_plank", bevel=0.015)
+    S.box("tie", 0.485, -0.54, 0.12, 0.515, -0.46, 0.20, "leather", bevel=0.006)
+    S.box("scratch", 0.38, -0.54, 0.335, 0.62, -0.535, 0.345, "bark", bevel=0.0)
+    return (1, 1), 0.42
+
+
+def _headstone_03():
+    S.box("slab", 0.20, -0.66, 0.0, 0.80, -0.34, 0.07, "stone", bevel=0.02)
+    S.box("slab_top", 0.24, -0.62, 0.065, 0.76, -0.38, 0.09, "stone_dark", bevel=0.01)
+    S.ellipsoid("leaves", 0.5, -0.5, 0.10, 0.20, 0.10, 0.04, "foliage", segs=12, rings=5)
+    for k, (fx, fy, m, h) in enumerate([(0.38, -0.5, "food_red", 0.20), (0.50, -0.46, "blossom", 0.24),
+                                        (0.60, -0.52, "crop_fruit", 0.21), (0.46, -0.56, "blossom", 0.18),
+                                        (0.55, -0.42, "food_red", 0.17)]):
+        S.cyl("stem", fx, fy, 0.008, 0.08, h, "vegetation", segs=5, bevel=0.0)
+        S.ellipsoid("bloom", fx, fy, h + 0.01, 0.036, 0.036, 0.03, m, segs=8, rings=5)
+    return (1, 1), 0.30
+
+
+def _pyre():
+    """2 x 1 funeral pyre: a crossed stack of logs on a bed of kindling."""
+    S.ellipsoid("bed", 1.0, -0.5, 0.0, 0.88, 0.42, 0.015, "straw", segs=22, rings=6)
+    # bottom layer runs north-south, then east-west, then north-south again
+    for i, x in enumerate((0.34, 0.62, 0.90, 1.18, 1.46, 1.70)):
+        _log("l0_%d" % i, (x, -0.92, 0.09), (x, -0.08, 0.09), 0.085, "bark")
+    for i, y in enumerate((-0.30, -0.52, -0.74)):
+        _log("l1_%d" % i, (0.22, y, 0.26), (1.78, y, 0.26), 0.08, "wood" if i == 1 else "bark")
+    for i, x in enumerate((0.55, 1.0, 1.45)):
+        _log("l2_%d" % i, (x, -0.84, 0.41), (x, -0.16, 0.41), 0.07, "bark")
+    _log("l3_0", (0.45, -0.40, 0.54), (1.55, -0.40, 0.54), 0.06, "wood")
+    _log("l3_1", (0.45, -0.60, 0.54), (1.55, -0.60, 0.54), 0.06, "bark")
+    # kindling: straw bundles and thin sticks poking out
+    for k, (x, y, z) in enumerate([(0.2, -0.12, 0.05), (1.82, -0.86, 0.06), (0.12, -0.80, 0.05), (1.9, -0.2, 0.05)]):
+        S.ellipsoid("bundle", x, y, z, 0.11, 0.07, 0.05, "straw", segs=10, rings=5)
+    for k in range(6):
+        x = 0.35 + 0.25 * k
+        _log("stick%d" % k, (x, -0.08, 0.20), (x + 0.12, 0.08, 0.26), 0.014, "bark", end_mat=None)
+    return (2, 1), 0.64
+
+
+def _pyre_burning():
+    """The same stack burnt down: charred, cracked logs and glowing embers.
+    The renderer draws the flames."""
+    S.ellipsoid("ash", 1.0, -0.5, 0.0, 0.92, 0.46, 0.02, "stone_dark", segs=22, rings=6)
+    for i, x in enumerate((0.34, 0.62, 0.90, 1.18, 1.46, 1.70)):
+        _log("l0_%d" % i, (x, -0.92, 0.08), (x, -0.08, 0.08), 0.082, "fur_dark", end_mat="stone_dark")
+    for i, y in enumerate((-0.30, -0.52, -0.74)):
+        _log("l1_%d" % i, (0.24, y, 0.24), (1.76, y, 0.24), 0.078, "fur_dark", end_mat="metal_dark")
+    for i, x in enumerate((0.55, 1.0, 1.45)):
+        _log("l2_%d" % i, (x, -0.82, 0.38), (x, -0.18, 0.38), 0.066, "fur_dark", end_mat="stone_dark")
+    _log("l3_0", (0.5, -0.42, 0.5), (1.5, -0.42, 0.5), 0.055, "metal_dark", end_mat="stone_dark")
+    # glowing cracks and embers between and on the logs
+    for k, (x, y) in enumerate([(0.48, -0.30), (0.76, -0.6), (1.04, -0.38), (1.32, -0.7), (1.60, -0.45),
+                                (0.9, -0.78), (1.2, -0.2), (0.62, -0.5)]):
+        S.ellipsoid("ember", x, y, 0.5 if k % 2 else 0.33, 0.09, 0.05, 0.03, "lamp_warm" if k % 3 else "pumpkin",
+                    segs=8, rings=5)
+    for k, x in enumerate((0.3, 0.8, 1.3, 1.75)):
+        S.ellipsoid("coal", x, -0.12 - 0.04 * (k % 2), 0.1, 0.08, 0.05, 0.04, "food_red", segs=8, rings=5)
+    return (2, 1), 0.60
+
+
 BUILDERS = {
     "bed_basic": (_bed, {"attachments": {"sleeper": [0.5, 0.42]}}),
     "bed_double": (_bed_double, {"attachments": {"sleeper": [0.5, 0.42], "sleeper2": [1.5, 0.42]}}),
@@ -284,8 +447,17 @@ BUILDERS = {
     "spike_trap": (_spike_trap, {}),
     "tailoring_bench": (_tailoring_bench, {"attachments": {"worker": [0.5, 1.15]}}),
     "drying_rack": (_drying_rack, {"attachments": {"worker": [0.5, 1.15]}}),
+    "grave_dug": (_grave_dug, {"building": "grave", "state": "dug"}),
+    "grave_filled": (_grave_filled, {"building": "grave", "state": "filled"}),
+    "headstone_00": (_headstone_00, {"item": "headstone", "style": "rounded"}),
+    "headstone_01": (_headstone_01, {"item": "headstone", "style": "cross"}),
+    "headstone_02": (_headstone_02, {"item": "headstone", "style": "wooden"}),
+    "headstone_03": (_headstone_03, {"item": "headstone", "style": "slab"}),
+    "pyre": (_pyre, {"building": "funeral pyre", "state": "stacked"}),
+    "pyre_burning": (_pyre_burning, {"building": "funeral pyre", "state": "burning"}),
 }
-ROTATABLE = {"bed_basic", "bed_double", "chair_basic", "workbench_basic", "stove_basic", "butcher_table",
+FACINGS_ONLY = {"grave_dug": ("south", "east"), "grave_filled": ("south", "east")}
+ROTATABLE = {"grave_dug", "grave_filled", "bed_basic", "bed_double", "chair_basic", "workbench_basic", "stove_basic", "butcher_table",
              "drying_rack", "tailoring_bench", "research_bench"}
 
 
@@ -311,7 +483,7 @@ def _blankets():
 def build():
     out = _blankets()
     for name, (fn, extra) in BUILDERS.items():
-        facings = FACINGS if name in ROTATABLE else ("south",)
+        facings = FACINGS_ONLY.get(name) or (FACINGS if name in ROTATABLE else ("south",))
         for f in facings:
             fp, zmax = fn()
             fp = S.face(S.objects(), f, fp)

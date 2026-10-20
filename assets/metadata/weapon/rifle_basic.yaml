@@ -12,5 +12,7 @@ weapon: rifle
 rotatable: true
 points: east
 attachments:
-  grip: [62.6, 94.1]
-  muzzle: [127.1, 86.5]
+  grip: [63.4, 84.8]
+  support: [97.9, 85.1]
+  muzzle: [136.3, 85.8]
+  stock: [28.8, 85.4]

@@ -195,11 +195,13 @@ func TestPlantSpriteScalesWithGrowth(t *testing.T) {
 	if !(young < grown) || grown != 1 || !strings.HasPrefix(key, "plant/tree_") {
 		t.Fatalf("tree scale young=%v grown=%v key=%s", young, grown, key)
 	}
-	if k, _ := plantSprite(game.PlantView{Species: "potato", Stage: 3}); k != "plant/potato_harvestable" {
+	// crops carry stage and a per-tile variant (ART §9); seasonKey falls
+	// back to the older shared sprites (environment_test.go)
+	if k, _ := plantSprite(game.PlantView{Species: "potato", Stage: 3}); k != "plant/potato_harvestable_v0" {
 		t.Fatalf("ripe crop sprite = %s", k)
 	}
-	if k, _ := plantSprite(game.PlantView{Species: "corn", Stage: 0}); k != "plant/crop_sown" {
-		t.Fatalf("freshly sown crops share the sown sprite, got %s", k)
+	if k, _ := plantSprite(game.PlantView{Species: "corn", Stage: 0}); k != "plant/corn_sown_v0" {
+		t.Fatalf("freshly sown crop sprite = %s", k)
 	}
 }
 

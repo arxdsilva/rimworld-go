@@ -59,9 +59,6 @@ const (
 	bleedOut = 4 * clock.TicksPerHour
 	// raiderLeaveIdle: raiders with no one left to fight for this long go home.
 	raiderLeaveIdle = clock.TicksPerHour
-	// corpseLinger is how long a dead raider's body stays before it is
-	// cleared away.
-	corpseLinger = clock.TicksPerHour / 2
 	// sightRange: colonists this close pull arriving raiders into the fight.
 	sightRange = 18
 	// raiderRetry: a raider that found no way in waits this long to re-plan.
@@ -250,10 +247,7 @@ func (g *Game) thinkRaider(id entity.EntityID, now uint64) {
 			g.dropRaiderGear(id)
 			g.raiders[id] = r
 		}
-		if now-r.Dead >= corpseLinger {
-			g.removeRaider(id)
-		}
-		return
+		return // its body stays until it is buried or cremated (burial.go)
 	case v.Status == health.Downed:
 		if r.Downed == 0 {
 			r.Downed = now
@@ -385,7 +379,8 @@ func (g *Game) nearestColonist(p Position) (entity.EntityID, Position, bool) {
 	return best, bp, best != 0
 }
 
-// dropRaiderGear leaves a dead raider's weapon where it fell.
+// dropRaiderGear leaves a dead pawn's (raider's or colonist's) weapon
+// where it fell.
 func (g *Game) dropRaiderGear(id entity.EntityID) {
 	pos, _ := g.positions.Get(id)
 	if k, ok := g.equip[id]; ok {
@@ -438,6 +433,7 @@ func (g *Game) raiderViews() []PawnView {
 			Status: v.Status.String(), Reason: v.Cause.String(), Health: v.HP() * 100 / health.MaxHP,
 			Weapon: weaponDefOf(g, id).Name, Lying: v.Status != health.Alive, Hostile: true,
 			Fleeing: g.raiders[id].Mode == raidFlee})
+		g.fillPawnAction(&out[len(out)-1], id, j)
 	}
 	return out
 }

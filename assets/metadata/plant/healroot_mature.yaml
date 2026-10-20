@@ -3,10 +3,11 @@ version: 1
 id: "core:plant/healroot_mature"
 image: generated/world/plant/healroot_mature.png
 scale: 2
-canvas: [160, 174]
+canvas: [166, 194]
 footprint: [1, 1]
-origin_px: [16, 30]
+origin_px: [19, 47]
 projection:
   shear_k: 0.5
 species: healroot
 growth: mature
+variant: 1

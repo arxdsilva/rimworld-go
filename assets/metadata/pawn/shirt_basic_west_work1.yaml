@@ -14,5 +14,6 @@ tint:
 layer: shirt_basic
 facing: west
 attachments:
-  hand: [71.1, 110.8]
+  hand: [63.2, 114.7]
+  hand_l: [62.2, 109.2]
 frame: work1

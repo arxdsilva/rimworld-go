@@ -73,6 +73,8 @@ const (
 	Research
 	// Tame: coaxing a wild animal into the colony.
 	Tame
+	// Bury: carrying a body to an empty grave and filling it in.
+	Bury
 )
 
 // IsIdle reports a free-time behaviour that any real work may replace.
@@ -138,6 +140,8 @@ func (k Kind) String() string {
 		return "research"
 	case Tame:
 		return "tame"
+	case Bury:
+		return "bury"
 	default:
 		return "idle"
 	}
@@ -153,6 +157,8 @@ const (
 	Interrupted
 	Cancelled
 	Reserved
+	// Blocked: other creatures kept the way shut for too long.
+	Blocked
 )
 
 func (r FailReason) String() string {
@@ -167,6 +173,8 @@ func (r FailReason) String() string {
 		return "cancelled"
 	case Reserved:
 		return "reserved"
+	case Blocked:
+		return "blocked"
 	default:
 		return ""
 	}

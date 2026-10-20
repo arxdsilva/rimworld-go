@@ -15,5 +15,6 @@ rimworld-go-review-integration/SKILL.md
 rimworld-go-router/SKILL.md
 rimworld-go-testing/SKILL.md
 rimworld-go-ui-screens/SKILL.md
+parallel-work/SKILL.md
 _templates/TASK_PACKET.md
 _templates/HANDOFF.md

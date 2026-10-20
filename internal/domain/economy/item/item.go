@@ -37,17 +37,25 @@ const (
 	Duster
 	// HerbalMedicine is dried healroot: doctors tend wounds with it.
 	HerbalMedicine
+	// Knife (stone) and Spear (wood) are melee weapons (SIM-015).
+	Knife
+	Spear
+	// CorpseHuman is a dead colonist or raider (Stack.Of names who);
+	// Bones are what a corpse rots down to (SIM-017).
+	CorpseHuman
+	Bones
 	numKinds
 )
 
 var kindNames = [numKinds]string{"food", "wood", "stone", "berries", "potatoes", "meat", "meal", "club", "rifle", "dustbuck corpse", "ridgewolf corpse",
-	"corn", "wheat", "beans", "lettuce", "radishes", "pumpkins", "leather", "parka", "tuque", "duster", "herbal medicine"}
+	"corn", "wheat", "beans", "lettuce", "radishes", "pumpkins", "leather", "parka", "tuque", "duster", "herbal medicine",
+	"knife", "spear", "human corpse", "bones"}
 
 // IsWeapon reports whether k can be equipped.
-func (k Kind) IsWeapon() bool { return k == Club || k == Rifle }
+func (k Kind) IsWeapon() bool { return k == Club || k == Rifle || k == Knife || k == Spear }
 
 // IsCorpse reports an animal carcass.
-func (k Kind) IsCorpse() bool { return k == CorpseDustbuck || k == CorpseRidgewolf }
+func (k Kind) IsCorpse() bool { return k == CorpseDustbuck || k == CorpseRidgewolf || k == CorpseHuman }
 
 // nutrition is hunger restored per unit eaten (needs.Full = 10000).
 // Produce values follow real energy density per portion, rounded for
@@ -180,6 +188,10 @@ type Stack struct {
 	Rot int
 	// Dried food (from a drying rack) keeps indefinitely.
 	Dried bool
+	// Of is the dead pawn a human corpse (or its bones) once was; DiedAt
+	// the tick it died.
+	Of     entity.EntityID
+	DiedAt uint64
 }
 
 // Shelf is how many full-speed rot ticks the stack keeps (0 = forever).
@@ -225,10 +237,11 @@ func DryRate(tenthsC int) int {
 }
 
 // CanMerge reports whether a and b may combine on the same tile.
-// Rotten corpses never merge with fresh ones.
+// Rotten corpses never merge with fresh ones, and one person's body (or
+// bones) never merges with another's.
 func CanMerge(a, b Stack) bool {
 	return a.Kind == b.Kind && a.Carrier == 0 && b.Carrier == 0 && a.X == b.X && a.Y == b.Y &&
-		a.Rotten() == b.Rotten() && a.Dried == b.Dried
+		a.Rotten() == b.Rotten() && a.Dried == b.Dried && a.Of == b.Of
 }
 
 // MergeRot is the spoilage of a stack of qa items with rot ra combined with
@@ -244,7 +257,7 @@ func MergeRot(qa, ra, qb, rb int) int {
 // before it spoils; 0 never spoils. Calibrated to real produce, squeezed for
 // play: fresh meat and cooked meals go off in days, greens in a week, roots
 // and squash keep a season, and dried grain and beans keep indefinitely.
-var shelfDays = [numKinds]float64{Meat: 2, Meal: 4, CorpseDustbuck: 2.5, CorpseRidgewolf: 2.5,
+var shelfDays = [numKinds]float64{Meat: 2, Meal: 4, CorpseDustbuck: 2.5, CorpseRidgewolf: 2.5, CorpseHuman: 3,
 	Berries: 10, Lettuce: 6, Radishes: 14, Potatoes: 30, Corn: 40, Pumpkins: 50}
 
 // ShelfTicks is how many full-speed rot ticks k survives (0 = never rots).

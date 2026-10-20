@@ -174,7 +174,7 @@ The first playable surface.
     -   Draw visible terrain only.
     -   Camera culling.
     -   Chunk-aware redraw/cache strategy.
--   [-] **Entity rendering** (pawns from snapshots + vendor pack lerp; vector items/plants/frames/walls/beds; no corpses/projectiles)
+-   [-] **Entity rendering** (pawns and animals from snapshots with curved, eased, sub-frame motion and stride-driven walk/trot frames; original art for items/plants/frames/walls/beds; no projectiles)
     -   Draw pawns, items, plants, buildings, corpses, projectiles.
     -   Presentation uses read-only simulation snapshots.
 -   [-] **Camera controls** (pan, zoom, and screen-to-world conversion implemented; center-on-selection not implemented)
@@ -303,7 +303,7 @@ interchangeable workers.
 
 ## 4.2 Pathfinding
 
--   [-] **Deterministic A**\* (8-connected Chebyshev on `grid.Grid`; f/g/y/x tie-break; no region graph)
+-   [-] **Deterministic A**\* (8-connected octile costs 10/14, no cutting wall corners, optional per-cell extra cost; f/g/y/x tie-break; no region graph)
     -   Exact tile pathfinding.
     -   Stable tie-breaking.
     -   No dependence on map iteration.
@@ -321,16 +321,16 @@ interchangeable workers.
 
 ## 4.3 Movement
 
--   [-] **Follow path** (A* path, `TicksPerCell` occupancy; no pawn-pawn collision)
+-   [x] **Follow path** (A* path; per-creature step timing: straight 15 ticks, diagonal 21)
     -   Pawns traverse cell paths over time rather than teleporting.
     -   Movement updates position at deterministic tick boundaries.
--   [ ] **Pawn collision and occupancy**
+-   [x] **Pawn collision and occupancy** (standing colonists, raiders and animals never share a cell; downed/sleeping/carried pawns can be stepped over)
     -   Prevent invalid stacking where gameplay requires exclusivity.
     -   Handle passing and temporary congestion.
--   [ ] **Deterministic movement conflict arbitration**
+-   [x] **Deterministic movement conflict arbitration** (ID-ordered moves; one fixed yielder per ring of walkers sidesteps, repaths or backs off)
     -   Multiple pawns attempting same cell resolve with stable
         priority/tie-break.
--   [ ] **Local congestion avoidance**
+-   [x] **Local congestion avoidance** (wait first; repath with extra cost around creatures at most every 45 blocked ticks; job fails as blocked after 600)
     -   Avoid constant global repathing.
     -   Optional short-lived congestion cost.
 
@@ -499,7 +499,7 @@ This is the heart of autonomous colony behavior.
 
 ## 6.2 Carrying/inventory
 
--   [-] **Pawn carry tracker** (haul `Carrier`; no personal inventory)
+-   [-] **Pawn carry tracker** (haul `Carrier`, shown as a load in both arms; no personal inventory)
     -   Pawn can carry an item stack while performing jobs.
 -   [ ] **Personal inventory**
     -   Support carried consumables/medicine/other inventory where
@@ -975,7 +975,7 @@ treatment, and surgery are major colony-management systems.
     -   Pawn cannot normally act.
     -   can be rescued/captured.
     -   not equivalent to death.
--   [-] **Death** (starvation after downed-from-hunger; no corpse/social)
+-   [-] **Death** (starvation, injury, infection, exposure; leaves a corpse and drops the weapon; colonists mourn; no social relations)
     -   Vital part destruction or lethal capacity/condition.
     -   create corpse.
     -   release jobs/reservations.
@@ -1069,15 +1069,15 @@ treatment, and surgery are major colony-management systems.
 
 ## 11.10 Corpses
 
--   [-] **Corpse entity**
+-   [x] **Corpse entity** (human corpse item remembers who it was and when they died; rots to bones; hauled to graves and pyres; animal corpses butchered)
     -   Stores deceased pawn identity/body.
     -   can rot.
     -   can be butchered where allowed.
     -   can be hauled.
--   [ ] **Graves**
+-   [x] **Graves** (dug, no materials; haulers carry and bury the nearest body; the grave keeps name, cause and days under a headstone)
     -   Bury corpse.
     -   grave stores occupant.
--   [ ] **Cremation**
+-   [x] **Cremation** (funeral pyre bench: Cremate corpse bill burns a body and 2 wood)
     -   Production job destroys corpses.
 
 ------------------------------------------------------------------------
@@ -1114,13 +1114,13 @@ treatment, and surgery are major colony-management systems.
 
 ## 12.3 Weather
 
--   [ ] **Weather state machine**
+-   [-] **Weather state machine** (deterministic 6-hour blocks: clear, cloudy, rain, storm, snow, blizzard by season and temperature; wind; snow depth and wetness; no fog kind)
     -   Clear.
     -   rain.
     -   fog.
     -   snow where climate supports it.
     -   thunderstorm/flashstorm-like weather.
--   [ ] **Weather effects**
+-   [-] **Weather effects** (outdoor chill in snow, outdoor campfires doused, slower walking in rain and snow, soaked/snow-day thoughts; light only darkens visually)
     -   light.
     -   temperature.
     -   fire suppression.
@@ -1237,7 +1237,7 @@ treatment, and surgery are major colony-management systems.
 -   [x] **Butchering**
 -   [x] **Cooking** (stove: 2 raw food -> 1 simple meal)
 -   [x] **Tailoring/apparel production** (tailoring bench sews leather parkas, tuques and dusters; butchering yields leather)
--   [-] **Smithing/weapon production** (workbench: 4 wood -> wooden club)
+-   [-] **Smithing/weapon production** (workbench: 4 wood -> wooden club, 3 stone -> knife, 5 wood -> spear)
 -   [ ] **Machining/advanced fabrication equivalents**
 -   [ ] **Drug production**
 -   [ ] **Component production in late tech**
@@ -2507,10 +2507,10 @@ the player-facing system.
 -   [ ] **UI feedback sounds**
 -   [ ] **Music system**
     -   Contextual but not authoritative.
--   [ ] **Pawn facing/aiming**
+-   [x] **Pawn facing/aiming** (smoothed facing with hysteresis; turns to the work tile, attack target and blockers; rifles held at ready, raised to aim and turned towards the target)
 -   [x] **Simple movement interpolation**
--   [ ] **Muzzle/projectile effects**
--   [ ] **Damage/fire effects**
+-   [x] **Muzzle/projectile effects** (muzzle flash and smoke at the rifle muzzle, ejected casing, tracer from the muzzle, impact puff)
+-   [-] **Damage/fire effects** (hit flash, flinch and stagger away from the attacker, directional blood, falls; burning-building fire not implemented)
 -   [ ] **Selection/targeting feedback**
 -   [ ] **Weather visual effects**
 -   [-] **Day/night presentation** (dusk/night fullscreen sky veil from outdoor light + hour; daytime ungraded; no indoor darkness)

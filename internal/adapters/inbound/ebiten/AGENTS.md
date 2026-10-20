@@ -117,3 +117,21 @@ None yet. Add them when colony draw or UI layout shows up in profiles.
   that `make art` does not produce.
 - `game -capture out.png` boots, starts a colony, enqueues a fixed set of
   ordinary commands, steps the sim and writes one frame (`make art-capture`).
+
+## Motion and body animation (ART-007, ART §27.1)
+
+- `motion.go` owns on-screen movement: `pawnMotion`/`animalMotion` return a
+  `moveState` (position, velocity, speed, stride, walk blend, facing) built
+  from the snapshot's `StepTick`, `StepTicks`, `NextX/NextY`, `HasNext` and
+  `BlockedBy`. Paths curve through tile centres; walks ease in and out;
+  facing uses hysteresis. `interpWorld`/`interpAnimal` delegate to it.
+- Clocks: `animT()` (sim ticks plus the elapsed fraction of the frame; freezes
+  when paused, scales with speed) drives movement, walk cycles, work swings
+  and combat reactions. `present` drives breathing, wind, fire, particles and
+  UI pulses. Captures use no sub-frame interpolation, so they stay deterministic.
+- Frames: pawn walk `walk01..walk12` and animal trot `walk01..walk08` advance
+  with stride (one cycle per 1.6 tiles); work `work1..work6` runs on `animT`.
+  Hair and hats follow the body frame's `head` attachment; tools its `hand`.
+- `camera_smooth.go`: eased pan and cursor-anchored zoom; capture writes the
+  camera directly.
+- The colonist inspector shows "waiting for <name>" while `BlockedBy` is set.

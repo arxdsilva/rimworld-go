@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	"fmt"
 	"image/color"
 	"math"
 
@@ -129,24 +130,265 @@ func hash01(keys ...uint64) float64 {
 
 // --- walk cycle -------------------------------------------------------
 
-// walkCycle maps 8 phases to frame suffixes (two tiles per full cycle,
-// so each tile is one stride: the feet stay planted).
-var walkCycle = [8]string{"", "_walk1", "_walk2", "_walk1", "", "_walk3", "_walk4", "_walk3"}
+// Frame counts and gait length (ART §27.1): a pawn walk cycle is 12 poses
+// over strideLen tiles of stride, an animal trot 8; work swings are 6.
+const (
+	walkFrames = 12
+	workFrames = 6
+	trotFrames = 8
+	strideLen  = 1.6
+	// contactEvery is the stride between two foot contacts (frames 01 and 07).
+	contactEvery = strideLen / 2
 
-// walkPhase is the stride position in tiles walked (fractional).
-func walkPhase(v pawnVisual, progress float64) float64 {
-	if v.steps == 0 {
-		return 0
+	// gait amplitudes, in tiles / radians at normal walking speed
+	bobAmp    = pawnBobPx * 1.4
+	swayAmp   = 0.015
+	leanAmp   = 0.06
+	leanBack  = 0.05
+	minBlend  = 0.05 // below this the static pose is used
+	trotBobPx = 0.03
+)
+
+// cycleIndex is floor(stride/strideLen*n) mod n, also for negative stride.
+func cycleIndex(stride float64, n int) int {
+	i := int(math.Floor(stride/strideLen*float64(n))) % n
+	if i < 0 {
+		i += n
 	}
-	return float64(v.steps-1) + progress
+	return i
 }
 
-func walkFrame(phase float64) string {
-	i := int(math.Floor(phase*4)) % 8
-	if i < 0 {
-		i += 8
+// walkIndex is the 0-based pawn walk frame for a stride in tiles.
+func walkIndex(stride float64) int { return cycleIndex(stride, walkFrames) }
+
+// walkSuffix is the walk frame suffix ("_walk01".."_walk12") for a mover,
+// or "" (the static pose) when it is not walking.
+func walkSuffix(m moveState) string {
+	if m.Blend < minBlend {
+		return ""
 	}
-	return walkCycle[i]
+	return fmt.Sprintf("_walk%02d", walkIndex(m.Stride)+1)
+}
+
+// trotSuffix is the animal trot frame suffix ("_walk01".."_walk08").
+func trotSuffix(m moveState) string {
+	if m.Blend < minBlend {
+		return ""
+	}
+	return fmt.Sprintf("_walk%02d", cycleIndex(m.Stride, trotFrames)+1)
+}
+
+// gaitScale is how strongly the gait shows: speed relative to a straight
+// step, capped (diagonals are faster), times the walk blend.
+func gaitScale(m moveState) float64 {
+	return math.Min(m.Speed*float64(game.TicksPerCell), 1) * clamp01(m.Blend)
+}
+
+// humps is |cos| with two humps per cycle whose peaks sit on the centres
+// of frames 01 and 07 (foot contact); n is the cycle's frame count.
+func humps(stride float64, n int) float64 {
+	cyc := stride/strideLen - 0.5/float64(n)
+	return math.Abs(math.Cos(2 * math.Pi * cyc))
+}
+
+// bobRaise is how far (tiles, up) the body is lifted: A*|cos| scaled by
+// speed and walk blend, peaking at foot contact.
+func bobRaise(stride, speed, blend float64) float64 {
+	return bobAmp * humps(stride, walkFrames) * gaitScale(moveState{Speed: speed, Blend: blend})
+}
+
+// trotBob is the animal's bounce (tiles, up); a fleeing animal gallops
+// with a 1.6x bounce.
+func trotBob(m moveState, fleeing bool) float64 {
+	b := trotBobPx * humps(m.Stride, trotFrames) * gaitScale(m)
+	if fleeing {
+		b *= 1.6
+	}
+	return b
+}
+
+// gaitSway is the lateral body sway (tiles) for N/S walkers: weight
+// shifts onto the stance foot once per cycle.
+func gaitSway(m moveState) float64 {
+	return swayAmp * math.Sin(2*math.Pi*m.Stride/strideLen) * gaitScale(m)
+}
+
+// gaitLean is the forward lean (radians, clockwise) of an E/W walker:
+// proportional to speed, and a short lean back while slowing to a stop.
+func gaitLean(f facing, m moveState) float64 {
+	var k float64
+	switch {
+	case m.Moving:
+		k = leanAmp * gaitScale(m)
+	case m.Blend > 0:
+		k = -leanBack * clamp01(m.Blend)
+	}
+	switch f {
+	case faceEast:
+		return k
+	case faceWest:
+		return -k
+	}
+	return 0
+}
+
+// walkPose is the gait's share of a figure transform.
+func walkPose(f facing, m moveState) pose {
+	ps := pose{px: figurePivotX, py: figurePivotY}
+	if m.Blend >= minBlend {
+		ps.dy = -bobRaise(m.Stride, m.Speed, m.Blend)
+	}
+	if f == faceNorth || f == faceSouth {
+		ps.dx = gaitSway(m)
+	}
+	ps.rot = gaitLean(f, m)
+	return ps
+}
+
+// headDelta is how far (tiles) the head moved from the static pose in
+// this body frame, from the "head" attachments. Hair and hats follow it.
+// Missing data (older art) means no offset.
+func headDelta(c *artCatalog, f facing, suffix string) (dx, dy float64) {
+	base := "pawn/body_" + f.String()
+	st, fr := c.sprite(base), c.sprite(base+suffix)
+	if suffix == "" || st == nil || fr == nil {
+		return 0, 0
+	}
+	h0, ok0 := st.meta.Attach["head"]
+	h1, ok1 := fr.meta.Attach["head"]
+	if !ok0 || !ok1 {
+		return 0, 0
+	}
+	return (h1[0] - h0[0]) / artTilePx, (h1[1] - h0[1]) / artTilePx
+}
+
+// blockedFacing turns a blocked creature towards whatever is in its way.
+func blockedFacing(p game.PawnView, pawns []game.PawnView, animals []game.AnimalView, prev facing) facing {
+	if p.BlockedBy == 0 {
+		return prev
+	}
+	for _, q := range pawns {
+		if q.ID == p.BlockedBy {
+			return facingFor(q.X-p.X, q.Y-p.Y, prev)
+		}
+	}
+	for _, a := range animals {
+		if a.ID == p.BlockedBy {
+			return facingFor(a.X-p.X, a.Y-p.Y, prev)
+		}
+	}
+	return prev
+}
+
+// --- footstep dust ---------------------------------------------------
+
+// contactsCrossed counts foot contacts (every contactEvery of stride)
+// passed going from one stride to the next.
+func contactsCrossed(prev, cur float64) int {
+	if cur <= prev {
+		return 0
+	}
+	return int(math.Floor(cur/contactEvery) - math.Floor(prev/contactEvery))
+}
+
+// footPoint is where the foot of a given contact parity lands, in world
+// tiles, for a creature whose tile corner is (x, y).
+func footPoint(x, y float64, f facing, parity int) [2]float64 {
+	side := 0.12
+	if parity%2 != 0 {
+		side = -side
+	}
+	if f == faceEast || f == faceWest {
+		return [2]float64{x + 0.5 + side, y + 0.62}
+	}
+	return [2]float64{x + 0.5 + side, y + 0.6}
+}
+
+// stepDust puffs dust at the foot for every contact the stride passed
+// since last time. The first sighting only records the stride.
+func (r *Renderer) stepDust(st *animState, id entity.EntityID, m moveState, heavy bool) {
+	prev, seen := st.prevStride[id]
+	st.prevStride[id] = m.Stride
+	if !seen || !m.Moving || m.Blend < 0.3 {
+		return
+	}
+	n := contactsCrossed(prev, m.Stride)
+	for i := 1; i <= n && i <= 2; i++ {
+		parity := int(math.Floor(prev/contactEvery)) + i
+		fp := footPoint(m.X, m.Y, m.Facing, parity)
+		cnt := 1
+		if heavy {
+			cnt = 2
+		}
+		r.burst(partStep, fp[0], fp[1], cnt, uint64(id)*977+uint64(parity))
+	}
+}
+
+// --- presentation state kept beside the Renderer ---------------------
+
+// animState is per-Renderer bookkeeping for the animations here.
+type animState struct {
+	carryBorn  map[entity.EntityID]uint64  // present frame a patient was lifted
+	prevStride map[entity.EntityID]float64 // last stride seen, for contact dust
+	prevWork   map[entity.EntityID]float64 // last animT seen while working
+	recs       map[[3]uint64]*reactRec
+}
+
+func (r *Renderer) animState() *animState {
+	if r.anims == nil {
+		r.anims = &animState{
+			carryBorn:  map[entity.EntityID]uint64{},
+			prevStride: map[entity.EntityID]float64{},
+			prevWork:   map[entity.EntityID]float64{},
+			recs:       map[[3]uint64]*reactRec{},
+		}
+	}
+	return r.anims
+}
+
+// easeFrames is how long bed entry and carry lifts take, in present frames.
+const easeFrames = 12
+
+// smoothEase is smoothstep over frames present frames since since.
+func smoothEase(now, since uint64, frames float64) float64 {
+	if now <= since {
+		return 0
+	}
+	t := clamp01(float64(now-since) / frames)
+	return t * t * (3 - 2*t)
+}
+
+// carryEase is the lift progress of a carried patient (0 on the ground,
+// 1 slung); the first call for a patient starts the lift.
+func (st *animState) carryEase(id entity.EntityID, now uint64) float64 {
+	born, ok := st.carryBorn[id]
+	if !ok {
+		st.carryBorn[id] = now
+		return 0
+	}
+	return smoothEase(now, born, easeFrames)
+}
+
+// dropCarry forgets a patient that is no longer carried.
+func (st *animState) dropCarry(id entity.EntityID) { delete(st.carryBorn, id) }
+
+// lerpPose blends two poses (same pivot assumed from a).
+func lerpPose(a, b pose, k float64) pose {
+	if k <= 0 {
+		return a
+	}
+	if k >= 1 {
+		return b
+	}
+	l := func(x, y float64) float64 { return x*(1-k) + y*k }
+	ax, ay := a.scale()
+	bx, by := b.scale()
+	return pose{
+		dx: l(a.dx, b.dx), dy: l(a.dy, b.dy), rot: l(a.rot, b.rot),
+		px: a.px, py: a.py,
+		sx: l(ax, bx), sy: l(ay, by),
+		cs: b.cs, flash: b.flash, skew: l(a.skew, b.skew),
+	}
 }
 
 // framed returns key+suffix when that frame exists, else key.
@@ -160,173 +402,12 @@ func (r *Renderer) framed(key, suffix string) string {
 	return key
 }
 
-// --- reactions from attack traces ---------------------------------------
-
-// attackReaction offsets an actor at (x, y): rifle recoil, melee lunge,
-// and knockback plus a flash when struck.
-func attackReaction(traces []game.TraceView, x, y int) (dx, dy float64, flash float32) {
-	for _, t := range traces {
-		if t.FromX == x && t.FromY == y && (t.ToX != x || t.ToY != y) {
-			ux, uy := unit(float64(t.ToX-x), float64(t.ToY-y))
-			switch {
-			case t.Melee && t.Age < 10:
-				k := math.Sin(math.Pi * float64(t.Age) / 10)
-				dx, dy = dx+ux*0.22*k, dy+uy*0.22*k
-			case !t.Melee && t.Age < 6:
-				k := 1 - float64(t.Age)/6
-				dx, dy = dx-ux*0.08*k, dy-uy*0.08*k
-			}
-		}
-		if t.ToX == x && t.ToY == y && t.Hit && t.Age < 12 && (t.FromX != x || t.FromY != y) {
-			k := 1 - float64(t.Age)/12
-			ux, uy := unit(float64(x-t.FromX), float64(y-t.FromY))
-			dx, dy = dx+ux*0.1*k, dy+uy*0.1*k
-			if f := float32(k); f > flash {
-				flash = f
-			}
-		}
-	}
-	return dx, dy, flash
-}
-
 func unit(x, y float64) (float64, float64) {
 	n := math.Hypot(x, y)
 	if n == 0 {
 		return 0, 0
 	}
 	return x / n, y / n
-}
-
-// --- work motion --------------------------------------------------------
-
-// actStyle is how a kind of hands-on work moves and what it throws up.
-type actStyle struct {
-	period int     // frames per swing
-	reach  float64 // lean towards the worked tile, tiles
-	burst  partKind
-	count  int
-	motion motion
-	tool   string // sprite key of the held tool, "" for bare hands
-}
-
-// motion is the arm pattern for a kind of work.
-type motion uint8
-
-const (
-	motionNone  motion = iota // no arm frames (eating)
-	motionSwing               // overhead: wind-up, strike, recover
-	motionReach               // hands working low in front
-)
-
-// strikeAt is where in a swing the tool lands (phase 0..1).
-const strikeAt = 0.48
-
-func styleFor(act string) (actStyle, bool) {
-	switch act {
-	case "cut":
-		return actStyle{period: 46, reach: 0.1, burst: partChip, count: 4, motion: motionSwing, tool: "tool/axe"}, true
-	case "construct", "deconstruct":
-		return actStyle{period: 34, reach: 0.08, burst: partChip, count: 3, motion: motionSwing, tool: "tool/hammer"}, true
-	case "mine":
-		return actStyle{period: 50, reach: 0.12, burst: partDust, count: 5, motion: motionSwing, tool: "tool/pickaxe"}, true
-	case "work at workbench":
-		return actStyle{period: 30, reach: 0.05, burst: partShaving, count: 2, motion: motionSwing, tool: "tool/hammer"}, true
-	case "play horseshoes":
-		return actStyle{period: 70, reach: 0.04, burst: partDust, count: 3, motion: motionSwing}, true
-	case "refuel":
-		return actStyle{period: 40, reach: 0.06, burst: partChip, count: 1, motion: motionReach}, true
-	case "work at tailoring bench":
-		return actStyle{period: 44, reach: 0.05, burst: partShaving, count: 1, motion: motionReach}, true
-	case "work at drying rack":
-		return actStyle{period: 52, reach: 0.06, burst: partLeaf, count: 1, motion: motionReach}, true
-	case "work at butcher table":
-		return actStyle{period: 36, reach: 0.06, burst: partBlood, count: 2, motion: motionSwing}, true
-	case "harvest":
-		return actStyle{period: 44, reach: 0.07, burst: partLeaf, count: 3, motion: motionReach}, true
-	case "sow":
-		return actStyle{period: 48, reach: 0.05, burst: partSoil, count: 3, motion: motionReach}, true
-	case "work at stove":
-		return actStyle{period: 40, reach: 0.04, burst: partSteam, count: 1, motion: motionReach}, true
-	case "work at campfire":
-		return actStyle{period: 40, reach: 0.04, burst: partSteam, count: 1, motion: motionReach}, true
-	case "tend":
-		return actStyle{period: 60, reach: 0.05, motion: motionReach}, true
-	case "eat":
-		return actStyle{period: 50, reach: 0.03}, true
-	}
-	return actStyle{}, false
-}
-
-// swingPhase is the 0..1 position within the current swing.
-func swingPhase(present, id uint64, period int) float64 {
-	if period <= 0 {
-		return 0
-	}
-	return float64((present+id*13)%uint64(period)) / float64(period)
-}
-
-// workArms is the arm frame suffix for a motion at a swing phase:
-// swings wind up (work1), snap down to the strike (work3) and recover;
-// reaching alternates low (work3) and mid (work2).
-func workArms(m motion, ph float64) string {
-	switch m {
-	case motionSwing:
-		switch {
-		case ph < 0.12:
-			return "_work2"
-		case ph < 0.40:
-			return "_work1"
-		case ph < strikeAt:
-			return "_work2"
-		case ph < 0.78:
-			return "_work3"
-		default:
-			return "_work2"
-		}
-	case motionReach:
-		if ph < 0.55 {
-			return "_work3"
-		}
-		return "_work2"
-	}
-	return ""
-}
-
-// workSwing is the body lean for a swing phase: back a little while
-// winding up, hard forward on the strike, easing out.
-func workSwing(present, id uint64, period int) float64 {
-	ph := swingPhase(present, id, period)
-	switch {
-	case ph < 0.40:
-		return -0.3 * easeOut(ph/0.40)
-	case ph < strikeAt:
-		return -0.3 + 1.3*easeOut((ph-0.40)/(strikeAt-0.40))
-	default:
-		return 1 - easeOut((ph-strikeAt)/(1-strikeAt))
-	}
-}
-
-// workStrike reports the frame where the tool lands.
-func workStrike(present, id uint64, period int) bool {
-	return period > 0 && (present+id*13)%uint64(period) == uint64(float64(period)*strikeAt)
-}
-
-// toolAngle is the held tool's screen rotation (radians, clockwise; the
-// sprite points east) for a facing and arm frame.
-func toolAngle(f facing, frame string) float64 {
-	type key struct {
-		f  facing
-		fr string
-	}
-	a := map[key]float64{
-		{faceEast, "_work1"}: -2.0, {faceEast, "_work2"}: -0.7, {faceEast, "_work3"}: 0.55,
-		{faceSouth, "_work1"}: -1.57, {faceSouth, "_work2"}: -0.45, {faceSouth, "_work3"}: 1.1,
-		{faceNorth, "_work1"}: -1.57, {faceNorth, "_work2"}: -0.9, {faceNorth, "_work3"}: 0.9,
-	}
-	if f == faceWest {
-		return -a[key{faceEast, frame}]
-	}
-	return a[key{f, frame}]
 }
 
 // --- particles ----------------------------------------------------------
@@ -345,6 +426,9 @@ const (
 	partStep
 	partSmoke
 	partEmber
+	partSpark   // pickaxe on rock, blade on blade
+	partCasing  // a spent rifle case, ejected sideways
+	partSawdust // saw and hammer work on wood
 )
 
 type particle struct {
@@ -372,6 +456,9 @@ var partColors = map[partKind][]color.RGBA{
 	partStep:    {{168, 148, 116, 255}},
 	partSmoke:   {{200, 196, 186, 255}},
 	partEmber:   {{255, 190, 80, 255}, {255, 140, 50, 255}, {255, 220, 130, 255}},
+	partSpark:   {{255, 236, 160, 255}, {255, 200, 90, 255}},
+	partCasing:  {{214, 170, 70, 255}, {186, 140, 52, 255}},
+	partSawdust: {{222, 196, 150, 255}, {200, 172, 126, 255}},
 }
 
 // burst spawns n particles of a kind at (x, y), deterministic in seed.
@@ -408,8 +495,30 @@ func (r *Renderer) burst(kind partKind, x, y float64, n int, seed uint64) {
 		case partEmber:
 			p.vx, p.vy, p.g = (h(2)-0.5)*0.012, -0.016-h(3)*0.01, -0.0001
 			p.life, p.size = 36+uint64(h(4)*24), 0.014
+		case partSpark:
+			p.vx, p.vy, p.g = (h(2)-0.5)*0.09, -0.04-h(3)*0.04, 0.005
+			p.life, p.size = 8+uint64(h(4)*6), 0.012
+		case partCasing:
+			p.vx, p.vy, p.g = (h(2)-0.5)*0.02, -0.05-h(3)*0.02, 0.006
+			p.life, p.size = 26, 0.016
+		case partSawdust:
+			p.vx, p.vy, p.g = (h(2)-0.5)*0.03, -0.012-h(3)*0.012, 0.0016
+			p.life, p.size = 26+uint64(h(4)*12), 0.018
 		}
 		r.parts = append(r.parts, p)
+	}
+}
+
+// burstDir is burst with every particle pushed along (dx, dy) by speed
+// tiles per frame: blood sprays away from the attacker, cases fly out
+// of the rifle's side.
+func (r *Renderer) burstDir(kind partKind, x, y float64, n int, seed uint64, dx, dy, speed float64) {
+	from := len(r.parts)
+	r.burst(kind, x, y, n, seed)
+	ux, uy := unit(dx, dy)
+	for i := from; i < len(r.parts); i++ {
+		r.parts[i].vx += ux * speed
+		r.parts[i].vy += uy * speed
 	}
 }
 
@@ -444,60 +553,27 @@ func (r *Renderer) drawParticles(screen *ebiten.Image, tile float64) {
 // --- per-frame animation driver ------------------------------------------
 
 // animate runs once per presentation frame after the simulation step:
-// work strikes, footsteps and hit splatter spawn particles.
+// footsteps here, then work strikes (work_anim.go) and combat effects
+// (combat_anim.go) spawn their particles.
 func (r *Renderer) animate(w game.WorldView, pawns []game.PawnView, running bool) {
 	if !running {
 		return
 	}
 	r.emitFireParticles(w)
+	st := r.animState()
 	for _, p := range pawns {
-		st, ok := styleFor(p.Acting)
-		if !ok || st.count == 0 || !workStrike(r.present, uint64(p.ID), st.period) {
+		if p.Lying || p.CarriedBy != 0 {
 			continue
 		}
-		x, y := float64(p.ActX)+0.5, float64(p.ActY)+0.45
-		switch p.Acting {
-		case "work at stove":
-			x, y = float64(p.ActX)+0.7, float64(p.ActY)-0.1
-		case "work at campfire":
-			x, y = float64(p.ActX)+0.5, float64(p.ActY)-0.1
-		case "sow", "eat":
-			x, y = float64(p.X)+0.5, float64(p.Y)+0.6
-		}
-		r.burst(st.burst, x, y, st.count, uint64(p.ID)*7919+r.present)
+		r.stepDust(st, p.ID, r.pawnMotion(p.ID), false)
 	}
-	// hit splatter and muzzle smoke, once per trace
-	now := uint64(r.game.Tick())
-	for _, t := range w.Traces {
-		key := [3]uint64{uint64(t.FromX)<<20 | uint64(t.FromY), uint64(t.ToX)<<20 | uint64(t.ToY), now - uint64(t.Age)}
-		if r.seenTrace[key] {
-			continue
-		}
-		r.seenTrace[key] = true
-		r.floatTrace(t, key[0]^key[1]^key[2])
-		switch {
-		case t.Hit && t.Building:
-			r.burst(partChip, float64(t.ToX)+0.5, float64(t.ToY)+0.4, 5, key[0]^key[1]^key[2])
-		case t.Hit:
-			r.burst(partBlood, float64(t.ToX)+0.5, float64(t.ToY)+0.35, 5, key[0]^key[1]^key[2])
-		}
-		if !t.Melee {
-			ux, uy := unit(float64(t.ToX-t.FromX), float64(t.ToY-t.FromY))
-			r.burst(partSmoke, float64(t.FromX)+0.5+ux*0.5, float64(t.FromY)+0.3+uy*0.5, 2, key[2])
+	for _, an := range w.Animals {
+		if an.Mode != "wandering" {
+			r.stepDust(st, an.ID, r.animalMotion(an.ID), true)
 		}
 	}
-	if len(r.seenTrace) > 256 {
-		r.seenTrace = map[[3]uint64]bool{}
-	}
-}
-
-// footstep puffs a little dust where a walker just stepped.
-func (r *Renderer) footstep(x, y int, seed uint64, heavy bool) {
-	n := 1
-	if heavy {
-		n = 2
-	}
-	r.burst(partStep, float64(x)+0.5, float64(y)+0.6, n, seed)
+	r.animateWork(w, pawns)
+	r.animateCombat(w, pawns)
 }
 
 // syncItems remembers when each ground item first appeared, so new

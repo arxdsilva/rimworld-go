@@ -3,10 +3,11 @@ version: 1
 id: "core:plant/lettuce_harvestable"
 image: generated/world/plant/lettuce_harvestable.png
 scale: 2
-canvas: [160, 184]
+canvas: [166, 187]
 footprint: [1, 1]
-origin_px: [16, 40]
+origin_px: [19, 40]
 projection:
   shear_k: 0.5
 species: lettuce
 growth: harvestable
+variant: 1

@@ -1,6 +1,10 @@
 package item
 
-import "testing"
+import (
+	"testing"
+
+	"rimworld-go/internal/domain/sim/clock"
+)
 
 func TestTakeRejectsOverdraw(t *testing.T) {
 	if _, ok := Take(2, 3); ok {
@@ -86,5 +90,43 @@ func TestDried(t *testing.T) {
 	}
 	if DryRate(250) != 1000 || DryRate(-50) != 250 || DryRate(100) != 625 {
 		t.Error("dry rate curve wrong")
+	}
+}
+
+func TestKnifeSpearAreValuedWeapons(t *testing.T) {
+	t.Parallel()
+	for _, k := range []Kind{Knife, Spear} {
+		if !k.IsWeapon() || k.Value() <= 0 {
+			t.Fatalf("%v: weapon=%v value=%d", k, k.IsWeapon(), k.Value())
+		}
+	}
+	if Knife.Value() >= Spear.Value() || Spear.Value() >= Club.Value()+20 {
+		t.Fatalf("values knife %d spear %d club %d", Knife.Value(), Spear.Value(), Club.Value())
+	}
+}
+
+func TestHumanCorpseKeepsThreeDaysAndBonesNeverRot(t *testing.T) {
+	if got, want := CorpseHuman.ShelfTicks(), 3*clock.TicksPerDay; got != want {
+		t.Fatalf("human corpse shelf %d, want %d (3 days)", got, want)
+	}
+	if Bones.Perishable() || Bones.IsFood() || Bones.IsCorpse() {
+		t.Fatal("bones never rot, are not food and are not butchered")
+	}
+	if !CorpseHuman.IsCorpse() || CorpseHuman.IsFood() {
+		t.Fatal("a human corpse is a corpse, never food")
+	}
+}
+
+func TestBodiesOfDifferentPawnsNeverMerge(t *testing.T) {
+	a := Stack{Kind: CorpseHuman, Qty: 1, X: 2, Y: 2, Of: 7}
+	b := Stack{Kind: CorpseHuman, Qty: 1, X: 2, Y: 2, Of: 9}
+	if CanMerge(a, b) {
+		t.Fatal("two people's bodies must stay two stacks")
+	}
+	if CanMerge(Stack{Kind: Bones, Qty: 1, Of: 7}, Stack{Kind: Bones, Qty: 1, Of: 9}) {
+		t.Fatal("two people's bones must stay two stacks")
+	}
+	if !CanMerge(Stack{Kind: Wood, Qty: 1}, Stack{Kind: Wood, Qty: 2}) {
+		t.Fatal("ordinary stacks still merge")
 	}
 }

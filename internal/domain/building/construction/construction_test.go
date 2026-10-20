@@ -13,7 +13,12 @@ func TestDefsAreConsistent(t *testing.T) {
 			t.Fatalf("def %d: empty or duplicate name %q", i, d.Name)
 		}
 		seen[d.Name] = true
-		if (d.Wood <= 0 || d.Work <= 0) && !d.Kind.Instant() {
+		switch {
+		case d.Dug:
+			if d.Wood != 0 || d.Work <= 0 {
+				t.Fatalf("%s: a dug kind needs work and no materials", d.Name)
+			}
+		case (d.Wood <= 0 || d.Work <= 0) && !d.Kind.Instant():
 			t.Fatalf("%s: cost and work must be positive (or both zero for an instant marking)", d.Name)
 		}
 		if k, ok := Parse(d.Name); !ok || k != d.Kind {
@@ -101,5 +106,20 @@ func TestDoubleBedHoldsTwo(t *testing.T) {
 	x1, y1 = SleepCell(DoubleBed, East, 4, 4, 1)
 	if x0 != x1 || y0 == y1 {
 		t.Fatalf("east-facing slots share the head column: %d,%d %d,%d", x0, y0, x1, y1)
+	}
+}
+
+func TestGraveAndPyre(t *testing.T) {
+	t.Parallel()
+	g := DefOf(Grave)
+	if !g.Dug || g.Wood != 0 || g.Work != 400 || g.BlocksMove || !g.Rotatable || g.Bench {
+		t.Fatalf("grave: %+v", g)
+	}
+	if cells, _, _ := Footprint(Grave, East, 3, 3); len(cells) != 2 || cells[1] != [2]int{4, 3} {
+		t.Fatalf("a grave turned east lies along x: %v", cells)
+	}
+	p := DefOf(Pyre)
+	if p.Wood != 6 || p.Work != 120 || !p.Bench || !p.HasSpot || p.Size != [2]int{2, 1} {
+		t.Fatalf("pyre: %+v", p)
 	}
 }
