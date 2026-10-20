@@ -61,10 +61,18 @@ def _ridgewolf():
 SPECIES = {"dustbuck": (_dustbuck, 0.74), "ridgewolf": (_ridgewolf, 0.7)}
 HIP_Z = {"dustbuck": 0.27, "ridgewolf": 0.29}
 
-# Trot (ART spec §27): diagonal leg pairs swing together. Same 8-frame
-# cycle as pawns: neutral, w1, w2, w1, neutral, w3, w4, w3.
+# Trot (ART spec §27.1): 8 poses per facing, walk01..walk08. Diagonal leg
+# pairs (front-left + back-right, front-right + back-left) swing together
+# by TROT_DEG; the swinging leg lifts, the body bobs twice per cycle (highest
+# at mid-stance) and the head nods +-NOD_DEG.
 TROT_DEG = 30.0
-WALK_FRAMES = {"walk1": 0.5, "walk2": 1.0, "walk3": -0.5, "walk4": -1.0}
+LIFT = 0.025
+BOB = 0.014
+NOD_DEG = 3.0
+TROT_N = 8
+WALK_FRAMES = {"walk%02d" % i: i for i in range(1, TROT_N + 1)}
+HEAD_PARTS = ("neck", "head", "muzzle", "nose", "eye", "ear", "prong", "tine", "snout")
+NECK_PIVOT = {"dustbuck": (CY - 0.12, 0.40), "ridgewolf": (CY - 0.15, 0.42)}
 
 
 def _mean(ob, axis):
@@ -72,20 +80,30 @@ def _mean(ob, axis):
     return sum((ob.matrix_world @ v.co)[axis] for v in vs) / max(len(vs), 1)
 
 
-def _pose(species, swing):
+def _pose(species, frame):
     from mathutils import Matrix
-    if swing == 0:
-        return
+    ph = (WALK_FRAMES[frame] - 1) / TROT_N
     pz = HIP_Z[species]
+    bob = BOB * (1.0 - math.cos(4 * math.pi * ph)) / 2.0
+    nod = math.radians(NOD_DEG * math.sin(4 * math.pi * ph))
+    ny, nz = NECK_PIVOT[species]
     for ob in S.objects():
-        if ob.name.split(".")[0] not in ("leg", "hoof"):
+        n = ob.name.split(".")[0]
+        if n in ("leg", "hoof"):
+            side = -1 if _mean(ob, 0) < CX else 1
+            front = 1 if _mean(ob, 1) < CY else -1
+            sg = side * front
+            a = math.radians(TROT_DEG * math.cos(2 * math.pi * ph) * sg)
+            py = _mean(ob, 1)
+            lift = LIFT * max(0.0, sg * math.sin(2 * math.pi * ph))
+            m = (Matrix.Translation((0, 0, lift)) @ Matrix.Translation((0, py, pz))
+                 @ Matrix.Rotation(a, 4, "X") @ Matrix.Translation((0, -py, -pz)))
+            ob.matrix_world = m @ ob.matrix_world
             continue
-        side = -1 if _mean(ob, 0) < CX else 1
-        front = 1 if _mean(ob, 1) < CY else -1
-        a = math.radians(TROT_DEG * swing * side * front)
-        py = _mean(ob, 1)
-        m = (Matrix.Translation((0, py, pz)) @ Matrix.Rotation(a, 4, "X")
-             @ Matrix.Translation((0, -py, -pz)))
+        m = Matrix.Translation((0, 0, bob))
+        if n in HEAD_PARTS:
+            m = m @ (Matrix.Translation((0, ny, nz)) @ Matrix.Rotation(nod, 4, "X")
+                     @ Matrix.Translation((0, -ny, -nz)))
         ob.matrix_world = m @ ob.matrix_world
 
 
@@ -130,7 +148,8 @@ def build():
         for f in FACINGS:
             for fr in [None] + list(WALK_FRAMES):
                 builder()
-                _pose(species, WALK_FRAMES.get(fr, 0.0))
+                if fr:
+                    _pose(species, fr)
                 S.face(S.objects(), f, (1, 1))
                 S.transform(S.objects(), _lean_matrix())
                 extra = {"species": species, "facing": f}

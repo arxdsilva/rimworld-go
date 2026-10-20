@@ -11,5 +11,5 @@ projection:
 layer: parka_leather
 facing: south
 attachments:
-  hand: [103.0, 135.6]
+  hand: [102.8, 109.0]
 frame: work2

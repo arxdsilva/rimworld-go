@@ -11,5 +11,5 @@ projection:
 layer: duster_leather
 facing: east
 attachments:
-  hand: [112.2, 126.5]
+  hand: [86.3, 104.2]
 frame: work2

@@ -14,5 +14,6 @@ tint:
 layer: body
 facing: north
 attachments:
-  hand: [57.0, 158.5]
+  hand: [57.5, 111.7]
+  head: [80.0, 111.4]
 frame: work3

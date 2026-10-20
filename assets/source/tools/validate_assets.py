@@ -106,30 +106,36 @@ def check_autotile():
             err("structure/wall_%s: missing masks %s" % (mat, missing))
 
 
-WALK_FRAMES = ("walk1", "walk2", "walk3", "walk4")
-WALK_LAYERS = ("body", "pants_basic", "shirt_basic", "vest_utility")
-WORK_FRAMES = ("work1", "work2", "work3")
-WORK_LAYERS = ("body", "shirt_basic")
+# ART §27.1: one 12-pose gait cycle, a 6-pose work swing, an 8-pose trot.
+WALK_FRAMES = tuple("walk%02d" % i for i in range(1, 13))
+WORK_FRAMES = tuple("work%d" % i for i in range(1, 7))
+TROT_FRAMES = tuple("walk%02d" % i for i in range(1, 9))
+ANIM_LAYERS = ("body", "pants_basic", "shirt_basic", "vest_utility", "parka_leather", "duster_leather")
 
 
 def check_pawn_layers():
     d = os.path.join(GEN, "pawn")
     sizes = {}
     for f in os.listdir(d):
-        m = re.match(r"^(\w+?)_(south|east|north|west)(?:_(?:walk|work)\d)?\.png$", f)
+        m = re.match(r"^(\w+?)_(south|east|north|west)(?:_(?:walk|work)\d+)?\.png$", f)
         if m and not f.endswith("_mask.png"):
             sizes.setdefault(m.group(2), set()).add(Image.open(os.path.join(d, f)).size)
     # every animated layer has the full walk cycle (frames share a canvas)
-    for layer in WALK_LAYERS:
+    for layer in ANIM_LAYERS:
         for facing in ("south", "east", "north", "west"):
             for fr in WALK_FRAMES:
                 if not os.path.exists(os.path.join(d, "%s_%s_%s.png" % (layer, facing, fr))):
                     err("pawn/%s_%s: missing walk frame %s" % (layer, facing, fr))
-    for layer in WORK_LAYERS:
-        for facing in ("south", "east", "north", "west"):
             for fr in WORK_FRAMES:
                 if not os.path.exists(os.path.join(d, "%s_%s_%s.png" % (layer, facing, fr))):
                     err("pawn/%s_%s: missing work frame %s" % (layer, facing, fr))
+    # hair and hats follow the body's head anchor (ART §27.1)
+    md = os.path.join(META, "pawn")
+    for f in sorted(os.listdir(md)) if os.path.isdir(md) else ():
+        if f.startswith("body_") and f.endswith(".yaml"):
+            with open(os.path.join(md, f)) as fh:
+                if not re.search(r"^\s+head:\s*\[", fh.read(), re.M):
+                    err("pawn/%s: missing head attachment" % f[:-5])
     ad = os.path.join(GEN, "animal")
     if os.path.isdir(ad):
         for f in os.listdir(ad):
@@ -137,7 +143,7 @@ def check_pawn_layers():
             if not m:
                 continue
             base = Image.open(os.path.join(ad, f)).size
-            for fr in WALK_FRAMES:
+            for fr in TROT_FRAMES:
                 p = os.path.join(ad, "%s_%s_%s.png" % (m.group(1), m.group(2), fr))
                 if not os.path.exists(p):
                     err("animal/%s: missing trot frame %s" % (f[:-4], fr))

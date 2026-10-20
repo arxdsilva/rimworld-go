@@ -8,6 +8,8 @@ correctly. Neutral greys + tint masks give skin/hair/cloth variety.
 
 Original proportions: compact geometric torso, short legs, large head.
 """
+import math
+
 import bmesh
 
 from .. import contracts as C
@@ -136,27 +138,71 @@ def _apply_modifiers():
             bpy.data.meshes.remove(old)
 
 
-# Walk cycle (ART spec §27): 8 presentation frames per facing,
-#   neutral, w1, w2, w1, neutral, w3, w4, w3
-# where w1/w2 swing the left leg forward by WALK_DEG/2 and WALK_DEG (right
-# arm forward with it), and w3/w4 mirror that. Only layers that cover
-# limbs get frames; hair rides the head (bobbed in the renderer).
+# Walk cycle (ART spec §27.1): 12 unique poses per facing, walk01..walk12.
+# Frame 01 is the right heel contact; the right leg then loads, passes
+# mid-stance, terminal stance, pre-swing and swings through; 07..12 are the
+# same poses for the left foot. Per-frame curves:
+#   hip     +-26 deg (cosine, forward at contact)
+#   knee    0-40 deg, peaking in swing
+#   pelvis  drops 2-3 px at loading (everything above the legs)
+#   arms    counter-swing at 0.8x the hip
+#   torso   twists +-4 deg against the pelvis
+# Only layers that cover limbs get frames; hair rides the head (bobbed in
+# the renderer).
 WALK_DEG = 26.0
-WALK_FRAMES = {"walk1": 0.5, "walk2": 1.0, "walk3": -0.5, "walk4": -1.0}
+WALK_N = 12
+WALK_FRAMES = {"walk%02d" % i: i for i in range(1, WALK_N + 1)}
 WALK_LAYERS = ("body", "pants_basic", "shirt_basic", "vest_utility", "parka_leather", "duster_leather")
 HIP_Z, SHOULDER_Z = 0.33, 0.60
+KNEE_Z = 0.18
+# right-knee flexion per frame (deg); the left knee reads the table 6 frames on
+KNEE_R = (3, 14, 8, 5, 6, 16, 34, 40, 36, 22, 8, 3)
+# pelvis drop weight per half-cycle frame (loading is the deepest)
+DROP_W = (0.5, 1.0, 0.55, 0.1, 0.0, 0.15)
+DROP_MAX = 0.022
 
-# Work swing (ART spec §27): arm poses for hands-on work (hammering,
-# chopping, digging), as (right arm, left arm) shoulder rotations in
-# degrees; negative swings the hand forward (towards the facing) and up.
-#   work1: wind-up, tool raised overhead
-#   work2: mid-swing
-#   work3: strike, arm forward and low at the worked tile
-# Both hands grip the tool (a two-handed swing reads in every facing);
-# the "hand" attachment is the tool hand. Only layers
-# that cover the arms get these frames.
-WORK_FRAMES = {"work1": (-155.0, -148.0), "work2": (-95.0, -90.0), "work3": (-38.0, -34.0)}
-WORK_LAYERS = ("body", "shirt_basic", "parka_leather", "duster_leather")
+# Work swing (ART spec §27.1): both hands grip the tool and swing it
+#   work1 wind-up start, work2 wind-up peak, work3 swing, work4 late swing,
+#   work5 strike, work6 recover.
+# Shoulder rotations in degrees (negative swings the hand forward and up);
+# smoothstep eases from the wind-up peak to the strike. Legs are braced.
+WORK_N = 6
+WORK_FRAMES = {"work%d" % i: i for i in range(1, WORK_N + 1)}
+WORK_LAYERS = ("body", "shirt_basic", "pants_basic", "vest_utility", "parka_leather", "duster_leather")
+WORK_ARM = {"w_start": -142.0, "w_peak": -162.0, "strike": -38.0, "recover": -78.0}
+
+
+def _smooth(t):
+    t = min(max(t, 0.0), 1.0)
+    return t * t * (3.0 - 2.0 * t)
+
+
+def _params(frame):
+    """Pose parameters for a frame: forward hip/knee flexion per leg (deg),
+    shoulder rotations (deg, negative = forward), pelvis drop (tiles) and
+    torso twist (deg)."""
+    zero = dict(hr=0.0, hl=0.0, kr=0.0, kl=0.0, ar=0.0, al=0.0, drop=0.0, twist=0.0)
+    if frame in WALK_FRAMES:
+        i = WALK_FRAMES[frame]
+        hr = WALK_DEG * math.cos(2 * math.pi * (i - 1) / WALK_N)
+        return dict(hr=hr, hl=-hr, kr=KNEE_R[i - 1], kl=KNEE_R[(i - 1 + 6) % 12],
+                    ar=0.8 * hr, al=-0.8 * hr, drop=DROP_MAX * DROP_W[(i - 1) % 6],
+                    twist=4.0 * hr / WALK_DEG)
+    if frame in WORK_FRAMES:
+        i = WORK_FRAMES[frame]
+        w = WORK_ARM
+        if i == 1:
+            r, e = w["w_start"], 0.0
+        elif i == 2:
+            r, e = w["w_peak"], 0.0
+        elif i == 6:
+            r, e = w["recover"], 1.0
+        else:  # 3, 4, 5 ease from the peak into the strike
+            e = _smooth((i - 2) / 3.0)
+            r = w["w_peak"] + (w["strike"] - w["w_peak"]) * e
+        return dict(hr=11.0, hl=-9.0, kr=14.0, kl=14.0, ar=r, al=r + 7.0 - 3.0 * e,
+                    drop=0.012 + 0.012 * e, twist=-3.0 + 6.0 * e)
+    return zero
 
 
 def _mean_x(ob):
@@ -165,41 +211,63 @@ def _mean_x(ob):
 
 
 def _rot_x(deg, pz):
-    import math
     from mathutils import Matrix
     return (Matrix.Translation((0, CY, pz)) @ Matrix.Rotation(math.radians(deg), 4, "X")
             @ Matrix.Translation((0, -CY, -pz)))
 
 
-def _pose_work(frame):
-    """Arms for a work frame (legs stay planted)."""
-    rdeg, ldeg = WORK_FRAMES[frame]
-    for ob in S.objects():
-        if ob.name.split(".")[0] in ("arm", "hand", "sleeve"):
-            deg = rdeg if _mean_x(ob) >= CX else ldeg
-            ob.matrix_world = _rot_x(deg, SHOULDER_Z) @ ob.matrix_world
+def _torso_matrix(p):
+    """Pelvis drop + torso twist, applied to everything above the legs."""
+    from mathutils import Matrix
+    tw = (Matrix.Translation((CX, CY, 0)) @ Matrix.Rotation(math.radians(p["twist"]), 4, "Z")
+          @ Matrix.Translation((-CX, -CY, 0)))
+    return Matrix.Translation((0, 0, -p["drop"])) @ tw
 
 
-def _pose(swing):
-    """Swing limbs for a walk frame: swing in [-1, 1]. Positive moves the
-    left (-X) leg forward (towards -Y, the facing) and the right arm with
-    it. Applied to every object (holdout body included) before facing."""
-    if swing == 0:
-        return
-    a = WALK_DEG * swing
+def _bend_knee(ob, flex):
+    """Bend a leg mesh at the knee: cut loops around KNEE_Z, then rotate the
+    shank (feet go backwards) with a smooth ramp over the cut loops."""
+    ob.data.transform(ob.matrix_world)
+    from mathutils import Matrix
+    ob.matrix_world = Matrix.Identity(4)
+    bm = bmesh.new()
+    bm.from_mesh(ob.data)
+    for z in (KNEE_Z + 0.03, KNEE_Z, KNEE_Z - 0.03):
+        bmesh.ops.bisect_plane(bm, geom=list(bm.verts) + list(bm.edges) + list(bm.faces),
+                               plane_co=(0, 0, z), plane_no=(0, 0, 1), dist=1e-5)
+    for v in bm.verts:
+        w = min(max((KNEE_Z + 0.03 - v.co.z) / 0.06, 0.0), 1.0)
+        if w <= 0.0:
+            continue
+        a = math.radians(flex * w)
+        dy, dz = v.co.y - CY, v.co.z - KNEE_Z
+        v.co.y = CY + dy * math.cos(a) - dz * math.sin(a)
+        v.co.z = KNEE_Z + dy * math.sin(a) + dz * math.cos(a)
+    bm.to_mesh(ob.data)
+    bm.free()
+    ob.data.update()
+
+
+def _pose(frame):
+    """Pose a walk or work frame. Forward is -Y; a forward swing is a
+    negative rotation about X. Applied to every object (holdout body
+    included) before the facing."""
+    p = _params(frame)
+    torso = _torso_matrix(p)
     for ob in S.objects():
         n = ob.name.split(".")[0]
-        side = -1 if _mean_x(ob) < CX else 1
+        right = _mean_x(ob) >= CX
         if n in ("leg", "pleg"):
-            # left leg (side -1) forward: rotate so the foot moves to -Y
-            ob.matrix_world = _rot_x(a * side, HIP_Z) @ ob.matrix_world
-        elif n in ("arm", "hand", "sleeve"):
-            ob.matrix_world = _rot_x(-a * side * 0.8, SHOULDER_Z) @ ob.matrix_world
-
-
-def _arm_angle(swing):
-    """Right-arm (hand attachment side) swing in degrees for a frame."""
-    return -WALK_DEG * swing * 0.8
+            flex = p["kr"] if right else p["kl"]
+            if flex > 0:
+                _bend_knee(ob, flex)
+            hip = p["hr"] if right else p["hl"]
+            ob.matrix_world = _rot_x(-hip, HIP_Z) @ ob.matrix_world
+        else:
+            m = torso
+            if n in ("arm", "hand", "sleeve", "psleeve", "pcuff", "dsleeve"):
+                m = torso @ _rot_x(p["ar"] if right else p["al"], SHOULDER_Z)
+            ob.matrix_world = m @ ob.matrix_world
 
 
 def _lean_matrix():
@@ -233,16 +301,22 @@ def _project(x, y, z, origin):
 HAND = {  # where held equipment's grip goes, per facing (Blender coords before facing rotation)
     "south": (CX + 0.195, CY - 0.06, 0.34),
 }
+HEAD_CENTER = (CX, CY, HEAD_Z)
 
 
-def _hand(facing, swing=0.0, arm=None):
-    import math
+def _attach(facing, frame, point):
+    """Project a rest-pose body point (right-arm attachments ride the right
+    arm) through the pose, facing and lean to canvas px."""
     from mathutils import Matrix, Vector
     deg = S.FACINGS[facing]
     m = (Matrix.Translation((0.5, -0.5, 0)) @ Matrix.Rotation(math.radians(deg), 4, "Z")
          @ Matrix.Translation((-0.5, 0.5, 0)))
-    a = _arm_angle(swing) if arm is None else arm
-    return _lean_matrix() @ m @ _rot_x(a, SHOULDER_Z) @ Vector(HAND["south"])
+    p = _params(frame)
+    return _lean_matrix() @ m @ point_matrix(p, point) @ Vector(point[0])
+
+
+def point_matrix(p, point):
+    return _torso_matrix(p) @ (_rot_x(p["ar"], SHOULDER_Z) if point[1] == "arm" else _rot_x(0, SHOULDER_Z))
 
 
 def _layer(name, facing, builder, body_holdout=True, frame=None):
@@ -251,20 +325,19 @@ def _layer(name, facing, builder, body_holdout=True, frame=None):
         S.holdout(objs)
     builder()
     _apply_modifiers()
-    swing = WALK_FRAMES.get(frame, 0.0)
-    arm = None
-    if frame in WORK_FRAMES:
-        _pose_work(frame)
-        arm = WORK_FRAMES[frame][0]
-    else:
-        _pose(swing)
+    if frame:
+        _pose(frame)
     _figure(facing)
     zm = _zmax_screen()
     top = int(-(-((C.SHEAR_K * zm + MARGINS[2]) * C.PPT) // 1))
     origin = (int(round(MARGINS[0] * C.PPT)), top)
-    h = _hand(facing, swing, arm)
+    h = _attach(facing, frame, (HAND["south"], "arm"))
+    att = {"hand": _project(h.x, h.y, h.z, origin)}
+    if name == "body":
+        hd = _attach(facing, frame, (HEAD_CENTER, "head"))
+        att["head"] = _project(hd.x, hd.y, hd.z, origin)
     sprite = "%s_%s" % (name, facing) + ("_" + frame if frame else "")
-    extra = {"layer": name, "facing": facing, "attachments": {"hand": _project(h.x, h.y, h.z, origin)}}
+    extra = {"layer": name, "facing": facing, "attachments": att}
     if frame:
         extra["frame"] = frame
     return S.render_asset("pawn", sprite, zmax=zm, margins=MARGINS, shadow=(name == "body"), extra=extra)
