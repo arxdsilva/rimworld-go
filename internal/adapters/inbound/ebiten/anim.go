@@ -402,266 +402,12 @@ func (r *Renderer) framed(key, suffix string) string {
 	return key
 }
 
-// --- reactions from attack traces ---------------------------------------
-
-// minReactionFrames is how long a recoil, lunge or flash stays visible in
-// present frames, however fast the simulation runs (ART §27 clocks).
-const minReactionFrames = 8
-
-// reactTrace is a trace as the reaction sees it: sim is its age in sim
-// ticks (+Inf once the sim dropped it) and frames its age in present frames.
-type reactTrace struct {
-	game.TraceView
-	sim, frames float64
-}
-
-type reactRec struct {
-	trace game.TraceView
-	seen  uint64 // present frame first seen
-	live  bool
-}
-
-// reactionAge is the age a reaction of duration dur ticks is shown at: the
-// sim age, but never advancing faster than dur over minReactionFrames.
-func reactionAge(sim, frames, dur float64) float64 {
-	return math.Min(sim, frames*dur/minReactionFrames)
-}
-
-// attackReaction offsets an actor at (x, y): rifle recoil, melee lunge,
-// and knockback plus a flash when struck, timed by sim age alone.
-func attackReaction(traces []game.TraceView, x, y int) (dx, dy float64, flash float32) {
-	rs := make([]reactTrace, len(traces))
-	for i, t := range traces {
-		rs[i] = reactTrace{TraceView: t, sim: float64(t.Age), frames: math.Inf(1)}
-	}
-	return attackReactionF(rs, x, y)
-}
-
-// attackReactionF is attackReaction with the minimum on-screen duration.
-func attackReactionF(traces []reactTrace, x, y int) (dx, dy float64, flash float32) {
-	for _, t := range traces {
-		if t.FromX == x && t.FromY == y && (t.ToX != x || t.ToY != y) {
-			ux, uy := unit(float64(t.ToX-x), float64(t.ToY-y))
-			switch {
-			case t.Melee && reactionAge(t.sim, t.frames, 10) < 10:
-				k := math.Sin(math.Pi * reactionAge(t.sim, t.frames, 10) / 10)
-				dx, dy = dx+ux*0.22*k, dy+uy*0.22*k
-			case !t.Melee && reactionAge(t.sim, t.frames, 6) < 6:
-				k := 1 - reactionAge(t.sim, t.frames, 6)/6
-				dx, dy = dx-ux*0.08*k, dy-uy*0.08*k
-			}
-		}
-		if t.ToX == x && t.ToY == y && t.Hit && (t.FromX != x || t.FromY != y) {
-			if age := reactionAge(t.sim, t.frames, 12); age < 12 {
-				k := 1 - age/12
-				ux, uy := unit(float64(x-t.FromX), float64(y-t.FromY))
-				dx, dy = dx+ux*0.1*k, dy+uy*0.1*k
-				if f := float32(k); f > flash {
-					flash = f
-				}
-			}
-		}
-	}
-	return dx, dy, flash
-}
-
-func traceKey(t game.TraceView, tick uint64) [3]uint64 {
-	return [3]uint64{uint64(t.FromX)<<20 | uint64(t.FromY), uint64(t.ToX)<<20 | uint64(t.ToY), tick - uint64(t.Age)}
-}
-
-// trackReactions remembers every trace for minReactionFrames present
-// frames after the sim drops it.
-func (st *animState) trackReactions(traces []game.TraceView, tick, present uint64) {
-	for _, rec := range st.recs {
-		rec.live = false
-	}
-	for _, t := range traces {
-		k := traceKey(t, tick)
-		rec, ok := st.recs[k]
-		if !ok {
-			rec = &reactRec{seen: present}
-			st.recs[k] = rec
-		}
-		rec.trace, rec.live = t, true
-	}
-	for k, rec := range st.recs {
-		if !rec.live && present-rec.seen > 3*minReactionFrames {
-			delete(st.recs, k)
-		}
-	}
-}
-
-// reactions appends the tracked traces, aged for display.
-func (st *animState) reactions(present uint64, dst []reactTrace) []reactTrace {
-	for _, rec := range st.recs {
-		rt := reactTrace{TraceView: rec.trace, sim: math.Inf(1), frames: float64(present - rec.seen)}
-		if rec.live {
-			rt.sim = float64(rec.trace.Age)
-		}
-		dst = append(dst, rt)
-	}
-	return dst
-}
-
-// reaction is the pose offset and flash of the creature at (x, y).
-func (r *Renderer) reaction(x, y int) (dx, dy float64, flash float32) {
-	return attackReactionF(r.animState().reactions(r.present, nil), x, y)
-}
-
 func unit(x, y float64) (float64, float64) {
 	n := math.Hypot(x, y)
 	if n == 0 {
 		return 0, 0
 	}
 	return x / n, y / n
-}
-
-// --- work motion --------------------------------------------------------
-
-// actStyle is how a kind of hands-on work moves and what it throws up.
-type actStyle struct {
-	period int     // frames per swing
-	reach  float64 // lean towards the worked tile, tiles
-	burst  partKind
-	count  int
-	motion motion
-	tool   string // sprite key of the held tool, "" for bare hands
-}
-
-// motion is the arm pattern for a kind of work.
-type motion uint8
-
-const (
-	motionNone  motion = iota // no arm frames (eating)
-	motionSwing               // overhead: wind-up, strike, recover
-	motionReach               // hands working low in front
-)
-
-// strikeAt is where in a swing the tool lands (phase 0..1).
-const strikeAt = 0.48
-
-func styleFor(act string) (actStyle, bool) {
-	switch act {
-	case "cut":
-		return actStyle{period: 46, reach: 0.1, burst: partChip, count: 4, motion: motionSwing, tool: "tool/axe"}, true
-	case "construct", "deconstruct":
-		return actStyle{period: 34, reach: 0.08, burst: partChip, count: 3, motion: motionSwing, tool: "tool/hammer"}, true
-	case "mine":
-		return actStyle{period: 50, reach: 0.12, burst: partDust, count: 5, motion: motionSwing, tool: "tool/pickaxe"}, true
-	case "work at workbench":
-		return actStyle{period: 30, reach: 0.05, burst: partShaving, count: 2, motion: motionSwing, tool: "tool/hammer"}, true
-	case "play horseshoes":
-		return actStyle{period: 70, reach: 0.04, burst: partDust, count: 3, motion: motionSwing}, true
-	case "refuel":
-		return actStyle{period: 40, reach: 0.06, burst: partChip, count: 1, motion: motionReach}, true
-	case "work at tailoring bench":
-		return actStyle{period: 44, reach: 0.05, burst: partShaving, count: 1, motion: motionReach}, true
-	case "work at drying rack":
-		return actStyle{period: 52, reach: 0.06, burst: partLeaf, count: 1, motion: motionReach}, true
-	case "work at butcher table":
-		return actStyle{period: 36, reach: 0.06, burst: partBlood, count: 2, motion: motionSwing}, true
-	case "harvest":
-		return actStyle{period: 44, reach: 0.07, burst: partLeaf, count: 3, motion: motionReach}, true
-	case "sow":
-		return actStyle{period: 48, reach: 0.05, burst: partSoil, count: 3, motion: motionReach}, true
-	case "work at stove":
-		return actStyle{period: 40, reach: 0.04, burst: partSteam, count: 1, motion: motionReach}, true
-	case "work at campfire":
-		return actStyle{period: 40, reach: 0.04, burst: partSteam, count: 1, motion: motionReach}, true
-	case "tend":
-		return actStyle{period: 60, reach: 0.05, motion: motionReach}, true
-	case "eat":
-		return actStyle{period: 50, reach: 0.03}, true
-	}
-	return actStyle{}, false
-}
-
-// workPhase is the 0..1 position within the current swing at animT t
-// (ticks); each pawn is offset so a crew does not swing in unison.
-func workPhase(t float64, id uint64, period int) float64 {
-	if period <= 0 {
-		return 0
-	}
-	return math.Mod(t+float64(id*13), float64(period)) / float64(period)
-}
-
-// workFrame is the work frame suffix at a swing phase: 1-2 wind-up,
-// 3-4 swing, 5 strike, 6 recover.
-func workFrame(ph float64) string {
-	switch {
-	case ph < 0.15:
-		return "_work1"
-	case ph < 0.30:
-		return "_work2"
-	case ph < 0.39:
-		return "_work3"
-	case ph < strikeAt:
-		return "_work4"
-	case ph < 0.58:
-		return "_work5"
-	default:
-		return "_work6"
-	}
-}
-
-// workArms is the frame suffix for a motion at a swing phase.
-func workArms(m motion, ph float64) string {
-	if m == motionNone {
-		return ""
-	}
-	return workFrame(ph)
-}
-
-// workSwing is the body lean for a swing at animT t: back a little while
-// winding up, hard forward on the strike, easing out.
-func workSwing(t float64, id uint64, period int) float64 {
-	ph := workPhase(t, id, period)
-	switch {
-	case ph < 0.40:
-		return -0.3 * easeOut(ph/0.40)
-	case ph < strikeAt:
-		return -0.3 + 1.3*easeOut((ph-0.40)/(strikeAt-0.40))
-	default:
-		return 1 - easeOut((ph-strikeAt)/(1-strikeAt))
-	}
-}
-
-func strikeIndex(t float64, id uint64, period int) float64 {
-	return math.Floor((t+float64(id*13))/float64(period) - strikeAt)
-}
-
-// workStrikeAt reports whether the tool lands while animT runs from prev
-// to cur. A paused clock (prev == cur) never strikes; 3x time strikes 3x
-// as often.
-func workStrikeAt(prev, cur float64, id uint64, period int) bool {
-	return period > 0 && strikeIndex(cur, id, period) > strikeIndex(prev, id, period)
-}
-
-// toolAngles is the held tool's screen rotation per work frame for an
-// east-facing pawn (radians, clockwise; the sprite points east).
-var toolAngles = map[string][3]float64{
-	// east, south, north
-	"_work1": {-1.9, -1.57, -1.57}, "_work2": {-2.2, -1.75, -1.85},
-	"_work3": {-1.2, -0.9, -1.1}, "_work4": {-0.4, 0.2, -0.2},
-	"_work5": {0.55, 1.1, 0.9}, "_work6": {0.1, 0.6, 0.4},
-}
-
-// toolAngle is the held tool's screen rotation for a facing and frame;
-// west mirrors east.
-func toolAngle(f facing, frame string) float64 {
-	a, ok := toolAngles[frame]
-	if !ok {
-		return 0
-	}
-	switch f {
-	case faceWest:
-		return -a[0]
-	case faceSouth:
-		return a[1]
-	case faceNorth:
-		return a[2]
-	}
-	return a[0]
 }
 
 // --- particles ----------------------------------------------------------
@@ -779,75 +525,27 @@ func (r *Renderer) drawParticles(screen *ebiten.Image, tile float64) {
 // --- per-frame animation driver ------------------------------------------
 
 // animate runs once per presentation frame after the simulation step:
-// work strikes, footsteps and hit splatter spawn particles.
+// footsteps here, then work strikes (work_anim.go) and combat effects
+// (combat_anim.go) spawn their particles.
 func (r *Renderer) animate(w game.WorldView, pawns []game.PawnView, running bool) {
 	if !running {
 		return
 	}
 	r.emitFireParticles(w)
 	st := r.animState()
-	t := r.animT() // swings and strides run on sim-scaled time
-	acting := map[entity.EntityID]bool{}
 	for _, p := range pawns {
 		if p.Lying || p.CarriedBy != 0 {
 			continue
 		}
 		r.stepDust(st, p.ID, r.pawnMotion(p.ID), false)
-		sty, ok := styleFor(p.Acting)
-		if !ok {
-			continue
-		}
-		acting[p.ID] = true
-		prev, seen := st.prevWork[p.ID]
-		st.prevWork[p.ID] = t
-		if !seen || sty.count == 0 || !workStrikeAt(prev, t, uint64(p.ID), sty.period) {
-			continue
-		}
-		x, y := float64(p.ActX)+0.5, float64(p.ActY)+0.45
-		switch p.Acting {
-		case "work at stove":
-			x, y = float64(p.ActX)+0.7, float64(p.ActY)-0.1
-		case "work at campfire":
-			x, y = float64(p.ActX)+0.5, float64(p.ActY)-0.1
-		case "sow", "eat":
-			x, y = float64(p.X)+0.5, float64(p.Y)+0.6
-		}
-		r.burst(sty.burst, x, y, sty.count, uint64(p.ID)*7919+r.present)
-	}
-	for id := range st.prevWork {
-		if !acting[id] {
-			delete(st.prevWork, id)
-		}
 	}
 	for _, an := range w.Animals {
 		if an.Mode != "wandering" {
 			r.stepDust(st, an.ID, r.animalMotion(an.ID), true)
 		}
 	}
-	// hit splatter and muzzle smoke, once per trace
-	now := uint64(r.game.Tick())
-	st.trackReactions(w.Traces, now, r.present)
-	for _, t := range w.Traces {
-		key := [3]uint64{uint64(t.FromX)<<20 | uint64(t.FromY), uint64(t.ToX)<<20 | uint64(t.ToY), now - uint64(t.Age)}
-		if r.seenTrace[key] {
-			continue
-		}
-		r.seenTrace[key] = true
-		r.floatTrace(t, key[0]^key[1]^key[2])
-		switch {
-		case t.Hit && t.Building:
-			r.burst(partChip, float64(t.ToX)+0.5, float64(t.ToY)+0.4, 5, key[0]^key[1]^key[2])
-		case t.Hit:
-			r.burst(partBlood, float64(t.ToX)+0.5, float64(t.ToY)+0.35, 5, key[0]^key[1]^key[2])
-		}
-		if !t.Melee {
-			ux, uy := unit(float64(t.ToX-t.FromX), float64(t.ToY-t.FromY))
-			r.burst(partSmoke, float64(t.FromX)+0.5+ux*0.5, float64(t.FromY)+0.3+uy*0.5, 2, key[2])
-		}
-	}
-	if len(r.seenTrace) > 256 {
-		r.seenTrace = map[[3]uint64]bool{}
-	}
+	r.animateWork(w, pawns)
+	r.animateCombat(w, pawns)
 }
 
 // syncItems remembers when each ground item first appeared, so new

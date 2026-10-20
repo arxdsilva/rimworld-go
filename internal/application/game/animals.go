@@ -33,6 +33,12 @@ type AnimalView struct {
 	NextX, NextY int
 	HasNext      bool
 	BlockedBy    entity.EntityID
+	// Action, as on PawnView: "bite", "kick", "graze", "flee" or "".
+	Action             string
+	AttackCycle        float64
+	HitTick            uint64
+	HitFromX, HitFromY int
+	HitDamage          int
 }
 
 // Wildlife at colony start and the daily top-up.

@@ -127,6 +127,21 @@ type PawnView struct {
 	NextX, NextY int
 	HasNext      bool
 	BlockedBy    entity.EntityID
+	// Action (presentation, ART §27.2): Action is the canonical action
+	// (actions.go, "" when idle or walking); ActionProgress the job's
+	// progress 0..1 (-1 unknown); ActTarget the creature acted on (attack,
+	// tend, tame, rescue); AttackCycle 0..1 through the current aim or
+	// cooldown, 1 on the strike tick; Carrying the item kind held in the
+	// arms ("pawn" while rescuing). HitTick/HitFromX,Y/HitDamage describe
+	// the last hit taken (HitTick 0: never).
+	Action             string
+	ActionProgress     float64
+	ActTarget          entity.EntityID
+	AttackCycle        float64
+	Carrying           string
+	HitTick            uint64
+	HitFromX, HitFromY int
+	HitDamage          int
 }
 
 // ItemView is a ground stack.

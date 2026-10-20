@@ -24,7 +24,7 @@ func main() {
 	capture := flag.String("capture", "", "dev: save one colony frame to this PNG and exit")
 	captureTicks := flag.Int("capture-ticks", 5400, "dev: simulation ticks to run before -capture")
 	captureZoom := flag.Float64("capture-zoom", 1, "dev: camera zoom for -capture")
-	scenario := flag.String("scenario", "", "dev: start scenario: rescue (a colonist starts badly hurt) | beds (sleeping spots in the other facings) | double (a double bed by the start) | corridor (two colonists meet head-on in a 1-wide corridor) | crowd (every colonist sent into a room with one door)")
+	scenario := flag.String("scenario", "", "dev: start scenario: rescue (a colonist starts badly hurt) | beds (sleeping spots in the other facings) | double (a double bed by the start) | corridor (two colonists meet head-on in a 1-wide corridor) | crowd (every colonist sent into a room with one door) | armory (armed, drafted colonists against a mixed raid) | chores (cutting, mining and tending by the start)")
 	captureFrames := flag.Int("capture-frames", 0, "dev: record this many consecutive frames (PATH_NNN.png) instead of one still")
 	captureSpeed := flag.Int("capture-speed", 1, "dev: game speed (1-3) while recording -capture-frames")
 	captureUI := flag.String("capture-ui", "", "dev: UI state for -capture: architect | orders | bills | pawn | combat | melee | follow | grow | corridor | crowd")
@@ -168,6 +168,26 @@ func main() {
 			}
 			if *scenario == "double" {
 				g.BuildNow("double bed", "wood", "south", *width/2-1, *height/2+1)
+			}
+			if *scenario == "armory" {
+				// colonists armed with a knife, a spear and a rifle, drafted,
+				// against a raid carrying every weapon kind
+				kinds := []item.Kind{item.Knife, item.Spear, item.Rifle}
+				for i, p := range g.Snapshot() {
+					g.Arm(p.ID, kinds[i%len(kinds)])
+					g.Enqueue(command.Command{Kind: command.DraftPawn, Pawn: uint64(p.ID), Enabled: true})
+				}
+				g.RaidArmed(item.Knife, item.Spear, item.Club, item.Rifle)
+			}
+			if *scenario == "chores" {
+				// trees to cut, rock to mine and a hurt colonist to tend,
+				// all close to the start
+				cx, cy := *width/2, *height/2
+				g.Enqueue(command.Command{Kind: command.DesignateCut, X: cx - 9, Y: cy - 6, X2: cx - 3, Y2: cy - 2})
+				g.Enqueue(command.Command{Kind: command.DesignateMine, X: cx - 2, Y: cy + 7, X2: cx + 4, Y2: cy + 9})
+				if snap := g.Snapshot(); len(snap) > 2 {
+					g.Injure(snap[2].ID, 35)
+				}
 			}
 			if *scenario == "corridor" {
 				// a 1-wide corridor north of the start; two colonists cross it

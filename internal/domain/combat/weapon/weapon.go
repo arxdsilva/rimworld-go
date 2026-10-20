@@ -9,6 +9,9 @@ const (
 	Rifle
 	Kick // dustbuck hooves
 	Bite // ridgewolf jaws
+	// Knife stabs fast for little damage; Spear thrusts slow and hard.
+	Knife
+	Spear
 	numKinds
 )
 
@@ -32,6 +35,8 @@ var defs = [numKinds]Def{
 	Rifle: {Name: "rifle", Ranged: true, Range: 12, Damage: 14, Cooldown: 150, Accuracy: 95, Falloff: 4},
 	Kick:  {Name: "hooves", Range: 1, Damage: 3, Cooldown: 120, Accuracy: 70},
 	Bite:  {Name: "bite", Range: 1, Damage: 9, Cooldown: 100, Accuracy: 80},
+	Knife: {Name: "knife", Range: 1, Damage: 8, Cooldown: 70, Accuracy: 90},
+	Spear: {Name: "spear", Range: 1, Damage: 13, Cooldown: 125, Accuracy: 85},
 }
 
 // DefOf returns the profile for k (fists for unknown kinds).

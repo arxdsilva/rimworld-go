@@ -33,6 +33,10 @@ type TraceView struct {
 	Melee        bool
 	Damage       int  // dealt on a hit
 	Building     bool // a blow on a door or wall
+	// Attacker and Target are the creatures involved (0 for a building
+	// target); Weapon is the attacker's weapon name.
+	Attacker, Target entity.EntityID
+	Weapon           string
 }
 
 func weaponKindOf(k item.Kind) weapon.Kind {

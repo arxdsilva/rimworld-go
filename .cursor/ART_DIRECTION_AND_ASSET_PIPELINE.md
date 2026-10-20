@@ -270,6 +270,15 @@ grip: [0.31, 0.55]
 muzzle: [0.94, 0.48]
 ```
 
+Held gear (family `gear`: `weapon/*`, `tool/*`) is one east-pointing
+sprite per item, rotated by the renderer, with image-px attachments:
+`grip` (main hand), `support` (off hand, so two-handed items sit in both
+hands), `muzzle` (firearms), `tip` (blades: knife, spear) and `head`
+(tools). Melee set: `weapon/knife`, `weapon/spear`, `weapon/club`;
+firearms: `weapon/rifle_basic` (+ `stock`) and `weapon/rifle_slung` (worn
+on the back). Tools: axe, pickaxe, hammer, trowel, sickle, bandage, bowl,
+spoon.
+
 Apparel uses shared body templates, body layers, tint regions, covered
 regions, and offsets.
 
@@ -588,6 +597,61 @@ Path and gait:
 - A blocked creature eases to a stop, faces the creature in its way and
   shows the idle pose.
 - Getting into bed and being picked up ease over 12 frames.
+
+### 27.2 Action animation (normative)
+
+Pose sets (Blender, every facing; body, pants, shirt, vest, parka and
+duster layers; hair and hats follow `head`):
+
+| Set | Frames | Pose |
+|---|---|---|
+| `ready` | 1 | rifle at low ready, both hands, elbows bent |
+| `aim` | 1 | rifle shouldered, cheek on stock, support arm out, slight lean in |
+| `fire1..3` | 3 | recoil: shoulder driven back, muzzle rise, recover |
+| `stab1..6` | 6 | knife: guard, chamber, step-thrust, full extension, withdraw, guard |
+| `thrust1..6` | 6 | spear, two hands: rear hand at the butt, lunge, full reach, recover |
+| `swing1..6` | 6 | club, one hand: cock over the shoulder, twist, diagonal strike, follow-through |
+| `punch1..4` | 4 | guard, jab, cross, guard |
+| `chop1..6` | 6 | axe, two hands: raise over the far shoulder, diagonal drive, rebound |
+| `mine1..6` | 6 | pickaxe, two hands: high overhead, vertical drive, knees bent, pry |
+| `hammer1..4` | 4 | hammer in the right hand, left hand steadying, short arcs |
+| `kneel`, `plant1..4` | 5 | one knee down; dig, place the seed, press the soil |
+| `pick1..4` | 4 | crouch, both hands into the plant, pull, drop into the bag |
+| `bench1..4` | 4 | hands at waist height working a bench (craft, cook, tailor, research) |
+| `tend1..4` | 4 | kneeling, both hands bandaging low in front |
+| `eat1..4` | 4 | bowl in the left hand at the chest, spoon to the mouth and back |
+| `carry`, `carry_walk01..12` | 13 | forearms forward and level holding a load; legs as in the walk |
+| `flinch1..3` | 3 | hit: torso snaps back, arms up, head turns away |
+| `fall1..4` | 4 | knees buckle, torso folds, hands out; the renderer finishes lying down |
+| `offer1..2` | 2 | crouched, hand held out low (taming) |
+
+Animals: dustbuck `kick1..4`, ridgewolf `bite1..4`, both `graze1..2` and
+`flinch1..2`.
+
+Every pawn body frame carries `hand` (right), `hand_l` (left) and `head`.
+
+Holding: a two-handed item puts its `grip` on `hand` and turns so its
+`support` lies on the line to `hand_l`; one-handed items hang from `hand`
+along the forearm. Off duty (not drafted, not attacking) the rifle is
+slung on the back, the knife rides on the belt (not drawn), the spear is
+carried upright in the right hand and the club stays in hand. Working
+swaps the weapon for the job's tool.
+
+Timing (with §27.1 clocks):
+
+- Aiming blends `ready` to `aim` over the first 60% of the attack cycle
+  (`PawnView.AttackCycle`); strike frames (`fire1`, the stab, thrust,
+  swing and punch peaks, animal bite and kick) land on the tick the
+  attack's trace appears (`TraceView.Attacker`, age 0).
+- A hit (`PawnView.HitTick`, `HitFromX/Y`) plays `flinch1..3` and
+  staggers 0.12 tile away from the attacker over 10 sim ticks; blood
+  sprays away from the attacker. A pawn going down plays `fall1..4`, then
+  lies down falling away from the last hit.
+- Work loops run on `animT` with a per-action period; each strike throws
+  that action's particles: chop wood chips, mine sparks and rock dust,
+  build sawdust, sow soil, harvest leaves, cook steam, butcher blood.
+  Each shot throws muzzle flash and smoke at `muzzle` and a shell casing.
+- Everything keeps the §27.1 minimum of 8 visible frames.
 
 ## 28. Deterministic Visual Variation
 

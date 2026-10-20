@@ -37,10 +37,24 @@ func (r *Renderer) poseFacing(p game.PawnView, m moveState) facing {
 	return blockedFacing(p, r.drawPawns, r.drawW.Animals, f)
 }
 
-// standingPose is the live transform for an upright pawn and the frame
-// suffix to use: a walk frame with bob, sway and lean from the motion, a
-// work frame on animT, or the static pose breathing.
-func (r *Renderer) standingPose(p game.PawnView, m moveState) (pose, string) {
+// actionPose is one action layer's contribution to an upright pawn (ART
+// §27.2): the body frame suffix, what it holds and how, and an extra
+// transform added to the standing pose. Layers are tried in priority
+// order by standingPose: hit reaction, combat, carrying, work.
+type actionPose struct {
+	ok     bool
+	suffix string   // body frame suffix ("_aim", "_stab3", "_chop5"); "" keeps the base frame
+	held   heldItem // replaces the default held item when held.set
+	dx, dy float64  // added offset, tiles
+	rot    float64  // added rotation, radians
+	squash float64  // vertical squash 0..1 (bending, crouching)
+	flash  float32  // hit flash 0..1
+}
+
+// standingPose is the live transform for an upright pawn, the frame
+// suffix to use and what it holds: walking or breathing, then the first
+// action layer that applies.
+func (r *Renderer) standingPose(p game.PawnView, m moveState) (pose, string, heldItem) {
 	ps := walkPose(m.Facing, m)
 	suffix := ""
 	moving := m.Blend >= minBlend
@@ -50,21 +64,36 @@ func (r *Renderer) standingPose(p game.PawnView, m moveState) (pose, string) {
 		b := math.Sin(2 * math.Pi * float64(r.present+uint64(p.ID)*37) / 150)
 		ps.sy = 1 + 0.012*b
 	}
-	if st, ok := styleFor(p.Acting); ok && !moving {
-		t := r.animT()
-		suffix = workArms(st.motion, workPhase(t, uint64(p.ID), st.period))
-		k := workSwing(t, uint64(p.ID), st.period)
-		ux, uy := unit(float64(p.ActX-p.X), float64(p.ActY-p.Y))
-		if ux == 0 && uy == 0 {
-			ps.sy *= 1 - 0.07*k // bending down to the ground
+	held := r.idleHeld(p, m)
+	for _, layer := range []func(game.PawnView, moveState) actionPose{r.hitReaction, r.combatPose, r.carryPose, r.workPose} {
+		a := layer(p, m)
+		if !a.ok {
+			continue
 		}
-		ps.dx += ux * st.reach * k
-		ps.dy += uy * st.reach * k
-		ps.rot += ux * 0.14 * k
+		if a.suffix != "" {
+			suffix = a.suffix
+		}
+		if a.held.set {
+			held = a.held
+		}
+		ps.dx += a.dx
+		ps.dy += a.dy
+		ps.rot += a.rot
+		if a.squash != 0 {
+			_, sy := ps.scale()
+			ps.sy = sy * (1 - a.squash)
+		}
+		if a.flash > ps.flash {
+			ps.flash = a.flash
+		}
+		break
 	}
-	dx, dy, fl := r.reaction(p.X, p.Y)
-	ps.dx, ps.dy, ps.flash = ps.dx+dx, ps.dy+dy, fl
-	return ps, suffix
+	dx, dy, fl := r.combatOffset(p)
+	ps.dx, ps.dy = ps.dx+dx, ps.dy+dy
+	if fl > ps.flash {
+		ps.flash = fl
+	}
+	return ps, suffix, held
 }
 
 func isHeadLayer(key string) bool {
@@ -84,16 +113,9 @@ func (r *Renderer) drawPawnArt(screen *ebiten.Image, p game.PawnView, wx, wy, ti
 	}
 	m := r.pawnMotion(p.ID)
 	m.Facing = r.poseFacing(p, m)
-	ps, suffix := r.standingPose(p, m)
+	ps, suffix, item := r.standingPose(p, m)
 	face := m.Facing
-	held := func() { r.drawHeldWeapon(screen, p, face, suffix, wx, wy, tile, ps) }
-	if sty, ok := styleFor(p.Acting); ok && sty.motion != motionNone && strings.HasPrefix(suffix, "_work") {
-		// working: the tool (or bare hands) replaces the weapon
-		held = func() { r.drawTool(screen, sty.tool, face, suffix, wx, wy, tile, ps) }
-	}
-	if face == faceNorth {
-		held() // in front, hidden by the body
-	}
+	r.drawHeld(screen, p, face, suffix, item, wx, wy, tile, ps, true) // the parts behind the body
 	hdx, hdy := headDelta(r.art, face, suffix)
 	headPs := ps
 	headPs.dx += hdx
@@ -105,9 +127,7 @@ func (r *Renderer) drawPawnArt(screen *ebiten.Image, p game.PawnView, wx, wy, ti
 		}
 		r.drawSpritePose(screen, r.framed(ly.key, suffix), ly.tint, wx, wy, tile, lp)
 	}
-	if face != faceNorth {
-		held()
-	}
+	r.drawHeld(screen, p, face, suffix, item, wx, wy, tile, ps, false) // the parts in front
 	if p.Hostile && !p.Lying {
 		r.drawHostileMarker(screen, p, wx+ps.dx, wy+ps.dy, tile)
 	}
@@ -268,93 +288,6 @@ func (r *Renderer) drawCarried(screen *ebiten.Image, q game.PawnView, f facing, 
 	ground, slung := carryPoses(f)
 	k := r.animState().carryEase(q.ID, r.present)
 	r.drawFigure(screen, q, wx, wy, tile, lerpPose(ground, slung, k))
-}
-
-// heldWeaponKey maps a wielded weapon to a sprite and how it is held.
-func heldWeaponKey(weapon string) (key string, scale float64, ok bool) {
-	switch weapon {
-	case "rifle":
-		return "weapon/rifle_basic", 0.62, true
-	case "club":
-		return "item/club_wood", 0.5, true
-	}
-	return "", 0, false
-}
-
-// drawHeldWeapon draws the wielded weapon with its grip at the body's
-// hand attachment for this walk frame, pointing along the facing, and
-// moved with the figure's pose.
-func (r *Renderer) drawHeldWeapon(screen *ebiten.Image, p game.PawnView, f facing, suffix string, wx, wy, tile float64, ps pose) {
-	key, k, ok := heldWeaponKey(p.Weapon)
-	if !ok {
-		return
-	}
-	body := r.art.sprite(r.framed("pawn/body_"+f.String(), suffix))
-	wsp := r.art.sprite(key)
-	img := r.art.image(key, color.NRGBA{})
-	if body == nil || wsp == nil || img == nil {
-		return
-	}
-	hand, okH := body.meta.Attach["hand"]
-	if !okH {
-		return
-	}
-	sx, sy := r.worldToScreenF(wx, wy)
-	bx, by, s := artOrigin(body.meta, float64(sx), float64(sy), tile)
-	hx, hy := bx+hand[0]*s, by+hand[1]*s
-	grip, okG := wsp.meta.Attach["grip"]
-	if !okG {
-		grip = [2]float64{float64(wsp.meta.Canvas[0]) / 2, float64(wsp.meta.Canvas[1]) / 2}
-	}
-	g := ebiten.GeoM{}
-	g.Translate(-grip[0], -grip[1])
-	switch f {
-	case faceWest:
-		g.Scale(-1, 1)
-	case faceSouth:
-		g.Rotate(math.Pi / 2.6)
-	case faceNorth:
-		g.Rotate(-math.Pi / 2.6)
-	}
-	g.Scale(s*k, s*k)
-	g.Translate(hx, hy)
-	g.Concat(ps.geo(float64(sx), float64(sy), tile))
-	op := &ebiten.DrawImageOptions{GeoM: g, Filter: ebiten.FilterLinear}
-	screen.DrawImage(img, op)
-}
-
-// drawTool draws a work tool with its grip in the tool hand of the
-// current arm frame, angled for the swing.
-func (r *Renderer) drawTool(screen *ebiten.Image, key string, f facing, suffix string, wx, wy, tile float64, ps pose) {
-	if key == "" {
-		return
-	}
-	body := r.art.sprite(r.framed("pawn/body_"+f.String(), suffix))
-	tsp := r.art.sprite(key)
-	img := r.art.image(key, color.NRGBA{})
-	if body == nil || tsp == nil || img == nil {
-		return
-	}
-	hand, ok := body.meta.Attach["hand"]
-	if !ok {
-		return
-	}
-	grip, ok := tsp.meta.Attach["grip"]
-	if !ok {
-		grip = [2]float64{float64(tsp.meta.Canvas[0]) / 2, float64(tsp.meta.Canvas[1]) / 2}
-	}
-	sx, sy := r.worldToScreenF(wx, wy)
-	bx, by, s := artOrigin(body.meta, float64(sx), float64(sy), tile)
-	g := ebiten.GeoM{}
-	g.Translate(-grip[0], -grip[1])
-	if f == faceWest {
-		g.Scale(-1, 1)
-	}
-	g.Rotate(toolAngle(f, suffix))
-	g.Scale(s*0.62, s*0.62)
-	g.Translate(bx+hand[0]*s, by+hand[1]*s)
-	g.Concat(ps.geo(float64(sx), float64(sy), tile))
-	screen.DrawImage(img, &ebiten.DrawImageOptions{GeoM: g, Filter: ebiten.FilterLinear})
 }
 
 // drawSnore floats small "z"s up and away from a sleeper's head.

@@ -37,14 +37,18 @@ const (
 	Duster
 	// HerbalMedicine is dried healroot: doctors tend wounds with it.
 	HerbalMedicine
+	// Knife (stone) and Spear (wood) are melee weapons (SIM-015).
+	Knife
+	Spear
 	numKinds
 )
 
 var kindNames = [numKinds]string{"food", "wood", "stone", "berries", "potatoes", "meat", "meal", "club", "rifle", "dustbuck corpse", "ridgewolf corpse",
-	"corn", "wheat", "beans", "lettuce", "radishes", "pumpkins", "leather", "parka", "tuque", "duster", "herbal medicine"}
+	"corn", "wheat", "beans", "lettuce", "radishes", "pumpkins", "leather", "parka", "tuque", "duster", "herbal medicine",
+	"knife", "spear"}
 
 // IsWeapon reports whether k can be equipped.
-func (k Kind) IsWeapon() bool { return k == Club || k == Rifle }
+func (k Kind) IsWeapon() bool { return k == Club || k == Rifle || k == Knife || k == Spear }
 
 // IsCorpse reports an animal carcass.
 func (k Kind) IsCorpse() bool { return k == CorpseDustbuck || k == CorpseRidgewolf }
