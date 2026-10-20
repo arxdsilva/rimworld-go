@@ -426,6 +426,9 @@ const (
 	partStep
 	partSmoke
 	partEmber
+	partSpark   // pickaxe on rock, blade on blade
+	partCasing  // a spent rifle case, ejected sideways
+	partSawdust // saw and hammer work on wood
 )
 
 type particle struct {
@@ -453,6 +456,9 @@ var partColors = map[partKind][]color.RGBA{
 	partStep:    {{168, 148, 116, 255}},
 	partSmoke:   {{200, 196, 186, 255}},
 	partEmber:   {{255, 190, 80, 255}, {255, 140, 50, 255}, {255, 220, 130, 255}},
+	partSpark:   {{255, 236, 160, 255}, {255, 200, 90, 255}},
+	partCasing:  {{214, 170, 70, 255}, {186, 140, 52, 255}},
+	partSawdust: {{222, 196, 150, 255}, {200, 172, 126, 255}},
 }
 
 // burst spawns n particles of a kind at (x, y), deterministic in seed.
@@ -489,8 +495,30 @@ func (r *Renderer) burst(kind partKind, x, y float64, n int, seed uint64) {
 		case partEmber:
 			p.vx, p.vy, p.g = (h(2)-0.5)*0.012, -0.016-h(3)*0.01, -0.0001
 			p.life, p.size = 36+uint64(h(4)*24), 0.014
+		case partSpark:
+			p.vx, p.vy, p.g = (h(2)-0.5)*0.09, -0.04-h(3)*0.04, 0.005
+			p.life, p.size = 8+uint64(h(4)*6), 0.012
+		case partCasing:
+			p.vx, p.vy, p.g = (h(2)-0.5)*0.02, -0.05-h(3)*0.02, 0.006
+			p.life, p.size = 26, 0.016
+		case partSawdust:
+			p.vx, p.vy, p.g = (h(2)-0.5)*0.03, -0.012-h(3)*0.012, 0.0016
+			p.life, p.size = 26+uint64(h(4)*12), 0.018
 		}
 		r.parts = append(r.parts, p)
+	}
+}
+
+// burstDir is burst with every particle pushed along (dx, dy) by speed
+// tiles per frame: blood sprays away from the attacker, cases fly out
+// of the rifle's side.
+func (r *Renderer) burstDir(kind partKind, x, y float64, n int, seed uint64, dx, dy, speed float64) {
+	from := len(r.parts)
+	r.burst(kind, x, y, n, seed)
+	ux, uy := unit(dx, dy)
+	for i := from; i < len(r.parts); i++ {
+		r.parts[i].vx += ux * speed
+		r.parts[i].vy += uy * speed
 	}
 }
 
