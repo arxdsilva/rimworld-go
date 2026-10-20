@@ -120,8 +120,8 @@ func (g *Game) heatRooms() {
 		if !ok || b.Kind != construction.Campfire || g.fuel[bid] <= 0 {
 			continue
 		}
-		if g.temperatureAt(b.X, b.Y) >= campfireBank {
-			continue // banked
+		if !g.burning(bid, b) {
+			continue // banked, or doused by rain or snow
 		}
 		g.fuel[bid] = max(0, g.fuel[bid]-climateInterval)
 		if r := g.roomAt(b.X, b.Y); r >= 0 && r < len(heat) {
