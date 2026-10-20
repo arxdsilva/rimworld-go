@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"math"
 	"slices"
+	"strconv"
 
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 
@@ -144,7 +145,8 @@ func (r *Renderer) traceList(w game.WorldView) []reactTrace {
 	rs := r.animState().reactions(r.present, nil)
 	if len(rs) == 0 {
 		for _, t := range w.Traces {
-			rs = append(rs, reactTrace{TraceView: t, sim: float64(t.Age), frames: math.Inf(1)})
+			born := float64(r.game.Tick()) - float64(t.Age)
+			rs = append(rs, reactTrace{TraceView: t, sim: float64(t.Age), frames: math.Inf(1), born: born})
 		}
 	}
 	slices.SortFunc(rs, func(a, b reactTrace) int {
@@ -193,9 +195,9 @@ func traceEnds(spots map[[2]int]vec, tr game.TraceView) (from, to vec) {
 	return vec{from.x + 0.5, from.y + 0.3}, vec{to.x + 0.5, to.y + 0.4}
 }
 
-// drawTraces renders recent attacks: rifle tracers with a muzzle flash
-// and a hit puff, or a short swing arc for melee. They start at the drawn
-// shooter and stay visible for at least minReactionFrames frames.
+// drawTraces renders recent attacks: rifle tracers from the muzzle with
+// a muzzle flash and a hit puff, or a trail along the weapon tip for
+// melee. They stay visible for at least minReactionFrames frames.
 func (r *Renderer) drawTraces(screen *ebiten.Image, w game.WorldView, tile float64) {
 	t := float32(tile)
 	rs := r.traceList(w)
@@ -210,16 +212,7 @@ func (r *Renderer) drawTraces(screen *ebiten.Image, w game.WorldView, tile float
 		tx, ty := r.worldToScreenF(to.x, to.y)
 		if tr.Melee {
 			if age := traceAge(rt, swingTicks); age < swingTicks {
-				k := 1 - age/swingTicks
-				a0 := math.Atan2(float64(ty-fy), float64(tx-fx)) - 0.9
-				for i := 0; i < 3; i++ {
-					a1, a2 := a0+float64(i)*0.6, a0+float64(i+1)*0.6
-					rad := float64(t) * 0.35
-					vector.StrokeLine(screen,
-						tx+float32(math.Cos(a1)*rad), ty+float32(math.Sin(a1)*rad),
-						tx+float32(math.Cos(a2)*rad), ty+float32(math.Sin(a2)*rad),
-						3, fade(swingClr, k), true)
-				}
+				r.drawMeleeTrail(screen, tr, 1-age/swingTicks, tx, ty, t)
 			}
 			if age := traceAge(rt, bloodTicks); tr.Hit && age < bloodTicks {
 				vector.FillCircle(screen, tx, ty, t*0.08*float32(1+math.Floor(age/4)), fade(bloodClr, 1-age/bloodTicks), true)
@@ -241,6 +234,9 @@ func (r *Renderer) drawTraces(screen *ebiten.Image, w game.WorldView, tile float
 			ex, ey = tx+ux*t*0.8-uy*t*0.35*side, ty+uy*t*0.8+ux*t*0.35*side
 		}
 		mx, my := fx+ux*t*0.5, fy+uy*t*0.5 // muzzle
+		if mz, ok := r.traceMuzzle(tr); ok {
+			mx, my = r.worldToScreenF(mz.x, mz.y)
+		}
 		if age := traceAge(rt, tracerTicks); age < tracerTicks {
 			k := 1 - age/tracerTicks
 			// a short bright streak travelling along the line
@@ -260,6 +256,77 @@ func (r *Renderer) drawTraces(screen *ebiten.Image, w game.WorldView, tile float
 			k := 1 - (age-3)/(puffTicks-3)
 			vector.FillCircle(screen, tx, ty, t*(0.05+0.012*float32(age)), fade(bloodClr, k), true)
 		}
+	}
+}
+
+// traceMuzzle is the shooter's muzzle for a shot, in world tiles, when the
+// shooter is a drawn pawn holding a rifle.
+func (r *Renderer) traceMuzzle(tr game.TraceView) (vec, bool) {
+	p, ok := pawnByStrike(r.drawPawns, tr)
+	if !ok {
+		return vec{}, false
+	}
+	return r.pawnHeldPoint(p, "muzzle")
+}
+
+// meleeTrail is the path of a melee attacker's weapon tip (or fist)
+// through its strike frames, in world tiles; nil when the attacker is not
+// a drawn pawn or the frames do not move the tip.
+func (r *Renderer) meleeTrail(tr game.TraceView) []vec {
+	p, ok := pawnByStrike(r.drawPawns, tr)
+	if !ok || p.Lying || p.CarriedBy != 0 || r.art == nil {
+		return nil
+	}
+	wx, wy := r.interpWorld(p)
+	m := r.pawnMotion(p.ID)
+	m.Facing = r.poseFacing(p, m)
+	ps, _, h := r.standingPose(p, m)
+	set, n := meleeSet(p.Weapon)
+	frames := []int{3, 4, 5}
+	if n == 4 {
+		frames = []int{1, 2, 3, 4}
+	}
+	attach := "tip"
+	if h.key == "" {
+		attach = "hand"
+	}
+	var pts []vec
+	lo, hi := vec{math.Inf(1), math.Inf(1)}, vec{math.Inf(-1), math.Inf(-1)}
+	for _, i := range frames {
+		pt, ok := r.heldPoint(m.Facing, set+strconv.Itoa(i), h, wx, wy, ps, attach)
+		if !ok {
+			return nil
+		}
+		pts = append(pts, pt)
+		lo = vec{math.Min(lo.x, pt.x), math.Min(lo.y, pt.y)}
+		hi = vec{math.Max(hi.x, pt.x), math.Max(hi.y, pt.y)}
+	}
+	if math.Hypot(hi.x-lo.x, hi.y-lo.y) < 0.08 {
+		return nil
+	}
+	return pts
+}
+
+// drawMeleeTrail draws a fading swish along the weapon tip's strike path,
+// or a short arc at the target when the path is unknown.
+func (r *Renderer) drawMeleeTrail(screen *ebiten.Image, tr game.TraceView, k float64, tx, ty, t float32) {
+	if pts := r.meleeTrail(tr); pts != nil {
+		for i := 1; i < len(pts); i++ {
+			ax, ay := r.worldToScreenF(pts[i-1].x, pts[i-1].y)
+			bx, by := r.worldToScreenF(pts[i].x, pts[i].y)
+			vector.StrokeLine(screen, ax, ay, bx, by, 3, fade(swingClr, k*float64(i)/float64(len(pts)-1)), true)
+		}
+		return
+	}
+	fx, fy := r.worldToScreenF(float64(tr.FromX)+0.5, float64(tr.FromY)+0.3)
+	a0 := math.Atan2(float64(ty-fy), float64(tx-fx)) - 0.9
+	for i := 0; i < 3; i++ {
+		a1, a2 := a0+float64(i)*0.6, a0+float64(i+1)*0.6
+		rad := float64(t) * 0.35
+		vector.StrokeLine(screen,
+			tx+float32(math.Cos(a1)*rad), ty+float32(math.Sin(a1)*rad),
+			tx+float32(math.Cos(a2)*rad), ty+float32(math.Sin(a2)*rad),
+			3, fade(swingClr, k), true)
 	}
 }
 
@@ -284,13 +351,62 @@ func (r *Renderer) settleVisuals() {
 	}
 }
 
-// animalFrame is the trot frame for a moving animal ("" standing).
+// animalFrame is the animal's body frame: a flinch while a hit is
+// fresh, the bite or kick (strike frame 3 on the attack's trace, wind-up
+// 1-2 by AttackCycle), the trot while moving, grazing.
 func (r *Renderer) animalFrame(an game.AnimalView) string {
-	return trotSuffix(r.animalMotion(an.ID))
+	m := r.animalMotion(an.ID)
+	if age, ok := r.hitAge(an.ID, an.HitTick, an.X, an.Y); ok && age < staggerTicks {
+		if age < 4 {
+			return "_flinch1"
+		}
+		return "_flinch2"
+	}
+	st, age, struck := r.lastStrike(an.ID, an.X, an.Y, meleeTicks)
+	moving := m.Blend >= minBlend
+	if set := animalAttackSet(an, st, struck); set != "" {
+		switch {
+		case struck && age < 3:
+			return set + "3"
+		case struck && age < meleeTicks:
+			return set + "4"
+		case !moving && (an.Action == game.ActionBite || an.Action == game.ActionKick):
+			if an.AttackCycle < aimAt {
+				return set + "1"
+			}
+			return set + "2"
+		}
+	}
+	if moving {
+		return trotSuffix(m)
+	}
+	if an.Action == game.ActionGraze {
+		if math.Mod(r.animT()+float64(an.ID)*17, 90) < 45 {
+			return "_graze1"
+		}
+		return "_graze2"
+	}
+	return ""
 }
 
-// animalPose: a trot bob (more when running), idle breathing, bite
-// lunges and hit reactions.
+// animalAttackSet is the attack pose set: by the action, else by the
+// weapon of its last strike.
+func animalAttackSet(an game.AnimalView, st reactTrace, struck bool) string {
+	switch {
+	case an.Action == game.ActionBite:
+		return "_bite"
+	case an.Action == game.ActionKick:
+		return "_kick"
+	case struck && st.Weapon == "hooves":
+		return "_kick"
+	case struck:
+		return "_bite"
+	}
+	return ""
+}
+
+// animalPose: a trot bob (more when running), idle breathing, a lunge
+// into each bite or kick, and a stagger away from the attacker when hit.
 func (r *Renderer) animalPose(an game.AnimalView) pose {
 	ps := pose{px: figurePivotX, py: figurePivotY}
 	m := r.animalMotion(an.ID)
@@ -299,7 +415,21 @@ func (r *Renderer) animalPose(an game.AnimalView) pose {
 	} else {
 		ps.sy = 1 + 0.015*math.Sin(2*math.Pi*float64(r.present+uint64(an.ID)*29)/120)
 	}
-	dx, dy, fl := r.reaction(an.X, an.Y)
-	ps.dx, ps.dy, ps.flash = ps.dx+dx, ps.dy+dy, fl
+	if st, age, struck := r.lastStrike(an.ID, an.X, an.Y, meleeTicks); struck && age < meleeTicks {
+		k := math.Sin(math.Pi * age / meleeTicks)
+		ux, uy := unit(float64(st.ToX-st.FromX), float64(st.ToY-st.FromY))
+		ps.dx, ps.dy = ps.dx+ux*0.2*k, ps.dy+uy*0.2*k
+	}
+	if an.HitTick == 0 {
+		dx, dy, fl := struckNudge(r.animState().reactions(r.present, nil), an.X, an.Y)
+		ps.dx, ps.dy, ps.flash = ps.dx+dx, ps.dy+dy, fl
+		return ps
+	}
+	if age, ok := r.hitAge(an.ID, an.HitTick, an.X, an.Y); ok && age < hitTicks {
+		ux, uy := awayFrom(an.X, an.Y, an.HitFromX, an.HitFromY, m.Facing)
+		k := staggerK(age)
+		ps.dx, ps.dy = ps.dx+ux*staggerDist*k, ps.dy+uy*staggerDist*k
+		ps.flash = float32(1 - age/hitTicks)
+	}
 	return ps
 }

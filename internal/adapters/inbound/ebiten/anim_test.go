@@ -29,8 +29,8 @@ func TestAttackReactions(t *testing.T) {
 
 func TestWorkSwingAndStrike(t *testing.T) {
 	t.Parallel()
-	st, ok := styleFor("cut")
-	if !ok || st.burst != partChip || st.tool != "tool/axe" || st.motion != motionSwing {
+	_, st, ok := actionOf(game.PawnView{Acting: "cut"}) // old Acting strings still map
+	if !ok || st.parts[0].kind != partChip || st.tool != "tool/axe" || st.fallback != motionSwing {
 		t.Fatal("cutting swings an axe and throws chips")
 	}
 	// six frames: 1-2 wind-up, 3-4 swing, 5 strike, 6 recover
@@ -56,7 +56,7 @@ func TestWorkSwingAndStrike(t *testing.T) {
 	if strikes != 3 || peak < 0.99 {
 		t.Fatalf("one strike per swing (%d), swing reaches 1 (%v)", strikes, peak)
 	}
-	if _, ok := styleFor(""); ok {
+	if _, _, ok := actionOf(game.PawnView{}); ok {
 		t.Fatal("no style when idle")
 	}
 }

@@ -31,6 +31,9 @@ func (r *Renderer) poseFacing(p game.PawnView, m moveState) facing {
 	if m.Blend >= minBlend {
 		return f
 	}
+	if tf, ok := targetFacing(p, r.drawPawns, r.drawW.Animals, f); ok {
+		return tf
+	}
 	if p.Acting != "" && (p.ActX != p.X || p.ActY != p.Y) {
 		return facingFor(p.ActX-p.X, p.ActY-p.Y, f)
 	}
@@ -49,6 +52,25 @@ type actionPose struct {
 	rot    float64  // added rotation, radians
 	squash float64  // vertical squash 0..1 (bending, crouching)
 	flash  float32  // hit flash 0..1
+}
+
+// targetFacing turns a pawn that is aiming or fighting towards its
+// target from the first moment, not only once a shot has been fired.
+func targetFacing(p game.PawnView, pawns []game.PawnView, animals []game.AnimalView, prev facing) (facing, bool) {
+	if p.ActTarget == 0 || (p.Action != game.ActionAim && p.Action != game.ActionMelee) {
+		return prev, false
+	}
+	for _, q := range pawns {
+		if q.ID == p.ActTarget {
+			return facingFor(q.X-p.X, q.Y-p.Y, prev), true
+		}
+	}
+	for _, an := range animals {
+		if an.ID == p.ActTarget {
+			return facingFor(an.X-p.X, an.Y-p.Y, prev), true
+		}
+	}
+	return prev, false
 }
 
 // standingPose is the live transform for an upright pawn, the frame
@@ -115,7 +137,7 @@ func (r *Renderer) drawPawnArt(screen *ebiten.Image, p game.PawnView, wx, wy, ti
 	m.Facing = r.poseFacing(p, m)
 	ps, suffix, item := r.standingPose(p, m)
 	face := m.Facing
-	r.drawHeld(screen, p, face, suffix, item, wx, wy, tile, ps, true) // the parts behind the body
+	r.drawHeld(screen, p, face, suffix, item, wx, wy, tile, ps, true) // first: the parts the body hides (slung rifle, items when facing north)
 	hdx, hdy := headDelta(r.art, face, suffix)
 	headPs := ps
 	headPs.dx += hdx
@@ -151,7 +173,8 @@ func (r *Renderer) drawFigure(screen *ebiten.Image, p game.PawnView, wx, wy, til
 	}
 }
 
-// drawLyingPawn: in a bed under the blanket, or fallen on the ground.
+// drawLyingPawn: in a bed under the blanket, or fallen on the ground
+// (fallPose: fall1..4, then down away from the last hit).
 func (r *Renderer) drawLyingPawn(screen *ebiten.Image, p game.PawnView, vis pawnVisual, wx, wy, tile float64) {
 	cs := noCS
 	if p.Status == "dead" {
@@ -163,21 +186,11 @@ func (r *Renderer) drawLyingPawn(screen *ebiten.Image, p game.PawnView, vis pawn
 			return
 		}
 	}
-	// on the bare ground
-	k := easeOut(float64(r.present-vis.lyingSince) / fallFrames)
-	side := 1.0
-	if vis.facing == faceWest {
-		side = -1
-	}
-	ps := pose{px: figurePivotX, py: figurePivotY, cs: cs}
-	ps.rot = side * math.Pi / 2 * k
-	ps.dx = -side * 0.42 * k
-	ps.dy = 0.1 * k
-	if p.Status != "dead" {
-		ps.sy = 1 + 0.02*math.Sin(2*math.Pi*float64(r.present+uint64(p.ID)*37)/110)
-	}
-	if k < 1 && p.Status != "alive" {
-		ps.flash = float32(0.5 * (1 - k))
+	suffix, ps, upright := r.fallPose(p, vis)
+	ps.cs = cs
+	if upright {
+		r.drawFigureFacing(screen, p, vis.facing, suffix, wx, wy, tile, ps)
+		return
 	}
 	r.drawFigure(screen, p, wx, wy, tile, ps)
 }
