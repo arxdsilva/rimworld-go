@@ -3,9 +3,11 @@ version: 1
 id: "core:plant/crop_sown"
 image: generated/world/plant/crop_sown.png
 scale: 2
-canvas: [160, 168]
+canvas: [166, 172]
 footprint: [1, 1]
-origin_px: [16, 24]
+origin_px: [19, 25]
 projection:
   shear_k: 0.5
+species: radish
 growth: sown
+variant: 0

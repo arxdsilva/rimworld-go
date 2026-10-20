@@ -3,10 +3,11 @@ version: 1
 id: "core:plant/lettuce_young"
 image: generated/world/plant/lettuce_young.png
 scale: 2
-canvas: [160, 173]
+canvas: [166, 184]
 footprint: [1, 1]
-origin_px: [16, 29]
+origin_px: [19, 37]
 projection:
   shear_k: 0.5
 species: lettuce
 growth: young
+variant: 1

@@ -3,11 +3,16 @@ version: 1
 id: "core:plant/tree_00"
 image: generated/world/plant/tree_00.png
 scale: 2
-canvas: [204, 304]
+canvas: [220, 296]
 footprint: [1, 1]
-origin_px: [38, 144]
+origin_px: [46, 136]
 projection:
   shear_k: 0.5
 species: tree
+kind: oak
 variant: 0
+season: summer
 yields: wood
+sway:
+  trunk: 0.02
+  canopy: 0.06

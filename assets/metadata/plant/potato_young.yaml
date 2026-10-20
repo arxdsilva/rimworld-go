@@ -3,10 +3,11 @@ version: 1
 id: "core:plant/potato_young"
 image: generated/world/plant/potato_young.png
 scale: 2
-canvas: [160, 176]
+canvas: [166, 186]
 footprint: [1, 1]
-origin_px: [16, 32]
+origin_px: [19, 39]
 projection:
   shear_k: 0.5
 species: potato
 growth: young
+variant: 1
