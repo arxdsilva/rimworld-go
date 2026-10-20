@@ -64,34 +64,37 @@ art-preview:  ## contact sheet + ART §34 prototype scene
 	python3 assets/source/tools/contact_sheet.py
 	python3 assets/source/tools/compose_scene.py
 
-# ---- README media (docs/screenshots, docs/clips) ----------------------------
+# ---- README media (docs/media, docs/clips): animated WebP only -------------
 SHOT := $(BIN_DIR)/game -capture
 
-.PHONY: screenshots
-screenshots:  ## README stills in docs/screenshots (real renderer)
-	go build -o $(BIN_DIR)/game ./cmd/game
-	$(SHOT) docs/screenshots/colony.png -capture-ticks 12000 -capture-zoom 0.8
-	$(SHOT) docs/screenshots/architect.png -capture-ui architect
-	$(SHOT) docs/screenshots/farm.png -capture-ui grow
-	$(SHOT) docs/screenshots/bills.png -capture-ui bills
-	$(SHOT) docs/screenshots/siege.png -scenario siege -capture-ui raid
-	$(SHOT) docs/screenshots/defense.png -scenario defense -capture-ui defense -capture-ticks 60 -capture-zoom 0.8
-	$(SHOT) docs/screenshots/combat.png -capture-ui combat
-	$(SHOT) docs/screenshots/animals.png -scenario animals -capture-ui pen
-	$(SHOT) docs/screenshots/research.png -scenario research -capture-ui research
-	$(SHOT) docs/screenshots/medic.png -scenario medic -capture-ui medic
-	$(SHOT) docs/screenshots/winter.png -scenario winter -capture-ui winter
-
-# $(call clip,NAME,FLAGS): record frames to bin/clips/NAME, encode docs/clips/NAME.webp
-define clip
-	rm -rf $(BIN_DIR)/clips/$(1)
-	$(SHOT) $(BIN_DIR)/clips/$(1)/f.png $(2)
-	python3 scripts/frames_to_webp.py --frames '$(BIN_DIR)/clips/$(1)/f_*.png' --out docs/clips/$(1).webp
+# $(call webp,DIR,NAME,FLAGS): record frames to bin/clips/NAME, encode DIR/NAME.webp
+define webp
+	rm -rf $(BIN_DIR)/clips/$(2)
+	$(SHOT) $(BIN_DIR)/clips/$(2)/f.png $(3)
+	python3 scripts/frames_to_webp.py --frames '$(BIN_DIR)/clips/$(2)/f_*.png' --out $(1)/$(2).webp --max-bytes 950000
 endef
+clip = $(call webp,docs/clips,$(1),$(2))
+still = $(call webp,docs/media,$(1),$(2))
+
+.PHONY: media
+media:  ## README gallery as short animated WebPs in docs/media (needs python3 + Pillow)
+	go build -o $(BIN_DIR)/game ./cmd/game
+	$(call still,colony,-capture-ticks 12000 -capture-zoom 0.8 -capture-frames 180)
+	$(call still,architect,-capture-ui architect -capture-frames 150)
+	$(call still,farm,-capture-ui grow -capture-frames 150)
+	$(call still,bills,-capture-ui bills -capture-frames 150)
+	$(call still,siege,-scenario siege -capture-ui raid -capture-frames 180)
+	$(call still,defense,-scenario defense -capture-ui defense -capture-ticks 60 -capture-zoom 0.8 -capture-frames 180)
+	$(call still,combat,-scenario armory -capture-ui raid -capture-zoom 1.6 -capture-ticks 560 -capture-frames 180)
+	$(call still,animals,-scenario animals -capture-ui pen -capture-frames 180)
+	$(call still,research,-scenario research -capture-ui research -capture-frames 150)
+	$(call still,medic,-scenario medic -capture-ui medic -capture-frames 150)
+	$(call still,winter,-scenario winter -capture-ui winter -capture-frames 180)
 
 .PHONY: clips
 clips:  ## README animated WebP clips in docs/clips (needs python3 + Pillow)
 	go build -o $(BIN_DIR)/game ./cmd/game
+	$(call clip,lategame,-scenario lategame -capture-ui lategame -capture-ticks 1200 -capture-frames 360)
 	$(call clip,colony_life,-capture-ui follow -capture-frames 240)
 	$(call clip,building,-capture-ticks 600 -capture-zoom 1.5 -capture-frames 240)
 	$(call clip,combat,-capture-ui combat -capture-frames 180)
@@ -99,6 +102,10 @@ clips:  ## README animated WebP clips in docs/clips (needs python3 + Pillow)
 	$(call clip,animals,-scenario animals -capture-ui pen -capture-frames 240)
 	$(call clip,melee,-scenario armory -capture-ui raid -capture-zoom 1.6 -capture-ticks 560 -capture-frames 240)
 	$(call clip,chores,-scenario chores -capture-ui follow -capture-zoom 1.8 -capture-ticks 4000 -capture-frames 240)
+	$(call clip,rain,-scenario rain -capture-ui weather -capture-zoom 1.4 -capture-frames 240)
+	$(call clip,snow,-scenario snow -capture-ui weather -capture-zoom 1.4 -capture-ticks 12000 -capture-frames 240)
+	$(call clip,grass,-capture-ui grass -capture-zoom 2 -capture-ticks 600 -capture-frames 240)
+	$(call clip,burial,-scenario burial -capture-ui burial -capture-zoom 1.6 -capture-ticks 30 -capture-frames 300 -capture-speed 3)
 
 .PHONY: clean
 clean:

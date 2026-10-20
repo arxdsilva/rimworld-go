@@ -25,10 +25,10 @@ func main() {
 	capture := flag.String("capture", "", "dev: save one colony frame to this PNG and exit")
 	captureTicks := flag.Int("capture-ticks", 5400, "dev: simulation ticks to run before -capture")
 	captureZoom := flag.Float64("capture-zoom", 1, "dev: camera zoom for -capture")
-	scenario := flag.String("scenario", "", "dev: start scenario: rescue (a colonist starts badly hurt) | beds (sleeping spots in the other facings) | double (a double bed by the start) | corridor (two colonists meet head-on in a 1-wide corridor) | crowd (every colonist sent into a room with one door) | armory (armed, drafted colonists against a mixed raid) | chores (cutting, mining and tending by the start) | lategame (a grown colony in autumn rain, raid incoming) | rain (a fall storm) | snow (winter snowfall)")
+	scenario := flag.String("scenario", "", "dev: start scenario: rescue (a colonist starts badly hurt) | beds (sleeping spots in the other facings) | double (a double bed by the start) | corridor (two colonists meet head-on in a 1-wide corridor) | crowd (every colonist sent into a room with one door) | armory (armed, drafted colonists against a mixed raid) | chores (cutting, mining and tending by the start) | lategame (a grown colony in autumn rain, raid incoming) | rain (a fall storm) | snow (winter snowfall) | burial (a graveyard, a pyre and two bodies)")
 	captureFrames := flag.Int("capture-frames", 0, "dev: record this many consecutive frames (PATH_NNN.png) instead of one still")
 	captureSpeed := flag.Int("capture-speed", 1, "dev: game speed (1-3) while recording -capture-frames")
-	captureUI := flag.String("capture-ui", "", "dev: UI state for -capture: architect | orders | bills | pawn | combat | melee | follow | grow | corridor | crowd | lategame | weather | grass")
+	captureUI := flag.String("capture-ui", "", "dev: UI state for -capture: architect | orders | bills | pawn | combat | melee | follow | grow | corridor | crowd | lategame | weather | grass | burial")
 	flag.Parse()
 
 	var shot *uiadapter.Capture
@@ -175,6 +175,11 @@ func main() {
 				// kitchen, workshop), fields, a pen, a sandbag line facing
 				// east, seven armed colonists, and a raid on its way
 				lateGame(g)
+			}
+			if *scenario == "burial" {
+				// a graveyard west of the start: three dug graves and a
+				// funeral pyre, and two settlers who did not make it
+				burialGround(g)
 			}
 			if *scenario == "rain" {
 				g.SkipTo(30, 13) // just past a 6-hour weather block, so the storm holds
@@ -388,4 +393,21 @@ func lateGame(g *game.Game) {
 		}
 	}
 	g.RaidArmed(item.Knife, item.Spear, item.Rifle)
+	burialGround(g)
+}
+
+// burialGround builds the -scenario burial set piece (and the late
+// game's graveyard): dug graves and a pyre at x 13..18, y 15..19.
+func burialGround(g *game.Game) {
+	g.ClearPlants(12, 14, 19, 20)
+	for _, x := range []int{13, 15, 17} {
+		g.BuildNow("grave", "wood", "south", x, 15)
+	}
+	g.BuildNow("funeral pyre", "wood", "south", 13, 19)
+	_, _ = g.SpawnStack(item.Wood, 12, 16, 19)
+	for i, n := range []string{"Old Tam", "Sefa"} {
+		if id, err := g.SpawnNamedPawn(15+i*2, 18, n); err == nil {
+			g.Injure(id, 500)
+		}
+	}
 }

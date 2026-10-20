@@ -234,6 +234,10 @@ func (a *App) captureUI(ui string) {
 		a.capture.pan = [][2]float64{{18, 10}, {33, 10}, {42, 18}, {16, 17}}
 		sw, sh := a.size()
 		a.renderer.centerOn(a.capture.pan[0][0], a.capture.pan[0][1], sw, sh)
+	case "burial":
+		// the -scenario burial graveyard
+		sw, sh := a.size()
+		a.renderer.centerOn(16, 17, sw, sh)
 	case "weather":
 		// open ground with trees and grass north-west of the start
 		cx, cy := float64(a.renderer.game.Width())/2, float64(a.renderer.game.Height())/2
