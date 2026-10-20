@@ -64,6 +64,40 @@ art-preview:  ## contact sheet + ART §34 prototype scene
 	python3 assets/source/tools/contact_sheet.py
 	python3 assets/source/tools/compose_scene.py
 
+# ---- README media (docs/screenshots, docs/clips) ----------------------------
+SHOT := $(BIN_DIR)/game -capture
+
+.PHONY: screenshots
+screenshots:  ## README stills in docs/screenshots (real renderer)
+	go build -o $(BIN_DIR)/game ./cmd/game
+	$(SHOT) docs/screenshots/colony.png -capture-ticks 12000 -capture-zoom 0.8
+	$(SHOT) docs/screenshots/architect.png -capture-ui architect
+	$(SHOT) docs/screenshots/farm.png -capture-ui grow
+	$(SHOT) docs/screenshots/bills.png -capture-ui bills
+	$(SHOT) docs/screenshots/siege.png -scenario siege -capture-ui raid
+	$(SHOT) docs/screenshots/defense.png -scenario defense -capture-ui defense -capture-ticks 60 -capture-zoom 0.8
+	$(SHOT) docs/screenshots/combat.png -capture-ui combat
+	$(SHOT) docs/screenshots/animals.png -scenario animals -capture-ui pen
+	$(SHOT) docs/screenshots/research.png -scenario research -capture-ui research
+	$(SHOT) docs/screenshots/medic.png -scenario medic -capture-ui medic
+	$(SHOT) docs/screenshots/winter.png -scenario winter -capture-ui winter
+
+# $(call clip,NAME,FLAGS): record frames to bin/clips/NAME, encode docs/clips/NAME.webp
+define clip
+	rm -rf $(BIN_DIR)/clips/$(1)
+	$(SHOT) $(BIN_DIR)/clips/$(1)/f.png $(2)
+	python3 scripts/frames_to_webp.py --frames '$(BIN_DIR)/clips/$(1)/f_*.png' --out docs/clips/$(1).webp
+endef
+
+.PHONY: clips
+clips:  ## README animated WebP clips in docs/clips (needs python3 + Pillow)
+	go build -o $(BIN_DIR)/game ./cmd/game
+	$(call clip,colony_life,-capture-ui follow -capture-frames 240)
+	$(call clip,building,-capture-ticks 600 -capture-zoom 1.5 -capture-frames 240)
+	$(call clip,combat,-capture-ui combat -capture-frames 180)
+	$(call clip,raid,-scenario raid -capture-ui raid -capture-ticks 500 -capture-frames 300)
+	$(call clip,animals,-scenario animals -capture-ui pen -capture-frames 240)
+
 .PHONY: clean
 clean:
 	rm -rf $(BIN_DIR)
