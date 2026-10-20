@@ -118,7 +118,7 @@ def _knife_geo():
 def _knife():
     _knife_geo()
     return _render("weapon", "knife", 0.07, ("weapon", "knife"),
-                   {"grip": (0.35, Y, 0.04), "support": (0.24, Y, 0.04), "tip": (0.86, Y, 0.03)})
+                   {"grip": (0.30, Y, 0.04), "support": (0.43, Y, 0.04), "tip": (0.86, Y, 0.03)})
 
 
 def _spear_geo():
@@ -151,7 +151,7 @@ def _club():
     for k, (dx, dy) in enumerate([(0.0, 0.11), (0.07, -0.1), (-0.06, -0.1), (0.1, 0.07), (0.13, 0.0)]):
         S.cyl("knob%d" % k, 0.80 + dx, y + dy, 0.02, 0.05, 0.11, "stone_dark", segs=6, r_top=0.006, bevel=0.0)
     return _render("weapon", "club", 0.12, ("weapon", "club"),
-                   {"grip": (0.32, Y, 0.04), "support": (0.24, Y, 0.04), "tip": (0.94, Y, 0.06)})
+                   {"grip": (0.28, Y, 0.04), "support": (0.42, Y, 0.04), "tip": (0.94, Y, 0.06)})
 
 
 # ------------------------------------------------------------------ tools
@@ -167,20 +167,20 @@ def _tools():
     out.append(_render("tool", "hammer", 0.12, ("tool", "hammer"),
                        {"grip": (0.26, y, 0.04), "support": (0.50, y, 0.04), "head": (0.82, y, 0.04)}))
 
-    # axe: two-handed, off hand at the butt
+    # axe: two-handed, lower (main) hand at the butt, upper hand slides up
     _rod(0.14, 0.82, 0.024, "wood", r_top=0.02)
     S.prism("blade", [(0.70, y - 0.03), (0.86, y - 0.03), (0.90, y - 0.17), (0.66, y - 0.15)], 0.0, 0.05,
             "steel", bevel=0.01)
     S.box("poll", 0.74, y - 0.03, 0.0, 0.84, y + 0.05, 0.06, "metal_dark", bevel=0.01)
     out.append(_render("tool", "axe", 0.12, ("tool", "axe"),
-                       {"grip": (0.38, y, 0.04), "support": (0.18, y, 0.04), "head": (0.86, y, 0.04)}))
+                       {"grip": (0.20, y, 0.04), "support": (0.55, y, 0.04), "head": (0.86, y, 0.04)}))
 
-    # pickaxe: two-handed, off hand at the butt
+    # pickaxe: two-handed, lower (main) hand at the butt, upper hand slides up
     _rod(0.16, 0.80, 0.024, "wood", r_top=0.02)
     S.prism("pick", [(0.78, y + 0.20), (0.84, y + 0.02), (0.84, y - 0.02), (0.78, y - 0.20),
                      (0.74, y - 0.04), (0.74, y + 0.04)], 0.0, 0.05, "steel", bevel=0.008)
     out.append(_render("tool", "pickaxe", 0.12, ("tool", "pickaxe"),
-                       {"grip": (0.40, y, 0.04), "support": (0.20, y, 0.04), "head": (0.86, y, 0.04)}))
+                       {"grip": (0.22, y, 0.04), "support": (0.56, y, 0.04), "head": (0.86, y, 0.04)}))
 
     # trowel: wooden handle, ferrule, flat pointed blade
     _rod(0.20, 0.44, 0.03, "wood", r_top=0.026)

@@ -15,4 +15,5 @@ layer: vest_utility
 facing: south
 attachments:
   hand: [102.6, 176.3]
+  hand_l: [58.3, 174.9]
 frame: walk01

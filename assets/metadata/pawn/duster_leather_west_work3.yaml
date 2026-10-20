@@ -12,4 +12,5 @@ layer: duster_leather
 facing: west
 attachments:
   hand: [58.1, 119.0]
+  hand_l: [56.7, 113.9]
 frame: work3

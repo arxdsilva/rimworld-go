@@ -12,4 +12,5 @@ layer: duster_leather
 facing: south
 attachments:
   hand: [101.7, 174.9]
+  hand_l: [57.4, 176.3]
 frame: walk07

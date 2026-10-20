@@ -15,3 +15,4 @@ layer: shirt_basic
 facing: north
 attachments:
   hand: [57.0, 173.3]
+  hand_l: [103.0, 173.3]

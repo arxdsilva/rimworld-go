@@ -15,4 +15,5 @@ layer: shirt_basic
 facing: north
 attachments:
   hand: [56.3, 142.5]
+  hand_l: [102.2, 145.2]
 frame: work4

@@ -15,4 +15,5 @@ layer: pants_basic
 facing: south
 attachments:
   hand: [102.5, 118.9]
+  hand_l: [56.5, 121.6]
 frame: work3

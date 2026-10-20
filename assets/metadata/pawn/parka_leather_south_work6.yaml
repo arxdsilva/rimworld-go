@@ -12,4 +12,5 @@ layer: parka_leather
 facing: south
 attachments:
   hand: [104.6, 148.9]
+  hand_l: [58.7, 151.7]
 frame: work6

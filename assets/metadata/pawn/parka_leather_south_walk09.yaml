@@ -12,4 +12,5 @@ layer: parka_leather
 facing: south
 attachments:
   hand: [102.5, 177.1]
+  hand_l: [57.0, 177.8]
 frame: walk09

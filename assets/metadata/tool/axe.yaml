@@ -12,6 +12,6 @@ tool: axe
 rotatable: true
 points: east
 attachments:
-  grip: [64.6, 85.4]
-  support: [39.0, 85.4]
+  grip: [41.6, 85.4]
+  support: [86.4, 85.4]
   head: [126.1, 85.4]

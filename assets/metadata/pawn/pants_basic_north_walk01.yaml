@@ -15,4 +15,5 @@ layer: pants_basic
 facing: north
 attachments:
   hand: [57.4, 177.5]
+  hand_l: [101.7, 167.8]
 frame: walk01

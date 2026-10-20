@@ -12,6 +12,6 @@ weapon: knife
 rotatable: true
 points: east
 attachments:
-  grip: [60.8, 82.4]
-  support: [46.7, 82.4]
+  grip: [54.4, 82.4]
+  support: [71.0, 82.4]
   tip: [126.1, 83.1]

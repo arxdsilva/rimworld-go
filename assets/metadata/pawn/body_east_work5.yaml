@@ -15,5 +15,6 @@ layer: body
 facing: east
 attachments:
   hand: [105.5, 162.1]
+  hand_l: [106.5, 171.4]
   head: [82.4, 112.9]
 frame: work5

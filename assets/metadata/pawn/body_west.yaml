@@ -15,4 +15,5 @@ layer: body
 facing: west
 attachments:
   hand: [70.6, 178.7]
+  hand_l: [70.6, 171.1]
   head: [77.6, 109.8]

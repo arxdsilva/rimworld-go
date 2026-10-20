@@ -12,6 +12,6 @@ weapon: club
 rotatable: true
 points: east
 attachments:
-  grip: [57.0, 85.4]
-  support: [46.7, 85.4]
+  grip: [51.8, 85.4]
+  support: [69.8, 85.4]
   tip: [136.3, 84.2]

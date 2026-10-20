@@ -15,5 +15,6 @@ layer: body
 facing: south
 attachments:
   hand: [101.9, 176.9]
+  hand_l: [57.2, 178.2]
   head: [80.0, 113.0]
 frame: walk08

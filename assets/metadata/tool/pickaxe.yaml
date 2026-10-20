@@ -12,6 +12,6 @@ tool: pickaxe
 rotatable: true
 points: east
 attachments:
-  grip: [67.2, 85.4]
-  support: [41.6, 85.4]
+  grip: [44.2, 85.4]
+  support: [87.7, 85.4]
   head: [126.1, 85.4]
