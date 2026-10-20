@@ -174,7 +174,7 @@ The first playable surface.
     -   Draw visible terrain only.
     -   Camera culling.
     -   Chunk-aware redraw/cache strategy.
--   [-] **Entity rendering** (pawns from snapshots + vendor pack lerp; vector items/plants/frames/walls/beds; no corpses/projectiles)
+-   [-] **Entity rendering** (pawns and animals from snapshots with curved, eased, sub-frame motion and stride-driven walk/trot frames; original art for items/plants/frames/walls/beds; no projectiles)
     -   Draw pawns, items, plants, buildings, corpses, projectiles.
     -   Presentation uses read-only simulation snapshots.
 -   [-] **Camera controls** (pan, zoom, and screen-to-world conversion implemented; center-on-selection not implemented)
@@ -303,7 +303,7 @@ interchangeable workers.
 
 ## 4.2 Pathfinding
 
--   [-] **Deterministic A**\* (8-connected Chebyshev on `grid.Grid`; f/g/y/x tie-break; no region graph)
+-   [-] **Deterministic A**\* (8-connected octile costs 10/14, no cutting wall corners, optional per-cell extra cost; f/g/y/x tie-break; no region graph)
     -   Exact tile pathfinding.
     -   Stable tie-breaking.
     -   No dependence on map iteration.
@@ -321,16 +321,16 @@ interchangeable workers.
 
 ## 4.3 Movement
 
--   [-] **Follow path** (A* path, `TicksPerCell` occupancy; no pawn-pawn collision)
+-   [x] **Follow path** (A* path; per-creature step timing: straight 15 ticks, diagonal 21)
     -   Pawns traverse cell paths over time rather than teleporting.
     -   Movement updates position at deterministic tick boundaries.
--   [ ] **Pawn collision and occupancy**
+-   [x] **Pawn collision and occupancy** (standing colonists, raiders and animals never share a cell; downed/sleeping/carried pawns can be stepped over)
     -   Prevent invalid stacking where gameplay requires exclusivity.
     -   Handle passing and temporary congestion.
--   [ ] **Deterministic movement conflict arbitration**
+-   [x] **Deterministic movement conflict arbitration** (ID-ordered moves; one fixed yielder per ring of walkers sidesteps, repaths or backs off)
     -   Multiple pawns attempting same cell resolve with stable
         priority/tie-break.
--   [ ] **Local congestion avoidance**
+-   [x] **Local congestion avoidance** (wait first; repath with extra cost around creatures at most every 45 blocked ticks; job fails as blocked after 600)
     -   Avoid constant global repathing.
     -   Optional short-lived congestion cost.
 
@@ -2507,7 +2507,7 @@ the player-facing system.
 -   [ ] **UI feedback sounds**
 -   [ ] **Music system**
     -   Contextual but not authoritative.
--   [ ] **Pawn facing/aiming**
+-   [-] **Pawn facing/aiming** (smoothed facing with hysteresis, faces work/attack target and blockers; no aiming pose)
 -   [x] **Simple movement interpolation**
 -   [ ] **Muzzle/projectile effects**
 -   [ ] **Damage/fire effects**

@@ -42,7 +42,7 @@ Media updated 2026-10-19 · regenerate with `make screenshots clips`
     <td width="50%"><img src="docs/screenshots/defense.png" width="100%" alt="A sandbag ring and spike traps as a raid arrives"><br><sub>A sandbag ring and spike traps as a raid arrives</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/screenshots/combat.png" width="100%" alt="A colonist with a rifle fights off an attacking ridgewolf"><br><sub>A colonist with a rifle fights off an attacking ridgewolf</sub></td>
+    <td width="50%"><img src="docs/screenshots/combat.png" width="100%" alt="A colonist opens fire with a rifle; the inspector shows her needs"><br><sub>A colonist opens fire with a rifle; the inspector shows her needs</sub></td>
     <td width="50%"></td>
   </tr>
 </table>

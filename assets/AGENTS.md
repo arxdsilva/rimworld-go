@@ -55,8 +55,11 @@ Rules:
 - Walls: pick `wall_<mat>_<mask>` with mask N=1, E=2, S=4, W=8 (doors
   count as wall neighbours).
 - Pawns: draw `body`, `pants_*`, `shirt_*`, `vest_*`, `hair_*` for the
-  same facing at the same anchor; held weapons attach their `grip` to the
-  body's `hand` attachment (behind the body when facing north).
+  same facing and frame at the same anchor; held weapons attach their `grip`
+  to the body's `hand` attachment (behind the body when facing north), and
+  hair/hats shift by the body frame's `head` attachment. Frames per ART
+  §27.1: walk `walk01..walk12`, work `work1..work6`, animal trot
+  `walk01..walk08`.
 - Renders are reproducible to ±1/255 per channel (GPU float noise).
 
 ## Layout

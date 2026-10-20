@@ -207,18 +207,18 @@ This is the minimum UI required to interact with a running simulation.
 
 ## 2.1 Main game viewport
 
--   [-] **Map viewport** (grid, pawns, stockpiles, plants, items, frames, buildings from read models; pawn lerp; no roofs/visibility/effects)
+-   [-] **Map viewport** (grid, pawns, stockpiles, plants, items, frames, buildings from read models; curved, eased, sub-frame pawn/animal motion; no roofs/visibility/effects)
     -   Occupies the central play area.
     -   Draw terrain, roofs/visibility treatment, structures, items,
         plants, pawns, effects and selection markers.
     -   Culls off-screen content.
     -   UI panels overlay or reserve space without changing
         authoritative map geometry.
--   [-] **Camera pan** (keyboard WASD/arrow pan implemented, presentation-only; mouse edge/drag pan and smoothing not implemented)
+-   [-] **Camera pan** (keyboard WASD/arrow pan with acceleration and smooth coast-to-stop, presentation-only; mouse edge/drag pan not implemented)
     -   Mouse edge/drag and keyboard movement.
     -   Smooth presentation movement.
     -   Camera position is presentation-only.
--   [-] **Camera zoom** (keyboard/wheel zoom clamped 0.5x-3x implemented; zoom-toward-cursor and far-zoom detail simplification not implemented)
+-   [-] **Camera zoom** (keyboard/wheel zoom clamped, eased toward the target and anchored at the cursor; far-zoom detail simplification not implemented)
     -   Multiple useful zoom levels from tactical detail to colony
         overview.
     -   At far zoom, simplify sprites/details rather than drawing
