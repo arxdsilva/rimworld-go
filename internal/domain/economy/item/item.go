@@ -40,18 +40,22 @@ const (
 	// Knife (stone) and Spear (wood) are melee weapons (SIM-015).
 	Knife
 	Spear
+	// CorpseHuman is a dead colonist or raider (Stack.Of names who);
+	// Bones are what a corpse rots down to (SIM-017).
+	CorpseHuman
+	Bones
 	numKinds
 )
 
 var kindNames = [numKinds]string{"food", "wood", "stone", "berries", "potatoes", "meat", "meal", "club", "rifle", "dustbuck corpse", "ridgewolf corpse",
 	"corn", "wheat", "beans", "lettuce", "radishes", "pumpkins", "leather", "parka", "tuque", "duster", "herbal medicine",
-	"knife", "spear"}
+	"knife", "spear", "human corpse", "bones"}
 
 // IsWeapon reports whether k can be equipped.
 func (k Kind) IsWeapon() bool { return k == Club || k == Rifle || k == Knife || k == Spear }
 
 // IsCorpse reports an animal carcass.
-func (k Kind) IsCorpse() bool { return k == CorpseDustbuck || k == CorpseRidgewolf }
+func (k Kind) IsCorpse() bool { return k == CorpseDustbuck || k == CorpseRidgewolf || k == CorpseHuman }
 
 // nutrition is hunger restored per unit eaten (needs.Full = 10000).
 // Produce values follow real energy density per portion, rounded for
@@ -184,6 +188,8 @@ type Stack struct {
 	Rot int
 	// Dried food (from a drying rack) keeps indefinitely.
 	Dried bool
+	// Of is the dead pawn a human corpse (or its bones) once was.
+	Of entity.EntityID
 }
 
 // Shelf is how many full-speed rot ticks the stack keeps (0 = forever).

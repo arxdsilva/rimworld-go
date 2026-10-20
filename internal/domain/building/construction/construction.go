@@ -40,6 +40,10 @@ const (
 	SpikeTrap
 	// ResearchBench is a 2x1 desk where colonists research.
 	ResearchBench
+	// Grave is a dug 1x2 plot that holds one body under a headstone;
+	// Pyre is a 2x1 log stack where bodies are cremated (SIM-017).
+	Grave
+	Pyre
 	kindCount
 )
 
@@ -68,6 +72,8 @@ type Def struct {
 	Spot    [2]int
 	HasSpot bool
 	Bench   bool // a workstation that runs bills
+	// Dug: made by digging, so it needs work but no materials (a grave).
+	Dug bool
 }
 
 // StoneWorkPct is the work multiplier (percent) for stone construction.
@@ -102,6 +108,10 @@ var defs = [kindCount]Def{
 		Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
 	DryingRack: {Kind: DryingRack, Name: "drying rack", Wood: 6, Work: 100, Layer: LayerObject, BlocksMove: true,
 		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
+	// A grave is dug, not built: no materials, just a long work.
+	Grave: {Kind: Grave, Name: "grave", Work: 400, Layer: LayerObject, Rotatable: true, Size: [2]int{1, 2}, Dug: true},
+	Pyre: {Kind: Pyre, Name: "funeral pyre", Wood: 6, Work: 120, Layer: LayerObject, BlocksMove: true,
+		Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
 }
 
 // MaxHP is how much damage a building takes before it is destroyed.

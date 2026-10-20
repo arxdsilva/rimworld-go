@@ -26,6 +26,9 @@ const (
 	ActionRefuel      = "refuel"
 	ActionHaul        = "haul"
 	ActionHorseshoes  = "horseshoes"
+	ActionDig         = "dig"     // digging a grave
+	ActionBury        = "bury"    // filling a grave over a body
+	ActionCremate     = "cremate" // burning a body on a pyre
 
 	// Animal actions.
 	ActionBite  = "bite"

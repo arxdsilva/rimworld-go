@@ -216,6 +216,7 @@ func (g *Game) die(id entity.EntityID, cause health.Cause) {
 	v, _ := g.vital.Get(id)
 	v.Status, v.Cause = health.Dead, cause
 	g.vital.Set(id, v)
+	g.spawnCorpse(id)
 }
 
 // heal regenerates injury over time and stands injured pawns back up.

@@ -151,6 +151,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	r.drawW, r.drawPawns = w, r.game.Snapshot()
 
 	r.drawTerrainArt(screen, w, sw, sh, tile)
+	r.drawGroundCover(screen, w, sw, sh, tile)
 	for _, z := range w.GrowZones {
 		for y := z.MinY; y <= z.MaxY; y++ {
 			for x := z.MinX; x <= z.MaxX; x++ {
@@ -220,7 +221,14 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 			t = r.art.tint("cloth", cloth[mix64(uint64(b.ID))%uint64(len(cloth))])
 		}
 		add(float64(b.Y+max(b.H, 1)-1), float64(b.X), func() {
-			r.drawSprite(screen, key, t, float64(b.X), float64(b.Y), tile, sw, sh)
+			switch b.Kind {
+			case "grave":
+				r.drawGrave(screen, b, tile, sw, sh)
+			case "funeral pyre":
+				r.drawPyre(screen, b, tile, sw, sh)
+			default:
+				r.drawSprite(screen, key, t, float64(b.X), float64(b.Y), tile, sw, sh)
+			}
 			if b.DryQty > 0 {
 				r.drawRackLoad(screen, b, tile, sw, sh)
 			}
@@ -256,17 +264,18 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	for _, p := range w.Plants {
 		p := p
 		key, scale := plantSprite(p)
-		amount := 0.035
+		key = r.seasonKey(key, w)
+		amount, kind := 0.035, kindBush
 		switch p.Species {
 		case "tree":
-			amount = 0.022
+			amount, kind = 0.022, kindTree
 		case "wheat", "corn":
-			amount = 0.07
+			amount, kind = 0.07, kindCrop
 		case "radish", "lettuce", "potato", "beans", "pumpkin", "healroot":
-			amount = 0.04
+			amount, kind = 0.04, kindCrop
 		}
 		add(float64(p.Y), float64(p.X), func() {
-			ps := pose{px: 0.5, py: 1, sx: scale, sy: scale, skew: r.sway(p.X, p.Y, amount)}
+			ps := r.plantPose(p.X, p.Y, kind, amount, scale)
 			r.drawSpritePose(screen, key, none, float64(p.X), float64(p.Y), tile, ps)
 		})
 	}
@@ -277,6 +286,10 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 		}
 		key := itemSprite(it.Kind)
 		add(float64(it.Y), float64(it.X), func() {
+			if it.Kind == "human corpse" || it.Kind == "bones" {
+				r.drawCorpseItem(screen, it, tile, sw, sh)
+				return
+			}
 			if !r.art.has(key) {
 				pad := float32(tile) * 0.3
 				sx, sy := r.worldToScreen(it.X, it.Y)
@@ -289,6 +302,9 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	r.addAnimalDraws(w, add, screen, tile, sw, sh)
 	for _, p := range r.drawPawns {
 		p := p
+		if p.Embodied {
+			continue // the body is a corpse item now
+		}
 		wx, wy := r.interpWorld(p)
 		row := wy + 0.01
 		if p.Lying && p.InBed {
@@ -315,6 +331,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	r.drawBreakClouds(screen, tile)
 	r.drawOrderRoute(screen, tile)
 	r.drawParticles(screen, tile)
+	r.drawWeather(screen, w, sw, sh, tile)
 	r.drawFloaters(screen, tile)
 
 	for _, p := range w.Plants {
@@ -560,7 +577,7 @@ func (r *Renderer) drawTerrainArt(screen *ebiten.Image, w game.WorldView, sw, sh
 			}
 			if (t == "soil" || t == "rich_soil") && (tileHash(x, y)>>8)%grassEvery == 0 {
 				h := tileHash(x, y) >> 8
-				r.drawSprite(screen, artKey("plant", "grass", int(h/grassEvery%2)), none, float64(x), float64(y), tile, sw, sh)
+				r.drawSpritePose(screen, artKey("plant", "grass", int(h/grassEvery%2)), none, float64(x), float64(y), tile, r.plantPose(x, y, kindGrass, 0.05, 1))
 			}
 		}
 	}

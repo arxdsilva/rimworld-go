@@ -30,6 +30,7 @@ import (
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/temperature"
 	"rimworld-go/internal/domain/world/terrain"
+	"rimworld-go/internal/domain/world/weather"
 )
 
 // Saved games: the complete authoritative state, gob-encoded and
@@ -160,6 +161,9 @@ type saveState struct {
 	// (absent in older saves: no recent strike or hit).
 	Strikes map[entity.EntityID]strikeRec
 	Hits    map[entity.EntityID]hitRec
+	// Weather (SIM-016) and Graves (SIM-017); absent in older saves.
+	Weather weather.State
+	Graves  map[entity.EntityID]graveRec
 }
 
 // Info describes the game for a save header.
@@ -200,6 +204,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 		Carrying: g.carrying, TendedUntil: g.tendedUntil, Wounds: g.wounds,
 		Research: g.research, ResearchCur: g.researchCur, ResearchSet: g.researchSet, Pens: g.pens, RockDamage: g.rockDamage, Residual: g.residual,
 		Motion: g.exportMotion(), Strikes: g.lastStrike, Hits: g.lastHit,
+		Weather: g.weather, Graves: g.graves,
 	}
 	for id, e := range g.exposure {
 		s.Exposure[id] = [2]int{e.hypo, e.heat}
@@ -307,6 +312,9 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.defaultMotion()
 	setMap(&g.lastStrike, s.Strikes)
 	setMap(&g.lastHit, s.Hits)
+	g.weather = s.Weather
+	setMap(&g.graves, s.Graves)
+	g.afterLoadBurial()
 	for id, e := range s.Exposure {
 		g.exposure[id] = exposureState{e[0], e[1]}
 	}

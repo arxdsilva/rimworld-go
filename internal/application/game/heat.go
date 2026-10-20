@@ -149,7 +149,7 @@ func (g *Game) heatRooms() {
 
 // burning reports a campfire with fuel that is actually burning now.
 func (g *Game) burning(bid entity.EntityID, b construction.Building) bool {
-	return g.fuel[bid] > 0 && g.temperatureAt(b.X, b.Y) < campfireBank
+	return g.fuel[bid] > 0 && !g.doused(bid) && g.temperatureAt(b.X, b.Y) < campfireBank
 }
 
 // --- refuelling ------------------------------------------------------------

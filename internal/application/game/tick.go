@@ -817,6 +817,8 @@ func (g *Game) phaseJobs() {
 			g.doSleep(id, j, now)
 		case job.Haul:
 			g.doHaul(id, j)
+		case job.Bury:
+			g.doBury(id, j)
 		case job.Construct:
 			g.doConstruct(id, j)
 		case job.Harvest:
@@ -1251,7 +1253,7 @@ func (g *Game) movePawn(id entity.EntityID, m motionRec, now uint64) bool {
 // stepPawn moves a pawn (and what it carries) from -> to at tick now.
 func (g *Game) stepPawn(id entity.EntityID, m *motionRec, carry entity.EntityID, from, to Position, now uint64) {
 	g.positions.Set(id, to)
-	m.stepped(now, pawnStepCost(from, to))
+	m.stepped(now, g.weatherSlow(to.X, to.Y, pawnStepCost(from, to)))
 	g.motion.Set(id, *m)
 	if carry != 0 {
 		if st, ok := g.stacks.Get(carry); ok {

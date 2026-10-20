@@ -55,6 +55,7 @@ type captureState struct {
 	saved   int  // sequence frames written
 	pending bool // a sequence frame is waiting to be drawn
 	follow  entity.EntityID
+	pan     [][2]float64 // camera waypoints (tiles) eased through over a frame sequence
 	done    bool
 	err     error
 }
@@ -157,6 +158,10 @@ func (a *App) tickCapture() {
 		}
 		a.renderer.speed = c.speed()
 		a.renderer.advance()
+		if wp := a.capture.pan; len(wp) > 1 && c.Frames > 1 {
+			x, y := panAt(wp, float64(a.capture.saved)/float64(c.Frames-1))
+			a.renderer.centerOn(x, y, a.sw, a.sh)
+		}
 		for _, p := range a.renderer.snapshot() {
 			if p.ID == a.capture.follow { // keep the followed colonist mid-screen
 				wx, wy := a.renderer.interpWorld(p)
@@ -222,6 +227,24 @@ func (a *App) captureUI(ui string) {
 				a.renderer.game.Step(1)
 				a.renderer.syncPawns()
 			}
+		}
+	case "lategame":
+		// a slow pan: the farms, the compound, the sandbag line, the
+		// graveyard (the -scenario lategame layout)
+		a.capture.pan = [][2]float64{{18, 10}, {33, 10}, {42, 18}, {16, 17}}
+		sw, sh := a.size()
+		a.renderer.centerOn(a.capture.pan[0][0], a.capture.pan[0][1], sw, sh)
+	case "weather":
+		// open ground with trees and grass north-west of the start
+		cx, cy := float64(a.renderer.game.Width())/2, float64(a.renderer.game.Height())/2
+		sw, sh := a.size()
+		a.renderer.centerOn(cx-8, cy-6, sw, sh)
+	case "grass":
+		// the first colonist walks across open grass; the camera follows
+		if pawns := a.renderer.snapshot(); len(pawns) > 0 {
+			p := pawns[0]
+			a.capture.follow = p.ID
+			a.renderer.enqueue(command.Command{Kind: command.MovePawn, Pawn: uint64(p.ID), X: p.X - 10, Y: p.Y - 8})
 		}
 	case "corridor", "crowd":
 		// the -scenario corridor / crowd set pieces, north / east of the start
@@ -456,3 +479,21 @@ func (a *App) drawCapture(screen *ebiten.Image) {
 
 // CaptureErr reports a failed capture run after RunGame returns.
 func (a *App) CaptureErr() error { return a.capture.err }
+
+// panAt is the camera point at progress t (0..1) along waypoints, eased
+// in and out on each leg.
+func panAt(wp [][2]float64, t float64) (float64, float64) {
+	if t <= 0 {
+		return wp[0][0], wp[0][1]
+	}
+	if t >= 1 {
+		last := wp[len(wp)-1]
+		return last[0], last[1]
+	}
+	legs := float64(len(wp) - 1)
+	i := int(t * legs)
+	k := t*legs - float64(i)
+	k = k * k * (3 - 2*k)
+	a, b := wp[i], wp[i+1]
+	return a[0] + (b[0]-a[0])*k, a[1] + (b[1]-a[1])*k
+}

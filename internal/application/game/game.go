@@ -28,6 +28,7 @@ import (
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/temperature"
 	"rimworld-go/internal/domain/world/terrain"
+	"rimworld-go/internal/domain/world/weather"
 	"rimworld-go/pkg/randx"
 )
 
@@ -142,6 +143,10 @@ type PawnView struct {
 	HitTick            uint64
 	HitFromX, HitFromY int
 	HitDamage          int
+	// Embodied: dead, and the body is now a human corpse item (SIM-017).
+	// Soaked: out in the rain.
+	Embodied bool
+	Soaked   bool
 }
 
 // ItemView is a ground stack.
@@ -159,6 +164,9 @@ type ItemView struct {
 	RotRate int
 	// Dried food came off a drying rack and never spoils.
 	Dried bool
+	// Of/OfName: whose body a human corpse (or bones) is (SIM-017).
+	Of     entity.EntityID
+	OfName string
 }
 
 // FrameView is a construction blueprint.
@@ -202,6 +210,12 @@ type BuildingView struct {
 	Burning bool
 	// HPPct is the building's health (percent); below 100 it is damaged.
 	HPPct int
+	// Grave (SIM-017): Occupant is who lies there ("" while empty),
+	// Epitaph the headstone line, Headstone the headstone style 0..3.
+	// A pyre reports Burning while it cremates.
+	Occupant  string
+	Epitaph   string
+	Headstone int
 }
 
 // PlantView is a wild plant.
@@ -214,6 +228,7 @@ type PlantView struct {
 	Growth      int // percent
 	Stage       int // 0 sown .. 3 ripe
 	Cut         bool
+	Wilted      bool // a crop suffering frost or stalled growth (SIM-016)
 }
 
 // StockpileView is a storage rectangle.
@@ -253,6 +268,13 @@ type WorldView struct {
 	// degree C, and the season name.
 	OutdoorTemp, IndoorTemp int
 	Season                  string
+	// Weather (SIM-016): Weather is the kind ("clear", "rain", ...),
+	// WeatherIntensity 0..1, WindX/WindY the wind in tiles per second,
+	// SnowDepth and Wetness 0..1 what lies on open ground.
+	Weather            string
+	WeatherIntensity   float64
+	WindX, WindY       float64
+	SnowDepth, Wetness float64
 	// Messages are recent event notices, oldest first.
 	Messages []MessageView
 	// Schedule is the colony default schedule (new colonists get a copy).
@@ -301,6 +323,8 @@ type Game struct {
 	bills      map[entity.EntityID][]recipe.Bill
 	racks      map[entity.EntityID]dryBatch // what each drying rack holds
 	fuel       map[entity.EntityID]int      // campfire fuel, ticks of burning
+	weather    weather.State                // outdoor weather (weather.go, SIM-016)
+	graves     map[entity.EntityID]graveRec // who lies in each filled grave (burial.go, SIM-017)
 	exposure   map[entity.EntityID]exposureState
 	noComfort  map[entity.EntityID]uint64 // no warm/cool spot found until this tick
 	orderQueue map[entity.EntityID][]queuedOrder
@@ -555,6 +579,7 @@ func (g *Game) Step(n int) {
 		g.phaseJobs()
 		g.phaseAnimals()
 		g.phaseThreats()
+		g.phaseWeather()
 		g.phaseMovement()
 		g.clock.Advance(1)
 	}

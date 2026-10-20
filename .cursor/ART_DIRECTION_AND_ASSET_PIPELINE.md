@@ -169,6 +169,22 @@ exceed one tile visually but retain a clear ground origin. Crop species
 should be recognizable at maturity; wild plants can use more silhouette
 variation.
 
+Vegetation set (family `plant`):
+
+- Trees: `tree_{oak,birch,pine}_00..02`. Oak and birch also have
+  `_autumn` (amber/red/gold canopy) and `_bare` (winter branches with a
+  light snow cap); pine is evergreen. Metadata `sway: {trunk, canopy}`.
+- Bushes: `bush_00..03`; berry bushes `berry_bush_00..02` with
+  `_harvestable` (berries visible).
+- Grass: `grass_00..07` (tufts, some with small flowers or clover) and
+  `grass_tall_00..03` (meadow grass on rich soil).
+- Crops: `<species>_<stage>_v0..v2` with stages `sown`, `sprout`,
+  `young`, `mature`, `harvestable` (ripe produce visible) and `wilted`
+  (frost or stalled growth). Variants change leaf count, angle and
+  height, not just colour.
+- Cozy rule: warm, slightly desaturated greens; soft value steps; no
+  pure saturated primaries.
+
 ## 10. Pawn Visual System
 
 Pawns are compositional, not one flattened sprite per colonist.
@@ -299,6 +315,26 @@ Fire, smoke, rain, snow, explosions, muzzle flashes, projectiles,
 impacts, and similar visuals are presentation effects. Keep them
 brief/readable and never let animation timing determine simulation
 outcomes.
+
+Weather (family `weather`, driven by `WorldView.Weather`,
+`WeatherIntensity`, `WindX/WindY`, `SnowDepth`, `Wetness`):
+
+- Rain: thin streaks angled by the wind, density by intensity, small
+  splash sprites where drops land, ripples on puddles. Storms darken the
+  scene and flash rare lightning.
+- Snow: flakes of a few sizes that flutter and drift with the wind,
+  settling into snow cover; blizzards cut visibility.
+- Ground: `snow_cover_00..05` and `snow_drift_00..03` by `SnowDepth`,
+  `puddle_00..05` by `Wetness`, `frost_00..03` on freezing mornings, each
+  picked per tile by hash.
+- Particle textures: `raindrop`, `splash_00..02`, `snowflake_00..03`.
+
+Corpses: animal corpses `item/corpse_<species>_v0..v2` (different lying
+poses); human corpses are drawn from the deceased's own pawn layers,
+lying, with the dead tint and the rot tint as they spoil; fully rotted
+bodies become `item/bones_00..01`. Graves (`furniture/grave_dug_*`,
+`grave_filled_*`, `headstone_00..03`) and the funeral pyre
+(`furniture/pyre`, `pyre_burning`) belong to the furniture family.
 
 ## 17. UI Art
 
@@ -653,6 +689,24 @@ Timing (with §27.1 clocks):
   Each shot throws muzzle flash and smoke at `muzzle` and a shell casing.
 - Everything keeps the §27.1 minimum of 8 visible frames.
 
+### 27.3 Environment motion (normative)
+
+- Wind field: world wind (`WindX/WindY`) plus two travelling gust fronts
+  (wavelength 9-14 tiles, moving downwind at 1.2x the wind) plus a small
+  per-plant phase, so visible waves roll across grass and crops.
+- Each plant leans with the local wind through a damped spring
+  (stiffness k=38, damping ratio 0.35). Lean limits: grass 0.35 rad,
+  crops 0.22, bushes 0.12, tree canopy 0.06 over a 0.02 trunk with the
+  canopy lagging the trunk.
+- Contact: a creature moving within 0.6 tile pushes a plant away from it
+  (0.9 x its speed, capped); the plant springs back when it has passed.
+  Trees shake briefly when brushed and, in fall, drop a leaf or two.
+- Clocks: ambient waving on `present` (the world keeps breathing while
+  paused); contact reads creature positions from the motion API.
+- Budget: only visible plants; contact only within 1.5 tiles of a moving
+  creature; no per-frame string building; weather particles in their own
+  capped pool.
+
 ## 28. Deterministic Visual Variation
 
 Visual randomness should be stable using keys such as world seed, tile
@@ -660,6 +714,10 @@ coordinate, EntityID, and variant category. Terrain variants, plant
 rotation, rock variants, and decals must not shuffle between
 frames/loads. Visual RNG must never feed back into authoritative
 simulation.
+
+Plant and decal variants are picked by `tileHash(x, y)`; seasonal looks
+by the world's season; human corpses take the deceased's look from its
+EntityID.
 
 ## 29. Tests and Visual QA
 

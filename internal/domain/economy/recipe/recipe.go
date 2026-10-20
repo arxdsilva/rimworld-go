@@ -23,6 +23,8 @@ const (
 	// Knife (stone) and Spear (wood): hand-made melee weapons.
 	Knife
 	Spear
+	// Cremate burns a human corpse on a funeral pyre.
+	Cremate
 	numRecipes
 )
 
@@ -93,6 +95,9 @@ var defs = [numRecipes]Def{
 		Input: Input{Kind: item.Stone, Qty: 3}, Output: item.Knife, OutQty: 1, Work: 200, Skill: work.Craft},
 	Spear: {ID: Spear, Name: "spear", Label: "Make wooden spear", Bench: construction.Workbench,
 		Input: Input{Kind: item.Wood, Qty: 5}, Output: item.Spear, OutQty: 1, Work: 320, Skill: work.Craft},
+	Cremate: {ID: Cremate, Name: "cremate", Label: "Cremate corpse", Bench: construction.Pyre,
+		Input: Input{Kind: item.CorpseHuman, Qty: 1}, Work: 300, Skill: work.Craft,
+		Extra: item.Wood, ExtraQty: 2},
 	DryFood: {ID: DryFood, Name: "dry_food", Label: "Dry food", Bench: construction.DryingRack,
 		Input: Input{AnyDryable: true, Qty: 1, Max: RackCapacity}, Work: 90, Skill: work.Cook, Dry: true},
 }

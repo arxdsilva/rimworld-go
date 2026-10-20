@@ -13,7 +13,12 @@ func TestDefsAreConsistent(t *testing.T) {
 			t.Fatalf("def %d: empty or duplicate name %q", i, d.Name)
 		}
 		seen[d.Name] = true
-		if (d.Wood <= 0 || d.Work <= 0) && !d.Kind.Instant() {
+		switch {
+		case d.Dug:
+			if d.Wood != 0 || d.Work <= 0 {
+				t.Fatalf("%s: a dug kind needs work and no materials", d.Name)
+			}
+		case (d.Wood <= 0 || d.Work <= 0) && !d.Kind.Instant():
 			t.Fatalf("%s: cost and work must be positive (or both zero for an instant marking)", d.Name)
 		}
 		if k, ok := Parse(d.Name); !ok || k != d.Kind {

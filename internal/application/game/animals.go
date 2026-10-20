@@ -407,7 +407,7 @@ func (g *Game) moveAnimal(id entity.EntityID, m motionRec, now uint64) {
 // there if it is a trap victim.
 func (g *Game) stepAnimal(id entity.EntityID, a *animal.State, m *motionRec, from, to Position, now uint64) {
 	g.positions.Set(id, to)
-	m.stepped(now, a.StepCost(isDiagonal(from, to)))
+	m.stepped(now, g.weatherSlow(to.X, to.Y, a.StepCost(isDiagonal(from, to))))
 	g.motion.Set(id, *m)
 	g.animals.Set(id, *a)
 	if g.trapVictim(*a) && g.hasTraps() && g.trapAt(to.X, to.Y) != 0 {

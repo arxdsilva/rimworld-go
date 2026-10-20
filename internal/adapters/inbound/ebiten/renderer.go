@@ -153,6 +153,7 @@ type Renderer struct {
 	mo        motionState     // per-creature motion and the animT clock (motion.go)
 	anims     *animState      // body-animation bookkeeping (anim.go)
 	smooth    camSmooth       // eased pan and zoom (camera_smooth.go)
+	env       envState        // wind, contact springs and weather (environment.go)
 
 	gridClr   color.RGBA
 	pawnClr   color.RGBA
@@ -217,6 +218,7 @@ func (r *Renderer) advance() {
 	r.syncPawns()
 	w := r.game.World()
 	r.animate(w, r.game.Snapshot(), n > 0)
+	r.stepEnvironment(w, r.game.Snapshot())
 	r.watchThreats(w)
 }
 

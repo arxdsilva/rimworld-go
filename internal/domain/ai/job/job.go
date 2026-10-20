@@ -73,6 +73,8 @@ const (
 	Research
 	// Tame: coaxing a wild animal into the colony.
 	Tame
+	// Bury: carrying a body to an empty grave and filling it in.
+	Bury
 )
 
 // IsIdle reports a free-time behaviour that any real work may replace.
@@ -138,6 +140,8 @@ func (k Kind) String() string {
 		return "research"
 	case Tame:
 		return "tame"
+	case Bury:
+		return "bury"
 	default:
 		return "idle"
 	}
