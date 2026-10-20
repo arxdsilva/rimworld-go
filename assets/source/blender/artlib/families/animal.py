@@ -203,29 +203,94 @@ def _zmax_screen(height):
     return hgt * (math.sin(t) / C.SHEAR_K + math.cos(t)) + 0.05
 
 
-def _corpse(builder):
-    """The species model rolled onto its side, lying across the tile,
-    over a small dark pool."""
+CORPSE_VARIANTS = 3
+LEG_PARTS = ("leg", "hoof")
+
+
+def _sockets():
+    """Dead eyes: dark, slightly sunken sockets in every species."""
+    from mathutils import Matrix
+    for ob in S.objects():
+        if ob.name.split(".")[0] != "eye":
+            continue
+        ob.data.materials[0] = S.mat("fur_dark")
+        c = sum((ob.matrix_world @ v.co for v in ob.data.vertices), ob.matrix_world.translation * 0) / len(ob.data.vertices)
+        S.transform([ob], Matrix.Translation(c) @ Matrix.Scale(1.45, 4) @ Matrix.Translation(-c))
+
+
+def _swing_legs(species, deg_front, deg_back):
+    """Swing front legs and back legs about the hip (X axis), degrees."""
+    from mathutils import Matrix
+    pz = HIP_Z[species]
+    for ob in S.objects():
+        if ob.name.split(".")[0] not in LEG_PARTS:
+            continue
+        py = _mean(ob, 1)
+        a = math.radians(deg_front if py < CY else deg_back)
+        S.transform([ob], Matrix.Translation((0, py, pz)) @ Matrix.Rotation(a, 4, "X")
+                    @ Matrix.Translation((0, -py, -pz)))
+
+
+def _turn_head(species, deg):
+    """Swing the head parts sideways about the neck base (Z axis)."""
+    from mathutils import Matrix
+    ny = NECK_PIVOT[species][0] - 0.02
+    for ob in S.objects():
+        if ob.name.split(".")[0] in HEAD_PARTS:
+            S.transform([ob], Matrix.Translation((CX, ny, 0)) @ Matrix.Rotation(math.radians(deg), 4, "Z")
+                        @ Matrix.Translation((-CX, -ny, 0)))
+
+
+def _corpse(species, builder, variant=0):
+    """The species model lying dead across its tile over a small dark pool.
+    v0 on its side, v1 curled with the head turned in, v2 stiff with the
+    legs stretched out."""
     from mathutils import Matrix, Vector
     builder()
+    _sockets()
+    face, roll, spin, pool = "east", 100.0, -90.0, 0.0
+    if variant == 1:
+        _swing_legs(species, 42.0, -42.0)
+        _turn_head(species, 62.0)
+        face, roll, spin, pool = "east", 98.0, 72.0, -0.04
+    elif variant == 2:
+        _swing_legs(species, -48.0, 40.0)
+        face, roll, spin, pool = "east", 104.0, -58.0, 0.05
     objs = S.objects()
-    S.face(objs, "east", (1, 1))
+    S.face(objs, face, (1, 1))
     pivot = Vector((0.5, -0.5, 0.0))
-    S.transform(objs, Matrix.Translation(pivot) @ Matrix.Rotation(math.radians(100), 4, "X")
+    S.transform(objs, Matrix.Translation(pivot) @ Matrix.Rotation(math.radians(roll), 4, "X")
                 @ Matrix.Scale(0.82, 4) @ Matrix.Translation(-pivot))
     zmin = min((ob.matrix_world @ v.co).z for ob in objs for v in ob.data.vertices)
     S.transform(objs, Matrix.Translation((0, 0, -zmin)))
-    zmax = max((ob.matrix_world @ v.co).z for ob in objs for v in ob.data.vertices)
-    S.ellipsoid("pool", 0.5, -0.66, 0.0, 0.26, 0.1, 0.01, "food_red", segs=20, rings=6)
+    if spin:
+        S.rotate_z(objs, spin)
+    pts = [ob.matrix_world @ v.co for ob in objs for v in ob.data.vertices]
+    cx = (min(p.x for p in pts) + max(p.x for p in pts)) / 2
+    cy = (min(p.y for p in pts) + max(p.y for p in pts)) / 2
+    S.transform(objs, Matrix.Translation((0.5 - cx, -0.5 - cy, 0)))
+    zmax = max(p.z for p in pts)
+    S.ellipsoid("pool", 0.5 + pool, -0.5, 0.0, 0.2, 0.15, 0.01, "food_red", segs=20, rings=6)
     return zmax
 
 
-def build():
+def _corpses():
     out = []
     for species, (builder, _h) in SPECIES.items():
-        zmax = _corpse(builder)
-        out.append(S.render_asset("item", "corpse_%s" % species, zmax=zmax + 0.05,
-                                  extra={"item": "%s corpse" % species, "species": species}))
+        for v in range(CORPSE_VARIANTS):
+            zmax = _corpse(species, builder, v)
+            out.append(S.render_asset("item", "corpse_%s_v%d" % (species, v), zmax=zmax + 0.05,
+                                      extra={"item": "%s corpse" % species, "species": species, "variant": v}))
+            if v == 0:  # legacy id kept as an alias of v0
+                zmax = _corpse(species, builder, 0)
+                out.append(S.render_asset("item", "corpse_%s" % species, zmax=zmax + 0.05,
+                                          extra={"item": "%s corpse" % species, "species": species,
+                                                 "alias": "corpse_%s_v0" % species}))
+    return out
+
+
+def build():
+    out = _corpses()
     for species, (builder, height) in SPECIES.items():
         for f in FACINGS:
             for fr in [None] + list(WALK_FRAMES) + ACTION_FRAMES[species]:

@@ -182,6 +182,19 @@ def _tools():
     out.append(_render("tool", "pickaxe", 0.12, ("tool", "pickaxe"),
                        {"grip": (0.22, y, 0.04), "support": (0.56, y, 0.04), "head": (0.86, y, 0.04)}))
 
+    # shovel: long wooden shaft, D-grip at the butt, ferrule, flat spade blade
+    _rod(0.14, 0.76, 0.024, "wood", r_top=0.021)
+    S.box("d_grip", 0.10, y - 0.07, 0.0, 0.17, y + 0.07, 0.05, "wood", bevel=0.012)
+    S.box("d_post_a", 0.10, y - 0.07, 0.0, 0.17, y - 0.045, 0.07, "bark", bevel=0.006)
+    S.box("d_post_b", 0.10, y + 0.045, 0.0, 0.17, y + 0.07, 0.07, "bark", bevel=0.006)
+    S.box("socket", 0.74, y - 0.034, 0.0, 0.84, y + 0.034, 0.07, "metal_dark", bevel=0.01)
+    S.prism("blade", [(0.82, y - 0.05), (0.90, y - 0.115), (0.99, y - 0.105), (1.06, y - 0.05),
+                      (1.08, y), (1.06, y + 0.05), (0.99, y + 0.105), (0.90, y + 0.115), (0.82, y + 0.05)],
+            0.0, 0.03, "steel", bevel=0.008)
+    S.box("rib", 0.84, y - 0.012, 0.03, 1.0, y + 0.012, 0.045, "metal_dark", bevel=0.004)
+    out.append(_render("tool", "shovel", 0.12, ("tool", "shovel"),
+                       {"grip": (0.20, y, 0.04), "support": (0.50, y, 0.04), "head": (1.0, y, 0.03)}))
+
     # trowel: wooden handle, ferrule, flat pointed blade
     _rod(0.20, 0.44, 0.03, "wood", r_top=0.026)
     S.cyl("ferrule", 0, 0, 0.034, 0.0, 0.05, "metal_dark", segs=8, bevel=0.0)
