@@ -43,3 +43,19 @@ func TestOppositeThoughtsReplaceEachOther(t *testing.T) {
 		t.Fatal("forget drops the room-quality group only")
 	}
 }
+
+func TestDeathAndBurialThoughts(t *testing.T) {
+	t.Parallel()
+	if d := DefOf(ColonistDied); d.Value != -6 || d.Duration != 3*day {
+		t.Fatalf("colonist died: %+v", d)
+	}
+	if d := DefOf(UnburiedCorpse); d.Value != -2 || d.Duration != 0 {
+		t.Fatalf("unburied corpse is a state thought: %+v", d)
+	}
+	var m Memories
+	m = m.Add(LaidToRest, 0)
+	m = m.Add(LaidToRest, 10)
+	if len(m) != 1 || Level(Active(m)) != Base+3 || m[0].Expires != 10+day {
+		t.Fatalf("laid to rest: +3 for a day, never stacked: %+v", m)
+	}
+}

@@ -659,6 +659,8 @@ func (g *Game) filterMatches(k item.Kind) bool {
 
 func allows(s zone.Stockpile, k item.Kind) bool {
 	switch {
+	case k == item.CorpseHuman, k == item.Bones:
+		return false // the dead go to graves and pyres, not shelves
 	case k.IsFood(), k.IsCorpse():
 		return s.AllowFood
 	case k == item.Wood:

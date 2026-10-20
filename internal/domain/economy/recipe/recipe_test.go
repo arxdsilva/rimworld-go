@@ -51,3 +51,22 @@ func TestKnifeSpearRecipes(t *testing.T) {
 		t.Fatal("the workbench offers knife and spear")
 	}
 }
+
+func TestCremateBurnsAHumanCorpseOnAPyre(t *testing.T) {
+	t.Parallel()
+	d := DefOf(Cremate)
+	if d.Bench != construction.Pyre || !d.Input.Accepts(item.CorpseHuman) || d.Input.Qty != 1 {
+		t.Fatalf("cremate: %+v", d)
+	}
+	if d.Input.Accepts(item.CorpseDustbuck) || d.OutQty != 0 || d.Extra != item.Wood || d.ExtraQty != 2 || d.Work != 300 {
+		t.Fatalf("cremate burns one body with 2 wood, makes nothing: %+v", d)
+	}
+	if len(For(construction.Pyre)) != 1 {
+		t.Fatal("a pyre only cremates")
+	}
+	for _, r := range For(construction.ButcherTable) {
+		if r.Input.Accepts(item.CorpseHuman) {
+			t.Fatal("human corpses are never butchered")
+		}
+	}
+}

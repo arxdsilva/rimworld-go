@@ -86,7 +86,8 @@ func (g *Game) phaseClimate() {
 
 // rotItems advances spoilage by the local temperature. Spoiled food is
 // destroyed; a rotten corpse lingers unbutcherable until it has rotted as
-// long again, then decays away. Stacks being carried or reserved for a job
+// long again, then decays away, except a human corpse, which becomes the
+// deceased's bones (SIM-017). Stacks being carried or reserved for a job
 // keep rotting but are only removed once they are free.
 func (g *Game) rotItems() {
 	type loss struct {
@@ -107,6 +108,9 @@ func (g *Game) rotItems() {
 			}
 		}
 		st.Rot += climateInterval * item.RotRate(int(g.temperatureAt(x, y))) / 1000
+		if st.Kind == item.CorpseHuman && st.Rot >= 2*st.Shelf() {
+			st.Kind, st.Rot = item.Bones, 0 // same Of: whose bones they are
+		}
 		g.stacks.Set(id, st)
 		gone := st.Rotten() && !st.Kind.IsCorpse() || st.Kind.IsCorpse() && st.Rot >= 2*st.Shelf()
 		if !gone || st.Carrier != 0 {

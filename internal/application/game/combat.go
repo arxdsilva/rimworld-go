@@ -217,6 +217,8 @@ func (g *Game) die(id entity.EntityID, cause health.Cause) {
 	v.Status, v.Cause = health.Dead, cause
 	g.vital.Set(id, v)
 	g.spawnCorpse(id)
+	g.dropRaiderGear(id) // the weapon falls beside the body
+	g.mourn(id)
 }
 
 // heal regenerates injury over time and stands injured pawns back up.

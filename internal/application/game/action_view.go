@@ -53,6 +53,14 @@ func (g *Game) actionOf(id entity.EntityID, j job.Record) string {
 		if active && j.Carry != 0 {
 			return ActionHaul
 		}
+	case job.Bury:
+		switch {
+		case working && j.Carry != 0:
+			return ActionBury
+		case active && j.Carry != 0:
+			return ActionHaul // carrying the body to the grave
+		}
+		return ""
 	case job.Rescue:
 		if working || active && g.carrying[id] != 0 {
 			return ActionRescue
@@ -75,6 +83,9 @@ func (g *Game) actionOf(id entity.EntityID, j job.Record) string {
 	}
 	switch j.Kind {
 	case job.Construct:
+		if fr, ok := g.frames.Get(j.Target); ok && fr.Kind == construction.Grave {
+			return ActionDig
+		}
 		return ActionBuild
 	case job.Deconstruct:
 		return ActionDeconstruct
@@ -112,6 +123,8 @@ func (g *Game) billAction(j job.Record) string {
 			return ActionTailor
 		case construction.ButcherTable:
 			return ActionButcher
+		case construction.Pyre:
+			return ActionCremate
 		}
 	}
 	return ActionCraft
@@ -155,6 +168,8 @@ func (g *Game) workTotal(id entity.EntityID, j job.Record) int {
 		return animal.TameWork
 	case job.Eat:
 		return needs.EatWorkTicks
+	case job.Bury:
+		return buryWork
 	case job.Refuel:
 		return refuelWork
 	case job.Bill:
