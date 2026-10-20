@@ -20,6 +20,9 @@ const (
 	MakeDuster
 	CampfireMeal
 	MakeRifle
+	// Knife (stone) and Spear (wood): hand-made melee weapons.
+	Knife
+	Spear
 	numRecipes
 )
 
@@ -86,6 +89,10 @@ var defs = [numRecipes]Def{
 	// A crude rifle: a long, careful job (needs Gunsmithing research).
 	MakeRifle: {ID: MakeRifle, Name: "make_rifle", Label: "Make crude rifle", Bench: construction.Workbench,
 		Input: Input{Kind: item.Wood, Qty: 12}, Output: item.Rifle, OutQty: 1, Work: 1500, Skill: work.Craft},
+	Knife: {ID: Knife, Name: "knife", Label: "Make stone knife", Bench: construction.Workbench,
+		Input: Input{Kind: item.Stone, Qty: 3}, Output: item.Knife, OutQty: 1, Work: 200, Skill: work.Craft},
+	Spear: {ID: Spear, Name: "spear", Label: "Make wooden spear", Bench: construction.Workbench,
+		Input: Input{Kind: item.Wood, Qty: 5}, Output: item.Spear, OutQty: 1, Work: 320, Skill: work.Craft},
 	DryFood: {ID: DryFood, Name: "dry_food", Label: "Dry food", Bench: construction.DryingRack,
 		Input: Input{AnyDryable: true, Qty: 1, Max: RackCapacity}, Work: 90, Skill: work.Cook, Dry: true},
 }

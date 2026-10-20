@@ -156,6 +156,10 @@ type saveState struct {
 	// Motion: step timing per creature on the map (absent in older saves,
 	// which default to due-now straight steps).
 	Motion []entry[motionRec]
+	// Strikes and Hits are the presentation stamps of action_view.go
+	// (absent in older saves: no recent strike or hit).
+	Strikes map[entity.EntityID]strikeRec
+	Hits    map[entity.EntityID]hitRec
 }
 
 // Info describes the game for a save header.
@@ -195,7 +199,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 		AnimalIDs: g.animalIDs, Animals: exportStore(g.animals), Equip: g.equip, Traces: g.traces, Wild: g.wild,
 		Carrying: g.carrying, TendedUntil: g.tendedUntil, Wounds: g.wounds,
 		Research: g.research, ResearchCur: g.researchCur, ResearchSet: g.researchSet, Pens: g.pens, RockDamage: g.rockDamage, Residual: g.residual,
-		Motion: g.exportMotion(),
+		Motion: g.exportMotion(), Strikes: g.lastStrike, Hits: g.lastHit,
 	}
 	for id, e := range g.exposure {
 		s.Exposure[id] = [2]int{e.hypo, e.heat}
@@ -301,6 +305,8 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.residual = s.Residual
 	g.motion = importStore(s.Motion)
 	g.defaultMotion()
+	setMap(&g.lastStrike, s.Strikes)
+	setMap(&g.lastHit, s.Hits)
 	for id, e := range s.Exposure {
 		g.exposure[id] = exposureState{e[0], e[1]}
 	}

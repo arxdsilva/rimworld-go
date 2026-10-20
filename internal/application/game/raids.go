@@ -438,6 +438,7 @@ func (g *Game) raiderViews() []PawnView {
 			Status: v.Status.String(), Reason: v.Cause.String(), Health: v.HP() * 100 / health.MaxHP,
 			Weapon: weaponDefOf(g, id).Name, Lying: v.Status != health.Alive, Hostile: true,
 			Fleeing: g.raiders[id].Mode == raidFlee})
+		g.fillPawnAction(&out[len(out)-1], id, j)
 	}
 	return out
 }

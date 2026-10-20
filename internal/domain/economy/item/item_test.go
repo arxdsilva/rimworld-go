@@ -88,3 +88,15 @@ func TestDried(t *testing.T) {
 		t.Error("dry rate curve wrong")
 	}
 }
+
+func TestKnifeSpearAreValuedWeapons(t *testing.T) {
+	t.Parallel()
+	for _, k := range []Kind{Knife, Spear} {
+		if !k.IsWeapon() || k.Value() <= 0 {
+			t.Fatalf("%v: weapon=%v value=%d", k, k.IsWeapon(), k.Value())
+		}
+	}
+	if Knife.Value() >= Spear.Value() || Spear.Value() >= Club.Value()+20 {
+		t.Fatalf("values knife %d spear %d club %d", Knife.Value(), Spear.Value(), Club.Value())
+	}
+}

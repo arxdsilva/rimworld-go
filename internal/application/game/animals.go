@@ -509,6 +509,7 @@ func (g *Game) animalViews() []AnimalView {
 			av.NextX, av.NextY, av.HasNext = a.Path[a.PathI].X, a.Path[a.PathI].Y, true
 			av.BlockedBy = m.BlockedBy
 		}
+		g.fillAnimalAction(av, id, a)
 	}
 	return out
 }

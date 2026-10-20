@@ -330,7 +330,11 @@ type Game struct {
 	animals   *component.Store[animal.State]
 	equip     map[entity.EntityID]item.Kind // wielded weapon; absent = fists
 	traces    []projectile.Trace
-	wild      bool // wildlife migrates in (generated colonies)
+	// lastStrike and lastHit are transient presentation stamps (see
+	// action_view.go); the simulation never reads them.
+	lastStrike map[entity.EntityID]strikeRec
+	lastHit    map[entity.EntityID]hitRec
+	wild       bool // wildlife migrates in (generated colonies)
 
 	carrying    map[entity.EntityID]entity.EntityID // rescuer -> patient
 	tendedUntil map[entity.EntityID]uint64
@@ -403,6 +407,8 @@ func New(cfg Config) *Game {
 		rockDamage:  make(map[[2]int]int),
 		research:    research.Complete(), // sandbox: everything known
 		motion:      component.NewStore[motionRec](),
+		lastStrike:  make(map[entity.EntityID]strikeRec),
+		lastHit:     make(map[entity.EntityID]hitRec),
 	}
 }
 
@@ -633,6 +639,7 @@ func (g *Game) Snapshot() []PawnView {
 			pv.Temp = int(g.temperatureAt(pos.X, pos.Y))
 		}
 		pv.Acting, pv.ActX, pv.ActY = g.acting(id, j)
+		g.fillPawnAction(pv, id, j)
 	}
 	views = append(views, g.raiderViews()...)
 	for i := range views {

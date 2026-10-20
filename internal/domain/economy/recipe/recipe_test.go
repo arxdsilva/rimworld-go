@@ -30,3 +30,24 @@ func TestRecipesAndBills(t *testing.T) {
 		t.Fatal("suspended bills never run")
 	}
 }
+
+func TestKnifeSpearRecipes(t *testing.T) {
+	t.Parallel()
+	k, s := DefOf(Knife), DefOf(Spear)
+	if k.Bench != construction.Workbench || k.Input != (Input{Kind: item.Stone, Qty: 3}) || k.Output != item.Knife || k.OutQty != 1 {
+		t.Fatalf("knife recipe = %+v", k)
+	}
+	if s.Bench != construction.Workbench || s.Input != (Input{Kind: item.Wood, Qty: 5}) || s.Output != item.Spear || s.OutQty != 1 {
+		t.Fatalf("spear recipe = %+v", s)
+	}
+	if k.Work <= 0 || s.Work <= k.Work {
+		t.Fatalf("a spear takes longer than a knife: %d vs %d", s.Work, k.Work)
+	}
+	seen := map[item.Kind]bool{}
+	for _, d := range For(construction.Workbench) {
+		seen[d.Output] = true
+	}
+	if !seen[item.Knife] || !seen[item.Spear] {
+		t.Fatal("the workbench offers knife and spear")
+	}
+}
