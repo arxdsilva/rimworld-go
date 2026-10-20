@@ -544,6 +544,51 @@ For 1,000+ pawns use atlases, bounded texture counts, tinting, culling,
 animation LOD, effect-density limits, and cached composited pawn
 appearances when appearance has not changed.
 
+### 27.1 Movement and body motion (normative)
+
+Frames (rendered in Blender, one set per facing):
+
+| Set | Frames | Layers | Notes |
+|---|---|---|---|
+| Pawn walk | `walk01`..`walk12` | body, pants, shirt, vest, parka, duster (+ masks) | one full gait cycle: 01 right heel contact, 02 loading, 03 mid-stance, 04 terminal stance, 05 pre-swing, 06 swing; 07-12 mirror for the left foot |
+| Pawn work | `work1`..`work6` | same layers | 1-2 wind-up, 3-4 swing, 5 strike, 6 recover; smoothstep eased |
+| Animal trot | `walk01`..`walk08` | per species | diagonal leg pairs, body bob, head nod |
+
+Every pawn body frame carries `hand` and `head` attachments (canvas px).
+Hair and hats are drawn at the body's `head` offset for that frame; held
+tools and weapons at its `hand` point.
+
+Clocks:
+
+- `animT` (sim ticks plus the elapsed fraction of the current frame):
+  movement, walk cycle, work swings, combat reactions. It freezes when
+  paused and scales with game speed.
+- `present` (real frames): breathing, wind, fire, particles, UI pulses.
+- Tracers, recoil, hit flashes and floaters stay visible for at least
+  `max(sim duration, 8 frames)` so they read at 3x.
+- Draw interpolates between simulation updates; screenshots and capture
+  sequences use no interpolation so they stay deterministic.
+
+Path and gait:
+
+- Positions follow the simulation's step timing exactly (step start tick
+  and duration, diagonal steps longer than straight ones), so speed is
+  constant on screen at every game speed.
+- Corners are drawn as a quadratic curve between the midpoints of the
+  incoming and outgoing steps, through the shared tile centre.
+- Starting from rest and stopping (arrival or blocked) ease with
+  smoothstep; the walk pose blends in and out over 0.3 tiles.
+- The walk cycle advances with distance travelled along the drawn path:
+  one 12-frame cycle per 1.6 tiles, so feet don't slide on diagonals.
+- Bob peaks once per footfall (frames 01 and 07); sway (north/south
+  facing) and forward lean (east/west) scale with speed; a short
+  lean-back on deceleration.
+- Facing uses the smoothed velocity with 20% axis hysteresis; a
+  north/south reversal passes through a side facing for 4 frames.
+- A blocked creature eases to a stop, faces the creature in its way and
+  shows the idle pose.
+- Getting into bed and being picked up ease over 12 frames.
+
 ## 28. Deterministic Visual Variation
 
 Visual randomness should be stable using keys such as world seed, tile

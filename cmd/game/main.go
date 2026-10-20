@@ -24,14 +24,15 @@ func main() {
 	capture := flag.String("capture", "", "dev: save one colony frame to this PNG and exit")
 	captureTicks := flag.Int("capture-ticks", 5400, "dev: simulation ticks to run before -capture")
 	captureZoom := flag.Float64("capture-zoom", 1, "dev: camera zoom for -capture")
-	scenario := flag.String("scenario", "", "dev: start scenario: rescue (a colonist starts badly hurt) | beds (sleeping spots in the other facings) | double (a double bed by the start)")
+	scenario := flag.String("scenario", "", "dev: start scenario: rescue (a colonist starts badly hurt) | beds (sleeping spots in the other facings) | double (a double bed by the start) | corridor (two colonists meet head-on in a 1-wide corridor) | crowd (every colonist sent into a room with one door)")
 	captureFrames := flag.Int("capture-frames", 0, "dev: record this many consecutive frames (PATH_NNN.png) instead of one still")
-	captureUI := flag.String("capture-ui", "", "dev: UI state for -capture: architect | orders | bills | pawn | combat | melee | follow | grow")
+	captureSpeed := flag.Int("capture-speed", 1, "dev: game speed (1-3) while recording -capture-frames")
+	captureUI := flag.String("capture-ui", "", "dev: UI state for -capture: architect | orders | bills | pawn | combat | melee | follow | grow | corridor | crowd")
 	flag.Parse()
 
 	var shot *uiadapter.Capture
 	if *capture != "" {
-		shot = &uiadapter.Capture{Path: *capture, Ticks: *captureTicks, Zoom: *captureZoom, UI: *captureUI, Frames: *captureFrames}
+		shot = &uiadapter.Capture{Path: *capture, Ticks: *captureTicks, Zoom: *captureZoom, UI: *captureUI, Frames: *captureFrames, Speed: *captureSpeed}
 	}
 
 	app := uiadapter.NewApp(uiadapter.AppConfig{
@@ -167,6 +168,44 @@ func main() {
 			}
 			if *scenario == "double" {
 				g.BuildNow("double bed", "wood", "south", *width/2-1, *height/2+1)
+			}
+			if *scenario == "corridor" {
+				// a 1-wide corridor north of the start; two colonists cross it
+				// from opposite ends
+				cx, cy := *width/2, *height/2-11
+				g.ClearPlants(cx-10, cy-3, cx+10, cy+3)
+				for x := cx - 6; x <= cx+6; x++ {
+					g.BuildNow("wall", "wood", "south", x, cy-1)
+					g.BuildNow("wall", "wood", "south", x, cy+1)
+				}
+				if snap := g.Snapshot(); len(snap) > 1 {
+					a, b := uint64(snap[0].ID), uint64(snap[1].ID)
+					g.Enqueue(command.Command{Kind: command.MovePawn, Pawn: a, X: cx - 8, Y: cy})
+					g.Enqueue(command.Command{Kind: command.MovePawn, Pawn: a, X: cx + 8, Y: cy, Queue: true})
+					g.Enqueue(command.Command{Kind: command.MovePawn, Pawn: b, X: cx + 9, Y: cy})
+					g.Enqueue(command.Command{Kind: command.MovePawn, Pawn: b, X: cx - 9, Y: cy, Queue: true})
+				}
+			}
+			if *scenario == "crowd" {
+				// a 5x5 room east of the start with one door facing the
+				// colony; every colonist is sent inside, so they queue at it
+				cx, cy := *width/2+13, *height/2
+				g.ClearPlants(cx-5, cy-4, cx+4, cy+4)
+				for x := cx - 3; x <= cx+3; x++ {
+					g.BuildNow("wall", "wood", "south", x, cy-3)
+					g.BuildNow("wall", "wood", "south", x, cy+3)
+				}
+				for y := cy - 2; y <= cy+2; y++ {
+					kind := "wall"
+					if y == cy {
+						kind = "door"
+					}
+					g.BuildNow(kind, "wood", "east", cx-3, y)
+					g.BuildNow("wall", "wood", "south", cx+3, y)
+				}
+				for i, p := range g.Snapshot() {
+					g.Enqueue(command.Command{Kind: command.MovePawn, Pawn: uint64(p.ID), X: cx + 1, Y: cy - 1 + i%3})
+				}
 			}
 			if *scenario == "rescue" {
 				if snap := g.Snapshot(); len(snap) > 1 {

@@ -153,6 +153,8 @@ const (
 	Interrupted
 	Cancelled
 	Reserved
+	// Blocked: other creatures kept the way shut for too long.
+	Blocked
 )
 
 func (r FailReason) String() string {
@@ -167,6 +169,8 @@ func (r FailReason) String() string {
 		return "cancelled"
 	case Reserved:
 		return "reserved"
+	case Blocked:
+		return "blocked"
 	default:
 		return ""
 	}

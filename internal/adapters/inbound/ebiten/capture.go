@@ -30,6 +30,9 @@ type Capture struct {
 	// Frames > 0 records that many consecutive frames at normal speed
 	// (Path gets a _NNN suffix per frame) instead of one still.
 	Frames int
+	// Speed is the game speed during a frame sequence: 1, 2 or 3
+	// (0 means 1). Lets captures check motion at higher speeds.
+	Speed int
 }
 
 // captureFrames lets presentation state (lerp, walk bob) settle.
@@ -209,6 +212,15 @@ func (a *App) captureUI(ui string) {
 				a.renderer.syncPawns()
 			}
 		}
+	case "corridor", "crowd":
+		// the -scenario corridor / crowd set pieces, north / east of the start
+		cx, cy := float64(a.renderer.game.Width())/2, float64(a.renderer.game.Height())/2
+		dx, dy := 0.0, -11.0
+		if ui == "crowd" {
+			dx, dy = 13, 0
+		}
+		sw, sh := a.size()
+		a.renderer.centerOn(cx+dx, cy+dy, sw, sh)
 	case "pen":
 		cx, cy := float64(a.renderer.game.Width())/2, float64(a.renderer.game.Height())/2
 		sw, sh := a.size()

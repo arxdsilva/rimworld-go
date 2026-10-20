@@ -118,6 +118,15 @@ type PawnView struct {
 	// is the tile being worked (presentation: facing, swings, particles).
 	Acting     string
 	ActX, ActY int
+	// Motion (presentation lerp, see ART §27): StepTick is the tick the
+	// current cell was entered, StepTicks how long that step lasts;
+	// NextX/NextY is the next planned cell when HasNext; BlockedBy is the
+	// creature in the way of the next step (0 when not blocked).
+	StepTick     uint64
+	StepTicks    int
+	NextX, NextY int
+	HasNext      bool
+	BlockedBy    entity.EntityID
 }
 
 // ItemView is a ground stack.

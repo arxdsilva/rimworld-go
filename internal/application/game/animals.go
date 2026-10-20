@@ -21,13 +21,18 @@ type AnimalView struct {
 	Mode       string
 	Designated bool
 	Hostile    bool // attacking a colonist
-	StepTicks  int  // ticks per tile at the current pace (for lerp)
+	StepTicks  int  // duration of the current step in ticks (for lerp)
 	// Tame animals belong to the colony and have a Name; TameMark: marked
 	// for taming; Manhunter: enraged, hunting colonists.
 	Tame      bool
 	Name      string
 	TameMark  bool
 	Manhunter bool
+	// Motion, as on PawnView.
+	StepTick     uint64
+	NextX, NextY int
+	HasNext      bool
+	BlockedBy    entity.EntityID
 }
 
 // Wildlife at colony start and the daily top-up.
