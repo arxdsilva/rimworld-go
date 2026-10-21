@@ -297,4 +297,5 @@ func (g *Game) digRock(x, y, dmg int) {
 	}
 	delete(g.rockDamage, k)
 	g.setTerrain(x, y, terrain.Stone)
+	g.roofOnMined(x, y)
 }

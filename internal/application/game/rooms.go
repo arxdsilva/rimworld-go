@@ -22,6 +22,8 @@ type RoomView struct {
 	Label string // awful .. impressive
 	Lit   bool   // has a lamp
 	Temp  int    // air temperature, tenths of a degree C
+	// Roofed is the roofed share of the room's cells, 0..1 (SIM-018).
+	Roofed float64
 }
 
 // ThoughtView is one line of a pawn's mood.
@@ -113,6 +115,7 @@ func (g *Game) ensureRooms() {
 	}
 	g.roomTemps = g.remapRoomTemps(grid, len(stats))
 	g.roomGrid, g.rooms, g.roomDirty = grid, stats, false
+	g.afterRoomsRebuilt() // roof.go
 }
 
 // roomAt is the room id at (x, y), or room.Outdoors / room.Wall.
@@ -129,7 +132,8 @@ func (g *Game) roomViews() []RoomView {
 	out := make([]RoomView, len(g.rooms))
 	for i, r := range g.rooms {
 		out[i] = RoomView{ID: i, Cells: r.contents.Cells, Role: r.role.String(), Score: r.score,
-			Label: room.Label(r.score), Lit: r.lit, Temp: int(g.roomTemps[i])}
+			Label: room.Label(r.score), Lit: r.lit, Temp: int(g.roomTemps[i]),
+			Roofed: float64(g.roomRoofed(i)) / 1000}
 	}
 	for _, bid := range g.bldgIDs { // a fire with wood lights its room
 		if b, ok := g.bldgs.Get(bid); ok && b.Kind == construction.Campfire && g.fuel[bid] > 0 {
@@ -208,7 +212,7 @@ func (g *Game) afterSleep(id entity.EntityID) {
 		onFloor = true
 	}
 	if onFloor {
-		if r < 0 {
+		if r < 0 && g.underSky(pos.X, pos.Y) {
 			g.remember(id, mood.SleptOutside)
 		} else {
 			g.remember(id, mood.SleptOnGround)
@@ -217,7 +221,9 @@ func (g *Game) afterSleep(id entity.EntityID) {
 	}
 	g.remember(id, mood.SleptInBed)
 	if r < 0 {
-		g.remember(id, mood.SleptOutside)
+		if g.underSky(pos.X, pos.Y) {
+			g.remember(id, mood.SleptOutside)
+		}
 		return
 	}
 	switch s := g.rooms[r].score; {

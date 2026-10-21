@@ -204,7 +204,7 @@ func (r *Renderer) drawHeldPart(screen *ebiten.Image, f facing, suffix string, h
 		return
 	}
 	if img := r.art.image(key, color.NRGBA{}); img != nil {
-		screen.DrawImage(img, &ebiten.DrawImageOptions{GeoM: g, Filter: ebiten.FilterLinear})
+		r.drawLit(screen, img, g, noCS, int(math.Floor(wx)), int(math.Floor(wy)))
 	}
 }
 

@@ -154,6 +154,10 @@ type Renderer struct {
 	anims     *animState      // body-animation bookkeeping (anim.go)
 	smooth    camSmooth       // eased pan and zoom (camera_smooth.go)
 	env       envState        // wind, contact springs and weather (environment.go)
+	lit       litRenderer     // sun, moon and lamp lighting (light.go)
+	// roofOverlay is the Roof overlay toggle (R); roofOverlayForced holds
+	// it on while a roof tool is selected (roof_draw.go).
+	roofOverlay, roofOverlayForced bool
 
 	gridClr   color.RGBA
 	pawnClr   color.RGBA
@@ -264,6 +268,8 @@ func (r *Renderer) handleSpeedInput() {
 		r.speed = speedFast
 	case inpututil.IsKeyJustPressed(ebiten.Key3):
 		r.speed = speedVeryFast
+	case inpututil.IsKeyJustPressed(ebiten.KeyR):
+		r.roofOverlay = !r.roofOverlay
 	}
 }
 
@@ -376,6 +382,7 @@ func (r *Renderer) Draw(screen *ebiten.Image) {
 	if r.art != nil {
 		r.drawArt(screen, sw, sh, tile)
 		r.drawDaylightRooms(screen, sw, sh)
+		r.drawRoofOverlay(screen, r.drawW, sw, sh, tile)
 		r.drawTraces(screen, r.game.World(), tile)
 		return
 	}

@@ -75,6 +75,10 @@ const (
 	Tame
 	// Bury: carrying a body to an empty grave and filling it in.
 	Bury
+	// Roof: building the roof over a planned tile (SIM-018).
+	Roof
+	// Unroof: taking down the roof over a tile planned for removal.
+	Unroof
 )
 
 // IsIdle reports a free-time behaviour that any real work may replace.
@@ -142,6 +146,10 @@ func (k Kind) String() string {
 		return "tame"
 	case Bury:
 		return "bury"
+	case Roof:
+		return "build roof"
+	case Unroof:
+		return "remove roof"
 	default:
 		return "idle"
 	}

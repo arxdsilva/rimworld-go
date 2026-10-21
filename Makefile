@@ -44,9 +44,14 @@ simulate:
 BLENDER ?= $(shell command -v blender 2>/dev/null || echo /Applications/Blender.app/Contents/MacOS/Blender)
 
 .PHONY: art
-art:  ## re-render every world sprite from assets/source/blender
+art:  ## re-render every world sprite from assets/source/blender, then their normal maps
 	"$(BLENDER)" -b --factory-startup -P assets/source/blender/build.py -- $(FAMILIES)
+	$(MAKE) normals
 	python3 assets/source/tools/validate_assets.py
+
+.PHONY: normals
+normals:  ## write <sprite>_n.png normal maps (pkg/spritenormals, a port of spritefusion-sprite-normals)
+	go run ./cmd/normalgen -dirs assets/generated/world $(NORMALS_ARGS)
 
 .PHONY: art-check
 art-check:  ## validate generated sprites against metadata

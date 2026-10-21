@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
+	"rimworld-go/internal/domain/world/roof"
 )
 
 // Action read model (ART §27.2). Everything here is a read-only view of
@@ -107,6 +108,8 @@ func (g *Game) actionOf(id entity.EntityID, j job.Record) string {
 		return ActionTame
 	case job.Repair:
 		return ActionRepair
+	case job.Roof, job.Unroof:
+		return ActionBuild
 	case job.Breach:
 		return ActionBreach
 	}
@@ -170,6 +173,10 @@ func (g *Game) workTotal(id entity.EntityID, j job.Record) int {
 		return needs.EatWorkTicks
 	case job.Bury:
 		return buryWork
+	case job.Roof:
+		return roof.BuildWork
+	case job.Unroof:
+		return roof.RemoveWork
 	case job.Refuel:
 		return refuelWork
 	case job.Bill:

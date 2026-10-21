@@ -164,6 +164,9 @@ type saveState struct {
 	// Weather (SIM-016) and Graves (SIM-017); absent in older saves.
 	Weather weather.State
 	Graves  map[entity.EntityID]graveRec
+	// Roofs (SIM-018): roof.Cell flags per tile; absent in older saves,
+	// whose closed rooms are auto-roofed on load.
+	Roofs []uint8
 }
 
 // Info describes the game for a save header.
@@ -204,7 +207,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 		Carrying: g.carrying, TendedUntil: g.tendedUntil, Wounds: g.wounds,
 		Research: g.research, ResearchCur: g.researchCur, ResearchSet: g.researchSet, Pens: g.pens, RockDamage: g.rockDamage, Residual: g.residual,
 		Motion: g.exportMotion(), Strikes: g.lastStrike, Hits: g.lastHit,
-		Weather: g.weather, Graves: g.graves,
+		Weather: g.weather, Graves: g.graves, Roofs: g.exportRoofs(),
 	}
 	for id, e := range g.exposure {
 		s.Exposure[id] = [2]int{e.hypo, e.heat}
@@ -315,6 +318,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.weather = s.Weather
 	setMap(&g.graves, s.Graves)
 	g.afterLoadBurial()
+	g.importRoofs(s.Roofs)
 	for id, e := range s.Exposure {
 		g.exposure[id] = exposureState{e[0], e[1]}
 	}

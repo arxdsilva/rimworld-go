@@ -85,6 +85,7 @@ type envState struct {
 	season               uint8
 	outdoorTemp          int
 	roomGrid             []int
+	roofs                []uint8 // roof flags per tile (SIM-018), may be empty
 	terrW                int
 	springs              map[uint32]*envSpring // contact springs by tile
 	movers               []envMover
@@ -211,7 +212,7 @@ func (e *envState) setWeather(w game.WorldView) {
 	e.snow, e.wet = clamp01(w.SnowDepth), clamp01(w.Wetness)
 	e.season = seasonIndex(w.Season)
 	e.outdoorTemp = w.OutdoorTemp
-	e.roomGrid, e.terrW = w.RoomGrid, w.TerrainW
+	e.roomGrid, e.terrW, e.roofs = w.RoomGrid, w.TerrainW, w.RoofCells
 	if w.WindX != e.wx || w.WindY != e.wy || e.dx == 0 && e.dy == 0 {
 		e.wx, e.wy = w.WindX, w.WindY
 		e.speed = math.Hypot(e.wx, e.wy)
@@ -755,7 +756,9 @@ func (e *envState) spawn() {
 	}
 }
 
-// outdoors reports open ground (no room): weather falls only there.
+// outdoors reports ground open to the sky: weather falls only there. With
+// roofs (SIM-018) that is any unroofed tile but a wall; without roof data,
+// any tile outside a room.
 func (e *envState) outdoors(x, y int) bool {
 	if len(e.roomGrid) == 0 || e.terrW <= 0 {
 		return true
@@ -764,7 +767,13 @@ func (e *envState) outdoors(x, y int) bool {
 		return true
 	}
 	i := y*e.terrW + x
-	return i >= len(e.roomGrid) || e.roomGrid[i] == -1
+	if i >= len(e.roomGrid) {
+		return true
+	}
+	if len(e.roofs) == len(e.roomGrid) {
+		return e.roomGrid[i] != -2 && !roofed(e.roofs[i])
+	}
+	return e.roomGrid[i] == -1
 }
 
 // lightningAt reports a lightning flash starting in tick bucket b: rare,

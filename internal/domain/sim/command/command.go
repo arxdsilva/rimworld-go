@@ -51,6 +51,12 @@ const (
 	DesignatePen
 	// ReleaseAnimal lets the tame animal Pawn (an animal id) go wild.
 	ReleaseAnimal
+	// DesignateRoof plans roofs over the supported, unroofed tiles of the
+	// X..X2, Y..Y2 rectangle (SIM-018).
+	DesignateRoof
+	// DesignateRemoveRoof plans the removal of roofs in the rectangle and
+	// keeps them off, even over closed rooms (SIM-018).
+	DesignateRemoveRoof
 )
 
 // WorkType is a compact work-column id for SetWorkEnabled.

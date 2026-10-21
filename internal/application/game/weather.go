@@ -33,8 +33,9 @@ func (g *Game) weatherSeed() uint64 {
 	return h
 }
 
-// outdoorsAt reports open ground: no room around the tile.
-func (g *Game) outdoorsAt(x, y int) bool { return g.roomAt(x, y) < 0 }
+// outdoorsAt reports open ground under the sky: no roof over the tile
+// (SIM-018; before roofs it meant no room around it).
+func (g *Game) outdoorsAt(x, y int) bool { return g.underSky(x, y) }
 
 // phaseWeather moves the weather on: a new block every 6 hours, easing
 // and ground build-up every climate interval.

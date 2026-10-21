@@ -251,6 +251,7 @@ func (g *Game) doMine(id entity.EntityID, j job.Record) {
 		return
 	}
 	g.setTerrain(j.DestX, j.DestY, terrain.Stone)
+	g.roofOnMined(j.DestX, j.DestY)
 	delete(g.mines, [2]int{j.DestX, j.DestY})
 	g.dropStack(item.Stone, MineYield, j.DestX, j.DestY)
 	j.State = job.Complete

@@ -1,0 +1,11 @@
+//kage:unit pixels
+
+// lit.kage: a world sprite lit by the sun, the moon, the sky's ambient
+// and lamps (ART §6.1). custom.x is sky exposure (1 open sky, 0 roofed),
+// custom.y lamp light 0..1, custom.z 1 when imageSrc1 holds a normal map.
+// ART-010 W4 fills this in; this stub passes colour through.
+package main
+
+func Fragment(dstPos vec4, srcPos vec2, color vec4, custom vec4) vec4 {
+	return imageSrc0At(srcPos) * color
+}

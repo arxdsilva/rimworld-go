@@ -5,6 +5,7 @@ import (
 	"math"
 	"sort"
 	"strconv"
+	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
@@ -110,6 +111,10 @@ func (r *Renderer) drawSpriteScaled(screen *ebiten.Image, key string, tint color
 	op.GeoM.Scale(s, s)
 	op.GeoM.Translate(x, y)
 	op.Filter = ebiten.FilterLinear
+	if !strings.HasPrefix(key, "overlay/") { // zones and markers stay unlit
+		r.drawLit(screen, img, op.GeoM, cs, int(math.Floor(wx)), int(math.Floor(wy)))
+		return
+	}
 	if cs != noCS {
 		op.ColorScale.Scale(cs[0]*cs[3], cs[1]*cs[3], cs[2]*cs[3], cs[3])
 	}
@@ -149,6 +154,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	none := color.NRGBA{}
 	w := r.game.World()
 	r.drawW, r.drawPawns = w, r.game.Snapshot()
+	r.lit.light = lightAt(w.Hour, w.DayOfYear, w.Weather, w.WeatherIntensity)
 
 	r.drawTerrainArt(screen, w, sw, sh, tile)
 	r.drawGroundCover(screen, w, sw, sh, tile)
@@ -194,6 +200,9 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 			r.drawSpriteCS(screen, buildSpriteStuff("floor", f.Stuff, "", 0, false, false), none, float64(f.X), float64(f.Y), tile, sw, sh, blueprintCS)
 		}
 	}
+
+	r.drawShadows(screen, w, sw, sh, tile) // shadow.go: under every object
+	r.drawEaves(screen, w, sw, sh, tile)   // roof_draw.go
 
 	walls := map[[2]int]bool{}
 	for _, b := range w.Buildings {
@@ -529,14 +538,10 @@ func (r *Renderer) drawTile(screen *ebiten.Image, key string, wx, wy, tile float
 		return
 	}
 	k := size / float64(img.Bounds().Dx())
-	op := &ebiten.DrawImageOptions{}
-	op.GeoM.Scale(k, k)
-	op.GeoM.Translate(x0, y0)
-	op.Filter = ebiten.FilterLinear
-	if cs != noCS {
-		op.ColorScale.Scale(cs[0]*cs[3], cs[1]*cs[3], cs[2]*cs[3], cs[3])
-	}
-	screen.DrawImage(img, op)
+	geo := ebiten.GeoM{}
+	geo.Scale(k, k)
+	geo.Translate(x0, y0)
+	r.drawLit(screen, img, geo, cs, int(math.Floor(wx)), int(math.Floor(wy)))
 }
 
 // terrainPriority: a higher index draws its soft edge over lower ones.

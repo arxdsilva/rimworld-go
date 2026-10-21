@@ -77,6 +77,7 @@ func (g *Game) phaseClimate() {
 	if uint64(g.clock.Now())%climateInterval != 0 {
 		return
 	}
+	g.checkRoofSupport() // roof.go: unsupported roofs fall first
 	g.heatRooms()
 	g.expose()
 	g.rotItems()

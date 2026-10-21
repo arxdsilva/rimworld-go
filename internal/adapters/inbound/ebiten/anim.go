@@ -79,15 +79,11 @@ func (r *Renderer) drawSpritePose(screen *ebiten.Image, key string, tint color.N
 	geo.Scale(s, s)
 	geo.Translate(x, y)
 	geo.Concat(ps.geo(float64(sx), float64(sy), tile))
-	op := &ebiten.DrawImageOptions{GeoM: geo, Filter: ebiten.FilterLinear}
 	cs := ps.cs
 	if cs == (colorScale{}) {
 		cs = noCS
 	}
-	if cs != noCS {
-		op.ColorScale.Scale(cs[0]*cs[3], cs[1]*cs[3], cs[2]*cs[3], cs[3])
-	}
-	screen.DrawImage(img, op)
+	r.drawLit(screen, img, geo, cs, int(math.Floor(wx)), int(math.Floor(wy)))
 	if ps.flash > 0 {
 		f := ps.flash
 		fl := &ebiten.DrawImageOptions{GeoM: geo, Filter: ebiten.FilterLinear}
