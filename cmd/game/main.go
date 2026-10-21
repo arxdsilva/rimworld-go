@@ -25,15 +25,17 @@ func main() {
 	capture := flag.String("capture", "", "dev: save one colony frame to this PNG and exit")
 	captureTicks := flag.Int("capture-ticks", 5400, "dev: simulation ticks to run before -capture")
 	captureZoom := flag.Float64("capture-zoom", 1, "dev: camera zoom for -capture")
-	scenario := flag.String("scenario", "", "dev: start scenario: rescue (a colonist starts badly hurt) | beds (sleeping spots in the other facings) | double (a double bed by the start) | corridor (two colonists meet head-on in a 1-wide corridor) | crowd (every colonist sent into a room with one door) | armory (armed, drafted colonists against a mixed raid) | chores (cutting, mining and tending by the start) | lategame (a grown colony in autumn rain, raid incoming) | rain (a fall storm) | snow (winter snowfall) | burial (a graveyard, a pyre and two bodies)")
+	scenario := flag.String("scenario", "", "dev: start scenario: rescue (a colonist starts badly hurt) | beds (sleeping spots in the other facings) | double (a double bed by the start) | corridor (two colonists meet head-on in a 1-wide corridor) | crowd (every colonist sent into a room with one door) | armory (armed, drafted colonists against a mixed raid) | chores (cutting, mining and tending by the start) | lategame (a grown colony in autumn rain, raid incoming) | rain (a fall storm) | snow (winter snowfall) | burial (a graveyard, a pyre and two bodies) | roofs (winter: a roofed room, an unroofed one, a roofed porch, a yard too big to roof) | sunny (a clear summer day from before dawn)")
+	hour := flag.Int("hour", -1, "dev: jump to this hour (0-23) of the scenario's day, or the next day's if past")
 	captureFrames := flag.Int("capture-frames", 0, "dev: record this many consecutive frames (PATH_NNN.png) instead of one still")
 	captureSpeed := flag.Int("capture-speed", 1, "dev: game speed (1-3) while recording -capture-frames")
-	captureUI := flag.String("capture-ui", "", "dev: UI state for -capture: architect | orders | bills | pawn | combat | melee | follow | grow | corridor | crowd | lategame | weather | grass | burial")
+	captureUI := flag.String("capture-ui", "", "dev: UI state for -capture: architect | orders | bills | pawn | combat | melee | follow | grow | corridor | crowd | lategame | weather | grass | burial | roofs | roofs-overlay")
+	captureTimelapse := flag.Int("capture-timelapse", 0, "dev: with -capture-frames, step this many sim ticks per recorded frame (a time-lapse)")
 	flag.Parse()
 
 	var shot *uiadapter.Capture
 	if *capture != "" {
-		shot = &uiadapter.Capture{Path: *capture, Ticks: *captureTicks, Zoom: *captureZoom, UI: *captureUI, Frames: *captureFrames, Speed: *captureSpeed}
+		shot = &uiadapter.Capture{Path: *capture, Ticks: *captureTicks, Zoom: *captureZoom, UI: *captureUI, Frames: *captureFrames, Speed: *captureSpeed, Timelapse: *captureTimelapse}
 	}
 
 	app := uiadapter.NewApp(uiadapter.AppConfig{
@@ -255,6 +257,23 @@ func main() {
 				g.BuildNow("sleeping spot", "wood", "south", cx-4, cy+1)
 				g.BuildNow("bed", "wood", "east", cx-4, cy+3)
 			}
+			if *scenario == "roofs" {
+				roofYard(g, *width/2, *height/2)
+			}
+			if *scenario == "sunny" {
+				g.SkipTo(12, 5) // a summer day, before sunrise
+				g.SetWeather(weather.Clear, 0)
+				g.HoldWeather()
+			}
+			if *hour >= 0 {
+				now := int(g.Tick())
+				day := now / clock.TicksPerDay
+				if now%clock.TicksPerDay > *hour*clock.TicksPerHour {
+					day++
+				}
+				g.SkipTo(day, *hour)
+			}
+			g.RoofRooms() // scenario rooms start roofed (SIM-018)
 			return g, nil
 		},
 	})
@@ -410,4 +429,54 @@ func burialGround(g *game.Game) {
 			g.Injure(id, 500)
 		}
 	}
+}
+
+// roofYard builds the -scenario roofs set piece east and west of the
+// start on a snowy winter day (cmd only: dev hooks): a roofed stone room
+// with a fire, the same room with its roof taken off, an open porch
+// roofed by designation, and a walled yard too big to roof itself.
+func roofYard(g *game.Game, cx, cy int) {
+	g.SkipTo(44, 10)
+	g.SetWeather(weather.Snow, 0.6)
+	g.HoldWeather()
+	g.ClearPlants(cx-21, cy-9, cx+18, cy+7)
+	box := func(x0, y0, x1, y1, doorX, doorY int) {
+		for x := x0; x <= x1; x++ {
+			for _, y := range []int{y0, y1} {
+				kind := "wall"
+				if x == doorX && y == doorY {
+					kind = "door"
+				}
+				g.BuildNow(kind, "stone", "south", x, y)
+			}
+		}
+		for y := y0 + 1; y < y1; y++ {
+			for _, x := range []int{x0, x1} {
+				kind := "wall"
+				if x == doorX && y == doorY {
+					kind = "door"
+				}
+				g.BuildNow(kind, "stone", "south", x, y)
+			}
+		}
+	}
+	// A: roofed, with a fire and a bed
+	box(cx+3, cy-8, cx+9, cy-2, cx+6, cy-2)
+	g.BuildNow("campfire", "wood", "south", cx+6, cy-5)
+	g.FuelCampfire(cx+6, cy-5)
+	g.BuildNow("bed", "wood", "south", cx+4, cy-7)
+	// B: the same room, its roof removed
+	box(cx+11, cy-8, cx+17, cy-2, cx+14, cy-2)
+	g.BuildNow("campfire", "wood", "south", cx+14, cy-5)
+	g.FuelCampfire(cx+14, cy-5)
+	g.BuildNow("bed", "wood", "south", cx+12, cy-7)
+	g.Enqueue(command.Command{Kind: command.DesignateRemoveRoof, X: cx + 12, Y: cy - 7, X2: cx + 16, Y2: cy - 3})
+	// C: an open porch south of A, on two posts, roofed by designation
+	g.BuildNow("wall", "wood", "south", cx+3, cy+1)
+	g.BuildNow("wall", "wood", "south", cx+9, cy+1)
+	g.BuildNow("table", "wood", "south", cx+6, cy)
+	g.Enqueue(command.Command{Kind: command.DesignateRoof, X: cx + 3, Y: cy - 1, X2: cx + 9, Y2: cy})
+	// D: a 13x13 walled yard: too big to roof on its own
+	box(cx-21, cy-8, cx-7, cy+6, cx-7, cy-1)
+	g.Step(1) // apply the designations before the roofs are completed
 }

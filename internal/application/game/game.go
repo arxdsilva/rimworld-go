@@ -334,6 +334,7 @@ type Game struct {
 	racks      map[entity.EntityID]dryBatch // what each drying rack holds
 	fuel       map[entity.EntityID]int      // campfire fuel, ticks of burning
 	weather    weather.State                // outdoor weather (weather.go, SIM-016)
+	weatherFix bool                         // dev: HoldWeather keeps the forced weather
 	graves     map[entity.EntityID]graveRec // who lies in each filled grave (burial.go, SIM-017)
 	exposure   map[entity.EntityID]exposureState
 	noComfort  map[entity.EntityID]uint64 // no warm/cool spot found until this tick

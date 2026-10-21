@@ -33,6 +33,9 @@ type Capture struct {
 	// Speed is the game speed during a frame sequence: 1, 2 or 3
 	// (0 means 1). Lets captures check motion at higher speeds.
 	Speed int
+	// Timelapse > 0 steps the simulation this many ticks per recorded
+	// frame instead of playing in real time (day-cycle clips).
+	Timelapse int
 }
 
 // speed is the game speed tier a frame sequence records at.
@@ -157,6 +160,14 @@ func (a *App) tickCapture() {
 			return // wait until this frame is on disk
 		}
 		a.renderer.speed = c.speed()
+		if c.Timelapse > 0 {
+			for left := c.Timelapse; left > 0; left -= 60 {
+				a.renderer.game.Step(min(left, 60))
+				a.renderer.syncPawns()
+			}
+			a.renderer.speed = speedPaused
+			a.renderer.settleVisuals()
+		}
 		a.renderer.advance()
 		if wp := a.capture.pan; len(wp) > 1 && c.Frames > 1 {
 			x, y := panAt(wp, float64(a.capture.saved)/float64(c.Frames-1))
@@ -234,6 +245,12 @@ func (a *App) captureUI(ui string) {
 		a.capture.pan = [][2]float64{{18, 10}, {33, 10}, {42, 18}, {16, 17}}
 		sw, sh := a.size()
 		a.renderer.centerOn(a.capture.pan[0][0], a.capture.pan[0][1], sw, sh)
+	case "roofs", "roofs-overlay":
+		// the -scenario roofs set piece: rooms A and B, the porch
+		cx, cy := float64(a.renderer.game.Width())/2, float64(a.renderer.game.Height())/2
+		sw, sh := a.size()
+		a.renderer.centerOn(cx+6, cy-3, sw, sh)
+		a.renderer.roofOverlay = ui == "roofs-overlay"
 	case "burial":
 		// the -scenario burial graveyard
 		sw, sh := a.size()

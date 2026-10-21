@@ -122,6 +122,47 @@ At 64 px/tile, target roughly 2--3 px major outer contours and 1--2 px
 internal separators. Use dark neutral/chromatic outlines rather than
 pure black everywhere. Internal lines should be weaker than silhouettes.
 
+Sprites carry **no baked drop shadow** (ART-010): shadows are cast at
+runtime by the sun and moon (§6.1). The upper-left toon banding stays as
+the restrained baked form cue.
+
+### 6.1 Dynamic light and shadows (normative, ART-010)
+
+Normal maps are generated with `pkg/spritenormals`, a Go port of
+[spritefusion-sprite-normals](https://github.com/Hugo-Dz/spritefusion-sprite-normals)
+by Hugo Duprez (MIT; see `THIRD_PARTY_NOTICES.md`).
+- **Method:**
+  - Each opaque island becomes a soft bevel dome: an exact distance transform, then `R·ln(1 + inset/R)`, blurred.
+  - Oklab-lightness detail is added on top.
+  - Sobel slopes become normals.
+- **Output:** `make normals` (part of `make art`) writes `<sprite>_n.png` (OpenGL green-up) next to every world sprite.
+- **Settings:** spritefusion's defaults, with radius 8, softness 2.3 and detail scale 1.2, because our art is @2x.
+
+The light comes from the sim clock only, so it is presentation and deterministic.
+- **Sun:**
+  - Rises in the east at 06:00, crosses the southern sky and sets in the west at 18:00.
+  - Peak elevation: Summer 65°, Spring/Fall 50°, Winter 32°.
+  - In screen space the light vector is `normalize(cos az·cos el, 0.5·sin az·cos el, sin el)`.
+  - Colour is warm at dawn and dusk, near white at noon. A flat surface at a summer noon renders at its own colour (≈1.0).
+- **Moon:**
+  - Crosses the night sky the same way, peaking at 40°.
+  - Cool `(0.55, 0.65, 0.90)` at 0.22 intensity.
+  - The night stays readable: about 0.25–0.35 under open sky.
+- **Ambient:** a sky ambient under open sky, and a dimmer indoor ambient under roofs. Roofed tiles get no sun, moon or shadows.
+- **Lamps:** lit rooms, and tiles within 3 tiles of a burning campfire, add a warm lamp term `(0.55, 0.42, 0.25)`.
+- **Shader:**
+  - Every world sprite is drawn by `lit.kage`, with sky exposure and lamp light as per-vertex values so draws still batch.
+  - A sprite without a normal map is lit flat.
+  - Zone and marker overlays, weather particles, UI and HUD are unlit.
+- **Shadows:**
+  - Casters are described in metadata as `shadow: {kind: blob|box|none, w, h, d}` in tiles.
+  - They fall away from the active light, length `clamp(h·cot el, 0.25·h, 3)` tiles: long at dawn and dusk, short at noon.
+  - Alpha is `0.32·(sin el / sin el_max)` by day (floor 0.15), `0.12` by moonlight, and faded in storms.
+  - Colour `(18, 20, 30)`.
+  - All shadows go into one offscreen layer with max blending, composited once, so overlaps never double-darken.
+  - None are cast on or from roofed tiles.
+  - Textures: `overlay/shadow_blob` and `overlay/shadow_box`.
+
 ## 7. Palette and Materials
 
 Maintain semantic shared palettes for wood, steel, dark/light metal,
@@ -328,6 +369,22 @@ Weather (family `weather`, driven by `WorldView.Weather`,
   `puddle_00..05` by `Wetness`, `frost_00..03` on freezing mornings, each
   picked per tile by hash.
 - Particle textures: `raindrop`, `splash_00..02`, `snowflake_00..03`.
+
+Roofs and interiors (§16.1, SIM-018): roofs are never drawn as tiles.
+- A roofed tile reads as indoors through light (§6.1): indoor ambient, lamp warmth, and no sun, moon, shadows, rain or snow.
+- Soft eave shadows run inside walls that bound roofed tiles (6 px, 10 px under top walls).
+- The Roof overlay (R or the HUD button, forced on with a roof tool) shows:
+
+  | Roof | Overlay style |
+  |---|---|
+  | Built | blue `{90,140,210,70}` with a lighter edge |
+  | Natural (mined rock) | slate `{110,110,125,85}`, stippled |
+  | Planned | amber dashes |
+  | Planned removal | red hatch |
+  | Unsupported, under the tool | red with ×s |
+
+- Collapse dust puffs where a roof falls.
+- Icons: `roof_build`, `roof_remove`, `overlay_roof`.
 
 Corpses: animal corpses `item/corpse_<species>_v0..v2` (different lying
 poses); human corpses are drawn from the deceased's own pawn layers,
@@ -551,6 +608,12 @@ estimates, and atlas utilization.
 Atlas packing should be deterministic where practical, use padding
 against texture bleeding, and keep stable content IDs independent of
 atlas coordinates.
+
+Light pipeline (ART-010):
+- World sprites render without a baked drop shadow.
+- `stage.render_asset` writes each sprite's `shadow:` caster block from its staged bounds.
+- `make normals` (`cmd/normalgen`, after Blender in `make art`) writes `<sprite>_n.png`. Masks, normal maps and `ui/` are skipped, and up-to-date maps are kept.
+- `validate_assets.py --light` requires a normal map with the sprite's size and alpha, and a `shadow:` block, for every world sprite.
 
 ## 26. Plugin Assets
 
