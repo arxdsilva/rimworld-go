@@ -564,6 +564,7 @@ func (r *Renderer) terrainName(w game.WorldView, x, y int) string {
 func (r *Renderer) drawTerrainArt(screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
 	none := color.NRGBA{}
 	byPri := []string{"soil", "rich_soil", "gravel", "stone"}
+	grassScratch = grassMask(w, grassScratch) // grass_draw.go
 	for y := 0; y < r.game.Height(); y++ {
 		for x := 0; x < r.game.Width(); x++ {
 			t := r.terrainName(w, x, y)
@@ -584,8 +585,11 @@ func (r *Renderer) drawTerrainArt(screen *ebiten.Image, w game.WorldView, sw, sh
 					r.drawSprite(screen, "terrain/"+terrainSprite[byPri[p]]+"_edge_"+twoDigits(mask), none, float64(x), float64(y), tile, sw, sh)
 				}
 			}
-			if (t == "soil" || t == "rich_soil") && (tileHash(x, y)>>8)%grassEvery == 0 {
+			if grassVisible(grassScratch, w, t, x, y) {
 				r.drawSpritePose(screen, grassKey(t, tileHash(x, y)), none, float64(x), float64(y), tile, r.plantPose(x, y, kindGrass, 0.05, 1))
+				if grassScratch[y*w.TerrainW+x]&grassMarked != 0 {
+					r.drawSprite(screen, "overlay/designation_cut", none, float64(x), float64(y), tile, sw, sh)
+				}
 			}
 		}
 	}

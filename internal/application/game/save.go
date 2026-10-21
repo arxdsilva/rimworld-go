@@ -167,6 +167,9 @@ type saveState struct {
 	// Roofs (SIM-018): roof.Cell flags per tile; absent in older saves,
 	// whose closed rooms are auto-roofed on load.
 	Roofs []uint8
+	// Grass and GrassCut (UI-011); absent in older saves, which reseed.
+	Grass    []uint8
+	GrassCut [][2]int
 }
 
 // Info describes the game for a save header.
@@ -209,6 +212,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 		Motion: g.exportMotion(), Strikes: g.lastStrike, Hits: g.lastHit,
 		Weather: g.weather, Graves: g.graves, Roofs: g.exportRoofs(),
 	}
+	s.Grass, s.GrassCut = g.exportGrass()
 	for id, e := range g.exposure {
 		s.Exposure[id] = [2]int{e.hypo, e.heat}
 	}
@@ -319,6 +323,8 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	setMap(&g.graves, s.Graves)
 	g.afterLoadBurial()
 	g.importRoofs(s.Roofs)
+	g.importGrass(s.Grass, s.GrassCut)
+	g.seedGrass() // an older save: grass from terrain, bare under buildings
 	for id, e := range s.Exposure {
 		g.exposure[id] = exposureState{e[0], e[1]}
 	}

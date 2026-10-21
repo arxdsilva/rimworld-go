@@ -141,7 +141,7 @@ func (g *Game) mineList() [][2]int {
 func (g *Game) assignCut(id entity.EntityID) bool {
 	best := g.nearestPlant(id, func(p plant.Plant) bool { return p.Cut })
 	if best == 0 {
-		return false
+		return g.assignCutGrass(id) // grass.go: marked grass after plants
 	}
 	p, _ := g.plants.Get(best)
 	return g.startJob(id, job.Record{Kind: job.Cut, Target: best, TX: p.X, TY: p.Y, WorkLeft: plant.DefOf(p.Species).CutWork})
@@ -181,6 +181,10 @@ func (g *Game) nearestPlant(id entity.EntityID, want func(plant.Plant) bool) ent
 }
 
 func (g *Game) doCut(id entity.EntityID, j job.Record) {
+	if j.Target == 0 {
+		g.doCutGrass(id, j) // grass.go: a grass tile, not a plant
+		return
+	}
 	p, ok := g.plants.Get(j.Target)
 	if !ok {
 		j.State, j.Fail = job.Fail, job.TargetGone

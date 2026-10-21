@@ -397,7 +397,9 @@ type Game struct {
 	// until the first room rebuild. roofCollapses are recent collapses.
 	roofs         []roof.Cell
 	roofCollapses []roofCollapse
-	roofx         roofIndex // roof.go: derived plan index and roofed counts
+	// grass is the ground cover layer (grass.go, UI-011).
+	grass grassState
+	roofx roofIndex // roof.go: derived plan index and roofed counts
 	// residual: air temperature of cells of a freshly breached room.
 	residual    map[int]temperature.Temp
 	researchCur research.Project
@@ -469,6 +471,7 @@ func New(cfg Config) *Game {
 func NewColony(cfg Config) *Game {
 	g := New(cfg)
 	g.generate(cfg.Seed)
+	g.seedGrass() // before anything is built or planted, so it never depends on when World() is read
 	if err := g.LoadStartKit(); err != nil {
 		panic(err)
 	}
