@@ -9,6 +9,10 @@ A RimWorld-inspired colony simulation written in Go with Ebitengine, built in pu
 
 <table>
   <tr>
+    <td width="50%"><img src="docs/clips/daycycle.webp" width="100%" alt="A summer day in a minute: the sun rises in the east, shadows swing west to east, then moonlight"><br><sub>A summer day in a minute: the sun rises in the east, shadows swing west to east, then moonlight</sub></td>
+    <td width="50%"><img src="docs/clips/roofs.webp" width="100%" alt="Snow at dusk: a roofed room warm by its fire, its unroofed twin dark and cold"><br><sub>Snow at dusk: a roofed room warm by its fire, its unroofed twin dark and cold</sub></td>
+  </tr>
+  <tr>
     <td width="50%"><img src="docs/clips/colony_life.webp" width="100%" alt="Colonists going about their work"><br><sub>Colonists going about their work</sub></td>
     <td width="50%"><img src="docs/clips/building.webp" width="100%" alt="The first hut going up from its blueprint"><br><sub>The first hut going up from its blueprint</sub></td>
   </tr>
@@ -91,6 +95,8 @@ Media updated 2026-10-19 · regenerate with `make media clips`
 - Research: a research bench with five projects that unlock buildings and work.
 - Weather: rain, storms, snow and blizzards with wind, puddles and snow cover; rain douses outdoor fires, snow chills the air, and colonists get soaked.
 - A living world: grass, crops and trees wave in gusting wind and part around anyone walking through; trees turn in autumn and stand bare and snowy in winter.
+- Sun, moon and shadows: every sprite has a normal map, lit by a sun that rises in the east and sets in the west (lower in winter) and by a cool moon at night; soft shadows swing and stretch with it, long at dawn and dusk.
+- Roofs: colonists roof closed rooms on their own, or wherever you plan one within 6 tiles of a wall; unroofed rooms lose their heat, roofs keep rain and snow off, and unsupported roofs collapse. Press R for the roof overlay.
 - Death and burial: the dead leave bodies that rot to bones; colonists mourn, dig graves with headstones, bury their own, or cremate on a funeral pyre.
 - Save and load, with a daily autosave.
 
@@ -111,6 +117,11 @@ make simulate       # headless simulation run for quick checks
 
 - `make media`: records the gallery as short animated WebPs through the game's `-capture` flag.
 - `make clips`: captures frame sequences and packs them into animated WebP with `scripts/frames_to_webp.py`. Needs python3 and Pillow.
+- `make art` re-renders the sprites in Blender, then `make normals` writes their normal maps.
+
+## Credits
+
+Normal maps are generated with a Go port of [spritefusion-sprite-normals](https://github.com/Hugo-Dz/spritefusion-sprite-normals) by Hugo Duprez (MIT); see [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 ## Project layout & contributing
 
