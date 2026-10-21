@@ -39,6 +39,7 @@ make art-check     # validator only (python3 + Pillow)
 make art-preview   # generated/contact_sheet.png + generated/prototype_scene.png
 make art-menu      # main-menu colony diorama (scenes/menu.py), not part of make art
 make audio         # procedural sound effects (cmd/audiogen) + the sound list
+make music         # composed music (cmd/audiogen/music.go) -> Ogg, needs ffmpeg
 make audio-check   # sound list vs files, 48 kHz, 20 MB budget
 ```
 
@@ -121,7 +122,10 @@ source/audio/elevenlabs/raw/               # downloads before review (git-ignore
 - Every sound is original. Effects are made in code (`cmd/audiogen`,
   `pkg/sfxsynth`): edit `cmd/audiogen/recipes.go`, then `make audio`.
   Output is byte-identical everywhere.
-- Music and ambience beds come from ElevenLabs within a 10,000-credit
+- Music is composed in code too (`cmd/audiogen/music.go`, `pkg/musicsynth`:
+  scores played by synthesized guitar, strings, horn, bass and drums
+  through a reverb): edit a score, then `make music`.
+- Ambience beds come from ElevenLabs within a 10,000-credit
   budget, in `prompts.json` priority order: one retry per sound at most,
   every take in the ledger. Import approved takes with
   `scripts/audio_import.sh` (loudness, 48 kHz, seamless loops, Vorbis,

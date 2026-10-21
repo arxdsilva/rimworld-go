@@ -154,6 +154,7 @@ None yet. Add them when colony draw or UI layout shows up in profiles.
   (`workStrikeAt`, silent when paused), world diffs (frames, plants,
   mines, door occupancy), traces, lightning, threats and clicks. The
   director pans by screen position, culls beyond half a view off screen,
+  fades effects with camera distance to silence fully zoomed out (`zoomEar`),
   limits repeats, and picks music (menu, calm, tension) and ambience
   (day/night, rain, campfires) from `WorldView`.
 

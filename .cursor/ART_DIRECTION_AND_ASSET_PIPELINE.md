@@ -626,7 +626,12 @@ with sidecar metadata.
     `cmd/audiogen/recipes.go` through `pkg/sfxsynth` (oscillators, noise,
     envelopes, filters, grains) to 48 kHz mono 16-bit WAV with three
     variants, byte-identical on every machine (`make audio`).
--   **Music and ambience beds** may be generated with ElevenLabs from the
+-   **Music** is composed in code: `cmd/audiogen/music.go` scores (theme,
+    calm, tension, A minor, frontier colours) played by `pkg/musicsynth`
+    instruments (plucked guitar, string pads and violins, horn, bass,
+    frame drum, taiko, shaker) through a stereo reverb, mastered and
+    encoded to Ogg Vorbis (`make music`). Byte-identical renders.
+-   **Ambience beds** may be generated with ElevenLabs from the
     prompts in `assets/source/audio/prompts.json`, within the project's
     credit budget, in priority order (what the player hears longest
     first). Each take is reviewed by a person before import, and every

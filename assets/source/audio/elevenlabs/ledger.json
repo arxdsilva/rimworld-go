@@ -1,5 +1,5 @@
 {
-  "note": "Every ElevenLabs generation, approved or not. Account: free tier (non-commercial use, credit ElevenLabs). check_subscription's character_count lags: it read 0 after the first take and 300 after all 12 ambience clips, i.e. about 25 credits per 5 s sound effect.",
+  "note": "Every ElevenLabs generation, approved or not. Account: free tier (non-commercial use, credit ElevenLabs). check_subscription's character_count lags and under-reported (300 shown for 12 clips); the user's dashboard showed 600, so a 5 s sound effect costs about 50 credits. Confirm every take's cost on the dashboard before the next spend.",
   "takes": [
     {
       "id": "amb.day",
@@ -9,7 +9,7 @@
       "tool": "text_to_sound_effects",
       "seconds": 5,
       "loop": true,
-      "credits": 25,
+      "credits": 50,
       "approved": "arxdsilva",
       "date": "2026-10-21"
     },
@@ -21,7 +21,7 @@
       "tool": "text_to_sound_effects",
       "seconds": 5,
       "loop": true,
-      "credits": 25,
+      "credits": 50,
       "approved": "pending listen",
       "date": "2026-10-21"
     },
@@ -33,7 +33,7 @@
       "tool": "text_to_sound_effects",
       "seconds": 5,
       "loop": true,
-      "credits": 25,
+      "credits": 50,
       "approved": "pending listen",
       "date": "2026-10-21"
     },
@@ -45,7 +45,7 @@
       "tool": "text_to_sound_effects",
       "seconds": 5,
       "loop": true,
-      "credits": 25,
+      "credits": 50,
       "approved": "pending listen",
       "date": "2026-10-21"
     },
@@ -57,7 +57,7 @@
       "tool": "text_to_sound_effects",
       "seconds": 5,
       "loop": true,
-      "credits": 25,
+      "credits": 50,
       "approved": "pending listen",
       "date": "2026-10-21"
     },
@@ -69,7 +69,7 @@
       "tool": "text_to_sound_effects",
       "seconds": 5,
       "loop": true,
-      "credits": 25,
+      "credits": 50,
       "approved": "pending listen",
       "date": "2026-10-21"
     },
@@ -81,7 +81,7 @@
       "tool": "text_to_sound_effects",
       "seconds": 5,
       "loop": true,
-      "credits": 25,
+      "credits": 50,
       "approved": "pending listen",
       "date": "2026-10-21"
     },
@@ -93,7 +93,7 @@
       "tool": "text_to_sound_effects",
       "seconds": 5,
       "loop": true,
-      "credits": 25,
+      "credits": 50,
       "approved": "pending listen",
       "date": "2026-10-21"
     },
@@ -105,7 +105,7 @@
       "tool": "text_to_sound_effects",
       "seconds": 5,
       "loop": true,
-      "credits": 25,
+      "credits": 50,
       "approved": "pending listen",
       "date": "2026-10-21"
     },
@@ -117,7 +117,7 @@
       "tool": "text_to_sound_effects",
       "seconds": 5,
       "loop": true,
-      "credits": 25,
+      "credits": 50,
       "approved": "pending listen",
       "date": "2026-10-21"
     },
@@ -129,7 +129,7 @@
       "tool": "text_to_sound_effects",
       "seconds": 5,
       "loop": true,
-      "credits": 25,
+      "credits": 50,
       "approved": "pending listen",
       "date": "2026-10-21"
     },
@@ -141,14 +141,24 @@
       "tool": "text_to_sound_effects",
       "seconds": 5,
       "loop": true,
-      "credits": 25,
+      "credits": 50,
       "approved": "pending listen",
+      "date": "2026-10-21"
+    },
+    {
+      "id": "music.menu",
+      "take": 0,
+      "part": "10 s cost sketch",
+      "tool": "compose_music (music_v2)",
+      "seconds": 10,
+      "credits": 0,
+      "approved": "refused by ElevenLabs: HTTP 402 paid_plan_required, 'Music API is not available for free users'",
       "date": "2026-10-21"
     }
   ],
   "totals": {
-    "credits_used": 300,
-    "credits_left": 9700,
-    "measured_by": "check_subscription character_count 0 -> 300"
+    "credits_used": 600,
+    "credits_left": 9400,
+    "measured_by": "user's ElevenLabs dashboard; check_subscription lagged (showed 300)"
   }
 }

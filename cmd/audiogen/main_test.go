@@ -83,3 +83,44 @@ func TestEveryRecipeHasAUniqueIDAndVolume(t *testing.T) {
 		seen[s.recipe.ID] = true
 	}
 }
+
+func TestScoresFitTheirLength(t *testing.T) {
+	t.Parallel()
+	want := map[string][2]float64{"music.menu": {200, 220}, "music.calm": {170, 190}, "music.tension": {70, 80}}
+	for _, tr := range tracks {
+		sc := tr.score(tr.seed)
+		w := want[tr.id]
+		if sc.Length < w[0] || sc.Length > w[1] || len(sc.Notes) < 100 {
+			t.Fatalf("%s: %.0f s with %d notes", tr.id, sc.Length, len(sc.Notes))
+		}
+		for _, n := range sc.Notes {
+			if n.Start < 0 || n.Start > sc.Length || n.Vel <= 0 || n.Vel > 1 {
+				t.Fatalf("%s: bad note %+v", tr.id, n)
+			}
+		}
+		again := tr.score(tr.seed)
+		if len(again.Notes) != len(sc.Notes) || again.Notes[len(sc.Notes)/2] != sc.Notes[len(sc.Notes)/2] {
+			t.Fatalf("%s: the score is not deterministic", tr.id)
+		}
+	}
+}
+
+func TestGenerateKeepsComposedMusic(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	theme := audiomanifest.Entry{ID: "music.menu", Bus: audiomanifest.BusMusic, Loop: true, Volume: 0.75,
+		Files: []string{"music/theme.ogg"}, Source: audiomanifest.SourceComposed, License: composedLicense}
+	if err := writeManifest(dir, audiomanifest.Manifest{Sounds: []audiomanifest.Entry{theme}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := generate(dir); err != nil {
+		t.Fatal(err)
+	}
+	m, err := readManifest(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := m.Lookup("music.menu"); !ok {
+		t.Fatal("make audio dropped the composed theme")
+	}
+}

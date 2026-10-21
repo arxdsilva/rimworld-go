@@ -5,6 +5,7 @@
 // machine.
 //
 //	audiogen [-assets assets]          render + update the sound list (make audio)
+//	audiogen -music                    compose the music to Ogg (make music; needs ffmpeg)
 //	audiogen -check                    validate the sound list against the files
 //	audiogen -loopfix in.wav out.wav   make an imported loop seamless
 //	audiogen -looping music/menu.ogg   print whether prompts.json marks it a loop
@@ -36,6 +37,7 @@ func main() {
 	check := flag.Bool("check", false, "validate the sound list against the files")
 	loopfix := flag.Bool("loopfix", false, "make the WAV loop seamless: -loopfix in.wav out.wav")
 	fade := flag.Float64("fade", 1, "-loopfix crossfade, seconds")
+	music := flag.Bool("music", false, "compose the music (scores in music.go) and encode Ogg with ffmpeg")
 	looping := flag.String("looping", "", "print true/false: is this prompts.json file a loop")
 	reg := flag.String("register", "", "add this imported file (under generated/audio) to the sound list")
 	credits := flag.Int("credits", 0, "-register: ElevenLabs credits the take cost")
@@ -44,6 +46,8 @@ func main() {
 	flag.Parse()
 	var err error
 	switch {
+	case *music:
+		err = composeAll(*assets)
 	case *looping != "":
 		var p prompt
 		if p, err = promptFor(*assets, *looping); err == nil {

@@ -8,11 +8,16 @@ import (
 
 // WriteWAV writes mono 16-bit PCM at rate as a RIFF WAVE file.
 func WriteWAV(w io.Writer, pcm []int16, rate int) error {
+	return WriteWAVChannels(w, pcm, rate, 1)
+}
+
+// WriteWAVChannels writes interleaved 16-bit PCM with ch channels.
+func WriteWAVChannels(w io.Writer, pcm []int16, rate, ch int) error {
 	data := uint32(len(pcm) * 2)
 	hdr := []any{
 		[4]byte{'R', 'I', 'F', 'F'}, 36 + data, [4]byte{'W', 'A', 'V', 'E'},
-		[4]byte{'f', 'm', 't', ' '}, uint32(16), uint16(1), uint16(1),
-		uint32(rate), uint32(rate * 2), uint16(2), uint16(16),
+		[4]byte{'f', 'm', 't', ' '}, uint32(16), uint16(1), uint16(ch),
+		uint32(rate), uint32(rate * 2 * ch), uint16(2 * ch), uint16(16),
 		[4]byte{'d', 'a', 't', 'a'}, data,
 	}
 	for _, v := range hdr {

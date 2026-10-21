@@ -29,7 +29,8 @@ const (
 
 // Sources.
 const (
-	SourceProcedural = "procedural"
+	SourceProcedural = "procedural" // effects: cmd/audiogen recipes
+	SourceComposed   = "composed"   // music: cmd/audiogen -music scores
 	SourceElevenLabs = "elevenlabs"
 )
 

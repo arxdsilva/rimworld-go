@@ -35,7 +35,8 @@ The game has sound. The UI adapter decides what is heard and sends it through a 
   - strikes from `workStrikeAt`, so a paused clock is silent and 3x speed strikes three times as often;
   - world diffs: frames finished, trees cut, mines done, door occupancy;
   - traces, lightning (thunder 20–90 frames later), new threats and notices, clicks and speed keys.
-- Placement: pan up to ±0.8 by screen x. Volume fades to silence half a view off screen and drops when zoomed out.
+- Placement: pan up to ±0.8 by screen x. Volume fades to silence half a view off screen.
+- Camera distance (`zoomEar`): effects fade from full at zoom 1.5 to silence at the map's zoom-out limit (`minZoomFor`), equal steps per halving of the zoom. They also narrow in stereo (to half width) and thin out (3, then 2, then 1 copy of a sound per frame). Campfires fade with them; ambience beds, music, UI and thunder don't.
 - Limits:
   - 4 frames between plays of one id;
   - 3 copies of an id per frame;

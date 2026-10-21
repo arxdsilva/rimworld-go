@@ -38,9 +38,37 @@ type loopWant struct {
 	vol, pan float64
 }
 
+// zoomNear is the zoom at or closer than which effects play at full
+// volume and full stereo width.
+const zoomNear = 1.5
+
+// zoomEar is how the camera's distance shapes the effects: from zoomNear
+// out to the map's zoom-out limit (zoomOut) they get quieter, narrower in
+// stereo and fewer per frame, reaching silence fully zoomed out. Each
+// halving of the zoom is an equal step.
+func zoomEar(zoom, zoomOut float64) (gain, panScale float64, perID int) {
+	span := math.Log2(zoomNear / zoomOut)
+	if zoom <= 0 || span <= 0 { // the map fits at zoomNear: no room to fade
+		return 1, 1, cueMaxPerID
+	}
+	far := math.Max(0, math.Min(1, math.Log2(zoomNear/zoom)/span))
+	gain = 1 - far
+	panScale = 1 - 0.5*far
+	switch {
+	case far > 0.6:
+		perID = 1
+	case far > 0.3:
+		perID = 2
+	default:
+		perID = cueMaxPerID
+	}
+	return gain, panScale, perID
+}
+
 // spatial places a world point (tiles) for the ear: pan from where it is
 // across the view, volume falling off to silence half a view beyond the
-// edge, and quieter when zoomed out. ok is false when it is out of earshot.
+// edge, and fading with camera distance (zoomEar) to silence fully zoomed
+// out. ok is false when it is out of earshot.
 func spatial(r *Renderer, x, y float64, v viewport) (vol, pan float64, ok bool) {
 	sx, sy := r.worldToScreenF(x, y)
 	fx, fy := float64(sx), float64(sy)
@@ -49,14 +77,14 @@ func spatial(r *Renderer, x, y float64, v viewport) (vol, pan float64, ok bool) 
 	if half <= 0 || v.h() <= 0 {
 		return 0, 0, false
 	}
-	pan = math.Max(-1, math.Min(1, (fx-cx)/half)) * panWidth
+	gain, panScale, _ := zoomEar(r.cam.zoom, r.minZoomFor(v))
+	pan = math.Max(-1, math.Min(1, (fx-cx)/half)) * panWidth * panScale
 	dx := math.Max(0, math.Max(v.x0-fx, fx-v.x1)) / half
 	dy := math.Max(0, math.Max(v.y0-fy, fy-v.y1)) / (v.h() / 2)
-	vol = 1 - math.Max(dx, dy)
-	if vol <= 0 {
+	vol = (1 - math.Max(dx, dy)) * gain
+	if vol <= 0.01 {
 		return 0, 0, false
 	}
-	vol *= math.Max(0.35, math.Min(1, 0.35+0.65*r.cam.zoom))
 	return vol, pan, true
 }
 
@@ -151,6 +179,7 @@ func (a *App) setLoops(want map[string]loopWant) {
 func (a *App) colonyCues() {
 	r := a.renderer
 	v := colonyViewport(a.sw, a.sh)
+	_, _, perID := zoomEar(r.cam.zoom, r.minZoomFor(v))
 	type placed struct {
 		id       string
 		vol, pan float64
@@ -176,7 +205,7 @@ func (a *App) colonyCues() {
 	}
 	count := map[string]int{}
 	for _, c := range near {
-		if count[c.id] >= cueMaxPerID {
+		if count[c.id] >= perID {
 			continue
 		}
 		count[c.id]++

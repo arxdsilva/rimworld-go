@@ -58,6 +58,10 @@ art-menu:  ## render the main-menu colony diorama (assets/source/blender/artlib/
 audio:  ## render the procedural sound effects (cmd/audiogen) and update the sound list
 	go run ./cmd/audiogen
 
+.PHONY: music
+music:  ## compose the music (cmd/audiogen/music.go) to Ogg Vorbis; needs ffmpeg with libvorbis
+	go run ./cmd/audiogen -music
+
 .PHONY: audio-check
 audio-check:  ## validate the sound list against the files and the size budget
 	go run ./cmd/audiogen -check

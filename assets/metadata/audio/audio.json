@@ -26,7 +26,7 @@
       "tool": "text_to_sound_effects",
       "prompt": "Open countryside daytime ambience: light steady wind through grass and a few distant songbirds, no people, no traffic, seamless loop.",
       "seconds": 20,
-      "credits": 100,
+      "credits": 200,
       "generated": "2026-10-21",
       "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
       "reviewed_by": "arxdsilva"
@@ -43,7 +43,7 @@
       "tool": "text_to_sound_effects",
       "prompt": "Calm night ambience in a field: soft wind and chirping crickets, distant, no people, seamless loop.",
       "seconds": 20,
-      "credits": 100,
+      "credits": 200,
       "generated": "2026-10-21",
       "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
       "reviewed_by": "arxdsilva"
@@ -60,10 +60,51 @@
       "tool": "text_to_sound_effects",
       "prompt": "Steady medium rain on grass and a wooden roof, no thunder, no voices, seamless loop.",
       "seconds": 20,
-      "credits": 100,
+      "credits": 200,
       "generated": "2026-10-21",
       "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
       "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "music.calm",
+      "bus": "music",
+      "volume": 0.7,
+      "files": [
+        "music/calm_1.ogg"
+      ],
+      "source": "composed",
+      "recipe": "music.calm",
+      "seed": 902,
+      "seconds": 180,
+      "license": "original, composed in code (CC0, this repo)"
+    },
+    {
+      "id": "music.menu",
+      "bus": "music",
+      "loop": true,
+      "volume": 0.75,
+      "files": [
+        "music/theme.ogg"
+      ],
+      "source": "composed",
+      "recipe": "music.menu",
+      "seed": 901,
+      "seconds": 211.4285625,
+      "license": "original, composed in code (CC0, this repo)"
+    },
+    {
+      "id": "music.tension",
+      "bus": "music",
+      "loop": true,
+      "volume": 0.75,
+      "files": [
+        "music/tension.ogg"
+      ],
+      "source": "composed",
+      "recipe": "music.tension",
+      "seed": 903,
+      "seconds": 74.1818125,
+      "license": "original, composed in code (CC0, this repo)"
     },
     {
       "id": "sfx.build_done",

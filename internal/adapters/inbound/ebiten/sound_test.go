@@ -245,3 +245,73 @@ func TestDayWeight(t *testing.T) {
 		}
 	}
 }
+
+func TestZoomEar(t *testing.T) {
+	t.Parallel()
+	const out = 0.3
+	cases := []struct {
+		zoom, gain, pan float64
+		perID           int
+	}{
+		{3.0, 1, 1, 3}, {1.5, 1, 1, 3}, {1.0, 0.748, 0.874, 3},
+		{0.5, 0.317, 0.658, 1}, {0.3, 0, 0.5, 1}, {0.2, 0, 0.5, 1},
+	}
+	for _, c := range cases {
+		g, p, n := zoomEar(c.zoom, out)
+		if math.Abs(g-c.gain) > 0.01 || math.Abs(p-c.pan) > 0.01 || n != c.perID {
+			t.Fatalf("zoomEar(%v) = %.3f %.3f %d, want %.3f %.3f %d", c.zoom, g, p, n, c.gain, c.pan, c.perID)
+		}
+	}
+	prev := 2.0
+	for z := 3.0; z >= out; z *= 0.95 {
+		g, _, _ := zoomEar(z, out)
+		if g > prev {
+			t.Fatalf("gain rises zooming out at %v", z)
+		}
+		prev = g
+	}
+	if g, p, n := zoomEar(0.5, 1.5); g != 1 || p != 1 || n != cueMaxPerID {
+		t.Fatal("a map that fits at zoomNear never fades")
+	}
+}
+
+func TestDirectorFadesWithZoom(t *testing.T) {
+	t.Parallel()
+	a, rec := soundApp(&stubSim{w: 48, h: 40})
+	r := a.renderer
+	v := colonyViewport(a.sw, a.sh)
+	hear := func(zoom, dx float64) []soundCall {
+		r.cam.zoom = zoom
+		rec.plays = nil
+		a.snd.frame += cueGap
+		cx, cy := centreTile(a)
+		r.cue("sfx.chop", cx+dx, cy, 1)
+		a.colonyCues()
+		return rec.played("sfx.chop")
+	}
+	near, mid := hear(1.5, 0), hear(0.5, 0)
+	if len(near) != 1 || len(mid) != 1 || mid[0].vol >= near[0].vol*0.6 {
+		t.Fatalf("zoomed out should be much quieter: near %+v mid %+v", near, mid)
+	}
+	nearR, midR := hear(1.5, 4), hear(0.5, 1.3) // about the same spot on screen
+	if len(nearR) != 1 || len(midR) != 1 || midR[0].pan >= nearR[0].pan {
+		t.Fatalf("zoomed out should pan narrower: near %+v mid %+v", nearR, midR)
+	}
+	if got := hear(r.minZoomFor(v), 0); len(got) != 0 {
+		t.Fatalf("fully zoomed out effects are silent, got %+v", got)
+	}
+	r.cam.zoom = 1.5
+	cx, cy := centreTile(a)
+	r.heard = game.WorldView{Hour: 12, Buildings: []game.BuildingView{{ID: 5, Kind: "campfire", X: int(cx), Y: int(cy), Burning: true}}}
+	want := map[string]loopWant{}
+	a.colonyAmbience(want)
+	if _, ok := want["fire:5"]; !ok {
+		t.Fatal("the campfire crackles zoomed in")
+	}
+	r.cam.zoom = r.minZoomFor(v)
+	want = map[string]loopWant{}
+	a.colonyAmbience(want)
+	if _, ok := want["fire:5"]; ok {
+		t.Fatal("a campfire is silent fully zoomed out")
+	}
+}
