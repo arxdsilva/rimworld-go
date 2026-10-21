@@ -910,3 +910,124 @@ func TestEnvironmentDrawsWithAndWithoutArt(t *testing.T) {
 		drawWeatherLabel(screen, 300, 10, lw)
 	}
 }
+
+// --- roofs (SIM-018) ------------------------------------------------------------
+
+// roofedWorld is a 64x64 outdoor map whose left half (x < 32) is roofed.
+func roofedWorld(weather string) game.WorldView {
+	w := game.WorldView{Weather: weather, WeatherIntensity: 1, WindX: 0.5, SnowDepth: 0.8, Wetness: 0.9,
+		OutdoorTemp: -40, Season: "Winter", TerrainW: 64, Terrain: make([]uint8, 64*64),
+		RoomGrid: make([]int, 64*64), RoofCells: make([]uint8, 64*64)}
+	for i := range w.RoomGrid {
+		w.RoomGrid[i] = -1
+		if i%64 < 32 {
+			w.RoofCells[i] = roofBuilt
+		}
+	}
+	return w
+}
+
+func TestNoGroundCoverUnderRoof(t *testing.T) {
+	t.Parallel()
+	w := roofedWorld("snow")
+	w.RoofCells[5*64+40] = roofNatural
+	w.RoofCells[6*64+40] = roofPlanBuild // planned, not built: still open
+	r := envRenderer(w)
+	for _, c := range []struct {
+		x, y int
+		open bool
+	}{{3, 3, false}, {31, 9, false}, {40, 5, false}, {40, 6, true}, {45, 9, true}} {
+		if got := r.groundOpen(w, c.x, c.y); got != c.open {
+			t.Errorf("groundOpen(%d,%d) = %v, want %v", c.x, c.y, got, c.open)
+		}
+	}
+	// grass under a roof is not buried in snow
+	under := r.plantPose(3, 3, kindGrass, 0.05, 1)
+	open := r.plantPose(45, 3, kindGrass, 0.05, 1)
+	if under.cs != (colorScale{}) && under.cs[3] != 1 || under.sy < open.sy {
+		t.Errorf("roofed grass buried: %+v vs open %+v", under, open)
+	}
+	if open.sy >= 1 {
+		t.Errorf("open grass not pressed by snow: %+v", open)
+	}
+	// and a whole frame draws
+	sim := newEnvSim(w)
+	r = New(sim)
+	r.art = envArt()
+	screen := ebiten.NewImage(640, 400)
+	r.drawGroundCover(screen, w, 640, 400, r.tilePx())
+}
+
+func TestRainSkipsRoofedTiles(t *testing.T) {
+	t.Parallel()
+	for _, kind := range []string{"rain", "snow"} {
+		w := roofedWorld(kind)
+		r := New(&stubSim{w: 64, h: 64})
+		r.env.view = envRect{20, 0, 44, 14}
+		stepFrames(r, w, 240)
+		if len(r.env.drops) == 0 {
+			t.Fatalf("%s: no drops at all", kind)
+		}
+		for _, d := range r.env.drops {
+			if x := int(math.Floor(d.gx)); x >= 0 && x < 32 && d.gy >= 0 { // off the map's top edge is open sky
+				t.Fatalf("%s: drop kind %d lands under the roof at x=%.2f", kind, d.kind, d.gx)
+			}
+		}
+	}
+	// a roof built over falling rain swallows it: nothing lands there
+	w := roofedWorld("rain")
+	for i := range w.RoofCells {
+		w.RoofCells[i] = 0
+	}
+	r := New(&stubSim{w: 64, h: 64})
+	r.env.view = envRect{0, 0, 24, 14}
+	stepFrames(r, w, 60)
+	for i := range w.RoofCells {
+		w.RoofCells[i] = roofBuilt
+	}
+	stepFrames(r, w, 60)
+	for _, d := range r.env.drops {
+		if d.kind != dropRain && d.gx >= 0 && d.gy >= 0 { // beyond the map edge is open sky
+			t.Fatalf("drop kind %d landed under a new roof", d.kind)
+		}
+	}
+}
+
+func TestCollapseDustOncePerStamp(t *testing.T) {
+	t.Parallel()
+	w := game.WorldView{Weather: "clear", RoofCollapses: []game.RoofCollapseView{{X: 4, Y: 5, Tick: 900}}}
+	r := envRenderer(w)
+	count := func(k partKind) int {
+		n := 0
+		for _, p := range r.parts {
+			if p.kind == k {
+				n++
+			}
+		}
+		return n
+	}
+	if count(partDust) != 12 || count(partChip) != 4 {
+		t.Fatalf("first frame: dust %d chips %d, want 12 and 4", count(partDust), count(partChip))
+	}
+	for _, p := range r.parts {
+		if p.x < 4 || p.x > 5 || p.y < 5 || p.y > 6 {
+			t.Fatalf("particle at %.2f,%.2f, want over tile 4,5", p.x, p.y)
+		}
+	}
+	stepFrames(r, w, 5)
+	if count(partDust) != 12 || count(partChip) != 4 {
+		t.Fatalf("stamp replayed: dust %d chips %d", count(partDust), count(partChip))
+	}
+	// a second collapse puffs once more; the first stays quiet
+	w.RoofCollapses = append(w.RoofCollapses, game.RoofCollapseView{X: 9, Y: 2, Tick: 1200})
+	stepFrames(r, w, 3)
+	if count(partDust) != 24 || count(partChip) != 8 {
+		t.Fatalf("second stamp: dust %d chips %d, want 24 and 8", count(partDust), count(partChip))
+	}
+	// Draw never emits: drawing a frame leaves the pool as it was
+	n := len(r.parts)
+	r.drawRoofOverlay(ebiten.NewImage(64, 64), w, 64, 64, r.tilePx())
+	if len(r.parts) != n {
+		t.Fatal("drawing emitted particles")
+	}
+}

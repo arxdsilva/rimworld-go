@@ -354,8 +354,8 @@ func (a *App) hudTimeText() string {
 	return fmt.Sprintf("%s  %s  %s", a.renderer.date(), a.renderer.speedRate(), a.renderer.activity())
 }
 
-// roofButtons is the HUD Roof toggle: top strip, left of the clock. Its
-// id rides the arch.cat. click route (see selectArchCategory).
+// roofButtons is the HUD Roof toggle: top strip, left of the clock
+// (clicks route through applyClick).
 func (a *App) roofButtons(sw int) []button {
 	if a.renderer == nil {
 		return nil
@@ -376,8 +376,11 @@ func (a *App) drawRoofButton(screen *ebiten.Image, sw int) {
 			}
 			drawIcon(screen, img, float64(b.x)+(float64(b.w)-float64(b.h)+4)/2, float64(b.y)+2, float64(b.h)-4)
 		}
-		if line := a.roofLegend(); line != "" {
-			drawLabel(screen, int(b.x)-len(line)*6-hudPad, 10, line)
+		if line := a.roofLegend(); line != "" { // a tab under the bar, clear of the readouts
+			lw := float32(len(line)*6 + 2*hudPad)
+			lx := min(b.x+b.w, float32(sw-hudPad)) - lw
+			drawPanel(screen, lx, hudTopH+2, lw, 22)
+			drawLabel(screen, int(lx)+hudPad, int(hudTopH)+7, line)
 		}
 	}
 }
@@ -439,12 +442,7 @@ func (a *App) drawRoofToolGhost(screen *ebiten.Image, x0, y0, x1, y1 int) {
 		}
 		sx, sy := r.worldToScreen(c[0], c[1])
 		if visible(sx, sy, float32(tile), float32(tile), sw, sh) {
-			roofUnsupportedMark(screen, sx, sy, tile)
+			r.drawRoofUnsupported(screen, c[0], c[1], tile) // roof_draw.go
 		}
 	}
 }
-
-// roofUnsupportedMark draws the red fill and "x" on one unsupported cell
-// at screen position (sx, sy). Local no-op until W5's drawRoofUnsupported
-// lands in roof_draw.go; the lead wires this call to it.
-func roofUnsupportedMark(screen *ebiten.Image, sx, sy float32, tile float64) {}
