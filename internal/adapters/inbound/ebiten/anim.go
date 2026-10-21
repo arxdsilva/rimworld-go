@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image/color"
 	"math"
+	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
@@ -83,7 +84,15 @@ func (r *Renderer) drawSpritePose(screen *ebiten.Image, key string, tint color.N
 	if cs == (colorScale{}) {
 		cs = noCS
 	}
-	r.drawLit(screen, img, geo, cs, int(math.Floor(wx)), int(math.Floor(wy)))
+	if strings.HasPrefix(key, "overlay/") { // selection rings and markers stay unlit
+		op := &ebiten.DrawImageOptions{GeoM: geo, Filter: ebiten.FilterLinear}
+		if cs != noCS {
+			op.ColorScale.Scale(cs[0]*cs[3], cs[1]*cs[3], cs[2]*cs[3], cs[3])
+		}
+		screen.DrawImage(img, op)
+	} else {
+		r.drawLit(screen, img, geo, cs, int(math.Floor(wx)), int(math.Floor(wy)))
+	}
 	if ps.flash > 0 {
 		f := ps.flash
 		fl := &ebiten.DrawImageOptions{GeoM: geo, Filter: ebiten.FilterLinear}

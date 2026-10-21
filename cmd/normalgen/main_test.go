@@ -12,12 +12,15 @@ import (
 
 func TestWanted(t *testing.T) {
 	for path, want := range map[string]bool{
-		"assets/generated/world/rock/granite.png":      true,
-		"assets/generated/world/pawn/body_mask.png":    false,
-		"assets/generated/world/rock/granite_n.png":    false,
-		"assets/generated/ui/icons/axe.png":            false,
-		"assets/generated/world/rock/granite.txt":      false,
-		"assets/generated/world/furniture/bed_far.png": true,
+		"assets/generated/world/rock/granite.png":           true,
+		"assets/generated/world/pawn/body_mask.png":         false,
+		"assets/generated/world/rock/granite_n.png":         false,
+		"assets/generated/ui/icons/axe.png":                 false,
+		"assets/generated/world/rock/granite.txt":           false,
+		"assets/generated/world/furniture/bed_far.png":      true,
+		"assets/generated/world/terrain/soil_00.png":        false,
+		"assets/generated/world/structure/floor_stone.png":  false,
+		"assets/generated/world/structure/wall_wood_00.png": true,
 	} {
 		if got := wanted(path); got != want {
 			t.Errorf("wanted(%q) = %v, want %v", path, got, want)

@@ -84,7 +84,11 @@ def check_sprite(family, name, path):
 def check_light(family, name, path, md, img):
     """The normal map and shadow caster of one sprite (ART §6.1)."""
     npath = path[:-4] + "_n.png"
-    if not os.path.exists(npath):
+    flat = family == "terrain" or (family == "structure" and name.startswith("floor"))
+    if flat:
+        if os.path.exists(npath):
+            err("%s/%s: terrain and floors are lit flat; remove the normal map" % (family, name))
+    elif not os.path.exists(npath):
         err("%s/%s: missing normal map (make normals)" % (family, name))
     else:
         n = Image.open(npath)

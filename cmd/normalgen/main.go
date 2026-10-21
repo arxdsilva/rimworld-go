@@ -44,13 +44,18 @@ func settings() spritenormals.Settings {
 	return s
 }
 
-// wanted reports a sprite PNG that needs a normal map.
+// wanted reports a sprite PNG that needs a normal map. Terrain and floors
+// lie flat on the ground and are lit flat (ART §6.1), so they get none.
 func wanted(path string) bool {
 	base := filepath.Base(path)
 	if !strings.HasSuffix(base, ".png") || strings.HasSuffix(base, "_mask.png") || strings.HasSuffix(base, "_n.png") {
 		return false
 	}
-	return !strings.Contains(filepath.ToSlash(path), "/ui/")
+	p := filepath.ToSlash(path)
+	if strings.Contains(p, "/structure/") && strings.HasPrefix(base, "floor") {
+		return false
+	}
+	return !strings.Contains(p, "/ui/") && !strings.Contains(p, "/terrain/")
 }
 
 // run collects the sprites that need a map, then writes them on a
