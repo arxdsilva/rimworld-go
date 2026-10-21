@@ -113,31 +113,3 @@ func (r *Renderer) drawBuildingDamage(screen *ebiten.Image, w game.WorldView, ti
 		vector.FillRect(screen, x, y, bw*float32(b.HPPct)/100, 4, c, false)
 	}
 }
-
-// drawPenFence rings an animal pen with rails and a post at every tile.
-func (r *Renderer) drawPenFence(screen *ebiten.Image, p [4]int, tile float64) {
-	x0, y0 := r.worldToScreenF(float64(p[0])+0.08, float64(p[1])+0.08)
-	x1, y1 := r.worldToScreenF(float64(p[2])+0.92, float64(p[3])+0.92)
-	rail := color.RGBA{150, 104, 62, 220}
-	th := float32(max(2, tile*0.05))
-	vector.StrokeRect(screen, x0, y0, x1-x0, y1-y0, th, rail, true)
-	post := color.RGBA{110, 74, 44, 240}
-	ps := float32(max(3, tile*0.09))
-	dot := func(x, y float32) { vector.FillRect(screen, x-ps/2, y-ps/2, ps, ps, post, false) }
-	for x := p[0]; x <= p[2]+1; x++ {
-		sx, _ := r.worldToScreenF(min(float64(x), float64(p[2])+0.92), 0)
-		if x == p[0] {
-			sx = x0
-		}
-		dot(sx, y0)
-		dot(sx, y1)
-	}
-	for y := p[1]; y <= p[3]+1; y++ {
-		_, sy := r.worldToScreenF(0, min(float64(y), float64(p[3])+0.92))
-		if y == p[1] {
-			sy = y0
-		}
-		dot(x0, sy)
-		dot(x1, sy)
-	}
-}

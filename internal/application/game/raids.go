@@ -398,6 +398,7 @@ func (g *Game) removeRaider(id entity.EntityID) {
 	g.vital.Delete(id)
 	delete(g.equip, id)
 	delete(g.raiders, id)
+	delete(g.logs, id)
 	kept := g.raiderIDs[:0]
 	for _, rid := range g.raiderIDs {
 		if rid != id {

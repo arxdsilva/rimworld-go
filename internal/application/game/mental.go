@@ -42,6 +42,7 @@ func (g *Game) mentalBreakTick(id entity.EntityID, j job.Record) bool {
 	}
 	if now >= b.until {
 		delete(g.breaks, id)
+		g.logEvent(id, logEntry{Kind: logRecovered})
 		g.remember(id, mood.Catharsis)
 		pos, _ := g.positions.Get(id)
 		g.message(pos.X, pos.Y, "%s has calmed down and feels a little better.", g.name(id))
@@ -95,6 +96,7 @@ func (g *Game) startBreak(id entity.EntityID) {
 	delete(g.draft, id)
 	delete(g.orderQueue, id)
 	g.breaks[id] = breakState{kind: k, until: uint64(g.clock.Now()) + mentalbreak.DefOf(k).Duration}
+	g.logEvent(id, logEntry{Kind: logMental, Name: mentalbreak.DefOf(k).Label})
 	pos, _ := g.positions.Get(id)
 	g.message(pos.X, pos.Y, "Mental break: "+mentalbreak.DefOf(k).Message, g.name(id))
 }

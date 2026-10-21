@@ -27,11 +27,12 @@ func (a *App) inspectorButtons() []button {
 	}
 	r := inspectorRect()
 	tabs := []buttonSpec{
-		{id: "inspector.character", label: "Character", selected: a.inspectTab != "needs" && a.inspectTab != "gear", w: 72, h: 22},
-		{id: "inspector.needs", label: "Needs", selected: a.inspectTab == "needs", w: 56, h: 22},
-		{id: "inspector.health", label: "Health", disabled: true, reason: "not implemented", w: 56, h: 22},
-		{id: "inspector.social", label: "Social", disabled: true, reason: "not implemented", w: 56, h: 22},
-		{id: "inspector.gear", label: "Gear", selected: a.inspectTab == "gear", w: 48, h: 22},
+		{id: "inspector.character", label: "Character", selected: a.inspectTab != "needs" && a.inspectTab != "gear" && a.inspectTab != "log", w: 72, h: 22},
+		{id: "inspector.needs", label: "Needs", selected: a.inspectTab == "needs", w: 48, h: 22},
+		{id: "inspector.health", label: "Health", disabled: true, reason: "not implemented", w: 52, h: 22},
+		{id: "inspector.social", label: "Social", disabled: true, reason: "not implemented", w: 52, h: 22},
+		{id: "inspector.gear", label: "Gear", selected: a.inspectTab == "gear", w: 42, h: 22},
+		{id: "inspector.log", label: "Log", selected: a.inspectTab == "log", w: 36, h: 22},
 	}
 	out := inspectorTabRow(r, tabs)
 	if p, ok := a.selectedPawn(); ok {
@@ -230,6 +231,7 @@ func inspectorTabRow(r button, tabs []buttonSpec) []button {
 			disabled: t.disabled,
 			reason:   t.reason,
 			selected: t.selected,
+			quiet:    t.disabled, // tabs are narrow: the reason shows on hover, no suffix
 		})
 		x += w + 4
 	}
@@ -285,6 +287,12 @@ func (a *App) drawInspector(screen *ebiten.Image) {
 	drawLabel(screen, int(r.x)+72, int(r.y)+72, fmt.Sprintf("activity  %s", p.Activity))
 	drawLabel(screen, int(r.x)+72, int(r.y)+88, fmt.Sprintf("tile      (%d, %d)  %s", p.X, p.Y, fmtTemp(p.Temp)))
 	drawLabel(screen, int(r.x)+72, int(r.y)+104, fmt.Sprintf("weapon    %s", p.Weapon))
+	if a.inspectTab == "log" {
+		a.drawPawnLog(screen, p)
+		mx, my := a.currentCursor()
+		a.drawButtons(screen, a.inspectorButtons(), mx, my)
+		return
+	}
 	if a.inspectTab == "gear" {
 		drawGear(screen, p, int(r.x)+12, int(r.y)+126)
 		mx, my := a.currentCursor()

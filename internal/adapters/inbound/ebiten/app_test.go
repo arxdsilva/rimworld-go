@@ -46,6 +46,9 @@ func (s *stubSim) CanPlaceAt(kind, stuff, facing string, x, y int) (bool, string
 func (s *stubSim) OrdersAt(pawn entity.EntityID, x, y int) []game.OrderOption {
 	return s.orders
 }
+func (s *stubSim) CanZoneAt(kind string, x, y int) bool {
+	return x >= 0 && y >= 0 && x < s.w && y < s.h
+}
 
 func testApp(sim Simulation) *App {
 	return NewApp(AppConfig{

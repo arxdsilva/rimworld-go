@@ -370,8 +370,8 @@ This is the heart of autonomous colony behavior.
 ## 5.2 Reservations
 
 -   [-] **Entity reservation** (exclusive pawn→entity; no quantity splits)
--   [-] **Tile reservation** (haul dest / move target)
--   [ ] **Item quantity reservation**
+-   [-] **Tile reservation** (haul dest / move target; a delivery route reserves its spare stockpile tile)
+-   [-] **Item quantity reservation** (in-flight material per frame/fuel user: haulers' shares are booked so a frame is never over-delivered (HAUL-001); no split reservations on a source stack)
 -   [-] **Bed/patient reservation** (bed `Claimant` for Sleep; no patient/medical)
 -   [ ] **Workstation reservation**
 -   [-] **Automatic reservation cleanup** (complete/cancel/replace/death; no target-deletion index)
@@ -478,7 +478,7 @@ This is the heart of autonomous colony behavior.
     -   drug.
     -   manufactured component.
     -   corpse/product categories.
--   [-] **Stackable items** (qty + limit 75, merge/take, no negatives; food/wood only)
+-   [-] **Stackable items** (stack limit 1000, carry 100 per trip, merge/take, no negatives)
     -   Quantity.
     -   stack limit.
     -   merge/split.
@@ -508,7 +508,7 @@ This is the heart of autonomous colony behavior.
 
 ## 6.3 Stockpile zones
 
--   [-] **Stockpile creation** (paint rectangle; food+wood filter)
+-   [-] **Stockpile creation** (paint tiles; one zone per tile; adjacent stockpiles merge; food/wood/stone filter set per zone, no filter UI yet (ZONE-001))
     -   Paint storage cells.
 -   [-] **Storage filters** (food and wood allowed; no category tree/quality)
     -   Category tree.
@@ -524,12 +524,12 @@ This is the heart of autonomous colony behavior.
 
 ## 6.4 Hauling
 
--   [-] **Haul loose item to storage** (food/wood to empty stockpile cell)
--   [-] **Haul construction resources** (wood to wall/bed frame)
+-   [-] **Haul loose item to storage** (up to 100 per trip to the nearest accepting stockpile tile, topping up stacks first)
+-   [-] **Haul construction resources** (a full load of wood or stone feeds a route of up to 8 nearby frames; leftovers go to the nearest stockpile, or only the needed amount is carried when storage has no room (HAUL-001))
 -   [ ] **Haul production ingredients**
 -   [ ] **Haul finished products**
 -   [x] **Haul corpses**
--   [ ] **Opportunistic/batched hauling where compatible**
+-   [-] **Opportunistic/batched hauling where compatible** (batched for construction materials and refuelling; not yet for general goods)
     -   Performance-conscious without changing core player expectations.
 
 ------------------------------------------------------------------------
@@ -544,7 +544,7 @@ This is the heart of autonomous colony behavior.
 -   [x] **Cut plant designation** (trees drop wood scaled by growth; bushes cleared)
 -   [x] **Harvest designation** (wild plants by order; zone crops harvest automatically; Grow work type)
 -   [x] **Hunt designation**
--   [-] **Cancel designation** (frames, harvest marks, deconstruct marks, overlapping stockpiles)
+-   [-] **Cancel designation** (frames, harvest marks, deconstruct marks; zones lose just the cancelled tiles (ZONE-001))
 -   [ ] **Forbid/unforbid designation/action**
 
 ## 7.2 Construction lifecycle
@@ -557,7 +557,7 @@ This is the heart of autonomous colony behavior.
     -   Stuff/material-based buildings where relevant.
     -   Different materials influence HP, beauty, flammability,
         work/material cost, etc.
--   [-] **Resource delivery** (wood hauled to frame until `Need`)
+-   [-] **Resource delivery** (material hauled to frames until `Need`, several frames per trip, in-flight amounts prevent over-delivery (HAUL-001))
     -   Haulers/builders deliver required materials.
 -   [-] **Construction frame**
     -   Delivered materials are committed to a partially constructed
@@ -629,7 +629,7 @@ This is the heart of autonomous colony behavior.
 
 ## 7.5 Specialized zones
 
--   [x] **Growing zones** (painted rectangles sowing amberroot; cancel removes; resow after harvest)
+-   [x] **Growing zones** (painted tiles sowing the chosen crop; never on taken tiles or infertile rough stone/rock; same-crop neighbours merge; cancel clears tiles; resow after harvest (ZONE-001))
 -   [ ] **Home area**
     -   Influences firefighting/cleaning/repair behavior.
 -   [x] **Roof build/remove areas** (SIM-018)
@@ -1510,7 +1510,7 @@ children systems.
 ## 18.6 Animal zones/pens
 
 -   [ ] **Animal allowed areas for zonable animals**
--   [-] **Pen system for appropriate livestock** (pen zones; tame animals keep inside or stay near the colony; no fences)
+-   [-] **Pen system for appropriate livestock** (pen zones of any shape, merged when adjacent, drawn with one fence; tame animals keep inside or stay near the colony; no fence buildings)
     -   Pen markers/boundaries.
     -   rope/lead jobs.
     -   enclosure validity.

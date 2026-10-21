@@ -15,12 +15,6 @@ import (
 // SowWork is the labour to sow one cell of a growing zone.
 const SowWork = 20
 
-// GrowZoneView is a growing zone in the read model.
-type GrowZoneView struct {
-	MinX, MinY, MaxX, MaxY int
-	Crop                   string
-}
-
 // CropID is the command value (Command.Build) for a crop name.
 func CropID(name string) (uint8, bool) {
 	s, ok := plant.Parse(name)
@@ -45,18 +39,7 @@ func (g *Game) addGrowZone(x1, y1, x2, y2 int, crop uint8) {
 	if !plant.DefOf(s).ZoneSowable() {
 		s = plant.Potato
 	}
-	minX, minY, maxX, maxY := normalizeRect(x1, y1, x2, y2)
-	g.growZones = append(g.growZones, zone.GrowZone{MinX: minX, MinY: minY, MaxX: maxX, MaxY: maxY, Crop: uint8(s)})
-}
-
-func (g *Game) cancelGrowZones(minX, minY, maxX, maxY int) {
-	kept := g.growZones[:0]
-	for _, z := range g.growZones {
-		if z.MaxX < minX || z.MinX > maxX || z.MaxY < minY || z.MinY > maxY {
-			kept = append(kept, z)
-		}
-	}
-	g.growZones = kept
+	g.paintZone(zone.KindGrow, zone.Zone{Crop: uint8(s)}, x1, y1, x2, y2)
 }
 
 // sowable reports whether a zone cell can be sown now.
@@ -74,14 +57,8 @@ func (g *Game) sowable(x, y int) bool {
 	return true
 }
 
-func (g *Game) zoneAt(x, y int) (zone.GrowZone, bool) {
-	for _, z := range g.growZones {
-		if z.Contains(x, y) {
-			return z, true
-		}
-	}
-	return zone.GrowZone{}, false
-}
+// zoneAt is the grow zone on tile (x, y).
+func (g *Game) zoneAt(x, y int) (zone.Zone, bool) { return g.zoneOf(zone.KindGrow, x, y) }
 
 func (g *Game) assignSow(id entity.EntityID) bool {
 	if g.assignZoneChop(id) {
@@ -91,21 +68,22 @@ func (g *Game) assignSow(id entity.EntityID) bool {
 	bestD := 1 << 30
 	var bx, by int
 	found := false
-	for _, z := range g.growZones {
-		for y := z.MinY; y <= z.MaxY; y++ {
-			for x := z.MinX; x <= z.MaxX; x++ {
-				if !g.sowable(x, y) {
-					continue
-				}
-				if _, taken := g.reserve.TileOwner(x, y); taken {
-					continue
-				}
-				if d := pathing.Dist(pos.X, pos.Y, x, y); d < bestD {
-					bestD, bx, by, found = d, x, y, true
-				}
-			}
+	g.zones.Each(func(z zone.Zone) bool {
+		if z.Kind != zone.KindGrow {
+			return true
 		}
-	}
+		g.zones.EachCell(z.ID, func(x, y int) bool {
+			d := pathing.Dist(pos.X, pos.Y, x, y)
+			if d >= bestD || !g.sowable(x, y) {
+				return true
+			}
+			if _, taken := g.reserve.TileOwner(x, y); !taken {
+				bestD, bx, by, found = d, x, y, true
+			}
+			return true
+		})
+		return true
+	})
 	if !found {
 		return false
 	}
@@ -168,14 +146,6 @@ func (g *Game) bestFood(id entity.EntityID) (entity.EntityID, int, int) {
 		}
 	}
 	return best, bx, by
-}
-
-func (g *Game) growZoneViews() []GrowZoneView {
-	out := make([]GrowZoneView, len(g.growZones))
-	for i, z := range g.growZones {
-		out[i] = GrowZoneView{z.MinX, z.MinY, z.MaxX, z.MaxY, plant.Species(z.Crop).String()}
-	}
-	return out
 }
 
 // LastMeal is what pawn id last ate (for mood/inspector).

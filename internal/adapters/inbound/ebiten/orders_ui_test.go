@@ -215,7 +215,7 @@ func TestGrowingZoneToolSendsCrop(t *testing.T) {
 	a.archX0, a.archY0, a.archX1, a.archY1 = 6, 6, 8, 7
 	a.submitArchitect()
 	g.Step(1)
-	z := g.World().GrowZones
+	z := zonesOfKind(g.World(), game.ZoneGrow)
 	if len(z) != 1 || z[0].Crop != "potato" || z[0].MaxX != 8 {
 		t.Fatalf("zones = %+v", z)
 	}
@@ -225,7 +225,7 @@ func TestGrowingZoneToolSendsCrop(t *testing.T) {
 	a.archX0, a.archY0, a.archX1, a.archY1 = 10, 6, 11, 7
 	a.submitArchitect()
 	g.Step(1)
-	z = g.World().GrowZones
+	z = zonesOfKind(g.World(), game.ZoneGrow)
 	if len(z) != 2 || z[1].Crop != "corn" {
 		t.Fatalf("picked corn: zones = %+v", z)
 	}

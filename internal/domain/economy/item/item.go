@@ -175,7 +175,7 @@ func (k Kind) IsStuff() bool { return k == Wood || k == Stone }
 const StackLimit = 1000
 
 // CarryLimit is how many items a colonist hauls in one trip.
-const CarryLimit = 75
+const CarryLimit = 100
 
 // Stack is a positive quantity of one kind at one location model.
 type Stack struct {

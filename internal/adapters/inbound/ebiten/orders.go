@@ -11,6 +11,7 @@ import (
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
+	"rimworld-go/internal/domain/sim/entity"
 )
 
 // Pawn orders (UI checklist §3.2, §13.1): draft toggle and the
@@ -146,16 +147,35 @@ func (a *App) handleOrders() {
 		return
 	}
 	tx, ty := a.renderer.TileAt(mx, my)
+	a.rightClickTile(tx, ty, float32(mx), float32(my))
+}
+
+// rightClickTile is the right-click on tile (tx, ty) with a pawn selected.
+// A drafted colonist walks to open ground at once; on a raider or animal it
+// gets the order menu instead, so Shoot / Melee are reachable.
+func (a *App) rightClickTile(tx, ty int, sx, sy float32) {
 	p, ok := a.selectedPawn()
 	if !ok {
 		return
 	}
-	if p.Drafted {
+	if p.Drafted && !a.creatureAt(tx, ty, p.ID) {
 		a.closeFloat()
 		a.renderer.enqueue(command.Command{Kind: command.MovePawn, Pawn: uint64(p.ID), X: tx, Y: ty, Queue: queueing()})
 		return
 	}
-	a.openOrders(tx, ty, float32(mx), float32(my))
+	a.openOrders(tx, ty, sx, sy)
+}
+
+// creatureAt reports whether a raider or animal stands on the tile, so a
+// drafted colonist's right-click offers Shoot / Melee instead of walking.
+func (a *App) creatureAt(tx, ty int, self entity.EntityID) bool {
+	for _, q := range a.renderer.hostiles() {
+		if q.ID != self && q.X == tx && q.Y == ty {
+			return true
+		}
+	}
+	_, ok := animalAt(a.renderer.world(), tx, ty)
+	return ok
 }
 
 func (a *App) toggleDraft() {

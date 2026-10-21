@@ -163,6 +163,7 @@ func (g *Game) closeWound(id entity.EntityID, c infection.Care) {
 	if w.At != 0 && w.Infection == 0 && g.rng.IntN(100) < infection.Chance(c) {
 		w.Infection = infection.Onset
 		pos, _ := g.positions.Get(id)
+		g.logEvent(id, logEntry{Kind: logInfected})
 		g.message(pos.X, pos.Y, "%s's wound is infected.", g.name(id))
 	}
 	w.At, w.Care = 0, c
@@ -198,6 +199,7 @@ func (g *Game) phaseInfection() {
 		if w.At != 0 && now-w.At >= infection.DelayHours*clock.TicksPerHour {
 			if w.Infection == 0 && g.rng.IntN(100) < infection.Chance(infection.Untreated) {
 				w.Infection = infection.Onset
+				g.logEvent(id, logEntry{Kind: logInfected})
 				g.message(pos.X, pos.Y, "%s's untended wound is infected.", g.name(id))
 			}
 			w.At = 0
@@ -211,6 +213,7 @@ func (g *Game) phaseInfection() {
 				g.die(id, health.CauseInfection)
 				continue
 			case 0:
+				g.logEvent(id, logEntry{Kind: logInfectionCleared})
 				g.message(pos.X, pos.Y, "%s fought off the infection.", g.name(id))
 				w.Care = infection.Untreated
 			}

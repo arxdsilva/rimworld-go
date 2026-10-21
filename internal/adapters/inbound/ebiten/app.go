@@ -126,6 +126,9 @@ type App struct {
 	archDrag                       bool
 	archX0, archY0, archX1, archY1 int
 	inspectTab                     string
+	logScroll, animalLogScroll     int // log_ui.go
+	logFor, animalLogFor           entity.EntityID
+	animalLogOpen                  bool
 	capture                        captureState
 	msgSeen                        map[string]uint64 // message key -> frame first shown
 	saveSlot                       string            // current colony's save slot
@@ -246,6 +249,7 @@ func (a *App) Update() error {
 
 	if a.nav.screen() == screenColony && a.nav.overlay() == overlayNone && a.renderer != nil {
 		a.renderer.handleSpeedInput()
+		a.renderer.wheelTaken = a.handleLogWheel()
 		if a.cfg.Capture == nil { // captures frame the camera themselves
 			a.renderer.handleCameraInput(colonyViewport(sw, sh))
 		}
@@ -490,6 +494,8 @@ func (a *App) applyClick(id string) {
 		a.inspectTab = "needs"
 	case id == "inspector.gear":
 		a.inspectTab = "gear"
+	case id == "inspector.log":
+		a.inspectTab = "log"
 	case id == "scenario.0":
 		a.scenario = 0
 	case id == "scenario.1":

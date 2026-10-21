@@ -230,7 +230,7 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		if g.inMatchingStockpile(st) {
 			return job.Record{}, ReasonStored
 		}
-		dx, dy, ok := g.emptyStockpileCell(st.Kind)
+		dx, dy, ok := g.stockpileCell(st.Kind, x, y)
 		if !ok || !g.filterMatches(st.Kind) {
 			return job.Record{}, ReasonNoStockpile
 		}
@@ -381,6 +381,16 @@ func (g *Game) prioritize(id entity.EntityID, o command.Order, x, y int, layer c
 		g.sleptAt[id] = rec.Target
 	}
 	g.interrupt(id, job.Cancelled)
+	if o == command.OrderSupply {
+		// HAUL-001: the clicked frame first (its whole remaining need),
+		// then a route chained from it like any delivery
+		fr, _ := g.frames.Get(rec.Dest)
+		st, _ := g.stacks.Get(rec.Target)
+		route, shares := g.routeFrom(rec.Target, st, rec.Dest, fr.Need-fr.Wood)
+		route.Forced = true
+		g.startDelivery(id, route, shares)
+		return
+	}
 	rec.Forced = true
 	g.startJob(id, rec)
 }

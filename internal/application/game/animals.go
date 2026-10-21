@@ -39,6 +39,8 @@ type AnimalView struct {
 	HitTick            uint64
 	HitFromX, HitFromY int
 	HitDamage          int
+	// Log (LOG-001) is what happened to the animal, newest first.
+	Log []LogLineView
 }
 
 // Wildlife at colony start and the daily top-up.
@@ -431,11 +433,15 @@ func (g *Game) killAnimal(id, by entity.EntityID) {
 		k.Hunger, k.Target, k.Mode, k.Attacker = 0, 0, animal.Wander, 0
 		g.animals.Set(by, k)
 	}
+	if by != 0 && by != id {
+		g.logEvent(by, logEntry{Kind: logKilled, Other: id, Name: animalLabel(a)})
+	}
 	g.removeAnimal(id)
 	g.dropStack(animal.DefOf(a.Species).Corpse, 1, pos.X, pos.Y)
 }
 
 func (g *Game) removeAnimal(id entity.EntityID) {
+	delete(g.logs, id)
 	g.animals.Delete(id)
 	g.positions.Delete(id)
 	kept := g.animalIDs[:0]
@@ -510,6 +516,7 @@ func (g *Game) animalViews() []AnimalView {
 			av.BlockedBy = m.BlockedBy
 		}
 		g.fillAnimalAction(av, id, a)
+		av.Log = g.logLines(id) // eventlog.go
 	}
 	return out
 }

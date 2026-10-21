@@ -40,6 +40,9 @@ type Simulation interface {
 	CanPlaceAt(kind, stuff, facing string, x, y int) (bool, string)
 	// OrdersAt lists what a pawn can be ordered to do at a tile.
 	OrdersAt(pawn entity.EntityID, x, y int) []game.OrderOption
+	// CanZoneAt reports whether a zone of kind ("stockpile", "grow",
+	// "pen") could claim a tile: the zone drag ghost per cell.
+	CanZoneAt(kind string, x, y int) bool
 }
 
 var _ Simulation = (*game.Game)(nil)
@@ -130,11 +133,13 @@ type pawnVisual struct {
 
 // Renderer drives an Ebitengine window from a running Simulation.
 type Renderer struct {
-	game  Simulation
-	speed speed
-	cam   camera
-	pack  *atlas
-	art   *artCatalog
+	game       Simulation
+	zoneGeoms  map[uint16]*zoneGeom // zones_draw.go outline cache
+	wheelTaken bool                 // the mouse wheel scrolled a log this frame
+	speed      speed
+	cam        camera
+	pack       *atlas
+	art        *artCatalog
 
 	// present is a presentation-only frame counter. Animation reads it;
 	// simulation never does. Tile lerp uses sim ticks vs moveTick.
@@ -326,7 +331,7 @@ func (r *Renderer) handleCameraInput(v viewport) {
 	if inpututil.IsKeyJustPressed(ebiten.KeyMinus) {
 		r.smooth.zoomAt(1/(1+zoomStep), cx, cy)
 	}
-	if _, wy := ebiten.Wheel(); wy != 0 {
+	if _, wy := ebiten.Wheel(); wy != 0 && !r.wheelTaken {
 		mx, my := ebiten.CursorPosition()
 		r.smooth.zoomAt(math.Pow(1+zoomStep, wy), float64(mx), float64(my))
 	}
@@ -631,17 +636,7 @@ func (r *Renderer) TileAt(sx, sy int) (int, int) {
 
 func (r *Renderer) drawWorld(screen *ebiten.Image, sw, sh int, tile float64) {
 	w := r.game.World()
-	stockClr := color.RGBA{R: 220, G: 200, B: 80, A: 70}
-	for _, z := range w.Stockpiles {
-		for y := z.MinY; y <= z.MaxY; y++ {
-			for x := z.MinX; x <= z.MaxX; x++ {
-				sx, sy := r.worldToScreen(x, y)
-				if visible(sx, sy, float32(tile), float32(tile), sw, sh) {
-					vector.FillRect(screen, sx, sy, float32(tile), float32(tile), stockClr, false)
-				}
-			}
-		}
-	}
+	r.drawZones(screen, w, sw, sh, tile)
 	plantClr := color.RGBA{R: 70, G: 150, B: 70, A: 220}
 	desigClr := color.RGBA{R: 240, G: 220, B: 40, A: 200}
 	for _, p := range w.Plants {

@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"fmt"
+	"rimworld-go/internal/application/game"
 	"testing"
 
 	"rimworld-go/internal/domain/sim/command"
@@ -22,7 +23,7 @@ func TestPausedStockpileShowsAtOnce(t *testing.T) {
 	a, tick := pausedColony(t)
 	before := tick()
 	a.renderer.enqueue(command.Command{Kind: command.DesignateStockpile, X: 5, Y: 5, X2: 7, Y2: 6})
-	if len(a.renderer.world().Stockpiles) != 1 {
+	if countZones(a.renderer.world(), game.ZoneStockpile) != 1 {
 		t.Fatal("a stockpile painted while paused must show at once")
 	}
 	if tick() != before {
@@ -77,11 +78,11 @@ func TestRunningStillQueuesForStep(t *testing.T) {
 	a, g, _ := liveColony(t, 0)
 	a.renderer.speed = speedNormal
 	a.renderer.enqueue(command.Command{Kind: command.DesignateStockpile, X: 5, Y: 5, X2: 7, Y2: 6})
-	if len(a.renderer.world().Stockpiles) != 0 {
+	if countZones(a.renderer.world(), game.ZoneStockpile) != 0 {
 		t.Fatal("while running, commands still wait for the next Step")
 	}
 	g.Step(1)
-	if len(a.renderer.world().Stockpiles) != 1 {
+	if countZones(a.renderer.world(), game.ZoneStockpile) != 1 {
 		t.Fatal("the next Step applies it")
 	}
 }

@@ -136,6 +136,15 @@ func (g *Game) fillPawnMotion(pv *PawnView) {
 	if j, ok := g.jobs.Get(pv.ID); ok && j.State == job.Goto && j.PathI < len(j.Path) {
 		pv.NextX, pv.NextY, pv.HasNext = j.Path[j.PathI].X, j.Path[j.PathI].Y, true
 		pv.BlockedBy = m.BlockedBy
+		pv.Path = make([][2]int, 0, len(j.Path)-j.PathI)
+		for _, p := range j.Path[j.PathI:] {
+			pv.Path = append(pv.Path, [2]int{p.X, p.Y})
+		}
+		pv.GoalX, pv.GoalY = walkTarget(j)
+		pv.HasGoal = true
+		if j.Carry == 0 && (j.Kind == job.Haul || j.Kind == job.Refuel) {
+			pv.DropX, pv.DropY, pv.HasDrop = j.DestX, j.DestY, true
+		}
 	}
 }
 

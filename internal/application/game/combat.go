@@ -172,6 +172,7 @@ func (g *Game) strike(attacker, target entity.EntityID, wk weapon.Kind) {
 	}
 	g.traces = append(g.traces, tr)
 	g.lastStrike[attacker] = strikeRec{Target: target, Tick: tr.Tick}
+	g.logStrike(attacker, target, wk, hit, tr.Damage)
 	if hit {
 		g.lastHit[target] = hitRec{Tick: tr.Tick, FromX: ap.X, FromY: ap.Y, Damage: d.Damage}
 		g.hurt(target, d.Damage, attacker)
@@ -185,6 +186,9 @@ func (g *Game) hurt(target entity.EntityID, dmg int, by entity.EntityID) {
 		a.Injury += dmg
 		a.Attacker = by
 		if animal.DefOf(a.Species).Skittish && !a.Tame {
+			if a.Mode != animal.Flee && by != 0 {
+				g.logEvent(target, logEntry{Kind: logFled, Other: by, Name: g.creatureName(by)})
+			}
 			a.Mode, a.FleeUntil, a.Path = animal.Flee, now+900, nil
 		}
 		g.provoked(target, &a, by)
@@ -213,6 +217,7 @@ func (g *Game) die(id entity.EntityID, cause health.Cause) {
 	g.interrupt(id, job.Cancelled)
 	g.releaseBed(id)
 	delete(g.draft, id)
+	g.logEvent(id, logEntry{Kind: logDied})
 	v, _ := g.vital.Get(id)
 	v.Status, v.Cause = health.Dead, cause
 	g.vital.Set(id, v)
