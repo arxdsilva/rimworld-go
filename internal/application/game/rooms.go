@@ -135,8 +135,8 @@ func (g *Game) roomViews() []RoomView {
 			Label: room.Label(r.score), Lit: r.lit, Temp: int(g.roomTemps[i]),
 			Roofed: float64(g.roomRoofed(i)) / 1000}
 	}
-	for _, bid := range g.bldgIDs { // a fire with wood lights its room
-		if b, ok := g.bldgs.Get(bid); ok && b.Kind == construction.Campfire && g.fuel[bid] > 0 {
+	for _, bid := range g.bldgIDs { // a burning fire lights its room (not one doused by rain or snow)
+		if b, ok := g.bldgs.Get(bid); ok && b.Kind == construction.Campfire && g.fuel[bid] > 0 && g.burning(bid, b) {
 			if r := g.roomAt(b.X, b.Y); r >= 0 && r < len(out) {
 				out[r].Lit = true
 			}

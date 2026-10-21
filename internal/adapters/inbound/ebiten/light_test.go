@@ -556,3 +556,31 @@ func BenchmarkDrawArtLitAB(b *testing.B) {
 		})
 	}
 }
+
+// TestLitRoomWallCornersGlow: a lit room's wall corners touch its floor
+// only diagonally; they glow with the rest of its walls.
+func TestLitRoomWallCornersGlow(t *testing.T) {
+	t.Parallel()
+	const w, h = 4, 4 // a wall ring around a 2x2 lit room
+	v := game.WorldView{TerrainW: w, Terrain: make([]uint8, w*h), RoomGrid: make([]int, w*h), RoofCells: make([]uint8, w*h),
+		Rooms: []game.RoomView{{ID: 0, Lit: true}}}
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			if x == 0 || y == 0 || x == w-1 || y == h-1 {
+				v.RoomGrid[y*w+x] = -2
+			} else {
+				v.RoofCells[y*w+x] = 1
+			}
+		}
+	}
+	r := &Renderer{}
+	r.drawW = v
+	for _, c := range [][2]int{{0, 0}, {3, 0}, {0, 3}, {3, 3}} {
+		if _, l := r.lightTile(c[0], c[1]); l != 1 {
+			t.Fatalf("corner %v lamp %v, want 1", c, l)
+		}
+	}
+	if s, _ := r.lightTile(0, 0); s != 1 {
+		t.Fatalf("a corner on the map edge keeps open sky, got %v", s)
+	}
+}

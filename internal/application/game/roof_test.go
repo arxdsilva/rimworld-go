@@ -791,3 +791,24 @@ func TestRoofJobFailsWhenPlanCancelled(t *testing.T) {
 		t.Fatal("off-map roof job should fail")
 	}
 }
+
+// TestDousedFireDoesNotLightRoom: a campfire put out by snow in an
+// unroofed room leaves the room dark; under a roof it burns and lights it.
+func TestDousedFireDoesNotLightRoom(t *testing.T) {
+	g := weatherGame(t)
+	g.SkipTo(44, 6) // a winter morning: the fire is not banked for warmth
+	hutWalls(t, g, 10, 2, 16, 8)
+	if !g.BuildNow("campfire", "wood", "south", 13, 5) {
+		t.Fatal("build campfire")
+	}
+	g.FuelCampfire(13, 5)
+	g.SetWeather(weather.Snow, 0.8)
+	lit := func() bool { return g.roomViews()[g.roomAt(13, 5)].Lit }
+	if lit() {
+		t.Fatal("a doused fire must not light its unroofed room")
+	}
+	g.RoofRooms()
+	if !lit() {
+		t.Fatal("under a roof the fire burns and lights the room")
+	}
+}

@@ -443,20 +443,20 @@ func roofYard(g *game.Game, cx, cy int) {
 	box := func(x0, y0, x1, y1, doorX, doorY int) {
 		for x := x0; x <= x1; x++ {
 			for _, y := range []int{y0, y1} {
-				kind := "wall"
+				kind, stuff := "wall", "stone"
 				if x == doorX && y == doorY {
-					kind = "door"
+					kind, stuff = "door", "wood" // doors are wooden
 				}
-				g.BuildNow(kind, "stone", "south", x, y)
+				g.BuildNow(kind, stuff, "south", x, y)
 			}
 		}
 		for y := y0 + 1; y < y1; y++ {
 			for _, x := range []int{x0, x1} {
-				kind := "wall"
+				kind, stuff := "wall", "stone"
 				if x == doorX && y == doorY {
-					kind = "door"
+					kind, stuff = "door", "wood" // doors are wooden
 				}
-				g.BuildNow(kind, "stone", "south", x, y)
+				g.BuildNow(kind, stuff, "south", x, y)
 			}
 		}
 	}

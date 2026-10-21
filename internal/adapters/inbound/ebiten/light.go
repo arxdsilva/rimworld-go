@@ -385,7 +385,9 @@ func (g *lightGrid) build(w *game.WorldView) {
 			continue
 		}
 		x, y := i%g.w, i/g.w
-		for _, d := range [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {
+		// sky from the four sides; lamp also from the diagonals, so a lit
+		// room's wall corners glow with the rest of its walls
+		for k, d := range [8][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {1, 1}, {-1, 1}, {1, -1}, {-1, -1}} {
 			nx, ny := x+d[0], y+d[1]
 			if nx < 0 || ny < 0 || nx >= g.w || ny >= g.h {
 				continue
@@ -394,7 +396,9 @@ func (g *lightGrid) build(w *game.WorldView) {
 			if w.RoomGrid[j] == room.Wall {
 				continue
 			}
-			g.sky[i] = max(g.sky[i], g.sky[j])
+			if k < 4 {
+				g.sky[i] = max(g.sky[i], g.sky[j])
+			}
 			g.lamp[i] = max(g.lamp[i], g.lamp[j])
 		}
 	}
