@@ -146,17 +146,17 @@ func (a *App) applyAnimalClick(id string) {
 	case "animal.close":
 		a.clearAnimal()
 	case "animal.hunt":
-		kind := command.DesignateHunt
-		if an.Designated {
-			kind = command.DesignateCancel
+		c := command.Command{Kind: command.DesignateHunt, X: an.X, Y: an.Y, X2: an.X, Y2: an.Y}
+		if an.Designated { // only the mark: a pen or zone underneath stays
+			c.Kind, c.Order = command.Undesignate, command.OrderHunt
 		}
-		a.renderer.enqueue(command.Command{Kind: kind, X: an.X, Y: an.Y, X2: an.X, Y2: an.Y})
+		a.renderer.enqueue(c)
 	case "animal.tame":
-		kind := command.DesignateTame
+		c := command.Command{Kind: command.DesignateTame, X: an.X, Y: an.Y, X2: an.X, Y2: an.Y}
 		if an.TameMark {
-			kind = command.DesignateCancel
+			c.Kind, c.Order = command.Undesignate, command.OrderTame
 		}
-		a.renderer.enqueue(command.Command{Kind: kind, X: an.X, Y: an.Y, X2: an.X, Y2: an.Y})
+		a.renderer.enqueue(c)
 	case "animal.release":
 		a.renderer.enqueue(command.Command{Kind: command.ReleaseAnimal, Pawn: uint64(an.ID)})
 	}

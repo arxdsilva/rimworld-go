@@ -182,6 +182,9 @@ type FrameView struct {
 	Floor    bool
 	Stuff    string
 	W, H     int
+	// Moving: a reinstall frame for building MovingFrom (UI-011).
+	Moving     bool
+	MovingFrom entity.EntityID
 }
 
 // BuildingView is a completed wall or bed.
@@ -217,6 +220,8 @@ type BuildingView struct {
 	Occupant  string
 	Epitaph   string
 	Headstone int
+	// MovingTo is where a planned move reinstalls it (nil: not moving).
+	MovingTo *[2]int
 }
 
 // PlantView is a wild plant.
@@ -230,6 +235,9 @@ type PlantView struct {
 	Stage       int // 0 sown .. 3 ripe
 	Cut         bool
 	Wilted      bool // a crop suffering frost or stalled growth (SIM-016)
+	// Zone is the crop of the growing zone the plant stands in ("" when
+	// none).
+	Zone string
 }
 
 // StockpileView is a storage rectangle.
@@ -296,6 +304,10 @@ type WorldView struct {
 	// the sun and moon (presentation only).
 	Hour      float64
 	DayOfYear int
+	// Grass is 1 per tile with grass (row-major, TerrainW wide; empty: no
+	// grass data); GrassCut are grass tiles marked for cutting (grass.go).
+	Grass    []uint8
+	GrassCut [][2]int
 }
 
 // Game holds all authoritative simulation state.
@@ -746,6 +758,9 @@ func (g *Game) World() WorldView {
 		})
 		fv := &w.Frames[len(w.Frames)-1]
 		fv.W, fv.H, _, _, _ = footprintView(fr.Kind, fr.Facing, fr.X, fr.Y)
+		if fr.Reinstall != 0 {
+			fv.Moving, fv.MovingFrom = true, entity.EntityID(fr.Reinstall)
+		}
 	}
 	for _, id := range g.bldgIDs {
 		b, ok := g.bldgs.Get(id)
@@ -767,7 +782,8 @@ func (g *Game) World() WorldView {
 			bv.DryKind, bv.DryQty, bv.DryPct = rb.Kind.String(), rb.Qty, rb.percent()
 		}
 		bv.W, bv.H, bv.SpotX, bv.SpotY, bv.HasSpot = footprintView(b.Kind, b.Facing, b.X, b.Y)
-		g.fillGraveView(bv, id, b) // burial.go
+		g.fillGraveView(bv, id, b)   // burial.go
+		bv.MovingTo = g.movingTo(id) // move.go
 	}
 	for _, id := range g.plantIDs {
 		p, ok := g.plants.Get(id)
@@ -779,6 +795,9 @@ func (g *Game) World() WorldView {
 			Species: p.Species.String(), Growth: p.Percent(), Stage: p.Stage(), Cut: p.Cut,
 		})
 		g.fillPlantWeather(&w.Plants[len(w.Plants)-1], p) // weather.go
+		if z, ok := g.zoneAt(p.X, p.Y); ok {
+			w.Plants[len(w.Plants)-1].Zone = plant.DefOf(plant.Species(z.Crop)).Name
+		}
 	}
 	w.TerrainW = g.terr.W
 	w.Terrain = make([]uint8, len(g.terr.Cells))
@@ -794,6 +813,7 @@ func (g *Game) World() WorldView {
 	w.Traces = g.traceViews()
 	g.fillWorldWeather(&w) // weather.go
 	g.fillRoofView(&w)     // roof.go
+	g.fillGrassView(&w)    // grass.go
 	now := uint64(g.clock.Now())
 	w.Hour = float64(now%clock.TicksPerDay) / clock.TicksPerHour
 	w.DayOfYear = int(now/clock.TicksPerDay) % clock.DaysPerYear

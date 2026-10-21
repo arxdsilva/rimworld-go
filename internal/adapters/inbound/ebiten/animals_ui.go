@@ -62,11 +62,11 @@ func (a *App) applyAnimalsTab(id string) {
 		}
 		switch parts[1] {
 		case "slaughter":
-			kind := command.DesignateHunt
-			if an.Designated {
-				kind = command.DesignateCancel
+			c := command.Command{Kind: command.DesignateHunt, X: an.X, Y: an.Y, X2: an.X, Y2: an.Y}
+			if an.Designated { // only the mark: the pen stays
+				c.Kind, c.Order = command.Undesignate, command.OrderHunt
 			}
-			a.renderer.enqueue(command.Command{Kind: kind, X: an.X, Y: an.Y, X2: an.X, Y2: an.Y})
+			a.renderer.enqueue(c)
 		case "release":
 			a.renderer.enqueue(command.Command{Kind: command.ReleaseAnimal, Pawn: n})
 		}

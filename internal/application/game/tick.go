@@ -128,6 +128,10 @@ func (g *Game) applyOne(c command.Command) {
 		g.designateRoof(c.X, c.Y, c.X2, c.Y2, true)
 	case command.DesignateRemoveRoof:
 		g.designateRoof(c.X, c.Y, c.X2, c.Y2, false)
+	case command.Undesignate:
+		g.undesignate(c.Order, c.X, c.Y, c.X2, c.Y2)
+	case command.MoveBuilding:
+		g.moveBuilding(entity.EntityID(c.Target), construction.Facing(c.Facing), c.X, c.Y) // move.go
 	}
 }
 
@@ -138,6 +142,40 @@ func (g *Game) cmdMove(id entity.EntityID, x, y int) {
 	g.interrupt(id, job.Cancelled)
 	rec := job.Record{Kind: job.Move, TX: x, TY: y, Forced: true}
 	g.startJob(id, rec)
+}
+
+// undesignate clears only the designation named by o in the rectangle;
+// zones, blueprints and other marks stay (unlike cancelRect).
+func (g *Game) undesignate(o command.Order, x1, y1, x2, y2 int) {
+	minX, minY, maxX, maxY := zone.Normalize(x1, y1, x2, y2)
+	switch o {
+	case command.OrderHarvest:
+		g.unmarkHarvest(minX, minY, maxX, maxY)
+	case command.OrderCut:
+		g.markCut(minX, minY, maxX, maxY, false)
+	case command.OrderHunt:
+		g.markHunt(minX, minY, maxX, maxY, false)
+	case command.OrderTame:
+		g.markTame(minX, minY, maxX, maxY, false)
+	case command.OrderMine:
+		g.markMine(minX, minY, maxX, maxY, false)
+	case command.OrderDeconstruct:
+		g.markDeconstruct(minX, minY, maxX, maxY, false)
+	}
+}
+
+// unmarkHarvest drops harvest marks on plants in the (normalized) rectangle.
+func (g *Game) unmarkHarvest(minX, minY, maxX, maxY int) {
+	for _, id := range g.plantIDs {
+		p, ok := g.plants.Get(id)
+		if !ok {
+			continue
+		}
+		if p.X >= minX && p.X <= maxX && p.Y >= minY && p.Y <= maxY {
+			p.Designated = false
+			g.plants.Set(id, p)
+		}
+	}
 }
 
 func (g *Game) cancelRect(x1, y1, x2, y2 int) {
@@ -163,17 +201,9 @@ func (g *Game) cancelRect(x1, y1, x2, y2 int) {
 	g.cancelPens(x1, y1, x2, y2)
 	g.cancelGrowZones(minX, minY, maxX, maxY)
 	g.clearRoofPlans(minX, minY, maxX, maxY)
+	g.unmarkGrass(minX, minY, maxX, maxY) // grass.go
 
-	for _, id := range g.plantIDs {
-		p, ok := g.plants.Get(id)
-		if !ok {
-			continue
-		}
-		if p.X >= minX && p.X <= maxX && p.Y >= minY && p.Y <= maxY {
-			p.Designated = false
-			g.plants.Set(id, p)
-		}
-	}
+	g.unmarkHarvest(minX, minY, maxX, maxY)
 
 	keptZ := g.stockpiles[:0]
 	for _, s := range g.stockpiles {
@@ -1067,6 +1097,10 @@ func (g *Game) doConstruct(id entity.EntityID, j job.Record) {
 }
 
 func (g *Game) completeFrame(id entity.EntityID, fr construction.Frame) {
+	if fr.Reinstall != 0 {
+		g.completeMove(id, fr) // move.go: the same building moves here
+		return
+	}
 	g.frames.Delete(id)
 	kept := g.frameIDs[:0]
 	for _, fid := range g.frameIDs {
@@ -1085,6 +1119,7 @@ func (g *Game) completeFrame(id entity.EntityID, fr construction.Frame) {
 		if pid := g.plantAt(c[0], c[1]); pid != 0 {
 			g.removePlant(pid)
 		}
+		g.clearGrass(c[0], c[1]) // grass.go
 	}
 	if construction.DefOf(fr.Kind).BlocksMove {
 		for _, c := range cells {

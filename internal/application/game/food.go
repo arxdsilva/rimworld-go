@@ -119,6 +119,7 @@ func (g *Game) doSow(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
+	g.clearGrass(j.TX, j.TY) // grass.go: sowing clears it
 	if pid, err := g.spawnPlant(plant.Species(z.Crop), j.TX, j.TY, 0); err == nil {
 		p, _ := g.plants.Get(pid)
 		p.Zone = true

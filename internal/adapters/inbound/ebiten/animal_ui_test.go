@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	"rimworld-go/internal/domain/sim/command"
 	"testing"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -60,5 +61,30 @@ func TestHuntToolMarksAnimals(t *testing.T) {
 	g.Step(1)
 	if an := g.World().Animals; len(an) != 1 || !an[0].Designated {
 		t.Fatalf("animals = %+v", an)
+	}
+}
+
+// TestCancelHuntKeepsPen: the panel's "Cancel hunt" clears only the mark;
+// the pen the animal stands in stays.
+func TestCancelHuntKeepsPen(t *testing.T) {
+	t.Parallel()
+	a, g, _ := liveColony(t, 0)
+	a.renderer.speed = speedPaused
+	a.renderer.enqueue(command.Command{Kind: command.DesignatePen, X: 6, Y: 6, X2: 12, Y2: 12})
+	aid, err := g.SpawnAnimal("dustbuck", 9, 9)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a.selectAnimalAt(9, 9)
+	click(t, a, "animal.hunt") // mark
+	click(t, a, "animal.hunt") // cancel
+	w := g.World()
+	if len(w.Pens) != 1 {
+		t.Fatal("cancelling a hunt must not delete the pen")
+	}
+	for _, an := range w.Animals {
+		if an.ID == aid && an.Designated {
+			t.Fatal("the hunt mark must clear")
+		}
 	}
 }

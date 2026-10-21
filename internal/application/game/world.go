@@ -37,6 +37,7 @@ func (g *Game) generate(seed uint64) generation.Result {
 
 func (g *Game) setTerrain(x, y int, t terrain.Type) {
 	g.terr.Set(x, y, t)
+	g.clearGrass(x, y) // grass.go: only soil grows grass
 	g.markRoomsDirty()
 	g.grid.SetWalkable(x, y, t.Walkable() && g.layerBlockerAt(x, y) == 0)
 }
@@ -105,6 +106,7 @@ func (g *Game) markCut(x1, y1, x2, y2 int, on bool) {
 		}
 		g.plants.Set(id, p)
 	}
+	g.markGrass(minX, minY, maxX, maxY, on) // grass.go
 }
 
 func (g *Game) markMine(x1, y1, x2, y2 int, on bool) {

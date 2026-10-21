@@ -240,6 +240,12 @@ func Covers(k Kind, f Facing, x, y, px, py int) bool {
 }
 
 // DefOf returns the definition for k.
+// Movable reports a building that can be moved (reinstalled) elsewhere:
+// everything but walls, doors, floors and graves.
+func Movable(k Kind) bool {
+	return k != Wall && k != Door && k != Grave && DefOf(k).Layer != LayerFloor
+}
+
 func DefOf(k Kind) Def {
 	if k >= kindCount {
 		return Def{}
@@ -351,6 +357,9 @@ type Frame struct {
 	// Rebuild marks the blueprint of a smashed building: builders and
 	// haulers see to it before anything else.
 	Rebuild bool
+	// Reinstall is the building (entity id) this frame moves here; 0 for
+	// a new blueprint. A reinstall needs no materials (UI-011).
+	Reinstall uint64
 }
 
 // Ready reports materials are in place.

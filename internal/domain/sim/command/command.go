@@ -57,6 +57,13 @@ const (
 	// DesignateRemoveRoof plans the removal of roofs in the rectangle and
 	// keeps them off, even over closed rooms (SIM-018).
 	DesignateRemoveRoof
+	// Undesignate clears only the designation named by Order (harvest,
+	// cut, hunt, tame, mine, deconstruct) in X..X2, Y..Y2; zones,
+	// blueprints and other marks stay (UI-011).
+	Undesignate
+	// MoveBuilding plans the move of building Target to X, Y facing
+	// Facing: builders reinstall it there, bills and owners kept (UI-011).
+	MoveBuilding
 )
 
 // WorkType is a compact work-column id for SetWorkEnabled.
@@ -93,6 +100,7 @@ const (
 	OrderHunt   // hunt the animal at X, Y
 	OrderAttack // drafted: attack the animal at X, Y
 	OrderEquip  // pick up and wield the weapon at X, Y
+	OrderTame   // Undesignate only: the taming mark
 )
 
 // Command is applied on a simulation tick, never by the UI directly.
@@ -115,4 +123,6 @@ type Command struct {
 	// Queue adds a MovePawn/Prioritize order behind the pawn's current
 	// order instead of replacing it.
 	Queue bool
+	// Target is a building id (MoveBuilding).
+	Target uint64
 }
