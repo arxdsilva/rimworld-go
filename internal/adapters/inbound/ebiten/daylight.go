@@ -11,9 +11,11 @@ import (
 // stay readable; the grade is a hint, not a filter.
 const skyOverlayMaxAlpha = 96
 
-// skyOverlay is a presentation-only grade over the world. Morning and
-// afternoon stay clear. Evening and night raise alpha as outdoor light
-// falls; hue follows the hour. HUD stays above it.
+// skyOverlay is a presentation-only grade over the world, used only by
+// the fallback (no art) renderer; the art path is lit per sprite by
+// light.go (ART §6.1). Morning and afternoon stay clear. Evening and
+// night raise alpha as outdoor light falls; hue follows the hour.
+// HUD stays above it.
 func skyOverlay(t clock.Tick) color.RGBA {
 	hour := int(clock.HourOfDay(t))
 	if hour >= clock.HoursPerDay {

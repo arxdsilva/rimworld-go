@@ -380,8 +380,7 @@ func (r *Renderer) Draw(screen *ebiten.Image) {
 	tile := r.tilePx()
 
 	if r.art != nil {
-		r.drawArt(screen, sw, sh, tile)
-		r.drawDaylightRooms(screen, sw, sh)
+		r.drawArt(screen, sw, sh, tile) // lit by light.go: no veil
 		r.drawRoofOverlay(screen, r.drawW, sw, sh, tile)
 		r.drawTraces(screen, r.game.World(), tile)
 		return
