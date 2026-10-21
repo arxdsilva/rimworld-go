@@ -141,7 +141,14 @@ func (g *Game) heatRooms() {
 	for r := range g.roomTemps {
 		cells := max(1, g.rooms[r].contents.Cells)
 		t := g.roomTemps[r]
-		t += (outside - t) * temperature.Temp(roomLeak(cells)) / 1000
+		// an unroofed room loses the indoor bonus and leaks up to 5x as
+		// fast (SIM-018); fully roofed rooms are unchanged
+		target, leak := outside, temperature.Temp(roomLeak(cells))
+		if f := g.roomRoofed(r); f < 1000 {
+			target = raw + temperature.IndoorBonus*temperature.Temp(f)/1000
+			leak = min(1000, leak*temperature.Temp(1000+4*(1000-f))/1000)
+		}
+		t += (target - t) * leak / 1000
 		t += temperature.Temp(heat[r] / cells)
 		g.roomTemps[r] = t
 	}

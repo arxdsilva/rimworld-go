@@ -85,6 +85,7 @@ type envState struct {
 	season               uint8
 	outdoorTemp          int
 	roomGrid             []int
+	roofs                []uint8 // roof flags per tile (SIM-018), may be empty
 	terrW                int
 	springs              map[uint32]*envSpring // contact springs by tile
 	movers               []envMover
@@ -101,6 +102,10 @@ type envState struct {
 	white, dot           *ebiten.Image
 	verts                []ebiten.Vertex
 	idx                  []uint16
+	shadow               shadowState   // the shadow pass (shadow.go)
+	roof                 roofDrawState // eaves and the Roof overlay (roof_draw.go)
+	// collapses are the roof-collapse stamps already shown as dust.
+	collapses map[game.RoofCollapseView]bool
 }
 
 type envRect struct{ x0, y0, x1, y1 float64 }
@@ -211,7 +216,7 @@ func (e *envState) setWeather(w game.WorldView) {
 	e.snow, e.wet = clamp01(w.SnowDepth), clamp01(w.Wetness)
 	e.season = seasonIndex(w.Season)
 	e.outdoorTemp = w.OutdoorTemp
-	e.roomGrid, e.terrW = w.RoomGrid, w.TerrainW
+	e.roomGrid, e.terrW, e.roofs = w.RoomGrid, w.TerrainW, w.RoofCells
 	if w.WindX != e.wx || w.WindY != e.wy || e.dx == 0 && e.dy == 0 {
 		e.wx, e.wy = w.WindX, w.WindY
 		e.speed = math.Hypot(e.wx, e.wy)
@@ -279,7 +284,7 @@ func (r *Renderer) plantPose(x, y int, kind plantKind, amount, scale float64) po
 	}
 	ps.skew = -leanX                // GeoM skew: negative tips the top east
 	ps.sy = scale * (1 - 0.6*leanY) // leaning south (towards the viewer) looks shorter
-	if kind == kindGrass && e.snow > 0 {
+	if kind == kindGrass && e.snow > 0 && e.outdoors(x, y) {
 		thr := 0.15 + 0.6*float64(h>>8&0xffff)/65536
 		a := 1 - clamp01((e.snow-thr)/0.2)
 		ps.sy *= 1 - 0.5*e.snow
@@ -299,6 +304,27 @@ func (r *Renderer) stepEnvironment(w game.WorldView, pawns []game.PawnView) {
 	e.setWeather(w)
 	r.stepContacts(w, pawns)
 	r.stepWeather()
+	r.stepCollapses(w)
+}
+
+// stepCollapses puffs dust and debris once for every roof collapse stamp
+// not seen before (SIM-018); stamps the view no longer lists are forgotten.
+func (r *Renderer) stepCollapses(w game.WorldView) {
+	e := &r.env
+	if len(w.RoofCollapses) == 0 {
+		e.collapses = nil
+		return
+	}
+	seen := make(map[game.RoofCollapseView]bool, len(w.RoofCollapses))
+	for _, c := range w.RoofCollapses {
+		if !e.collapses[c] {
+			seed := mix64(c.Tick ^ uint64(envTileKey(c.X, c.Y))<<20 ^ 0xc011)
+			r.burst(partDust, float64(c.X)+0.5, float64(c.Y)+0.5, 12, seed)
+			r.burst(partChip, float64(c.X)+0.5, float64(c.Y)+0.4, 4, seed^0x5a)
+		}
+		seen[c] = true
+	}
+	e.collapses = seen
 }
 
 // stepContacts indexes this frame's moving creatures, pushes the plants
@@ -690,6 +716,9 @@ func (r *Renderer) stepWeather() {
 				continue
 			}
 			x, y := int(math.Floor(d.gx)), int(math.Floor(d.gy))
+			if !e.outdoors(x, y) { // roofed over since it spawned: nothing lands
+				continue
+			}
 			d.age, d.t = 0, 0
 			switch {
 			case d.kind == dropSnow:
@@ -755,7 +784,9 @@ func (e *envState) spawn() {
 	}
 }
 
-// outdoors reports open ground (no room): weather falls only there.
+// outdoors reports ground open to the sky: weather falls only there. With
+// roofs (SIM-018) that is any unroofed tile but a wall; without roof data,
+// any tile outside a room.
 func (e *envState) outdoors(x, y int) bool {
 	if len(e.roomGrid) == 0 || e.terrW <= 0 {
 		return true
@@ -764,7 +795,13 @@ func (e *envState) outdoors(x, y int) bool {
 		return true
 	}
 	i := y*e.terrW + x
-	return i >= len(e.roomGrid) || e.roomGrid[i] == -1
+	if i >= len(e.roomGrid) {
+		return true
+	}
+	if len(e.roofs) == len(e.roomGrid) {
+		return e.roomGrid[i] != -2 && !roofed(e.roofs[i])
+	}
+	return e.roomGrid[i] == -1
 }
 
 // lightningAt reports a lightning flash starting in tick bucket b: rare,
@@ -916,7 +953,7 @@ func (r *Renderer) drawGroundCover(screen *ebiten.Image, w game.WorldView, sw, s
 	}
 	e.setWeather(w)
 	x0, y0, x1, y1 := r.visibleTiles()
-	open := func(x, y int) bool { return e.outdoors(x, y) && r.terrainName(w, x, y) != "rock" }
+	open := func(x, y int) bool { return r.groundOpen(w, x, y) }
 	veil := 0.85 // snow veil strength: all of it without decals, a base under them
 	if r.art.has(snowCoverKeys[0]) {
 		veil = 0.5
@@ -976,6 +1013,12 @@ func (r *Renderer) drawGroundCover(screen *ebiten.Image, w game.WorldView, sw, s
 			}
 		}
 	}
+}
+
+// groundOpen reports ground that takes snow cover, drifts, puddles and
+// frost: open to the sky (not roofed, not a wall) and not rock.
+func (r *Renderer) groundOpen(w game.WorldView, x, y int) bool {
+	return r.env.outdoors(x, y) && r.terrainName(w, x, y) != "rock"
 }
 
 // puddleShape is a drawn puddle when its art is missing: a dark ellipse

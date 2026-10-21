@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [19, 42]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 1.013
+  h: 0.382
+  d: 0.998
 species: pumpkin
 growth: harvestable
 variant: 2

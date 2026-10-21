@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [16, 66]
 projection:
   shear_k: 0.5
+shadow:
+  kind: box
+  w: 0.6
+  h: 0.78
+  d: 0.6
 attachments:
   seat: [0.5, 0.52]
 rotatable: true

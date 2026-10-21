@@ -6,7 +6,11 @@ id/naming, canvas size, origin, footprint, @2x scale, tint masks, alpha,
 tileable terrain seams, wall autotile completeness, and pawn layer
 canvas agreement.
 
-    python3 assets/source/tools/validate_assets.py
+    python3 assets/source/tools/validate_assets.py [--no-light]
+
+Every sprite must also have a normal map <name>_n.png of the same size
+and alpha (make normals) and a shadow: block in its metadata (ART §6.1);
+--no-light skips those two checks.
 """
 import os
 import re
@@ -21,6 +25,8 @@ PPT = 128
 ID = re.compile(r"^core:[a-z_]+/[a-z0-9_]+$")
 
 errors = []
+LIGHT = "--no-light" not in sys.argv[1:]
+SHADOW_KINDS = ("blob", "box", "none")
 
 
 def err(msg):
@@ -70,7 +76,31 @@ def check_sprite(family, name, path):
         g = re.search(r"group: (\w+)", md).group(1)
         if g not in ("cloth", "skin", "hair"):
             err("%s/%s: unknown tint group %s" % (family, name, g))
+    if LIGHT:
+        check_light(family, name, path, md, img)
     return md
+
+
+def check_light(family, name, path, md, img):
+    """The normal map and shadow caster of one sprite (ART §6.1)."""
+    npath = path[:-4] + "_n.png"
+    flat = family == "terrain" or (family == "structure" and name.startswith("floor"))
+    if flat:
+        if os.path.exists(npath):
+            err("%s/%s: terrain and floors are lit flat; remove the normal map" % (family, name))
+    elif not os.path.exists(npath):
+        err("%s/%s: missing normal map (make normals)" % (family, name))
+    else:
+        n = Image.open(npath)
+        if n.size != img.size:
+            err("%s/%s: normal map size %s != %s" % (family, name, n.size, img.size))
+        elif n.convert("RGBA").getchannel("A").tobytes() != img.getchannel("A").tobytes():
+            err("%s/%s: normal map alpha differs from the sprite" % (family, name))
+    m = re.search(r"^shadow:\n  kind: (\w+)\n  w: ([\d.]+)\n  h: ([\d.]+)\n  d: ([\d.]+)$", md, re.M)
+    if not m:
+        err("%s/%s: missing shadow: block (kind, w, h, d)" % (family, name))
+    elif m.group(1) not in SHADOW_KINDS:
+        err("%s/%s: unknown shadow kind %s" % (family, name, m.group(1)))
 
 
 def check_terrain_seams():
@@ -137,7 +167,7 @@ def check_pawn_layers():
     sizes = {}
     for f in os.listdir(d):
         m = re.match(r"^(\w+?)_(south|east|north|west)(?:_[a-z_]+\d*)?\.png$", f)
-        if m and not f.endswith("_mask.png"):
+        if m and not f.endswith("_mask.png") and not f.endswith("_n.png"):
             sizes.setdefault(m.group(2), set()).add(Image.open(os.path.join(d, f)).size)
     # every animated layer has the full walk cycle (frames share a canvas)
     for layer in ANIM_LAYERS:
@@ -218,7 +248,7 @@ def main():
     for family in sorted(os.listdir(GEN)):
         d = os.path.join(GEN, family)
         for f in sorted(os.listdir(d)):
-            if f.endswith(".png") and not f.endswith("_mask.png"):
+            if f.endswith(".png") and not f.endswith("_mask.png") and not f.endswith("_n.png"):
                 check_sprite(family, f[:-4], os.path.join(d, f))
                 count += 1
     for family in sorted(os.listdir(META)):

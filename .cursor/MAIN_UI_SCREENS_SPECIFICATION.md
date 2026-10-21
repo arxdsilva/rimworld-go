@@ -1963,6 +1963,21 @@ caravan formation; - health operations.
 Use **overlays** for spatial information: - power; - temperature; -
 roof; - fertility; - beauty; - room; - path/debug data.
 
+**Roof overlay (UI-010, implemented):**
+- **Toggle:** R or the HUD "Roof" button (icon `overlay_roof`). It is forced on while the Architect's Build roof or Remove roof tool is held.
+- **What it shows:**
+  - built roofs in blue
+  - natural (mined-rock) roofs in stippled slate
+  - planned roofs as amber dashes
+  - planned removals as a red hatch
+  - under a roof tool's rectangle, unsupported tiles in red with "×"
+- **Legend:** "Roof: blue built · slate natural · dashed planned · hatched removal".
+- **Hover panel:** a roof line: "Roofed", "Natural roof (rock)", "Roof planned", "Roof removal planned", "Unroofed", or "Unroofed (room too large to auto-roof)". The room line adds ", roofed N%".
+- **Architect (Structure):**
+  - "Build roof": "Colonists roof these tiles. A roof needs a wall within 6 tiles; closed rooms are roofed automatically."
+  - "Remove roof": "Take roofs down and keep them off, even in closed rooms."
+  - Both are area tools emitting `DesignateRoof` and `DesignateRemoveRoof`.
+
 Use **modal confirmation** sparingly for destructive/irreversible
 actions.
 

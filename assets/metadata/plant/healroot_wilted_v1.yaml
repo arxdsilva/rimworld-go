@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [19, 25]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 0.726
+  h: 0.134
+  d: 0.751
 species: healroot
 growth: wilted
 variant: 1

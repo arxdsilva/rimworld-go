@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [16, 24]
 projection:
   shear_k: 0.5
+shadow:
+  kind: none
+  w: 0.977
+  h: 0.07
+  d: 0.228
 tool: shovel
 rotatable: true
 points: east

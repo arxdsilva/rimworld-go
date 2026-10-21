@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [19, 29]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 0.647
+  h: 0.18
+  d: 0.618
 species: potato
 growth: wilted
 variant: 2

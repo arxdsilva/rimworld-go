@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [16, 106]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 0.628
+  h: 0.666
+  d: 0.225
 species: dustbuck
 facing: west
 frame: walk08

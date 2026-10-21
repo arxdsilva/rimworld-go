@@ -259,6 +259,83 @@ def _blueprint(t):
     return _save("blueprint", img, {"overlay": "blueprint", "tileable": True})
 
 
+# ------------------------------------------------- shadow + roof textures
+def _save_flat(name, w, h, img, extra=None):
+    path = S.out_path("overlay", name)
+    S.write_png(img, path)
+    data = {"image": "generated/world/overlay/%s.png" % name, "scale": C.SCALE,
+            "canvas": [w, h], "footprint": [w / N, h / N], "origin_px": [0, 0],
+            "overlay": name, "shadow": {"kind": "none", "w": 0.0, "h": 0.0, "d": 0.0}}
+    data.update(extra or {})
+    meta.write("overlay", name, data)
+    return path
+
+
+def _shadow_blob():
+    """128x64 soft Gaussian ellipse, white RGB, alpha 1 at the centre -> 0 at the edge."""
+    H, W = N // 2, N
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32) + 0.5
+    r2 = ((xx - W / 2) / (W / 2)) ** 2 + ((yy - H / 2) / (H / 2)) ** 2
+    g = np.exp(-4.0 * r2)
+    g = np.clip((g - np.exp(-4.0)) / (1.0 - np.exp(-4.0)), 0.0, 1.0) * (r2 < 1.0)
+    img = np.ones((H, W, 4), np.float32)
+    img[..., 3] = g
+    return _save_flat("shadow_blob", W, H, img, {"marking": True})
+
+
+def _shadow_box():
+    """128x128 white rectangle with an 8 px feather to alpha 0 at the border."""
+    yy, xx = np.mgrid[0:N, 0:N].astype(np.float32) + 0.5
+    edge = np.minimum(np.minimum(xx, N - xx), np.minimum(yy, N - yy))
+    img = np.ones((N, N, 4), np.float32)
+    img[..., 3] = np.clip(edge / 8.0, 0.0, 1.0)
+    return _save_flat("shadow_box", N, N, img, {"marking": True})
+
+
+def _g_roof(xx, yy, c):  # gable roof: chevron + eave line
+    d = np.minimum(_seg(xx, yy, c - 22, c + 2, c, c - 18), _seg(xx, yy, c, c - 18, c + 22, c + 2))
+    return np.minimum(d, _seg(xx, yy, c - 22, c + 2, c + 22, c + 2))
+
+
+def _g_roof_build(xx, yy, c):  # roof + plus sign under it
+    d = _g_roof(xx, yy, c)
+    d = np.minimum(d, _seg(xx, yy, c - 8, c + 16, c + 8, c + 16))
+    return np.minimum(d, _seg(xx, yy, c, c + 8, c, c + 24))
+
+
+def _g_roof_remove(xx, yy, c):  # roof + strike-through
+    return np.minimum(_g_roof(xx, yy, c), _seg(xx, yy, c - 20, c - 18, c + 20, c + 20))
+
+
+def _g_overlay_roof(xx, yy, c):  # roof with rafters
+    d = _g_roof(xx, yy, c)
+    for ox in (-10, 0, 10):
+        d = np.minimum(d, _seg(xx, yy, c + ox, c + 2, c + ox * 0.55, c - 9 - (10 - abs(ox)) * 0.2))
+    return d
+
+
+def _roof_tile(name, kind):
+    xx, yy = _grid()
+    img = np.zeros((N, N, 4), np.float32)
+    edge = np.minimum(np.minimum(xx, N - xx), np.minimum(yy, N - yy))
+    if kind == "built":
+        _paint(img, np.ones((N, N), np.float32), (90 / 255, 140 / 255, 210 / 255), 70 / 255)
+    elif kind == "natural":
+        _paint(img, np.ones((N, N), np.float32), (110 / 255, 110 / 255, 125 / 255), 85 / 255)
+        stipple = ((xx + yy) % 16 < 3.0) & (xx % 2 < 1)
+        _paint(img, stipple.astype(np.float32), (70 / 255, 70 / 255, 85 / 255), 0.55)
+    elif kind == "plan":
+        amber = (235 / 255, 175 / 255, 60 / 255)
+        _paint(img, np.ones((N, N), np.float32), amber, 30 / 255)
+        dash = (((xx + yy) // 14) % 2) == 0
+        _paint(img, (_cov(edge - 4) * dash).astype(np.float32), amber, 200 / 255)
+    else:  # remove: red hatch
+        red = (220 / 255, 70 / 255, 60 / 255)
+        hatch = ((xx - yy) % 20) < 4
+        _paint(img, hatch.astype(np.float32), red, 120 / 255)
+    return _save_flat(name, N, N, img, {"overlay": "roof", "roof": kind, "tileable": True})
+
+
 # ---------------------------------------------------------------- icons
 ICONS = {
     # icon name: (family, sprite)
@@ -362,7 +439,13 @@ def build():
             _badge_icon("order_hunt", t, _g_hunt, t["danger"]),
             _badge_icon("order_tame", t, _g_tame, (0.95, 0.55, 0.62)),
             _badge_icon("zone_pen", t, _g_pen, (0.78, 0.55, 0.32)),
-            _badge_icon("zone_grow", t, _g_sprout, (0.45, 0.78, 0.36))]
+            _badge_icon("zone_grow", t, _g_sprout, (0.45, 0.78, 0.36)),
+            _badge_icon("roof_build", t, _g_roof_build, (0.35, 0.55, 0.82)),
+            _badge_icon("roof_remove", t, _g_roof_remove, t["danger"]),
+            _badge_icon("overlay_roof", t, _g_overlay_roof, (0.45, 0.65, 0.90))]
+    out += [_shadow_blob(), _shadow_box(), _roof_tile("roof_built", "built"),
+            _roof_tile("roof_natural", "natural"), _roof_tile("roof_plan", "plan"),
+            _roof_tile("roof_remove", "remove")]
     for name, (fam, spr) in ICONS.items():
         p = _icon(name, fam, spr)
         if p:

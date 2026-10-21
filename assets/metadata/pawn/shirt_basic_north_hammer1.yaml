@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [16, 153]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 0.499
+  h: 0.327
+  d: 0.26
 tint:
   group: cloth
   mask: generated/world/pawn/shirt_basic_north_hammer1_mask.png

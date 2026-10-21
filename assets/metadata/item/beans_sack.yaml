@@ -8,5 +8,10 @@ footprint: [1, 1]
 origin_px: [16, 37]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 0.426
+  h: 0.31
+  d: 0.426
 item: beans
 stack: true

@@ -44,9 +44,14 @@ simulate:
 BLENDER ?= $(shell command -v blender 2>/dev/null || echo /Applications/Blender.app/Contents/MacOS/Blender)
 
 .PHONY: art
-art:  ## re-render every world sprite from assets/source/blender
+art:  ## re-render every world sprite from assets/source/blender, then their normal maps
 	"$(BLENDER)" -b --factory-startup -P assets/source/blender/build.py -- $(FAMILIES)
+	$(MAKE) normals
 	python3 assets/source/tools/validate_assets.py
+
+.PHONY: normals
+normals:  ## write <sprite>_n.png normal maps (pkg/spritenormals, a port of spritefusion-sprite-normals)
+	go run ./cmd/normalgen -dirs assets/generated/world $(NORMALS_ARGS)
 
 .PHONY: art-check
 art-check:  ## validate generated sprites against metadata
@@ -96,7 +101,7 @@ media:  ## README gallery as short animated WebPs in docs/media (needs python3 +
 clips:  ## README animated WebP clips in docs/clips (needs python3 + Pillow)
 	go build -o $(BIN_DIR)/game ./cmd/game
 	$(call clip,lategame,-scenario lategame -capture-ui lategame -capture-ticks 1200 -capture-frames 360,--step 3 --fps 20 --quality 45 --max-bytes 2600000)
-	$(call clip,colony_life,-capture-ui follow -capture-frames 240)
+	$(call clip,colony_life,-capture-ui follow -capture-frames 240,--quality 45 --max-bytes 2000000)
 	$(call clip,building,-capture-ticks 600 -capture-zoom 1.5 -capture-frames 240)
 	$(call clip,combat,-capture-ui combat -capture-frames 180)
 	$(call clip,raid,-scenario raid -capture-ui raid -capture-ticks 500 -capture-frames 300)
@@ -107,6 +112,8 @@ clips:  ## README animated WebP clips in docs/clips (needs python3 + Pillow)
 	$(call clip,snow,-scenario snow -capture-ui weather -capture-zoom 1.4 -capture-ticks 12000 -capture-frames 240)
 	$(call clip,grass,-capture-ui grass -capture-zoom 2 -capture-ticks 600 -capture-frames 240)
 	$(call clip,burial,-scenario burial -capture-ui burial -capture-zoom 1.6 -capture-ticks 30 -capture-frames 300 -capture-speed 3)
+	$(call clip,daycycle,-scenario sunny -capture-ui weather -capture-zoom 1.2 -capture-timelapse 250 -capture-frames 240,--fps 20 --quality 50 --max-bytes 2400000)
+	$(call clip,roofs,-scenario roofs -hour 15 -capture-ui roofs -capture-ticks 7500 -capture-frames 240,--quality 50)
 
 .PHONY: clean
 clean:

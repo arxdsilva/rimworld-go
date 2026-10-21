@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [19, 41]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 0.259
+  h: 0.39
+  d: 0.286
 species: grass
 variant: 0
 decoration: true

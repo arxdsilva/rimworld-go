@@ -40,6 +40,16 @@ type artMeta struct {
 	TintGroup string
 	TintMask  string
 	Attach    map[string][2]float64
+	// Shadow is how the sprite casts a moving shadow (ART §6.1): kind
+	// "blob", "box" or "none" (or empty: none), and its footprint width W,
+	// height above ground H and depth D, in tiles.
+	Shadow artShadow
+}
+
+// artShadow is a sprite's shadow caster (metadata "shadow:").
+type artShadow struct {
+	Kind    string
+	W, H, D float64
 }
 
 // parseArtMeta reads the flat YAML subset written by artlib/meta.py:
@@ -83,6 +93,20 @@ func parseArtMeta(src string) (artMeta, error) {
 			m.TintGroup = val
 		case nested && parent == "tint" && key == "mask":
 			m.TintMask = val
+		case nested && parent == "shadow" && key == "kind":
+			m.Shadow.Kind = val
+		case nested && parent == "shadow" && (key == "w" || key == "h" || key == "d"):
+			var f float64
+			if f, err = strconv.ParseFloat(val, 64); err == nil {
+				switch key {
+				case "w":
+					m.Shadow.W = f
+				case "h":
+					m.Shadow.H = f
+				default:
+					m.Shadow.D = f
+				}
+			}
 		case nested && parent == "attachments":
 			var p [2]float64
 			p, err = parsePair(val)
@@ -207,6 +231,11 @@ type artSprite struct {
 	pix  *image.NRGBA
 	mask *image.NRGBA
 	img  *ebiten.Image
+	// normalPath is the sprite's normal map (<image>_n.png, ART §6.1), ""
+	// when it has none; normal is its GPU image, loaded on first draw.
+	normalPath string
+	normal     *ebiten.Image
+	normalDone bool
 }
 
 type tintKey struct {
@@ -220,6 +249,9 @@ type artCatalog struct {
 	sprites map[string]*artSprite // "family/name"
 	tints   map[string]map[string]color.NRGBA
 	tinted  map[tintKey]*ebiten.Image
+	// normals maps every drawn sprite image (tinted or not) to its normal
+	// map, for the lit draw (light.go).
+	normals map[*ebiten.Image]*ebiten.Image
 }
 
 // LocateArt walks parents of cwd for assets/metadata and returns the
@@ -246,7 +278,8 @@ func LocateArt() (string, error) {
 // loadArtCatalog reads every world sprite's metadata, PNG and tint mask
 // under root (the assets directory).
 func loadArtCatalog(root string) (*artCatalog, error) {
-	c := &artCatalog{sprites: map[string]*artSprite{}, tinted: map[tintKey]*ebiten.Image{}}
+	c := &artCatalog{sprites: map[string]*artSprite{}, tinted: map[tintKey]*ebiten.Image{},
+		normals: map[*ebiten.Image]*ebiten.Image{}}
 	base, err := os.ReadFile(filepath.Join(root, "palettes", "base.yaml"))
 	if err != nil {
 		return nil, err
@@ -287,6 +320,10 @@ func loadArtCatalog(root string) (*artCatalog, error) {
 				if sp.mask, err = decodeNRGBA(filepath.Join(root, filepath.FromSlash(m.TintMask))); err != nil {
 					return nil, err
 				}
+			}
+			np := filepath.Join(root, filepath.FromSlash(strings.TrimSuffix(m.Image, ".png")+"_n.png"))
+			if _, err := os.Stat(np); err == nil {
+				sp.normalPath = np
 			}
 			c.sprites[fam.Name()+"/"+strings.TrimSuffix(f.Name(), ".yaml")] = sp
 		}
@@ -340,6 +377,7 @@ func (c *artCatalog) image(key string, tint color.NRGBA) *ebiten.Image {
 	if sp.mask == nil || tint.A == 0 {
 		if sp.img == nil {
 			sp.img = ebiten.NewImageFromImage(sp.pix)
+			c.linkNormal(sp.img, sp)
 		}
 		return sp.img
 	}
@@ -349,7 +387,31 @@ func (c *artCatalog) image(key string, tint color.NRGBA) *ebiten.Image {
 	}
 	img := ebiten.NewImageFromImage(tintNRGBA(sp.pix, sp.mask, tint))
 	c.tinted[k] = img
+	c.linkNormal(img, sp)
 	return img
+}
+
+// linkNormal records sp's normal map (decoded once) as img's.
+func (c *artCatalog) linkNormal(img *ebiten.Image, sp *artSprite) {
+	if !sp.normalDone {
+		sp.normalDone = true
+		if sp.normalPath != "" {
+			if n, err := decodeNRGBA(sp.normalPath); err == nil && n.Bounds().Size() == sp.pix.Bounds().Size() {
+				sp.normal = ebiten.NewImageFromImage(n)
+			}
+		}
+	}
+	if sp.normal != nil && c.normals != nil {
+		c.normals[img] = sp.normal
+	}
+}
+
+// normalOf is img's normal map, nil when it has none (flat).
+func (c *artCatalog) normalOf(img *ebiten.Image) *ebiten.Image {
+	if c == nil {
+		return nil
+	}
+	return c.normals[img]
 }
 
 // tint returns preset name from group (e.g. "hair", "black").

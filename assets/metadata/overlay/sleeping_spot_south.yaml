@@ -10,3 +10,8 @@ overlay: sleeping_spot
 marking: true
 facing: south
 rotatable: true
+shadow:
+  kind: none
+  w: 0.0
+  h: 0.0
+  d: 0.0

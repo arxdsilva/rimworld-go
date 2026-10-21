@@ -111,6 +111,7 @@ func (a *App) colonistBarButtons(sw, sh int) []button {
 
 func (a *App) colonyButtons(sw, sh int) []button {
 	out := a.floatButtons() // topmost first: hit-testing takes the first match
+	out = append(out, a.roofButtons(sw)...)
 	out = append(out, a.hudTabButtons(sw, sh)...)
 	out = append(out, a.colonistBarButtons(sw, sh)...)
 	out = append(out, a.inspectorButtons()...)
@@ -127,6 +128,7 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 	if a.renderer == nil {
 		return
 	}
+	a.syncRoofForce()
 	a.drawArchitectGhost(screen)
 	drawPanel(screen, 0, 0, float32(sw), hudTopH)
 	x := hudPad
@@ -143,8 +145,9 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 		x += (len(season) + 3) * 6
 	}
 	drawWeatherLabel(screen, x, 10, wld)
-	time := fmt.Sprintf("%s  %s  %s", a.renderer.date(), a.renderer.speedRate(), a.renderer.activity())
+	time := a.hudTimeText()
 	drawLabel(screen, sw-len(time)*7-hudPad, 10, time)
+	a.drawRoofButton(screen, sw)
 
 	drawPanel(screen, 0, hudBarY(sh), float32(sw), hudBarH)
 	mx, my := a.currentCursor()
@@ -244,7 +247,7 @@ func (a *App) drawHoverRoom(screen *ebiten.Image, sh int) {
 	} else {
 		lines = append(lines, "Temperature "+fmtTemp(t))
 	}
-	for _, lbl := range []string{roomLabelAt(w, tx, ty), plantLabelAt(w, tx, ty), itemLabelAt(w, tx, ty)} {
+	for _, lbl := range []string{roomLabelAt(w, tx, ty), roofLabelAt(w, tx, ty), plantLabelAt(w, tx, ty), itemLabelAt(w, tx, ty)} {
 		if lbl != "" {
 			lines = append(lines, lbl)
 		}
@@ -336,4 +339,110 @@ func itemLabelAt(w game.WorldView, x, y int) string {
 		}
 	}
 	return ""
+}
+
+// ---------------------------------------------------------- Roof overlay (UI-010)
+
+const (
+	roofButtonID  = "hud.roof"
+	roofButtonW   = 48
+	roofLegendTxt = "Roof: blue built · slate natural · dashed planned · hatched removal"
+)
+
+// hudTimeText is the right-aligned clock text of the top strip.
+func (a *App) hudTimeText() string {
+	return fmt.Sprintf("%s  %s  %s", a.renderer.date(), a.renderer.speedRate(), a.renderer.activity())
+}
+
+// roofButtons is the HUD Roof toggle: top strip, left of the clock
+// (clicks route through applyClick).
+func (a *App) roofButtons(sw int) []button {
+	if a.renderer == nil {
+		return nil
+	}
+	x := float32(sw-len(a.hudTimeText())*7-hudPad) - roofButtonW - hudPad
+	return []button{{id: roofButtonID, label: "Roof", x: x, y: 4, w: roofButtonW, h: hudTopH - 8, selected: a.renderer.roofOverlayOn()}}
+}
+
+func (a *App) drawRoofButton(screen *ebiten.Image, sw int) {
+	mx, my := a.currentCursor()
+	for _, b := range a.roofButtons(sw) {
+		drawButton(screen, b, b.contains(mx, my))
+		if img := a.icon("overlay_roof"); img != nil {
+			// Icon replaces the text label: blank it with the button fill, then draw.
+			vector.FillRect(screen, b.x+2, b.y+2, b.w-4, b.h-4, uiBtn, false)
+			if b.selected {
+				vector.FillRect(screen, b.x+2, b.y+2, b.w-4, b.h-4, uiBtnSelected, false)
+			}
+			drawIcon(screen, img, float64(b.x)+(float64(b.w)-float64(b.h)+4)/2, float64(b.y)+2, float64(b.h)-4)
+		}
+		if line := a.roofLegend(); line != "" { // a tab under the bar, clear of the readouts
+			lw := float32(len(line)*6 + 2*hudPad)
+			lx := min(b.x+b.w, float32(sw-hudPad)) - lw
+			drawPanel(screen, lx, hudTopH+2, lw, 22)
+			drawLabel(screen, int(lx)+hudPad, int(hudTopH)+7, line)
+		}
+	}
+}
+
+// roofLegend is the one-line key shown while the Roof overlay is on.
+func (a *App) roofLegend() string {
+	if a.renderer == nil || !a.renderer.roofOverlayOn() {
+		return ""
+	}
+	return roofLegendTxt
+}
+
+// toggleRoofOverlay is the R key and HUD button action.
+func (r *Renderer) toggleRoofOverlay() { r.roofOverlay = !r.roofOverlay }
+
+// toggleRoofOverlayIfAny tolerates a nil renderer (menus).
+func (r *Renderer) toggleRoofOverlayIfAny() {
+	if r != nil {
+		r.toggleRoofOverlay()
+	}
+}
+
+// roofToolID reports id is one of the two roof Architect tools.
+func roofToolID(id string) bool { return id == "roof" || id == "noroof" }
+
+// roofForced is whether the overlay must be forced on: a roof tool is the
+// selected tool of an open Architect.
+func roofForced(archOpen bool, toolID string) bool { return archOpen && roofToolID(toolID) }
+
+// syncRoofForce keeps renderer.roofOverlayForced in step with the Architect.
+func (a *App) syncRoofForce() {
+	if a.renderer != nil {
+		a.renderer.roofOverlayForced = roofForced(a.archOpen, a.archTool)
+	}
+}
+
+// roofGhostUnsupported decides whether a cell under the Build roof
+// rectangle gets the red "can't roof" mark: any non-wall cell lacking
+// the Supported flag.
+func roofGhostUnsupported(flags uint8, wall bool) bool {
+	return !wall && flags&roofSupported == 0
+}
+
+// drawRoofToolGhost marks unsupported cells under the dragged rectangle.
+func (a *App) drawRoofToolGhost(screen *ebiten.Image, x0, y0, x1, y1 int) {
+	r := a.renderer
+	w := r.world()
+	walls := map[[2]int]bool{}
+	for _, b := range w.Buildings {
+		if b.Kind == "wall" || b.Kind == "door" {
+			walls[[2]int{b.X, b.Y}] = true
+		}
+	}
+	tile := r.tilePx()
+	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
+	for _, c := range placementCells(placeArea, x0, y0, x1, y1) {
+		if !roofGhostUnsupported(roofCellAt(w, c[0], c[1]), walls[c]) {
+			continue
+		}
+		sx, sy := r.worldToScreen(c[0], c[1])
+		if visible(sx, sy, float32(tile), float32(tile), sw, sh) {
+			r.drawRoofUnsupported(screen, c[0], c[1], tile) // roof_draw.go
+		}
+	}
 }

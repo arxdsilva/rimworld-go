@@ -8,5 +8,10 @@ footprint: [1, 1]
 origin_px: [16, 28]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 0.35
+  h: 0.12
+  d: 0.335
 item: radishes
 stack: true

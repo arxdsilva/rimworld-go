@@ -8,6 +8,11 @@ footprint: [2, 1]
 origin_px: [16, 63]
 projection:
   shear_k: 0.5
+shadow:
+  kind: box
+  w: 1.92
+  h: 0.7
+  d: 0.88
 tint:
   group: cloth
   mask: generated/world/furniture/tailoring_bench_south_mask.png

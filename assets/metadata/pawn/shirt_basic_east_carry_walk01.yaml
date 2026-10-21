@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [16, 153]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 0.23
+  h: 0.289
+  d: 0.489
 tint:
   group: cloth
   mask: generated/world/pawn/shirt_basic_east_carry_walk01_mask.png

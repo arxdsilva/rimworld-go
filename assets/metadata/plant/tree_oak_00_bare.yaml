@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [46, 115]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 1.427
+  h: 1.432
+  d: 1.335
 species: tree
 kind: oak
 variant: 0

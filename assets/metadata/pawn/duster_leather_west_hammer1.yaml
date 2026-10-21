@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [16, 153]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 0.413
+  h: 0.541
+  d: 0.512
 layer: duster_leather
 facing: west
 attachments:

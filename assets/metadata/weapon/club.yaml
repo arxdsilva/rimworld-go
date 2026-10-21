@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [16, 24]
 projection:
   shear_k: 0.5
+shadow:
+  kind: none
+  w: 0.792
+  h: 0.145
+  d: 0.25
 weapon: club
 rotatable: true
 points: east

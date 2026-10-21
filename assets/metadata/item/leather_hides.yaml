@@ -8,5 +8,10 @@ footprint: [1, 1]
 origin_px: [16, 28]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 0.58
+  h: 0.15
+  d: 0.48
 item: leather
 stack: true

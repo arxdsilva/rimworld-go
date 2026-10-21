@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [16, 22]
 projection:
   shear_k: 0.5
+shadow:
+  kind: none
+  w: 0.974
+  h: 0.062
+  d: 0.165
 weapon: spear
 rotatable: true
 points: east

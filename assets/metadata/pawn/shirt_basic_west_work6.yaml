@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [16, 153]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 0.26
+  h: 0.285
+  d: 0.459
 tint:
   group: cloth
   mask: generated/world/pawn/shirt_basic_west_work6_mask.png

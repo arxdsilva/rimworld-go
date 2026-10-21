@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [16, 36]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 0.573
+  h: 0.258
+  d: 0.8
 item: ridgewolf corpse
 species: ridgewolf
 variant: 2

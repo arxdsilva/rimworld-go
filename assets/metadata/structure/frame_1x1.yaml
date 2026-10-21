@@ -8,4 +8,9 @@ footprint: [1, 1]
 origin_px: [16, 65]
 projection:
   shear_k: 0.5
+shadow:
+  kind: box
+  w: 0.86
+  h: 0.76
+  d: 0.86
 stage: frame

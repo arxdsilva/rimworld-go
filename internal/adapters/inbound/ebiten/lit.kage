@@ -1,0 +1,56 @@
+//kage:unit pixels
+
+// lit.kage: a world sprite lit by the sun, the moon, the sky's ambient
+// and lamps (ART §6.1; Go twins litFactor and decodeNormal in light.go).
+// Per vertex: color is the colour scale (premultiplied), custom.x sky
+// exposure (1 open sky, 0 roofed), custom.y lamp light 0..1, custom.z the
+// x offset in pixels from the sprite to its normal map in the same image
+// (0: no normal map, lit flat). The uniforms are the frame's light, the
+// same for every draw, and only imageSrc0UnsafeAt is used (no source
+// region uniforms), so Ebiten batches draws across sprites.
+package main
+
+var SunL vec3
+var MoonL vec3
+var SunColor vec3
+var MoonColor vec3
+var SkyAmbient vec3
+var IndoorAmbient vec3
+var LampColor vec3
+
+// bilinear is FilterLinear's 4-tap sample (premultiplied colour).
+func bilinear(p vec2) vec4 {
+	p0 := p - 1/2.0
+	p1 := p + 1/2.0
+	c0 := imageSrc0UnsafeAt(p0)
+	c1 := imageSrc0UnsafeAt(vec2(p1.x, p0.y))
+	c2 := imageSrc0UnsafeAt(vec2(p0.x, p1.y))
+	c3 := imageSrc0UnsafeAt(p1)
+	rate := fract(p1)
+	return mix(mix(c0, c1, rate.x), mix(c2, c3, rate.x), rate.y)
+}
+
+func Fragment(dstPos vec4, srcPos vec2, color vec4, custom vec4) vec4 {
+	base := bilinear(srcPos) * color
+	if base.a <= 0 {
+		return vec4(0)
+	}
+	n := vec3(0, 0, 1)
+	if custom.z > 0.5 {
+		t := bilinear(srcPos + vec2(custom.z, 0))
+		if t.a > 1.0/255 {
+			// straight-alpha PNG, stored premultiplied: un-premultiply;
+			// OpenGL green-up to screen y-down
+			m := t.rgb/t.a*2 - 1
+			m.y = -m.y
+			if dot(m, m) > 1e-6 {
+				n = normalize(m)
+			}
+		}
+	}
+	sky := custom.x
+	amb := mix(IndoorAmbient, SkyAmbient, sky)
+	dif := (SunColor*max(dot(n, SunL), 0) + MoonColor*max(dot(n, MoonL), 0)) * sky
+	rgb := base.rgb * (amb + dif + LampColor*custom.y)
+	return vec4(min(rgb, vec3(base.a)), base.a)
+}

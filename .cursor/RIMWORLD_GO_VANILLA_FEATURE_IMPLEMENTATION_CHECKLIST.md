@@ -588,7 +588,7 @@ This is the heart of autonomous colony behavior.
 -   [-] **Floors** (buildable/deconstructable separate layer; no movement/beauty/cleanliness stats)
     -   Construct/remove.
     -   movement, beauty, cleanliness, flammability attributes.
--   [ ] **Roofs**
+-   [-] **Roofs** (SIM-018; no deterioration, toxic fallout or collapse injuries)
     -   Roof cells.
     -   roof construction/removal jobs.
     -   support rules.
@@ -631,7 +631,7 @@ This is the heart of autonomous colony behavior.
 -   [x] **Growing zones** (painted rectangles sowing amberroot; cancel removes; resow after harvest)
 -   [ ] **Home area**
     -   Influences firefighting/cleaning/repair behavior.
--   [ ] **Roof build/remove areas**
+-   [x] **Roof build/remove areas** (SIM-018)
 -   [ ] **Allowed areas**
     -   Already introduced in Phase 5 but integrated with zone UI.
 
@@ -1129,8 +1129,8 @@ treatment, and surgery are major colony-management systems.
 
 ## 12.4 Lighting
 
--   [-] **Day/night light** (outdoor level is a pure function of tick; indoor/roofed and artificial lights not yet)
--   [ ] **Roof/indoor darkness**
+-   [-] **Day/night light** (outdoor level is a pure function of tick; indoor/roofed and artificial lights not yet) (ART-010, SIM-018: sun/moon, indoor and lamp light; no light gameplay effects)
+-   [-] **Roof/indoor darkness** (ART-010, SIM-018: indoor ambient under roofs; no light-level gameplay effects)
 -   [x] **Artificial lights**
 -   [ ] **Light affects plants**
 -   [-] **Light can affect work/mood/accuracy where appropriate**
@@ -2440,7 +2440,7 @@ the player-facing system.
 
 ## 34.2 Overlays
 
--   [ ] **Roof overlay**
+-   [-] **Roof overlay** (SIM-018; no thin or mountain roof distinction)
 -   [ ] **Power grid**
 -   [ ] **Beauty**
 -   [ ] **Room stats**
@@ -2513,7 +2513,7 @@ the player-facing system.
 -   [-] **Damage/fire effects** (hit flash, flinch and stagger away from the attacker, directional blood, falls; burning-building fire not implemented)
 -   [ ] **Selection/targeting feedback**
 -   [ ] **Weather visual effects**
--   [-] **Day/night presentation** (dusk/night fullscreen sky veil from outdoor light + hour; daytime ungraded; no indoor darkness)
+-   [x] **Day/night presentation** (ART-010: every sprite lit by a moving sun, a cool moon, indoor ambient under roofs and lamp light; moving shadows; the old fullscreen veil is retired)
 
 All assets must be original or appropriately licensed.
 
@@ -2901,7 +2901,7 @@ Do not call the vanilla milestone complete until this audit passes.
 ## 41.1 Colony survival loop
 
 -   [-] Start with generated colonists and supplies. (Ada/Bo/Cora + food/wood/plants; wizard does not change kit)
--   [-] Build shelter. (wood walls; no rooms/roofs)
+-   [-] Build shelter. (wood walls; no rooms/roofs) (SIM-018: roofed rooms now built)
 -   [-] Assign beds. (claim on Sleep)
 -   [-] Create stockpile. (food+wood paint)
 -   [x] Grow crops.

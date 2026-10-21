@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [16, 24]
 projection:
   shear_k: 0.5
+shadow:
+  kind: none
+  w: 0.68
+  h: 0.054
+  d: 0.385
 tool: pickaxe
 rotatable: true
 points: east

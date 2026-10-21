@@ -8,5 +8,10 @@ footprint: [1, 1]
 origin_px: [16, 32]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 0.482
+  h: 0.193
+  d: 0.398
 item: potatoes
 stack: true

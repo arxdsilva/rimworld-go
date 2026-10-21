@@ -375,15 +375,65 @@ def _clip(img, origin, footprint, clip, zclip):
     return img
 
 
+SHADOW_KINDS = {"pawn": "blob", "animal": "blob", "plant": "blob", "item": "blob", "gear": "blob",
+                "structure": "box", "furniture": "box", "rock": "box",
+                "terrain": "none", "overlay": "none", "weather": "none"}
+FLAT_H = 0.05   # tiles: casters this low cast no shadow
+
+
+FIGURE_LEAN = {"pawn": C.FIGURE_LEAN_DEG, "animal": 40.0}   # animal.LEAN_DEG
+
+
+def _shadow_meta(family, name, kind=None, footprint=None):
+    """Caster bounds (tiles) from the unsheared, non-holdout meshes.
+
+    Figures are modelled leaned back towards the camera; their bounds are
+    measured after undoing the lean so h is the standing height and w/d
+    the ground footprint. Structures are clamped to their footprint
+    (autotile posts overhang to join neighbours)."""
+    unlean = None
+    if family in FIGURE_LEAN:
+        unlean = Matrix.Rotation(math.radians(FIGURE_LEAN[family]), 4, "X")
+    lo = np.full(3, 1e9)
+    hi = np.full(3, -1e9)
+    for ob in stage().collection.all_objects:
+        if ob.type != "MESH" or ob.get("rwg_holdout"):
+            continue
+        n = len(ob.data.vertices)
+        if not n:
+            continue
+        co = np.empty(n * 3, np.float32)
+        ob.data.vertices.foreach_get("co", co)
+        m = np.array(ob.matrix_world if unlean is None else unlean @ ob.matrix_world)
+        v = co.reshape(n, 3) @ m[:3, :3].T + m[:3, 3]
+        lo, hi = np.minimum(lo, v.min(axis=0)), np.maximum(hi, v.max(axis=0))
+    if hi[0] < lo[0]:
+        lo = hi = np.zeros(3)
+    w, d = float(hi[0] - lo[0]), float(hi[1] - lo[1])
+    h = float(hi[2] - lo[2]) if unlean is not None else float(max(hi[2], 0.0))
+    if footprint is not None and family in ("structure", "furniture", "rock"):
+        w, d = min(w, footprint[0]), min(d, footprint[1])
+    k = kind or SHADOW_KINDS.get(family, "none")
+    if kind is None and family == "structure" and name.startswith("floor_"):
+        k = "none"
+    if h <= FLAT_H:
+        k = "none"
+    return {"kind": k, "w": round(w, 3), "h": round(h, 3), "d": round(d, 3)}
+
+
 def render_asset(family, name, footprint=(1, 1), zmax=1.0, margins=None,
-                 outline=True, shadow=True, extra=None, keep=False,
-                 clip=(), zclip=None, tint=True):
+                 outline=True, shadow=False, extra=None, keep=False,
+                 clip=(), zclip=None, tint=True, shadow_kind=None):
     """Shear, frame, render, post-process, write PNG + metadata.
 
     footprint: (w, h) tiles. zmax: tallest point (m). margins: tiles
     (left, right, top, bottom) beyond the footprint/overhang.
+    shadow: bake a UI-art drop shadow (world sprites never do; the game
+    casts sun shadows from the `shadow:` metadata). shadow_kind overrides
+    the per-family caster kind (blob|box|none).
     """
     sc = stage()
+    shadow_meta = _shadow_meta(family, name, shadow_kind, footprint)
     w, h = footprint
     ml, mr, mt, mb = margins or (C.DEFAULT_MARGIN,) * 4
     left = int(round(ml * C.PPT))
@@ -413,6 +463,7 @@ def render_asset(family, name, footprint=(1, 1), zmax=1.0, margins=None,
         "footprint": [w, h],
         "origin_px": [left, top],
         "projection": {"shear_k": C.SHEAR_K},
+        "shadow": shadow_meta,
     }
     if groups and tint:
         white, black = _flat("mask_on", (1, 1, 1)), _flat("mask_off", (0, 0, 0))

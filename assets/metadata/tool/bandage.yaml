@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [16, 26]
 projection:
   shear_k: 0.5
+shadow:
+  kind: none
+  w: 0.536
+  h: 0.14
+  d: 0.206
 tint:
   group: cloth
   mask: generated/world/tool/bandage_mask.png

@@ -118,6 +118,10 @@ func (g *Game) applyOne(c command.Command) {
 		}
 	case command.SetSchedule:
 		g.setSchedule(entity.EntityID(c.Pawn), c.Index, schedule.Activity(c.Mode))
+	case command.DesignateRoof:
+		g.designateRoof(c.X, c.Y, c.X2, c.Y2, true)
+	case command.DesignateRemoveRoof:
+		g.designateRoof(c.X, c.Y, c.X2, c.Y2, false)
 	}
 }
 
@@ -152,6 +156,7 @@ func (g *Game) cancelRect(x1, y1, x2, y2 int) {
 	g.markTame(x1, y1, x2, y2, false)
 	g.cancelPens(x1, y1, x2, y2)
 	g.cancelGrowZones(minX, minY, maxX, maxY)
+	g.clearRoofPlans(minX, minY, maxX, maxY)
 
 	for _, id := range g.plantIDs {
 		p, ok := g.plants.Get(id)
@@ -821,6 +826,8 @@ func (g *Game) phaseJobs() {
 			g.doHaul(id, j)
 		case job.Bury:
 			g.doBury(id, j)
+		case job.Roof, job.Unroof:
+			g.doRoof(id, j)
 		case job.Construct:
 			g.doConstruct(id, j)
 		case job.Harvest:

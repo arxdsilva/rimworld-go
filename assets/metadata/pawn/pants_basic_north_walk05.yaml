@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [16, 153]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 0.31
+  h: 0.347
+  d: 0.235
 tint:
   group: cloth
   mask: generated/world/pawn/pants_basic_north_walk05_mask.png

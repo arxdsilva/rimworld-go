@@ -33,14 +33,15 @@ func (g *Game) weatherSeed() uint64 {
 	return h
 }
 
-// outdoorsAt reports open ground: no room around the tile.
-func (g *Game) outdoorsAt(x, y int) bool { return g.roomAt(x, y) < 0 }
+// outdoorsAt reports open ground under the sky: no roof over the tile
+// (SIM-018; before roofs it meant no room around it).
+func (g *Game) outdoorsAt(x, y int) bool { return g.underSky(x, y) }
 
 // phaseWeather moves the weather on: a new block every 6 hours, easing
 // and ground build-up every climate interval.
 func (g *Game) phaseWeather() {
 	now := g.clock.Now()
-	if uint64(now)%weatherBlockTicks == 0 {
+	if uint64(now)%weatherBlockTicks == 0 && !g.weatherFix {
 		mean := float64(temperature.DailyMean(now)) / 10
 		g.weather = weather.Next(g.weatherSeed(), uint64(now)/weatherBlockTicks, g.weather, mean, temperature.Season(now))
 	}
@@ -142,6 +143,10 @@ func (g *Game) SetWeather(k weather.Kind, intensity float64) {
 	g.weather.Kind, g.weather.Target = k, k
 	g.weather.Intensity, g.weather.Goal = intensity, intensity
 }
+
+// HoldWeather keeps the current weather kind through block changes (dev
+// scenarios such as day-cycle clips; not saved).
+func (g *Game) HoldWeather() { g.weatherFix = true }
 
 // Weather is the current outdoor weather.
 func (g *Game) Weather() weather.State { return g.weather }

@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [46, 136]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 1.15
+  h: 1.79
+  d: 1.122
 species: tree
 kind: pine
 variant: 2

@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [19, 77]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 0.77
+  h: 0.902
+  d: 0.657
 species: beans
 growth: mature
 variant: 1

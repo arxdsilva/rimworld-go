@@ -8,6 +8,11 @@ footprint: [1, 2]
 origin_px: [16, 82]
 projection:
   shear_k: 0.5
+shadow:
+  kind: box
+  w: 1
+  h: 1.015
+  d: 2
 building: grave
 state: dug
 rotatable: true

@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [16, 153]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 0.462
+  h: 0.919
+  d: 0.532
 tint:
   group: skin
   mask: generated/world/pawn/body_south_swing4_mask.png

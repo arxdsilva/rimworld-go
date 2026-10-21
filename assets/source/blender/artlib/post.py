@@ -81,7 +81,7 @@ def drop_shadow(img, offset=None, blur=None, alpha=None, rgb=None):
     return out
 
 
-def process(img, do_outline=True, do_shadow=True, **kw):
+def process(img, do_outline=True, do_shadow=False, **kw):
     if do_outline:
         img = outline(img, **{k: v for k, v in kw.items() if k in ("width", "darken", "saturate")})
     if do_shadow:

@@ -26,6 +26,7 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/grid"
 	"rimworld-go/internal/domain/world/plant"
+	"rimworld-go/internal/domain/world/roof"
 	"rimworld-go/internal/domain/world/temperature"
 	"rimworld-go/internal/domain/world/terrain"
 	"rimworld-go/internal/domain/world/weather"
@@ -286,6 +287,15 @@ type WorldView struct {
 	Locked   map[string]string
 	// Pens are animal pen zones (x1, y1, x2, y2 inclusive).
 	Pens [][4]int
+	// Roofs (SIM-018): RoofCells is the roof.Cell flags per tile
+	// (row-major, TerrainW wide); RoofCollapses are collapses of the last
+	// hour.
+	RoofCells     []uint8
+	RoofCollapses []RoofCollapseView
+	// Hour is the time of day 0..24 and DayOfYear 0..DaysPerYear-1, for
+	// the sun and moon (presentation only).
+	Hour      float64
+	DayOfYear int
 }
 
 // Game holds all authoritative simulation state.
@@ -324,6 +334,7 @@ type Game struct {
 	racks      map[entity.EntityID]dryBatch // what each drying rack holds
 	fuel       map[entity.EntityID]int      // campfire fuel, ticks of burning
 	weather    weather.State                // outdoor weather (weather.go, SIM-016)
+	weatherFix bool                         // dev: HoldWeather keeps the forced weather
 	graves     map[entity.EntityID]graveRec // who lies in each filled grave (burial.go, SIM-017)
 	exposure   map[entity.EntityID]exposureState
 	noComfort  map[entity.EntityID]uint64 // no warm/cool spot found until this tick
@@ -370,6 +381,11 @@ type Game struct {
 	pens []pen
 	// rockDamage: rock tiles sappers are hacking through.
 	rockDamage map[[2]int]int
+	// roofs: the roof state per tile (roof.go, SIM-018), row-major; empty
+	// until the first room rebuild. roofCollapses are recent collapses.
+	roofs         []roof.Cell
+	roofCollapses []roofCollapse
+	roofx         roofIndex // roof.go: derived plan index and roofed counts
 	// residual: air temperature of cells of a freshly breached room.
 	residual    map[int]temperature.Temp
 	researchCur research.Project
@@ -777,6 +793,10 @@ func (g *Game) World() WorldView {
 	w.Animals = g.animalViews()
 	w.Traces = g.traceViews()
 	g.fillWorldWeather(&w) // weather.go
+	g.fillRoofView(&w)     // roof.go
+	now := uint64(g.clock.Now())
+	w.Hour = float64(now%clock.TicksPerDay) / clock.TicksPerHour
+	w.DayOfYear = int(now/clock.TicksPerDay) % clock.DaysPerYear
 	return w
 }
 

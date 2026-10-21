@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [19, 90]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 1.105
+  h: 1.082
+  d: 0.753
 species: corn
 growth: wilted
 variant: 0
