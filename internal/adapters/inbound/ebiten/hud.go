@@ -344,8 +344,7 @@ func itemLabelAt(w game.WorldView, x, y int) string {
 // ---------------------------------------------------------- Roof overlay (UI-010)
 
 const (
-	roofButtonID  = "arch.cat.roof_overlay"
-	roofButtonCat = "roof_overlay" // roofButtonID without the arch.cat. prefix
+	roofButtonID  = "hud.roof"
 	roofButtonW   = 48
 	roofLegendTxt = "Roof: blue built · slate natural · dashed planned · hatched removal"
 )

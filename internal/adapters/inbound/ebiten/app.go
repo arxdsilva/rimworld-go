@@ -357,6 +357,8 @@ func (a *App) finishBoot() {
 
 func (a *App) applyClick(id string) {
 	switch {
+	case id == roofButtonID:
+		a.renderer.toggleRoofOverlayIfAny()
 	case strings.HasPrefix(id, "bar.pawn."):
 		n, err := strconv.ParseUint(strings.TrimPrefix(id, "bar.pawn."), 10, 64)
 		if err == nil && a.renderer != nil {

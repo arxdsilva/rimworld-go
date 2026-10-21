@@ -160,10 +160,6 @@ func (a *App) closeArchitect() {
 }
 
 func (a *App) selectArchCategory(id string) {
-	if id == roofButtonCat { // the HUD Roof button routes through the arch.cat. prefix
-		a.renderer.toggleRoofOverlayIfAny()
-		return
-	}
 	defer a.syncRoofForce()
 	a.archCat = id
 	if t, ok := toolByID(a.archTool); !ok || t.category != id {
