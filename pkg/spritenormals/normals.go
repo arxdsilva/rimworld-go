@@ -8,8 +8,11 @@
 package spritenormals
 
 import (
+	"errors"
 	"fmt"
 	"image"
+	"math"
+	"strconv"
 )
 
 // Settings mirrors spritefusion-sprite-normals NormalSettings; the
@@ -30,25 +33,64 @@ func DefaultSettings() Settings {
 		DetailStrength: 6, DetailScale: 0.6, NormalStrength: 1.5}
 }
 
+// maxPixels is the per-island processing limit, padding included.
+const maxPixels = 4194304
+
 // Validate reports a setting outside the ranges spritefusion accepts.
 func (s Settings) Validate() error {
-	return nil // ART-010 W2: the ranges of settings.rs
+	for _, c := range []struct {
+		name          string
+		value, lo, hi float32
+	}{
+		{"alpha-threshold", s.AlphaThreshold, 0, 0.99},
+		{"shape-radius", s.ShapeRadius, 0.5, 512},
+		{"shape-strength", s.ShapeStrength, 0, 8},
+		{"shape-softness", s.ShapeSoftness, 0, 8},
+		{"detail-strength", s.DetailStrength, 0, 8},
+		{"detail-scale", s.DetailScale, 0.6, 8},
+		{"normal-strength", s.NormalStrength, 0, 8},
+	} {
+		v := float64(c.value)
+		if math.IsNaN(v) || math.IsInf(v, 0) || c.value < c.lo || c.value > c.hi {
+			return fmt.Errorf("invalid setting: %s must be finite and between %s and %s", c.name,
+				strconv.FormatFloat(float64(c.lo), 'g', -1, 32), strconv.FormatFloat(float64(c.hi), 'g', -1, 32))
+		}
+	}
+	return nil
 }
 
 // Generate returns the normal map of src: same size, same alpha; fully
-// transparent pixels are the neutral (128, 128, 255).
+// transparent pixels are the neutral (128, 128, 255). Disconnected
+// silhouettes are filtered independently.
 func Generate(src *image.NRGBA, s Settings) (*image.NRGBA, error) {
 	if err := s.Validate(); err != nil {
 		return nil, fmt.Errorf("spritenormals: %w", err)
 	}
-	// ART-010 W2: the relief pipeline. Stub: a flat map.
-	b := src.Bounds()
-	out := image.NewNRGBA(b)
-	for y := b.Min.Y; y < b.Max.Y; y++ {
-		for x := b.Min.X; x < b.Max.X; x++ {
-			i := out.PixOffset(x, y)
-			out.Pix[i], out.Pix[i+1], out.Pix[i+2], out.Pix[i+3] = 128, 128, 255, src.Pix[src.PixOffset(x, y)+3]
+	w, h := src.Rect.Dx(), src.Rect.Dy()
+	pad := s.padding()
+	if w <= 0 || h <= 0 || (w+2*pad)*(h+2*pad) > maxPixels {
+		return nil, errors.New("spritenormals: image is empty or exceeds the 4194304-pixel processing limit")
+	}
+	out := neutralMap(src)
+	mask := make([]bool, w*h)
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			mask[y*w+x] = float32(src.Pix[y*src.Stride+x*4+3])/255 > s.AlphaThreshold
 		}
 	}
+	for _, part := range components(mask, w, h) {
+		iw, ih := part.maxX-part.minX+1, part.maxY-part.minY+1
+		island := image.NewNRGBA(image.Rect(0, 0, iw, ih))
+		for _, idx := range part.pixels {
+			sx, sy := idx%w, idx/w
+			copy(island.Pix[(sy-part.minY)*island.Stride+(sx-part.minX)*4:][:4], src.Pix[sy*src.Stride+sx*4:][:4])
+		}
+		gen := relief(island, s)
+		for _, idx := range part.pixels {
+			sx, sy := idx%w, idx/w
+			copy(out.Pix[sy*out.Stride+sx*4:][:4], gen.Pix[(sy-part.minY)*gen.Stride+(sx-part.minX)*4:][:4])
+		}
+	}
+	out.Rect = src.Rect
 	return out, nil
 }

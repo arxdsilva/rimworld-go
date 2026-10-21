@@ -15,7 +15,9 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"rimworld-go/pkg/spritenormals"
@@ -51,8 +53,12 @@ func wanted(path string) bool {
 	return !strings.Contains(filepath.ToSlash(path), "/ui/")
 }
 
+// run collects the sprites that need a map, then writes them on a
+// bounded worker pool; each map depends only on its own sprite, so the
+// output is identical whatever the order.
 func run(dirs []string, force bool) (written, skipped int, err error) {
-	s := settings()
+	type job struct{ in, out string }
+	var jobs []job
 	for _, dir := range dirs {
 		err = filepath.WalkDir(strings.TrimSpace(dir), func(path string, d os.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !wanted(path) {
@@ -63,17 +69,44 @@ func run(dirs []string, force bool) (written, skipped int, err error) {
 				skipped++
 				return nil
 			}
-			if err := one(path, out, s); err != nil {
-				return fmt.Errorf("%s: %w", path, err)
-			}
-			written++
+			jobs = append(jobs, job{path, out})
 			return nil
 		})
 		if err != nil {
-			return written, skipped, err
+			return 0, skipped, err
 		}
 	}
-	return written, skipped, nil
+	s := settings()
+	queue := make(chan job)
+	var (
+		wg       sync.WaitGroup
+		mu       sync.Mutex
+		firstErr error
+	)
+	for range runtime.NumCPU() {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := range queue {
+				err := one(j.in, j.out, s)
+				mu.Lock()
+				if err != nil {
+					if firstErr == nil {
+						firstErr = fmt.Errorf("%s: %w", j.in, err)
+					}
+				} else {
+					written++
+				}
+				mu.Unlock()
+			}
+		}()
+	}
+	for _, j := range jobs {
+		queue <- j
+	}
+	close(queue)
+	wg.Wait()
+	return written, skipped, firstErr
 }
 
 // newer reports a exists and is at least as new as b.
