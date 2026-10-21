@@ -17,6 +17,12 @@ import (
 	"rimworld-go/internal/domain/world/plant"
 )
 
+// ApplyPending applies every queued command now, in order: what the next
+// Step would do first. While paused the clock does not move, so this is the
+// same state the first phase of that Step would reach (the UI calls it so
+// paused actions show at once).
+func (g *Game) ApplyPending() { g.phaseCommands() }
+
 func (g *Game) phaseCommands() {
 	cmds := g.pending
 	g.pending = nil

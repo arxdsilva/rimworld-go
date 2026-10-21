@@ -576,7 +576,21 @@ func (r *Renderer) date() clock.Date { return r.game.Date() }
 
 func (r *Renderer) activity() schedule.Activity { return r.game.Activity() }
 
-func (r *Renderer) enqueue(c command.Command) { r.game.Enqueue(c) }
+// pendingApplier applies queued commands without advancing time
+// (consumer-owned: test fakes need not implement it).
+type pendingApplier interface{ ApplyPending() }
+
+// enqueue sends a player command. While paused it is applied at once, so
+// zones, blueprints, designations, priorities and orders show immediately
+// instead of on unpause; running, it waits for the next Step.
+func (r *Renderer) enqueue(c command.Command) {
+	r.game.Enqueue(c)
+	if r.speed == speedPaused {
+		if p, ok := r.game.(pendingApplier); ok {
+			p.ApplyPending()
+		}
+	}
+}
 
 // TileAt converts a screen pixel to a map tile.
 func (r *Renderer) TileAt(sx, sy int) (int, int) {
