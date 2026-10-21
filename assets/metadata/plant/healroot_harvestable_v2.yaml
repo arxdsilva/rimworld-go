@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [19, 48]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 0.915
+  h: 0.458
+  d: 0.81
 species: healroot
 growth: harvestable
 variant: 2

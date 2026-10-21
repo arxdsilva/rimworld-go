@@ -772,7 +772,7 @@ def _layer(name, facing, builder, body_holdout=True, frame=None):
     extra = {"layer": name, "facing": facing, "attachments": att}
     if frame:
         extra["frame"] = frame
-    return S.render_asset("pawn", sprite, zmax=zm, margins=MARGINS, shadow=(name == "body"), extra=extra)
+    return S.render_asset("pawn", sprite, zmax=zm, margins=MARGINS, extra=extra)
 
 
 LAYERS = {

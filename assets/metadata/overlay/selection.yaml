@@ -7,3 +7,8 @@ canvas: [128, 128]
 footprint: [1, 1]
 origin_px: [0, 0]
 overlay: selection
+shadow:
+  kind: none
+  w: 0.0
+  h: 0.0
+  d: 0.0

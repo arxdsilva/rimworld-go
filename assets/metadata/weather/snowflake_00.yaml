@@ -9,3 +9,8 @@ origin_px: [5, 5]
 weather: snow_particle
 variant: 0
 particle: true
+shadow:
+  kind: none
+  w: 0.0
+  h: 0.0
+  d: 0.0

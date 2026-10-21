@@ -8,6 +8,11 @@ footprint: [2, 1]
 origin_px: [16, 38]
 projection:
   shear_k: 0.5
+shadow:
+  kind: box
+  w: 1.782
+  h: 0.21
+  d: 0.985
 building: grave
 state: filled
 rotatable: true

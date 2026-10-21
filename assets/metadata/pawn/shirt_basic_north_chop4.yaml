@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [16, 153]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 0.428
+  h: 0.304
+  d: 0.303
 tint:
   group: cloth
   mask: generated/world/pawn/shirt_basic_north_chop4_mask.png

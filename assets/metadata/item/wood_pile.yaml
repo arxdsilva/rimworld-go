@@ -8,5 +8,10 @@ footprint: [1, 1]
 origin_px: [16, 47]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 0.612
+  h: 0.366
+  d: 0.74
 item: wood
 stack: true

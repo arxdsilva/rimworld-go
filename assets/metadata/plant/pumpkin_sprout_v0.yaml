@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [19, 27]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 0.6
+  h: 0.117
+  d: 0.6
 species: pumpkin
 growth: sprout
 variant: 0

@@ -8,6 +8,11 @@ footprint: [2, 2]
 origin_px: [16, 61]
 projection:
   shear_k: 0.5
+shadow:
+  kind: box
+  w: 1.9
+  h: 0.47
+  d: 1.32
 tint:
   group: cloth
   mask: generated/world/furniture/bed_double_blanket_north_mask.png

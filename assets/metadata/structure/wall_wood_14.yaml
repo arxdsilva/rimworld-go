@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [16, 80]
 projection:
   shear_k: 0.5
+shadow:
+  kind: box
+  w: 1
+  h: 1.0
+  d: 1
 autotile: wall
 mask: 14
 material: wood

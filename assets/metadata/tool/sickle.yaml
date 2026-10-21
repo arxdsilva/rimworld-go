@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [16, 23]
 projection:
   shear_k: 0.5
+shadow:
+  kind: none
+  w: 0.587
+  h: 0.065
+  d: 0.522
 tool: sickle
 rotatable: true
 points: east

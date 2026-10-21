@@ -6,11 +6,11 @@ id/naming, canvas size, origin, footprint, @2x scale, tint masks, alpha,
 tileable terrain seams, wall autotile completeness, and pawn layer
 canvas agreement.
 
-    python3 assets/source/tools/validate_assets.py [--light]
+    python3 assets/source/tools/validate_assets.py [--no-light]
 
-With --light (ART §6.1) every sprite must also have a normal map
-<name>_n.png of the same size and alpha (make normals) and a shadow:
-block in its metadata.
+Every sprite must also have a normal map <name>_n.png of the same size
+and alpha (make normals) and a shadow: block in its metadata (ART §6.1);
+--no-light skips those two checks.
 """
 import os
 import re
@@ -25,7 +25,7 @@ PPT = 128
 ID = re.compile(r"^core:[a-z_]+/[a-z0-9_]+$")
 
 errors = []
-LIGHT = "--light" in sys.argv[1:]
+LIGHT = "--no-light" not in sys.argv[1:]
 SHADOW_KINDS = ("blob", "box", "none")
 
 

@@ -9,3 +9,8 @@ origin_px: [12, 8]
 weather: splash
 frame: 2
 particle: true
+shadow:
+  kind: none
+  w: 0.0
+  h: 0.0
+  d: 0.0

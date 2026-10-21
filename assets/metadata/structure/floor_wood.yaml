@@ -8,4 +8,9 @@ footprint: [1, 1]
 origin_px: [0, 0]
 projection:
   shear_k: 0.5
+shadow:
+  kind: none
+  w: 1
+  h: 0.0
+  d: 1
 tileable: true

@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [16, 153]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 0.706
+  h: 0.939
+  d: 0.501
 tint:
   group: skin
   mask: generated/world/pawn/body_north_flinch1_mask.png

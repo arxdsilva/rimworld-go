@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [16, 27]
 projection:
   shear_k: 0.5
+shadow:
+  kind: none
+  w: 0.438
+  h: 0.158
+  d: 0.436
 tool: bowl
 rotatable: true
 points: east

@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [16, 153]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 0.334
+  h: 0.539
+  d: 0.489
 layer: parka_leather
 facing: east
 attachments:

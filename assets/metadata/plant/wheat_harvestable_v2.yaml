@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [19, 103]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 0.531
+  h: 1.338
+  d: 0.556
 species: wheat
 growth: harvestable
 variant: 2

@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [16, 101]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 0.889
+  h: 0.638
+  d: 0.239
 species: ridgewolf
 facing: east
 frame: walk03

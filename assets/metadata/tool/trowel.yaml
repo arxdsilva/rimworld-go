@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [16, 23]
 projection:
   shear_k: 0.5
+shadow:
+  kind: none
+  w: 0.676
+  h: 0.064
+  d: 0.167
 tool: trowel
 rotatable: true
 points: east

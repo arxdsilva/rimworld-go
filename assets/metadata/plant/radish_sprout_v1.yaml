@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [19, 30]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 0.6
+  h: 0.157
+  d: 0.6
 species: radish
 growth: sprout
 variant: 1

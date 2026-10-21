@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [16, 153]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 0.415
+  h: 0.896
+  d: 0.527
 tint:
   group: skin
   mask: generated/world/pawn/body_west_pick4_mask.png

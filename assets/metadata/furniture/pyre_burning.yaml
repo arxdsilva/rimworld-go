@@ -8,6 +8,11 @@ footprint: [2, 1]
 origin_px: [16, 55]
 projection:
   shear_k: 0.5
+shadow:
+  kind: box
+  w: 1.821
+  h: 0.551
+  d: 0.92
 building: funeral pyre
 state: burning
 rotatable: false

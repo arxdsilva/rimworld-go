@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [19, 24]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 0.581
+  h: 0.133
+  d: 0.622
 species: radish
 growth: wilted
 variant: 2

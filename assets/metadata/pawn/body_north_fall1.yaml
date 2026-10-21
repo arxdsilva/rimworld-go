@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [16, 153]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 0.747
+  h: 0.894
+  d: 0.334
 tint:
   group: skin
   mask: generated/world/pawn/body_north_fall1_mask.png

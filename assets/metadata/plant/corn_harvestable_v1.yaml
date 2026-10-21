@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [19, 147]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 1.067
+  h: 2.001
+  d: 1.017
 species: corn
 growth: harvestable
 variant: 1

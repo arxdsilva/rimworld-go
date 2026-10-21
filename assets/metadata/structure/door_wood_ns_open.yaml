@@ -8,5 +8,10 @@ footprint: [1, 1]
 origin_px: [16, 80]
 projection:
   shear_k: 0.5
+shadow:
+  kind: box
+  w: 0.92
+  h: 1.0
+  d: 1
 axis: ns
 state: open

@@ -613,7 +613,7 @@ Light pipeline (ART-010):
 - World sprites render without a baked drop shadow.
 - `stage.render_asset` writes each sprite's `shadow:` caster block from its staged bounds.
 - `make normals` (`cmd/normalgen`, after Blender in `make art`) writes `<sprite>_n.png`. Masks, normal maps and `ui/` are skipped, and up-to-date maps are kept.
-- `validate_assets.py --light` requires a normal map with the sprite's size and alpha, and a `shadow:` block, for every world sprite.
+- `validate_assets.py` (`make art-check`) requires a normal map with the sprite's size and alpha, and a `shadow:` block, for every world sprite.
 
 ## 26. Plugin Assets
 

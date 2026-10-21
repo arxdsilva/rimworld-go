@@ -8,4 +8,9 @@ footprint: [1, 1]
 origin_px: [16, 27]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 0.68
+  h: 0.13
+  d: 0.62
 item: duster

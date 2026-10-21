@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [16, 37]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 0.591
+  h: 0.267
+  d: 0.425
 item: dustbuck corpse
 species: dustbuck
 variant: 1

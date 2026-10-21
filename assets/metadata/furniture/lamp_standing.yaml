@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [16, 106]
 projection:
   shear_k: 0.5
+shadow:
+  kind: box
+  w: 0.496
+  h: 1.4
+  d: 0.496
 emissive: lamp_warm
 light_radius: 6
 rotatable: false

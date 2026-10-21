@@ -8,6 +8,11 @@ footprint: [2, 1]
 origin_px: [16, 54]
 projection:
   shear_k: 0.5
+shadow:
+  kind: box
+  w: 1.94
+  h: 0.58
+  d: 0.9
 tint:
   group: cloth
   mask: generated/world/furniture/bed_basic_west_mask.png

@@ -8,4 +8,9 @@ footprint: [1, 1]
 origin_px: [16, 24]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 0.633
+  h: 0.07
+  d: 0.281
 item: knife

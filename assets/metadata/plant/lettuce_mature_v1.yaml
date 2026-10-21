@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [19, 45]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 0.733
+  h: 0.384
+  d: 0.756
 species: lettuce
 growth: mature
 variant: 1

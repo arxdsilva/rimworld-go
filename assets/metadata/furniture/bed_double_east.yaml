@@ -8,6 +8,11 @@ footprint: [2, 2]
 origin_px: [16, 61]
 projection:
   shear_k: 0.5
+shadow:
+  kind: box
+  w: 1.94
+  h: 0.7
+  d: 1.9
 tint:
   group: cloth
   mask: generated/world/furniture/bed_double_east_mask.png

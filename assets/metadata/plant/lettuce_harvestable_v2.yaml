@@ -8,6 +8,11 @@ footprint: [1, 1]
 origin_px: [19, 45]
 projection:
   shear_k: 0.5
+shadow:
+  kind: blob
+  w: 0.898
+  h: 0.421
+  d: 0.857
 species: lettuce
 growth: harvestable
 variant: 2
