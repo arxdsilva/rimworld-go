@@ -385,6 +385,7 @@ type Game struct {
 	// until the first room rebuild. roofCollapses are recent collapses.
 	roofs         []roof.Cell
 	roofCollapses []roofCollapse
+	roofx         roofIndex // roof.go: derived plan index and roofed counts
 	// residual: air temperature of cells of a freshly breached room.
 	residual    map[int]temperature.Temp
 	researchCur research.Project

@@ -13,8 +13,16 @@ import (
 )
 
 // hut walls in a room with interior x0+1..x1-1, y0+1..y1-1 and a door at
-// the middle of the south wall.
+// the middle of the south wall, and roofs it (SIM-018: a room is sheltered
+// only under a roof).
 func hut(t *testing.T, g *Game, x0, y0, x1, y1 int) {
+	t.Helper()
+	hutWalls(t, g, x0, y0, x1, y1)
+	g.RoofRooms()
+}
+
+// hutWalls is hut without the roof.
+func hutWalls(t *testing.T, g *Game, x0, y0, x1, y1 int) {
 	t.Helper()
 	for x := x0; x <= x1; x++ {
 		for _, y := range []int{y0, y1} {

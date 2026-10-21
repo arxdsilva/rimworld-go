@@ -277,7 +277,7 @@ func (g *Game) acting(id entity.EntityID, j job.Record) (string, int, int) {
 	switch j.Kind {
 	case job.Construct, job.Deconstruct, job.Cut, job.Harvest, job.Sow:
 		return j.Kind.String(), j.TX, j.TY
-	case job.Mine:
+	case job.Mine, job.Roof, job.Unroof:
 		return j.Kind.String(), j.DestX, j.DestY
 	case job.Bill:
 		if j.Carry == 0 { // picking the ingredient up, not working yet
