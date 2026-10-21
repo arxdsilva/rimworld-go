@@ -39,7 +39,7 @@ bl_info = {
 }
 
 # Keep in sync with blender_mcp.addon_manager.EXPECTED_ADDON_PROTOCOL_VERSION.
-ADDON_PROTOCOL_VERSION = 13
+ADDON_PROTOCOL_VERSION = 14
 
 # Per-snapshot object cap for get_world_state_snapshot. Keep in sync with
 # blender_mcp.trajectory.MAX_SNAPSHOT_OBJECTS.
@@ -56,6 +56,28 @@ DISCORD_URL = "https://discord.gg/SNqPn4TcKQ"
 # Add User-Agent as required by Poly Haven API
 REQ_HEADERS = requests.utils.default_headers()
 REQ_HEADERS.update({"User-Agent": "blender-mcp"})
+
+# Meshy, with the user's own key. Sidebar model id -> label; the id is what
+# the request sends. Text runs as a preview task, then one refine task.
+MESHY_API_BASE = "https://api.meshy.ai/openapi"
+MESHY_DEFAULT_MODEL = "latest"
+MESHY_MODELS = {
+    "latest": "Meshy 7.1",
+    "meshy-6": "Meshy 6",
+}
+MESHY_KEY_URL = ("https://www.meshy.ai/developers/keys"
+                 "?utm_source=mcp-for-blender&utm_medium=integration&utm_campaign=blender-addon")
+MESHY_PROMPT_MAX = 800
+MESHY_IMAGE_MAX_BYTES = 20 * 1024 * 1024
+MESHY_IMAGE_TYPES = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
+# Every task: GLB only, sized to real-world height, origin at the bottom.
+MESHY_OUTPUT = {"target_formats": ["glb"], "auto_size": True, "origin_at": "bottom"}
+MESHY_HEADERS = {"User-Agent": "mcp-for-blender/" + ".".join(str(part) for part in bl_info["version"])}
+MESHY_TIMEOUT = (10, 60)
+# Preview task id -> refine task id. Blender runs commands one at a time, so
+# this is where a repeated refine request (after the MCP side lost the reply to
+# a socket timeout, or from a second MCP server) gets the refine already paid for.
+_meshy_refines = {}
 
 # Set when the user disconnects so opening another blend file does not restart
 # the server behind their back. A manual connect or add-on reload clears it.
@@ -1262,6 +1284,19 @@ class BlenderMCPServer:
             "BLENDERMCP_HUNYUAN3D_API_URL",
         ) or "http://localhost:8081"
 
+    def _get_meshy_api_key(self):
+        return self._get_config_value(
+            "blendermcp_meshy_api_key",
+            "meshy_api_key",
+            "BLENDERMCP_MESHY_API_KEY",
+        )
+
+    def _resolve_meshy_model(self):
+        model = getattr(bpy.context.scene, "blendermcp_meshy_model", MESHY_DEFAULT_MODEL) or MESHY_DEFAULT_MODEL
+        if model not in MESHY_MODELS:
+            return None, {"error": f"Unknown Meshy model. Choose one of: {', '.join(MESHY_MODELS)}"}
+        return model, None
+
     def start(self):
         if bpy.app.background:
             print("BlenderMCP: cannot start server in background mode (blender -b) - commands would never execute\n"
@@ -1518,6 +1553,7 @@ class BlenderMCPServer:
             "get_polypizza_status": self.get_polypizza_status,
             "get_hunyuan3d_status": self.get_hunyuan3d_status,
             "get_tripo_status": premium_tripo_status,
+            "get_meshy_status": self.get_meshy_status,
             "export_scene": self.export_scene,
         }
 
@@ -1569,6 +1605,18 @@ class BlenderMCPServer:
 
         # Tripo is only offered through Premium
         handlers.update(premium_tripo_handlers())
+
+        # Meshy runs through Premium when it's the generation source, else on
+        # the user's own key. getattr so scenes from before Meshy still dispatch.
+        if getattr(bpy.context.scene, "blendermcp_use_meshy", False) and premium_active():
+            handlers.update(premium_meshy_handlers())
+        elif getattr(bpy.context.scene, "blendermcp_use_meshy", False):
+            handlers.update({
+                "create_meshy_job": self.create_meshy_job,
+                "refine_meshy_job": self.refine_meshy_job,
+                "poll_meshy_job_status": self.poll_meshy_job_status,
+                "import_generated_asset_meshy": self.import_generated_asset_meshy,
+            })
 
         handler = handlers.get(cmd_type)
         if handler:
@@ -5030,11 +5078,213 @@ class BlenderMCPServer:
                 shutil.rmtree(temp_dir)
     #endregion
 
+    #region Meshy
+    def get_meshy_status(self):
+        """Get the current status of Meshy integration."""
+        if premium_active():
+            return premium_integration_status("meshy", getattr(bpy.context.scene, "blendermcp_use_meshy", False))
+        if not getattr(bpy.context.scene, "blendermcp_use_meshy", False):
+            return {
+                "enabled": False,
+                "message": """Meshy integration is currently disabled. To enable it:
+                            1. In the 3D Viewport, find the MCP for Blender panel in the sidebar (press N if hidden)
+                            2. Under AI Model Generation, check Meshy
+                            3. Choose a model and fill in the API Key (needs a paid Meshy plan)""",
+            }
+        if not self._get_meshy_api_key():
+            return {
+                "enabled": False,
+                "message": """Meshy integration is currently enabled, but the API key is not given. To enable it:
+                            1. In the 3D Viewport, find the MCP for Blender panel in the sidebar (press N if hidden)
+                            2. Under AI Model Generation, keep Meshy checked
+                            3. Fill in the API Key (needs a paid Meshy plan)""",
+            }
+        model, error = self._resolve_meshy_model()
+        if error:
+            return {"enabled": False, "message": error["error"]}
+        choices = ", ".join(f"{label} ({ident})" for ident, label in MESHY_MODELS.items())
+        return {
+            "enabled": True,
+            "model": model,
+            "message": (
+                f"Meshy integration is enabled and ready to use. Model: {MESHY_MODELS[model]}. "
+                f"Sidebar choices: {choices}."
+            ),
+        }
+
+    def _meshy_headers(self):
+        api_key = self._get_meshy_api_key()
+        if not api_key:
+            return None, {"error": "Meshy API key is not given"}
+        return {**MESHY_HEADERS, "Authorization": f"Bearer {api_key}"}, None
+
+    @staticmethod
+    def _meshy_parse(response):
+        """(payload, None) on success, else (None, {"error": readable message}).
+        Messages come from fixed text or Meshy's reply, never the request, so
+        the key can't leak into them."""
+        try:
+            payload = response.json()
+        except Exception:
+            payload = None
+        if response.ok and isinstance(payload, dict):
+            return payload, None
+        if response.status_code == 401:
+            return None, {"error": "Meshy rejected the API key"}
+        # 402 also means a key credit limit, a workspace limit or a free plan,
+        # so Meshy's own message wins; the fixed text is only a fallback.
+        fallback = {
+            402: "Out of Meshy credits. Top up at meshy.ai",
+            429: "Meshy rate limit hit, wait and retry",
+        }.get(response.status_code, f"Meshy request failed with status {response.status_code}")
+        message = payload.get("message") if isinstance(payload, dict) else None
+        return None, {"error": message or fallback}
+
+    def _meshy_post(self, path, body):
+        headers, error = self._meshy_headers()
+        if error:
+            return None, error
+        try:
+            response = requests.post(f"{MESHY_API_BASE}{path}", headers=headers, json=body, timeout=MESHY_TIMEOUT)
+        except Exception:
+            return None, {"error": "Meshy request failed. Check the internet connection and try again"}
+        data, error = self._meshy_parse(response)
+        if error:
+            return None, error
+        task_id = data.get("result")
+        if not task_id:
+            return None, {"error": "Meshy response did not include a task id"}
+        return task_id, None
+
+    @staticmethod
+    def _meshy_image_url(image):
+        """A URL or data URI as given; a local file as a base64 data URI."""
+        if re.match(r"^(https?://|data:image/)", image, re.IGNORECASE):
+            return image, None
+        if not os.path.isfile(image):
+            return None, {"error": f"Image file not found: {image}"}
+        mime = MESHY_IMAGE_TYPES.get(os.path.splitext(image)[1].lower())
+        if not mime:
+            return None, {"error": "Meshy accepts JPG, PNG or WebP images"}
+        if os.path.getsize(image) > MESHY_IMAGE_MAX_BYTES:
+            return None, {"error": "Meshy accepts images up to 20 MB"}
+        with open(image, "rb") as handle:
+            encoded = base64.b64encode(handle.read()).decode("ascii")
+        return f"data:{mime};base64,{encoded}", None
+
+    def create_meshy_job(self, text_prompt=None, image=None):
+        """Start a Meshy text preview task ("t2p") or image-to-3D task ("i2m")."""
+        text_prompt = (text_prompt or "").strip()
+        image = (image or "").strip()
+        if bool(text_prompt) == bool(image):
+            return {"error": "Provide either a text prompt or an image, not both"}
+        if len(text_prompt) > MESHY_PROMPT_MAX:
+            return {"error": f"Meshy prompts are limited to {MESHY_PROMPT_MAX} characters"}
+        model, error = self._resolve_meshy_model()
+        if error:
+            return error
+
+        if text_prompt:
+            body = {"mode": "preview", "prompt": text_prompt, "ai_model": model, **MESHY_OUTPUT}
+            task_id, error = self._meshy_post("/v2/text-to-3d", body)
+            kind = "t2p"
+        else:
+            image_url, error = self._meshy_image_url(image)
+            if error:
+                return error
+            body = {"image_url": image_url, "ai_model": model, "should_texture": True, "enable_pbr": True,
+                    **MESHY_OUTPUT}
+            task_id, error = self._meshy_post("/v1/image-to-3d", body)
+            kind = "i2m"
+        if error:
+            return error
+        return {"task_id": task_id, "kind": kind, "model": model}
+
+    def refine_meshy_job(self, preview_task_id=None):
+        """Texture a finished preview. At most one refine per preview: asking
+        again returns the refine already started."""
+        if not preview_task_id:
+            return {"error": "preview_task_id is required"}
+        if preview_task_id in _meshy_refines:
+            return {"task_id": _meshy_refines[preview_task_id], "kind": "t2r"}
+        body = {"mode": "refine", "preview_task_id": preview_task_id, "enable_pbr": True, **MESHY_OUTPUT}
+        task_id, error = self._meshy_post("/v2/text-to-3d", body)
+        if error:
+            return error
+        _meshy_refines[preview_task_id] = task_id
+        return {"task_id": task_id, "kind": "t2r"}
+
+    def poll_meshy_job_status(self, task_id=None, kind=None):
+        """Query one Meshy task. Does not wait; the MCP client polls again."""
+        if not task_id:
+            return {"error": "task_id is required"}
+        if kind == "prm":
+            return {"error": "This Meshy generation was started through Premium. Switch Generation Source "
+                             "back to Premium in the add-on preferences to finish it."}
+        path = {"t2p": "/v2/text-to-3d", "t2r": "/v2/text-to-3d", "i2m": "/v1/image-to-3d"}.get(kind)
+        if not path:
+            return {"error": f"Unknown Meshy task kind: {kind}"}
+        headers, error = self._meshy_headers()
+        if error:
+            return error
+        try:
+            response = requests.get(f"{MESHY_API_BASE}{path}/{quote(str(task_id), safe='')}",
+                                    headers=headers, timeout=MESHY_TIMEOUT)
+        except Exception:
+            return {"error": "Meshy request failed. Check the internet connection and try again"}
+        data, error = self._meshy_parse(response)
+        if error:
+            return error
+        result = {"status": data.get("status"), "progress": data.get("progress")}
+        if data.get("status") == "SUCCEEDED":
+            model_url = (data.get("model_urls") or {}).get("glb")
+            if not model_url:
+                return {**result, "error": "Meshy task succeeded but returned no GLB URL"}
+            result["model_url"] = model_url
+        elif data.get("status") in ("FAILED", "CANCELED"):
+            result["error"] = (data.get("task_error") or {}).get("message") or data.get("status")
+        return result
+
+    def import_generated_asset_meshy(self, name, model_url=None):
+        """Download a Meshy GLB and import it into the current scene."""
+        if not model_url:
+            return {"succeed": False, "error": "No file URL provided"}
+        if not re.match(r"^https?://", model_url, re.IGNORECASE):
+            return {"succeed": False, "error": "Invalid URL format. Must start with http:// or https://"}
+
+        temp_dir = tempfile.mkdtemp(prefix="meshy_glb_")
+        glb_path = osp.join(temp_dir, "model.glb")
+        try:
+            response = requests.get(model_url, headers=MESHY_HEADERS, stream=True, timeout=MESHY_TIMEOUT)
+            response.raise_for_status()
+            with open(glb_path, "wb") as handle:
+                for chunk in response.iter_content(chunk_size=8192):
+                    handle.write(chunk)
+            obj = self._clean_imported_glb(filepath=glb_path, mesh_name=name)
+            if obj is None:
+                return {"succeed": False, "error": "No mesh objects imported from GLB"}
+            result = {
+                "name": obj.name,
+                "type": obj.type,
+                "location": [obj.location.x, obj.location.y, obj.location.z],
+                "rotation": [obj.rotation_euler.x, obj.rotation_euler.y, obj.rotation_euler.z],
+                "scale": [obj.scale.x, obj.scale.y, obj.scale.z],
+            }
+            if obj.type == "MESH":
+                result["world_bounding_box"] = self._get_aabb(obj)
+            return {"succeed": True, **result}
+        except Exception:
+            return {"succeed": False, "error": "Failed to import Meshy model"}
+        finally:
+            with suppress(Exception):
+                shutil.rmtree(temp_dir)
+    #endregion
+
 #region Premium
 # Premium is a different key, not a different set of tools. With the Premium
-# toggle on, the Hyper3D and Hunyuan3D commands send the same request through
-# the MCP for Blender server, which holds the fal key and decides quotas, and
-# replies are reshaped into the fal/Tencent shapes the MCP tools already
+# toggle on, the Hyper3D, Hunyuan3D and Meshy commands send the same request through
+# the MCP for Blender server, which holds the fal and Meshy keys and decides quotas, and
+# replies are reshaped into the fal/Tencent/Meshy shapes the MCP tools already
 # parse. Tripo is only offered through Premium. With generation_source left at
 # BYOK nothing here runs, and nothing here touches the network until the user
 # activates a key.
@@ -5156,6 +5406,7 @@ def import_model_files(files, name):
 # Overridden by BLENDERMCP_PREMIUM_API_URL, so forks can point at their own
 # Supabase project without editing code.
 PREMIUM_API_URL_DEFAULT = "https://dbunjhuejdwwcafedslw.supabase.co/functions/v1/premium"
+# Links to it add ?ref= saying where the user clicked, for the site's analytics.
 PREMIUM_PRICING_URL = "https://mcp-for-blender.com/premium"
 PREMIUM_MANAGE_URL_DEFAULT = "https://mcp-for-blender.com/account"
 PREMIUM_TIMEOUT = 30
@@ -5180,6 +5431,7 @@ PREMIUM_ERROR_MESSAGES = {
 
 # The scene checkboxes that turn each generator on, in both modes.
 PREMIUM_INTEGRATIONS = {
+    "meshy": ("Meshy", "blendermcp_use_meshy"),
     "hyper3d": ("Hyper3D Rodin", "blendermcp_use_hyper3d"),
     "hunyuan3d": ("Hunyuan3D", "blendermcp_use_hunyuan3d"),
     "tripo": ("Tripo", "blendermcp_use_tripo"),
@@ -5359,7 +5611,7 @@ def _premium_quality(model, quality, from_image):
 
 
 def premium_integration_status(integration, enabled):
-    """Reply for get_hyper3d_status / get_hunyuan3d_status / get_tripo_status."""
+    """Reply for get_hyper3d_status / get_hunyuan3d_status / get_tripo_status / get_meshy_status."""
     label, prop = PREMIUM_INTEGRATIONS[integration]
     if not enabled:
         return {"enabled": False, "mode": "PREMIUM", "message": (
@@ -5381,6 +5633,8 @@ def premium_integration_status(integration, enabled):
                       "poll_hunyuan_job_status, then import_generated_asset_hunyuan with the ResultFile3Ds URL. "
                       + quality),
         "tripo": "Mode: PREMIUM. From an image, Tripo is high-quality only. " + quality,
+        "meshy": ("Mode: PREMIUM. Meshy uses its latest model and every generation counts as standard "
+                  "quality. Models arrive at real-world size with their origin at the bottom."),
     }[integration]
     return {"enabled": True, "mode": "PREMIUM", "message": f"{summary}. {flow}"}
 
@@ -5504,7 +5758,8 @@ def premium_tripo_status():
     enabled = bool(getattr(bpy.context.scene, "blendermcp_use_tripo", False))
     if premium_active():
         return premium_integration_status("tripo", enabled)
-    return {"enabled": False, "message": "Tripo is only available with MCP for Blender Premium."}
+    return {"enabled": False, "message": "Tripo is only available with MCP for Blender Premium: "
+                                         f"{PREMIUM_PRICING_URL}?ref=addon-tripo"}
 
 
 def premium_tripo_handlers():
@@ -5515,6 +5770,51 @@ def premium_tripo_handlers():
         "create_tripo_job": premium_create_tripo_job,
         "poll_tripo_job_status": premium_poll_fal_job,
         "import_generated_asset_tripo": premium_import_job,
+    }
+
+
+# Meshy: Meshy-style shapes. The Premium server runs a text job's preview and
+# refine as one job, so there's no refine step here, and "prm" tells these
+# jobs apart from tasks started on the user's own key.
+
+_PREMIUM_MESHY_STATUS = {"reserved": "PENDING", "running": "IN_PROGRESS", "succeeded": "SUCCEEDED",
+                         "failed": "FAILED"}
+
+
+def premium_create_meshy_job(text_prompt=None, image=None):
+    result = premium_create_job("meshy", "standard", text_prompt=text_prompt, image=image)
+    if not result.get("job_id"):
+        return result
+    return {"task_id": result["job_id"], "kind": "prm", "message": premium_summary()}
+
+
+def premium_poll_meshy_job(task_id=None, kind=None):
+    if not task_id:
+        return {"error": "task_id is required"}
+    if kind != "prm":
+        return {"error": "This Meshy generation was started with your own Meshy API key. Switch Generation "
+                         "Source back to Your own API keys in the add-on preferences to finish it."}
+    job = _premium_job(task_id)
+    if job.get("code") or "status" not in job:
+        return job
+    reply = {"status": _PREMIUM_MESHY_STATUS.get(job["status"], "IN_PROGRESS")}
+    if job.get("progress") is not None:
+        reply["progress"] = job["progress"]
+    if job["status"] == "failed":
+        reply["error"] = (job.get("error") or "Generation failed") + ". This attempt wasn't counted."
+    return reply
+
+
+def premium_import_meshy(name, task_id=None, model_url=None):
+    return premium_import_job(task_id, name)
+
+
+def premium_meshy_handlers():
+    """Meshy commands in Premium mode; the caller checks the checkbox."""
+    return {
+        "create_meshy_job": premium_create_meshy_job,
+        "poll_meshy_job_status": premium_poll_meshy_job,
+        "import_generated_asset_meshy": premium_import_meshy,
     }
 
 
@@ -5588,14 +5888,14 @@ def premium_draw_preferences(prefs, box):
     _premium_draw_quality(prefs, col)
     row = col.row(align=True)
     row.operator("blendermcp.premium_open_account", text="Manage account", icon='URL')
-    row.operator("wm.url_open", text="Get Premium", icon='FUND').url = PREMIUM_PRICING_URL
+    row.operator("wm.url_open", text="Get Premium", icon='FUND').url = PREMIUM_PRICING_URL + "?ref=addon-prefs"
 
 
 def premium_draw_upsell(layout):
     """For own-key users: a single line saying Premium exists and where to get it."""
     row = layout.row(align=True)
     row.label(text="No API keys? Use Premium", icon='FUND')
-    row.operator("wm.url_open", text="Get Premium").url = PREMIUM_PRICING_URL
+    row.operator("wm.url_open", text="Get Premium").url = PREMIUM_PRICING_URL + "?ref=addon-upsell"
 
 
 def premium_draw_panel(layout, prefs):
@@ -5607,14 +5907,14 @@ def premium_draw_panel(layout, prefs):
         col.label(text="Activate your license key in Preferences.")
         row = col.row(align=True)
         row.operator("screen.userpref_show", text="Open Preferences", icon='PREFERENCES').section = 'ADDONS'
-        row.operator("wm.url_open", text="Get Premium", icon='FUND').url = PREMIUM_PRICING_URL
+        row.operator("wm.url_open", text="Get Premium", icon='FUND').url = PREMIUM_PRICING_URL + "?ref=addon-sidebar"
     elif not _premium_status:
         col.operator("blendermcp.premium_refresh", text="Load plan", icon='FILE_REFRESH')
     elif not _premium_status.get("tier"):
         col.label(text="Your subscription isn't active.")
         row = col.row(align=True)
         row.operator("blendermcp.premium_open_account", text="Manage account", icon='URL')
-        row.operator("wm.url_open", text="Get Premium", icon='FUND').url = PREMIUM_PRICING_URL
+        row.operator("wm.url_open", text="Get Premium", icon='FUND').url = PREMIUM_PRICING_URL + "?ref=addon-sidebar"
     elif prefs is not None:
         # Quality only means something once there's a plan to spend.
         col.separator()
@@ -5764,7 +6064,7 @@ class BLENDERMCP_AddonPreferences(bpy.types.AddonPreferences):
         name="Generation Source",
         description="Where 3D model generation runs",
         items=[
-            ("BYOK", "Your own API keys", "Use your own Hyper3D, fal.ai or Tencent Cloud keys"),
+            ("BYOK", "Your own API keys", "Use your own Hyper3D, fal.ai, Meshy or Tencent Cloud keys"),
             ("PREMIUM", "Premium", "Generate through MCP for Blender Premium with one license key"),
         ],
         default="BYOK",
@@ -5790,10 +6090,16 @@ class BLENDERMCP_AddonPreferences(bpy.types.AddonPreferences):
         ],
         default="standard",
     )
+    meshy_api_key: bpy.props.StringProperty(
+        name="Meshy API Key",
+        subtype="PASSWORD",
+        description="Persistent Meshy API Key",
+        default=""
+    )
 
     def draw(self, context):
         layout = self.layout
-        
+
         # Telemetry section
         layout.label(text="Telemetry & Privacy:", icon='PREFERENCES')
         
@@ -5837,6 +6143,9 @@ class BLENDERMCP_AddonPreferences(bpy.types.AddonPreferences):
             col.operator("wm.url_open", text="Tencent Cloud keys", icon='URL').url = \
                 "https://console.cloud.tencent.com/cam/capi"
             col.prop(self, "hunyuan3d_api_url", text="Hunyuan3D API URL")
+            col.separator()
+            col.prop(self, "meshy_api_key", text="Meshy API Key")
+            col.operator("wm.url_open", text="meshy.ai keys", icon='URL').url = MESHY_KEY_URL
 
         layout.separator()
         layout.label(text="Persistent API Credentials:", icon='LOCKED')
@@ -5961,6 +6270,18 @@ class BLENDERMCP_PT_Panel(bpy.types.Panel):
             sub = self._integration_header(layout, scene, "blendermcp_use_tripo", "Tripo", 'MESH_TORUS')
             if sub:
                 sub.label(text="Runs through Premium")
+
+        sub = self._integration_header(layout, scene, "blendermcp_use_meshy", "Meshy", 'OUTLINER_OB_MESH')
+        if sub and premium:
+            sub.label(text="Runs through Premium")
+        elif sub:
+            col = sub.column(align=True)
+            col.prop(scene, "blendermcp_meshy_model", text="Model")
+            if prefs:
+                col.prop(prefs, "meshy_api_key", text="API Key")
+            else:
+                col.prop(scene, "blendermcp_meshy_api_key", text="API Key")
+            sub.operator("wm.url_open", text="meshy.ai keys", icon='URL').url = MESHY_KEY_URL
 
         # Community section
         layout.separator()
@@ -6353,6 +6674,26 @@ def register():
         default=False
     )
 
+    bpy.types.Scene.blendermcp_use_meshy = bpy.props.BoolProperty(
+        name="Use Meshy",
+        description="Enable Meshy model generation",
+        default=False,
+    )
+
+    bpy.types.Scene.blendermcp_meshy_model = bpy.props.EnumProperty(
+        name="Meshy Model",
+        description="Meshy model used for each generation",
+        items=[(ident, label, f"{label} model") for ident, label in MESHY_MODELS.items()],
+        default=MESHY_DEFAULT_MODEL,
+    )
+
+    bpy.types.Scene.blendermcp_meshy_api_key = bpy.props.StringProperty(
+        name="Meshy API Key",
+        subtype="PASSWORD",
+        description="API Key provided by Meshy",
+        default="",
+    )
+
     bpy.types.Scene.blendermcp_use_polypizza = bpy.props.BoolProperty(
         name="Use Poly Pizza",
         description="Enable Poly Pizza asset integration",
@@ -6422,6 +6763,9 @@ def unregister():
     del bpy.types.Scene.blendermcp_use_sketchfab
     del bpy.types.Scene.blendermcp_sketchfab_api_key
     del bpy.types.Scene.blendermcp_use_tripo
+    del bpy.types.Scene.blendermcp_use_meshy
+    del bpy.types.Scene.blendermcp_meshy_model
+    del bpy.types.Scene.blendermcp_meshy_api_key
     del bpy.types.Scene.blendermcp_use_polypizza
     del bpy.types.Scene.blendermcp_polypizza_api_key
     del bpy.types.Scene.blendermcp_use_hunyuan3d
