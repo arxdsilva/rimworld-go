@@ -156,9 +156,15 @@ func (a *App) closeArchitect() {
 	a.archOpen = false
 	a.archTool = ""
 	a.archDrag = false
+	a.syncRoofForce()
 }
 
 func (a *App) selectArchCategory(id string) {
+	if id == roofButtonCat { // the HUD Roof button routes through the arch.cat. prefix
+		a.renderer.toggleRoofOverlayIfAny()
+		return
+	}
+	defer a.syncRoofForce()
 	a.archCat = id
 	if t, ok := toolByID(a.archTool); !ok || t.category != id {
 		a.archTool = ""
@@ -172,6 +178,7 @@ func (a *App) selectArchTool(id string) {
 		return
 	}
 	a.archCat = t.category
+	defer a.syncRoofForce()
 	if a.archTool == id {
 		a.archTool = "" // clicking the selected card toggles it off
 		return
@@ -301,6 +308,7 @@ func (a *App) rotateTool(dir int) {
 // handleArchitectInput runs while a tool is selected: drag to place,
 // right-click to stop, Q/E to rotate.
 func (a *App) handleArchitectInput(chromeConsumed bool) {
+	defer a.syncRoofForce() // right-click and Escape drop the tool; keep the overlay in step
 	if !a.archOpen || a.archTool == "" || a.renderer == nil {
 		return
 	}
@@ -413,6 +421,9 @@ func (a *App) drawArchitectGhost(screen *ebiten.Image) {
 	t, cells := a.previewCells()
 	if t.mode == placeArea {
 		a.renderer.drawGhostRect(screen, cells[0].x, cells[0].y, cells[1].x, cells[1].y)
+		if t.cmd == command.DesignateRoof {
+			a.drawRoofToolGhost(screen, cells[0].x, cells[0].y, cells[1].x, cells[1].y)
+		}
 		return
 	}
 	a.renderer.drawPlacementGhost(screen, t.build, a.toolStuff(t), facingNames[a.archFacing], cells)
