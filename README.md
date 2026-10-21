@@ -40,7 +40,7 @@ A RimWorld-inspired colony simulation written in Go with Ebitengine, built in pu
 
 ## Progress
 
-Media updated 2026-10-19 · regenerate with `make media clips`
+Media updated 2026-10-21 · regenerate with `make media clips`
 
 ### Building
 
