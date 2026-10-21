@@ -65,14 +65,14 @@ type lightState struct {
 const (
 	moonPeakEl     = 40.0 // degrees
 	litShadowMinEl = 2.0  // degrees: below this a light casts no shadow
-	litShadowAlpha = 0.32 // sun shadow alpha at the season's noon
+	litShadowAlpha = 0.38 // sun shadow alpha at the season's noon
 	// litShadowFloor keeps dawn and dusk shadows legible (W5: at
-	// sin(el) scaling they were ≈0.09 at 07:00): 0.32·0.625 = 0.20.
+	// sin(el) scaling they were ≈0.09 at 07:00): 0.38·0.625 ≈ 0.24.
 	litShadowFloor = 0.625
 	// litShadowFade is how long (hours) shadows take to fade in after the
 	// light rises and out before it sets.
 	litShadowFade   = 0.5
-	litMoonShadow   = 0.12 // moonlight shadow alpha
+	litMoonShadow   = 0.14 // moonlight shadow alpha
 	litShadowMaxLen = 3.0  // tiles
 )
 

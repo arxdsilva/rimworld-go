@@ -419,8 +419,8 @@ func TestShadowFields(t *testing.T) {
 	if !unit(noon.ShadowDir) || !near(noon.ShadowDir[0], 0) || noon.ShadowDir[1] >= 0 {
 		t.Fatalf("noon shadows fall north (-y): %v", noon.ShadowDir)
 	}
-	if !near(noon.ShadowAlpha, 0.32) {
-		t.Fatalf("summer noon alpha %v, want 0.32", noon.ShadowAlpha)
+	if !near(noon.ShadowAlpha, 0.38) {
+		t.Fatalf("summer noon alpha %v, want 0.38", noon.ShadowAlpha)
 	}
 	if l := noon.ShadowLen(1); !near(l, 1/math.Tan(65*math.Pi/180)) {
 		t.Fatalf("noon shadow of h 1: %v", l)
@@ -436,11 +436,11 @@ func TestShadowFields(t *testing.T) {
 	if l := dawn.ShadowLen(1); !near(l, 3) {
 		t.Fatalf("dawn shadow is long (clamped to 3), got %v", l)
 	}
-	if want := 0.32 * 0.625; !near(dawn.ShadowAlpha, want) {
+	if want := 0.38 * 0.625; !near(dawn.ShadowAlpha, want) {
 		t.Fatalf("06:30 alpha %v, want the floor %v", dawn.ShadowAlpha, want)
 	}
 	// legible (>= 0.20) from 30 min after sunrise to 30 min before sunset,
-	// in every season, rising to 0.32 at noon
+	// in every season, rising to 0.38 at noon
 	for _, day := range []int{summerDay, winterDay, 3, 30} {
 		prev := 0.0
 		for h := 6.5; h <= 12; h += 0.25 {
@@ -467,7 +467,7 @@ func TestShadowFields(t *testing.T) {
 	}
 
 	mid := lightAt(0, summerDay, "clear", 0)
-	if !near(mid.ShadowAlpha, 0.12) || !unit(mid.ShadowDir) || mid.ShadowDir[1] >= 0 {
+	if !near(mid.ShadowAlpha, 0.14) || !unit(mid.ShadowDir) || mid.ShadowDir[1] >= 0 {
 		t.Fatalf("midnight moon shadow: alpha %v dir %v", mid.ShadowAlpha, mid.ShadowDir)
 	}
 	if l := mid.ShadowLen(1); !near(l, 1/math.Tan(40*math.Pi/180)) {
@@ -488,18 +488,18 @@ func TestShadowFields(t *testing.T) {
 	}
 
 	winter := lightAt(12, winterDay, "clear", 0)
-	if !near(winter.ShadowAlpha, 0.32) || winter.ShadowLen(1) <= noon.ShadowLen(1) {
+	if !near(winter.ShadowAlpha, 0.38) || winter.ShadowLen(1) <= noon.ShadowLen(1) {
 		t.Fatalf("winter noon: alpha %v (season-normalised), length %v longer than summer", winter.ShadowAlpha, winter.ShadowLen(1))
 	}
 
 	storm := lightAt(12, summerDay, "storm", 0.5)
-	if !near(storm.ShadowAlpha, 0.32*(1-0.6*0.5)) {
+	if !near(storm.ShadowAlpha, 0.38*(1-0.6*0.5)) {
 		t.Fatalf("storm alpha %v", storm.ShadowAlpha)
 	}
-	if bl := lightAt(0, summerDay, "blizzard", 1); !near(bl.ShadowAlpha, 0.12*0.4) {
+	if bl := lightAt(0, summerDay, "blizzard", 1); !near(bl.ShadowAlpha, 0.14*0.4) {
 		t.Fatalf("blizzard moon alpha %v", bl.ShadowAlpha)
 	}
-	if rain := lightAt(12, summerDay, "rain", 1); !near(rain.ShadowAlpha, 0.32) {
+	if rain := lightAt(12, summerDay, "rain", 1); !near(rain.ShadowAlpha, 0.38) {
 		t.Fatalf("rain does not fade shadows, got %v", rain.ShadowAlpha)
 	}
 }
