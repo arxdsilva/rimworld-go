@@ -4,7 +4,8 @@
 #   scripts/audio_import.sh <raw-file> <file-in-prompts.json> <credits> "<license>"
 #   e.g. scripts/audio_import.sh assets/source/audio/elevenlabs/raw/x.mp3 ambience/day.ogg 400 "ElevenLabs Creator plan"
 #
-# Loudness-normalizes (music -16 LUFS stereo, ambience -20 LUFS mono),
+# Loudness-normalizes (measured, then gained: music -16 LUFS stereo,
+# ambience -20 LUFS mono),
 # resamples to 48 kHz, makes loops seamless (audiogen -loopfix), encodes
 # Ogg Vorbis into assets/generated/audio/<file>, and lists it in the sound
 # list with its prompt, credits and license (audiogen -register).
@@ -22,8 +23,13 @@ esac
 loop=$(go run ./cmd/audiogen -looping "$rel")
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
-ffmpeg -hide_banner -loglevel error -y -i "$raw" \
-  -af "loudnorm=I=${lufs}:TP=-1.5:LRA=11" -ar 48000 -ac "$ch" -c:a pcm_s16le "$tmp/norm.wav"
+# measure, then apply the exact gain (single-pass loudnorm undershoots on
+# short, quiet clips), with a limiter keeping peaks under -1.5 dBFS
+ffmpeg -hide_banner -loglevel error -y -i "$raw" -ar 48000 -ac "$ch" -c:a pcm_s16le "$tmp/in.wav"
+have=$(ffmpeg -hide_banner -i "$tmp/in.wav" -af ebur128=framelog=quiet -f null - 2>&1 | awk '/^ +I:/ {print $2}' | tail -1)
+gain=$(awk -v t="$lufs" -v h="$have" 'BEGIN { printf "%.2f", t - h }')
+ffmpeg -hide_banner -loglevel error -y -i "$tmp/in.wav" \
+  -af "volume=${gain}dB,alimiter=limit=0.84:attack=5:release=50:level=false" -c:a pcm_s16le "$tmp/norm.wav"
 src=$tmp/norm.wav
 if [ "$loop" = true ]; then
   go run ./cmd/audiogen -loopfix "$tmp/norm.wav" "$tmp/loop.wav"

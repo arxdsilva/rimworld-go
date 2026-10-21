@@ -51,6 +51,8 @@ func creditsLines() []string {
 		"Vendor sprites (first playable stand-in): Raphael Goncalves",
 		"(Rgsdev), CC0.",
 		"Sound effects: original, made in code (cmd/audiogen).",
+		"Ambience and music: generated with ElevenLabs (elevenlabs.io),",
+		"free tier, non-commercial use.",
 	}
 }
 

@@ -1,4 +1,154 @@
 {
-  "note": "Every ElevenLabs generation, approved or not: id, take, seconds, credits_before, credits_after, approved, date.",
-  "takes": []
+  "note": "Every ElevenLabs generation, approved or not. Account: free tier (non-commercial use, credit ElevenLabs). check_subscription's character_count lags: it read 0 after the first take and 300 after all 12 ambience clips, i.e. about 25 credits per 5 s sound effect.",
+  "takes": [
+    {
+      "id": "amb.day",
+      "take": 1,
+      "part": "1 of 4 (stitched bed)",
+      "file": "raw/sfx_Open__20261021_115412.mp3",
+      "tool": "text_to_sound_effects",
+      "seconds": 5,
+      "loop": true,
+      "credits": 25,
+      "approved": "arxdsilva",
+      "date": "2026-10-21"
+    },
+    {
+      "id": "amb.day",
+      "take": 1,
+      "part": "2 of 4 (stitched bed)",
+      "file": "raw/sfx_Open__20261021_115559.mp3",
+      "tool": "text_to_sound_effects",
+      "seconds": 5,
+      "loop": true,
+      "credits": 25,
+      "approved": "pending listen",
+      "date": "2026-10-21"
+    },
+    {
+      "id": "amb.day",
+      "take": 1,
+      "part": "3 of 4 (stitched bed)",
+      "file": "raw/sfx_Open__20261021_115601.mp3",
+      "tool": "text_to_sound_effects",
+      "seconds": 5,
+      "loop": true,
+      "credits": 25,
+      "approved": "pending listen",
+      "date": "2026-10-21"
+    },
+    {
+      "id": "amb.day",
+      "take": 1,
+      "part": "4 of 4 (stitched bed)",
+      "file": "raw/sfx_Open__20261021_115604.mp3",
+      "tool": "text_to_sound_effects",
+      "seconds": 5,
+      "loop": true,
+      "credits": 25,
+      "approved": "pending listen",
+      "date": "2026-10-21"
+    },
+    {
+      "id": "amb.night",
+      "take": 1,
+      "part": "1 of 4 (stitched bed)",
+      "file": "raw/sfx_Calm__20261021_115621.mp3",
+      "tool": "text_to_sound_effects",
+      "seconds": 5,
+      "loop": true,
+      "credits": 25,
+      "approved": "pending listen",
+      "date": "2026-10-21"
+    },
+    {
+      "id": "amb.night",
+      "take": 1,
+      "part": "2 of 4 (stitched bed)",
+      "file": "raw/sfx_Quiet_20261021_115625.mp3",
+      "tool": "text_to_sound_effects",
+      "seconds": 5,
+      "loop": true,
+      "credits": 25,
+      "approved": "pending listen",
+      "date": "2026-10-21"
+    },
+    {
+      "id": "amb.night",
+      "take": 1,
+      "part": "3 of 4 (stitched bed)",
+      "file": "raw/sfx_Calm__20261021_115628.mp3",
+      "tool": "text_to_sound_effects",
+      "seconds": 5,
+      "loop": true,
+      "credits": 25,
+      "approved": "pending listen",
+      "date": "2026-10-21"
+    },
+    {
+      "id": "amb.night",
+      "take": 1,
+      "part": "4 of 4 (stitched bed)",
+      "file": "raw/sfx_Peace_20261021_115631.mp3",
+      "tool": "text_to_sound_effects",
+      "seconds": 5,
+      "loop": true,
+      "credits": 25,
+      "approved": "pending listen",
+      "date": "2026-10-21"
+    },
+    {
+      "id": "amb.rain",
+      "take": 1,
+      "part": "1 of 4 (stitched bed)",
+      "file": "raw/sfx_Stead_20261021_115635.mp3",
+      "tool": "text_to_sound_effects",
+      "seconds": 5,
+      "loop": true,
+      "credits": 25,
+      "approved": "pending listen",
+      "date": "2026-10-21"
+    },
+    {
+      "id": "amb.rain",
+      "take": 1,
+      "part": "2 of 4 (stitched bed)",
+      "file": "raw/sfx_Stead_20261021_115638.mp3",
+      "tool": "text_to_sound_effects",
+      "seconds": 5,
+      "loop": true,
+      "credits": 25,
+      "approved": "pending listen",
+      "date": "2026-10-21"
+    },
+    {
+      "id": "amb.rain",
+      "take": 1,
+      "part": "3 of 4 (stitched bed)",
+      "file": "raw/sfx_Mediu_20261021_115641.mp3",
+      "tool": "text_to_sound_effects",
+      "seconds": 5,
+      "loop": true,
+      "credits": 25,
+      "approved": "pending listen",
+      "date": "2026-10-21"
+    },
+    {
+      "id": "amb.rain",
+      "take": 1,
+      "part": "4 of 4 (stitched bed)",
+      "file": "raw/sfx_Stead_20261021_115644.mp3",
+      "tool": "text_to_sound_effects",
+      "seconds": 5,
+      "loop": true,
+      "credits": 25,
+      "approved": "pending listen",
+      "date": "2026-10-21"
+    }
+  ],
+  "totals": {
+    "credits_used": 300,
+    "credits_left": 9700,
+    "measured_by": "check_subscription character_count 0 -> 300"
+  }
 }
