@@ -132,6 +132,8 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 	}
 	a.syncRoofForce()
 	a.drawArchitectGhost(screen)
+	a.drawMoveMarkers(screen) // move_mode.go: pending moves
+	a.drawMoveMode(screen)
 	drawPanel(screen, 0, 0, float32(sw), hudTopH)
 	x := hudPad
 	wld := a.renderer.world()

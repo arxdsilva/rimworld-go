@@ -99,6 +99,7 @@ func (a *App) buildingButtons() []button {
 	if !b.Deconstruct {
 		out = append(out, button{id: "bldg.deconstruct", label: "Deconstruct", x: r.x + r.w - 130, y: r.y + r.h - 32, w: 120, h: 24})
 	}
+	out = append(out, a.moveCopyButtons(b, r)...)
 	if !b.Bench {
 		return out
 	}
@@ -175,6 +176,9 @@ func (a *App) drawBuildingInspector(screen *ebiten.Image) {
 			drawLabel(screen, int(r.x)+16, y+4, "No bills yet - add one below.")
 		}
 	}
+	if ln := movingLine(b); ln != "" {
+		drawLabel(screen, int(r.x)+134, int(r.y+r.h)-86, ln)
+	}
 	mx, my := a.currentCursor()
 	a.drawButtons(screen, a.buildingButtons(), mx, my)
 	a.drawBuildingSelection(screen, b)
@@ -241,6 +245,19 @@ func (a *App) applyBuildingClick(id string) {
 			X2: b.X + max(b.W, 1) - 1, Y2: b.Y + max(b.H, 1) - 1})
 		return
 	}
+	switch id {
+	case "bldg.move":
+		a.startMove(b)
+		return
+	case "bldg.copy":
+		a.presetArchTool(b.Kind, b.Stuff, b.Facing)
+		return
+	case "bldg.cancelmove":
+		if f, ok := pendingMoveFrame(a.renderer.world(), b.ID); ok {
+			a.renderer.enqueue(moveCancelRect(f))
+		}
+		return
+	}
 	parts := strings.Split(id, ".")
 	if len(parts) != 3 || parts[0] != "bill" {
 		return
@@ -278,4 +295,34 @@ func (a *App) applyBuildingClick(id string) {
 		return
 	}
 	a.renderer.enqueue(set)
+}
+
+// moveCopyButtons are the Move / Copy / Cancel-move buttons along the
+// panel's bottom edge.
+func (a *App) moveCopyButtons(b game.BuildingView, r button) []button {
+	y := r.y + r.h - 32
+	mv := button{id: "bldg.move", label: "Move", x: r.x + 12, y: y, w: 56, h: 24}
+	if !movableKind(b.Kind, b.Floor) {
+		mv.disabled, mv.reason, mv.quiet = true, "can't be moved", true
+	}
+	cp := button{id: "bldg.copy", label: "Copy", x: r.x + 72, y: y, w: 56, h: 24}
+	if p := a.lockedBy("build:" + b.Kind); p != "" {
+		cp.disabled, cp.reason, cp.quiet = true, "needs research: "+p, true
+	} else if !hasBuildTool(b.Kind) {
+		cp.disabled, cp.reason, cp.quiet = true, "not buildable", true
+	}
+	out := []button{mv, cp}
+	if b.MovingTo != nil {
+		out = append(out, button{id: "bldg.cancelmove", label: "Cancel move", x: r.x + 12, y: y - 30, w: 112, h: 24})
+	}
+	return out
+}
+
+func hasBuildTool(kind string) bool {
+	for _, t := range archTools {
+		if t.build == kind {
+			return true
+		}
+	}
+	return false
 }

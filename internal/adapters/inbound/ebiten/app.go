@@ -104,7 +104,8 @@ type App struct {
 	hasAnimal                      bool
 	selPlant, selItem              entity.EntityID // plant and item panels (selection.go)
 	hasPlant, hasItem              bool
-	selCycle                       selCycle // last map click, for cycling a tile's stack
+	selCycle                       selCycle      // last map click, for cycling a tile's stack
+	bldgMove                       bldgMoveState // the building panel's Move mode (move_mode.go)
 	alertCycle                     map[string]int
 	archDrag                       bool
 	archX0, archY0, archX1, archY1 int
@@ -221,8 +222,12 @@ func (a *App) Update() error {
 			a.closeFloat() // click outside the order menu just closes it
 			consumed = true
 		}
+		moving := a.handleMoveMode() // move_mode.go: placing a moved building
+		if moving {
+			consumed = true
+		}
 		a.handleArchitectInput(consumed)
-		if a.archTool == "" {
+		if a.archTool == "" && !moving {
 			if !consumed && inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 				a.clickSelect() // selection.go
 			}

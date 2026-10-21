@@ -439,3 +439,31 @@ func (a *App) drawArchitectGhost(screen *ebiten.Image) {
 	vector.FillRect(screen, float32(mx+16), float32(my+18), float32(len(msg)*6+12), 18, uiPanel, false)
 	drawLabel(screen, mx+22, my+19, msg)
 }
+
+// presetArchTool opens the Architect with the build tool for kind
+// selected (never toggling it off), the material and facing preset, as
+// the building panel's Copy does. False when no tool builds kind.
+func (a *App) presetArchTool(kind, stuff, facing string) bool {
+	for _, t := range archTools {
+		if t.build != kind {
+			continue
+		}
+		a.openArchitect()
+		a.archCat = t.category
+		a.archTool = t.id
+		a.archDrag = false
+		if bv, ok := buildable(kind); ok && bv.StoneOK && stuff == "stone" {
+			a.archStuff = "stone"
+		} else if ok && bv.StoneOK {
+			a.archStuff = "wood"
+		}
+		for i, n := range facingNames {
+			if n == facing {
+				a.archFacing = uint8(i)
+			}
+		}
+		a.syncRoofForce()
+		return true
+	}
+	return false
+}
