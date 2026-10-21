@@ -15,6 +15,7 @@ import (
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/platform/config"
 )
 
 const (
@@ -58,10 +59,19 @@ type AppConfig struct {
 	// Nil: locate from cwd. When it fails the vendor pack is used.
 	LoadArt    func() (*artCatalog, error)
 	LoadSplash func() (*ebiten.Image, error)
+	// LoadMenuScene loads the main-menu colony diorama (make art-menu).
+	// Nil: locate from cwd. When it fails the gradient backdrop is drawn.
+	LoadMenuScene func() (*menuDiorama, error)
 	// Capture, when set, runs a scripted screenshot session and quits.
 	Capture *Capture
 	// Saves connects save/load to storage (zero value: disabled).
 	Saves SaveHooks
+	// Settings loads and stores the Options (zero value: defaults, not saved).
+	Settings SettingsHooks
+	// Window applies fullscreen and VSync (nil: leave the window alone).
+	Window func(fullscreen, vsync bool)
+	// Sound plays the client's audio (nil: silent).
+	Sound Sound
 }
 
 // App is the ebiten.Game shell: screen routing, widgets, and (once
@@ -77,15 +87,20 @@ type App struct {
 	art        *artCatalog
 	packWarn   string
 	splash     *ebiten.Image
+	menu       *menuDiorama
+	menuTried  bool
+	menuTick   uint64 // drives menu motion; counts while no colony is shown
 	sessionErr string
 	hint       string
 	shouldQuit bool
 
 	scenario    int
 	storyteller int
-	// noThreatPause turns off pausing when a threat arrives (Options).
-	noThreatPause bool
-	difficulty    int
+	// settings are the player's Options (settings.go).
+	settings   config.Settings
+	optionsTab string
+	snd        soundDirector // what is heard (sound_director.go)
+	difficulty int
 
 	simsStarted                    int
 	renderer                       *Renderer
@@ -111,6 +126,9 @@ type App struct {
 	archDrag                       bool
 	archX0, archY0, archX1, archY1 int
 	inspectTab                     string
+	logScroll, animalLogScroll     int // log_ui.go
+	logFor, animalLogFor           entity.EntityID
+	animalLogOpen                  bool
 	capture                        captureState
 	msgSeen                        map[string]uint64 // message key -> frame first shown
 	saveSlot                       string            // current colony's save slot
@@ -161,13 +179,28 @@ func NewApp(cfg AppConfig) *App {
 			return loadPNG(path)
 		}
 	}
-	return &App{
+	if cfg.LoadMenuScene == nil {
+		cfg.LoadMenuScene = func() (*menuDiorama, error) {
+			root, err := LocateArt()
+			if err != nil {
+				return nil, err
+			}
+			return loadMenuDiorama(root)
+		}
+	}
+	if cfg.Sound == nil {
+		cfg.Sound = noSound{}
+	}
+	a := &App{
 		cfg: cfg,
 		now: time.Now,
 		nav: newNav(),
 		sw:  DefaultWindowWidth,
 		sh:  DefaultWindowHeight,
 	}
+	a.loadSettings()
+	a.applySettings()
+	return a
 }
 
 func loadAtlasFromRoot(root string) (*atlas, error) {
@@ -201,6 +234,7 @@ func (a *App) Update() error {
 			mx, my := ebiten.CursorPosition()
 			if b, ok := hitButton(a.layoutButtons(sw, sh), mx, my); ok {
 				consumed = true
+				a.uiSound(b)
 				if b.disabled {
 					a.hint = b.reason
 				} else {
@@ -215,6 +249,7 @@ func (a *App) Update() error {
 
 	if a.nav.screen() == screenColony && a.nav.overlay() == overlayNone && a.renderer != nil {
 		a.renderer.handleSpeedInput()
+		a.renderer.wheelTaken = a.handleLogWheel()
 		if a.cfg.Capture == nil { // captures frame the camera themselves
 			a.renderer.handleCameraInput(colonyViewport(sw, sh))
 		}
@@ -235,11 +270,15 @@ func (a *App) Update() error {
 			a.handleOrders()
 		}
 	}
+	if a.nav.screen() != screenColony && a.cfg.Capture == nil {
+		a.menuTick++
+	}
 	if a.cfg.Capture != nil {
 		a.tickCapture()
 	} else {
 		a.tick()
 	}
+	a.soundFrame()
 	if a.shouldQuit && (a.cfg.Capture == nil || a.capture.done) {
 		return ebiten.Termination
 	}
@@ -345,6 +384,7 @@ func (a *App) loadPack() {
 		}
 	}
 	a.loadSplash()
+	a.loadMenuScene()
 }
 
 func (a *App) finishBoot() {
@@ -439,11 +479,11 @@ func (a *App) applyClick(id string) {
 		a.toggleWorkCell(id)
 	case id == "tab.menu":
 		a.apply(intent{kind: intentPause})
-	case id == "options.pausethreat":
-		a.noThreatPause = !a.noThreatPause
-		if a.renderer != nil {
-			a.renderer.pauseOnThreat = !a.noThreatPause
-		}
+	case strings.HasPrefix(id, "options.") && id != "options.back":
+		a.applyOption(id)
+	case id == "menu.options" || id == "pause.options":
+		a.optionsTab = "" // always open on the first tab
+		a.apply(a.clickIntent(id))
 	case id == "inspector.close":
 		if a.renderer != nil {
 			a.renderer.ClearSelect()
@@ -454,6 +494,8 @@ func (a *App) applyClick(id string) {
 		a.inspectTab = "needs"
 	case id == "inspector.gear":
 		a.inspectTab = "gear"
+	case id == "inspector.log":
+		a.inspectTab = "log"
 	case id == "scenario.0":
 		a.scenario = 0
 	case id == "scenario.1":
@@ -574,7 +616,7 @@ func (a *App) startSession(sim Simulation) {
 	a.renderer = New(sim)
 	a.renderer.pack = a.pack
 	a.renderer.art = a.art
-	a.renderer.pauseOnThreat = !a.noThreatPause
+	a.syncRenderer()
 	a.nav.reset(frame{screen: screenColony})
 }
 
@@ -710,7 +752,9 @@ func bodyOrigin(buttons []button, sh int) (x, y int) {
 }
 
 func (a *App) fillMenu(screen *ebiten.Image, sw, sh int, title string, body []string, bodyX int) {
-	drawMenuBackdrop(screen, sw, sh)
+	if !a.drawMenuDiorama(screen, sw, sh, 0.55) {
+		drawMenuBackdrop(screen, sw, sh)
+	}
 	drawPanel(screen, 40, 24, float32(sw-80), 56)
 	drawLabel(screen, 56, 44, title)
 	if len(body) == 0 {

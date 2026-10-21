@@ -170,6 +170,15 @@ type saveState struct {
 	// Grass and GrassCut (UI-011); absent in older saves, which reseed.
 	Grass    []uint8
 	GrassCut [][2]int
+	// ZoneMap (ZONE-001): the per-tile zones; absent in older saves, whose
+	// stockpile, grow zone and pen rectangles are painted into it on load.
+	ZoneMap zoneSave
+	// Logs (LOG-001): per-creature event logs; absent in older saves.
+	Logs map[entity.EntityID][]logEntry
+	// Incoming (HAUL-001): material on its way to each frame or fuel user.
+	Incoming map[entity.EntityID]int
+	// Deliveries (HAUL-001): each hauler's shares of Incoming, route order.
+	Deliveries map[entity.EntityID][]haulShare
 }
 
 // Info describes the game for a save header.
@@ -197,7 +206,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 		Jobs: exportStore(g.jobs), Need: exportStore(g.need), Vital: exportStore(g.vital), Labor: exportStore(g.labor),
 		ItemIDs: g.itemIDs, Stacks: exportStore(g.stacks), FrameIDs: g.frameIDs, Frames: exportStore(g.frames),
 		BldgIDs: g.bldgIDs, Bldgs: exportStore(g.bldgs), PlantIDs: g.plantIDs, Plants: exportStore(g.plants),
-		Terr: g.terr, Mines: g.mines, Stockpiles: g.stockpiles, GrowZones: g.growZones,
+		Terr: g.terr, Mines: g.mines,
 		LastMeal: g.lastMeal, Bills: g.bills, Racks: g.racks, Fuel: g.fuel,
 		Exposure: map[entity.EntityID][2]int{}, NoComfort: g.noComfort,
 		OrderQueue: map[entity.EntityID][]savedOrder{}, Apparel: g.apparel, Joy: g.joy,
@@ -208,7 +217,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 		AteAt: g.ateAt, Draft: g.draft, SleptAt: g.sleptAt,
 		AnimalIDs: g.animalIDs, Animals: exportStore(g.animals), Equip: g.equip, Traces: g.traces, Wild: g.wild,
 		Carrying: g.carrying, TendedUntil: g.tendedUntil, Wounds: g.wounds,
-		Research: g.research, ResearchCur: g.researchCur, ResearchSet: g.researchSet, Pens: g.pens, RockDamage: g.rockDamage, Residual: g.residual,
+		Research: g.research, ResearchCur: g.researchCur, ResearchSet: g.researchSet, RockDamage: g.rockDamage, Residual: g.residual,
 		Motion: g.exportMotion(), Strikes: g.lastStrike, Hits: g.lastHit,
 		Weather: g.weather, Graves: g.graves, Roofs: g.exportRoofs(),
 	}
@@ -224,6 +233,8 @@ func (g *Game) Save(w io.Writer, name string) error {
 	for id, b := range g.breaks {
 		s.Breaks[id] = savedBreak{b.kind, b.until}
 	}
+	s.ZoneMap, s.Logs, s.Incoming = g.exportZones(), g.exportLogs(), g.exportIncoming()
+	s.Deliveries = g.exportDeliveries()
 	zw := gzip.NewWriter(w)
 	enc := gob.NewEncoder(zw)
 	if err := enc.Encode(g.Info(name)); err != nil {
@@ -285,7 +296,6 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.bldgIDs, g.bldgs = s.BldgIDs, importStore(s.Bldgs)
 	g.plantIDs, g.plants = s.PlantIDs, importStore(s.Plants)
 	g.terr = s.Terr
-	g.stockpiles, g.growZones = s.Stockpiles, s.GrowZones
 	g.roomGrid, g.roomTemps, g.roomDirty = s.RoomGrid, s.RoomTemps, true
 	g.reserve = reservation.Import(s.Claims)
 	g.pending = s.Pending
@@ -312,7 +322,6 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	setMap(&g.tendedUntil, s.TendedUntil)
 	setMap(&g.wounds, s.Wounds)
 	g.research, g.researchCur, g.researchSet = s.Research, s.ResearchCur, s.ResearchSet
-	g.pens = s.Pens
 	setMap(&g.rockDamage, s.RockDamage)
 	g.residual = s.Residual
 	g.motion = importStore(s.Motion)
@@ -336,6 +345,11 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	for id, b := range s.Breaks {
 		g.breaks[id] = breakState{b.Kind, b.Until}
 	}
+	s.ZoneMap.legacy = legacyZones{s.Stockpiles, s.GrowZones, s.Pens} // older saves: rectangles
+	g.importZones(s.ZoneMap)
+	g.importLogs(s.Logs)
+	g.importIncoming(s.Incoming)
+	g.importDeliveries(s.Deliveries)
 	return g, info, nil
 }
 

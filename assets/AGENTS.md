@@ -37,6 +37,10 @@ rebuilds everything:
 make art           # headless Blender -> generated/ + metadata/, then validate
 make art-check     # validator only (python3 + Pillow)
 make art-preview   # generated/contact_sheet.png + generated/prototype_scene.png
+make art-menu      # main-menu colony diorama (scenes/menu.py), not part of make art
+make audio         # procedural sound effects (cmd/audiogen) + the sound list
+make music         # composed music (cmd/audiogen/music.go) -> Ogg, needs ffmpeg
+make audio-check   # sound list vs files, 48 kHz, 20 MB budget
 ```
 
 Rules:
@@ -76,14 +80,16 @@ assets/
 │   ├── blender/
 │   │   ├── build.py     # entry point (headless or live via Blender MCP)
 │   │   ├── template.blend
-│   │   └── artlib/      # contracts, stage, post-pass, metadata, families/
+│   │   └── artlib/      # contracts, stage, post-pass, metadata, families/, scenes/
 │   ├── tools/           # validate_assets.py, contact_sheet.py, compose_scene.py
 │   └── raster/ui/main_menu_colonist.png
 ├── generated/
 │   ├── world/<family>/<name>.png (+ _mask.png)   # @2x sprites
 │   ├── ui/icons/*.png
+│   ├── ui/menu/menu_diorama.png (+ menu_glow_lamp/fire.png)  # main-menu scene
 │   ├── contact_sheet.png, prototype_scene*.png, pawn_sheet.png  # review aids
 ├── metadata/<family>/<name>.yaml   # footprint, origin_px, attachments, tint
+│   └── ui_menu/menu_diorama.yaml    # menu scene: canvas, glow layers, fire/lamp px (not a sprite)
 ├── Free 2D Animated Vector Game Character Sprites/   # vendor source
 └── .gitkeep
 ```
@@ -93,7 +99,39 @@ colonist bust with raven, RGBA cutout). It is not vendor pack art and is
 not a reconstruction of proprietary RimWorld screenshots. The brief that
 produced it lives at repo-root `ai-bg-rimworld`.
 
+`generated/ui/menu/` is the main-menu background: one scene composed from
+the family builders and rendered through the same stage (`stage.place`,
+`stage.render_scene`). Edit `source/blender/artlib/scenes/menu.py`, then
+`make art-menu`; live, `menu.preview()` writes a quarter-size render.
+
 The renderer draws the original set (ART-006). The vendor pack is only a
 fallback when `metadata/` is missing. Do not hand-patch vendor PNGs; treat
 the pack as immutable source. `generated/ingame_capture.png` comes from
 `make art-capture` (real renderer).
+
+## Audio (SND-002)
+
+```text
+generated/audio/{ui,sfx,ambience,music}/   # 48 kHz: WAV effects, Ogg Vorbis music/ambience
+metadata/audio/audio.json                  # the sound list: id, bus, loop, volume, files, provenance
+source/audio/prompts.json                  # ElevenLabs prompts in spending order + credit budget
+source/audio/elevenlabs/ledger.json        # every ElevenLabs take, approved or not, with its cost
+source/audio/elevenlabs/raw/               # downloads before review (git-ignored)
+```
+
+- Every sound is original. Effects are made in code (`cmd/audiogen`,
+  `pkg/sfxsynth`): edit `cmd/audiogen/recipes.go`, then `make audio`.
+  Output is byte-identical everywhere.
+- Music is composed in code too (`cmd/audiogen/music.go`, `pkg/musicsynth`:
+  scores played by synthesized guitar, strings, horn, bass and drums
+  through a reverb): edit a score, then `make music`.
+- Ambience beds come from ElevenLabs within a 10,000-credit
+  budget, in `prompts.json` priority order: one retry per sound at most,
+  every take in the ledger. Import approved takes with
+  `scripts/audio_import.sh` (loudness, 48 kHz, seamless loops, Vorbis,
+  sound-list entry with prompt, credits and license).
+- Ids: `ui.*` (interface bus), `sfx.*` (effects), `amb.*` (ambience),
+  `music.*` (music). Several files on one id are variants (effects pick
+  one at random; music plays them in turn).
+- Total audio stays under 20 MB (`make audio-check`).
+

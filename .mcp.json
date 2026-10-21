@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "blender": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["blender-mcp"],
+      "env": { "DISABLE_TELEMETRY": "true" }
+    },
+    "elevenlabs": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["elevenlabs-mcp"],
+      "env": {
+        "ELEVENLABS_API_KEY": "${ELEVEN_LABS_API_KEY}",
+        "ELEVENLABS_MCP_BASE_PATH": "assets/source/audio/elevenlabs/raw"
+      }
+    }
+  }
+}

@@ -40,7 +40,7 @@ A RimWorld-inspired colony simulation written in Go with Ebitengine, built in pu
 
 ## Progress
 
-Media updated 2026-10-19 · regenerate with `make media clips`
+Media updated 2026-10-21 · regenerate with `make media clips`
 
 ### Building
 
@@ -84,9 +84,12 @@ Media updated 2026-10-19 · regenerate with `make media clips`
 ## What works today
 
 - Building: generated maps, cutting, mining, walls, doors, beds, multi-tile workbenches and a stove, all placed from the Architect menu.
+- Zones: stockpiles, growing zones, tree zones and pens are painted tile by tile. A tile belongs to one zone only, touching zones of the same kind merge under one outline, and growing zones skip bare rock. The drag preview shows which tiles will be claimed.
+- Hauling: colonists carry up to 100 at a time. One trip feeds several nearby building sites and takes the leftovers back to the nearest stockpile.
 - Farming and food: growing zones, a crop picker, regrowing berries, campfire cooking, drying racks, spoilage and frost.
 - Production: workbench bills, a tailoring bench and clothing (parkas, tuques, dusters).
-- Colonists: needs, mood, rooms and impressiveness, recreation, mental breaks, work priorities, schedules and a per-colonist order queue.
+- Colonists: needs, mood, rooms and impressiveness, recreation, mental breaks, work priorities, schedules and a per-colonist order queue. Every colonist's route and destination show on the map, and drafted colonists can be sent to a spot or ordered to attack.
+- Event logs: every colonist, raider and animal remembers what happened to it (bites, hits, injuries, meals, sleep, taming, breakdowns), shown in its inspector.
 - Temperature: seasons, room heat from campfires, and hypothermia on winter nights.
 - Threats: raids that scale with colony wealth, sieges, sappers, winter wolf packs, and auto-pause on danger.
 - Defences and combat: sandbags, spike traps, breaching raiders, rebuilding after breaches, ranged and melee combat with floating damage numbers.
@@ -98,7 +101,8 @@ Media updated 2026-10-19 · regenerate with `make media clips`
 - Sun, moon and shadows: every sprite has a normal map, lit by a sun that rises in the east and sets in the west (lower in winter) and by a cool moon at night; soft shadows swing and stretch with it, long at dawn and dusk.
 - Roofs: colonists roof closed rooms on their own, or wherever you plan one within 6 tiles of a wall; unroofed rooms lose their heat, roofs keep rain and snow off, and unsupported roofs collapse. Press R for the roof overlay.
 - Death and burial: the dead leave bodies that rot to bones; colonists mourn, dig graves with headstones, bury their own, or cremate on a funeral pyre.
-- Save and load, with a daily autosave.
+- Sound and options: code-made sound effects that pan with the camera and fade as you zoom out, ambience for day, night and rain, and composed music for the menu, colony life and raids. Options cover volumes, fullscreen, effects detail, autosave interval, edge scrolling and reduced motion, and are saved between runs.
+- Save and load, with an autosave every in-game day (adjustable in Options).
 
 The full backlogs are in the [vanilla feature checklist](.cursor/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md) and the [UI/UX checklist](.cursor/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md).
 
@@ -113,11 +117,24 @@ make test           # unit tests with the race detector and coverage
 make simulate       # headless simulation run for quick checks
 ```
 
+Sound plays through your default audio device; `go run ./cmd/game -noaudio`
+(or `RIMWORLD_GO_NOAUDIO=1`) runs silently. On Linux, audio needs cgo and
+the ALSA headers (`sudo apt install libasound2-dev`). Options (volumes,
+fullscreen, effects, autosave, edge scrolling, reduced motion) are saved to
+`settings.json` in your user config folder, next to the saves.
+
 ### Refreshing the README media
 
 - `make media`: records the gallery as short animated WebPs through the game's `-capture` flag.
 - `make clips`: captures frame sequences and packs them into animated WebP with `scripts/frames_to_webp.py`. Needs python3 and Pillow.
 - `make art` re-renders the sprites in Blender, then `make normals` writes their normal maps.
+- To let an AI agent drive a live Blender (Blender MCP), see [`tools/blender-mcp`](tools/blender-mcp/README.md). `.mcp.json` and `.cursor/mcp.json` register the server for Claude Code and Cursor.
+
+### Sound
+
+- `make audio` renders the sound effects from code (`cmd/audiogen`, recipes in `cmd/audiogen/recipes.go`) and updates the sound list `assets/metadata/audio/audio.json`; `make audio-check` validates it.
+- `make music` composes the music in code (`cmd/audiogen/music.go`, `pkg/musicsynth`): the main theme, a calm colony track and a raid loop, encoded to Ogg with ffmpeg.
+- Ambience comes from ElevenLabs through its MCP server, registered in `.mcp.json`. Put your key in your shell profile as `export ELEVEN_LABS_API_KEY=...` (the config maps it to the server's `ELEVENLABS_API_KEY`), then restart your editor so it inherits it. Prompts and the credit budget are in `assets/source/audio/prompts.json`; import an approved take with `scripts/audio_import.sh <raw> <file> <credits> "<license>"`.
 
 ## Credits
 

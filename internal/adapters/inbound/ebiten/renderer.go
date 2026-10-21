@@ -40,6 +40,9 @@ type Simulation interface {
 	CanPlaceAt(kind, stuff, facing string, x, y int) (bool, string)
 	// OrdersAt lists what a pawn can be ordered to do at a tile.
 	OrdersAt(pawn entity.EntityID, x, y int) []game.OrderOption
+	// CanZoneAt reports whether a zone of kind ("stockpile", "grow",
+	// "pen") could claim a tile: the zone drag ghost per cell.
+	CanZoneAt(kind string, x, y int) bool
 }
 
 var _ Simulation = (*game.Game)(nil)
@@ -130,11 +133,13 @@ type pawnVisual struct {
 
 // Renderer drives an Ebitengine window from a running Simulation.
 type Renderer struct {
-	game  Simulation
-	speed speed
-	cam   camera
-	pack  *atlas
-	art   *artCatalog
+	game       Simulation
+	zoneGeoms  map[uint16]*zoneGeom // zones_draw.go outline cache
+	wheelTaken bool                 // the mouse wheel scrolled a log this frame
+	speed      speed
+	cam        camera
+	pack       *atlas
+	art        *artCatalog
 
 	// present is a presentation-only frame counter. Animation reads it;
 	// simulation never does. Tile lerp uses sim ticks vs moveTick.
@@ -167,9 +172,23 @@ type Renderer struct {
 	// danger message already handled.
 	pauseOnThreat bool
 	threatPaused  bool
-	dangerInit    bool
-	lastDanger    uint64
-	floaters      []floater
+
+	// Options (settings.go syncRenderer): particle and weather detail
+	// multiplier, edge-of-screen panning, and a capped lightning flash.
+	fx              float64
+	edgeScroll      bool
+	reducedFlashing bool
+
+	// sound (sound_signals.go): cues for the App's director, last frame's
+	// world to hear changes, the pending thunder and the world this frame.
+	cues       []soundCue
+	memo       soundMemo
+	thunderAt  uint64
+	threatAt   uint64 // present frame of the newest threat
+	heard      game.WorldView
+	dangerInit bool
+	lastDanger uint64
+	floaters   []floater
 }
 
 // New returns a Renderer for sim. Sprites are optional: call LoadPack
@@ -180,6 +199,7 @@ func New(sim Simulation) *Renderer {
 		speed:         speedNormal,
 		cam:           camera{zoom: 1},
 		pauseOnThreat: true,
+		fx:            1,
 		last:          map[entity.EntityID]pawnVisual{},
 		seenTrace:     map[[3]uint64]bool{},
 		gridClr:       color.RGBA{R: 40, G: 40, B: 40, A: 180},
@@ -224,6 +244,11 @@ func (r *Renderer) advance() {
 	r.animate(w, r.game.Snapshot(), n > 0)
 	r.stepEnvironment(w, r.game.Snapshot())
 	r.watchThreats(w)
+	r.heard = w
+	if n > 0 {
+		r.listenWorld(w, r.game.Snapshot())
+	}
+	r.listenThunder()
 }
 
 func (r *Renderer) syncPawns() {
@@ -259,15 +284,20 @@ func (r *Renderer) handleSpeedInput() {
 	case inpututil.IsKeyJustPressed(ebiten.KeySpace):
 		if r.speed == speedPaused {
 			r.speed = speedNormal
+			r.globalCue("ui.resume")
 		} else {
 			r.speed = speedPaused
+			r.globalCue("ui.pause")
 		}
 	case inpututil.IsKeyJustPressed(ebiten.Key1):
 		r.speed = speedNormal
+		r.globalCue("ui.speed")
 	case inpututil.IsKeyJustPressed(ebiten.Key2):
 		r.speed = speedFast
+		r.globalCue("ui.speed")
 	case inpututil.IsKeyJustPressed(ebiten.Key3):
 		r.speed = speedVeryFast
+		r.globalCue("ui.speed")
 	case inpututil.IsKeyJustPressed(ebiten.KeyR):
 		r.roofOverlay = !r.roofOverlay
 	}
@@ -287,6 +317,11 @@ func (r *Renderer) handleCameraInput(v viewport) {
 	if ebiten.IsKeyPressed(ebiten.KeyDown) || ebiten.IsKeyPressed(ebiten.KeyS) {
 		dy++
 	}
+	if r.edgeScroll && ebiten.IsFocused() {
+		mx, my := ebiten.CursorPosition()
+		ex, ey := edgePan(mx, my, v)
+		dx, dy = dx+ex, dy+ey
+	}
 	r.smooth.pushPan(dx, dy)
 
 	cx, cy := (v.x0+v.x1)/2, (v.y0+v.y1)/2
@@ -296,12 +331,37 @@ func (r *Renderer) handleCameraInput(v viewport) {
 	if inpututil.IsKeyJustPressed(ebiten.KeyMinus) {
 		r.smooth.zoomAt(1/(1+zoomStep), cx, cy)
 	}
-	if _, wy := ebiten.Wheel(); wy != 0 {
+	if _, wy := ebiten.Wheel(); wy != 0 && !r.wheelTaken {
 		mx, my := ebiten.CursorPosition()
 		r.smooth.zoomAt(math.Pow(1+zoomStep, wy), float64(mx), float64(my))
 	}
 	r.clampCamera(v) // first-call centring and min-zoom guard
 	r.smooth.step(1/float64(ebiten.TPS()), &r.cam, r.camLimits(v))
+}
+
+// edgeBand is how close (px) the cursor must be to a viewport edge to pan.
+const edgeBand = 6
+
+// edgePan is the pan direction for a cursor at (mx, my): towards any
+// viewport edge within edgeBand, nothing when the cursor is outside it.
+func edgePan(mx, my int, v viewport) (dx, dy float64) {
+	x, y := float64(mx), float64(my)
+	if x < v.x0 || x >= v.x1 || y < v.y0 || y >= v.y1 {
+		return 0, 0
+	}
+	switch {
+	case x < v.x0+edgeBand:
+		dx = -1
+	case x >= v.x1-edgeBand:
+		dx = 1
+	}
+	switch {
+	case y < v.y0+edgeBand:
+		dy = -1
+	case y >= v.y1-edgeBand:
+		dy = 1
+	}
+	return dx, dy
 }
 
 func clampZoom(z float64) float64 {
@@ -576,17 +636,7 @@ func (r *Renderer) TileAt(sx, sy int) (int, int) {
 
 func (r *Renderer) drawWorld(screen *ebiten.Image, sw, sh int, tile float64) {
 	w := r.game.World()
-	stockClr := color.RGBA{R: 220, G: 200, B: 80, A: 70}
-	for _, z := range w.Stockpiles {
-		for y := z.MinY; y <= z.MaxY; y++ {
-			for x := z.MinX; x <= z.MaxX; x++ {
-				sx, sy := r.worldToScreen(x, y)
-				if visible(sx, sy, float32(tile), float32(tile), sw, sh) {
-					vector.FillRect(screen, sx, sy, float32(tile), float32(tile), stockClr, false)
-				}
-			}
-		}
-	}
+	r.drawZones(screen, w, sw, sh, tile)
 	plantClr := color.RGBA{R: 70, G: 150, B: 70, A: 220}
 	desigClr := color.RGBA{R: 240, G: 220, B: 40, A: 200}
 	for _, p := range w.Plants {

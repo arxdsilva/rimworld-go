@@ -46,6 +46,9 @@ func (s *stubSim) CanPlaceAt(kind, stuff, facing string, x, y int) (bool, string
 func (s *stubSim) OrdersAt(pawn entity.EntityID, x, y int) []game.OrderOption {
 	return s.orders
 }
+func (s *stubSim) CanZoneAt(kind string, x, y int) bool {
+	return x >= 0 && y >= 0 && x < s.w && y < s.h
+}
 
 func testApp(sim Simulation) *App {
 	return NewApp(AppConfig{
@@ -57,6 +60,9 @@ func testApp(sim Simulation) *App {
 			return nil, nil
 		},
 		LoadSplash: func() (*ebiten.Image, error) {
+			return nil, nil
+		},
+		LoadMenuScene: func() (*menuDiorama, error) {
 			return nil, nil
 		},
 		NewSim: func() (Simulation, error) {
@@ -279,6 +285,13 @@ func TestLoadAndCreditsNavigate(t *testing.T) {
 	click(t, a, "menu.credits")
 	if a.nav.screen() != screenCredits {
 		t.Fatalf("credits = %s", a.nav.screen())
+	}
+	if lines := creditsLines(); len(lines) == 0 || lines[0] != "Created by arxdsilva" {
+		t.Fatalf("credits open with %q, want the creator first", lines)
+	}
+	click(t, a, "credits.back")
+	if a.nav.screen() != screenMainMenu {
+		t.Fatalf("credits back = %s", a.nav.screen())
 	}
 }
 

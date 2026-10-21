@@ -355,6 +355,7 @@ func (g *Game) springTrap(victim entity.EntityID, x, y int) {
 		Tick: uint64(g.clock.Now()), Hit: true, Melee: true, Damage: trapDamage})
 	g.removeBuilding(tid)
 	g.placeFrameStuff(construction.SpikeTrap, t.Stuff, construction.South, x, y) // re-lay it
+	g.logEvent(victim, logEntry{Kind: logTrap, Amount: trapDamage})
 	g.hurt(victim, trapDamage, 0)
 }
 

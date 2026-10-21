@@ -18,7 +18,9 @@ func (a *App) mainMenuButtons(sw, sh int) []button {
 }
 
 func (a *App) drawMainMenu(screen *ebiten.Image, sw, sh int) {
-	drawMenuBackdrop(screen, sw, sh)
+	if !a.drawMenuDiorama(screen, sw, sh, 0) {
+		drawMenuBackdrop(screen, sw, sh)
+	}
 	a.drawMenuSplash(screen, sw, sh)
 	drawLabel(screen, menuTitleX(sw, "rimworld-go"), 28, "rimworld-go")
 	cx := menuRailX(sw)
@@ -38,14 +40,24 @@ func (a *App) creditsButtons(sw, sh int) []button {
 	}}
 }
 
-func (a *App) drawCredits(screen *ebiten.Image, sw, sh int) {
-	a.paintMenu(screen, sw, sh, "Credits", []string{
+// creditsLines is the Credits screen body.
+func creditsLines() []string {
+	return []string{
+		"Created by arxdsilva",
+		"",
 		"rimworld-go is original work. It is not affiliated with Ludeon",
 		"Studios or RimWorld.",
 		"",
 		"Vendor sprites (first playable stand-in): Raphael Goncalves",
 		"(Rgsdev), CC0.",
-	}, a.creditsButtons(sw, sh))
+		"Music and sound effects: original, made in code (cmd/audiogen).",
+		"Ambience: generated with ElevenLabs (elevenlabs.io), free tier,",
+		"non-commercial use.",
+	}
+}
+
+func (a *App) drawCredits(screen *ebiten.Image, sw, sh int) {
+	a.paintMenu(screen, sw, sh, "Credits", creditsLines(), a.creditsButtons(sw, sh))
 }
 
 // hasSaves reports a loadable save exists (for Continue).

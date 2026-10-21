@@ -49,6 +49,23 @@ art:  ## re-render every world sprite from assets/source/blender, then their nor
 	$(MAKE) normals
 	python3 assets/source/tools/validate_assets.py
 
+.PHONY: art-menu
+art-menu:  ## render the main-menu colony diorama (assets/source/blender/artlib/scenes/menu.py)
+	"$(BLENDER)" -b --factory-startup -P assets/source/blender/build.py -- menu
+	python3 assets/source/tools/validate_assets.py
+
+.PHONY: audio
+audio:  ## render the procedural sound effects (cmd/audiogen) and update the sound list
+	go run ./cmd/audiogen
+
+.PHONY: music
+music:  ## compose the music (cmd/audiogen/music.go) to Ogg Vorbis; needs ffmpeg with libvorbis
+	go run ./cmd/audiogen -music
+
+.PHONY: audio-check
+audio-check:  ## validate the sound list against the files and the size budget
+	go run ./cmd/audiogen -check
+
 .PHONY: normals
 normals:  ## write <sprite>_n.png normal maps (pkg/spritenormals, a port of spritefusion-sprite-normals)
 	go run ./cmd/normalgen -dirs assets/generated/world $(NORMALS_ARGS)
@@ -63,6 +80,7 @@ art-capture:  ## in-game screenshot of a scripted colony (real renderer)
 	$(BIN_DIR)/game -capture assets/generated/ingame_capture.png
 	$(BIN_DIR)/game -capture assets/generated/ingame_architect.png -capture-ui architect
 	$(BIN_DIR)/game -capture assets/generated/ingame_orders.png -capture-ui orders
+	$(BIN_DIR)/game -capture assets/generated/ingame_menu.png -capture-ui menu
 
 .PHONY: art-preview
 art-preview:  ## contact sheet + ART §34 prototype scene
@@ -103,7 +121,7 @@ clips:  ## README animated WebP clips in docs/clips (needs python3 + Pillow)
 	$(call clip,lategame,-scenario lategame -capture-ui lategame -capture-ticks 1200 -capture-frames 360,--step 3 --fps 20 --quality 45 --max-bytes 2600000)
 	$(call clip,colony_life,-capture-ui follow -capture-frames 240,--quality 45 --max-bytes 2000000)
 	$(call clip,building,-capture-ticks 600 -capture-zoom 1.5 -capture-frames 240)
-	$(call clip,combat,-capture-ui combat -capture-frames 180)
+	$(call clip,combat,-capture-ui combat -capture-frames 180,--quality 50)
 	$(call clip,raid,-scenario raid -capture-ui raid -capture-ticks 500 -capture-frames 300)
 	$(call clip,animals,-scenario animals -capture-ui pen -capture-frames 240)
 	$(call clip,melee,-scenario armory -capture-ui raid -capture-zoom 1.6 -capture-ticks 560 -capture-frames 240)

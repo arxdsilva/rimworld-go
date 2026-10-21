@@ -39,12 +39,13 @@ func TestOptionsTogglePauseOnThreat(t *testing.T) {
 	a := testApp(&stubSim{w: 4, h: 4})
 	a.finishBoot()
 	click(t, a, "menu.options")
+	click(t, a, "options.tab.gameplay")
 	click(t, a, "options.pausethreat")
-	if !a.noThreatPause {
+	if a.settings.Gameplay.PauseOnThreat {
 		t.Fatal("toggle off")
 	}
 	click(t, a, "options.pausethreat")
-	if a.noThreatPause {
+	if !a.settings.Gameplay.PauseOnThreat {
 		t.Fatal("toggle back on")
 	}
 }

@@ -1,0 +1,164 @@
+{
+  "note": "Every ElevenLabs generation, approved or not. Account: free tier (non-commercial use, credit ElevenLabs). check_subscription's character_count lags and under-reported (300 shown for 12 clips); the user's dashboard showed 600, so a 5 s sound effect costs about 50 credits. Confirm every take's cost on the dashboard before the next spend.",
+  "takes": [
+    {
+      "id": "amb.day",
+      "take": 1,
+      "part": "1 of 4 (stitched bed)",
+      "file": "raw/sfx_Open__20261021_115412.mp3",
+      "tool": "text_to_sound_effects",
+      "seconds": 5,
+      "loop": true,
+      "credits": 50,
+      "approved": "arxdsilva",
+      "date": "2026-10-21"
+    },
+    {
+      "id": "amb.day",
+      "take": 1,
+      "part": "2 of 4 (stitched bed)",
+      "file": "raw/sfx_Open__20261021_115559.mp3",
+      "tool": "text_to_sound_effects",
+      "seconds": 5,
+      "loop": true,
+      "credits": 50,
+      "approved": "pending listen",
+      "date": "2026-10-21"
+    },
+    {
+      "id": "amb.day",
+      "take": 1,
+      "part": "3 of 4 (stitched bed)",
+      "file": "raw/sfx_Open__20261021_115601.mp3",
+      "tool": "text_to_sound_effects",
+      "seconds": 5,
+      "loop": true,
+      "credits": 50,
+      "approved": "pending listen",
+      "date": "2026-10-21"
+    },
+    {
+      "id": "amb.day",
+      "take": 1,
+      "part": "4 of 4 (stitched bed)",
+      "file": "raw/sfx_Open__20261021_115604.mp3",
+      "tool": "text_to_sound_effects",
+      "seconds": 5,
+      "loop": true,
+      "credits": 50,
+      "approved": "pending listen",
+      "date": "2026-10-21"
+    },
+    {
+      "id": "amb.night",
+      "take": 1,
+      "part": "1 of 4 (stitched bed)",
+      "file": "raw/sfx_Calm__20261021_115621.mp3",
+      "tool": "text_to_sound_effects",
+      "seconds": 5,
+      "loop": true,
+      "credits": 50,
+      "approved": "pending listen",
+      "date": "2026-10-21"
+    },
+    {
+      "id": "amb.night",
+      "take": 1,
+      "part": "2 of 4 (stitched bed)",
+      "file": "raw/sfx_Quiet_20261021_115625.mp3",
+      "tool": "text_to_sound_effects",
+      "seconds": 5,
+      "loop": true,
+      "credits": 50,
+      "approved": "pending listen",
+      "date": "2026-10-21"
+    },
+    {
+      "id": "amb.night",
+      "take": 1,
+      "part": "3 of 4 (stitched bed)",
+      "file": "raw/sfx_Calm__20261021_115628.mp3",
+      "tool": "text_to_sound_effects",
+      "seconds": 5,
+      "loop": true,
+      "credits": 50,
+      "approved": "pending listen",
+      "date": "2026-10-21"
+    },
+    {
+      "id": "amb.night",
+      "take": 1,
+      "part": "4 of 4 (stitched bed)",
+      "file": "raw/sfx_Peace_20261021_115631.mp3",
+      "tool": "text_to_sound_effects",
+      "seconds": 5,
+      "loop": true,
+      "credits": 50,
+      "approved": "pending listen",
+      "date": "2026-10-21"
+    },
+    {
+      "id": "amb.rain",
+      "take": 1,
+      "part": "1 of 4 (stitched bed)",
+      "file": "raw/sfx_Stead_20261021_115635.mp3",
+      "tool": "text_to_sound_effects",
+      "seconds": 5,
+      "loop": true,
+      "credits": 50,
+      "approved": "pending listen",
+      "date": "2026-10-21"
+    },
+    {
+      "id": "amb.rain",
+      "take": 1,
+      "part": "2 of 4 (stitched bed)",
+      "file": "raw/sfx_Stead_20261021_115638.mp3",
+      "tool": "text_to_sound_effects",
+      "seconds": 5,
+      "loop": true,
+      "credits": 50,
+      "approved": "pending listen",
+      "date": "2026-10-21"
+    },
+    {
+      "id": "amb.rain",
+      "take": 1,
+      "part": "3 of 4 (stitched bed)",
+      "file": "raw/sfx_Mediu_20261021_115641.mp3",
+      "tool": "text_to_sound_effects",
+      "seconds": 5,
+      "loop": true,
+      "credits": 50,
+      "approved": "pending listen",
+      "date": "2026-10-21"
+    },
+    {
+      "id": "amb.rain",
+      "take": 1,
+      "part": "4 of 4 (stitched bed)",
+      "file": "raw/sfx_Stead_20261021_115644.mp3",
+      "tool": "text_to_sound_effects",
+      "seconds": 5,
+      "loop": true,
+      "credits": 50,
+      "approved": "pending listen",
+      "date": "2026-10-21"
+    },
+    {
+      "id": "music.menu",
+      "take": 0,
+      "part": "10 s cost sketch",
+      "tool": "compose_music (music_v2)",
+      "seconds": 10,
+      "credits": 0,
+      "approved": "refused by ElevenLabs: HTTP 402 paid_plan_required, 'Music API is not available for free users'",
+      "date": "2026-10-21"
+    }
+  ],
+  "totals": {
+    "credits_used": 600,
+    "credits_left": 9400,
+    "measured_by": "user's ElevenLabs dashboard; check_subscription lagged (showed 300)"
+  }
+}

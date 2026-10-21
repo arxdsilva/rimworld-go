@@ -158,28 +158,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 
 	r.drawTerrainArt(screen, w, sw, sh, tile)
 	r.drawGroundCover(screen, w, sw, sh, tile)
-	for _, z := range w.GrowZones {
-		for y := z.MinY; y <= z.MaxY; y++ {
-			for x := z.MinX; x <= z.MaxX; x++ {
-				r.drawSprite(screen, "overlay/grow_zone", none, float64(x), float64(y), tile, sw, sh)
-			}
-		}
-	}
-	for _, p := range w.Pens {
-		for y := p[1]; y <= p[3]; y++ {
-			for x := p[0]; x <= p[2]; x++ {
-				r.drawSprite(screen, "overlay/pen_zone", none, float64(x), float64(y), tile, sw, sh)
-			}
-		}
-		r.drawPenFence(screen, p, tile)
-	}
-	for _, z := range w.Stockpiles {
-		for y := z.MinY; y <= z.MaxY; y++ {
-			for x := z.MinX; x <= z.MaxX; x++ {
-				r.drawSprite(screen, "overlay/stockpile", none, float64(x), float64(y), tile, sw, sh)
-			}
-		}
-	}
+	r.drawZones(screen, w, sw, sh, tile) // zones_draw.go
 	for _, f := range w.Frames {
 		r.drawSprite(screen, "overlay/blueprint", none, float64(f.X), float64(f.Y), tile, sw, sh)
 	}
@@ -214,6 +193,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	for _, p := range r.game.Snapshot() {
 		occupied[[2]int{p.X, p.Y}] = true
 	}
+	r.drawPaths(screen, sw, sh, tile) // paths_draw.go
 	var draws []artDraw
 	add := func(row, col float64, fn func()) { draws = append(draws, artDraw{row, col, fn}) }
 	r.addRockDraws(w, add, screen, sw, sh, tile)

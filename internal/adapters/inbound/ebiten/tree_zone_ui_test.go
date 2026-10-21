@@ -1,6 +1,10 @@
 package ebiten
 
-import "testing"
+import (
+	"testing"
+
+	"rimworld-go/internal/application/game"
+)
 
 func TestCropPickerListsTrees(t *testing.T) {
 	t.Parallel()
@@ -21,7 +25,7 @@ func TestCropPickerListsTrees(t *testing.T) {
 	a.archX0, a.archY0, a.archX1, a.archY1 = 6, 6, 8, 7
 	a.submitArchitect()
 	g.Step(1)
-	z := g.World().GrowZones
+	z := zonesOfKind(g.World(), game.ZoneGrow)
 	if len(z) != 1 || z[0].Crop != "tree" {
 		t.Fatalf("zones = %+v", z)
 	}

@@ -29,6 +29,7 @@ type camSmooth struct {
 	anchorX      float64 // screen point kept fixed while zooming
 	anchorY      float64
 	instant      bool
+	speed        float64 // pan speed multiplier (Options); 0 means 1
 }
 
 // pushPan records held-pan input for the next step; dx, dy are directions
@@ -94,8 +95,12 @@ func (s *camSmooth) stepPan(dt float64, c *camera) {
 		return
 	}
 	k := 1 - math.Exp(-dt/panTau)
-	s.vx += (s.dirX*panMaxSpeed - s.vx) * k
-	s.vy += (s.dirY*panMaxSpeed - s.vy) * k
+	top := panMaxSpeed
+	if s.speed > 0 {
+		top *= s.speed
+	}
+	s.vx += (s.dirX*top - s.vx) * k
+	s.vy += (s.dirY*top - s.vy) * k
 	s.dirX, s.dirY = 0, 0
 	if math.Abs(s.vx) < 0.5 {
 		s.vx = 0

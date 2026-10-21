@@ -392,6 +392,11 @@ func (a *App) submitArchitect() {
 		return
 	}
 	if t.mode == placeArea {
+		if kind := zoneKindOf(t); kind != "" && !anyZoneCell(a.archX0, a.archY0, a.archX1, a.archY1, func(x, y int) bool {
+			return a.renderer.game.CanZoneAt(kind, x, y)
+		}) {
+			a.hint = "No free tiles there" // the command still goes out; the sim ignores it
+		}
 		c := command.Command{Kind: t.cmd, X: a.archX0, Y: a.archY0, X2: a.archX1, Y2: a.archY1}
 		if t.crop != "" {
 			c.Build, _ = game.ZoneSpeciesID(a.selectedCrop().Name)
@@ -422,6 +427,10 @@ func (a *App) drawArchitectGhost(screen *ebiten.Image) {
 	}
 	t, cells := a.previewCells()
 	if t.mode == placeArea {
+		if kind := zoneKindOf(t); kind != "" {
+			a.drawZoneGhost(screen, kind, cells[0].x, cells[0].y, cells[1].x, cells[1].y)
+			return
+		}
 		a.renderer.drawGhostRect(screen, cells[0].x, cells[0].y, cells[1].x, cells[1].y)
 		if t.cmd == command.DesignateRoof {
 			a.drawRoofToolGhost(screen, cells[0].x, cells[0].y, cells[1].x, cells[1].y)
@@ -472,4 +481,67 @@ func (a *App) presetArchTool(kind, stuff, facing string) bool {
 		return true
 	}
 	return false
+}
+
+// zoneKindOf maps a zone tool to the sim's zone kind ("" for other tools).
+func zoneKindOf(t archTool) string {
+	switch t.cmd {
+	case command.DesignateStockpile:
+		return game.ZoneStockpile
+	case command.DesignateGrowZone:
+		return game.ZoneGrow
+	case command.DesignatePen:
+		return game.ZonePen
+	}
+	return ""
+}
+
+func normRect(x0, y0, x1, y1 int) (int, int, int, int) {
+	return min(x0, x1), min(y0, y1), max(x0, x1), max(y0, y1)
+}
+
+// anyZoneCell reports whether any cell of the rectangle is claimable.
+func anyZoneCell(x0, y0, x1, y1 int, can func(x, y int) bool) bool {
+	x0, y0, x1, y1 = normRect(x0, y0, x1, y1)
+	for y := y0; y <= y1; y++ {
+		for x := x0; x <= x1; x++ {
+			if can(x, y) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// zoneGhostCells judges each cell of the dragged rectangle, clipped to the
+// visible tile window clip (minX, minY, maxX, maxY) so a huge drag stays cheap.
+func zoneGhostCells(x0, y0, x1, y1 int, clip [4]int, can func(x, y int) bool) []ghostCell {
+	x0, y0, x1, y1 = normRect(x0, y0, x1, y1)
+	x0, y0, x1, y1 = max(x0, clip[0]), max(y0, clip[1]), min(x1, clip[2]), min(y1, clip[3])
+	var out []ghostCell
+	for y := y0; y <= y1; y++ {
+		for x := x0; x <= x1; x++ {
+			out = append(out, ghostCell{x: x, y: y, ok: can(x, y)})
+		}
+	}
+	return out
+}
+
+// drawZoneGhost tints each dragged cell green where the zone can claim it
+// and red where it cannot.
+func (a *App) drawZoneGhost(screen *ebiten.Image, kind string, x0, y0, x1, y1 int) {
+	r := a.renderer
+	sw, sh := a.size()
+	tile := r.tilePx()
+	cx0, cy0 := r.TileAt(0, 0)
+	cx1, cy1 := r.TileAt(sw, sh)
+	clip := [4]int{cx0 - 1, cy0 - 1, cx1 + 1, cy1 + 1}
+	for _, c := range zoneGhostCells(x0, y0, x1, y1, clip, func(x, y int) bool { return r.game.CanZoneAt(kind, x, y) }) {
+		sx, sy := r.worldToScreen(c.x, c.y)
+		clr := color.NRGBA{R: 90, G: 200, B: 90, A: 64}
+		if !c.ok {
+			clr = color.NRGBA{R: 220, G: 70, B: 60, A: 64}
+		}
+		vector.FillRect(screen, sx, sy, float32(tile), float32(tile), clr, false)
+	}
 }

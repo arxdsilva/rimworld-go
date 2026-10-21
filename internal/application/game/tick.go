@@ -51,11 +51,7 @@ func (g *Game) applyOne(c command.Command) {
 	case command.MovePawn:
 		g.cmdMove(entity.EntityID(c.Pawn), c.X, c.Y)
 	case command.DesignateStockpile:
-		minX, minY, maxX, maxY := zone.Normalize(c.X, c.Y, c.X2, c.Y2)
-		g.stockpiles = append(g.stockpiles, zone.Stockpile{
-			MinX: minX, MinY: minY, MaxX: maxX, MaxY: maxY,
-			AllowFood: true, AllowWood: true, AllowStone: true,
-		})
+		g.paintZone(zone.KindStockpile, zone.Zone{Food: true, Wood: true, Stone: true}, c.X, c.Y, c.X2, c.Y2)
 	case command.DesignateWall:
 		g.placeFrame(construction.Wall, c.X, c.Y)
 	case command.DesignateBed:
@@ -97,7 +93,7 @@ func (g *Game) applyOne(c command.Command) {
 	case command.DesignateTame:
 		g.markTame(c.X, c.Y, c.X2, c.Y2, true)
 	case command.DesignatePen:
-		g.addPen(c.X, c.Y, c.X2, c.Y2)
+		g.paintZone(zone.KindPen, zone.Zone{}, c.X, c.Y, c.X2, c.Y2)
 	case command.ReleaseAnimal:
 		g.releaseAnimal(entity.EntityID(c.Pawn))
 	case command.DesignateDeconstruct:
@@ -198,20 +194,12 @@ func (g *Game) cancelRect(x1, y1, x2, y2 int) {
 	g.markMine(x1, y1, x2, y2, false)
 	g.markHunt(x1, y1, x2, y2, false)
 	g.markTame(x1, y1, x2, y2, false)
-	g.cancelPens(x1, y1, x2, y2)
-	g.cancelGrowZones(minX, minY, maxX, maxY)
+	g.zones.Clear(zone.Rect{MinX: minX, MinY: minY, MaxX: maxX, MaxY: maxY}) // zones.go: shrinks or splits
 	g.clearRoofPlans(minX, minY, maxX, maxY)
 	g.unmarkGrass(minX, minY, maxX, maxY) // grass.go
 
 	g.unmarkHarvest(minX, minY, maxX, maxY)
 
-	keptZ := g.stockpiles[:0]
-	for _, s := range g.stockpiles {
-		if s.MaxX < minX || s.MinX > maxX || s.MaxY < minY || s.MinY > maxY {
-			keptZ = append(keptZ, s)
-		}
-	}
-	g.stockpiles = keptZ
 }
 
 func (g *Game) phaseNeeds() {
@@ -258,6 +246,7 @@ func (g *Game) phaseNeeds() {
 
 func (g *Game) down(id entity.EntityID, cause health.Cause) {
 	g.interrupt(id, job.Cancelled)
+	g.logEvent(id, logEntry{Kind: logDowned})
 	v, _ := g.vital.Get(id)
 	v.Status, v.Cause, v.DownedTick = health.Downed, cause, uint64(g.clock.Now())
 	g.vital.Set(id, v)
@@ -296,6 +285,7 @@ func (g *Game) interrupt(id entity.EntityID, reason job.FailReason) {
 	g.dropCarry(id)
 	g.dropPatient(id)
 	g.reserve.ReleaseOwner(id)
+	g.releaseDelivery(id)
 	if j.Kind != job.None && j.State != job.Idle && j.State != job.Complete {
 		j.State = job.Fail
 		j.Fail = reason
@@ -328,6 +318,7 @@ func (g *Game) phaseAI() {
 		v, _ := g.vital.Get(id)
 		if v.Status == health.Dead {
 			g.reserve.ReleaseOwner(id)
+			g.releaseDelivery(id)
 			continue
 		}
 		if v.Status == health.Downed {
@@ -342,9 +333,11 @@ func (g *Game) phaseAI() {
 			g.dropCarry(id)
 			g.dropPatient(id)
 			g.reserve.ReleaseOwner(id)
+			g.releaseDelivery(id)
 			g.jobs.Set(id, job.Record{})
 			j = job.Record{}
 		}
+		g.releaseStaleDelivery(id, j) // a delivery swapped out without an interrupt
 		if g.mentalBreakTick(id, j) {
 			continue // acting out: no orders, no work
 		}
@@ -451,6 +444,7 @@ func (g *Game) phaseAI() {
 
 func (g *Game) startJob(id entity.EntityID, rec job.Record) bool {
 	g.reserve.ReleaseOwner(id)
+	g.releaseDelivery(id) // a replaced delivery gives its shares back
 	if rec.Target != 0 && rec.Kind != job.Attack && rec.Kind != job.Sleep && !g.reserve.TryEntity(id, rec.Target) {
 		rec.State = job.Fail
 		rec.Fail = job.Reserved
@@ -464,7 +458,10 @@ func (g *Game) startJob(id entity.EntityID, rec job.Record) bool {
 		g.jobs.Set(id, rec)
 		return false
 	}
-	if rec.Kind == job.Haul && !g.reserve.TryTile(id, rec.DestX, rec.DestY) {
+	// a delivery route (HAUL-001) books frames through incoming shares
+	// and holds only its spare stockpile cell
+	if rec.Kind == job.Haul && len(rec.Route) == 0 && !g.reserve.TryTile(id, rec.DestX, rec.DestY) ||
+		rec.HasSpare && !g.reserve.TryTile(id, rec.SpareX, rec.SpareY) {
 		g.reserve.ReleaseOwner(id)
 		rec.State = job.Fail
 		rec.Fail = job.Reserved
@@ -609,48 +606,10 @@ func (g *Game) assignSleep(id entity.EntityID) {
 
 func (g *Game) assignHaul(id entity.EntityID) bool {
 	pos, _ := g.positions.Get(id)
-	if rec, ok := g.haulToFrame(id, pos); ok {
-		return g.startJob(id, rec)
+	if rec, shares, ok := g.planDelivery(id, pos); ok && g.startDelivery(id, rec, shares) {
+		return true
 	}
-	return g.haulToStockpile(id, pos)
-}
-
-func (g *Game) haulToFrame(id entity.EntityID, pos Position) (job.Record, bool) {
-	var bestWood, bestFrame entity.EntityID
-	bestD := 1 << 30
-	var wx, wy, fx, fy int
-	for _, fid := range g.frameIDs {
-		fr, ok := g.frames.Get(fid)
-		if !ok || fr.Ready() {
-			continue
-		}
-		if _, taken := g.reserve.EntityOwner(fid); taken {
-			continue
-		}
-		for _, iid := range g.itemIDs {
-			st, ok := g.stacks.Get(iid)
-			if !ok || st.Kind != fr.Stuff || st.Qty <= 0 || st.Carrier != 0 {
-				continue
-			}
-			if _, taken := g.reserve.EntityOwner(iid); taken {
-				continue
-			}
-			d := pathing.Dist(pos.X, pos.Y, st.X, st.Y)
-			if fr.Rebuild {
-				d -= rebuildFirst
-			}
-			if d < bestD || (d == bestD && iid < bestWood) {
-				bestD, bestWood, bestFrame = d, iid, fid
-				wx, wy, fx, fy = st.X, st.Y, fr.X, fr.Y
-			}
-		}
-	}
-	if bestWood == 0 {
-		return job.Record{}, false
-	}
-	return job.Record{
-		Kind: job.Haul, Target: bestWood, TX: wx, TY: wy, DestX: fx, DestY: fy, Dest: bestFrame,
-	}, true
+	return g.haulToStockpile(id, pos) // nothing to supply (or it fell through)
 }
 
 func (g *Game) haulToStockpile(id entity.EntityID, pos Position) bool {
@@ -680,97 +639,13 @@ func (g *Game) haulToStockpile(id entity.EntityID, pos Position) bool {
 	if !found {
 		return false
 	}
-	dx, dy, ok := g.emptyStockpileCell(best.Kind)
+	dx, dy, ok := g.stockpileCell(best.Kind, best.X, best.Y)
 	if !ok {
 		return false
 	}
 	return g.startJob(id, job.Record{
 		Kind: job.Haul, Target: bestID, TX: best.X, TY: best.Y, DestX: dx, DestY: dy,
 	})
-}
-
-func (g *Game) filterMatches(k item.Kind) bool {
-	for _, s := range g.stockpiles {
-		if allows(s, k) {
-			return true
-		}
-	}
-	return false
-}
-
-func allows(s zone.Stockpile, k item.Kind) bool {
-	switch {
-	case k == item.CorpseHuman, k == item.Bones:
-		return false // the dead go to graves and pyres, not shelves
-	case k.IsFood(), k.IsCorpse():
-		return s.AllowFood
-	case k == item.Wood:
-		return s.AllowWood
-	case k == item.Stone:
-		return s.AllowStone
-	case k == item.Leather, k == item.HerbalMedicine, k.IsApparel(), k.IsWeapon():
-		return true // goods: always welcome
-	}
-	return false
-}
-
-func (g *Game) inMatchingStockpile(st item.Stack) bool {
-	for _, s := range g.stockpiles {
-		if !s.Contains(st.X, st.Y) {
-			continue
-		}
-		if allows(s, st.Kind) {
-			return true
-		}
-	}
-	return false
-}
-
-// emptyStockpileCell is where a load of kind k goes: a stockpile cell
-// whose same-kind stack still has room (topping up), else an empty cell.
-func (g *Game) emptyStockpileCell(k item.Kind) (int, int, bool) {
-	for _, s := range g.stockpiles {
-		if !allows(s, k) {
-			continue
-		}
-		for y := s.MinY; y <= s.MaxY; y++ {
-			for x := s.MinX; x <= s.MaxX; x++ {
-				oid := g.itemAt(x, y)
-				if oid == 0 {
-					continue
-				}
-				o, _ := g.stacks.Get(oid)
-				if o.Kind != k || o.Qty+item.CarryLimit > item.StackLimit {
-					continue
-				}
-				if _, taken := g.reserve.TileOwner(x, y); taken {
-					continue
-				}
-				return x, y, true
-			}
-		}
-	}
-	for _, s := range g.stockpiles {
-		if !allows(s, k) {
-			continue
-		}
-		for y := s.MinY; y <= s.MaxY; y++ {
-			for x := s.MinX; x <= s.MaxX; x++ {
-				if !g.grid.Walkable(x, y) {
-					continue
-				}
-				if g.itemAt(x, y) != 0 || g.layerFrameAt(x, y, construction.LayerObject) != 0 ||
-					g.layerBldgAt(x, y, construction.LayerObject) != 0 {
-					continue
-				}
-				if _, taken := g.reserve.TileOwner(x, y); taken {
-					continue
-				}
-				return x, y, true
-			}
-		}
-	}
-	return 0, 0, false
 }
 
 func (g *Game) assignConstruct(id entity.EntityID) bool {
@@ -949,6 +824,7 @@ func (g *Game) doEat(id entity.EntityID, j job.Record) {
 	}
 	g.need.Set(id, n)
 	g.ateAt[id] = true
+	g.logEvent(id, logEntry{Kind: logAte, Name: st.Kind.String()})
 	j.State = job.Complete
 	g.jobs.Set(id, j)
 }
@@ -977,6 +853,11 @@ func (g *Game) doSleep(id entity.EntityID, j job.Record, now uint64) {
 	}
 	if done {
 		j.State = job.Complete
+		if g.sleptAt[id] != 0 {
+			g.logEvent(id, logEntry{Kind: logSleptBed})
+		} else {
+			g.logEvent(id, logEntry{Kind: logSleptGround})
+		}
 		g.afterSleep(id)
 	}
 	g.jobs.Set(id, j)
@@ -996,7 +877,9 @@ func (g *Game) doHaul(id entity.EntityID, j job.Record) {
 		if take > item.CarryLimit {
 			take = item.CarryLimit
 		}
-		if fr, ok := g.frames.Get(j.Dest); ok && j.Dest != 0 {
+		if len(j.Route) > 0 {
+			take = min(st.Qty, max(1, j.Count)) // the planned load (haul_route.go)
+		} else if fr, ok := g.frames.Get(j.Dest); ok && j.Dest != 0 {
 			if need := fr.Need - fr.Wood; need > 0 && take > need {
 				take = need
 			}
@@ -1012,6 +895,13 @@ func (g *Game) doHaul(id entity.EntityID, j job.Record) {
 		st.Carrier = id
 		g.stacks.Set(carry, st)
 		j.Carry = carry
+		if len(j.Route) > 0 {
+			g.trimDelivery(id, take)
+			if !g.routeWalk(id, &j, st.Kind) {
+				g.routeArrive(id, j)
+			}
+			return
+		}
 		path, ok := g.pathTo(id, j.DestX, j.DestY)
 		if !ok {
 			st.Carrier = 0
@@ -1031,6 +921,10 @@ func (g *Game) doHaul(id entity.EntityID, j job.Record) {
 		}
 		j.State = job.Goto
 		g.jobs.Set(id, j)
+		return
+	}
+	if len(j.Route) > 0 {
+		g.routeArrive(id, j)
 		return
 	}
 	g.finishHaulDrop(id, j)

@@ -148,6 +148,16 @@ type PawnView struct {
 	// Soaked: out in the rain.
 	Embodied bool
 	Soaked   bool
+	// Path (UI-013) is the rest of the current walk, cell by cell, ending
+	// at GoalX/GoalY (HasGoal); a haul still going to its pickup also has
+	// its drop point DropX/DropY (HasDrop).
+	Path         [][2]int
+	HasGoal      bool
+	GoalX, GoalY int
+	HasDrop      bool
+	DropX, DropY int
+	// Log (LOG-001) is what happened to the creature, newest first.
+	Log []LogLineView
 }
 
 // ItemView is a ground stack.
@@ -240,19 +250,12 @@ type PlantView struct {
 	Zone string
 }
 
-// StockpileView is a storage rectangle.
-type StockpileView struct {
-	MinX, MinY, MaxX, MaxY           int
-	AllowFood, AllowWood, AllowStone bool
-}
-
 // WorldView is the non-pawn read model for HUD and the map.
 type WorldView struct {
 	Items      []ItemView
 	Frames     []FrameView
 	Buildings  []BuildingView
 	Plants     []PlantView
-	Stockpiles []StockpileView
 	Food, Wood int
 	Stone      int
 	// Terrain is the ground type per tile, row-major, TerrainW wide;
@@ -261,8 +264,6 @@ type WorldView struct {
 	TerrainW int
 	// Mines are tiles designated for mining.
 	Mines [][2]int
-	// GrowZones are painted growing areas.
-	GrowZones []GrowZoneView
 	// FoodByKind is ground food per kind name.
 	FoodByKind map[string]int
 	// RoomGrid is the room id per tile (row-major, TerrainW wide); -1 is
@@ -293,8 +294,9 @@ type WorldView struct {
 	// project that opens them.
 	Research []ResearchView
 	Locked   map[string]string
-	// Pens are animal pen zones (x1, y1, x2, y2 inclusive).
-	Pens [][4]int
+	// Zones (ZONE-001) are every stockpile, grow zone and pen, tile by
+	// tile, with their settings.
+	Zones []ZoneView
 	// Roofs (SIM-018): RoofCells is the roof.Cell flags per tile
 	// (row-major, TerrainW wide); RoofCollapses are collapses of the last
 	// hour.
@@ -339,8 +341,7 @@ type Game struct {
 	terr     terrain.Map
 	mines    map[[2]int]bool
 
-	stockpiles []zone.Stockpile
-	growZones  []zone.GrowZone
+	zones      *zone.Map // stockpiles, grow zones and pens (zones.go, ZONE-001)
 	lastMeal   map[entity.EntityID]item.Kind
 	bills      map[entity.EntityID][]recipe.Bill
 	racks      map[entity.EntityID]dryBatch // what each drying rack holds
@@ -370,6 +371,7 @@ type Game struct {
 	pending    []command.Command
 
 	ateAt   map[entity.EntityID]bool
+	logs    map[entity.EntityID][]logEntry // per-creature event logs (eventlog.go)
 	draft   map[entity.EntityID]bool
 	sleptAt map[entity.EntityID]entity.EntityID // pawn -> bed, 0 = ground
 
@@ -389,8 +391,6 @@ type Game struct {
 	wounds map[entity.EntityID]wound
 	// research progress and the current project (researchSet: one is picked)
 	research research.Progress
-	// pens are animal pen zones.
-	pens []pen
 	// rockDamage: rock tiles sappers are hacking through.
 	rockDamage map[[2]int]int
 	// roofs: the roof state per tile (roof.go, SIM-018), row-major; empty
@@ -412,6 +412,8 @@ type Game struct {
 	occ      occupancy // movement blocking index (occupancy.go), transient
 	// enterHook, when set (tests only), replaces enter's verdicts.
 	enterHook func(id entity.EntityID, from, to Position) (stepVerdict, Position)
+	// haul: in-flight material deliveries (haul_route.go, HAUL-001).
+	haul haulState
 }
 
 // New builds a Game from cfg. Width/Height must be positive.
@@ -433,6 +435,7 @@ func New(cfg Config) *Game {
 		bldgs:       component.NewStore[construction.Building](),
 		plants:      component.NewStore[plant.Wild](),
 		terr:        terrain.NewMap(cfg.Width, cfg.Height),
+		zones:       zone.NewMap(cfg.Width, cfg.Height),
 		mines:       make(map[[2]int]bool),
 		lastMeal:    make(map[entity.EntityID]item.Kind),
 		bills:       make(map[entity.EntityID][]recipe.Bill),
@@ -451,6 +454,7 @@ func New(cfg Config) *Game {
 		roomDirty:   true,
 		reserve:     reservation.NewTable(),
 		ateAt:       make(map[entity.EntityID]bool),
+		logs:        make(map[entity.EntityID][]logEntry),
 		draft:       make(map[entity.EntityID]bool),
 		sleptAt:     make(map[entity.EntityID]entity.EntityID),
 		animals:     component.NewStore[animal.State](),
@@ -700,8 +704,9 @@ func (g *Game) Snapshot() []PawnView {
 	views = append(views, g.raiderViews()...)
 	for i := range views {
 		g.fillPawnMotion(&views[i])
-		g.fillPawnDeath(&views[i])   // burial.go
-		g.fillPawnWeather(&views[i]) // weather.go
+		g.fillPawnDeath(&views[i])             // burial.go
+		g.fillPawnWeather(&views[i])           // weather.go
+		views[i].Log = g.logLines(views[i].ID) // eventlog.go
 	}
 	return views
 }
@@ -713,13 +718,12 @@ func (g *Game) World() WorldView {
 		Frames:      make([]FrameView, 0, len(g.frameIDs)),
 		Buildings:   make([]BuildingView, 0, len(g.bldgIDs)),
 		Plants:      make([]PlantView, 0, len(g.plantIDs)),
-		Stockpiles:  append([]StockpileView(nil), stockpileViews(g.stockpiles)...),
 		OutdoorTemp: int(temperature.Outdoor(g.clock.Now())),
 		IndoorTemp:  int(temperature.Indoor(g.clock.Now())),
 		Season:      temperature.Season(g.clock.Now()),
 		Messages:    append([]MessageView(nil), g.messages...),
 		Research:    g.researchViews(),
-		Pens:        g.penViews(),
+		Zones:       g.zoneViews(),
 		Locked:      g.lockedKeys(),
 		Schedule:    append([]schedule.Activity(nil), g.sched[:]...),
 	}
@@ -808,7 +812,6 @@ func (g *Game) World() WorldView {
 		w.Terrain[i] = uint8(t)
 	}
 	w.Mines = g.mineList()
-	w.GrowZones = g.growZoneViews()
 	g.ensureRooms()
 	w.RoomGrid = append([]int(nil), g.roomGrid...)
 	w.Rooms = g.roomViews()
@@ -821,14 +824,6 @@ func (g *Game) World() WorldView {
 	w.Hour = float64(now%clock.TicksPerDay) / clock.TicksPerHour
 	w.DayOfYear = int(now/clock.TicksPerDay) % clock.DaysPerYear
 	return w
-}
-
-func stockpileViews(z []zone.Stockpile) []StockpileView {
-	out := make([]StockpileView, len(z))
-	for i, s := range z {
-		out[i] = StockpileView{s.MinX, s.MinY, s.MaxX, s.MaxY, s.AllowFood, s.AllowWood, s.AllowStone}
-	}
-	return out
 }
 
 func lastMealName(g *Game, id entity.EntityID) string {

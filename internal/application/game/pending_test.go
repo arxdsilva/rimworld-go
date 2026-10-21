@@ -13,7 +13,8 @@ import (
 func TestApplyPendingMatchesStep(t *testing.T) {
 	cmds := func(g *Game) {
 		p := g.Snapshot()[0]
-		g.Enqueue(command.Command{Kind: command.DesignateStockpile, X: 2, Y: 2, X2: 5, Y2: 4})
+		// zones skip rock: paint by the colonist, on open ground
+		g.Enqueue(command.Command{Kind: command.DesignateStockpile, X: p.X - 2, Y: p.Y + 2, X2: p.X + 1, Y2: p.Y + 4})
 		g.Enqueue(command.Command{Kind: command.DesignateBuild, Build: 1, X: 10, Y: 10})
 		g.Enqueue(command.Command{Kind: command.SetWorkPriority, Pawn: uint64(p.ID), Work: command.WorkHaul, Count: 1})
 		g.Enqueue(command.Command{Kind: command.MovePawn, Pawn: uint64(p.ID), X: p.X + 3, Y: p.Y})
@@ -23,7 +24,7 @@ func TestApplyPendingMatchesStep(t *testing.T) {
 	cmds(a)
 	cmds(b)
 	a.ApplyPending()
-	if len(a.World().Stockpiles) != 1 {
+	if len(zonesOf(a.World(), ZoneStockpile)) != 1 {
 		t.Fatal("a stockpile applied while paused must show at once")
 	}
 	a.Step(300)

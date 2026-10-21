@@ -584,6 +584,7 @@ func (r *Renderer) animateCombat(w game.WorldView, pawns []game.PawnView) {
 			continue
 		}
 		r.seenTrace[key] = true
+		r.traceSound(t)
 		seed := key[0] ^ key[1] ^ key[2]
 		r.floatTrace(t, seed)
 		ux, uy := unit(float64(t.ToX-t.FromX), float64(t.ToY-t.FromY))

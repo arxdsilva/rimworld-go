@@ -117,20 +117,7 @@ def _tile_img(name, v):
 
 
 def _tile(name, v):
-    mats, _ = S.pal()
-    mat, cells, (lo, hi), deco = SPECS[name]
-    p = mats[mat]
-    border = 1000 + sum(map(ord, name))
-    seed = border * 31 + v
-    field = 0.70 * _noise(cells, border, seed) + 0.30 * _noise(cells * 2, border + 7, seed + 7)
-    img = _bands(field, p, lo, hi)
-    rng = np.random.RandomState(seed + 99)
-    if "clods" in deco:
-        _stamp(img, rng, *deco["clods"], p)
-    if "pebbles" in deco:
-        _stamp(img, rng, *deco["pebbles"], mats["stone"] if name == "gravel" else p)
-    if "cracks" in deco:
-        _cracks(img, rng, deco["cracks"], p)
+    img = _tile_img(name, v)
     out = "%s_%02d" % (name, v)
     path = S.out_path("terrain", out)
     S.write_png(img, path)
@@ -150,9 +137,9 @@ EDGE_DEPTH = 30.0   # px @2x
 EDGE_WOBBLE = 9.0
 
 
-def _edge(name, mask):
-    mats, _ = S.pal()
-    mat, cells, (lo, hi), deco = SPECS[name]
+def _edge_img(name, mask):
+    """Variant 0 of name with a soft, noisy alpha falling off away from
+    the sides in mask."""
     border = 1000 + sum(map(ord, name))
     base = _tile_img(name, 0)
     wob = _noise(6, border + 13, border * 7 + mask) * EDGE_WOBBLE
@@ -169,6 +156,11 @@ def _edge(name, mask):
     a = np.clip((EDGE_DEPTH + wob - dist) / 6.0, 0.0, 1.0)
     img = base.copy()
     img[..., 3] = a
+    return img
+
+
+def _edge(name, mask):
+    img = _edge_img(name, mask)
     out = "%s_edge_%02d" % (name, mask)
     path = S.out_path("terrain", out)
     S.write_png(img, path)

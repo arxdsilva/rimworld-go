@@ -51,14 +51,16 @@ func (a *App) saveNow(slot string) {
 	a.hint = "saved " + slot
 }
 
-// tickAutosave saves once per in-game day at autosaveHour.
+// tickAutosave saves at autosaveHour every Options-chosen number of
+// in-game days (0: never).
 func (a *App) tickAutosave() {
-	if !a.canSave() || a.cfg.Capture != nil {
+	n := a.settings.Gameplay.AutosaveDays
+	if !a.canSave() || a.cfg.Capture != nil || n <= 0 {
 		return
 	}
 	d := a.renderer.game.Date()
 	day := int(a.renderer.game.Tick()) / 60000
-	if d.Hour == autosaveHour && day != a.autosaveDay {
+	if d.Hour == autosaveHour && day-a.autosaveDay >= n {
 		a.autosaveDay = day
 		a.saveNow(a.saveSlot + "-autosave")
 	}

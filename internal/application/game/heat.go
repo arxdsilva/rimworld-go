@@ -195,6 +195,13 @@ func (g *Game) assignRefuel(id entity.EntityID) bool {
 		}
 		rec := job.Record{Kind: job.Refuel, Target: sid, TX: st.X, TY: st.Y, Dest: f.bid,
 			DestX: sx, DestY: sy, WorkLeft: refuelWork, Count: need}
+		if st.Qty > need {
+			// HAUL-001: a full load when a stockpile cell takes the rest
+			if px, py, ok := g.stockpileCell(item.Wood, b.X, b.Y); ok {
+				rec.Count = max(need, min(st.Qty, item.CarryLimit))
+				rec.Route, rec.SpareX, rec.SpareY, rec.HasSpare = []entity.EntityID{f.bid}, px, py, true
+			}
+		}
 		if !g.startJob(id, rec) {
 			continue
 		}
@@ -205,6 +212,10 @@ func (g *Game) assignRefuel(id entity.EntityID) bool {
 }
 
 func (g *Game) doRefuel(id entity.EntityID, j job.Record) {
+	if j.Carry != 0 && len(j.Route) > 0 && j.RouteI >= len(j.Route) {
+		g.routeArrive(id, j) // fire fed: at the stockpile with the rest
+		return
+	}
 	if _, ok := g.bldgs.Get(j.Dest); !ok {
 		j.State, j.Fail = job.Fail, job.TargetGone
 		g.jobs.Set(id, j)
@@ -251,7 +262,18 @@ func (g *Game) doRefuel(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
-	if st, ok := g.stacks.Get(j.Carry); ok {
+	if st, ok := g.stacks.Get(j.Carry); ok && len(j.Route) > 0 {
+		give := min(st.Qty, CampfireCapacity-g.fuel[j.Dest]/TicksPerWood)
+		g.fuel[j.Dest] = min(CampfireCapacity*TicksPerWood, g.fuel[j.Dest]+give*TicksPerWood)
+		if st.Qty -= give; st.Qty > 0 {
+			g.stacks.Set(j.Carry, st)
+			j.RouteI = len(j.Route)
+			if !g.routeWalk(id, &j, st.Kind) {
+				g.routeArrive(id, j)
+			}
+			return
+		}
+	} else if ok {
 		g.fuel[j.Dest] = min(CampfireCapacity*TicksPerWood, g.fuel[j.Dest]+st.Qty*TicksPerWood)
 	}
 	g.deleteItem(j.Carry)
@@ -290,9 +312,11 @@ func (g *Game) expose() {
 			g.die(id, health.CauseHeatstroke)
 			g.message(pos.X, pos.Y, "%s died of heatstroke", g.nameOf(id))
 		case v.Status == health.Alive && e.hypo >= exposure.Serious:
+			g.logEvent(id, logEntry{Kind: logHypothermia})
 			g.down(id, health.CauseHypothermia)
 			g.message(pos.X, pos.Y, "%s collapsed from hypothermia", g.nameOf(id))
 		case v.Status == health.Alive && e.heat >= exposure.Serious:
+			g.logEvent(id, logEntry{Kind: logHeatstroke})
 			g.down(id, health.CauseHeatstroke)
 			g.message(pos.X, pos.Y, "%s collapsed from heatstroke", g.nameOf(id))
 		case v.Status == health.Downed && (v.Cause == health.CauseHypothermia && e.hypo < exposure.Recover ||

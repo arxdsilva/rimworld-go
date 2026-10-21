@@ -206,6 +206,7 @@ func (g *Game) doRescue(id entity.EntityID, j job.Record) {
 	cx, cy := g.sleepCellFor(j.Target, b)
 	g.positions.Set(j.Target, Position{X: cx, Y: cy})
 	g.sleptAt[j.Target] = j.Dest
+	g.logPair(j.Target, id, logRescuedBy, logRescued, 0, 0)
 	j.State = job.Complete
 	g.jobs.Set(id, j)
 }
@@ -268,6 +269,7 @@ func (g *Game) doTend(id entity.EntityID, j job.Record) {
 	}
 	g.vital.Set(j.Target, v)
 	g.tendedUntil[j.Target] = uint64(g.clock.Now()) + TendTicks
+	g.logPair(j.Target, id, logTendedBy, logTended, 0, 0)
 	g.closeWound(j.Target, care)
 	j.State = job.Complete
 	g.jobs.Set(id, j)

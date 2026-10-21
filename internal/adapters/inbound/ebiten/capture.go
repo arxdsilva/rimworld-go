@@ -25,7 +25,9 @@ type Capture struct {
 	Ticks int // simulation ticks to advance before the shot
 	Zoom  float64
 	// UI opens a UI state for the shot: "" (none), "architect" (furniture
-	// card + placement ghost) or "orders" (a pawn's right-click menu).
+	// card + placement ghost), "orders" (a pawn's right-click menu), or a
+	// menu screen ("menu", "credits", "options[-tab]"; see menuCaptures;
+	// no game is started).
 	UI string
 	// Frames > 0 records that many consecutive frames at normal speed
 	// (Path gets a _NNN suffix per frame) instead of one still.
@@ -120,6 +122,10 @@ func (a *App) tickCapture() {
 	if c == nil || a.capture.done {
 		return
 	}
+	if screen, ok := menuCaptures[c.UI]; ok {
+		a.tickMenuCapture(screen)
+		return
+	}
 	if !a.capture.started {
 		if a.nav.screen() == screenBoot {
 			a.finishBoot()
@@ -186,6 +192,43 @@ func (a *App) tickCapture() {
 	a.capture.frames++
 }
 
+// menuCaptures are the -capture-ui states shot without starting a game,
+// each the button clicks that open it from the main menu.
+var menuCaptures = map[string][]string{
+	"menu":             nil,
+	"credits":          {"menu.credits"},
+	"options":          {"menu.options"},
+	"options-graphics": {"menu.options", "options.tab.graphics"},
+	"options-gameplay": {"menu.options", "options.tab.gameplay"},
+	"options-access":   {"menu.options", "options.tab.access"},
+}
+
+// tickMenuCapture shoots a menu screen without starting a game: Ticks
+// picks the moment of the menu's motion, and a frame sequence advances it
+// one tick per frame.
+func (a *App) tickMenuCapture(open []string) {
+	c := a.cfg.Capture
+	if !a.capture.started {
+		if a.nav.screen() == screenBoot {
+			a.finishBoot()
+		}
+		for _, id := range open {
+			a.applyClick(id)
+		}
+		a.menuTick = uint64(max(c.Ticks, 0))
+		a.capture.started = true
+		return
+	}
+	if c.Frames > 0 && a.capture.frames >= captureFrames {
+		if !a.capture.pending {
+			a.menuTick++
+			a.capture.pending = true
+		}
+		return
+	}
+	a.capture.frames++
+}
+
 // captureUI puts the client into a UI state for the screenshot, with a
 // synthetic cursor so hover-driven previews render.
 func (a *App) captureUI(ui string) {
@@ -249,6 +292,36 @@ func (a *App) captureUI(ui string) {
 		// UI-011 panels: the nearest tree, ground item, colonist or
 		// building to the map centre, selected, its panel open
 		a.captureInspect(ui)
+	case "zones":
+		a.captureZones(at)
+	case "paths":
+		// every colonist walking somewhere: dotted routes, one drafted
+		g := a.renderer.game
+		pawns := a.renderer.snapshot()
+		for i, p := range pawns {
+			tx, ty := p.X+9-3*i, p.Y+(i%2)*10-4
+			if i == 1 {
+				g.Enqueue(command.Command{Kind: command.DraftPawn, Pawn: uint64(p.ID), Enabled: true})
+			}
+			g.Enqueue(command.Command{Kind: command.MovePawn, Pawn: uint64(p.ID), X: tx, Y: ty})
+		}
+		for i := 0; i < 4; i++ {
+			g.Step(3)
+			a.renderer.syncPawns()
+		}
+		if len(pawns) > 0 {
+			sw, sh := a.size()
+			a.renderer.centerOn(float64(pawns[0].X)+4, float64(pawns[0].Y)+3, sw, sh)
+			if len(pawns) > 2 {
+				a.renderer.Select(pawns[2].ID)
+			}
+		}
+	case "log":
+		// the colonist inspector's Log tab
+		if pawns := a.renderer.snapshot(); len(pawns) > 0 {
+			a.renderer.Select(pawns[0].ID)
+			a.inspectTab = "log"
+		}
 	case "paused-stockpile":
 		// a stockpile painted while paused shows at once
 		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
@@ -583,4 +656,53 @@ func (a *App) captureInspect(ui string) {
 		sx, sy := a.renderer.worldToScreenF(float64(bx)+3.5, float64(by)+0.5)
 		a.cursor = &[2]int{int(sx), int(sy)}
 	}
+}
+
+// captureZones lays out two touching stockpiles, a grow zone and a grow
+// drag ghost running over rough stone (red where it cannot be sown).
+func (a *App) captureZones(at func(tx, ty int) (int, int)) {
+	g := a.renderer.game
+	cx, cy := g.Width()/2, g.Height()/2
+	free := func(kind string, x0, y0, w, h int) bool {
+		for y := y0; y < y0+h; y++ {
+			for x := x0; x < x0+w; x++ {
+				if !g.CanZoneAt(kind, x, y) {
+					return false
+				}
+			}
+		}
+		return true
+	}
+	// the nearest open 8x6 block to the centre for the stockpiles
+	sx, sy, best := cx, cy, 1<<30
+	for y := 2; y < g.Height()-8; y++ {
+		for x := 2; x < g.Width()-12; x++ {
+			if d := abs(x-cx) + abs(y-cy); d < best && free(game.ZoneStockpile, x, y, 8, 6) {
+				sx, sy, best = x, y, d
+			}
+		}
+	}
+	a.renderer.enqueue(command.Command{Kind: command.DesignateStockpile, X: sx, Y: sy, X2: sx + 3, Y2: sy + 1})
+	a.renderer.enqueue(command.Command{Kind: command.DesignateStockpile, X: sx + 2, Y: sy + 2, X2: sx + 6, Y2: sy + 4})
+	id, _ := game.CropID("potato")
+	a.renderer.enqueue(command.Command{Kind: command.DesignateGrowZone, X: sx + 5, Y: sy, X2: sx + 7, Y2: sy + 1, Build: id})
+	g.Step(1)
+	// the drag: start at rough stone (walkable, not sowable) near the centre
+	gx, gy, gbest := sx, sy+7, 1<<30
+	for y := 2; y < g.Height()-4; y++ {
+		for x := 2; x < g.Width()-6; x++ {
+			if d := abs(x-cx) + abs(y-cy); d < gbest && g.CanZoneAt(game.ZoneStockpile, x, y) && !g.CanZoneAt(game.ZoneGrow, x, y) {
+				gx, gy, gbest = x, y, d
+			}
+		}
+	}
+	a.openArchitect()
+	a.selectArchCategory("zones")
+	a.selectArchTool("grow")
+	a.archDrag = true
+	a.archX0, a.archY0, a.archX1, a.archY1 = gx-3, gy-1, gx+3, gy+2
+	x, y := at(gx+3, gy+2)
+	a.cursor = &[2]int{x, y}
+	sw, sh := a.size()
+	a.renderer.centerOn(float64(gx+sx)/2+1, float64(gy+sy)/2+2, sw, sh)
 }

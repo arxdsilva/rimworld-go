@@ -1,0 +1,441 @@
+{
+  "version": 1,
+  "sounds": [
+    {
+      "id": "amb.campfire",
+      "bus": "ambience",
+      "loop": true,
+      "volume": 0.7,
+      "files": [
+        "ambience/campfire.wav"
+      ],
+      "source": "procedural",
+      "recipe": "amb.campfire",
+      "seed": 402,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "amb.day",
+      "bus": "ambience",
+      "loop": true,
+      "volume": 0.6,
+      "files": [
+        "ambience/day.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "Open countryside daytime ambience: light steady wind through grass and a few distant songbirds, no people, no traffic, seamless loop.",
+      "seconds": 20,
+      "credits": 200,
+      "generated": "2026-10-21",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "amb.night",
+      "bus": "ambience",
+      "loop": true,
+      "volume": 0.6,
+      "files": [
+        "ambience/night.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "Calm night ambience in a field: soft wind and chirping crickets, distant, no people, seamless loop.",
+      "seconds": 20,
+      "credits": 200,
+      "generated": "2026-10-21",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "amb.rain",
+      "bus": "ambience",
+      "loop": true,
+      "volume": 0.7,
+      "files": [
+        "ambience/rain.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "Steady medium rain on grass and a wooden roof, no thunder, no voices, seamless loop.",
+      "seconds": 20,
+      "credits": 200,
+      "generated": "2026-10-21",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "music.calm",
+      "bus": "music",
+      "volume": 0.7,
+      "files": [
+        "music/calm_1.ogg"
+      ],
+      "source": "composed",
+      "recipe": "music.calm",
+      "seed": 902,
+      "seconds": 180,
+      "license": "original, composed in code (CC0, this repo)"
+    },
+    {
+      "id": "music.menu",
+      "bus": "music",
+      "loop": true,
+      "volume": 0.75,
+      "files": [
+        "music/theme.ogg"
+      ],
+      "source": "composed",
+      "recipe": "music.menu",
+      "seed": 901,
+      "seconds": 211.4285625,
+      "license": "original, composed in code (CC0, this repo)"
+    },
+    {
+      "id": "music.tension",
+      "bus": "music",
+      "loop": true,
+      "volume": 0.75,
+      "files": [
+        "music/tension.ogg"
+      ],
+      "source": "composed",
+      "recipe": "music.tension",
+      "seed": 903,
+      "seconds": 74.1818125,
+      "license": "original, composed in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.build_done",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/build_done_0.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.build_done",
+      "seed": 206,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.chop",
+      "bus": "effects",
+      "volume": 0.8,
+      "files": [
+        "sfx/chop_0.wav",
+        "sfx/chop_1.wav",
+        "sfx/chop_2.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.chop",
+      "seed": 201,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.cleave",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/cleave_0.wav",
+        "sfx/cleave_1.wav",
+        "sfx/cleave_2.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.cleave",
+      "seed": 210,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.door_close",
+      "bus": "effects",
+      "volume": 0.6,
+      "files": [
+        "sfx/door_close_0.wav",
+        "sfx/door_close_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.door_close",
+      "seed": 302,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.door_open",
+      "bus": "effects",
+      "volume": 0.55,
+      "files": [
+        "sfx/door_open_0.wav",
+        "sfx/door_open_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.door_open",
+      "seed": 301,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.gunshot",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/gunshot_0.wav",
+        "sfx/gunshot_1.wav",
+        "sfx/gunshot_2.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.gunshot",
+      "seed": 305,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.hammer",
+      "bus": "effects",
+      "volume": 0.75,
+      "files": [
+        "sfx/hammer_0.wav",
+        "sfx/hammer_1.wav",
+        "sfx/hammer_2.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.hammer",
+      "seed": 205,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.harvest",
+      "bus": "effects",
+      "volume": 0.6,
+      "files": [
+        "sfx/harvest_0.wav",
+        "sfx/harvest_1.wav",
+        "sfx/harvest_2.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.harvest",
+      "seed": 208,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.melee_hit",
+      "bus": "effects",
+      "volume": 0.8,
+      "files": [
+        "sfx/melee_hit_0.wav",
+        "sfx/melee_hit_1.wav",
+        "sfx/melee_hit_2.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.melee_hit",
+      "seed": 303,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.pick",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/pick_0.wav",
+        "sfx/pick_1.wav",
+        "sfx/pick_2.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.pick",
+      "seed": 203,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.rock_break",
+      "bus": "effects",
+      "volume": 0.8,
+      "files": [
+        "sfx/rock_break_0.wav",
+        "sfx/rock_break_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.rock_break",
+      "seed": 204,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.saw",
+      "bus": "effects",
+      "volume": 0.6,
+      "files": [
+        "sfx/saw_0.wav",
+        "sfx/saw_1.wav",
+        "sfx/saw_2.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.saw",
+      "seed": 207,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.soil",
+      "bus": "effects",
+      "volume": 0.65,
+      "files": [
+        "sfx/soil_0.wav",
+        "sfx/soil_1.wav",
+        "sfx/soil_2.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.soil",
+      "seed": 209,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.thunder",
+      "bus": "effects",
+      "volume": 0.9,
+      "files": [
+        "sfx/thunder_0.wav",
+        "sfx/thunder_1.wav",
+        "sfx/thunder_2.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.thunder",
+      "seed": 401,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.tree_fall",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/tree_fall_0.wav",
+        "sfx/tree_fall_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.tree_fall",
+      "seed": 202,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.wood_drop",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/wood_drop_0.wav",
+        "sfx/wood_drop_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.wood_drop",
+      "seed": 211,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.wood_hit",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/wood_hit_0.wav",
+        "sfx/wood_hit_1.wav",
+        "sfx/wood_hit_2.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.wood_hit",
+      "seed": 304,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "ui.click",
+      "bus": "ui",
+      "volume": 0.55,
+      "files": [
+        "ui/click_0.wav",
+        "ui/click_1.wav",
+        "ui/click_2.wav"
+      ],
+      "source": "procedural",
+      "recipe": "ui.click",
+      "seed": 101,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "ui.deny",
+      "bus": "ui",
+      "volume": 0.5,
+      "files": [
+        "ui/deny_0.wav"
+      ],
+      "source": "procedural",
+      "recipe": "ui.deny",
+      "seed": 102,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "ui.notice",
+      "bus": "ui",
+      "volume": 0.5,
+      "files": [
+        "ui/notice_0.wav"
+      ],
+      "source": "procedural",
+      "recipe": "ui.notice",
+      "seed": 107,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "ui.pause",
+      "bus": "ui",
+      "volume": 0.45,
+      "files": [
+        "ui/pause_0.wav"
+      ],
+      "source": "procedural",
+      "recipe": "ui.pause",
+      "seed": 105,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "ui.resume",
+      "bus": "ui",
+      "volume": 0.45,
+      "files": [
+        "ui/resume_0.wav"
+      ],
+      "source": "procedural",
+      "recipe": "ui.resume",
+      "seed": 106,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "ui.speed",
+      "bus": "ui",
+      "volume": 0.45,
+      "files": [
+        "ui/speed_0.wav"
+      ],
+      "source": "procedural",
+      "recipe": "ui.speed",
+      "seed": 104,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "ui.threat",
+      "bus": "ui",
+      "volume": 0.7,
+      "files": [
+        "ui/threat_0.wav"
+      ],
+      "source": "procedural",
+      "recipe": "ui.threat",
+      "seed": 108,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "ui.toggle",
+      "bus": "ui",
+      "volume": 0.5,
+      "files": [
+        "ui/toggle_0.wav",
+        "ui/toggle_1.wav",
+        "ui/toggle_2.wav"
+      ],
+      "source": "procedural",
+      "recipe": "ui.toggle",
+      "seed": 103,
+      "license": "original, made in code (CC0, this repo)"
+    }
+  ]
+}

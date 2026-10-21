@@ -112,12 +112,12 @@ func TestTameAnimalsKeepToPensAndUseDoors(t *testing.T) {
 		p, _ := g.positions.Get(buck)
 		t.Fatalf("a tame animal walks through the door into its pen (at %v)", p)
 	}
-	if len(g.World().Pens) != 1 {
+	if len(zonesOf(g.World(), ZonePen)) != 1 {
 		t.Fatal("pen in the world view")
 	}
-	g.Enqueue(command.Command{Kind: command.DesignateCancel, X: 17, Y: 3, X2: 17, Y2: 3})
+	g.Enqueue(command.Command{Kind: command.DesignateCancel, X: 17, Y: 3, X2: 23, Y2: 9})
 	g.Step(1)
-	if len(g.pens) != 0 {
+	if len(g.zones.Zones()) != 0 {
 		t.Fatal("cancel removes the pen")
 	}
 }

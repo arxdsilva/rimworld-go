@@ -182,8 +182,14 @@ func (r *Renderer) emitPyre(b game.BuildingView) {
 
 // drawFlame is the campfire flame and ground glow (fire.go) scaled by k.
 func (r *Renderer) drawFlame(screen *ebiten.Image, cx, cy, t, tile, k float64) {
-	f := 0.75 + 0.25*math.Sin(t*0.31)*math.Sin(t*0.13+2)
 	sx, sy := r.worldToScreenF(cx, cy)
+	drawFlameScreen(screen, sx, sy, t, tile, k)
+}
+
+// drawFlameScreen draws the flame at screen point (sx, sy), tile pixels
+// per tile; shared by the colony and the main-menu diorama.
+func drawFlameScreen(screen *ebiten.Image, sx, sy float32, t, tile, k float64) {
+	f := 0.75 + 0.25*math.Sin(t*0.31)*math.Sin(t*0.13+2)
 	vector.FillCircle(screen, sx, sy+float32(tile*0.12), float32(tile*0.75*k), fade(color.RGBA{255, 150, 60, 255}, 0.10*f), true)
 	vector.FillCircle(screen, sx, sy+float32(tile*0.12), float32(tile*0.42*k), fade(color.RGBA{255, 170, 80, 255}, 0.16*f), true)
 	for i, c := range []color.RGBA{{205, 60, 30, 255}, {245, 130, 40, 255}, {255, 205, 90, 255}} {
@@ -191,7 +197,7 @@ func (r *Renderer) drawFlame(screen *ebiten.Image, cx, cy, t, tile, k float64) {
 		for j := 0; j < 4; j++ {
 			h := float64(j) / 4
 			sway := math.Sin(t*0.22+h*3+float64(i)) * 0.03 * h * k
-			px, py := r.worldToScreenF(cx+sway, cy-h*0.32*f*k)
+			px, py := sx+float32(sway*tile), sy-float32(h*0.32*f*k*tile)
 			vector.FillCircle(screen, px, py, base*float32(1-h*0.7), fade(c, 0.9), true)
 		}
 	}

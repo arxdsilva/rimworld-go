@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 	"testing"
 
@@ -79,7 +80,7 @@ func TestCancelHuntKeepsPen(t *testing.T) {
 	click(t, a, "animal.hunt") // mark
 	click(t, a, "animal.hunt") // cancel
 	w := g.World()
-	if len(w.Pens) != 1 {
+	if countZones(w, game.ZonePen) != 1 {
 		t.Fatal("cancelling a hunt must not delete the pen")
 	}
 	for _, an := range w.Animals {

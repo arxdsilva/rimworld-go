@@ -7,3 +7,6 @@
 *.rwgr
 __pycache__/
 _to_delete/
+
+# ElevenLabs downloads before review (scripts/audio_import.sh imports approved takes)
+assets/source/audio/elevenlabs/raw/

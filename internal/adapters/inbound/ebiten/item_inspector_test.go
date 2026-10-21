@@ -103,7 +103,7 @@ func TestItemHaulOnlyWhenUnstored(t *testing.T) {
 	if got := itemLines(it, true); got[len(got)-1] != "In a stockpile" {
 		t.Fatalf("lines = %v", got)
 	}
-	w := game.WorldView{Stockpiles: []game.StockpileView{{MinX: 7, MinY: 7, MaxX: 9, MaxY: 9}}}
+	w := game.WorldView{Zones: []game.ZoneView{rectZone(1, game.ZoneStockpile, 7, 7, 9, 9)}}
 	if !inStockpile(w, 8, 8) || inStockpile(w, 10, 8) {
 		t.Fatal("inStockpile bounds wrong")
 	}

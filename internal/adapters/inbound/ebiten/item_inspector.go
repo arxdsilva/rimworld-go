@@ -68,9 +68,14 @@ func itemTitle(it game.ItemView) string {
 
 // inStockpile reports whether (x, y) lies in any stockpile.
 func inStockpile(w game.WorldView, x, y int) bool {
-	for _, s := range w.Stockpiles {
-		if x >= s.MinX && x <= s.MaxX && y >= s.MinY && y <= s.MaxY {
-			return true
+	for _, z := range w.Zones {
+		if z.Kind != game.ZoneStockpile || x < z.MinX || x > z.MaxX || y < z.MinY || y > z.MaxY {
+			continue
+		}
+		for _, c := range z.Cells {
+			if c[0] == x && c[1] == y {
+				return true
+			}
 		}
 	}
 	return false

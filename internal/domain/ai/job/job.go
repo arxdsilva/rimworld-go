@@ -210,6 +210,13 @@ type Record struct {
 	Forced bool
 	// BillIndex is the bench bill a Bill job works on.
 	BillIndex int
+	// Route (HAUL-001) is a delivery's targets in order (frames, or a fuel
+	// user), RouteI the next one; SpareX/SpareY the stockpile cell that
+	// takes what's left (HasSpare).
+	Route          []entity.EntityID
+	RouteI         int
+	SpareX, SpareY int
+	HasSpare       bool
 }
 
 // Line is the inspector job summary.

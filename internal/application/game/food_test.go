@@ -23,8 +23,8 @@ func TestGrowZoneSowsGrowsAndHarvests(t *testing.T) {
 	g.Enqueue(command.Command{Kind: command.DesignateGrowZone, X: 4, Y: 2, X2: 5, Y2: 3, Build: crop})
 	g.Step(TicksPerCell*40 + 4*plant.DefOf(plant.Radish).SowWork)
 	w := g.World()
-	if len(w.GrowZones) != 1 || w.GrowZones[0].Crop != "radish" {
-		t.Fatalf("zones = %+v", w.GrowZones)
+	if gz := zonesOf(w, ZoneGrow); len(gz) != 1 || gz[0].Crop != "radish" {
+		t.Fatalf("zones = %+v", w.Zones)
 	}
 	sown := 0
 	for _, p := range w.Plants {
@@ -79,7 +79,12 @@ func TestCancelRemovesGrowZone(t *testing.T) {
 	g.Step(1)
 	g.Enqueue(command.Command{Kind: command.DesignateCancel, X: 3, Y: 2, X2: 3, Y2: 2})
 	g.Step(1)
-	if len(g.World().GrowZones) != 0 {
+	if w := g.World(); len(w.Zones) != 1 || len(w.Zones[0].Cells) != 8 {
+		t.Fatalf("cancelling one tile shrinks the zone: %+v", w.Zones)
+	}
+	g.Enqueue(command.Command{Kind: command.DesignateCancel, X: 2, Y: 1, X2: 4, Y2: 3})
+	g.Step(1)
+	if len(g.World().Zones) != 0 {
 		t.Fatal("cancel should remove the zone")
 	}
 }

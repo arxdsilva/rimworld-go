@@ -35,8 +35,8 @@ func TestTreeZoneAccepted(t *testing.T) {
 	g, _ := treeZoneGame(t)
 	g.Step(1)
 	w := g.World()
-	if len(w.GrowZones) != 1 || w.GrowZones[0].Crop != "tree" {
-		t.Fatalf("zones = %+v", w.GrowZones)
+	if gz := zonesOf(w, ZoneGrow); len(gz) != 1 || gz[0].Crop != "tree" {
+		t.Fatalf("zones = %+v", w.Zones)
 	}
 	if id, ok := ZoneSpeciesID("tree"); !ok || plant.Species(id) != plant.Tree {
 		t.Fatalf("ZoneSpeciesID(tree) = %d %v", id, ok)

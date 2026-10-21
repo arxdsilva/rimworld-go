@@ -18,11 +18,6 @@ import (
 // manhunter, hunting every colonist for a day; the storyteller also sends
 // whole manhunter packs.
 
-// pen is an animal pen zone (inclusive rectangle).
-type pen struct{ X1, Y1, X2, Y2 int }
-
-func (p pen) contains(x, y int) bool { return x >= p.X1 && x <= p.X2 && y >= p.Y1 && y <= p.Y2 }
-
 const (
 	guardRadius = 10
 	// pathRetry: after a failed path search an animal waits this long
@@ -32,31 +27,6 @@ const (
 
 var petNames = []string{"Biscuit", "Pepper", "Juniper", "Ash", "Clover", "Moss", "Tansy", "Rook", "Sorrel",
 	"Bramble", "Fennel", "Hazel", "Ember", "Thistle", "Burr", "Wren"}
-
-func (g *Game) penViews() [][4]int {
-	out := make([][4]int, 0, len(g.pens))
-	for _, p := range g.pens {
-		out = append(out, [4]int{p.X1, p.Y1, p.X2, p.Y2})
-	}
-	return out
-}
-
-func (g *Game) addPen(x1, y1, x2, y2 int) {
-	minX, minY, maxX, maxY := zone.Normalize(x1, y1, x2, y2)
-	g.pens = append(g.pens, pen{minX, minY, maxX, maxY})
-}
-
-// cancelPens drops pens overlapping the rectangle.
-func (g *Game) cancelPens(x1, y1, x2, y2 int) {
-	minX, minY, maxX, maxY := zone.Normalize(x1, y1, x2, y2)
-	kept := g.pens[:0]
-	for _, p := range g.pens {
-		if p.X2 < minX || p.X1 > maxX || p.Y2 < minY || p.Y1 > maxY {
-			kept = append(kept, p)
-		}
-	}
-	g.pens = kept
-}
 
 func (g *Game) markTame(x1, y1, x2, y2 int, on bool) {
 	minX, minY, maxX, maxY := zone.Normalize(x1, y1, x2, y2)
@@ -140,8 +110,12 @@ func (g *Game) doTame(id entity.EntityID, j job.Record) {
 		a.Name = petNames[g.rng.IntN(len(petNames))]
 		a.Mode, a.Target, a.Attacker, a.Path, a.PathI = animal.Wander, 0, 0, nil, 0
 		g.message(ap.X, ap.Y, "%s tamed a %s. Its name is %s.", g.name(id), a.Species, a.Name)
+		g.logEvent(j.Target, logEntry{Kind: logTamedBy, Other: id, Name: g.name(id)})
+		g.logEvent(id, logEntry{Kind: logTamed, Other: j.Target, Name: a.Name + " the " + a.Species.String()})
 	} else {
 		a.TameRetry = now + animal.TameRetryTicks
+		g.logEvent(j.Target, logEntry{Kind: logResistedTaming, Other: id, Name: g.name(id)})
+		g.logEvent(id, logEntry{Kind: logFailedTame, Other: j.Target, Name: a.Species.String()})
 		if g.rng.IntN(100) < def.TameRevenge {
 			g.enrage(j.Target, &a, id, now)
 		} else {
@@ -161,6 +135,7 @@ func (g *Game) enrage(id entity.EntityID, a *animal.State, who entity.EntityID, 
 	a.Manhunter = now + animal.ManhunterTicks
 	a.Mode, a.Target, a.TameMark, a.FleeUntil = animal.Attack, who, false, 0
 	a.Path, a.PathI = nil, 0
+	g.logEvent(id, logEntry{Kind: logManhunter, Other: who})
 	p, _ := g.positions.Get(id)
 	g.threat(p.X, p.Y, "A %s has gone manhunter!", a.Species)
 }
@@ -281,14 +256,18 @@ func (g *Game) thinkTame(id entity.EntityID, a *animal.State, now uint64) {
 	}
 	a.NextThink = now + 240 + uint64(g.rng.IntN(480))
 	if p, ok := g.nearestPen(pos); ok {
-		if !p.contains(pos.X, pos.Y) {
-			g.animalGoTo(id, a, (p.X1+p.X2)/2, (p.Y1+p.Y2)/2)
+		if at, _ := g.zones.At(pos.X, pos.Y); at != p {
+			gx, gy := g.penGoal(p)
+			g.animalGoTo(id, a, gx, gy)
 			return
 		}
 		r := def.WanderRadius
-		x := clampInt(pos.X+g.rng.IntN(2*r+1)-r, p.X1, p.X2)
-		y := clampInt(pos.Y+g.rng.IntN(2*r+1)-r, p.Y1, p.Y2)
-		g.animalGoTo(id, a, x, y)
+		b, _ := g.zones.Bounds(p)
+		x := clampInt(pos.X+g.rng.IntN(2*r+1)-r, b.MinX, b.MaxX)
+		y := clampInt(pos.Y+g.rng.IntN(2*r+1)-r, b.MinY, b.MaxY)
+		if at, _ := g.zones.At(x, y); at == p { // pens need not be rectangles
+			g.animalGoTo(id, a, x, y)
+		}
 		return
 	}
 	// no pen: stay near the colony
@@ -324,21 +303,6 @@ func (g *Game) nearestPredator(id entity.EntityID, pos Position, r int) (Positio
 		}
 	}
 	return best, found
-}
-
-func (g *Game) nearestPen(pos Position) (pen, bool) {
-	best, bestD, ok := pen{}, 1<<30, false
-	for _, p := range g.pens {
-		cx, cy := (p.X1+p.X2)/2, (p.Y1+p.Y2)/2
-		d := weapon.Distance(pos.X, pos.Y, cx, cy)
-		if p.contains(pos.X, pos.Y) {
-			d = -1
-		}
-		if d < bestD {
-			best, bestD, ok = p, d, true
-		}
-	}
-	return best, ok
 }
 
 // home is roughly where the colony lives: its first standing colonist's

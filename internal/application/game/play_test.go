@@ -91,15 +91,15 @@ func TestFirstPlayableHaulBedEatSleep(t *testing.T) {
 	foodInStock := false
 	for _, it := range world.Items {
 		if it.Kind == "food" && !it.Carried {
-			for _, z := range world.Stockpiles {
-				if it.X >= z.MinX && it.X <= z.MaxX && it.Y >= z.MinY && it.Y <= z.MaxY {
+			for _, z := range zonesOf(world, ZoneStockpile) {
+				if inZone(z, it.X, it.Y) {
 					foodInStock = true
 				}
 			}
 		}
 	}
 	if !foodInStock {
-		t.Fatalf("expected food in a stockpile, items=%v zones=%v", world.Items, world.Stockpiles)
+		t.Fatalf("expected food in a stockpile, items=%v zones=%v", world.Items, world.Zones)
 	}
 	ate, slept := false, false
 	for _, p := range g.Snapshot() {

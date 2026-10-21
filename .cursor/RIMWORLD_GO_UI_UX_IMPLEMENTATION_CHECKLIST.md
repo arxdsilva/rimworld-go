@@ -375,6 +375,8 @@ building, item, plant, animal, corpse or tile.
 
 -   [-] **Current activity/job** (inspector job line + schedule activity + tile; no draft)
 -   [x] **Draft state** (inspector status + Draft/Undraft button)
+-   [x] **Walking path** (every colonist's remaining route and destination on the map; drafted brighter; a haul's drop point marked (UI-013))
+-   [x] **Event log** (inspector Log tab: what happened to the colonist, newest first, 30 kept; animal inspector: Recent + Log (LOG-001))
 -   [ ] **Faction**
 -   [-] **Immediate health state** (alive/downed/dead + reason; no injury tree)
 -   [x] **Immediate mood state**
@@ -459,12 +461,12 @@ the player's primary world-editing command surface.
 
 ## 6.1 Zone tool
 
--   [-] **Create stockpile** (Architect paint; food+wood; no grow-zone)
--   [ ] **Create growing zone**
--   [ ] **Expand zone**
--   [ ] **Shrink/delete zone**
+-   [x] **Create stockpile** (Architect paint, tile by tile: skips tiles another zone owns; the drag ghost marks each tile green or red (ZONE-001))
+-   [x] **Create growing zone** (crop picker incl. tree zones; skips taken tiles and infertile rough stone/rock (ZONE-001))
+-   [x] **Expand zone** (painting next to a zone of the same kind, and for grow zones the same crop, extends it; a drag bridging two merges them)
+-   [x] **Shrink/delete zone** (the Cancel tool clears just its tiles; a zone cut in two becomes two zones)
 -   [ ] **Select existing zone**
--   [ ] **Zone color/outline**
+-   [x] **Zone color/outline** (borderless fill per tile plus one outline along the zone's outer edge: stockpile dashed gold, grow zone solid green, pen fence)
     -   Distinct but unobtrusive.
 
 ## 6.2 Stockpile configuration panel
@@ -788,7 +790,7 @@ understandable.
 
 -   [x] **Move order** (drafted: right-click moves and holds)
     -   Right-click valid destination.
--   [x] **Attack order**
+-   [x] **Attack order** (drafted: right-click a raider or animal opens Shoot / Melee attack (UI-013))
     -   Hostile target.
 -   [x] **Melee attack**
 -   [x] **Ranged attack**

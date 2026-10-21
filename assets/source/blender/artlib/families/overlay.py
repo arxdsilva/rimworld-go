@@ -196,13 +196,17 @@ def _g_mine(xx, yy, c):  # pick: shaft + curved head
     return np.minimum(d, head)
 
 
+# Zone fills carry no border: the game outlines a whole zone along its
+# outer edge only (ZONE-001), so adjacent tiles read as one area. Pattern
+# periods divide N so the fill tiles without seams.
+
+
 def _stockpile(t):
     xx, yy = _grid()
     img = np.zeros((N, N, 4), np.float32)
     _paint(img, np.ones((N, N), np.float32), t["stockpile"], 0.16)
-    stripes = ((xx + yy) % 24) < 3
-    border = (xx < 4) | (yy < 4) | (xx > N - 4) | (yy > N - 4)
-    _paint(img, (stripes & border).astype(np.float32), t["stockpile"], 0.75)
+    stripes = ((xx + yy) % 32) < 3
+    _paint(img, stripes.astype(np.float32), t["stockpile"], 0.22)
     return _save("stockpile", img, {"overlay": "zone", "tileable": True})
 
 
@@ -212,9 +216,7 @@ def _grow_zone(t):
     green = (0.45, 0.78, 0.36)
     _paint(img, np.ones((N, N), np.float32), green, 0.14)
     rows = ((yy % 32) < 3)
-    border = (xx < 4) | (yy < 4) | (xx > N - 4) | (yy > N - 4)
-    _paint(img, (rows & ~border).astype(np.float32), green, 0.35)
-    _paint(img, ((((xx + yy) % 24) < 3) & border).astype(np.float32), green, 0.8)
+    _paint(img, rows.astype(np.float32), green, 0.35)
     return _save("grow_zone", img, {"overlay": "zone", "tileable": True})
 
 

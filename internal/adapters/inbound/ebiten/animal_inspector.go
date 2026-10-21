@@ -48,8 +48,18 @@ func (a *App) selectedAnimal() (game.AnimalView, bool) {
 	return game.AnimalView{}, false
 }
 
-func animalRect() button {
-	return button{x: hudPad, y: hudTopH + hudPad, w: 300, h: 150}
+const (
+	animalPanelH     = 222 // with the Recent list
+	animalPanelFullH = 340 // with the full scrollable log open
+)
+
+// animalPanel is the inspector rect; it grows while the full log is open.
+func (a *App) animalPanel() button {
+	h := float32(animalPanelH)
+	if a.animalLogOpen {
+		h = animalPanelFullH
+	}
+	return button{x: hudPad, y: hudTopH + hudPad, w: 300, h: h}
 }
 
 func (a *App) animalButtons() []button {
@@ -57,7 +67,8 @@ func (a *App) animalButtons() []button {
 	if !ok || a.workOpen || a.archOpen {
 		return nil
 	}
-	r := animalRect()
+	a.syncAnimalLog(an.ID)
+	r := a.animalPanel()
 	label := "Hunt"
 	switch {
 	case an.Designated:
@@ -69,6 +80,11 @@ func (a *App) animalButtons() []button {
 		{id: "animal.close", label: "X", x: r.x + r.w - 28, y: r.y + 6, w: 22, h: 22},
 		{id: "animal.hunt", label: label, x: r.x + 12, y: r.y + r.h - 34, w: 120, h: 24, selected: an.Designated},
 	}
+	logLabel := "Log"
+	if a.animalLogOpen {
+		logLabel = "Less"
+	}
+	out = append(out, button{id: "animal.log", label: logLabel, x: r.x + 248, y: r.y + r.h - 34, w: 40, h: 24, selected: a.animalLogOpen})
 	switch {
 	case an.Tame:
 		out = append(out, button{id: "animal.release", label: "Release", x: r.x + 140, y: r.y + r.h - 34, w: 100, h: 24})
@@ -105,7 +121,8 @@ func (a *App) drawAnimalInspector(screen *ebiten.Image) {
 	if !ok || a.workOpen || a.archOpen {
 		return
 	}
-	r := animalRect()
+	a.syncAnimalLog(an.ID)
+	r := a.animalPanel()
 	drawPanel(screen, r.x, r.y, r.w, r.h)
 	if a.renderer.art != nil {
 		if img := a.renderer.art.image("ui_icon/"+an.Species, color.NRGBA{}); img != nil {
@@ -125,6 +142,7 @@ func (a *App) drawAnimalInspector(screen *ebiten.Image) {
 	drawLabel(screen, int(r.x)+60, int(r.y)+30, state)
 	drawLabel(screen, int(r.x)+12, int(r.y)+58, animalBlurb(an.Species))
 	drawNeedBar(screen, int(r.x)+12, int(r.y)+84, 270, 14, an.Health, "health")
+	a.drawAnimalLog(screen, an, r)
 	if an.Designated {
 		drawLabel(screen, int(r.x)+150, int(r.y+r.h)-28, "marked for hunting")
 	}
@@ -144,6 +162,9 @@ func (a *App) applyAnimalClick(id string) {
 	switch id {
 	case "animal.close":
 		a.clearAnimal()
+	case "animal.log":
+		a.animalLogOpen = !a.animalLogOpen
+		a.animalLogScroll = 0
 	case "animal.hunt":
 		c := command.Command{Kind: command.DesignateHunt, X: an.X, Y: an.Y, X2: an.X, Y2: an.Y}
 		if an.Designated { // only the mark: a pen or zone underneath stays

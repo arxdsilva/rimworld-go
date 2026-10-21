@@ -83,7 +83,7 @@ func (a *App) drawAnimalsTab(screen *ebiten.Image, sw, sh int) {
 			marked++
 		}
 	}
-	drawLabel(screen, int(r.x)+12, int(r.y)+10, fmt.Sprintf("Animals  (%d tame, %d marked for taming, %d pens)", len(a.tameAnimals()), marked, len(w.Pens)))
+	drawLabel(screen, int(r.x)+12, int(r.y)+10, fmt.Sprintf("Animals  (%d tame, %d marked for taming, %d pens)", len(a.tameAnimals()), marked, countZones(w, game.ZonePen)))
 	drawLabel(screen, int(r.x)+12, int(r.y)+28, "Tame with Architect > Orders > Tame (hunters do it). Tame wolves guard; pens keep animals in place.")
 	drawLabel(screen, int(r.x)+52, int(r.y)+44, "Name          Species     Health  Doing")
 	mx, my := a.currentCursor()
@@ -107,4 +107,15 @@ func (a *App) drawAnimalsTab(screen *ebiten.Image, sw, sh int) {
 	if len(a.tameAnimals()) == 0 {
 		drawLabel(screen, int(r.x)+52, int(r.y)+66, "No tame animals yet.")
 	}
+}
+
+// countZones is how many zones of kind the world has.
+func countZones(w game.WorldView, kind string) int {
+	n := 0
+	for _, z := range w.Zones {
+		if z.Kind == kind {
+			n++
+		}
+	}
+	return n
 }

@@ -5,6 +5,7 @@ own camera, light, or render settings.
 import math
 import os
 import tempfile
+from contextlib import contextmanager
 
 import bmesh
 import bpy
@@ -51,6 +52,7 @@ def stage():
 
 def clear():
     sc = stage()
+    sc.pop("rwg_sheared", None)
     for ob in list(sc.collection.all_objects):
         data = ob.data
         bpy.data.objects.remove(ob, do_unlink=True)
@@ -249,21 +251,25 @@ def _shear_all(sc):
 
 
 def _rig(sc, x_min, y_max, w_px, h_px):
-    cam_data = bpy.data.cameras.new("rwg_cam")
-    cam_data.type = "ORTHO"
-    cam_data.ortho_scale = max(w_px, h_px) / C.PPT
-    cam_data.clip_start = 0.1
-    cam_data.clip_end = 200
-    cam = _link(bpy.data.objects.new("rwg_cam", cam_data))
+    """The canonical camera and sun; reused when the stage already has them
+    (multi-pass scene renders)."""
+    cam = sc.camera if sc.camera is not None and sc.camera.name.startswith("rwg_cam") else None
+    if cam is None:
+        cam_data = bpy.data.cameras.new("rwg_cam")
+        cam_data.type = "ORTHO"
+        cam_data.clip_start = 0.1
+        cam_data.clip_end = 200
+        cam = _link(bpy.data.objects.new("rwg_cam", cam_data))
+        sc.camera = cam
+        sun_data = bpy.data.lights.new("rwg_sun", "SUN")
+        sun_data.energy = math.pi
+        sun_data.angle = math.radians(1.0)
+        sun_data.use_shadow = True
+        sun = _link(bpy.data.objects.new("rwg_sun", sun_data))
+        L = Vector(C.light_vector())
+        sun.rotation_euler = Vector((0, 0, -1)).rotation_difference(-L).to_euler()
+    cam.data.ortho_scale = max(w_px, h_px) / C.PPT
     cam.location = (x_min + w_px / C.PPT / 2, y_max - h_px / C.PPT / 2, 100)
-    sc.camera = cam
-    sun_data = bpy.data.lights.new("rwg_sun", "SUN")
-    sun_data.energy = math.pi
-    sun_data.angle = math.radians(1.0)
-    sun_data.use_shadow = True
-    sun = _link(bpy.data.objects.new("rwg_sun", sun_data))
-    L = Vector(C.light_vector())
-    sun.rotation_euler = Vector((0, 0, -1)).rotation_difference(-L).to_euler()
     sc.render.resolution_x = w_px
     sc.render.resolution_y = h_px
 
@@ -489,6 +495,103 @@ def render_asset(family, name, footprint=(1, 1), zmax=1.0, margins=None,
     if not keep:
         clear()
     return path
+
+
+# ------------------------------------------------------- whole scenes
+# Scenes (artlib/scenes) compose many family builders into one render
+# through the same camera, light, shear and post-pass as sprites.
+
+@contextmanager
+def isolate():
+    """Park the stage's objects while one builder runs, so builders that
+    act on S.objects() (posing, clear()) only see their own piece."""
+    sc = stage()
+    park = bpy.data.collections.get("rwg_parked") or bpy.data.collections.new("rwg_parked")
+    park.use_fake_user = True
+    moved = list(sc.collection.objects)
+    for ob in moved:
+        park.objects.link(ob)
+        sc.collection.objects.unlink(ob)
+    try:
+        yield
+    finally:
+        for ob in list(park.objects):
+            sc.collection.objects.link(ob)
+            park.objects.unlink(ob)
+
+
+@contextmanager
+def no_render():
+    """Builders that render themselves (render_asset) only build."""
+    global render_asset
+    real = render_asset
+    render_asset = lambda *a, **k: None  # noqa: E731
+    try:
+        yield
+    finally:
+        render_asset = real
+
+
+def place(builder, x, y, facing=None, tag=None):
+    """Build one piece alone and move it to game tile (x, y) (top-left of
+    its footprint). builder may return (footprint, zmax); facing rotates
+    south-authored geometry. Returns the piece's objects."""
+    with isolate(), no_render():
+        ret = builder()
+        objs = objects()
+        fp = ret[0] if isinstance(ret, tuple) and ret and isinstance(ret[0], tuple) else (1, 1)
+        if facing and facing != "south":
+            face(objs, facing, fp)
+        transform(objs, Matrix.Translation((x, -y, 0)))
+        for ob in objs:
+            ob["rwg_piece"] = tag or builder.__name__
+    return objs
+
+
+def mat_tinted(name, hex_):
+    """Palette material with the runtime multiply tint baked in (sRGB)."""
+    key = "rwg_%s@%s" % (name, hex_.lstrip("#"))
+    m = bpy.data.materials.get(key)
+    if m:
+        return m
+    p = dict(pal()[0][name])
+    t = palette.hex_to_srgb(hex_)
+    for band in ("light", "base", "shadow"):
+        c = palette.hex_to_srgb(p[band])
+        p[band] = "#" + "".join("%02x" % int(round(min(1, ci * ti) * 255)) for ci, ti in zip(c, t))
+    m = mat(name).copy()
+    m.name = key
+    ramp = next(n for n in m.node_tree.nodes if n.type == "VALTORGB")
+    for el, band in zip(ramp.color_ramp.elements, ("shadow", "base", "light")):
+        el.color = (*palette.hex_to_linear(p[band]), 1)
+    return m
+
+
+@contextmanager
+def swap_materials(pick):
+    """Temporarily give every mesh the material pick(object) returns."""
+    saved = _swap(stage(), pick)
+    try:
+        yield
+    finally:
+        _restore(saved)
+
+
+def flat(name, rgb=None, holdout=False):
+    return _flat(name, rgb, holdout)
+
+
+def render_scene(x_min, y_max, w_px, h_px, outline=True, scale=1.0):
+    """Render the whole stage through the canonical rig: frame top-left at
+    Blender (x_min, y_max), w_px x h_px (times scale, for previews). Shears
+    once; never writes or clears. Returns the post-processed RGBA image."""
+    sc = stage()
+    if not sc.get("rwg_sheared"):
+        _shear_all(sc)
+        sc["rwg_sheared"] = True
+    _rig(sc, x_min, y_max, w_px, h_px)
+    sc.render.resolution_percentage = int(round(scale * 100))
+    return post.process(_render_raw(sc), do_outline=outline, do_shadow=False)
 
 
 TEMPLATE = os.path.join(C.SOURCE_DIR, "template.blend")

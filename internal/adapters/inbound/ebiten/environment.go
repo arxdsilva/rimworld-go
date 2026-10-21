@@ -698,7 +698,7 @@ func (r *Renderer) stepWeather() {
 	want := 0
 	if e.kind.falling() && !e.view.empty() {
 		area := (e.view.x1 - e.view.x0) * (e.view.y1 - e.view.y0)
-		want = min(int(e.kind.density()*e.intensity*area), cap*85/100)
+		want = min(int(e.kind.density()*e.intensity*area*r.fxOr1()), cap*85/100)
 	}
 	room := cap - want // landing effects share what the drops leave
 	live, effects := 0, 0
@@ -1052,11 +1052,24 @@ func (r *Renderer) drawWeather(screen *ebiten.Image, w game.WorldView, sw, sh in
 	r.drawLightning(screen, w, sw, sh)
 }
 
+// maxFlashReduced caps the lightning flash with Reduced flashing on.
+const maxFlashReduced = 0.15
+
+// fxOr1 is the Options effects multiplier (1 for a renderer built
+// without settings).
+func (r *Renderer) fxOr1() float64 {
+	if r.fx <= 0 {
+		return 1
+	}
+	return r.fx
+}
+
 func (r *Renderer) drawLightning(screen *ebiten.Image, w game.WorldView, sw, sh int) {
 	e := &r.env
 	b := uint64(r.game.Tick()) / lightningBucket
 	if lightningAt(w.Weather, w.WeatherIntensity, b) && (!e.flashSeen || b != e.flashBucket) {
 		e.flashBucket, e.flashAt, e.flashSeen = b, r.present, true
+		r.thunderAt = r.present + thunderDelay(b)
 	}
 	if !e.flashSeen {
 		return
@@ -1072,6 +1085,9 @@ func (r *Renderer) drawLightning(screen *ebiten.Image, w game.WorldView, sw, sh 
 		a = 0.38
 	case age < 40:
 		a = 0.38 * math.Exp(-(age-9)/6)
+	}
+	if r.reducedFlashing { // Options: accessibility
+		a = math.Min(a, maxFlashReduced)
 	}
 	if a > 0.005 {
 		vector.FillRect(screen, 0, 0, float32(sw), float32(sh), color.RGBA{uint8(235 * a), uint8(240 * a), uint8(255 * a), uint8(255 * a)}, false)

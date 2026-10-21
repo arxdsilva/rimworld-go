@@ -1,4 +1,5 @@
-// Package zone is stockpile rectangles with a food+wood filter.
+// Package zone is the per-tile zone map (stockpiles, grow zones, pens) and
+// the legacy zone rectangles older saves hold.
 package zone
 
 // Stockpile is a painted storage rectangle. Filters are food and wood only.

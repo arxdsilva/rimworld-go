@@ -33,8 +33,8 @@ func TestUndesignateKeepsZones(t *testing.T) {
 		apply(command.Command{Kind: command.Undesignate, Order: o, X: 12, Y: 12, X2: 12, Y2: 12})
 	}
 	w := g.World()
-	if len(w.Pens) != 1 || len(w.GrowZones) != 1 {
-		t.Fatalf("zones must stay: pens %d grow zones %d", len(w.Pens), len(w.GrowZones))
+	if len(zonesOf(w, ZonePen)) != 1 || len(zonesOf(w, ZoneGrow)) != 1 {
+		t.Fatalf("zones must stay: %+v", w.Zones)
 	}
 	for _, a := range w.Animals {
 		if a.ID == aid && (a.Designated || a.TameMark) {
