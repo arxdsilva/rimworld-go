@@ -207,7 +207,7 @@ This is the minimum UI required to interact with a running simulation.
 
 ## 2.1 Main game viewport
 
--   [-] **Map viewport** (grid, pawns, stockpiles, plants, items, frames, buildings from read models; curved, eased, sub-frame pawn/animal motion; no roofs/visibility/effects)
+-   [-] **Map viewport** (grid, pawns, stockpiles, plants, items, frames, buildings from read models; curved, eased, sub-frame pawn/animal motion; no roofs/visibility/effects) (SIM-018, ART-010: roof overlay and sprite lighting done; no visibility or effects)
     -   Occupies the central play area.
     -   Draw terrain, roofs/visibility treatment, structures, items,
         plants, pawns, effects and selection markers.
@@ -298,7 +298,7 @@ building, item, plant, animal, corpse or tile.
 -   [ ] **Description**
     -   Data-driven description.
     -   Plugins can provide localization.
--   [-] **Location and environment** (tile coordinates from `PawnView`; no room/temperature/terrain/roof)
+-   [-] **Location and environment** (tile coordinates from `PawnView`; no room/temperature/terrain/roof) (SIM-018: roof line in hover panel)
     -   Cell.
     -   room/outdoors.
     -   temperature.
@@ -414,7 +414,7 @@ the player's primary world-editing command surface.
 
 -   [x] **Ghost blueprint** (real sprite per cell, walls autotile among ghosts, hover preview before dragging)
     -   Show exact occupied cells before command submission.
--   [-] **Validity visualization** (green/red ghosts, first failure reason, count and wood total; reasons: outside, blocked, occupied, planned, items)
+-   [-] **Validity visualization** (green/red ghosts, first failure reason, count and wood total; reasons: outside, blocked, occupied, planned, items) (SIM-018: unsupported roof tiles marked red ×)
     -   Valid/invalid placement.
     -   Reasons: occupied, impassable, unsupported, missing research,
         wrong terrain, blocked interaction cell, roof/support
@@ -441,7 +441,7 @@ the player's primary world-editing command surface.
 -   [x] **Cancel** (blueprints, harvest and deconstruct marks, zones)
 -   [ ] **Forbid/unforbid**
 -   [ ] **Remove floor**
--   [ ] **Remove roof**
+-   [x] **Remove roof** (SIM-018)
 -   [ ] **Claim structure where base-game semantics require it**
 -   [ ] **Smooth stone/floor equivalents if supported**
 
@@ -935,10 +935,10 @@ understandable.
 
 ## 16.4 Roof overlay
 
--   [ ] **Roofed**
--   [ ] **Unroofed**
+-   [x] **Roofed** (SIM-018)
+-   [x] **Unroofed** (SIM-018: left unmarked by the overlay; hover line "Unroofed", with "room too large to auto-roof")
 -   [ ] **Mountain/thick roof distinction where gameplay requires it**
--   [ ] **Build/remove roof designation**
+-   [x] **Build/remove roof designation** (SIM-018)
 
 ## 16.5 Fertility overlay
 
@@ -2091,7 +2091,7 @@ Complete:
 -   [ ] Bills.
 -   [ ] Research.
 -   [ ] Power overlay.
--   [ ] Temperature/roof overlays.
+-   [-] Temperature/roof overlays. (SIM-018: roof overlay done; temperature overlay missing)
 -   [ ] Drafted combat.
 -   [ ] Hit/cover feedback.
 -   [ ] Assign/policies.
