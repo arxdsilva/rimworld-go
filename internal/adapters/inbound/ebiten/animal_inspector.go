@@ -29,8 +29,7 @@ func (a *App) selectAnimalAt(tx, ty int) bool {
 		a.hasAnimal = false
 		return false
 	}
-	a.selAnimal, a.hasAnimal = an.ID, true
-	a.clearBuilding()
+	a.selectCand(selCand{selAnimal, an.ID})
 	return true
 }
 

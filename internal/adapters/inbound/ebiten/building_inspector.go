@@ -61,7 +61,7 @@ func (a *App) selectBuildingAt(tx, ty int) bool {
 		a.hasBuilding = false
 		return false
 	}
-	a.selBuilding, a.hasBuilding = b.ID, true
+	a.selectCand(selCand{selBuilding, b.ID})
 	return true
 }
 

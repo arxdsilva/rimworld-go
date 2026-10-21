@@ -102,6 +102,9 @@ type App struct {
 	hasBuilding                    bool
 	selAnimal                      entity.EntityID
 	hasAnimal                      bool
+	selPlant, selItem              entity.EntityID // plant and item panels (selection.go)
+	hasPlant, hasItem              bool
+	selCycle                       selCycle // last map click, for cycling a tile's stack
 	alertCycle                     map[string]int
 	archDrag                       bool
 	archX0, archY0, archX1, archY1 int
@@ -221,17 +224,7 @@ func (a *App) Update() error {
 		a.handleArchitectInput(consumed)
 		if a.archTool == "" {
 			if !consumed && inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-				a.renderer.handleSelectionInput()
-				if a.renderer.HasSelect() {
-					a.clearBuilding()
-					a.clearAnimal()
-				} else {
-					mx, my := a.currentCursor()
-					tx, ty := a.renderer.TileAt(mx, my)
-					if !a.selectAnimalAt(tx, ty) {
-						a.selectBuildingAt(tx, ty)
-					}
-				}
+				a.clickSelect() // selection.go
 			}
 			a.handleOrders()
 		}
@@ -426,6 +419,10 @@ func (a *App) applyClick(id string) {
 		}
 	case strings.HasPrefix(id, "animal."):
 		a.applyAnimalClick(id)
+	case strings.HasPrefix(id, "plant."):
+		a.applyPlantClick(id) // plant_inspector.go
+	case strings.HasPrefix(id, "item."):
+		a.applyItemClick(id) // item_inspector.go
 	case strings.HasPrefix(id, "alert."):
 		a.focusAlert(id)
 	case strings.HasPrefix(id, "bldg.") || strings.HasPrefix(id, "bill."):
