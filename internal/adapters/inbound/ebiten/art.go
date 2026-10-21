@@ -293,7 +293,7 @@ func loadArtCatalog(root string) (*artCatalog, error) {
 		return nil, err
 	}
 	for _, fam := range families {
-		if !fam.IsDir() {
+		if !fam.IsDir() || fam.Name() == menuMetaFamily { // menu art is not a sprite
 			continue
 		}
 		files, err := os.ReadDir(filepath.Join(metaRoot, fam.Name()))

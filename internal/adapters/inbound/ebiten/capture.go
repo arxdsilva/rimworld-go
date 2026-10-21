@@ -25,7 +25,8 @@ type Capture struct {
 	Ticks int // simulation ticks to advance before the shot
 	Zoom  float64
 	// UI opens a UI state for the shot: "" (none), "architect" (furniture
-	// card + placement ghost) or "orders" (a pawn's right-click menu).
+	// card + placement ghost), "orders" (a pawn's right-click menu) or
+	// "menu" (the main menu; no game is started).
 	UI string
 	// Frames > 0 records that many consecutive frames at normal speed
 	// (Path gets a _NNN suffix per frame) instead of one still.
@@ -120,6 +121,10 @@ func (a *App) tickCapture() {
 	if c == nil || a.capture.done {
 		return
 	}
+	if c.UI == "menu" {
+		a.tickMenuCapture()
+		return
+	}
 	if !a.capture.started {
 		if a.nav.screen() == screenBoot {
 			a.finishBoot()
@@ -183,6 +188,29 @@ func (a *App) tickCapture() {
 		return
 	}
 	a.renderer.present++
+	a.capture.frames++
+}
+
+// tickMenuCapture shoots the main menu without starting a game: Ticks
+// picks the moment of the menu's motion, and a frame sequence advances it
+// one tick per frame.
+func (a *App) tickMenuCapture() {
+	c := a.cfg.Capture
+	if !a.capture.started {
+		if a.nav.screen() == screenBoot {
+			a.finishBoot()
+		}
+		a.menuTick = uint64(max(c.Ticks, 0))
+		a.capture.started = true
+		return
+	}
+	if c.Frames > 0 && a.capture.frames >= captureFrames {
+		if !a.capture.pending {
+			a.menuTick++
+			a.capture.pending = true
+		}
+		return
+	}
 	a.capture.frames++
 }
 

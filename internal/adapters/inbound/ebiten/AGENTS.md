@@ -18,6 +18,7 @@ commands via `Enqueue`. Domain code does not import this package.
 - UI chrome tokens (`assets/palettes/ui.yaml`, mirrored in Go)
 - colony HUD: Food/Wood/time strip, colonist bar, Architect, Work, inspector
 - main-menu colonist splash (original PNG, left of the action rail)
+- main-menu colony diorama (`menu_diorama.go`: drift, glow, flame, scrim)
 - `Renderer` — colony camera, speed tiers, selection, world draw, `Enqueue`
 - original art catalog (`assets/metadata` + generated PNGs, tint masks) and
   its draw path (`art.go`, `draw_art.go`); vendor sprite atlas as fallback
@@ -75,6 +76,9 @@ commands via `Enqueue`. Domain code does not import this package.
 - Menu chrome colors must match `assets/palettes/ui.yaml`.
 - Main-menu splash is presentation-only; a missing PNG still shows the
   backdrop and right-rail buttons.
+- The menu diorama is optional (`AppConfig.LoadMenuScene`); without it the
+  gradient backdrop is drawn. Its motion runs on `menuTick`, never the sim,
+  and `-capture-ui menu` shoots it without starting a game.
 
 ## Hot paths
 

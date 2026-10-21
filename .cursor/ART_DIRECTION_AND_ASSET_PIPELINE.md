@@ -482,7 +482,9 @@ edge cleanup → transparency validation → metadata → in-game review.
 camera, lighting, world background, reference tile plane, origin, and
 render resolution. Use simple stylized materials, render transparent,
 then normalize outline/palette and optionally paint over. Agents must
-not invent independent camera/light setups.
+not invent independent camera/light setups. Whole scenes (the main-menu
+diorama) compose family builders into one render through the same rig
+(`stage.render_scene`), never a scene-specific camera or light.
 
 ## 22. AI-Assisted Art
 

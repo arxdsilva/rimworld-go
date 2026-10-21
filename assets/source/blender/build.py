@@ -3,20 +3,35 @@
 Headless (reproducible, what `make art` runs):
     blender -b --factory-startup -P assets/source/blender/build.py -- [family ...]
 Live (Blender MCP / Text editor):
-    exec(open(".../assets/source/blender/build.py").read())
+    p = ".../assets/source/blender/build.py"
+    exec(open(p).read(), {"__file__": p, "__name__": "rwg_live"}); build(["furniture"])
+Scenes (not part of a default build): build(["menu"]) -> artlib/scenes/menu.py
 """
 import importlib
 import os
 import sys
 
-HERE = os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() else \
-    "/Users/asilva/youtube/rimworld-go/assets/source/blender"
+import bpy
+
+
+def _here():
+    if "__file__" in globals():
+        return os.path.dirname(os.path.abspath(__file__))
+    if os.environ.get("RWG_BLENDER_DIR"):
+        return os.environ["RWG_BLENDER_DIR"]
+    if bpy.data.filepath:  # template.blend lives next to this script
+        return os.path.dirname(bpy.data.filepath)
+    raise RuntimeError("build.py: exec with {'__file__': path} or set RWG_BLENDER_DIR")
+
+
+HERE = _here()
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
 
 import artlib  # noqa: E402
 
 FAMILIES = ["terrain", "rock", "structure", "furniture", "plant", "item", "pawn", "gear", "animal", "weather", "overlay"]
+SCENES = ["menu"]   # whole-scene renders; only built when named
 
 
 def _reload():
@@ -31,7 +46,8 @@ def build(families=None):
     stage.clear()
     done = []
     for fam in families or FAMILIES:
-        mod = importlib.import_module("artlib.families." + fam)
+        pkg = "artlib.scenes." if fam in SCENES else "artlib.families."
+        mod = importlib.import_module(pkg + fam)
         importlib.reload(mod)
         done += mod.build()
     if families is None:

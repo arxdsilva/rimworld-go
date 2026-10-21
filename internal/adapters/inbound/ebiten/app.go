@@ -58,6 +58,9 @@ type AppConfig struct {
 	// Nil: locate from cwd. When it fails the vendor pack is used.
 	LoadArt    func() (*artCatalog, error)
 	LoadSplash func() (*ebiten.Image, error)
+	// LoadMenuScene loads the main-menu colony diorama (make art-menu).
+	// Nil: locate from cwd. When it fails the gradient backdrop is drawn.
+	LoadMenuScene func() (*menuDiorama, error)
 	// Capture, when set, runs a scripted screenshot session and quits.
 	Capture *Capture
 	// Saves connects save/load to storage (zero value: disabled).
@@ -77,6 +80,9 @@ type App struct {
 	art        *artCatalog
 	packWarn   string
 	splash     *ebiten.Image
+	menu       *menuDiorama
+	menuTried  bool
+	menuTick   uint64 // drives menu motion; counts while no colony is shown
 	sessionErr string
 	hint       string
 	shouldQuit bool
@@ -161,6 +167,15 @@ func NewApp(cfg AppConfig) *App {
 			return loadPNG(path)
 		}
 	}
+	if cfg.LoadMenuScene == nil {
+		cfg.LoadMenuScene = func() (*menuDiorama, error) {
+			root, err := LocateArt()
+			if err != nil {
+				return nil, err
+			}
+			return loadMenuDiorama(root)
+		}
+	}
 	return &App{
 		cfg: cfg,
 		now: time.Now,
@@ -234,6 +249,9 @@ func (a *App) Update() error {
 			}
 			a.handleOrders()
 		}
+	}
+	if a.nav.screen() != screenColony && a.cfg.Capture == nil {
+		a.menuTick++
 	}
 	if a.cfg.Capture != nil {
 		a.tickCapture()
@@ -345,6 +363,7 @@ func (a *App) loadPack() {
 		}
 	}
 	a.loadSplash()
+	a.loadMenuScene()
 }
 
 func (a *App) finishBoot() {
@@ -710,7 +729,9 @@ func bodyOrigin(buttons []button, sh int) (x, y int) {
 }
 
 func (a *App) fillMenu(screen *ebiten.Image, sw, sh int, title string, body []string, bodyX int) {
-	drawMenuBackdrop(screen, sw, sh)
+	if !a.drawMenuDiorama(screen, sw, sh, 0.55) {
+		drawMenuBackdrop(screen, sw, sh)
+	}
 	drawPanel(screen, 40, 24, float32(sw-80), 56)
 	drawLabel(screen, 56, 44, title)
 	if len(body) == 0 {

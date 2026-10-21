@@ -18,7 +18,9 @@ func (a *App) mainMenuButtons(sw, sh int) []button {
 }
 
 func (a *App) drawMainMenu(screen *ebiten.Image, sw, sh int) {
-	drawMenuBackdrop(screen, sw, sh)
+	if !a.drawMenuDiorama(screen, sw, sh, 0) {
+		drawMenuBackdrop(screen, sw, sh)
+	}
 	a.drawMenuSplash(screen, sw, sh)
 	drawLabel(screen, menuTitleX(sw, "rimworld-go"), 28, "rimworld-go")
 	cx := menuRailX(sw)

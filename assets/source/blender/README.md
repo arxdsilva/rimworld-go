@@ -15,7 +15,17 @@ artlib/meta.py           writes metadata/<family>/<name>.yaml
 artlib/families/         terrain, structure, furniture, plant, item, pawn (+ weapon), overlay (+ UI icons)
 ```
 
-Live iteration with Blender MCP: in Blender's Python, `exec(open(".../build.py").read()); build(["furniture"])`.
+Live iteration with Blender MCP: in Blender's Python,
+`p = ".../build.py"; exec(open(p).read(), {"__file__": p, "__name__": "rwg_live"}); build(["furniture"])`.
+Use the Blender version that wrote `template.blend` (5.2); older versions
+name the EEVEE engine differently and shade differently.
+
+Scenes (`artlib/scenes/`) compose many builders into one render, through
+the same rig: `stage.place(builder, x, y)` builds a piece alone (inside
+`stage.isolate()`, with self-rendering builders muted) and moves it to a
+tile; `stage.render_scene(...)` shears, frames and renders the whole
+stage. `make art-menu` (or `build(["menu"])`) renders the main-menu
+diorama; `menu.preview()` writes a quarter-size check render.
 
 Adding an asset: write a builder in the right family using `stage.box/cyl/
 ellipsoid/blob/prism` and palette material names, call

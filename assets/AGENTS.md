@@ -37,6 +37,7 @@ rebuilds everything:
 make art           # headless Blender -> generated/ + metadata/, then validate
 make art-check     # validator only (python3 + Pillow)
 make art-preview   # generated/contact_sheet.png + generated/prototype_scene.png
+make art-menu      # main-menu colony diorama (scenes/menu.py), not part of make art
 ```
 
 Rules:
@@ -76,14 +77,16 @@ assets/
 │   ├── blender/
 │   │   ├── build.py     # entry point (headless or live via Blender MCP)
 │   │   ├── template.blend
-│   │   └── artlib/      # contracts, stage, post-pass, metadata, families/
+│   │   └── artlib/      # contracts, stage, post-pass, metadata, families/, scenes/
 │   ├── tools/           # validate_assets.py, contact_sheet.py, compose_scene.py
 │   └── raster/ui/main_menu_colonist.png
 ├── generated/
 │   ├── world/<family>/<name>.png (+ _mask.png)   # @2x sprites
 │   ├── ui/icons/*.png
+│   ├── ui/menu/menu_diorama.png (+ menu_glow_lamp/fire.png)  # main-menu scene
 │   ├── contact_sheet.png, prototype_scene*.png, pawn_sheet.png  # review aids
 ├── metadata/<family>/<name>.yaml   # footprint, origin_px, attachments, tint
+│   └── ui_menu/menu_diorama.yaml    # menu scene: canvas, glow layers, fire/lamp px (not a sprite)
 ├── Free 2D Animated Vector Game Character Sprites/   # vendor source
 └── .gitkeep
 ```
@@ -92,6 +95,11 @@ assets/
 colonist bust with raven, RGBA cutout). It is not vendor pack art and is
 not a reconstruction of proprietary RimWorld screenshots. The brief that
 produced it lives at repo-root `ai-bg-rimworld`.
+
+`generated/ui/menu/` is the main-menu background: one scene composed from
+the family builders and rendered through the same stage (`stage.place`,
+`stage.render_scene`). Edit `source/blender/artlib/scenes/menu.py`, then
+`make art-menu`; live, `menu.preview()` writes a quarter-size render.
 
 The renderer draws the original set (ART-006). The vendor pack is only a
 fallback when `metadata/` is missing. Do not hand-patch vendor PNGs; treat

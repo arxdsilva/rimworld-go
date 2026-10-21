@@ -49,6 +49,11 @@ art:  ## re-render every world sprite from assets/source/blender, then their nor
 	$(MAKE) normals
 	python3 assets/source/tools/validate_assets.py
 
+.PHONY: art-menu
+art-menu:  ## render the main-menu colony diorama (assets/source/blender/artlib/scenes/menu.py)
+	"$(BLENDER)" -b --factory-startup -P assets/source/blender/build.py -- menu
+	python3 assets/source/tools/validate_assets.py
+
 .PHONY: normals
 normals:  ## write <sprite>_n.png normal maps (pkg/spritenormals, a port of spritefusion-sprite-normals)
 	go run ./cmd/normalgen -dirs assets/generated/world $(NORMALS_ARGS)
@@ -63,6 +68,7 @@ art-capture:  ## in-game screenshot of a scripted colony (real renderer)
 	$(BIN_DIR)/game -capture assets/generated/ingame_capture.png
 	$(BIN_DIR)/game -capture assets/generated/ingame_architect.png -capture-ui architect
 	$(BIN_DIR)/game -capture assets/generated/ingame_orders.png -capture-ui orders
+	$(BIN_DIR)/game -capture assets/generated/ingame_menu.png -capture-ui menu
 
 .PHONY: art-preview
 art-preview:  ## contact sheet + ART §34 prototype scene

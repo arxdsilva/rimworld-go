@@ -122,9 +122,14 @@ loading it blindly.
 -   [-] original colonist bust splash on the left over the existing menu
     backdrop (bust flush to PNG bottom edge); title and actions sit on a
     right rail. No live simulation.
+-   [x] generated colony diorama behind the bust (ART-011): a dusk colony
+    rendered in Blender from the sprite builders (`make art-menu`), drawn
+    with a slow pan/zoom, lamp and fire glow, the campfire flame, embers
+    and dust, and a scrim behind the title, rail and bust. Sub-menus show
+    it dimmed. The code-drawn gradient remains the fallback when the
+    files are missing.
 
-May later display a lightweight animated or generated colony scene, but
-menu presentation must not require an active authoritative simulation.
+Menu presentation must not require an active authoritative simulation.
 
 ------------------------------------------------------------------------
 
@@ -1808,7 +1813,7 @@ Agents should implement screens approximately in this dependency order.
 ## Wave UI-1 --- First interactive simulation
 
 -   [-] Boot (phase list + pack load; no plugin/fatal recovery)
--   [-] Main Menu (navigation shell; Continue/Plugins/Tutorial disabled; original colonist splash left, actions right rail)
+-   [-] Main Menu (navigation shell; Continue/Plugins/Tutorial disabled; original colonist splash left over the animated colony diorama, actions right rail)
 -   [-] Main Colony (viewport plus Food/Wood/time strip, colonist names, Architect/Work/Menu; no alerts)
 -   [-] camera (WASD/arrows pan, keyboard/wheel zoom; no edge pan)
 -   [-] time controls (pause / normal 1x / fast 3x / superfast 6x, date/period/clock, current schedule block in top chrome; no temperature/weather)

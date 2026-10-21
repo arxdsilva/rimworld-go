@@ -59,6 +59,9 @@ func testApp(sim Simulation) *App {
 		LoadSplash: func() (*ebiten.Image, error) {
 			return nil, nil
 		},
+		LoadMenuScene: func() (*menuDiorama, error) {
+			return nil, nil
+		},
 		NewSim: func() (Simulation, error) {
 			return sim, nil
 		},
