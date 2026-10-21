@@ -38,7 +38,8 @@ type Def struct {
 	Wood        int  // wood from cutting a fully grown plant
 	Regrows     bool // harvest resets growth instead of removing the plant
 	RegrowTo    int  // growth percent after a regrowing harvest
-	Crop        bool // sown in growing zones
+	Crop        bool // sown in growing zones, eaten as food, frost-killed
+	Sowable     bool // may be sown in a growing zone though not a crop (trees)
 	// Sens is how strongly soil fertility changes growth speed, percent:
 	// 100 = fully (corn on gravel crawls), 30 = barely (potatoes thrive
 	// anywhere). Zero means 100.
@@ -51,6 +52,9 @@ type Def struct {
 	// go dormant.
 	FrostKill int
 }
+
+// ZoneSowable reports whether a growing zone may sow this species.
+func (d Def) ZoneSowable() bool { return d.Crop || d.Sowable }
 
 // Plants grow only in daylight, GrowFromHour to GrowToHour.
 const (
@@ -70,7 +74,7 @@ func growDays(days float64) int {
 var defs = [numSpecies]Def{
 	BerryBush: {Species: BerryBush, Name: "berry_bush", GrowTicks: 12000, HarvestWork: 30, Yield: 5, Yields: item.Berries,
 		CutWork: 20, Regrows: true, RegrowTo: 35},
-	Tree: {Species: Tree, Name: "tree", GrowTicks: 60000, CutWork: 90, Wood: 8},
+	Tree: {Species: Tree, Name: "tree", GrowTicks: 60000, CutWork: 90, Wood: 8, Sowable: true, SowWork: 40},
 	// Crops: growth follows real days-to-harvest at roughly twelve real
 	// days per game day; yields are per plant, balanced so a colonist
 	// eats from about three tiles of potatoes.

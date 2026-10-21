@@ -28,7 +28,8 @@ const (
 	archCropCols = 4
 	archCropBtnW = 62
 	archCropBtnH = 22
-	archCropH    = 2*(archCropBtnH+4) + 56
+	archCropRows = 3 // eight crops and the tree entry
+	archCropH    = archCropRows*(archCropBtnH+4) + 56
 )
 
 // archCardRows is the card rows the current category needs (min 2).
@@ -47,7 +48,7 @@ func (a *App) archCropOpen() bool {
 }
 
 func (a *App) selectedCrop() game.CropView {
-	crops := game.Crops()
+	crops := game.ZoneSpecies()
 	for _, c := range crops {
 		if c.Name == a.archCrop {
 			return c
@@ -108,7 +109,7 @@ func (a *App) architectButtons() []button {
 	if a.archCropOpen() {
 		sel := a.selectedCrop().Name
 		top := a.archCropTop(r)
-		for i, c := range game.Crops() {
+		for i, c := range game.ZoneSpecies() {
 			col, row := i%archCropCols, i/archCropCols
 			b := button{
 				id: "arch.crop." + c.Name, label: strings.ToUpper(c.Name[:1]) + c.Name[1:],
@@ -238,14 +239,19 @@ func (a *App) drawArchitect(screen *ebiten.Image) {
 	}
 	if a.archCropOpen() {
 		c := a.selectedCrop()
-		y := int(a.archCropTop(r)) + 2*(archCropBtnH+4) + 2
-		drawLabel(screen, int(r.x)+12, y, fmt.Sprintf("%s: %.1f days, %d %s per plant", strings.ToUpper(c.Name[:1])+c.Name[1:], c.Days, c.Yield, c.Label))
-		drawLabel(screen, int(r.x)+12, y+16, fmt.Sprintf("rich %.1fd  gravel %.1fd  food %d each", c.RichDays, c.GravelDay, c.Nutrition))
-		keeps := "keeps forever"
-		if c.ShelfDays > 0 {
-			keeps = fmt.Sprintf("keeps %.0f days", c.ShelfDays)
+		y := int(a.archCropTop(r)) + archCropRows*(archCropBtnH+4) + 2
+		if c.Name == "tree" {
+			drawLabel(screen, int(r.x)+12, y, fmt.Sprintf("Tree: %.1f days, %d wood per tree", c.Days, c.Yield))
+			drawLabel(screen, int(r.x)+12, y+16, fmt.Sprintf("rich %.1fd  gravel %.1fd  felled when grown", c.RichDays, c.GravelDay))
+		} else {
+			drawLabel(screen, int(r.x)+12, y, fmt.Sprintf("%s: %.1f days, %d %s per plant", strings.ToUpper(c.Name[:1])+c.Name[1:], c.Days, c.Yield, c.Label))
+			drawLabel(screen, int(r.x)+12, y+16, fmt.Sprintf("rich %.1fd  gravel %.1fd  food %d each", c.RichDays, c.GravelDay, c.Nutrition))
+			keeps := "keeps forever"
+			if c.ShelfDays > 0 {
+				keeps = fmt.Sprintf("keeps %.0f days", c.ShelfDays)
+			}
+			drawLabel(screen, int(r.x)+12, y+32, fmt.Sprintf("frost kills below %s, %s", fmtTemp(c.FrostKill), keeps))
 		}
-		drawLabel(screen, int(r.x)+12, y+32, fmt.Sprintf("frost kills below %s, %s", fmtTemp(c.FrostKill), keeps))
 	}
 	iy := int(r.y+r.h) - archInfoH + 6
 	stone := 0
@@ -388,7 +394,7 @@ func (a *App) submitArchitect() {
 	if t.mode == placeArea {
 		c := command.Command{Kind: t.cmd, X: a.archX0, Y: a.archY0, X2: a.archX1, Y2: a.archY1}
 		if t.crop != "" {
-			c.Build, _ = game.CropID(a.selectedCrop().Name)
+			c.Build, _ = game.ZoneSpeciesID(a.selectedCrop().Name)
 		}
 		a.renderer.enqueue(c)
 		return

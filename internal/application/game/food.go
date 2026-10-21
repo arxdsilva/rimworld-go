@@ -30,9 +30,19 @@ func CropID(name string) (uint8, bool) {
 	return uint8(s), true
 }
 
+// ZoneSpeciesID is the DesignateGrowZone command value (Command.Build) for
+// any species a growing zone can sow: crops and trees.
+func ZoneSpeciesID(name string) (uint8, bool) {
+	s, ok := plant.Parse(name)
+	if !ok || !plant.DefOf(s).ZoneSowable() {
+		return 0, false
+	}
+	return uint8(s), true
+}
+
 func (g *Game) addGrowZone(x1, y1, x2, y2 int, crop uint8) {
 	s := plant.Species(crop)
-	if !plant.DefOf(s).Crop {
+	if !plant.DefOf(s).ZoneSowable() {
 		s = plant.Potato
 	}
 	minX, minY, maxX, maxY := normalizeRect(x1, y1, x2, y2)
@@ -74,6 +84,9 @@ func (g *Game) zoneAt(x, y int) (zone.GrowZone, bool) {
 }
 
 func (g *Game) assignSow(id entity.EntityID) bool {
+	if g.assignZoneChop(id) {
+		return true // grown zone trees are felled before their cells are resown
+	}
 	pos, _ := g.positions.Get(id)
 	bestD := 1 << 30
 	var bx, by int
@@ -201,4 +214,16 @@ func Crops() []CropView {
 		})
 	}
 	return out
+}
+
+// ZoneSpecies lists what a growing zone can sow: the crops, then trees.
+func ZoneSpecies() []CropView {
+	out := Crops()
+	d := plant.DefOf(plant.Tree)
+	return append(out, CropView{
+		Name: d.Name, Label: "wood", Days: plant.GrowDays(plant.Tree, terrain.Soil.Fertility()),
+		GravelDay: plant.GrowDays(plant.Tree, terrain.Gravel.Fertility()),
+		RichDays:  plant.GrowDays(plant.Tree, terrain.RichSoil.Fertility()),
+		Yield:     d.Wood, Sens: d.Sens,
+	})
 }
