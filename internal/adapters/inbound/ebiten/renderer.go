@@ -314,30 +314,6 @@ func clampZoom(z float64) float64 {
 	return z
 }
 
-func (r *Renderer) handleSelectionInput() {
-	if !inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-		return
-	}
-	mx, my := ebiten.CursorPosition()
-	wx, wy := r.screenToWorld(mx, my)
-
-	for _, p := range r.snapshot() {
-		px, py := r.interpWorld(p)
-		if wx >= px && wx < px+1 && wy >= py && wy < py+1 {
-			r.selected, r.hasSelect = p.ID, true
-			return
-		}
-	}
-	tx, ty := int(wx), int(wy)
-	for _, p := range r.snapshot() {
-		if p.X == tx && p.Y == ty {
-			r.selected, r.hasSelect = p.ID, true
-			return
-		}
-	}
-	r.hasSelect = false
-}
-
 func (r *Renderer) screenToWorld(sx, sy int) (float64, float64) {
 	tile := float64(TileSize) * r.cam.zoom
 	return (float64(sx) + r.cam.offsetX) / tile, (float64(sy) + r.cam.offsetY) / tile

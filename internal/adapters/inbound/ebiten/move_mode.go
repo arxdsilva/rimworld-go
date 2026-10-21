@@ -94,8 +94,6 @@ func (a *App) startMove(b game.BuildingView) {
 	a.archDrag = false
 }
 
-func (a *App) endMove() { a.moveSt().on = false }
-
 // moveValid asks the sim whether the building may be reinstalled at
 // (x, y) with the current facing.
 func (a *App) moveValid(b game.BuildingView, x, y int) (bool, string) {

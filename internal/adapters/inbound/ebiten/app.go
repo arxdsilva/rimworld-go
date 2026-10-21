@@ -104,8 +104,9 @@ type App struct {
 	hasAnimal                      bool
 	selPlant, selItem              entity.EntityID // plant and item panels (selection.go)
 	hasPlant, hasItem              bool
-	selCycle                       selCycle      // last map click, for cycling a tile's stack
-	bldgMove                       bldgMoveState // the building panel's Move mode (move_mode.go)
+	selCycle                       selCycle        // last map click, for cycling a tile's stack
+	bldgMove                       bldgMoveState   // the building panel's Move mode (move_mode.go)
+	equipCache                     equipCacheState // the pawn Gear tab's nearby weapons (inspector.go)
 	alertCycle                     map[string]int
 	archDrag                       bool
 	archX0, archY0, archX1, archY1 int

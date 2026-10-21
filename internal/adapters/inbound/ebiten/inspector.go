@@ -85,18 +85,19 @@ type equipOption struct {
 }
 
 type equipCacheKey struct {
-	r         *Renderer
-	pawn      entity.EntityID
-	tick      clock.Tick
-	x, y      int
-	items     int
-	drafted   bool
-	weapon    string
-	queued    int
-	completed bool
+	r       *Renderer
+	pawn    entity.EntityID
+	tick    clock.Tick
+	x, y    int
+	items   int
+	drafted bool
+	weapon  string
+	queued  int
 }
 
-var equipCache struct {
+// equipCacheState is the Gear tab's "Equip nearby" list, kept per App
+// (App.equipCache) and rebuilt when its key changes.
+type equipCacheState struct {
 	key  equipCacheKey
 	set  bool
 	opts []equipOption
@@ -112,8 +113,8 @@ func (a *App) equipNearby(p game.PawnView) []equipOption {
 	items := a.renderer.world().Items
 	key := equipCacheKey{r: a.renderer, pawn: p.ID, tick: a.renderer.game.Tick(), x: p.X, y: p.Y,
 		items: len(items), drafted: p.Drafted, weapon: p.Weapon, queued: len(p.QueuedOrders)}
-	if equipCache.set && equipCache.key == key {
-		return equipCache.opts
+	if a.equipCache.set && a.equipCache.key == key {
+		return a.equipCache.opts
 	}
 	type cand struct {
 		it   game.ItemView
@@ -148,7 +149,7 @@ func (a *App) equipNearby(p game.PawnView) []equipOption {
 			}
 		}
 	}
-	equipCache.key, equipCache.set, equipCache.opts = key, true, out
+	a.equipCache.key, a.equipCache.set, a.equipCache.opts = key, true, out
 	return out
 }
 
@@ -204,7 +205,7 @@ func (a *App) applyPawnEquipClick(id string) {
 	for _, o := range a.equipNearby(p) {
 		if uint64(o.Item) == n {
 			a.renderer.enqueue(o.Cmd)
-			equipCache.set = false
+			a.equipCache.set = false
 			return
 		}
 	}

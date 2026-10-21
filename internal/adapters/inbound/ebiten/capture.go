@@ -245,6 +245,15 @@ func (a *App) captureUI(ui string) {
 		a.capture.pan = [][2]float64{{18, 10}, {33, 10}, {42, 18}, {16, 17}}
 		sw, sh := a.size()
 		a.renderer.centerOn(a.capture.pan[0][0], a.capture.pan[0][1], sw, sh)
+	case "plant", "item", "pawnactions", "move", "copy":
+		// UI-011 panels: the nearest tree, ground item, colonist or
+		// building to the map centre, selected, its panel open
+		a.captureInspect(ui)
+	case "paused-stockpile":
+		// a stockpile painted while paused shows at once
+		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
+		a.renderer.speed = speedPaused
+		a.renderer.enqueue(command.Command{Kind: command.DesignateStockpile, X: cx - 6, Y: cy + 2, X2: cx - 2, Y2: cy + 5})
 	case "roofs", "roofs-overlay":
 		// the -scenario roofs set piece: rooms A and B, the porch
 		cx, cy := float64(a.renderer.game.Width())/2, float64(a.renderer.game.Height())/2
@@ -517,4 +526,61 @@ func panAt(wp [][2]float64, t float64) (float64, float64) {
 	k = k * k * (3 - 2*k)
 	a, b := wp[i], wp[i+1]
 	return a[0] + (b[0]-a[0])*k, a[1] + (b[1]-a[1])*k
+}
+
+// captureInspect selects, for a panel capture, the thing nearest the map
+// centre: a tree ("plant"), a ground item ("item"), a colonist
+// ("pawnactions", Gear tab) or a movable building ("move" in move mode,
+// "copy" after Copy).
+func (a *App) captureInspect(ui string) {
+	w := a.renderer.world()
+	cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
+	near := func(x, y int) int { return abs(x-cx) + abs(y-cy) }
+	best, bx, by := 1<<30, cx, cy
+	pick := func(x, y int) {
+		if d := near(x, y); d < best {
+			best, bx, by = d, x, y
+		}
+	}
+	switch ui {
+	case "plant":
+		for _, p := range w.Plants {
+			if p.Species == "tree" {
+				pick(p.X, p.Y)
+			}
+		}
+		a.selectPlantAt(bx, by)
+	case "item":
+		for _, it := range w.Items {
+			if !it.Carried {
+				pick(it.X, it.Y)
+			}
+		}
+		a.selectItemAt(bx, by)
+	case "pawnactions":
+		if pawns := a.renderer.snapshot(); len(pawns) > 0 {
+			a.renderer.Select(pawns[0].ID)
+			bx, by = pawns[0].X, pawns[0].Y
+			a.inspectTab = "gear"
+		}
+	case "move", "copy":
+		for _, b := range w.Buildings {
+			if movableKind(b.Kind, b.Floor) {
+				pick(b.X, b.Y)
+			}
+		}
+		a.selectBuildingAt(bx, by)
+		if ui == "move" {
+			a.applyBuildingClick("bldg.move")
+			a.bldgMove.fresh = false
+		} else {
+			a.applyBuildingClick("bldg.copy")
+		}
+	}
+	sw, sh := a.size()
+	a.renderer.centerOn(float64(bx)+2, float64(by), sw, sh)
+	if ui == "move" { // hover the ghost three tiles east of the original
+		sx, sy := a.renderer.worldToScreenF(float64(bx)+3.5, float64(by)+0.5)
+		a.cursor = &[2]int{int(sx), int(sy)}
+	}
 }
