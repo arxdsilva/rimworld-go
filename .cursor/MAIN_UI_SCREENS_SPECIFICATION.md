@@ -105,9 +105,9 @@ Primary entry point for a play session.
 -   [-] Load Game (empty stub; no persistence)
 -   [-] Continue (visible, disabled: no saves yet)
 -   [-] Plugins (visible, disabled)
--   [-] Options (stub tabs; settings not wired)
+-   [x] Options (Audio/Graphics/Gameplay/Accessibility tabs, saved to settings.json; Controls deferred)
 -   [-] Tutorial/Help (visible, disabled)
--   [-] Credits (stub screen)
+-   [x] Credits (creator, originality notice, asset credits)
 -   [x] Quit
 
 ## Information
@@ -1397,47 +1397,58 @@ Never silently load a materially incompatible save.
 
 # 42. Options Screen
 
+Settings live in `internal/platform/config` and are saved to
+`<user config dir>/rimworld-go/settings.json` (UI-012). They change
+presentation only, never the simulation; captures ignore them.
+
 ## Tabs
 
 ### Graphics
 
--   resolution/window;
--   VSync/frame cap;
--   UI scale;
--   effects/detail;
--   far-zoom detail.
+-   [x] window: fullscreen toggle (the window resizes freely; no
+    resolution presets);
+-   [-] VSync/frame cap (VSync toggle; Ebitengine has no frame cap);
+-   [ ] UI scale (needs a font and layout pass: hand-placed px layouts and
+    a fixed bitmap font);
+-   [x] effects/detail (Full/Reduced/Minimal: particles, weather drops,
+    menu embers and dust);
+-   [ ] far-zoom detail.
 
 ### Audio
 
--   master;
--   music;
--   effects;
--   ambience;
--   UI.
+-   [x] master;
+-   [x] music;
+-   [x] effects;
+-   [x] ambience;
+-   [x] UI;
+-   [x] mute when unfocused.
 
 ### Gameplay
 
--   pause on threat;
--   autosave;
--   edge scrolling;
--   speed behavior;
--   confirmations;
--   learning helper.
+-   [x] pause on threat;
+-   [x] autosave (daily, every 3 days, weekly, off);
+-   [x] edge scrolling;
+-   [x] camera pan speed;
+-   [ ] speed behavior;
+-   [ ] confirmations;
+-   [ ] learning helper.
 
 ### Controls
 
--   bindings;
--   rebinding;
--   conflicts;
--   reset.
+-   [ ] bindings;
+-   [ ] rebinding;
+-   [ ] conflicts;
+-   [ ] reset.
 
 ### Accessibility
 
--   text/UI scale;
--   color-vision support;
--   reduced effects/flashing;
--   tooltip delay;
--   other supported accessibility options.
+-   [ ] text/UI scale (see Graphics UI scale);
+-   [ ] color-vision support;
+-   [x] reduced effects/flashing (Reduced flashing caps lightning; Reduced
+    motion freezes the menu drift, drops embers and dust, and snaps the
+    camera);
+-   [ ] tooltip delay;
+-   [ ] other supported accessibility options.
 
 ------------------------------------------------------------------------
 
@@ -1887,7 +1898,7 @@ required before a polished external build.
 -   [ ] Save
 -   [-] Load (empty stub from main menu; pause Load disabled)
 -   [-] Pause Menu (Resume/Options/Main Menu/Quit; Save/Load/Help disabled)
--   [-] Options (tab labels + Back; settings not wired)
+-   [x] Options (Audio/Graphics/Gameplay/Accessibility tabs, saved to settings.json; Controls deferred)
 -   [ ] Tutorial
 -   [ ] Help
 

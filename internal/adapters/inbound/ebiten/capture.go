@@ -25,8 +25,9 @@ type Capture struct {
 	Ticks int // simulation ticks to advance before the shot
 	Zoom  float64
 	// UI opens a UI state for the shot: "" (none), "architect" (furniture
-	// card + placement ghost), "orders" (a pawn's right-click menu) or
-	// "menu" (the main menu; no game is started).
+	// card + placement ghost), "orders" (a pawn's right-click menu), or a
+	// menu screen ("menu", "credits", "options[-tab]"; see menuCaptures;
+	// no game is started).
 	UI string
 	// Frames > 0 records that many consecutive frames at normal speed
 	// (Path gets a _NNN suffix per frame) instead of one still.
@@ -121,8 +122,8 @@ func (a *App) tickCapture() {
 	if c == nil || a.capture.done {
 		return
 	}
-	if c.UI == "menu" {
-		a.tickMenuCapture()
+	if screen, ok := menuCaptures[c.UI]; ok {
+		a.tickMenuCapture(screen)
 		return
 	}
 	if !a.capture.started {
@@ -191,14 +192,28 @@ func (a *App) tickCapture() {
 	a.capture.frames++
 }
 
-// tickMenuCapture shoots the main menu without starting a game: Ticks
+// menuCaptures are the -capture-ui states shot without starting a game,
+// each the button clicks that open it from the main menu.
+var menuCaptures = map[string][]string{
+	"menu":             nil,
+	"credits":          {"menu.credits"},
+	"options":          {"menu.options"},
+	"options-graphics": {"menu.options", "options.tab.graphics"},
+	"options-gameplay": {"menu.options", "options.tab.gameplay"},
+	"options-access":   {"menu.options", "options.tab.access"},
+}
+
+// tickMenuCapture shoots a menu screen without starting a game: Ticks
 // picks the moment of the menu's motion, and a frame sequence advances it
 // one tick per frame.
-func (a *App) tickMenuCapture() {
+func (a *App) tickMenuCapture(open []string) {
 	c := a.cfg.Capture
 	if !a.capture.started {
 		if a.nav.screen() == screenBoot {
 			a.finishBoot()
+		}
+		for _, id := range open {
+			a.applyClick(id)
 		}
 		a.menuTick = uint64(max(c.Ticks, 0))
 		a.capture.started = true

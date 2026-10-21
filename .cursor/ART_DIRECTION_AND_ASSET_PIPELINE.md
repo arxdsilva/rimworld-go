@@ -617,6 +617,29 @@ Light pipeline (ART-010):
 - `make normals` (`cmd/normalgen`, after Blender in `make art`) writes `<sprite>_n.png`. Masks, normal maps and `ui/` are skipped, and up-to-date maps are kept.
 - `validate_assets.py` (`make art-check`) requires a normal map with the sprite's size and alpha, and a `shadow:` block, for every world sprite.
 
+### 25.1 Audio assets (SND-002)
+
+Sound follows the same rules as art: original, generated reproducibly,
+with sidecar metadata.
+
+-   **Effects** are made in code: `cmd/audiogen` renders the recipes in
+    `cmd/audiogen/recipes.go` through `pkg/sfxsynth` (oscillators, noise,
+    envelopes, filters, grains) to 48 kHz mono 16-bit WAV with three
+    variants, byte-identical on every machine (`make audio`).
+-   **Music and ambience beds** may be generated with ElevenLabs from the
+    prompts in `assets/source/audio/prompts.json`, within the project's
+    credit budget, in priority order (what the player hears longest
+    first). Each take is reviewed by a person before import, and every
+    take is recorded in `assets/source/audio/elevenlabs/ledger.json`.
+-   **The sound list** `assets/metadata/audio/audio.json` records, per id,
+    the bus, loop flag, volume, files and provenance (recipe and seed, or
+    tool, prompt, credits, license and reviewer).
+-   Loudness: music about -16 LUFS, ambience about -20 LUFS, effects
+    peak-normalized to -1 dBFS and balanced by their list volume.
+-   Budget: 20 MB of audio in the repository (`make audio-check`).
+-   Never import recordings or music from other games, and never prompt a
+    generator to imitate a named game's soundtrack.
+
 ## 26. Plugin Assets
 
 Plugins use the same validation and namespaced IDs.

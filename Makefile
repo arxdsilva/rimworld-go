@@ -54,6 +54,14 @@ art-menu:  ## render the main-menu colony diorama (assets/source/blender/artlib/
 	"$(BLENDER)" -b --factory-startup -P assets/source/blender/build.py -- menu
 	python3 assets/source/tools/validate_assets.py
 
+.PHONY: audio
+audio:  ## render the procedural sound effects (cmd/audiogen) and update the sound list
+	go run ./cmd/audiogen
+
+.PHONY: audio-check
+audio-check:  ## validate the sound list against the files and the size budget
+	go run ./cmd/audiogen -check
+
 .PHONY: normals
 normals:  ## write <sprite>_n.png normal maps (pkg/spritenormals, a port of spritefusion-sprite-normals)
 	go run ./cmd/normalgen -dirs assets/generated/world $(NORMALS_ARGS)

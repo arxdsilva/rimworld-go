@@ -4,11 +4,14 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	uiadapter "rimworld-go/internal/adapters/inbound/ebiten"
+	"rimworld-go/internal/adapters/outbound/ebitenaudio"
 	"rimworld-go/internal/adapters/outbound/filesave"
+	"rimworld-go/internal/adapters/outbound/settingsfile"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/mentalbreak"
@@ -29,8 +32,9 @@ func main() {
 	hour := flag.Int("hour", -1, "dev: jump to this hour (0-23) of the scenario's day, or the next day's if past")
 	captureFrames := flag.Int("capture-frames", 0, "dev: record this many consecutive frames (PATH_NNN.png) instead of one still")
 	captureSpeed := flag.Int("capture-speed", 1, "dev: game speed (1-3) while recording -capture-frames")
-	captureUI := flag.String("capture-ui", "", "dev: UI state for -capture: architect | orders | bills | pawn | combat | melee | follow | grow | corridor | crowd | lategame | weather | grass | burial | roofs | roofs-overlay | plant | item | pawnactions | paused-stockpile | move | copy | menu")
+	captureUI := flag.String("capture-ui", "", "dev: UI state for -capture: architect | orders | bills | pawn | combat | melee | follow | grow | corridor | crowd | lategame | weather | grass | burial | roofs | roofs-overlay | plant | item | pawnactions | paused-stockpile | move | copy | menu | credits | options | options-graphics | options-gameplay | options-access")
 	captureTimelapse := flag.Int("capture-timelapse", 0, "dev: with -capture-frames, step this many sim ticks per recorded frame (a time-lapse)")
+	noAudio := flag.Bool("noaudio", false, "dev: run without sound")
 	flag.Parse()
 
 	var shot *uiadapter.Capture
@@ -38,11 +42,16 @@ func main() {
 		shot = &uiadapter.Capture{Path: *capture, Ticks: *captureTicks, Zoom: *captureZoom, UI: *captureUI, Frames: *captureFrames, Speed: *captureSpeed, Timelapse: *captureTimelapse}
 	}
 
-	app := uiadapter.NewApp(uiadapter.AppConfig{
-		Version: "dev",
-		Assets:  *assets,
-		Capture: shot,
-		Saves:   saveHooks(),
+	cfg := uiadapter.AppConfig{
+		Version:  "dev",
+		Assets:   *assets,
+		Capture:  shot,
+		Saves:    saveHooks(),
+		Settings: settingsHooks(shot != nil),
+		Window: func(fullscreen, vsync bool) {
+			ebiten.SetFullscreen(fullscreen)
+			ebiten.SetVsyncEnabled(vsync)
+		},
 		NewSim: func() (uiadapter.Simulation, error) {
 			g := game.NewColony(game.Config{Seed: *seed, Width: *width, Height: *height})
 			if *scenario == "beds" {
@@ -276,7 +285,12 @@ func main() {
 			g.RoofRooms() // scenario rooms start roofed (SIM-018)
 			return g, nil
 		},
-	})
+	}
+	// only a live engine: a nil *Engine in the interface would not be nil
+	if snd := openSound(shot != nil || *noAudio || os.Getenv("RIMWORLD_GO_NOAUDIO") == "1"); snd != nil {
+		cfg.Sound = snd
+	}
+	app := uiadapter.NewApp(cfg)
 
 	ebiten.SetTPS(clock.TicksPerSecond)
 	ebiten.SetWindowSize(uiadapter.DefaultWindowWidth, uiadapter.DefaultWindowHeight)
@@ -288,6 +302,40 @@ func main() {
 	if err := app.CaptureErr(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// openSound opens the audio device and the sound list; nil when off
+// (captures, -noaudio, RIMWORLD_GO_NOAUDIO=1) or when they can't be
+// opened, and the game runs silent.
+func openSound(off bool) *ebitenaudio.Engine {
+	if off {
+		return nil
+	}
+	root, err := ebitenaudio.LocateAudio()
+	if err != nil {
+		log.Printf("sound off: %v", err)
+		return nil
+	}
+	snd, err := ebitenaudio.New(root)
+	if err != nil {
+		log.Printf("sound off: %v", err)
+		return nil
+	}
+	return snd
+}
+
+// settingsHooks wires the Options to the per-user settings file. Captures
+// get none, so screenshots always use the default settings.
+func settingsHooks(capturing bool) uiadapter.SettingsHooks {
+	if capturing {
+		return uiadapter.SettingsHooks{}
+	}
+	store, err := settingsfile.Default()
+	if err != nil {
+		log.Printf("settings not saved: %v", err)
+		return uiadapter.SettingsHooks{}
+	}
+	return uiadapter.SettingsHooks{Load: store.Load, Save: store.Save}
 }
 
 // saveHooks wires the UI's save/load to the per-user saves folder.

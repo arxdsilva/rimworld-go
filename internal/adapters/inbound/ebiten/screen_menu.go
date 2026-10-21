@@ -40,14 +40,22 @@ func (a *App) creditsButtons(sw, sh int) []button {
 	}}
 }
 
-func (a *App) drawCredits(screen *ebiten.Image, sw, sh int) {
-	a.paintMenu(screen, sw, sh, "Credits", []string{
+// creditsLines is the Credits screen body.
+func creditsLines() []string {
+	return []string{
+		"Created by arxdsilva",
+		"",
 		"rimworld-go is original work. It is not affiliated with Ludeon",
 		"Studios or RimWorld.",
 		"",
 		"Vendor sprites (first playable stand-in): Raphael Goncalves",
 		"(Rgsdev), CC0.",
-	}, a.creditsButtons(sw, sh))
+		"Sound effects: original, made in code (cmd/audiogen).",
+	}
+}
+
+func (a *App) drawCredits(screen *ebiten.Image, sw, sh int) {
+	a.paintMenu(screen, sw, sh, "Credits", creditsLines(), a.creditsButtons(sw, sh))
 }
 
 // hasSaves reports a loadable save exists (for Continue).

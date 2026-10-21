@@ -113,12 +113,23 @@ make test           # unit tests with the race detector and coverage
 make simulate       # headless simulation run for quick checks
 ```
 
+Sound plays through your default audio device; `go run ./cmd/game -noaudio`
+(or `RIMWORLD_GO_NOAUDIO=1`) runs silently. On Linux, audio needs cgo and
+the ALSA headers (`sudo apt install libasound2-dev`). Options (volumes,
+fullscreen, effects, autosave, edge scrolling, reduced motion) are saved to
+`settings.json` in your user config folder, next to the saves.
+
 ### Refreshing the README media
 
 - `make media`: records the gallery as short animated WebPs through the game's `-capture` flag.
 - `make clips`: captures frame sequences and packs them into animated WebP with `scripts/frames_to_webp.py`. Needs python3 and Pillow.
 - `make art` re-renders the sprites in Blender, then `make normals` writes their normal maps.
 - To let an AI agent drive a live Blender (Blender MCP), see [`tools/blender-mcp`](tools/blender-mcp/README.md). `.mcp.json` and `.cursor/mcp.json` register the server for Claude Code and Cursor.
+
+### Sound
+
+- `make audio` renders the sound effects from code (`cmd/audiogen`, recipes in `cmd/audiogen/recipes.go`) and updates the sound list `assets/metadata/audio/audio.json`; `make audio-check` validates it.
+- Music and ambience come from ElevenLabs through its MCP server, registered in `.mcp.json`. Put your key in your shell profile as `export ELEVEN_LABS_API_KEY=...` (the config maps it to the server's `ELEVENLABS_API_KEY`), then restart your editor so it inherits it. Prompts and the credit budget are in `assets/source/audio/prompts.json`; import an approved take with `scripts/audio_import.sh <raw> <file> <credits> "<license>"`.
 
 ## Credits
 

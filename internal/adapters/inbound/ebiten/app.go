@@ -15,6 +15,7 @@ import (
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/platform/config"
 )
 
 const (
@@ -65,6 +66,12 @@ type AppConfig struct {
 	Capture *Capture
 	// Saves connects save/load to storage (zero value: disabled).
 	Saves SaveHooks
+	// Settings loads and stores the Options (zero value: defaults, not saved).
+	Settings SettingsHooks
+	// Window applies fullscreen and VSync (nil: leave the window alone).
+	Window func(fullscreen, vsync bool)
+	// Sound plays the client's audio (nil: silent).
+	Sound Sound
 }
 
 // App is the ebiten.Game shell: screen routing, widgets, and (once
@@ -89,9 +96,11 @@ type App struct {
 
 	scenario    int
 	storyteller int
-	// noThreatPause turns off pausing when a threat arrives (Options).
-	noThreatPause bool
-	difficulty    int
+	// settings are the player's Options (settings.go).
+	settings   config.Settings
+	optionsTab string
+	snd        soundDirector // what is heard (sound_director.go)
+	difficulty int
 
 	simsStarted                    int
 	renderer                       *Renderer
@@ -176,13 +185,19 @@ func NewApp(cfg AppConfig) *App {
 			return loadMenuDiorama(root)
 		}
 	}
-	return &App{
+	if cfg.Sound == nil {
+		cfg.Sound = noSound{}
+	}
+	a := &App{
 		cfg: cfg,
 		now: time.Now,
 		nav: newNav(),
 		sw:  DefaultWindowWidth,
 		sh:  DefaultWindowHeight,
 	}
+	a.loadSettings()
+	a.applySettings()
+	return a
 }
 
 func loadAtlasFromRoot(root string) (*atlas, error) {
@@ -216,6 +231,7 @@ func (a *App) Update() error {
 			mx, my := ebiten.CursorPosition()
 			if b, ok := hitButton(a.layoutButtons(sw, sh), mx, my); ok {
 				consumed = true
+				a.uiSound(b)
 				if b.disabled {
 					a.hint = b.reason
 				} else {
@@ -258,6 +274,7 @@ func (a *App) Update() error {
 	} else {
 		a.tick()
 	}
+	a.soundFrame()
 	if a.shouldQuit && (a.cfg.Capture == nil || a.capture.done) {
 		return ebiten.Termination
 	}
@@ -458,11 +475,11 @@ func (a *App) applyClick(id string) {
 		a.toggleWorkCell(id)
 	case id == "tab.menu":
 		a.apply(intent{kind: intentPause})
-	case id == "options.pausethreat":
-		a.noThreatPause = !a.noThreatPause
-		if a.renderer != nil {
-			a.renderer.pauseOnThreat = !a.noThreatPause
-		}
+	case strings.HasPrefix(id, "options.") && id != "options.back":
+		a.applyOption(id)
+	case id == "menu.options" || id == "pause.options":
+		a.optionsTab = "" // always open on the first tab
+		a.apply(a.clickIntent(id))
 	case id == "inspector.close":
 		if a.renderer != nil {
 			a.renderer.ClearSelect()
@@ -593,7 +610,7 @@ func (a *App) startSession(sim Simulation) {
 	a.renderer = New(sim)
 	a.renderer.pack = a.pack
 	a.renderer.art = a.art
-	a.renderer.pauseOnThreat = !a.noThreatPause
+	a.syncRenderer()
 	a.nav.reset(frame{screen: screenColony})
 }
 

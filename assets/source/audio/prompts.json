@@ -1,0 +1,78 @@
+{
+  "budget_credits": 10000,
+  "reserve_credits": 1500,
+  "rules": "Spend in priority order; measure real cost with check_subscription before and after the first take; at most one retry per sound; every take goes in elevenlabs/ledger.json.",
+  "sounds": [
+    {
+      "priority": 1,
+      "id": "music.calm",
+      "file": "music/calm_1.ogg",
+      "tool": "music",
+      "seconds": 180,
+      "loop": false,
+      "volume": 0.7,
+      "prompt": "Calm, warm acoustic frontier music for a colony-building game: fingerpicked guitar, soft strings, light hand percussion, hopeful but reflective, no vocals, gentle ending."
+    },
+    {
+      "priority": 2,
+      "id": "amb.day",
+      "file": "ambience/day.ogg",
+      "tool": "text_to_sound_effects",
+      "seconds": 20,
+      "loop": true,
+      "volume": 0.6,
+      "prompt": "Open countryside daytime ambience: light steady wind through grass and a few distant songbirds, no people, no traffic, seamless loop."
+    },
+    {
+      "priority": 3,
+      "id": "amb.night",
+      "file": "ambience/night.ogg",
+      "tool": "text_to_sound_effects",
+      "seconds": 20,
+      "loop": true,
+      "volume": 0.6,
+      "prompt": "Calm night ambience in a field: soft wind and chirping crickets, distant, no people, seamless loop."
+    },
+    {
+      "priority": 4,
+      "id": "amb.rain",
+      "file": "ambience/rain.ogg",
+      "tool": "text_to_sound_effects",
+      "seconds": 20,
+      "loop": true,
+      "volume": 0.7,
+      "prompt": "Steady medium rain on grass and a wooden roof, no thunder, no voices, seamless loop."
+    },
+    {
+      "priority": 5,
+      "id": "music.tension",
+      "file": "music/tension.ogg",
+      "tool": "music",
+      "seconds": 75,
+      "loop": true,
+      "volume": 0.75,
+      "prompt": "Tense, low, pulsing frontier battle music: taiko-like drums, dissonant low strings, rising unease, loopable, no vocals."
+    },
+    {
+      "priority": 6,
+      "id": "music.menu",
+      "file": "music/menu.ogg",
+      "tool": "music",
+      "seconds": 90,
+      "loop": true,
+      "volume": 0.7,
+      "prompt": "Main menu theme for a frontier colony game at dusk: solo guitar melody over warm pads, nostalgic, slow, no vocals, loopable."
+    },
+    {
+      "priority": 7,
+      "id": "music.calm",
+      "file": "music/calm_2.ogg",
+      "tool": "music",
+      "seconds": 180,
+      "loop": false,
+      "volume": 0.7,
+      "optional": true,
+      "prompt": "Calm, warm acoustic frontier music for a colony-building game: solo piano and soft cello, light brushed percussion, hopeful but reflective, no vocals, gentle ending."
+    }
+  ]
+}

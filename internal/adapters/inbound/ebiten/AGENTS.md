@@ -19,6 +19,10 @@ commands via `Enqueue`. Domain code does not import this package.
 - colony HUD: Food/Wood/time strip, colonist bar, Architect, Work, inspector
 - main-menu colonist splash (original PNG, left of the action rail)
 - main-menu colony diorama (`menu_diorama.go`: drift, glow, flame, scrim)
+- Options screen (`screen_options.go`: tabbed rows from one table) and the
+  player's settings (`settings.go`: load, apply, save through `SettingsHooks`)
+- sound director (`sound_director.go`) and the renderer's sound cues
+  (`sound_signals.go`) behind the consumer-owned `Sound` port (`sound.go`)
 - `Renderer` — colony camera, speed tiers, selection, world draw, `Enqueue`
 - original art catalog (`assets/metadata` + generated PNGs, tint masks) and
   its draw path (`art.go`, `draw_art.go`); vendor sprite atlas as fallback
@@ -33,6 +37,7 @@ commands via `Enqueue`. Domain code does not import this package.
 - `internal/domain` types that appear on that read model (`clock`,
   `entity`, `schedule`, `command`)
 - Ebitengine, image/png, OS path lookup for generated art, the vendor pack and menu splash
+- `internal/platform/config` (the settings type)
 
 ## Forbidden dependencies
 
@@ -41,6 +46,9 @@ commands via `Enqueue`. Domain code does not import this package.
 - mutating domain stores
 - wall-clock or global RNG in anything that could leak into sim
 - proprietary RimWorld art, text, or layouts
+- `ebiten/v2/audio` or any audio library: sound goes through `Sound`
+  (cmd/game wires `internal/adapters/outbound/ebitenaudio`), so tests and
+  captures never open an audio device
 
 ## Contracts
 
@@ -139,3 +147,13 @@ None yet. Add them when colony draw or UI layout shows up in profiles.
 - `camera_smooth.go`: eased pan and cursor-anchored zoom; capture writes the
   camera directly.
 - The colonist inspector shows "waiting for <name>" while `BlockedBy` is set.
+- Settings are presentation-only (window, particles, camera, autosave,
+  sound) and never reach the simulation. `-capture` runs get no
+  `SettingsHooks` and no `Sound`, so captures are deterministic.
+- Sound cues come from presentation signals only: work strikes
+  (`workStrikeAt`, silent when paused), world diffs (frames, plants,
+  mines, door occupancy), traces, lightning, threats and clicks. The
+  director pans by screen position, culls beyond half a view off screen,
+  limits repeats, and picks music (menu, calm, tension) and ambience
+  (day/night, rain, campfires) from `WorldView`.
+

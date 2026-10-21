@@ -167,9 +167,23 @@ type Renderer struct {
 	// danger message already handled.
 	pauseOnThreat bool
 	threatPaused  bool
-	dangerInit    bool
-	lastDanger    uint64
-	floaters      []floater
+
+	// Options (settings.go syncRenderer): particle and weather detail
+	// multiplier, edge-of-screen panning, and a capped lightning flash.
+	fx              float64
+	edgeScroll      bool
+	reducedFlashing bool
+
+	// sound (sound_signals.go): cues for the App's director, last frame's
+	// world to hear changes, the pending thunder and the world this frame.
+	cues       []soundCue
+	memo       soundMemo
+	thunderAt  uint64
+	threatAt   uint64 // present frame of the newest threat
+	heard      game.WorldView
+	dangerInit bool
+	lastDanger uint64
+	floaters   []floater
 }
 
 // New returns a Renderer for sim. Sprites are optional: call LoadPack
@@ -180,6 +194,7 @@ func New(sim Simulation) *Renderer {
 		speed:         speedNormal,
 		cam:           camera{zoom: 1},
 		pauseOnThreat: true,
+		fx:            1,
 		last:          map[entity.EntityID]pawnVisual{},
 		seenTrace:     map[[3]uint64]bool{},
 		gridClr:       color.RGBA{R: 40, G: 40, B: 40, A: 180},
@@ -224,6 +239,11 @@ func (r *Renderer) advance() {
 	r.animate(w, r.game.Snapshot(), n > 0)
 	r.stepEnvironment(w, r.game.Snapshot())
 	r.watchThreats(w)
+	r.heard = w
+	if n > 0 {
+		r.listenWorld(w, r.game.Snapshot())
+	}
+	r.listenThunder()
 }
 
 func (r *Renderer) syncPawns() {
@@ -259,15 +279,20 @@ func (r *Renderer) handleSpeedInput() {
 	case inpututil.IsKeyJustPressed(ebiten.KeySpace):
 		if r.speed == speedPaused {
 			r.speed = speedNormal
+			r.globalCue("ui.resume")
 		} else {
 			r.speed = speedPaused
+			r.globalCue("ui.pause")
 		}
 	case inpututil.IsKeyJustPressed(ebiten.Key1):
 		r.speed = speedNormal
+		r.globalCue("ui.speed")
 	case inpututil.IsKeyJustPressed(ebiten.Key2):
 		r.speed = speedFast
+		r.globalCue("ui.speed")
 	case inpututil.IsKeyJustPressed(ebiten.Key3):
 		r.speed = speedVeryFast
+		r.globalCue("ui.speed")
 	case inpututil.IsKeyJustPressed(ebiten.KeyR):
 		r.roofOverlay = !r.roofOverlay
 	}
@@ -287,6 +312,11 @@ func (r *Renderer) handleCameraInput(v viewport) {
 	if ebiten.IsKeyPressed(ebiten.KeyDown) || ebiten.IsKeyPressed(ebiten.KeyS) {
 		dy++
 	}
+	if r.edgeScroll && ebiten.IsFocused() {
+		mx, my := ebiten.CursorPosition()
+		ex, ey := edgePan(mx, my, v)
+		dx, dy = dx+ex, dy+ey
+	}
 	r.smooth.pushPan(dx, dy)
 
 	cx, cy := (v.x0+v.x1)/2, (v.y0+v.y1)/2
@@ -302,6 +332,31 @@ func (r *Renderer) handleCameraInput(v viewport) {
 	}
 	r.clampCamera(v) // first-call centring and min-zoom guard
 	r.smooth.step(1/float64(ebiten.TPS()), &r.cam, r.camLimits(v))
+}
+
+// edgeBand is how close (px) the cursor must be to a viewport edge to pan.
+const edgeBand = 6
+
+// edgePan is the pan direction for a cursor at (mx, my): towards any
+// viewport edge within edgeBand, nothing when the cursor is outside it.
+func edgePan(mx, my int, v viewport) (dx, dy float64) {
+	x, y := float64(mx), float64(my)
+	if x < v.x0 || x >= v.x1 || y < v.y0 || y >= v.y1 {
+		return 0, 0
+	}
+	switch {
+	case x < v.x0+edgeBand:
+		dx = -1
+	case x >= v.x1-edgeBand:
+		dx = 1
+	}
+	switch {
+	case y < v.y0+edgeBand:
+		dy = -1
+	case y >= v.y1-edgeBand:
+		dy = 1
+	}
+	return dx, dy
 }
 
 func clampZoom(z float64) float64 {

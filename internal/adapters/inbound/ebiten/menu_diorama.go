@@ -13,6 +13,8 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+
+	"rimworld-go/internal/platform/config"
 )
 
 // The main-menu background: a dusk colony rendered in Blender
@@ -199,6 +201,16 @@ func buildMenuScrim(sw, sh int) *image.NRGBA {
 	return img
 }
 
+// menuParticles is how many embers per fire and dust motes the menu
+// draws under the Options effects and motion settings.
+func menuParticles(s config.Settings) (embers, motes int) {
+	if s.Accessibility.ReducedMotion {
+		return 0, 0
+	}
+	fx := s.Graphics.FX()
+	return int(math.Round(menuEmbers * fx)), int(math.Round(menuMotes * fx))
+}
+
 func (a *App) loadMenuScene() {
 	if a.menuTried || a.cfg.LoadMenuScene == nil {
 		return
@@ -217,7 +229,12 @@ func (a *App) drawMenuDiorama(screen *ebiten.Image, sw, sh int, dim float64) boo
 		return false
 	}
 	t := float64(a.menuTick)
-	s, ox, oy := menuView(d.w, d.h, sw, sh, t)
+	embers, motes := menuParticles(a.settings)
+	view := t
+	if a.settings.Accessibility.ReducedMotion { // still frame; the fire still burns
+		view = 0
+	}
+	s, ox, oy := menuView(d.w, d.h, sw, sh, view)
 	lv := 0
 	for lv+1 < len(d.levels) && s*float64(int(1)<<(lv+1)) <= 1 {
 		lv++
@@ -243,7 +260,7 @@ func (a *App) drawMenuDiorama(screen *ebiten.Image, sw, sh int, dim float64) boo
 	for i, p := range d.fires {
 		sx, sy := float32(ox+p[0]*s), float32(oy+p[1]*s)
 		drawFlameScreen(screen, sx, sy, t+float64(i)*17, tile, 1)
-		for e := 0; e < menuEmbers; e++ {
+		for e := 0; e < embers; e++ {
 			h := mix64(uint64(i*menuEmbers+e) + 0x51)
 			ph := fract(t/150 + hashUnit(h))
 			ex := sx + float32(tile*((hashUnit(mix64(h))-0.5)*0.3+0.08*math.Sin(t/40+float64(e))))
@@ -251,7 +268,7 @@ func (a *App) drawMenuDiorama(screen *ebiten.Image, sw, sh int, dim float64) boo
 			vector.FillCircle(screen, ex, ey, float32(math.Max(1, tile*0.022)), fade(color.RGBA{255, 170, 80, 255}, 0.8*(1-ph)), true)
 		}
 	}
-	for i := 0; i < menuMotes; i++ {
+	for i := 0; i < motes; i++ {
 		x, y, r, al := menuMote(i, t, sw, sh)
 		c := uiAccent
 		if i%3 == 0 {

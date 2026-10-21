@@ -468,6 +468,9 @@ var partColors = map[partKind][]color.RGBA{
 
 // burst spawns n particles of a kind at (x, y), deterministic in seed.
 func (r *Renderer) burst(kind partKind, x, y float64, n int, seed uint64) {
+	if n > 0 && r.fx > 0 && r.fx < 1 { // Options: effects detail
+		n = int(math.Ceil(float64(n) * r.fx))
+	}
 	cols := partColors[kind]
 	for i := 0; i < n; i++ {
 		if len(r.parts) >= maxParticles {

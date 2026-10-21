@@ -204,14 +204,20 @@ func (r *Renderer) animateWork(w game.WorldView, pawns []game.PawnView) {
 		if p.Lying || p.CarriedBy != 0 {
 			continue
 		}
-		_, d, ok := actionOf(p)
+		act, d, ok := actionOf(p)
 		if !ok {
 			continue
 		}
 		acting[p.ID] = true
 		prev, seen := st.prevWork[p.ID]
 		st.prevWork[p.ID] = t
-		if !seen || len(d.parts) == 0 || !workStrikeAt(prev, t, uint64(p.ID), d.period) {
+		if !seen || !workStrikeAt(prev, t, uint64(p.ID), d.period) {
+			continue
+		}
+		if id, ok := actionSounds[act]; ok {
+			r.cue(id, float64(p.ActX)+0.5, float64(p.ActY)+0.5, 1)
+		}
+		if len(d.parts) == 0 {
 			continue
 		}
 		x, y := float64(p.ActX)+0.5, float64(p.ActY)+0.45

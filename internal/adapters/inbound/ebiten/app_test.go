@@ -283,6 +283,13 @@ func TestLoadAndCreditsNavigate(t *testing.T) {
 	if a.nav.screen() != screenCredits {
 		t.Fatalf("credits = %s", a.nav.screen())
 	}
+	if lines := creditsLines(); len(lines) == 0 || lines[0] != "Created by arxdsilva" {
+		t.Fatalf("credits open with %q, want the creator first", lines)
+	}
+	click(t, a, "credits.back")
+	if a.nav.screen() != screenMainMenu {
+		t.Fatalf("credits back = %s", a.nav.screen())
+	}
 }
 
 func TestScenarioSelectionStaysOnScreen(t *testing.T) {
