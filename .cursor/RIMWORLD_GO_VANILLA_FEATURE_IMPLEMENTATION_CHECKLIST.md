@@ -572,6 +572,7 @@ This is the heart of autonomous colony behavior.
 -   [x] **Repair** (builders mend damaged buildings once no raiders are standing)
     -   Damaged player structures become repair work.
 -   [x] **Deconstruction** (construct work type; half the wood refunded; tile and bed claim freed)
+-   [x] **Reinstall (move)** (UI-011: a reinstall frame, no materials, half the work; the same building moves with bills, fuel, owners and HP; walls, doors, floors and graves stay)
     -   Work removes building and yields appropriate salvage.
 
 ## 7.3 Core structures
@@ -694,7 +695,7 @@ This is the heart of autonomous colony behavior.
     -   yield.
     -   minimum sowing skill.
     -   temperature/light requirements.
--   [x] **Sowing** (Grow work sows empty fertile zone cells; prioritizable from the order menu)
+-   [x] **Sowing** (Grow work sows empty fertile zone cells; prioritizable from the order menu; tree zones are planted, chopped when grown and replanted (UI-011))
     -   Growers plant designated crops in growing zones.
 -   [-] **Plant growth** (integer per-tick growth scaled by fertility x soil sensitivity x temperature; daylight only; frost kills crops; no plant health)
     -   Analytical/bucketed growth.
@@ -1770,7 +1771,7 @@ forage; - local map appearance.
 -   [-] **Rock/mountain mass** (noise outcrops biased to map edges, stone ground ring, open start area; no ore)
 -   [ ] **Ore/resource deposits**
 -   [ ] **Water**
--   [x] **Wild vegetation** (trees, berry bushes; grass decals presentation-only)
+-   [x] **Wild vegetation** (trees, berry bushes; grass is simulated ground cover removed by building, sowing and Cut plants (UI-011))
 -   [-] **Wildlife**
 -   [ ] **Ancient ruins/debris**
 -   [ ] **Starting clear/landing area**

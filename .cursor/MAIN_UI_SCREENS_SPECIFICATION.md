@@ -421,6 +421,17 @@ Only valid contextual commands appear.
 
 Disabled commands show reason.
 
+**Implemented (UI-011):**
+- **Selecting:** a map click selects, in order, a pawn, animal, ground item, building, plant, then floor. A second click on the same tile cycles through what's there.
+- **Pawn panel:** an action bar (Draft, Clear orders), and "Equip nearby" on the Gear tab.
+- **Plant panel:** growth stage, readiness, frost and zone, with Harvest, Cut/Chop and per-colonist "now" orders.
+- **Item panel:** freshness, the body's name and storage, with per-colonist Equip, Wear, Eat and Haul.
+- **Building panel:**
+  - **Move:** a ghost placement mode that reinstalls the same building, keeping its bills, fuel and owners.
+  - **Copy:** the Architect, preset to that building.
+- **Action availability:** actions come from the same options as the right-click menu, and disabled ones show the simulation's reason.
+- **Paused play:** every action applies at once while paused.
+
 ------------------------------------------------------------------------
 
 # 11. Detailed Stats Screen

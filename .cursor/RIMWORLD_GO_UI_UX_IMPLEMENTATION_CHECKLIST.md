@@ -231,11 +231,11 @@ This is the minimum UI required to interact with a running simulation.
 
 ## 2.2 Selection interaction
 
--   [-] **Single-click selection** (click selects the pawn on that tile, click on empty ground clears selection; entity-priority tie-breaking not needed yet with only pawns present)
+-   [x] **Single-click selection** (UI-011: pawn → animal → item → building → plant → floor under the cursor; empty ground clears)
     -   Prioritize sensible entity under cursor.
     -   Clicking empty terrain selects tile or clears selection
         depending interaction state.
--   [ ] **Selection cycling**
+-   [x] **Selection cycling** (UI-011: clicking the same tile again cycles its stack)
     -   When multiple selectable things share a cell, provide
         predictable way to inspect/cycle them.
 -   [ ] **Drag-select colonists**
@@ -286,7 +286,7 @@ building, item, plant, animal, corpse or tile.
 
 ## 3.1 Generic selection panel
 
--   [-] **Selected entity header** (pawn display name, colonist, job, status alive/downed/dead, reason `no food`/`no bed`)
+-   [-] **Selected entity header** (pawn, animal, building, plant and item panels with name, icon, category and condition (UI-011); no faction/ownership line)
     -   Display label/name.
     -   entity category.
     -   faction/ownership where relevant.
@@ -307,7 +307,7 @@ building, item, plant, animal, corpse or tile.
 
 ## 3.2 Context command bar
 
--   [-] **Context-sensitive actions** (Draft/Undraft button + R; right-click menu: go here, build, supply, deconstruct, harvest, sleep, eat, haul; no forbid/hunt/equip/arrest)
+-   [-] **Context-sensitive actions** (UI-011 panels: draft, clear orders, equip nearby; plant harvest/cut and per-colonist now-orders; item equip/wear/eat/haul per colonist; animal hunt/tame/release; building move (reinstall)/copy/deconstruct; no forbid/arrest/set owner)
     -   Draft.
     -   forbid.
     -   hunt.
@@ -434,7 +434,7 @@ the player's primary world-editing command surface.
 ## 5.3 Orders
 
 -   [ ] **Mine**
--   [ ] **Cut plants**
+-   [x] **Cut plants** (trees, bushes and grass (UI-011))
 -   [x] **Harvest** (wild plants via Architect; zone crops automatic)
 -   [x] **Hunt**
 -   [x] **Deconstruct**
