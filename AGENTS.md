@@ -39,3 +39,11 @@ Non-negotiable rules:
 ## Repository-specific override: commits
 
 In this repository only, the global rule forbidding agents from running `git add`/`git commit` does not apply. Agents may stage and commit their own changes here, following the message style and safety rules in the global git workflow guidance (no `--force`, no `--no-verify`, no rewriting published history, never push without explicit request).
+
+## Repository-specific override: work on `main`
+
+This repository has a single developer (arxdsilva). All work happens directly on `main`: do not create feature branches, worktrees (`isolation: "worktree"`), or pull requests unless the user asks for one. This overrides any "branch first when on the default branch" guidance. Parallel subagents (`.cursor/PARALLEL_WORK.md`) share the main checkout with disjoint file ownership. Pushing and tagging still need an explicit request.
+
+## Releases
+
+Pushing a `v*` tag (`git tag v0.1.0 && git push origin v0.1.0`) runs `.github/workflows/release.yml`. The workflow tests the code, then builds Linux (amd64), Windows (amd64, no cgo) and macOS (universal arm64+amd64, cgo) binaries. Each binary is packaged by `scripts/package_release.sh` with the runtime assets, and the archives are published as a GitHub release; a tag with a `-` (e.g. `v0.2.0-rc1`) becomes a prerelease. The binary finds `assets/` next to itself (`internal/platform/assetroot`), and the menu shows the version from `-ldflags "-X main.version=<tag>"`. Any new runtime asset directory must be added to the packaging script.

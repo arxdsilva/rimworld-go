@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 
+	"rimworld-go/internal/platform/assetroot"
+
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -254,25 +256,14 @@ type artCatalog struct {
 	normals map[*ebiten.Image]*ebiten.Image
 }
 
-// LocateArt walks parents of cwd for assets/metadata and returns the
-// assets root.
+// LocateArt finds assets/metadata above the working directory or the
+// executable (assetroot) and returns the assets root.
 func LocateArt() (string, error) {
-	dir, err := os.Getwd()
+	root, err := assetroot.FindParent("assets", artMetadataRel, true)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("original art: %w; run make art", err)
 	}
-	for i := 0; i < 12; i++ {
-		cand := filepath.Join(dir, "assets")
-		if st, err := os.Stat(filepath.Join(cand, artMetadataRel)); err == nil && st.IsDir() {
-			return cand, nil
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			break
-		}
-		dir = parent
-	}
-	return "", fmt.Errorf("original art (assets/%s) not found from cwd; run make art", artMetadataRel)
+	return root, nil
 }
 
 // loadArtCatalog reads every world sprite's metadata, PNG and tint mask

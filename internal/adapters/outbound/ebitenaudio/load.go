@@ -2,35 +2,23 @@ package ebitenaudio
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"rimworld-go/internal/platform/assetroot"
+
 	"rimworld-go/pkg/audiomanifest"
 	"rimworld-go/pkg/sfxsynth"
 )
 
-// LocateAudio walks up from the working directory to the first "assets"
-// directory holding the sound list (audiomanifest.Rel) and returns it.
+// LocateAudio finds the "assets" directory holding the sound list
+// (audiomanifest.Rel) above the working directory or the executable
+// (assetroot) and returns it.
 func LocateAudio() (string, error) {
-	dir, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-	for {
-		root := filepath.Join(dir, "assets")
-		if fi, err := os.Stat(filepath.Join(root, filepath.FromSlash(audiomanifest.Rel))); err == nil && !fi.IsDir() {
-			return root, nil
-		}
-		up := filepath.Dir(dir)
-		if up == dir {
-			return "", errors.New("no assets/" + audiomanifest.Rel + " above the working directory")
-		}
-		dir = up
-	}
+	return assetroot.FindParent("assets", filepath.FromSlash(audiomanifest.Rel), false)
 }
 
 // load reads and validates the sound list under the assets root, then

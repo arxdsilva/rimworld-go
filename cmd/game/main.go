@@ -20,6 +20,10 @@ import (
 	"rimworld-go/internal/domain/world/weather"
 )
 
+// version is the build's version, shown on the main menu. Release builds
+// set it from the git tag: -ldflags "-X main.version=v1.2.3".
+var version = "dev"
+
 func main() {
 	seed := flag.Uint64("seed", 1, "deterministic RNG seed")
 	width := flag.Int("width", 48, "map width in tiles")
@@ -43,7 +47,7 @@ func main() {
 	}
 
 	cfg := uiadapter.AppConfig{
-		Version:  "dev",
+		Version:  version,
 		Assets:   *assets,
 		Capture:  shot,
 		Saves:    saveHooks(),

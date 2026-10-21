@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"rimworld-go/internal/platform/assetroot"
+
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -30,22 +32,11 @@ func menuTitleX(sw int, title string) int {
 
 // LocateMenuSplash walks parents of cwd looking for DefaultMenuSplashRel.
 func LocateMenuSplash() (string, error) {
-	dir, err := os.Getwd()
+	p, err := assetroot.Find(filepath.FromSlash(DefaultMenuSplashRel), false)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("menu splash: %w", err)
 	}
-	for i := 0; i < 12; i++ {
-		cand := filepath.Join(dir, DefaultMenuSplashRel)
-		if st, err := os.Stat(cand); err == nil && !st.IsDir() {
-			return cand, nil
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			break
-		}
-		dir = parent
-	}
-	return "", fmt.Errorf("menu splash %q not found from cwd", DefaultMenuSplashRel)
+	return p, nil
 }
 
 func loadPNG(path string) (*ebiten.Image, error) {

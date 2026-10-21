@@ -108,7 +108,14 @@ The full backlogs are in the [vanilla feature checklist](.cursor/RIMWORLD_GO_VAN
 
 ## Run it
 
-Requires Go 1.26.5 or later (the version in [`go.mod`](go.mod)).
+Ready-made builds for Windows, macOS (Apple Silicon and Intel) and Linux are on
+the [Releases](https://github.com/arxdsilva/rimworld-go/releases) page: unpack
+the archive and run `rimworld-go`, keeping the `assets` folder next to it. The
+macOS build is unsigned, so open it the first time with right-click → Open.
+Pushing a `v*` tag builds and publishes a new release
+([`release.yml`](.github/workflows/release.yml)).
+
+To build from source you need Go 1.26.5 or later (the version in [`go.mod`](go.mod)).
 
 ```sh
 go run ./cmd/game   # start the game

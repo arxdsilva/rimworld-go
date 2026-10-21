@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"rimworld-go/internal/platform/assetroot"
 )
 
 // DefaultPackRel is the vendor character pack, relative to the repo root.
@@ -44,24 +46,14 @@ type BodyPart struct {
 	Anims    map[string][]string
 }
 
-// LocatePack walks parents of cwd looking for DefaultPackRel.
+// LocatePack finds DefaultPackRel above the working directory or the
+// executable (assetroot).
 func LocatePack() (string, error) {
-	dir, err := os.Getwd()
+	p, err := assetroot.Find(DefaultPackRel, true)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("sprite pack: %w", err)
 	}
-	for i := 0; i < 12; i++ {
-		cand := filepath.Join(dir, DefaultPackRel)
-		if st, err := os.Stat(cand); err == nil && st.IsDir() {
-			return cand, nil
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			break
-		}
-		dir = parent
-	}
-	return "", fmt.Errorf("sprite pack %q not found from cwd", DefaultPackRel)
+	return p, nil
 }
 
 // DiscoverPack inventories PNGs under root. It does not load textures.

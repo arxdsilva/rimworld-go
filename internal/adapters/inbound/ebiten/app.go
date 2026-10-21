@@ -381,6 +381,7 @@ func (a *App) loadPack() {
 			}
 		} else {
 			a.art = art
+			a.packWarn = "" // the vendor pack is only a fallback for missing art
 		}
 	}
 	a.loadSplash()
