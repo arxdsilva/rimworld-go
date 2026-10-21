@@ -419,6 +419,8 @@ func (a *App) applyClick(id string) {
 		}
 	case strings.HasPrefix(id, "animal."):
 		a.applyAnimalClick(id)
+	case strings.HasPrefix(id, "pawn.equip."):
+		a.applyPawnEquipClick(id) // inspector.go
 	case strings.HasPrefix(id, "plant."):
 		a.applyPlantClick(id) // plant_inspector.go
 	case strings.HasPrefix(id, "item."):

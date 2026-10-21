@@ -3,11 +3,17 @@ package ebiten
 import (
 	"fmt"
 	"image/color"
+	"sort"
+	"strconv"
+	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/sim/clock"
+	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -29,15 +35,10 @@ func (a *App) inspectorButtons() []button {
 	}
 	out := inspectorTabRow(r, tabs)
 	if p, ok := a.selectedPawn(); ok {
-		label := "Draft (R)"
-		if p.Drafted {
-			label = "Undraft (R)"
+		out = append(out, a.pawnActionBar(p, r)...)
+		if a.inspectTab == "gear" {
+			out = append(out, a.equipNearbyButtons(p, r)...)
 		}
-		dead := p.Status != "alive"
-		out = append(out, button{
-			id: "pawn.draft", label: label, x: r.x + 12, y: r.y + r.h - 62, w: 120, h: 24,
-			selected: p.Drafted, disabled: dead, reason: "not able to act",
-		})
 	}
 	out = append(out, button{
 		id:    "inspector.close",
@@ -48,6 +49,165 @@ func (a *App) inspectorButtons() []button {
 		h:     22,
 	})
 	return out
+}
+
+// pawnActionBar is the Draft / Clear orders row along the panel's bottom,
+// shown on every tab. A dead or downed colonist's actions are disabled with
+// the status as the reason.
+func (a *App) pawnActionBar(p game.PawnView, r button) []button {
+	label := "Draft (R)"
+	if p.Drafted {
+		label = "Undraft (R)"
+	}
+	y := r.y + r.h - 62
+	draft := button{id: "pawn.draft", label: label, x: r.x + 12, y: y, w: 120, h: 24, selected: p.Drafted}
+	clear := button{id: "pawn.clearorders", label: "Clear orders", x: r.x + 140, y: y, w: 120, h: 24}
+	switch {
+	case p.Status != "alive":
+		draft.disabled, draft.reason = true, p.Status
+		clear.disabled, clear.reason = true, p.Status
+	case len(p.QueuedOrders) == 0:
+		clear.disabled, clear.reason = true, "no queued orders"
+	}
+	return []button{draft, clear}
+}
+
+const (
+	maxEquipShown      = 4  // buttons in the "Equip nearby" list
+	maxEquipCandidates = 12 // nearest weapons whose orders are probed
+)
+
+// equipOption is one reachable weapon the selected colonist can equip.
+type equipOption struct {
+	Item  entity.EntityID
+	Label string
+	Cmd   command.Command
+}
+
+type equipCacheKey struct {
+	r         *Renderer
+	pawn      entity.EntityID
+	tick      clock.Tick
+	x, y      int
+	items     int
+	drafted   bool
+	weapon    string
+	queued    int
+	completed bool
+}
+
+var equipCache struct {
+	key  equipCacheKey
+	set  bool
+	opts []equipOption
+}
+
+// equipNearby lists up to maxEquipShown nearest loose weapons (Chebyshev
+// distance, ties by item id) for which the game offers an enabled Equip
+// order. The result is cached while nothing it depends on changes.
+func (a *App) equipNearby(p game.PawnView) []equipOption {
+	if a.renderer == nil || p.Status != "alive" {
+		return nil
+	}
+	items := a.renderer.world().Items
+	key := equipCacheKey{r: a.renderer, pawn: p.ID, tick: a.renderer.game.Tick(), x: p.X, y: p.Y,
+		items: len(items), drafted: p.Drafted, weapon: p.Weapon, queued: len(p.QueuedOrders)}
+	if equipCache.set && equipCache.key == key {
+		return equipCache.opts
+	}
+	type cand struct {
+		it   game.ItemView
+		dist int
+	}
+	var cands []cand
+	for _, it := range items {
+		if k, ok := item.ParseKind(it.Kind); it.Carried || !ok || !k.IsWeapon() {
+			continue
+		}
+		cands = append(cands, cand{it, max(abs(it.X-p.X), abs(it.Y-p.Y))})
+	}
+	sort.Slice(cands, func(i, j int) bool {
+		if cands[i].dist != cands[j].dist {
+			return cands[i].dist < cands[j].dist
+		}
+		return cands[i].it.ID < cands[j].it.ID
+	})
+	if len(cands) > maxEquipCandidates {
+		cands = cands[:maxEquipCandidates]
+	}
+	var out []equipOption
+	for _, c := range cands {
+		if len(out) == maxEquipShown {
+			break
+		}
+		for _, o := range a.renderer.game.OrdersAt(p.ID, c.it.X, c.it.Y) {
+			if orderIs(command.OrderEquip)(o) && strings.HasPrefix(o.Label, "Equip") && !o.Disabled {
+				out = append(out, equipOption{Item: c.it.ID, Cmd: o.Cmd,
+					Label: fmt.Sprintf("%s \u2014 %d tiles", titleCase(c.it.Kind), c.dist)})
+				break
+			}
+		}
+	}
+	equipCache.key, equipCache.set, equipCache.opts = key, true, out
+	return out
+}
+
+func titleCase(s string) string {
+	if s == "" {
+		return s
+	}
+	return strings.ToUpper(s[:1]) + s[1:]
+}
+
+// equipListY is the top of the "Equip nearby" buttons on the Gear tab,
+// below the wearing list and comfort line.
+func equipListY(r button, p game.PawnView) float32 {
+	return r.y + 244 + float32(len(p.Apparel))*16
+}
+
+// equipNearbyButtons builds the Gear tab's "Equip nearby" list as buttons
+// (pure: no drawing). Dead or downed colonists get one disabled line.
+func (a *App) equipNearbyButtons(p game.PawnView, r button) []button {
+	y := equipListY(r, p)
+	limit := r.y + r.h - 66 // keep clear of the action bar
+	if p.Status != "alive" {
+		return []button{{id: "pawn.equip.none", label: "Equip nearby", x: r.x + 12, y: y, w: 300, h: 16,
+			disabled: true, reason: p.Status}}
+	}
+	opts := a.equipNearby(p)
+	if len(opts) == 0 {
+		return []button{{id: "pawn.equip.none", label: "no weapons in reach", x: r.x + 12, y: y, w: 300, h: 16,
+			disabled: true, reason: "no weapons in reach"}}
+	}
+	var out []button
+	for _, o := range opts {
+		if y+16 > limit {
+			break
+		}
+		out = append(out, button{id: fmt.Sprintf("pawn.equip.%d", o.Item), label: o.Label, x: r.x + 12, y: y, w: 300, h: 16})
+		y += 17
+	}
+	return out
+}
+
+// applyPawnEquipClick enqueues the Equip order behind a "pawn.equip.<id>"
+// button. Routed from applyClick.
+func (a *App) applyPawnEquipClick(id string) {
+	n, err := strconv.ParseUint(strings.TrimPrefix(id, "pawn.equip."), 10, 64)
+	if err != nil || a.renderer == nil {
+		return
+	}
+	p, ok := a.selectedPawn()
+	if !ok {
+		return
+	}
+	for _, o := range a.equipNearby(p) {
+		if uint64(o.Item) == n {
+			a.renderer.enqueue(o.Cmd)
+			equipCache.set = false
+			return
+		}
+	}
 }
 
 func inspectorTabRow(r button, tabs []buttonSpec) []button {
@@ -231,8 +391,7 @@ func drawGear(screen *ebiten.Image, p game.PawnView, x, y int) {
 		drawLabel(screen, x+12, ly, gearLine(a))
 	}
 	drawLabel(screen, x, ly+28, fmt.Sprintf("Comfortable  %s to %s", fmtTemp(p.ComfortMin), fmtTemp(p.ComfortMax)))
-	drawLabel(screen, x, ly+48, "Order a colonist to Wear clothes from the")
-	drawLabel(screen, x, ly+62, "right-click menu, or let it dress itself.")
+	drawLabel(screen, x, ly+48, "Equip nearby")
 }
 
 func gearLine(a string) string {
