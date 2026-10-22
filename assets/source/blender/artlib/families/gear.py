@@ -250,6 +250,19 @@ def _tools():
     S.ellipsoid("dish", 0.745, y, 0.062, 0.085, 0.052, 0.012, "bark", segs=12, rings=6)
     out.append(_render("tool", "spoon", 0.1, ("tool", "spoon"),
                        {"grip": (0.32, y, 0.04), "support": (0.46, y, 0.04), "head": (0.78, y, 0.06)}))
+    # broom: long stick, a flared head of bound straw at the working end
+    _rod(0.14, 0.78, 0.022, "wood", r_top=0.02)
+    S.prism("bristles", [(0.74, y - 0.045), (0.90, y - 0.10), (1.04, y - 0.125), (1.06, y), (1.04, y + 0.125),
+                         (0.90, y + 0.10), (0.74, y + 0.045)], 0.0, 0.05, "straw", bevel=0.01)
+    S.prism("bristle_tips", [(0.98, y - 0.12), (1.07, y - 0.115), (1.09, y), (1.07, y + 0.115), (0.98, y + 0.12)],
+            0.0, 0.04, "corn_yellow", bevel=0.006)
+    for k, dy in enumerate((-0.07, -0.025, 0.025, 0.07)):
+        S.box("strand%d" % k, 0.84, y + dy - 0.004, 0.05, 1.04, y + dy + 0.004, 0.056, "burlap", bevel=0.002)
+    S.box("binding", 0.72, y - 0.05, 0.0, 0.80, y + 0.05, 0.062, "leather", bevel=0.01)
+    S.box("binding2", 0.82, y - 0.075, 0.0, 0.86, y + 0.075, 0.056, "bark", bevel=0.006)
+    out.append(_render("tool", "broom", 0.1, ("tool", "broom"),
+                       {"grip": (0.22, y, 0.04), "support": (0.52, y, 0.04), "head": (1.0, y, 0.03)}))
+
     return out
 
 

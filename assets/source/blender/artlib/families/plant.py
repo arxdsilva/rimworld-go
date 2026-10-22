@@ -373,7 +373,7 @@ CROP_M = (0.15, 0.15, 0.12, 0.15)
 LEAF_Z = 0.07
 BROWN = ("tuber", "burlap", "straw")
 SEED_MAT = {"radish": "food_red", "lettuce": "leaf_light", "beans": "burlap", "potato": "tuber",
-            "corn": "corn_yellow", "wheat": "straw", "pumpkin": "straw", "healroot": "vegetation"}
+            "corn": "corn_yellow", "wheat": "straw", "pumpkin": "straw", "healroot": "vegetation", "cotton": "ceramic"}
 
 
 def _mound():
@@ -589,6 +589,73 @@ def _wheat(st, v):
                   {"harvestable": "corn_yellow", "wilted": "burlap"}.get(st, "leaf_light"), segs=6, rings=5)
 
 
+def _boll(name, x, y, z, r, open_=True):
+    """A cotton boll: a puff of fluff cupped in a brown calyx."""
+    _ball(name + "c", x, y, z - r * 0.35, r * 0.7, r * 0.7, r * 0.5, "tuber", segs=6, rings=4)
+    _ball(name + "a", x, y, z + r * 0.35, r, r, r * 0.95, "cotton_boll", segs=10, rings=7)
+    if open_:
+        _ball(name + "b", x + r * 0.55, y - r * 0.2, z + r * 0.15, r * 0.7, r * 0.7, r * 0.65, "cotton_boll",
+              segs=8, rings=5)
+        _ball(name + "d", x - r * 0.5, y + r * 0.1, z + r * 0.2, r * 0.65, r * 0.65, r * 0.6, "cotton_boll",
+              segs=8, rings=5)
+
+
+def _cotton(st, v):
+    """Bushy shrub: a main stem, side branches carrying broad leaf tufts;
+    mature plants show green bolls and a pale blossom, harvestable ones
+    burst white bolls out of every tuft."""
+    rng = random.Random(90 + v)
+    if st == "sprout":
+        _sprout_leaves(v, "vegetation", n=2, length=0.11, width=0.08, pitch=0.55)
+        return
+    wilt = st == "wilted"
+    H = {"young": 0.3, "mature": (0.52, 0.58, 0.48)[v], "harvestable": (0.55, 0.62, 0.5)[v],
+         "wilted": (0.4, 0.44, 0.36)[v]}[st]
+    lean = (0.0, 0.04, -0.04)[v] * (3 if wilt else 1)
+    top = (CX + lean, CY, 0.05 + H)
+    _limb("stem", (CX, CY, 0.05), top, 0.026, 0.014, "tuber" if wilt else "vegetation", segs=6)
+    lm = "tuber" if wilt else None
+    if st == "young":
+        for j in range(5):
+            t = 0.25 + 0.7 * j / 4
+            a = 0.7 + 2.3 * j + v
+            _leaf("yl%d" % j, CX + lean * t, CY, 0.05 + H * t, a, 0.35, 0.17, 0.12,
+                  ("foliage", "vegetation")[j % 2], thick=0.03)
+        return
+    nb = (3, 4, 3)[v] + (1 if st == "harvestable" else 0)
+    tips = []
+    for k in range(nb):
+        t = 0.3 + 0.55 * k / max(nb - 1, 1)
+        a = 2 * math.pi * k / nb + 0.6 + 0.8 * v
+        reach = 0.2 - 0.05 * t + rng.uniform(-0.02, 0.03)
+        z0 = 0.05 + H * t
+        sx, sy = CX + lean * t, CY
+        ex, ey = sx + math.cos(a) * reach, sy + math.sin(a) * reach
+        ez = z0 + (0.06 if not wilt else -0.07)
+        _limb("br%d" % k, (sx, sy, z0), (ex, ey, ez), 0.014, 0.008, "tuber" if wilt else "vegetation", segs=5)
+        tips.append((ex, ey, ez, a))
+        _cluster("tuft%d" % k, ex, ey, ez + 0.01, 0.1, lm or ("foliage", "vegetation")[k % 2], 70 + 3 * k + v,
+                 lumps=0.35, squash=0.7)
+        for j in range(2):
+            _leaf("bl%d_%d" % (k, j), ex, ey, ez, a + (j * 2 - 1) * 0.9, -0.1 if wilt else 0.2, 0.13, 0.09,
+                  lm or "leaf_light", thick=0.025)
+    # crown tuft on the main stem
+    _cluster("crown", top[0], top[1], top[2], 0.1, lm or "vegetation", 80 + v, lumps=0.35, squash=0.7)
+    for j in range(4):
+        _leaf("cl%d" % j, top[0], top[1], top[2] - 0.02, 0.8 + 1.7 * j + v, 0.3 if not wilt else -0.4, 0.15, 0.1,
+              lm or ("foliage", "leaf_light")[j % 2], thick=0.025)
+    if st == "mature":  # green bolls swelling and a first blossom
+        for k, (ex, ey, ez, a) in enumerate(tips[:3]):
+            _ball("gb%d" % k, ex + math.cos(a) * 0.05, ey + math.sin(a) * 0.05 - 0.02, ez - 0.01, 0.028, 0.028, 0.034,
+                  "foliage", segs=7, rings=5)
+        ex, ey, ez, a = tips[-1]
+        _ball("bloom", ex, ey - 0.03, ez + 0.07, 0.04, 0.04, 0.03, "blossom", segs=8, rings=5)
+    if st == "harvestable":
+        for k, (ex, ey, ez, a) in enumerate(tips):
+            _boll("bo%d" % k, ex + math.cos(a) * 0.035, ey + math.sin(a) * 0.035 - 0.015, ez + 0.07, 0.048)
+        _boll("bt", top[0], top[1] - 0.02, top[2] + 0.06, 0.05)
+
+
 def _pumpkin(st, v):
     rng = random.Random(80 + v)
     n = (4, 5, 6)[v]
@@ -620,11 +687,11 @@ def _pumpkin(st, v):
 
 
 CROPS = {"radish": _radish, "lettuce": _lettuce, "beans": _beans, "potato": _potato,
-         "corn": _corn, "wheat": _wheat, "pumpkin": _pumpkin, "healroot": _healroot}
+         "corn": _corn, "wheat": _wheat, "pumpkin": _pumpkin, "healroot": _healroot, "cotton": _cotton}
 STAGES = ("sown", "sprout", "young", "mature", "harvestable", "wilted")
 
 
-GROW = {"corn": (1.3, 1.6), "wheat": (1.4, 1.45), "pumpkin": (1.5, 1.5), "beans": (1.45, 1.5)}
+GROW = {"corn": (1.3, 1.6), "wheat": (1.4, 1.45), "pumpkin": (1.5, 1.5), "beans": (1.45, 1.5), "cotton": (1.4, 1.5)}
 
 
 def _crop_geo(species, st, v):

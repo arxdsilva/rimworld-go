@@ -278,7 +278,104 @@ def _bones(variant):
     return S.render_asset("item", "bones_%02d" % variant, zmax=0.14, extra={"item": "bones", "variant": variant})
 
 
+# --- cloth, straw and rolled carpets (ART 16.3) -----------------------------
+
+def _roll_matrix(cx, cy, r, ln, yaw):
+    """Place a +Z cylinder of length `ln` lying on the ground, centred on (cx, cy),
+    its axis `yaw` degrees from +X (negative turns towards the viewer)."""
+    import math
+    from mathutils import Matrix
+    a = math.radians(yaw)
+    return (Matrix.Translation((cx - math.cos(a) * ln / 2, cy - math.sin(a) * ln / 2, r))
+            @ Matrix.Rotation(a, 4, "Z") @ Matrix.Rotation(math.radians(90), 4, "Y"))
+
+
+def _cloth_bolt():
+    """Three off-white bolts of cloth rolled on wooden cores, two below and
+    one on top, each with a burlap wrapper band."""
+    import math
+    yaw = -38
+    r, ln = 0.105, 0.56
+    n = (-math.sin(math.radians(yaw)), math.cos(math.radians(yaw)))   # sideways on the ground
+    for k, (off, z) in enumerate(((-0.115, r), (0.115, r), (0.0, r * 2.55))):
+        n0 = len(S.objects())
+        S.cyl("bolt", 0, 0, r, 0.0, ln, "cloth_white", segs=18, bevel=0.01)
+        S.cyl("core", 0, 0, 0.04, ln, ln + 0.012, "wood", segs=10, bevel=0.0)
+        S.cyl("layer", 0, 0, 0.075, ln, ln + 0.006, "ceramic", segs=14, bevel=0.0)
+        S.cyl("band", 0, 0, r + 0.006, ln * 0.45, ln * 0.45 + 0.07, "burlap", segs=18, bevel=0.0)
+        S.cyl("edge", 0, 0, r + 0.003, ln * 0.12, ln * 0.12 + 0.02, "ceramic", segs=18, bevel=0.0)
+        m = _roll_matrix(0.5 + n[0] * off, -0.52 + n[1] * off, z, ln, yaw)
+        for ob in S.objects()[n0:]:
+            ob.matrix_world = m
+    return S.render_asset("item", "cloth_bolt", zmax=0.36, extra={"item": "cloth", "stack": True})
+
+
+def _straw_bundle():
+    """Golden straw lying in a bundle, tied with twine."""
+    import math
+    import random
+    from mathutils import Matrix
+    rnd = random.Random(11)
+    for i in range(26):
+        y = -0.5 + rnd.uniform(-0.13, 0.13)
+        z = 0.04 + rnd.uniform(0.0, 0.15)
+        yaw = rnd.uniform(-9, 9)
+        length = rnd.uniform(0.62, 0.76)
+        x0 = 0.5 - length / 2 + rnd.uniform(-0.03, 0.03)
+        S.cyl("stalk%d" % i, 0, 0, 0.02, 0.0, length, "straw" if i % 3 else "corn_yellow", segs=5, bevel=0.0)
+        S.objects()[-1].matrix_world = Matrix.Translation((x0, y, z)) @ Matrix.Rotation(math.radians(yaw), 4, "Z") \
+            @ Matrix.Rotation(math.radians(90), 4, "Y")
+    for k, x in enumerate((0.40, 0.60)):
+        S.box("tie%d" % k, x - 0.02, -0.66, 0.0, x + 0.02, -0.34, 0.23, "leather", bevel=0.01)
+    return S.render_asset("item", "straw_bundle", zmax=0.26, extra={"item": "straw", "stack": True})
+
+
+_ROLL = {
+    # material -> (body, ring, core, tie)
+    "straw": ("carpet_straw", "carpet_straw_dark", "carpet_straw_edge", "leather"),
+    "cloth": ("carpet_cloth", "carpet_cloth_stripe", "carpet_cloth_edge", "straw"),
+    "leather": ("carpet_leather", "carpet_leather_edge", "carpet_leather_edge", "straw"),
+    "wood": ("carpet_wood", "carpet_wood_alt", "carpet_wood_edge", "leather"),
+}
+
+
+def _carpet_rolled(kind):
+    """A rug rolled up lengthwise, spiral end facing the viewer, two ties."""
+    import math
+    from mathutils import Matrix
+    body, ring, core, tie = _ROLL[kind]
+    r, ln = 0.15, 0.62
+    n0 = len(S.objects())
+    S.cyl("roll", 0, 0, r, 0.0, ln, body, segs=20, bevel=0.01)
+    # spiral end: concentric rings
+    S.cyl("e1", 0, 0, r * 0.82, ln, ln + 0.008, ring, segs=18, bevel=0.0)
+    S.cyl("e2", 0, 0, r * 0.62, ln, ln + 0.014, body, segs=16, bevel=0.0)
+    S.cyl("e3", 0, 0, r * 0.42, ln, ln + 0.02, ring, segs=14, bevel=0.0)
+    S.cyl("e4", 0, 0, r * 0.2, ln, ln + 0.026, core, segs=10, bevel=0.0)
+    if kind == "cloth":   # border stripe shows as bands around the roll
+        for k, t in enumerate((0.1, 0.84)):
+            S.cyl("stripe%d" % k, 0, 0, r + 0.005, ln * t, ln * t + 0.05, ring, segs=20, bevel=0.0)
+    elif kind == "wood":  # slat joints run round the roll
+        for k in range(5):
+            S.cyl("joint%d" % k, 0, 0, r + 0.004, ln * (0.12 + 0.19 * k), ln * (0.12 + 0.19 * k) + 0.014, core,
+                  segs=20, bevel=0.0)
+    elif kind == "straw":  # weave ridges
+        for k in range(6):
+            S.cyl("weave%d" % k, 0, 0, r + 0.004, ln * (0.1 + 0.15 * k), ln * (0.1 + 0.15 * k) + 0.03, ring,
+                  segs=20, bevel=0.0)
+    else:                 # darker hide wrapping round near each end
+        for k, t in enumerate((0.04, 0.9)):
+            S.cyl("wrap%d" % k, 0, 0, r + 0.004, ln * t, ln * t + 0.05, ring, segs=20, bevel=0.0)
+    for k, t in enumerate((0.22, 0.72)):
+        S.cyl("tie%d" % k, 0, 0, r + 0.014, ln * t, ln * t + 0.045, tie, segs=20, bevel=0.0)
+    for ob in S.objects()[n0:]:
+        ob.matrix_world = _roll_matrix(0.5, -0.5, r, ln, -38)
+    return S.render_asset("item", "carpet_%s_rolled" % kind, zmax=0.32,
+                          extra={"item": "%s carpet" % kind, "stack": True})
+
+
 def build():
     return [_wood(), _food(), _steel(), _stone(), _berries(), _ration(), _meat(), _meal(), _club(), _rifle_item(), _knife_item(), _spear_item(),
             _potatoes(), _corn(), _wheat(), _beans(), _lettuce(), _radishes(), _pumpkins(),
-            _leather(), _parka(), _tuque(), _duster(), _herbal_medicine(), _bones(0), _bones(1)]
+            _leather(), _parka(), _tuque(), _duster(), _herbal_medicine(), _bones(0), _bones(1),
+            _cloth_bolt(), _straw_bundle()] + [_carpet_rolled(k) for k in _ROLL]

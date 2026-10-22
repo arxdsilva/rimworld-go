@@ -317,6 +317,26 @@ def _g_overlay_roof(xx, yy, c):  # roof with rafters
     return d
 
 
+def _g_house(xx, yy, c):  # small house: gable roof over walls
+    d = np.minimum(_seg(xx, yy, c - 26, c - 4, c, c - 26), _seg(xx, yy, c, c - 26, c + 26, c - 4))
+    d = np.minimum(d, _seg(xx, yy, c - 18, c - 6, c - 18, c + 24))
+    d = np.minimum(d, _seg(xx, yy, c + 18, c - 6, c + 18, c + 24))
+    return np.minimum(d, _seg(xx, yy, c - 18, c + 24, c + 18, c + 24))
+
+
+def _g_home(xx, yy, c):  # house with a door
+    d = _g_house(xx, yy, c)
+    d = np.minimum(d, _seg(xx, yy, c - 6, c + 24, c - 6, c + 10))
+    d = np.minimum(d, _seg(xx, yy, c + 6, c + 24, c + 6, c + 10))
+    return np.minimum(d, _seg(xx, yy, c - 6, c + 10, c + 6, c + 10))
+
+
+def _g_home_clear(xx, yy, c):  # house with a cross
+    d = _g_house(xx, yy, c)
+    d = np.minimum(d, _seg(xx, yy, c - 8, c + 4, c + 8, c + 20))
+    return np.minimum(d, _seg(xx, yy, c + 8, c + 4, c - 8, c + 20))
+
+
 def _roof_tile(name, kind):
     xx, yy = _grid()
     img = np.zeros((N, N, 4), np.float32)
@@ -381,6 +401,13 @@ ICONS = {
     "research_bench": ("furniture", "research_bench_south"),
     "spike_trap": ("furniture", "spike_trap"),
     "tailoring_bench": ("furniture", "tailoring_bench_south"),
+    "cloth": ("item", "cloth_bolt"),
+    "straw": ("item", "straw_bundle"),
+    "straw_carpet": ("item", "carpet_straw_rolled"),
+    "cloth_carpet": ("item", "carpet_cloth_rolled"),
+    "leather_carpet": ("item", "carpet_leather_rolled"),
+    "wood_carpet": ("item", "carpet_wood_rolled"),
+    "carpet": ("furniture", "carpet_cloth"),   # the Architect tool: a laid mat
 }
 ICON_PX = 128          # @2x of a 64 px icon
 ICON_PAD = 10
@@ -441,7 +468,9 @@ def build():
             _badge_icon("zone_grow", t, _g_sprout, (0.45, 0.78, 0.36)),
             _badge_icon("roof_build", t, _g_roof_build, (0.35, 0.55, 0.82)),
             _badge_icon("roof_remove", t, _g_roof_remove, t["danger"]),
-            _badge_icon("overlay_roof", t, _g_overlay_roof, (0.45, 0.65, 0.90))]
+            _badge_icon("overlay_roof", t, _g_overlay_roof, (0.45, 0.65, 0.90)),
+            _badge_icon("home", t, _g_home, (0.29, 0.50, 0.83)),
+            _badge_icon("home_clear", t, _g_home_clear, t["danger"])]
     out += [_shadow_blob(), _shadow_box(), _roof_tile("roof_built", "built"),
             _roof_tile("roof_natural", "natural"), _roof_tile("roof_plan", "plan"),
             _roof_tile("roof_remove", "remove")]

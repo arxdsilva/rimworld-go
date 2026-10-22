@@ -1,0 +1,18 @@
+# Carpets, cloth and cotton (ART spec 16.3, SIM-021). Original colours.
+# Merged over materials.yaml by the palette loader (materials_*.yaml).
+# Same format as materials.yaml: three toon bands per material.
+version: 1
+materials:
+  carpet_straw:        {light: "#dcc07f", base: "#c8a868", shadow: "#a0844c"}
+  carpet_straw_dark:   {light: "#c6a664", base: "#b2924f", shadow: "#88703c"}
+  carpet_straw_edge:   {light: "#a88a50", base: "#8a6e3c", shadow: "#68522a"}
+  carpet_cloth:        {light: "#b4605a", base: "#94423e", shadow: "#6c2e2e"}
+  carpet_cloth_edge:   {light: "#7c3634", base: "#602a2a", shadow: "#461e1f"}
+  carpet_cloth_stripe: {light: "#ecdcb4", base: "#d6c394", shadow: "#a89870"}
+  carpet_leather:      {light: "#94643e", base: "#7a4e2c", shadow: "#573520"}
+  carpet_leather_edge: {light: "#5e3b22", base: "#482d19", shadow: "#331f11"}
+  carpet_wood:         {light: "#a68256", base: "#8a6a44", shadow: "#644c30"}
+  carpet_wood_alt:     {light: "#b48f60", base: "#977650", shadow: "#6e5538"}
+  carpet_wood_edge:    {light: "#54402b", base: "#3f2f1f", shadow: "#2a1e12"}
+  cloth_white:         {light: "#fbf6ea", base: "#e8dfca", shadow: "#b8ad94"}
+  cotton_boll:         {light: "#ffffff", base: "#f3f1ec", shadow: "#bcc1cc"}

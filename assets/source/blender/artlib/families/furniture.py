@@ -431,6 +431,106 @@ def _pyre_burning():
     return (2, 1), 0.60
 
 
+# --- carpets (ART 16.3): flat 1x1 floor mats, ~0.8 tile wide, no facing ----
+CP0, CP1 = 0.10, 0.90          # mat extent on each axis (x; y is -CP1..-CP0)
+CP_EDGE = 0.03                 # 2 px darker border at game scale
+
+
+def _carpet_straw():
+    """Woven straw mat: a basket-weave checker of two straw tones."""
+    S.box("edge", CP0, -CP1, 0.0, CP1, -CP0, 0.03, "carpet_straw_edge", bevel=0.008)
+    n = 8
+    lo, hi = CP0 + CP_EDGE, CP1 - CP_EDGE
+    step = (hi - lo) / n
+    for i in range(n):
+        for j in range(n):
+            x0, y0 = lo + i * step, -hi + j * step
+            horiz = (i + j) % 2 == 0
+            # each cell holds three strips; orientation alternates like a weave
+            for k in range(3):
+                f0, f1 = (k + 0.08) / 3, (k + 0.92) / 3
+                if horiz:
+                    S.box("w", x0 + 0.004, y0 + f0 * step, 0.022, x0 + step - 0.004, y0 + f1 * step, 0.04,
+                          "carpet_straw" if k != 1 else "carpet_straw_dark", bevel=0.004)
+                else:
+                    S.box("w", x0 + f0 * step, y0 + 0.004, 0.026, x0 + f1 * step, y0 + step - 0.004, 0.044,
+                          "carpet_straw_dark" if k != 1 else "carpet_straw", bevel=0.004)
+    return (1, 1), 0.06
+
+
+def _carpet_cloth():
+    """Dyed cloth rug: thick pile, a cream border stripe and fringe."""
+    S.box("edge", CP0, -CP1, 0.0, CP1, -CP0, 0.03, "carpet_cloth_edge", bevel=0.01)
+    e = CP_EDGE
+    S.box("pile", CP0 + e, -CP1 + e, 0.02, CP1 - e, -CP0 - e, 0.05, "carpet_cloth", bevel=0.012, segments=2)
+    # border stripe, inset from the edge
+    a, b, w = CP0 + 0.08, CP1 - 0.08, 0.035
+    z0, z1 = 0.045, 0.056
+    S.box("stripe_n", a, -CP0 - 0.08 - w, z0, b, -CP0 - 0.08, z1, "carpet_cloth_stripe", bevel=0.004)
+    S.box("stripe_s", a, -CP1 + 0.08, z0, b, -CP1 + 0.08 + w, z1, "carpet_cloth_stripe", bevel=0.004)
+    S.box("stripe_w", a, -CP1 + 0.08, z0, a + w, -CP0 - 0.08, z1, "carpet_cloth_stripe", bevel=0.004)
+    S.box("stripe_e", b - w, -CP1 + 0.08, z0, b, -CP0 - 0.08, z1, "carpet_cloth_stripe", bevel=0.004)
+    # centre lozenge
+    S.prism("lozenge", [(0.5, -0.34), (0.62, -0.5), (0.5, -0.66), (0.38, -0.5)], 0.045, 0.056,
+            "carpet_cloth_stripe", bevel=0.004)
+    # fringe tassels on the short ends
+    for k in range(9):
+        x = CP0 + 0.04 + k * 0.088
+        S.box("fr_n", x, -CP0, 0.0, x + 0.03, -CP0 + 0.05, 0.022, "carpet_cloth_stripe", bevel=0.004)
+        S.box("fr_s", x, -CP1 - 0.05, 0.0, x + 0.03, -CP1, 0.022, "carpet_cloth_stripe", bevel=0.004)
+    return (1, 1), 0.06
+
+
+def _carpet_leather():
+    """Stitched brown hide: slightly ragged outline, a dark rim, stitching."""
+    import math
+    outer = [(0.10, -0.22), (0.16, -0.11), (0.34, -0.09), (0.50, -0.12), (0.68, -0.09), (0.85, -0.12),
+             (0.91, -0.28), (0.89, -0.50), (0.92, -0.72), (0.86, -0.88), (0.66, -0.91), (0.48, -0.88),
+             (0.30, -0.91), (0.14, -0.87), (0.09, -0.70), (0.11, -0.46)]
+    cx, cy = 0.5, -0.5
+    inner = [(cx + (x - cx) * 0.93, cy + (y - cy) * 0.93) for x, y in outer]
+    S.prism("rim", outer, 0.0, 0.03, "carpet_leather_edge", bevel=0.008)
+    S.prism("hide", inner, 0.0, 0.042, "carpet_leather", bevel=0.01)
+    # patches of darker, worn hide
+    S.blob("patch0", 0.34, -0.36, 0.036, 0.12, "carpet_leather_edge", seed=31, lumps=0.2, squash=0.07)
+    S.blob("patch1", 0.66, -0.64, 0.036, 0.10, "carpet_leather_edge", seed=32, lumps=0.2, squash=0.07)
+    # stitching: short light dashes around the inside of the rim
+    pts = [(cx + (x - cx) * 0.84, cy + (y - cy) * 0.84) for x, y in outer]
+    for i in range(len(pts)):
+        (x0, y0), (x1, y1) = pts[i], pts[(i + 1) % len(pts)]
+        L = math.hypot(x1 - x0, y1 - y0)
+        for k in range(max(2, int(L / 0.07))):
+            t = (k + 0.5) / max(2, int(L / 0.07))
+            sx, sy = x0 + (x1 - x0) * t, y0 + (y1 - y0) * t
+            S.box("st", sx - 0.012, sy - 0.012, 0.04, sx + 0.012, sy + 0.012, 0.05, "straw", bevel=0.002)
+    # a centre seam where two hides are joined
+    S.box("seam", 0.20, -0.515, 0.04, 0.80, -0.485, 0.048, "carpet_leather_edge", bevel=0.002)
+    for k in range(10):
+        x = 0.22 + k * 0.062
+        S.box("sx", x, -0.532, 0.045, x + 0.02, -0.468, 0.052, "straw", bevel=0.002)
+    return (1, 1), 0.06
+
+
+def _carpet_wood():
+    """Wooden slat mat: six slats with dark gaps, two cross battens."""
+    S.box("base", CP0, -CP1, 0.0, CP1, -CP0, 0.02, "carpet_wood_edge", bevel=0.006)
+    for y, in ((-0.72,), (-0.28,)):
+        S.box("batten", CP0, y - 0.035, 0.015, CP1, y + 0.035, 0.03, "carpet_wood_edge", bevel=0.004)
+    n = 6
+    gap = 0.014
+    w = (CP1 - CP0 - gap * (n + 1)) / n
+    for i in range(n):
+        x0 = CP0 + gap + i * (w + gap)
+        S.box("slat%d" % i, x0, -CP1 + CP_EDGE * 0.5, 0.02, x0 + w, -CP0 - CP_EDGE * 0.5, 0.05,
+              "carpet_wood" if i % 2 == 0 else "carpet_wood_alt", bevel=0.01)
+        # grain line and a nail head per batten
+        S.box("grain%d" % i, x0 + w * 0.45, -0.84, 0.048, x0 + w * 0.55, -0.55, 0.054, "carpet_wood_edge", bevel=0.0)
+        for y in (-0.72, -0.28):
+            S.box("nail%d" % i, x0 + w * 0.4, y - 0.012, 0.048, x0 + w * 0.6, y + 0.012, 0.056, "metal_dark",
+                  bevel=0.002)
+    return (1, 1), 0.06
+
+
 BUILDERS = {
     "bed_basic": (_bed, {"attachments": {"sleeper": [0.5, 0.42]}}),
     "bed_double": (_bed_double, {"attachments": {"sleeper": [0.5, 0.42], "sleeper2": [1.5, 0.42]}}),
@@ -455,6 +555,10 @@ BUILDERS = {
     "headstone_03": (_headstone_03, {"item": "headstone", "style": "slab"}),
     "pyre": (_pyre, {"building": "funeral pyre", "state": "stacked"}),
     "pyre_burning": (_pyre_burning, {"building": "funeral pyre", "state": "burning"}),
+    "carpet_straw": (_carpet_straw, {"carpet": "straw", "flat": True}),
+    "carpet_cloth": (_carpet_cloth, {"carpet": "cloth", "flat": True}),
+    "carpet_leather": (_carpet_leather, {"carpet": "leather", "flat": True}),
+    "carpet_wood": (_carpet_wood, {"carpet": "wood", "flat": True}),
 }
 FACINGS_ONLY = {"grave_dug": ("south", "east"), "grave_filled": ("south", "east")}
 ROTATABLE = {"grave_dug", "grave_filled", "bed_basic", "bed_double", "chair_basic", "workbench_basic", "stove_basic", "butcher_table",
@@ -489,5 +593,7 @@ def build():
             fp = S.face(S.objects(), f, fp)
             ex = dict(extra, rotatable=name in ROTATABLE, facing=f)
             suffix = "_" + f if name in ROTATABLE else ""
-            out.append(S.render_asset("furniture", name + suffix, footprint=fp, zmax=zmax, extra=ex))
+            # flat floor mats lie on the ground: no sun shadow
+            out.append(S.render_asset("furniture", name + suffix, footprint=fp, zmax=zmax, extra=ex,
+                                      shadow_kind="none" if extra.get("flat") else None))
     return out
