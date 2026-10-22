@@ -231,6 +231,9 @@ func checkAll(assets string) (int, int64, error) {
 			}
 		}
 	}
+	if err := checkAnimals(assets, m); err != nil {
+		return 0, 0, err
+	}
 	if size > budget {
 		return 0, 0, fmt.Errorf("audio is %.1f MB, over the %d MB budget", float64(size)/(1<<20), budget>>20)
 	}
