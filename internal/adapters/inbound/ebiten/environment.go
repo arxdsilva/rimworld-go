@@ -104,6 +104,7 @@ type envState struct {
 	idx                  []uint16
 	shadow               shadowState   // the shadow pass (shadow.go)
 	roof                 roofDrawState // eaves and the Roof overlay (roof_draw.go)
+	home                 homeDrawState // the Home overlay's cached outline (home_draw.go)
 	// collapses are the roof-collapse stamps already shown as dust.
 	collapses map[game.RoofCollapseView]bool
 }

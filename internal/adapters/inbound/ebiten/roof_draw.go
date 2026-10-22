@@ -228,6 +228,7 @@ func alphaOf(c color.RGBA) float64 { return float64(c.A) / 255 }
 
 // drawRoofOverlay draws the Roof overlay when it is on, in one batch.
 func (r *Renderer) drawRoofOverlay(screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
+	r.drawHomeOverlay(screen, w, sw, sh, tile) // home_draw.go: under the roof tint
 	st := &r.env.roof
 	st.overlayVerts = 0
 	if !r.roofOverlayOn() || len(w.RoofCells) == 0 {

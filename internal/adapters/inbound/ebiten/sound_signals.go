@@ -36,6 +36,7 @@ var actionSounds = map[string]string{
 	game.ActionTailor:      "sfx.saw",
 	game.ActionButcher:     "sfx.cleave",
 	game.ActionRefuel:      "sfx.wood_drop",
+	game.ActionClean:       "sfx.sweep",
 }
 
 func (r *Renderer) cue(id string, x, y, vol float64) {

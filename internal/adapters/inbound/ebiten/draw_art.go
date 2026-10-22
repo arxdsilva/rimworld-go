@@ -165,27 +165,25 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 
 	r.drawTerrainArt(screen, w, sw, sh, tile)
 	r.drawGroundCover(screen, w, sw, sh, tile)
-	// built floors sit under zones, which sit under everything else
-	r.layer("floors")
-	for _, b := range w.Buildings {
-		if b.Floor {
-			r.drawTile(screen, buildSpriteStuff("floor", b.Stuff, "", 0, false, false), float64(b.X), float64(b.Y), tile, sw, sh, noCS)
-		}
-	}
-	r.drawStains(screen, w, sw, sh, tile) // blood_draw.go: blood and ichor on ground and floors (ART §16.2)
+	r.drawFloorLayers(screen, w, sw, sh, tile)
 	r.layer("zones")
 	r.drawZones(screen, w, sw, sh, tile) // zones_draw.go
 	for _, f := range w.Frames {
 		r.drawSprite(screen, "overlay/blueprint", none, float64(f.X), float64(f.Y), tile, sw, sh)
 	}
 
-	for _, b := range w.Buildings { // floor markings lie on the floor
-		if b.Kind == "sleeping spot" {
+	for _, b := range w.Buildings { // floor markings and carpets lie on the floor
+		switch b.Kind {
+		case "sleeping spot":
 			r.drawSprite(screen, buildSprite(b.Kind, b.Facing, 0, false, false), none, float64(b.X), float64(b.Y), tile, sw, sh)
+		case "carpet":
+			r.drawSprite(screen, buildSpriteStuff(b.Kind, b.Stuff, "", 0, false, false), none, float64(b.X), float64(b.Y), tile, sw, sh)
 		}
 	}
 	for _, f := range w.Frames {
-		if f.Floor {
+		if f.Kind == "carpet" {
+			r.drawSpriteCS(screen, buildSpriteStuff(f.Kind, f.Stuff, "", 0, false, false), none, float64(f.X), float64(f.Y), tile, sw, sh, blueprintCS)
+		} else if f.Floor {
 			r.drawSpriteCS(screen, buildSpriteStuff("floor", f.Stuff, "", 0, false, false), none, float64(f.X), float64(f.Y), tile, sw, sh, blueprintCS)
 		}
 	}
@@ -210,7 +208,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	cloth := r.colonyCloths()
 	for _, b := range w.Buildings {
 		b := b
-		if b.Floor || b.Kind == "sleeping spot" {
+		if b.Floor || onFloor(b.Kind) {
 			continue
 		}
 		mask := wallMask(walls, b.X, b.Y)
@@ -248,7 +246,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	}
 	for _, f := range w.Frames {
 		f := f
-		if f.Floor {
+		if f.Floor || f.Kind == "carpet" {
 			continue
 		}
 		pm := wallMask(planned, f.X, f.Y)
@@ -270,7 +268,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 			amount, kind = 0.022, kindTree
 		case "wheat", "corn":
 			amount, kind = 0.07, kindCrop
-		case "radish", "lettuce", "potato", "beans", "pumpkin", "healroot":
+		case "radish", "lettuce", "potato", "beans", "pumpkin", "healroot", "cotton":
 			amount, kind = 0.04, kindCrop
 		}
 		add(float64(p.Y), float64(p.X), func() {
@@ -404,6 +402,12 @@ func itemSprite(kind string) string {
 		return "item/corpse_ridgewolf"
 	case "stone", "stone_blocks":
 		return "item/stone_blocks"
+	case "cloth":
+		return "item/cloth_bolt"
+	case "straw":
+		return "item/straw_bundle"
+	case "straw carpet", "cloth carpet", "leather carpet", "wood carpet":
+		return "item/carpet_" + strings.TrimSuffix(kind, " carpet") + "_rolled"
 	case "human corpse":
 		return corpseCarrySprite
 	case "bones":
@@ -677,6 +681,43 @@ func clampStage(s int) int {
 	return s
 }
 
+// cleanlinessNote is a room's dirt for its label: empty while it is clean,
+// else ", dirty (-3)" with the impressiveness it costs.
+func cleanlinessNote(rm game.RoomView) string {
+	if rm.Cleanliness == "" || rm.Cleanliness == "clean" {
+		return ""
+	}
+	if rm.FilthPenalty > 0 {
+		return ", " + rm.Cleanliness + " (-" + strconv.Itoa(rm.FilthPenalty) + ")"
+	}
+	return ", " + rm.Cleanliness
+}
+
+// onFloor reports a building kind drawn flat in the floor-marking pass,
+// under pawns and furniture, not in the object pass.
+func onFloor(kind string) bool { return kind == "sleeping spot" || kind == "carpet" }
+
+// drawFloorLayers draws the ground under zones: built floors, then the
+// tracked-in dirt (dirt_draw.go, ART §16.3), then the blood and ichor
+// stains (blood_draw.go, ART §16.2), so blood always lies over dirt. The
+// dirt and stains layers are traced only when there is some.
+func (r *Renderer) drawFloorLayers(screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
+	r.layer("floors")
+	for _, b := range w.Buildings {
+		if b.Floor {
+			r.drawTile(screen, buildSpriteStuff("floor", b.Stuff, "", 0, false, false), float64(b.X), float64(b.Y), tile, sw, sh, noCS)
+		}
+	}
+	if len(w.Dirt) > 0 {
+		r.layer("dirt")
+		r.drawDirt(screen, w, sw, sh, tile)
+	}
+	if len(w.Stains) > 0 {
+		r.layer("stains")
+		r.drawStains(screen, w, sw, sh, tile)
+	}
+}
+
 // roomLabelAt describes the room at a tile for HUD/inspectors.
 func roomLabelAt(w game.WorldView, x, y int) string {
 	if w.TerrainW <= 0 || x < 0 || y < 0 || x >= w.TerrainW {
@@ -694,7 +735,7 @@ func roomLabelAt(w game.WorldView, x, y int) string {
 		return ""
 	}
 	rm := w.Rooms[id]
-	s := "Room: " + rm.Role + ", " + rm.Label + " (" + strconv.Itoa(rm.Score) + ")"
+	s := "Room: " + rm.Role + ", " + rm.Label + " (" + strconv.Itoa(rm.Score) + ")" + cleanlinessNote(rm)
 	if rm.Lit {
 		s += ", lit"
 	}

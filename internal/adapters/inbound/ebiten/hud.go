@@ -255,7 +255,7 @@ func (a *App) drawHoverRoom(screen *ebiten.Image, sh int) {
 	} else {
 		lines = append(lines, "Temperature "+fmtTemp(t))
 	}
-	for _, lbl := range []string{roomLabelAt(w, tx, ty), cleanLabelAt(w, tx, ty), homeLabelAt(w, tx, ty), roofLabelAt(w, tx, ty), plantLabelAt(w, tx, ty), itemLabelAt(w, tx, ty)} {
+	for _, lbl := range []string{roomLabelAt(w, tx, ty), homeLabelAt(w, tx, ty), roofLabelAt(w, tx, ty), plantLabelAt(w, tx, ty), itemLabelAt(w, tx, ty)} {
 		if lbl != "" {
 			lines = append(lines, lbl)
 		}
@@ -522,29 +522,4 @@ func homeLabelAt(w game.WorldView, x, y int) string {
 		return "Home area"
 	}
 	return ""
-}
-
-// cleanLabelAt is the room's cleanliness ("Cleanliness: dirty (-3)") when
-// the room at the tile is not clean, else "".
-func cleanLabelAt(w game.WorldView, x, y int) string {
-	if w.TerrainW <= 0 || x < 0 || y < 0 || x >= w.TerrainW {
-		return ""
-	}
-	i := y*w.TerrainW + x
-	if i >= len(w.RoomGrid) {
-		return ""
-	}
-	id := w.RoomGrid[i]
-	if id < 0 || id >= len(w.Rooms) {
-		return ""
-	}
-	rm := w.Rooms[id]
-	if rm.Cleanliness == "" || rm.Cleanliness == "clean" {
-		return ""
-	}
-	s := "Cleanliness: " + rm.Cleanliness
-	if rm.FilthPenalty > 0 {
-		s += " (-" + strconv.Itoa(rm.FilthPenalty) + ")"
-	}
-	return s
 }

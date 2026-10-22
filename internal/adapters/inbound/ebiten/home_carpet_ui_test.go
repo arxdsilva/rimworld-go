@@ -438,13 +438,8 @@ func TestHoverHomeAndCleanliness(t *testing.T) {
 	if got := homeLabelAt(w, 9, 9); got != "" {
 		t.Fatalf("oob = %q", got)
 	}
-	if got := cleanLabelAt(w, 1, 0); got != "Cleanliness: dirty (-3)" {
-		t.Fatalf("dirty = %q", got)
-	}
-	for _, x := range []int{0, 2, 7} {
-		if got := cleanLabelAt(w, x, 0); got != "" {
-			t.Fatalf("x=%d clean/outdoors = %q", x, got)
-		}
+	if got := roomLabelAt(w, 1, 0); !strings.Contains(got, "dirty (-3)") {
+		t.Fatalf("hover room label = %q, want the cleanliness once", got)
 	}
 }
 

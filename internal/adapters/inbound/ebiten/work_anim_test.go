@@ -33,7 +33,7 @@ func TestWorkPoseTable(t *testing.T) {
 		game.ActionChop, game.ActionMine, game.ActionBuild, game.ActionDeconstruct, game.ActionRepair,
 		game.ActionBreach, game.ActionSow, game.ActionHarvest, game.ActionCraft, game.ActionCook,
 		game.ActionTailor, game.ActionButcher, game.ActionResearch, game.ActionTend, game.ActionTame,
-		game.ActionEat, game.ActionRefuel, game.ActionHorseshoes,
+		game.ActionEat, game.ActionRefuel, game.ActionHorseshoes, game.ActionClean,
 	}
 	for _, a := range actions {
 		d, ok := workTable[a]
@@ -178,6 +178,24 @@ func TestSowKneels(t *testing.T) {
 	r.art = &artCatalog{sprites: map[string]*artSprite{}}
 	if a := r.workPose(p, moveState{}); !strings.HasPrefix(a.suffix, "_work") {
 		t.Fatalf("falls back to generic work frames: %q", a.suffix)
+	}
+}
+
+// TestCleanSweeps: cleaning (SIM-021) is the low pick pose with a broom,
+// upright, throwing dust.
+func TestCleanSweeps(t *testing.T) {
+	t.Parallel()
+	r, _ := workRenderer(0)
+	d := workTable[game.ActionClean]
+	if d.set != "_pick" || d.tool != "tool/broom" || d.stance != stanceUpright || len(d.parts) == 0 || d.parts[0].kind != partDust {
+		t.Fatalf("clean row: %+v", d)
+	}
+	a := r.workPose(worker(game.ActionClean), moveState{})
+	if !a.ok || !strings.HasPrefix(a.suffix, "_pick") || a.held.key != "tool/broom" || a.squash <= 0 {
+		t.Fatalf("clean pose %+v", a)
+	}
+	if actionSounds[game.ActionClean] != "sfx.sweep" {
+		t.Fatalf("clean sound %q", actionSounds[game.ActionClean])
 	}
 }
 
