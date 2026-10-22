@@ -451,9 +451,9 @@ the player's primary world-editing command surface.
 
 -   [x] **Designation overlay** (blueprints are translucent blue ghosts, scaffold once wood arrives; deconstruct marker on buildings)
     -   Clearly distinguish planned work from completed structures.
--   [-] **Resource requirement feedback** (card cost + colony wood, placement total, `Haul wood to X (n/m)` in the order menu; no frame inspector)
+-   [x] **Resource requirement feedback** (card cost + colony wood, placement total, `Haul wood to X (n/m)` in the order menu; UI-015: frame inspector shows delivered/needed, on the way, stock and craft hints; carpet card shows stock; "Blueprints waiting for materials" alert)
 -   [x] **Cancel designation interaction** (Orders → Cancel area)
--   [ ] **Selection inspector for blueprint/frame**
+-   [x] **Selection inspector for blueprint/frame** (UI-015: status, materials, work estimate, haulers, builder, footprint, Cancel blueprint with refund)
 
 ------------------------------------------------------------------------
 
@@ -1087,12 +1087,12 @@ This screen centralizes per-pawn behavioral policies.
 ## 19.3 Pen UI
 
 -   [ ] **Pen marker inspector**
--   [x] **Pen boundary visualization** (brown wash, fence rails and posts)
+-   [x] **Pen boundary visualization** (brown wash, fence rails and posts; ART-014: buildable wood/stone fences and gates with autotiled art)
 -   [ ] **Enclosure validity**
 -   [ ] **Assigned species**
 -   [-] **Nutrition/grazing capacity** (UI-014: feeding trough panel shows stock and filter; no grass capacity readout)
 -   [-] **Animal count vs food capacity** (UI-014: pen full alert only; no capacity ratio)
--   [ ] **Missing gate/breach warning**
+-   [ ] **Missing gate/breach warning** (fences and gates are buildable (SIM-028) but no pen validity warning)
 
 ## 19.4 Wildlife tab
 

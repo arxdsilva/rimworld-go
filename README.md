@@ -96,6 +96,8 @@ Media updated 2026-10-21 · regenerate with `make media clips`
 - Event logs: every colonist, raider and animal remembers what happened to it (bites, hits, injuries, meals, sleep, taming, breakdowns), shown in its inspector.
 - Temperature: seasons, room heat from campfires, and hypothermia on winter nights.
 - Threats: raids that scale with colony wealth, sieges, sappers, winter wolf packs, and auto-pause on danger.
+- Blueprint inspector: click a blueprint or frame to see its status, materials delivered, on the way and in stock, work left, haulers and builder; cancelling refunds delivered materials. Blocked or unreachable work is put off so colonists move on to something else, and the colonist inspector shows why.
+- Floors, fences and forbid: floors can go under beds and benches; wood and stone fences and gates keep animals in (tame animals use gates, colonists climb fences slowly); forbid items with the Forbid/Allow tools or F so colonists leave them alone.
 - Defences and combat: sandbags, spike traps, breaching raiders, rebuilding after breaches, ranged and melee combat with floating damage numbers.
 - Health: injuries, rescue and tending, infections, herbal medicine and a healroot crop.
 - Blood: hits spray blood (ichor from hive insects), wounded colonists and animals look bloodied until they heal, and the floor keeps splats, drip trails and pools that dry to brown, fade over 7 days and wash off in rain or snow.

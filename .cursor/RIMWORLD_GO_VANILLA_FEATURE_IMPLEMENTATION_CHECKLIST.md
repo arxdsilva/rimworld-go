@@ -330,7 +330,7 @@ interchangeable workers.
 -   [x] **Deterministic movement conflict arbitration** (ID-ordered moves; one fixed yielder per ring of walkers sidesteps, repaths or backs off)
     -   Multiple pawns attempting same cell resolve with stable
         priority/tie-break.
--   [x] **Local congestion avoidance** (wait first; repath with extra cost around creatures at most every 45 blocked ticks; job fails as blocked after 600)
+-   [x] **Local congestion avoidance** (wait first; repath with extra cost around creatures at most every 45 blocked ticks; job fails as blocked after 600; SIM-027: a pawn behind a non-yielding blocker gives up after 2 s and working pawns on adjacent cells shuffle aside)
     -   Avoid constant global repathing.
     -   Optional short-lived congestion cost.
 
@@ -357,7 +357,7 @@ This is the heart of autonomous colony behavior.
     -   Complete.
     -   Fail/cancel.
     -   Every transition is deterministic and testable.
--   [-] **Job interruption** (player `MovePawn`/`Prioritize`/`DraftPawn`, critical hunger/rest, target gone, reservation fail; prioritized jobs ignore tiredness; no danger/mental)
+-   [-] **Job interruption** (player `MovePawn`/`Prioritize`/`DraftPawn`, critical hunger/rest, target gone, reservation fail; SIM-027: blocked (15 s) or unreachable (1 h, reset on walkability change) work is postponed per pawn+job+target, givers skip postponed candidates, blocked player orders retry 3 times then drop with a message; prioritized jobs ignore tiredness; no danger/mental)
     -   Player order.
     -   Drafting.
     -   danger.
@@ -492,7 +492,7 @@ This is the heart of autonomous colony behavior.
     -   Items can take damage.
     -   Outdoor/unroofed or unsuitable storage can cause deterioration
         where applicable.
--   [ ] **Item forbidden state**
+-   [x] **Item forbidden state** (SIM-028: `Stack.Forbidden`; haul, eat, equip, bills, refuel, troughs and burial skip it; raid weapons and bodies drop forbidden; Forbid/Allow area tools, item toggle, F key; follow-ups: forced Prioritize on a forbidden item is allowed, stacks forbidden mid-haul are not interrupted)
     -   Player can forbid/unforbid items.
     -   Autonomous hauling/use ignores forbidden targets unless
         explicitly ordered where appropriate.
@@ -544,8 +544,8 @@ This is the heart of autonomous colony behavior.
 -   [x] **Cut plant designation** (trees drop wood scaled by growth; bushes cleared)
 -   [x] **Harvest designation** (wild plants by order; zone crops harvest automatically; Grow work type)
 -   [x] **Hunt designation**
--   [-] **Cancel designation** (frames, harvest marks, deconstruct marks; zones lose just the cancelled tiles (ZONE-001))
--   [ ] **Forbid/unforbid designation/action**
+-   [-] **Cancel designation** (frames refund delivered materials (UI-015 `CancelFrame` and the Cancel area), harvest marks, deconstruct marks; zones lose just the cancelled tiles (ZONE-001))
+-   [x] **Forbid/unforbid designation/action** (SIM-028 Forbid/Allow area tools and item toggle; UI-016 F key)
 
 ## 7.2 Construction lifecycle
 
@@ -559,7 +559,7 @@ This is the heart of autonomous colony behavior.
         work/material cost, etc.
 -   [-] **Resource delivery** (material hauled to frames until `Need`, several frames per trip, in-flight amounts prevent over-delivery (HAUL-001))
     -   Haulers/builders deliver required materials.
--   [-] **Construction frame**
+-   [-] **Construction frame** (delivered materials tracked per frame with in-flight amounts; UI-015 frame inspector shows them)
     -   Delivered materials are committed to a partially constructed
         entity.
 -   [-] **Construction work** (fixed WorkTicks; no skill)
@@ -586,7 +586,7 @@ This is the heart of autonomous colony behavior.
     -   Opening delay.
     -   faction/permission interaction.
     -   affect pathing and room boundaries.
--   [-] **Floors** (buildable/deconstructable separate layer; no movement/beauty/cleanliness stats)
+-   [-] **Floors** (buildable/deconstructable separate layer; SIM-028: may go under any furniture, not on rock, walls, fences/gates or dug graves; no movement/beauty/cleanliness stats)
     -   Construct/remove.
     -   movement, beauty, cleanliness, flammability attributes.
 -   [-] **Roofs** (SIM-018; no deterioration, toxic fallout or collapse injuries)
@@ -649,7 +649,7 @@ This is the heart of autonomous colony behavior.
     -   Hunger decays over time.
     -   Thresholds affect behavior/mood.
     -   Severe hunger causes malnutrition/starvation and can kill.
--   [-] **Food search** (nearest edible stack; entity reserved; no diet/forbidden)
+-   [-] **Food search** (nearest edible stack; entity reserved; SIM-028: forbidden stacks skipped, animals never pick food behind fences; no diet)
     -   Prefer valid edible food according to restrictions and
         availability.
     -   Reserve food before fetching it.
@@ -1510,7 +1510,7 @@ children systems.
 ## 18.6 Animal zones/pens
 
 -   [ ] **Animal allowed areas for zonable animals**
--   [-] **Pen system for appropriate livestock** (pen zones of any shape, merged when adjacent, drawn with one fence; tame animals keep inside or stay near the colony; SIM-024: feeding troughs with plant/meat/any filter filled by haulers, animals graze in the pen; UI-014 pen-full alert; no fence buildings, no rope/lead, no enclosure validity or capacity readout)
+-   [-] **Pen system for appropriate livestock** (pen zones of any shape, merged when adjacent, drawn with one fence; tame animals keep inside or stay near the colony; SIM-024: feeding troughs with plant/meat/any filter filled by haulers, animals graze in the pen; UI-014 pen-full alert; SIM-028: buildable wood/stone fences and gates (animals can't cross fences, tame animals pass gates, colonists climb fences at x3 cost; pathing doesn't prefer gates, no stone gate art), no rope/lead, no enclosure validity or capacity readout)
     -   Pen markers/boundaries.
     -   rope/lead jobs.
     -   enclosure validity.
