@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
@@ -100,7 +99,7 @@ func (r *Renderer) drawOrderRoute(screen *ebiten.Image, tile float64) {
 			n++
 			label = strconv.Itoa(n)
 		}
-		ebitenutil.DebugPrintAt(screen, label, int(sx)-3, int(sy)-8)
+		debugPrintAt(screen, label, int(sx)-3, int(sy)-8)
 	}
 }
 

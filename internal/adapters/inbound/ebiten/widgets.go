@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"image/color"
+	"sync"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
@@ -150,11 +151,11 @@ func drawButton(dst *ebiten.Image, b button, hover bool) {
 	if b.disabled && label != "" && !b.quiet {
 		label = label + "  (disabled)"
 	}
-	ebitenutil.DebugPrintAt(dst, label, int(b.x)+12, int(b.y)+int(b.h)/2-7)
+	debugPrintAt(dst, label, int(b.x)+12, int(b.y)+int(b.h)/2-7)
 }
 
 func drawLabel(dst *ebiten.Image, x, y int, text string) {
-	ebitenutil.DebugPrintAt(dst, text, x, y)
+	debugPrintAt(dst, text, x, y)
 }
 
 func hitButton(buttons []button, mx, my int) (button, bool) {
@@ -164,4 +165,16 @@ func hitButton(buttons []button, mx, my int) (button, bool) {
 		}
 	}
 	return button{}, false
+}
+
+// debugTextMu serialises ebitenutil.DebugPrintAt, whose glyph cache is a
+// package global without a lock: the game draws on one goroutine, but
+// parallel tests draw text concurrently.
+var debugTextMu sync.Mutex
+
+// debugPrintAt is ebitenutil.DebugPrintAt, safe across goroutines.
+func debugPrintAt(dst *ebiten.Image, s string, x, y int) {
+	debugTextMu.Lock()
+	defer debugTextMu.Unlock()
+	ebitenutil.DebugPrintAt(dst, s, x, y)
 }

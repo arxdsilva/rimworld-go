@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
@@ -84,7 +83,7 @@ func (a *App) drawFloat(screen *ebiten.Image) {
 	}
 	r := a.floatRect()
 	drawPanel(screen, r.x-2, r.y-2, r.w+4, r.h+4)
-	ebitenutil.DebugPrintAt(screen, "Shift: queue (max 3)", int(r.x)+10, int(r.y+r.h)-floatHintH+1)
+	debugPrintAt(screen, "Shift: queue (max 3)", int(r.x)+10, int(r.y+r.h)-floatHintH+1)
 	mx, my := a.currentCursor()
 	for _, b := range a.floatButtons() {
 		fill := uiBtn

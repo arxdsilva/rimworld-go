@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
@@ -32,7 +31,7 @@ func (r *Renderer) drawStackCounts(screen *ebiten.Image, w game.WorldView, tile 
 		x := sx + float32(tile) - tw - 2
 		y := sy + float32(tile) - 16
 		vector.FillRect(screen, x, y, tw, 14, color.RGBA{16, 12, 8, 190}, false)
-		ebitenutil.DebugPrintAt(screen, s, int(x)+2, int(y)-1)
+		debugPrintAt(screen, s, int(x)+2, int(y)-1)
 	}
 }
 

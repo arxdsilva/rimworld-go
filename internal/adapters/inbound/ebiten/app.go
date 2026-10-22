@@ -8,7 +8,6 @@ import (
 	"time"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
@@ -678,14 +677,14 @@ func (a *App) Draw(screen *ebiten.Image) {
 func (a *App) drawHoverHint(screen *ebiten.Image, sw, sh int) {
 	mx, my := ebiten.CursorPosition()
 	if b, ok := hitButton(a.layoutButtons(sw, sh), mx, my); ok && b.disabled && b.reason != "" {
-		ebitenutil.DebugPrintAt(screen, b.reason, 16, sh-22)
+		debugPrintAt(screen, b.reason, 16, sh-22)
 		return
 	}
 	if a.hint != "" {
-		ebitenutil.DebugPrintAt(screen, a.hint, 16, sh-22)
+		debugPrintAt(screen, a.hint, 16, sh-22)
 	}
 	if a.packWarn != "" && a.nav.screen() == screenMainMenu {
-		ebitenutil.DebugPrintAt(screen, "asset warning: "+a.packWarn, 16, sh-40)
+		debugPrintAt(screen, "asset warning: "+a.packWarn, 16, sh-40)
 	}
 }
 

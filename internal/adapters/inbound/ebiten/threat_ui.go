@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
@@ -123,7 +122,7 @@ func floaterText(s string) *ebiten.Image {
 		return img
 	}
 	img := ebiten.NewImage(len(s)*6+2, 16)
-	ebitenutil.DebugPrintAt(img, s, 0, 0)
+	debugPrintAt(img, s, 0, 0)
 	if len(floaterCache) < 256 {
 		floaterCache[s] = img
 	}

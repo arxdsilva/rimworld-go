@@ -7,8 +7,6 @@ import (
 	"slices"
 	"strconv"
 
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
-
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
@@ -86,7 +84,7 @@ func (r *Renderer) drawAnimalOverlays(screen *ebiten.Image, w game.WorldView, ti
 			sx, sy := r.worldToScreenF(wx+0.5, wy+1.0)
 			tw := float32(len(an.Name)*6 + 6)
 			vector.FillRect(screen, sx-tw/2, sy, tw, 14, color.RGBA{16, 12, 8, 150}, false)
-			ebitenutil.DebugPrintAt(screen, an.Name, int(sx-tw/2)+3, int(sy)-1)
+			debugPrintAt(screen, an.Name, int(sx-tw/2)+3, int(sy)-1)
 		}
 		if an.Health < 100 {
 			sx, sy := r.worldToScreenF(wx+0.15, wy-animalBarLift(an.Size))
