@@ -76,16 +76,21 @@ func TestThreatOdds(t *testing.T) {
 		}
 		return out
 	}
-	if c := count(false, 7); c[threatRaid] != threatRolls {
-		t.Fatalf("before day 8 only raids: %v", c)
+	// SIM-025 turned one raid face into a mad animal from day 6, in every
+	// season (fireThreat falls back to a raid when none can go mad).
+	if c := count(false, 5); c[threatRaid] != threatRolls {
+		t.Fatalf("before day 6 only raids: %v", c)
 	}
-	if c := count(false, 10); c[threatManhunters] != 2 || c[threatHive] != 0 || c[threatRaid] != 6 {
+	if c := count(false, 7); c[threatMad] != 1 || c[threatRaid] != threatRolls-1 {
+		t.Fatalf("day 7: raids and a mad animal: %v", c)
+	}
+	if c := count(false, 10); c[threatManhunters] != 2 || c[threatHive] != 0 || c[threatMad] != 1 || c[threatRaid] != 5 {
 		t.Fatalf("day 10: %v", c)
 	}
-	if c := count(false, 12); c[threatManhunters] != 2 || c[threatHive] != 1 || c[threatRaid] != 5 {
+	if c := count(false, 12); c[threatManhunters] != 2 || c[threatHive] != 1 || c[threatMad] != 1 || c[threatRaid] != 4 {
 		t.Fatalf("day 12: %v", c)
 	}
-	if c := count(true, 12); c[threatPack] != 4 || c[threatHive] != 1 || c[threatRaid] != 3 {
+	if c := count(true, 12); c[threatPack] != 4 || c[threatHive] != 1 || c[threatMad] != 1 || c[threatRaid] != 2 {
 		t.Fatalf("winter: %v", c)
 	}
 }

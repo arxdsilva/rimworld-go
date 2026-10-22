@@ -77,6 +77,9 @@ var workTable = map[string]actionDef{
 	game.ActionResearch: {set: "_bench", frames: 4, strike: 2, period: 60, reach: 0.03, lean: 0.02, fallback: motionReach},
 	game.ActionTend:     {set: "_tend", frames: 4, strike: 2, period: 60, reach: 0.05, lean: 0.06, squash: 0.16, tool: "tool/bandage", stance: stanceUpright, kneel: true, fallback: motionReach},
 	game.ActionTame:     {set: "_offer", frames: 2, strike: 2, period: 64, reach: 0.04, lean: 0.04, squash: 0.12, fallback: motionReach},
+	// Milking kneels beside the animal; shearing works at its flank (SIM-026).
+	game.ActionMilk:  {set: "_tend", frames: 4, strike: 2, period: 56, reach: 0.04, lean: 0.05, squash: 0.12, stance: stanceUpright, kneel: true, fallback: motionReach},
+	game.ActionShear: {set: "_pick", frames: 4, strike: 3, period: 40, reach: 0.06, lean: 0.05, squash: 0.08, stance: stanceUpright, fallback: motionReach},
 	// Spoon in the right hand, bowl level in the left (hand_l).
 	game.ActionEat:    {set: "_eat", frames: 4, strike: 3, period: 50, reach: 0.02, tool: "tool/spoon", stance: stanceUpright, off: "tool/bowl"},
 	game.ActionRefuel: {set: "_bench", frames: 4, strike: 2, period: 40, reach: 0.06, lean: 0.04, fallback: motionReach, parts: []partSpec{{partChip, 1}}},

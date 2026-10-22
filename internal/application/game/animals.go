@@ -72,10 +72,11 @@ type AnimalView struct {
 	Herd        uint32
 }
 
-// Wildlife at colony start (wildlife.go has the draw and the daily top-up).
+// Wildlife at colony start (wildlife.go has the draw; population.go the
+// carrying capacity that tops it up).
 const (
-	startHerdsMin   = 3
-	startHerdsMax   = 4
+	startHerdsMin   = 4
+	startHerdsMax   = 6
 	wildStartRadius = 12
 	wolfStartRadius = 16
 	dawnHour        = 6
@@ -130,6 +131,7 @@ func (g *Game) phaseAnimals() {
 	g.migrate(now)
 	g.rebuildCreatures()                            // animal_index.go
 	g.troughDeliveries(now)                         // trough_feed.go: loads haulers brought this tick
+	g.lifePhase(now)                                // animal_life.go: eggs incubate
 	g.wl.ids = append(g.wl.ids[:0], g.animalIDs...) // the list changes as animals die or leave
 	for _, id := range g.wl.ids {
 		a, ok := g.animals.Get(id)
@@ -141,6 +143,9 @@ func (g *Game) phaseAnimals() {
 		}
 		if !g.tickNeeds(id, &a, now) {
 			continue // starved to death
+		}
+		if !g.tickLife(id, &a, now) { // animal_life.go
+			continue // died of old age
 		}
 		g.thinkAnimal(id, &a, now)
 		if _, still := g.animals.Get(id); !still {
@@ -195,6 +200,9 @@ func (g *Game) thinkAnimal(id entity.EntityID, a *animal.State, now uint64) {
 	case animal.Wander:
 	default:
 		a.Mode, a.Path, a.PathI = animal.Wander, nil, 0
+	}
+	if g.lifeMove(id, a, pos, now) { // animal_life.go: mating, following its mother
+		return
 	}
 	if a.Tame {
 		g.wanderTame(id, a, pos, def, now)
@@ -383,7 +391,7 @@ func (g *Game) callPack(id entity.EntityID, pos Position, prey entity.EntityID) 
 			return
 		}
 		o, ok := g.animals.Get(aid)
-		if !ok || o.Species != me.Species || o.Tame != me.Tame || o.Target != 0 || o.Manhunter != 0 || badlyHurt(o) {
+		if !ok || o.Species != me.Species || o.Tame != me.Tame || o.Target != 0 || o.Manhunter != 0 || badlyHurt(o) || !g.grown(o, now) {
 			return
 		}
 		o.Target, o.HuntSince = prey, now
@@ -514,6 +522,15 @@ func (g *Game) stepAnimal(id entity.EntityID, a *animal.State, m *motionRec, fro
 	}
 }
 
+// killerName is who did it, for a death message: "a timber wolf", or a
+// colonist's or pet's name.
+func (g *Game) killerName(id entity.EntityID) string {
+	if a, ok := g.animals.Get(id); ok && !(a.Tame && a.Name != "") {
+		return "a " + a.Species.Label()
+	}
+	return g.creatureName(id)
+}
+
 // killAnimal drops its corpse and removes it (an explosive one bursts).
 // A predator that made the kill eats it (T4): its feed target becomes the
 // carcass, and eating it consumes the corpse.
@@ -526,6 +543,8 @@ func (g *Game) killAnimal(id, by entity.EntityID) {
 	if a.Tame {
 		if a.Food == 0 && a.Starving != 0 {
 			g.message(pos.X, pos.Y, "%s the %s has starved to death.", a.Name, a.Species.Label())
+		} else if by != 0 && by != id {
+			g.message(pos.X, pos.Y, "%s the %s was killed by %s.", a.Name, a.Species.Label(), g.killerName(by))
 		} else {
 			g.message(pos.X, pos.Y, "%s the %s has died.", a.Name, a.Species.Label())
 		}

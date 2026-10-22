@@ -35,6 +35,8 @@ const (
 	// refuelBelow: haulers top a campfire up once it is half empty.
 	refuelBelow = CampfireCapacity * TicksPerWood / 2
 	refuelWork  = 30
+	// oilWood: one ember oil burns as long as this many logs (SIM-026).
+	oilWood = 3
 	// warmWait is the longest a cold colonist waits in a warm spot.
 	warmWait = 2500
 	// residualLeak (permille per climate interval): a breached room's air
@@ -170,8 +172,30 @@ func (g *Game) burning(bid entity.EntityID, b construction.Building) bool {
 
 // --- refuelling ------------------------------------------------------------
 
-// assignRefuel sends a hauler with wood to the emptiest campfire that is
-// half empty or worse.
+// fuelTicks is how long one item of kind k burns in a campfire (0: not a
+// fuel): a log TicksPerWood, an ember oil oilWood logs' worth.
+func fuelTicks(k item.Kind) int {
+	switch k {
+	case item.Wood:
+		return TicksPerWood
+	case item.EmberOil:
+		return oilWood * TicksPerWood
+	}
+	return 0
+}
+
+// fuelRoom is how many items of fuel k campfire bid takes before it is
+// full (a part-burnt one rounds up).
+func (g *Game) fuelRoom(bid entity.EntityID, k item.Kind) int {
+	per := fuelTicks(k)
+	if per <= 0 {
+		return 0
+	}
+	return max(0, (CampfireCapacity*TicksPerWood-g.fuel[bid]+per-1)/per)
+}
+
+// assignRefuel sends a hauler with wood (or, with none about, ember oil)
+// to the emptiest campfire that is half empty or worse.
 func (g *Game) assignRefuel(id entity.EntityID) bool {
 	type cand struct {
 		bid  entity.EntityID
@@ -193,10 +217,15 @@ func (g *Game) assignRefuel(id entity.EntityID) bool {
 	})
 	for _, f := range fires {
 		b, _ := g.bldgs.Get(f.bid)
-		need := CampfireCapacity - f.fuel/TicksPerWood
-		sid, st := g.ingredientFor(id, recipe.Input{Kind: item.Wood, Qty: 1, Max: need})
+		fuel := item.Wood
+		need := g.fuelRoom(f.bid, fuel)
+		sid, st := g.ingredientFor(id, recipe.Input{Kind: fuel, Qty: 1, Max: need})
 		if sid == 0 {
-			return false
+			fuel = item.EmberOil
+			need = g.fuelRoom(f.bid, fuel)
+			if sid, st = g.ingredientFor(id, recipe.Input{Kind: fuel, Qty: 1, Max: need}); sid == 0 {
+				return false
+			}
 		}
 		sx, sy, ok := g.besideSpot(id, b.X, b.Y)
 		if !ok {
@@ -206,7 +235,7 @@ func (g *Game) assignRefuel(id entity.EntityID) bool {
 			DestX: sx, DestY: sy, WorkLeft: refuelWork, Count: need}
 		if st.Qty > need {
 			// HAUL-001: a full load when a stockpile cell takes the rest
-			if px, py, ok := g.stockpileCell(item.Wood, b.X, b.Y); ok {
+			if px, py, ok := g.stockpileCell(fuel, b.X, b.Y); ok {
 				rec.Count = max(need, min(st.Qty, item.CarryLimit))
 				rec.Route, rec.SpareX, rec.SpareY, rec.HasSpare = []entity.EntityID{f.bid}, px, py, true
 			}
@@ -232,7 +261,7 @@ func (g *Game) doRefuel(id entity.EntityID, j job.Record) {
 	}
 	if j.Carry == 0 {
 		st, ok := g.stacks.Get(j.Target)
-		if !ok || st.Carrier != 0 || st.Kind != item.Wood {
+		if !ok || st.Carrier != 0 || fuelTicks(st.Kind) == 0 {
 			j.State, j.Fail = job.Fail, job.TargetGone
 			g.jobs.Set(id, j)
 			return
@@ -243,7 +272,7 @@ func (g *Game) doRefuel(id entity.EntityID, j job.Record) {
 			g.stacks.Set(j.Target, st)
 			carry = g.entities.Next()
 			g.itemIDs = append(g.itemIDs, carry)
-			g.stacks.Set(carry, item.Stack{Kind: item.Wood, Qty: take, X: st.X, Y: st.Y, Carrier: id})
+			g.stacks.Set(carry, item.Stack{Kind: st.Kind, Qty: take, X: st.X, Y: st.Y, Carrier: id})
 		} else {
 			st.Carrier = id
 			g.stacks.Set(j.Target, st)
@@ -272,8 +301,8 @@ func (g *Game) doRefuel(id entity.EntityID, j job.Record) {
 		return
 	}
 	if st, ok := g.stacks.Get(j.Carry); ok && len(j.Route) > 0 {
-		give := min(st.Qty, CampfireCapacity-g.fuel[j.Dest]/TicksPerWood)
-		g.fuel[j.Dest] = min(CampfireCapacity*TicksPerWood, g.fuel[j.Dest]+give*TicksPerWood)
+		give := min(st.Qty, g.fuelRoom(j.Dest, st.Kind))
+		g.fuel[j.Dest] = min(CampfireCapacity*TicksPerWood, g.fuel[j.Dest]+give*fuelTicks(st.Kind))
 		if st.Qty -= give; st.Qty > 0 {
 			g.stacks.Set(j.Carry, st)
 			j.RouteI = len(j.Route)
@@ -283,7 +312,7 @@ func (g *Game) doRefuel(id entity.EntityID, j job.Record) {
 			return
 		}
 	} else if ok {
-		g.fuel[j.Dest] = min(CampfireCapacity*TicksPerWood, g.fuel[j.Dest]+st.Qty*TicksPerWood)
+		g.fuel[j.Dest] = min(CampfireCapacity*TicksPerWood, g.fuel[j.Dest]+st.Qty*fuelTicks(st.Kind))
 	}
 	g.deleteItem(j.Carry)
 	j.Carry = 0

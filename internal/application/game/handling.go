@@ -1,6 +1,8 @@
 package game
 
 import (
+	"fmt"
+
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
@@ -42,14 +44,15 @@ func (g *Game) markTame(x1, y1, x2, y2 int, on bool) {
 	}
 }
 
-// beingTamed: a handler has claimed this animal for a taming job.
+// beingTamed: a handler has claimed this animal for a taming, milking or
+// shearing job.
 func (g *Game) beingTamed(id entity.EntityID) bool {
 	owner, ok := g.reserve.EntityOwner(id)
 	if !ok {
 		return false
 	}
 	j, _ := g.jobs.Get(owner)
-	return j.Kind == job.Tame && j.Target == id
+	return (j.Kind == job.Tame || j.Kind == job.Milk || j.Kind == job.Shear) && j.Target == id
 }
 
 // assignTame sends a hunter to the nearest animal marked for taming.
@@ -138,7 +141,8 @@ func (g *Game) enrage(id entity.EntityID, a *animal.State, who entity.EntityID, 
 	a.Path, a.PathI = nil, 0
 	g.logEvent(id, logEntry{Kind: logManhunter, Other: who})
 	p, _ := g.positions.Get(id)
-	g.threat(p.X, p.Y, "A %s has gone manhunter!", a.Species.Label())
+	g.post(MessageView{Tick: now, Text: fmt.Sprintf("A %s has gone manhunter!", a.Species.Label()),
+		X: p.X, Y: p.Y, Danger: true, Focus: id})
 	if animal.DefOf(a.Species).Legendary {
 		g.rallyLegendaries(id, who, now)
 	}

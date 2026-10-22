@@ -330,6 +330,10 @@ func (g *Game) acting(id entity.EntityID, j job.Record) (string, int, int) {
 	case job.Eat:
 		pos, _ := g.positions.Get(id)
 		return j.Kind.String(), pos.X, pos.Y
+	case job.Milk, job.Shear:
+		if p, ok := g.positions.Get(j.Target); ok {
+			return g.collectVerb(j), p.X, p.Y // animal_products.go
+		}
 	}
 	return "", 0, 0
 }

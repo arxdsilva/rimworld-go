@@ -105,7 +105,8 @@ func TestCutGrassRegrowsButBuiltDoesNot(t *testing.T) {
 }
 
 func TestGrassNeverRegrowsWithoutRegrowDays(t *testing.T) {
-	g := New(Config{Seed: 1, Width: 24, Height: 16, Biome: biome.ExtremeDesert})
+	// the ice sheet has no regrow days (deserts got some for their grazers)
+	g := New(Config{Seed: 1, Width: 24, Height: 16, Biome: biome.IceSheet})
 	g.setTerrain(5, 5, terrain.Soil)
 	g.seedGrass().cells[5*g.grid.Width()+5] = 1
 	if !g.grazeGrass(5, 5) {

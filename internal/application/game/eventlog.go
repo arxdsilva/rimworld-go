@@ -57,7 +57,15 @@ const (
 	logRescuedBy
 	logRescued
 	logCollapsed
-	logStarving // SIM-024: an animal's food ran out
+	logStarving  // SIM-024: an animal's food ran out
+	logLeaving   // SIM-025: set off to leave the map (over capacity, crossing, done gnawing)
+	logJoined    // SIM-025: a stray or farm animal joined the colony
+	logLiking    // SIM-025: a wild animal tamed itself
+	logMated     // SIM-026: mated with Name
+	logGaveBirth // SIM-026: Amount young (Name: "goat kids")
+	logBorn      // SIM-026: born to Name
+	logOldAge    // SIM-026: died of old age
+	logHatched   // SIM-026: hatched from an egg
 )
 
 // logEntry is one stored event (plain data; text is built for the view).
@@ -231,6 +239,22 @@ func logText(e logEntry) string {
 		return "Collapsed from exhaustion"
 	case logStarving:
 		return "Starving"
+	case logLeaving:
+		return "Left for the edge of the map"
+	case logJoined:
+		return "Joined the colony"
+	case logLiking:
+		return "Took a liking to the colony"
+	case logMated:
+		return "Mated with " + e.Name
+	case logGaveBirth:
+		return fmt.Sprintf("Gave birth to %d %s", e.Amount, e.Name)
+	case logBorn:
+		return "Born to " + e.Name
+	case logOldAge:
+		return "Died of old age"
+	case logHatched:
+		return "Hatched"
 	}
 	return ""
 }

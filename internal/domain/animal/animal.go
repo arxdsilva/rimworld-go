@@ -556,7 +556,7 @@ type State struct {
 	HasSex     bool
 	Born       uint64 // tick (0: an adult from an older save)
 	Pregnant   uint64 // due tick (0: not pregnant)
-	Mated      int    // fertile eggs still to lay from the last mating
+	Mated      int    // eggs still to lay under the last mating (MatedEggs)
 	Product    int    // milk/wool/oil fullness, permille
 	Feed       FeedTarget
 	FeedLeft   int    // ticks left eating the current target
@@ -570,6 +570,13 @@ type State struct {
 	// Leaving: walking off the map to ExitX/ExitY (a herd over capacity,
 	// a crossing); a flee or a fight on the way returns to Leave after.
 	Leaving bool
+	// Mating (SIM-026, life.go): Mate is the partner of a mating under
+	// way (both sides point at each other); MateLeft the ticks of it
+	// still to go once the male stands beside her; MateUntil the tick it
+	// is given up if it has not happened.
+	Mate      entity.EntityID
+	MateLeft  int
+	MateUntil uint64
 }
 
 // Enraged reports a manhunter at tick now.

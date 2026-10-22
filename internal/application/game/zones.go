@@ -164,7 +164,10 @@ func allows(s zone.Zone, k item.Kind) bool {
 		return s.Wood
 	case k == item.Stone:
 		return s.Stone
-	case k == item.Leather, k == item.HerbalMedicine, k == item.Cloth, k == item.Straw, k.IsCarpet(), k.IsApparel(), k.IsWeapon():
+	case k == item.FertileEgg: // SIM-026: kept with the food; they hatch in place
+		return s.Food
+	case k == item.Leather, k == item.HerbalMedicine, k == item.Cloth, k == item.Straw, k.IsCarpet(), k.IsApparel(), k.IsWeapon(),
+		k == item.Wool, k == item.EmberOil:
 		return true // goods: always welcome
 	}
 	return false

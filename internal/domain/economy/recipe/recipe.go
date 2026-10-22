@@ -36,6 +36,10 @@ const (
 	MakeWoodCarpet
 	SewClothCarpet
 	SewLeatherCarpet
+	// Wool (SIM-026): a knitted parka and a woven carpet at the
+	// tailoring bench.
+	KnitWoolParka
+	WeaveWoolCarpet
 	numRecipes
 )
 
@@ -128,6 +132,10 @@ var defs = [numRecipes]Def{
 		Input: Input{Kind: item.Cloth, Qty: 8}, Output: item.CarpetCloth, OutQty: 1, Work: 400, Skill: work.Craft},
 	SewLeatherCarpet: {ID: SewLeatherCarpet, Name: "sew_leather_carpet", Label: "Sew leather carpet", Bench: construction.TailoringBench,
 		Input: Input{Kind: item.Leather, Qty: 6}, Output: item.CarpetLeather, OutQty: 1, Work: 400, Skill: work.Craft},
+	KnitWoolParka: {ID: KnitWoolParka, Name: "knit_wool_parka", Label: "Knit wool parka", Bench: construction.TailoringBench,
+		Input: Input{Kind: item.Wool, Qty: 16}, Output: item.WoolParka, OutQty: 1, Work: 1000, Skill: work.Craft},
+	WeaveWoolCarpet: {ID: WeaveWoolCarpet, Name: "weave_wool_carpet", Label: "Weave wool carpet", Bench: construction.TailoringBench,
+		Input: Input{Kind: item.Wool, Qty: 8}, Output: item.CarpetWool, OutQty: 1, Work: 450, Skill: work.Craft},
 }
 
 // RackCapacity is how many items one drying rack holds.

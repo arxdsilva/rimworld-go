@@ -101,7 +101,7 @@ var defs = [numSpecies]Def{
 	Cactus: {Species: Cactus, Name: "cactus", GrowTicks: 90000, CutWork: 40, Wood: 2, ColdKill: -50, Trunk: true},
 	// Shrub and reeds are hardy enough for every biome they grow wild in
 	// (tundra, cold bog), blizzards included.
-	Shrub: {Species: Shrub, Name: "shrub", GrowTicks: 30000, CutWork: 25, Wood: 3, ColdKill: -400, HeatKill: 500, Browse: true},
+	Shrub: {Species: Shrub, Name: "shrub", GrowTicks: 30000, CutWork: 25, Wood: 3, ColdKill: -400, HeatKill: 650, Browse: true},
 	Reeds: {Species: Reeds, Name: "reeds", Label: "straw", GrowTicks: 15000, HarvestWork: 25, Yield: 4, Yields: item.Straw,
 		CutWork: 15, Regrows: true, RegrowTo: 30, ColdKill: -300, Browse: true},
 	// Crops: growth follows real days-to-harvest at roughly twelve real

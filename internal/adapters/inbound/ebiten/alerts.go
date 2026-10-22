@@ -280,7 +280,11 @@ func animalAlerts(w game.WorldView) []alert {
 		out = append(out, alert{key: "cropraid", label: "Wild animals eating crops", danger: true, targets: raiders})
 	}
 	if len(gnaws) > 0 {
-		out = append(out, alert{key: "timbergnaw", label: "Timbergnaws eating trees", targets: gnaws})
+		label := "Timbergnaws eating trees"
+		if w.TreesFelled > 0 {
+			label = fmt.Sprintf("Timbergnaws eating trees (%d felled)", w.TreesFelled)
+		}
+		out = append(out, alert{key: "timbergnaw", label: label, targets: gnaws})
 	}
 	for _, z := range w.Zones {
 		if z.Kind != game.ZonePen || len(z.Cells) == 0 {

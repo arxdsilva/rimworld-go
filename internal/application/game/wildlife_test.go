@@ -122,12 +122,18 @@ func TestWildlifeWeights(t *testing.T) {
 	}
 }
 
+// TestMigrationDeterministic: the dawn top-up (a prey herd whenever fewer
+// than six grazers were left) became the hourly capacity check (SIM-025,
+// population.go): an empty wild map gets one group of one species at an
+// edge, the same for the same seed; a map at capacity gets nobody, at any
+// hour.
 func TestMigrationDeterministic(t *testing.T) {
 	run := func() ([]animal.Species, []Position) {
 		g := New(Config{Seed: 11, Width: 50, Height: 50})
 		g.wild = true
-		dawn := uint64(3*clock.TicksPerDay + dawnHour*clock.TicksPerHour)
-		g.migrate(dawn)
+		for h := 1; len(g.animalIDs) == 0 && h < 24*20; h++ {
+			g.migrate(uint64(3*clock.TicksPerDay + h*clock.TicksPerHour))
+		}
 		var ps []Position
 		for _, id := range g.animalIDs {
 			p, _ := g.positions.Get(id)
@@ -138,26 +144,31 @@ func TestMigrationDeterministic(t *testing.T) {
 	s1, p1 := run()
 	s2, p2 := run()
 	if len(s1) == 0 {
-		t.Fatal("an empty map gets a migrating herd at dawn")
+		t.Fatal("an empty map gets a group within 20 days")
 	}
 	if !reflect.DeepEqual(s1, s2) || !reflect.DeepEqual(p1, p2) {
 		t.Fatalf("migration differs: %v %v vs %v %v", s1, p1, s2, p2)
 	}
-	for _, s := range s1 {
-		if s != s1[0] || animal.DefOf(s).Predator {
-			t.Fatalf("one grazing herd of one species migrates: %v", s1)
+	for i, s := range s1 {
+		if s != s1[0] {
+			t.Fatalf("one group of one species arrives: %v", s1)
+		}
+		if p := p1[i]; min(p.X, p.Y, 49-p.X, 49-p.Y) > 2 {
+			t.Fatalf("arrived at %v, not at an edge", p)
 		}
 	}
-	// a stocked map gets nobody; nor does any hour but dawn
+	// a stocked map (at capacity) gets nobody, dawn or not
 	g := New(Config{Seed: 11, Width: 50, Height: 50})
 	g.wild = true
-	for i := 0; i < minWildGrazers; i++ {
-		_, _ = g.SpawnAnimal("deer", 5+i, 5)
+	for i := 0; len(g.animalIDs) < g.wildlifeCap(); i++ {
+		_, _ = g.SpawnAnimal("deer", 5+i%40, 5+i/40)
 	}
-	g.migrate(uint64(3*clock.TicksPerDay + dawnHour*clock.TicksPerHour))
-	g.migrate(uint64(3*clock.TicksPerDay + 9*clock.TicksPerHour))
-	if len(g.animalIDs) != minWildGrazers {
-		t.Fatalf("stocked map grew to %d", len(g.animalIDs))
+	n := len(g.animalIDs)
+	for h := 0; h < 48; h++ {
+		g.migrate(uint64(3*clock.TicksPerDay + h*clock.TicksPerHour))
+	}
+	if len(g.animalIDs) != n {
+		t.Fatalf("stocked map grew from %d to %d", n, len(g.animalIDs))
 	}
 }
 

@@ -197,7 +197,7 @@ func (g *Game) nothingToEat(id entity.EntityID, a *animal.State, pos Position, n
 	def := animal.DefOf(a.Species)
 	a.Feed, a.FeedLeft = animal.FeedTarget{}, 0
 	hunter := def.Predator || animal.EcologyOf(a.Species).Diet == animal.Carnivore
-	if !a.Tame && hunter && a.Food < animal.FeedStart && !badlyHurt(*a) && now >= a.FleeUntil { // T3 (never while hurt: T10)
+	if !a.Tame && hunter && a.Food < animal.FeedStart && !badlyHurt(*a) && now >= a.FleeUntil && g.grown(*a, now) { // T3 (never while hurt: T10; the young don't hunt)
 		if prey := g.findPrey(id, pos, def); prey != 0 {
 			a.Mode, a.Target, a.HuntSince = animal.Attack, prey, now
 			return
@@ -566,7 +566,10 @@ func (g *Game) feedStep(id entity.EntityID, a *animal.State, pos Position, now u
 }
 
 // eat finishes a meal: the food is consumed (or eaten down) and the
-// animal's food rises by the meal for its size.
+// animal's food rises by the meal for its size. Young animals eat half
+// portions (portion, animal_life.go): the same meal fills them
+// animal.YoungMeal times as far, so a stack or trough feeds them with
+// half the items.
 func (g *Game) eat(id entity.EntityID, a *animal.State, t animal.FeedTarget, now uint64) {
 	a.Feed, a.FeedLeft, a.NextDecide = animal.FeedTarget{}, 0, now
 	diet := animal.EcologyOf(a.Species).Diet
@@ -590,16 +593,18 @@ func (g *Game) eat(id entity.EntityID, a *animal.State, t animal.FeedTarget, now
 		g.shareCarcass(id, t, meal-animal.Meal(a.Species, animal.Full-a.Food), now)
 	case animal.FeedItem:
 		st, _ := g.stacks.Get(t.ID)
-		per := animal.Meal(a.Species, animal.FeedValue(diet, st.Kind))
+		per := g.portion(a, now, animal.Meal(a.Species, animal.FeedValue(diet, st.Kind)))
 		n := min(st.Qty, max(1, (animal.Full-a.Food+per-1)/max(per, 1)))
 		g.takeItems(t.ID, st, n)
 		a.Food = min(animal.Full, a.Food+n*per)
 		return
 	case animal.FeedTrough:
-		a.Food = min(animal.Full, a.Food+g.eatFromTrough(t.ID, a.Species, diet, animal.Full-a.Food)) // trough_feed.go
+		// trough_feed.go; the young want half as much from it
+		k := g.portion(a, now, 1)
+		a.Food = min(animal.Full, a.Food+k*g.eatFromTrough(t.ID, a.Species, diet, (animal.Full-a.Food+k-1)/k))
 		return
 	}
-	a.Food = min(animal.Full, a.Food+animal.Meal(a.Species, gain))
+	a.Food = min(animal.Full, a.Food+g.portion(a, now, animal.Meal(a.Species, gain)))
 }
 
 // shareCarcass: the animals feeding on the same carcass beside the one
@@ -677,4 +682,5 @@ func (g *Game) fillAnimalNeeds(av *AnimalView, a animal.State) {
 	days := animal.AgeDays(a.Born, now, a.Species)
 	av.AgeDays, av.Adult = days, animal.Adult(a.Species, days)
 	av.Stage, av.Scale = animal.Stage(a.Species, av.Adult), animal.GrowthScale(a.Species, days)
+	g.fillAnimalLife(av, a, now) // animal_life.go
 }

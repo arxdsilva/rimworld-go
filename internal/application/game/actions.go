@@ -22,6 +22,8 @@ const (
 	ActionTend        = "tend"
 	ActionRescue      = "rescue"
 	ActionTame        = "tame"
+	ActionMilk        = "milk"  // milking, or collecting ember oil (SIM-026)
+	ActionShear       = "shear" // shearing wool (SIM-026)
 	ActionEat         = "eat"
 	ActionRefuel      = "refuel"
 	ActionHaul        = "haul"

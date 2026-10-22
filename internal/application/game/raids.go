@@ -7,6 +7,7 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/sim/clock"
@@ -106,16 +107,21 @@ const (
 	threatPack
 	threatManhunters
 	threatHive
+	threatMad // one wild animal near home goes manhunter (SIM-025)
 )
 
 // threatRolls is the storyteller's die. Odds (SIM-019): in winter a
 // predator pack 4/8 and, from day 12, a hive swarm 1/8; otherwise a
 // manhunter pack 2/8 from day 8 and a hive swarm 1/8 from day 12; a raid
 // the rest (so raids went from 3/4 to 5/8 outside winter and from 1/2 to
-// 3/8 in winter, once hives can come).
+// 3/8 in winter, once hives can come). SIM-025 takes one more raid face
+// in every season for a mad animal from day 6 (raids 4/8 outside winter,
+// 2/8 in it, from day 12); a mad animal that cannot happen (cooling down,
+// no wild animal near home) is a raid after all.
 const (
 	threatRolls  = 8
 	hiveFirstDay = 12
+	madRoll      = threatRolls - 2
 )
 
 // pickThreat maps a roll of the die (0..threatRolls-1) to a threat.
@@ -127,6 +133,8 @@ func pickThreat(roll, day int, winter bool) threatKind {
 		return threatManhunters
 	case roll == threatRolls-1 && day >= hiveFirstDay:
 		return threatHive
+	case roll == madRoll && day >= incident.DefOf(incident.MadAnimal).MinDay:
+		return threatMad
 	}
 	return threatRaid
 }
@@ -141,6 +149,10 @@ func (g *Game) fireThreat(now uint64) {
 		g.manhunterPack(3 + g.rng.IntN(3))
 	case threatHive:
 		g.hiveSwarm()
+	case threatMad:
+		if !g.madAnimal(now, false) { // incidents.go
+			g.scaledRaid(day)
+		}
 	default:
 		g.scaledRaid(day)
 	}

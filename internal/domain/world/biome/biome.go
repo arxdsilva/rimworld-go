@@ -100,10 +100,12 @@ var defs = [NumBiomes]Def{
 		Plants: []PlantDensity{{plant.Shrub, 40}, {plant.Cactus, 10}}, Grass: 350, Regrow: 10, Wildlife: 70},
 	Desert: {Key: "desert", Name: "Desert", Blurb: "Sand, cactus and scorching days. Farming is hard work.",
 		Climate: c(300, 90, 110), Wetness: 20, Ground: Ground{Soil: 50, Gravel: 250, Sand: 700},
-		Plants: []PlantDensity{{plant.Cactus, 15}, {plant.Shrub, 10}}, Grass: 80, Regrow: 16, Wildlife: 30, Difficulty: "hard"},
+		// sparse grass that comes back quickly after rain keeps the few
+		// grazers alive (a slower regrow starved them by day 5)
+		Plants: []PlantDensity{{plant.Cactus, 15}, {plant.Shrub, 30}}, Grass: 220, Regrow: 7, Wildlife: 30, Difficulty: "hard"},
 	ExtremeDesert: {Key: "extreme_desert", Name: "Extreme desert", Blurb: "Dunes and blistering heat. Almost nothing lives here.",
 		Climate: c(380, 80, 120), Wetness: 5, Ground: Ground{Gravel: 150, Sand: 850},
-		Plants: []PlantDensity{{plant.Cactus, 4}}, Wildlife: 10, Difficulty: "extreme"},
+		Plants: []PlantDensity{{plant.Cactus, 4}, {plant.Shrub, 8}}, Grass: 60, Regrow: 9, Wildlife: 10, Difficulty: "extreme"},
 }
 
 func init() {

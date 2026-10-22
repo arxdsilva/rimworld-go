@@ -125,3 +125,18 @@ func (st *State) Fired(id ID, now uint64) {
 	}
 	st.Last[id] = now
 }
+
+// Nature rolls come every NatureGapMin..NatureGapMax days (our pacing),
+// at a random hour of the day.
+const (
+	NatureGapMin = 2
+	NatureGapMax = 5
+)
+
+// NextNatureAt is the tick of a nature roll gapDays after the day of tick
+// now, at hour (0..23; clamped). It is always after now.
+func NextNatureAt(now uint64, gapDays, hour int) uint64 {
+	hour = min(max(hour, 0), clock.HoursPerDay-1)
+	day := now/clock.TicksPerDay + uint64(max(gapDays, 1))
+	return day*clock.TicksPerDay + uint64(hour)*clock.TicksPerHour
+}

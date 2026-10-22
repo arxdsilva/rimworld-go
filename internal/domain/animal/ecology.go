@@ -250,8 +250,25 @@ const (
 	plainEggDays = 1
 )
 
-// LifeOf is s's life numbers.
+// LifeOf is s's life numbers (from a table built once: it is read every
+// tick, life.go).
 func LifeOf(s Species) Life {
+	if s >= numSpecies {
+		return lives[Deer]
+	}
+	return lives[s]
+}
+
+// lives is every species' Life.
+var lives = func() (out [numSpecies]Life) {
+	for i := range out {
+		out[i] = buildLife(Species(i))
+	}
+	return out
+}()
+
+// buildLife works s's life numbers out from its size, body and products.
+func buildLife(s Species) Life {
 	r, e := RosterOf(s), EcologyOf(s)
 	l := lifeBySize[r.Size]
 	switch r.Archetype {

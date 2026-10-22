@@ -1,6 +1,7 @@
 package game
 
 import (
+	"sort"
 	"strings"
 
 	"rimworld-go/internal/domain/animal"
@@ -12,12 +13,13 @@ import (
 	"rimworld-go/internal/domain/world/temperature"
 )
 
-// Wildlife (SIM-019). Which species live on the map follows the season
-// and their habitat: cold-climate animals come in winter, hot-climate
-// ones in summer. Start herds and daily migrants are drawn by those
-// weights from g.rng (deterministic). Rarer events: a legendary animal
-// wanders in at most once a year, explosive animals burst when they die,
-// and hive swarms come out of the rock (hive.go).
+// Wildlife (SIM-019, SIM-025). Which species live on the map follows the
+// season and their habitat: cold-climate animals come in winter,
+// hot-climate ones in summer. Start herds and later arrivals are drawn by
+// those weights from g.rng (deterministic); how many live on the map
+// follows its carrying capacity (population.go). Rarer events: a
+// legendary animal wanders in at most once a year, explosive animals
+// burst when they die, and hive swarms come out of the rock (hive.go).
 
 // wildlifeState is the saved wildlife event state.
 type wildlifeState struct {
@@ -30,6 +32,17 @@ type wildlifeState struct {
 	// in the last hour (animal_needs.go).
 	LastHerd  uint32
 	CropRaids []cropRaid
+	// Population (population.go, SIM-025): Count is the wild count of the
+	// in-game hour CountHour-1 (0: not counted yet); PopSettle the tick
+	// before which no arrival or departure follows the last one; Departs
+	// the herds walking off an overfull map; Gnaw the timbergnaws of the
+	// current gnawing event (incidents.go).
+	Count     int
+	Preds     int // predators among Count
+	CountHour uint64
+	PopSettle uint64
+	Departs   []departure
+	Gnaw      gnawEvent
 
 	// idx and food are the per-tick creature and food indexes
 	// (animal_index.go): derived, never saved.
@@ -53,9 +66,6 @@ type BurstView struct {
 }
 
 const (
-	// minWildGrazers: below this many wild prey animals a herd migrates
-	// in at dawn (about two herds).
-	minWildGrazers = 6
 	// startPredatorMax caps a starting predator herd so a new colony
 	// meets a pair, not a whole pack.
 	startPredatorMax = 2
@@ -204,11 +214,15 @@ func (g *Game) spawnHerd(s animal.Species, x, y, n int) []entity.EntityID {
 	return out
 }
 
-// spawnWildlife places 3-4 season-weighted herds away from the start
-// site: at least one of prey and, when the season has any, one of
-// predators (kept to a pair, farther out).
+// spawnWildlife places 4-6 season-weighted herds away from the start
+// site, at least one of prey and, when the season has any, one of
+// predators (kept to a pair, farther out, placed right after the first
+// herd), then more herds until the map
+// holds about startCapPct of its capacity; no herd takes the count past
+// that target except the first.
 func (g *Game) spawnWildlife() {
 	g.wild = true
+	target := g.startTarget()
 	n := startHerdsMin + g.rng.IntN(startHerdsMax-startHerdsMin+1)
 	picks := make([]animal.Species, 0, n)
 	for i := 0; i < n; i++ {
@@ -234,20 +248,47 @@ func (g *Game) spawnWildlife() {
 			picks[len(picks)-1] = s
 		}
 	}
-	for _, s := range picks {
-		size, r := g.herdSizeOf(s), wildStartRadius
+	// the first herd, then the predators, then the rest: a small map's
+	// target is not used up before the predators are placed
+	if len(picks) > 1 {
+		rest := append([]animal.Species(nil), picks[1:]...)
+		sort.SliceStable(rest, func(i, j int) bool { return isPredator(rest[i]) && !isPredator(rest[j]) })
+		copy(picks[1:], rest)
+	}
+	count, preds := 0, 0
+	place := func(s animal.Species, room int) {
+		size, r := min(g.herdSizeOf(s), room), wildStartRadius
 		if isPredator(s) {
 			size, r = min(size, startPredatorMax), wolfStartRadius
 		}
 		if x, y, ok := g.randomTileAway(r); ok {
-			g.spawnHerd(s, x, y, size)
+			k := len(g.spawnHerd(s, x, y, size))
+			count += k
+			if isPredator(s) {
+				preds += k
+			}
+		}
+	}
+	for i, s := range picks {
+		room := target - count
+		if i == 0 {
+			room = max(room, animal.RosterOf(s).HerdMin)
+		}
+		if room > 0 {
+			place(s, room)
+		}
+	}
+	for tries := 0; count < target && tries < 4*target; tries++ {
+		if s, ok := g.pickWildGroup(count, preds); ok {
+			place(s, target-count)
 		}
 	}
 }
 
-// migrate: at dawn, a season-weighted prey herd walks in from a map edge
-// when the wild prey has thinned out (hunting stays sustainable), and a
-// legendary may wander in (legendaryVisit).
+// migrate is the wildlife's upkeep: a legendary may wander in
+// (legendaryVisit) and, every hour, the population is checked against the
+// map's capacity (population.go). It replaced the dawn top-up that
+// brought a prey herd in whenever fewer than six grazers were left.
 func (g *Game) migrate(now uint64) {
 	if !g.wild {
 		return
@@ -255,31 +296,9 @@ func (g *Game) migrate(now uint64) {
 	if g.legendaryDue(now) {
 		g.legendaryVisit(now, g.rng.IntN(100))
 	}
-	if now%uint64(clock.TicksPerDay) != uint64(dawnHour*clock.TicksPerHour) {
-		return
+	if now%uint64(clock.TicksPerHour) == 0 {
+		g.populationHour(now)
 	}
-	n := 0
-	for _, id := range g.animalIDs {
-		if a, ok := g.animals.Get(id); ok && !a.Tame && wildPrey(a.Species) {
-			n++
-		}
-	}
-	if n >= minWildGrazers {
-		return
-	}
-	s, ok := g.pickSpecies(isPrey)
-	if !ok {
-		return
-	}
-	if x, y, ok := g.mapEdgeTile(); ok {
-		g.spawnHerd(s, x, y, g.herdSizeOf(s))
-	}
-}
-
-// wildPrey: a species counted towards the migrating stock.
-func wildPrey(s animal.Species) bool {
-	d := animal.DefOf(s)
-	return !d.Predator && !d.Hive && !d.Legendary
 }
 
 // mapEdgeTile is a random walkable tile one in from a map edge.

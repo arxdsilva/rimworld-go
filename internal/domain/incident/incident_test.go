@@ -48,3 +48,18 @@ func TestCooldownMinDayAndBiome(t *testing.T) {
 		t.Fatal("caller veto")
 	}
 }
+
+func TestNextNatureAt(t *testing.T) {
+	now := uint64(3*clock.TicksPerDay + 17*clock.TicksPerHour)
+	for gap := NatureGapMin; gap <= NatureGapMax; gap++ {
+		for hour := 0; hour < clock.HoursPerDay; hour++ {
+			at := NextNatureAt(now, gap, hour)
+			if at <= now || at/clock.TicksPerDay != uint64(3+gap) || at%clock.TicksPerDay != uint64(hour*clock.TicksPerHour) {
+				t.Fatalf("gap %d hour %d: tick %d", gap, hour, at)
+			}
+		}
+	}
+	if at := NextNatureAt(now, 0, 99); at <= now || at%clock.TicksPerDay != uint64(23*clock.TicksPerHour) {
+		t.Fatalf("clamped: %d", at)
+	}
+}

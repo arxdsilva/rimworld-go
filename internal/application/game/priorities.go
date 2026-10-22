@@ -89,7 +89,9 @@ func (g *Game) assignWorkType(id entity.EntityID, t work.Type) bool {
 	case work.Cook, work.Craft:
 		return g.assignBill(id, work.Mask(0).Set(t, true))
 	case work.Hunt:
-		return g.assignHunt(id) || g.assignTame(id)
+		return g.assignHunt(id)
+	case work.Handle: // SIM-026: taming moved here from Hunt
+		return g.assignTame(id) || g.assignCollect(id) // animal_products.go
 	case work.Grow:
 		if g.woodLow() && g.assignCut(id) {
 			return true // short of wood: designated trees come first

@@ -106,6 +106,10 @@ func (g *Game) actionOf(id entity.EntityID, j job.Record) string {
 		return ActionResearch
 	case job.Tame:
 		return ActionTame
+	case job.Milk:
+		return ActionMilk
+	case job.Shear:
+		return ActionShear
 	case job.Repair:
 		return ActionRepair
 	case job.Roof, job.Unroof:
@@ -171,6 +175,8 @@ func (g *Game) workTotal(id entity.EntityID, j job.Record) int {
 		return TendWork
 	case job.Tame:
 		return animal.TameWork
+	case job.Milk, job.Shear:
+		return animal.CollectWork
 	case job.Eat:
 		return needs.EatWorkTicks
 	case job.Bury:
@@ -274,7 +280,7 @@ func (g *Game) fillPawnAction(pv *PawnView, id entity.EntityID, j job.Record) {
 	if pv.Action != "" {
 		pv.ActionProgress = g.progressOf(id, j)
 		switch j.Kind {
-		case job.Attack, job.Hunt, job.Tend, job.Tame, job.Rescue:
+		case job.Attack, job.Hunt, job.Tend, job.Tame, job.Rescue, job.Milk, job.Shear:
 			pv.ActTarget = j.Target
 		}
 	}

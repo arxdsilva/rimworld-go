@@ -831,6 +831,8 @@ func (g *Game) phaseJobs() {
 			g.doResearch(id, j)
 		case job.Tame:
 			g.doTame(id, j)
+		case job.Milk, job.Shear:
+			g.doCollect(id, j) // animal_products.go
 		case job.Clean:
 			g.doClean(id, j) // clean.go
 		case job.Wander, job.Chat, job.Relax, job.FireSide, job.Horseshoes, job.Hide:
@@ -1424,5 +1426,5 @@ func (g *Game) VitalOf(id entity.EntityID) health.Record {
 // age and drying, and the same body (species, who, when) for corpses.
 func splitLoad(st item.Stack, take int) item.Stack {
 	return item.Stack{Kind: st.Kind, Qty: take, X: st.X, Y: st.Y, Rot: st.Rot, Dried: st.Dried,
-		Animal: st.Animal, Of: st.Of, DiedAt: st.DiedAt}
+		Animal: st.Animal, Of: st.Of, DiedAt: st.DiedAt, Hatch: st.Hatch, Tame: st.Tame}
 }

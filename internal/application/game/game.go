@@ -272,12 +272,15 @@ type PlantView struct {
 type WorldView struct {
 	// Biome is the map's setting: display name and key (SIM-023).
 	Biome, BiomeKey string
-	Items           []ItemView
-	Frames          []FrameView
-	Buildings       []BuildingView
-	Plants          []PlantView
-	Food, Wood      int
-	Stone           int
+	// TreesFelled is how many trees the visiting timbergnaws have eaten
+	// (SIM-025; 0 when none are about).
+	TreesFelled int
+	Items       []ItemView
+	Frames      []FrameView
+	Buildings   []BuildingView
+	Plants      []PlantView
+	Food, Wood  int
+	Stone       int
 	// Terrain is the ground type per tile, row-major, TerrainW wide;
 	// codes index TerrainNames().
 	Terrain  []uint8
@@ -664,6 +667,7 @@ func (g *Game) Step(n int) {
 		g.phaseJobs()
 		g.phaseAnimals()
 		g.phaseThreats()
+		g.phaseIncidents() // incidents.go: nature events, departures (SIM-025)
 		g.phaseWeather()
 		g.phaseMovement()
 		g.clock.Advance(1)
@@ -781,6 +785,10 @@ func (g *Game) World() WorldView {
 		Locked:      g.lockedKeys(),
 		Schedule:    append([]schedule.Activity(nil), g.sched[:]...),
 	}
+	if n, felled := g.Timbergnaws(); n > 0 {
+		w.TreesFelled = felled
+	}
+
 	for _, id := range g.itemIDs {
 		st, ok := g.stacks.Get(id)
 		if !ok {

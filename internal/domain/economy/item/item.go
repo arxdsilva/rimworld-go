@@ -281,10 +281,12 @@ func DryRate(tenthsC int) int {
 
 // CanMerge reports whether a and b may combine on the same tile.
 // Rotten corpses never merge with fresh ones, one person's body (or
-// bones) never merges with another's, and animal corpses stack by species.
+// bones) never merges with another's, and animal corpses stack by species;
+// fertile eggs stack by species and by whose they are (Tame), and the
+// merged stack keeps the incubation of the one it joins.
 func CanMerge(a, b Stack) bool {
 	return a.Kind == b.Kind && a.Carrier == 0 && b.Carrier == 0 && a.X == b.X && a.Y == b.Y &&
-		a.Rotten() == b.Rotten() && a.Dried == b.Dried && a.Of == b.Of && a.Animal == b.Animal
+		a.Rotten() == b.Rotten() && a.Dried == b.Dried && a.Of == b.Of && a.Animal == b.Animal && a.Tame == b.Tame
 }
 
 // ConvertLegacy turns a save's former dustbuck or ridgewolf corpse into a
