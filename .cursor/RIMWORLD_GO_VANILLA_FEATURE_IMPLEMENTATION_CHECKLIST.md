@@ -1171,7 +1171,7 @@ treatment, and surgery are major colony-management systems.
 
 # PHASE 13 --- Cleaning, Filth, Deterioration, and Colony Maintenance
 
--   [ ] **Filth entities/layers**
+-   [-] **Filth entities/layers** (SIM-020: blood and ichor stains as a per-tile layer that fades over 7 days and washes off in rain and snow; no dirt, vomit or trash yet)
     -   Dirt, blood, vomit, trash-like filth.
     -   Created by movement/events/injuries/animals as appropriate.
 -   [ ] **Cleanliness**
@@ -1180,7 +1180,7 @@ treatment, and surgery are major colony-management systems.
         systems.
 -   [ ] **Cleaning work**
     -   Home-area filth becomes indexed cleaning work.
--   [ ] **Blood trails**
+-   [x] **Blood trails** (SIM-020: bleeding colonists, raiders and animals drip every third tile; untended downed pawns pool)
     -   Bleeding moving pawns can create blood filth.
 -   [ ] **Outdoor deterioration**
     -   Eligible items deteriorate when exposed.
@@ -2511,7 +2511,7 @@ the player-facing system.
 -   [x] **Pawn facing/aiming** (smoothed facing with hysteresis; turns to the work tile, attack target and blockers; rifles held at ready, raised to aim and turned towards the target)
 -   [x] **Simple movement interpolation**
 -   [x] **Muzzle/projectile effects** (muzzle flash and smoke at the rifle muzzle, ejected casing, tracer from the muzzle, impact puff)
--   [-] **Damage/fire effects** (hit flash, flinch and stagger away from the attacker, directional blood, falls; burning-building fire not implemented)
+-   [-] **Damage/fire effects** (hit flash, flinch and stagger away from the attacker, directional blood sprays scaled by damage, bloodied bodies, floor stains, falls; burning-building fire not implemented)
 -   [ ] **Selection/targeting feedback**
 -   [ ] **Weather visual effects**
 -   [x] **Day/night presentation** (ART-010: every sprite lit by a moving sun, a cool moon, indoor ambient under roofs and lamp light; moving shadows; the old fullscreen veil is retired)
