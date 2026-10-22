@@ -8,6 +8,7 @@ import (
 	"io"
 	"rimworld-go/internal/domain/research"
 	"rimworld-go/internal/domain/world/stain"
+	"slices"
 
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/reservation"
@@ -191,6 +192,11 @@ type saveState struct {
 	Carried    map[entity.EntityID]uint16
 	Home       []uint8
 	CleanWired bool
+	// CleanQ: Home tiles queued for cleaning, half-swept ones included,
+	// so a loaded game resumes them (absent: rebuilt from the threshold).
+	CleanQ []int32
+	// HomeVer is the Home area's change counter (WorldView.HomeVer).
+	HomeVer uint32
 	// Incoming (HAUL-001): material on its way to each frame or fuel user.
 	Incoming map[entity.EntityID]int
 	// Deliveries (HAUL-001): each hauler's shares of Incoming, route order.
@@ -242,6 +248,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 	s.Stains = g.exportStains()
 	s.Dirt, s.Carried = g.exportDirt()
 	s.Home, s.CleanWired = g.exportHome(), true
+	s.CleanQ, s.HomeVer = slices.Clone(g.filth.cleanQ), g.homeArea.ver
 	for id, e := range g.exposure {
 		s.Exposure[id] = [2]int{e.hypo, e.heat}
 	}
@@ -359,8 +366,9 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.importRoofs(s.Roofs)
 	g.importGrass(s.Grass, s.GrassCut)
 	g.importStains(s.Stains)
-	g.importHome(s.Home)            // home.go: an older save gets Home around its buildings
+	g.importHome(s.Home, s.HomeVer) // home.go: an older save gets Home around its buildings
 	g.importDirt(s.Dirt, s.Carried) // filth.go
+	g.importCleanQ(s.CleanQ)        // filth.go: half-swept tiles stay queued
 	if !s.CleanWired {
 		g.wireCleaning() // clean.go: an older save switches cleaning on once
 	}

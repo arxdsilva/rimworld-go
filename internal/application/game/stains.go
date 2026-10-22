@@ -79,11 +79,13 @@ func (g *Game) stamp(x, y int, kind stain.Kind, add int) {
 	}
 	k := [2]int{x, y}
 	s := g.stains.tiles[k]
+	old := s.Amount
 	s.X, s.Y, s.Kind = x, y, kind
 	s.Amount = stain.Add(s.Amount, add)
 	s.Born = uint64(g.clock.Now())
 	s.Variant = stainVariant(x, y)
 	g.stains.tiles[k] = s
+	g.stainMoved(x, y, int(old), int(s.Amount))
 	if len(g.stains.tiles) > stain.Cap {
 		g.dropFaintestStain()
 	}
@@ -102,6 +104,38 @@ func (g *Game) dropFaintestStain() {
 	k := [2]int{worst.X, worst.Y}
 	delete(g.stains.tiles, k)
 	delete(g.stains.frac, k)
+	g.stainMoved(worst.X, worst.Y, int(worst.Amount), 0)
+}
+
+// stainMoved keeps the room filth sums and the cleaning queue (filth.go)
+// in step with the stain on (x, y) going from old to nv. Every stain
+// change ends here.
+func (g *Game) stainMoved(x, y, old, nv int) {
+	if old == nv || !g.grid.InBounds(x, y) {
+		return
+	}
+	i := y*g.grid.Width() + x
+	d := g.dirtAtIdx(i)
+	g.filthMoved(i, d+old, d+nv)
+}
+
+// setStainAmount sets the stain on (x, y) (cleaning); 0 removes it.
+func (g *Game) setStainAmount(x, y, a int) {
+	k := [2]int{x, y}
+	s, ok := g.stains.tiles[k]
+	if !ok || int(s.Amount) == a {
+		return
+	}
+	old := int(s.Amount)
+	if a <= 0 {
+		delete(g.stains.tiles, k)
+		delete(g.stains.frac, k)
+		a = 0
+	} else {
+		s.Amount = uint16(min(a, stain.Full))
+		g.stains.tiles[k] = s
+	}
+	g.stainMoved(x, y, old, a)
 }
 
 func stainWeaker(a, b stain.Stain) bool {
@@ -204,6 +238,7 @@ func (g *Game) stainDowned(id entity.EntityID, now uint64) {
 // rain or snow falls (called every climate interval).
 func (g *Game) stainDecay() {
 	g.pruneDrips()
+	g.washDirt() // filth.go: rain rinses dirt off open ground too
 	if len(g.stains.tiles) == 0 {
 		return
 	}
@@ -218,9 +253,11 @@ func (g *Game) stainDecay() {
 		if a == 0 {
 			delete(g.stains.tiles, k)
 			delete(g.stains.frac, k)
+			g.stainMoved(s.X, s.Y, int(s.Amount), 0)
 			continue
 		}
 		if a != s.Amount {
+			g.stainMoved(s.X, s.Y, int(s.Amount), int(a))
 			s.Amount = a
 			g.stains.tiles[k] = s
 		}
@@ -231,8 +268,10 @@ func (g *Game) stainDecay() {
 	}
 }
 
-// pruneDrips forgets drip counters of creatures that are gone.
+// pruneDrips forgets drip counters of creatures that are gone, and the
+// boots of pawns that are (filth.go).
 func (g *Game) pruneDrips() {
+	g.pruneCarried()
 	for id := range g.stains.dripN {
 		if _, ok := g.animals.Get(id); ok {
 			continue
@@ -297,4 +336,5 @@ func (g *Game) importStains(s []stain.Stain) {
 		st.Rem = 0
 		g.stains.tiles[k] = st
 	}
+	g.refreshFilth() // stains count as filth: requeue and recount
 }

@@ -71,12 +71,12 @@ func (g *Game) applyOne(c command.Command) {
 	case command.DesignateCancel:
 		g.cancelRect(c.X, c.Y, c.X2, c.Y2)
 	case command.DesignateBuild:
-		stuff := item.Kind(c.Stuff)
-		if !stuff.IsStuff() {
-			stuff = item.Wood // zero value: default material
+		kind, stuff := construction.Kind(c.Build), item.Kind(c.Stuff)
+		if !construction.StuffOK(kind, stuff) {
+			stuff = construction.DefaultStuff(kind) // zero value or a mismatch: default material
 		}
-		if !g.buildLocked(construction.Kind(c.Build)) {
-			g.placeFrameStuff(construction.Kind(c.Build), stuff, construction.ParseFacing(c.Facing), c.X, c.Y)
+		if !g.buildLocked(kind) {
+			g.placeFrameStuff(kind, stuff, construction.ParseFacing(c.Facing), c.X, c.Y)
 		}
 	case command.DesignateCut:
 		g.markCut(c.X, c.Y, c.X2, c.Y2, true)
@@ -787,6 +787,7 @@ func (g *Game) phaseJobs() {
 		if v.Status == health.Downed && j.Kind != job.Sleep {
 			continue
 		}
+		g.dirtWork(id, j, now) // filth.go: field work soils the boots
 		switch j.Kind {
 		case job.Eat:
 			g.doEat(id, j)
@@ -828,6 +829,8 @@ func (g *Game) phaseJobs() {
 			g.doResearch(id, j)
 		case job.Tame:
 			g.doTame(id, j)
+		case job.Clean:
+			g.doClean(id, j) // clean.go
 		case job.Wander, job.Chat, job.Relax, job.FireSide, job.Horseshoes, job.Hide:
 			g.doIdle(id, j)
 		default:
@@ -1083,6 +1086,7 @@ func (g *Game) completeFrame(id entity.EntityID, fr construction.Frame) {
 	g.bldgIDs = append(g.bldgIDs, id)
 	g.bldgs.Set(id, construction.Building{Kind: fr.Kind, Stuff: fr.Stuff, Facing: fr.Facing, X: fr.X, Y: fr.Y})
 	g.markRoomsDirty()
+	g.autoHome(fr.Kind, fr.Facing, fr.X, fr.Y) // home.go
 	g.defaultBills(id, fr.Kind)
 	// bushes and crops under the footprint are cleared below
 	cells, _, _ := construction.Footprint(fr.Kind, fr.Facing, fr.X, fr.Y)
@@ -1146,6 +1150,9 @@ func (g *Game) doHarvest(id entity.EntityID, j job.Record) {
 	}
 	d := plant.DefOf(p.Species)
 	g.dropStack(d.Yields, d.Yield, p.X, p.Y)
+	if d.ExtraQty > 0 {
+		g.dropStack(d.Extra, d.ExtraQty, p.X, p.Y) // a by-product: straw with wheat
+	}
 	if d.Regrows {
 		p.Growth = d.GrowTicks * d.RegrowTo / 100
 		p.Designated = false
@@ -1275,6 +1282,7 @@ func (g *Game) movePawn(id entity.EntityID, m motionRec, now uint64) bool {
 func (g *Game) stepPawn(id entity.EntityID, m *motionRec, carry entity.EntityID, from, to Position, now uint64) {
 	g.positions.Set(id, to)
 	g.stainStep(id, from) // stains.go: a bleeding pawn drips
+	g.dirtStep(id, to)    // filth.go: boots pick dirt up or leave it
 	m.stepped(now, g.weatherSlow(to.X, to.Y, pawnStepCost(from, to)))
 	g.motion.Set(id, *m)
 	if carry != 0 {

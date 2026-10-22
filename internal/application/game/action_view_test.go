@@ -21,7 +21,7 @@ var pawnActions = map[string]bool{
 	ActionDeconstruct: true, ActionRepair: true, ActionBreach: true, ActionSow: true, ActionHarvest: true,
 	ActionCraft: true, ActionCook: true, ActionTailor: true, ActionButcher: true, ActionResearch: true,
 	ActionTend: true, ActionRescue: true, ActionTame: true, ActionEat: true, ActionRefuel: true,
-	ActionHaul: true, ActionHorseshoes: true,
+	ActionHaul: true, ActionHorseshoes: true, ActionClean: true, ActionDig: true, ActionBury: true, ActionCremate: true,
 }
 
 func TestActionVocabularyCoversJobs(t *testing.T) {
@@ -36,7 +36,7 @@ func TestActionVocabularyCoversJobs(t *testing.T) {
 		job.Mine: ActionMine, job.Sow: ActionSow, job.Harvest: ActionHarvest, job.Eat: ActionEat,
 		job.Tend: ActionTend, job.Refuel: ActionRefuel, job.Horseshoes: ActionHorseshoes,
 		job.Research: ActionResearch, job.Tame: ActionTame, job.Repair: ActionRepair,
-		job.Breach: ActionBreach, job.Haul: ActionHaul,
+		job.Breach: ActionBreach, job.Haul: ActionHaul, job.Clean: ActionClean,
 	}
 	for k, a := range want {
 		if got := g.actionOf(id, do(k)); got != a {
@@ -50,7 +50,7 @@ func TestActionVocabularyCoversJobs(t *testing.T) {
 		}
 	}
 	// Every job kind maps to "" or a C2 action.
-	for k := job.None; k <= job.Tame; k++ {
+	for k := job.None; k <= job.Clean; k++ {
 		if got := g.actionOf(id, do(k)); got != "" && !pawnActions[got] {
 			t.Errorf("%v: %q is not in the vocabulary", k, got)
 		}

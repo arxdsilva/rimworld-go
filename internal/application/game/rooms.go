@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/recreation"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/filth"
 	"rimworld-go/internal/domain/world/room"
 	"rimworld-go/internal/domain/world/terrain"
 )
@@ -120,6 +121,7 @@ func (g *Game) ensureRooms() {
 		stats[i].lit = stats[i].contents.Lamps > 0
 	}
 	g.roomTemps = g.remapRoomTemps(grid, len(stats))
+	g.rebuildFilth(grid, len(stats)) // filth.go: tread and room filth sums
 	g.roomGrid, g.rooms, g.roomDirty = grid, stats, false
 	g.afterRoomsRebuilt() // roof.go
 }
@@ -133,13 +135,33 @@ func (g *Game) roomAt(x, y int) int {
 	return g.roomGrid[y*g.grid.Width()+x]
 }
 
+// roomFilth is room r's dirt plus stain and the impressiveness it costs.
+func (g *Game) roomFilth(r int) (sum, penalty int) {
+	if r < 0 || r >= len(g.rooms) || r >= len(g.filth.roomSum) {
+		return 0, 0
+	}
+	sum = g.filth.roomSum[r]
+	return sum, filth.Penalty(sum, g.rooms[r].contents.Cells)
+}
+
+// roomScore is room r's impressiveness less what its filth costs (rooms
+// must be current).
+func (g *Game) roomScore(r int) int {
+	_, pen := g.roomFilth(r)
+	return g.rooms[r].score - pen
+}
+
 func (g *Game) roomViews() []RoomView {
 	g.ensureRooms()
 	out := make([]RoomView, len(g.rooms))
 	for i, r := range g.rooms {
-		out[i] = RoomView{ID: i, Cells: r.contents.Cells, Role: r.role.String(), Score: r.score,
-			Label: room.Label(r.score), Lit: r.lit, Temp: int(g.roomTemps[i]),
-			Roofed: float64(g.roomRoofed(i)) / 1000}
+		sum, pen := g.roomFilth(i)
+		avg := sum / max(1, r.contents.Cells)
+		score := r.score - pen
+		out[i] = RoomView{ID: i, Cells: r.contents.Cells, Role: r.role.String(), Score: score,
+			Label: room.Label(score), Lit: r.lit, Temp: int(g.roomTemps[i]),
+			Roofed: float64(g.roomRoofed(i)) / 1000,
+			Filth:  avg, Cleanliness: filth.Label(avg), FilthPenalty: pen}
 	}
 	for _, bid := range g.bldgIDs { // a burning fire lights its room (not one doused by rain or snow)
 		if b, ok := g.bldgs.Get(bid); ok && b.Kind == construction.Campfire && g.fuel[bid] > 0 && g.burning(bid, b) {
@@ -232,7 +254,7 @@ func (g *Game) afterSleep(id entity.EntityID) {
 		}
 		return
 	}
-	switch s := g.rooms[r].score; {
+	switch s := g.roomScore(r); {
 	case s < 0:
 		g.remember(id, mood.SleptInAwfulRoom)
 	case s >= 12:
@@ -283,7 +305,7 @@ func (g *Game) acting(id entity.EntityID, j job.Record) (string, int, int) {
 	switch j.Kind {
 	case job.Construct, job.Deconstruct, job.Cut, job.Harvest, job.Sow:
 		return j.Kind.String(), j.TX, j.TY
-	case job.Mine, job.Roof, job.Unroof:
+	case job.Mine, job.Roof, job.Unroof, job.Clean:
 		return j.Kind.String(), j.DestX, j.DestY
 	case job.Bill:
 		if j.Carry == 0 { // picking the ingredient up, not working yet

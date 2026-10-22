@@ -523,14 +523,14 @@ func (g *Game) arrivalOf(id entity.EntityID) arrival {
 // (Eat, Haul and Rescue only while carrying).
 var exactCellKinds = []job.Kind{job.Sleep, job.Relax, job.Bill, job.Research, job.Horseshoes}
 
-// workCell is the tile id's job works on: the rock for mining, else the
-// job target, else the walk's last cell.
+// workCell is the tile id's job works on: the rock for mining, the tile
+// being swept for cleaning, else the job target, else the walk's last cell.
 func (g *Game) workCell(id entity.EntityID, to Position) Position {
 	j, ok := g.jobs.Get(id)
 	if !ok {
 		return to
 	}
-	if j.Kind == job.Mine {
+	if j.Kind == job.Mine || j.Kind == job.Clean {
 		return Position{X: j.DestX, Y: j.DestY}
 	}
 	if j.TX == 0 && j.TY == 0 {

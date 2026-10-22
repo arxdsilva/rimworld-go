@@ -510,6 +510,7 @@ func NewColony(cfg Config) *Game {
 	if err := g.LoadStartKit(); err != nil {
 		panic(err)
 	}
+	g.startHome() // home.go: a 13x13 Home around the landing spot (SIM-021)
 	g.spawnWildlife()
 	g.scheduleThreats()
 	g.research = research.Progress{} // a new colony knows nothing yet
