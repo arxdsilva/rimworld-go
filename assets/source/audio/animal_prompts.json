@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "note": "Animal voices (SND-003): cmd/sfxgen sends each prompt (+ defaults.suffix) to ElevenLabs text-to-sound-effects. Ids are animal.<roster key>.<call|attack|hurt|die>, the 9 voice groups animal.<group>.<event>, animal.generic.<event> and animal.burst. Our own words: describe the creature, never RimWorld names. Budget and spending rules: prompts.json and SND-003.",
+  "defaults": {
+    "prompt_influence": 0.55,
+    "suffix": ", close-up, dry, no music, no background noise, no human voice"
+  },
+  "sounds": [
+    {"id": "animal.cow.call", "seconds": 2.0, "prompt": "a single deep, lowing cow moo"},
+    {"id": "animal.timber_wolf.attack", "seconds": 0.8, "prompt": "a short aggressive wolf snarl ending in a snapping bite"},
+    {"id": "animal.hive_crawler.hurt", "seconds": 0.6, "prompt": "a sharp chittering insect shriek with wet clicking"}
+  ]
+}

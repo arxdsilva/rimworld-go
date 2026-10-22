@@ -5,7 +5,10 @@
 // Per vertex: color is the colour scale (premultiplied), custom.x sky
 // exposure (1 open sky, 0 roofed), custom.y lamp light 0..1, custom.z the
 // x offset in pixels from the sprite to its normal map in the same image
-// (0: no normal map, lit flat). The uniforms are the frame's light, the
+// (0: no normal map, lit flat), custom.w a blood stain on a creature
+// figure (SIM-020; 0 on everything else): w = 32*ichor + 2*wetStep +
+// coverage, coverage in [0,1), wetStep 0..15 (fresh, wet sheen), ichor 0
+// or 1. ART-013 BR fills in the stain. The uniforms are the frame's light, the
 // same for every draw, and only imageSrc0UnsafeAt is used (no source
 // region uniforms), so Ebiten batches draws across sprites.
 package main

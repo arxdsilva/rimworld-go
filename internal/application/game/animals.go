@@ -411,6 +411,7 @@ func (g *Game) moveAnimal(id entity.EntityID, m motionRec, now uint64) {
 // there if it is a trap victim.
 func (g *Game) stepAnimal(id entity.EntityID, a *animal.State, m *motionRec, from, to Position, now uint64) {
 	g.positions.Set(id, to)
+	g.stainStep(id, from) // stains.go: a bleeding animal drips
 	m.stepped(now, g.weatherSlow(to.X, to.Y, a.StepCost(isDiagonal(from, to))))
 	g.motion.Set(id, *m)
 	g.animals.Set(id, *a)
@@ -439,6 +440,7 @@ func (g *Game) killAnimal(id, by entity.EntityID) {
 		g.logEvent(by, logEntry{Kind: logKilled, Other: id, Name: animalLabel(a)})
 	}
 	g.removeAnimal(id)
+	g.stainAnimalDeath(a.Species, pos) // stains.go
 	g.dropCorpse(a.Species, pos.X, pos.Y)
 	if animal.DefOf(a.Species).Explosive {
 		g.burst(a.Species, pos)

@@ -445,6 +445,30 @@ bodies become `item/bones_00..01`. Graves (`furniture/grave_dug_*`,
 `grave_filled_*`, `headstone_00..03`) and the funeral pyre
 (`furniture/pyre`, `pyre_burning`) belong to the furniture family.
 
+### 16.2 Blood and stains (normative, SIM-020 / ART-013)
+
+- **Sim state** (deterministic, saved): each tile holds a stain with an amount from 0 to 1000 and the tick of its last fresh blood.
+  - **Hit:** `120 + 60·damage` on the target's tile, plus 40% of that on the tile beyond it, away from the attacker, for hits of 6 damage or more.
+  - **Death:** a pool of 700.
+  - **Bleeding:** creatures drip 80 on every 3rd tile they walk. Downed, untended colonists pool by 60 an hour, up to 600.
+  - Hive insects leave **ichor**.
+- **Fading and washing:**
+  - A full stain fades linearly to nothing in **7 in-game days**.
+  - Outdoors, it washes off in **2 h of full rain** or **3 h of snow**, proportionally slower in lighter weather.
+  - Under roofs it only fades.
+  - At most 2000 stains; the faintest go first.
+- **Drawing:**
+  - Procedural splat, pool and drip textures, chosen by amount (under 0.2 drips, under 0.6 splats, otherwise pools).
+  - Rotated and offset by a hash of the tile.
+  - **Alpha = amount**, so fading is smooth.
+  - Colour dries over a day: blood #7a1414 to #4a1d1a, ichor #a8a030 to #5c5a1c.
+  - Drawn lit, after the ground cover and floors and before shadows.
+- **On creatures:**
+  - Blood blotches spread with lost health (`lit.kage` Custom3 coverage). For colonists it's stronger while a wound is open, and it clears as they heal.
+  - A fresh hit adds a wet sheen for 2 s.
+  - It covers bodies and clothes, not hair or held items.
+- **Sprays** scale with damage (`4 + damage/2` particles), with a few droplets flicking back toward the attacker.
+
 ## 17. UI Art
 
 Use an original high-information-density interface: neutral/dark

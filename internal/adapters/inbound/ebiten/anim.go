@@ -434,6 +434,7 @@ const (
 	partSpark   // pickaxe on rock, blade on blade
 	partCasing  // a spent rifle case, ejected sideways
 	partSawdust // saw and hammer work on wood
+	partIchor   // hive insects' yellow-green ichor (SIM-020)
 )
 
 type particle struct {
@@ -464,6 +465,7 @@ var partColors = map[partKind][]color.RGBA{
 	partSpark:   {{255, 236, 160, 255}, {255, 200, 90, 255}},
 	partCasing:  {{214, 170, 70, 255}, {186, 140, 52, 255}},
 	partSawdust: {{222, 196, 150, 255}, {200, 172, 126, 255}},
+	partIchor:   {{176, 168, 52, 255}, {140, 136, 40, 255}},
 }
 
 // burst spawns n particles of a kind at (x, y), deterministic in seed.

@@ -166,6 +166,13 @@ type Renderer struct {
 	cast *shadowCast
 	// bursts remembers which explosive deaths already burst (animal_burst.go).
 	bursts burstTracker
+	// voice is the animals' sound memory (animal_sounds.go); soundHas
+	// reports a sound id exists (the App wires Sound.Has; nil: all do).
+	voice    animalVoice
+	soundHas func(id string) bool
+	// figureBlood, while non-zero, is the blood stain drawLit puts on the
+	// figure layer being drawn (lit.kage Custom3, blood_draw.go).
+	figureBlood float32
 	// roofOverlay is the Roof overlay toggle (R); roofOverlayForced holds
 	// it on while a roof tool is selected (roof_draw.go).
 	roofOverlay, roofOverlayForced bool
@@ -250,6 +257,7 @@ func (r *Renderer) advance() {
 	r.animate(w, r.game.Snapshot(), n > 0)
 	r.stepEnvironment(w, r.game.Snapshot())
 	r.emitWorldBursts(w) // animal_burst.go: explosive animal deaths
+	r.listenAnimals(w)   // animal_sounds.go: calls, flee cries, deaths
 	r.watchThreats(w)
 	r.heard = w
 	if n > 0 {

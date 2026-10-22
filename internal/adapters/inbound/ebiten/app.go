@@ -614,6 +614,7 @@ func (a *App) startSession(sim Simulation) {
 	a.closeFloat()
 	a.inspectTab = "character"
 	a.renderer = New(sim)
+	a.renderer.soundHas = a.cfg.Sound.Has // animal voices fall back by what exists
 	a.renderer.pack = a.pack
 	a.renderer.art = a.art
 	a.syncRenderer()

@@ -312,6 +312,8 @@ type WorldView struct {
 	// grass data); GrassCut are grass tiles marked for cutting (grass.go).
 	Grass    []uint8
 	GrassCut [][2]int
+	// Stains are blood and ichor on the ground (SIM-020), sorted y then x.
+	Stains []StainView
 }
 
 // Game holds all authoritative simulation state.
@@ -406,7 +408,9 @@ type Game struct {
 	roofCollapses []roofCollapse
 	// grass is the ground cover layer (grass.go, UI-011).
 	grass grassState
-	roofx roofIndex // roof.go: derived plan index and roofed counts
+	// stains are blood and ichor on the ground (stains.go, SIM-020).
+	stains stainState
+	roofx  roofIndex // roof.go: derived plan index and roofed counts
 	// residual: air temperature of cells of a freshly breached room.
 	residual    map[int]temperature.Temp
 	researchCur research.Project
@@ -832,6 +836,7 @@ func (g *Game) World() WorldView {
 	g.fillRoofView(&w)     // roof.go
 	g.fillWildlifeView(&w) // wildlife.go
 	g.fillGrassView(&w)    // grass.go
+	g.fillStainView(&w)    // stains.go
 	now := uint64(g.clock.Now())
 	w.Hour = float64(now%clock.TicksPerDay) / clock.TicksPerHour
 	w.DayOfYear = int(now/clock.TicksPerDay) % clock.DaysPerYear

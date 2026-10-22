@@ -179,6 +179,7 @@ func (g *Game) strike(attacker, target entity.EntityID, wk weapon.Kind) {
 	g.logStrike(attacker, target, wk, hit, tr.Damage)
 	if hit {
 		g.lastHit[target] = hitRec{Tick: tr.Tick, FromX: ap.X, FromY: ap.Y, Damage: d.Damage}
+		g.stainHit(target, ap, tp, d.Damage) // stains.go: before hurt, while the target exists
 		g.hurt(target, d.Damage, attacker)
 	}
 }
@@ -219,6 +220,7 @@ func (g *Game) hurt(target entity.EntityID, dmg int, by entity.EntityID) {
 }
 
 func (g *Game) die(id entity.EntityID, cause health.Cause) {
+	g.stainDeath(id) // stains.go
 	g.interrupt(id, job.Cancelled)
 	g.releaseBed(id)
 	delete(g.draft, id)

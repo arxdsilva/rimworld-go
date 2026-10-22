@@ -211,6 +211,7 @@ func (g *Game) phaseNeeds() {
 		}
 		g.heal(id, &v, now)
 		if v.Status == health.Downed {
+			g.stainDowned(id, now) // stains.go: an untended body pools
 			n, _ := g.need.Get(id)
 			if n.Starving() && v.Cause != health.CauseNoFood {
 				v.Cause = health.CauseNoFood
@@ -1271,6 +1272,7 @@ func (g *Game) movePawn(id entity.EntityID, m motionRec, now uint64) bool {
 // stepPawn moves a pawn (and what it carries) from -> to at tick now.
 func (g *Game) stepPawn(id entity.EntityID, m *motionRec, carry entity.EntityID, from, to Position, now uint64) {
 	g.positions.Set(id, to)
+	g.stainStep(id, from) // stains.go: a bleeding pawn drips
 	m.stepped(now, g.weatherSlow(to.X, to.Y, pawnStepCost(from, to)))
 	g.motion.Set(id, *m)
 	if carry != 0 {

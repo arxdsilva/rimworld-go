@@ -85,3 +85,22 @@ None. Sound reads presentation state only and uses its own RNG.
 
 - No pitch or filter control in Ebitengine. Variety comes from 3 pre-made variants, and the indoor effect is volume only.
 - OGG voices are not panned (music and beds are not positional).
+
+## Addendum: animal voices (SND-003 contract)
+- **Ids:** `animal.<roster key>.<event>`, with events `call`, `attack`, `hurt` and `die`; plus `animal.burst`.
+- **Fallback chain:**
+  1. `animal.<key>.<event>`
+  2. `animal.<group>.<event>`, where the group is one of `small_mammal`, `large_mammal`, `canid`, `felid`, `bovid`, `bird_small`, `bird_large`, `reptile`, `insect` (`voiceGroup` in `animal_sounds.go`)
+  3. `animal.generic.<event>`
+
+  The chain is resolved with `Sound.Has` (`Renderer.soundHas`).
+- **Triggers** (presentation, `animal_sounds.go`):
+  - **Calls** while wandering come from per-animal timers: 25–70 s, scaled by game speed, none while paused, on screen only. They're capped at 2 calls a second and 3 species per 10 s.
+  - A **cry** sounds once per flee.
+  - **Attack** and **hurt** come from combat traces, with `sfx.melee_hit` kept under them at 0.6.
+  - **Die** plays when an animal leaves the world and a corpse of its species is on its tile.
+  - **Burst** plays from `WorldView.Bursts`.
+- **Files:**
+  - ElevenLabs takes become `generated/audio/sfx/animals/<key>_<event>[_b].ogg`, made by `cmd/sfxgen` and `make animal-audio` (ffmpeg plus oggenc).
+  - Procedural group placeholders come from `cmd/audiogen`.
+- **Engine:** OGG one-shots are decoded once, cached (LRU, 24 MiB of PCM) and panned like WAV.

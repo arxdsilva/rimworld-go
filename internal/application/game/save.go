@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"rimworld-go/internal/domain/research"
+	"rimworld-go/internal/domain/world/stain"
 
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/reservation"
@@ -180,6 +181,9 @@ type saveState struct {
 	ZoneMap zoneSave
 	// Logs (LOG-001): per-creature event logs; absent in older saves.
 	Logs map[entity.EntityID][]logEntry
+	// Stains (SIM-020): blood and ichor on the ground; absent in older
+	// saves (none).
+	Stains []stain.Stain
 	// Incoming (HAUL-001): material on its way to each frame or fuel user.
 	Incoming map[entity.EntityID]int
 	// Deliveries (HAUL-001): each hauler's shares of Incoming, route order.
@@ -228,6 +232,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 		Weather: g.weather, Graves: g.graves, Roofs: g.exportRoofs(),
 	}
 	s.Grass, s.GrassCut = g.exportGrass()
+	s.Stains = g.exportStains()
 	for id, e := range g.exposure {
 		s.Exposure[id] = [2]int{e.hypo, e.heat}
 	}
@@ -344,6 +349,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.afterLoadBurial()
 	g.importRoofs(s.Roofs)
 	g.importGrass(s.Grass, s.GrassCut)
+	g.importStains(s.Stains)
 	g.seedGrass() // an older save: grass from terrain, bare under buildings
 	for id, e := range s.Exposure {
 		g.exposure[id] = exposureState{e[0], e[1]}

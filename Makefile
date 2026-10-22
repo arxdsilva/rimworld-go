@@ -66,6 +66,10 @@ music:  ## compose the music (cmd/audiogen/music.go) to Ogg Vorbis; needs ffmpeg
 audio-check:  ## validate the sound list against the files and the size budget
 	go run ./cmd/audiogen -check
 
+.PHONY: animal-audio
+animal-audio:  ## process approved ElevenLabs animal takes to OGG (cmd/sfxgen; needs ffmpeg and oggenc)
+	go run ./cmd/sfxgen -process
+
 .PHONY: normals
 normals:  ## write <sprite>_n.png normal maps (pkg/spritenormals, a port of spritefusion-sprite-normals)
 	go run ./cmd/normalgen -dirs assets/generated/world $(NORMALS_ARGS)

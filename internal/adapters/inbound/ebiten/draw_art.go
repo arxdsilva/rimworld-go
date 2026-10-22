@@ -165,6 +165,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 
 	r.drawTerrainArt(screen, w, sw, sh, tile)
 	r.drawGroundCover(screen, w, sw, sh, tile)
+	r.drawStains(screen, w, sw, sh, tile) // blood_draw.go: blood and ichor on the ground
 	// built floors sit under zones, which sit under everything else
 	r.layer("floors")
 	for _, b := range w.Buildings {

@@ -51,6 +51,7 @@ func (g *Game) phaseWeather() {
 	tempC := float64(temperature.Outdoor(now)) / 10
 	g.weather = g.weather.Step(climateInterval, tempC, temperature.Season(now))
 	g.weatherThoughts()
+	g.stainDecay() // stains.go: fade, and wash under rain or snow
 }
 
 // soaking reports weather that wets whoever is out in it.
