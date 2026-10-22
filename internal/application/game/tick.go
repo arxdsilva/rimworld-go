@@ -1,6 +1,8 @@
 package game
 
 import (
+	"slices"
+
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/ai/work"
@@ -43,7 +45,8 @@ func (g *Game) applyOne(c command.Command) {
 			g.queueOrder(id, c)
 			return
 		}
-		delete(g.orderQueue, id) // a plain order replaces the queue
+		delete(g.orderQueue, id)        // a plain order replaces the queue
+		defer g.followPlainOrder(id, c) // order_queue.go: kept to retry if blocked
 	}
 	switch c.Kind {
 	case command.ClearOrders:
@@ -187,18 +190,24 @@ func (g *Game) unmarkHarvest(minX, minY, maxX, maxY int) {
 func (g *Game) cancelRect(x1, y1, x2, y2 int) {
 	minX, minY, maxX, maxY := zone.Normalize(x1, y1, x2, y2)
 	keptFrames := g.frameIDs[:0]
+	var refund []entity.EntityID
 	for _, id := range g.frameIDs {
 		fr, ok := g.frames.Get(id)
 		if !ok {
 			continue
 		}
 		if fr.X >= minX && fr.X <= maxX && fr.Y >= minY && fr.Y <= maxY {
-			g.frames.Delete(id)
+			refund = append(refund, id)
 			continue
 		}
 		keptFrames = append(keptFrames, id)
 	}
 	g.frameIDs = keptFrames
+	for _, id := range refund {
+		fr, _ := g.frames.Get(id)
+		g.frames.Delete(id)
+		g.refundFrame(id, fr) // frame_view.go: delivered materials back
+	}
 	g.markDeconstruct(x1, y1, x2, y2, false)
 	g.markCut(x1, y1, x2, y2, false)
 	g.markMine(x1, y1, x2, y2, false)
@@ -331,6 +340,7 @@ func (g *Game) dropCarry(id entity.EntityID) {
 }
 
 func (g *Game) phaseAI() {
+	g.postSweep() // postpone.go: hourly
 	for _, id := range g.pawnIDs {
 		act := g.activityOf(id)
 		if act != schedule.Sleep {
@@ -353,6 +363,10 @@ func (g *Game) phaseAI() {
 		}
 		j, _ := g.jobs.Get(id)
 		if j.State == job.Complete || j.State == job.Fail {
+			g.postponeJob(id, j) // postpone.go: blocked or out of reach
+			if j.Forced {
+				g.forcedJobEnded(id, j) // a blocked order goes back on the queue
+			}
 			g.dropCarry(id)
 			g.dropPatient(id)
 			g.reserve.ReleaseOwner(id)
@@ -364,7 +378,7 @@ func (g *Game) phaseAI() {
 		if g.mentalBreakTick(id, j) {
 			continue // acting out: no orders, no work
 		}
-		if len(g.orderQueue[id]) > 0 && !g.followingOrder(id) && (g.drafted(id) || !needs.SleepScheduled(act)) {
+		if g.orderDue(id) && !g.followingOrder(id) && (g.drafted(id) || !needs.SleepScheduled(act)) {
 			g.nextOrder(id)
 			continue
 		}
@@ -529,6 +543,7 @@ func (g *Game) startJob(id entity.EntityID, rec job.Record) bool {
 		rec.State = job.Fail
 		rec.Fail = job.Unreachable
 		g.jobs.Set(id, rec)
+		g.postponeJob(id, rec) // postpone.go: givers move on to the next target
 		return false
 	}
 	rec.Path = path
@@ -592,7 +607,7 @@ func (g *Game) pathTo(id entity.EntityID, tx, ty int) ([]pathing.Point, bool) {
 func (g *Game) hasEdible() bool {
 	for _, id := range g.itemIDs {
 		st, ok := g.stacks.Get(id)
-		if !ok || !st.Kind.IsFood() || st.Qty <= 0 || st.Carrier != 0 {
+		if !ok || !st.Kind.IsFood() || st.Qty <= 0 || st.Carrier != 0 || st.Forbidden {
 			continue
 		}
 		if _, taken := g.reserve.EntityOwner(id); taken {
@@ -673,49 +688,91 @@ func (g *Game) assignSleep(id entity.EntityID) {
 
 func (g *Game) assignHaul(id entity.EntityID) bool {
 	pos, _ := g.positions.Get(id)
-	if rec, shares, ok := g.planDelivery(id, pos); ok && g.startDelivery(id, rec, shares) {
-		return true
+	for range workTries {
+		rec, shares, ok := g.planDelivery(id, pos)
+		if !ok {
+			break
+		}
+		if g.startDelivery(id, rec, shares) {
+			return true
+		}
+		if !g.postponedFor(id, job.Haul, rec.Target, 0, 0) {
+			break // not out of reach: planning again picks the same load
+		}
 	}
 	return g.haulToStockpile(id, pos) // nothing to supply (or it fell through)
 }
 
+// haulToStockpile carries the nearest loose stack to a stockpile, trying
+// the next nearest when one can't be started (postponed or out of reach:
+// SIM-027), at most workTries stacks; kinds with no stockpile room are
+// skipped once found full.
 func (g *Game) haulToStockpile(id entity.EntityID, pos Position) bool {
-	var best item.Stack
-	var bestID entity.EntityID
-	bestD := 1 << 30
-	found := false
-	for _, iid := range g.itemIDs {
-		st, ok := g.stacks.Get(iid)
-		if !ok || st.Qty <= 0 || st.Carrier != 0 {
+	var tried []entity.EntityID
+	var full []item.Kind
+	for range workTries {
+		var best item.Stack
+		var bestID entity.EntityID
+		bestD := 1 << 30
+		found := false
+		for _, iid := range g.itemIDs {
+			st, ok := g.stacks.Get(iid)
+			if !ok || st.Qty <= 0 || st.Carrier != 0 || st.Forbidden {
+				continue
+			}
+			if _, taken := g.reserve.EntityOwner(iid); taken {
+				continue
+			}
+			if slices.Contains(tried, iid) || slices.Contains(full, st.Kind) || g.postponedFor(id, job.Haul, iid, 0, 0) {
+				continue
+			}
+			if g.inMatchingStockpile(st) {
+				continue
+			}
+			if !g.filterMatches(st.Kind) {
+				continue
+			}
+			d := pathing.Dist(pos.X, pos.Y, st.X, st.Y)
+			if !found || d < bestD || (d == bestD && iid < bestID) {
+				found, bestD, bestID, best = true, d, iid, st
+			}
+		}
+		if !found {
+			return false
+		}
+		dx, dy, ok := g.stockpileCell(best.Kind, best.X, best.Y)
+		if !ok {
+			full = append(full, best.Kind)
 			continue
 		}
-		if _, taken := g.reserve.EntityOwner(iid); taken {
-			continue
+		if g.startJob(id, job.Record{
+			Kind: job.Haul, Target: bestID, TX: best.X, TY: best.Y, DestX: dx, DestY: dy,
+		}) {
+			return true
 		}
-		if g.inMatchingStockpile(st) {
-			continue
-		}
-		if !g.filterMatches(st.Kind) {
-			continue
-		}
-		d := pathing.Dist(pos.X, pos.Y, st.X, st.Y)
-		if !found || d < bestD || (d == bestD && iid < bestID) {
-			found, bestD, bestID, best = true, d, iid, st
-		}
+		tried = append(tried, bestID)
 	}
-	if !found {
-		return false
-	}
-	dx, dy, ok := g.stockpileCell(best.Kind, best.X, best.Y)
-	if !ok {
-		return false
-	}
-	return g.startJob(id, job.Record{
-		Kind: job.Haul, Target: bestID, TX: best.X, TY: best.Y, DestX: dx, DestY: dy,
-	})
+	return false
 }
 
+// assignConstruct builds the nearest ready frame or takes down the nearest
+// marked building, trying the next nearest when one can't be started
+// (postponed or out of reach: SIM-027), at most workTries.
 func (g *Game) assignConstruct(id entity.EntityID) bool {
+	var tried []entity.EntityID
+	for range workTries {
+		t, ok := g.constructTry(id, tried)
+		if ok || t == 0 {
+			return ok
+		}
+		tried = append(tried, t)
+	}
+	return false
+}
+
+// constructTry starts the nearest construct or deconstruct job whose
+// target is not in tried; it returns the target tried (0: none left).
+func (g *Game) constructTry(id entity.EntityID, tried []entity.EntityID) (entity.EntityID, bool) {
 	pos, _ := g.positions.Get(id)
 	var best entity.EntityID
 	bestD := 1 << 30
@@ -726,6 +783,9 @@ func (g *Game) assignConstruct(id entity.EntityID) bool {
 			continue
 		}
 		if _, taken := g.reserve.EntityOwner(fid); taken {
+			continue
+		}
+		if slices.Contains(tried, fid) || g.postponedFor(id, job.Construct, fid, 0, 0) {
 			continue
 		}
 		d := pathing.Dist(pos.X, pos.Y, fr.X, fr.Y)
@@ -744,28 +804,31 @@ func (g *Game) assignConstruct(id entity.EntityID) bool {
 		if _, taken := g.reserve.EntityOwner(bid); taken {
 			continue
 		}
+		if slices.Contains(tried, bid) || g.postponedFor(id, job.Deconstruct, bid, 0, 0) {
+			continue
+		}
 		d := pathing.Dist(pos.X, pos.Y, b.X, b.Y)
 		if d < bestD || (d == bestD && bid < best) {
 			best, bestD, bx, by = bid, d, b.X, b.Y
 		}
 	}
 	if best == 0 {
-		return false
+		return 0, false
 	}
 	if b, ok := g.bldgs.Get(best); ok {
 		tx, ty := g.workSpot(id, bx, by)
-		return g.startJob(id, job.Record{
+		return best, g.startJob(id, job.Record{
 			Kind: job.Deconstruct, Target: best, TX: tx, TY: ty, WorkLeft: b.WorkLeft,
 		})
 	}
 	fr, _ := g.frames.Get(best)
-	return g.startJob(id, job.Record{
+	return best, g.startJob(id, job.Record{
 		Kind: job.Construct, Target: best, TX: bx, TY: by, WorkLeft: fr.WorkLeft,
 	})
 }
 
 func (g *Game) assignHarvest(id entity.EntityID) bool {
-	best := g.nearestPlant(id, wantsHarvest)
+	best := g.nearestPlant(id, job.Harvest, wantsHarvest)
 	if best == 0 {
 		return false
 	}
@@ -1277,7 +1340,7 @@ func (g *Game) movePawn(id entity.EntityID, m motionRec, now uint64) bool {
 			}
 		}
 	}
-	if m.BlockedTicks > blockedFailTicks {
+	if m.BlockedTicks > g.blockedLimit(id, m.BlockedBy, v) {
 		if j, _ := g.jobs.Get(id); j.State == job.Goto {
 			j.State, j.Fail = job.Fail, job.Blocked
 			g.jobs.Set(id, j)

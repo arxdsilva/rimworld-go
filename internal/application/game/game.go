@@ -406,7 +406,7 @@ type Game struct {
 	incidents  incident.State             // the storyteller's nature events (SIM-025)
 	troughs    map[entity.EntityID]troughState
 	noFood     map[entity.EntityID]uint64 // food out of reach: no eating attempt until this tick
-	postponed  map[postKey]uint64         // work put off until this tick (postpone.go, SIM-027)
+	postponed  postState                  // work put off, orders followed (postpone.go, SIM-027)
 	restedFree map[entity.EntityID]bool   // woke fully rested in the current Sleep block: free time
 	calm       map[entity.EntityID]uint64 // fled a threat: holding back from work until this tick
 	banked     map[entity.EntityID]bool   // campfires banked by their room thermostat (heat.go)
@@ -426,6 +426,7 @@ type Game struct {
 	roomGrid   []int
 	rooms      []roomStats
 	roomDirty  bool
+	fence      fenceIndex // fence and gate cells, derived (fences.go, SIM-028)
 	reserve    *reservation.Table
 	pending    []command.Command
 
@@ -510,7 +511,7 @@ func New(cfg Config) *Game {
 		climate:     biome.DefOf(cfg.Biome).Climate,
 		troughs:     make(map[entity.EntityID]troughState),
 		noFood:      make(map[entity.EntityID]uint64),
-		postponed:   make(map[postKey]uint64),
+		postponed:   newPostState(),
 		restedFree:  make(map[entity.EntityID]bool),
 		calm:        make(map[entity.EntityID]uint64),
 		banked:      make(map[entity.EntityID]bool),
@@ -770,6 +771,7 @@ func (g *Game) Snapshot() []PawnView {
 		for _, q := range g.orderQueue[id] {
 			pv.QueuedOrders = append(pv.QueuedOrders, QueuedOrderView{Label: q.label, X: q.cmd.X, Y: q.cmd.Y})
 		}
+		pv.Postponed = g.postponedLines(id) // postpone.go (SIM-027)
 		if pos, ok := g.positions.Get(id); ok {
 			pv.Temp = int(g.temperatureAt(pos.X, pos.Y))
 		}
@@ -851,6 +853,7 @@ func (g *Game) World() WorldView {
 			fv.Moving, fv.MovingFrom = true, entity.EntityID(fr.Reinstall)
 		}
 	}
+	g.fillFrameViews(w.Frames) // frame_view.go: inspector fields
 	for _, id := range g.bldgIDs {
 		b, ok := g.bldgs.Get(id)
 		if !ok {

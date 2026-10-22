@@ -62,8 +62,22 @@ func (a *App) selectedCrop() game.CropView {
 	return crops[0]
 }
 
+// archStuffPerRow is how many material buttons fit one row; carpets
+// (five materials with counts) wrap to a second row.
+const archStuffPerRow = 3
+
+// archStuffExtra is the extra panel height the material rows need.
+func (a *App) archStuffExtra() int {
+	if t, ok := toolByID(a.archTool); ok {
+		if bv, ok := buildable(t.build); ok && len(bv.Stuffs) > 4 {
+			return 26
+		}
+	}
+	return 0
+}
+
 func (a *App) architectRect() button {
-	h := archTop + a.archCardRows()*(archCardH+archCardGap) + archInfoH
+	h := archTop + a.archCardRows()*(archCardH+archCardGap) + archInfoH + a.archStuffExtra()
 	if a.archCropOpen() {
 		h += archCropH
 	}
@@ -126,12 +140,22 @@ func (a *App) architectButtons() []button {
 		if bv, ok := buildable(t.build); ok && len(bv.Stuffs) > 1 {
 			// One button per material, default first, shrunk to fit the
 			// panel (a carpet shows one per carpet material).
-			y := r.y + r.h - 28
-			n := float32(len(bv.Stuffs))
-			bw := min(float32(64), (r.w-20-6*(n-1))/n)
+			perRow := len(bv.Stuffs)
+			if a.archStuffExtra() > 0 {
+				perRow = archStuffPerRow
+			}
+			n := float32(perRow)
+			bw := min(float32(84), (r.w-20-6*(n-1))/n)
+			rows := (len(bv.Stuffs) + perRow - 1) / perRow
 			for i, s := range bv.Stuffs {
+				row, col := i/perRow, i%perRow
+				label := stuffLabel(s)
+				if bv.Carpet && a.renderer != nil {
+					label = fmt.Sprintf("%s (%d)", label, stockOf(a.renderer.world(), s))
+				}
 				out = append(out, button{
-					id: "arch.stuff." + s, label: stuffLabel(s), x: r.x + 10 + float32(i)*(bw+6), y: y, w: bw, h: 22,
+					id: "arch.stuff." + s, label: label, x: r.x + 10 + float32(col)*(bw+6),
+					y: r.y + r.h - 28 - float32(rows-1-row)*26, w: bw, h: 22,
 					selected: a.toolStuff(t) == s,
 				})
 			}
@@ -176,7 +200,7 @@ func stuffCatch(bv game.BuildableView, stuff string) int {
 // archTooltipLines is the hover card for tool t with material stuff:
 // name, description, cost and work, a stock warning, and for carpets the
 // dirt it catches plus where to lay it. wood is the colony's wood.
-func archTooltipLines(t archTool, stuff string, wood int) []string {
+func archTooltipLines(t archTool, stuff string, wood, stock int) []string {
 	lines := []string{t.label, t.desc}
 	bv, ok := buildable(t.build)
 	if !ok {
@@ -184,6 +208,7 @@ func archTooltipLines(t archTool, stuff string, wood int) []string {
 	}
 	if bv.Carpet {
 		lines = append(lines, fmt.Sprintf("Cost: 1 %s · Work %d · catches %d%% of tracked dirt", stuff, bv.Work, stuffCatch(bv, stuff)))
+		lines = append(lines, carpetStockLine(stuff, stock))
 		return append(lines, "Tip: lay it on the tile just inside a door")
 	}
 	lines = append(lines, fmt.Sprintf("Cost: %d %s   Work: %d", bv.Wood, stuff, bv.Work))
@@ -191,6 +216,38 @@ func archTooltipLines(t archTool, stuff string, wood int) []string {
 		lines = append(lines, fmt.Sprintf("Only %d wood in the colony", wood))
 	}
 	return lines
+}
+
+// stockOf counts the free (on the ground, not carried, not forbidden)
+// items of kind on the map.
+func stockOf(w game.WorldView, kind string) int {
+	n := 0
+	for _, it := range w.Items {
+		if it.Kind == kind && !it.Carried && !it.Forbidden {
+			n += it.Qty
+		}
+	}
+	return n
+}
+
+// carpetStockLine is the Architect card's stock line for a carpet: the
+// count, and when none is on hand where to sew one.
+func carpetStockLine(carpet string, stock int) string {
+	if stock > 0 {
+		return fmt.Sprintf("In stock: %d %s", stock, carpet)
+	}
+	return fmt.Sprintf("In stock: 0 %s%s", carpet, sewHint(carpet))
+}
+
+// sewHint is ": sew one at a tailoring bench (8 straw)" from the recipe
+// that makes item, or "" when no recipe does.
+func sewHint(item string) string {
+	for _, r := range game.Recipes() {
+		if r.Output == item {
+			return fmt.Sprintf(": sew one at a %s (%s)", r.Bench, r.Input)
+		}
+	}
+	return ""
 }
 
 // cropLines is the crop picker's stat lines for c (crops and the tree).
@@ -296,7 +353,11 @@ func (a *App) drawArchitect(screen *ebiten.Image) {
 		}
 		t, _ := toolByID(strings.TrimPrefix(b.id, "arch.tool."))
 		drawButton(screen, b, b.contains(mx, my))
-		drawIcon(screen, a.icon(t.icon), float64(b.x)+6, float64(b.y)+8, 40)
+		if img := a.icon(t.icon); img != nil {
+			drawIcon(screen, img, float64(b.x)+6, float64(b.y)+8, 40)
+		} else {
+			drawIconFallback(screen, t, b.x+6, b.y+8)
+		}
 		drawLabel(screen, int(b.x)+50, int(b.y)+10, t.label)
 		if b.disabled {
 			drawLabel(screen, int(b.x)+50, int(b.y)+30, "needs research")
@@ -318,7 +379,7 @@ func (a *App) drawArchitect(screen *ebiten.Image) {
 			drawLabel(screen, int(r.x)+12, y+i*16, ln)
 		}
 	}
-	iy := int(r.y+r.h) - archInfoH + 6
+	iy := int(r.y+r.h) - archInfoH - a.archStuffExtra() + 6
 	stone := 0
 	if a.renderer != nil {
 		stone = a.renderer.world().Stone
@@ -347,7 +408,11 @@ func (a *App) drawArchitect(screen *ebiten.Image) {
 }
 
 func (a *App) drawArchTooltip(screen *ebiten.Image, t archTool, wood, x, y int) {
-	lines := archTooltipLines(t, a.toolStuff(t), wood)
+	stock := 0
+	if a.renderer != nil {
+		stock = stockOf(a.renderer.world(), a.toolStuff(t))
+	}
+	lines := archTooltipLines(t, a.toolStuff(t), wood, stock)
 	w := 0
 	for _, l := range lines {
 		if len(l) > w {
@@ -605,5 +670,15 @@ func (a *App) drawZoneGhost(screen *ebiten.Image, kind string, x0, y0, x1, y1 in
 			clr = color.NRGBA{R: 220, G: 70, B: 60, A: 64}
 		}
 		vector.FillRect(screen, sx, sy, float32(tile), float32(tile), clr, false)
+	}
+}
+
+// drawIconFallback is a plain tile with the tool's initial, for a card
+// whose icon is missing from the art catalog.
+func drawIconFallback(screen *ebiten.Image, t archTool, x, y float32) {
+	vector.FillRect(screen, x, y, 40, 40, uiBtnDisabled, false)
+	vector.StrokeRect(screen, x, y, 40, 40, 1, uiBtnBorder, false)
+	if t.label != "" {
+		drawLabel(screen, int(x)+16, int(y)+13, t.label[:1])
 	}
 }

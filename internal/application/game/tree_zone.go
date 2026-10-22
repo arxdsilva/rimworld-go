@@ -16,7 +16,7 @@ func wantsZoneChop(p plant.Plant) bool {
 // the ordinary cut job (wood drops as for a wild tree); the emptied cell is
 // then resown by assignSow.
 func (g *Game) assignZoneChop(id entity.EntityID) bool {
-	best := g.nearestPlant(id, wantsZoneChop)
+	best := g.nearestPlant(id, job.Cut, wantsZoneChop)
 	if best == 0 {
 		return false
 	}

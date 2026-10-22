@@ -137,6 +137,8 @@ type App struct {
 	hasAnimal                      bool
 	selPlant, selItem              entity.EntityID // plant and item panels (selection.go)
 	hasPlant, hasItem              bool
+	selFrame                       entity.EntityID // blueprint/frame panel (frame_inspector.go)
+	hasFrame                       bool
 	selCycle                       selCycle        // last map click, for cycling a tile's stack
 	bldgMove                       bldgMoveState   // the building panel's Move mode (move_mode.go)
 	equipCache                     equipCacheState // the pawn Gear tab's nearby weapons (inspector.go)
@@ -337,6 +339,10 @@ func (a *App) handleColonyEscape() bool {
 		a.clearBuilding()
 		return true
 	}
+	if a.hasFrame {
+		a.clearFrame()
+		return true
+	}
 	if a.renderer != nil && a.renderer.HasSelect() {
 		a.renderer.ClearSelect()
 		return true
@@ -495,6 +501,8 @@ func (a *App) applyClick(id string) {
 		a.applyPlantClick(id) // plant_inspector.go
 	case strings.HasPrefix(id, "item."):
 		a.applyItemClick(id) // item_inspector.go
+	case strings.HasPrefix(id, "frame."):
+		a.applyFrameClick(id) // frame_inspector.go
 	case strings.HasPrefix(id, "msg."):
 		a.focusMessage(id)
 	case strings.HasPrefix(id, "alert."):

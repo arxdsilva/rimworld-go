@@ -257,6 +257,9 @@ func (g *Game) assignRoof(id entity.EntityID) bool {
 		if _, taken := g.reserve.TileOwner(x, y); taken {
 			continue
 		}
+		if kind, _ := roofWork(g.roofs[i]); g.postponedFor(id, kind, 0, x, y) {
+			continue // SIM-027: out of reach lately
+		}
 		c := cand{i, pathing.Dist(pos.X, pos.Y, x, y)}
 		// keep the roofTries nearest, in (distance, index) order; plans
 		// ascend by index, so a strict compare keeps the earlier tile
@@ -278,6 +281,7 @@ func (g *Game) assignRoof(id entity.EntityID) bool {
 		kind, _ := roofWork(g.roofs[c.i])
 		tx, ty, ok := g.roofSpot(id, pos, x, y)
 		if !ok {
+			g.postponeTile(id, kind, x, y)
 			continue
 		}
 		work := roof.BuildWork

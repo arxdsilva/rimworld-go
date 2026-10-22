@@ -6,6 +6,7 @@ import "sort"
 type Grid struct {
 	width, height int
 	blocked       map[int]bool // index -> not walkable
+	rev           uint64       // bumped on every walkability change
 }
 
 // New returns a Grid of the given size. Width and height must be positive.
@@ -42,12 +43,21 @@ func (g *Grid) SetWalkable(x, y int, walkable bool) {
 	if !g.InBounds(x, y) {
 		return
 	}
+	i := g.index(x, y)
+	if g.blocked[i] != walkable {
+		return // unchanged
+	}
+	g.rev++
 	if walkable {
-		delete(g.blocked, g.index(x, y))
+		delete(g.blocked, i)
 	} else {
-		g.blocked[g.index(x, y)] = true
+		g.blocked[i] = true
 	}
 }
+
+// Version is a counter that changes whenever any tile's walkability does, so
+// callers can drop reachability they cached cheaply.
+func (g *Grid) Version() uint64 { return g.rev }
 
 func (g *Grid) index(x, y int) int {
 	return y*g.width + x

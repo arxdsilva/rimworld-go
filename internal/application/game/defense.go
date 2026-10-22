@@ -1,6 +1,8 @@
 package game
 
 import (
+	"slices"
+
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
@@ -385,26 +387,36 @@ func (g *Game) assignRepair(id entity.EntityID) bool {
 		return false
 	}
 	pos, _ := g.positions.Get(id)
-	var best entity.EntityID
-	bestD := 1 << 30
-	for _, bid := range g.bldgIDs {
-		b, ok := g.bldgs.Get(bid)
-		if !ok || b.Damage <= 0 || b.Deconstruct {
-			continue
+	var tried []entity.EntityID
+	for range workTries { // SIM-027: the next nearest when one can't be started
+		var best entity.EntityID
+		bestD := 1 << 30
+		for _, bid := range g.bldgIDs {
+			b, ok := g.bldgs.Get(bid)
+			if !ok || b.Damage <= 0 || b.Deconstruct {
+				continue
+			}
+			if _, taken := g.reserve.EntityOwner(bid); taken {
+				continue
+			}
+			if slices.Contains(tried, bid) || g.postponedFor(id, job.Repair, bid, 0, 0) {
+				continue
+			}
+			if d := pathing.Dist(pos.X, pos.Y, b.X, b.Y); d < bestD || (d == bestD && bid < best) {
+				best, bestD = bid, d
+			}
 		}
-		if _, taken := g.reserve.EntityOwner(bid); taken {
-			continue
+		if best == 0 {
+			return false
 		}
-		if d := pathing.Dist(pos.X, pos.Y, b.X, b.Y); d < bestD || (d == bestD && bid < best) {
-			best, bestD = bid, d
+		b, _ := g.bldgs.Get(best)
+		tx, ty := g.workSpot(id, b.X, b.Y)
+		if g.startJob(id, job.Record{Kind: job.Repair, Target: best, TX: tx, TY: ty, WorkLeft: b.Damage}) {
+			return true
 		}
+		tried = append(tried, best)
 	}
-	if best == 0 {
-		return false
-	}
-	b, _ := g.bldgs.Get(best)
-	tx, ty := g.workSpot(id, b.X, b.Y)
-	return g.startJob(id, job.Record{Kind: job.Repair, Target: best, TX: tx, TY: ty, WorkLeft: b.Damage})
+	return false
 }
 
 func (g *Game) doRepair(id entity.EntityID, j job.Record) {

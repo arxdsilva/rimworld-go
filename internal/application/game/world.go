@@ -1,6 +1,7 @@
 package game
 
 import (
+	"slices"
 	"sort"
 
 	"rimworld-go/internal/domain/ai/job"
@@ -143,7 +144,7 @@ func (g *Game) mineList() [][2]int {
 }
 
 func (g *Game) assignCut(id entity.EntityID) bool {
-	best := g.nearestPlant(id, func(p plant.Plant) bool { return p.Cut })
+	best := g.nearestPlant(id, job.Cut, func(p plant.Plant) bool { return p.Cut })
 	if best == 0 {
 		return g.assignCutGrass(id) // grass.go: marked grass after plants
 	}
@@ -152,9 +153,10 @@ func (g *Game) assignCut(id entity.EntityID) bool {
 }
 
 // nearestPlant is the closest unreserved plant matching want that pawn id
-// can actually walk to (0 if none). Plants walled in by rock are skipped
-// so colonists don't retry an unreachable one all day.
-func (g *Game) nearestPlant(id entity.EntityID, want func(plant.Plant) bool) entity.EntityID {
+// can actually walk to (0 if none) for a job of kind k. Plants walled in by
+// rock are skipped, and put off (SIM-027) so colonists don't search for a
+// way to an unreachable one all day.
+func (g *Game) nearestPlant(id entity.EntityID, k job.Kind, want func(plant.Plant) bool) entity.EntityID {
 	pos, _ := g.positions.Get(id)
 	type cand struct {
 		id entity.EntityID
@@ -169,6 +171,9 @@ func (g *Game) nearestPlant(id entity.EntityID, want func(plant.Plant) bool) ent
 		if _, taken := g.reserve.EntityOwner(pid); taken {
 			continue
 		}
+		if g.postponedFor(id, k, pid, 0, 0) {
+			continue
+		}
 		cs = append(cs, cand{pid, pathing.Dist(pos.X, pos.Y, p.X, p.Y)})
 	}
 	sort.Slice(cs, func(i, j int) bool { return cs[i].d < cs[j].d || cs[i].d == cs[j].d && cs[i].id < cs[j].id })
@@ -180,6 +185,7 @@ func (g *Game) nearestPlant(id entity.EntityID, want func(plant.Plant) bool) ent
 		if g.reachable(id, p.X, p.Y) {
 			return c.id
 		}
+		g.postpone(postKey{Pawn: id, Kind: k, Target: c.id}, job.Unreachable)
 	}
 	return 0
 }
@@ -213,29 +219,42 @@ func (g *Game) doCut(id entity.EntityID, j job.Record) {
 	g.jobs.Set(id, j)
 }
 
+// assignMine mines the nearest designated rock, trying the next nearest
+// when one can't be started (walled in, postponed: SIM-027), at most
+// workTries rocks.
 func (g *Game) assignMine(id entity.EntityID) bool {
 	pos, _ := g.positions.Get(id)
-	bestD := 1 << 30
-	var best [2]int
-	found := false
-	for _, k := range g.mineList() {
-		if _, taken := g.reserve.TileOwner(k[0], k[1]); taken {
-			continue
-		}
-		d := pathing.Dist(pos.X, pos.Y, k[0], k[1])
-		if d < bestD {
+	list := g.mineList()
+	var tried [][2]int
+	for range workTries {
+		bestD := 1 << 30
+		var best [2]int
+		found := false
+		for _, k := range list {
+			if _, taken := g.reserve.TileOwner(k[0], k[1]); taken {
+				continue
+			}
+			d := pathing.Dist(pos.X, pos.Y, k[0], k[1])
+			if d >= bestD || slices.Contains(tried, k) || g.postponedFor(id, job.Mine, 0, k[0], k[1]) {
+				continue
+			}
 			best, bestD, found = k, d, true
 		}
+		if !found {
+			return false
+		}
+		if g.startMine(id, best[0], best[1], false) {
+			return true
+		}
+		tried = append(tried, best)
 	}
-	if !found {
-		return false
-	}
-	return g.startMine(id, best[0], best[1], false)
+	return false
 }
 
 func (g *Game) startMine(id entity.EntityID, rx, ry int, forced bool) bool {
 	tx, ty, ok := g.reachableSpot(id, rx, ry)
 	if !ok {
+		g.postponeTile(id, job.Mine, rx, ry) // walled in: SIM-027
 		return false
 	}
 	if !g.startJob(id, job.Record{Kind: job.Mine, TX: tx, TY: ty, DestX: rx, DestY: ry, WorkLeft: MineWork, Forced: forced}) {

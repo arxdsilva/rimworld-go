@@ -285,6 +285,9 @@ func (a *App) drawInspector(screen *ebiten.Image) {
 	a.drawPawnPortrait(screen, p, float64(r.x)+12, float64(r.y)+52, 48, 64)
 	drawLabel(screen, int(r.x)+72, int(r.y)+56, fmt.Sprintf("job       %s", p.Job))
 	drawLabel(screen, int(r.x)+72, int(r.y)+72, fmt.Sprintf("activity  %s", p.Activity))
+	if ln := postponedLine(p.Postponed); ln != "" {
+		drawLabel(screen, int(r.x)+220, int(r.y)+72, ln)
+	}
 	drawLabel(screen, int(r.x)+72, int(r.y)+88, fmt.Sprintf("tile      (%d, %d)  %s", p.X, p.Y, fmtTemp(p.Temp)))
 	drawLabel(screen, int(r.x)+72, int(r.y)+104, fmt.Sprintf("weapon    %s", p.Weapon))
 	if ln := dirtyBootsLine(p); ln != "" {
@@ -431,6 +434,19 @@ func gearLine(a string) string {
 
 // waitingForLine is the read-only status fragment shown while a colonist is
 // held up by another creature standing in its next cell.
+// postponedLine is the colonist's work put off because it was blocked or
+// out of reach (SIM-027): the first entry, plus how many more.
+func postponedLine(lines []string) string {
+	if len(lines) == 0 {
+		return ""
+	}
+	ln := "put off: " + lines[0]
+	if len(lines) > 1 {
+		ln += fmt.Sprintf(" (+%d)", len(lines)-1)
+	}
+	return ln
+}
+
 func waitingForLine(blockedBy entity.EntityID, name func(entity.EntityID) string) string {
 	if blockedBy == 0 {
 		return ""

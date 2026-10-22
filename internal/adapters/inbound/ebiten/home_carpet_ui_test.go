@@ -248,7 +248,7 @@ func TestCarpetTooltipUsesSelectedMaterial(t *testing.T) {
 	tool, _ := toolByID("carpet")
 	bv, _ := buildable("carpet")
 	for i, s := range bv.Stuffs {
-		lines := archTooltipLines(tool, s, 0)
+		lines := archTooltipLines(tool, s, 0, 0)
 		want := fmt.Sprintf("Cost: 1 %s · Work %d · catches %d%% of tracked dirt", s, bv.Work, bv.Catches[i])
 		if !contains(lines, want) {
 			t.Fatalf("tooltip for %s = %q, want line %q", s, lines, want)
@@ -271,7 +271,7 @@ func TestStoneWallTooltipNamesStone(t *testing.T) {
 	t.Parallel()
 	tool, _ := toolByID("wall")
 	bv, _ := buildable("wall")
-	lines := archTooltipLines(tool, "stone", 0)
+	lines := archTooltipLines(tool, "stone", 0, 0)
 	want := fmt.Sprintf("Cost: %d stone   Work: %d", bv.Wood, bv.Work)
 	if !contains(lines, want) {
 		t.Fatalf("lines = %q, want %q", lines, want)
@@ -281,7 +281,7 @@ func TestStoneWallTooltipNamesStone(t *testing.T) {
 			t.Fatalf("wood warning on a stone build: %q", l)
 		}
 	}
-	lines = archTooltipLines(tool, "wood", 0)
+	lines = archTooltipLines(tool, "wood", 0, 0)
 	if !contains(lines, "Only 0 wood in the colony") {
 		t.Fatalf("wood warning missing: %q", lines)
 	}

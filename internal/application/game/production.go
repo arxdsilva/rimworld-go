@@ -153,7 +153,7 @@ func (g *Game) ingredientFor(id entity.EntityID, in recipe.Input) (entity.Entity
 	for _, iid := range g.itemIDs {
 		st, ok := g.stacks.Get(iid)
 		// a rotten body still burns on a pyre
-		if !ok || st.Carrier != 0 || st.Qty < in.Qty || !in.AcceptsStack(st) || st.Rotten() && st.Kind != item.CorpseHuman {
+		if !ok || st.Carrier != 0 || st.Forbidden || st.Qty < in.Qty || !in.AcceptsStack(st) || st.Rotten() && st.Kind != item.CorpseHuman {
 			continue
 		}
 		if owner, taken := g.reserve.EntityOwner(iid); taken && owner != id {
@@ -176,7 +176,11 @@ func (g *Game) assignBill(id entity.EntityID, m work.Mask) bool {
 		if owner, taken := g.reserve.EntityOwner(bid); taken && owner != id {
 			continue
 		}
+		if g.postponedFor(id, job.Bill, bid, 0, 0) {
+			continue // SIM-027: blocked or out of reach lately
+		}
 		_, spot, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
+		unreach := false
 		for i, bl := range g.bills[bid] {
 			d := recipe.DefOf(bl.Recipe)
 			if !m.Enabled(d.Skill) {
@@ -201,7 +205,11 @@ func (g *Game) assignBill(id entity.EntityID, m work.Mask) bool {
 			if sid == 0 {
 				continue
 			}
-			if !g.reachable(id, spot[0], spot[1]) {
+			if unreach || !g.reachable(id, spot[0], spot[1]) {
+				if !unreach { // SIM-027: searched once, put off
+					g.postpone(postKey{Pawn: id, Kind: job.Bill, Target: bid}, job.Unreachable)
+				}
+				unreach = true
 				continue
 			}
 			rec := job.Record{Kind: job.Bill, Target: sid, TX: st.X, TY: st.Y, Dest: bid,

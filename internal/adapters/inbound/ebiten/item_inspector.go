@@ -102,6 +102,9 @@ func itemLines(it game.ItemView, stored bool) []string {
 		out = append(out, fmt.Sprintf("Catches %d%% of tracked dirt", it.Catch),
 			"Install from Architect > Furniture > Carpet")
 	}
+	if it.Forbidden {
+		out = append(out, "Forbidden: colonists leave it alone")
+	}
 	if stored {
 		return append(out, "In a stockpile")
 	}
@@ -165,6 +168,15 @@ func flattenChips(rows []itemChipRow) []colonistAction {
 	return out
 }
 
+// itemForbidButton toggles the stack's forbidden flag (SetForbidden).
+func itemForbidButton(r button, it game.ItemView) button {
+	label := "Forbid"
+	if it.Forbidden {
+		label = "Allow"
+	}
+	return button{id: "item.forbid", label: label, x: r.x + r.w - 96, y: r.y + 34, w: 84, h: 22}
+}
+
 // itemButtons are the item panel's buttons (ids "item.*").
 func (a *App) itemButtons() []button {
 	it, ok := a.selectedItem()
@@ -172,7 +184,8 @@ func (a *App) itemButtons() []button {
 		return nil
 	}
 	stored := inStockpile(a.renderer.world(), it.X, it.Y)
-	return itemPanelButtons(itemRect(), a.itemRows(it, stored))
+	r := itemRect()
+	return append(itemPanelButtons(r, a.itemRows(it, stored)), itemForbidButton(r, it))
 }
 
 // drawItemInspector draws the item panel when an item is selected.
@@ -205,7 +218,7 @@ func (a *App) drawItemInspector(screen *ebiten.Image) {
 		drawLabel(screen, x+12, y+int(r.h)-26-(len(rows)-1-i)*26, row.Verb)
 	}
 	mx, my := a.currentCursor()
-	a.drawButtons(screen, itemPanelButtons(r, rows), mx, my)
+	a.drawButtons(screen, append(itemPanelButtons(r, rows), itemForbidButton(r, it)), mx, my)
 	if a.renderer.art != nil {
 		a.renderer.drawSprite(screen, "overlay/selection", color.NRGBA{}, float64(it.X), float64(it.Y), a.renderer.tilePx(), a.sw, a.sh)
 	}
@@ -219,6 +232,10 @@ func (a *App) applyItemClick(id string) {
 	}
 	if id == "item.close" {
 		a.clearItem()
+		return
+	}
+	if id == "item.forbid" {
+		a.renderer.enqueue(command.Command{Kind: command.SetForbidden, Target: uint64(it.ID), Enabled: !it.Forbidden})
 		return
 	}
 	n, err := strconv.Atoi(strings.TrimPrefix(id, "item.act."))

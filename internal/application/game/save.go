@@ -78,6 +78,10 @@ func importStore[T any](es []entry[T]) *component.Store[T] {
 type savedOrder struct {
 	Cmd   command.Command
 	Label string
+	// RetryAt/Tries: a blocked order waiting to be retried (SIM-027;
+	// absent in older saves).
+	RetryAt uint64
+	Tries   int
 }
 
 type savedBreak struct {
@@ -123,11 +127,12 @@ type saveState struct {
 	Fuel       map[entity.EntityID]int
 	Exposure   map[entity.EntityID][2]int
 	NoComfort  map[entity.EntityID]uint64
-	NoFood     map[entity.EntityID]uint64 // absent in older saves
-	Postponed  []postEntry                // absent in older saves (SIM-027)
-	RestedFree map[entity.EntityID]bool   // absent in older saves
-	Calm       map[entity.EntityID]uint64 // absent in older saves
-	Banked     map[entity.EntityID]bool   // absent in older saves
+	NoFood     map[entity.EntityID]uint64     // absent in older saves
+	Postponed  []postEntry                    // absent in older saves (SIM-027)
+	PostOrders map[entity.EntityID]savedOrder // orders being followed; absent in older saves
+	RestedFree map[entity.EntityID]bool       // absent in older saves
+	Calm       map[entity.EntityID]uint64     // absent in older saves
+	Banked     map[entity.EntityID]bool       // absent in older saves
 	OrderQueue map[entity.EntityID][]savedOrder
 	Apparel    map[entity.EntityID]worn
 	// Prio is the priorities as saved before animal handling (11 work
@@ -244,7 +249,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 		Terr: g.terr, Mines: g.mines,
 		LastMeal: g.lastMeal, Bills: g.bills, Racks: g.racks, Fuel: g.fuel,
 		Exposure: map[entity.EntityID][2]int{}, NoComfort: g.noComfort,
-		NoFood: g.noFood, Postponed: g.exportPostponed(), RestedFree: g.restedFree, Calm: g.calm, Banked: g.banked,
+		NoFood: g.noFood, Postponed: g.exportPostponed(), PostOrders: g.exportOrders(), RestedFree: g.restedFree, Calm: g.calm, Banked: g.banked,
 		OrderQueue: map[entity.EntityID][]savedOrder{}, Apparel: g.apparel, Joy: g.joy,
 		Prios: g.prio, Scheds: g.scheds,
 		RaiderIDs: g.raiderIDs, Raiders: g.raiders, RaidGroups: g.raidGroups, NextThreat: g.nextThreat, ThreatsOn: g.threatsOn,
@@ -268,7 +273,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 	}
 	for id, q := range g.orderQueue {
 		for _, o := range q {
-			s.OrderQueue[id] = append(s.OrderQueue[id], savedOrder{o.cmd, o.label})
+			s.OrderQueue[id] = append(s.OrderQueue[id], savedOrder{Cmd: o.cmd, Label: o.label, RetryAt: o.retryAt, Tries: o.tries})
 		}
 	}
 	for id, b := range g.breaks {
@@ -351,6 +356,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	setMap(&g.noComfort, s.NoComfort)
 	setMap(&g.noFood, s.NoFood)
 	g.importPostponed(s.Postponed)
+	g.importOrders(s.PostOrders)
 	setMap(&g.restedFree, s.RestedFree)
 	setMap(&g.calm, s.Calm)
 	setMap(&g.banked, s.Banked)
@@ -399,7 +405,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	}
 	for id, q := range s.OrderQueue {
 		for _, o := range q {
-			g.orderQueue[id] = append(g.orderQueue[id], queuedOrder{o.Cmd, o.Label})
+			g.orderQueue[id] = append(g.orderQueue[id], queuedOrder{cmd: o.Cmd, label: o.Label, retryAt: o.RetryAt, tries: o.Tries})
 		}
 	}
 	for id, b := range s.Breaks {

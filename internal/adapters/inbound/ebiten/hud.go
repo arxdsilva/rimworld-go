@@ -121,6 +121,7 @@ func (a *App) colonyButtons(sw, sh int) []button {
 	out = append(out, a.animalButtons()...)
 	out = append(out, a.plantButtons()...)
 	out = append(out, a.itemButtons()...)
+	out = append(out, a.frameButtons()...)
 	out = append(out, a.alertButtons(sw)...)
 	out = append(out, a.messageButtons(sw)...)
 	out = append(out, a.architectButtons()...)
@@ -168,6 +169,7 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 	a.drawAnimalInspector(screen)
 	a.drawPlantInspector(screen)
 	a.drawItemInspector(screen)
+	a.drawFrameInspector(screen)
 	a.drawAlerts(screen, sw)
 	a.drawArchitect(screen)
 	if a.workOpen {
@@ -232,6 +234,9 @@ func (a *App) colonyChromeHit(mx, my, sw, sh int) bool {
 	if a.hasBuilding && !a.workOpen && !a.archOpen && buildingRect().contains(mx, my) {
 		return true
 	}
+	if _, ok := a.selectedFrame(); ok && !a.workOpen && !a.archOpen && frameRect().contains(mx, my) {
+		return true
+	}
 	return false
 }
 
@@ -257,7 +262,7 @@ func (a *App) drawHoverRoom(screen *ebiten.Image, sh int) {
 	} else {
 		lines = append(lines, "Temperature "+fmtTemp(t))
 	}
-	for _, lbl := range []string{roomLabelAt(w, tx, ty), homeLabelAt(w, tx, ty), roofLabelAt(w, tx, ty), plantLabelAt(w, tx, ty), itemLabelAt(w, tx, ty)} {
+	for _, lbl := range []string{roomLabelAt(w, tx, ty), homeLabelAt(w, tx, ty), roofLabelAt(w, tx, ty), plantLabelAt(w, tx, ty), fenceLabelAt(w, tx, ty), itemLabelAt(w, tx, ty)} {
 		if lbl != "" {
 			lines = append(lines, lbl)
 		}
@@ -342,6 +347,9 @@ func itemLabelAt(w game.WorldView, x, y int) string {
 				name = "dried " + name
 			}
 			s := fmt.Sprintf("%s%s x %d", strings.ToUpper(name[:1]), name[1:], it.Qty)
+			if it.Forbidden {
+				s += ", forbidden"
+			}
 			if f := freshLabel(it); f != "" {
 				s += ", " + f
 			}

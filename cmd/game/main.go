@@ -36,12 +36,12 @@ func main() {
 	capture := flag.String("capture", "", "dev: save one colony frame to this PNG and exit")
 	captureTicks := flag.Int("capture-ticks", 5400, "dev: simulation ticks to run before -capture")
 	captureZoom := flag.Float64("capture-zoom", 1, "dev: camera zoom for -capture")
-	scenario := flag.String("scenario", "", "dev: start scenario: pen (a pen with a feeding trough, tame animals and wild ones about) | rescue (a colonist starts badly hurt) | beds (sleeping spots in the other facings) | double (a double bed by the start) | corridor (two colonists meet head-on in a 1-wide corridor) | crowd (every colonist sent into a room with one door) | armory (armed, drafted colonists against a mixed raid) | chores (cutting, mining and tending by the start) | lategame (a grown colony in autumn rain, raid incoming) | rain (a fall storm) | snow (winter snowfall) | burial (a graveyard, a pyre and two bodies) | roofs (winter: a roofed room, an unroofed one, a roofed porch, a yard too big to roof) | sunny (a clear summer day from before dawn) | zoo (all 61 animal species, tamed and named, in a pen; use -width 80 -height 60)")
+	scenario := flag.String("scenario", "", "dev: start scenario: pen (a pen with a feeding trough, tame animals and wild ones about) | rescue (a colonist starts badly hurt) | beds (sleeping spots in the other facings) | double (a double bed by the start) | corridor (two colonists meet head-on in a 1-wide corridor) | crowd (every colonist sent into a room with one door) | armory (armed, drafted colonists against a mixed raid) | chores (cutting, mining and tending by the start) | lategame (a grown colony in autumn rain, raid incoming) | rain (a fall storm) | snow (winter snowfall) | burial (a graveyard, a pyre and two bodies) | roofs (winter: a roofed room, an unroofed one, a roofed porch, a yard too big to roof) | sunny (a clear summer day from before dawn) | fence (a fenced field with a gate, deer outside) | forbid (loose items, some forbidden) | zoo (all 61 animal species, tamed and named, in a pen; use -width 80 -height 60)")
 	biomeKey := flag.String("biome", "temperate_forest", "dev: biome of the map: "+biomeKeys()+" (also the landing picker's starting choice)")
 	hour := flag.Int("hour", -1, "dev: jump to this hour (0-23) of the scenario's day, or the next day's if past")
 	captureFrames := flag.Int("capture-frames", 0, "dev: record this many consecutive frames (PATH_NNN.png) instead of one still")
 	captureSpeed := flag.Int("capture-speed", 1, "dev: game speed (1-3) while recording -capture-frames")
-	captureUI := flag.String("capture-ui", "", "dev: UI state for -capture: picker | wild | trough | inspector | architect | orders | bills | pawn | combat | melee | follow | grow | corridor | crowd | lategame | weather | grass | burial | roofs | roofs-overlay | home | carpet | plant | item | pawnactions | paused-stockpile | move | copy | menu | credits | options | options-graphics | options-gameplay | options-access | zones | paths | log | zoo")
+	captureUI := flag.String("capture-ui", "", "dev: UI state for -capture: picker | wild | trough | inspector | architect | orders | bills | pawn | combat | melee | follow | grow | corridor | crowd | lategame | weather | grass | burial | roofs | roofs-overlay | home | carpet | plant | item | pawnactions | paused-stockpile | move | copy | menu | credits | options | options-graphics | options-gameplay | options-access | zones | paths | log | frame | fence | forbid | zoo")
 	captureTimelapse := flag.Int("capture-timelapse", 0, "dev: with -capture-frames, step this many sim ticks per recorded frame (a time-lapse)")
 	noAudio := flag.Bool("noaudio", false, "dev: run without sound")
 	flag.Parse()
@@ -206,6 +206,15 @@ func main() {
 				}
 				_, _ = g.SpawnStack(item.Meat, 40, cx+5, cy+6)
 				_, _ = g.SpawnStack(item.Berries, 20, cx+6, cy+6)
+			}
+			if *scenario == "fence" {
+				// a fenced field east of the start with a gate on its south
+				// side, a few crops inside and deer grazing outside
+				fenceField(g, *width/2, *height/2)
+			}
+			if *scenario == "forbid" {
+				// wood, food and a rifle on the ground, some of it forbidden
+				forbidScene(g, *width/2, *height/2)
 			}
 			if *scenario == "double" {
 				g.BuildNow("double bed", "wood", "south", *width/2-1, *height/2+1)
@@ -613,4 +622,42 @@ func penScene(g *game.Game, cx, cy int) {
 		}
 	}
 	g.Step(1)
+}
+
+// fenceField builds a wooden fence rectangle with a gate in its south
+// side east of the start, and spawns deer outside it.
+func fenceField(g *game.Game, cx, cy int) {
+	x0, y0, x1, y1 := cx+8, cy-6, cx+16, cy-1
+	g.ClearPlants(x0-3, y0-3, x1+3, y1+4)
+	for x := x0; x <= x1; x++ {
+		g.BuildNow("fence", "wood", "south", x, y0)
+		if x == x0+4 {
+			g.BuildNow("fence gate", "wood", "south", x, y1)
+			continue
+		}
+		g.BuildNow("fence", "wood", "south", x, y1)
+	}
+	for y := y0 + 1; y < y1; y++ {
+		g.BuildNow("fence", "wood", "south", x0, y)
+		g.BuildNow("fence", "wood", "south", x1, y)
+	}
+	g.Enqueue(command.Command{Kind: command.DesignateGrowZone, X: x0 + 1, Y: y0 + 1, X2: x1 - 1, Y2: y1 - 1})
+	for i, p := range [][2]int{{x1 + 2, y0 + 1}, {x1 + 3, y1 - 1}, {x0 + 3, y1 + 2}} {
+		_ = i
+		_, _ = g.SpawnAnimal("deer", p[0], p[1])
+	}
+}
+
+// forbidScene drops a few loose stacks near the start and forbids half.
+func forbidScene(g *game.Game, cx, cy int) {
+	spots := []struct {
+		kind item.Kind
+		qty  int
+	}{{item.Wood, 30}, {item.Meat, 12}, {item.Rifle, 1}, {item.Berries, 15}, {item.Wood, 12}}
+	for i, s := range spots {
+		id, err := g.SpawnStack(s.kind, s.qty, cx+4+i, cy-5)
+		if err == nil && i%2 == 0 {
+			g.Enqueue(command.Command{Kind: command.SetForbidden, Target: uint64(id), Enabled: true})
+		}
+	}
 }

@@ -19,6 +19,7 @@ const (
 	selItem
 	selBuilding
 	selPlant
+	selFrame
 )
 
 // selCand is one selectable thing on a tile.
@@ -54,6 +55,18 @@ func selectablesAt(w game.WorldView, pawns []game.PawnView, tx, ty int) []selCan
 		}
 	}
 	var floor []selCand
+	var floorFrames []selCand
+	for _, f := range w.Frames {
+		fw, fh := max(f.W, 1), max(f.H, 1)
+		if tx < f.X || ty < f.Y || tx >= f.X+fw || ty >= f.Y+fh {
+			continue
+		}
+		if f.Floor {
+			floorFrames = append(floorFrames, selCand{selFrame, f.ID})
+		} else {
+			out = append(out, selCand{selFrame, f.ID})
+		}
+	}
 	for _, b := range w.Buildings {
 		bw, bh := max(b.W, 1), max(b.H, 1)
 		if tx < b.X || ty < b.Y || tx >= b.X+bw || ty >= b.Y+bh {
@@ -70,7 +83,8 @@ func selectablesAt(w game.WorldView, pawns []game.PawnView, tx, ty int) []selCan
 			out = append(out, selCand{selPlant, p.ID})
 		}
 	}
-	return append(out, floor...)
+	out = append(out, floor...)
+	return append(out, floorFrames...)
 }
 
 // pawnUnderCursor is the colonist drawn under screen pixel (mx, my), even
@@ -131,6 +145,8 @@ func (a *App) selectCand(c selCand) {
 		a.selBuilding, a.hasBuilding = c.id, true
 	case selPlant:
 		a.selPlant, a.hasPlant = c.id, true
+	case selFrame:
+		a.selFrame, a.hasFrame = c.id, true
 	}
 }
 
@@ -150,6 +166,9 @@ func (a *App) clearSelections(keep selKind) {
 	}
 	if keep != selPlant {
 		a.hasPlant = false
+	}
+	if keep != selFrame {
+		a.hasFrame = false
 	}
 }
 

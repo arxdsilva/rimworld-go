@@ -146,6 +146,19 @@ func (r *Renderer) drawPlacementGhost(screen *ebiten.Image, kind, stuff, facing 
 		}
 		mask := wallMask(set, c.x, c.y)
 		key := buildSpriteStuff(kind, stuff, facing, mask, mask&(wallE|wallW) != 0, false)
+		if !r.art.has(key) {
+			sx, sy := r.worldToScreen(c.x, c.y)
+			if isFenceKind(kind) {
+				drawFenceVector(screen, sx, sy, float32(tile), kind, mask, false, stuff == "stone", 170)
+				continue
+			}
+			clr := color.RGBA{90, 200, 90, 120}
+			if !c.ok {
+				clr = color.RGBA{220, 70, 60, 120}
+			}
+			vector.FillRect(screen, sx, sy, float32(tile), float32(tile), clr, false)
+			continue
+		}
 		r.drawSpriteCS(screen, key, color.NRGBA{}, float64(c.x), float64(c.y), tile, sw, sh, cs)
 	}
 }
@@ -201,6 +214,8 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	for _, p := range r.game.Snapshot() {
 		occupied[[2]int{p.X, p.Y}] = true
 	}
+	fences := fenceSet(w, false)
+	creatures := creatureCells(w, r.drawPawns)
 	r.drawPaths(screen, sw, sh, tile) // paths_draw.go
 	var draws []artDraw
 	add := func(row, col float64, fn func()) { draws = append(draws, artDraw{row, col, fn}) }
@@ -212,7 +227,11 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 			continue
 		}
 		mask := wallMask(walls, b.X, b.Y)
-		key := buildSpriteStuff(b.Kind, b.Stuff, b.Facing, mask, mask&(wallE|wallW) != 0, occupied[[2]int{b.X, b.Y}])
+		open := occupied[[2]int{b.X, b.Y}]
+		if isFenceKind(b.Kind) {
+			mask, open = wallMask(fences, b.X, b.Y), creatures[[2]int{b.X, b.Y}]
+		}
+		key := buildSpriteStuff(b.Kind, b.Stuff, b.Facing, mask, mask&(wallE|wallW) != 0, open)
 		if b.Kind == troughKind {
 			key = troughKey(b)
 		}
@@ -229,6 +248,11 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 			default:
 				if b.Kind == troughKind && !r.art.has(key) {
 					r.drawTroughFallback(screen, b, tile)
+					break
+				}
+				if isFenceKind(b.Kind) && !r.art.has(key) {
+					sx, sy := r.worldToScreen(b.X, b.Y)
+					drawFenceVector(screen, sx, sy, float32(tile), b.Kind, mask, open, b.Stuff == "stone", 255)
 					break
 				}
 				r.drawSprite(screen, key, t, float64(b.X), float64(b.Y), tile, sw, sh)
@@ -251,16 +275,25 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 			planned[[2]int{f.X, f.Y}] = true
 		}
 	}
+	plannedFences := fenceSet(w, true)
 	for _, f := range w.Frames {
 		f := f
 		if f.Floor || f.Kind == "carpet" {
 			continue
 		}
 		pm := wallMask(planned, f.X, f.Y)
+		if isFenceKind(f.Kind) {
+			pm = wallMask(plannedFences, f.X, f.Y)
+		}
 		key := buildSpriteStuff(f.Kind, f.Stuff, f.Facing, pm, pm&(wallE|wallW) != 0, false)
 		add(float64(f.Y+max(f.H, 1)-1), float64(f.X), func() {
 			if f.Wood > 0 {
 				r.drawSprite(screen, "structure/frame_1x1", none, float64(f.X), float64(f.Y), tile, sw, sh)
+			}
+			if isFenceKind(f.Kind) && !r.art.has(key) {
+				sx, sy := r.worldToScreen(f.X, f.Y)
+				drawFenceVector(screen, sx, sy, float32(tile), f.Kind, pm, false, f.Stuff == "stone", 140)
+				return
 			}
 			r.drawSpriteCS(screen, key, none, float64(f.X), float64(f.Y), tile, sw, sh, blueprintCS)
 		})
@@ -289,6 +322,9 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 			continue
 		}
 		key := itemSpriteSpecies(it.Kind, it.Animal, it.X, it.Y)
+		if it.Forbidden {
+			add(float64(it.Y)+0.001, float64(it.X), func() { r.drawForbiddenMark(screen, it.X, it.Y, tile, sw, sh) })
+		}
 		add(float64(it.Y), float64(it.X), func() {
 			if it.Kind == "human corpse" || it.Kind == "bones" {
 				r.drawCorpseItem(screen, it, tile, sw, sh)

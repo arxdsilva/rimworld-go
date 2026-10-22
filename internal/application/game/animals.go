@@ -405,12 +405,12 @@ func (g *Game) callPack(id entity.EntityID, pos Position, prey entity.EntityID) 
 func (g *Game) animalGoTo(id entity.EntityID, a *animal.State, gx, gy int) {
 	w, h := g.grid.Width(), g.grid.Height()
 	gx, gy = clampInt(gx, 0, w-1), clampInt(gy, 0, h-1)
-	if !g.grid.Walkable(gx, gy) {
+	if !g.grid.Walkable(gx, gy) || g.fenceBars(a.Tame, gx, gy) {
 		found := false
 		for r := 1; r <= 3 && !found; r++ {
 			for dy := -r; dy <= r && !found; dy++ {
 				for dx := -r; dx <= r && !found; dx++ {
-					if g.grid.Walkable(gx+dx, gy+dy) {
+					if g.grid.Walkable(gx+dx, gy+dy) && !g.fenceBars(a.Tame, gx+dx, gy+dy) {
 						gx, gy, found = gx+dx, gy+dy, true
 					}
 				}
@@ -425,10 +425,9 @@ func (g *Game) animalGoTo(id entity.EntityID, a *animal.State, gx, gy int) {
 		a.Path, a.PathI = nil, 0
 		return
 	}
-	var q pathing.Query = g.hostileMap()
-	if a.Tame {
-		q = g.grid // the colony's own animals use its doors
-	}
+	// the colony's own animals use its doors and gates; no animal
+	// crosses a fence (fences.go)
+	q := g.animalQuery(a.Tame, g.animalBase(a.Tame))
 	path, ok := pathing.Find(q, pos.X, pos.Y, gx, gy)
 	if !ok {
 		// no way there (a shut door, say): don't search again for a while
@@ -465,7 +464,7 @@ func (g *Game) moveAnimal(id entity.EntityID, m motionRec, now uint64) {
 		return
 	}
 	next := a.Path[a.PathI]
-	if !g.grid.Walkable(next.X, next.Y) || !a.Tame && g.doorAt(next.X, next.Y) {
+	if !g.grid.Walkable(next.X, next.Y) || !a.Tame && g.doorAt(next.X, next.Y) || g.fenceBars(a.Tame, next.X, next.Y) {
 		a.Path, a.PathI = nil, 0
 		g.animals.Set(id, a)
 		return

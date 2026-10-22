@@ -382,7 +382,8 @@ func (b *feedBest) offer(k animal.FeedKind, id entity.EntityID, x, y, d int) {
 // pos (only tiles allow accepts, when it is set).
 func (g *Game) findFeed(a *animal.State, pos Position, diet animal.Diet, allow func(x, y int) bool) (animal.FeedTarget, bool) {
 	const r = animal.FeedRadius
-	ok := func(x, y int) bool { return allow == nil || allow(x, y) }
+	reach := g.fenceReachable(a, pos) // fences.go: nothing behind a fence
+	ok := func(x, y int) bool { return (allow == nil || allow(x, y)) && (reach == nil || reach(x, y)) }
 	fx := g.food()
 	if diet.Meat() || diet.Plants() && !a.Tame {
 		var carcass, raw feedBest

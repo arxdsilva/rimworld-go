@@ -172,7 +172,13 @@ func (g *Game) canPlace(k construction.Kind, x, y int) (bool, string) {
 	if g.terr.At(x, y) == terrain.Rock {
 		return false, ReasonRock
 	}
-	if !g.grid.Walkable(x, y) {
+	if layer == construction.LayerFloor {
+		// floors go under furniture, even benches that block the way, but
+		// never into a wall, a fence post or a grave (SIM-028)
+		if g.floorBarrierAt(x, y) {
+			return false, ReasonBlocked
+		}
+	} else if !g.grid.Walkable(x, y) {
 		return false, ReasonBlocked
 	}
 	if pid := g.plantAt(x, y); pid != 0 {
@@ -184,6 +190,26 @@ func (g *Game) canPlace(k construction.Kind, x, y int) (bool, string) {
 		return false, ReasonItem
 	}
 	return true, ""
+}
+
+// floorBarrierAt: (x, y) holds, or is planned to hold, an object no
+// floor goes under: a wall, a fence or gate, or a dug grave.
+func (g *Game) floorBarrierAt(x, y int) bool {
+	barrier := func(k construction.Kind) bool {
+		d := construction.DefOf(k)
+		return k == construction.Wall || d.AnimalBlock || d.Dug
+	}
+	if bid := g.layerBldgAt(x, y, construction.LayerObject); bid != 0 {
+		if b, _ := g.bldgs.Get(bid); barrier(b.Kind) {
+			return true
+		}
+	}
+	if fid := g.layerFrameAt(x, y, construction.LayerObject); fid != 0 {
+		if fr, _ := g.frames.Get(fid); barrier(fr.Kind) {
+			return true
+		}
+	}
+	return false
 }
 
 func (g *Game) placeFrame(kind construction.Kind, x, y int) {

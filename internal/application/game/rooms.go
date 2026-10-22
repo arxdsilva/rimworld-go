@@ -46,7 +46,7 @@ type roomStats struct {
 	lit      bool
 }
 
-func (g *Game) markRoomsDirty() { g.roomDirty = true }
+func (g *Game) markRoomsDirty() { g.roomDirty = true; g.fenceDirty() } // fences.go: a building changed
 
 func (g *Game) isBoundary(x, y int) bool {
 	if g.terr.At(x, y) == terrain.Rock {

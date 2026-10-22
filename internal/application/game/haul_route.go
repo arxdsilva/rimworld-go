@@ -81,6 +81,9 @@ func (g *Game) planDelivery(id entity.EntityID, pos Position) (job.Record, []hau
 		if _, taken := g.reserve.EntityOwner(fid); taken {
 			continue
 		}
+		if g.postponedFor(id, job.Haul, fid, 0, 0) {
+			continue // SIM-027: blocked on the way there lately
+		}
 		nf := needyFrame{id: fid, stuff: fr.Stuff, need: need}
 		if fr.Rebuild {
 			nf.first = rebuildFirst
@@ -96,11 +99,14 @@ func (g *Game) planDelivery(id entity.EntityID, pos Position) (job.Record, []hau
 	var free []freeStack
 	for _, iid := range g.itemIDs {
 		st, ok := g.stacks.Get(iid)
-		if !ok || st.Qty <= 0 || st.Carrier != 0 || !slices.Contains(kinds, st.Kind) {
+		if !ok || st.Qty <= 0 || st.Carrier != 0 || st.Forbidden || !slices.Contains(kinds, st.Kind) {
 			continue
 		}
 		if _, taken := g.reserve.EntityOwner(iid); taken {
 			continue
+		}
+		if g.postponedFor(id, job.Haul, iid, 0, 0) {
+			continue // SIM-027: out of reach or blocked lately
 		}
 		free = append(free, freeStack{iid, st})
 	}

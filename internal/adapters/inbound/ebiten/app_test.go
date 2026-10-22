@@ -20,6 +20,7 @@ type stubSim struct {
 	w, h   int
 	tick   clock.Tick
 	wild   []game.WildlifeRow
+	world  game.WorldView
 }
 
 func (s *stubSim) Step(n int) {
@@ -35,7 +36,7 @@ func (s *stubSim) Date() clock.Date          { return clock.DateAt(s.tick) }
 func (s *stubSim) Activity() schedule.Activity {
 	return schedule.Work
 }
-func (s *stubSim) World() game.WorldView        { return game.WorldView{} }
+func (s *stubSim) World() game.WorldView        { return s.world }
 func (s *stubSim) Wildlife() []game.WildlifeRow { return s.wild }
 func (s *stubSim) Apply(command.Command)        {}
 func (s *stubSim) Enqueue(c command.Command)    { s.cmds = append(s.cmds, c) }

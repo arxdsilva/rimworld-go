@@ -441,7 +441,11 @@ func (g *Game) nearestColonist(p Position) (entity.EntityID, Position, bool) {
 func (g *Game) dropRaiderGear(id entity.EntityID) {
 	pos, _ := g.positions.Get(id)
 	if k, ok := g.equip[id]; ok {
-		g.dropStack(k, 1, pos.X, pos.Y)
+		if g.isRaider(id) {
+			g.dropForbidden(k, 1, pos.X, pos.Y) // forbid.go: raid loot starts forbidden
+		} else {
+			g.dropStack(k, 1, pos.X, pos.Y)
+		}
 		delete(g.equip, id)
 	}
 }

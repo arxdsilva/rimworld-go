@@ -1,6 +1,8 @@
 package game
 
 import (
+	"slices"
+
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
@@ -231,6 +233,7 @@ func (g *Game) die(id entity.EntityID, cause health.Cause) {
 	g.vital.Set(id, v)
 	g.spawnCorpse(id)
 	g.dropRaiderGear(id) // the weapon falls beside the body
+	g.forbidRaidBody(id) // forbid.go: a raider's body starts forbidden
 	g.mourn(id)
 }
 
@@ -349,30 +352,42 @@ func (g *Game) hostile(a animal.State) bool {
 
 // assignHunt sends a hunter after the nearest designated animal, first
 // fetching a free ranged weapon if it has none.
+// The next nearest animal is tried when one can't be started (out of
+// reach, postponed: SIM-027), at most workTries animals.
 func (g *Game) assignHunt(id entity.EntityID) bool {
 	pos, _ := g.positions.Get(id)
-	best, bestD := entity.EntityID(0), 1<<30
-	var bp Position
-	for _, aid := range g.animalIDs {
-		a, ok := g.animals.Get(aid)
-		if !ok || !a.Designated || a.Dead() {
-			continue
+	var tried []entity.EntityID
+	for range workTries {
+		best, bestD := entity.EntityID(0), 1<<30
+		var bp Position
+		for _, aid := range g.animalIDs {
+			a, ok := g.animals.Get(aid)
+			if !ok || !a.Designated || a.Dead() {
+				continue
+			}
+			if _, taken := g.reserve.EntityOwner(aid); taken {
+				continue
+			}
+			if slices.Contains(tried, aid) || g.postponedFor(id, job.Hunt, aid, 0, 0) {
+				continue
+			}
+			ap, _ := g.positions.Get(aid)
+			if d := manhattan(pos.X, pos.Y, ap.X, ap.Y); d < bestD {
+				best, bestD, bp = aid, d, ap
+			}
 		}
-		if _, taken := g.reserve.EntityOwner(aid); taken {
-			continue
+		if best == 0 {
+			return false
 		}
-		ap, _ := g.positions.Get(aid)
-		if d := manhattan(pos.X, pos.Y, ap.X, ap.Y); d < bestD {
-			best, bestD, bp = aid, d, ap
+		if !g.hasRanged(id) {
+			return g.assignEquip(id, item.Rifle)
 		}
+		if g.startJob(id, job.Record{Kind: job.Hunt, Target: best, TX: bp.X, TY: bp.Y, WorkLeft: aimTicks(weaponDefOf(g, id))}) {
+			return true
+		}
+		tried = append(tried, best)
 	}
-	if best == 0 {
-		return false
-	}
-	if !g.hasRanged(id) {
-		return g.assignEquip(id, item.Rifle)
-	}
-	return g.startJob(id, job.Record{Kind: job.Hunt, Target: best, TX: bp.X, TY: bp.Y, WorkLeft: aimTicks(weaponDefOf(g, id))})
+	return false
 }
 
 // assignEquip walks to the nearest free weapon of kind k.

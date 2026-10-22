@@ -2,6 +2,7 @@ package game
 
 import (
 	"rimworld-go/internal/domain/building/zone"
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -33,5 +34,30 @@ func (g *Game) markForbidden(x1, y1, x2, y2 int, on bool) {
 		if ok && st.Carrier == 0 && st.X >= minX && st.X <= maxX && st.Y >= minY && st.Y <= maxY {
 			g.setForbidden(id, on)
 		}
+	}
+}
+
+// dropForbidden spawns a forbidden stack (raid loot) at (x, y), merging
+// into a forbidden stack of the same kind there.
+func (g *Game) dropForbidden(k item.Kind, qty, x, y int) {
+	sid, err := g.SpawnStack(k, qty, x, y)
+	if err != nil {
+		return
+	}
+	if st, ok := g.stacks.Get(sid); ok {
+		st.Forbidden = true
+		g.mergeOrSet(sid, st)
+	}
+}
+
+// forbidRaidBody forbids the body of raider id that just died, so nobody
+// hauls it off before the player allows it.
+func (g *Game) forbidRaidBody(id entity.EntityID) {
+	if !g.isRaider(id) {
+		return
+	}
+	if cid, st, ok := g.bodyOf(id); ok && !st.Forbidden && st.Carrier == 0 {
+		st.Forbidden = true
+		g.stacks.Set(cid, st)
 	}
 }

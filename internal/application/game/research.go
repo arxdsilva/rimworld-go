@@ -1,6 +1,8 @@
 package game
 
 import (
+	"slices"
+
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/recipe"
@@ -109,11 +111,27 @@ func (g *Game) setResearch(p research.Project) {
 	g.researchCur, g.researchSet = p, true
 }
 
-// assignResearch sends a researcher to the nearest free research bench.
+// assignResearch sends a researcher to the nearest free research bench,
+// trying the next nearest when one can't be started (out of reach,
+// postponed: SIM-027), at most workTries benches.
 func (g *Game) assignResearch(id entity.EntityID) bool {
 	if !g.researchSet || !g.research.Available(g.researchCur) {
 		return false
 	}
+	var tried []entity.EntityID
+	for range workTries {
+		bid, ok := g.researchTry(id, tried)
+		if ok || bid == 0 {
+			return ok
+		}
+		tried = append(tried, bid)
+	}
+	return false
+}
+
+// researchTry starts research at the nearest bench not in tried; it
+// returns the bench tried (0: none left).
+func (g *Game) researchTry(id entity.EntityID, tried []entity.EntityID) (entity.EntityID, bool) {
 	pos, _ := g.positions.Get(id)
 	var best entity.EntityID
 	var bx, by int
@@ -126,6 +144,9 @@ func (g *Game) assignResearch(id entity.EntityID) bool {
 		if owner, taken := g.reserve.EntityOwner(bid); taken && owner != id {
 			continue
 		}
+		if slices.Contains(tried, bid) || g.postponedFor(id, job.Research, bid, 0, 0) {
+			continue
+		}
 		_, spot, ok := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
 		if !ok || !g.grid.Walkable(spot[0], spot[1]) {
 			continue
@@ -135,9 +156,9 @@ func (g *Game) assignResearch(id entity.EntityID) bool {
 		}
 	}
 	if best == 0 {
-		return false
+		return 0, false
 	}
-	return g.startJob(id, job.Record{Kind: job.Research, Target: best, TX: bx, TY: by, WorkLeft: researchSession})
+	return best, g.startJob(id, job.Record{Kind: job.Research, Target: best, TX: bx, TY: by, WorkLeft: researchSession})
 }
 
 func (g *Game) doResearch(id entity.EntityID, j job.Record) {

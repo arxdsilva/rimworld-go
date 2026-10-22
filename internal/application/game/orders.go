@@ -293,7 +293,7 @@ func (g *Game) nearestFree(id entity.EntityID, k item.Kind) (entity.EntityID, in
 	var bx, by int
 	for _, iid := range g.itemIDs {
 		st, ok := g.stacks.Get(iid)
-		if !ok || st.Kind != k || st.Qty <= 0 || st.Carrier != 0 {
+		if !ok || st.Kind != k || st.Qty <= 0 || st.Carrier != 0 || st.Forbidden {
 			continue
 		}
 		if owner, taken := g.reserve.EntityOwner(iid); taken && owner != id {

@@ -97,7 +97,7 @@ func (g *Game) assignWear(id entity.EntityID) bool {
 	bestGain, bestD := 0, 1<<30
 	for _, sid := range g.itemIDs {
 		st, ok := g.stacks.Get(sid)
-		if !ok || st.Carrier != 0 || !st.Kind.IsApparel() {
+		if !ok || st.Carrier != 0 || st.Forbidden || !st.Kind.IsApparel() {
 			continue
 		}
 		if _, taken := g.reserve.EntityOwner(sid); taken {

@@ -199,6 +199,9 @@ func (g *Game) assignCutGrass(id entity.EntityID) bool {
 		if _, taken := g.reserve.TileOwner(k[0], k[1]); taken {
 			continue
 		}
+		if g.postponedFor(id, job.Cut, 0, k[0], k[1]) {
+			continue // SIM-027: out of reach lately
+		}
 		cs = append(cs, cand{k[0], k[1], pathing.Dist(pos.X, pos.Y, k[0], k[1])})
 	}
 	sort.SliceStable(cs, func(i, j int) bool { return cs[i].d < cs[j].d })
@@ -208,6 +211,7 @@ func (g *Game) assignCutGrass(id entity.EntityID) bool {
 		}
 		tx, ty, ok := g.reachableSpot(id, c.x, c.y)
 		if !ok {
+			g.postponeTile(id, job.Cut, c.x, c.y)
 			continue
 		}
 		if !g.startJob(id, job.Record{Kind: job.Cut, TX: tx, TY: ty, DestX: c.x, DestY: c.y, WorkLeft: GrassCutWork}) {

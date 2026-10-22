@@ -196,8 +196,8 @@ func (g *Game) fillTroughs(id entity.EntityID) bool {
 			continue
 		}
 		if fill := g.troughFill(bid); fill < troughFillBelow {
-			if owner, taken := g.reserve.TileOwner(b.X, b.Y); !taken || owner == id {
-				low = append(low, cand{bid, fill})
+			if owner, taken := g.reserve.TileOwner(b.X, b.Y); (!taken || owner == id) && !g.postponedFor(id, job.Haul, bid, 0, 0) {
+				low = append(low, cand{bid, fill}) // SIM-027: not one put off lately
 			}
 		}
 	}
@@ -215,7 +215,7 @@ func (g *Game) fillTroughs(id entity.EntityID) bool {
 		bestD := 1 << 30
 		for _, sid := range g.itemIDs {
 			st, ok := g.stacks.Get(sid)
-			if !ok || st.Carrier != 0 || st.Qty <= 0 || st.Rotten() || !troughFeeds(f, st.Kind) {
+			if !ok || st.Carrier != 0 || st.Forbidden || st.Qty <= 0 || st.Rotten() || !troughFeeds(f, st.Kind) {
 				continue
 			}
 			if st.X == b.X && st.Y == b.Y {
@@ -223,6 +223,9 @@ func (g *Game) fillTroughs(id entity.EntityID) bool {
 			}
 			if _, taken := g.reserve.EntityOwner(sid); taken {
 				continue
+			}
+			if g.postponedFor(id, job.Haul, sid, 0, 0) {
+				continue // SIM-027: out of reach lately
 			}
 			if d := pathing.Dist(b.X, b.Y, st.X, st.Y); d < bestD || d == bestD && sid < best {
 				best, bst, bestD = sid, st, d

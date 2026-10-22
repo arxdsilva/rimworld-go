@@ -190,6 +190,37 @@ def _badge_icon(name, t, glyph, rgb):
     return path
 
 
+def _g_forbid(xx, yy, c):  # circle with a slash
+    return np.minimum(np.abs(np.hypot(xx - c, yy - c) - 17), _seg(xx, yy, c - 12, c - 12, c + 12, c + 12))
+
+
+def _g_allow(xx, yy, c):  # check mark
+    return np.minimum(_seg(xx, yy, c - 17, c + 1, c - 6, c + 13), _seg(xx, yy, c - 6, c + 13, c + 18, c - 13))
+
+
+def _g_rooms(xx, yy, c):  # floor plan: outer box, dividing wall with a doorway
+    box = np.abs(np.maximum(np.abs(xx - c) - 20, np.abs(yy - c) - 16))
+    d = np.minimum(box, _seg(xx, yy, c + 2, c - 16, c + 2, c - 4))
+    return np.minimum(d, _seg(xx, yy, c + 2, c + 6, c + 2, c + 16))
+
+
+def _forbidden_marker(t):
+    """Small corner chip for forbidden items: red disc, white slash ring."""
+    xx, yy = _grid()
+    img = np.zeros((N, N, 4), np.float32)
+    cx, cy, r = N - 34.0, 34.0, 26.0
+    d = np.hypot(xx - cx, yy - cy)
+    _paint(img, _cov(d - r - 3), (0.08, 0.07, 0.06), 0.85)
+    _paint(img, _cov(d - r), t["danger"])
+    ring = np.abs(d - (r - 7.0))
+    sl = _seg(xx, yy, cx - 12, cy - 12, cx + 12, cy + 12)
+    w = (0.97, 0.95, 0.92)
+    _paint(img, _cov(ring - 3.0), w)
+    _paint(img, _cov(sl - 3.2), w)
+    return _save("forbidden", img, {"overlay": "forbidden", "marking": True,
+                                    "note": "corner chip, upper-right of the item tile"})
+
+
 def _g_mine(xx, yy, c):  # pick: shaft + curved head
     d = _seg(xx, yy, c - 12, c + 14, c + 6, c - 8)
     head = np.abs(np.hypot(xx - (c + 18), yy - (c + 6)) - 24)
@@ -415,6 +446,8 @@ ICONS = {
     "ember_oil": ("item", "ember_oil"),
     "wool_parka": ("item", "parka_wool"),
     "feeding_trough": ("furniture", "feeding_trough_empty_south"),
+    "fence": ("structure", "fence_wood_10"),    # the Architect fence tool
+    "fence_gate": ("structure", "fence_gate_south"),
     "carpet": ("furniture", "carpet_cloth"),   # the Architect tool: a laid mat
 }
 ICON_PX = 128          # @2x of a 64 px icon
@@ -635,7 +668,7 @@ def build():
            _designation("designation_harvest", t, _g_harvest), _designation("designation_mine", t, _g_mine),
            _designation("designation_deconstruct", t, _g_deconstruct),
            _designation("designation_hunt", t, _g_hunt),
-           _designation("designation_tame", t, _g_tame), _pen_zone(t),
+           _designation("designation_tame", t, _g_tame), _pen_zone(t), _forbidden_marker(t),
            _stockpile(t), _blueprint(t), _grow_zone(t)] + [_sleeping_spot(f) for f in SPOT_FACINGS]
     out += [_badge_icon("order_harvest", t, _g_harvest, t["designation"]),
             _badge_icon("order_deconstruct", t, _g_deconstruct, t["danger"]),
@@ -651,6 +684,9 @@ def build():
             _badge_icon("roof_build", t, _g_roof_build, (0.35, 0.55, 0.82)),
             _badge_icon("roof_remove", t, _g_roof_remove, t["danger"]),
             _badge_icon("overlay_roof", t, _g_overlay_roof, (0.45, 0.65, 0.90)),
+            _badge_icon("order_forbid", t, _g_forbid, t["danger"]),
+            _badge_icon("order_allow", t, _g_allow, (0.45, 0.78, 0.36)),
+            _badge_icon("overlay_rooms", t, _g_rooms, (0.35, 0.72, 0.70)),
             _badge_icon("home", t, _g_home, (0.29, 0.50, 0.83)),
             _badge_icon("home_clear", t, _g_home_clear, t["danger"])]
     out += [_biome_icon(k) for k in BIOMES]

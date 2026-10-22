@@ -312,8 +312,8 @@ func (r *Renderer) shadowCasters(w game.WorldView, pawns []game.PawnView) []shad
 		out = append(out, shadowCaster{spec: s, x: bx, y: by})
 	}
 	for _, b := range w.Buildings {
-		if b.Floor || b.Kind == "sleeping spot" {
-			continue
+		if b.Floor || b.Kind == "sleeping spot" || isFenceKind(b.Kind) {
+			continue // fences cast no sun shadow (art: shadow kind none)
 		}
 		key := buildSpriteStuff(b.Kind, b.Stuff, b.Facing, 0, false, false)
 		addBox(key, float64(b.X), float64(b.Y), float64(max(b.W, 1)), float64(max(b.H, 1)), 1)

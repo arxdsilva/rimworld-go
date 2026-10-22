@@ -606,7 +606,13 @@ func TestBuriedRaiderLeavesTheRaiderList(t *testing.T) {
 	rid := g.raiderIDs[0]
 	name := g.name(rid)
 	g.die(rid, health.CauseInjury)
+	// a raider's body starts forbidden (UI-016): the player allows it
 	gid := burGrave(t, g, construction.South, 12, 4)
+	cid, _, _ := burBody(g, rid)
+	if g.assignBury(uint64ToID(ada)) {
+		t.Fatal("a forbidden body is not buried")
+	}
+	g.setForbidden(cid, false)
 	if !burRun(g, 6000, func() bool { _, _, there := burBody(g, rid); return !there }) {
 		t.Fatal("the raider's body should be buried")
 	}

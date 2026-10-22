@@ -56,3 +56,29 @@ func TestNewPanicsOnNonPositiveSize(t *testing.T) {
 	}()
 	New(0, 5)
 }
+
+func TestVersionChangesOnlyWithWalkability(t *testing.T) {
+	g := New(3, 3)
+	r0 := g.Version()
+	g.SetWalkable(1, 1, true) // already walkable
+	if g.Version() != r0 {
+		t.Fatal("a no-op SetWalkable changed Version")
+	}
+	g.SetWalkable(1, 1, false)
+	r1 := g.Version()
+	if r1 == r0 {
+		t.Fatal("blocking a tile did not change Version")
+	}
+	g.SetWalkable(1, 1, false)
+	if g.Version() != r1 {
+		t.Fatal("re-blocking a blocked tile changed Version")
+	}
+	g.SetWalkable(1, 1, true)
+	if g.Version() == r1 {
+		t.Fatal("unblocking a tile did not change Version")
+	}
+	g.SetWalkable(9, 9, false) // out of bounds
+	if g.Version() != r1+1 {
+		t.Fatal("an out-of-bounds SetWalkable changed Version")
+	}
+}

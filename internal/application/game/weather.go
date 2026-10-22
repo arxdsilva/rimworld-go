@@ -98,6 +98,7 @@ func (g *Game) hasMemory(id entity.EntityID, k mood.Kind) bool {
 // on an outdoor tile, after the ground's own cost (SIM-023: marsh, sand
 // and ice are slow unless floored over; plain ground costs 100%).
 func (g *Game) weatherSlow(x, y int, base int) int {
+	base = g.fenceSlow(x, y, base) // fences.go: climbing over a fence
 	if c := g.terr.At(x, y).WalkCost(); c != 100 && g.treadAt(y*g.grid.Width()+x)&treadFloor == 0 {
 		base = (base*c + 99) / 100
 	}

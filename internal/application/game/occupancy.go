@@ -47,6 +47,12 @@ const (
 	cycleDepth = 8
 	// avoidAhead is how much of a walker's path a yielder keeps clear of.
 	avoidAhead = 10
+	// stuckFailTicks: a colonist held up this long by a creature that
+	// stands still and won't make way (drafted, in a mental break, a
+	// raider, a worker at an exact cell), with no way round, gives up with
+	// job.Blocked and its work is postponed (SIM-027). Behind a walker or
+	// a creature that makes way it keeps blockedFailTicks.
+	stuckFailTicks = 120
 )
 
 // occupancy is the movement-phase index of standing creatures. It is
@@ -244,8 +250,10 @@ func (g *Game) enter(id entity.EntityID, from, to Position) (stepVerdict, Positi
 		// the occupant is moving on: wait for it, replan if it is stuck
 		return g.repathEvery(id, from, to, blocked, true)
 	}
-	// the occupant stands still
-	if by == occ && blocked >= idleYieldAfter && blocked%yieldRetry == 0 && g.idleYieldable(occ) {
+	// the occupant stands still: an idler makes way, and so does a
+	// colonist at work that can do it from another cell (for colonists)
+	if by == occ && blocked >= idleYieldAfter && blocked%yieldRetry == 0 &&
+		(g.idleYieldable(occ) || g.colonist(id) && g.workYieldable(occ)) {
 		g.makeWay(occ, id)
 	}
 	if g.finalStep(id, to) {
@@ -598,6 +606,38 @@ func (g *Game) idleYieldable(id entity.EntityID) bool {
 	return j.Kind == job.None || j.Kind.IsIdle() || j.State == job.Idle || j.State == job.Complete || j.State == job.Fail
 }
 
+// colonist: a player colonist (not a raider).
+func (g *Game) colonist(id entity.EntityID) bool { return g.isPawn(id) && !g.isRaider(id) }
+
+// workYieldable: a colonist at work (not drafted, not in a mental break)
+// whose job is done from any cell next to its work: it shuffles to a free
+// cell still touching the work and keeps the job (makeWay). Bench, bed and
+// carrying jobs (exact cells) and fights hold their cell.
+func (g *Game) workYieldable(id entity.EntityID) bool {
+	if !g.colonist(id) || g.drafted(id) || g.breaking(id) {
+		return false
+	}
+	j, _ := g.jobs.Get(id)
+	if j.Kind == job.None || j.State != job.Do || j.Kind.IsIdle() || j.Kind == job.Hunt || j.Kind == job.Attack {
+		return false
+	}
+	return g.arrivalOf(id) == arriveAdjacent
+}
+
+// blockedLimit is how long walker id waits on 'by' (the creature in its
+// way; v this tick's verdict) before it gives up: stuckFailTicks behind a
+// colonist-blocking creature that stands still, won't make way and has no
+// way round it; else blockedFailTicks.
+func (g *Game) blockedLimit(id, by entity.EntityID, v stepVerdict) int {
+	if by == 0 || v == stepRepath || !g.colonist(id) || g.targetOf(id) == by {
+		return blockedFailTicks
+	}
+	if _, walking := g.walkNext(by); walking || g.idleYieldable(by) || g.workYieldable(by) {
+		return blockedFailTicks // it moves on, or makes way
+	}
+	return stuckFailTicks
+}
+
 // makeWay gives a creature standing still a short walk to the nearest
 // free cell off forID's way (forID 0: just off its own cell), so it leaves
 // on its next due move. A working pawn keeps its job and resumes it next
@@ -620,6 +660,9 @@ func (g *Game) makeWay(id, forID entity.EntityID) bool {
 		return false
 	}
 	dest := path[len(path)-1]
+	if working && forID != 0 && pathing.Dist(dest.X, dest.Y, wc.X, wc.Y) > 1 {
+		return false // a worker only shuffles to a cell it can still work from
+	}
 	if a, ok := g.animals.Get(id); ok {
 		a.Path, a.PathI, a.GoalX, a.GoalY = path, 0, dest.X, dest.Y
 		g.animals.Set(id, a)
@@ -728,9 +771,9 @@ func (g *Game) asideRoute(id entity.EntityID, pos Position, avoid []Position, wc
 func (g *Game) queryFor(id entity.EntityID) pathing.Query {
 	if a, ok := g.animals.Get(id); ok {
 		if a.Tame {
-			return g.grid
+			return g.animalQuery(true, g.grid) // fences.go: gates open, fences shut
 		}
-		return g.phaseHostileMap()
+		return g.animalQuery(false, g.phaseHostileMap())
 	}
 	if g.isRaider(id) && !g.sapper(id) {
 		return g.phaseHostileMap() // what pathQuery gives a raider

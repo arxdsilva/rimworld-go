@@ -300,6 +300,39 @@ func (a *App) captureUI(ui string) {
 		// the -scenario zoo pen (rows of 12 animals from (4, 3), 3 apart)
 		sw, sh := a.size()
 		a.renderer.centerOn(4+12*3/2, 3+7.5, sw, sh)
+	case "frame":
+		// a wall frame with part of its materials delivered, selected
+		w := a.renderer.world()
+		var pick *game.FrameView
+		for i := range w.Frames {
+			f := &w.Frames[i]
+			if f.Floor || f.Kind == "carpet" {
+				continue
+			}
+			if pick == nil || (f.Wood > 0 && f.Wood < f.Need && !(pick.Wood > 0 && pick.Wood < pick.Need)) {
+				pick = f
+			}
+		}
+		if pick != nil {
+			a.selectCand(selCand{selFrame, pick.ID})
+			sw, sh := a.size()
+			a.renderer.centerOn(float64(pick.X)+3, float64(pick.Y), sw, sh)
+		}
+	case "fence":
+		// the -scenario fence field
+		sw, sh := a.size()
+		a.renderer.centerOn(float64(a.renderer.game.Width()/2+12), float64(a.renderer.game.Height()/2-3), sw, sh)
+	case "forbid":
+		// the -scenario forbid items, the first forbidden one selected
+		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
+		sw, sh := a.size()
+		a.renderer.centerOn(float64(cx+6), float64(cy-5), sw, sh)
+		for _, it := range a.renderer.world().Items {
+			if it.Forbidden && !it.Carried {
+				a.selectCand(selCand{selItem, it.ID})
+				break
+			}
+		}
 	case "plant", "item", "pawnactions", "move", "copy":
 		// UI-011 panels: the nearest tree, ground item, colonist or
 		// building to the map centre, selected, its panel open

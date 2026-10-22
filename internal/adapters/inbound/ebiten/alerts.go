@@ -164,6 +164,9 @@ func buildAlerts(pawns []game.PawnView, w game.WorldView) []alert {
 	if al, ok := spoilingAlert(w); ok {
 		out = append(out, al)
 	}
+	if al, ok := waitingFramesAlert(w); ok {
+		out = append(out, al)
+	}
 	group("unhappy", false, unhappy, func(n string) string { return n + " is unhappy" }, "colonists are unhappy")
 	return out
 }
@@ -307,4 +310,19 @@ func animalAlerts(w game.WorldView) []alert {
 		}
 	}
 	return out
+}
+
+// waitingFramesAlert flags blueprints whose material is not in stock
+// anywhere (the frame status starts with "No "): clicking cycles them.
+func waitingFramesAlert(w game.WorldView) (alert, bool) {
+	var at [][2]int
+	for _, f := range w.Frames {
+		if strings.HasPrefix(f.Status, "No ") {
+			at = append(at, [2]int{f.X, f.Y})
+		}
+	}
+	if len(at) == 0 {
+		return alert{}, false
+	}
+	return alert{key: "waitingframes", label: fmt.Sprintf("Blueprints waiting for materials (%d)", len(at)), targets: at}, true
 }

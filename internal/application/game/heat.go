@@ -210,6 +210,9 @@ func (g *Game) assignRefuel(id entity.EntityID) bool {
 		if owner, taken := g.reserve.EntityOwner(bid); taken && owner != id {
 			continue
 		}
+		if g.postponedFor(id, job.Refuel, bid, 0, 0) {
+			continue // SIM-027: blocked or out of reach lately
+		}
 		fires = append(fires, cand{bid, g.fuel[bid]})
 	}
 	sort.Slice(fires, func(i, j int) bool {

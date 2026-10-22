@@ -1,8 +1,9 @@
 package game
 
 import (
-	"rimworld-go/internal/domain/building/construction"
 	"testing"
+
+	"rimworld-go/internal/domain/building/construction"
 
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/exposure"

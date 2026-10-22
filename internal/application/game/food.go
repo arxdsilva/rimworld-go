@@ -1,6 +1,8 @@
 package game
 
 import (
+	"slices"
+
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/building/construction"
@@ -65,33 +67,43 @@ func (g *Game) assignSow(id entity.EntityID) bool {
 		return true // grown zone trees are felled before their cells are resown
 	}
 	pos, _ := g.positions.Get(id)
-	bestD := 1 << 30
-	var bx, by int
-	found := false
-	g.zones.Each(func(z zone.Zone) bool {
-		if z.Kind != zone.KindGrow {
-			return true
-		}
-		g.zones.EachCell(z.ID, func(x, y int) bool {
-			d := pathing.Dist(pos.X, pos.Y, x, y)
-			if d >= bestD || !g.sowable(x, y) {
+	var tried [][2]int
+	for range workTries { // SIM-027: the next nearest cell when one can't be started
+		bestD := 1 << 30
+		var bx, by int
+		found := false
+		g.zones.Each(func(z zone.Zone) bool {
+			if z.Kind != zone.KindGrow {
 				return true
 			}
-			if _, taken := g.reserve.TileOwner(x, y); !taken {
-				bestD, bx, by, found = d, x, y, true
-			}
+			g.zones.EachCell(z.ID, func(x, y int) bool {
+				d := pathing.Dist(pos.X, pos.Y, x, y)
+				if d >= bestD || !g.sowable(x, y) {
+					return true
+				}
+				if slices.Contains(tried, [2]int{x, y}) || g.postponedFor(id, job.Sow, 0, x, y) {
+					return true
+				}
+				if _, taken := g.reserve.TileOwner(x, y); !taken {
+					bestD, bx, by, found = d, x, y, true
+				}
+				return true
+			})
 			return true
 		})
-		return true
-	})
-	if !found {
-		return false
+		if !found {
+			return false
+		}
+		work := SowWork
+		if z, ok := g.zoneAt(bx, by); ok && plant.DefOf(plant.Species(z.Crop)).SowWork > 0 {
+			work = plant.DefOf(plant.Species(z.Crop)).SowWork
+		}
+		if g.startJob(id, job.Record{Kind: job.Sow, TX: bx, TY: by, WorkLeft: work}) {
+			return true
+		}
+		tried = append(tried, [2]int{bx, by})
 	}
-	work := SowWork
-	if z, ok := g.zoneAt(bx, by); ok && plant.DefOf(plant.Species(z.Crop)).SowWork > 0 {
-		work = plant.DefOf(plant.Species(z.Crop)).SowWork
-	}
-	return g.startJob(id, job.Record{Kind: job.Sow, TX: bx, TY: by, WorkLeft: work})
+	return false
 }
 
 func (g *Game) doSow(id entity.EntityID, j job.Record) {
@@ -133,7 +145,7 @@ func (g *Game) bestFood(id entity.EntityID) (entity.EntityID, int, int) {
 	var bx, by int
 	for _, iid := range g.itemIDs {
 		st, ok := g.stacks.Get(iid)
-		if !ok || !st.Kind.IsFood() || st.Qty <= 0 || st.Carrier != 0 {
+		if !ok || !st.Kind.IsFood() || st.Qty <= 0 || st.Carrier != 0 || st.Forbidden {
 			continue
 		}
 		if owner, taken := g.reserve.EntityOwner(iid); taken && owner != id {

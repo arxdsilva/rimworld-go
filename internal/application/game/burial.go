@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"slices"
 
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
@@ -221,7 +222,7 @@ func (g *Game) cremate(bid, cid entity.EntityID, d recipe.Def) {
 func (g *Game) freeWood() int {
 	n := 0
 	for _, id := range g.itemIDs {
-		if st, ok := g.stacks.Get(id); ok && st.Kind == item.Wood && st.Carrier == 0 {
+		if st, ok := g.stacks.Get(id); ok && st.Kind == item.Wood && st.Carrier == 0 && !st.Forbidden {
 			n += st.Qty
 		}
 	}
@@ -237,7 +238,7 @@ func (g *Game) burnWood(x, y, n int) {
 		bestD := 1 << 30
 		for _, id := range g.itemIDs {
 			st, ok := g.stacks.Get(id)
-			if !ok || st.Kind != item.Wood || st.Carrier != 0 || st.Qty <= 0 {
+			if !ok || st.Kind != item.Wood || st.Carrier != 0 || st.Forbidden || st.Qty <= 0 {
 				continue
 			}
 			if d := pathing.Dist(x, y, st.X, st.Y); d < bestD || d == bestD && id < best {
@@ -269,34 +270,43 @@ func (g *Game) cremating(bid entity.EntityID) bool {
 
 // assignBury gives hauler id the nearest free body and the empty grave
 // nearest that body (reachable), reserving both.
+// The next nearest body is tried when one can't be started (out of reach,
+// postponed: SIM-027), at most workTries bodies.
 func (g *Game) assignBury(id entity.EntityID) bool {
 	pos, _ := g.positions.Get(id)
-	var cid entity.EntityID
-	var cst item.Stack
-	bestD := 1 << 30
-	g.stacks.All(func(iid entity.EntityID, st item.Stack) {
-		if !isBody(st.Kind) || st.Carrier != 0 || st.Qty <= 0 {
-			return
-		}
-		if d := pathing.Dist(pos.X, pos.Y, st.X, st.Y); d < bestD || d == bestD && iid < cid {
-			if _, taken := g.reserve.EntityOwner(iid); !taken {
-				cid, cst, bestD = iid, st, d
+	var tried []entity.EntityID
+	for range workTries {
+		var cid entity.EntityID
+		var cst item.Stack
+		bestD := 1 << 30
+		g.stacks.All(func(iid entity.EntityID, st item.Stack) {
+			if !isBody(st.Kind) || st.Carrier != 0 || st.Forbidden || st.Qty <= 0 {
+				return
 			}
+			if slices.Contains(tried, iid) || g.postponedFor(id, job.Bury, iid, 0, 0) {
+				return
+			}
+			if d := pathing.Dist(pos.X, pos.Y, st.X, st.Y); d < bestD || d == bestD && iid < cid {
+				if _, taken := g.reserve.EntityOwner(iid); !taken {
+					cid, cst, bestD = iid, st, d
+				}
+			}
+		})
+		if cid == 0 {
+			return false
 		}
-	})
-	if cid == 0 {
-		return false
+		gid, sx, sy, ok := g.graveFor(id, cst)
+		if !ok {
+			return false // no free grave in reach
+		}
+		rec := job.Record{Kind: job.Bury, Target: cid, TX: cst.X, TY: cst.Y, Dest: gid, DestX: sx, DestY: sy, WorkLeft: buryWork}
+		if g.startJob(id, rec) {
+			g.reserve.TryEntity(id, gid)
+			return true
+		}
+		tried = append(tried, cid)
 	}
-	gid, sx, sy, ok := g.graveFor(id, cst)
-	if !ok {
-		return false
-	}
-	rec := job.Record{Kind: job.Bury, Target: cid, TX: cst.X, TY: cst.Y, Dest: gid, DestX: sx, DestY: sy, WorkLeft: buryWork}
-	if !g.startJob(id, rec) {
-		return false
-	}
-	g.reserve.TryEntity(id, gid)
-	return true
+	return false
 }
 
 // graveFor is the empty, free grave nearest body st that hauler id can

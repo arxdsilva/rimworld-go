@@ -53,6 +53,10 @@ var archTools = []archTool{
 		desc: "Chop trees for wood or clear bushes. Grass too."},
 	{id: "mine", label: "Mine", category: "orders", icon: "order_mine", mode: placeArea, cmd: command.DesignateMine,
 		desc: "Dig out rock. Each tile drops stone blocks."},
+	{id: "forbid", label: "Forbid", category: "orders", icon: "order_forbid", mode: placeArea, cmd: command.DesignateForbid, enable: true,
+		desc: "Colonists leave forbidden items alone. Drag over the items."},
+	{id: "allow", label: "Allow", category: "orders", icon: "order_allow", mode: placeArea, cmd: command.DesignateForbid,
+		desc: "Let colonists use forbidden items again. Drag over the items."},
 	{id: "hunt", label: "Hunt", category: "orders", icon: "order_hunt", mode: placeArea, cmd: command.DesignateHunt,
 		desc: "Mark animals for hunters. Hunters need a rifle; kills drop meat."},
 	{id: "tame", label: "Tame", category: "orders", icon: "order_tame", mode: placeArea, cmd: command.DesignateTame,
@@ -69,6 +73,10 @@ var archTools = []archTool{
 		desc: "Take tiles out of the Home area so colonists leave them dirty."},
 	{id: "wall", label: "Wall", category: "structure", icon: "wall", mode: placeLine, build: "wall",
 		desc: "Blocks movement. Drag to draw a line."},
+	{id: "fence", label: "Fence", category: "structure", icon: "fence", mode: placeLine, build: "fence",
+		desc: "Animals can't cross; colonists climb over (slow). Drag to draw a line."},
+	{id: "fence_gate", label: "Fence gate", category: "structure", icon: "fence_gate", mode: placeSingle, build: "fence gate",
+		desc: "Animals can't cross; colonists climb over (slow). A gate lets colonists and tame animals through. Q/E rotates."},
 	{id: "roof", label: "Build roof", category: "structure", icon: "roof_build", mode: placeArea, cmd: command.DesignateRoof,
 		desc: "Colonists roof these tiles. A roof needs a wall within 6 tiles; closed rooms are roofed automatically."},
 	{id: "noroof", label: "Remove roof", category: "structure", icon: "roof_remove", mode: placeArea, cmd: command.DesignateRemoveRoof,
@@ -204,6 +212,12 @@ func rotateFacing(f uint8, dir int) uint8 {
 
 // buildSpriteStuff is buildSprite with a material (walls and floors).
 func buildSpriteStuff(kind, stuff, facing string, mask int, ew, open bool) string {
+	switch kind {
+	case fenceKind:
+		return fenceSprite(stuff, mask)
+	case gateKind:
+		return gateSprite(facing, open)
+	}
 	if kind == "carpet" {
 		return carpetSprite(stuff)
 	}
@@ -233,6 +247,10 @@ func carpetSprite(stuff string) string {
 // matter for walls (autotile) and doors (axis). open draws doors open.
 func buildSprite(kind, facing string, mask int, ew, open bool) string {
 	switch kind {
+	case fenceKind:
+		return fenceSprite("wood", mask)
+	case gateKind:
+		return gateSprite(facing, open)
 	case "wall":
 		return "structure/wall_wood_" + twoDigits(mask)
 	case "door":

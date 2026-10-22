@@ -168,3 +168,13 @@ func TestDeadPawnActionsDisabled(t *testing.T) {
 }
 
 func eid(id entity.EntityID) string { return strconv.FormatUint(uint64(id), 10) }
+
+func TestPostponedLine(t *testing.T) {
+	if postponedLine(nil) != "" {
+		t.Fatal("nothing put off: no line")
+	}
+	got := postponedLine([]string{"build wall: blocked, retry in 12 s", "haul wood: can't reach"})
+	if got != "put off: build wall: blocked, retry in 12 s (+1)" {
+		t.Fatalf("line %q", got)
+	}
+}

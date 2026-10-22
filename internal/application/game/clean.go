@@ -48,6 +48,9 @@ func (g *Game) assignClean(id entity.EntityID) bool {
 		if _, taken := g.reserve.TileOwner(x, y); taken {
 			continue
 		}
+		if g.postponedFor(id, job.Clean, 0, x, y) {
+			continue // SIM-027: out of reach lately
+		}
 		if n < len(best) {
 			n++
 		}
@@ -63,6 +66,7 @@ func (g *Game) assignClean(id entity.EntityID) bool {
 		x, y := int(c.i)%w, int(c.i)/w
 		tx, ty, ok := g.reachableSpot(id, x, y)
 		if !ok {
+			g.postponeTile(id, job.Clean, x, y)
 			continue
 		}
 		work := (g.filthTotal(int(c.i))+filth.CleanPerTick-1)/filth.CleanPerTick + cleanSlack
