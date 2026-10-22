@@ -315,3 +315,43 @@ func TestDirectorFadesWithZoom(t *testing.T) {
 		t.Fatal("a campfire is silent fully zoomed out")
 	}
 }
+
+// terrainWorld is a 4x1 strip of one terrain with the given marks.
+func terrainWorld(ground string, mines, smooths [][2]int) game.WorldView {
+	code := uint8(0)
+	for i, n := range game.TerrainNames() {
+		if n == ground {
+			code = uint8(i)
+		}
+	}
+	return game.WorldView{TerrainW: 4, Terrain: []uint8{code, code, code, code}, Mines: mines, Smooths: smooths}
+}
+
+func TestMineAndSmoothCuesOnlyOnTerrainChange(t *testing.T) {
+	t.Parallel()
+	r := New(&stubSim{w: 4, h: 1})
+	mark := [][2]int{{1, 0}}
+	// cancelling a mine mark leaves the rock: no break sound
+	r.listenWorld(terrainWorld("rock", mark, nil), nil)
+	r.listenWorld(terrainWorld("rock", nil, nil), nil)
+	if c := r.takeCues(); len(c) != 0 {
+		t.Fatalf("cancelled mine cued %+v", c)
+	}
+	// mined out: the rock is gone
+	r.listenWorld(terrainWorld("rock", mark, nil), nil)
+	r.listenWorld(terrainWorld("stone", nil, nil), nil)
+	if c := r.takeCues(); len(c) != 1 || c[0].id != "sfx.rock_break" || c[0].x != 1.5 {
+		t.Fatalf("mined rock cues %+v", c)
+	}
+	// smoothing: silent when cancelled, a chisel strike when done
+	r.listenWorld(terrainWorld("rock", nil, mark), nil)
+	r.listenWorld(terrainWorld("rock", nil, nil), nil)
+	if c := r.takeCues(); len(c) != 0 {
+		t.Fatalf("cancelled smoothing cued %+v", c)
+	}
+	r.listenWorld(terrainWorld("rock", nil, mark), nil)
+	r.listenWorld(terrainWorld("rock_smooth", nil, nil), nil)
+	if c := r.takeCues(); len(c) != 1 || c[0].id != "sfx.pick" {
+		t.Fatalf("smoothed rock cues %+v", c)
+	}
+}

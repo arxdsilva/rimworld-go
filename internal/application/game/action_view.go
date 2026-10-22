@@ -95,6 +95,8 @@ func (g *Game) actionOf(id entity.EntityID, j job.Record) string {
 		return ActionChop
 	case job.Mine:
 		return ActionMine
+	case job.Smooth:
+		return ActionSmooth
 	case job.Sow:
 		return ActionSow
 	case job.Harvest:
@@ -161,7 +163,9 @@ func (g *Game) workTotal(id entity.EntityID, j job.Record) int {
 			return plant.DefOf(p.Species).HarvestWork
 		}
 	case job.Mine:
-		return MineWork
+		return g.mineWorkAt(j.DestX, j.DestY)
+	case job.Smooth:
+		return g.smoothWork(j.DestX, j.DestY)
 	case job.Sow:
 		if z, ok := g.zoneAt(j.TX, j.TY); ok && plant.DefOf(plant.Species(z.Crop)).SowWork > 0 {
 			return plant.DefOf(plant.Species(z.Crop)).SowWork

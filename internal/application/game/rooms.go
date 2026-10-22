@@ -49,7 +49,7 @@ type roomStats struct {
 func (g *Game) markRoomsDirty() { g.roomDirty = true; g.fenceDirty() } // fences.go: a building changed
 
 func (g *Game) isBoundary(x, y int) bool {
-	if g.terr.At(x, y) == terrain.Rock {
+	if terrain.IsRockWall(g.terr.At(x, y)) {
 		return true
 	}
 	bid := g.layerBldgAt(x, y, construction.LayerObject)
@@ -102,6 +102,10 @@ func (g *Game) ensureRooms() {
 			if r < 0 {
 				continue
 			}
+			// SIM-029: a smooth stone floor counts as floored (once)
+			if g.terr.At(x, y) == terrain.StoneSmooth && g.layerBldgAt(x, y, construction.LayerFloor) == 0 {
+				stats[r].contents.Floored++
+			}
 			for _, d := range [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {
 				nx, ny := x+d[0], y+d[1]
 				if nx < 0 || ny < 0 || nx >= w || ny >= h || grid[ny*w+nx] != room.Wall {
@@ -109,7 +113,7 @@ func (g *Game) ensureRooms() {
 				}
 				stats[r].contents.TotalWalls++
 				bid := g.layerBldgAt(nx, ny, construction.LayerObject)
-				if b, ok := g.bldgs.Get(bid); ok && b.Stuff == item.Stone || g.terr.At(nx, ny) == terrain.Rock {
+				if b, ok := g.bldgs.Get(bid); ok && (item.IsStoneBlocks(b.Stuff) || b.Stuff == item.Stone) || terrain.IsRockWall(g.terr.At(nx, ny)) {
 					stats[r].contents.StoneWalls++
 				}
 			}
@@ -305,7 +309,7 @@ func (g *Game) acting(id entity.EntityID, j job.Record) (string, int, int) {
 	switch j.Kind {
 	case job.Construct, job.Deconstruct, job.Cut, job.Harvest, job.Sow:
 		return j.Kind.String(), j.TX, j.TY
-	case job.Mine, job.Roof, job.Unroof, job.Clean:
+	case job.Mine, job.Smooth, job.Roof, job.Unroof, job.Clean:
 		return j.Kind.String(), j.DestX, j.DestY
 	case job.Bill:
 		if j.Carry == 0 { // picking the ingredient up, not working yet

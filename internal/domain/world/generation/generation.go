@@ -10,6 +10,7 @@ import (
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/terrain"
+	"rimworld-go/pkg/noise"
 	"rimworld-go/pkg/randx"
 )
 
@@ -31,41 +32,12 @@ type Result struct {
 // StartRadius is the half-size of the guaranteed open start area.
 const StartRadius = 5
 
-// valueNoise is smooth lattice noise in [0, 1] with cell size `cell`.
-type valueNoise struct {
-	cell    float64
-	gw, gh  int
-	lattice []float64
-}
-
-func newNoise(r *randx.Rand, w, h int, cell float64) valueNoise {
-	gw := int(float64(w)/cell) + 2
-	gh := int(float64(h)/cell) + 2
-	l := make([]float64, gw*gh)
-	for i := range l {
-		l[i] = float64(r.IntN(1<<20)) / float64(1<<20)
-	}
-	return valueNoise{cell: cell, gw: gw, gh: gh, lattice: l}
-}
-
-func (n valueNoise) at(x, y int) float64 {
-	fx, fy := (float64(x)+0.5)/n.cell, (float64(y)+0.5)/n.cell
-	ix, iy := int(math.Floor(fx)), int(math.Floor(fy))
-	tx, ty := fx-float64(ix), fy-float64(iy)
-	tx = tx * tx * (3 - 2*tx)
-	ty = ty * ty * (3 - 2*ty)
-	g := func(a, b int) float64 { return n.lattice[b*n.gw+a] }
-	top := g(ix, iy)*(1-tx) + g(ix+1, iy)*tx
-	bot := g(ix, iy+1)*(1-tx) + g(ix+1, iy+1)*tx
-	return top*(1-ty) + bot*ty
-}
-
 // Generate builds a map. The centre StartRadius area is always open soil.
 func Generate(seed uint64, w, h int) Result {
 	r := randx.New(seed ^ 0x6d61706765) // independent of the sim RNG stream
-	rock := newNoise(r, w, h, 11)
-	rock2 := newNoise(r, w, h, 4)
-	fert := newNoise(r, w, h, 7)
+	rock := noise.New(r, w, h, 11)
+	rock2 := noise.New(r, w, h, 4)
+	fert := noise.New(r, w, h, 7)
 	m := terrain.NewMap(w, h)
 	cx, cy := w/2, h/2
 	res := Result{
@@ -82,8 +54,8 @@ func Generate(seed uint64, w, h int) Result {
 			dx := math.Abs(float64(x-cx)) / float64(w/2+1)
 			dy := math.Abs(float64(y-cy)) / float64(h/2+1)
 			edge := math.Max(dx, dy)
-			v := 0.75*rock.at(x, y) + 0.25*rock2.at(x, y) + 0.28*edge
-			f := fert.at(x, y)
+			v := 0.75*rock.At(x, y) + 0.25*rock2.At(x, y) + 0.28*edge
+			f := fert.At(x, y)
 			t := terrain.Soil
 			switch {
 			case v > 0.80 && !inClear(x, y):
@@ -133,9 +105,9 @@ func GenerateBiome(seed uint64, w, h int, b biome.Def) Result {
 		return Generate(seed, w, h)
 	}
 	r := randx.New(seed ^ 0x6d61706765)
-	rock := newNoise(r, w, h, 11)
-	rock2 := newNoise(r, w, h, 4)
-	fert := newNoise(r, w, h, 7)
+	rock := noise.New(r, w, h, 11)
+	rock2 := noise.New(r, w, h, 4)
+	fert := noise.New(r, w, h, 7)
 	m := terrain.NewMap(w, h)
 	cx, cy := w/2, h/2
 	res := Result{
@@ -153,7 +125,7 @@ func GenerateBiome(seed uint64, w, h int, b biome.Def) Result {
 		for x := 0; x < w; x++ {
 			dx := math.Abs(float64(x-cx)) / float64(w/2+1)
 			dy := math.Abs(float64(y-cy)) / float64(h/2+1)
-			v := 0.75*rock.at(x, y) + 0.25*rock2.at(x, y) + 0.28*math.Max(dx, dy)
+			v := 0.75*rock.At(x, y) + 0.25*rock2.At(x, y) + 0.28*math.Max(dx, dy)
 			i := y*w + x
 			switch {
 			case noRock:
@@ -164,7 +136,7 @@ func GenerateBiome(seed uint64, w, h int, b biome.Def) Result {
 				m.Cells[i] = terrain.Stone
 				continue
 			}
-			fv[i] = fert.at(x, y)
+			fv[i] = fert.At(x, y)
 			soft = append(soft, int32(i))
 		}
 	}

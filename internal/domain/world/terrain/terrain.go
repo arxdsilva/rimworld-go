@@ -13,10 +13,13 @@ const (
 	Sand
 	Marsh // wet, slow ground
 	Ice   // frozen ground: nothing grows
+	// Smoothed stone (SIM-029): a worked rock wall and a worked stone floor.
+	RockSmooth
+	StoneSmooth
 	numTypes
 )
 
-var names = [numTypes]string{"soil", "rich_soil", "gravel", "stone", "rock", "sand", "marsh", "ice"}
+var names = [numTypes]string{"soil", "rich_soil", "gravel", "stone", "rock", "sand", "marsh", "ice", "rock_smooth", "stone_smooth"}
 
 func (t Type) String() string {
 	if t >= numTypes {
@@ -26,7 +29,10 @@ func (t Type) String() string {
 }
 
 // Walkable reports whether pawns can stand on t.
-func (t Type) Walkable() bool { return t != Rock }
+func (t Type) Walkable() bool { return !IsRockWall(t) }
+
+// IsRockWall reports a solid natural wall: rough or smoothed rock.
+func IsRockWall(t Type) bool { return t == Rock || t == RockSmooth }
 
 // Fertility is the growth-rate multiplier in percent (0 = nothing grows).
 func (t Type) Fertility() int {

@@ -54,6 +54,8 @@ const (
 	// FenceGate lets colonists and tame animals through (SIM-028).
 	Fence
 	FenceGate
+	// StonecutterTable cuts stone chunks into blocks (SIM-029).
+	StonecutterTable
 	kindCount
 )
 
@@ -77,7 +79,8 @@ type Def struct {
 	Layer      Layer
 	BlocksMove bool // completed building makes its tile unwalkable
 	Rotatable  bool
-	StoneOK    bool // may be built from stone blocks instead of wood
+	StoneOK    bool // may be built from any stone blocks instead of wood
+	MetalOK    bool // may be built from steel
 	// Size is the footprint (w, h) when facing south; zero means 1x1.
 	Size [2]int
 	// Spot is the interaction cell relative to the footprint's top-left
@@ -94,13 +97,34 @@ type Def struct {
 	AnimalBlock, Gate bool
 }
 
-// StoneWorkPct is the work multiplier (percent) for stone construction.
+// StoneWorkPct is the work multiplier (percent) for granite, the legacy
+// "stone" material; StuffStats has every material.
 const StoneWorkPct = 160
 
+// StuffStats is a material's HP and construct work multipliers (percent).
+// Original numbers: granite keeps the legacy stone values.
+func StuffStats(s item.Kind) (hpPct, workPct int) {
+	switch s {
+	case item.GraniteBlocks, item.Stone:
+		return 200, StoneWorkPct
+	case item.SandstoneBlocks:
+		return 150, 125
+	case item.LimestoneBlocks:
+		return 170, 140
+	case item.SlateBlocks:
+		return 160, 135
+	case item.MarbleBlocks:
+		return 140, 150
+	case item.Steel:
+		return 140, 90
+	}
+	return 100, 100
+}
+
 var defs = [kindCount]Def{
-	Wall:         {Kind: Wall, Name: "wall", Wood: 2, Work: 40, Layer: LayerObject, BlocksMove: true, StoneOK: true},
+	Wall:         {Kind: Wall, Name: "wall", Wood: 2, Work: 40, Layer: LayerObject, BlocksMove: true, StoneOK: true, MetalOK: true},
 	Bed:          {Kind: Bed, Name: "bed", Wood: 5, Work: 90, Layer: LayerObject, Rotatable: true, Size: [2]int{1, 2}},
-	Door:         {Kind: Door, Name: "door", Wood: 2, Work: 50, Layer: LayerObject},
+	Door:         {Kind: Door, Name: "door", Wood: 2, Work: 50, Layer: LayerObject, MetalOK: true},
 	Floor:        {Kind: Floor, Name: "floor", Wood: 1, Work: 20, Layer: LayerFloor, StoneOK: true},
 	Table:        {Kind: Table, Name: "table", Wood: 3, Work: 50, Layer: LayerObject},
 	Chair:        {Kind: Chair, Name: "chair", Wood: 2, Work: 40, Layer: LayerObject, Rotatable: true},
@@ -136,6 +160,8 @@ var defs = [kindCount]Def{
 		Rotatable: true, Spot: [2]int{0, 1}, HasSpot: true},
 	Fence:     {Kind: Fence, Name: "fence", Wood: 1, Work: 20, Layer: LayerObject, StoneOK: true, AnimalBlock: true},
 	FenceGate: {Kind: FenceGate, Name: "fence gate", Wood: 3, Work: 40, Layer: LayerObject, Rotatable: true, AnimalBlock: true, Gate: true},
+	StonecutterTable: {Kind: StonecutterTable, Name: "stonecutter table", Wood: 6, Work: 160, Layer: LayerObject, BlocksMove: true,
+		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
 }
 
 // MaxHP is how much damage a building takes before it is destroyed.
@@ -151,10 +177,8 @@ func MaxHP(k Kind, s item.Kind) int {
 	case SpikeTrap:
 		hp = 40
 	}
-	if s == item.Stone {
-		hp = hp * 2
-	}
-	return hp
+	pct, _ := StuffStats(s)
+	return hp * pct / 100
 }
 
 // CoverPct is how much a building on the shooter's side of a target cuts
@@ -329,11 +353,13 @@ func StuffOK(k Kind, s item.Kind) bool {
 	if DefOf(k).Carpet || s.IsCarpet() {
 		return DefOf(k).Carpet && s.IsCarpet()
 	}
-	switch s {
-	case item.Wood:
+	switch {
+	case s == item.Wood:
 		return true
-	case item.Stone:
+	case item.IsStoneBlocks(s):
 		return DefOf(k).StoneOK
+	case s == item.Steel:
+		return DefOf(k).MetalOK
 	}
 	return false
 }
@@ -348,22 +374,24 @@ func DefaultStuff(k Kind) item.Kind {
 
 // Stuffs lists the materials k may be built from, default first.
 func Stuffs(k Kind) []item.Kind {
-	switch d := DefOf(k); {
-	case d.Carpet:
+	d := DefOf(k)
+	if d.Carpet {
 		return item.Carpets()
-	case d.StoneOK:
-		return []item.Kind{item.Wood, item.Stone}
 	}
-	return []item.Kind{item.Wood}
+	out := []item.Kind{item.Wood}
+	if d.StoneOK {
+		out = append(out, item.StoneBlocks()...)
+	}
+	if d.MetalOK {
+		out = append(out, item.Steel)
+	}
+	return out
 }
 
 // WorkFor is the construct work for k built from s.
 func WorkFor(k Kind, s item.Kind) int {
-	w := DefOf(k).Work
-	if s == item.Stone {
-		w = w * StoneWorkPct / 100
-	}
-	return w
+	_, pct := StuffStats(s)
+	return DefOf(k).Work * pct / 100
 }
 
 // Facing is the orientation of a rotatable building.

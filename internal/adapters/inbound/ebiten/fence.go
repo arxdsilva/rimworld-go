@@ -10,7 +10,7 @@ import (
 )
 
 // Fences and the forbidden marker (UI-017, ART fences). Fences autotile
-// among themselves and their gates like walls do; a gate is drawn open
+// among themselves, their gates and walls (one way, linkgrid.go); a gate is drawn open
 // while a creature stands in it. Every key may be missing from the art
 // catalog: the vector fallbacks below keep nothing invisible.
 
@@ -24,7 +24,7 @@ func isFenceKind(kind string) bool { return kind == fenceKind || kind == gateKin
 // fenceSprite is structure/fence_<wood|stone>_<mask>.
 func fenceSprite(stuff string, mask int) string {
 	m := "wood"
-	if stuff == "stone" {
+	if isStoneStuff(stuff) {
 		m = "stone"
 	}
 	return "structure/fence_" + m + "_" + twoDigits(mask)
@@ -36,25 +36,6 @@ func gateSprite(facing string, open bool) string {
 		return "structure/fence_gate_open_" + facingOr(facing)
 	}
 	return "structure/fence_gate_" + facingOr(facing)
-}
-
-// fenceSet collects the cells a fence joins (fences, gates, walls, doors;
-// plus planned ones from frames when planned is true) for autotiling.
-func fenceSet(w game.WorldView, planned bool) map[[2]int]bool {
-	set := map[[2]int]bool{}
-	for _, b := range w.Buildings {
-		if isFenceKind(b.Kind) || b.Kind == "wall" || b.Kind == "door" {
-			set[[2]int{b.X, b.Y}] = true
-		}
-	}
-	if planned {
-		for _, f := range w.Frames {
-			if isFenceKind(f.Kind) || f.Kind == "wall" || f.Kind == "door" {
-				set[[2]int{f.X, f.Y}] = true
-			}
-		}
-	}
-	return set
 }
 
 // creatureCells marks tiles holding a colonist or an animal (a gate there

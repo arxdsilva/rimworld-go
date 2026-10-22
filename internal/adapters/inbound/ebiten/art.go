@@ -470,30 +470,14 @@ func (c *artCatalog) tintNames(group string) []string {
 
 // --- pure presentation rules -------------------------------------------
 
-// Wall autotile mask bits (ART spec / assets/AGENTS.md).
+// Wall autotile mask bits (ART spec / assets/AGENTS.md); linkgrid.go
+// computes the masks.
 const (
 	wallN = 1
 	wallE = 2
 	wallS = 4
 	wallW = 8
 )
-
-func wallMask(walls map[[2]int]bool, x, y int) int {
-	m := 0
-	if walls[[2]int{x, y - 1}] {
-		m |= wallN
-	}
-	if walls[[2]int{x + 1, y}] {
-		m |= wallE
-	}
-	if walls[[2]int{x, y + 1}] {
-		m |= wallS
-	}
-	if walls[[2]int{x - 1, y}] {
-		m |= wallW
-	}
-	return m
-}
 
 // facing is a presentation-only pawn orientation.
 type facing uint8

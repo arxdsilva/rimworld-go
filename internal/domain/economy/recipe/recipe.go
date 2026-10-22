@@ -4,6 +4,7 @@ import (
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/world/geology"
 )
 
 // ID identifies a recipe.
@@ -40,6 +41,12 @@ const (
 	// tailoring bench.
 	KnitWoolParka
 	WeaveWoolCarpet
+	// Stonecutting (SIM-029): one chunk becomes a pile of blocks of its stone.
+	CutSandstone
+	CutGranite
+	CutLimestone
+	CutSlate
+	CutMarble
 	numRecipes
 )
 
@@ -50,8 +57,10 @@ type Input struct {
 	Kind       item.Kind
 	AnyRaw     bool
 	AnyDryable bool
-	Qty        int
-	Max        int
+	// AnyStoneBlocks accepts blocks of any stone (SIM-029).
+	AnyStoneBlocks bool
+	Qty            int
+	Max            int
 }
 
 // Take is how many items the input takes from a stack of qty.
@@ -115,7 +124,7 @@ var defs = [numRecipes]Def{
 	MakeRifle: {ID: MakeRifle, Name: "make_rifle", Label: "Make crude rifle", Bench: construction.Workbench,
 		Input: Input{Kind: item.Wood, Qty: 12}, Output: item.Rifle, OutQty: 1, Work: 1500, Skill: work.Craft},
 	Knife: {ID: Knife, Name: "knife", Label: "Make stone knife", Bench: construction.Workbench,
-		Input: Input{Kind: item.Stone, Qty: 3}, Output: item.Knife, OutQty: 1, Work: 200, Skill: work.Craft},
+		Input: Input{AnyStoneBlocks: true, Qty: 3}, Output: item.Knife, OutQty: 1, Work: 200, Skill: work.Craft},
 	Spear: {ID: Spear, Name: "spear", Label: "Make wooden spear", Bench: construction.Workbench,
 		Input: Input{Kind: item.Wood, Qty: 5}, Output: item.Spear, OutQty: 1, Work: 320, Skill: work.Craft},
 	Cremate: {ID: Cremate, Name: "cremate", Label: "Cremate corpse", Bench: construction.Pyre,
@@ -136,6 +145,20 @@ var defs = [numRecipes]Def{
 		Input: Input{Kind: item.Wool, Qty: 16}, Output: item.WoolParka, OutQty: 1, Work: 1000, Skill: work.Craft},
 	WeaveWoolCarpet: {ID: WeaveWoolCarpet, Name: "weave_wool_carpet", Label: "Weave wool carpet", Bench: construction.TailoringBench,
 		Input: Input{Kind: item.Wool, Qty: 8}, Output: item.CarpetWool, OutQty: 1, Work: 450, Skill: work.Craft},
+	CutSandstone: cut(CutSandstone, geology.Sandstone),
+	CutGranite:   cut(CutGranite, geology.Granite),
+	CutLimestone: cut(CutLimestone, geology.Limestone),
+	CutSlate:     cut(CutSlate, geology.Slate),
+	CutMarble:    cut(CutMarble, geology.Marble),
+}
+
+// CutYield is how many blocks one chunk makes at the stonecutter table.
+const CutYield = 10
+
+func cut(id ID, s geology.Stone) Def {
+	return Def{ID: id, Name: "cut_" + s.String(), Label: "Cut " + s.String() + " blocks",
+		Bench: construction.StonecutterTable, Input: Input{Kind: item.ChunkOf(s), Qty: 1},
+		Output: item.BlocksOf(s), OutQty: CutYield, Work: 300, Skill: work.Craft}
 }
 
 // RackCapacity is how many items one drying rack holds.
@@ -178,6 +201,8 @@ func (in Input) Accepts(k item.Kind) bool {
 		return k.Raw()
 	case in.AnyDryable:
 		return k.Dryable()
+	case in.AnyStoneBlocks:
+		return item.IsStoneBlocks(k)
 	}
 	return k == in.Kind
 }

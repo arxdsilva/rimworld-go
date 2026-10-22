@@ -126,6 +126,9 @@ type heldItem struct {
 	// maxAim off its pose.
 	aim        bool
 	aimX, aimY float64
+	// cs tints the right-hand item (a carried stone chunk's stone); zero
+	// is untinted.
+	cs colorScale
 }
 
 // onDuty: drafted, a raider on the attack, or fighting right now.
@@ -203,8 +206,12 @@ func (r *Renderer) drawHeldPart(screen *ebiten.Image, f facing, suffix string, h
 	if !ok {
 		return
 	}
+	cs := noCS
+	if !left && h.cs != (colorScale{}) {
+		cs = h.cs
+	}
 	if img := r.art.image(key, color.NRGBA{}); img != nil {
-		r.drawLit(screen, img, g, noCS, int(math.Floor(wx)), int(math.Floor(wy)))
+		r.drawLit(screen, img, g, cs, int(math.Floor(wx)), int(math.Floor(wy)))
 	}
 }
 

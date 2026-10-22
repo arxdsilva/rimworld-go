@@ -67,15 +67,42 @@ func (a *App) selectedCrop() game.CropView {
 	return crops[0]
 }
 
-// archStuffPerRow is how many material buttons fit one row; carpets
-// (five materials with counts) wrap to a second row.
+// archStuffPerRow is how many material buttons fit one row when a tool
+// has more than four; carpets (five materials with counts) wrap to a
+// second row, and long names ("Sandstone blocks") take fewer per row.
 const archStuffPerRow = 3
+
+// archStuffGrid lays out a buildable's material buttons: per row, rows,
+// and the button width.
+func archStuffGrid(bv game.BuildableView) (perRow, rows int, bw float32) {
+	n := len(bv.Stuffs)
+	if n == 0 {
+		return 0, 0, 0
+	}
+	perRow = n
+	if n > 4 {
+		perRow = archStuffPerRow
+	}
+	width := func(k int) float32 { return (archW - 20 - 6*float32(k-1)) / float32(k) }
+	need := 0
+	if !bv.Carpet { // carpet labels carry counts and keep their three per row
+		for _, s := range bv.Stuffs {
+			need = max(need, len(stuffLabel(s))*6+12)
+		}
+	}
+	for perRow > 1 && width(perRow) < float32(need) {
+		perRow--
+	}
+	bw = min(max(84, float32(need)), width(perRow))
+	return perRow, (n + perRow - 1) / perRow, bw
+}
 
 // archStuffExtra is the extra panel height the material rows need.
 func (a *App) archStuffExtra() int {
 	if t, ok := toolByID(a.archTool); ok {
-		if bv, ok := buildable(t.build); ok && len(bv.Stuffs) > 4 {
-			return 26
+		if bv, ok := buildable(t.build); ok && len(bv.Stuffs) > 1 {
+			_, rows, _ := archStuffGrid(bv)
+			return max(rows-1, 0) * 26
 		}
 	}
 	return 0
@@ -145,13 +172,7 @@ func (a *App) architectButtons() []button {
 		if bv, ok := buildable(t.build); ok && len(bv.Stuffs) > 1 {
 			// One button per material, default first, shrunk to fit the
 			// panel (a carpet shows one per carpet material).
-			perRow := len(bv.Stuffs)
-			if a.archStuffExtra() > 0 {
-				perRow = archStuffPerRow
-			}
-			n := float32(perRow)
-			bw := min(float32(84), (r.w-20-6*(n-1))/n)
-			rows := (len(bv.Stuffs) + perRow - 1) / perRow
+			perRow, rows, bw := archStuffGrid(bv)
 			for i, s := range bv.Stuffs {
 				row, col := i/perRow, i%perRow
 				label := stuffLabel(s)
@@ -169,8 +190,8 @@ func (a *App) architectButtons() []button {
 	return out
 }
 
-// stuffLabel is a material button's text: "Wood", "Stone", or the carpet's
-// material ("Cloth" for "cloth carpet") so they all fit in a row.
+// stuffLabel is a material button's text: "Wood", "Granite blocks",
+// "Steel", or the carpet's material ("Cloth" for "cloth carpet").
 func stuffLabel(s string) string {
 	s = strings.TrimSuffix(s, " carpet")
 	return strings.ToUpper(s[:1]) + s[1:]
@@ -221,6 +242,16 @@ func archTooltipLines(t archTool, stuff string, wood, stock int) []string {
 		lines = append(lines, fmt.Sprintf("Only %d wood in the colony", wood))
 	}
 	return lines
+}
+
+// archStockLine is the Architect's stock line: wood, plus the selected
+// material's free stock ("Granite blocks 40") or, with no stone or steel
+// material picked, the colony's stone blocks.
+func archStockLine(w game.WorldView, wood int, stuff string) string {
+	if stuff == "" || stuff == "wood" {
+		return fmt.Sprintf("Wood %d   Stone %d", wood, w.Stone)
+	}
+	return fmt.Sprintf("Wood %d   %s %d", wood, stuffLabel(stuff), stockOf(w, stuff))
 }
 
 // stockOf counts the free (on the ground, not carried, not forbidden)
@@ -327,7 +358,10 @@ func (a *App) icon(name string) *ebiten.Image {
 	return a.art.image("ui_icon/"+name, color.NRGBA{})
 }
 
-func drawIcon(dst, img *ebiten.Image, x, y, size float64) {
+func drawIcon(dst, img *ebiten.Image, x, y, size float64) { drawIconCS(dst, img, x, y, size, noCS) }
+
+// drawIconCS is drawIcon multiplied by cs (a stone item's tint).
+func drawIconCS(dst, img *ebiten.Image, x, y, size float64, cs colorScale) {
 	if img == nil {
 		return
 	}
@@ -336,6 +370,9 @@ func drawIcon(dst, img *ebiten.Image, x, y, size float64) {
 	op.GeoM.Scale(s, s)
 	op.GeoM.Translate(x, y)
 	op.Filter = ebiten.FilterLinear
+	if cs != noCS {
+		op.ColorScale.Scale(cs[0], cs[1], cs[2], cs[3])
+	}
 	dst.DrawImage(img, op)
 }
 
@@ -386,11 +423,15 @@ func (a *App) drawArchitect(screen *ebiten.Image) {
 		}
 	}
 	iy := int(r.y+r.h) - archInfoH - a.archStuffExtra() + 6
-	stone := 0
-	if a.renderer != nil {
-		stone = a.renderer.world().Stone
+	stuff := ""
+	if t, ok := toolByID(a.archTool); ok {
+		if bv, ok := buildable(t.build); ok && !bv.Carpet {
+			stuff = a.toolStuff(t)
+		}
 	}
-	drawLabel(screen, int(r.x)+12, iy, fmt.Sprintf("Wood %d   Stone %d", wood, stone))
+	if a.renderer != nil {
+		drawLabel(screen, int(r.x)+12, iy, archStockLine(a.renderer.world(), wood, stuff))
+	}
 	if t, ok := toolByID(a.archTool); ok {
 		hint := map[placeMode]string{
 			placeSingle: "Click to place",

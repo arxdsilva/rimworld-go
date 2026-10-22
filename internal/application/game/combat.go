@@ -98,7 +98,7 @@ func (g *Game) combatTarget(id entity.EntityID) (Position, bool) {
 
 // blocksSight: rock, walls and (closed) doors stop bullets.
 func (g *Game) blocksSight(x, y int) bool {
-	if g.terr.At(x, y) == terrain.Rock {
+	if terrain.IsRockWall(g.terr.At(x, y)) {
 		return true
 	}
 	if bid := g.layerBldgAt(x, y, construction.LayerObject); bid != 0 {

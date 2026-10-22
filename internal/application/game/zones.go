@@ -101,7 +101,7 @@ func (g *Game) zoneable(kind zone.Kind, x, y int) bool {
 		return false
 	}
 	t := g.terr.At(x, y)
-	if t == terrain.Rock {
+	if terrain.IsRockWall(t) {
 		return false
 	}
 	return kind != zone.KindGrow || t.Fertility() > 0
@@ -162,12 +162,12 @@ func allows(s zone.Zone, k item.Kind) bool {
 		return s.Food
 	case k == item.Wood:
 		return s.Wood
-	case k == item.Stone:
+	case k == item.Stone, item.IsChunk(k), item.IsStoneBlocks(k):
 		return s.Stone
 	case k == item.FertileEgg: // SIM-026: kept with the food; they hatch in place
 		return s.Food
 	case k == item.Leather, k == item.HerbalMedicine, k == item.Cloth, k == item.Straw, k.IsCarpet(), k.IsApparel(), k.IsWeapon(),
-		k == item.Wool, k == item.EmberOil:
+		k == item.Wool, k == item.EmberOil, item.IsMetal(k):
 		return true // goods: always welcome
 	}
 	return false

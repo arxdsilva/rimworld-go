@@ -84,14 +84,10 @@ func frameStuff(f game.FrameView) string {
 
 // frameName is the display name of the thing being built.
 func frameName(f game.FrameView) string {
-	name := capitalize(f.Kind)
 	if f.Kind == "carpet" && strings.HasSuffix(f.Stuff, " carpet") {
 		return capitalize(f.Stuff)
 	}
-	if f.Stuff == "stone" {
-		name = "Stone " + f.Kind
-	}
-	return name
+	return materialTitle(f.Kind, f.Stuff)
 }
 
 // frameStarted reports whether construction has begun (materials in or

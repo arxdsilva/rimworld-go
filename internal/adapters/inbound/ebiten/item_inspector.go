@@ -200,11 +200,12 @@ func (a *App) drawItemInspector(screen *ebiten.Image) {
 	drawPanel(screen, r.x, r.y, r.w, r.h)
 	if a.renderer.art != nil {
 		key := "ui_icon/" + strings.ReplaceAll(it.Kind, " ", "_") // "cloth carpet" -> cloth_carpet
+		cs := noCS
 		if !a.renderer.art.has(key) {
-			key = itemSpriteSpecies(it.Kind, it.Animal, it.X, it.Y)
+			key, cs = a.renderer.stoneItem(itemSpriteSpecies(it.Kind, it.Animal, it.X, it.Y), it.Kind, noCS)
 		}
 		if img := a.renderer.art.image(key, color.NRGBA{}); img != nil {
-			drawIcon(screen, img, float64(r.x)+12, float64(r.y)+10, 40)
+			drawIconCS(screen, img, float64(r.x)+12, float64(r.y)+10, 40, cs)
 		}
 	}
 	x, y := int(r.x), int(r.y)

@@ -34,7 +34,7 @@ func TestRecipesAndBills(t *testing.T) {
 func TestKnifeSpearRecipes(t *testing.T) {
 	t.Parallel()
 	k, s := DefOf(Knife), DefOf(Spear)
-	if k.Bench != construction.Workbench || k.Input != (Input{Kind: item.Stone, Qty: 3}) || k.Output != item.Knife || k.OutQty != 1 {
+	if k.Bench != construction.Workbench || k.Input != (Input{AnyStoneBlocks: true, Qty: 3}) || k.Output != item.Knife || k.OutQty != 1 {
 		t.Fatalf("knife recipe = %+v", k)
 	}
 	if s.Bench != construction.Workbench || s.Input != (Input{Kind: item.Wood, Qty: 5}) || s.Output != item.Spear || s.OutQty != 1 {

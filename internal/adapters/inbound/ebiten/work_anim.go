@@ -60,8 +60,10 @@ type actionDef struct {
 // workTable is the single source of truth for hands-on actions (ART
 // §27.2). Combat (aim, melee) and carrying (rescue, haul) are other layers.
 var workTable = map[string]actionDef{
-	game.ActionChop:        {set: "_chop", frames: 6, strike: 4, period: 46, reach: 0.10, lean: 0.14, tool: "tool/axe", stance: stanceHands, fallback: motionSwing, parts: []partSpec{{partChip, 4}}},
-	game.ActionMine:        {set: "_mine", frames: 6, strike: 4, period: 50, reach: 0.12, lean: 0.16, squash: 0.03, tool: "tool/pickaxe", stance: stanceHands, fallback: motionSwing, parts: []partSpec{{partSpark, 3}, {partDust, 4}}},
+	game.ActionChop: {set: "_chop", frames: 6, strike: 4, period: 46, reach: 0.10, lean: 0.14, tool: "tool/axe", stance: stanceHands, fallback: motionSwing, parts: []partSpec{{partChip, 4}}},
+	game.ActionMine: {set: "_mine", frames: 6, strike: 4, period: 50, reach: 0.12, lean: 0.16, squash: 0.03, tool: "tool/pickaxe", stance: stanceHands, fallback: motionSwing, parts: []partSpec{{partSpark, 3}, {partDust, 4}}},
+	// Smoothing (SIM-029): the mine swing, shorter and lighter, with dust.
+	game.ActionSmooth:      {set: "_mine", frames: 6, strike: 4, period: 40, reach: 0.08, lean: 0.10, squash: 0.03, tool: "tool/pickaxe", stance: stanceHands, fallback: motionSwing, parts: []partSpec{{partDust, 3}}},
 	game.ActionBreach:      {set: "_mine", frames: 6, strike: 4, period: 44, reach: 0.12, lean: 0.16, squash: 0.03, tool: "tool/pickaxe", stance: stanceHands, fallback: motionSwing, parts: []partSpec{{partSpark, 3}, {partDust, 4}}},
 	game.ActionBuild:       {set: "_hammer", frames: 4, strike: 3, period: 34, reach: 0.08, lean: 0.10, tool: "tool/hammer", stance: stanceHands, fallback: motionSwing, parts: []partSpec{{partSawdust, 3}}},
 	game.ActionDeconstruct: {set: "_hammer", frames: 4, strike: 3, period: 34, reach: 0.08, lean: 0.10, tool: "tool/hammer", stance: stanceHands, fallback: motionSwing, parts: []partSpec{{partSawdust, 3}}},
@@ -95,7 +97,7 @@ var workTable = map[string]actionDef{
 // no Action) to canonical actions.
 var legacyActions = map[string]string{
 	"cut": game.ActionChop, "construct": game.ActionBuild, "deconstruct": game.ActionDeconstruct,
-	"mine": game.ActionMine, "harvest": game.ActionHarvest, "sow": game.ActionSow,
+	"mine": game.ActionMine, "smooth": game.ActionSmooth, "harvest": game.ActionHarvest, "sow": game.ActionSow,
 	"refuel": game.ActionRefuel, "play horseshoes": game.ActionHorseshoes,
 	"tend": game.ActionTend, "eat": game.ActionEat,
 	"work at workbench": game.ActionCraft, "work at stove": game.ActionCook,
@@ -271,11 +273,11 @@ func (r *Renderer) carryPose(p game.PawnView, m moveState) actionPose {
 	}
 	a.held = heldItem{set: true} // bare hands: the patient is drawn over the rescuer
 	if p.Carrying != "pawn" {
-		key := itemSprite(p.Carrying)
-		if p.CarryingAnimal != "" { // a carcass shows its species
+		key, cs := r.stoneItem(itemSprite(p.Carrying), p.Carrying, noCS) // stone takes its tint
+		if p.CarryingAnimal != "" {                                      // a carcass shows its species
 			key = "item/corpse_" + p.CarryingAnimal + "_v0"
 		}
-		a.held = heldItem{set: true, key: key, stance: stanceLoad}
+		a.held = heldItem{set: true, key: key, stance: stanceLoad, cs: cs}
 	}
 	return a
 }

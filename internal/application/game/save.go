@@ -2,9 +2,11 @@ package game
 
 import (
 	"compress/gzip"
+	"encoding/binary"
 	"encoding/gob"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"io"
 	"slices"
 
@@ -31,6 +33,7 @@ import (
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/component"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/geology"
 	"rimworld-go/internal/domain/world/grid"
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/temperature"
@@ -219,6 +222,14 @@ type saveState struct {
 	Incoming map[entity.EntityID]int
 	// Deliveries (HAUL-001): each hauler's shares of Incoming, route order.
 	Deliveries map[entity.EntityID][]haulShare
+	// Geo and Smooths (SIM-029): stone types, ore veins and smoothing
+	// marks; absent in older saves, whose geology is regenerated from
+	// their terrain and whose legacy stone becomes granite blocks.
+	// StructVer is WorldView.StructVer, restored so a loaded game's view
+	// matches the original's.
+	Geo       geology.Map
+	Smooths   map[[2]int]bool
+	StructVer uint64
 }
 
 // Info describes the game for a save header.
@@ -281,6 +292,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 	}
 	s.ZoneMap, s.Logs, s.Incoming = g.exportZones(), g.exportLogs(), g.exportIncoming()
 	s.Deliveries = g.exportDeliveries()
+	s.Geo, s.Smooths, s.StructVer = g.geo, g.smooths, g.structVer
 	zw := gzip.NewWriter(w)
 	enc := gob.NewEncoder(zw)
 	if err := enc.Encode(g.Info(name)); err != nil {
@@ -417,6 +429,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.importIncoming(s.Incoming)
 	g.importDeliveries(s.Deliveries)
 	g.afterLoadAnimals() // legacy corpses and bills (wildlife.go)
+	g.importGeology(s.Geo, s.Smooths, s.StructVer)
 	return g, info, nil
 }
 
@@ -444,5 +457,79 @@ func (g *Game) migrateHandling(old map[entity.EntityID]legacyPriorities) {
 		if m, ok := g.labor.Get(id); ok {
 			g.labor.Set(id, m.Set(work.Handle, m.Enabled(work.Hunt)))
 		}
+	}
+}
+
+// importGeology installs saved geology and smoothing marks (SIM-029). An
+// older save has none: its geology is generated from a hash of its
+// terrain (deterministic, never the sim RNG) and its legacy stone is
+// migrated to granite blocks.
+func (g *Game) importGeology(geo geology.Map, smooths map[[2]int]bool, ver uint64) {
+	setMap(&g.smooths, smooths)
+	g.structVer = ver
+	g.migrateLegacyStone() // a no-op on newer saves
+	if geo.W == g.terr.W && geo.H == g.terr.H && geo.W > 0 {
+		g.geo = geo
+		return
+	}
+	g.geo = geology.Generate(terrainHash(g.terr), g.terr)
+	g.structVer++
+}
+
+// terrainHash is an FNV-64a hash of the terrain: the geology seed of a
+// save made before geology existed.
+func terrainHash(t terrain.Map) uint64 {
+	h := fnv.New64a()
+	var hdr [16]byte
+	binary.LittleEndian.PutUint64(hdr[:8], uint64(t.W))
+	binary.LittleEndian.PutUint64(hdr[8:], uint64(t.H))
+	_, _ = h.Write(hdr[:])
+	cells := make([]byte, len(t.Cells))
+	for i, c := range t.Cells {
+		cells[i] = byte(c)
+	}
+	_, _ = h.Write(cells)
+	return h.Sum64()
+}
+
+// migrateLegacyStone rewrites the generic stone of older saves (no longer
+// a building material) as granite blocks, which keep its numbers: stacks,
+// building and frame materials, and build commands waiting to apply, in
+// order queues or being followed.
+func (g *Game) migrateLegacyStone() {
+	for _, id := range g.itemIDs {
+		if st, ok := g.stacks.Get(id); ok && st.Kind == item.Stone {
+			st.Kind = item.GraniteBlocks
+			g.stacks.Set(id, st)
+		}
+	}
+	for _, id := range g.bldgIDs {
+		if b, ok := g.bldgs.Get(id); ok && b.Stuff == item.Stone {
+			b.Stuff = item.GraniteBlocks
+			g.bldgs.Set(id, b)
+		}
+	}
+	for _, id := range g.frameIDs {
+		if fr, ok := g.frames.Get(id); ok && fr.Stuff == item.Stone {
+			fr.Stuff = item.GraniteBlocks
+			g.frames.Set(id, fr)
+		}
+	}
+	fix := func(c *command.Command) {
+		if c.Stuff == uint8(item.Stone) {
+			c.Stuff = uint8(item.GraniteBlocks)
+		}
+	}
+	for i := range g.pending {
+		fix(&g.pending[i])
+	}
+	for _, q := range g.orderQueue { // in-place edits: order never matters
+		for i := range q {
+			fix(&q[i].cmd)
+		}
+	}
+	for id, o := range g.postponed.orders {
+		fix(&o.cmd)
+		g.postponed.orders[id] = o
 	}
 }

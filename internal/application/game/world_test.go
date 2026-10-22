@@ -1,12 +1,15 @@
 package game
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/command"
+	"rimworld-go/internal/domain/world/geology"
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/terrain"
 )
@@ -59,7 +62,7 @@ func TestChopTreeDropsWood(t *testing.T) {
 	}
 }
 
-func TestMineRockDropsStoneAndOpensTile(t *testing.T) {
+func TestMineRockDropsTypedChunk(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 10, Height: 5})
 	g.SpawnNamedPawn(1, 2, "Bo")
 	for y := 0; y < 5; y++ {
@@ -76,26 +79,109 @@ func TestMineRockDropsStoneAndOpensTile(t *testing.T) {
 	if g.TerrainAt(6, 2) != "stone" || !g.grid.Walkable(6, 2) {
 		t.Fatalf("mined tile = %s walkable=%v", g.TerrainAt(6, 2), g.grid.Walkable(6, 2))
 	}
-	if g.World().Stone != MineYield || len(g.World().Mines) != 0 {
-		t.Fatalf("stone=%d mines=%v", g.World().Stone, g.World().Mines)
+	// a map without geology reads as granite: one granite chunk, no blocks
+	if g.stockOf(item.GraniteChunk) != MineYield || g.World().Stone != 0 || len(g.World().Mines) != 0 {
+		t.Fatalf("chunks=%d stone=%d mines=%v", g.stockOf(item.GraniteChunk), g.World().Stone, g.World().Mines)
 	}
 	if g.TerrainAt(6, 1) != "rock" {
 		t.Fatal("only the designated tile is mined")
+	}
+	// a marble cell drops a marble chunk and keeps its stone as ground
+	if !g.SetGround(6, 3, 6, 3, "rock", "marble", "") {
+		t.Fatal("set ground")
+	}
+	g.Enqueue(command.Command{Kind: command.DesignateMine, X: 6, Y: 3, X2: 6, Y2: 3})
+	g.Step(TicksPerCell*20 + MineWork + 10)
+	if g.TerrainAt(6, 3) != "stone" || g.stockOf(item.MarbleChunk) != 1 || g.stoneAt(6, 3) != geology.Marble {
+		t.Fatalf("marble cell = %s chunks %d stone %v", g.TerrainAt(6, 3), g.stockOf(item.MarbleChunk), g.stoneAt(6, 3))
+	}
+}
+
+func TestMineOreDropsMetalAndClearsOre(t *testing.T) {
+	for _, c := range []struct {
+		ore  string
+		kind item.Kind
+		qty  int
+	}{{"steel", item.Steel, 20}, {"silver", item.Silver, 25}, {"gold", item.Gold, 8}} {
+		g := New(Config{Seed: 1, Width: 10, Height: 5})
+		id, _ := g.SpawnNamedPawn(1, 2, "Bo")
+		if !g.SetGround(6, 0, 6, 4, "rock", "slate", c.ore) {
+			t.Fatal("set ground")
+		}
+		g.Enqueue(command.Command{Kind: command.DesignateMine, X: 6, Y: 2, X2: 6, Y2: 2})
+		for range TicksPerCell * 20 {
+			if j, _ := g.jobs.Get(id); j.Kind == job.Mine && j.State == job.Do {
+				break
+			}
+			g.Step(1)
+		}
+		j, _ := g.jobs.Get(id)
+		if j.Kind != job.Mine || j.WorkLeft != MineWork*3/2 || g.workTotal(id, j) != MineWork*3/2 {
+			t.Fatalf("%s: ore job %v work %d total %d", c.ore, j.Kind, j.WorkLeft, g.workTotal(id, j))
+		}
+		g.Step(MineWork + 10)
+		if g.TerrainAt(6, 2) != "rock" {
+			t.Fatalf("%s: ore takes longer than plain rock to mine", c.ore)
+		}
+		g.Step(MineWork)
+		if g.TerrainAt(6, 2) != "stone" || g.geo.OreAt(6, 2) != geology.NoOre || g.stoneAt(6, 2) != geology.Slate {
+			t.Fatalf("%s: mined = %s ore %v stone %v", c.ore, g.TerrainAt(6, 2), g.geo.OreAt(6, 2), g.stoneAt(6, 2))
+		}
+		if g.stockOf(c.kind) != c.qty || g.stockOf(item.SlateChunk) != 0 {
+			t.Fatalf("%s: metal %d chunks %d", c.ore, g.stockOf(c.kind), g.stockOf(item.SlateChunk))
+		}
+		if g.geo.OreAt(6, 1) == geology.NoOre {
+			t.Fatalf("%s: the vein's other cells keep their ore", c.ore)
+		}
+	}
+	w := New(Config{Seed: 1, Width: 4, Height: 4})
+	w.SpawnStack(item.Steel, 3, 0, 0)
+	w.SpawnStack(item.Silver, 4, 1, 0)
+	w.SpawnStack(item.Gold, 5, 2, 0)
+	if v := w.World(); v.Steel != 3 || v.Silver != 4 || v.Gold != 5 || v.Stone != 0 {
+		t.Fatalf("metal totals %d %d %d stone %d", v.Steel, v.Silver, v.Gold, v.Stone)
+	}
+}
+
+func TestMineSmoothedWall(t *testing.T) {
+	g := New(Config{Seed: 1, Width: 10, Height: 5})
+	id, _ := g.SpawnNamedPawn(1, 2, "Bo")
+	if !g.SetGround(6, 0, 6, 4, "rock_smooth", "limestone", "") {
+		t.Fatal("set ground")
+	}
+	if g.grid.Walkable(6, 2) {
+		t.Fatal("a smoothed wall blocks")
+	}
+	g.Enqueue(command.Command{Kind: command.DesignateMine, X: 6, Y: 2, X2: 6, Y2: 2})
+	g.Step(1)
+	if len(g.World().Mines) != 1 {
+		t.Fatalf("smoothed rock is mineable: %v", g.World().Mines)
+	}
+	g.Step(TicksPerCell*20 + MineWork + 10)
+	if g.TerrainAt(6, 2) != "stone" || g.stockOf(item.LimestoneChunk) != 1 {
+		t.Fatalf("mined smoothed wall = %s chunks %d", g.TerrainAt(6, 2), g.stockOf(item.LimestoneChunk))
+	}
+	var opts []string
+	for _, o := range g.OrdersAt(id, 6, 1) {
+		opts = append(opts, o.Label)
+	}
+	if !slices.Contains(opts, "Mine rock") || slices.Contains(opts, "Smooth wall") {
+		t.Fatalf("orders on a smoothed wall: %v", opts)
 	}
 }
 
 func TestStoneWallUsesStoneBlocks(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 10, Height: 5})
 	g.SpawnNamedPawn(1, 2, "Cora")
-	g.SpawnStack(item.Stone, 5, 2, 3)
+	g.SpawnStack(item.GraniteBlocks, 5, 2, 3)
 	g.SpawnStack(item.Wood, 5, 2, 1)
 	if ok, r := g.CanPlaceStuff("table", "stone", 5, 2); ok || r != ReasonStuff {
 		t.Fatalf("stone table: %v %q", ok, r)
 	}
-	g.Enqueue(command.Command{Kind: command.DesignateBuild, Build: uint8(construction.Wall), Stuff: uint8(item.Stone), X: 6, Y: 2})
-	g.Step(TicksPerCell*60 + construction.WorkFor(construction.Wall, item.Stone) + 20)
+	g.Enqueue(command.Command{Kind: command.DesignateBuild, Build: uint8(construction.Wall), Stuff: uint8(item.GraniteBlocks), X: 6, Y: 2})
+	g.Step(TicksPerCell*60 + construction.WorkFor(construction.Wall, item.GraniteBlocks) + 20)
 	b, ok := building(g, 6, 2, "wall")
-	if !ok || b.Stuff != "stone" {
+	if !ok || b.Stuff != "granite blocks" {
 		t.Fatalf("stone wall = %+v %v", b, ok)
 	}
 	if g.World().Wood != 5 || g.World().Stone != 3 {

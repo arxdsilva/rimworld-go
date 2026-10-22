@@ -182,7 +182,7 @@ func TestEmberOilFuelsCampfire(t *testing.T) {
 	if st, _ := stackOf(g, item.EmberOil); st.Qty != 3 {
 		t.Fatalf("ember oil left = %d, want 3", st.Qty)
 	}
-	if fuelTicks(item.EmberOil) != 3*fuelTicks(item.Wood) || fuelTicks(item.Stone) != 0 {
+	if fuelTicks(item.EmberOil) != 3*fuelTicks(item.Wood) || fuelTicks(item.GraniteBlocks) != 0 {
 		t.Fatal("one oil burns as long as three logs")
 	}
 }

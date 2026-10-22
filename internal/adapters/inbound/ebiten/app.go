@@ -128,7 +128,7 @@ type App struct {
 	archCat                        string
 	archTool                       string
 	archFacing                     uint8
-	archStuff                      string // "wood" or "stone" for tools that allow both
+	archStuff                      string // picked material ("wood", "granite blocks", "steel", a carpet)
 	archCrop                       string // crop the growing-zone tool sows
 	float                          floatMenu
 	cursor                         *[2]int // capture-only synthetic cursor

@@ -8,6 +8,7 @@ const (
 	ActionMelee       = "melee" // melee attack with the wielded weapon
 	ActionChop        = "chop"
 	ActionMine        = "mine"
+	ActionSmooth      = "smooth" // smoothing rock or a stone floor (SIM-029)
 	ActionBuild       = "build"
 	ActionDeconstruct = "deconstruct"
 	ActionRepair      = "repair"

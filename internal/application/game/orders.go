@@ -50,10 +50,12 @@ const (
 	ReasonStored      = "already stored"
 	ReasonBusyTarget  = "in use by "
 	ReasonIncapable   = "not able to act"
-	ReasonNoStone     = "no free stone"
-	ReasonNoMine      = "mining disabled"
-	ReasonNotSowable  = "cannot sow here"
-	ReasonGone        = "no longer there"
+	// ReasonNoStuff is followed by the material's name ("no free
+	// granite blocks"; SIM-029).
+	ReasonNoStuff    = "no free "
+	ReasonNoMine     = "mining disabled"
+	ReasonNotSowable = "cannot sow here"
+	ReasonGone       = "no longer there"
 )
 
 func (g *Game) drafted(id entity.EntityID) bool { return g.draft[id] }
@@ -121,8 +123,8 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		}
 		wid, wx, wy := g.nearestFree(id, fr.Stuff)
 		if wid == 0 {
-			if fr.Stuff == item.Stone {
-				return job.Record{}, ReasonNoStone
+			if fr.Stuff != item.Wood {
+				return job.Record{}, ReasonNoStuff + fr.Stuff.String()
 			}
 			return job.Record{}, ReasonNoWood
 		}
@@ -183,8 +185,10 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 			return job.Record{}, r
 		}
 		return job.Record{Kind: job.Cut, Target: pid, TX: x, TY: y, WorkLeft: plant.DefOf(p.Species).CutWork}, ""
+	case command.OrderSmooth:
+		return g.forcedSmooth(id, x, y, m.Enabled(work.Construct)) // smooth.go
 	case command.OrderMine:
-		if g.terr.At(x, y) != terrain.Rock {
+		if !terrain.IsRockWall(g.terr.At(x, y)) {
 			return job.Record{}, ReasonGone
 		}
 		if !m.Enabled(work.Mine) {
@@ -197,7 +201,7 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		if !ok {
 			return job.Record{}, ReasonUnreachable
 		}
-		return job.Record{Kind: job.Mine, TX: tx, TY: ty, DestX: x, DestY: y, WorkLeft: MineWork}, ""
+		return job.Record{Kind: job.Mine, TX: tx, TY: ty, DestX: x, DestY: y, WorkLeft: g.mineWorkAt(x, y)}, ""
 	case command.OrderSleep:
 		bid := g.layerBldgAt(x, y, construction.LayerObject)
 		b, ok := g.bldgs.Get(bid)
@@ -363,6 +367,12 @@ func (g *Game) prioritize(id entity.EntityID, o command.Order, x, y int, layer c
 		g.startMine(id, x, y, true)
 		return
 	}
+	if o == command.OrderSmooth {
+		g.interrupt(id, job.Cancelled)
+		g.smooths[[2]int{x, y}] = true
+		g.startSmooth(id, x, y, true)
+		return
+	}
 	if o == command.OrderHunt {
 		if a, ok := g.animals.Get(rec.Target); ok {
 			a.Designated = true
@@ -409,7 +419,7 @@ func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 	reach := g.reachable(pawn, x, y)
 	var out []OrderOption
 	move := OrderOption{Label: "Go here", Cmd: command.Command{Kind: command.MovePawn, Pawn: uint64(pawn), X: x, Y: y}}
-	if g.terr.At(x, y) == terrain.Rock {
+	if terrain.IsRockWall(g.terr.At(x, y)) {
 		move.Disabled, move.Reason = true, ReasonRock
 	} else if !g.grid.Walkable(x, y) {
 		move.Disabled, move.Reason = true, ReasonBlocked
@@ -428,7 +438,7 @@ func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 			switch o {
 			case command.OrderDeconstruct:
 				tx, ty = g.workSpot(pawn, x, y)
-			case command.OrderMine:
+			case command.OrderMine, command.OrderSmooth:
 				tx, ty = -1, -1 // forcedJob already checked a reachable spot
 			}
 			if tx >= 0 && !g.reachable(pawn, tx, ty) {
@@ -460,8 +470,15 @@ func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 			}
 		}
 	}
-	if g.terr.At(x, y) == terrain.Rock {
+	if terrain.IsRockWall(g.terr.At(x, y)) {
 		add("Mine rock", command.OrderMine, construction.LayerObject)
+	}
+	if g.smoothable(x, y) { // smooth.go
+		label := "Smooth floor"
+		if terrain.IsRockWall(g.terr.At(x, y)) {
+			label = "Smooth wall"
+		}
+		add(label, command.OrderSmooth, construction.LayerObject)
 	}
 	if z, ok := g.zoneAt(x, y); ok && g.plantAt(x, y) == 0 {
 		add("Sow "+plant.Species(z.Crop).String(), command.OrderSow, construction.LayerObject)

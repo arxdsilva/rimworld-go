@@ -109,7 +109,7 @@ func (g *Game) execOrder(id entity.EntityID, c command.Command) string {
 		}
 		g.cmdMove(id, c.X, c.Y)
 	case command.Prioritize:
-		if c.Order != command.OrderMine {
+		if c.Order != command.OrderMine && c.Order != command.OrderSmooth {
 			if _, reason := g.forcedJob(id, c.Order, c.X, c.Y, construction.Layer(c.Layer)); reason != "" {
 				return reason
 			}

@@ -64,7 +64,7 @@ func (g *Game) Wealth() int {
 	for _, id := range g.bldgIDs {
 		if b, ok := g.bldgs.Get(id); ok {
 			v := construction.WoodCost(b.Kind)*2 + construction.WorkTicks(b.Kind)/20
-			if b.Stuff == item.Stone {
+			if item.IsStoneBlocks(b.Stuff) || b.Stuff == item.Stone {
 				v = v * 3 / 2
 			}
 			w += v
@@ -261,7 +261,7 @@ func (g *Game) sapperBreaks() tileSet {
 	w := g.grid.Width()
 	for y := 0; y < g.grid.Height(); y++ {
 		for x := 0; x < w; x++ {
-			if g.terr.At(x, y) == terrain.Rock {
+			if terrain.IsRockWall(g.terr.At(x, y)) {
 				set[y*w+x] = true
 			}
 		}
@@ -287,7 +287,7 @@ func (s sapperMap) Walkable(x, y int) bool {
 
 // digRock: a sapper hacks at a rock tile; it opens up at zero.
 func (g *Game) digRock(x, y, dmg int) {
-	if g.terr.At(x, y) != terrain.Rock {
+	if !terrain.IsRockWall(g.terr.At(x, y)) {
 		return
 	}
 	k := [2]int{x, y}
@@ -296,6 +296,6 @@ func (g *Game) digRock(x, y, dmg int) {
 		return
 	}
 	delete(g.rockDamage, k)
-	g.setTerrain(x, y, terrain.Stone)
+	g.setTerrain(x, y, terrain.Stone) // clears any ore (SIM-029)
 	g.roofOnMined(x, y)
 }

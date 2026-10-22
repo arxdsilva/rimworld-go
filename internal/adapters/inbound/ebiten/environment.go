@@ -1018,9 +1018,10 @@ func (r *Renderer) drawGroundCover(screen *ebiten.Image, w game.WorldView, sw, s
 }
 
 // groundOpen reports ground that takes snow cover, drifts, puddles and
-// frost: open to the sky (not roofed, not a wall) and not rock.
+// frost: open to the sky (not roofed, not a wall) and not rock (rough or
+// smoothed).
 func (r *Renderer) groundOpen(w game.WorldView, x, y int) bool {
-	return r.env.outdoors(x, y) && r.terrainName(w, x, y) != "rock"
+	return r.env.outdoors(x, y) && !isRockWallName(r.terrainName(w, x, y))
 }
 
 // puddleShape is a drawn puddle when its art is missing: a dark ellipse

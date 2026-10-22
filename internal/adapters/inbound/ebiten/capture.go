@@ -38,6 +38,9 @@ type Capture struct {
 	// Timelapse > 0 steps the simulation this many ticks per recorded
 	// frame instead of playing in real time (day-cycle clips).
 	Timelapse int
+	// Bare skips the scripted starter orders (blueprints, cut and mine
+	// marks), for set-piece scenarios that build their own scene.
+	Bare bool
 }
 
 // speed is the game speed tier a frame sequence records at.
@@ -145,8 +148,10 @@ func (a *App) tickCapture() {
 		a.renderer.cam.offsetX = (float64(a.renderer.game.Width())/2+0.5)*tile - float64(a.sw)/2
 		a.renderer.cam.offsetY = (float64(a.renderer.game.Height())/2)*tile - float64(a.sh)/2
 		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
-		for _, cmd := range captureOrders(cx, cy) {
-			a.renderer.enqueue(cmd)
+		if !c.Bare {
+			for _, cmd := range captureOrders(cx, cy) {
+				a.renderer.enqueue(cmd)
+			}
 		}
 		for left := c.Ticks; left > 0; left -= 60 {
 			n := 60
@@ -515,7 +520,7 @@ func (a *App) captureUI(ui string) {
 		a.openArchitect()
 		a.selectArchCategory("structure")
 		a.selectArchTool("wall")
-		a.archStuff = "stone"
+		a.archStuff = defaultStoneStuff(a.renderer.world())
 		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
 		a.archDrag = true
 		a.archX0, a.archY0, a.archX1, a.archY1 = cx+1, cy-2, cx+5, cy-2

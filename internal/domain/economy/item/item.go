@@ -4,6 +4,7 @@ package item
 import (
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/geology"
 )
 
 // Kind is a stack category.
@@ -66,6 +67,23 @@ const (
 	EmberOil
 	WoolParka
 	CarpetWool
+	// Stone (SIM-029): mining drops a chunk of the rock's stone; a
+	// stonecutter cuts chunks into blocks, the building material. The
+	// legacy Stone kind above is migrated to GraniteBlocks on load.
+	SandstoneChunk
+	GraniteChunk
+	LimestoneChunk
+	SlateChunk
+	MarbleChunk
+	SandstoneBlocks
+	GraniteBlocks
+	LimestoneBlocks
+	SlateBlocks
+	MarbleBlocks
+	// Metals are mined from ore veins; steel is also a building material.
+	Steel
+	Silver
+	Gold
 	numKinds
 )
 
@@ -73,7 +91,10 @@ var kindNames = [numKinds]string{"food", "wood", "stone", "berries", "potatoes",
 	"corn", "wheat", "beans", "lettuce", "radishes", "pumpkins", "leather", "parka", "tuque", "duster", "herbal medicine",
 	"knife", "spear", "human corpse", "bones", "animal corpse",
 	"cloth", "straw", "straw carpet", "cloth carpet", "leather carpet", "wood carpet",
-	"milk", "wool", "egg", "fertile egg", "ember oil", "wool parka", "wool carpet"}
+	"milk", "wool", "egg", "fertile egg", "ember oil", "wool parka", "wool carpet",
+	"sandstone chunk", "granite chunk", "limestone chunk", "slate chunk", "marble chunk",
+	"sandstone blocks", "granite blocks", "limestone blocks", "slate blocks", "marble blocks",
+	"steel", "silver", "gold"}
 
 // IsWeapon reports whether k can be equipped.
 func (k Kind) IsWeapon() bool { return k == Club || k == Rifle || k == Knife || k == Spear }
@@ -198,7 +219,7 @@ func (k Kind) Insulation() (cold, heat int) {
 func Apparel() []Kind { return []Kind{Parka, Tuque, Duster, WoolParka} }
 
 // IsStuff reports whether k is a building material.
-func (k Kind) IsStuff() bool { return k == Wood || k == Stone }
+func (k Kind) IsStuff() bool { return k == Wood || IsStoneBlocks(k) || k == Steel }
 
 // IsCarpet reports a crafted carpet (installed as a carpet building).
 func (k Kind) IsCarpet() bool { return k >= CarpetStraw && k <= CarpetWood || k == CarpetWool }
@@ -384,4 +405,48 @@ func Take(qty, n int) (int, bool) {
 		return qty, false
 	}
 	return qty - n, true
+}
+
+// ChunkOf is the chunk mined from stone s (Food when s is None).
+func ChunkOf(s geology.Stone) Kind {
+	if s < geology.Sandstone || s > geology.Marble {
+		return Food
+	}
+	return SandstoneChunk + Kind(s-geology.Sandstone)
+}
+
+// BlocksOf is the blocks cut from stone s (Food when s is None).
+func BlocksOf(s geology.Stone) Kind {
+	if s < geology.Sandstone || s > geology.Marble {
+		return Food
+	}
+	return SandstoneBlocks + Kind(s-geology.Sandstone)
+}
+
+// StoneOf is the stone a chunk or blocks kind is made of; the legacy
+// Stone kind reads as granite; anything else is None.
+func StoneOf(k Kind) geology.Stone {
+	switch {
+	case IsChunk(k):
+		return geology.Sandstone + geology.Stone(k-SandstoneChunk)
+	case IsStoneBlocks(k):
+		return geology.Sandstone + geology.Stone(k-SandstoneBlocks)
+	case k == Stone:
+		return geology.Granite
+	}
+	return geology.None
+}
+
+// IsChunk reports a rough stone chunk.
+func IsChunk(k Kind) bool { return k >= SandstoneChunk && k <= MarbleChunk }
+
+// IsStoneBlocks reports cut stone blocks.
+func IsStoneBlocks(k Kind) bool { return k >= SandstoneBlocks && k <= MarbleBlocks }
+
+// IsMetal reports a mined metal.
+func IsMetal(k Kind) bool { return k == Steel || k == Silver || k == Gold }
+
+// StoneBlocks lists the five block kinds in enum order.
+func StoneBlocks() []Kind {
+	return []Kind{SandstoneBlocks, GraniteBlocks, LimestoneBlocks, SlateBlocks, MarbleBlocks}
 }

@@ -36,7 +36,7 @@ func main() {
 	capture := flag.String("capture", "", "dev: save one colony frame to this PNG and exit")
 	captureTicks := flag.Int("capture-ticks", 5400, "dev: simulation ticks to run before -capture")
 	captureZoom := flag.Float64("capture-zoom", 1, "dev: camera zoom for -capture")
-	scenario := flag.String("scenario", "", "dev: start scenario: pen (a pen with a feeding trough, tame animals and wild ones about) | rescue (a colonist starts badly hurt) | beds (sleeping spots in the other facings) | double (a double bed by the start) | corridor (two colonists meet head-on in a 1-wide corridor) | crowd (every colonist sent into a room with one door) | armory (armed, drafted colonists against a mixed raid) | chores (cutting, mining and tending by the start) | lategame (a grown colony in autumn rain, raid incoming) | rain (a fall storm) | snow (winter snowfall) | burial (a graveyard, a pyre and two bodies) | roofs (winter: a roofed room, an unroofed one, a roofed porch, a yard too big to roof) | sunny (a clear summer day from before dawn) | fence (a fenced field with a gate, deer outside) | forbid (loose items, some forbidden) | zoo (all 61 animal species, tamed and named, in a pen; use -width 80 -height 60)")
+	scenario := flag.String("scenario", "", "dev: start scenario: pen (a pen with a feeding trough, tame animals and wild ones about) | rescue (a colonist starts badly hurt) | beds (sleeping spots in the other facings) | double (a double bed by the start) | corridor (two colonists meet head-on in a 1-wide corridor) | crowd (every colonist sent into a room with one door) | armory (armed, drafted colonists against a mixed raid) | chores (cutting, mining and tending by the start) | lategame (a grown colony in autumn rain, raid incoming) | rain (a fall storm) | snow (winter snowfall) | burial (a graveyard, a pyre and two bodies) | roofs (winter: a roofed room, an unroofed one, a roofed porch, a yard too big to roof) | sunny (a clear summer day from before dawn) | fence (a fenced field with a gate, deer outside) | forbid (loose items, some forbidden) | zoo (all 61 animal species, tamed and named, in a pen; use -width 80 -height 60) | walls (linked walls and rock: every connection case, five stones, smoothed rock, ore)")
 	biomeKey := flag.String("biome", "temperate_forest", "dev: biome of the map: "+biomeKeys()+" (also the landing picker's starting choice)")
 	hour := flag.Int("hour", -1, "dev: jump to this hour (0-23) of the scenario's day, or the next day's if past")
 	captureFrames := flag.Int("capture-frames", 0, "dev: record this many consecutive frames (PATH_NNN.png) instead of one still")
@@ -48,7 +48,8 @@ func main() {
 
 	var shot *uiadapter.Capture
 	if *capture != "" {
-		shot = &uiadapter.Capture{Path: *capture, Ticks: *captureTicks, Zoom: *captureZoom, UI: *captureUI, Frames: *captureFrames, Speed: *captureSpeed, Timelapse: *captureTimelapse}
+		shot = &uiadapter.Capture{Path: *capture, Ticks: *captureTicks, Zoom: *captureZoom, UI: *captureUI, Frames: *captureFrames, Speed: *captureSpeed, Timelapse: *captureTimelapse,
+			Bare: *scenario == "walls"}
 	}
 
 	biomeID, ok := biome.Parse(*biomeKey)
@@ -310,6 +311,11 @@ func main() {
 			if *scenario == "roofs" {
 				roofYard(g, *width/2, *height/2)
 			}
+			if *scenario == "walls" {
+				// linked walls and rock (ART-015): every connection case,
+				// five stones, smoothed rock, ore and a mined-out hole
+				wallScene(g, *width/2, *height/2)
+			}
 			if *scenario == "sunny" {
 				g.SkipTo(12, 5) // a summer day, before sunrise
 				g.SetWeather(weather.Clear, 0)
@@ -429,6 +435,74 @@ func saveHooks() uiadapter.SaveHooks {
 	}
 }
 
+// wallScene builds the -scenario walls set piece around (cx, cy): wood
+// and granite walls in every connection case, a five-stone rock strip, a
+// mined-out hole, a wall run into an outcrop, rough beside smoothed rock,
+// an ore vein, steel walls and a chunk by the rock.
+func wallScene(g *game.Game, cx, cy int) {
+	x0, y0 := cx-17, cy-8
+	g.ClearPlants(x0-1, y0-1, cx+18, cy+7)
+	g.SetGround(x0-1, y0-1, cx+18, cy+7, "soil", "", "")
+	at := func(dx, dy int) (int, int) { return x0 + dx, y0 + dy }
+	build := func(kind, stuff string, cells ...[2]int) {
+		for _, c := range cells {
+			x, y := at(c[0], c[1])
+			g.BuildNow(kind, stuff, "south", x, y)
+		}
+	}
+	ground := func(dx0, dy0, dx1, dy1 int, t, stone, ore string) {
+		ax, ay := at(dx0, dy0)
+		bx, by := at(dx1, dy1)
+		g.SetGround(ax, ay, bx, by, t, stone, ore)
+	}
+	// row 1: wood shapes, a granite 2x2 and ring, diagonal-only walls
+	build("wall", "wood", [2]int{0, 0})                                                              // isolated
+	build("wall", "wood", [2]int{2, 0}, [2]int{3, 0}, [2]int{4, 0})                                  // straight
+	build("wall", "wood", [2]int{6, 0}, [2]int{7, 0}, [2]int{6, 1})                                  // L
+	build("wall", "wood", [2]int{9, 0}, [2]int{10, 0}, [2]int{11, 0}, [2]int{10, 1})                 // T
+	build("wall", "wood", [2]int{14, 0}, [2]int{13, 1}, [2]int{14, 1}, [2]int{15, 1}, [2]int{14, 2}) // cross
+	build("wall", "granite blocks", [2]int{17, 0}, [2]int{18, 0}, [2]int{17, 1}, [2]int{18, 1})      // 2x2
+	for dx := 20; dx <= 22; dx++ {
+		for dy := 0; dy <= 2; dy++ {
+			if dx == 21 && dy == 1 {
+				continue
+			}
+			kind := "wall"
+			if dx == 21 && dy == 2 {
+				kind = "door"
+			}
+			stuff := "granite blocks"
+			if kind == "door" {
+				stuff = "wood"
+			}
+			build(kind, stuff, [2]int{dx, dy})
+		}
+	}
+	build("wall", "wood", [2]int{24, 0}, [2]int{25, 1}) // diagonal only
+	// row 2: five stones side by side, a mined-out 3x3, a wall into rock,
+	// rough beside smoothed rock over a smooth floor
+	for i, st := range []string{"sandstone", "granite", "limestone", "slate", "marble"} {
+		ground(i*3, 4, i*3+2, 6, "rock", st, "")
+	}
+	ground(16, 4, 18, 6, "rock", "granite", "")
+	ground(17, 5, 17, 5, "stone", "granite", "")
+	ground(20, 4, 22, 6, "rock", "granite", "")
+	build("wall", "granite blocks", [2]int{23, 5}, [2]int{24, 5}, [2]int{25, 5})
+	ground(27, 4, 29, 6, "rock", "marble", "")
+	ground(30, 4, 32, 6, "rock_smooth", "marble", "")
+	ground(27, 7, 32, 7, "stone_smooth", "marble", "")
+	// row 3: ore veins in granite, a chunk beside it, steel walls and door
+	ground(0, 10, 6, 13, "rock", "granite", "")
+	ground(2, 11, 3, 12, "rock", "granite", "steel")
+	ground(4, 12, 5, 12, "rock", "granite", "silver")
+	ground(1, 13, 1, 13, "rock", "granite", "gold")
+	if x, y := at(7, 11); true {
+		_, _ = g.SpawnStack(item.GraniteChunk, 1, x, y)
+	}
+	build("wall", "steel", [2]int{10, 11}, [2]int{11, 11}, [2]int{13, 11}, [2]int{14, 11}, [2]int{14, 12})
+	build("door", "steel", [2]int{12, 11})
+}
+
 // lateGame builds the -scenario lategame colony (cmd only: dev hooks).
 func lateGame(g *game.Game) {
 	g.SkipTo(30, 7) // just past a 6-hour weather block, so the rain holds
@@ -441,7 +515,7 @@ func lateGame(g *game.Game) {
 			if y == 15 && (x == 28 || x == 33 || x == 38) {
 				kind = "door"
 			}
-			g.BuildNow(kind, "stone", "south", x, y)
+			g.BuildNow(kind, "granite blocks", "south", x, y)
 		}
 	}
 	for y := 6; y <= 14; y++ {
@@ -450,7 +524,7 @@ func lateGame(g *game.Game) {
 			if y == 10 && (x == 31 || x == 36) {
 				kind = "door"
 			}
-			g.BuildNow(kind, "stone", "south", x, y)
+			g.BuildNow(kind, "granite blocks", "south", x, y)
 		}
 	}
 	for x := 27; x <= 30; x++ { // bedroom
@@ -543,7 +617,7 @@ func roofYard(g *game.Game, cx, cy int) {
 	box := func(x0, y0, x1, y1, doorX, doorY int) {
 		for x := x0; x <= x1; x++ {
 			for _, y := range []int{y0, y1} {
-				kind, stuff := "wall", "stone"
+				kind, stuff := "wall", "granite blocks"
 				if x == doorX && y == doorY {
 					kind, stuff = "door", "wood" // doors are wooden
 				}
@@ -552,7 +626,7 @@ func roofYard(g *game.Game, cx, cy int) {
 		}
 		for y := y0 + 1; y < y1; y++ {
 			for _, x := range []int{x0, x1} {
-				kind, stuff := "wall", "stone"
+				kind, stuff := "wall", "granite blocks"
 				if x == doorX && y == doorY {
 					kind, stuff = "door", "wood" // doors are wooden
 				}

@@ -57,8 +57,11 @@ func Recipes() []RecipeView {
 			continue // older saves' recipes, upgraded on load
 		}
 		in := d.Input.Kind.String()
-		if d.Input.AnyRaw {
+		switch {
+		case d.Input.AnyRaw:
 			in = "raw food"
+		case d.Input.AnyStoneBlocks:
+			in = "any stone blocks"
 		}
 		out = append(out, RecipeView{
 			ID: uint8(d.ID), Name: d.Name, Label: d.Label, Bench: d.Bench.String(),

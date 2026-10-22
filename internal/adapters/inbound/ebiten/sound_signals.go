@@ -24,6 +24,7 @@ type soundCue struct {
 var actionSounds = map[string]string{
 	game.ActionChop:        "sfx.chop",
 	game.ActionMine:        "sfx.pick",
+	game.ActionSmooth:      "sfx.pick",
 	game.ActionBreach:      "sfx.pick",
 	game.ActionDig:         "sfx.soil",
 	game.ActionBury:        "sfx.soil",
@@ -59,14 +60,17 @@ type soundMemo struct {
 	init      bool
 	frames    map[entity.EntityID][2]int
 	plants    map[entity.EntityID][2]int
-	mines     map[[2]int]bool
+	mines     map[[2]int]uint8 // marked tile -> its terrain code
+	smooths   map[[2]int]uint8
 	doorsOpen map[[2]int]bool
 	chopped   map[[2]int]bool // tiles a pawn was cutting last frame
 	notice    uint64          // newest non-danger message heard
 }
 
-// listenWorld cues builds finishing, trees falling, rock mined out and
-// doors opening or closing, from the difference with the last frame.
+// listenWorld cues builds finishing, trees falling, rock mined out or
+// smoothed and doors opening or closing, from the difference with the
+// last frame. A mine or smooth mark that vanished cues only when its
+// tile's terrain changed (a cancelled mark is silent).
 func (r *Renderer) listenWorld(w game.WorldView, pawns []game.PawnView) {
 	m := &r.memo
 	frames := make(map[entity.EntityID][2]int, len(w.Frames))
@@ -77,10 +81,14 @@ func (r *Renderer) listenWorld(w game.WorldView, pawns []game.PawnView) {
 	for _, p := range w.Plants {
 		plants[p.ID] = [2]int{p.X, p.Y}
 	}
-	mines := make(map[[2]int]bool, len(w.Mines))
-	for _, t := range w.Mines {
-		mines[t] = true
+	marks := func(ts [][2]int) map[[2]int]uint8 {
+		out := make(map[[2]int]uint8, len(ts))
+		for _, t := range ts {
+			out[t], _ = terrainCode(w, t[0], t[1])
+		}
+		return out
 	}
+	mines, smooths := marks(w.Mines), marks(w.Smooths)
 	standing := map[[2]int]bool{}
 	chopped := map[[2]int]bool{}
 	for _, p := range pawns {
@@ -114,11 +122,18 @@ func (r *Renderer) listenWorld(w game.WorldView, pawns []game.PawnView) {
 				r.cue("sfx.tree_fall", float64(at[0])+0.5, float64(at[1])+0.5, 1)
 			}
 		}
-		for t := range m.mines {
-			if !mines[t] {
-				r.cue("sfx.rock_break", float64(t[0])+0.5, float64(t[1])+0.5, 1)
+		done := func(was map[[2]int]uint8, now map[[2]int]uint8, id string) {
+			for t, code := range was {
+				if _, still := now[t]; still {
+					continue
+				}
+				if c, ok := terrainCode(w, t[0], t[1]); ok && c != code {
+					r.cue(id, float64(t[0])+0.5, float64(t[1])+0.5, 1)
+				}
 			}
 		}
+		done(m.mines, mines, "sfx.rock_break")
+		done(m.smooths, smooths, "sfx.pick")
 		for t, open := range doors {
 			if was, ok := m.doorsOpen[t]; ok && was != open {
 				id := "sfx.door_close"
@@ -132,7 +147,7 @@ func (r *Renderer) listenWorld(w game.WorldView, pawns []game.PawnView) {
 			r.globalCue("ui.notice")
 		}
 	}
-	*m = soundMemo{init: true, frames: frames, plants: plants, mines: mines, doorsOpen: doors,
+	*m = soundMemo{init: true, frames: frames, plants: plants, mines: mines, smooths: smooths, doorsOpen: doors,
 		chopped: chopped, notice: notice}
 }
 

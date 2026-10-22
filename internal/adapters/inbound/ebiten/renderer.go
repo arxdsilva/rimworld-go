@@ -217,6 +217,13 @@ type Renderer struct {
 	dangerInit bool
 	lastDanger uint64
 	floaters   []floater
+
+	// links is the cached wall/rock/fence connectivity (linkgrid.go);
+	// stoneArt memoises stone tints and resolved linked keys, and draws
+	// is the reused per-frame object queue (stone_art.go, draw_art.go).
+	links    linkGrid
+	stoneArt stoneArtCache
+	draws    []artDraw
 }
 
 // New returns a Renderer for sim. Sprites are optional: call LoadPack

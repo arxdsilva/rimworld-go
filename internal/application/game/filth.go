@@ -213,7 +213,7 @@ func (g *Game) dirtWork(id entity.EntityID, j job.Record, now uint64) {
 		return
 	}
 	switch j.Kind {
-	case job.Sow, job.Harvest, job.Cut, job.Mine:
+	case job.Sow, job.Harvest, job.Cut, job.Mine, job.Smooth:
 	case job.Construct:
 		if fr, ok := g.frames.Get(j.Target); !ok || fr.Kind != construction.Grave {
 			return

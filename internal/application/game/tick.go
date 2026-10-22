@@ -85,6 +85,8 @@ func (g *Game) applyOne(c command.Command) {
 		g.markCut(c.X, c.Y, c.X2, c.Y2, true)
 	case command.DesignateMine:
 		g.markMine(c.X, c.Y, c.X2, c.Y2, true)
+	case command.DesignateSmooth:
+		g.markSmooth(c.X, c.Y, c.X2, c.Y2, true) // smooth.go
 	case command.AddBill, command.SetBill, command.RemoveBill:
 		g.applyBill(c)
 	case command.DesignateGrowZone:
@@ -168,6 +170,8 @@ func (g *Game) undesignate(o command.Order, x1, y1, x2, y2 int) {
 		g.markTame(minX, minY, maxX, maxY, false)
 	case command.OrderMine:
 		g.markMine(minX, minY, maxX, maxY, false)
+	case command.OrderSmooth:
+		g.markSmooth(minX, minY, maxX, maxY, false)
 	case command.OrderDeconstruct:
 		g.markDeconstruct(minX, minY, maxX, maxY, false)
 	}
@@ -211,6 +215,7 @@ func (g *Game) cancelRect(x1, y1, x2, y2 int) {
 	g.markDeconstruct(x1, y1, x2, y2, false)
 	g.markCut(x1, y1, x2, y2, false)
 	g.markMine(x1, y1, x2, y2, false)
+	g.markSmooth(x1, y1, x2, y2, false)
 	g.markHunt(x1, y1, x2, y2, false)
 	g.markTame(x1, y1, x2, y2, false)
 	g.zones.Clear(zone.Rect{MinX: minX, MinY: minY, MaxX: maxX, MaxY: maxY}) // zones.go: shrinks or splits
@@ -880,6 +885,8 @@ func (g *Game) phaseJobs() {
 			g.doCut(id, j)
 		case job.Mine:
 			g.doMine(id, j)
+		case job.Smooth:
+			g.doSmooth(id, j) // smooth.go
 		case job.Sow:
 			g.doSow(id, j)
 		case job.Bill:
@@ -1159,6 +1166,7 @@ func (g *Game) completeFrame(id entity.EntityID, fr construction.Frame) {
 	g.bldgIDs = append(g.bldgIDs, id)
 	g.bldgs.Set(id, construction.Building{Kind: fr.Kind, Stuff: fr.Stuff, Facing: fr.Facing, X: fr.X, Y: fr.Y})
 	g.markRoomsDirty()
+	g.structVer++                              // SIM-029: link/autotile caches
 	g.autoHome(fr.Kind, fr.Facing, fr.X, fr.Y) // home.go
 	g.defaultBills(id, fr.Kind)
 	// bushes and crops under the footprint are cleared below

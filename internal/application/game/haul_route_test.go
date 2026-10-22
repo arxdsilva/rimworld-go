@@ -166,7 +166,7 @@ func TestDeliveryRouteLimits(t *testing.T) {
 		t.Fatalf("far frame chained: route %v count %d", rec2.Route, rec2.Count)
 	}
 	// the stone wall is never on a wood route
-	g2.placeFrameStuff(construction.Wall, item.Stone, construction.South, 7, 7)
+	g2.placeFrameStuff(construction.Wall, item.GraniteBlocks, construction.South, 7, 7)
 	rec3, _, _ := g2.planDelivery(id2, pos2)
 	if len(rec3.Route) != 1 {
 		t.Fatalf("stone frame on a wood route: %v", rec3.Route)

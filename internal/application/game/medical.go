@@ -4,7 +4,6 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/building/construction"
-	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
@@ -285,9 +284,9 @@ func (g *Game) BuildNow(kind, stuff, facing string, x, y int) bool {
 	if !ok {
 		return false
 	}
-	st := item.Wood
-	if stuff == "stone" {
-		st = item.Stone
+	st, ok := stuffByName(stuff)
+	if !ok {
+		return false
 	}
 	f := parseFacingName(facing)
 	if ok, _ := g.canPlaceAt(b, f, x, y); !ok {

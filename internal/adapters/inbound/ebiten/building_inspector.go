@@ -87,14 +87,10 @@ func (a *App) selectBuildingAt(tx, ty int) bool {
 func (a *App) clearBuilding() { a.hasBuilding = false }
 
 func buildingTitle(b game.BuildingView) string {
-	name := strings.ToUpper(b.Kind[:1]) + b.Kind[1:]
 	if b.Kind == "carpet" && strings.HasSuffix(b.Stuff, " carpet") {
 		return strings.ToUpper(b.Stuff[:1]) + b.Stuff[1:] // "Straw carpet"
 	}
-	if b.Stuff == "stone" {
-		name = "Stone " + b.Kind
-	}
-	return name
+	return materialTitle(b.Kind, b.Stuff) // "Wall", "Granite wall", "Steel door"
 }
 
 func (a *App) recipesFor(kind string) []game.RecipeView {

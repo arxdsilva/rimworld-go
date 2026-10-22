@@ -52,7 +52,9 @@ var archTools = []archTool{
 	{id: "cut", label: "Cut plants", category: "orders", icon: "order_cut", mode: placeArea, cmd: command.DesignateCut,
 		desc: "Chop trees for wood or clear bushes. Grass too."},
 	{id: "mine", label: "Mine", category: "orders", icon: "order_mine", mode: placeArea, cmd: command.DesignateMine,
-		desc: "Dig out rock. Each tile drops stone blocks."},
+		desc: "Dig out rock. Each tile drops a stone chunk; ore veins drop metal."},
+	{id: "smooth", label: "Smooth stone", category: "orders", icon: "order_smooth", mode: placeArea, cmd: command.DesignateSmooth,
+		desc: "Smooth rock walls and rough stone ground into clean walls and floors. Not on ore."},
 	{id: "forbid", label: "Forbid", category: "orders", icon: "order_forbid", mode: placeArea, cmd: command.DesignateForbid, enable: true,
 		desc: "Colonists leave forbidden items alone. Drag over the items."},
 	{id: "allow", label: "Allow", category: "orders", icon: "order_allow", mode: placeArea, cmd: command.DesignateForbid,
@@ -119,6 +121,8 @@ var archTools = []archTool{
 		desc: "Sews leather into parkas, tuques and dusters (2x1). Select it to add bills."},
 	{id: "drying", label: "Drying rack", category: "production", icon: "drying_rack", mode: placeSingle, build: "drying rack",
 		desc: "Dries up to 25 perishable food at a time so it never rots (2x1). Starts with a Dry food bill."},
+	{id: "stonecutter", label: "Stonecutter table", category: "production", icon: "stonecutter_table", mode: placeSingle, build: "stonecutter table",
+		desc: "Cuts stone chunks into stone blocks for building (2x1). Select it to add bills. Q/E rotates."},
 	{id: "research", label: "Research bench", category: "production", icon: "research_bench", mode: placeSingle, build: "research bench",
 		desc: "A desk to study at (2x1). Pick a project in the Research tab; colonists with Research work sit here. Q/E rotates."},
 	{id: "sandbags", label: "Sandbags", category: "security", icon: "sandbags", mode: placeLine, build: "sandbags",
@@ -221,13 +225,13 @@ func buildSpriteStuff(kind, stuff, facing string, mask int, ew, open bool) strin
 	if kind == "carpet" {
 		return carpetSprite(stuff)
 	}
-	if stuff == "stone" {
-		switch kind {
-		case "wall":
-			return "structure/wall_stone_" + twoDigits(mask)
-		case "floor":
-			return "structure/floor_stone"
-		}
+	switch m := stuffMaterial(stuff); {
+	case kind == "wall" && m != "wood":
+		return wallPrefix(stuff) + "_" + twoDigits(mask)
+	case kind == "floor" && m == "stone":
+		return "structure/floor_stone"
+	case kind == "door" && m == "steel":
+		return doorSprite("steel", ew, open)
 	}
 	return buildSprite(kind, facing, mask, ew, open)
 }
@@ -254,14 +258,7 @@ func buildSprite(kind, facing string, mask int, ew, open bool) string {
 	case "wall":
 		return "structure/wall_wood_" + twoDigits(mask)
 	case "door":
-		axis, state := "ns", "closed"
-		if ew {
-			axis = "ew"
-		}
-		if open {
-			state = "open"
-		}
-		return "structure/door_wood_" + axis + "_" + state
+		return doorSprite("wood", ew, open)
 	case "floor":
 		return "structure/floor_wood"
 	case "double bed":
@@ -304,8 +301,22 @@ func buildSprite(kind, facing string, mask int, ew, open bool) string {
 		return carpetSprite("")
 	case "feeding trough":
 		return "furniture/feeding_trough_empty_" + facingOr(facing)
+	case "stonecutter table":
+		return "furniture/stonecutter_table_" + facingOr(facing)
 	}
 	return ""
+}
+
+// doorSprite is structure/door_<material>_<ns|ew>_<open|closed>.
+func doorSprite(material string, ew, open bool) string {
+	axis, state := "ns", "closed"
+	if ew {
+		axis = "ew"
+	}
+	if open {
+		state = "open"
+	}
+	return "structure/door_" + material + "_" + axis + "_" + state
 }
 
 func facingOr(f string) string {

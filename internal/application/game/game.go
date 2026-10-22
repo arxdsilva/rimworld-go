@@ -28,6 +28,7 @@ import (
 	"rimworld-go/internal/domain/sim/component"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/filth"
+	"rimworld-go/internal/domain/world/geology"
 	"rimworld-go/internal/domain/world/grid"
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/roof"
@@ -297,13 +298,25 @@ type WorldView struct {
 	Buildings   []BuildingView
 	Plants      []PlantView
 	Food, Wood  int
-	Stone       int
+	Stone       int // all stone blocks
+	// Metals mined from ore veins (SIM-029).
+	Steel, Silver, Gold int
 	// Terrain is the ground type per tile, row-major, TerrainW wide;
 	// codes index TerrainNames().
 	Terrain  []uint8
 	TerrainW int
 	// Mines are tiles designated for mining.
 	Mines [][2]int
+	// Smooths are tiles designated for smoothing (SIM-029).
+	Smooths [][2]int
+	// StoneType and Ore are the geology per tile (row-major, TerrainW
+	// wide): codes index StoneNames() / OreNames(), 0 = none. Shared
+	// read-only slices, rebuilt only when StructVer changes.
+	StoneType []uint8
+	Ore       []uint8
+	// StructVer changes whenever terrain or a building changes, so the
+	// renderer can cache link (autotile) data.
+	StructVer uint64
 	// FoodByKind is ground food per kind name.
 	FoodByKind map[string]int
 	// RoomGrid is the room id per tile (row-major, TerrainW wide); -1 is
@@ -390,6 +403,14 @@ type Game struct {
 	plants   *component.Store[plant.Wild]
 	terr     terrain.Map
 	mines    map[[2]int]bool
+	// Geology (SIM-029): stone type and ore per tile; smoothing marks;
+	// structVer bumps on any terrain or building change (view cache key).
+	geo       geology.Map
+	smooths   map[[2]int]bool
+	structVer uint64
+	viewStone []uint8
+	viewOre   []uint8
+	viewVer   uint64
 
 	zones      *zone.Map // stockpiles, grow zones and pens (zones.go, ZONE-001)
 	lastMeal   map[entity.EntityID]item.Kind
@@ -501,6 +522,8 @@ func New(cfg Config) *Game {
 		terr:        terrain.NewMap(cfg.Width, cfg.Height),
 		zones:       zone.NewMap(cfg.Width, cfg.Height),
 		mines:       make(map[[2]int]bool),
+		smooths:     make(map[[2]int]bool),
+		geo:         geology.NewMap(cfg.Width, cfg.Height),
 		lastMeal:    make(map[entity.EntityID]item.Kind),
 		bills:       make(map[entity.EntityID][]recipe.Bill),
 		racks:       make(map[entity.EntityID]dryBatch),
@@ -832,8 +855,14 @@ func (g *Game) World() WorldView {
 				w.FoodByKind[st.Kind.String()] += st.Qty
 			case st.Kind == item.Wood:
 				w.Wood += st.Qty
-			case st.Kind == item.Stone:
+			case item.IsStoneBlocks(st.Kind) || st.Kind == item.Stone:
 				w.Stone += st.Qty
+			case st.Kind == item.Steel:
+				w.Steel += st.Qty
+			case st.Kind == item.Silver:
+				w.Silver += st.Qty
+			case st.Kind == item.Gold:
+				w.Gold += st.Qty
 			}
 		}
 	}
@@ -904,6 +933,9 @@ func (g *Game) World() WorldView {
 		w.Terrain[i] = uint8(t)
 	}
 	w.Mines = g.mineList()
+	w.Smooths = g.smoothList()
+	w.StoneType, w.Ore = g.stoneLayers()
+	w.StructVer = g.structVer
 	g.ensureRooms()
 	w.RoomGrid = append([]int(nil), g.roomGrid...)
 	w.Rooms = g.roomViews()

@@ -269,7 +269,9 @@ func TestFenceSpriteKeys(t *testing.T) {
 	w := game.WorldView{
 		Buildings: []game.BuildingView{{Kind: "fence", X: 1, Y: 1}, {Kind: "fence gate", X: 2, Y: 1}, {Kind: "wall", X: 1, Y: 0}, {Kind: "bed", X: 0, Y: 1}},
 	}
-	if m := wallMask(fenceSet(w, false), 1, 1); m != wallN|wallE {
+	var g linkGrid
+	g.sync(w, 3, 3)
+	if m := g.mask(1, 1); m != wallN|wallE {
 		t.Fatalf("mask = %d, want N|E (wall above, gate right, bed ignored)", m)
 	}
 	if lbl := fenceLabelAt(w, 1, 1); !strings.HasPrefix(lbl, "Fence") {

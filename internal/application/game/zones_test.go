@@ -144,7 +144,7 @@ func TestStockpileCellPicksNearest(t *testing.T) {
 	if x, y, ok := g.stockpileCell(item.Wood, 24, 8); !ok || x != 0 || y != 0 {
 		t.Fatalf("top up the stack first: %d,%d %v", x, y, ok)
 	}
-	if x, y, ok := g.stockpileCell(item.Stone, 1, 1); !ok || x != 1 || y != 1 {
+	if x, y, ok := g.stockpileCell(item.GraniteBlocks, 1, 1); !ok || x != 1 || y != 1 {
 		t.Fatalf("another kind skips the stack's tile: %d,%d %v", x, y, ok)
 	}
 }

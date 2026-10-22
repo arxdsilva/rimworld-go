@@ -97,14 +97,19 @@ func TestTintNRGBAOnlyInsideMask(t *testing.T) {
 
 func TestWallMask(t *testing.T) {
 	t.Parallel()
-	w := map[[2]int]bool{{1, 1}: true, {1, 0}: true, {2, 1}: true, {1, 2}: true, {0, 1}: true}
-	if got := wallMask(w, 1, 1); got != wallN|wallE|wallS|wallW {
+	w := game.WorldView{StructVer: 1}
+	for _, c := range [][2]int{{1, 1}, {1, 0}, {2, 1}, {1, 2}, {0, 1}, {5, 5}} {
+		w.Buildings = append(w.Buildings, game.BuildingView{Kind: "wall", X: c[0], Y: c[1]})
+	}
+	var g linkGrid
+	g.sync(w, 8, 8)
+	if got := g.mask(1, 1); got != wallN|wallE|wallS|wallW {
 		t.Fatalf("cross = %d", got)
 	}
-	if got := wallMask(w, 1, 0); got != wallS {
+	if got := g.mask(1, 0); got != wallS {
 		t.Fatalf("north arm = %d", got)
 	}
-	if got := wallMask(w, 5, 5); got != 0 {
+	if got := g.mask(5, 5); got != 0 {
 		t.Fatalf("isolated = %d", got)
 	}
 }
@@ -291,6 +296,25 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 			}
 		}
 	}
+	// ART-015: every baked variant a linked family can be asked for, and
+	// the stone, ore and smoothing singles.
+	for _, prefix := range []string{"rock/rock_wall", "rock/rock_smooth", "rock/ore_steel", "rock/ore_silver", "rock/ore_gold",
+		"structure/wall_wood", "structure/wall_stone", "structure/wall_steel"} {
+		keys = append(keys, linkedKeys(prefix)...)
+	}
+	for _, ew := range []bool{false, true} {
+		for _, open := range []bool{false, true} {
+			keys = append(keys, buildSpriteStuff("door", "steel", "", 0, ew, open))
+		}
+	}
+	for v := 0; v < soilVariants; v++ {
+		keys = append(keys, artKey("terrain", "stone_smooth", v))
+	}
+	for m := 1; m < 16; m++ {
+		keys = append(keys, "terrain/stone_smooth_edge_"+twoDigits(m))
+	}
+	keys = append(keys, itemSprite("granite chunk"), itemSprite("marble blocks"), itemSprite("steel"),
+		itemSprite("silver"), itemSprite("gold"), smoothMarkKey)
 	for f := faceSouth; f <= faceWest; f++ {
 		for _, l := range []string{"body", "pants_basic", "shirt_basic", "vest_utility", "parka_leather", "duster_leather"} {
 			keys = append(keys, "pawn/"+l+"_"+f.String())
@@ -311,6 +335,14 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 	for _, k := range keys {
 		if !c.has(k) {
 			t.Errorf("missing generated sprite %s", k)
+		}
+	}
+	if n := len(c.tintNames("stone_tint")); n != len(stoneNames)-1 {
+		t.Errorf("stone_tint has %d presets, want one per stone (%d)", n, len(stoneNames)-1)
+	}
+	for _, o := range []string{"steel", "silver", "gold"} { // the ore body takes the stone tint through a mask
+		if sp := c.sprite("rock/ore_" + o + "_15_cf"); sp != nil && (sp.mask == nil || sp.meta.TintGroup == "") {
+			t.Errorf("rock/ore_%s should be tintable", o)
 		}
 	}
 	for _, g := range []string{"skin", "hair", "cloth"} {

@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/terrain"
 )
 
 // Postponed work (SIM-027): a job that failed because the way was blocked
@@ -75,7 +76,7 @@ func newPostState() postState {
 // postponable reports job kinds whose givers skip postponed targets.
 func postponable(k job.Kind) bool {
 	switch k {
-	case job.Haul, job.Construct, job.Deconstruct, job.Harvest, job.Cut, job.Mine, job.Sow,
+	case job.Haul, job.Construct, job.Deconstruct, job.Harvest, job.Cut, job.Mine, job.Smooth, job.Sow,
 		job.Bill, job.Hunt, job.Refuel, job.Repair, job.Research, job.Clean, job.Bury,
 		job.Roof, job.Unroof:
 		return true
@@ -107,7 +108,7 @@ func postKeyOf(id entity.EntityID, j job.Record) postKey {
 		return postKey{Pawn: id, Kind: j.Kind, Target: target}
 	}
 	switch j.Kind {
-	case job.Mine, job.Clean, job.Roof, job.Unroof, job.Cut:
+	case job.Mine, job.Smooth, job.Clean, job.Roof, job.Unroof, job.Cut:
 		return postKey{Pawn: id, Kind: j.Kind, X: j.DestX, Y: j.DestY}
 	}
 	return postKey{Pawn: id, Kind: j.Kind, X: j.TX, Y: j.TY}
@@ -403,6 +404,11 @@ func (g *Game) postLabel(k postKey) string {
 		}
 	case job.Mine:
 		return "mine rock"
+	case job.Smooth:
+		if terrain.IsRockWall(g.terr.At(k.X, k.Y)) {
+			return "smooth rock"
+		}
+		return "smooth floor"
 	case job.Roof:
 		return "build roof"
 	case job.Unroof:

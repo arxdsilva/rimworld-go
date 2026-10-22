@@ -66,8 +66,11 @@ func Buildables() []BuildableView {
 
 // StuffID is the command value (command.Command.Stuff) for a material name.
 func StuffID(name string) (uint8, bool) {
+	if k, ok := stuffByName(name); ok {
+		return uint8(k), true
+	}
 	k, ok := item.ParseKind(name)
-	if !ok || !(k.IsStuff() || k.IsCarpet()) {
+	if !ok || !k.IsCarpet() {
 		return 0, false
 	}
 	return uint8(k), true
@@ -169,7 +172,7 @@ func (g *Game) canPlace(k construction.Kind, x, y int) (bool, string) {
 	if g.layerFrameAt(x, y, layer) != 0 {
 		return false, ReasonPlanned
 	}
-	if g.terr.At(x, y) == terrain.Rock {
+	if terrain.IsRockWall(g.terr.At(x, y)) {
 		return false, ReasonRock
 	}
 	if layer == construction.LayerFloor {
@@ -387,6 +390,7 @@ func (g *Game) removeBuilding(id entity.EntityID) {
 	}
 	delete(g.bills, id)
 	g.markRoomsDirty()
+	g.structVer++ // SIM-029: link/autotile caches
 	for _, c := range []uint64{b.Claimant, b.Claimant2} {
 		if c != 0 {
 			delete(g.sleptAt, entity.EntityID(c))

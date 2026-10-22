@@ -71,7 +71,7 @@ func stainVariant(x, y int) uint8 {
 // stamp adds blood of kind to tile (x, y): out of bounds and rock stay
 // clean; it merges into an existing stain, which is fresh again.
 func (g *Game) stamp(x, y int, kind stain.Kind, add int) {
-	if add <= 0 || !g.grid.InBounds(x, y) || g.terr.At(x, y) == terrain.Rock {
+	if add <= 0 || !g.grid.InBounds(x, y) || terrain.IsRockWall(g.terr.At(x, y)) {
 		return
 	}
 	if g.stains.tiles == nil {

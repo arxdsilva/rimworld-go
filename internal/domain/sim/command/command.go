@@ -79,6 +79,9 @@ const (
 	// DesignateForbid forbids (Enabled) or allows every stack in X..X2,
 	// Y..Y2.
 	DesignateForbid
+	// DesignateSmooth marks rock walls (no ore) and rough stone floors in
+	// X..X2, Y..Y2 for smoothing (SIM-029).
+	DesignateSmooth
 )
 
 // WorkType is a compact work-column id for SetWorkEnabled.
@@ -118,6 +121,7 @@ const (
 	OrderAttack // drafted: attack the animal at X, Y
 	OrderEquip  // pick up and wield the weapon at X, Y
 	OrderTame   // Undesignate only: the taming mark
+	OrderSmooth // smooth the rock wall or stone floor at X, Y (SIM-029)
 )
 
 // Command is applied on a simulation tick, never by the UI directly.

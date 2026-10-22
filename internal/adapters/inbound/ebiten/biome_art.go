@@ -50,6 +50,9 @@ var terrainFallbacks = map[string]terrainFallback{
 	"sand":  {"gravel", colorScale{1.35, 1.15, 0.7, 1}},
 	"marsh": {"soil", colorScale{0.55, 0.78, 0.66, 1}},
 	"ice":   {"gravel", colorScale{0.78, 0.95, 1.3, 1}},
+	// smooth stone before its art: rough stone, a touch lighter
+	"stone_smooth": {"stone", colorScale{1.12, 1.12, 1.12, 1}},
+	"rock_smooth":  {"stone", colorScale{1.12, 1.12, 1.12, 1}},
 }
 
 // terrainTileKey is the ground tile of terrain t at variant v and the

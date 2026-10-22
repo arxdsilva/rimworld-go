@@ -171,9 +171,9 @@ func TestStoneMaterialReachesBlueprint(t *testing.T) {
 	click(t, a, "tab.architect")
 	click(t, a, "arch.cat.structure")
 	click(t, a, "arch.tool.wall")
-	click(t, a, "arch.stuff.stone")
-	if a.toolStuff(archTool{build: "wall"}) != "stone" {
-		t.Fatal("stone should be selected for walls")
+	click(t, a, "arch.stuff.granite blocks")
+	if a.toolStuff(archTool{build: "wall"}) != "granite blocks" {
+		t.Fatal("granite blocks should be selected for walls")
 	}
 	if a.toolStuff(archTool{build: "door"}) != "wood" {
 		t.Fatal("doors cannot be stone; they fall back to wood")
@@ -183,7 +183,7 @@ func TestStoneMaterialReachesBlueprint(t *testing.T) {
 	a.submitArchitect()
 	g.Step(1)
 	f := g.World().Frames
-	if len(f) != 2 || f[0].Stuff != "stone" {
+	if len(f) != 2 || f[0].Stuff != "granite blocks" || f[1].Stuff != "granite blocks" {
 		t.Fatalf("frames = %+v", f)
 	}
 }

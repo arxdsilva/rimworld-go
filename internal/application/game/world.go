@@ -3,6 +3,7 @@ package game
 import (
 	"slices"
 	"sort"
+	"strings"
 
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
@@ -10,18 +11,54 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/generation"
+	"rimworld-go/internal/domain/world/geology"
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/terrain"
 )
 
-// MineYield is the stone blocks dropped by mining one rock tile.
-const MineYield = 5
+// MineYield is the chunks of its stone dropped by mining one rock tile
+// (SIM-029: a stonecutter cuts each chunk into blocks).
+const MineYield = 1
 
-// MineWork is the labour to mine one rock tile.
+// MineWork is the labour to mine one rock tile; an ore vein takes half as
+// long again (mineWorkAt).
 const MineWork = 360
+
+// OreYield is the metal dropped by mining one ore tile (SIM-029; original
+// numbers).
+var OreYield = [...]int{geology.Steel: 20, geology.Silver: 25, geology.Gold: 8}
+
+// oreMetal is the item mined from an ore vein.
+func oreMetal(o geology.Ore) item.Kind {
+	switch o {
+	case geology.Silver:
+		return item.Silver
+	case geology.Gold:
+		return item.Gold
+	}
+	return item.Steel
+}
 
 // TerrainNames maps WorldView.Terrain codes to names.
 func TerrainNames() []string { return terrain.Names() }
+
+// StoneNames maps WorldView.StoneType codes to names ("" is none).
+func StoneNames() []string {
+	out := []string{""}
+	for _, s := range geology.Stones() {
+		out = append(out, s.String())
+	}
+	return out
+}
+
+// OreNames maps WorldView.Ore codes to names ("" is none).
+func OreNames() []string {
+	out := []string{""}
+	for _, o := range geology.Ores() {
+		out = append(out, o.String())
+	}
+	return out
+}
 
 // generate replaces the map with a seeded generated one for the game's
 // biome (temperate forest: the original generator).
@@ -32,6 +69,9 @@ func (g *Game) generate(seed uint64) generation.Result {
 			g.setTerrain(x, y, res.Terrain.At(x, y))
 		}
 	}
+	// SIM-029: stone types and ore veins, from their own RNG stream
+	g.geo = geology.Generate(seed, g.terr)
+	g.structVer++
 	for _, p := range res.Plants {
 		_, _ = g.spawnPlant(p.Species, p.X, p.Y, p.Growth)
 	}
@@ -40,9 +80,60 @@ func (g *Game) generate(seed uint64) generation.Result {
 
 func (g *Game) setTerrain(x, y int, t terrain.Type) {
 	g.terr.Set(x, y, t)
+	if t != terrain.Rock {
+		g.geo.SetOre(x, y, geology.NoOre) // ore only lives in rough rock
+	}
+	if len(g.smooths) > 0 {
+		delete(g.smooths, [2]int{x, y}) // the marked ground is gone
+	}
+	g.structVer++
 	g.clearGrass(x, y) // grass.go: only soil grows grass
 	g.markRoomsDirty()
 	g.grid.SetWalkable(x, y, t.Walkable() && g.layerBlockerAt(x, y) == 0)
+}
+
+// naturalStone reports ground that has a stone type: rock walls and
+// rough or smoothed stone ground.
+func naturalStone(t terrain.Type) bool {
+	return terrain.IsRockWall(t) || t == terrain.Stone || t == terrain.StoneSmooth
+}
+
+// stoneAt is the stone of (x, y): its geology, or granite for natural
+// stone on a map without geology (tests, legacy cells); None elsewhere.
+func (g *Game) stoneAt(x, y int) geology.Stone {
+	s := g.geo.At(x, y)
+	if s == geology.None && g.grid.InBounds(x, y) && naturalStone(g.terr.At(x, y)) {
+		return geology.Granite
+	}
+	return s
+}
+
+// mineWorkAt is the labour to mine (x, y): ore veins take longer.
+func (g *Game) mineWorkAt(x, y int) int {
+	if g.geo.OreAt(x, y) != geology.NoOre {
+		return MineWork * 3 / 2
+	}
+	return MineWork
+}
+
+// stoneLayers is the shared read-only geology view (WorldView.StoneType,
+// Ore), rebuilt into fresh slices only when structVer has moved, so an
+// older view never changes under its reader.
+func (g *Game) stoneLayers() ([]uint8, []uint8) {
+	if g.viewStone != nil && g.viewVer == g.structVer {
+		return g.viewStone, g.viewOre
+	}
+	w, h := g.terr.W, g.terr.H
+	st, ore := make([]uint8, w*h), make([]uint8, w*h)
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			i := y*w + x
+			st[i] = uint8(g.stoneAt(x, y)) // geology.Stone codes match StoneNames()
+			ore[i] = uint8(g.geo.OreAt(x, y))
+		}
+	}
+	g.viewStone, g.viewOre, g.viewVer = st, ore, g.structVer
+	return st, ore
 }
 
 // TerrainAt returns the ground type name at (x, y).
@@ -119,7 +210,7 @@ func (g *Game) markMine(x1, y1, x2, y2 int, on bool) {
 	for y := minY; y <= maxY; y++ {
 		for x := minX; x <= maxX; x++ {
 			k := [2]int{x, y}
-			if on && g.terr.At(x, y) == terrain.Rock && g.grid.InBounds(x, y) {
+			if on && terrain.IsRockWall(g.terr.At(x, y)) && g.grid.InBounds(x, y) {
 				g.mines[k] = true
 			} else if !on {
 				delete(g.mines, k)
@@ -257,7 +348,7 @@ func (g *Game) startMine(id entity.EntityID, rx, ry int, forced bool) bool {
 		g.postponeTile(id, job.Mine, rx, ry) // walled in: SIM-027
 		return false
 	}
-	if !g.startJob(id, job.Record{Kind: job.Mine, TX: tx, TY: ty, DestX: rx, DestY: ry, WorkLeft: MineWork, Forced: forced}) {
+	if !g.startJob(id, job.Record{Kind: job.Mine, TX: tx, TY: ty, DestX: rx, DestY: ry, WorkLeft: g.mineWorkAt(rx, ry), Forced: forced}) {
 		return false
 	}
 	g.reserve.TryTile(id, rx, ry)
@@ -265,7 +356,7 @@ func (g *Game) startMine(id entity.EntityID, rx, ry int, forced bool) bool {
 }
 
 func (g *Game) doMine(id entity.EntityID, j job.Record) {
-	if g.terr.At(j.DestX, j.DestY) != terrain.Rock {
+	if !terrain.IsRockWall(g.terr.At(j.DestX, j.DestY)) {
 		j.State, j.Fail = job.Fail, job.TargetGone
 		g.jobs.Set(id, j)
 		return
@@ -279,10 +370,15 @@ func (g *Game) doMine(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
-	g.setTerrain(j.DestX, j.DestY, terrain.Stone)
+	ore := g.geo.OreAt(j.DestX, j.DestY)
+	g.setTerrain(j.DestX, j.DestY, terrain.Stone) // clears the ore; the stone stays
 	g.roofOnMined(j.DestX, j.DestY)
 	delete(g.mines, [2]int{j.DestX, j.DestY})
-	g.dropStack(item.Stone, MineYield, j.DestX, j.DestY)
+	if ore != geology.NoOre {
+		g.dropStack(oreMetal(ore), OreYield[ore], j.DestX, j.DestY)
+	} else {
+		g.dropStack(item.ChunkOf(g.stoneAt(j.DestX, j.DestY)), MineYield, j.DestX, j.DestY)
+	}
 	j.State = job.Complete
 	g.jobs.Set(id, j)
 }
@@ -322,12 +418,16 @@ type SoilView struct {
 	// WalkCost is the time to cross it, percent of plain ground (marsh 200:
 	// "slow ground" in the hover; floors cancel it).
 	WalkCost int
+	// Smoothable: a builder may smooth it (rough rock without ore, rough
+	// stone ground without a building; SIM-029).
+	Smoothable bool
 }
 
 var soilLabels = map[string]string{
 	"soil": "Soil", "rich_soil": "Rich soil", "gravel": "Gravel",
 	"stone": "Rough stone", "rock": "Rock wall",
 	"sand": "Sand", "marsh": "Marsh", "ice": "Ice",
+	"rock_smooth": "Smoothed rock wall", "stone_smooth": "Smooth stone floor",
 }
 
 // Soils lists every ground type, indexed by the WorldView.Terrain code.
@@ -337,7 +437,37 @@ func Soils() []SoilView {
 	for i, n := range names {
 		t := terrain.Type(i)
 		out[i] = SoilView{Name: n, Label: soilLabels[n], Fertility: t.Fertility(),
-			Farmable: t.Fertility() > 0, Walkable: t.Walkable(), WalkCost: t.WalkCost()}
+			Farmable: t.Fertility() > 0, Walkable: t.Walkable(), WalkCost: t.WalkCost(),
+			Smoothable: t == terrain.Rock || t == terrain.Stone}
 	}
 	return out
+}
+
+// SoilLabel is the hover name of a tile's ground (SIM-029): ground, stone
+// and ore are names as in TerrainNames(), StoneNames() and OreNames(), ""
+// meaning none. Natural stone names its stone ("Granite rock wall",
+// "Smooth granite floor", "Compacted steel (in granite)"); without a
+// stone it is the plain Soils() label; an unknown ground is "".
+func SoilLabel(ground, stone, ore string) string {
+	s, ok := geology.ParseStone(stone)
+	if !ok {
+		return soilLabels[ground]
+	}
+	name := strings.ToLower(s.Label())
+	switch ground {
+	case "rock":
+		for _, o := range geology.Ores() {
+			if o.String() == ore {
+				return o.Label() + " (in " + name + ")"
+			}
+		}
+		return s.Label() + " rock wall"
+	case "rock_smooth":
+		return "Smoothed " + name + " wall"
+	case "stone":
+		return "Rough " + name + " ground"
+	case "stone_smooth":
+		return "Smooth " + name + " floor"
+	}
+	return soilLabels[ground]
 }

@@ -221,12 +221,28 @@ func TestWallMaterialButtonsStillWoodStone(t *testing.T) {
 	click(t, a, "tab.architect")
 	click(t, a, "arch.cat.structure")
 	click(t, a, "arch.tool.wall")
-	_, w := hasButton(a.architectButtons(), "arch.stuff.wood")
-	_, s := hasButton(a.architectButtons(), "arch.stuff.stone")
-	if !w || !s {
-		t.Fatal("wall should offer Wood and Stone")
+	// wood, every stone's blocks and steel, labelled and inside the panel
+	want := map[string]string{"wood": "Wood", "sandstone blocks": "Sandstone blocks", "granite blocks": "Granite blocks",
+		"limestone blocks": "Limestone blocks", "slate blocks": "Slate blocks", "marble blocks": "Marble blocks", "steel": "Steel"}
+	r := a.architectRect()
+	n := 0
+	for _, b := range a.architectButtons() {
+		if !strings.HasPrefix(b.id, "arch.stuff.") {
+			continue
+		}
+		n++
+		s := strings.TrimPrefix(b.id, "arch.stuff.")
+		if want[s] == "" || b.label != want[s] {
+			t.Fatalf("unexpected wall material button %q (%q)", b.id, b.label)
+		}
+		if b.x+b.w > r.x+r.w || b.y+b.h > r.y+r.h || len(b.label)*6+12 > int(b.w) {
+			t.Fatalf("%q does not fit the panel: %+v", b.id, b)
+		}
 	}
-	click(t, a, "arch.stuff.stone")
+	if n != len(want) {
+		t.Fatalf("wall offers %d materials, want %d", n, len(want))
+	}
+	click(t, a, "arch.stuff.granite blocks")
 	click(t, a, "arch.cat.furniture")
 	click(t, a, "arch.tool.carpet")
 	tool, _ := toolByID("carpet")
@@ -236,10 +252,17 @@ func TestWallMaterialButtonsStillWoodStone(t *testing.T) {
 	click(t, a, "arch.tool.carpet") // off
 	click(t, a, "arch.cat.structure")
 	click(t, a, "arch.tool.door")
+	var door []string
 	for _, b := range a.architectButtons() {
 		if strings.HasPrefix(b.id, "arch.stuff.") {
-			t.Fatalf("door should have no material buttons, got %q", b.id)
+			door = append(door, strings.TrimPrefix(b.id, "arch.stuff."))
 		}
+	}
+	if strings.Join(door, ",") != "wood,steel" {
+		t.Fatalf("door should offer only wood and steel, got %q", door)
+	}
+	if got := a.toolStuff(archTool{build: "door"}); got != "wood" {
+		t.Fatalf("granite pick falls back to wood on a door: %q", got)
 	}
 }
 

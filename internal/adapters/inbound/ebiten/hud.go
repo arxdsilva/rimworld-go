@@ -156,12 +156,10 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 	drawPanel(screen, 0, 0, float32(sw), hudTopH)
 	x := hudPad
 	wld := a.renderer.world()
-	drawLabel(screen, x, 10, fmt.Sprintf("Food %d", wld.Food))
-	x += 90
-	drawLabel(screen, x, 10, fmt.Sprintf("Wood %d", wld.Wood))
-	x += 90
-	drawLabel(screen, x, 10, fmt.Sprintf("Stone %d", wld.Stone))
-	x += 90
+	for _, l := range resourceReadouts(wld) { // Food, Wood, Stone, Steel (+ Silver, Gold)
+		drawLabel(screen, x, 10, l)
+		x += max(90, len(l)*6+18)
+	}
 	if wld.Season != "" {
 		season := seasonText(wld)
 		drawLabel(screen, x, 10, season)
@@ -325,8 +323,9 @@ func drawHoverPanel(screen *ebiten.Image, sw, bottomY int, lines []string) {
 	}
 }
 
-// soilLines describes the ground on a tile: its type, fertility and whether
-// crops can be grown there.
+// soilLines describes the ground on a tile: its type (with its stone or
+// ore), fertility, whether crops can be grown there and whether it can be
+// smoothed.
 func soilLines(w game.WorldView, x, y int) []string {
 	if w.TerrainW <= 0 || x < 0 || y < 0 || x >= w.TerrainW {
 		return nil
@@ -341,7 +340,18 @@ func soilLines(w game.WorldView, x, y int) []string {
 		return nil
 	}
 	s := soils[c]
-	lines := []string{s.Label, fmt.Sprintf("Fertility %d%%", s.Fertility)}
+	stone, ore := "", ""
+	if i < len(w.StoneType) && int(w.StoneType[i]) < len(stoneNames) {
+		stone = stoneNames[w.StoneType[i]]
+	}
+	if i < len(w.Ore) && int(w.Ore[i]) < len(oreNames) {
+		ore = oreNames[w.Ore[i]]
+	}
+	label := game.SoilLabel(s.Name, stone, ore) // "Granite rock wall", "Compacted steel (in granite)"
+	if label == "" {
+		label = s.Label
+	}
+	lines := []string{label, fmt.Sprintf("Fertility %d%%", s.Fertility)}
 	switch {
 	case !s.Walkable:
 		lines = append(lines, "Impassable, mine to clear")
@@ -353,6 +363,9 @@ func soilLines(w game.WorldView, x, y int) []string {
 		lines = append(lines, fmt.Sprintf("Farmable, crops grow %d%% slower", 100-s.Fertility))
 	default:
 		lines = append(lines, "Farmable, normal growth")
+	}
+	if s.Smoothable && ore == "" {
+		lines = append(lines, "Smoothable")
 	}
 	return lines
 }

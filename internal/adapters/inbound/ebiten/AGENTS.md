@@ -143,8 +143,22 @@ None yet. Add them when colony draw or UI layout shows up in profiles.
 - Placement: sprite top-left = footprint top-left - `origin_px` * (tile/128).
 - Draw order: terrain -> grass decals -> floors -> zones/blueprint -> objects
   and pawns sorted by row then column -> designations -> selection -> daylight.
-- Walls pick `wall_wood_<mask>` (N=1 E=2 S=4 W=8). Beds draw `bed_cot`
-  (domain beds are single-cell). Frames draw scaffold once wood arrives.
+- Linked rendering (ART-015, `linkgrid.go`): walls, doors, fences and rock
+  link through flags/accepts (walls and rock join; fences join walls one
+  way; rock links off the map edge). The grid is cached on
+  `WorldView.StructVer` (one per Renderer, so per session); frames and
+  ghosts use a per-frame planned set. Keys are `<prefix>_<NN>` (N=1 E=2
+  S=4 W=8) or `<prefix>_<NN>_c<h>` with filled corners (NE=1 SE=2 SW=4
+  NW=8), 47 per family; missing art falls back to `_NN`, then to a
+  related family (`linkFallback`). Families: `rock/rock_wall`,
+  `rock/rock_smooth`, `rock/ore_<metal>`, `structure/wall_<wood|stone|steel>`.
+- Stone art is tint-neutral: the stone tint (`stone_tint` palette group)
+  multiplies as a colour scale, or bakes through the ore sprites' mask
+  (`stone_art.go`). Rock, stone ground and edges, stone walls, fences,
+  floors, chunks and blocks take their stone's tint. Rock draws and the
+  terrain pass cover only the visible tiles (padded).
+- Beds draw `bed_cot` (domain beds are single-cell). Frames draw scaffold
+  once wood arrives.
 - Pawn look (skin/hair/style/clothes) is a pure function of EntityID;
   facing comes from the last tile step. Both are presentation-only.
 - Tinted textures are baked once per (sprite, tint) on the CPU and cached.

@@ -63,7 +63,7 @@ func (g *Game) HiveSwarm() { g.hiveSwarm() }
 func (g *Game) spawnNear(s animal.Species, x, y int) (entity.EntityID, bool) {
 	for try := 0; try < 12; try++ {
 		hx, hy := x+g.rng.IntN(5)-2, y+g.rng.IntN(5)-2
-		if !g.grid.InBounds(hx, hy) || g.terr.At(hx, hy) == terrain.Rock {
+		if !g.grid.InBounds(hx, hy) || terrain.IsRockWall(g.terr.At(hx, hy)) {
 			continue
 		}
 		if id, err := g.spawnAnimal(s, hx, hy); err == nil {
@@ -97,7 +97,7 @@ func (g *Game) hiveExit() (int, int, bool) {
 func (g *Game) bordersRock(x, y int) bool {
 	for _, d := range [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {
 		nx, ny := x+d[0], y+d[1]
-		if g.grid.InBounds(nx, ny) && g.terr.At(nx, ny) == terrain.Rock {
+		if g.grid.InBounds(nx, ny) && terrain.IsRockWall(g.terr.At(nx, ny)) {
 			return true
 		}
 	}

@@ -342,22 +342,13 @@ func (r *Renderer) addRockCasters(w game.WorldView, add func(key string, x, y, f
 	if w.TerrainW <= 0 || len(w.Terrain) == 0 {
 		return
 	}
-	rock := -1
-	for i, n := range game.TerrainNames() {
-		if n == "rock" {
-			rock = i
-		}
-	}
-	if rock < 0 {
-		return
-	}
 	gw, gh := r.game.Width(), r.game.Height()
-	isRock := func(x, y int) bool {
+	isRock := func(x, y int) bool { // rough or smoothed rock; map edges count as rock
 		if x < 0 || y < 0 || x >= gw || y >= gh {
 			return true
 		}
 		i := y*w.TerrainW + x
-		return i < len(w.Terrain) && int(w.Terrain[i]) == rock
+		return i < len(w.Terrain) && isRockWallCode(w.Terrain[i])
 	}
 	x0, y0, x1, y1 := 0, 0, gw-1, gh-1
 	if v := r.env.view; !v.empty() {

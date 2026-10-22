@@ -131,7 +131,7 @@ func (g *Game) startBreach(id entity.EntityID, tp Position) bool {
 	for _, p := range path {
 		if !q.Walkable(p.X, p.Y) {
 			bid := g.layerBldgAt(p.X, p.Y, construction.LayerObject)
-			if bid == 0 && g.terr.At(p.X, p.Y) != terrain.Rock {
+			if bid == 0 && !terrain.IsRockWall(g.terr.At(p.X, p.Y)) {
 				return false // a trap in the way: plan again later
 			}
 			rec := job.Record{Kind: job.Breach, Target: bid, DestX: p.X, DestY: p.Y, TX: sx, TY: sy, WorkLeft: breachCooldown}
@@ -183,7 +183,7 @@ func (g *Game) doBreach(id entity.EntityID, j job.Record) {
 
 // doDig: a sapper beside a rock tile hacks at it on cooldown.
 func (g *Game) doDig(id entity.EntityID, j job.Record) {
-	if g.terr.At(j.DestX, j.DestY) != terrain.Rock {
+	if !terrain.IsRockWall(g.terr.At(j.DestX, j.DestY)) {
 		j.State = job.Complete
 		g.jobs.Set(id, j)
 		return

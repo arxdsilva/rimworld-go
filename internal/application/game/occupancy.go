@@ -538,7 +538,7 @@ func (g *Game) workCell(id entity.EntityID, to Position) Position {
 	if !ok {
 		return to
 	}
-	if j.Kind == job.Mine || j.Kind == job.Clean {
+	if j.Kind == job.Mine || j.Kind == job.Smooth || j.Kind == job.Clean {
 		return Position{X: j.DestX, Y: j.DestY}
 	}
 	if j.TX == 0 && j.TY == 0 {

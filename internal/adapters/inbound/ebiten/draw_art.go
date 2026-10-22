@@ -1,9 +1,10 @@
 package ebiten
 
 import (
+	"cmp"
 	"image/color"
 	"math"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -22,9 +23,12 @@ const (
 	grassEvery   = 5
 )
 
+// artDraw is one queued object draw: a closure, or (fn nil) a linked
+// sprite, which mountains queue by the hundred without allocating.
 type artDraw struct {
 	row, col float64
 	fn       func()
+	ld       linkedDraw
 }
 
 // colorScale is a per-draw RGBA multiplier (ghosts, blueprints).
@@ -126,10 +130,21 @@ func (r *Renderer) drawSpriteScaled(screen *ebiten.Image, key string, tint color
 func (r *Renderer) drawPlacementGhost(screen *ebiten.Image, kind, stuff, facing string, cells []ghostCell) {
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
 	tile := r.tilePx()
-	set := map[[2]int]bool{}
-	for _, c := range cells {
-		set[[2]int{c.x, c.y}] = true
+	link := buildingLink(kind)
+	var p map[[2]int]linkFlag
+	if r.art != nil && link.flags != 0 { // ghosts join built walls, rock, frames and each other
+		w := r.drawW
+		if w.TerrainW == 0 {
+			w = r.world()
+		}
+		r.links.sync(w, r.game.Width(), r.game.Height())
+		ghosts := make([]plannedCell, len(cells))
+		for i, c := range cells {
+			ghosts[i] = plannedCell{x: c.x, y: c.y, flags: link.flags}
+		}
+		p = r.links.plan(w.Frames, ghosts)
 	}
+	tint := r.stuffTint(stuff)
 	for _, c := range cells {
 		cs := ghostOKCS
 		if !c.ok {
@@ -144,12 +159,19 @@ func (r *Renderer) drawPlacementGhost(screen *ebiten.Image, kind, stuff, facing 
 			vector.FillRect(screen, sx, sy, float32(tile), float32(tile), clr, false)
 			continue
 		}
-		mask := wallMask(set, c.x, c.y)
-		key := buildSpriteStuff(kind, stuff, facing, mask, mask&(wallE|wallW) != 0, false)
+		mask, corners := 0, 0
+		if p != nil {
+			mask = r.links.plannedMask(p, link.accepts, c.x, c.y)
+			corners = r.links.plannedCorners(p, link.accepts, c.x, c.y)
+		}
+		if kind == "wall" && r.drawLinked(screen, wallPrefix(stuff), c.x, c.y, mask, corners, tint, cs, tile, sw, sh) {
+			continue
+		}
+		key := r.buildKey(kind, stuff, facing, mask, mask&(wallE|wallW) != 0, false)
 		if !r.art.has(key) {
 			sx, sy := r.worldToScreen(c.x, c.y)
 			if isFenceKind(kind) {
-				drawFenceVector(screen, sx, sy, float32(tile), kind, mask, false, stuff == "stone", 170)
+				drawFenceVector(screen, sx, sy, float32(tile), kind, mask, false, isStoneStuff(stuff), 170)
 				continue
 			}
 			clr := color.RGBA{90, 200, 90, 120}
@@ -159,8 +181,20 @@ func (r *Renderer) drawPlacementGhost(screen *ebiten.Image, kind, stuff, facing 
 			vector.FillRect(screen, sx, sy, float32(tile), float32(tile), clr, false)
 			continue
 		}
-		r.drawSpriteCS(screen, key, color.NRGBA{}, float64(c.x), float64(c.y), tile, sw, sh, cs)
+		r.drawSpriteCS(screen, key, color.NRGBA{}, float64(c.x), float64(c.y), tile, sw, sh, mulCS(tintCS(tint), cs))
 	}
+}
+
+// buildKey is buildSpriteStuff with a fallback to the wood sprite when a
+// material's art (steel doors, stone fences) is missing.
+func (r *Renderer) buildKey(kind, stuff, facing string, mask int, ew, open bool) string {
+	key := buildSpriteStuff(kind, stuff, facing, mask, ew, open)
+	if r.art != nil && stuffMaterial(stuff) != "wood" && !r.art.has(key) {
+		if alt := buildSprite(kind, facing, mask, ew, open); alt != "" && r.art.has(alt) {
+			return alt
+		}
+	}
+	return key
 }
 
 // layer marks the start of a ground layer for the draw-order test.
@@ -175,6 +209,8 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	w := r.game.World()
 	r.drawW, r.drawPawns = w, r.game.Snapshot()
 	r.lit.light = lightAt(w.Hour, w.DayOfYear, w.Weather, w.WeatherIntensity)
+	r.setView(sw, sh, tile)
+	r.links.sync(w, r.game.Width(), r.game.Height()) // linkgrid.go: rebuilt only on StructVer
 
 	r.drawTerrainArt(screen, w, sw, sh, tile)
 	r.drawGroundCover(screen, w, sw, sh, tile)
@@ -197,43 +233,47 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 		if f.Kind == "carpet" {
 			r.drawSpriteCS(screen, buildSpriteStuff(f.Kind, f.Stuff, "", 0, false, false), none, float64(f.X), float64(f.Y), tile, sw, sh, blueprintCS)
 		} else if f.Floor {
-			r.drawSpriteCS(screen, buildSpriteStuff("floor", f.Stuff, "", 0, false, false), none, float64(f.X), float64(f.Y), tile, sw, sh, blueprintCS)
+			cs := mulCS(tintCS(r.stuffTint(f.Stuff)), blueprintCS)
+			r.drawSpriteCS(screen, r.buildKey("floor", f.Stuff, "", 0, false, false), none, float64(f.X), float64(f.Y), tile, sw, sh, cs)
 		}
 	}
 
 	r.drawShadows(screen, w, sw, sh, tile) // shadow.go: under every object
 	r.drawEaves(screen, w, sw, sh, tile)   // roof_draw.go
 
-	walls := map[[2]int]bool{}
-	for _, b := range w.Buildings {
-		if b.Kind == "wall" || b.Kind == "door" {
-			walls[[2]int{b.X, b.Y}] = true
-		}
-	}
 	occupied := map[[2]int]bool{}
 	for _, p := range r.game.Snapshot() {
 		occupied[[2]int{p.X, p.Y}] = true
 	}
-	fences := fenceSet(w, false)
 	creatures := creatureCells(w, r.drawPawns)
 	r.drawPaths(screen, sw, sh, tile) // paths_draw.go
-	var draws []artDraw
-	add := func(row, col float64, fn func()) { draws = append(draws, artDraw{row, col, fn}) }
-	r.addRockDraws(w, add, screen, sw, sh, tile)
+	draws := r.draws[:0]
+	add := func(row, col float64, fn func()) { draws = append(draws, artDraw{row: row, col: col, fn: fn}) }
+	draws = r.addRockDraws(w, draws)
 	cloth := r.colonyCloths()
 	for _, b := range w.Buildings {
 		b := b
 		if b.Floor || onFloor(b.Kind) {
 			continue
 		}
-		mask := wallMask(walls, b.X, b.Y)
+		mask, corners := 0, 0
 		open := occupied[[2]int{b.X, b.Y}]
-		if isFenceKind(b.Kind) {
-			mask, open = wallMask(fences, b.X, b.Y), creatures[[2]int{b.X, b.Y}]
+		switch {
+		case b.Kind == "wall":
+			mask, corners = r.links.mask(b.X, b.Y), r.links.corners(b.X, b.Y)
+		case b.Kind == "door":
+			mask = r.links.mask(b.X, b.Y)
+		case isFenceKind(b.Kind):
+			mask, open = r.links.mask(b.X, b.Y), creatures[[2]int{b.X, b.Y}]
 		}
-		key := buildSpriteStuff(b.Kind, b.Stuff, b.Facing, mask, mask&(wallE|wallW) != 0, open)
+		key := r.buildKey(b.Kind, b.Stuff, b.Facing, mask, mask&(wallE|wallW) != 0, open)
 		if b.Kind == troughKind {
 			key = troughKey(b)
+		}
+		stuffCS := tintCS(r.stuffTint(b.Stuff)) // stone walls, fences and floors take their stone's tint
+		wallDraw, linked := linkedDraw{}, false
+		if b.Kind == "wall" {
+			wallDraw, linked = r.linkedSprite(wallPrefix(b.Stuff), b.X, b.Y, mask, corners, r.stuffTint(b.Stuff), noCS)
 		}
 		t := none
 		if (b.Kind == "bed" || b.Kind == "double bed") && len(cloth) > 0 {
@@ -246,16 +286,20 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 			case "funeral pyre":
 				r.drawPyre(screen, b, tile, sw, sh)
 			default:
+				if linked {
+					r.drawLinkedSprite(screen, wallDraw, tile, sw, sh)
+					break
+				}
 				if b.Kind == troughKind && !r.art.has(key) {
 					r.drawTroughFallback(screen, b, tile)
 					break
 				}
 				if isFenceKind(b.Kind) && !r.art.has(key) {
 					sx, sy := r.worldToScreen(b.X, b.Y)
-					drawFenceVector(screen, sx, sy, float32(tile), b.Kind, mask, open, b.Stuff == "stone", 255)
+					drawFenceVector(screen, sx, sy, float32(tile), b.Kind, mask, open, isStoneStuff(b.Stuff), 255)
 					break
 				}
-				r.drawSprite(screen, key, t, float64(b.X), float64(b.Y), tile, sw, sh)
+				r.drawSpriteCS(screen, key, t, float64(b.X), float64(b.Y), tile, sw, sh, stuffCS)
 			}
 			if b.DryQty > 0 {
 				r.drawRackLoad(screen, b, tile, sw, sh)
@@ -265,37 +309,41 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 			}
 		})
 	}
-	// planned walls autotile with each other and with built walls
-	planned := map[[2]int]bool{}
-	for k := range walls {
-		planned[k] = true
-	}
-	for _, f := range w.Frames {
-		if f.Kind == "wall" || f.Kind == "door" {
-			planned[[2]int{f.X, f.Y}] = true
-		}
-	}
-	plannedFences := fenceSet(w, true)
+	// planned walls and fences autotile with each other, built walls and
+	// rock (an O(frames) planned set, linkgrid.go)
+	planned := r.links.plan(w.Frames, nil)
 	for _, f := range w.Frames {
 		f := f
 		if f.Floor || f.Kind == "carpet" {
 			continue
 		}
-		pm := wallMask(planned, f.X, f.Y)
-		if isFenceKind(f.Kind) {
-			pm = wallMask(plannedFences, f.X, f.Y)
+		pm, pc := 0, 0
+		if c := buildingLink(f.Kind); c.flags != 0 {
+			pm = r.links.plannedMask(planned, c.accepts, f.X, f.Y)
+			if f.Kind == "wall" {
+				pc = r.links.plannedCorners(planned, c.accepts, f.X, f.Y)
+			}
 		}
-		key := buildSpriteStuff(f.Kind, f.Stuff, f.Facing, pm, pm&(wallE|wallW) != 0, false)
+		key := r.buildKey(f.Kind, f.Stuff, f.Facing, pm, pm&(wallE|wallW) != 0, false)
+		tint := r.stuffTint(f.Stuff)
+		wallDraw, linked := linkedDraw{}, false
+		if f.Kind == "wall" {
+			wallDraw, linked = r.linkedSprite(wallPrefix(f.Stuff), f.X, f.Y, pm, pc, tint, blueprintCS)
+		}
 		add(float64(f.Y+max(f.H, 1)-1), float64(f.X), func() {
 			if f.Wood > 0 {
 				r.drawSprite(screen, "structure/frame_1x1", none, float64(f.X), float64(f.Y), tile, sw, sh)
 			}
-			if isFenceKind(f.Kind) && !r.art.has(key) {
-				sx, sy := r.worldToScreen(f.X, f.Y)
-				drawFenceVector(screen, sx, sy, float32(tile), f.Kind, pm, false, f.Stuff == "stone", 140)
+			if linked {
+				r.drawLinkedSprite(screen, wallDraw, tile, sw, sh)
 				return
 			}
-			r.drawSpriteCS(screen, key, none, float64(f.X), float64(f.Y), tile, sw, sh, blueprintCS)
+			if isFenceKind(f.Kind) && !r.art.has(key) {
+				sx, sy := r.worldToScreen(f.X, f.Y)
+				drawFenceVector(screen, sx, sy, float32(tile), f.Kind, pm, false, isStoneStuff(f.Stuff), 140)
+				return
+			}
+			r.drawSpriteCS(screen, key, none, float64(f.X), float64(f.Y), tile, sw, sh, mulCS(tintCS(tint), blueprintCS))
 		})
 	}
 	for _, p := range w.Plants {
@@ -330,13 +378,14 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 				r.drawCorpseItem(screen, it, tile, sw, sh)
 				return
 			}
-			if !r.art.has(key) {
+			cs := itemCS(it)
+			if key, cs = r.stoneItem(key, it.Kind, cs); !r.art.has(key) {
 				pad := float32(tile) * 0.3
 				sx, sy := r.worldToScreen(it.X, it.Y)
 				vector.FillRect(screen, sx+pad, sy+pad, float32(tile)-2*pad, float32(tile)-2*pad, color.RGBA{200, 90, 40, 255}, false)
 				return
 			}
-			r.drawSpriteScaled(screen, key, none, float64(it.X), float64(it.Y), tile, sw, sh, itemCS(it), r.itemPop(it.ID))
+			r.drawSpriteScaled(screen, key, none, float64(it.X), float64(it.Y), tile, sw, sh, cs, r.itemPop(it.ID))
 		})
 	}
 	r.addAnimalDraws(w, add, screen, tile, sw, sh)
@@ -354,15 +403,21 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 		}
 		add(row, wx, func() { r.drawPawnArt(screen, p, wx, wy, tile, sw, sh) })
 	}
-	sort.SliceStable(draws, func(i, j int) bool {
-		if draws[i].row != draws[j].row {
-			return draws[i].row < draws[j].row
+	slices.SortStableFunc(draws, func(a, b artDraw) int {
+		if c := cmp.Compare(a.row, b.row); c != 0 {
+			return c
 		}
-		return draws[i].col < draws[j].col
+		return cmp.Compare(a.col, b.col)
 	})
-	for _, d := range draws {
-		d.fn()
+	for i := range draws {
+		if d := &draws[i]; d.fn != nil {
+			d.fn()
+		} else {
+			r.drawLinkedSprite(screen, d.ld, tile, sw, sh)
+		}
 	}
+	clear(draws) // drop this frame's closures; keep the buffer
+	r.draws = draws[:0]
 	r.drawWorkGlow(screen, tile)
 	r.drawFires(screen, w, tile)
 	r.drawStackCounts(screen, w, tile)
@@ -384,6 +439,13 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	}
 	for _, m := range w.Mines {
 		r.drawSprite(screen, "overlay/designation_mine", none, float64(m[0]), float64(m[1]), tile, sw, sh)
+	}
+	smoothKey, smoothCS := smoothMarkKey, noCS
+	if !r.art.has(smoothKey) { // older art: the mine mark, cooled blue
+		smoothKey, smoothCS = "overlay/designation_mine", smoothFallbackCS
+	}
+	for _, m := range w.Smooths {
+		r.drawSpriteCS(screen, smoothKey, none, float64(m[0]), float64(m[1]), tile, sw, sh, smoothCS)
 	}
 	r.drawAnimalOverlays(screen, w, tile, sw, sh)
 	if r.hasSelect {
@@ -445,6 +507,10 @@ func itemSprite(kind string) string {
 		return "item/corpse_ridgewolf"
 	case "stone", "stone_blocks":
 		return "item/stone_blocks"
+	case "silver":
+		return "item/silver"
+	case "gold":
+		return "item/gold"
 	case "cloth":
 		return "item/cloth_bolt"
 	case "straw":
@@ -455,6 +521,12 @@ func itemSprite(kind string) string {
 		return corpseCarrySprite
 	case "bones":
 		return bonesSprite(0, 0)
+	}
+	switch {
+	case strings.HasSuffix(kind, " chunk"):
+		return "item/stone_chunk"
+	case strings.HasSuffix(kind, " blocks"):
+		return "item/stone_blocks"
 	}
 	if k := biomeItemSprite(kind); k != "" {
 		return k
@@ -586,47 +658,130 @@ func (r *Renderer) drawTile(screen *ebiten.Image, key string, wx, wy, tile float
 	r.drawLit(screen, img, geo, cs, int(math.Floor(wx)), int(math.Floor(wy)))
 }
 
-// terrainPriority: a higher index draws its soft edge over lower ones.
-var terrainPriority = map[string]int{"soil": 0, "rich_soil": 1, "sand": 2, "marsh": 3, "gravel": 4, "ice": 5, "stone": 6, "rock": 6}
+// terrainPriority: a higher index draws its soft edge over lower ones
+// (the order the terrain edge art is made for, ART-015). Rock draws its
+// ground as rough stone, smoothed rock as smooth stone.
+var terrainPriority = map[string]int{"soil": 0, "rich_soil": 1, "gravel": 2, "stone": 3, "rock": 3,
+	"stone_smooth": 4, "rock_smooth": 4, "sand": 5, "marsh": 6, "ice": 7}
 
-var terrainSprite = map[string]string{"soil": "soil", "rich_soil": "soil_rich", "gravel": "gravel", "stone": "stone", "rock": "stone", "sand": "sand", "marsh": "marsh", "ice": "ice"}
+var terrainSprite = map[string]string{"soil": "soil", "rich_soil": "soil_rich", "gravel": "gravel", "stone": "stone", "rock": "stone",
+	"sand": "sand", "marsh": "marsh", "ice": "ice", "stone_smooth": "stone_smooth", "rock_smooth": "stone_smooth"}
+
+// terrainByPri lists the edge-drawing terrains by priority.
+var terrainByPri = []string{"soil", "rich_soil", "gravel", "stone", "stone_smooth", "sand", "marsh", "ice"}
+
+// terrainNames, terrainPriByCode and stoneGroundCode index the read
+// model's terrain codes once (no per-tile map lookups).
+var (
+	terrainNames     = game.TerrainNames()
+	terrainPriByCode = func() (out [256]int8) {
+		for i, n := range terrainNames {
+			out[i] = int8(terrainPriority[n])
+		}
+		return out
+	}()
+	stoneGroundCode = func() (out [256]bool) {
+		for i, n := range terrainNames {
+			out[i] = n == "stone" || n == "stone_smooth" || isRockWallName(n)
+		}
+		return out
+	}()
+	// terrainEdgeKeys[p][mask] is terrain/<sprite>_edge_<NN> of priority p.
+	terrainEdgeKeys = func() [][16]string {
+		out := make([][16]string, len(terrainByPri))
+		for p, n := range terrainByPri {
+			for m := 1; m < 16; m++ {
+				out[p][m] = "terrain/" + terrainSprite[n] + "_edge_" + twoDigits(m)
+			}
+		}
+		return out
+	}()
+)
 
 func (r *Renderer) terrainName(w game.WorldView, x, y int) string {
-	if w.TerrainW <= 0 || x < 0 || y < 0 || x >= w.TerrainW {
+	c, ok := terrainCode(w, x, y)
+	if !ok || int(c) >= len(terrainNames) {
 		return ""
+	}
+	return terrainNames[c]
+}
+
+// terrainCode is the read model's terrain code at (x, y).
+func terrainCode(w game.WorldView, x, y int) (uint8, bool) {
+	if w.TerrainW <= 0 || x < 0 || y < 0 || x >= w.TerrainW {
+		return 0, false
 	}
 	i := y*w.TerrainW + x
 	if i >= len(w.Terrain) {
-		return ""
+		return 0, false
 	}
-	names := game.TerrainNames()
-	return names[w.Terrain[i]]
+	return w.Terrain[i], true
 }
 
+// tileKeyOf is the cached ground tile and colour scale of a terrain code
+// and variant (terrainTileKey without the per-tile string building).
+func (r *Renderer) tileKeyOf(code uint8, v int) (string, colorScale) {
+	c := r.stoneCache()
+	if c.tiles == nil {
+		c.tiles = make([][soilVariants]tileKeyEntry, len(terrainNames))
+	}
+	if int(code) >= len(c.tiles) {
+		return r.terrainTileKey("", v)
+	}
+	e := &c.tiles[code][v]
+	if !e.done {
+		e.key, e.cs = r.terrainTileKey(terrainNames[code], v)
+		e.done = true
+	}
+	return e.key, e.cs
+}
+
+// drawTerrainArt draws the ground of the visible tiles (padded by one):
+// the tile, the soft edges of higher-priority neighbours, and grass.
+// Stone ground (rough, smooth, under rock) takes its stone's tint.
 func (r *Renderer) drawTerrainArt(screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
 	none := color.NRGBA{}
-	byPri := []string{"soil", "rich_soil", "sand", "marsh", "gravel", "ice", "stone"}
 	grassCS := grassTint(w.BiomeKey)
 	grassScratch = grassMask(w, grassScratch) // grass_draw.go
-	for y := 0; y < r.game.Height(); y++ {
-		for x := 0; x < r.game.Width(); x++ {
-			t := r.terrainName(w, x, y)
-			if t == "" {
-				t = "soil"
+	x0, y0, x1, y1 := r.visibleTiles()
+	x0, y0 = max(x0-1, 0), max(y0-1, 0)
+	x1, y1 = min(x1+1, r.game.Width()-1), min(y1+1, r.game.Height()-1)
+	for y := y0; y <= y1; y++ {
+		for x := x0; x <= x1; x++ {
+			code, ok := terrainCode(w, x, y)
+			t := "soil"
+			if ok && int(code) < len(terrainNames) {
+				t = terrainNames[code]
+			} else {
+				code, ok = 0, false
 			}
-			key, tcs := r.terrainTileKey(t, int(tileHash(x, y)%soilVariants))
+			key, tcs := r.tileKeyOf(code, int(tileHash(x, y)%soilVariants))
+			if !ok {
+				key, tcs = r.terrainTileKey("soil", int(tileHash(x, y)%soilVariants))
+			} else if stoneGroundCode[code] {
+				tcs = mulCS(tcs, tintCS(r.stoneTintAt(w, x, y)))
+			}
 			r.drawTile(screen, key, float64(x), float64(y), tile, sw, sh, tcs)
-			pri := terrainPriority[t]
-			for p := pri + 1; p < len(byPri); p++ {
-				mask := 0
+			pri := int(terrainPriByCode[code])
+			for p := pri + 1; p < len(terrainByPri); p++ {
+				mask, sx, sy := 0, -1, -1
 				for _, n := range [...]struct{ dx, dy, bit int }{{0, -1, wallN}, {1, 0, wallE}, {0, 1, wallS}, {-1, 0, wallW}} {
-					if nt := r.terrainName(w, x+n.dx, y+n.dy); nt != "" && terrainPriority[nt] == p {
+					if nc, ok := terrainCode(w, x+n.dx, y+n.dy); ok && int(terrainPriByCode[nc]) == p {
 						mask |= n.bit
+						sx, sy = x+n.dx, y+n.dy
 					}
 				}
-				if mask != 0 {
-					r.drawSprite(screen, "terrain/"+terrainSprite[byPri[p]]+"_edge_"+twoDigits(mask), none, float64(x), float64(y), tile, sw, sh)
+				if mask == 0 {
+					continue
 				}
+				ek, ecs := terrainEdgeKeys[p][mask], noCS
+				if !r.art.has(ek) && terrainByPri[p] == "stone_smooth" { // older art: the rough edge
+					ek = terrainEdgeKeys[terrainPriority["stone"]][mask]
+				}
+				if n := terrainByPri[p]; n == "stone" || n == "stone_smooth" { // stone edges take the neighbouring stone's tint
+					ecs = tintCS(r.stoneTintAt(w, sx, sy))
+				}
+				r.drawSpriteCS(screen, ek, none, float64(x), float64(y), tile, sw, sh, ecs)
 			}
 			if grassVisible(grassScratch, w, t, x, y) {
 				gp := r.plantPose(x, y, kindGrass, 0.05, 1)
@@ -640,37 +795,71 @@ func (r *Renderer) drawTerrainArt(screen *ebiten.Image, w game.WorldView, sw, sh
 	}
 }
 
-// addRockDraws queues natural rock walls (autotiled among rock tiles).
-func (r *Renderer) addRockDraws(w game.WorldView, add func(row, col float64, fn func()), screen *ebiten.Image, sw, sh int, tile float64) {
-	rocks := map[[2]int]bool{}
-	for y := 0; y < r.game.Height(); y++ {
-		for x := 0; x < r.game.Width(); x++ {
-			if r.terrainName(w, x, y) == "rock" {
-				rocks[[2]int{x, y}] = true
+// addRockDraws queues the natural rock walls in view, padded one column
+// each side, one row north and two south (tall sprites reach north):
+// linked (linkgrid.go) among rock and walls, tinted by their stone, ore
+// cells with their vein sprite.
+func (r *Renderer) addRockDraws(w game.WorldView, draws []artDraw) []artDraw {
+	if w.TerrainW <= 0 {
+		return draws
+	}
+	x0, y0, x1, y1 := r.visibleTiles()
+	x0, y0 = max(x0-1, 0), max(y0-1, 0)
+	x1, y1 = min(x1+1, r.game.Width()-1, w.TerrainW-1), min(y1+2, r.game.Height()-1)
+	for y := y0; y <= y1; y++ {
+		for x := x0; x <= x1; x++ {
+			i := y*w.TerrainW + x
+			if i >= len(w.Terrain) || !isRockWallCode(w.Terrain[i]) {
+				continue
+			}
+			ore := ""
+			if i < len(w.Ore) && int(w.Ore[i]) < len(oreNames) {
+				ore = oreNames[w.Ore[i]]
+			}
+			var stone uint8
+			if i < len(w.StoneType) {
+				stone = w.StoneType[i]
+			}
+			prefix := rockPrefix(terrainNames[w.Terrain[i]], ore)
+			ld, ok := r.linkedSprite(prefix, x, y, r.links.mask(x, y), r.links.corners(x, y), r.stoneTint(stone), noCS)
+			if ok {
+				draws = append(draws, artDraw{row: float64(y), col: float64(x), ld: ld})
 			}
 		}
 	}
-	// map edges count as rock so outcrops run cleanly off the map
-	for k := range rocks {
-		x, y := k[0], k[1]
-		mask := wallMask(rocks, x, y)
-		if y == 0 {
-			mask |= wallN
-		}
-		if x == r.game.Width()-1 {
-			mask |= wallE
-		}
-		if y == r.game.Height()-1 {
-			mask |= wallS
-		}
-		if x == 0 {
-			mask |= wallW
-		}
-		key := "rock/rock_wall_" + twoDigits(mask)
-		add(float64(y), float64(x), func() {
-			r.drawSprite(screen, key, color.NRGBA{}, float64(x), float64(y), tile, sw, sh)
-		})
+	return draws
+}
+
+// smoothMarkKey is the smoothing designation; older art falls back to the
+// mine mark cooled blue.
+const smoothMarkKey = "overlay/designation_smooth"
+
+var smoothFallbackCS = colorScale{0.65, 0.9, 1.35, 1}
+
+// stoneItem is the key and colour scale of a ground stack: chunks and
+// blocks take their stone's tint; a chunk without art draws as blocks and
+// precious metals without art as steel bars.
+func (r *Renderer) stoneItem(key, kind string, cs colorScale) (string, colorScale) {
+	if fb, ok := itemFallback[key]; ok && !r.art.has(key) {
+		key = fb
 	}
+	stone := ""
+	switch {
+	case kind == "stone":
+		stone = defaultStone
+	case strings.HasSuffix(kind, " chunk"), strings.HasSuffix(kind, " blocks"):
+		stone = kind[:strings.LastIndexByte(kind, ' ')]
+	}
+	if stone == "" {
+		return key, cs
+	}
+	return key, mulCS(tintCS(r.stuffTint(stone+" blocks")), cs)
+}
+
+var itemFallback = map[string]string{
+	"item/stone_chunk": "item/stone_blocks",
+	"item/silver":      "item/steel_bars",
+	"item/gold":        "item/steel_bars",
 }
 
 // grassKeys are the tuft sprites: short tufts (some flowering) on soil,
@@ -759,7 +948,7 @@ func (r *Renderer) drawFloorLayers(screen *ebiten.Image, w game.WorldView, sw, s
 	r.layer("floors")
 	for _, b := range w.Buildings {
 		if b.Floor {
-			r.drawTile(screen, buildSpriteStuff("floor", b.Stuff, "", 0, false, false), float64(b.X), float64(b.Y), tile, sw, sh, noCS)
+			r.drawTile(screen, r.buildKey("floor", b.Stuff, "", 0, false, false), float64(b.X), float64(b.Y), tile, sw, sh, tintCS(r.stuffTint(b.Stuff)))
 		}
 	}
 	if len(w.Dirt) > 0 {

@@ -85,6 +85,8 @@ const (
 	// is collected with Milk).
 	Milk
 	Shear
+	// Smooth: working a rock wall or stone floor smooth (SIM-029).
+	Smooth
 )
 
 // IsIdle reports a free-time behaviour that any real work may replace.
@@ -112,6 +114,8 @@ func (k Kind) String() string {
 		return "cut"
 	case Mine:
 		return "mine"
+	case Smooth:
+		return "smooth"
 	case Sow:
 		return "sow"
 	case Bill:

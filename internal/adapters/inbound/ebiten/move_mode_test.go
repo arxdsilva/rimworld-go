@@ -144,7 +144,7 @@ func TestMoveModeCancel(t *testing.T) {
 func TestCopyOpensArchitectPreset(t *testing.T) {
 	t.Parallel()
 	// A butcher table cannot be stone, so kind and facing are checked on
-	// it and the stone preset on a stone wall.
+	// it and the material presets on stone walls and a steel door.
 	a, _, _ := bldgApp(t, "butcher table", "wood", "east")
 	a.applyBuildingClick("bldg.copy")
 	tool, ok := toolByID(a.archTool)
@@ -154,11 +154,17 @@ func TestCopyOpensArchitectPreset(t *testing.T) {
 	if a.archFacing != facingIndex("east") {
 		t.Fatalf("facing = %d", a.archFacing)
 	}
-	w, _, _ := bldgApp(t, "wall", "stone", "south")
-	w.applyBuildingClick("bldg.copy")
-	wt, _ := toolByID(w.archTool)
-	if wt.build != "wall" || w.toolStuff(wt) != "stone" {
-		t.Fatalf("wall copy: tool=%q stuff=%q", w.archTool, w.archStuff)
+	for _, c := range []struct{ kind, stuff, want string }{
+		{"wall", "marble blocks", "marble blocks"},
+		{"wall", "stone", "granite blocks"}, // a pre-migration read model
+		{"door", "steel", "steel"},
+	} {
+		w, _, _ := bldgApp(t, c.kind, c.stuff, "south")
+		w.applyBuildingClick("bldg.copy")
+		wt, _ := toolByID(w.archTool)
+		if wt.build != c.kind || w.toolStuff(wt) != c.want {
+			t.Fatalf("%s %s copy: tool=%q stuff=%q", c.stuff, c.kind, w.archTool, w.archStuff)
+		}
 	}
 }
 

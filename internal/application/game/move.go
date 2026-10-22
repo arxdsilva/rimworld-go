@@ -56,7 +56,7 @@ func (g *Game) canMoveTo(bid entity.EntityID, f construction.Facing, x, y int) (
 	for _, c := range cells {
 		cx, cy := c[0], c[1]
 		if g.otherBldgAt(bid, cx, cy, def.Layer) || g.otherFrameAt(bid, cx, cy, def.Layer) ||
-			g.terr.At(cx, cy) == terrain.Rock || (!g.grid.Walkable(cx, cy) && !own(cx, cy)) {
+			terrain.IsRockWall(g.terr.At(cx, cy)) || (!g.grid.Walkable(cx, cy) && !own(cx, cy)) {
 			return false, ReasonMoveHit
 		}
 		if pid := g.plantAt(cx, cy); pid != 0 {
@@ -214,6 +214,7 @@ func (g *Game) completeMove(id entity.EntityID, fr construction.Frame) {
 		}
 	}
 	g.markRoomsDirty()
+	g.structVer++ // SIM-029: link/autotile caches
 	// sleepers and users were headed for (or lying on) the old cells
 	for _, pid := range g.pawnIDs {
 		j, ok := g.jobs.Get(pid)

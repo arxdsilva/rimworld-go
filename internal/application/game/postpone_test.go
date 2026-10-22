@@ -112,7 +112,7 @@ func TestBlockedJobIsPostponed(t *testing.T) {
 	bob := postWorker(t, g, 3, 5, "Bob", work.Construct, work.Haul)
 	d := draftedPawn(t, g, 8, 5) // stands in the doorway
 	// other work on Bob's side: two loads for a stockpile
-	g.SpawnStack(item.Stone, 20, 2, 10)
+	g.SpawnStack(item.GraniteBlocks, 20, 2, 10)
 	g.SpawnStack(item.Wood, 20, 6, 10)
 	g.paintZone(zone.KindStockpile, zone.Zone{Food: true, Wood: true, Stone: true}, 1, 1, 2, 2)
 
