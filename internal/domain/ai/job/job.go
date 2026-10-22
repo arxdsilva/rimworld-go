@@ -81,6 +81,10 @@ const (
 	Unroof
 	// Clean: sweeping dirt and stains off a Home-area tile (SIM-021).
 	Clean
+	// Milk and Shear collect a tame animal's product (SIM-026; ember oil
+	// is collected with Milk).
+	Milk
+	Shear
 )
 
 // IsIdle reports a free-time behaviour that any real work may replace.
@@ -154,6 +158,10 @@ func (k Kind) String() string {
 		return "remove roof"
 	case Clean:
 		return "clean"
+	case Milk:
+		return "milk"
+	case Shear:
+		return "shear"
 	default:
 		return "idle"
 	}

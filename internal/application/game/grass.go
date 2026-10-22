@@ -25,6 +25,15 @@ type grassState struct {
 	seeded bool
 	cells  []uint8 // 1 = grass, row-major grid.Width() wide
 	cut    map[[2]int]bool
+	// regrow is the grazed or cut tiles growing back (SIM-023), a min-heap
+	// on At.
+	regrow []grassRegrow
+}
+
+// grassRegrow is one bare tile due to grow back at tick At (saved).
+type grassRegrow struct {
+	At   uint64
+	Cell int32
 }
 
 func (g *Game) grassSt() *grassState { return &g.grass }

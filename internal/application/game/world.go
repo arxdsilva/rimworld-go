@@ -301,6 +301,7 @@ type SoilView struct {
 var soilLabels = map[string]string{
 	"soil": "Soil", "rich_soil": "Rich soil", "gravel": "Gravel",
 	"stone": "Rough stone", "rock": "Rock wall",
+	"sand": "Sand", "marsh": "Marsh", "ice": "Ice",
 }
 
 // Soils lists every ground type, indexed by the WorldView.Terrain code.

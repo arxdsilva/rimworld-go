@@ -96,6 +96,8 @@ func (g *Game) applyOne(c command.Command) {
 		g.paintZone(zone.KindPen, zone.Zone{}, c.X, c.Y, c.X2, c.Y2)
 	case command.ReleaseAnimal:
 		g.releaseAnimal(entity.EntityID(c.Pawn))
+	case command.SetTroughFilter:
+		g.setTroughFilter(entity.EntityID(c.Target), c.Mode)
 	case command.DesignateDeconstruct:
 		g.markDeconstruct(c.X, c.Y, c.X2, c.Y2, true)
 	case command.DesignateHunt:

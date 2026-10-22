@@ -16,6 +16,9 @@ const (
 	Research
 	Mine
 	Craft
+	// Handle is animal handling: taming, milking, shearing (SIM-026).
+	// Appended: saved priorities of older saves are migrated on load.
+	Handle
 	NumTypes
 )
 
@@ -35,6 +38,7 @@ func DefaultColonist() Mask {
 	m = m.Set(Doctor, true)
 	m = m.Set(Research, true)
 	m = m.Set(Clean, true)
+	m = m.Set(Handle, true)
 	return m
 }
 
@@ -93,4 +97,4 @@ func (p Priorities) Set(t Type, v int) Priorities {
 }
 
 // Order is the tie-break among work types sharing a priority.
-var Order = []Type{Doctor, Haul, Construct, Cook, Craft, Hunt, Grow, Mine, Research, Clean}
+var Order = []Type{Doctor, Haul, Construct, Cook, Craft, Hunt, Handle, Grow, Mine, Research, Clean}

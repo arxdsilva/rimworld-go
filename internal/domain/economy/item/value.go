@@ -7,6 +7,7 @@ var value = [numKinds]int{
 	Corn: 1, Wheat: 1, Beans: 1, Lettuce: 1, Radishes: 1, Pumpkins: 1,
 	Leather: 3, Parka: 80, Tuque: 20, Duster: 60, HerbalMedicine: 15,
 	Cloth: 2, Straw: 1, CarpetStraw: 15, CarpetWood: 12, CarpetLeather: 25, CarpetCloth: 30,
+	Milk: 2, Wool: 3, Egg: 2, FertileEgg: 4, EmberOil: 4, WoolParka: 95, CarpetWool: 30,
 }
 
 // Value is the market value of one unit of k.

@@ -9,10 +9,14 @@ const (
 	Gravel
 	Stone // rough stone ground
 	Rock  // natural rock wall
+	// Biome ground (SIM-023); append only, saved.
+	Sand
+	Marsh // wet, slow ground
+	Ice   // frozen ground: nothing grows
 	numTypes
 )
 
-var names = [numTypes]string{"soil", "rich_soil", "gravel", "stone", "rock"}
+var names = [numTypes]string{"soil", "rich_soil", "gravel", "stone", "rock", "sand", "marsh", "ice"}
 
 func (t Type) String() string {
 	if t >= numTypes {
@@ -33,8 +37,26 @@ func (t Type) Fertility() int {
 		return 140
 	case Gravel:
 		return 70
+	case Marsh:
+		return 60
+	case Sand:
+		return 10
 	default:
 		return 0
+	}
+}
+
+// WalkCost is the time to cross t in percent of plain ground.
+func (t Type) WalkCost() int {
+	switch t {
+	case Marsh:
+		return 200
+	case Ice:
+		return 130
+	case Sand:
+		return 120
+	default:
+		return 100
 	}
 }
 

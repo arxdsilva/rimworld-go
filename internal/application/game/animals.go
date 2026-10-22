@@ -49,6 +49,27 @@ type AnimalView struct {
 	HitDamage          int
 	// Log (LOG-001) is what happened to the animal, newest first.
 	Log []LogLineView
+	// Needs and life (SIM-024..026). State is the behaviour ("wandering",
+	// "feeding", "resting", "hunting", "attacking", "fleeing", "leaving");
+	// Food and Rest are percent. Stage is "young" or "adult" (or the
+	// archetype's word for young); Scale the body size factor, 0.55..1 as
+	// the young grow. Product is "milk", "wool", "ember oil" or "" with
+	// ProductPct its fullness. Herd groups animals that move together.
+	State       string
+	Food, Rest  int
+	Diet        string
+	AgeDays     int
+	Adult       bool
+	Stage       string
+	Scale       float64
+	Pregnant    bool
+	PregPct     int
+	EggsFertile bool
+	Product     string
+	ProductPct  int
+	Sleeping    bool
+	Leaving     bool
+	Herd        uint32
 }
 
 // Wildlife at colony start (wildlife.go has the draw and the daily top-up).

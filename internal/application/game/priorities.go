@@ -34,6 +34,8 @@ func workTypeOf(c command.WorkType) (work.Type, bool) {
 		return work.Research, true
 	case command.WorkClean:
 		return work.Clean, true
+	case command.WorkHandle:
+		return work.Handle, true
 	}
 	return 0, false
 }

@@ -124,12 +124,11 @@ func (a *App) architectButtons() []button {
 	}
 	if t, ok := toolByID(a.archTool); ok {
 		if bv, ok := buildable(t.build); ok && len(bv.Stuffs) > 1 {
-			// One button per material, default first; a carpet shows its four.
+			// One button per material, default first, shrunk to fit the
+			// panel (a carpet shows one per carpet material).
 			y := r.y + r.h - 28
-			bw := float32(64)
-			if bv.Carpet {
-				bw = 62
-			}
+			n := float32(len(bv.Stuffs))
+			bw := min(float32(64), (r.w-20-6*(n-1))/n)
 			for i, s := range bv.Stuffs {
 				out = append(out, button{
 					id: "arch.stuff." + s, label: stuffLabel(s), x: r.x + 10 + float32(i)*(bw+6), y: y, w: bw, h: 22,
@@ -142,7 +141,7 @@ func (a *App) architectButtons() []button {
 }
 
 // stuffLabel is a material button's text: "Wood", "Stone", or the carpet's
-// material ("Cloth" for "cloth carpet") so four fit in a row.
+// material ("Cloth" for "cloth carpet") so they all fit in a row.
 func stuffLabel(s string) string {
 	s = strings.TrimSuffix(s, " carpet")
 	return strings.ToUpper(s[:1]) + s[1:]

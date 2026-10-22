@@ -55,7 +55,8 @@ func TestBuildablesListCarpetMaterials(t *testing.T) {
 		if !b.Carpet || b.Wood != 1 || b.Stuffs[0] != "straw carpet" {
 			t.Fatalf("carpet view = %+v", b)
 		}
-		want := map[string]int{"straw carpet": 45, "wood carpet": 30, "leather carpet": 55, "cloth carpet": 70}
+		want := map[string]int{"straw carpet": 45, "wood carpet": 30, "leather carpet": 55, "cloth carpet": 70,
+			"wool carpet": 70} // woven wool catches like cloth (SIM-026)
 		for i, s := range b.Stuffs {
 			if b.Catches[i] != want[s] {
 				t.Fatalf("%s catches %d%%, want %d%%", s, b.Catches[i], want[s])

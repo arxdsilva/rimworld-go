@@ -11,10 +11,10 @@ func at(day, hour int) clock.Tick {
 }
 
 func TestSeasonsAndDays(t *testing.T) {
-	if got := DailyMean(at(peakDay, 0)); got != yearMean+yearAmplitude {
+	if got := DailyMean(at(peakDay, 0)); got != Temp(Temperate.YearMean+Temperate.Amplitude) {
 		t.Errorf("peak mean = %v", got)
 	}
-	if got := DailyMean(at(peakDay+30, 0)); got != yearMean-yearAmplitude {
+	if got := DailyMean(at(peakDay+30, 0)); got != Temp(Temperate.YearMean-Temperate.Amplitude) {
 		t.Errorf("trough mean = %v", got)
 	}
 	if Outdoor(at(3, warmestHour)) <= Outdoor(at(3, coldestHour)) {
@@ -44,5 +44,21 @@ func TestSeasonNames(t *testing.T) {
 		if got := Season(at(day, 12)); got != want {
 			t.Errorf("day %d: got %s want %s", day, got, want)
 		}
+	}
+}
+
+// The temperate climate is the original curve; a colder one is shifted down.
+func TestClimateCurves(t *testing.T) {
+	cold := Climate{YearMean: -80, Amplitude: 180, PeakDay: 15, DaySwing: 50}
+	for _, tick := range []clock.Tick{0, 7 * clock.TicksPerDay, 40*clock.TicksPerDay + 3*clock.TicksPerHour} {
+		if Outdoor(tick) != Temperate.Outdoor(tick) {
+			t.Fatalf("Outdoor(%d) differs from Temperate.Outdoor", tick)
+		}
+	}
+	if low, high := cold.Range(); low != -310 || high != 150 {
+		t.Fatalf("cold range %v..%v", low, high)
+	}
+	if g, c := Temperate.GrowingDays(30), cold.GrowingDays(30); g <= c || c == 0 {
+		t.Fatalf("growing days temperate %d, cold %d", g, c)
 	}
 }

@@ -6,9 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"rimworld-go/internal/domain/research"
-	"rimworld-go/internal/domain/world/stain"
 	"slices"
+
+	"rimworld-go/internal/domain/incident"
+	"rimworld-go/internal/domain/research"
+	"rimworld-go/internal/domain/world/biome"
+	"rimworld-go/internal/domain/world/stain"
 
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/reservation"
@@ -126,7 +129,10 @@ type saveState struct {
 	Banked     map[entity.EntityID]bool   // absent in older saves
 	OrderQueue map[entity.EntityID][]savedOrder
 	Apparel    map[entity.EntityID]worn
-	Prio       map[entity.EntityID]work.Priorities
+	// Prio is the priorities as saved before animal handling (11 work
+	// types); Prios replaces it (SIM-026).
+	Prio       map[entity.EntityID]legacyPriorities
+	Prios      map[entity.EntityID]work.Priorities // absent in older saves
 	RaiderIDs  []entity.EntityID
 	Raiders    map[entity.EntityID]raiderState
 	RaidGroups []raidGroup
@@ -177,6 +183,12 @@ type saveState struct {
 	// Grass and GrassCut (UI-011); absent in older saves, which reseed.
 	Grass    []uint8
 	GrassCut [][2]int
+	// SIM-023..026, all absent in older saves: the biome (temperate
+	// forest), regrowing grass, nature events, and feeding troughs.
+	Biome       biome.ID
+	GrassRegrow []grassRegrow
+	Incidents   incident.State
+	Troughs     map[entity.EntityID]troughState
 	// ZoneMap (ZONE-001): the per-tile zones; absent in older saves, whose
 	// stockpile, grow zone and pen rectangles are painted into it on load.
 	ZoneMap zoneSave
@@ -233,7 +245,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 		Exposure: map[entity.EntityID][2]int{}, NoComfort: g.noComfort,
 		NoFood: g.noFood, RestedFree: g.restedFree, Calm: g.calm, Banked: g.banked,
 		OrderQueue: map[entity.EntityID][]savedOrder{}, Apparel: g.apparel, Joy: g.joy,
-		Prio: g.prio, Scheds: g.scheds,
+		Prios: g.prio, Scheds: g.scheds,
 		RaiderIDs: g.raiderIDs, Raiders: g.raiders, RaidGroups: g.raidGroups, NextThreat: g.nextThreat, ThreatsOn: g.threatsOn,
 		Breaks: map[entity.EntityID]savedBreak{}, RoomGrid: g.roomGrid, RoomTemps: g.roomTemps,
 		Memories: g.memories, Claims: g.reserve.Export(), Pending: g.pending,
@@ -245,6 +257,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 		Weather: g.weather, Graves: g.graves, Roofs: g.exportRoofs(),
 	}
 	s.Grass, s.GrassCut = g.exportGrass()
+	s.Biome, s.GrassRegrow, s.Incidents, s.Troughs = g.biome, g.grass.regrow, g.incidents, g.troughs
 	s.Stains = g.exportStains()
 	s.Dirt, s.Carried = g.exportDirt()
 	s.Home, s.CleanWired = g.exportHome(), true
@@ -340,7 +353,10 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	setMap(&g.calm, s.Calm)
 	setMap(&g.banked, s.Banked)
 	setMap(&g.apparel, s.Apparel)
-	setMap(&g.prio, s.Prio)
+	setMap(&g.prio, s.Prios)
+	if s.Prios == nil {
+		g.migrateHandling(s.Prio)
+	}
 	setMap(&g.raiders, s.Raiders)
 	g.raiderIDs, g.raidGroups, g.nextThreat, g.threatsOn = s.RaiderIDs, s.RaidGroups, s.NextThreat, s.ThreatsOn
 	setMap(&g.scheds, s.Scheds)
@@ -365,6 +381,9 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.afterLoadBurial()
 	g.importRoofs(s.Roofs)
 	g.importGrass(s.Grass, s.GrassCut)
+	g.biome, g.climate, g.incidents = s.Biome, biome.DefOf(s.Biome).Climate, s.Incidents
+	g.grass.regrow = s.GrassRegrow
+	setMap(&g.troughs, s.Troughs)
 	g.importStains(s.Stains)
 	g.importHome(s.Home, s.HomeVer) // home.go: an older save gets Home around its buildings
 	g.importDirt(s.Dirt, s.Carried) // filth.go
@@ -397,5 +416,25 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 func setMap[K comparable, V any](dst *map[K]V, src map[K]V) {
 	if src != nil {
 		*dst = src
+	}
+}
+
+// legacyPriorities is work.Priorities before the Handle work type.
+type legacyPriorities [work.Handle]uint8
+
+// migrateHandling loads the priorities of a save from before animal
+// handling: every work type keeps its priority, and Handle (taming moved
+// there from Hunt) takes Hunt's, in priorities and enable masks.
+func (g *Game) migrateHandling(old map[entity.EntityID]legacyPriorities) {
+	for id, lp := range old {
+		var p work.Priorities
+		copy(p[:], lp[:])
+		p[work.Handle] = p[work.Hunt]
+		g.prio[id] = p
+	}
+	for _, id := range g.pawnIDs {
+		if m, ok := g.labor.Get(id); ok {
+			g.labor.Set(id, m.Set(work.Handle, m.Enabled(work.Hunt)))
+		}
 	}
 }

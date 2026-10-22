@@ -75,12 +75,18 @@ func TestDried(t *testing.T) {
 		t.Error("dried meat keeps and can't be dried again")
 	}
 	for _, k := range Foods() {
+		if k == Milk || k == Egg {
+			continue // perishable but not dried (SIM-026); checked below
+		}
 		if k.Perishable() && !(Stack{Kind: k, Qty: 1}).Dryable() {
 			t.Errorf("%s should be dryable", k)
 		}
 		if k.Perishable() && k.DryTicks() <= 0 {
 			t.Errorf("%s has no drying time", k)
 		}
+	}
+	if (Stack{Kind: Milk, Qty: 1}).Dryable() || (Stack{Kind: Egg, Qty: 1}).Dryable() {
+		t.Error("milk and eggs are not dried")
 	}
 	if (Stack{Kind: Wheat, Qty: 1}).Dryable() || (Stack{Kind: CorpseAnimal, Qty: 1}).Dryable() {
 		t.Error("grain is already dry; corpses are butchered")

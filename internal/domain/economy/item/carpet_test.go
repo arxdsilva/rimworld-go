@@ -4,7 +4,7 @@ import "testing"
 
 func TestCarpetKinds(t *testing.T) {
 	t.Parallel()
-	if len(Carpets()) != 4 {
+	if len(Carpets()) != 5 { // straw, wood, leather, cloth, wool (SIM-026)
 		t.Fatalf("carpets = %v", Carpets())
 	}
 	for _, c := range Carpets() {

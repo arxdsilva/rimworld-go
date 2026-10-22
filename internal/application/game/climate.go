@@ -24,6 +24,9 @@ type MessageView struct {
 	// Danger marks a threat arriving (raids, predator packs): the UI may
 	// pause the game for it.
 	Danger bool
+	// Focus is the creature the message is about (0: none), for a
+	// jump-to link that follows it.
+	Focus entity.EntityID
 }
 
 // temperatureAt is the air temperature on a tile: enclosed rooms hold the

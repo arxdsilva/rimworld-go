@@ -189,13 +189,14 @@ func TestCarpetToolAndMaterialButtons(t *testing.T) {
 			stuffs = append(stuffs, b)
 		}
 	}
-	want := []string{"straw carpet", "wood carpet", "leather carpet", "cloth carpet"}
+	// wool carpet joined with animal products (SIM-026)
+	want := []string{"straw carpet", "wood carpet", "leather carpet", "cloth carpet", "wool carpet"}
 	bv, _ := buildable("carpet")
-	if len(bv.Stuffs) != 4 {
+	if len(bv.Stuffs) != len(want) {
 		t.Fatalf("carpet stuffs = %v", bv.Stuffs)
 	}
-	if len(stuffs) != 4 {
-		t.Fatalf("%d material buttons, want 4", len(stuffs))
+	if len(stuffs) != len(want) {
+		t.Fatalf("%d material buttons, want %d", len(stuffs), len(want))
 	}
 	for _, w := range want {
 		if _, ok := hasButton(stuffs, "arch.stuff."+w); !ok {
@@ -205,7 +206,7 @@ func TestCarpetToolAndMaterialButtons(t *testing.T) {
 	if !stuffs[0].selected || a.toolStuff(tool) != bv.Stuffs[0] {
 		t.Fatalf("default material should be selected first: %q", a.toolStuff(tool))
 	}
-	if stuffs[0].x+stuffs[0].w > stuffs[1].x || stuffs[3].x+stuffs[3].w > archW+hudPad {
+	if stuffs[0].x+stuffs[0].w > stuffs[1].x || stuffs[len(stuffs)-1].x+stuffs[len(stuffs)-1].w > archW+hudPad {
 		t.Fatalf("buttons overlap or overflow the panel: %+v", stuffs)
 	}
 	click(t, a, "arch.stuff.cloth carpet")

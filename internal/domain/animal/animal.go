@@ -472,7 +472,13 @@ type Mode uint8
 const (
 	Wander Mode = iota
 	Flee
-	Attack
+	Attack // the aggressive state: retaliating, guarding, manhunting
+	// SIM-024 (append only, saved): eating, sleeping, stalking prey, and
+	// walking off the map.
+	Feed
+	Rest
+	Hunt
+	Leave
 )
 
 func (m Mode) String() string {
@@ -481,9 +487,37 @@ func (m Mode) String() string {
 		return "fleeing"
 	case Attack:
 		return "attacking"
+	case Feed:
+		return "feeding"
+	case Rest:
+		return "resting"
+	case Hunt:
+		return "hunting"
+	case Leave:
+		return "leaving"
 	default:
 		return "wandering"
 	}
+}
+
+// FeedKind is what a feeding animal is eating.
+type FeedKind uint8
+
+const (
+	FeedNone    FeedKind = iota
+	FeedGrass            // a grass tile
+	FeedPlant            // a wild plant or a crop (browse)
+	FeedTree             // a living tree (tree-eaters)
+	FeedItem             // a loose raw food item
+	FeedCarcass          // a corpse
+	FeedTrough           // a pen trough
+)
+
+// FeedTarget is where a feeding animal is going to eat.
+type FeedTarget struct {
+	Kind FeedKind
+	ID   entity.EntityID // item, plant or trough (0 for grass)
+	X, Y int
 }
 
 // State is one living animal.
@@ -514,6 +548,25 @@ type State struct {
 	Manhunter uint64
 	// RetryAt: after a failed path search, no new search before this tick.
 	RetryAt uint64
+
+	// Needs and life (SIM-024..026; zero in saves from before them, which
+	// the game reads as fed, rested, adult, with the art's sex).
+	Food, Rest int  // 0..Full
+	Female     bool // set at spawn when HasSex
+	HasSex     bool
+	Born       uint64 // tick (0: an adult from an older save)
+	Pregnant   uint64 // due tick (0: not pregnant)
+	Mated      int    // fertile eggs still to lay from the last mating
+	Product    int    // milk/wool/oil fullness, permille
+	Feed       FeedTarget
+	FeedLeft   int    // ticks left eating the current target
+	NextFeed   uint64 // found nothing to eat: no new search before this tick
+	Starving   uint64 // tick food ran out (0: fed)
+	HuntSince  uint64 // tick the current hunt started or last struck
+	Herd       uint32 // spawn group: herds bed down and leave together
+	ExitX      int    // Leave mode's map-edge exit
+	ExitY      int
+	NextDecide uint64 // next full decision (DecideEvery)
 }
 
 // Enraged reports a manhunter at tick now.

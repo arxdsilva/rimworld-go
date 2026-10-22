@@ -67,6 +67,9 @@ const (
 	// DesignateHome paints (Enabled) or clears the Home area over X..X2,
 	// Y..Y2: colonists clean only inside it (SIM-021).
 	DesignateHome
+	// SetTroughFilter sets feeding trough Target's feed filter to Mode
+	// (0 plants, 1 meat, 2 any; SIM-024).
+	SetTroughFilter
 )
 
 // WorkType is a compact work-column id for SetWorkEnabled.
@@ -84,6 +87,7 @@ const (
 	WorkDoctor
 	WorkResearch
 	WorkClean
+	WorkHandle // taming, milking, shearing (SIM-026)
 )
 
 // Order is a player-forced job for Prioritize.

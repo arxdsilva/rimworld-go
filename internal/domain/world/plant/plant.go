@@ -25,6 +25,12 @@ const (
 	Healroot
 	// Cotton is a fibre crop: picked as cloth for tailoring and carpets (SIM-021).
 	Cotton
+	// Wild biome plants (SIM-023): append only, saved.
+	Pine
+	JungleTree
+	Cactus
+	Shrub
+	Reeds
 	numSpecies
 )
 
@@ -56,6 +62,13 @@ type Def struct {
 	// shrug off a few degrees. Only crops die of frost: wild trees and bushes
 	// go dormant.
 	FrostKill int
+	// ColdKill and HeatKill (tenths of a degree C, 0 = never) kill a wild
+	// biome plant out of its climate; the original tree and bush only go
+	// dormant.
+	ColdKill, HeatKill int
+	// Browse: grazing animals eat it down (bushes, shrubs, reeds). Trunk:
+	// a woody plant, chopped for wood and gnawed by tree-eating animals.
+	Browse, Trunk bool
 }
 
 // ZoneSowable reports whether a growing zone may sow this species.
@@ -78,8 +91,17 @@ func growDays(days float64) int {
 
 var defs = [numSpecies]Def{
 	BerryBush: {Species: BerryBush, Name: "berry_bush", GrowTicks: 12000, HarvestWork: 30, Yield: 5, Yields: item.Berries,
-		CutWork: 20, Regrows: true, RegrowTo: 35},
-	Tree: {Species: Tree, Name: "tree", GrowTicks: 60000, CutWork: 90, Wood: 8, Sowable: true, SowWork: 40},
+		CutWork: 20, Regrows: true, RegrowTo: 35, Browse: true},
+	Tree: {Species: Tree, Name: "tree", GrowTicks: 60000, CutWork: 90, Wood: 8, Sowable: true, SowWork: 40, Trunk: true},
+	// Biome plants (SIM-023, our numbers).
+	Pine: {Species: Pine, Name: "pine", GrowTicks: 70000, CutWork: 90, Wood: 10, Sowable: true, SowWork: 40,
+		HeatKill: 400, Trunk: true},
+	JungleTree: {Species: JungleTree, Name: "jungle_tree", GrowTicks: 60000, CutWork: 100, Wood: 12, Sowable: true,
+		SowWork: 40, ColdKill: 20, Trunk: true},
+	Cactus: {Species: Cactus, Name: "cactus", GrowTicks: 90000, CutWork: 40, Wood: 2, ColdKill: -50, Trunk: true},
+	Shrub:  {Species: Shrub, Name: "shrub", GrowTicks: 30000, CutWork: 25, Wood: 3, ColdKill: -150, HeatKill: 500, Browse: true},
+	Reeds: {Species: Reeds, Name: "reeds", Label: "straw", GrowTicks: 15000, HarvestWork: 25, Yield: 4, Yields: item.Straw,
+		CutWork: 15, Regrows: true, RegrowTo: 30, ColdKill: -100, Browse: true},
 	// Crops: growth follows real days-to-harvest at roughly twelve real
 	// days per game day; yields are per plant, balanced so a colonist
 	// eats from about three tiles of potatoes.
@@ -143,6 +165,13 @@ func TempFactor(tenthsC int) int {
 func Frostbitten(s Species, tenthsC int) bool {
 	d := DefOf(s)
 	return d.Crop && tenthsC < d.FrostKill
+}
+
+// Killed reports whether a wild biome plant of species s dies at air
+// temperature tenthsC (crops use Frostbitten).
+func Killed(s Species, tenthsC int) bool {
+	d := DefOf(s)
+	return d.ColdKill != 0 && tenthsC < d.ColdKill || d.HeatKill != 0 && tenthsC > d.HeatKill
 }
 
 // Crops lists the farm crops in menu order (fastest first).

@@ -47,8 +47,14 @@ const (
 	// Carpet is a walkable 1x1 entrance carpet installed from a crafted carpet
 	// item (its stuff): it wipes tracked dirt off boots (SIM-021).
 	Carpet
+	// FeedingTrough holds feed for the tame animals of its pen (SIM-024);
+	// haulers fill it, animals eat at its spot.
+	FeedingTrough
 	kindCount
 )
+
+// TroughCapacity is how many food items a feeding trough holds.
+const TroughCapacity = 60
 
 // Layer separates what can share a tile: one floor plus one object.
 type Layer uint8
@@ -119,6 +125,8 @@ var defs = [kindCount]Def{
 		Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
 	// A carpet takes one crafted carpet item (Wood counts items, not wood).
 	Carpet: {Kind: Carpet, Name: "carpet", Wood: 1, Work: 30, Layer: LayerObject, Carpet: true},
+	FeedingTrough: {Kind: FeedingTrough, Name: "feeding trough", Wood: 4, Work: 60, Layer: LayerObject, BlocksMove: true,
+		Rotatable: true, Spot: [2]int{0, 1}, HasSpot: true},
 }
 
 // MaxHP is how much damage a building takes before it is destroyed.

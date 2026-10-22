@@ -4,7 +4,10 @@ package game
 
 import (
 	"fmt"
+
+	"rimworld-go/internal/domain/incident"
 	"rimworld-go/internal/domain/research"
+	"rimworld-go/internal/domain/world/biome"
 
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/reservation"
@@ -48,6 +51,8 @@ type Position struct {
 type Config struct {
 	Seed          uint64
 	Width, Height int
+	// Biome is the map's setting (SIM-023); zero is temperate forest.
+	Biome biome.ID
 }
 
 // PawnView is a read-only snapshot of a single pawn.
@@ -241,6 +246,10 @@ type BuildingView struct {
 	Headstone int
 	// MovingTo is where a planned move reinstalls it (nil: not moving).
 	MovingTo *[2]int
+	// Feeding trough (SIM-024): TroughFill items of TroughCap, and the
+	// filter ("plants", "meat", "any").
+	TroughFill, TroughCap int
+	TroughFilter          string
 }
 
 // PlantView is a wild plant.
@@ -261,12 +270,14 @@ type PlantView struct {
 
 // WorldView is the non-pawn read model for HUD and the map.
 type WorldView struct {
-	Items      []ItemView
-	Frames     []FrameView
-	Buildings  []BuildingView
-	Plants     []PlantView
-	Food, Wood int
-	Stone      int
+	// Biome is the map's setting: display name and key (SIM-023).
+	Biome, BiomeKey string
+	Items           []ItemView
+	Frames          []FrameView
+	Buildings       []BuildingView
+	Plants          []PlantView
+	Food, Wood      int
+	Stone           int
 	// Terrain is the ground type per tile, row-major, TerrainW wide;
 	// codes index TerrainNames().
 	Terrain  []uint8
@@ -370,6 +381,10 @@ type Game struct {
 	graves     map[entity.EntityID]graveRec // who lies in each filled grave (burial.go, SIM-017)
 	exposure   map[entity.EntityID]exposureState
 	noComfort  map[entity.EntityID]uint64 // no warm/cool spot found until this tick
+	biome      biome.ID                   // the map's setting (SIM-023)
+	climate    temperature.Climate        // its outdoor temperature curve
+	incidents  incident.State             // the storyteller's nature events (SIM-025)
+	troughs    map[entity.EntityID]troughState
 	noFood     map[entity.EntityID]uint64 // food out of reach: no eating attempt until this tick
 	restedFree map[entity.EntityID]bool   // woke fully rested in the current Sleep block: free time
 	calm       map[entity.EntityID]uint64 // fled a threat: holding back from work until this tick
@@ -470,6 +485,9 @@ func New(cfg Config) *Game {
 		fuel:        make(map[entity.EntityID]int),
 		exposure:    make(map[entity.EntityID]exposureState),
 		noComfort:   make(map[entity.EntityID]uint64),
+		biome:       cfg.Biome,
+		climate:     biome.DefOf(cfg.Biome).Climate,
+		troughs:     make(map[entity.EntityID]troughState),
 		noFood:      make(map[entity.EntityID]uint64),
 		restedFree:  make(map[entity.EntityID]bool),
 		calm:        make(map[entity.EntityID]uint64),
@@ -747,7 +765,9 @@ func (g *Game) Snapshot() []PawnView {
 
 // World returns the non-pawn read model.
 func (g *Game) World() WorldView {
+	bd := biome.DefOf(g.biome)
 	w := WorldView{
+		Biome: bd.Name, BiomeKey: bd.Key,
 		Items:       make([]ItemView, 0, len(g.itemIDs)),
 		Frames:      make([]FrameView, 0, len(g.frameIDs)),
 		Buildings:   make([]BuildingView, 0, len(g.bldgIDs)),
@@ -822,6 +842,10 @@ func (g *Game) World() WorldView {
 		}
 		if b.Kind == construction.Campfire {
 			bv.Fuel, bv.FuelPct, bv.Burning = true, g.fuel[id]*100/(CampfireCapacity*TicksPerWood), g.burning(id, b)
+		}
+		if b.Kind == construction.FeedingTrough {
+			bv.TroughFill, bv.TroughCap = g.troughFill(id), construction.TroughCapacity
+			bv.TroughFilter = troughFilterNames[min(int(g.troughs[id].Filter), len(troughFilterNames)-1)]
 		}
 		if rb := g.racks[id]; rb.Qty > 0 {
 			bv.DryKind, bv.DryQty, bv.DryPct = rb.Kind.String(), rb.Qty, rb.percent()

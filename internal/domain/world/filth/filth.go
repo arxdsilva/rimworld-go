@@ -74,7 +74,7 @@ func Wipe(c, catchPm int) (keep, soil int) {
 // off: dense cloth pile best, wood slats worst. Zero for non-carpets.
 func Catch(k item.Kind) int {
 	switch k {
-	case item.CarpetCloth:
+	case item.CarpetCloth, item.CarpetWool:
 		return 700
 	case item.CarpetLeather:
 		return 550

@@ -1,0 +1,342 @@
+package animal
+
+import (
+	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/sim/clock"
+	"rimworld-go/internal/domain/world/biome"
+)
+
+// Ecology (SIM-024..026): what a species eats, where it lives wild, when it
+// sleeps, and what it gives. Biome membership follows where each real
+// animal lives (our originals follow their design); every number is our
+// own formula over size, not a copied table.
+
+// Diet is what an animal eats.
+type Diet uint8
+
+const (
+	Herbivore  Diet = iota // grass, browse, crops, raw veg, straw
+	Carnivore              // carcasses and meat; hunts when there are none
+	Omnivore               // both
+	Dendrovore             // living trees
+	NoDiet                 // hive insects: no needs
+)
+
+var dietNames = [...]string{"plants", "meat", "plants and meat", "trees", ""}
+
+func (d Diet) String() string {
+	if int(d) < len(dietNames) {
+		return dietNames[d]
+	}
+	return ""
+}
+
+// Plants reports a diet that grazes and browses; Meat one that eats
+// carcasses.
+func (d Diet) Plants() bool { return d == Herbivore || d == Omnivore }
+
+// Meat reports a diet that eats carcasses and raw meat.
+func (d Diet) Meat() bool { return d == Carnivore || d == Omnivore }
+
+// Product is what a tame animal gives without being killed.
+type Product uint8
+
+const (
+	NoProduct Product = iota
+	Milk              // adult females
+	Wool
+	EmberOil
+)
+
+var productNames = [...]string{"", "milk", "wool", "ember oil"}
+
+func (p Product) String() string {
+	if int(p) < len(productNames) {
+		return productNames[p]
+	}
+	return ""
+}
+
+// Item is the item kind a product drops as.
+func (p Product) Item() item.Kind {
+	switch p {
+	case Milk:
+		return item.Milk
+	case Wool:
+		return item.Wool
+	case EmberOil:
+		return item.EmberOil
+	}
+	return 0
+}
+
+// EggKind is how a species lays eggs.
+type EggKind uint8
+
+const (
+	NoEggs      EggKind = iota // live birth
+	FertileEggs                // lays only when mated; the eggs hatch
+	PlainEggs                  // lays an edible egg a day, fertile ones when mated
+)
+
+// Ecology is a species' ecological row.
+type Ecology struct {
+	Diet Diet
+	// Core biomes it lives in wild; Marginal ones where it is rarer.
+	// Both empty: never wild (domestic, pets, event and hive animals).
+	Core, Marginal biome.Set
+	Nocturnal      bool
+	Product        Product
+	Eggs           EggKind
+}
+
+// biome shorthand for the table below.
+const (
+	tf = biome.TemperateForest
+	bf = biome.BorealForest
+	tu = biome.Tundra
+	cb = biome.ColdBog
+	is = biome.IceSheet
+	si = biome.SeaIce
+	ts = biome.TemperateSwamp
+	ps = biome.TropicalSwamp
+	rf = biome.TropicalRainforest
+	as = biome.AridShrubland
+	de = biome.Desert
+	xd = biome.ExtremeDesert
+)
+
+func in(ids ...biome.ID) biome.Set { return biome.Of(ids...) }
+
+var ecology = [numSpecies]Ecology{
+	Deer:             {Diet: Herbivore, Core: in(tf, bf, ts), Marginal: in(cb)},
+	TimberWolf:       {Diet: Carnivore, Core: in(tf, bf), Marginal: in(cb, tu)},
+	Alpaca:           {Diet: Herbivore, Core: in(as), Marginal: in(tu, tf), Product: Wool},
+	Bison:            {Diet: Herbivore, Core: in(tf, as), Marginal: in(bf), Product: Wool},
+	Emberbuck:        {Diet: Herbivore, Core: in(tf, as), Marginal: in(ts, de), Product: EmberOil},
+	Capybara:         {Diet: Herbivore, Core: in(rf, ps), Marginal: in(ts)},
+	Caribou:          {Diet: Herbivore, Core: in(tu, bf, cb), Marginal: in(is), Product: Milk},
+	Cow:              {Diet: Herbivore, Product: Milk},
+	Donkey:           {Diet: Herbivore, Core: in(as, de), Marginal: in(tf)},
+	Dromedary:        {Diet: Herbivore, Core: in(de, xd, as), Product: Milk},
+	Elephant:         {Diet: Herbivore, Core: in(rf, ps, as)},
+	Elk:              {Diet: Herbivore, Core: in(bf, tf, cb), Marginal: in(tu), Product: Milk},
+	Gazelle:          {Diet: Herbivore, Core: in(as, de), Marginal: in(tf, xd)},
+	Goat:             {Diet: Herbivore, Product: Milk},
+	Horse:            {Diet: Herbivore, Core: in(tf, as), Marginal: in(bf)},
+	Ibex:             {Diet: Herbivore, Core: in(tu, bf), Marginal: in(tf, cb)},
+	GroundSloth:      {Diet: Herbivore, Marginal: in(tf, bf, ts, as, rf), Product: Wool},
+	Woolhorn:         {Diet: Herbivore, Core: in(tu, bf, cb, is), Marginal: in(si), Product: Wool},
+	Pig:              {Diet: Omnivore},
+	Rhinoceros:       {Diet: Herbivore, Core: in(as, rf), Marginal: in(ps)},
+	Sheep:            {Diet: Herbivore, Product: Wool},
+	Yak:              {Diet: Herbivore, Core: in(tu), Marginal: in(bf, cb), Product: Milk},
+	Timbergnaw:       {Diet: Dendrovore},
+	ArcticFox:        {Diet: Carnivore, Core: in(tu, is, si), Marginal: in(bf), Nocturnal: true},
+	ArcticWolf:       {Diet: Carnivore, Core: in(tu, is), Marginal: in(si, bf)},
+	CinderRat:        {Diet: Omnivore, Core: in(tf, as), Marginal: in(ts), Nocturnal: true},
+	Cat:              {Diet: Carnivore},
+	Chinchilla:       {Diet: Herbivore, Core: in(as), Marginal: in(tu), Nocturnal: true},
+	Cougar:           {Diet: Carnivore, Core: in(tf, bf, as), Marginal: in(de, cb, ts), Nocturnal: true},
+	FennecFox:        {Diet: Omnivore, Core: in(de, xd, as), Nocturnal: true},
+	GrizzlyBear:      {Diet: Omnivore, Core: in(bf, tf), Marginal: in(tu, cb)},
+	GuineaPig:        {Diet: Herbivore, Marginal: in(rf, as)},
+	Hare:             {Diet: Herbivore, Core: in(tf, as), Marginal: in(bf, ts)},
+	Husky:            {Diet: Carnivore},
+	Labrador:         {Diet: Omnivore},
+	Lynx:             {Diet: Carnivore, Core: in(bf), Marginal: in(tu, cb), Nocturnal: true},
+	Monkey:           {Diet: Omnivore, Core: in(rf, ps)},
+	Panther:          {Diet: Carnivore, Core: in(rf, ps), Nocturnal: true},
+	PolarBear:        {Diet: Carnivore, Core: in(si, is), Marginal: in(tu)},
+	Raccoon:          {Diet: Omnivore, Core: in(tf, ts), Nocturnal: true},
+	Rat:              {Diet: Omnivore, Core: in(tf, ts, ps, rf), Marginal: in(as), Nocturnal: true},
+	RedFox:           {Diet: Omnivore, Core: in(tf, bf), Marginal: in(as, tu), Nocturnal: true},
+	Snowhare:         {Diet: Herbivore, Core: in(tu, bf, cb)},
+	Squirrel:         {Diet: Herbivore, Core: in(tf, bf)},
+	DireWolf:         {Diet: Carnivore, Core: in(tu), Marginal: in(bf)},
+	WildBoar:         {Diet: Omnivore, Core: in(tf, ts), Marginal: in(rf)},
+	YorkshireTerrier: {Diet: Omnivore},
+	Cassowary:        {Diet: Omnivore, Core: in(rf, ps), Eggs: FertileEggs},
+	Chicken:          {Diet: Omnivore, Eggs: PlainEggs},
+	Duck:             {Diet: Omnivore, Core: in(ts), Marginal: in(ps, cb), Eggs: PlainEggs},
+	Emu:              {Diet: Omnivore, Core: in(as), Marginal: in(de), Eggs: FertileEggs},
+	Goose:            {Diet: Herbivore, Core: in(ts, cb), Marginal: in(tu), Eggs: PlainEggs},
+	Ostrich:          {Diet: Omnivore, Core: in(as, de), Eggs: FertileEggs},
+	Turkey:           {Diet: Omnivore, Core: in(tf), Eggs: FertileEggs},
+	Cobra:            {Diet: Carnivore, Core: in(rf, as), Marginal: in(de), Eggs: FertileEggs},
+	Iguana:           {Diet: Herbivore, Core: in(rf, ps), Marginal: in(de), Eggs: FertileEggs},
+	Tortoise:         {Diet: Herbivore, Core: in(as, de), Marginal: in(rf, xd), Eggs: FertileEggs},
+	HiveBeetle:       {Diet: NoDiet},
+	HiveBrute:        {Diet: NoDiet},
+	HiveCrawler:      {Diet: NoDiet},
+	Glimmerstag:      {Diet: Herbivore},
+}
+
+// EcologyOf is s's ecological row.
+func EcologyOf(s Species) Ecology {
+	if s >= numSpecies {
+		return ecology[Deer]
+	}
+	return ecology[s]
+}
+
+// Wild reports whether s ever lives wild in biome b.
+func Wild(s Species, b biome.ID) bool { return Weight(s, b) > 0 }
+
+// commonality weights (ours): small, timid animals are many; big ones and
+// hunters are few.
+var (
+	sizeWeight      = [...]int{SizeXS: 100, SizeS: 80, SizeM: 50, SizeL: 30, SizeXL: 15}
+	behaviourWeight = [...]int{Grazer: 100, Skittish: 100, Docile: 100, Domestic: 100, Pet: 100,
+		Territorial: 60, Predator: 25, PackPredator: 30, Hive: 0, Legendary: 0}
+)
+
+// Fit of a biome for a species, percent.
+const (
+	coreFit     = 100
+	marginalFit = 35
+)
+
+// Weight is how common s is in biome b's wildlife, relative to the other
+// species there (0: never wild in b). The season factor applies on top.
+func Weight(s Species, b biome.ID) int {
+	e, r := EcologyOf(s), RosterOf(s)
+	fit := 0
+	switch {
+	case e.Core.Has(b):
+		fit = coreFit
+	case e.Marginal.Has(b):
+		fit = marginalFit
+	}
+	if fit == 0 || r.HerdMin == 0 {
+		return 0
+	}
+	return sizeWeight[r.Size] * behaviourWeight[r.Behaviour] * fit / 10000
+}
+
+// Life is a species' life numbers by size (our own).
+type Life struct {
+	AdultDays, LifeDays  int
+	GestDays             int
+	LitterMin, LitterMax int
+	EggDays              int // fertile layers: days between eggs while mated
+	HatchDays            int
+	ProductDays          int // days to fill the product once
+	ProductYield         int // items per collection
+}
+
+var lifeBySize = [...]Life{
+	SizeXS: {AdultDays: 6, LifeDays: 120, GestDays: 5, LitterMin: 1, LitterMax: 4, EggDays: 4},
+	SizeS:  {AdultDays: 10, LifeDays: 240, GestDays: 8, LitterMin: 1, LitterMax: 3, EggDays: 4},
+	SizeM:  {AdultDays: 18, LifeDays: 480, GestDays: 14, LitterMin: 1, LitterMax: 2, EggDays: 8},
+	SizeL:  {AdultDays: 25, LifeDays: 720, GestDays: 20, LitterMin: 1, LitterMax: 1, EggDays: 8},
+	SizeXL: {AdultDays: 30, LifeDays: 900, GestDays: 25, LitterMin: 1, LitterMax: 1, EggDays: 8},
+}
+
+// product numbers by size (our own): milk every 2 days, wool every 12,
+// ember oil every 2.
+var (
+	milkYield = [...]int{SizeXS: 2, SizeS: 4, SizeM: 6, SizeL: 10, SizeXL: 15}
+	woolYield = [...]int{SizeXS: 8, SizeS: 20, SizeM: 35, SizeL: 70, SizeXL: 110}
+)
+
+const (
+	milkDays     = 2
+	woolDays     = 12
+	emberOilDays = 2
+	emberOilQty  = 6
+	birdHatch    = 6
+	reptileHatch = 10
+	plainEggDays = 1
+)
+
+// LifeOf is s's life numbers.
+func LifeOf(s Species) Life {
+	r, e := RosterOf(s), EcologyOf(s)
+	l := lifeBySize[r.Size]
+	switch r.Archetype {
+	case ArchBird:
+		l.HatchDays = birdHatch
+	case ArchSnake, ArchLizard, ArchTortoise:
+		l.HatchDays = reptileHatch
+	}
+	if e.Eggs == PlainEggs {
+		l.EggDays = plainEggDays
+	}
+	switch e.Product {
+	case Milk:
+		l.ProductDays, l.ProductYield = milkDays, milkYield[r.Size]
+	case Wool:
+		l.ProductDays, l.ProductYield = woolDays, woolYield[r.Size]
+	case EmberOil:
+		l.ProductDays, l.ProductYield = emberOilDays, emberOilQty
+	}
+	return l
+}
+
+// Needs (0..Full, like colonists). Every gap between a start and a stop
+// threshold is deliberate: animals must not flap between two states.
+const (
+	Full = 10000
+	// FoodPerDay drains a full animal empty in under two days.
+	FoodPerDay = 6000
+	// FeedStart: an animal looks for food below this; FeedStop: it eats
+	// until this.
+	FeedStart = 4000
+	FeedStop  = 9500
+	// GrazeFood is one grass tile for a medium animal (GrazeTicks to eat).
+	GrazeFood  = 1500
+	GrazeTicks = 120
+	// TreeTicks is how long a tree-eater takes over one tree.
+	TreeTicks = 400
+	// NoFoodRetry: found nothing to eat, look again after this.
+	NoFoodRetry = 600
+	// StarveEvery: a starving animal takes 1 injury this often.
+	StarveEvery = 600
+	// RestPerDay drains a full animal empty in about 1.6 days awake;
+	// SleepPerHour refills it from empty in 8 hours.
+	RestPerDay   = 6250
+	SleepPerHour = Full / 8
+	// RestStart: bed down in sleep hours below this; RestCollapse: at any
+	// hour. RestWake: up at full; RestWakeDay: out of sleep hours, up from
+	// this.
+	RestStart    = 7000
+	RestCollapse = 1500
+	RestWakeDay  = 6000
+	// HuntGiveUp ticks without a strike, or prey beyond HuntRadius +
+	// HuntLeash, and a predator gives up; it tries again after HuntRetry.
+	HuntGiveUp = 1500
+	HuntLeash  = 8
+	HuntRetry  = 1200
+	// BadlyHurt: fighters break off below this percent of their hit points.
+	BadlyHurt = 30
+	// DecideEvery: a full decision this often (staggered by id); threats
+	// are checked every ThreatEvery.
+	DecideEvery = 60
+	ThreatEvery = 15
+)
+
+// sizeMeal is how much one grazed tile (and any other meal) means to a
+// body this size, percent of a medium animal's.
+var sizeMeal = [...]int{SizeXS: 300, SizeS: 200, SizeM: 100, SizeL: 60, SizeXL: 40}
+
+// Meal scales a food's nutrition to species s (big bodies need more).
+func Meal(s Species, nutrition int) int { return nutrition * sizeMeal[RosterOf(s).Size] / 100 }
+
+// SleepHours reports whether hour h is when s sleeps: diurnal animals
+// 21-05, nocturnal ones 09-16.
+func SleepHours(s Species, h int) bool {
+	if EcologyOf(s).Nocturnal {
+		return h >= 9 && h < 17
+	}
+	return h >= 21 || h < 5
+}
+
+// AgeDays is how old an animal born at tick born is at tick now (born 0:
+// an adult from before ages were kept).
+func AgeDays(born, now uint64, s Species) int {
+	if born == 0 || now < born {
+		return LifeOf(s).AdultDays * 2
+	}
+	return int((now - born) / clock.TicksPerDay)
+}

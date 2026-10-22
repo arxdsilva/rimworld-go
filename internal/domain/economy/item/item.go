@@ -56,13 +56,24 @@ const (
 	CarpetCloth
 	CarpetLeather
 	CarpetWood
+	// Animal products (SIM-026): milk and eggs are food, wool is a
+	// textile, ember oil burns in a campfire. A FertileEgg hatches
+	// (Stack.Animal names the species, Stack.Hatch its progress).
+	Milk
+	Wool
+	Egg
+	FertileEgg
+	EmberOil
+	WoolParka
+	CarpetWool
 	numKinds
 )
 
 var kindNames = [numKinds]string{"food", "wood", "stone", "berries", "potatoes", "meat", "meal", "club", "rifle", "dustbuck corpse", "ridgewolf corpse",
 	"corn", "wheat", "beans", "lettuce", "radishes", "pumpkins", "leather", "parka", "tuque", "duster", "herbal medicine",
 	"knife", "spear", "human corpse", "bones", "animal corpse",
-	"cloth", "straw", "straw carpet", "cloth carpet", "leather carpet", "wood carpet"}
+	"cloth", "straw", "straw carpet", "cloth carpet", "leather carpet", "wood carpet",
+	"milk", "wool", "egg", "fertile egg", "ember oil", "wool parka", "wool carpet"}
 
 // IsWeapon reports whether k can be equipped.
 func (k Kind) IsWeapon() bool { return k == Club || k == Rifle || k == Knife || k == Spear }
@@ -76,12 +87,13 @@ func (k Kind) IsCorpse() bool {
 // Produce values follow real energy density per portion, rounded for
 // play: grains and dry beans are dense, leafy greens are light.
 var nutrition = [numKinds]int{Food: 4000, Berries: 1500, Meat: 2200, Meal: 6000,
-	Potatoes: 1600, Corn: 1700, Wheat: 2400, Beans: 2400, Lettuce: 450, Radishes: 500, Pumpkins: 800}
+	Potatoes: 1600, Corn: 1700, Wheat: 2400, Beans: 2400, Lettuce: 450, Radishes: 500, Pumpkins: 800,
+	Milk: 900, Egg: 700}
 
 // preference ranks food choice: higher is eaten first.
 // Raw grain, dry beans and raw potatoes are edible but unappealing.
 var preference = [numKinds]int{Meal: 4, Food: 3, Berries: 2, Corn: 2, Lettuce: 2, Radishes: 2, Pumpkins: 2,
-	Potatoes: 1, Beans: 1, Wheat: 1, Meat: 1}
+	Potatoes: 1, Beans: 1, Wheat: 1, Meat: 1, Milk: 2, Egg: 1}
 
 // Nutrition is the hunger restored by eating one unit of k (0 if inedible).
 func (k Kind) Nutrition() int {
@@ -104,7 +116,7 @@ func (k Kind) Raw() bool { return k.IsFood() && k != Food && k != Meal }
 
 // Foods lists every edible kind.
 func Foods() []Kind {
-	return []Kind{Food, Berries, Potatoes, Corn, Wheat, Beans, Lettuce, Radishes, Pumpkins, Meat, Meal}
+	return []Kind{Food, Berries, Potatoes, Corn, Wheat, Beans, Lettuce, Radishes, Pumpkins, Meat, Meal, Milk, Egg}
 }
 
 func (k Kind) String() string {
@@ -159,6 +171,8 @@ var apparel = [numKinds]struct {
 	Parka:  {Body, 200, -30},
 	Tuque:  {Head, 60, 0},
 	Duster: {Body, 40, 80},
+	// knitted wool traps more warmth than leather and breathes a little
+	WoolParka: {Body, 240, -20},
 }
 
 // IsApparel reports clothing that can be worn.
@@ -181,16 +195,16 @@ func (k Kind) Insulation() (cold, heat int) {
 }
 
 // Apparel lists every wearable kind.
-func Apparel() []Kind { return []Kind{Parka, Tuque, Duster} }
+func Apparel() []Kind { return []Kind{Parka, Tuque, Duster, WoolParka} }
 
 // IsStuff reports whether k is a building material.
 func (k Kind) IsStuff() bool { return k == Wood || k == Stone }
 
 // IsCarpet reports a crafted carpet (installed as a carpet building).
-func (k Kind) IsCarpet() bool { return k >= CarpetStraw && k <= CarpetWood }
+func (k Kind) IsCarpet() bool { return k >= CarpetStraw && k <= CarpetWood || k == CarpetWool }
 
 // Carpets lists every carpet kind, cheapest material first.
-func Carpets() []Kind { return []Kind{CarpetStraw, CarpetWood, CarpetLeather, CarpetCloth} }
+func Carpets() []Kind { return []Kind{CarpetStraw, CarpetWood, CarpetLeather, CarpetCloth, CarpetWool} }
 
 // StackLimit is how many items of one kind share a tile.
 const StackLimit = 1000
@@ -213,8 +227,13 @@ type Stack struct {
 	// the tick it died.
 	Of     entity.EntityID
 	DiedAt uint64
-	// Animal is the species (animal.Species value) of a CorpseAnimal.
+	// Animal is the species (animal.Species value) of a CorpseAnimal, a
+	// FertileEgg or a Wool stack.
 	Animal uint8
+	// Hatch is a fertile egg's incubation so far (ticks); Tame: laid by a
+	// tame mother, so the hatchling joins the colony.
+	Hatch int
+	Tame  bool
 }
 
 // Shelf is how many full-speed rot ticks the stack keeps (0 = forever).
@@ -229,8 +248,9 @@ func (s Stack) Shelf() int {
 // isn't dried or spoiled yet.
 func (s Stack) Dryable() bool { return s.Kind.Dryable() && !s.Dried && !s.Rotten() }
 
-// Dryable reports perishable food kinds (corpses are butchered, not dried).
-func (k Kind) Dryable() bool { return k.IsFood() && k.Perishable() }
+// Dryable reports perishable food kinds (corpses are butchered, not dried;
+// milk and eggs don't dry).
+func (k Kind) Dryable() bool { return k.IsFood() && k.Perishable() && k != Milk && k != Egg }
 
 // dryDays is how long a rack batch takes to dry in warm air: thin meat
 // strips and leaves dry in about a day, juicy fruit, sliced roots and
@@ -296,7 +316,8 @@ func MergeRot(qa, ra, qb, rb int) int {
 // play: fresh meat and cooked meals go off in days, greens in a week, roots
 // and squash keep a season, and dried grain and beans keep indefinitely.
 var shelfDays = [numKinds]float64{Meat: 2, Meal: 4, CorpseDustbuck: 2.5, CorpseRidgewolf: 2.5, CorpseAnimal: 2.5, CorpseHuman: 3,
-	Berries: 10, Lettuce: 6, Radishes: 14, Potatoes: 30, Corn: 40, Pumpkins: 50}
+	Berries: 10, Lettuce: 6, Radishes: 14, Potatoes: 30, Corn: 40, Pumpkins: 50,
+	Milk: 3, Egg: 10}
 
 // ShelfTicks is how many full-speed rot ticks k survives (0 = never rots).
 func (k Kind) ShelfTicks() int {
