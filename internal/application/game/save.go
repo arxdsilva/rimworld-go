@@ -148,6 +148,7 @@ type saveState struct {
 	Equip     map[entity.EntityID]item.Kind
 	Traces    []projectile.Trace
 	Wild      bool
+	Wildlife  wildlifeState
 
 	Carrying    map[entity.EntityID]entity.EntityID
 	TendedUntil map[entity.EntityID]uint64
@@ -220,7 +221,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 		Breaks: map[entity.EntityID]savedBreak{}, RoomGrid: g.roomGrid, RoomTemps: g.roomTemps,
 		Memories: g.memories, Claims: g.reserve.Export(), Pending: g.pending,
 		AteAt: g.ateAt, Draft: g.draft, SleptAt: g.sleptAt,
-		AnimalIDs: g.animalIDs, Animals: exportStore(g.animals), Equip: g.equip, Traces: g.traces, Wild: g.wild,
+		AnimalIDs: g.animalIDs, Animals: exportStore(g.animals), Equip: g.equip, Traces: g.traces, Wild: g.wild, Wildlife: g.wl,
 		Carrying: g.carrying, TendedUntil: g.tendedUntil, Wounds: g.wounds,
 		Research: g.research, ResearchCur: g.researchCur, ResearchSet: g.researchSet, RockDamage: g.rockDamage, Residual: g.residual,
 		Motion: g.exportMotion(), Strikes: g.lastStrike, Hits: g.lastHit,
@@ -306,6 +307,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.pending = s.Pending
 	g.animalIDs, g.animals = s.AnimalIDs, importStore(s.Animals)
 	g.traces, g.wild = s.Traces, s.Wild
+	g.wl = s.Wildlife
 	setMap(&g.mines, s.Mines)
 	setMap(&g.lastMeal, s.LastMeal)
 	setMap(&g.bills, s.Bills)
@@ -359,6 +361,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.importLogs(s.Logs)
 	g.importIncoming(s.Incoming)
 	g.importDeliveries(s.Deliveries)
+	g.afterLoadAnimals() // legacy corpses and bills (wildlife.go)
 	return g, info, nil
 }
 

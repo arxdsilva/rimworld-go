@@ -175,7 +175,7 @@ func TestAnimalVerdicts(t *testing.T) {
 	id = walkAnimal(t, g, "dustbuck", 1, 1, path)
 	verdicts(g, id, 1, stepSidestep, Position{2, 2})
 	g.Step(1)
-	if av := animalView(t, g, id); av.X != 2 || av.Y != 2 || av.StepTicks != 25 || !av.HasNext {
+	if av := animalView(t, g, id); av.X != 2 || av.Y != 2 || av.StepTicks != (animal.DefOf(animal.Deer).StepTicks*1414+500)/1000 || !av.HasNext {
 		t.Fatalf("sidestepped animal %+v", av)
 	}
 	g.Step(4 * 25)

@@ -12,6 +12,8 @@ type ID uint8
 const (
 	SimpleMeal ID = iota
 	Club
+	// ButcherDustbuck and ButcherRidgewolf are legacy (older saves' bills):
+	// ButcherAnimal butchers every species.
 	ButcherDustbuck
 	ButcherRidgewolf
 	DryFood
@@ -25,6 +27,9 @@ const (
 	Spear
 	// Cremate burns a human corpse on a funeral pyre.
 	Cremate
+	// ButcherAnimal butchers any animal corpse; its yields come from the
+	// species (SIM-019).
+	ButcherAnimal
 	numRecipes
 )
 
@@ -61,6 +66,11 @@ type Def struct {
 	// Extra is a by-product made alongside Output (leather from butchering).
 	Extra    item.Kind
 	ExtraQty int
+	// BySpecies: the yields (Output meat, Extra leather) come from the
+	// carcass's species, not OutQty/ExtraQty. Legacy recipes are kept for
+	// older saves only and offered nowhere (Upgrade).
+	BySpecies bool
+	Legacy    bool
 	// Dry recipes don't produce on the spot: the work lays the batch out on
 	// the rack, which dries it over time into a dried stack of the same kind.
 	Dry bool
@@ -73,15 +83,18 @@ var defs = [numRecipes]Def{
 		Input: Input{Kind: item.Wood, Qty: 4}, Output: item.Club, OutQty: 1, Work: 240, Skill: work.Craft},
 	ButcherDustbuck: {ID: ButcherDustbuck, Name: "butcher_dustbuck", Label: "Butcher dustbuck", Bench: construction.ButcherTable,
 		Input: Input{Kind: item.CorpseDustbuck, Qty: 1}, Output: item.Meat, OutQty: 12, Work: 200, Skill: work.Cook,
-		Extra: item.Leather, ExtraQty: 5},
+		Extra: item.Leather, ExtraQty: 5, Legacy: true},
 	ButcherRidgewolf: {ID: ButcherRidgewolf, Name: "butcher_ridgewolf", Label: "Butcher ridgewolf", Bench: construction.ButcherTable,
 		Input: Input{Kind: item.CorpseRidgewolf, Qty: 1}, Output: item.Meat, OutQty: 6, Work: 200, Skill: work.Cook,
-		Extra: item.Leather, ExtraQty: 4},
+		Extra: item.Leather, ExtraQty: 4, Legacy: true},
+	ButcherAnimal: {ID: ButcherAnimal, Name: "butcher_animal", Label: "Butcher animal", Bench: construction.ButcherTable,
+		Input: Input{Kind: item.CorpseAnimal, Qty: 1}, Output: item.Meat, Work: 200, Skill: work.Cook,
+		Extra: item.Leather, BySpecies: true},
 	// Cooking over an open fire is half again as slow as at a stove.
 	CampfireMeal: {ID: CampfireMeal, Name: "simple_meal_campfire", Label: "Cook simple meal over the fire",
 		Bench: construction.Campfire, Input: Input{AnyRaw: true, Qty: 2}, Output: item.Meal, OutQty: 1,
 		Work: 180, Skill: work.Cook},
-	// Tailoring: a parka takes the hides of about three dustbucks.
+	// Tailoring: a parka takes the hides of about three deer.
 	MakeParka: {ID: MakeParka, Name: "make_parka", Label: "Sew leather parka", Bench: construction.TailoringBench,
 		Input: Input{Kind: item.Leather, Qty: 14}, Output: item.Parka, OutQty: 1, Work: 900, Skill: work.Craft},
 	MakeTuque: {ID: MakeTuque, Name: "make_tuque", Label: "Sew leather tuque", Bench: construction.TailoringBench,
@@ -116,11 +129,19 @@ func DefOf(id ID) Def {
 // All lists every recipe.
 func All() []Def { return defs[:] }
 
-// For lists recipes a bench kind can run.
+// Upgrade maps a legacy recipe to the one that replaced it.
+func Upgrade(id ID) ID {
+	if id == ButcherDustbuck || id == ButcherRidgewolf {
+		return ButcherAnimal
+	}
+	return id
+}
+
+// For lists recipes a bench kind can run (legacy ones excluded).
 func For(bench construction.Kind) []Def {
 	var out []Def
 	for _, d := range defs {
-		if d.Bench == bench {
+		if d.Bench == bench && !d.Legacy {
 			out = append(out, d)
 		}
 	}

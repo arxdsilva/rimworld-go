@@ -50,7 +50,7 @@ func TestHunterFetchesRifleAndBringsDownDustbuck(t *testing.T) {
 	if g.Equipped(p) != "rifle" {
 		t.Fatalf("hunter should have picked up the rifle, has %q", g.Equipped(p))
 	}
-	if got := itemsOnGround(g, "dustbuck corpse"); got != 1 {
+	if got := itemsOnGround(g, "deer corpse"); got != 1 {
 		t.Fatalf("dustbuck corpses = %d, want 1", got)
 	}
 }
@@ -83,7 +83,7 @@ func TestHungryWolfAttacksAndDraftedRiflemanKillsIt(t *testing.T) {
 		a, _ := g.animals.Get(wolf)
 		t.Fatalf("drafted rifleman should auto-engage the wolf: wolf %+v", a)
 	}
-	if got := itemsOnGround(g, "ridgewolf corpse"); got != 1 {
+	if got := itemsOnGround(g, "timber wolf corpse"); got != 1 {
 		t.Fatalf("wolf corpses = %d", got)
 	}
 	if g.VitalOf(victim).Status == health.Dead {
@@ -169,17 +169,29 @@ func TestCombatOrders(t *testing.T) {
 
 func TestColonyStartsWithWildlifeAndARifle(t *testing.T) {
 	g := NewColony(Config{Seed: 7, Width: 48, Height: 40})
-	bucks, wolves := 0, 0
+	// 3-4 season-weighted herds (SIM-019): grazers and at least one
+	// predator (formerly dustbuck herds and 2 ridgewolves)
+	grazers, predators := 0, 0
+	species := map[string]bool{}
 	for _, a := range g.World().Animals {
-		switch a.Species {
-		case "deer": // formerly dustbuck
-			bucks++
-		case "timber_wolf": // formerly ridgewolf
-			wolves++
+		s, ok := animal.ParseSpecies(a.Species)
+		if !ok {
+			t.Fatalf("unknown species %q", a.Species)
+		}
+		d := animal.DefOf(s)
+		if d.Hive || d.Legendary {
+			t.Fatalf("%s at colony start", a.Species)
+		}
+		species[a.Species] = true
+		if d.Predator {
+			predators++
+		} else {
+			grazers++
 		}
 	}
-	if bucks < herdSize || wolves != startWolves {
-		t.Fatalf("wildlife: %d dustbucks, %d wolves", bucks, wolves)
+	if grazers == 0 || predators == 0 || predators > startPredatorMax*startHerdsMax || len(species) > startHerdsMax ||
+		grazers+predators < startHerdsMin {
+		t.Fatalf("wildlife: %d grazers, %d predators, species %v", grazers, predators, species)
 	}
 	rifles := 0
 	for _, it := range g.World().Items {

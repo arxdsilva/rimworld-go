@@ -295,11 +295,8 @@ func (g *Game) fillAnimalAction(av *AnimalView, id entity.EntityID, a animal.Sta
 	case animal.Attack:
 		pos, _ := g.positions.Get(id)
 		if tp, ok := g.positions.Get(a.Target); struck || ok && weapon.Distance(pos.X, pos.Y, tp.X, tp.Y) <= 1 {
-			av.Action = ActionBite
-			if def.Attack == weapon.Kick {
-				av.Action = ActionKick
-			}
-			av.AttackCycle = cycle(a.Cooldown, weapon.DefOf(def.Attack).Cooldown)
+			av.Action = animal.RosterOf(a.Species).Attack.String() // bite, claw, kick, gore, headbutt, peck
+			av.AttackCycle = cycle(a.Cooldown, def.Cooldown)
 		}
 	default:
 		if !def.Predator && a.PathI >= len(a.Path) {

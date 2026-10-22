@@ -151,6 +151,10 @@ func (g *Game) canHit(from Position, d weapon.Def, tp Position) bool {
 // strike resolves one attack and records its trace.
 func (g *Game) strike(attacker, target entity.EntityID, wk weapon.Kind) {
 	d := weapon.DefOf(wk)
+	if a, ok := g.animals.Get(attacker); ok { // a natural weapon hits as hard as its owner is big
+		ad := animal.DefOf(a.Species)
+		d.Damage, d.Accuracy = ad.Damage, ad.Accuracy
+	}
 	ap, _ := g.positions.Get(attacker)
 	tp, ok := g.positions.Get(target)
 	if !ok {

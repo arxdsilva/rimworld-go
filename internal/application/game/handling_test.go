@@ -65,7 +65,7 @@ func TestProvokedAnimalsSometimesGoManhunter(t *testing.T) {
 	for seed := uint64(1); seed <= 30; seed++ {
 		g := New(Config{Seed: seed, Width: 20, Height: 10})
 		ada, _ := g.SpawnNamedPawn(3, 5, "Ada")
-		buck, _ := g.SpawnAnimal("dustbuck", 15, 5)
+		buck, _ := g.SpawnAnimal("elk", 15, 5) // a grazer (revenge 10, as the dustbuck had; deer are skittish now)
 		g.hurt(buck, 5, ada)
 		if a, _ := g.animals.Get(buck); a.Enraged(uint64(g.clock.Now())) {
 			enraged++

@@ -93,15 +93,15 @@ func TestNoSowingInWinter(t *testing.T) {
 
 func TestRottenCorpseIsNotButchered(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 8, Height: 6})
-	if _, err := g.SpawnStack(item.CorpseDustbuck, 1, 2, 2); err != nil {
+	if _, err := g.SpawnStack(item.CorpseAnimal, 1, 2, 2); err != nil {
 		t.Fatal(err)
 	}
 	for _, id := range g.itemIDs {
 		st, _ := g.stacks.Get(id)
-		st.Rot = item.CorpseDustbuck.ShelfTicks()
+		st.Rot = item.CorpseAnimal.ShelfTicks()
 		g.stacks.Set(id, st)
 	}
-	if id, _ := g.ingredientFor(0, recipe.DefOf(recipe.ButcherDustbuck).Input); id != 0 {
+	if id, _ := g.ingredientFor(0, recipe.DefOf(recipe.ButcherAnimal).Input); id != 0 {
 		t.Fatal("rotten corpse offered as butchering ingredient")
 	}
 }

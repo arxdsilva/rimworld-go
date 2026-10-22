@@ -1,0 +1,446 @@
+package game
+
+import (
+	"strings"
+
+	"rimworld-go/internal/domain/animal"
+	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/economy/recipe"
+	"rimworld-go/internal/domain/sim/clock"
+	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/temperature"
+)
+
+// Wildlife (SIM-019). Which species live on the map follows the season
+// and their habitat: cold-climate animals come in winter, hot-climate
+// ones in summer. Start herds and daily migrants are drawn by those
+// weights from g.rng (deterministic). Rarer events: a legendary animal
+// wanders in at most once a year, explosive animals burst when they die,
+// and hive swarms come out of the rock (hive.go).
+
+// wildlifeState is the saved wildlife event state.
+type wildlifeState struct {
+	// LegendaryYear is 1 + the year a legendary last wandered in (0: never).
+	LegendaryYear int
+	// Bursts are explosive deaths of the last hour (presentation).
+	Bursts []burstStamp
+}
+
+type burstStamp struct {
+	X, Y    int
+	Tick    uint64
+	Species animal.Species
+}
+
+// BurstView is a recent explosive death, for the renderer's flash and
+// scorch (kept an hour, like roof collapses).
+type BurstView struct {
+	X, Y    int
+	Tick    uint64
+	Species string
+}
+
+const (
+	// minWildGrazers: below this many wild prey animals a herd migrates
+	// in at dawn (about two herds).
+	minWildGrazers = 6
+	// startPredatorMax caps a starting predator herd so a new colony
+	// meets a pair, not a whole pack.
+	startPredatorMax = 2
+	// packRadius: pack mates this close join a hunt.
+	packRadius = 10
+	// legendaryRadius: legendaries this close answer one's rage.
+	legendaryRadius = 30
+	// burstDamage is a burst's damage at an adjacent tile; diagonal
+	// neighbours take burstFalloff less (Euclidean 1.41 of 1.5 tiles).
+	burstDamage  = 15
+	burstFalloff = 5
+	burstKeep    = clock.TicksPerHour
+	// The legendary visit: from legendaryFromDay, a legendaryChance
+	// percent roll once a day at legendaryHour, at most once a year.
+	legendaryFromDay = 20
+	legendaryHour    = 10
+	legendaryChance  = 2
+)
+
+// Season weights in permille.
+const (
+	weightFavoured  = 3000
+	weightNormal    = 1000
+	weightShunned   = 300
+	weightAnyHab    = 600
+	domesticPermill = 150
+)
+
+// habitatWeight is how welcome one habitat is in season.
+func habitatWeight(h animal.Habitat, season string) int {
+	switch h {
+	case animal.HabCold:
+		switch season {
+		case "Winter":
+			return weightFavoured
+		case "Summer":
+			return weightShunned
+		}
+	case animal.HabHot:
+		switch season {
+		case "Summer":
+			return weightFavoured
+		case "Winter":
+			return weightShunned
+		}
+	}
+	return weightNormal
+}
+
+// wildWeight is species s's chance (permille weight) to be drawn as a
+// wild herd in season: the mean over its habitats, an any-climate
+// species at 0.6, domestic and pet species rare; never hive insects or
+// legendaries.
+func wildWeight(s animal.Species, season string) int {
+	r := animal.RosterOf(s)
+	if r.HerdMin <= 0 || r.Behaviour == animal.Hive || r.Behaviour == animal.Legendary {
+		return 0
+	}
+	var w int
+	if r.Habitat == animal.HabAny {
+		w = weightAnyHab
+	} else {
+		n := 0
+		for _, h := range []animal.Habitat{animal.HabTemperate, animal.HabCold, animal.HabHot} {
+			if r.Habitat&h != 0 {
+				w += habitatWeight(h, season)
+				n++
+			}
+		}
+		if n > 0 {
+			w /= n
+		}
+	}
+	if r.Behaviour == animal.Domestic || r.Behaviour == animal.Pet {
+		w = w * domesticPermill / 1000
+	}
+	return w
+}
+
+// pickSpecies draws one species passing keep, weighted for the current
+// season; ok is false when none qualifies.
+func (g *Game) pickSpecies(keep func(animal.Species) bool) (animal.Species, bool) {
+	season := temperature.Season(g.clock.Now())
+	total := 0
+	for _, s := range animal.All() {
+		if keep(s) {
+			total += wildWeight(s, season)
+		}
+	}
+	if total <= 0 {
+		return 0, false
+	}
+	roll := g.rng.IntN(total)
+	for _, s := range animal.All() {
+		if !keep(s) {
+			continue
+		}
+		if roll -= wildWeight(s, season); roll < 0 {
+			return s, true
+		}
+	}
+	return 0, false
+}
+
+func anySpecies(animal.Species) bool { return true }
+
+func isPredator(s animal.Species) bool { return animal.DefOf(s).Predator }
+
+func isPrey(s animal.Species) bool { return !animal.DefOf(s).Predator }
+
+// herdSizeOf draws a herd size for s.
+func (g *Game) herdSizeOf(s animal.Species) int {
+	r := animal.RosterOf(s)
+	return r.HerdMin + g.rng.IntN(r.HerdMax-r.HerdMin+1)
+}
+
+// spawnHerd places n animals of s around (x, y).
+func (g *Game) spawnHerd(s animal.Species, x, y, n int) []entity.EntityID {
+	var out []entity.EntityID
+	for i := 0; i < n; i++ {
+		for try := 0; try < 12; try++ {
+			hx, hy := x+g.rng.IntN(5)-2, y+g.rng.IntN(5)-2
+			if id, err := g.spawnAnimal(s, hx, hy); err == nil {
+				out = append(out, id)
+				break
+			}
+		}
+	}
+	return out
+}
+
+// spawnWildlife places 3-4 season-weighted herds away from the start
+// site: at least one of prey and, when the season has any, one of
+// predators (kept to a pair, farther out).
+func (g *Game) spawnWildlife() {
+	g.wild = true
+	n := startHerdsMin + g.rng.IntN(startHerdsMax-startHerdsMin+1)
+	picks := make([]animal.Species, 0, n)
+	for i := 0; i < n; i++ {
+		if s, ok := g.pickSpecies(anySpecies); ok {
+			picks = append(picks, s)
+		}
+	}
+	has := func(f func(animal.Species) bool) bool {
+		for _, s := range picks {
+			if f(s) {
+				return true
+			}
+		}
+		return false
+	}
+	if len(picks) > 0 && !has(isPrey) {
+		if s, ok := g.pickSpecies(isPrey); ok {
+			picks[0] = s
+		}
+	}
+	if len(picks) > 1 && !has(isPredator) {
+		if s, ok := g.pickSpecies(isPredator); ok {
+			picks[len(picks)-1] = s
+		}
+	}
+	for _, s := range picks {
+		size, r := g.herdSizeOf(s), wildStartRadius
+		if isPredator(s) {
+			size, r = min(size, startPredatorMax), wolfStartRadius
+		}
+		if x, y, ok := g.randomTileAway(r); ok {
+			g.spawnHerd(s, x, y, size)
+		}
+	}
+}
+
+// migrate: at dawn, a season-weighted prey herd walks in from a map edge
+// when the wild prey has thinned out (hunting stays sustainable), and a
+// legendary may wander in (legendaryVisit).
+func (g *Game) migrate(now uint64) {
+	if !g.wild {
+		return
+	}
+	if g.legendaryDue(now) {
+		g.legendaryVisit(now, g.rng.IntN(100))
+	}
+	if now%uint64(clock.TicksPerDay) != uint64(dawnHour*clock.TicksPerHour) {
+		return
+	}
+	n := 0
+	for _, id := range g.animalIDs {
+		if a, ok := g.animals.Get(id); ok && !a.Tame && wildPrey(a.Species) {
+			n++
+		}
+	}
+	if n >= minWildGrazers {
+		return
+	}
+	s, ok := g.pickSpecies(isPrey)
+	if !ok {
+		return
+	}
+	if x, y, ok := g.mapEdgeTile(); ok {
+		g.spawnHerd(s, x, y, g.herdSizeOf(s))
+	}
+}
+
+// wildPrey: a species counted towards the migrating stock.
+func wildPrey(s animal.Species) bool {
+	d := animal.DefOf(s)
+	return !d.Predator && !d.Hive && !d.Legendary
+}
+
+// mapEdgeTile is a random walkable tile one in from a map edge.
+func (g *Game) mapEdgeTile() (int, int, bool) {
+	w, h := g.grid.Width(), g.grid.Height()
+	for try := 0; try < 40; try++ {
+		var x, y int
+		switch g.rng.IntN(4) {
+		case 0:
+			x, y = g.rng.IntN(w), 1
+		case 1:
+			x, y = g.rng.IntN(w), h-2
+		case 2:
+			x, y = 1, g.rng.IntN(h)
+		default:
+			x, y = w-2, g.rng.IntN(h)
+		}
+		if g.grid.Walkable(x, y) {
+			return x, y, true
+		}
+	}
+	return 0, 0, false
+}
+
+// legendaryDue: the once-a-day moment a legendary may arrive.
+func (g *Game) legendaryDue(now uint64) bool {
+	day := int(now / clock.TicksPerDay)
+	return g.wild && day >= legendaryFromDay && now%uint64(clock.TicksPerDay) == uint64(legendaryHour*clock.TicksPerHour) &&
+		g.wl.LegendaryYear != day/clock.DaysPerYear+1
+}
+
+// legendaryVisit brings a glimmerstag in at a map edge when roll (a
+// percent) is under legendaryChance; at most once a year.
+func (g *Game) legendaryVisit(now uint64, roll int) {
+	if !g.legendaryDue(now) || roll >= legendaryChance {
+		return
+	}
+	x, y, ok := g.mapEdgeTile()
+	if !ok {
+		return
+	}
+	if _, err := g.spawnAnimal(animal.Glimmerstag, x, y); err != nil {
+		return
+	}
+	g.wl.LegendaryYear = int(now/clock.TicksPerDay)/clock.DaysPerYear + 1
+	g.message(x, y, "A glimmerstag wanders in.")
+}
+
+// rallyLegendaries: a legendary's rage calls every wild legendary within
+// legendaryRadius to the same fight.
+func (g *Game) rallyLegendaries(id entity.EntityID, who entity.EntityID, now uint64) {
+	pos, _ := g.positions.Get(id)
+	for _, aid := range g.animalIDs {
+		if aid == id {
+			continue
+		}
+		o, ok := g.animals.Get(aid)
+		if !ok || o.Tame || o.Enraged(now) || !animal.DefOf(o.Species).Legendary {
+			continue
+		}
+		if p, _ := g.positions.Get(aid); chebyshev(pos, p) > legendaryRadius {
+			continue
+		}
+		o.Manhunter = now + animal.ManhunterTicks
+		o.Mode, o.Target, o.TameMark, o.FleeUntil, o.Path, o.PathI = animal.Attack, who, false, 0, nil, 0
+		g.animals.Set(aid, o)
+		g.logEvent(aid, logEntry{Kind: logManhunter, Other: who})
+	}
+}
+
+func chebyshev(a, b Position) int {
+	dx, dy := a.X-b.X, a.Y-b.Y
+	if dx < 0 {
+		dx = -dx
+	}
+	if dy < 0 {
+		dy = -dy
+	}
+	return max(dx, dy)
+}
+
+// burst: an explosive animal dying at pos hurts every creature within 1.5
+// tiles (15 beside it, 10 diagonally) and leaves a stamp for the renderer.
+// The fire domain has no ignition yet, so nothing catches fire.
+func (g *Game) burst(s animal.Species, pos Position) {
+	now := uint64(g.clock.Now())
+	g.wl.Bursts = append(g.wl.Bursts, burstStamp{X: pos.X, Y: pos.Y, Tick: now, Species: s})
+	g.message(pos.X, pos.Y, "The %s burst into flames!", s.Label())
+	var hit []entity.EntityID
+	for _, list := range [][]entity.EntityID{g.pawnIDs, g.raiderIDs, g.animalIDs} {
+		for _, id := range list {
+			if p, ok := g.positions.Get(id); ok && chebyshev(pos, p) <= 1 {
+				hit = append(hit, id)
+			}
+		}
+	}
+	for _, id := range hit {
+		p, _ := g.positions.Get(id)
+		dmg := burstDamage
+		if p.X != pos.X && p.Y != pos.Y {
+			dmg -= burstFalloff
+		}
+		g.hurt(id, dmg, 0) // a dead or removed one is skipped by hurt
+	}
+}
+
+// pruneBursts forgets bursts older than an hour.
+func (g *Game) pruneBursts(now uint64) {
+	kept := g.wl.Bursts[:0]
+	for _, b := range g.wl.Bursts {
+		if now-b.Tick <= burstKeep {
+			kept = append(kept, b)
+		}
+	}
+	g.wl.Bursts = kept
+}
+
+// fillWildlifeView copies the recent bursts into the view.
+func (g *Game) fillWildlifeView(w *WorldView) {
+	if len(g.wl.Bursts) == 0 {
+		return
+	}
+	w.Bursts = make([]BurstView, len(g.wl.Bursts))
+	for i, b := range g.wl.Bursts {
+		w.Bursts[i] = BurstView{X: b.X, Y: b.Y, Tick: b.Tick, Species: b.Species.String()}
+	}
+}
+
+// dropCorpse leaves a carcass of s at (x, y), stacking with its species.
+func (g *Game) dropCorpse(s animal.Species, x, y int) {
+	sid, err := g.SpawnStack(item.CorpseAnimal, 1, x, y)
+	if err != nil {
+		return
+	}
+	st, _ := g.stacks.Get(sid)
+	st.Animal = uint8(s)
+	g.mergeOrSet(sid, st)
+}
+
+// afterLoadAnimals converts an older save: dustbuck and ridgewolf
+// corpses become deer and timber wolf corpses, and their butcher bills
+// one butcher-animal bill per bench.
+func (g *Game) afterLoadAnimals() {
+	for _, id := range g.itemIDs {
+		if st, ok := g.stacks.Get(id); ok {
+			if c, conv := item.ConvertLegacy(st); conv {
+				g.stacks.Set(id, c)
+			}
+		}
+	}
+	for bid, bills := range g.bills {
+		out, has := bills[:0:0], false
+		changed := false
+		for _, bl := range bills {
+			up := recipe.Upgrade(bl.Recipe)
+			if up != bl.Recipe {
+				changed = true
+				if has {
+					continue // one butcher-animal bill does them all
+				}
+				bl.Recipe = up
+			}
+			if bl.Recipe == recipe.ButcherAnimal {
+				has = true
+			}
+			out = append(out, bl)
+		}
+		if changed {
+			g.bills[bid] = out
+		}
+	}
+}
+
+// pluralLabel is a species' plural display name ("timber wolves").
+func pluralLabel(s animal.Species) string {
+	l := s.Label()
+	switch {
+	case strings.HasSuffix(l, "wolf"):
+		return l[:len(l)-1] + "ves"
+	case strings.HasSuffix(l, "goose"):
+		return l[:len(l)-4] + "eese"
+	case strings.HasSuffix(l, "x"), strings.HasSuffix(l, "ch"):
+		return l + "es"
+	case strings.HasSuffix(l, "deer"), strings.HasSuffix(l, "sheep"), strings.HasSuffix(l, "bison"),
+		strings.HasSuffix(l, "elk"), strings.HasSuffix(l, "caribou"):
+		return l
+	case strings.HasSuffix(l, "y") && !strings.HasSuffix(l, "ey") && !strings.HasSuffix(l, "ay"):
+		return l[:len(l)-1] + "ies"
+	case strings.HasSuffix(l, "s"):
+		return l + "es"
+	}
+	return l + "s"
+}

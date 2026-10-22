@@ -964,7 +964,7 @@ func (g *Game) doHaul(id entity.EntityID, j job.Record) {
 			g.stacks.Set(j.Target, st)
 			carry = g.entities.Next()
 			g.itemIDs = append(g.itemIDs, carry)
-			st = item.Stack{Kind: st.Kind, Qty: take, X: st.X, Y: st.Y, Rot: st.Rot, Dried: st.Dried}
+			st = splitLoad(st, take)
 		}
 		st.Carrier = id
 		g.stacks.Set(carry, st)
@@ -1404,4 +1404,11 @@ func (g *Game) SleptInBed(id entity.EntityID) bool { return g.sleptAt[id] != 0 }
 func (g *Game) VitalOf(id entity.EntityID) health.Record {
 	v, _ := g.vital.Get(id)
 	return v
+}
+
+// splitLoad is the take-sized load split off stack st: same kind, place,
+// age and drying, and the same body (species, who, when) for corpses.
+func splitLoad(st item.Stack, take int) item.Stack {
+	return item.Stack{Kind: st.Kind, Qty: take, X: st.X, Y: st.Y, Rot: st.Rot, Dried: st.Dried,
+		Animal: st.Animal, Of: st.Of, DiedAt: st.DiedAt}
 }

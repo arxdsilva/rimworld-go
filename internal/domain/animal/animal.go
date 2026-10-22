@@ -297,18 +297,27 @@ func ParseSpecies(name string) (Species, bool) {
 // FleeRadius and turning straight back (no flee/graze flapping).
 const FleeRelease = 4
 
-// Def is a species definition. Step ticks are per tile moved.
+// Def is a species definition, derived from its roster row (buildDef).
+// Step ticks are per tile moved.
 type Def struct {
 	MaxHP int
 	// Corpse is the item left on death (meat comes from butchering it).
 	Corpse    item.Kind
 	StepTicks int
 	FleeStep  int
-	Meat      int
-	Attack    weapon.Kind
-	Predator  bool
-	Skittish  bool
-	// FleeRadius: skittish animals flee threats this close.
+	// Meat and Leather are what butchering the corpse yields.
+	Meat    int
+	Leather int
+	// Attack is the natural weapon; Damage, Cooldown and Accuracy its
+	// numbers for this species' size (they override the weapon profile's).
+	Attack   weapon.Kind
+	Damage   int
+	Cooldown int
+	Accuracy int
+	Predator bool
+	// Skittish animals flee: from threats within FleeRadius (when it is
+	// above 0) and from whoever hurts them.
+	Skittish   bool
 	FleeRadius int
 	// AggroRadius: hungry predators attack people this close.
 	AggroRadius int
@@ -323,6 +332,15 @@ type Def struct {
 	// manhunter; TameRevenge the same for a botched taming.
 	Revenge     int
 	TameRevenge int
+	// Pack predators spawn and hunt together; SmallPrey ones take only
+	// XS and S animals. Hive insects are hostile from birth and never
+	// tamed; a Legendary's rage calls every legendary nearby; Explosive
+	// animals burst when they die.
+	Pack      bool
+	SmallPrey bool
+	Hive      bool
+	Legendary bool
+	Explosive bool
 }
 
 // Taming and manhunters.
@@ -343,18 +361,101 @@ var defs = func() (out [numSpecies]Def) {
 	return out
 }()
 
-// buildDef derives a species' numbers from its roster classes. SIM-019 S1
-// replaces this stub with the size and behaviour formulas; until then
-// every species gets the former dustbuck (grazers) or ridgewolf
-// (predators) numbers.
+// sizeStats are a size class's base numbers (SIM-019: our own formulas).
+type sizeStats struct {
+	hp, step, meat, leather, damage, cooldown, accuracy int
+}
+
+var bySize = [...]sizeStats{
+	SizeXS: {hp: 12, step: 16, meat: 2, leather: 0, damage: 2, cooldown: 100, accuracy: 80},
+	SizeS:  {hp: 28, step: 14, meat: 6, leather: 2, damage: 4, cooldown: 110, accuracy: 78},
+	SizeM:  {hp: 55, step: 16, meat: 14, leather: 5, damage: 7, cooldown: 120, accuracy: 75},
+	SizeL:  {hp: 100, step: 18, meat: 30, leather: 10, damage: 11, cooldown: 130, accuracy: 72},
+	SizeXL: {hp: 170, step: 22, meat: 55, leather: 16, damage: 16, cooldown: 140, accuracy: 70},
+}
+
+// behaviourStats are a behaviour class's temperament.
+type behaviourStats struct {
+	tame, revenge int
+	fleeRadius    int  // flees threats this close (0: only when hurt)
+	flees         bool // runs when hurt
+	predator      bool
+	wander        int
+	hpPct         int // percent of the size's hit points
+}
+
+var byBehaviour = [...]behaviourStats{
+	Grazer:       {tame: 40, revenge: 10, fleeRadius: 3, flees: true, wander: 4, hpPct: 100},
+	Skittish:     {tame: 30, revenge: 0, fleeRadius: 5, flees: true, wander: 4, hpPct: 100},
+	Docile:       {tame: 50, revenge: 5, flees: true, wander: 3, hpPct: 100},
+	Domestic:     {tame: 75, revenge: 5, flees: true, wander: 4, hpPct: 100},
+	Pet:          {tame: 70, revenge: 3, flees: true, wander: 4, hpPct: 100},
+	Territorial:  {tame: 15, revenge: 50, wander: 4, hpPct: 100},
+	Predator:     {tame: 15, revenge: 45, predator: true, wander: 6, hpPct: 100},
+	PackPredator: {tame: 15, revenge: 45, predator: true, wander: 6, hpPct: 100},
+	Hive:         {tame: 0, revenge: 0, wander: 5, hpPct: 100},
+	Legendary:    {tame: 5, revenge: 100, wander: 5, hpPct: 250},
+}
+
+// Speed class step adjustments; fleeing runs at 60% of the step.
+const (
+	fastStep    = -4
+	slowStep    = 6
+	fleePermill = 600
+	// explosiveTame: a volatile animal is harder to coax.
+	explosiveTame = 30
+)
+
+// hpOverride is the few species the size rule misjudges (percent of
+// their size's hit points): a tortoise's shell.
+var hpOverride = map[Species]int{Tortoise: 150}
+
+var attackWeapon = [...]weapon.Kind{
+	AttackBite: weapon.Bite, AttackClaw: weapon.Claw, AttackKick: weapon.Kick,
+	AttackGore: weapon.Gore, AttackHeadbutt: weapon.Headbutt, AttackPeck: weapon.Peck,
+}
+
+// scale is v adjusted by pct percent, rounded to nearest.
+func scale(v, pct int) int { return (v*(100+pct) + 50) / 100 }
+
+// buildDef derives a species' numbers from its roster classes: size sets
+// the body (hit points, pace, yields, blow), behaviour the temperament.
 func buildDef(s Species, r Roster) Def {
-	if r.Behaviour == Predator || r.Behaviour == PackPredator || r.Behaviour == Hive {
-		return Def{MaxHP: 60, Corpse: item.CorpseRidgewolf, StepTicks: 14, FleeStep: 14, Meat: 6, Attack: weapon.Bite,
-			Predator: true, AggroRadius: 5, HungerTicks: 90000, HuntRadius: 22, WanderRadius: 6,
-			TameChance: 25, Revenge: 45, TameRevenge: 30}
+	z, b := bySize[r.Size], byBehaviour[r.Behaviour]
+	hpPct := b.hpPct
+	if p, ok := hpOverride[s]; ok {
+		hpPct = p
 	}
-	return Def{MaxHP: 40, Corpse: item.CorpseDustbuck, StepTicks: 18, FleeStep: 10, Meat: 12, Attack: weapon.Kick,
-		Skittish: true, FleeRadius: 5, WanderRadius: 4, TameChance: 60, Revenge: 10, TameRevenge: 5}
+	step := scale(z.step, r.SizeTrim)
+	switch r.Speed {
+	case SpeedFast:
+		step += fastStep
+	case SpeedSlow:
+		step += slowStep
+	}
+	d := Def{
+		MaxHP:  scale(z.hp, r.SizeTrim) * hpPct / 100,
+		Corpse: item.CorpseAnimal, StepTicks: step, FleeStep: (step*fleePermill + 500) / 1000,
+		Meat: scale(z.meat, r.SizeTrim), Leather: scale(z.leather, r.SizeTrim),
+		Attack: attackWeapon[r.Attack], Damage: scale(z.damage, r.SizeTrim), Cooldown: z.cooldown, Accuracy: z.accuracy,
+		Predator: b.predator, Skittish: b.flees, FleeRadius: b.fleeRadius, WanderRadius: b.wander,
+		TameChance: b.tame, Revenge: b.revenge, TameRevenge: b.revenge * 2 / 3,
+		Pack: r.Behaviour == PackPredator, SmallPrey: r.SmallPrey, Hive: r.Behaviour == Hive,
+		Legendary: r.Behaviour == Legendary, Explosive: r.Explosive,
+	}
+	if d.Predator {
+		d.AggroRadius, d.HungerTicks, d.HuntRadius = 5, 90000, 22
+	}
+	if d.Explosive {
+		d.TameChance = explosiveTame
+	}
+	return d
+}
+
+// Yield is the meat and leather butchering one fresh corpse of s gives.
+func Yield(s Species) (meat, leather int) {
+	d := DefOf(s)
+	return d.Meat, d.Leather
 }
 
 // DefOf returns the definition for s.

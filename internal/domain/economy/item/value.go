@@ -3,7 +3,7 @@ package item
 // value is a rough market value per unit, used to weigh a colony's wealth.
 var value = [numKinds]int{
 	Food: 2, Wood: 1, Stone: 1, Berries: 1, Potatoes: 1, Meat: 2, Meal: 5,
-	Club: 15, Knife: 10, Spear: 20, Rifle: 120, CorpseDustbuck: 20, CorpseRidgewolf: 25,
+	Club: 15, Knife: 10, Spear: 20, Rifle: 120, CorpseDustbuck: 20, CorpseRidgewolf: 25, CorpseAnimal: 20,
 	Corn: 1, Wheat: 1, Beans: 1, Lettuce: 1, Radishes: 1, Pumpkins: 1,
 	Leather: 3, Parka: 80, Tuque: 20, Duster: 60, HerbalMedicine: 15,
 }

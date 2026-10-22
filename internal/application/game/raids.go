@@ -16,7 +16,8 @@ import (
 
 // Threats. A simple storyteller sends a small raid a few days in, then
 // every five to nine days, growing slowly with time; in winter, hungry
-// wolf packs come too. Raiders are pawns of their own faction: they walk in
+// predator packs come too, and manhunter packs and hive swarms (hive.go)
+// at times (pickThreat has the odds). Raiders are pawns of their own faction: they walk in
 // from a map edge, attack the nearest standing colonist, and retreat when
 // badly hurt or once half their group is down. A downed raider bleeds out.
 
@@ -97,14 +98,49 @@ func (g *Game) scheduleThreats() {
 	g.nextThreat = uint64(firstRaidDay*clock.TicksPerDay + g.rng.IntN(clock.TicksPerDay))
 }
 
+// threatKind is what the storyteller sends.
+type threatKind uint8
+
+const (
+	threatRaid threatKind = iota
+	threatPack
+	threatManhunters
+	threatHive
+)
+
+// threatRolls is the storyteller's die. Odds (SIM-019): in winter a
+// predator pack 4/8 and, from day 12, a hive swarm 1/8; otherwise a
+// manhunter pack 2/8 from day 8 and a hive swarm 1/8 from day 12; a raid
+// the rest (so raids went from 3/4 to 5/8 outside winter and from 1/2 to
+// 3/8 in winter, once hives can come).
+const (
+	threatRolls  = 8
+	hiveFirstDay = 12
+)
+
+// pickThreat maps a roll of the die (0..threatRolls-1) to a threat.
+func pickThreat(roll, day int, winter bool) threatKind {
+	switch {
+	case winter && roll < 4:
+		return threatPack
+	case !winter && roll < 2 && day >= 8:
+		return threatManhunters
+	case roll == threatRolls-1 && day >= hiveFirstDay:
+		return threatHive
+	}
+	return threatRaid
+}
+
 func (g *Game) fireThreat(now uint64) {
 	day := int(now / clock.TicksPerDay)
 	winter := temperature.Season(clock.Tick(now)) == "Winter"
-	switch roll := g.rng.IntN(4); {
-	case winter && roll < 2:
+	switch pickThreat(g.rng.IntN(threatRolls), day, winter) {
+	case threatPack:
 		g.wolfPack(2 + g.rng.IntN(2))
-	case !winter && roll == 0 && day >= 8:
+	case threatManhunters:
 		g.manhunterPack(3 + g.rng.IntN(3))
+	case threatHive:
+		g.hiveSwarm()
 	default:
 		g.scaledRaid(day)
 	}
@@ -203,27 +239,36 @@ func (g *Game) raidWith(kit []item.Kind, plan raidPlan) {
 	}
 }
 
-// wolfPack sends hungry ridgewolves in from an edge.
+// wolfPack sends n hungry pack predators of one season-fitting species
+// in from an edge.
 func (g *Game) wolfPack(n int) {
+	s, ok := g.pickSpecies(func(s animal.Species) bool { return animal.DefOf(s).Pack })
+	if !ok {
+		return
+	}
 	ex, ey, ok := g.edgeTile()
 	if !ok {
 		return
 	}
+	spawned := 0
 	for i := 0; i < n; i++ {
 		for try := 0; try < 10; try++ {
 			x, y := ex+g.rng.IntN(5)-2, ey+g.rng.IntN(5)-2
 			if !g.grid.InBounds(x, y) {
 				continue
 			}
-			if id, err := g.spawnAnimal(animal.Ridgewolf, x, y); err == nil {
+			if id, err := g.spawnAnimal(s, x, y); err == nil {
 				a, _ := g.animals.Get(id)
-				a.Hunger = animal.DefOf(animal.Ridgewolf).HungerTicks
+				a.Hunger = animal.DefOf(s).HungerTicks
 				g.animals.Set(id, a)
+				spawned++
 				break
 			}
 		}
 	}
-	g.threat(ex, ey, "A pack of %d starving ridgewolves is prowling near the colony.", n)
+	if spawned > 0 {
+		g.threat(ex, ey, "A pack of %d starving %s is prowling near the colony.", spawned, pluralLabel(s))
+	}
 }
 
 // groupBroken: half or more of a raid group is down, dead or gone.

@@ -178,6 +178,7 @@ type ItemView struct {
 	// Of/OfName: whose body a human corpse (or bones) is (SIM-017).
 	Of     entity.EntityID
 	OfName string
+	Animal string // species key of a CorpseAnimal ("deer"), SIM-019
 }
 
 // FrameView is a construction blueprint.
@@ -302,6 +303,7 @@ type WorldView struct {
 	// hour.
 	RoofCells     []uint8
 	RoofCollapses []RoofCollapseView
+	Bursts        []BurstView // explosive animal deaths of the last hour (SIM-019, wildlife.go)
 	// Hour is the time of day 0..24 and DayOfYear 0..DaysPerYear-1, for
 	// the sun and moon (presentation only).
 	Hour      float64
@@ -319,6 +321,7 @@ type Game struct {
 	entities *entity.Allocator
 	rng      *randx.Rand
 	sched    schedule.Grid
+	wl       wildlifeState // SIM-019 wildlife events (wildlife.go)
 
 	messages []MessageView
 
@@ -827,6 +830,7 @@ func (g *Game) World() WorldView {
 	w.Traces = g.traceViews()
 	g.fillWorldWeather(&w) // weather.go
 	g.fillRoofView(&w)     // roof.go
+	g.fillWildlifeView(&w) // wildlife.go
 	g.fillGrassView(&w)    // grass.go
 	now := uint64(g.clock.Now())
 	w.Hour = float64(now%clock.TicksPerDay) / clock.TicksPerHour

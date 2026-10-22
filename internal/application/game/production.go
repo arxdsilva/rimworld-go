@@ -4,6 +4,7 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/ai/work"
+	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
@@ -52,6 +53,9 @@ type BillView struct {
 func Recipes() []RecipeView {
 	var out []RecipeView
 	for _, d := range recipe.All() {
+		if d.Legacy {
+			continue // older saves' recipes, upgraded on load
+		}
 		in := d.Input.Kind.String()
 		if d.Input.AnyRaw {
 			in = "raw food"
@@ -255,7 +259,7 @@ func (g *Game) doBill(id entity.EntityID, j job.Record) {
 			nid := g.entities.Next()
 			g.itemIDs = append(g.itemIDs, nid)
 			g.stacks.Set(nid, item.Stack{Kind: st.Kind, Qty: take, X: st.X, Y: st.Y, Carrier: id, Rot: st.Rot, Dried: st.Dried,
-				Of: st.Of, DiedAt: st.DiedAt})
+				Of: st.Of, DiedAt: st.DiedAt, Animal: st.Animal})
 			carry = nid
 		} else {
 			st.Carrier = id
@@ -293,10 +297,18 @@ func (g *Game) doBill(id entity.EntityID, j job.Record) {
 	} else if d.ID == recipe.Cremate {
 		g.cremate(j.Dest, j.Carry, d) // burns the body and its wood (burial.go)
 	} else {
+		out, extra := d.OutQty, d.ExtraQty
+		if d.BySpecies { // butchering: the yields come from the carcass's species
+			if st, ok := g.stacks.Get(j.Carry); ok {
+				out, extra = animal.Yield(animal.Species(st.Animal))
+			}
+		}
 		g.deleteItem(j.Carry)
-		g.dropStack(d.Output, d.OutQty, j.DestX, j.DestY)
-		if d.ExtraQty > 0 {
-			g.dropStack(d.Extra, d.ExtraQty, j.DestX, j.DestY)
+		if out > 0 {
+			g.dropStack(d.Output, out, j.DestX, j.DestY)
+		}
+		if extra > 0 {
+			g.dropStack(d.Extra, extra, j.DestX, j.DestY)
 		}
 	}
 	j.Carry = 0

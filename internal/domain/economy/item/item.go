@@ -58,7 +58,9 @@ var kindNames = [numKinds]string{"food", "wood", "stone", "berries", "potatoes",
 func (k Kind) IsWeapon() bool { return k == Club || k == Rifle || k == Knife || k == Spear }
 
 // IsCorpse reports an animal carcass.
-func (k Kind) IsCorpse() bool { return k == CorpseDustbuck || k == CorpseRidgewolf || k == CorpseHuman }
+func (k Kind) IsCorpse() bool {
+	return k == CorpseAnimal || k == CorpseDustbuck || k == CorpseRidgewolf || k == CorpseHuman
+}
 
 // nutrition is hunger restored per unit eaten (needs.Full = 10000).
 // Produce values follow real energy density per portion, rounded for
@@ -242,11 +244,26 @@ func DryRate(tenthsC int) int {
 }
 
 // CanMerge reports whether a and b may combine on the same tile.
-// Rotten corpses never merge with fresh ones, and one person's body (or
-// bones) never merges with another's.
+// Rotten corpses never merge with fresh ones, one person's body (or
+// bones) never merges with another's, and animal corpses stack by species.
 func CanMerge(a, b Stack) bool {
 	return a.Kind == b.Kind && a.Carrier == 0 && b.Carrier == 0 && a.X == b.X && a.Y == b.Y &&
-		a.Rotten() == b.Rotten() && a.Dried == b.Dried && a.Of == b.Of
+		a.Rotten() == b.Rotten() && a.Dried == b.Dried && a.Of == b.Of && a.Animal == b.Animal
+}
+
+// ConvertLegacy turns a save's former dustbuck or ridgewolf corpse into a
+// CorpseAnimal of the species that took its slot (deer 0, timber wolf 1);
+// ok is false (and s unchanged) for any other stack.
+func ConvertLegacy(s Stack) (Stack, bool) {
+	switch s.Kind {
+	case CorpseDustbuck:
+		s.Kind, s.Animal = CorpseAnimal, 0
+	case CorpseRidgewolf:
+		s.Kind, s.Animal = CorpseAnimal, 1
+	default:
+		return s, false
+	}
+	return s, true
 }
 
 // MergeRot is the spoilage of a stack of qa items with rot ra combined with
@@ -262,7 +279,7 @@ func MergeRot(qa, ra, qb, rb int) int {
 // before it spoils; 0 never spoils. Calibrated to real produce, squeezed for
 // play: fresh meat and cooked meals go off in days, greens in a week, roots
 // and squash keep a season, and dried grain and beans keep indefinitely.
-var shelfDays = [numKinds]float64{Meat: 2, Meal: 4, CorpseDustbuck: 2.5, CorpseRidgewolf: 2.5, CorpseHuman: 3,
+var shelfDays = [numKinds]float64{Meat: 2, Meal: 4, CorpseDustbuck: 2.5, CorpseRidgewolf: 2.5, CorpseAnimal: 2.5, CorpseHuman: 3,
 	Berries: 10, Lettuce: 6, Radishes: 14, Potatoes: 30, Corn: 40, Pumpkins: 50}
 
 // ShelfTicks is how many full-speed rot ticks k survives (0 = never rots).

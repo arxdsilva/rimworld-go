@@ -3,6 +3,7 @@ package game
 import (
 	"testing"
 
+	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/pawn/health"
@@ -12,8 +13,8 @@ import (
 )
 
 func TestButcheringYieldsLeather(t *testing.T) {
-	d := recipe.DefOf(recipe.ButcherDustbuck)
-	if d.Extra != item.Leather || d.ExtraQty <= 0 {
+	d := recipe.DefOf(recipe.ButcherAnimal) // leather by species (SIM-019)
+	if d.Extra != item.Leather || !d.BySpecies || animal.DefOf(animal.Deer).Leather <= 0 {
 		t.Fatalf("butchering should give leather: %+v", d)
 	}
 	if recipe.DefOf(recipe.MakeParka).Input.Kind != item.Leather {

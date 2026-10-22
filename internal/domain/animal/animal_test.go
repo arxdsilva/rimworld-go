@@ -5,10 +5,10 @@ import "testing"
 func TestSpeciesRules(t *testing.T) {
 	t.Parallel()
 	s := State{Species: Dustbuck}
-	if s.HP() != 40 || s.Dead() {
+	if s.HP() != 55 || s.Dead() { // a deer (formerly dustbuck): size M
 		t.Fatal("fresh dustbuck")
 	}
-	s.Injury = 41
+	s.Injury = 56
 	if !s.Dead() || s.HP() != 0 {
 		t.Fatal("dead at zero hp")
 	}
@@ -47,8 +47,8 @@ func TestStepCostScalesDiagonals(t *testing.T) {
 		straight   int
 		diagonally int
 	}{
-		{State{Species: Dustbuck}, 18, 25},             // round(18 * 1.414)
-		{State{Species: Ridgewolf}, 14, 20},            // round(14 * 1.414)
+		{State{Species: Dustbuck}, 16, 23},             // round(16 * 1.414)
+		{State{Species: Gazelle}, 12, 17},              // round(12 * 1.414)
 		{State{Species: Dustbuck, Mode: Flee}, 10, 14}, // round(10 * 1.414)
 	}
 	for _, c := range cases {

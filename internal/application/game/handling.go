@@ -32,8 +32,8 @@ func (g *Game) markTame(x1, y1, x2, y2 int, on bool) {
 	minX, minY, maxX, maxY := zone.Normalize(x1, y1, x2, y2)
 	for _, id := range g.animalIDs {
 		a, ok := g.animals.Get(id)
-		if !ok || a.Tame && on {
-			continue
+		if !ok || on && (a.Tame || animal.DefOf(a.Species).TameChance == 0) {
+			continue // hive insects are never tamed
 		}
 		if p, _ := g.positions.Get(id); p.X >= minX && p.X <= maxX && p.Y >= minY && p.Y <= maxY {
 			a.TameMark = on
@@ -60,7 +60,7 @@ func (g *Game) assignTame(id entity.EntityID) bool {
 	bestD := 1 << 30
 	for _, aid := range g.animalIDs {
 		a, ok := g.animals.Get(aid)
-		if !ok || !a.TameMark || a.Tame || a.Enraged(now) || now < a.TameRetry {
+		if !ok || !a.TameMark || a.Tame || a.Enraged(now) || now < a.TameRetry || animal.DefOf(a.Species).TameChance == 0 {
 			continue
 		}
 		if _, taken := g.reserve.EntityOwner(aid); taken {
@@ -109,17 +109,17 @@ func (g *Game) doTame(id entity.EntityID, j job.Record) {
 		a.Tame, a.TameMark, a.Designated = true, false, false
 		a.Name = petNames[g.rng.IntN(len(petNames))]
 		a.Mode, a.Target, a.Attacker, a.Path, a.PathI = animal.Wander, 0, 0, nil, 0
-		g.message(ap.X, ap.Y, "%s tamed a %s. Its name is %s.", g.name(id), a.Species, a.Name)
+		g.message(ap.X, ap.Y, "%s tamed a %s. Its name is %s.", g.name(id), a.Species.Label(), a.Name)
 		g.logEvent(j.Target, logEntry{Kind: logTamedBy, Other: id, Name: g.name(id)})
-		g.logEvent(id, logEntry{Kind: logTamed, Other: j.Target, Name: a.Name + " the " + a.Species.String()})
+		g.logEvent(id, logEntry{Kind: logTamed, Other: j.Target, Name: a.Name + " the " + a.Species.Label()})
 	} else {
 		a.TameRetry = now + animal.TameRetryTicks
 		g.logEvent(j.Target, logEntry{Kind: logResistedTaming, Other: id, Name: g.name(id)})
-		g.logEvent(id, logEntry{Kind: logFailedTame, Other: j.Target, Name: a.Species.String()})
+		g.logEvent(id, logEntry{Kind: logFailedTame, Other: j.Target, Name: a.Species.Label()})
 		if g.rng.IntN(100) < def.TameRevenge {
 			g.enrage(j.Target, &a, id, now)
 		} else {
-			g.message(ap.X, ap.Y, "%s failed to tame the %s.", g.name(id), a.Species)
+			g.message(ap.X, ap.Y, "%s failed to tame the %s.", g.name(id), a.Species.Label())
 		}
 	}
 	g.animals.Set(j.Target, a)
@@ -127,7 +127,8 @@ func (g *Game) doTame(id entity.EntityID, j job.Record) {
 	g.jobs.Set(id, j)
 }
 
-// enrage turns a wild animal manhunter for a day, going for who.
+// enrage turns a wild animal manhunter for a day, going for who; a
+// legendary's rage calls every legendary nearby (wildlife.go).
 func (g *Game) enrage(id entity.EntityID, a *animal.State, who entity.EntityID, now uint64) {
 	if a.Tame || a.Enraged(now) {
 		return
@@ -137,7 +138,10 @@ func (g *Game) enrage(id entity.EntityID, a *animal.State, who entity.EntityID, 
 	a.Path, a.PathI = nil, 0
 	g.logEvent(id, logEntry{Kind: logManhunter, Other: who})
 	p, _ := g.positions.Get(id)
-	g.threat(p.X, p.Y, "A %s has gone manhunter!", a.Species)
+	g.threat(p.X, p.Y, "A %s has gone manhunter!", a.Species.Label())
+	if animal.DefOf(a.Species).Legendary {
+		g.rallyLegendaries(id, who, now)
+	}
 }
 
 // provoked: a wild animal hurt by a colonist may go manhunter.
@@ -180,7 +184,7 @@ func (g *Game) chase(id entity.EntityID, a *animal.State, now uint64) {
 	if weapon.Distance(pos.X, pos.Y, tp.X, tp.Y) <= 1 {
 		a.Path, a.PathI = nil, 0
 		if a.Cooldown == 0 {
-			a.Cooldown = weapon.DefOf(def.Attack).Cooldown
+			a.Cooldown = def.Cooldown
 			g.animals.Set(id, *a)
 			g.strike(id, a.Target, def.Attack)
 			if cur, ok := g.animals.Get(id); ok {
@@ -336,28 +340,52 @@ func (g *Game) bedOf(id entity.EntityID) entity.EntityID {
 	return 0
 }
 
-// manhunterPack sends n enraged dustbucks in from a map edge.
+// manhunterPack sends n enraged animals of one season-fitting grazer or
+// territorial species in from a map edge (half as many of a large one).
 func (g *Game) manhunterPack(n int) {
+	s, ok := g.pickSpecies(manhunterSpecies)
+	if !ok {
+		return
+	}
 	ex, ey, ok := g.edgeTile()
 	if !ok {
 		return
 	}
+	if animal.RosterOf(s).Size >= animal.SizeL {
+		n = (n + 1) / 2
+	}
 	now := uint64(g.clock.Now())
+	spawned := 0
 	for i := 0; i < n; i++ {
 		for try := 0; try < 10; try++ {
 			x, y := ex+g.rng.IntN(5)-2, ey+g.rng.IntN(5)-2
 			if !g.grid.InBounds(x, y) {
 				continue
 			}
-			if id, err := g.spawnAnimal(animal.Dustbuck, x, y); err == nil {
+			if id, err := g.spawnAnimal(s, x, y); err == nil {
 				a, _ := g.animals.Get(id)
 				a.Manhunter, a.Mode = now+animal.ManhunterTicks, animal.Attack
 				g.animals.Set(id, a)
+				spawned++
 				break
 			}
 		}
 	}
-	g.threat(ex, ey, "A manhunter pack of %d dustbucks is charging the colony!", n)
+	if spawned == 0 {
+		return
+	}
+	name := pluralLabel(s)
+	if spawned == 1 {
+		name = s.Label()
+	}
+	g.threat(ex, ey, "A manhunter pack of %d %s is charging the colony!", spawned, name)
+}
+
+// manhunterSpecies: who forms manhunter packs (grazers and territorial
+// animals).
+func manhunterSpecies(s animal.Species) bool {
+	b := animal.RosterOf(s).Behaviour
+	return b == animal.Grazer || b == animal.Territorial
 }
 
 // ManhunterPack is the dev hook for a manhunter pack.
@@ -370,7 +398,7 @@ func (g *Game) releaseAnimal(id entity.EntityID) {
 		return
 	}
 	p, _ := g.positions.Get(id)
-	g.message(p.X, p.Y, "%s the %s was released into the wild.", a.Name, a.Species)
+	g.message(p.X, p.Y, "%s the %s was released into the wild.", a.Name, a.Species.Label())
 	a.Tame, a.Name, a.Target, a.Mode = false, "", 0, animal.Wander
 	g.animals.Set(id, a)
 }

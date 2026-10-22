@@ -63,7 +63,7 @@ func TestRot(t *testing.T) {
 	if got := MergeRot(10, 0, 30, 100); got != 75 {
 		t.Errorf("merge rot = %d, want 75", got)
 	}
-	fresh, rotten := Stack{Kind: CorpseDustbuck, Qty: 1}, Stack{Kind: CorpseDustbuck, Qty: 1, Rot: CorpseDustbuck.ShelfTicks()}
+	fresh, rotten := Stack{Kind: CorpseAnimal, Qty: 1}, Stack{Kind: CorpseAnimal, Qty: 1, Rot: CorpseAnimal.ShelfTicks()}
 	if CanMerge(fresh, rotten) {
 		t.Error("rotten and fresh corpses must not merge")
 	}
@@ -82,7 +82,7 @@ func TestDried(t *testing.T) {
 			t.Errorf("%s has no drying time", k)
 		}
 	}
-	if (Stack{Kind: Wheat, Qty: 1}).Dryable() || (Stack{Kind: CorpseDustbuck, Qty: 1}).Dryable() {
+	if (Stack{Kind: Wheat, Qty: 1}).Dryable() || (Stack{Kind: CorpseAnimal, Qty: 1}).Dryable() {
 		t.Error("grain is already dry; corpses are butchered")
 	}
 	if CanMerge(Stack{Kind: Meat, Qty: 1}, Stack{Kind: Meat, Qty: 1, Dried: true}) {

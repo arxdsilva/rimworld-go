@@ -8,7 +8,6 @@ import (
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
-	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -52,12 +51,10 @@ type AnimalView struct {
 	Log []LogLineView
 }
 
-// Wildlife at colony start and the daily top-up.
+// Wildlife at colony start (wildlife.go has the draw and the daily top-up).
 const (
-	startHerds      = 2
-	herdSize        = 3
-	startWolves     = 2
-	minDustbucks    = 4
+	startHerdsMin   = 3
+	startHerdsMax   = 4
 	wildStartRadius = 12
 	wolfStartRadius = 16
 	dawnHour        = 6
@@ -96,71 +93,10 @@ func (g *Game) randomTileAway(minR int) (int, int, bool) {
 	return 0, 0, false
 }
 
-func (g *Game) spawnHerd(x, y, n int) {
-	for i := 0; i < n; i++ {
-		for try := 0; try < 12; try++ {
-			hx, hy := x+g.rng.IntN(5)-2, y+g.rng.IntN(5)-2
-			if _, err := g.spawnAnimal(animal.Dustbuck, hx, hy); err == nil {
-				break
-			}
-		}
-	}
-}
-
-// spawnWildlife places dustbuck herds and ridgewolves away from the
-// start site.
-func (g *Game) spawnWildlife() {
-	g.wild = true
-	for h := 0; h < startHerds; h++ {
-		if x, y, ok := g.randomTileAway(wildStartRadius); ok {
-			g.spawnHerd(x, y, herdSize)
-		}
-	}
-	for w := 0; w < startWolves; w++ {
-		if x, y, ok := g.randomTileAway(wolfStartRadius); ok {
-			_, _ = g.spawnAnimal(animal.Ridgewolf, x, y)
-		}
-	}
-}
-
-// migrate tops up dustbucks at dawn so hunting stays sustainable.
-func (g *Game) migrate(now uint64) {
-	if !g.wild || now%uint64(clock.TicksPerDay) != uint64(dawnHour*clock.TicksPerHour) {
-		return
-	}
-	n := 0
-	for _, id := range g.animalIDs {
-		if a, ok := g.animals.Get(id); ok && a.Species == animal.Dustbuck {
-			n++
-		}
-	}
-	if n >= minDustbucks {
-		return
-	}
-	// enter at a map edge
-	w, h := g.grid.Width(), g.grid.Height()
-	for try := 0; try < 40; try++ {
-		var x, y int
-		switch g.rng.IntN(4) {
-		case 0:
-			x, y = g.rng.IntN(w), 1
-		case 1:
-			x, y = g.rng.IntN(w), h-2
-		case 2:
-			x, y = 1, g.rng.IntN(h)
-		default:
-			x, y = w-2, g.rng.IntN(h)
-		}
-		if g.grid.Walkable(x, y) {
-			g.spawnHerd(x, y, herdSize)
-			return
-		}
-	}
-}
-
 func (g *Game) phaseAnimals() {
 	now := uint64(g.clock.Now())
 	g.traces = projectile.Prune(g.traces, now)
+	g.pruneBursts(now)
 	g.migrate(now)
 	for _, id := range append([]entity.EntityID(nil), g.animalIDs...) {
 		a, ok := g.animals.Get(id)
@@ -201,7 +137,11 @@ func (g *Game) thinkAnimal(id entity.EntityID, a *animal.State, now uint64) {
 		if a.Mode == animal.Flee {
 			r += animal.FleeRelease // run well clear before grazing again
 		}
-		tp, threat := g.nearestThreat(id, pos, r)
+		var tp Position
+		threat := false
+		if r > 0 { // tame-natured animals only run once hurt
+			tp, threat = g.nearestThreat(id, pos, r)
+		}
 		if now < a.FleeUntil {
 			if p, ok := g.positions.Get(a.Attacker); ok {
 				tp, threat = p, true
@@ -283,12 +223,13 @@ func (g *Game) validPrey(self, t entity.EntityID) bool {
 	return g.standingPawn(t)
 }
 
-// findPrey: the nearest dustbuck within HuntRadius, else a standing
-// colonist within AggroRadius.
+// findPrey: the nearest animal the predator can take within HuntRadius
+// (huntable), else a standing colonist within AggroRadius. A pack
+// predator's mates nearby join the hunt.
 func (g *Game) findPrey(id entity.EntityID, pos Position, def animal.Def) entity.EntityID {
 	best, bestD := entity.EntityID(0), def.HuntRadius+1
 	for _, aid := range g.animalIDs {
-		if !g.validPrey(id, aid) {
+		if !g.huntable(id, aid) {
 			continue
 		}
 		p, _ := g.positions.Get(aid)
@@ -297,6 +238,9 @@ func (g *Game) findPrey(id entity.EntityID, pos Position, def animal.Def) entity
 		}
 	}
 	if best != 0 {
+		if def.Pack {
+			g.callPack(id, pos, best)
+		}
 		return best
 	}
 	bestD = def.AggroRadius + 1
@@ -310,6 +254,48 @@ func (g *Game) findPrey(id entity.EntityID, pos Position, def animal.Def) entity
 		}
 	}
 	return best
+}
+
+// huntable: prey a predator can take: a living non-predator no bigger
+// than itself (XS or S only for a small-prey hunter), never a hive
+// insect or a legendary.
+func (g *Game) huntable(self, t entity.EntityID) bool {
+	if !g.validPrey(self, t) {
+		return false
+	}
+	o, ok := g.animals.Get(t)
+	if !ok {
+		return false
+	}
+	me, _ := g.animals.Get(self)
+	od, md := animal.DefOf(o.Species), animal.DefOf(me.Species)
+	if od.Predator || od.Hive || od.Legendary {
+		return false
+	}
+	size := animal.RosterOf(o.Species).Size
+	if md.SmallPrey {
+		return size <= animal.SizeS
+	}
+	return size <= animal.RosterOf(me.Species).Size
+}
+
+// callPack sets idle wild pack mates of id's species within packRadius on
+// the same prey.
+func (g *Game) callPack(id entity.EntityID, pos Position, prey entity.EntityID) {
+	me, _ := g.animals.Get(id)
+	for _, aid := range g.animalIDs {
+		if aid == id {
+			continue
+		}
+		o, ok := g.animals.Get(aid)
+		if !ok || o.Species != me.Species || o.Tame != me.Tame || o.Target != 0 || o.Manhunter != 0 {
+			continue
+		}
+		if p, _ := g.positions.Get(aid); chebyshev(pos, p) <= packRadius {
+			o.Target = prey
+			g.animals.Set(aid, o)
+		}
+	}
 }
 
 // animalGoTo paths towards (gx, gy), clamped to the map and nudged to a
@@ -433,7 +419,7 @@ func (g *Game) stepAnimal(id entity.EntityID, a *animal.State, m *motionRec, fro
 	}
 }
 
-// killAnimal drops its meat and removes it. A predator that made the
+// killAnimal drops its corpse and removes it (an explosive one bursts). A predator that made the
 // kill eats half of it.
 func (g *Game) killAnimal(id, by entity.EntityID) {
 	a, ok := g.animals.Get(id)
@@ -442,7 +428,7 @@ func (g *Game) killAnimal(id, by entity.EntityID) {
 	}
 	pos, _ := g.positions.Get(id)
 	if a.Tame {
-		g.message(pos.X, pos.Y, "%s the %s has died.", a.Name, a.Species)
+		g.message(pos.X, pos.Y, "%s the %s has died.", a.Name, a.Species.Label())
 	}
 	if k, ok := g.animals.Get(by); ok && animal.DefOf(k.Species).Predator {
 		// the predator feeds on the kill; the carcass is left behind
@@ -453,7 +439,10 @@ func (g *Game) killAnimal(id, by entity.EntityID) {
 		g.logEvent(by, logEntry{Kind: logKilled, Other: id, Name: animalLabel(a)})
 	}
 	g.removeAnimal(id)
-	g.dropStack(animal.DefOf(a.Species).Corpse, 1, pos.X, pos.Y)
+	g.dropCorpse(a.Species, pos.X, pos.Y)
+	if animal.DefOf(a.Species).Explosive {
+		g.burst(a.Species, pos)
+	}
 }
 
 func (g *Game) removeAnimal(id entity.EntityID) {

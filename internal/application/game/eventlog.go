@@ -84,7 +84,7 @@ func animalLabel(a animal.State) string {
 	if a.Tame && a.Name != "" {
 		return a.Name
 	}
-	return a.Species.String()
+	return a.Species.Label()
 }
 
 // logEvent appends e (stamped now) to subject's log, dropping the oldest
@@ -141,6 +141,27 @@ func (g *Game) logLines(id entity.EntityID) []LogLineView {
 	return out
 }
 
+// strikeVerb is an animal blow's verb ("Bit", "Clawed"), passive
+// ("Bitten", "Clawed") when suffered.
+func strikeVerb(wk uint8, passive bool) string {
+	switch weapon.Kind(wk) {
+	case weapon.Claw:
+		return "Clawed"
+	case weapon.Kick:
+		return "Kicked"
+	case weapon.Gore:
+		return "Gored"
+	case weapon.Headbutt:
+		return "Headbutted"
+	case weapon.Peck:
+		return "Pecked"
+	}
+	if passive {
+		return "Bitten"
+	}
+	return "Bit"
+}
+
 func logText(e logEntry) string {
 	with := ""
 	if n := weapon.DefOf(weapon.Kind(e.Weapon)).Name; n != "fists" && n != "" {
@@ -156,9 +177,9 @@ func logText(e logEntry) string {
 	case logWasMissed:
 		return e.Name + " missed"
 	case logBit:
-		return fmt.Sprintf("Bit %s (-%d)", e.Name, e.Amount)
+		return fmt.Sprintf("%s %s (-%d)", strikeVerb(e.Weapon, false), e.Name, e.Amount)
 	case logBitten:
-		return fmt.Sprintf("Bitten by %s (-%d)", e.Name, e.Amount)
+		return fmt.Sprintf("%s by %s (-%d)", strikeVerb(e.Weapon, true), e.Name, e.Amount)
 	case logTrap:
 		return fmt.Sprintf("Hurt by a trap (-%d)", e.Amount)
 	case logDowned:

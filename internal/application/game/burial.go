@@ -5,6 +5,7 @@ import (
 
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
+	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
@@ -436,8 +437,15 @@ func (g *Game) fillPawnDeath(pv *PawnView) {
 	pv.Embodied = pv.Status == health.Dead.String()
 }
 
-// fillCorpseView sets ItemView.Of and OfName for a human corpse or bones.
+// fillCorpseView sets ItemView.Of and OfName for a human corpse or bones,
+// and names an animal corpse by its species (Kind "deer corpse", Animal
+// "deer", SIM-019).
 func (g *Game) fillCorpseView(iv *ItemView, st item.Stack) {
+	if st.Kind == item.CorpseAnimal {
+		s := animal.Species(st.Animal)
+		iv.Kind, iv.Animal = s.Label()+" corpse", s.String()
+		return
+	}
 	if !isBody(st.Kind) {
 		return
 	}

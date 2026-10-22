@@ -169,8 +169,8 @@ func TestSnapshotExposesStepTiming(t *testing.T) {
 	start := uint64(h.Tick())
 	h.Step(1)
 	av := animalView(t, h, aid)
-	if av.X != 2 || av.Y != 2 || av.StepTick != start || av.StepTicks != (14*1414+500)/1000 {
-		t.Fatalf("animal view %+v, want a 20-tick diagonal step at tick %d", av, start)
+	if diag := (animal.DefOf(animal.TimberWolf).StepTicks*1414 + 500) / 1000; av.X != 2 || av.Y != 2 || av.StepTick != start || av.StepTicks != diag {
+		t.Fatalf("animal view %+v, want a %d-tick diagonal step at tick %d", av, diag, start)
 	}
 	if !av.HasNext || av.NextX != 3 || av.NextY != 2 {
 		t.Fatalf("animal next (%d,%d) has=%v, want (3,2)", av.NextX, av.NextY, av.HasNext)

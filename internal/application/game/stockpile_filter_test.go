@@ -15,7 +15,7 @@ func TestHumanCorpseAndBonesNeverStockpiled(t *testing.T) {
 			t.Fatalf("%s allowed in a stockpile", k)
 		}
 	}
-	if !allows(all, item.CorpseDustbuck) {
+	if !allows(all, item.CorpseAnimal) {
 		t.Fatal("animal corpses still go to food stockpiles for butchering")
 	}
 }

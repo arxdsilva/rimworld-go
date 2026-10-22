@@ -7,7 +7,6 @@ import (
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
-	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/command"
 )
@@ -80,19 +79,17 @@ func TestButcherTableTurnsCorpsesIntoMeat(t *testing.T) {
 		t.Fatal(err)
 	}
 	placeBuilt(t, g, construction.ButcherTable, construction.South, 6, 3)
-	if w := g.World(); len(w.Buildings) != 1 || len(w.Buildings[0].Bills) != 2 {
-		t.Fatalf("butcher table starts with butcher bills: %+v", w.Buildings)
+	if w := g.World(); len(w.Buildings) != 1 || len(w.Buildings[0].Bills) != 1 || w.Buildings[0].Bills[0].Recipe != "butcher_animal" {
+		t.Fatalf("butcher table starts with the butcher bill: %+v", w.Buildings)
 	}
-	if _, err := g.SpawnStack(item.CorpseDustbuck, 1, 3, 7); err != nil {
-		t.Fatal(err)
-	}
+	g.dropCorpse(animal.Deer, 3, 7)
 	for i := 0; i < 100 && itemsOnGround(g, "meat") == 0; i++ {
 		g.Step(30)
 	}
-	if got := itemsOnGround(g, "meat"); got != recipe.DefOf(recipe.ButcherDustbuck).OutQty {
+	if got := itemsOnGround(g, "meat"); got != animal.DefOf(animal.Deer).Meat {
 		t.Fatalf("meat = %d", got)
 	}
-	if itemsOnGround(g, "dustbuck corpse") != 0 {
+	if itemsOnGround(g, "deer corpse") != 0 {
 		t.Fatal("corpse consumed")
 	}
 }
