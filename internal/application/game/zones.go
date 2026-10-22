@@ -164,7 +164,7 @@ func allows(s zone.Zone, k item.Kind) bool {
 		return s.Wood
 	case k == item.Stone:
 		return s.Stone
-	case k == item.Leather, k == item.HerbalMedicine, k.IsApparel(), k.IsWeapon():
+	case k == item.Leather, k == item.HerbalMedicine, k == item.Cloth, k == item.Straw, k.IsCarpet(), k.IsApparel(), k.IsWeapon():
 		return true // goods: always welcome
 	}
 	return false

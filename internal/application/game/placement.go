@@ -4,6 +4,7 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/filth"
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/terrain"
 )
@@ -38,7 +39,10 @@ type BuildableView struct {
 	// "stone"; a carpet lists the carpet items). Carpet marks the entrance
 	// carpet, installed from a crafted carpet item (SIM-021).
 	Stuffs []string
-	Carpet bool
+	// Catches is the percent of tracked dirt each material wipes off,
+	// parallel to Stuffs; 0 for non-carpets.
+	Catches []int
+	Carpet  bool
 }
 
 // Buildables lists every buildable in catalog order.
@@ -53,6 +57,7 @@ func Buildables() []BuildableView {
 		})
 		for _, s := range construction.Stuffs(d.Kind) {
 			out[len(out)-1].Stuffs = append(out[len(out)-1].Stuffs, s.String())
+			out[len(out)-1].Catches = append(out[len(out)-1].Catches, filth.Catch(s)/10)
 		}
 		out[len(out)-1].Carpet = d.Carpet
 	}
@@ -62,7 +67,7 @@ func Buildables() []BuildableView {
 // StuffID is the command value (command.Command.Stuff) for a material name.
 func StuffID(name string) (uint8, bool) {
 	k, ok := item.ParseKind(name)
-	if !ok || !k.IsStuff() {
+	if !ok || !(k.IsStuff() || k.IsCarpet()) {
 		return 0, false
 	}
 	return uint8(k), true
