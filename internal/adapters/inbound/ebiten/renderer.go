@@ -161,6 +161,9 @@ type Renderer struct {
 	smooth    camSmooth       // eased pan and zoom (camera_smooth.go)
 	env       envState        // wind, contact springs and weather (environment.go)
 	lit       litRenderer     // sun, moon and lamp lighting (light.go)
+	// cast, while set, turns world sprite draws into shadow silhouettes
+	// (shadow_cast.go).
+	cast *shadowCast
 	// roofOverlay is the Roof overlay toggle (R); roofOverlayForced holds
 	// it on while a roof tool is selected (roof_draw.go).
 	roofOverlay, roofOverlayForced bool

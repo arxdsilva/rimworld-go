@@ -268,6 +268,47 @@ a small direction set (`north/east/south/west`) and mirror only where
 asymmetry permits. Life stages may use scale or dedicated juvenile
 silhouettes.
 
+### 11.1 Roster and builder (normative, ART-011)
+
+- **Roster:** 61 species, listed in `assets/source/blender/artlib/families/animal_roster.py`.
+  - It mirrors `internal/domain/animal` (same keys and order).
+  - Each row's `features` text is the binding visual brief: silhouette, proportions, palette and markings.
+  - The species exaggerate their defining traits: the elephant's trunk and ears, the ibex's horns, the fennec's ears, the squirrel's tail.
+- **Originals rule:** RimWorld's invented creatures are never reproduced. Ten roster entries are **original** creatures filling the same roles, with their own names and looks:
+  - emberbuck, cinder_rat, woolhorn, glimmerstag, timbergnaw
+  - hive_beetle, hive_brute, hive_crawler
+  - ground_sloth and dire_wolf (both real extinct animals)
+- **Sizes** are body lengths in tiles: XS 0.35, S 0.6, M 0.95, L 1.4, XL 2.0, with `+`/`-` meaning ±15%. Large animals overhang their tile.
+- **One parametric builder:** `families/animals/` (`rig.py` plus archetype modules). Archetypes:
+
+  | Archetype | Species |
+  |---|---|
+  | quadruped | most mammals |
+  | primate | monkey |
+  | bird | |
+  | snake | |
+  | lizard | |
+  | tortoise | |
+  | beetle, brute, crawler | hive insects |
+
+- **Per species and facing (south/east/north/west):**
+
+  | Sprite | Frames |
+  |---|---|
+  | standing | 1 |
+  | trot | `walk01..08` |
+  | attack (by the species' natural weapon) | `bite1..4`, `claw1..4`, `kick1..4`, `gore1..4`, `headbutt1..4` or `peck1..4` |
+  | graze | `graze1..2` |
+  | flinch | `flinch1..2` |
+
+  - Corpses are `item/corpse_<key>_v0..v2`, three lying poses.
+  - The icon is `ui_icon/<key>`.
+- **Dimorphic species** (deer, elk, chicken) add a full female set, `animal/<key>_f_<facing>[_frame]`. The renderer picks it by `AnimalView.Female`.
+- **Style:** fixed palette materials (no tint masks), dark outlines, toon bands, restrained 3–6 tones per species, tiny eyes. No baked shadow: shadows are cast at runtime (§6.1).
+- **QA:**
+  - A 64 px silhouette sheet of all 61 species, where each must be identifiable by its signature features.
+  - A gameplay-zoom contact sheet.
+
 ## 12. Buildings and Construction
 
 Function dominates decoration. A bed visibly communicates sleeping
@@ -754,7 +795,7 @@ duster layers; hair and hats follow `head`):
 | `fall1..4` | 4 | knees buckle, torso folds, hands out; the renderer finishes lying down |
 | `offer1..2` | 2 | crouched, hand held out low (taming) |
 
-Animals: dustbuck `kick1..4`, ridgewolf `bite1..4`, both `graze1..2` and
+Animals (ART-011): every species has its natural weapon's set (`bite`, `claw`, `kick`, `gore`, `headbutt` or `peck`, `1..4`), and all have `graze1..2` and
 `flinch1..2`.
 
 Every pawn body frame carries `hand` (right), `hand_l` (left) and `head`.

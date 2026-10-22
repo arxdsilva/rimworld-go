@@ -145,7 +145,7 @@ func TestCombatOrders(t *testing.T) {
 		}
 		return OrderOption{}, false
 	}
-	hunt, ok := find(g.OrdersAt(p, 8, 4), "Hunt dustbuck")
+	hunt, ok := find(g.OrdersAt(p, 8, 4), "Hunt deer")
 	if !ok || !hunt.Disabled || hunt.Reason != ReasonNoRanged {
 		t.Fatalf("unarmed hunt option = %+v %v", hunt, ok)
 	}
@@ -161,7 +161,7 @@ func TestCombatOrders(t *testing.T) {
 	g.Apply(command.Command{Kind: command.DraftPawn, Pawn: uint64(p), Enabled: true})
 	g.Step(1)
 	buck := g.World().Animals[0]
-	atk, ok := find(g.OrdersAt(p, buck.X, buck.Y), "Melee attack dustbuck")
+	atk, ok := find(g.OrdersAt(p, buck.X, buck.Y), "Melee attack deer")
 	if !ok || atk.Disabled {
 		t.Fatalf("drafted attack option = %+v %v (orders %+v)", atk, ok, g.OrdersAt(p, buck.X, buck.Y))
 	}
@@ -172,9 +172,9 @@ func TestColonyStartsWithWildlifeAndARifle(t *testing.T) {
 	bucks, wolves := 0, 0
 	for _, a := range g.World().Animals {
 		switch a.Species {
-		case "dustbuck":
+		case "deer": // formerly dustbuck
 			bucks++
-		case "ridgewolf":
+		case "timber_wolf": // formerly ridgewolf
 			wolves++
 		}
 	}

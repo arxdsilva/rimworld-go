@@ -537,6 +537,10 @@ func (l *litRenderer) syncUniforms() {
 // uniforms; per-sprite light rides in vertex attributes, so Ebiten merges
 // consecutive draws from one atlas page into one batch.
 func (r *Renderer) drawLit(dst, img *ebiten.Image, geo ebiten.GeoM, cs colorScale, tx, ty int) {
+	if r.cast != nil { // the shadow pass: a silhouette, not a lit sprite
+		r.castSilhouette(img, geo)
+		return
+	}
 	if cs == (colorScale{}) {
 		cs = noCS
 	}

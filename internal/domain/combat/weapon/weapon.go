@@ -12,6 +12,11 @@ const (
 	// Knife stabs fast for little damage; Spear thrusts slow and hard.
 	Knife
 	Spear
+	// Animal natural weapons (SIM-019); Kick and Bite above are too.
+	Claw
+	Gore
+	Headbutt
+	Peck
 	numKinds
 )
 
@@ -37,6 +42,11 @@ var defs = [numKinds]Def{
 	Bite:  {Name: "bite", Range: 1, Damage: 9, Cooldown: 100, Accuracy: 80},
 	Knife: {Name: "knife", Range: 1, Damage: 8, Cooldown: 70, Accuracy: 90},
 	Spear: {Name: "spear", Range: 1, Damage: 13, Cooldown: 125, Accuracy: 85},
+	// SIM-019 S1 tunes these; damage is scaled by the animal's size.
+	Claw:     {Name: "claws", Range: 1, Damage: 7, Cooldown: 110, Accuracy: 75},
+	Gore:     {Name: "horns", Range: 1, Damage: 9, Cooldown: 130, Accuracy: 70},
+	Headbutt: {Name: "head", Range: 1, Damage: 6, Cooldown: 130, Accuracy: 75},
+	Peck:     {Name: "beak", Range: 1, Damage: 2, Cooldown: 100, Accuracy: 80},
 }
 
 // DefOf returns the profile for k (fists for unknown kinds).

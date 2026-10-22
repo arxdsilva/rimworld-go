@@ -1,0 +1,10 @@
+//kage:unit pixels
+
+// shadow_blur.kage: contact-hardening blur of the shadow layer (ART-012).
+// R holds the caster height (0 at the feet, 1 at the top): the blur radius
+// grows with it. ART-012 SH1 fills this in; this stub passes through.
+package main
+
+func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
+	return imageSrc0At(srcPos)
+}

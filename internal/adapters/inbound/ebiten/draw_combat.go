@@ -64,16 +64,7 @@ func (r *Renderer) addAnimalDraws(w game.WorldView, add func(row, col float64, f
 	for _, an := range w.Animals {
 		an := an
 		wx, wy := r.interpAnimal(an)
-		add(wy+0.01, wx, func() {
-			vis := r.last[an.ID]
-			key := "animal/" + an.Species + "_" + vis.facing.String()
-			if !r.art.has(key) {
-				sx, sy := r.worldToScreenF(wx, wy)
-				vector.FillCircle(screen, sx+float32(tile)/2, sy+float32(tile)/2, float32(tile)*0.3, color.RGBA{150, 120, 80, 255}, false)
-				return
-			}
-			r.drawSpritePose(screen, r.framed(key, r.animalFrame(an)), color.NRGBA{}, wx, wy, tile, r.animalPose(an))
-		})
+		add(wy+0.01, wx, func() { r.drawAnimalFigure(screen, an, wx, wy, tile) })
 	}
 }
 

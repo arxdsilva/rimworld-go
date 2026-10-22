@@ -34,7 +34,7 @@ func TestPredatorBiteIsLoggedOnBothSides(t *testing.T) {
 	wolf, _ := g.SpawnAnimal("ridgewolf", 5, 5)
 	buck, _ := g.SpawnAnimal("dustbuck", 6, 5)
 	g.strikeUntilHit(t, wolf, buck, weapon.Fists)
-	if !hasLog(g, wolf, "Bit Dustbuck (-") && !hasLog(g, wolf, "Bit dustbuck (-") {
+	if !hasLog(g, wolf, "Bit deer (-") {
 		t.Fatalf("wolf log %v", logTexts(g, wolf))
 	}
 	if !hasLog(g, buck, "Bitten by ") || !hasLog(g, buck, "(-") {

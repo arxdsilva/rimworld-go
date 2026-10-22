@@ -1,38 +1,291 @@
 package animal
 
 import (
+	"strings"
+
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
-// Species is a kind of animal.
+// Species is a kind of animal. Values are saved: append new species
+// before numSpecies, never reorder (Deer and TimberWolf took the slots of
+// the former dustbuck and ridgewolf).
 type Species uint8
 
 const (
-	// Dustbuck is a skittish grazer: it wanders in small herds and flees
-	// from people and predators. Hunted for meat.
-	Dustbuck Species = iota
-	// Ridgewolf is a predator: it hunts dustbucks when hungry, attacks
-	// people who come too close while hungry, and fights back when hurt.
-	Ridgewolf
+	Deer Species = iota
+	TimberWolf
+	Alpaca
+	Bison
+	Emberbuck
+	Capybara
+	Caribou
+	Cow
+	Donkey
+	Dromedary
+	Elephant
+	Elk
+	Gazelle
+	Goat
+	Horse
+	Ibex
+	GroundSloth
+	Woolhorn
+	Pig
+	Rhinoceros
+	Sheep
+	Yak
+	Timbergnaw
+	ArcticFox
+	ArcticWolf
+	CinderRat
+	Cat
+	Chinchilla
+	Cougar
+	FennecFox
+	GrizzlyBear
+	GuineaPig
+	Hare
+	Husky
+	Labrador
+	Lynx
+	Monkey
+	Panther
+	PolarBear
+	Raccoon
+	Rat
+	RedFox
+	Snowhare
+	Squirrel
+	DireWolf
+	WildBoar
+	YorkshireTerrier
+	Cassowary
+	Chicken
+	Duck
+	Emu
+	Goose
+	Ostrich
+	Turkey
+	Cobra
+	Iguana
+	Tortoise
+	HiveBeetle
+	HiveBrute
+	HiveCrawler
+	Glimmerstag
 	numSpecies
+
+	// Dustbuck and Ridgewolf are the former names of Deer and TimberWolf.
+	Dustbuck  = Deer
+	Ridgewolf = TimberWolf
 )
 
-var names = [numSpecies]string{"dustbuck", "ridgewolf"}
+// Archetype is the body plan the art builds a species from.
+type Archetype uint8
+
+const (
+	ArchQuadruped Archetype = iota
+	ArchPrimate
+	ArchBird
+	ArchSnake
+	ArchLizard
+	ArchTortoise
+	ArchBeetle
+	ArchBrute
+	ArchCrawler
+)
+
+// Size is a species' body class (SIM-019 formulas key off it).
+type Size uint8
+
+const (
+	SizeXS Size = iota
+	SizeS
+	SizeM
+	SizeL
+	SizeXL
+)
+
+// Behaviour is how a species lives: what it does when calm and when
+// threatened, and how easily it is tamed.
+type Behaviour uint8
+
+const (
+	Grazer Behaviour = iota
+	Skittish
+	Docile
+	Domestic
+	Pet
+	Territorial
+	Predator
+	PackPredator
+	Hive
+	Legendary
+)
+
+// Habitat is a bit set of the climates a species lives in.
+type Habitat uint8
+
+const (
+	HabTemperate Habitat = 1 << iota
+	HabCold
+	HabHot
+	HabAny = HabTemperate | HabCold | HabHot
+)
+
+// AttackKind is a species' natural weapon; its name is the action and the
+// art's attack frame set ("bite1".."bite4", ...).
+type AttackKind uint8
+
+const (
+	AttackBite AttackKind = iota
+	AttackClaw
+	AttackKick
+	AttackGore
+	AttackHeadbutt
+	AttackPeck
+)
+
+var attackNames = [...]string{"bite", "claw", "kick", "gore", "headbutt", "peck"}
+
+func (a AttackKind) String() string {
+	if int(a) < len(attackNames) {
+		return attackNames[a]
+	}
+	return "bite"
+}
+
+// Speed is a species' pace class over its size's base step.
+type Speed uint8
+
+const (
+	SpeedNormal Speed = iota
+	SpeedFast
+	SpeedSlow
+)
+
+// Roster is a species' identity and classes (the binding roster of
+// SIM-019 / ART-011); Def's numbers derive from it.
+type Roster struct {
+	Key       string // snake_case: the art key and the save-independent name
+	Archetype Archetype
+	Size      Size
+	SizeTrim  int // percent over or under the size class (S+ = +15)
+	Behaviour Behaviour
+	Habitat   Habitat
+	Attack    AttackKind
+	HerdMin   int // 0: never spawns as a wild herd (hive insects)
+	HerdMax   int
+	Speed     Speed
+	Dimorphic bool // separate female art (renderer picks by id)
+	Explosive bool // bursts when it dies
+	SmallPrey bool // a predator of small animals only
+}
+
+var roster = [numSpecies]Roster{
+	Deer:             {Key: "deer", Archetype: ArchQuadruped, Size: SizeM, Behaviour: Skittish, Habitat: HabTemperate, Attack: AttackKick, HerdMin: 2, HerdMax: 4, Dimorphic: true},
+	TimberWolf:       {Key: "timber_wolf", Archetype: ArchQuadruped, Size: SizeM, Behaviour: PackPredator, Habitat: HabTemperate, Attack: AttackBite, HerdMin: 3, HerdMax: 5},
+	Alpaca:           {Key: "alpaca", Archetype: ArchQuadruped, Size: SizeM, Behaviour: Domestic, Habitat: HabCold | HabTemperate, Attack: AttackKick, HerdMin: 2, HerdMax: 4},
+	Bison:            {Key: "bison", Archetype: ArchQuadruped, Size: SizeL, Behaviour: Territorial, Habitat: HabTemperate, Attack: AttackGore, HerdMin: 3, HerdMax: 6},
+	Emberbuck:        {Key: "emberbuck", Archetype: ArchQuadruped, Size: SizeM, Behaviour: Grazer, Habitat: HabTemperate, Attack: AttackKick, HerdMin: 1, HerdMax: 3, Explosive: true},
+	Capybara:         {Key: "capybara", Archetype: ArchQuadruped, Size: SizeM, SizeTrim: -15, Behaviour: Grazer, Habitat: HabHot | HabTemperate, Attack: AttackBite, HerdMin: 2, HerdMax: 5},
+	Caribou:          {Key: "caribou", Archetype: ArchQuadruped, Size: SizeL, Behaviour: Grazer, Habitat: HabCold, Attack: AttackGore, HerdMin: 3, HerdMax: 6},
+	Cow:              {Key: "cow", Archetype: ArchQuadruped, Size: SizeL, Behaviour: Domestic, Habitat: HabTemperate, Attack: AttackHeadbutt, HerdMin: 1, HerdMax: 3, Speed: SpeedSlow},
+	Donkey:           {Key: "donkey", Archetype: ArchQuadruped, Size: SizeM, SizeTrim: 15, Behaviour: Domestic, Habitat: HabTemperate | HabHot, Attack: AttackKick, HerdMin: 1, HerdMax: 2},
+	Dromedary:        {Key: "dromedary", Archetype: ArchQuadruped, Size: SizeL, Behaviour: Domestic, Habitat: HabHot, Attack: AttackKick, HerdMin: 1, HerdMax: 3},
+	Elephant:         {Key: "elephant", Archetype: ArchQuadruped, Size: SizeXL, Behaviour: Territorial, Habitat: HabHot, Attack: AttackGore, HerdMin: 2, HerdMax: 4},
+	Elk:              {Key: "elk", Archetype: ArchQuadruped, Size: SizeL, Behaviour: Grazer, Habitat: HabTemperate | HabCold, Attack: AttackGore, HerdMin: 2, HerdMax: 5, Dimorphic: true},
+	Gazelle:          {Key: "gazelle", Archetype: ArchQuadruped, Size: SizeS, SizeTrim: 15, Behaviour: Skittish, Habitat: HabHot, Attack: AttackKick, HerdMin: 3, HerdMax: 6, Speed: SpeedFast},
+	Goat:             {Key: "goat", Archetype: ArchQuadruped, Size: SizeS, SizeTrim: 15, Behaviour: Domestic, Habitat: HabAny, Attack: AttackHeadbutt, HerdMin: 2, HerdMax: 4},
+	Horse:            {Key: "horse", Archetype: ArchQuadruped, Size: SizeL, Behaviour: Domestic, Habitat: HabTemperate, Attack: AttackKick, HerdMin: 1, HerdMax: 3, Speed: SpeedFast},
+	Ibex:             {Key: "ibex", Archetype: ArchQuadruped, Size: SizeM, Behaviour: Grazer, Habitat: HabCold | HabTemperate, Attack: AttackHeadbutt, HerdMin: 2, HerdMax: 4},
+	GroundSloth:      {Key: "ground_sloth", Archetype: ArchQuadruped, Size: SizeXL, Behaviour: Territorial, Habitat: HabTemperate | HabCold, Attack: AttackClaw, HerdMin: 1, HerdMax: 1, Speed: SpeedSlow},
+	Woolhorn:         {Key: "woolhorn", Archetype: ArchQuadruped, Size: SizeL, Behaviour: Domestic, Habitat: HabCold | HabTemperate, Attack: AttackHeadbutt, HerdMin: 3, HerdMax: 6},
+	Pig:              {Key: "pig", Archetype: ArchQuadruped, Size: SizeM, Behaviour: Domestic, Habitat: HabTemperate, Attack: AttackBite, HerdMin: 1, HerdMax: 3, Speed: SpeedSlow},
+	Rhinoceros:       {Key: "rhinoceros", Archetype: ArchQuadruped, Size: SizeXL, Behaviour: Territorial, Habitat: HabHot, Attack: AttackGore, HerdMin: 1, HerdMax: 2},
+	Sheep:            {Key: "sheep", Archetype: ArchQuadruped, Size: SizeS, SizeTrim: 15, Behaviour: Domestic, Habitat: HabTemperate | HabCold, Attack: AttackHeadbutt, HerdMin: 3, HerdMax: 6},
+	Yak:              {Key: "yak", Archetype: ArchQuadruped, Size: SizeL, Behaviour: Domestic, Habitat: HabCold, Attack: AttackGore, HerdMin: 2, HerdMax: 4},
+	Timbergnaw:       {Key: "timbergnaw", Archetype: ArchQuadruped, Size: SizeM, Behaviour: Grazer, Habitat: HabTemperate | HabCold, Attack: AttackBite, HerdMin: 3, HerdMax: 5},
+	ArcticFox:        {Key: "arctic_fox", Archetype: ArchQuadruped, Size: SizeS, Behaviour: Predator, Habitat: HabCold, Attack: AttackBite, HerdMin: 1, HerdMax: 1, SmallPrey: true, Speed: SpeedFast},
+	ArcticWolf:       {Key: "arctic_wolf", Archetype: ArchQuadruped, Size: SizeM, Behaviour: PackPredator, Habitat: HabCold, Attack: AttackBite, HerdMin: 3, HerdMax: 5},
+	CinderRat:        {Key: "cinder_rat", Archetype: ArchQuadruped, Size: SizeXS, Behaviour: Skittish, Habitat: HabTemperate, Attack: AttackBite, HerdMin: 2, HerdMax: 4, Explosive: true},
+	Cat:              {Key: "cat", Archetype: ArchQuadruped, Size: SizeS, SizeTrim: -15, Behaviour: Pet, Habitat: HabAny, Attack: AttackClaw, HerdMin: 1, HerdMax: 1},
+	Chinchilla:       {Key: "chinchilla", Archetype: ArchQuadruped, Size: SizeXS, Behaviour: Grazer, Habitat: HabCold | HabTemperate, Attack: AttackBite, HerdMin: 2, HerdMax: 4},
+	Cougar:           {Key: "cougar", Archetype: ArchQuadruped, Size: SizeM, Behaviour: Predator, Habitat: HabTemperate | HabHot, Attack: AttackClaw, HerdMin: 1, HerdMax: 1, Speed: SpeedFast},
+	FennecFox:        {Key: "fennec_fox", Archetype: ArchQuadruped, Size: SizeXS, Behaviour: Predator, Habitat: HabHot, Attack: AttackBite, HerdMin: 1, HerdMax: 1, SmallPrey: true, Speed: SpeedFast},
+	GrizzlyBear:      {Key: "grizzly_bear", Archetype: ArchQuadruped, Size: SizeL, Behaviour: Predator, Habitat: HabTemperate | HabCold, Attack: AttackClaw, HerdMin: 1, HerdMax: 1},
+	GuineaPig:        {Key: "guinea_pig", Archetype: ArchQuadruped, Size: SizeXS, Behaviour: Domestic, Habitat: HabTemperate, Attack: AttackBite, HerdMin: 2, HerdMax: 4},
+	Hare:             {Key: "hare", Archetype: ArchQuadruped, Size: SizeS, SizeTrim: -15, Behaviour: Skittish, Habitat: HabTemperate, Attack: AttackBite, HerdMin: 1, HerdMax: 2, Speed: SpeedFast},
+	Husky:            {Key: "husky", Archetype: ArchQuadruped, Size: SizeM, SizeTrim: -15, Behaviour: Pet, Habitat: HabCold, Attack: AttackBite, HerdMin: 1, HerdMax: 1},
+	Labrador:         {Key: "labrador", Archetype: ArchQuadruped, Size: SizeM, SizeTrim: -15, Behaviour: Pet, Habitat: HabTemperate, Attack: AttackBite, HerdMin: 1, HerdMax: 1},
+	Lynx:             {Key: "lynx", Archetype: ArchQuadruped, Size: SizeS, SizeTrim: 15, Behaviour: Predator, Habitat: HabCold, Attack: AttackClaw, HerdMin: 1, HerdMax: 1},
+	Monkey:           {Key: "monkey", Archetype: ArchPrimate, Size: SizeS, Behaviour: Skittish, Habitat: HabHot, Attack: AttackClaw, HerdMin: 2, HerdMax: 5},
+	Panther:          {Key: "panther", Archetype: ArchQuadruped, Size: SizeM, Behaviour: Predator, Habitat: HabHot, Attack: AttackClaw, HerdMin: 1, HerdMax: 1},
+	PolarBear:        {Key: "polar_bear", Archetype: ArchQuadruped, Size: SizeL, SizeTrim: 15, Behaviour: Predator, Habitat: HabCold, Attack: AttackClaw, HerdMin: 1, HerdMax: 1},
+	Raccoon:          {Key: "raccoon", Archetype: ArchQuadruped, Size: SizeS, Behaviour: Skittish, Habitat: HabTemperate, Attack: AttackBite, HerdMin: 1, HerdMax: 2},
+	Rat:              {Key: "rat", Archetype: ArchQuadruped, Size: SizeXS, Behaviour: Skittish, Habitat: HabAny, Attack: AttackBite, HerdMin: 2, HerdMax: 5},
+	RedFox:           {Key: "red_fox", Archetype: ArchQuadruped, Size: SizeS, Behaviour: Predator, Habitat: HabTemperate, Attack: AttackBite, HerdMin: 1, HerdMax: 1, SmallPrey: true, Speed: SpeedFast},
+	Snowhare:         {Key: "snowhare", Archetype: ArchQuadruped, Size: SizeS, SizeTrim: -15, Behaviour: Skittish, Habitat: HabCold, Attack: AttackBite, HerdMin: 1, HerdMax: 2, Speed: SpeedFast},
+	Squirrel:         {Key: "squirrel", Archetype: ArchQuadruped, Size: SizeXS, Behaviour: Skittish, Habitat: HabTemperate, Attack: AttackBite, HerdMin: 1, HerdMax: 3},
+	DireWolf:         {Key: "dire_wolf", Archetype: ArchQuadruped, Size: SizeL, SizeTrim: -15, Behaviour: PackPredator, Habitat: HabCold, Attack: AttackBite, HerdMin: 2, HerdMax: 4},
+	WildBoar:         {Key: "wild_boar", Archetype: ArchQuadruped, Size: SizeM, Behaviour: Territorial, Habitat: HabTemperate, Attack: AttackGore, HerdMin: 2, HerdMax: 4},
+	YorkshireTerrier: {Key: "yorkshire_terrier", Archetype: ArchQuadruped, Size: SizeXS, Behaviour: Pet, Habitat: HabTemperate, Attack: AttackBite, HerdMin: 1, HerdMax: 1},
+	Cassowary:        {Key: "cassowary", Archetype: ArchBird, Size: SizeM, SizeTrim: 15, Behaviour: Territorial, Habitat: HabHot, Attack: AttackKick, HerdMin: 1, HerdMax: 1},
+	Chicken:          {Key: "chicken", Archetype: ArchBird, Size: SizeXS, Behaviour: Domestic, Habitat: HabAny, Attack: AttackPeck, HerdMin: 3, HerdMax: 6, Dimorphic: true},
+	Duck:             {Key: "duck", Archetype: ArchBird, Size: SizeXS, Behaviour: Domestic, Habitat: HabTemperate, Attack: AttackPeck, HerdMin: 2, HerdMax: 5},
+	Emu:              {Key: "emu", Archetype: ArchBird, Size: SizeM, Behaviour: Skittish, Habitat: HabHot, Attack: AttackKick, HerdMin: 2, HerdMax: 4},
+	Goose:            {Key: "goose", Archetype: ArchBird, Size: SizeS, SizeTrim: -15, Behaviour: Domestic, Habitat: HabTemperate, Attack: AttackPeck, HerdMin: 2, HerdMax: 5},
+	Ostrich:          {Key: "ostrich", Archetype: ArchBird, Size: SizeL, Behaviour: Skittish, Habitat: HabHot, Attack: AttackKick, HerdMin: 1, HerdMax: 3, Speed: SpeedFast},
+	Turkey:           {Key: "turkey", Archetype: ArchBird, Size: SizeS, Behaviour: Domestic, Habitat: HabTemperate, Attack: AttackPeck, HerdMin: 2, HerdMax: 4},
+	Cobra:            {Key: "cobra", Archetype: ArchSnake, Size: SizeS, Behaviour: Territorial, Habitat: HabHot, Attack: AttackBite, HerdMin: 1, HerdMax: 1},
+	Iguana:           {Key: "iguana", Archetype: ArchLizard, Size: SizeS, Behaviour: Skittish, Habitat: HabHot, Attack: AttackBite, HerdMin: 1, HerdMax: 2},
+	Tortoise:         {Key: "tortoise", Archetype: ArchTortoise, Size: SizeS, Behaviour: Docile, Habitat: HabHot | HabTemperate, Attack: AttackBite, HerdMin: 1, HerdMax: 1, Speed: SpeedSlow},
+	HiveBeetle:       {Key: "hive_beetle", Archetype: ArchBeetle, Size: SizeXS, SizeTrim: 15, Behaviour: Hive, Habitat: HabAny, Attack: AttackBite, HerdMin: 0, HerdMax: 0},
+	HiveBrute:        {Key: "hive_brute", Archetype: ArchBrute, Size: SizeL, Behaviour: Hive, Habitat: HabAny, Attack: AttackClaw, HerdMin: 0, HerdMax: 0},
+	HiveCrawler:      {Key: "hive_crawler", Archetype: ArchCrawler, Size: SizeM, Behaviour: Hive, Habitat: HabAny, Attack: AttackBite, HerdMin: 0, HerdMax: 0},
+	Glimmerstag:      {Key: "glimmerstag", Archetype: ArchQuadruped, Size: SizeXL, Behaviour: Legendary, Habitat: HabTemperate, Attack: AttackGore, HerdMin: 1, HerdMax: 1},
+}
+
+// RosterOf is s's roster row.
+func RosterOf(s Species) Roster {
+	if s >= numSpecies {
+		return roster[Deer]
+	}
+	return roster[s]
+}
+
+// All lists every species in value order.
+func All() []Species {
+	out := make([]Species, numSpecies)
+	for i := range out {
+		out[i] = Species(i)
+	}
+	return out
+}
 
 func (s Species) String() string {
 	if s >= numSpecies {
 		return "animal"
 	}
-	return names[s]
+	return roster[s].Key
 }
 
-// ParseSpecies maps a name to a species.
+// Label is the species' display name ("arctic fox").
+func (s Species) Label() string { return strings.ReplaceAll(s.String(), "_", " ") }
+
+// ParseSpecies maps a key (or a former name) to a species.
 func ParseSpecies(name string) (Species, bool) {
-	for i, n := range names {
-		if n == name {
+	switch name {
+	case "dustbuck":
+		return Deer, true
+	case "ridgewolf":
+		return TimberWolf, true
+	}
+	for i := range roster {
+		if roster[i].Key == name {
 			return Species(i), true
 		}
 	}
@@ -82,18 +335,32 @@ const (
 	TameRetryTicks = 5000
 )
 
-var defs = [numSpecies]Def{
-	Dustbuck: {MaxHP: 40, Corpse: item.CorpseDustbuck, StepTicks: 18, FleeStep: 10, Meat: 12, Attack: weapon.Kick,
-		Skittish: true, FleeRadius: 5, WanderRadius: 4, TameChance: 60, Revenge: 10, TameRevenge: 5},
-	Ridgewolf: {MaxHP: 60, Corpse: item.CorpseRidgewolf, StepTicks: 14, FleeStep: 14, Meat: 6, Attack: weapon.Bite,
-		Predator: true, AggroRadius: 5, HungerTicks: 90000, HuntRadius: 22, WanderRadius: 6,
-		TameChance: 25, Revenge: 45, TameRevenge: 30},
+// defs derive from the roster (buildDef, SIM-019).
+var defs = func() (out [numSpecies]Def) {
+	for i := range out {
+		out[i] = buildDef(Species(i), roster[i])
+	}
+	return out
+}()
+
+// buildDef derives a species' numbers from its roster classes. SIM-019 S1
+// replaces this stub with the size and behaviour formulas; until then
+// every species gets the former dustbuck (grazers) or ridgewolf
+// (predators) numbers.
+func buildDef(s Species, r Roster) Def {
+	if r.Behaviour == Predator || r.Behaviour == PackPredator || r.Behaviour == Hive {
+		return Def{MaxHP: 60, Corpse: item.CorpseRidgewolf, StepTicks: 14, FleeStep: 14, Meat: 6, Attack: weapon.Bite,
+			Predator: true, AggroRadius: 5, HungerTicks: 90000, HuntRadius: 22, WanderRadius: 6,
+			TameChance: 25, Revenge: 45, TameRevenge: 30}
+	}
+	return Def{MaxHP: 40, Corpse: item.CorpseDustbuck, StepTicks: 18, FleeStep: 10, Meat: 12, Attack: weapon.Kick,
+		Skittish: true, FleeRadius: 5, WanderRadius: 4, TameChance: 60, Revenge: 10, TameRevenge: 5}
 }
 
 // DefOf returns the definition for s.
 func DefOf(s Species) Def {
 	if s >= numSpecies {
-		return defs[Dustbuck]
+		return defs[Deer]
 	}
 	return defs[s]
 }
@@ -209,4 +476,13 @@ func FleeGoal(x, y, tx, ty, dist int) (int, int) {
 		m = ay
 	}
 	return x + dx*dist/m, y + dy*dist/m
+}
+
+// sizeLength is the body length in tiles per size class (ART-011).
+var sizeLength = [...]float64{SizeXS: 0.35, SizeS: 0.6, SizeM: 0.95, SizeL: 1.4, SizeXL: 2.0}
+
+// BodyLength is s's body length in tiles, with its size trim.
+func BodyLength(s Species) float64 {
+	r := RosterOf(s)
+	return sizeLength[r.Size] * float64(100+r.SizeTrim) / 100
 }

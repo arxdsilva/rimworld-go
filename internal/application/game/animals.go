@@ -14,8 +14,17 @@ import (
 
 // AnimalView is one living wild animal.
 type AnimalView struct {
-	ID         entity.EntityID
+	ID entity.EntityID
+	// Species is the species key ("arctic_fox": the art key); Label its
+	// display name ("arctic fox"); Attack its natural weapon and attack
+	// frame set ("bite", "claw", "kick", "gore", "headbutt", "peck");
+	// Female picks a dimorphic species' female art; Size its body
+	// length in tiles (SIM-019).
 	Species    string
+	Label      string
+	Attack     string
+	Female     bool
+	Size       float64
 	X, Y       int
 	Health     int // percent
 	Mode       string
@@ -505,7 +514,9 @@ func (g *Game) animalViews() []AnimalView {
 		}
 		p, _ := g.positions.Get(id)
 		out = append(out, AnimalView{
-			ID: id, Species: a.Species.String(), X: p.X, Y: p.Y,
+			ID: id, Species: a.Species.String(), Label: a.Species.Label(), X: p.X, Y: p.Y,
+			Attack: animal.RosterOf(a.Species).Attack.String(), Female: animalFemale(id, a.Species),
+			Size:       animal.BodyLength(a.Species),
 			Health:     a.HP() * 100 / animal.DefOf(a.Species).MaxHP,
 			Mode:       a.Mode.String(),
 			Designated: a.Designated,
@@ -526,4 +537,10 @@ func (g *Game) animalViews() []AnimalView {
 		av.Log = g.logLines(id) // eventlog.go
 	}
 	return out
+}
+
+// animalFemale reports a dimorphic animal's sex, fixed by its id
+// (presentation: only the art differs).
+func animalFemale(id entity.EntityID, s animal.Species) bool {
+	return animal.RosterOf(s).Dimorphic && (uint64(id)*0x9E3779B97F4A7C15)>>63 == 1
 }

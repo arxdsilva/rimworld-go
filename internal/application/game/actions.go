@@ -31,8 +31,12 @@ const (
 	ActionCremate     = "cremate" // burning a body on a pyre
 
 	// Animal actions.
-	ActionBite  = "bite"
-	ActionKick  = "kick"
-	ActionGraze = "graze"
-	ActionFlee  = "flee"
+	ActionBite     = "bite"
+	ActionKick     = "kick"
+	ActionClaw     = "claw"
+	ActionGore     = "gore"
+	ActionHeadbutt = "headbutt"
+	ActionPeck     = "peck"
+	ActionGraze    = "graze"
+	ActionFlee     = "flee"
 )

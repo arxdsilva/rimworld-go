@@ -44,12 +44,15 @@ const (
 	// Bones are what a corpse rots down to (SIM-017).
 	CorpseHuman
 	Bones
+	// CorpseAnimal is any animal's carcass (Stack.Animal names the
+	// species, SIM-019); CorpseDustbuck and CorpseRidgewolf are legacy.
+	CorpseAnimal
 	numKinds
 )
 
 var kindNames = [numKinds]string{"food", "wood", "stone", "berries", "potatoes", "meat", "meal", "club", "rifle", "dustbuck corpse", "ridgewolf corpse",
 	"corn", "wheat", "beans", "lettuce", "radishes", "pumpkins", "leather", "parka", "tuque", "duster", "herbal medicine",
-	"knife", "spear", "human corpse", "bones"}
+	"knife", "spear", "human corpse", "bones", "animal corpse"}
 
 // IsWeapon reports whether k can be equipped.
 func (k Kind) IsWeapon() bool { return k == Club || k == Rifle || k == Knife || k == Spear }
@@ -192,6 +195,8 @@ type Stack struct {
 	// the tick it died.
 	Of     entity.EntityID
 	DiedAt uint64
+	// Animal is the species (animal.Species value) of a CorpseAnimal.
+	Animal uint8
 }
 
 // Shelf is how many full-speed rot ticks the stack keeps (0 = forever).
