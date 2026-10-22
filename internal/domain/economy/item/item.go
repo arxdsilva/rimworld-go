@@ -234,6 +234,9 @@ type Stack struct {
 	// tame mother, so the hatchling joins the colony.
 	Hatch int
 	Tame  bool
+	// Forbidden stacks are left alone by colonists' autonomous work
+	// (hauling, eating, building, crafting) until allowed (UI-016).
+	Forbidden bool
 }
 
 // Shelf is how many full-speed rot ticks the stack keeps (0 = forever).
@@ -286,7 +289,8 @@ func DryRate(tenthsC int) int {
 // merged stack keeps the incubation of the one it joins.
 func CanMerge(a, b Stack) bool {
 	return a.Kind == b.Kind && a.Carrier == 0 && b.Carrier == 0 && a.X == b.X && a.Y == b.Y &&
-		a.Rotten() == b.Rotten() && a.Dried == b.Dried && a.Of == b.Of && a.Animal == b.Animal && a.Tame == b.Tame
+		a.Rotten() == b.Rotten() && a.Dried == b.Dried && a.Of == b.Of && a.Animal == b.Animal && a.Tame == b.Tame &&
+		a.Forbidden == b.Forbidden
 }
 
 // ConvertLegacy turns a save's former dustbuck or ridgewolf corpse into a

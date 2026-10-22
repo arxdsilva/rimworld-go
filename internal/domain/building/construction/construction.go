@@ -50,6 +50,10 @@ const (
 	// FeedingTrough holds feed for the tame animals of its pen (SIM-024);
 	// haulers fill it, animals eat at its spot.
 	FeedingTrough
+	// Fence keeps animals out (or in); colonists climb over it. A
+	// FenceGate lets colonists and tame animals through (SIM-028).
+	Fence
+	FenceGate
 	kindCount
 )
 
@@ -85,6 +89,9 @@ type Def struct {
 	Dug bool
 	// Carpet: built from a crafted carpet item (Stuffs) rather than wood.
 	Carpet bool
+	// AnimalBlock: animals can't cross it (fences); Gate lets tame ones
+	// through (SIM-028).
+	AnimalBlock, Gate bool
 }
 
 // StoneWorkPct is the work multiplier (percent) for stone construction.
@@ -127,6 +134,8 @@ var defs = [kindCount]Def{
 	Carpet: {Kind: Carpet, Name: "carpet", Wood: 1, Work: 30, Layer: LayerObject, Carpet: true},
 	FeedingTrough: {Kind: FeedingTrough, Name: "feeding trough", Wood: 4, Work: 60, Layer: LayerObject, BlocksMove: true,
 		Rotatable: true, Spot: [2]int{0, 1}, HasSpot: true},
+	Fence:     {Kind: Fence, Name: "fence", Wood: 1, Work: 20, Layer: LayerObject, StoneOK: true, AnimalBlock: true},
+	FenceGate: {Kind: FenceGate, Name: "fence gate", Wood: 3, Work: 40, Layer: LayerObject, Rotatable: true, AnimalBlock: true, Gate: true},
 }
 
 // MaxHP is how much damage a building takes before it is destroyed.

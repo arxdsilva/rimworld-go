@@ -145,14 +145,17 @@ type PawnView struct {
 	// cooldown, 1 on the strike tick; Carrying the item kind held in the
 	// arms ("pawn" while rescuing). HitTick/HitFromX,Y/HitDamage describe
 	// the last hit taken (HitTick 0: never).
-	Action             string
-	ActionProgress     float64
-	ActTarget          entity.EntityID
-	AttackCycle        float64
-	Carrying           string
+	Action         string
+	ActionProgress float64
+	ActTarget      entity.EntityID
+	AttackCycle    float64
+	Carrying       string
 	// CarryingAnimal is the species key of a carried animal carcass
 	// ("" otherwise), so the renderer can draw the right body.
 	CarryingAnimal string
+	// Postponed lists work this colonist put off because it was blocked
+	// or out of reach ("build wall: blocked by Bo, retry in 12 s"; SIM-027).
+	Postponed          []string
 	HitTick            uint64
 	HitFromX, HitFromY int
 	HitDamage          int
@@ -193,6 +196,8 @@ type ItemView struct {
 	Animal string // species key of a CorpseAnimal ("deer"), SIM-019
 	// Catch: a carpet item's share of tracked dirt wiped, percent (SIM-021).
 	Catch int
+	// Forbidden: colonists leave this stack alone (UI-016).
+	Forbidden bool
 }
 
 // FrameView is a construction blueprint.
@@ -210,6 +215,15 @@ type FrameView struct {
 	// Moving: a reinstall frame for building MovingFrom (UI-011).
 	Moving     bool
 	MovingFrom entity.EntityID
+	// Frame inspector (UI-015): total work, materials in transit to it,
+	// free and reserved stock of its material on the map, who builds and
+	// who hauls ("Ada (4 wood)"), and a one-line status.
+	WorkTotal         int
+	Incoming          int
+	InStock, Reserved int
+	Builder           string
+	Haulers           []string
+	Status            string
 }
 
 // BuildingView is a completed wall or bed.
@@ -392,6 +406,7 @@ type Game struct {
 	incidents  incident.State             // the storyteller's nature events (SIM-025)
 	troughs    map[entity.EntityID]troughState
 	noFood     map[entity.EntityID]uint64 // food out of reach: no eating attempt until this tick
+	postponed  map[postKey]uint64         // work put off until this tick (postpone.go, SIM-027)
 	restedFree map[entity.EntityID]bool   // woke fully rested in the current Sleep block: free time
 	calm       map[entity.EntityID]uint64 // fled a threat: holding back from work until this tick
 	banked     map[entity.EntityID]bool   // campfires banked by their room thermostat (heat.go)
@@ -495,6 +510,7 @@ func New(cfg Config) *Game {
 		climate:     biome.DefOf(cfg.Biome).Climate,
 		troughs:     make(map[entity.EntityID]troughState),
 		noFood:      make(map[entity.EntityID]uint64),
+		postponed:   make(map[postKey]uint64),
 		restedFree:  make(map[entity.EntityID]bool),
 		calm:        make(map[entity.EntityID]uint64),
 		banked:      make(map[entity.EntityID]bool),
@@ -801,7 +817,7 @@ func (g *Game) World() WorldView {
 			ID: id, Kind: st.Kind.String(), Qty: st.Qty, X: st.X, Y: st.Y, Carried: st.Carrier != 0,
 			FreshDays: freshDays(st), Rotten: st.Rotten(), Dried: st.Dried,
 			RotRate: item.RotRate(int(g.temperatureAt(st.X, st.Y))),
-			Catch:   filth.Catch(st.Kind) / 10,
+			Catch:   filth.Catch(st.Kind) / 10, Forbidden: st.Forbidden,
 		})
 		g.fillCorpseView(&w.Items[len(w.Items)-1], st) // burial.go
 		if st.Carrier == 0 {

@@ -124,6 +124,7 @@ type saveState struct {
 	Exposure   map[entity.EntityID][2]int
 	NoComfort  map[entity.EntityID]uint64
 	NoFood     map[entity.EntityID]uint64 // absent in older saves
+	Postponed  []postEntry                // absent in older saves (SIM-027)
 	RestedFree map[entity.EntityID]bool   // absent in older saves
 	Calm       map[entity.EntityID]uint64 // absent in older saves
 	Banked     map[entity.EntityID]bool   // absent in older saves
@@ -243,7 +244,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 		Terr: g.terr, Mines: g.mines,
 		LastMeal: g.lastMeal, Bills: g.bills, Racks: g.racks, Fuel: g.fuel,
 		Exposure: map[entity.EntityID][2]int{}, NoComfort: g.noComfort,
-		NoFood: g.noFood, RestedFree: g.restedFree, Calm: g.calm, Banked: g.banked,
+		NoFood: g.noFood, Postponed: g.exportPostponed(), RestedFree: g.restedFree, Calm: g.calm, Banked: g.banked,
 		OrderQueue: map[entity.EntityID][]savedOrder{}, Apparel: g.apparel, Joy: g.joy,
 		Prios: g.prio, Scheds: g.scheds,
 		RaiderIDs: g.raiderIDs, Raiders: g.raiders, RaidGroups: g.raidGroups, NextThreat: g.nextThreat, ThreatsOn: g.threatsOn,
@@ -349,6 +350,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	setMap(&g.fuel, s.Fuel)
 	setMap(&g.noComfort, s.NoComfort)
 	setMap(&g.noFood, s.NoFood)
+	g.importPostponed(s.Postponed)
 	setMap(&g.restedFree, s.RestedFree)
 	setMap(&g.calm, s.Calm)
 	setMap(&g.banked, s.Banked)

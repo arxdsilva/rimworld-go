@@ -70,6 +70,15 @@ const (
 	// SetTroughFilter sets feeding trough Target's feed filter to Mode
 	// (0 plants, 1 meat, 2 any; SIM-024).
 	SetTroughFilter
+	// CancelFrame removes blueprint/frame Target, dropping its delivered
+	// materials back on the map (UI-015).
+	CancelFrame
+	// SetForbidden forbids (Enabled) or allows item stack Target: forbidden
+	// stacks are left alone by haulers, eaters and builders (UI-016).
+	SetForbidden
+	// DesignateForbid forbids (Enabled) or allows every stack in X..X2,
+	// Y..Y2.
+	DesignateForbid
 )
 
 // WorkType is a compact work-column id for SetWorkEnabled.

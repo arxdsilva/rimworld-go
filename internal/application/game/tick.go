@@ -98,6 +98,12 @@ func (g *Game) applyOne(c command.Command) {
 		g.releaseAnimal(entity.EntityID(c.Pawn))
 	case command.SetTroughFilter:
 		g.setTroughFilter(entity.EntityID(c.Target), c.Mode)
+	case command.CancelFrame:
+		g.cancelFrame(entity.EntityID(c.Target)) // frame_view.go
+	case command.SetForbidden:
+		g.setForbidden(entity.EntityID(c.Target), c.Enabled) // forbid.go
+	case command.DesignateForbid:
+		g.markForbidden(c.X, c.Y, c.X2, c.Y2, c.Enabled)
 	case command.DesignateDeconstruct:
 		g.markDeconstruct(c.X, c.Y, c.X2, c.Y2, true)
 	case command.DesignateHunt:
