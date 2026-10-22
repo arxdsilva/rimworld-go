@@ -78,7 +78,7 @@ const (
 	litShadowFade   = 0.5
 	litMoonFloor    = 0.12 // moonlight shadow floor (clear sky)
 	litMoonCap      = 0.30
-	litShadowMaxLen = 3.0  // tiles
+	litShadowMaxLen = 3.0 // tiles
 )
 
 var (
