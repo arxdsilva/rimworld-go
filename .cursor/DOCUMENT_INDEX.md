@@ -16,6 +16,7 @@ All paths below are relative to this `.cursor/` folder unless noted.
 | Per-task AI handoffs | `handoffs/` |
 | Task-specific playbooks (start here for any new task) | `skills/rimworld-go-router/SKILL.md` |
 | Multi-area work across parallel agents | `PARALLEL_WORK.md` (playbook: `skills/parallel-work/SKILL.md`) |
+| New-game flow, globe, factions, storytellers, difficulty, colonist identity, water, big maps (plan of record) | `NG1_NEW_GAME_PLAN.md` |
 | Cursor always-on recognition rules | `rules/` |
 | Global contributor rules | `../AGENTS.md` |
 

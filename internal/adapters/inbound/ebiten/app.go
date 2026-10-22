@@ -57,6 +57,9 @@ type SimFactory func(NewGame) (Simulation, error)
 type NewGame struct {
 	Seed  uint64
 	Biome biome.ID
+	// Setup is the full wizard result (NG-1); nil = the legacy start from
+	// Seed and Biome (captures, tests).
+	Setup *game.Setup
 }
 
 // AppConfig is the composition-root wiring for the interactive client.
@@ -73,6 +76,8 @@ type AppConfig struct {
 	// Nil: locate from cwd. When it fails the vendor pack is used.
 	LoadArt    func() (*artCatalog, error)
 	LoadSplash func() (*ebiten.Image, error)
+	// Scenarios stores custom scenarios (nil: custom scenarios unavailable).
+	Scenarios ScenarioStore
 	// LoadMenuScene loads the main-menu colony diorama (make art-menu).
 	// Nil: locate from cwd. When it fails the gradient backdrop is drawn.
 	LoadMenuScene func() (*menuDiorama, error)

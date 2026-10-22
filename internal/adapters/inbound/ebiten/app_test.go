@@ -36,10 +36,13 @@ func (s *stubSim) Date() clock.Date          { return clock.DateAt(s.tick) }
 func (s *stubSim) Activity() schedule.Activity {
 	return schedule.Work
 }
-func (s *stubSim) World() game.WorldView        { return s.world }
-func (s *stubSim) Wildlife() []game.WildlifeRow { return s.wild }
-func (s *stubSim) Apply(command.Command)        {}
-func (s *stubSim) Enqueue(c command.Command)    { s.cmds = append(s.cmds, c) }
+func (s *stubSim) World() game.WorldView                    { return s.world }
+func (s *stubSim) Wildlife() []game.WildlifeRow             { return s.wild }
+func (s *stubSim) Factions() []game.FactionView             { return nil }
+func (s *stubSim) Story() game.StoryView                    { return game.StoryView{} }
+func (s *stubSim) Bio(entity.EntityID) (game.BioView, bool) { return game.BioView{}, false }
+func (s *stubSim) Apply(command.Command)                    {}
+func (s *stubSim) Enqueue(c command.Command)                { s.cmds = append(s.cmds, c) }
 func (s *stubSim) CanPlaceAt(kind, stuff, facing string, x, y int) (bool, string) {
 	if x < 0 || y < 0 || x >= s.w || y >= s.h {
 		return false, "outside the map"

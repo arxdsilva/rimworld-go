@@ -19,6 +19,7 @@ import (
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/pawn/health"
+	"rimworld-go/internal/domain/pawn/look"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/pawn/recreation"
@@ -50,6 +51,8 @@ type Position struct {
 
 // Config configures a new Game.
 type Config struct {
+	// Setup is the new-game wizard's choices (NG-1); nil = legacy start.
+	Setup         *Setup
 	Seed          uint64
 	Width, Height int
 	// Biome is the map's setting (SIM-023); zero is temperate forest.
@@ -77,8 +80,18 @@ type PawnView struct {
 	WorkDoctor    bool
 	WorkResearch  bool
 	WorkClean     bool
-	Ate           bool
-	LastMeal      string // kind name of the last food eaten, "" if none
+	// NG-1 identity (PAWN-G fills): sex, build, age, look, incapable work,
+	// skill levels and passions (skill.ID order), adulthood title.
+	Sex       string
+	Build     string
+	AgeYears  int
+	Look      look.Look
+	Incapable work.Mask
+	SkillLv   [11]uint8
+	Passion   [11]uint8
+	Title     string
+	Ate       bool
+	LastMeal  string // kind name of the last food eaten, "" if none
 	// Dirt is the dirt on the pawn's boots, percent of filth.Full (SIM-021).
 	Dirt       int
 	SleptInBed bool

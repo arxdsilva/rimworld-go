@@ -82,6 +82,12 @@ const (
 	// DesignateSmooth marks rock walls (no ore) and rough stone floors in
 	// X..X2, Y..Y2 for smoothing (SIM-029).
 	DesignateSmooth
+	// SetStoryteller switches the storyteller to the profile key in Name
+	// (NG-1 §2.4); it takes effect at the next scheduling decision.
+	SetStoryteller
+	// SetDifficulty sets the difficulty: Name is a preset key, or
+	// "custom:" + difficulty.Encode(settings) (NG-1 §2.4).
+	SetDifficulty
 )
 
 // WorkType is a compact work-column id for SetWorkEnabled.
@@ -146,4 +152,6 @@ type Command struct {
 	Queue bool
 	// Target is a building id (MoveBuilding).
 	Target uint64
+	// Name carries a key for SetStoryteller / SetDifficulty.
+	Name string
 }

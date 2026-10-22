@@ -23,6 +23,25 @@ var (
 	uiBtnBorder   = color.RGBA{R: 0x8A, G: 0x6A, B: 0x48, A: 0xFF}
 	uiAccent      = color.RGBA{R: 0xE8, G: 0xC0, B: 0x70, A: 0xFF}
 	uiDim         = color.RGBA{R: 0x00, G: 0x00, B: 0x00, A: 0xA0}
+	// NG-1 §1.2: text, states, fields, sliders, scrollbars, tooltips, modals.
+	uiText         = color.RGBA{R: 0xE8, G: 0xE2, B: 0xD6, A: 0xFF}
+	uiTextDim      = color.RGBA{R: 0xA8, G: 0x9F, B: 0x92, A: 0xFF}
+	uiTextDisabled = color.RGBA{R: 0x6E, G: 0x66, B: 0x5C, A: 0xFF}
+	uiHeading      = color.RGBA{R: 0xF2, G: 0xD9, B: 0xA6, A: 0xFF}
+	uiWarning      = color.RGBA{R: 0xE0, G: 0xA0, B: 0x40, A: 0xFF}
+	uiDanger       = color.RGBA{R: 0xD2, G: 0x56, B: 0x4A, A: 0xFF}
+	uiGood         = color.RGBA{R: 0x7F, G: 0xB8, B: 0x6A, A: 0xFF}
+	uiField        = color.RGBA{R: 0x1A, G: 0x13, B: 0x0E, A: 0xFF}
+	uiFieldBorder  = color.RGBA{R: 0x6B, G: 0x53, B: 0x40, A: 0xFF}
+	uiFieldFocus   = color.RGBA{R: 0xE8, G: 0xC0, B: 0x70, A: 0xFF}
+	uiSliderTrack  = color.RGBA{R: 0x3A, G: 0x2E, B: 0x28, A: 0xFF}
+	uiSliderFill   = color.RGBA{R: 0x8B, G: 0x5A, B: 0x2B, A: 0xFF}
+	uiSliderKnob   = color.RGBA{R: 0xE8, G: 0xC0, B: 0x70, A: 0xFF}
+	uiScrollTrack  = color.RGBA{R: 0x1A, G: 0x13, B: 0x0E, A: 0xFF}
+	uiScrollThumb  = color.RGBA{R: 0x6B, G: 0x53, B: 0x40, A: 0xFF}
+	uiTooltip      = color.RGBA{R: 0x12, G: 0x0D, B: 0x0A, A: 0xF2}
+	uiTooltipEdge  = color.RGBA{R: 0x8A, G: 0x6A, B: 0x48, A: 0xFF}
+	uiModalDim     = color.RGBA{R: 0x00, G: 0x00, B: 0x00, A: 0xB0}
 )
 
 var uiTokens = map[string]color.RGBA{
@@ -38,6 +57,24 @@ var uiTokens = map[string]color.RGBA{
 	"ui.button_border":   uiBtnBorder,
 	"ui.accent":          uiAccent,
 	"ui.dim":             uiDim,
+	"ui.text":            uiText,
+	"ui.text_dim":        uiTextDim,
+	"ui.text_disabled":   uiTextDisabled,
+	"ui.heading":         uiHeading,
+	"ui.warning":         uiWarning,
+	"ui.danger":          uiDanger,
+	"ui.good":            uiGood,
+	"ui.field":           uiField,
+	"ui.field_border":    uiFieldBorder,
+	"ui.field_focus":     uiFieldFocus,
+	"ui.slider_track":    uiSliderTrack,
+	"ui.slider_fill":     uiSliderFill,
+	"ui.slider_knob":     uiSliderKnob,
+	"ui.scroll_track":    uiScrollTrack,
+	"ui.scroll_thumb":    uiScrollThumb,
+	"ui.tooltip":         uiTooltip,
+	"ui.tooltip_border":  uiTooltipEdge,
+	"ui.modal_dim":       uiModalDim,
 }
 
 const menuBackdropBands = 12

@@ -28,6 +28,9 @@ type SaveHooks struct {
 	Save func(sim Simulation, slot string) error
 	List func() ([]SaveSlot, error)
 	Load func(path string) (Simulation, string, error) // sim, slot name
+	// SaveCommit saves a commitment-mode colony to its one slot (NG-1 §2.13);
+	// nil falls back to Save.
+	SaveCommit func(sim Simulation, slot string) error
 }
 
 // autosaveHour is when each in-game day's autosave happens.

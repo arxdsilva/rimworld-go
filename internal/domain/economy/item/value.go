@@ -10,6 +10,7 @@ var value = [numKinds]int{
 	Milk: 2, Wool: 3, Egg: 2, FertileEgg: 4, EmberOil: 4, WoolParka: 95, CarpetWool: 30,
 	SandstoneBlocks: 1, GraniteBlocks: 1, LimestoneBlocks: 1, SlateBlocks: 1, MarbleBlocks: 1,
 	Steel: 2, Silver: 1, Gold: 10,
+	Components: 28, IndustrialMedicine: 24,
 }
 
 // Value is the market value of one unit of k.

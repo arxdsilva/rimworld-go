@@ -34,6 +34,11 @@ const (
 	LaidToRest
 	Soaked
 	SnowDay
+	// NG-1: arrival by drop pod, doing passion work, the difficulty's mood
+	// offset (value comes from settings; 0 hides it).
+	Landed
+	LovesWork
+	Difficulty
 	numKinds
 )
 
@@ -55,6 +60,7 @@ const (
 	groupLaidToRest
 	groupSoaked
 	groupSnowDay
+	groupLovesWork
 )
 
 // day: remembered thoughts last one in-game day.
@@ -87,6 +93,9 @@ var defs = [numKinds]Def{
 	LaidToRest:        {"laid a friend to rest", 3, day, groupLaidToRest},
 	Soaked:            {"soaked", -3, day / 4, groupSoaked},
 	SnowDay:           {"snow day", 2, day, groupSnowDay},
+	Landed:            {"rough landing", -4, day, groupNone},
+	LovesWork:         {"doing work I love", 2, 0, groupLovesWork},
+	Difficulty:        {"the way of the world", 0, 0, groupNone},
 }
 
 // DefOf returns the thought definition.

@@ -55,11 +55,13 @@ const (
 	Steel
 	Silver
 	Gold
+	// Machinery is buried machinery: mined for components (NG-1 §4.8).
+	Machinery
 	numOres
 )
 
-var oreNames = [numOres]string{"", "steel", "silver", "gold"}
-var oreLabels = [numOres]string{"", "Compacted steel", "Silver ore", "Gold ore"}
+var oreNames = [numOres]string{"", "steel", "silver", "gold", "machinery"}
+var oreLabels = [numOres]string{"", "Compacted steel", "Silver ore", "Gold ore", "Buried machinery"}
 
 func (o Ore) String() string {
 	if o >= numOres {

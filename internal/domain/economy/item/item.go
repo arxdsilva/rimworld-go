@@ -84,6 +84,10 @@ const (
 	Steel
 	Silver
 	Gold
+	// Components are salvaged or fabricated parts for advanced builds;
+	// industrial medicine is refined from herbal (NG-1 §4.8).
+	Components
+	IndustrialMedicine
 	numKinds
 )
 
@@ -94,7 +98,8 @@ var kindNames = [numKinds]string{"food", "wood", "stone", "berries", "potatoes",
 	"milk", "wool", "egg", "fertile egg", "ember oil", "wool parka", "wool carpet",
 	"sandstone chunk", "granite chunk", "limestone chunk", "slate chunk", "marble chunk",
 	"sandstone blocks", "granite blocks", "limestone blocks", "slate blocks", "marble blocks",
-	"steel", "silver", "gold"}
+	"steel", "silver", "gold",
+	"components", "industrial medicine"}
 
 // IsWeapon reports whether k can be equipped.
 func (k Kind) IsWeapon() bool { return k == Club || k == Rifle || k == Knife || k == Spear }

@@ -16,10 +16,16 @@ const (
 	// Smoothed stone (SIM-029): a worked rock wall and a worked stone floor.
 	RockSmooth
 	StoneSmooth
+	// Water and wet ground from the landing site (NG-1 §4.3); append only, saved.
+	ShallowWater // wadeable, slow, unbuildable
+	DeepWater    // impassable
+	Mud          // wet, slow-ish ground by rivers and lakes
+	Track        // packed dirt road toward the map edge
 	numTypes
 )
 
-var names = [numTypes]string{"soil", "rich_soil", "gravel", "stone", "rock", "sand", "marsh", "ice", "rock_smooth", "stone_smooth"}
+var names = [numTypes]string{"soil", "rich_soil", "gravel", "stone", "rock", "sand", "marsh", "ice", "rock_smooth", "stone_smooth",
+	"shallow_water", "deep_water", "mud", "track"}
 
 func (t Type) String() string {
 	if t >= numTypes {
@@ -29,7 +35,23 @@ func (t Type) String() string {
 }
 
 // Walkable reports whether pawns can stand on t.
-func (t Type) Walkable() bool { return !IsRockWall(t) }
+func (t Type) Walkable() bool { return !IsRockWall(t) && t != DeepWater }
+
+// IsWater reports shallow or deep water: nothing is built or dropped on it.
+func IsWater(t Type) bool { return t == ShallowWater || t == DeepWater }
+
+// Wetness is how wet the ground is in permille (dirt pickup, NG-1 §5.6).
+func (t Type) Wetness() int {
+	switch t {
+	case ShallowWater, DeepWater:
+		return 1000
+	case Mud:
+		return 800
+	case Marsh:
+		return 600
+	}
+	return 0
+}
 
 // IsRockWall reports a solid natural wall: rough or smoothed rock.
 func IsRockWall(t Type) bool { return t == Rock || t == RockSmooth }
@@ -47,6 +69,8 @@ func (t Type) Fertility() int {
 		return 60
 	case Sand:
 		return 10
+	case Mud:
+		return 70
 	default:
 		return 0
 	}
@@ -61,6 +85,12 @@ func (t Type) WalkCost() int {
 		return 130
 	case Sand:
 		return 120
+	case ShallowWater:
+		return 300
+	case Mud:
+		return 140
+	case Track:
+		return 90
 	default:
 		return 100
 	}

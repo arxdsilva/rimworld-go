@@ -196,6 +196,9 @@ Do not encode essential state by hue alone.
 
 ## 8. Terrain
 
+**NG-1 water (normative):** terrain `shallow_water` (walk 300, unbuildable), `deep_water` (impassable), `mud` (walk 140, fertility 70), `track` (dirt road, walk 90, not farmable); 4 variants each (`terrain/<type>_v0..3`), 16-mask edges for mud-over-soil and shallow-over-deep, shore-foam masks; `ebiten/water.kage` ripple + caustic glints on the presentation clock (4-frame fallback; Reduced Motion freezes it). See `NG1_NEW_GAME_PLAN.md` §4.3, §7.3.
+
+
 Initial terrain families: soil, rich soil, stony soil, sand, gravel,
 mud/marsh, shallow/deep water, ice, rough stone, constructed floors, and
 snow.
@@ -240,6 +243,9 @@ Vegetation set (family `plant`):
   pure saturated primaries.
 
 ## 10. Pawn Visual System
+
+**NG-1 builds (normative):** one parametrised rig (`families/pawn.py` `BUILDS`) gives six builds — `m_thin, m_avg, m_heavy, f_thin, f_avg, f_heavy` — for body and every apparel layer, all frames and facings; keys `pawn/<layer>_<build>_<facing>_<frame>`, the old `pawn/body_…` keys alias `m_avg`. Hair styles short, crop, bun, long, braid, shaved, curls, tail; beards short, full, moustache (males, 40 %); a grey-hair palette entry. The pawn family is atlas-packed by `cmd/atlasgen` (≤4096² pages, `assets/metadata/atlas/<family>.yaml`). Looks are domain data (`pawn/look.Look`); `look.Legacy(id)` reproduces pre-NG-1 looks. See `NG1_NEW_GAME_PLAN.md` §4.6, §7.1.
+
 
 Pawns are compositional, not one flattened sprite per colonist.
 
@@ -510,11 +516,21 @@ readability.
 Pawn portraits should initially derive from the compositional pawn
 system.
 
+### 17.1 Setup screens, font and storyteller portraits (normative, NG-1)
+
+- **Font:** Noto Sans Regular/SemiBold (OFL 1.1, embedded from `ebiten/fontdata/`); type scale Small 11, Body 13, Label 13 SemiBold, Large 16, Title 22, Huge 32; UI scale 90–130 %.
+- **Setup chrome:** centred dialog frame (≤1240×760, title 44 px, footer 56 px; Back bottom-left, forward bottom-right) over the dimmed diorama + baked starfield + a distant planet disc; widget tokens in `assets/palettes/ui.yaml` (text, fields, sliders, scrollbars, tooltips, modal dim).
+- **Storyteller busts** (`families/portrait.py`, 512×640 + 120×150 thumbnails, transparent, same stage/lighting contract): Orla Vane (late 50s, close-cropped silver hair, dispatcher's headset round the neck, quilted navy jacket with a reflective stripe, calm half-smile); Bram Holloway (60s, broad, ruddy, short white beard, knitted cardigan over an apron, steaming mug); Kestrel Quay (30s, angular, asymmetric dark hair with one shaved side, long coat with brass buttons, a card between two fingers, one raised eyebrow). Never reference RimWorld storyteller art; silhouettes, palettes and props must differ clearly.
+- **Icons:** `ui_icon/scenario_<key>` + `scenario_custom`, `passion_minor|major`, `skill_<key>`, `trait`, `factions`, `minimap`, `components`, `industrial_medicine`, `tool_cabinet`, `hospital_bed`.
+- Details: `NG1_NEW_GAME_PLAN.md` §1, §2, §7.
+
 ## 18. Factions and Overlays
 
 Factions are data-driven through emblem, accent palette, optional
 apparel palette, and optional architecture palette. Prefer shared world
 art plus faction identity layers over entirely unique asset libraries.
+
+**NG-1 factions (normative):** emblems `ui_icon/faction_<settlers|clans|drifters|freebooters|swarm|player>`, settlement icons `ui_icon/settlement_<neolithic|industrial>` tinted by the faction accent; the globe is vertex-coloured from `assets/palettes/world.yaml` (one colour per biome mixed toward `mountain_tint` by hilliness 0/12/25/40 %), rivers, dashed roads, faction-tinted settlement emblems, hover/selected tile outlines, starfield. See `NG1_NEW_GAME_PLAN.md` §2.7, §4.1, §7.3.
 
 Renderer-owned reusable overlays include selection, hover, hostile
 target, blueprint, forbidden, hunt, harvest, cut, mine, deconstruct,

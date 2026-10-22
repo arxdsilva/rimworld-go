@@ -68,12 +68,21 @@ type Gameplay struct {
 	// DevMode turns on the developer keys: ultrafast speed, single-tick
 	// stepping, debug actions, the debug log and the debug inspector.
 	DevMode bool `json:"dev_mode"`
+	// NG-1: the last new-game choices (pre-filled next time), whether a new
+	// colony starts running instead of paused, and birthday letters.
+	LastStoryteller string `json:"last_storyteller,omitempty"`
+	LastDifficulty  string `json:"last_difficulty,omitempty"`
+	LastSaveMode    string `json:"last_save_mode,omitempty"`
+	RunOnStart      bool   `json:"run_on_start,omitempty"`
+	BirthdayLetters bool   `json:"birthday_letters,omitempty"`
 }
 
 // Accessibility options.
 type Accessibility struct {
 	ReducedMotion   bool `json:"reduced_motion"`
 	ReducedFlashing bool `json:"reduced_flashing"`
+	// UIScale is the text and UI scale in percent (UIScaleMin..UIScaleMax; 0 = 100).
+	UIScale int `json:"ui_scale,omitempty"`
 }
 
 // Ranges and steps.
@@ -85,12 +94,20 @@ const (
 )
 
 // Defaults are the settings of a fresh install.
+// UI scale range (NG-1 §1.1).
+const (
+	UIScaleMin  = 90
+	UIScaleMax  = 130
+	UIScaleStep = 5
+)
+
 func Defaults() Settings {
 	return Settings{
-		Version:  SettingsVersion,
-		Audio:    Audio{Master: 80, Music: 60, Effects: 80, Ambience: 70, UI: 70, MuteUnfocused: true},
-		Graphics: Graphics{VSync: true, Effects: EffectsFull},
-		Gameplay: Gameplay{PauseOnThreat: true, AutosaveDays: 1, PanSpeed: 100},
+		Version:       SettingsVersion,
+		Audio:         Audio{Master: 80, Music: 60, Effects: 80, Ambience: 70, UI: 70, MuteUnfocused: true},
+		Graphics:      Graphics{VSync: true, Effects: EffectsFull},
+		Gameplay:      Gameplay{PauseOnThreat: true, AutosaveDays: 1, PanSpeed: 100},
+		Accessibility: Accessibility{UIScale: 100},
 	}
 }
 
@@ -114,6 +131,10 @@ func (s Settings) Normalize() Settings {
 		s.Gameplay.AutosaveDays = d.Gameplay.AutosaveDays
 	}
 	s.Gameplay.PanSpeed = snap(s.Gameplay.PanSpeed, PanSpeedMin, PanSpeedMax, PanSpeedStep)
+	if s.Accessibility.UIScale == 0 {
+		s.Accessibility.UIScale = 100
+	}
+	s.Accessibility.UIScale = snap(s.Accessibility.UIScale, UIScaleMin, UIScaleMax, UIScaleStep)
 	s.Controls = s.Controls.normalize()
 	return s
 }

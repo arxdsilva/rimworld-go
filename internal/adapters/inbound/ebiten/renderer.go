@@ -45,6 +45,10 @@ type Simulation interface {
 	// Wildlife lists the wild species on the map (the Animals tab's Wild
 	// list).
 	Wildlife() []game.WildlifeRow
+	// NG-1: the Factions window, storyteller/difficulty and a colonist's Bio.
+	Factions() []game.FactionView
+	Story() game.StoryView
+	Bio(id entity.EntityID) (game.BioView, bool)
 }
 
 var _ Simulation = (*game.Game)(nil)

@@ -93,6 +93,8 @@ assets, saves, and renderer resources initialize.
 
 ------------------------------------------------------------------------
 
+> **NG-1 (normative):** §2–§8 below are implemented per `NG1_NEW_GAME_PLAN.md` §1 (shared visual language, font, widget kit, navigation, wizard draft) and §2.1–§2.13 (every screen: layout, control ids, validation, states, tests, captures). Where this spec and the plan differ, the plan wins for these screens. Original names only: storytellers Orla Vane / Bram Holloway / Kestrel Quay; difficulties Wanderer…Merciless; scenarios Broken Hull, Ember Clan, Gilded Expedition, Bare Hands.
+
 # 2. Main Menu
 
 ## Purpose

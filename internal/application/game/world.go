@@ -428,6 +428,7 @@ var soilLabels = map[string]string{
 	"stone": "Rough stone", "rock": "Rock wall",
 	"sand": "Sand", "marsh": "Marsh", "ice": "Ice",
 	"rock_smooth": "Smoothed rock wall", "stone_smooth": "Smooth stone floor",
+	"shallow_water": "Shallow water", "deep_water": "Deep water", "mud": "Mud", "track": "Dirt track",
 }
 
 // Soils lists every ground type, indexed by the WorldView.Terrain code.

@@ -16,6 +16,9 @@ const (
 	screenOptions
 	screenLoad
 	screenCredits
+	// screenScenarioEditor is the Scenario Editor, pushed from Choose
+	// Scenario (NG-1 §2.3).
+	screenScenarioEditor
 )
 
 func (s screenID) String() string {
@@ -42,6 +45,8 @@ func (s screenID) String() string {
 		return "load"
 	case screenCredits:
 		return "credits"
+	case screenScenarioEditor:
+		return "scenario_editor"
 	default:
 		return "unknown"
 	}

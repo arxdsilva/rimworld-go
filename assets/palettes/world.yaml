@@ -1,0 +1,25 @@
+# Original rimworld-go world-map (globe) palette (NG-1 §1.2).
+# One base colour per biome, mixed toward mountain_tint by hilliness
+# (0 / 12 / 25 / 40 %). Prototyped for this project, not sampled from
+# another game. Consumed by internal/adapters/inbound/ebiten (globe.go).
+
+world.ocean_deep: "#0E2A47FF"
+world.ocean_shallow: "#1F4E79FF"
+world.lake: "#2D6A9AFF"
+world.river: "#3F86C2FF"
+world.road: "#8C7355FF"
+world.uncovered: "#121820FF"
+world.atmosphere_rim: "#4A7FD4FF"
+world.mountain_tint: "#6E6A62FF"
+world.ice_sheet: "#E6EEF2FF"
+world.sea_ice: "#CFE0EAFF"
+world.tundra: "#9AA58AFF"
+world.boreal_forest: "#3F5E46FF"
+world.cold_bog: "#5B6B4EFF"
+world.temperate_forest: "#4E7A3AFF"
+world.temperate_swamp: "#4A6B47FF"
+world.tropical_rainforest: "#2F6B2AFF"
+world.tropical_swamp: "#3C6A3AFF"
+world.arid_shrubland: "#A58E5AFF"
+world.desert: "#CDAE72FF"
+world.extreme_desert: "#DDBE86FF"
