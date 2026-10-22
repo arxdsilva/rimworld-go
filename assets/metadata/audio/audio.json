@@ -816,6 +816,20 @@
       "license": "original, made in code (CC0, this repo)"
     },
     {
+      "id": "sfx.sweep",
+      "bus": "effects",
+      "volume": 0.45,
+      "files": [
+        "sfx/sweep_0.wav",
+        "sfx/sweep_1.wav",
+        "sfx/sweep_2.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.sweep",
+      "seed": 212,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
       "id": "sfx.thunder",
       "bus": "effects",
       "volume": 0.9,

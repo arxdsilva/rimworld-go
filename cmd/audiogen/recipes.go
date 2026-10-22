@@ -110,6 +110,11 @@ var sounds = []sound{
 		{Wave: s.Pink, Dur: 0.05, LowPass: 2000, Gain: 0.4},
 	}}, 0.7},
 	{s.Recipe{ID: "sfx.wood_drop", Seed: 211, Variants: 2, Jitter: 0.08, Layers: cat(knock(0, 300, 1), knock(0.14, 260, 0.6))}, 0.7},
+	// A broom: two brushy strokes of filtered noise (SIM-021).
+	{s.Recipe{ID: "sfx.sweep", Seed: 212, Variants: 3, Jitter: 0.1, Layers: []s.Layer{
+		{Wave: s.Pink, Dur: 0.22, BandPass: 3200, BandEnd: 2400, Q: 0.6, Attack: 0.04, Decay: 0.12, Gain: 0.55},
+		{Wave: s.White, Start: 0.26, Dur: 0.16, BandPass: 4200, BandEnd: 3000, Q: 0.7, Attack: 0.03, Decay: 0.09, Gain: 0.35},
+	}}, 0.45},
 
 	// --- doors and hits
 	{s.Recipe{ID: "sfx.door_open", Seed: 301, Variants: 2, Jitter: 0.05, Layers: cat([]s.Layer{

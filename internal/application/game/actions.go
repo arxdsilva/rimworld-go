@@ -27,6 +27,7 @@ const (
 	ActionHaul        = "haul"
 	ActionHorseshoes  = "horseshoes"
 	ActionDig         = "dig"     // digging a grave
+	ActionClean       = "clean"   // sweeping a Home tile (SIM-021)
 	ActionBury        = "bury"    // filling a grave over a body
 	ActionCremate     = "cremate" // burning a body on a pyre
 
