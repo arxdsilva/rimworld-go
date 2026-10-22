@@ -288,6 +288,10 @@ func (a *App) captureUI(ui string) {
 		a.capture.pan = [][2]float64{{18, 10}, {33, 10}, {42, 18}, {16, 17}}
 		sw, sh := a.size()
 		a.renderer.centerOn(a.capture.pan[0][0], a.capture.pan[0][1], sw, sh)
+	case "zoo":
+		// the -scenario zoo pen (rows of 12 animals from (4, 3), 3 apart)
+		sw, sh := a.size()
+		a.renderer.centerOn(4+12*3/2, 3+7.5, sw, sh)
 	case "plant", "item", "pawnactions", "move", "copy":
 		// UI-011 panels: the nearest tree, ground item, colonist or
 		// building to the map centre, selected, its panel open
