@@ -20,7 +20,9 @@ on the audio device at 48 kHz, honoring the player's volume settings.
 - gain: cue vol × entry volume × `config.Gain(bus)` × `config.Gain(Master)`,
   0 when `MuteUnfocused` and the window is unfocused
 - one-shots: random non-repeating variant, pan baked into stereo bytes,
-  24-voice cap (oldest closed), finished voices reaped in `Update`
+  24-voice cap (oldest closed), finished voices reaped in `Update`;
+  OGG one-shots decode once to mono PCM (stereo is downmixed), are kept in
+  an LRU capped at 24 MiB of PCM (`oggcache.go`), and play and pan like WAVs
 - loops: per-emitter key, 0.8 s fades, WAV loops panned live (atomic pan
   read on the audio goroutine), OGG loops via `audio.NewInfiniteLoop`
 - music: 2.5 s crossfades; looping tracks repeat, others play their files

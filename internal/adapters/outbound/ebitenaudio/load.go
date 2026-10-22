@@ -23,7 +23,7 @@ func LocateAudio() (string, error) {
 
 // load reads and validates the sound list under the assets root, then
 // every file it names: WAVs decode to mono 48 kHz PCM, OGGs are kept as
-// encoded bytes (decoded per play). A file that is missing, unreadable
+// encoded bytes (one-shots decode to a cached PCM on first play; loops and music stream). A file that is missing, unreadable
 // or at another rate is logged and skipped; only a bad sound list is an
 // error. Variants keep their manifest order per kind.
 func load(root string) (audiomanifest.Manifest, map[string][][]int16, map[string][][]byte, error) {

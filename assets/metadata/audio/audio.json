@@ -66,6 +66,538 @@
       "reviewed_by": "arxdsilva"
     },
     {
+      "id": "animal.bird_large.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/group_bird_large_attack_0.ogg",
+        "sfx/animals/group_bird_large_attack_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.bird_large.attack",
+      "seed": 5061,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.bird_large.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/group_bird_large_call_0.ogg",
+        "sfx/animals/group_bird_large_call_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.bird_large.call",
+      "seed": 5060,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.bird_large.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/group_bird_large_die_0.ogg",
+        "sfx/animals/group_bird_large_die_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.bird_large.die",
+      "seed": 5063,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.bird_large.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/group_bird_large_hurt_0.ogg",
+        "sfx/animals/group_bird_large_hurt_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.bird_large.hurt",
+      "seed": 5062,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.bird_small.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/group_bird_small_attack_0.ogg",
+        "sfx/animals/group_bird_small_attack_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.bird_small.attack",
+      "seed": 5051,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.bird_small.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/group_bird_small_call_0.ogg",
+        "sfx/animals/group_bird_small_call_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.bird_small.call",
+      "seed": 5050,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.bird_small.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/group_bird_small_die_0.ogg",
+        "sfx/animals/group_bird_small_die_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.bird_small.die",
+      "seed": 5053,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.bird_small.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/group_bird_small_hurt_0.ogg",
+        "sfx/animals/group_bird_small_hurt_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.bird_small.hurt",
+      "seed": 5052,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.bovid.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/group_bovid_attack_0.ogg",
+        "sfx/animals/group_bovid_attack_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.bovid.attack",
+      "seed": 5041,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.bovid.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/group_bovid_call_0.ogg",
+        "sfx/animals/group_bovid_call_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.bovid.call",
+      "seed": 5040,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.bovid.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/group_bovid_die_0.ogg",
+        "sfx/animals/group_bovid_die_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.bovid.die",
+      "seed": 5043,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.bovid.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/group_bovid_hurt_0.ogg",
+        "sfx/animals/group_bovid_hurt_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.bovid.hurt",
+      "seed": 5042,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.burst",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/burst_0.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.burst",
+      "seed": 5099,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.canid.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/group_canid_attack_0.ogg",
+        "sfx/animals/group_canid_attack_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.canid.attack",
+      "seed": 5021,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.canid.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/group_canid_call_0.ogg",
+        "sfx/animals/group_canid_call_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.canid.call",
+      "seed": 5020,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.canid.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/group_canid_die_0.ogg",
+        "sfx/animals/group_canid_die_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.canid.die",
+      "seed": 5023,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.canid.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/group_canid_hurt_0.ogg",
+        "sfx/animals/group_canid_hurt_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.canid.hurt",
+      "seed": 5022,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.felid.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/group_felid_attack_0.ogg",
+        "sfx/animals/group_felid_attack_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.felid.attack",
+      "seed": 5031,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.felid.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/group_felid_call_0.ogg",
+        "sfx/animals/group_felid_call_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.felid.call",
+      "seed": 5030,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.felid.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/group_felid_die_0.ogg",
+        "sfx/animals/group_felid_die_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.felid.die",
+      "seed": 5033,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.felid.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/group_felid_hurt_0.ogg",
+        "sfx/animals/group_felid_hurt_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.felid.hurt",
+      "seed": 5032,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.generic.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/generic_attack_0.ogg",
+        "sfx/animals/generic_attack_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.generic.attack",
+      "seed": 5091,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.generic.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/generic_call_0.ogg",
+        "sfx/animals/generic_call_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.generic.call",
+      "seed": 5090,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.generic.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/generic_die_0.ogg",
+        "sfx/animals/generic_die_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.generic.die",
+      "seed": 5093,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.generic.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/generic_hurt_0.ogg",
+        "sfx/animals/generic_hurt_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.generic.hurt",
+      "seed": 5092,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.insect.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/group_insect_attack_0.ogg",
+        "sfx/animals/group_insect_attack_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.insect.attack",
+      "seed": 5081,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.insect.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/group_insect_call_0.ogg",
+        "sfx/animals/group_insect_call_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.insect.call",
+      "seed": 5080,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.insect.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/group_insect_die_0.ogg",
+        "sfx/animals/group_insect_die_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.insect.die",
+      "seed": 5083,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.insect.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/group_insect_hurt_0.ogg",
+        "sfx/animals/group_insect_hurt_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.insect.hurt",
+      "seed": 5082,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.large_mammal.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/group_large_mammal_attack_0.ogg",
+        "sfx/animals/group_large_mammal_attack_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.large_mammal.attack",
+      "seed": 5011,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.large_mammal.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/group_large_mammal_call_0.ogg",
+        "sfx/animals/group_large_mammal_call_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.large_mammal.call",
+      "seed": 5010,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.large_mammal.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/group_large_mammal_die_0.ogg",
+        "sfx/animals/group_large_mammal_die_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.large_mammal.die",
+      "seed": 5013,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.large_mammal.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/group_large_mammal_hurt_0.ogg",
+        "sfx/animals/group_large_mammal_hurt_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.large_mammal.hurt",
+      "seed": 5012,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.reptile.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/group_reptile_attack_0.ogg",
+        "sfx/animals/group_reptile_attack_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.reptile.attack",
+      "seed": 5071,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.reptile.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/group_reptile_call_0.ogg",
+        "sfx/animals/group_reptile_call_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.reptile.call",
+      "seed": 5070,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.reptile.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/group_reptile_die_0.ogg",
+        "sfx/animals/group_reptile_die_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.reptile.die",
+      "seed": 5073,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.reptile.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/group_reptile_hurt_0.ogg",
+        "sfx/animals/group_reptile_hurt_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.reptile.hurt",
+      "seed": 5072,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.small_mammal.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/group_small_mammal_attack_0.ogg",
+        "sfx/animals/group_small_mammal_attack_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.small_mammal.attack",
+      "seed": 5001,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.small_mammal.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/group_small_mammal_call_0.ogg",
+        "sfx/animals/group_small_mammal_call_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.small_mammal.call",
+      "seed": 5000,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.small_mammal.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/group_small_mammal_die_0.ogg",
+        "sfx/animals/group_small_mammal_die_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.small_mammal.die",
+      "seed": 5003,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "animal.small_mammal.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/group_small_mammal_hurt_0.ogg",
+        "sfx/animals/group_small_mammal_hurt_1.ogg"
+      ],
+      "source": "procedural",
+      "recipe": "animal.small_mammal.hurt",
+      "seed": 5002,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
       "id": "music.calm",
       "bus": "music",
       "volume": 0.7,

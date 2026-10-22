@@ -33,6 +33,8 @@ type Engine struct {
 	pcm     map[string][][]int16 // WAV variants, mono 48 kHz
 	ogg     map[string][][]byte  // OGG variants, encoded
 
+	oggCache *oggCache // decoded OGG one-shots (mono PCM), LRU
+
 	b       backend
 	decode  func([]byte) (io.ReadSeeker, int64, error)
 	focused func() bool
@@ -87,17 +89,18 @@ func New(assetsRoot string) (*Engine, error) {
 
 func newEngine(m audiomanifest.Manifest, pcm map[string][][]int16, ogg map[string][][]byte, b backend) *Engine {
 	e := &Engine{
-		entries: map[string]audiomanifest.Entry{},
-		pcm:     pcm,
-		ogg:     ogg,
-		b:       b,
-		decode:  decodeOGG,
-		focused: ebiten.IsFocused,
-		vol:     config.Defaults().Audio,
-		rng:     splitmix{s: 1},
-		last:    map[string]int{},
-		warned:  map[string]bool{},
-		loops:   map[string]*loopVoice{},
+		entries:  map[string]audiomanifest.Entry{},
+		pcm:      pcm,
+		ogg:      ogg,
+		oggCache: newOggCache(oggCacheLimit),
+		b:        b,
+		decode:   decodeOGG,
+		focused:  ebiten.IsFocused,
+		vol:      config.Defaults().Audio,
+		rng:      splitmix{s: 1},
+		last:     map[string]int{},
+		warned:   map[string]bool{},
+		loops:    map[string]*loopVoice{},
 	}
 	if e.pcm == nil {
 		e.pcm = map[string][][]int16{}
@@ -124,7 +127,7 @@ func (e *Engine) Play(id string, vol, pan float64) {
 	if !ok || vol <= 0 {
 		return
 	}
-	p, _, err := e.open(id, e.pick(id), false, pan)
+	p, _, err := e.openShot(id, e.pick(id), pan)
 	if err != nil {
 		e.warn(id, "%v", err)
 		return
@@ -288,6 +291,30 @@ func (e *Engine) start(t *track) {
 	p.SetVolume(e.gain(t.e.Bus, t.cur*t.e.Volume))
 	p.Play()
 	t.p = p
+}
+
+// openShot makes a one-shot voice for variant v of id. OGG variants decode
+// to mono PCM on first play and come from an LRU after that, so they pan
+// like WAVs. Loops and music go through open and stream.
+func (e *Engine) openShot(id string, v int, pan float64) (player, *loopReader, error) {
+	ov := v - len(e.pcm[id])
+	if ov < 0 {
+		return e.open(id, v, false, pan)
+	}
+	oggs := e.ogg[id]
+	if ov >= len(oggs) {
+		return nil, nil, fmt.Errorf("no variant %d", ov)
+	}
+	k := oggKey{id, ov}
+	pcm, ok := e.oggCache.get(k)
+	if !ok {
+		var err error
+		if pcm, err = monoPCM(oggs[ov], e.decode); err != nil {
+			return nil, nil, err
+		}
+		e.oggCache.put(k, pcm)
+	}
+	return e.b.fromBytes(stereoBytes(pcm, pan)), nil, nil
 }
 
 // open makes a voice for variant v of id: WAV variants come first, then

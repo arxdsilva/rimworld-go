@@ -6,6 +6,7 @@
 //
 //	audiogen [-assets assets]          render + update the sound list (make audio)
 //	audiogen -music                    compose the music to Ogg (make music; needs ffmpeg)
+//	audiogen -animals                  render the animal placeholder voices to Ogg (needs oggenc)
 //	audiogen -check                    validate the sound list against the files
 //	audiogen -loopfix in.wav out.wav   make an imported loop seamless
 //	audiogen -looping music/menu.ogg   print whether prompts.json marks it a loop
@@ -21,7 +22,10 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
+
+	"github.com/hajimehoshi/ebiten/v2/audio/vorbis"
 
 	"rimworld-go/pkg/audiomanifest"
 	"rimworld-go/pkg/sfxsynth"
@@ -34,6 +38,7 @@ const proceduralLicense = "original, made in code (CC0, this repo)"
 
 func main() {
 	assets := flag.String("assets", "assets", "assets directory")
+	animal := flag.Bool("animals", false, "render the animal placeholder voices (animal_recipes.go) and encode Ogg with oggenc")
 	check := flag.Bool("check", false, "validate the sound list against the files")
 	loopfix := flag.Bool("loopfix", false, "make the WAV loop seamless: -loopfix in.wav out.wav")
 	fade := flag.Float64("fade", 1, "-loopfix crossfade, seconds")
@@ -48,6 +53,8 @@ func main() {
 	switch {
 	case *music:
 		err = composeAll(*assets)
+	case *animal:
+		err = animals(*assets)
 	case *looping != "":
 		var p prompt
 		if p, err = promptFor(*assets, *looping); err == nil {
@@ -95,8 +102,26 @@ func fileStem(id string) string {
 	switch kind {
 	case "amb":
 		kind = "ambience"
+	case "animal":
+		return animalStem(name)
 	}
 	return kind + "/" + name
+}
+
+// animalStem places animal ids under sfx/animals: animal.canid.call ->
+// group_canid_call, animal.generic.die -> generic_die, animal.burst ->
+// burst, any other key.event -> key_event.
+func animalStem(name string) string {
+	key, event, ok := strings.Cut(name, ".")
+	switch {
+	case !ok:
+		return "sfx/animals/" + name
+	case key == "generic":
+		return "sfx/animals/generic_" + event
+	case slices.Contains(animalGroups, key):
+		return "sfx/animals/group_" + key + "_" + event
+	}
+	return "sfx/animals/" + key + "_" + event
 }
 
 func generate(assets string) (int, error) {
@@ -107,7 +132,7 @@ func generate(assets string) (int, error) {
 	}
 	keep := m.Sounds[:0]
 	for _, e := range m.Sounds {
-		if e.Source != audiomanifest.SourceProcedural {
+		if e.Source != audiomanifest.SourceProcedural || isAnimalPlaceholder(e.ID) { // -animals owns those
 			keep = append(keep, e)
 		}
 	}
@@ -188,6 +213,11 @@ func checkAll(assets string) (int, int64, error) {
 				return 0, 0, fmt.Errorf("%s: %w", e.ID, err)
 			}
 			size += st.Size()
+			if strings.HasSuffix(rel, ".ogg") {
+				if err := checkOgg(path); err != nil {
+					return 0, 0, fmt.Errorf("%s: %s: %w", e.ID, rel, err)
+				}
+			}
 			if strings.HasSuffix(rel, ".wav") {
 				f, err := os.Open(path)
 				if err != nil {
@@ -205,6 +235,25 @@ func checkAll(assets string) (int, int64, error) {
 		return 0, 0, fmt.Errorf("audio is %.1f MB, over the %d MB budget", float64(size)/(1<<20), budget>>20)
 	}
 	return len(m.Sounds), size, nil
+}
+
+// checkOgg decodes an Ogg Vorbis file and wants it to be 48 kHz.
+func checkOgg(path string) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	st, err := vorbis.DecodeWithoutResampling(f)
+	switch {
+	case err != nil:
+		return fmt.Errorf("not a decodable Ogg Vorbis file: %w", err)
+	case st.SampleRate() != sfxsynth.Rate:
+		return fmt.Errorf("Ogg must be %d Hz, is %d Hz", sfxsynth.Rate, st.SampleRate())
+	case st.Length() <= 0:
+		return errors.New("Ogg has no samples")
+	}
+	return nil
 }
 
 func loopFix(in, out string, fade float64) error {
