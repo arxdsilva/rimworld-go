@@ -21,6 +21,22 @@ from PIL import Image
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 GEN = os.path.join(ROOT, "generated", "world")
 META = os.path.join(ROOT, "metadata")
+
+
+def tint_groups():
+    """Tint group names declared under `tints:` in palettes/base.yaml."""
+    out, inside = set(), False
+    for line in open(os.path.join(ROOT, "palettes", "base.yaml"), encoding="utf-8"):
+        if not line.startswith(" "):
+            inside = line.startswith("tints:")
+            continue
+        m = re.match(r"^\s{2}(\w+):\s*\{", line)
+        if inside and m:
+            out.add(m.group(1))
+    return out
+
+
+TINT_GROUPS = tint_groups()
 PPT = 128
 ID = re.compile(r"^core:[a-z_]+/[a-z0-9_]+$")
 
@@ -74,7 +90,7 @@ def check_sprite(family, name, path):
         elif Image.open(mpth).size != img.size:
             err("%s/%s: tint mask size mismatch" % (family, name))
         g = re.search(r"group: (\w+)", md).group(1)
-        if g not in ("cloth", "skin", "hair"):
+        if g not in TINT_GROUPS:
             err("%s/%s: unknown tint group %s" % (family, name, g))
     if LIGHT:
         check_light(family, name, path, md, img)

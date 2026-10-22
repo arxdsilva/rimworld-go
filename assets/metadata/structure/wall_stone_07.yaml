@@ -15,4 +15,5 @@ shadow:
   d: 1
 autotile: wall
 mask: 7
+corners: 0
 material: stone

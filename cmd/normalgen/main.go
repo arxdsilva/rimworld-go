@@ -3,6 +3,9 @@
 // a port of spritefusion-sprite-normals (MIT, (c) 2026 Hugo Duprez); see
 // THIRD_PARTY_NOTICES.md. Tint masks, normal maps and UI art are skipped,
 // and a sprite whose normal map is newer is left alone unless -force.
+// Autotiled sprites (metadata `autotile` + `mask`) are clipped flush where
+// they join a neighbour; their silhouette is extended past those edges
+// before the bevel is computed, so joined tiles light as one surface.
 //
 //	normalgen [-dirs assets/generated/world] [-force]
 package main
@@ -11,11 +14,13 @@ import (
 	"flag"
 	"fmt"
 	"image"
+	"image/color"
 	"image/draw"
 	"image/png"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -139,7 +144,7 @@ func one(in, out string, s spritenormals.Settings) error {
 		nrgba = image.NewNRGBA(src.Bounds())
 		draw.Draw(nrgba, nrgba.Bounds(), src, src.Bounds().Min, draw.Src)
 	}
-	n, err := spritenormals.Generate(nrgba, s)
+	n, err := normalsFor(nrgba, linkedMaskOf(in), s)
 	if err != nil {
 		return err
 	}
@@ -153,4 +158,158 @@ func one(in, out string, s spritenormals.Settings) error {
 		return err
 	}
 	return w.Close()
+}
+
+// Autotile mask bits (ART spec / assets/AGENTS.md).
+const (
+	linkN = 1
+	linkE = 2
+	linkS = 4
+	linkW = 8
+)
+
+// linkedMaskOf reads the autotile mask from the sprite's metadata
+// (generated/world/<fam>/<name>.png -> metadata/<fam>/<name>.yaml); -1
+// when the sprite isn't autotiled or has no metadata.
+func linkedMaskOf(png string) int {
+	p := filepath.ToSlash(png)
+	i := strings.LastIndex(p, "/generated/world/")
+	if i < 0 {
+		return -1
+	}
+	meta := p[:i] + "/metadata/" + strings.TrimSuffix(p[i+len("/generated/world/"):], ".png") + ".yaml"
+	src, err := os.ReadFile(filepath.FromSlash(meta))
+	if err != nil {
+		return -1
+	}
+	return linkedMask(string(src))
+}
+
+// linkedMask is the top-level `mask:` of an `autotile:` sprite, else -1.
+func linkedMask(meta string) int {
+	auto, mask := false, -1
+	for _, line := range strings.Split(meta, "\n") {
+		k, v, ok := strings.Cut(line, ":")
+		if !ok || strings.HasPrefix(line, " ") {
+			continue
+		}
+		switch k {
+		case "autotile":
+			auto = true
+		case "mask":
+			if n, err := strconv.Atoi(strings.TrimSpace(v)); err == nil {
+				mask = n
+			}
+		}
+	}
+	if !auto {
+		return -1
+	}
+	return mask
+}
+
+// linkPad is how far a linked edge is extended: well past the bevel
+// radius, so the dome is flat where the tile meets its neighbour.
+const linkPad = 32
+
+// normalsFor makes the normal map of src. For an autotiled sprite (mask
+// >= 0) every linked edge's outermost opaque column/row is replicated
+// outward first, and the result cropped back to src's bounds.
+func normalsFor(src *image.NRGBA, mask int, s spritenormals.Settings) (*image.NRGBA, error) {
+	if mask <= 0 {
+		return spritenormals.Generate(src, s)
+	}
+	b := src.Bounds()
+	pad := image.NewNRGBA(image.Rect(0, 0, b.Dx()+2*linkPad, b.Dy()+2*linkPad))
+	draw.Draw(pad, image.Rect(linkPad, linkPad, linkPad+b.Dx(), linkPad+b.Dy()), src, b.Min, draw.Src)
+	extendLinked(pad, mask)
+	n, err := spritenormals.Generate(pad, s)
+	if err != nil {
+		return nil, err
+	}
+	out := image.NewNRGBA(image.Rect(0, 0, b.Dx(), b.Dy()))
+	draw.Draw(out, out.Bounds(), n, image.Pt(linkPad, linkPad), draw.Src)
+	// the extension only shaped the bevel: keep the sprite's own alpha
+	for y := 0; y < b.Dy(); y++ {
+		for x := 0; x < b.Dx(); x++ {
+			a := src.NRGBAAt(b.Min.X+x, b.Min.Y+y).A
+			c := out.NRGBAAt(x, y)
+			if a == 0 {
+				c = color.NRGBA{}
+			}
+			c.A = a
+			out.SetNRGBA(x, y, c)
+		}
+	}
+	return out, nil
+}
+
+// extendLinked copies the outermost opaque column (west/east) or row
+// (north/south) of img outward to the image edge for each linked side;
+// columns first, so rows then carry the widened shape to the corners.
+func extendLinked(img *image.NRGBA, mask int) {
+	b := img.Bounds()
+	opaque := func(x, y int) bool { return img.NRGBAAt(x, y).A > 8 }
+	colHas := func(x int) bool {
+		for y := b.Min.Y; y < b.Max.Y; y++ {
+			if opaque(x, y) {
+				return true
+			}
+		}
+		return false
+	}
+	rowHas := func(y int) bool {
+		for x := b.Min.X; x < b.Max.X; x++ {
+			if opaque(x, y) {
+				return true
+			}
+		}
+		return false
+	}
+	copyCol := func(from, to int) {
+		for y := b.Min.Y; y < b.Max.Y; y++ {
+			img.SetNRGBA(to, y, img.NRGBAAt(from, y))
+		}
+	}
+	copyRow := func(from, to int) {
+		for x := b.Min.X; x < b.Max.X; x++ {
+			img.SetNRGBA(x, to, img.NRGBAAt(x, from))
+		}
+	}
+	if mask&linkW != 0 {
+		x0 := b.Min.X
+		for x0 < b.Max.X && !colHas(x0) {
+			x0++
+		}
+		for x := b.Min.X; x < x0 && x0 < b.Max.X; x++ {
+			copyCol(x0, x)
+		}
+	}
+	if mask&linkE != 0 {
+		x1 := b.Max.X - 1
+		for x1 >= b.Min.X && !colHas(x1) {
+			x1--
+		}
+		for x := x1 + 1; x < b.Max.X && x1 >= b.Min.X; x++ {
+			copyCol(x1, x)
+		}
+	}
+	if mask&linkN != 0 {
+		y0 := b.Min.Y
+		for y0 < b.Max.Y && !rowHas(y0) {
+			y0++
+		}
+		for y := b.Min.Y; y < y0 && y0 < b.Max.Y; y++ {
+			copyRow(y0, y)
+		}
+	}
+	if mask&linkS != 0 {
+		y1 := b.Max.Y - 1
+		for y1 >= b.Min.Y && !rowHas(y1) {
+			y1--
+		}
+		for y := y1 + 1; y < b.Max.Y && y1 >= b.Min.Y; y++ {
+			copyRow(y1, y)
+		}
+	}
 }

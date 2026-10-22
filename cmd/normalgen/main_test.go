@@ -143,3 +143,72 @@ func TestSettingsScaledForDoubleResolution(t *testing.T) {
 		t.Errorf("settings = %+v", s)
 	}
 }
+
+func TestLinkedMaskFromMetadata(t *testing.T) {
+	for src, want := range map[string]int{
+		"autotile: rock\nmask: 6\ncorners: 2\n":                                                6,
+		"tint:\n  group: stone_tint\n  mask: generated/x_mask.png\nautotile: rock\nmask: 15\n": 15,
+		"mask: 0\n":         -1, // not an autotile
+		"autotile: rock\n":  -1,
+		"id: core:pawn/x\n": -1,
+	} {
+		if got := linkedMask(src); got != want {
+			t.Errorf("linkedMask(%q) = %d, want %d", src, got, want)
+		}
+	}
+}
+
+// A west-linked sprite clipped flush at its tile edge must not get a
+// bevel along that edge: the silhouette is extended past it first, so the
+// normals there match the interior, while the free east edge still bevels.
+func TestLinkedEdgeHasNoBevel(t *testing.T) {
+	img := image.NewNRGBA(image.Rect(0, 0, 64, 48))
+	for y := 8; y < 40; y++ {
+		for x := 16; x < 56; x++ { // clipped flush at x=16 (west linked)
+			img.SetNRGBA(x, y, color.NRGBA{150, 150, 150, 255})
+		}
+	}
+	plain, err := normalsFor(img, -1, settings())
+	if err != nil {
+		t.Fatal(err)
+	}
+	linked, err := normalsFor(img, 8, settings()) // W = 8
+	if err != nil {
+		t.Fatal(err)
+	}
+	if linked.Bounds() != img.Bounds() {
+		t.Fatalf("bounds %v, want %v", linked.Bounds(), img.Bounds())
+	}
+	flat := func(c color.NRGBA) bool { return c.R >= 120 && c.R <= 136 }
+	if c := plain.NRGBAAt(16, 24); flat(c) {
+		t.Fatalf("unlinked west edge should bevel, normal %v", c)
+	}
+	if c := linked.NRGBAAt(16, 24); !flat(c) {
+		t.Fatalf("linked west edge bevels: normal %v", c)
+	}
+	if c := linked.NRGBAAt(55, 24); flat(c) {
+		t.Fatalf("free east edge lost its bevel: normal %v", c)
+	}
+}
+
+// The extension is only for the bevel: the written map keeps the
+// sprite's own alpha (the validator and the lit shader rely on it).
+func TestLinkedNormalsKeepSpriteAlpha(t *testing.T) {
+	img := image.NewNRGBA(image.Rect(0, 0, 64, 48))
+	for y := 8; y < 40; y++ {
+		for x := 16; x < 56; x++ {
+			img.SetNRGBA(x, y, color.NRGBA{150, 150, 150, uint8(128 + x)})
+		}
+	}
+	n, err := normalsFor(img, 8|1, settings())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for y := 0; y < 48; y++ {
+		for x := 0; x < 64; x++ {
+			if got, want := n.NRGBAAt(x, y).A, img.NRGBAAt(x, y).A; got != want {
+				t.Fatalf("alpha at %d,%d = %d, want %d", x, y, got, want)
+			}
+		}
+	}
+}

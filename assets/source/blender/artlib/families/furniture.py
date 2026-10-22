@@ -94,6 +94,23 @@ def _workbench():
     return (2, 1), 1.05
 
 
+def _stonecutter_table():
+    # 2 x 1, worker stands on the south side. Stone slab top, blocks on a shelf, a hand saw.
+    for i, x in enumerate([0.14, 1.86]):
+        for j, y in enumerate([-0.20, -0.80]):
+            S.box("leg%d%d" % (i, j), x - 0.08, y - 0.08, 0.0, x + 0.08, y + 0.08, 0.50, "stone_neutral_dark", bevel=0.02)
+    S.box("shelf", 0.10, -0.86, 0.12, 1.90, -0.14, 0.17, "wood", bevel=0.015)
+    S.box("slab", 0.04, -0.94, 0.50, 1.96, -0.06, 0.64, "stone_neutral", bevel=0.03)
+    S.box("back", 0.06, -0.18, 0.64, 1.94, -0.06, 0.92, "wood_plank", bevel=0.03)
+    S.box("block_a", 0.22, -0.74, 0.64, 0.66, -0.34, 0.82, "stone_neutral_dark", bevel=0.025)
+    S.box("block_b", 0.30, -0.70, 0.82, 0.58, -0.40, 0.92, "stone_neutral", bevel=0.02)
+    S.box("saw_blade", 1.02, -0.70, 0.66, 1.62, -0.66, 0.78, "steel", bevel=0.005)
+    S.box("saw_grip", 1.62, -0.72, 0.66, 1.76, -0.62, 0.78, "wood", bevel=0.01)
+    S.box("chisel", 1.20, -0.46, 0.64, 1.56, -0.40, 0.68, "metal_dark", bevel=0.005)
+    S.box("dust", 0.78, -0.62, 0.64, 0.98, -0.44, 0.67, "stone_neutral", bevel=0.01)
+    return (2, 1), 0.92
+
+
 def _stove():
     # 2 x 1, the cook stands on the south side.
     S.box("body", 0.06, -0.92, 0.0, 1.94, -0.10, 0.62, "metal_dark", bevel=0.04)
@@ -575,6 +592,7 @@ BUILDERS = {
     "chair_basic": (_chair, {"attachments": {"seat": [0.5, 0.52]}}),
     "workbench_basic": (_workbench, {"attachments": {"worker": [0.5, 1.15]}}),
     "lamp_standing": (_lamp, {"emissive": "lamp_warm", "light_radius": 6}),
+    "stonecutter_table": (_stonecutter_table, {"attachments": {"worker": [0.5, 1.15]}}),
     "stove_basic": (_stove, {"attachments": {"cook": [0.25, 1.5]}}),
     "butcher_table": (_butcher_table, {"attachments": {"worker": [0.5, 1.15]}}),
     "campfire": (_campfire, {}),
@@ -601,7 +619,7 @@ BUILDERS = {
     "carpet_wool": (_carpet_wool, {"carpet": "wool", "flat": True}),
 }
 FACINGS_ONLY = {"grave_dug": ("south", "east"), "grave_filled": ("south", "east")}
-ROTATABLE = {"grave_dug", "grave_filled", "bed_basic", "bed_double", "chair_basic", "workbench_basic", "stove_basic", "butcher_table",
+ROTATABLE = {"grave_dug", "grave_filled", "bed_basic", "bed_double", "chair_basic", "workbench_basic", "stonecutter_table", "stove_basic", "butcher_table",
              "drying_rack", "tailoring_bench", "research_bench", "feeding_trough_empty", "feeding_trough_full"}
 
 

@@ -85,6 +85,7 @@ art-capture:  ## in-game screenshot of a scripted colony (real renderer)
 	$(BIN_DIR)/game -capture assets/generated/ingame_architect.png -capture-ui architect
 	$(BIN_DIR)/game -capture assets/generated/ingame_orders.png -capture-ui orders
 	$(BIN_DIR)/game -capture assets/generated/ingame_menu.png -capture-ui menu
+	$(BIN_DIR)/game -capture assets/generated/ingame_walls.png -scenario walls -capture-ticks 2 -capture-zoom 0.5
 
 .PHONY: art-preview
 art-preview:  ## contact sheet + ART §34 prototype scene

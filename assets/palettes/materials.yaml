@@ -76,7 +76,17 @@ materials:
   wool_cream:  {light: "#fbf5e4", base: "#e9dec4", shadow: "#b9ad92"}
   wool_slate:  {light: "#909aa6", base: "#6e7783", shadow: "#4b535e"}
   crystal_blue: {light: "#e8f8ff", base: "#b3ddf4", shadow: "#7aaccc"}
+  # stone (SIM-029/ART-015): rock, smoothed rock, stone walls/floors/fences,
+  # stone terrain, chunks and blocks are authored in these near-white
+  # neutrals and multiplied at draw time by the cell's stone tint
+  # (base.yaml tints.stone_tint) - no mask. Ore sprites put their rock body
+  # in stone_tint (masked) so the flecks keep their own colour.
+  stone_neutral:      {light: "#ffffff", base: "#e6e6e6", shadow: "#ababab"}
+  stone_neutral_dark: {light: "#d6d6d6", base: "#bdbdbd", shadow: "#8a8a8a"}
+  silver:      {light: "#f3f5f7", base: "#c9ced4", shadow: "#8e959d"}
+  gold:        {light: "#ffe9a0", base: "#e2b53c", shadow: "#a37b1f"}
   # neutral, tinted at runtime
+  stone_tint:  {light: "#ffffff", base: "#e6e6e6", shadow: "#ababab", tint: true}
   cloth:       {light: "#f4f4f4", base: "#d2d2d2", shadow: "#a2a2a2", tint: true}
   skin:        {light: "#f6f6f6", base: "#dadada", shadow: "#adadad", tint: true}
   hair:        {light: "#efefef", base: "#c4c4c4", shadow: "#8e8e8e", tint: true}

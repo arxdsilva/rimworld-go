@@ -17,7 +17,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 GEN = os.path.join(ROOT, "generated", "world")
 META = os.path.join(ROOT, "metadata")
 
-PREVIEW_TINT = {"cloth": "navy", "skin": "tan", "hair": "brown"}
+PREVIEW_TINT = {"cloth": "navy", "skin": "tan", "hair": "brown", "stone_tint": "granite"}
 
 
 def tints():

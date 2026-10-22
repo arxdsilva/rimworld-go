@@ -10,9 +10,10 @@ projection:
   shear_k: 0.5
 shadow:
   kind: box
-  w: 1
-  h: 0.936
+  w: 0.94
+  h: 0.805
   d: 1
 autotile: rock
 mask: 4
+corners: 0
 material: stone

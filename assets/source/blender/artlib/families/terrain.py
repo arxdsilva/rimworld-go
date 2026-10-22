@@ -79,6 +79,18 @@ def _stamp(img, rng, count, rmin, rmax, p, squash=0.8):
                 img[(d < 1.0) & (((xx - cx - ox + r * 0.3) / r) ** 2 + ((yy - cy - oy + r * 0.3) / r) ** 2 < 0.35), :3] = _soft(p, "light")
 
 
+def _joints(img, p):
+    """Smoothed floor: faint flagstone joints, periodic so the tile stays seamless."""
+    col = _soft(p, "shadow")
+    hi = _soft(p, "light")
+    for y in (0, N // 2):
+        img[y, :, :3] = col
+        img[(y + 1) % N, :, :3] = hi
+    for x, ys in ((N // 4, (0, N // 2)), (3 * N // 4, (N // 2, N))):
+        img[ys[0]:ys[1], x, :3] = col
+        img[ys[0]:ys[1], (x + 1) % N, :3] = hi
+
+
 def _cracks(img, rng, count, p, strong=False):
     for _ in range(count):
         x, y = rng.uniform(0, N, 2)
@@ -138,7 +150,9 @@ SPECS = {
     "soil":      ("soil", 4, (-0.62, 0.68), {"clods": (3, 2.0, 3.0)}),
     "soil_rich": ("soil_rich", 4, (-0.58, 0.66), {"clods": (6, 1.6, 2.6)}),
     "gravel":    ("gravel", 4, (-0.58, 0.60), {"pebbles": (18, 2.5, 4.5)}),
-    "stone":     ("stone", 4, (-0.55, 0.60), {"cracks": 2, "pebbles": (3, 3.0, 5.0)}),
+    # stone and its smoothed variant are tint-neutral: the renderer multiplies the cell's stone colour
+    "stone":     ("stone_neutral", 4, (-0.55, 0.60), {"cracks": 2, "pebbles": (3, 3.0, 5.0)}),
+    "stone_smooth": ("stone_neutral", 3, (-0.70, 0.74), {"joints": True}),
     # biome grounds
     "sand":      ("sand", 4, (-0.50, 0.55), {"ripples": 5}),
     "marsh":     ("marsh", 4, (-0.45, 0.55), {"glints": 9}),
@@ -161,6 +175,8 @@ def _tile_img(name, v):
         _stamp(img, rng, *deco["pebbles"], mats["stone"] if name == "gravel" else p)
     if "frost" in deco:
         _frost(img, rng, deco["frost"], p)
+    if "joints" in deco:
+        _joints(img, p)
     if "cracks" in deco:
         _cracks(img, rng, deco["cracks"], p, strong=(name == "ice"))
     if "glints" in deco:
@@ -186,7 +202,7 @@ def _tile(name, v):
 # Ground transitions: a higher-priority terrain draws a soft, noisy edge
 # over its lower-priority neighbours. Mask bits N=1, E=2, S=4, W=8 say
 # which sides of the lower tile touch the higher terrain.
-PRIORITY = ("soil", "soil_rich", "gravel", "stone", "sand", "marsh", "ice")
+PRIORITY = ("soil", "soil_rich", "gravel", "stone", "stone_smooth", "sand", "marsh", "ice")
 EDGE_DEPTH = 30.0   # px @2x
 EDGE_WOBBLE = 9.0
 

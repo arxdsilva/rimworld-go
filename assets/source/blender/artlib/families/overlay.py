@@ -228,6 +228,13 @@ def _g_mine(xx, yy, c):  # pick: shaft + curved head
     return np.minimum(d, head)
 
 
+def _g_smooth(xx, yy, c):  # flat trowel over a levelled surface: two level lines + a wiping stroke
+    lines = np.minimum(_seg(xx, yy, c - 20, c + 14, c + 20, c + 14), _seg(xx, yy, c - 20, c + 4, c + 6, c + 4))
+    blade = _seg(xx, yy, c - 6, c - 4, c + 18, c - 4)
+    handle = _seg(xx, yy, c + 18, c - 4, c + 22, c - 20)
+    return np.minimum(np.minimum(lines, blade), handle)
+
+
 # Zone fills carry no border: the game outlines a whole zone along its
 # outer edge only (ZONE-001), so adjacent tiles read as one area. Pattern
 # periods divide N so the fill tiles without seams.
@@ -420,6 +427,7 @@ ICONS = {
     "wall": ("structure", "wall_wood_00"),
     "door": ("structure", "door_wood_ew_closed"),
     "workbench": ("furniture", "workbench_basic_south"),
+    "stonecutter_table": ("furniture", "stonecutter_table_south"),
     "lamp": ("furniture", "lamp_standing"),
     "tree": ("plant", "tree_00"),
     "crop": ("plant", "potato_harvestable"),
@@ -665,7 +673,7 @@ def _biome_icon(key):
 def build():
     t = _base_tokens()
     out = [_selection(t), _designation("designation_cut", t, _g_cut),
-           _designation("designation_harvest", t, _g_harvest), _designation("designation_mine", t, _g_mine),
+           _designation("designation_harvest", t, _g_harvest), _designation("designation_mine", t, _g_mine), _designation("designation_smooth", t, _g_smooth),
            _designation("designation_deconstruct", t, _g_deconstruct),
            _designation("designation_hunt", t, _g_hunt),
            _designation("designation_tame", t, _g_tame), _pen_zone(t), _forbidden_marker(t),
@@ -677,6 +685,7 @@ def build():
             _badge_icon("draft", t, _g_draft, t["danger"]),
             _badge_icon("order_cut", t, _g_cut, t["designation"]),
             _badge_icon("order_mine", t, _g_mine, t["designation"]),
+            _badge_icon("order_smooth", t, _g_smooth, t["designation"]),
             _badge_icon("order_hunt", t, _g_hunt, t["danger"]),
             _badge_icon("order_tame", t, _g_tame, (0.95, 0.55, 0.62)),
             _badge_icon("zone_pen", t, _g_pen, (0.78, 0.55, 0.32)),

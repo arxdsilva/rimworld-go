@@ -15,4 +15,5 @@ shadow:
   d: 1
 autotile: wall
 mask: 9
+corners: 0
 material: wood

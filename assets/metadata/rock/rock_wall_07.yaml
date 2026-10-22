@@ -11,8 +11,9 @@ projection:
 shadow:
   kind: box
   w: 1
-  h: 0.954
+  h: 0.857
   d: 1
 autotile: rock
 mask: 7
+corners: 0
 material: stone

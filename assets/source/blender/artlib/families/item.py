@@ -43,8 +43,34 @@ def _stone():
     blocks = [(0.18, -0.74, 0.0), (0.50, -0.74, 0.0), (0.18, -0.44, 0.0), (0.34, -0.60, 0.16)]
     for k, (x, y, z) in enumerate(blocks):
         S.box("block%d" % k, x, y, z, x + 0.30, y + 0.28, z + 0.16,
-              "stone" if k != 1 else "stone_dark", bevel=0.025)
+              "stone_neutral" if k != 1 else "stone_neutral_dark", bevel=0.025)
     return S.render_asset("item", "stone_blocks", zmax=0.33, extra={"item": "stone_blocks", "stack": True})
+
+
+def _stone_chunk():
+    """A quarried chunk: same geometry as the terrain rock_chunk, tint-neutral."""
+    r = 0.30
+    S.blob("rock", 0.5, -0.52, 0.0, r, "stone_neutral", seed=11, lumps=0.25, squash=0.8)
+    S.blob("rock2", 0.5 + r * 0.9, -0.62, 0.0, r * 0.45, "stone_neutral_dark", seed=12, lumps=0.3)
+    return S.render_asset("item", "stone_chunk", zmax=r * 0.9, extra={"item": "stone_chunk", "stack": True})
+
+
+def _silver():
+    bars = [(0.20, -0.70, 0), (0.24, -0.50, 0), (0.30, -0.60, 1), (0.52, -0.62, 0)]
+    for k, (x, y, layer) in enumerate(bars):
+        z = layer * 0.08
+        w = 0.34 if k == 3 else 0.46
+        S.prism("bar%d" % k, [(x, y - 0.07), (x + w, y - 0.07), (x + w - 0.03, y + 0.07), (x + 0.03, y + 0.07)],
+                z, z + 0.08, "silver", bevel=0.012)
+    return S.render_asset("item", "silver", zmax=0.19, extra={"item": "silver", "stack": True})
+
+
+def _gold():
+    nuggets = [(0.36, -0.58, 0.0, 0.17, 3), (0.62, -0.50, 0.0, 0.14, 4), (0.52, -0.74, 0.0, 0.12, 5),
+               (0.48, -0.56, 0.12, 0.13, 6)]
+    for k, (x, y, z, r, seed) in enumerate(nuggets):
+        S.blob("nugget%d" % k, x, y, z, r, "gold", seed=seed, lumps=0.30, squash=0.8)
+    return S.render_asset("item", "gold", zmax=0.3, extra={"item": "gold", "stack": True})
 
 
 def _berries():
@@ -438,7 +464,7 @@ def _parka_wool():
 
 
 def build():
-    return [_wood(), _food(), _steel(), _stone(), _berries(), _ration(), _meat(), _meal(), _club(), _rifle_item(), _knife_item(), _spear_item(),
+    return [_wood(), _food(), _steel(), _stone(), _stone_chunk(), _silver(), _gold(), _berries(), _ration(), _meat(), _meal(), _club(), _rifle_item(), _knife_item(), _spear_item(),
             _potatoes(), _corn(), _wheat(), _beans(), _lettuce(), _radishes(), _pumpkins(),
             _leather(), _parka(), _tuque(), _duster(), _herbal_medicine(), _bones(0), _bones(1),
             _cloth_bolt(), _straw_bundle(), _milk(), _wool(), _eggs(False), _eggs(True), _ember_oil(), _parka_wool()] + [_carpet_rolled(k) for k in _ROLL]

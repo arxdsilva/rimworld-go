@@ -24,7 +24,7 @@ def _fence(mask, mat):
         post, rail, cap = "wood", "wood_plank", "wood"
         pw, rw = 0.058, 0.026
     else:
-        post, rail, cap = "stone", "stone", "stone_dark"
+        post, rail, cap = "stone_neutral", "stone_neutral", "stone_neutral_dark"
         pw, rw = 0.075, 0.04
     cx, cy = 0.5, -0.5
     S.box("post", cx - pw, cy - pw, 0.0, cx + pw, cy + pw, FH, post, bevel=0.015)

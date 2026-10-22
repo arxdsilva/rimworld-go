@@ -17,4 +17,9 @@ overlay:
 tints:
   skin:  {pale: "#f0d3be", light: "#dcb08e", tan: "#bf8a62", brown: "#8f5f3f", dark: "#5e3d29"}
   hair:  {black: "#2b2522", brown: "#5a3b26", auburn: "#8a4a2c", blond: "#d6b46e", grey: "#a7a39d"}
+  # Natural stone tints (SIM-029): the RGB values from the user-supplied
+  # rendering reference (RimWorld Core stone colours), used at the user's
+  # explicit request. Multiplies stone_neutral sprites (colour scale) and
+  # stone_tint masks.
+  stone_tint: {sandstone: "#7e685e", granite: "#695f61", limestone: "#9e9987", slate: "#464646", marble: "#848784"}
   cloth: {sand: "#cbb48c", olive: "#7a8150", navy: "#3f5170", rust: "#a2593a", slate: "#6b7480", cream: "#e3dccb", raider: "#4b2626"}

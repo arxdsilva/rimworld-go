@@ -5,6 +5,7 @@ door). 16 sprites per material; connected edges are clipped so adjacent
 tiles join without seams. Draw order must be north -> south.
 """
 from .. import stage as S
+from .linked import _variants, relevant
 
 WALL_H = 1.0
 EXT = 0.2          # geometry overshoot past connected edges (clipped away)
@@ -12,34 +13,76 @@ INSET = 0.04       # gap to the tile edge on free sides
 BITS = (("N", 1), ("E", 2), ("S", 4), ("W", 8))
 
 
-def _wall(mask, body, cap, trim):
+RIM = 0.13
+CORNER_XY = {  # corner -> (sx, sy): which tile corner (+1 east/north, -1 west/south)
+    "NE": (1, 1), "SE": (1, -1), "SW": (-1, -1), "NW": (-1, 1)}
+
+
+def _corner_range(sx, sy):
+    """x / y range of the corner INSET square, extended past the tile edge by EXT (clipped)."""
+    # reaches 0.1 into the arms so their bevels hide under the (marginally lower) corner top
+    xr = (1 - 0.1, 1 + EXT) if sx > 0 else (-EXT, 0.1)
+    yr = (-0.1, EXT) if sy > 0 else (-1 - EXT, -1 + 0.1)
+    return xr, yr
+
+
+def _wall(mask, filled, body, cap, trim, kind):
+    """Body is a plus of two boxes (centre + arms to every linked side); a
+    relevant corner is either filled (corner box to the tile corner, flat top,
+    no rim) or notched (INSET square left empty, rim L wrapped around it that
+    continues the neighbours' free-edge rims)."""
     con = {d for d, b in BITS if mask & b}
     x0 = -EXT if "W" in con else INSET
     x1 = 1 + EXT if "E" in con else 1 - INSET
     y1 = EXT if "N" in con else -INSET
     y0 = -1 - EXT if "S" in con else -1 + INSET
     top = WALL_H - 0.05
-    S.box("body", x0, y0, 0.0, x1, y1, top, body, bevel=0.02)
-    rim = 0.13
+    if con & {"E", "W"} or not con & {"N", "S"}:
+        S.box("body", x0, -1 + INSET, 0.0, x1, -INSET, top, body, bevel=0.02)
+    if con & {"N", "S"}:
+        S.box("body_v", INSET, y0, 0.0, 1 - INSET, y1, top, body, bevel=0.02)
+    rel = relevant(mask)
+    for name in rel:
+        if name in filled:
+            (cx0, cx1), (cy0, cy1) = _corner_range(*CORNER_XY[name])
+            S.box("corner_" + name, cx0, cy0, 0.0, cx1, cy1, top - 0.001, body, bevel=0.02)
     # raised rim on free edges only; connected edges stay open so runs read continuous
     if "N" not in con:
-        S.box("rim_n", x0, y1 - rim, top - 0.02, x1, y1, WALL_H, cap, bevel=0.02)
+        S.box("rim_n", x0, y1 - RIM, top - 0.02, x1, y1, WALL_H, cap, bevel=0.02)
     if "S" not in con:
-        S.box("rim_s", x0, y0, top - 0.02, x1, y0 + rim, WALL_H, cap, bevel=0.02)
+        S.box("rim_s", x0, y0, top - 0.02, x1, y0 + RIM, WALL_H, cap, bevel=0.02)
     if "W" not in con:
-        S.box("rim_w", x0, y0, top - 0.02, x0 + rim, y1, WALL_H, cap, bevel=0.02)
+        S.box("rim_w", x0, y0, top - 0.02, x0 + RIM, y1, WALL_H, cap, bevel=0.02)
     if "E" not in con:
-        S.box("rim_e", x1 - rim, y0, top - 0.02, x1, y1, WALL_H, cap, bevel=0.02)
-    if not con:
-        pass
-    if "S" not in con:  # visible front face: horizontal seams (+ block joints for stone)
+        S.box("rim_e", x1 - RIM, y0, top - 0.02, x1, y1, WALL_H, cap, bevel=0.02)
+    for name in rel:
+        if name in filled:
+            continue
+        sx, sy = CORNER_XY[name]
+        # vertical leg: along the N/S arm's side edge, reaching past the tile edge
+        xs = (1 - INSET - RIM, 1 - INSET) if sx > 0 else (INSET, INSET + RIM)
+        ys = (-1 - EXT, -1 + INSET + RIM) if sy < 0 else (-INSET - RIM, EXT)
+        S.box("rimv_" + name, xs[0], ys[0], top - 0.02, xs[1], ys[1], WALL_H, cap, bevel=0.02)
+        # horizontal leg: along the E/W arm's side edge
+        xh = (-EXT, INSET + RIM) if sx < 0 else (1 - INSET - RIM, 1 + EXT)
+        yh = (-1 + INSET, -1 + INSET + RIM) if sy < 0 else (-INSET - RIM, -INSET)
+        S.box("rimh_" + name, xh[0], yh[0], top - 0.02, xh[1], yh[1], WALL_H, cap, bevel=0.02)
+    if "S" not in con:  # visible front face: horizontal seams (+ block joints / panel rivets)
         for z in (0.30, 0.60):
             S.box("seam", x0 + 0.02, y0 - 0.012, z, x1 - 0.02, y0 + 0.01, z + 0.03, trim, bevel=0.0)
-        if body == "stone":
+        if kind == "stone":
             for i, (zl, zh) in enumerate(((0.0, 0.30), (0.33, 0.60), (0.63, WALL_H - 0.06))):
                 for xs in ((0.35, 0.72) if i % 2 == 0 else (0.18, 0.55, 0.9)):
                     if x0 < xs < x1:
                         S.box("joint", xs - 0.012, y0 - 0.012, zl, xs + 0.012, y0 + 0.01, zh, trim, bevel=0.0)
+        elif kind == "steel":
+            if x0 < 0.5 < x1:   # one panel joint per tile, riveted seams
+                S.box("joint", 0.5 - 0.014, y0 - 0.012, 0.0, 0.5 + 0.014, y0 + 0.01, WALL_H - 0.06, trim, bevel=0.0)
+            for z in (0.15, 0.45, 0.78):
+                for xs in (0.1, 0.3, 0.7, 0.9):
+                    if x0 + 0.04 < xs < x1 - 0.04:
+                        S.box("rivet", xs - 0.018, y0 - 0.02, z - 0.018, xs + 0.018, y0 + 0.01, z + 0.018,
+                              "steel", bevel=0.006)
     return con
 
 
@@ -76,8 +119,8 @@ def _floor_stone():
         for k in range(-1, 3):
             x0 = k / 2 + off
             S.box("flag", x0 + 0.018, y0 + 0.018, -0.035, x0 + 0.5 - 0.018, y1 - 0.018, 0.0,
-                  "stone" if (r + k) % 3 else "gravel", bevel=0.02)
-    S.box("under", -1, -2, -0.08, 2, 1, -0.035, "stone_dark", bevel=0.0)
+                  "stone_neutral" if (r + k) % 3 else "gravel", bevel=0.02)
+    S.box("under", -1, -2, -0.08, 2, 1, -0.035, "stone_neutral_dark", bevel=0.0)
 
 
 def _floor_wood():
@@ -108,20 +151,28 @@ def _frame():
     S.box("stack", 0.30, -0.60, 0.0, 0.70, -0.36, 0.14, "wood_plank", bevel=0.02)
 
 
+WALLS = (("wood", "wood_plank", "wood", "bark", "wood"),
+         ("stone", "stone_neutral", "stone_neutral", "stone_neutral_dark", "stone"),
+         ("steel", "steel", "steel", "metal_dark", "steel"))
+
+
 def build():
     out = []
-    for mat, body, cap, trim in (("wood", "wood_plank", "wood", "bark"), ("stone", "stone", "stone", "stone_dark")):
+    for mat, body, cap, trim, kind in WALLS:
         for mask in range(16):
-            con = _wall(mask, body, cap, trim)
-            out.append(S.render_asset("structure", "wall_%s_%02d" % (mat, mask), zmax=WALL_H,
-                                      clip=tuple(con), extra={"autotile": "wall", "mask": mask,
-                                                              "material": mat}))
-    for axis in ("ew", "ns"):
-        for open_ in (False, True):
-            con = _door(axis, open_, "wood", "wood_plank")
-            out.append(S.render_asset("structure", "door_wood_%s_%s" % (axis, "open" if open_ else "closed"),
-                                      zmax=WALL_H, clip=con,
-                                      extra={"axis": axis, "state": "open" if open_ else "closed"}))
+            for filled, suffix in _variants(mask):
+                con = _wall(mask, filled, body, cap, trim, kind)
+                bits = int(suffix[2:], 16) if suffix else 0
+                out.append(S.render_asset("structure", "wall_%s_%02d%s" % (mat, mask, suffix), zmax=WALL_H,
+                                          clip=tuple(con), extra={"autotile": "wall", "mask": mask,
+                                                                  "corners": bits, "material": mat}))
+    for mat, frame, leaf in (("wood", "wood", "wood_plank"), ("steel", "metal_dark", "steel")):
+        for axis in ("ew", "ns"):
+            for open_ in (False, True):
+                con = _door(axis, open_, frame, leaf)
+                out.append(S.render_asset("structure", "door_%s_%s_%s" % (mat, axis, "open" if open_ else "closed"),
+                                          zmax=WALL_H, clip=con,
+                                          extra={"axis": axis, "state": "open" if open_ else "closed"}))
     _floor_wood()
     out.append(S.render_asset("structure", "floor_wood", zmax=0.0, margins=(0, 0, 0, 0),
                               outline=False, shadow=False, extra={"tileable": True}))
