@@ -108,18 +108,20 @@ func main() {
 				g.Sappers(2)
 			}
 			if *scenario == "animals" {
-				// a pen with two tame animals, a wild dustbuck marked for
+				// a pen with a husky, a cow, a horse and a goat, a wild deer marked for
 				// taming, and a manhunter on its way
 				cx, cy := *width/2, *height/2
 				g.ClearPlants(cx+4, cy-6, cx+12, cy+2)
 				g.Enqueue(command.Command{Kind: command.DesignatePen, X: cx + 5, Y: cy - 5, X2: cx + 11, Y2: cy + 1})
-				if id, err := g.SpawnAnimal("ridgewolf", cx+7, cy-3); err == nil {
-					g.TameAnimal(id, "Ash")
+				for _, t := range []struct {
+					species, name string
+					x, y          int
+				}{{"husky", "Ash", cx + 7, cy - 3}, {"cow", "Clover", cx + 9, cy - 1}, {"horse", "Maple", cx + 6, cy - 1}, {"goat", "Pip", cx + 10, cy - 4}} {
+					if id, err := g.SpawnAnimal(t.species, t.x, t.y); err == nil {
+						g.TameAnimal(id, t.name)
+					}
 				}
-				if id, err := g.SpawnAnimal("dustbuck", cx+9, cy-1); err == nil {
-					g.TameAnimal(id, "Clover")
-				}
-				if _, err := g.SpawnAnimal("dustbuck", cx-6, cy-5); err == nil {
+				if _, err := g.SpawnAnimal("deer", cx-6, cy-5); err == nil {
 					g.Enqueue(command.Command{Kind: command.DesignateTame, X: cx - 6, Y: cy - 5, X2: cx - 6, Y2: cy - 5})
 				}
 			}

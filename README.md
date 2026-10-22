@@ -34,6 +34,10 @@ A RimWorld-inspired colony simulation written in Go with Ebitengine, built in pu
   </tr>
   <tr>
     <td width="50%"><img src="docs/clips/animals.webp" width="100%" alt="Tamed animals in their pen"><br><sub>Tamed animals in their pen</sub></td>
+    <td width="50%"><img src="docs/clips/zoo.webp" width="100%" alt="All 61 animal species, penned and named"><br><sub>All 61 animal species, penned and named</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/clips/shadows.webp" width="100%" alt="A colonist's own shadow from dawn to dusk: legs, clothes and tools, sharp at the feet and soft at the tip"><br><sub>A colonist's own shadow from dawn to dusk: legs, clothes and tools, sharp at the feet and soft at the tip</sub></td>
     <td width="50%"></td>
   </tr>
 </table>
@@ -72,7 +76,7 @@ Media updated 2026-10-21 · regenerate with `make media clips`
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/media/animals.webp" width="100%" alt="A pen of tamed animals; a guard wolf"><br><sub>A pen of tamed animals; a guard wolf</sub></td>
+    <td width="50%"><img src="docs/media/animals.webp" width="100%" alt="A pen of tamed animals: a husky, a cow, a horse and a goat"><br><sub>A pen of tamed animals: a husky, a cow, a horse and a goat</sub></td>
     <td width="50%"><img src="docs/media/research.webp" width="100%" alt="Research bench and the project list"><br><sub>Research bench and the project list</sub></td>
   </tr>
   <tr>
@@ -94,11 +98,11 @@ Media updated 2026-10-21 · regenerate with `make media clips`
 - Threats: raids that scale with colony wealth, sieges, sappers, winter wolf packs, and auto-pause on danger.
 - Defences and combat: sandbags, spike traps, breaching raiders, rebuilding after breaches, ranged and melee combat with floating damage numbers.
 - Health: injuries, rescue and tending, infections, herbal medicine and a healroot crop.
-- Animals: hunting, butchering, taming, pens, guard wolves and manhunters.
+- Animals: 61 species (livestock, wild grazers and predators, pets, birds, reptiles, hive insects and a rare legendary stag) that spawn by season and habitat, hunt, flee, gore and kick; hunting, butchering, taming, pens, manhunter packs and hive swarms.
 - Research: a research bench with five projects that unlock buildings and work.
 - Weather: rain, storms, snow and blizzards with wind, puddles and snow cover; rain douses outdoor fires, snow chills the air, and colonists get soaked.
 - A living world: grass, crops and trees wave in gusting wind and part around anyone walking through; trees turn in autumn and stand bare and snowy in winter.
-- Sun, moon and shadows: every sprite has a normal map, lit by a sun that rises in the east and sets in the west (lower in winter) and by a cool moon at night; soft shadows swing and stretch with it, long at dawn and dusk.
+- Sun, moon and shadows: every sprite has a normal map, lit by a sun that rises in the east and sets in the west (lower in winter) and by a cool moon at night; shadows swing and stretch with it, long at dawn and dusk. Colonists and animals cast their own animated silhouettes, sharp at the feet and soft at the tip, plus shadows away from campfires and lamps at night.
 - Roofs: colonists roof closed rooms on their own, or wherever you plan one within 6 tiles of a wall; unroofed rooms lose their heat, roofs keep rain and snow off, and unsupported roofs collapse. Press R for the roof overlay.
 - Death and burial: the dead leave bodies that rot to bones; colonists mourn, dig graves with headstones, bury their own, or cremate on a funeral pyre.
 - Sound and options: code-made sound effects that pan with the camera and fade as you zoom out, ambience for day, night and rain, and composed music for the menu, colony life and raids. Options cover volumes, fullscreen, effects detail, autosave interval, edge scrolling and reduced motion, and are saved between runs.
