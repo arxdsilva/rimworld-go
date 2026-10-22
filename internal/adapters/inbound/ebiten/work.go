@@ -25,6 +25,7 @@ var workLive = map[int]struct {
 	4:  {command.WorkConstruct, func(p game.PawnView) bool { return p.WorkConstruct }},
 	5:  {command.WorkHunt, func(p game.PawnView) bool { return p.WorkHunt }},
 	6:  {command.WorkHaul, func(p game.PawnView) bool { return p.WorkHaul }},
+	7:  {command.WorkClean, func(p game.PawnView) bool { return p.WorkClean }},
 	8:  {command.WorkResearch, func(p game.PawnView) bool { return p.WorkResearch }},
 	9:  {command.WorkMine, func(p game.PawnView) bool { return p.WorkMine }},
 	10: {command.WorkCraft, func(p game.PawnView) bool { return p.WorkCraft }},

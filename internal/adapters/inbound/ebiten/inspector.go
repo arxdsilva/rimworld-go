@@ -287,6 +287,9 @@ func (a *App) drawInspector(screen *ebiten.Image) {
 	drawLabel(screen, int(r.x)+72, int(r.y)+72, fmt.Sprintf("activity  %s", p.Activity))
 	drawLabel(screen, int(r.x)+72, int(r.y)+88, fmt.Sprintf("tile      (%d, %d)  %s", p.X, p.Y, fmtTemp(p.Temp)))
 	drawLabel(screen, int(r.x)+72, int(r.y)+104, fmt.Sprintf("weapon    %s", p.Weapon))
+	if ln := dirtyBootsLine(p); ln != "" {
+		drawLabel(screen, int(r.x)+220, int(r.y)+104, ln)
+	}
 	if a.inspectTab == "log" {
 		a.drawPawnLog(screen, p)
 		mx, my := a.currentCursor()
@@ -325,6 +328,15 @@ func (a *App) drawInspector(screen *ebiten.Image) {
 	}
 	mx, my := a.currentCursor()
 	a.drawButtons(screen, a.inspectorButtons(), mx, my)
+}
+
+// dirtyBootsLine is "Dirty boots N%" while the colonist carries dirt on
+// their boots, else "".
+func dirtyBootsLine(p game.PawnView) string {
+	if p.Dirt <= 0 {
+		return ""
+	}
+	return fmt.Sprintf("Dirty boots %d%%", p.Dirt)
 }
 
 func drawNeedBar(screen *ebiten.Image, x, y, w, h, pct int, label string) {

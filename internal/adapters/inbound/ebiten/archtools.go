@@ -1,6 +1,8 @@
 package ebiten
 
 import (
+	"strings"
+
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 )
@@ -28,6 +30,7 @@ type archTool struct {
 	build    string       // construction kind for buildables
 	cmd      command.Kind // area command for zones/orders
 	crop     string       // crop for growing zones
+	enable   bool         // area command paints (Enabled) rather than clears
 }
 
 var archCategories = []struct{ id, label string }{
@@ -60,6 +63,10 @@ var archTools = []archTool{
 		desc: "Storage area. Haulers bring food and wood here."},
 	{id: "grow", label: "Growing zone", category: "zones", icon: "zone_grow", mode: placeArea, cmd: command.DesignateGrowZone,
 		crop: "potato", desc: "Pick a crop or trees below. Colonists sow it and harvest when ripe; crops grow in daylight, faster on rich soil."},
+	{id: "home", label: "Home", category: "zones", icon: "home", mode: placeArea, cmd: command.DesignateHome, enable: true,
+		desc: "Paint the Home area: colonists sweep dirt off these tiles. It grows around new buildings."},
+	{id: "unhome", label: "Clear home", category: "zones", icon: "home_clear", mode: placeArea, cmd: command.DesignateHome,
+		desc: "Take tiles out of the Home area so colonists leave them dirty."},
 	{id: "wall", label: "Wall", category: "structure", icon: "wall", mode: placeLine, build: "wall",
 		desc: "Blocks movement. Drag to draw a line."},
 	{id: "roof", label: "Build roof", category: "structure", icon: "roof_build", mode: placeArea, cmd: command.DesignateRoof,
@@ -82,6 +89,8 @@ var archTools = []archTool{
 		desc: "Seat for a table. Q/E rotates."},
 	{id: "horseshoes", label: "Horseshoe pin", category: "furniture", icon: "horseshoe_pin", mode: placeSingle, build: "horseshoe pin",
 		desc: "A game of horseshoes: the best free-time fun, keeps colonists from getting bored."},
+	{id: "carpet", label: "Carpet", category: "furniture", icon: "carpet", mode: placeSingle, build: "carpet",
+		desc: "Wipes dirt off boots. Lay it on the tile just inside a door. Pick a carpet below."},
 	{id: "lamp", label: "Lamp", category: "furniture", icon: "lamp", mode: placeSingle, build: "lamp",
 		desc: "Lights its room at night."},
 	{id: "workbench", label: "Workbench", category: "production", icon: "workbench", mode: placeSingle, build: "workbench",
@@ -193,6 +202,9 @@ func rotateFacing(f uint8, dir int) uint8 {
 
 // buildSpriteStuff is buildSprite with a material (walls and floors).
 func buildSpriteStuff(kind, stuff, facing string, mask int, ew, open bool) string {
+	if kind == "carpet" {
+		return carpetSprite(stuff)
+	}
 	if stuff == "stone" {
 		switch kind {
 		case "wall":
@@ -202,6 +214,17 @@ func buildSpriteStuff(kind, stuff, facing string, mask int, ew, open bool) strin
 		}
 	}
 	return buildSprite(kind, facing, mask, ew, open)
+}
+
+// carpetSprite is furniture/carpet_<straw|cloth|leather|wood> for a carpet
+// material ("cloth carpet" or just "cloth"); straw when unknown.
+func carpetSprite(stuff string) string {
+	m := strings.TrimSuffix(stuff, " carpet")
+	switch m {
+	case "straw", "cloth", "leather", "wood":
+		return "furniture/carpet_" + m
+	}
+	return "furniture/carpet_straw"
 }
 
 // buildSprite is the world sprite for a building kind; neighbours only
@@ -257,6 +280,8 @@ func buildSprite(kind, facing string, mask int, ew, open bool) string {
 		return "furniture/chair_basic_" + facingOr(facing)
 	case "lamp":
 		return "furniture/lamp_standing"
+	case "carpet":
+		return carpetSprite("")
 	}
 	return ""
 }

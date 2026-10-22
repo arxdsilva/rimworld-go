@@ -447,6 +447,26 @@ func (a *App) captureUI(ui string) {
 		a.archX0, a.archY0, a.archX1, a.archY1 = cx+6, cy-2, cx+8, cy
 		x, y := at(cx+8, cy)
 		a.cursor = &[2]int{x, y}
+	case "home":
+		// the Home tool in hand, overlay on, a rectangle being dragged
+		a.openArchitect()
+		a.selectArchCategory("zones")
+		a.selectArchTool("home")
+		a.renderer.homeOverlay = true
+		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
+		a.archDrag = true
+		a.archX0, a.archY0, a.archX1, a.archY1 = cx-3, cy-2, cx+3, cy+2
+		x, y := at(cx+3, cy+2)
+		a.cursor = &[2]int{x, y}
+	case "carpet":
+		// the Carpet tool with its four material buttons, cloth picked
+		a.openArchitect()
+		a.selectArchCategory("furniture")
+		a.selectArchTool("carpet")
+		a.archStuff = "cloth carpet"
+		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
+		x, y := at(cx+1, cy+1)
+		a.cursor = &[2]int{x, y}
 	case "architect":
 		a.openArchitect()
 		a.selectArchCategory("structure")

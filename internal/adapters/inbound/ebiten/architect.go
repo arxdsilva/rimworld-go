@@ -29,7 +29,7 @@ const (
 	archCropBtnW = 62
 	archCropBtnH = 22
 	archCropRows = 3 // eight crops and the tree entry
-	archCropH    = archCropRows*(archCropBtnH+4) + 56
+	archCropH    = archCropRows*(archCropBtnH+4) + 72
 )
 
 // archCardRows is the card rows the current category needs (min 2).
@@ -123,12 +123,17 @@ func (a *App) architectButtons() []button {
 		}
 	}
 	if t, ok := toolByID(a.archTool); ok {
-		if bv, ok := buildable(t.build); ok && bv.StoneOK {
+		if bv, ok := buildable(t.build); ok && len(bv.Stuffs) > 1 {
+			// One button per material, default first; a carpet shows its four.
 			y := r.y + r.h - 28
-			for i, s := range []struct{ id, label string }{{"wood", "Wood"}, {"stone", "Stone"}} {
+			bw := float32(64)
+			if bv.Carpet {
+				bw = 62
+			}
+			for i, s := range bv.Stuffs {
 				out = append(out, button{
-					id: "arch.stuff." + s.id, label: s.label, x: r.x + 10 + float32(i)*70, y: y, w: 64, h: 22,
-					selected: a.toolStuff(t) == s.id,
+					id: "arch.stuff." + s, label: stuffLabel(s), x: r.x + 10 + float32(i)*(bw+6), y: y, w: bw, h: 22,
+					selected: a.toolStuff(t) == s,
 				})
 			}
 		}
@@ -136,12 +141,81 @@ func (a *App) architectButtons() []button {
 	return out
 }
 
-// toolStuff is the material the tool will build with.
+// stuffLabel is a material button's text: "Wood", "Stone", or the carpet's
+// material ("Cloth" for "cloth carpet") so four fit in a row.
+func stuffLabel(s string) string {
+	s = strings.TrimSuffix(s, " carpet")
+	return strings.ToUpper(s[:1]) + s[1:]
+}
+
+// toolStuff is the material the tool will build with: the player's pick
+// when the buildable offers it, else its default (first) material.
 func (a *App) toolStuff(t archTool) string {
-	if bv, ok := buildable(t.build); ok && bv.StoneOK && a.archStuff == "stone" {
-		return "stone"
+	bv, ok := buildable(t.build)
+	if !ok || len(bv.Stuffs) == 0 {
+		return "wood"
 	}
-	return "wood"
+	for _, s := range bv.Stuffs {
+		if s == a.archStuff {
+			return s
+		}
+	}
+	return bv.Stuffs[0]
+}
+
+// stuffCatch is the percent of tracked dirt a carpet of material stuff
+// wipes (0 when bv is not a carpet or the catalog lists no figure).
+func stuffCatch(bv game.BuildableView, stuff string) int {
+	for i, s := range bv.Stuffs {
+		if s == stuff && i < len(bv.Catches) {
+			return bv.Catches[i]
+		}
+	}
+	return 0
+}
+
+// archTooltipLines is the hover card for tool t with material stuff:
+// name, description, cost and work, a stock warning, and for carpets the
+// dirt it catches plus where to lay it. wood is the colony's wood.
+func archTooltipLines(t archTool, stuff string, wood int) []string {
+	lines := []string{t.label, t.desc}
+	bv, ok := buildable(t.build)
+	if !ok {
+		return lines
+	}
+	if bv.Carpet {
+		lines = append(lines, fmt.Sprintf("Cost: 1 %s · Work %d · catches %d%% of tracked dirt", stuff, bv.Work, stuffCatch(bv, stuff)))
+		return append(lines, "Tip: lay it on the tile just inside a door")
+	}
+	lines = append(lines, fmt.Sprintf("Cost: %d %s   Work: %d", bv.Wood, stuff, bv.Work))
+	if stuff == "wood" && bv.Wood > wood {
+		lines = append(lines, fmt.Sprintf("Only %d wood in the colony", wood))
+	}
+	return lines
+}
+
+// cropLines is the crop picker's stat lines for c (crops and the tree).
+func cropLines(c game.CropView) []string {
+	if c.Name == "tree" {
+		return []string{
+			fmt.Sprintf("Tree: %.1f days, %d wood per tree", c.Days, c.Yield),
+			fmt.Sprintf("rich %.1fd  gravel %.1fd  felled when grown", c.RichDays, c.GravelDay),
+		}
+	}
+	first := fmt.Sprintf("%s: %.1f days, %d %s per plant", strings.ToUpper(c.Name[:1])+c.Name[1:], c.Days, c.Yield, c.Label)
+	second := fmt.Sprintf("rich %.1fd  gravel %.1fd  food %d each", c.RichDays, c.GravelDay, c.Nutrition)
+	if !c.Food {
+		second = fmt.Sprintf("rich %.1fd  gravel %.1fd  %s, not food", c.RichDays, c.GravelDay, c.Label)
+	}
+	keeps := "keeps forever"
+	if c.ShelfDays > 0 {
+		keeps = fmt.Sprintf("keeps %.0f days", c.ShelfDays)
+	}
+	out := []string{first, second, fmt.Sprintf("frost kills below %s, %s", fmtTemp(c.FrostKill), keeps)}
+	if c.ExtraQty > 0 {
+		out = append(out, fmt.Sprintf("also +%d %s per harvest", c.ExtraQty, c.Extra))
+	}
+	return out
 }
 
 func (a *App) openArchitect() {
@@ -227,7 +301,9 @@ func (a *App) drawArchitect(screen *ebiten.Image) {
 		drawLabel(screen, int(b.x)+50, int(b.y)+10, t.label)
 		if b.disabled {
 			drawLabel(screen, int(b.x)+50, int(b.y)+30, "needs research")
-		} else if bv, ok := buildable(t.build); ok {
+		} else if bv, ok := buildable(t.build); ok && bv.Carpet {
+			drawLabel(screen, int(b.x)+50, int(b.y)+30, "1 carpet")
+		} else if ok {
 			drawLabel(screen, int(b.x)+50, int(b.y)+30, fmt.Sprintf("%d %s", bv.Wood, a.toolStuff(t)))
 		} else {
 			drawLabel(screen, int(b.x)+50, int(b.y)+30, map[placeMode]string{placeArea: "drag area"}[t.mode])
@@ -238,19 +314,9 @@ func (a *App) drawArchitect(screen *ebiten.Image) {
 		}
 	}
 	if a.archCropOpen() {
-		c := a.selectedCrop()
 		y := int(a.archCropTop(r)) + archCropRows*(archCropBtnH+4) + 2
-		if c.Name == "tree" {
-			drawLabel(screen, int(r.x)+12, y, fmt.Sprintf("Tree: %.1f days, %d wood per tree", c.Days, c.Yield))
-			drawLabel(screen, int(r.x)+12, y+16, fmt.Sprintf("rich %.1fd  gravel %.1fd  felled when grown", c.RichDays, c.GravelDay))
-		} else {
-			drawLabel(screen, int(r.x)+12, y, fmt.Sprintf("%s: %.1f days, %d %s per plant", strings.ToUpper(c.Name[:1])+c.Name[1:], c.Days, c.Yield, c.Label))
-			drawLabel(screen, int(r.x)+12, y+16, fmt.Sprintf("rich %.1fd  gravel %.1fd  food %d each", c.RichDays, c.GravelDay, c.Nutrition))
-			keeps := "keeps forever"
-			if c.ShelfDays > 0 {
-				keeps = fmt.Sprintf("keeps %.0f days", c.ShelfDays)
-			}
-			drawLabel(screen, int(r.x)+12, y+32, fmt.Sprintf("frost kills below %s, %s", fmtTemp(c.FrostKill), keeps))
+		for i, ln := range cropLines(a.selectedCrop()) {
+			drawLabel(screen, int(r.x)+12, y+i*16, ln)
 		}
 	}
 	iy := int(r.y+r.h) - archInfoH + 6
@@ -270,7 +336,7 @@ func (a *App) drawArchitect(screen *ebiten.Image) {
 			hint += "  Q/E rotate (" + facingNames[a.archFacing] + ")"
 		}
 		drawLabel(screen, int(r.x)+12, iy+16, hint)
-		if bv, ok := buildable(t.build); !ok || !bv.StoneOK {
+		if bv, ok := buildable(t.build); !ok || len(bv.Stuffs) < 2 {
 			drawLabel(screen, int(r.x)+12, iy+32, "Right-click: stop placing")
 		}
 	} else {
@@ -282,13 +348,7 @@ func (a *App) drawArchitect(screen *ebiten.Image) {
 }
 
 func (a *App) drawArchTooltip(screen *ebiten.Image, t archTool, wood, x, y int) {
-	lines := []string{t.label, t.desc}
-	if bv, ok := buildable(t.build); ok {
-		lines = append(lines, fmt.Sprintf("Cost: %d wood   Work: %d", bv.Wood, bv.Work))
-		if bv.Wood > wood {
-			lines = append(lines, fmt.Sprintf("Only %d wood in the colony", wood))
-		}
-	}
+	lines := archTooltipLines(t, a.toolStuff(t), wood)
 	w := 0
 	for _, l := range lines {
 		if len(l) > w {
@@ -397,7 +457,7 @@ func (a *App) submitArchitect() {
 		}) {
 			a.hint = "No free tiles there" // the command still goes out; the sim ignores it
 		}
-		c := command.Command{Kind: t.cmd, X: a.archX0, Y: a.archY0, X2: a.archX1, Y2: a.archY1}
+		c := command.Command{Kind: t.cmd, X: a.archX0, Y: a.archY0, X2: a.archX1, Y2: a.archY1, Enabled: t.enable}
 		if t.crop != "" {
 			c.Build, _ = game.ZoneSpeciesID(a.selectedCrop().Name)
 		}
@@ -467,10 +527,13 @@ func (a *App) presetArchTool(kind, stuff, facing string) bool {
 		a.archCat = t.category
 		a.archTool = t.id
 		a.archDrag = false
-		if bv, ok := buildable(kind); ok && bv.StoneOK && stuff == "stone" {
-			a.archStuff = "stone"
-		} else if ok && bv.StoneOK {
-			a.archStuff = "wood"
+		if bv, ok := buildable(kind); ok && len(bv.Stuffs) > 1 {
+			a.archStuff = bv.Stuffs[0]
+			for _, s := range bv.Stuffs {
+				if s == stuff {
+					a.archStuff = s
+				}
+			}
 		}
 		for i, n := range facingNames {
 			if n == facing {

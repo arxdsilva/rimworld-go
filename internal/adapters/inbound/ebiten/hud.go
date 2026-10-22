@@ -112,6 +112,7 @@ func (a *App) colonistBarButtons(sw, sh int) []button {
 func (a *App) colonyButtons(sw, sh int) []button {
 	out := a.floatButtons() // topmost first: hit-testing takes the first match
 	out = append(out, a.roofButtons(sw)...)
+	out = append(out, a.homeButtons(sw)...)
 	out = append(out, a.hudTabButtons(sw, sh)...)
 	out = append(out, a.colonistBarButtons(sw, sh)...)
 	out = append(out, a.inspectorButtons()...)
@@ -152,6 +153,7 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 	time := a.hudTimeText()
 	drawLabel(screen, sw-len(time)*7-hudPad, 10, time)
 	a.drawRoofButton(screen, sw)
+	a.drawHomeButton(screen, sw)
 
 	drawPanel(screen, 0, hudBarY(sh), float32(sw), hudBarH)
 	mx, my := a.currentCursor()
@@ -253,7 +255,7 @@ func (a *App) drawHoverRoom(screen *ebiten.Image, sh int) {
 	} else {
 		lines = append(lines, "Temperature "+fmtTemp(t))
 	}
-	for _, lbl := range []string{roomLabelAt(w, tx, ty), roofLabelAt(w, tx, ty), plantLabelAt(w, tx, ty), itemLabelAt(w, tx, ty)} {
+	for _, lbl := range []string{roomLabelAt(w, tx, ty), cleanLabelAt(w, tx, ty), homeLabelAt(w, tx, ty), roofLabelAt(w, tx, ty), plantLabelAt(w, tx, ty), itemLabelAt(w, tx, ty)} {
 		if lbl != "" {
 			lines = append(lines, lbl)
 		}
@@ -416,8 +418,10 @@ func roofToolID(id string) bool { return id == "roof" || id == "noroof" }
 // selected tool of an open Architect.
 func roofForced(archOpen bool, toolID string) bool { return archOpen && roofToolID(toolID) }
 
-// syncRoofForce keeps renderer.roofOverlayForced in step with the Architect.
+// syncRoofForce keeps renderer.roofOverlayForced (and the Home overlay's
+// forced flag) in step with the Architect.
 func (a *App) syncRoofForce() {
+	a.syncHomeForce()
 	if a.renderer != nil {
 		a.renderer.roofOverlayForced = roofForced(a.archOpen, a.archTool)
 	}
@@ -451,4 +455,96 @@ func (a *App) drawRoofToolGhost(screen *ebiten.Image, x0, y0, x1, y1 int) {
 			r.drawRoofUnsupported(screen, c[0], c[1], tile) // roof_draw.go
 		}
 	}
+}
+
+// ---------------------------------------------------------- Home overlay (SIM-021)
+
+const (
+	homeButtonID = "hud.home"
+	homeButtonW  = 48
+)
+
+// homeToolID reports id is one of the two Home Architect tools.
+func homeToolID(id string) bool { return id == "home" || id == "unhome" }
+
+// homeForced is whether the Home overlay must be forced on: a Home tool is
+// in hand.
+func homeForced(archOpen bool, toolID string) bool { return archOpen && homeToolID(toolID) }
+
+// syncHomeForce keeps renderer.homeOverlayForced in step with the Architect.
+func (a *App) syncHomeForce() {
+	if a.renderer != nil {
+		a.renderer.homeOverlayForced = homeForced(a.archOpen, a.archTool)
+	}
+}
+
+// homeShown reports the Home overlay is showing (toggle or tool held).
+func (r *Renderer) homeShown() bool { return r.homeOverlay || r.homeOverlayForced }
+
+// toggleHomeOverlayIfAny is the HUD Home button action; it tolerates a nil
+// renderer (menus).
+func (r *Renderer) toggleHomeOverlayIfAny() {
+	if r != nil {
+		r.homeOverlay = !r.homeOverlay
+	}
+}
+
+// homeButtons is the HUD Home toggle, immediately left of the Roof button.
+// Clicks route through applyClick (id homeButtonID).
+func (a *App) homeButtons(sw int) []button {
+	rb := a.roofButtons(sw)
+	if len(rb) == 0 {
+		return nil
+	}
+	return []button{{id: homeButtonID, label: "Home", x: rb[0].x - homeButtonW - hudPad/2, y: 4, w: homeButtonW, h: hudTopH - 8, selected: a.renderer.homeShown()}}
+}
+
+func (a *App) drawHomeButton(screen *ebiten.Image, sw int) {
+	mx, my := a.currentCursor()
+	for _, b := range a.homeButtons(sw) {
+		drawButton(screen, b, b.contains(mx, my))
+		if img := a.icon("home"); img != nil {
+			vector.FillRect(screen, b.x+2, b.y+2, b.w-4, b.h-4, uiBtn, false)
+			if b.selected {
+				vector.FillRect(screen, b.x+2, b.y+2, b.w-4, b.h-4, uiBtnSelected, false)
+			}
+			drawIcon(screen, img, float64(b.x)+(float64(b.w)-float64(b.h)+4)/2, float64(b.y)+2, float64(b.h)-4)
+		}
+	}
+}
+
+// homeLabelAt is "Home area" when the tile is in the Home area.
+func homeLabelAt(w game.WorldView, x, y int) string {
+	if w.TerrainW <= 0 || x < 0 || y < 0 || x >= w.TerrainW {
+		return ""
+	}
+	if i := y*w.TerrainW + x; i < len(w.Home) && w.Home[i] != 0 {
+		return "Home area"
+	}
+	return ""
+}
+
+// cleanLabelAt is the room's cleanliness ("Cleanliness: dirty (-3)") when
+// the room at the tile is not clean, else "".
+func cleanLabelAt(w game.WorldView, x, y int) string {
+	if w.TerrainW <= 0 || x < 0 || y < 0 || x >= w.TerrainW {
+		return ""
+	}
+	i := y*w.TerrainW + x
+	if i >= len(w.RoomGrid) {
+		return ""
+	}
+	id := w.RoomGrid[i]
+	if id < 0 || id >= len(w.Rooms) {
+		return ""
+	}
+	rm := w.Rooms[id]
+	if rm.Cleanliness == "" || rm.Cleanliness == "clean" {
+		return ""
+	}
+	s := "Cleanliness: " + rm.Cleanliness
+	if rm.FilthPenalty > 0 {
+		s += " (-" + strconv.Itoa(rm.FilthPenalty) + ")"
+	}
+	return s
 }

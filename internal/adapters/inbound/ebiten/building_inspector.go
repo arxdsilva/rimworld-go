@@ -69,6 +69,9 @@ func (a *App) clearBuilding() { a.hasBuilding = false }
 
 func buildingTitle(b game.BuildingView) string {
 	name := strings.ToUpper(b.Kind[:1]) + b.Kind[1:]
+	if b.Kind == "carpet" && strings.HasSuffix(b.Stuff, " carpet") {
+		return strings.ToUpper(b.Stuff[:1]) + b.Stuff[1:] // "Straw carpet"
+	}
 	if b.Stuff == "stone" {
 		name = "Stone " + b.Kind
 	}
@@ -161,6 +164,9 @@ func (a *App) drawBuildingInspector(screen *ebiten.Image) {
 	for i, ln := range graveLines(b) {
 		drawLabel(screen, int(r.x)+12, int(r.y)+46+i*18, ln)
 	}
+	if ln := carpetLine(b); ln != "" {
+		drawLabel(screen, int(r.x)+12, int(r.y)+46, ln)
+	}
 	if b.Bench {
 		drawLabel(screen, int(r.x)+12, int(r.y)+46, "Bills")
 		y := int(r.y) + 64
@@ -182,6 +188,15 @@ func (a *App) drawBuildingInspector(screen *ebiten.Image) {
 	mx, my := a.currentCursor()
 	a.drawButtons(screen, a.buildingButtons(), mx, my)
 	a.drawBuildingSelection(screen, b)
+}
+
+// carpetLine is a carpet's inspector text: the share of tracked dirt it
+// wipes off boots. "" for other buildings.
+func carpetLine(b game.BuildingView) string {
+	if b.Kind != "carpet" {
+		return ""
+	}
+	return fmt.Sprintf("Catches %d%% of tracked dirt", b.Catch)
 }
 
 // graveLines is a grave's inspector text: who lies there and the

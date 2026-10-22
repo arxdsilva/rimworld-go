@@ -28,6 +28,10 @@ var (
 		"corn": true, "wheat": true, "beans": true, "lettuce": true, "radishes": true, "pumpkins": true}
 )
 
+// isCarpetItem is a crafted carpet ("cloth carpet"), installed from the
+// Architect.
+func isCarpetItem(it game.ItemView) bool { return strings.HasSuffix(it.Kind, " carpet") }
+
 func isHumanBody(it game.ItemView) bool { return it.Kind == "human corpse" || it.Kind == "bones" }
 
 // itemCategory is the header's category word.
@@ -41,6 +45,8 @@ func itemCategory(it game.ItemView) string {
 		return "food"
 	case isHumanBody(it) || strings.HasSuffix(it.Kind, " corpse"):
 		return "body"
+	case isCarpetItem(it):
+		return "furnishing"
 	}
 	return "material"
 }
@@ -91,6 +97,10 @@ func itemLines(it game.ItemView, stored bool) []string {
 		out = append(out, "Dried")
 	case it.FreshDays >= 0:
 		out = append(out, fmt.Sprintf("Fresh for %.0f days", it.FreshDays))
+	}
+	if isCarpetItem(it) {
+		out = append(out, fmt.Sprintf("Catches %d%% of tracked dirt", it.Catch),
+			"Install from Architect > Furniture > Carpet")
 	}
 	if stored {
 		return append(out, "In a stockpile")
@@ -176,7 +186,7 @@ func (a *App) drawItemInspector(screen *ebiten.Image) {
 	r := itemRect()
 	drawPanel(screen, r.x, r.y, r.w, r.h)
 	if a.renderer.art != nil {
-		key := "ui_icon/" + it.Kind
+		key := "ui_icon/" + strings.ReplaceAll(it.Kind, " ", "_") // "cloth carpet" -> cloth_carpet
 		if !a.renderer.art.has(key) {
 			key = itemSpriteSpecies(it.Kind, it.Animal, it.X, it.Y)
 		}
