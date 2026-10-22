@@ -150,6 +150,9 @@ type PawnView struct {
 	ActTarget          entity.EntityID
 	AttackCycle        float64
 	Carrying           string
+	// CarryingAnimal is the species key of a carried animal carcass
+	// ("" otherwise), so the renderer can draw the right body.
+	CarryingAnimal string
 	HitTick            uint64
 	HitFromX, HitFromY int
 	HitDamage          int

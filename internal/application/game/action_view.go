@@ -5,6 +5,7 @@ import (
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/weapon"
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/sim/entity"
@@ -286,6 +287,11 @@ func (g *Game) fillPawnAction(pv *PawnView, id entity.EntityID, j job.Record) {
 	}
 	pv.AttackCycle = g.attackCycleOf(id, j)
 	pv.Carrying = g.carryingOf(id, j)
+	if j.Carry != 0 {
+		if st, ok := g.stacks.Get(j.Carry); ok && st.Carrier == id && st.Kind == item.CorpseAnimal {
+			pv.CarryingAnimal = animal.Species(st.Animal).String()
+		}
+	}
 	if h, ok := g.lastHit[id]; ok {
 		pv.HitTick, pv.HitFromX, pv.HitFromY, pv.HitDamage = h.Tick, h.FromX, h.FromY, h.Damage
 	}

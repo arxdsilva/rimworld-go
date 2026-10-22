@@ -271,7 +271,11 @@ func (r *Renderer) carryPose(p game.PawnView, m moveState) actionPose {
 	}
 	a.held = heldItem{set: true} // bare hands: the patient is drawn over the rescuer
 	if p.Carrying != "pawn" {
-		a.held = heldItem{set: true, key: itemSprite(p.Carrying), stance: stanceLoad}
+		key := itemSprite(p.Carrying)
+		if p.CarryingAnimal != "" { // a carcass shows its species
+			key = "item/corpse_" + p.CarryingAnimal + "_v0"
+		}
+		a.held = heldItem{set: true, key: key, stance: stanceLoad}
 	}
 	return a
 }

@@ -522,6 +522,9 @@ func (g *Game) stepAnimal(id entity.EntityID, a *animal.State, m *motionRec, fro
 	}
 }
 
+// KillAnimal kills animal id where it stands (dev and debug tools).
+func (g *Game) KillAnimal(id entity.EntityID) { g.killAnimal(id, 0) }
+
 // killerName is who did it, for a death message: "a timber wolf", or a
 // colonist's or pet's name.
 func (g *Game) killerName(id entity.EntityID) string {

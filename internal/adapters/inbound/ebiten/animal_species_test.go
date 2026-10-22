@@ -248,3 +248,56 @@ func TestBurstEmitsOnce(t *testing.T) {
 		t.Fatal("bursts are deterministic")
 	}
 }
+
+// TestWorldItemsHaveSprites: every ground item the game shows draws a real
+// sprite. Carcasses come from the read model as "<species> corpse", which
+// used to fall through to a missing key (orange squares).
+func TestWorldItemsHaveSprites(t *testing.T) {
+	root, err := LocateArt()
+	if err != nil {
+		t.Skip("generated art not present:", err)
+	}
+	c, err := loadArtCatalog(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	g := game.New(game.Config{Seed: 1, Width: 16, Height: 12})
+	for i, sp := range []string{"cobra", "capybara", "deer", "elephant", "chicken"} {
+		id, err := g.SpawnAnimal(sp, 2+i*2, 4)
+		if err != nil {
+			t.Fatal(err)
+		}
+		g.KillAnimal(id)
+	}
+	w := g.World()
+	if len(w.Items) < 5 {
+		t.Fatalf("%d items, want the 5 carcasses", len(w.Items))
+	}
+	for _, it := range w.Items {
+		if key := itemSpriteSpecies(it.Kind, it.Animal, it.X, it.Y); !c.has(key) {
+			t.Errorf("%q (animal %q) draws %q, which has no sprite", it.Kind, it.Animal, key)
+		}
+	}
+}
+
+// TestCarriedCarcassShowsItsSpecies: a hauler carrying a carcass holds that
+// species' body, not nothing.
+func TestCarriedCarcassShowsItsSpecies(t *testing.T) {
+	root, err := LocateArt()
+	if err != nil {
+		t.Skip("generated art not present:", err)
+	}
+	c, err := loadArtCatalog(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	key := "item/corpse_" + "capybara" + "_v0"
+	if !c.has(key) {
+		t.Fatalf("no %s", key)
+	}
+	p := game.PawnView{Carrying: "animal corpse", CarryingAnimal: "capybara"}
+	r := &Renderer{art: c}
+	if a := r.carryPose(p, moveState{}); a.held.key != key {
+		t.Fatalf("held %q, want %q", a.held.key, key)
+	}
+}

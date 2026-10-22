@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image/color"
 	"math"
+	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
@@ -84,11 +85,15 @@ func itemSpriteAt(kind string, x, y int) string {
 	return itemSpriteSpecies(kind, "", x, y)
 }
 
-// itemSpriteSpecies is itemSpriteAt for a stack that names its species
-// (an "animal corpse" draws item/corpse_<species>_v<0..2>; an unnamed
-// carcass draws the deer's). The former dustbuck and ridgewolf corpse
-// kinds keep their own art.
+// itemSpriteSpecies is itemSpriteAt for a stack that names its species. The
+// read model names a carcass by species ("cobra corpse", Animal "cobra"):
+// it draws item/corpse_<species>_v<0..2>; an unnamed "animal corpse" draws
+// the deer's. The former dustbuck and ridgewolf corpse kinds keep their own
+// art.
 func itemSpriteSpecies(kind, species string, x, y int) string {
+	if species != "" && strings.HasSuffix(kind, " corpse") && kind != "human corpse" {
+		return fmt.Sprintf("item/corpse_%s_v%d", species, tileHash(x, y)%3)
+	}
 	switch kind {
 	case "bones":
 		return bonesSprite(x, y)
