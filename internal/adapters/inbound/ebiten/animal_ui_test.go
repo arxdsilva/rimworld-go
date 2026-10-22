@@ -1,9 +1,10 @@
 package ebiten
 
 import (
+	"testing"
+
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
-	"testing"
 
 	"github.com/hajimehoshi/ebiten/v2"
 )

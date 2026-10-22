@@ -584,7 +584,9 @@ func (g *Game) nearestFreeStep(id entity.EntityID, from, to Position) Position {
 // Raiders never make way.
 func (g *Game) idleYieldable(id entity.EntityID) bool {
 	if a, ok := g.animals.Get(id); ok {
-		return a.Mode == animal.Wander && a.PathI >= len(a.Path) && !g.beingTamed(id)
+		// grazing or bedded-down animals step aside too, then carry on
+		calm := a.Mode == animal.Wander || a.Mode == animal.Feed || a.Mode == animal.Rest
+		return calm && a.PathI >= len(a.Path) && !g.beingTamed(id)
 	}
 	if !g.isPawn(id) || g.isRaider(id) || g.drafted(id) {
 		return false

@@ -166,6 +166,7 @@ def beetle_poses(spec):
     out["flinch1"] = Pose(ty=0.05, bz=0.01, pitch=-9, head=-14, ears=30,
                           feet={"fl": (0.05, 0.02), "fr": (0.04, 0.0), "ml": (0.03, 0), "mr": (0.03, 0.02)})
     out["flinch2"] = Pose(ty=0.025, pitch=-4, head=-6, ears=12)
+    out["rest"] = Pose(bz=0.07, head=18, feet={n: (0.0, 0.0) for n in ("fl", "fr", "ml", "mr", "hl", "hr")})
     return out
 
 
@@ -283,6 +284,7 @@ def brute_poses(spec):
     out["graze2"] = BrutePose(ty=-0.03, pitch=10, head=30, arm=0.6, jaw=10)
     out["flinch1"] = BrutePose(ty=0.05, pitch=-8, head=-12, arm=-0.6, feet={"ml": (0.04, 0.02), "mr": (0.03, 0)})
     out["flinch2"] = BrutePose(ty=0.025, pitch=-4, head=-6, arm=-0.3)
+    out["rest"] = BrutePose(bz=0.09, pitch=3, head=16, arm=-0.6)   # crouched, scythes folded in
     return out
 
 
@@ -384,6 +386,7 @@ def crawler_poses(spec):
     out["graze2"] = CrawlerPose(phase=0.5, rise=0.0, amp=0.7, jaw=0)
     out["flinch1"] = CrawlerPose(phase=1.2, rise=0.3, amp=1.7, curl=0.5, jaw=22, ty=0.04)
     out["flinch2"] = CrawlerPose(phase=0.9, rise=0.1, amp=1.3, curl=0.25, jaw=10)
+    out["rest"] = CrawlerPose(phase=0.4, rise=0.0, amp=0.35, curl=0.7, jaw=0)   # loosely curled, legs tucked
     return out
 
 

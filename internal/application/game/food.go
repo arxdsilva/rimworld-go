@@ -198,11 +198,14 @@ func Crops() []CropView {
 // ZoneSpecies lists what a growing zone can sow: the crops, then trees.
 func ZoneSpecies() []CropView {
 	out := Crops()
-	d := plant.DefOf(plant.Tree)
-	return append(out, CropView{
-		Name: d.Name, Label: "wood", Days: plant.GrowDays(plant.Tree, terrain.Soil.Fertility()),
-		GravelDay: plant.GrowDays(plant.Tree, terrain.Gravel.Fertility()),
-		RichDays:  plant.GrowDays(plant.Tree, terrain.RichSoil.Fertility()),
-		Yield:     d.Wood, Sens: d.Sens,
-	})
+	for _, s := range []plant.Species{plant.Tree, plant.Pine, plant.JungleTree} { // tree zones (SIM-023)
+		d := plant.DefOf(s)
+		out = append(out, CropView{
+			Name: d.Name, Label: "wood", Days: plant.GrowDays(s, terrain.Soil.Fertility()),
+			GravelDay: plant.GrowDays(s, terrain.Gravel.Fertility()),
+			RichDays:  plant.GrowDays(s, terrain.RichSoil.Fertility()),
+			Yield:     d.Wood, Sens: d.Sens,
+		})
+	}
+	return out
 }

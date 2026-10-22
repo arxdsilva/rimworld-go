@@ -52,13 +52,13 @@ func (g *Game) remapRoomTemps(newGrid []int, n int) []temperature.Temp {
 	out := make([]temperature.Temp, n)
 	if g.roomGrid == nil { // first build: rooms start sheltered
 		for i := range out {
-			out[i] = temperature.Indoor(now)
+			out[i] = g.climate.Indoor(now)
 		}
 		return out
 	}
 	sum := make([]int, n)
 	cnt := make([]int, n)
-	outside := int(temperature.Outdoor(now))
+	outside := int(g.climate.Outdoor(now))
 	if g.residual == nil {
 		g.residual = map[int]temperature.Temp{}
 	}
@@ -116,7 +116,7 @@ func isqrt(n int) int {
 func (g *Game) heatRooms() {
 	g.ensureRooms()
 	now := g.clock.Now()
-	outside := temperature.Outdoor(now) + temperature.IndoorBonus
+	outside := g.climate.Outdoor(now) + temperature.IndoorBonus
 	heat := make([]int, len(g.rooms))
 	for _, bid := range g.bldgIDs {
 		b, ok := g.bldgs.Get(bid)
@@ -138,7 +138,7 @@ func (g *Game) heatRooms() {
 		}
 	}
 	// breached rooms' air mixes with the outside over a few hours
-	raw := temperature.Outdoor(now)
+	raw := g.climate.Outdoor(now)
 	for i, t := range g.residual {
 		t += (raw - t) * residualLeak / 1000
 		if d := t - raw; d < 5 && d > -5 {

@@ -57,6 +57,7 @@ const (
 	logRescuedBy
 	logRescued
 	logCollapsed
+	logStarving // SIM-024: an animal's food ran out
 )
 
 // logEntry is one stored event (plain data; text is built for the view).
@@ -228,6 +229,8 @@ func logText(e logEntry) string {
 		return "Rescued " + e.Name
 	case logCollapsed:
 		return "Collapsed from exhaustion"
+	case logStarving:
+		return "Starving"
 	}
 	return ""
 }

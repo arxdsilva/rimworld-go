@@ -1,0 +1,23 @@
+# Biome ground, plants and wildlife products. Original colours.
+# Merged over materials.yaml by the palette loader (materials_*.yaml).
+version: 1
+materials:
+  sand:         {light: "#e4d3a2", base: "#d2bd86", shadow: "#b09c68"}
+  marsh:        {light: "#64704a", base: "#4c5a3c", shadow: "#36422c"}
+  marsh_water:  {light: "#8fb0b4", base: "#5f8590", shadow: "#44626d"}
+  ice:          {light: "#e8f4fa", base: "#cfe4f0", shadow: "#9fc0d6"}
+  jungle_leaf:    {light: "#58b04a", base: "#3a8f3c", shadow: "#276a2f"}
+  jungle_leaf_hi: {light: "#8ad85a", base: "#62b84a", shadow: "#3f8a38"}
+  cactus:         {light: "#7fc08a", base: "#4f9a64", shadow: "#347350"}
+  cactus_dry:     {light: "#c8c27c", base: "#a39e5c", shadow: "#79763f"}
+  cactus_bloom:   {light: "#ff9fc0", base: "#e5648f", shadow: "#a8406a"}
+  shrub_leaf:     {light: "#a2b46a", base: "#7f9150", shadow: "#5c6a3a"}
+  shrub_dry:      {light: "#d1b78a", base: "#a98f64", shadow: "#7a6544"}
+  reed:           {light: "#b6cf72", base: "#8aac4e", shadow: "#617e38"}
+  reed_head:      {light: "#9a6f4a", base: "#74502f", shadow: "#523820"}
+  milk:           {light: "#ffffff", base: "#f2f0ea", shadow: "#c9ccd6"}
+  egg_shell:      {light: "#fff6e2", base: "#ecdcb8", shadow: "#bba57c"}
+  egg_fertile:    {light: "#ffe3b8", base: "#e8b878", shadow: "#b4824a"}
+  oil_amber:      {light: "#ffc25a", base: "#e8862a", shadow: "#a8531a"}
+  carpet_wool:    {light: "#f1e6cc", base: "#dccdaa", shadow: "#b4a47e"}
+  carpet_wool_stripe: {light: "#8d8a86", base: "#6c6a68", shadow: "#4c4a49"}

@@ -196,6 +196,8 @@ func (a *App) tickCapture() {
 // each the button clicks that open it from the main menu.
 var menuCaptures = map[string][]string{
 	"menu":             nil,
+	"picker":           {"menu.newgame", "wizard.next", "wizard.next", "wizard.next"},
+	"seed":             {"menu.newgame", "wizard.next", "wizard.next"},
 	"credits":          {"menu.credits"},
 	"options":          {"menu.options"},
 	"options-graphics": {"menu.options", "options.tab.graphics"},
@@ -261,6 +263,12 @@ func (a *App) captureUI(ui string) {
 			a.renderer.cam.offsetX, a.renderer.cam.offsetY = -1e6, -1e6
 		}
 		a.renderer.clampCamera(v)
+	case "wild":
+		// the Animals tab's Wild list
+		a.workOpen, a.panelMode, a.animalsWild = true, "animals", true
+	case "inspector", "trough":
+		// the -scenario pen: an animal with needs, or the trough, selected
+		a.captureBiomeInspect(ui)
 	case "work", "schedule", "research", "animals":
 		a.workOpen, a.panelMode = true, ui
 		if ui == "schedule" {
@@ -741,4 +749,29 @@ func (a *App) captureZones(at func(tx, ty int) (int, int)) {
 	a.cursor = &[2]int{x, y}
 	sw, sh := a.size()
 	a.renderer.centerOn(float64(gx+sx)/2+1, float64(gy+sy)/2+2, sw, sh)
+}
+
+// captureBiomeInspect selects what the wildlife captures show: the first
+// tame animal (inspector) or the first feeding trough (trough), and
+// centres the camera on it.
+func (a *App) captureBiomeInspect(ui string) {
+	w := a.renderer.world()
+	sw, sh := a.size()
+	if ui == "trough" {
+		for _, b := range w.Buildings {
+			if isTrough(b) {
+				a.selectBuildingAt(b.X, b.Y)
+				a.renderer.centerOn(float64(b.X)+0.5, float64(b.Y)+0.5, sw, sh)
+				return
+			}
+		}
+		return
+	}
+	for _, an := range w.Animals {
+		if an.Tame {
+			a.selectCand(selCand{selAnimal, an.ID})
+			a.renderer.centerOn(float64(an.X)+0.5, float64(an.Y)+0.5, sw, sh)
+			return
+		}
+	}
 }

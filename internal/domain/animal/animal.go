@@ -567,6 +567,9 @@ type State struct {
 	ExitX      int    // Leave mode's map-edge exit
 	ExitY      int
 	NextDecide uint64 // next full decision (DecideEvery)
+	// Leaving: walking off the map to ExitX/ExitY (a herd over capacity,
+	// a crossing); a flee or a fight on the way returns to Leave after.
+	Leaving bool
 }
 
 // Enraged reports a manhunter at tick now.
@@ -584,10 +587,12 @@ func (s State) HP() int {
 // Dead reports whether the animal has no hit points left.
 func (s State) Dead() bool { return s.HP() <= 0 }
 
-// Hungry reports whether a predator wants to hunt.
+// Hungry reports whether a predator wants to hunt: its food is below
+// FeedStart (or, in a save from before needs, it went HungerTicks without
+// a meal).
 func (s State) Hungry() bool {
 	d := DefOf(s.Species)
-	return d.Predator && s.Hunger >= d.HungerTicks
+	return d.Predator && (s.Hunger >= d.HungerTicks || s.HasSex && s.Food < FeedStart)
 }
 
 // Step is the ticks per tile for the current mode.

@@ -6,7 +6,6 @@ import (
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/exposure"
 	"rimworld-go/internal/domain/sim/entity"
-	"rimworld-go/internal/domain/world/temperature"
 )
 
 // Clothes. Each colonist wears at most one garment per slot (body, head)
@@ -77,7 +76,7 @@ func fit(b exposure.Bands, mean int) int {
 // assignWear sends a colonist to put on a free garment that suits the
 // season better than what it has in that slot.
 func (g *Game) assignWear(id entity.EntityID) bool {
-	mean := int(temperature.DailyMean(g.clock.Now()))
+	mean := int(g.climate.DailyMean(g.clock.Now()))
 	pos, _ := g.positions.Get(id)
 	cur := fit(g.bandsOf(id), mean)
 	// take off a garment that makes the season worse (a parka in summer)

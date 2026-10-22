@@ -122,6 +122,7 @@ func (a *App) colonyButtons(sw, sh int) []button {
 	out = append(out, a.plantButtons()...)
 	out = append(out, a.itemButtons()...)
 	out = append(out, a.alertButtons(sw)...)
+	out = append(out, a.messageButtons(sw)...)
 	out = append(out, a.architectButtons()...)
 	out = append(out, a.workButtons()...)
 	return out
@@ -145,8 +146,9 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 	drawLabel(screen, x, 10, fmt.Sprintf("Stone %d", wld.Stone))
 	x += 90
 	if wld.Season != "" {
-		season := fmt.Sprintf("%s  %s outside", wld.Season, fmtTemp(wld.OutdoorTemp))
+		season := seasonText(wld)
 		drawLabel(screen, x, 10, season)
+		defer a.drawBiomeTooltip(screen, x, len(season)*6)
 		x += (len(season) + 3) * 6
 	}
 	drawWeatherLabel(screen, x, 10, wld)

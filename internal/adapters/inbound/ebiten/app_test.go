@@ -19,6 +19,7 @@ type stubSim struct {
 	steps  int
 	w, h   int
 	tick   clock.Tick
+	wild   []game.WildlifeRow
 }
 
 func (s *stubSim) Step(n int) {
@@ -34,9 +35,10 @@ func (s *stubSim) Date() clock.Date          { return clock.DateAt(s.tick) }
 func (s *stubSim) Activity() schedule.Activity {
 	return schedule.Work
 }
-func (s *stubSim) World() game.WorldView     { return game.WorldView{} }
-func (s *stubSim) Apply(command.Command)     {}
-func (s *stubSim) Enqueue(c command.Command) { s.cmds = append(s.cmds, c) }
+func (s *stubSim) World() game.WorldView        { return game.WorldView{} }
+func (s *stubSim) Wildlife() []game.WildlifeRow { return s.wild }
+func (s *stubSim) Apply(command.Command)        {}
+func (s *stubSim) Enqueue(c command.Command)    { s.cmds = append(s.cmds, c) }
 func (s *stubSim) CanPlaceAt(kind, stuff, facing string, x, y int) (bool, string) {
 	if x < 0 || y < 0 || x >= s.w || y >= s.h {
 		return false, "outside the map"
@@ -65,7 +67,7 @@ func testApp(sim Simulation) *App {
 		LoadMenuScene: func() (*menuDiorama, error) {
 			return nil, nil
 		},
-		NewSim: func() (Simulation, error) {
+		NewSim: func(NewGame) (Simulation, error) {
 			return sim, nil
 		},
 	})
@@ -360,15 +362,16 @@ func TestWorldGenerateStaysInFooter(t *testing.T) {
 		if !isFooterButton(b, a.sh) {
 			t.Fatalf("Generate at y=%v should be in the footer", b.y)
 		}
-		if !b.disabled {
-			t.Fatal("Generate should stay disabled")
+		if b.disabled {
+			t.Fatal("Generate should be enabled")
 		}
 	}
 	if !found {
 		t.Fatal("missing world.generate")
 	}
 	x, _ := bodyOrigin(a.worldGenButtons(a.sw, a.sh), a.sh)
-	if x != bodyDefaultX {
-		t.Fatalf("world gen body x=%d, want %d after Generate moved to footer", x, bodyDefaultX)
+	// the seed field and dice sit in the left rail; the copy clears them
+	if x <= bodyDefaultX+260 {
+		t.Fatalf("world gen body x=%d, want right of the seed field", x)
 	}
 }

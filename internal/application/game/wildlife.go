@@ -8,6 +8,7 @@ import (
 	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/temperature"
 )
 
@@ -24,6 +25,17 @@ type wildlifeState struct {
 	LegendaryYear int
 	// Bursts are explosive deaths of the last hour (presentation).
 	Bursts []burstStamp
+	// LastHerd is the last herd id given out (SIM-024: herds bed down,
+	// leave and migrate together); CropRaids the crops wild animals ate
+	// in the last hour (animal_needs.go).
+	LastHerd  uint32
+	CropRaids []cropRaid
+
+	// idx and food are the per-tick creature and food indexes
+	// (animal_index.go): derived, never saved.
+	idx  creatureIndex
+	food foodIndex
+	ids  []entity.EntityID // phaseAnimals' scratch copy of animalIDs
 }
 
 type burstStamp struct {
@@ -65,11 +77,10 @@ const (
 
 // Season weights in permille.
 const (
-	weightFavoured  = 3000
-	weightNormal    = 1000
-	weightShunned   = 300
-	weightAnyHab    = 600
-	domesticPermill = 150
+	weightFavoured = 3000
+	weightNormal   = 1000
+	weightShunned  = 300
+	weightAnyHab   = 600
 )
 
 // habitatWeight is how welcome one habitat is in season.
@@ -93,44 +104,42 @@ func habitatWeight(h animal.Habitat, season string) int {
 	return weightNormal
 }
 
-// wildWeight is species s's chance (permille weight) to be drawn as a
-// wild herd in season: the mean over its habitats, an any-climate
-// species at 0.6, domestic and pet species rare; never hive insects or
-// legendaries.
-func wildWeight(s animal.Species, season string) int {
+// seasonWeight is how much season favours species s (permille): the mean
+// over its habitats, an any-climate species at 0.6.
+func seasonWeight(s animal.Species, season string) int {
 	r := animal.RosterOf(s)
-	if r.HerdMin <= 0 || r.Behaviour == animal.Hive || r.Behaviour == animal.Legendary {
-		return 0
-	}
-	var w int
 	if r.Habitat == animal.HabAny {
-		w = weightAnyHab
-	} else {
-		n := 0
-		for _, h := range []animal.Habitat{animal.HabTemperate, animal.HabCold, animal.HabHot} {
-			if r.Habitat&h != 0 {
-				w += habitatWeight(h, season)
-				n++
-			}
-		}
-		if n > 0 {
-			w /= n
+		return weightAnyHab
+	}
+	w, n := 0, 0
+	for _, h := range []animal.Habitat{animal.HabTemperate, animal.HabCold, animal.HabHot} {
+		if r.Habitat&h != 0 {
+			w += habitatWeight(h, season)
+			n++
 		}
 	}
-	if r.Behaviour == animal.Domestic || r.Behaviour == animal.Pet {
-		w = w * domesticPermill / 1000
+	if n == 0 {
+		return weightNormal
 	}
-	return w
+	return w / n
 }
 
-// pickSpecies draws one species passing keep, weighted for the current
-// season; ok is false when none qualifies.
+// wildWeight is species s's chance to be drawn as a wild herd in biome b
+// in season: how common it is there (animal.Weight; 0 for domestic, pet,
+// event and hive animals and for species of other biomes) times the
+// season's welcome.
+func wildWeight(s animal.Species, b biome.ID, season string) int {
+	return animal.Weight(s, b) * seasonWeight(s, season)
+}
+
+// pickSpecies draws one species of the map's biome passing keep, weighted
+// for the current season; ok is false when none qualifies.
 func (g *Game) pickSpecies(keep func(animal.Species) bool) (animal.Species, bool) {
 	season := temperature.Season(g.clock.Now())
 	total := 0
 	for _, s := range animal.All() {
 		if keep(s) {
-			total += wildWeight(s, season)
+			total += wildWeight(s, g.biome, season)
 		}
 	}
 	if total <= 0 {
@@ -141,7 +150,7 @@ func (g *Game) pickSpecies(keep func(animal.Species) bool) (animal.Species, bool
 		if !keep(s) {
 			continue
 		}
-		if roll -= wildWeight(s, season); roll < 0 {
+		if roll -= wildWeight(s, g.biome, season); roll < 0 {
 			return s, true
 		}
 	}
@@ -160,16 +169,36 @@ func (g *Game) herdSizeOf(s animal.Species) int {
 	return r.HerdMin + g.rng.IntN(r.HerdMax-r.HerdMin+1)
 }
 
-// spawnHerd places n animals of s around (x, y).
+// spawnHerd places n wild animals of s around (x, y) as one herd: each
+// with a random sex, an age from 0.2 to 0.8 of its lifespan (at least one
+// grown), and food and rest between 60 and 100 percent.
 func (g *Game) spawnHerd(s animal.Species, x, y, n int) []entity.EntityID {
 	var out []entity.EntityID
+	g.wl.LastHerd++
+	herd := g.wl.LastHerd
+	life := animal.LifeOf(s)
+	now := uint64(g.clock.Now())
 	for i := 0; i < n; i++ {
 		for try := 0; try < 12; try++ {
 			hx, hy := x+g.rng.IntN(5)-2, y+g.rng.IntN(5)-2
-			if id, err := g.spawnAnimal(s, hx, hy); err == nil {
-				out = append(out, id)
-				break
+			id, err := g.spawnAnimal(s, hx, hy)
+			if err != nil {
+				continue
 			}
+			a, _ := g.animals.Get(id)
+			lo, hi := life.LifeDays*2/10, life.LifeDays*8/10
+			days := lo + g.rng.IntN(max(hi-lo, 0)+1)
+			if i == 0 {
+				days = max(days, life.AdultDays) // a herd has a grown leader
+			}
+			a.Born = animal.BornAt(now, uint64(days)*clock.TicksPerDay)
+			a.Female = g.rng.IntN(2) == 0
+			a.Food = animal.Full * (60 + g.rng.IntN(41)) / 100
+			a.Rest = animal.Full * (60 + g.rng.IntN(41)) / 100
+			a.Herd = herd
+			g.animals.Set(id, a)
+			out = append(out, id)
+			break
 		}
 	}
 	return out
@@ -303,22 +332,19 @@ func (g *Game) legendaryVisit(now uint64, roll int) {
 // legendaryRadius to the same fight.
 func (g *Game) rallyLegendaries(id entity.EntityID, who entity.EntityID, now uint64) {
 	pos, _ := g.positions.Get(id)
-	for _, aid := range g.animalIDs {
+	g.within(pos.X, pos.Y, legendaryRadius, ckAnimal, func(aid entity.EntityID, _ Position) {
 		if aid == id {
-			continue
+			return
 		}
 		o, ok := g.animals.Get(aid)
 		if !ok || o.Tame || o.Enraged(now) || !animal.DefOf(o.Species).Legendary {
-			continue
-		}
-		if p, _ := g.positions.Get(aid); chebyshev(pos, p) > legendaryRadius {
-			continue
+			return
 		}
 		o.Manhunter = now + animal.ManhunterTicks
 		o.Mode, o.Target, o.TameMark, o.FleeUntil, o.Path, o.PathI = animal.Attack, who, false, 0, nil, 0
 		g.animals.Set(aid, o)
 		g.logEvent(aid, logEntry{Kind: logManhunter, Other: who})
-	}
+	})
 }
 
 func chebyshev(a, b Position) int {
@@ -340,15 +366,12 @@ func (g *Game) burst(s animal.Species, pos Position) {
 	g.wl.Bursts = append(g.wl.Bursts, burstStamp{X: pos.X, Y: pos.Y, Tick: now, Species: s})
 	g.message(pos.X, pos.Y, "The %s burst into flames!", s.Label())
 	var hit []entity.EntityID
-	for _, list := range [][]entity.EntityID{g.pawnIDs, g.raiderIDs, g.animalIDs} {
-		for _, id := range list {
-			if p, ok := g.positions.Get(id); ok && chebyshev(pos, p) <= 1 {
-				hit = append(hit, id)
-			}
-		}
-	}
+	g.within(pos.X, pos.Y, 1, ckAll, func(id entity.EntityID, _ Position) { hit = append(hit, id) })
 	for _, id := range hit {
-		p, _ := g.positions.Get(id)
+		p, ok := g.positions.Get(id)
+		if !ok {
+			continue // a chained burst already took it
+		}
 		dmg := burstDamage
 		if p.X != pos.X && p.Y != pos.Y {
 			dmg -= burstFalloff
@@ -379,21 +402,37 @@ func (g *Game) fillWildlifeView(w *WorldView) {
 	}
 }
 
-// dropCorpse leaves a carcass of s at (x, y), stacking with its species.
-func (g *Game) dropCorpse(s animal.Species, x, y int) {
+// dropCorpse leaves a carcass of s at (x, y), stacking with its species,
+// and returns the stack it lies in (0: none).
+func (g *Game) dropCorpse(s animal.Species, x, y int) entity.EntityID {
 	sid, err := g.SpawnStack(item.CorpseAnimal, 1, x, y)
 	if err != nil {
-		return
+		return 0
 	}
 	st, _ := g.stacks.Get(sid)
 	st.Animal = uint8(s)
 	g.mergeOrSet(sid, st)
+	if _, ok := g.stacks.Get(sid); ok {
+		return sid
+	}
+	for _, id := range g.itemIDs { // merged into the carcasses already there
+		if o, ok := g.stacks.Get(id); ok && o.Carrier == 0 && o.X == x && o.Y == y && o.Kind == item.CorpseAnimal && o.Animal == uint8(s) {
+			return id
+		}
+	}
+	return 0
 }
 
 // afterLoadAnimals converts an older save: dustbuck and ridgewolf
 // corpses become deer and timber wolf corpses, and their butcher bills
 // one butcher-animal bill per bench.
 func (g *Game) afterLoadAnimals() {
+	for _, id := range g.animalIDs { // SIM-024: fed, rested, sexed
+		if a, ok := g.animals.Get(id); ok && (!a.HasSex || a.Hunger != 0) {
+			a.Normalise(uint64(id))
+			g.animals.Set(id, a)
+		}
+	}
 	for _, id := range g.itemIDs {
 		if st, ok := g.stacks.Get(id); ok {
 			if c, conv := item.ConvertLegacy(st); conv {

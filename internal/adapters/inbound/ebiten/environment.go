@@ -429,7 +429,7 @@ func (e *envState) indexTrees(w game.WorldView, now uint64) {
 	}
 	clear(e.trees)
 	for _, p := range w.Plants {
-		if p.Species == "tree" {
+		if isTreePlant(p.Species) {
 			e.trees[envTileKey(p.X, p.Y)] = true
 		}
 	}
@@ -591,6 +591,7 @@ func buildPlantKeys() plantKeyTable {
 			t.fallback[b+"_harvestable"] = []string{legacy + "_harvestable"}
 		}
 	}
+	addBiomePlantFallbacks(&t)
 	return t
 }
 

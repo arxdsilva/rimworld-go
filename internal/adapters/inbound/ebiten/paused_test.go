@@ -2,8 +2,9 @@ package ebiten
 
 import (
 	"fmt"
-	"rimworld-go/internal/application/game"
 	"testing"
+
+	"rimworld-go/internal/application/game"
 
 	"rimworld-go/internal/domain/sim/command"
 )

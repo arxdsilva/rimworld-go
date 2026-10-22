@@ -13,6 +13,7 @@ import (
 	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/temperature"
 )
 
@@ -39,69 +40,85 @@ func speciesOf(g *Game) []animal.Species {
 
 func onlyHabitat(s animal.Species, h animal.Habitat) bool { return animal.RosterOf(s).Habitat == h }
 
+// SIM-024 changed this test: start wildlife now comes from the biome's
+// species (animal.Weight), so no single biome has both cold-only and
+// hot-only animals to compare. The season still weighs within a biome:
+// boreal cold-climate animals are drawn more in winter, arid hot-climate
+// ones more in summer.
 func TestStartWildlifeBySeason(t *testing.T) {
 	cold, hot := map[string]int{}, map[string]int{}
 	for _, season := range []string{"Winter", "Summer"} {
 		day := seasonDay(t, season, 1)
-		for seed := uint64(1); seed <= 40; seed++ {
-			g := New(Config{Seed: seed, Width: 60, Height: 60})
-			jumpTo(g, day, 12)
-			g.spawnWildlife()
-			preds, grazers := 0, 0
-			for _, s := range speciesOf(g) {
-				d := animal.DefOf(s)
-				if d.Hive || d.Legendary {
-					t.Fatalf("%s at colony start", s)
+		for _, b := range []biome.ID{biome.BorealForest, biome.AridShrubland} {
+			for seed := uint64(1); seed <= 40; seed++ {
+				g := New(Config{Seed: seed, Width: 60, Height: 60, Biome: b})
+				jumpTo(g, day, 12)
+				g.spawnWildlife()
+				preds, grazers := 0, 0
+				for _, s := range speciesOf(g) {
+					d := animal.DefOf(s)
+					if d.Hive || d.Legendary {
+						t.Fatalf("%s at colony start", s)
+					}
+					if animal.Weight(s, b) == 0 {
+						t.Fatalf("%s is not wild in %v", s, b)
+					}
+					if d.Predator {
+						preds++
+					} else {
+						grazers++
+					}
+					switch {
+					case onlyHabitat(s, animal.HabCold):
+						cold[season]++
+					case onlyHabitat(s, animal.HabHot):
+						hot[season]++
+					}
 				}
-				if d.Predator {
-					preds++
-				} else {
-					grazers++
+				if preds == 0 || grazers == 0 {
+					t.Fatalf("seed %d %s %v: %d predators, %d grazers", seed, season, b, preds, grazers)
 				}
-				switch {
-				case onlyHabitat(s, animal.HabCold):
-					cold[season]++
-				case onlyHabitat(s, animal.HabHot):
-					hot[season]++
-				}
-			}
-			if preds == 0 || grazers == 0 {
-				t.Fatalf("seed %d %s: %d predators, %d grazers", seed, season, preds, grazers)
 			}
 		}
 	}
-	if cold["Winter"] <= hot["Winter"] || hot["Summer"] <= cold["Summer"] || cold["Winter"] <= cold["Summer"] {
+	if cold["Winter"] <= cold["Summer"] || hot["Summer"] <= hot["Winter"] {
 		t.Fatalf("season weighting: cold %v, hot %v", cold, hot)
 	}
 }
 
+// SIM-024 changed this test: the season factor is seasonWeight; wildWeight
+// multiplies it by the biome's commonality (domestic and pet species are
+// never wild now instead of rare).
 func TestWildlifeWeights(t *testing.T) {
 	t.Parallel()
-	if w := wildWeight(animal.Caribou, "Winter"); w != 3000 {
+	if w := seasonWeight(animal.Caribou, "Winter"); w != 3000 {
 		t.Errorf("cold species in winter %d", w)
 	}
-	if w := wildWeight(animal.Caribou, "Summer"); w != 300 {
+	if w := seasonWeight(animal.Caribou, "Summer"); w != 300 {
 		t.Errorf("cold species in summer %d", w)
 	}
-	if w := wildWeight(animal.Gazelle, "Summer"); w != 3000 {
+	if w := seasonWeight(animal.Gazelle, "Summer"); w != 3000 {
 		t.Errorf("hot species in summer %d", w)
 	}
-	if w := wildWeight(animal.Deer, "Winter"); w != 1000 {
+	if w := seasonWeight(animal.Deer, "Winter"); w != 1000 {
 		t.Errorf("temperate %d", w)
 	}
-	if w := wildWeight(animal.Rat, "Summer"); w != 600 {
+	if w := seasonWeight(animal.Rat, "Summer"); w != 600 {
 		t.Errorf("any-habitat %d", w)
 	}
-	if w := wildWeight(animal.Cow, "Spring"); w != 150 {
-		t.Errorf("domestic %d", w)
-	}
-	if w := wildWeight(animal.Ibex, "Winter"); w != 2000 { // cold|temperate: the mean
+	if w := seasonWeight(animal.Ibex, "Winter"); w != 2000 { // cold|temperate: the mean
 		t.Errorf("mixed habitat %d", w)
 	}
-	for _, s := range []animal.Species{animal.HiveBeetle, animal.Glimmerstag} {
-		if wildWeight(s, "Spring") != 0 {
+	if w := wildWeight(animal.Deer, biome.TemperateForest, "Winter"); w != animal.Weight(animal.Deer, biome.TemperateForest)*1000 {
+		t.Errorf("deer in a temperate winter %d", w)
+	}
+	for _, s := range []animal.Species{animal.HiveBeetle, animal.Glimmerstag, animal.Cow, animal.Husky} {
+		if wildWeight(s, biome.TemperateForest, "Spring") != 0 {
 			t.Errorf("%s never spawns wild", s)
 		}
+	}
+	if wildWeight(animal.Caribou, biome.TemperateForest, "Winter") != 0 {
+		t.Error("caribou are not temperate forest wildlife")
 	}
 }
 

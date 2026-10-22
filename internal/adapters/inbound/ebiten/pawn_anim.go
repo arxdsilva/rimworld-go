@@ -367,9 +367,14 @@ func (r *Renderer) drawCarried(screen *ebiten.Image, q game.PawnView, f facing, 
 
 // drawSnore floats small "z"s up and away from a sleeper's head.
 func (r *Renderer) drawSnore(screen *ebiten.Image, p game.PawnView, hx, hy, tile float64) {
+	r.drawSnoreFor(screen, uint64(p.ID), hx, hy, tile)
+}
+
+// drawSnoreFor is drawSnore for any sleeper (a colonist or an animal).
+func (r *Renderer) drawSnoreFor(screen *ebiten.Image, id uint64, hx, hy, tile float64) {
 	const period = 75
 	for i := 0; i < 3; i++ {
-		t := float64((r.present+uint64(p.ID)*29+uint64(i*period/3))%period) / period
+		t := float64((r.present+id*29+uint64(i*period/3))%period) / period
 		size := tile * (0.07 + 0.06*t)
 		x := hx + 0.18 + 0.28*t + 0.04*math.Sin(t*6)
 		y := hy - 0.25 - 0.55*t

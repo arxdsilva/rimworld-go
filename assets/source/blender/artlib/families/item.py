@@ -336,6 +336,7 @@ _ROLL = {
     "cloth": ("carpet_cloth", "carpet_cloth_stripe", "carpet_cloth_edge", "straw"),
     "leather": ("carpet_leather", "carpet_leather_edge", "carpet_leather_edge", "straw"),
     "wood": ("carpet_wood", "carpet_wood_alt", "carpet_wood_edge", "leather"),
+    "wool": ("carpet_wool", "carpet_wool_stripe", "carpet_wool_stripe", "straw"),
 }
 
 
@@ -363,6 +364,9 @@ def _carpet_rolled(kind):
         for k in range(6):
             S.cyl("weave%d" % k, 0, 0, r + 0.004, ln * (0.1 + 0.15 * k), ln * (0.1 + 0.15 * k) + 0.03, ring,
                   segs=20, bevel=0.0)
+    elif kind == "wool":  # dark stripe bands round the roll
+        for k, t in enumerate((0.1, 0.84)):
+            S.cyl("stripe%d" % k, 0, 0, r + 0.005, ln * t, ln * t + 0.05, ring, segs=20, bevel=0.0)
     else:                 # darker hide wrapping round near each end
         for k, t in enumerate((0.04, 0.9)):
             S.cyl("wrap%d" % k, 0, 0, r + 0.004, ln * t, ln * t + 0.05, ring, segs=20, bevel=0.0)
@@ -374,8 +378,67 @@ def _carpet_rolled(kind):
                           extra={"item": "%s carpet" % kind, "stack": True})
 
 
+# --- wildlife products (biome / animal husbandry) ---------------------------
+
+def _milk():
+    """A wooden pail brimming with milk, with a ceramic jug beside it."""
+    S.cyl("pail", 0.40, -0.52, 0.20, 0.0, 0.26, "wood", r_top=0.24, segs=18)
+    S.cyl("hoop", 0.40, -0.52, 0.215, 0.10, 0.14, "bark", segs=18, bevel=0.0)
+    S.cyl("milk", 0.40, -0.52, 0.215, 0.24, 0.265, "milk", segs=18, bevel=0.0)
+    S.cyl("jug", 0.70, -0.40, 0.10, 0.0, 0.26, "ceramic", r_top=0.07, segs=14)
+    S.cyl("neck", 0.70, -0.40, 0.055, 0.25, 0.32, "ceramic", segs=12)
+    S.cyl("jugmilk", 0.70, -0.40, 0.045, 0.31, 0.325, "milk", segs=12, bevel=0.0)
+    return S.render_asset("item", "milk", zmax=0.36, extra={"item": "milk", "stack": True})
+
+
+def _wool():
+    """Two soft fleece bundles, tied with twine. Neutral cream: the renderer
+    tints it per species."""
+    for k, (x, y, z, r, sd) in enumerate([(0.38, -0.54, 0.0, 0.22, 301), (0.62, -0.50, 0.0, 0.2, 302),
+                                          (0.50, -0.56, 0.16, 0.18, 303), (0.30, -0.40, 0.02, 0.12, 304)]):
+        S.blob("fleece%d" % k, x, y, z, r, "wool_cream", seed=sd, lumps=0.3, squash=0.7)
+    S.box("twine", 0.30, -0.54, 0.10, 0.70, -0.50, 0.14, "straw", bevel=0.01)
+    return S.render_asset("item", "wool", zmax=0.34, extra={"item": "wool", "stack": True})
+
+
+def _eggs(fertile):
+    """A straw nest with three eggs; fertile ones are warmer, with a dark speck."""
+    S.cyl("nest", 0.5, -0.52, 0.27, 0.0, 0.07, "straw", r_top=0.30, segs=18)
+    S.cyl("nest_in", 0.5, -0.52, 0.17, 0.06, 0.075, "burlap", segs=16, bevel=0.0)
+    mat = "egg_fertile" if fertile else "egg_shell"
+    for k, (x, y) in enumerate([(0.41, -0.48), (0.60, -0.48), (0.50, -0.64)]):
+        S.ellipsoid("egg%d" % k, x, y, 0.17, 0.1, 0.1, 0.13, mat, segs=14, rings=9)
+        if fertile:
+            S.ellipsoid("speck%d" % k, x - 0.03, y - 0.06, 0.2, 0.018, 0.012, 0.018, "wood", segs=6, rings=4)
+    return S.render_asset("item", "fertile_egg" if fertile else "egg", zmax=0.32,
+                          extra={"item": "fertile egg" if fertile else "egg", "stack": True})
+
+
+def _ember_oil():
+    """A stoppered glass flask of glowing amber oil."""
+    S.ellipsoid("flask", 0.5, -0.52, 0.17, 0.18, 0.18, 0.17, "oil_amber", segs=16, rings=10)
+    S.ellipsoid("glow", 0.5, -0.56, 0.2, 0.1, 0.07, 0.09, "gland_ember", segs=12, rings=8)
+    S.ellipsoid("glint", 0.40, -0.66, 0.26, 0.04, 0.02, 0.05, "glass", segs=8, rings=5)
+    S.cyl("neck", 0.5, -0.52, 0.06, 0.28, 0.42, "oil_amber", segs=12)
+    S.cyl("cork", 0.5, -0.52, 0.055, 0.42, 0.5, "wood", segs=10, bevel=0.005)
+    S.box("label", 0.34, -0.71, 0.1, 0.66, -0.69, 0.2, "ceramic", bevel=0.004)
+    return S.render_asset("item", "ember_oil", zmax=0.52, extra={"item": "ember oil", "stack": True,
+                                                                "emissive": "gland_ember"})
+
+
+def _parka_wool():
+    """A folded wool parka: cream knit with grey trim and a woolly ruff."""
+    S.box("body", 0.18, -0.78, 0.0, 0.82, -0.30, 0.12, "carpet_wool", bevel=0.05, segments=2)
+    S.box("fold", 0.22, -0.74, 0.12, 0.78, -0.40, 0.18, "carpet_wool", bevel=0.04)
+    S.box("stripe", 0.18, -0.58, 0.0, 0.82, -0.52, 0.125, "carpet_wool_stripe", bevel=0.02)
+    S.ellipsoid("hood", 0.50, -0.30, 0.14, 0.22, 0.10, 0.08, "wool_cream", segs=14, rings=8)
+    for k, x in enumerate([0.36, 0.50, 0.64]):
+        S.cyl("toggle%d" % k, x, -0.64, 0.018, 0.17, 0.20, "wood", segs=8, bevel=0.0)
+    return S.render_asset("item", "parka_wool", zmax=0.24, extra={"item": "wool parka"})
+
+
 def build():
     return [_wood(), _food(), _steel(), _stone(), _berries(), _ration(), _meat(), _meal(), _club(), _rifle_item(), _knife_item(), _spear_item(),
             _potatoes(), _corn(), _wheat(), _beans(), _lettuce(), _radishes(), _pumpkins(),
             _leather(), _parka(), _tuque(), _duster(), _herbal_medicine(), _bones(0), _bones(1),
-            _cloth_bolt(), _straw_bundle()] + [_carpet_rolled(k) for k in _ROLL]
+            _cloth_bolt(), _straw_bundle(), _milk(), _wool(), _eggs(False), _eggs(True), _ember_oil(), _parka_wool()] + [_carpet_rolled(k) for k in _ROLL]

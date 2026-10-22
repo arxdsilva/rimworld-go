@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
+
 	"rimworld-go/internal/domain/animal"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -18,6 +20,7 @@ import (
 	"rimworld-go/internal/domain/pawn/mentalbreak"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
+	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/weather"
 )
 
@@ -33,11 +36,12 @@ func main() {
 	capture := flag.String("capture", "", "dev: save one colony frame to this PNG and exit")
 	captureTicks := flag.Int("capture-ticks", 5400, "dev: simulation ticks to run before -capture")
 	captureZoom := flag.Float64("capture-zoom", 1, "dev: camera zoom for -capture")
-	scenario := flag.String("scenario", "", "dev: start scenario: rescue (a colonist starts badly hurt) | beds (sleeping spots in the other facings) | double (a double bed by the start) | corridor (two colonists meet head-on in a 1-wide corridor) | crowd (every colonist sent into a room with one door) | armory (armed, drafted colonists against a mixed raid) | chores (cutting, mining and tending by the start) | lategame (a grown colony in autumn rain, raid incoming) | rain (a fall storm) | snow (winter snowfall) | burial (a graveyard, a pyre and two bodies) | roofs (winter: a roofed room, an unroofed one, a roofed porch, a yard too big to roof) | sunny (a clear summer day from before dawn) | zoo (all 61 animal species, tamed and named, in a pen; use -width 80 -height 60)")
+	scenario := flag.String("scenario", "", "dev: start scenario: pen (a pen with a feeding trough, tame animals and wild ones about) | rescue (a colonist starts badly hurt) | beds (sleeping spots in the other facings) | double (a double bed by the start) | corridor (two colonists meet head-on in a 1-wide corridor) | crowd (every colonist sent into a room with one door) | armory (armed, drafted colonists against a mixed raid) | chores (cutting, mining and tending by the start) | lategame (a grown colony in autumn rain, raid incoming) | rain (a fall storm) | snow (winter snowfall) | burial (a graveyard, a pyre and two bodies) | roofs (winter: a roofed room, an unroofed one, a roofed porch, a yard too big to roof) | sunny (a clear summer day from before dawn) | zoo (all 61 animal species, tamed and named, in a pen; use -width 80 -height 60)")
+	biomeKey := flag.String("biome", "temperate_forest", "dev: biome of the map: "+biomeKeys()+" (also the landing picker's starting choice)")
 	hour := flag.Int("hour", -1, "dev: jump to this hour (0-23) of the scenario's day, or the next day's if past")
 	captureFrames := flag.Int("capture-frames", 0, "dev: record this many consecutive frames (PATH_NNN.png) instead of one still")
 	captureSpeed := flag.Int("capture-speed", 1, "dev: game speed (1-3) while recording -capture-frames")
-	captureUI := flag.String("capture-ui", "", "dev: UI state for -capture: architect | orders | bills | pawn | combat | melee | follow | grow | corridor | crowd | lategame | weather | grass | burial | roofs | roofs-overlay | home | carpet | plant | item | pawnactions | paused-stockpile | move | copy | menu | credits | options | options-graphics | options-gameplay | options-access | zones | paths | log | zoo")
+	captureUI := flag.String("capture-ui", "", "dev: UI state for -capture: picker | wild | trough | inspector | architect | orders | bills | pawn | combat | melee | follow | grow | corridor | crowd | lategame | weather | grass | burial | roofs | roofs-overlay | home | carpet | plant | item | pawnactions | paused-stockpile | move | copy | menu | credits | options | options-graphics | options-gameplay | options-access | zones | paths | log | zoo")
 	captureTimelapse := flag.Int("capture-timelapse", 0, "dev: with -capture-frames, step this many sim ticks per recorded frame (a time-lapse)")
 	noAudio := flag.Bool("noaudio", false, "dev: run without sound")
 	flag.Parse()
@@ -47,18 +51,31 @@ func main() {
 		shot = &uiadapter.Capture{Path: *capture, Ticks: *captureTicks, Zoom: *captureZoom, UI: *captureUI, Frames: *captureFrames, Speed: *captureSpeed, Timelapse: *captureTimelapse}
 	}
 
+	biomeID, ok := biome.Parse(*biomeKey)
+	if !ok {
+		log.Fatalf("unknown -biome %q (one of: %s)", *biomeKey, biomeKeys())
+	}
+	seedSet := false
+	flag.Visit(func(f *flag.Flag) { seedSet = seedSet || f.Name == "seed" })
+	defaultSeed := uint64(0) // the wizard rolls a random seed
+	if seedSet || shot != nil {
+		defaultSeed = *seed
+	}
+
 	cfg := uiadapter.AppConfig{
-		Version:  version,
-		Assets:   *assets,
-		Capture:  shot,
-		Saves:    saveHooks(),
-		Settings: settingsHooks(shot != nil),
+		DefaultSeed:  defaultSeed,
+		DefaultBiome: biomeID,
+		Version:      version,
+		Assets:       *assets,
+		Capture:      shot,
+		Saves:        saveHooks(),
+		Settings:     settingsHooks(shot != nil),
 		Window: func(fullscreen, vsync bool) {
 			ebiten.SetFullscreen(fullscreen)
 			ebiten.SetVsyncEnabled(vsync)
 		},
-		NewSim: func() (uiadapter.Simulation, error) {
-			g := game.NewColony(game.Config{Seed: *seed, Width: *width, Height: *height})
+		NewSim: func(ng uiadapter.NewGame) (uiadapter.Simulation, error) {
+			g := game.NewColony(game.Config{Seed: ng.Seed, Width: *width, Height: *height, Biome: ng.Biome})
 			if *scenario == "beds" {
 				cx, cy := *width/2, *height/2
 				for i, f := range []string{"east", "west", "north"} {
@@ -124,6 +141,11 @@ func main() {
 				if _, err := g.SpawnAnimal("deer", cx-6, cy-5); err == nil {
 					g.Enqueue(command.Command{Kind: command.DesignateTame, X: cx - 6, Y: cy - 5, X2: cx - 6, Y2: cy - 5})
 				}
+			}
+			if *scenario == "pen" {
+				// a pen with a feeding trough and tame goat, cow, hen and
+				// horse, and wild animals about: the wildlife UI captures
+				penScene(g, *width/2, *height/2)
 			}
 			if *scenario == "research" {
 				cx, cy := *width/2, *height/2
@@ -312,6 +334,17 @@ func main() {
 	if err := app.CaptureErr(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// biomeKeys lists the -biome keys, comma separated. The "biomes" capture
+// is a script-level loop: for b in temperate_forest boreal_forest ...; do
+// go run ./cmd/game -noaudio -biome $b -capture out_$b.png; done
+func biomeKeys() string {
+	keys := make([]string, 0, biome.NumBiomes)
+	for _, d := range biome.All() {
+		keys = append(keys, d.Key)
+	}
+	return strings.Join(keys, ", ")
 }
 
 // openSound opens the audio device and the sound list; nil when off
@@ -557,4 +590,27 @@ func zoo(g *game.Game) {
 			}
 		}
 	}
+}
+
+// penScene builds the -scenario pen set piece east of the start (cmd
+// only: dev hooks): a fenced pen with a feeding trough and four tame
+// animals, a marked wild deer, and a few wild animals about.
+func penScene(g *game.Game, cx, cy int) {
+	g.ClearPlants(cx+3, cy-8, cx+14, cy+3)
+	g.Enqueue(command.Command{Kind: command.DesignatePen, X: cx + 4, Y: cy - 6, X2: cx + 11, Y2: cy + 1})
+	g.BuildNow("feeding trough", "wood", "south", cx+7, cy-3)
+	for _, t := range []struct {
+		species, name string
+		x, y          int
+	}{{"goat", "Pip", cx + 5, cy - 4}, {"cow", "Clover", cx + 9, cy - 1}, {"chicken", "Hen", cx + 6, cy}, {"horse", "Maple", cx + 10, cy - 5}} {
+		if id, err := g.SpawnAnimal(t.species, t.x, t.y); err == nil {
+			g.TameAnimal(id, t.name)
+		}
+	}
+	for i, sp := range []string{"deer", "deer", "deer", "boar", "timber_wolf", "hare", "hare"} {
+		if _, err := g.SpawnAnimal(sp, cx-9+i*2, cy-9+i%3*2); err != nil {
+			continue
+		}
+	}
+	g.Step(1)
 }

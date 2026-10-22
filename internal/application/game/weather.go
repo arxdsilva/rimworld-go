@@ -6,6 +6,7 @@ import (
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/temperature"
 	"rimworld-go/internal/domain/world/weather"
@@ -42,13 +43,14 @@ func (g *Game) outdoorsAt(x, y int) bool { return g.underSky(x, y) }
 func (g *Game) phaseWeather() {
 	now := g.clock.Now()
 	if uint64(now)%weatherBlockTicks == 0 && !g.weatherFix {
-		mean := float64(temperature.DailyMean(now)) / 10
-		g.weather = weather.Next(g.weatherSeed(), uint64(now)/weatherBlockTicks, g.weather, mean, temperature.Season(now))
+		mean := float64(g.climate.DailyMean(now)) / 10
+		wet := biome.DefOf(g.biome).Wetness // rain and snow odds, percent of temperate
+		g.weather = weather.NextWet(g.weatherSeed(), uint64(now)/weatherBlockTicks, g.weather, mean, temperature.Season(now), wet)
 	}
 	if uint64(now)%climateInterval != 0 {
 		return
 	}
-	tempC := float64(temperature.Outdoor(now)) / 10
+	tempC := float64(g.climate.Outdoor(now)) / 10
 	g.weather = g.weather.Step(climateInterval, tempC, temperature.Season(now))
 	g.weatherThoughts()
 	g.stainDecay() // stains.go: fade, and wash under rain or snow
@@ -93,8 +95,12 @@ func (g *Game) hasMemory(id entity.EntityID, k mood.Kind) bool {
 }
 
 // weatherSlow is base step ticks plus what rain, snow or a blizzard adds
-// on an outdoor tile.
+// on an outdoor tile, after the ground's own cost (SIM-023: marsh, sand
+// and ice are slow unless floored over; plain ground costs 100%).
 func (g *Game) weatherSlow(x, y int, base int) int {
+	if c := g.terr.At(x, y).WalkCost(); c != 100 && g.treadAt(y*g.grid.Width()+x)&treadFloor == 0 {
+		base = (base*c + 99) / 100
+	}
 	pct := 0.0
 	switch g.weather.Kind {
 	case weather.Rain:

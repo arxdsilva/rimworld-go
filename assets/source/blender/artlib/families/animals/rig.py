@@ -963,6 +963,23 @@ def corpse_pose(spec, v):
                 paws={"fl": (-0.06, -0.3), "fr": (0.02, -0.28), "hl": (0.08, -0.3), "hr": (0.0, -0.29)})
 
 
+def rest_pose(spec):
+    """Lying down (resting / sleeping): the belly on the ground, legs folded
+    under (the IK knees bend out at ground level), neck lowered and the head
+    carried low, ears relaxed, tail slack. Archetypes with a different
+    anatomy override it through Body.poses["rest"]."""
+    cd = spec.chest[1]
+    drop = max(0.0, spec.height - 2 * cd - 0.012 + spec.belly * 0.55)
+    return Pose(bz=drop, ty=0.0, pitch=0.0, neck=-22, head=14, ears=26, tail=-14, sway=0)
+
+
+def only_frames():
+    """ANIMAL_FRAMES=rest renders just the rest frame of each set (canvas
+    margins still come from the full pose set, so it matches the others)."""
+    v = os.environ.get("ANIMAL_FRAMES", "").strip()
+    return v if v and v != "static" else None
+
+
 def frame_poses(spec, static=False):
     """Ordered {frame name or None: Pose} for one sprite set."""
     out = {None: Pose()}
@@ -976,6 +993,7 @@ def frame_poses(spec, static=False):
         out[name] = p
     for name, p in zip(FLINCH, flinch_poses(spec)):
         out[name] = p
+    out["rest"] = rest_pose(spec)
     if spec.poses:
         out.update(spec.poses)
     return out
@@ -1044,6 +1062,10 @@ def render_species(spec, static=False, suffix="", corpses=True):
     out = []
     poses = frame_poses(spec, static)
     margins = _probe_margins(spec, poses)
+    only = only_frames()
+    if only:
+        poses = {n: p for n, p in poses.items() if n in only.split(",")}
+        corpses = False
     base = spec.key + suffix
     for f in FACINGS:
         for fr, pose in poses.items():

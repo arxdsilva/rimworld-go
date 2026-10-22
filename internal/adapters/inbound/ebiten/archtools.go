@@ -93,6 +93,8 @@ var archTools = []archTool{
 		desc: "Wipes dirt off boots. Lay it on the tile just inside a door. Pick a carpet below."},
 	{id: "lamp", label: "Lamp", category: "furniture", icon: "lamp", mode: placeSingle, build: "lamp",
 		desc: "Lights its room at night."},
+	{id: "trough", label: "Feeding trough", category: "furniture", icon: "feeding_trough", mode: placeSingle, build: "feeding trough",
+		desc: "Pen animals eat from it when the grass is gone. Haulers fill it; choose plants, meat or any when you select it. Q/E rotates."},
 	{id: "workbench", label: "Workbench", category: "production", icon: "workbench", mode: placeSingle, build: "workbench",
 		desc: "Crafting station (2x1). Select it to add bills. Q/E rotates."},
 	{id: "stove", label: "Stove", category: "production", icon: "stove", mode: placeSingle, build: "stove",
@@ -221,7 +223,7 @@ func buildSpriteStuff(kind, stuff, facing string, mask int, ew, open bool) strin
 func carpetSprite(stuff string) string {
 	m := strings.TrimSuffix(stuff, " carpet")
 	switch m {
-	case "straw", "cloth", "leather", "wood":
+	case "straw", "cloth", "leather", "wood", "wool":
 		return "furniture/carpet_" + m
 	}
 	return "furniture/carpet_straw"
@@ -282,6 +284,8 @@ func buildSprite(kind, facing string, mask int, ew, open bool) string {
 		return "furniture/lamp_standing"
 	case "carpet":
 		return carpetSprite("")
+	case "feeding trough":
+		return "furniture/feeding_trough_empty_" + facingOr(facing)
 	}
 	return ""
 }

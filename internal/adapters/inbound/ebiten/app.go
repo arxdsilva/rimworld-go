@@ -11,9 +11,12 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
+	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/pawn/schedule"
+	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/platform/config"
 )
 
@@ -46,14 +49,25 @@ var bootPhases = []string{
 // SimFactory constructs a headless simulation when the player starts a
 // game. The adapter never calls game.New itself; the composition root
 // supplies the factory.
-type SimFactory func() (Simulation, error)
+type SimFactory func(NewGame) (Simulation, error)
+
+// NewGame is what the new-game wizard chose: the world seed and the
+// biome the colony lands in.
+type NewGame struct {
+	Seed  uint64
+	Biome biome.ID
+}
 
 // AppConfig is the composition-root wiring for the interactive client.
 type AppConfig struct {
-	Version  string
-	Assets   string // empty: locate the vendor pack from cwd
-	NewSim   SimFactory
-	LoadPack func() (*atlas, error)
+	Version string
+	Assets  string // empty: locate the vendor pack from cwd
+	NewSim  SimFactory
+	// DefaultSeed pre-fills the wizard's seed (0: a random one).
+	DefaultSeed uint64
+	// DefaultBiome is the biome the landing picker starts on.
+	DefaultBiome biome.ID
+	LoadPack     func() (*atlas, error)
 	// LoadArt loads the original generated sprites (assets/metadata).
 	// Nil: locate from cwd. When it fails the vendor pack is used.
 	LoadArt    func() (*artCatalog, error)
@@ -95,6 +109,11 @@ type App struct {
 
 	scenario    int
 	storyteller int
+	animalsWild bool               // the Animals tab shows the Wild list
+	wildRows    []game.WildlifeRow // g.Wildlife(), read once per tick
+	wildTick    clock.Tick
+	wildRead    bool
+	wiz         wizardState // the seed and biome chosen in the wizard (screen_newgame.go)
 	// settings are the player's Options (settings.go).
 	settings   config.Settings
 	optionsTab string
@@ -197,6 +216,7 @@ func NewApp(cfg AppConfig) *App {
 		sw:  DefaultWindowWidth,
 		sh:  DefaultWindowHeight,
 	}
+	a.wiz = newWizardState(cfg)
 	a.loadSettings()
 	a.applySettings()
 	return a
@@ -269,6 +289,7 @@ func (a *App) Update() error {
 			a.handleOrders()
 		}
 	}
+	a.handleSeedInput()
 	if a.nav.screen() != screenColony && a.cfg.Capture == nil {
 		a.menuTick++
 	}
@@ -474,6 +495,8 @@ func (a *App) applyClick(id string) {
 		a.applyPlantClick(id) // plant_inspector.go
 	case strings.HasPrefix(id, "item."):
 		a.applyItemClick(id) // item_inspector.go
+	case strings.HasPrefix(id, "msg."):
+		a.focusMessage(id)
 	case strings.HasPrefix(id, "alert."):
 		a.focusAlert(id)
 	case strings.HasPrefix(id, "bldg.") || strings.HasPrefix(id, "bill."):
@@ -499,6 +522,7 @@ func (a *App) applyClick(id string) {
 		a.inspectTab = "gear"
 	case id == "inspector.log":
 		a.inspectTab = "log"
+	case a.applyWizardClick(id):
 	case id == "scenario.0":
 		a.scenario = 0
 	case id == "scenario.1":
@@ -596,7 +620,7 @@ func (a *App) startGame() {
 		a.sessionErr = "no simulation factory"
 		return
 	}
-	sim, err := a.cfg.NewSim()
+	sim, err := a.cfg.NewSim(NewGame{Seed: a.wiz.seed, Biome: a.wiz.biome})
 	if err != nil {
 		a.sessionErr = err.Error()
 		return

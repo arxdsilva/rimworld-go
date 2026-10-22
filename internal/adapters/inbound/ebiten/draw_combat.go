@@ -80,6 +80,9 @@ func (r *Renderer) drawAnimalOverlays(screen *ebiten.Image, w game.WorldView, ti
 			bob := pose{px: 0.5, py: 0.5, sx: 0.5, sy: 0.5}
 			r.drawSpritePose(screen, "overlay/designation_tame", color.NRGBA{}, wx, wy-animalMarkerLift(an.Size)-0.05*math.Sin(float64(r.present)*0.08), tile, bob)
 		}
+		if an.Sleeping && r.animalResting(an) {
+			r.drawSnoreFor(screen, uint64(an.ID), wx+0.25, wy+0.1-an.Size*0.1, tile)
+		}
 		if an.Tame && an.Name != "" && tile >= stackCountMinTile {
 			sx, sy := r.worldToScreenF(wx+0.5, wy+1.0)
 			tw := float32(len(an.Name)*6 + 6)

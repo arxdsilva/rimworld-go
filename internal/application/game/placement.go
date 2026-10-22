@@ -176,7 +176,7 @@ func (g *Game) canPlace(k construction.Kind, x, y int) (bool, string) {
 		return false, ReasonBlocked
 	}
 	if pid := g.plantAt(x, y); pid != 0 {
-		if p, _ := g.plants.Get(pid); p.Species == plant.Tree {
+		if p, _ := g.plants.Get(pid); plant.DefOf(p.Species).Trunk && p.Species != plant.Cactus {
 			return false, ReasonTree
 		}
 	}

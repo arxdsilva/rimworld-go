@@ -548,6 +548,15 @@ def flinch_set(spec):
             Pose(ty=0.03, pitch=-4, neck=8, head=-10, yaw=8, ears=20, tail=6)]
 
 
+def rest_set(spec):
+    """Sitting: belly on the ground, legs folded away, neck drawn in with the
+    head sunk low on the shoulders."""
+    cd = spec.chest[1]
+    drop = max(0.0, spec.height - 2 * cd - 0.0 + spec.belly * 0.5)
+    return Pose(bz=drop, neck=-(spec.neck_angle * 0.3), head=30, tail=-6,
+                feet={"hl": (-0.03, 0.0), "hr": (-0.03, 0.0)})
+
+
 def bird_poses(spec):
     out = {}
     for i in range(1, rig.TROT_N + 1):
@@ -560,6 +569,7 @@ def bird_poses(spec):
         out[name] = p
     for name, p in zip(rig.FLINCH, flinch_set(spec)):
         out[name] = p
+    out["rest"] = rest_set(spec)
     return out
 
 

@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"strings"
 
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/work"
@@ -22,7 +23,7 @@ func plantLabel(s plant.Species) string {
 	case plant.Tree:
 		return "tree"
 	}
-	return s.String()
+	return strings.ReplaceAll(s.String(), "_", " ")
 }
 
 // OrderOption is one entry of a pawn's right-click menu at a tile. When
@@ -472,7 +473,7 @@ func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 			add("Harvest "+name, command.OrderHarvest, construction.LayerObject)
 		}
 		verb := "Cut "
-		if p.Species == plant.Tree {
+		if plant.DefOf(p.Species).Trunk {
 			verb = "Chop "
 		}
 		add(verb+name, command.OrderCut, construction.LayerObject)

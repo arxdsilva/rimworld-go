@@ -21,3 +21,30 @@ func GrassAt(t terrain.Type, x, y int) bool {
 	}
 	return (tileHash(x, y)>>8)%grassEvery == 0
 }
+
+// GrassGround reports whether terrain t carries grass: in the legacy
+// (temperate) map only soil and rich soil, in other biomes any fertile
+// ground (moss on tundra gravel, sedge on marsh, tufts on sand). Ice never.
+func GrassGround(t terrain.Type, legacy bool) bool {
+	if legacy {
+		return t == terrain.Soil || t == terrain.RichSoil
+	}
+	return t.Fertility() > 0
+}
+
+// GrassAtBiome reports whether tile (x, y) of terrain t starts with grass in
+// a biome that seeds permil of its grass ground (SIM-023); sand holds a
+// quarter of that.
+func GrassAtBiome(t terrain.Type, x, y, permil int) bool {
+	if !GrassGround(t, false) {
+		return false
+	}
+	if t == terrain.Sand {
+		permil /= 4
+	}
+	h := tileHash(x, y) ^ 0x6772617373 // "grass"
+	h = (h ^ h>>30) * 0xbf58476d1ce4e5b9
+	h = (h ^ h>>27) * 0x94d049bb133111eb
+	h ^= h >> 31
+	return int(h%1000) < permil
+}

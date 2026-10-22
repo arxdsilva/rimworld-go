@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"image/color"
+
 	"rimworld-go/internal/application/game"
 
 	"rimworld-go/internal/domain/sim/entity"

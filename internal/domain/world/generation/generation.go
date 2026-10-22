@@ -5,7 +5,9 @@ package generation
 
 import (
 	"math"
+	"sort"
 
+	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/terrain"
 	"rimworld-go/pkg/randx"
@@ -117,4 +119,109 @@ func Generate(seed uint64, w, h int) Result {
 		}
 	}
 	return res
+}
+
+// GenerateBiome builds a map for biome b (SIM-023). A legacy biome
+// (temperate forest) is exactly Generate. Every other biome keeps the
+// rock and stone noise and the open start; the soft ground is the fert
+// noise ranked through b's Ground mix (ice and sand in the low band, rich
+// soil in the high one), so each map holds the biome's shares. Wild plants
+// roll per fertile tile against b's Plants permille. A biome of nothing but
+// ice (sea ice) has no rock either.
+func GenerateBiome(seed uint64, w, h int, b biome.Def) Result {
+	if b.Legacy {
+		return Generate(seed, w, h)
+	}
+	r := randx.New(seed ^ 0x6d61706765)
+	rock := newNoise(r, w, h, 11)
+	rock2 := newNoise(r, w, h, 4)
+	fert := newNoise(r, w, h, 7)
+	m := terrain.NewMap(w, h)
+	cx, cy := w/2, h/2
+	res := Result{
+		Terrain: m,
+		ClearX0: cx - StartRadius, ClearY0: cy - StartRadius,
+		ClearX1: cx + StartRadius, ClearY1: cy + StartRadius,
+	}
+	inClear := func(x, y int) bool {
+		return x >= res.ClearX0 && x <= res.ClearX1 && y >= res.ClearY0 && y <= res.ClearY1
+	}
+	noRock := b.Ground.Ice >= 1000
+	soft := make([]int32, 0, w*h)
+	fv := make([]float64, w*h)
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			dx := math.Abs(float64(x-cx)) / float64(w/2+1)
+			dy := math.Abs(float64(y-cy)) / float64(h/2+1)
+			v := 0.75*rock.at(x, y) + 0.25*rock2.at(x, y) + 0.28*math.Max(dx, dy)
+			i := y*w + x
+			switch {
+			case noRock:
+			case v > 0.80 && !inClear(x, y):
+				m.Cells[i] = terrain.Rock
+				continue
+			case v > 0.71:
+				m.Cells[i] = terrain.Stone
+				continue
+			}
+			fv[i] = fert.at(x, y)
+			soft = append(soft, int32(i))
+		}
+	}
+	// rank the soft tiles by fertility (ties by index) and cut the ranks
+	// at the mix's cumulative weights, low band first
+	sort.Slice(soft, func(a, c int) bool {
+		fa, fc := fv[soft[a]], fv[soft[c]]
+		return fa < fc || fa == fc && soft[a] < soft[c]
+	})
+	g := b.Ground
+	bands := [...]struct {
+		t terrain.Type
+		w int
+	}{
+		{terrain.Ice, g.Ice}, {terrain.Sand, g.Sand}, {terrain.Gravel, g.Gravel},
+		{terrain.Marsh, g.Marsh}, {terrain.Soil, g.Soil}, {terrain.RichSoil, g.Rich},
+	}
+	total := 0
+	for _, bd := range bands {
+		total += bd.w
+	}
+	if total <= 0 {
+		total = 1
+		bands[4].w = 1 // no mix: plain soil
+	}
+	band, upTo := 0, 0
+	for rank, i := range soft {
+		for band < len(bands)-1 && rank*total >= (upTo+bands[band].w)*len(soft) {
+			upTo += bands[band].w
+			band++
+		}
+		m.Cells[i] = bands[band].t
+	}
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			if inClear(x, y) || m.At(x, y).Fertility() == 0 {
+				continue
+			}
+			roll, acc := r.IntN(1000), 0
+			for _, pd := range b.Plants {
+				if acc += pd.Permil; roll < acc {
+					res.Plants = append(res.Plants, PlantSpawn{X: x, Y: y, Species: pd.Species,
+						Growth: startGrowth(r, pd.Species)})
+					break
+				}
+			}
+		}
+	}
+	return res
+}
+
+// startGrowth is a wild plant's growth at generation: trees 60-100% grown,
+// bushes and reeds 40-100%.
+func startGrowth(r *randx.Rand, s plant.Species) int {
+	d := plant.DefOf(s)
+	if d.Trunk && !d.Regrows {
+		return d.GrowTicks * (60 + r.IntN(41)) / 100
+	}
+	return d.GrowTicks * (40 + r.IntN(61)) / 100
 }

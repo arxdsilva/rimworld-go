@@ -163,6 +163,8 @@ def snake_poses(spec):
     out["graze2"] = SnakePose(phase=0.0, rear=0.25, hood=0.0, jaw=6)
     out["flinch1"] = SnakePose(phase=0.8, rear=1.0, hood=1.0, lunge=-0.6, yaw=10)
     out["flinch2"] = SnakePose(phase=0.6, rear=1.0, hood=0.9, lunge=-0.25, yaw=5)
+    # rest: a tight low S-coil, head resting on the ground, hood folded
+    out["rest"] = SnakePose(phase=0.5, rear=0.12, hood=0.0, amp=2.4, yaw=0)
     return out
 
 
@@ -364,6 +366,7 @@ def tortoise_poses(spec):
     out["graze2"] = TortoisePose(neck=-26, ext=0.2, head=30)
     out["flinch1"] = TortoisePose(retract=1.0, ty=0.02, bz=0.06)
     out["flinch2"] = TortoisePose(retract=0.6, ty=0.01, bz=0.03)
+    out["rest"] = TortoisePose(retract=0.8, bz=0.03, ty=0.0)   # head and legs drawn in, shell on the ground
     return out
 
 

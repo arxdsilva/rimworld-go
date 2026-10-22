@@ -75,7 +75,11 @@ var rows = [4][4]float64{
 
 // Row is the chance of each next kind (Clear, Cloudy, Rain, Storm) after
 // from in season, renormalised. Snow follows Rain's row, Blizzard Storm's.
-func Row(from Kind, season string) [4]float64 {
+func Row(from Kind, season string) [4]float64 { return RowWet(from, season, 100) }
+
+// RowWet is Row for a climate whose rain and snow odds are wet percent of
+// the temperate ones (a biome's Wetness; 100 is Row).
+func RowWet(from Kind, season string, wet int) [4]float64 {
 	idx := int(from)
 	switch from {
 	case Snow:
@@ -93,6 +97,11 @@ func Row(from Kind, season string) [4]float64 {
 	}
 	r[Rain] *= f
 	r[Storm] *= f
+	if wet != 100 && wet >= 0 {
+		w := float64(wet) / 100
+		r[Rain] *= w
+		r[Storm] *= w
+	}
 	sum := r[0] + r[1] + r[2] + r[3]
 	for i := range r {
 		r[i] /= sum
@@ -124,7 +133,13 @@ func windSpeed(k Kind, intensity float64) float64 {
 // day's mean outdoor temperature (°C) and the season. It picks the block's
 // kind, target intensity and wind direction; rain halves the snow lying.
 func Next(seed, block uint64, prev State, meanTempC float64, season string) State {
-	row := Row(prev.Target, season)
+	return NextWet(seed, block, prev, meanTempC, season, 100)
+}
+
+// NextWet is Next under a climate whose rain, storm and snow odds are wet
+// percent of the temperate ones (SIM-023: the biome's Wetness).
+func NextWet(seed, block uint64, prev State, meanTempC float64, season string, wet int) State {
+	row := RowWet(prev.Target, season, wet)
 	u := unit(seed, block, 1)
 	k := Storm
 	acc := 0.0

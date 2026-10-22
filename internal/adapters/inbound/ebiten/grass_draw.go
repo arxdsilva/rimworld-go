@@ -59,7 +59,7 @@ func grassMask(w game.WorldView, buf []uint8) []uint8 {
 // grassVisible reports whether a tuft is drawn at tile (x, y) on terrain t.
 // With no simulation grass data (empty mask) it is the old renderer rule.
 func grassVisible(mask []uint8, w game.WorldView, t string, x, y int) bool {
-	if t != "soil" && t != "rich_soil" {
+	if t != "soil" && t != "rich_soil" && t != "marsh" {
 		return false
 	}
 	if len(mask) == 0 {

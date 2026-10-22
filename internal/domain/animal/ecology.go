@@ -333,10 +333,140 @@ func SleepHours(s Species, h int) bool {
 }
 
 // AgeDays is how old an animal born at tick born is at tick now (born 0:
-// an adult from before ages were kept).
+// an adult from before ages were kept). Born may lie before tick 0 (a
+// start herd's old animals): it is then stored wrapped (BornAt), and the
+// difference still comes out right in uint64 arithmetic.
 func AgeDays(born, now uint64, s Species) int {
-	if born == 0 || now < born {
+	if born == 0 {
 		return LifeOf(s).AdultDays * 2
 	}
-	return int((now - born) / clock.TicksPerDay)
+	age := int64(now - born)
+	if age < 0 {
+		return 0
+	}
+	return int(age / clock.TicksPerDay)
+}
+
+// BornAt is the Born tick of an animal ageTicks old at tick now (it may
+// wrap below tick 0; never 0, which means "adult from an old save").
+func BornAt(now, ageTicks uint64) uint64 {
+	if b := now - ageTicks; b != 0 {
+		return b
+	}
+	return 1
+}
+
+// Adult reports an animal of age days is grown.
+func Adult(s Species, days int) bool { return days >= LifeOf(s).AdultDays }
+
+// GrowthScale is the drawn body size of an animal age days old: 0.55
+// newborn up to 1 when adult.
+func GrowthScale(s Species, days int) float64 {
+	a := LifeOf(s).AdultDays
+	if a <= 0 || days >= a {
+		return 1
+	}
+	if days < 0 {
+		days = 0
+	}
+	return 0.55 + 0.45*float64(days)/float64(a)
+}
+
+// Stage is the life-stage word for the inspector: "adult", or the young
+// of the body plan ("chick", "hatchling", "young").
+func Stage(s Species, adult bool) string {
+	if adult {
+		return "adult"
+	}
+	switch RosterOf(s).Archetype {
+	case ArchBird:
+		return "chick"
+	case ArchSnake, ArchLizard, ArchTortoise:
+		return "hatchling"
+	}
+	return "young"
+}
+
+// ArtFemale is the sex an animal from a save without sexes gets: the
+// hash of its id the art used to pick dimorphic females.
+func ArtFemale(id uint64) bool { return (id*0x9E3779B97F4A7C15)>>63 == 1 }
+
+// Normalise fills in what a save from before needs and sexes lacks
+// (HasSex false): fed, rested, the art's sex. A pre-needs hunger counter
+// (Hunger, ticks since a predator's last meal) becomes Food, HungerTicks
+// mapping to just under FeedStart, and is cleared.
+func (s *State) Normalise(id uint64) {
+	if !s.HasSex {
+		s.HasSex, s.Female = true, ArtFemale(id)
+		if s.Food == 0 {
+			s.Food = Full
+		}
+		if s.Rest == 0 {
+			s.Rest = Full
+		}
+	}
+	if s.Hunger == 0 {
+		return
+	}
+	if ht := DefOf(s.Species).HungerTicks; ht > 0 {
+		f := Full - int(min(s.Hunger, 2*ht)*uint64(Full-FeedStart+1)/ht)
+		s.Food = min(s.Food, max(f, 1))
+	}
+	s.Hunger = 0
+}
+
+// NeedsFree reports a species that has no food or rest needs (hive
+// insects, legendaries).
+func NeedsFree(s Species) bool {
+	d := DefOf(s)
+	return EcologyOf(s).Diet == NoDiet || d.Hive || d.Legendary
+}
+
+// Feeding numbers (our own). A browsed plant is two grazed tiles; a crop
+// loses CropBite percent of its growth per meal and dies below CropDies;
+// a tree is a big meal. Items take ItemTicks to eat, a carcass
+// CarcassTicks.
+const (
+	BrowseFood   = 2 * GrazeFood
+	CropFood     = 2 * GrazeFood
+	CropBite     = 40
+	CropDies     = 20
+	TreeFood     = 6000
+	ItemTicks    = 90
+	CarcassTicks = 300
+	// FeedRadius bounds every food search (tiles, Chebyshev).
+	FeedRadius = 30
+	// HayFood is one straw's worth to a plant eater.
+	HayFood = 900
+)
+
+// FeedValue is what one item of k is worth to an animal of diet d before
+// its size (Meal): raw plant food and straw for plant eaters, raw meat for
+// meat eaters; 0 when it won't eat it.
+func FeedValue(d Diet, k item.Kind) int {
+	switch {
+	case k == item.Straw && d.Plants():
+		return HayFood
+	case k == item.Meat && d.Meat():
+		return k.Nutrition()
+	case d.Plants() && PlantFeed(k):
+		return k.Nutrition()
+	}
+	return 0
+}
+
+// PlantFeed reports raw plant food an animal eats (berries and raw
+// vegetables; straw separately).
+func PlantFeed(k item.Kind) bool {
+	switch k {
+	case item.Berries, item.Potatoes, item.Corn, item.Wheat, item.Beans, item.Lettuce, item.Radishes, item.Pumpkins:
+		return true
+	}
+	return false
+}
+
+// CarcassFood is a corpse of species s as a meal (its meat).
+func CarcassFood(s Species) int {
+	m, _ := Yield(s)
+	return max(m, 1) * item.Meat.Nutrition()
 }

@@ -79,14 +79,58 @@ def _stamp(img, rng, count, rmin, rmax, p, squash=0.8):
                 img[(d < 1.0) & (((xx - cx - ox + r * 0.3) / r) ** 2 + ((yy - cy - oy + r * 0.3) / r) ** 2 < 0.35), :3] = _soft(p, "light")
 
 
-def _cracks(img, rng, count, p):
+def _cracks(img, rng, count, p, strong=False):
     for _ in range(count):
         x, y = rng.uniform(0, N, 2)
         ang = rng.uniform(0, np.pi)
-        for _ in range(int(rng.uniform(18, 40))):
-            ang += rng.uniform(-0.5, 0.5)
-            x, y = (x + np.cos(ang) * 1.5) % N, (y + np.sin(ang) * 1.5) % N
-            img[int(y) % N, int(x) % N, :3] = _soft(p, "shadow")
+        step = 0.7 if strong else 1.5
+        for _ in range(int(rng.uniform(18, 40) * (2.2 if strong else 1))):
+            ang += rng.uniform(-0.5, 0.5) * (0.5 if strong else 1)
+            x, y = (x + np.cos(ang) * step) % N, (y + np.sin(ang) * step) % N
+            col = _rgb(p["shadow"]) if strong else _soft(p, "shadow")
+            img[int(y) % N, int(x) % N, :3] = col
+            if strong:
+                img[(int(y) + 1) % N, int(x) % N, :3] = col
+
+
+def _glints(img, rng, count, p, water):
+    """Marsh: small puddles with a pale glint on their upper-left rim."""
+    yy, xx = np.mgrid[0:N, 0:N]
+    for _ in range(count):
+        cx, cy = rng.uniform(0, N, 2)
+        rx, ry = rng.uniform(5, 11), rng.uniform(3, 6)
+        for ox in (-N, 0, N):
+            for oy in (-N, 0, N):
+                d = ((xx - cx - ox) / rx) ** 2 + ((yy - cy - oy) / ry) ** 2
+                img[d < 1.0, :3] = _rgb(water["shadow"]) * 0.6 + _rgb(water["base"]) * 0.4
+                inner = ((xx - cx - ox) / (rx * 0.75)) ** 2 + ((yy - cy - oy) / (ry * 0.7)) ** 2
+                img[(d < 1.0) & (inner < 1.0), :3] = _rgb(water["base"])
+                gl = ((xx - cx - ox + rx * 0.3) / (rx * 0.35)) ** 2 + ((yy - cy - oy + ry * 0.3) / (ry * 0.28)) ** 2
+                img[gl < 1.0, :3] = _rgb(water["light"])
+
+
+def _ripples(img, rng, count, p):
+    """Sand: short wind-ripple dashes (shadow line under a light line)."""
+    for _ in range(count):
+        x, y = rng.uniform(0, N, 2)
+        ln = int(rng.uniform(12, 26))
+        for i in range(ln):
+            yy = (int(y + np.sin(i * 0.35) * 1.5)) % N
+            xx = (int(x) + i) % N
+            img[yy, xx, :3] = _soft(p, "light")
+            img[(yy + 2) % N, xx, :3] = _soft(p, "shadow")
+
+
+def _frost(img, rng, count, p):
+    """Ice: pale frosty patches."""
+    yy, xx = np.mgrid[0:N, 0:N]
+    for _ in range(count):
+        cx, cy = rng.uniform(0, N, 2)
+        r = rng.uniform(4, 9)
+        for ox in (-N, 0, N):
+            for oy in (-N, 0, N):
+                d = ((xx - cx - ox) / r) ** 2 + ((yy - cy - oy) / (r * 0.7)) ** 2
+                img[d < 1.0, :3] = _rgb(p["light"]) * 0.7 + _rgb(p["base"]) * 0.3
 
 
 SPECS = {
@@ -95,6 +139,10 @@ SPECS = {
     "soil_rich": ("soil_rich", 4, (-0.58, 0.66), {"clods": (6, 1.6, 2.6)}),
     "gravel":    ("gravel", 4, (-0.58, 0.60), {"pebbles": (18, 2.5, 4.5)}),
     "stone":     ("stone", 4, (-0.55, 0.60), {"cracks": 2, "pebbles": (3, 3.0, 5.0)}),
+    # biome grounds
+    "sand":      ("sand", 4, (-0.50, 0.55), {"ripples": 5}),
+    "marsh":     ("marsh", 4, (-0.45, 0.55), {"glints": 9}),
+    "ice":       ("ice", 3, (-0.50, 0.55), {"cracks": 6, "frost": 5}),
 }
 
 
@@ -111,8 +159,14 @@ def _tile_img(name, v):
         _stamp(img, rng, *deco["clods"], p)
     if "pebbles" in deco:
         _stamp(img, rng, *deco["pebbles"], mats["stone"] if name == "gravel" else p)
+    if "frost" in deco:
+        _frost(img, rng, deco["frost"], p)
     if "cracks" in deco:
-        _cracks(img, rng, deco["cracks"], p)
+        _cracks(img, rng, deco["cracks"], p, strong=(name == "ice"))
+    if "glints" in deco:
+        _glints(img, rng, deco["glints"], p, mats["marsh_water"])
+    if "ripples" in deco:
+        _ripples(img, rng, deco["ripples"], p)
     return img
 
 
@@ -132,7 +186,7 @@ def _tile(name, v):
 # Ground transitions: a higher-priority terrain draws a soft, noisy edge
 # over its lower-priority neighbours. Mask bits N=1, E=2, S=4, W=8 say
 # which sides of the lower tile touch the higher terrain.
-PRIORITY = ("soil", "soil_rich", "gravel", "stone")
+PRIORITY = ("soil", "soil_rich", "gravel", "stone", "sand", "marsh", "ice")
 EDGE_DEPTH = 30.0   # px @2x
 EDGE_WOBBLE = 9.0
 

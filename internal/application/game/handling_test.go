@@ -8,7 +8,10 @@ import (
 )
 
 func TestHunterTamesMarkedAnimal(t *testing.T) {
-	g := New(Config{Seed: 4, Width: 24, Height: 14})
+	// SIM-024: seed 6 (was 4). Taming is a 30% roll every TameRetryTicks;
+	// paced animal thinking reorders the shared rng draws, and seed 4 now
+	// fails all three tries that fit in the test's 15000 ticks.
+	g := New(Config{Seed: 6, Width: 24, Height: 14})
 	ada, _ := g.SpawnNamedPawn(4, 7, "Ada")
 	buck, _ := g.SpawnAnimal("dustbuck", 16, 7)
 	g.Enqueue(command.Command{Kind: command.DesignateTame, X: 16, Y: 7, X2: 16, Y2: 7})

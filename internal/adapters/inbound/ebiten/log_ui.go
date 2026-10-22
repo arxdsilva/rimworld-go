@@ -85,8 +85,8 @@ func logPanelRect() (x, y, w, h int) {
 }
 
 // animalLogRect is the animal inspector's expanded log area.
-func animalLogRect(r button) (x, y, w, h int) {
-	return int(r.x) + 12, int(r.y) + 106, int(r.w) - 24, int(r.h) - 106 - 44
+func animalLogRect(r button, extra int) (x, y, w, h int) {
+	return int(r.x) + 12, int(r.y) + 106 + extra, int(r.w) - 24, int(r.h) - 106 - extra - 44
 }
 
 // handleLogWheel scrolls the log under the cursor with the mouse wheel and
@@ -120,10 +120,9 @@ func (a *App) scrollLogAt(mx, my int, wy float64) bool {
 	}
 	if an, ok := a.selectedAnimal(); ok && a.animalLogOpen && !a.workOpen && !a.archOpen {
 		r := a.animalPanel()
-		x, y, w, h := animalLogRect(r)
+		x, y, w, h := animalLogRect(r, animalExtraH(an))
 		if mx >= x && mx < x+w && my >= y && my < y+h {
 			a.animalLogScroll = max(0, a.animalLogScroll+step)
-			_ = an
 			return true
 		}
 	}
@@ -177,7 +176,7 @@ func (a *App) syncAnimalLog(id entity.EntityID) {
 // drawAnimalLog draws the animal inspector's Recent list, or the full
 // scrollable log when expanded.
 func (a *App) drawAnimalLog(screen *ebiten.Image, an game.AnimalView, r button) {
-	x, y, w, h := animalLogRect(r)
+	x, y, w, h := animalLogRect(r, animalExtraH(an))
 	cols := w / logCharW
 	if a.animalLogOpen {
 		rows := wrapLogRows(an.Log, cols)

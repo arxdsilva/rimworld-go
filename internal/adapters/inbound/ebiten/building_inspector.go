@@ -103,6 +103,7 @@ func (a *App) buildingButtons() []button {
 		out = append(out, button{id: "bldg.deconstruct", label: "Deconstruct", x: r.x + r.w - 130, y: r.y + r.h - 32, w: 120, h: 24})
 	}
 	out = append(out, a.moveCopyButtons(b, r)...)
+	out = append(out, a.troughButtons(b, r)...)
 	if !b.Bench {
 		return out
 	}
@@ -182,6 +183,7 @@ func (a *App) drawBuildingInspector(screen *ebiten.Image) {
 			drawLabel(screen, int(r.x)+16, y+4, "No bills yet - add one below.")
 		}
 	}
+	a.drawTroughSection(screen, b, r)
 	if ln := movingLine(b); ln != "" {
 		drawLabel(screen, int(r.x)+134, int(r.y+r.h)-86, ln)
 	}
@@ -260,6 +262,9 @@ func (a *App) applyBuildingClick(id string) {
 	if id == "bldg.deconstruct" {
 		a.renderer.enqueue(command.Command{Kind: command.DesignateDeconstruct, X: b.X, Y: b.Y,
 			X2: b.X + max(b.W, 1) - 1, Y2: b.Y + max(b.H, 1) - 1})
+		return
+	}
+	if a.applyTroughClick(id, b) {
 		return
 	}
 	switch id {

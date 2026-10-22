@@ -11,7 +11,7 @@ import (
 	"rimworld-go/internal/domain/sim/command"
 )
 
-var workColumns = []string{"FF", "Doc", "Grow", "Cook", "Bld", "Hunt", "Haul", "Cln", "Rsh", "Mine", "Crft"}
+var workColumns = []string{"FF", "Doc", "Grow", "Cook", "Bld", "Hunt", "Haul", "Cln", "Rsh", "Mine", "Crft", "Hndl"}
 
 // workLive maps live work columns (indexes into workColumns, which follow
 // work.Type order) to their command and pawn flag.
@@ -29,6 +29,7 @@ var workLive = map[int]struct {
 	8:  {command.WorkResearch, func(p game.PawnView) bool { return p.WorkResearch }},
 	9:  {command.WorkMine, func(p game.PawnView) bool { return p.WorkMine }},
 	10: {command.WorkCraft, func(p game.PawnView) bool { return p.WorkCraft }},
+	11: {command.WorkHandle, func(p game.PawnView) bool { return false }}, // priorities carry it
 }
 
 // workPriority is the colonist's priority for a work column (0 = off).

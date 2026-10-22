@@ -719,6 +719,140 @@ def _crop(species, st, v, name):
                   {"species": species, "growth": st, "variant": v}, CROP_M)
 
 
+# ------------------------------------------------------------ biome plants
+# pine in snow, jungle tree, cactus, shrub and reeds (biome work).
+# Like the other trees these are drawn at one size and scaled by the
+# renderer with Growth; dry cactus/shrub is the withered look.
+def _pine_snow(i):
+    tiers = (6, 7, 5)[i]
+    R0 = (0.6, 0.66, 0.5)[i]
+    z0 = (0.26, 0.22, 0.26)[i]
+    step = (0.21, 0.19, 0.25)[i]
+    S.cyl("flare", CX, CY, 0.15, 0.0, 0.1, "bark", segs=9, r_top=0.09, bevel=0.0)
+    S.cyl("trunk", CX, CY, 0.085, 0.0, z0 + 0.3, "bark", segs=8, r_top=0.06)
+    rng = random.Random(600 + i)
+    for j in range(tiers):
+        f = j / float(tiers)
+        r = R0 * (1.0 - f) ** 0.9 + 0.09
+        z = z0 + j * step
+        cx, cy = CX + rng.uniform(-0.02, 0.02), CY + rng.uniform(-0.02, 0.02)
+        segs = (8, 9, 7)[(i + j) % 3]
+        S.cyl("tier%d" % j, cx, cy, r, z, z + step * 1.15, "leaf_pine" if j % 2 == 0 else "leaf_pine_hi",
+              segs=segs, r_top=r * 0.55, bevel=0.0)
+        # snow load: a smaller cone resting on the tier's shoulder
+        S.cyl("snow%d" % j, cx, cy, r * 0.8, z + step * 0.55, z + step * 1.2, "snow", segs=segs,
+              r_top=r * 0.45, bevel=0.0)
+        _top(z + step * 1.2)
+    S.cyl("tip", CX, CY, 0.07, z0 + tiers * step - 0.05, z0 + tiers * step + 0.28, "snow", segs=6, r_top=0.005,
+          bevel=0.0)
+    _top(z0 + tiers * step + 0.28)
+
+
+def _jungle(i):
+    th = (0.95, 0.85, 1.0)[i]
+    lean = ((0.0, 0.0), (0.06, 0.02), (-0.05, 0.03))[i]
+    top = (CX + lean[0], CY + lean[1], th)
+    S.cyl("flare", CX, CY, 0.25, 0.0, 0.14, "bark", segs=10, r_top=0.12, bevel=0.0)
+    _limb("trunk", (CX, CY, 0.05), top, 0.12, 0.075, "bark", segs=9)
+    for k in range(4):  # buttress roots
+        a = math.radians(40 + 90 * k + 25 * i)
+        _limb("butt%d" % k, (CX + math.cos(a) * 0.06, CY + math.sin(a) * 0.06, 0.28),
+              (CX + math.cos(a) * 0.3, CY + math.sin(a) * 0.3, 0.0), 0.06, 0.03, "bark", segs=5)
+    rng = random.Random(1200 + i)
+    R = (0.82, 0.76, 0.86)[i]
+    rings = ((7, 0.62, 0.0), (5, 0.36, 0.1), (1, 0.0, 0.2))  # flat, wide umbrella of big leaf clusters
+    for layer, (n, rad, dz) in enumerate(rings):
+        for k in range(n):
+            a = 2 * math.pi * k / max(n, 1) + rng.uniform(-0.3, 0.3) + layer
+            x = top[0] + math.cos(a) * R * rad
+            y = top[1] + math.sin(a) * R * rad * 0.9
+            z = th + 0.05 + dz + rng.uniform(-0.03, 0.04)
+            cr = R * (0.38, 0.4, 0.42)[layer] * rng.uniform(0.9, 1.1)
+            _cluster("jl%d_%d" % (layer, k), x, y, z, cr, ("jungle_leaf", "jungle_leaf_hi")[(k + layer) % 2],
+                     seed=1210 + 17 * i + 5 * layer + k, lumps=0.28, squash=0.55)
+    for k in range(3):  # hanging vine
+        a = rng.uniform(0, 2 * math.pi)
+        x, y = top[0] + math.cos(a) * R * 0.5, top[1] + math.sin(a) * R * 0.45
+        _limb("vine%d" % k, (x, y, th + 0.02), (x + 0.02, y, th - 0.28), 0.014, 0.008, "jungle_leaf", segs=4)
+
+
+def _cactus(i, dry):
+    mat = "cactus_dry" if dry else "cactus"
+    if i == 0:  # saguaro: tall column, two arms
+        S.cyl("col", CX, CY, 0.11, 0.0, 0.72, mat, segs=8, r_top=0.09, bevel=0.0)
+        _ball("cap", CX, CY, 0.72, 0.09, 0.09, 0.07, mat, segs=8, rings=4)
+        for sgn, h in ((-1, 0.34), (1, 0.46)):
+            _limb("armh%d" % sgn, (CX + sgn * 0.08, CY, h), (CX + sgn * 0.26, CY, h), 0.06, 0.06, mat, segs=7)
+            _limb("armv%d" % sgn, (CX + sgn * 0.26, CY, h), (CX + sgn * 0.26, CY, h + 0.26), 0.06, 0.05, mat, segs=7)
+            _ball("armc%d" % sgn, CX + sgn * 0.26, CY, h + 0.26, 0.05, 0.05, 0.05, mat, segs=7, rings=4)
+        bloom = (CX, CY, 0.79)
+    elif i == 1:  # barrel
+        _ball("barrel", CX, CY, 0.24, 0.2, 0.2, 0.26, mat, segs=10, rings=7)
+        for k in range(6):
+            a = 2 * math.pi * k / 6
+            _limb("rib%d" % k, (CX + math.cos(a) * 0.19, CY + math.sin(a) * 0.19, 0.04),
+                  (CX + math.cos(a) * 0.1, CY + math.sin(a) * 0.1, 0.5), 0.016, 0.01,
+                  "shrub_dry" if not dry else "cactus", segs=4)
+        bloom = (CX, CY, 0.5)
+    else:  # prickly pear pads
+        for k, (dx, z, rx, rz) in enumerate(((0.0, 0.0, 0.22, 0.24), (-0.1, 0.3, 0.17, 0.2), (0.15, 0.26, 0.16, 0.18))):
+            _ball("pad%d" % k, CX + dx, CY, z + rz, rx, 0.07, rz, mat, segs=9, rings=5)
+        bloom = (CX - 0.1, CY, 0.52)
+    if not dry:
+        _ball("bloom", bloom[0], bloom[1], bloom[2], 0.05, 0.05, 0.04, "cactus_bloom", segs=7, rings=4)
+
+
+def _shrub(i, dry):
+    leaf = "shrub_dry" if dry else "shrub_leaf"
+    rng = random.Random(1500 + i)
+    n = (6, 5, 7)[i]
+    for k in range(n):
+        a = 2 * math.pi * k / n + rng.uniform(-0.3, 0.3)
+        ln = rng.uniform(0.34, 0.55)
+        el = rng.uniform(0.7, 1.2)
+        p0 = (CX, CY, 0.0)
+        p1 = (CX + math.cos(a) * math.cos(el) * ln, CY + math.sin(a) * math.cos(el) * ln, math.sin(el) * ln)
+        _limb("tw%d" % k, p0, p1, 0.02, 0.008, "bark", segs=4)
+        if not dry or k % 2 == 0:
+            _cluster("sl%d" % k, p1[0], p1[1], p1[2] - 0.02, 0.15 if not dry else 0.09, leaf,
+                     seed=1510 + 10 * i + k, lumps=0.3, squash=0.8)
+    if not dry:
+        _cluster("core", CX, CY, 0.06, 0.22, leaf, seed=1530 + i, squash=0.8)
+
+
+def _reeds(i):
+    rng = random.Random(1700 + i)
+    n = (14, 16, 12)[i]
+    for k in range(n):
+        a = 2 * math.pi * k / n + rng.uniform(-0.3, 0.3)
+        rr = rng.uniform(0.03, 0.2)
+        h = rng.uniform(0.6, 1.0)
+        _blade("r%d" % k, CX + math.cos(a) * rr, CY + math.sin(a) * rr, h, a, rng.uniform(0.04, 0.16),
+               ("reed", "vegetation")[k % 2], r=0.04)
+        if k % 3 == 0:  # cattail head
+            _ball("head%d" % k, CX + math.cos(a) * (rr + 0.09), CY + math.sin(a) * (rr + 0.09), h - 0.1,
+                  0.045, 0.045, 0.12, "reed_head", segs=7, rings=5)
+
+
+def _build_biome_plants():
+    out = []
+    for i in range(3):
+        out.append(_asset(lambda i=i: _pine_snow(i), "tree_pine_%02d_snow" % i,
+                          {"species": "tree", "kind": "pine", "variant": i, "season": "snow", "yields": "wood",
+                           "sway": SWAY}, TREE_MARGINS))
+        out.append(_asset(lambda i=i: _jungle(i), "tree_jungle_%02d" % i,
+                          {"species": "tree", "kind": "jungle", "variant": i, "season": "summer",
+                           "yields": "wood", "sway": SWAY}, TREE_MARGINS))
+        for dry in (False, True):
+            sfx = "_dry" if dry else ""
+            out.append(_asset(lambda i=i, d=dry: _cactus(i, d), "cactus_%02d%s" % (i, sfx),
+                              {"species": "cactus", "variant": i, "dry": dry}, BUSH_M))
+            out.append(_asset(lambda i=i, d=dry: _shrub(i, d), "shrub_%02d%s" % (i, sfx),
+                              {"species": "shrub", "variant": i, "dry": dry}, BUSH_M))
+        out.append(_asset(lambda i=i: _reeds(i), "reeds_%02d" % i, {"species": "reeds", "variant": i}, BUSH_M))
+    return out
+
+
 # ------------------------------------------------------------------ build
 def build():
     out = []
@@ -750,6 +884,7 @@ def build():
     for sp in CROPS:
         for st in ("young", "mature", "harvestable"):
             out.append(_crop(sp, st, 1, "%s_%s" % (sp, st)))
+    out += _build_biome_plants()
     return out
 
 

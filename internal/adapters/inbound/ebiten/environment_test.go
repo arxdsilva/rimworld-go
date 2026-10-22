@@ -483,7 +483,7 @@ func TestBushVariantKey(t *testing.T) {
 	}
 	wild := map[string]bool{}
 	for x := 0; x < 40; x++ {
-		k, _ := plantSprite(game.PlantView{X: x, Y: 2, Species: "shrub", Growth: 50})
+		k, _ := plantSprite(game.PlantView{X: x, Y: 2, Species: "bramble", Growth: 50})
 		wild[k] = true
 		if got := r.seasonKey(k, game.WorldView{}); !r.art.has(got) {
 			t.Fatalf("bush %s falls back to missing %s", k, got)

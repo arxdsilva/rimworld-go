@@ -54,6 +54,26 @@ def _chair():
     return (1, 1), 0.78
 
 
+def _trough(full):
+    """1x1 feeding trough: a long open wooden box on two trestle ends. Full
+    shows a mounded fodder heap (straw with a few greens) over the rim."""
+    for i, x in enumerate([0.22, 0.78]):
+        S.box("foot%d" % i, x - 0.05, -0.80, 0.0, x + 0.05, -0.20, 0.10, "wood", bevel=0.015)
+        S.box("leg%d" % i, x - 0.05, -0.66, 0.08, x + 0.05, -0.34, 0.30, "wood", bevel=0.015)
+    S.box("floor", 0.10, -0.74, 0.28, 0.90, -0.26, 0.34, "wood_plank", bevel=0.02)
+    S.box("side_s", 0.08, -0.78, 0.30, 0.92, -0.70, 0.52, "wood", bevel=0.02)
+    S.box("side_n", 0.08, -0.30, 0.30, 0.92, -0.22, 0.52, "wood", bevel=0.02)
+    S.box("end_w", 0.06, -0.78, 0.30, 0.14, -0.22, 0.52, "wood_plank", bevel=0.02)
+    S.box("end_e", 0.86, -0.78, 0.30, 0.94, -0.22, 0.52, "wood_plank", bevel=0.02)
+    if full:
+        S.blob("fodder", 0.5, -0.5, 0.34, 0.27, "straw", seed=88, lumps=0.2, squash=0.5)
+        S.blob("fodder2", 0.34, -0.46, 0.4, 0.2, "corn_yellow", seed=89, lumps=0.25, squash=0.5)
+        S.blob("greens", 0.68, -0.52, 0.42, 0.17, "vegetation", seed=90, lumps=0.3, squash=0.55)
+        return (1, 1), 0.7
+    S.box("scrap", 0.30, -0.62, 0.34, 0.52, -0.52, 0.37, "straw", bevel=0.01)
+    return (1, 1), 0.52
+
+
 def _workbench():
     # 2 x 1, worker stands on the south side.
     for i, x in enumerate([0.12, 1.88]):
@@ -531,6 +551,23 @@ def _carpet_wood():
     return (1, 1), 0.06
 
 
+def _carpet_wool():
+    """Thick woollen rug: cream pile, two dark stripes, fringe at both ends."""
+    S.box("base", CP0, -CP1, 0.0, CP1, -CP0, 0.04, "carpet_wool_stripe", bevel=0.01)
+    S.box("pile", CP0 + CP_EDGE, -CP1 + CP_EDGE, 0.03, CP1 - CP_EDGE, -CP0 - CP_EDGE, 0.06, "carpet_wool",
+          bevel=0.015, segments=2)
+    for k, x in enumerate((0.26, 0.74)):
+        S.box("stripe%d" % k, x - 0.03, -CP1 + CP_EDGE, 0.058, x + 0.03, -CP0 - CP_EDGE, 0.066,
+              "carpet_wool_stripe", bevel=0.004)
+    for k in range(10):
+        y = -0.88 + k * 0.08
+        for sx in (-1, 1):
+            xe = CP0 if sx < 0 else CP1
+            S.box("fr%d%d" % (k, sx), xe - 0.05 if sx < 0 else xe, y, 0.0, xe if sx < 0 else xe + 0.05, y + 0.035,
+                  0.03, "wool_cream", bevel=0.006)
+    return (1, 1), 0.07
+
+
 BUILDERS = {
     "bed_basic": (_bed, {"attachments": {"sleeper": [0.5, 0.42]}}),
     "bed_double": (_bed_double, {"attachments": {"sleeper": [0.5, 0.42], "sleeper2": [1.5, 0.42]}}),
@@ -541,6 +578,8 @@ BUILDERS = {
     "stove_basic": (_stove, {"attachments": {"cook": [0.25, 1.5]}}),
     "butcher_table": (_butcher_table, {"attachments": {"worker": [0.5, 1.15]}}),
     "campfire": (_campfire, {}),
+    "feeding_trough_empty": (lambda: _trough(False), {"building": "feeding trough", "state": "empty"}),
+    "feeding_trough_full": (lambda: _trough(True), {"building": "feeding trough", "state": "full"}),
     "horseshoe_pin": (_horseshoe_pin, {}),
     "sandbags": (_sandbags, {}),
     "research_bench": (_research_bench, {"attachments": {"worker": [0.5, 1.15]}}),
@@ -559,10 +598,11 @@ BUILDERS = {
     "carpet_cloth": (_carpet_cloth, {"carpet": "cloth", "flat": True}),
     "carpet_leather": (_carpet_leather, {"carpet": "leather", "flat": True}),
     "carpet_wood": (_carpet_wood, {"carpet": "wood", "flat": True}),
+    "carpet_wool": (_carpet_wool, {"carpet": "wool", "flat": True}),
 }
 FACINGS_ONLY = {"grave_dug": ("south", "east"), "grave_filled": ("south", "east")}
 ROTATABLE = {"grave_dug", "grave_filled", "bed_basic", "bed_double", "chair_basic", "workbench_basic", "stove_basic", "butcher_table",
-             "drying_rack", "tailoring_bench", "research_bench"}
+             "drying_rack", "tailoring_bench", "research_bench", "feeding_trough_empty", "feeding_trough_full"}
 
 
 # Blanket overlays: drawn over a sleeper so they read as tucked in. The

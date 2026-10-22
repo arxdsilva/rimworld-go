@@ -86,6 +86,8 @@ func buildAlerts(pawns []game.PawnView, w game.WorldView) []alert {
 		out = append(out, alert{key: "hostile", label: label, danger: true, targets: hostiles})
 	}
 
+	out = append(out, animalAlerts(w)...)
+
 	var rescue, starving, collapsed, unhappy []game.PawnView
 	alive := 0
 	for _, p := range pawns {
@@ -233,4 +235,72 @@ func (r *Renderer) centerOn(wx, wy float64, sw, sh int) {
 	r.cam.offsetY = wy*tile - float64(sh)/2
 	r.cam.placed = true // an explicit jump; don't recentre on the map
 	r.clampCamera(colonyViewport(sw, sh))
+}
+
+// hungryAlertBelow is the food percent under which a tame animal raises
+// "Animals hungry".
+const hungryAlertBelow = 25
+
+// penFullDiv: a pen holding more animals than its cells / this is full.
+const penFullDiv = 4
+
+// animalAlerts are the animal ecology alerts, derived from the read
+// model: hungry tame animals, wild animals eating crops, timbergnaws
+// eating trees and full pens.
+func animalAlerts(w game.WorldView) []alert {
+	var out []alert
+	var hungry, raiders, gnaws [][2]int
+	growCells := map[[2]int]bool{}
+	for _, z := range w.Zones {
+		if z.Kind == game.ZoneGrow {
+			for _, c := range z.Cells {
+				growCells[c] = true
+			}
+		}
+	}
+	for _, an := range w.Animals {
+		pos := [2]int{an.X, an.Y}
+		switch {
+		case an.Tame && animalHasNeeds(an) && an.Food < hungryAlertBelow:
+			hungry = append(hungry, pos)
+		case !an.Tame && !an.Leaving && an.Species == "timbergnaw":
+			gnaws = append(gnaws, pos)
+		case !an.Tame && an.State == "feeding" && growCells[pos]:
+			raiders = append(raiders, pos)
+		}
+	}
+	if len(hungry) > 0 {
+		label := "Animals hungry"
+		if len(hungry) > 1 {
+			label = fmt.Sprintf("Animals hungry (%d)", len(hungry))
+		}
+		out = append(out, alert{key: "animalhungry", label: label, targets: hungry})
+	}
+	if len(raiders) > 0 {
+		out = append(out, alert{key: "cropraid", label: "Wild animals eating crops", danger: true, targets: raiders})
+	}
+	if len(gnaws) > 0 {
+		out = append(out, alert{key: "timbergnaw", label: "Timbergnaws eating trees", targets: gnaws})
+	}
+	for _, z := range w.Zones {
+		if z.Kind != game.ZonePen || len(z.Cells) == 0 {
+			continue
+		}
+		in := map[[2]int]bool{}
+		for _, c := range z.Cells {
+			in[c] = true
+		}
+		var pos [][2]int
+		for _, an := range w.Animals {
+			if an.Tame && in[[2]int{an.X, an.Y}] {
+				pos = append(pos, [2]int{an.X, an.Y})
+			}
+		}
+		if len(pos) > len(z.Cells)/penFullDiv {
+			out = append(out, alert{key: fmt.Sprintf("penfull.%d", z.ID),
+				label:   fmt.Sprintf("Pen full: %d animals in a %d-tile pen", len(pos), len(z.Cells)),
+				targets: pos})
+		}
+	}
+	return out
 }

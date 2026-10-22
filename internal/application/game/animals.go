@@ -97,7 +97,11 @@ func (g *Game) spawnAnimal(s animal.Species, x, y int) (entity.EntityID, error) 
 	id := g.entities.Next()
 	g.animalIDs = append(g.animalIDs, id)
 	g.positions.Set(id, Position{X: x, Y: y})
-	g.animals.Set(id, animal.State{Species: s, NextThink: uint64(g.clock.Now()) + uint64(g.rng.IntN(300))})
+	// fed, rested and adult, with the sex its id gives (spawnHerd draws
+	// ages, needs and sexes for wild herds)
+	g.animals.Set(id, animal.State{Species: s, NextThink: uint64(g.clock.Now()) + uint64(g.rng.IntN(300)),
+		Food: animal.Full, Rest: animal.Full, HasSex: true, Female: animal.ArtFemale(uint64(id))})
+	g.invalidateCreatures() // animal_index.go: a mid-tick arrival is found at once
 	return id, nil
 }
 
@@ -114,12 +118,20 @@ func (g *Game) randomTileAway(minR int) (int, int, bool) {
 	return 0, 0, false
 }
 
+// phaseAnimals runs every animal: its needs every tick, its reflexes
+// (fleeing, fighting, eating, walking) every tick, and a full decision
+// (animal_needs.go) every animal.DecideEvery ticks or when something
+// happens to it. The creature index is rebuilt once here first.
 func (g *Game) phaseAnimals() {
 	now := uint64(g.clock.Now())
 	g.traces = projectile.Prune(g.traces, now)
 	g.pruneBursts(now)
+	g.pruneCropRaids(now)
 	g.migrate(now)
-	for _, id := range append([]entity.EntityID(nil), g.animalIDs...) {
+	g.rebuildCreatures()                            // animal_index.go
+	g.troughDeliveries(now)                         // trough_feed.go: loads haulers brought this tick
+	g.wl.ids = append(g.wl.ids[:0], g.animalIDs...) // the list changes as animals die or leave
+	for _, id := range g.wl.ids {
 		a, ok := g.animals.Get(id)
 		if !ok {
 			continue
@@ -127,8 +139,8 @@ func (g *Game) phaseAnimals() {
 		if a.Cooldown > 0 {
 			a.Cooldown--
 		}
-		if animal.DefOf(a.Species).Predator {
-			a.Hunger++
+		if !g.tickNeeds(id, &a, now) {
+			continue // starved to death
 		}
 		g.thinkAnimal(id, &a, now)
 		if _, still := g.animals.Get(id); !still {
@@ -138,7 +150,11 @@ func (g *Game) phaseAnimals() {
 	}
 }
 
+// thinkAnimal is one animal's tick: rage, being tamed, fleeing and
+// fighting come first; then a leaving animal walks off; then needs pick
+// between wandering, feeding and resting (decide, paced).
 func (g *Game) thinkAnimal(id entity.EntityID, a *animal.State, now uint64) {
+	a.Normalise(uint64(id)) // an older save's (or a fixture's) hunger counter
 	def := animal.DefOf(a.Species)
 	pos, _ := g.positions.Get(id)
 	if g.thinkManhunter(id, a, now) {
@@ -146,58 +162,43 @@ func (g *Game) thinkAnimal(id entity.EntityID, a *animal.State, now uint64) {
 	}
 	if g.beingTamed(id) { // holds still for the handler
 		a.Path, a.PathI, a.Mode = nil, 0, animal.Wander
+		a.Feed, a.FeedLeft = animal.FeedTarget{}, 0
 		return
 	}
-	if a.Tame {
-		g.thinkTame(id, a, now)
+	if g.fleeCheck(id, a, pos, def, now) {
 		return
 	}
-	switch {
-	case def.Skittish:
-		r := def.FleeRadius
-		if a.Mode == animal.Flee {
-			r += animal.FleeRelease // run well clear before grazing again
-		}
-		var tp Position
-		threat := false
-		if r > 0 { // tame-natured animals only run once hurt
-			tp, threat = g.nearestThreat(id, pos, r)
-		}
-		if now < a.FleeUntil {
-			if p, ok := g.positions.Get(a.Attacker); ok {
-				tp, threat = p, true
-			}
-		}
-		if threat {
-			lost := a.PathI >= len(a.Path) && now >= a.RetryAt
-			if a.Mode != animal.Flee || lost || (now+uint64(id))%40 == 0 {
-				a.Mode = animal.Flee
-				fx, fy := animal.FleeGoal(pos.X, pos.Y, tp.X, tp.Y, 8)
-				g.animalGoTo(id, a, fx, fy)
-			}
+	if a.Tame && def.Predator {
+		if g.guardCheck(id, a, pos, now) {
 			return
 		}
-		if a.Mode == animal.Flee && a.PathI < len(a.Path) {
-			return // finish the run
-		}
-	case def.Predator:
-		if a.Target != 0 && !g.validPrey(id, a.Target) {
-			a.Target = 0
-		}
-		if a.Target == 0 && a.Attacker != 0 && g.validPrey(id, a.Attacker) {
-			a.Target = a.Attacker
-		}
-		if a.Target == 0 && a.Hungry() {
-			a.Target = g.findPrey(id, pos, def)
-		}
-		if a.Target != 0 {
+	} else if g.fightCheck(id, a, pos, def, now) {
+		return
+	}
+	if a.Leaving {
+		g.walkOff(id, a, pos, now)
+		return
+	}
+	if now >= a.NextDecide {
+		g.decideAnimal(id, a, pos, now)
+		if a.Mode == animal.Attack && a.Target != 0 { // T3: off hunting
 			g.chase(id, a, now)
 			return
 		}
-		a.Attacker = 0
 	}
-	if a.Mode != animal.Wander {
+	switch a.Mode {
+	case animal.Feed:
+		g.feedStep(id, a, pos, now)
+		return
+	case animal.Rest:
+		return // lies down (or walks to its herd's bed)
+	case animal.Wander:
+	default:
 		a.Mode, a.Path, a.PathI = animal.Wander, nil, 0
+	}
+	if a.Tame {
+		g.wanderTame(id, a, pos, def, now)
+		return
 	}
 	if a.PathI >= len(a.Path) && now >= a.NextThink {
 		r := def.WanderRadius
@@ -206,30 +207,107 @@ func (g *Game) thinkAnimal(id entity.EntityID, a *animal.State, now uint64) {
 	}
 }
 
+// fleeCheck runs a skittish animal away from threats (a tame one from
+// wild predators only), and any animal still in its FleeUntil window from
+// whoever hurt it. Threats are looked for every animal.ThreatEvery ticks
+// (staggered by id) and every tick while fleeing. It reports true while
+// the animal is fleeing.
+func (g *Game) fleeCheck(id entity.EntityID, a *animal.State, pos Position, def animal.Def, now uint64) bool {
+	var tp Position
+	threat := false
+	scan := a.Mode == animal.Flee || (now+uint64(id))%animal.ThreatEvery == 0
+	r := def.FleeRadius
+	if a.Mode == animal.Flee {
+		r += animal.FleeRelease // run well clear before grazing again
+	}
+	dist := 8
+	switch {
+	case a.Tame && def.Predator: // guards don't run from predators
+	case a.Tame:
+		dist = 6
+		if scan {
+			tp, threat = g.nearestPredator(id, pos, r)
+		}
+	case def.Skittish && r > 0 && scan: // tame-natured animals only run once hurt
+		tp, threat = g.nearestThreat(id, pos, r)
+	}
+	if !a.Tame && now < a.FleeUntil {
+		if p, ok := g.positions.Get(a.Attacker); ok {
+			tp, threat = p, true
+		}
+	}
+	if threat {
+		lost := a.PathI >= len(a.Path) && (a.Tame || now >= a.RetryAt)
+		if a.Mode != animal.Flee || lost || (now+uint64(id))%40 == 0 {
+			if a.Mode != animal.Flee {
+				a.Feed, a.FeedLeft, a.Target = animal.FeedTarget{}, 0, 0 // a sleeper wakes, a grazer drops its meal
+			}
+			a.Mode = animal.Flee
+			fx, fy := animal.FleeGoal(pos.X, pos.Y, tp.X, tp.Y, dist)
+			g.animalGoTo(id, a, fx, fy)
+		}
+		return true
+	}
+	if a.Mode == animal.Flee {
+		if a.PathI < len(a.Path) {
+			return true // finish the run
+		}
+		a.Mode, a.Path, a.PathI = animal.Wander, nil, 0
+		a.NextDecide = now // the run is over: think again at once
+	}
+	return false
+}
+
+// fightCheck runs a wild animal's fight: a predator's hunt or revenge, a
+// woken territorial animal's (animal_needs.go). A badly hurt fighter
+// breaks off (T10) and a hunt that fails gives up (T5). It reports true
+// while the animal fights.
+func (g *Game) fightCheck(id entity.EntityID, a *animal.State, pos Position, def animal.Def, now uint64) bool {
+	if a.Target != 0 && !g.validPrey(id, a.Target) {
+		g.endFight(a)
+	}
+	calm := !badlyHurt(*a) && now >= a.FleeUntil
+	if a.Target == 0 && def.Predator && calm && a.Attacker != 0 && g.validPrey(id, a.Attacker) {
+		a.Target = a.Attacker // revenge
+	}
+	if a.Target == 0 {
+		a.HuntSince = 0 // its prey died under another's teeth, or was never set
+		if def.Predator {
+			a.Attacker = 0
+		}
+		return false
+	}
+	if badlyHurt(*a) && !a.Enraged(now) && !def.Legendary {
+		g.breakOff(id, a, pos, now)
+		return true
+	}
+	tp, _ := g.positions.Get(a.Target)
+	d := weapon.Distance(pos.X, pos.Y, tp.X, tp.Y)
+	switch {
+	case a.HuntSince != 0 && (now-a.HuntSince > animal.HuntGiveUp || d > huntRadius(def)+animal.HuntLeash):
+		g.endFight(a) // the prey got away: try again later
+		a.NextFeed, a.NextDecide = now+animal.HuntRetry, now
+		return false
+	case a.HuntSince == 0 && !def.Predator && d > territorialLeash:
+		g.endFight(a) // chased it off
+		return false
+	}
+	g.chase(id, a, now)
+	return true
+}
+
 // nearestThreat: the closest standing colonist or predator within r.
 func (g *Game) nearestThreat(id entity.EntityID, pos Position, r int) (Position, bool) {
-	best, bestD, found := Position{}, r+1, false
-	consider := func(p Position) {
-		if d := weapon.Distance(pos.X, pos.Y, p.X, p.Y); d < bestD {
-			best, bestD, found = p, d, true
+	_, p, ok := g.nearestWhere(pos.X, pos.Y, r, ckPawn|ckAnimal, func(o entity.EntityID, _ Position) bool {
+		if o == id {
+			return false
 		}
-	}
-	for _, pid := range g.pawnIDs {
-		if g.standingPawn(pid) {
-			p, _ := g.positions.Get(pid)
-			consider(p)
+		if a, ok := g.animals.Get(o); ok {
+			return animal.DefOf(a.Species).Predator
 		}
-	}
-	for _, aid := range g.animalIDs {
-		if aid == id {
-			continue
-		}
-		if o, ok := g.animals.Get(aid); ok && animal.DefOf(o.Species).Predator {
-			p, _ := g.positions.Get(aid)
-			consider(p)
-		}
-	}
-	return best, found
+		return g.standingPawn(o)
+	})
+	return p, ok
 }
 
 // validPrey: a living animal of another species, or a standing colonist.
@@ -244,42 +322,37 @@ func (g *Game) validPrey(self, t entity.EntityID) bool {
 	return g.standingPawn(t)
 }
 
-// findPrey: the nearest animal the predator can take within HuntRadius
-// (huntable), else a standing colonist within AggroRadius. A pack
+// findPrey: the nearest animal the predator can take within its hunt
+// radius (huntable), else a standing colonist within AggroRadius. A pack
 // predator's mates nearby join the hunt.
 func (g *Game) findPrey(id entity.EntityID, pos Position, def animal.Def) entity.EntityID {
-	best, bestD := entity.EntityID(0), def.HuntRadius+1
-	for _, aid := range g.animalIDs {
-		if !g.huntable(id, aid) {
-			continue
-		}
-		p, _ := g.positions.Get(aid)
-		if d := weapon.Distance(pos.X, pos.Y, p.X, p.Y); d < bestD {
-			best, bestD = aid, d
-		}
-	}
-	if best != 0 {
+	best, _, ok := g.nearestWhere(pos.X, pos.Y, huntRadius(def), ckAnimal, func(o entity.EntityID, _ Position) bool {
+		return g.huntable(id, o)
+	})
+	if ok {
 		if def.Pack {
 			g.callPack(id, pos, best)
 		}
 		return best
 	}
-	bestD = def.AggroRadius + 1
-	for _, pid := range g.pawnIDs {
-		if !g.standingPawn(pid) {
-			continue
-		}
-		p, _ := g.positions.Get(pid)
-		if d := weapon.Distance(pos.X, pos.Y, p.X, p.Y); d < bestD {
-			best, bestD = pid, d
-		}
-	}
+	best, _, _ = g.nearestWhere(pos.X, pos.Y, def.AggroRadius, ckPawn, func(o entity.EntityID, _ Position) bool {
+		return g.standingPawn(o)
+	})
 	return best
 }
 
+// huntRadius is how far an animal looks for prey: its species' hunt
+// radius, or smallPreyRadius for a meat eater that is no predator.
+func huntRadius(def animal.Def) int {
+	if def.HuntRadius > 0 {
+		return def.HuntRadius
+	}
+	return smallPreyRadius
+}
+
 // huntable: prey a predator can take: a living non-predator no bigger
-// than itself (XS or S only for a small-prey hunter), never a hive
-// insect or a legendary.
+// than itself (XS or S only for a small-prey hunter, or a meat eater that
+// is no predator), never a hive insect or a legendary.
 func (g *Game) huntable(self, t entity.EntityID) bool {
 	if !g.validPrey(self, t) {
 		return false
@@ -294,7 +367,7 @@ func (g *Game) huntable(self, t entity.EntityID) bool {
 		return false
 	}
 	size := animal.RosterOf(o.Species).Size
-	if md.SmallPrey {
+	if md.SmallPrey || !md.Predator {
 		return size <= animal.SizeS
 	}
 	return size <= animal.RosterOf(me.Species).Size
@@ -304,19 +377,19 @@ func (g *Game) huntable(self, t entity.EntityID) bool {
 // the same prey.
 func (g *Game) callPack(id entity.EntityID, pos Position, prey entity.EntityID) {
 	me, _ := g.animals.Get(id)
-	for _, aid := range g.animalIDs {
+	now := uint64(g.clock.Now())
+	g.within(pos.X, pos.Y, packRadius, ckAnimal, func(aid entity.EntityID, _ Position) {
 		if aid == id {
-			continue
+			return
 		}
 		o, ok := g.animals.Get(aid)
-		if !ok || o.Species != me.Species || o.Tame != me.Tame || o.Target != 0 || o.Manhunter != 0 {
-			continue
+		if !ok || o.Species != me.Species || o.Tame != me.Tame || o.Target != 0 || o.Manhunter != 0 || badlyHurt(o) {
+			return
 		}
-		if p, _ := g.positions.Get(aid); chebyshev(pos, p) <= packRadius {
-			o.Target = prey
-			g.animals.Set(aid, o)
-		}
-	}
+		o.Target, o.HuntSince = prey, now
+		o.Feed, o.FeedLeft = animal.FeedTarget{}, 0
+		g.animals.Set(aid, o)
+	})
 }
 
 // animalGoTo paths towards (gx, gy), clamped to the map and nudged to a
@@ -441,8 +514,9 @@ func (g *Game) stepAnimal(id entity.EntityID, a *animal.State, m *motionRec, fro
 	}
 }
 
-// killAnimal drops its corpse and removes it (an explosive one bursts). A predator that made the
-// kill eats half of it.
+// killAnimal drops its corpse and removes it (an explosive one bursts).
+// A predator that made the kill eats it (T4): its feed target becomes the
+// carcass, and eating it consumes the corpse.
 func (g *Game) killAnimal(id, by entity.EntityID) {
 	a, ok := g.animals.Get(id)
 	if !ok {
@@ -450,19 +524,22 @@ func (g *Game) killAnimal(id, by entity.EntityID) {
 	}
 	pos, _ := g.positions.Get(id)
 	if a.Tame {
-		g.message(pos.X, pos.Y, "%s the %s has died.", a.Name, a.Species.Label())
-	}
-	if k, ok := g.animals.Get(by); ok && animal.DefOf(k.Species).Predator {
-		// the predator feeds on the kill; the carcass is left behind
-		k.Hunger, k.Target, k.Mode, k.Attacker = 0, 0, animal.Wander, 0
-		g.animals.Set(by, k)
+		if a.Food == 0 && a.Starving != 0 {
+			g.message(pos.X, pos.Y, "%s the %s has starved to death.", a.Name, a.Species.Label())
+		} else {
+			g.message(pos.X, pos.Y, "%s the %s has died.", a.Name, a.Species.Label())
+		}
 	}
 	if by != 0 && by != id {
 		g.logEvent(by, logEntry{Kind: logKilled, Other: id, Name: animalLabel(a)})
 	}
 	g.removeAnimal(id)
 	g.stainAnimalDeath(a.Species, pos) // stains.go
-	g.dropCorpse(a.Species, pos.X, pos.Y)
+	corpse := g.dropCorpse(a.Species, pos.X, pos.Y)
+	if k, ok := g.animals.Get(by); ok && (animal.DefOf(k.Species).Predator || k.HuntSince != 0) {
+		g.feedOnKill(by, &k, corpse, pos) // animal_needs.go
+		g.animals.Set(by, k)
+	}
 	if animal.DefOf(a.Species).Explosive {
 		g.burst(a.Species, pos)
 	}
@@ -509,12 +586,11 @@ func (g *Game) markHunt(x1, y1, x2, y2 int, on bool) {
 }
 
 func (g *Game) animalAt(x, y int) entity.EntityID {
-	for _, id := range g.animalIDs {
-		if p, ok := g.positions.Get(id); ok && p.X == x && p.Y == y {
-			return id
-		}
-	}
-	return 0
+	id, _, _ := g.nearestWhere(x, y, 0, ckAnimal, func(o entity.EntityID, _ Position) bool {
+		_, ok := g.animals.Get(o)
+		return ok
+	})
+	return id
 }
 
 func (g *Game) animalViews() []AnimalView {
@@ -527,7 +603,7 @@ func (g *Game) animalViews() []AnimalView {
 		p, _ := g.positions.Get(id)
 		out = append(out, AnimalView{
 			ID: id, Species: a.Species.String(), Label: a.Species.Label(), X: p.X, Y: p.Y,
-			Attack: animal.RosterOf(a.Species).Attack.String(), Female: animalFemale(id, a.Species),
+			Attack: animal.RosterOf(a.Species).Attack.String(), Female: animalFemale(id, a),
 			Size:       animal.BodyLength(a.Species),
 			Health:     a.HP() * 100 / animal.DefOf(a.Species).MaxHP,
 			Mode:       a.Mode.String(),
@@ -545,14 +621,31 @@ func (g *Game) animalViews() []AnimalView {
 			av.NextX, av.NextY, av.HasNext = a.Path[a.PathI].X, a.Path[a.PathI].Y, true
 			av.BlockedBy = m.BlockedBy
 		}
-		g.fillAnimalAction(av, id, a)
-		av.Log = g.logLines(id) // eventlog.go
+		g.fillAnimalAction(av, id, actionState(a))
+		if av.Sleeping = sleeping(a); av.Sleeping {
+			av.Action = "" // the renderer draws the rest pose
+		}
+		g.fillAnimalNeeds(av, a) // animal_needs.go
+		av.Log = g.logLines(id)  // eventlog.go
 	}
 	return out
 }
 
-// animalFemale reports a dimorphic animal's sex, fixed by its id
-// (presentation: only the art differs).
-func animalFemale(id entity.EntityID, s animal.Species) bool {
-	return animal.RosterOf(s).Dimorphic && (uint64(id)*0x9E3779B97F4A7C15)>>63 == 1
+// actionState is a as the action view reads it: feeding and leaving
+// animals look like wandering ones (a grazer standing still grazes).
+func actionState(a animal.State) animal.State {
+	switch a.Mode {
+	case animal.Feed, animal.Leave, animal.Rest:
+		a.Mode = animal.Wander
+	}
+	return a
+}
+
+// animalFemale reports an animal's sex (simulated since SIM-024; an older
+// save's animals keep the sex their id gave the art).
+func animalFemale(id entity.EntityID, a animal.State) bool {
+	if !a.HasSex {
+		return animal.ArtFemale(uint64(id))
+	}
+	return a.Female
 }

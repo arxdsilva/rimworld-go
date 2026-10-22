@@ -1,9 +1,10 @@
 package ebiten
 
 import (
-	ebiten "github.com/hajimehoshi/ebiten/v2"
 	"strings"
 	"testing"
+
+	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/economy/item"

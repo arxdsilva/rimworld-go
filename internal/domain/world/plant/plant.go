@@ -99,9 +99,11 @@ var defs = [numSpecies]Def{
 	JungleTree: {Species: JungleTree, Name: "jungle_tree", GrowTicks: 60000, CutWork: 100, Wood: 12, Sowable: true,
 		SowWork: 40, ColdKill: 20, Trunk: true},
 	Cactus: {Species: Cactus, Name: "cactus", GrowTicks: 90000, CutWork: 40, Wood: 2, ColdKill: -50, Trunk: true},
-	Shrub:  {Species: Shrub, Name: "shrub", GrowTicks: 30000, CutWork: 25, Wood: 3, ColdKill: -150, HeatKill: 500, Browse: true},
+	// Shrub and reeds are hardy enough for every biome they grow wild in
+	// (tundra, cold bog), blizzards included.
+	Shrub: {Species: Shrub, Name: "shrub", GrowTicks: 30000, CutWork: 25, Wood: 3, ColdKill: -400, HeatKill: 500, Browse: true},
 	Reeds: {Species: Reeds, Name: "reeds", Label: "straw", GrowTicks: 15000, HarvestWork: 25, Yield: 4, Yields: item.Straw,
-		CutWork: 15, Regrows: true, RegrowTo: 30, ColdKill: -100, Browse: true},
+		CutWork: 15, Regrows: true, RegrowTo: 30, ColdKill: -300, Browse: true},
 	// Crops: growth follows real days-to-harvest at roughly twelve real
 	// days per game day; yields are per plant, balanced so a colonist
 	// eats from about three tiles of potatoes.

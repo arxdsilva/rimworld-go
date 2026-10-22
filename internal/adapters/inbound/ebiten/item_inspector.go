@@ -23,7 +23,7 @@ const maxItemChips = 3
 
 var (
 	weaponKinds = map[string]bool{"club": true, "rifle": true, "knife": true, "spear": true}
-	apparelKind = map[string]bool{"parka": true, "tuque": true, "duster": true}
+	apparelKind = map[string]bool{"parka": true, "wool parka": true, "tuque": true, "duster": true}
 	foodKinds   = map[string]bool{"food": true, "berries": true, "potatoes": true, "meat": true, "meal": true,
 		"corn": true, "wheat": true, "beans": true, "lettuce": true, "radishes": true, "pumpkins": true}
 )

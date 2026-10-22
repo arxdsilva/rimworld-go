@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	"fmt"
 	"image/color"
 	"strings"
 
@@ -59,6 +60,9 @@ func (a *App) animalPanel() button {
 	h := float32(animalPanelH)
 	if a.animalLogOpen {
 		h = animalPanelFullH
+	}
+	if an, ok := a.selectedAnimal(); ok {
+		h += float32(animalExtraH(an))
 	}
 	return button{x: hudPad, y: hudTopH + hudPad, w: 300, h: h}
 }
@@ -163,9 +167,19 @@ func (a *App) drawAnimalInspector(screen *ebiten.Image) {
 	case an.TameMark:
 		state += ", marked for taming"
 	}
+	if st := a.animalStateLine(an); st != "" && !an.Manhunter && !an.Hostile {
+		state = st
+		if an.TameMark {
+			state += ", marked for taming"
+		}
+	}
 	drawLabel(screen, int(r.x)+60, int(r.y)+30, state)
+	if l := animalLifeLine(an); l != "" {
+		drawLabel(screen, int(r.x)+60, int(r.y)+44, l)
+	}
 	drawLabel(screen, int(r.x)+12, int(r.y)+58, animalBlurb(an.Species))
 	drawNeedBar(screen, int(r.x)+12, int(r.y)+84, 270, 14, an.Health, "health")
+	a.drawAnimalNeeds(screen, an, r)
 	a.drawAnimalLog(screen, an, r)
 	if an.Designated {
 		drawLabel(screen, int(r.x)+150, int(r.y+r.h)-28, "marked for hunting")
@@ -203,5 +217,115 @@ func (a *App) applyAnimalClick(id string) {
 		a.renderer.enqueue(c)
 	case "animal.release":
 		a.renderer.enqueue(command.Command{Kind: command.ReleaseAnimal, Pawn: uint64(an.ID)})
+	}
+}
+
+// Animal needs, life and products (plan 6.2): the inspector's block
+// under the health bar.
+
+// animalStateLine is what the animal is doing: "Feeding", or "Wild |
+// Wandering" for a wild one (the Mode when the sim gives no State).
+func (a *App) animalStateLine(an game.AnimalView) string {
+	st := an.State
+	if st == "" {
+		st = an.Mode
+	}
+	if st == "" {
+		return ""
+	}
+	if !an.Tame {
+		return "Wild | " + capitalize(st)
+	}
+	return capitalize(st)
+}
+
+// animalLifeLine is "Female | adult | 34 days old" (the sex, stage and
+// age), "" when the view carries none of it.
+func animalLifeLine(an game.AnimalView) string {
+	if an.AgeDays == 0 && an.Stage == "" && an.Scale == 0 {
+		return ""
+	}
+	sex := "Male"
+	if an.Female {
+		sex = "Female"
+	}
+	stage := an.Stage
+	if stage == "" {
+		stage = "adult"
+		if !an.Adult {
+			stage = "young"
+		}
+	}
+	return fmt.Sprintf("%s | %s | %d days old", sex, stage, an.AgeDays)
+}
+
+// animalHasNeeds reports whether the view carries needs to show.
+func animalHasNeeds(an game.AnimalView) bool { return an.State != "" }
+
+func animalPregLine(an game.AnimalView) string {
+	switch {
+	case an.Pregnant:
+		return fmt.Sprintf("Pregnant %d%%", an.PregPct)
+	case an.EggsFertile:
+		return "Eggs are fertile"
+	}
+	return ""
+}
+
+func animalDietLine(an game.AnimalView) string {
+	if an.Diet == "" {
+		return ""
+	}
+	return "Diet: " + an.Diet
+}
+
+// animalExtraH is how tall the needs block is: Food and Rest bars, the
+// product bar, a pregnancy line, the diet line and a wild animal's tame
+// chance.
+func animalExtraH(an game.AnimalView) int {
+	if !animalHasNeeds(an) {
+		return 0
+	}
+	h := 40 // food, rest
+	if an.Product != "" {
+		h += 20
+	}
+	if animalPregLine(an) != "" {
+		h += 16
+	}
+	if animalDietLine(an) != "" {
+		h += 16
+	}
+	if !an.Tame {
+		h += 16 // tame chance
+	}
+	return h
+}
+
+func (a *App) drawAnimalNeeds(screen *ebiten.Image, an game.AnimalView, r button) {
+	if !animalHasNeeds(an) {
+		return
+	}
+	x, y := int(r.x)+12, int(r.y)+104
+	drawNeedBar(screen, x, y, 270, 14, an.Food, "food")
+	y += 20
+	drawNeedBar(screen, x, y, 270, 14, an.Rest, "rest")
+	y += 20
+	if an.Product != "" {
+		drawNeedBar(screen, x, y, 270, 14, an.ProductPct, an.Product)
+		y += 20
+	}
+	if l := animalPregLine(an); l != "" {
+		drawLabel(screen, x, y, l)
+		y += 16
+	}
+	if l := animalDietLine(an); l != "" {
+		drawLabel(screen, x, y, l)
+		y += 16
+	}
+	if !an.Tame {
+		if row, ok := a.wildRow(an.Species); ok {
+			drawLabel(screen, x, y, fmt.Sprintf("Tame chance %d%%", row.TameChance))
+		}
 	}
 }

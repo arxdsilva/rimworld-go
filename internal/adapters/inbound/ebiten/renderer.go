@@ -43,6 +43,9 @@ type Simulation interface {
 	// CanZoneAt reports whether a zone of kind ("stockpile", "grow",
 	// "pen") could claim a tile: the zone drag ghost per cell.
 	CanZoneAt(kind string, x, y int) bool
+	// Wildlife lists the wild species on the map (the Animals tab's Wild
+	// list).
+	Wildlife() []game.WildlifeRow
 }
 
 var _ Simulation = (*game.Game)(nil)

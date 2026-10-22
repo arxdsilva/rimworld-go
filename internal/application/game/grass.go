@@ -1,18 +1,24 @@
 package game
 
 import (
+	"container/heap"
 	"sort"
 
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/plant"
 )
 
 // Grass (UI-011): ground cover on soil, owned by the simulation so that
 // building, sowing and Cut plants remove it. Seeded from terrain by
-// plant.GrassAt (the rule the renderer used), never regrows (v1).
+// plant.GrassAt (the rule the renderer used) on the temperate map, by the
+// biome's Grass permille elsewhere (SIM-023). A cut or grazed tile grows
+// back after the biome's Regrow days (a min-heap, popped in phasePlants);
+// building, flooring and sowing leave it bare.
 
 // GrassCutWork is the labour to cut one grass tile.
 const GrassCutWork = 25
@@ -49,9 +55,11 @@ func (g *Game) seedGrass() *grassState {
 	s.seeded = true
 	s.cells = make([]uint8, w*h)
 	s.cut = map[[2]int]bool{}
+	bd := biome.DefOf(g.biome)
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
-			if plant.GrassAt(g.terr.At(x, y), x, y) {
+			t := g.terr.At(x, y)
+			if bd.Legacy && plant.GrassAt(t, x, y) || !bd.Legacy && plant.GrassAtBiome(t, x, y, bd.Grass) {
 				s.cells[y*w+x] = 1
 			}
 		}
@@ -228,6 +236,86 @@ func (g *Game) doCutGrass(id entity.EntityID, j job.Record) {
 		return
 	}
 	g.clearGrass(j.DestX, j.DestY)
+	g.scheduleRegrow(j.DestX, j.DestY)
 	j.State = job.Complete
 	g.jobs.Set(id, j)
+}
+
+// grazeGrass eats the grass on (x, y) down to bare ground and schedules it
+// to grow back; false if there was no grass (SIM-023, grazing animals).
+func (g *Game) grazeGrass(x, y int) bool {
+	if !g.hasGrass(x, y) {
+		return false
+	}
+	g.clearGrass(x, y)
+	g.scheduleRegrow(x, y)
+	return true
+}
+
+// regrowJitter is the spread of a tile's regrow time, percent either way.
+const regrowJitter = 20
+
+// regrowHeap orders pending regrowth by tick, then cell (deterministic).
+type regrowHeap []grassRegrow
+
+func (h regrowHeap) Len() int { return len(h) }
+func (h regrowHeap) Less(i, j int) bool {
+	return h[i].At < h[j].At || h[i].At == h[j].At && h[i].Cell < h[j].Cell
+}
+func (h regrowHeap) Swap(i, j int) { h[i], h[j] = h[j], h[i] }
+func (h *regrowHeap) Push(x any)   { *h = append(*h, x.(grassRegrow)) }
+func (h *regrowHeap) Pop() any {
+	old := *h
+	v := old[len(old)-1]
+	*h = old[:len(old)-1]
+	return v
+}
+
+// scheduleRegrow queues bare tile (x, y) to grow grass back in the biome's
+// Regrow days, +-regrowJitter percent; a biome whose grass never regrows
+// (Regrow 0) queues nothing.
+func (g *Game) scheduleRegrow(x, y int) {
+	days := biome.DefOf(g.biome).Regrow
+	if days <= 0 || !g.grid.InBounds(x, y) {
+		return
+	}
+	base := uint64(days) * clock.TicksPerDay
+	span := base * 2 * regrowJitter / 100
+	at := uint64(g.clock.Now()) + base - span/2 + uint64(g.rng.IntN(int(span)+1))
+	heap.Push((*regrowHeap)(&g.grass.regrow), grassRegrow{At: at, Cell: int32(y*g.grid.Width() + x)})
+}
+
+// regrowGrass grows back every queued tile that is due, unless it was
+// built on, floored, sown or turned to barren ground meanwhile.
+func (g *Game) regrowGrass() {
+	s := g.grassSt()
+	now := uint64(g.clock.Now())
+	if len(s.regrow) == 0 || s.regrow[0].At > now {
+		return
+	}
+	h := (*regrowHeap)(&s.regrow)
+	s = g.seedGrass()
+	w, n := g.grid.Width(), int32(len(s.cells))
+	for len(s.regrow) > 0 && s.regrow[0].At <= now {
+		c := heap.Pop(h).(grassRegrow).Cell
+		if c < 0 || c >= n || s.cells[c] == 1 {
+			continue
+		}
+		if x, y := int(c)%w, int(c)/w; g.grassCanRegrow(x, y) {
+			s.cells[c] = 1
+		}
+	}
+}
+
+// grassCanRegrow reports bare grass ground with nothing built, planned or
+// growing on it.
+func (g *Game) grassCanRegrow(x, y int) bool {
+	if !plant.GrassGround(g.terr.At(x, y), biome.DefOf(g.biome).Legacy) || !g.grid.Walkable(x, y) {
+		return false
+	}
+	if g.plantAt(x, y) != 0 {
+		return false
+	}
+	return g.layerBldgAt(x, y, construction.LayerObject) == 0 && g.layerBldgAt(x, y, construction.LayerFloor) == 0 &&
+		g.layerFrameAt(x, y, construction.LayerObject) == 0 && g.layerFrameAt(x, y, construction.LayerFloor) == 0
 }

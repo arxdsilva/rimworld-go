@@ -407,6 +407,14 @@ ICONS = {
     "cloth_carpet": ("item", "carpet_cloth_rolled"),
     "leather_carpet": ("item", "carpet_leather_rolled"),
     "wood_carpet": ("item", "carpet_wood_rolled"),
+    "wool_carpet": ("item", "carpet_wool_rolled"),
+    "milk": ("item", "milk"),
+    "wool": ("item", "wool"),
+    "egg": ("item", "egg"),
+    "fertile_egg": ("item", "fertile_egg"),
+    "ember_oil": ("item", "ember_oil"),
+    "wool_parka": ("item", "parka_wool"),
+    "feeding_trough": ("furniture", "feeding_trough_empty_south"),
     "carpet": ("furniture", "carpet_cloth"),   # the Architect tool: a laid mat
 }
 ICON_PX = 128          # @2x of a 64 px icon
@@ -447,6 +455,180 @@ def _icon(name, family, sprite):
     return path
 
 
+# ---------------------------------------------------------------- biome icons
+# 12 round swatch emblems for the new-game biome picker: sky over ground
+# inside the same dark disc the order badges use, with a tiny scene glyph.
+def _tri(xx, yy, cx, top, base, half):
+    """Signed-ish distance of an isoceles triangle (apex up)."""
+    t = np.clip((yy - top) / max(base - top, 1e-3), -0.2, 1.2)
+    w = half * t
+    return np.maximum(np.abs(xx - cx) - w, np.maximum(top - yy, yy - base))
+
+
+def _ell(xx, yy, cx, cy, rx, ry):
+    return np.hypot((xx - cx) / rx, (yy - cy) / ry) * min(rx, ry) - min(rx, ry)
+
+
+def _box(xx, yy, x0, y0, x1, y1):
+    return np.maximum(np.maximum(x0 - xx, xx - x1), np.maximum(y0 - yy, yy - y1))
+
+
+def _fill(img, d, rgb, alpha=1.0, edge=True):
+    if edge:
+        _paint(img, _cov(d - 2.0), (0.10, 0.09, 0.08), 0.75)
+    _paint(img, _cov(d), rgb, alpha)
+
+
+def _pine(img, xx, yy, cx, base, h, rgb=(0.17, 0.38, 0.30), snow=False):
+    _fill(img, _box(xx, yy, cx - 2.5, base - 6, cx + 2.5, base), (0.38, 0.28, 0.2))
+    for k in range(3):
+        top = base - h + k * h * 0.22
+        b = base - 4 - (2 - k) * h * 0.0 - h * 0.12 * (2 - k) * -1
+        _fill(img, _tri(xx, yy, cx, top, top + h * 0.5, h * 0.3 + k * 2), rgb)
+        if snow:
+            _fill(img, _tri(xx, yy, cx, top, top + h * 0.2, h * 0.12 + k), (0.96, 0.98, 1.0), edge=False)
+
+
+def _round_tree(img, xx, yy, cx, base, r, rgb=(0.28, 0.56, 0.25)):
+    _fill(img, _box(xx, yy, cx - 3, base - r, cx + 3, base), (0.38, 0.28, 0.2))
+    _fill(img, np.hypot(xx - cx, yy - (base - r * 1.5)) - r, rgb)
+    _paint(img, _cov(np.hypot(xx - cx + r * 0.3, yy - (base - r * 1.7)) - r * 0.45), tuple(min(1, v + 0.15) for v in rgb), 0.8)
+
+
+def _reed(img, xx, yy, cx, base, h, lean=0.0):
+    _fill(img, _seg(xx, yy, cx, base, cx + lean, base - h) - 1.6, (0.50, 0.62, 0.30))
+    _fill(img, _ell(xx, yy, cx + lean, base - h - 3, 3.2, 8), (0.45, 0.30, 0.18))
+
+
+def _cactus(img, xx, yy, cx, base, h):
+    g = (0.30, 0.60, 0.40)
+    _fill(img, _seg(xx, yy, cx, base, cx, base - h) - 5, g)
+    _fill(img, _seg(xx, yy, cx - 9, base - h * 0.5, cx - 9, base - h * 0.75) - 3.5, g)
+    _fill(img, _seg(xx, yy, cx - 9, base - h * 0.5, cx, base - h * 0.5) - 3.5, g, edge=False)
+    _fill(img, _seg(xx, yy, cx + 9, base - h * 0.4, cx + 9, base - h * 0.65) - 3.5, g)
+    _fill(img, _seg(xx, yy, cx + 9, base - h * 0.4, cx, base - h * 0.4) - 3.5, g, edge=False)
+
+
+def _dune(img, xx, yy, y0, amp, ph, rgb):
+    ysurf = y0 + amp * np.sin(xx / 22.0 + ph)
+    _paint(img, _cov(ysurf - yy), rgb)
+
+
+def _water(img, xx, yy, y0, rgb, hi):
+    _paint(img, _cov(y0 - yy) * 0, rgb)
+    _paint(img, _cov(_box(xx, yy, 0, y0, 128, 128)), rgb)
+    for k, (wx, wy) in enumerate(((40, y0 + 10), (82, y0 + 20), (60, y0 + 30))):
+        _paint(img, _cov(_seg(xx, yy, wx - 8, wy, wx + 8, wy) - 1.4), hi, 0.9)
+
+
+def _crack(img, xx, yy, pts, rgb):
+    for (ax, ay), (bx, by) in zip(pts, pts[1:]):
+        _paint(img, _cov(_seg(xx, yy, ax, ay, bx, by) - 1.5), rgb)
+
+
+def _glyph_biome(key, img, xx, yy):
+    hz = 76  # horizon row
+    if key == "temperate_forest":
+        _round_tree(img, xx, yy, 42, 96, 17); _round_tree(img, xx, yy, 78, 100, 20, (0.22, 0.48, 0.22))
+    elif key == "boreal_forest":
+        _pine(img, xx, yy, 40, 98, 40, snow=True); _pine(img, xx, yy, 72, 102, 52, snow=True)
+        _pine(img, xx, yy, 92, 94, 30, snow=True)
+    elif key == "tundra":
+        for cx, h in ((36, 12), (60, 16), (88, 11)):
+            for dx in (-4, 0, 4):
+                _paint(img, _cov(_seg(xx, yy, cx + dx, 96, cx + dx * 1.6, 96 - h) - 1.5), (0.52, 0.56, 0.36))
+        _paint(img, _cov(_ell(xx, yy, 70, 88, 16, 4)), (0.95, 0.97, 1.0), 0.9)
+        _paint(img, _cov(_ell(xx, yy, 34, 100, 12, 3.5)), (0.95, 0.97, 1.0), 0.9)
+    elif key == "cold_bog":
+        _paint(img, _cov(_ell(xx, yy, 56, 96, 30, 8)), (0.55, 0.72, 0.80))
+        _reed(img, xx, yy, 82, 98, 28, 3); _reed(img, xx, yy, 92, 98, 20, -3); _reed(img, xx, yy, 36, 94, 22, 2)
+        _paint(img, _cov(_ell(xx, yy, 60, 70, 22, 4)), (0.92, 0.95, 0.98), 0.7)
+    elif key == "ice_sheet":
+        _crack(img, xx, yy, [(30, 84), (48, 92), (58, 88), (78, 100)], (0.45, 0.65, 0.82))
+        _crack(img, xx, yy, [(58, 88), (64, 78), (80, 74)], (0.45, 0.65, 0.82))
+        _crack(img, xx, yy, [(78, 100), (96, 96)], (0.45, 0.65, 0.82))
+        _fill(img, _tri(xx, yy, 80, 52, 78, 12), (0.84, 0.94, 1.0)); _fill(img, _tri(xx, yy, 56, 60, 78, 9), (0.74, 0.88, 0.98))
+    elif key == "sea_ice":
+        _water(img, xx, yy, hz, (0.30, 0.52, 0.68), (0.62, 0.82, 0.92))
+        for cx, cy, rx in ((46, 94, 20), (86, 104, 16)):
+            _fill(img, _ell(xx, yy, cx, cy, rx, 7), (0.93, 0.97, 1.0))
+        _fill(img, _tri(xx, yy, 46, 76, 94, 8), (0.80, 0.92, 1.0))
+    elif key == "temperate_swamp":
+        _water(img, xx, yy, 86, (0.34, 0.45, 0.32), (0.62, 0.76, 0.58))
+        _round_tree(img, xx, yy, 40, 92, 14, (0.30, 0.50, 0.28)); _reed(img, xx, yy, 78, 98, 24, 2); _reed(img, xx, yy, 88, 100, 17, -2)
+    elif key == "tropical_swamp":
+        _water(img, xx, yy, 84, (0.20, 0.44, 0.38), (0.55, 0.85, 0.70))
+        _round_tree(img, xx, yy, 56, 88, 17, (0.20, 0.58, 0.30))
+        for dx in (-9, 0, 9):
+            _paint(img, _cov(_seg(xx, yy, 56 + dx * 0.3, 78, 56 + dx * 1.3, 96) - 1.8), (0.42, 0.30, 0.2))
+        _reed(img, xx, yy, 92, 100, 20, 2)
+    elif key == "tropical_rainforest":
+        _fill(img, _box(xx, yy, 60, 56, 68, 104), (0.38, 0.28, 0.2))
+        for cx, cy, r, c in ((64, 50, 24, (0.20, 0.62, 0.28)), (44, 58, 14, (0.25, 0.70, 0.30)), (86, 58, 14, (0.16, 0.54, 0.26))):
+            _fill(img, np.hypot((xx - cx) / 1.35, yy - cy) - r, c)
+        _paint(img, _cov(_ell(xx, yy, 52, 44, 8, 5)), (0.55, 0.85, 0.40), 0.8)
+        _fill(img, _ell(xx, yy, 96, 84, 3, 3), (0.9, 0.35, 0.45))
+    elif key == "arid_shrubland":
+        for cx, cy, r, c in ((46, 90, 14, (0.55, 0.60, 0.34)), (76, 94, 11, (0.62, 0.55, 0.34)), (96, 98, 8, (0.55, 0.60, 0.34))):
+            _fill(img, np.hypot((xx - cx) / 1.3, yy - cy) - r, c)
+        for dx in (-3, 0, 3):
+            _paint(img, _cov(_seg(xx, yy, 24 + dx, 100, 24 + dx * 2, 90) - 1.3), (0.70, 0.58, 0.32))
+    elif key == "desert":
+        _dune(img, xx, yy, 88, 6, 0.5, (0.86, 0.70, 0.42))
+        _cactus(img, xx, yy, 46, 98, 30)
+        _fill(img, _ell(xx, yy, 92, 38, 8, 8), (1.0, 0.9, 0.55))
+    else:  # extreme_desert
+        _fill(img, _ell(xx, yy, 64, 52, 17, 17), (1.0, 0.86, 0.45))
+        _dune(img, xx, yy, 90, 8, 0.0, (0.80, 0.52, 0.30)); _dune(img, xx, yy, 102, 5, 2.0, (0.70, 0.42, 0.24))
+        for k, (a, b) in enumerate(((24, 76), (100, 70), (82, 80))):
+            _paint(img, _cov(_seg(xx, yy, a - 5, b, a + 5, b) - 1.2), (1.0, 0.85, 0.6), 0.7)
+
+
+BIOMES = {
+    # key: (sky, ground, rim)
+    "temperate_forest": ((0.64, 0.82, 0.92), (0.42, 0.62, 0.32), (0.36, 0.66, 0.34)),
+    "boreal_forest": ((0.72, 0.82, 0.88), (0.90, 0.94, 0.98), (0.30, 0.55, 0.50)),
+    "tundra": ((0.76, 0.84, 0.90), (0.60, 0.60, 0.48), (0.62, 0.68, 0.74)),
+    "cold_bog": ((0.66, 0.72, 0.76), (0.40, 0.48, 0.40), (0.40, 0.58, 0.62)),
+    "ice_sheet": ((0.80, 0.90, 0.96), (0.88, 0.95, 1.00), (0.55, 0.78, 0.92)),
+    "sea_ice": ((0.78, 0.88, 0.94), (0.78, 0.88, 0.94), (0.40, 0.62, 0.80)),
+    "temperate_swamp": ((0.70, 0.78, 0.70), (0.36, 0.46, 0.30), (0.46, 0.60, 0.34)),
+    "tropical_swamp": ((0.62, 0.84, 0.74), (0.22, 0.42, 0.30), (0.26, 0.64, 0.50)),
+    "tropical_rainforest": ((0.52, 0.82, 0.72), (0.16, 0.46, 0.24), (0.22, 0.70, 0.34)),
+    "arid_shrubland": ((0.86, 0.84, 0.68), (0.76, 0.64, 0.40), (0.74, 0.62, 0.30)),
+    "desert": ((0.95, 0.88, 0.66), (0.90, 0.78, 0.50), (0.92, 0.74, 0.34)),
+    "extreme_desert": ((1.00, 0.78, 0.50), (0.86, 0.58, 0.34), (0.90, 0.46, 0.22)),
+}
+
+
+def _biome_icon(key):
+    xx, yy = _grid()
+    img = np.zeros((N, N, 4), np.float32)
+    c = N / 2
+    sky, ground, rim = BIOMES[key]
+    disc = _cov(np.hypot(xx - c, yy - c) - 52)
+    _paint(img, disc, (0.12, 0.10, 0.09), 0.92)
+    inner = _cov(np.hypot(xx - c, yy - c) - 46)
+    # sky, then ground below the horizon
+    g = np.where(yy > 76, 1.0, 0.0).astype(np.float32)
+    _paint(img, inner, sky)
+    _paint(img, inner * g, ground)
+    # clip the scene to the disc: paint into a scratch layer, mask by disc
+    scene = np.zeros_like(img)
+    _glyph_biome(key, scene, xx, yy)
+    mask = inner[..., None]
+    a = scene[..., 3:4] * mask
+    img[..., :3] = scene[..., :3] * a + img[..., :3] * (1 - a)
+    img[..., 3:4] = np.maximum(img[..., 3:4], a)
+    _stroke(img, np.abs(np.hypot(xx - c, yy - c) - 50), 4.0, rim)
+    name = "biome_" + key
+    path = os.path.join(UI_DIR, name + ".png")
+    S.write_png(img, path)
+    meta.write("ui_icon", name, {"image": "generated/ui/icons/%s.png" % name, "scale": C.SCALE,
+                                 "canvas": [N, N], "source": "glyph", "biome": key})
+    return path
+
+
 def build():
     t = _base_tokens()
     out = [_selection(t), _designation("designation_cut", t, _g_cut),
@@ -471,6 +653,7 @@ def build():
             _badge_icon("overlay_roof", t, _g_overlay_roof, (0.45, 0.65, 0.90)),
             _badge_icon("home", t, _g_home, (0.29, 0.50, 0.83)),
             _badge_icon("home_clear", t, _g_home_clear, t["danger"])]
+    out += [_biome_icon(k) for k in BIOMES]
     out += [_shadow_blob(), _shadow_box(), _roof_tile("roof_built", "built"),
             _roof_tile("roof_natural", "natural"), _roof_tile("roof_plan", "plan"),
             _roof_tile("roof_remove", "remove")]

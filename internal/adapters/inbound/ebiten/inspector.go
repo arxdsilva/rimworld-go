@@ -419,6 +419,8 @@ func gearLine(a string) string {
 	switch a {
 	case "parka":
 		return "leather parka  (much warmer, hot in summer)"
+	case "wool parka":
+		return "wool parka  (much warmer, hot in summer)"
 	case "tuque":
 		return "knitted tuque  (warmer)"
 	case "duster":

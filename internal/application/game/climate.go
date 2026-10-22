@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"strings"
 
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/clock"
@@ -38,7 +39,7 @@ func (g *Game) temperatureAt(x, y int) temperature.Temp {
 	if t, ok := g.residual[y*g.grid.Width()+x]; ok {
 		return t // a freshly breached room still holds some warmth
 	}
-	return temperature.Outdoor(g.clock.Now()) + g.weatherTempDelta(x, y)
+	return g.climate.Outdoor(g.clock.Now()) + g.weatherTempDelta(x, y)
 }
 
 // sowMinMean is the lowest daily mean temperature (tenths of a degree C)
@@ -49,7 +50,7 @@ const sowMinMean = 30
 // day's mean there (outdoors, or the room's temperature) is above
 // sowMinMean.
 func (g *Game) growingSeason(x, y int) bool {
-	mean := temperature.DailyMean(g.clock.Now())
+	mean := g.climate.DailyMean(g.clock.Now())
 	if r := g.roomAt(x, y); r >= 0 && r < len(g.roomTemps) {
 		mean = g.roomTemps[r]
 	}
@@ -140,28 +141,51 @@ func (g *Game) rotItems() {
 	}
 }
 
-// frostCrops kills crops standing in air colder than they can bear.
+// frostCrops kills crops standing in air colder than they can bear, and
+// wild biome plants (pine, jungle tree, cactus, ...) out of their climate
+// (SIM-023): a jungle tree sown into a temperate winter, a pine in a desert
+// summer. The original tree and berry bush only go dormant.
 func (g *Game) frostCrops() {
 	dead := map[plant.Species]int{}
 	var order []plant.Species
 	var fx, fy int
+	hot := map[plant.Species]bool{}
 	for _, id := range append([]entity.EntityID(nil), g.plantIDs...) {
 		p, ok := g.plants.Get(id)
-		if !ok || !plant.Frostbitten(p.Species, int(g.temperatureAt(p.X, p.Y))) {
+		if !ok {
+			continue
+		}
+		t := int(g.temperatureAt(p.X, p.Y))
+		if !plant.Frostbitten(p.Species, t) && !plant.Killed(p.Species, t) {
 			continue
 		}
 		g.removePlant(id)
 		if dead[p.Species] == 0 {
 			order = append(order, p.Species)
 			fx, fy = p.X, p.Y
+			d := plant.DefOf(p.Species)
+			hot[p.Species] = d.HeatKill != 0 && t > d.HeatKill
 		}
 		dead[p.Species]++
 	}
 	for _, s := range order {
-		if n := dead[s]; n == 1 {
+		n := dead[s]
+		switch {
+		case plant.DefOf(s).Crop && n == 1:
 			g.message(fx, fy, "Frost killed a %s plant", s)
-		} else {
+		case plant.DefOf(s).Crop:
 			g.message(fx, fy, "Frost killed the %s (%d plants)", plant.DefOf(s).Label, n)
+		default:
+			cause := "cold"
+			if hot[s] {
+				cause = "heat"
+			}
+			name := strings.ReplaceAll(plantLabel(s), "_", " ")
+			if n == 1 {
+				g.message(fx, fy, "The %s killed a %s", cause, name)
+			} else {
+				g.message(fx, fy, "The %s killed %d %s plants", cause, n, name)
+			}
 		}
 	}
 }

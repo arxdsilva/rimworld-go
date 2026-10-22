@@ -185,6 +185,9 @@ func (g *Game) chase(id entity.EntityID, a *animal.State, now uint64) {
 		a.Path, a.PathI = nil, 0
 		if a.Cooldown == 0 {
 			a.Cooldown = def.Cooldown
+			if a.HuntSince != 0 {
+				a.HuntSince = now // a strike: the hunt is still on (T5)
+			}
 			g.animals.Set(id, *a)
 			g.strike(id, a.Target, def.Attack)
 			if cur, ok := g.animals.Get(id); ok {
@@ -204,66 +207,41 @@ func (g *Game) chase(id entity.EntityID, a *animal.State, now uint64) {
 // guardTarget is the nearest threat a tame guard animal should fight: a
 // standing raider, or a wild animal attacking the colony.
 func (g *Game) guardTarget(id entity.EntityID, pos Position) entity.EntityID {
-	best, bestD := entity.EntityID(0), guardRadius+1
-	for _, rid := range g.raiderIDs {
-		if !g.standingRaider(rid) {
-			continue
-		}
-		p, _ := g.positions.Get(rid)
-		if d := weapon.Distance(pos.X, pos.Y, p.X, p.Y); d < bestD {
-			best, bestD = rid, d
-		}
-	}
 	now := uint64(g.clock.Now())
-	for _, aid := range g.animalIDs {
-		o, ok := g.animals.Get(aid)
-		if aid == id || !ok || o.Tame || o.Dead() || !(g.hostile(o) || o.Enraged(now)) {
-			continue
+	best, _, _ := g.nearestWhere(pos.X, pos.Y, guardRadius, ckRaider|ckAnimal, func(o entity.EntityID, _ Position) bool {
+		if g.isRaider(o) {
+			return g.standingRaider(o)
 		}
-		p, _ := g.positions.Get(aid)
-		if d := weapon.Distance(pos.X, pos.Y, p.X, p.Y); d < bestD {
-			best, bestD = aid, d
-		}
-	}
+		a, ok := g.animals.Get(o)
+		return o != id && ok && !a.Tame && !a.Dead() && (g.hostile(a) || a.Enraged(now))
+	})
 	return best
 }
 
-// thinkTame: guards fight off threats, everyone else keeps to the pens
-// (or near the colony) and shies away from predators.
-func (g *Game) thinkTame(id entity.EntityID, a *animal.State, now uint64) {
-	def := animal.DefOf(a.Species)
-	pos, _ := g.positions.Get(id)
-	if def.Predator {
-		if a.Target != 0 && !g.combatAlive(a.Target) {
-			a.Target = 0
-		}
-		if a.Target == 0 {
-			a.Target = g.guardTarget(id, pos)
-		}
-		if a.Target != 0 {
-			g.chase(id, a, now)
-			return
-		}
-	} else {
-		r := def.FleeRadius
-		if a.Mode == animal.Flee {
-			r += animal.FleeRelease // run well clear before grazing again
-		}
-		if tp, threat := g.nearestPredator(id, pos, r); threat {
-			if a.Mode != animal.Flee || a.PathI >= len(a.Path) || (now+uint64(id))%40 == 0 {
-				a.Mode = animal.Flee
-				fx, fy := animal.FleeGoal(pos.X, pos.Y, tp.X, tp.Y, 6)
-				g.animalGoTo(id, a, fx, fy)
-			}
-			return
-		}
-		if a.Mode == animal.Flee && a.PathI < len(a.Path) {
-			return // finish the run
-		}
+// guardCheck: a tame guard (a predator) fights off threats near it,
+// looking for one every animal.ThreatEvery ticks. It reports true while it
+// fights.
+func (g *Game) guardCheck(id entity.EntityID, a *animal.State, pos Position, now uint64) bool {
+	if a.Target != 0 && !g.combatAlive(a.Target) {
+		a.Target = 0
 	}
-	if a.Mode != animal.Wander {
-		a.Mode, a.Path, a.PathI, a.Target = animal.Wander, nil, 0, 0
+	if a.Target == 0 && (now+uint64(id))%animal.ThreatEvery == 0 {
+		a.Target = g.guardTarget(id, pos)
 	}
+	if a.Target == 0 {
+		if a.Mode == animal.Attack {
+			a.Mode, a.Path, a.PathI = animal.Wander, nil, 0
+		}
+		return false
+	}
+	a.Feed, a.FeedLeft = animal.FeedTarget{}, 0 // a sleeping guard wakes
+	g.chase(id, a, now)
+	return true
+}
+
+// wanderTame: tame animals keep to the pens (or near the colony).
+func (g *Game) wanderTame(id entity.EntityID, a *animal.State, pos Position, def animal.Def, now uint64) {
+	a.Target = 0
 	if a.PathI < len(a.Path) || now < a.NextThink {
 		return
 	}
@@ -304,18 +282,11 @@ func (g *Game) combatAlive(id entity.EntityID) bool {
 // nearestPredator: the closest wild predator within r (tame grazers do
 // not fear people or the colony's own wolves).
 func (g *Game) nearestPredator(id entity.EntityID, pos Position, r int) (Position, bool) {
-	best, bestD, found := Position{}, r+1, false
-	for _, aid := range g.animalIDs {
-		o, ok := g.animals.Get(aid)
-		if aid == id || !ok || o.Tame || !animal.DefOf(o.Species).Predator {
-			continue
-		}
-		p, _ := g.positions.Get(aid)
-		if d := weapon.Distance(pos.X, pos.Y, p.X, p.Y); d < bestD {
-			best, bestD, found = p, d, true
-		}
-	}
-	return best, found
+	_, p, ok := g.nearestWhere(pos.X, pos.Y, r, ckAnimal, func(o entity.EntityID, _ Position) bool {
+		a, ok := g.animals.Get(o)
+		return o != id && ok && !a.Tame && animal.DefOf(a.Species).Predator
+	})
+	return p, ok
 }
 
 // home is roughly where the colony lives: its first standing colonist's

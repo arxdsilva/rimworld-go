@@ -7,6 +7,7 @@ import (
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/generation"
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/terrain"
@@ -21,9 +22,10 @@ const MineWork = 360
 // TerrainNames maps WorldView.Terrain codes to names.
 func TerrainNames() []string { return terrain.Names() }
 
-// generate replaces the map with a seeded generated one.
+// generate replaces the map with a seeded generated one for the game's
+// biome (temperate forest: the original generator).
 func (g *Game) generate(seed uint64) generation.Result {
-	res := generation.Generate(seed, g.grid.Width(), g.grid.Height())
+	res := generation.GenerateBiome(seed, g.grid.Width(), g.grid.Height(), biome.DefOf(g.biome))
 	for y := 0; y < g.grid.Height(); y++ {
 		for x := 0; x < g.grid.Width(); x++ {
 			g.setTerrain(x, y, res.Terrain.At(x, y))
@@ -75,8 +77,10 @@ func (g *Game) removePlant(id entity.EntityID) {
 	g.plantIDs = kept
 }
 
-// phasePlants grows every plant on fertile ground.
+// phasePlants grows every plant on fertile ground, and grass back on
+// grazed or cut tiles that are due (grass.go).
 func (g *Game) phasePlants() {
+	g.regrowGrass()
 	if !plant.GrowingHour(g.Date().Hour) {
 		return // plants grow in daylight only
 	}
@@ -296,6 +300,9 @@ type SoilView struct {
 	Fertility int    // growth rate in percent; 0 = nothing grows
 	Farmable  bool   // growing zones may be placed here
 	Walkable  bool
+	// WalkCost is the time to cross it, percent of plain ground (marsh 200:
+	// "slow ground" in the hover; floors cancel it).
+	WalkCost int
 }
 
 var soilLabels = map[string]string{
@@ -311,7 +318,7 @@ func Soils() []SoilView {
 	for i, n := range names {
 		t := terrain.Type(i)
 		out[i] = SoilView{Name: n, Label: soilLabels[n], Fertility: t.Fertility(),
-			Farmable: t.Fertility() > 0, Walkable: t.Walkable()}
+			Farmable: t.Fertility() > 0, Walkable: t.Walkable(), WalkCost: t.WalkCost()}
 	}
 	return out
 }

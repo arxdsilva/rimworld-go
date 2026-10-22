@@ -60,7 +60,7 @@ func (g *Game) canMoveTo(bid entity.EntityID, f construction.Facing, x, y int) (
 			return false, ReasonMoveHit
 		}
 		if pid := g.plantAt(cx, cy); pid != 0 {
-			if p, _ := g.plants.Get(pid); p.Species == plant.Tree {
+			if p, _ := g.plants.Get(pid); plant.DefOf(p.Species).Trunk && p.Species != plant.Cactus {
 				return false, ReasonTree
 			}
 		}

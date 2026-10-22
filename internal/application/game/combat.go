@@ -198,6 +198,7 @@ func (g *Game) hurt(target entity.EntityID, dmg int, by entity.EntityID) {
 			}
 			a.Mode, a.FleeUntil, a.Path = animal.Flee, now+900, nil
 		}
+		g.animalHurt(target, &a, by, now) // animal_needs.go: wakes it, T8
 		g.animals.Set(target, a)
 		if a.Dead() {
 			g.killAnimal(target, by)

@@ -22,7 +22,7 @@ func plantRect() button { return button{x: hudPad, y: hudTopH + hudPad, w: 300, 
 // maxPlantChips is how many "now" colonist chips fit in the panel's row.
 const maxPlantChips = 3
 
-func isTree(p game.PlantView) bool { return p.Species == "tree" }
+func isTree(p game.PlantView) bool { return isTreePlant(p.Species) }
 
 func capitalize(s string) string {
 	s = strings.ReplaceAll(s, "_", " ")
@@ -35,6 +35,12 @@ func capitalize(s string) string {
 // plantTitle names the plant: trees by their drawn variant, the rest by
 // species.
 func plantTitle(p game.PlantView) string {
+	switch p.Species {
+	case "pine":
+		return "Pine tree"
+	case "jungle_tree":
+		return "Jungle tree"
+	}
 	if isTree(p) {
 		return capitalize(treeSpecies[treeSpeciesAt(tileHash(p.X, p.Y))]) + " tree"
 	}

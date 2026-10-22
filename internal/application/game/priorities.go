@@ -83,7 +83,7 @@ func (g *Game) assignWorkType(id entity.EntityID, t work.Type) bool {
 	case work.Doctor:
 		return g.assignDoctor(id)
 	case work.Haul:
-		return g.assignRefuel(id) || g.assignBury(id) || g.assignHaul(id)
+		return g.assignRefuel(id) || g.fillTroughs(id) || g.assignBury(id) || g.assignHaul(id) // fillTroughs: trough_feed.go
 	case work.Construct:
 		return g.assignConstruct(id) || g.assignRepair(id) || g.assignRoof(id)
 	case work.Cook, work.Craft:

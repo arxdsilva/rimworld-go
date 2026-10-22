@@ -213,6 +213,9 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 		}
 		mask := wallMask(walls, b.X, b.Y)
 		key := buildSpriteStuff(b.Kind, b.Stuff, b.Facing, mask, mask&(wallE|wallW) != 0, occupied[[2]int{b.X, b.Y}])
+		if b.Kind == troughKind {
+			key = troughKey(b)
+		}
 		t := none
 		if (b.Kind == "bed" || b.Kind == "double bed") && len(cloth) > 0 {
 			t = r.art.tint("cloth", cloth[mix64(uint64(b.ID))%uint64(len(cloth))])
@@ -224,6 +227,10 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 			case "funeral pyre":
 				r.drawPyre(screen, b, tile, sw, sh)
 			default:
+				if b.Kind == troughKind && !r.art.has(key) {
+					r.drawTroughFallback(screen, b, tile)
+					break
+				}
 				r.drawSprite(screen, key, t, float64(b.X), float64(b.Y), tile, sw, sh)
 			}
 			if b.DryQty > 0 {
@@ -264,7 +271,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 		key = r.seasonKey(key, w)
 		amount, kind := 0.035, kindBush
 		switch p.Species {
-		case "tree":
+		case "tree", "pine", "jungle_tree":
 			amount, kind = 0.022, kindTree
 		case "wheat", "corn":
 			amount, kind = 0.07, kindCrop
@@ -406,12 +413,15 @@ func itemSprite(kind string) string {
 		return "item/cloth_bolt"
 	case "straw":
 		return "item/straw_bundle"
-	case "straw carpet", "cloth carpet", "leather carpet", "wood carpet":
+	case "straw carpet", "cloth carpet", "leather carpet", "wood carpet", "wool carpet":
 		return "item/carpet_" + strings.TrimSuffix(kind, " carpet") + "_rolled"
 	case "human corpse":
 		return corpseCarrySprite
 	case "bones":
 		return bonesSprite(0, 0)
+	}
+	if k := biomeItemSprite(kind); k != "" {
+		return k
 	}
 	return "item/" + kind
 }
@@ -480,6 +490,8 @@ func (r *Renderer) pawnLayers(l pawnLook, f facing, apparel ...string) []struct 
 		switch a {
 		case "parka":
 			out = append(out, layer{"pawn/parka_leather_" + fs, color.NRGBA{}})
+		case "wool parka": // the leather parka layer, tinted cream
+			out = append(out, layer{"pawn/parka_leather_" + fs, color.NRGBA{R: 238, G: 228, B: 200, A: 255}})
 		case "duster":
 			out = append(out, layer{"pawn/duster_leather_" + fs, color.NRGBA{}})
 		case "tuque":
@@ -539,9 +551,9 @@ func (r *Renderer) drawTile(screen *ebiten.Image, key string, wx, wy, tile float
 }
 
 // terrainPriority: a higher index draws its soft edge over lower ones.
-var terrainPriority = map[string]int{"soil": 0, "rich_soil": 1, "gravel": 2, "stone": 3, "rock": 3}
+var terrainPriority = map[string]int{"soil": 0, "rich_soil": 1, "sand": 2, "marsh": 3, "gravel": 4, "ice": 5, "stone": 6, "rock": 6}
 
-var terrainSprite = map[string]string{"soil": "soil", "rich_soil": "soil_rich", "gravel": "gravel", "stone": "stone", "rock": "stone"}
+var terrainSprite = map[string]string{"soil": "soil", "rich_soil": "soil_rich", "gravel": "gravel", "stone": "stone", "rock": "stone", "sand": "sand", "marsh": "marsh", "ice": "ice"}
 
 func (r *Renderer) terrainName(w game.WorldView, x, y int) string {
 	if w.TerrainW <= 0 || x < 0 || y < 0 || x >= w.TerrainW {
@@ -557,7 +569,8 @@ func (r *Renderer) terrainName(w game.WorldView, x, y int) string {
 
 func (r *Renderer) drawTerrainArt(screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
 	none := color.NRGBA{}
-	byPri := []string{"soil", "rich_soil", "gravel", "stone"}
+	byPri := []string{"soil", "rich_soil", "sand", "marsh", "gravel", "ice", "stone"}
+	grassCS := grassTint(w.BiomeKey)
 	grassScratch = grassMask(w, grassScratch) // grass_draw.go
 	for y := 0; y < r.game.Height(); y++ {
 		for x := 0; x < r.game.Width(); x++ {
@@ -565,8 +578,8 @@ func (r *Renderer) drawTerrainArt(screen *ebiten.Image, w game.WorldView, sw, sh
 			if t == "" {
 				t = "soil"
 			}
-			base := terrainSprite[t]
-			r.drawTile(screen, artKey("terrain", base, int(tileHash(x, y)%soilVariants)), float64(x), float64(y), tile, sw, sh, noCS)
+			key, tcs := r.terrainTileKey(t, int(tileHash(x, y)%soilVariants))
+			r.drawTile(screen, key, float64(x), float64(y), tile, sw, sh, tcs)
 			pri := terrainPriority[t]
 			for p := pri + 1; p < len(byPri); p++ {
 				mask := 0
@@ -580,7 +593,9 @@ func (r *Renderer) drawTerrainArt(screen *ebiten.Image, w game.WorldView, sw, sh
 				}
 			}
 			if grassVisible(grassScratch, w, t, x, y) {
-				r.drawSpritePose(screen, grassKey(t, tileHash(x, y)), none, float64(x), float64(y), tile, r.plantPose(x, y, kindGrass, 0.05, 1))
+				gp := r.plantPose(x, y, kindGrass, 0.05, 1)
+				gp.cs = grassCS
+				r.drawSpritePose(screen, grassKey(t, tileHash(x, y)), none, float64(x), float64(y), tile, gp)
 				if grassScratch[y*w.TerrainW+x]&grassMarked != 0 {
 					r.drawSprite(screen, "overlay/designation_cut", none, float64(x), float64(y), tile, sw, sh)
 				}
@@ -655,6 +670,9 @@ func plantSprite(p game.PlantView) (string, float64) {
 	h := tileHash(p.X, p.Y)
 	if ks, ok := plantKeys.crops[p.Species]; ok {
 		return ks[cropStage(p)][h%3], 1
+	}
+	if k, sc, ok := newPlantKey(p, h); ok {
+		return k, sc
 	}
 	switch p.Species {
 	case "tree":
