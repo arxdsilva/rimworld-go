@@ -154,7 +154,6 @@ ACTION_FRAMES = (("ready", "aim", "kneel", "carry") + _set("fire", 3) + _set("st
                  _set("bench", 4) + _set("tend", 4) + _set("eat", 4) + _set("flinch", 3) +
                  _set("fall", 4) + _set("offer", 2) +
                  tuple("carry_walk%02d" % i for i in range(1, 13)))
-ANIMAL_ACTIONS = {"dustbuck": _set("kick", 4), "ridgewolf": _set("bite", 4)}
 ANIMAL_COMMON = _set("graze", 2) + _set("flinch", 2)
 # held gear: two-handed items need a support point towards the working end
 GEAR_END = {"weapon": ("muzzle", "tip"), "tool": ("head",)}
@@ -190,30 +189,60 @@ def check_pawn_layers():
                 for key in ("head", "hand", "hand_l"):
                     if not re.search(r"^\s+%s:\s*\[" % key, text, re.M):
                         err("pawn/%s: missing %s attachment" % (f[:-5], key))
-    ad = os.path.join(GEN, "animal")
-    if os.path.isdir(ad):
-        for f in os.listdir(ad):
-            m = re.match(r"^(\w+?)_(south|east|north|west)\.png$", f)
-            if not m:
-                continue
-            base = Image.open(os.path.join(ad, f)).size
-            for fr in TROT_FRAMES:
-                p = os.path.join(ad, "%s_%s_%s.png" % (m.group(1), m.group(2), fr))
-                if not os.path.exists(p):
-                    err("animal/%s: missing trot frame %s" % (f[:-4], fr))
-                elif Image.open(p).size != base:
-                    err("animal/%s_%s: canvas differs from the standing frame" % (f[:-4], fr))
-            for fr in ANIMAL_ACTIONS.get(m.group(1), ()) + ANIMAL_COMMON:
-                p = os.path.join(ad, "%s_%s_%s.png" % (m.group(1), m.group(2), fr))
-                if not os.path.exists(p):
-                    err("animal/%s: missing action frame %s" % (f[:-4], fr))
-                elif Image.open(p).size != base:
-                    err("animal/%s_%s: canvas differs from the standing frame" % (f[:-4], fr))
     for facing, s in sizes.items():
         if len(s) != 1:
             err("pawn/%s: layers disagree on canvas %s" % (facing, sorted(s)))
     if set(sizes) != {"south", "east", "north", "west"}:
         err("pawn: need all four facings, got %s" % sorted(sizes))
+
+
+def _roster():
+    """The binding animal roster (ART-011), read from the Blender family."""
+    sys.path.insert(0, os.path.join(ROOT, "source", "blender", "artlib", "families"))
+    try:
+        import animal_roster
+    finally:
+        sys.path.pop(0)
+    return animal_roster.ROSTER
+
+
+def check_animals():
+    """Every roster species has its full set (ART §11.1, §27.1-27.2): per
+    facing the standing frame, trot walk01..08, its attack set 1..4,
+    graze1..2 and flinch1..2 on the standing frame's canvas; corpses
+    v0..v2; and the same animal set under <key>_f for dimorphic species.
+    Sprites of species outside the roster are errors."""
+    ad = os.path.join(GEN, "animal")
+    roster = _roster()
+    bases = set()
+    for sp in roster:
+        frames = TROT_FRAMES + _set(sp.attack, 4) + ANIMAL_COMMON
+        for base in [sp.key] + ([sp.key + "_f"] if sp.dimorphic else []):
+            bases.add(base)
+            for facing in ("south", "east", "north", "west"):
+                stand = os.path.join(ad, "%s_%s.png" % (base, facing))
+                if not os.path.exists(stand):
+                    err("animal/%s_%s: missing standing frame" % (base, facing))
+                    continue
+                size = Image.open(stand).size
+                for fr in frames:
+                    p = os.path.join(ad, "%s_%s_%s.png" % (base, facing, fr))
+                    if not os.path.exists(p):
+                        err("animal/%s_%s: missing frame %s" % (base, facing, fr))
+                    elif Image.open(p).size != size:
+                        err("animal/%s_%s_%s: canvas differs from the standing frame" % (base, facing, fr))
+        for v in range(3):
+            if not os.path.exists(os.path.join(GEN, "item", "corpse_%s_v%d.png" % (sp.key, v))):
+                err("item/corpse_%s_v%d: missing corpse" % (sp.key, v))
+    keys = {sp.key for sp in roster}
+    for f in sorted(os.listdir(ad)) if os.path.isdir(ad) else ():
+        m = re.match(r"^(\w+?)_(south|east|north|west)\.png$", f)
+        if m and m.group(1) not in bases:
+            err("animal/%s: species not in the roster" % f[:-4])
+    for f in sorted(os.listdir(os.path.join(GEN, "item"))):
+        m = re.match(r"^corpse_(\w+?)(?:_v\d)?\.png$", f)
+        if m and not f.endswith("_n.png") and m.group(1) not in keys:
+            err("item/%s: corpse of a species not in the roster" % f[:-4])
 
 
 def _attach(text, key):
@@ -259,6 +288,7 @@ def main():
     check_terrain_seams()
     check_autotile()
     check_pawn_layers()
+    check_animals()
     check_gear()
     for e in errors:
         print("ERROR", e)

@@ -9,7 +9,7 @@ Each species' features are the binding visual brief for its builder.
 """
 from collections import namedtuple
 
-Species = namedtuple("Species", "key archetype size dimorphic features")
+Species = namedtuple("Species", "key archetype size dimorphic features attack", defaults=(None,))
 
 SIZE_LENGTH = {"XS": 0.35, "S": 0.6, "M": 0.95, "L": 1.4, "XL": 2.0}
 
@@ -145,5 +145,24 @@ ROSTER = [
     Species('glimmerstag', 'quadruped', 'XL', False,
             'ORIGINAL (not a thrumbo): giant pale ivory stag, long graceful neck, narrow elegant head, tall branching pale-blue crystal antlers (slightly emissive), a mossy green-grey mane over neck and shoulders, cool blue-grey shadows'),
 ]
+
+# Natural weapon per key (mirrors internal/domain/animal Def.Attack): the
+# attack frame set is <attack>1..4.
+ATTACK = {
+    'deer': 'kick', 'timber_wolf': 'bite', 'alpaca': 'kick', 'bison': 'gore', 'emberbuck': 'kick',
+    'capybara': 'bite', 'caribou': 'gore', 'cow': 'headbutt', 'donkey': 'kick', 'dromedary': 'kick',
+    'elephant': 'gore', 'elk': 'gore', 'gazelle': 'kick', 'goat': 'headbutt', 'horse': 'kick',
+    'ibex': 'headbutt', 'ground_sloth': 'claw', 'woolhorn': 'headbutt', 'pig': 'bite', 'rhinoceros': 'gore',
+    'sheep': 'headbutt', 'yak': 'gore', 'timbergnaw': 'bite', 'arctic_fox': 'bite', 'arctic_wolf': 'bite',
+    'cinder_rat': 'bite', 'cat': 'claw', 'chinchilla': 'bite', 'cougar': 'claw', 'fennec_fox': 'bite',
+    'grizzly_bear': 'claw', 'guinea_pig': 'bite', 'hare': 'bite', 'husky': 'bite', 'labrador': 'bite',
+    'lynx': 'claw', 'monkey': 'claw', 'panther': 'claw', 'polar_bear': 'claw', 'raccoon': 'bite',
+    'rat': 'bite', 'red_fox': 'bite', 'snowhare': 'bite', 'squirrel': 'bite', 'dire_wolf': 'bite',
+    'wild_boar': 'gore', 'yorkshire_terrier': 'bite', 'cassowary': 'kick', 'chicken': 'peck', 'duck': 'peck',
+    'emu': 'kick', 'goose': 'peck', 'ostrich': 'kick', 'turkey': 'peck', 'cobra': 'bite', 'iguana': 'bite',
+    'tortoise': 'bite', 'hive_beetle': 'bite', 'hive_brute': 'claw', 'hive_crawler': 'bite',
+    'glimmerstag': 'gore',
+}
+ROSTER = [s._replace(attack=ATTACK[s.key]) for s in ROSTER]
 
 BY_KEY = {s.key: s for s in ROSTER}

@@ -42,6 +42,40 @@ materials:
   pumpkin:     {light: "#f5a04a", base: "#dc7a26", shadow: "#a4551a"}
   burlap:      {light: "#cdb68b", base: "#a99169", shadow: "#7a684a"}
   blossom:     {light: "#f6f0ff", base: "#d9cdee", shadow: "#a596c2"}
+  # animals (ART-011): coats, skins, horns, wool
+  eye_black:   {light: "#3b3330", base: "#231d1b", shadow: "#141010"}
+  blood_dried: {light: "#5a2622", base: "#4a1d1a", shadow: "#361413"}
+  fur_deer:    {light: "#c9844f", base: "#a8653a", shadow: "#774425"}
+  fur_white:   {light: "#fdfcf8", base: "#e6e5df", shadow: "#b5b8bd"}
+  fur_black:   {light: "#4b4a52", base: "#2e2d33", shadow: "#1b1a1f"}
+  fur_wolf:    {light: "#a69a88", base: "#857a6a", shadow: "#5d5549"}
+  fur_wolf_light: {light: "#e3d9c7", base: "#c4b8a3", shadow: "#908675"}
+  fur_squirrel: {light: "#d67f45", base: "#b25f2e", shadow: "#7d401d"}
+  fur_ginger:  {light: "#eba45d", base: "#cc803b", shadow: "#915625"}
+  fur_chestnut: {light: "#a2603a", base: "#7f4527", shadow: "#552c18"}
+  fur_brown:   {light: "#8f6849", base: "#6e4d35", shadow: "#4b3424"}
+  fur_choc:    {light: "#5e4334", base: "#463126", shadow: "#2e1f18"}
+  fur_gold:    {light: "#f2cb7c", base: "#d8a858", shadow: "#9f7839"}
+  fur_sand:    {light: "#eed6a5", base: "#d5b581", shadow: "#a0855a"}
+  fur_ochre:   {light: "#d39a52", base: "#b07a36", shadow: "#7c5222"}
+  fur_tawny:   {light: "#ddac6e", base: "#bd8a4c", shadow: "#8a6232"}
+  fur_rust:    {light: "#e57d3b", base: "#c45f22", shadow: "#8a3f15"}
+  fur_taupe:   {light: "#a69786", base: "#867767", shadow: "#5d5246"}
+  fur_moss:    {light: "#a1b088", base: "#7d8d67", shadow: "#56624a"}
+  fur_ivory:   {light: "#fbf7ec", base: "#e4dfd0", shadow: "#a9adb8"}
+  fur_ash:     {light: "#cdd0d6", base: "#aaaeb6", shadow: "#7d828b"}
+  fur_steel:   {light: "#8a95a3", base: "#6a7482", shadow: "#4a525e"}
+  skin_pink:   {light: "#f4c2b4", base: "#e09d8e", shadow: "#b06f64"}
+  skin_rose:   {light: "#d98b85", base: "#bf6d69", shadow: "#8e4b4a"}
+  fur_boar:    {light: "#7a6a5c", base: "#5d5045", shadow: "#3f362f"}
+  skin_grey:   {light: "#a8afb7", base: "#868e97", shadow: "#5f666f"}
+  skin_slate:  {light: "#808b9a", base: "#646e7c", shadow: "#454d58"}
+  horn_ivory:  {light: "#fdf7e6", base: "#e8dec2", shadow: "#b4a98d"}
+  horn_dark:   {light: "#8f8574", base: "#6b6254", shadow: "#463f35"}
+  tooth_orange: {light: "#f4a64c", base: "#d8802c", shadow: "#9e5a1c"}
+  wool_cream:  {light: "#fbf5e4", base: "#e9dec4", shadow: "#b9ad92"}
+  wool_slate:  {light: "#909aa6", base: "#6e7783", shadow: "#4b535e"}
+  crystal_blue: {light: "#e8f8ff", base: "#b3ddf4", shadow: "#7aaccc"}
   # neutral, tinted at runtime
   cloth:       {light: "#f4f4f4", base: "#d2d2d2", shadow: "#a2a2a2", tint: true}
   skin:        {light: "#f6f6f6", base: "#dadada", shadow: "#adadad", tint: true}
@@ -49,3 +83,5 @@ materials:
 emissive:
   lamp_warm:   "#ffd98a"
   indicator:   "#7fe3ff"
+  gland_ember: "#ffa23c"
+  crystal_glow: "#aeeeff"

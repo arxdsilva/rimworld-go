@@ -13,6 +13,7 @@ import numpy as np
 from .. import contracts as C
 from .. import meta, palette
 from .. import stage as S
+from .animal_roster import ROSTER
 
 N = C.PPT
 UI_DIR = os.path.join(C.ASSETS_DIR, "generated", "ui", "icons")
@@ -372,7 +373,6 @@ ICONS = {
     "tree": ("plant", "tree_00"),
     "crop": ("plant", "potato_harvestable"),
     "colonist": ("pawn", "body_south"),
-    "dustbuck": ("animal", "dustbuck_east"),
     "butcher_table": ("furniture", "butcher_table_south"),
     "drying_rack": ("furniture", "drying_rack_south"),
     "campfire": ("furniture", "campfire"),
@@ -381,9 +381,6 @@ ICONS = {
     "research_bench": ("furniture", "research_bench_south"),
     "spike_trap": ("furniture", "spike_trap"),
     "tailoring_bench": ("furniture", "tailoring_bench_south"),
-    "corpse_dustbuck": ("item", "corpse_dustbuck"),
-    "corpse_ridgewolf": ("item", "corpse_ridgewolf"),
-    "ridgewolf": ("animal", "ridgewolf_east"),
 }
 ICON_PX = 128          # @2x of a 64 px icon
 ICON_PAD = 10
@@ -448,7 +445,12 @@ def build():
     out += [_shadow_blob(), _shadow_box(), _roof_tile("roof_built", "built"),
             _roof_tile("roof_natural", "natural"), _roof_tile("roof_plan", "plan"),
             _roof_tile("roof_remove", "remove")]
-    for name, (fam, spr) in ICONS.items():
+    # One icon per roster species (ui_icon/<key>), cut from the standing
+    # east frame; a species whose art is not rendered yet is skipped.
+    icons = dict(ICONS)
+    for sp in ROSTER:
+        icons[sp.key] = ("animal", sp.key + "_east")
+    for name, (fam, spr) in icons.items():
         p = _icon(name, fam, spr)
         if p:
             out.append(p)
