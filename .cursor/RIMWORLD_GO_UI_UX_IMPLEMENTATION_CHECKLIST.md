@@ -286,7 +286,7 @@ building, item, plant, animal, corpse or tile.
 
 ## 3.1 Generic selection panel
 
--   [-] **Selected entity header** (pawn, animal, building, plant and item panels with name, icon, category and condition (UI-011); no faction/ownership line)
+-   [-] **Selected entity header** (pawn, animal, building, plant and item panels with name, icon, category and condition (UI-011); UI-014 animal inspector adds state, food/rest bars, sex/stage/age, pregnancy %, product bar, diet and tame chance; no faction/ownership line)
     -   Display label/name.
     -   entity category.
     -   faction/ownership where relevant.
@@ -307,7 +307,7 @@ building, item, plant, animal, corpse or tile.
 
 ## 3.2 Context command bar
 
--   [-] **Context-sensitive actions** (UI-011 panels: draft, clear orders, equip nearby; plant harvest/cut and per-colonist now-orders; item equip/wear/eat/haul per colonist; animal hunt/tame/release; building move (reinstall)/copy/deconstruct; no forbid/arrest/set owner)
+-   [-] **Context-sensitive actions** (UI-011 panels: draft, clear orders, equip nearby; plant harvest/cut and per-colonist now-orders; item equip/wear/eat/haul per colonist; animal hunt/tame/release and (UI-014) milk/shear products; building move (reinstall)/copy/deconstruct; no forbid/arrest/set owner)
     -   Draft.
     -   forbid.
     -   hunt.
@@ -1060,7 +1060,7 @@ This screen centralizes per-pawn behavioral policies.
 
 ## 19.1 Animals tab
 
--   [ ] **Owned animal table**
+-   [-] **Owned animal table** (UI-014: Animals tab Colony view lists tame animals with species, state, sex/stage/age, Handle work column; no health, master, area, training columns)
     -   Name.
     -   species.
     -   sex.
@@ -1090,19 +1090,19 @@ This screen centralizes per-pawn behavioral policies.
 -   [x] **Pen boundary visualization** (brown wash, fence rails and posts)
 -   [ ] **Enclosure validity**
 -   [ ] **Assigned species**
--   [ ] **Nutrition/grazing capacity**
--   [ ] **Animal count vs food capacity**
+-   [-] **Nutrition/grazing capacity** (UI-014: feeding trough panel shows stock and filter; no grass capacity readout)
+-   [-] **Animal count vs food capacity** (UI-014: pen full alert only; no capacity ratio)
 -   [ ] **Missing gate/breach warning**
 
 ## 19.4 Wildlife tab
 
--   [ ] **Species rows**
--   [ ] **Count**
--   [ ] **Predator/herbivore**
--   [ ] **Hunt risk**
--   [ ] **Tame chance/wildness**
--   [ ] **Body size/meat yield context**
--   [x] **Hunt designation toggle**
+-   [x] **Species rows** (UI-014: Animals tab Colony/Wild toggle, Wild species list)
+-   [x] **Count**
+-   [x] **Predator/herbivore** (diet and predator flag)
+-   [-] **Hunt risk** (predator flag only; no risk estimate)
+-   [-] **Tame chance/wildness** (tame % shown; no wildness stat)
+-   [-] **Body size/meat yield context** (meat yield shown; no body size)
+-   [x] **Hunt designation toggle** (Hunt all / Tame one / Cancel per species)
 -   [ ] **Sort/filter**
 
 ------------------------------------------------------------------------
@@ -1252,7 +1252,7 @@ the player what just happened and what requires attention.
 -   [ ] **Expandable details**
     -   Which pawns/items/rooms are affected.
 -   [ ] **Click cycles affected targets**
--   [ ] **Examples**
+-   [-] **Examples** (UI-014: animals hungry, wild animals eating crops, timbergnaws eating trees (N felled), pen full alerts)
     -   low food.
     -   colonist needs rescue.
     -   medical emergency.
@@ -1326,7 +1326,7 @@ the player what just happened and what requires attention.
 
 ## 25.2 World tile inspector
 
--   [ ] **Biome**
+-   [-] **Biome** (UI-014: top bar names the biome; no world tile inspector)
 -   [ ] **Terrain/hilliness**
 -   [ ] **Elevation**
 -   [ ] **Temperature**
@@ -1361,17 +1361,17 @@ the player what just happened and what requires attention.
 
 ## 26.1 New-world setup
 
--   [-] **World seed input** (placeholder label)
+-   [x] **World seed input** (UI-014: typed digit field with Dice; same seed and biome give the same site)
 -   [-] **Planet coverage/size option** (placeholder label)
 -   [-] **Temperature/rainfall/population options where supported** (placeholder labels)
--   [-] **Generate button** (visible, disabled)
+-   [-] **Generate button** (UI-014: enabled, builds from the seed and goes on to the biome picker; no progress)
 -   [ ] **Generation progress**
     -   UI remains responsive.
 
 ## 26.2 Landing-site selection
 
 -   [ ] **Select world tile**
--   [-] **Detailed tile card** (static placeholder; no map)
+-   [-] **Detailed tile card** (UI-014: biome picker card shows temperatures, growing days, ground, plants and top wildlife; no world map or tile selection)
     -   biome.
     -   temperature range.
     -   growing period.
@@ -1383,7 +1383,7 @@ the player what just happened and what requires attention.
 -   [ ] **Search/find world features**
     -   Optional high-value usability feature.
 -   [-] **Settle/start command** (Next to pawns; Start is on the pawn screen)
--   [-] **Back/regenerate** (Back only; Generate disabled)
+-   [-] **Back/regenerate** (Back and Dice for a new seed)
 
 ------------------------------------------------------------------------
 

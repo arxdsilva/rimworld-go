@@ -665,7 +665,7 @@ This is the heart of autonomous colony behavior.
 
 -   [-] **Plant food** (harvest yield stacks; no meat/diet categories)
 -   [x] **Meat**
--   [ ] **Animal products**
+-   [-] **Animal products** (SIM-026: milk, wool, plain and fertile eggs, ember oil; Handle work type, Milk/Shear jobs; young give no reduced meat, no per-species yield tuning UI)
     -   Milk/eggs where species definitions support them.
 -   [ ] **Food categories and diet compatibility**
 
@@ -1471,11 +1471,11 @@ children systems.
 
 ## 18.2 Wildlife
 
--   [-] **Biome wildlife population** (SIM-019: start herds and migration weighted by season and habitat; no biome maps yet)
+-   [x] **Biome wildlife population** (SIM-023/025: per-biome wildlife density and spawn weights; start population sized to the biome's carrying capacity; arrivals below 70%, herds leave above 130%, predator cap)
     -   Spawn species appropriate to biome/climate.
--   [-] **Animal hunger/rest**
+-   [x] **Animal hunger/rest** (SIM-024: every animal has Food and Rest; states Wander/Feed/Rest/Hunt/Flee/Leave with hysteresis; herds bed down together, night and day sleepers, starvation)
     -   Simpler needs than humans.
--   [ ] **Grazing/foraging**
+-   [x] **Grazing/foraging** (SIM-024: grazing grass, browsing, crop raiding, carcass eating, timbergnaw tree felling; feeding troughs in pens)
 -   [x] **Predation** (SIM-019: predators hunt prey no bigger than themselves; small-prey predators XS/S only; packs share targets)
     -   Predators select prey and hunt.
 -   [x] **Wild animal flee/fight response** (flee within 5 tiles and run until clear of 9; enraged animals don't flee; unarmed colonists flee once and hold back 600 ticks, armed ones keep their target)
@@ -1485,16 +1485,16 @@ children systems.
 -   [x] **Hunt designation**
 -   [x] **Hunter requires suitable ranged weapon**
 -   [ ] **Stalk/approach/fire job**
--   [-] **Animal retaliation/manhunter chance** (SIM-019: revenge chance by behaviour class, legendary 100% and rallies its kind; no tame-animal defence)
+-   [-] **Animal retaliation/manhunter chance** (SIM-019: revenge chance by behaviour class, legendary 100% and rallies its kind; SIM-024: badly hurt fighters break off, predators give up chases; no tame-animal defence)
 -   [x] **Corpse hauling/butchering integration**
 
 ## 18.4 Taming
 
 -   [x] **Tame designation** (Orders > Tame or the animal inspector; hunters tame)
--   [ ] **Animal-handling interaction**
+-   [-] **Animal-handling interaction** (SIM-026: taming moved from Hunt to the Handle work type, also used for Milk/Shear; no separate trust/nuzzle interaction)
 -   [ ] **Food requirement**
 -   [ ] **Success chance based on skill/wildness**
--   [x] **Tame animal joins colony** (named; dustbuck 60%, wolf 25% a try; a botched try may enrage it)
+-   [x] **Tame animal joins colony** (named; chance per try by species (deer 60%, timber wolf 25%); a botched try may enrage it; tame young are named at birth)
 
 ## 18.5 Training
 
@@ -1510,7 +1510,7 @@ children systems.
 ## 18.6 Animal zones/pens
 
 -   [ ] **Animal allowed areas for zonable animals**
--   [-] **Pen system for appropriate livestock** (pen zones of any shape, merged when adjacent, drawn with one fence; tame animals keep inside or stay near the colony; no fence buildings)
+-   [-] **Pen system for appropriate livestock** (pen zones of any shape, merged when adjacent, drawn with one fence; tame animals keep inside or stay near the colony; SIM-024: feeding troughs with plant/meat/any filter filled by haulers, animals graze in the pen; UI-014 pen-full alert; no fence buildings, no rope/lead, no enclosure validity or capacity readout)
     -   Pen markers/boundaries.
     -   rope/lead jobs.
     -   enclosure validity.
@@ -1518,24 +1518,24 @@ children systems.
 
 ## 18.7 Animal products
 
--   [ ] **Milk production**
--   [ ] **Wool production**
--   [ ] **Egg laying**
+-   [x] **Milk production** (SIM-026: milk from dairy species with a product bar; Handle-work Milk job)
+-   [x] **Wool production** (SIM-026: Shear job; wool parka and wool carpet recipes)
+-   [x] **Egg laying** (SIM-026: chickens, ducks, geese lay plain eggs; fertile eggs hatch at 0 to 45 C, frozen ones die; ember oil campfire fuel)
     -   Data-driven species components.
 
 ## 18.8 Reproduction
 
--   [ ] **Mating/pregnancy**
--   [ ] **Birth/hatching**
--   [ ] **Population control policies if included in target vanilla
-    version**
+-   [x] **Mating/pregnancy** (SIM-026: daily 35% mating check, pregnancy and litters, ageing, juveniles follow the mother, old-age death)
+-   [x] **Birth/hatching** (SIM-026: litters, tame young named, fertile eggs hatch)
+-   [-] **Population control policies if included in target vanilla
+    version** (SIM-025: per-biome carrying capacity with arrivals/departures and predator cap; no player policy; slaughter/hunt only)
 
 ## 18.9 Manhunter/scaria-like state
 
--   [x] **Manhunter** (wild animals hurt by colonists may enrage for a day: dustbuck 10%, wolf 45%)
+-   [x] **Manhunter** (wild animals hurt by colonists may enrage for a day; chance by behaviour class (deer 0%, timber wolf 45%))
     -   Hostile animal mental state.
     -   Can result from damage/event.
--   [x] **Manhunter pack incident** (storyteller: manhunter dustbuck packs outside winter, wolf packs in winter)
+-   [x] **Manhunter pack incident** (storyteller: manhunter herbivore packs outside winter, wolf packs in winter; SIM-025: single mad animal also in the threat pool)
     -   Storyteller-generated group attack.
 
 ------------------------------------------------------------------------
@@ -1741,22 +1741,24 @@ local colony map. citeturn1search4
 Implement functional equivalents for vanilla biome classes, with
 original assets/content:
 
--   [ ] **Temperate forest**
--   [ ] **Boreal forest**
--   [ ] **Tropical rainforest**
--   [ ] **Arid shrubland**
--   [ ] **Desert**
--   [ ] **Extreme desert**
--   [ ] **Tundra**
--   [ ] **Ice sheet**
--   [ ] **Sea ice**
--   [ ] **Temperate swamp**
--   [ ] **Tropical swamp**
--   [ ] **Cold bog**
+-   [x] **Temperate forest**
+-   [x] **Boreal forest**
+-   [x] **Tropical rainforest**
+-   [x] **Arid shrubland**
+-   [x] **Desert**
+-   [x] **Extreme desert**
+-   [x] **Tundra**
+-   [x] **Ice sheet**
+-   [x] **Sea ice**
+-   [x] **Temperate swamp**
+-   [x] **Tropical swamp**
+-   [x] **Cold bog**
 
 Each biome defines: - terrain mix; - plant density/species; -
 wildlife; - rainfall; - temperature profile; - disease frequency; -
 forage; - local map appearance.
+
+SIM-023: all twelve exist as `world/biome` data and are picked directly in the new-game wizard (no world-map tile choice). Each defines climate, wetness, ground mix, wild plants, grass density/regrowth and wildlife density; disease frequency is not modelled.
 
 ## 22.3 Terrain topology
 
@@ -1767,12 +1769,12 @@ forage; - local map appearance.
 
 ## 22.4 Local map generation
 
--   [ ] **Terrain from biome/topology**
+-   [-] **Terrain from biome/topology** (SIM-023: ground mix per biome incl. sand, marsh, ice; no topology/hilliness)
 -   [-] **Rock/mountain mass** (noise outcrops biased to map edges, stone ground ring, open start area; no ore)
 -   [ ] **Ore/resource deposits**
 -   [ ] **Water**
 -   [x] **Wild vegetation** (trees, berry bushes; grass is simulated ground cover removed by building, sowing and Cut plants (UI-011))
--   [-] **Wildlife**
+-   [x] **Wildlife** (SIM-023/025: per-biome density, species weights, sex and age at spawn, carrying capacity)
 -   [ ] **Ancient ruins/debris**
 -   [ ] **Starting clear/landing area**
 
@@ -1955,7 +1957,7 @@ and other colony incidents. citeturn2search2turn2search7
 
 ## 25.1 Incident framework
 
--   [ ] **Incident definition**
+-   [-] **Incident definition** (SIM-025: `internal/domain/incident` defs with weight, cooldown, biome limits and nature-event cadence of 2 to 5 days; no category/point budget, raids and threats still use the storyteller schedule)
     -   Category.
     -   eligibility.
     -   weight.
@@ -1976,9 +1978,9 @@ and other colony incidents. citeturn2search2turn2search7
 -   [ ] **Transport pod crash / downed stranger**
 -   [ ] **Resource meteorite**
 -   [ ] **Cargo pod drop**
--   [ ] **Animal joins**
--   [ ] **Farm animals wander in**
--   [ ] **Rare self-tame animal**
+-   [x] **Animal joins** (SIM-025: stray joins)
+-   [x] **Farm animals wander in** (SIM-025)
+-   [x] **Rare self-tame animal** (SIM-025: taken a liking)
 -   [x] **Wild animal migration**
 -   [ ] **Party**
 -   [ ] **Marriage**
@@ -1990,7 +1992,7 @@ and other colony incidents. citeturn2search2turn2search7
 -   [x] **Raid** (edge arrival, assault nearest colonist, flee, bleed out, dropped weapons; saved)
 -   [ ] **Infestation**
 -   [x] **Manhunter pack**
--   [ ] **Animal insanity**
+-   [x] **Animal insanity** (SIM-025: mad animal, a single manhunter)
 -   [ ] **Disease outbreak**
 -   [ ] **Blight**
     -   Crop disease spreads/destroys plants.
@@ -2118,7 +2120,7 @@ and other colony incidents. citeturn2search2turn2search7
 
 ## 27.3 Wildlife tab
 
--   [ ] **Wildlife list**
+-   [-] **Wildlife list** (UI-014: Animals tab Colony/Wild toggle with species, count, diet, predator, tame %, meat and Hunt all/Tame one/Cancel; no sort/filter)
     -   species.
     -   count.
     -   predator status.
@@ -2192,7 +2194,7 @@ relocation. citeturn2search12
 -   [ ] **Food consumption**
 -   [ ] **Health/disease progression**
 -   [ ] **Mood effects**
--   [ ] **Animal feeding**
+-   [x] **Animal feeding** (SIM-024: animals graze, eat carcasses and crops, and are fed from troughs)
 -   [ ] **Prisoner handling**
 
 Use aggregated/analytical updates rather than simulating local-map jobs.
@@ -3104,9 +3106,9 @@ least:
 -   [ ] Drug definitions.
 -   [ ] Faction definitions.
 -   [ ] Trader definitions.
--   [ ] Biome definitions.
+-   [-] Biome definitions. (SIM-023: 12 biomes as Go data in `world/biome`, not data-pack files)
 -   [ ] World-generation definitions.
--   [ ] Incident definitions.
+-   [-] Incident definitions. (SIM-025: nature events as Go data in `domain/incident`, not data-pack files)
 -   [ ] Storyteller definitions.
 -   [ ] Scenario definitions.
 -   [ ] Quest archetype/content definitions.

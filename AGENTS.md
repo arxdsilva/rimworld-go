@@ -26,6 +26,7 @@ Non-negotiable rules:
 - Any code that depends on an adapter, or an adapter that depends on the application layer, must depend on a small, consumer-owned interface (the behavior it needs), never the concrete type directly — construct concrete types only at the composition root. This is SOLID's Dependency Inversion Principle; keep each such interface single-purpose per the Interface Segregation Principle. See `.cursor/HEXAGONAL_ARCHITECTURE.md` §6.
 - No global RNG or wall-clock time in authoritative gameplay.
 - Avoid global scans; use indexes, batching, sleeping, and invalidation.
+- Animals make full decisions every 60 ticks through the bucket index (`internal/application/game/animal_index.go`, `animal_needs.go`); never scan all creatures per tick. Biome data lives in `internal/domain/world/biome`, nature-event definitions in `internal/domain/incident`.
 - Every need-, threat- or threshold-driven behaviour must start and stop at different thresholds (hysteresis), or have a minimum duration or retry cooldown, so actors don't flap between two activities. Any new one ships with a no-flap test (see `internal/application/game/sleep_test.go`).
 - Run relevant tests and benchmarks.
 - Do not weaken tests to pass CI.

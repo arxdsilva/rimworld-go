@@ -248,6 +248,15 @@ Show phase/progress while keeping UI responsive.
 Transition into landing-site selection without discarding generated
 world state.
 
+Status (UI-014):
+
+-   [x] seed; (typed digit field with Dice)
+-   [-] world coverage/size; (label only)
+-   [-] temperature; (label only: follows the chosen biome)
+-   [-] rainfall; (label only: follows the chosen biome)
+-   [ ] faction/population density;
+-   [-] Generate. (enabled; builds from the seed and goes to the biome picker; no progress phases)
+
 ------------------------------------------------------------------------
 
 # 7. Landing Site Selection / World Preview
@@ -276,6 +285,15 @@ forage; - useful known resources; - nearby settlements/factions.
 
 The player should be able to understand why one tile is easier or harder
 than another.
+
+Status (UI-014): there is no world map yet; the screen is a biome picker.
+
+-   [-] selected-tile panel; (biome card with icon, temperatures, growing days, ground, plants, top wildlife; no elevation, roads, forage, settlements)
+-   [ ] interactive planet/world map;
+-   [ ] inspect tiles / search features;
+-   [-] choose tile; (choose a biome directly)
+-   [-] regenerate/back; (Back and Dice)
+-   [x] continue. (Next to pawns)
 
 ------------------------------------------------------------------------
 

@@ -63,7 +63,7 @@ Rules:
   to the body's `hand` attachment (behind the body when facing north), and
   hair/hats shift by the body frame's `head` attachment. Frames per ART
   §27.1: walk `walk01..walk12`, work `work1..work6`, animal trot
-  `walk01..walk08`.
+  `walk01..walk08`, animal rest pose `rest` (all animal sets).
 - Renders are reproducible to ±1/255 per channel (GPU float noise).
 
 ## Layout

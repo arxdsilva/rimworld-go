@@ -200,6 +200,8 @@ Initial terrain families: soil, rich soil, stony soil, sand, gravel,
 mud/marsh, shallow/deep water, ice, rough stone, constructed floors, and
 snow.
 
+Shipped (ART-013): sand, marsh and ice with transition edges alongside the earlier families; grass is tinted per biome at runtime.
+
 Terrain uses low-frequency texture and should not compete with pawns.
 Natural terrain should have deterministic visual variants selected from
 stable coordinates/visual seed. Use transition masks, edge decals, or
@@ -1051,10 +1053,10 @@ resolve metadata conflicts, and update the catalog.
 
 ### ART Wave 7 --- Animals/biomes
 
--   [ ] domestic animals
--   [ ] wildlife/predators
--   [ ] juvenile variants
--   [ ] biome plants
+-   [x] domestic animals (ART-011 roster: 61 species incl. domestic; ART-013 adds a rest pose for all 64 animal sets)
+-   [x] wildlife/predators (ART-011 roster; ART-013 rest pose)
+-   [x] juvenile variants (scaled at runtime from the adult set, not separate art, per section 11)
+-   [x] biome plants (ART-013: pine with snow, jungle tree, cactus with dry, shrub with dry, reeds; terrains sand, marsh, ice with edges; 12 biome icons)
 -   [-] rock/resource variants (natural rock walls 16-mask, rock chunks, stone blocks item; no ore)
 -   [x] snow/weather (rain, storm and snow particles; snow cover, drifts, puddles and frost; wind-driven plant motion)
 
