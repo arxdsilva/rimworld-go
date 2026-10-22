@@ -284,6 +284,9 @@ type litRenderer struct {
 	verts    [4]ebiten.Vertex
 	opts     ebiten.DrawTrianglesShaderOptions
 	uniforms [7][]float32
+	// onDraw, when set (tests), sees every lit draw's image and its
+	// Custom3 blood value.
+	onDraw func(img *ebiten.Image, blood float32)
 }
 
 // litGap is the transparent column between a sprite and its normal map
@@ -446,7 +449,8 @@ func (r *Renderer) lightTile(tx, ty int) (sky, lamp float32) {
 // colour is cs premultiplied as DrawImage's ColorScale is (rgb×a), and
 // the custom attributes are sky (Custom0), lamp (Custom1) and the x
 // offset in pixels from the sprite to its normal map in the source image
-// (Custom2; 0 means none: lit flat).
+// (Custom2; 0 means none: lit flat). Custom3 (a figure's blood) is left
+// 0; drawLit sets it from r.figureBlood.
 func litQuad(vs *[4]ebiten.Vertex, sx, sy, w, h float32, geo ebiten.GeoM, cs colorScale, sky, lamp, normalOff float32) {
 	cr, cg, cb, ca := cs[0]*cs[3], cs[1]*cs[3], cs[2]*cs[3], cs[3]
 	for i := range vs {
@@ -545,6 +549,9 @@ func (r *Renderer) drawLit(dst, img *ebiten.Image, geo ebiten.GeoM, cs colorScal
 		r.castSilhouette(img, geo)
 		return
 	}
+	if r.lit.onDraw != nil {
+		r.lit.onDraw(img, r.figureBlood)
+	}
 	if cs == (colorScale{}) {
 		cs = noCS
 	}
@@ -565,6 +572,9 @@ func (r *Renderer) drawLit(dst, img *ebiten.Image, geo ebiten.GeoM, cs colorScal
 		sx, sy = 0, 0
 	}
 	litQuad(&r.lit.verts, sx, sy, float32(b.Dx()), float32(b.Dy()), geo, cs, sky, lamp, off)
+	for i := range r.lit.verts { // Custom3: the figure's blood (blood_draw.go), 0 for everything else
+		r.lit.verts[i].Custom3 = r.figureBlood
+	}
 	r.lit.syncUniforms()
 	r.lit.opts.Images[0] = src
 	dst.DrawTrianglesShader32(r.lit.verts[:], litIndices[:], sh, &r.lit.opts)

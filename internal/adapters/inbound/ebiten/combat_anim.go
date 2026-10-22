@@ -506,13 +506,16 @@ func (r *Renderer) drawFigureFacing(screen *ebiten.Image, p game.PawnView, f fac
 	headPs := ps
 	headPs.dx += hdx*c - hdy*s
 	headPs.dy += hdx*s + hdy*c
+	blood := r.pawnBlood(p) // body and apparel only (blood_draw.go)
 	for _, ly := range r.pawnLayers(r.look(p), f, p.Apparel...) {
 		lp := ps
 		if isHeadLayer(ly.key) {
 			lp = headPs
 		}
+		r.figureBlood = layerBlood(ly.key, blood)
 		r.drawSpritePose(screen, r.framed(ly.key, suffix), ly.tint, wx, wy, tile, lp)
 	}
+	r.figureBlood = 0
 }
 
 // --- weapon points and particles -----------------------------------------
@@ -594,8 +597,13 @@ func (r *Renderer) animateCombat(w game.WorldView, pawns []game.PawnView) {
 			if !t.Melee {
 				r.burst(partSpark, float64(t.ToX)+0.5, float64(t.ToY)+0.4, 3, seed^0x5a)
 			}
-		case t.Hit:
-			r.burstDir(partBlood, float64(t.ToX)+0.5, float64(t.ToY)+0.35, 6, seed, ux, uy, bloodSpeed)
+		case t.Hit: // blood_draw.go: scaled by damage, ichor from insects
+			kind, x, y := sprayKind(w, t.Target), float64(t.ToX)+0.5, float64(t.ToY)+0.35
+			n, speed := sprayFor(t.Damage)
+			r.burstDir(kind, x, y, n, seed, ux, uy, speed)
+			if t.Melee { // a few drops flicked back toward the attacker
+				r.burstDir(kind, x, y, 2, seed^0xb10d, -ux, -uy, 0.6*bloodSpeed)
+			}
 		}
 		if !t.Melee {
 			mz, port := r.shotPoints(t, pawns)

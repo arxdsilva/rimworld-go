@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	hitStain       = 120 // a hit leaves this, plus hitStainPerDmg per damage
-	hitStainPerDmg = 60
+	hitStain       = 40 // a hit leaves this, plus hitStainPerDmg per damage: a rifle hit (14) is a splat, two make a pool
+	hitStainPerDmg = 25
 	sprayDamage    = 6  // hits this heavy spray the tile behind the target
 	spraySharePct  = 40 // of the hit stain
 	deathPool      = 700

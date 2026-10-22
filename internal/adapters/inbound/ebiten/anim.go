@@ -496,7 +496,7 @@ func (r *Renderer) burst(kind partKind, x, y float64, n int, seed uint64) {
 		case partSteam, partSmoke:
 			p.vx, p.vy = (h(2)-0.5)*0.006, -0.012-h(3)*0.006
 			p.life, p.size, p.grow = 50+uint64(h(4)*20), 0.06, 0.003
-		case partBlood:
+		case partBlood, partIchor:
 			p.vx, p.vy, p.g = (h(2)-0.5)*0.06, -0.025-h(3)*0.03, 0.004
 			p.life, p.size = 18+uint64(h(4)*8), 0.03+h(5)*0.015
 		case partStep:

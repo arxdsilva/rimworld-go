@@ -8,9 +8,13 @@
 // (0: no normal map, lit flat), custom.w a blood stain on a creature
 // figure (SIM-020; 0 on everything else): w = 32*ichor + 2*wetStep +
 // coverage, coverage in [0,1), wetStep 0..15 (fresh, wet sheen), ichor 0
-// or 1. ART-013 BR fills in the stain. The uniforms are the frame's light, the
-// same for every draw, and only imageSrc0UnsafeAt is used (no source
-// region uniforms), so Ebiten batches draws across sprites.
+// or 1. Where w > 0 the sprite's own pixels are mixed toward blood (or
+// ichor) by a value-noise blotch mask over srcPos thresholded by the
+// coverage, and a wet sheen of wetStep/15·0.25 is added after lighting
+// on the blotches (Go twins decodeBlood, bloodMask in blood_draw.go).
+// The uniforms are the frame's light, the same for every draw, and only
+// imageSrc0UnsafeAt is used (no source region uniforms, no other
+// images), so Ebiten batches draws across sprites.
 package main
 
 var SunL vec3
@@ -33,10 +37,46 @@ func bilinear(p vec2) vec4 {
 	return mix(mix(c0, c1, rate.x), mix(c2, c3, rate.x), rate.y)
 }
 
+// bloodHash is a sin-free float hash (stable across GPUs) of a noise
+// lattice point, 0..1.
+func bloodHash(p vec2) float {
+	p3 := fract(vec3(p.x, p.y, p.x) * 0.1031)
+	p3 += dot(p3, p3.yzx+33.33)
+	return fract((p3.x + p3.y) * p3.z)
+}
+
+// bloodNoise is smooth value noise over the hashed lattice, 0..1.
+func bloodNoise(p vec2) float {
+	i := floor(p)
+	f := fract(p)
+	u := f * f * (3 - 2*f)
+	a := bloodHash(i)
+	b := bloodHash(i + vec2(1, 0))
+	c := bloodHash(i + vec2(0, 1))
+	d := bloodHash(i + vec2(1, 1))
+	return mix(mix(a, b, u.x), mix(c, d, u.x), u.y)
+}
+
 func Fragment(dstPos vec4, srcPos vec2, color vec4, custom vec4) vec4 {
 	base := bilinear(srcPos) * color
 	if base.a <= 0 {
 		return vec4(0)
+	}
+	sheen := 0.0
+	if custom.w > 0 {
+		w := custom.w
+		ichor := step(32.0, w)
+		w -= 32 * ichor
+		wetStep := floor(w / 2)
+		cov := w - 2*wetStep
+		// two octaves, stretched so the painted share tracks the coverage
+		// (bloodMask in blood_draw.go is the Go twin)
+		nz := bloodNoise(srcPos/10.0)*0.65 + bloodNoise(srcPos/4.0)*0.35
+		nz = (nz-0.5)*2.2 + 0.5
+		m := (1 - smoothstep(cov-0.05, cov+0.05, nz)) * step(1.0/255, base.a)
+		blood := mix(vec3(0.42, 0.06, 0.06), vec3(0.62, 0.60, 0.20), ichor)
+		base.rgb = mix(base.rgb, blood*base.a, m*0.85)
+		sheen = wetStep / 15 * m * 0.25
 	}
 	n := vec3(0, 0, 1)
 	if custom.z > 0.5 {
@@ -54,6 +94,10 @@ func Fragment(dstPos vec4, srcPos vec2, color vec4, custom vec4) vec4 {
 	sky := custom.x
 	amb := mix(IndoorAmbient, SkyAmbient, sky)
 	dif := (SunColor*max(dot(n, SunL), 0) + MoonColor*max(dot(n, MoonL), 0)) * sky
-	rgb := base.rgb * (amb + dif + LampColor*custom.y)
+	lamp := LampColor * custom.y
+	rgb := base.rgb * (amb + dif + lamp)
+	// the wet sheen catches the direct light (sun, moon, lamps) more than
+	// the ambient, so it glints by day and stays dark at night
+	rgb += sheen * base.a * (dif + lamp + 0.35*amb)
 	return vec4(min(rgb, vec3(base.a)), base.a)
 }

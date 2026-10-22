@@ -448,7 +448,7 @@ bodies become `item/bones_00..01`. Graves (`furniture/grave_dug_*`,
 ### 16.2 Blood and stains (normative, SIM-020 / ART-013)
 
 - **Sim state** (deterministic, saved): each tile holds a stain with an amount from 0 to 1000 and the tick of its last fresh blood.
-  - **Hit:** `120 + 60·damage` on the target's tile, plus 40% of that on the tile beyond it, away from the attacker, for hits of 6 damage or more.
+  - **Hit:** `40 + 25·damage` on the target's tile, plus 40% of that on the tile beyond it, away from the attacker, for hits of 6 damage or more.
   - **Death:** a pool of 700.
   - **Bleeding:** creatures drip 80 on every 3rd tile they walk. Downed, untended colonists pool by 60 an hour, up to 600.
   - Hive insects leave **ichor**.

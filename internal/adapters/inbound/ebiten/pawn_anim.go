@@ -195,13 +195,16 @@ func (r *Renderer) drawPawnFigure(dst *ebiten.Image, p game.PawnView, wx, wy, ti
 	headPs := ps
 	headPs.dx += hdx
 	headPs.dy += hdy
+	blood := r.pawnBlood(p) // body and apparel only (blood_draw.go)
 	for _, ly := range r.pawnLayers(r.look(p), face, p.Apparel...) {
 		lp := ps
 		if isHeadLayer(ly.key) {
 			lp = headPs // hair and hats ride the head
 		}
+		r.figureBlood = layerBlood(ly.key, blood)
 		r.drawSpritePose(dst, r.framed(ly.key, suffix), ly.tint, wx, wy, tile, lp)
 	}
+	r.figureBlood = 0
 	r.drawHeld(dst, p, face, suffix, item, wx, wy, tile, ps, false) // the parts in front
 	for _, q := range r.drawPawns {
 		if q.CarriedBy != 0 && q.CarriedBy == p.ID {
@@ -212,9 +215,12 @@ func (r *Renderer) drawPawnFigure(dst *ebiten.Image, p game.PawnView, wx, wy, ti
 
 // layersSouth draws the figure facing south with a pose.
 func (r *Renderer) drawFigure(screen *ebiten.Image, p game.PawnView, wx, wy, tile float64, ps pose) {
+	blood := r.pawnBlood(p) // body and apparel only (blood_draw.go)
 	for _, ly := range r.pawnLayers(r.look(p), faceSouth, p.Apparel...) {
+		r.figureBlood = layerBlood(ly.key, blood)
 		r.drawSpritePose(screen, ly.key, ly.tint, wx, wy, tile, ps)
 	}
+	r.figureBlood = 0
 }
 
 // drawLyingPawn: in a bed under the blanket, or fallen on the ground

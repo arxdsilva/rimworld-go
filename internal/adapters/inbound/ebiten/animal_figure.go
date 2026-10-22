@@ -42,5 +42,7 @@ func (r *Renderer) drawAnimalFigure(dst *ebiten.Image, an game.AnimalView, wx, w
 		vector.FillCircle(dst, sx+float32(tile)/2, sy+float32(tile)/2, float32(tile)*0.3, color.RGBA{150, 120, 80, 255}, false)
 		return
 	}
+	r.figureBlood = r.animalBlood(an) // the whole figure (blood_draw.go)
 	r.drawSpritePose(dst, r.animalFrameKey(an), color.NRGBA{}, wx, wy, tile, r.animalPose(an))
+	r.figureBlood = 0
 }

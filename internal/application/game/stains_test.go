@@ -53,8 +53,8 @@ func TestHitStampsTargetTile(t *testing.T) {
 		t.Fatalf("stain on target tile = %+v, %v", s, ok)
 	}
 	g.stainHit(b, Position{5, 5}, Position{9, 9}, 2)
-	if s, _ := stainAt(g, 9, 9); s.Amount != 240 || s.Variant >= 6 {
-		t.Fatalf("a 2 damage hit = %+v, want 240", s)
+	if s, _ := stainAt(g, 9, 9); s.Amount != hitStain+2*hitStainPerDmg || s.Variant >= 6 {
+		t.Fatalf("a 2 damage hit = %+v, want %d", s, hitStain+2*hitStainPerDmg)
 	}
 	if _, ok := stainAt(g, 10, 10); ok {
 		t.Fatal("a light hit must not spray")
@@ -65,11 +65,11 @@ func TestHeavyHitSpraysBehindAwayFromAttacker(t *testing.T) {
 	g := stainGame(t)
 	b, _ := g.SpawnNamedPawn(6, 5, "Bo")
 	g.stainHit(b, Position{5, 5}, Position{6, 5}, 10) // attacker to the west
-	if s, _ := stainAt(g, 6, 5); s.Amount != 720 {
-		t.Fatalf("target tile = %d, want 720", s.Amount)
+	if s, _ := stainAt(g, 6, 5); s.Amount != hitStain+10*hitStainPerDmg {
+		t.Fatalf("target tile = %d, want %d", s.Amount, hitStain+10*hitStainPerDmg)
 	}
-	if s, ok := stainAt(g, 7, 5); !ok || s.Amount != 288 {
-		t.Fatalf("spray = %+v, want 288 at 7,5", s)
+	if s, ok := stainAt(g, 7, 5); !ok || s.Amount != (hitStain+10*hitStainPerDmg)*spraySharePct/100 {
+		t.Fatalf("spray = %+v, want 40%% of the hit at 7,5", s)
 	}
 	g.stainHit(b, Position{8, 8}, Position{7, 7}, 6) // attacker to the south-east
 	if _, ok := stainAt(g, 6, 6); !ok {
@@ -112,10 +112,10 @@ func TestMissLeavesNoStain(t *testing.T) {
 func TestDeathLeavesPool(t *testing.T) {
 	g := stainGame(t)
 	id, _ := g.SpawnNamedPawn(7, 7, "Ada")
-	g.stainHit(id, Position{6, 7}, Position{7, 7}, 1) // 180 already there
+	g.stainHit(id, Position{6, 7}, Position{7, 7}, 1) // a light hit already there
 	g.die(id, health.CauseInjury)
-	if s, ok := stainAt(g, 7, 7); !ok || s.Amount != 880 {
-		t.Fatalf("pool = %+v, want 880 (hit 180 + pool 700)", s)
+	if s, ok := stainAt(g, 7, 7); !ok || s.Amount != hitStain+hitStainPerDmg+deathPool {
+		t.Fatalf("pool = %+v, want the hit plus the death pool", s)
 	}
 	g.stainDeath(entity.EntityID(9999)) // gone: nothing happens
 	if len(g.stains.tiles) != 1 {
@@ -149,7 +149,7 @@ func TestInsectIchor(t *testing.T) {
 		t.Fatalf("hit on a beetle = %+v", s)
 	}
 	g.killAnimal(id, 0)
-	if s, _ := stainAt(g, 8, 8); s.Kind != stain.Ichor || s.Amount != 940 {
+	if s, _ := stainAt(g, 8, 8); s.Kind != stain.Ichor || s.Amount != hitStain+2*hitStainPerDmg+deathPool {
 		t.Fatalf("beetle pool = %+v", s)
 	}
 	if v := g.World().Stains; len(v) != 1 || v[0].Kind != "ichor" {
@@ -291,9 +291,9 @@ func TestDownedPools(t *testing.T) {
 	if len(g2.stains.tiles) != 0 {
 		t.Fatal("unknown id pooled")
 	}
-	g2.stainHit(id2, Position{1, 1}, Position{5, 5}, 10) // 720: already over the limit
+	g2.stainHit(id2, Position{1, 1}, Position{5, 5}, 25) // 665: already over the limit
 	g2.stainDowned(id2, hour)
-	if s, _ := stainAt(g2, 5, 5); s.Amount != 720 {
+	if s, _ := stainAt(g2, 5, 5); s.Amount != hitStain+25*hitStainPerDmg {
 		t.Fatalf("over-limit pool grew to %d", s.Amount)
 	}
 }
