@@ -7,6 +7,7 @@ import (
 	"image/color"
 	"image/draw"
 	"image/png"
+	"math"
 	"os"
 	"path/filepath"
 	"sort"
@@ -238,6 +239,48 @@ type artSprite struct {
 	normalPath string
 	normal     *ebiten.Image
 	normalDone bool
+	// opaqueH caches opaqueHeightPx (0: not measured yet).
+	opaqueH float64
+}
+
+// opaqueAlphaMin is the alpha (0..255) a pixel needs to count as part of
+// a sprite's body when measuring it (faint glow and anti-aliasing don't).
+const opaqueAlphaMin = 32
+
+// opaqueHeightPx is the height of the sprite's opaque part, from its
+// alpha bounds, in canvas (source) pixels: measured once and cached. A
+// sprite without opaque pixels reports its canvas height. It calibrates
+// a creature's shadow (ART-012: κ = shadow.h / opaque height).
+func (sp *artSprite) opaqueHeightPx() float64 {
+	if sp.opaqueH > 0 {
+		return sp.opaqueH
+	}
+	h := float64(sp.meta.Canvas[1])
+	if sp.pix != nil {
+		b := sp.pix.Bounds()
+		top, bot := -1, -1
+		for y := b.Min.Y; y < b.Max.Y; y++ {
+			row := sp.pix.Pix[sp.pix.PixOffset(b.Min.X, y):]
+			for x := 0; x < b.Dx(); x++ {
+				if row[4*x+3] >= opaqueAlphaMin {
+					if top < 0 {
+						top = y
+					}
+					bot = y
+					break
+				}
+			}
+		}
+		if top >= 0 && b.Dy() > 0 {
+			k := 1.0
+			if sp.meta.Canvas[1] > 0 {
+				k = float64(sp.meta.Canvas[1]) / float64(b.Dy())
+			}
+			h = float64(bot-top+1) * k
+		}
+	}
+	sp.opaqueH = math.Max(h, 1)
+	return sp.opaqueH
 }
 
 type tintKey struct {

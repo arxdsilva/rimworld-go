@@ -1,10 +1,67 @@
 //kage:unit pixels
 
 // shadow_blur.kage: contact-hardening blur of the shadow layer (ART-012).
-// R holds the caster height (0 at the feet, 1 at the top): the blur radius
-// grows with it. ART-012 SH1 fills this in; this stub passes through.
+// The layer holds premultiplied (H·a, a, a, a): R carries the caster's
+// height H (0 at the feet, 1 at the top of the silhouette). A blocker
+// search over the widest disk estimates the height of what casts the
+// shadow around this pixel, then 12 Poisson taps average the alpha over
+// a radius R0 + R1·H: crisp at the feet, soft toward the tip. The output
+// is white at the blurred alpha (premultiplied), composited with the
+// shadow colour.
 package main
 
+// R0 and R1 are the radius terms in pixels (r0 + r1·H).
+var R0 float
+var R1 float
+
+func tap(i int) vec2 {
+	// a 12-tap Poisson disk (unit radius)
+	if i == 0 {
+		return vec2(-0.326, -0.406)
+	} else if i == 1 {
+		return vec2(-0.840, -0.074)
+	} else if i == 2 {
+		return vec2(-0.696, 0.457)
+	} else if i == 3 {
+		return vec2(-0.203, 0.621)
+	} else if i == 4 {
+		return vec2(0.962, -0.195)
+	} else if i == 5 {
+		return vec2(0.473, -0.480)
+	} else if i == 6 {
+		return vec2(0.519, 0.767)
+	} else if i == 7 {
+		return vec2(0.185, -0.893)
+	} else if i == 8 {
+		return vec2(0.507, 0.064)
+	} else if i == 9 {
+		return vec2(0.896, 0.412)
+	} else if i == 10 {
+		return vec2(-0.322, -0.933)
+	}
+	return vec2(-0.792, -0.598)
+}
+
 func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
-	return imageSrc0At(srcPos)
+	c := imageSrc0At(srcPos)
+	// blocker search: the mean height of the shadow around here
+	hs := c.r
+	ws := c.a
+	rmax := R0 + R1
+	for i := 0; i < 12; i++ {
+		s := imageSrc0At(srcPos + tap(i)*rmax)
+		hs += s.r
+		ws += s.a
+	}
+	h := 0.0
+	if ws > 0.0001 {
+		h = clamp(hs/ws, 0, 1)
+	}
+	r := R0 + R1*h
+	a := c.a
+	for i := 0; i < 12; i++ {
+		a += imageSrc0At(srcPos + tap(i)*r).a
+	}
+	a /= 13
+	return vec4(a)
 }

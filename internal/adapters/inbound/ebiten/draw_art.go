@@ -282,7 +282,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 		if it.Carried {
 			continue
 		}
-		key := itemSpriteAt(it.Kind, it.X, it.Y)
+		key := itemSpriteSpecies(it.Kind, it.Animal, it.X, it.Y)
 		add(float64(it.Y), float64(it.X), func() {
 			if it.Kind == "human corpse" || it.Kind == "bones" {
 				r.drawCorpseItem(screen, it, tile, sw, sh)

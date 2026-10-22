@@ -74,13 +74,13 @@ func (r *Renderer) drawAnimalOverlays(screen *ebiten.Image, w game.WorldView, ti
 		wx, wy := r.interpAnimal(an)
 		switch {
 		case an.Manhunter:
-			r.drawHostileMarker(screen, game.PawnView{}, wx, wy, tile)
+			r.drawHostileMarker(screen, game.PawnView{}, wx, wy-(animalMarkerLift(an.Size)-animalMarkBase), tile)
 		case an.Designated:
 			spin := pose{px: 0.5, py: 0.5, sx: 0.5, sy: 0.5, rot: float64(r.present) * 0.035}
-			r.drawSpritePose(screen, "overlay/designation_hunt", color.NRGBA{}, wx, wy-0.95, tile, spin)
+			r.drawSpritePose(screen, "overlay/designation_hunt", color.NRGBA{}, wx, wy-animalMarkerLift(an.Size), tile, spin)
 		case an.TameMark:
 			bob := pose{px: 0.5, py: 0.5, sx: 0.5, sy: 0.5}
-			r.drawSpritePose(screen, "overlay/designation_tame", color.NRGBA{}, wx, wy-0.95-0.05*math.Sin(float64(r.present)*0.08), tile, bob)
+			r.drawSpritePose(screen, "overlay/designation_tame", color.NRGBA{}, wx, wy-animalMarkerLift(an.Size)-0.05*math.Sin(float64(r.present)*0.08), tile, bob)
 		}
 		if an.Tame && an.Name != "" && tile >= stackCountMinTile {
 			sx, sy := r.worldToScreenF(wx+0.5, wy+1.0)
@@ -89,7 +89,7 @@ func (r *Renderer) drawAnimalOverlays(screen *ebiten.Image, w game.WorldView, ti
 			ebitenutil.DebugPrintAt(screen, an.Name, int(sx-tw/2)+3, int(sy)-1)
 		}
 		if an.Health < 100 {
-			sx, sy := r.worldToScreenF(wx+0.15, wy-0.32)
+			sx, sy := r.worldToScreenF(wx+0.15, wy-animalBarLift(an.Size))
 			bw := float32(tile) * 0.7
 			vector.FillRect(screen, sx, sy, bw, 4, color.RGBA{30, 24, 20, 220}, false)
 			vector.FillRect(screen, sx, sy, bw*float32(an.Health)/100, 4, healthColor(an.Health), false)
@@ -361,7 +361,7 @@ func (r *Renderer) animalFrame(an game.AnimalView) string {
 			return set + "3"
 		case struck && age < meleeTicks:
 			return set + "4"
-		case !moving && (an.Action == game.ActionBite || an.Action == game.ActionKick):
+		case !moving && attackAction(an.Action):
 			if an.AttackCycle < aimAt {
 				return set + "1"
 			}
@@ -380,20 +380,62 @@ func (r *Renderer) animalFrame(an game.AnimalView) string {
 	return ""
 }
 
-// animalAttackSet is the attack pose set: by the action, else by the
-// weapon of its last strike.
+// attackAction reports an Action that is a natural-weapon attack.
+func attackAction(a string) bool { return a == game.ActionBite || a == game.ActionKick }
+
+// animalAttackSet is the attack pose set while the animal attacks or just
+// struck: its natural weapon's set ("_claw", "_gore", ...). A view without
+// an attack kind (an older sim) falls back to the action, then the weapon
+// of its last strike.
 func animalAttackSet(an game.AnimalView, st reactTrace, struck bool) string {
+	if !struck && !attackAction(an.Action) {
+		return ""
+	}
 	switch {
-	case an.Action == game.ActionBite:
-		return "_bite"
+	case an.Attack != "":
+		return "_" + an.Attack
 	case an.Action == game.ActionKick:
 		return "_kick"
-	case struck && st.Weapon == "hooves":
-		return "_kick"
-	case struck:
+	case an.Action == game.ActionBite:
 		return "_bite"
+	case st.Weapon == "hooves":
+		return "_kick"
 	}
-	return ""
+	return "_bite"
+}
+
+// Overlay heights over an animal, in tiles above its tile origin. The
+// former single-size values fit a 0.95-tile deer; bigger bodies lift
+// them by their extra height (about 0.45 of the body length for a
+// quadruped) so marks clear an elephant and hug a rat.
+const (
+	animalHeightK   = 0.45
+	animalRefSize   = 0.95 // body length the base lifts were tuned for
+	animalMarkBase  = 0.95
+	animalBarBase   = 0.32
+	animalMinMark   = 0.55
+	animalMinBar    = 0.1
+	animalMarkAbove = 0.4 // a mark floats at least this far over the height
+)
+
+// animalHeight is an animal's estimated height in tiles from its body
+// length (an unknown size counts as the reference deer).
+func animalHeight(size float64) float64 {
+	if size <= 0 {
+		size = animalRefSize
+	}
+	return animalHeightK * size
+}
+
+// animalMarkerLift is how far above its tile the hunt and tame marks hover.
+func animalMarkerLift(size float64) float64 {
+	extra := animalHeight(size) - animalHeight(animalRefSize)
+	return max(animalMinMark, animalMarkBase+extra, animalHeight(size)+animalMarkAbove)
+}
+
+// animalBarLift is how far above its tile the health bar sits.
+func animalBarLift(size float64) float64 {
+	return max(animalMinBar, animalBarBase+animalHeight(size)-animalHeight(animalRefSize))
 }
 
 // animalPose: a trot bob (more when running), idle breathing, a lunge

@@ -10,9 +10,17 @@ import (
 )
 
 // animalBaseKey is the animal's standing sprite for its current facing:
-// "animal/<species>_<facing>" (ART-011). U1 adds the female variant.
+// "animal/<species>_<facing>" (ART-011); a female of a dimorphic species
+// uses "animal/<species>_f_<facing>" when that art exists (else the male
+// set, so a species without female art still draws).
 func (r *Renderer) animalBaseKey(an game.AnimalView) string {
-	return "animal/" + an.Species + "_" + r.last[an.ID].facing.String()
+	facing := r.last[an.ID].facing.String()
+	if an.Female {
+		if k := "animal/" + an.Species + "_f_" + facing; r.art.has(k) {
+			return k
+		}
+	}
+	return "animal/" + an.Species + "_" + facing
 }
 
 // animalFrameKey is the sprite drawn for the animal this frame: its base

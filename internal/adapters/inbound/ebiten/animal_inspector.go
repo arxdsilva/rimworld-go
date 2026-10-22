@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
@@ -98,22 +99,49 @@ func (a *App) animalButtons() []button {
 	return out
 }
 
-func animalTitle(an game.AnimalView) string {
-	s := strings.ToUpper(an.Species[:1]) + an.Species[1:]
-	if an.Tame && an.Name != "" {
-		return an.Name + " (tame " + an.Species + ")"
+// animalLabel is the species' display name ("arctic fox"): the view's
+// Label, else the key with its underscores spaced out.
+func animalLabel(an game.AnimalView) string {
+	switch {
+	case an.Label != "":
+		return an.Label
+	case an.Species != "":
+		return strings.ReplaceAll(an.Species, "_", " ")
 	}
-	return s
+	return "animal"
 }
 
-func animalBlurb(species string) string {
-	switch species {
-	case "dustbuck":
-		return "Skittish grazer. Flees people. Hunt for meat."
-	case "ridgewolf":
-		return "Predator. Hunts dustbucks; bites back."
+func animalTitle(an game.AnimalView) string {
+	l := animalLabel(an)
+	if an.Tame && an.Name != "" {
+		return an.Name + " (tame " + l + ")"
 	}
-	return ""
+	return strings.ToUpper(l[:1]) + l[1:]
+}
+
+// animalInitial is the letter shown on the fallback icon disc.
+func animalInitial(label string) string {
+	for _, r := range label {
+		if r != ' ' && r != '_' {
+			return strings.ToUpper(string(r))
+		}
+	}
+	return "?"
+}
+
+var iconDiscClr = color.RGBA{R: 0x4A, G: 0x3C, B: 0x2C, A: 0xFF}
+
+// drawAnimalIcon draws the species' ui_icon at (x, y), size px square; a
+// species without one gets its initial on a disc.
+func drawAnimalIcon(dst *ebiten.Image, art *artCatalog, an game.AnimalView, x, y, size float64) {
+	if img := art.image("ui_icon/"+an.Species, color.NRGBA{}); img != nil {
+		drawIcon(dst, img, x, y, size)
+		return
+	}
+	r := float32(size) / 2
+	vector.FillCircle(dst, float32(x)+r, float32(y)+r, r, iconDiscClr, true)
+	vector.StrokeCircle(dst, float32(x)+r, float32(y)+r, r, 1.5, color.RGBA{R: 0xC8, G: 0xB0, B: 0x82, A: 0xFF}, true)
+	drawLabel(dst, int(x+float64(r))-3, int(y+float64(r))-7, animalInitial(animalLabel(an)))
 }
 
 func (a *App) drawAnimalInspector(screen *ebiten.Image) {
@@ -124,11 +152,7 @@ func (a *App) drawAnimalInspector(screen *ebiten.Image) {
 	a.syncAnimalLog(an.ID)
 	r := a.animalPanel()
 	drawPanel(screen, r.x, r.y, r.w, r.h)
-	if a.renderer.art != nil {
-		if img := a.renderer.art.image("ui_icon/"+an.Species, color.NRGBA{}); img != nil {
-			drawIcon(screen, img, float64(r.x)+12, float64(r.y)+10, 40)
-		}
-	}
+	drawAnimalIcon(screen, a.renderer.art, an, float64(r.x)+12, float64(r.y)+10, 40)
 	drawLabel(screen, int(r.x)+60, int(r.y)+12, animalTitle(an))
 	state := an.Mode
 	switch {

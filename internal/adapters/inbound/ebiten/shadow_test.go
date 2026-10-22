@@ -233,13 +233,23 @@ func TestNoShadowsUnderRoof(t *testing.T) {
 			t.Fatalf("caster under a roof at %v: %v", roofedTile, got)
 		}
 	}
-	for _, open := range [][2]int{{8, 3}, {10, 3}, {11, 3}, {9, 3}} { // a planned roof is not a roof yet
+	for _, open := range [][2]int{{8, 3}, {10, 3}, {11, 3}} { // a planned roof is not a roof yet
 		if got[open] == 0 {
 			t.Fatalf("no caster on open ground at %v: %v", open, got)
 		}
 	}
-	if got[[2]int{12, 3}] != 0 || got[[2]int{13, 3}] != 0 {
-		t.Fatalf("floors and embodied pawns cast: %v", got)
+	if got[[2]int{12, 3}] != 0 || got[[2]int{9, 3}] != 0 || got[[2]int{13, 3}] != 0 {
+		t.Fatalf("floors or pawns cast a box or blob: %v", got)
+	}
+	// pawns cast silhouettes instead (with art), roofed or not; the
+	// embodied one is a corpse item now
+	r.art.sprites["pawn/body_south"] = fakeSprite([2]int{160, 297}, pt{16, 153}, nil)
+	sky := map[int]bool{}
+	for _, c := range r.creatureCasters(w, pawns) {
+		sky[int(c.pawn.ID)] = c.sky
+	}
+	if len(sky) != 2 || sky[1] || !sky[2] {
+		t.Fatalf("creature casters (id: open sky) %v", sky)
 	}
 	// off-screen casters (beyond the longest shadow) are skipped
 	r.env.view = envRect{0, 0, 2, 2}
@@ -277,8 +287,8 @@ func TestShadowsClippedAtRoofedTiles(t *testing.T) {
 	w.Items = []game.ItemView{{Kind: "wood", X: 10, Y: 3}}
 	w.Animals = []game.AnimalView{{ID: 7, Species: "dustbuck", X: 12, Y: 4}}
 	r.drawPawns = []game.PawnView{{ID: 1, X: 11, Y: 3}}
-	if n := len(r.shadowCasters(w, r.drawPawns)); n != 5 {
-		t.Fatalf("got %d casters, want 5", n)
+	if n := len(r.shadowCasters(w, r.drawPawns)); n != 3 {
+		t.Fatalf("got %d box and blob casters, want 3", n)
 	}
 	r.drawShadows(ebiten.NewImage(640, 400), w, 640, 400, r.tilePx())
 	if r.env.shadow.composites != 1 {
@@ -307,13 +317,14 @@ func TestWallShadowsMergeSingleAlpha(t *testing.T) {
 		if c.spec.kind != shadowBox {
 			t.Fatalf("wall caster %+v is not a box", c)
 		}
-		r.addBox(&b, c, r.lit.light, r.tilePx())
+		r.addBox(&b, c, r.lit.light, r.tilePx(), 0.32)
 	}
-	// every vertex is fully opaque (core) or fully clear (feather edge):
-	// overlapping walls max to exactly the core alpha, never more
+	// every vertex is at the shadow alpha (core) or clear (feather edge):
+	// overlapping walls max to exactly the core alpha, never more; boxes
+	// carry no height (red 0) for the penumbra blur
 	for _, v := range b.verts {
-		if v.ColorA != 0 && v.ColorA != 1 {
-			t.Fatalf("vertex alpha %.3f", v.ColorA)
+		if v.ColorA != 0 && v.ColorA != 0.32 || v.ColorR != 0 {
+			t.Fatalf("vertex alpha %.3f red %.3f", v.ColorA, v.ColorR)
 		}
 	}
 	// the whole layer is composited once, at the light's shadow alpha

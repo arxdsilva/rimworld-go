@@ -2,7 +2,6 @@ package ebiten
 
 import (
 	"fmt"
-	"image/color"
 	"strconv"
 	"strings"
 
@@ -85,28 +84,30 @@ func (a *App) drawAnimalsTab(screen *ebiten.Image, sw, sh int) {
 	}
 	drawLabel(screen, int(r.x)+12, int(r.y)+10, fmt.Sprintf("Animals  (%d tame, %d marked for taming, %d pens)", len(a.tameAnimals()), marked, countZones(w, game.ZonePen)))
 	drawLabel(screen, int(r.x)+12, int(r.y)+28, "Tame with Architect > Orders > Tame (hunters do it). Tame wolves guard; pens keep animals in place.")
-	drawLabel(screen, int(r.x)+52, int(r.y)+44, "Name          Species     Health  Doing")
+	drawLabel(screen, int(r.x)+52, int(r.y)+44, "Name          Species            Health  Doing")
 	mx, my := a.currentCursor()
 	for i, an := range a.tameAnimals() {
 		y := int(r.y) + 60 + i*animalRowH
 		if y+animalRowH > int(r.y+r.h) {
 			break
 		}
-		if a.renderer.art != nil {
-			if img := a.renderer.art.image("ui_icon/"+an.Species, color.NRGBA{}); img != nil {
-				drawIcon(screen, img, float64(r.x)+16, float64(y), 26)
-			}
-		}
-		doing := an.Mode
-		if an.Designated {
-			doing = "marked for slaughter"
-		}
-		drawLabel(screen, int(r.x)+52, y+6, fmt.Sprintf("%-13s %-11s %3d%%    %s", an.Name, an.Species, an.Health, doing))
+		drawAnimalIcon(screen, a.renderer.art, an, float64(r.x)+16, float64(y), 26)
+		drawLabel(screen, int(r.x)+52, y+6, animalRow(an))
 	}
 	a.drawButtons(screen, a.animalsTabButtons(), mx, my)
 	if len(a.tameAnimals()) == 0 {
 		drawLabel(screen, int(r.x)+52, int(r.y)+66, "No tame animals yet.")
 	}
+}
+
+// animalRow is one line of the Animals tab: name, species label (long
+// ones like "yorkshire terrier" fit), health and what it is doing.
+func animalRow(an game.AnimalView) string {
+	doing := an.Mode
+	if an.Designated {
+		doing = "marked for slaughter"
+	}
+	return fmt.Sprintf("%-13s %-18s %3d%%    %s", an.Name, animalLabel(an), an.Health, doing)
 }
 
 // countZones is how many zones of kind the world has.

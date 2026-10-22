@@ -51,8 +51,13 @@ const (
 	blobMinDepth  = 0.35
 )
 
-// shadowColor is the shadow's dark cool tint (ART §6.1).
+// shadowColor is the shadow's dark cool tint at noon (ART §6.1); it
+// tilts bluer at low sun (shadowTint).
 var shadowColor = [3]float32{18, 20, 30}
+
+// shadowRGB is the layer colour of shapes with no height (boxes, blobs
+// and contact pools): R holds height for the penumbra blur, so 0.
+var shadowRGB = color.RGBA{0, 255, 255, 255}
 
 // shadowBlend is the layer's blend: the max of source and destination, so
 // overlapping casters never darken twice.
@@ -224,15 +229,29 @@ func shadowCompositeScale(l lightState) colorScale {
 
 // shadowState is the shadow pass's reusable state (kept on envState).
 type shadowState struct {
-	layer      *ebiten.Image // screen-sized, reallocated on resize
+	layer *ebiten.Image // screen-sized, reallocated on resize
+	// scratch is screen-sized too: the blur's target, and before that the
+	// discard target of figure draws in cast mode (anything a figure
+	// draws directly, such as a hit flash, lands there and is overwritten).
+	scratch    *ebiten.Image
 	blobImg    *ebiten.Image // procedural fallback for overlay/shadow_blob
 	boxes      triBatch
 	blobs      triBatch
 	clear      triBatch
+	contacts   triBatch
 	casters    []shadowCaster
+	creatures  []creatureCaster
+	plans      []creaturePlan
+	lights     []pointLight
+	cast       shadowCast
+	castInit   bool
+	blur       *ebiten.Shader
+	blurErr    error
+	blurOpts   ebiten.DrawRectShaderOptions
 	specs      map[string]shadowSpec
 	specsArt   *artCatalog
 	composites int // layer composites, for tests
+	casts      int // creature silhouettes drawn, for tests
 }
 
 // spec is the cached caster for sprite key.
@@ -267,8 +286,10 @@ func skyOpen(w game.WorldView, x, y int) bool {
 	return !roofed(roofCellAt(w, x, y))
 }
 
-// shadowCasters lists this frame's casters standing on open-sky tiles
-// within the view (widened by the longest shadow).
+// shadowCasters lists this frame's box and blob casters (buildings,
+// rocks, plants and items) standing on open-sky tiles within the view
+// (widened by the longest shadow). Pawns and animals cast their own
+// silhouettes (creatureCasters).
 func (r *Renderer) shadowCasters(w game.WorldView, pawns []game.PawnView) []shadowCaster {
 	st := &r.env.shadow
 	out := st.casters[:0]
@@ -308,20 +329,8 @@ func (r *Renderer) shadowCasters(w game.WorldView, pawns []game.PawnView) []shad
 		if it.Carried {
 			continue
 		}
-		key := itemSpriteAt(it.Kind, it.X, it.Y)
+		key := itemSpriteSpecies(it.Kind, it.Animal, it.X, it.Y)
 		addBox(key, float64(it.X), float64(it.Y), 1, 1, 1)
-	}
-	for _, an := range w.Animals {
-		wx, wy := r.interpAnimal(an)
-		key := "animal/" + an.Species + "_" + r.last[an.ID].facing.String()
-		addBox(key, wx, wy, 1, 1, 1)
-	}
-	for _, p := range pawns {
-		if p.Embodied {
-			continue
-		}
-		wx, wy := r.interpWorld(p)
-		addBox("pawn/body_south", wx, wy, 1, 1, 1)
 	}
 	st.casters = out
 	return out
@@ -474,17 +483,21 @@ func (r *Renderer) blobTexture() *ebiten.Image {
 	return st.blobImg
 }
 
-// addBlob queues a blob caster into the blob batch.
-func (r *Renderer) addBlob(b *triBatch, c shadowCaster, l lightState, tex *ebiten.Image, tile float64) {
-	q := blobQuad(c.x, c.y, c.spec, l)
+// addBlob queues a blob caster into the blob batch at alpha a.
+func (r *Renderer) addBlob(b *triBatch, c shadowCaster, l lightState, tex *ebiten.Image, tile, a float64) {
+	r.addTexQuad(b, blobQuad(c.x, c.y, c.spec, l), tex, a)
+}
+
+// addTexQuad queues the whole of tex on a quad (world tiles, corners in
+// texture order) at alpha a, with no height.
+func (r *Renderer) addTexQuad(b *triBatch, q [4][2]float64, tex *ebiten.Image, a float64) {
 	tw, th := float64(tex.Bounds().Dx()), float64(tex.Bounds().Dy())
 	ox, oy := float64(tex.Bounds().Min.X), float64(tex.Bounds().Min.Y)
-	white := color.RGBA{255, 255, 255, 255}
 	uv := [4][2]float64{{ox, oy}, {ox + tw, oy}, {ox, oy + th}, {ox + tw, oy + th}}
 	var i uint32
 	for k, p := range q {
 		sx, sy := r.worldToScreenF(p[0], p[1])
-		j := b.vert(float64(sx), float64(sy), uv[k][0], uv[k][1], white, 1)
+		j := b.vert(float64(sx), float64(sy), uv[k][0], uv[k][1], shadowRGB, a)
 		if k == 0 {
 			i = j
 		}
@@ -493,18 +506,19 @@ func (r *Renderer) addBlob(b *triBatch, c shadowCaster, l lightState, tex *ebite
 	b.tri(i+1, i+3, i+2)
 }
 
-// addBox queues a box caster's swept footprint with a feathered skirt.
-func (r *Renderer) addBox(b *triBatch, c shadowCaster, l lightState, tile float64) {
+// addBox queues a box caster's swept footprint with a feathered skirt,
+// its core at alpha a.
+func (r *Renderer) addBox(b *triBatch, c shadowCaster, l lightState, tile, a float64) {
 	pts, n := boxHull(c.x, c.y, c.spec.w, c.spec.d, c.spec, l)
 	if n < 3 {
 		return
 	}
-	white := color.RGBA{255, 255, 255, 255}
+	white := shadowRGB
 	f := shadowFeather
 	base := uint32(len(b.verts))
 	for i := 0; i < n; i++ {
 		sx, sy := r.worldToScreenF(pts[i][0], pts[i][1])
-		b.vert(float64(sx), float64(sy), 1.5, 1.5, white, 1)
+		b.vert(float64(sx), float64(sy), 1.5, 1.5, white, a)
 	}
 	for i := 1; i+1 < n; i++ {
 		b.tri(base, base+uint32(i), base+uint32(i+1))
@@ -533,40 +547,67 @@ func (r *Renderer) addBox(b *triBatch, c shadowCaster, l lightState, tile float6
 	}
 }
 
-// drawShadows draws the frame's shadow layer onto screen.
+// drawShadows draws the frame's shadow layer onto screen. The layer holds
+// absolute alpha (max-blended, so overlaps never double-darken) and the
+// caster height in red:
+//
+//	(a) box and blob casters at the sun or moon's shadow alpha
+//	(b) creature silhouettes for the sun or moon (open sky only)
+//	    -- roofed tiles cleared --
+//	(c) creature silhouettes for campfires and lamps (kept indoors)
+//	(d) contact pools under every creature
+//
+// then one contact-hardening blur into scratch and one composite.
 func (r *Renderer) drawShadows(screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
-	l := r.lit.light
-	if l.ShadowAlpha <= 0 || l.ShadowLen == nil || sw <= 0 || sh <= 0 {
+	if sw <= 0 || sh <= 0 {
 		return
 	}
+	l := r.lit.light
 	r.setView(sw, sh, tile)
 	st := &r.env.shadow
-	casters := r.shadowCasters(w, r.drawPawns)
-	if len(casters) == 0 {
+	sa := 0.0
+	if l.ShadowLen != nil {
+		sa = float64(shadowCompositeScale(l)[3])
+	}
+	var casters []shadowCaster
+	if sa > 0 {
+		casters = r.shadowCasters(w, r.drawPawns)
+	}
+	creatures := r.creatureCasters(w, r.drawPawns)
+	if len(casters) == 0 && len(creatures) == 0 {
 		return
 	}
-	if st.layer == nil || st.layer.Bounds().Dx() != sw || st.layer.Bounds().Dy() != sh {
-		if st.layer != nil {
-			st.layer.Deallocate()
-		}
-		st.layer = ebiten.NewImage(sw, sh)
-	} else {
-		st.layer.Clear()
-	}
+	st.layer = fitLayer(st.layer, sw, sh)
+	st.layer.Clear()
+	st.scratch = fitLayer(st.scratch, sw, sh)
 	tex := r.blobTexture()
+	white := r.env.whiteImg()
 	st.boxes.reset()
 	st.blobs.reset()
 	for _, c := range casters {
 		if c.spec.kind == shadowBox {
-			r.addBox(&st.boxes, c, l, tile)
+			r.addBox(&st.boxes, c, l, tile, sa)
 		} else {
-			r.addBlob(&st.blobs, c, l, tex, tile)
+			r.addBlob(&st.blobs, c, l, tex, tile, sa)
 		}
 	}
-	white := r.env.whiteImg()
 	st.boxes.flush(st.layer, white, shadowBlend)
 	st.blobs.flush(st.layer, tex, shadowBlend)
-	// nothing falls on roofed ground
+
+	sunEl := sunElevation(l)
+	daylight := daylightOf(sunEl)
+	lights := r.pointLights(w, daylight)
+	plans := st.plans[:0]
+	for _, c := range creatures {
+		plans = append(plans, planCreature(c.px, c.py, c.h, c.sky, l, daylight, lights))
+	}
+	st.plans = plans
+	for i, c := range creatures {
+		if plans[i].sun {
+			r.castCreature(w, c, plans[i].sunCast, tile)
+		}
+	}
+	// nothing from the sky falls on roofed ground
 	x0, y0, x1, y1 := r.visibleTiles()
 	var runs [][3]int
 	runs = roofRuns(w, x0, y0, x1, y1, runs)
@@ -579,9 +620,52 @@ func (r *Renderer) drawShadows(screen *ebiten.Image, w game.WorldView, sw, sh in
 		}
 		st.clear.flush(st.layer, white, ebiten.BlendDestinationOut)
 	}
-	cs := shadowCompositeScale(l)
+	st.contacts.reset()
+	for i, c := range creatures {
+		for j := 0; j < plans[i].np; j++ {
+			r.castCreature(w, c, plans[i].points[j], tile)
+		}
+		r.addContact(&st.contacts, c, plans[i].contact, tex)
+	}
+	st.contacts.flush(st.layer, tex, shadowBlend)
+
+	maxEl := seasonMaxEl(w.DayOfYear) * math.Pi / 180
+	ratio := clamp01(sunEl / maxEl)
+	out := st.layer
+	if bs := r.shadowBlurShader(); bs != nil {
+		r0, r1 := blurRadii(tile/TileSize, ratio)
+		st.blurOpts.Uniforms["R0"], st.blurOpts.Uniforms["R1"] = float32(r0), float32(r1)
+		st.blurOpts.Images[0] = st.layer
+		st.blurOpts.Blend = ebiten.BlendCopy
+		st.scratch.DrawRectShader(sw, sh, bs, &st.blurOpts)
+		out = st.scratch
+	}
+	tint := shadowTint(ratio)
 	op := &ebiten.DrawImageOptions{}
-	op.ColorScale.Scale(cs[0], cs[1], cs[2], cs[3])
-	screen.DrawImage(st.layer, op)
+	op.ColorScale.Scale(tint[0]/255, tint[1]/255, tint[2]/255, 1)
+	screen.DrawImage(out, op)
 	st.composites++
+}
+
+// fitLayer is img when it is sw x sh, else a new image of that size (the
+// old one deallocated).
+func fitLayer(img *ebiten.Image, sw, sh int) *ebiten.Image {
+	if img != nil && img.Bounds().Dx() == sw && img.Bounds().Dy() == sh {
+		return img
+	}
+	if img != nil {
+		img.Deallocate()
+	}
+	return ebiten.NewImage(sw, sh)
+}
+
+// shadowBlurShader is shadow_blur.kage, compiled on first use; nil when
+// it failed (the layer is then composited unblurred).
+func (r *Renderer) shadowBlurShader() *ebiten.Shader {
+	st := &r.env.shadow
+	if st.blur == nil && st.blurErr == nil {
+		st.blur, st.blurErr = ebiten.NewShader(shadowBlurKage)
+		st.blurOpts.Uniforms = map[string]any{}
+	}
+	return st.blur
 }

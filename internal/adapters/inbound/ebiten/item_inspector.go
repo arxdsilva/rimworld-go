@@ -178,7 +178,7 @@ func (a *App) drawItemInspector(screen *ebiten.Image) {
 	if a.renderer.art != nil {
 		key := "ui_icon/" + it.Kind
 		if !a.renderer.art.has(key) {
-			key = itemSpriteAt(it.Kind, it.X, it.Y)
+			key = itemSpriteSpecies(it.Kind, it.Animal, it.X, it.Y)
 		}
 		if img := a.renderer.art.image(key, color.NRGBA{}); img != nil {
 			drawIcon(screen, img, float64(r.x)+12, float64(r.y)+10, 40)

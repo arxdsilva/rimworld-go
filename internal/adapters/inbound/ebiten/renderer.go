@@ -164,6 +164,8 @@ type Renderer struct {
 	// cast, while set, turns world sprite draws into shadow silhouettes
 	// (shadow_cast.go).
 	cast *shadowCast
+	// bursts remembers which explosive deaths already burst (animal_burst.go).
+	bursts burstTracker
 	// roofOverlay is the Roof overlay toggle (R); roofOverlayForced holds
 	// it on while a roof tool is selected (roof_draw.go).
 	roofOverlay, roofOverlayForced bool
@@ -247,6 +249,7 @@ func (r *Renderer) advance() {
 	w := r.game.World()
 	r.animate(w, r.game.Snapshot(), n > 0)
 	r.stepEnvironment(w, r.game.Snapshot())
+	r.emitWorldBursts(w) // animal_burst.go: explosive animal deaths
 	r.watchThreats(w)
 	r.heard = w
 	if n > 0 {

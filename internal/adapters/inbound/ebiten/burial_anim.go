@@ -78,11 +78,25 @@ func corpseFlies(it game.ItemView, present uint64) [][2]float64 {
 func bonesSprite(x, y int) string { return artKey("item", "bones", int(tileHash(x, y)%2)) }
 
 // itemSpriteAt is itemSprite with the per-tile variants of corpses and
-// bones (animal corpses v0..v2, bones 00..01).
+// bones (animal corpses v0..v2, bones 00..01). It has no species for an
+// "animal corpse"; use itemSpriteSpecies with ItemView.Animal for those.
 func itemSpriteAt(kind string, x, y int) string {
+	return itemSpriteSpecies(kind, "", x, y)
+}
+
+// itemSpriteSpecies is itemSpriteAt for a stack that names its species
+// (an "animal corpse" draws item/corpse_<species>_v<0..2>; an unnamed
+// carcass draws the deer's). The former dustbuck and ridgewolf corpse
+// kinds keep their own art.
+func itemSpriteSpecies(kind, species string, x, y int) string {
 	switch kind {
 	case "bones":
 		return bonesSprite(x, y)
+	case "animal corpse":
+		if species == "" {
+			species = "deer"
+		}
+		return fmt.Sprintf("item/corpse_%s_v%d", species, tileHash(x, y)%3)
 	case "dustbuck corpse", "ridgewolf corpse":
 		sp := kind[:len(kind)-len(" corpse")]
 		return fmt.Sprintf("item/corpse_%s_v%d", sp, tileHash(x, y)%3)

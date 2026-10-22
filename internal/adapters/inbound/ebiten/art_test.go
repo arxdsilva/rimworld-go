@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/animal"
 	"strings"
 	"testing"
 )
@@ -185,6 +186,60 @@ func TestTwoDigits(t *testing.T) {
 	}
 }
 
+// animalSpriteKeys is every sprite the renderer can ask for one body set of
+// a species: base is "animal/<key>" or "animal/<key>_f" for the female set.
+func animalSpriteKeys(base, attack string) []string {
+	var keys []string
+	for f := faceSouth; f <= faceWest; f++ {
+		stand := base + "_" + f.String()
+		keys = append(keys, stand)
+		for i := 1; i <= trotFrames; i++ {
+			keys = append(keys, fmt.Sprintf("%s_walk%02d", stand, i))
+		}
+		for i := 1; i <= 4; i++ {
+			keys = append(keys, fmt.Sprintf("%s_%s%d", stand, attack, i))
+		}
+		for _, p := range []string{"graze1", "graze2", "flinch1", "flinch2"} {
+			keys = append(keys, stand+"_"+p)
+		}
+	}
+	return keys
+}
+
+// TestEverySpeciesHasArt: every species in the roster ships the full body
+// set (four facings of stand, trot, its attack kind, graze and flinch),
+// three corpse poses and an icon; dimorphic species add the female set.
+func TestEverySpeciesHasArt(t *testing.T) {
+	root, err := LocateArt()
+	if err != nil {
+		t.Skip("generated art not present:", err)
+	}
+	c, err := loadArtCatalog(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, s := range animal.All() {
+		ro := animal.RosterOf(s)
+		keys := animalSpriteKeys("animal/"+ro.Key, ro.Attack.String())
+		if ro.Dimorphic {
+			keys = append(keys, animalSpriteKeys("animal/"+ro.Key+"_f", ro.Attack.String())...)
+		}
+		for v := 0; v < 3; v++ {
+			keys = append(keys, fmt.Sprintf("item/corpse_%s_v%d", ro.Key, v))
+		}
+		keys = append(keys, "ui_icon/"+ro.Key)
+		var missing []string
+		for _, k := range keys {
+			if !c.has(k) {
+				missing = append(missing, k)
+			}
+		}
+		if len(missing) > 0 {
+			t.Errorf("%s: %d missing sprites, e.g. %s", ro.Key, len(missing), missing[0])
+		}
+	}
+}
+
 // TestGeneratedArtCoversRenderer guards against renderer/art drift: every
 // sprite key the draw path can request must exist in assets/.
 func TestGeneratedArtCoversRenderer(t *testing.T) {
@@ -212,8 +267,7 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 		"structure/frame_1x1", "item/wood_pile", "item/food_crate", "overlay/stockpile",
 		"overlay/blueprint", "overlay/selection", "overlay/designation_harvest",
 		"overlay/designation_deconstruct", "ui_icon/draft", "overlay/designation_hunt",
-		"weapon/rifle_basic", "ui_icon/dustbuck", "ui_icon/ridgewolf",
-		itemSprite("dustbuck corpse"), itemSprite("ridgewolf corpse"),
+		"weapon/rifle_basic",
 		"tool/hammer", "tool/axe", "tool/pickaxe",
 		"overlay/sleeping_spot_south", "overlay/sleeping_spot_east", "overlay/sleeping_spot_north",
 		"overlay/sleeping_spot_west", "ui_icon/sleeping_spot")
@@ -222,11 +276,6 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 			keys = append(keys, "plant/"+c.Name+"_"+st)
 		}
 		keys = append(keys, itemSprite(c.Label), "ui_icon/"+strings.ReplaceAll(c.Label, " ", "_"))
-	}
-	for _, sp := range []string{"dustbuck", "ridgewolf"} {
-		for f := faceSouth; f <= faceWest; f++ {
-			keys = append(keys, "animal/"+sp+"_"+f.String())
-		}
 	}
 	for _, t := range archTools {
 		keys = append(keys, "ui_icon/"+t.icon)
@@ -249,11 +298,6 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 			}
 			for i := 1; i <= workFrames; i++ {
 				keys = append(keys, fmt.Sprintf("pawn/%s_%s_work%d", l, f, i))
-			}
-		}
-		for _, sp := range []string{"dustbuck", "ridgewolf"} {
-			for i := 1; i <= trotFrames; i++ {
-				keys = append(keys, fmt.Sprintf("animal/%s_%s_walk%02d", sp, f, i))
 			}
 		}
 		for _, bed := range []string{"bed_basic"} {

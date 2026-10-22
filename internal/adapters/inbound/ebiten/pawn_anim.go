@@ -122,22 +122,75 @@ func isHeadLayer(key string) bool {
 	return strings.HasPrefix(key, "pawn/hair_") || strings.HasPrefix(key, "pawn/tuque_")
 }
 
+// drawPawnArt draws a pawn in the object pass: its figure, then the
+// extras that are not part of its shape (hostile marker, draft icon).
+// It also does the pass's bookkeeping, which the figure draw never does.
 func (r *Renderer) drawPawnArt(screen *ebiten.Image, p game.PawnView, wx, wy, tile float64, sw, sh int) {
-	st := r.animState()
 	if p.CarriedBy != 0 {
 		return // drawn over its rescuer
 	}
-	st.dropCarry(p.ID)
-	vis := r.last[p.ID]
+	r.animState().dropCarry(p.ID)
+	fp := r.pawnFigurePoseOf(p)
+	r.drawPawnFigure(screen, p, wx, wy, tile, fp)
 	if p.Lying {
-		r.drawLyingPawn(screen, p, vis, wx, wy, tile)
 		return
+	}
+	ps := fp.ps
+	if p.Hostile {
+		r.drawHostileMarker(screen, p, wx+ps.dx, wy+ps.dy, tile)
+	}
+	if p.Drafted {
+		if img := r.art.image("ui_icon/draft", color.NRGBA{}); img != nil {
+			sx, sy := r.worldToScreenF(wx+0.62+ps.dx, wy-0.95+ps.dy)
+			drawIcon(screen, img, float64(sx), float64(sy), tile*0.3)
+		}
+	}
+}
+
+// pawnFigurePose is everything a pawn's figure draw needs this frame,
+// resolved once (from read-only state) so the object pass and every
+// light of the shadow pass draw the same figure.
+type pawnFigurePose struct {
+	vis    pawnVisual // the presentation state (lying pawns read it)
+	face   facing
+	suffix string   // body frame
+	held   heldItem // what it holds
+	ps     pose
+}
+
+// pawnFigurePoseOf resolves p's figure pose for this frame. It reads
+// renderer state and writes none.
+func (r *Renderer) pawnFigurePoseOf(p game.PawnView) pawnFigurePose {
+	fp := pawnFigurePose{vis: r.last[p.ID]}
+	if p.Lying {
+		return fp // drawLyingPawn poses it
 	}
 	m := r.pawnMotion(p.ID)
 	m.Facing = r.poseFacing(p, m)
-	ps, suffix, item := r.standingPose(p, m)
-	face := m.Facing
-	r.drawHeld(screen, p, face, suffix, item, wx, wy, tile, ps, true) // first: the parts the body hides (slung rifle, items when facing north)
+	fp.ps, fp.suffix, fp.held = r.standingPose(p, m)
+	fp.face = m.Facing
+	return fp
+}
+
+// figureLying reports a pawn lying on the bare ground (downed, dead or
+// asleep there), whose silhouette lies flat; one in bed casts none.
+func figureLying(p game.PawnView) bool { return p.Lying && !p.InBed }
+
+// drawPawnFigure draws only the pawn's figure: body, apparel, hair, the
+// held item and what it carries (a load or a rescued patient), in pose
+// and facing. It writes no renderer state and draws no labels, bars,
+// rings or flashes of its own, so the shadow pass (r.cast set) calls it
+// to draw the pawn's silhouette.
+func (r *Renderer) drawPawnFigure(dst *ebiten.Image, p game.PawnView, wx, wy, tile float64, fp pawnFigurePose) {
+	if p.Lying {
+		r.drawLyingPawn(dst, p, fp.vis, wx, wy, tile)
+		return
+	}
+	ps, face, suffix, item := fp.ps, fp.face, fp.suffix, fp.held
+	if r.cast != nil {
+		ps.flash = 0 // a light effect, not part of the shape
+	}
+	r.drawHeld(dst, p, face, suffix, item, wx, wy, tile, ps, true) // first: the parts the body hides (slung rifle, items when facing north)
 	hdx, hdy := headDelta(r.art, face, suffix)
 	headPs := ps
 	headPs.dx += hdx
@@ -147,21 +200,12 @@ func (r *Renderer) drawPawnArt(screen *ebiten.Image, p game.PawnView, wx, wy, ti
 		if isHeadLayer(ly.key) {
 			lp = headPs // hair and hats ride the head
 		}
-		r.drawSpritePose(screen, r.framed(ly.key, suffix), ly.tint, wx, wy, tile, lp)
+		r.drawSpritePose(dst, r.framed(ly.key, suffix), ly.tint, wx, wy, tile, lp)
 	}
-	r.drawHeld(screen, p, face, suffix, item, wx, wy, tile, ps, false) // the parts in front
-	if p.Hostile && !p.Lying {
-		r.drawHostileMarker(screen, p, wx+ps.dx, wy+ps.dy, tile)
-	}
-	if p.Drafted {
-		if img := r.art.image("ui_icon/draft", color.NRGBA{}); img != nil {
-			sx, sy := r.worldToScreenF(wx+0.62+ps.dx, wy-0.95+ps.dy)
-			drawIcon(screen, img, float64(sx), float64(sy), tile*0.3)
-		}
-	}
+	r.drawHeld(dst, p, face, suffix, item, wx, wy, tile, ps, false) // the parts in front
 	for _, q := range r.drawPawns {
-		if q.CarriedBy == p.ID {
-			r.drawCarried(screen, q, face, wx+ps.dx, wy+ps.dy, tile)
+		if q.CarriedBy != 0 && q.CarriedBy == p.ID {
+			r.drawCarried(dst, q, face, wx+ps.dx, wy+ps.dy, tile)
 		}
 	}
 }
@@ -181,6 +225,9 @@ func (r *Renderer) drawLyingPawn(screen *ebiten.Image, p game.PawnView, vis pawn
 		cs = deadCS
 	}
 	if p.InBed {
+		if r.cast != nil {
+			return // the bed casts the shadow
+		}
 		if b, ok := bedUnder(r.drawW, p.X, p.Y); ok {
 			r.drawInBed(screen, p, b, vis.lyingSince, tile, cs)
 			return
@@ -188,6 +235,9 @@ func (r *Renderer) drawLyingPawn(screen *ebiten.Image, p game.PawnView, vis pawn
 	}
 	suffix, ps, upright := r.fallPose(p, vis)
 	ps.cs = cs
+	if r.cast != nil {
+		ps.flash = 0
+	}
 	if upright {
 		r.drawFigureFacing(screen, p, vis.facing, suffix, wx, wy, tile, ps)
 		return
@@ -299,7 +349,13 @@ func carryPoses(f facing) (ground, slung pose) {
 // lifted from the ground over easeFrames.
 func (r *Renderer) drawCarried(screen *ebiten.Image, q game.PawnView, f facing, wx, wy, tile float64) {
 	ground, slung := carryPoses(f)
-	k := r.animState().carryEase(q.ID, r.present)
+	st := r.animState()
+	var k float64
+	if r.cast == nil {
+		k = st.carryEase(q.ID, r.present) // the first sighting starts the lift
+	} else if born, ok := st.carryBorn[q.ID]; ok {
+		k = smoothEase(r.present, born, easeFrames) // shadow pass: read only
+	}
 	r.drawFigure(screen, q, wx, wy, tile, lerpPose(ground, slung, k))
 }
 

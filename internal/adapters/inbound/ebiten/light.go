@@ -65,14 +65,19 @@ type lightState struct {
 const (
 	moonPeakEl     = 40.0 // degrees
 	litShadowMinEl = 2.0  // degrees: below this a light casts no shadow
-	litShadowAlpha = 0.38 // sun shadow alpha at the season's noon
-	// litShadowFloor keeps dawn and dusk shadows legible (W5: at
-	// sin(el) scaling they were ≈0.09 at 07:00): 0.38·0.625 ≈ 0.24.
-	litShadowFloor = 0.625
+	// Shadow strength is physical: a shadow removes the light's direct
+	// share of a flat ground's light, S/(A+S) (S the light's colour on the
+	// ground, A the sky ambient), times litShadowGain. litShadowFloor
+	// keeps long dawn and dusk shadows legible in clear weather (scaled by
+	// how much weather dims the light); litShadowCap stops a hard noon.
+	litShadowGain  = 0.95
+	litShadowFloor = 0.34
+	litShadowCap   = 0.62
 	// litShadowFade is how long (hours) shadows take to fade in after the
 	// light rises and out before it sets.
 	litShadowFade   = 0.5
-	litMoonShadow   = 0.14 // moonlight shadow alpha
+	litMoonFloor    = 0.12 // moonlight shadow floor (clear sky)
+	litMoonCap      = 0.30
 	litShadowMaxLen = 3.0  // tiles
 )
 
@@ -181,8 +186,10 @@ func lightAt(hour float64, dayOfYear int, weather string, intensity float64) lig
 	day = min(max(day, 0), 1)
 	ls.LampColor = scale3(lampNight, 1-0.4*day)
 
+	clear := float32(1) // how much of the light reaches the ground through weather
 	if f := weatherSun(weather); f < 1 {
 		d := float32((1 - f) * (0.5 + 0.5*min(max(intensity, 0), 1)))
+		clear = 1 - d
 		ls.SunColor = scale3(ls.SunColor, 1-d)
 		ls.MoonColor = scale3(ls.MoonColor, 1-d)
 		grey := func(a [3]float32) [3]float32 {
@@ -199,16 +206,13 @@ func lightAt(hour float64, dayOfYear int, weather string, intensity float64) lig
 	alpha := 0.0
 	switch {
 	case sunEl > 0:
-		alpha = litShadowAlpha * max(math.Sin(sunEl)/math.Sin(maxEl), litShadowFloor) * horizonFade(hour-6)
+		alpha = shadowStrength(ls.SunColor, ls.SunL, ls.SkyAmbient, litShadowFloor*clear, litShadowCap) * horizonFade(hour-6)
 	case moonEl > 0:
-		alpha = litMoonShadow * horizonFade(math.Mod(hour-18+24, 24))
+		alpha = shadowStrength(ls.MoonColor, ls.MoonL, ls.SkyAmbient, litMoonFloor*clear, litMoonCap) * horizonFade(math.Mod(hour-18+24, 24))
 		el, l = moonEl, ls.MoonL
 	}
 	if el*180/math.Pi <= litShadowMinEl {
 		return ls
-	}
-	if weather == "storm" || weather == "blizzard" {
-		alpha *= 1 - 0.6*min(max(intensity, 0), 1)
 	}
 	if g := math.Hypot(float64(l[0]), float64(l[1])); g > 1e-9 {
 		ls.ShadowDir = [2]float64{-float64(l[0]) / g, -float64(l[1]) / g}
@@ -564,4 +568,16 @@ func (r *Renderer) drawLit(dst, img *ebiten.Image, geo ebiten.GeoM, cs colorScal
 	r.lit.syncUniforms()
 	r.lit.opts.Images[0] = src
 	dst.DrawTrianglesShader32(r.lit.verts[:], litIndices[:], sh, &r.lit.opts)
+}
+
+// shadowStrength is a light's shadow alpha on flat ground: the share of
+// the ground's light it supplies, S/(A+S), times litShadowGain, between
+// floor and limit.
+func shadowStrength(c, dir, ambient [3]float32, floor float32, limit float32) float64 {
+	s := lum3(c) * max(dir[2], 0)
+	a := lum3(ambient)
+	if s+a <= 0 {
+		return 0
+	}
+	return float64(min(max(litShadowGain*s/(a+s), floor), limit))
 }
