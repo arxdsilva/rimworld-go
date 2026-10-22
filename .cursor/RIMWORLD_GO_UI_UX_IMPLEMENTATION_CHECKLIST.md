@@ -89,7 +89,7 @@ use these primitives.
     -   Commands carry enough information for domain-side validation.
     -   UI may optimistically preview actions but authoritative success
         comes from simulation state.
--   [-] **Presentation-only state store** (screen stack, pause, camera, selection, hover/hint, Architect/Work overlays; no bindings/search store)
+-   [-] **Presentation-only state store** (screen stack, pause, camera, selection and groups, hover/hint, Architect/Work overlays, bindings, search (UI-016))
     -   Camera.
     -   current selection.
     -   hovered tile/entity.
@@ -155,7 +155,7 @@ use these primitives.
 -   [ ] **Slider**
 -   [ ] **Dropdown**
 -   [ ] **Text input**
--   [ ] **Search input**
+-   [-] **Search input** (UI-016: the Z search box; no shared widget yet)
 -   [ ] **Numeric input/stepper**
 -   [ ] **Scrollable panel**
 -   [ ] **Virtualized list**
@@ -185,14 +185,14 @@ use these primitives.
 -   [-] **Mouse hit testing**
     -   UI consumes pointer before map interaction. (menus and pause overlay)
     -   Map receives pointer only when not blocked by a panel/modal.
--   [-] **Keyboard focus**
-    -   Text fields capture typing without triggering game hotkeys. (no text fields yet)
+-   [x] **Keyboard focus** (UI-016: input context stack text > modal > tool > panel > map > global > dev; the seed field, search box and key capture swallow keys)
+    -   Text fields capture typing without triggering game hotkeys.
     -   Escape backs out one interaction level at a time. (overlay, then stack, then pause)
--   [ ] **Shortcut manager**
+-   [x] **Shortcut manager** (UI-016: `internal/platform/input` action registry with contexts, defaults, conflicts and the resolver; tooltips and labels read the live keys, e.g. "Draft [R]")
     -   Named actions rather than hardcoded keys.
     -   Display shortcut in tooltips.
     -   Rebinding later uses the same registry.
--   [ ] **Drag interaction state**
+-   [x] **Drag interaction state** (UI-016: selection box, zone/area drags, build line/rectangle/oval, schedule painting, formation right-drag; no list reorder yet)
     -   Selection rectangle.
     -   zone painting.
     -   build line/area.
@@ -214,7 +214,7 @@ This is the minimum UI required to interact with a running simulation.
     -   Culls off-screen content.
     -   UI panels overlay or reserve space without changing
         authoritative map geometry.
--   [-] **Camera pan** (keyboard WASD/arrow pan with acceleration and smooth coast-to-stop, presentation-only; mouse edge/drag pan not implemented)
+-   [x] **Camera pan** (keyboard WASD/arrow pan with acceleration and smooth coast-to-stop, Shift fast pan, edge scrolling (Options) and middle-mouse drag (UI-016); presentation-only)
     -   Mouse edge/drag and keyboard movement.
     -   Smooth presentation movement.
     -   Camera position is presentation-only.
@@ -224,7 +224,7 @@ This is the minimum UI required to interact with a running simulation.
     -   At far zoom, simplify sprites/details rather than drawing
         expensive fine detail.
     -   Zoom toward cursor where practical.
--   [ ] **Jump/center camera**
+-   [x] **Jump/center camera** (alerts and messages jump; `,`/`.` select the previous/next colonist and centre on them; search results centre on the pick (UI-016))
     -   Double-click/select alert/entity.
     -   Hotkey to center selected pawn.
     -   Event letters can provide jump target.
@@ -238,13 +238,13 @@ This is the minimum UI required to interact with a running simulation.
 -   [x] **Selection cycling** (UI-011: clicking the same tile again cycles its stack)
     -   When multiple selectable things share a cell, provide
         predictable way to inspect/cycle them.
--   [ ] **Drag-select colonists**
+-   [x] **Drag-select colonists** (UI-016: a left drag boxes colonists, else animals, else items; Shift+click and Shift+drag add/remove)
     -   Rectangle selects player-controllable pawns.
     -   Modifiers add/remove from selection.
--   [ ] **Double-click same-type selection**
+-   [x] **Double-click same-type selection** (UI-016: visible colonists, animals of the species, stacks of the item)
     -   Select visible entities of the same relevant type, useful for
         pawns/animals/items.
--   [-] **Selection markers** (yellow outline on the selected pawn; no multi-selection/hostile/friendly differentiation yet)
+-   [-] **Selection markers** (yellow outline on the selected pawn; every group member outlined and its colonist-bar slot lit (UI-016); no hostile/friendly differentiation yet)
     -   Clear original visual indicator.
     -   Differentiate single/multiple selection and hostile/friendly if
         needed.
@@ -327,7 +327,7 @@ building, item, plant, animal, corpse or tile.
     -   Disabled command must explain *why*: incapable, unreachable,
         reserved, missing material, wrong faction, research missing,
         unsafe, etc.
--   [ ] **Multi-selection actions**
+-   [-] **Multi-selection actions** (UI-016: group panel with Draft all/Undraft all, Forbid all/Allow all and the member list; R, F and right-click act on every member; formation moves; no assign area yet)
     -   Draft/undraft.
     -   assign area.
     -   group commands.
@@ -441,7 +441,7 @@ the player's primary world-editing command surface.
 -   [x] **Hunt**
 -   [x] **Deconstruct**
 -   [x] **Cancel** (blueprints, harvest and deconstruct marks, zones)
--   [ ] **Forbid/unforbid**
+-   [x] **Forbid/unforbid** (Orders › Forbid/Allow area tools, the item panel button and F on the selection, UI-016)
 -   [ ] **Remove floor**
 -   [x] **Remove roof** (SIM-018)
 -   [ ] **Claim structure where base-game semantics require it**
@@ -784,7 +784,7 @@ understandable.
 -   [x] **Draft toggle** (inspector button + R)
     -   Prominent when colonist selected.
 -   [x] **Draft state in colonist bar**
--   [ ] **Multi-draft**
+-   [x] **Multi-draft** (UI-016: R or Draft all on a group; drafted groups spread around a right-click or line up along a right-drag)
 
 ## 13.2 Tactical orders
 
@@ -914,7 +914,7 @@ understandable.
 
 ## 16.1 Overlay framework
 
--   [ ] **Overlay toggle registry**
+-   [-] **Overlay toggle registry** (UI-016: Roof (Shift+R), Home and Room stats (G) toggles in the HUD; no shared registry or plugin API yet)
     -   Only one or compatible multiple overlays active.
     -   Plugins can register overlays through safe API.
 
@@ -955,11 +955,11 @@ understandable.
 
 ## 16.7 Room overlay
 
--   [ ] **Room boundary**
+-   [-] **Room boundary** (UI-016: the G overlay tints each room by impressiveness; no outline)
 -   [x] **Room role**
 -   [ ] **Space**
 -   [ ] **beauty**
--   [-] **cleanliness** (SIM-021: in room labels and the hover panel; no room overlay yet)
+-   [x] **cleanliness** (SIM-021 room labels and hover panel; UI-016 room stats card)
 -   [ ] **wealth**
 -   [x] **impressiveness**
 
@@ -1672,10 +1672,10 @@ the player what just happened and what requires attention.
 
 ## 34.4 Controls
 
--   [ ] **Key binding list**
--   [ ] **Rebind**
--   [ ] **Conflict detection**
--   [ ] **Reset defaults**
+-   [x] **Key binding list** (UI-016: Options › Controls, paged, by category)
+-   [x] **Rebind** (click a slot, press a key; Esc cancels, Backspace clears; saved in settings.json)
+-   [x] **Conflict detection** (a used key asks "Swap?")
+-   [x] **Reset defaults**
 
 ## 34.5 Accessibility
 
@@ -1825,19 +1825,19 @@ source and intended for AI-assisted development.
 
 ## 38.1 Developer toolbar
 
--   [ ] **Developer mode toggle**
--   [ ] **Debug actions**
+-   [x] **Developer mode toggle** (UI-016: Options › Gameplay; ultrafast 15x and Numpad + single-tick step)
+-   [-] **Debug actions** (UI-016: `/` menu: spawn deer/wolf, add wood, fire nature events, raid, kill animal, fill needs)
 -   [ ] **Debug overlays**
--   [ ] **Inspector**
+-   [-] **Inspector** (UI-016: `'` raw id, position, job and flags of the selection)
 -   [ ] **Profiler**
 -   [ ] **Incident/storyteller tools**
 -   [ ] **Content/plugin tools**
 
 ## 38.2 Entity debug inspector
 
--   [ ] **EntityID**
+-   [x] **EntityID** (UI-016 debug inspector)
 -   [ ] **Components**
--   [ ] **Current job**
+-   [x] **Current job** (UI-016 debug inspector)
 -   [ ] **Intent scores**
 -   [ ] **Reservations**
 -   [ ] **Path**
@@ -1851,11 +1851,11 @@ source and intended for AI-assisted development.
 
 ## 38.3 Map debug overlays
 
--   [ ] **Cell coordinates**
+-   [-] **Cell coordinates** (UI-016: Alt-held hover lines; no grid overlay)
 -   [ ] **Chunk IDs/activity**
 -   [ ] **Region IDs**
--   [ ] **Room IDs**
--   [ ] **Walkability/path cost**
+-   [-] **Room IDs** (UI-016: Alt-held hover shows room id and score)
+-   [-] **Walkability/path cost** (UI-016: Alt-held hover shows the walk cost)
 -   [ ] **Current paths**
 -   [ ] **Reservations**
 -   [ ] **Work candidates**
@@ -1870,20 +1870,20 @@ source and intended for AI-assisted development.
 
 ## 38.4 Debug actions
 
--   [ ] **Spawn item**
--   [ ] **Spawn pawn/animal**
+-   [-] **Spawn item** (UI-016: 100 wood at the cursor)
+-   [-] **Spawn pawn/animal** (UI-016: deer, timber wolf)
 -   [ ] **Destroy entity**
 -   [ ] **Damage/heal**
 -   [ ] **Add/remove health effect**
--   [ ] **Set need/mood**
+-   [-] **Set need/mood** (UI-016: fill the selected colonist's food and rest)
 -   [ ] **Teleport**
 -   [ ] **Trigger mental state**
--   [ ] **Trigger incident**
+-   [-] **Trigger incident** (UI-016: herd crossing, farm animals, mad animal)
 -   [ ] **Set weather**
 -   [ ] **Change time**
 -   [ ] **Finish research**
 -   [ ] **Change goodwill**
--   [ ] **Generate raid**
+-   [x] **Generate raid** (UI-016)
 -   [ ] **Force job**
 -   [ ] **Rebuild selected cache/index**
 
@@ -1954,9 +1954,9 @@ manageable beyond vanilla-scale colonies.
 
 ## 40.3 Search everywhere
 
--   [ ] **Pawn search**
--   [ ] **Animal search**
--   [ ] **Item/storage search**
+-   [x] **Pawn search** (UI-016: Z)
+-   [x] **Animal search** (name or species)
+-   [-] **Item/storage search** (items by kind on the map; buildings, plants and blueprints too; no storage contents yet)
 -   [ ] **Research search**
 -   [ ] **Build menu search**
 -   [ ] **Quest search**

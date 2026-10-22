@@ -105,7 +105,7 @@ Media updated 2026-10-21 · regenerate with `make media clips`
 - Weather: rain, storms, snow and blizzards with wind, puddles and snow cover; rain douses outdoor fires, snow chills the air, and colonists get soaked.
 - A living world: grass, crops and trees wave in gusting wind and part around anyone walking through; trees turn in autumn and stand bare and snowy in winter.
 - Sun, moon and shadows: every sprite has a normal map, lit by a sun that rises in the east and sets in the west (lower in winter) and by a cool moon at night; shadows swing and stretch with it, long at dawn and dusk. Colonists and animals cast their own animated silhouettes, sharp at the feet and soft at the tip, plus shadows away from campfires and lamps at night.
-- Roofs: colonists roof closed rooms on their own, or wherever you plan one within 6 tiles of a wall; unroofed rooms lose their heat, roofs keep rain and snow off, and unsupported roofs collapse. Press R for the roof overlay.
+- Roofs: colonists roof closed rooms on their own, or wherever you plan one within 6 tiles of a wall; unroofed rooms lose their heat, roofs keep rain and snow off, and unsupported roofs collapse. Press Shift+R for the roof overlay.
 - Death and burial: the dead leave bodies that rot to bones; colonists mourn, dig graves with headstones, bury their own, or cremate on a funeral pyre.
 - Sound and options: animal calls, cries, attacks and deaths for every species; code-made sound effects that pan with the camera and fade as you zoom out, ambience for day, night and rain, and composed music for the menu, colony life and raids. Options cover volumes, fullscreen, effects detail, autosave interval, edge scrolling and reduced motion, and are saved between runs.
 - Save and load, with an autosave every in-game day (adjustable in Options).
@@ -135,6 +135,25 @@ Sound plays through your default audio device; `go run ./cmd/game -noaudio`
 the ALSA headers (`sudo apt install libasound2-dev`). Options (volumes,
 fullscreen, effects, autosave, edge scrolling, reduced motion) are saved to
 `settings.json` in your user config folder, next to the saves.
+
+### Controls
+
+Every key can be changed in Options › Controls (conflicts ask before
+swapping; Reset to defaults puts them back).
+
+| What | Keys |
+|---|---|
+| Camera | WASD or arrows pan (Shift: faster), PgDn / PgUp or the wheel zoom, middle-drag pans, edge scrolling in Options |
+| Time | Space pause, 1 / 2 / 3 speeds, Home / End one speed up / down |
+| Tabs | Tab Architect, F1 Work, F2 Schedule, F4 Animals, F5 Wildlife, F6 Research (F3, F7-F9 not yet) |
+| View | F10 screenshot (saved under `screenshots` next to the settings), F11 hide the interface |
+| Selection | click, Shift+click add/remove, drag a box, double-click for all of a kind on screen, `,` / `.` previous / next colonist, Numpad * next thing in the cell, Z search |
+| Selected | R draft / undraft (all selected), F forbid / allow, B H Y N J U M K I L O P the panel's buttons in order |
+| Orders | right-click (drafted: the group spreads around the tile; right-drag lines them up), Shift queues |
+| Architect | Q / E rotate, or change the shape of drag tools (line, rectangle, oval, filled or empty); Ctrl squares the shape; C Cancel tool, X Deconstruct tool |
+| Overlays | Shift+R roofs, G room stats, hold Alt for cell details |
+| Amounts | Ctrl x10, Shift x100, Ctrl+Shift x1000 on bill +/- |
+| Developer mode (Options › Gameplay) | 4 ultrafast, Numpad + one tick while paused, / debug actions, ` debug log, ' debug inspector |
 
 ### Refreshing the README media
 

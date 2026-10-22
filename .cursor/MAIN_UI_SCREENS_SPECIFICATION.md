@@ -1447,16 +1447,17 @@ presentation only, never the simulation; captures ignore them.
 -   [x] autosave (daily, every 3 days, weekly, off);
 -   [x] edge scrolling;
 -   [x] camera pan speed;
+-   [x] developer mode (UI-016: ultrafast, tick step, debug actions, log, inspector);
 -   [ ] speed behavior;
 -   [ ] confirmations;
 -   [ ] learning helper.
 
 ### Controls
 
--   [ ] bindings;
--   [ ] rebinding;
--   [ ] conflicts;
--   [ ] reset.
+-   [x] bindings (UI-016: every action by category, paged);
+-   [x] rebinding (click a slot, press a key; Esc cancels, Backspace clears);
+-   [x] conflicts ("Swap?" before a used key is taken);
+-   [x] reset.
 
 ### Accessibility
 
@@ -1832,7 +1833,7 @@ Agents should implement screens approximately in this dependency order.
 ## Wave UI-0 --- Framework
 
 -   [-] UI primitives (button/label/panel; no sliders, text fields, virtual lists)
--   [-] input/focus (mouse hit-test + Escape; no focus ring or shortcut manager)
+-   [-] input/focus (UI-016: input context stack, shortcut registry with rebinding, text fields swallow keys; no focus ring)
 -   [-] window/modal system (full-screen stack + pause overlay)
 -   [-] tooltips (disabled-reason line only)
 -   [ ] virtual lists/tables
@@ -1844,7 +1845,7 @@ Agents should implement screens approximately in this dependency order.
 -   [-] Boot (phase list + pack load; no plugin/fatal recovery)
 -   [-] Main Menu (navigation shell; Continue/Plugins/Tutorial disabled; original colonist splash left over the animated colony diorama, actions right rail)
 -   [-] Main Colony (viewport plus Food/Wood/time strip, colonist names, Architect/Work/Menu; no alerts)
--   [-] camera (WASD/arrows pan, keyboard/wheel zoom; no edge pan)
+-   [x] camera (WASD/arrows pan with Shift fast pan, edge pan, middle-drag, keyboard/wheel zoom, centre on colonist)
 -   [-] time controls (pause / normal 1x / fast 3x / superfast 6x, date/period/clock, current schedule block in top chrome; no temperature/weather)
 -   [-] selection (click pawn or colonist bar; inspector Character/Needs)
 -   [-] Generic Inspector (name, job, status, reason, food/rest bars; Health/Social/Gear disabled)

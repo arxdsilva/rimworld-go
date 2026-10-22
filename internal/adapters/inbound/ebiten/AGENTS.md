@@ -38,6 +38,7 @@ commands via `Enqueue`. Domain code does not import this package.
   `entity`, `schedule`, `command`)
 - Ebitengine, image/png, OS path lookup for generated art, the vendor pack and menu splash
 - `internal/platform/config` (the settings type)
+- `internal/platform/input` (the key-binding registry and resolver)
 
 ## Forbidden dependencies
 
@@ -58,15 +59,19 @@ commands via `Enqueue`. Domain code does not import this package.
 - Return to main menu drops the renderer so the menu stays headless.
 - Pause overlay skips `Renderer.advance` and map input.
 - HUD, inspector, Architect, and Work consume pointer hits before map selection.
-- Escape on colony: Architect, then Work, then inspector selection, then pause.
+- Escape on colony: hidden UI, order/debug menu, formation drag, Move mode,
+  Architect tool, Architect, Work, building/frame/group/pawn selection, then pause.
 - Disabled buttons do not navigate; they expose a reason string.
 - `Layout` follows the window size; camera/zoom stay presentation-only.
 - Architect (`architect.go`, `archtools.go`): categories Orders/Zones/
   Structure/Furniture; cards read costs from `game.Buildables()`; build
   tools emit `DesignateBuild` (kind id + facing) only for cells where
   `Simulation.CanPlace` is ok; area tools emit one rectangle command
-  (`DesignateStockpile/Harvest/Deconstruct/Cancel`). Q/E rotate,
-  right-click or Escape leaves the tool.
+  (`DesignateStockpile/Harvest/Deconstruct/Cancel`). Q/E rotate single
+  placements and change the draw style of drag tools (`drawstyle.go`:
+  line, filled/empty rectangle, filled/empty oval; Ctrl squares; oval
+  area tools send one rectangle per row run); right-click or Escape leaves
+  the tool and the right-click is consumed.
 - Work Grow/Bld/Haul cells emit `SetWorkEnabled`.
 - Pawn orders (`orders.go`): Draft button / R emits `DraftPawn`. Right-click
   with a pawn selected: drafted -> `MovePawn`; undrafted -> menu built from
@@ -74,6 +79,24 @@ commands via `Enqueue`. Domain code does not import this package.
   reason). Escape closes the menu first.
 - The `Simulation` interface also exposes read-only `CanPlace` and
   `OrdersAt`; the adapter never re-implements placement or order rules.
+
+## Input (UI-016)
+
+- Only `input_source.go` reads Ebitengine's keyboard and mouse. `App.Update`
+  polls once (`pollInput`) into `inputFrame` and resolves actions with
+  `input.Resolve` against the context stack (`contextStack`: text > modal >
+  tool > panel > map > global > dev). A pressed key fires at most one
+  action; a used mouse press is `take()`n so later handlers skip it.
+- Handlers read `a.in.fired(action)`, `held`, `clicked`, `down`,
+  `released`, the raw `key(name)` (text owners only) and the modifiers.
+  The renderer receives intents (`togglePause`, `setSpeed`, `stepSpeed`,
+  `applyCamera`), never keys.
+- Bindings live in `config.Settings.Controls` (overrides only) and are
+  edited on Options › Controls (`controls_ui.go`). Labels and tooltips
+  use `keyHint`, so they always show the live key.
+- Developer mode (Options › Gameplay) adds the Dev context; its debug
+  actions use the consumer-owned `devTools` interface (`devmode.go`).
+- Tests drive `App.Update` with `fakeInput` (`input_ui_test.go`).
 
 ## Invariants
 

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 )
 
 // SettingsVersion is the settings file format. Older files decode over
@@ -17,6 +18,15 @@ type Settings struct {
 	Graphics      Graphics      `json:"graphics"`
 	Gameplay      Gameplay      `json:"gameplay"`
 	Accessibility Accessibility `json:"accessibility"`
+	Controls      Controls      `json:"controls"`
+}
+
+// Controls are the player's key bindings: action id -> binding strings
+// ("Shift+R"), only where they differ from the defaults (package input
+// owns the action table, the defaults and the full normalization). An
+// empty list unbinds the action.
+type Controls struct {
+	Bindings map[string][]string `json:"bindings,omitempty"`
 }
 
 // Audio volumes are 0..100 in steps of VolumeStep.
@@ -55,6 +65,9 @@ type Gameplay struct {
 	AutosaveDays  int  `json:"autosave_days"`
 	EdgeScroll    bool `json:"edge_scroll"`
 	PanSpeed      int  `json:"pan_speed"` // percent, PanSpeedMin..PanSpeedMax
+	// DevMode turns on the developer keys: ultrafast speed, single-tick
+	// stepping, debug actions, the debug log and the debug inspector.
+	DevMode bool `json:"dev_mode"`
 }
 
 // Accessibility options.
@@ -101,7 +114,31 @@ func (s Settings) Normalize() Settings {
 		s.Gameplay.AutosaveDays = d.Gameplay.AutosaveDays
 	}
 	s.Gameplay.PanSpeed = snap(s.Gameplay.PanSpeed, PanSpeedMin, PanSpeedMax, PanSpeedStep)
+	s.Controls = s.Controls.normalize()
 	return s
+}
+
+// normalize trims binding strings, drops empty ones and duplicates, and
+// copies the map so callers never share it.
+func (c Controls) normalize() Controls {
+	if len(c.Bindings) == 0 {
+		return Controls{}
+	}
+	out := make(map[string][]string, len(c.Bindings))
+	for id, keys := range c.Bindings {
+		id = strings.TrimSpace(id)
+		if id == "" {
+			continue
+		}
+		clean := []string{}
+		for _, k := range keys {
+			if k = strings.TrimSpace(k); k != "" && !contains(clean, k) {
+				clean = append(clean, k)
+			}
+		}
+		out[id] = clean
+	}
+	return Controls{Bindings: out}
 }
 
 func contains[T comparable](xs []T, v T) bool {

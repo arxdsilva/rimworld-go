@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
@@ -109,7 +108,7 @@ func (a *App) chooseFloat(id string) {
 		return
 	}
 	c := o.Cmd
-	c.Queue = queueing() // Shift: queue behind the current order
+	c.Queue = a.queueing() // Shift: queue behind the current order
 	a.renderer.enqueue(c)
 	a.closeFloat()
 }
@@ -128,27 +127,6 @@ func (a *App) openOrders(tx, ty int, sx, sy float32) {
 	a.float = floatMenu{open: true, x: sx + 6, y: sy + 4, opts: opts, tx: tx, ty: ty}
 }
 
-// handleOrders: right-click with a pawn selected. Drafted pawns move at
-// once; undrafted pawns get the order menu.
-func (a *App) handleOrders() {
-	if a.renderer == nil || !a.renderer.HasSelect() {
-		return
-	}
-	if inpututil.IsKeyJustPressed(ebiten.KeyR) {
-		a.toggleDraft()
-	}
-	if !inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
-		return
-	}
-	mx, my := a.currentCursor()
-	sw, sh := a.size()
-	if a.colonyChromeHit(mx, my, sw, sh) && !a.floatRect().contains(mx, my) {
-		return
-	}
-	tx, ty := a.renderer.TileAt(mx, my)
-	a.rightClickTile(tx, ty, float32(mx), float32(my))
-}
-
 // rightClickTile is the right-click on tile (tx, ty) with a pawn selected.
 // A drafted colonist walks to open ground at once; on a raider or animal it
 // gets the order menu instead, so Shoot / Melee are reachable.
@@ -159,7 +137,7 @@ func (a *App) rightClickTile(tx, ty int, sx, sy float32) {
 	}
 	if p.Drafted && !a.creatureAt(tx, ty, p.ID) {
 		a.closeFloat()
-		a.renderer.enqueue(command.Command{Kind: command.MovePawn, Pawn: uint64(p.ID), X: tx, Y: ty, Queue: queueing()})
+		a.renderer.enqueue(command.Command{Kind: command.MovePawn, Pawn: uint64(p.ID), X: tx, Y: ty, Queue: a.queueing()})
 		return
 	}
 	a.openOrders(tx, ty, sx, sy)

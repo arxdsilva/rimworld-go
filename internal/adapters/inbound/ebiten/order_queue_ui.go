@@ -18,11 +18,6 @@ import (
 
 const queueRowH = 18
 
-// queueing reports the queue modifier held.
-func queueing() bool {
-	return ebiten.IsKeyPressed(ebiten.KeyShift)
-}
-
 // orderQueueRect is the panel listing n queued orders below the inspector.
 func orderQueueRect(n int) button {
 	r := inspectorRect()

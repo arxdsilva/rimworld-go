@@ -18,6 +18,25 @@ import (
 
 const billRowH = 26
 
+// billMaxCount caps a bill's target.
+const billMaxCount = 9999
+
+// qtyStep is a numeric control's step for the held modifiers (UI-016):
+// x10 with Ctrl, x100 with Shift, x1000 with both.
+func qtyStep(ctrl, shift bool) int {
+	switch {
+	case ctrl && shift:
+		return 1000
+	case shift:
+		return 100
+	case ctrl:
+		return 10
+	}
+	return 1
+}
+
+func (a *App) qtyStep() int { return qtyStep(a.in.ctrl(), a.in.shift()) }
+
 // recipe.Mode values (mirrored; the adapter only sends the numbers).
 const (
 	billModeDo      = 0
@@ -112,8 +131,8 @@ func (a *App) buildingButtons() []button {
 		ix := strconv.Itoa(i)
 		x := r.x + r.w - 150
 		out = append(out,
-			button{id: "bill.minus." + ix, label: "-", x: x, y: y, w: 22, h: 22},
-			button{id: "bill.plus." + ix, label: "+", x: x + 24, y: y, w: 22, h: 22},
+			button{id: "bill.minus." + ix, label: "-", x: x, y: y, w: 22, h: 22, tip: "Fewer (Ctrl x10, Shift x100, both x1000)"},
+			button{id: "bill.plus." + ix, label: "+", x: x + 24, y: y, w: 22, h: 22, tip: "More (Ctrl x10, Shift x100, both x1000)"},
 			button{id: "bill.mode." + ix, label: "M", x: x + 48, y: y, w: 22, h: 22},
 			button{id: "bill.pause." + ix, label: "||", x: x + 72, y: y, w: 26, h: 22, selected: bl.Suspended},
 			button{id: "bill.del." + ix, label: "x", x: x + 100, y: y, w: 22, h: 22},
@@ -301,11 +320,9 @@ func (a *App) applyBuildingClick(id string) {
 		Count: bl.Target, Enabled: bl.Suspended}
 	switch parts[1] {
 	case "minus":
-		if bl.Target > 1 {
-			set.Count = bl.Target - 1
-		}
+		set.Count = max(1, bl.Target-a.qtyStep())
 	case "plus":
-		set.Count = bl.Target + 1
+		set.Count = min(billMaxCount, bl.Target+a.qtyStep())
 	case "mode":
 		set.Mode = (bl.ModeID + 1) % 3
 	case "pause":

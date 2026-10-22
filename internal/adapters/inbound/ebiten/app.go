@@ -2,13 +2,13 @@ package ebiten
 
 import (
 	"fmt"
+	"image"
 	"math"
 	"strconv"
 	"strings"
 	"time"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
@@ -18,6 +18,7 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/platform/config"
+	"rimworld-go/internal/platform/input"
 )
 
 const (
@@ -160,6 +161,27 @@ type App struct {
 	lastPainted                    string            // schedule cell last painted by a drag
 	now                            func() time.Time  // wall clock for alpha (injectable for tests)
 	lastTick                       time.Time         // when the renderer last advanced
+
+	// Input (UI-016): the device source (a fake in tests), this Update's
+	// resolved frame, the live bindings and an Update counter.
+	src     inputSource
+	in      inputFrame
+	binds   input.Bindings
+	updates uint64
+	rebind  rebindState   // Options › Controls key capture (controls_ui.go)
+	search  searchState   // Z search box (search_ui.go)
+	form    formationDrag // drafted colonists' right-drag line (formation.go)
+	group   selGroup      // multi-selection (multiselect.go)
+	press   pressState    // the map left press: drag box and double click
+	midDrag midDragState  // middle-mouse camera drag
+	dev     devState      // developer mode panels (devmode.go)
+	toasts  []toast       // short notices (toast.go)
+	hideUI  bool          // F11: only the map is drawn
+	rooms   bool          // G: room stats overlay (room_stats.go)
+	// archStyle is the drag tool's draw style (0: the tool's default).
+	archStyle drawStyle
+	archCtrl  bool      // Ctrl held: the drag box is square (drawstyle.go)
+	shot      shotState // F10 screenshot (screenshot.go)
 }
 
 // NewApp returns an App on the boot screen. Simulation is not created
@@ -233,28 +255,35 @@ func loadAtlasFromRoot(root string) (*atlas, error) {
 }
 
 // Update routes input, advances boot/colony, and applies screen intents.
+// Input is polled once (pollInput) and each handler reads the resolved
+// frame; the context stack makes one key or click do one thing.
 func (a *App) Update() error {
 	if a.shouldQuit {
 		return ebiten.Termination
 	}
-
-	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+	a.updates++
+	a.pollInput()
+	a.handleTextInput()
+	if a.in.fired(input.Cancel) {
 		a.pressEscape()
 		if a.shouldQuit {
 			return ebiten.Termination
 		}
 	}
+	if a.in.fired(input.Accept) {
+		a.pressAccept()
+	}
+	a.handleViewKeys() // F10 screenshot, F11 hide UI (hotkeys.go)
 
 	sw, sh := a.size()
-	consumed := false
-	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+	if a.in.clicked(mbLeft) {
 		if a.nav.screen() == screenBoot {
 			a.finishBoot()
-			consumed = true
+			a.in.take(mbLeft)
 		} else {
-			mx, my := ebiten.CursorPosition()
+			mx, my := a.currentCursor()
 			if b, ok := hitButton(a.layoutButtons(sw, sh), mx, my); ok {
-				consumed = true
+				a.in.take(mbLeft)
 				a.uiSound(b)
 				if b.disabled {
 					a.hint = b.reason
@@ -262,36 +291,31 @@ func (a *App) Update() error {
 					a.hint = ""
 					a.applyClick(b.id)
 				}
-			} else if a.nav.screen() == screenColony && a.nav.overlay() == overlayNone && a.colonyChromeHit(mx, my, sw, sh) {
-				consumed = true
+			} else if a.colonyLive() && a.colonyChromeHit(mx, my, sw, sh) {
+				a.in.take(mbLeft)
 			}
 		}
 	}
 
-	if a.nav.screen() == screenColony && a.nav.overlay() == overlayNone && a.renderer != nil {
-		a.renderer.handleSpeedInput()
+	if a.colonyLive() {
+		a.pruneGroup()
+		a.handleColonyKeys() // hotkeys.go
 		a.renderer.wheelTaken = a.handleLogWheel()
 		if a.cfg.Capture == nil { // captures frame the camera themselves
-			a.renderer.handleCameraInput(colonyViewport(sw, sh))
+			a.renderer.applyCamera(colonyViewport(sw, sh), a.cameraInput(colonyViewport(sw, sh)))
 		}
 		a.handleScheduleDrag()
-		if a.float.open && !consumed && inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-			a.closeFloat() // click outside the order menu just closes it
-			consumed = true
+		if (a.float.open || a.dev.menu) && a.in.clicked(mbLeft) {
+			a.closeFloat() // click outside a menu just closes it
+			a.dev.menu = false
+			a.in.take(mbLeft)
 		}
 		moving := a.handleMoveMode() // move_mode.go: placing a moved building
-		if moving {
-			consumed = true
-		}
-		a.handleArchitectInput(consumed)
+		a.handleArchitectInput()
 		if a.archTool == "" && !moving {
-			if !consumed && inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-				a.clickSelect() // selection.go
-			}
-			a.handleOrders()
+			a.handleMapMouse() // selection.go / multiselect.go / formation.go
 		}
 	}
-	a.handleSeedInput()
 	if a.nav.screen() != screenColony && a.cfg.Capture == nil {
 		a.menuTick++
 	}
@@ -318,8 +342,24 @@ func (a *App) handleColonyEscape() bool {
 	if a.nav.screen() != screenColony || a.nav.overlay() != overlayNone {
 		return false
 	}
+	if a.hideUI {
+		a.hideUI = false // Esc brings the interface back first
+		return true
+	}
 	if a.float.open {
 		a.closeFloat()
+		return true
+	}
+	if a.dev.menu {
+		a.dev.menu = false
+		return true
+	}
+	if a.form.on {
+		a.form = formationDrag{}
+		return true
+	}
+	if a.bldgMove.on {
+		a.bldgMove.on = false // Move mode takes Esc alone (UI-016)
 		return true
 	}
 	if a.archOpen && a.archTool != "" {
@@ -341,6 +381,10 @@ func (a *App) handleColonyEscape() bool {
 	}
 	if a.hasFrame {
 		a.clearFrame()
+		return true
+	}
+	if a.grouped() {
+		a.clearSelections(selNone)
 		return true
 	}
 	if a.renderer != nil && a.renderer.HasSelect() {
@@ -428,9 +472,22 @@ func (a *App) applyClick(id string) {
 		a.renderer.toggleRoofOverlayIfAny()
 	case id == homeButtonID:
 		a.renderer.toggleHomeOverlayIfAny()
+	case id == roomsButtonID:
+		a.rooms = !a.rooms
+	case strings.HasPrefix(id, "group."):
+		a.applyGroupClick(id) // multiselect.go
+	case strings.HasPrefix(id, "search."):
+		a.applySearchClick(id) // search_ui.go
+	case strings.HasPrefix(id, "dev."):
+		a.applyDevClick(id) // devmode.go
 	case strings.HasPrefix(id, "bar.pawn."):
 		n, err := strconv.ParseUint(strings.TrimPrefix(id, "bar.pawn."), 10, 64)
 		if err == nil && a.renderer != nil {
+			if a.in.shift() { // Shift+click on the bar adds or removes
+				a.toggleInSet(selCand{selPawn, entity.EntityID(n)})
+				break
+			}
+			a.group = selGroup{}
 			a.renderer.Select(entity.EntityID(n))
 			a.clearBuilding()
 		}
@@ -517,6 +574,7 @@ func (a *App) applyClick(id string) {
 		a.applyOption(id)
 	case id == "menu.options" || id == "pause.options":
 		a.optionsTab = "" // always open on the first tab
+		a.rebind = rebindState{}
 		a.apply(a.clickIntent(id))
 	case id == "inspector.close":
 		if a.renderer != nil {
@@ -692,7 +750,9 @@ func (a *App) Draw(screen *ebiten.Image) {
 		} else {
 			screen.Fill(uiSpace)
 		}
-		a.drawColonyHUD(screen, sw, sh)
+		if !a.hideUI {
+			a.drawColonyHUD(screen, sw, sh)
+		}
 		if a.nav.overlay() == overlayPause {
 			a.drawPause(screen, sw, sh)
 		}
@@ -707,14 +767,38 @@ func (a *App) Draw(screen *ebiten.Image) {
 	}
 
 	a.drawHoverHint(screen, sw, sh)
+	if a.shot.pending { // F10: this frame, before the toast that reports it
+		a.shot.pending = false
+		a.takeScreenshot(func(img *image.RGBA) { screen.ReadPixels(img.Pix) }, sw, sh)
+	}
+	if !a.uiHidden() {
+		a.drawToasts(screen, sw, sh)
+	}
 	a.drawCapture(screen)
 }
 
+// uiHidden reports F11 hid the interface (the colony map only).
+func (a *App) uiHidden() bool { return a.hideUI && a.nav.screen() == screenColony }
+
 func (a *App) drawHoverHint(screen *ebiten.Image, sw, sh int) {
-	mx, my := ebiten.CursorPosition()
-	if b, ok := hitButton(a.layoutButtons(sw, sh), mx, my); ok && b.disabled && b.reason != "" {
-		debugPrintAt(screen, b.reason, 16, sh-22)
+	if a.uiHidden() {
 		return
+	}
+	mx, my := a.currentCursor()
+	if b, ok := hitButton(a.layoutButtons(sw, sh), mx, my); ok {
+		if b.disabled && b.reason != "" {
+			debugPrintAt(screen, b.reason, 16, sh-22)
+			return
+		}
+		if b.tip != "" { // a small card by the cursor, clear of the tab strip
+			w := len(b.tip)*6 + 16
+			x, y := min(mx+14, sw-w-4), my+20
+			if y+22 > sh {
+				y = my - 28
+			}
+			drawPanel(screen, float32(x), float32(y), float32(w), 20)
+			drawLabel(screen, x+8, y+3, b.tip)
+		}
 	}
 	if a.hint != "" {
 		debugPrintAt(screen, a.hint, 16, sh-22)
@@ -850,7 +934,7 @@ func (a *App) currentCursor() (int, int) {
 	if a.cursor != nil {
 		return a.cursor[0], a.cursor[1]
 	}
-	return ebiten.CursorPosition()
+	return a.in.raw.mx, a.in.raw.my
 }
 
 func (a *App) paintMenu(screen *ebiten.Image, sw, sh int, title string, body []string, buttons []button) {

@@ -2,6 +2,7 @@ package config
 
 import (
 	"bytes"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -21,7 +22,7 @@ func TestSettingsRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got != s {
+	if !reflect.DeepEqual(got, s) {
 		t.Fatalf("round trip\n got %+v\nwant %+v", got, s)
 	}
 }
@@ -34,7 +35,7 @@ func TestSettingsPartialKeepsDefaults(t *testing.T) {
 	}
 	want := Defaults()
 	want.Audio.Music = 20
-	if got != want {
+	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %+v, want %+v", got, want)
 	}
 }
@@ -53,7 +54,7 @@ func TestSettingsNormalize(t *testing.T) {
 		n.Gameplay.AutosaveDays != 1 || n.Gameplay.PanSpeed != PanSpeedMin || n.Version != SettingsVersion {
 		t.Fatalf("normalize = %+v", n)
 	}
-	if Defaults().Normalize() != Defaults() {
+	if !reflect.DeepEqual(Defaults().Normalize(), Defaults()) {
 		t.Fatal("defaults are not normal")
 	}
 }
@@ -61,7 +62,7 @@ func TestSettingsNormalize(t *testing.T) {
 func TestSettingsDecodeErrorGivesDefaults(t *testing.T) {
 	t.Parallel()
 	got, err := Decode(strings.NewReader(`{not json`))
-	if err == nil || got != Defaults() {
+	if err == nil || !reflect.DeepEqual(got, Defaults()) {
 		t.Fatalf("got %+v, %v; want defaults and an error", got, err)
 	}
 }
@@ -73,5 +74,23 @@ func TestGainAndFX(t *testing.T) {
 	}
 	if (Graphics{Effects: EffectsFull}).FX() != 1 || (Graphics{Effects: EffectsMinimal}).FX() != 0.2 {
 		t.Fatal("fx levels")
+	}
+}
+
+func TestControlsAndDevModeDecodeOverDefaults(t *testing.T) {
+	t.Parallel()
+	got, err := Decode(strings.NewReader(`{"version": 1, "gameplay": {"dev_mode": true}, "controls": {"bindings": {"thing.draft": [" Y ", "Y", ""]}}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !got.Gameplay.DevMode || got.Gameplay.PanSpeed != 100 {
+		t.Fatalf("gameplay = %+v", got.Gameplay)
+	}
+	if b := got.Controls.Bindings["thing.draft"]; len(b) != 1 || b[0] != "Y" {
+		t.Fatalf("bindings = %v", got.Controls.Bindings)
+	}
+	old, err := Decode(strings.NewReader(`{"version": 1, "audio": {"music": 20}}`))
+	if err != nil || old.Controls.Bindings != nil || old.Gameplay.DevMode {
+		t.Fatalf("an old file gets default controls: %+v %v", old.Controls, err)
 	}
 }

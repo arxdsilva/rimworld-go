@@ -203,6 +203,7 @@ var menuCaptures = map[string][]string{
 	"options-graphics": {"menu.options", "options.tab.graphics"},
 	"options-gameplay": {"menu.options", "options.tab.gameplay"},
 	"options-access":   {"menu.options", "options.tab.access"},
+	"controls":         {"menu.options", "options.tab.controls"},
 }
 
 // tickMenuCapture shoots a menu screen without starting a game: Ticks
@@ -508,6 +509,8 @@ func (a *App) captureUI(ui string) {
 		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
 		x, y := at(cx+1, cy+1)
 		a.cursor = &[2]int{x, y}
+	case "search", "rooms", "multiselect", "drawstyle", "hideui":
+		a.captureInput(ui, at)
 	case "architect":
 		a.openArchitect()
 		a.selectArchCategory("structure")
@@ -604,6 +607,42 @@ func (a *App) captureUI(ui string) {
 		x, y := at(tx, ty)
 		a.cursor = &[2]int{x + 20, y}
 		a.openOrders(tx, ty, float32(x), float32(y))
+	}
+}
+
+// captureInput sets up the input-system shots (UI-016): the search box
+// with results, the room stats overlay with a room card, three colonists
+// selected with the group panel, an empty-oval wall preview and F11.
+func (a *App) captureInput(ui string, at func(tx, ty int) (int, int)) {
+	cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
+	switch ui {
+	case "search":
+		a.openSearch()
+		a.search.text = "wo"
+		a.search.idx = 1
+	case "rooms":
+		a.rooms = true
+		x, y := at(cx-3, cy+1) // inside the walled room of captureOrders
+		a.cursor = &[2]int{x, y}
+	case "multiselect":
+		var ids []entity.EntityID
+		for _, p := range a.renderer.snapshot() {
+			ids = append(ids, p.ID)
+		}
+		a.setGroup(selPawn, ids)
+		x, y := at(cx+6, cy-1)
+		a.cursor = &[2]int{x, y}
+	case "drawstyle":
+		a.openArchitect()
+		a.selectArchCategory("structure")
+		a.selectArchTool("wall")
+		a.archStyle = styleOvalEdge
+		a.archDrag = true
+		a.archX0, a.archY0, a.archX1, a.archY1 = cx+5, cy-4, cx+9, cy+1
+		x, y := at(cx+9, cy+1)
+		a.cursor = &[2]int{x, y}
+	case "hideui":
+		a.hideUI = true
 	}
 }
 

@@ -95,7 +95,7 @@ func (a *App) handleLogWheel() bool {
 	if a.renderer == nil {
 		return false
 	}
-	_, wy := ebiten.Wheel()
+	wy := a.in.raw.wheelY
 	if wy == 0 {
 		return false
 	}

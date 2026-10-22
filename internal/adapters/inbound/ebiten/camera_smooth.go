@@ -30,6 +30,7 @@ type camSmooth struct {
 	anchorY      float64
 	instant      bool
 	speed        float64 // pan speed multiplier (Options); 0 means 1
+	boost        float64 // fast-pan multiplier this frame (Shift); 0 means 1
 }
 
 // pushPan records held-pan input for the next step; dx, dy are directions
@@ -88,9 +89,13 @@ func (s *camSmooth) stepZoom(dt float64, c *camera, lim camLimits) {
 }
 
 func (s *camSmooth) stepPan(dt float64, c *camera) {
+	boost := 1.0
+	if s.boost > 0 {
+		boost = s.boost
+	}
 	if s.instant {
-		c.offsetX += s.dirX * panPixels
-		c.offsetY += s.dirY * panPixels
+		c.offsetX += s.dirX * panPixels * boost
+		c.offsetY += s.dirY * panPixels * boost
 		s.vx, s.vy, s.dirX, s.dirY = 0, 0, 0, 0
 		return
 	}
@@ -99,6 +104,7 @@ func (s *camSmooth) stepPan(dt float64, c *camera) {
 	if s.speed > 0 {
 		top *= s.speed
 	}
+	top *= boost
 	s.vx += (s.dirX*top - s.vx) * k
 	s.vy += (s.dirY*top - s.vy) * k
 	s.dirX, s.dirY = 0, 0

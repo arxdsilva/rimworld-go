@@ -1,6 +1,9 @@
 package ebiten
 
-import "rimworld-go/internal/platform/config"
+import (
+	"rimworld-go/internal/platform/config"
+	"rimworld-go/internal/platform/input"
+)
 
 // SettingsHooks connect the Options screen to storage (zero value: the
 // defaults, nothing saved).
@@ -11,6 +14,7 @@ type SettingsHooks struct {
 
 // loadSettings reads the stored settings once at startup.
 func (a *App) loadSettings() {
+	a.binds = nil // rebuilt from the loaded controls
 	a.settings = config.Defaults()
 	if a.cfg.Settings.Load == nil {
 		return
@@ -36,6 +40,10 @@ func (a *App) setSettings(s config.Settings) {
 // applySettings pushes the settings into the window, the colony renderer
 // and the sound.
 func (a *App) applySettings() {
+	a.binds = input.FromSettings(a.settings.Controls.Bindings)
+	if !a.settings.Gameplay.DevMode {
+		a.dev = devState{}
+	}
 	if a.cfg.Window != nil {
 		a.cfg.Window(a.settings.Graphics.Fullscreen, a.settings.Graphics.VSync)
 	}
@@ -56,4 +64,7 @@ func (a *App) syncRenderer() {
 	r.smooth.speed = float64(s.Gameplay.PanSpeed) / 100
 	r.reducedFlashing = s.Accessibility.ReducedFlashing
 	r.smooth.instant = s.Accessibility.ReducedMotion // no eased pan or zoom
+	if !s.Gameplay.DevMode && r.speed == speedUltra {
+		r.speed = speedVeryFast // ultrafast is a developer tier
+	}
 }

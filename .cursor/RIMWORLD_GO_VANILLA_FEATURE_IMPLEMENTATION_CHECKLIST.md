@@ -2488,13 +2488,13 @@ the player-facing system.
 
 ## 34.6 Input
 
--   [ ] **Keyboard shortcuts**
+-   [x] **Keyboard shortcuts** (UI-016: action registry in `internal/platform/input`; camera, time, tabs, selection, orders, overlays, Architect, gizmo keys, screenshots, developer keys)
 -   [ ] **Control groups**
--   [ ] **Shift command queue**
--   [ ] **Double-click select same type**
--   [ ] **Drag designation**
--   [ ] **Cancel tool**
--   [ ] **Rebindable controls where practical**
+-   [x] **Shift command queue** (order menu and drafted moves, formations included)
+-   [x] **Double-click select same type** (UI-016)
+-   [x] **Drag designation** (areas, build lines/rectangles/ovals with Ctrl to square, UI-016)
+-   [x] **Cancel tool** (right-click or Esc leaves a tool; C picks the Cancel tool)
+-   [x] **Rebindable controls where practical** (Options › Controls, saved; modifiers are fixed)
 
 ------------------------------------------------------------------------
 

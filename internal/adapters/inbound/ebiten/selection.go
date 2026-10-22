@@ -150,8 +150,9 @@ func (a *App) selectCand(c selCand) {
 	}
 }
 
-// clearSelections drops every selection but kind keep.
+// clearSelections drops every selection but kind keep, and any group.
 func (a *App) clearSelections(keep selKind) {
+	a.group = selGroup{}
 	if keep != selPawn && a.renderer != nil {
 		a.renderer.ClearSelect()
 	}

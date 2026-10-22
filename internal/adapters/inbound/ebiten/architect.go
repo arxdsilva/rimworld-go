@@ -6,12 +6,17 @@ import (
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
+	"rimworld-go/internal/platform/input"
 )
+
+// rotateKeys is the live rotate keys, "Q/E" by default.
+func (a *App) rotateKeys() string {
+	return a.bindings().Label(input.RotateLeft) + "/" + a.bindings().Label(input.RotateRight)
+}
 
 const (
 	archW        = 276
@@ -312,6 +317,7 @@ func (a *App) selectArchTool(id string) {
 	}
 	a.archTool = id
 	a.archDrag = false
+	a.archStyle = styleDefault
 }
 
 func (a *App) icon(name string) *ebiten.Image {
@@ -393,7 +399,10 @@ func (a *App) drawArchitect(screen *ebiten.Image) {
 			placeArea:   "Drag an area",
 		}[t.mode]
 		if bv, ok := buildable(t.build); ok && bv.Rotatable {
-			hint += "  Q/E rotate (" + facingNames[a.archFacing] + ")"
+			hint += "  " + a.rotateKeys() + " rotate (" + facingNames[a.archFacing] + ")"
+		}
+		if len(toolStyles(t)) > 1 {
+			hint = styleNames[a.curStyle(t)] + "  " + a.rotateKeys() + " shape, Ctrl square"
 		}
 		drawLabel(screen, int(r.x)+12, iy+16, hint)
 		if bv, ok := buildable(t.build); !ok || len(bv.Stuffs) < 2 {
@@ -432,19 +441,23 @@ func (a *App) rotateTool(dir int) {
 }
 
 // handleArchitectInput runs while a tool is selected: drag to place,
-// right-click to stop, Q/E to rotate.
-func (a *App) handleArchitectInput(chromeConsumed bool) {
+// right-click to stop (taking the click, so no colonist is ordered too),
+// Q/E to rotate or change the draw style.
+func (a *App) handleArchitectInput() {
 	defer a.syncRoofForce() // right-click and Escape drop the tool; keep the overlay in step
 	if !a.archOpen || a.archTool == "" || a.renderer == nil {
 		return
 	}
-	if inpututil.IsKeyJustPressed(ebiten.KeyQ) {
-		a.rotateTool(-1)
+	f := &a.in
+	if f.fired(input.RotateLeft) {
+		a.rotateOrStyle(-1)
 	}
-	if inpututil.IsKeyJustPressed(ebiten.KeyE) {
-		a.rotateTool(1)
+	if f.fired(input.RotateRight) {
+		a.rotateOrStyle(1)
 	}
-	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
+	a.archCtrl = f.ctrl()
+	if f.clicked(mbRight) {
+		f.take(mbRight)
 		if a.archDrag {
 			a.archDrag = false
 		} else {
@@ -456,15 +469,16 @@ func (a *App) handleArchitectInput(chromeConsumed bool) {
 	sw, sh := a.size()
 	onMap := !a.colonyChromeHit(mx, my, sw, sh)
 	tx, ty := a.renderer.TileAt(mx, my)
-	if !chromeConsumed && onMap && inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+	if onMap && f.clicked(mbLeft) {
+		f.take(mbLeft)
 		a.archDrag = true
 		a.archX0, a.archY0 = tx, ty
 		a.archX1, a.archY1 = tx, ty
 	}
-	if a.archDrag && ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && onMap {
+	if a.archDrag && f.down(mbLeft) && onMap {
 		a.archX1, a.archY1 = tx, ty
 	}
-	if a.archDrag && inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft) {
+	if a.archDrag && f.released(mbLeft) {
 		if onMap {
 			a.archX1, a.archY1 = tx, ty
 		}
@@ -480,22 +494,26 @@ type ghostCell struct {
 }
 
 // previewCells is what the current tool would affect right now: the
-// dragged span, or the hovered cell when not dragging.
+// dragged span, or the hovered cell when not dragging. An area tool in
+// the rectangle style gets its two corners; in the oval style every cell.
 func (a *App) previewCells() (archTool, []ghostCell) {
 	t, ok := toolByID(a.archTool)
 	if !ok || a.renderer == nil {
 		return archTool{}, nil
 	}
-	x0, y0, x1, y1 := a.archX0, a.archY0, a.archX1, a.archY1
-	if !a.archDrag {
-		mx, my := a.currentCursor()
-		x0, y0 = a.renderer.TileAt(mx, my)
-		x1, y1 = x0, y0
-	}
+	x0, y0, x1, y1 := a.dragSpan()
+	style := a.curStyle(t)
 	if t.mode == placeArea {
-		return t, []ghostCell{{x: x0, y: y0, ok: true}, {x: x1, y: y1, ok: true}}
+		if style != styleOval {
+			return t, []ghostCell{{x: x0, y: y0, ok: true}, {x: x1, y: y1, ok: true}}
+		}
+		var out []ghostCell
+		for _, c := range shapeCells(style, [2]int{x0, y0}, [2]int{x1, y1}, false) {
+			out = append(out, ghostCell{x: c[0], y: c[1], ok: true})
+		}
+		return t, out
 	}
-	cells := placementCells(t.mode, x0, y0, x1, y1)
+	cells := shapeCells(style, [2]int{x0, y0}, [2]int{x1, y1}, false)
 	if len(cells) > archMaxGhost {
 		cells = cells[:archMaxGhost]
 	}
@@ -507,6 +525,24 @@ func (a *App) previewCells() (archTool, []ghostCell) {
 	return t, out
 }
 
+// dragSpan is the drag's two corners (the hovered cell twice when not
+// dragging), the end squared while Ctrl is held on a box style.
+func (a *App) dragSpan() (x0, y0, x1, y1 int) {
+	x0, y0, x1, y1 = a.archX0, a.archY0, a.archX1, a.archY1
+	if !a.archDrag {
+		mx, my := a.currentCursor()
+		x0, y0 = a.renderer.TileAt(mx, my)
+		x1, y1 = x0, y0
+	}
+	if t, ok := toolByID(a.archTool); ok && a.archCtrl && a.curStyle(t) != styleLine && len(toolStyles(t)) > 0 {
+		x1, y1 = constrainEnd(x0, y0, x1, y1)
+	}
+	return x0, y0, x1, y1
+}
+
+// areaOval reports the area tool draws an oval.
+func (a *App) areaOval(t archTool) bool { return t.mode == placeArea && a.curStyle(t) == styleOval }
+
 func (a *App) submitArchitect() {
 	if a.renderer == nil {
 		return
@@ -516,16 +552,33 @@ func (a *App) submitArchitect() {
 		return
 	}
 	if t.mode == placeArea {
-		if kind := zoneKindOf(t); kind != "" && !anyZoneCell(a.archX0, a.archY0, a.archX1, a.archY1, func(x, y int) bool {
+		x0, y0, x1, y1 := a.archX0, a.archY0, a.archX1, a.archY1
+		if a.archCtrl {
+			x1, y1 = constrainEnd(x0, y0, x1, y1)
+		}
+		runs := []rowRun{{y: -1}}
+		if a.areaOval(t) {
+			cs := make([][2]int, 0, len(cells))
+			for _, c := range cells {
+				cs = append(cs, [2]int{c.x, c.y})
+			}
+			runs = rowRuns(cs)
+		}
+		if kind := zoneKindOf(t); kind != "" && !anyZoneCell(x0, y0, x1, y1, func(x, y int) bool {
 			return a.renderer.game.CanZoneAt(kind, x, y)
 		}) {
 			a.hint = "No free tiles there" // the command still goes out; the sim ignores it
 		}
-		c := command.Command{Kind: t.cmd, X: a.archX0, Y: a.archY0, X2: a.archX1, Y2: a.archY1, Enabled: t.enable}
-		if t.crop != "" {
-			c.Build, _ = game.ZoneSpeciesID(a.selectedCrop().Name)
+		for _, run := range runs {
+			c := command.Command{Kind: t.cmd, X: x0, Y: y0, X2: x1, Y2: y1, Enabled: t.enable}
+			if run.y >= 0 { // one oval row
+				c.X, c.Y, c.X2, c.Y2 = run.x0, run.y, run.x1, run.y
+			}
+			if t.crop != "" {
+				c.Build, _ = game.ZoneSpeciesID(a.selectedCrop().Name)
+			}
+			a.renderer.enqueue(c)
 		}
-		a.renderer.enqueue(c)
 		return
 	}
 	id, ok := kindID(t.build)
@@ -550,6 +603,17 @@ func (a *App) drawArchitectGhost(screen *ebiten.Image) {
 		return
 	}
 	t, cells := a.previewCells()
+	if a.areaOval(t) {
+		kind := zoneKindOf(t)
+		for _, c := range cells {
+			if kind != "" {
+				a.drawZoneGhost(screen, kind, c.x, c.y, c.x, c.y)
+			} else {
+				a.renderer.drawGhostRect(screen, c.x, c.y, c.x, c.y)
+			}
+		}
+		return
+	}
 	if t.mode == placeArea {
 		if kind := zoneKindOf(t); kind != "" {
 			a.drawZoneGhost(screen, kind, cells[0].x, cells[0].y, cells[1].x, cells[1].y)
@@ -575,8 +639,9 @@ func (a *App) drawArchitectGhost(screen *ebiten.Image) {
 	if firstBad != "" {
 		msg += "   can't place: " + firstBad
 	}
-	vector.FillRect(screen, float32(mx+16), float32(my+18), float32(len(msg)*6+12), 18, uiPanel, false)
-	drawLabel(screen, mx+22, my+19, msg)
+	lx := min(mx+16, sw-len(msg)*6-16) // keep the label on screen
+	vector.FillRect(screen, float32(lx), float32(my+18), float32(len(msg)*6+12), 18, uiPanel, false)
+	drawLabel(screen, lx+6, my+19, msg)
 }
 
 // presetArchTool opens the Architect with the build tool for kind
@@ -591,6 +656,7 @@ func (a *App) presetArchTool(kind, stuff, facing string) bool {
 		a.archCat = t.category
 		a.archTool = t.id
 		a.archDrag = false
+		a.archStyle = styleDefault
 		if bv, ok := buildable(kind); ok && len(bv.Stuffs) > 1 {
 			a.archStuff = bv.Stuffs[0]
 			for _, s := range bv.Stuffs {

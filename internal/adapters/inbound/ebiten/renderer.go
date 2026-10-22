@@ -10,7 +10,6 @@ import (
 	"math"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
@@ -79,7 +78,11 @@ const (
 	speedNormal
 	speedFast
 	speedVeryFast
+	speedUltra // developer mode only (UI-016)
 )
+
+// ultraTicks is the developer ultrafast tier's ticks per frame.
+const ultraTicks = 15
 
 func (s speed) ticksPerFrame() int {
 	switch s {
@@ -89,6 +92,8 @@ func (s speed) ticksPerFrame() int {
 		return 3
 	case speedVeryFast:
 		return 6
+	case speedUltra:
+		return ultraTicks
 	default:
 		return 0
 	}
@@ -102,6 +107,8 @@ func (s speed) label() string {
 		return "fast"
 	case speedVeryFast:
 		return "superfast"
+	case speedUltra:
+		return "ultrafast"
 	default:
 		return "paused"
 	}
@@ -176,9 +183,11 @@ type Renderer struct {
 	// figureBlood, while non-zero, is the blood stain drawLit puts on the
 	// figure layer being drawn (lit.kage Custom3, blood_draw.go).
 	figureBlood float32
-	// roofOverlay is the Roof overlay toggle (R); roofOverlayForced holds
+	// roofOverlay is the Roof overlay toggle (Shift+R); roofOverlayForced holds
 	// it on while a roof tool is selected (roof_draw.go).
 	roofOverlay, roofOverlayForced bool
+	// stepTicks are single ticks the developer asked for while paused.
+	stepTicks int
 	// homeOverlay is the Home area overlay toggle; homeOverlayForced holds
 	// it on while a Home tool is in hand (SIM-021, home_draw.go, hud.go).
 	homeOverlay, homeOverlayForced bool
@@ -254,6 +263,10 @@ func (r *Renderer) LoadDefaultPack() error {
 func (r *Renderer) advance() {
 	r.present++
 	n := r.speed.ticksPerFrame()
+	if n == 0 && r.stepTicks > 0 { // developer single-tick step while paused
+		n = 1
+		r.stepTicks--
+	}
 	r.mo.stepped = n
 	if n > 0 {
 		r.game.Step(n)
@@ -300,61 +313,73 @@ func (r *Renderer) syncPawns() {
 	r.mo.endSync()
 }
 
-func (r *Renderer) handleSpeedInput() {
-	switch {
-	case inpututil.IsKeyJustPressed(ebiten.KeySpace):
-		if r.speed == speedPaused {
-			r.speed = speedNormal
-			r.globalCue("ui.resume")
-		} else {
-			r.speed = speedPaused
-			r.globalCue("ui.pause")
-		}
-	case inpututil.IsKeyJustPressed(ebiten.Key1):
+// Speed and camera intents (UI-016): the App resolves the keys and the
+// mouse (input_frame.go) and the renderer only applies what they mean.
+
+// togglePause pauses, or resumes at normal speed.
+func (r *Renderer) togglePause() {
+	if r.speed == speedPaused {
 		r.speed = speedNormal
-		r.globalCue("ui.speed")
-	case inpututil.IsKeyJustPressed(ebiten.Key2):
-		r.speed = speedFast
-		r.globalCue("ui.speed")
-	case inpututil.IsKeyJustPressed(ebiten.Key3):
-		r.speed = speedVeryFast
-		r.globalCue("ui.speed")
-	case inpututil.IsKeyJustPressed(ebiten.KeyR):
-		r.roofOverlay = !r.roofOverlay
+		r.globalCue("ui.resume")
+		return
 	}
+	r.speed = speedPaused
+	r.globalCue("ui.pause")
 }
 
-func (r *Renderer) handleCameraInput(v viewport) {
-	var dx, dy float64
-	if ebiten.IsKeyPressed(ebiten.KeyLeft) || ebiten.IsKeyPressed(ebiten.KeyA) {
-		dx--
-	}
-	if ebiten.IsKeyPressed(ebiten.KeyRight) || ebiten.IsKeyPressed(ebiten.KeyD) {
-		dx++
-	}
-	if ebiten.IsKeyPressed(ebiten.KeyUp) || ebiten.IsKeyPressed(ebiten.KeyW) {
-		dy--
-	}
-	if ebiten.IsKeyPressed(ebiten.KeyDown) || ebiten.IsKeyPressed(ebiten.KeyS) {
-		dy++
-	}
-	if r.edgeScroll && ebiten.IsFocused() {
-		mx, my := ebiten.CursorPosition()
-		ex, ey := edgePan(mx, my, v)
-		dx, dy = dx+ex, dy+ey
-	}
-	r.smooth.pushPan(dx, dy)
+// setSpeed picks a speed tier.
+func (r *Renderer) setSpeed(s speed) {
+	r.speed = s
+	r.globalCue("ui.speed")
+}
 
+// stepSpeed moves one tier up (d > 0) or down, paused .. superfast
+// (ultrafast is dev-only and steps down to superfast).
+func (r *Renderer) stepSpeed(d int) {
+	s := r.speed
+	if s > speedVeryFast {
+		s = speedVeryFast
+		if d > 0 {
+			d = 0
+		}
+	}
+	r.setSpeed(speed(max(int(speedPaused), min(int(speedVeryFast), int(s)+d))))
+}
+
+// camInput is one frame of camera intent.
+type camInput struct {
+	dx, dy       float64 // held pan direction (keys plus edge scroll)
+	fast         bool    // Shift: pan faster
+	zoom         int     // keyboard zoom steps (+in) about the viewport centre
+	wheel        float64 // mouse wheel steps (+in) about (wx, wy)
+	wx, wy       float64
+	dragX, dragY float64 // middle-mouse drag this frame, screen px
+}
+
+// fastPanBoost is the pan speed multiplier while Shift is held.
+const fastPanBoost = 2.5
+
+// applyCamera pans and zooms by one frame of intent, then clamps.
+func (r *Renderer) applyCamera(v viewport, in camInput) {
+	r.smooth.boost = 1
+	if in.fast {
+		r.smooth.boost = fastPanBoost
+	}
+	r.smooth.pushPan(in.dx, in.dy)
 	cx, cy := (v.x0+v.x1)/2, (v.y0+v.y1)/2
-	if inpututil.IsKeyJustPressed(ebiten.KeyEqual) {
+	for ; in.zoom > 0; in.zoom-- {
 		r.smooth.zoomAt(1+zoomStep, cx, cy)
 	}
-	if inpututil.IsKeyJustPressed(ebiten.KeyMinus) {
+	for ; in.zoom < 0; in.zoom++ {
 		r.smooth.zoomAt(1/(1+zoomStep), cx, cy)
 	}
-	if _, wy := ebiten.Wheel(); wy != 0 && !r.wheelTaken {
-		mx, my := ebiten.CursorPosition()
-		r.smooth.zoomAt(math.Pow(1+zoomStep, wy), float64(mx), float64(my))
+	if in.wheel != 0 {
+		r.smooth.zoomAt(math.Pow(1+zoomStep, in.wheel), in.wx, in.wy)
+	}
+	if in.dragX != 0 || in.dragY != 0 { // the map follows the hand
+		r.cam.offsetX -= in.dragX
+		r.cam.offsetY -= in.dragY
+		r.smooth.vx, r.smooth.vy = 0, 0
 	}
 	r.clampCamera(v) // first-call centring and min-zoom guard
 	r.smooth.step(1/float64(ebiten.TPS()), &r.cam, r.camLimits(v))

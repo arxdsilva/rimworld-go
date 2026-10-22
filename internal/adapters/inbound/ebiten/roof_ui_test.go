@@ -149,10 +149,12 @@ func TestHUDRoofButtonToggles(t *testing.T) {
 	}
 }
 
+// UI-016 moved the roof overlay from R (now Draft) to Shift+R; the key
+// itself is covered by TestRDraftsAndShiftRTogglesRoof.
 func TestRKeyToggles(t *testing.T) {
 	t.Parallel()
 	a, _ := roofStubApp(t)
-	a.renderer.toggleRoofOverlay() // what the R key calls
+	a.renderer.toggleRoofOverlay() // what Shift+R calls
 	if !a.renderer.roofOverlay {
 		t.Fatal("toggle should turn the overlay on")
 	}

@@ -3,6 +3,7 @@ package settingsfile
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -13,7 +14,7 @@ func TestMissingFileIsDefaults(t *testing.T) {
 	t.Parallel()
 	s := Store{Path: filepath.Join(t.TempDir(), "settings.json")}
 	got, err := s.Load()
-	if err != nil || got != config.Defaults() {
+	if err != nil || !reflect.DeepEqual(got, config.Defaults()) {
 		t.Fatalf("got %+v, %v; want defaults", got, err)
 	}
 }
@@ -29,7 +30,7 @@ func TestSaveLoadRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 	got, err := s.Load()
-	if err != nil || got != want {
+	if err != nil || !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %+v, %v; want %+v", got, err, want)
 	}
 	entries, _ := os.ReadDir(filepath.Dir(s.Path))
@@ -47,7 +48,7 @@ func TestCorruptFileSetAside(t *testing.T) {
 		t.Fatal(err)
 	}
 	got, err := s.Load()
-	if err == nil || got != config.Defaults() {
+	if err == nil || !reflect.DeepEqual(got, config.Defaults()) {
 		t.Fatalf("got %+v, %v; want defaults and an error", got, err)
 	}
 	if _, err := os.Stat(s.Path + ".bad"); err != nil {

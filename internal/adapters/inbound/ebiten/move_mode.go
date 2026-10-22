@@ -4,12 +4,12 @@ import (
 	"fmt"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/platform/input"
 )
 
 // Move mode (UI-011): the building panel's Move button lets the player
@@ -143,25 +143,29 @@ func (a *App) moveStep(tx, ty int, onMap bool, rotate int, left, cancel bool) bo
 	return true
 }
 
-// handleMoveMode reads the mouse and keys; true when move mode took the
-// input (so selection must not also act on the click).
+// handleMoveMode feeds move mode this frame's input; true when move mode
+// took it (so selection must not also act on the click). Escape is the
+// Esc chain's (pressEscape), so it is handled once.
 func (a *App) handleMoveMode() (consumed bool) {
 	if !a.moveSt().on || a.renderer == nil {
 		return false
 	}
+	f := &a.in
 	rot := 0
-	if inpututil.IsKeyJustPressed(ebiten.KeyQ) {
+	if f.fired(input.RotateLeft) {
 		rot--
 	}
-	if inpututil.IsKeyJustPressed(ebiten.KeyE) {
+	if f.fired(input.RotateRight) {
 		rot++
 	}
 	mx, my := a.currentCursor()
 	sw, sh := a.size()
 	tx, ty := a.renderer.TileAt(mx, my)
 	onMap := !a.colonyChromeHit(mx, my, sw, sh)
-	cancel := inpututil.IsKeyJustPressed(ebiten.KeyEscape) || inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight)
-	left := inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft)
+	cancel := f.clicked(mbRight)
+	left := f.clicked(mbLeft)
+	f.take(mbLeft)
+	f.take(mbRight)
 	return a.moveStep(tx, ty, onMap, rot, left, cancel)
 }
 
@@ -188,7 +192,7 @@ func (a *App) drawMoveMode(screen *ebiten.Image) {
 	if !okMove {
 		msg += "   can't move: " + why
 	} else if bv, ok := buildable(b.Kind); ok && bv.Rotatable {
-		msg += "   Q/E rotate"
+		msg += "   " + a.rotateKeys() + " rotate"
 	}
 	vector.FillRect(screen, float32(mx+16), float32(my+18), float32(len(msg)*6+12), 18, uiPanel, false)
 	drawLabel(screen, mx+22, my+19, msg)

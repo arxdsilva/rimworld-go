@@ -31,9 +31,9 @@ type optionRow struct {
 	apply      func(s *config.Settings, d int) // d: -1/+1 for steppers, 0 to toggle/cycle
 }
 
-var optionTabLabels = map[string]string{"audio": "Audio", "graphics": "Graphics", "gameplay": "Gameplay", "access": "Accessibility"}
+var optionTabLabels = map[string]string{"audio": "Audio", "graphics": "Graphics", "gameplay": "Gameplay", "controls": "Controls", "access": "Accessibility"}
 
-func optionTabs() []string { return []string{"audio", "graphics", "gameplay", "access"} }
+func optionTabs() []string { return []string{"audio", "graphics", "gameplay", "controls", "access"} }
 
 // Layout (px).
 const (
@@ -116,7 +116,10 @@ func optionRows(tab string) []optionRow {
 					return float64(s.Gameplay.PanSpeed-config.PanSpeedMin) / (config.PanSpeedMax - config.PanSpeedMin)
 				},
 				apply: func(s *config.Settings, d int) { s.Gameplay.PanSpeed += d * config.PanSpeedStep }},
+			toggleRow("devmode", "Developer mode", func(s *config.Settings) *bool { return &s.Gameplay.DevMode }),
 		}
+	case "controls":
+		return nil // controls_ui.go draws its own rows
 	case "access":
 		return []optionRow{
 			toggleRow("reducedmotion", "Reduced motion", func(s *config.Settings) *bool { return &s.Accessibility.ReducedMotion }),
@@ -135,7 +138,8 @@ func optionRows(tab string) []optionRow {
 
 // optionNotes is the dim line under a tab's rows.
 var optionNotes = map[string]string{
-	"access": "Text size and UI scale: planned (needs the new font and layout pass).",
+	"access":   "Text size and UI scale: planned (needs the new font and layout pass).",
+	"gameplay": "Developer mode: 4 ultrafast, Numpad + one tick (paused), / debug actions, ` log, ' inspector.",
 }
 
 func (a *App) currentOptionsTab() string {
@@ -153,6 +157,9 @@ func (a *App) optionsButtons(sw, sh int) []button {
 	for i, t := range optionTabs() {
 		out = append(out, button{id: "options.tab." + t, label: optionTabLabels[t],
 			x: float32(56 + i*(optTabW+8)), y: optTabY, w: optTabW, h: optBtnH, selected: t == tab})
+	}
+	if tab == "controls" {
+		out = append(out, a.controlsButtons(sw, sh)...)
 	}
 	for i, r := range optionRows(tab) {
 		y := rowY(i)
@@ -172,6 +179,12 @@ func (a *App) applyOption(id string) {
 	key := strings.TrimPrefix(id, "options.")
 	if t, ok := strings.CutPrefix(key, "tab."); ok {
 		a.optionsTab = t
+		a.rebind = rebindState{}
+		a.cfg.Sound.Play("ui.toggle", 1, 0)
+		return
+	}
+	if strings.HasPrefix(key, "ctl.") {
+		a.applyControlsClick(key) // controls_ui.go
 		a.cfg.Sound.Play("ui.toggle", 1, 0)
 		return
 	}
@@ -196,6 +209,13 @@ func (a *App) drawOptions(screen *ebiten.Image, sw, sh int) {
 	a.fillMenu(screen, sw, sh, "Options", nil, 0)
 	drawPanel(screen, 40, 96, float32(sw-80), float32(sh-180))
 	tab := a.currentOptionsTab()
+	if tab == "controls" {
+		a.drawControls(screen, sw, sh)
+		mx, my := a.currentCursor()
+		a.drawButtons(screen, a.optionsButtons(sw, sh)[:len(optionTabs())], mx, my)
+		a.drawButtons(screen, []button{{id: "options.back", label: "Back", x: 40, y: footerY(sh), w: 140, h: 36}}, mx, my)
+		return
+	}
 	rows := optionRows(tab)
 	for i, r := range rows {
 		y := rowY(i)

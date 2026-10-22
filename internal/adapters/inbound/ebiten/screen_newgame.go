@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/world/biome"
@@ -190,20 +189,21 @@ func (a *App) drawWorldGen(screen *ebiten.Image, sw, sh int) {
 	}, a.worldGenButtons(sw, sh))
 }
 
-// handleSeedInput feeds typed digits to the seed field while it is edited.
+// handleSeedInput feeds typed digits to the seed field while it is edited
+// (the text context: Enter or Esc accept, Backspace deletes).
 func (a *App) handleSeedInput() {
 	if a.nav.screen() != screenWorldGen || !a.wiz.editing {
 		return
 	}
-	for _, r := range ebiten.AppendInputChars(nil) {
+	for _, r := range a.in.raw.chars {
 		if r >= '0' && r <= '9' && len(a.wiz.seedText) < maxSeedDigits {
 			a.wiz.seedText += string(r)
 		}
 	}
-	if inpututil.IsKeyJustPressed(ebiten.KeyBackspace) && a.wiz.seedText != "" {
+	if a.in.key("Backspace") && a.wiz.seedText != "" {
 		a.wiz.seedText = a.wiz.seedText[:len(a.wiz.seedText)-1]
 	}
-	if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
+	if a.in.key("Enter") || a.in.key("NumpadEnter") || a.in.key("Escape") {
 		a.wiz.commitSeed()
 	}
 }

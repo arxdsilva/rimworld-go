@@ -83,7 +83,8 @@ type button struct {
 	disabled bool
 	reason   string
 	selected bool
-	quiet    bool // disabled without the "(disabled)" suffix (the reason shows on hover)
+	quiet    bool   // disabled without the "(disabled)" suffix (the reason shows on hover)
+	tip      string // hover line for an enabled button (e.g. its hotkey)
 }
 
 func (b button) contains(mx, my int) bool {

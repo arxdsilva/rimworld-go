@@ -9,6 +9,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/platform/input"
 )
 
 const (
@@ -22,17 +23,18 @@ const (
 var hudTabSpecs = []struct {
 	id, label string
 	enabled   bool
+	key       input.Action // its shortcut ("" none)
 }{
-	{"tab.architect", "Architect", true},
-	{"tab.work", "Work", true},
-	{"tab.schedule", "Schedule", true},
-	{"tab.assign", "Assign", false},
-	{"tab.animals", "Animals", true},
-	{"tab.research", "Research", true},
-	{"tab.world", "World", false},
-	{"tab.history", "History", false},
-	{"tab.factions", "Factions", false},
-	{"tab.menu", "Menu", true},
+	{"tab.architect", "Architect", true, input.TabArchitect},
+	{"tab.work", "Work", true, input.TabWork},
+	{"tab.schedule", "Schedule", true, input.TabSchedule},
+	{"tab.assign", "Assign", false, input.TabAssign},
+	{"tab.animals", "Animals", true, input.TabAnimals},
+	{"tab.research", "Research", true, input.TabResearch},
+	{"tab.world", "World", false, input.TabWorld},
+	{"tab.history", "History", false, input.TabHistory},
+	{"tab.factions", "Factions", false, ""},
+	{"tab.menu", "Menu", true, input.Cancel},
 }
 
 func hudTabY(sh int) float32 { return float32(sh - hudTabH) }
@@ -67,6 +69,9 @@ func (a *App) hudTabButtons(sw, sh int) []button {
 			b.disabled = true
 			b.reason = "not implemented"
 		}
+		if t.key != "" {
+			b.tip = t.label + a.keyHint(t.key)
+		}
 		if t.id == "tab.work" && a.workOpen && (a.panelMode == "work" || a.panelMode == "") {
 			b.selected = true
 		}
@@ -95,7 +100,7 @@ func (a *App) colonistBarButtons(sw, sh int) []button {
 	y := hudBarY(sh)
 	out := make([]button, 0, len(pawns))
 	for i, p := range pawns {
-		sel := a.renderer.HasSelect() && a.renderer.Selected() == p.ID
+		sel := a.renderer.HasSelect() && a.renderer.Selected() == p.ID || a.inGroup(selPawn, p.ID)
 		out = append(out, button{
 			id:       "bar.pawn." + strconv.FormatUint(uint64(p.ID), 10),
 			label:    "",
@@ -110,9 +115,16 @@ func (a *App) colonistBarButtons(sw, sh int) []button {
 }
 
 func (a *App) colonyButtons(sw, sh int) []button {
+	if a.hideUI {
+		return nil // F11: only the map
+	}
 	out := a.floatButtons() // topmost first: hit-testing takes the first match
+	out = append(out, a.devButtons()...)
+	out = append(out, a.searchButtons(sw)...)
 	out = append(out, a.roofButtons(sw)...)
 	out = append(out, a.homeButtons(sw)...)
+	out = append(out, a.roomsButtons(sw)...)
+	out = append(out, a.groupButtons()...)
 	out = append(out, a.hudTabButtons(sw, sh)...)
 	out = append(out, a.colonistBarButtons(sw, sh)...)
 	out = append(out, a.inspectorButtons()...)
@@ -134,6 +146,10 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 		return
 	}
 	a.syncRoofForce()
+	a.drawRoomOverlay(screen) // room_stats.go
+	a.drawGroupMarks(screen)  // multiselect.go
+	a.drawFormation(screen)   // formation.go
+	a.drawBoxSelect(screen)
 	a.drawArchitectGhost(screen)
 	a.drawMoveMarkers(screen) // move_mode.go: pending moves
 	a.drawMoveMode(screen)
@@ -157,6 +173,7 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 	drawLabel(screen, sw-len(time)*7-hudPad, 10, time)
 	a.drawRoofButton(screen, sw)
 	a.drawHomeButton(screen, sw)
+	a.drawRoomsButton(screen, sw)
 
 	drawPanel(screen, 0, hudBarY(sh), float32(sw), hudBarH)
 	mx, my := a.currentCursor()
@@ -170,6 +187,8 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 	a.drawPlantInspector(screen)
 	a.drawItemInspector(screen)
 	a.drawFrameInspector(screen)
+	a.drawGroupInspector(screen)
+	a.drawGizmoKeys(screen) // gizmo.go
 	a.drawAlerts(screen, sw)
 	a.drawArchitect(screen)
 	if a.workOpen {
@@ -178,6 +197,9 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 	a.drawFloat(screen)
 	a.drawMessages(screen)
 	a.drawHoverRoom(screen, sh)
+	a.drawRoomCard(screen)
+	a.drawDevPanels(screen, sw, sh) // devmode.go
+	a.drawSearch(screen, sw)        // search_ui.go
 }
 
 func (a *App) drawColonistPortraits(screen *ebiten.Image, sh int) {
@@ -210,6 +232,18 @@ func (a *App) drawPawnPortrait(screen *ebiten.Image, p game.PawnView, x, y, w, h
 }
 
 func (a *App) colonyChromeHit(mx, my, sw, sh int) bool {
+	if a.hideUI {
+		return false
+	}
+	if a.search.open && a.searchRect(sw).contains(mx, my) {
+		return true
+	}
+	if a.dev.menu && a.devMenuRect().contains(mx, my) {
+		return true
+	}
+	if a.grouped() && !a.workOpen && !a.archOpen && groupRect(len(a.groupRows())).contains(mx, my) {
+		return true
+	}
 	if my < hudTopH {
 		return true
 	}
@@ -266,6 +300,9 @@ func (a *App) drawHoverRoom(screen *ebiten.Image, sh int) {
 		if lbl != "" {
 			lines = append(lines, lbl)
 		}
+	}
+	if a.in.alt() { // Alt held: the detailed cell lines (room_stats.go)
+		lines = append(lines, detailLines(w, tx, ty)...)
 	}
 	drawHoverPanel(screen, sw, int(hudBarY(sh)), lines)
 }
@@ -379,7 +416,8 @@ func (a *App) roofButtons(sw int) []button {
 		return nil
 	}
 	x := float32(sw-len(a.hudTimeText())*7-hudPad) - roofButtonW - hudPad
-	return []button{{id: roofButtonID, label: "Roof", x: x, y: 4, w: roofButtonW, h: hudTopH - 8, selected: a.renderer.roofOverlayOn()}}
+	return []button{{id: roofButtonID, label: "Roof", x: x, y: 4, w: roofButtonW, h: hudTopH - 8, selected: a.renderer.roofOverlayOn(),
+		tip: "Roof overlay" + a.keyHint(input.RoofOverlay)}}
 }
 
 func (a *App) drawRoofButton(screen *ebiten.Image, sw int) {
@@ -411,7 +449,7 @@ func (a *App) roofLegend() string {
 	return roofLegendTxt
 }
 
-// toggleRoofOverlay is the R key and HUD button action.
+// toggleRoofOverlay is the Shift+R key and HUD button action.
 func (r *Renderer) toggleRoofOverlay() { r.roofOverlay = !r.roofOverlay }
 
 // toggleRoofOverlayIfAny tolerates a nil renderer (menus).

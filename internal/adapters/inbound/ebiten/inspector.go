@@ -15,6 +15,7 @@ import (
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/platform/input"
 )
 
 func inspectorRect() button {
@@ -56,9 +57,9 @@ func (a *App) inspectorButtons() []button {
 // shown on every tab. A dead or downed colonist's actions are disabled with
 // the status as the reason.
 func (a *App) pawnActionBar(p game.PawnView, r button) []button {
-	label := "Draft (R)"
+	label := "Draft" + a.keyHint(input.Draft)
 	if p.Drafted {
-		label = "Undraft (R)"
+		label = "Undraft" + a.keyHint(input.Draft)
 	}
 	y := r.y + r.h - 62
 	draft := button{id: "pawn.draft", label: label, x: r.x + 12, y: y, w: 120, h: 24, selected: p.Drafted}
