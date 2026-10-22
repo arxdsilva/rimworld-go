@@ -27,6 +27,7 @@ type Stain struct {
 	Amount  uint16 // 0..Full: how strong it is now
 	Born    uint64 // tick of the last fresh blood (it dries from here)
 	Variant uint8  // which splat shape, a hash of the tile
+	Rem     int    // fade/wash remainder (Fade, Wash frac); saved so a load continues identically
 }
 
 const (
@@ -42,14 +43,53 @@ const (
 	Cap = 2000
 )
 
+// Wash and Fade share one remainder per stain, counted in units of
+// 1/FadeTicks of an amount point, so every step is integer math and
+// stepped calls sum exactly to one big call.
+const (
+	rainScale = FadeTicks / RainWash
+	snowScale = FadeTicks / SnowWash
+)
+
+// drain takes scaled (1/FadeTicks amount points) off a, carrying the
+// remainder in frac. A stain that reaches nothing drops its remainder.
+func drain(a uint16, scaled int, frac *int) uint16 {
+	acc := *frac + scaled
+	dec := acc / FadeTicks
+	*frac = acc % FadeTicks
+	if dec >= int(a) {
+		*frac = 0
+		return 0
+	}
+	return a - uint16(dec)
+}
+
 // Fade is a after ticks of fading (linear: a full stain is gone after
 // FadeTicks). frac carries the remainder between calls so steps sum
-// exactly. SIM-020 BS: implement.
-func Fade(a uint16, ticks int, frac *int) uint16 { return a }
+// exactly.
+func Fade(a uint16, ticks int, frac *int) uint16 {
+	if ticks <= 0 || a == 0 {
+		return a
+	}
+	return drain(a, Full*ticks, frac)
+}
 
 // Wash is a after ticks of rain (snow: snowfall) at intensity 0..1 on
-// open ground. frac carries the remainder. SIM-020 BS: implement.
-func Wash(a uint16, ticks int, intensity float64, snow bool, frac *int) uint16 { return a }
+// open ground: a full stain washes off in RainWash (SnowWash) at
+// intensity 1. frac is the same remainder Fade uses.
+func Wash(a uint16, ticks int, intensity float64, snow bool, frac *int) uint16 {
+	if ticks <= 0 || a == 0 || intensity <= 0 {
+		return a
+	}
+	pm := int(min(intensity, 1)*1000 + 0.5) // permille, deterministic rounding
+	scale := rainScale
+	if snow {
+		scale = snowScale
+	}
+	return drain(a, Full*ticks*pm*scale/1000, frac)
+}
 
-// Add is a plus add, capped at Full. SIM-020 BS: implement.
-func Add(a uint16, add int) uint16 { return a }
+// Add is a plus add, capped at Full.
+func Add(a uint16, add int) uint16 {
+	return uint16(max(0, min(Full, int(a)+add)))
+}
