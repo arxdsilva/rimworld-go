@@ -1457,7 +1457,7 @@ children systems.
 
 ## 18.1 Species definitions
 
--   [x] **Animal species**
+-   [x] **Animal species** (SIM-019: 61 species from size/behaviour classes; ten originals replace RimWorld-invented creatures)
     -   Anatomy.
     -   body size.
     -   movement.
@@ -1471,12 +1471,12 @@ children systems.
 
 ## 18.2 Wildlife
 
--   [-] **Biome wildlife population**
+-   [-] **Biome wildlife population** (SIM-019: start herds and migration weighted by season and habitat; no biome maps yet)
     -   Spawn species appropriate to biome/climate.
 -   [-] **Animal hunger/rest**
     -   Simpler needs than humans.
 -   [ ] **Grazing/foraging**
--   [ ] **Predation**
+-   [x] **Predation** (SIM-019: predators hunt prey no bigger than themselves; small-prey predators XS/S only; packs share targets)
     -   Predators select prey and hunt.
 -   [x] **Wild animal flee/fight response** (flee within 5 tiles and run until clear of 9; enraged animals don't flee; unarmed colonists flee once and hold back 600 ticks, armed ones keep their target)
 
@@ -1485,7 +1485,7 @@ children systems.
 -   [x] **Hunt designation**
 -   [x] **Hunter requires suitable ranged weapon**
 -   [ ] **Stalk/approach/fire job**
--   [-] **Animal retaliation/manhunter chance**
+-   [-] **Animal retaliation/manhunter chance** (SIM-019: revenge chance by behaviour class, legendary 100% and rallies its kind; no tame-animal defence)
 -   [x] **Corpse hauling/butchering integration**
 
 ## 18.4 Taming
@@ -1929,14 +1929,14 @@ Use original names rather than copying RimWorld storyteller characters.
 
 ## 24.6 Insects
 
--   [ ] **Insect species**
+-   [x] **Insect species** (SIM-019: hive beetle, hive brute, hive crawler; original designs)
 -   [ ] **Hive**
     -   Spawns/maintains insect population.
--   [ ] **Infestation incident**
+-   [-] **Infestation incident** (SIM-019: hive swarm bursts from the rock nearest the colony from day 12; no hives or dark/warm rules)
     -   Can emerge in valid under-mountain/dark/warm areas according to
         independently implemented rules.
 -   [ ] **Hive reproduction**
--   [ ] **Insect hostile AI**
+-   [x] **Insect hostile AI** (SIM-019: hostile from spawn, never flee, never tameable)
 
 ## 24.7 Manhunter threat
 

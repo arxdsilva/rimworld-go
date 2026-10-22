@@ -157,11 +157,22 @@ The light comes from the sim clock only, so it is presentation and deterministic
 - **Shadows:**
   - Casters are described in metadata as `shadow: {kind: blob|box|none, w, h, d}` in tiles.
   - They fall away from the active light, length `clamp(h·cot el, 0.25·h, 3)` tiles: long at dawn and dusk, short at noon.
-  - Alpha is `0.32·(sin el / sin el_max)` by day (floor 0.15), `0.12` by moonlight, and faded in storms.
+  - **Alpha is physical:** a shadow removes the light's direct share of flat ground, `0.95·S/(A+S)`. `S` is the light's colour times its height `L.z`, and `A` is the sky ambient.
+    - Floor 0.34 (moon 0.12), scaled by how much weather lets through. Cap 0.62 (moon 0.30).
+    - It fades over the first and last half hour of the light.
   - Colour `(18, 20, 30)`.
   - All shadows go into one offscreen layer with max blending, composited once, so overlaps never double-darken.
-  - None are cast on or from roofed tiles.
-  - Textures: `overlay/shadow_blob` and `overlay/shadow_box`.
+  - **No sun or moon shadows** are cast on or from roofed tiles.
+  - Textures: `overlay/shadow_blob` and `overlay/shadow_box`, for buildings, plants, items and rocks.
+- **Creature shadows (ART-012):** pawns and animals cast **their own silhouette**: every pawn layer (body, apparel, hair, held weapon or tool, carried item), and the animal's current trot, attack or graze frame.
+  - **How they're drawn:** by the same figure code with a cast flag. The figure code is pure, with no state writes.
+  - **Projection:** affine, about the feet pivot. Height above the feet maps to `ShadowDir·m·z`, where `m` is the light's length per tile of height. Width runs across the shadow. Lying poses project at a quarter of the height.
+  - **Softness:** the silhouette encodes height (0 at the feet, 1 at the top), and a contact-hardening blur (`shadow_blur.kage`) softens it with distance from the feet. It's crisp at contact and soft at the tip.
+  - **Contact pools:** a soft dark pool sits under every creature, also indoors, at night and in storms.
+  - **Point lights:** burning campfires (height 0.5 tile, reach 4.5) and lamps in lit rooms (1.6, 6) cast shadows away from the light.
+    - Each creature takes its 2 nearest lights.
+    - Length follows point-light geometry `d·h/(H−h)`, clamped `[0.3h, 3]`.
+    - Alpha is `0.30·falloff·(1−daylight)`; campfire light flickers.
 
 ## 7. Palette and Materials
 
