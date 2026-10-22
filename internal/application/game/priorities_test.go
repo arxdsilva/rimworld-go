@@ -55,6 +55,9 @@ func TestPersonalSchedule(t *testing.T) {
 	a, _ := g.SpawnNamedPawn(3, 3, "Ada")
 	b, _ := g.SpawnNamedPawn(8, 3, "Bo")
 	h := g.Date().Hour
+	// half rested: a fully rested colonist spends a Sleep hour as free time
+	g.SetNeeds(a, needs.Full, needs.Full/2)
+	g.SetNeeds(b, needs.Full, needs.Full/2)
 	g.Enqueue(command.Command{Kind: command.SetSchedule, Pawn: uint64(b), Index: h, Mode: uint8(schedule.Sleep)})
 	g.Step(5)
 	if j, _ := g.jobs.Get(b); j.Kind != job.Sleep {

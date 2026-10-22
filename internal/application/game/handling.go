@@ -240,13 +240,22 @@ func (g *Game) thinkTame(id entity.EntityID, a *animal.State, now uint64) {
 			g.chase(id, a, now)
 			return
 		}
-	} else if tp, threat := g.nearestPredator(id, pos, def.FleeRadius); threat {
-		if a.Mode != animal.Flee || a.PathI >= len(a.Path) || (now+uint64(id))%40 == 0 {
-			a.Mode = animal.Flee
-			fx, fy := animal.FleeGoal(pos.X, pos.Y, tp.X, tp.Y, 6)
-			g.animalGoTo(id, a, fx, fy)
+	} else {
+		r := def.FleeRadius
+		if a.Mode == animal.Flee {
+			r += animal.FleeRelease // run well clear before grazing again
 		}
-		return
+		if tp, threat := g.nearestPredator(id, pos, r); threat {
+			if a.Mode != animal.Flee || a.PathI >= len(a.Path) || (now+uint64(id))%40 == 0 {
+				a.Mode = animal.Flee
+				fx, fy := animal.FleeGoal(pos.X, pos.Y, tp.X, tp.Y, 6)
+				g.animalGoTo(id, a, fx, fy)
+			}
+			return
+		}
+		if a.Mode == animal.Flee && a.PathI < len(a.Path) {
+			return // finish the run
+		}
 	}
 	if a.Mode != animal.Wander {
 		a.Mode, a.Path, a.PathI, a.Target = animal.Wander, nil, 0, 0

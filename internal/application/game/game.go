@@ -351,6 +351,10 @@ type Game struct {
 	graves     map[entity.EntityID]graveRec // who lies in each filled grave (burial.go, SIM-017)
 	exposure   map[entity.EntityID]exposureState
 	noComfort  map[entity.EntityID]uint64 // no warm/cool spot found until this tick
+	noFood     map[entity.EntityID]uint64 // food out of reach: no eating attempt until this tick
+	restedFree map[entity.EntityID]bool   // woke fully rested in the current Sleep block: free time
+	calm       map[entity.EntityID]uint64 // fled a threat: holding back from work until this tick
+	banked     map[entity.EntityID]bool   // campfires banked by their room thermostat (heat.go)
 	orderQueue map[entity.EntityID][]queuedOrder
 	apparel    map[entity.EntityID]worn
 	prio       map[entity.EntityID]work.Priorities
@@ -443,6 +447,10 @@ func New(cfg Config) *Game {
 		fuel:        make(map[entity.EntityID]int),
 		exposure:    make(map[entity.EntityID]exposureState),
 		noComfort:   make(map[entity.EntityID]uint64),
+		noFood:      make(map[entity.EntityID]uint64),
+		restedFree:  make(map[entity.EntityID]bool),
+		calm:        make(map[entity.EntityID]uint64),
+		banked:      make(map[entity.EntityID]bool),
 		orderQueue:  make(map[entity.EntityID][]queuedOrder),
 		apparel:     make(map[entity.EntityID]worn),
 		prio:        make(map[entity.EntityID]work.Priorities),

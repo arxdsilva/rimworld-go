@@ -239,14 +239,21 @@ func (g *Game) phaseNeeds() {
 			continue
 		}
 		if n.Exhausted() {
+			// collapse: drop and sleep right here, this tick
 			g.down(id, health.CauseNoBed)
+			g.assignSleepInPlace(id)
 		}
 	}
 }
 
 func (g *Game) down(id entity.EntityID, cause health.Cause) {
 	g.interrupt(id, job.Cancelled)
-	g.logEvent(id, logEntry{Kind: logDowned})
+	if cause == health.CauseNoBed {
+		g.logEvent(id, logEntry{Kind: logCollapsed})
+	} else {
+		g.logEvent(id, logEntry{Kind: logDowned})
+	}
+	delete(g.calm, id) // lying down ends any flight
 	v, _ := g.vital.Get(id)
 	v.Status, v.Cause, v.DownedTick = health.Downed, cause, uint64(g.clock.Now())
 	g.vital.Set(id, v)
@@ -315,8 +322,13 @@ func (g *Game) dropCarry(id entity.EntityID) {
 func (g *Game) phaseAI() {
 	for _, id := range g.pawnIDs {
 		act := g.activityOf(id)
+		if act != schedule.Sleep {
+			delete(g.restedFree, id) // free time ends with the Sleep block
+		}
 		v, _ := g.vital.Get(id)
 		if v.Status == health.Dead {
+			delete(g.calm, id)
+			delete(g.restedFree, id)
 			g.reserve.ReleaseOwner(id)
 			g.releaseDelivery(id)
 			continue
@@ -356,16 +368,22 @@ func (g *Game) phaseAI() {
 		if g.defend(id, j) {
 			continue
 		}
-		if j.Kind != job.Warm && j.Kind != job.Eat && g.needsComfort(id) && !g.noComfortUntil(id) {
-			if j.Kind != job.None && j.State != job.Idle {
-				g.interrupt(id, job.Interrupted)
-			}
-			if g.assignWarm(id) {
-				continue
+		// Warmth only wakes a sleeper when the exposure turns dangerous, and
+		// nothing is interrupted unless a bearable spot was actually found.
+		if j.Kind != job.Warm && j.Kind != job.Eat && g.needsComfort(id) && !g.noComfortUntil(id) &&
+			(j.Kind != job.Sleep || g.exposureDanger(id)) {
+			if x, y, ok := g.warmSpot(id); ok {
+				if j.Kind != job.None && j.State != job.Idle {
+					g.interrupt(id, job.Interrupted)
+				}
+				if g.startJob(id, job.Record{Kind: job.Warm, TX: x, TY: y, WorkLeft: warmWait}) {
+					continue
+				}
+				j, _ = g.jobs.Get(id)
 			}
 			g.noComfort[id] = uint64(g.clock.Now()) + warmRetry
 		}
-		if j.Kind != job.Sleep && j.Kind != job.Eat && !j.Forced && g.patientRest(id) {
+		if j.Kind != job.Sleep && j.Kind != job.Eat && j.Kind != job.Warm && !j.Forced && g.patientRest(id) {
 			if j.Kind != job.None && j.State != job.Idle {
 				g.interrupt(id, job.Interrupted)
 			}
@@ -375,14 +393,23 @@ func (g *Game) phaseAI() {
 		n, _ := g.need.Get(id)
 
 		busy := j.Kind != job.None && j.State != job.Idle
+		// A tired colonist sleeps whenever its schedule allows it (not in
+		// Work hours, where it keeps going until it collapses). Rest at
+		// zero never reaches here: phaseNeeds has already collapsed it.
+		tired := n.Tired() && needs.SleepAllowed(act)
 		// The schedule comes first: at bedtime a colonist drops whatever it
 		// is doing (even a prioritized order) and goes to bed, eating first
-		// if it is hungry. Only drafting overrides it.
-		if needs.SleepScheduled(act) && j.Kind != job.Sleep && j.Kind != job.Eat && j.Kind != job.Warm {
+		// if it is hungry. Only drafting overrides it. One that already
+		// woke fully rested this block has free time until it tires.
+		if needs.SleepScheduled(act) && n.Rest >= needs.Full {
+			g.restedFree[id] = true
+		}
+		bedtime := needs.SleepScheduled(act) && (!g.restedFree[id] || n.Tired())
+		if bedtime && j.Kind != job.Sleep && j.Kind != job.Eat && j.Kind != job.Warm {
 			if busy {
 				g.interrupt(id, job.Interrupted)
 			}
-			if n.Hungry() && g.hasEdible() {
+			if n.Hungry() && g.seekFood(id) {
 				g.assignEat(id)
 			} else {
 				g.assignSleep(id)
@@ -390,22 +417,22 @@ func (g *Game) phaseAI() {
 			continue
 		}
 		if busy && j.Kind.IsIdle() {
-			needy := n.Hungry() && g.hasEdible() || n.Tired() || n.Exhausted()
+			needy := n.Hungry() && g.seekFood(id) || tired
 			if !needy && (uint64(g.clock.Now())+uint64(id))%idleRecheck != 0 {
 				continue // keep idling; look for real work now and then
 			}
 			busy = false
 		}
-		if busy && j.Forced && !n.Exhausted() {
+		if busy && j.Forced {
 			continue // player-prioritized: finish it first
 		}
 		if busy {
-			if n.Hungry() && j.Kind != job.Eat && g.hasEdible() {
+			if n.Hungry() && j.Kind != job.Eat && g.seekFood(id) {
 				g.interrupt(id, job.Interrupted)
 				g.assignEat(id)
 				continue
 			}
-			if (n.Exhausted() || n.Tired()) && j.Kind != job.Sleep && j.Kind != job.Eat {
+			if tired && j.Kind != job.Sleep && j.Kind != job.Eat && j.Kind != job.Warm {
 				g.interrupt(id, job.Interrupted)
 				g.assignSleep(id)
 				continue
@@ -413,21 +440,24 @@ func (g *Game) phaseAI() {
 			continue
 		}
 
-		if n.Hungry() && g.hasEdible() {
+		if n.Hungry() && g.seekFood(id) {
 			g.assignEat(id)
 			continue
 		}
-		if n.Exhausted() || n.Tired() || needs.SleepScheduled(act) {
+		if tired || bedtime {
 			g.assignSleep(id)
 			continue
+		}
+		// a free-time activity still running when work was looked for
+		var idling job.Record
+		if j.Kind.IsIdle() && j.Active() {
+			idling = j
 		}
 		if !needs.WorkScheduled(act) {
 			if g.assignWear(id) {
 				continue
 			}
-			if !j.Kind.IsIdle() || !j.Active() {
-				g.assignIdle(id) // recreation: free time
-			}
+			g.keepIdling(id, idling) // recreation: free time
 			continue
 		}
 		if g.assignWorkByPriority(id) {
@@ -436,10 +466,24 @@ func (g *Game) phaseAI() {
 		if g.assignWear(id) {
 			continue
 		}
-		if !j.Kind.IsIdle() || !j.Active() {
-			g.assignIdle(id) // nothing to do: free time
-		}
+		g.keepIdling(id, idling) // nothing to do: free time
 	}
+}
+
+// keepIdling carries on with a running free-time activity, or picks a new
+// one. A work giver that tried and failed may have written a failed job
+// over the activity; that must not restart it every idle recheck.
+func (g *Game) keepIdling(id entity.EntityID, idling job.Record) {
+	cur, _ := g.jobs.Get(id)
+	if cur.Kind.IsIdle() && cur.Active() {
+		return
+	}
+	if idling.Kind != job.None && (cur.Kind == job.None || cur.State == job.Fail) &&
+		(idling.Target == 0 || g.reserve.TryEntity(id, idling.Target)) {
+		g.jobs.Set(id, idling)
+		return
+	}
+	g.assignIdle(id)
 }
 
 func (g *Game) startJob(id entity.EntityID, rec job.Record) bool {
@@ -548,14 +592,26 @@ func (g *Game) hasEdible() bool {
 	return false
 }
 
+// foodRetry is how long a colonist whose food is out of reach waits before
+// trying to eat again (it works or sleeps meanwhile instead of retrying
+// every tick).
+const foodRetry = 500
+
+// seekFood reports whether pawn id should go looking for food now.
+func (g *Game) seekFood(id entity.EntityID) bool {
+	return uint64(g.clock.Now()) >= g.noFood[id] && g.hasEdible()
+}
+
 func (g *Game) assignEat(id entity.EntityID) {
 	best, bx, by := g.bestFood(id)
 	if best == 0 {
 		return
 	}
-	g.startJob(id, job.Record{
+	if !g.startJob(id, job.Record{
 		Kind: job.Eat, Target: best, TX: bx, TY: by, WorkLeft: needs.EatWorkTicks,
-	})
+	}) {
+		g.noFood[id] = uint64(g.clock.Now()) + foodRetry
+	}
 }
 
 func (g *Game) assignSleepInPlace(id entity.EntityID) {
@@ -596,7 +652,7 @@ func (g *Game) assignSleep(id entity.EntityID) {
 		sx, sy := g.sleepCellFor(id, b)
 		if !g.startJob(id, job.Record{Kind: job.Sleep, Target: best, TX: sx, TY: sy, WorkLeft: needs.SleepWorkMin}) {
 			g.bldgs.Set(best, b.Release(uint64(id)))
-			g.sleptAt[id] = 0
+			g.assignSleepInPlace(id) // the bed is out of reach: the ground will do
 		}
 		return
 	}
@@ -833,25 +889,8 @@ func (g *Game) doSleep(id entity.EntityID, j job.Record, now uint64) {
 	n, _ := g.need.Get(id)
 	n = needs.SleepTick(n, now)
 	g.need.Set(id, n)
-	if v, ok := g.vital.Get(id); ok && v.Status == health.Downed && v.Cause == health.CauseNoBed && n.Rest >= needs.CriticalRest {
-		v.Status = health.Alive
-		v.Cause = health.CauseNone
-		g.vital.Set(id, v)
-	}
 	j.WorkLeft--
-	act := g.activityOf(id)
-	// fully rested sleepers stay in bed through scheduled sleep hours
-	done := n.Rest >= needs.Full && !needs.SleepScheduled(act)
-	if !n.Exhausted() && needs.WorkScheduled(act) && n.Rest > needs.CriticalRest && j.WorkLeft <= 0 {
-		done = true
-	}
-	if done && g.patientRest(id) && j.WorkLeft > -patientWait {
-		done = false // stay put: a doctor is coming
-	}
-	if n.Hungry() && g.hasEdible() {
-		done = true
-	}
-	if done {
+	if g.sleepDone(id, n, j) {
 		j.State = job.Complete
 		if g.sleptAt[id] != 0 {
 			g.logEvent(id, logEntry{Kind: logSleptBed})
@@ -861,6 +900,41 @@ func (g *Game) doSleep(id entity.EntityID, j job.Record, now uint64) {
 		g.afterSleep(id)
 	}
 	g.jobs.Set(id, j)
+}
+
+// sleepDone reports whether a sleeper gets up now. A collapsed colonist
+// sleeps to WakeRest whatever happens; otherwise it wakes to eat, at full
+// rest in Sleep hours (the rest of the block is free time), with the start
+// of Work hours once over the tired line, and at WakeRest in any other
+// block. These gaps keep it from bouncing between bed and work.
+func (g *Game) sleepDone(id entity.EntityID, n needs.Pair, j job.Record) bool {
+	if v, ok := g.vital.Get(id); ok && v.Status == health.Downed {
+		if v.Cause != health.CauseNoBed || n.Rest < needs.WakeRest {
+			return false
+		}
+		v.Status, v.Cause = health.Alive, health.CauseNone
+		g.vital.Set(id, v)
+	}
+	if n.Hungry() && g.seekFood(id) {
+		return true
+	}
+	act := g.activityOf(id)
+	var done bool
+	switch {
+	case needs.SleepScheduled(act):
+		done = n.Rest >= needs.Full
+		if done {
+			g.restedFree[id] = true
+		}
+	case needs.SleepAllowed(act):
+		done = n.Rest >= needs.WakeRest
+	default: // Work hours
+		done = n.Rest > needs.CriticalRest && j.WorkLeft <= 0
+	}
+	if done && g.patientRest(id) && j.WorkLeft > -patientWait {
+		done = false // stay put: a doctor is coming
+	}
+	return done
 }
 
 func (g *Game) doHaul(id entity.EntityID, j job.Record) {

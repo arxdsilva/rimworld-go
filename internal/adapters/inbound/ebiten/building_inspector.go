@@ -211,7 +211,9 @@ func billLine(bl game.BillView) string {
 		count = fmt.Sprintf("%d/%d", bl.Done, bl.Target)
 	}
 	line := fmt.Sprintf("%s  %s", strings.TrimPrefix(strings.TrimPrefix(bl.Label, "Cook "), "Make "), count)
-	if bl.Status != "" {
+	if bl.Waiting && bl.Status == game.BillHaveEnough {
+		line += fmt.Sprintf("  (Have enough - resumes at %d)", bl.ResumeAt)
+	} else if bl.Status != "" {
 		line += "  (" + bl.Status + ")"
 	}
 	return line

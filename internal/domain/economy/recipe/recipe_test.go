@@ -70,3 +70,33 @@ func TestCremateBurnsAHumanCorpseOnAPyre(t *testing.T) {
 		}
 	}
 }
+
+func TestUntilHaveWaitsThenResumesAt(t *testing.T) {
+	t.Parallel()
+	b := Bill{Recipe: CampfireMeal, Mode: UntilHave, Target: 10}
+	if b.ResumeAt() != 8 {
+		t.Fatalf("resume at %d, want 8", b.ResumeAt())
+	}
+	b = b.Update(10)
+	if !b.Waiting || b.Wants(10) {
+		t.Fatal("at target the bill waits")
+	}
+	b = b.Update(9)
+	if !b.Waiting || b.Wants(9) {
+		t.Fatal("9 is still waiting")
+	}
+	b = b.Update(8)
+	if b.Waiting || !b.Wants(8) {
+		t.Fatal("8 resumes")
+	}
+	one := Bill{Mode: UntilHave, Target: 1}.Update(1)
+	if !one.Waiting || one.ResumeAt() != 0 {
+		t.Fatalf("target 1: %+v", one)
+	}
+	if one = one.Update(0); one.Waiting || !one.Wants(0) {
+		t.Fatal("target 1 resumes at 0")
+	}
+	if (Bill{Mode: Forever, Waiting: true}).Update(0).Waiting {
+		t.Fatal("other modes never wait")
+	}
+}

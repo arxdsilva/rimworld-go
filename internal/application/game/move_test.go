@@ -255,7 +255,10 @@ func TestBuildingUsableWhileMovePending(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 16, Height: 12})
 	bid := built(t, g, "bed", "south", 3, 3)
 	pid, _ := g.SpawnNamedPawn(5, 5, "Ada")
-	g.SetNeeds(pid, needs.Full, 0) // exhausted: sleeps before any building
+	// tired (not collapsed: that sleeps where it drops) in hours that allow
+	// sleep, so it goes to bed before any building
+	sleepAnytime(g)
+	g.SetNeeds(pid, needs.Full, needs.CriticalRest-500)
 	moveCmd(g, bid, construction.South, 10, 6)
 	slept := false
 	for i := 0; i < 200 && !slept; i++ {

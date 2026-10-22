@@ -56,6 +56,7 @@ const (
 	logHeatstroke
 	logRescuedBy
 	logRescued
+	logCollapsed
 )
 
 // logEntry is one stored event (plain data; text is built for the view).
@@ -204,6 +205,8 @@ func logText(e logEntry) string {
 		return "Rescued by " + e.Name
 	case logRescued:
 		return "Rescued " + e.Name
+	case logCollapsed:
+		return "Collapsed from exhaustion"
 	}
 	return ""
 }

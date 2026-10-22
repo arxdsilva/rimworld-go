@@ -49,10 +49,6 @@ func (g *Game) mentalBreakTick(id entity.EntityID, j job.Record) bool {
 		g.interrupt(id, job.Cancelled)
 		return false
 	}
-	n, _ := g.need.Get(id)
-	if n.Exhausted() || n.Starving() {
-		return false // even a broken colonist sleeps and eats when it must
-	}
 	if j.Active() && (j.Kind == job.Eat || j.Kind == mentalJob[b.kind]) {
 		return true
 	}

@@ -3,6 +3,8 @@ package ebiten
 import (
 	"testing"
 
+	ebiten "github.com/hajimehoshi/ebiten/v2"
+
 	"rimworld-go/internal/application/game"
 )
 
@@ -152,5 +154,31 @@ func TestZoneLabelOncePerZone(t *testing.T) {
 	g := (&Renderer{}).zoneGeomOf(z)
 	if len(g.cells) != 6 {
 		t.Fatalf("geom cells = %d", len(g.cells))
+	}
+}
+
+// TestZoneDrawsOverFloor: floors are opaque, so they must be drawn before
+// the zones laid on them. Pixels can't be read outside the game loop, so
+// the test checks the layer order of a frame with a floor and a zone.
+func TestZoneDrawsOverFloor(t *testing.T) {
+	root, err := LocateArt()
+	if err != nil {
+		t.Skip("generated art not present:", err)
+	}
+	art, err := loadArtCatalog(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	g := game.NewColony(game.Config{Seed: 7, Width: 40, Height: 30})
+	r := New(g)
+	r.art = art
+	var order []string
+	r.layerTrace = func(n string) { order = append(order, n) }
+	screen := ebiten.NewImage(640, 400)
+	tile := r.tilePx()
+	r.setView(640, 400, tile)
+	r.drawArt(screen, 640, 400, tile)
+	if len(order) != 2 || order[0] != "floors" || order[1] != "zones" {
+		t.Fatalf("layer order = %v, want floors then zones", order)
 	}
 }

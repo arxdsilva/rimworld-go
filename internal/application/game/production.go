@@ -42,6 +42,10 @@ type BillView struct {
 	Done      int
 	Suspended bool
 	Status    string
+	// Waiting: an "until you have" bill resting at its target until the
+	// stock falls to ResumeAt (BillHaveEnough status).
+	Waiting  bool
+	ResumeAt int
 }
 
 // Recipes lists every recipe.
@@ -171,7 +175,13 @@ func (g *Game) assignBill(id entity.EntityID, m work.Mask) bool {
 		_, spot, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
 		for i, bl := range g.bills[bid] {
 			d := recipe.DefOf(bl.Recipe)
-			if !m.Enabled(d.Skill) || !bl.Wants(g.billStock(d)) {
+			if !m.Enabled(d.Skill) {
+				continue
+			}
+			stock := g.billStock(d)
+			bl = bl.Update(stock)
+			g.bills[bid][i] = bl
+			if !bl.Wants(stock + g.billPending(bl, d)) {
 				continue
 			}
 			if d.Dry && g.racks[bid].Qty > 0 {
@@ -200,6 +210,25 @@ func (g *Game) assignBill(id entity.EntityID, m work.Mask) bool {
 		}
 	}
 	return false
+}
+
+// billPending is the output already being made for an "until you have"
+// bill, so two cooks don't both start the last meal.
+func (g *Game) billPending(bl recipe.Bill, d recipe.Def) int {
+	if bl.Mode != recipe.UntilHave || d.Dry {
+		return 0
+	}
+	n := 0
+	for _, pid := range g.pawnIDs {
+		j, ok := g.jobs.Get(pid)
+		if !ok || j.Kind != job.Bill || j.State == job.Complete || j.State == job.Fail {
+			continue
+		}
+		if bills := g.bills[j.Dest]; j.BillIndex < len(bills) && bills[j.BillIndex].Recipe == bl.Recipe {
+			n += d.OutQty
+		}
+	}
+	return n
 }
 
 func (g *Game) doBill(id entity.EntityID, j job.Record) {
@@ -285,6 +314,7 @@ func (g *Game) billViews(bid entity.EntityID) []BillView {
 		d := recipe.DefOf(bl.Recipe)
 		st := BillActive
 		stock := g.billStock(d)
+		bl = bl.Update(stock) // local copy: views never mutate
 		switch {
 		case bl.Suspended:
 			st = BillSuspended
@@ -305,6 +335,7 @@ func (g *Game) billViews(bid entity.EntityID) []BillView {
 		out = append(out, BillView{
 			Recipe: d.Name, Label: d.Label, Mode: bl.Mode.String(), ModeID: uint8(bl.Mode),
 			Target: bl.Target, Done: bl.Done, Suspended: bl.Suspended, Status: st,
+			Waiting: bl.Waiting, ResumeAt: bl.ResumeAt(),
 		})
 	}
 	return out

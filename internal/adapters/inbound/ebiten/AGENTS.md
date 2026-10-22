@@ -118,7 +118,7 @@ None yet. Add them when colony draw or UI layout shows up in profiles.
 - When `assets/metadata` exists the renderer draws generated art only
   (`drawArt`); the vendor pack is used only if art loading fails.
 - Placement: sprite top-left = footprint top-left - `origin_px` * (tile/128).
-- Draw order: terrain -> grass decals -> stockpile/blueprint -> objects
+- Draw order: terrain -> grass decals -> floors -> zones/blueprint -> objects
   and pawns sorted by row then column -> designations -> selection -> daylight.
 - Walls pick `wall_wood_<mask>` (N=1 E=2 S=4 W=8). Beds draw `bed_cot`
   (domain beds are single-cell). Frames draw scaffold once wood arrives.

@@ -133,6 +133,7 @@ type pawnVisual struct {
 
 // Renderer drives an Ebitengine window from a running Simulation.
 type Renderer struct {
+	layerTrace func(string) // test hook: ground layers in draw order
 	game       Simulation
 	zoneGeoms  map[uint16]*zoneGeom // zones_draw.go outline cache
 	wheelTaken bool                 // the mouse wheel scrolled a log this frame
@@ -636,6 +637,15 @@ func (r *Renderer) TileAt(sx, sy int) (int, int) {
 
 func (r *Renderer) drawWorld(screen *ebiten.Image, sw, sh int, tile float64) {
 	w := r.game.World()
+	floorClr := color.RGBA{R: 90, G: 90, B: 95, A: 255}
+	for _, b := range w.Buildings { // floors lie under the zones
+		if !b.Floor {
+			continue
+		}
+		if sx, sy := r.worldToScreen(b.X, b.Y); visible(sx, sy, float32(tile), float32(tile), sw, sh) {
+			vector.FillRect(screen, sx+4, sy+4, float32(tile)-8, float32(tile)-8, floorClr, false)
+		}
+	}
 	r.drawZones(screen, w, sw, sh, tile)
 	plantClr := color.RGBA{R: 70, G: 150, B: 70, A: 220}
 	desigClr := color.RGBA{R: 240, G: 220, B: 40, A: 200}
@@ -677,6 +687,9 @@ func (r *Renderer) drawWorld(screen *ebiten.Image, sw, sh int, tile float64) {
 	wallClr := color.RGBA{R: 90, G: 90, B: 95, A: 255}
 	bedClr := color.RGBA{R: 70, G: 90, B: 160, A: 255}
 	for _, b := range w.Buildings {
+		if b.Floor {
+			continue // drawn before the zones
+		}
 		sx, sy := r.worldToScreen(b.X, b.Y)
 		if !visible(sx, sy, float32(tile), float32(tile), sw, sh) {
 			continue

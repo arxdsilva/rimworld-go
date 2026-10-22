@@ -39,6 +39,11 @@ func ParseSpecies(name string) (Species, bool) {
 	return 0, false
 }
 
+// FleeRelease widens the threat radius while an animal is already
+// fleeing, so it runs well clear instead of stopping one tile outside
+// FleeRadius and turning straight back (no flee/graze flapping).
+const FleeRelease = 4
+
 // Def is a species definition. Step ticks are per tile moved.
 type Def struct {
 	MaxHP int

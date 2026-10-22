@@ -1,12 +1,15 @@
 package game
 
 import (
+	"strings"
 	"testing"
 
+	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/health"
+	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -252,5 +255,98 @@ func TestMergeOverflowSpills(t *testing.T) {
 	}
 	if total != 1020 || stacks != 2 {
 		t.Fatalf("overflow spills to a neighbour: total %d stacks %d", total, stacks)
+	}
+}
+
+func TestUnarmedColonistCalmsDown(t *testing.T) {
+	g := New(Config{Seed: 2, Width: 40, Height: 16})
+	runner, _ := g.SpawnNamedPawn(12, 8, "Runner")
+	g.SetNeeds(runner, needs.Full, needs.Full)
+	wolf, _ := g.SpawnAnimal("ridgewolf", 15, 8)
+	a, _ := g.animals.Get(wolf)
+	a.Target, a.Mode = runner, animal.Attack
+	g.animals.Set(wolf, a)
+	g.Step(2)
+	if j, _ := g.jobs.Get(runner); j.Kind != job.Move {
+		t.Fatalf("unarmed colonist should run, job %+v", j)
+	}
+	start := uint64(g.clock.Now())
+	// the wolf loses interest and just stands about
+	a, _ = g.animals.Get(wolf)
+	a.Target, a.Mode, a.NextThink, a.Path, a.PathI = 0, animal.Wander, 1<<40, nil, 0
+	g.animals.Set(wolf, a)
+	for uint64(g.clock.Now()) < start+fleeCalm-1 {
+		g.Step(1)
+		g.SetNeeds(runner, needs.Full, needs.Full)
+		if j, _ := g.jobs.Get(runner); j.Kind != job.None && j.Kind != job.Move {
+			t.Fatalf("tick %d: still shaken, the colonist should hold back from work, job %+v",
+				uint64(g.clock.Now())-start, j)
+		}
+	}
+	resumed := false
+	for i := 0; i < 2000 && !resumed; i++ {
+		g.Step(1)
+		g.SetNeeds(runner, needs.Full, needs.Full)
+		j, _ := g.jobs.Get(runner)
+		resumed = j.Kind != job.None && j.Kind != job.Move
+	}
+	if !resumed {
+		t.Fatal("once calm, the colonist goes back to its day")
+	}
+	if _, ok := g.calm[runner]; ok {
+		t.Fatal("the calm window is cleared once it has passed")
+	}
+	n := 0
+	for _, s := range logTexts(g, runner) {
+		if strings.HasPrefix(s, "Fled from") {
+			n++
+		}
+	}
+	if n != 1 {
+		t.Fatalf("one flight is one log line, got %d: %q", n, logTexts(g, runner))
+	}
+}
+
+func TestArmedColonistKeepsTarget(t *testing.T) {
+	g := New(Config{Seed: 2, Width: 30, Height: 12})
+	shooter, _ := g.SpawnNamedPawn(10, 6, "Shooter")
+	g.Arm(shooter, item.Rifle)
+	w1, _ := g.SpawnAnimal("ridgewolf", 13, 3)
+	w2, _ := g.SpawnAnimal("ridgewolf", 7, 9)
+	// both wolves hold their ground, attacking; every 20 ticks the other
+	// one is a tile nearer
+	hold := func(id entity.EntityID, x, y int) {
+		a, ok := g.animals.Get(id)
+		if !ok {
+			return
+		}
+		a.Target, a.Mode, a.Path, a.PathI, a.RetryAt = shooter, animal.Attack, nil, 0, 1<<40
+		g.animals.Set(id, a)
+		g.positions.Set(id, Position{X: x, Y: y})
+	}
+	var target entity.EntityID
+	switches := 0
+	for i := 0; i < 300; i++ {
+		if (i/20)%2 == 0 {
+			hold(w1, 12, 4) // 2 tiles
+			hold(w2, 7, 9)  // 3 tiles
+		} else {
+			hold(w1, 13, 3)
+			hold(w2, 8, 8)
+		}
+		g.Step(1)
+		g.SetNeeds(shooter, needs.Full, needs.Full)
+		if j, _ := g.jobs.Get(shooter); j.Kind == job.Attack && j.Target != target {
+			if target != 0 {
+				switches++
+			}
+			target = j.Target
+		}
+	}
+	if switches > 1 {
+		t.Fatalf("target thrash: switched %d times", switches)
+	}
+	if _, ok := g.lastStrike[shooter]; !ok {
+		t.Fatal("a colonist keeping its target finishes aiming and fires")
 	}
 }

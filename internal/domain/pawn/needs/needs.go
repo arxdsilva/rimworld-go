@@ -1,4 +1,4 @@
-// Package needs is hunger and rest meters (integer permille, 0–Full).
+// Package needs is hunger and rest meters (integers, 0–Full).
 package needs
 
 import "rimworld-go/internal/domain/pawn/schedule"
@@ -9,10 +9,16 @@ const (
 	CriticalRest    = 2000
 	HungerPeriod    = 12 // ticks per 1 hunger lost while not eating
 	RestAwakePeriod = 4  // ticks per 1 rest lost while awake
-	SleepGain       = 3  // rest restored per tick while sleeping
-	EatRestore      = 4000
-	EatWorkTicks    = 20
-	SleepWorkMin    = 40
+	// SleepGain rest is restored every SleepPeriod ticks asleep: 0.4 a
+	// tick, so 20% -> 100% (or 0 -> 80%) takes 8 in-game hours.
+	SleepGain   = 2
+	SleepPeriod = 5
+	// WakeRest is a reasonable sleep: tired sleepers outside a Sleep
+	// block, and collapsed ones, rest to here before getting up.
+	WakeRest     = 8000
+	EatRestore   = 4000
+	EatWorkTicks = 20
+	SleepWorkMin = 40
 )
 
 // Pair is a pawn's food and rest.
@@ -51,7 +57,9 @@ func Decay(p Pair, now uint64) Pair {
 
 // SleepTick restores rest. Hunger still decays slowly while asleep.
 func SleepTick(p Pair, now uint64) Pair {
-	p.Rest = clamp(p.Rest + SleepGain)
+	if now%uint64(SleepPeriod) == 0 {
+		p.Rest = clamp(p.Rest + SleepGain)
+	}
 	if now%uint64(HungerPeriod) == 0 && p.Hunger > 0 {
 		p.Hunger--
 	}
@@ -81,6 +89,12 @@ func Percent(v int) int {
 // SleepScheduled is true for Sleep blocks (Anything does not force sleep).
 func SleepScheduled(a schedule.Activity) bool {
 	return a == schedule.Sleep
+}
+
+// SleepAllowed is true when a tired colonist may go to bed: anything but
+// Work. In Work hours it keeps going until it collapses at zero.
+func SleepAllowed(a schedule.Activity) bool {
+	return a != schedule.Work
 }
 
 // WorkScheduled is true when autonomous labor is allowed.

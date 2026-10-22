@@ -27,8 +27,11 @@ const (
 	// 20-cell room about 30 C above the outside air.
 	campfireHeat = 160
 	// campfireBank: a fire banks down (burning no fuel, adding no heat)
-	// once the air around it reaches 16 C, comfortably warm.
-	campfireBank = 160
+	// once the air around it reaches 20 C, and campfireRelight: it flares
+	// up again when the air cools below 16 C. The gap keeps it from
+	// flickering on and off every climate interval.
+	campfireBank    = 200
+	campfireRelight = 160
 	// refuelBelow: haulers top a campfire up once it is half empty.
 	refuelBelow = CampfireCapacity * TicksPerWood / 2
 	refuelWork  = 30
@@ -120,6 +123,12 @@ func (g *Game) heatRooms() {
 		if !ok || b.Kind != construction.Campfire || g.fuel[bid] <= 0 {
 			continue
 		}
+		switch t := g.temperatureAt(b.X, b.Y); {
+		case !g.banked[bid] && t >= campfireBank:
+			g.banked[bid] = true
+		case g.banked[bid] && t < campfireRelight:
+			delete(g.banked, bid)
+		}
 		if !g.burning(bid, b) {
 			continue // banked, or doused by rain or snow
 		}
@@ -156,7 +165,7 @@ func (g *Game) heatRooms() {
 
 // burning reports a campfire with fuel that is actually burning now.
 func (g *Game) burning(bid entity.EntityID, b construction.Building) bool {
-	return g.fuel[bid] > 0 && !g.doused(bid) && g.temperatureAt(b.X, b.Y) < campfireBank
+	return g.fuel[bid] > 0 && !g.doused(bid) && !g.banked[bid]
 }
 
 // --- refuelling ------------------------------------------------------------
@@ -343,9 +352,9 @@ func (g *Game) needsComfort(id entity.EntityID) bool {
 	return e.hypo >= exposure.Mild && t < b.Min || e.heat >= exposure.Mild && t > b.Max
 }
 
-// assignWarm walks a colonist suffering exposure to the nearest reachable
-// spot in a room with bearable air. It returns false when there is none.
-func (g *Game) assignWarm(id entity.EntityID) bool {
+// warmSpot finds the nearest reachable spot in a room with bearable air for
+// a colonist suffering exposure. ok is false when there is none.
+func (g *Game) warmSpot(id entity.EntityID) (int, int, bool) {
 	g.ensureRooms()
 	pos, _ := g.positions.Get(id)
 	cold := g.exposure[id].hypo >= g.exposure[id].heat
@@ -386,15 +395,24 @@ func (g *Game) assignWarm(id entity.EntityID) bool {
 		if i >= 12 {
 			break
 		}
-		if !g.reachable(id, s.x, s.y) {
-			continue
-		}
-		rec := job.Record{Kind: job.Warm, TX: s.x, TY: s.y, WorkLeft: warmWait}
-		if g.startJob(id, rec) {
-			return true
+		if g.reachable(id, s.x, s.y) {
+			return s.x, s.y, true
 		}
 	}
-	return false
+	return 0, 0, false
+}
+
+// assignWarm walks pawn id to the nearest bearable spot, if any.
+func (g *Game) assignWarm(id entity.EntityID) bool {
+	x, y, ok := g.warmSpot(id)
+	return ok && g.startJob(id, job.Record{Kind: job.Warm, TX: x, TY: y, WorkLeft: warmWait})
+}
+
+// exposureDanger: hypothermia or heatstroke bad enough to get a sleeper
+// out of bed (a little chill only matters once it is awake).
+func (g *Game) exposureDanger(id entity.EntityID) bool {
+	e := g.exposure[id]
+	return e.hypo >= exposure.Recover || e.heat >= exposure.Recover
 }
 
 // warmRetry is how long a colonist that found no bearable spot waits

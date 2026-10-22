@@ -188,7 +188,11 @@ func (g *Game) thinkAnimal(id entity.EntityID, a *animal.State, now uint64) {
 	}
 	switch {
 	case def.Skittish:
-		tp, threat := g.nearestThreat(id, pos, def.FleeRadius)
+		r := def.FleeRadius
+		if a.Mode == animal.Flee {
+			r += animal.FleeRelease // run well clear before grazing again
+		}
+		tp, threat := g.nearestThreat(id, pos, r)
 		if now < a.FleeUntil {
 			if p, ok := g.positions.Get(a.Attacker); ok {
 				tp, threat = p, true
@@ -202,6 +206,9 @@ func (g *Game) thinkAnimal(id entity.EntityID, a *animal.State, now uint64) {
 				g.animalGoTo(id, a, fx, fy)
 			}
 			return
+		}
+		if a.Mode == animal.Flee && a.PathI < len(a.Path) {
+			return // finish the run
 		}
 	case def.Predator:
 		if a.Target != 0 && !g.validPrey(id, a.Target) {

@@ -174,6 +174,31 @@ type Bill struct {
 	Target    int
 	Done      int
 	Suspended bool
+	// Waiting: an "until you have" bill that reached its target and
+	// rests until the stock falls to ResumeAt (absent in older saves).
+	Waiting bool
+}
+
+// ResumeAt is the stock an "until you have" bill waits for after reaching
+// its target, so one meal eaten doesn't send a cook back for one meal.
+func (b Bill) ResumeAt() int {
+	return b.Target - max(1, b.Target/5)
+}
+
+// Update latches the "until you have" wait: it starts at the target and
+// ends once the stock falls to ResumeAt.
+func (b Bill) Update(stock int) Bill {
+	if b.Mode != UntilHave {
+		b.Waiting = false
+		return b
+	}
+	switch {
+	case !b.Waiting && stock >= b.Target:
+		b.Waiting = true
+	case b.Waiting && stock <= b.ResumeAt():
+		b.Waiting = false
+	}
+	return b
 }
 
 // Wants reports whether the bill should run now, given the colony's
@@ -186,7 +211,7 @@ func (b Bill) Wants(stock int) bool {
 	case Forever:
 		return true
 	case UntilHave:
-		return stock < b.Target
+		return !b.Waiting && stock < b.Target
 	default:
 		return b.Done < b.Target
 	}

@@ -185,13 +185,14 @@ func (g *Game) hurt(target entity.EntityID, dmg int, by entity.EntityID) {
 	if a, ok := g.animals.Get(target); ok {
 		a.Injury += dmg
 		a.Attacker = by
-		if animal.DefOf(a.Species).Skittish && !a.Tame {
+		g.provoked(target, &a, by)
+		// an enraged animal fights on instead of bolting (no flee/attack flapping)
+		if animal.DefOf(a.Species).Skittish && !a.Tame && !a.Enraged(now) {
 			if a.Mode != animal.Flee && by != 0 {
 				g.logEvent(target, logEntry{Kind: logFled, Other: by, Name: g.creatureName(by)})
 			}
 			a.Mode, a.FleeUntil, a.Path = animal.Flee, now+900, nil
 		}
-		g.provoked(target, &a, by)
 		g.animals.Set(target, a)
 		if a.Dead() {
 			g.killAnimal(target, by)
@@ -427,52 +428,109 @@ func (g *Game) traceViews() []TraceView {
 	return out
 }
 
-// defend reacts to an animal attacking an undrafted colonist: armed
-// colonists fight back, unarmed ones run. It reports whether it acted.
-func (g *Game) defend(id entity.EntityID, j job.Record) bool {
-	pos, _ := g.positions.Get(id)
+// Threat reach for defend: an animal attacking a colonist this close, or
+// a raider shooting at it from this far. The release radii apply while
+// a colonist is already fleeing (or fighting a target), so it gets well
+// clear before turning back to work (no work/flee flapping).
+const (
+	animalReach   = 4
+	raiderReach   = 14
+	animalRelease = 8
+	raiderRelease = 18
+	// fleeCalm is how long an unarmed colonist who fled holds back from
+	// work after it last saw the threat.
+	fleeCalm = 600
+	// switchMargin: an armed colonist only swaps targets for a threat
+	// this many tiles closer than the one it is fighting.
+	switchMargin = 3
+)
+
+// threatTo reports t's position and distance when it is attacking id
+// within reach (animals from close by, raiders from further off).
+func (g *Game) threatTo(id, t entity.EntityID, pos Position, animalR, raiderR int) (Position, int, bool) {
+	if a, ok := g.animals.Get(t); ok {
+		if a.Mode != animal.Attack || a.Target != id {
+			return Position{}, 0, false
+		}
+		ap, _ := g.positions.Get(t)
+		d := weapon.Distance(pos.X, pos.Y, ap.X, ap.Y)
+		return ap, d, d < animalR
+	}
+	rj, _ := g.jobs.Get(t)
+	if !g.isRaider(t) || !g.standingRaider(t) || rj.Kind != job.Attack || rj.Target != id {
+		return Position{}, 0, false
+	}
+	rp, _ := g.positions.Get(t)
+	d := weapon.Distance(pos.X, pos.Y, rp.X, rp.Y)
+	return rp, d, d < raiderR
+}
+
+// nearestThreatTo is the closest animal or raider attacking id within
+// reach (0: none).
+func (g *Game) nearestThreatTo(id entity.EntityID, pos Position, animalR, raiderR int) (entity.EntityID, Position, int) {
 	var threat entity.EntityID
 	var tp Position
-	best := 4
+	best := 0
+	consider := func(t entity.EntityID) {
+		if p, d, ok := g.threatTo(id, t, pos, animalR, raiderR); ok && (threat == 0 || d < best) {
+			threat, tp, best = t, p, d
+		}
+	}
 	for _, aid := range g.animalIDs {
-		a, ok := g.animals.Get(aid)
-		if !ok || a.Mode != animal.Attack || a.Target != id {
-			continue
-		}
-		ap, _ := g.positions.Get(aid)
-		if d := weapon.Distance(pos.X, pos.Y, ap.X, ap.Y); d < best {
-			threat, tp, best = aid, ap, d
+		consider(aid)
+	}
+	for _, rid := range g.raiderIDs {
+		consider(rid)
+	}
+	return threat, tp, best
+}
+
+// defend reacts to an animal or raider attacking an undrafted colonist:
+// armed colonists fight back, unarmed ones run and then hold back from
+// work until they calm down. It reports whether it acted.
+func (g *Game) defend(id entity.EntityID, j job.Record) bool {
+	pos, _ := g.positions.Get(id)
+	now := uint64(g.clock.Now())
+	_, armed := g.equip[id]
+	calm := false
+	if until, ok := g.calm[id]; ok {
+		if calm = now < until && !armed; !calm {
+			delete(g.calm, id)
 		}
 	}
-	for _, rid := range g.raiderIDs { // raiders shoot from further off
-		rj, _ := g.jobs.Get(rid)
-		if !g.standingRaider(rid) || rj.Kind != job.Attack || rj.Target != id {
-			continue
-		}
-		rp, _ := g.positions.Get(rid)
-		if d := weapon.Distance(pos.X, pos.Y, rp.X, rp.Y); d < 14 && (threat == 0 || d < best) {
-			threat, tp, best = rid, rp, d
-		}
+	ar, rr := animalReach, raiderReach
+	if calm {
+		ar, rr = animalRelease, raiderRelease
 	}
+	threat, tp, best := g.nearestThreatTo(id, pos, ar, rr)
 	if threat == 0 {
-		return false
+		return calm // still shaken: hold position, start no work
 	}
-	if _, armed := g.equip[id]; armed {
-		if j.Kind == job.Attack && j.Target == threat && j.State != job.Fail {
-			return true
+	if armed {
+		if j.Kind == job.Attack && j.State != job.Fail {
+			if j.Target == threat {
+				return true
+			}
+			// keep the current target (and its aim) unless the new one is much closer
+			if _, d, ok := g.threatTo(id, j.Target, pos, animalRelease, raiderRelease); ok && best > d-switchMargin {
+				return true
+			}
 		}
 		g.interrupt(id, job.Interrupted)
 		g.startJob(id, job.Record{Kind: job.Attack, Target: threat, TX: tp.X, TY: tp.Y, WorkLeft: aimTicks(weaponDefOf(g, id))})
 		return true
 	}
-	now := uint64(g.clock.Now())
-	if j.Kind == job.Move && j.State == job.Goto && (now+uint64(id))%30 != 0 {
+	if !calm {
+		g.logEvent(id, logEntry{Kind: logFled, Other: threat, Name: g.creatureName(threat)})
+	}
+	g.calm[id] = now + fleeCalm // calm down only once the threat is gone
+	if calm && j.Kind == job.Move && j.State == job.Goto && (now+uint64(id))%30 != 0 {
 		return true // keep running
 	}
 	fx, fy := animal.FleeGoal(pos.X, pos.Y, tp.X, tp.Y, 7)
 	fx, fy, ok := g.walkableNear(fx, fy, 3)
 	if !ok {
-		return false
+		return true // cornered: stay put rather than walk back to work
 	}
 	g.interrupt(id, job.Interrupted)
 	g.startJob(id, job.Record{Kind: job.Move, TX: fx, TY: fy})

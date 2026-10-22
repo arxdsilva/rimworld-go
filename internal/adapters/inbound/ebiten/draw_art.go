@@ -150,6 +150,13 @@ func (r *Renderer) drawPlacementGhost(screen *ebiten.Image, kind, stuff, facing 
 	}
 }
 
+// layer marks the start of a ground layer for the draw-order test.
+func (r *Renderer) layer(name string) {
+	if r.layerTrace != nil {
+		r.layerTrace(name)
+	}
+}
+
 func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	none := color.NRGBA{}
 	w := r.game.World()
@@ -158,17 +165,19 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 
 	r.drawTerrainArt(screen, w, sw, sh, tile)
 	r.drawGroundCover(screen, w, sw, sh, tile)
-	r.drawZones(screen, w, sw, sh, tile) // zones_draw.go
-	for _, f := range w.Frames {
-		r.drawSprite(screen, "overlay/blueprint", none, float64(f.X), float64(f.Y), tile, sw, sh)
-	}
-
-	// floors (and planned floors) sit under everything else
+	// built floors sit under zones, which sit under everything else
+	r.layer("floors")
 	for _, b := range w.Buildings {
 		if b.Floor {
 			r.drawTile(screen, buildSpriteStuff("floor", b.Stuff, "", 0, false, false), float64(b.X), float64(b.Y), tile, sw, sh, noCS)
 		}
 	}
+	r.layer("zones")
+	r.drawZones(screen, w, sw, sh, tile) // zones_draw.go
+	for _, f := range w.Frames {
+		r.drawSprite(screen, "overlay/blueprint", none, float64(f.X), float64(f.Y), tile, sw, sh)
+	}
+
 	for _, b := range w.Buildings { // floor markings lie on the floor
 		if b.Kind == "sleeping spot" {
 			r.drawSprite(screen, buildSprite(b.Kind, b.Facing, 0, false, false), none, float64(b.X), float64(b.Y), tile, sw, sh)

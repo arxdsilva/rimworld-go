@@ -448,7 +448,7 @@ This is the heart of autonomous colony behavior.
     -   Work.
     -   Sleep.
     -   Recreation.
--   [-] **Schedule-aware intent** (bedtime overrides any job or prioritized order except drafting, eating first if hungry; recreation and idle time run free-time behaviours)
+-   [-] **Schedule-aware intent** (bedtime overrides any job or prioritized order except drafting, eating first if hungry; recreation and idle time run free-time behaviours; tired colonists keep working through Work hours until they collapse; waking fully rested in a Sleep block turns the rest of it into free time until tired again)
     -   Schedule biases/limits autonomous intent but emergencies and
         critical needs can override appropriately.
 
@@ -732,12 +732,12 @@ derived from thoughts and traits and low mood creates mental-break risk.
 
 ## 9.1 Rest
 
--   [-] **Rest need** (awake decay, sleep restore, exhaustion forces ground sleep; hunger 0 downs, not rest)
+-   [-] **Rest need** (awake decay, sleep restore 20%->100% in 8 h, sleepers wake at 80% outside Sleep hours and 100% in them; at 0 the colonist collapses and sleeps where it drops until 80%; hunger 0 downs, not rest; no rest effectiveness by bed quality yet)
     -   Decays while awake.
     -   Replenishes while sleeping.
     -   Severe exhaustion can force sleep.
     -   Tiredness affects mood and performance.
--   [-] **Sleep intent** (owned bed else current tile; schedule Sleep/Work)
+-   [-] **Sleep intent** (owned bed else nearest free bed else current tile, also when the bed is out of reach; schedule-aware: tired sleep only outside Work hours)
     -   Schedule-aware.
     -   Select owned/assigned bed if available.
     -   Fall back to available sleeping location.
@@ -1096,7 +1096,7 @@ treatment, and surgery are major colony-management systems.
         openings/structures.
     -   Use efficient region/room approximation rather than per-cell
         fluid simulation.
--   [-] **Heat sources/sinks** (wood campfire heats its room and banks at 16C; haulers refuel it; no powered heater/cooler)
+-   [-] **Heat sources/sinks** (wood campfire heats its room, banks at 20C and relights below 16C; haulers refuel it; no powered heater/cooler)
     -   Campfire/heater-like source.
     -   cooler/air-conditioner-like device.
     -   passive cooler equivalent.
@@ -1217,7 +1217,7 @@ treatment, and surgery are major colony-management systems.
 
 -   [x] **Bill queue** (ordered bills per bench; first runnable bill wins)
     -   Multiple ordered bills per workstation.
--   [x] **Bill modes** (do X, forever, until you have X; suspend)
+-   [x] **Bill modes** (do X, forever, until you have X (waits at X, resumes at X - X/5, counts meals already cooking); suspend)
     -   Do X times.
     -   Do forever.
     -   Do until X inventory count.
@@ -1478,7 +1478,7 @@ children systems.
 -   [ ] **Grazing/foraging**
 -   [ ] **Predation**
     -   Predators select prey and hunt.
--   [x] **Wild animal flee/fight response**
+-   [x] **Wild animal flee/fight response** (flee within 5 tiles and run until clear of 9; enraged animals don't flee; unarmed colonists flee once and hold back 600 ticks, armed ones keep their target)
 
 ## 18.3 Hunting
 

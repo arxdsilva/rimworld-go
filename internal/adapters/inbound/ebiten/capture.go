@@ -686,7 +686,19 @@ func (a *App) captureZones(at func(tx, ty int) (int, int)) {
 	a.renderer.enqueue(command.Command{Kind: command.DesignateStockpile, X: sx + 2, Y: sy + 2, X2: sx + 6, Y2: sy + 4})
 	id, _ := game.CropID("potato")
 	a.renderer.enqueue(command.Command{Kind: command.DesignateGrowZone, X: sx + 5, Y: sy, X2: sx + 7, Y2: sy + 1, Build: id})
+	// the second stockpile's centre sits on a built wood floor
+	if id, ok := kindID("floor"); ok {
+		for y := sy + 2; y <= sy+3; y++ {
+			for x := sx + 2; x <= sx+4; x++ {
+				a.renderer.enqueue(command.Command{Kind: command.DesignateBuild, Build: id, X: x, Y: y})
+			}
+		}
+	}
 	g.Step(1)
+	for i := 0; i < 30; i++ { // the colonists lay it
+		g.Step(60)
+		a.renderer.syncPawns()
+	}
 	// the drag: start at rough stone (walkable, not sowable) near the centre
 	gx, gy, gbest := sx, sy+7, 1<<30
 	for y := 2; y < g.Height()-4; y++ {

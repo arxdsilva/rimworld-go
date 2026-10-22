@@ -131,6 +131,7 @@ func TestSleepingSpotIsInstantAndFree(t *testing.T) {
 	if len(w.Frames) != 0 || len(w.Buildings) != 1 || w.Buildings[0].Kind != "sleeping spot" {
 		t.Fatalf("spot should exist at once with no frame: frames %+v buildings %+v", w.Frames, w.Buildings)
 	}
+	sleepAnytime(g)                  // tired colonists only go to bed outside Work hours
 	g.SetNeeds(sleeper, 1<<20, 1500) // tired, not yet collapsed
 	for i := 0; i < 60 && !g.inBed(sleeper); i++ {
 		g.Step(10)
@@ -150,6 +151,7 @@ func TestTwoColonistsShareADoubleBed(t *testing.T) {
 	a, _ := g.SpawnNamedPawn(2, 7, "A")
 	b, _ := g.SpawnNamedPawn(3, 7, "B")
 	placeBuilt(t, g, construction.DoubleBed, construction.South, 5, 2)
+	sleepAnytime(g) // tired colonists only go to bed outside Work hours
 	g.SetNeeds(a, 1<<20, 1500)
 	g.SetNeeds(b, 1<<20, 1500)
 	for i := 0; i < 100 && !(g.inBed(a) && g.inBed(b)); i++ {

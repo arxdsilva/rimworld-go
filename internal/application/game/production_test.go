@@ -123,3 +123,28 @@ func TestBillWaitsForIngredients(t *testing.T) {
 		t.Fatal("recipes listed")
 	}
 }
+
+func TestBillsDontOvershootWithTwoCooks(t *testing.T) {
+	g := New(Config{Seed: 1, Width: 12, Height: 6})
+	a, _ := g.SpawnNamedPawn(1, 1, "Ada")
+	b, _ := g.SpawnNamedPawn(2, 1, "Bo")
+	placeBuilt(t, g, construction.Stove, construction.South, 5, 2)
+	placeBuilt(t, g, construction.Stove, construction.South, 8, 2)
+	g.SpawnStack(item.Meal, 9, 1, 4)
+	g.SpawnStack(item.Berries, 10, 1, 3) // one stack each: stacks are reserved
+	g.SpawnStack(item.Berries, 10, 2, 3)
+	g.Enqueue(command.Command{Kind: command.AddBill, X: 5, Y: 2, Recipe: uint8(recipe.SimpleMeal), Mode: uint8(recipe.UntilHave), Count: 10})
+	g.Enqueue(command.Command{Kind: command.AddBill, X: 8, Y: 2, Recipe: uint8(recipe.SimpleMeal), Mode: uint8(recipe.UntilHave), Count: 10})
+	g.Step(1)
+	for i := 0; i < 400; i++ {
+		g.SetNeeds(a, needs.Full, needs.Full)
+		g.SetNeeds(b, needs.Full, needs.Full)
+		g.Step(TicksPerCell)
+		if n := g.stockOf(item.Meal); n > 10 {
+			t.Fatalf("meals = %d, want at most 10", n)
+		}
+	}
+	if n := g.stockOf(item.Meal); n < 10 {
+		t.Fatalf("meals = %d, want the target reached", n)
+	}
+}

@@ -193,13 +193,16 @@ func TestExhaustionForcesSleepOnGround(t *testing.T) {
 	if p.Reason != "no bed" {
 		t.Fatalf("inspector reason=%q, want no bed", p.Reason)
 	}
-	g.Step(needs.CriticalRest/needs.SleepGain + 10)
-	p = pawn(t, g, id)
-	if p.Rest < needs.Percent(needs.CriticalRest) {
-		t.Fatalf("rest still %d after forced sleep", p.Rest)
+	// a collapsed colonist sleeps where it dropped until WakeRest (80%)
+	for i := 0; i < needs.WakeRest/needs.SleepGain*needs.SleepPeriod+10 && p.Status != "alive"; i++ {
+		g.Step(1)
+		p = pawn(t, g, id)
 	}
 	if p.Status != "alive" {
 		t.Fatalf("status=%s after rest recovered, want alive", p.Status)
+	}
+	if p.Rest < needs.Percent(needs.WakeRest) {
+		t.Fatalf("up at rest %d, want %d", p.Rest, needs.Percent(needs.WakeRest))
 	}
 }
 
@@ -255,6 +258,7 @@ func TestDeadPawnReleasesBed(t *testing.T) {
 	if _, err := g.SpawnStack(item.Wood, 10, 2, 2); err != nil {
 		t.Fatal(err)
 	}
+	sleepAnytime(g) // tired colonists only go to bed outside Work hours
 	g.SetNeeds(id, 8000, 9000)
 	g.Enqueue(command.Command{Kind: command.DesignateBed, X: 4, Y: 2})
 	g.Step(TicksPerCell*80 + 400)
