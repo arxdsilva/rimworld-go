@@ -22,6 +22,7 @@ These playbooks live in `.cursor/skills/` so Cursor auto-discovers them. Do not 
 | rimworld-go-content-modding | Definitions and mods |
 | rimworld-go-art-assets | Sprites, icons, UI chrome, palettes, pivots, atlases, renderer presentation, asset pipeline |
 | rimworld-go-ui-screens | Player-facing screens, windows, overlays, HUD layout, navigation, inspectors |
+| rimworld-go-creatures | Adding or changing an animal/creature: roster, sim numbers, rig art, four generated sounds, hooks |
 | rimworld-go-testing | Tests, fuzz, benchmarks, long runs |
 | rimworld-go-debugging | Reproduce and fix simulation bugs |
 | rimworld-go-review-integration | PR review and multi-agent merge |

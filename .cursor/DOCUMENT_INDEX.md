@@ -10,6 +10,7 @@ All paths below are relative to this `.cursor/` folder unless noted.
 | Efficient AI context usage | `AI_TOKEN_OPTIMIZATION.md` |
 | Visual production, sprites, icons, UI chrome, asset pipeline | `ART_DIRECTION_AND_ASSET_PIPELINE.md` (playbook: `skills/rimworld-go-art-assets/SKILL.md`) |
 | Per-screen layout, navigation, commands, and states | `MAIN_UI_SCREENS_SPECIFICATION.md` (playbook: `skills/rimworld-go-ui-screens/SKILL.md`) |
+| Adding or changing an animal/creature (roster, art, four generated sounds) | `skills/rimworld-go-creatures/SKILL.md` (rule: `rules/creatures.mdc`) |
 | Ordered vanilla gameplay feature backlog | `RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` |
 | Ordered player-facing UI/UX backlog | `RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` |
 | Per-task AI handoffs | `handoffs/` |

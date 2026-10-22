@@ -47,6 +47,7 @@ Token/context policy is defined by `.cursor/AI_TOKEN_OPTIMIZATION.md`.
 | Definitions, YAML/JSON content, mods | `rimworld-go-content-modding` |
 | Sprites, icons, UI chrome, palettes, pivots, atlases, renderer presentation, asset pipeline | `rimworld-go-art-assets` |
 | Player-facing screens, windows, overlays, HUD layout, navigation, inspectors, management tables | `rimworld-go-ui-screens` |
+| A new or changed animal/creature species (roster, art, sounds, behaviour) | `rimworld-go-creatures` |
 | Tests, fuzz, benchmarks, long simulations | `rimworld-go-testing` |
 | Regression/bug/replay investigation | `rimworld-go-debugging` |
 | PR review, merge wave, architecture compliance | `rimworld-go-review-integration` |

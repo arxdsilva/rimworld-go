@@ -13,7 +13,7 @@ All canonical specs, rules, and agent-facing data live in [`.cursor/`](.cursor/D
 - `.cursor/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` — ordered player-facing UI/UX backlog.
 - `.cursor/handoffs/` — per-task AI handoff records.
 - `.cursor/skills/` — task playbooks; start with `.cursor/skills/rimworld-go-router/SKILL.md`.
-- `.cursor/rules/` — Cursor always-on recognition (art direction, UI screens).
+- `.cursor/rules/` — Cursor always-on recognition (art direction, UI screens, creatures).
 - `.cursor/PARALLEL_WORK.md` — how multi-area tasks fan out to parallel subagents (playbook: `.cursor/skills/parallel-work/SKILL.md`).
 
 Non-negotiable rules:
@@ -35,6 +35,7 @@ Non-negotiable rules:
 - Whenever work satisfies (fully or partially) an item in `.cursor/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md`, `.cursor/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`, `.cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md`, or `.cursor/MAIN_UI_SCREENS_SPECIFICATION.md`, update that item's checkbox in the same change: `[x]` only when its full acceptance criteria are met, `[-]` when partially done (state what's missing in a short trailing note), `[!]` when blocked (state why). Never leave completed work unreflected in the checklists.
 - Any newly implemented domain/application behavior that is player-observable per `.cursor/MASTER_SPEC.md` or `.cursor/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` must ship with a corresponding HUD/UI representation (read-only, via `Snapshot()`/read models, never a direct domain reference) in the same change. If that representation is a named screen, follow `.cursor/MAIN_UI_SCREENS_SPECIFICATION.md` via skill `rimworld-go-ui-screens`. If no sensible on-screen representation exists yet (e.g. a pure internal primitive with no player-facing effect), state why in the handoff instead of adding one.
 - Player-facing screens, windows, overlays, HUD layout, and navigation must follow `.cursor/MAIN_UI_SCREENS_SPECIFICATION.md` via skill `rimworld-go-ui-screens`. Load only the sections that skill names for the screen. Use `.cursor/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` for ordered backlog/acceptance. Screens consume read models and emit typed commands; they never mutate domain state. Skip that spec for headless simulation-only work with no screen.
+- Every new or changed animal/creature follows skill `rimworld-go-creatures` (`.cursor/skills/rimworld-go-creatures/SKILL.md`): roster row in Go and the art mirror, rig art with full sprite set, and **all four generated sounds** (`call`, `attack`, `hurt`, `die`) through `cmd/sfxgen` with user-approved spending — never ship a creature silent, on placeholder voices only, or as a copy of a RimWorld-invented creature.
 - Player-visible sprites, icons, UI chrome, renderer presentation, palettes, pivots, atlases, and asset-pipeline tooling must follow `.cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md` via skill `rimworld-go-art-assets`. Load only the sections that skill names for the asset family. Domain stays headless: pixels, texture handles, camera, and animation stay in presentation adapters. Never trace, extract, or reconstruct proprietary RimWorld art. Skip that spec for headless simulation-only work with no visual output.
 
 ## Repository-specific override: commits

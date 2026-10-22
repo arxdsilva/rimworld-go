@@ -3,6 +3,7 @@ rimworld-go-ai-jobs/SKILL.md
 rimworld-go-art-assets/SKILL.md
 rimworld-go-bootstrap/SKILL.md
 rimworld-go-content-modding/SKILL.md
+rimworld-go-creatures/SKILL.md
 rimworld-go-debugging/SKILL.md
 rimworld-go-determinism/SKILL.md
 rimworld-go-documentation/SKILL.md
