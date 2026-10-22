@@ -24,7 +24,20 @@ def hex_to_srgb(h):
 
 
 def load(path=None):
-    path = path or os.path.join(contracts.PALETTE_DIR, "materials.yaml")
+    """Parse materials.yaml, plus any materials_*.yaml extensions beside it
+    (e.g. materials_birds.yaml) when no explicit path is given."""
+    if path is None:
+        import glob
+        mats, emis = _load_one(os.path.join(contracts.PALETTE_DIR, "materials.yaml"))
+        for extra in sorted(glob.glob(os.path.join(contracts.PALETTE_DIR, "materials_*.yaml"))):
+            m, e = _load_one(extra, required=False)
+            mats.update(m)
+            emis.update(e)
+        return mats, emis
+    return _load_one(path)
+
+
+def _load_one(path, required=True):
     mats, emis, section = {}, {}, None
     with open(path, encoding="utf-8") as f:
         for line in f:
@@ -46,6 +59,6 @@ def load(path=None):
                 m = _EMIT.match(line)
                 if m:
                     emis[m.group(1)] = m.group(2)
-    if not mats:
+    if not mats and required:
         raise RuntimeError("no materials parsed from %s" % path)
     return mats, emis

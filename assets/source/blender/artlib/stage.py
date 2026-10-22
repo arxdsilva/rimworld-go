@@ -429,7 +429,7 @@ def _shadow_meta(family, name, kind=None, footprint=None):
 
 def render_asset(family, name, footprint=(1, 1), zmax=1.0, margins=None,
                  outline=True, shadow=False, extra=None, keep=False,
-                 clip=(), zclip=None, tint=True, shadow_kind=None):
+                 clip=(), zclip=None, tint=True, shadow_kind=None, outline_width=None):
     """Shear, frame, render, post-process, write PNG + metadata.
 
     footprint: (w, h) tiles. zmax: tallest point (m). margins: tiles
@@ -457,7 +457,7 @@ def render_asset(family, name, footprint=(1, 1), zmax=1.0, margins=None,
     zc = zmax if zclip is None else zclip
     if clip:
         raw = _clip(raw, (left, top), (w, h), clip, zc)
-    img = post.process(raw, do_outline=outline, do_shadow=shadow)
+    img = post.process(raw, do_outline=outline, do_shadow=shadow, width=outline_width)
     if clip:
         img = _clip(img, (left, top), (w, h), clip, zc)
     path = out_path(family, name)
