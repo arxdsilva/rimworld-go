@@ -630,7 +630,7 @@ This is the heart of autonomous colony behavior.
 ## 7.5 Specialized zones
 
 -   [x] **Growing zones** (painted tiles sowing the chosen crop; never on taken tiles or infertile rough stone/rock; same-crop neighbours merge; cancel clears tiles; resow after harvest (ZONE-001))
--   [ ] **Home area**
+-   [-] **Home area** (SIM-021: painted, auto-grown around buildings, drives cleaning; no firefighting or repair yet)
     -   Influences firefighting/cleaning/repair behavior.
 -   [x] **Roof build/remove areas** (SIM-018)
 -   [ ] **Allowed areas**
@@ -1171,14 +1171,14 @@ treatment, and surgery are major colony-management systems.
 
 # PHASE 13 --- Cleaning, Filth, Deterioration, and Colony Maintenance
 
--   [-] **Filth entities/layers** (SIM-020: blood and ichor stains as a per-tile layer that fades over 7 days and washes off in rain and snow; no dirt, vomit or trash yet)
+-   [-] **Filth entities/layers** (SIM-020: blood and ichor stains that fade over 7 days and wash off in rain and snow; SIM-021: dirt tracked in on boots from outdoor ground and field work, kept indoors until cleaned; no vomit or trash, animals track no dirt)
     -   Dirt, blood, vomit, trash-like filth.
     -   Created by movement/events/injuries/animals as appropriate.
--   [ ] **Cleanliness**
+-   [-] **Cleanliness** (SIM-021: room filth from dirt and stains costs up to 10 impressiveness, shown in room labels; floor properties and medical/cooking/research effects missing)
     -   Room cleanliness derived from filth/floor properties.
     -   Influences medical/cooking/research or other vanilla-equivalent
         systems.
--   [ ] **Cleaning work**
+-   [x] **Cleaning work** (SIM-021: Home tiles over 120 filth are queued, swept to 0, nearest first, reserved per tile; Clean work column)
     -   Home-area filth becomes indexed cleaning work.
 -   [x] **Blood trails** (SIM-020: bleeding colonists, raiders and animals drip every third tile; untended downed pawns pool)
     -   Bleeding moving pawns can create blood filth.
@@ -2447,7 +2447,7 @@ the player-facing system.
 -   [ ] **Room stats**
 -   [x] **Fertility**
 -   [ ] **Terrain/path cost debug**
--   [ ] **Home area**
+-   [-] **Home area** (SIM-021: painted, auto-grown around buildings, drives cleaning; no firefighting or repair yet)
 -   [ ] **Allowed areas**
 -   [ ] **Storage zones**
 -   [ ] **Growing zones**

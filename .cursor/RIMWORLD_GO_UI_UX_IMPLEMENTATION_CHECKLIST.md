@@ -499,9 +499,9 @@ the player's primary world-editing command surface.
 
 ## 6.4 Home area
 
--   [ ] **Home area overlay**
--   [ ] **Expand/shrink home area**
--   [ ] **Automatic home-area expansion setting**
+-   [x] **Home area overlay** (SIM-021: blue tint, HUD toggle, held on while a Home tool is in hand)
+-   [x] **Expand/shrink home area** (Architect > Zones > Home / Clear home)
+-   [-] **Automatic home-area expansion setting** (Home always grows around new buildings; no setting to turn it off)
     -   If implemented.
 -   [ ] **Explain effects**
     -   Firefighting, cleaning and repair relevance.
@@ -959,7 +959,7 @@ understandable.
 -   [x] **Room role**
 -   [ ] **Space**
 -   [ ] **beauty**
--   [ ] **cleanliness**
+-   [-] **cleanliness** (SIM-021: in room labels and the hover panel; no room overlay yet)
 -   [ ] **wealth**
 -   [x] **impressiveness**
 

@@ -90,7 +90,7 @@ Media updated 2026-10-21 · regenerate with `make media clips`
 - Building: generated maps, cutting, mining, walls, doors, beds, multi-tile workbenches and a stove, all placed from the Architect menu.
 - Zones: stockpiles, growing zones, tree zones and pens are painted tile by tile. A tile belongs to one zone only, touching zones of the same kind merge under one outline, and growing zones skip bare rock. The drag preview shows which tiles will be claimed.
 - Hauling: colonists carry up to 100 at a time. One trip feeds several nearby building sites and takes the leftovers back to the nearest stockpile.
-- Farming and food: growing zones, a crop picker, regrowing berries, campfire cooking, drying racks, spoilage and frost.
+- Farming and food: growing zones, a crop picker, regrowing berries, cotton for cloth, straw from wheat, campfire cooking, drying racks, spoilage and frost.
 - Production: workbench bills, a tailoring bench and clothing (parkas, tuques, dusters).
 - Colonists: needs, mood, rooms and impressiveness, recreation, mental breaks, work priorities, schedules and a per-colonist order queue. Every colonist's route and destination show on the map, and drafted colonists can be sent to a spot or ordered to attack.
 - Event logs: every colonist, raider and animal remembers what happened to it (bites, hits, injuries, meals, sleep, taming, breakdowns), shown in its inspector.
@@ -99,6 +99,7 @@ Media updated 2026-10-21 · regenerate with `make media clips`
 - Defences and combat: sandbags, spike traps, breaching raiders, rebuilding after breaches, ranged and melee combat with floating damage numbers.
 - Health: injuries, rescue and tending, infections, herbal medicine and a healroot crop.
 - Blood: hits spray blood (ichor from hive insects), wounded colonists and animals look bloodied until they heal, and the floor keeps splats, drip trails and pools that dry to brown, fade over 7 days and wash off in rain or snow.
+- Dirt and cleaning: colonists pick up dirt outdoors (more in rain and field work) and track it into rooms; entrance carpets of straw, wood, leather or cloth catch 30-70% of it; colonists sweep dirt and blood inside the Home area you paint, and dirty rooms lose impressiveness.
 - Animals: 61 species (livestock, wild grazers and predators, pets, birds, reptiles, hive insects and a rare legendary stag) that spawn by season and habitat, hunt, flee, gore and kick; hunting, butchering, taming, pens, manhunter packs and hive swarms.
 - Research: a research bench with five projects that unlock buildings and work.
 - Weather: rain, storms, snow and blizzards with wind, puddles and snow cover; rain douses outdoor fires, snow chills the air, and colonists get soaked.
