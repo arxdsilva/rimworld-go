@@ -469,6 +469,29 @@ bodies become `item/bones_00..01`. Graves (`furniture/grave_dug_*`,
   - It covers bodies and clothes, not hair or held items.
 - **Sprays** scale with damage (`4 + damage/2` particles), with a few droplets flicking back toward the attacker.
 
+### 16.3 Dirt, carpets, cotton and the Home area (normative, SIM-021)
+
+- **Tracked dirt on the ground** (`WorldView.Dirt`, amount 0..1):
+  - Procedural scuffs, smudges and boot prints, from one atlas through `drawLit`.
+  - Drawn after floors and **before** blood (`dirt_draw.go`).
+  - Colour: soil brown, #6b5238 (light) to #4a3826 (heavy). **Alpha = 0.15 + 0.6·amount**, so a light trail reads as faint prints.
+  - Under 0.25 the tile shows 1–3 boot prints, oriented by a tile hash. Above that, a smudge grows with the amount.
+- **Carpets** (`furniture/carpet_<material>`; materials straw, cloth, leather, wood):
+  - A flat 1×1 mat about 0.8 tile wide, with a slight pile and a 2 px darker border.
+  - No facing. It is drawn in the floor-marking pass, under pawns and furniture.
+  - Looks by material:
+    - **straw:** woven tan #c8a868, with a visible weave
+    - **cloth:** a dyed pile with a border stripe, using the `cloth` tint preset
+    - **leather:** a stitched brown hide, #7a4e2c
+    - **wood:** slats with gaps, #8a6a44
+  - Rolled item sprites: `item/carpet_<material>_rolled`.
+- **Cloth and straw items:** `item/cloth_bolt` (an off-white bolt) and `item/straw_bundle`.
+- **Cotton crop:** `plant/cotton_{sprout,young,mature,harvestable}` with `_v0.._v2`, like the other crops. Bushy green stems; when harvestable, white bolls.
+- **Broom:** the held tool `tool/broom`, a stick with a straw head. The cleaning pose reuses the low `_pick` work frames, with dust particles.
+- **Home overlay:** a translucent blue tint (#4a7fd4, alpha 0.18) with a 1 px edge on its outline.
+  - Shown while a Home tool is held, or when toggled from the overlay row next to Roof.
+- **Icons** (`ui_icon/`, underscores): `cloth`, `straw`, `straw_carpet`, `cloth_carpet`, `leather_carpet`, `wood_carpet`, `carpet` (the Architect tool), `home`, `home_clear`.
+
 ## 17. UI Art
 
 Use an original high-information-density interface: neutral/dark

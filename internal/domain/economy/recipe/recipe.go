@@ -30,6 +30,12 @@ const (
 	// ButcherAnimal butchers any animal corpse; its yields come from the
 	// species (SIM-019).
 	ButcherAnimal
+	// Carpets (SIM-021): woven straw and wood slats at the workbench, cloth
+	// and leather at the tailoring bench.
+	MakeStrawCarpet
+	MakeWoodCarpet
+	SewClothCarpet
+	SewLeatherCarpet
 	numRecipes
 )
 
@@ -113,6 +119,15 @@ var defs = [numRecipes]Def{
 		Extra: item.Wood, ExtraQty: 2},
 	DryFood: {ID: DryFood, Name: "dry_food", Label: "Dry food", Bench: construction.DryingRack,
 		Input: Input{AnyDryable: true, Qty: 1, Max: RackCapacity}, Work: 90, Skill: work.Cook, Dry: true},
+	// Entrance carpets: the better the material, the more dirt it catches.
+	MakeStrawCarpet: {ID: MakeStrawCarpet, Name: "make_straw_carpet", Label: "Weave straw carpet", Bench: construction.Workbench,
+		Input: Input{Kind: item.Straw, Qty: 10}, Output: item.CarpetStraw, OutQty: 1, Work: 300, Skill: work.Craft},
+	MakeWoodCarpet: {ID: MakeWoodCarpet, Name: "make_wood_carpet", Label: "Make wood slat carpet", Bench: construction.Workbench,
+		Input: Input{Kind: item.Wood, Qty: 6}, Output: item.CarpetWood, OutQty: 1, Work: 250, Skill: work.Craft},
+	SewClothCarpet: {ID: SewClothCarpet, Name: "sew_cloth_carpet", Label: "Sew cloth carpet", Bench: construction.TailoringBench,
+		Input: Input{Kind: item.Cloth, Qty: 8}, Output: item.CarpetCloth, OutQty: 1, Work: 400, Skill: work.Craft},
+	SewLeatherCarpet: {ID: SewLeatherCarpet, Name: "sew_leather_carpet", Label: "Sew leather carpet", Bench: construction.TailoringBench,
+		Input: Input{Kind: item.Leather, Qty: 6}, Output: item.CarpetLeather, OutQty: 1, Work: 400, Skill: work.Craft},
 }
 
 // RackCapacity is how many items one drying rack holds.

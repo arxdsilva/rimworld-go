@@ -128,6 +128,8 @@ func (g *Game) applyOne(c command.Command) {
 		g.undesignate(c.Order, c.X, c.Y, c.X2, c.Y2)
 	case command.MoveBuilding:
 		g.moveBuilding(entity.EntityID(c.Target), construction.Facing(c.Facing), c.X, c.Y) // move.go
+	case command.DesignateHome:
+		g.paintHome(c.X, c.Y, c.X2, c.Y2, c.Enabled) // home.go
 	}
 }
 

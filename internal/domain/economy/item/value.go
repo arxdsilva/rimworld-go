@@ -6,6 +6,7 @@ var value = [numKinds]int{
 	Club: 15, Knife: 10, Spear: 20, Rifle: 120, CorpseDustbuck: 20, CorpseRidgewolf: 25, CorpseAnimal: 20,
 	Corn: 1, Wheat: 1, Beans: 1, Lettuce: 1, Radishes: 1, Pumpkins: 1,
 	Leather: 3, Parka: 80, Tuque: 20, Duster: 60, HerbalMedicine: 15,
+	Cloth: 2, Straw: 1, CarpetStraw: 15, CarpetWood: 12, CarpetLeather: 25, CarpetCloth: 30,
 }
 
 // Value is the market value of one unit of k.

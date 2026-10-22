@@ -169,6 +169,11 @@ type CropView struct {
 	// (0 = forever). Days assume growing weather (10 C or warmer).
 	FrostKill int
 	ShelfDays float64
+	// Food: the produce is edible. Extra and ExtraQty: a by-product per
+	// harvest ("straw", 4) (SIM-021).
+	Food     bool
+	Extra    string
+	ExtraQty int
 }
 
 // Crops lists the sowable crops, fastest first.
@@ -181,7 +186,11 @@ func Crops() []CropView {
 			GravelDay: plant.GrowDays(s, terrain.Gravel.Fertility()), RichDays: plant.GrowDays(s, terrain.RichSoil.Fertility()),
 			Yield: d.Yield, Nutrition: d.Yields.Nutrition(), Sens: d.Sens,
 			FrostKill: d.FrostKill, ShelfDays: float64(d.Yields.ShelfTicks()) / clock.TicksPerDay,
+			Food: d.Yields.Nutrition() > 0,
 		})
+		if d.ExtraQty > 0 {
+			out[len(out)-1].Extra, out[len(out)-1].ExtraQty = d.Extra.String(), d.ExtraQty
+		}
 	}
 	return out
 }

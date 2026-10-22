@@ -47,12 +47,22 @@ const (
 	// CorpseAnimal is any animal's carcass (Stack.Animal names the
 	// species, SIM-019); CorpseDustbuck and CorpseRidgewolf are legacy.
 	CorpseAnimal
+	// Cloth is picked from cotton; Straw comes with the wheat harvest (SIM-021).
+	Cloth
+	Straw
+	// Carpets are crafted, then installed at an entrance: stepping on one
+	// wipes off part of the dirt a colonist tracks in (filth.Catch).
+	CarpetStraw
+	CarpetCloth
+	CarpetLeather
+	CarpetWood
 	numKinds
 )
 
 var kindNames = [numKinds]string{"food", "wood", "stone", "berries", "potatoes", "meat", "meal", "club", "rifle", "dustbuck corpse", "ridgewolf corpse",
 	"corn", "wheat", "beans", "lettuce", "radishes", "pumpkins", "leather", "parka", "tuque", "duster", "herbal medicine",
-	"knife", "spear", "human corpse", "bones", "animal corpse"}
+	"knife", "spear", "human corpse", "bones", "animal corpse",
+	"cloth", "straw", "straw carpet", "cloth carpet", "leather carpet", "wood carpet"}
 
 // IsWeapon reports whether k can be equipped.
 func (k Kind) IsWeapon() bool { return k == Club || k == Rifle || k == Knife || k == Spear }
@@ -175,6 +185,12 @@ func Apparel() []Kind { return []Kind{Parka, Tuque, Duster} }
 
 // IsStuff reports whether k is a building material.
 func (k Kind) IsStuff() bool { return k == Wood || k == Stone }
+
+// IsCarpet reports a crafted carpet (installed as a carpet building).
+func (k Kind) IsCarpet() bool { return k >= CarpetStraw && k <= CarpetWood }
+
+// Carpets lists every carpet kind, cheapest material first.
+func Carpets() []Kind { return []Kind{CarpetStraw, CarpetWood, CarpetLeather, CarpetCloth} }
 
 // StackLimit is how many items of one kind share a tile.
 const StackLimit = 1000

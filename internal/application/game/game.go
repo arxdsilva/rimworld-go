@@ -24,6 +24,7 @@ import (
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/component"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/filth"
 	"rimworld-go/internal/domain/world/grid"
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/roof"
@@ -69,14 +70,17 @@ type PawnView struct {
 	WorkCraft     bool
 	WorkDoctor    bool
 	WorkResearch  bool
+	WorkClean     bool
 	Ate           bool
 	LastMeal      string // kind name of the last food eaten, "" if none
-	SleptInBed    bool
-	Drafted       bool
-	Mood          int
-	MoodLabel     string
-	Thoughts      []ThoughtView
-	Health        int // hit points left, percent
+	// Dirt is the dirt on the pawn's boots, percent of filth.Full (SIM-021).
+	Dirt       int
+	SleptInBed bool
+	Drafted    bool
+	Mood       int
+	MoodLabel  string
+	Thoughts   []ThoughtView
+	Health     int // hit points left, percent
 	// RaidPlan is a raider\'s raid plan: "assault", "siege" or "sappers".
 	RaidPlan string
 	// Infection severity (0-100, 0: none); Wounded: an open, untended wound.
@@ -179,6 +183,8 @@ type ItemView struct {
 	Of     entity.EntityID
 	OfName string
 	Animal string // species key of a CorpseAnimal ("deer"), SIM-019
+	// Catch: a carpet item's share of tracked dirt wiped, percent (SIM-021).
+	Catch int
 }
 
 // FrameView is a construction blueprint.
@@ -225,6 +231,8 @@ type BuildingView struct {
 	Burning bool
 	// HPPct is the building's health (percent); below 100 it is damaged.
 	HPPct int
+	// Catch: an installed carpet's share of tracked dirt wiped, percent (SIM-021).
+	Catch int
 	// Grave (SIM-017): Occupant is who lies there ("" while empty),
 	// Epitaph the headstone line, Headstone the headstone style 0..3.
 	// A pyre reports Burning while it cremates.
@@ -314,6 +322,12 @@ type WorldView struct {
 	GrassCut [][2]int
 	// Stains are blood and ichor on the ground (SIM-020), sorted y then x.
 	Stains []StainView
+	// Dirt is tracked-in dirt on the ground (SIM-021), sorted y then x.
+	Dirt []DirtView
+	// Home is 1 per tile inside the Home area (row-major, TerrainW wide);
+	// HomeVer changes whenever it does, so the renderer can cache.
+	Home    []uint8
+	HomeVer uint32
 }
 
 // Game holds all authoritative simulation state.
@@ -409,8 +423,10 @@ type Game struct {
 	// grass is the ground cover layer (grass.go, UI-011).
 	grass grassState
 	// stains are blood and ichor on the ground (stains.go, SIM-020).
-	stains stainState
-	roofx  roofIndex // roof.go: derived plan index and roofed counts
+	stains   stainState
+	filth    filthState // tracked-in dirt (SIM-021, filth.go)
+	homeArea homeState  // the Home area (SIM-021, home.go)
+	roofx    roofIndex  // roof.go: derived plan index and roofed counts
 	// residual: air temperature of cells of a freshly breached room.
 	residual    map[int]temperature.Temp
 	researchCur research.Project
@@ -670,6 +686,8 @@ func (g *Game) Snapshot() []PawnView {
 			WorkCraft:     m.Enabled(work.Craft),
 			WorkDoctor:    m.Enabled(work.Doctor),
 			WorkResearch:  m.Enabled(work.Research),
+			WorkClean:     m.Enabled(work.Clean),
+			Dirt:          g.carriedPct(id),
 			Ate:           g.ateAt[id],
 			LastMeal:      lastMealName(g, id),
 			SleptInBed:    g.sleptAt[id] != 0,
@@ -751,6 +769,7 @@ func (g *Game) World() WorldView {
 			ID: id, Kind: st.Kind.String(), Qty: st.Qty, X: st.X, Y: st.Y, Carried: st.Carrier != 0,
 			FreshDays: freshDays(st), Rotten: st.Rotten(), Dried: st.Dried,
 			RotRate: item.RotRate(int(g.temperatureAt(st.X, st.Y))),
+			Catch:   filth.Catch(st.Kind) / 10,
 		})
 		g.fillCorpseView(&w.Items[len(w.Items)-1], st) // burial.go
 		if st.Carrier == 0 {
@@ -797,6 +816,9 @@ func (g *Game) World() WorldView {
 		})
 		bv := &w.Buildings[len(w.Buildings)-1]
 		bv.HPPct = b.HP() * 100 / max(1, construction.MaxHP(b.Kind, b.Stuff))
+		if b.Kind == construction.Carpet {
+			bv.Catch = filth.Catch(b.Stuff) / 10
+		}
 		if b.Kind == construction.Campfire {
 			bv.Fuel, bv.FuelPct, bv.Burning = true, g.fuel[id]*100/(CampfireCapacity*TicksPerWood), g.burning(id, b)
 		}
@@ -837,6 +859,8 @@ func (g *Game) World() WorldView {
 	g.fillWildlifeView(&w) // wildlife.go
 	g.fillGrassView(&w)    // grass.go
 	g.fillStainView(&w)    // stains.go
+	g.fillDirtView(&w)     // filth.go
+	g.fillHomeView(&w)     // home.go
 	now := uint64(g.clock.Now())
 	w.Hour = float64(now%clock.TicksPerDay) / clock.TicksPerHour
 	w.DayOfYear = int(now/clock.TicksPerDay) % clock.DaysPerYear

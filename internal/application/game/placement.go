@@ -34,6 +34,11 @@ type BuildableView struct {
 	StoneOK   bool // can be built from stone blocks
 	W, H      int  // footprint facing south
 	Bench     bool // runs bills
+	// Stuffs are the materials it may be built from, default first ("wood",
+	// "stone"; a carpet lists the carpet items). Carpet marks the entrance
+	// carpet, installed from a crafted carpet item (SIM-021).
+	Stuffs []string
+	Carpet bool
 }
 
 // Buildables lists every buildable in catalog order.
@@ -46,6 +51,10 @@ func Buildables() []BuildableView {
 			Floor: d.Layer == construction.LayerFloor, Blocks: d.BlocksMove, StoneOK: d.StoneOK,
 			W: max1(d.Size[0]), H: max1(d.Size[1]), Bench: d.Bench,
 		})
+		for _, s := range construction.Stuffs(d.Kind) {
+			out[len(out)-1].Stuffs = append(out[len(out)-1].Stuffs, s.String())
+		}
+		out[len(out)-1].Carpet = d.Carpet
 	}
 	return out
 }

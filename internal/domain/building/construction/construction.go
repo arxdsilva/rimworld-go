@@ -44,6 +44,9 @@ const (
 	// Pyre is a 2x1 log stack where bodies are cremated (SIM-017).
 	Grave
 	Pyre
+	// Carpet is a walkable 1x1 entrance carpet installed from a crafted carpet
+	// item (its stuff): it wipes tracked dirt off boots (SIM-021).
+	Carpet
 	kindCount
 )
 
@@ -74,6 +77,8 @@ type Def struct {
 	Bench   bool // a workstation that runs bills
 	// Dug: made by digging, so it needs work but no materials (a grave).
 	Dug bool
+	// Carpet: built from a crafted carpet item (Stuffs) rather than wood.
+	Carpet bool
 }
 
 // StoneWorkPct is the work multiplier (percent) for stone construction.
@@ -112,6 +117,8 @@ var defs = [kindCount]Def{
 	Grave: {Kind: Grave, Name: "grave", Work: 400, Layer: LayerObject, Rotatable: true, Size: [2]int{1, 2}, Dug: true},
 	Pyre: {Kind: Pyre, Name: "funeral pyre", Wood: 6, Work: 120, Layer: LayerObject, BlocksMove: true,
 		Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
+	// A carpet takes one crafted carpet item (Wood counts items, not wood).
+	Carpet: {Kind: Carpet, Name: "carpet", Wood: 1, Work: 30, Layer: LayerObject, Carpet: true},
 }
 
 // MaxHP is how much damage a building takes before it is destroyed.
@@ -291,11 +298,20 @@ func WorkTicks(k Kind) int { return DefOf(k).Work }
 // DeconstructTicks is the labor to take a building down.
 func DeconstructTicks(k Kind) int { return (DefOf(k).Work + 1) / 2 }
 
-// Refund is the material returned by deconstruction (half, rounded down).
-func Refund(k Kind) int { return DefOf(k).Wood / 2 }
+// Refund is the material returned by deconstruction (half, rounded down;
+// a carpet comes back whole).
+func Refund(k Kind) int {
+	if DefOf(k).Carpet {
+		return DefOf(k).Wood
+	}
+	return DefOf(k).Wood / 2
+}
 
 // StuffOK reports whether k may be built from material s.
 func StuffOK(k Kind, s item.Kind) bool {
+	if DefOf(k).Carpet || s.IsCarpet() {
+		return DefOf(k).Carpet && s.IsCarpet()
+	}
 	switch s {
 	case item.Wood:
 		return true
@@ -303,6 +319,25 @@ func StuffOK(k Kind, s item.Kind) bool {
 		return DefOf(k).StoneOK
 	}
 	return false
+}
+
+// DefaultStuff is the material k is built from when none is chosen.
+func DefaultStuff(k Kind) item.Kind {
+	if DefOf(k).Carpet {
+		return item.CarpetStraw
+	}
+	return item.Wood
+}
+
+// Stuffs lists the materials k may be built from, default first.
+func Stuffs(k Kind) []item.Kind {
+	switch d := DefOf(k); {
+	case d.Carpet:
+		return item.Carpets()
+	case d.StoneOK:
+		return []item.Kind{item.Wood, item.Stone}
+	}
+	return []item.Kind{item.Wood}
 }
 
 // WorkFor is the construct work for k built from s.

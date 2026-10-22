@@ -22,7 +22,7 @@ const (
 // Mask is a bitset of enabled work types.
 type Mask uint16
 
-// DefaultColonist enables Haul, Construct, and Grow.
+// DefaultColonist enables every work type except firefighting.
 func DefaultColonist() Mask {
 	var m Mask
 	m = m.Set(Haul, true)
@@ -34,6 +34,7 @@ func DefaultColonist() Mask {
 	m = m.Set(Craft, true)
 	m = m.Set(Doctor, true)
 	m = m.Set(Research, true)
+	m = m.Set(Clean, true)
 	return m
 }
 
@@ -92,4 +93,4 @@ func (p Priorities) Set(t Type, v int) Priorities {
 }
 
 // Order is the tie-break among work types sharing a priority.
-var Order = []Type{Doctor, Haul, Construct, Cook, Craft, Hunt, Grow, Mine, Research}
+var Order = []Type{Doctor, Haul, Construct, Cook, Craft, Hunt, Grow, Mine, Research, Clean}

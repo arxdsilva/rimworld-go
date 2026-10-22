@@ -24,6 +24,12 @@ type RoomView struct {
 	Temp  int    // air temperature, tenths of a degree C
 	// Roofed is the roofed share of the room's cells, 0..1 (SIM-018).
 	Roofed float64
+	// Filth is the average dirt plus stain per cell (0..filth.Full),
+	// Cleanliness its label and FilthPenalty the impressiveness it costs
+	// (already taken off Score) (SIM-021).
+	Filth        int
+	Cleanliness  string
+	FilthPenalty int
 }
 
 // ThoughtView is one line of a pawn's mood.

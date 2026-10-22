@@ -64,6 +64,9 @@ const (
 	// MoveBuilding plans the move of building Target to X, Y facing
 	// Facing: builders reinstall it there, bills and owners kept (UI-011).
 	MoveBuilding
+	// DesignateHome paints (Enabled) or clears the Home area over X..X2,
+	// Y..Y2: colonists clean only inside it (SIM-021).
+	DesignateHome
 )
 
 // WorkType is a compact work-column id for SetWorkEnabled.
@@ -80,6 +83,7 @@ const (
 	WorkCraft
 	WorkDoctor
 	WorkResearch
+	WorkClean
 )
 
 // Order is a player-forced job for Prioritize.

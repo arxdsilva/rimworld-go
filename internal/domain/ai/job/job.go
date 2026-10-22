@@ -79,6 +79,8 @@ const (
 	Roof
 	// Unroof: taking down the roof over a tile planned for removal.
 	Unroof
+	// Clean: sweeping dirt and stains off a Home-area tile (SIM-021).
+	Clean
 )
 
 // IsIdle reports a free-time behaviour that any real work may replace.
@@ -150,6 +152,8 @@ func (k Kind) String() string {
 		return "build roof"
 	case Unroof:
 		return "remove roof"
+	case Clean:
+		return "clean"
 	default:
 		return "idle"
 	}

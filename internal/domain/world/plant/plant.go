@@ -23,6 +23,8 @@ const (
 	Pumpkin
 	// Healroot is a medicinal herb: harvested as herbal medicine.
 	Healroot
+	// Cotton is a fibre crop: picked as cloth for tailoring and carpets (SIM-021).
+	Cotton
 	numSpecies
 )
 
@@ -34,12 +36,15 @@ type Def struct {
 	HarvestWork int // ticks to harvest when ripe
 	Yield       int // food units from a ripe harvest
 	Yields      item.Kind
-	CutWork     int  // ticks to cut down
-	Wood        int  // wood from cutting a fully grown plant
-	Regrows     bool // harvest resets growth instead of removing the plant
-	RegrowTo    int  // growth percent after a regrowing harvest
-	Crop        bool // sown in growing zones, eaten as food, frost-killed
-	Sowable     bool // may be sown in a growing zone though not a crop (trees)
+	// Extra is a by-product dropped with every harvest (wheat leaves straw).
+	Extra    item.Kind
+	ExtraQty int
+	CutWork  int  // ticks to cut down
+	Wood     int  // wood from cutting a fully grown plant
+	Regrows  bool // harvest resets growth instead of removing the plant
+	RegrowTo int  // growth percent after a regrowing harvest
+	Crop     bool // sown in growing zones, harvested as produce, frost-killed
+	Sowable  bool // may be sown in a growing zone though not a crop (trees)
 	// Sens is how strongly soil fertility changes growth speed, percent:
 	// 100 = fully (corn on gravel crawls), 30 = barely (potatoes thrive
 	// anywhere). Zero means 100.
@@ -91,7 +96,8 @@ var defs = [numSpecies]Def{
 	Corn: {Species: Corn, Name: "corn", Label: "corn", GrowTicks: growDays(8), HarvestWork: 40, Yield: 7,
 		Yields: item.Corn, CutWork: 14, Crop: true, Sens: 100, SowWork: 25, FrostKill: -10},
 	Wheat: {Species: Wheat, Name: "wheat", Label: "wheat", GrowTicks: growDays(10), HarvestWork: 35, Yield: 8,
-		Yields: item.Wheat, CutWork: 10, Crop: true, Sens: 80, SowWork: 20, FrostKill: -80},
+		Yields: item.Wheat, CutWork: 10, Crop: true, Sens: 80, SowWork: 20, FrostKill: -80,
+		Extra: item.Straw, ExtraQty: 4},
 	Beans: {Species: Beans, Name: "beans", Label: "beans", GrowTicks: growDays(5), HarvestWork: 30, Yield: 4,
 		Yields: item.Beans, CutWork: 10, Crop: true, Sens: 60, SowWork: 25, FrostKill: -10},
 	Lettuce: {Species: Lettuce, Name: "lettuce", Label: "lettuce", GrowTicks: growDays(3.75), HarvestWork: 18, Yield: 4,
@@ -103,6 +109,9 @@ var defs = [numSpecies]Def{
 	// Healroot: slow and fussy about soil, two doses of medicine a plant.
 	Healroot: {Species: Healroot, Name: "healroot", Label: "herbal medicine", GrowTicks: growDays(6.5), HarvestWork: 40,
 		Yield: 2, Yields: item.HerbalMedicine, CutWork: 8, Crop: true, Sens: 80, SowWork: 35, FrostKill: -20},
+	// Cotton: a warm-season fibre crop; five bolls of cloth a plant.
+	Cotton: {Species: Cotton, Name: "cotton", Label: "cloth", GrowTicks: growDays(9), HarvestWork: 40, Yield: 5,
+		Yields: item.Cloth, CutWork: 10, Crop: true, Sens: 70, SowWork: 25, FrostKill: -10},
 }
 
 // Growth temperature, tenths of a degree C: nothing grows at or below
@@ -138,7 +147,7 @@ func Frostbitten(s Species, tenthsC int) bool {
 
 // Crops lists the farm crops in menu order (fastest first).
 func Crops() []Species {
-	return []Species{Radish, Lettuce, Beans, Healroot, Potato, Corn, Pumpkin, Wheat}
+	return []Species{Radish, Lettuce, Beans, Healroot, Potato, Corn, Pumpkin, Cotton, Wheat}
 }
 
 // Rate is the growth speed in percent on soil of the given fertility

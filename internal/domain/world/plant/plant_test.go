@@ -41,7 +41,7 @@ func TestGrowRespectsFertility(t *testing.T) {
 func TestCropsGrowLikeTheRealThing(t *testing.T) {
 	t.Parallel()
 	// order of maturity matches real crops: radish < lettuce < beans <
-	// (healroot) < potato < corn < pumpkin < wheat
+	// (healroot) < potato < corn < pumpkin < (cotton) < wheat
 	prev := 0.0
 	for _, c := range Crops() {
 		d := GrowDays(c, 100)
@@ -49,9 +49,9 @@ func TestCropsGrowLikeTheRealThing(t *testing.T) {
 			t.Fatalf("%s matures in %.1f days, not after the previous crop (%.1f)", c, d, prev)
 		}
 		prev = d
-		medicinal := DefOf(c).Yields == item.HerbalMedicine
-		if !DefOf(c).Crop || DefOf(c).Yield <= 0 || DefOf(c).Yields.Nutrition() <= 0 && !medicinal {
-			t.Fatalf("%s must be an edible (or medicinal) crop", c)
+		useful := DefOf(c).Yields == item.HerbalMedicine || DefOf(c).Yields == item.Cloth
+		if !DefOf(c).Crop || DefOf(c).Yield <= 0 || DefOf(c).Yields.Nutrition() <= 0 && !useful {
+			t.Fatalf("%s must be an edible, medicinal or fibre crop", c)
 		}
 	}
 	if GrowDays(Potato, 100) != 7.5 || GrowDays(Radish, 100) != 2 {

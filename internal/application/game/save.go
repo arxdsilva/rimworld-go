@@ -184,6 +184,13 @@ type saveState struct {
 	// Stains (SIM-020): blood and ichor on the ground; absent in older
 	// saves (none).
 	Stains []stain.Stain
+	// Dirt, Carried, Home (SIM-021): tracked-in dirt, what each pawn carries
+	// on its boots and the Home area; absent in older saves. CleanWired
+	// marks a save made after cleaning work was switched on for everyone.
+	Dirt       []dirtCell
+	Carried    map[entity.EntityID]uint16
+	Home       []uint8
+	CleanWired bool
 	// Incoming (HAUL-001): material on its way to each frame or fuel user.
 	Incoming map[entity.EntityID]int
 	// Deliveries (HAUL-001): each hauler's shares of Incoming, route order.
@@ -233,6 +240,8 @@ func (g *Game) Save(w io.Writer, name string) error {
 	}
 	s.Grass, s.GrassCut = g.exportGrass()
 	s.Stains = g.exportStains()
+	s.Dirt, s.Carried = g.exportDirt()
+	s.Home, s.CleanWired = g.exportHome(), true
 	for id, e := range g.exposure {
 		s.Exposure[id] = [2]int{e.hypo, e.heat}
 	}
@@ -350,6 +359,11 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.importRoofs(s.Roofs)
 	g.importGrass(s.Grass, s.GrassCut)
 	g.importStains(s.Stains)
+	g.importHome(s.Home)            // home.go: an older save gets Home around its buildings
+	g.importDirt(s.Dirt, s.Carried) // filth.go
+	if !s.CleanWired {
+		g.wireCleaning() // clean.go: an older save switches cleaning on once
+	}
 	g.seedGrass() // an older save: grass from terrain, bare under buildings
 	for id, e := range s.Exposure {
 		g.exposure[id] = exposureState{e[0], e[1]}
