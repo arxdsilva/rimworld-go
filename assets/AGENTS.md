@@ -58,6 +58,20 @@ Rules:
   bottom row (north → south, then west → east) → overlays.
 - Walls: pick `wall_<mat>_<mask>` with mask N=1, E=2, S=4, W=8 (doors
   count as wall neighbours).
+- Linked families (`rock/rock_wall`, `rock/rock_smooth`, `rock/ore_<metal>`,
+  `structure/wall_<wood|stone|steel>`; ART-015) bake their inner corners:
+  47 sprites each, `<prefix>_<NN>` plus `<prefix>_<NN>_c<h>` where `h` is
+  the hex of the filled corners (NE=1, SE=2, SW=4, NW=8). A corner is
+  filled when both of its cardinals and its diagonal link; an unfilled
+  one is notched so it lines up with the neighbours' free edges. Walls,
+  doors and rock link to each other; fences link one way into walls.
+  Natural rock links past the map edge, built walls don't.
+- Stone is drawn in neutral greys (`stone_neutral*`) and multiplied at
+  draw time by the cell's or material's stone tint (`base.yaml`
+  `tints.stone_tint`); ore sprites mask only their rock body
+  (`stone_tint`) so the metal flecks keep their colour.
+  `cmd/normalgen` extends linked edges before beveling, so joined tiles
+  light as one surface.
 - Pawns: draw `body`, `pants_*`, `shirt_*`, `vest_*`, `hair_*` for the
   same facing and frame at the same anchor; held weapons attach their `grip`
   to the body's `hand` attachment (behind the body when facing north), and

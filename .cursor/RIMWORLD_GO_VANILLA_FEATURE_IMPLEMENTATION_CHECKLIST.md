@@ -170,7 +170,7 @@ The first playable surface.
 
 ## 2.2 Rendering
 
--   [-] **Tile rendering** (vendor ground/rock tiles plus grid; camera culling of off-screen cells; no domain terrain types or chunk-aware caching yet)
+-   [-] **Tile rendering** (domain terrain drawn from original art; rock and terrain drawn for visible tiles only, linked rock/wall connectivity cached until terrain or buildings change (UI-017); no baked chunk images yet)
     -   Draw visible terrain only.
     -   Camera culling.
     -   Chunk-aware redraw/cache strategy.
@@ -553,7 +553,7 @@ This is the heart of autonomous colony behavior.
     -   Placement preview.
     -   Validate terrain, occupancy, research, material, and support
         requirements.
--   [-] **Material selection** (walls/floors from wood or stone; stone costs no wood, +60% work; no HP/beauty/flammability yet)
+-   [-] **Material selection** (wood, five stone blocks or steel; per-material HP and work (SIM-029); no beauty/flammability yet)
     -   Stuff/material-based buildings where relevant.
     -   Different materials influence HP, beauty, flammability,
         work/material cost, etc.
@@ -577,7 +577,7 @@ This is the heart of autonomous colony behavior.
 
 ## 7.3 Core structures
 
--   [-] **Walls** (block pathing; no vision/rooms/material stats)
+-   [-] **Walls** (block pathing, bound rooms, per-material HP/work, link visually to rock and each other (UI-017); no vision blocking)
     -   Block movement/vision/projectiles.
     -   Define rooms.
     -   Material-dependent stats.
@@ -1234,7 +1234,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 14.3 Crafting
 
--   [ ] **Stone cutting**
+-   [x] **Stone cutting** (SIM-029: stonecutter table, one chunk of any of five stones cuts into 10 blocks of it)
 -   [x] **Butchering**
 -   [x] **Cooking** (stove: 2 raw food -> 1 simple meal)
 -   [x] **Tailoring/apparel production** (tailoring bench sews leather parkas, tuques and dusters; butchering yields leather)
@@ -1770,8 +1770,8 @@ SIM-023: all twelve exist as `world/biome` data and are picked directly in the n
 ## 22.4 Local map generation
 
 -   [-] **Terrain from biome/topology** (SIM-023: ground mix per biome incl. sand, marsh, ice; no topology/hilliness)
--   [-] **Rock/mountain mass** (noise outcrops biased to map edges, stone ground ring, open start area; no ore)
--   [ ] **Ore/resource deposits**
+-   [x] **Rock/mountain mass** (noise outcrops biased to map edges, stone ground ring, open start area; 2-3 stone types per map in regions, SIM-029; overhead mountain roof tracked under roofs)
+-   [x] **Ore/resource deposits** (SIM-029: steel, silver and gold veins grown inside rock; mined for metal)
 -   [ ] **Water**
 -   [x] **Wild vegetation** (trees, berry bushes; grass is simulated ground cover removed by building, sowing and Cut plants (UI-011))
 -   [x] **Wildlife** (SIM-023/025: per-biome density, species weights, sex and age at spawn, carrying capacity)

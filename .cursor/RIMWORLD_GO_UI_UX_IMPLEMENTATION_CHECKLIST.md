@@ -445,7 +445,7 @@ the player's primary world-editing command surface.
 -   [ ] **Remove floor**
 -   [x] **Remove roof** (SIM-018)
 -   [ ] **Claim structure where base-game semantics require it**
--   [ ] **Smooth stone/floor equivalents if supported**
+-   [x] **Smooth stone/floor equivalents if supported** (Orders › Smooth: rock walls without ore and rough stone floors, UI-017/SIM-029)
 
 ## 5.4 Designation feedback
 

@@ -1010,8 +1010,8 @@ resolve metadata conflicts, and update the catalog.
 
 ### ART Wave 2 --- First playable
 
--   [-] soil/stone/water (domain terrain drawn in-game: soil/rich soil/gravel/stone variants with soft edge transitions, 16-mask natural rock walls; water missing)
--   [-] wall/door/floor (16-mask wood wall autotile drawn in-game; doors and wood floor generated but the domain has no doors/floors yet)
+-   [-] soil/stone/water (domain terrain drawn in-game: soil/rich soil/gravel/stone/smooth stone variants with soft edge transitions, natural rock walls with baked corners tinted per stone (ART-015); water missing)
+-   [x] wall/door/floor (wood/stone/steel walls with 16 masks plus baked inner corners, 47 per material; wood and steel doors; wood and stone floors; all drawn in-game, ART-015)
 -   [x] blueprint/frame (blueprint overlay on every frame, scaffold once wood is delivered)
 -   [x] pawn base: original compositional pawns (body/pants/shirt/vest/hair layers, 4 facings, EntityID-stable tints) with an 8-frame Blender walk cycle synced to tile progress, idle breathing, work swings, lying/in-bed/carried poses; vendor pack kept as fallback
 -   [x] first hair/apparel (3 hairstyles, pants/shirt/vest, runtime tint masks, in-game)
@@ -1028,7 +1028,7 @@ resolve metadata conflicts, and update the catalog.
 
 ### ART Wave 4 --- Production
 
--   [-] material variants (wood/stone walls and floors; doors/furniture wood only)
+-   [-] material variants (wood, five tinted stones and steel for walls; wood/stone floors; wood/steel doors; furniture wood only)
 -   [ ] furniture families
 -   [ ] production/research benches
 -   [ ] storage
@@ -1057,7 +1057,7 @@ resolve metadata conflicts, and update the catalog.
 -   [x] wildlife/predators (ART-011 roster; ART-013 rest pose)
 -   [x] juvenile variants (scaled at runtime from the adult set, not separate art, per section 11)
 -   [x] biome plants (ART-013: pine with snow, jungle tree, cactus with dry, shrub with dry, reeds; terrains sand, marsh, ice with edges; 12 biome icons)
--   [-] rock/resource variants (natural rock walls 16-mask, rock chunks, stone blocks item; no ore)
+-   [x] rock/resource variants (rough and smoothed rock and steel/silver/gold ore, 47 linked variants each, tinted per stone; stone chunk, stone blocks, steel, silver and gold items; ART-015)
 -   [x] snow/weather (rain, storm and snow particles; snow cover, drifts, puddles and frost; wind-driven plant motion)
 
 ### ART Wave 8 --- World/factions
