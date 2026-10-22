@@ -119,6 +119,8 @@ media:  ## README gallery as short animated WebPs in docs/media (needs python3 +
 	$(call still,research,-scenario research -capture-ui research -capture-frames 150)
 	$(call still,medic,-scenario medic -capture-ui medic -capture-frames 150)
 	$(call still,winter,-scenario winter -capture-ui winter -capture-frames 180)
+	$(call still,rock,-scenario walls -capture-ticks 2 -capture-zoom 0.5 -capture-frames 150)
+	$(call still,rock_close,-scenario walls -capture-ticks 2 -capture-zoom 1.2 -capture-frames 150)
 
 .PHONY: clips
 clips:  ## README animated WebP clips in docs/clips (needs python3 + Pillow)

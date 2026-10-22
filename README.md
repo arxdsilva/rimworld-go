@@ -44,7 +44,7 @@ A RimWorld-inspired colony simulation written in Go with Ebitengine, built in pu
 
 ## Progress
 
-Media updated 2026-10-21 · regenerate with `make media clips`
+Media updated 2026-10-22 · regenerate with `make media clips`
 
 ### Building
 
@@ -56,6 +56,10 @@ Media updated 2026-10-21 · regenerate with `make media clips`
   <tr>
     <td width="50%"><img src="docs/media/farm.webp" width="100%" alt="Growing zones and the crop picker"><br><sub>Growing zones and the crop picker</sub></td>
     <td width="50%"><img src="docs/media/bills.webp" width="100%" alt="Workbenches and production bills"><br><sub>Workbenches and production bills</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/media/rock.webp" width="100%" alt="Linked walls and rock: every wall shape, five stones, smoothed rock, ore veins and a mined-out hole"><br><sub>Linked walls and rock: every wall shape, five stones, smoothed rock, ore veins and a mined-out hole</sub></td>
+    <td width="50%"><img src="docs/media/rock_close.webp" width="100%" alt="Close up: rock masses read as one surface, and walls join the outcrop"><br><sub>Close up: rock masses read as one surface, and walls join the outcrop</sub></td>
   </tr>
 </table>
 
@@ -88,6 +92,7 @@ Media updated 2026-10-21 · regenerate with `make media clips`
 ## What works today
 
 - Building: generated maps, cutting, mining, walls, doors, beds, multi-tile workbenches and a stove, all placed from the Architect menu.
+- Stone: each map has two or three of five stones (sandstone, granite, limestone, slate, marble) and steel, silver and gold veins. Mining drops a chunk of the rock's stone, a stonecutter cuts it into blocks, and each stone builds walls with its own strength and build time. Builders can smooth rock walls and stone floors. Walls, doors and rock connect into one continuous surface.
 - Zones: stockpiles, growing zones, tree zones and pens are painted tile by tile. A tile belongs to one zone only, touching zones of the same kind merge under one outline, and growing zones skip bare rock. The drag preview shows which tiles will be claimed.
 - Hauling: colonists carry up to 100 at a time. One trip feeds several nearby building sites and takes the leftovers back to the nearest stockpile.
 - Farming and food: growing zones, a crop picker, regrowing berries, cotton for cloth, straw from wheat, campfire cooking, drying racks, spoilage and frost.
