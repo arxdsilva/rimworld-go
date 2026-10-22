@@ -176,6 +176,9 @@ type Renderer struct {
 	// roofOverlay is the Roof overlay toggle (R); roofOverlayForced holds
 	// it on while a roof tool is selected (roof_draw.go).
 	roofOverlay, roofOverlayForced bool
+	// homeOverlay is the Home area overlay toggle; homeOverlayForced holds
+	// it on while a Home tool is in hand (SIM-021, home_draw.go, hud.go).
+	homeOverlay, homeOverlayForced bool
 
 	gridClr   color.RGBA
 	pawnClr   color.RGBA
