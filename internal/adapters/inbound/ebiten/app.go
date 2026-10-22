@@ -340,6 +340,7 @@ func (a *App) tick() {
 		a.tickBoot()
 	case screenColony:
 		if a.nav.overlay() == overlayNone && a.renderer != nil {
+			a.renderer.voice.view = colonyViewport(a.sw, a.sh) // animal calls only on screen
 			a.renderer.advance()
 			a.markUpdate()
 			a.tickAutosave()

@@ -138,13 +138,26 @@ func (r *Renderer) listenWorld(w game.WorldView, pawns []game.PawnView) {
 // traceSound is the sound of a new attack trace, heard where it lands
 // (shots where they are fired).
 func (r *Renderer) traceSound(t game.TraceView) {
+	voiced := false
+	if an, ok := r.voice.byID[t.Attacker]; ok && t.Attacker != 0 {
+		ax, ay := float64(t.FromX)+0.5, float64(t.FromY)+0.5
+		voiced = r.cueAnimal(an.Species, voiceAttack, ax, ay, volAttack)
+	}
+	if an, ok := r.voice.byID[t.Target]; ok && t.Target != 0 && t.Hit && !t.Building {
+		tx, ty := float64(t.ToX)+0.5, float64(t.ToY)+0.5
+		voiced = r.cueAnimal(an.Species, voiceHurt, tx, ty, volHurt) || voiced
+	}
 	switch {
 	case t.Hit && t.Building:
 		r.cue("sfx.wood_hit", float64(t.ToX)+0.5, float64(t.ToY)+0.5, 1)
 	case !t.Melee:
 		r.cue("sfx.gunshot", float64(t.FromX)+0.5, float64(t.FromY)+0.5, 1)
 	case t.Hit:
-		r.cue("sfx.melee_hit", float64(t.ToX)+0.5, float64(t.ToY)+0.5, 1)
+		vol := 1.0
+		if voiced {
+			vol = volMeleeUnder // the voice leads, the impact sits under it
+		}
+		r.cue("sfx.melee_hit", float64(t.ToX)+0.5, float64(t.ToY)+0.5, vol)
 	}
 }
 

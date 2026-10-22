@@ -54,6 +54,7 @@ func (t *burstTracker) emit(r *Renderer, events []burstEvent) {
 func (r *Renderer) emitBurst(ev burstEvent) {
 	x, y := float64(ev.X)+0.5, float64(ev.Y)+0.4
 	seed := uint64(ev.ID)*0x9E3779B1 ^ ev.Tick*0x85EBCA6B
+	r.cue(voiceBurst, x, y, volBurst) // the bang (animal_sounds.go)
 
 	// the flash: one big, short-lived ember that swells and fades
 	if len(r.parts) < maxParticles {
