@@ -216,7 +216,7 @@ func TestHelpersDeterministic(t *testing.T) {
 	if stemOf("animal.timber_wolf.call") != "timber_wolf_call" || stemOf("animal.burst") != "burst" || eventOf("animal.burst") != "burst" {
 		t.Fatal("stem/event")
 	}
-	if serialOf("a", "a") != serialOf("a", "a") || serialOf("a", "a") == serialOf("a", "b") {
+	if s := serialOf("a", "a"); s != serialOf("a", "a") || s == serialOf("a", "b") {
 		t.Fatal("serial")
 	}
 	if r := variantRate("animal.cow.call"); r != 1.04 && r != 0.96 {

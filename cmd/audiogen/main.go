@@ -252,9 +252,9 @@ func checkOgg(path string) error {
 	case err != nil:
 		return fmt.Errorf("not a decodable Ogg Vorbis file: %w", err)
 	case st.SampleRate() != sfxsynth.Rate:
-		return fmt.Errorf("Ogg must be %d Hz, is %d Hz", sfxsynth.Rate, st.SampleRate())
+		return fmt.Errorf("ogg must be %d Hz, is %d Hz", sfxsynth.Rate, st.SampleRate())
 	case st.Length() <= 0:
-		return errors.New("Ogg has no samples")
+		return errors.New("ogg has no samples")
 	}
 	return nil
 }
