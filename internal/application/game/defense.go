@@ -175,7 +175,7 @@ func (g *Game) startBreach(id entity.EntityID, tp Position) bool {
 		breaks = g.sapperBreaks() // sappers tunnel through rock too
 	}
 	bm := breachMap{g: g, breaks: breaks}
-	path, ok := pathing.Find(bm, pos.X, pos.Y, tp.X, tp.Y)
+	path, ok := g.searcher().Find(bm, pos.X, pos.Y, tp.X, tp.Y)
 	if !ok {
 		return false
 	}

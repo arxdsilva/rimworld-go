@@ -32,9 +32,8 @@ type corridorScratch struct {
 	open   []rnode
 	mark   []uint32 // per region: in the corridor (mark == markGen)
 	markG  uint32
-	marked []int32 // regions in the last corridor (to clear its cells)
+	marked []int32 // regions in the corridor being built
 	allow  []uint64
-	allowG uint32 // graph generation marked was numbered in
 }
 
 type rnode struct{ f, g, r int32 }
@@ -182,17 +181,12 @@ func (m *Map) Corridor(l Layer, sx, sy, tx, ty int) (allow []uint64, ok bool) {
 	}
 	// the corridor: route regions and their open neighbours
 	words := (w*h + 63) / 64
-	switch {
-	case len(cs.allow) != words:
+	if len(cs.allow) != words {
 		cs.allow = make([]uint64, words)
-	case cs.allowG != gr.gen: // regions renumbered since: clear it all
-		clear(cs.allow)
-	default:
-		for _, r := range cs.marked {
-			m.eachCell(r, func(i int) { cs.allow[i>>6] &^= 1 << (uint(i) & 63) })
-		}
+	} else {
+		clear(cs.allow) // a few µs even at 500², less than unmarking region by region
 	}
-	cs.marked, cs.allowG = cs.marked[:0], gr.gen
+	cs.marked = cs.marked[:0]
 	if cs.markG++; cs.markG == 0 {
 		clear(cs.mark)
 		cs.markG = 1
@@ -217,9 +211,35 @@ func (m *Map) Corridor(l Layer, sx, sy, tx, ty int) (allow []uint64, ok bool) {
 		}
 	}
 	for _, r := range cs.marked {
-		m.eachCell(r, func(i int) { cs.allow[i>>6] |= 1 << (uint(i) & 63) })
+		m.setCells(r, cs.allow)
 	}
 	return cs.allow, true
+}
+
+// setCells sets global region r's cells in the row-major bitset allow, a
+// chunk row (at most 16 cells, so at most two words) at a time.
+func (m *Map) setCells(r int32, allow []uint64) {
+	k := m.gr.keys[r]
+	c, l := k.chunk(), uint16(k.local())
+	w := m.p.geo.W
+	x0, y0, x1, y1 := m.p.geo.Bounds(c)
+	for y := y0; y < y1; y++ {
+		i := y*w + x0
+		var row uint64
+		for b, v := range m.p.local[i : y*w+x1] {
+			if v == l {
+				row |= 1 << uint(b)
+			}
+		}
+		if row == 0 {
+			continue
+		}
+		s := uint(i) & 63
+		allow[i>>6] |= row << s
+		if s+uint(x1-x0) > 64 {
+			allow[i>>6+1] |= row >> (64 - s)
+		}
+	}
 }
 
 // eachCell calls fn with every cell of global region r.

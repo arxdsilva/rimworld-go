@@ -61,6 +61,7 @@ const (
 type occupancy struct {
 	w, h    int
 	cells   []entity.EntityID // standing creature per cell, 0 = none
+	near    []uint8           // per cell: held cells in its 3×3 (crowdCost's fast path)
 	marked  []int             // cells written since the last rebuild
 	stacked []stackedRec      // creatures sharing a cell with a lower ID
 	carried []entity.EntityID // patients being carried (scratch)
@@ -72,9 +73,11 @@ type occupancy struct {
 	// dirty: the movement phase started and the index is not rebuilt yet
 	// (it is rebuilt on first use, or by the periodic stack sweep).
 	dirty bool
-	// hostile caches the wild-animal / raider walkability for the phase.
-	hostile   hostileMap
-	hostileOK bool
+	// hostile caches the wild-animal / raider walkability for the phase
+	// (boxed once: handing it out allocates nothing).
+	hostile    pathing.Query
+	hostileOK  bool
+	hostileGen uint64 // bumped whenever hostile is rebuilt
 }
 
 type stackedRec struct {
@@ -114,10 +117,11 @@ func (g *Game) rebuildOccupancy() {
 	if o.w != w || o.h != h || len(o.cells) != w*h {
 		o.w, o.h = w, h
 		o.cells = make([]entity.EntityID, w*h)
+		o.near = make([]uint8, w*h)
 		o.marked = o.marked[:0]
 	}
 	for _, i := range o.marked {
-		o.cells[i] = 0
+		o.put(i, 0)
 	}
 	o.marked = o.marked[:0]
 	o.stacked = o.stacked[:0]
@@ -138,10 +142,10 @@ func (g *Game) rebuildOccupancy() {
 			}
 			switch held := o.cells[i]; {
 			case held == 0:
-				o.cells[i] = id
+				o.put(i, id)
 				o.marked = append(o.marked, i)
 			case id < held: // the lower ID keeps the cell
-				o.cells[i] = id
+				o.put(i, id)
 				o.stacked = append(o.stacked, stackedRec{id: held, idx: i})
 			default:
 				o.stacked = append(o.stacked, stackedRec{id: id, idx: i})
@@ -163,6 +167,26 @@ func (o *occupancy) index(x, y int) (int, bool) {
 	return y*o.w + x, true
 }
 
+// put sets cell i's creature, keeping near (the held cells around each
+// cell) in step when the cell turns held or free.
+func (o *occupancy) put(i int, id entity.EntityID) {
+	was := o.cells[i] != 0
+	o.cells[i] = id
+	if was == (id != 0) {
+		return
+	}
+	var d uint8 = 1
+	if was {
+		d = 255 // -1
+	}
+	x, y := i%o.w, i/o.w
+	for ny := max(y-1, 0); ny <= min(y+1, o.h-1); ny++ {
+		for nx := max(x-1, 0); nx <= min(x+1, o.w-1); nx++ {
+			o.near[ny*o.w+nx] += d
+		}
+	}
+}
+
 // at is the indexed standing creature on (x, y), 0 when none.
 func (o *occupancy) at(x, y int) entity.EntityID {
 	if i, ok := o.index(x, y); ok {
@@ -175,10 +199,10 @@ func (o *occupancy) at(x, y int) entity.EntityID {
 // cell over when id leaves it.
 func (o *occupancy) move(id entity.EntityID, from, to Position) {
 	if fi, ok := o.index(from.X, from.Y); ok && o.cells[fi] == id {
-		o.cells[fi] = 0
+		o.put(fi, 0)
 		for k, s := range o.stacked {
 			if s.idx == fi {
-				o.cells[fi] = s.id
+				o.put(fi, s.id)
 				o.stacked = append(o.stacked[:k], o.stacked[k+1:]...)
 				break
 			}
@@ -192,7 +216,7 @@ func (o *occupancy) move(id entity.EntityID, from, to Position) {
 		}
 	}
 	if ti, ok := o.index(to.X, to.Y); ok {
-		o.cells[ti] = id
+		o.put(ti, id)
 		o.marked = append(o.marked, ti)
 	}
 }
@@ -200,7 +224,7 @@ func (o *occupancy) move(id entity.EntityID, from, to Position) {
 // standing reports a creature that owns its cell: a living animal, or a
 // colonist or raider on its feet who is neither asleep nor carried.
 func (g *Game) standing(id entity.EntityID) bool {
-	if a, ok := g.animals.Get(id); ok {
+	if a := g.animals.Ref(id); a != nil {
 		return !a.Dead()
 	}
 	return g.standingWalker(id)
@@ -308,7 +332,7 @@ func (g *Game) planAround(id entity.EntityID, from, to Position) bool {
 		return false
 	}
 	o := &g.occ
-	path, ok := pathing.Find(g.costedQuery(id), from.X, from.Y, goal.X, goal.Y)
+	path, ok := g.findPath(id, g.costedQuery(id), from.X, from.Y, goal.X, goal.Y) // paths.go: long ones in the region corridor
 	if !ok || len(path) == 0 {
 		return false
 	}
@@ -434,7 +458,7 @@ func (g *Game) blockCycle(id, occ entity.EntityID) (entity.EntityID, bool) {
 
 // walkNext is the next cell on id's current walk.
 func (g *Game) walkNext(id entity.EntityID) (Position, bool) {
-	if a, ok := g.animals.Get(id); ok {
+	if a := g.animals.Ref(id); a != nil {
 		if a.PathI < len(a.Path) {
 			p := a.Path[a.PathI]
 			return Position{X: p.X, Y: p.Y}, true
@@ -451,7 +475,7 @@ func (g *Game) walkNext(id entity.EntityID) (Position, bool) {
 
 // walkGoal is the last cell of id's current walk.
 func (g *Game) walkGoal(id entity.EntityID) (Position, bool) {
-	if a, ok := g.animals.Get(id); ok {
+	if a := g.animals.Ref(id); a != nil {
 		if a.PathI < len(a.Path) {
 			p := a.Path[len(a.Path)-1]
 			return Position{X: p.X, Y: p.Y}, true
@@ -472,7 +496,7 @@ func (g *Game) pathAhead(id entity.EntityID, out []Position) []Position {
 	out = append(out, pos)
 	var path []pathing.Point
 	var i int
-	if a, ok := g.animals.Get(id); ok {
+	if a := g.animals.Ref(id); a != nil {
 		path, i = a.Path, a.PathI
 	} else if j, ok := g.jobs.Get(id); ok && j.State == job.Goto {
 		path, i = j.Path, j.PathI
@@ -491,7 +515,7 @@ func (g *Game) finalStep(id entity.EntityID, to Position) bool {
 
 // targetOf is the creature id is attacking (0 when none).
 func (g *Game) targetOf(id entity.EntityID) entity.EntityID {
-	if a, ok := g.animals.Get(id); ok {
+	if a := g.animals.Ref(id); a != nil {
 		if a.Mode == animal.Attack {
 			return a.Target
 		}
@@ -591,7 +615,7 @@ func (g *Game) nearestFreeStep(id entity.EntityID, from, to Position) Position {
 // drafted, not in a mental break), or a calm animal standing about.
 // Raiders never make way.
 func (g *Game) idleYieldable(id entity.EntityID) bool {
-	if a, ok := g.animals.Get(id); ok {
+	if a := g.animals.Ref(id); a != nil {
 		// grazing or bedded-down animals step aside too, then carry on
 		calm := a.Mode == animal.Wander || a.Mode == animal.Feed || a.Mode == animal.Rest
 		return calm && a.PathI >= len(a.Path) && !g.beingTamed(id)
@@ -769,11 +793,11 @@ func (g *Game) asideRoute(id entity.EntityID, pos Position, avoid []Position, wc
 // queryFor is the walkability id moves with: wild animals keep out of
 // doors, tame ones use them; pawns plan as pathTo does.
 func (g *Game) queryFor(id entity.EntityID) pathing.Query {
-	if a, ok := g.animals.Get(id); ok {
+	if a := g.animals.Ref(id); a != nil {
 		if a.Tame {
-			return g.animalQuery(true, g.animalBase(true)) // fences.go: gates open, fences shut
+			return g.animalPathQuery(true, false) // fences.go: gates open, fences shut
 		}
-		return g.animalQuery(false, g.phaseHostileMap())
+		return g.animalPathQuery(false, true)
 	}
 	if g.isRaider(id) && !g.sapper(id) {
 		return g.phaseHostileMap() // what pathQuery gives a raider
@@ -787,6 +811,7 @@ func (g *Game) phaseHostileMap() pathing.Query {
 	o := &g.occ
 	if !o.hostileOK || o.dirty {
 		o.hostile, o.hostileOK = g.hostileMap(), true
+		o.hostileGen++
 	}
 	return o.hostile
 }
@@ -803,6 +828,9 @@ type crowdCost struct {
 func (c crowdCost) ExtraCost(x, y int) int {
 	o := &c.g.occ
 	ground := c.g.groundExtra(x, y) // water.go: slow ground costs extra, so A* wades only when it pays
+	if i, ok := o.index(x, y); ok && o.near[i] == 0 {
+		return ground // no creature on the cell or beside it
+	}
 	if id := o.at(x, y); id != 0 && id != c.self {
 		return occupiedCost + ground
 	}
@@ -841,7 +869,7 @@ func (g *Game) pathAround(id entity.EntityID, tx, ty int) ([]pathing.Point, bool
 	}
 	q := g.costedQuery(id)
 	if q.Walkable(tx, ty) {
-		return pathing.Find(q, pos.X, pos.Y, tx, ty)
+		return g.findPath(id, q, pos.X, pos.Y, tx, ty) // paths.go: long ones in the region corridor
 	}
 	if pathing.Adjacent(pos.X, pos.Y, tx, ty) {
 		return nil, true
@@ -853,7 +881,7 @@ func (g *Game) pathAround(id entity.EntityID, tx, ty int) ([]pathing.Point, bool
 		if !q.Walkable(ax, ay) {
 			continue
 		}
-		p, ok := pathing.Find(q, pos.X, pos.Y, ax, ay)
+		p, ok := g.findPath(id, q, pos.X, pos.Y, ax, ay)
 		if !ok {
 			continue
 		}

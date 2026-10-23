@@ -220,7 +220,11 @@ func NewApp(cfg AppConfig) *App {
 			if err != nil {
 				return nil, err
 			}
-			return loadArtCatalog(root)
+			c, err := loadArtCatalog(root)
+			if err == nil {
+				c.prewarmAsync() // art_atlas.go: pages cut in the background, not mid-frame
+			}
+			return c, err
 		}
 	}
 	if cfg.LoadSplash == nil {

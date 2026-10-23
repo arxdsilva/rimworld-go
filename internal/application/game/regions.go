@@ -226,7 +226,9 @@ type plainQuery struct{ pathing.Query }
 
 // checkReach, under the test self-check, proves a "no path" region answer
 // with a full search.
-func checkReach(q pathing.Query, sx, sy, tx, ty int, got bool) bool {
+// It is generic so a query is boxed only when it is checked (a Reach
+// call stays allocation-free).
+func checkReach[Q pathing.Query](q Q, sx, sy, tx, ty int, got bool) bool {
 	if !got && selfCheck() {
 		if _, ok := pathing.Find(plainQuery{q}, sx, sy, tx, ty); ok {
 			panic("regions: Reach said no, A* found a path")

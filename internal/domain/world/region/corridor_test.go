@@ -57,6 +57,30 @@ func colonyMap(r *randx.Rand, w, h int) *world {
 	return wd
 }
 
+// TestSetCellsMatchesEachCell: marking a region's cells a chunk row at a
+// time sets exactly its cells, on widths whose chunk rows straddle words.
+func TestSetCellsMatchesEachCell(t *testing.T) {
+	for seed := uint64(1); seed <= 4; seed++ {
+		r := randx.New(seed)
+		w, h := 97+r.IntN(90), 61+r.IntN(70)
+		wd := colonyMap(r, w, h)
+		wd.m.Label(Colonist, 0, 0) // brings the regions up to date
+		m := wd.m
+		m.graph()
+		words := (w*h + 63) / 64
+		for reg := int32(0); reg < int32(m.p.n); reg++ {
+			got, want := make([]uint64, words), make([]uint64, words)
+			m.setCells(reg, got)
+			m.eachCell(reg, func(i int) { want[i>>6] |= 1 << (uint(i) & 63) })
+			for k := range got {
+				if got[k] != want[k] {
+					t.Fatalf("seed %d %dx%d region %d: word %d = %#x, want %#x", seed, w, h, reg, k, got[k], want[k])
+				}
+			}
+		}
+	}
+}
+
 func pathCost(sx, sy int, p []pathing.Point) int {
 	c := 0
 	for _, s := range p {

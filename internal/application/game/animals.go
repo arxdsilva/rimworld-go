@@ -3,7 +3,6 @@ package game
 import (
 	"fmt"
 
-	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/combat/projectile"
@@ -149,7 +148,7 @@ func (g *Game) phaseAnimals() {
 			continue // died of old age
 		}
 		g.thinkAnimal(id, &a, now)
-		if _, still := g.animals.Get(id); !still {
+		if !g.animals.Has(id) {
 			continue
 		}
 		g.animals.Set(id, a) // it steps in phaseMovement
@@ -311,7 +310,7 @@ func (g *Game) nearestThreat(id entity.EntityID, pos Position, r int) (Position,
 		if o == id {
 			return false
 		}
-		if a, ok := g.animals.Get(o); ok {
+		if a := g.animals.Ref(o); a != nil {
 			return animal.DefOf(a.Species).Predator
 		}
 		return g.standingPawn(o)
@@ -324,8 +323,11 @@ func (g *Game) validPrey(self, t entity.EntityID) bool {
 	if t == self {
 		return false
 	}
-	if o, ok := g.animals.Get(t); ok {
-		me, _ := g.animals.Get(self)
+	if o := g.animals.Ref(t); o != nil {
+		me := g.animals.Ref(self)
+		if me == nil {
+			me = &animal.State{}
+		}
 		return !o.Dead() && (o.Species != me.Species || o.Tame != me.Tame)
 	}
 	return g.standingPawn(t)
@@ -431,8 +433,8 @@ func (g *Game) animalGoTo(id entity.EntityID, a *animal.State, gx, gy int) {
 	}
 	// the colony's own animals use its doors and gates; no animal
 	// crosses a fence (fences.go)
-	q := g.animalQuery(a.Tame, g.animalBase(a.Tame))
-	path, ok := pathing.Find(q, pos.X, pos.Y, gx, gy)
+	q := g.animalPathQuery(a.Tame, false)
+	path, ok := g.searcher().Find(q, pos.X, pos.Y, gx, gy)
 	if !ok {
 		// no way there (a shut door, say): don't search again for a while
 		a.Path, a.PathI = nil, 0
@@ -456,17 +458,18 @@ func clampInt(v, lo, hi int) int {
 // is clear (the animal half of phaseMovement; m, its record, says it
 // is due).
 func (g *Game) moveAnimal(id entity.EntityID, m motionRec, now uint64) {
-	a, ok := g.animals.Get(id)
-	if !ok {
+	ar := g.animals.Ref(id)
+	if ar == nil {
 		return // removed earlier this tick
 	}
-	if a.PathI >= len(a.Path) {
+	if ar.PathI >= len(ar.Path) {
 		if m.BlockedTicks != 0 || m.BlockedBy != 0 {
 			m.BlockedTicks, m.BlockedBy = 0, 0
 			g.motion.Set(id, m)
 		}
 		return
 	}
+	a := *ar
 	next := a.Path[a.PathI]
 	if !g.grid.Walkable(next.X, next.Y) || !a.Tame && g.doorAt(next.X, next.Y) || g.fenceBars(a.Tame, next.X, next.Y) {
 		a.Path, a.PathI = nil, 0

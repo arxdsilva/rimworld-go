@@ -596,7 +596,7 @@ func (g *Game) pathToVia(id entity.EntityID, tx, ty int, regions bool) ([]pathin
 		q = plainQuery{q} // regions.go: a plain search (self-check reference)
 	}
 	if q.Walkable(tx, ty) {
-		if !reach(tx, ty) {
+		if !reach.ok(tx, ty) {
 			return nil, false
 		}
 		return g.findPathVia(id, q, regions, pos.X, pos.Y, tx, ty)
@@ -614,7 +614,7 @@ func (g *Game) pathToVia(id entity.EntityID, tx, ty int, regions bool) ([]pathin
 				continue
 			}
 			ax, ay := tx+dx, ty+dy
-			if !q.Walkable(ax, ay) || !reach(ax, ay) {
+			if !q.Walkable(ax, ay) || !reach.ok(ax, ay) {
 				continue
 			}
 			p, ok := g.findPathVia(id, q, regions, pos.X, pos.Y, ax, ay)

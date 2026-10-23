@@ -3,7 +3,6 @@ package game
 import (
 	"fmt"
 
-	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/incident"
@@ -333,7 +332,7 @@ func (g *Game) crossingLine() (ax, ay, bx, by int, ok bool) {
 		if !g.dryWalkable(ax, ay) || !g.dryWalkable(bx, by) {
 			continue
 		}
-		if _, found := pathing.Find(q, ax, ay, bx, by); found {
+		if _, found := g.searcher().Find(q, ax, ay, bx, by); found {
 			return ax, ay, bx, by, true
 		}
 	}

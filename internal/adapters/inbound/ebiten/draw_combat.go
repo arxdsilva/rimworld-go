@@ -66,9 +66,26 @@ func (r *Renderer) addAnimalDraws(w game.WorldView, add func(row, col float64, f
 	}
 }
 
-// drawAnimalOverlays draws hunt marks and health bars above animals.
+// drawAnimalOverlays draws hunt marks and health bars above animals, then
+// the sleepers' snores. The snores (vector strokes) go in a pass of their
+// own: a vector stroke between two sprite draws flushes the vector batch,
+// a path fill per animal (milliseconds a frame with the map in view).
 func (r *Renderer) drawAnimalOverlays(screen *ebiten.Image, w game.WorldView, tile float64, sw, sh int) {
 	for _, an := range w.Animals {
+		if !r.lod.inView(an.X, an.Y, 3, 4) { // lod.go: off screen, as the figure pass culls
+			continue
+		}
+		// the map tier (< 16 px tiles) draws no decals (lod.go): a snore's
+		// "z" would be under two pixels there
+		if an.Sleeping && r.lod.tier != lodMap && r.animalResting(an) {
+			wx, wy := r.interpAnimal(an)
+			r.drawSnoreFor(screen, uint64(an.ID), wx+0.25, wy+0.1-an.Size*0.1, tile)
+		}
+	}
+	for _, an := range w.Animals {
+		if !r.lod.inView(an.X, an.Y, 3, 4) {
+			continue
+		}
 		wx, wy := r.interpAnimal(an)
 		switch {
 		case an.Manhunter:
@@ -80,20 +97,17 @@ func (r *Renderer) drawAnimalOverlays(screen *ebiten.Image, w game.WorldView, ti
 			bob := pose{px: 0.5, py: 0.5, sx: 0.5, sy: 0.5}
 			r.drawSpritePose(screen, "overlay/designation_tame", color.NRGBA{}, wx, wy-animalMarkerLift(an.Size)-0.05*math.Sin(float64(r.present)*0.08), tile, bob)
 		}
-		if an.Sleeping && r.animalResting(an) {
-			r.drawSnoreFor(screen, uint64(an.ID), wx+0.25, wy+0.1-an.Size*0.1, tile)
-		}
 		if an.Tame && an.Name != "" && tile >= stackCountMinTile {
 			sx, sy := r.worldToScreenF(wx+0.5, wy+1.0)
 			tw := textW(an.Name, tsSmall) + 6
-			vector.FillRect(screen, sx-tw/2, sy, tw, 14, color.RGBA{16, 12, 8, 150}, false)
+			r.solidRect(screen, sx-tw/2, sy, tw, 14, color.RGBA{16, 12, 8, 150})
 			drawText(screen, an.Name, float64(sx-tw/2)+3, float64(sy)-2, tsSmall)
 		}
 		if an.Health < 100 {
 			sx, sy := r.worldToScreenF(wx+0.15, wy-animalBarLift(an.Size))
 			bw := float32(tile) * 0.7
-			vector.FillRect(screen, sx, sy, bw, 4, color.RGBA{30, 24, 20, 220}, false)
-			vector.FillRect(screen, sx, sy, bw*float32(an.Health)/100, 4, healthColor(an.Health), false)
+			r.solidRect(screen, sx, sy, bw, 4, color.RGBA{30, 24, 20, 220}) // lod.go: a sprite, not a path fill
+			r.solidRect(screen, sx, sy, bw*float32(an.Health)/100, 4, healthColor(an.Health))
 		}
 	}
 }

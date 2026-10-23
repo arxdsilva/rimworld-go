@@ -67,6 +67,7 @@ type lodState struct {
 	// vis is this frame's visible tile range (inclusive) and chunks the
 	// chunk views over it padded by visPad tiles (cx0..cx1 × cy0..cy1).
 	vx0, vy0, vx1, vy1 int
+	viewSet            bool // a frame has set vx0..vy1 (inView)
 	cx0, cy0, cx1, cy1 int
 	views              []game.ChunkView
 	chunks             chunkCache
@@ -79,7 +80,8 @@ type lodState struct {
 	verts               []ebiten.Vertex
 	idx                 []uint32
 	white               *ebiten.Image
-	baking              bool // drawLit draws unlit albedo (a bake)
+	rectOp              ebiten.DrawImageOptions // solidRect's, reused
+	baking              bool                    // drawLit draws unlit albedo (a bake)
 	bakeCast            shadowCast
 	// budget is how many chunk bakes this frame may still do.
 	budget int
@@ -99,7 +101,7 @@ const bakeBudget = 24
 func (r *Renderer) syncFrameChunks() {
 	l := &r.lod
 	x0, y0, x1, y1 := r.visibleTiles()
-	l.vx0, l.vy0, l.vx1, l.vy1 = x0, y0, x1, y1
+	l.vx0, l.vy0, l.vx1, l.vy1, l.viewSet = x0, y0, x1, y1, true
 	w, h := r.game.Width(), r.game.Height()
 	l.views = l.views[:0]
 	if w <= 0 || h <= 0 || x1 < x0 || y1 < y0 {
@@ -138,6 +140,12 @@ func (r *Renderer) plantsOn(w *game.WorldView, x0, y0, x1, y1 int, buf []int32) 
 // by padS, the other sides by pad).
 func (l *lodState) near(x, y, pad, padS int) bool {
 	return x >= l.vx0-pad && x <= l.vx1+pad && y >= l.vy0-pad && y <= l.vy1+padS
+}
+
+// inView is near once a frame has set the view (syncFrameChunks); before
+// that (a pass drawn on its own, as tests do) every tile counts.
+func (l *lodState) inView(x, y, pad, padS int) bool {
+	return !l.viewSet || l.near(x, y, pad, padS)
 }
 
 // withBake runs fn with the camera, culling and lighting set up to draw
@@ -268,6 +276,24 @@ func (l *lodState) whiteImg() *ebiten.Image {
 	return l.white
 }
 
+// solidRect fills the screen rectangle x, y, w, h with c as one sprite
+// draw of the white pixel: the pixels vector.FillRect fills without
+// anti-aliasing, without its path fill (a tessellation and a flush of the
+// vector batch each: per-animal health bars cost milliseconds a frame
+// zoomed out).
+func (r *Renderer) solidRect(dst *ebiten.Image, x, y, w, h float32, c color.Color) {
+	if w <= 0 || h <= 0 {
+		return
+	}
+	op := &r.lod.rectOp
+	op.GeoM.Reset()
+	op.GeoM.Scale(float64(w), float64(h))
+	op.GeoM.Translate(float64(x), float64(y))
+	op.ColorScale.Reset()
+	op.ColorScale.ScaleWithColor(c)
+	dst.DrawImage(r.lod.whiteImg(), op)
+}
+
 // plantMarkColor is a plant's mark in the map bake: trees dark, crops
 // golden green, other plants green.
 func plantMarkColor(p *game.PlantView) (color.RGBA, float64) {
@@ -315,16 +341,27 @@ func (r *Renderer) drawBaked(screen, src *ebiten.Image, bx, by int, sx0, sy0, bp
 		sy1 := float32(float64(y+1)*tile - r.cam.offsetY)
 		vy := float32(sy0 + float64(y-by)*bpx)
 		for x := tx0; x <= tx1; x++ {
-			sx := float32(float64(x)*tile - r.cam.offsetX)
-			sx1 := float32(float64(x+1)*tile - r.cam.offsetX)
-			vx := float32(sx0 + float64(x-bx)*bpx)
+			// a run of tiles lit alike is one quad (open ground under the
+			// sky mostly is): the same pixels, far fewer vertices
 			sky, lamp := r.lightTile(x, y)
+			xe := x
+			for xe < tx1 {
+				if s, lm := r.lightTile(xe+1, y); s != sky || lm != lamp {
+					break
+				}
+				xe++
+			}
+			sx := float32(float64(x)*tile - r.cam.offsetX)
+			sx1 := float32(float64(xe+1)*tile - r.cam.offsetX)
+			vx := float32(sx0 + float64(x-bx)*bpx)
+			vx1 := float32(sx0 + float64(xe+1-bx)*bpx)
+			x = xe
 			n := uint32(len(l.verts))
 			for k := 0; k < 4; k++ {
 				dx, dy := sx, sy
 				ux, uy := vx, vy
 				if k&1 != 0 {
-					dx, ux = sx1, vx+float32(bpx)
+					dx, ux = sx1, vx1
 				}
 				if k&2 != 0 {
 					dy, uy = sy1, vy+float32(bpx)

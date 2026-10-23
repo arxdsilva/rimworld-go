@@ -4,7 +4,6 @@ import (
 	"slices"
 
 	"rimworld-go/internal/domain/ai/job"
-	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/weapon"
@@ -163,7 +162,7 @@ func (g *Game) enclosed() bool {
 			continue
 		}
 		p, _ := g.positions.Get(id)
-		if _, ok := pathing.Find(hm, ex, ey, p.X, p.Y); ok {
+		if _, ok := g.searcher().Find(hm, ex, ey, p.X, p.Y); ok {
 			return false
 		}
 	}

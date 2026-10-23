@@ -10,6 +10,7 @@ import (
 	"rimworld-go/internal/domain/world/biome"
 
 	"rimworld-go/internal/domain/ai/job"
+	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/ai/reservation"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/animal"
@@ -515,9 +516,15 @@ type Game struct {
 
 	// motion: per-creature step timing (motion_store.go); moverBuf is
 	// scratch for the ascending-ID mover list.
-	motion   *component.Store[motionRec]
-	moverBuf []mover
-	occ      occupancy // movement blocking index (occupancy.go), transient
+	motion    *component.Store[motionRec]
+	moverBuf  []mover
+	moverOld  []entity.EntityID // pruneMotion scratch
+	raiderBuf []entity.EntityID // phaseThreats scratch
+	// pathSearch is the game's own A* state (paths.go: searcher), never
+	// saved; a pointer so a copied Game shares one search generation.
+	pathSearch *pathing.Searcher
+	animalQ    [3]animalQCache // fences.go: animalPathQuery, never saved
+	occ        occupancy       // movement blocking index (occupancy.go), transient
 	// enterHook, when set (tests only), replaces enter's verdicts.
 	enterHook func(id entity.EntityID, from, to Position) (stepVerdict, Position)
 	// haul: in-flight material deliveries (haul_route.go, HAUL-001).

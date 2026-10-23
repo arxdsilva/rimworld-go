@@ -373,3 +373,73 @@ func sameVisible(a, b *image.NRGBA) bool {
 	}
 	return true
 }
+
+// TestPrewarmAsyncMatchesPrewarm: the background prewarm leaves exactly
+// the compressed copies the synchronous one does (every page layer cut
+// once), and sprites taken while it runs come out as without it.
+func TestPrewarmAsyncMatchesPrewarm(t *testing.T) {
+	t.Parallel()
+	root := syntheticAtlas(t, 5)
+	want, err := loadArtCatalog(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want.prewarmAtlases()
+	got, err := loadArtCatalog(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	<-got.prewarmAsync()
+	for key, sp := range want.sprites {
+		g := got.sprites[key]
+		if sp.src == nil || g == nil || g.src == nil {
+			t.Fatalf("%s: not atlas-backed", key)
+		}
+		if !sameLayers(g.src.z, sp.src.z) {
+			t.Fatalf("%s: compressed copies differ from the synchronous prewarm", key)
+		}
+	}
+	a := got.sprites["dummy/s0"].src.atlas
+	for pg := range a.cut {
+		for layer, done := range a.cut[pg] {
+			if !done {
+				t.Fatalf("page %d layer %d not cut", pg, layer)
+			}
+		}
+	}
+	if a.decodes != want.sprites["dummy/s0"].src.atlas.decodes || len(a.cache) != 0 {
+		t.Fatalf("decodes %d (sync %d), cache %d", a.decodes, want.sprites["dummy/s0"].src.atlas.decodes, len(a.cache))
+	}
+
+	// draws racing the prewarm (run with -race): same pixels as a plain load
+	plain, err := loadArtCatalog(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	racing, err := loadArtCatalog(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := racing.prewarmAsync()
+	for i := 4; i >= 0; i-- {
+		key := fmt.Sprintf("dummy/s%d", i)
+		p, r := plain.sprite(key), racing.sprite(key)
+		if !bytes.Equal(p.pix.Pix, r.pix.Pix) || !bytes.Equal(p.mask.Pix, r.mask.Pix) {
+			t.Fatalf("%s: pixels differ while prewarming", key)
+		}
+		pn, rn := p.src.normalImage(p), r.src.normalImage(r)
+		if (pn == nil) != (rn == nil) || pn != nil && !bytes.Equal(pn.Pix, rn.Pix) {
+			t.Fatalf("%s: normal map differs while prewarming", key)
+		}
+	}
+	<-done
+}
+
+func sameLayers(a, b [atlasLayers][]byte) bool {
+	for i := range a {
+		if !bytes.Equal(a[i], b[i]) {
+			return false
+		}
+	}
+	return true
+}

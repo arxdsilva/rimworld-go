@@ -145,6 +145,44 @@ func (g *Game) animalBase(tame bool) pathing.Query {
 	return g.hostileMap()
 }
 
+// animalQCache is one boxed animal path query and the versions it was
+// built at (animalPathQuery).
+type animalQCache struct {
+	q          pathing.Query
+	fgen, bver uint64
+	ok         bool
+}
+
+// animalPathQuery is animalQuery over animalBase(tame), or for a wild
+// animal with phase set over the movement phase's hostile map: the same
+// query, boxed once per fence generation and base version (structVer for
+// the live hostile map, the phase map's rebuild count) so an animal's
+// path search allocates nothing. Under the test self-check it is rebuilt
+// so the cached door set is checked as before.
+func (g *Game) animalPathQuery(tame, phase bool) pathing.Query {
+	f := g.fences()
+	slot, ver := 0, uint64(0)
+	var phaseBase pathing.Query
+	switch {
+	case tame:
+	case phase:
+		phaseBase = g.phaseHostileMap()
+		slot, ver = 2, g.occ.hostileGen
+	default:
+		slot, ver = 1, g.structVer
+	}
+	c := &g.animalQ[slot]
+	if c.ok && c.fgen == f.gen && c.bver == ver && !selfCheck() {
+		return c.q
+	}
+	base := phaseBase
+	if !phase || tame {
+		base = g.animalBase(tame)
+	}
+	*c = animalQCache{q: g.animalQuery(tame, base), fgen: f.gen, bver: ver, ok: true}
+	return c.q
+}
+
 // fenceReachable returns, while fences stand, a filter of the cells an
 // animal standing at pos could walk to (or stand beside, for cells it
 // cannot enter); nil when there are no fences (everything is a

@@ -174,8 +174,7 @@ type spriteAtlas struct {
 	cut    [][atlasLayers]bool
 	// decodes counts page-layer decodes (tests, the memory benchmark).
 	decodes int
-	zw      *flate.Writer
-	zbuf    bytes.Buffer
+	def     deflater
 	zr      io.ReadCloser
 	zsrc    bytes.Reader
 }
@@ -297,12 +296,119 @@ func (c *artCatalog) prewarmAtlases() (held int) {
 	return held
 }
 
+// prewarmAsync cuts every packed family's page layers on a background
+// goroutine, so play seldom meets an uncut page: cutting one on first use
+// decodes a ~67 MB page layer mid-frame (~0.4 s, a visible hitch; NG-1
+// §6.1 draw budget). Decoding and compressing run outside the atlas lock
+// with the goroutine's own compressor; the lock is held only to publish
+// a page layer's copies, and one a draw cut meanwhile is left as it is.
+// The result is what cutPage leaves (the compressed copies; see prewarm).
+// The returned channel is closed when it is done (tests).
+func (c *artCatalog) prewarmAsync() <-chan struct{} {
+	done := make(chan struct{})
+	if c == nil {
+		close(done)
+		return done
+	}
+	var atlases []*spriteAtlas
+	seen := map[*spriteAtlas]bool{}
+	for _, sp := range c.sprites {
+		if sp.src != nil && !seen[sp.src.atlas] {
+			seen[sp.src.atlas] = true
+			atlases = append(atlases, sp.src.atlas)
+		}
+	}
+	go func() {
+		defer close(done)
+		var z deflater
+		for _, a := range atlases {
+			for pg := range a.byPage {
+				for layer := 0; layer < atlasLayers; layer++ {
+					a.cutPageAside(pg, layer, &z)
+				}
+			}
+		}
+	}()
+	return done
+}
+
+// cutPageAside is cutPage for the background prewarm: a.mu is taken only
+// to check and to publish.
+func (a *spriteAtlas) cutPageAside(pg, layer int, z *deflater) {
+	a.mu.Lock()
+	done := a.cut[pg][layer]
+	a.mu.Unlock()
+	if done {
+		return
+	}
+	path := ""
+	for _, o := range a.byPage[pg] { // byPage and the sprites' paths never change after load
+		if path = o.layerPath(layer); path != "" {
+			break
+		}
+	}
+	var copies [][]byte
+	if path != "" {
+		pd := decodeLayer(a.root, layer, path)
+		copies = make([][]byte, len(a.byPage[pg]))
+		for i, o := range a.byPage[pg] {
+			if (layer == layerMask && o.maskPath == "") || (layer == layerNorm && !o.entry.normal) {
+				continue
+			}
+			if raw := trimmedOf(pd, layer, o.entry.rect); raw != nil {
+				copies[i] = z.deflate(raw)
+			}
+		}
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.cut[pg][layer] {
+		return // a draw cut it first
+	}
+	a.cut[pg][layer] = true
+	if path == "" {
+		return
+	}
+	a.decodes++
+	for i, o := range a.byPage[pg] {
+		if copies[i] != nil {
+			o.z[layer] = copies[i]
+		}
+	}
+}
+
+// deflater is a reusable flate compressor (a flate writer is ~1 MB of
+// state).
+type deflater struct {
+	zw  *flate.Writer
+	buf bytes.Buffer
+}
+
+// deflate compresses b at flate's fastest level.
+func (d *deflater) deflate(b []byte) []byte {
+	d.buf.Reset()
+	if d.zw == nil {
+		d.zw, _ = flate.NewWriter(&d.buf, flate.BestSpeed)
+	} else {
+		d.zw.Reset(&d.buf)
+	}
+	d.zw.Write(b)
+	d.zw.Close()
+	return bytes.Clone(d.buf.Bytes())
+}
+
 // decodePage decodes one layer of page n into the transient cache.
 func (a *spriteAtlas) decodePage(n, layer int, path string) *pageData {
-	pd := &pageData{}
+	pd := decodeLayer(a.root, layer, path)
 	a.cache[n] = pd
 	a.decodes++
-	full := filepath.Join(a.root, filepath.FromSlash(path))
+	return pd
+}
+
+// decodeLayer decodes one page layer file under root.
+func decodeLayer(root string, layer int, path string) *pageData {
+	pd := &pageData{}
+	full := filepath.Join(root, filepath.FromSlash(path))
 	switch layer {
 	case layerMask:
 		pd.mask = decodeGray(full)
@@ -353,17 +459,7 @@ func trimmedOf(pd *pageData, layer int, r image.Rectangle) []byte {
 
 // deflateAll compresses b at flate's fastest level (a's writer and buffer
 // are reused: a flate writer is ~1 MB of state).
-func (a *spriteAtlas) deflateAll(b []byte) []byte {
-	a.zbuf.Reset()
-	if a.zw == nil {
-		a.zw, _ = flate.NewWriter(&a.zbuf, flate.BestSpeed)
-	} else {
-		a.zw.Reset(&a.zbuf)
-	}
-	a.zw.Write(b)
-	a.zw.Close()
-	return bytes.Clone(a.zbuf.Bytes())
-}
+func (a *spriteAtlas) deflateAll(b []byte) []byte { return a.def.deflate(b) }
 
 // inflateAll expands a deflateAll copy of n bytes, nil when corrupt.
 func (a *spriteAtlas) inflateAll(z []byte, n int) []byte {

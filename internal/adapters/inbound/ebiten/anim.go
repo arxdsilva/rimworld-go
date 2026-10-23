@@ -534,6 +534,7 @@ func (r *Renderer) burstDir(kind partKind, x, y float64, n int, seed uint64, dx,
 
 // drawParticles draws live particles and drops expired ones.
 func (r *Renderer) drawParticles(screen *ebiten.Image, tile float64) {
+	b := screen.Bounds()
 	kept := r.parts[:0]
 	for _, p := range r.parts {
 		age := float64(r.present - p.born)
@@ -554,7 +555,13 @@ func (r *Renderer) drawParticles(screen *ebiten.Image, tile float64) {
 		case partStep:
 			alpha *= 0.3
 		}
+		if r.lod.tier == lodMap {
+			continue // the map tier (< 16 px tiles) draws no decals (lod.go): kept, not drawn
+		}
 		sx, sy := r.worldToScreenF(x, y)
+		if rr := float32(rad) + 1; sx+rr < float32(b.Min.X) || sx-rr > float32(b.Max.X) || sy+rr < float32(b.Min.Y) || sy-rr > float32(b.Max.Y) {
+			continue // off screen: kept, not drawn (a vector fill costs a tessellation and a draw call)
+		}
 		vector.FillCircle(screen, sx, sy, float32(rad), fade(p.clr, alpha), true)
 	}
 	r.parts = kept

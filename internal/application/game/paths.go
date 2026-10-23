@@ -5,26 +5,51 @@ import (
 
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/region"
 )
 
 // Path queries (NG-1 §6.5, E3): pathTo and pathAround ask the region map
 // before searching, so an unreachable target costs a label lookup instead
 // of a flood of the mover's whole component.
 
+// searcher is the game's A* (pathing.Searcher): its search state is kept
+// for the game's life instead of the shared pool the garbage collector
+// empties, so a long search never reallocates 4 MB at 500².
+func (g *Game) searcher() *pathing.Searcher {
+	if g.pathSearch == nil {
+		g.pathSearch = new(pathing.Searcher)
+	}
+	return g.pathSearch
+}
+
 // reachFrom is the region pre-check for a mover at pos: may a walk reach
 // (x, y)? Without regions everything may.
-func (g *Game) reachFrom(id entity.EntityID, pos Position, regions bool) func(x, y int) bool {
+func (g *Game) reachFrom(id entity.EntityID, pos Position, regions bool) reachCheck {
 	if !regions {
-		return func(int, int) bool { return true }
+		return reachCheck{}
 	}
-	m, l := g.regionsNow(), g.moverLayer(id)
-	return func(x, y int) bool {
-		ok := m.Reach(l, pos.X, pos.Y, x, y)
-		if !ok && selfCheck() {
-			checkReach(g.pathQuery(id), pos.X, pos.Y, x, y, ok)
-		}
-		return ok
+	return reachCheck{g: g, m: g.regionsNow(), l: g.moverLayer(id), id: id, pos: pos}
+}
+
+// reachCheck is reachFrom's answer (a value, not a closure: asking
+// allocates nothing). With no map every cell may be reached.
+type reachCheck struct {
+	g   *Game
+	m   *region.Map
+	l   region.Layer
+	id  entity.EntityID
+	pos Position
+}
+
+func (r reachCheck) ok(x, y int) bool {
+	if r.m == nil {
+		return true
 	}
+	ok := r.m.Reach(r.l, r.pos.X, r.pos.Y, x, y)
+	if !ok && selfCheck() {
+		checkReach(r.g.pathQuery(r.id), r.pos.X, r.pos.Y, x, y, ok)
+	}
+	return ok
 }
 
 // Long searches (NG-1 §6.5): a path whose ends are more than longPath
@@ -52,7 +77,7 @@ type searchBudget struct {
 // corridor hold no path).
 func (g *Game) findPath(id entity.EntityID, q pathing.Query, sx, sy, tx, ty int) ([]pathing.Point, bool) {
 	if pathing.Octile(sx, sy, tx, ty) <= longPath || g.noRegions() || g.regs.exactLong {
-		return pathing.Find(q, sx, sy, tx, ty)
+		return g.searcher().Find(q, sx, sy, tx, ty)
 	}
 	if !q.Walkable(tx, ty) || !g.grid.InBounds(sx, sy) {
 		return nil, false
@@ -64,16 +89,16 @@ func (g *Game) findPath(id entity.EntityID, q pathing.Query, sx, sy, tx, ty int)
 	if !ok {
 		return checkReachPath(q, sx, sy, tx, ty)
 	}
-	if p, ok := pathing.FindIn(q, allow, sx, sy, tx, ty); ok {
+	if p, ok := g.searcher().FindIn(q, allow, sx, sy, tx, ty); ok {
 		return p, true
 	}
-	return pathing.Find(q, sx, sy, tx, ty)
+	return g.searcher().Find(q, sx, sy, tx, ty)
 }
 
 // findPathVia is findPath, or a plain exact search without regions.
 func (g *Game) findPathVia(id entity.EntityID, q pathing.Query, regions bool, sx, sy, tx, ty int) ([]pathing.Point, bool) {
 	if !regions {
-		return pathing.Find(q, sx, sy, tx, ty)
+		return g.searcher().Find(q, sx, sy, tx, ty)
 	}
 	return g.findPath(id, q, sx, sy, tx, ty)
 }

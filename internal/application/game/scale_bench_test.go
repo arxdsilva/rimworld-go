@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"os"
+	"runtime"
 	"slices"
 	"strconv"
 	"testing"
@@ -46,18 +47,29 @@ func noSelfCheck(b *testing.B) {
 }
 
 // benchTicks times each tick and reports ms/tick, p99-ms/tick and the
-// worst three consecutive ticks (one 3x-speed frame).
+// worst three consecutive ticks (one 3x-speed frame), plus steady-B/tick:
+// bytes allocated per tick over the run's second half (B/op also counts
+// the one-off buffers the first ticks after a load build).
 func benchTicks(b *testing.B, g *game.Game) {
 	durs := make([]time.Duration, 0, b.N)
+	var m0, m1 runtime.MemStats
+	half := b.N / 2
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
+		if i == half {
+			runtime.ReadMemStats(&m0)
+		}
 		t0 := time.Now()
 		g.Step(1)
 		durs = append(durs, time.Since(t0))
 	}
 	b.StopTimer()
+	runtime.ReadMemStats(&m1)
 	reportTicks(b, durs)
+	if n := b.N - half; n > 0 && b.N >= 100 {
+		b.ReportMetric(float64(m1.TotalAlloc-m0.TotalAlloc)/float64(n), "steady-B/tick")
+	}
 }
 
 func reportTicks(b *testing.B, durs []time.Duration) {

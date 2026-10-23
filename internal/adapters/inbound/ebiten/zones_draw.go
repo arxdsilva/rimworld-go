@@ -159,7 +159,11 @@ func (r *Renderer) drawZones(screen *ebiten.Image, w game.WorldView, sw, sh int,
 	for _, z := range w.Zones {
 		key, fill := zoneSpriteKey(z.Kind)
 		useArt := r.art != nil
+		filled := useArt && r.zoneFill(screen, key, z.Cells, tile, sw, sh) // one batch for every cell
 		for _, c := range z.Cells {
+			if filled {
+				break
+			}
 			if useArt {
 				r.drawSprite(screen, key, none, float64(c[0]), float64(c[1]), tile, sw, sh)
 				continue
@@ -175,6 +179,55 @@ func (r *Renderer) drawZones(screen *ebiten.Image, w game.WorldView, sw, sh int,
 		}
 		r.drawZoneLabel(screen, z, sw, sh, tile)
 	}
+}
+
+// zoneFill draws the zone sprite key on every visible cell as one
+// triangle batch: the quads drawSprite would draw one call each (an
+// unlit overlay: the same geometry, source and filter), so a big zoomed-
+// out colony's zones cost one call, not thousands. False when the
+// sprite is missing (the caller falls back).
+func (r *Renderer) zoneFill(screen *ebiten.Image, key string, cells [][2]int, tile float64, sw, sh int) bool {
+	sp := r.art.sprite(key)
+	if sp == nil {
+		return false
+	}
+	img := r.art.image(key, color.NRGBA{})
+	if img == nil {
+		return false
+	}
+	b := img.Bounds()
+	sx0, sy0, sx1, sy1 := float32(b.Min.X), float32(b.Min.Y), float32(b.Max.X), float32(b.Max.Y)
+	l := &r.lod
+	l.verts, l.idx = l.verts[:0], l.idx[:0]
+	for _, c := range cells {
+		px, py := r.worldToScreenF(float64(c[0]), float64(c[1]))
+		x, y, s := artOrigin(sp.meta, float64(px), float64(py), tile)
+		w, h := float64(sp.meta.Canvas[0])*s, float64(sp.meta.Canvas[1])*s
+		if !visible(float32(x), float32(y), float32(w), float32(h), sw, sh) {
+			continue
+		}
+		var geo ebiten.GeoM
+		geo.Scale(s, s)
+		geo.Translate(x, y)
+		n := uint32(len(l.verts))
+		for k := 0; k < 4; k++ {
+			u, v := sx0, sy0
+			if k&1 != 0 {
+				u = sx1
+			}
+			if k&2 != 0 {
+				v = sy1
+			}
+			dx, dy := geo.Apply(float64(u-sx0), float64(v-sy0))
+			l.verts = append(l.verts, ebiten.Vertex{DstX: float32(dx), DstY: float32(dy), SrcX: u, SrcY: v,
+				ColorR: 1, ColorG: 1, ColorB: 1, ColorA: 1})
+		}
+		l.idx = append(l.idx, n, n+1, n+2, n+1, n+3, n+2)
+	}
+	if len(l.idx) > 0 {
+		screen.DrawTriangles32(l.verts, l.idx, img, &ebiten.DrawTrianglesOptions{Filter: ebiten.FilterLinear})
+	}
+	return true
 }
 
 func (r *Renderer) runVisible(run edgeRun, sw, sh int, pad float32) bool {

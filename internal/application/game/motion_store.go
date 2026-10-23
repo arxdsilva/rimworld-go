@@ -1,8 +1,10 @@
 package game
 
 import (
+	"cmp"
+	"slices"
+
 	"rimworld-go/internal/domain/ai/job"
-	"rimworld-go/internal/domain/sim/component"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -91,18 +93,25 @@ func (g *Game) movers() []mover {
 }
 
 // pruneMotion drops records of creatures that left the map. Runs only
-// when the store holds more records than there are creatures.
+// when the store holds more records than there are creatures. Records
+// are deleted in place (the store's order is never read: exports go by
+// movers), so a departure allocates nothing.
 func (g *Game) pruneMotion(movers []mover) {
 	if g.motion.Len() <= len(movers) {
 		return
 	}
-	kept := component.NewStore[motionRec]()
-	for _, mv := range movers {
-		if m, ok := g.motion.Get(mv.id); ok {
-			kept.Set(mv.id, m)
+	old := g.moverOld[:0]
+	g.motion.All(func(id entity.EntityID, _ motionRec) {
+		if _, on := slices.BinarySearchFunc(movers, id, func(mv mover, id entity.EntityID) int {
+			return cmp.Compare(mv.id, id)
+		}); !on {
+			old = append(old, id)
 		}
+	})
+	for _, id := range old {
+		g.motion.Delete(id)
 	}
-	g.motion = kept
+	g.moverOld = old[:0]
 }
 
 // exportMotion is the records of creatures on the map, in ID order.

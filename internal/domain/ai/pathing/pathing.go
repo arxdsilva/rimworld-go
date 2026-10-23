@@ -1,7 +1,10 @@
 // Package pathing owns deterministic tile pathfinding.
 package pathing
 
-import "sync"
+import (
+	"math/bits"
+	"sync"
+)
 
 // Query is the walkability surface a search needs. grid.Grid satisfies it.
 type Query interface {
@@ -69,7 +72,7 @@ func Find(q Query, sx, sy, tx, ty int) ([]Point, bool) {
 	if r, ok := q.(Reacher); ok && !r.Reach(sx, sy, tx, ty) {
 		return nil, false
 	}
-	return search(q, sx, sy, tx, ty, nil)
+	return pooledSearch(q, sx, sy, tx, ty, nil)
 }
 
 // FindIn is Find restricted to the cells set in allow (row-major bitset;
@@ -82,12 +85,53 @@ func FindIn(q Query, allow []uint64, sx, sy, tx, ty int) ([]Point, bool) {
 	if sx == tx && sy == ty {
 		return nil, true
 	}
-	return search(q, sx, sy, tx, ty, allow)
+	return pooledSearch(q, sx, sy, tx, ty, allow)
+}
+
+// Searcher is Find and FindIn with search state of its own, kept between
+// searches: one owner (a simulation) reuses it instead of the shared pool,
+// which the garbage collector empties (a 500² map's state is 4 MB). It is
+// not safe for concurrent use. Results are identical to Find and FindIn:
+// every search sees fresh state. The zero value is ready to use.
+type Searcher struct {
+	sc scratch
+}
+
+// Find is pathing.Find on s's state.
+func (s *Searcher) Find(q Query, sx, sy, tx, ty int) ([]Point, bool) {
+	if q == nil || !inBounds(q, sx, sy) || !q.Walkable(tx, ty) {
+		return nil, false
+	}
+	if sx == tx && sy == ty {
+		return nil, true
+	}
+	if r, ok := q.(Reacher); ok && !r.Reach(sx, sy, tx, ty) {
+		return nil, false
+	}
+	return search(q, sx, sy, tx, ty, nil, s.sc.reset(q.Width()*q.Height()))
+}
+
+// FindIn is pathing.FindIn on s's state.
+func (s *Searcher) FindIn(q Query, allow []uint64, sx, sy, tx, ty int) ([]Point, bool) {
+	if q == nil || !inBounds(q, sx, sy) || !q.Walkable(tx, ty) {
+		return nil, false
+	}
+	if sx == tx && sy == ty {
+		return nil, true
+	}
+	return search(q, sx, sy, tx, ty, allow, s.sc.reset(q.Width()*q.Height()))
+}
+
+// pooledSearch is search on state from the shared pool.
+func pooledSearch(q Query, sx, sy, tx, ty int, allow []uint64) ([]Point, bool) {
+	sc := scratchPool.Get().(*scratch)
+	defer scratchPool.Put(sc)
+	return search(q, sx, sy, tx, ty, allow, sc.reset(q.Width()*q.Height()))
 }
 
 // search is the A* behind Find: allow, when non-nil, limits the cells it
 // may enter.
-func search(q Query, sx, sy, tx, ty int, allow []uint64) ([]Point, bool) {
+func search(q Query, sx, sy, tx, ty int, allow []uint64, sc *scratch) ([]Point, bool) {
 	w, h := q.Width(), q.Height()
 	n := w * h
 	var bits []uint64
@@ -99,27 +143,73 @@ func search(q Query, sx, sy, tx, ty int, allow []uint64) ([]Point, bool) {
 	if allow != nil && len(allow) < (n+63)/64 {
 		allow = nil
 	}
-	sc := getScratch(n)
-	defer scratchPool.Put(sc)
+	// The open list orders (f, g, cell). Packed into one uint64 (narrow
+	// keys: half the memory, one compare) while f and g fit their bit
+	// fields; a search whose costs outgrow them is run again on the wide
+	// list. Both orders are the same, so are the paths.
+	if p, ok, fits := searchOpen(q, sx, sy, tx, ty, allow, bits, sc, newKeys(n)); fits {
+		return p, ok
+	}
+	sc.reset(n)
+	p, ok, _ := searchOpen(q, sx, sy, tx, ty, allow, bits, sc, keys{})
+	return p, ok
+}
 
+// keys is the packing of an open-list entry into one uint64: f above g
+// above the cell index. The zero value means "wide": the heap of nodes.
+type keys struct {
+	on            bool
+	iBits, fShift uint
+	fMax, gMax    int
+	iMask         uint64
+}
+
+func newKeys(n int) keys {
+	ib := uint(bits.Len(uint(n)))
+	gb := (64 - ib) / 2
+	fb := 64 - ib - gb
+	return keys{on: true, iBits: ib, fShift: ib + gb, fMax: 1<<fb - 1, gMax: 1<<gb - 1, iMask: 1<<ib - 1}
+}
+
+// searchOpen is search's A* on the open list kp picks; fits is false when
+// a packed key would overflow (the result is then meaningless).
+func searchOpen(q Query, sx, sy, tx, ty int, allow, bits []uint64, sc *scratch, kp keys) (path []Point, found, fits bool) {
+	w, h := q.Width(), q.Height()
 	start := int32(sy*w + sx)
 	goal := int32(ty*w + tx)
 	sc.touch(start)
 	sc.cells[start].g = 0
 
 	coster, _ := q.(Coster)
-	sc.open.push(node{fg: pack(octile(sx, sy, tx, ty), 0), i: start})
+	if f := octile(sx, sy, tx, ty); kp.on {
+		if f > kp.fMax {
+			return nil, false, false
+		}
+		sc.kopen.push(uint64(f)<<kp.fShift | uint64(start))
+	} else {
+		sc.open.push(node{fg: pack(f, 0), i: start})
+	}
 
 	cells := sc.cells
-	for sc.open.len() > 0 {
-		cur := sc.open.pop()
-		ci := cur.i
+	for {
+		var ci int32
+		if kp.on {
+			if len(sc.kopen) == 0 {
+				break
+			}
+			ci = int32(sc.kopen.pop() & kp.iMask)
+		} else {
+			if sc.open.len() == 0 {
+				break
+			}
+			ci = sc.open.pop().i
+		}
 		c := &cells[ci]
 		if c.closed {
 			continue
 		}
 		if ci == goal {
-			return reconstruct(cells, w, start, goal), true
+			return reconstruct(cells, w, start, goal), true, true
 		}
 		c.closed = true
 		cx, cy := int(ci)%w, int(ci)/w
@@ -172,10 +262,18 @@ func search(q Query, sx, sy, tx, ty int, allow []uint64) ([]Point, bool) {
 			}
 			nc.g = int32(ng)
 			nc.came = ci
-			sc.open.push(node{fg: pack(ng+octile(nx, ny, tx, ty), ng), i: ni})
+			f := ng + octile(nx, ny, tx, ty)
+			if kp.on {
+				if f > kp.fMax || ng > kp.gMax {
+					return nil, false, false
+				}
+				sc.kopen.push(uint64(f)<<kp.fShift | uint64(ng)<<kp.iBits | uint64(ni))
+			} else {
+				sc.open.push(node{fg: pack(f, ng), i: ni})
+			}
 		}
 	}
-	return nil, false
+	return nil, false, true
 }
 
 // pack orders (f, g) in one key: f in the high half, g in the low.
@@ -197,12 +295,13 @@ type scratch struct {
 	cells []cell
 	gen   uint32
 	open  heap
+	kopen keyHeap
 }
 
 var scratchPool = sync.Pool{New: func() any { return new(scratch) }}
 
-func getScratch(n int) *scratch {
-	sc := scratchPool.Get().(*scratch)
+// reset readies sc for a search over n cells.
+func (sc *scratch) reset(n int) *scratch {
 	if len(sc.cells) < n {
 		sc.cells = make([]cell, n)
 		sc.gen = 0
@@ -215,6 +314,7 @@ func getScratch(n int) *scratch {
 		sc.gen = 1
 	}
 	sc.open = sc.open[:0]
+	sc.kopen = sc.kopen[:0]
 	return sc
 }
 
@@ -292,55 +392,127 @@ func (a node) less(b node) bool {
 	return a.i < b.i
 }
 
+// heap is a 4-ary min-heap of open nodes (shallower than a binary heap:
+// fewer cache misses on the large open lists of long searches). Keys are
+// unique (a cell is pushed again only with a lower g), so the pop order,
+// and every path, is the same as with any other exact priority queue.
 type heap []node
 
 func (h heap) len() int { return len(h) }
 
 func (h *heap) push(n node) {
 	*h = append(*h, n)
-	h.up(len(*h) - 1)
+	s := *h
+	i := len(s) - 1
+	for i > 0 {
+		p := (i - 1) >> 2
+		if !n.less(s[p]) {
+			break
+		}
+		s[i] = s[p]
+		i = p
+	}
+	s[i] = n
 }
 
 func (h *heap) pop() node {
-	old := *h
-	n := old[0]
-	last := old[len(old)-1]
-	*h = old[:len(old)-1]
-	if len(*h) > 0 {
-		(*h)[0] = last
-		h.down(0)
+	s := *h
+	top := s[0]
+	last := s[len(s)-1]
+	s = s[:len(s)-1]
+	*h = s
+	n := len(s)
+	if n == 0 {
+		return top
 	}
-	return n
+	i := 0
+	for {
+		c := 4*i + 1
+		if c >= n {
+			break
+		}
+		m := c
+		for k, end := c+1, min(c+4, n); k < end; k++ {
+			if s[k].less(s[m]) {
+				m = k
+			}
+		}
+		if !s[m].less(last) {
+			break
+		}
+		s[i] = s[m]
+		i = m
+	}
+	s[i] = last
+	return top
 }
 
-func (h heap) up(i int) {
+// keyHeap is the 4-ary min-heap of packed keys (keys: f, g, cell in one
+// uint64, so the order is heap's).
+type keyHeap []uint64
+
+func (h *keyHeap) push(v uint64) {
+	*h = append(*h, v)
+	s := *h
+	i := len(s) - 1
 	for i > 0 {
-		p := (i - 1) / 2
-		if !h[i].less(h[p]) {
-			return
+		p := (i - 1) >> 2
+		if v >= s[p] {
+			break
 		}
-		h[i], h[p] = h[p], h[i]
+		s[i] = s[p]
 		i = p
 	}
+	s[i] = v
 }
 
-func (h heap) down(i int) {
-	n := len(h)
+func (h *keyHeap) pop() uint64 {
+	s := *h
+	top := s[0]
+	last := s[len(s)-1]
+	s = s[:len(s)-1]
+	*h = s
+	n := len(s)
+	i := 0
 	for {
-		l := 2*i + 1
-		if l >= n {
-			return
+		c := 4*i + 1
+		if c+3 < n { // all four children: pick the least without branching on order
+			m, mv := c, s[c]
+			if v := s[c+1]; v < mv {
+				m, mv = c+1, v
+			}
+			if v := s[c+2]; v < mv {
+				m, mv = c+2, v
+			}
+			if v := s[c+3]; v < mv {
+				m, mv = c+3, v
+			}
+			if mv >= last {
+				break
+			}
+			s[i] = mv
+			i = m
+			continue
 		}
-		min := l
-		if r := l + 1; r < n && h[r].less(h[l]) {
-			min = r
+		if c >= n {
+			break
 		}
-		if !h[min].less(h[i]) {
-			return
+		m, mv := c, s[c]
+		for k := c + 1; k < n; k++ {
+			if s[k] < mv {
+				m, mv = k, s[k]
+			}
 		}
-		h[i], h[min] = h[min], h[i]
-		i = min
+		if mv >= last {
+			break
+		}
+		s[i] = mv
+		i = m
 	}
+	if n > 0 {
+		s[i] = last
+	}
+	return top
 }
 
 // Dist is Chebyshev distance, used for cheap job scoring.

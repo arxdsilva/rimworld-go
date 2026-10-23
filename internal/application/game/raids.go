@@ -2,7 +2,6 @@ package game
 
 import (
 	"rimworld-go/internal/domain/ai/job"
-	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/weapon"
@@ -96,9 +95,11 @@ func (g *Game) phaseThreats() {
 	if g.threatsOn && now >= g.nextThreat {
 		g.fireThreat(now)
 	}
-	for _, id := range append([]entity.EntityID(nil), g.raiderIDs...) {
+	ids := append(g.raiderBuf[:0], g.raiderIDs...) // the list changes as raiders die or leave
+	for _, id := range ids {
 		g.thinkRaider(id, now)
 	}
+	g.raiderBuf = ids[:0]
 }
 
 // scheduleThreats starts the storyteller (colonies, not bare test maps).
@@ -208,7 +209,7 @@ func (g *Game) edgeTile() (int, int, bool) {
 		if checks++; checks > 12 {
 			break
 		}
-		if _, ok := pathing.Find(bm, x, y, hx, hy); ok {
+		if _, ok := g.searcher().Find(bm, x, y, hx, hy); ok {
 			return x, y, true
 		}
 	}
