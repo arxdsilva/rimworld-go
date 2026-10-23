@@ -20,14 +20,18 @@ const fakeKey = "sk-fake-TEST-KEY-0123456789abcdef"
 // fakeAPI is an httptest ElevenLabs: scripted failures first, then MP3s.
 type fakeAPI struct {
 	*httptest.Server
-	mu      sync.Mutex
-	gens    []map[string]any // generation request bodies
-	subs    int              // subscription reads
-	keys    []string         // xi-api-key seen
-	script  []int            // statuses for the first generation calls
-	used    int
-	limit   int
-	perGen  int // credits the counter moves per generation
+	mu     sync.Mutex
+	gens   []map[string]any // generation request bodies
+	subs   int              // subscription reads
+	keys   []string         // xi-api-key seen
+	script []int            // statuses for the first generation calls
+	used   int
+	limit  int
+	perGen int // credits the counter moves per generation
+	// lag, when set, holds the counter still until every lag-th
+	// generation, then shows everything at once (the real API lags).
+	lag     int
+	shown   int
 	echoKey bool
 }
 
@@ -41,7 +45,11 @@ func newFakeAPI(t *testing.T) *fakeAPI {
 		switch {
 		case r.Method == http.MethodGet && r.URL.Path == "/v1/user/subscription":
 			f.subs++
-			json.NewEncoder(w).Encode(map[string]int{"character_count": f.used, "character_limit": f.limit})
+			shown := f.used
+			if f.lag > 0 {
+				shown = f.shown
+			}
+			json.NewEncoder(w).Encode(map[string]int{"character_count": shown, "character_limit": f.limit})
 		case r.Method == http.MethodPost && r.URL.Path == "/v1/sound-generation":
 			if r.URL.Query().Get("output_format") != "mp3_44100_128" {
 				http.Error(w, "bad format", http.StatusBadRequest)
@@ -64,6 +72,9 @@ func newFakeAPI(t *testing.T) *fakeAPI {
 				}
 			}
 			f.used += f.perGen
+			if f.lag > 0 && len(f.gens)%f.lag == 0 {
+				f.shown = f.used
+			}
 			w.Header().Set("Content-Type", "audio/mpeg")
 			fmt.Fprintf(w, "FAKE-MP3:%v", body["text"])
 		default:

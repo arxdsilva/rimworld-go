@@ -282,6 +282,22 @@ func TestSecondsOverrideForTheSketch(t *testing.T) {
 	}
 }
 
+// A lagging counter that jumps by several takes at once must not be
+// charged again on top of the estimates already logged for them.
+func TestLaggingCounterNotCountedTwice(t *testing.T) {
+	t.Parallel()
+	e := newEnv(t, threeSounds()...)
+	e.api = newFakeAPI(t)
+	e.api.lag = 3 // the counter shows nothing until the third take, then all 60
+	if _, _, err := e.cli("-budget-from-api"); err != nil {
+		t.Fatal(err)
+	}
+	l := e.readLedger()
+	if len(l.Takes) != 3 || l.spent() != 60 {
+		t.Fatalf("ledger logged %d credits over %d takes, want the 60 really spent", l.spent(), len(l.Takes))
+	}
+}
+
 func TestNeverLogsKey(t *testing.T) {
 	t.Parallel()
 	e := newEnv(t, threeSounds()...)

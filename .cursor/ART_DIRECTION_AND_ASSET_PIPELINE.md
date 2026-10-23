@@ -753,6 +753,12 @@ with sidecar metadata.
     credit budget, in priority order (what the player hears longest
     first). Each take is reviewed by a person before import, and every
     take is recorded in `assets/source/audio/elevenlabs/ledger.json`.
+-   **Animal voices** (call, attack, hurt, die per species, the 9 voice
+    groups and the hive burst) are generated with ElevenLabs by
+    `cmd/sfxgen` from `assets/source/audio/animal_prompts.json`, processed
+    to mono 48 kHz Ogg with a ±4% pitched B variant, and listed only after
+    a person approves them (SND-003). `animal.generic.*` stays the
+    code-made last fallback.
 -   **The sound list** `assets/metadata/audio/audio.json` records, per id,
     the bus, loop flag, volume, files and provenance (recipe and seed, or
     tool, prompt, credits, license and reviewer).

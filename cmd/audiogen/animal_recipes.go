@@ -313,7 +313,8 @@ func animals(assets string) error {
 
 // generateAnimals renders every animal recipe through a temporary WAV and
 // enc into generated/audio/sfx/animals/*.ogg, and lists (or replaces) the
-// entries in the sound list, leaving every other entry alone.
+// entries in the sound list, leaving every other entry and every approved
+// ElevenLabs take alone.
 func generateAnimals(assets string, enc encoder) (int, error) {
 	m, err := readManifest(assets)
 	if err != nil {
@@ -326,8 +327,14 @@ func generateAnimals(assets string, enc encoder) (int, error) {
 	defer os.RemoveAll(tmp)
 	root := filepath.Join(assets, filepath.FromSlash(audiomanifest.Dir))
 	all := animalSounds()
+	made := 0
 	for _, snd := range all {
 		rc := snd.recipe
+		// an approved ElevenLabs take replaces its placeholder for good
+		if old, ok := m.Lookup(rc.ID); ok && old.Source == audiomanifest.SourceElevenLabs {
+			continue
+		}
+		made++
 		e := audiomanifest.Entry{ID: rc.ID, Bus: audiomanifest.BusOf(rc.ID), Volume: snd.volume,
 			Source: audiomanifest.SourceProcedural, Recipe: rc.ID, Seed: rc.Seed, License: proceduralLicense}
 		for v := 0; v < max(rc.Variants, 1); v++ {
@@ -363,5 +370,5 @@ func generateAnimals(assets string, enc encoder) (int, error) {
 	if err := m.Validate(); err != nil {
 		return 0, err
 	}
-	return len(all), writeManifest(assets, m)
+	return made, writeManifest(assets, m)
 }

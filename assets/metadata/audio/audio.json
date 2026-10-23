@@ -92,276 +92,2030 @@
       "license": "original, made in code (CC0, this repo)"
     },
     {
+      "id": "animal.alpaca.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/alpaca_attack.ogg",
+        "sfx/animals/alpaca_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a sharp alpaca alarm shriek with a spitting hiss, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.alpaca.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/alpaca_call.ogg",
+        "sfx/animals/alpaca_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a soft, nasal alpaca hum, gentle and rising slightly, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2,
+      "credits": 20,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.alpaca.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/alpaca_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long alpaca groan fading into a low hum, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.8,
+      "credits": 18,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.alpaca.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/alpaca_hurt.ogg",
+        "sfx/animals/alpaca_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short alpaca squeal of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.arctic_fox.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/arctic_fox_attack.ogg",
+        "sfx/animals/arctic_fox_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a sharp fox snarl and a snapping bite, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.arctic_fox.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/arctic_fox_call.ogg",
+        "sfx/animals/arctic_fox_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a high, yipping fox bark-scream, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.arctic_fox.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/arctic_fox_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a thin, fading fox whimper, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.4,
+      "credits": 14,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.arctic_fox.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/arctic_fox_hurt.ogg",
+        "sfx/animals/arctic_fox_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short fox yelp of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.arctic_wolf.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/arctic_wolf_attack.ogg",
+        "sfx/animals/arctic_wolf_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a rasping wolf snarl and a hard bite, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.arctic_wolf.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/arctic_wolf_call.ogg",
+        "sfx/animals/arctic_wolf_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long, clear, high wolf howl ending in a short whine, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2,
+      "credits": 20,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.arctic_wolf.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/arctic_wolf_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a fading wolf howl dropping into a weak whimper, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.8,
+      "credits": 18,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.arctic_wolf.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/arctic_wolf_hurt.ogg",
+        "sfx/animals/arctic_wolf_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a sharp wolf yelp of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
       "id": "animal.bird_large.attack",
       "bus": "effects",
       "volume": 0.85,
       "files": [
-        "sfx/animals/group_bird_large_attack_0.ogg",
-        "sfx/animals/group_bird_large_attack_1.ogg"
+        "sfx/animals/bird_large_attack.ogg",
+        "sfx/animals/bird_large_attack_b.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.bird_large.attack",
-      "seed": 5061,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a hissing large bird growl and a heavy kick thud, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.bird_large.call",
       "bus": "effects",
       "volume": 0.7,
       "files": [
-        "sfx/animals/group_bird_large_call_0.ogg",
-        "sfx/animals/group_bird_large_call_1.ogg"
+        "sfx/animals/bird_large_call.ogg",
+        "sfx/animals/bird_large_call_b.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.bird_large.call",
-      "seed": 5060,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a deep flightless bird boom-hoot, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.bird_large.die",
       "bus": "effects",
       "volume": 1,
       "files": [
-        "sfx/animals/group_bird_large_die_0.ogg",
-        "sfx/animals/group_bird_large_die_1.ogg"
+        "sfx/animals/bird_large_die.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.bird_large.die",
-      "seed": 5063,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long large bird groan fading out, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.bird_large.hurt",
       "bus": "effects",
       "volume": 0.85,
       "files": [
-        "sfx/animals/group_bird_large_hurt_0.ogg",
-        "sfx/animals/group_bird_large_hurt_1.ogg"
+        "sfx/animals/bird_large_hurt.ogg",
+        "sfx/animals/bird_large_hurt_b.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.bird_large.hurt",
-      "seed": 5062,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short large bird bellow of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.bird_small.attack",
       "bus": "effects",
       "volume": 0.85,
       "files": [
-        "sfx/animals/group_bird_small_attack_0.ogg",
-        "sfx/animals/group_bird_small_attack_1.ogg"
+        "sfx/animals/bird_small_attack.ogg",
+        "sfx/animals/bird_small_attack_b.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.bird_small.attack",
-      "seed": 5051,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "an angry bird squawk and a quick peck, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.bird_small.call",
       "bus": "effects",
       "volume": 0.7,
       "files": [
-        "sfx/animals/group_bird_small_call_0.ogg",
-        "sfx/animals/group_bird_small_call_1.ogg"
+        "sfx/animals/bird_small_call.ogg",
+        "sfx/animals/bird_small_call_b.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.bird_small.call",
-      "seed": 5050,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short bird squawk-cluck, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1,
+      "credits": 10,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.bird_small.die",
       "bus": "effects",
       "volume": 1,
       "files": [
-        "sfx/animals/group_bird_small_die_0.ogg",
-        "sfx/animals/group_bird_small_die_1.ogg"
+        "sfx/animals/bird_small_die.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.bird_small.die",
-      "seed": 5053,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long weak bird squawk fading out, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.bird_small.hurt",
       "bus": "effects",
       "volume": 0.85,
       "files": [
-        "sfx/animals/group_bird_small_hurt_0.ogg",
-        "sfx/animals/group_bird_small_hurt_1.ogg"
+        "sfx/animals/bird_small_hurt.ogg",
+        "sfx/animals/bird_small_hurt_b.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.bird_small.hurt",
-      "seed": 5052,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short sharp bird squawk of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.bison.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/bison_attack.ogg",
+        "sfx/animals/bison_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a snorting bison bellow and a heavy charging thud, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.bison.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/bison_call.ogg",
+        "sfx/animals/bison_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a deep guttural bison grunt-bellow, low and rumbling, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2.2,
+      "credits": 22,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.bison.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/bison_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long bison groan ending in a heavy collapsing breath, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2,
+      "credits": 20,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.bison.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/bison_hurt.ogg",
+        "sfx/animals/bison_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short loud bison grunt of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.bovid.attack",
       "bus": "effects",
       "volume": 0.85,
       "files": [
-        "sfx/animals/group_bovid_attack_0.ogg",
-        "sfx/animals/group_bovid_attack_1.ogg"
+        "sfx/animals/bovid_attack.ogg",
+        "sfx/animals/bovid_attack_b.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.bovid.attack",
-      "seed": 5041,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "an angry bovine snort-bellow and a headbutt thud, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.bovid.call",
       "bus": "effects",
       "volume": 0.7,
       "files": [
-        "sfx/animals/group_bovid_call_0.ogg",
-        "sfx/animals/group_bovid_call_1.ogg"
+        "sfx/animals/bovid_call.ogg",
+        "sfx/animals/bovid_call_b.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.bovid.call",
-      "seed": 5040,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a bovine bleat-low, wavering, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.bovid.die",
       "bus": "effects",
       "volume": 1,
       "files": [
-        "sfx/animals/group_bovid_die_0.ogg",
-        "sfx/animals/group_bovid_die_1.ogg"
+        "sfx/animals/bovid_die.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.bovid.die",
-      "seed": 5043,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long bovine moan trailing off, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.bovid.hurt",
       "bus": "effects",
       "volume": 0.85,
       "files": [
-        "sfx/animals/group_bovid_hurt_0.ogg",
-        "sfx/animals/group_bovid_hurt_1.ogg"
+        "sfx/animals/bovid_hurt.ogg",
+        "sfx/animals/bovid_hurt_b.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.bovid.hurt",
-      "seed": 5042,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short bovine bleat of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.burst",
       "bus": "effects",
       "volume": 1,
       "files": [
-        "sfx/animals/burst_0.ogg"
+        "sfx/animals/burst.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.burst",
-      "seed": 5099,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a heavy, muffled fiery explosion whump with a short crackling flash, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.canid.attack",
       "bus": "effects",
       "volume": 0.85,
       "files": [
-        "sfx/animals/group_canid_attack_0.ogg",
-        "sfx/animals/group_canid_attack_1.ogg"
+        "sfx/animals/canid_attack.ogg",
+        "sfx/animals/canid_attack_b.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.canid.attack",
-      "seed": 5021,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a canine snarl and a snapping bite, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.canid.call",
       "bus": "effects",
       "volume": 0.7,
       "files": [
-        "sfx/animals/group_canid_call_0.ogg",
-        "sfx/animals/group_canid_call_1.ogg"
+        "sfx/animals/canid_call.ogg",
+        "sfx/animals/canid_call_b.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.canid.call",
-      "seed": 5020,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a dog-like bark ending in a short howl, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2,
+      "credits": 20,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.canid.die",
       "bus": "effects",
       "volume": 1,
       "files": [
-        "sfx/animals/group_canid_die_0.ogg",
-        "sfx/animals/group_canid_die_1.ogg"
+        "sfx/animals/canid_die.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.canid.die",
-      "seed": 5023,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long canine whimper fading away, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.canid.hurt",
       "bus": "effects",
       "volume": 0.85,
       "files": [
-        "sfx/animals/group_canid_hurt_0.ogg",
-        "sfx/animals/group_canid_hurt_1.ogg"
+        "sfx/animals/canid_hurt.ogg",
+        "sfx/animals/canid_hurt_b.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.canid.hurt",
-      "seed": 5022,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a sharp canine yelp of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.capybara.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/capybara_attack.ogg",
+        "sfx/animals/capybara_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a sharp capybara bark and a quick tooth snap, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.capybara.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/capybara_call.ogg",
+        "sfx/animals/capybara_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a soft capybara purr and a short chirpy whistle-squeak, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2,
+      "credits": 20,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.capybara.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/capybara_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a drawn-out capybara whine fading into silence, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.8,
+      "credits": 18,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.capybara.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/capybara_hurt.ogg",
+        "sfx/animals/capybara_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short pained capybara squeal, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.caribou.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/caribou_attack.ogg",
+        "sfx/animals/caribou_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a harsh caribou snort and a clash of antlers, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.caribou.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/caribou_call.ogg",
+        "sfx/animals/caribou_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a dry, croaky caribou grunt with a faint hoof click, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2.2,
+      "credits": 22,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.caribou.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/caribou_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long weak caribou groan ending in a heavy thud, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2,
+      "credits": 20,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.caribou.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/caribou_hurt.ogg",
+        "sfx/animals/caribou_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short sharp caribou bleat of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.cassowary.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/cassowary_attack.ogg",
+        "sfx/animals/cassowary_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a hissing cassowary growl and a hard kick thud, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.cassowary.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/cassowary_call.ogg",
+        "sfx/animals/cassowary_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a deep, booming cassowary rumble, low and pulsing, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.cassowary.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/cassowary_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long deep cassowary groan fading out, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.cassowary.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/cassowary_hurt.ogg",
+        "sfx/animals/cassowary_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short loud cassowary hiss-bark, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.cat.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/cat_attack.ogg",
+        "sfx/animals/cat_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "an angry cat hiss and yowl with a claw swipe, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.cat.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/cat_call.ogg",
+        "sfx/animals/cat_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a single clear cat meow, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.cat.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/cat_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long drawn-out cat yowl fading to a whimper, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.4,
+      "credits": 14,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.cat.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/cat_hurt.ogg",
+        "sfx/animals/cat_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short cat shriek of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.chicken.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/chicken_attack.ogg",
+        "sfx/animals/chicken_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "an angry chicken squawk and a quick peck, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.chicken.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/chicken_call.ogg",
+        "sfx/animals/chicken_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a hen's clucking, three short clucks, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.2,
+      "credits": 12,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.chicken.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/chicken_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long chicken squawk fading into a gurgle, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.chicken.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/chicken_hurt.ogg",
+        "sfx/animals/chicken_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short chicken squawk of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.chinchilla.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/chinchilla_attack.ogg",
+        "sfx/animals/chinchilla_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a tiny angry chinchilla chatter and a tooth snap, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.chinchilla.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/chinchilla_call.ogg",
+        "sfx/animals/chinchilla_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a tiny chinchilla chirp-squeak, soft and quick, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1,
+      "credits": 10,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.chinchilla.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/chinchilla_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a faint chinchilla squeak fading away, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1,
+      "credits": 10,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.chinchilla.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/chinchilla_hurt.ogg",
+        "sfx/animals/chinchilla_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short tiny chinchilla squeak of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.cinder_rat.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/cinder_rat_attack.ogg",
+        "sfx/animals/cinder_rat_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "an angry rat hiss with a spitting crackle and a tooth snap, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.cinder_rat.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/cinder_rat_call.ogg",
+        "sfx/animals/cinder_rat_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a sharp rat squeak with a small hiss of sparks, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1,
+      "credits": 10,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.cinder_rat.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/cinder_rat_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a thin dying rat squeal ending in a faint fizzle, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1,
+      "credits": 10,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.cinder_rat.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/cinder_rat_hurt.ogg",
+        "sfx/animals/cinder_rat_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a tiny rat shriek with a spark pop, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.cobra.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/cobra_attack.ogg",
+        "sfx/animals/cobra_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a sharp cobra hiss and a fast strike, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.cobra.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/cobra_call.ogg",
+        "sfx/animals/cobra_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long, slow cobra hiss, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.cobra.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/cobra_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a weakening snake hiss trailing into silence, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.4,
+      "credits": 14,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.cobra.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/cobra_hurt.ogg",
+        "sfx/animals/cobra_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short pained snake hiss, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.cougar.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/cougar_attack.ogg",
+        "sfx/animals/cougar_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a cougar snarl-growl and a claw swipe, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.cougar.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/cougar_call.ogg",
+        "sfx/animals/cougar_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a rising cougar scream-yowl, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2,
+      "credits": 20,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.cougar.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/cougar_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long fading cougar yowl ending in a rasping breath, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.8,
+      "credits": 18,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.cougar.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/cougar_hurt.ogg",
+        "sfx/animals/cougar_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short cougar squall of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.cow.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/cow_attack.ogg",
+        "sfx/animals/cow_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "an angry cow bellow and a headbutt thud, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.cow.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/cow_call.ogg",
+        "sfx/animals/cow_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a single deep, lowing cow moo, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2.2,
+      "credits": 22,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.cow.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/cow_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long failing cow moo trailing off, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2,
+      "credits": 20,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.cow.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/cow_hurt.ogg",
+        "sfx/animals/cow_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short pained cow bellow, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.deer.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/deer_attack.ogg",
+        "sfx/animals/deer_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "an angry deer snort with a sharp hoof stamp and kick, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.deer.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/deer_call.ogg",
+        "sfx/animals/deer_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short doe's bleat and a low buck grunt, breathy and alert, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2,
+      "credits": 20,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.deer.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/deer_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long deer bleat that trails off into a heavy exhale, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.8,
+      "credits": 18,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.deer.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/deer_hurt.ogg",
+        "sfx/animals/deer_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short startled deer bleat, high and pained, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.dire_wolf.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/dire_wolf_attack.ogg",
+        "sfx/animals/dire_wolf_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a deep heavy wolf snarl and a crushing bite, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.dire_wolf.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/dire_wolf_call.ogg",
+        "sfx/animals/dire_wolf_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a deep, heavy, booming wolf howl, slow and low, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2.2,
+      "credits": 22,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.dire_wolf.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/dire_wolf_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long heavy wolf howl breaking into a groan, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2,
+      "credits": 20,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.dire_wolf.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/dire_wolf_hurt.ogg",
+        "sfx/animals/dire_wolf_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a deep wolf yelp of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.donkey.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/donkey_attack.ogg",
+        "sfx/animals/donkey_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "an angry donkey bray-snort and a hoof kick thud, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.donkey.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/donkey_call.ogg",
+        "sfx/animals/donkey_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a high, nasal donkey bray (hee-haw), close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2,
+      "credits": 20,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.donkey.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/donkey_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long broken donkey bray fading into a wheeze, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.8,
+      "credits": 18,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.donkey.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/donkey_hurt.ogg",
+        "sfx/animals/donkey_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short sharp donkey bray of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.dromedary.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/dromedary_attack.ogg",
+        "sfx/animals/dromedary_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "an angry camel roar with a gurgling snarl, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.dromedary.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/dromedary_call.ogg",
+        "sfx/animals/dromedary_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a deep gurgling camel groan, bubbling in the throat, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2.2,
+      "credits": 22,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.dromedary.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/dromedary_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long camel groan collapsing into a heavy sigh, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2,
+      "credits": 20,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.dromedary.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/dromedary_hurt.ogg",
+        "sfx/animals/dromedary_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short camel bellow of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.duck.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/duck_attack.ogg",
+        "sfx/animals/duck_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "an angry duck hiss-quack and a bill snap, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.duck.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/duck_call.ogg",
+        "sfx/animals/duck_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short, nasal duck quack, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1,
+      "credits": 10,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.duck.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/duck_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long weak duck quack fading away, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.duck.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/duck_hurt.ogg",
+        "sfx/animals/duck_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short sharp duck quack of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.elephant.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/elephant_attack.ogg",
+        "sfx/animals/elephant_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a furious elephant trumpet-roar, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.elephant.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/elephant_call.ogg",
+        "sfx/animals/elephant_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a deep elephant trumpet with a low rumble underneath, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2.5,
+      "credits": 25,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.elephant.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/elephant_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long dying elephant trumpet fading into a low rumble, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2.5,
+      "credits": 25,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.elephant.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/elephant_hurt.ogg",
+        "sfx/animals/elephant_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short pained elephant squeal-trumpet, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.elk.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/elk_attack.ogg",
+        "sfx/animals/elk_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "an angry elk bugle-grunt with a clash of antlers, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.elk.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/elk_call.ogg",
+        "sfx/animals/elk_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a bull elk bugle, a rising whistle ending in grunts, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2.2,
+      "credits": 22,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.elk.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/elk_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a fading elk bugle collapsing into a groan, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2,
+      "credits": 20,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.elk.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/elk_hurt.ogg",
+        "sfx/animals/elk_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short elk bark of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.emberbuck.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/emberbuck_attack.ogg",
+        "sfx/animals/emberbuck_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a sharp antelope snort with a hot sputter of sparks, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.emberbuck.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/emberbuck_call.ogg",
+        "sfx/animals/emberbuck_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a light antelope bleat with a faint crackle of embers, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2,
+      "credits": 20,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.emberbuck.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/emberbuck_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a fading antelope bleat dying into a smoldering crackle, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.8,
+      "credits": 18,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.emberbuck.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/emberbuck_hurt.ogg",
+        "sfx/animals/emberbuck_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short antelope bleat with a small spark pop, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.emu.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/emu_attack.ogg",
+        "sfx/animals/emu_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "an emu hiss-grunt and a hard kick thud, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.emu.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/emu_call.ogg",
+        "sfx/animals/emu_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a deep emu drumming boom, hollow and pulsing, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.emu.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/emu_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long hollow emu groan fading out, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.emu.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/emu_hurt.ogg",
+        "sfx/animals/emu_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short emu grunt-bark of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.felid.attack",
       "bus": "effects",
       "volume": 0.85,
       "files": [
-        "sfx/animals/group_felid_attack_0.ogg",
-        "sfx/animals/group_felid_attack_1.ogg"
+        "sfx/animals/felid_attack.ogg",
+        "sfx/animals/felid_attack_b.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.felid.attack",
-      "seed": 5031,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a cat hiss-snarl and a claw swipe, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.felid.call",
       "bus": "effects",
       "volume": 0.7,
       "files": [
-        "sfx/animals/group_felid_call_0.ogg",
-        "sfx/animals/group_felid_call_1.ogg"
+        "sfx/animals/felid_call.ogg",
+        "sfx/animals/felid_call_b.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.felid.call",
-      "seed": 5030,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a feline meow turning into a low growl, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.felid.die",
       "bus": "effects",
       "volume": 1,
       "files": [
-        "sfx/animals/group_felid_die_0.ogg",
-        "sfx/animals/group_felid_die_1.ogg"
+        "sfx/animals/felid_die.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.felid.die",
-      "seed": 5033,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long fading feline yowl, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.felid.hurt",
       "bus": "effects",
       "volume": 0.85,
       "files": [
-        "sfx/animals/group_felid_hurt_0.ogg",
-        "sfx/animals/group_felid_hurt_1.ogg"
+        "sfx/animals/felid_hurt.ogg",
+        "sfx/animals/felid_hurt_b.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.felid.hurt",
-      "seed": 5032,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short feline yowl of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.fennec_fox.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/fennec_fox_attack.ogg",
+        "sfx/animals/fennec_fox_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a tiny fox snarl and a quick bite, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.fennec_fox.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/fennec_fox_call.ogg",
+        "sfx/animals/fennec_fox_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a high, chirpy fennec fox yip-whine, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1,
+      "credits": 10,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.fennec_fox.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/fennec_fox_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a thin fading fox whimper, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1,
+      "credits": 10,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.fennec_fox.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/fennec_fox_hurt.ogg",
+        "sfx/animals/fennec_fox_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short high fox yelp of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.gazelle.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/gazelle_attack.ogg",
+        "sfx/animals/gazelle_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a sharp gazelle snort and a quick hoof kick, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.gazelle.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/gazelle_call.ogg",
+        "sfx/animals/gazelle_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a high, sharp gazelle snort and a short bleat, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.gazelle.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/gazelle_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a thin, fading gazelle bleat, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.4,
+      "credits": 14,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.gazelle.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/gazelle_hurt.ogg",
+        "sfx/animals/gazelle_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short high gazelle bleat of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.generic.attack",
@@ -416,212 +2170,2684 @@
       "license": "original, made in code (CC0, this repo)"
     },
     {
+      "id": "animal.glimmerstag.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/glimmerstag_attack.ogg",
+        "sfx/animals/glimmerstag_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a thunderous stag roar with a glassy crack of antlers, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.glimmerstag.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/glimmerstag_call.ogg",
+        "sfx/animals/glimmerstag_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a deep resonant stag bellow with a faint glassy shimmer, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2.5,
+      "credits": 25,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.glimmerstag.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/glimmerstag_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long fading stag bellow with a shimmering crystal chime, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2.5,
+      "credits": 25,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.glimmerstag.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/glimmerstag_hurt.ogg",
+        "sfx/animals/glimmerstag_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short deep stag bellow with a glassy ring, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.goat.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/goat_attack.ogg",
+        "sfx/animals/goat_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "an angry goat bleat-snort and a hard headbutt thud, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.goat.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/goat_call.ogg",
+        "sfx/animals/goat_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short wavering goat bleat (maaah), close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.goat.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/goat_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long cracking goat bleat fading away, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.4,
+      "credits": 14,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.goat.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/goat_hurt.ogg",
+        "sfx/animals/goat_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short sharp goat bleat of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.goose.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/goose_attack.ogg",
+        "sfx/animals/goose_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "an angry goose hiss and honk with a wing flap, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.goose.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/goose_call.ogg",
+        "sfx/animals/goose_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short goose honk, harsh, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.2,
+      "credits": 12,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.goose.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/goose_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long weak goose honk fading away, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.goose.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/goose_hurt.ogg",
+        "sfx/animals/goose_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a sharp goose honk of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.grizzly_bear.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/grizzly_bear_attack.ogg",
+        "sfx/animals/grizzly_bear_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a huge bear roar with a heavy claw swipe, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.grizzly_bear.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/grizzly_bear_call.ogg",
+        "sfx/animals/grizzly_bear_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a deep bear huff and rumbling growl, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2.2,
+      "credits": 22,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.grizzly_bear.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/grizzly_bear_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long bear moan sinking into a rumble, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2,
+      "credits": 20,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.grizzly_bear.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/grizzly_bear_hurt.ogg",
+        "sfx/animals/grizzly_bear_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short bear roar of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.ground_sloth.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/ground_sloth_attack.ogg",
+        "sfx/animals/ground_sloth_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a furious deep sloth roar with a heavy claw swipe, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.ground_sloth.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/ground_sloth_call.ogg",
+        "sfx/animals/ground_sloth_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a slow deep rumbling groan, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2.5,
+      "credits": 25,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.ground_sloth.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/ground_sloth_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long deep groan sinking into a rumble and a heavy thud, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2.5,
+      "credits": 25,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.ground_sloth.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/ground_sloth_hurt.ogg",
+        "sfx/animals/ground_sloth_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short deep groan of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.guinea_pig.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/guinea_pig_attack.ogg",
+        "sfx/animals/guinea_pig_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a guinea pig tooth chatter with an angry squeak, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.guinea_pig.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/guinea_pig_call.ogg",
+        "sfx/animals/guinea_pig_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a quick guinea pig wheek, high and squeaky, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1,
+      "credits": 10,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.guinea_pig.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/guinea_pig_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a faint, fading guinea pig squeak, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1,
+      "credits": 10,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.guinea_pig.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/guinea_pig_hurt.ogg",
+        "sfx/animals/guinea_pig_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short sharp guinea pig squeal, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.hare.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/hare_attack.ogg",
+        "sfx/animals/hare_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a hare's growling grunt and a thumping kick, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.hare.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/hare_call.ogg",
+        "sfx/animals/hare_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a quiet hare grunt-squeak, breathy, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.hare.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/hare_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long fading hare scream trailing off, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.4,
+      "credits": 14,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.hare.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/hare_hurt.ogg",
+        "sfx/animals/hare_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short piercing hare scream, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.hive_beetle.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/hive_beetle_attack.ogg",
+        "sfx/animals/hive_beetle_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "an angry beetle buzz and a hard mandible click, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.hive_beetle.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/hive_beetle_call.ogg",
+        "sfx/animals/hive_beetle_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a dry beetle chirr, clicking and buzzing, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.2,
+      "credits": 12,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.hive_beetle.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/hive_beetle_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a fading beetle buzz with a last crunching click, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1,
+      "credits": 10,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.hive_beetle.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/hive_beetle_hurt.ogg",
+        "sfx/animals/hive_beetle_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short insect shriek with wet clicking, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.hive_brute.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/hive_brute_attack.ogg",
+        "sfx/animals/hive_brute_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a huge insectoid screech and a scythe slash, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.hive_brute.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/hive_brute_call.ogg",
+        "sfx/animals/hive_brute_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a deep insectoid chittering rumble with clicking mandibles, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.hive_brute.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/hive_brute_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long dying insectoid screech collapsing into wet clicks, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2,
+      "credits": 20,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.hive_brute.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/hive_brute_hurt.ogg",
+        "sfx/animals/hive_brute_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a loud insect shriek, wet and rasping, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.hive_crawler.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/hive_crawler_attack.ogg",
+        "sfx/animals/hive_crawler_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "an angry insect hiss and a pincer snap, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.hive_crawler.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/hive_crawler_call.ogg",
+        "sfx/animals/hive_crawler_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a fast, skittering insect chitter with wet hissing, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.2,
+      "credits": 12,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.hive_crawler.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/hive_crawler_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a fading insect chitter ending in a wet crunch, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.8,
+      "credits": 18,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.hive_crawler.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/hive_crawler_hurt.ogg",
+        "sfx/animals/hive_crawler_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a sharp chittering insect shriek with wet clicking, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.horse.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/horse_attack.ogg",
+        "sfx/animals/horse_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "an angry horse squeal and snort with a hoof kick thud, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.horse.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/horse_call.ogg",
+        "sfx/animals/horse_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a loud horse whinny rising then falling, ending in a snort, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2.2,
+      "credits": 22,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.horse.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/horse_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long horse whinny breaking into a heavy groaning breath, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2,
+      "credits": 20,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.horse.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/horse_hurt.ogg",
+        "sfx/animals/horse_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short horse scream of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.husky.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/husky_attack.ogg",
+        "sfx/animals/husky_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a husky snarl and a snapping bite, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.husky.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/husky_call.ogg",
+        "sfx/animals/husky_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a husky's wavering howl (woo-woo-woo), close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2,
+      "credits": 20,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.husky.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/husky_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long husky whimper fading away, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.8,
+      "credits": 18,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.husky.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/husky_hurt.ogg",
+        "sfx/animals/husky_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a sharp husky yelp of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.ibex.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/ibex_attack.ogg",
+        "sfx/animals/ibex_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "an angry ibex snort and a clack of horns in a headbutt, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.ibex.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/ibex_call.ogg",
+        "sfx/animals/ibex_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a rough, nasal ibex bleat and a whistling snort, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2,
+      "credits": 20,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.ibex.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/ibex_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a weak ibex bleat fading to silence, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.8,
+      "credits": 18,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.ibex.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/ibex_hurt.ogg",
+        "sfx/animals/ibex_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short sharp ibex bleat of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.iguana.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/iguana_attack.ogg",
+        "sfx/animals/iguana_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "an iguana hiss, a tail-whip crack and a snapping bite, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.iguana.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/iguana_call.ogg",
+        "sfx/animals/iguana_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a quiet iguana hiss and a dry tongue click, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.iguana.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/iguana_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long weak lizard hiss fading out, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.4,
+      "credits": 14,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.iguana.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/iguana_hurt.ogg",
+        "sfx/animals/iguana_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short iguana hiss-grunt of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
       "id": "animal.insect.attack",
       "bus": "effects",
       "volume": 0.85,
       "files": [
-        "sfx/animals/group_insect_attack_0.ogg",
-        "sfx/animals/group_insect_attack_1.ogg"
+        "sfx/animals/insect_attack.ogg",
+        "sfx/animals/insect_attack_b.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.insect.attack",
-      "seed": 5081,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "an angry insect hiss and a mandible snap, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.insect.call",
       "bus": "effects",
       "volume": 0.7,
       "files": [
-        "sfx/animals/group_insect_call_0.ogg",
-        "sfx/animals/group_insect_call_1.ogg"
+        "sfx/animals/insect_call.ogg",
+        "sfx/animals/insect_call_b.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.insect.call",
-      "seed": 5080,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a dry insect chitter with clicking, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.2,
+      "credits": 12,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.insect.die",
       "bus": "effects",
       "volume": 1,
       "files": [
-        "sfx/animals/group_insect_die_0.ogg",
-        "sfx/animals/group_insect_die_1.ogg"
+        "sfx/animals/insect_die.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.insect.die",
-      "seed": 5083,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a fading insect chitter ending in a wet crunch, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.insect.hurt",
       "bus": "effects",
       "volume": 0.85,
       "files": [
-        "sfx/animals/group_insect_hurt_0.ogg",
-        "sfx/animals/group_insect_hurt_1.ogg"
+        "sfx/animals/insect_hurt.ogg",
+        "sfx/animals/insect_hurt_b.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.insect.hurt",
-      "seed": 5082,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short insect shriek with wet clicking, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.labrador.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/labrador_attack.ogg",
+        "sfx/animals/labrador_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "an angry labrador bark-growl and a snap, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.labrador.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/labrador_call.ogg",
+        "sfx/animals/labrador_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a friendly labrador bark, two short woofs, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2,
+      "credits": 20,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.labrador.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/labrador_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long labrador whine fading into a sigh, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.8,
+      "credits": 18,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.labrador.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/labrador_hurt.ogg",
+        "sfx/animals/labrador_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short labrador yelp of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.large_mammal.attack",
       "bus": "effects",
       "volume": 0.85,
       "files": [
-        "sfx/animals/group_large_mammal_attack_0.ogg",
-        "sfx/animals/group_large_mammal_attack_1.ogg"
+        "sfx/animals/large_mammal_attack.ogg",
+        "sfx/animals/large_mammal_attack_b.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.large_mammal.attack",
-      "seed": 5011,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a large animal snort and a roaring charge with a heavy thud, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.large_mammal.call",
       "bus": "effects",
       "volume": 0.7,
       "files": [
-        "sfx/animals/group_large_mammal_call_0.ogg",
-        "sfx/animals/group_large_mammal_call_1.ogg"
+        "sfx/animals/large_mammal_call.ogg",
+        "sfx/animals/large_mammal_call_b.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.large_mammal.call",
-      "seed": 5010,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a deep large grazing animal grunt-bellow, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2,
+      "credits": 20,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.large_mammal.die",
       "bus": "effects",
       "volume": 1,
       "files": [
-        "sfx/animals/group_large_mammal_die_0.ogg",
-        "sfx/animals/group_large_mammal_die_1.ogg"
+        "sfx/animals/large_mammal_die.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.large_mammal.die",
-      "seed": 5013,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long large animal groan collapsing with a heavy thud, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.large_mammal.hurt",
       "bus": "effects",
       "volume": 0.85,
       "files": [
-        "sfx/animals/group_large_mammal_hurt_0.ogg",
-        "sfx/animals/group_large_mammal_hurt_1.ogg"
+        "sfx/animals/large_mammal_hurt.ogg",
+        "sfx/animals/large_mammal_hurt_b.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.large_mammal.hurt",
-      "seed": 5012,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short large animal bellow of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.lynx.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/lynx_attack.ogg",
+        "sfx/animals/lynx_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a lynx hiss-snarl and a claw swipe, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.lynx.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/lynx_call.ogg",
+        "sfx/animals/lynx_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a low lynx caterwaul, a rough mewing growl, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.lynx.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/lynx_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long fading lynx yowl, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.4,
+      "credits": 14,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.lynx.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/lynx_hurt.ogg",
+        "sfx/animals/lynx_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short lynx yowl of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.monkey.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/monkey_attack.ogg",
+        "sfx/animals/monkey_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "an angry monkey shriek and a snapping bite, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.monkey.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/monkey_call.ogg",
+        "sfx/animals/monkey_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a chattering monkey screech with short hoots, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.monkey.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/monkey_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long monkey wail fading to a whimper, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.4,
+      "credits": 14,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.monkey.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/monkey_hurt.ogg",
+        "sfx/animals/monkey_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short monkey squeal of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.ostrich.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/ostrich_attack.ogg",
+        "sfx/animals/ostrich_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a hissing ostrich growl and a heavy kick thud, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.ostrich.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/ostrich_call.ogg",
+        "sfx/animals/ostrich_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a deep ostrich boom, a rumbling hoot, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.ostrich.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/ostrich_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long ostrich groan fading to silence, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.ostrich.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/ostrich_hurt.ogg",
+        "sfx/animals/ostrich_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short ostrich bellow of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.panther.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/panther_attack.ogg",
+        "sfx/animals/panther_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a panther snarl-roar and a claw swipe, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.panther.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/panther_call.ogg",
+        "sfx/animals/panther_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a low panther growl ending in a rasping cough-roar, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2,
+      "credits": 20,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.panther.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/panther_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long panther growl fading into a rasp, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.8,
+      "credits": 18,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.panther.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/panther_hurt.ogg",
+        "sfx/animals/panther_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short panther snarl of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.pig.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/pig_attack.ogg",
+        "sfx/animals/pig_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "an angry pig squeal-snort and a snapping bite, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.pig.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/pig_call.ogg",
+        "sfx/animals/pig_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short pig oink-grunt with snuffling, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2,
+      "credits": 20,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.pig.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/pig_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long pig squeal fading into a gurgle, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.8,
+      "credits": 18,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.pig.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/pig_hurt.ogg",
+        "sfx/animals/pig_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a sharp pig squeal, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.polar_bear.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/polar_bear_attack.ogg",
+        "sfx/animals/polar_bear_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a roaring polar bear snarl with a heavy swipe, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.polar_bear.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/polar_bear_call.ogg",
+        "sfx/animals/polar_bear_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a deep polar bear huff and rumbling growl, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2.2,
+      "credits": 22,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.polar_bear.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/polar_bear_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long polar bear moan sinking into a rumble, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2,
+      "credits": 20,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.polar_bear.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/polar_bear_hurt.ogg",
+        "sfx/animals/polar_bear_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short polar bear bellow of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.raccoon.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/raccoon_attack.ogg",
+        "sfx/animals/raccoon_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "an angry raccoon hiss-growl and a bite, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.raccoon.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/raccoon_call.ogg",
+        "sfx/animals/raccoon_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a chittering raccoon trill-purr, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.raccoon.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/raccoon_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long raccoon whimper-chitter fading away, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.4,
+      "credits": 14,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.raccoon.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/raccoon_hurt.ogg",
+        "sfx/animals/raccoon_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short raccoon shriek of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.rat.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/rat_attack.ogg",
+        "sfx/animals/rat_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "an angry rat hiss and a tooth snap, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.rat.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/rat_call.ogg",
+        "sfx/animals/rat_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a high, quick rat squeak and chatter, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1,
+      "credits": 10,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.rat.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/rat_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a thin dying rat squeal, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1,
+      "credits": 10,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.rat.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/rat_hurt.ogg",
+        "sfx/animals/rat_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a sharp rat squeal of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.red_fox.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/red_fox_attack.ogg",
+        "sfx/animals/red_fox_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a fox snarl-yap and a snapping bite, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.red_fox.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/red_fox_call.ogg",
+        "sfx/animals/red_fox_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a sharp fox scream-bark (gekkering), close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.red_fox.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/red_fox_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a thin fox scream fading into a whimper, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.4,
+      "credits": 14,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.red_fox.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/red_fox_hurt.ogg",
+        "sfx/animals/red_fox_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short fox yelp of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.reptile.attack",
       "bus": "effects",
       "volume": 0.85,
       "files": [
-        "sfx/animals/group_reptile_attack_0.ogg",
-        "sfx/animals/group_reptile_attack_1.ogg"
+        "sfx/animals/reptile_attack.ogg",
+        "sfx/animals/reptile_attack_b.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.reptile.attack",
-      "seed": 5071,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a sharp reptile hiss and a fast snapping strike, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.reptile.call",
       "bus": "effects",
       "volume": 0.7,
       "files": [
-        "sfx/animals/group_reptile_call_0.ogg",
-        "sfx/animals/group_reptile_call_1.ogg"
+        "sfx/animals/reptile_call.ogg",
+        "sfx/animals/reptile_call_b.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.reptile.call",
-      "seed": 5070,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long, slow reptile hiss, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.reptile.die",
       "bus": "effects",
       "volume": 1,
       "files": [
-        "sfx/animals/group_reptile_die_0.ogg",
-        "sfx/animals/group_reptile_die_1.ogg"
+        "sfx/animals/reptile_die.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.reptile.die",
-      "seed": 5073,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a weakening reptile hiss trailing into silence, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.reptile.hurt",
       "bus": "effects",
       "volume": 0.85,
       "files": [
-        "sfx/animals/group_reptile_hurt_0.ogg",
-        "sfx/animals/group_reptile_hurt_1.ogg"
+        "sfx/animals/reptile_hurt.ogg",
+        "sfx/animals/reptile_hurt_b.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.reptile.hurt",
-      "seed": 5072,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short pained reptile hiss, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.rhinoceros.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/rhinoceros_attack.ogg",
+        "sfx/animals/rhinoceros_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a furious rhinoceros huff and bellow with a heavy charging thud, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.rhinoceros.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/rhinoceros_call.ogg",
+        "sfx/animals/rhinoceros_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a deep rhinoceros snort-bellow, wheezing and rumbling, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2.5,
+      "credits": 25,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.rhinoceros.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/rhinoceros_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long rhinoceros groan collapsing with a heavy thud, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2.5,
+      "credits": 25,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.rhinoceros.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/rhinoceros_hurt.ogg",
+        "sfx/animals/rhinoceros_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short rhinoceros bellow of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.sheep.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/sheep_attack.ogg",
+        "sfx/animals/sheep_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "an angry sheep grunt-bleat and a headbutt thud, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.sheep.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/sheep_call.ogg",
+        "sfx/animals/sheep_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a wavering sheep baa, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.sheep.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/sheep_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long weak sheep baa fading out, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.4,
+      "credits": 14,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.sheep.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/sheep_hurt.ogg",
+        "sfx/animals/sheep_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short pained sheep bleat, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.small_mammal.attack",
       "bus": "effects",
       "volume": 0.85,
       "files": [
-        "sfx/animals/group_small_mammal_attack_0.ogg",
-        "sfx/animals/group_small_mammal_attack_1.ogg"
+        "sfx/animals/small_mammal_attack.ogg",
+        "sfx/animals/small_mammal_attack_b.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.small_mammal.attack",
-      "seed": 5001,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a small mammal hiss-snarl and a tooth snap, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.small_mammal.call",
       "bus": "effects",
       "volume": 0.7,
       "files": [
-        "sfx/animals/group_small_mammal_call_0.ogg",
-        "sfx/animals/group_small_mammal_call_1.ogg"
+        "sfx/animals/small_mammal_call.ogg",
+        "sfx/animals/small_mammal_call_b.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.small_mammal.call",
-      "seed": 5000,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a small rodent squeak-chatter, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.small_mammal.die",
       "bus": "effects",
       "volume": 1,
       "files": [
-        "sfx/animals/group_small_mammal_die_0.ogg",
-        "sfx/animals/group_small_mammal_die_1.ogg"
+        "sfx/animals/small_mammal_die.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.small_mammal.die",
-      "seed": 5003,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a thin dying small mammal squeal, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "animal.small_mammal.hurt",
       "bus": "effects",
       "volume": 0.85,
       "files": [
-        "sfx/animals/group_small_mammal_hurt_0.ogg",
-        "sfx/animals/group_small_mammal_hurt_1.ogg"
+        "sfx/animals/small_mammal_hurt.ogg",
+        "sfx/animals/small_mammal_hurt_b.ogg"
       ],
-      "source": "procedural",
-      "recipe": "animal.small_mammal.hurt",
-      "seed": 5002,
-      "license": "original, made in code (CC0, this repo)"
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short small mammal squeal of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.snowhare.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/snowhare_attack.ogg",
+        "sfx/animals/snowhare_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a snow hare growl-grunt and a thumping kick, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.snowhare.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/snowhare_call.ogg",
+        "sfx/animals/snowhare_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a quiet snow hare chirp-grunt, soft and breathy, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.snowhare.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/snowhare_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long fading hare scream trailing off, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.4,
+      "credits": 14,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.snowhare.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/snowhare_hurt.ogg",
+        "sfx/animals/snowhare_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short piercing hare scream, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.squirrel.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/squirrel_attack.ogg",
+        "sfx/animals/squirrel_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "an angry squirrel chitter and a tooth chatter, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.squirrel.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/squirrel_call.ogg",
+        "sfx/animals/squirrel_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a fast squirrel chatter-chirp, scolding, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1,
+      "credits": 10,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.squirrel.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/squirrel_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a thin fading squirrel squeak, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1,
+      "credits": 10,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.squirrel.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/squirrel_hurt.ogg",
+        "sfx/animals/squirrel_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short squirrel squeal of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.timber_wolf.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/timber_wolf_attack.ogg",
+        "sfx/animals/timber_wolf_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short aggressive wolf snarl ending in a snapping bite, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.timber_wolf.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/timber_wolf_call.ogg",
+        "sfx/animals/timber_wolf_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long, mournful wolf howl rising and falling, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2,
+      "credits": 20,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.timber_wolf.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/timber_wolf_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a weak last wolf howl breaking into a whimper, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.8,
+      "credits": 18,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.timber_wolf.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/timber_wolf_hurt.ogg",
+        "sfx/animals/timber_wolf_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a sharp wolf yelp of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.timbergnaw.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/timbergnaw_attack.ogg",
+        "sfx/animals/timbergnaw_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a furious rodent hiss-chatter with chisel teeth snapping, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.timbergnaw.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/timbergnaw_call.ogg",
+        "sfx/animals/timbergnaw_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a husky beaver chitter and a wooden gnaw, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2,
+      "credits": 20,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.timbergnaw.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/timbergnaw_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a fading rodent squeal with a last wooden gnash, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.8,
+      "credits": 18,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.timbergnaw.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/timbergnaw_hurt.ogg",
+        "sfx/animals/timbergnaw_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short rodent squeak with a tooth chatter, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.tortoise.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/tortoise_attack.ogg",
+        "sfx/animals/tortoise_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a tortoise hiss and a snapping bite with a shell knock, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 16,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.tortoise.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/tortoise_call.ogg",
+        "sfx/animals/tortoise_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a slow, low tortoise wheeze-grunt, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.tortoise.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/tortoise_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long slow tortoise wheeze fading out, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.4,
+      "credits": 14,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.tortoise.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/tortoise_hurt.ogg",
+        "sfx/animals/tortoise_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short tortoise hiss of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.turkey.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/turkey_attack.ogg",
+        "sfx/animals/turkey_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "an angry turkey gobble-squawk and a peck, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.turkey.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/turkey_call.ogg",
+        "sfx/animals/turkey_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a rolling turkey gobble, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.turkey.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/turkey_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long turkey gobble breaking into a weak squawk, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.5,
+      "credits": 15,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.turkey.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/turkey_hurt.ogg",
+        "sfx/animals/turkey_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short turkey squawk of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.wild_boar.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/wild_boar_attack.ogg",
+        "sfx/animals/wild_boar_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a furious boar squeal-roar and a tusk thud, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.wild_boar.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/wild_boar_call.ogg",
+        "sfx/animals/wild_boar_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a harsh boar grunt-snort with snuffling, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2,
+      "credits": 20,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.wild_boar.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/wild_boar_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long boar squeal fading into a wheeze, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1.8,
+      "credits": 18,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.wild_boar.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/wild_boar_hurt.ogg",
+        "sfx/animals/wild_boar_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short boar squeal of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.woolhorn.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/woolhorn_attack.ogg",
+        "sfx/animals/woolhorn_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a heavy ox bellow and a hard headbutt thud, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.woolhorn.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/woolhorn_call.ogg",
+        "sfx/animals/woolhorn_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a deep shaggy ox grunt with a soft rumbling bellow, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2.2,
+      "credits": 22,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.woolhorn.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/woolhorn_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long ox bellow fading into a rumbling sigh, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2,
+      "credits": 20,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.woolhorn.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/woolhorn_hurt.ogg",
+        "sfx/animals/woolhorn_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short deep ox grunt of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.yak.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/yak_attack.ogg",
+        "sfx/animals/yak_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "an angry yak snort-roar and a horn thud, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.yak.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/yak_call.ogg",
+        "sfx/animals/yak_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a low yak grunt, rumbling and oink-like, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2.2,
+      "credits": 22,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.yak.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/yak_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a long yak groan fading into a rumble, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 2,
+      "credits": 20,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.yak.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/yak_hurt.ogg",
+        "sfx/animals/yak_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short deep yak grunt of pain, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.yorkshire_terrier.attack",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/yorkshire_terrier_attack.ogg",
+        "sfx/animals/yorkshire_terrier_attack_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a tiny terrier snarl and a snappy yap, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.8,
+      "credits": 8,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.yorkshire_terrier.call",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/animals/yorkshire_terrier_call.ogg",
+        "sfx/animals/yorkshire_terrier_call_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a tiny, high yapping terrier bark, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1,
+      "credits": 10,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.yorkshire_terrier.die",
+      "bus": "effects",
+      "volume": 1,
+      "files": [
+        "sfx/animals/yorkshire_terrier_die.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a faint terrier whimper fading away, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 1,
+      "credits": 10,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
+    },
+    {
+      "id": "animal.yorkshire_terrier.hurt",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/animals/yorkshire_terrier_hurt.ogg",
+        "sfx/animals/yorkshire_terrier_hurt_b.ogg"
+      ],
+      "source": "elevenlabs",
+      "tool": "text_to_sound_effects",
+      "prompt": "a short high terrier yelp, close-up, dry, no music, no background noise, no human voice",
+      "seconds": 0.6,
+      "credits": 6,
+      "generated": "2026-10-23",
+      "license": "ElevenLabs free tier: non-commercial use, credit ElevenLabs",
+      "reviewed_by": "arxdsilva"
     },
     {
       "id": "music.calm",

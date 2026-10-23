@@ -1,10 +1,10 @@
 # Task Handoff
 
 Task ID: SND-003
-Status: triggers, engine and placeholder voices complete. The ElevenLabs species voices are blocked: `ELEVENLABS_API_KEY` is not set in the agent's shell.
+Status: complete. All 281 ElevenLabs animal voices (61 species × 4, the 9 voice groups × 4, the hive burst) were generated, reviewed by ear and approved on 2026-10-23. Only `animal.generic.*` stays a code-made placeholder, as the last fallback.
 
 ## Summary
-All 61 species have voices: idle calls while wandering, a flee cry, attack, hurt, death, and a "whump" for explosive deaths. Until the generated species clips are approved, they play procedural placeholders: 9 voice groups plus a generic set (CC0, code-made). The ElevenLabs generator, processing and review flow are built and tested offline, with 281 prompts ready.
+All 61 species have their own voices: idle calls while wandering, a flee cry, attack, hurt, death, and a "whump" for explosive deaths. The fallback chain (species, then voice group, then generic) still covers any id that goes missing; the generic set is code-made (CC0).
 
 ## Files changed
 - **Engine** (`internal/adapters/outbound/ebitenaudio`): OGG one-shots are decoded once into a 24 MiB PCM LRU (`oggcache.go`) and panned like WAVs. Loops and music are unchanged.
@@ -21,12 +21,19 @@ All 61 species have voices: idle calls while wandering, a flee cry, attack, hurt
 - **`audiogen -check`:** OGG decodes at 48 kHz, every roster key's four events resolve through the fallback chain, and the files stay within the 20 MiB budget (11 MiB now).
 - **Rules:** `.cursor/rules/creatures.mdc` and skill `rimworld-go-creatures`: every new creature gets the same setup, including its four generated sounds.
 
-## Remaining (needs the key, and user approval at each stop)
-1. `export ELEVENLABS_API_KEY=...` in the shell that starts the agent.
-2. **Measure:** `go run ./cmd/sfxgen -only animal.cow.hurt -seconds 1 -budget-from-api` (one 1 s sketch, to read the real credit cost).
-3. **Pilot:** cow, timber_wolf, chicken, elephant, cat and hive_crawler × 4 events, about 300 credits. Then `make animal-audio`, `sfxgen -review`, and the user listens.
-4. **Full run:** the 9 voice-group batches (about 3,330 credits estimated in total), each checked against the 1,500 reserve, plus at most one retry per rejected clip.
-5. Run `sfxgen -approve <ids>` and `make audio-check`. Add the "Animal voices" line to `THIRD_PARTY_NOTICES.md` (ElevenLabs free tier: non-commercial, credit ElevenLabs).
+## Generation run (2026-10-23)
+- **Spent:** 3,349 credits on the free tier. 3,331 for the 281 clips at the measured 10 credits a second; 10 for a 1 s cost sketch (ledger id `cost_sketch.animal_1s`); 8 for an unneeded retry of `animal.tortoise.attack`. Take 1 of that clip was wrongly rejected as silent; it was a processing bug (below), and take 2 is the approved one. The API counter matched the estimates exactly; ledger total 3,949 including last month's 600.
+- **Review:** the user listened to every clip on the `sfxgen -review` page and approved all 281 (`reviewed_by: arxdsilva` in `audio.json`); no rejects.
+- **Audio budget:** `make audio-check` reports 325 sounds, 18.3 MB of 20 MB. The 73 group and burst placeholder files nothing plays any more were deleted.
+- **Fixes found during the run** (each with a test that failed first):
+  - `sfxgen` charged lagged counter jumps on top of estimates already logged for the same takes (3,993 logged against about 2,070 spent), which stopped the first run early at its cap. It now logs `max(estimate, counter movement this run - credits logged this run)`, and the affected ledger entries were corrected (`TestLaggingCounterNotCountedTwice`).
+  - Clips trimmed below 0.4 s read as `-inf` LUFS, because loudnorm measures 400 ms blocks. They are padded with silence for measuring and cut back after (`TestProcessShortClip`).
+  - `audiogen -animals` would have put the code-made placeholders back over approved ElevenLabs group and burst takes. It now skips any id whose entry is from ElevenLabs (`TestAnimalsKeepApprovedTakes`).
+- Coverage: `cmd/sfxgen` 87.1%; `cmd/audiogen` 69.1% (68.8% before; the gap is the older music and effect renderers, not this change).
+
+## Follow-ups
+- License: free-tier output is non-commercial and needs attribution (`THIRD_PARTY_NOTICES.md`). Regenerate on a paid plan before any commercial release.
+- New creatures follow skill `rimworld-go-creatures`: four prompts, then `sfxgen -dry-run -only animal.<key>.*`, user-approved spending, review, and `-approve`.
 
 ## Invariants
 - The key is never printed, logged or committed. Every paid take is appended to `assets/source/audio/elevenlabs/ledger.json`.

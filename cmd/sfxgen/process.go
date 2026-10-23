@@ -27,6 +27,9 @@ const (
 	fadeOut   = 0.030
 	oggQ      = "4"
 	animalDir = "sfx/animals" // under assets/generated/audio
+	// minMeasure is the shortest clip loudnorm can measure (one 400 ms
+	// block, with margin); shorter clips are padded while measured.
+	minMeasure = 0.5
 )
 
 // trimChain removes silence below -50 dB from the start and, via a
@@ -142,6 +145,13 @@ func (a *app) finish(in, ogg, id, variant string, target float64) (float64, erro
 	}
 	fo := math.Min(fadeOut, dur)
 	fade := fmt.Sprintf("afade=t=in:d=%g,afade=t=out:st=%.4f:d=%g", fadeIn, dur-fo, fo)
+	// loudnorm measures 400 ms blocks and reads a shorter clip as -inf:
+	// pad it with silence (gated out of the measurement), cut it back after.
+	cut := ""
+	if dur < minMeasure {
+		fade += fmt.Sprintf(",apad=whole_dur=%g", minMeasure)
+		cut = fmt.Sprintf(",atrim=end=%.4f", dur)
+	}
 	ln := fmt.Sprintf("loudnorm=I=%g:TP=%g:LRA=11", target, truePeak)
 	out, err := a.ff("-i", in, "-af", fade+","+ln+":print_format=json", "-f", "null", "-")
 	if err != nil {
@@ -157,8 +167,8 @@ func (a *app) finish(in, ogg, id, variant string, target float64) (float64, erro
 	}
 	defer os.RemoveAll(tmp)
 	wav := filepath.Join(tmp, "norm.wav")
-	pass2 := fmt.Sprintf("%s,%s:measured_I=%s:measured_TP=%s:measured_LRA=%s:measured_thresh=%s:offset=%s:linear=true:print_format=json,aresample=%d",
-		fade, ln, m.InputI, m.InputTP, m.InputLRA, m.InputThresh, m.Offset, rate)
+	pass2 := fmt.Sprintf("%s,%s:measured_I=%s:measured_TP=%s:measured_LRA=%s:measured_thresh=%s:offset=%s:linear=true:print_format=json,aresample=%d%s",
+		fade, ln, m.InputI, m.InputTP, m.InputLRA, m.InputThresh, m.Offset, rate, cut)
 	out, err = a.ff("-i", in, "-af", pass2, "-ar", strconv.Itoa(rate), "-ac", "1", "-c:a", "pcm_s16le", wav)
 	if err != nil {
 		return 0, err

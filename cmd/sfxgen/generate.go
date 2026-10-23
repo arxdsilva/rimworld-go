@@ -81,6 +81,7 @@ func (a *app) generate() error {
 	ctx := context.Background()
 	var sub subscription
 	var subp *subscription
+	startUsed := 0
 	if a.cfg.budgetFromAPI {
 		if a.key == "" {
 			return errors.New(keyEnv + " is not set (needed for -budget-from-api)")
@@ -89,6 +90,7 @@ func (a *app) generate() error {
 			return err
 		}
 		subp = &sub
+		startUsed = sub.Used
 	}
 	if a.cfg.dryRun {
 		a.dryRun(todo, skips, l, a.remaining(l, subp))
@@ -122,11 +124,13 @@ func (a *app) generate() error {
 			if err != nil {
 				return fmt.Errorf("%s: %w", s.ID, err)
 			}
-			if delta := after.Used - sub.Used; delta > 0 {
-				credits = delta
-			} else {
+			// The counter lags and then jumps by several takes at once, some
+			// already logged at their estimate: charge only what the counter
+			// shows beyond this run's ledger, never less than the estimate.
+			if after.Used == sub.Used {
 				fmt.Fprintf(a.stdout, "note: the API counter did not move for %s (it lags); logged the estimate %d\n", s.ID, est)
 			}
+			credits = max(est, after.Used-startUsed-spent)
 			sub = after
 		}
 		n := l.nextTake(s.ID)

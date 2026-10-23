@@ -13,12 +13,16 @@ import (
 
 // writeTone writes a mono 44.1 kHz WAV: 0.25 s of silence, a decaying
 // two-harmonic tone of 0.6 s, 0.25 s of silence.
-func writeTone(t *testing.T, path string) {
+func writeTone(t *testing.T, path string) { writeToneOf(t, path, 0.6) }
+
+// writeToneOf is writeTone with a tone of tone seconds.
+func writeToneOf(t *testing.T, path string, tone float64) {
 	t.Helper()
 	const sr = 44100
-	n := sr * 11 / 10
+	toneN := int(tone * sr)
+	n := sr/2 + toneN
 	pcm := make([]int16, n)
-	for i := sr / 4; i < sr/4+sr*6/10; i++ {
+	for i := sr / 4; i < sr/4+toneN; i++ {
 		x := float64(i-sr/4) / sr
 		v := 0.3 * math.Exp(-3*x) * (math.Sin(2*math.Pi*300*x) + 0.5*math.Sin(2*math.Pi*600*x))
 		pcm[i] = int16(v * 32767)
@@ -40,13 +44,16 @@ func writeTone(t *testing.T, path string) {
 
 // writeRaw makes a raw take: an MP3 when ffmpeg can encode one, else the
 // WAV (ffmpeg probes content, not the extension).
-func writeRaw(t *testing.T, path string) {
+func writeRaw(t *testing.T, path string) { writeRawOf(t, path, 0.6) }
+
+// writeRawOf is writeRaw with a tone of tone seconds.
+func writeRawOf(t *testing.T, path string, tone float64) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	wav := path + ".wav"
-	writeTone(t, wav)
+	writeToneOf(t, wav, tone)
 	if err := exec.Command("ffmpeg", "-hide_banner", "-nostdin", "-y", "-i", wav, "-c:a", "libmp3lame", "-b:a", "128k", "-f", "mp3", path).Run(); err != nil {
 		b, _ := os.ReadFile(wav)
 		os.WriteFile(path, b, 0o644)
@@ -151,6 +158,26 @@ func TestProcessMakesOggAndVariant(t *testing.T) {
 	// the burst loudness target is the loudest
 	if _, ok := events["burst"]; !ok || events["burst"].lufs != -16 {
 		t.Fatal("burst target")
+	}
+}
+
+// Loudness is measured over 400 ms blocks: a hurt yelp trimmed to 0.3 s
+// must still be measured and normalised, and keep its length.
+func TestProcessShortClip(t *testing.T) {
+	needTools(t)
+	t.Parallel()
+	e := newEnv(t)
+	writeRawOf(t, filepath.Join(e.raw, "animal.cow.hurt_t1.mp3"), 0.3)
+	e.writeLedger(Take{ID: "animal.cow.hurt", Take: 1, File: "raw/animal.cow.hurt_t1.mp3"})
+	if _, _, err := e.cli("-process", "-only", "animal.cow.hurt"); err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(e.assets, "generated/audio/sfx/animals")
+	for _, f := range []string{"cow_hurt.ogg", "cow_hurt_b.ogg"} {
+		d, _ := decodedSeconds(t, filepath.Join(dir, f))
+		if d < 0.2 || d > 0.36 {
+			t.Fatalf("%s is %.3f s, want the 0.3 s clip (no padding left)", f, d)
+		}
 	}
 }
 

@@ -188,3 +188,39 @@ func TestNewRecipesDeterministic(t *testing.T) {
 		}
 	}
 }
+
+// TestAnimalsKeepApprovedTakes: audiogen -animals re-renders the
+// placeholders without swapping an approved ElevenLabs group take back,
+// and skips the files of placeholders a take replaced.
+func TestAnimalsKeepApprovedTakes(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	take := audiomanifest.Entry{ID: "animal.canid.call", Bus: audiomanifest.BusOf("animal.canid.call"), Volume: 0.7,
+		Files: []string{"sfx/animals/canid_call.ogg"}, Source: audiomanifest.SourceElevenLabs, License: "x"}
+	if err := writeManifest(dir, audiomanifest.Manifest{Sounds: []audiomanifest.Entry{take}}); err != nil {
+		t.Fatal(err)
+	}
+	copyWAV := func(wav, ogg string, _ uint64) error {
+		b, err := os.ReadFile(wav)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(ogg, b, 0o644)
+	}
+	if _, err := generateAnimals(dir, copyWAV); err != nil {
+		t.Fatal(err)
+	}
+	m, err := readManifest(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e, ok := m.Lookup("animal.canid.call"); !ok || e.Source != audiomanifest.SourceElevenLabs {
+		t.Fatalf("approved take replaced by %+v", e)
+	}
+	if e, ok := m.Lookup("animal.generic.call"); !ok || e.Source != audiomanifest.SourceProcedural {
+		t.Fatalf("placeholder not listed: %+v", e)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "generated/audio/sfx/animals/group_canid_call_0.ogg")); err == nil {
+		t.Fatal("a placeholder nobody plays was rendered (it costs audio budget)")
+	}
+}
