@@ -58,9 +58,12 @@ func (a *App) pickResearch(id string) {
 func (a *App) drawResearch(screen *ebiten.Image, sw, sh int) {
 	r := workRect(sw, sh)
 	drawPanel(screen, r.x, r.y, r.w, r.h)
-	drawLabel(screen, int(r.x)+12, int(r.y)+10, "Research  (pick a project; colonists with Research work study it at a research bench)")
+	drawText(screen, "Research", float64(r.x)+12, float64(r.y)+6, withColor(tsLabel, uiHeading))
+	hintX := float64(r.x) + 12 + float64(textW("Research", tsLabel)) + 16
+	drawText(screen, ellipsize("pick a project; colonists with Research work study it at a research bench", tsSmall, float64(r.x+r.w)-12-hintX),
+		hintX, float64(r.y)+6+(lineH(tsLabel)-lineH(tsSmall))/2, withColor(tsSmall, uiTextDim))
 	if !a.hasResearchBench() {
-		drawLabel(screen, int(r.x)+12, int(r.y)+26, "No research bench yet: build one from Architect > Production.")
+		drawText(screen, "No research bench yet: build one from Architect > Production.", float64(r.x)+12, float64(r.y)+25, withColor(tsSmall, uiWarning))
 	}
 	mx, my := a.currentCursor()
 	views := a.renderer.world().Research
@@ -77,10 +80,11 @@ func (a *App) drawResearch(screen *ebiten.Image, sw, sh int) {
 		case !p.Available:
 			status = "needs " + strings.Join(p.Requires, ", ")
 		}
-		drawResearchBar(screen, float32(x), float32(y+4), 120, 10, p)
-		drawLabel(screen, x+130, y+2, fmt.Sprintf("%d / %d  %s", p.Progress, p.Cost, status))
-		drawLabel(screen, x, y+18, p.Desc)
-		drawLabel(screen, x, y+34, "Unlocks: "+strings.Join(p.Unlocks, ", "))
+		maxW := float64(r.x+r.w) - 12 - float64(x)
+		drawResearchBar(screen, float32(x), float32(y+6), 120, 10, p)
+		drawText(screen, ellipsize(fmt.Sprintf("%d / %d  %s", p.Progress, p.Cost, status), tsBody, maxW-130), float64(x+130), float64(y), tsBody)
+		drawText(screen, ellipsize(p.Desc, tsSmall, maxW), float64(x), float64(y)+20, tsSmall)
+		drawText(screen, ellipsize("Unlocks: "+strings.Join(p.Unlocks, ", "), tsSmall, maxW), float64(x), float64(y)+37, withColor(tsSmall, uiTextDim))
 	}
 }
 

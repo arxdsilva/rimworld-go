@@ -76,9 +76,9 @@ func (a *App) drawGizmoKeys(screen *ebiten.Image) {
 		if l == "" {
 			continue
 		}
-		w := float32(len(l)*6 + 4)
+		w := textW(l, tsSmall) + 4
 		x, y := b.x+b.w-w-1, b.y+1
-		vector.FillRect(screen, x, y, w, 12, uiSpace, false)
-		debugPrintAt(screen, l, int(x)+2, int(y)-2)
+		vector.FillRect(screen, x, y, w, 13, uiSpace, false)
+		drawText(screen, l, float64(x)+2, float64(y)-3, tsSmall)
 	}
 }

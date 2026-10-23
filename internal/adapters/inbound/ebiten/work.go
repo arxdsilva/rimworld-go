@@ -267,10 +267,13 @@ func (a *App) drawWork(screen *ebiten.Image, sw, sh int) {
 	}
 	r := workRect(sw, sh)
 	drawPanel(screen, r.x, r.y, r.w, r.h)
-	drawLabel(screen, int(r.x)+12, int(r.y)+10, "Work priorities  (1 = do first ... 4 = do last, - = never; click a cell to change)")
+	drawText(screen, "Work priorities", float64(r.x)+12, float64(r.y)+8, withColor(tsLabel, uiHeading))
+	hintX := float64(r.x) + 12 + float64(textW("Work priorities", tsLabel)) + 16
+	drawText(screen, ellipsize("1 = do first ... 4 = do last, - = never; click a cell to change", tsSmall, float64(r.x+r.w)-12-hintX),
+		hintX, float64(r.y)+8+(lineH(tsLabel)-lineH(tsSmall))/2, withColor(tsSmall, uiTextDim))
 	hx := int(r.x) + 12 + workNameW
 	for i, col := range workColumns {
-		drawLabel(screen, hx+i*workCellW, int(r.y)+28, col)
+		drawText(screen, col, float64(hx+i*workCellW)+float64(workCellW-4)/2, float64(r.y)+28, textStyle{Size: tsSmall.Size, Color: uiTextDim, Align: alignCenter})
 	}
 	pawns := a.renderer.snapshot()
 	for row, p := range pawns {
@@ -278,7 +281,7 @@ func (a *App) drawWork(screen *ebiten.Image, sw, sh int) {
 		if y > int(r.y+r.h)-20 {
 			break
 		}
-		drawLabel(screen, int(r.x)+12, y, pawnLabel(p))
+		drawText(screen, ellipsize(pawnLabel(p), tsBody, workNameW-8), float64(r.x)+12, float64(y)+(workRowH-2-lineH(tsBody))/2, tsBody)
 	}
 	mx, my := a.currentCursor()
 	a.drawButtons(screen, a.workButtons(), mx, my)
@@ -303,7 +306,7 @@ func (a *App) drawWork(screen *ebiten.Image, sw, sh int) {
 					color.RGBA{uint8(150 - pr*22), uint8(120 - pr*16), 50, 255}, false)
 			}
 			a.drawWorkSkill(screen, p, col, cell)
-			drawLabel(screen, int(cell.X)+17, y+3, v)
+			drawText(screen, v, float64(cell.X+cell.W/2), float64(cell.Y)+(float64(cell.H)-lineH(tsBody))/2, textStyle{Size: tsBody.Size, Align: alignCenter})
 		}
 	}
 }

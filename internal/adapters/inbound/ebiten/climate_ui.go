@@ -118,8 +118,8 @@ func (a *App) liveMessages() []game.MessageView {
 // messageRect is the i-th notice's rect: centred under the top bar,
 // clear of the side panels and alerts.
 func (a *App) messageRect(sw, i int, m game.MessageView) button {
-	w := len(messageLine(m))*6 + 16
-	return button{x: float32((sw - w) / 2), y: float32(hudTopH + hudPad + i*24), w: float32(w), h: 20}
+	w := int(textW(messageLine(m), tsBody)) + 16
+	return button{x: float32((sw - w) / 2), y: float32(hudTopH + hudPad + i*26), w: float32(w), h: float32(lineStep(tsBody)) + 2}
 }
 
 // messageButtons make the notices clickable: a click jumps to the

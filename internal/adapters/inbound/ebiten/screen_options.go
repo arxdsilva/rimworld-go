@@ -238,7 +238,8 @@ func (a *App) drawOptions(screen *ebiten.Image, sw, sh int) {
 	rows := optionRows(tab)
 	for i, r := range rows {
 		y := rowY(i)
-		drawLabel(screen, 56, int(y)+11, r.label)
+		ty := float64(y) + (optBtnH-lineH(tsBody))/2
+		drawText(screen, r.label, 56, ty, tsBody)
 		if r.kind != rowStep {
 			continue
 		}
@@ -247,10 +248,13 @@ func (a *App) drawOptions(screen *ebiten.Image, sw, sh int) {
 		vector.FillRect(screen, bx, by, optBarW, 12, uiBtnDisabled, false)
 		vector.FillRect(screen, bx, by, optBarW*float32(clamp01(r.frac(a.settings))), 12, uiAccent, false)
 		vector.StrokeRect(screen, bx, by, optBarW, 12, 1, uiPanelBorder, false)
-		drawLabel(screen, optCtrlX+2*optBtnH+optBarW+28, int(y)+11, r.value(a.settings))
+		drawText(screen, r.value(a.settings), optCtrlX+2*optBtnH+optBarW+28, ty, tsBody)
 	}
 	if note := optionNotes[tab]; note != "" {
-		drawLabel(screen, 56, int(rowY(len(rows)))+optNoteY-20, note)
+		ny := float64(rowY(len(rows))) + optNoteY - 20
+		for i, ln := range wrapPx(note, tsSmall, float64(sw)-2*56-16) {
+			drawText(screen, ln, 56, ny+float64(i)*lineH(tsSmall), withColor(tsSmall, uiTextDim))
+		}
 	}
 	mx, my := a.currentCursor()
 	a.drawButtons(screen, a.optionsButtons(sw, sh), mx, my)

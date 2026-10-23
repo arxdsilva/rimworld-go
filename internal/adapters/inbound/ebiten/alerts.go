@@ -210,7 +210,7 @@ func (a *App) drawAlerts(screen *ebiten.Image, sw int) {
 		vector.FillRect(screen, r.x, r.y, r.w, r.h, bg, false)
 		vector.FillRect(screen, r.x, r.y, 4, r.h, edge, false)
 		vector.StrokeRect(screen, r.x, r.y, r.w, r.h, 1, edge, false)
-		drawLabel(screen, int(r.x)+12, int(r.y)+6, al.label)
+		drawFitSmall(screen, al.label, float64(r.x)+12, float64(r.y)+(float64(r.h)-lineH(tsBody))/2, float64(r.w)-18, tsBody)
 	}
 }
 

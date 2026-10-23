@@ -180,17 +180,18 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 	wld := a.renderer.world()
 	for _, l := range resourceReadouts(wld) { // Food, Wood, Stone, Steel (+ Silver, Gold)
 		drawLabel(screen, x, 10, l)
-		x += max(90, len(l)*6+18)
+		x += max(90, int(textW(l, tsBody))+18)
 	}
 	if wld.Season != "" {
 		season := seasonText(wld)
 		drawLabel(screen, x, 10, season)
-		defer a.drawBiomeTooltip(screen, x, len(season)*6)
-		x += (len(season) + 3) * 6
+		seasonW := int(textW(season, tsBody))
+		defer a.drawBiomeTooltip(screen, x, seasonW)
+		x += seasonW + 18
 	}
 	drawWeatherLabel(screen, x, 10, wld)
 	time := a.hudTimeText()
-	drawLabel(screen, sw-len(time)*7-hudPad, 10, time)
+	drawLabel(screen, sw-int(textW(time, tsBody))-hudPad, 10, time)
 	a.drawRoofButton(screen, sw)
 	a.drawHomeButton(screen, sw)
 	a.drawRoomsButton(screen, sw)
@@ -233,7 +234,7 @@ func (a *App) drawColonistPortraits(screen *ebiten.Image, sh int) {
 			drawIcon(screen, a.icon("draft"), x+24, y-2, 18)
 		}
 		vector.FillRect(screen, float32(x), float32(y)+46, 40*float32(p.Mood)/100, 3, moodColor(p.Mood), false)
-		drawLabel(screen, int(x), int(hudBarY(sh))+hudBarH-14, pawnLabel(p))
+		drawText(screen, ellipsize(pawnLabel(p), tsSmall, barSlot-4), x, float64(hudBarY(sh))+hudBarH-lineH(tsSmall)-1, tsSmall)
 	}
 }
 
@@ -331,18 +332,14 @@ func (a *App) drawHoverRoom(screen *ebiten.Image, sh int) {
 // drawHoverPanel draws lines in a right-aligned panel whose bottom edge sits
 // just above bottomY. The first line is the title.
 func drawHoverPanel(screen *ebiten.Image, sw, bottomY int, lines []string) {
-	const lineH, pad = 16, 8
-	wid := 0
-	for _, l := range lines {
-		if n := len(l) * 6; n > wid {
-			wid = n
-		}
-	}
-	pw, ph := wid+pad*2, len(lines)*lineH+pad*2-4
+	const pad = 8
+	step := int(lineStep(tsBody))
+	wid := int(maxTextW(lines, tsBody))
+	pw, ph := wid+pad*2, len(lines)*step+pad*2-4
 	px, py := sw-pw-hudPad, bottomY-ph-hudPad
 	drawPanel(screen, float32(px), float32(py), float32(pw), float32(ph))
 	for i, l := range lines {
-		drawLabel(screen, px+pad, py+pad-2+i*lineH, l)
+		drawLabel(screen, px+pad, py+pad-2+i*step, l)
 	}
 }
 
@@ -451,7 +448,7 @@ func (a *App) roofButtons(sw int) []button {
 	if a.renderer == nil {
 		return nil
 	}
-	x := float32(sw-len(a.hudTimeText())*7-hudPad) - roofButtonW - hudPad
+	x := float32(sw-int(textW(a.hudTimeText(), tsBody))-hudPad) - roofButtonW - hudPad
 	return []button{{id: roofButtonID, label: "Roof", x: x, y: 4, w: roofButtonW, h: hudTopH - 8, selected: a.renderer.roofOverlayOn(),
 		tip: "Roof overlay" + a.keyHint(input.RoofOverlay)}}
 }
@@ -469,9 +466,9 @@ func (a *App) drawRoofButton(screen *ebiten.Image, sw int) {
 			drawIcon(screen, img, float64(b.x)+(float64(b.w)-float64(b.h)+4)/2, float64(b.y)+2, float64(b.h)-4)
 		}
 		if line := a.roofLegend(); line != "" { // a tab under the bar, clear of the readouts
-			lw := float32(len(line)*6 + 2*hudPad)
+			lw := textW(line, tsBody) + 2*hudPad
 			lx := min(b.x+b.w, float32(sw-hudPad)) - lw
-			drawPanel(screen, lx, hudTopH+2, lw, 22)
+			drawPanel(screen, lx, hudTopH+2, lw, lineStep(tsBody)+6)
 			drawLabel(screen, int(lx)+hudPad, int(hudTopH)+7, line)
 		}
 	}

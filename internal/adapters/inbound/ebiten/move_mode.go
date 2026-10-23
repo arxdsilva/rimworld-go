@@ -194,8 +194,8 @@ func (a *App) drawMoveMode(screen *ebiten.Image) {
 	} else if bv, ok := buildable(b.Kind); ok && bv.Rotatable {
 		msg += "   " + a.rotateKeys() + " rotate"
 	}
-	vector.FillRect(screen, float32(mx+16), float32(my+18), float32(len(msg)*6+12), 18, uiPanel, false)
-	drawLabel(screen, mx+22, my+19, msg)
+	vector.FillRect(screen, float32(mx+16), float32(my+18), textW(msg, tsBody)+16, lineStep(tsBody)+4, uiPanel, false)
+	drawText(screen, msg, float64(mx+24), float64(my+20), tsBody)
 }
 
 // drawMoveMarkers labels each reinstall frame with a small arrow.
@@ -208,7 +208,7 @@ func (a *App) drawMoveMarkers(screen *ebiten.Image) {
 			continue
 		}
 		sx, sy := a.renderer.worldToScreen(f.X, f.Y)
-		drawLabel(screen, int(sx)+2, int(sy)+2, "->")
+		drawText(screen, "->", float64(sx)+2, float64(sy)+2, withColor(tsSmall, uiAccent))
 	}
 }
 

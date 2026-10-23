@@ -27,11 +27,12 @@ func (r *Renderer) drawStackCounts(screen *ebiten.Image, w game.WorldView, tile 
 		}
 		s := strconv.Itoa(it.Qty)
 		sx, sy := r.worldToScreen(it.X, it.Y)
-		tw := float32(len(s)*6 + 4)
+		tw := textW(s, tsSmall) + 6
+		th := lineStep(tsSmall) - 2
 		x := sx + float32(tile) - tw - 2
-		y := sy + float32(tile) - 16
-		vector.FillRect(screen, x, y, tw, 14, color.RGBA{16, 12, 8, 190}, false)
-		debugPrintAt(screen, s, int(x)+2, int(y)-1)
+		y := sy + float32(tile) - th - 2
+		vector.FillRect(screen, x, y, tw, th, color.RGBA{16, 12, 8, 190}, false)
+		drawText(screen, s, float64(x)+3, float64(y)-1, tsSmall)
 	}
 }
 

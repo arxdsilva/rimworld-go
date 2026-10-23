@@ -404,7 +404,7 @@ func groupNoun(k selKind, n int) string {
 
 func groupRect(rows int) button {
 	r := inspectorRect()
-	return button{x: r.x, y: r.y, w: r.w, h: float32(76 + min(rows, groupListMax)*18)}
+	return button{x: r.x, y: r.y, w: r.w, h: float32(80 + min(rows, groupListMax)*21)}
 }
 
 // groupButtons are the group panel's buttons ("group.*").
@@ -434,7 +434,7 @@ func (a *App) groupButtons() []button {
 			break
 		}
 		out = append(out, button{id: "group.pick." + strconv.FormatUint(uint64(row.id), 10), label: row.label,
-			x: r.x + 12, y: r.y + 66 + float32(i)*18, w: r.w - 24, h: 16, tip: "Select only this one"})
+			x: r.x + 12, y: r.y + 66 + float32(i)*21, w: r.w - 24, h: 20, tip: "Select only this one"})
 	}
 	return out
 }
@@ -495,9 +495,9 @@ func (a *App) drawGroupInspector(screen *ebiten.Image) {
 	rows := a.groupRows()
 	r := groupRect(len(rows))
 	drawPanel(screen, r.x, r.y, r.w, r.h)
-	drawLabel(screen, int(r.x)+12, int(r.y)+10, groupNoun(a.group.kind, len(rows))+" selected")
+	drawText(screen, groupNoun(a.group.kind, len(rows))+" selected", float64(r.x)+12, float64(r.y)+9, withColor(tsLabel, uiHeading))
 	if len(rows) > groupListMax {
-		drawLabel(screen, int(r.x)+12, int(r.y+r.h)-18, fmt.Sprintf("... and %d more", len(rows)-groupListMax))
+		drawText(screen, fmt.Sprintf("... and %d more", len(rows)-groupListMax), float64(r.x)+12, float64(r.y+r.h)-lineH(tsSmall)-3, withColor(tsSmall, uiTextDim))
 	}
 	mx, my := a.currentCursor()
 	for _, b := range bs {
@@ -505,7 +505,7 @@ func (a *App) drawGroupInspector(screen *ebiten.Image) {
 			if b.contains(mx, my) {
 				vector.FillRect(screen, b.x, b.y, b.w, b.h, uiBtnHover, false)
 			}
-			drawLabel(screen, int(b.x)+4, int(b.y)+1, b.label)
+			drawText(screen, ellipsize(b.label, tsBody, float64(b.w)-8), float64(b.x)+4, float64(b.y)+(float64(b.h)-lineH(tsBody))/2, tsBody)
 			continue
 		}
 		drawButton(screen, b, b.contains(mx, my))

@@ -16,7 +16,7 @@ import (
 // colonist's queue is listed under the inspector with a Clear button, and
 // its route is drawn on the map as numbered waypoints.
 
-const queueRowH = 18
+const queueRowH = 20
 
 // orderQueueRect is the panel listing n queued orders below the inspector.
 func orderQueueRect(n int) button {
@@ -40,9 +40,9 @@ func (a *App) drawOrderQueue(screen *ebiten.Image) {
 	}
 	r := orderQueueRect(len(p.QueuedOrders))
 	drawPanel(screen, r.x, r.y, r.w, r.h)
-	drawLabel(screen, int(r.x)+12, int(r.y)+7, fmt.Sprintf("Queued orders %d/%d", len(p.QueuedOrders), game.MaxQueuedOrders))
+	drawText(screen, fmt.Sprintf("Queued orders %d/%d", len(p.QueuedOrders), game.MaxQueuedOrders), float64(r.x)+12, float64(r.y)+5, withColor(tsLabel, uiHeading))
 	for i, q := range p.QueuedOrders {
-		drawLabel(screen, int(r.x)+16, int(r.y)+28+i*queueRowH, fmt.Sprintf("%d. %s", i+1, q.Label))
+		drawText(screen, ellipsize(fmt.Sprintf("%d. %s", i+1, q.Label), tsBody, float64(r.w)-32), float64(r.x)+16, float64(r.y)+28+float64(i*queueRowH), tsBody)
 	}
 	mx, my := a.currentCursor()
 	a.drawButtons(screen, a.orderQueueButtons(), mx, my)
@@ -94,7 +94,7 @@ func (r *Renderer) drawOrderRoute(screen *ebiten.Image, tile float64) {
 			n++
 			label = strconv.Itoa(n)
 		}
-		debugPrintAt(screen, label, int(sx)-3, int(sy)-8)
+		drawText(screen, label, float64(sx), float64(sy)-lineH(tsSmall)/2, textStyle{Size: tsSmall.Size, Bold: true, Align: alignCenter})
 	}
 }
 

@@ -298,5 +298,7 @@ func (r *Renderer) drawZoneLabel(screen *ebiten.Image, z game.ZoneView, sw, sh i
 	if !visible(sx, sy, float32(tile), float32(tile), sw, sh) {
 		return
 	}
-	drawLabel(screen, int(sx)+4, int(sy)+4, zoneLabelText(z))
+	lbl := ellipsize(zoneLabelText(z), tsSmall, tile*float64(max(1, z.MaxX-z.MinX+1))-8)
+	drawText(screen, lbl, float64(sx)+5, float64(sy)+4, withColor(tsSmall, color.RGBA{0, 0, 0, 170})) // shadow
+	drawText(screen, lbl, float64(sx)+4, float64(sy)+3, tsSmall)
 }

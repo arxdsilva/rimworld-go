@@ -73,7 +73,10 @@ func (a *App) scheduleRows() []uint64 {
 func (a *App) drawSchedule(screen *ebiten.Image, sw, sh int) {
 	r := workRect(sw, sh)
 	drawPanel(screen, r.x, r.y, r.w, r.h)
-	drawLabel(screen, int(r.x)+12, int(r.y)+10, "Schedule  (pick an activity, then click or drag across the hours)")
+	drawText(screen, "Schedule", float64(r.x)+12, float64(r.y)+6, withColor(tsLabel, uiHeading))
+	hintX := float64(r.x) + 12 + float64(textW("Schedule", tsLabel)) + 16
+	drawText(screen, ellipsize("pick an activity, then click or drag across the hours", tsSmall, float64(r.x+r.w)-12-hintX),
+		hintX, float64(r.y)+6+(lineH(tsLabel)-lineH(tsSmall))/2, withColor(tsSmall, uiTextDim))
 	mx, my := a.currentCursor()
 	for _, b := range a.scheduleButtons() {
 		if !strings.HasPrefix(b.id, "sched.brush.") {
@@ -85,7 +88,7 @@ func (a *App) drawSchedule(screen *ebiten.Image, sw, sh int) {
 	}
 	gx := int(r.x) + 12 + workNameW
 	for h := 0; h < 24; h += 3 {
-		drawLabel(screen, gx+h*schedCellW+2, int(r.y)+schedTop-16, fmt.Sprintf("%02d", h))
+		drawText(screen, fmt.Sprintf("%02d", h), float64(gx+h*schedCellW+2), float64(int(r.y)+schedTop)-lineH(tsSmall)-1, withColor(tsSmall, uiTextDim))
 	}
 	byID := map[uint64]game.PawnView{}
 	for _, p := range a.renderer.snapshot() {
@@ -102,7 +105,7 @@ func (a *App) drawSchedule(screen *ebiten.Image, sw, sh int) {
 		if p, ok := byID[id]; ok {
 			name, grid = pawnLabel(p), p.Schedule
 		}
-		drawLabel(screen, int(r.x)+12, y+4, name)
+		drawText(screen, ellipsize(name, tsBody, workNameW-8), float64(r.x)+12, float64(y)+(schedRowH-3-lineH(tsBody))/2, tsBody)
 		for h := 0; h < 24; h++ {
 			x := float32(gx + h*schedCellW)
 			c := color.RGBA{60, 56, 50, 255}

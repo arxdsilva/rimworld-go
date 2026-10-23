@@ -51,12 +51,10 @@ func (a *App) drawBiomeTooltip(screen *ebiten.Image, x, width int) {
 	if len(lines) == 0 {
 		return
 	}
-	wid := 0
-	for _, l := range lines {
-		wid = max(wid, len(l)*6)
-	}
-	drawPanel(screen, float32(x), hudTopH+4, float32(wid+16), float32(len(lines)*16+12))
+	step := int(lineStep(tsBody))
+	wid := int(maxTextW(lines, tsBody))
+	drawPanel(screen, float32(x), hudTopH+4, float32(wid+16), float32(len(lines)*step+12))
 	for i, l := range lines {
-		drawLabel(screen, x+8, hudTopH+10+i*16, l)
+		drawLabel(screen, x+8, hudTopH+10+i*step, l)
 	}
 }

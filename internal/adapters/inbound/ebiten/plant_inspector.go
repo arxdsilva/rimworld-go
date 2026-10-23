@@ -17,7 +17,7 @@ import (
 // grown, and Harvest / Cut (or Chop) with "now" orders per colonist.
 
 // plantRect is the plant panel's frame (the inspector's top-left slot).
-func plantRect() button { return button{x: hudPad, y: hudTopH + hudPad, w: 300, h: 190} }
+func plantRect() button { return button{x: hudPad, y: hudTopH + hudPad, w: 340, h: 210} }
 
 // maxPlantChips is how many "now" colonist chips fit in the panel's row.
 const maxPlantChips = 3
@@ -124,9 +124,6 @@ func plantMarkCmd(p game.PlantView, harvest, undo bool) command.Command {
 
 func chipLabel(c colonistAction) string {
 	n := c.Name
-	if len(n) > 9 {
-		n = n[:9]
-	}
 	if c.Disabled {
 		n += " ×"
 	}
@@ -147,7 +144,7 @@ func plantPanelButtons(r button, p game.PlantView, chips []colonistAction) []but
 		case !p.Harvestable:
 			dis, reason = true, "not ready"
 		}
-		out = append(out, button{id: "plant.harvest", label: label, x: x, y: by, w: 130, h: 24, selected: p.Designated, disabled: dis, reason: reason})
+		out = append(out, button{id: "plant.harvest", label: label, x: x, y: by, w: 130, h: 24, selected: p.Designated, disabled: dis, reason: reason, quiet: true})
 		x += 138
 	}
 	cut := "Cut"
@@ -161,8 +158,8 @@ func plantPanelButtons(r button, p game.PlantView, chips []colonistAction) []but
 	cx := r.x + 48
 	for _, c := range plantNowChips(p, chips) {
 		out = append(out, button{id: "plant.now." + strconv.FormatUint(uint64(c.Pawn), 10), label: chipLabel(c),
-			x: cx, y: by - 26, w: 82, h: 20, disabled: c.Disabled, reason: c.Reason, quiet: true})
-		cx += 84
+			x: cx, y: by - 26, w: 88, h: 20, disabled: c.Disabled, reason: c.Reason, quiet: true})
+		cx += 90
 	}
 	return out
 }
@@ -203,13 +200,17 @@ func (a *App) drawPlantInspector(screen *ebiten.Image) {
 		}
 	}
 	x, y := int(r.x), int(r.y)
-	drawLabel(screen, x+60, y+12, plantTitle(p))
-	drawLabel(screen, x+60, y+30, plantCategory(p))
-	drawNeedBar(screen, x+12, y+62, 270, 12, p.Growth, plantStageWord(p))
-	for i, l := range plantLines(p) {
-		drawLabel(screen, x+12, y+80+i*14, l)
+	drawText(screen, ellipsize(plantTitle(p), tsLabel, float64(r.w)-60-40), float64(x+60), float64(y+10), withColor(tsLabel, uiHeading))
+	drawText(screen, ellipsize(plantCategory(p), tsSmall, float64(r.w)-60-12), float64(x+60), float64(y+32), withColor(tsSmall, uiTextDim))
+	drawNeedBar(screen, x+12, y+62, int(r.w)-24, 12, p.Growth, plantStageWord(p))
+	ly := float64(y + 84)
+	for _, l := range plantLines(p) {
+		for _, wl := range wrapPx(l, tsSmall, float64(r.w)-24) {
+			drawText(screen, wl, float64(x+12), ly, tsSmall)
+			ly += float64(lineStep(tsSmall))
+		}
 	}
-	drawLabel(screen, x+12, y+int(r.h)-54, "now:")
+	drawText(screen, "now:", float64(x+12), float64(y)+float64(r.h)-56+(20-lineH(tsSmall))/2, withColor(tsSmall, uiTextDim))
 	mx, my := a.currentCursor()
 	a.drawButtons(screen, a.plantButtons(), mx, my)
 	if a.renderer.art != nil {

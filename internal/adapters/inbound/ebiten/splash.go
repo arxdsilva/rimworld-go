@@ -19,7 +19,6 @@ const (
 	menuRailW   = 300
 	menuRailPad = 40
 	splashTop   = 24
-	debugCharW  = 7
 )
 
 func menuRailX(sw int) float32 {
@@ -27,7 +26,7 @@ func menuRailX(sw int) float32 {
 }
 
 func menuTitleX(sw int, title string) int {
-	return (sw - len(title)*debugCharW) / 2
+	return (sw - int(textW(title, tsHuge))) / 2
 }
 
 // LocateMenuSplash walks parents of cwd looking for DefaultMenuSplashRel.

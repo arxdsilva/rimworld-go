@@ -14,40 +14,34 @@ import (
 // newest first.
 
 const (
-	logLineH      = 14 // px per text row
-	logCharW      = 7  // debug font advance (ART: 7 px/char)
 	logEmptyText  = "Nothing has happened yet."
 	logRecentRows = 4 // animal inspector's Recent list
 )
+
+// logStyle is the log's text: the small size, so a panel shows many rows.
+var logStyle = tsSmall
+
+// logLineH is the px height of one log row.
+func logLineH() int { return int(lineStep(logStyle)) }
 
 // logLineText is "Day D, HHh  Text".
 func logLineText(l game.LogLineView) string {
 	return fmt.Sprintf("Day %d, %02dh  %s", l.Day, l.Hour, l.Text)
 }
 
-// wrapLogRows lays lines (newest first) out as rows of at most cols
-// characters; a long line wraps onto indented continuation rows.
-func wrapLogRows(lines []game.LogLineView, cols int) []string {
-	if cols < 8 {
-		cols = 8
-	}
+// wrapLogRows lays lines (newest first) out as rows no wider than maxW px;
+// a long line wraps onto indented continuation rows.
+func wrapLogRows(lines []game.LogLineView, maxW float64) []string {
+	maxW = max(maxW, 60)
+	indent := "  "
+	iw := float64(textW(indent, logStyle))
 	var rows []string
 	for _, l := range lines {
-		s := []rune(logLineText(l))
-		first := true
-		for len(s) > 0 {
-			w := cols
-			if !first {
-				w = cols - 2
-			}
-			n := min(len(s), w)
-			row := string(s[:n])
-			if !first {
-				row = "  " + row
+		for i, row := range wrapPx(logLineText(l), logStyle, maxW-iw) {
+			if i > 0 {
+				row = indent + row
 			}
 			rows = append(rows, row)
-			s = s[n:]
-			first = false
 		}
 	}
 	return rows
@@ -59,21 +53,24 @@ func clampLogScroll(scroll, rows, visible int) int {
 }
 
 // drawLogRows draws the visible slice of rows from scroll, with a small
-// scroll hint when more are hidden. Returns the clamped offset.
-func drawLogRows(screen *ebiten.Image, rows []string, x, y, visible, scroll int) int {
+// scroll hint at the right edge (hintX) when more are hidden. Returns the
+// clamped offset.
+func drawLogRows(screen *ebiten.Image, rows []string, x, y, w, visible, scroll int) int {
+	lh := logLineH()
 	if len(rows) == 0 {
-		drawLabel(screen, x, y, logEmptyText)
+		drawText(screen, logEmptyText, float64(x), float64(y), withColor(logStyle, uiTextDim))
 		return 0
 	}
 	scroll = clampLogScroll(scroll, len(rows), visible)
 	for i := 0; i < visible && scroll+i < len(rows); i++ {
-		drawLabel(screen, x, y+i*logLineH, rows[scroll+i])
+		drawText(screen, rows[scroll+i], float64(x), float64(y+i*lh), logStyle)
 	}
+	hint := textStyle{Size: logStyle.Size, Color: uiAccent, Align: alignRight}
 	if scroll > 0 {
-		drawLabel(screen, x+logCharW*38, y-logLineH, "^")
+		drawText(screen, "^", float64(x+w-4), float64(y-lh), hint)
 	}
 	if scroll+visible < len(rows) {
-		drawLabel(screen, x+logCharW*38, y+visible*logLineH, "v")
+		drawText(screen, "v", float64(x+w-4), float64(y+visible*lh), hint)
 	}
 	return scroll
 }
@@ -81,7 +78,7 @@ func drawLogRows(screen *ebiten.Image, rows []string, x, y, visible, scroll int)
 // logPanelRect is the pawn Log tab's text area inside the inspector.
 func logPanelRect() (x, y, w, h int) {
 	r := inspectorRect()
-	return int(r.x) + 12, int(r.y) + 126, int(r.w) - 24, int(r.h) - 126 - 70
+	return int(r.x) + 12, int(r.y) + insBodyY, int(r.w) - 24, int(r.h) - insBodyY - 70
 }
 
 // animalLogRect is the animal inspector's expanded log area.
@@ -145,23 +142,19 @@ func (a *App) syncLogFor(id entity.EntityID) {
 func (a *App) drawPawnLog(screen *ebiten.Image, p game.PawnView) {
 	a.syncLogFor(p.ID)
 	x, y, w, h := logPanelRect()
-	rows := wrapLogRows(p.Log, w/logCharW)
-	a.logScroll = drawLogRows(screen, rows, x, y, h/logLineH, a.logScroll)
+	rows := wrapLogRows(p.Log, float64(w)-12)
+	a.logScroll = drawLogRows(screen, rows, x, y, w, h/logLineH(), a.logScroll)
 }
 
 // recentLogRows is the animal inspector's Recent list: the newest
-// logRecentRows lines, each clipped to one row.
-func recentLogRows(log []game.LogLineView, cols int) []string {
+// logRecentRows lines, each clipped to one row of at most maxW px.
+func recentLogRows(log []game.LogLineView, maxW float64) []string {
 	if len(log) > logRecentRows {
 		log = log[:logRecentRows]
 	}
 	rows := make([]string, 0, len(log))
 	for _, l := range log {
-		t := []rune(logLineText(l))
-		if len(t) > cols {
-			t = t[:cols]
-		}
-		rows = append(rows, string(t))
+		rows = append(rows, ellipsize(logLineText(l), logStyle, maxW))
 	}
 	return rows
 }
@@ -177,13 +170,12 @@ func (a *App) syncAnimalLog(id entity.EntityID) {
 // scrollable log when expanded.
 func (a *App) drawAnimalLog(screen *ebiten.Image, an game.AnimalView, r button) {
 	x, y, w, h := animalLogRect(r, animalExtraH(an))
-	cols := w / logCharW
 	if a.animalLogOpen {
-		rows := wrapLogRows(an.Log, cols)
-		a.animalLogScroll = drawLogRows(screen, rows, x, y, h/logLineH, a.animalLogScroll)
+		rows := wrapLogRows(an.Log, float64(w)-12)
+		a.animalLogScroll = drawLogRows(screen, rows, x, y, w, h/logLineH(), a.animalLogScroll)
 		return
 	}
-	drawLabel(screen, x, y-2, "Recent:")
-	rows := recentLogRows(an.Log, cols)
-	drawLogRows(screen, rows, x, y+logLineH, logRecentRows, 0)
+	drawText(screen, "Recent:", float64(x), float64(y)-2, withColor(tsSmall, uiTextDim))
+	rows := recentLogRows(an.Log, float64(w)-12)
+	drawLogRows(screen, rows, x, y+logLineH(), w, logRecentRows, 0)
 }

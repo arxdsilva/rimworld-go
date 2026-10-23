@@ -43,7 +43,7 @@ func floatLabel(o game.OrderOption) string {
 func (a *App) floatRect() button {
 	w := floatMinW
 	for _, o := range a.float.opts {
-		if n := len(floatLabel(o))*6 + 28; n > w {
+		if n := int(textW(floatLabel(o), tsBody)) + 28; n > w {
 			w = n
 		}
 	}
@@ -82,7 +82,7 @@ func (a *App) drawFloat(screen *ebiten.Image) {
 	}
 	r := a.floatRect()
 	drawPanel(screen, r.x-2, r.y-2, r.w+4, r.h+4)
-	debugPrintAt(screen, "Shift: queue (max 3)", int(r.x)+10, int(r.y+r.h)-floatHintH+1)
+	drawText(screen, "Shift: queue (max 3)", float64(r.x)+10, float64(r.y+r.h)-floatHintH, withColor(tsSmall, uiTextDim))
 	mx, my := a.currentCursor()
 	for _, b := range a.floatButtons() {
 		fill := uiBtn
@@ -93,7 +93,11 @@ func (a *App) drawFloat(screen *ebiten.Image) {
 		}
 		vector.FillRect(screen, b.x, b.y, b.w, b.h, fill, false)
 		vector.StrokeRect(screen, b.x, b.y, b.w, b.h, 1, uiPanelBorder, false)
-		drawLabel(screen, int(b.x)+10, int(b.y)+4, b.label)
+		ts := tsBody
+		if b.disabled {
+			ts = withColor(tsBody, uiTextDim)
+		}
+		drawText(screen, ellipsize(b.label, ts, float64(b.w)-20), float64(b.x)+10, float64(b.y)+(float64(b.h)-lineH(ts))/2, ts)
 	}
 }
 

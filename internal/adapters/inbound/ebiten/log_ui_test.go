@@ -23,11 +23,11 @@ func TestLogLineTextAndWrap(t *testing.T) {
 	if got := logLineText(game.LogLineView{Day: 2, Hour: 7, Text: "Ate a meal"}); got != "Day 2, 07h  Ate a meal" {
 		t.Fatalf("text = %q", got)
 	}
-	rows := wrapLogRows([]game.LogLineView{{Day: 1, Hour: 1, Text: strings.Repeat("x", 60)}}, 30)
-	if len(rows) < 2 || !strings.HasPrefix(rows[1], "  ") || len(rows[0]) > 30 {
+	rows := wrapLogRows([]game.LogLineView{{Day: 1, Hour: 1, Text: strings.Repeat("x", 60)}}, 200)
+	if w, _ := measure(rows[0], logStyle); len(rows) < 2 || !strings.HasPrefix(rows[1], "  ") || w > 200 {
 		t.Fatalf("rows = %q", rows)
 	}
-	if got := wrapLogRows(logs(3), 45); len(got) != 3 || !strings.Contains(got[0], "event A") {
+	if got := wrapLogRows(logs(3), 300); len(got) != 3 || !strings.Contains(got[0], "event A") {
 		t.Fatalf("newest first: %q", got)
 	}
 	if clampLogScroll(99, 10, 4) != 6 || clampLogScroll(-1, 10, 4) != 0 {
@@ -37,7 +37,7 @@ func TestLogLineTextAndWrap(t *testing.T) {
 
 func TestRecentShowsFourNewest(t *testing.T) {
 	t.Parallel()
-	rows := recentLogRows(logs(7), 40)
+	rows := recentLogRows(logs(7), 300)
 	if len(rows) != 4 || !strings.Contains(rows[0], "event A") || !strings.Contains(rows[3], "event D") {
 		t.Fatalf("rows = %q", rows)
 	}
@@ -68,7 +68,7 @@ func TestLogTabButtonAndRendering(t *testing.T) {
 	empty := p
 	empty.Log = nil
 	a.drawPawnLog(img, empty)
-	if rows := wrapLogRows(empty.Log, 40); len(rows) != 0 {
+	if rows := wrapLogRows(empty.Log, 300); len(rows) != 0 {
 		t.Fatal("no lines, no rows (the empty message is drawn instead)")
 	}
 	// the wheel scrolls inside the panel, and not outside it

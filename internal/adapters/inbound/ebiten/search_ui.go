@@ -44,7 +44,7 @@ type searchHit struct {
 const (
 	searchW       = 440
 	searchMaxHits = 8
-	searchRowH    = 20
+	searchRowH    = 22
 	searchMaxLen  = 32
 )
 
@@ -225,14 +225,18 @@ func (a *App) drawSearch(screen *ebiten.Image, sw int) {
 	if (a.updates/30)%2 == 0 {
 		cursor = "_"
 	}
-	drawLabel(screen, int(r.x)+14, int(r.y)+12, "Search: "+a.search.text+cursor)
+	query := []rune(a.search.text)
+	for len(query) > 1 && textW("Search: "+string(query)+cursor, tsBody) > r.w-28 {
+		query = query[1:] // keep the end of a long query, where the player is typing
+	}
+	drawText(screen, "Search: "+string(query)+cursor, float64(r.x)+14, float64(r.y)+8+(24-lineH(tsBody))/2, tsBody)
 	hits := a.searchHits()
 	if len(hits) == 0 {
 		msg := "Type a name, species, item or building"
 		if a.search.text != "" {
 			msg = "Nothing matches"
 		}
-		drawLabel(screen, int(r.x)+16, int(r.y)+42, msg)
+		drawText(screen, msg, float64(r.x)+16, float64(r.y)+42, withColor(tsBody, uiTextDim))
 	}
 	mx, my := a.currentCursor()
 	for i, b := range a.searchButtons(sw) {
@@ -247,8 +251,10 @@ func (a *App) drawSearch(screen *ebiten.Image, sw int) {
 			fill = uiBtnHover
 		}
 		vector.FillRect(screen, b.x, b.y, b.w, b.h, fill, false)
-		drawLabel(screen, int(b.x)+6, int(b.y)+2, hits[i].label)
 		kind := hits[i].kind
-		drawLabel(screen, int(b.x+b.w)-len(kind)*6-8, int(b.y)+2, kind)
+		ty := float64(b.y) + (float64(b.h)-lineH(tsBody))/2
+		kw := float64(textW(kind, tsSmall))
+		drawText(screen, ellipsize(hits[i].label, tsBody, float64(b.w)-kw-26), float64(b.x)+6, ty, tsBody)
+		drawText(screen, kind, float64(b.x+b.w)-8, float64(b.y)+(float64(b.h)-lineH(tsSmall))/2, textStyle{Size: tsSmall.Size, Color: uiTextDim, Align: alignRight})
 	}
 }

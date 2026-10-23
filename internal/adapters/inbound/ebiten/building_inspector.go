@@ -155,7 +155,7 @@ func (a *App) drawBuildingInspector(screen *ebiten.Image) {
 	}
 	r := buildingRect()
 	drawPanel(screen, r.x, r.y, r.w, r.h)
-	drawLabel(screen, int(r.x)+12, int(r.y)+10, buildingTitle(b))
+	drawFitSmall(screen, buildingTitle(b), float64(r.x)+12, float64(r.y)+8, float64(r.w)-48, tsLabel)
 	state := fmt.Sprintf("tile (%d, %d)", b.X, b.Y)
 	if b.Deconstruct {
 		state += "   marked for deconstruction"
@@ -176,7 +176,7 @@ func (a *App) drawBuildingInspector(screen *ebiten.Image) {
 	if b.DryQty > 0 {
 		state += fmt.Sprintf("   drying %d %s, %d%%", b.DryQty, b.DryKind, b.DryPct)
 	}
-	drawLabel(screen, int(r.x)+12, int(r.y)+28, state)
+	drawFitSmall(screen, state, float64(r.x)+12, float64(r.y)+27, float64(r.w)-24, tsBody)
 	for i, ln := range graveLines(b) {
 		drawLabel(screen, int(r.x)+12, int(r.y)+46+i*18, ln)
 	}
@@ -184,14 +184,14 @@ func (a *App) drawBuildingInspector(screen *ebiten.Image) {
 		drawLabel(screen, int(r.x)+12, int(r.y)+46, ln)
 	}
 	if b.Bench {
-		drawLabel(screen, int(r.x)+12, int(r.y)+46, "Bills")
+		drawText(screen, "Bills", float64(r.x)+12, float64(r.y)+44, tsLabel)
 		y := int(r.y) + 64
 		for _, bl := range b.Bills {
 			line := billLine(bl)
 			if bl.Status != "" {
 				vector.FillRect(screen, r.x+8, float32(y), 4, 22, uiBtnDisabled, false)
 			}
-			drawLabel(screen, int(r.x)+16, y+4, line)
+			drawFitSmall(screen, line, float64(r.x)+16, float64(y)+2, float64(r.w)-150-22, tsBody)
 			y += billRowH
 		}
 		if len(b.Bills) == 0 {
@@ -200,7 +200,7 @@ func (a *App) drawBuildingInspector(screen *ebiten.Image) {
 	}
 	a.drawTroughSection(screen, b, r)
 	if ln := movingLine(b); ln != "" {
-		drawLabel(screen, int(r.x)+134, int(r.y+r.h)-86, ln)
+		drawFitSmall(screen, ln, float64(r.x)+134, float64(r.y+r.h)-88, float64(r.w)-146, tsBody)
 	}
 	mx, my := a.currentCursor()
 	a.drawButtons(screen, a.buildingButtons(), mx, my)

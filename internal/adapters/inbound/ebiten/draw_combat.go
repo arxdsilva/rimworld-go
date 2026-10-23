@@ -85,9 +85,9 @@ func (r *Renderer) drawAnimalOverlays(screen *ebiten.Image, w game.WorldView, ti
 		}
 		if an.Tame && an.Name != "" && tile >= stackCountMinTile {
 			sx, sy := r.worldToScreenF(wx+0.5, wy+1.0)
-			tw := float32(len(an.Name)*6 + 6)
+			tw := textW(an.Name, tsSmall) + 6
 			vector.FillRect(screen, sx-tw/2, sy, tw, 14, color.RGBA{16, 12, 8, 150}, false)
-			debugPrintAt(screen, an.Name, int(sx-tw/2)+3, int(sy)-1)
+			drawText(screen, an.Name, float64(sx-tw/2)+3, float64(sy)-2, tsSmall)
 		}
 		if an.Health < 100 {
 			sx, sy := r.worldToScreenF(wx+0.15, wy-animalBarLift(an.Size))

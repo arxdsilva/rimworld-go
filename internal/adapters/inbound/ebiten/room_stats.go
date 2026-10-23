@@ -133,16 +133,18 @@ func (a *App) drawRoomCard(screen *ebiten.Image) {
 		return
 	}
 	lines := roomCardLines(w.Rooms[id])
-	wid := 0
-	for _, l := range lines {
-		wid = max(wid, len(l)*6)
-	}
-	pw, ph := wid+20, len(lines)*16+12
+	wid := int(maxTextW(lines, tsBody))
+	rowH := int(lineStep(tsBody))
+	pw, ph := wid+24, len(lines)*rowH+12
 	x, y := min(mx+18, sw-pw-4), min(my+18, int(hudBarY(sh))-ph-4)
 	drawPanel(screen, float32(x), float32(y), float32(pw), float32(ph))
 	vector.FillRect(screen, float32(x)+1, float32(y)+1, 4, float32(ph)-2, opaque(roomTint(w.Rooms[id].Score)), false)
 	for i, l := range lines {
-		drawLabel(screen, x+10, y+6+i*16, l)
+		st := tsBody
+		if i == 0 {
+			st = withColor(tsLabel, uiHeading)
+		}
+		drawText(screen, l, float64(x+14), float64(y+6+i*rowH), st)
 	}
 }
 

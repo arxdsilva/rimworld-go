@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"image/color"
+	"math"
 	"strconv"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -95,36 +96,18 @@ func (r *Renderer) drawFloaters(screen *ebiten.Image, tile float64) {
 		kept = append(kept, f)
 		rise := float64(age) / floaterLife * 0.7
 		sx, sy := r.worldToScreenF(f.x, f.y-rise)
-		k := min(3, max(1.5, tile/36)) // text scale follows the zoom
-		w := float32(float64(len(f.text)*6+4) * k)
-		h := float32(14 * k)
+		// text scale follows the zoom, in half steps so few faces are cached
+		k := math.Round(min(3, max(1.5, tile/36))*2) / 2
+		st := textStyle{Size: tsSmall.Size * k, Bold: true, Align: alignCenter}
+		w := textW(f.text, st) + float32(6*k)
+		h := lineStep(st)
 		fade := float32(1)
 		if age > floaterLife/2 {
 			fade = float32(floaterLife-age) / float32(floaterLife/2)
 		}
 		vector.FillRect(screen, sx-w/2, sy-h/2, w, h, color.RGBA{16, 12, 8, uint8(170 * fade)}, false)
-		img := floaterText(f.text)
-		op := &ebiten.DrawImageOptions{}
-		op.GeoM.Scale(k, k)
-		op.GeoM.Translate(float64(sx-w/2)+2*k, float64(sy-h/2)-k)
-		op.ColorScale.ScaleWithColor(f.clr)
-		op.ColorScale.ScaleAlpha(fade)
-		screen.DrawImage(img, op)
+		st.Color = color.NRGBA{f.clr.R, f.clr.G, f.clr.B, uint8(255 * fade)}
+		drawText(screen, f.text, float64(sx), float64(sy-h/2), st)
 	}
 	r.floaters = kept
-}
-
-var floaterCache = map[string]*ebiten.Image{}
-
-// floaterText renders (and caches) a short white debug-font label.
-func floaterText(s string) *ebiten.Image {
-	if img, ok := floaterCache[s]; ok {
-		return img
-	}
-	img := ebiten.NewImage(len(s)*6+2, 16)
-	debugPrintAt(img, s, 0, 0)
-	if len(floaterCache) < 256 {
-		floaterCache[s] = img
-	}
-	return img
 }

@@ -175,26 +175,26 @@ func (a *App) drawFrameInspector(screen *ebiten.Image) {
 	r := frameRect()
 	drawPanel(screen, r.x, r.y, r.w, r.h)
 	x, y := int(r.x)+12, int(r.y)+10
-	drawLabel(screen, x, y, in.Title)
-	drawLabel(screen, x, y+22, "Status: "+in.Status)
+	drawText(screen, in.Title, float64(x), float64(y)-2, tsLabel)
+	drawFitSmall(screen, "Status: "+in.Status, float64(x), float64(y+20), float64(r.w)-24, tsBody)
 	barW := int(r.w) - 24
 	y += 48
 	if in.Material != "" {
-		drawLabel(screen, x, y, "Materials  "+in.Material)
+		drawFitSmall(screen, "Materials  "+in.Material, float64(x), float64(y), float64(barW), tsBody)
 		drawFracBar(screen, x, y+18, barW, 8, in.MatFrac)
 		y += 32
 		if in.Stock != "" {
-			drawLabel(screen, x, y, "In stock  "+in.Stock)
+			drawFitSmall(screen, "In stock  "+in.Stock, float64(x), float64(y), float64(barW), tsBody)
 			y += 20
 		}
 	}
 	if in.Work != "" {
-		drawLabel(screen, x, y, "Work  "+in.Work)
+		drawFitSmall(screen, "Work  "+in.Work, float64(x), float64(y), float64(barW), tsBody)
 		drawFracBar(screen, x, y+18, barW, 8, in.WorkFrac)
 		y += 32
 	}
-	drawLabel(screen, x, y, in.People)
-	drawLabel(screen, x, y+20, in.Foot)
+	drawFitSmall(screen, in.People, float64(x), float64(y), float64(barW), tsBody)
+	drawFitSmall(screen, in.Foot, float64(x), float64(y+20), float64(barW), tsBody)
 	mx, my := a.currentCursor()
 	a.drawButtons(screen, a.frameButtons(), mx, my)
 	if a.renderer.art != nil {

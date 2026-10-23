@@ -16,7 +16,7 @@ import (
 // and per-colonist Equip / Wear / Haul / Eat orders.
 
 // itemRect is the item panel's frame (the inspector's top-left slot).
-func itemRect() button { return button{x: hudPad, y: hudTopH + hudPad, w: 300, h: 200} }
+func itemRect() button { return button{x: hudPad, y: hudTopH + hudPad, w: 340, h: 210} }
 
 // maxItemChips is how many colonist chips fit in one action row.
 const maxItemChips = 3
@@ -153,7 +153,7 @@ func itemPanelButtons(r button, rows []itemChipRow) []button {
 		y := r.y + r.h - 30 - float32(len(rows)-1-i)*26
 		for j, c := range row.Chips {
 			out = append(out, button{id: "item.act." + strconv.Itoa(n), label: chipLabel(c),
-				x: r.x + 56 + float32(j)*84, y: y, w: 82, h: 20, disabled: c.Disabled, reason: c.Reason, quiet: true})
+				x: r.x + 56 + float32(j)*90, y: y, w: 88, h: 20, disabled: c.Disabled, reason: c.Reason, quiet: true})
 			n++
 		}
 	}
@@ -208,15 +208,20 @@ func (a *App) drawItemInspector(screen *ebiten.Image) {
 			drawIconCS(screen, img, float64(r.x)+12, float64(r.y)+10, 40, cs)
 		}
 	}
-	x, y := int(r.x), int(r.y)
-	drawLabel(screen, x+60, y+12, itemTitle(it))
-	drawLabel(screen, x+60, y+30, itemCategory(it))
-	for i, l := range itemLines(it, stored) {
-		drawLabel(screen, x+12, y+62+i*14, l)
+	x, y := float64(r.x), float64(r.y)
+	drawText(screen, ellipsize(itemTitle(it), tsLabel, float64(r.w)-60-40), x+60, y+10, withColor(tsLabel, uiHeading))
+	drawText(screen, ellipsize(itemCategory(it), tsSmall, float64(r.w)-60-100), x+60, y+32, withColor(tsSmall, uiTextDim))
+	ly := y + 62
+	for _, l := range itemLines(it, stored) {
+		for _, wl := range wrapPx(l, tsSmall, float64(r.w)-24) {
+			drawText(screen, wl, x+12, ly, tsSmall)
+			ly += float64(lineStep(tsSmall))
+		}
 	}
 	rows := a.itemRows(it, stored)
 	for i, row := range rows {
-		drawLabel(screen, x+12, y+int(r.h)-26-(len(rows)-1-i)*26, row.Verb)
+		ry := y + float64(r.h) - 30 - float64(len(rows)-1-i)*26
+		drawText(screen, row.Verb, x+12, ry+(20-lineH(tsSmall))/2, withColor(tsSmall, uiTextDim))
 	}
 	mx, my := a.currentCursor()
 	a.drawButtons(screen, append(itemPanelButtons(r, rows), itemForbidButton(r, it)), mx, my)

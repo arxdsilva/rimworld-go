@@ -145,7 +145,7 @@ func drawAnimalIcon(dst *ebiten.Image, art *artCatalog, an game.AnimalView, x, y
 	r := float32(size) / 2
 	vector.FillCircle(dst, float32(x)+r, float32(y)+r, r, iconDiscClr, true)
 	vector.StrokeCircle(dst, float32(x)+r, float32(y)+r, r, 1.5, color.RGBA{R: 0xC8, G: 0xB0, B: 0x82, A: 0xFF}, true)
-	drawLabel(dst, int(x+float64(r))-3, int(y+float64(r))-7, animalInitial(animalLabel(an)))
+	drawCentered(dst, animalInitial(animalLabel(an)), x+float64(r), y+float64(r), tsLabel)
 }
 
 func (a *App) drawAnimalInspector(screen *ebiten.Image) {
@@ -157,7 +157,7 @@ func (a *App) drawAnimalInspector(screen *ebiten.Image) {
 	r := a.animalPanel()
 	drawPanel(screen, r.x, r.y, r.w, r.h)
 	drawAnimalIcon(screen, a.renderer.art, an, float64(r.x)+12, float64(r.y)+10, 40)
-	drawLabel(screen, int(r.x)+60, int(r.y)+12, animalTitle(an))
+	drawFitSmall(screen, animalTitle(an), float64(r.x)+60, float64(r.y)+8, float64(r.w)-60-36, tsLabel)
 	state := an.Mode
 	switch {
 	case an.Manhunter:
@@ -173,11 +173,16 @@ func (a *App) drawAnimalInspector(screen *ebiten.Image) {
 			state += ", marked for taming"
 		}
 	}
-	drawLabel(screen, int(r.x)+60, int(r.y)+30, state)
+	drawFitSmall(screen, state, float64(r.x)+60, float64(r.y)+27, float64(r.w)-72, tsSmall)
 	if l := animalLifeLine(an); l != "" {
-		drawLabel(screen, int(r.x)+60, int(r.y)+44, l)
+		drawFitSmall(screen, l, float64(r.x)+60, float64(r.y)+41, float64(r.w)-72, tsSmall)
 	}
-	drawLabel(screen, int(r.x)+12, int(r.y)+58, animalBlurb(an.Species))
+	for i, ln := range wrapPx(animalBlurb(an.Species), withColor(tsSmall, uiTextDim), float64(r.w)-24) {
+		if i > 1 {
+			break
+		}
+		drawText(screen, ln, float64(r.x)+12, float64(r.y)+55+float64(i*13), withColor(tsSmall, uiTextDim))
+	}
 	drawNeedBar(screen, int(r.x)+12, int(r.y)+84, 270, 14, an.Health, "health")
 	a.drawAnimalNeeds(screen, an, r)
 	a.drawAnimalLog(screen, an, r)

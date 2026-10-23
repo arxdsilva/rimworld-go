@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"fmt"
+	"image/color"
 	"strconv"
 	"strings"
 	"time"
@@ -212,11 +213,8 @@ func (a *App) loadButtons(sw, sh int) []button {
 		if i >= slotRows {
 			break
 		}
-		label := fmt.Sprintf("%-28s  %s  %d colonists", sl.Name, sl.Date, sl.Colonists)
-		if sl.Err != "" {
-			label = fmt.Sprintf("%-28s  (cannot load: %s)", sl.Name, sl.Err)
-		}
-		out = append(out, button{id: "load.slot." + strconv.Itoa(i), label: label,
+		// the row's text is drawn by drawLoad (proportional columns)
+		out = append(out, button{id: "load.slot." + strconv.Itoa(i), quiet: true,
 			x: x, y: float32(120 + i*(slotRowH+6)), w: 600, h: slotRowH,
 			disabled: sl.Err != "", reason: sl.Err})
 	}
@@ -235,15 +233,22 @@ func (a *App) drawLoad(screen *ebiten.Image, sw, sh int) {
 			break
 		}
 		b := buttons[i+1]
-		right := int(b.x+b.w) - 10
+		bx, by := float64(b.x), float64(b.y)
+		right := float64(b.x+b.w) - 12
 		if !sl.Modified.IsZero() {
 			when := sl.Modified.Format("Jan 2 15:04")
-			right -= len(when) * 6
-			drawLabel(screen, right, int(b.y)+int(b.h)/2-7, when)
-			right -= 16
+			drawText(screen, when, right, by+4, textStyle{Size: tsSmall.Size, Color: uiTextDim, Align: alignRight})
+			right -= float64(textW(when, tsSmall)) + 16
 		}
 		if sl.Commitment {
-			drawLabel(screen, right-len(commitTag)*6, int(b.y)+int(b.h)/2-7, commitTag)
+			drawText(screen, commitTag, right, by+4, textStyle{Size: tsSmall.Size, Color: uiAccent, Align: alignRight})
+			right -= float64(textW(commitTag, tsSmall)) + 16
 		}
+		drawText(screen, ellipsize(sl.Name, tsLabel, right-bx-12), bx+12, by+3, tsLabel)
+		sub, c := fmt.Sprintf("%s  %d colonists", sl.Date, sl.Colonists), color.Color(uiTextDim)
+		if sl.Err != "" {
+			sub, c = "cannot load: "+sl.Err, uiDanger
+		}
+		drawText(screen, ellipsize(sub, tsSmall, float64(b.w)-24), bx+12, by+float64(b.h)-lineH(tsSmall)-2, withColor(tsSmall, c))
 	}
 }

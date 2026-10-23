@@ -23,8 +23,8 @@ const (
 	archCardW    = 126
 	archCardH    = 58
 	archCardGap  = 8
-	archTop      = 64 // cards start below header + category row
-	archInfoH    = 84
+	archTop      = 80 // cards start below the header and two category rows
+	archInfoH    = 70
 	archMaxGhost = 400
 )
 
@@ -104,7 +104,7 @@ func archStuffGrid(bv game.BuildableView) (perRow, rows int, bw float32) {
 	need := 0
 	if !bv.Carpet { // carpet labels carry counts and keep their three per row
 		for _, s := range bv.Stuffs {
-			need = max(need, len(stuffLabel(s))*6+12)
+			need = max(need, int(textW(stuffLabel(s), tsBody))+16)
 		}
 	}
 	for perRow > 1 && width(perRow) < float32(need) {
@@ -144,11 +144,14 @@ func (a *App) architectButtons() []button {
 	}
 	r := a.architectRect()
 	out := make([]button, 0, len(archCategories)+6)
-	cx := r.x + 10
+	cx, cy := r.x+10, r.y+30
 	for _, c := range archCategories {
-		w := float32(len(c.label)*7 + 14)
+		w := textW(c.label, tsBody) + 20
+		if cx+w > r.x+r.w-10 { // wrap to a second row
+			cx, cy = r.x+10, cy+24
+		}
 		out = append(out, button{
-			id: "arch.cat." + c.id, label: c.label, x: cx, y: r.y + 30, w: w, h: 22,
+			id: "arch.cat." + c.id, label: c.label, x: cx, y: cy, w: w, h: 22,
 			selected: a.archCat == c.id,
 		})
 		cx += w + 4
@@ -403,7 +406,7 @@ func (a *App) drawArchitect(screen *ebiten.Image) {
 	}
 	r := a.architectRect()
 	drawPanel(screen, r.x, r.y, r.w, r.h)
-	drawLabel(screen, int(r.x)+12, int(r.y)+8, "Architect")
+	drawText(screen, "Architect", float64(r.x)+12, float64(r.y)+6, tsLabel)
 	mx, my := a.currentCursor()
 	wood := 0
 	if a.renderer != nil {
@@ -422,16 +425,19 @@ func (a *App) drawArchitect(screen *ebiten.Image) {
 		} else {
 			drawIconFallback(screen, t, b.x+6, b.y+8)
 		}
-		drawLabel(screen, int(b.x)+50, int(b.y)+10, t.label)
+		tw := float64(b.w) - 54
+		drawFitSmall(screen, t.label, float64(b.x)+50, float64(b.y)+8, tw, tsBody)
+		sub := ""
 		if b.disabled {
-			drawLabel(screen, int(b.x)+50, int(b.y)+30, lockWord(b.reason))
+			sub = lockWord(b.reason)
 		} else if bv, ok := buildable(t.build); ok && bv.Carpet {
-			drawLabel(screen, int(b.x)+50, int(b.y)+30, "1 carpet")
+			sub = "1 carpet"
 		} else if ok {
-			drawLabel(screen, int(b.x)+50, int(b.y)+30, fmt.Sprintf("%d %s", bv.Wood, a.toolStuff(t)))
+			sub = fmt.Sprintf("%d %s", bv.Wood, strings.TrimSuffix(a.toolStuff(t), " blocks"))
 		} else {
-			drawLabel(screen, int(b.x)+50, int(b.y)+30, map[placeMode]string{placeArea: "drag area"}[t.mode])
+			sub = map[placeMode]string{placeArea: "drag area"}[t.mode]
 		}
+		drawText(screen, ellipsize(sub, tsSmall, tw), float64(b.x)+50, float64(b.y)+31, withColor(tsSmall, uiTextDim))
 		if b.contains(mx, my) {
 			tt := t
 			hover = &tt
@@ -440,9 +446,10 @@ func (a *App) drawArchitect(screen *ebiten.Image) {
 	if a.archCropOpen() {
 		y := int(a.archCropTop(r)) + archCropRows*(archCropBtnH+4) + 2
 		for i, ln := range cropLines(a.selectedCrop()) {
-			drawLabel(screen, int(r.x)+12, y+i*16, ln)
+			drawLabel(screen, int(r.x)+12, y+i*int(lineStep(tsBody)), ln)
 		}
 	}
+	step := 18
 	iy := int(r.y+r.h) - archInfoH - a.archStuffExtra() + 6
 	stuff := ""
 	if t, ok := toolByID(a.archTool); ok {
@@ -466,12 +473,12 @@ func (a *App) drawArchitect(screen *ebiten.Image) {
 		if len(toolStyles(t)) > 1 {
 			hint = styleNames[a.curStyle(t)] + "  " + a.rotateKeys() + " shape, Ctrl square"
 		}
-		drawLabel(screen, int(r.x)+12, iy+16, hint)
+		drawLabel(screen, int(r.x)+12, iy+step, hint)
 		if bv, ok := buildable(t.build); !ok || len(bv.Stuffs) < 2 {
-			drawLabel(screen, int(r.x)+12, iy+32, "Right-click: stop placing")
+			drawLabel(screen, int(r.x)+12, iy+2*step, "Right-click: stop placing")
 		}
 	} else {
-		drawLabel(screen, int(r.x)+12, iy+16, "Pick something to place")
+		drawLabel(screen, int(r.x)+12, iy+step, "Pick something to place")
 	}
 	if hover != nil {
 		a.drawArchTooltip(screen, *hover, wood, int(r.x+r.w)+6, int(r.y)+archTop)
@@ -487,15 +494,11 @@ func (a *App) drawArchTooltip(screen *ebiten.Image, t archTool, wood, x, y int) 
 	if why := a.toolLock(t); why != "" {
 		lines = append(lines, "Locked: "+why)
 	}
-	w := 0
-	for _, l := range lines {
-		if len(l) > w {
-			w = len(l)
-		}
-	}
-	drawPanel(screen, float32(x), float32(y), float32(w*7+20), float32(len(lines)*16+12))
+	step := int(lineStep(tsBody))
+	w := int(maxTextW(lines, tsBody))
+	drawPanel(screen, float32(x), float32(y), float32(w+20), float32(len(lines)*step+12))
 	for i, l := range lines {
-		drawLabel(screen, x+10, y+6+i*16, l)
+		drawLabel(screen, x+10, y+6+i*step, l)
 	}
 }
 
@@ -704,9 +707,10 @@ func (a *App) drawArchitectGhost(screen *ebiten.Image) {
 	if firstBad != "" {
 		msg += "   can't place: " + firstBad
 	}
-	lx := min(mx+16, sw-len(msg)*6-16) // keep the label on screen
-	vector.FillRect(screen, float32(lx), float32(my+18), float32(len(msg)*6+12), 18, uiPanel, false)
-	drawLabel(screen, lx+6, my+19, msg)
+	mw := int(textW(msg, tsBody))
+	lx := min(mx+16, sw-mw-18) // keep the label on screen
+	vector.FillRect(screen, float32(lx), float32(my+18), float32(mw+12), lineStep(tsBody)+4, uiPanel, false)
+	drawLabel(screen, lx+6, my+20, msg)
 }
 
 // presetArchTool opens the Architect with the build tool for kind
@@ -810,6 +814,6 @@ func drawIconFallback(screen *ebiten.Image, t archTool, x, y float32) {
 	vector.FillRect(screen, x, y, 40, 40, uiBtnDisabled, false)
 	vector.StrokeRect(screen, x, y, 40, 40, 1, uiBtnBorder, false)
 	if t.label != "" {
-		drawLabel(screen, int(x)+16, int(y)+13, t.label[:1])
+		drawLabel(screen, int(x)+16, int(y)+15, t.label[:1])
 	}
 }

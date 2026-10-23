@@ -45,10 +45,10 @@ func (a *App) drawToasts(screen *ebiten.Image, sw, sh int) {
 		y = sh - 110
 	}
 	for i := len(ts) - 1; i >= 0; i-- {
-		w := len(ts[i].text)*6 + 24
+		w := int(textW(ts[i].text, tsBody)) + 28
 		x := (sw - w) / 2
-		drawPanel(screen, float32(x), float32(y), float32(w), 24)
-		drawLabel(screen, x+12, y+5, ts[i].text)
-		y -= 28
+		drawPanel(screen, float32(x), float32(y), float32(w), 26)
+		drawText(screen, ts[i].text, float64(x+14), float64(y)+(26-lineH(tsBody))/2, tsBody)
+		y -= 30
 	}
 }

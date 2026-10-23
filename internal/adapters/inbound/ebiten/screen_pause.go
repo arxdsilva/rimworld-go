@@ -28,7 +28,7 @@ func (a *App) drawPause(screen *ebiten.Image, sw, sh int) {
 	px := float32(sw)/2 - pw/2
 	py := float32(sh)/2 - ph/2
 	drawPanel(screen, px, py, pw, ph)
-	drawLabel(screen, int(px)+24, int(py)+20, "Paused")
+	drawText(screen, "Paused", float64(px)+24, float64(py)+16, withColor(tsLarge, uiHeading))
 	mx, my := a.currentCursor()
 	a.drawButtons(screen, a.pauseButtons(sw, sh), mx, my)
 }

@@ -180,7 +180,7 @@ func (a *App) drawDevPanels(screen *ebiten.Image, sw, sh int) {
 	if a.dev.menu {
 		r := a.devMenuRect()
 		drawPanel(screen, r.x, r.y, r.w, r.h)
-		drawLabel(screen, int(r.x)+8, int(r.y)+4, fmt.Sprintf("Debug actions at (%d, %d)", a.dev.tx, a.dev.ty))
+		drawText(screen, fmt.Sprintf("Debug actions at (%d, %d)", a.dev.tx, a.dev.ty), float64(r.x)+8, float64(r.y)+3, tsLabel)
 		for _, b := range a.devButtons() {
 			drawButton(screen, b, b.contains(mx, my))
 		}
@@ -220,20 +220,18 @@ func (a *App) drawDebugLog(screen *ebiten.Image, sw, sh int) {
 	if len(lines) > 18 {
 		lines = lines[:18]
 	}
-	w := 0
+	var w float32
 	for i, l := range lines {
-		if len(l) > 70 {
-			lines[i] = l[:70]
-		}
-		w = max(w, len(lines[i])*6)
+		lines[i] = ellipsize(l, tsSmall, devLogMaxW)
+		w = max(w, textW(lines[i], tsSmall))
 	}
-	pw, ph := float32(w+20), float32(len(lines)*14+28)
+	pw, ph := w+20, float32(len(lines)*devStep+28)
 	x, y := float32(sw)-pw-hudPad, hudBarY(sh)-ph-hudPad-120
 	y = max(y, hudTopH+hudPad)
 	drawPanel(screen, x, y, pw, ph)
-	drawLabel(screen, int(x)+8, int(y)+4, "Debug log ("+a.bindings().Label(input.DevLog)+")")
+	drawText(screen, "Debug log ("+a.bindings().Label(input.DevLog)+")", float64(x)+8, float64(y)+3, tsLabel)
 	for i, l := range lines {
-		drawLabel(screen, int(x)+8, int(y)+22+i*14, l)
+		drawText(screen, l, float64(x)+8, float64(y)+24+float64(i*devStep), tsSmall)
 	}
 }
 
@@ -273,15 +271,17 @@ func (a *App) debugInspectLines() []string {
 
 func (a *App) drawDebugInspector(screen *ebiten.Image, sw int) {
 	lines := append([]string{fmt.Sprintf("Debug inspector  tick %d", a.renderer.game.Tick())}, a.debugInspectLines()...)
-	w := 0
-	for _, l := range lines {
-		w = max(w, len(l)*6)
-	}
-	pw, ph := float32(w+20), float32(len(lines)*14+12)
+	pw, ph := maxTextW(lines, tsSmall)+20, float32(len(lines)*devStep+12)
 	x := float32(sw) - pw - hudPad
 	y := float32(hudTopH + 30)
 	drawPanel(screen, x, y, pw, ph)
 	for i, l := range lines {
-		drawLabel(screen, int(x)+8, int(y)+4+i*14, l)
+		drawText(screen, l, float64(x)+8, float64(y)+4+float64(i*devStep), tsSmall)
 	}
 }
+
+// Debug panels use the small type so a long log stays on one screen.
+const (
+	devStep    = 15  // line pitch
+	devLogMaxW = 460 // widest log line, px
+)

@@ -37,7 +37,7 @@ func (a *App) troughButtons(b game.BuildingView, r button) []button {
 	out := make([]button, 0, len(troughFilters))
 	for i, f := range troughFilters {
 		out = append(out, button{id: "bldg.trough." + f.key, label: f.label,
-			x: r.x + 12 + float32(i*88), y: r.y + 96, w: 82, h: 24, selected: b.TroughFilter == f.key})
+			x: r.x + 12 + float32(i*88), y: r.y + 104, w: 82, h: 24, selected: b.TroughFilter == f.key})
 	}
 	return out
 }
@@ -89,23 +89,28 @@ func (a *App) drawTroughSection(screen *ebiten.Image, b game.BuildingView, r but
 	if b.TroughCap > 0 {
 		pct = b.TroughFill * 100 / b.TroughCap
 	}
-	drawLabel(screen, x, y, fmt.Sprintf("Feed  %d / %d", b.TroughFill, b.TroughCap))
+	fx, fy := float64(x), float64(y)
+	drawText(screen, fmt.Sprintf("Feed  %d / %d", b.TroughFill, b.TroughCap), fx, fy, tsBody)
 	bx := float32(x + 130)
-	vector.FillRect(screen, bx, float32(y), 200, 14, uiBtnDisabled, false)
-	vector.FillRect(screen, bx, float32(y), float32(200*pct/100), 14, uiAccent, false)
-	drawLabel(screen, x, y+18, "Haulers fill it with feed matching the filter.")
-	drawLabel(screen, x, y+36, "Accepts:")
+	by := float32(y) + (lineStep(tsBody)-14)/2
+	vector.FillRect(screen, bx, by, 200, 14, uiBtnDisabled, false)
+	vector.FillRect(screen, bx, by, float32(200*pct/100), 14, uiAccent, false)
+	dim := withColor(tsSmall, uiTextDim)
+	drawText(screen, "Haulers fill it with feed matching the filter.", fx, fy+float64(lineStep(tsBody)), dim)
+	drawText(screen, "Accepts:", fx, fy+float64(lineStep(tsBody)+lineStep(tsSmall)), dim)
 	list := penAnimals(a.renderer.world(), b.X, b.Y)
-	drawLabel(screen, x, int(r.y)+134, fmt.Sprintf("Pen animals (%d)", len(list)))
+	drawText(screen, fmt.Sprintf("Pen animals (%d)", len(list)), fx, float64(r.y)+138, withColor(tsLabel, uiHeading))
+	ly, ss := float64(r.y)+162, float64(lineStep(tsSmall))
 	for i, an := range list {
 		if i >= maxTroughAnimals {
-			drawLabel(screen, x, int(r.y)+152+i*16, fmt.Sprintf("... and %d more", len(list)-i))
+			drawText(screen, fmt.Sprintf("... and %d more", len(list)-i), fx, ly, dim)
 			break
 		}
 		line := fmt.Sprintf("%s (%s)", an.Name, animalLabel(an))
 		if animalHasNeeds(an) {
 			line += fmt.Sprintf("  food %d%%", an.Food)
 		}
-		drawLabel(screen, x+8, int(r.y)+152+i*16, line)
+		drawText(screen, ellipsize(line, tsSmall, float64(r.w)-32), fx+8, ly, tsSmall)
+		ly += ss
 	}
 }

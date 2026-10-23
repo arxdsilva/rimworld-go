@@ -184,20 +184,20 @@ func (a *App) drawControls(screen *ebiten.Image, sw, sh int) {
 		all := input.Defs()
 		prev = all[a.rebind.page*ctlRowsPerPage(sh)-1].Category
 	}
-	drawLabel(screen, ctlCatX, ctlTop-14, "Category")
-	drawLabel(screen, ctlLabelX, ctlTop-14, "Action")
-	drawLabel(screen, ctlSlotX+4, ctlTop-14, "Keys (click to change)")
+	drawText(screen, "Category", ctlCatX, ctlTop-20, tsLabel)
+	drawText(screen, "Action", ctlLabelX, ctlTop-20, tsLabel)
+	drawText(screen, "Keys (click to change)", ctlSlotX+4, ctlTop-20, tsLabel)
 	for i, d := range defs {
 		y := ctlTop + i*ctlRowH + 5
 		if d.Category != prev {
-			drawLabel(screen, ctlCatX, y, d.Category)
+			drawLabelClip(screen, ctlCatX, y, ctlLabelX-ctlCatX-8, d.Category)
 			prev = d.Category
 		}
 		label := d.Label
 		if d.Reserved != "" {
 			label += " (" + d.Reserved + ")"
 		}
-		drawLabel(screen, ctlLabelX, y, label)
+		drawLabelClip(screen, ctlLabelX, y, ctlSlotX-ctlLabelX-8, label)
 	}
 	status := fmt.Sprintf("Page %d of %d", a.rebind.page+1, ctlPages(sh))
 	switch {
@@ -216,7 +216,7 @@ func (a *App) drawControls(screen *ebiten.Image, sw, sh int) {
 		c := input.Conflicts(a.bindings())[0]
 		status = fmt.Sprintf("Conflict: %s is bound twice (%s, %s)", c.Key.Label(), c.A, c.B)
 	}
-	drawLabel(screen, ctlCatX, ctlTop+ctlRowsPerPage(sh)*ctlRowH+7, status)
+	drawLabelClip(screen, ctlCatX, ctlTop+ctlRowsPerPage(sh)*ctlRowH+7, sw-2*ctlCatX, status)
 	mx, my := a.currentCursor()
 	a.drawButtons(screen, a.controlsButtons(sw, sh), mx, my)
 }

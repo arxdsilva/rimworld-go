@@ -17,7 +17,7 @@ func (a *App) drawBoot(screen *ebiten.Image, sw, sh int) {
 		body = append(body, "", "warning: "+a.packWarn)
 	}
 	a.fillMenu(screen, sw, sh, "rimworld-go", body, bodyDefaultX)
-	drawLabel(screen, 56, sh-40, "escape to skip")
+	drawText(screen, "escape to skip", 56, float64(sh-40), withColor(tsSmall, uiTextDim))
 }
 
 func fmtProgress(n, total int) string {

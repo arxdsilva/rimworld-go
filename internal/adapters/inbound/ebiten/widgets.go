@@ -2,10 +2,8 @@ package ebiten
 
 import (
 	"image/color"
-	"sync"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
@@ -187,13 +185,62 @@ func drawButton(dst *ebiten.Image, b button, hover bool) {
 	vector.StrokeRect(dst, b.x, b.y, b.w, b.h, 1, border, false)
 	label := b.label
 	if b.disabled && label != "" && !b.quiet {
-		label = label + "  (disabled)"
+		if w, _ := measure(label+"  (disabled)", tsBody); w <= float64(b.w)-16 {
+			label += "  (disabled)" // else the dimmed fill and the hover reason say it
+		}
 	}
-	debugPrintAt(dst, label, int(b.x)+12, int(b.y)+int(b.h)/2-7)
+	drawButtonLabel(dst, label, b)
 }
 
+// drawButtonLabel prints a button's label vertically centred: inset from
+// the left when it fits with room, centred when it only just fits (the
+// "-", "+", "x" stubs), else ellipsized.
+func drawButtonLabel(dst *ebiten.Image, label string, b button) {
+	tw, _ := measure(label, tsBody)
+	bw := float64(b.w)
+	x := float64(b.x) + 10
+	switch {
+	case tw <= bw-20:
+	case tw <= bw-4:
+		x = float64(b.x) + (bw-tw)/2
+	default:
+		label = ellipsize(label, tsBody, bw-8)
+		x = float64(b.x) + 4
+	}
+	drawText(dst, label, x, float64(b.y)+(float64(b.h)-lineH(tsBody))/2+1, tsBody)
+}
+
+// drawCentered prints s in st centred on (cx, cy).
+func drawCentered(dst *ebiten.Image, s string, cx, cy float64, st textStyle) {
+	st.Align = alignCenter
+	drawText(dst, s, cx, cy-lineH(st)/2+1, st)
+}
+
+// drawLabelClip is drawLabel cut with an ellipsis to maxW pixels.
+func drawLabelClip(dst *ebiten.Image, x, y, maxW int, text string) {
+	drawLabel(dst, x, y, ellipsize(text, tsBody, float64(maxW)))
+}
+
+// drawFitSmall prints s in st at (x, y) top-left, dropping to the small style
+// and then ellipsizing so it stays within maxW.
+func drawFitSmall(dst *ebiten.Image, s string, x, y, maxW float64, st textStyle) {
+	if w, _ := measure(s, st); w > maxW {
+		small := tsSmall
+		small.Bold, small.Color = st.Bold, st.Color
+		if sm := small; sm.Size < st.Size {
+			st = sm
+		}
+		s = ellipsize(s, st, maxW)
+	}
+	drawText(dst, s, x, y, st)
+}
+
+// labelDY lifts Noto Sans so a drawLabel (x, y) lands where the 16-px
+// debug font's glyphs did: baselines match to within a pixel.
+const labelDY = -2
+
 func drawLabel(dst *ebiten.Image, x, y int, text string) {
-	debugPrintAt(dst, text, x, y)
+	drawText(dst, text, float64(x), float64(y+labelDY), tsBody)
 }
 
 func hitButton(buttons []button, mx, my int) (button, bool) {
@@ -205,14 +252,8 @@ func hitButton(buttons []button, mx, my int) (button, bool) {
 	return button{}, false
 }
 
-// debugTextMu serialises ebitenutil.DebugPrintAt, whose glyph cache is a
-// package global without a lock: the game draws on one goroutine, but
-// parallel tests draw text concurrently.
-var debugTextMu sync.Mutex
-
-// debugPrintAt is ebitenutil.DebugPrintAt, safe across goroutines.
+// debugPrintAt draws body-size UI text at the old debug-font position
+// (kept for its many call sites; drawText is already goroutine-safe).
 func debugPrintAt(dst *ebiten.Image, s string, x, y int) {
-	debugTextMu.Lock()
-	defer debugTextMu.Unlock()
-	ebitenutil.DebugPrintAt(dst, s, x, y)
+	drawLabel(dst, x, y, s)
 }

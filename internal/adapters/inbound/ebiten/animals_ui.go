@@ -51,7 +51,7 @@ const (
 	wildMeat      = 490
 	wildMarks     = 576
 	wildBtn       = 700 // Hunt all, Tame one, Cancel
-	animalsRowTop = 76
+	animalsRowTop = 84
 )
 
 // wildlife is the game's wild species list, read again only when the
@@ -227,7 +227,7 @@ func (a *App) drawAnimalsTab(screen *ebiten.Image, sw, sh int) {
 			marked++
 		}
 	}
-	drawLabel(screen, int(r.x)+12, int(r.y)+10, fmt.Sprintf("Animals  (%d tame, %d marked for taming, %d pens)", len(a.tameAnimals()), marked, countZones(w, game.ZonePen)))
+	drawText(screen, fmt.Sprintf("Animals  (%d tame, %d marked for taming, %d pens)", len(a.tameAnimals()), marked, countZones(w, game.ZonePen)), float64(r.x)+12, float64(r.y)+8, tsLabel)
 	mx, my := a.currentCursor()
 	if a.animalsWild {
 		a.drawWildList(screen, r)
@@ -243,8 +243,8 @@ func (a *App) drawAnimalsTab(screen *ebiten.Image, sw, sh int) {
 
 func (a *App) drawColonyList(screen *ebiten.Image, r button) {
 	x0, y0 := int(r.x), int(r.y)
-	drawLabel(screen, x0+12, y0+34, "Tame with Architect > Orders > Tame (hunters do it). Handle work tames, milks and shears; pens keep animals in place.")
-	head := y0 + animalsRowTop - 16
+	drawFitSmall(screen, "Tame with Architect > Orders > Tame (hunters do it). Handle work tames, milks and shears; pens keep animals in place.", float64(x0+12), float64(y0+34), float64(colBtn-24), tsBody)
+	head := y0 + animalsRowTop - 22
 	for _, h := range []struct {
 		x int
 		s string
@@ -260,17 +260,17 @@ func (a *App) drawColonyList(screen *ebiten.Image, r button) {
 		}
 		drawAnimalIcon(screen, a.renderer.art, an, float64(r.x)+16, float64(y), 26)
 		ty := y + 6
-		drawLabel(screen, x0+colName, ty, an.Name)
-		drawLabel(screen, x0+colSpecies, ty, animalLabel(an))
-		drawLabel(screen, x0+colSex, ty, animalSexLetter(an))
-		drawLabel(screen, x0+colAge, ty, animalAgeText(an))
+		drawLabelClip(screen, x0+colName, ty, colSpecies-colName-6, an.Name)
+		drawLabelClip(screen, x0+colSpecies, ty, colSex-colSpecies-6, animalLabel(an))
+		drawLabelClip(screen, x0+colSex, ty, colAge-colSex-4, animalSexLetter(an))
+		drawLabelClip(screen, x0+colAge, ty, colFood-colAge-6, animalAgeText(an))
 		if animalHasNeeds(an) {
 			drawMiniBar(screen, x0+colFood, y+8, 70, 10, an.Food, an.Food < hungryBelow)
 		}
-		drawLabel(screen, x0+colProduct, ty, animalProductText(an))
-		drawLabel(screen, x0+colPreg, ty, animalPregCell(an))
-		drawLabel(screen, x0+colHealth, ty, fmt.Sprintf("%d%%", an.Health))
-		drawLabel(screen, x0+colDoing, ty, animalDoing(an))
+		drawLabelClip(screen, x0+colProduct, ty, colPreg-colProduct-6, animalProductText(an))
+		drawLabelClip(screen, x0+colPreg, ty, colHealth-colPreg-6, animalPregCell(an))
+		drawLabelClip(screen, x0+colHealth, ty, colDoing-colHealth-6, fmt.Sprintf("%d%%", an.Health))
+		drawLabelClip(screen, x0+colDoing, ty, colBtn-colDoing-8, animalDoing(an))
 	}
 	if len(list) == 0 {
 		drawLabel(screen, int(r.x)+52, int(r.y)+animalsRowTop, "No tame animals yet.")
@@ -279,8 +279,8 @@ func (a *App) drawColonyList(screen *ebiten.Image, r button) {
 
 func (a *App) drawWildList(screen *ebiten.Image, r button) {
 	x0, y0 := int(r.x), int(r.y)
-	drawLabel(screen, x0+12, y0+34, "Wild animals on the map. Click a row to look at one; Hunt all marks every animal of it, Tame one marks a single animal.")
-	head := y0 + animalsRowTop - 16
+	drawFitSmall(screen, "Wild animals on the map. Click a row to look at one; Hunt all marks every animal of it, Tame one marks a single animal.", float64(x0+12), float64(y0+34), float64(wildBtn-24), tsBody)
+	head := y0 + animalsRowTop - 22
 	for _, h := range []struct {
 		x int
 		s string
@@ -295,15 +295,15 @@ func (a *App) drawWildList(screen *ebiten.Image, r button) {
 		}
 		drawAnimalIcon(screen, a.renderer.art, game.AnimalView{Species: row.Species, Label: row.Label}, float64(r.x)+16, float64(y), 26)
 		ty := y + 6
-		drawLabel(screen, x0+wildLabel, ty, row.Label)
-		drawLabel(screen, x0+wildCount, ty, fmt.Sprintf("x%d", row.Count))
-		drawLabel(screen, x0+wildDiet, ty, row.Diet)
+		drawLabelClip(screen, x0+wildLabel, ty, wildCount-wildLabel-6, row.Label)
+		drawLabelClip(screen, x0+wildCount, ty, wildDiet-wildCount-6, fmt.Sprintf("x%d", row.Count))
+		drawLabelClip(screen, x0+wildDiet, ty, wildPred-wildDiet-6, row.Diet)
 		if row.Predator {
 			drawWarning(screen, float32(x0+wildPred+6), float32(y+13))
 		}
-		drawLabel(screen, x0+wildTame, ty, fmt.Sprintf("%d%%", row.TameChance))
-		drawLabel(screen, x0+wildMeat, ty, strconv.Itoa(row.Meat))
-		drawLabel(screen, x0+wildMarks, ty, fmt.Sprintf("hunt %d, tame %d", row.Hunted, row.TameMarked))
+		drawLabelClip(screen, x0+wildTame, ty, wildMeat-wildTame-6, fmt.Sprintf("%d%%", row.TameChance))
+		drawLabelClip(screen, x0+wildMeat, ty, wildMarks-wildMeat-6, strconv.Itoa(row.Meat))
+		drawLabelClip(screen, x0+wildMarks, ty, wildBtn-wildMarks-8, fmt.Sprintf("hunt %d, tame %d", row.Hunted, row.TameMarked))
 	}
 	if len(rows) == 0 {
 		drawLabel(screen, x0+52, y0+animalsRowTop, "No wild animals in sight.")
@@ -376,7 +376,7 @@ func drawMiniBar(screen *ebiten.Image, x, y, w, h, pct int, low bool) {
 // drawWarning is a red "!" disc: the predator flag.
 func drawWarning(screen *ebiten.Image, cx, cy float32) {
 	vector.FillCircle(screen, cx, cy, 8, alertClr, true)
-	drawLabel(screen, int(cx)-3, int(cy)-7, "!")
+	drawCentered(screen, "!", float64(cx), float64(cy), tsLabel)
 }
 
 // animalRow is one line of the Animals tab: name, species label (long

@@ -806,25 +806,42 @@ func (a *App) drawHoverHint(screen *ebiten.Image, sw, sh int) {
 	mx, my := a.currentCursor()
 	if b, ok := hitButton(a.layoutHits(sw, sh), mx, my); ok {
 		if b.disabled && b.reason != "" {
-			debugPrintAt(screen, b.reason, 16, sh-22)
+			a.drawBottomHint(screen, b.reason, sh)
 			return
 		}
 		if b.tip != "" { // a small card by the cursor, clear of the tab strip
-			w := len(b.tip)*6 + 16
+			tw, _ := measure(b.tip, tsBody)
+			w := int(tw) + 16
+			ch := int(lineH(tsBody)) + 6
 			x, y := min(mx+14, sw-w-4), my+20
-			if y+22 > sh {
-				y = my - 28
+			if y+ch+2 > sh {
+				y = my - ch - 8
 			}
-			drawPanel(screen, float32(x), float32(y), float32(w), 20)
-			drawLabel(screen, x+8, y+3, b.tip)
+			drawPanel(screen, float32(x), float32(y), float32(w), float32(ch))
+			drawText(screen, b.tip, float64(x+8), float64(y+3), tsBody)
 		}
 	}
 	if a.hint != "" {
-		debugPrintAt(screen, a.hint, 16, sh-22)
+		a.drawBottomHint(screen, a.hint, sh)
 	}
 	if a.packWarn != "" && a.nav.screen() == screenMainMenu {
 		debugPrintAt(screen, "asset warning: "+a.packWarn, 16, sh-40)
 	}
+}
+
+// drawBottomHint prints a one-line hint at the bottom left: on the footer
+// row of a menu screen, or on a card just above the colonist bar so it
+// does not run over the tab strip.
+func (a *App) drawBottomHint(screen *ebiten.Image, s string, sh int) {
+	if a.nav.screen() != screenColony {
+		debugPrintAt(screen, s, 16, sh-22)
+		return
+	}
+	w := int(textW(s, tsBody)) + 16
+	h := int(lineStep(tsBody)) + 4
+	y := int(hudBarY(sh)) - h - 4
+	drawPanel(screen, 8, float32(y), float32(w), float32(h))
+	drawLabel(screen, 16, y+4, s)
 }
 
 func (a *App) layoutButtons(sw, sh int) []button {
@@ -895,7 +912,7 @@ func (a *App) fillMenu(screen *ebiten.Image, sw, sh int, title string, body []st
 		drawMenuBackdrop(screen, sw, sh)
 	}
 	drawPanel(screen, 40, 24, float32(sw-80), 56)
-	drawLabel(screen, 56, 44, title)
+	drawText(screen, title, 56, 40, tsLarge)
 	if len(body) == 0 {
 		return
 	}
@@ -906,7 +923,7 @@ func (a *App) fillMenu(screen *ebiten.Image, sw, sh int, title string, body []st
 	y := bodyDefaultY
 	for _, line := range body {
 		drawLabel(screen, bodyX, y, line)
-		y += 16
+		y += int(lineH(tsBody))
 	}
 }
 

@@ -33,7 +33,7 @@ func TestMenuTitleCentered(t *testing.T) {
 	sw := DefaultWindowWidth
 	x := menuTitleX(sw, title)
 	mid := sw / 2
-	textMid := x + (len(title)*debugCharW)/2
+	textMid := x + int(textW(title, tsHuge))/2
 	if textMid < mid-1 || textMid > mid+1 {
 		t.Fatalf("title midpoint %d, want ~%d (x=%d)", textMid, mid, x)
 	}
