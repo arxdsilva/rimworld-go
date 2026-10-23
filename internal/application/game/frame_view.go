@@ -97,6 +97,10 @@ func (g *Game) fillFrameViews(views []FrameView) {
 		fv.Builder = builders[fv.ID]
 		fv.Haulers = haulers[fv.ID]
 		fv.Status = frameStatus(fr, *fv)
+		if bid := g.replacedStanding(fr); bid != 0 {
+			b, _ := g.bldgs.Get(bid)
+			fv.Status = "Waiting for the " + construction.DefOf(b.Kind).Name + " to be removed"
+		}
 	}
 }
 
@@ -188,6 +192,7 @@ func (g *Game) cancelFrame(id entity.EntityID) {
 	if !ok {
 		return
 	}
+	g.unmarkReplaced(fr)
 	g.frames.Delete(id)
 	kept := g.frameIDs[:0]
 	for _, fid := range g.frameIDs {

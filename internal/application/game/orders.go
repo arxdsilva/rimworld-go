@@ -22,6 +22,14 @@ func plantLabel(s plant.Species) string {
 		return "berry bush"
 	case plant.Tree:
 		return "tree"
+	case plant.Bramble:
+		return "bramble thicket"
+	case plant.Moss:
+		return "ground moss"
+	case plant.Agave:
+		return "desert rosette"
+	case plant.Dandelion:
+		return "dandelions"
 	}
 	return strings.ReplaceAll(s.String(), "_", " ")
 }
@@ -114,6 +122,9 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		}
 		if !m.Enabled(work.Construct) {
 			return job.Record{}, ReasonNoConstruct
+		}
+		if why := g.replaceWhy(fr); why != "" {
+			return job.Record{}, why
 		}
 		if !fr.Ready() {
 			return job.Record{}, ReasonNotReady

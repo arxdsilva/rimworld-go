@@ -6,6 +6,7 @@ import (
 
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
+	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
 )
@@ -197,6 +198,9 @@ func TestPredatorBlockedByFence(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 30, Height: 20})
 	bareGround(g)
 	fenceRing(t, g, 12, 6, 20, 14, [2]int{16, 6})
+	// the hare belongs to the pen: an unpenned tame animal may wander out
+	// of the gate on its own (PLAY-010 made the seeded walk leave)
+	zoneCmd(g, command.DesignatePen, 13, 7, 19, 13, 0)
 	hare, _ := g.SpawnAnimal("hare", 16, 10)
 	g.TameAnimal(hare, "Bun")
 	wolf, _ := g.SpawnAnimal("timber_wolf", 5, 10)

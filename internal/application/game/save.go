@@ -235,6 +235,10 @@ type saveState struct {
 	// Grass and GrassCut (UI-011); absent in older saves, which reseed.
 	Grass    []uint8
 	GrassCut [][2]int
+	// GrassGrowth (PLAY-010) is each regrowing grass tile's growth
+	// percent (0: full); empty while nothing regrows and in older saves,
+	// which load full.
+	GrassGrowth []uint8
 	// SIM-023..026, all absent in older saves: the biome (temperate
 	// forest), regrowing grass, nature events, and feeding troughs.
 	Biome       biome.ID
@@ -328,6 +332,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 		Weather: g.weather, Graves: g.graves, Roofs: g.exportRoofs(),
 	}
 	s.Grass, s.GrassCut = g.exportGrass()
+	s.GrassGrowth = g.exportGrassGrowth() // grass.go
 	s.Bios, s.Skills, s.WorkCarry = g.exportBios()
 	s.SkillLive = g.exportSkillLive()
 	s.Biome, s.GrassRegrow, s.Incidents, s.Troughs = g.biome, g.grass.regrow, g.incidents, g.troughs
@@ -466,6 +471,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.afterLoadBurial()
 	g.importRoofs(s.Roofs)
 	g.importGrass(s.Grass, s.GrassCut)
+	g.importGrassGrowth(s.GrassGrowth) // grass.go: older saves load full
 	g.biome, g.climate, g.incidents = s.Biome, biome.DefOf(s.Biome).Climate, s.Incidents
 	g.importSetupState(s.NG1)                   // setup.go: overrides the climate from the site
 	g.importBios(s.Bios, s.Skills, s.WorkCarry) // skills.go: older saves get neutral bios

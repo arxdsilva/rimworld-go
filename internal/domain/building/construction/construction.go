@@ -2,7 +2,10 @@
 // accept wood then work) and completed buildings.
 package construction
 
-import "rimworld-go/internal/domain/economy/item"
+import (
+	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/sim/entity"
+)
 
 // Kind is a buildable structure.
 type Kind uint8
@@ -478,6 +481,12 @@ type Frame struct {
 	// Reinstall is the building (entity id) this frame moves here; 0 for
 	// a new blueprint. A reinstall needs no materials (UI-011).
 	Reinstall uint64
+	// Replaces is the wall, fence, door or gate this door or gate frame
+	// takes the place of; the frame waits until that piece is gone.
+	// ReplaceMarked: the frame itself set the piece's deconstruct mark
+	// (so cancelling the frame clears it again).
+	Replaces      entity.EntityID
+	ReplaceMarked bool
 }
 
 // Ready reports materials and components are in place.

@@ -64,6 +64,12 @@ func TestGrownGolden(t *testing.T) {
 	if testing.Short() {
 		t.Skip("long golden run")
 	}
+	// Re-pinned (PLAY-010): animals react to every attack, predators charge
+	// colonists who come close, unarmed colonists flee sooner, colonists
+	// and tame animals walk through each other, and grass regrows from
+	// shoots. The moved saved fields are exactly the ones those touch
+	// (animals, positions/motion/jobs, hits/wounds/logs, RNG, grass
+	// growth); checked field by field against 4b12749d on the scale runs.
 	// Re-pinned (NG-1 E4): plants grow per chunk once per climate interval
 	// (plant.GrowSpan) and frost kills in the same pass; after Build and
 	// 1, 250, 1 000 and 5 000 ticks every saved field is identical to
@@ -74,7 +80,7 @@ func TestGrownGolden(t *testing.T) {
 	// Re-pinned earlier: CompleteResearch now also completes the NG-1 research
 	// projects (more unlocks), and StateHash became format-independent;
 	// identical with and without the E1 engine changes.
-	const want uint64 = 0x15baeed3067ee62
+	const want uint64 = 0xf9db977252c82e01
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

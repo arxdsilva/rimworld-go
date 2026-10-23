@@ -79,3 +79,6 @@ in the way; the colonist inspector shows "waiting for <name>".
   reservation in `cmdMove`); drafted groups need a formation/spread order.
 - No movement speed stat or terrain cost yet (checklist "Movement cost").
 - No region graph; repaths are still full A* (rate-limited).
+
+## Addendum (PLAY-010)
+Colonists and tame animals now walk through each other; see SIM-037. Wild animals and raiders keep the blocking rules described here.

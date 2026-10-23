@@ -2,7 +2,6 @@ package game
 
 import (
 	"sort"
-	"strings"
 
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/world/biome"
@@ -69,7 +68,7 @@ func biomeInfo(d biome.Def) BiomeInfo {
 	plants := append([]biome.PlantDensity(nil), d.Plants...)
 	sort.SliceStable(plants, func(i, j int) bool { return plants[i].Permil > plants[j].Permil })
 	for _, p := range plants {
-		info.Plants = append(info.Plants, strings.ReplaceAll(p.Species.String(), "_", " "))
+		info.Plants = append(info.Plants, plantLabel(p.Species)) // orders.go: "ground moss", "desert rosette"
 	}
 	type sp struct {
 		label string

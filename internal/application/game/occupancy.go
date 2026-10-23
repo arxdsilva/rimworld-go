@@ -22,9 +22,12 @@ const (
 	stepArriveNear                    // end the walk at alt, next to the target
 )
 
-// Blocking rules (SIM-014). Every standing creature (colonist, raider,
-// animal) owns its cell; downed, sleeping and carried pawns, corpses and
-// items never block.
+// Blocking rules (SIM-014, PLAY-010). Colonists and tame animals are
+// partners: they walk through each other and may share a cell, except
+// that a colonist never ends a walk on another colonist's cell while
+// either is in combat (inCombat). Wild animals and raiders own their cell
+// against everyone. Downed, sleeping and carried pawns, corpses and items
+// never block.
 const (
 	// yieldRetry: a creature that has to give way retries its sidestep
 	// this often while it stays blocked.
@@ -60,11 +63,24 @@ const (
 // saved.
 type occupancy struct {
 	w, h    int
-	cells   []entity.EntityID // standing creature per cell, 0 = none
-	near    []uint8           // per cell: held cells in its 3×3 (crowdCost's fast path)
+	cells   []entity.EntityID // standing blocker (wild animal, raider) per cell, 0 = none
+	near    []uint8           // per cell: blocker cells in its 3×3 (crowdCost's fast path)
 	marked  []int             // cells written since the last rebuild
-	stacked []stackedRec      // creatures sharing a cell with a lower ID
+	stacked []stackedRec      // blockers sharing a cell with a lower ID
 	carried []entity.EntityID // patients being carried (scratch)
+	// partner layer (PLAY-010): colonists and tame animals, several per
+	// cell. pfirst is the lowest ID of them, pcount how many, pextra the
+	// others (in no particular order: every read is order-free, so the
+	// index is a function of who stands where, as after a load); pnear
+	// counts partner cells in each cell's 3×3.
+	pfirst []entity.EntityID
+	pcount []uint16
+	pnear  []uint8
+	pextra []stackedRec
+	// rebuild scratch: cells holding a blocker and partners, cells holding
+	// two or more partners, creatures to move off, one cell's partners
+	mixed, shared []int
+	moveOff, here []entity.EntityID
 	// repath cache: the path enter() planned with a stepRepath verdict,
 	// handed out by pathAround in the same tick.
 	rpID   entity.EntityID
@@ -107,10 +123,12 @@ func (g *Game) buildOccupancy() {
 }
 
 // rebuildOccupancy indexes every standing creature's cell. O(movers): only
-// the cells written last time are cleared. A creature found on a cell a
-// lower ID already holds is stacked (spawned, ejected or stood up there);
-// if it stands still it is given a step to a free cell now, so it leaves
-// on its next due move.
+// the cells written last time are cleared. Blockers sharing a cell
+// (spawned, ejected or stood up there) and blocker–partner pairs are
+// stacked: the higher ID of the pair, if it stands still, is given a step
+// to a free cell now, so it leaves on its next due move. Partners may
+// share a cell; two colonists settled on one cell are split the same way
+// only while either is in combat.
 func (g *Game) rebuildOccupancy() {
 	o := &g.occ
 	w, h := g.grid.Width(), g.grid.Height()
@@ -118,13 +136,20 @@ func (g *Game) rebuildOccupancy() {
 		o.w, o.h = w, h
 		o.cells = make([]entity.EntityID, w*h)
 		o.near = make([]uint8, w*h)
+		o.pfirst = make([]entity.EntityID, w*h)
+		o.pcount = make([]uint16, w*h)
+		o.pnear = make([]uint8, w*h)
 		o.marked = o.marked[:0]
 	}
 	for _, i := range o.marked {
 		o.put(i, 0)
+		o.pput(i, 0)
+		o.pcount[i] = 0
 	}
 	o.marked = o.marked[:0]
 	o.stacked = o.stacked[:0]
+	o.pextra = o.pextra[:0]
+	o.mixed, o.shared = o.mixed[:0], o.shared[:0]
 	o.dirty = false
 	o.carried = o.carried[:0]
 	for _, p := range g.carrying {
@@ -140,6 +165,19 @@ func (g *Game) rebuildOccupancy() {
 			if !ok {
 				continue
 			}
+			if g.partner(id) {
+				o.addPartner(i, id)
+				if o.cells[i] != 0 {
+					o.mixed = append(o.mixed, i)
+				}
+				if o.pcount[i] == 2 {
+					o.shared = append(o.shared, i)
+				}
+				continue
+			}
+			if o.pcount[i] != 0 {
+				o.mixed = append(o.mixed, i)
+			}
 			switch held := o.cells[i]; {
 			case held == 0:
 				o.put(i, id)
@@ -153,10 +191,136 @@ func (g *Game) rebuildOccupancy() {
 		}
 	}
 	slices.SortFunc(o.stacked, func(a, b stackedRec) int { return cmp.Compare(a.id, b.id) })
+	g.unstack()
+}
+
+// unstack gives every stacked creature that stands still a step off its
+// cell, in ID order: the higher ID of each blocking pair, and of each pair
+// of settled colonists where either is in combat.
+func (g *Game) unstack() {
+	o := &g.occ
+	o.moveOff = o.moveOff[:0]
 	for _, s := range o.stacked {
-		if _, walking := g.walkNext(s.id); !walking {
-			g.makeWay(s.id, 0)
+		o.moveOff = append(o.moveOff, s.id)
+	}
+	for _, i := range o.mixed {
+		if b := o.cells[i]; b > o.pfirst[i] {
+			o.moveOff = append(o.moveOff, b) // a partner below it keeps the cell
+		} else {
+			o.moveOff = append(o.moveOff, o.partnersOn(i)...)
 		}
+	}
+	for _, i := range o.shared {
+		g.combatStack(i)
+	}
+	if len(o.moveOff) == 0 {
+		return
+	}
+	slices.Sort(o.moveOff)
+	o.moveOff = slices.Compact(o.moveOff)
+	for _, id := range o.moveOff {
+		if _, walking := g.walkNext(id); !walking {
+			g.makeWay(id, 0)
+		}
+	}
+}
+
+// combatStack adds to moveOff the colonists settled on partner cell i that
+// must leave it: going up by ID, each one that would share the cell with a
+// staying colonist while either of them is in combat. Colonists passing
+// through (walking) are left alone.
+func (g *Game) combatStack(i int) {
+	o := &g.occ
+	ids := o.partnersOn(i)
+	slices.Sort(ids)
+	stayed, combat := false, false
+	for _, id := range ids {
+		if !g.colonist(id) {
+			continue
+		}
+		if _, walking := g.walkNext(id); walking {
+			continue
+		}
+		c := g.inCombat(id)
+		if stayed && (c || combat) {
+			o.moveOff = append(o.moveOff, id)
+			continue
+		}
+		stayed, combat = true, combat || c
+	}
+}
+
+// partnersOn lists the partners on cell i (in the scratch buffer here).
+func (o *occupancy) partnersOn(i int) []entity.EntityID {
+	out := o.here[:0]
+	if o.pfirst[i] != 0 {
+		out = append(out, o.pfirst[i])
+	}
+	if o.pcount[i] > 1 {
+		for _, s := range o.pextra {
+			if s.idx == i {
+				out = append(out, s.id)
+			}
+		}
+	}
+	o.here = out
+	return out
+}
+
+// addPartner indexes partner id on cell i.
+func (o *occupancy) addPartner(i int, id entity.EntityID) {
+	switch first := o.pfirst[i]; {
+	case first == 0:
+		o.pput(i, id)
+	case id < first: // the lowest ID is first
+		o.pfirst[i] = id
+		o.pextra = append(o.pextra, stackedRec{id: first, idx: i})
+	default:
+		o.pextra = append(o.pextra, stackedRec{id: id, idx: i})
+	}
+	o.pcount[i]++
+	o.marked = append(o.marked, i)
+}
+
+// dropPartner unindexes partner id from cell fi (inMap: fi is on the
+// map); it reports whether id was indexed as a partner.
+func (o *occupancy) dropPartner(id entity.EntityID, fi int, inMap bool) bool {
+	if inMap && o.pfirst[fi] == id {
+		o.pcount[fi]--
+		k := -1
+		if o.pcount[fi] > 0 {
+			for n, s := range o.pextra {
+				if s.idx == fi && (k < 0 || s.id < o.pextra[k].id) {
+					k = n
+				}
+			}
+		}
+		if k < 0 {
+			o.pput(fi, 0)
+			o.pcount[fi] = 0
+			return true
+		}
+		o.pfirst[fi] = o.pextra[k].id // the next lowest takes over
+		o.pextra = slices.Delete(o.pextra, k, k+1)
+		return true
+	}
+	for n, s := range o.pextra {
+		if s.id == id {
+			o.pcount[s.idx]--
+			o.pextra = slices.Delete(o.pextra, n, n+1)
+			return true
+		}
+	}
+	return false
+}
+
+// pput sets cell i's first partner, keeping pnear in step when the cell
+// turns held or free.
+func (o *occupancy) pput(i int, id entity.EntityID) {
+	was := o.pfirst[i] != 0
+	o.pfirst[i] = id
+	if was != (id != 0) {
+		bump(o.pnear, o.w, o.h, i, was)
 	}
 }
 
@@ -167,38 +331,73 @@ func (o *occupancy) index(x, y int) (int, bool) {
 	return y*o.w + x, true
 }
 
-// put sets cell i's creature, keeping near (the held cells around each
+// put sets cell i's blocker, keeping near (the blocker cells around each
 // cell) in step when the cell turns held or free.
 func (o *occupancy) put(i int, id entity.EntityID) {
 	was := o.cells[i] != 0
 	o.cells[i] = id
-	if was == (id != 0) {
-		return
+	if was != (id != 0) {
+		bump(o.near, o.w, o.h, i, was)
 	}
+}
+
+// bump adds one (or, with down, removes one) to near across cell i's 3×3.
+func bump(near []uint8, w, h, i int, down bool) {
 	var d uint8 = 1
-	if was {
+	if down {
 		d = 255 // -1
 	}
-	x, y := i%o.w, i/o.w
-	for ny := max(y-1, 0); ny <= min(y+1, o.h-1); ny++ {
-		for nx := max(x-1, 0); nx <= min(x+1, o.w-1); nx++ {
-			o.near[ny*o.w+nx] += d
+	x, y := i%w, i/w
+	for ny := max(y-1, 0); ny <= min(y+1, h-1); ny++ {
+		for nx := max(x-1, 0); nx <= min(x+1, w-1); nx++ {
+			near[ny*w+nx] += d
 		}
 	}
 }
 
-// at is the indexed standing creature on (x, y), 0 when none.
+// at is the indexed standing creature on (x, y), 0 when none: its blocker,
+// else its first partner.
 func (o *occupancy) at(x, y int) entity.EntityID {
+	if i, ok := o.index(x, y); ok {
+		if b := o.cells[i]; b != 0 {
+			return b
+		}
+		return o.pfirst[i]
+	}
+	return 0
+}
+
+// blocker is the indexed blocker on (x, y), 0 when none.
+func (o *occupancy) blocker(x, y int) entity.EntityID {
 	if i, ok := o.index(x, y); ok {
 		return o.cells[i]
 	}
 	return 0
 }
 
-// move re-indexes id from -> to. A creature stacked on from takes the
-// cell over when id leaves it.
-func (o *occupancy) move(id entity.EntityID, from, to Position) {
-	if fi, ok := o.index(from.X, from.Y); ok && o.cells[fi] == id {
+// move re-indexes id from -> to, in the partner layer when partner. A
+// blocker stacked on from takes the cell over when id leaves it.
+func (o *occupancy) move(id entity.EntityID, partner bool, from, to Position) {
+	fi, inMap := o.index(from.X, from.Y)
+	if !o.dropBlocker(id, fi, inMap) {
+		o.dropPartner(id, fi, inMap)
+	}
+	ti, ok := o.index(to.X, to.Y)
+	if !ok {
+		return
+	}
+	if partner {
+		o.addPartner(ti, id)
+		return
+	}
+	o.put(ti, id)
+	o.marked = append(o.marked, ti)
+}
+
+// dropBlocker unindexes blocker id from cell fi; it reports whether id was
+// indexed as a blocker.
+func (o *occupancy) dropBlocker(id entity.EntityID, fi int, inMap bool) bool {
+	if inMap && o.cells[fi] == id {
 		o.put(fi, 0)
 		for k, s := range o.stacked {
 			if s.idx == fi {
@@ -207,18 +406,24 @@ func (o *occupancy) move(id entity.EntityID, from, to Position) {
 				break
 			}
 		}
-	} else {
-		for k, s := range o.stacked {
-			if s.id == id {
-				o.stacked = append(o.stacked[:k], o.stacked[k+1:]...)
-				break
-			}
+		return true
+	}
+	for k, s := range o.stacked {
+		if s.id == id {
+			o.stacked = append(o.stacked[:k], o.stacked[k+1:]...)
+			return true
 		}
 	}
-	if ti, ok := o.index(to.X, to.Y); ok {
-		o.put(ti, id)
-		o.marked = append(o.marked, ti)
+	return false
+}
+
+// partner reports a creature that walks through other partners: a
+// colonist or a tame animal (PLAY-010).
+func (g *Game) partner(id entity.EntityID) bool {
+	if a := g.animals.Ref(id); a != nil {
+		return a.Tame
 	}
+	return g.colonist(id)
 }
 
 // standing reports a creature that owns its cell: a living animal, or a
@@ -252,9 +457,13 @@ func (g *Game) standingWalker(id entity.EntityID) bool {
 // the cell for stepSidestep and stepArriveNear.
 func (g *Game) enter(id entity.EntityID, from, to Position) (stepVerdict, Position) {
 	o := g.occIndex()
-	occ := o.at(to.X, to.Y)
+	mp := g.partner(id)
+	occ := g.holderFor(id, mp, to)
 	if occ == 0 || occ == id {
-		o.move(id, from, to)
+		if mp && g.meleeOn(id, to) {
+			return stepWait, from // a partner closing on a partner stops next to it
+		}
+		o.move(id, mp, from, to)
 		return stepGo, to
 	}
 	blocked, by := g.motionBlocked(id)
@@ -269,7 +478,7 @@ func (g *Game) enter(id entity.EntityID, from, to Position) (stepVerdict, Positi
 			if yielder != id {
 				return g.repathEvery(id, from, to, blocked, true)
 			}
-			return g.giveWay(id, from, to, occ, blocked)
+			return g.giveWay(id, mp, from, to, occ, blocked)
 		}
 		// the occupant is moving on: wait for it, replan if it is stuck
 		return g.repathEvery(id, from, to, blocked, true)
@@ -285,17 +494,100 @@ func (g *Game) enter(id entity.EntityID, from, to Position) (stepVerdict, Positi
 		case arriveExact:
 			return stepWait, from
 		case arriveNearest:
-			alt := g.nearestFreeStep(id, from, to)
-			o.move(id, from, alt)
-			return stepArriveNear, alt
+			if alt, ok := g.nearestFreeStep(id, from, to); ok {
+				o.move(id, mp, from, alt)
+				return stepArriveNear, alt
+			}
 		default:
 			if alt, ok := g.freeNextTo(id, from, g.workCell(id, to)); ok {
-				o.move(id, from, alt)
+				o.move(id, mp, from, alt)
 				return stepArriveNear, alt
 			}
 		}
 	}
 	return g.repathEvery(id, from, to, blocked, false)
+}
+
+// holderFor is the creature that keeps mover id (a partner when mp) out of
+// cell c, 0 when none: a blocker always; for a wild animal or raider also
+// any partner; for a colonist's last step, a colonist there when either is
+// in combat (decision 7). Other partners pass through.
+func (g *Game) holderFor(id entity.EntityID, mp bool, c Position) entity.EntityID {
+	o := &g.occ
+	i, ok := o.index(c.X, c.Y)
+	if !ok {
+		return 0
+	}
+	if b := o.cells[i]; b != 0 && b != id {
+		return b
+	}
+	if o.pcount[i] == 0 {
+		return 0
+	}
+	if !mp {
+		return o.pfirst[i]
+	}
+	if g.colonist(id) && g.finalStep(id, c) {
+		return g.combatHolder(id, i)
+	}
+	return 0
+}
+
+// combatHolder is a colonist on partner cell i, other than id, that id may
+// not end its walk on: any colonist when id is in combat, else one in
+// combat; 0 when none.
+func (g *Game) combatHolder(id entity.EntityID, i int) entity.EntityID {
+	o := &g.occ
+	self := g.inCombat(id)
+	keeps := func(p entity.EntityID) bool {
+		return p != 0 && p != id && g.colonist(p) && (self || g.inCombat(p))
+	}
+	if p := o.pfirst[i]; keeps(p) {
+		return p // the lowest ID
+	}
+	var best entity.EntityID
+	if o.pcount[i] > 1 {
+		for _, s := range o.pextra {
+			if s.idx == i && (best == 0 || s.id < best) && keeps(s.id) {
+				best = s.id
+			}
+		}
+	}
+	return best
+}
+
+// meleeOn reports that id's attack target is a partner on cell c.
+func (g *Game) meleeOn(id entity.EntityID, c Position) bool {
+	o := &g.occ
+	i, ok := o.index(c.X, c.Y)
+	if !ok || o.pcount[i] == 0 {
+		return false
+	}
+	t := g.targetOf(id)
+	if t == 0 {
+		return false
+	}
+	if o.pfirst[i] == t {
+		return true
+	}
+	for _, s := range o.pextra {
+		if s.idx == i && s.id == t {
+			return true
+		}
+	}
+	return false
+}
+
+// stopOK reports that id may end a walk on its own cell c: no colonist
+// shares it that combatHolder would keep it off (a partner may stand on
+// someone's cell while passing through).
+func (g *Game) stopOK(id entity.EntityID, c Position) bool {
+	o := &g.occ
+	i, ok := o.index(c.X, c.Y)
+	if !ok || o.pcount[i] < 2 || !g.colonist(id) {
+		return true
+	}
+	return g.combatHolder(id, i) == 0
 }
 
 // occIndex is the index, built on first use (e.g. a hook called before
@@ -337,7 +629,7 @@ func (g *Game) planAround(id entity.EntityID, from, to Position) bool {
 		return false
 	}
 	first := path[0]
-	if first.X == to.X && first.Y == to.Y || o.at(first.X, first.Y) != 0 {
+	if first.X == to.X && first.Y == to.Y || g.holderFor(id, g.partner(id), Position{X: first.X, Y: first.Y}) != 0 {
 		return false
 	}
 	o.rpID, o.rpAt, o.rpPath = id, uint64(g.clock.Now()), path
@@ -348,7 +640,7 @@ func (g *Game) planAround(id entity.EntityID, from, to Position) bool {
 // sidestep off both paths towards its goal; else replan around; else back
 // off along the other's path (a 1-wide corridor); else wait. It retries
 // every yieldRetry blocked ticks.
-func (g *Game) giveWay(id entity.EntityID, from, to Position, occ entity.EntityID, blocked int) (stepVerdict, Position) {
+func (g *Game) giveWay(id entity.EntityID, mp bool, from, to Position, occ entity.EntityID, blocked int) (stepVerdict, Position) {
 	if blocked%yieldRetry != 0 {
 		return stepWait, from
 	}
@@ -370,7 +662,7 @@ func (g *Game) giveWay(id entity.EntityID, from, to Position, occ entity.EntityI
 		}
 	}
 	if found {
-		o.move(id, from, best)
+		o.move(id, mp, from, best)
 		return stepSidestep, best
 	}
 	if g.planAround(id, from, to) {
@@ -389,7 +681,7 @@ func (g *Game) giveWay(id entity.EntityID, from, to Position, occ entity.EntityI
 		}
 	}
 	if found {
-		o.move(id, from, best)
+		o.move(id, mp, from, best)
 		return stepSidestep, best
 	}
 	return stepWait, from
@@ -417,8 +709,8 @@ func onPath(p []Position, c Position) bool {
 	return false
 }
 
-// stepOpen: one legal, unoccupied step from -> c (walkable, a neighbour,
-// no corner cutting).
+// stepOpen: one legal step from -> c onto an empty cell (walkable, a
+// neighbour, no corner cutting, no creature at all: a cell to stop on).
 func (g *Game) stepOpen(q pathing.Query, from, c Position) bool {
 	dx, dy := c.X-from.X, c.Y-from.Y
 	if dx < -1 || dx > 1 || dy < -1 || dy > 1 || dx == 0 && dy == 0 {
@@ -434,17 +726,17 @@ func (g *Game) stepOpen(q pathing.Query, from, c Position) bool {
 }
 
 // blockCycle follows the chain of walkers each waiting on the next one's
-// cell, starting at occ. It reports whether the chain closes back on id
-// and, if so, the highest ID in the ring (the one that gives way).
+// cell (holderFor: as each one sees it), starting at occ. It reports
+// whether the chain closes back on id and, if so, the highest ID in the
+// ring (the one that gives way).
 func (g *Game) blockCycle(id, occ entity.EntityID) (entity.EntityID, bool) {
-	o := &g.occ
 	top, cur := max(id, occ), occ
 	for range cycleDepth {
 		n, walking := g.walkNext(cur)
 		if !walking {
 			return 0, false
 		}
-		nxt := o.at(n.X, n.Y)
+		nxt := g.holderFor(cur, g.partner(cur), n)
 		switch nxt {
 		case 0, cur:
 			return 0, false
@@ -575,7 +867,7 @@ func (g *Game) workCell(id entity.EntityID, to Position) Position {
 // itself if it touches wc, else the free step from 'from' that touches wc,
 // nearest to it.
 func (g *Game) freeNextTo(id entity.EntityID, from, wc Position) (Position, bool) {
-	if pathing.Dist(from.X, from.Y, wc.X, wc.Y) <= 1 {
+	if pathing.Dist(from.X, from.Y, wc.X, wc.Y) <= 1 && g.stopOK(id, from) {
 		return from, true
 	}
 	q := g.queryFor(id)
@@ -594,20 +886,21 @@ func (g *Game) freeNextTo(id entity.EntityID, from, wc Position) (Position, bool
 }
 
 // nearestFreeStep is the free cell nearest to the taken target among 'from'
-// and its open steps ('from' wins ties: no needless shuffle).
-func (g *Game) nearestFreeStep(id entity.EntityID, from, to Position) Position {
+// and its open steps ('from' wins ties: no needless shuffle). 'from' only
+// counts when id may stop there (stopOK); false when no cell qualifies.
+func (g *Game) nearestFreeStep(id entity.EntityID, from, to Position) (Position, bool) {
 	q := g.queryFor(id)
-	best, bestD := from, pathing.Octile(from.X, from.Y, to.X, to.Y)
+	best, bestD, found := from, pathing.Octile(from.X, from.Y, to.X, to.Y), g.stopOK(id, from)
 	for _, d := range stepDirs {
 		c := Position{X: from.X + d[0], Y: from.Y + d[1]}
 		if !g.stepOpen(q, from, c) {
 			continue
 		}
-		if dist := pathing.Octile(c.X, c.Y, to.X, to.Y); dist < bestD || dist == bestD && best != from && before(c, best) {
-			best, bestD = c, dist
+		if dist := pathing.Octile(c.X, c.Y, to.X, to.Y); !found || dist < bestD || dist == bestD && best != from && before(c, best) {
+			best, bestD, found = c, dist, true
 		}
 	}
-	return best
+	return best, found
 }
 
 // idleYieldable: a creature that steps aside for a walker who has waited
@@ -817,25 +1110,28 @@ func (g *Game) phaseHostileMap() pathing.Query {
 }
 
 // crowdCost adds blocking costs to a walkability query: a cell holding a
-// creature costs occupiedCost, one next to a creature standing still
-// besideCost.
+// creature that blocks the mover costs occupiedCost, one next to such a
+// creature standing still besideCost. A partner mover (colonist, tame
+// animal) prices only blockers: other partners are free ground.
 type crowdCost struct {
 	pathing.Query
-	g    *Game
-	self entity.EntityID
+	g       *Game
+	self    entity.EntityID
+	partner bool
 }
 
 func (c crowdCost) ExtraCost(x, y int) int {
 	o := &c.g.occ
 	ground := c.g.groundExtra(x, y) // water.go: slow ground costs extra, so A* wades only when it pays
-	if i, ok := o.index(x, y); ok && o.near[i] == 0 {
-		return ground // no creature on the cell or beside it
+	i, ok := o.index(x, y)
+	if !ok || o.near[i] == 0 && (c.partner || o.pnear[i] == 0) {
+		return ground // no creature in the way on the cell or beside it
 	}
-	if id := o.at(x, y); id != 0 && id != c.self {
+	if id := c.in(x, y); id != 0 && id != c.self {
 		return occupiedCost + ground
 	}
 	for _, d := range stepDirs {
-		id := o.at(x+d[0], y+d[1])
+		id := c.in(x+d[0], y+d[1])
 		if id == 0 || id == c.self {
 			continue
 		}
@@ -846,9 +1142,17 @@ func (c crowdCost) ExtraCost(x, y int) int {
 	return ground
 }
 
+// in is the creature on (x, y) that the mover prices.
+func (c crowdCost) in(x, y int) entity.EntityID {
+	if c.partner {
+		return c.g.occ.blocker(x, y)
+	}
+	return c.g.occ.at(x, y)
+}
+
 func (g *Game) costedQuery(id entity.EntityID) pathing.Query {
 	g.occIndex()
-	return crowdCost{Query: g.queryFor(id), g: g, self: id}
+	return crowdCost{Query: g.queryFor(id), g: g, self: id, partner: g.partner(id)}
 }
 
 // pathAround replans from id's cell to (tx, ty), treating cells taken by
@@ -907,7 +1211,7 @@ func routeCost(q pathing.Query, pos Position, p []pathing.Point) int {
 }
 
 // occupantAt reports the standing creature on (x, y), if any, as of the
-// current movement phase's index.
+// current movement phase's index: its blocker, else its first partner.
 func (g *Game) occupantAt(x, y int) (entity.EntityID, bool) {
 	id := g.occIndex().at(x, y)
 	return id, id != 0

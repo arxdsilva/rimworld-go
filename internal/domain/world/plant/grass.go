@@ -1,6 +1,9 @@
 package plant
 
-import "rimworld-go/internal/domain/world/terrain"
+import (
+	"rimworld-go/internal/domain/sim/clock"
+	"rimworld-go/internal/domain/world/terrain"
+)
 
 // grassEvery is how sparse grass is: one soil tile in five.
 const grassEvery = 5
@@ -47,4 +50,40 @@ func GrassAtBiome(t terrain.Type, x, y, permil int) bool {
 	h = (h ^ h>>27) * 0x94d049bb133111eb
 	h ^= h >> 31
 	return int(h%1000) < permil
+}
+
+// Grass growth (PLAY-010): a grazed or cut tile grows back as shoots and
+// fills out over a few days of mild weather. Growth is percent, 0..100.
+const (
+	// GrassFull is a fully grown grass tile.
+	GrassFull = 100
+	// GrassShoots is the growth a tile regrows at.
+	GrassShoots = 15
+	// GrassGrazeMin: grazers pass over grass below this growth while any
+	// fuller grass is in reach (hysteresis: shoots are left to fill out).
+	GrassGrazeMin = 30
+	// GrassMinMeal is the least share of a full meal a grazed tile gives,
+	// percent.
+	GrassMinMeal = 30
+	// GrassFillTicks is how long shoots take to fill out at full growth
+	// speed (mild weather).
+	GrassFillTicks = 3 * clock.TicksPerDay
+)
+
+// GrassGrowSpan is the growth (percent points) grass gains over ticks
+// t0+1..t1 at growth speed tempFactor permille (TempFactor), integrated
+// as a running total so spans telescope and fractions are never lost.
+func GrassGrowSpan(tempFactor int, t0, t1 uint64) int {
+	if tempFactor <= 0 || t1 <= t0 {
+		return 0
+	}
+	const den = 1000 * GrassFillTicks
+	f := uint64(tempFactor) * (GrassFull - GrassShoots)
+	return int(t1*f/den - t0*f/den)
+}
+
+// GrassMeal is the food of grazing a tile at growth percent, out of a
+// full tile's meal full: in proportion, never under GrassMinMeal percent.
+func GrassMeal(full, growth int) int {
+	return full * max(growth, GrassMinMeal) / 100
 }

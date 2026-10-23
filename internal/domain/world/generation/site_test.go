@@ -10,6 +10,7 @@ import (
 
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/geology"
+	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/site"
 	"rimworld-go/internal/domain/world/terrain"
 	"rimworld-go/pkg/randx"
@@ -29,15 +30,23 @@ func mapHash(res Result) uint64 {
 
 // goldenLegacy is GenerateBiome at 96×80 before landing sites existed.
 // Recompute only for a deliberate change to legacy generation.
+//
+// Re-pinned for PLAY-010 (boreal, cold bog, rainforest, desert, extreme
+// desert): the biomes' Plants lists gained the wild ground plants (moss,
+// bramble, agave, ...) and the rainforest's jungle trees and berries were
+// thinned to make room. A field diff against the previous commit showed
+// the terrain hash, start clearing and cave layer unchanged in every
+// entry; only Plants changed (new species, and the old species' cells
+// shifted with the extra rolls). Temperate and sea ice hold.
 var goldenLegacy = map[string]uint64{
 	"temperate_forest/1":     0xf9556ebe8dd7f667,
 	"temperate_forest/42":    0xe7ef9051bfe51cdc,
-	"boreal_forest/1":        0xc9334b250390451e,
-	"cold_bog/42":            0xcfde1438e1b52bcc,
+	"boreal_forest/1":        0x418cf6f6f99c9753,
+	"cold_bog/42":            0x849a4147c11d811,
 	"sea_ice/1":              0x9e4f0547fb0fc925,
-	"tropical_rainforest/42": 0x17891dabb3cb065a,
-	"desert/1":               0x9f7fe09bec6c2928,
-	"extreme_desert/42":      0x903b63018b1c59a5,
+	"tropical_rainforest/42": 0x8b9f446db2663c45,
+	"desert/1":               0x7679fc5c5eb66e01,
+	"extreme_desert/42":      0x833490ba976e44a1,
 }
 
 func TestZeroSiteMatchesLegacy(t *testing.T) {
@@ -62,20 +71,57 @@ func TestZeroSiteMatchesLegacy(t *testing.T) {
 // TestFeaturelessSiteKeepsLegacyGround: a site that only names its stones
 // (default hills, no water, caves or road) keeps the legacy terrain and
 // plants whenever the safety pass had nothing to carve.
+//
+// PLAY-010: the temperate forest's landing sites also grow brambles and
+// dandelions, which the legacy generator (GenerateBiome's temperate map)
+// never had. So the legacy equality is checked on the biome without its
+// ground plants (exactly the pre-PLAY-010 rows), and the full biome keeps
+// the legacy terrain and rolls the same plant stream.
 func TestFeaturelessSiteKeepsLegacyGround(t *testing.T) {
 	t.Parallel()
 	s := site.Site{Stones: []geology.Stone{geology.Granite, geology.Slate}}
 	for _, b := range []biome.ID{biome.TemperateForest, biome.AridShrubland, biome.BorealForest} {
+		full := biome.DefOf(b)
+		old := withoutGroundPlants(full)
 		for seed := uint64(1); seed <= 6; seed++ {
-			res, g := generateSite(seed, 96, 80, biome.DefOf(b), s)
+			res, g := generateSite(seed, 96, 80, old, s)
 			if g.carved > 0 {
 				continue
 			}
-			if !reflect.DeepEqual(res, GenerateBiome(seed, 96, 80, biome.DefOf(b))) {
+			if !reflect.DeepEqual(res, GenerateBiome(seed, 96, 80, old)) {
 				t.Fatalf("%s/%d: featureless site differs from the legacy map", b, seed)
+			}
+			got, _ := generateSite(seed, 96, 80, full, s)
+			if !reflect.DeepEqual(got.Terrain, res.Terrain) {
+				t.Fatalf("%s/%d: ground plants changed the terrain", b, seed)
+			}
+			if want := rollPlants(seed, 96, 80, full); !reflect.DeepEqual(got, want) {
+				t.Fatalf("%s/%d: featureless site plants differ from the biome's roll", b, seed)
 			}
 		}
 	}
+}
+
+// withoutGroundPlants is d with the PLAY-010 ground plants dropped.
+func withoutGroundPlants(d biome.Def) biome.Def {
+	var ps []biome.PlantDensity
+	for _, pd := range d.Plants {
+		if !plant.DefOf(pd.Species).Ground {
+			ps = append(ps, pd)
+		}
+	}
+	d.Plants = ps
+	return d
+}
+
+// rollPlants is the default-hills map of b with b's plant list rolled on
+// it, the legacy generator's terrain for a legacy biome.
+func rollPlants(seed uint64, w, h int, b biome.Def) Result {
+	r := randx.New(seed ^ mapSalt)
+	res := newResult(w, h)
+	baseTerrain(r, &res, b, hillsTable[site.HillsDefault], nil)
+	spawnPlants(r, &res, b)
+	return res
 }
 
 func count(m terrain.Map, keep func(terrain.Type) bool) int {

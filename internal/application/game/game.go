@@ -127,7 +127,8 @@ type PawnView struct {
 	// HasOrder: following a player order whose target tile is OrderX, OrderY.
 	HasOrder       bool
 	OrderX, OrderY int
-	// Hostile marks a raider (not a colonist); Fleeing a raider running off.
+	// Hostile marks a raider (not a colonist); Fleeing a raider running off
+	// or an unarmed colonist running from a threat (PLAY-010).
 	Hostile, Fleeing bool
 	// Temperament is the colonist's free-time leaning
 	// (wanderer, social, homebody).
@@ -876,6 +877,7 @@ func (g *Game) snapshot() []PawnView {
 		if b, ok := g.breaks[id]; ok {
 			pv.MentalBreak = b.kind.String()
 		}
+		g.fillFleeView(pv, id) // an unarmed colonist running from a threat (flee.go)
 		b := g.bandsOf(id)
 		pv.ComfortMin, pv.ComfortMax = b.Min, b.Max
 		if j, _ := g.jobs.Get(id); j.Forced && j.Active() {

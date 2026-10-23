@@ -60,3 +60,19 @@ func TestStepCostScalesDiagonals(t *testing.T) {
 		}
 	}
 }
+
+func TestFighterAndCharger(t *testing.T) {
+	cases := []struct {
+		s                Species
+		fighter, charger bool
+	}{
+		{Deer, false, false}, {Sheep, false, false}, {Cat, false, false}, {Tortoise, false, false},
+		{Elk, false, false}, {WildBoar, true, false}, {Cougar, true, true}, {TimberWolf, true, true},
+		{Glimmerstag, true, false}, {HiveBeetle, false, false},
+	}
+	for _, c := range cases {
+		if Fighter(c.s) != c.fighter || Charger(c.s) != c.charger {
+			t.Errorf("%s: fighter %v charger %v, want %v %v", c.s, Fighter(c.s), Charger(c.s), c.fighter, c.charger)
+		}
+	}
+}

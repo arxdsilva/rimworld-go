@@ -301,6 +301,15 @@ func (g *Game) fillPawnAction(pv *PawnView, id entity.EntityID, j job.Record) {
 	}
 }
 
+// chargeLine is a charging predator's state line, "charging Ada" (the
+// inspector capitalises it); "" when it is not charging.
+func (g *Game) chargeLine(a animal.State) string {
+	if a.ChargeSince == 0 || a.Mode != animal.Attack || a.Target == 0 {
+		return ""
+	}
+	return "charging " + g.creatureName(a.Target)
+}
+
 // fillAnimalAction fills the C1 action fields of an animal view.
 func (g *Game) fillAnimalAction(av *AnimalView, id entity.EntityID, a animal.State) {
 	now := uint64(g.clock.Now())

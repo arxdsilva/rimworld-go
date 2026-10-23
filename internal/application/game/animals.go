@@ -173,6 +173,7 @@ func (g *Game) thinkAnimal(id entity.EntityID, a *animal.State, now uint64) {
 	if g.fleeCheck(id, a, pos, def, now) {
 		return
 	}
+	g.chargeCheck(id, a, pos, now) // a wild predator may rush someone close
 	if a.Tame && def.Predator {
 		if g.guardCheck(id, a, pos, now) {
 			return
@@ -216,10 +217,12 @@ func (g *Game) thinkAnimal(id entity.EntityID, a *animal.State, now uint64) {
 }
 
 // fleeCheck runs a skittish animal away from threats (a tame one from
-// wild predators only), and any animal still in its FleeUntil window from
-// whoever hurt it. Threats are looked for every animal.ThreatEvery ticks
-// (staggered by id) and every tick while fleeing. It reports true while
-// the animal is fleeing.
+// wild predators only), and any animal, wild or tame, still in its
+// FleeUntil window from whoever hurt it. Threats are looked for every
+// animal.ThreatEvery ticks (staggered by id) and every tick while
+// fleeing; the goal (fleeFrom) is picked again when the run ends or
+// every 40 ticks, and kept while it is at least as far from the threat.
+// It reports true while the animal is fleeing.
 func (g *Game) fleeCheck(id entity.EntityID, a *animal.State, pos Position, def animal.Def, now uint64) bool {
 	var tp Position
 	threat := false
@@ -239,20 +242,25 @@ func (g *Game) fleeCheck(id entity.EntityID, a *animal.State, pos Position, def 
 	case def.Skittish && r > 0 && scan: // tame-natured animals only run once hurt
 		tp, threat = g.nearestThreat(id, pos, r)
 	}
-	if !a.Tame && now < a.FleeUntil {
+	// a predator seen across a fence or water can't get at it: no reason
+	// to run (running would take it out through a gate, into the threat)
+	if threat && !g.reachesFoe(false, tp, pos) {
+		threat = false
+	}
+	if now < a.FleeUntil && a.Attacker != 0 {
 		if p, ok := g.positions.Get(a.Attacker); ok {
 			tp, threat = p, true
 		}
 	}
 	if threat {
-		lost := a.PathI >= len(a.Path) && (a.Tame || now >= a.RetryAt)
+		lost := a.PathI >= len(a.Path) && now >= a.RetryAt
 		if a.Mode != animal.Flee || lost || (now+uint64(id))%40 == 0 {
 			if a.Mode != animal.Flee {
 				a.Feed, a.FeedLeft, a.Target = animal.FeedTarget{}, 0, 0 // a sleeper wakes, a grazer drops its meal
+				a.Path, a.PathI = nil, 0
 			}
 			a.Mode = animal.Flee
-			fx, fy := animal.FleeGoal(pos.X, pos.Y, tp.X, tp.Y, dist)
-			g.animalGoTo(id, a, fx, fy)
+			g.fleeFrom(id, a, pos, tp, dist, false) // animal_flee.go
 		}
 		return true
 	}
@@ -271,11 +279,13 @@ func (g *Game) fleeCheck(id entity.EntityID, a *animal.State, pos Position, def 
 // breaks off (T10) and a hunt that fails gives up (T5). It reports true
 // while the animal fights.
 func (g *Game) fightCheck(id entity.EntityID, a *animal.State, pos Position, def animal.Def, now uint64) bool {
-	if a.Target != 0 && !g.validPrey(id, a.Target) {
+	// prey, or whoever hurt it (its own kind too: animalHurt)
+	if a.Target != 0 && !g.validPrey(id, a.Target) && !(a.Target == a.Attacker && g.validFoe(id, a.Target)) {
 		g.endFight(a)
 	}
 	calm := !badlyHurt(*a) && now >= a.FleeUntil
-	if a.Target == 0 && def.Predator && calm && a.Attacker != 0 && g.validPrey(id, a.Attacker) {
+	if a.Target == 0 && def.Predator && calm && a.Attacker != 0 && g.validPrey(id, a.Attacker) &&
+		g.reachesFoe(a.Tame, pos, g.posOf(a.Attacker)) { // never one it can't get at (no flee/attack flapping)
 		a.Target = a.Attacker // revenge
 	}
 	if a.Target == 0 {
@@ -302,6 +312,57 @@ func (g *Game) fightCheck(id entity.EntityID, a *animal.State, pos Position, def
 	}
 	g.chase(id, a, now)
 	return true
+}
+
+// chargeCheck is a wild predator's charge (PLAY-010 2.3 C). An awake,
+// unhurt, calm predator with no target looks every animal.DecideEvery
+// ticks (staggered by id) for a standing colonist or raider within
+// animal.ChargeRadius and, when it finds one, rolls animal.ChargePct;
+// any roll waits animal.ChargeCooldown for the next. A charge is an
+// Attack on that person (fightCheck chases it) that ends beyond
+// animal.ChargeLeash, after animal.ChargeTicks, or once the target is
+// down or the animal turned to something else; the cooldown starts then.
+// Off where predators leave colonists alone (Wanderer, Gentle).
+func (g *Game) chargeCheck(id entity.EntityID, a *animal.State, pos Position, now uint64) {
+	if a.ChargeSince != 0 {
+		tp, ok := g.positions.Get(a.Target)
+		if a.Tame || a.Mode != animal.Attack || !ok || !g.standingPawn(a.Target) ||
+			now-a.ChargeSince > animal.ChargeTicks || weapon.Distance(pos.X, pos.Y, tp.X, tp.Y) > animal.ChargeLeash {
+			if a.Mode == animal.Attack && a.Target != 0 {
+				if a.Attacker == a.Target {
+					a.Attacker = 0 // it let them go: no revenge straight after
+				}
+				g.endFight(a)
+			}
+			a.ChargeSince, a.NextCharge = 0, now+animal.ChargeCooldown
+		}
+		return
+	}
+	if a.Tame || !animal.Charger(a.Species) || now < a.NextCharge || (now+uint64(id))%animal.DecideEvery != 0 ||
+		a.Target != 0 || a.Mode == animal.Flee || sleeping(*a) || badlyHurt(*a) || a.Enraged(now) || now < a.FleeUntil ||
+		!g.predatorsHuntColonists() { // story.go: difficulty (NG-1)
+		return
+	}
+	who, _, ok := g.nearestWhere(pos.X, pos.Y, animal.ChargeRadius, ckPawn|ckRaider, func(o entity.EntityID, _ Position) bool {
+		return g.standingPawn(o)
+	})
+	if !ok {
+		return
+	}
+	a.NextCharge = now + animal.ChargeCooldown
+	if g.rng.IntN(100) >= animal.ChargePct {
+		return
+	}
+	a.Mode, a.Target, a.HuntSince, a.ChargeSince = animal.Attack, who, 0, now
+	a.Path, a.PathI, a.Feed, a.FeedLeft = nil, 0, animal.FeedTarget{}, 0
+	g.logEvent(who, logEntry{Kind: logChargedBy, Other: id, Name: g.killerName(id)})
+	g.logEvent(id, logEntry{Kind: logCharged, Other: who, Name: g.creatureName(who)})
+}
+
+// posOf is id's position (the zero cell when it has none).
+func (g *Game) posOf(id entity.EntityID) Position {
+	p, _ := g.positions.Get(id)
+	return p
 }
 
 // nearestThreat: the closest standing colonist or predator within r.
@@ -658,7 +719,10 @@ func (g *Game) animalViews() []AnimalView {
 			av.Action = "" // the renderer draws the rest pose
 		}
 		g.fillAnimalNeeds(av, a) // animal_needs.go
-		av.Log = g.logLines(id)  // eventlog.go
+		if s := g.chargeLine(a); s != "" {
+			av.State = s // action_view.go: "charging Ada"
+		}
+		av.Log = g.logLines(id) // eventlog.go
 	}
 	return out
 }

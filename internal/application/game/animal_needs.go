@@ -288,24 +288,26 @@ func (g *Game) endFight(a *animal.State) {
 	}
 }
 
-// animalHurt is the needs side of an animal being hurt (combat.go hurt):
-// it thinks again at once; a sleeper wakes, and a territorial animal or
-// predator fights whoever woke it (T8).
+// animalHurt is the reaction side of an animal being hurt (combat.go
+// hurt; PLAY-010): it thinks again at once, and a sleeper wakes. With an
+// attacker it always fights or runs: a fighter (canFightBack) goes for its
+// attacker, keeping a foe it already has; anyone who can't fight back
+// runs on every hit (fleeHit). A manhunter fights on. Traps and bursts
+// (no attacker) only wake it, and a wild flee-class animal runs.
 func (g *Game) animalHurt(id entity.EntityID, a *animal.State, by entity.EntityID, now uint64) {
 	a.NextDecide = now
-	if a.Mode == animal.Flee {
-		a.Feed, a.FeedLeft = animal.FeedTarget{}, 0
-	}
-	if a.Mode != animal.Rest || a.Enraged(now) {
+	if by == 0 || by == id {
+		g.hurtBlind(a, now)
 		return
 	}
-	a.Mode, a.Path, a.PathI = animal.Wander, nil, 0
-	switch animal.RosterOf(a.Species).Behaviour {
-	case animal.Territorial, animal.Predator, animal.PackPredator:
-		if !a.Tame && by != 0 && by != id && !badlyHurt(*a) {
-			a.Mode, a.Target = animal.Attack, by
-		}
+	if a.Enraged(now) {
+		return // an enraged animal fights on instead of bolting (no flee/attack flapping)
 	}
+	if g.canFightBack(id, *a, by) {
+		fightBack(a, by, g.validFoe(id, a.Target))
+		return
+	}
+	g.fleeHit(id, a, by, now)
 }
 
 // feedOnKill: the killer of an animal feeds on its carcass (T4) when it
@@ -456,34 +458,79 @@ func (g *Game) findFeed(a *animal.State, pos Position, diet animal.Diet, allow f
 	return animal.FeedTarget{}, false
 }
 
-// nearestGrass is the nearest walkable grass tile within r of pos, ring by
-// ring (Chebyshev), each ring in a fixed order.
+// nearestGrass is the grass tile a grazer within r of pos picks: the
+// nearest walkable one, ring by ring (Chebyshev), each ring in a fixed
+// order. While some grass is regrowing (PLAY-010) it weighs growth too:
+// the fullest tile of the first ring holding grass and the ring after it
+// (ties to ring order, so a full field picks exactly the nearest tile),
+// passing over shoots under plant.GrassGrazeMin unless no fuller grass is
+// in reach at all. That threshold is the hysteresis that keeps a grazer
+// off the tiles it just bared.
 func (g *Game) nearestGrass(pos Position, r int, ok func(x, y int) bool) (int, int, bool) {
 	try := func(x, y int) bool {
 		return g.grid.InBounds(x, y) && g.hasGrass(x, y) && g.grid.Walkable(x, y) && ok(x, y)
 	}
-	if try(pos.X, pos.Y) {
-		return pos.X, pos.Y, true
-	}
-	for d := 1; d <= r; d++ {
-		for x := pos.X - d; x <= pos.X+d; x++ {
-			if try(x, pos.Y-d) {
-				return x, pos.Y - d, true
+	if g.grassSt().nGrowing == 0 { // every tile full: the nearest
+		var bx, by int
+		found := false
+		grassRings(pos, 0, r, func(x, y int) bool {
+			if try(x, y) {
+				bx, by, found = x, y, true
 			}
-			if try(x, pos.Y+d) {
-				return x, pos.Y + d, true
+			return found
+		})
+		return bx, by, found
+	}
+	if x, y, found := g.fullestGrass(pos, r, plant.GrassGrazeMin, try); found {
+		return x, y, true
+	}
+	return g.fullestGrass(pos, r, 1, try)
+}
+
+// fullestGrass is the fullest grass tile (growth at least least) of the
+// first ring within r of pos holding one and the ring after it; ties go
+// to the nearer ring, then ring order.
+func (g *Game) fullestGrass(pos Position, r, least int, try func(x, y int) bool) (int, int, bool) {
+	bx, by, best, last := 0, 0, 0, r
+	grassRings(pos, 0, r, func(x, y int) bool {
+		if d := max(abs(x-pos.X), abs(y-pos.Y)); d > last {
+			return true
+		}
+		if !try(x, y) {
+			return false
+		}
+		if v := g.grassGrowthAt(x, y); v >= least && v > best {
+			if best == 0 {
+				last = min(r, max(abs(x-pos.X), abs(y-pos.Y))+1)
+			}
+			bx, by, best = x, y, v
+		}
+		return false
+	})
+	return bx, by, best > 0
+}
+
+// grassRings visits the tiles at Chebyshev distance d0..r from pos, ring
+// by ring, each ring in nearestGrass's fixed order, until fn says stop.
+func grassRings(pos Position, d0, r int, fn func(x, y int) bool) {
+	if d0 == 0 {
+		if fn(pos.X, pos.Y) {
+			return
+		}
+		d0 = 1
+	}
+	for d := d0; d <= r; d++ {
+		for x := pos.X - d; x <= pos.X+d; x++ {
+			if fn(x, pos.Y-d) || fn(x, pos.Y+d) {
+				return
 			}
 		}
 		for y := pos.Y - d + 1; y <= pos.Y+d-1; y++ {
-			if try(pos.X-d, y) {
-				return pos.X - d, y, true
-			}
-			if try(pos.X+d, y) {
-				return pos.X + d, y, true
+			if fn(pos.X-d, y) || fn(pos.X+d, y) {
+				return
 			}
 		}
 	}
-	return 0, 0, false
 }
 
 // stockpiled: (x, y) lies in a stockpile.
@@ -578,8 +625,9 @@ func (g *Game) eat(id entity.EntityID, a *animal.State, t animal.FeedTarget, now
 	gain := 0
 	switch t.Kind {
 	case animal.FeedGrass:
-		if g.grazeGrass(t.X, t.Y) { // grass.go: bare, then regrows
-			gain = animal.GrazeFood
+		growth := g.grassGrowthAt(t.X, t.Y) // PLAY-010: shoots feed less
+		if g.grazeGrass(t.X, t.Y) {         // grass.go: bare, then regrows
+			gain = plant.GrassMeal(animal.GrazeFood, growth)
 		}
 	case animal.FeedTree:
 		g.removePlant(t.ID) // gnawed down: no wood

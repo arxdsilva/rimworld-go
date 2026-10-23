@@ -49,12 +49,24 @@ func (g *Game) waterPlacement(x, y int) (bool, string) {
 }
 
 // groundExtra is the path cost added for entering (x, y) on slow ground
-// (marsh, mud, sand, ice, shallow water): (WalkCost-100)/10, none on
-// floored tiles or ground at least as fast as plain.
+// (marsh, mud, sand, ice, shallow water) and through slow plants
+// (brambles, PLAY-010): (WalkCost-100)/10 for each, none on floored tiles
+// or ground at least as fast as plain. Only replans (costedQuery) weigh
+// it: the first plan (pathQuery) is plain walkability, and giving it a
+// cost would move every route on slow ground, goldens included.
 func (g *Game) groundExtra(x, y int) int {
-	c := g.terr.At(x, y).WalkCost()
-	if c <= 100 || !g.grid.InBounds(x, y) || g.treadAt(y*g.grid.Width()+x)&treadFloor != 0 {
+	if !g.grid.InBounds(x, y) {
 		return 0
 	}
-	return (c - 100) / 10
+	extra := 0
+	if c := g.terr.At(x, y).WalkCost(); c > 100 {
+		extra += (c - 100) / 10
+	}
+	if c := g.plantWalkCost(x, y); c > 100 {
+		extra += (c - 100) / 10
+	}
+	if extra == 0 || g.treadAt(y*g.grid.Width()+x)&treadFloor != 0 {
+		return 0
+	}
+	return extra
 }

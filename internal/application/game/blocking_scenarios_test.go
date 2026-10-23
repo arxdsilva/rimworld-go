@@ -9,8 +9,11 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 )
 
-// Full-simulation blocking scenarios (SIM-014): creatures never share a
-// cell, and every conflict resolves without deadlock.
+// Full-simulation blocking scenarios (SIM-014): creatures that block each
+// other never share a cell, and every conflict resolves without deadlock.
+// PLAY-010: colonists and tame animals (partners) walk through each other;
+// only two colonists settled on one cell while either is in combat
+// conflict.
 
 // standingCreatures lists every creature that owns its cell right now.
 func standingCreatures(g *Game) []entity.EntityID {
@@ -45,10 +48,42 @@ func sharedCells(g *Game) map[Position][]entity.EntityID {
 	return at
 }
 
+// blockingPair: a and b block each other (not both colonists or tame
+// animals).
+func blockingPair(g *Game, a, b entity.EntityID) bool { return !g.partner(a) || !g.partner(b) }
+
+// combatPair: two colonists, either in combat, both standing still (not
+// passing through): the pair decision 7 keeps apart.
+func combatPair(g *Game, a, b entity.EntityID) bool {
+	if !g.colonist(a) || !g.colonist(b) || !g.inCombat(a) && !g.inCombat(b) {
+		return false
+	}
+	_, wa := g.walkNext(a)
+	_, wb := g.walkNext(b)
+	return !wa && !wb
+}
+
+// conflicts lists every pair sharing a cell that must not: blocking pairs
+// and settled combat pairs, with their cell.
+func conflicts(g *Game) map[[2]entity.EntityID]Position {
+	out := map[[2]entity.EntityID]Position{}
+	for p, ids := range sharedCells(g) {
+		for i := 0; i < len(ids); i++ {
+			for k := i + 1; k < len(ids); k++ {
+				a, b := min(ids[i], ids[k]), max(ids[i], ids[k])
+				if blockingPair(g, a, b) || combatPair(g, a, b) {
+					out[[2]entity.EntityID{a, b}] = p
+				}
+			}
+		}
+	}
+	return out
+}
+
 func assertNoSharedCell(t *testing.T, g *Game, tick int) {
 	t.Helper()
-	for p, ids := range sharedCells(g) {
-		t.Fatalf("tick %d: creatures %v share cell %v", tick, ids, p)
+	for pair, p := range conflicts(g) {
+		t.Fatalf("tick %d: creatures %v share cell %v", tick, pair, p)
 	}
 }
 
@@ -79,9 +114,11 @@ func runUntil(t *testing.T, g *Game, limit int, done func() bool) int {
 	return -1
 }
 
-func TestCorridorHeadOnBothArrive(t *testing.T) {
-	// mirrors cmd/game -scenario corridor: a 1-wide corridor of walls,
-	// two colonists crossing it from opposite ends
+// corridorScenario mirrors cmd/game -scenario corridor: a 1-wide corridor
+// of walls, two drafted colonists at opposite ends. It orders those
+// flagged across and returns each one's arrival tick after the orders (0
+// when not ordered, -1 when it never arrived).
+func corridorScenario(t *testing.T, goA, goB bool) (int, int) {
 	g := New(Config{Seed: 1, Width: 32, Height: 9})
 	cx, cy := 16, 4
 	for x := cx - 6; x <= cx+6; x++ {
@@ -91,27 +128,86 @@ func TestCorridorHeadOnBothArrive(t *testing.T) {
 	}
 	a := draftedPawn(t, g, cx-9, cy)
 	b := draftedPawn(t, g, cx+9, cy)
-	order(g, a, cx+8, cy)
-	order(g, b, cx-8, cy)
-	// uncontested each walk is 17 straight steps; the yielder backs out of
-	// the corridor and comes back, so allow 300 ticks on top of that
-	budget := 17*TicksPerCell + 300
+	if goA {
+		order(g, a, cx+8, cy)
+	}
+	if goB {
+		order(g, b, cx-8, cy)
+	}
 	start := int(g.Tick())
-	var doneA, doneB int
-	at := runUntil(t, g, budget, func() bool {
-		tick := int(g.Tick())
-		if doneA == 0 && pos(g, a) == (Position{cx + 8, cy}) {
+	doneA, doneB := -1, -1
+	if !goA {
+		doneA = 0
+	}
+	if !goB {
+		doneB = 0
+	}
+	runUntil(t, g, 17*TicksPerCell+300, func() bool {
+		tick := int(g.Tick()) - start
+		if doneA < 0 && pos(g, a) == (Position{cx + 8, cy}) {
 			doneA = tick
 		}
-		if doneB == 0 && pos(g, b) == (Position{cx - 8, cy}) {
+		if doneB < 0 && pos(g, b) == (Position{cx - 8, cy}) {
 			doneB = tick
 		}
-		return doneA != 0 && doneB != 0
+		return doneA >= 0 && doneB >= 0
 	})
-	if at < 0 {
-		t.Fatalf("not both across within %d ticks: a at %v, b at %v", budget, pos(g, a), pos(g, b))
+	return doneA, doneB
+}
+
+func TestCorridorHeadOnBothArrive(t *testing.T) {
+	// PLAY-010: the two colonists pass through each other, so each crosses
+	// in the time it takes through an empty corridor (±1 tick)
+	aloneA, _ := corridorScenario(t, true, false)
+	_, aloneB := corridorScenario(t, false, true)
+	if aloneA < 0 || aloneB < 0 {
+		t.Fatalf("an empty corridor was not crossed: %d %d", aloneA, aloneB)
 	}
-	t.Logf("arrived at ticks %d and %d (start %d)", doneA, doneB, start)
+	doneA, doneB := corridorScenario(t, true, true)
+	if doneA < 0 || doneB < 0 {
+		t.Fatalf("not both across: %d %d", doneA, doneB)
+	}
+	if abs(doneA-aloneA) > 1 || abs(doneB-aloneB) > 1 {
+		t.Fatalf("crossing took %d and %d ticks, alone %d and %d", doneA, doneB, aloneA, aloneB)
+	}
+}
+
+func TestCorridorBlockerHeadOnBothArrive(t *testing.T) {
+	// the corridor scenario with a colonist and a wild animal, which still
+	// block each other: the animal (the higher ID) backs out of the
+	// corridor and both get across. Only the movement phase runs.
+	g := New(Config{Seed: 1, Width: 32, Height: 9})
+	cx, cy := 16, 4
+	for x := cx - 6; x <= cx+6; x++ {
+		if !g.BuildNow("wall", "wood", "south", x, cy-1) || !g.BuildNow("wall", "wood", "south", x, cy+1) {
+			t.Fatal("walls not built")
+		}
+	}
+	col := draftedPawn(t, g, cx-9, cy)
+	d := wildAt(t, g, cx+9, cy)
+	goalC, goalD := Position{cx + 8, cy}, Position{cx - 8, cy}
+	g.cmdMove(col, goalC.X, goalC.Y)
+	send := func() {
+		an, _ := g.animals.Get(d)
+		g.animalGoTo(d, &an, goalD.X, goalD.Y)
+		g.animals.Set(d, an)
+	}
+	send()
+	an, _ := g.animals.Get(d)
+	budget := 17*max(TicksPerCell, an.Step()) + 400
+	tick := 1
+	for ; tick <= budget && (pos(g, col) != goalC || pos(g, d) != goalD); tick++ {
+		g.phaseMovement()
+		g.clock.Advance(1)
+		assertNoSharedCell(t, g, tick)
+		if an, _ := g.animals.Get(d); an.PathI >= len(an.Path) && pos(g, d) != goalD {
+			send() // it stopped short (backed out, or gave up): send it on
+		}
+	}
+	if pos(g, col) != goalC || pos(g, d) != goalD {
+		t.Fatalf("not both across within %d ticks: colonist at %v, animal at %v", budget, pos(g, col), pos(g, d))
+	}
+	t.Logf("both across after %d ticks", tick)
 }
 
 func TestCrowdToOneCellSpreads(t *testing.T) {
@@ -274,8 +370,10 @@ func TestNoSharedCellInvariant(t *testing.T) {
 		if len(g.animalIDs) == 0 {
 			t.Fatalf("seed %d: no animals", seed)
 		}
-		// stacks only come from outside movement (spawns, standing up);
-		// a step never creates one, and every stack clears quickly
+		// blocking stacks only come from outside movement (spawns,
+		// standing up); a step never creates one. Colonists settled on one
+		// cell with either in combat, and every blocking stack, clear
+		// quickly.
 		since := map[[2]entity.EntityID]int{}
 		for tick := 1; tick <= ticks; tick++ {
 			before := map[entity.EntityID]Position{}
@@ -284,20 +382,17 @@ func TestNoSharedCellInvariant(t *testing.T) {
 			}
 			g.Step(1)
 			now := map[[2]entity.EntityID]int{}
-			for p, ids := range sharedCells(g) {
-				for i := 0; i < len(ids); i++ {
-					for k := i + 1; k < len(ids); k++ {
-						pair := [2]entity.EntityID{min(ids[i], ids[k]), max(ids[i], ids[k])}
-						for _, id := range pair {
-							if was, ok := before[id]; ok && was != p {
-								t.Fatalf("seed %d tick %d: %d walked onto %v held by %v", seed, tick, id, p, ids)
-							}
-						}
-						now[pair] = since[pair] + 1
-						if now[pair] > 2*TicksPerCellDiag {
-							t.Fatalf("seed %d tick %d: %v stacked on %v for %d ticks", seed, tick, pair, p, now[pair])
+			for pair, p := range conflicts(g) {
+				if blockingPair(g, pair[0], pair[1]) {
+					for _, id := range pair {
+						if was, ok := before[id]; ok && was != p {
+							t.Fatalf("seed %d tick %d: %d walked onto %v held by %v", seed, tick, id, p, pair)
 						}
 					}
+				}
+				now[pair] = since[pair] + 1
+				if now[pair] > 2*TicksPerCellDiag {
+					t.Fatalf("seed %d tick %d: %v stacked on %v for %d ticks", seed, tick, pair, p, now[pair])
 				}
 			}
 			since = now

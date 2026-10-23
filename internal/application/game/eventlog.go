@@ -66,6 +66,8 @@ const (
 	logBorn      // SIM-026: born to Name
 	logOldAge    // SIM-026: died of old age
 	logHatched   // SIM-026: hatched from an egg
+	logCharged   // PLAY-010: a predator charged Name
+	logChargedBy // PLAY-010: charged by Name ("a cougar")
 )
 
 // logEntry is one stored event (plain data; text is built for the view).
@@ -285,6 +287,10 @@ func logText(e logEntry) string {
 		return "Died of old age"
 	case logHatched:
 		return "Hatched"
+	case logCharged:
+		return "Charged " + e.Name
+	case logChargedBy:
+		return "Charged by " + e.Name
 	}
 	return ""
 }

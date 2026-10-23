@@ -114,6 +114,10 @@ func (g *Game) weatherSlow(x, y int, base int) int {
 	if c := g.terr.At(x, y).WalkCost(); c != 100 && g.treadAt(y*g.grid.Width()+x)&treadFloor == 0 {
 		base = (base*c + 99) / 100
 	}
+	// PLAY-010: a bramble thicket or elephant ears slow the step too
+	if c := g.plantWalkCost(x, y); c > 100 && g.treadAt(y*g.grid.Width()+x)&treadFloor == 0 {
+		base = (base*c + 99) / 100
+	}
 	pct := 0.0
 	switch g.weather.Kind {
 	case weather.Rain:

@@ -50,6 +50,7 @@ func (g *Game) growChunks() {
 		g.chunkPlants(cg, c, func(id entity.EntityID, p plant.Plant) {
 			g.growPlant(id, p, now, gp, &fp)
 		})
+		g.growGrassChunk(c, now) // grass.go: regrowing grass fills out (PLAY-010)
 	}
 	g.endFrostPass(&fp)
 }
@@ -203,4 +204,17 @@ func frostCount(text string, s plant.Species, hot bool) (int, bool) {
 		return 0, false
 	}
 	return n, true
+}
+
+// plantWalkCost is the step time (percent) of the plant on (x, y), 0 for
+// none or a plant that doesn't slow walkers (PLAY-010: brambles). It
+// reads the plant cell index directly (no scan cross-check): it runs per
+// A* node and per step.
+func (g *Game) plantWalkCost(x, y int) int {
+	id := g.plantAtIndexed(x, y)
+	if id == 0 {
+		return 0
+	}
+	p, _ := g.plants.Get(id)
+	return plant.DefOf(p.Species).WalkCost
 }

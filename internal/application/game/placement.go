@@ -172,7 +172,8 @@ func (g *Game) canPlace(k construction.Kind, x, y int) (bool, string) {
 		return false, ReasonScenario
 	}
 	layer := construction.DefOf(k).Layer
-	if g.layerBldgAt(x, y, layer) != 0 {
+	rep := g.replaceTarget(k, x, y) // a door or gate may stand where a wall or fence does
+	if rep == 0 && g.layerBldgAt(x, y, layer) != 0 {
 		return false, ReasonOccupied
 	}
 	if g.layerFrameAt(x, y, layer) != 0 {
@@ -190,7 +191,7 @@ func (g *Game) canPlace(k construction.Kind, x, y int) (bool, string) {
 		if g.floorBarrierAt(x, y) {
 			return false, ReasonBlocked
 		}
-	} else if !g.grid.Walkable(x, y) {
+	} else if rep == 0 && !g.grid.Walkable(x, y) {
 		return false, ReasonBlocked
 	}
 	if pid := g.plantAt(x, y); pid != 0 {
@@ -202,6 +203,85 @@ func (g *Game) canPlace(k construction.Kind, x, y int) (bool, string) {
 		return false, ReasonItem
 	}
 	return true, ""
+}
+
+// replaceTarget is the wall, fence, door or gate a door or gate of kind
+// k placed at (x, y) would replace (0: none). Same kind over same kind
+// is not a replacement.
+func (g *Game) replaceTarget(k construction.Kind, x, y int) entity.EntityID {
+	if k != construction.Door && k != construction.FenceGate {
+		return 0
+	}
+	bid := g.layerBldgAt(x, y, construction.LayerObject)
+	b, ok := g.bldgs.Get(bid)
+	if !ok || b.Kind == k {
+		return 0
+	}
+	switch b.Kind {
+	case construction.Wall, construction.Fence, construction.Door, construction.FenceGate:
+		return bid
+	}
+	return 0
+}
+
+// ReplacesAt names what a door or gate of kind would replace at (x, y)
+// ("wall", "fence", ...); "" when it replaces nothing. Read-only; the
+// Architect ghost reads "replaces wall".
+func (g *Game) ReplacesAt(kind string, x, y int) string {
+	k, ok := construction.Parse(kind)
+	if !ok {
+		return ""
+	}
+	if bid := g.replaceTarget(k, x, y); bid != 0 {
+		b, _ := g.bldgs.Get(bid)
+		return construction.DefOf(b.Kind).Name
+	}
+	return ""
+}
+
+// replacedStanding is the piece frame fr replaces while it still stands
+// (0: none, the frame may be built).
+func (g *Game) replacedStanding(fr construction.Frame) entity.EntityID {
+	if fr.Replaces == 0 {
+		return 0
+	}
+	if _, ok := g.bldgs.Get(fr.Replaces); !ok {
+		return 0
+	}
+	return fr.Replaces
+}
+
+// replaceWhy is the build refusal while the old piece stands ("" when
+// the frame is free to build).
+func (g *Game) replaceWhy(fr construction.Frame) string {
+	bid := g.replacedStanding(fr)
+	if bid == 0 {
+		return ""
+	}
+	b, _ := g.bldgs.Get(bid)
+	return "The " + construction.DefOf(b.Kind).Name + " must come down first"
+}
+
+// unmarkReplaced clears the deconstruct mark a replacing frame set, when
+// the frame is cancelled.
+func (g *Game) unmarkReplaced(fr construction.Frame) {
+	if !fr.ReplaceMarked || fr.Replaces == 0 {
+		return
+	}
+	if b, ok := g.bldgs.Get(fr.Replaces); ok && b.Deconstruct {
+		b.Deconstruct = false
+		g.bldgs.Set(fr.Replaces, b)
+	}
+}
+
+// cancelReplacing cancels the frame that replaces building bid (its
+// deconstruct mark was cleared).
+func (g *Game) cancelReplacing(bid entity.EntityID) {
+	for _, fid := range append([]entity.EntityID(nil), g.frameIDs...) {
+		if fr, ok := g.frames.Get(fid); ok && fr.Replaces == bid {
+			g.cancelFrame(fid)
+		}
+	}
 }
 
 // floorBarrierAt: (x, y) holds, or is planned to hold, an object no
@@ -263,6 +343,16 @@ func (g *Game) placeFrameStuff(kind construction.Kind, stuff item.Kind, f constr
 		CompNeed: construction.ComponentCost(kind), // delivered after the material (haul_route.go)
 		WorkLeft: construction.WorkFor(kind, stuff),
 	}
+	if cells, _, _ := construction.Footprint(kind, f, x, y); len(cells) > 0 {
+		if rep := g.replaceTarget(kind, cells[0][0], cells[0][1]); rep != 0 {
+			fr.Replaces = rep // the old piece comes down first
+			if b, _ := g.bldgs.Get(rep); !b.Deconstruct {
+				b.Deconstruct, b.WorkLeft = true, construction.DeconstructTicks(b.Kind)
+				g.bldgs.Set(rep, b)
+				fr.ReplaceMarked = true
+			}
+		}
+	}
 	g.frames.Set(id, fr)
 	g.noteFrame(id) // indexes.go
 	if kind.Instant() {
@@ -316,6 +406,9 @@ func (g *Game) markDeconstruct(x1, y1, x2, y2 int, on bool) {
 			b.WorkLeft = construction.DeconstructTicks(b.Kind)
 		}
 		g.bldgs.Set(id, b)
+		if !on {
+			g.cancelReplacing(id) // a door or gate waiting for this piece is dropped
+		}
 	}
 }
 

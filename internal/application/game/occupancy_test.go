@@ -79,17 +79,31 @@ func TestEnterFreeCellGoesAndReindexes(t *testing.T) {
 }
 
 func TestEnterBlockedByStandingPawn(t *testing.T) {
+	// PLAY-010: a colonist no longer blocks another colonist; the walker
+	// steps into the worker's cell at once and both stay indexed there
 	g := occTestGame()
 	a := mustPawn(t, g, 2, 5)
 	b := mustPawn(t, g, 3, 5)
 	walkTo(g, a, job.Move, straight(2, 8, 5)...)
 	g.jobs.Set(b, job.Record{Kind: job.Construct, State: job.Do, TX: 3, TY: 4})
 	rebuild(g)
+	if v, alt := g.enter(a, Position{2, 5}, Position{3, 5}); v != stepGo || alt != (Position{3, 5}) {
+		t.Fatalf("colonist into a working colonist = %v %v, want go", v, alt)
+	}
+	if i := 5*g.occ.w + 3; g.occ.pcount[i] != 2 || g.occ.pfirst[i] != a && g.occ.pfirst[i] != b {
+		t.Fatalf("shared cell indexes %d partners (first %d), want both", g.occ.pcount[i], g.occ.pfirst[i])
+	}
+
+	// a standing wild animal still blocks: the colonist plans around it at once
+	g = occTestGame()
+	a = mustPawn(t, g, 2, 5)
+	b = wildAt(t, g, 3, 5)
+	walkTo(g, a, job.Move, straight(2, 8, 5)...)
+	rebuild(g)
 	v, _ := g.enter(a, Position{2, 5}, Position{3, 5})
 	if v == stepGo {
-		t.Fatal("walked into a standing pawn")
+		t.Fatal("walked into a standing wild animal")
 	}
-	// behind a pawn standing at work it plans around at once
 	if v != stepRepath {
 		t.Fatalf("verdict = %v, want repath", v)
 	}
@@ -99,7 +113,7 @@ func TestEnterBlockedByStandingPawn(t *testing.T) {
 	}
 	for _, s := range p {
 		if s == (pathing.Point{X: 3, Y: 5}) {
-			t.Fatalf("route %v goes through the worker", p)
+			t.Fatalf("route %v goes through the animal", p)
 		}
 	}
 	if p[len(p)-1] != (pathing.Point{X: 8, Y: 5}) {
@@ -112,7 +126,7 @@ func TestEnterBlockedByStandingPawn(t *testing.T) {
 	}
 
 	// a walker moving on elsewhere is waited for, not planned around
-	walkTo(g, b, job.Move, pathing.Point{X: 3, Y: 4})
+	animalWalk(g, b, pathing.Point{X: 3, Y: 4})
 	setBlocked(g, a, 0, 0)
 	rebuild(g)
 	if v, _ := g.enter(a, Position{2, 5}, Position{3, 5}); v != stepWait {
@@ -157,25 +171,44 @@ func TestCarriedPawnDoesNotBlock(t *testing.T) {
 }
 
 func TestIdlePawnStepsAside(t *testing.T) {
-	g := occTestGame()
 	// a 1-wide corridor along y=5 with a bay at (5,4)
-	for x := 1; x < 12; x++ {
-		g.grid.SetWalkable(x, 4, x == 5)
-		g.grid.SetWalkable(x, 6, false)
+	corridor := func() *Game {
+		g := occTestGame()
+		for x := 1; x < 12; x++ {
+			g.grid.SetWalkable(x, 4, x == 5)
+			g.grid.SetWalkable(x, 6, false)
+		}
+		return g
 	}
+	// PLAY-010: a colonist walks through an idle colonist; nobody moves aside
+	g := corridor()
 	a := mustPawn(t, g, 2, 5)
 	b := mustPawn(t, g, 3, 5)
 	walkTo(g, a, job.Move, straight(2, 10, 5)...)
 	g.jobs.Set(b, job.Record{Kind: job.Wander, State: job.Do, TX: 3, TY: 5, WorkLeft: 400})
 	rebuild(g)
-	if v, _ := g.enter(a, Position{2, 5}, Position{3, 5}); v != stepWait {
+	if v, _ := g.enter(a, Position{2, 5}, Position{3, 5}); v != stepGo {
+		t.Fatalf("colonist past an idler = %v, want go", v)
+	}
+	if j, _ := g.jobs.Get(b); j.State != job.Do {
+		t.Fatalf("idler moved for a colonist: %+v", j)
+	}
+
+	// a wild animal still waits, and the idle colonist makes way for it
+	g = corridor()
+	b = mustPawn(t, g, 3, 5)
+	d := wildAt(t, g, 2, 5)
+	animalWalk(g, d, straight(2, 10, 5)...)
+	g.jobs.Set(b, job.Record{Kind: job.Wander, State: job.Do, TX: 3, TY: 5, WorkLeft: 400})
+	rebuild(g)
+	if v, _ := g.enter(d, Position{2, 5}, Position{3, 5}); v != stepWait {
 		t.Fatalf("verdict = %v, want wait (no way around)", v)
 	}
 	if j, _ := g.jobs.Get(b); j.State != job.Do {
 		t.Fatal("idler moved before the walker waited 30 ticks")
 	}
-	setBlocked(g, a, idleYieldAfter, b)
-	if v, _ := g.enter(a, Position{2, 5}, Position{3, 5}); v != stepWait {
+	setBlocked(g, d, idleYieldAfter, b)
+	if v, _ := g.enter(d, Position{2, 5}, Position{3, 5}); v != stepWait {
 		t.Fatalf("verdict = %v, want wait while it makes way", v)
 	}
 	j, _ := g.jobs.Get(b)
@@ -187,15 +220,15 @@ func TestIdlePawnStepsAside(t *testing.T) {
 	}
 
 	// the full movement phase then clears the corridor
-	for range 200 {
+	for range 400 {
 		g.phaseMovement()
 		g.clock.Advance(1)
-		if pos(g, a) == pos(g, b) {
+		if pos(g, d) == pos(g, b) {
 			t.Fatal("walker and idler share a cell")
 		}
 	}
-	if pos(g, a) != (Position{10, 5}) {
-		t.Fatalf("walker at %v, want (10,5)", pos(g, a))
+	if pos(g, d) != (Position{10, 5}) {
+		t.Fatalf("walker at %v, want (10,5)", pos(g, d))
 	}
 }
 
@@ -219,11 +252,26 @@ func TestDraftedAndRaiderDoNotMakeWay(t *testing.T) {
 }
 
 func TestHeadOnSwapResolves(t *testing.T) {
+	// PLAY-010: two colonists head-on simply pass through each other
 	g := occTestGame()
-	a := mustPawn(t, g, 3, 5) // lower ID: keeps its line
-	b := mustPawn(t, g, 4, 5) // higher ID: yields
+	a := mustPawn(t, g, 3, 5)
+	b := mustPawn(t, g, 4, 5)
 	walkTo(g, a, job.Move, straight(3, 9, 5)...)
 	walkTo(g, b, job.Move, straight(4, 0, 5)...)
+	rebuild(g)
+	if v, _ := g.enter(a, Position{3, 5}, Position{4, 5}); v != stepGo {
+		t.Fatalf("colonist head-on, lower ID = %v, want go", v)
+	}
+	if v, _ := g.enter(b, Position{4, 5}, Position{3, 5}); v != stepGo {
+		t.Fatalf("colonist head-on, higher ID = %v, want go", v)
+	}
+
+	// a colonist and a wild animal head-on: the higher ID (the animal) yields
+	g = occTestGame()
+	a = mustPawn(t, g, 3, 5) // lower ID: keeps its line
+	b = wildAt(t, g, 4, 5)   // higher ID: yields
+	walkTo(g, a, job.Move, straight(3, 9, 5)...)
+	animalWalk(g, b, straight(4, 0, 5)...)
 	rebuild(g)
 	if v, _ := g.enter(a, Position{3, 5}, Position{4, 5}); v != stepWait {
 		t.Fatalf("lower ID verdict %v, want wait", v)
@@ -244,15 +292,11 @@ func TestHeadOnSwapResolves(t *testing.T) {
 	}
 
 	// in a 1-wide corridor the yielder backs off along the other's way
-	h := occTestGame()
-	for x := 0; x < 14; x++ {
-		h.grid.SetWalkable(x, 4, false)
-		h.grid.SetWalkable(x, 6, false)
-	}
+	h := corridorGame()
 	a = mustPawn(t, h, 3, 5)
-	b = mustPawn(t, h, 4, 5)
+	b = wildAt(t, h, 4, 5)
 	walkTo(h, a, job.Move, straight(3, 9, 5)...)
-	walkTo(h, b, job.Move, straight(4, 0, 5)...)
+	animalWalk(h, b, straight(4, 0, 5)...)
 	rebuild(h)
 	v, alt = h.enter(b, Position{4, 5}, Position{3, 5})
 	if v != stepSidestep || alt != (Position{5, 5}) {
@@ -285,10 +329,11 @@ func TestHostileTargetIsNotAYieldPartner(t *testing.T) {
 }
 
 func TestArriveNearWhenDestinationTaken(t *testing.T) {
+	// the last cell is held by a blocker (a wild animal standing still);
+	// colonists in one another's way are covered in walkthrough_test.go
 	g := occTestGame()
 	a := mustPawn(t, g, 4, 5)
-	b := mustPawn(t, g, 5, 5)
-	g.jobs.Set(b, job.Record{Kind: job.Construct, State: job.Do, TX: 6, TY: 5})
+	wildAt(t, g, 5, 5)
 
 	// an adjacency job: 'from' already touches the work cell
 	g.jobs.Set(a, job.Record{Kind: job.Cut, State: job.Goto, TX: 5, TY: 5, Path: []pathing.Point{{X: 5, Y: 5}}})
@@ -301,8 +346,7 @@ func TestArriveNearWhenDestinationTaken(t *testing.T) {
 	g.positions.Set(a, Position{3, 3})
 	g.jobs.Set(a, job.Record{Kind: job.Mine, State: job.Goto, TX: 4, TY: 4, DestX: 5, DestY: 4,
 		Path: []pathing.Point{{X: 4, Y: 4}}})
-	c := mustPawn(t, g, 4, 4)
-	g.jobs.Set(c, job.Record{Kind: job.Construct, State: job.Do, TX: 4, TY: 3})
+	c := wildAt(t, g, 4, 4)
 	rebuild(g)
 	v, alt := g.enter(a, Position{3, 3}, Position{4, 4})
 	if v != stepArriveNear || pathing.Dist(alt.X, alt.Y, 5, 4) != 1 || alt == (Position{4, 4}) {
@@ -347,7 +391,7 @@ func TestExactCellJobsWait(t *testing.T) {
 		g := occTestGame()
 		a := mustPawn(t, g, 4, 5)
 		b := mustPawn(t, g, 5, 5)
-		g.jobs.Set(b, job.Record{Kind: job.Construct, State: job.Do, TX: 6, TY: 5})
+		g.setDraft(b, true) // in combat: never shares its cell (PLAY-010)
 		rec := job.Record{Kind: k, State: job.Goto, TX: 5, TY: 5, Path: []pathing.Point{{X: 5, Y: 5}}}
 		if k == job.Haul || k == job.Eat {
 			rec.Carry = 99 // carrying it to its cell
@@ -361,26 +405,28 @@ func TestExactCellJobsWait(t *testing.T) {
 			t.Fatalf("%v: arrival %v, want exact", k, g.arrivalOf(a))
 		}
 	}
-	// an idler on a bed cell makes way after 30 ticks
+	// an idling animal on a bed cell makes way after 30 ticks
 	g := occTestGame()
 	a := mustPawn(t, g, 4, 5)
-	b := mustPawn(t, g, 5, 5)
+	b := wildAt(t, g, 5, 5)
 	g.jobs.Set(a, job.Record{Kind: job.Sleep, State: job.Goto, TX: 5, TY: 5, Path: []pathing.Point{{X: 5, Y: 5}}})
 	setBlocked(g, a, idleYieldAfter, b)
 	rebuild(g)
 	if v, _ := g.enter(a, Position{4, 5}, Position{5, 5}); v != stepWait {
 		t.Fatalf("verdict %v, want wait", v)
 	}
-	if j, _ := g.jobs.Get(b); j.Kind != job.Wander || j.State != job.Goto {
-		t.Fatalf("idler on the bed cell not sent aside: %+v", j)
+	if an, _ := g.animals.Get(b); len(an.Path) == 0 {
+		t.Fatalf("idler on the bed cell not sent aside: %+v", an)
 	}
 }
 
 func TestThreeCycleHighestYields(t *testing.T) {
+	// drafted: each last step lands on a colonist in combat, so the ring
+	// resolves as before (out of combat they all just go: walkthrough_test.go)
 	g := occTestGame()
-	a := mustPawn(t, g, 5, 5)
-	b := mustPawn(t, g, 6, 5)
-	c := mustPawn(t, g, 6, 6)
+	a := draftedPawn(t, g, 5, 5)
+	b := draftedPawn(t, g, 6, 5)
+	c := draftedPawn(t, g, 6, 6)
 	walkTo(g, a, job.Move, pathing.Point{X: 6, Y: 5})
 	walkTo(g, b, job.Move, pathing.Point{X: 6, Y: 6})
 	walkTo(g, c, job.Move, pathing.Point{X: 5, Y: 5})
@@ -410,9 +456,10 @@ func TestUnstackHigherIDMovesOff(t *testing.T) {
 	if j.State != job.Goto || len(j.Path) != 1 {
 		t.Fatalf("stacked pawn got no step off: %+v", j)
 	}
-	// a working pawn keeps its job and steps next to its work
+	// a working pawn on a drafted pawn's cell keeps its job and steps next
+	// to its work
 	h := occTestGame()
-	mustPawn(t, h, 5, 5)
+	draftedPawn(t, h, 5, 5)
 	w := mustPawn(t, h, 5, 5)
 	h.jobs.Set(w, job.Record{Kind: job.Construct, State: job.Do, TX: 7, TY: 5, WorkLeft: 50})
 	rebuild(h)
@@ -505,8 +552,7 @@ func TestPathAroundUnwalkableTarget(t *testing.T) {
 	g := occTestGame()
 	g.grid.SetWalkable(8, 5, false)
 	a := mustPawn(t, g, 2, 5)
-	blocker := mustPawn(t, g, 7, 5)
-	g.jobs.Set(blocker, job.Record{Kind: job.Construct, State: job.Do, TX: 7, TY: 4})
+	wildAt(t, g, 7, 5) // a blocker (a colonist there would be walked through)
 	rebuild(g)
 	p, ok := g.pathAround(a, 8, 5)
 	if !ok || len(p) == 0 {
@@ -528,9 +574,10 @@ func TestPathAroundUnwalkableTarget(t *testing.T) {
 func TestCrowdCostPricesCreatures(t *testing.T) {
 	g := occTestGame()
 	a := mustPawn(t, g, 2, 2)
-	b := mustPawn(t, g, 5, 5)
-	w := mustPawn(t, g, 8, 8)
-	walkTo(g, w, job.Move, pathing.Point{X: 9, Y: 8})
+	b := wildAt(t, g, 5, 5)
+	w := wildAt(t, g, 8, 8)
+	animalWalk(g, w, pathing.Point{X: 9, Y: 8})
+	col := mustPawn(t, g, 5, 9)
 	rebuild(g)
 	c := g.costedQuery(a).(pathing.Coster)
 	if got := c.ExtraCost(5, 5); got != occupiedCost {
@@ -545,7 +592,25 @@ func TestCrowdCostPricesCreatures(t *testing.T) {
 	if got := c.ExtraCost(2, 2); got != 0 {
 		t.Fatalf("own cell = %d, want 0", got)
 	}
-	_ = b
+	// a colonist is free ground for another colonist (PLAY-010)...
+	if got := c.ExtraCost(5, 9); got != 0 {
+		t.Fatalf("a colonist's cell for a colonist = %d, want 0", got)
+	}
+	if got := c.ExtraCost(4, 9); got != 0 {
+		t.Fatalf("beside a colonist for a colonist = %d, want 0", got)
+	}
+	// ...but not for a wild animal
+	wc := g.costedQuery(b).(pathing.Coster)
+	if got := wc.ExtraCost(5, 9); got != occupiedCost {
+		t.Fatalf("a colonist's cell for a wild animal = %d", got)
+	}
+	if got := wc.ExtraCost(4, 9); got != besideCost {
+		t.Fatalf("beside a colonist for a wild animal = %d", got)
+	}
+	if got := wc.ExtraCost(5, 5); got != 0 {
+		t.Fatalf("own cell = %d, want 0", got)
+	}
+	_ = col
 }
 
 func TestOccupancyIndexIsLazyAndBounded(t *testing.T) {

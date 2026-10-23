@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/ai/work"
+	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/economy/item"
@@ -75,14 +76,43 @@ func frameGone(g *Game, fid entity.EntityID) bool {
 	return !ok
 }
 
-// stepFed steps n ticks keeping the pawns fed and rested.
+// stepFed steps n ticks keeping the pawns fed and rested (and any animal
+// among them held in place: holdWild).
 func stepFed(g *Game, n int, pawns ...entity.EntityID) {
 	for range n {
 		for _, p := range pawns {
+			if g.isAnimal(p) {
+				holdWild(g, p)
+				continue
+			}
 			g.SetNeeds(p, needs.Full, needs.Full)
 		}
 		g.Step(1)
 	}
+}
+
+// doorBlocker spawns a wild animal standing in a doorway. Colonists walk
+// through each other (PLAY-010), so the creature that stands still, won't
+// make way and leaves no way round is a wild one held for a handler (an
+// off-map entity with a taming job); stepFed keeps it held.
+func doorBlocker(t *testing.T, g *Game, x, y int) entity.EntityID {
+	t.Helper()
+	id := wildAt(t, g, x, y)
+	handler := g.entities.Next()
+	g.jobs.Set(handler, job.Record{Kind: job.Tame, State: job.Do, Target: id})
+	if !g.reserve.TryEntity(handler, id) {
+		t.Fatal("handler reservation")
+	}
+	holdWild(g, id)
+	return id
+}
+
+// holdWild keeps wild animal id fed and rested; held for its handler, it
+// stands still and never makes way.
+func holdWild(g *Game, id entity.EntityID) {
+	a, _ := g.animals.Get(id)
+	a.Food, a.Rest = animal.Full, animal.Full
+	g.animals.Set(id, a)
 }
 
 // firstActive steps up to n ticks until pawn id has an active job of kind
@@ -110,7 +140,7 @@ func TestBlockedJobIsPostponed(t *testing.T) {
 	g := doorwayMap()
 	fid := readyWall(t, g, 12, 5)
 	bob := postWorker(t, g, 3, 5, "Bob", work.Construct, work.Haul)
-	d := draftedPawn(t, g, 8, 5) // stands in the doorway
+	d := doorBlocker(t, g, 8, 5) // stands in the doorway
 	// other work on Bob's side: two loads for a stockpile
 	g.SpawnStack(item.GraniteBlocks, 20, 2, 10)
 	g.SpawnStack(item.Wood, 20, 6, 10)
@@ -144,9 +174,7 @@ func TestBlockedJobIsPostponed(t *testing.T) {
 		t.Fatalf("view lines %q, want the postponed wall", lines)
 	}
 	// the blocker leaves; once the retry passes Bob builds the wall
-	g.setDraft(d, false)
 	g.positions.Set(d, Position{X: 16, Y: 10})
-	g.setDraft(d, true)
 	for i := 0; i < 3000 && !frameGone(g, fid); i++ {
 		stepFed(g, 1, bob, d)
 	}
@@ -257,30 +285,55 @@ func TestUnreachableRetriedAfterWallRemoved(t *testing.T) {
 }
 
 func TestWorkingPawnShufflesAside(t *testing.T) {
-	for _, k := range []job.Kind{job.Construct, job.Clean} {
+	// a 1-wide corridor along y=5 with a bay at (3,4)
+	corridor := func() *Game {
 		g := occTestGame()
-		// a 1-wide corridor along y=5 with a bay at (3,4)
 		for x := 1; x < 12; x++ {
 			g.grid.SetWalkable(x, 4, x == 3)
 			g.grid.SetWalkable(x, 6, false)
 		}
-		a := mustPawn(t, g, 1, 5)
-		b := mustPawn(t, g, 3, 5)
-		walkTo(g, a, job.Move, straight(1, 10, 5)...)
+		return g
+	}
+	for _, k := range []job.Kind{job.Construct, job.Clean} {
 		rec := job.Record{Kind: k, State: job.Do, Target: 999, TX: 3, TY: 5, WorkLeft: 5000}
 		if k == job.Clean {
 			rec.Target, rec.DestX, rec.DestY = 0, 3, 5
 		}
+		// PLAY-010: a colonist walks straight through a worker, who keeps
+		// its job and its cell
+		g := corridor()
+		a := mustPawn(t, g, 1, 5)
+		b := mustPawn(t, g, 3, 5)
+		walkTo(g, a, job.Move, straight(1, 10, 5)...)
 		g.jobs.Set(b, rec)
+		if blocked := runMoves(g, 300, a); blocked != 0 {
+			t.Fatalf("%v: walker held up %d ticks by a worker", k, blocked)
+		}
+		if pos(g, a) != (Position{10, 5}) || pos(g, b) != (Position{3, 5}) {
+			t.Fatalf("%v: walker at %v, worker at %v", k, pos(g, a), pos(g, b))
+		}
+		if j, _ := g.jobs.Get(b); j.Kind != k || j.State != job.Do {
+			t.Fatalf("%v: the worker lost its job: %s", k, j.Line())
+		}
+
+		// a worker in combat (here a live calm window) keeps its cell to
+		// itself: a colonist heading for that exact cell waits, and the
+		// worker shuffles to a free cell still next to its work
+		g = corridor()
+		a = mustPawn(t, g, 1, 5)
+		b = mustPawn(t, g, 3, 5)
+		walkTo(g, a, job.Sleep, straight(1, 3, 5)...)
+		g.jobs.Set(b, rec)
+		g.calm[b] = uint64(g.clock.Now()) + 5000
 		for range 300 {
 			g.phaseMovement()
 			g.clock.Advance(1)
 			if pos(g, a) == pos(g, b) {
-				t.Fatalf("%v: walker and worker share a cell", k)
+				t.Fatalf("%v: walker and worker in combat share a cell", k)
 			}
 		}
-		if pos(g, a) != (Position{10, 5}) {
-			t.Fatalf("%v: walker at %v, want (10,5): the worker should shuffle aside", k, pos(g, a))
+		if pos(g, a) != (Position{3, 5}) {
+			t.Fatalf("%v: walker at %v, want (3,5): the worker should shuffle aside", k, pos(g, a))
 		}
 		j, _ := g.jobs.Get(b)
 		if j.Kind != k || j.State != job.Do {
@@ -297,7 +350,7 @@ func TestBlockedForcedOrderIsPostponedNotLost(t *testing.T) {
 		g := doorwayMap()
 		fid := readyWall(t, g, 12, 5)
 		bob := postWorker(t, g, 3, 5, "Bob", work.Construct, work.Haul)
-		d := draftedPawn(t, g, 8, 5)
+		d := doorBlocker(t, g, 8, 5)
 		g.Enqueue(command.Command{Kind: command.Prioritize, Pawn: uint64(bob), X: 12, Y: 5,
 			Order: command.OrderBuild, Layer: uint8(construction.LayerObject)})
 		return g, fid, bob, d
@@ -317,9 +370,7 @@ func TestBlockedForcedOrderIsPostponedNotLost(t *testing.T) {
 		if !requeued {
 			t.Fatalf("the blocked order should go back on the queue with a retry tick: %+v", g.orderQueue[bob])
 		}
-		g.setDraft(d, false)
 		g.positions.Set(d, Position{X: 16, Y: 10})
-		g.setDraft(d, true)
 		for i := 0; i < 2500 && !frameGone(g, fid); i++ {
 			stepFed(g, 1, bob, d)
 		}

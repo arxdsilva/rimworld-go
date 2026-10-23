@@ -120,7 +120,16 @@ func TestMatingPregnancyBirth(t *testing.T) {
 	}
 	advance(g, d.Pregnant)
 	keepFed(g, daisy)
-	g.Step(2)
+	// where she stood when she gave birth: she may walk on through her
+	// young in the same tick (tame animals pass through each other, PLAY-010)
+	var birthAt Position
+	for range 2 {
+		at := pos(g, daisy)
+		g.Step(1)
+		if birthAt == (Position{}) && animalOf(g, daisy).Pregnant == 0 {
+			birthAt = at
+		}
+	}
 	if animalOf(g, daisy).Pregnant != 0 {
 		t.Fatal("she has given birth")
 	}
@@ -137,8 +146,8 @@ func TestMatingPregnancyBirth(t *testing.T) {
 		if v.Adult || v.Stage != "young" || v.Scale > 0.56 {
 			t.Fatalf("newborn view %+v", v)
 		}
-		if p := pos(g, id); chebyshev(p, pos(g, daisy)) > 1 {
-			t.Fatalf("born at %v, beside the mother at %v", p, pos(g, daisy))
+		if p := pos(g, id); chebyshev(p, birthAt) > 1 {
+			t.Fatalf("born at %v, beside the mother at %v", p, birthAt)
 		}
 	}
 	if !hasMessage(g, "Daisy gave birth to") || !hasMessage(g, "goat kid") {

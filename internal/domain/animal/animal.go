@@ -353,6 +353,39 @@ const (
 	TameRetryTicks = 5000
 )
 
+// Reactions and charges (PLAY-010).
+const (
+	// HurtFleeTicks: an animal that runs from whoever hurt it keeps
+	// running from them this long after the last hit.
+	HurtFleeTicks = 900
+	// A wild predator that is not busy rolls ChargePct percent, at most
+	// once per ChargeCooldown ticks, to charge a person within
+	// ChargeRadius; the charge ends beyond ChargeLeash tiles or after
+	// ChargeTicks, and the cooldown starts again.
+	ChargeRadius   = 3
+	ChargePct      = 30
+	ChargeCooldown = 600
+	ChargeTicks    = 1200
+	ChargeLeash    = 10
+)
+
+// Fighter reports whether animals of s stand and fight whoever hurts
+// them (territorial animals, predators and legendaries) rather than run.
+func Fighter(s Species) bool {
+	switch RosterOf(s).Behaviour {
+	case Territorial, Predator, PackPredator, Legendary:
+		return true
+	}
+	return false
+}
+
+// Charger reports whether wild animals of s charge people who come close
+// (predators and pack predators).
+func Charger(s Species) bool {
+	b := RosterOf(s).Behaviour
+	return b == Predator || b == PackPredator
+}
+
 // defs derive from the roster (buildDef, SIM-019).
 var defs = func() (out [numSpecies]Def) {
 	for i := range out {
@@ -577,6 +610,11 @@ type State struct {
 	Mate      entity.EntityID
 	MateLeft  int
 	MateUntil uint64
+	// Charges (PLAY-010): a wild predator may rush a person who comes
+	// close. ChargeSince is the tick the current charge began (0: none);
+	// NextCharge the first tick it may roll for another.
+	ChargeSince uint64
+	NextCharge  uint64
 }
 
 // Enraged reports a manhunter at tick now.

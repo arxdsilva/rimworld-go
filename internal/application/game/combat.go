@@ -197,14 +197,7 @@ func (g *Game) hurt(target entity.EntityID, dmg int, by entity.EntityID) {
 		a.Injury += dmg
 		a.Attacker = by
 		g.provoked(target, &a, by)
-		// an enraged animal fights on instead of bolting (no flee/attack flapping)
-		if animal.DefOf(a.Species).Skittish && !a.Tame && !a.Enraged(now) {
-			if a.Mode != animal.Flee && by != 0 {
-				g.logEvent(target, logEntry{Kind: logFled, Other: by, Name: g.creatureName(by)})
-			}
-			a.Mode, a.FleeUntil, a.Path = animal.Flee, now+900, nil
-		}
-		g.animalHurt(target, &a, by, now) // animal_needs.go: wakes it, T8
+		g.animalHurt(target, &a, by, now) // animal_needs.go: wakes it, then it fights back or runs
 		g.animals.Set(target, a)
 		if a.Dead() {
 			g.killAnimal(target, by)
@@ -472,6 +465,11 @@ const (
 	raiderReach   = 14
 	animalRelease = 8
 	raiderRelease = 18
+	// fleeReach, fleeRelease: an unarmed colonist runs from an animal
+	// coming for it from this far off, and keeps running until it is
+	// past fleeRelease (PLAY-010; flee.go).
+	fleeReach   = 12
+	fleeRelease = 16
 	// fleeCalm is how long an unarmed colonist who fled holds back from
 	// work after it last saw the threat.
 	fleeCalm = 600
@@ -533,23 +531,20 @@ func (g *Game) nearestThreatTo(id entity.EntityID, pos Position, animalR, raider
 }
 
 // defend reacts to an animal or raider attacking an undrafted colonist:
-// armed colonists fight back, unarmed ones run and then hold back from
-// work until they calm down. It reports whether it acted.
+// armed colonists fight back, unarmed ones run (flee.go) and then hold
+// back from work and orders until they calm down. It reports whether it
+// acted.
 func (g *Game) defend(id entity.EntityID, j job.Record) bool {
 	pos, _ := g.positions.Get(id)
 	now := uint64(g.clock.Now())
-	_, armed := g.equip[id]
-	armed = armed && g.canViolence(id) // a pacifist runs instead (skills.go)
+	armed := g.fightsBack(id) // a pacifist runs instead (skills.go)
 	calm := false
 	if until, ok := g.calm[id]; ok {
 		if calm = now < until && !armed; !calm {
 			delete(g.calm, id)
 		}
 	}
-	ar, rr := animalReach, raiderReach
-	if calm {
-		ar, rr = animalRelease, raiderRelease
-	}
+	ar, rr := threatReach(armed, calm)
 	threat, tp, best := g.nearestThreatTo(id, pos, ar, rr)
 	if threat == 0 {
 		return calm // still shaken: hold position, start no work
@@ -572,15 +567,19 @@ func (g *Game) defend(id entity.EntityID, j job.Record) bool {
 		g.logEvent(id, logEntry{Kind: logFled, Other: threat, Name: g.creatureName(threat)})
 	}
 	g.calm[id] = now + fleeCalm // calm down only once the threat is gone
-	if calm && j.Kind == job.Move && j.State == job.Goto && (now+uint64(id))%30 != 0 {
+	running := calm && j.Kind == job.Move && j.State == job.Goto && !j.Forced
+	if running && (now+uint64(id))%30 != 0 {
 		return true // keep running
 	}
-	fx, fy := animal.FleeGoal(pos.X, pos.Y, tp.X, tp.Y, 7)
-	fx, fy, ok := g.walkableNear(fx, fy, 3)
+	fx, fy, ok := g.fleeGoal(id, pos, tp)
 	if !ok {
-		return true // cornered: stay put rather than walk back to work
+		// cornered: stay put rather than work, sleep or walk an order
+		if !running {
+			g.dropForFlight(id, j)
+		}
+		return true
 	}
-	g.interrupt(id, job.Interrupted)
+	g.dropForFlight(id, j)
 	g.startJob(id, job.Record{Kind: job.Move, TX: fx, TY: fy})
 	return true
 }

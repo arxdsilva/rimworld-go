@@ -2,6 +2,7 @@ package game
 
 import (
 	"container/heap"
+	"encoding/binary"
 	"sort"
 
 	"rimworld-go/internal/domain/ai/job"
@@ -10,6 +11,7 @@ import (
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/biome"
+	"rimworld-go/internal/domain/world/chunk"
 	"rimworld-go/internal/domain/world/plant"
 )
 
@@ -34,6 +36,25 @@ type grassState struct {
 	// regrow is the grazed or cut tiles growing back (SIM-023), a min-heap
 	// on At.
 	regrow []grassRegrow
+	// growth (PLAY-010) is each regrowing tile's growth percent, allocated
+	// on the first regrowth: 0 means full (or no grass), so the zero state
+	// is today's all-full grass. growing lists, per chunk, the tiles with
+	// a nonzero growth (exactly those), in the order they regrew;
+	// nGrowing counts them.
+	growth   []uint8
+	growing  [][]int32
+	nGrowing int
+	// ver changes with any grass or growth change; view is the growth
+	// layer last handed out, built at viewVer. fp is the fingerprint of
+	// the grass and growth (WorldView.GrassVer), taken at fpVer: a content
+	// hash rather than the counter, so a loaded game reads the same
+	// version as the game it was saved from.
+	ver     uint64
+	view    []uint8
+	viewVer uint64
+	fp      uint64
+	fpVer   uint64
+	fpOK    bool
 }
 
 // grassRegrow is one bare tile due to grow back at tick At (saved).
@@ -53,6 +74,7 @@ func (g *Game) seedGrass() *grassState {
 	}
 	w, h := g.grid.Width(), g.grid.Height()
 	s.seeded = true
+	s.ver++
 	s.cells = make([]uint8, w*h)
 	s.cut = map[[2]int]bool{}
 	bd := biome.DefOf(g.biome)
@@ -105,8 +127,13 @@ func (g *Game) clearGrass(x, y int) {
 	if !s.seeded || !g.grid.InBounds(x, y) {
 		return
 	}
-	s.cells[y*g.grid.Width()+x] = 0
+	i := y*g.grid.Width() + x
+	if s.cells[i] != 0 || s.growth != nil && s.growth[i] != 0 {
+		s.ver++
+	}
+	s.cells[i] = 0
 	delete(s.cut, [2]int{x, y})
+	g.stopGrowing(s, int32(i))
 }
 
 // markGrass marks (on) or unmarks grass tiles in the rectangle for cutting.
@@ -151,11 +178,37 @@ func (g *Game) grassCutList() [][2]int {
 	return out
 }
 
-// fillGrassView copies grass and its cut marks into the view.
+// fillGrassView copies grass, its cut marks and its growth into the view.
 func (g *Game) fillGrassView(w *WorldView) {
 	s := g.seedGrass()
 	w.Grass = shareLayer(&g.viewGrass, s.cells) // indexes.go: shared, copy-on-write
 	w.GrassCut = g.grassCutList()
+	w.GrassGrowth, w.GrassVer = g.grassGrowthView(s), grassFingerprint(s)
+}
+
+// grassFingerprint is a content hash of the grass and its growth, kept
+// until the grass changes.
+func grassFingerprint(s *grassState) uint64 {
+	if s.fpOK && s.fpVer == s.ver {
+		return s.fp
+	}
+	h := uint64(0xcbf29ce484222325)
+	mix := func(b []uint8) {
+		for len(b) >= 8 {
+			h = (h ^ binary.LittleEndian.Uint64(b)) * 0x100000001b3
+			h ^= h >> 29
+			b = b[8:]
+		}
+		for _, v := range b {
+			h = (h ^ uint64(v)) * 0x100000001b3
+		}
+	}
+	mix(s.cells)
+	if s.nGrowing > 0 {
+		mix(s.growth)
+	}
+	s.fp, s.fpVer, s.fpOK = h|1, s.ver, true // never 0: 0 reads "no grass data"
+	return s.fp
 }
 
 // exportGrass returns the persisted form: the grass bitmap (one byte per
@@ -169,7 +222,8 @@ func (g *Game) exportGrass() ([]uint8, [][2]int) {
 // leaves the layer unseeded so it reseeds from terrain on first use.
 func (g *Game) importGrass(cells []uint8, cut [][2]int) {
 	s := g.grassSt()
-	*s = grassState{}
+	ver := s.ver + 1 // GrassVer only moves forward, across loads too
+	*s = grassState{ver: ver}
 	if len(cells) != g.grid.Width()*g.grid.Height() {
 		return
 	}
@@ -308,6 +362,7 @@ func (g *Game) regrowGrass() {
 		}
 		if x, y := int(c)%w, int(c)/w; g.grassCanRegrow(x, y) {
 			s.cells[c] = 1
+			g.startGrowing(s, c, plant.GrassShoots) // PLAY-010: shoots, filling out over days
 		}
 	}
 }
@@ -323,4 +378,174 @@ func (g *Game) grassCanRegrow(x, y int) bool {
 	}
 	return g.layerBldgAt(x, y, construction.LayerObject) == 0 && g.layerBldgAt(x, y, construction.LayerFloor) == 0 &&
 		g.layerFrameAt(x, y, construction.LayerObject) == 0 && g.layerFrameAt(x, y, construction.LayerFloor) == 0
+}
+
+// ---- grass growth (PLAY-010) ----
+//
+// A grazed or cut tile regrows as shoots (plant.GrassShoots) and fills
+// out to full over plant.GrassFillTicks of mild weather. Only regrowing
+// tiles carry a growth value; they are listed per chunk and grown in the
+// staggered per-chunk plant pass (plant_growth.go), so the work is the
+// few regrowing tiles of this tick's chunks, never a map scan.
+
+// grassSnowCover is the snow depth that buries grass and stops it growing.
+const grassSnowCover = 0.1
+
+// grassGrowthAt is the growth percent of the grass on (x, y): 100 for a
+// full tile, 0 where there is no grass.
+func (g *Game) grassGrowthAt(x, y int) int {
+	if !g.hasGrass(x, y) {
+		return 0
+	}
+	s := g.grassSt()
+	if s.growth == nil {
+		return plant.GrassFull
+	}
+	if v := s.growth[y*g.grid.Width()+x]; v != 0 {
+		return int(v)
+	}
+	return plant.GrassFull
+}
+
+// startGrowing sets tile i growing at growth v (full when v >= 100).
+func (g *Game) startGrowing(s *grassState, i int32, v int) {
+	s.ver++
+	if v >= plant.GrassFull {
+		g.stopGrowing(s, i)
+		return
+	}
+	cg := chunk.New(g.grid.Width(), g.grid.Height())
+	if s.growth == nil {
+		s.growth = make([]uint8, len(s.cells))
+	}
+	if s.growing == nil {
+		s.growing = make([][]int32, cg.Count())
+	}
+	if s.growth[i] == 0 {
+		c := cg.OfIndex(int(i))
+		s.growing[c] = append(s.growing[c], i)
+		s.nGrowing++
+	}
+	s.growth[i] = uint8(max(v, 1))
+}
+
+// stopGrowing takes tile i out of the growing set (full, or bare).
+func (g *Game) stopGrowing(s *grassState, i int32) {
+	if s.growth == nil || s.growth[i] == 0 {
+		return
+	}
+	s.growth[i] = 0
+	s.ver++
+	c := chunk.New(g.grid.Width(), g.grid.Height()).OfIndex(int(i))
+	l := s.growing[c]
+	for k, v := range l {
+		if v == i {
+			s.growing[c] = append(l[:k], l[k+1:]...)
+			s.nGrowing--
+			return
+		}
+	}
+}
+
+// setGrassGrowth sets the growth of the grass on (x, y) (tests, fixtures).
+func (g *Game) setGrassGrowth(x, y, v int) {
+	if !g.hasGrass(x, y) {
+		return
+	}
+	g.startGrowing(g.grassSt(), int32(y*g.grid.Width()+x), v)
+}
+
+// growGrassChunk grows chunk c's regrowing grass over the climate
+// interval that ends now: plant.GrassGrowSpan at the tile's air
+// temperature. Snow cover and frost pause it; a tile reaching full, or
+// one that lost its grass, leaves the growing set.
+func (g *Game) growGrassChunk(c int, now uint64) {
+	s := g.grassSt()
+	if s.nGrowing == 0 || len(s.growing[c]) == 0 {
+		return
+	}
+	snow := g.weather.SnowDepth >= grassSnowCover
+	w := g.grid.Width()
+	l := s.growing[c]
+	kept := l[:0]
+	for _, i := range l {
+		if s.cells[i] == 0 { // bared behind clearGrass's back (fixtures)
+			s.growth[i] = 0
+			s.nGrowing--
+			s.ver++
+			continue
+		}
+		x, y := int(i)%w, int(i)/w
+		if snow && g.outdoorsAt(x, y) {
+			kept = append(kept, i)
+			continue
+		}
+		tf := plant.TempFactor(int(g.temperatureAt(x, y)))
+		n := plant.GrassGrowSpan(tf, now-min(now, climateInterval), now)
+		if n <= 0 {
+			kept = append(kept, i)
+			continue
+		}
+		s.ver++
+		if v := int(s.growth[i]) + n; v < plant.GrassFull {
+			s.growth[i] = uint8(v)
+			kept = append(kept, i)
+			continue
+		}
+		s.growth[i] = 0 // full
+		s.nGrowing--
+	}
+	clear(l[len(kept):]) // tidy the dropped tail
+	s.growing[c] = kept
+}
+
+// grassGrowthView is the read model's growth layer: nil while every grass
+// tile is full, else 0..100 per tile (full grass reads 100). A slice once
+// handed out is never written again; a new one is built when the grass
+// changed.
+func (g *Game) grassGrowthView(s *grassState) []uint8 {
+	if s.nGrowing == 0 {
+		return nil
+	}
+	if s.view != nil && s.viewVer == s.ver {
+		return s.view
+	}
+	out := make([]uint8, len(s.cells))
+	for i, c := range s.cells {
+		if c == 0 {
+			continue
+		}
+		if v := s.growth[i]; v != 0 {
+			out[i] = v
+		} else {
+			out[i] = plant.GrassFull
+		}
+	}
+	s.view, s.viewVer = out, s.ver
+	return out
+}
+
+// exportGrassGrowth is the saved growth layer (0: full or no grass), nil
+// while nothing is growing, so saves of full maps stay as they were.
+func (g *Game) exportGrassGrowth() []uint8 {
+	s := g.grassSt()
+	if s.nGrowing == 0 {
+		return nil
+	}
+	return append([]uint8(nil), s.growth...)
+}
+
+// importGrassGrowth restores a saved growth layer after importGrass; a
+// missing (older save) or malformed layer leaves every tile full.
+func (g *Game) importGrassGrowth(v []uint8) {
+	s := g.grassSt()
+	s.growth, s.growing, s.nGrowing, s.view = nil, nil, 0, nil
+	if !s.seeded || len(v) != len(s.cells) {
+		return
+	}
+	for i, x := range v {
+		if x != 0 && s.cells[i] == 1 {
+			g.startGrowing(s, int32(i), int(x))
+		}
+	}
 }

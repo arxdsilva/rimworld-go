@@ -216,6 +216,7 @@ func (g *Game) cancelRect(x1, y1, x2, y2 int) {
 	g.frameIDs = keptFrames
 	for _, id := range refund {
 		fr, _ := g.frames.Get(id)
+		g.unmarkReplaced(fr)
 		g.frames.Delete(id)
 		g.refundFrame(id, fr) // frame_view.go: delivered materials back
 	}
@@ -389,6 +390,11 @@ func (g *Game) phaseAI() {
 		if g.mentalBreakTick(id, j) {
 			continue // acting out: no orders, no work
 		}
+		// an unarmed colonist runs from an attacker before its orders,
+		// work or sleep; queued orders wait for it to calm down (flee.go)
+		if !g.drafted(id) && !g.fightsBack(id) && g.defend(id, j) {
+			continue
+		}
 		if g.orderDue(id) && !g.followingOrder(id) && (g.drafted(id) || !needs.SleepScheduled(act)) {
 			g.nextOrder(id)
 			continue
@@ -401,7 +407,7 @@ func (g *Game) phaseAI() {
 			}
 			continue
 		}
-		if g.defend(id, j) {
+		if g.fightsBack(id) && g.defend(id, j) {
 			continue
 		}
 		// Warmth only wakes a sleeper when the exposure turns dangerous, and
@@ -817,8 +823,8 @@ func (g *Game) constructTry(id entity.EntityID, tried []entity.EntityID) (entity
 	var bx, by int
 	for _, fid := range g.frameIDs {
 		fr, ok := g.frames.Get(fid)
-		if !ok || !fr.Ready() {
-			continue
+		if !ok || !fr.Ready() || g.replacedStanding(fr) != 0 {
+			continue // a door waits for the wall it replaces to come down
 		}
 		if _, taken := g.reserve.EntityOwner(fid); taken {
 			continue
@@ -1185,6 +1191,9 @@ func (g *Game) doConstruct(id entity.EntityID, j job.Record) {
 }
 
 func (g *Game) completeFrame(id entity.EntityID, fr construction.Frame) {
+	if g.replacedStanding(fr) != 0 {
+		return // never built while the piece it replaces stands
+	}
 	if fr.Reinstall != 0 {
 		g.completeMove(id, fr) // move.go: the same building moves here
 		return

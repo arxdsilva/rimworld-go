@@ -17,6 +17,15 @@ import (
 // Re-pin: go test -run TestScaleGolden -v ./internal/application/game/
 // and copy the "got" values.
 //
+// Re-pinned (PLAY-010): animals react to every attack (fight or flee,
+// penned ones inside the pen), predators charge colonists within 3 tiles,
+// unarmed colonists flee from 12 tiles, colonists and tame animals walk
+// through each other, and grazed grass regrows from shoots. Checked field
+// by field against 4b12749d after 20 000 ticks of all six colonies: only
+// Animals, Positions, Motion, Jobs, Carried, Claims, Postponed, Hits,
+// Strikes, Wounds, Stains, Logs, Skills, Joy, Need, TendedUntil, Vital,
+// RNG and the new GrassGrowth moved; no colonist dies (two are hurt).
+//
 // Re-pinned (NG-1 E4, plant_growth.go): plants grow per chunk once per
 // climate interval (plant.GrowSpan, one rate per window) instead of every
 // tick, and frost kills in the same pass. Checked field by field against
@@ -33,12 +42,12 @@ import (
 // values are identical when computed on the contract commit (fbc76fd6)
 // and on the new save format.
 var scaleGolden = map[string]uint64{
-	"48x40/seed1":    0xae93af67a85a0717,
-	"48x40/seed7":    0x1ffec660bec74194,
-	"48x40/seed42":   0x655898a73e2c16d3,
-	"120x120/seed1":  0x13c02846ac4ec28,
-	"120x120/seed7":  0xcd26219d6a19ebfb,
-	"120x120/seed42": 0xf5d403e00d332b28,
+	"48x40/seed1":    0xb31191f837c3c677,
+	"48x40/seed7":    0x342dda381c866916,
+	"48x40/seed42":   0xe4d0a0b0e1c666af,
+	"120x120/seed1":  0xc1d1e177077c4082,
+	"120x120/seed7":  0xe5ec76240bab6cc3,
+	"120x120/seed42": 0x4019b650e8e4a53d,
 }
 
 const scaleGoldenTicks = 20000
