@@ -145,6 +145,76 @@ def _frost(img, rng, count, p):
                 img[d < 1.0, :3] = _rgb(p["light"]) * 0.7 + _rgb(p["base"]) * 0.3
 
 
+def _waves(img, rng, count, p, length=(14, 32), amp=2.2, thick=2):
+    """Water: short wavy crest lines (pale line over a shadow line).
+    Wrap-around, so every variant stays seamless."""
+    hi = _rgb(p["light"]) * 0.75 + _rgb(p["base"]) * 0.25
+    lo = _soft(p, "shadow")
+    for _ in range(count):
+        x, y = rng.uniform(0, N, 2)
+        ln = int(rng.uniform(*length))
+        ph = rng.uniform(0, 6.28)
+        for i in range(ln):
+            fade = min(1.0, i / 4.0, (ln - i) / 4.0)
+            if fade < 0.5:
+                continue
+            xx = int(x + i) % N
+            yy = int(y + np.sin(i * 0.32 + ph) * amp) % N
+            for t in range(thick):
+                img[(yy + t) % N, xx, :3] = hi
+            img[(yy + thick + 1) % N, xx, :3] = lo
+
+
+def _sparkle(img, rng, count, p):
+    """Deep water: a few tiny pale cross glints."""
+    hi = _rgb(p["light"])
+    for _ in range(count):
+        x, y = (int(v) for v in rng.uniform(0, N, 2))
+        for dx, dy in ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)):
+            img[(y + dy) % N, (x + dx) % N, :3] = hi
+
+
+def _shoals(img, rng, count, p, bottom):
+    """Shallow water: sandy bottom patches showing through (lighter, warmer)."""
+    yy, xx = np.mgrid[0:N, 0:N]
+    tone = _rgb(p["base"]) * 0.55 + _rgb(p["light"]) * 0.30 + _rgb(bottom["light"]) * 0.15
+    for _ in range(count):
+        cx, cy = rng.uniform(0, N, 2)
+        rx, ry = rng.uniform(16, 30), rng.uniform(9, 16)
+        for ox in (-N, 0, N):
+            for oy in (-N, 0, N):
+                d = ((xx - cx - ox) / rx) ** 2 + ((yy - cy - oy) / ry) ** 2
+                img[d < 1.0, :3] = tone
+
+
+def _puddles(img, rng, count, p, water):
+    """Mud: wet sheens with a pale glint, wider and flatter than marsh pools."""
+    yy, xx = np.mgrid[0:N, 0:N]
+    for _ in range(count):
+        cx, cy = rng.uniform(0, N, 2)
+        rx, ry = rng.uniform(13, 24), rng.uniform(6, 11)
+        for ox in (-N, 0, N):
+            for oy in (-N, 0, N):
+                d = ((xx - cx - ox) / rx) ** 2 + ((yy - cy - oy) / ry) ** 2
+                img[d < 1.0, :3] = _rgb(p["shadow"]) * 0.7 + _rgb(water["base"]) * 0.3
+                inner = ((xx - cx - ox) / (rx * 0.72)) ** 2 + ((yy - cy - oy) / (ry * 0.62)) ** 2
+                img[(d < 1.0) & (inner < 1.0), :3] = _rgb(p["shadow"]) * 0.45 + _rgb(water["base"]) * 0.55
+                gl = ((xx - cx - ox + rx * 0.28) / (rx * 0.3)) ** 2 + ((yy - cy - oy + ry * 0.3) / (ry * 0.22)) ** 2
+                img[gl < 1.0, :3] = _rgb(water["light"])
+
+
+def _scuffs(img, rng, count, p):
+    """Track: short dark drag marks and pale chips where feet and carts wore the dirt."""
+    for _ in range(count):
+        x, y = rng.uniform(0, N, 2)
+        ang = rng.uniform(0, np.pi)
+        for i in range(int(rng.uniform(8, 18))):
+            xx = int(x + np.cos(ang) * i) % N
+            yy = int(y + np.sin(ang) * i) % N
+            img[yy, xx, :3] = _soft(p, "shadow")
+            img[(yy + 1) % N, xx, :3] = _soft(p, "light")
+
+
 SPECS = {
     # name: (material, lattice cells, (lo, hi) band thresholds, decorations)
     "soil":      ("soil", 4, (-0.62, 0.68), {"clods": (3, 2.0, 3.0)}),
@@ -157,7 +227,13 @@ SPECS = {
     "sand":      ("sand", 4, (-0.50, 0.55), {"ripples": 5}),
     "marsh":     ("marsh", 4, (-0.45, 0.55), {"glints": 9}),
     "ice":       ("ice", 3, (-0.50, 0.55), {"cracks": 6, "frost": 5}),
+    # NG-1 water and ground (spec §8): walk 300 / impassable / walk 140 / walk 90
+    "shallow_water": ("water_shallow", 3, (-0.55, 0.62), {"shoals": 3, "waves": (14, 2.0)}),
+    "deep_water":    ("water_deep", 3, (-0.50, 0.58), {"waves": (7, 1.6), "sparkle": 6}),
+    "mud":           ("mud", 4, (-0.50, 0.58), {"puddles": 3, "clods": (5, 1.4, 2.4)}),
+    "track":         ("track_dirt", 4, (-0.55, 0.62), {"pebbles": (12, 1.8, 3.2), "scuffs": 9}),
 }
+LIQUIDS = ("shallow_water", "deep_water")
 
 
 def _tile_img(name, v):
@@ -172,7 +248,7 @@ def _tile_img(name, v):
     if "clods" in deco:
         _stamp(img, rng, *deco["clods"], p)
     if "pebbles" in deco:
-        _stamp(img, rng, *deco["pebbles"], mats["stone"] if name == "gravel" else p)
+        _stamp(img, rng, *deco["pebbles"], mats["gravel"] if name == "track" else mats["stone"] if name == "gravel" else p)
     if "frost" in deco:
         _frost(img, rng, deco["frost"], p)
     if "joints" in deco:
@@ -183,6 +259,17 @@ def _tile_img(name, v):
         _glints(img, rng, deco["glints"], p, mats["marsh_water"])
     if "ripples" in deco:
         _ripples(img, rng, deco["ripples"], p)
+    if "shoals" in deco:
+        _shoals(img, rng, deco["shoals"], p, mats["sand"])
+    if "waves" in deco:
+        count, amp = deco["waves"]
+        _waves(img, rng, count, p, amp=amp)
+    if "sparkle" in deco:
+        _sparkle(img, rng, deco["sparkle"], p)
+    if "puddles" in deco:
+        _puddles(img, rng, deco["puddles"], p, mats["mud_wet"])
+    if "scuffs" in deco:
+        _scuffs(img, rng, deco["scuffs"], p)
     return img
 
 
@@ -195,6 +282,7 @@ def _tile(name, v):
         "image": "generated/world/terrain/%s.png" % out, "scale": C.SCALE,
         "canvas": [N, N], "footprint": [1, 1], "origin_px": [0, 0],
         "tileable": True, "terrain": name, "variant": v, "variants": VARIANTS,
+        **({"liquid": True} if name in LIQUIDS else {}),
     })
     return path
 
@@ -207,12 +295,8 @@ EDGE_DEPTH = 30.0   # px @2x
 EDGE_WOBBLE = 9.0
 
 
-def _edge_img(name, mask):
-    """Variant 0 of name with a soft, noisy alpha falling off away from
-    the sides in mask."""
-    border = 1000 + sum(map(ord, name))
-    base = _tile_img(name, 0)
-    wob = _noise(6, border + 13, border * 7 + mask) * EDGE_WOBBLE
+def _side_dist(mask):
+    """Distance (px) to the nearest side in mask (bits N=1, E=2, S=4, W=8)."""
     yy, xx = np.mgrid[0:N, 0:N].astype(np.float32) + 0.5
     dist = np.full((N, N), 1e9, np.float32)
     if mask & 1:
@@ -223,14 +307,26 @@ def _edge_img(name, mask):
         dist = np.minimum(dist, N - yy)
     if mask & 8:
         dist = np.minimum(dist, xx)
-    a = np.clip((EDGE_DEPTH + wob - dist) / 6.0, 0.0, 1.0)
+    return dist
+
+
+def _edge_img(name, mask, depth=None, wobble=None):
+    """Variant 0 of name with a soft, noisy alpha falling off away from
+    the sides in mask."""
+    depth = EDGE_DEPTH if depth is None else depth
+    wobble = EDGE_WOBBLE if wobble is None else wobble
+    border = 1000 + sum(map(ord, name))
+    base = _tile_img(name, 0)
+    wob = _noise(6, border + 13, border * 7 + mask) * wobble
+    dist = _side_dist(mask)
+    a = np.clip((depth + wob - dist) / 6.0, 0.0, 1.0)
     img = base.copy()
     img[..., 3] = a
     return img
 
 
-def _edge(name, mask):
-    img = _edge_img(name, mask)
+def _edge(name, mask, **kw):
+    img = _edge_img(name, mask, **kw)
     out = "%s_edge_%02d" % (name, mask)
     path = S.out_path("terrain", out)
     S.write_png(img, path)
@@ -238,6 +334,53 @@ def _edge(name, mask):
         "image": "generated/world/terrain/%s.png" % out, "scale": C.SCALE,
         "canvas": [N, N], "footprint": [1, 1], "origin_px": [0, 0],
         "transition": name, "mask": mask,
+    })
+    return path
+
+
+# Shore foam (water.kage fallback): a wavy pale band drawn over a WATER tile
+# along the sides that touch land (or, for shallow over deep, the same
+# mask the edge uses). Mask bits N=1, E=2, S=4, W=8. Translucent so the
+# water shows through; bubbles trail off into the water.
+FOAM_DEPTH = 17.0
+
+
+def _foam_img(mask):
+    p = S.pal()[0]["water_foam"]
+    border = 7331
+    wob = _noise(6, border, border * 3 + mask) * 6.5 + _noise(12, border + 5, border * 5 + mask) * 2.5
+    dist = _side_dist(mask)
+    band = FOAM_DEPTH + wob
+    a = np.clip((band - dist) / 4.0, 0.0, 1.0)               # solid foam hugging the shore
+    lace = np.clip((band + 9.0 - dist) / 5.0, 0.0, 1.0) - a   # thinner lacy trailing line
+    lace_pat = (_noise(10, border + 9, border * 7 + mask) > 0.05).astype(np.float32)
+    rng = np.random.RandomState(900 + mask)
+    bub = np.zeros((N, N), np.float32)
+    yy, xx = np.mgrid[0:N, 0:N].astype(np.float32)
+    for _ in range(10):
+        cx, cy = rng.uniform(0, N, 2)
+        if dist[int(cy) % N, int(cx) % N] < FOAM_DEPTH + 24:
+            r = rng.uniform(2.2, 4.0)
+            bub = np.maximum(bub, np.clip(1.6 - np.hypot(xx - cx, yy - cy) / r, 0, 1))
+    alpha = np.clip(a * 0.88 + lace * lace_pat * 0.55 + bub * 0.6, 0.0, 0.92)
+    img = np.empty((N, N, 4), np.float32)
+    img[..., :3] = _rgb(p["base"])
+    inner = a > 0.5   # lit crest on the outer edge, shadowed lacing deeper in
+    img[inner & (dist > band - 6.0), :3] = _rgb(p["shadow"])
+    img[inner & (dist < band * 0.55), :3] = _rgb(p["light"])
+    img[..., 3] = alpha
+    return img
+
+
+def _foam(mask):
+    img = _foam_img(mask)
+    out = "shore_foam_edge_%02d" % mask
+    path = S.out_path("terrain", out)
+    S.write_png(img, path)
+    meta.write("terrain", out, {
+        "image": "generated/world/terrain/%s.png" % out, "scale": C.SCALE,
+        "canvas": [N, N], "footprint": [1, 1], "origin_px": [0, 0],
+        "transition": "shore_foam", "mask": mask, "overlay_on": "water",
     })
     return path
 
@@ -263,4 +406,18 @@ def build():
     for name in PRIORITY[1:]:
         for mask in range(1, 16):
             out.append(_edge(name, mask))
+    out += build_ng1_edges()
+    return out
+
+
+NG1_TILES = ("shallow_water", "deep_water", "mud", "track")
+
+
+def build_ng1_edges():
+    """Mud over soil, shallow water over deep (wider, softer), shore foam."""
+    out = []
+    for mask in range(1, 16):
+        out.append(_edge("mud", mask))
+        out.append(_edge("shallow_water", mask, depth=38.0, wobble=11.0))
+        out.append(_foam(mask))
     return out

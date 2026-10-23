@@ -91,7 +91,7 @@ const (
 
 var profiles = []Profile{
 	{
-		Key: "steady", Name: "Orla Vane", Title: "the Steady Hand", Portrait: "ui/portrait/steady",
+		Key: "steady", Name: "Orla Vane", Title: "the Steady Hand", Portrait: "ui_portrait/steady",
 		Bio: "Orla spent thirty years in a dispatch booth, sending convoys across country that did not care whether they arrived. " +
 			"She came away believing that trouble is a tide, not an accident, and that a crew that knows when the water will rise can build a wall in time.\n\n" +
 			"She keeps a rhythm: a stretch of hard weather, then a stretch to mend and breathe. She will not apologise for the hard stretch, and she never skips the rest.\n\n" +
@@ -100,7 +100,7 @@ var profiles = []Profile{
 		PointsMin: 100, PointsMax: 100, RampPerCycle: 4, RampCap: 40, PositiveBias: 20,
 	},
 	{
-		Key: "hearth", Name: "Bram Holloway", Title: "the Hearthkeeper", Portrait: "ui/portrait/hearth",
+		Key: "hearth", Name: "Bram Holloway", Title: "the Hearthkeeper", Portrait: "ui_portrait/hearth",
 		Bio: "Bram kept an inn at a crossroads for forty winters and never once turned a stranger away without a bowl of something hot. " +
 			"He has seen what hurried people do, and he prefers to let you finish your soup.\n\n" +
 			"He is slow to send trouble, and slower to send it twice. When someone in your colony is lost he goes quiet for a while, the way an innkeeper does when a regular stops coming in.\n\n" +
@@ -109,7 +109,7 @@ var profiles = []Profile{
 		PointsMin: 100, PointsMax: 100, PositiveBias: 45, LossEaseDays: 6, LossEasePct: 70,
 	},
 	{
-		Key: "gambler", Name: "Kestrel Quay", Title: "the Gambler", Portrait: "ui/portrait/gambler",
+		Key: "gambler", Name: "Kestrel Quay", Title: "the Gambler", Portrait: "ui_portrait/gambler",
 		Bio: "Kestrel made a living at card tables on three continents and left each of them a little faster than she arrived. " +
 			"She does not remember the last hand, only the next one, and she will bet that you do not either.\n\n" +
 			"With her there is no schedule. Some weeks nothing happens and you start to trust the quiet; then two bad things turn up at breakfast. " +

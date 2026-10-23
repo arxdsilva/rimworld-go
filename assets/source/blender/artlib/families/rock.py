@@ -128,6 +128,56 @@ def _smooth(mask, filled):
     return con
 
 
+# Buried machinery (NG-1 §4.8): an ore whose rock body is the tinted stone and
+# whose flecks are wreckage of an older age: a toothed gear, a copper pipe elbow
+# and a riveted steel plate, all lying on the visible top below the clip height.
+def _gear_top(cx, cy, z, r, teeth=9):
+    import math
+    S.cyl("gear", cx, cy, r, z, z + 0.06, "steel", segs=teeth * 2, bevel=0.008)
+    S.cyl("gear_hole", cx, cy, r * 0.36, z + 0.055, z + 0.075, "metal_dark", segs=10, bevel=0.0)
+    for k in range(teeth):
+        a = 2 * math.pi * k / teeth
+        S.box("tooth%d" % k, cx + math.cos(a) * r * 1.03 - 0.022, cy + math.sin(a) * r * 1.03 - 0.022, z,
+              cx + math.cos(a) * r * 1.03 + 0.022, cy + math.sin(a) * r * 1.03 + 0.022, z + 0.06, "steel",
+              bevel=0.004)
+
+
+def _machinery(mask, filled):
+    con = _rock(mask, filled, mats=("stone_tint", "stone_tint"))
+    _gear_top(0.50, -0.56, 0.86, 0.17)
+    S.box("pipe", 0.16, -0.38, 0.84, 0.50, -0.30, 0.92, "copper", bevel=0.02)
+    S.cyl("pipe_up", 0.50, -0.34, 0.05, 0.84, 0.97, "copper", segs=10, bevel=0.01)
+    S.cyl("pipe_cap", 0.50, -0.34, 0.065, 0.95, 0.99, "metal_dark", segs=10, bevel=0.005)
+    S.box("plate", 0.58, -0.76, 0.82, 0.84, -0.58, 0.88, "steel", bevel=0.01)
+    for k, (x, y) in enumerate(((0.61, -0.73), (0.81, -0.73), (0.61, -0.61), (0.81, -0.61))):
+        S.cyl("rivet%d" % k, x, y, 0.016, 0.88, 0.91, "metal_dark", segs=6, bevel=0.0)
+    S.ellipsoid("cog_small", 0.28, -0.70, 0.84, 0.08, 0.08, 0.035, "metal_dark", segs=10, rings=6)
+    return con
+
+
+def _cave_mouth(facing):
+    """A cave entrance in tint-neutral stone: a rock horseshoe round a dark opening,
+    open to `facing`. Authored facing south, rotated by stage.face()."""
+    L, D = "stone_neutral", "stone_neutral_dark"
+    S.box("back", 0.04, -0.46, 0.0, 0.96, -0.04, 0.56, D, bevel=0.07, segments=2)
+    S.box("arm_w", 0.04, -0.96, 0.0, 0.28, -0.30, 0.36, D, bevel=0.07, segments=2)
+    S.box("arm_e", 0.72, -0.96, 0.0, 0.96, -0.30, 0.36, D, bevel=0.07, segments=2)
+    S.box("lintel", 0.22, -0.52, 0.34, 0.78, -0.34, 0.52, L, bevel=0.06, segments=2)
+    S.box("dark_face", 0.28, -0.465, 0.0, 0.72, -0.44, 0.34, "eye_black", bevel=0.0)
+    S.box("dark_floor", 0.28, -0.97, 0.0, 0.72, -0.44, 0.012, "eye_black", bevel=0.0)
+    S.box("dark_floor2", 0.31, -0.99, 0.0, 0.69, -0.9, 0.014, "backdrop", bevel=0.0)
+    for k, (x, y, z, r, sd) in enumerate(((0.30, -0.22, 0.46, 0.21, 41), (0.70, -0.24, 0.46, 0.20, 42),
+                                           (0.50, -0.14, 0.52, 0.19, 43), (0.16, -0.58, 0.28, 0.14, 44),
+                                           (0.84, -0.60, 0.28, 0.14, 45), (0.18, -0.84, 0.18, 0.12, 46),
+                                           (0.82, -0.84, 0.18, 0.12, 47))):
+        S.blob("lump%d" % k, x, y, z, r, L if k % 2 == 0 else D, seed=sd, lumps=0.3, squash=0.9)
+    for k, (x, y, r, sd) in enumerate(((0.34, -0.93, 0.07, 51), (0.62, -0.95, 0.06, 52), (0.50, -0.90, 0.04, 53))):
+        S.blob("rubble%d" % k, x, y, 0.0, r, L, seed=sd, lumps=0.3, squash=0.6)
+    fp = S.face(S.objects(), facing, (1, 1))
+    return S.render_asset("rock", "cave_mouth_" + facing, footprint=fp, zmax=0.65,
+                          extra={"overlay": "cave_mouth", "facing": facing, "rotatable": True, "material": "stone"})
+
+
 def _emit(name, builder, zmax, zclip, material, extra=None):
     out = []
     for mask in range(16):
@@ -147,4 +197,12 @@ def build():
     for ore, metal in (("steel", "steel"), ("silver", "silver"), ("gold", "gold")):
         out += _emit("ore_" + ore, lambda m, f, metal=metal: _ore(m, f, metal), ROCK_H, 0.80, "stone",
                      {"ore": ore})
+    out += build_ng1()
+    return out
+
+
+def build_ng1():
+    """Buried machinery ore (same linked set as the metal ores) and the cave mouths."""
+    out = _emit("ore_machinery", _machinery, ROCK_H, 0.80, "stone", {"ore": "machinery"})
+    out += [_cave_mouth(f) for f in ("south", "east", "north", "west")]
     return out

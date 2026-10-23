@@ -156,6 +156,48 @@ WALLS = (("wood", "wood_plank", "wood", "bark", "wood"),
          ("steel", "steel", "steel", "metal_dark", "steel"))
 
 
+def _tilt(n0, pivot, rx=0.0, ry=0.0, rz=0.0):
+    """Rotate the objects made since index n0 (degrees, about a pivot point)."""
+    import math
+    from mathutils import Matrix
+    m = (Matrix.Translation(pivot) @ Matrix.Rotation(math.radians(rz), 4, "Z")
+         @ Matrix.Rotation(math.radians(ry), 4, "Y") @ Matrix.Rotation(math.radians(rx), 4, "X")
+         @ Matrix.Translation((-pivot[0], -pivot[1], -pivot[2])))
+    for ob in S.objects()[n0:]:
+        ob.matrix_world = m @ ob.matrix_world
+
+
+def _pod_shell():
+    """A crashed drop pod, broken open: charred ground, a torn hull plate with an
+    orange stripe, the cracked porthole ring, a bent strut and loose scrap.
+    Low and walkable: everything stays under knee height."""
+    S.cyl("scorch", 0.5, -0.5, 0.47, 0.0, 0.012, "pod_scorch", segs=22, bevel=0.0, ry=0.40)
+    n0 = len(S.objects())
+    S.box("plate", 0.12, -0.78, 0.04, 0.60, -0.46, 0.09, "pod_hull", bevel=0.02)
+    S.box("plate_stripe", 0.12, -0.64, 0.085, 0.60, -0.56, 0.10, "pod_paint", bevel=0.0)
+    S.box("plate_rib", 0.30, -0.78, 0.09, 0.34, -0.46, 0.14, "pod_hull", bevel=0.01)
+    _tilt(n0, (0.36, -0.62, 0.05), rx=-9, ry=7, rz=-14)
+    n0 = len(S.objects())
+    S.cyl("port_ring", 0.70, -0.40, 0.17, 0.04, 0.12, "metal_dark", segs=14, bevel=0.015)
+    S.cyl("port_glass", 0.70, -0.40, 0.125, 0.12, 0.135, "glass", segs=14, bevel=0.0)
+    S.cyl("port_core", 0.70, -0.40, 0.045, 0.135, 0.145, "pod_scorch", segs=8, bevel=0.0)
+    _tilt(n0, (0.70, -0.40, 0.06), rx=12, ry=-10)
+    n0 = len(S.objects())
+    S.box("shard", 0.58, -0.30, 0.03, 0.86, -0.22, 0.07, "pod_hull", bevel=0.01)
+    S.box("shard_tip", 0.80, -0.31, 0.03, 0.92, -0.21, 0.065, "pod_scorch", bevel=0.005)
+    _tilt(n0, (0.72, -0.26, 0.04), rz=28)
+    n0 = len(S.objects())
+    S.box("strut", 0.10, -0.26, 0.04, 0.50, -0.20, 0.09, "metal_dark", bevel=0.008)
+    S.box("strut_bend", 0.46, -0.26, 0.04, 0.62, -0.20, 0.09, "metal_dark", bevel=0.008)
+    _tilt(n0, (0.46, -0.23, 0.05), rz=-16, ry=-8)
+    for k, (x, y, r, sd) in enumerate(((0.28, -0.86, 0.07, 1), (0.78, -0.72, 0.06, 2), (0.20, -0.44, 0.05, 3),
+                                       (0.84, -0.56, 0.05, 4), (0.52, -0.90, 0.045, 5))):
+        S.blob("scrap%d" % k, x, y, 0.0, r, "pod_hull" if k % 2 == 0 else "pod_scorch", seed=sd, lumps=0.3,
+               squash=0.6)
+    return S.render_asset("structure", "pod_shell", zmax=0.22,
+                          extra={"building": "pod shell", "walkable": True, "salvage": "steel"})
+
+
 def build():
     out = []
     for mat, body, cap, trim, kind in WALLS:
@@ -181,4 +223,5 @@ def build():
                               outline=False, shadow=False, extra={"tileable": True}))
     _frame()
     out.append(S.render_asset("structure", "frame_1x1", zmax=0.76, extra={"stage": "frame"}))
+    out.append(_pod_shell())
     return out

@@ -36,6 +36,64 @@ def _bed_double():
     return (2, 2), 0.70
 
 
+def _tool_cabinet():
+    """1x1 workshop tool cabinet: a tall steel locker with a pegboard top rack,
+    an orange stripe, two doors and a wrench and mallet resting on top."""
+    import math
+    from mathutils import Matrix
+    for sx in (-1, 1):
+        S.box("foot%d" % sx, 0.5 + sx * 0.28 - 0.05, -0.74, 0.0, 0.5 + sx * 0.28 + 0.05, -0.64, 0.06, "metal_dark",
+              bevel=0.01)
+    S.box("body", 0.14, -0.80, 0.05, 0.86, -0.22, 0.80, "pod_hull", bevel=0.035, segments=2)
+    S.box("top", 0.12, -0.82, 0.78, 0.88, -0.20, 0.84, "steel", bevel=0.02)
+    S.box("seam", 0.495, -0.815, 0.09, 0.505, -0.79, 0.76, "metal_dark", bevel=0.0)
+    S.box("stripe", 0.15, -0.815, 0.56, 0.85, -0.79, 0.70, "pod_paint", bevel=0.0)
+    for sx in (-1, 1):
+        S.box("handle%d" % sx, 0.5 + sx * 0.07 - 0.012, -0.835, 0.30, 0.5 + sx * 0.07 + 0.012, -0.80, 0.46, "metal_dark",
+              bevel=0.004)
+        S.box("vent%d" % sx, 0.5 + sx * 0.2 - 0.09, -0.805, 0.10, 0.5 + sx * 0.2 + 0.09, -0.795, 0.13, "metal_dark",
+              bevel=0.0)
+    # wrench lying on top, angled; mallet beside it
+    n0 = len(S.objects())
+    S.box("wrench", 0.24, -0.58, 0.84, 0.62, -0.52, 0.875, "metal_dark", bevel=0.01)
+    S.cyl("wr_ring", 0.64, -0.55, 0.055, 0.84, 0.875, "metal_dark", segs=10, bevel=0.005)
+    m = Matrix.Translation((0.5, -0.5, 0)) @ Matrix.Rotation(math.radians(24), 4, "Z") @ Matrix.Translation((-0.5, 0.5, 0))
+    for ob in S.objects()[n0:]:
+        ob.matrix_world = m @ ob.matrix_world
+    S.box("mal_h", 0.30, -0.36, 0.84, 0.70, -0.31, 0.875, "wood", bevel=0.008)
+    S.box("mal_head", 0.66, -0.43, 0.84, 0.78, -0.25, 0.94, "metal_dark", bevel=0.012)
+    return (1, 1), 0.94
+
+
+def _hospital_bed():
+    """1x2 hospital bed: steel frame on casters, white mattress, teal sheet, raised
+    side rails, a bed-head monitor and an IV stand. Authored facing south."""
+    for sx in (-1, 1):
+        for y in (-0.22, -1.78):
+            S.cyl("caster", 0.5 + sx * 0.36, y, 0.045, 0.0, 0.07, "metal_dark", segs=10, bevel=0.005)
+    S.box("frame", 0.09, -1.92, 0.07, 0.91, -0.08, 0.24, "steel", bevel=0.03)
+    S.box("mattress", 0.13, -1.88, 0.22, 0.87, -0.12, 0.36, "med_white", bevel=0.05, segments=2)
+    S.box("sheet", 0.12, -1.90, 0.30, 0.88, -0.78, 0.42, "sheet_teal", bevel=0.045, segments=2)
+    S.box("fold", 0.12, -0.92, 0.34, 0.88, -0.74, 0.45, "sheet_teal", bevel=0.05)
+    S.box("pillow", 0.22, -0.46, 0.34, 0.78, -0.16, 0.45, "med_white", bevel=0.07, segments=2)
+    S.box("headboard", 0.08, -0.14, 0.07, 0.92, -0.06, 0.60, "steel", bevel=0.03)
+    S.box("footboard", 0.10, -1.94, 0.07, 0.90, -1.88, 0.40, "steel", bevel=0.02)
+    for sx in (-1, 1):
+        x = 0.5 + sx * 0.405
+        S.box("rail%d" % sx, x - 0.018, -1.42, 0.36, x + 0.018, -0.50, 0.40, "steel", bevel=0.006)
+        for y in (-1.42, -0.50):
+            S.box("rail_post", x - 0.025, y - 0.025, 0.24, x + 0.025, y + 0.025, 0.40, "steel", bevel=0.005)
+    # monitor on the headboard, with a lit trace
+    S.box("monitor", 0.60, -0.14, 0.60, 0.88, -0.04, 0.82, "metal_dark", bevel=0.015)
+    S.box("screen", 0.63, -0.16, 0.65, 0.85, -0.14, 0.79, "indicator", bevel=0.0)
+    # IV stand at the head corner: pole, crossbar, bag
+    S.cyl("iv_base", 0.97, -0.32, 0.05, 0.0, 0.03, "metal_dark", segs=10, bevel=0.004)
+    S.cyl("iv_pole", 0.97, -0.32, 0.014, 0.03, 0.98, "steel", segs=8, bevel=0.0)
+    S.box("iv_arm", 0.88, -0.335, 0.94, 1.06, -0.305, 0.97, "steel", bevel=0.004)
+    S.ellipsoid("iv_bag", 0.88, -0.32, 0.84, 0.045, 0.03, 0.09, "med_blue", segs=10, rings=6)
+    return (1, 2), 0.98
+
+
 def _table():
     for i, (x, y) in enumerate([(0.12, -0.12), (0.88, -0.12), (0.12, -0.88), (0.88, -0.88)]):
         S.box("leg%d" % i, x - 0.05, y - 0.05, 0.0, x + 0.05, y + 0.05, 0.50, "wood", bevel=0.015)
@@ -588,6 +646,8 @@ def _carpet_wool():
 BUILDERS = {
     "bed_basic": (_bed, {"attachments": {"sleeper": [0.5, 0.42]}}),
     "bed_double": (_bed_double, {"attachments": {"sleeper": [0.5, 0.42], "sleeper2": [1.5, 0.42]}}),
+    "hospital_bed": (_hospital_bed, {"attachments": {"sleeper": [0.5, 0.42]}, "building": "hospital bed"}),
+    "tool_cabinet": (_tool_cabinet, {"building": "tool cabinet"}),
     "table_small": (_table, {}),
     "chair_basic": (_chair, {"attachments": {"seat": [0.5, 0.52]}}),
     "workbench_basic": (_workbench, {"attachments": {"worker": [0.5, 1.15]}}),
@@ -619,7 +679,7 @@ BUILDERS = {
     "carpet_wool": (_carpet_wool, {"carpet": "wool", "flat": True}),
 }
 FACINGS_ONLY = {"grave_dug": ("south", "east"), "grave_filled": ("south", "east")}
-ROTATABLE = {"grave_dug", "grave_filled", "bed_basic", "bed_double", "chair_basic", "workbench_basic", "stonecutter_table", "stove_basic", "butcher_table",
+ROTATABLE = {"hospital_bed", "grave_dug", "grave_filled", "bed_basic", "bed_double", "chair_basic", "workbench_basic", "stonecutter_table", "stove_basic", "butcher_table",
              "drying_rack", "tailoring_bench", "research_bench", "feeding_trough_empty", "feeding_trough_full"}
 
 
@@ -642,9 +702,12 @@ def _blankets():
     return out
 
 
-def build():
-    out = _blankets()
+def build(only=None):
+    """Every furniture sprite; `only` (names from BUILDERS) renders just those."""
+    out = [] if only else _blankets()
     for name, (fn, extra) in BUILDERS.items():
+        if only and name not in only:
+            continue
         facings = FACINGS_ONLY.get(name) or (FACINGS if name in ROTATABLE else ("south",))
         for f in facings:
             fp, zmax = fn()

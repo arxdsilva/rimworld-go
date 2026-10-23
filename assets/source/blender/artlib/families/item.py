@@ -463,8 +463,119 @@ def _parka_wool():
     return S.render_asset("item", "parka_wool", zmax=0.24, extra={"item": "wool parka"})
 
 
+# ---- NG-1 salvage: components and industrial medicine (small / medium / large stacks)
+def _spin(n0, cx, cy, deg):
+    """Rotate the objects made since index n0 about the vertical axis through (cx, cy)."""
+    import math
+    from mathutils import Matrix
+    m = (Matrix.Translation((cx, cy, 0)) @ Matrix.Rotation(math.radians(deg), 4, "Z")
+         @ Matrix.Translation((-cx, -cy, 0)))
+    for ob in S.objects()[n0:]:
+        ob.matrix_world = m @ ob.matrix_world
+
+
+def _board(cx, cy, z, deg, w=0.34, d=0.24):
+    """A circuit board: green plate, copper traces, a dark chip, brass contacts."""
+    n0 = len(S.objects())
+    x0, y0 = cx - w / 2, cy - d / 2
+    S.box("pcb", x0, y0, z, x0 + w, y0 + d, z + 0.03, "circuit", bevel=0.008)
+    S.box("trace_a", x0 + 0.03, y0 + 0.07, z + 0.03, x0 + w * 0.62, y0 + 0.09, z + 0.036, "copper", bevel=0.0)
+    S.box("trace_b", x0 + w * 0.62, y0 + 0.07, z + 0.03, x0 + w * 0.65, y0 + d - 0.04, z + 0.036, "copper", bevel=0.0)
+    S.box("chip", x0 + w * 0.2, y0 + 0.11, z + 0.03, x0 + w * 0.5, y0 + d - 0.05, z + 0.07, "metal_dark", bevel=0.01)
+    S.box("cap", x0 + w * 0.72, y0 + 0.05, z + 0.03, x0 + w * 0.84, y0 + 0.13, z + 0.085, "steel", bevel=0.01)
+    for k in range(4):
+        S.box("pad%d" % k, x0 + 0.02 + k * 0.045, y0 - 0.02, z + 0.005, x0 + 0.045 + k * 0.045, y0 + 0.02,
+              z + 0.034, "brass", bevel=0.0)
+    _spin(n0, cx, cy, deg)
+
+
+def _gear(cx, cy, z, r=0.09, teeth=8):
+    import math
+    S.cyl("gear", cx, cy, r, z, z + 0.04, "steel", segs=teeth * 2, bevel=0.006)
+    S.cyl("gear_hub", cx, cy, r * 0.38, z + 0.04, z + 0.06, "metal_dark", segs=10, bevel=0.004)
+    for k in range(teeth):
+        a = 2 * math.pi * k / teeth
+        S.box("tooth%d" % k, cx + math.cos(a) * r * 1.02 - 0.014, cy + math.sin(a) * r * 1.02 - 0.014, z,
+              cx + math.cos(a) * r * 1.02 + 0.014, cy + math.sin(a) * r * 1.02 + 0.014, z + 0.04, "steel",
+              bevel=0.003)
+
+
+def _components(size):
+    """Fabricated components: circuit boards and a gear. More of each as the stack grows."""
+    if size == "s":
+        _board(0.50, -0.55, 0.0, 12)
+        _gear(0.70, -0.40, 0.0, r=0.08)
+        z = 0.12
+    elif size == "m":
+        _board(0.42, -0.62, 0.0, -8)
+        _board(0.58, -0.50, 0.03, 20)
+        _board(0.46, -0.42, 0.06, 4, w=0.30, d=0.22)
+        _gear(0.76, -0.68, 0.0)
+        _gear(0.24, -0.30, 0.0, r=0.07, teeth=7)
+        z = 0.2
+    else:
+        for k, (x, y, d) in enumerate([(0.38, -0.66, -10), (0.62, -0.62, 10), (0.34, -0.40, 6), (0.60, -0.36, -14)]):
+            _board(x, y, 0.0, d)
+        for k, (x, y, d) in enumerate([(0.46, -0.52, 18), (0.54, -0.50, -4), (0.44, -0.46, 8)]):
+            _board(x, y, 0.035 * (k + 1), d, w=0.32, d=0.23)
+        _gear(0.80, -0.76, 0.0, r=0.1)
+        _gear(0.22, -0.82, 0.0, r=0.08, teeth=7)
+        _gear(0.82, -0.22, 0.0, r=0.07, teeth=7)
+        S.cyl("spool", 0.5, -0.80, 0.07, 0.0, 0.05, "copper", segs=14, bevel=0.008)
+        z = 0.3
+    return S.render_asset("item", "components_" + size, zmax=z + 0.08,
+                          extra={"item": "components", "stack": True, "stack_size": size})
+
+
+def _vial(x, y, z, cap="med_blue"):
+    S.cyl("vial", x, y, 0.045, z, z + 0.15, "glass", segs=10, bevel=0.006)
+    S.cyl("fill", x, y, 0.036, z + 0.01, z + 0.09, "med_blue", segs=10, bevel=0.0)
+    S.cyl("cap", x, y, 0.05, z + 0.15, z + 0.19, cap, segs=10, bevel=0.006)
+
+
+def _med_box(x, y, z, deg, w=0.30, d=0.20):
+    """White carton with a blue band and a plus mark (a generic plus, no cross emblem)."""
+    n0 = len(S.objects())
+    S.box("carton", x - w / 2, y - d / 2, z, x + w / 2, y + d / 2, z + 0.10, "med_white", bevel=0.02)
+    S.box("band", x - w / 2 - 0.004, y - d / 2 - 0.004, z + 0.03, x + w / 2 + 0.004, y + d / 2 + 0.004, z + 0.055,
+          "med_blue", bevel=0.0)
+    S.box("plus_h", x - 0.06, y - 0.014, z + 0.10, x + 0.06, y + 0.014, z + 0.108, "med_blue", bevel=0.0)
+    S.box("plus_v", x - 0.014, y - 0.06, z + 0.10, x + 0.014, y + 0.06, z + 0.108, "med_blue", bevel=0.0)
+    _spin(n0, x, y, deg)
+
+
+def _industrial_medicine(size):
+    """Industrial medicine: sealed cartons and glass vials with blue caps."""
+    if size == "s":
+        _med_box(0.50, -0.58, 0.0, 8)
+        _vial(0.36, -0.36, 0.0)
+        _vial(0.62, -0.36, 0.0)
+        z = 0.2
+    elif size == "m":
+        _med_box(0.40, -0.62, 0.0, -6)
+        _med_box(0.60, -0.58, 0.0, 12)
+        _med_box(0.50, -0.60, 0.10, 2, w=0.26, d=0.18)
+        for k, x in enumerate((0.30, 0.50, 0.70)):
+            _vial(x, -0.32 + 0.02 * (k % 2), 0.0)
+        z = 0.3
+    else:
+        for k, (x, y, d) in enumerate([(0.32, -0.70, -8), (0.62, -0.72, 8), (0.34, -0.48, 10), (0.64, -0.50, -6)]):
+            _med_box(x, y, 0.0, d)
+        for k, (x, y, d) in enumerate([(0.46, -0.62, 6), (0.50, -0.50, -10), (0.44, -0.56, 2)]):
+            _med_box(x, y, 0.10 * (k + 1), d, w=0.26, d=0.18)
+        for k, x in enumerate((0.24, 0.40, 0.56, 0.72)):
+            _vial(x, -0.26 + 0.02 * (k % 2), 0.0)
+        z = 0.42
+    return S.render_asset("item", "industrial_medicine_" + size, zmax=z + 0.05,
+                          extra={"item": "industrial medicine", "stack": True, "stack_size": size})
+
+
 def build():
     return [_wood(), _food(), _steel(), _stone(), _stone_chunk(), _silver(), _gold(), _berries(), _ration(), _meat(), _meal(), _club(), _rifle_item(), _knife_item(), _spear_item(),
             _potatoes(), _corn(), _wheat(), _beans(), _lettuce(), _radishes(), _pumpkins(),
             _leather(), _parka(), _tuque(), _duster(), _herbal_medicine(), _bones(0), _bones(1),
-            _cloth_bolt(), _straw_bundle(), _milk(), _wool(), _eggs(False), _eggs(True), _ember_oil(), _parka_wool()] + [_carpet_rolled(k) for k in _ROLL]
+            _cloth_bolt(), _straw_bundle(), _milk(), _wool(), _eggs(False), _eggs(True), _ember_oil(), _parka_wool()] + [_carpet_rolled(k) for k in _ROLL] + build_ng1()
+
+
+def build_ng1():
+    return [_components(z) for z in "sml"] + [_industrial_medicine(z) for z in "sml"]

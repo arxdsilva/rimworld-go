@@ -457,6 +457,11 @@ ICONS = {
     "fence": ("structure", "fence_wood_10"),    # the Architect fence tool
     "fence_gate": ("structure", "fence_gate_south"),
     "carpet": ("furniture", "carpet_cloth"),   # the Architect tool: a laid mat
+    # NG-1 items and buildings (cut from the 3D sprites like the rest)
+    "components": ("item", "components_m"),
+    "industrial_medicine": ("item", "industrial_medicine_m"),
+    "tool_cabinet": ("furniture", "tool_cabinet"),
+    "hospital_bed": ("furniture", "hospital_bed_south"),
 }
 ICON_PX = 128          # @2x of a 64 px icon
 ICON_PAD = 10
@@ -670,6 +675,456 @@ def _biome_icon(key):
     return path
 
 
+# ---------------------------------------------------------------- NG-1 glyph icons
+# Scenario scenes, skills, traits, passions, factions and settlements. All
+# original, drawn from signed distance fields at 128 px (@2x of 64).
+def _save_icon(name, img, extra=None):
+    path = os.path.join(UI_DIR, name + ".png")
+    S.write_png(img, path)
+    data = {"image": "generated/ui/icons/%s.png" % name, "scale": C.SCALE, "canvas": [N, N], "source": "glyph"}
+    data.update(extra or {})
+    meta.write("ui_icon", name, data)
+    return path
+
+
+def _rot(xx, yy, cx, cy, deg):
+    """Coordinates rotated about (cx, cy): draw an upright shape, turned by deg."""
+    a = np.radians(deg)
+    dx, dy = xx - cx, yy - cy
+    return cx + dx * np.cos(a) + dy * np.sin(a), cy - dx * np.sin(a) + dy * np.cos(a)
+
+
+def _rbox(xx, yy, cx, cy, hw, hh, r=0.0):
+    """Signed distance of a rounded box centred (cx, cy), half sizes hw, hh."""
+    qx, qy = np.abs(xx - cx) - (hw - r), np.abs(yy - cy) - (hh - r)
+    return np.hypot(np.maximum(qx, 0), np.maximum(qy, 0)) + np.minimum(np.maximum(qx, qy), 0) - r
+
+
+def _cap(xx, yy, ax, ay, bx, by, r):
+    """Signed distance of a capsule (a thick segment)."""
+    return _seg(xx, yy, ax, ay, bx, by) - r
+
+
+def _poly(xx, yy, pts):
+    """Signed distance of a CONVEX polygon (either winding); compose concave
+    shapes with np.minimum of convex pieces."""
+    n = len(pts)
+    best = np.full(xx.shape, 1e9, np.float32)
+    crosses = []
+    for i in range(n):
+        ax, ay = pts[i]
+        bx, by = pts[(i + 1) % n]
+        best = np.minimum(best, _seg(xx, yy, ax, ay, bx, by))
+        crosses.append((bx - ax) * (yy - ay) - (by - ay) * (xx - ax))
+    inside = np.all([c <= 0 for c in crosses], axis=0) | np.all([c >= 0 for c in crosses], axis=0)
+    return np.where(inside, -best, best)
+
+
+def _disc_icon(name, sky, ground, rim, scene, horizon=76, extra=None):
+    """Round scene emblem (like the biome swatches): sky over ground in a dark
+    disc, `scene(img, xx, yy)` drawn clipped to the disc."""
+    xx, yy = _grid()
+    img = np.zeros((N, N, 4), np.float32)
+    c = N / 2
+    _paint(img, _cov(np.hypot(xx - c, yy - c) - 52), (0.12, 0.10, 0.09), 0.92)
+    inner = _cov(np.hypot(xx - c, yy - c) - 46)
+    _paint(img, inner, sky)
+    _paint(img, inner * (yy > horizon), ground)
+    layer = np.zeros_like(img)
+    scene(layer, xx, yy)
+    a = layer[..., 3:4] * inner[..., None]
+    img[..., :3] = layer[..., :3] * a + img[..., :3] * (1 - a)
+    img[..., 3:4] = np.maximum(img[..., 3:4], a)
+    _stroke(img, np.abs(np.hypot(xx - c, yy - c) - 50), 4.0, rim)
+    return _save_icon(name, img, extra)
+
+
+def _flame(img, xx, yy, cx, base, h, outer, inner, edge=True):
+    """A teardrop flame standing on y=base, height h; inner core lighter."""
+    w = h * 0.30
+    body = np.minimum(np.hypot(xx - cx, yy - (base - w)) - w,
+                      _tri(xx, yy, cx, base - h, base - w, w * 1.0))
+    # flick the tip a touch to the right
+    _fill(img, body, outer, edge=edge)
+    w2 = w * 0.55
+    core = np.minimum(np.hypot(xx - cx, yy - (base - w2 * 0.9)) - w2,
+                      _tri(xx, yy, cx, base - h * 0.62, base - w2 * 0.9, w2 * 1.0))
+    _paint(img, _cov(core), inner)
+
+
+# scenario scenes --------------------------------------------------------
+def _scene_hull(img, xx, yy):
+    for sx, sy, r in ((24, 18, 1.4), (50, 30, 1.1), (88, 22, 1.5), (104, 40, 1.0), (70, 14, 1.0), (36, 46, 1.0)):
+        _paint(img, _cov(np.hypot(xx - sx, yy - sy) - r), (0.95, 0.95, 1.0), 0.9)
+    rx, ry = _rot(xx, yy, 62, 78, -16)
+    hull = _rbox(rx, ry, 62, 78, 38, 15, 9)
+    _fill(img, hull, (0.62, 0.66, 0.72))
+    _paint(img, _cov(_rbox(rx, ry, 62, 70, 36, 5, 4)), (0.78, 0.82, 0.88))
+    _paint(img, _cov(_rbox(rx, ry, 62, 84, 36, 4, 3)), (0.45, 0.49, 0.56))
+    _paint(img, _cov(np.hypot(rx - 86, ry - 76) - 5.5), (0.30, 0.55, 0.70))          # porthole
+    _paint(img, _cov(np.abs(np.hypot(rx - 86, ry - 76) - 5.5) - 1.2), (0.20, 0.22, 0.26))
+    # the break: a jagged dark crack and a torn-off plate
+    for (ax, ay), (bx, by) in zip([(54, 64), (58, 74), (52, 82), (57, 92)], [(58, 74), (52, 82), (57, 92), (53, 100)]):
+        _paint(img, _cov(_seg(xx, yy, ax, ay, bx, by) - 2.2), (0.10, 0.09, 0.10))
+    _fill(img, _poly(xx, yy, [(36, 100), (48, 96), (52, 106), (40, 108)]), (0.50, 0.54, 0.60))
+    # fire and smoke
+    _flame(img, xx, yy, 56, 98, 24, (0.96, 0.52, 0.18), (1.0, 0.85, 0.40))
+    for cx, cy, r, a in ((50, 52, 7, 0.7), (45, 42, 9, 0.55), (40, 31, 10, 0.4)):
+        _paint(img, _cov(np.hypot(xx - cx, yy - cy) - r), (0.55, 0.55, 0.58), a)
+
+
+def _scene_ember(img, xx, yy):
+    # a tent behind the fire
+    _fill(img, _tri(xx, yy, 82, 34, 92, 24), (0.50, 0.34, 0.22))
+    _paint(img, _cov(_tri(xx, yy, 82, 62, 92, 7)), (0.17, 0.11, 0.09))
+    _fill(img, _seg(xx, yy, 82, 34, 84, 24) - 1.6, (0.38, 0.26, 0.18))
+    _paint(img, _cov(_seg(xx, yy, 62, 92, 76, 40) - 1.4), (0.38, 0.26, 0.18))
+    # fire ring of stones, crossed logs, flame, sparks
+    for k, ang in enumerate(np.linspace(0, 2 * np.pi, 9)[:-1]):
+        _fill(img, np.hypot((xx - (46 + np.cos(ang) * 19)) / 1.2, yy - (96 + np.sin(ang) * 7)) - 4.0,
+              (0.55, 0.55, 0.57) if k % 2 else (0.43, 0.43, 0.47), edge=False)
+    _fill(img, _cap(xx, yy, 32, 100, 60, 90, 3.6), (0.46, 0.30, 0.18))
+    _fill(img, _cap(xx, yy, 32, 90, 60, 100, 3.6), (0.54, 0.36, 0.22))
+    _flame(img, xx, yy, 46, 96, 40, (0.95, 0.42, 0.14), (1.0, 0.84, 0.36))
+    for px, py in ((30, 44), (62, 40), (36, 30), (56, 28)):
+        _paint(img, _cov(np.hypot(xx - px, yy - py) - 1.7), (1.0, 0.78, 0.34), 0.9)
+
+
+def _scene_gilded(img, xx, yy):
+    gold, dgold = (0.93, 0.76, 0.28), (0.72, 0.52, 0.16)
+    # a compass star behind the chest
+    for k in range(4):
+        ax, ay = _rot(xx, yy, 64, 42, 90 * k)
+        _fill(img, _tri(ax, ay, 64, 14, 42, 6.5), (1.0, 0.93, 0.62), edge=False)
+    _paint(img, _cov(np.abs(np.hypot(xx - 64, yy - 42) - 15) - 1.3), gold, 0.9)
+    # treasure chest: body, curved lid, gold bands and lock
+    _fill(img, _rbox(xx, yy, 64, 80, 31, 15, 3), (0.50, 0.32, 0.20))
+    lid = np.minimum(_rbox(xx, yy, 64, 63, 31, 6, 2), np.hypot((xx - 64) / 1.0, (yy - 73) * 1.65) - 31)
+    lid = np.where(yy > 66, 1e3, lid)
+    _fill(img, np.maximum(np.hypot((xx - 64), (yy - 68) * 1.7) - 31, yy - 68), (0.58, 0.38, 0.23))
+    for bx in (42, 86):
+        _fill(img, _rbox(xx, yy, bx, 74, 3.6, 21, 1.5), gold, edge=False)
+    _fill(img, _rbox(xx, yy, 64, 76, 6, 7, 2), gold)
+    _paint(img, _cov(_rbox(xx, yy, 64, 77, 1.6, 3.2, 0.8)), (0.25, 0.16, 0.10))
+    for cx, cy in ((86, 100), (96, 97), (91, 92)):
+        _fill(img, _rbox(xx, yy, cx, cy, 6, 3.2, 3.0), gold)
+        _paint(img, _cov(_rbox(xx, yy, cx, cy - 1, 4, 1.0, 1.0)), (1.0, 0.92, 0.55), 0.9)
+    _fill(img, _rbox(xx, yy, 32, 99, 6, 3.2, 3.0), dgold)
+
+
+def _scene_hands(img, xx, yy):
+    skin, edge = (0.94, 0.76, 0.62), (0.62, 0.42, 0.32)
+    def part(d):
+        _paint(img, _cov(d - 2.4), (0.10, 0.09, 0.08), 0.9)
+        _paint(img, _cov(d), skin)
+    part(_rbox(xx, yy, 64, 82, 19, 17, 8))                                  # palm
+    for fx, top, lean in ((46, 40, -6), (56, 32, -2), (68, 32, 2), (79, 40, 6)):   # four fingers
+        part(_cap(xx, yy, fx, 74, fx + lean, top, 5.6))
+    part(_cap(xx, yy, 47, 92, 30, 70, 6.0))                                 # thumb
+    for fx in (46, 56, 68, 79):
+        _paint(img, _cov(_seg(xx, yy, fx, 78, fx, 86) - 0.8), edge, 0.55)   # finger creases
+    _paint(img, _cov(_rbox(xx, yy, 64, 92, 14, 1.4, 1.0)), edge, 0.5)     # wrist crease
+    _paint(img, _cov(_rbox(xx, yy, 64, 108, 21, 8, 4)), (0.55, 0.46, 0.38))  # cuffless forearm in shadow
+
+
+def _scene_custom(img, xx, yy):
+    cols = ((0.95, 0.62, 0.40), (0.55, 0.85, 0.60), (0.60, 0.72, 0.98))
+    for k, (y, kx) in enumerate(((42, 44), (64, 78), (86, 56))):
+        _fill(img, _rbox(xx, yy, 64, y, 30, 3.2, 3.0), (0.22, 0.24, 0.30))
+        _paint(img, _cov(_rbox(xx, yy, (34 + kx) / 2, y, (kx - 34) / 2, 2.2, 2.0)), cols[k])
+        _fill(img, np.hypot(xx - kx, yy - y) - 8.0, (0.92, 0.93, 0.96))
+        _paint(img, _cov(np.hypot(xx - kx, yy - y) - 3.2), cols[k])
+
+
+SCENARIOS = {
+    # key: (sky, ground, rim, scene)
+    "broken_hull": ((0.13, 0.16, 0.30), (0.33, 0.30, 0.30), (0.42, 0.62, 0.86), _scene_hull),
+    "ember_clan": ((0.30, 0.21, 0.28), (0.34, 0.25, 0.19), (0.93, 0.50, 0.22), _scene_ember),
+    "gilded_expedition": ((0.97, 0.88, 0.62), (0.80, 0.66, 0.40), (0.91, 0.74, 0.30), _scene_gilded),
+    "bare_hands": ((0.72, 0.84, 0.90), (0.42, 0.58, 0.36), (0.86, 0.85, 0.80), _scene_hands),
+    "custom": ((0.20, 0.22, 0.29), (0.20, 0.22, 0.29), (0.62, 0.70, 0.88), _scene_custom),
+}
+
+
+def _scenario_icon(key):
+    sky, ground, rim, scene = SCENARIOS[key]
+    return _disc_icon("scenario_" + key, sky, ground, rim, scene, extra={"scenario": key})
+
+
+# passion flames -----------------------------------------------------------
+def _passion_icon(level):
+    xx, yy = _grid()
+    img = np.zeros((N, N, 4), np.float32)
+    if level == "minor":
+        _flame(img, xx, yy, 64, 108, 78, (0.97, 0.58, 0.20), (1.0, 0.90, 0.48))
+    else:
+        _flame(img, xx, yy, 36, 108, 50, (0.93, 0.36, 0.20), (1.0, 0.72, 0.36))
+        _flame(img, xx, yy, 92, 108, 50, (0.93, 0.36, 0.20), (1.0, 0.72, 0.36))
+        _flame(img, xx, yy, 64, 112, 100, (1.0, 0.64, 0.16), (1.0, 0.94, 0.52))
+        for sx, sy, r in ((24, 26, 6.0), (104, 20, 5.0)):      # sparks: four-point stars
+            for ang in (0, 90):
+                px, py = _rot(xx, yy, sx, sy, ang)
+                _fill(img, _rbox(px, py, sx, sy, r, 1.5, 1.0), (1.0, 0.93, 0.55), edge=False)
+    return _save_icon("passion_" + level, img, {"passion": level})
+
+
+# skill glyphs (distance fields for _badge_icon) ----------------------------
+def _g_shoot(xx, yy, c):  # target reticle
+    d = np.minimum(np.abs(np.hypot(xx - c, yy - c) - 17), np.abs(np.hypot(xx - c, yy - c) - 1.5))
+    for ax, ay, bx, by in ((c - 25, c, c - 9, c), (c + 9, c, c + 25, c), (c, c - 25, c, c - 9), (c, c + 9, c, c + 25)):
+        d = np.minimum(d, _seg(xx, yy, ax, ay, bx, by))
+    return d
+
+
+def _g_melee(xx, yy, c):  # a sword: blade, crossguard, grip, pommel
+    d = _seg(xx, yy, c + 19, c - 21, c - 5, c + 3)                          # blade
+    d = np.minimum(d, _seg(xx, yy, c - 13, c - 5, c + 3, c + 11))           # crossguard (square to the blade)
+    d = np.minimum(d, _seg(xx, yy, c - 5, c + 3, c - 16, c + 14))           # grip
+    d = np.minimum(d, np.hypot(xx - (c - 19), yy - (c + 17)) - 1.6)         # pommel
+    return d
+
+
+def _g_pick(xx, yy, c):  # pickaxe: haft and a swept double-pointed head
+    d = _seg(xx, yy, c - 14, c + 21, c + 4, c - 8)
+    for (ax, ay), (bx, by) in zip([(c - 24, c + 2), (c - 12, c - 14), (c + 6, c - 20)],
+                                  [(c - 12, c - 14), (c + 6, c - 20), (c + 22, c - 8)]):
+        d = np.minimum(d, _seg(xx, yy, ax, ay, bx, by))
+    return d
+
+
+def _g_build(xx, yy, c):  # hammer
+    handle = _seg(xx, yy, c - 17, c + 19, c + 3, c - 3)
+    head = _seg(xx, yy, c - 6, c - 16, c + 14, c + 2) - 6.0
+    return np.minimum(handle, head)
+
+
+def _g_cook(xx, yy, c):  # lidded pot with curling steam
+    pot = np.abs(np.maximum(np.abs(xx - c) - 14, np.abs(yy - c - 9) - 9))
+    d = np.minimum(pot, np.minimum(_seg(xx, yy, c - 14, c + 5, c - 23, c + 5), _seg(xx, yy, c + 14, c + 5, c + 23, c + 5)))
+    d = np.minimum(d, _seg(xx, yy, c - 16, c - 1, c + 16, c - 1))
+    for ox in (-8, 6):
+        pts = [(c + ox, c - 5), (c + ox + 4, c - 11), (c + ox - 1, c - 17), (c + ox + 3, c - 23)]
+        for (ax, ay), (bx, by) in zip(pts, pts[1:]):
+            d = np.minimum(d, _seg(xx, yy, ax, ay, bx, by))
+    return d
+
+
+def _g_paw(xx, yy, c):  # pad and four toes (stroke widens each, so the cores are tiny)
+    d = np.hypot((xx - c) / 1.3, yy - (c + 9)) - 6.0
+    for ox, oy in ((-17, -5), (-6, -16), (6, -16), (17, -5)):
+        d = np.minimum(d, np.hypot((xx - c - ox) / 0.85, yy - c - oy) - 1.5)
+    return d
+
+
+def _g_gear(xx, yy, c):
+    d = np.abs(np.hypot(xx - c, yy - c) - 12)
+    for k in range(8):
+        a = k * np.pi / 4
+        d = np.minimum(d, _seg(xx, yy, c + np.cos(a) * 13, c + np.sin(a) * 13, c + np.cos(a) * 21, c + np.sin(a) * 21))
+    return np.minimum(d, np.abs(np.hypot(xx - c, yy - c) - 3))
+
+
+def _g_med(xx, yy, c):  # a bold plus
+    d = np.minimum(_seg(xx, yy, c - 16, c, c + 16, c), _seg(xx, yy, c, c - 16, c, c + 16))
+    return d - 2.5
+
+
+def _g_social(xx, yy, c):  # two speech bubbles
+    a = np.abs(_rbox(xx, yy, c - 8, c - 8, 16, 10, 6))
+    b = np.abs(_rbox(xx, yy, c + 8, c + 9, 16, 10, 6))
+    tails = np.minimum(_seg(xx, yy, c - 18, c, c - 22, c + 6), _seg(xx, yy, c + 18, c + 17, c + 22, c + 23))
+    return np.minimum(np.minimum(a, b), tails)
+
+
+def _g_mind(xx, yy, c):  # light bulb
+    d = np.abs(np.hypot(xx - c, yy - c + 5) - 12)
+    d = np.minimum(d, np.minimum(_seg(xx, yy, c - 6, c + 10, c - 6, c + 16), _seg(xx, yy, c + 6, c + 10, c + 6, c + 16)))
+    d = np.minimum(d, _seg(xx, yy, c - 6, c + 18, c + 6, c + 18))
+    for ang in (-90, -45, 0, 45, 90):
+        a = np.radians(ang)
+        d = np.minimum(d, _seg(xx, yy, c + np.sin(a) * 18, c - 5 - np.cos(a) * 18, c + np.sin(a) * 24, c - 5 - np.cos(a) * 24))
+    return d
+
+
+def _g_trait(xx, yy, c):  # a hex chip with a diamond core
+    pts = [(c + 22 * np.cos(np.radians(60 * k + 30)), c + 22 * np.sin(np.radians(60 * k + 30))) for k in range(6)]
+    d = np.full(xx.shape, 1e9, np.float32)
+    for i in range(6):
+        d = np.minimum(d, _seg(xx, yy, *pts[i], *pts[(i + 1) % 6]))
+    for i, (ax, ay, bx, by) in enumerate(((c, c - 10, c + 10, c), (c + 10, c, c, c + 10), (c, c + 10, c - 10, c), (c - 10, c, c, c - 10))):
+        d = np.minimum(d, _seg(xx, yy, ax, ay, bx, by))
+    return d
+
+
+def _g_factions(xx, yy, c):  # two pennants on poles
+    d = np.minimum(_seg(xx, yy, c - 12, c + 22, c - 12, c - 20), _seg(xx, yy, c + 12, c + 22, c + 12, c - 8))
+    f1 = np.minimum(_seg(xx, yy, c - 12, c - 20, c + 2, c - 14), np.minimum(_seg(xx, yy, c + 2, c - 14, c - 12, c - 6), 1e9))
+    f2 = np.minimum(_seg(xx, yy, c + 12, c - 8, c + 25, c - 2), _seg(xx, yy, c + 25, c - 2, c + 12, c + 4))
+    return np.minimum(np.minimum(d, f1), f2)
+
+
+def _g_minimap(xx, yy, c):  # a map card with a viewport frame
+    d = np.abs(_rbox(xx, yy, c, c, 23, 19, 3))
+    d = np.minimum(d, np.abs(_rbox(xx, yy, c + 6, c - 3, 9, 7, 1)))
+    d = np.minimum(d, _seg(xx, yy, c - 23, c + 4, c - 6, c + 4))
+    return np.minimum(d, _seg(xx, yy, c - 10, c - 19, c - 10, c + 19))
+
+
+SKILL_ICONS = (
+    ("shooting", _g_shoot, (0.93, 0.50, 0.36)), ("melee", _g_melee, (0.84, 0.86, 0.92)),
+    ("construction", _g_build, (0.96, 0.74, 0.34)), ("mining", _g_pick, (0.62, 0.72, 0.86)),
+    ("cooking", _g_cook, (0.97, 0.66, 0.40)), ("plants", _g_sprout, (0.45, 0.78, 0.36)),
+    ("animals", _g_paw, (0.84, 0.64, 0.44)), ("crafting", _g_gear, (0.48, 0.80, 0.82)),
+    ("medicine", _g_med, (0.46, 0.86, 0.66)), ("social", _g_social, (0.95, 0.60, 0.76)),
+    ("intellectual", _g_mind, (0.98, 0.88, 0.46)),
+)
+
+
+# faction emblems and settlement icons (white-ish: the renderer multiplies by the accent) -----
+SHIELD_FILL = (0.97, 0.97, 0.95)
+SHIELD_INK = (0.58, 0.58, 0.60)
+
+
+def _white_icon(name, painter, extra=None, shield=True):
+    xx, yy = _grid()
+    img = np.zeros((N, N, 4), np.float32)
+    if shield:
+        sh = np.minimum(_poly(xx, yy, [(22, 14), (106, 14), (106, 62), (64, 116), (22, 62)]),
+                        _rbox(xx, yy, 64, 40, 42, 26, 5))
+        _paint(img, _cov(sh - 3.0), (0.20, 0.20, 0.22), 0.95)
+        _paint(img, _cov(sh), SHIELD_FILL)
+        _paint(img, _cov(np.abs(sh + 6.5) - 1.0), SHIELD_INK, 0.45)
+    painter(img, xx, yy)
+    d = dict({"tintable": True, "tint": "accent"}, **(extra or {}))
+    return _save_icon(name, img, d)
+
+
+def _ink(img, d, w=7.0, rgb=SHIELD_INK):
+    _paint(img, _cov(d - w / 2), rgb)
+
+
+def _em_settlers(img, xx, yy):   # a homestead: gabled house, door, window, sprig of wheat
+    _ink(img, _poly(xx, yy, [(32, 66), (64, 36), (96, 66)]) - 1.0, 7.0)
+    _paint(img, _cov(_poly(xx, yy, [(36, 64), (64, 40), (92, 64)])), (0.80, 0.80, 0.82))
+    _ink(img, _rbox(xx, yy, 64, 78, 22, 14, 2.0) - 1.0, 5.0)
+    _paint(img, _cov(_rbox(xx, yy, 64, 78, 20, 12, 2.0)), (0.86, 0.86, 0.88))
+    _ink(img, _rbox(xx, yy, 64, 83, 5, 9, 1.5), 4.0, (0.40, 0.40, 0.43))
+    _paint(img, _cov(_rbox(xx, yy, 50, 76, 4, 4, 1.0)), SHIELD_INK)
+    _paint(img, _cov(_rbox(xx, yy, 78, 76, 4, 4, 1.0)), SHIELD_INK)
+
+
+def _em_clans(img, xx, yy):      # three claw slashes through a crescent
+    for ox in (-17, 0, 17):
+        _ink(img, _seg(xx, yy, 64 + ox + 9, 28, 64 + ox - 9, 88) - 0.5, 8.0)
+    _ink(img, np.abs(np.hypot(xx - 64, yy - 56) - 30) - 0.0 + 6.0 * (yy < 52), 5.0, (0.76, 0.76, 0.78))
+
+
+def _em_drifters(img, xx, yy):   # a cart wheel on the road
+    c = (64, 56)
+    _ink(img, np.abs(np.hypot(xx - c[0], yy - c[1]) - 27), 6.5)
+    for k in range(8):
+        a = np.radians(22.5 + 45 * k)
+        _ink(img, _seg(xx, yy, c[0], c[1], c[0] + np.cos(a) * 26, c[1] + np.sin(a) * 26), 3.6)
+    _ink(img, np.hypot(xx - c[0], yy - c[1]) - 5.0, 5.0, (0.40, 0.40, 0.43))
+
+
+def _em_freebooters(img, xx, yy):  # skull over crossed blades
+    _ink(img, np.minimum(_seg(xx, yy, 30, 36, 98, 94), _seg(xx, yy, 98, 36, 30, 94)), 6.5, (0.74, 0.74, 0.76))
+    skull = np.minimum(np.hypot(xx - 64, yy - 50) - 21, _rbox(xx, yy, 64, 68, 13, 11, 4))
+    _paint(img, _cov(skull - 3.0), (0.22, 0.22, 0.25))
+    _paint(img, _cov(skull), (0.95, 0.95, 0.93))
+    for ex in (54, 74):
+        _paint(img, _cov(np.hypot(xx - ex, yy - 52) - 6.0), (0.25, 0.25, 0.28))
+    _paint(img, _cov(_poly(xx, yy, [(64, 58), (59, 68), (69, 68)])), (0.25, 0.25, 0.28))
+    for tx in (57, 64, 71):
+        _paint(img, _cov(_seg(xx, yy, tx, 74, tx, 78) - 0.9), (0.30, 0.30, 0.33))
+
+
+def _em_swarm(img, xx, yy):      # a beetle seen from above
+    body = np.hypot((xx - 64) / 0.74, yy - 68) - 26
+    _paint(img, _cov(body - 2.5), (0.30, 0.30, 0.33))
+    _paint(img, _cov(body), (0.86, 0.86, 0.88))
+    _ink(img, _seg(xx, yy, 64, 44, 64, 94), 3.0)                         # wing seam
+    _paint(img, _cov(np.hypot(xx - 64, yy - 38) - 10.5), (0.30, 0.30, 0.33))
+    _paint(img, _cov(np.hypot(xx - 64, yy - 38) - 8.0), SHIELD_INK)
+    for sy, dx in ((54, 30), (68, 33), (82, 28)):
+        for sx in (-1, 1):
+            _ink(img, _seg(xx, yy, 64 + sx * 20, sy, 64 + sx * dx, sy + (4 if sy < 60 else 8)), 3.4)
+    for sx in (-1, 1):
+        _ink(img, _seg(xx, yy, 64 + sx * 5, 30, 64 + sx * 14, 18), 3.0)
+
+
+def _star(xx, yy, cx, cy, r_out, r_in=None):
+    """Signed distance of a five-point star (union of five spikes and the core)."""
+    r_in = r_out * 0.42 if r_in is None else r_in
+    tips = [(cx + r_out * np.cos(np.radians(-90 + 72 * k)), cy + r_out * np.sin(np.radians(-90 + 72 * k))) for k in range(5)]
+    mids = [(cx + r_in * np.cos(np.radians(-54 + 72 * k)), cy + r_in * np.sin(np.radians(-54 + 72 * k))) for k in range(5)]
+    d = _poly(xx, yy, mids)
+    for k in range(5):
+        d = np.minimum(d, _poly(xx, yy, [mids[k - 1], tips[k], mids[k]]))
+    return d
+
+
+def _em_player(img, xx, yy):     # the colony banner: pole, pennant, star
+    _ink(img, _seg(xx, yy, 38, 98, 38, 22), 5.5)
+    pen = _poly(xx, yy, [(40, 24), (96, 40), (40, 62)])
+    _paint(img, _cov(pen), (0.86, 0.86, 0.88))
+    _ink(img, np.abs(pen), 4.0)
+    star = _star(xx, yy, 58, 45, 13)
+    _paint(img, _cov(star - 1.5), (0.36, 0.36, 0.40))
+
+
+def _set_neolithic(img, xx, yy):  # three tents, a palisade and a fire
+    pal = (0.20, 0.20, 0.22)
+    for cx, top, base, hw, fill in ((64, 34, 84, 26, 0.95), (28, 56, 90, 20, 0.88), (100, 56, 90, 20, 0.88)):
+        t = _tri(xx, yy, cx, top, base, hw)
+        _paint(img, _cov(t - 2.8), pal, 0.95)
+        _paint(img, _cov(t), (fill, fill, fill - 0.01))
+        _paint(img, _cov(_tri(xx, yy, cx, base - 20, base, 6)), (0.35, 0.33, 0.33))
+        _paint(img, _cov(_seg(xx, yy, cx, top, cx, top - 10) - 1.8), pal)
+    for px in range(14, 118, 12):
+        _paint(img, _cov(_rbox(xx, yy, px, 100, 3.2, 8, 1.2) - 0.0), (0.30, 0.30, 0.32))
+        _paint(img, _cov(_rbox(xx, yy, px, 100, 2.2, 7, 1.0)), (0.88, 0.88, 0.86))
+
+
+def _set_industrial(img, xx, yy):  # sawtooth factory with stacks and smoke
+    pal = (0.20, 0.20, 0.22)
+    body = np.minimum(_rbox(xx, yy, 44, 76, 30, 20, 1.0),
+                      np.minimum(_poly(xx, yy, [(14, 56), (34, 42), (34, 58)]),
+                                 np.minimum(_poly(xx, yy, [(34, 56), (54, 42), (54, 58)]),
+                                            _poly(xx, yy, [(54, 56), (74, 42), (74, 58)]))))
+    _paint(img, _cov(body - 2.8), pal, 0.95)
+    _paint(img, _cov(body), (0.92, 0.92, 0.90))
+    for wx in (26, 44, 62):
+        _paint(img, _cov(_rbox(xx, yy, wx, 78, 5, 6, 1.0)), (0.40, 0.42, 0.46))
+    for sx, top in ((90, 26), (106, 38)):
+        st = _rbox(xx, yy, sx, (top + 96) / 2, 7, (96 - top) / 2, 1.0)
+        _paint(img, _cov(st - 2.8), pal, 0.95)
+        _paint(img, _cov(st), (0.86, 0.86, 0.85))
+        _paint(img, _cov(_rbox(xx, yy, sx, top + 4, 7.5, 2.6, 0.5)), (0.55, 0.55, 0.58))
+    for cx, cy, r in ((90, 14, 7), (98, 6, 8)):
+        _paint(img, _cov(np.hypot(xx - cx, yy - cy) - r), (0.72, 0.72, 0.74), 0.8)
+
+
+def _ng1_icons():
+    t = _base_tokens()
+    out = [_scenario_icon(k) for k in SCENARIOS]
+    out += [_passion_icon(l) for l in ("minor", "major")]
+    out += [_badge_icon("skill_" + k, t, g, rgb) for k, g, rgb in SKILL_ICONS]
+    out += [_badge_icon("trait", t, _g_trait, (0.76, 0.64, 0.96)),
+            _badge_icon("factions", t, _g_factions, (0.95, 0.78, 0.40)),
+            _badge_icon("minimap", t, _g_minimap, (0.45, 0.78, 0.82))]
+    out += [_white_icon("faction_settlers", _em_settlers, {"faction": "settlers"}),
+            _white_icon("faction_clans", _em_clans, {"faction": "clans"}),
+            _white_icon("faction_drifters", _em_drifters, {"faction": "drifters"}),
+            _white_icon("faction_freebooters", _em_freebooters, {"faction": "freebooters"}),
+            _white_icon("faction_swarm", _em_swarm, {"faction": "swarm"}),
+            _white_icon("faction_player", _em_player, {"faction": "player"}),
+            _white_icon("settlement_neolithic", _set_neolithic, {"settlement": "neolithic"}, shield=False),
+            _white_icon("settlement_industrial", _set_industrial, {"settlement": "industrial"}, shield=False)]
+    return out
+
+
 def build():
     t = _base_tokens()
     out = [_selection(t), _designation("designation_cut", t, _g_cut),
@@ -699,6 +1154,7 @@ def build():
             _badge_icon("home", t, _g_home, (0.29, 0.50, 0.83)),
             _badge_icon("home_clear", t, _g_home_clear, t["danger"])]
     out += [_biome_icon(k) for k in BIOMES]
+    out += _ng1_icons()
     out += [_shadow_blob(), _shadow_box(), _roof_tile("roof_built", "built"),
             _roof_tile("roof_natural", "natural"), _roof_tile("roof_plan", "plan"),
             _roof_tile("roof_remove", "remove")]
