@@ -1,7 +1,6 @@
 package ebiten
 
 import (
-	"strconv"
 	"strings"
 	"testing"
 
@@ -63,8 +62,6 @@ func TestPickerListsEveryBiomeAndStartPassesTheChoice(t *testing.T) {
 		t.Fatalf("NewSim got %+v, want the tile's biome %v and its setup", got, want)
 	}
 }
-
-func itoaN(n int) string { return strconv.Itoa(n) }
 
 func TestLandingDetailShowsClimateGroundAndWildlife(t *testing.T) {
 	t.Parallel()

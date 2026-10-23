@@ -64,9 +64,7 @@ func factionRows(fs []faction.Faction) []facRow {
 		if f.Leader.Name != "" {
 			r.Leader = f.Leader.Title + " " + f.Leader.Name
 		}
-		for _, t := range f.Settlements {
-			r.Tiles = append(r.Tiles, t)
-		}
+		r.Tiles = append(r.Tiles, f.Settlements...)
 		if len(f.Settlements) > 0 {
 			r.Capital = f.Settlements[0]
 		}

@@ -34,8 +34,8 @@ type uiState struct {
 	// the cursor has rested on it.
 	tipID     string
 	tipFrames int
-	// dragX, dragY is the grab offset of the active drag.
-	dragX, dragY float32
+	// dragY is the grab offset of the active scrollbar drag.
+	dragY float32
 
 	frame      uint64
 	mx, my     int

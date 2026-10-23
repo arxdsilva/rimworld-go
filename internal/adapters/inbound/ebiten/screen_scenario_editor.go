@@ -37,7 +37,6 @@ type editorState struct {
 	cardY     map[int]float32 // content y of each part card, measured last layout
 	cardEnd   map[int]float32 // and where each card ends
 	loadErr   string
-	msg       string
 }
 
 func newEditor(def scenario.Def, source string) *editorState {

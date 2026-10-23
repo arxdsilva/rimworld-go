@@ -38,19 +38,6 @@ func gateSprite(facing string, open bool) string {
 	return "structure/fence_gate_" + facingOr(facing)
 }
 
-// creatureCells marks tiles holding a colonist or an animal (a gate there
-// is drawn open).
-func creatureCells(w game.WorldView, pawns []game.PawnView) map[[2]int]bool {
-	out := map[[2]int]bool{}
-	for _, p := range pawns {
-		out[[2]int{p.X, p.Y}] = true
-	}
-	for _, an := range w.Animals {
-		out[[2]int{an.X, an.Y}] = true
-	}
-	return out
-}
-
 // fenceLabelAt is the hover/inspector text for a fence or gate tile.
 func fenceLabelAt(w game.WorldView, x, y int) string {
 	for _, b := range w.Buildings {

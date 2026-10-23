@@ -423,9 +423,6 @@ func (f *formCtx) row(h float32) (rect, bool) {
 // gap leaves h px empty.
 func (f *formCtx) gap(h float32) { f.y += h }
 
-// top is the screen y of the next row.
-func (f *formCtx) top() float32 { return f.view.Y + f.y - f.off }
-
 // content is the content height so far (for the scroll area next frame).
 func (f *formCtx) content() float32 { return f.y + 4 }
 

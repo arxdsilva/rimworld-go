@@ -56,7 +56,6 @@ func TestOrientationCentresAndNorthIsUp(t *testing.T) {
 func TestPickRoundTrip(t *testing.T) {
 	t.Parallel()
 	rng := rand.New(rand.NewSource(7))
-	vp := NewViewport(0, 0, 1280, 720, 0, 0)
 	checked := 0
 	for i := 0; i < 400; i++ {
 		cam := NewCamera()
@@ -64,7 +63,7 @@ func TestPickRoundTrip(t *testing.T) {
 		cam.Lon = (rng.Float64()*2 - 1) * math.Pi
 		cam.SetDist(MinDist + rng.Float64()*(MaxDist-MinDist))
 		cam.PanX, cam.PanY = (rng.Float64()-0.5)*300, (rng.Float64()-0.5)*200
-		vp = cam.Viewport(0, 0, 1280, 720)
+		vp := cam.Viewport(0, 0, 1280, 720)
 		for j := 0; j < 25; j++ {
 			p := Norm(Vec3{rng.NormFloat64(), rng.NormFloat64(), rng.NormFloat64()})
 			sx, sy, z := cam.Project(vp, p)

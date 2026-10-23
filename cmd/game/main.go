@@ -52,6 +52,7 @@ func main() {
 	cpuProfile := flag.String("cpuprofile", "", "dev: write a CPU profile to this file")
 	memProfile := flag.String("memprofile", "", "dev: write a heap profile to this file on exit")
 	traceOut := flag.String("trace", "", "dev: write an execution trace to this file")
+	fpsProbe := flag.Int("fpsprobe", 0, "dev: run the colony for this many seconds at -capture-speed (2 = 3 ticks/frame) and -capture-zoom, log frame stats and quit")
 	flag.Parse()
 	stopProfiles := startProfiles(*cpuProfile, *traceOut)
 
@@ -81,6 +82,7 @@ func main() {
 		Saves:        saveHooks(),
 		Settings:     settingsHooks(shot != nil),
 		Scenarios:    scenarioStore(shot != nil),
+		FPSProbe:     fpsProbeOf(*fpsProbe, *captureZoom, *captureSpeed),
 		NewSimBuilder: func(ng uiadapter.NewGame) (uiadapter.SimBuilder, error) {
 			return &colonyBuilder{b: game.NewColonyBuilder(game.Config{Seed: ng.Seed, Biome: ng.Biome, Setup: ng.Setup})}, nil
 		},
@@ -835,4 +837,15 @@ func (c *colonyBuilder) Sim() (uiadapter.Simulation, error) {
 	}
 	g.RoofRooms()
 	return g, nil
+}
+
+// fpsProbeOf is the dev frame-rate probe config (nil when off).
+func fpsProbeOf(seconds int, zoom float64, speed int) *uiadapter.FPSProbe {
+	if seconds <= 0 {
+		return nil
+	}
+	if speed <= 1 {
+		speed = 2 // 3 ticks per frame: the NG-1 budget speed
+	}
+	return &uiadapter.FPSProbe{Seconds: seconds, Zoom: zoom, Speed: speed}
 }

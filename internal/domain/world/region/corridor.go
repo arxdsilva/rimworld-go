@@ -81,13 +81,6 @@ func (m *Map) graph() *regionGraph {
 	return gr
 }
 
-// center is region r's mean cell.
-func (m *Map) center(r int32) (int, int) {
-	k := m.gr.keys[r]
-	c := m.p.chunks[k.chunk()].center[k.local()]
-	return int(c >> 16), int(c & 0xFFFF)
-}
-
 func octile(ax, ay, bx, by int) int32 {
 	dx, dy := ax-bx, ay-by
 	if dx < 0 {

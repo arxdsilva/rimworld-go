@@ -78,6 +78,8 @@ type AppConfig struct {
 	LoadSplash func() (*ebiten.Image, error)
 	// Scenarios stores custom scenarios (nil: custom scenarios unavailable).
 	Scenarios ScenarioStore
+	// FPSProbe runs a dev frame-rate measurement and quits (fps_probe.go).
+	FPSProbe *FPSProbe
 	// NewSimBuilder builds a wizard Setup colony step by step for the
 	// loading screen (nil: NewSim in one step).
 	NewSimBuilder func(NewGame) (SimBuilder, error)
@@ -99,6 +101,8 @@ type AppConfig struct {
 // App is the ebiten.Game shell: screen routing, widgets, and (once
 // started) the colony renderer. Menus do not own or step a simulation.
 type App struct {
+	// fps is the dev frame-rate probe (fps_probe.go).
+	fps fpsProbeState
 	// ui is the widget kit's state (NG-1 §1.4, ui_state.go).
 	ui  uiState
 	cfg AppConfig
@@ -275,6 +279,10 @@ func (a *App) Update() error {
 	if a.shouldQuit {
 		return ebiten.Termination
 	}
+	if a.fpsProbeUpdate() { // dev frame-rate probe (fps_probe.go)
+		return ebiten.Termination
+	}
+	defer a.fpsProbeAfterUpdate()
 	if a.handleWindowClose() { // commitment: save before the window closes (saves.go)
 		return ebiten.Termination
 	}
@@ -744,6 +752,7 @@ func (a *App) dropSession() {
 
 // Draw paints the current full screen and any overlay.
 func (a *App) Draw(screen *ebiten.Image) {
+	defer a.fpsProbeDraw(time.Now())
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
 	a.sw, a.sh = sw, sh
 
@@ -929,29 +938,6 @@ func (a *App) fillMenu(screen *ebiten.Image, sw, sh int, title string, body []st
 		drawLabel(screen, bodyX, y, line)
 		y += int(lineH(tsBody))
 	}
-}
-
-func (a *App) footer(sw, sh int, nextLabel, nextID string) []button {
-	y := footerY(sh)
-	out := []button{{
-		id:    "wizard.back",
-		label: "Back",
-		x:     40,
-		y:     y,
-		w:     140,
-		h:     36,
-	}}
-	if nextID != "" {
-		out = append(out, button{
-			id:    nextID,
-			label: nextLabel,
-			x:     float32(sw - 180),
-			y:     y,
-			w:     140,
-			h:     36,
-		})
-	}
-	return out
 }
 
 // Layout uses the window size so menus and the colony viewport share one surface.

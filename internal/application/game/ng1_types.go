@@ -1,7 +1,6 @@
 package game
 
 import (
-	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/pawn/look"
@@ -150,7 +149,3 @@ type StoryView struct {
 	Adaptation         int
 	Commitment         bool
 }
-
-// incapableMask converts a pawn's incapabilities to a work mask (helper
-// for read models).
-func incapableMask(p pawngen.Pawn) work.Mask { return p.Incapable().WorkMask() }

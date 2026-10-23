@@ -326,6 +326,7 @@ func (g *Game) cmdSetDifficulty(v string) {
 			return
 		}
 		g.ng.setup.Preset, g.ng.setup.Difficulty = difficulty.Custom, s
+		g.rebuildAllStats() // skills.go: pain tolerance and mood follow the difficulty
 		return
 	}
 	p, ok := difficulty.Parse(v)
@@ -333,6 +334,7 @@ func (g *Game) cmdSetDifficulty(v string) {
 		return
 	}
 	g.ng.setup.Preset, g.ng.setup.Difficulty = p, difficulty.Of(p)
+	g.rebuildAllStats()
 }
 
 // --- difficulty hooks -------------------------------------------------------

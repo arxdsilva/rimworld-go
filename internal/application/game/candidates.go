@@ -34,10 +34,14 @@ const MaxNameRunes = 16
 
 // Rename errors (the screen shows err.Error()).
 var (
+	//lint:ignore ST1005 shown to the player as a sentence
 	ErrNickRequired = errors.New("Every colonist needs a nickname")
-	ErrNameTooLong  = errors.New("Names are at most 16 characters")
-	ErrNameChars    = errors.New("Names use only letters, spaces, ' and -")
-	ErrNickTaken    = errors.New("Another colonist already has that nickname")
+	//lint:ignore ST1005 shown to the player as a sentence
+	ErrNameTooLong = errors.New("Names are at most 16 characters")
+	//lint:ignore ST1005 shown to the player as a sentence
+	ErrNameChars = errors.New("Names use only letters, spaces, ' and -")
+	//lint:ignore ST1005 shown to the player as a sentence
+	ErrNickTaken = errors.New("Another colonist already has that nickname")
 )
 
 // defaultExtra is how many more candidates than People the pool holds

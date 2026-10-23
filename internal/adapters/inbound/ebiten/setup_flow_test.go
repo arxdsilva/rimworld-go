@@ -62,12 +62,6 @@ func toPawns(t *testing.T, a *App) {
 	settleUI(t, a)
 }
 
-// tinyPlanet builds the tiny world directly.
-func tinyPlanet() *planet.Planet {
-	p := defaultTestParams()
-	return planet.Build(p)
-}
-
 func defaultTestParams() planet.Params {
 	return planet.Params{SeedText: tinySeed, Coverage: 5, Rain: 2, Temp: 2, Pop: 1, Factions: faction.DefaultSlots()}
 }

@@ -57,15 +57,6 @@ func (r *Renderer) interpAnimal(an game.AnimalView) (float64, float64) {
 	return m.X, m.Y
 }
 
-// addAnimalDraws queues animals into the depth-sorted object pass.
-func (r *Renderer) addAnimalDraws(w game.WorldView, add func(row, col float64, fn func()), screen *ebiten.Image, tile float64, sw, sh int) {
-	for _, an := range w.Animals {
-		an := an
-		wx, wy := r.interpAnimal(an)
-		add(wy+0.01, wx, func() { r.drawAnimalFigure(screen, an, wx, wy, tile) })
-	}
-}
-
 // drawAnimalOverlays draws hunt marks and health bars above animals, then
 // the sleepers' snores. The snores (vector strokes) go in a pass of their
 // own: a vector stroke between two sprite draws flushes the vector batch,
