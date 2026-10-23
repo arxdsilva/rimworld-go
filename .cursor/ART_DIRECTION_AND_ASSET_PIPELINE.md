@@ -226,21 +226,116 @@ exceed one tile visually but retain a clear ground origin. Crop species
 should be recognizable at maturity; wild plants can use more silhouette
 variation.
 
-Vegetation set (family `plant`):
+Vegetation set (family `plant`; trees in `families/trees.py`):
 
-- Trees: `tree_{oak,birch,pine}_00..02`. Oak and birch also have
-  `_autumn` (amber/red/gold canopy) and `_bare` (winter branches with a
-  light snow cap); pine is evergreen. Metadata `sway: {trunk, canopy}`.
-- Bushes: `bush_00..03`; berry bushes `berry_bush_00..02` with
-  `_harvestable` (berries visible).
-- Grass: `grass_00..07` (tufts, some with small flowers or clover) and
-  `grass_tall_00..03` (meadow grass on rich soil).
+- Trees: `tree_{oak,birch,pine,jungle}_00..02`. Oak and birch also have
+  `_autumn` and `_bare`; pine has `_snow`. Every tree sprite also exists
+  as `…_trunk` and `…_canopy` parts on the **same canvas and origin**
+  (§9.2). Metadata `sway: {trunk, canopy}`.
+- Ground plants: `<key>_<stage>_v<n>` with stage `young` or `mature`,
+  plus `<key>_dormant_v<n>` (leafless, dry or frozen look). Berry bushes
+  add `_harvestable`. Keys: `bush`, `berry_bush`, `shrub`, `reeds`,
+  `cactus`, `healroot`, `bramble`, `moss`, `agave`, `ball_cactus`,
+  `elephant_ear`, `fire_lily`, `dandelion`.
+- Grass: `grass_short_v0..5`, `grass_tall_v0..3`,
+  `grass_short_dormant_v0..2`, composed many per tile by the renderer
+  (§9.1).
 - Crops: `<species>_<stage>_v0..v2` with stages `sown`, `sprout`,
-  `young`, `mature`, `harvestable` (ripe produce visible) and `wilted`
-  (frost or stalled growth). Variants change leaf count, angle and
-  height, not just colour.
-- Cozy rule: warm, slightly desaturated greens; soft value steps; no
-  pure saturated primaries.
+  `young`, `mature`, `harvestable` and `wilted`. Variants change leaf
+  count, angle and height, not just colour.
+- **No contour, ever:** grass and every plant (ground plants, bushes,
+  crops, trees and their parts) render with `outline_width=0`. Shapes
+  separate by colour value alone: darker recesses, lighter tips.
+- `flat_normal: true` in metadata makes `cmd/normalgen` write a flat
+  normal map (low cover: grass, moss, dandelion) instead of the dome
+  relief, so the sprite may be mirrored without wrong lighting.
+
+### 9.1 Ground vegetation (normative, PLAY-010)
+
+**Identity.** Ground vegetation is many small, separate, flat-shaded
+sprites laid over an earthy terrain texture, never one big painting of
+a field. Up close each plant reads by a few chosen shapes; at colony
+zoom the shapes merge into tufts and shrubs; far out they only tint the
+ground. A single tile stays sparse (soil shows between blades); a
+landscape reads dense because many small sprites overlap. Gameplay
+comes first: colonists, animals, items and buildings must stay easy to
+pick out over any vegetation.
+
+**Style.** Flat colour shapes with two value bands, modest internal
+shading, no strong highlights, no wet or translucent leaves, no
+photographic detail, no pixel-art blockiness, no black outlines (no
+outlines at all, see above). Neutral, upright rest pose so wind can
+lean the sprite. Fully transparent background with real gaps between
+blades and leaves; never a square patch.
+
+**Palette** (`assets/palettes/materials_plants.yaml`): dark olive
+#414E32, forest olive #556442, grass green #708052, sage #87936C, dry
+green #91915F, khaki #A49B70, stem brown #766247, dried foliage #857651,
+plus accents used sparingly: berry blue-violet, fire-lily orange,
+dandelion pale yellow. About two thirds of a plant sits in its middle
+green; darker olive and brown separate overlaps; light yellow-green
+touches only exposed tips. Biome tint (`grassTint`) shifts the whole
+set warmer or cooler; never neon, never cyan.
+
+**Silhouettes** (each must read at 64 px):
+
+| Plant | Silhouette |
+|---|---|
+| grass (short) | a loose fan of 4–10 thin tapered blades from a narrow base, some leaning, a few lighter for overlap |
+| grass (tall) | the same blades, about 1.6× taller and fuller, a jagged top line |
+| bush | a low, slightly wider-than-tall mound with a scalloped edge, mottled leaf clusters, darker base |
+| berry bush | the bush mound with small blue-violet berry dots that never dominate |
+| shrub | a low star rosette of 6–12 broad pointed leaves with gaps at the tips |
+| reeds | thin upright stems with small brown heads |
+| cactus | an upright column cactus, clearly not the ball cactus |
+| healroot | a low herb, medium-width leaves round a centre |
+| bramble | a low horizontal tangle of crossing brown woody stems with scattered olive leaves |
+| moss | a flat mottled grey-green cushion hugging the ground |
+| agave | a rosette of 8–14 thick blue-green pointed leaves |
+| ball cactus | a squat ribbed ball, faint grooves, no long spines |
+| elephant ear | 6–10 large arrow-shaped leaves radiating out with gaps between |
+| fire lily | a fan of strap leaves with 2–3 small orange flower clusters above |
+| dandelion | a tiny green rosette with one or two pale yellow dots |
+
+**Growth and seasons.** Young plants are smaller with more empty space;
+mature ones are fuller, never a new design. Dormant looks keep the
+plant's structure with brown, dried, sparser foliage (bramble keeps its
+stems, grass shrivels to straw). Snow hides low cover; only trees get
+autumn colours.
+
+**Composition (renderer).** Grass is drawn as up to nine tuft copies per
+tile in a jittered 3×3 grid; edge copies may sit up to 0.15 tile past
+the tile edge so neighbours interleave. Copies pick a variant, may be
+mirrored and scale with growth (short 0.45–0.65, tall 0.7–0.9). Other
+ground plants are one sprite per plant, varied by `tileHash`. Ground
+vegetation never uses linked autotiles.
+
+**Acceptance.** Blades readable at medium zoom; bush, rosette and tangle
+clearly different; terrain visible through grass and open foliage;
+palette consistent across the set; scale order grass < bush < tree;
+repeated sprites show no obvious pattern; alpha only, no square edges;
+no contour; creatures and items stay readable on top.
+
+### 9.2 Trees (normative, PLAY-010)
+
+- **Trunk:** visible from the ground to at least 55% of the tree's
+  height, a slight flare at the root, bark materials `bark` /
+  `bark_birch`.
+- **Canopy:** loose leaf clusters with gaps, no solid core. It sits on
+  the upper trunk, overhangs about half a tile into the tile above and
+  at most 0.2 tile to each side; total height about 1.5 tiles above the
+  root. Outer clusters are soft and irregular so neighbouring canopies
+  overlap into one forest edge; variants differ in canopy height
+  (±0.1) and lean.
+- **Pine:** visible trunk under tiered boughs starting near 35% height.
+  **Jungle:** tall trunk, broad flatter crown.
+- **Parts:** `_trunk` (trunk and lowest limbs) and `_canopy` (leaves and
+  upper limbs) share the full sprite's canvas and origin. The renderer
+  draws trunk then canopy; the canopy (never the trunk or shadow) fades
+  to 40% opacity while a creature stands on the tree's tile, the tile
+  above or the two tiles diagonally above, or the hovered/selected
+  thing is there, easing over about 0.2 s (instant with Reduced
+  Motion).
 
 ## 10. Pawn Visual System
 
@@ -297,7 +392,7 @@ silhouettes.
   - emberbuck, cinder_rat, woolhorn, glimmerstag, timbergnaw
   - hive_beetle, hive_brute, hive_crawler
   - ground_sloth and dire_wolf (both real extinct animals)
-- **Sizes** are body lengths in tiles: XS 0.35, S 0.6, M 0.95, L 1.4, XL 2.0, with `+`/`-` meaning ±15%. Large animals overhang their tile.
+- **Sizes** are body lengths in tiles: XS 0.44 (raised from 0.35 in PLAY-010; XS+ stays below S-), S 0.6, M 0.95, L 1.4, XL 2.0, with `+`/`-` meaning ±15%. Large animals overhang their tile.
 - **One parametric builder:** `families/animals/` (`rig.py` plus archetype modules). Archetypes:
 
   | Archetype | Species |
@@ -733,6 +828,11 @@ Light pipeline (ART-010):
 - `stage.render_asset` writes each sprite's `shadow:` caster block from its staged bounds.
 - `make normals` (`cmd/normalgen`, after Blender in `make art`) writes `<sprite>_n.png`. Masks, normal maps and `ui/` are skipped, and up-to-date maps are kept.
 - `validate_assets.py` (`make art-check`) requires a normal map with the sprite's size and alpha, and a `shadow:` block, for every world sprite.
+
+Housekeeping (PLAY-010, normative):
+- Remove unused assets and resources in the same change that makes them unused: sprites with their `_n` maps and metadata, sounds, fonts, palette entries, vendor packs, generated files and the code that loads them. Never keep a fallback asset nobody draws. An alias may stay only while something still reads it.
+- `make art-check` runs an orphan check: every generated sprite, sound and metadata file must be referenced by a renderer key table, a palette, a recipe or other metadata, or be listed with a reason in `assets/metadata/orphan_allow.txt`.
+- Plant sprites never carry an outline (`outline_width=0`); the check fails if one does.
 
 ### 25.1 Audio assets (SND-002)
 

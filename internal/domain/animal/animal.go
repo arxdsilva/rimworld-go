@@ -644,8 +644,9 @@ func FleeGoal(x, y, tx, ty, dist int) (int, int) {
 	return x + dx*dist/m, y + dy*dist/m
 }
 
-// sizeLength is the body length in tiles per size class (ART-011).
-var sizeLength = [...]float64{SizeXS: 0.35, SizeS: 0.6, SizeM: 0.95, SizeL: 1.4, SizeXL: 2.0}
+// sizeLength is the body length in tiles per size class (ART-011; XS
+// raised from 0.35 in PLAY-010, still below the smallest S-).
+var sizeLength = [...]float64{SizeXS: 0.44, SizeS: 0.6, SizeM: 0.95, SizeL: 1.4, SizeXL: 2.0}
 
 // BodyLength is s's body length in tiles, with its size trim.
 func BodyLength(s Species) float64 {

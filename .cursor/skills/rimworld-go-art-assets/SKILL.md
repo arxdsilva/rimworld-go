@@ -89,7 +89,9 @@ gameplay requirement
 8. Inspect in the real renderer at normal gameplay zoom, on light and dark terrain.
 9. Update matching ART wave checkboxes in `.cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md` (`[x]` / `[-]` / `[!]`).
 10. If the work also maps to a vanilla or UI checklist item, update that checkbox in the same change.
-11. Write a concise handoff including visual/art impact.
+11. Delete every asset, alias, metadata file and loader the change leaves unused (spec §25 housekeeping); `make art-check` must report no orphans.
+12. Plants and grass: no contour (`outline_width=0`, spec §9).
+13. Write a concise handoff including visual/art impact.
 
 ## Task packet extras
 

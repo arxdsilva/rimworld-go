@@ -5,7 +5,7 @@ description: Split a multi-area rimworld-go task across parallel subagents per .
 
 # Parallel work (lead checklist)
 
-1. **Map areas → agents.** List the areas the task touches (rule intro table); one agent per area/layer (hexagon). ≤ 5 running at once.
+1. **Map areas → agents.** List the areas the task touches (rule intro table); one agent per area/layer (hexagon). ≤ 15 running at once.
    1b. **Pick each agent's model** (rule §6): `haiku` for mechanical work, `sonnet` for implementation against a written contract, `opus` for determinism/pathing/jobs/saves/timing math. Escalate one tier after two failed gates.
 2. **Contract first (you, alone):**
    - `.cursor` spec sections, read models (`internal/application/game/*View`), consumer-owned interfaces, ports, typed commands, asset names/metadata, save format — additive only.

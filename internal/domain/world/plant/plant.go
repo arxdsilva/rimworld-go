@@ -31,6 +31,14 @@ const (
 	Cactus
 	Shrub
 	Reeds
+	// Wild ground plants (PLAY-010): append only, saved.
+	Bramble
+	Moss
+	Agave
+	BallCactus
+	ElephantEar
+	FireLily
+	Dandelion
 	numSpecies
 )
 
@@ -69,6 +77,12 @@ type Def struct {
 	// Browse: grazing animals eat it down (bushes, shrubs, reeds). Trunk:
 	// a woody plant, chopped for wood and gnawed by tree-eating animals.
 	Browse, Trunk bool
+	// WalkCost is the step time on this plant's cell, percent (bramble
+	// 150 = half again as slow); zero means it doesn't slow walkers.
+	WalkCost int
+	// Ground: a low ground plant (moss, wildflowers, brambles) that never
+	// blocks building; placing a building clears it.
+	Ground bool
 }
 
 // ZoneSowable reports whether a growing zone may sow this species.
@@ -104,6 +118,20 @@ var defs = [numSpecies]Def{
 	Shrub: {Species: Shrub, Name: "shrub", GrowTicks: 30000, CutWork: 25, Wood: 3, ColdKill: -400, HeatKill: 650, Browse: true},
 	Reeds: {Species: Reeds, Name: "reeds", Label: "straw", GrowTicks: 15000, HarvestWork: 25, Yield: 4, Yields: item.Straw,
 		CutWork: 15, Regrows: true, RegrowTo: 30, ColdKill: -300, Browse: true},
+	// Wild ground plants (PLAY-010, our numbers): no wood, no yield.
+	Bramble: {Species: Bramble, Name: "bramble", GrowTicks: 40000, CutWork: 30, ColdKill: -300, HeatKill: 450,
+		Browse: true, WalkCost: 150, Ground: true},
+	Moss: {Species: Moss, Name: "moss", GrowTicks: 30000, CutWork: 10, ColdKill: -500, HeatKill: 350,
+		Browse: true, Ground: true},
+	Agave: {Species: Agave, Name: "agave", GrowTicks: 50000, CutWork: 25, ColdKill: -50, HeatKill: 650, Ground: true},
+	BallCactus: {Species: BallCactus, Name: "ball_cactus", GrowTicks: 60000, CutWork: 20, ColdKill: -80, HeatKill: 700,
+		Ground: true},
+	ElephantEar: {Species: ElephantEar, Name: "elephant_ear", GrowTicks: 30000, CutWork: 15, ColdKill: 50, HeatKill: 500,
+		Browse: true, WalkCost: 110, Ground: true},
+	FireLily: {Species: FireLily, Name: "fire_lily", GrowTicks: 30000, CutWork: 10, HeatKill: 450, Browse: true,
+		Ground: true},
+	Dandelion: {Species: Dandelion, Name: "dandelion", GrowTicks: 15000, CutWork: 5, ColdKill: -200, HeatKill: 400,
+		Browse: true, Ground: true},
 	// Crops: growth follows real days-to-harvest at roughly twelve real
 	// days per game day; yields are per plant, balanced so a colonist
 	// eats from about three tiles of potatoes.

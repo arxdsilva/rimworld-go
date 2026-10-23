@@ -186,3 +186,26 @@ func TestAttackModeAndBodyNames(t *testing.T) {
 		t.Errorf("a threat on the same tile: flee east, got %d,%d", x, y)
 	}
 }
+
+// TestXSBetweenOldAndS: XS animals read bigger than the old 0.35-tile
+// class, yet the biggest XS (with its trim) stays below the smallest S
+// (with its trim), so the size classes never overlap (PLAY-010).
+func TestXSBetweenOldAndS(t *testing.T) {
+	t.Parallel()
+	maxXS, minS := 0.0, 99.0
+	for _, s := range All() {
+		l := BodyLength(s)
+		switch RosterOf(s).Size {
+		case SizeXS:
+			if l <= 0.35 {
+				t.Errorf("%s: XS body length %.3f, want above the old 0.35", s, l)
+			}
+			maxXS = max(maxXS, l)
+		case SizeS:
+			minS = min(minS, l)
+		}
+	}
+	if maxXS >= minS {
+		t.Fatalf("largest XS %.3f must stay below smallest S %.3f", maxXS, minS)
+	}
+}

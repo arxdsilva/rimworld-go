@@ -381,6 +381,12 @@ type WorldView struct {
 	// grass data); GrassCut are grass tiles marked for cutting (grass.go).
 	Grass    []uint8
 	GrassCut [][2]int
+	// GrassGrowth is each grass tile's growth, 0..100 (PLAY-010): shoots
+	// after grazing or cutting fill out over a few days. Empty means every
+	// grass tile is full. GrassVer changes whenever Grass or GrassGrowth
+	// does (presentation caches key on it; never saved).
+	GrassGrowth []uint8
+	GrassVer    uint64
 	// Stains are blood and ichor on the ground (SIM-020), sorted y then x.
 	Stains []StainView
 	// Dirt is tracked-in dirt on the ground (SIM-021), sorted y then x.

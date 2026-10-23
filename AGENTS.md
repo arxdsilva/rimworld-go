@@ -31,6 +31,8 @@ Non-negotiable rules:
 - Run relevant tests and benchmarks.
 - Do not weaken tests to pass CI.
 - Do not copy proprietary code, assets, text, or balancing data.
+- Remove unused assets and resources in the same change that makes them unused: sprites, sounds, fonts, metadata, palette entries, vendor packs, generated files and their loaders. Never keep a fallback asset nobody draws. An alias may stay only while something still reads it; delete it in the change that removes the last reader. `make art-check` fails on orphans not listed with a reason in `assets/metadata/orphan_allow.txt`.
+- Grass and plants (ground plants, bushes, crops, trees) never have a contour or outline.
 - Every scoped task must leave a concise handoff in `.cursor/handoffs/`.
 - Multi-area tasks follow `.cursor/PARALLEL_WORK.md` (skill `parallel-work`): contract first, disjoint file ownership, lead-only shared config, phased verification.
 - Whenever work satisfies (fully or partially) an item in `.cursor/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md`, `.cursor/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md`, `.cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md`, or `.cursor/MAIN_UI_SCREENS_SPECIFICATION.md`, update that item's checkbox in the same change: `[x]` only when its full acceptance criteria are met, `[-]` when partially done (state what's missing in a short trailing note), `[!]` when blocked (state why). Never leave completed work unreflected in the checklists.

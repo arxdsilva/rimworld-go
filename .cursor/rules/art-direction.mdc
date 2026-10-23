@@ -15,5 +15,7 @@ When that work is in scope:
 4. Never trace, extract, or reconstruct proprietary RimWorld art.
 5. Do not bulk-produce assets until Wave 0 contracts and the §34 prototype gate are met.
 6. Update matching ART wave checkboxes in the spec (`[x]` / `[-]` / `[!]`).
+7. Remove assets and resources that a change leaves unused, in the same change (spec §25 housekeeping); `make art-check` fails on orphans.
+8. Grass and plants never have a contour or outline (spec §9).
 
 Skip the spec for headless simulation-only tasks with no visual output.

@@ -53,7 +53,7 @@ contract (spec §, read models, stubs) → **producers in parallel** (domain/sim
 | Make contract changes as the lead, additive only, and broadcast them to every affected agent | Let one agent change a shared contract |
 | After each phase, run the gates below, then apply the merge checklist in `skills/rimworld-go-review-integration/SKILL.md` | Declare done from agent reports alone |
 | Route fixes back to the owning agent | Patch an active agent's files behind its back |
-| Keep ≤ 5 agents running at once | Spawn more because "it's faster" |
+| Keep ≤ 15 agents running at once | Spawn more than the work has disjoint areas for |
 
 **Gates after each phase:**
 

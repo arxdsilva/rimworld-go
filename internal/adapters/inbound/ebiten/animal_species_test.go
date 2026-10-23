@@ -139,7 +139,7 @@ func TestCorpseSpriteBySpecies(t *testing.T) {
 // higher over bigger animals and hug small ones.
 func TestOverlayAboveTallAnimals(t *testing.T) {
 	t.Parallel()
-	rat, deer, elephant := 0.35, 0.95, 2.0
+	rat, deer, elephant := 0.44, 0.95, 2.0
 	if animalMarkerLift(0) != animalMarkerLift(deer) || animalBarLift(0) != animalBarLift(deer) {
 		t.Fatal("an unknown size is drawn like the former deer")
 	}
