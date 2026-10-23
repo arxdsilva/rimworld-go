@@ -10,9 +10,9 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.346
-  h: 0.176
-  d: 0.265
+  w: 0.435
+  h: 0.222
+  d: 0.333
 item: hive beetle corpse
 species: hive_beetle
 variant: 2

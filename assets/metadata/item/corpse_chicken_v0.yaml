@@ -10,9 +10,9 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.336
-  h: 0.129
-  d: 0.128
+  w: 0.422
+  h: 0.162
+  d: 0.161
 item: chicken corpse
 species: chicken
 variant: 0

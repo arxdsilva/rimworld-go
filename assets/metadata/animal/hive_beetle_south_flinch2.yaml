@@ -10,9 +10,9 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.235
-  h: 0.169
-  d: 0.35
+  w: 0.296
+  h: 0.212
+  d: 0.44
 species: hive_beetle
 facing: south
 frame: flinch2

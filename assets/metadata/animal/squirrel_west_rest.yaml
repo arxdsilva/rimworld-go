@@ -10,9 +10,9 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.339
-  h: 0.224
-  d: 0.075
+  w: 0.426
+  h: 0.282
+  d: 0.094
 species: squirrel
 facing: west
 frame: rest

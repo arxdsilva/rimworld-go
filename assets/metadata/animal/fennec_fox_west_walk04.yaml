@@ -10,9 +10,9 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.372
-  h: 0.185
-  d: 0.073
+  w: 0.468
+  h: 0.233
+  d: 0.091
 species: fennec_fox
 facing: west
 frame: walk04

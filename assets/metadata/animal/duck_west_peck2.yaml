@@ -10,9 +10,9 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.279
-  h: 0.104
-  d: 0.104
+  w: 0.351
+  h: 0.13
+  d: 0.131
 species: duck
 facing: west
 frame: peck2

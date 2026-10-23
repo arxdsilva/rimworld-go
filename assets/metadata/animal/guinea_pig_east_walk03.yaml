@@ -10,9 +10,9 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.276
-  h: 0.109
-  d: 0.093
+  w: 0.347
+  h: 0.137
+  d: 0.117
 species: guinea_pig
 facing: east
 frame: walk03

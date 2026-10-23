@@ -10,9 +10,9 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.095
-  h: 0.16
-  d: 0.299
+  w: 0.12
+  h: 0.202
+  d: 0.376
 species: chicken
 facing: south
 frame: rest

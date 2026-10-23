@@ -10,9 +10,9 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.367
-  h: 0.061
-  d: 0.119
+  w: 0.461
+  h: 0.077
+  d: 0.15
 item: cinder rat corpse
 species: cinder_rat
 variant: 1

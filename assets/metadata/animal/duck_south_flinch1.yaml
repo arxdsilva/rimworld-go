@@ -10,9 +10,9 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.122
-  h: 0.149
-  d: 0.257
+  w: 0.153
+  h: 0.187
+  d: 0.323
 species: duck
 facing: south
 frame: flinch1

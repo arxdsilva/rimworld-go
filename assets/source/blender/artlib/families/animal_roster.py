@@ -2,7 +2,7 @@
 
 Mirrors internal/domain/animal (same keys and order); the Go test
 TestEverySpeciesHasArt and validate_assets.py check the two agree.
-Size classes are body lengths in tiles: XS 0.35, S 0.6, M 0.95, L 1.4,
+Size classes are body lengths in tiles: XS 0.44, S 0.6, M 0.95, L 1.4,
 XL 2.0 (+/- 15%). Rows marked ORIGINAL replace RimWorld's invented
 creatures with our own designs (AGENTS.md: never copy proprietary art).
 Each species' features are the binding visual brief for its builder.
@@ -11,7 +11,7 @@ from collections import namedtuple
 
 Species = namedtuple("Species", "key archetype size dimorphic features attack", defaults=(None,))
 
-SIZE_LENGTH = {"XS": 0.35, "S": 0.6, "M": 0.95, "L": 1.4, "XL": 2.0}
+SIZE_LENGTH = {"XS": 0.44, "S": 0.6, "M": 0.95, "L": 1.4, "XL": 2.0}
 
 
 def body_length(size):

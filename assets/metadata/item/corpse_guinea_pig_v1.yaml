@@ -10,9 +10,9 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.245
-  h: 0.094
-  d: 0.138
+  w: 0.306
+  h: 0.118
+  d: 0.174
 item: guinea pig corpse
 species: guinea_pig
 variant: 1

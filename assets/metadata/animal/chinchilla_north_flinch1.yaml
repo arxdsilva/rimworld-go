@@ -10,9 +10,9 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.099
-  h: 0.155
-  d: 0.251
+  w: 0.125
+  h: 0.195
+  d: 0.315
 species: chinchilla
 facing: north
 frame: flinch1

@@ -10,9 +10,9 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.264
-  h: 0.097
-  d: 0.154
+  w: 0.332
+  h: 0.122
+  d: 0.194
 item: yorkshire terrier corpse
 species: yorkshire_terrier
 variant: 1

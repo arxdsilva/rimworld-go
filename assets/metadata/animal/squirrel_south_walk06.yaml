@@ -10,9 +10,9 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.075
-  h: 0.285
-  d: 0.305
+  w: 0.094
+  h: 0.358
+  d: 0.383
 species: squirrel
 facing: south
 frame: walk06

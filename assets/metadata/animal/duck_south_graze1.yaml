@@ -10,9 +10,9 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.09
-  h: 0.092
-  d: 0.277
+  w: 0.114
+  h: 0.116
+  d: 0.348
 species: duck
 facing: south
 frame: graze1

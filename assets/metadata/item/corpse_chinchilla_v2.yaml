@@ -10,9 +10,9 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.251
-  h: 0.099
-  d: 0.149
+  w: 0.316
+  h: 0.125
+  d: 0.187
 item: chinchilla corpse
 species: chinchilla
 variant: 2

@@ -10,9 +10,9 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.098
-  h: 0.189
-  d: 0.202
+  w: 0.123
+  h: 0.238
+  d: 0.254
 species: chicken
 facing: south
 sex: female

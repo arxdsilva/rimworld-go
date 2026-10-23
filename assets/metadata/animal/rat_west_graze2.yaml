@@ -10,9 +10,9 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.387
-  h: 0.089
-  d: 0.06
+  w: 0.486
+  h: 0.112
+  d: 0.075
 species: rat
 facing: west
 frame: graze2

@@ -10,9 +10,9 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.075
-  h: 0.264
-  d: 0.34
+  w: 0.094
+  h: 0.332
+  d: 0.427
 species: squirrel
 facing: south
 frame: flinch2

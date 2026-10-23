@@ -10,9 +10,9 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.303
-  h: 0.118
-  d: 0.089
+  w: 0.381
+  h: 0.149
+  d: 0.107
 item: duck corpse
 species: duck
 variant: 0

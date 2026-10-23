@@ -10,9 +10,9 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.257
-  h: 0.212
-  d: 0.133
+  w: 0.323
+  h: 0.267
+  d: 0.167
 species: chicken
 facing: west
 frame: flinch1

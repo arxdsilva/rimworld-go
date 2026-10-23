@@ -10,9 +10,9 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.329
-  h: 0.099
-  d: 0.296
+  w: 0.414
+  h: 0.124
+  d: 0.372
 item: squirrel corpse
 species: squirrel
 variant: 0

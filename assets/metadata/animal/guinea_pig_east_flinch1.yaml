@@ -10,9 +10,9 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.273
-  h: 0.115
-  d: 0.093
+  w: 0.344
+  h: 0.144
+  d: 0.117
 species: guinea_pig
 facing: east
 frame: flinch1

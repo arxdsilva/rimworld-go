@@ -10,9 +10,9 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.262
-  h: 0.214
-  d: 0.107
+  w: 0.329
+  h: 0.269
+  d: 0.135
 species: chicken
 facing: east
 frame: peck1

@@ -10,9 +10,9 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.261
-  h: 0.143
-  d: 0.084
+  w: 0.328
+  h: 0.18
+  d: 0.106
 species: yorkshire_terrier
 facing: east
 frame: bite3

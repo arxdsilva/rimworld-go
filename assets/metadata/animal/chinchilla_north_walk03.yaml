@@ -10,9 +10,9 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.099
-  h: 0.148
-  d: 0.269
+  w: 0.125
+  h: 0.186
+  d: 0.339
 species: chinchilla
 facing: north
 frame: walk03

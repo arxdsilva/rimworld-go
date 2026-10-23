@@ -10,9 +10,9 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.361
-  h: 0.06
-  d: 0.165
+  w: 0.454
+  h: 0.075
+  d: 0.207
 item: rat corpse
 species: rat
 variant: 2

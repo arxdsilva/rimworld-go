@@ -10,9 +10,9 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.399
-  h: 0.139
-  d: 0.06
+  w: 0.502
+  h: 0.175
+  d: 0.075
 species: rat
 facing: east
 frame: flinch1

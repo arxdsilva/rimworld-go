@@ -10,9 +10,9 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.421
-  h: 0.1
-  d: 0.06
+  w: 0.529
+  h: 0.126
+  d: 0.075
 species: rat
 facing: east
 frame: walk08

@@ -10,9 +10,9 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.394
-  h: 0.078
-  d: 0.06
+  w: 0.495
+  h: 0.098
+  d: 0.075
 species: cinder_rat
 facing: west
 frame: rest

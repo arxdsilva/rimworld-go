@@ -10,9 +10,9 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.373
-  h: 0.082
-  d: 0.165
+  w: 0.469
+  h: 0.104
+  d: 0.208
 item: fennec fox corpse
 species: fennec_fox
 variant: 0
