@@ -202,8 +202,8 @@ func (a *App) tickCapture() {
 // each the button clicks that open it from the main menu.
 var menuCaptures = map[string][]string{
 	"menu":             nil,
-	"picker":           {"menu.newgame", "wizard.next", "wizard.next", "wizard.next"},
-	"seed":             {"menu.newgame", "wizard.next", "wizard.next"},
+	"picker":           capLanding,
+	"seed":             capWorld,
 	"credits":          {"menu.credits"},
 	"options":          {"menu.options"},
 	"options-graphics": {"menu.options", "options.tab.graphics"},
@@ -217,6 +217,48 @@ var menuCaptures = map[string][]string{
 	"scenario-editor-addpart": {"menu.newgame", "scen.edit", "sced.add"},
 	"storyteller":             {"menu.newgame", "wizard.next"},
 	"difficulty-custom":       {"menu.newgame", "wizard.next", "diff.custom"},
+	"worldgen":                capWorld,
+	"worldgen-progress":       append(append([]string(nil), capWorld...), "@worldgen-progress"),
+	"landing":                 capLanding,
+	"landing-advanced":        append(append([]string(nil), capLanding...), "land.advanced"),
+	"landing-factions":        append(append([]string(nil), capLanding...), "land.factions"),
+	"pawns":                   append(append([]string(nil), capLanding...), "wizard.next"),
+	"pawns-reroll":            append(append([]string(nil), capLanding...), "wizard.next", "pawns.reroll"),
+}
+
+// The click scripts that reach Create World and Select Landing Site. A
+// token starting with "@" is a scripted step (captureStep) instead of a
+// click.
+var (
+	capWorld   = []string{"menu.newgame", "wizard.next", "wizard.next", "@seed"}
+	capLanding = []string{"menu.newgame", "wizard.next", "wizard.next", "@seed", "@landing"}
+)
+
+// captureStep runs a scripted step of a menu capture: a fixed world seed,
+// a generated world with a landing site chosen, or a generation frozen
+// part-way.
+func (a *App) captureStep(step string) {
+	ng := a.draft()
+	switch step {
+	case "@seed":
+		ng.world.SeedText = "amber-hollow"
+	case "@landing":
+		a.worldGenerate()
+		for ng.builder != nil { // run the generation to the end at once
+			a.worldStep()
+		}
+		a.uiSt().modals = nil
+		if ng.planet != nil {
+			ng.tile = ng.planet.RandomLanding(0)
+			if ng.tile >= 0 {
+				ng.landRolls = 1
+			}
+		}
+	case "@worldgen-progress":
+		ng.genHold = 0.4
+		a.worldGenerate()
+		ng.genStep = 1500
+	}
 }
 
 // tickMenuCapture shoots a menu screen without starting a game: Ticks
@@ -232,7 +274,11 @@ func (a *App) tickMenuCapture(open []string) {
 			if a.cursor == nil {
 				a.cursor = &[2]int{-100, -100} // no hover state in the shot
 			}
-			a.applyClick(open[a.capture.opened])
+			if step := open[a.capture.opened]; strings.HasPrefix(step, "@") {
+				a.captureStep(step)
+			} else {
+				a.applyClick(step)
+			}
 			a.capture.opened++
 			return
 		}

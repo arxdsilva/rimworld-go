@@ -124,7 +124,6 @@ type App struct {
 	wildRows    []game.WildlifeRow // g.Wildlife(), read once per tick
 	wildTick    clock.Tick
 	wildRead    bool
-	wiz         wizardState // the seed and biome chosen in the wizard (screen_newgame.go)
 	// settings are the player's Options (settings.go).
 	settings   config.Settings
 	optionsTab string
@@ -249,7 +248,6 @@ func NewApp(cfg AppConfig) *App {
 		sw:  DefaultWindowWidth,
 		sh:  DefaultWindowHeight,
 	}
-	a.wiz = newWizardState(cfg)
 	a.loadSettings()
 	a.applySettings()
 	return a
@@ -672,20 +670,29 @@ func (a *App) frameAlpha() float64 {
 	return math.Max(0, math.Min(f, alphaMax))
 }
 
+// startGame starts the legacy colony (no wizard draft): the configured
+// seed and biome. The New Colony wizard starts through beginLoading.
 func (a *App) startGame() {
-	if a.cfg.NewSim == nil {
-		a.sessionErr = "no simulation factory"
-		return
+	seed := a.cfg.DefaultSeed
+	if seed == 0 {
+		seed = randomSeed()
 	}
-	sim, err := a.cfg.NewSim(NewGame{Seed: a.wiz.seed, Biome: a.wiz.biome})
+	b, err := a.simBuilder(NewGame{Seed: seed, Biome: a.cfg.DefaultBiome})
 	if err != nil {
 		a.sessionErr = err.Error()
 		return
 	}
-	a.startSession(sim)
-	a.saveSlot = newSlotName()
-	a.autosaveDay = 0
-	a.ng = nil // the setup is done: the wizard's draft goes with it
+	for {
+		if _, _, done := b.Step(loadUnits); done {
+			break
+		}
+	}
+	sim, err := b.Sim()
+	if err != nil {
+		a.sessionErr = err.Error()
+		return
+	}
+	a.finishStart(sim)
 }
 
 // startSession installs a simulation (new or loaded) as the colony.

@@ -19,13 +19,11 @@ import (
 )
 
 // quickStart drives a menu App from the main menu to a running colony
-// with the defaults: New Colony, Next through the four steps, Start.
+// with the defaults: New Colony, Next through Scenario and Storyteller, a
+// tiny (5%) world, a random landing site and Start.
 func quickStart(t *testing.T, a *App) {
 	t.Helper()
-	click(t, a, "menu.newgame")
-	for i := 0; i < 4; i++ {
-		click(t, a, "wizard.next")
-	}
+	toPawns(t, a)
 	click(t, a, "wizard.start")
 	if a.nav.screen() != screenColony {
 		t.Fatalf("quickStart ended on %s, want colony", a.nav.screen())

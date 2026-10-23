@@ -20,11 +20,7 @@ func TestSaveFromPauseThenLoad(t *testing.T) {
 		Load: func(path string) (Simulation, string, error) { return &stubSim{w: 4, h: 4}, path, nil },
 	}
 	a.finishBoot()
-	click(t, a, "menu.newgame")
-	for i := 0; i < 4; i++ {
-		click(t, a, "wizard.next")
-	}
-	click(t, a, "wizard.start")
+	quickStart(t, a)
 	slot := a.saveSlot
 	a.apply(intent{kind: intentPause})
 	click(t, a, "pause.save")

@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	"image/color"
 	"sort"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -148,9 +149,8 @@ func (a *App) uiTable(id string, r rect, cols []tableCol, n int, sel *int, rowH 
 			case hover:
 				fillRect(dst, row, uiBtnHover)
 			case di%2 == 1:
-				stripe := uiPanelBorder
-				stripe.A = 0x28
-				fillRect(dst, row, stripe)
+				// a faint stripe: non-premultiplied, so the 16 % alpha scales the colour
+				fillRect(dst, row, color.NRGBA{R: uiPanelBorder.R, G: uiPanelBorder.G, B: uiPanelBorder.B, A: 0x28})
 			}
 			for ci, c := range cols {
 				cell := rect{rcols[ci].X, row.Y, rcols[ci].W, row.H}

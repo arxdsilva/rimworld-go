@@ -146,14 +146,23 @@ func TestNewGameWizardAndStart(t *testing.T) {
 		{"menu.newgame", screenScenario},
 		{"wizard.next", screenStoryteller},
 		{"wizard.next", screenWorldGen},
-		{"wizard.next", screenLanding},
-		{"wizard.next", screenPawns},
 	}
 	for _, step := range want {
 		click(t, a, step.id)
 		if a.nav.screen() != step.scr {
 			t.Fatalf("after %s = %s, want %s", step.id, a.nav.screen(), step.scr)
 		}
+	}
+	// Create World generates (a tiny world) and arrives at the landing
+	// site screen; Next then needs a chosen site.
+	ng := a.draft()
+	ng.world.SeedText, ng.world.Coverage = tinySeed, 5
+	click(t, a, "world.generate")
+	runUntil(t, a, func() bool { return a.nav.screen() == screenLanding })
+	click(t, a, "land.random")
+	click(t, a, "wizard.next")
+	if a.nav.screen() != screenPawns {
+		t.Fatalf("after landing Next = %s, want pawns", a.nav.screen())
 	}
 	click(t, a, "wizard.start")
 	if a.nav.screen() != screenColony {
@@ -205,11 +214,7 @@ func TestPauseBlocksSteppingAndResumeContinues(t *testing.T) {
 	sim := &stubSim{w: 8, h: 8}
 	a := testApp(sim)
 	a.finishBoot()
-	click(t, a, "menu.newgame")
-	for i := 0; i < 4; i++ {
-		click(t, a, "wizard.next")
-	}
-	click(t, a, "wizard.start")
+	quickStart(t, a)
 
 	a.tick()
 	if sim.steps == 0 {
@@ -241,11 +246,7 @@ func TestReturnToMenuDropsSim(t *testing.T) {
 	sim := &stubSim{w: 8, h: 8}
 	a := testApp(sim)
 	a.finishBoot()
-	click(t, a, "menu.newgame")
-	for i := 0; i < 4; i++ {
-		click(t, a, "wizard.next")
-	}
-	click(t, a, "wizard.start")
+	quickStart(t, a)
 	a.apply(intent{kind: intentPause})
 	click(t, a, "pause.menu")
 	if a.nav.screen() != screenMainMenu {
@@ -258,11 +259,7 @@ func TestReturnToMenuDropsSim(t *testing.T) {
 	if sim.steps != 0 {
 		t.Fatalf("headless menu stepped %d", sim.steps)
 	}
-	click(t, a, "menu.newgame")
-	for i := 0; i < 4; i++ {
-		click(t, a, "wizard.next")
-	}
-	click(t, a, "wizard.start")
+	quickStart(t, a)
 	if a.simsStarted != 2 {
 		t.Fatalf("second start simsStarted=%d, want 2", a.simsStarted)
 	}
@@ -272,11 +269,7 @@ func TestOptionsFromPauseReturnsToPause(t *testing.T) {
 	t.Parallel()
 	a := testApp(&stubSim{w: 4, h: 4})
 	a.finishBoot()
-	click(t, a, "menu.newgame")
-	for i := 0; i < 4; i++ {
-		click(t, a, "wizard.next")
-	}
-	click(t, a, "wizard.start")
+	quickStart(t, a)
 	a.apply(intent{kind: intentPause})
 	click(t, a, "pause.options")
 	if a.nav.screen() != screenOptions {
@@ -388,25 +381,13 @@ func TestWorldGenerateStaysInFooter(t *testing.T) {
 	if a.nav.screen() != screenWorldGen {
 		t.Fatalf("screen = %s, want world_gen", a.nav.screen())
 	}
-	found := false
-	for _, b := range a.worldGenButtons(a.sw, a.sh) {
-		if b.id != "world.generate" {
-			continue
-		}
-		found = true
-		if !isFooterButton(b, a.sh) {
-			t.Fatalf("Generate at y=%v should be in the footer", b.y)
-		}
-		if b.disabled {
-			t.Fatal("Generate should be enabled")
-		}
-	}
-	if !found {
+	settleUI(t, a)
+	w, ok := a.uiSt().find("world.generate")
+	if !ok {
 		t.Fatal("missing world.generate")
 	}
-	x, _ := bodyOrigin(a.worldGenButtons(a.sw, a.sh), a.sh)
-	// the seed field and dice sit in the left rail; the copy clears them
-	if x <= bodyDefaultX+260 {
-		t.Fatalf("world gen body x=%d, want right of the seed field", x)
+	_, _, _, footer := dialogFrame(a.sw, a.sh)
+	if w.disabled || w.r.Y < footer.Y || w.r.bottom() > footer.bottom() {
+		t.Fatalf("Generate at %+v should be enabled in the footer %+v", w.r, footer)
 	}
 }

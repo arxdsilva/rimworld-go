@@ -11,6 +11,7 @@ import (
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/difficulty"
+	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/scenario"
 	"rimworld-go/internal/domain/storyteller"
 	"rimworld-go/internal/domain/world/planet"
@@ -32,6 +33,9 @@ const (
 )
 
 const defaultPreset = difficulty.Settled
+
+// defaultCoverage is the globe coverage of a fresh draft (percent).
+const defaultCoverage = 30
 
 // scenEntry is one row source of the Choose Scenario list: a built-in, a
 // custom file or an unsaved scenario from this session.
@@ -73,12 +77,40 @@ type newGameState struct {
 	customOpen  bool                // the Custom Difficulty dialog has been shown once
 	saveMode    difficulty.SaveMode
 
-	// Placeholders SCREENS-B fills (Create World, Landing, Characters).
+	// Create World, Landing and Characters (screen_worldgen.go,
+	// screen_landing.go, screen_pawns.go).
 	world   planet.Params
 	tile    int // selected landing tile, -1 none
-	season  int // -1 Auto, else a season index
+	season  int // -1 Auto, else a season index (0 Spring .. 3 Winter)
 	mapSize int
 	err     string
+
+	planet    *planet.Planet  // the generated world, kept across Back
+	planetKey string          // Params.Key() the planet was built from
+	builder   *planet.Builder // in-flight generation
+	genStep   int             // work units stepped per frame
+	genPhase  planet.Phase
+	genFrac   float32
+	genErr    string  // why the last generation failed
+	genHold   float32 // captures: stop stepping at this progress
+	globe     *globeView
+	globeOf   *planet.Planet
+	landRolls int  // presses of "Select random site"
+	outside   bool // the last click was on the uncovered part of the globe
+	legend    bool // the biome legend is open
+	facSel    int  // highlighted row of the Factions table
+	info      infoCache
+
+	pool    candidatePool // the character candidates
+	poolKey string        // what the pool was made from
+	pawnSel int           // highlighted roster position
+	names   [3]string     // first, nick, last drafts of the highlighted candidate
+	namesOf int           // the roster position the drafts belong to (-1 none)
+	nameErr string
+	drag    rosterDrag
+	load    *loadState // the colony is being built
+	// buildHook replaces the one-step builder (tests).
+	buildHook func(NewGame) (SimBuilder, error)
 
 	// initial is the signature of the defaults, to tell whether a later step
 	// was changed.
@@ -141,13 +173,20 @@ func (a *App) draft() *newGameState {
 // in the settings.
 func (a *App) newDraft() *newGameState {
 	g := a.settings.Gameplay
+	seedText := randomWorldPhrase()
+	if a.cfg.DefaultSeed != 0 {
+		seedText = strconv.FormatUint(a.cfg.DefaultSeed, 10)
+	}
 	ng := &newGameState{
 		storyteller: defaultStoryteller,
 		preset:      defaultPreset,
 		saveMode:    difficulty.ReloadAnytime,
 		tile:        -1,
 		season:      -1,
-		mapSize:     min(defaultMapSide, game.MaxEnabledSide),
+		mapSize:     defaultMapSideEnabled(),
+		namesOf:     -1,
+		world: planet.Params{SeedText: seedText, Coverage: defaultCoverage, Rain: 2, Temp: 2, Pop: 1,
+			Factions: faction.DefaultSlots()},
 	}
 	if p, ok := storyteller.ByKey(g.LastStoryteller); ok && !p.Hidden {
 		ng.storyteller = p.Key
@@ -229,6 +268,9 @@ func (ng *newGameState) refreshScenarios(a *App) {
 // goBack is the Back button and Escape on a setup screen: it pops one
 // screen, asking first when that would throw work away (NG-1 §1.5).
 func (a *App) goBack() {
+	if ng := a.ng; ng != nil && ng.load != nil {
+		return // the colony is being built: nothing to go back to
+	}
 	switch a.nav.screen() {
 	case screenScenarioEditor:
 		if ng := a.ng; ng != nil && ng.ed != nil && ng.ed.dirty() {
@@ -271,7 +313,9 @@ func (a *App) ngClick(id string) bool {
 		a.draft()
 		a.apply(intent{kind: intentPush, screen: screenScenario})
 	case strings.HasPrefix(id, "scen."), strings.HasPrefix(id, "sced."),
-		strings.HasPrefix(id, "story."), strings.HasPrefix(id, "diff."), strings.HasPrefix(id, "save."):
+		strings.HasPrefix(id, "story."), strings.HasPrefix(id, "diff."), strings.HasPrefix(id, "save."),
+		strings.HasPrefix(id, "world."), strings.HasPrefix(id, "land."), strings.HasPrefix(id, "pawns."),
+		strings.HasPrefix(id, "fac."), strings.HasPrefix(id, "wizard."):
 		// Kit widgets answer these through uiClick; a stale id does nothing.
 	default:
 		return false
@@ -329,9 +373,11 @@ func dimText() textStyle {
 // widgets of the screen's hook go on top. A window below the minimum gets
 // the "too small" note instead.
 func (a *App) drawNGFrame(screen *ebiten.Image, sw, sh int, title string) {
-	if !a.drawMenuDiorama(screen, sw, sh, 0.55) {
-		drawMenuBackdrop(screen, sw, sh)
+	var p *planet.Planet
+	if a.ng != nil {
+		p = a.ng.planet
 	}
+	a.drawSetupBackdrop(screen, sw, sh, p)
 	if tooSmall(sw, sh) {
 		drawTooSmall(screen, sw, sh)
 		return

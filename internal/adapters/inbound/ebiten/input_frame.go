@@ -95,8 +95,6 @@ func (a *App) textActive() bool {
 		return true
 	case a.search.open && a.colonyLive():
 		return true
-	case a.nav.screen() == screenWorldGen && a.wiz.editing:
-		return true
 	case a.uiTextEditing(): // a widget-kit text field (ui_textfield.go)
 		return true
 	}
@@ -173,8 +171,6 @@ func (a *App) handleTextInput() {
 		a.captureBinding() // controls_ui.go
 	case a.search.open:
 		a.searchTyping() // search_ui.go
-	case a.wiz.editing:
-		a.handleSeedInput()
 	}
 }
 

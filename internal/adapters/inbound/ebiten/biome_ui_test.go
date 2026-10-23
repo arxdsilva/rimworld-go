@@ -46,37 +46,21 @@ func TestPickerListsEveryBiomeAndStartPassesTheChoice(t *testing.T) {
 	var got []NewGame
 	a := appWith(&stubSim{w: 4, h: 4}, func(c *AppConfig) { c.DefaultSeed = 4242 }, &got)
 	a.finishBoot()
-	click(t, a, "menu.newgame")
-	for i := 0; i < 3; i++ {
-		click(t, a, "wizard.next")
+	toLanding(t, a)
+	// The old biome list is gone: the globe's tile decides the biome.
+	if hasWidget(a, "landing.biome.0") {
+		t.Fatal("the landing screen no longer lists biomes")
 	}
-	if a.nav.screen() != screenLanding {
-		t.Fatalf("screen = %s, want landing", a.nav.screen())
+	click(t, a, "land.random")
+	tile := a.ng.tile
+	if tile < 0 {
+		t.Fatal("Select random site must choose a tile")
 	}
-	n := 0
-	for _, b := range a.layoutButtons(a.sw, a.sh) {
-		if strings.HasPrefix(b.id, "landing.biome.") {
-			n++
-		}
-	}
-	if n != 12 {
-		t.Fatalf("%d biome cards, want 12", n)
-	}
-	desert, _ := biome.Parse("desert")
-	idx := -1
-	for i, b := range a.wiz.biomes {
-		if b.ID == desert {
-			idx = i
-		}
-	}
-	click(t, a, "landing.biome."+itoaN(idx))
-	if a.wiz.biome != desert {
-		t.Fatalf("biome = %v, want desert", a.wiz.biome)
-	}
+	want := a.ng.planet.Biome[tile]
 	click(t, a, "wizard.next")
 	click(t, a, "wizard.start")
-	if len(got) != 1 || got[0].Biome != desert || got[0].Seed != 4242 {
-		t.Fatalf("NewSim got %+v, want desert seed 4242", got)
+	if len(got) != 1 || got[0].Biome != want || got[0].Setup == nil || got[0].Setup.Tile != tile || got[0].Seed != got[0].Setup.Seed {
+		t.Fatalf("NewSim got %+v, want the tile's biome %v and its setup", got, want)
 	}
 }
 
@@ -105,25 +89,19 @@ func TestWorldStepSeedFieldAndDice(t *testing.T) {
 	click(t, a, "menu.newgame")
 	click(t, a, "wizard.next")
 	click(t, a, "wizard.next")
-	if a.wiz.seed != 99 {
-		t.Fatalf("seed = %d, want the configured 99", a.wiz.seed)
+	ng := a.draft()
+	if ng.world.SeedText != "99" {
+		t.Fatalf("seed = %q, want the configured 99", ng.world.SeedText)
 	}
 	click(t, a, "world.dice")
-	if a.wiz.seed == 99 || a.wiz.seed == 0 || a.wiz.seedText == "99" {
-		t.Fatalf("dice kept the seed: %d %q", a.wiz.seed, a.wiz.seedText)
+	if ng.world.SeedText == "99" || ng.world.SeedText == "" {
+		t.Fatalf("dice kept the seed: %q", ng.world.SeedText)
 	}
-	click(t, a, "world.seed")
-	if !a.wiz.editing {
-		t.Fatal("the seed field should take the keyboard")
-	}
-	a.wiz.seedText = "555"
+	ng.world.SeedText, ng.world.Coverage = tinySeed, 5
 	click(t, a, "world.generate")
-	if a.wiz.seed != 555 || a.nav.screen() != screenLanding {
-		t.Fatalf("generate: seed=%d screen=%s", a.wiz.seed, a.nav.screen())
-	}
-	rnd := newWizardState(AppConfig{})
-	if rnd.seed == 0 {
-		t.Fatal("a wizard with no default seed rolls one")
+	runUntil(t, a, func() bool { return a.nav.screen() == screenLanding })
+	if ng.world.SeedText != tinySeed || ng.planet == nil {
+		t.Fatalf("generate: seed=%q planet=%v", ng.world.SeedText, ng.planet != nil)
 	}
 }
 

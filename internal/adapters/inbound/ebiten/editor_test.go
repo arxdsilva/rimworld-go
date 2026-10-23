@@ -457,7 +457,7 @@ func TestEditorLoadShowsErrorsOfBrokenFiles(t *testing.T) {
 func TestEditorResetAndSeed(t *testing.T) {
 	t.Parallel()
 	a, f, _ := editorApp(t, false)
-	a.wiz.seed, a.wiz.seedText = 777, "777"
+	a.ng.world.SeedText = "777"
 	worldBefore := a.ng.world
 	ed := a.ng.ed
 	seed := ed.def.Seed
@@ -465,8 +465,8 @@ func TestEditorResetAndSeed(t *testing.T) {
 	if ed.def.Seed == seed {
 		t.Fatal("Randomize seed must change the scenario's seed")
 	}
-	if a.wiz.seed != 777 || a.wiz.seedText != "777" || a.ng.world.SeedText != worldBefore.SeedText {
-		t.Fatalf("the planet seed changed: wiz=%d world=%q", a.wiz.seed, a.ng.world.SeedText)
+	if a.ng.world.SeedText != "777" || a.ng.world.SeedText != worldBefore.SeedText {
+		t.Fatalf("the planet seed changed: world=%q", a.ng.world.SeedText)
 	}
 	ed.def.Name = "Scribble"
 	ed.def.Parts = nil
