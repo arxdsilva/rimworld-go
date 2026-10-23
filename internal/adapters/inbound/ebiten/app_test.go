@@ -77,8 +77,27 @@ func testApp(sim Simulation) *App {
 	})
 }
 
+// settleUI runs one Update on a menu screen (with a fake input if the test
+// has none) so the screen's kit widgets are declared and clickable by id.
+func settleUI(t *testing.T, a *App) {
+	t.Helper()
+	if s := a.nav.screen(); s == screenBoot || s == screenColony {
+		return
+	}
+	if a.src == nil {
+		fakeOn(a)
+	}
+	if _, ok := a.src.(*fakeInput); !ok {
+		return
+	}
+	if err := a.Update(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func click(t *testing.T, a *App, id string) {
 	t.Helper()
+	settleUI(t, a)
 	for _, b := range a.layoutHits(a.sw, a.sh) {
 		if b.id != id {
 			continue
@@ -306,36 +325,48 @@ func TestScenarioSelectionStaysOnScreen(t *testing.T) {
 	a := testApp(&stubSim{w: 4, h: 4})
 	a.finishBoot()
 	click(t, a, "menu.newgame")
-	click(t, a, "scenario.2")
-	if a.scenario != 2 || a.nav.screen() != screenScenario {
-		t.Fatalf("select scenario 2: idx=%d screen=%s", a.scenario, a.nav.screen())
+	click(t, a, "scen.row.gilded_expedition") // the third built-in
+	if sel := a.draft().selected(); sel == nil || sel.key != "gilded_expedition" || a.nav.screen() != screenScenario {
+		t.Fatalf("select the third scenario: sel=%+v screen=%s", a.draft().selected(), a.nav.screen())
 	}
 }
 
+// The setup screens' columns must not run under each other (the intent of
+// the old left-rail body origin): the scenario list clears the details,
+// the storyteller cards clear the centre and the difficulty column, and
+// everything sits inside the dialog's content.
 func TestBodyOriginClearsLeftRail(t *testing.T) {
 	t.Parallel()
 	a := testApp(&stubSim{w: 4, h: 4})
 	a.finishBoot()
 	click(t, a, "menu.newgame")
 
-	x, y := bodyOrigin(a.scenarioButtons(a.sw, a.sh), a.sh)
-	if y != bodyDefaultY {
-		t.Fatalf("scenario body y=%d, want %d", y, bodyDefaultY)
-	}
-	if x <= 56+260 {
-		t.Fatalf("scenario body x=%d, want right of 260px rail", x)
+	for _, size := range [][2]int{{1280, 720}, {1920, 1080}} {
+		_, _, content, _ := dialogFrame(size[0], size[1])
+		L := scenarioRects(content)
+		if L.right.X < L.left.right() || L.list.right() > L.left.right()+0.5 {
+			t.Fatalf("%v scenario details start at %v, list ends at %v", size, L.right.X, L.left.right())
+		}
+		if L.right.X < content.X+content.W*0.38 {
+			t.Fatalf("%v scenario details x=%v, want right of the 38%% list column", size, L.right.X)
+		}
+		if L.right.right() > content.right()+0.5 || L.buttons.bottom() > content.bottom()+0.5 {
+			t.Fatalf("%v scenario columns leave the content area", size)
+		}
+		S := storyRects(content)
+		if S.centre.X < S.left.right() || S.right.X < S.centre.right() || S.right.right() > content.right()+0.5 {
+			t.Fatalf("%v storyteller columns overlap: %+v", size, S)
+		}
 	}
 
 	click(t, a, "wizard.next")
-	x, _ = bodyOrigin(a.storytellerButtons(a.sw, a.sh), a.sh)
-	if x <= 56+280 {
-		t.Fatalf("storyteller body x=%d, want right of 280px rail", x)
+	if a.nav.screen() != screenStoryteller {
+		t.Fatalf("screen = %s, want storyteller", a.nav.screen())
 	}
-
 	click(t, a, "wizard.back")
 	click(t, a, "wizard.back")
 	click(t, a, "menu.load")
-	x, _ = bodyOrigin(a.loadButtons(a.sw, a.sh), a.sh)
+	x, _ := bodyOrigin(a.loadButtons(a.sw, a.sh), a.sh)
 	if x != bodyDefaultX {
 		t.Fatalf("load body x=%d, want %d (footer only)", x, bodyDefaultX)
 	}

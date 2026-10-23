@@ -139,7 +139,7 @@ func (a *App) uiBegin() {
 	u.mx, u.my = mx, my
 
 	a.uiRunModals()
-	u.layer = len(u.modals)
+	u.layer = 0 // screen widgets sit under every modal (modals declare their own layers above)
 	if a.nav.overlay() != overlayNone || a.nav.screen() == screenBoot {
 		return
 	}

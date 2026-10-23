@@ -115,8 +115,11 @@ type App struct {
 	hint       string
 	shouldQuit bool
 
-	scenario    int
-	storyteller int
+	// ng is the New Colony wizard's draft (newgame_state.go); nil outside
+	// the wizard. ngUnsaved are the custom scenarios made this session and
+	// not saved to a file.
+	ng          *newGameState
+	ngUnsaved   unsavedDefs
 	animalsWild bool               // the Animals tab shows the Wild list
 	wildRows    []game.WildlifeRow // g.Wildlife(), read once per tick
 	wildTick    clock.Tick
@@ -126,7 +129,6 @@ type App struct {
 	settings   config.Settings
 	optionsTab string
 	snd        soundDirector // what is heard (sound_director.go)
-	difficulty int
 
 	simsStarted                    int
 	renderer                       *Renderer
@@ -548,11 +550,8 @@ func (a *App) applyClick(id string) {
 		a.apply(intent{kind: intentPush, screen: screenLoad})
 	case id == "menu.continue":
 		a.refreshSlots()
-		for i, sl := range a.slots {
-			if sl.Err == "" {
-				a.loadSlot(i)
-				break
-			}
+		if i := a.newestSlot(); i >= 0 { // the most recent save, commitment ones too
+			a.loadSlot(i)
 		}
 	case id == "pawn.draft":
 		a.toggleDraft()
@@ -599,24 +598,6 @@ func (a *App) applyClick(id string) {
 	case id == "inspector.log":
 		a.inspectTab = "log"
 	case a.applyWizardClick(id):
-	case id == "scenario.0":
-		a.scenario = 0
-	case id == "scenario.1":
-		a.scenario = 1
-	case id == "scenario.2":
-		a.scenario = 2
-	case id == "storyteller.0":
-		a.storyteller = 0
-	case id == "storyteller.1":
-		a.storyteller = 1
-	case id == "storyteller.2":
-		a.storyteller = 2
-	case id == "difficulty.0":
-		a.difficulty = 0
-	case id == "difficulty.1":
-		a.difficulty = 1
-	case id == "difficulty.2":
-		a.difficulty = 2
 	default:
 		a.apply(a.clickIntent(id))
 	}
@@ -656,7 +637,7 @@ func (a *App) apply(in intent) {
 	case intentPush:
 		a.nav.push(frame{screen: in.screen})
 	case intentBack:
-		a.nav.pop()
+		a.goBack() // newgame_state.go: confirms before it discards a setup
 	case intentStartGame:
 		a.startGame()
 	case intentQuit:
@@ -704,6 +685,7 @@ func (a *App) startGame() {
 	a.startSession(sim)
 	a.saveSlot = newSlotName()
 	a.autosaveDay = 0
+	a.ng = nil // the setup is done: the wizard's draft goes with it
 }
 
 // startSession installs a simulation (new or loaded) as the colony.
@@ -745,6 +727,8 @@ func (a *App) Draw(screen *ebiten.Image) {
 		a.drawMainMenu(screen, sw, sh)
 	case screenScenario:
 		a.drawScenario(screen, sw, sh)
+	case screenScenarioEditor:
+		a.drawScenarioEditor(screen, sw, sh)
 	case screenStoryteller:
 		a.drawStoryteller(screen, sw, sh)
 	case screenWorldGen:

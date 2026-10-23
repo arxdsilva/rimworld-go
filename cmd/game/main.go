@@ -14,6 +14,7 @@ import (
 	uiadapter "rimworld-go/internal/adapters/inbound/ebiten"
 	"rimworld-go/internal/adapters/outbound/ebitenaudio"
 	"rimworld-go/internal/adapters/outbound/filesave"
+	"rimworld-go/internal/adapters/outbound/scenariofile"
 	"rimworld-go/internal/adapters/outbound/settingsfile"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/economy/item"
@@ -41,7 +42,7 @@ func main() {
 	hour := flag.Int("hour", -1, "dev: jump to this hour (0-23) of the scenario's day, or the next day's if past")
 	captureFrames := flag.Int("capture-frames", 0, "dev: record this many consecutive frames (PATH_NNN.png) instead of one still")
 	captureSpeed := flag.Int("capture-speed", 1, "dev: game speed (1-3) while recording -capture-frames")
-	captureUI := flag.String("capture-ui", "", "dev: UI state for -capture: picker | wild | trough | inspector | architect | orders | bills | pawn | combat | melee | follow | grow | corridor | crowd | lategame | weather | grass | burial | roofs | roofs-overlay | home | carpet | plant | item | pawnactions | paused-stockpile | move | copy | menu | credits | options | options-graphics | options-gameplay | options-access | zones | paths | log | frame | fence | forbid | zoo | controls | search | rooms | multiselect | drawstyle | hideui")
+	captureUI := flag.String("capture-ui", "", "dev: UI state for -capture: picker | wild | trough | inspector | architect | orders | bills | pawn | combat | melee | follow | grow | corridor | crowd | lategame | weather | grass | burial | roofs | roofs-overlay | home | carpet | plant | item | pawnactions | paused-stockpile | move | copy | menu | credits | options | options-graphics | options-gameplay | options-access | zones | paths | log | frame | fence | forbid | zoo | controls | search | rooms | multiselect | drawstyle | hideui | scenario | scenario-editor | scenario-editor-addpart | storyteller | difficulty-custom")
 	captureTimelapse := flag.Int("capture-timelapse", 0, "dev: with -capture-frames, step this many sim ticks per recorded frame (a time-lapse)")
 	noAudio := flag.Bool("noaudio", false, "dev: run without sound")
 	flag.Parse()
@@ -71,6 +72,7 @@ func main() {
 		Capture:      shot,
 		Saves:        saveHooks(),
 		Settings:     settingsHooks(shot != nil),
+		Scenarios:    scenarioStore(shot != nil),
 		Window: func(fullscreen, vsync bool) {
 			ebiten.SetFullscreen(fullscreen)
 			ebiten.SetVsyncEnabled(vsync)
@@ -734,4 +736,30 @@ func forbidScene(g *game.Game, cx, cy int) {
 			g.Enqueue(command.Command{Kind: command.SetForbidden, Target: uint64(id), Enabled: true})
 		}
 	}
+}
+
+// scenarioFiles adapts the scenario file store to the UI's port (NG-1 §5.7).
+type scenarioFiles struct{ scenariofile.Store }
+
+func (s scenarioFiles) List() ([]uiadapter.ScenarioFile, error) {
+	fs, err := s.Store.List()
+	out := make([]uiadapter.ScenarioFile, 0, len(fs))
+	for _, f := range fs {
+		out = append(out, uiadapter.ScenarioFile{Name: f.Name, Modified: f.Modified.Format("2006-01-02 15:04")})
+	}
+	return out, err
+}
+
+// scenarioStore is where custom scenarios live; captures get none so they
+// never read the player's files.
+func scenarioStore(capturing bool) uiadapter.ScenarioStore {
+	if capturing {
+		return nil
+	}
+	s, err := scenariofile.Default()
+	if err != nil {
+		log.Printf("custom scenarios unavailable: %v", err)
+		return nil
+	}
+	return scenarioFiles{s}
 }

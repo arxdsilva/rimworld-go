@@ -13,119 +13,10 @@ import (
 	"rimworld-go/internal/domain/world/biome"
 )
 
-var scenarios = []struct {
-	name, desc, summary string
-}{
-	{
-		name:    "Emergency landing",
-		desc:    "A small crew survives a hard landing with leftover gear and a working fabricator.",
-		summary: "3 colonists  |  mid-tech  |  modest supplies",
-	},
-	{
-		name:    "Frontier camp",
-		desc:    "A low-tech group arrives with tools, seeds, and little else.",
-		summary: "5 colonists  |  low-tech  |  scarce supplies",
-	},
-	{
-		name:    "Sole survivor",
-		desc:    "One colonist, a wreck, and a long walk to safety.",
-		summary: "1 colonist  |  mixed tech  |  hard start",
-	},
-}
-
-var storytellers = []struct {
-	name, desc string
-}{
-	{"Measured tide", "Incidents ramp as the colony grows. Predictable pressure."},
-	{"Quiet years", "Fewer threats, more room to build. Forgiving pacing."},
-	{"Wild dice", "Quiet stretches and sudden spikes. High variance."},
-}
-
-var difficulties = []string{"Forgiving", "Standard", "Harsh"}
-
 var stubPawns = []string{
 	"Mira   grower / cook     no violence incapacity",
 	"Hal    constructor       modest shooting",
 	"Rin    researcher        frail, good intellectual",
-}
-
-func (a *App) scenarioButtons(sw, sh int) []button {
-	specs := make([]buttonSpec, 0, 5)
-	for i, s := range scenarios {
-		specs = append(specs, buttonSpec{
-			id:       "scenario." + itoa(i),
-			label:    s.name,
-			selected: a.scenario == i,
-			w:        260,
-			h:        40,
-		})
-	}
-	left := stackButtons(56, 120, 260, 40, 8, specs)
-	left = append(left, button{
-		id:       "scenario.edit",
-		label:    "Create / edit custom",
-		x:        56,
-		y:        300,
-		w:        260,
-		h:        32,
-		disabled: true,
-		reason:   "not implemented",
-	})
-	return append(left, a.footer(sw, sh, "Next", "wizard.next")...)
-}
-
-func (a *App) drawScenario(screen *ebiten.Image, sw, sh int) {
-	s := scenarios[a.scenario]
-	a.paintMenu(screen, sw, sh, "New Game — Scenario", []string{
-		s.name,
-		s.desc,
-		s.summary,
-	}, a.scenarioButtons(sw, sh))
-}
-
-func (a *App) storytellerButtons(sw, sh int) []button {
-	specs := make([]buttonSpec, 0, 6)
-	for i, s := range storytellers {
-		specs = append(specs, buttonSpec{
-			id:       "storyteller." + itoa(i),
-			label:    s.name,
-			selected: a.storyteller == i,
-			w:        280,
-			h:        40,
-		})
-	}
-	for i, name := range difficulties {
-		specs = append(specs, buttonSpec{
-			id:       "difficulty." + itoa(i),
-			label:    "Difficulty: " + name,
-			selected: a.difficulty == i,
-			w:        280,
-			h:        32,
-		})
-	}
-	left := stackButtons(56, 120, 280, 40, 8, specs)
-	left = append(left, button{
-		id:       "storyteller.custom",
-		label:    "Customize",
-		x:        56,
-		y:        420,
-		w:        280,
-		h:        32,
-		disabled: true,
-		reason:   "not implemented",
-	})
-	return append(left, a.footer(sw, sh, "Next", "wizard.next")...)
-}
-
-func (a *App) drawStoryteller(screen *ebiten.Image, sw, sh int) {
-	s := storytellers[a.storyteller]
-	a.paintMenu(screen, sw, sh, "Storyteller & Difficulty", []string{
-		"Selected: " + s.name,
-		s.desc,
-		"",
-		"Preset: " + difficulties[a.difficulty],
-		"Custom threat/economy/mood sliders are not wired yet.",
-	}, a.storytellerButtons(sw, sh))
 }
 
 // wizardState is what the New Game wizard has chosen so far.
@@ -211,6 +102,9 @@ func (a *App) handleSeedInput() {
 // applyWizardClick handles the world and landing screens' buttons; it
 // reports whether id was one of them.
 func (a *App) applyWizardClick(id string) bool {
+	if a.ngClick(id) { // New Colony and the scenario, storyteller and difficulty screens (newgame_state.go)
+		return true
+	}
 	switch {
 	case id == "world.seed":
 		a.wiz.editing = true

@@ -58,6 +58,7 @@ func (c *Capture) speed() speed {
 const captureFrames = 30
 
 type captureState struct {
+	opened  int // menu-capture clicks applied so far
 	started bool
 	frames  int
 	saved   int  // sequence frames written
@@ -209,6 +210,13 @@ var menuCaptures = map[string][]string{
 	"options-gameplay": {"menu.options", "options.tab.gameplay"},
 	"options-access":   {"menu.options", "options.tab.access"},
 	"controls":         {"menu.options", "options.tab.controls"},
+	// NG-1 setup screens. Each click runs on its own tick, so the screen
+	// it opened has declared its widgets before the next id is clicked.
+	"scenario":                {"menu.newgame"},
+	"scenario-editor":         {"menu.newgame", "scen.edit"},
+	"scenario-editor-addpart": {"menu.newgame", "scen.edit", "sced.add"},
+	"storyteller":             {"menu.newgame", "wizard.next"},
+	"difficulty-custom":       {"menu.newgame", "wizard.next", "diff.custom"},
 }
 
 // tickMenuCapture shoots a menu screen without starting a game: Ticks
@@ -220,8 +228,13 @@ func (a *App) tickMenuCapture(open []string) {
 		if a.nav.screen() == screenBoot {
 			a.finishBoot()
 		}
-		for _, id := range open {
-			a.applyClick(id)
+		if a.capture.opened < len(open) {
+			if a.cursor == nil {
+				a.cursor = &[2]int{-100, -100} // no hover state in the shot
+			}
+			a.applyClick(open[a.capture.opened])
+			a.capture.opened++
+			return
 		}
 		a.menuTick = uint64(max(c.Ticks, 0))
 		a.capture.started = true
