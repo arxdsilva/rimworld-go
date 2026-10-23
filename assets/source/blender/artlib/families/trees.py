@@ -233,7 +233,7 @@ def _jungle(i):
 
 
 def build():
-    """Every tree sprite, in the order plant.build() used to render them."""
+    """Every tree sprite (build.py family `trees`; output keys stay plant/tree_*)."""
     out = []
     for kind in ("oak", "birch", "pine"):
         for i in range(3):
@@ -241,6 +241,10 @@ def build():
             if kind != "pine":
                 out.append(_tree(kind, i, "autumn", "tree_%s_%02d_autumn" % (kind, i)))
                 out.append(_tree(kind, i, "bare", "tree_%s_%02d_bare" % (kind, i)))
+    out += build_biome()
+    # legacy aliases (overlay.py's tree icon still reads tree_00)
+    for i in range(3):
+        out.append(_tree("oak", i, "summer", "tree_%02d" % i))
     return out
 
 

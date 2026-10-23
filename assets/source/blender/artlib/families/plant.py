@@ -19,7 +19,6 @@ import numpy as np
 from mathutils import Matrix, Vector
 
 from .. import stage as S
-from . import trees
 from .plant_base import CX, CY, _Z, _asset, _ball, _blade, _cluster, _leaf, _limb, _top
 from .trees import _tree  # noqa: F401  (scenes/menu.py calls plant._tree)
 
@@ -573,7 +572,7 @@ def _build_biome_plants():
 
 # ------------------------------------------------------------------ build
 def build():
-    out = trees.build()
+    out = []
     for i in range(4):
         out.append(_bush(i))
     for i in range(3):
@@ -588,15 +587,12 @@ def build():
             for v in range(3):
                 out.append(_crop(sp, st, v, "%s_%s_v%d" % (sp, st, v)))
     # legacy aliases, to be deleted by the lead once the renderer switches
-    for i in range(3):
-        out.append(_tree("oak", i, "summer", "tree_%02d" % i))
     for i in range(2):
         out.append(_alias_berry(i))
     out.append(_crop("radish", "sown", 0, "crop_sown"))
     for sp in CROPS:
         for st in ("young", "mature", "harvestable"):
             out.append(_crop(sp, st, 1, "%s_%s" % (sp, st)))
-    out += trees.build_biome()
     out += _build_biome_plants()
     return out
 
