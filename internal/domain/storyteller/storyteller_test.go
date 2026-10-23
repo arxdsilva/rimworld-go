@@ -45,7 +45,7 @@ func TestProfilesTable(t *testing.T) {
 		if len(paras) < 2 || len(paras) > 3 {
 			t.Errorf("%s bio has %d paragraphs, want 2-3", p.Key, len(paras))
 		}
-		if p.Portrait != "ui/portrait/"+p.Key {
+		if p.Portrait != "ui_portrait/"+p.Key { // the art catalog key (metadata/ui_portrait)
 			t.Errorf("%s portrait %q", p.Key, p.Portrait)
 		}
 		if p.Hidden {
