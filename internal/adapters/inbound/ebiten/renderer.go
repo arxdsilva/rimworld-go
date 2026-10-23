@@ -79,14 +79,6 @@ const (
 	zoomStep  = 0.1
 )
 
-// Presentation animation is paced by Update frames (Ebitengine default
-// 60 TPS), never by authoritative simulation ticks. Periods are chosen
-// so a full idle/walk cycle is about a second at normal zoom.
-const (
-	idleAnimPeriod    = 12
-	walkAnimPeriod    = 8
-	walkSustainFrames = 20
-)
 
 // speed is a presentation-only game-speed tier. It controls how often
 // the simulation advances; it never changes simulation rules.
@@ -168,7 +160,6 @@ type Renderer struct {
 	wheelTaken bool                 // the mouse wheel scrolled a log this frame
 	speed      speed
 	cam        camera
-	pack       *atlas
 	art        *artCatalog
 
 	// present is a presentation-only frame counter. Animation reads it;
@@ -264,8 +255,8 @@ type Renderer struct {
 // gets back, so it turns the cache on for every simulation it draws.
 type viewCacher interface{ SetViewCache(on bool) }
 
-// New returns a Renderer for sim. Sprites are optional: call LoadPack
-// after New. Without a pack, pawns fall back to colored rectangles.
+// New returns a Renderer for sim. Art is optional (the app sets r.art)
+// after New. Without art, pawns fall back to colored rectangles.
 func New(sim Simulation) *Renderer {
 	vc, cached := sim.(viewCacher)
 	if cached {
@@ -284,30 +275,6 @@ func New(sim Simulation) *Renderer {
 		pawnClr:       color.RGBA{R: 220, G: 60, B: 60, A: 255},
 		selectClr:     color.RGBA{R: 250, G: 220, B: 60, A: 255},
 	}
-}
-
-// LoadPack discovers and decodes the vendor sprite pack. Only colonist
-// idle/walk, ground, rocks, and the crosshair are uploaded as textures.
-func (r *Renderer) LoadPack(root string) error {
-	p, err := DiscoverPack(root)
-	if err != nil {
-		return err
-	}
-	a, err := loadAtlas(p)
-	if err != nil {
-		return err
-	}
-	r.pack = a
-	return nil
-}
-
-// LoadDefaultPack locates the vendor pack from cwd/parents and loads it.
-func (r *Renderer) LoadDefaultPack() error {
-	root, err := LocatePack()
-	if err != nil {
-		return err
-	}
-	return r.LoadPack(root)
 }
 
 func (r *Renderer) advance() {
@@ -552,13 +519,7 @@ func (r *Renderer) drawTerrain(screen *ebiten.Image, sw, sh int, tile float64) {
 			if !visible(sx, sy, float32(tile), float32(tile), sw, sh) {
 				continue
 			}
-			if g := r.pack.groundAt(x, y); g != nil {
-				drawImage(screen, g, float64(sx), float64(sy), tile, tile, false)
-			}
-			if rock := r.pack.rockAt(x, y); rock != nil {
-				pad := tile * 0.15
-				drawImage(screen, rock, float64(sx)+pad, float64(sy)+pad, tile-2*pad, tile-2*pad, false)
-			}
+			vector.FillRect(screen, sx, sy, float32(tile), float32(tile), fallbackGround, false)
 		}
 	}
 }
@@ -625,40 +586,15 @@ func lerp(a, b int, t float64) float64 {
 	return float64(a) + (float64(b)-float64(a))*t
 }
 
-func (r *Renderer) drawPawn(screen *ebiten.Image, p game.PawnView, sx, sy float32, tile float64) {
-	ss := r.pack.colonist(p.ID)
-	vis := r.last[p.ID]
-	inTransit := vis.fromX != p.X || vis.fromY != p.Y
+// fallbackGround is the terrain colour when no art is loaded.
+var fallbackGround = color.RGBA{R: 74, G: 66, B: 50, A: 255}
 
-	if ss == nil {
-		vector.FillRect(screen, sx+2, sy+2, float32(tile)-4, float32(tile)-4, r.pawnClr, false)
-		return
-	}
-	frames := ss.idle
-	period := uint64(idleAnimPeriod)
-	if len(ss.walk) > 0 && (inTransit || walkHold(r.present, vis.lastMove, walkSustainFrames)) {
-		frames = ss.walk
-		period = uint64(walkAnimPeriod)
-	}
-	img := animFrame(frames, r.present, period)
-	if img == nil {
-		vector.FillRect(screen, sx+2, sy+2, float32(tile)-4, float32(tile)-4, r.pawnClr, false)
-		return
-	}
-	// Side-view characters are taller than a tile; sit them on the cell.
-	h := tile * 1.7
-	w := h * float64(img.Bounds().Dx()) / float64(img.Bounds().Dy())
-	x := float64(sx) + (tile-w)/2
-	y := float64(sy) + tile - h
-	drawImage(screen, img, x, y, w, h, vis.flip)
+// drawPawn is the no-art fallback: a plain coloured square.
+func (r *Renderer) drawPawn(screen *ebiten.Image, p game.PawnView, sx, sy float32, tile float64) {
+	vector.FillRect(screen, sx+2, sy+2, float32(tile)-4, float32(tile)-4, r.pawnClr, false)
 }
 
 func (r *Renderer) drawSelection(screen *ebiten.Image, sx, sy float32, tile float64) {
-	if r.pack != nil && r.pack.crosshair != nil {
-		pad := tile * 0.05
-		drawImage(screen, r.pack.crosshair, float64(sx)+pad, float64(sy)+pad, tile-2*pad, tile-2*pad, false)
-		return
-	}
 	vector.StrokeRect(screen, sx+1, sy+1, float32(tile)-2, float32(tile)-2, 2, r.selectClr, false)
 }
 

@@ -1,39 +1,23 @@
 package ebiten
 
 import (
-	"image"
-	"image/color"
 	"testing"
+
+	ebiten "github.com/hajimehoshi/ebiten/v2"
+
+	"rimworld-go/internal/application/game"
 )
 
-func TestCropAlphaTrimsTransparentPadding(t *testing.T) {
-	src := image.NewNRGBA(image.Rect(0, 0, 10, 10))
-	for y := 3; y < 6; y++ {
-		for x := 2; x < 5; x++ {
-			src.SetNRGBA(x, y, color.NRGBA{R: 255, A: 255})
-		}
+// TestRendererWithoutArtDrawsFallback: with no art catalog (the vendor
+// pack is gone, PLAY-010) the colony still draws a frame: plain terrain
+// and a coloured square per pawn, selection included, without panicking.
+func TestRendererWithoutArtDrawsFallback(t *testing.T) {
+	t.Parallel()
+	r := New(&stubSim{w: 6, h: 4, pawns: []game.PawnView{{ID: 1, X: 2, Y: 2, Status: "alive"}}})
+	if r.art != nil {
+		t.Fatal("a fresh renderer has no art")
 	}
-	got := cropAlpha(src)
-	if got.Bounds().Dx() != 3 || got.Bounds().Dy() != 3 {
-		t.Fatalf("cropped = %v, want 3x3", got.Bounds())
-	}
-}
-
-func TestScaleNRGBACapsMaxDimension(t *testing.T) {
-	src := image.NewNRGBA(image.Rect(0, 0, 200, 100))
-	for y := 0; y < 100; y++ {
-		for x := 0; x < 200; x++ {
-			src.SetNRGBA(x, y, color.NRGBA{R: 10, A: 255})
-		}
-	}
-	got := scaleNRGBA(src, 50)
-	if got.Bounds().Dx() != 50 || got.Bounds().Dy() != 25 {
-		t.Fatalf("scaled = %dx%d, want 50x25", got.Bounds().Dx(), got.Bounds().Dy())
-	}
-}
-
-func TestAnimFrameWraps(t *testing.T) {
-	if animFrame(nil, 10, 1) != nil {
-		t.Fatal("empty frames should yield nil")
-	}
+	r.cam.zoom = 1
+	r.hasSelect, r.selected = true, 1
+	r.Draw(ebiten.NewImage(320, 240))
 }

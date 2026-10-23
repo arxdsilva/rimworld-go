@@ -239,18 +239,9 @@ func (a *App) drawColonistPortraits(screen *ebiten.Image, sh int) {
 }
 
 func (a *App) drawPawnPortrait(screen *ebiten.Image, p game.PawnView, x, y, w, h float64) {
-	if a.renderer.art != nil && a.renderer.drawPawnPortraitArt(screen, p, x, y, w, h) {
-		return
+	if a.renderer.art != nil {
+		a.renderer.drawPawnPortraitArt(screen, p, x, y, w, h)
 	}
-	if a.renderer.pack == nil {
-		return
-	}
-	ss := a.renderer.pack.colonist(p.ID)
-	if ss == nil {
-		return
-	}
-	img := animFrame(ss.idle, a.renderer.present, uint64(idleAnimPeriod))
-	drawImage(screen, img, x, y, w, h, false)
 }
 
 func (a *App) colonyChromeHit(mx, my, sw, sh int) bool {

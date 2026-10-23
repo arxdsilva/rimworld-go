@@ -65,15 +65,14 @@ type NewGame struct {
 // AppConfig is the composition-root wiring for the interactive client.
 type AppConfig struct {
 	Version string
-	Assets  string // empty: locate the vendor pack from cwd
 	NewSim  SimFactory
 	// DefaultSeed pre-fills the wizard's seed (0: a random one).
 	DefaultSeed uint64
 	// DefaultBiome is the biome the landing picker starts on.
 	DefaultBiome biome.ID
-	LoadPack     func() (*atlas, error)
 	// LoadArt loads the original generated sprites (assets/metadata).
-	// Nil: locate from cwd. When it fails the vendor pack is used.
+	// Nil: locate from cwd. When it fails the renderer draws plain
+	// coloured fallbacks.
 	LoadArt    func() (*artCatalog, error)
 	LoadSplash func() (*ebiten.Image, error)
 	// Scenarios stores custom scenarios (nil: custom scenarios unavailable).
@@ -112,10 +111,9 @@ type App struct {
 
 	sw, sh     int
 	bootFrames int
-	packTried  bool
-	pack       *atlas
+	artTried   bool
 	art        *artCatalog
-	packWarn   string
+	artWarn    string
 	splash     *ebiten.Image
 	menu       *menuDiorama
 	menuTried  bool
@@ -207,19 +205,6 @@ func NewApp(cfg AppConfig) *App {
 	if cfg.Version == "" {
 		cfg.Version = "dev"
 	}
-	if cfg.LoadPack == nil {
-		assets := cfg.Assets
-		cfg.LoadPack = func() (*atlas, error) {
-			if assets != "" {
-				return loadAtlasFromRoot(assets)
-			}
-			root, err := LocatePack()
-			if err != nil {
-				return nil, err
-			}
-			return loadAtlasFromRoot(root)
-		}
-	}
 	if cfg.LoadArt == nil {
 		cfg.LoadArt = func() (*artCatalog, error) {
 			root, err := LocateArt()
@@ -264,14 +249,6 @@ func NewApp(cfg AppConfig) *App {
 	a.loadSettings()
 	a.applySettings()
 	return a
-}
-
-func loadAtlasFromRoot(root string) (*atlas, error) {
-	p, err := DiscoverPack(root)
-	if err != nil {
-		return nil, err
-	}
-	return loadAtlas(p)
 }
 
 // Update routes input, advances boot/colony, and applies screen intents.
@@ -451,8 +428,8 @@ func (a *App) tick() {
 func (a *App) tickBoot() {
 	a.bootFrames++
 	phase := a.bootPhase()
-	if phase >= bootAssetPhase && !a.packTried {
-		a.loadPack()
+	if phase >= bootAssetPhase && !a.artTried {
+		a.loadAssets()
 	}
 	if phase >= len(bootPhases) {
 		a.finishBoot()
@@ -463,25 +440,14 @@ func (a *App) bootPhase() int {
 	return a.bootFrames / bootFramesPerPhase
 }
 
-func (a *App) loadPack() {
-	a.packTried = true
-	if a.cfg.LoadPack != nil {
-		p, err := a.cfg.LoadPack()
-		if err != nil {
-			a.packWarn = err.Error()
-		} else {
-			a.pack = p
-		}
-	}
+func (a *App) loadAssets() {
+	a.artTried = true
 	if a.cfg.LoadArt != nil {
 		art, err := a.cfg.LoadArt()
 		if err != nil {
-			if a.packWarn == "" {
-				a.packWarn = err.Error()
-			}
+			a.artWarn = err.Error()
 		} else {
 			a.art = art
-			a.packWarn = "" // the vendor pack is only a fallback for missing art
 		}
 	}
 	a.loadSplash()
@@ -489,8 +455,8 @@ func (a *App) loadPack() {
 }
 
 func (a *App) finishBoot() {
-	if !a.packTried {
-		a.loadPack()
+	if !a.artTried {
+		a.loadAssets()
 	}
 	a.nav.reset(frame{screen: screenMainMenu})
 }
@@ -737,7 +703,6 @@ func (a *App) startSession(sim Simulation) {
 	a.inspectTab = "character"
 	a.renderer = New(sim)
 	a.renderer.soundHas = a.cfg.Sound.Has // animal voices fall back by what exists
-	a.renderer.pack = a.pack
 	a.renderer.art = a.art
 	a.syncRenderer()
 	a.nav.reset(frame{screen: screenColony})
@@ -839,8 +804,8 @@ func (a *App) drawHoverHint(screen *ebiten.Image, sw, sh int) {
 	if a.hint != "" {
 		a.drawBottomHint(screen, a.hint, sh)
 	}
-	if a.packWarn != "" && a.nav.screen() == screenMainMenu {
-		debugPrintAt(screen, "asset warning: "+a.packWarn, 16, sh-40)
+	if a.artWarn != "" && a.nav.screen() == screenMainMenu {
+		debugPrintAt(screen, "asset warning: "+a.artWarn, 16, sh-40)
 	}
 }
 

@@ -63,3 +63,6 @@ Main colony HUD still debug text, plus a small idle portrait when a pawn is sele
 
 - Freeze ART Wave 0 and replace this pack with original top-down art.
 - Optional: decode remaining extras (bullet/muzzle) when projectiles exist.
+
+## Addendum (PLAY-010, 2026-10-23): removed
+The vendor pack (`assets/Free 2D Animated Vector Game Character Sprites/`, 203 MB) and its loader (`pack.go`, the `atlas` in `sprites.go`, `AppConfig.LoadPack`, the `-assets` flag) are gone. It was only drawn when the generated art failed to load; that case now draws plain coloured terrain and pawn squares (`TestRendererWithoutArtDrawsFallback`). The folder is still in git history. AGENTS.md now requires deleting unused assets in the change that leaves them unused.

@@ -1135,7 +1135,7 @@ resolve metadata conflicts, and update the catalog.
 -   [x] soil/stone/water (domain terrain drawn in-game: soil/rich soil/gravel/stone/smooth stone variants with soft edge transitions, natural rock walls with baked corners tinted per stone (ART-015); NG-1 adds shallow and deep water with a ripple shader, mud and dirt tracks, ART-014)
 -   [x] wall/door/floor (wood/stone/steel walls with 16 masks plus baked inner corners, 47 per material; wood and steel doors; wood and stone floors; all drawn in-game, ART-015)
 -   [x] blueprint/frame (blueprint overlay on every frame, scaffold once wood is delivered)
--   [x] pawn base: original compositional pawns (body/pants/shirt/vest/hair layers, 4 facings, EntityID-stable tints) with an 8-frame Blender walk cycle synced to tile progress, idle breathing, work swings, lying/in-bed/carried poses; vendor pack kept as fallback
+-   [x] pawn base: original compositional pawns (body/pants/shirt/vest/hair layers, 4 facings, EntityID-stable tints) with an 8-frame Blender walk cycle synced to tile progress, idle breathing, work swings, lying/in-bed/carried poses
 -   [x] first hair/apparel (3 hairstyles, pants/shirt/vest, runtime tint masks, in-game)
 -   [-] basic resources/items (wood/food drawn in-game; steel/stone generated, no domain items yet)
 -   [x] selection/designation markers (original selection brackets, harvest designation, stockpile zone in-game; cut/mine glyphs ready for when those orders exist)

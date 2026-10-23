@@ -29,7 +29,7 @@ commands via `Enqueue`. Domain code does not import this package.
   (`sound_signals.go`) behind the consumer-owned `Sound` port (`sound.go`)
 - `Renderer` — colony camera, speed tiers, selection, world draw, `Enqueue`
 - original art catalog (`assets/metadata` + generated PNGs, tint masks) and
-  its draw path (`art.go`, `draw_art.go`); vendor sprite atlas as fallback
+  its draw path (`art.go`, `draw_art.go`); plain coloured fallbacks without art
 - dev screenshot capture (`capture.go`, `game -capture`)
 - presentation animation / tile lerp clocks
 
@@ -41,7 +41,7 @@ commands via `Enqueue`. Domain code does not import this package.
 - `internal/domain` types that appear on that read model (`clock`,
   `entity`, `schedule`, `command`)
 - NG-1 setup types the wizard draft and read models carry: `domain/world/planet` and `site` (a finished, read-only planet), `scenario`, `difficulty`, `storyteller`, `faction`, `pawn/pawngen`, `pawn/look`; the wizard builds a `game.Setup` from them and never reaches into game internals
-- Ebitengine, image/png, OS path lookup for generated art, the vendor pack and menu splash
+- Ebitengine, image/png, OS path lookup for generated art and the menu splash
 - `internal/platform/config` (the settings type)
 - `internal/platform/input` (the key-binding registry and resolver)
 
@@ -201,7 +201,8 @@ open a window. Existing renderer unit tests stay headless.
 ## Original art (ART-006)
 
 - When `assets/metadata` exists the renderer draws generated art only
-  (`drawArt`); the vendor pack is used only if art loading fails.
+  (`drawArt`); if art loading fails it draws plain coloured terrain and
+  pawn squares (the vendor pack was removed in PLAY-010).
 - Placement: sprite top-left = footprint top-left - `origin_px` * (tile/128).
 - Draw order: terrain -> grass decals -> floors -> zones/blueprint -> objects
   and pawns sorted by row then column -> designations -> selection -> daylight.

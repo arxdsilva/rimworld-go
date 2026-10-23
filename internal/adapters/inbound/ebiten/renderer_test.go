@@ -99,15 +99,3 @@ func TestNextVisualLerpsThenSettles(t *testing.T) {
 	}
 }
 
-func TestWalkSustainHoldsAfterMove(t *testing.T) {
-	t.Parallel()
-	if !walkHold(20, 10, walkSustainFrames) {
-		t.Fatal("expected walk shortly after lastMove")
-	}
-	if walkHold(10+walkSustainFrames, 10, walkSustainFrames) {
-		t.Fatal("walk should end after sustain window")
-	}
-	if walkHold(50, 0, walkSustainFrames) {
-		t.Fatal("never-moved pawn should idle")
-	}
-}

@@ -23,7 +23,6 @@ func (s *worldSim) World() game.WorldView { return s.w }
 func appWith(sim Simulation, mod func(*AppConfig), got *[]NewGame) *App {
 	cfg := AppConfig{
 		Version:       "test",
-		LoadPack:      func() (*atlas, error) { return nil, nil },
 		LoadArt:       func() (*artCatalog, error) { return nil, nil },
 		LoadSplash:    func() (*ebiten.Image, error) { return nil, nil },
 		LoadMenuScene: func() (*menuDiorama, error) { return nil, nil },

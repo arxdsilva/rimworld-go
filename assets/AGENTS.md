@@ -4,30 +4,6 @@ Presentation-only art. Nothing in this tree is authoritative simulation
 state. The renderer and other inbound adapters consume these files;
 `internal/domain` must not.
 
-## Vendor pack (first playable)
-
-`Free 2D Animated Vector Game Character Sprites/` is a CC0 pack by
-Raphael Gonçalves (Rgsdev). License: `License.txt`.
-
-It is a **side-view** compositional character kit (idle/walk/jump/hit/
-death plus environment tiles). It is not the long-term top-down art
-bible in `.cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md`. The ebiten
-adapter uses it so pawns and ground are readable now; original
-orthographic colony art still has to be produced under Wave 0/§34.
-
-IDs the renderer understands:
-
-```text
-core:pawn/vendor_char_1 .. core:pawn/vendor_char_4
-core:pawn/vendor_enemy_1 .. core:pawn/vendor_enemy_4
-core:terrain/vendor_ground
-core:overlay/vendor_crosshair
-```
-
-Appearance is assigned from `EntityID` in the renderer (stable, not
-RNG). Animation frame is derived from simulation tick in the adapter
-and never written back to the domain.
-
 ## Original art pipeline (ART Wave 0/1, §34 prototype)
 
 Original world art is rendered from code in Blender. One command
@@ -104,13 +80,11 @@ assets/
 │   ├── contact_sheet.png, prototype_scene*.png, pawn_sheet.png  # review aids
 ├── metadata/<family>/<name>.yaml   # footprint, origin_px, attachments, tint
 │   └── ui_menu/menu_diorama.yaml    # menu scene: canvas, glow layers, fire/lamp px (not a sprite)
-├── Free 2D Animated Vector Game Character Sprites/   # vendor source
 └── .gitkeep
 ```
 
 `source/raster/ui/main_menu_colonist.png` is original title art (cel-shaded
-colonist bust with raven, RGBA cutout). It is not vendor pack art and is
-not a reconstruction of proprietary RimWorld screenshots. The brief that
+colonist bust with raven, RGBA cutout). It is not a reconstruction of proprietary RimWorld screenshots. The brief that
 produced it lives at repo-root `ai-bg-rimworld`.
 
 `generated/ui/menu/` is the main-menu background: one scene composed from
@@ -118,9 +92,9 @@ the family builders and rendered through the same stage (`stage.place`,
 `stage.render_scene`). Edit `source/blender/artlib/scenes/menu.py`, then
 `make art-menu`; live, `menu.preview()` writes a quarter-size render.
 
-The renderer draws the original set (ART-006). The vendor pack is only a
-fallback when `metadata/` is missing. Do not hand-patch vendor PNGs; treat
-the pack as immutable source. `generated/ingame_capture.png` comes from
+The renderer draws the original set (ART-006); without `metadata/` it
+draws plain coloured fallbacks. The old vendor sprite pack was removed in
+PLAY-010 (unused assets are deleted, see AGENTS.md). `generated/ingame_capture.png` comes from
 `make art-capture` (real renderer).
 
 ## Audio (SND-002)

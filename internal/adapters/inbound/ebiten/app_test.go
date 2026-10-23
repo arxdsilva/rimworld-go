@@ -81,9 +81,6 @@ func (s *stubSim) CanZoneAt(kind string, x, y int) bool {
 func testApp(sim Simulation) *App {
 	return NewApp(AppConfig{
 		Version: "test",
-		LoadPack: func() (*atlas, error) {
-			return nil, nil
-		},
 		LoadArt: func() (*artCatalog, error) {
 			return nil, nil
 		},

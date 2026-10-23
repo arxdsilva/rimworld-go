@@ -13,8 +13,8 @@ func (a *App) drawBoot(screen *ebiten.Image, sw, sh int) {
 		"phase: " + bootPhases[phase],
 		fmtProgress(phase+1, len(bootPhases)),
 	}
-	if a.packWarn != "" {
-		body = append(body, "", "warning: "+a.packWarn)
+	if a.artWarn != "" {
+		body = append(body, "", "warning: "+a.artWarn)
 	}
 	a.fillMenu(screen, sw, sh, "rimworld-go", body, bodyDefaultX)
 	drawText(screen, "escape to skip", 56, float64(sh-40), withColor(tsSmall, uiTextDim))

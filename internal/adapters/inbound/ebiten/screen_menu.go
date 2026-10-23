@@ -93,11 +93,10 @@ func creditsLines() []string {
 		"rimworld-go is original work. It is not affiliated with Ludeon",
 		"Studios or RimWorld.",
 		"",
-		"Vendor sprites (first playable stand-in): Raphael Goncalves",
-		"(Rgsdev), CC0.",
 		"Music and sound effects: original, made in code (cmd/audiogen).",
 		"Noto Sans: SIL Open Font License 1.1.",
-		"Ambience: generated with ElevenLabs (elevenlabs.io), free tier,",
+		"Ambience and animal voices: generated with ElevenLabs",
+		"(elevenlabs.io), free tier,",
 		"non-commercial use.",
 	}
 }
