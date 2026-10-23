@@ -148,6 +148,8 @@ clips:  ## README animated WebP clips in docs/clips (needs python3 + Pillow)
 	$(call clip,daycycle,-scenario sunny -capture-ui weather -capture-zoom 1.2 -capture-timelapse 250 -capture-frames 240,--fps 20 --quality 50 --max-bytes 2400000)
 	$(call clip,roofs,-scenario roofs -hour 15 -capture-ui roofs -capture-ticks 7500 -capture-frames 240,--quality 50)
 	$(call clip,zoo,-seed 2 -width 80 -height 60 -scenario zoo -hour 11 -capture-ui zoo -capture-zoom 0.85 -capture-frames 240,--quality 50 --max-bytes 2400000)
+	$(call clip,bigmap,-seed 1 -width 500 -height 500 -scenario grown -capture-zoom 0.1 -capture-ticks 60 -capture-speed 3 -capture-frames 240,--quality 50 --max-bytes 2400000)
+	$(call clip,bigmap_colony,-seed 1 -width 500 -height 500 -scenario grown -capture-zoom 0.35 -capture-ticks 60 -capture-speed 3 -capture-frames 240,--quality 50 --max-bytes 2400000)
 	$(call clip,shadows,-scenario sunny -hour 6 -capture-ui follow -capture-zoom 2 -capture-timelapse 125 -capture-frames 240,--fps 20 --quality 50 --max-bytes 2400000)
 
 .PHONY: clean

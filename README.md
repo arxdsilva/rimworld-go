@@ -2,12 +2,18 @@
 
 A RimWorld-inspired colony simulation written in Go with Ebitengine, built in public on YouTube. Original Blender-rendered art; no proprietary RimWorld code, art or data.
 
+**Maps up to 500×500 tiles at 60+ fps.** A grown 500×500 colony held 117 fps on average (1% low 68) over a ten-minute run at 3× speed on an Apple M3 Pro, at about 0.7 ms per simulation tick.
+
 <p align="center"><img src="docs/clips/lategame.webp" width="100%" alt="Late game: a stone compound in autumn rain, fields at every stage, a raid met at the sandbags, and a graveyard"></p>
 <p align="center"><sub>Late game: a stone compound in autumn rain, fields at every stage, a raid met at the sandbags, and a graveyard</sub></p>
 
 ## See it move
 
 <table>
+  <tr>
+    <td width="50%"><img src="docs/clips/bigmap.webp" width="100%" alt="A 500x500 map at 3x speed, zoomed all the way out: a grown colony in the middle, the minimap showing how much land is left"><br><sub>A 500×500 map at 3× speed, zoomed all the way out: a grown colony in the middle, the minimap showing how much land is left</sub></td>
+    <td width="50%"><img src="docs/clips/bigmap_colony.webp" width="100%" alt="The same 500x500 colony closer in: a full colony at work, still at 3x speed"><br><sub>The same 500×500 colony closer in: a full colony at work, still at 3× speed</sub></td>
+  </tr>
   <tr>
     <td width="50%"><img src="docs/clips/daycycle.webp" width="100%" alt="A summer day in a minute: the sun rises in the east, shadows swing west to east, then moonlight"><br><sub>A summer day in a minute: the sun rises in the east, shadows swing west to east, then moonlight</sub></td>
     <td width="50%"><img src="docs/clips/roofs.webp" width="100%" alt="Snow at dusk: a roofed room warm by its fire, its unroofed twin dark and cold"><br><sub>Snow at dusk: a roofed room warm by its fire, its unroofed twin dark and cold</sub></td>
@@ -44,7 +50,7 @@ A RimWorld-inspired colony simulation written in Go with Ebitengine, built in pu
 
 ## Progress
 
-Media updated 2026-10-22 · regenerate with `make media clips`
+Media updated 2026-10-23 · regenerate with `make media clips`
 
 ### Building
 
