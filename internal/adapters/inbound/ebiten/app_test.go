@@ -6,7 +6,9 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/pawn/schedule"
+	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
@@ -21,6 +23,13 @@ type stubSim struct {
 	tick   clock.Tick
 	wild   []game.WildlifeRow
 	world  game.WorldView
+	// NG-1 colony UI read models (nil/zero: none).
+	factions   []game.FactionView
+	story      game.StoryView
+	bios       map[entity.EntityID]game.BioView
+	incapable  map[entity.EntityID]map[work.Type]string
+	learned    map[entity.EntityID][skill.NumSkills]int
+	buildables []game.BuildableView
 }
 
 func (s *stubSim) Step(n int) {
@@ -36,13 +45,26 @@ func (s *stubSim) Date() clock.Date          { return clock.DateAt(s.tick) }
 func (s *stubSim) Activity() schedule.Activity {
 	return schedule.Work
 }
-func (s *stubSim) World() game.WorldView                    { return s.world }
-func (s *stubSim) Wildlife() []game.WildlifeRow             { return s.wild }
-func (s *stubSim) Factions() []game.FactionView             { return nil }
-func (s *stubSim) Story() game.StoryView                    { return game.StoryView{} }
-func (s *stubSim) Bio(entity.EntityID) (game.BioView, bool) { return game.BioView{}, false }
-func (s *stubSim) Apply(command.Command)                    {}
-func (s *stubSim) Enqueue(c command.Command)                { s.cmds = append(s.cmds, c) }
+func (s *stubSim) World() game.WorldView        { return s.world }
+func (s *stubSim) Wildlife() []game.WildlifeRow { return s.wild }
+func (s *stubSim) Factions() []game.FactionView { return s.factions }
+func (s *stubSim) Story() game.StoryView        { return s.story }
+func (s *stubSim) Bio(id entity.EntityID) (game.BioView, bool) {
+	b, ok := s.bios[id]
+	return b, ok
+}
+func (s *stubSim) Buildables() []game.BuildableView {
+	if s.buildables != nil {
+		return s.buildables
+	}
+	return game.Buildables()
+}
+func (s *stubSim) IncapableReason(id entity.EntityID, t work.Type) string {
+	return s.incapable[id][t]
+}
+func (s *stubSim) LearnedThisWeek(id entity.EntityID) [skill.NumSkills]int { return s.learned[id] }
+func (s *stubSim) Apply(command.Command)                                   {}
+func (s *stubSim) Enqueue(c command.Command)                               { s.cmds = append(s.cmds, c) }
 func (s *stubSim) CanPlaceAt(kind, stuff, facing string, x, y int) (bool, string) {
 	if x < 0 || y < 0 || x >= s.w || y >= s.h {
 		return false, "outside the map"

@@ -217,7 +217,10 @@ func (g *Game) edgeTile() (int, int, bool) {
 
 // Raid sends n raiders in from one map edge to assault the colony (also
 // a dev hook).
-func (g *Game) Raid(n int) { g.raidWith(g.kitOf(n), planAssault) }
+func (g *Game) Raid(n int) {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
+	g.raidWith(g.kitOf(n), planAssault)
+}
 
 // raidWith sends one raider per weapon in kit, following plan.
 func (g *Game) raidWith(kit []item.Kind, plan raidPlan) { g.raidFrom(kit, plan, 0) }

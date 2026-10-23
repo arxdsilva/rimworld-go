@@ -99,6 +99,7 @@ func TestWildDeerEatsCrop(t *testing.T) {
 		p, _ := g.plants.Get(crop)
 		f(&p)
 		g.plants.Set(crop, p)
+		g.notePlantMark(crop) // jobindex.go: as doSow does
 	}
 	setPlant(func(p *plant.Plant) { p.Zone = true })
 	deer, _ := g.SpawnAnimal("deer", 10, 10)
@@ -129,6 +130,7 @@ func TestWildDeerEatsCrop(t *testing.T) {
 	p2, _ := h.plants.Get(c2)
 	p2.Zone = true
 	h.plants.Set(c2, p2)
+	h.notePlantMark(c2) // jobindex.go: as doSow does
 	pet, _ := h.SpawnAnimal("deer", 10, 10)
 	h.TameAnimal(pet, "Clover")
 	setAnimal(h, pet, func(a *animal.State) { a.Food = 3000 })

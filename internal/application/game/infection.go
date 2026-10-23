@@ -238,6 +238,7 @@ func (g *Game) InfectionOf(id entity.EntityID) int { return g.wounds[id].Infecti
 
 // Infect gives a colonist an infection (dev scenarios and fixtures).
 func (g *Game) Infect(id entity.EntityID, severity int) {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
 	w := g.wounds[id]
 	w.Infection = severity
 	g.wounds[id] = w

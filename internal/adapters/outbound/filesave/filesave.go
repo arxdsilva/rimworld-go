@@ -1,11 +1,12 @@
 // Package filesave stores saved games as files in a saves folder: one
-// file per slot, written atomically (temp file + rename) so a crash never
-// leaves a half-written save behind.
+// file per slot, written atomically (temp file, fsync, rename) so a crash
+// never leaves a half-written save behind.
 package filesave
 
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -61,18 +62,33 @@ func sanitize(name string) string {
 // Save writes g to the slot (replacing it) and returns the file path.
 func (s Store) Save(g *game.Game, slot string) (string, error) {
 	slot = sanitize(slot)
+	return s.write(slot, func(w io.Writer) error { return g.Save(w, slot) })
+}
+
+// write replaces the slot's file atomically: the save goes to a temp file
+// in the same folder, is flushed to disk (fsync), then renamed over the
+// old file, and the folder is synced so the rename itself survives a
+// crash. Any failure removes the temp file and leaves the old save as it
+// was — a commitment colony's only save is never half-written (NG-1 §2.13).
+func (s Store) write(slot string, encode func(io.Writer) error) (string, error) {
 	if err := os.MkdirAll(s.Dir, 0o755); err != nil {
 		return "", fmt.Errorf("create saves folder: %w", err)
 	}
 	path := filepath.Join(s.Dir, slot+Ext)
-	tmp, err := os.CreateTemp(s.Dir, slot+"-*.tmp")
+	tmp, err := os.CreateTemp(s.Dir, slot+Ext+"-*.tmp")
 	if err != nil {
 		return "", fmt.Errorf("create save: %w", err)
 	}
-	if err := g.Save(tmp, slot); err != nil {
+	fail := func(err error) (string, error) {
 		tmp.Close()
 		os.Remove(tmp.Name())
 		return "", err
+	}
+	if err := encode(tmp); err != nil {
+		return fail(err)
+	}
+	if err := tmp.Sync(); err != nil {
+		return fail(fmt.Errorf("flush save: %w", err))
 	}
 	if err := tmp.Close(); err != nil {
 		os.Remove(tmp.Name())
@@ -82,7 +98,17 @@ func (s Store) Save(g *game.Game, slot string) (string, error) {
 		os.Remove(tmp.Name())
 		return "", fmt.Errorf("store save: %w", err)
 	}
+	syncDir(s.Dir)
 	return path, nil
+}
+
+// syncDir flushes a folder's entries (the rename) to disk. Best effort:
+// some systems cannot sync a directory, and the save is complete anyway.
+func syncDir(dir string) {
+	if d, err := os.Open(dir); err == nil {
+		_ = d.Sync()
+		d.Close()
+	}
 }
 
 // List returns every save, newest first. Unreadable files are listed with
@@ -110,7 +136,7 @@ func (s Store) List() ([]Slot, error) {
 		} else {
 			sl.Info, sl.Err = game.ReadSaveInfo(f)
 			f.Close()
-			if sl.Err == nil && sl.Info.Version != game.SaveVersion {
+			if sl.Err == nil && !game.SupportedSaveVersion(sl.Info.Version) {
 				sl.Err = game.ErrSaveVersion
 			}
 		}

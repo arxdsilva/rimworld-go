@@ -59,12 +59,12 @@ func (r *Renderer) takeCues() []soundCue {
 type soundMemo struct {
 	init      bool
 	frames    map[entity.EntityID][2]int
-	plants    map[entity.EntityID][2]int
-	mines     map[[2]int]uint8 // marked tile -> its terrain code
+	cutPlants map[[2]int]entity.EntityID // the plant on each tile a pawn was cutting last frame
+	mines     map[[2]int]uint8           // marked tile -> its terrain code
 	smooths   map[[2]int]uint8
 	doorsOpen map[[2]int]bool
-	chopped   map[[2]int]bool // tiles a pawn was cutting last frame
-	notice    uint64          // newest non-danger message heard
+	notice    uint64  // newest non-danger message heard
+	plantBuf  []int32 // plantOn's PlantsIn buffer
 }
 
 // listenWorld cues builds finishing, trees falling, rock mined out or
@@ -76,10 +76,6 @@ func (r *Renderer) listenWorld(w game.WorldView, pawns []game.PawnView) {
 	frames := make(map[entity.EntityID][2]int, len(w.Frames))
 	for _, f := range w.Frames {
 		frames[f.ID] = [2]int{f.X, f.Y}
-	}
-	plants := make(map[entity.EntityID][2]int, len(w.Plants))
-	for _, p := range w.Plants {
-		plants[p.ID] = [2]int{p.X, p.Y}
 	}
 	marks := func(ts [][2]int) map[[2]int]uint8 {
 		out := make(map[[2]int]uint8, len(ts))
@@ -95,6 +91,14 @@ func (r *Renderer) listenWorld(w game.WorldView, pawns []game.PawnView) {
 		standing[[2]int{p.X, p.Y}] = true
 		if act, _, ok := actionOf(p); ok && act == game.ActionChop {
 			chopped[[2]int{p.ActX, p.ActY}] = true
+		}
+	}
+	// the plant on each tile being cut, from that tile alone (no pass over
+	// every plant on the map, NG-1 §6.7)
+	cut := make(map[[2]int]entity.EntityID, len(chopped))
+	for t := range chopped {
+		if id, ok := r.plantOn(&w, t); ok {
+			cut[t] = id
 		}
 	}
 	doors := map[[2]int]bool{}
@@ -117,8 +121,8 @@ func (r *Renderer) listenWorld(w game.WorldView, pawns []game.PawnView) {
 				r.cue("sfx.build_done", float64(at[0])+0.5, float64(at[1])+0.5, 1)
 			}
 		}
-		for id, at := range m.plants {
-			if _, ok := plants[id]; !ok && m.chopped[at] {
+		for at, id := range m.cutPlants { // a plant cut last frame is gone
+			if now, ok := r.plantOn(&w, at); !ok || now != id {
 				r.cue("sfx.tree_fall", float64(at[0])+0.5, float64(at[1])+0.5, 1)
 			}
 		}
@@ -147,8 +151,21 @@ func (r *Renderer) listenWorld(w game.WorldView, pawns []game.PawnView) {
 			r.globalCue("ui.notice")
 		}
 	}
-	*m = soundMemo{init: true, frames: frames, plants: plants, mines: mines, smooths: smooths, doorsOpen: doors,
-		chopped: chopped, notice: notice}
+	*m = soundMemo{init: true, frames: frames, cutPlants: cut, mines: mines, smooths: smooths, doorsOpen: doors,
+		notice: notice, plantBuf: m.plantBuf}
+}
+
+// plantOn is the plant on tile t of w (Simulation.PlantsIn: that tile's
+// chunk only).
+func (r *Renderer) plantOn(w *game.WorldView, t [2]int) (entity.EntityID, bool) {
+	m := &r.memo
+	m.plantBuf = r.plantsOn(w, t[0], t[1], t[0], t[1], m.plantBuf[:0])
+	for _, i := range m.plantBuf {
+		if int(i) < len(w.Plants) {
+			return w.Plants[i].ID, true
+		}
+	}
+	return 0, false
 }
 
 // traceSound is the sound of a new attack trace, heard where it lands

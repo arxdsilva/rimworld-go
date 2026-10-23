@@ -121,6 +121,7 @@ func (b *ColonyBuilder) runStep() {
 		g.spawnWildlife()
 	case 4:
 		b.g.finishSetup()
+		b.g.warmIndexes(true) // jobindex.go: not on the first tick
 		b.done = true
 	}
 	b.step++

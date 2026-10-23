@@ -31,9 +31,19 @@ type optionRow struct {
 	apply      func(s *config.Settings, d int) // d: -1/+1 for steppers, 0 to toggle/cycle
 }
 
-var optionTabLabels = map[string]string{"audio": "Audio", "graphics": "Graphics", "gameplay": "Gameplay", "controls": "Controls", "access": "Accessibility"}
+var optionTabLabels = map[string]string{"audio": "Audio", "graphics": "Graphics", "gameplay": "Gameplay", "controls": "Controls", "access": "Accessibility", "story": "Story"}
 
 func optionTabs() []string { return []string{"audio", "graphics", "gameplay", "controls", "access"} }
+
+// optionTabList is the tabs on offer now: Story (story_tab.go) joins them
+// while a colony is running.
+func (a *App) optionTabList() []string {
+	tabs := optionTabs()
+	if a.renderer == nil {
+		return tabs
+	}
+	return append(tabs[:3:3], "story", "controls", "access")
+}
 
 // Layout (px).
 const (
@@ -120,6 +130,8 @@ func optionRows(tab string) []optionRow {
 		}
 	case "controls":
 		return nil // controls_ui.go draws its own rows
+	case "story":
+		return nil // story_tab.go declares its own widgets
 	case "access":
 		return []optionRow{
 			toggleRow("reducedmotion", "Reduced motion", func(s *config.Settings) *bool { return &s.Accessibility.ReducedMotion }),
@@ -143,7 +155,7 @@ var optionNotes = map[string]string{
 }
 
 func (a *App) currentOptionsTab() string {
-	if _, ok := optionTabLabels[a.optionsTab]; ok {
+	if _, ok := optionTabLabels[a.optionsTab]; ok && (a.optionsTab != "story" || a.renderer != nil) {
 		return a.optionsTab
 	}
 	return "audio"
@@ -154,7 +166,7 @@ func rowY(i int) float32 { return float32(optRowY + i*optRowStep) }
 func (a *App) optionsButtons(sw, sh int) []button {
 	tab := a.currentOptionsTab()
 	var out []button
-	for i, t := range optionTabs() {
+	for i, t := range a.optionTabList() {
 		out = append(out, button{id: "options.tab." + t, label: optionTabLabels[t],
 			x: float32(56 + i*(optTabW+8)), y: optTabY, w: optTabW, h: optBtnH, selected: t == tab})
 	}
@@ -169,7 +181,9 @@ func (a *App) optionsButtons(sw, sh int) []button {
 				button{id: "options." + r.key + ".inc", label: "+", x: optCtrlX + optBtnH + 8 + optBarW + 8, y: y, w: optBtnH, h: optBtnH})
 			continue
 		}
-		out = append(out, button{id: "options." + r.key, label: r.value(a.settings), x: optCtrlX, y: y, w: 160, h: optBtnH})
+		lock := a.optionLock(r.key) // saves.go: developer mode is locked in commitment mode
+		out = append(out, button{id: "options." + r.key, label: r.value(a.settings), x: optCtrlX, y: y, w: 160, h: optBtnH,
+			disabled: lock != "", reason: lock})
 	}
 	return append(out, button{id: "options.back", label: "Back", x: 40, y: footerY(sh), w: 140, h: 36})
 }
@@ -209,10 +223,15 @@ func (a *App) drawOptions(screen *ebiten.Image, sw, sh int) {
 	a.fillMenu(screen, sw, sh, "Options", nil, 0)
 	drawPanel(screen, 40, 96, float32(sw-80), float32(sh-180))
 	tab := a.currentOptionsTab()
+	if tab == "story" { // the kit paints the tab's content over the panel
+		mx, my := a.currentCursor()
+		a.drawButtons(screen, a.optionsButtons(sw, sh), mx, my)
+		return
+	}
 	if tab == "controls" {
 		a.drawControls(screen, sw, sh)
 		mx, my := a.currentCursor()
-		a.drawButtons(screen, a.optionsButtons(sw, sh)[:len(optionTabs())], mx, my)
+		a.drawButtons(screen, a.optionsButtons(sw, sh)[:len(a.optionTabList())], mx, my)
 		a.drawButtons(screen, []button{{id: "options.back", label: "Back", x: 40, y: footerY(sh), w: 140, h: 36}}, mx, my)
 		return
 	}

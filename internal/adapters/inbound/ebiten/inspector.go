@@ -18,8 +18,10 @@ import (
 	"rimworld-go/internal/platform/input"
 )
 
+// inspectorRect is the pawn inspector's panel. The Bio tab (bio_ui.go) is
+// why it is 380 x 500: the seven tabs and the skill table need the room.
 func inspectorRect() button {
-	return button{x: hudPad, y: hudTopH + hudPad, w: 340, h: 390}
+	return button{x: hudPad, y: hudTopH + hudPad, w: 380, h: 500}
 }
 
 func (a *App) inspectorButtons() []button {
@@ -27,9 +29,15 @@ func (a *App) inspectorButtons() []button {
 		return nil
 	}
 	r := inspectorRect()
+	bioOn := a.bioTabOn()
+	bio := buttonSpec{id: "inspector.bio", label: "Bio", selected: bioOn, w: 36, h: 22}
+	if p, ok := a.selectedPawn(); ok && !hasBio(p) {
+		bio.disabled, bio.reason, bio.selected = true, "No biography for this colonist", false
+	}
 	tabs := []buttonSpec{
-		{id: "inspector.character", label: "Character", selected: a.inspectTab != "needs" && a.inspectTab != "gear" && a.inspectTab != "log", w: 72, h: 22},
+		{id: "inspector.character", label: "Character", selected: a.inspectTab != "needs" && a.inspectTab != "gear" && a.inspectTab != "log" && !bioOn, w: 72, h: 22},
 		{id: "inspector.needs", label: "Needs", selected: a.inspectTab == "needs", w: 48, h: 22},
+		bio,
 		{id: "inspector.health", label: "Health", disabled: true, reason: "not implemented", w: 52, h: 22},
 		{id: "inspector.social", label: "Social", disabled: true, reason: "not implemented", w: 52, h: 22},
 		{id: "inspector.gear", label: "Gear", selected: a.inspectTab == "gear", w: 42, h: 22},
@@ -249,6 +257,12 @@ func (a *App) drawInspector(screen *ebiten.Image) {
 	}
 	r := inspectorRect()
 	drawPanel(screen, r.x, r.y, r.w, r.h)
+	if a.bioTabOn() {
+		// bio_ui.go declares and paints the tab's content with the widget kit.
+		mx, my := a.currentCursor()
+		a.drawButtons(screen, a.inspectorButtons(), mx, my)
+		return
+	}
 	title := pawnLabel(p)
 	if p.Temperament != "" {
 		title += "  - " + p.Temperament

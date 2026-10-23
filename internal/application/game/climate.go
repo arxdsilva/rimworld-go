@@ -2,12 +2,10 @@ package game
 
 import (
 	"fmt"
-	"strings"
 
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
-	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/temperature"
 )
 
@@ -80,7 +78,8 @@ func (g *Game) post(m MessageView) {
 	}
 }
 
-// phaseClimate rots perishable stacks and kills frostbitten crops.
+// phaseClimate rots perishable stacks, moves room temperatures and
+// exposure on (frostbitten crops die with the plant pass: plant_growth.go).
 func (g *Game) phaseClimate() {
 	if uint64(g.clock.Now())%climateInterval != 0 {
 		return
@@ -89,8 +88,7 @@ func (g *Game) phaseClimate() {
 	g.heatRooms()
 	g.expose()
 	g.rotItems()
-	g.frostCrops()
-	g.dryRacks()
+	g.dryRacks() // frost: per chunk with the plants (plant_growth.go)
 }
 
 // rotItems advances spoilage by the local temperature. Spoiled food is
@@ -150,63 +148,6 @@ func (g *Game) rotItems() {
 			continue
 		}
 		g.message(l.x, l.y, "%d %s rotted away", l.qty, k)
-	}
-}
-
-// frostCrops kills crops standing in air colder than they can bear, and
-// wild biome plants (pine, jungle tree, cactus, ...) out of their climate
-// (SIM-023): a jungle tree sown into a temperate winter, a pine in a desert
-// summer. The original tree and berry bush only go dormant.
-func (g *Game) frostCrops() {
-	dead := map[plant.Species]int{}
-	var order []plant.Species
-	var fx, fy int
-	hot := map[plant.Species]bool{}
-	var gone map[entity.EntityID]bool // removed from plantIDs once, in order, after the pass
-	for _, id := range g.plantIDs {
-		p, ok := g.plants.Get(id)
-		if !ok {
-			continue
-		}
-		t := int(g.temperatureAt(p.X, p.Y))
-		if !plant.Frostbitten(p.Species, t) && !plant.Killed(p.Species, t) {
-			continue
-		}
-		g.plants.Delete(id) // removePlant, with the list compacted below
-		if gone == nil {
-			gone = map[entity.EntityID]bool{}
-		}
-		gone[id] = true
-		if dead[p.Species] == 0 {
-			order = append(order, p.Species)
-			fx, fy = p.X, p.Y
-			d := plant.DefOf(p.Species)
-			hot[p.Species] = d.HeatKill != 0 && t > d.HeatKill
-		}
-		dead[p.Species]++
-	}
-	if gone != nil {
-		g.plantIDs = dropIDs(g.plantIDs, func(id entity.EntityID) bool { return gone[id] })
-	}
-	for _, s := range order {
-		n := dead[s]
-		switch {
-		case plant.DefOf(s).Crop && n == 1:
-			g.message(fx, fy, "Frost killed a %s plant", s)
-		case plant.DefOf(s).Crop:
-			g.message(fx, fy, "Frost killed the %s (%d plants)", plant.DefOf(s).Label, n)
-		default:
-			cause := "cold"
-			if hot[s] {
-				cause = "heat"
-			}
-			name := strings.ReplaceAll(plantLabel(s), "_", " ")
-			if n == 1 {
-				g.message(fx, fy, "The %s killed a %s", cause, name)
-			} else {
-				g.message(fx, fy, "The %s killed %d %s plants", cause, n, name)
-			}
-		}
 	}
 }
 

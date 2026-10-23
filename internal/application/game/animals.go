@@ -84,6 +84,7 @@ const (
 
 // SpawnAnimal places an animal of the named species (fixtures, tools).
 func (g *Game) SpawnAnimal(species string, x, y int) (entity.EntityID, error) {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
 	s, ok := animal.ParseSpecies(species)
 	if !ok {
 		return 0, fmt.Errorf("spawn animal: unknown species %q", species)
@@ -525,7 +526,10 @@ func (g *Game) stepAnimal(id entity.EntityID, a *animal.State, m *motionRec, fro
 }
 
 // KillAnimal kills animal id where it stands (dev and debug tools).
-func (g *Game) KillAnimal(id entity.EntityID) { g.killAnimal(id, 0) }
+func (g *Game) KillAnimal(id entity.EntityID) {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
+	g.killAnimal(id, 0)
+}
 
 // killerName is who did it, for a death message: "a timber wolf", or a
 // colonist's or pet's name.

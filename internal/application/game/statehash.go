@@ -42,8 +42,13 @@ func (g *Game) StateHash() uint64 {
 
 // normalisedFields is the save as named fields, with research folded into
 // one "Research" progress list (the newest field that holds it).
+//
+// The header is hashed as its v1 shape (Version pinned to 1): its newer
+// fields (map size, biome, storyteller, difficulty, save mode) are derived
+// from state hashed below, and the version is format. The blocked tiles
+// are hashed as the v1 index list whichever field carries them.
 func normalisedFields(info SaveInfo, s *saveState) map[string]any {
-	f := map[string]any{"Info": info}
+	f := map[string]any{"Info": infoV1{1, info.Name, info.Date, info.Day, info.Colonists}}
 	v, t := reflect.ValueOf(s).Elem(), reflect.TypeOf(s).Elem()
 	for i := 0; i < t.NumField(); i++ {
 		if t.Field(i).IsExported() {
@@ -59,7 +64,22 @@ func normalisedFields(info SaveInfo, s *saveState) map[string]any {
 		research = research[:len(research)-1]
 	}
 	f["Research"] = research
+	f["Blocked"] = s.blockedTiles()
+	delete(f, "BlockedBits")
+	// Bookkeeping first saved in v2 (it existed before, unsaved): hashed
+	// through its effects on the state above, so the pins taken before v2
+	// still hold. TestSaveV2RoundTripSetup checks it survives a save.
+	for _, k := range [...]string{"SkillLive", "StainDrip", "PostSweep"} {
+		delete(f, k)
+	}
 	return f
+}
+
+// infoV1 is SaveInfo as version 1 wrote it (the hashed header).
+type infoV1 struct {
+	Version        int
+	Name, Date     string
+	Day, Colonists int
 }
 
 // ints is an int array or slice as a fresh []int (nil for anything else).

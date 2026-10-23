@@ -71,6 +71,7 @@ type CropRaidView struct {
 // CropRaids lists the crops wild animals ate in the last hour, oldest
 // first (read-only; for the "Wild animals eating crops" alert).
 func (g *Game) CropRaids() []CropRaidView {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
 	now := uint64(g.clock.Now())
 	var out []CropRaidView
 	for _, c := range g.wl.CropRaids {

@@ -57,6 +57,9 @@ func (g *Game) beingTamed(id entity.EntityID) bool {
 
 // assignTame sends a hunter to the nearest animal marked for taming.
 func (g *Game) assignTame(id entity.EntityID) bool {
+	if !g.anyAnimal(func(_ entity.EntityID, a animal.State) bool { return a.TameMark && !a.Tame }) {
+		return false // jobindex.go: nothing marked for taming
+	}
 	now := uint64(g.clock.Now())
 	pos, _ := g.positions.Get(id)
 	var best entity.EntityID
@@ -365,7 +368,10 @@ func manhunterSpecies(s animal.Species) bool {
 }
 
 // ManhunterPack is the dev hook for a manhunter pack.
-func (g *Game) ManhunterPack(n int) { g.manhunterPack(n) }
+func (g *Game) ManhunterPack(n int) {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
+	g.manhunterPack(n)
+}
 
 // releaseAnimal turns a tame animal loose.
 func (g *Game) releaseAnimal(id entity.EntityID) {
@@ -381,6 +387,7 @@ func (g *Game) releaseAnimal(id entity.EntityID) {
 
 // TameAnimal makes an animal tame on the spot (dev scenarios, fixtures).
 func (g *Game) TameAnimal(id entity.EntityID, name string) {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
 	if a, ok := g.animals.Get(id); ok {
 		a.Tame, a.Name, a.TameMark, a.Manhunter = true, name, false, 0
 		g.animals.Set(id, a)

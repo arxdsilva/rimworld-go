@@ -160,13 +160,17 @@ func (g *Game) doused(bid entity.EntityID) bool {
 
 // SetWeather forces the weather (dev scenarios).
 func (g *Game) SetWeather(k weather.Kind, intensity float64) {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
 	g.weather.Kind, g.weather.Target = k, k
 	g.weather.Intensity, g.weather.Goal = intensity, intensity
 }
 
 // HoldWeather keeps the current weather kind through block changes (dev
 // scenarios such as day-cycle clips; not saved).
-func (g *Game) HoldWeather() { g.weatherFix = true }
+func (g *Game) HoldWeather() {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
+	g.weatherFix = true
+}
 
 // Weather is the current outdoor weather.
 func (g *Game) Weather() weather.State { return g.weather }

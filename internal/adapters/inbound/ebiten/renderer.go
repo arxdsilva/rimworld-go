@@ -13,7 +13,9 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/pawn/schedule"
+	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
@@ -49,6 +51,19 @@ type Simulation interface {
 	Factions() []game.FactionView
 	Story() game.StoryView
 	Bio(id entity.EntityID) (game.BioView, bool)
+	// NG-1 colony UI (UI-COLONY): the building catalog with the scenario's
+	// locks (BuildableView.Locked), the Work tab's "Incapable: <why>" for a
+	// colonist's work type ("" when it can) and the Bio tab's experience
+	// gained in the last 7 days per skill.
+	Buildables() []game.BuildableView
+	IncapableReason(id entity.EntityID, t work.Type) string
+	LearnedThisWeek(id entity.EntityID) [skill.NumSkills]int
+	// NG-1 E5 renderer read models (chunk_view.go, minimap_view.go): a
+	// chunk's share of World() and its bake versions, the plants in a tile
+	// rectangle, and the minimap layer when it changed since ver.
+	ChunkLayer(cx, cy int) game.ChunkView
+	PlantsIn(x0, y0, x1, y1 int, buf []int32) []int32
+	MinimapLayer(ver uint64) (game.MinimapView, bool)
 }
 
 var _ Simulation = (*game.Game)(nil)
@@ -230,11 +245,25 @@ type Renderer struct {
 	links    linkGrid
 	stoneArt stoneArtCache
 	draws    []artDraw
+	// ENG-D fields
+	// lod is the zoom tier, the chunk and whole-map bakes and the frame's
+	// chunk lists (lod.go, chunk_cache.go); mini the minimap (minimap.go).
+	lod  lodState
+	mini minimapState
 }
+
+// viewCacher is a simulation that can cache its read models between
+// calls (game.Game.SetViewCache, NG-1 §6.3): the renderer only changes it
+// through Step, Enqueue and ApplyPending and never writes the views it
+// gets back, so it turns the cache on for every simulation it draws.
+type viewCacher interface{ SetViewCache(on bool) }
 
 // New returns a Renderer for sim. Sprites are optional: call LoadPack
 // after New. Without a pack, pawns fall back to colored rectangles.
 func New(sim Simulation) *Renderer {
+	if vc, ok := sim.(viewCacher); ok {
+		vc.SetViewCache(true)
+	}
 	return &Renderer{
 		game:          sim,
 		speed:         speedNormal,

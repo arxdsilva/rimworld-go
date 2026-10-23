@@ -54,6 +54,7 @@ func TestWildDeerCannotReachFencedCrop(t *testing.T) {
 			p, _ := g.plants.Get(c)
 			p.Zone = true
 			g.plants.Set(c, p)
+			g.notePlantMark(c) // jobindex.go: as doSow does
 			crops = append(crops, c)
 		}
 	}

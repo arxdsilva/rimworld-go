@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"hash/fnv"
 	"io"
+	mathbits "math/bits"
+	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/pawn/pawngen"
 	"rimworld-go/internal/domain/pawn/skill"
 	"slices"
@@ -48,17 +50,37 @@ import (
 // game continues tick for tick as the original would have (the RNG, the
 // entity allocator and every store are captured). Derived caches (room
 // stats) are rebuilt on load.
+//
+// Versions (NG-1 §5.8): v1 is every save before NG-1; v2 adds the header
+// fields below and writes the blocked tiles as a bitset (BlockedBits).
+// Every other field is additive, so Load reads both: a v1 save gets the
+// legacy setup (no storyteller, difficulty or factions) and neutral bios.
 
-// SaveVersion is bumped whenever the format changes incompatibly.
-const SaveVersion = 1
+// SaveVersion is the version new saves are written with.
+const SaveVersion = 2
+
+// minSaveVersion is the oldest version Load still reads.
+const minSaveVersion = 1
+
+// SupportedSaveVersion reports whether Load can read a save of version v.
+func SupportedSaveVersion(v int) bool { return v >= minSaveVersion && v <= SaveVersion }
 
 // SaveInfo is the header of a save: enough to list it without loading.
+// The fields after Colonists are v2 (zero in a v1 header).
 type SaveInfo struct {
 	Version   int
 	Name      string // colony / save name
 	Date      string // in-game date
 	Day       int    // days since landing
 	Colonists int    // alive
+	// Commitment: one save per colony, written by the game itself
+	// (NG-1 §2.13); Storyteller and Difficulty name the colony's ("" for a
+	// legacy colony); MapSize is the map side; Biome the biome's name.
+	Commitment  bool
+	Storyteller string
+	Difficulty  string
+	MapSize     int
+	Biome       string
 }
 
 type entry[T any] struct {
@@ -101,7 +123,10 @@ type saveState struct {
 	NextEntity entity.EntityID
 	RNG        []byte
 	Sched      schedule.Grid
-	Blocked    []int
+	// Blocked lists the blocked tile indexes (v1); v2 writes BlockedBits,
+	// the grid's bitset (a quarter of the size of the list), instead.
+	Blocked     []int
+	BlockedBits []uint64
 
 	Messages []MessageView
 
@@ -134,6 +159,7 @@ type saveState struct {
 	NoComfort  map[entity.EntityID]uint64
 	NoFood     map[entity.EntityID]uint64     // absent in older saves
 	Postponed  []postEntry                    // absent in older saves (SIM-027)
+	PostSweep  uint64                         // the next postponed sweep (v2; absent: the first tick)
 	PostOrders map[entity.EntityID]savedOrder // orders being followed; absent in older saves
 	RestedFree map[entity.EntityID]bool       // absent in older saves
 	Calm       map[entity.EntityID]uint64     // absent in older saves
@@ -181,9 +207,13 @@ type saveState struct {
 	NG1 *SetupState
 	// Bios, Skills, WorkCarry (NG-1 §5.4): each colonist's identity, skills
 	// and fractional work progress; absent in older saves (neutral bios).
-	Bios        map[entity.EntityID]pawngen.Pawn
-	Skills      map[entity.EntityID]skill.Set
-	WorkCarry   map[entity.EntityID]int32
+	Bios      map[entity.EntityID]pawngen.Pawn
+	Skills    map[entity.EntityID]skill.Set
+	WorkCarry map[entity.EntityID]int32
+	// SkillLive (v2): the rest of the skill state that moves the game —
+	// learning saturation, fractional need drains, the last skilled work
+	// (passion joy) and fractional research; absent in older saves.
+	SkillLive   *savedSkillLive
 	ResearchCur research.Project
 	ResearchSet bool
 	Pens        []pen
@@ -219,6 +249,9 @@ type saveState struct {
 	// Stains (SIM-020): blood and ichor on the ground; absent in older
 	// saves (none).
 	Stains []stain.Stain
+	// StainDrip (v2): tiles each bleeding creature walked since its last
+	// drip; absent in older saves (every count restarts at zero).
+	StainDrip map[entity.EntityID]int
 	// Dirt, Carried, Home (SIM-021): tracked-in dirt, what each pawn carries
 	// on its boots and the Home area; absent in older saves. CleanWired
 	// marks a save made after cleaning work was switched on for everyone.
@@ -253,8 +286,16 @@ func (g *Game) Info(name string) SaveInfo {
 			alive++
 		}
 	}
-	return SaveInfo{Version: SaveVersion, Name: name, Date: g.Date().String(),
-		Day: int(g.clock.Now()) / clock.TicksPerDay, Colonists: alive}
+	info := SaveInfo{Version: SaveVersion, Name: name, Date: g.Date().String(),
+		Day: int(g.clock.Now()) / clock.TicksPerDay, Colonists: alive,
+		MapSize: g.grid.Width(), Biome: biome.DefOf(g.biome).Name}
+	if g.hasSetup() {
+		s := g.ng.setup
+		info.Commitment = s.SaveMode == difficulty.Commitment
+		info.Storyteller = g.storyProfile().Name
+		info.Difficulty = s.Preset.String()
+	}
+	return info
 }
 
 // Save writes the whole game to w under the given save name.
@@ -265,7 +306,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 	}
 	s := saveState{
 		Tick: g.clock.Now(), W: g.grid.Width(), H: g.grid.Height(), NextEntity: g.entities.Peek(),
-		RNG: rng, Sched: g.sched, Blocked: g.grid.Blocked(), Messages: g.messages,
+		RNG: rng, Sched: g.sched, BlockedBits: g.grid.BlockedBits(), Messages: g.messages,
 		PawnIDs: g.pawnIDs, Positions: exportStore(g.positions), Names: exportStore(g.names),
 		Jobs: exportStore(g.jobs), Need: exportStore(g.need), Vital: exportStore(g.vital), Labor: exportStore(g.labor),
 		ItemIDs: g.itemIDs, Stacks: exportStore(g.stacks), FrameIDs: g.frameIDs, Frames: exportStore(g.frames),
@@ -273,7 +314,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 		Terr: g.terr, Mines: g.mines,
 		LastMeal: g.lastMeal, Bills: g.bills, Racks: g.racks, Fuel: g.fuel,
 		Exposure: map[entity.EntityID][2]int{}, NoComfort: g.noComfort,
-		NoFood: g.noFood, Postponed: g.exportPostponed(), PostOrders: g.exportOrders(), RestedFree: g.restedFree, Calm: g.calm, Banked: g.banked,
+		NoFood: g.noFood, Postponed: g.exportPostponed(), PostSweep: g.postponed.sweepAt, PostOrders: g.exportOrders(), RestedFree: g.restedFree, Calm: g.calm, Banked: g.banked,
 		OrderQueue: map[entity.EntityID][]savedOrder{}, Apparel: g.apparel, Joy: g.joy,
 		Prios: g.prio, Scheds: g.scheds,
 		RaiderIDs: g.raiderIDs, Raiders: g.raiders, RaidGroups: g.raidGroups, NextThreat: g.nextThreat, ThreatsOn: g.threatsOn,
@@ -288,8 +329,9 @@ func (g *Game) Save(w io.Writer, name string) error {
 	}
 	s.Grass, s.GrassCut = g.exportGrass()
 	s.Bios, s.Skills, s.WorkCarry = g.exportBios()
+	s.SkillLive = g.exportSkillLive()
 	s.Biome, s.GrassRegrow, s.Incidents, s.Troughs = g.biome, g.grass.regrow, g.incidents, g.troughs
-	s.Stains = g.exportStains()
+	s.Stains, s.StainDrip = g.exportStains(), g.stains.dripN
 	s.Dirt, s.Carried = g.exportDirt()
 	s.Home, s.CleanWired = g.exportHome(), true
 	s.CleanQ, s.HomeVer = slices.Clone(g.filth.cleanQ), g.homeArea.ver
@@ -307,7 +349,12 @@ func (g *Game) Save(w io.Writer, name string) error {
 	s.ZoneMap, s.Logs, s.Incoming = g.exportZones(), g.exportLogs(), g.exportIncoming()
 	s.Deliveries = g.exportDeliveries()
 	s.Geo, s.Smooths, s.StructVer = g.geo, g.smooths, g.structVer
-	zw := gzip.NewWriter(w)
+	// BestSpeed: a fifth of the default level's time for a file about a
+	// sixth larger (NG-1 §6.8: a 500² save in ≤ 300 ms, ≤ 4 MB).
+	zw, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
+	if err != nil {
+		return fmt.Errorf("save: %w", err)
+	}
 	enc := gob.NewEncoder(zw)
 	if err := enc.Encode(g.Info(name)); err != nil {
 		return fmt.Errorf("save header: %w", err)
@@ -345,7 +392,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	if err := dec.Decode(&info); err != nil {
 		return nil, info, fmt.Errorf("read save header: %w", err)
 	}
-	if info.Version != SaveVersion {
+	if !SupportedSaveVersion(info.Version) {
 		return nil, info, fmt.Errorf("%w (file v%d, game v%d)", ErrSaveVersion, info.Version, SaveVersion)
 	}
 	var s saveState
@@ -357,7 +404,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 		return nil, info, fmt.Errorf("restore rng: %w", err)
 	}
 	g.clock = clock.NewAt(s.Tick)
-	g.grid = grid.Restore(s.W, s.H, s.Blocked)
+	g.grid = grid.Restore(s.W, s.H, s.blockedTiles())
 	g.entities = entity.Resume(s.NextEntity)
 	g.sched = s.Sched
 	g.messages = s.Messages
@@ -382,6 +429,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	setMap(&g.noComfort, s.NoComfort)
 	setMap(&g.noFood, s.NoFood)
 	g.importPostponed(s.Postponed)
+	g.postponed.sweepAt = s.PostSweep
 	g.importOrders(s.PostOrders)
 	setMap(&g.restedFree, s.RestedFree)
 	setMap(&g.calm, s.Calm)
@@ -421,9 +469,11 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.biome, g.climate, g.incidents = s.Biome, biome.DefOf(s.Biome).Climate, s.Incidents
 	g.importSetupState(s.NG1)                   // setup.go: overrides the climate from the site
 	g.importBios(s.Bios, s.Skills, s.WorkCarry) // skills.go: older saves get neutral bios
+	g.importSkillLive(s.SkillLive)
 	g.grass.regrow = s.GrassRegrow
 	setMap(&g.troughs, s.Troughs)
 	g.importStains(s.Stains)
+	setMap(&g.stains.dripN, s.StainDrip)
 	g.importHome(s.Home, s.HomeVer) // home.go: an older save gets Home around its buildings
 	g.importDirt(s.Dirt, s.Carried) // filth.go
 	g.importCleanQ(s.CleanQ)        // filth.go: half-swept tiles stay queued
@@ -449,7 +499,103 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.importDeliveries(s.Deliveries)
 	g.afterLoadAnimals() // legacy corpses and bills (wildlife.go)
 	g.importGeology(s.Geo, s.Smooths, s.StructVer)
+	g.warmIndexes(true) // jobindex.go: indexes, rooms and regions now, not on the first tick
 	return g, info, nil
+}
+
+// savedSkillLive mirrors the skill state skills.go keeps beside the bios
+// (skillState's learned, carry, working and research).
+type savedSkillLive struct {
+	Learned   map[entity.EntityID]savedLearn
+	NeedCarry map[entity.EntityID]savedNeedCarry
+	Working   map[entity.EntityID]savedWorking
+	Research  int
+}
+
+type savedLearn struct {
+	Day   int32
+	Today [skill.NumSkills]int32
+	Week  [7][skill.NumSkills]int32
+	Carry [skill.NumSkills]int16
+}
+
+type savedNeedCarry struct{ Hunger, Rest, Joy int32 }
+
+type savedWorking struct {
+	Skill skill.ID
+	Tick  uint64
+}
+
+// exportSkillLive is the skill state beyond bios, skills and work carry
+// (nil when there is none).
+func (g *Game) exportSkillLive() *savedSkillLive {
+	sk := &g.sk
+	if len(sk.learned) == 0 && len(sk.carry) == 0 && len(sk.working) == 0 && sk.research == 0 {
+		return nil
+	}
+	out := &savedSkillLive{Research: sk.research}
+	if len(sk.learned) > 0 {
+		out.Learned = make(map[entity.EntityID]savedLearn, len(sk.learned))
+		for id, l := range sk.learned {
+			out.Learned[id] = savedLearn{Day: l.day, Today: l.today, Week: l.week, Carry: l.carry}
+		}
+	}
+	if len(sk.carry) > 0 {
+		out.NeedCarry = make(map[entity.EntityID]savedNeedCarry, len(sk.carry))
+		for id, c := range sk.carry {
+			out.NeedCarry[id] = savedNeedCarry{c.hunger, c.rest, c.joy}
+		}
+	}
+	if len(sk.working) > 0 {
+		out.Working = make(map[entity.EntityID]savedWorking, len(sk.working))
+		for id, w := range sk.working {
+			out.Working[id] = savedWorking{w.sk, w.tick}
+		}
+	}
+	return out
+}
+
+// importSkillLive restores exportSkillLive's state (after importBios).
+func (g *Game) importSkillLive(s *savedSkillLive) {
+	if s == nil {
+		return
+	}
+	g.sk.ensure()
+	for id, l := range s.Learned {
+		g.sk.learned[id] = &learnLog{day: l.Day, today: l.Today, week: l.Week, carry: l.Carry}
+	}
+	for id, c := range s.NeedCarry {
+		g.sk.carry[id] = &needCarry{c.Hunger, c.Rest, c.Joy}
+	}
+	for id, w := range s.Working {
+		g.sk.working[id] = workingRec{w.Skill, w.Tick}
+	}
+	g.sk.research = s.Research
+}
+
+// blockedTiles is the blocked tile list, from whichever field the save
+// carries it in (BlockedBits from v2 on).
+func (s *saveState) blockedTiles() []int {
+	if s.BlockedBits == nil {
+		return s.Blocked
+	}
+	return bitIndexes(s.BlockedBits)
+}
+
+// bitIndexes lists the set bits of a bitset in ascending order.
+func bitIndexes(bits []uint64) []int {
+	n := 0
+	for _, w := range bits {
+		n += mathbits.OnesCount64(w)
+	}
+	out := make([]int, 0, n)
+	for wi, w := range bits {
+		for w != 0 {
+			out = append(out, wi*64+mathbits.TrailingZeros64(w))
+			w &= w - 1
+		}
+	}
+	return out
 }
 
 // setMap installs a decoded map, keeping the empty one gob leaves nil.

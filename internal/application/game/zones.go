@@ -5,7 +5,6 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/economy/item"
-	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/terrain"
 )
@@ -195,20 +194,10 @@ func (g *Game) inMatchingStockpile(st item.Stack) bool {
 // no item, planned or built object, or reservation.
 func (g *Game) stockpileCell(k item.Kind, nearX, nearY int) (x, y int, ok bool) {
 	w := g.Width()
-	// loose items on stockpile tiles, the first per tile (as itemAt)
-	loose := map[int]entity.EntityID{}
-	for _, iid := range g.itemIDs {
-		st, has := g.stacks.Get(iid)
-		if !has || st.Carrier != 0 {
-			continue
-		}
-		if _, zoned := g.zoneOf(zone.KindStockpile, st.X, st.Y); !zoned {
-			continue
-		}
-		if _, dup := loose[st.Y*w+st.X]; !dup {
-			loose[st.Y*w+st.X] = iid
-		}
-	}
+	// loose items on stockpile tiles, the first per tile (as itemAt; 0:
+	// none), in a reused per-tile scratch (jobindex.go)
+	loose := g.looseOnStockpiles()
+	defer g.releaseLoose()
 	bestD := 1 << 30
 	better := func(cx, cy int) bool {
 		d := pathing.Dist(nearX, nearY, cx, cy)
@@ -220,8 +209,8 @@ func (g *Game) stockpileCell(k item.Kind, nearX, nearY int) (x, y int, ok bool) 
 		return !taken
 	}
 	g.eachStockpileCell(k, func(cx, cy int) {
-		oid, has := loose[cy*w+cx]
-		if !has || !better(cx, cy) {
+		oid := loose[cy*w+cx]
+		if oid == 0 || !better(cx, cy) {
 			return
 		}
 		o, _ := g.stacks.Get(oid)
@@ -233,7 +222,7 @@ func (g *Game) stockpileCell(k item.Kind, nearX, nearY int) (x, y int, ok bool) 
 		return x, y, true
 	}
 	g.eachStockpileCell(k, func(cx, cy int) {
-		if _, has := loose[cy*w+cx]; has || !better(cx, cy) || !g.grid.Walkable(cx, cy) || !free(cx, cy) {
+		if loose[cy*w+cx] != 0 || !better(cx, cy) || !g.grid.Walkable(cx, cy) || !free(cx, cy) {
 			return
 		}
 		if g.layerFrameAt(cx, cy, construction.LayerObject) != 0 || g.layerBldgAt(cx, cy, construction.LayerObject) != 0 {

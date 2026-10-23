@@ -46,6 +46,8 @@ func (a *App) handleColonyKeys() {
 		return
 	}
 	switch {
+	case f.fired(input.Minimap):
+		r.toggleMinimap()
 	case f.fired(input.Pause):
 		r.togglePause()
 	case f.fired(input.Speed1):

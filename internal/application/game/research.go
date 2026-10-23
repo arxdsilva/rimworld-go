@@ -195,10 +195,14 @@ func (g *Game) doResearch(id entity.EntityID, j job.Record) {
 }
 
 // CompleteResearch finishes every project (dev hook).
-func (g *Game) CompleteResearch() { g.research = research.Complete() }
+func (g *Game) CompleteResearch() {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
+	g.research = research.Complete()
+}
 
 // AddResearch puts points into a project by name (dev scenarios).
 func (g *Game) AddResearch(name string, pts int) {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
 	if p, ok := research.Parse(name); ok {
 		g.research.Add(p, pts)
 	}
@@ -206,10 +210,14 @@ func (g *Game) AddResearch(name string, pts int) {
 
 // PickResearch sets the current project by name (dev scenarios).
 func (g *Game) PickResearch(name string) {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
 	if p, ok := research.Parse(name); ok {
 		g.setResearch(p)
 	}
 }
 
 // ResetResearch forgets all research (fixtures: a fresh colony's tree).
-func (g *Game) ResetResearch() { g.research, g.researchSet = research.Progress{}, false }
+func (g *Game) ResetResearch() {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
+	g.research, g.researchSet = research.Progress{}, false
+}

@@ -134,7 +134,7 @@ func (a *App) tickCapture() {
 		if a.nav.screen() == screenBoot {
 			a.finishBoot()
 		}
-		a.startGame()
+		a.captureStart(c.UI) // capture_colony.go: a setup colony for the colony UI states
 		if a.renderer == nil {
 			a.capture.err = fmt.Errorf("capture: %s", a.sessionErr)
 			a.capture.done, a.shouldQuit = true, true
@@ -575,6 +575,9 @@ func (a *App) captureUI(ui string) {
 		a.cursor = &[2]int{x, y}
 	case "search", "rooms", "multiselect", "drawstyle", "hideui":
 		a.captureInput(ui, at)
+	case "factions-colony", "bio", "work-incapable", "arrival", "options-story", "letter-intro",
+		"arch-hospital", "arch-cabinet", "arch-locked", "chips":
+		a.captureColonyUI(ui) // capture_colony.go
 	case "architect":
 		a.openArchitect()
 		a.selectArchCategory("structure")

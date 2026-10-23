@@ -287,6 +287,9 @@ type litRenderer struct {
 	// onDraw, when set (tests), sees every lit draw's image and its
 	// Custom3 blood value.
 	onDraw func(img *ebiten.Image, blood float32)
+	// calls counts world draw calls (lit sprites, water tiles, baked
+	// chunk and map pages) for the draw benchmarks; it only ever grows.
+	calls int
 }
 
 // litGap is the transparent column between a sprite and its normal map
@@ -295,19 +298,36 @@ const litGap = 1
 
 var litIndices = [6]uint32{0, 1, 2, 1, 3, 2}
 
-// lightGrid is the per-tile sky exposure and lamp light of one frame,
-// rebuilt when the world view changes.
+// lightGrid is the per-tile sky exposure and lamp light, filled lazily a
+// chunk (16×16 tiles) at a time: only the chunks a frame reads are built,
+// and they are rebuilt only after the light's inputs change (NG-1 §6.7).
+// The roof and room layers are shared copy-on-write slices (a new backing
+// array means a change), and the lit rooms and burning campfires are
+// compared by content, since the room and building lists are rebuilt
+// every tick.
 type lightGrid struct {
 	w, h      int
+	cw        int // chunks per row
 	sky, lamp []float32
 	litRooms  []bool
-	// key is the world view the grid was built from (World() copies these
-	// slices every call, so new backing arrays mean a new frame).
+	fires     [][2]int // burning campfires
+	// built[c] is the generation chunk c was last built at; gen moves
+	// whenever an input changes, so every chunk goes stale at once and is
+	// rebuilt when next read.
+	built []uint64
+	gen   uint64
+	view  *game.WorldView // the view the chunks are built from
+	// key is the view the inputs were last checked against (identity of
+	// the shared layers and lists, plus their lengths); sum is the content
+	// key (layer identities, lit rooms, fires) the generation stands for.
 	keyRooms *int
 	keyRoofs *uint8
 	keyBlds  *game.BuildingView
 	keyRm    *game.RoomView
-	keyLens  [4]int
+	keyLens  [5]int
+	sum      uint64
+	genRooms *int
+	genRoofs *uint8
 }
 
 func litFirst[T any](s []T) *T {
@@ -324,91 +344,131 @@ const (
 	campfireFalloff = 3.5
 )
 
-// build fills g from w: sky 0 under a built or natural roof, else 1;
-// lamp 1 in lit rooms and up to 1 − dist/3.5 near burning campfires.
-// Boundary tiles (walls, doors and rock, RoomGrid −2) are lit as their
-// open faces are: sky 1 when unroofed or next to an open-sky floor tile
-// (an outer wall, a mountain face), lamp the brightest of their floor
-// neighbours (a lit room's walls glow with it). Lighting every wall as
-// indoors turned outer walls, doors and rock into near-black slabs at
-// noon. It reuses g's slices, so it allocates only while growing.
-func (g *lightGrid) build(w *game.WorldView) {
-	g.keyRooms, g.keyRoofs, g.keyBlds, g.keyRm = litFirst(w.RoomGrid), litFirst(w.RoofCells), litFirst(w.Buildings), litFirst(w.Rooms)
-	g.keyLens = [4]int{len(w.RoomGrid), len(w.RoofCells), len(w.Buildings), len(w.Rooms)}
-	g.w = w.TerrainW
-	g.h = 0
-	if g.w > 0 {
-		g.h = max(len(w.RoomGrid), len(w.RoofCells), len(w.Terrain)) / g.w
+// sync points g at w, moving the generation when the light's inputs
+// differ from the last view's. The check is pointer and length compares
+// while the view's lists are the same; a new list costs one scan of the
+// rooms and buildings. It reuses g's slices, so it allocates only while
+// growing.
+func (g *lightGrid) sync(w *game.WorldView) {
+	g.view = w
+	lens := [5]int{len(w.RoomGrid), len(w.RoofCells), len(w.Buildings), len(w.Rooms), w.TerrainW}
+	if g.built != nil && g.keyRooms == litFirst(w.RoomGrid) && g.keyRoofs == litFirst(w.RoofCells) &&
+		g.keyBlds == litFirst(w.Buildings) && g.keyRm == litFirst(w.Rooms) && g.keyLens == lens {
+		return
 	}
-	n := g.w * g.h
-	g.sky = litGrow(g.sky, n)
-	g.lamp = litGrow(g.lamp, n)
+	g.keyRooms, g.keyRoofs, g.keyBlds, g.keyRm, g.keyLens = litFirst(w.RoomGrid), litFirst(w.RoofCells), litFirst(w.Buildings), litFirst(w.Rooms), lens
 	g.litRooms = g.litRooms[:0]
+	sum := uint64(0x6c69676874)
 	for _, rm := range w.Rooms {
 		if rm.Lit && rm.ID >= 0 {
 			for len(g.litRooms) <= rm.ID {
 				g.litRooms = append(g.litRooms, false)
 			}
 			g.litRooms[rm.ID] = true
+			sum = mix64(sum ^ uint64(rm.ID+1))
 		}
 	}
+	g.fires = g.fires[:0]
+	for i := range w.Buildings {
+		if b := &w.Buildings[i]; b.Kind == "campfire" && b.Burning {
+			g.fires = append(g.fires, [2]int{b.X, b.Y})
+			sum = mix64(sum ^ uint64(b.X)<<20 ^ uint64(b.Y)<<40 ^ 0xf1)
+		}
+	}
+	for _, n := range [3]int{lens[0], lens[1], lens[4]} { // layer sizes; the lists are compared by content
+		sum = mix64(sum ^ uint64(n))
+	}
+	layersSame := g.genRooms == g.keyRooms && g.genRoofs == g.keyRoofs
+	g.genRooms, g.genRoofs = g.keyRooms, g.keyRoofs
+	w0, h0 := g.w, g.h
+	g.w = w.TerrainW
+	g.h = 0
+	if g.w > 0 {
+		g.h = max(len(w.RoomGrid), len(w.RoofCells), len(w.Terrain)) / g.w
+	}
+	g.cw = (g.w + chunkTiles - 1) / chunkTiles
+	n := g.w * g.h
+	nc := g.cw * ((g.h + chunkTiles - 1) / chunkTiles)
+	if sum != g.sum || !layersSame || g.w != w0 || g.h != h0 || len(g.built) != nc {
+		g.sum = sum
+		g.gen++
+		g.sky = litGrow(g.sky, n)
+		g.lamp = litGrow(g.lamp, n)
+		if cap(g.built) < nc {
+			g.built = make([]uint64, nc)
+		}
+		g.built = g.built[:nc]
+	}
+}
+
+// chunkTiles is the light grid's chunk side (game.ChunkSize).
+const chunkTiles = game.ChunkSize
+
+// base is tile i's own light: sky 0 under a built or natural roof, else
+// 1; lamp 1 in lit rooms and up to 1 − dist/3.5 near burning campfires.
+func (g *lightGrid) base(w *game.WorldView, i int) (sky, lamp float32) {
 	const roofed = uint8(roof.Built | roof.Natural)
-	for i := 0; i < n; i++ {
-		sky, lamp := float32(1), float32(0)
-		if i < len(w.RoofCells) && w.RoofCells[i]&roofed != 0 {
-			sky = 0
-		}
-		if i < len(w.RoomGrid) {
-			id := w.RoomGrid[i]
-			if id >= 0 && id < len(g.litRooms) && g.litRooms[id] {
-				lamp = 1
-			}
-		}
-		g.sky[i], g.lamp[i] = sky, lamp
+	sky = 1
+	if i < len(w.RoofCells) && w.RoofCells[i]&roofed != 0 {
+		sky = 0
 	}
-	for _, b := range w.Buildings {
-		if b.Kind != "campfire" || !b.Burning {
+	if i < len(w.RoomGrid) {
+		if id := w.RoomGrid[i]; id >= 0 && id < len(g.litRooms) && g.litRooms[id] {
+			return sky, 1
+		}
+	}
+	x, y := i%g.w, i/g.w
+	for _, f := range g.fires {
+		dx, dy := x-f[0], y-f[1]
+		if dx < -campfireReach || dx > campfireReach || dy < -campfireReach || dy > campfireReach {
 			continue
 		}
-		for dy := -campfireReach; dy <= campfireReach; dy++ {
-			for dx := -campfireReach; dx <= campfireReach; dx++ {
-				x, y := b.X+dx, b.Y+dy
-				d := math.Hypot(float64(dx), float64(dy))
-				if x < 0 || y < 0 || x >= g.w || y >= g.h || d > campfireReach {
-					continue
+		if d := math.Hypot(float64(dx), float64(dy)); d <= campfireReach {
+			lamp = max(lamp, float32(1-d/campfireFalloff))
+		}
+	}
+	return sky, lamp
+}
+
+// buildChunk fills chunk c. Boundary tiles (walls, doors and rock,
+// RoomGrid −2) are lit as their open faces are: sky 1 when unroofed or
+// next to an open-sky floor tile (an outer wall, a mountain face), lamp
+// the brightest of their floor neighbours (a lit room's walls glow with
+// it). Lighting every wall as indoors turned outer walls, doors and rock
+// into near-black slabs at noon. Neighbours are read through base, so a
+// chunk never depends on another being built.
+func (g *lightGrid) buildChunk(c int) {
+	w := g.view
+	x0, y0 := (c%g.cw)*chunkTiles, (c/g.cw)*chunkTiles
+	x1, y1 := min(x0+chunkTiles, g.w), min(y0+chunkTiles, g.h)
+	walls := len(w.RoomGrid) >= g.w*g.h
+	for y := y0; y < y1; y++ {
+		for x := x0; x < x1; x++ {
+			i := y*g.w + x
+			sky, lamp := g.base(w, i)
+			if walls && w.RoomGrid[i] == room.Wall {
+				// sky from the four sides; lamp also from the diagonals, so a
+				// lit room's wall corners glow with the rest of its walls
+				for k, d := range [8][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {1, 1}, {-1, 1}, {1, -1}, {-1, -1}} {
+					nx, ny := x+d[0], y+d[1]
+					if nx < 0 || ny < 0 || nx >= g.w || ny >= g.h {
+						continue
+					}
+					j := ny*g.w + nx
+					if w.RoomGrid[j] == room.Wall {
+						continue
+					}
+					ns, nl := g.base(w, j)
+					if k < 4 {
+						sky = max(sky, ns)
+					}
+					lamp = max(lamp, nl)
 				}
-				i := y*g.w + x
-				g.lamp[i] = max(g.lamp[i], float32(1-d/campfireFalloff))
 			}
+			g.sky[i], g.lamp[i] = sky, lamp
 		}
 	}
-	if len(w.RoomGrid) < n {
-		return
-	}
-	// Boundary tiles read only floor neighbours, which this pass never
-	// changes, so updating in place is order-independent.
-	for i := 0; i < n; i++ {
-		if w.RoomGrid[i] != room.Wall {
-			continue
-		}
-		x, y := i%g.w, i/g.w
-		// sky from the four sides; lamp also from the diagonals, so a lit
-		// room's wall corners glow with the rest of its walls
-		for k, d := range [8][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {1, 1}, {-1, 1}, {1, -1}, {-1, -1}} {
-			nx, ny := x+d[0], y+d[1]
-			if nx < 0 || ny < 0 || nx >= g.w || ny >= g.h {
-				continue
-			}
-			j := ny*g.w + nx
-			if w.RoomGrid[j] == room.Wall {
-				continue
-			}
-			if k < 4 {
-				g.sky[i] = max(g.sky[i], g.sky[j])
-			}
-			g.lamp[i] = max(g.lamp[i], g.lamp[j])
-		}
-	}
+	g.built[c] = g.gen
 }
 
 func litGrow(s []float32, n int) []float32 {
@@ -418,18 +478,13 @@ func litGrow(s []float32, n int) []float32 {
 	return s[:n]
 }
 
-// stale reports whether w is not the view g was built from.
-func (g *lightGrid) stale(w *game.WorldView) bool {
-	return g.keyRooms != litFirst(w.RoomGrid) || g.keyRoofs != litFirst(w.RoofCells) ||
-		g.keyBlds != litFirst(w.Buildings) || g.keyRm != litFirst(w.Rooms) ||
-		g.keyLens != [4]int{len(w.RoomGrid), len(w.RoofCells), len(w.Buildings), len(w.Rooms)} ||
-		g.w != w.TerrainW || (g.sky == nil && w.TerrainW > 0)
-}
-
 // at is the light at (tx, ty); off the map is open sky without lamps.
 func (g *lightGrid) at(tx, ty int) (sky, lamp float32) {
 	if tx < 0 || ty < 0 || tx >= g.w || ty >= g.h {
 		return 1, 0
+	}
+	if c := (ty/chunkTiles)*g.cw + tx/chunkTiles; g.built[c] != g.gen {
+		g.buildChunk(c)
 	}
 	i := ty*g.w + tx
 	return g.sky[i], g.lamp[i]
@@ -438,9 +493,7 @@ func (g *lightGrid) at(tx, ty int) (sky, lamp float32) {
 // lightTile is the light at tile (tx, ty): sky 1 under open sky, 0 under
 // a roof; lamp 0..1 from lit rooms and nearby campfires.
 func (r *Renderer) lightTile(tx, ty int) (sky, lamp float32) {
-	if r.lit.grid.stale(&r.drawW) {
-		r.lit.grid.build(&r.drawW)
-	}
+	r.lit.grid.sync(&r.drawW)
 	return r.lit.grid.at(tx, ty)
 }
 
@@ -545,6 +598,10 @@ func (l *litRenderer) syncUniforms() {
 // uniforms; per-sprite light rides in vertex attributes, so Ebiten merges
 // consecutive draws from one atlas page into one batch.
 func (r *Renderer) drawLit(dst, img *ebiten.Image, geo ebiten.GeoM, cs colorScale, tx, ty int) {
+	if r.lod.baking { // a bake (lod.go): unlit albedo, lit when it is drawn
+		r.drawUnlit(dst, img, geo, cs)
+		return
+	}
 	if r.cast != nil { // the shadow pass: a silhouette, not a lit sprite
 		r.castSilhouette(img, geo)
 		return
@@ -552,6 +609,7 @@ func (r *Renderer) drawLit(dst, img *ebiten.Image, geo ebiten.GeoM, cs colorScal
 	if r.lit.onDraw != nil {
 		r.lit.onDraw(img, r.figureBlood)
 	}
+	r.lit.calls++
 	if cs == (colorScale{}) {
 		cs = noCS
 	}

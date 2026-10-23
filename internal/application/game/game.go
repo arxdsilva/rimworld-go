@@ -629,16 +629,19 @@ func NewColony(cfg Config) *Game {
 	g.spawnWildlife()
 	g.scheduleThreats()
 	g.research = research.Progress{} // a new colony knows nothing yet
+	g.warmIndexes(false)             // jobindex.go: not on the first tick
 	return g
 }
 
 // SpawnPawn creates a pawn at (x, y) with a generated display name.
 func (g *Game) SpawnPawn(x, y int) (entity.EntityID, error) {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
 	return g.SpawnNamedPawn(x, y, "")
 }
 
 // SpawnNamedPawn creates a pawn with an explicit display name.
 func (g *Game) SpawnNamedPawn(x, y int, name string) (entity.EntityID, error) {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
 	if !g.grid.Walkable(x, y) {
 		return 0, fmt.Errorf("spawn pawn at (%d, %d): tile not walkable", x, y)
 	}
@@ -662,6 +665,7 @@ func (g *Game) SpawnNamedPawn(x, y int, name string) (entity.EntityID, error) {
 
 // SpawnStack places a ground item stack.
 func (g *Game) SpawnStack(kind item.Kind, qty, x, y int) (entity.EntityID, error) {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
 	if !g.grid.InBounds(x, y) || qty <= 0 {
 		return 0, fmt.Errorf("spawn stack")
 	}
@@ -673,12 +677,14 @@ func (g *Game) SpawnStack(kind item.Kind, qty, x, y int) (entity.EntityID, error
 
 // SpawnPlant places a ripe wild berry bush.
 func (g *Game) SpawnPlant(x, y int) (entity.EntityID, error) {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
 	return g.spawnPlant(plant.BerryBush, x, y, plant.DefOf(plant.BerryBush).GrowTicks)
 }
 
 // LoadStartKit places three named colonists, food, wood, and ripe berry
 // bushes around the map centre.
 func (g *Game) LoadStartKit() error {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
 	cx, cy := g.grid.Width()/2, g.grid.Height()/2
 	names := []string{"Ada", "Bo", "Cora"}
 	spots := []Position{{cx - 1, cy}, {cx, cy}, {cx + 1, cy}}
@@ -737,11 +743,13 @@ func (g *Game) Enqueue(c command.Command) { g.Apply(c) }
 
 // SetNeeds overwrites hunger/rest (fixtures).
 func (g *Game) SetNeeds(id entity.EntityID, hunger, rest int) {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
 	g.need.Set(id, needs.Pair{Hunger: hunger, Rest: rest})
 }
 
 // SetWork sets a work-type enable flag immediately (also available via command).
 func (g *Game) SetWork(id entity.EntityID, t work.Type, on bool) {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
 	m, ok := g.labor.Get(id)
 	if !ok {
 		return

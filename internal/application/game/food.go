@@ -128,6 +128,7 @@ func (g *Game) doSow(id entity.EntityID, j job.Record) {
 		p, _ := g.plants.Get(pid)
 		p.Zone = true
 		g.plants.Set(pid, p)
+		g.notePlantMark(pid) // jobindex.go
 	}
 	j.State = job.Complete
 	g.jobs.Set(id, j)

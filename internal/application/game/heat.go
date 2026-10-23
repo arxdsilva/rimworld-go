@@ -326,6 +326,7 @@ func (g *Game) doRefuel(id entity.EntityID, j job.Record) {
 
 // FuelCampfire fills a campfire at (x, y) (dev scenarios and fixtures).
 func (g *Game) FuelCampfire(x, y int) {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
 	if bid := g.layerBldgAt(x, y, construction.LayerObject); bid != 0 {
 		g.fuel[bid] = CampfireCapacity * TicksPerWood
 	}
@@ -471,6 +472,7 @@ func (g *Game) doWarm(id entity.EntityID, j job.Record) {
 // SkipTo jumps the calendar forward to day (0-based) at hour without
 // simulating the time in between (dev scenarios and fixtures).
 func (g *Game) SkipTo(day, hour int) {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
 	target := clock.Tick(day*clock.TicksPerDay + hour*clock.TicksPerHour)
 	if target > g.clock.Now() {
 		g.clock.Advance(int(target - g.clock.Now()))
@@ -479,6 +481,7 @@ func (g *Game) SkipTo(day, hour int) {
 
 // ClearPlants removes every plant in the rectangle (dev scenarios).
 func (g *Game) ClearPlants(x0, y0, x1, y1 int) {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
 	for _, id := range append([]entity.EntityID(nil), g.plantIDs...) {
 		if p, ok := g.plants.Get(id); ok && p.X >= x0 && p.X <= x1 && p.Y >= y0 && p.Y <= y1 {
 			g.removePlant(id)

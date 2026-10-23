@@ -311,26 +311,66 @@ func (r *Renderer) shadowCasters(w game.WorldView, pawns []game.PawnView) []shad
 		bx, by := boxFootprint(x, y, fw, fd, s)
 		out = append(out, shadowCaster{spec: s, x: bx, y: by})
 	}
-	for _, b := range w.Buildings {
-		if b.Floor || b.Kind == "sleeping spot" || isFenceKind(b.Kind) {
-			continue // fences cast no sun shadow (art: shadow kind none)
+	// a cheap position test first: keys and footprints cost more than
+	// most casters are worth off screen (a tree's footprint is ≤ 3 tiles)
+	near := func(x, y int) bool { return inView(float64(x)-2, float64(y)-2, 5, 5) }
+	building := func(b *game.BuildingView) {
+		if b.Floor || b.Kind == "sleeping spot" || isFenceKind(b.Kind) || !near(b.X, b.Y) {
+			return // fences cast no sun shadow (art: shadow kind none)
 		}
 		key := buildSpriteStuff(b.Kind, b.Stuff, b.Facing, 0, false, false)
 		addBox(key, float64(b.X), float64(b.Y), float64(max(b.W, 1)), float64(max(b.H, 1)), 1)
 	}
-	r.addRockCasters(w, addBox)
-	for _, p := range w.Plants {
-		key, scale := plantSprite(p)
+	plant := func(p *game.PlantView) {
+		if !near(p.X, p.Y) {
+			return
+		}
+		key, scale := plantSprite(*p)
 		key = r.seasonKey(key, w)
 		fw, fd := r.footprintOf(key)
 		addBox(key, float64(p.X), float64(p.Y), fw, fd, scale)
 	}
-	for _, it := range w.Items {
-		if it.Carried {
-			continue
+	stack := func(it *game.ItemView) {
+		if it.Carried || !near(it.X, it.Y) {
+			return
 		}
 		key := itemSpriteSpecies(it.Kind, it.Animal, it.X, it.Y)
 		addBox(key, float64(it.X), float64(it.Y), 1, 1, 1)
+	}
+	if r.frameLists(&w) { // only the chunks in view (lod.go)
+		for _, cv := range r.lod.views {
+			for _, i := range cv.Buildings {
+				if int(i) < len(w.Buildings) {
+					building(&w.Buildings[i])
+				}
+			}
+		}
+		r.addRockCasters(w, addBox)
+		for _, cv := range r.lod.views {
+			for _, i := range cv.Plants {
+				if int(i) < len(w.Plants) {
+					plant(&w.Plants[i])
+				}
+			}
+		}
+		for _, cv := range r.lod.views {
+			for _, i := range cv.Items {
+				if int(i) < len(w.Items) {
+					stack(&w.Items[i])
+				}
+			}
+		}
+	} else {
+		for i := range w.Buildings {
+			building(&w.Buildings[i])
+		}
+		r.addRockCasters(w, addBox)
+		for i := range w.Plants {
+			plant(&w.Plants[i])
+		}
+		for i := range w.Items {
+			stack(&w.Items[i])
+		}
 	}
 	st.casters = out
 	return out

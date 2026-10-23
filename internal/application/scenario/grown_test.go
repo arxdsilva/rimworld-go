@@ -64,13 +64,17 @@ func TestGrownGolden(t *testing.T) {
 	if testing.Short() {
 		t.Skip("long golden run")
 	}
+	// Re-pinned (NG-1 E4): plants grow per chunk once per climate interval
+	// (plant.GrowSpan) and frost kills in the same pass; after Build and
+	// 1, 250, 1 000 and 5 000 ticks every saved field is identical to
+	// f815d545 except the plants' Growth.
 	// Re-pinned (NG-1 S3): colonists now save their bios and skills; every
 	// other saved field is identical to the previous pin (checked field by
 	// field against 4d68b9aa), so behaviour is unchanged.
 	// Re-pinned earlier: CompleteResearch now also completes the NG-1 research
 	// projects (more unlocks), and StateHash became format-independent;
 	// identical with and without the E1 engine changes.
-	const want uint64 = 0x2844fbd3ed0ee461
+	const want uint64 = 0x15baeed3067ee62
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

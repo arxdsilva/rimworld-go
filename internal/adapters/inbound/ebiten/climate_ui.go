@@ -118,7 +118,7 @@ func (a *App) liveMessages() []game.MessageView {
 // messageRect is the i-th notice's rect: centred under the top bar,
 // clear of the side panels and alerts.
 func (a *App) messageRect(sw, i int, m game.MessageView) button {
-	w := len(m.Text)*6 + 16
+	w := len(messageLine(m))*6 + 16
 	return button{x: float32((sw - w) / 2), y: float32(hudTopH + hudPad + i*24), w: float32(w), h: 20}
 }
 
@@ -172,6 +172,15 @@ func (a *App) drawMessages(screen *ebiten.Image) {
 	for i, m := range a.liveMessages() {
 		r := a.messageRect(sw, i, m)
 		vector.FillRect(screen, r.x, r.y, r.w, r.h, color.RGBA{20, 16, 12, 200}, false)
-		drawLabel(screen, int(r.x)+8, int(r.y)+3, m.Text)
+		drawLabel(screen, int(r.x)+8, int(r.y)+3, messageLine(m))
 	}
+}
+
+// messageLine is a notice's one line: a letter (the intro, extreme
+// weather) opens in its own window, so the strip only names it.
+func messageLine(m game.MessageView) string {
+	if m.Letter && m.Title != "" {
+		return "Letter: " + m.Title
+	}
+	return m.Text
 }

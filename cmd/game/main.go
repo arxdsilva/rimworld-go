@@ -20,6 +20,7 @@ import (
 	"rimworld-go/internal/adapters/outbound/scenariofile"
 	"rimworld-go/internal/adapters/outbound/settingsfile"
 	"rimworld-go/internal/application/game"
+	appscenario "rimworld-go/internal/application/scenario"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/mentalbreak"
 	"rimworld-go/internal/domain/sim/clock"
@@ -40,12 +41,12 @@ func main() {
 	capture := flag.String("capture", "", "dev: save one colony frame to this PNG and exit")
 	captureTicks := flag.Int("capture-ticks", 5400, "dev: simulation ticks to run before -capture")
 	captureZoom := flag.Float64("capture-zoom", 1, "dev: camera zoom for -capture")
-	scenario := flag.String("scenario", "", "dev: start scenario: pen (a pen with a feeding trough, tame animals and wild ones about) | rescue (a colonist starts badly hurt) | beds (sleeping spots in the other facings) | double (a double bed by the start) | corridor (two colonists meet head-on in a 1-wide corridor) | crowd (every colonist sent into a room with one door) | armory (armed, drafted colonists against a mixed raid) | chores (cutting, mining and tending by the start) | lategame (a grown colony in autumn rain, raid incoming) | rain (a fall storm) | snow (winter snowfall) | burial (a graveyard, a pyre and two bodies) | roofs (winter: a roofed room, an unroofed one, a roofed porch, a yard too big to roof) | sunny (a clear summer day from before dawn) | fence (a fenced field with a gate, deer outside) | forbid (loose items, some forbidden) | zoo (all 61 animal species, tamed and named, in a pen; use -width 80 -height 60) | walls (linked walls and rock: every connection case, five stones, smoothed rock, ore)")
+	scenario := flag.String("scenario", "", "dev: start scenario: pen (a pen with a feeding trough, tame animals and wild ones about) | rescue (a colonist starts badly hurt) | beds (sleeping spots in the other facings) | double (a double bed by the start) | corridor (two colonists meet head-on in a 1-wide corridor) | crowd (every colonist sent into a room with one door) | armory (armed, drafted colonists against a mixed raid) | chores (cutting, mining and tending by the start) | lategame (a grown colony in autumn rain, raid incoming) | rain (a fall storm) | snow (winter snowfall) | burial (a graveyard, a pyre and two bodies) | roofs (winter: a roofed room, an unroofed one, a roofed porch, a yard too big to roof) | sunny (a clear summer day from before dawn) | fence (a fenced field with a gate, deer outside) | forbid (loose items, some forbidden) | grown (the benchmark grown colony at -width x -height; set RIMWORLD_FIXTURE_DIR to cache it) | zoo (all 61 animal species, tamed and named, in a pen; use -width 80 -height 60) | walls (linked walls and rock: every connection case, five stones, smoothed rock, ore)")
 	biomeKey := flag.String("biome", "temperate_forest", "dev: biome of the map: "+biomeKeys()+" (also the landing picker's starting choice)")
 	hour := flag.Int("hour", -1, "dev: jump to this hour (0-23) of the scenario's day, or the next day's if past")
 	captureFrames := flag.Int("capture-frames", 0, "dev: record this many consecutive frames (PATH_NNN.png) instead of one still")
 	captureSpeed := flag.Int("capture-speed", 1, "dev: game speed (1-3) while recording -capture-frames")
-	captureUI := flag.String("capture-ui", "", "dev: UI state for -capture: picker | wild | trough | inspector | architect | orders | bills | pawn | combat | melee | follow | grow | corridor | crowd | lategame | weather | grass | burial | roofs | roofs-overlay | home | carpet | plant | item | pawnactions | paused-stockpile | move | copy | menu | credits | options | options-graphics | options-gameplay | options-access | zones | paths | log | frame | fence | forbid | zoo | controls | search | rooms | multiselect | drawstyle | hideui | scenario | scenario-editor | scenario-editor-addpart | storyteller | difficulty-custom | worldgen | worldgen-progress | landing | landing-advanced | landing-factions | pawns | pawns-reroll")
+	captureUI := flag.String("capture-ui", "", "dev: UI state for -capture: picker | wild | trough | inspector | architect | orders | bills | pawn | combat | melee | follow | grow | corridor | crowd | lategame | weather | grass | burial | roofs | roofs-overlay | home | carpet | plant | item | pawnactions | paused-stockpile | move | copy | menu | credits | options | options-graphics | options-gameplay | options-access | zones | paths | log | frame | fence | forbid | zoo | controls | search | rooms | multiselect | drawstyle | hideui | scenario | scenario-editor | scenario-editor-addpart | storyteller | difficulty-custom | worldgen | worldgen-progress | landing | landing-advanced | landing-factions | pawns | pawns-reroll | factions-colony | bio | work-incapable | arrival | options-story | letter-intro | arch-hospital | arch-cabinet | arch-locked | chips")
 	captureTimelapse := flag.Int("capture-timelapse", 0, "dev: with -capture-frames, step this many sim ticks per recorded frame (a time-lapse)")
 	noAudio := flag.Bool("noaudio", false, "dev: run without sound")
 	cpuProfile := flag.String("cpuprofile", "", "dev: write a CPU profile to this file")
@@ -88,6 +89,10 @@ func main() {
 			ebiten.SetVsyncEnabled(vsync)
 		},
 		NewSim: func(ng uiadapter.NewGame) (uiadapter.Simulation, error) {
+			if *scenario == "grown" { // dev: the benchmark's grown colony at -width x -height
+				appscenario.CacheDir = os.Getenv("RIMWORLD_FIXTURE_DIR")
+				return appscenario.Load(appscenario.GrownColony(1, *width, *height, false))
+			}
 			g := game.NewColony(game.Config{Seed: ng.Seed, Width: *width, Height: *height, Biome: ng.Biome})
 			if *scenario == "beds" {
 				cx, cy := *width/2, *height/2
@@ -431,7 +436,7 @@ func saveHooks() uiadapter.SaveHooks {
 			out := make([]uiadapter.SaveSlot, 0, len(slots))
 			for _, sl := range slots {
 				s := uiadapter.SaveSlot{Name: sl.Name, Path: sl.Path, Date: sl.Info.Date,
-					Colonists: sl.Info.Colonists, Modified: sl.Modified}
+					Colonists: sl.Info.Colonists, Modified: sl.Modified, Commitment: sl.Info.Commitment}
 				if sl.Err != nil {
 					s.Err = sl.Err.Error()
 				}

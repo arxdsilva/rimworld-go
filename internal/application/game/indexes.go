@@ -534,4 +534,5 @@ type seedCache struct {
 // indexes are the derived lookup structures above (never saved).
 type indexes struct {
 	plants, bldgs, frames cellSlots
+	jobs                  jobIndexes // jobindex.go
 }

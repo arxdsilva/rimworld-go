@@ -446,6 +446,7 @@ func (g *Game) importRoofs(cells []uint8) {
 // RoofRooms completes every planned roof at once (dev scenarios, tests):
 // closed rooms are auto-planned first.
 func (g *Game) RoofRooms() {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
 	g.ensureRooms()
 	for _, p := range slices.Clone(g.roofx.plans) {
 		i := int(p)

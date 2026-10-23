@@ -25,6 +25,7 @@ func stuffByName(name string) (item.Kind, bool) {
 // to terrain ground with the given stone and ore ("" for none). Plants on
 // rock are cleared. It reports false on an unknown name.
 func (g *Game) SetGround(x0, y0, x1, y1 int, ground, stone, ore string) bool {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
 	t, ok := terrainByName(ground)
 	if !ok {
 		return false
@@ -82,16 +83,21 @@ func terrainByName(name string) (terrain.Type, bool) {
 
 // Arm puts weapon k in colonist id's hands (k must be a weapon).
 func (g *Game) Arm(id entity.EntityID, k item.Kind) {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
 	if k.IsWeapon() {
 		g.equip[id] = k
 	}
 }
 
 // RaidArmed sends an assault raid carrying exactly these weapons.
-func (g *Game) RaidArmed(kit ...item.Kind) { g.raidWith(kit, planAssault) }
+func (g *Game) RaidArmed(kit ...item.Kind) {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
+	g.raidWith(kit, planAssault)
+}
 
 // SpawnCrop places a plant of species at (x, y) grown to pct percent.
 func (g *Game) SpawnCrop(species string, x, y, pct int) (entity.EntityID, error) {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
 	s, ok := plant.Parse(species)
 	if !ok {
 		return 0, errSpawn

@@ -68,6 +68,7 @@ const (
 	Beauty      Action = "overlay.beauty"
 	Detail      Action = "overlay.detail"
 	Search      Action = "overlay.search"
+	Minimap     Action = "overlay.minimap"
 
 	Queue   Action = "orders.queue"
 	Qty10   Action = "qty.x10"
@@ -165,6 +166,8 @@ var defs = []Def{
 	{ID: Beauty, Label: "Beauty", Category: "Overlays", Context: CtxMap, Kind: Toggle, Defaults: keys("T"), Reserved: NotYet},
 	{ID: Detail, Label: "Detailed cell info (hold)", Category: "Overlays", Context: CtxMap, Kind: Modifier, Fixed: true, Defaults: keys(KeyAlt)},
 	{ID: Search, Label: "Search", Category: "Overlays", Context: CtxMap, Defaults: keys("Z")},
+	// NG-1 §2.12: plain M is Command 7's, so the minimap takes Shift+M.
+	{ID: Minimap, Label: "Minimap", Category: "Overlays", Context: CtxMap, Kind: Toggle, Defaults: []Binding{shift("M")}},
 
 	{ID: Queue, Label: "Queue order (click)", Category: "Orders", Context: CtxMap, Kind: Modifier, Fixed: true, Defaults: keys(KeyShift)},
 	{ID: Qty10, Label: "Amount x10 (click)", Category: "Orders", Context: CtxPanel, Kind: Modifier, Fixed: true, Defaults: keys(KeyCtrl)},

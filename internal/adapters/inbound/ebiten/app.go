@@ -271,6 +271,9 @@ func (a *App) Update() error {
 	if a.shouldQuit {
 		return ebiten.Termination
 	}
+	if a.handleWindowClose() { // commitment: save before the window closes (saves.go)
+		return ebiten.Termination
+	}
 	a.updates++
 	a.pollInput()
 	a.handleTextInput()
@@ -303,6 +306,8 @@ func (a *App) Update() error {
 				}
 			} else if a.colonyLive() && a.colonyChromeHit(mx, my, sw, sh) {
 				a.in.take(mbLeft)
+			} else if a.colonyLive() && !a.hideUI && a.renderer.minimapClick(mx, my, colonyViewport(sw, sh)) {
+				a.in.take(mbLeft) // minimap (minimap.go): the camera moved
 			}
 		}
 	}
@@ -543,6 +548,8 @@ func (a *App) applyClick(id string) {
 		if i, err := strconv.Atoi(strings.TrimPrefix(id, "load.slot.")); err == nil {
 			a.loadSlot(i)
 		}
+	case id == "pause.savequit": // commitment: Save & Quit to Menu (saves.go)
+		a.apply(intent{kind: intentReturnToMenu})
 	case id == "pause.save":
 		a.saveNow(a.saveSlot)
 		a.apply(intent{kind: intentResume})
@@ -642,8 +649,14 @@ func (a *App) apply(in intent) {
 	case intentStartGame:
 		a.startGame()
 	case intentQuit:
+		if !a.saveBeforeLeaving() {
+			return
+		}
 		a.shouldQuit = true
 	case intentReturnToMenu:
+		if !a.saveBeforeLeaving() {
+			return
+		}
 		a.dropSession()
 		a.nav.reset(frame{screen: screenMainMenu})
 	case intentResume:
@@ -755,6 +768,7 @@ func (a *App) Draw(screen *ebiten.Image) {
 			screen.Fill(uiSpace)
 		}
 		if !a.hideUI {
+			a.renderer.drawMinimap(screen, colonyViewport(sw, sh)) // minimap.go: big maps only
 			a.drawColonyHUD(screen, sw, sh)
 		}
 		if a.nav.overlay() == overlayPause {

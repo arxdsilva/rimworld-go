@@ -151,11 +151,13 @@ func (g *Game) spawnPlant(s plant.Species, x, y, growth int) (entity.EntityID, e
 	p := plant.Plant{Species: s, X: x, Y: y, Growth: growth}
 	g.plants.Set(id, p)
 	g.notePlant(id, p) // indexes.go
+	g.plantsChanged()  // jobindex.go
 	return id, nil
 }
 
 // SpawnPlantSpecies places a plant with growth in ticks (fixtures, generation).
 func (g *Game) SpawnPlantSpecies(species string, x, y, growth int) (entity.EntityID, error) {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
 	s, ok := plant.Parse(species)
 	if !ok {
 		return 0, errSpawn
@@ -166,30 +168,15 @@ func (g *Game) SpawnPlantSpecies(species string, x, y, growth int) (entity.Entit
 func (g *Game) removePlant(id entity.EntityID) {
 	g.plants.Delete(id)
 	g.plantIDs = dropIDs(g.plantIDs, func(pid entity.EntityID) bool { return pid == id })
+	g.plantsChanged() // jobindex.go
 }
 
-// phasePlants grows every plant on fertile ground, and grass back on
+// phasePlants grows the plants of this tick's chunks (each chunk once a
+// climate interval, frost included: plant_growth.go), and grass back on
 // grazed or cut tiles that are due (grass.go).
 func (g *Game) phasePlants() {
 	g.regrowGrass()
-	if !plant.GrowingHour(g.Date().Hour) {
-		return // plants grow in daylight only
-	}
-	now := uint64(g.clock.Now())
-	gp := g.growthPct() // setup.go: a scenario's permanent conditions (Ashfall)
-	for _, id := range g.plantIDs {
-		p, ok := g.plants.Get(id)
-		if !ok || p.Ripe() {
-			continue
-		}
-		rate := plant.Rate(p.Species, g.terr.At(p.X, p.Y).Fertility())
-		rate = rate * plant.TempFactor(int(g.temperatureAt(p.X, p.Y))) / 1000
-		if gp != 100 {
-			rate = rate * gp / 100
-		}
-		p = p.Grow(rate, now)
-		g.plants.Set(id, p)
-	}
+	g.growChunks() // plant_growth.go: a few chunks a tick, frost included
 }
 
 func (g *Game) markCut(x1, y1, x2, y2 int, on bool) {
@@ -202,6 +189,7 @@ func (g *Game) markCut(x1, y1, x2, y2 int, on bool) {
 		p.Cut = on
 		if on {
 			p.Designated = false
+			g.notePlantMark(id) // jobindex.go
 		}
 		g.plants.Set(id, p)
 	}
@@ -267,25 +255,10 @@ func (g *Game) assignCut(id entity.EntityID) bool {
 // way to an unreachable one all day.
 func (g *Game) nearestPlant(id entity.EntityID, k job.Kind, want func(plant.Plant) bool) entity.EntityID {
 	pos, _ := g.positions.Get(id)
-	type cand struct {
-		id entity.EntityID
-		d  int
+	cs := g.plantCands(id, k, want, pos) // jobindex.go: the marked plants only
+	if selfCheck() {
+		g.checkPlantCands(id, k, want, pos, cs)
 	}
-	var cs []cand
-	for _, pid := range g.plantIDs {
-		p, ok := g.plants.Get(pid)
-		if !ok || !want(p) {
-			continue
-		}
-		if _, taken := g.reserve.EntityOwner(pid); taken {
-			continue
-		}
-		if g.postponedFor(id, k, pid, 0, 0) {
-			continue
-		}
-		cs = append(cs, cand{pid, pathing.Dist(pos.X, pos.Y, p.X, p.Y)})
-	}
-	sort.Slice(cs, func(i, j int) bool { return cs[i].d < cs[j].d || cs[i].d == cs[j].d && cs[i].id < cs[j].id })
 	for i, c := range cs {
 		if i >= 16 {
 			break

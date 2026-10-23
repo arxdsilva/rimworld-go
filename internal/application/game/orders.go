@@ -363,6 +363,7 @@ func (g *Game) prioritize(id entity.EntityID, o command.Order, x, y int, layer c
 		if p, ok := g.plants.Get(rec.Target); ok {
 			p.Designated = true
 			g.plants.Set(rec.Target, p)
+			g.notePlantMark(rec.Target) // jobindex.go
 		}
 	}
 	if o == command.OrderMine {
@@ -388,6 +389,7 @@ func (g *Game) prioritize(id entity.EntityID, o command.Order, x, y int, layer c
 		if p, ok := g.plants.Get(rec.Target); ok {
 			p.Cut = true
 			g.plants.Set(rec.Target, p)
+			g.notePlantMark(rec.Target) // jobindex.go
 		}
 	}
 	if o == command.OrderSleep {

@@ -181,6 +181,7 @@ func (g *Game) fireIncident(id incident.ID, now uint64) bool {
 // skipping the schedule, cooldown and day checks but not the map's own
 // (dev hook and tests); it reports whether it happened.
 func (g *Game) FireIncident(key string) bool {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
 	now := uint64(g.clock.Now())
 	for _, d := range incident.All() {
 		if d.Key == key && g.incidentFits(d.ID, now) && g.fireIncident(d.ID, now) {

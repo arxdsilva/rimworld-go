@@ -75,6 +75,7 @@ func (g *Game) applyOne(c command.Command) {
 			if p.X >= minX && p.X <= maxX && p.Y >= minY && p.Y <= maxY {
 				p.Designated = true
 				g.plants.Set(id, p)
+				g.notePlantMark(id) // jobindex.go
 			}
 		}
 	case command.DesignateCancel:
@@ -740,6 +741,7 @@ func (g *Game) assignHaul(id entity.EntityID) bool {
 func (g *Game) haulToStockpile(id entity.EntityID, pos Position) bool {
 	var tried []entity.EntityID
 	var full []item.Kind
+	var takes [256]int8 // filterMatches per kind (0 unknown, 1 yes, -1 no): zones don't change here
 	for range workTries {
 		var best item.Stack
 		var bestID entity.EntityID
@@ -759,7 +761,13 @@ func (g *Game) haulToStockpile(id entity.EntityID, pos Position) bool {
 			if g.inMatchingStockpile(st) {
 				continue
 			}
-			if !g.filterMatches(st.Kind) {
+			if takes[st.Kind] == 0 {
+				takes[st.Kind] = -1
+				if g.filterMatches(st.Kind) {
+					takes[st.Kind] = 1
+				}
+			}
+			if takes[st.Kind] < 0 {
 				continue
 			}
 			d := pathing.Dist(pos.X, pos.Y, st.X, st.Y)

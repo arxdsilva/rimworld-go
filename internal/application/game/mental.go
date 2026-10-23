@@ -146,6 +146,7 @@ func (g *Game) Breaking(id entity.EntityID) string {
 
 // ForceBreak starts a mental break now (dev scenarios and fixtures).
 func (g *Game) ForceBreak(id entity.EntityID, k mentalbreak.Kind) {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
 	if v, ok := g.vital.Get(id); !ok || v.Status != health.Alive {
 		return
 	}

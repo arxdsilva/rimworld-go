@@ -72,6 +72,7 @@ func ripeZoneTree(t *testing.T) (*Game, entity.EntityID) {
 	p, _ := g.plants.Get(pid)
 	p.Zone = true
 	g.plants.Set(pid, p)
+	g.notePlantMark(pid) // jobindex.go: as doSow does
 	return g, pid
 }
 

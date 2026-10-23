@@ -56,6 +56,80 @@ func grassMask(w game.WorldView, buf []uint8) []uint8 {
 	return buf
 }
 
+// grassFrameMask fills grassScratch for tiles x0..x1 × y0..y1 of w (the
+// frame's drawn tiles): the rest of the buffer is left as it was and is
+// never read this frame. The covers come from the frame's chunk lists
+// when w is the frame's world (lod.go), so no full-map pass runs per
+// frame; any other world (tests) takes the whole-map grassMask.
+func (r *Renderer) grassFrameMask(w *game.WorldView, x0, y0, x1, y1 int) {
+	if !r.frameLists(w) {
+		grassScratch = grassMask(*w, grassScratch)
+		return
+	}
+	n := len(w.Grass)
+	if cap(grassScratch) < n {
+		grassScratch = make([]uint8, n)
+	}
+	buf := grassScratch[:n]
+	grassScratch = buf
+	tw := w.TerrainW
+	if tw <= 0 || n == 0 {
+		return
+	}
+	th := n / tw
+	x0, y0, x1, y1 = max(x0, 0), max(y0, 0), min(x1, tw-1), min(y1, th-1)
+	if x1 < x0 || y1 < y0 {
+		return
+	}
+	for y := y0; y <= y1; y++ {
+		clear(buf[y*tw+x0 : y*tw+x1+1])
+	}
+	cover := func(x, y, cw, ch int) {
+		cw, ch = max(cw, 1), max(ch, 1)
+		for yy := max(y, y0); yy < min(y+ch, y1+1); yy++ {
+			for xx := max(x, x0); xx < min(x+cw, x1+1); xx++ {
+				buf[yy*tw+xx] |= grassCovered
+			}
+		}
+	}
+	for _, cv := range r.lod.views {
+		for _, i := range cv.Buildings {
+			if int(i) < len(w.Buildings) {
+				b := &w.Buildings[i]
+				cover(b.X, b.Y, b.W, b.H)
+			}
+		}
+		for _, i := range cv.Frames {
+			if int(i) < len(w.Frames) {
+				f := &w.Frames[i]
+				cover(f.X, f.Y, f.W, f.H)
+			}
+		}
+		for _, i := range cv.Plants {
+			if int(i) < len(w.Plants) {
+				p := &w.Plants[i]
+				cover(p.X, p.Y, 1, 1)
+			}
+		}
+	}
+	for _, c := range w.GrassCut {
+		if c[0] >= x0 && c[0] <= x1 && c[1] >= y0 && c[1] <= y1 {
+			buf[c[1]*tw+c[0]] |= grassMarked
+		}
+	}
+}
+
+// frameLists reports whether w is the world this frame's chunk lists
+// index (r.drawW, synced by syncFrameChunks): the same shared lists.
+func (r *Renderer) frameLists(w *game.WorldView) bool {
+	d := &r.drawW
+	return r.game != nil && len(r.lod.views) > 0 &&
+		litFirst(w.Buildings) == litFirst(d.Buildings) && len(w.Buildings) == len(d.Buildings) &&
+		litFirst(w.Plants) == litFirst(d.Plants) && len(w.Plants) == len(d.Plants) &&
+		litFirst(w.Items) == litFirst(d.Items) && len(w.Items) == len(d.Items) &&
+		litFirst(w.Frames) == litFirst(d.Frames) && len(w.Frames) == len(d.Frames)
+}
+
 // grassVisible reports whether a tuft is drawn at tile (x, y) on terrain t.
 // With no simulation grass data (empty mask) it is the old renderer rule.
 func grassVisible(mask []uint8, w game.WorldView, t string, x, y int) bool {

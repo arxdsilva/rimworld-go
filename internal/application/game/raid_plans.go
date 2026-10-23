@@ -171,10 +171,16 @@ func (g *Game) enclosed() bool {
 }
 
 // Siege sends a siege raid of n raiders (dev hook).
-func (g *Game) Siege(n int) { g.raidWith(g.kitOf(n), planSiege) }
+func (g *Game) Siege(n int) {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
+	g.raidWith(g.kitOf(n), planSiege)
+}
 
 // Sappers sends n sappers (dev hook).
-func (g *Game) Sappers(n int) { g.raidWith(g.kitOf(n), planSappers) }
+func (g *Game) Sappers(n int) {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
+	g.raidWith(g.kitOf(n), planSappers)
+}
 
 func (g *Game) kitOf(n int) []item.Kind {
 	kit := make([]item.Kind, n)

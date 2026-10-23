@@ -1,6 +1,7 @@
 package game
 
 import (
+	"slices"
 	"sort"
 
 	"rimworld-go/internal/domain/combat/weapon"
@@ -221,6 +222,11 @@ type foodIndex struct {
 	ok     bool
 	at     uint64
 	ni, np int
+	// the plant grid's own key (plants never move: see food)
+	plantsOK       bool
+	plantGen       uint64
+	plantSrc       any
+	plantW, plantH int
 }
 
 // food is the food index, rebuilt once per tick (and when an item or plant
@@ -239,14 +245,31 @@ func (g *Game) food() *foodIndex {
 		}
 		return fx.items.bucket(st.X, st.Y)
 	}, func(i int) entity.EntityID { return g.itemIDs[i] })
-	fx.plants.reset(w, h)
-	fx.plants.fill(len(g.plantIDs), func(i int) int {
+	// Plants never move: the plant grid is rebuilt only when the plant
+	// list changed since (or the store was replaced: Load), which is the
+	// grid a rebuild would make anyway.
+	if !fx.plantsOK || fx.plantGen != g.idx.jobs.plantGen || fx.plantSrc != g.plants || fx.plantW != w || fx.plantH != h {
+		g.fillFoodPlants(&fx.plants, w, h)
+		fx.plantsOK, fx.plantGen, fx.plantSrc, fx.plantW, fx.plantH = true, g.idx.jobs.plantGen, g.plants, w, h
+	} else if selfCheck() {
+		var fresh bucketGrid[entity.EntityID]
+		g.fillFoodPlants(&fresh, w, h)
+		if !slices.Equal(fresh.start, fx.plants.start) || !slices.Equal(fresh.ents, fx.plants.ents) {
+			panic("food index: the plant list changed without plantsChanged")
+		}
+	}
+	fx.ok, fx.at, fx.ni, fx.np = true, uint64(g.clock.Now()), len(g.itemIDs), len(g.plantIDs)
+	return fx
+}
+
+// fillFoodPlants buckets every plant, in list order.
+func (g *Game) fillFoodPlants(b *bucketGrid[entity.EntityID], w, h int) {
+	b.reset(w, h)
+	b.fill(len(g.plantIDs), func(i int) int {
 		p, ok := g.plants.Get(g.plantIDs[i])
 		if !ok {
 			return -1
 		}
-		return fx.plants.bucket(p.X, p.Y)
+		return b.bucket(p.X, p.Y)
 	}, func(i int) entity.EntityID { return g.plantIDs[i] })
-	fx.ok, fx.at, fx.ni, fx.np = true, uint64(g.clock.Now()), len(g.itemIDs), len(g.plantIDs)
-	return fx
 }

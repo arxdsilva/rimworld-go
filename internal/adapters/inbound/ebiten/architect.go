@@ -46,6 +46,23 @@ func (a *App) archCardRows() int {
 	return rows
 }
 
+// archStride is the distance between card rows: the card and its gap,
+// with the gap squeezed (to 2 px) when a long category (furniture) would
+// run the panel into the bottom bar.
+func (a *App) archStride() float32 {
+	stride := float32(archCardH + archCardGap)
+	_, sh := a.size()
+	avail := hudBarY(sh) - float32(hudTopH+2*hudPad) - archTop - archInfoH - float32(a.archStuffExtra())
+	if a.archCropOpen() {
+		avail -= archCropH
+	}
+	rows := float32(a.archCardRows())
+	if need := stride * rows; need > avail {
+		stride = max(float32(archCardH+2), avail/rows)
+	}
+	return stride
+}
+
 // archCropOpen reports the selected tool sows a crop.
 func (a *App) archCropOpen() bool {
 	t, ok := toolByID(a.archTool)
@@ -109,16 +126,16 @@ func (a *App) archStuffExtra() int {
 }
 
 func (a *App) architectRect() button {
-	h := archTop + a.archCardRows()*(archCardH+archCardGap) + archInfoH + a.archStuffExtra()
+	h := archTop + float32(a.archCardRows())*a.archStride() + archInfoH + float32(a.archStuffExtra())
 	if a.archCropOpen() {
 		h += archCropH
 	}
-	return button{x: hudPad, y: hudTopH + hudPad, w: archW, h: float32(h)}
+	return button{x: hudPad, y: hudTopH + hudPad, w: archW, h: h}
 }
 
 // archCropTop is the y of the crop picker block.
 func (a *App) archCropTop(r button) float32 {
-	return r.y + archTop + float32(a.archCardRows()*(archCardH+archCardGap))
+	return r.y + archTop + float32(a.archCardRows())*a.archStride()
 }
 
 func (a *App) architectButtons() []button {
@@ -141,13 +158,13 @@ func (a *App) architectButtons() []button {
 		b := button{
 			id: "arch.tool." + t.id,
 			x:  r.x + 10 + float32(col)*(archCardW+archCardGap),
-			y:  r.y + archTop + float32(row)*(archCardH+archCardGap),
+			y:  r.y + archTop + float32(row)*a.archStride(),
 			w:  archCardW, h: archCardH,
 			selected: a.archTool == t.id,
 		}
 		if t.build != "" {
-			if p := a.lockedBy("build:" + t.build); p != "" {
-				b.disabled, b.reason, b.selected, b.quiet = true, "Needs research: "+p, false, true
+			if why := a.toolLock(t); why != "" {
+				b.disabled, b.reason, b.selected, b.quiet = true, why, false, true
 			}
 		}
 		out = append(out, b)
@@ -237,7 +254,11 @@ func archTooltipLines(t archTool, stuff string, wood, stock int) []string {
 		lines = append(lines, carpetStockLine(stuff, stock))
 		return append(lines, "Tip: lay it on the tile just inside a door")
 	}
-	lines = append(lines, fmt.Sprintf("Cost: %d %s   Work: %d", bv.Wood, stuff, bv.Work))
+	cost := fmt.Sprintf("Cost: %d %s", bv.Wood, stuff)
+	if n := componentsOf(bv); n > 0 {
+		cost += fmt.Sprintf(" + %d %s", n, componentWord(n))
+	}
+	lines = append(lines, fmt.Sprintf("%s   Work: %d", cost, bv.Work))
 	if stuff == "wood" && bv.Wood > wood {
 		lines = append(lines, fmt.Sprintf("Only %d wood in the colony", wood))
 	}
@@ -403,7 +424,7 @@ func (a *App) drawArchitect(screen *ebiten.Image) {
 		}
 		drawLabel(screen, int(b.x)+50, int(b.y)+10, t.label)
 		if b.disabled {
-			drawLabel(screen, int(b.x)+50, int(b.y)+30, "needs research")
+			drawLabel(screen, int(b.x)+50, int(b.y)+30, lockWord(b.reason))
 		} else if bv, ok := buildable(t.build); ok && bv.Carpet {
 			drawLabel(screen, int(b.x)+50, int(b.y)+30, "1 carpet")
 		} else if ok {
@@ -463,6 +484,9 @@ func (a *App) drawArchTooltip(screen *ebiten.Image, t archTool, wood, x, y int) 
 		stock = stockOf(a.renderer.world(), a.toolStuff(t))
 	}
 	lines := archTooltipLines(t, a.toolStuff(t), wood, stock)
+	if why := a.toolLock(t); why != "" {
+		lines = append(lines, "Locked: "+why)
+	}
 	w := 0
 	for _, l := range lines {
 		if len(l) > w {

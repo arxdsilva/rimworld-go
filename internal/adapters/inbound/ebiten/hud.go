@@ -33,7 +33,7 @@ var hudTabSpecs = []struct {
 	{"tab.research", "Research", true, input.TabResearch},
 	{"tab.world", "World", false, input.TabWorld},
 	{"tab.history", "History", false, input.TabHistory},
-	{"tab.factions", "Factions", false, ""},
+	{"tab.factions", "Factions", true, ""},
 	{"tab.menu", "Menu", true, input.Cancel},
 }
 
@@ -46,6 +46,20 @@ func pawnLabel(p game.PawnView) string {
 		return p.Name
 	}
 	return fmt.Sprintf("Colonist %d", p.ID)
+}
+
+// barTip is a colonist bar slot's hover line: the name, the age and the
+// adulthood title ("Ada, 31, Convoy mechanic"); a legacy colonist has
+// neither, so only the name.
+func barTip(p game.PawnView) string {
+	parts := []string{pawnLabel(p)}
+	if p.AgeYears > 0 {
+		parts = append(parts, strconv.Itoa(p.AgeYears))
+	}
+	if p.Title != "" && p.Title != "—" {
+		parts = append(parts, p.Title)
+	}
+	return strings.Join(parts, ", ")
 }
 
 func (a *App) hudTabButtons(sw, sh int) []button {
@@ -71,6 +85,13 @@ func (a *App) hudTabButtons(sw, sh int) []button {
 		}
 		if t.key != "" {
 			b.tip = t.label + a.keyHint(t.key)
+		}
+		if t.id == "tab.factions" && a.renderer != nil {
+			if len(a.renderer.game.Factions()) == 0 {
+				b.disabled, b.reason = true, "no other peoples in this colony"
+			} else {
+				b.selected = a.uiModalTop() == colFacModalID
+			}
 		}
 		if t.id == "tab.work" && a.workOpen && (a.panelMode == "work" || a.panelMode == "") {
 			b.selected = true
@@ -104,6 +125,7 @@ func (a *App) colonistBarButtons(sw, sh int) []button {
 		out = append(out, button{
 			id:       "bar.pawn." + strconv.FormatUint(uint64(p.ID), 10),
 			label:    "",
+			tip:      barTip(p),
 			x:        float32(hudPad + i*barSlot),
 			y:        y + 4,
 			w:        barSlot - 4,
@@ -188,6 +210,7 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 	a.drawGroupInspector(screen)
 	a.drawGizmoKeys(screen) // gizmo.go
 	a.drawAlerts(screen, sw)
+	a.drawStatusChips(screen, sw) // status_chips.go: heat wave, cold snap, conditions
 	a.drawArchitect(screen)
 	if a.workOpen {
 		a.drawWork(screen, sw, sh)

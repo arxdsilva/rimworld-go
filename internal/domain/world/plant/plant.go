@@ -284,6 +284,42 @@ func (p Plant) WoodYield() int {
 	return DefOf(p.Species).Wood * p.Percent() / 100
 }
 
+// GrowSpan is the growth (ticks) a plant growing at rate percent (100:
+// one growth tick per tick) gains over the ticks t0+1 .. t1, counting
+// only the growing hours: exactly the sum of Grow's per-tick steps over
+// those ticks at that rate, so spans telescope — GrowSpan(r, a, b) +
+// GrowSpan(r, b, c) == GrowSpan(r, a, c). Growth is then integrated per
+// window (one rate for the whole span) instead of tick by tick.
+func GrowSpan(rate int, t0, t1 uint64) int {
+	if rate <= 0 || t1 <= t0 {
+		return 0
+	}
+	f := uint64(rate)
+	total := 0
+	for day := t0 / clock.TicksPerDay; day*clock.TicksPerDay <= t1; day++ {
+		// the day's growing ticks are (s, e]: GrowFromHour:00 .. GrowToHour:00 - 1
+		s := day*clock.TicksPerDay + GrowFromHour*clock.TicksPerHour - 1
+		e := day*clock.TicksPerDay + GrowToHour*clock.TicksPerHour - 1
+		if lo, hi := max(s, t0), min(e, t1); hi > lo {
+			total += int(hi*f/100 - lo*f/100)
+		}
+	}
+	return total
+}
+
+// AddGrowth is p with n ticks of growth added (capped at ripe).
+func (p Plant) AddGrowth(n int) Plant {
+	if n <= 0 {
+		return p
+	}
+	d := DefOf(p.Species)
+	if p.Growth >= d.GrowTicks {
+		return p
+	}
+	p.Growth = min(p.Growth+n, d.GrowTicks)
+	return p
+}
+
 // Grow advances growth by one tick at fertility percent. Growth uses an
 // integer accumulator so it stays deterministic.
 func (p Plant) Grow(fertility int, tick uint64) Plant {

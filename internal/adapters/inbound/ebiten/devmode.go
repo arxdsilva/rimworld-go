@@ -42,7 +42,7 @@ type devState struct {
 }
 
 // devMode reports developer mode is on.
-func (a *App) devMode() bool { return a.settings.Gameplay.DevMode }
+func (a *App) devMode() bool { return a.settings.Gameplay.DevMode && !a.commitment() } // never in a commitment colony
 
 // devAction is one debug menu entry.
 type devAction struct {

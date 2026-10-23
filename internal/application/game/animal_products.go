@@ -38,6 +38,9 @@ func (g *Game) collectReady(aid entity.EntityID, a animal.State, now uint64) boo
 // with a full product (the creature index, nearest first).
 func (g *Game) assignCollect(id entity.EntityID) bool {
 	now := uint64(g.clock.Now())
+	if !g.anyAnimal(func(o entity.EntityID, a animal.State) bool { return g.collectReady(o, a, now) }) {
+		return false // jobindex.go: no product ready anywhere
+	}
 	pos, _ := g.positions.Get(id)
 	r := max(g.grid.Width(), g.grid.Height())
 	best, bp, ok := g.nearestWhere(pos.X, pos.Y, r, ckAnimal, func(o entity.EntityID, _ Position) bool {

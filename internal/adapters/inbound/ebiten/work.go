@@ -1,13 +1,17 @@
 package ebiten
 
 import (
+	"fmt"
 	"image/color"
 	"strconv"
+	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/ai/work"
+	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/command"
 )
 
@@ -54,8 +58,123 @@ func nextPriority(v int) int {
 const (
 	workRowH  = 22
 	workNameW = 110
-	workCellW = 36
+	workCellW = 46 // wide enough for the skill level, the priority and the passion glyph
 )
+
+// workColSkill is the skill each work column trains and is paced by
+// (NG-1 §2.12); Firefighting, Hauling and Cleaning have none.
+var workColSkill = [...]struct {
+	sk skill.ID
+	ok bool
+}{
+	1:  {skill.Medicine, true},
+	2:  {skill.Plants, true},
+	3:  {skill.Cooking, true},
+	4:  {skill.Construction, true},
+	5:  {skill.Shooting, true},
+	8:  {skill.Intellectual, true},
+	9:  {skill.Mining, true},
+	10: {skill.Crafting, true},
+	11: {skill.Animals, true},
+}
+
+// workHelp is the header hover card of each work column.
+var workHelp = [...]string{
+	0:  "Firefighting\nPutting out fires. Not available yet.",
+	1:  "Doctor\nTend the wounded and the sick, and carry the downed to bed. Skill: Medicine.",
+	2:  "Growing\nSow, harvest and cut plants, and cut grass. Skill: Plants.",
+	3:  "Cooking\nCook meals at a stove or campfire and butcher animals. Skill: Cooking.",
+	4:  "Building\nBuild, deconstruct, repair, roof and smooth. Skill: Construction.",
+	5:  "Hunting\nHunt wild animals with a rifle, or a melee weapon. Skill: Shooting (Melee).",
+	6:  "Hauling\nCarry items to stockpiles, benches and frames. No skill.",
+	7:  "Cleaning\nSweep dirt and filth off the Home area. No skill.",
+	8:  "Research\nStudy at a research bench. Skill: Intellectual.",
+	9:  "Mining\nDig out rock and ore. Skill: Mining.",
+	10: "Crafting\nWork at benches: workbench, tailoring, stonecutting. Skill: Crafting.",
+	11: "Handling\nTame, milk, shear and collect from animals. Skill: Animals.",
+}
+
+// workIncapable reports colonist p can never do work column col, and why
+// ("Incapable: Violence (backstory: Convoy mechanic)").
+func (a *App) workIncapable(p game.PawnView, col int) (string, bool) {
+	if !p.Incapable.Enabled(work.Type(col)) {
+		return "", false
+	}
+	why := ""
+	if a.renderer != nil {
+		why = a.renderer.game.IncapableReason(p.ID, work.Type(col))
+	}
+	if why == "" {
+		why = "Incapable"
+	}
+	return why, true
+}
+
+// workCellRect is the rectangle of colonist row's cell in column col.
+func workCellRect(r button, row, col int) rect {
+	hx := r.x + 12 + workNameW
+	y := r.y + 48 + float32(row*workRowH)
+	return rect{hx + float32(col*workCellW), y, workCellW - 4, workRowH - 2}
+}
+
+// workRowShown reports the row fits the panel.
+func workRowShown(r button, row int) bool { return int(r.y)+48+row*workRowH <= int(r.y+r.h)-20 }
+
+// workCellTip is the hover card of a live cell: priority, skill, passion.
+func workCellTip(p game.PawnView, col int) string {
+	name := workHelp[col]
+	name, _, _ = strings.Cut(name, "\n")
+	tip := pawnLabel(p) + ": " + name + "\n"
+	if pr := workPriority(p, col); pr > 0 {
+		tip += fmt.Sprintf("Priority %d (1 first, 4 last). ", pr)
+	} else {
+		tip += "Never. "
+	}
+	if col < len(workColSkill) && workColSkill[col].ok {
+		sk := workColSkill[col].sk
+		tip += fmt.Sprintf("%s level %d, %s.", sk.Label(), p.SkillLv[sk], passionName(int(p.Passion[sk])))
+	}
+	return tip
+}
+
+// passionName is "no passion", "minor passion" or "major passion".
+func passionName(p int) string {
+	switch p {
+	case 1:
+		return "minor passion"
+	case 2:
+		return "major passion"
+	}
+	return "no passion"
+}
+
+// workTipsUI declares the Work tab's hover cards: each column header names
+// its work and skill, each incapable cell says why.
+func (a *App) workTipsUI(sw, sh int) {
+	if !a.workOpen || (a.panelMode != "work" && a.panelMode != "") {
+		return
+	}
+	r := workRect(sw, sh)
+	for col := range workColumns {
+		cr := workCellRect(r, 0, col)
+		a.uiTip("work.hdr."+uiNum(col), rect{cr.X, r.y + 22, cr.W, 22}, workHelp[col])
+	}
+	for row, p := range a.renderer.snapshot() {
+		if !workRowShown(r, row) {
+			break
+		}
+		for col := range workColumns {
+			if _, live := workLive[col]; !live {
+				continue
+			}
+			tip := workCellTip(p, col)
+			if why, inc := a.workIncapable(p, col); inc {
+				tip = why
+			}
+			a.uiTip(fmt.Sprintf("work.tip.%d.%d", p.ID, col), workCellRect(r, row, col), tip)
+		}
+	}
+}
 
 func workRect(sw, sh int) button {
 	h := hudBarY(sh) - float32(hudTopH) - 2*hudPad
@@ -106,14 +225,20 @@ func (a *App) workButtons() []button {
 			if _, ok := workTypeForCol(col); !ok {
 				continue
 			}
-			out = append(out, button{
+			b := button{
 				id:    "work.cell." + strconv.FormatUint(uint64(p.ID), 10) + "." + strconv.Itoa(col),
 				label: "",
 				x:     float32(hx + col*workCellW),
 				y:     float32(y),
 				w:     float32(workCellW - 4),
 				h:     float32(workRowH - 2),
-			})
+			}
+			if why, inc := a.workIncapable(p, col); inc {
+				// An incapable cell is hatched and can't be clicked: the
+				// reason shows as its tooltip (workTipsUI) and as the hint.
+				b.disabled, b.reason, b.quiet = true, why, true
+			}
+			out = append(out, b)
 		}
 	}
 	return out
@@ -167,13 +292,45 @@ func (a *App) drawWork(screen *ebiten.Image, sw, sh int) {
 			if v == "" {
 				continue
 			}
-			x := hx + col*workCellW
+			cell := workCellRect(r, row, col)
+			if p.Incapable.Enabled(work.Type(col)) {
+				drawHatch(screen, cell)
+				continue
+			}
 			if pr := workPriority(p, col); pr > 0 {
 				// brighter for more urgent work
-				vector.FillRect(screen, float32(x), float32(y), float32(workCellW-4), float32(workRowH-2),
+				vector.FillRect(screen, cell.X, cell.Y, cell.W, cell.H,
 					color.RGBA{uint8(150 - pr*22), uint8(120 - pr*16), 50, 255}, false)
 			}
-			drawLabel(screen, x+12, y+3, v)
+			a.drawWorkSkill(screen, p, col, cell)
+			drawLabel(screen, int(cell.X)+17, y+3, v)
 		}
 	}
+}
+
+// drawWorkSkill adds the related skill's level (left) and the passion glyph
+// (right) to a live Work cell. Work with no skill shows neither.
+func (a *App) drawWorkSkill(screen *ebiten.Image, p game.PawnView, col int, cell rect) {
+	if col >= len(workColSkill) || !workColSkill[col].ok {
+		return
+	}
+	sk := workColSkill[col].sk
+	ls := tsSmall
+	ls.Color = uiTextDim
+	drawText(screen, strconv.Itoa(int(p.SkillLv[sk])), float64(cell.X+3), float64(cell.Y)+(float64(cell.H)-lineH(ls))/2, ls)
+	if ps := int(p.Passion[sk]); ps > 0 {
+		a.drawPassion(screen, ps, float64(cell.right()-13), float64(cell.Y)+(float64(cell.H)-10)/2, 10, ls, float64(cell.Y)+3)
+	}
+}
+
+// drawHatch fills r with the disabled colour and diagonal stripes: work the
+// colonist can never do.
+func drawHatch(dst *ebiten.Image, r rect) {
+	vector.FillRect(dst, r.X, r.Y, r.W, r.H, uiBtnDisabled, false)
+	sub := clipTo(dst, r)
+	c := uiTextDisabled
+	for d := float32(-r.H); d < r.W; d += 6 {
+		vector.StrokeLine(sub, r.X+d, r.bottom(), r.X+d+r.H, r.Y, 1, c, false)
+	}
+	strokeRect(dst, r, uiBtnBorder)
 }

@@ -89,9 +89,7 @@ type envState struct {
 	terrW                int
 	springs              map[uint32]*envSpring // contact springs by tile
 	movers               []envMover
-	trees                map[uint32]bool
-	treesN               int
-	treesAt              uint64
+	treeBuf              []int32 // treeAt's PlantsIn buffer
 	view                 envRect // visible world rectangle, tiles (set while drawing)
 	drops                []weatherDrop
 	seq                  uint64
@@ -350,9 +348,6 @@ func (r *Renderer) stepContacts(w game.WorldView, pawns []game.PawnView) {
 			add(r.animalMotion(an.ID))
 		}
 	}
-	if len(e.movers) > 0 {
-		e.indexTrees(w, r.present)
-	}
 	for _, m := range e.movers {
 		for ty := int(math.Floor(m.y - contactRadius)); ty <= int(math.Ceil(m.y+contactRadius)); ty++ {
 			for tx := int(math.Floor(m.x - contactRadius)); tx <= int(math.Ceil(m.x+contactRadius)); tx++ {
@@ -365,7 +360,7 @@ func (r *Renderer) stepContacts(w game.WorldView, pawns []game.PawnView) {
 	}
 	cd := 2 * springZeta * math.Sqrt(springK)
 	for k, s := range e.springs {
-		if s.touch && !s.was && e.trees[k] {
+		if s.touch && !s.was && r.treeAt(&w, int(k&0xffff), int(k>>16)) {
 			s.shakeAt, s.shaking = r.present, true
 			if e.season == seasonFall {
 				r.dropLeaves(int(k&0xffff), int(k>>16))
@@ -418,22 +413,17 @@ func (e *envState) push(tx, ty int, m envMover) {
 	s.touch = true
 }
 
-// indexTrees refreshes the set of tree tiles (for brush shakes) when the
-// plants change, at most every two seconds otherwise.
-func (e *envState) indexTrees(w game.WorldView, now uint64) {
-	if e.trees != nil && len(w.Plants) == e.treesN && now-e.treesAt < 120 {
-		return
-	}
-	if e.trees == nil {
-		e.trees = map[uint32]bool{}
-	}
-	clear(e.trees)
-	for _, p := range w.Plants {
-		if isTreePlant(p.Species) {
-			e.trees[envTileKey(p.X, p.Y)] = true
+// treeAt reports a tree on tile (x, y) (a brush shake), from the plants
+// on that tile alone (Simulation.PlantsIn), never a pass over every plant.
+func (r *Renderer) treeAt(w *game.WorldView, x, y int) bool {
+	e := &r.env
+	e.treeBuf = r.plantsOn(w, x, y, x, y, e.treeBuf[:0])
+	for _, i := range e.treeBuf {
+		if int(i) < len(w.Plants) && isTreePlant(w.Plants[i].Species) {
+			return true
 		}
 	}
-	e.treesN, e.treesAt = len(w.Plants), now
+	return false
 }
 
 var autumnLeaves = []color.RGBA{{214, 140, 52, 255}, {178, 74, 44, 255}, {226, 184, 74, 255}, {160, 104, 48, 255}}
@@ -957,7 +947,7 @@ func (r *Renderer) drawGroundCover(screen *ebiten.Image, w game.WorldView, sw, s
 	x0, y0, x1, y1 := r.visibleTiles()
 	open := func(x, y int) bool { return r.groundOpen(w, x, y) }
 	veil := 0.85 // snow veil strength: all of it without decals, a base under them
-	if r.art.has(snowCoverKeys[0]) {
+	if r.art.has(snowCoverKeys[0]) && tile >= decalMinTile {
 		veil = 0.5
 	}
 	e.beginBatch()
@@ -982,6 +972,9 @@ func (r *Renderer) drawGroundCover(screen *ebiten.Image, w game.WorldView, sw, s
 		}
 	}
 	e.flush(screen, e.whiteImg())
+	if tile < decalMinTile { // zoomed out: the veil alone (lod.go)
+		return
+	}
 	none := color.NRGBA{}
 	decal := func(k string, x, y int, a float64) {
 		if a > 0 && r.art.has(k) {

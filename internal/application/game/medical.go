@@ -1,6 +1,8 @@
 package game
 
 import (
+	"fmt"
+
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/building/construction"
@@ -32,16 +34,13 @@ func (g *Game) injuredDowned(id entity.EntityID) bool {
 // bedUnder is the bed covering a pawn's tile that it has claimed.
 func (g *Game) bedUnder(id entity.EntityID) entity.EntityID {
 	pos, _ := g.positions.Get(id)
-	for _, bid := range g.bldgIDs {
-		b, ok := g.bldgs.Get(bid)
-		if !ok || !b.Kind.Sleeps() || b.SlotOf(uint64(id)) < 0 {
-			continue
-		}
-		if construction.Covers(b.Kind, b.Facing, b.X, b.Y, pos.X, pos.Y) {
-			return bid
+	bid := g.bedUnderIndexed(id, pos) // jobindex.go
+	if selfCheck() {
+		if s := g.bedUnderScan(id, pos); s != bid {
+			panic(fmt.Sprintf("bedUnder(%d) index %d, scan %d", id, bid, s))
 		}
 	}
-	return 0
+	return bid
 }
 
 func (g *Game) inBed(id entity.EntityID) bool { return g.bedUnder(id) != 0 }
@@ -281,10 +280,14 @@ func (g *Game) doTend(id entity.EntityID, j job.Record) {
 
 // Injure deals damage to a colonist as if from an attack (dev scenarios
 // and fixtures).
-func (g *Game) Injure(id entity.EntityID, dmg int) { g.hurt(id, dmg, 0) }
+func (g *Game) Injure(id entity.EntityID, dmg int) {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
+	g.hurt(id, dmg, 0)
+}
 
 // BuildNow places a finished building (dev scenarios and fixtures).
 func (g *Game) BuildNow(kind, stuff, facing string, x, y int) bool {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
 	b, ok := buildableByName(kind)
 	if !ok {
 		return false
@@ -341,6 +344,16 @@ func (g *Game) besideSpot(id entity.EntityID, x, y int) (int, int, bool) {
 }
 
 func (g *Game) bedCovering(x, y int) bool {
+	on := g.bedCoveringIndexed(x, y) // jobindex.go
+	if selfCheck() {
+		if s := g.bedCoveringScan(x, y); s != on {
+			panic(fmt.Sprintf("bedCovering(%d,%d) index %v, scan %v", x, y, on, s))
+		}
+	}
+	return on
+}
+
+func (g *Game) bedCoveringScan(x, y int) bool {
 	for _, bid := range g.bldgIDs {
 		if b, ok := g.bldgs.Get(bid); ok && b.Kind.Sleeps() && construction.Covers(b.Kind, b.Facing, b.X, b.Y, x, y) {
 			return true

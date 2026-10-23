@@ -57,7 +57,10 @@ func (g *Game) hiveSwarm() {
 }
 
 // HiveSwarm is the dev hook for a hive swarm.
-func (g *Game) HiveSwarm() { g.hiveSwarm() }
+func (g *Game) HiveSwarm() {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
+	g.hiveSwarm()
+}
 
 // spawnNear places s on a walkable tile within two of (x, y).
 func (g *Game) spawnNear(s animal.Species, x, y int) (entity.EntityID, bool) {

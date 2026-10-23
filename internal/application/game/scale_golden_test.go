@@ -17,6 +17,13 @@ import (
 // Re-pin: go test -run TestScaleGolden -v ./internal/application/game/
 // and copy the "got" values.
 //
+// Re-pinned (NG-1 E4, plant_growth.go): plants grow per chunk once per
+// climate interval (plant.GrowSpan, one rate per window) instead of every
+// tick, and frost kills in the same pass. Checked field by field against
+// f815d545 after 1, 250, 1 000, 5 000 and 20 000 ticks of all six
+// colonies: every saved field is identical except Plants, and within the
+// plants only Growth differs (ids, species, positions and marks equal).
+//
 // Re-pinned (NG-1 S3): colonists now save their bios and skills (new
 // state); every other saved field is identical to the previous pins, so
 // behaviour is unchanged (checked field by field against 4d68b9aa).
@@ -26,12 +33,12 @@ import (
 // values are identical when computed on the contract commit (fbc76fd6)
 // and on the new save format.
 var scaleGolden = map[string]uint64{
-	"48x40/seed1":    0xca28aed6af2d3d04,
-	"48x40/seed7":    0x80dba255c6e4d3b0,
-	"48x40/seed42":   0x5ed1c332d169196c,
-	"120x120/seed1":  0x5ab1797efe806172,
-	"120x120/seed7":  0xa9f0a72776702b9c,
-	"120x120/seed42": 0x2c38132a2bcaf5b6,
+	"48x40/seed1":    0xae93af67a85a0717,
+	"48x40/seed7":    0x1ffec660bec74194,
+	"48x40/seed42":   0x655898a73e2c16d3,
+	"120x120/seed1":  0x13c02846ac4ec28,
+	"120x120/seed7":  0xcd26219d6a19ebfb,
+	"120x120/seed42": 0xf5d403e00d332b28,
 }
 
 const scaleGoldenTicks = 20000

@@ -5,10 +5,16 @@ import ebiten "github.com/hajimehoshi/ebiten/v2"
 func (a *App) pauseButtons(sw, sh int) []button {
 	cx := float32(sw)/2 - 140
 	y := float32(sh)/2 - 140
+	save := buttonSpec{id: "pause.save", label: "Save", disabled: !a.canSave(), reason: "saving unavailable"}
+	load := buttonSpec{id: "pause.load", label: "Load", disabled: !a.canLoad(), reason: "loading unavailable"}
+	if a.commitment() { // saves.go: one timeline, saved by the game itself
+		save = buttonSpec{id: "pause.savequit", label: "Save & Quit to Menu", disabled: !a.canSave(), reason: "saving unavailable"}
+		load = buttonSpec{id: "pause.load", label: "Load", disabled: true, reason: commitLoadReason}
+	}
 	return stackButtons(cx, y, 280, 36, 8, []buttonSpec{
 		{id: "pause.resume", label: "Resume"},
-		{id: "pause.save", label: "Save", disabled: !a.canSave(), reason: "saving unavailable"},
-		{id: "pause.load", label: "Load", disabled: !a.canLoad(), reason: "loading unavailable"},
+		save,
+		load,
 		{id: "pause.options", label: "Options"},
 		{id: "pause.help", label: "Help", disabled: true, reason: "not implemented"},
 		{id: "pause.menu", label: "Return to Main Menu"},

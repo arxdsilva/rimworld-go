@@ -1,11 +1,13 @@
 package ebiten
 
 import (
+	"os"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
+	appscenario "rimworld-go/internal/application/scenario"
 )
 
 // BenchmarkDrawArt is one whole world frame (terrain, shadows, buildings,
@@ -63,5 +65,86 @@ func benchDraw(b *testing.B, setup func(*game.Game)) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		frame()
+	}
+}
+
+// BenchmarkDrawArt500 is one world frame of the grown 500² colony
+// (internal/application/scenario; set RIMWORLD_FIXTURE_DIR to keep the
+// fixture between runs) at each zoom the LOD tiers cover: z1 (64 px
+// tiles, live), z0.5 and z0.25 (32 and 16 px, baked chunks) and zmin (the
+// furthest zoom-out, the whole-map bake). The sim is paused, so only the
+// draw is timed; draw-calls/op counts lit sprites, water tiles and baked
+// pages (light.go litRenderer.calls). NG-1 §6.1: ≤ 6 ms and ≤ 6 000 draw
+// calls at every zoom.
+func BenchmarkDrawArt500(b *testing.B) {
+	benchDrawGrown(b, 500)
+}
+
+// BenchmarkDrawArt250 is BenchmarkDrawArt500 at 250² (the §6.9 gate for
+// standard sizes).
+func BenchmarkDrawArt250(b *testing.B) {
+	benchDrawGrown(b, 250)
+}
+
+func benchDrawGrown(b *testing.B, side int) {
+	root, err := LocateArt()
+	if err != nil {
+		b.Skip("generated art not present:", err)
+	}
+	art, err := loadArtCatalog(root)
+	if err != nil {
+		b.Fatal(err)
+	}
+	art.prewarmAtlases() // page cuts are a one-time cost, not the frame's
+	if d := os.Getenv("RIMWORLD_FIXTURE_DIR"); d != "" {
+		appscenario.CacheDir = d
+	}
+	data := appscenario.GrownColony(1, side, side, false)
+	for _, z := range []struct {
+		name string
+		zoom float64 // 0: the furthest zoom-out
+		run  bool    // the sim runs at normal speed (its tick is not timed): bakes follow the changes
+	}{{"z1", 1, false}, {"z0.5", 0.5, false}, {"z0.25", 0.25, false}, {"zmin", 0, false},
+		{"z0.25-run", 0.25, true}, {"zmin-run", 0, true}} {
+		b.Run(z.name, func(b *testing.B) {
+			g, err := appscenario.Load(data)
+			if err != nil {
+				b.Fatal(err)
+			}
+			r := New(g)
+			r.art = art
+			r.speed = speedPaused
+			if z.run {
+				r.speed = speedNormal
+			}
+			const sw, sh = 1280, 800
+			v := colonyViewport(sw, sh)
+			r.cam.zoom = z.zoom
+			if z.zoom == 0 {
+				r.cam.zoom = r.minZoomFor(v)
+			}
+			r.clampCamera(v) // centred on the colony
+			screen := ebiten.NewImage(sw, sh)
+			tile := r.tilePx()
+			frame := func() {
+				r.advance()
+				r.setView(sw, sh, tile)
+				r.drawArt(screen, sw, sh, tile)
+			}
+			for i := 0; i < 60; i++ { // textures uploaded, atlas pages cut, bakes made
+				frame()
+			}
+			calls := r.lit.calls
+			b.ReportAllocs()
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				b.StopTimer()
+				r.advance()
+				b.StartTimer()
+				r.setView(sw, sh, tile)
+				r.drawArt(screen, sw, sh, tile)
+			}
+			b.ReportMetric(float64(r.lit.calls-calls)/float64(b.N), "draw-calls/op")
+		})
 	}
 }

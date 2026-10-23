@@ -210,7 +210,7 @@ func TestOldSaveWithoutMotionLoads(t *testing.T) {
 		t.Fatal(err)
 	}
 	g, info, err := Load(bytes.NewReader(data))
-	if err != nil || info.Version != SaveVersion {
+	if err != nil || info.Version != 1 { // a v1 file, read by the v2 loader
 		t.Fatalf("load: %v (info %+v)", err, info)
 	}
 	walker := g.pawnIDs[0]

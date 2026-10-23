@@ -182,8 +182,8 @@ func (g *Game) assignBill(id entity.EntityID, m work.Mask) bool {
 		if g.postponedFor(id, job.Bill, bid, 0, 0) {
 			continue // SIM-027: blocked or out of reach lately
 		}
-		_, spot, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
-		unreach := false
+		var spot [2]int // the work spot, worked out once a bill wants doing
+		spotOK, unreach := false, false
 		for i, bl := range g.bills[bid] {
 			d := recipe.DefOf(bl.Recipe)
 			if !m.Enabled(d.Skill) || !g.meetsMinSkill(id, d.Learn, d.MinSkill) { // skills.go
@@ -207,6 +207,10 @@ func (g *Game) assignBill(id entity.EntityID, m work.Mask) bool {
 			sid, st := g.ingredientFor(id, d.Input)
 			if sid == 0 {
 				continue
+			}
+			if !spotOK {
+				_, spot, _ = construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
+				spotOK = true
 			}
 			if unreach || !g.reachable(id, spot[0], spot[1]) {
 				if !unreach { // SIM-027: searched once, put off
