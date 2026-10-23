@@ -129,12 +129,10 @@ type ebitenWindow struct{}
 func (ebitenWindow) SetClosingHandled(v bool) { ebiten.SetWindowClosingHandled(v) }
 func (ebitenWindow) BeingClosed() bool        { return ebiten.IsWindowBeingClosed() }
 
-// appWindow is the window; closeHandled what it was last told. Both are
-// package-level because the window is process-wide (one App per window).
-var (
-	appWindow    windowHooks = ebitenWindow{}
-	closeHandled bool
-)
+// appWindow is the window hooks a new App takes (tests swap it before
+// building their App). What the window was last told lives on the App,
+// so parallel test Apps never share it.
+var appWindow windowHooks = ebitenWindow{}
 
 // handleWindowClose takes over the window's close button while a
 // commitment colony runs, and reports when the game should end: the
@@ -142,11 +140,14 @@ var (
 // that save fails, so a broken disk never traps the player in the window.
 func (a *App) handleWindowClose() bool {
 	want := a.commitment() && a.cfg.Capture == nil
-	if want != closeHandled {
-		appWindow.SetClosingHandled(want)
-		closeHandled = want
+	if a.win == nil {
+		a.win = appWindow
 	}
-	if !closeHandled || !appWindow.BeingClosed() {
+	if want != a.closeHandled {
+		a.win.SetClosingHandled(want)
+		a.closeHandled = want
+	}
+	if !a.closeHandled || !a.win.BeingClosed() {
 		return false
 	}
 	a.saveBeforeLeaving()

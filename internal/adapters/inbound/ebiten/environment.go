@@ -523,10 +523,9 @@ var treeSpecies = [...]string{"oak", "birch", "pine"}
 type plantKeyTable struct {
 	crops    map[string]*[numCropStages][3]string
 	trees    [3][3]string
-	bushes   [4][2]string // [variant][harvestable]
-	berry    [3][2]string
 	fallback map[string][]string
 	seasonal map[string][2]string // autumn, bare
+	ground   map[string]*groundKeys
 }
 
 var plantKeys = buildPlantKeys()
@@ -565,31 +564,15 @@ func buildPlantKeys() plantKeyTable {
 		for v := 0; v < 3; v++ {
 			k := artKey("plant", "tree_"+sp, v)
 			t.trees[s][v] = k
-			legacy := artKey("plant", "tree", v)
-			t.fallback[k] = []string{legacy}
 			if sp != "pine" {
 				t.seasonal[k] = [2]string{k + "_autumn", k + "_bare"}
-				t.fallback[k+"_autumn"] = []string{k, legacy}
-				t.fallback[k+"_bare"] = []string{k, legacy}
+				t.fallback[k+"_autumn"] = []string{k}
+				t.fallback[k+"_bare"] = []string{k}
 			}
 		}
 	}
-	for v := 0; v < 4; v++ {
-		legacy := artKey("plant", "bush", v%2)
-		k := artKey("plant", "bush", v)
-		t.bushes[v] = [2]string{k, k + "_harvestable"}
-		if k != legacy {
-			t.fallback[k] = []string{legacy}
-			t.fallback[k+"_harvestable"] = []string{legacy + "_harvestable"}
-		}
-		if v < 3 {
-			b := artKey("plant", "berry_bush", v)
-			t.berry[v] = [2]string{b, b + "_harvestable"}
-			t.fallback[b] = []string{legacy}
-			t.fallback[b+"_harvestable"] = []string{legacy + "_harvestable"}
-		}
-	}
 	addBiomePlantFallbacks(&t)
+	addGroundPlantKeys(&t)
 	return t
 }
 
@@ -622,13 +605,6 @@ func treeSpeciesAt(h uint64) int {
 		return 1
 	}
 	return 2
-}
-
-func boolIdx(b bool) int {
-	if b {
-		return 1
-	}
-	return 0
 }
 
 // --- weather particles ------------------------------------------------------------

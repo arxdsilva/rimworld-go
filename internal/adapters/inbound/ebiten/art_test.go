@@ -264,8 +264,8 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 	for m := 0; m < 16; m++ {
 		keys = append(keys, "structure/wall_wood_"+twoDigits(m))
 	}
-	keys = append(keys, "plant/grass_00", "plant/grass_01", "plant/bush_00", "plant/bush_01",
-		"plant/bush_00_harvestable", "plant/bush_01_harvestable", "overlay/grow_zone",
+	keys = append(keys, "plant/grass_short_v0", "plant/grass_short_v1", "plant/bush_mature_v0", "plant/bush_mature_v1",
+		"plant/berry_bush_harvestable_v0", "plant/berry_bush_harvestable_v1", "overlay/grow_zone",
 		"plant/crop_sown",
 		itemSprite("food"), itemSprite("berries"), itemSprite("meat"),
 		itemSprite("meal"), itemSprite("stone"), "rock/rock_wall_15", "terrain/stone_edge_15",
@@ -332,6 +332,9 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 		for _, h := range hairStyles {
 			keys = append(keys, "pawn/"+h+"_"+f.String())
 		}
+	}
+	for _, k := range treePartCoverageKeys() { // PLAY-010 2.9: whole tree plus its trunk and canopy parts
+		keys = append(keys, k, k+treeTrunkSuffix, k+treeCanopySuffix)
 	}
 	for _, k := range keys {
 		if !c.has(k) {

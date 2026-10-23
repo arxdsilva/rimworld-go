@@ -559,6 +559,8 @@ type ghostCell struct {
 	x, y   int
 	ok     bool
 	reason string
+	// replaces names the wall or fence a door/gate here takes the place of.
+	replaces string
 }
 
 // previewCells is what the current tool would affect right now: the
@@ -588,7 +590,11 @@ func (a *App) previewCells() (archTool, []ghostCell) {
 	out := make([]ghostCell, 0, len(cells))
 	for _, c := range cells {
 		ok, reason := a.renderer.game.CanPlaceAt(t.build, a.toolStuff(t), facingNames[a.archFacing], c[0], c[1])
-		out = append(out, ghostCell{x: c[0], y: c[1], ok: ok, reason: reason})
+		gc := ghostCell{x: c[0], y: c[1], ok: ok, reason: reason}
+		if ok {
+			gc.replaces = a.renderer.game.ReplacesAt(t.build, c[0], c[1])
+		}
+		out = append(out, gc)
 	}
 	return t, out
 }
@@ -694,16 +700,22 @@ func (a *App) drawArchitectGhost(screen *ebiten.Image) {
 		return
 	}
 	a.renderer.drawPlacementGhost(screen, t.build, a.toolStuff(t), facingNames[a.archFacing], cells)
-	valid, firstBad := 0, ""
+	valid, firstBad, replaces := 0, "", ""
 	for _, c := range cells {
 		if c.ok {
 			valid++
+			if replaces == "" {
+				replaces = c.replaces
+			}
 		} else if firstBad == "" {
 			firstBad = c.reason
 		}
 	}
 	bv, _ := buildable(t.build)
 	msg := fmt.Sprintf("%s x%d  %d %s", t.label, valid, valid*bv.Wood, a.toolStuff(t))
+	if replaces != "" {
+		msg += "   replaces " + replaces
+	}
 	if firstBad != "" {
 		msg += "   can't place: " + firstBad
 	}

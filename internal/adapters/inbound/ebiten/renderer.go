@@ -39,6 +39,9 @@ type Simulation interface {
 	// CanPlaceAt is the read-only placement rule the Architect previews
 	// (material, facing and every footprint cell).
 	CanPlaceAt(kind, stuff, facing string, x, y int) (bool, string)
+	// ReplacesAt names the wall or fence a door or gate would replace
+	// there ("" when none): the ghost reads "replaces wall".
+	ReplacesAt(kind string, x, y int) string
 	// OrdersAt lists what a pawn can be ordered to do at a tile.
 	OrdersAt(pawn entity.EntityID, x, y int) []game.OrderOption
 	// CanZoneAt reports whether a zone of kind ("stockpile", "grow",
@@ -78,7 +81,6 @@ const (
 	maxZoom   = 3.0
 	zoomStep  = 0.1
 )
-
 
 // speed is a presentation-only game-speed tier. It controls how often
 // the simulation advances; it never changes simulation rules.
@@ -155,6 +157,7 @@ type pawnVisual struct {
 // Renderer drives an Ebitengine window from a running Simulation.
 type Renderer struct {
 	layerTrace func(string) // test hook: ground layers in draw order
+	treeFx     treeFx       // see-through tree canopies (tree_fade.go)
 	game       Simulation
 	zoneGeoms  map[uint16]*zoneGeom // zones_draw.go outline cache
 	wheelTaken bool                 // the mouse wheel scrolled a log this frame

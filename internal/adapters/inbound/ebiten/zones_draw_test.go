@@ -178,7 +178,15 @@ func TestZoneDrawsOverFloor(t *testing.T) {
 	tile := r.tilePx()
 	r.setView(640, 400, tile)
 	r.drawArt(screen, 640, 400, tile)
-	if len(order) != 2 || order[0] != "floors" || order[1] != "zones" {
+	// other traced layers (tree trunks and canopies, PLAY-010) may come
+	// and go; floors and zones each appear once, floors first
+	var fz []string
+	for _, n := range order {
+		if n == "floors" || n == "zones" {
+			fz = append(fz, n)
+		}
+	}
+	if len(fz) != 2 || fz[0] != "floors" || fz[1] != "zones" {
 		t.Fatalf("layer order = %v, want floors then zones", order)
 	}
 }

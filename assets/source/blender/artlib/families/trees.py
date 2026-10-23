@@ -319,8 +319,6 @@ def build():
                 out += _tree_parts(kind, i, "autumn", "tree_%s_%02d_autumn" % (kind, i))
                 out += _tree_parts(kind, i, "bare", "tree_%s_%02d_bare" % (kind, i))
     out += build_biome()
-    for i in range(3):  # legacy aliases (overlay.py's tree icon still reads tree_00)
-        out += _tree_parts("oak", i, "summer", "tree_%02d" % i)
     return out
 
 

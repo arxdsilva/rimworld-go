@@ -302,6 +302,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	for i := range w.Animals {
 		l.creatures[[2]int{w.Animals[i].X, w.Animals[i].Y}] = true
 	}
+	r.sweepTreeFades()
 	r.drawPaths(screen, sw, sh, tile) // paths_draw.go
 	draws := r.draws[:0]
 	if lt == lodLive { // rock is baked below 48 px
@@ -591,6 +592,20 @@ func (r *Renderer) drawPlantObj(dst *ebiten.Image, w *game.WorldView, p *game.Pl
 		amount, kind = 0.04, kindCrop
 	}
 	ps := r.plantPose(p.X, p.Y, kind, amount, scale)
+	if kind == kindTree {
+		if trunk, canopy, ok := r.treePartKeys(key); ok {
+			// PLAY-010 2.9: the trunk stays opaque, the canopy turns
+			// see-through over creatures behind it; one pose for both
+			r.layer("tree_trunk")
+			r.drawSpritePose(dst, trunk, color.NRGBA{}, float64(p.X), float64(p.Y), tile, ps)
+			if a := r.treeCanopyAlpha(p.X, p.Y); a < 1 {
+				ps.cs = colorScale{1, 1, 1, a}
+			}
+			r.layer("tree_canopy")
+			r.drawSpritePose(dst, canopy, color.NRGBA{}, float64(p.X), float64(p.Y), tile, ps)
+			return
+		}
+	}
 	r.drawSpritePose(dst, key, color.NRGBA{}, float64(p.X), float64(p.Y), tile, ps)
 }
 
@@ -906,53 +921,39 @@ func (r *Renderer) tileKeyOf(code uint8, v int) (string, colorScale) {
 }
 
 // drawTerrainArt draws the ground of the visible tiles (padded by one):
-// the tile, the soft edges of higher-priority neighbours, and grass.
-// Stone ground (rough, smooth, under rock) takes its stone's tint.
+// the tile, the soft edges of higher-priority neighbours; then, over the
+// whole view's ground, the grass tufts (so a neighbour's ground never
+// paints over a tuft). Stone ground (rough, smooth, under rock) takes its
+// stone's tint.
 func (r *Renderer) drawTerrainArt(screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
 	x0, y0, x1, y1 := r.visibleTiles()
 	x0, y0 = max(x0-1, 0), max(y0-1, 0)
 	x1, y1 = min(x1+1, r.game.Width()-1), min(y1+1, r.game.Height()-1)
-	r.grassFrameMask(&w, x0, y0, x1, y1) // grass_draw.go
-	grassCS := grassTint(w.BiomeKey)
 	for y := y0; y <= y1; y++ {
 		for x := x0; x <= x1; x++ {
 			r.drawGroundTile(screen, &w, x, y, tile, sw, sh)
-			r.drawTuft(screen, &w, x, y, tile, sw, sh, grassCS)
 		}
 	}
+	r.drawTufts(screen, w, sw, sh, tile)
 }
 
-// drawTufts draws the grass tufts of the visible tiles alone (the chunk
-// tier, over baked ground).
+// drawTufts draws the visible grass over the ground (grass_batch.go): the
+// tuft batch, every copy from lodLiveMin and at most grassMidCap from
+// grassLiveMin (below that the chunk images hold the tufts), then the
+// cut marks.
 func (r *Renderer) drawTufts(screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
-	x0, y0, x1, y1 := r.visibleTiles()
-	r.grassFrameMask(&w, x0, y0, x1, y1)
-	grassCS := grassTint(w.BiomeKey)
-	for y := y0; y <= y1; y++ {
-		for x := x0; x <= x1; x++ {
-			r.drawTuft(screen, &w, x, y, tile, sw, sh, grassCS)
+	vx0, vy0, vx1, vy1 := r.visibleTiles()
+	x0, y0, x1, y1 := r.grassReach(vx0, vy0, vx1, vy1)
+	r.grassFrameMask(&w, x0, y0, x1, y1) // grass_draw.go
+	r.lod.grass.quads = 0
+	if tile >= grassLiveMin {
+		limit := 9
+		if tile < lodLiveMin {
+			limit = grassMidCap
 		}
+		r.grassBatchOf(screen, &w, x0, y0, x1, y1, tile, sw, sh, limit)
 	}
-}
-
-// drawTuft draws tile (x, y)'s grass tuft, if it has one, and its cut
-// mark (grassScratch must hold the frame's mask, grassFrameMask).
-func (r *Renderer) drawTuft(screen *ebiten.Image, w *game.WorldView, x, y int, tile float64, sw, sh int, grassCS colorScale) {
-	code, ok := terrainCode(*w, x, y)
-	t := "soil"
-	if ok && int(code) < len(terrainNames) {
-		t = terrainNames[code]
-	}
-	if t != "soil" && t != "rich_soil" && t != "marsh" || !grassVisible(grassScratch, *w, t, x, y) {
-		return
-	}
-	none := color.NRGBA{}
-	gp := r.plantPose(x, y, kindGrass, 0.05, 1)
-	gp.cs = grassCS
-	r.drawSpritePose(screen, grassKey(t, tileHash(x, y)), none, float64(x), float64(y), tile, gp)
-	if i := y*w.TerrainW + x; i < len(grassScratch) && grassScratch[i]&grassMarked != 0 {
-		r.drawSprite(screen, "overlay/designation_cut", none, float64(x), float64(y), tile, sw, sh)
-	}
+	r.drawGrassCutMarks(screen, &w, vx0, vy0, vx1, vy1, tile, sw, sh)
 }
 
 // drawGroundTile draws tile (x, y)'s ground: its terrain tile (water
@@ -1085,37 +1086,16 @@ var itemFallback = map[string]string{
 	"item/gold":        "item/steel_bars",
 }
 
-// grassKeys are the tuft sprites: short tufts (some flowering) on soil,
-// tall meadow grass mixed in on rich soil (ART §9).
-var (
-	grassKeys     = keysOf("plant/grass_", 8)
-	tallGrassKeys = keysOf("plant/grass_tall_", 4)
-)
-
-func keysOf(prefix string, n int) []string {
-	out := make([]string, n)
-	for i := range out {
-		out[i] = prefix + twoDigits(i)
-	}
-	return out
-}
-
-// grassKey picks a tile's tuft by its hash; rich soil grows tall grass
-// on half its tufts.
-func grassKey(terrain string, h uint64) string {
-	h >>= 12
-	if terrain == "rich_soil" && h%2 == 0 {
-		return tallGrassKeys[(h/2)%uint64(len(tallGrassKeys))]
-	}
-	return grassKeys[h%uint64(len(grassKeys))]
-}
-
 // plantSprite picks the sprite and growth scale for a plant: tree
 // species, bush and crop variants by tileHash, crops by drawn stage
 // (ART §9, §28). Keys come from a prebuilt table; seasonKey then picks the
 // seasonal look and falls back to older art.
 func plantSprite(p game.PlantView) (string, float64) {
 	h := tileHash(p.X, p.Y)
+	if p.Species == "healroot" && p.Zone == "" {
+		k, sc, _ := newPlantKey(p, h)
+		return k, sc
+	}
 	if ks, ok := plantKeys.crops[p.Species]; ok {
 		return ks[cropStage(p)][h%3], 1
 	}
@@ -1126,10 +1106,8 @@ func plantSprite(p game.PlantView) (string, float64) {
 	case "tree":
 		k := 0.45 + 0.55*float64(p.Growth)/100
 		return plantKeys.trees[treeSpeciesAt(h)][h%3], k
-	case "berry_bush":
-		return plantKeys.berry[h%3][boolIdx(p.Harvestable)], bushScale(p)
 	default:
-		return plantKeys.bushes[h%4][boolIdx(p.Harvestable)], bushScale(p)
+		return groundPick(plantKeys.ground["bush"], p, h), bushScale(p)
 	}
 }
 

@@ -8,10 +8,6 @@ const (
 	grassMarked  uint8 = 2 // marked for cutting: draw overlay/designation_cut
 )
 
-// grassScratch is reused by drawTerrainArt so no allocation happens per
-// frame after warm-up (the renderer draws on one goroutine).
-var grassScratch []uint8
-
 // grassMask fills buf (reused when big enough) with one byte per tile,
 // row-major w.TerrainW wide: grassCovered for any tile under a building or
 // frame footprint or holding a plant, grassMarked for grass marked for
@@ -56,22 +52,24 @@ func grassMask(w game.WorldView, buf []uint8) []uint8 {
 	return buf
 }
 
-// grassFrameMask fills grassScratch for tiles x0..x1 × y0..y1 of w (the
-// frame's drawn tiles): the rest of the buffer is left as it was and is
-// never read this frame. The covers come from the frame's chunk lists
-// when w is the frame's world (lod.go), so no full-map pass runs per
-// frame; any other world (tests) takes the whole-map grassMask.
+// grassFrameMask fills the renderer's grass mask (r.lod.grass.mask) for
+// tiles x0..x1 × y0..y1: the rest of the buffer is left as it was and is
+// not read for them. The covers come from the chunk lists over that
+// range (and grassCoverReach up and left, where a footprint's anchor can
+// lie) when w is the frame's world (lod.go), so no full-map pass runs
+// per frame; any other world (tests) takes the whole-map grassMask.
 func (r *Renderer) grassFrameMask(w *game.WorldView, x0, y0, x1, y1 int) {
+	gb := &r.lod.grass
 	if !r.frameLists(w) {
-		grassScratch = grassMask(*w, grassScratch)
+		gb.mask = grassMask(*w, gb.mask)
 		return
 	}
 	n := len(w.Grass)
-	if cap(grassScratch) < n {
-		grassScratch = make([]uint8, n)
+	if cap(gb.mask) < n {
+		gb.mask = make([]uint8, n)
 	}
-	buf := grassScratch[:n]
-	grassScratch = buf
+	buf := gb.mask[:n]
+	gb.mask = buf
 	tw := w.TerrainW
 	if tw <= 0 || n == 0 {
 		return
@@ -92,23 +90,27 @@ func (r *Renderer) grassFrameMask(w *game.WorldView, x0, y0, x1, y1 int) {
 			}
 		}
 	}
-	for _, cv := range r.lod.views {
-		for _, i := range cv.Buildings {
-			if int(i) < len(w.Buildings) {
-				b := &w.Buildings[i]
-				cover(b.X, b.Y, b.W, b.H)
+	cs := game.ChunkSize
+	for cy := max(y0-grassCoverReach, 0) / cs; cy <= y1/cs; cy++ {
+		for cx := max(x0-grassCoverReach, 0) / cs; cx <= x1/cs; cx++ {
+			cv := r.chunkView(cx, cy)
+			for _, i := range cv.Buildings {
+				if int(i) < len(w.Buildings) {
+					b := &w.Buildings[i]
+					cover(b.X, b.Y, b.W, b.H)
+				}
 			}
-		}
-		for _, i := range cv.Frames {
-			if int(i) < len(w.Frames) {
-				f := &w.Frames[i]
-				cover(f.X, f.Y, f.W, f.H)
+			for _, i := range cv.Frames {
+				if int(i) < len(w.Frames) {
+					f := &w.Frames[i]
+					cover(f.X, f.Y, f.W, f.H)
+				}
 			}
-		}
-		for _, i := range cv.Plants {
-			if int(i) < len(w.Plants) {
-				p := &w.Plants[i]
-				cover(p.X, p.Y, 1, 1)
+			for _, i := range cv.Plants {
+				if int(i) < len(w.Plants) {
+					p := &w.Plants[i]
+					cover(p.X, p.Y, 1, 1)
+				}
 			}
 		}
 	}
@@ -130,10 +132,12 @@ func (r *Renderer) frameLists(w *game.WorldView) bool {
 		litFirst(w.Frames) == litFirst(d.Frames) && len(w.Frames) == len(d.Frames)
 }
 
-// grassVisible reports whether a tuft is drawn at tile (x, y) on terrain t.
-// With no simulation grass data (empty mask) it is the old renderer rule.
+// grassVisible reports whether a tuft is drawn at tile (x, y) on terrain
+// t: grass ground (grassGroundName, the sim's rule) holding grass not
+// covered in mask. With no simulation grass data (empty mask) it is the
+// old hashed rule.
 func grassVisible(mask []uint8, w game.WorldView, t string, x, y int) bool {
-	if t != "soil" && t != "rich_soil" && t != "marsh" {
+	if !grassGroundName(t) {
 		return false
 	}
 	if len(mask) == 0 {

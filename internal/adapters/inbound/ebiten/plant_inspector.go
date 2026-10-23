@@ -11,6 +11,7 @@ import (
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/plant"
 )
 
 // Plant panel (UI-011, MAIN_UI §10): what the plant is, how far it has
@@ -79,6 +80,9 @@ func plantLines(p game.PlantView) []string {
 	if p.Wilted {
 		out = append(out, "Wilting: too cold")
 	}
+	if slowsWalking(p) {
+		out = append(out, "Slows walking")
+	}
 	if p.Zone != "" {
 		out = append(out, "In a growing zone ("+capitalize(p.Zone)+")")
 	}
@@ -89,6 +93,13 @@ func plantLines(p game.PlantView) []string {
 		out = append(out, "Marked to cut")
 	}
 	return out
+}
+
+// slowsWalking reports a plant whose cell costs extra step time (bramble,
+// elephant ear), from its definition's WalkCost.
+func slowsWalking(p game.PlantView) bool {
+	sp, ok := plant.Parse(p.Species)
+	return ok && plant.DefOf(sp).WalkCost > 100
 }
 
 // plantNowMatch picks which order the "now" chips issue.

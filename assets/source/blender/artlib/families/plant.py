@@ -8,8 +8,8 @@ the set. Origin is always the ground point (trunk base / tuft base /
 mound centre) so the renderer can bend plants from the root. Variation
 is authored per variant index, never RNG at runtime (all RNG is seeded).
 
-Old ids (`tree_00`, `bush_00_harvestable`, `crop_sown`, `corn_mature`...)
-are rendered as aliases of the new geometry until the renderer switches.
+Crop aliases (`crop_sown`, `corn_mature`...) are still rendered for the
+renderer's fallbacks.
 """
 import math
 import random
@@ -107,15 +107,10 @@ def _grass_tall(i):
                         GRASS_M, flat=True)
 
 
-# legacy ids, rendered from the new tufts until the renderer switches
+# a single tuft / the mature bush, used by scenes/menu.py (not built as sprites)
 def _grass(i):
     return _plant_asset(lambda: _grass_short_geo(i % 6), "grass_%02d" % i,
                         {"species": "grass", "variant": i, "decoration": True}, GRASS_M, flat=True)
-
-
-def _grass_tall_legacy(i):
-    return _plant_asset(lambda: _grass_tall_geo(i), "grass_tall_%02d" % i,
-                        {"species": "grass_tall", "variant": i, "decoration": True}, GRASS_M, flat=True)
 
 
 # ------------------------------------------------------------ bush mounds
@@ -167,20 +162,9 @@ def _mound_geo(v, stage, berries=0):
 
 
 def _bush(i):
-    """Legacy bush_0N: the mature bush."""
+    """The mature bush (scenes/menu.py)."""
     return _plant_asset(lambda: _mound_geo(i, "mature"), "bush_%02d" % i,
                         {"species": "bush", "variant": i})
-
-
-def _berry_legacy(i, ripe):
-    name = "berry_bush_%02d%s" % (i, "_harvestable" if ripe else "")
-    return _plant_asset(lambda: _mound_geo(i, "mature", 11 if ripe else 4), name,
-                        {"species": "berry_bush", "variant": i, "harvestable": ripe})
-
-
-def _alias_berry(i):
-    return _plant_asset(lambda: _mound_geo(i, "mature", 11), "bush_%02d_harvestable" % i,
-                        {"species": "berry_bush", "variant": i, "harvestable": True})
 
 
 # ---------------------------------------------------------------- rosettes
@@ -793,23 +777,6 @@ def build():
         for st in STAGES:
             for v in range(3):
                 out.append(_crop(sp, st, v, "%s_%s_v%d" % (sp, st, v)))
-    # legacy aliases, to be deleted by the lead once the renderer switches
-    for i in range(8):
-        out.append(_grass(i))
-    for i in range(4):
-        out.append(_grass_tall_legacy(i))
-        out.append(_bush(i))
-    for i in range(3):
-        out.append(_berry_legacy(i, False))
-        out.append(_berry_legacy(i, True))
-        for dry in (False, True):
-            sfx = "_dry" if dry else ""
-            st = "dormant" if dry else "mature"
-            out.append(_ground("cactus", st, i, "cactus_%02d%s" % (i, sfx)))
-            out.append(_ground("shrub", st, i, "shrub_%02d%s" % (i, sfx)))
-        out.append(_ground("reeds", "mature", i, "reeds_%02d" % i))
-    for i in range(2):
-        out.append(_alias_berry(i))
     out.append(_crop("radish", "sown", 0, "crop_sown"))
     for sp in CROPS:
         for st in ("young", "mature", "harvestable"):

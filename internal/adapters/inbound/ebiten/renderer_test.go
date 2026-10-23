@@ -98,4 +98,3 @@ func TestNextVisualLerpsThenSettles(t *testing.T) {
 		t.Fatal("moving -x should flip")
 	}
 }
-

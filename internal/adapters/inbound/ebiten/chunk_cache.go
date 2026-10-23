@@ -91,14 +91,22 @@ func (r *Renderer) drawChunkBake(screen *ebiten.Image, w *game.WorldView, cx, cy
 	mw, mh := r.game.Width(), r.game.Height()
 	c := cy*((mw+cs-1)/cs) + cx
 	x0, y0 := cx*cs, cy*cs
-	b, bake := r.lod.chunks.get(c, cv.Ver, r.lod.budget > 0)
+	ver, tufts := cv.Ver, r.grassBakesTufts()
+	if tufts { // 16–24 px: the image holds the chunk's tufts too (grass_batch.go)
+		ver = grassBakeKey(ver, r.grassChunkSig(w, cx, cy))
+	}
+	b, bake := r.lod.chunks.get(c, ver, r.lod.budget > 0)
 	if b == nil {
 		return false
 	}
 	if bake {
 		r.lod.budget--
-		r.bakeGround(b.img, w, x0, y0, min(x0+cs, mw), min(y0+cs, mh), chunkBakePx, bakePad, bakePad, false)
-		r.lod.chunks.done(b, cv.Ver)
+		x1, y1 := min(x0+cs, mw), min(y0+cs, mh)
+		r.bakeGround(b.img, w, x0, y0, x1, y1, chunkBakePx, bakePad, bakePad, false)
+		if tufts {
+			r.bakeTufts(b.img, w, x0, y0, x1, y1, chunkBakePx, bakePad, bakePad)
+		}
+		r.lod.chunks.done(b, ver)
 	}
 	r.drawBaked(screen, b.img, x0, y0, bakePad, bakePad, chunkBakePx, tx0, ty0, tx1, ty1)
 	return true

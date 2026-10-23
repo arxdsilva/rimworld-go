@@ -31,8 +31,8 @@ func (w *fakeWindow) BeingClosed() bool        { return w.closing }
 func useFakeWindow(t *testing.T) *fakeWindow {
 	t.Helper()
 	w := &fakeWindow{}
-	appWindow, closeHandled = w, false
-	t.Cleanup(func() { appWindow, closeHandled = ebitenWindow{}, false })
+	appWindow = w
+	t.Cleanup(func() { appWindow = ebitenWindow{} })
 	return w
 }
 

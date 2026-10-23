@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	"fmt"
 	"math"
 	"strings"
 	"testing"
@@ -397,19 +398,14 @@ func TestSeasonalTreeKey(t *testing.T) {
 			t.Fatalf("pine in %s: %s", s, got)
 		}
 	}
-	// missing art falls back: no autumn look -> the species; no species -> the old tree
+	// missing art falls back: no autumn look -> the species
 	p, oak := treeAt(t, "oak")
 	r.art = envArt(oak)
 	if got := r.seasonKey(oak, season("Fall")); got != oak {
 		t.Fatalf("no autumn art: %s", got)
 	}
-	r.art = envArt("plant/tree_00", "plant/tree_01", "plant/tree_02")
-	got := r.seasonKey(oak, season("Fall"))
-	if !strings.HasPrefix(got, "plant/tree_0") || !r.art.has(got) {
-		t.Fatalf("no species art: %s", got)
-	}
-	if again := r.seasonKey(oak, season("Fall")); again != got {
-		t.Fatalf("cached key changed: %s then %s", got, again)
+	if again := r.seasonKey(oak, season("Fall")); again != oak {
+		t.Fatalf("cached key changed: %s then %s", oak, again)
 	}
 	if k, _ := plantSprite(p); k != oak {
 		t.Fatalf("tree key not stable per tile: %s then %s", oak, k)
@@ -464,22 +460,26 @@ func TestCropStageAndVariantKey(t *testing.T) {
 func TestBushVariantKey(t *testing.T) {
 	t.Parallel()
 	r := New(&stubSim{w: 64, h: 64})
-	r.art = envArt("plant/bush_00", "plant/bush_01", "plant/bush_00_harvestable", "plant/bush_01_harvestable")
+	var arts []string
+	for v := 0; v < groundVariants; v++ {
+		arts = append(arts, fmt.Sprintf("plant/berry_bush_mature_v%d", v), fmt.Sprintf("plant/berry_bush_harvestable_v%d", v), fmt.Sprintf("plant/berry_bush_dormant_v%d", v), fmt.Sprintf("plant/bramble_mature_v%d", v))
+	}
+	r.art = envArt(arts...)
 	berry := map[string]bool{}
 	for x := 0; x < 30; x++ {
 		p := game.PlantView{X: x, Y: 2, Species: "berry_bush", Growth: 100, Harvestable: x%2 == 0}
 		k, scale := plantSprite(p)
-		if !strings.HasPrefix(k, "plant/berry_bush_0") || strings.HasSuffix(k, "_harvestable") != p.Harvestable || scale != 1 {
+		if !strings.HasPrefix(k, "plant/berry_bush_") || strings.Contains(k, "_harvestable_v") != p.Harvestable || scale != 1 {
 			t.Fatalf("berry bush at x=%d: %s scale %v", x, k, scale)
 		}
-		berry[strings.TrimSuffix(k, "_harvestable")] = true
+		berry[strings.Replace(k, "_harvestable", "_x", 1)] = true
 		got := r.seasonKey(k, game.WorldView{Season: "Fall"})
-		if !r.art.has(got) || strings.HasSuffix(got, "_harvestable") != p.Harvestable {
+		if !r.art.has(got) || strings.Contains(got, "_harvestable_v") != p.Harvestable {
 			t.Fatalf("berry bush %s falls back to %s", k, got)
 		}
 	}
-	if len(berry) != 3 {
-		t.Fatalf("berry bushes use %d variants, want 3", len(berry))
+	if len(berry) != 4 {
+		t.Fatalf("berry bushes use %d variants, want 4", len(berry))
 	}
 	wild := map[string]bool{}
 	for x := 0; x < 40; x++ {

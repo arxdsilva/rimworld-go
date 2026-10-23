@@ -16,9 +16,13 @@ import (
 //	          stone, rock, floors, carpets) is a baked 16 px/tile image
 //	          (chunk_cache.go), drawn lit per tile; objects stay live;
 //	< 16 px   map: one whole-map bake at 4 px/tile in ≤ 4096-px pages,
-//	          ground plus buildings and plants as marks; no shadows,
-//	          tufts, decals or item sprites; creatures keep a minimum size
-//	          and selection rings stay.
+//	          ground, a soft grass tint, buildings and plants as marks; no
+//	          shadows, tufts, decals or item sprites; creatures keep a
+//	          minimum size and selection rings stay.
+//
+// Grass tufts (grass_batch.go) are live from 24 px (at most four a tile
+// below 48 px) and baked into the chunk images from 16 to 24 px; the
+// bake keys then fold in the chunk's grass (grassChunkSig, grassMapSig).
 //
 // Bakes are unlit albedo; drawBaked lights them per tile through lit.kage
 // (flat, as the ground is lit live), so day, night, roofs and lamps read
@@ -83,6 +87,7 @@ type lodState struct {
 	rectOp              ebiten.DrawImageOptions // solidRect's, reused
 	baking              bool                    // drawLit draws unlit albedo (a bake)
 	bakeCast            shadowCast
+	grass               grassBatch // grass_batch.go: tuft atlas, mask, batch buffers
 	// budget is how many chunk bakes this frame may still do.
 	budget int
 }
@@ -189,6 +194,9 @@ func (r *Renderer) bakeGround(dst *ebiten.Image, w *game.WorldView, x0, y0, x1, 
 			for x := gx0; x <= gx1; x++ {
 				r.drawGroundTile(dst, w, x, y, tile, sw, sh)
 			}
+		}
+		if objects { // the map bake: grass as a soft tint (grass_batch.go)
+			r.bakeGrassTint(dst, w, gx0, gy0, gx1+1, gy1+1, tile)
 		}
 		// floors and floor markings from the chunks around the area
 		cs := game.ChunkSize
@@ -303,7 +311,21 @@ func plantMarkColor(p *game.PlantView) (color.RGBA, float64) {
 	case isCropSpecies(p.Species):
 		return color.RGBA{150, 160, 70, 255}, 0.5
 	}
+	if c, ok := wildMarkColors[p.Species]; ok {
+		return c, 0.4
+	}
 	return color.RGBA{70, 120, 52, 255}, 0.45
+}
+
+// wildMarkColors are the far-zoom marks of the PLAY-010 wild plants.
+var wildMarkColors = map[string]color.RGBA{
+	"bramble":      {92, 84, 52, 255},
+	"moss":         {96, 118, 92, 255},
+	"agave":        {80, 124, 112, 255},
+	"ball_cactus":  {88, 130, 80, 255},
+	"elephant_ear": {50, 110, 60, 255},
+	"fire_lily":    {196, 110, 44, 255},
+	"dandelion":    {200, 188, 90, 255},
 }
 
 // isCropSpecies reports a sown crop.
@@ -481,7 +503,7 @@ func (r *Renderer) drawMapChunk(screen *ebiten.Image, w *game.WorldView, cx, cy 
 	}
 	x0, y0 := cx*cs, cy*cs
 	img, px, py := m.page(x0, y0)
-	want := [2]uint64{cv.Ver, cv.PlantVer}
+	want := [2]uint64{grassBakeKey(cv.Ver, r.grassMapSig(w, cx, cy, cv.Ver)), cv.PlantVer}
 	if !m.baked[c] || m.ver[c] != want {
 		if r.lod.budget <= 0 {
 			if !m.baked[c] {

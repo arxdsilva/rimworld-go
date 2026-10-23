@@ -429,7 +429,7 @@ ICONS = {
     "workbench": ("furniture", "workbench_basic_south"),
     "stonecutter_table": ("furniture", "stonecutter_table_south"),
     "lamp": ("furniture", "lamp_standing"),
-    "tree": ("plant", "tree_00"),
+    "tree": ("plant", "tree_oak_00"),
     "crop": ("plant", "potato_harvestable"),
     "colonist": ("pawn", "body_south"),
     "butcher_table": ("furniture", "butcher_table_south"),

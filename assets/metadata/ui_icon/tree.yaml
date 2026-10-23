@@ -4,4 +4,4 @@ id: "core:ui_icon/tree"
 image: generated/ui/icons/tree.png
 scale: 2
 canvas: [128, 128]
-source: "core:plant/tree_00"
+source: "core:plant/tree_oak_00"

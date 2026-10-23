@@ -114,13 +114,20 @@ type App struct {
 	artTried   bool
 	art        *artCatalog
 	artWarn    string
-	splash     *ebiten.Image
-	menu       *menuDiorama
-	menuTried  bool
-	menuTick   uint64 // drives menu motion; counts while no colony is shown
-	sessionErr string
-	hint       string
-	shouldQuit bool
+	// win is the window close hooks (saves.go), closeHandled what they
+	// were last told.
+	win          windowHooks
+	closeHandled bool
+	// treeFocus / treeSel are reused buffers for the see-through canopy
+	// focus (tree_focus.go).
+	treeFocus, treeSel [][2]int
+	splash             *ebiten.Image
+	menu               *menuDiorama
+	menuTried          bool
+	menuTick           uint64 // drives menu motion; counts while no colony is shown
+	sessionErr         string
+	hint               string
+	shouldQuit         bool
 
 	// ng is the New Colony wizard's draft (newgame_state.go); nil outside
 	// the wizard. ngUnsaved are the custom scenarios made this session and
@@ -241,6 +248,7 @@ func NewApp(cfg AppConfig) *App {
 	}
 	a := &App{
 		cfg: cfg,
+		win: appWindow,
 		now: time.Now,
 		nav: newNav(),
 		sw:  DefaultWindowWidth,
@@ -743,6 +751,7 @@ func (a *App) Draw(screen *ebiten.Image) {
 	case screenColony:
 		if a.renderer != nil {
 			a.renderer.setAlpha(a.frameAlpha())
+			a.syncTreeFocus() // tree_focus.go: hover, selection and ghost see through canopies
 			a.renderer.Draw(screen)
 		} else {
 			screen.Fill(uiSpace)

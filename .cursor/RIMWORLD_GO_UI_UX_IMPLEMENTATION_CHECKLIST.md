@@ -414,7 +414,7 @@ the player's primary world-editing command surface.
 
 ## 5.2 Placement preview
 
--   [x] **Ghost blueprint** (real sprite per cell, walls autotile among ghosts, hover preview before dragging)
+-   [x] **Ghost blueprint** (real sprite per cell, walls autotile among ghosts, hover preview before dragging; a door or gate over a wall or fence shows "replaces wall" (UI-021))
     -   Show exact occupied cells before command submission.
 -   [-] **Validity visualization** (green/red ghosts, first failure reason, count and wood total; reasons: outside, blocked, occupied, planned, items) (SIM-018: unsupported roof tiles marked red ×)
     -   Valid/invalid placement.

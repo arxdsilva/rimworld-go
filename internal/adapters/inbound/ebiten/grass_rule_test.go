@@ -8,18 +8,24 @@ import (
 	"rimworld-go/internal/domain/world/terrain"
 )
 
-// TestGrassMatchesRendererRule pins the domain's grass rule to the formula
-// the renderer used before grass became simulation state.
+// TestGrassMatchesRendererRule pins the renderer's grass ground to the
+// simulation's (PLAY-010): a tuft shows on any tile the sim seeds with
+// grass, i.e. every fertile terrain (plant.GrassGround outside the legacy
+// map), and the legacy seeding stays a subset of it.
 func TestGrassMatchesRendererRule(t *testing.T) {
-	for _, tt := range []struct {
-		t    terrain.Type
-		name string
-	}{{terrain.Soil, "soil"}, {terrain.RichSoil, "rich_soil"}, {terrain.Stone, "stone"}, {terrain.Gravel, "gravel"}} {
-		for y := 0; y < 64; y++ {
-			for x := 0; x < 64; x++ {
-				old := (tt.name == "soil" || tt.name == "rich_soil") && (tileHash(x, y)>>8)%grassEvery == 0
-				if got := plant.GrassAt(tt.t, x, y); got != old {
-					t.Fatalf("%s (%d,%d): GrassAt=%v renderer=%v", tt.name, x, y, got, old)
+	for code, name := range terrain.Names() {
+		tt := terrain.Type(code)
+		if got, want := grassGroundCode[code], plant.GrassGround(tt, false); got != want {
+			t.Fatalf("%s: renderer grass ground %v, sim %v", name, got, want)
+		}
+		w := game.WorldView{TerrainW: 1, Terrain: []uint8{uint8(code)}, Grass: []uint8{1}}
+		if got := grassVisible(grassMask(w, nil), w, name, 0, 0); got != plant.GrassGround(tt, false) {
+			t.Fatalf("%s: seeded grass visible=%v", name, got)
+		}
+		for y := 0; y < 16; y++ {
+			for x := 0; x < 16; x++ {
+				if plant.GrassAt(tt, x, y) && !grassGroundCode[code] {
+					t.Fatalf("%s (%d,%d): legacy grass on non-grass ground", name, x, y)
 				}
 			}
 		}

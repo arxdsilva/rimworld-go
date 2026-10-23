@@ -21,7 +21,8 @@ import numpy as np
 from .. import contracts as C
 from .. import meta, palette, post
 from .. import stage as S
-from ..families import animal, furniture, item, pawn, plant, rock, structure, terrain
+from ..families import animal_roster, furniture, item, linked, pawn, plant, rock, structure, terrain
+from ..families.animals import quadruped, rig
 
 FRAME_PX = (3200, 1800)
 TILES_W, TILES_H = 25, 15          # ground tiles covering the frame
@@ -142,6 +143,14 @@ def _wall_mask(x, y):
                if (x + dx, y + dy) in solid)
 
 
+def _wall_filled(x, y, mask, solid=None):
+    """The linked corners whose diagonal neighbour is solid too (linked.py)."""
+    if solid is None:
+        solid = WALLS | {DOOR}
+    diag = {"NE": (1, -1), "SE": (1, 1), "SW": (-1, 1), "NW": (-1, -1)}
+    return {n for n in linked.relevant(mask) if (x + diag[n][0], y + diag[n][1]) in solid}
+
+
 def _rock_mask(x, y):
     return sum(b for (dx, dy), b in (((0, -1), 1), ((1, 0), 2), ((0, 1), 4), ((-1, 0), 8))
                if (x + dx, y + dy) in RIDGE)
@@ -207,10 +216,13 @@ def _tint_table():
 
 
 def _dustbuck():
-    animal._dustbuck()
-    animal._pose_action("dustbuck", animal.POSES["dustbuck"]["graze1"])
+    # a grazing deer from the animal rig (ART-011); the old dustbuck model
+    # is gone from the roster
+    row = next(r for r in animal_roster.ROSTER if r.key == "deer")
+    spec = quadruped.spec(row)
+    rig.build(spec, rig.graze_poses(spec)[0])
     S.face(S.objects(), DUSTBUCK[2], (1, 1))
-    S.transform(S.objects(), animal._lean_matrix())
+    S.transform(S.objects(), rig.lean_matrix())
     for ob in S.objects():
         ob.visible_shadow = False
         ob["rwg_figure"] = True
@@ -248,12 +260,14 @@ def build_scene():
     try:
         for (x, y) in sorted(WALLS):
             m = _wall_mask(x, y)
-            S.place(lambda m=m: structure._wall(m, "wood_plank", "wood", "bark"), x, y, tag="wall")
+            f = _wall_filled(x, y, m)
+            S.place(lambda m=m, f=f: structure._wall(m, f, "wood_plank", "wood", "bark", "wood"), x, y, tag="wall")
         S.place(lambda: structure._door("ew", True, "wood", "wood_plank"), DOOR[0], DOOR[1], tag="door")
     finally:
         structure.EXT = ext
     for (x, y) in sorted(RIDGE):
-        S.place(lambda m=_rock_mask(x, y): rock._rock(m), x, y, tag="rock")
+        m = _rock_mask(x, y)
+        S.place(lambda m=m, f=_wall_filled(x, y, m, RIDGE): rock._rock(m, f), x, y, tag="rock")
     for name, x, y, facing, cloth in FURNITURE:
         objs = S.place(FURN[name], x, y, facing=facing, tag=name)
         if cloth:

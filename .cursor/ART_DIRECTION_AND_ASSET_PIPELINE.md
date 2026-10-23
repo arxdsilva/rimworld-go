@@ -1143,7 +1143,7 @@ resolve metadata conflicts, and update the catalog.
 ### ART Wave 3 --- Survival
 
 -   [-] bed/table/chair (1×1 cot drawn in-game for the current single-cell bed; 1×2 bed, table, chair generated in 4 facings for when the domain has footprints/furniture)
--   [x] food/crops/wild plants/trees (oak, birch and pine in 3 variants with autumn and bare winter looks; bushes and berry bushes; 12 grass tufts; 8 crops × 6 stages × 3 variants)
+-   [x] food/crops/wild plants/trees (PLAY-010: restyled to §9.1/§9.2 without outlines; oak, birch, pine and jungle trees with visible trunks and _trunk/_canopy parts; grass tufts composed up to 9 per tile; 13 ground plants with young/mature/dormant looks incl. 7 new ones; 8 crops × 6 stages × 3 variants)
 -   [ ] stove/butcher workstation
 -   [-] medicine (NG-1: industrial medicine stacks and the hospital bed; no other medical art)
 -   [x] blood/injury effects

@@ -309,7 +309,7 @@ func (a *App) drawHoverRoom(screen *ebiten.Image, sh int) {
 	} else {
 		lines = append(lines, "Temperature "+fmtTemp(t))
 	}
-	for _, lbl := range []string{roomLabelAt(w, tx, ty), homeLabelAt(w, tx, ty), roofLabelAt(w, tx, ty), plantLabelAt(w, tx, ty), fenceLabelAt(w, tx, ty), itemLabelAt(w, tx, ty)} {
+	for _, lbl := range []string{roomLabelAt(w, tx, ty), homeLabelAt(w, tx, ty), roofLabelAt(w, tx, ty), plantLabelAt(w, tx, ty), grassLabelAt(w, tx, ty), fenceLabelAt(w, tx, ty), itemLabelAt(w, tx, ty)} {
 		if lbl != "" {
 			lines = append(lines, lbl)
 		}
@@ -397,6 +397,19 @@ func plantLabelAt(w game.WorldView, x, y int) string {
 		}
 	}
 	return ""
+}
+
+// grassLabelAt is the hover line of a growing grass tile ("Grass
+// (growing, 40%)"); empty for full, absent or cut grass.
+func grassLabelAt(w game.WorldView, x, y int) string {
+	if w.TerrainW <= 0 || x < 0 || y < 0 || x >= w.TerrainW {
+		return ""
+	}
+	i := y*w.TerrainW + x
+	if i >= len(w.Grass) || w.Grass[i] == 0 || i >= len(w.GrassGrowth) || w.GrassGrowth[i] >= 100 {
+		return ""
+	}
+	return fmt.Sprintf("Grass (growing, %d%%)", w.GrassGrowth[i])
 }
 
 // itemLabelAt describes the ground stack on a tile ("Potatoes x 240").

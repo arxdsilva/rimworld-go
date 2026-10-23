@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	"fmt"
 	"image/color"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -83,10 +84,43 @@ func isTreePlant(species string) bool {
 	return species == "tree" || species == "pine" || species == "jungle_tree"
 }
 
-// newPlantKey is the sprite of a biome plant species (pine, jungle_tree,
-// cactus, shrub, reeds) at tile hash h, with the growth scale; the
-// fallback chain in plantKeys resolves to tree and bush art when the
-// species art is missing.
+// groundVariants is how many art variants each ground plant has.
+const groundVariants = 4
+
+// youngBelow is the growth percent under which a ground plant draws its
+// young stage.
+const youngBelow = 55
+
+// groundKeys is one ground plant's sprite keys per variant.
+type groundKeys struct {
+	young, mature, dormant, harvest [groundVariants]string
+}
+
+// groundPlants lists the ground plant species.
+var groundPlants = []string{
+	"bush", "berry_bush", "shrub", "reeds", "cactus", "bramble", "moss", "agave",
+	"ball_cactus", "healroot_wild", "elephant_ear", "fire_lily", "dandelion",
+}
+
+// groundPick is the sprite key of ground plant p (hash h): dormant when
+// wilted, harvestable for ripe produce, else young or mature by growth.
+func groundPick(g *groundKeys, p game.PlantView, h uint64) string {
+	v := h % groundVariants
+	switch {
+	case p.Wilted:
+		return g.dormant[v]
+	case p.Harvestable && g.harvest[v] != "":
+		return g.harvest[v]
+	case p.Growth < youngBelow:
+		return g.young[v]
+	}
+	return g.mature[v]
+}
+
+// newPlantKey is the sprite of a biome or ground plant species (pine,
+// jungle_tree, bush, berry bush, shrub, reeds, cactus and the PLAY-010
+// wild plants) at tile hash h, with the growth scale; the fallback chain
+// in plantKeys resolves to the mature stage or variant 0.
 func newPlantKey(p game.PlantView, h uint64) (string, float64, bool) {
 	v := int(h % 3)
 	switch p.Species {
@@ -94,41 +128,59 @@ func newPlantKey(p game.PlantView, h uint64) (string, float64, bool) {
 		return plantKeys.trees[2][v], 0.45 + 0.55*float64(p.Growth)/100, true
 	case "jungle_tree":
 		return artKey("plant", "tree_jungle", v), 0.45 + 0.55*float64(p.Growth)/100, true
-	case "cactus":
-		k := artKey("plant", "cactus", v)
-		if p.Wilted {
-			k += "_dry"
-		}
-		return k, bushScale(p), true
-	case "shrub":
-		k := artKey("plant", "shrub", v)
-		if p.Wilted {
-			k += "_dry"
-		}
-		return k, bushScale(p), true
-	case "reeds":
-		return artKey("plant", "reeds", v), bushScale(p), true
+	}
+	if p.Species == "healroot" && p.Zone == "" { // wild healroot, not a sown crop
+		return groundPick(plantKeys.ground["healroot_wild"], p, h), bushScale(p), true
+	}
+	if g, ok := plantKeys.ground[p.Species]; ok {
+		return groundPick(g, p, h), bushScale(p), true
 	}
 	return "", 0, false
 }
 
+// addGroundPlantKeys builds the stage keys of every ground plant, their
+// fallbacks (variant 0, then the mature stage) and the winter dormant look.
+func addGroundPlantKeys(t *plantKeyTable) {
+	t.ground = map[string]*groundKeys{}
+	for _, name := range groundPlants {
+		g := &groundKeys{}
+		t.ground[name] = g
+		berry := name == "berry_bush"
+		for v := 0; v < groundVariants; v++ {
+			key := func(stage string) string { return fmt.Sprintf("plant/%s_%s_v%d", name, stage, v) }
+			v0 := func(stage string) []string {
+				if v == 0 {
+					return nil
+				}
+				return []string{fmt.Sprintf("plant/%s_%s_v0", name, stage)}
+			}
+			g.young[v], g.mature[v], g.dormant[v] = key("young"), key("mature"), key("dormant")
+			t.fallback[g.young[v]] = append(v0("young"), g.mature[v])
+			t.fallback[g.mature[v]] = v0("mature")
+			t.fallback[g.dormant[v]] = append(v0("dormant"), g.mature[v])
+			winter := g.dormant[v]
+			t.seasonal[g.young[v]] = [2]string{g.young[v], winter}
+			t.seasonal[g.mature[v]] = [2]string{g.mature[v], winter}
+			if berry {
+				g.harvest[v] = key("harvestable")
+				t.fallback[g.harvest[v]] = append(v0("harvestable"), g.mature[v])
+				t.seasonal[g.harvest[v]] = [2]string{g.harvest[v], winter}
+			}
+		}
+	}
+}
+
 // addBiomePlantFallbacks registers the fallback art of the biome plants:
-// trees fall back to the oak, the rest to bushes.
+// the jungle tree falls back to the oak.
 func addBiomePlantFallbacks(t *plantKeyTable) {
 	oak := artKey("plant", "tree_oak", 0)
-	bush := artKey("plant", "bush", 0)
 	for v := 0; v < 3; v++ {
 		jt := artKey("plant", "tree_jungle", v)
-		t.fallback[jt] = []string{artKey("plant", "tree_oak", v), oak, artKey("plant", "tree", v)}
-		for _, n := range []string{"cactus", "shrub", "reeds"} {
-			k := artKey("plant", n, v)
-			t.fallback[k] = []string{artKey("plant", "bush", v%2), bush}
-			t.fallback[k+"_dry"] = []string{k, artKey("plant", "bush", v%2), bush}
-		}
+		t.fallback[jt] = []string{artKey("plant", "tree_oak", v), oak}
 		// pine stays green through the year but wears snow in winter
 		pk := t.trees[2][v]
 		t.seasonal[pk] = [2]string{pk, pk + "_snow"}
-		t.fallback[pk+"_snow"] = []string{pk, artKey("plant", "tree", v)}
+		t.fallback[pk+"_snow"] = []string{pk}
 	}
 }
 

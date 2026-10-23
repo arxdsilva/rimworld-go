@@ -324,7 +324,7 @@ interchangeable workers.
 -   [x] **Follow path** (A* path; per-creature step timing: straight 15 ticks, diagonal 21)
     -   Pawns traverse cell paths over time rather than teleporting.
     -   Movement updates position at deterministic tick boundaries.
--   [x] **Pawn collision and occupancy** (standing colonists, raiders and animals never share a cell; downed/sleeping/carried pawns can be stepped over)
+-   [x] **Pawn collision and occupancy** (PLAY-010 SIM-037: colonists and tame animals walk through each other; wild animals and raiders block; a drafted, attacking or fleeing colonist never ends a move on another colonist's tile; downed/sleeping/carried pawns can be stepped over)
     -   Prevent invalid stacking where gameplay requires exclusivity.
     -   Handle passing and temporary congestion.
 -   [x] **Deterministic movement conflict arbitration** (ID-ordered moves; one fixed yielder per ring of walkers sidesteps, repaths or backs off)
@@ -549,7 +549,7 @@ This is the heart of autonomous colony behavior.
 
 ## 7.2 Construction lifecycle
 
--   [-] **Blueprint** (`CanPlace` shared by preview and sim: bounds, layer occupancy, blocked, items under walls; floor + object layers share a tile; no research/support checks)
+-   [-] **Blueprint** (`CanPlace` shared by preview and sim: bounds, layer occupancy, blocked, items under walls; floor + object layers share a tile; doors and gates may replace walls and fences (deconstruct first, UI-021); no research/support checks)
     -   Placement preview.
     -   Validate terrain, occupancy, research, material, and support
         requirements.
@@ -703,7 +703,7 @@ This is the heart of autonomous colony behavior.
 -   [x] **Harvest maturity** (plants ripen at GrowTicks; berry bushes regrow to 35% after harvest)
     -   Mature plants generate harvest work.
     -   Skill can affect yield/failure.
--   [x] **Wild plants** (seeded generation scatters trees and berry bushes on fertile ground)
+-   [x] **Wild plants** (seeded generation scatters trees and berry bushes on fertile ground; PLAY-010 SIM-038: per-biome bramble thicket (slows walking), ground moss, desert rosette, ball cactus, elephant ear, fire lily, dandelions)
     -   Map generation creates harvestable/non-harvestable vegetation.
 
 ## 8.5 Food spoilage
@@ -1475,17 +1475,17 @@ children systems.
     -   Spawn species appropriate to biome/climate.
 -   [x] **Animal hunger/rest** (SIM-024: every animal has Food and Rest; states Wander/Feed/Rest/Hunt/Flee/Leave with hysteresis; herds bed down together, night and day sleepers, starvation)
     -   Simpler needs than humans.
--   [x] **Grazing/foraging** (SIM-024: grazing grass, browsing, crop raiding, carcass eating, timbergnaw tree felling; feeding troughs in pens)
+-   [x] **Grazing/foraging** (SIM-024: grazing grass, browsing, crop raiding, carcass eating, timbergnaw tree felling; feeding troughs in pens; SIM-038: grazers prefer fuller grass, meals scale with growth)
 -   [x] **Predation** (SIM-019: predators hunt prey no bigger than themselves; small-prey predators XS/S only; packs share targets)
     -   Predators select prey and hunt.
--   [x] **Wild animal flee/fight response** (flee within 5 tiles and run until clear of 9; enraged animals don't flee; unarmed colonists flee once and hold back 600 ticks, armed ones keep their target)
+-   [x] **Wild animal flee/fight response** (flee within 5 tiles and run until clear of 9; enraged animals don't flee; PLAY-010 SIM-035: every animal hit by an attacker fights back or flees, one that can't fight back flees on every hit (penned ones inside the pen), predators may charge colonists within 3 tiles unless asleep (off on Wanderer/Gentle); SIM-036: unarmed undrafted colonists flee from an animal coming for them within 12 tiles, even mid-order or asleep; armed ones keep their target)
 
 ## 18.3 Hunting
 
 -   [x] **Hunt designation**
 -   [x] **Hunter requires suitable ranged weapon**
 -   [ ] **Stalk/approach/fire job**
--   [-] **Animal retaliation/manhunter chance** (SIM-019: revenge chance by behaviour class, legendary 100% and rallies its kind; SIM-024: badly hurt fighters break off, predators give up chases; no tame-animal defence)
+-   [-] **Animal retaliation/manhunter chance** (SIM-019: revenge chance by behaviour class, legendary 100% and rallies its kind; SIM-024: badly hurt fighters break off, predators give up chases; SIM-035: tame fighters defend themselves against anything but their own colonists)
 -   [x] **Corpse hauling/butchering integration**
 
 ## 18.4 Taming
@@ -1773,7 +1773,7 @@ SIM-023: all twelve exist as `world/biome` data. NG-1 now classifies them on the
 -   [x] **Rock/mountain mass** (noise outcrops biased to map edges, stone ground ring, open start area; 2-3 stone types per map in regions, SIM-029; overhead mountain roof tracked under roofs)
 -   [x] **Ore/resource deposits** (SIM-029: steel, silver and gold veins grown inside rock; mined for metal)
 -   [x] **Water** (NG-1 SIM-033: coast, rivers with deep cores, mud banks and fords, lakes, wet ground, tracks, a reachability pass; no bridges or fishing)
--   [x] **Wild vegetation** (trees, berry bushes; grass is simulated ground cover removed by building, sowing and Cut plants (UI-011))
+-   [x] **Wild vegetation** (trees, berry bushes and seven new ground plants (SIM-038); grass is simulated ground cover removed by building, sowing and Cut plants (UI-011) and regrows from shoots over three days after grazing or cutting)
 -   [x] **Wildlife** (SIM-023/025: per-biome density, species weights, sex and age at spawn, carrying capacity)
 -   [ ] **Ancient ruins/debris**
 -   [x] **Starting clear/landing area** (NG-1: open start radius, no water within 7 tiles of the centre, drop pods land on dry ground)

@@ -299,7 +299,7 @@ func TestOrphanReportFakeTree(t *testing.T) {
 
 func TestStemWords(t *testing.T) {
 	cases := map[string]string{
-		"tree_oak_v2": "tree oak", "alpaca_east_walk03": "alpaca walk", "grass_00": "grass",
+		"tree_oak_v2": "tree oak", "alpaca_east_walk03": "alpaca walk", "grass_short_v0": "grass short",
 		"wall_wood_15_cf": "wall wood",
 	}
 	for in, want := range cases {

@@ -178,7 +178,7 @@ func TestBoxVsBlobByMetadata(t *testing.T) {
 	if s := shadowSpecFor("furniture/table_2x1", meta("", 2, 1, 198)); s.w != 2 || s.d != 1 {
 		t.Errorf("box fallback footprint %+v, want 2x1", s)
 	}
-	if s := shadowSpecFor("plant/bush_00", meta("", 1, 1, 200)); math.Abs(s.w-0.7) > 1e-9 || s.d != 0.4 {
+	if s := shadowSpecFor("plant/bush_mature_v0", meta("", 1, 1, 200)); math.Abs(s.w-0.7) > 1e-9 || s.d != 0.4 {
 		t.Errorf("plant fallback %+v", s)
 	}
 }
