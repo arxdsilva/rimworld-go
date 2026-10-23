@@ -66,7 +66,7 @@ func main() {
 	var shot *uiadapter.Capture
 	if *capture != "" {
 		shot = &uiadapter.Capture{Path: *capture, Ticks: *captureTicks, Zoom: *captureZoom, UI: *captureUI, Frames: *captureFrames, Speed: *captureSpeed, Timelapse: *captureTimelapse,
-			Bare: *scenario == "walls"}
+			Bare: *scenario == "walls" || *scenario == "grown"} // set pieces: no scripted starter orders
 	}
 
 	biomeID, ok := biome.Parse(*biomeKey)
@@ -99,7 +99,14 @@ func main() {
 		NewSim: func(ng uiadapter.NewGame) (uiadapter.Simulation, error) {
 			if *scenario == "grown" { // dev: the benchmark's grown colony at -width x -height
 				appscenario.CacheDir = os.Getenv("RIMWORLD_FIXTURE_DIR")
-				return appscenario.Load(appscenario.GrownColony(1, *width, *height, false))
+				g, err := appscenario.Load(appscenario.GrownColony(1, *width, *height, false))
+				if err == nil && shot != nil {
+					// media captures show the colony as its builders would leave
+					// it: closed rooms roofed. The benchmark fixture itself (and
+					// -fpsprobe) stays as recorded in ENG-001.
+					g.RoofRooms()
+				}
+				return g, err
 			}
 			g := game.NewColony(game.Config{Seed: ng.Seed, Width: *width, Height: *height, Biome: ng.Biome})
 			if *scenario == "beds" {
@@ -541,20 +548,20 @@ func lateGame(g *game.Game) {
 	// the compound: stone walls x 26..40, y 5..15, split in three rooms
 	for x := 26; x <= 40; x++ {
 		for _, y := range []int{5, 15} {
-			kind := "wall"
+			kind, stuff := "wall", "granite blocks"
 			if y == 15 && (x == 28 || x == 33 || x == 38) {
-				kind = "door"
+				kind, stuff = "door", "wood" // doors are wood or steel, never stone
 			}
-			g.BuildNow(kind, "granite blocks", "south", x, y)
+			g.BuildNow(kind, stuff, "south", x, y)
 		}
 	}
 	for y := 6; y <= 14; y++ {
 		for _, x := range []int{26, 31, 36, 40} {
-			kind := "wall"
+			kind, stuff := "wall", "granite blocks"
 			if y == 10 && (x == 31 || x == 36) {
-				kind = "door"
+				kind, stuff = "door", "wood"
 			}
-			g.BuildNow(kind, "granite blocks", "south", x, y)
+			g.BuildNow(kind, stuff, "south", x, y)
 		}
 	}
 	for x := 27; x <= 30; x++ { // bedroom

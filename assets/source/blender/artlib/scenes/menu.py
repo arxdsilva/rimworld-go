@@ -57,7 +57,9 @@ COLONISTS = [
     (13, 10, "east", "kneel", "tan", "hair_short", "black", "sand", "olive"),
     (15, 10, "west", "bench1", "pale", "hair_bun", "auburn", "slate", None),
     (14, 11, "north", None, "dark", "hair_crop", "grey", "cream", "rust"),
-    (15, 9, "south", None, "light", "hair_bun", "black", "rust", "slate"),
+    # in front of the doorway, not a wall: figures lean back, so a head
+    # against the wall sinks into it and loses its hair
+    (14, 9, "south", None, "light", "hair_bun", "black", "rust", "slate"),
 ]
 TREES = [("oak", 0, "autumn", 0, 4), ("birch", 1, "autumn", 3, 7), ("oak", 2, "autumn", -1, 9),
          ("birch", 0, "autumn", 6, 12), ("birch", 2, "summer", 2, 0), ("oak", 1, "summer", 8, -1),
