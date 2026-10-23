@@ -11,7 +11,6 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/plant"
-	"rimworld-go/internal/domain/world/temperature"
 )
 
 // Nature events (SIM-025, plan 3.2-3.3). Every two to five days, at a
@@ -121,19 +120,20 @@ func (g *Game) rollNature(now uint64) {
 	ok := func(id incident.ID) bool {
 		if fit[id] == 0 {
 			fit[id] = 2
-			if g.incidentFits(id, now) {
+			if !g.incidentDisabled(incident.DefOf(id).Key) && g.incidentFits(id, now) { // setup.go: scenario-disabled (NG-1)
 				fit[id] = 1
 			}
 		}
 		return fit[id] == 1
 	}
-	total := incident.Total(incident.Nature, g.incidents, now, g.biome, ok)
+	rn := g.rel(now) // setup.go: the catalogue's days count from the landing (now itself on a legacy colony)
+	total := incident.Total(incident.Nature, g.incidents, rn, g.biome, ok)
 	if total <= 0 {
 		return
 	}
-	if id, picked := incident.Pick(incident.Nature, g.incidents, now, g.biome, g.rng.IntN(total), ok); picked {
+	if id, picked := incident.Pick(incident.Nature, g.incidents, rn, g.biome, g.rng.IntN(total), ok); picked {
 		if g.fireIncident(id, now) {
-			g.incidents.Fired(id, now)
+			g.incidents.Fired(id, rn)
 		}
 	}
 }
@@ -184,7 +184,7 @@ func (g *Game) FireIncident(key string) bool {
 	now := uint64(g.clock.Now())
 	for _, d := range incident.All() {
 		if d.Key == key && g.incidentFits(d.ID, now) && g.fireIncident(d.ID, now) {
-			g.incidents.Fired(d.ID, now)
+			g.incidents.Fired(d.ID, g.rel(now))
 			return true
 		}
 	}
@@ -246,7 +246,7 @@ func crosser(s animal.Species) bool {
 // hasWildSpecies: the biome has wildlife passing keep this season (no
 // randomness drawn, unlike pickSpecies).
 func (g *Game) hasWildSpecies(keep func(animal.Species) bool) bool {
-	season := temperature.Season(g.clock.Now())
+	season := g.season(uint64(g.clock.Now())) // setup.go: the map's own calendar
 	for _, s := range animal.All() {
 		if keep(s) && wildWeight(s, g.biome, season) > 0 {
 			return true
@@ -329,7 +329,7 @@ func (g *Game) crossingLine() (ax, ay, bx, by int, ok bool) {
 			ax, ay = w-1, g.rng.IntN(h)
 			bx, by = 0, clampInt(ay+drift, 0, h-1)
 		}
-		if !g.grid.Walkable(ax, ay) || !g.grid.Walkable(bx, by) {
+		if !g.dryWalkable(ax, ay) || !g.dryWalkable(bx, by) {
 			continue
 		}
 		if _, found := pathing.Find(q, ax, ay, bx, by); found {
@@ -614,7 +614,7 @@ func (g *Game) madCandidates(now uint64) []entity.EntityID {
 // forced, it keeps to the event's first day and cooldown; it reports
 // whether one went mad.
 func (g *Game) madAnimal(now uint64, force bool) bool {
-	if !force && !incident.DefOf(incident.MadAnimal).Allowed(g.incidents, now, g.biome) {
+	if !force && !incident.DefOf(incident.MadAnimal).Allowed(g.incidents, g.rel(now), g.biome) {
 		return false
 	}
 	cands := g.madCandidates(now)
@@ -627,6 +627,6 @@ func (g *Game) madAnimal(now uint64, force bool) bool {
 	who, _, _ := g.nearestColonist(pos)
 	g.enrage(id, &a, who, now) // the existing manhunter threat message
 	g.animals.Set(id, a)
-	g.incidents.Fired(incident.MadAnimal, now)
+	g.incidents.Fired(incident.MadAnimal, g.rel(now))
 	return true
 }

@@ -43,14 +43,20 @@ func workTypeOf(c command.WorkType) (work.Type, bool) {
 // prioOf is a colonist's priorities (derived from its enable mask for
 // colonists made before priorities existed).
 func (g *Game) prioOf(id entity.EntityID) work.Priorities {
-	if p, ok := g.prio[id]; ok {
-		return p
+	p, ok := g.prio[id]
+	if !ok {
+		m, _ := g.labor.Get(id)
+		for t := work.Type(0); t < work.NumTypes; t++ {
+			if m.Enabled(t) {
+				p[t] = work.DefaultPriority
+			}
+		}
 	}
-	var p work.Priorities
-	m, _ := g.labor.Get(id)
-	for t := work.Type(0); t < work.NumTypes; t++ {
-		if m.Enabled(t) {
-			p[t] = work.DefaultPriority
+	if inc := g.incapableWork(id); inc != 0 { // skills.go: never incapable work
+		for t := work.Type(0); t < work.NumTypes; t++ {
+			if inc.Enabled(t) {
+				p[t] = 0
+			}
 		}
 	}
 	return p
@@ -58,6 +64,10 @@ func (g *Game) prioOf(id entity.EntityID) work.Priorities {
 
 func (g *Game) setPriority(id entity.EntityID, t work.Type, v int) {
 	if _, ok := g.labor.Get(id); !ok {
+		return
+	}
+	if v > 0 && g.incapableWork(id).Enabled(t) {
+		g.incapableToast(id, t) // skills.go: ignored, "Incapable: <reason>"
 		return
 	}
 	p := g.prioOf(id).Set(t, v)
@@ -79,6 +89,9 @@ func (g *Game) assignWorkByPriority(id entity.EntityID) bool {
 }
 
 func (g *Game) assignWorkType(id entity.EntityID, t work.Type) bool {
+	if g.incapableWork(id).Enabled(t) {
+		return false // skills.go: incapable work is never assigned
+	}
 	switch t {
 	case work.Doctor:
 		return g.assignDoctor(id)

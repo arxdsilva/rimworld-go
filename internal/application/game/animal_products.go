@@ -71,15 +71,16 @@ func (g *Game) doCollect(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
-	if !g.workTick(id) {
+	u := g.workProgress(id, skAnimals, true) // skills.go
+	if u == 0 {
 		return
 	}
-	if j.WorkLeft--; j.WorkLeft > 0 {
+	if j.WorkLeft -= u; j.WorkLeft > 0 {
 		g.jobs.Set(id, j)
 		return
 	}
 	p := animal.EcologyOf(a.Species).Product
-	if sid, err := g.SpawnStack(p.Item(), animal.LifeOf(a.Species).ProductYield, ap.X, ap.Y); err == nil {
+	if sid, err := g.SpawnStack(p.Item(), g.productYield(id, animal.LifeOf(a.Species).ProductYield), ap.X, ap.Y); err == nil {
 		st, _ := g.stacks.Get(sid)
 		if p == animal.Wool {
 			st.Animal = uint8(a.Species) // wool keeps its animal's colour

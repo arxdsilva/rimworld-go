@@ -7,9 +7,11 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/pawn/health"
+	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/filth"
 	"rimworld-go/internal/domain/world/stain"
+	"rimworld-go/internal/domain/world/terrain"
 )
 
 // Tracked-in dirt (SIM-021): pawns pick dirt up on outdoor soil and field
@@ -184,6 +186,9 @@ func (g *Game) dirtStep(id entity.EntityID, to Position) {
 	t := g.treadAt(i)
 	nc := c
 	switch {
+	case g.terr.At(to.X, to.Y) == terrain.ShallowWater:
+		nc = wadeWash(c) // water.go: wading rinses the boots
+		g.remember(id, mood.Soaked)
 	case t&treadCatch != 0:
 		if c == 0 {
 			return
@@ -196,7 +201,7 @@ func (g *Game) dirtStep(id entity.EntityID, to Position) {
 		nc = keep
 		g.addDirt(i, drop)
 	case t&treadFloor == 0 && g.terr.At(to.X, to.Y).Fertility() > 0:
-		nc = filth.Carry(c, filth.Gain(filth.StepGain, g.wetPm(), g.hasGrass(to.X, to.Y)))
+		nc = filth.Carry(c, g.stepGain(to.X, to.Y, filth.StepGain, g.hasGrass(to.X, to.Y)))
 	default:
 		nc = filth.Shed(c)
 	}
@@ -231,7 +236,7 @@ func (g *Game) dirtWork(id entity.EntityID, j job.Record, now uint64) {
 		return
 	}
 	c := int(g.filth.carried[id])
-	g.setCarried(id, filth.Carry(c, filth.Gain(filth.WorkGain, g.wetPm(), false)))
+	g.setCarried(id, filth.Carry(c, g.stepGain(pos.X, pos.Y, filth.WorkGain, false)))
 }
 
 // washDirt rinses dirt off open ground while rain or snow falls (called

@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"hash/fnv"
 	"io"
+	"rimworld-go/internal/domain/pawn/pawngen"
+	"rimworld-go/internal/domain/pawn/skill"
 	"slices"
 
 	"rimworld-go/internal/domain/incident"
@@ -174,6 +176,14 @@ type saveState struct {
 	// saves decode); ResearchAll is every project and wins when present.
 	Research    research.V1
 	ResearchAll []int
+	// NG1 is the new-game setup and its live state (scenario, storyteller,
+	// difficulty, factions, climate, conditions, arrival); nil = legacy.
+	NG1 *SetupState
+	// Bios, Skills, WorkCarry (NG-1 §5.4): each colonist's identity, skills
+	// and fractional work progress; absent in older saves (neutral bios).
+	Bios        map[entity.EntityID]pawngen.Pawn
+	Skills      map[entity.EntityID]skill.Set
+	WorkCarry   map[entity.EntityID]int32
 	ResearchCur research.Project
 	ResearchSet bool
 	Pens        []pen
@@ -272,11 +282,12 @@ func (g *Game) Save(w io.Writer, name string) error {
 		AteAt: g.ateAt, Draft: g.draft, SleptAt: g.sleptAt,
 		AnimalIDs: g.animalIDs, Animals: exportStore(g.animals), Equip: g.equip, Traces: g.traces, Wild: g.wild, Wildlife: g.wl,
 		Carrying: g.carrying, TendedUntil: g.tendedUntil, Wounds: g.wounds,
-		Research: g.research.V1(), ResearchAll: g.research.Slice(), ResearchCur: g.researchCur, ResearchSet: g.researchSet, RockDamage: g.rockDamage, Residual: g.residual,
+		Research: g.research.V1(), ResearchAll: g.research.Slice(), NG1: g.exportSetupState(), ResearchCur: g.researchCur, ResearchSet: g.researchSet, RockDamage: g.rockDamage, Residual: g.residual,
 		Motion: g.exportMotion(), Strikes: g.lastStrike, Hits: g.lastHit,
 		Weather: g.weather, Graves: g.graves, Roofs: g.exportRoofs(),
 	}
 	s.Grass, s.GrassCut = g.exportGrass()
+	s.Bios, s.Skills, s.WorkCarry = g.exportBios()
 	s.Biome, s.GrassRegrow, s.Incidents, s.Troughs = g.biome, g.grass.regrow, g.incidents, g.troughs
 	s.Stains = g.exportStains()
 	s.Dirt, s.Carried = g.exportDirt()
@@ -408,6 +419,8 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.importRoofs(s.Roofs)
 	g.importGrass(s.Grass, s.GrassCut)
 	g.biome, g.climate, g.incidents = s.Biome, biome.DefOf(s.Biome).Climate, s.Incidents
+	g.importSetupState(s.NG1)                   // setup.go: overrides the climate from the site
+	g.importBios(s.Bios, s.Skills, s.WorkCarry) // skills.go: older saves get neutral bios
 	g.grass.regrow = s.GrassRegrow
 	setMap(&g.troughs, s.Troughs)
 	g.importStains(s.Stains)

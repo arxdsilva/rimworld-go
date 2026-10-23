@@ -43,6 +43,9 @@ type BuildableView struct {
 	// parallel to Stuffs; 0 for non-carpets.
 	Catches []int
 	Carpet  bool
+	// Locked is why this colony cannot build it ("" when it can):
+	// (*Game).Buildables sets ReasonScenario for a disallowed building.
+	Locked string
 }
 
 // Buildables lists every buildable in catalog order.
@@ -165,6 +168,9 @@ func (g *Game) canPlace(k construction.Kind, x, y int) (bool, string) {
 	if !g.grid.InBounds(x, y) {
 		return false, ReasonOutside
 	}
+	if g.scenarioForbids(k) { // setup.go: the scenario disallows it (NG-1)
+		return false, ReasonScenario
+	}
 	layer := construction.DefOf(k).Layer
 	if g.layerBldgAt(x, y, layer) != 0 {
 		return false, ReasonOccupied
@@ -174,6 +180,9 @@ func (g *Game) canPlace(k construction.Kind, x, y int) (bool, string) {
 	}
 	if terrain.IsRockWall(g.terr.At(x, y)) {
 		return false, ReasonRock
+	}
+	if ok, r := g.waterPlacement(x, y); !ok { // water.go: nothing is built on water, floors included
+		return false, r
 	}
 	if layer == construction.LayerFloor {
 		// floors go under furniture, even benches that block the way, but
@@ -251,6 +260,7 @@ func (g *Game) placeFrameStuff(kind construction.Kind, stuff item.Kind, f constr
 		X:        x,
 		Y:        y,
 		Need:     construction.WoodCost(kind),
+		CompNeed: construction.ComponentCost(kind), // delivered after the material (haul_route.go)
 		WorkLeft: construction.WorkFor(kind, stuff),
 	}
 	g.frames.Set(id, fr)
@@ -294,7 +304,7 @@ func (g *Game) markDeconstruct(x1, y1, x2, y2 int, on bool) {
 		if b.Deconstruct == on {
 			continue
 		}
-		if on && b.Kind.Instant() {
+		if on && b.Kind.Instant() && !construction.DefOf(b.Kind).Placed { // a pod shell is salvaged, not erased
 			erase = append(erase, id)
 			continue
 		}
@@ -355,6 +365,9 @@ func (g *Game) removeBuilding(id entity.EntityID) {
 		}
 	}
 	if r := construction.Refund(b.Kind); r > 0 {
-		g.dropStack(b.Stuff, r, b.X, b.Y)
+		g.dropStack(refundStuff(b), r, b.X, b.Y)
+	}
+	if n := componentRefund(b.Kind); n > 0 {
+		g.dropStack(item.Components, n, b.X, b.Y) // half the components, rounded down
 	}
 }

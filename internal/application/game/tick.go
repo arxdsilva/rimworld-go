@@ -11,7 +11,6 @@ import (
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/needs"
-	"rimworld-go/internal/domain/pawn/recreation"
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/research"
 	"rimworld-go/internal/domain/sim/command"
@@ -52,6 +51,10 @@ func (g *Game) applyOne(c command.Command) {
 		defer g.followPlainOrder(id, c) // order_queue.go: kept to retry if blocked
 	}
 	switch c.Kind {
+	case command.SetStoryteller:
+		g.cmdSetStoryteller(c.Name) // story.go (NG-1)
+	case command.SetDifficulty:
+		g.cmdSetDifficulty(c.Name) // story.go (NG-1)
 	case command.ClearOrders:
 		delete(g.orderQueue, entity.EntityID(c.Pawn))
 	case command.MovePawn:
@@ -256,12 +259,11 @@ func (g *Game) phaseNeeds() {
 		j, _ := g.jobs.Get(id)
 		n, _ := g.need.Get(id)
 		if j.Kind != job.Sleep || j.State != job.Do {
-			n = needs.Decay(n, now)
+			n = g.decayNeeds(id, n, now) // skills.go: HungerRate, RestRate
 			g.need.Set(id, n)
-			if now%recreation.DrainPeriod == 0 && g.joy[id] > 0 {
-				g.joy[id]--
-			}
+			g.drainJoy(id, now) // skills.go: RecreationRate, passion work
 		}
+		g.skillsDaily(id, now) // skills.go: decay, age, birthdays
 		if n.Starving() {
 			g.down(id, health.CauseNoFood)
 			continue
@@ -545,7 +547,14 @@ func (g *Game) startJob(id entity.EntityID, rec job.Record) bool {
 		g.jobs.Set(id, rec)
 		return false
 	}
-	path, ok := g.pathTo(id, rec.TX, rec.TY)
+	path, ok := g.pathToJob(id, rec.TX, rec.TY) // paths.go: long searches are budgeted
+	if !ok && g.pathDeferred() {
+		g.reserve.ReleaseOwner(id)
+		rec.State = job.Fail
+		rec.Fail = job.Reserved // not unreachable: tried again next tick
+		g.jobs.Set(id, rec)
+		return false
+	}
 	if !ok {
 		g.reserve.ReleaseOwner(id)
 		rec.State = job.Fail
@@ -570,13 +579,26 @@ func (g *Game) startJob(id entity.EntityID, rec job.Record) bool {
 }
 
 func (g *Game) pathTo(id entity.EntityID, tx, ty int) ([]pathing.Point, bool) {
+	return g.pathToVia(id, tx, ty, !g.noRegions())
+}
+
+// pathToVia is pathTo; with regions, targets in another component fail at
+// once instead of costing a flood of the start's (paths.go).
+func (g *Game) pathToVia(id entity.EntityID, tx, ty int, regions bool) ([]pathing.Point, bool) {
 	pos, _ := g.positions.Get(id)
 	if pos.X == tx && pos.Y == ty {
 		return nil, true
 	}
 	q := g.pathQuery(id)
+	reach := g.reachFrom(id, pos, regions)
+	if !regions {
+		q = plainQuery{q} // regions.go: a plain search (self-check reference)
+	}
 	if q.Walkable(tx, ty) {
-		return pathing.Find(q, pos.X, pos.Y, tx, ty)
+		if !reach(tx, ty) {
+			return nil, false
+		}
+		return g.findPathVia(id, q, regions, pos.X, pos.Y, tx, ty)
 	}
 	if pathing.Adjacent(pos.X, pos.Y, tx, ty) {
 		return nil, true
@@ -591,10 +613,10 @@ func (g *Game) pathTo(id entity.EntityID, tx, ty int) ([]pathing.Point, bool) {
 				continue
 			}
 			ax, ay := tx+dx, ty+dy
-			if !q.Walkable(ax, ay) {
+			if !q.Walkable(ax, ay) || !reach(ax, ay) {
 				continue
 			}
-			p, ok := pathing.Find(q, pos.X, pos.Y, ax, ay)
+			p, ok := g.findPathVia(id, q, regions, pos.X, pos.Y, ax, ay)
 			if !ok {
 				continue
 			}
@@ -1137,11 +1159,12 @@ func (g *Game) doConstruct(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
-	if !g.workTick(id) {
+	u := g.workProgress(id, skConstruction, true) // skills.go
+	if u == 0 {
 		g.jobs.Set(id, j)
 		return
 	}
-	fr.WorkLeft--
+	fr.WorkLeft -= u
 	j.WorkLeft = fr.WorkLeft
 	if fr.WorkLeft > 0 {
 		g.frames.Set(j.Target, fr)
@@ -1199,11 +1222,12 @@ func (g *Game) doDeconstruct(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
-	if !g.workTick(id) {
+	u := g.workProgress(id, skConstruction, true) // skills.go
+	if u == 0 {
 		g.jobs.Set(id, j)
 		return
 	}
-	b.WorkLeft--
+	b.WorkLeft -= u
 	j.WorkLeft = b.WorkLeft
 	if b.WorkLeft > 0 {
 		g.bldgs.Set(j.Target, b)
@@ -1224,17 +1248,23 @@ func (g *Game) doHarvest(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
-	if !g.workTick(id) {
+	u := g.workProgress(id, skPlants, true) // skills.go
+	if u == 0 {
 		g.jobs.Set(id, j)
 		return
 	}
-	j.WorkLeft--
+	j.WorkLeft -= u
 	if j.WorkLeft > 0 {
 		g.jobs.Set(id, j)
 		return
 	}
 	d := plant.DefOf(p.Species)
-	g.dropStack(d.Yields, d.Yield, p.X, p.Y)
+	if g.fumbled(id) { // low Plants skill: nothing comes of it (skills.go)
+		pos, _ := g.positions.Get(id)
+		g.message(pos.X, pos.Y, "%s fumbled the harvest.", g.name(id))
+	} else {
+		g.dropStack(d.Yields, g.skillYield(id, skPlants, g.diffYield(DiffCrop, d.Yield)), p.X, p.Y)
+	}
 	if d.ExtraQty > 0 {
 		g.dropStack(d.Extra, d.ExtraQty, p.X, p.Y) // a by-product: straw with wheat
 	}
@@ -1368,7 +1398,8 @@ func (g *Game) stepPawn(id entity.EntityID, m *motionRec, carry entity.EntityID,
 	g.positions.Set(id, to)
 	g.stainStep(id, from) // stains.go: a bleeding pawn drips
 	g.dirtStep(id, to)    // filth.go: boots pick dirt up or leave it
-	m.stepped(now, g.weatherSlow(to.X, to.Y, pawnStepCost(from, to)))
+	// skills.go: step time ÷ MoveSpeed
+	m.stepped(now, g.paceStep(id, g.weatherSlow(to.X, to.Y, pawnStepCost(from, to))))
 	g.motion.Set(id, *m)
 	if carry != 0 {
 		if st, ok := g.stacks.Get(carry); ok {
@@ -1423,6 +1454,14 @@ func (g *Game) mergeOrSetFrom(id entity.EntityID, st item.Stack, seen []spillSte
 		return
 	}
 	seen = append(seen, here)
+	if g.isWaterAt(st.X, st.Y) && st.Carrier == 0 {
+		// a load set down in water floats to the nearest dry ground
+		if x, y, ok := g.spillTile(st.Kind, st.X, st.Y); ok {
+			st.X, st.Y = x, y
+			g.mergeOrSetFrom(id, st, seen)
+			return
+		}
+	}
 	for _, oid := range g.itemIDs {
 		if oid == id {
 			continue
@@ -1480,8 +1519,8 @@ func (g *Game) spillTile(k item.Kind, x, y int) (int, int, bool) {
 					continue
 				}
 				nx, ny := x+dx, y+dy
-				if !g.grid.Walkable(nx, ny) {
-					continue
+				if !g.dryWalkable(nx, ny) {
+					continue // nothing is dropped in the water
 				}
 				oid := g.itemAt(nx, ny)
 				if oid == 0 {

@@ -87,3 +87,8 @@ func Restore(width, height int, blocked []int) *Grid {
 	}
 	return g
 }
+
+// BlockedBits is the row-major blocked-cell bitset (bit i set: tile i is
+// not walkable), shared read-only: pathing reads it instead of calling
+// Walkable per cell, and region maps diff it against their copy.
+func (g *Grid) BlockedBits() []uint64 { return g.blocked }

@@ -75,14 +75,19 @@ func (g *Game) spawnNear(s animal.Species, x, y int) (entity.EntityID, bool) {
 
 // hiveExit is the open tile beside the rock face nearest the colony: the
 // walkable tile bordering natural rock closest to home (ties: row-major
-// first).
+// first). The answer is cached per structure: grid, terrain and buildings
+// unchanged and home in the same place give the same tile.
 func (g *Game) hiveExit() (int, int, bool) {
 	hx, hy := g.home()
+	c := &g.regs.hive
+	if c.ok && c.grid == g.grid && c.gridVer == g.grid.Version() && c.structVer == g.structVer && c.hx == hx && c.hy == hy {
+		return c.x, c.y, c.found
+	}
 	w, h := g.grid.Width(), g.grid.Height()
 	best, bx, by := -1, 0, 0
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
-			if !g.grid.Walkable(x, y) || !g.bordersRock(x, y) {
+			if !g.dryWalkable(x, y) || !g.bordersRock(x, y) {
 				continue
 			}
 			if d := chebyshev(Position{X: x, Y: y}, Position{X: hx, Y: hy}); best < 0 || d < best {
@@ -90,6 +95,8 @@ func (g *Game) hiveExit() (int, int, bool) {
 			}
 		}
 	}
+	*c = hiveExitCache{ok: true, grid: g.grid, gridVer: g.grid.Version(), structVer: g.structVer,
+		hx: hx, hy: hy, x: bx, y: by, found: best >= 0}
 	return bx, by, best >= 0
 }
 

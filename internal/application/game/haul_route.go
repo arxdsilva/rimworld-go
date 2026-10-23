@@ -5,6 +5,7 @@ import (
 
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
+	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -51,6 +52,51 @@ func (g *Game) frameNeed(fid entity.EntityID, need, wood int) int {
 	return need - wood - g.haul.incoming[fid]
 }
 
+// A frame has two delivery slots: its material, then its components
+// (NG-1 §4.8). A share or route entry names a slot by key: the frame id
+// for the material, the frame id with compSlot set for the components.
+// The keys fit the saved maps unchanged (entity ids stay far below it).
+const compSlot = entity.EntityID(1) << 62
+
+// slotKey is the delivery slot of frame fid that takes items of kind k.
+func slotKey(fid entity.EntityID, k item.Kind) entity.EntityID {
+	if k == item.Components {
+		return fid | compSlot
+	}
+	return fid
+}
+
+// slotFrame splits a slot key into its frame id and whether it is the
+// components slot.
+func slotFrame(key entity.EntityID) (fid entity.EntityID, comp bool) {
+	return key &^ compSlot, key&compSlot != 0
+}
+
+// slotNeed is what frame fid still lacks of items of kind k once loads on
+// the way land: 0 for a kind the frame does not take. Components are
+// wanted once the material is delivered or fully promised.
+func (g *Game) slotNeed(fid entity.EntityID, fr construction.Frame, k item.Kind) int {
+	switch {
+	case k == item.Components:
+		if fr.CompNeed <= fr.Comp || fr.Wood+g.haul.incoming[fid] < fr.Need {
+			return 0
+		}
+		return fr.CompNeed - fr.Comp - g.haul.incoming[fid|compSlot]
+	case k == fr.Stuff:
+		return g.frameNeed(fid, fr.Need, fr.Wood)
+	}
+	return 0
+}
+
+// slotOpen: the frame's slot for items of kind k still takes them (the
+// walk and the hand-over check, which ignore loads on the way).
+func slotOpen(fr construction.Frame, k item.Kind) bool {
+	if k == item.Components {
+		return fr.Comp < fr.CompNeed
+	}
+	return k == fr.Stuff && fr.Wood < fr.Need
+}
+
 type freeStack struct {
 	id entity.EntityID
 	st item.Stack
@@ -74,8 +120,8 @@ func (g *Game) planDelivery(id entity.EntityID, pos Position) (job.Record, []hau
 		if !ok {
 			continue
 		}
-		need := g.frameNeed(fid, fr.Need, fr.Wood)
-		if need <= 0 {
+		needs := [2]int{g.slotNeed(fid, fr, fr.Stuff), g.slotNeed(fid, fr, item.Components)}
+		if needs[0] <= 0 && needs[1] <= 0 {
 			continue
 		}
 		if _, taken := g.reserve.EntityOwner(fid); taken {
@@ -84,13 +130,18 @@ func (g *Game) planDelivery(id entity.EntityID, pos Position) (job.Record, []hau
 		if g.postponedFor(id, job.Haul, fid, 0, 0) {
 			continue // SIM-027: blocked on the way there lately
 		}
-		nf := needyFrame{id: fid, stuff: fr.Stuff, need: need}
-		if fr.Rebuild {
-			nf.first = rebuildFirst
-		}
-		frames = append(frames, nf)
-		if !slices.Contains(kinds, fr.Stuff) {
-			kinds = append(kinds, fr.Stuff)
+		for i, k := range [2]item.Kind{fr.Stuff, item.Components} {
+			if needs[i] <= 0 {
+				continue
+			}
+			nf := needyFrame{id: fid, stuff: k, need: needs[i]}
+			if fr.Rebuild {
+				nf.first = rebuildFirst
+			}
+			frames = append(frames, nf)
+			if !slices.Contains(kinds, k) {
+				kinds = append(kinds, k)
+			}
 		}
 	}
 	if len(frames) == 0 {
@@ -127,17 +178,18 @@ func (g *Game) planDelivery(id entity.EntityID, pos Position) (job.Record, []hau
 	if bestStack == 0 {
 		return job.Record{}, nil, false
 	}
-	rec, shares := g.routeFrom(bestStack, bst, bestFrame, bestNeed)
+	rec, shares := g.routeFrom(bestStack, bst, slotKey(bestFrame, bst.Kind), bestNeed)
 	return rec, shares, true
 }
 
-// routeFrom builds a delivery of stack sid starting at frame first (whose
-// share is firstNeed): it chains the nearest same-material frames with
+// routeFrom builds a delivery of stack sid starting at slot first (a
+// frame's slotKey; its share is firstNeed): it chains the nearest same-material frames with
 // need, each within routeReach of the last, until the route needs a full
 // load or holds routeFrames. The load is a full CarryLimit when a
 // stockpile cell can take the leftovers, else just what the route needs.
 func (g *Game) routeFrom(sid entity.EntityID, st item.Stack, first entity.EntityID, firstNeed int) (job.Record, []haulShare) {
-	fr0, _ := g.frames.Get(first)
+	fid0, _ := slotFrame(first)
+	fr0, _ := g.frames.Get(fid0)
 	route := []entity.EntityID{first}
 	needs := []int{firstNeed}
 	sum, lx, ly := firstNeed, fr0.X, fr0.Y
@@ -145,25 +197,26 @@ func (g *Game) routeFrom(sid entity.EntityID, st item.Stack, first entity.Entity
 		var next entity.EntityID
 		nd, nneed, nx, ny := 1<<30, 0, 0, 0
 		for _, fid := range g.frameIDs {
-			if slices.Contains(route, fid) {
+			key := slotKey(fid, st.Kind)
+			if slices.Contains(route, key) {
 				continue
 			}
 			fr, ok := g.frames.Get(fid)
-			if !ok || fr.Stuff != st.Kind {
+			if !ok {
 				continue
 			}
 			d := pathing.Dist(lx, ly, fr.X, fr.Y)
-			if d > routeReach || d > nd || (d == nd && fid > next) {
+			if d > routeReach || d > nd || (d == nd && key > next) {
 				continue
 			}
-			need := g.frameNeed(fid, fr.Need, fr.Wood)
+			need := g.slotNeed(fid, fr, st.Kind) // 0 for a kind the frame does not take
 			if need <= 0 {
 				continue
 			}
 			if _, taken := g.reserve.EntityOwner(fid); taken {
 				continue
 			}
-			next, nd, nneed, nx, ny = fid, d, need, fr.X, fr.Y
+			next, nd, nneed, nx, ny = key, d, need, fr.X, fr.Y
 		}
 		if next == 0 {
 			break
@@ -171,7 +224,7 @@ func (g *Game) routeFrom(sid entity.EntityID, st item.Stack, first entity.Entity
 		route, needs = append(route, next), append(needs, nneed)
 		sum, lx, ly = sum+nneed, nx, ny
 	}
-	rec := job.Record{Kind: job.Haul, Target: sid, TX: st.X, TY: st.Y, Dest: first, DestX: fr0.X, DestY: fr0.Y}
+	rec := job.Record{Kind: job.Haul, Target: sid, TX: st.X, TY: st.Y, Dest: fid0, DestX: fr0.X, DestY: fr0.Y}
 	take := min(st.Qty, item.CarryLimit)
 	if take > sum {
 		if sx, sy, ok := g.stockpileCell(st.Kind, lx, ly); ok {
@@ -302,18 +355,19 @@ func (g *Game) trimDelivery(id entity.EntityID, carried int) {
 // at once.
 func (g *Game) routeWalk(id entity.EntityID, j *job.Record, kind item.Kind) bool {
 	for j.RouteI < len(j.Route) {
-		fid := j.Route[j.RouteI]
+		key := j.Route[j.RouteI]
 		if j.Kind != job.Haul {
 			return false // a fuel user: the job walks there itself
 		}
+		fid, _ := slotFrame(key)
 		fr, ok := g.frames.Get(fid)
-		if ok && fr.Stuff == kind && !fr.Ready() {
+		if ok && slotOpen(fr, kind) {
 			if path, ok := g.pathTo(id, fr.X, fr.Y); ok {
 				j.Dest, j.DestX, j.DestY = fid, fr.X, fr.Y
 				return g.walkOn(id, j, path)
 			}
 		}
-		g.consumeShare(id, fid) // gone, filled or out of reach: skip it
+		g.consumeShare(id, key) // gone, filled or out of reach: skip it
 		j.RouteI++
 	}
 	if !j.HasSpare {
@@ -353,14 +407,21 @@ func (g *Game) routeArrive(id entity.EntityID, j job.Record) {
 			g.storeLeftover(id, j, st)
 			return
 		}
-		fid := j.Route[j.RouteI]
-		if fr, ok := g.frames.Get(fid); ok && fr.Stuff == st.Kind && fr.Wood < fr.Need {
-			give := min(st.Qty, fr.Need-fr.Wood)
-			fr.Wood += give
-			st.Qty -= give
+		key := j.Route[j.RouteI]
+		fid, _ := slotFrame(key)
+		if fr, ok := g.frames.Get(fid); ok && slotOpen(fr, st.Kind) {
+			if st.Kind == item.Components {
+				give := min(st.Qty, fr.CompNeed-fr.Comp)
+				fr.Comp += give
+				st.Qty -= give
+			} else {
+				give := min(st.Qty, fr.Need-fr.Wood)
+				fr.Wood += give
+				st.Qty -= give
+			}
 			g.frames.Set(fid, fr)
 		}
-		g.consumeShare(id, fid)
+		g.consumeShare(id, key)
 		j.RouteI++
 		if st.Qty <= 0 {
 			g.deleteItem(j.Carry)

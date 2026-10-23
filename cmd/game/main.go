@@ -80,6 +80,9 @@ func main() {
 		Saves:        saveHooks(),
 		Settings:     settingsHooks(shot != nil),
 		Scenarios:    scenarioStore(shot != nil),
+		NewSimBuilder: func(ng uiadapter.NewGame) (uiadapter.SimBuilder, error) {
+			return &colonyBuilder{b: game.NewColonyBuilder(game.Config{Seed: ng.Seed, Biome: ng.Biome, Setup: ng.Setup})}, nil
+		},
 		Window: func(fullscreen, vsync bool) {
 			ebiten.SetFullscreen(fullscreen)
 			ebiten.SetVsyncEnabled(vsync)
@@ -813,4 +816,18 @@ func writeHeapProfile(path string) {
 	if err := pprof.WriteHeapProfile(f); err != nil {
 		log.Printf("memprofile: %v", err)
 	}
+}
+
+// colonyBuilder steps a wizard colony for the loading screen (NG-1 §2.10).
+type colonyBuilder struct{ b *game.ColonyBuilder }
+
+func (c *colonyBuilder) Step(units int) (string, float32, bool) { return c.b.Step(units) }
+
+func (c *colonyBuilder) Sim() (uiadapter.Simulation, error) {
+	g := c.b.Game()
+	if g == nil {
+		return nil, fmt.Errorf("colony not built")
+	}
+	g.RoofRooms()
+	return g, nil
 }

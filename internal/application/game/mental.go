@@ -33,7 +33,8 @@ func (g *Game) mentalBreakTick(id entity.EntityID, j job.Record) bool {
 		if (now+uint64(id)*977)%clock.TicksPerHour != 0 {
 			return false
 		}
-		risk := mentalbreak.RiskPerHour(g.moodOf(id))
+		// Threshold + the trait offset (skills.go): mood - offset
+		risk := mentalbreak.RiskPerHour(g.moodOf(id) - g.breakOffset(id))
 		if risk == 0 || g.rng.IntN(1000) >= risk {
 			return false
 		}

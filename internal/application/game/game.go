@@ -238,6 +238,9 @@ type FrameView struct {
 	Builder           string
 	Haulers           []string
 	Status            string
+	// Components delivered, needed and on the way (NG-1 §4.8; 0 for a
+	// kind without any).
+	Comp, CompNeed, CompIncoming int
 }
 
 // BuildingView is a completed wall or bed.
@@ -385,6 +388,12 @@ type WorldView struct {
 	// HomeVer changes whenever it does, so the renderer can cache.
 	Home    []uint8
 	HomeVer uint32
+	// NG-1 setup (setup_view.go): arrival pods for the fall streak and dust
+	// (Tick is the landing tick), the permanent conditions' keys and the
+	// heat wave or cold snap in progress ("" when none).
+	Arrivals   []ArrivalView
+	Conditions []string
+	Extreme    string
 }
 
 // Game holds all authoritative simulation state.
@@ -460,7 +469,8 @@ type Game struct {
 	roomGrid   []int
 	rooms      []roomStats
 	roomDirty  bool
-	fence      fenceIndex // fence and gate cells, derived (fences.go, SIM-028)
+	fence      fenceIndex  // fence and gate cells, derived (fences.go, SIM-028)
+	regs       regionState // walkability regions and labels, derived (regions.go, NG-1 E2)
 	reserve    *reservation.Table
 	pending    []command.Command
 
@@ -512,6 +522,8 @@ type Game struct {
 	enterHook func(id entity.EntityID, from, to Position) (stepVerdict, Position)
 	// haul: in-flight material deliveries (haul_route.go, HAUL-001).
 	haul haulState
+	// cabinets: tool cabinet bonus per bench, per structVer (items_ng1.go), never saved.
+	cabinets cabinetState
 	// phaseObs: optional per-phase timing observer (phases.go); set only
 	// from cmd/* and benchmarks, never read by gameplay.
 	phaseObs PhaseObserver
@@ -533,6 +545,11 @@ type Game struct {
 	minesVer  uint64
 	mineCache mineCache
 	seedCache seedCache
+	// sk: bios, skills, stats and learning (skills.go, NG-1 PAWN-G).
+	sk skillState
+	// ng: the new-game setup's live state (setup.go, NG-1 SETUP); zero
+	// for a legacy colony.
+	ng ng1State
 }
 
 // New builds a Game from cfg. Width/Height must be positive.
@@ -639,6 +656,7 @@ func (g *Game) SpawnNamedPawn(x, y int, name string) (entity.EntityID, error) {
 	g.labor.Set(id, g.prio[id].Mask())
 	g.scheds[id] = g.sched
 	g.joy[id] = recreation.Start
+	g.giveBio(id, legacyBio(id, name)) // skills.go: a neutral pawn (NG-1 §0.4)
 	return id, nil
 }
 
@@ -859,6 +877,7 @@ func (g *Game) snapshot() []PawnView {
 		g.fillPawnDeath(&views[i])             // burial.go
 		g.fillPawnWeather(&views[i])           // weather.go
 		views[i].Log = g.logLines(views[i].ID) // eventlog.go
+		g.fillPawnBio(&views[i])               // skills.go: NG-1 identity
 	}
 	return views
 }
@@ -1011,6 +1030,7 @@ func (g *Game) world() WorldView {
 	g.fillStainView(&w)    // stains.go
 	g.fillDirtView(&w)     // filth.go
 	g.fillHomeView(&w)     // home.go
+	g.fillSetupView(&w)    // setup_view.go (NG-1)
 	now := uint64(g.clock.Now())
 	w.Hour = float64(now%clock.TicksPerDay) / clock.TicksPerHour
 	w.DayOfYear = int(now/clock.TicksPerDay) % clock.DaysPerYear

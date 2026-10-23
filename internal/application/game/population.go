@@ -1,6 +1,7 @@
 package game
 
 import (
+	"math"
 	"sort"
 
 	"rimworld-go/internal/domain/animal"
@@ -68,7 +69,7 @@ type departure struct {
 // density over the map's area, cut in winter.
 func (g *Game) wildlifeCap() int {
 	bd := biome.DefOf(g.biome)
-	c := bd.Wildlife * g.grid.Width() * g.grid.Height() / 10000
+	c := wildlifeCapacity(bd.Wildlife, g.grid.Width()*g.grid.Height())
 	if temperature.Season(g.clock.Now()) == "Winter" {
 		pct := winterMildPct
 		if bd.Climate.YearMean <= 0 {
@@ -77,6 +78,37 @@ func (g *Game) wildlifeCap() int {
 		c = c * pct / 100
 	}
 	return c
+}
+
+// Wildlife capacity curve (NG-1 §6.6, D15): linear in area up to 120²,
+// then with the square root of the area (a 500² map is not seventeen
+// times as crowded), never above wildlifeMax.
+const (
+	wildlifeLinearArea = 120 * 120
+	wildlifeMax        = 300
+)
+
+// wildlifeCapacity is a biome density (animals per 10 000 tiles) over a
+// map of area tiles, before the winter cut: density × area/10 000 up to
+// 120², else density × 1.44 × √(area/120²), capped at wildlifeMax. Integer
+// arithmetic (deterministic): 1.44·√(area/14 400) = 12·√(100·area)/10 000.
+func wildlifeCapacity(density, area int) int {
+	if area <= wildlifeLinearArea {
+		return density * area / 10000
+	}
+	return min(wildlifeMax, density*12*floorSqrt(100*area)/10000)
+}
+
+// floorSqrt is ⌊√n⌋ for n >= 0, exact (the float estimate is corrected).
+func floorSqrt(n int) int {
+	r := int(math.Sqrt(float64(n)))
+	for r > 0 && r*r > n {
+		r--
+	}
+	for (r+1)*(r+1) <= n {
+		r++
+	}
+	return r
 }
 
 // countsWild: an animal counted against capacity. Tame animals, leavers

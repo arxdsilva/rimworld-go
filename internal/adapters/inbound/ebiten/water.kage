@@ -1,0 +1,71 @@
+//kage:unit pixels
+
+// water.kage: a ground-plane water tile lit like lit.kage lights the
+// ground (flat normal), with a slow UV ripple and caustic glints that
+// ride on the presentation clock (NG-1 §7.3; Go twins waterRipple and
+// waterGlint in water_draw.go). Per vertex: color is the colour scale
+// (premultiplied), custom.x sky exposure, custom.y lamp light, custom.zw
+// the world position in tiles (continuous across tiles, so the ripple
+// never shows a seam); deep water adds waterDeepBias to custom.z. Time is
+// the presentation clock in seconds, held still by Reduced Motion.
+package main
+
+var SunL vec3
+var MoonL vec3
+var SunColor vec3
+var MoonColor vec3
+var SkyAmbient vec3
+var IndoorAmbient vec3
+var LampColor vec3
+var Time float
+
+// wrapAt is the texel at p wrapped inside the sprite's own region: water
+// tiles are tileable, so the ripple pulls texels in from the far side.
+func wrapAt(p vec2) vec4 {
+	o := imageSrc0Origin()
+	s := imageSrc0Size()
+	return imageSrc0UnsafeAt(o + mod(p-o, s))
+}
+
+// bilinear is FilterLinear's 4-tap sample with wrapped taps.
+func bilinear(p vec2) vec4 {
+	p0 := p - 1/2.0
+	p1 := p + 1/2.0
+	c0 := wrapAt(p0)
+	c1 := wrapAt(vec2(p1.x, p0.y))
+	c2 := wrapAt(vec2(p0.x, p1.y))
+	c3 := wrapAt(p1)
+	rate := fract(p1)
+	return mix(mix(c0, c1, rate.x), mix(c2, c3, rate.x), rate.y)
+}
+
+func Fragment(dstPos vec4, srcPos vec2, color vec4, custom vec4) vec4 {
+	wp := custom.zw
+	deep := step(2048.0, custom.z)
+	wp.x -= 2048 * deep
+	t := Time
+
+	// ripple: a slow swell pushes the sample about 1.5% of a tile
+	k := imageSrc0Size().x / 128.0
+	swell := vec2(
+		sin(wp.y*5.0+t*1.1+sin(wp.x*2.3+t*0.5)),
+		cos(wp.x*4.3-t*0.9+sin(wp.y*2.9-t*0.4)))
+	base := bilinear(srcPos+swell*2.0*k) * color
+	if base.a <= 0 {
+		return vec4(0)
+	}
+
+	// caustic glints: bright threads where two drifting waves cross
+	w1 := sin(wp.x*9.0+t*0.8+sin(wp.y*7.0-t*0.5)*1.7)
+	w2 := sin(wp.y*8.0-t*0.6+sin(wp.x*6.0+t*0.4)*1.5)
+	glint := smoothstep(0.80, 1.0, w1*w2) * (0.34 - 0.16*deep)
+
+	amb := mix(IndoorAmbient, SkyAmbient, custom.x)
+	dif := (SunColor*max(SunL.z, 0) + MoonColor*max(MoonL.z, 0)) * custom.x
+	lamp := LampColor * custom.y
+	light := amb + dif + lamp
+	rgb := base.rgb * light
+	// the glints catch the direct light more than the ambient
+	rgb += vec3(0.55, 0.72, 0.80) * glint * base.a * (dif + lamp + 0.35*amb)
+	return vec4(min(rgb, vec3(base.a)), base.a)
+}

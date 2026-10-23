@@ -82,6 +82,9 @@ func (g *Game) Wealth() int {
 
 // raidPoints is what the storyteller may spend on a raid on this day.
 func (g *Game) raidPoints(day int) int {
+	if g.hasSetup() {
+		return g.threatPoints() // story.go: difficulty.ThreatPoints (NG-1 §3.3)
+	}
 	colonists := 0
 	for _, id := range g.pawnIDs {
 		if g.standingPawn(id) {
@@ -105,10 +108,14 @@ func meleeCost(k item.Kind) int {
 }
 
 // raidKit spends points on raiders' weapons (at least one raider).
-func (g *Game) raidKit(points int) []item.Kind {
+func (g *Game) raidKit(points int) []item.Kind { return g.raidKitOf(points, true) }
+
+// raidKitOf is raidKit for a faction: rifles only when it has them (a
+// neolithic clan carries spears, clubs and knives), at most maxRaiders.
+func (g *Game) raidKitOf(points int, rifles bool) []item.Kind {
 	var kit []item.Kind
-	for len(kit) < maxScaledRaiders && (points >= knifeCost || len(kit) == 0) {
-		if points >= rifleCost && g.rng.IntN(100) < 55 {
+	for limit := g.maxRaiders(); len(kit) < limit && (points >= knifeCost || len(kit) == 0); {
+		if rifles && points >= rifleCost && g.rng.IntN(100) < 55 {
 			kit = append(kit, item.Rifle)
 			points -= rifleCost
 			continue
@@ -127,6 +134,12 @@ func (g *Game) raidKit(points int) []item.Kind {
 // that suits the colony.
 func (g *Game) scaledRaid(day int) {
 	kit := g.raidKit(g.raidPoints(day))
+	g.raidWith(kit, g.pickPlan(day))
+}
+
+// pickPlan chooses a raid's plan for colony day day: sappers against a
+// shut-in colony, now and then a siege, else an assault.
+func (g *Game) pickPlan(day int) raidPlan {
 	plan := planAssault
 	switch roll := g.rng.IntN(100); {
 	case day >= 10 && roll < 50 && g.enclosed():
@@ -134,7 +147,7 @@ func (g *Game) scaledRaid(day int) {
 	case day >= 12 && roll < 30:
 		plan = planSiege
 	}
-	g.raidWith(kit, plan)
+	return plan
 }
 
 // enclosed reports that no colonist can be reached from the map edge

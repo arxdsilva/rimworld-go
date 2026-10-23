@@ -314,7 +314,7 @@ func (g *Game) spawnYoung(s animal.Species, x, y int, tame bool, herd uint32, no
 func (g *Game) birthSpot(x, y int) (int, int, bool) {
 	for _, d := range [][2]int{{0, 1}, {1, 0}, {-1, 0}, {0, -1}, {1, 1}, {-1, 1}, {1, -1}, {-1, -1}} {
 		nx, ny := x+d[0], y+d[1]
-		if !g.grid.Walkable(nx, ny) {
+		if !g.dryWalkable(nx, ny) {
 			continue
 		}
 		if _, _, taken := g.nearestWhere(nx, ny, 0, ckAll, nil); !taken {

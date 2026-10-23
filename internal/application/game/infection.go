@@ -84,18 +84,24 @@ func (g *Game) lyingForCare(id entity.EntityID) bool {
 	return j.Kind == job.Sleep && j.State == job.Do
 }
 
-// withMedicine adds a fetch of herbal medicine to a tend job, if there is
-// some to be had.
+// withMedicine adds a fetch of medicine to a tend job (rec.Target is the
+// patient), if there is some to be had. The tier is chosen here, once, from
+// the patient's state: industrial for a severe injury or an infection,
+// herbal otherwise, each falling back to the other. The job carries the
+// chosen dose, so the tier cannot flap while the doctor works (NG-1 §4.8).
 func (g *Game) withMedicine(id entity.EntityID, rec job.Record) job.Record {
-	sid, st := g.ingredientFor(id, recipe.Input{Kind: item.HerbalMedicine, Qty: 1, Max: 1})
-	if sid == 0 {
+	for _, k := range g.medicineTiers(rec.Target) {
+		sid, st := g.ingredientFor(id, recipe.Input{Kind: k, Qty: 1, Max: 1})
+		if sid == 0 {
+			continue
+		}
+		if _, taken := g.reserve.EntityOwner(sid); taken {
+			continue
+		}
+		rec.Dest, rec.DestX, rec.DestY = sid, rec.TX, rec.TY
+		rec.TX, rec.TY = st.X, st.Y
 		return rec
 	}
-	if _, taken := g.reserve.EntityOwner(sid); taken {
-		return rec
-	}
-	rec.Dest, rec.DestX, rec.DestY = sid, rec.TX, rec.TY
-	rec.TX, rec.TY = st.X, st.Y
 	return rec
 }
 
@@ -103,7 +109,7 @@ func (g *Game) withMedicine(id entity.EntityID, rec job.Record) job.Record {
 // for the patient. Reports false if the job had to end.
 func (g *Game) pickUpMedicine(id entity.EntityID, j *job.Record) bool {
 	st, ok := g.stacks.Get(j.Dest)
-	if !ok || st.Carrier != 0 || st.Kind != item.HerbalMedicine {
+	if !ok || st.Carrier != 0 || !isMedicine(st.Kind) {
 		j.Dest = 0 // gone: tend without it
 	} else {
 		carry := j.Dest
@@ -112,7 +118,7 @@ func (g *Game) pickUpMedicine(id entity.EntityID, j *job.Record) bool {
 			g.stacks.Set(j.Dest, st)
 			carry = g.entities.Next()
 			g.itemIDs = append(g.itemIDs, carry)
-			g.stacks.Set(carry, item.Stack{Kind: item.HerbalMedicine, Qty: 1, X: st.X, Y: st.Y, Carrier: id})
+			g.stacks.Set(carry, item.Stack{Kind: st.Kind, Qty: 1, X: st.X, Y: st.Y, Carrier: id})
 		} else {
 			st.Carrier = id
 			g.stacks.Set(j.Dest, st)
@@ -139,6 +145,9 @@ func (g *Game) pickUpMedicine(id entity.EntityID, j *job.Record) bool {
 func (g *Game) tendCare(doctor, patient entity.EntityID, j job.Record) infection.Care {
 	switch {
 	case j.Carry != 0:
+		if st, ok := g.stacks.Get(j.Carry); ok && st.Kind == item.IndustrialMedicine {
+			return infection.IndustrialMedicine
+		}
 		return infection.Medicine
 	case doctor == patient:
 		return infection.SelfTended
@@ -149,6 +158,8 @@ func (g *Game) tendCare(doctor, patient entity.EntityID, j job.Record) infection
 // tendHeal is the injury a tend mends at once.
 func tendHeal(c infection.Care) int {
 	switch c {
+	case infection.IndustrialMedicine:
+		return TendHeal * infection.HealPct(c) / 100
 	case infection.Medicine:
 		return TendHeal * 2
 	case infection.SelfTended:
@@ -158,9 +169,9 @@ func tendHeal(c infection.Care) int {
 }
 
 // closeWound: a tend closes an open wound (it may still fester).
-func (g *Game) closeWound(id entity.EntityID, c infection.Care) {
+func (g *Game) closeWound(id entity.EntityID, c infection.Care, doctor entity.EntityID) {
 	w := g.wounds[id]
-	if w.At != 0 && w.Infection == 0 && g.rng.IntN(100) < infection.Chance(c) {
+	if w.At != 0 && w.Infection == 0 && g.rng.IntN(100) < g.infectionPct(g.infectionChance(id, c)*g.doctorInfectionPct(doctor)/100) { // story.go: difficulty (NG-1)
 		w.Infection = infection.Onset
 		pos, _ := g.positions.Get(id)
 		g.logEvent(id, logEntry{Kind: logInfected})
@@ -197,7 +208,7 @@ func (g *Game) phaseInfection() {
 		}
 		pos, _ := g.positions.Get(id)
 		if w.At != 0 && now-w.At >= infection.DelayHours*clock.TicksPerHour {
-			if w.Infection == 0 && g.rng.IntN(100) < infection.Chance(infection.Untreated) {
+			if w.Infection == 0 && g.rng.IntN(100) < g.infectionPct(infection.Chance(infection.Untreated)) { // story.go: difficulty (NG-1)
 				w.Infection = infection.Onset
 				g.logEvent(id, logEntry{Kind: logInfected})
 				g.message(pos.X, pos.Y, "%s's untended wound is infected.", g.name(id))

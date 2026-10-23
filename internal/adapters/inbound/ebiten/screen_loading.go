@@ -127,6 +127,9 @@ func (a *App) simBuilder(ng NewGame) (SimBuilder, error) {
 	if a.ng != nil && a.ng.buildHook != nil && ng.Setup != nil {
 		return a.ng.buildHook(ng) // tests, and later the stepping factory
 	}
+	if a.cfg.NewSimBuilder != nil && ng.Setup != nil {
+		return a.cfg.NewSimBuilder(ng)
+	}
 	if a.cfg.NewSim == nil {
 		return nil, errNoFactory
 	}

@@ -96,7 +96,8 @@ func (g *Game) doClean(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
-	if !g.workTick(id) {
+	u := g.workProgress(id, skNone, false) // skills.go
+	if u == 0 {
 		g.jobs.Set(id, j)
 		return
 	}
@@ -105,7 +106,7 @@ func (g *Game) doClean(id entity.EntityID, j job.Record) {
 	if ns != st {
 		g.setStainAmount(j.DestX, j.DestY, ns)
 	}
-	j.WorkLeft--
+	j.WorkLeft -= u
 	if nd+ns == 0 || j.WorkLeft <= 0 {
 		j.State = job.Complete // what is left stays queued
 	}

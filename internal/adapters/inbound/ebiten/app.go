@@ -78,6 +78,9 @@ type AppConfig struct {
 	LoadSplash func() (*ebiten.Image, error)
 	// Scenarios stores custom scenarios (nil: custom scenarios unavailable).
 	Scenarios ScenarioStore
+	// NewSimBuilder builds a wizard Setup colony step by step for the
+	// loading screen (nil: NewSim in one step).
+	NewSimBuilder func(NewGame) (SimBuilder, error)
 	// LoadMenuScene loads the main-menu colony diorama (make art-menu).
 	// Nil: locate from cwd. When it fails the gradient backdrop is drawn.
 	LoadMenuScene func() (*menuDiorama, error)

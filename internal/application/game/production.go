@@ -186,7 +186,7 @@ func (g *Game) assignBill(id entity.EntityID, m work.Mask) bool {
 		unreach := false
 		for i, bl := range g.bills[bid] {
 			d := recipe.DefOf(bl.Recipe)
-			if !m.Enabled(d.Skill) {
+			if !m.Enabled(d.Skill) || !g.meetsMinSkill(id, d.Learn, d.MinSkill) { // skills.go
 				continue
 			}
 			stock := g.billStock(d)
@@ -291,11 +291,12 @@ func (g *Game) doBill(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
-	if !g.workTick(id) {
+	u := g.workProgressPct(id, d.Learn, true, 100+g.cabinetBonus(j.Dest)) // skills.go; tool cabinets
+	if u == 0 {
 		g.jobs.Set(id, j)
 		return
 	}
-	j.WorkLeft--
+	j.WorkLeft -= u
 	if j.WorkLeft > 0 {
 		g.jobs.Set(id, j)
 		return
@@ -312,6 +313,7 @@ func (g *Game) doBill(id entity.EntityID, j job.Record) {
 		if d.BySpecies { // butchering: the yields come from the carcass's species
 			if st, ok := g.stacks.Get(j.Carry); ok {
 				out, extra = animal.Yield(animal.Species(st.Animal))
+				out, extra = g.butcherYield(id, out), g.butcherYield(id, extra) // skills.go
 			}
 		}
 		g.deleteItem(j.Carry)

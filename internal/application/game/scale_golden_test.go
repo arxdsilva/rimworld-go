@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -16,17 +17,21 @@ import (
 // Re-pin: go test -run TestScaleGolden -v ./internal/application/game/
 // and copy the "got" values.
 //
-// Re-pinned: save format (research slice), behaviour unchanged. StateHash
+// Re-pinned (NG-1 S3): colonists now save their bios and skills (new
+// state); every other saved field is identical to the previous pins, so
+// behaviour is unchanged (checked field by field against 4d68b9aa).
+//
+// Re-pinned earlier: save format (research slice), behaviour unchanged. StateHash
 // became format-independent (normalised fields) at the same time; these
 // values are identical when computed on the contract commit (fbc76fd6)
 // and on the new save format.
 var scaleGolden = map[string]uint64{
-	"48x40/seed1":    0xde829987be0450d,
-	"48x40/seed7":    0x33b15f6cbd436f80,
-	"48x40/seed42":   0x1b69004746143ca3,
-	"120x120/seed1":  0x5fce5c24ecd8eec0,
-	"120x120/seed7":  0xbfb1360ca07b408b,
-	"120x120/seed42": 0x3bfa12d561682348,
+	"48x40/seed1":    0xca28aed6af2d3d04,
+	"48x40/seed7":    0x80dba255c6e4d3b0,
+	"48x40/seed42":   0x5ed1c332d169196c,
+	"120x120/seed1":  0x5ab1797efe806172,
+	"120x120/seed7":  0xa9f0a72776702b9c,
+	"120x120/seed42": 0x2c38132a2bcaf5b6,
 }
 
 const scaleGoldenTicks = 20000
@@ -108,13 +113,32 @@ func (g *Game) BenchPath(id entity.EntityID, x, y int) int {
 	return len(p)
 }
 
-// BenchRebuildRooms rebuilds rooms as a wall change does and returns the
-// room count.
+// BenchRebuildRooms toggles a wall beside home (built, then removed on
+// the next call) and rebuilds the rooms as that change does; it returns
+// the room count.
 func (g *Game) BenchRebuildRooms() int {
-	g.roomDirty = true
+	if id, ok := benchWalls[g]; ok {
+		g.removeBuilding(id)
+		delete(benchWalls, g)
+	} else {
+		hx, hy := g.home()
+		for r := 0; r < 60 && !ok; r++ {
+			for dy := -r; dy <= r && !ok; dy++ {
+				for dx := -r; dx <= r && !ok; dx++ {
+					x, y := hx+dx, hy+dy
+					if can, _ := g.canPlaceAt(construction.Wall, construction.South, x, y); can && g.BuildNow("wall", "wood", "south", x, y) {
+						benchWalls[g], ok = g.layerBldgAt(x, y, construction.LayerObject), true
+					}
+				}
+			}
+		}
+	}
 	g.ensureRooms()
 	return len(g.rooms)
 }
+
+// benchWalls is the wall BenchRebuildRooms stands, per game.
+var benchWalls = map[*Game]entity.EntityID{}
 
 // Every test in this package runs with the per-cell indexes checked
 // against the original scans (indexes.go); the external benchmarks turn

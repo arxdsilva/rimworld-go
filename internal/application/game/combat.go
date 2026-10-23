@@ -164,6 +164,10 @@ func (g *Game) strike(attacker, target entity.EntityID, wk weapon.Kind) {
 	}
 	dist := weapon.Distance(ap.X, ap.Y, tp.X, tp.Y)
 	chance := weapon.HitChance(d, dist)
+	if _, beast := g.animals.Get(attacker); !beast {
+		chance = g.hitChanceFor(attacker, d.Ranged, chance) // skills.go: Shooting/Melee, accuracy stats
+		g.combatLearn(attacker, d.Ranged)
+	}
 	if d.Ranged {
 		chance = chance * (100 - g.coverFor(ap, tp)) / 100
 	}
@@ -217,7 +221,7 @@ func (g *Game) hurt(target entity.EntityID, dmg int, by entity.EntityID) {
 	switch {
 	case v.Injury >= health.MaxHP:
 		g.die(target, health.CauseInjury)
-	case v.Injury >= health.DownedInjury && v.Status == health.Alive:
+	case v.Injury >= g.downedAt(target) && v.Status == health.Alive: // skills.go: pain tolerance
 		g.down(target, health.CauseInjury)
 	}
 }
@@ -269,6 +273,9 @@ func (g *Game) heal(id entity.EntityID, v *health.Record, now uint64) {
 // range (and in sight for guns), then attack on cooldown.
 func (g *Game) doCombat(id entity.EntityID, j job.Record, now uint64) {
 	tp, ok := g.combatTarget(j.Target)
+	if ok && !g.canViolence(id) {
+		ok = false // incapable of violence: never attacks or hunts (skills.go)
+	}
 	if ok && j.Kind == job.Hunt {
 		a, _ := g.animals.Get(j.Target)
 		ok = a.Designated
@@ -288,7 +295,7 @@ func (g *Game) doCombat(id entity.EntityID, j job.Record, now uint64) {
 		j.State, j.Path, j.PathI = job.Do, nil, 0
 		if j.WorkLeft == 0 {
 			g.strike(id, j.Target, wk)
-			j.WorkLeft = d.Cooldown
+			j.WorkLeft = g.aimTicksFor(id, d.Cooldown) // skills.go: AimCooldown
 		}
 		g.jobs.Set(id, j)
 		return
@@ -314,6 +321,9 @@ func (g *Game) doCombat(id entity.EntityID, j job.Record, now uint64) {
 // autoEngage makes an idle drafted pawn attack the nearest hostile it
 // can hit from where it stands.
 func (g *Game) autoEngage(id entity.EntityID) {
+	if !g.canViolence(id) {
+		return
+	}
 	pos, _ := g.positions.Get(id)
 	d := weaponDefOf(g, id)
 	best, bestD := entity.EntityID(0), 1<<30
@@ -498,8 +508,20 @@ func (g *Game) nearestThreatTo(id entity.EntityID, pos Position, animalR, raider
 			threat, tp, best = t, p, d
 		}
 	}
-	for _, aid := range g.animalIDs {
-		consider(aid)
+	// attacking animals from the creature index (animal_index.go): the
+	// nearest within animalR, ties to the lower id — the first in
+	// animalIDs, which ascend
+	if animalR > 0 {
+		attacking := func(t entity.EntityID, _ Position) bool {
+			a, ok := g.animals.Get(t)
+			return ok && a.Mode == animal.Attack && a.Target == id
+		}
+		if aid, ap, ok := g.nearestWhere(pos.X, pos.Y, animalR-1, ckAnimal, attacking); ok {
+			threat, tp, best = aid, ap, weapon.Distance(pos.X, pos.Y, ap.X, ap.Y)
+		}
+	}
+	if selfCheck() {
+		g.checkThreatScan(id, pos, animalR, raiderR, threat, best) // paths.go
 	}
 	for _, rid := range g.raiderIDs {
 		consider(rid)
@@ -514,6 +536,7 @@ func (g *Game) defend(id entity.EntityID, j job.Record) bool {
 	pos, _ := g.positions.Get(id)
 	now := uint64(g.clock.Now())
 	_, armed := g.equip[id]
+	armed = armed && g.canViolence(id) // a pacifist runs instead (skills.go)
 	calm := false
 	if until, ok := g.calm[id]; ok {
 		if calm = now < until && !armed; !calm {
@@ -566,7 +589,7 @@ func (g *Game) walkableNear(x, y, r int) (int, int, bool) {
 	for d := 0; d <= r; d++ {
 		for dy := -d; dy <= d; dy++ {
 			for dx := -d; dx <= d; dx++ {
-				if g.grid.Walkable(x+dx, y+dy) {
+				if g.dryWalkable(x+dx, y+dy) {
 					if _, taken := g.reserve.TileOwner(x+dx, y+dy); !taken {
 						return x + dx, y + dy, true
 					}

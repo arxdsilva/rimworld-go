@@ -59,42 +59,40 @@ func (g *Game) isBoundary(x, y int) bool {
 	return false
 }
 
+// ensureRooms rebuilds the rooms after a building or terrain change:
+// incrementally through the room map (rooms_index.go), or in full with
+// regions off.
 func (g *Game) ensureRooms() {
 	if !g.roomDirty && g.roomGrid != nil {
 		return
 	}
+	if g.noRegions() {
+		g.rebuildRoomsFull()
+		return
+	}
+	g.rebuildRoomsIncremental()
+}
+
+// rebuildRoomsFull detects every room and recounts its contents from
+// scratch (the reference the incremental rebuild must match).
+func (g *Game) rebuildRoomsFull() {
 	w, h := g.grid.Width(), g.grid.Height()
 	grid, sizes := room.Detect(w, h, g.isBoundary)
+	stats := g.roomStatsFull(grid, sizes)
+	g.roomTemps = g.remapRoomTemps(grid, len(stats))
+	g.rebuildFilth(grid, len(stats)) // filth.go: tread and room filth sums
+	g.roomGrid, g.rooms, g.roomDirty = grid, stats, false
+	g.afterRoomsRebuilt() // roof.go
+}
+
+// roomStatsFull scores every room of a detected grid by a full scan.
+func (g *Game) roomStatsFull(grid []int, sizes []int) []roomStats {
+	w, h := g.grid.Width(), g.grid.Height()
 	stats := make([]roomStats, len(sizes))
 	for i, n := range sizes {
 		stats[i].contents.Cells = n
 	}
-	for _, id := range g.bldgIDs {
-		b, ok := g.bldgs.Get(id)
-		if !ok {
-			continue
-		}
-		cells, _, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
-		r := grid[cells[0][1]*w+cells[0][0]]
-		if r < 0 {
-			continue
-		}
-		c := &stats[r].contents
-		switch {
-		case b.Kind == construction.Floor:
-			c.Floored++
-		case b.Kind.Sleeps():
-			c.Beds++
-		case b.Kind == construction.Table:
-			c.Tables++
-		case b.Kind == construction.Chair:
-			c.Chairs++
-		case b.Kind == construction.Lamp:
-			c.Lamps++
-		case construction.DefOf(b.Kind).Bench:
-			c.Benches++
-		}
-	}
+	g.countRoomBuildings(grid, stats) // rooms_index.go
 	// walls around each room (adjacency count; stone share matters)
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
@@ -124,10 +122,7 @@ func (g *Game) ensureRooms() {
 		stats[i].role = room.RoleOf(stats[i].contents)
 		stats[i].lit = stats[i].contents.Lamps > 0
 	}
-	g.roomTemps = g.remapRoomTemps(grid, len(stats))
-	g.rebuildFilth(grid, len(stats)) // filth.go: tread and room filth sums
-	g.roomGrid, g.rooms, g.roomDirty = grid, stats, false
-	g.afterRoomsRebuilt() // roof.go
+	return stats
 }
 
 // roomAt is the room id at (x, y), or room.Outdoors / room.Wall.
@@ -230,7 +225,7 @@ func (g *Game) thoughts(id entity.EntityID) []mood.Thought {
 	if v, _ := g.vital.Get(id); v.Status != health.Dead && g.unburiedNear(pos) {
 		states = append(states, mood.UnburiedCorpse)
 	}
-	return mood.Active(g.memories[id].Prune(uint64(g.clock.Now())), states...)
+	return g.traitThoughts(id, mood.Active(g.memories[id].Prune(uint64(g.clock.Now())), states...)) // skills.go
 }
 
 func (g *Game) moodOf(id entity.EntityID) int { return mood.Level(g.thoughts(id)) }

@@ -210,6 +210,8 @@ type Renderer struct {
 	fx              float64
 	edgeScroll      bool
 	reducedFlashing bool
+	reducedMotion   bool // freezes the water ripple and foam (water_draw.go)
+	water           waterRenderer
 
 	// sound (sound_signals.go): cues for the App's director, last frame's
 	// world to hear changes, the pending thunder and the world this frame.

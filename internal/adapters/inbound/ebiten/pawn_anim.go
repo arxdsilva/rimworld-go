@@ -254,7 +254,7 @@ func (r *Renderer) drawLyingPawn(screen *ebiten.Image, p game.PawnView, vis pawn
 // bedUnder is the sleeping furniture covering tile (x, y).
 func bedUnder(w game.WorldView, x, y int) (game.BuildingView, bool) {
 	for _, b := range w.Buildings {
-		if b.Kind != "bed" && b.Kind != "double bed" && b.Kind != "sleeping spot" {
+		if b.Kind != "bed" && b.Kind != "double bed" && b.Kind != "sleeping spot" && b.Kind != hospitalBedKind {
 			continue
 		}
 		bw, bh := max(b.W, 1), max(b.H, 1)
@@ -316,7 +316,7 @@ func (r *Renderer) drawInBed(screen *ebiten.Image, p game.PawnView, b game.Build
 	if p.Status == "alive" {
 		defer r.drawSnore(screen, p, hx, hy, tile)
 	}
-	if spot {
+	if spot || b.Kind == hospitalBedKind { // a hospital bed's sheet is part of its sprite
 		return
 	}
 	key := "furniture/bed_basic_blanket_" + facingOr(b.Facing)

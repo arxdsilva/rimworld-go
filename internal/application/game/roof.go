@@ -329,11 +329,12 @@ func (g *Game) doRoof(id entity.EntityID, j job.Record) {
 		g.failRoof(id, j)
 		return
 	}
-	if !g.workTick(id) {
+	u := g.workProgress(id, skConstruction, true) // skills.go
+	if u == 0 {
 		g.jobs.Set(id, j)
 		return
 	}
-	j.WorkLeft--
+	j.WorkLeft -= u
 	if j.WorkLeft > 0 {
 		g.jobs.Set(id, j)
 		return

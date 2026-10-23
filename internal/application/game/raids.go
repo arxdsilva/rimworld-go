@@ -51,6 +51,11 @@ type raidGroup struct {
 	CampX, CampY    int
 	Camped, Stormed bool
 	Started, Until  uint64
+	// Faction is 1 + the index of the faction that sent it (0: an
+	// unattributed raid, as every legacy one); Over: it was defeated or
+	// left and the faction's goodwill paid for it (factions.go, NG-1).
+	Faction int
+	Over    bool
 }
 
 const (
@@ -85,6 +90,9 @@ func (g *Game) standingRaider(id entity.EntityID) bool {
 // phaseThreats runs the storyteller and every raider.
 func (g *Game) phaseThreats() {
 	now := uint64(g.clock.Now())
+	if g.hasSetup() {
+		g.setupTick(now) // story.go: arrival, losses, day rollover (NG-1)
+	}
 	if g.threatsOn && now >= g.nextThreat {
 		g.fireThreat(now)
 	}
@@ -95,6 +103,10 @@ func (g *Game) phaseThreats() {
 
 // scheduleThreats starts the storyteller (colonies, not bare test maps).
 func (g *Game) scheduleThreats() {
+	if g.hasSetup() {
+		g.scheduleStory(uint64(g.clock.Now())) // story.go: the chosen storyteller (NG-1)
+		return
+	}
 	g.threatsOn = true
 	g.nextThreat = uint64(firstRaidDay*clock.TicksPerDay + g.rng.IntN(clock.TicksPerDay))
 }
@@ -140,6 +152,10 @@ func pickThreat(roll, day int, winter bool) threatKind {
 }
 
 func (g *Game) fireThreat(now uint64) {
+	if g.hasSetup() {
+		g.fireStoryThreat(now) // story.go: storyteller, difficulty, factions (NG-1)
+		return
+	}
 	day := int(now / clock.TicksPerDay)
 	winter := temperature.Season(clock.Tick(now)) == "Winter"
 	switch pickThreat(g.rng.IntN(threatRolls), day, winter) {
@@ -183,8 +199,8 @@ func (g *Game) edgeTile() (int, int, bool) {
 		default:
 			x, y = w-1, g.rng.IntN(h)
 		}
-		if !g.grid.Walkable(x, y) {
-			continue
+		if !g.dryWalkable(x, y) {
+			continue // never arrive in the water
 		}
 		if !found {
 			fx, fy, found = x, y, true // fallback: any walkable edge tile
@@ -204,13 +220,22 @@ func (g *Game) edgeTile() (int, int, bool) {
 func (g *Game) Raid(n int) { g.raidWith(g.kitOf(n), planAssault) }
 
 // raidWith sends one raider per weapon in kit, following plan.
-func (g *Game) raidWith(kit []item.Kind, plan raidPlan) {
+func (g *Game) raidWith(kit []item.Kind, plan raidPlan) { g.raidFrom(kit, plan, 0) }
+
+// raidFrom is raidWith for the faction fac (1 + index into the colony's
+// factions; 0: unattributed). A faction's raiders get generated names and
+// its message names the faction.
+func (g *Game) raidFrom(kit []item.Kind, plan raidPlan, fac int) {
 	ex, ey, ok := g.edgeTile()
 	n := len(kit)
 	if !ok || n <= 0 {
 		return
 	}
+	f := g.factionOf(fac) // factions.go: nil for a legacy raid
 	grp := raidGroup{Size: n, Plan: plan}
+	if f != nil {
+		grp.Faction = fac
+	}
 	if plan == planSiege {
 		grp.CampX, grp.CampY = g.campSpot(ex, ey)
 	}
@@ -219,13 +244,17 @@ func (g *Game) raidWith(kit []item.Kind, plan raidPlan) {
 	spawned := 0
 	for i := 0; i < n*6 && spawned < n; i++ {
 		x, y := ex+g.rng.IntN(5)-2, ey+g.rng.IntN(5)-2
-		if !g.grid.InBounds(x, y) || !g.grid.Walkable(x, y) {
+		if !g.grid.InBounds(x, y) || !g.dryWalkable(x, y) {
 			continue
 		}
 		id := g.entities.Next()
 		g.raiderIDs = append(g.raiderIDs, id)
 		g.positions.Set(id, Position{X: x, Y: y})
-		g.names.Set(id, raiderNames[g.rng.IntN(len(raiderNames))])
+		if f != nil {
+			g.names.Set(id, g.raiderName(id, f)) // story.go
+		} else {
+			g.names.Set(id, raiderNames[g.rng.IntN(len(raiderNames))])
+		}
 		g.jobs.Set(id, job.Record{})
 		g.need.Set(id, needs.NewFull())
 		g.vital.Set(id, health.Record{Status: health.Alive})
@@ -235,6 +264,11 @@ func (g *Game) raidWith(kit []item.Kind, plan raidPlan) {
 	}
 	g.raidGroups[group].Size = spawned
 	if spawned == 0 {
+		g.raidGroups[group].Over = f != nil // nothing to repel: no goodwill lost
+		return
+	}
+	if f != nil {
+		g.raidMessage(ex, ey, spawned, plan, f) // story.go
 		return
 	}
 	word := "raiders are"

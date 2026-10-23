@@ -83,14 +83,27 @@ func (g *Game) name(id entity.EntityID) string {
 	return n
 }
 
-// reachable reports whether pawn id could path to (x, y).
+// reachable reports whether pawn id could path to (x, y): a region-label
+// comparison (regions.go), never a search.
 func (g *Game) reachable(id entity.EntityID, x, y int) bool {
-	_, ok := g.pathTo(id, x, y)
+	if g.noRegions() {
+		_, ok := g.pathToVia(id, x, y, false)
+		return ok
+	}
+	ok := g.reachRegions(id, x, y)
+	if selfCheck() {
+		if _, want := g.pathToVia(id, x, y, false); want != ok {
+			panic(fmt.Sprintf("regions: reachable(%d, %d, %d) = %v, A* says %v", id, x, y, ok, want))
+		}
+	}
 	return ok
 }
 
 // forcedJob builds the job a Prioritize order would start, or a reason.
 func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer construction.Layer) (job.Record, string) {
+	if why := g.incapableOrder(id, o); why != "" {
+		return job.Record{}, why // skills.go: "Incapable: Violence (trait: Gentle)"
+	}
 	m, _ := g.labor.Get(id)
 	switch o {
 	case command.OrderBuild:
@@ -121,10 +134,11 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		if fr.Ready() {
 			return job.Record{}, ReasonSupplied
 		}
-		wid, wx, wy := g.nearestFree(id, fr.Stuff)
+		sk := supplyKind(fr) // items_ng1.go: the material, then the components
+		wid, wx, wy := g.nearestFree(id, sk)
 		if wid == 0 {
-			if fr.Stuff != item.Wood {
-				return job.Record{}, ReasonNoStuff + fr.Stuff.String()
+			if sk != item.Wood {
+				return job.Record{}, ReasonNoStuff + sk.String()
 			}
 			return job.Record{}, ReasonNoWood
 		}
@@ -388,7 +402,7 @@ func (g *Game) prioritize(id entity.EntityID, o command.Order, x, y int, layer c
 		// then a route chained from it like any delivery
 		fr, _ := g.frames.Get(rec.Dest)
 		st, _ := g.stacks.Get(rec.Target)
-		route, shares := g.routeFrom(rec.Target, st, rec.Dest, fr.Need-fr.Wood)
+		route, shares := g.routeFrom(rec.Target, st, slotKey(rec.Dest, st.Kind), supplyNeed(fr, st.Kind))
 		route.Forced = true
 		g.startDelivery(id, route, shares)
 		return
@@ -448,7 +462,8 @@ func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 			if fr.Ready() {
 				add("Prioritize building "+fr.Kind.String(), command.OrderBuild, layer)
 			} else {
-				add(fmt.Sprintf("Haul %s to %s (%d/%d)", fr.Stuff, fr.Kind, fr.Wood, fr.Need), command.OrderSupply, layer)
+				sk := supplyKind(fr)
+				add(fmt.Sprintf("Haul %s to %s (%d/%d)", sk, fr.Kind, supplyHave(fr, sk), supplyNeed(fr, sk)+supplyHave(fr, sk)), command.OrderSupply, layer)
 			}
 		}
 		if bid := g.layerBldgAt(x, y, layer); bid != 0 {

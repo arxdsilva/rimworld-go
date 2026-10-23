@@ -64,10 +64,13 @@ func TestGrownGolden(t *testing.T) {
 	if testing.Short() {
 		t.Skip("long golden run")
 	}
-	// Re-pinned: CompleteResearch now also completes the NG-1 research
+	// Re-pinned (NG-1 S3): colonists now save their bios and skills; every
+	// other saved field is identical to the previous pin (checked field by
+	// field against 4d68b9aa), so behaviour is unchanged.
+	// Re-pinned earlier: CompleteResearch now also completes the NG-1 research
 	// projects (more unlocks), and StateHash became format-independent;
 	// identical with and without the E1 engine changes.
-	const want uint64 = 0xefdfa4b86fff8e25
+	const want uint64 = 0x2844fbd3ed0ee461
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

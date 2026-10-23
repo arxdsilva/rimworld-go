@@ -101,6 +101,8 @@ func rockPrefix(terrain, ore string) string {
 		return "rock/ore_silver"
 	case "gold":
 		return "rock/ore_gold"
+	case "machinery":
+		return "rock/ore_machinery"
 	}
 	return "rock/rock_wall"
 }
@@ -111,6 +113,7 @@ var linkFallback = map[string]string{
 	"rock/ore_steel":       "rock/rock_wall",
 	"rock/ore_silver":      "rock/rock_wall",
 	"rock/ore_gold":        "rock/rock_wall",
+	"rock/ore_machinery":   "rock/rock_wall",
 	"structure/wall_steel": "structure/wall_stone",
 }
 

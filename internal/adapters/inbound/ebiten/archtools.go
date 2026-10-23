@@ -303,6 +303,12 @@ func buildSprite(kind, facing string, mask int, ew, open bool) string {
 		return "furniture/feeding_trough_empty_" + facingOr(facing)
 	case "stonecutter table":
 		return "furniture/stonecutter_table_" + facingOr(facing)
+	case "tool cabinet":
+		return "furniture/tool_cabinet"
+	case "hospital bed":
+		return "furniture/hospital_bed_" + facingOr(facing)
+	case "pod shell":
+		return "structure/pod_shell"
 	}
 	return ""
 }

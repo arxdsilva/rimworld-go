@@ -250,6 +250,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	draws := r.draws[:0]
 	add := func(row, col float64, fn func()) { draws = append(draws, artDraw{row: row, col: col, fn: fn}) }
 	draws = r.addRockDraws(w, draws)
+	draws = r.addCaveMouths(w, draws, screen, tile, sw, sh) // ng1_art.go
 	cloth := r.colonyCloths()
 	for _, b := range w.Buildings {
 		b := b
@@ -369,7 +370,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 		if it.Carried {
 			continue
 		}
-		key := itemSpriteSpecies(it.Kind, it.Animal, it.X, it.Y)
+		key := sizedItemKey(itemSpriteSpecies(it.Kind, it.Animal, it.X, it.Y), it.Qty)
 		if it.Forbidden {
 			add(float64(it.Y)+0.001, float64(it.X), func() { r.drawForbiddenMark(screen, it.X, it.Y, tile, sw, sh) })
 		}
@@ -426,6 +427,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	r.drawBreakClouds(screen, tile)
 	r.drawOrderRoute(screen, tile)
 	r.drawParticles(screen, tile)
+	r.drawArrivals(screen, w, tile) // arrival_draw.go
 	r.drawWeather(screen, w, sw, sh, tile)
 	r.drawFloaters(screen, tile)
 
@@ -483,6 +485,10 @@ func itemSprite(kind string) string {
 		return "item/pumpkins"
 	case "herbal medicine":
 		return "item/herbal_medicine"
+	case "components":
+		return "item/components_m" // sizedItemKey picks the pile by quantity
+	case "industrial medicine":
+		return "item/industrial_medicine_m"
 	case "meat":
 		return "item/meat_pile"
 	case "leather":
@@ -661,14 +667,21 @@ func (r *Renderer) drawTile(screen *ebiten.Image, key string, wx, wy, tile float
 // terrainPriority: a higher index draws its soft edge over lower ones
 // (the order the terrain edge art is made for, ART-015). Rock draws its
 // ground as rough stone, smoothed rock as smooth stone.
+//
+// Water is the lowest of all (NG-1 §7.3): deep -2, shallow -1, so every
+// ground's edge overlaps it and shallow water's own edge overlaps deep.
+// A track is bare dirt like soil; mud draws over the ground it lies on.
 var terrainPriority = map[string]int{"soil": 0, "rich_soil": 1, "gravel": 2, "stone": 3, "rock": 3,
-	"stone_smooth": 4, "rock_smooth": 4, "sand": 5, "marsh": 6, "ice": 7}
+	"stone_smooth": 4, "rock_smooth": 4, "sand": 5, "marsh": 6, "ice": 7,
+	"mud": 8, "track": 0, "shallow_water": -1, "deep_water": -2}
 
 var terrainSprite = map[string]string{"soil": "soil", "rich_soil": "soil_rich", "gravel": "gravel", "stone": "stone", "rock": "stone",
-	"sand": "sand", "marsh": "marsh", "ice": "ice", "stone_smooth": "stone_smooth", "rock_smooth": "stone_smooth"}
+	"sand": "sand", "marsh": "marsh", "ice": "ice", "stone_smooth": "stone_smooth", "rock_smooth": "stone_smooth",
+	"mud": "mud", "track": "track", "shallow_water": "shallow_water", "deep_water": "deep_water"}
 
-// terrainByPri lists the edge-drawing terrains by priority.
-var terrainByPri = []string{"soil", "rich_soil", "gravel", "stone", "stone_smooth", "sand", "marsh", "ice"}
+// terrainByPri lists the edge-drawing terrains by priority (index = priority;
+// water and track draw no ground edge of their own here, waterEdge does).
+var terrainByPri = []string{"soil", "rich_soil", "gravel", "stone", "stone_smooth", "sand", "marsh", "ice", "mud"}
 
 // terrainNames, terrainPriByCode and stoneGroundCode index the read
 // model's terrain codes once (no per-tile map lookups).
@@ -677,6 +690,12 @@ var (
 	terrainPriByCode = func() (out [256]int8) {
 		for i, n := range terrainNames {
 			out[i] = int8(terrainPriority[n])
+		}
+		return out
+	}()
+	isWaterCode = func() (out [256]bool) {
+		for i, n := range terrainNames {
+			out[i] = n == "shallow_water" || n == "deep_water"
 		}
 		return out
 	}()
@@ -761,17 +780,30 @@ func (r *Renderer) drawTerrainArt(screen *ebiten.Image, w game.WorldView, sw, sh
 			} else if stoneGroundCode[code] {
 				tcs = mulCS(tcs, tintCS(r.stoneTintAt(w, x, y)))
 			}
-			r.drawTile(screen, key, float64(x), float64(y), tile, sw, sh, tcs)
+			if ok && isWaterCode[code] {
+				r.drawWaterTile(screen, terrainNames[code], x, y, tile, sw, sh, tcs) // water_draw.go
+			} else {
+				r.drawTile(screen, key, float64(x), float64(y), tile, sw, sh, tcs)
+			}
 			pri := int(terrainPriByCode[code])
-			for p := pri + 1; p < len(terrainByPri); p++ {
+			var nbPri [4]int // N, E, S, W; -100 off the map
+			higher := false
+			for i, n := range [...]struct{ dx, dy int }{{0, -1}, {1, 0}, {0, 1}, {-1, 0}} {
+				nbPri[i] = -100
+				if nc, ok := terrainCode(w, x+n.dx, y+n.dy); ok {
+					nbPri[i] = int(terrainPriByCode[nc])
+					higher = higher || nbPri[i] > pri
+				}
+			}
+			for p := max(pri+1, 0); higher && p < len(terrainByPri); p++ {
 				mask, sx, sy := 0, -1, -1
-				for _, n := range [...]struct{ dx, dy, bit int }{{0, -1, wallN}, {1, 0, wallE}, {0, 1, wallS}, {-1, 0, wallW}} {
-					if nc, ok := terrainCode(w, x+n.dx, y+n.dy); ok && int(terrainPriByCode[nc]) == p {
+				for i, n := range [...]struct{ dx, dy, bit int }{{0, -1, wallN}, {1, 0, wallE}, {0, 1, wallS}, {-1, 0, wallW}} {
+					if nbPri[i] == p {
 						mask |= n.bit
 						sx, sy = x+n.dx, y+n.dy
 					}
 				}
-				if mask == 0 {
+				if mask == 0 || p == 0 { // soil has no edge art: it is the plain ground
 					continue
 				}
 				ek, ecs := terrainEdgeKeys[p][mask], noCS
@@ -782,6 +814,9 @@ func (r *Renderer) drawTerrainArt(screen *ebiten.Image, w game.WorldView, sw, sh
 					ecs = tintCS(r.stoneTintAt(w, sx, sy))
 				}
 				r.drawSpriteCS(screen, ek, none, float64(x), float64(y), tile, sw, sh, ecs)
+			}
+			if ok && isWaterCode[code] {
+				r.drawWaterEdges(screen, terrainNames[code], nbPri, x, y, tile, sw, sh) // water_draw.go
 			}
 			if grassVisible(grassScratch, w, t, x, y) {
 				gp := r.plantPose(x, y, kindGrass, 0.05, 1)

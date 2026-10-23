@@ -26,7 +26,7 @@ const MineWork = 360
 
 // OreYield is the metal dropped by mining one ore tile (SIM-029; original
 // numbers).
-var OreYield = [...]int{geology.Steel: 20, geology.Silver: 25, geology.Gold: 8}
+var OreYield = [...]int{geology.Steel: 20, geology.Silver: 25, geology.Gold: 8, geology.Machinery: 2}
 
 // oreMetal is the item mined from an ore vein.
 func oreMetal(o geology.Ore) item.Kind {
@@ -35,6 +35,8 @@ func oreMetal(o geology.Ore) item.Kind {
 		return item.Silver
 	case geology.Gold:
 		return item.Gold
+	case geology.Machinery:
+		return item.Components // buried machinery (NG-1 §4.8)
 	}
 	return item.Steel
 }
@@ -54,7 +56,7 @@ func StoneNames() []string {
 // OreNames maps WorldView.Ore codes to names ("" is none).
 func OreNames() []string {
 	out := []string{""}
-	for _, o := range geology.Ores() {
+	for _, o := range minedOres() {
 		out = append(out, o.String())
 	}
 	return out
@@ -89,6 +91,7 @@ func (g *Game) setTerrain(x, y int, t terrain.Type) {
 	g.structVer++
 	g.clearGrass(x, y) // grass.go: only soil grows grass
 	g.markRoomsDirty()
+	g.roomTouch(x, y) // rooms_index.go: re-read this cell at the rebuild
 	g.grid.SetWalkable(x, y, t.Walkable() && g.layerBlockerAt(x, y) == 0)
 }
 
@@ -173,6 +176,7 @@ func (g *Game) phasePlants() {
 		return // plants grow in daylight only
 	}
 	now := uint64(g.clock.Now())
+	gp := g.growthPct() // setup.go: a scenario's permanent conditions (Ashfall)
 	for _, id := range g.plantIDs {
 		p, ok := g.plants.Get(id)
 		if !ok || p.Ripe() {
@@ -180,6 +184,9 @@ func (g *Game) phasePlants() {
 		}
 		rate := plant.Rate(p.Species, g.terr.At(p.X, p.Y).Fertility())
 		rate = rate * plant.TempFactor(int(g.temperatureAt(p.X, p.Y))) / 1000
+		if gp != 100 {
+			rate = rate * gp / 100
+		}
 		p = p.Grow(rate, now)
 		g.plants.Set(id, p)
 	}
@@ -303,11 +310,12 @@ func (g *Game) doCut(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
-	if !g.workTick(id) {
+	u := g.workProgress(id, skPlants, true) // skills.go
+	if u == 0 {
 		g.jobs.Set(id, j)
 		return
 	}
-	j.WorkLeft--
+	j.WorkLeft -= u
 	if j.WorkLeft > 0 {
 		g.jobs.Set(id, j)
 		return
@@ -372,11 +380,12 @@ func (g *Game) doMine(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
-	if !g.workTick(id) {
+	u := g.workProgress(id, skMining, true) // skills.go
+	if u == 0 {
 		g.jobs.Set(id, j)
 		return
 	}
-	j.WorkLeft--
+	j.WorkLeft -= u
 	if j.WorkLeft > 0 {
 		g.jobs.Set(id, j)
 		return
@@ -387,9 +396,9 @@ func (g *Game) doMine(id entity.EntityID, j job.Record) {
 	delete(g.mines, [2]int{j.DestX, j.DestY})
 	g.minesVer++
 	if ore != geology.NoOre {
-		g.dropStack(oreMetal(ore), OreYield[ore], j.DestX, j.DestY)
+		g.dropStack(oreMetal(ore), g.skillYield(id, skMining, g.diffYield(DiffMine, OreYield[ore])), j.DestX, j.DestY)
 	} else {
-		g.dropStack(item.ChunkOf(g.stoneAt(j.DestX, j.DestY)), MineYield, j.DestX, j.DestY)
+		g.dropStack(item.ChunkOf(g.stoneAt(j.DestX, j.DestY)), g.skillYield(id, skMining, g.diffYield(DiffMine, MineYield)), j.DestX, j.DestY)
 	}
 	j.State = job.Complete
 	g.jobs.Set(id, j)
@@ -469,7 +478,7 @@ func SoilLabel(ground, stone, ore string) string {
 	name := strings.ToLower(s.Label())
 	switch ground {
 	case "rock":
-		for _, o := range geology.Ores() {
+		for _, o := range minedOres() {
 			if o.String() == ore {
 				return o.Label() + " (in " + name + ")"
 			}

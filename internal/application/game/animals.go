@@ -92,7 +92,7 @@ func (g *Game) SpawnAnimal(species string, x, y int) (entity.EntityID, error) {
 }
 
 func (g *Game) spawnAnimal(s animal.Species, x, y int) (entity.EntityID, error) {
-	if !g.grid.Walkable(x, y) {
+	if !g.dryWalkable(x, y) {
 		return 0, fmt.Errorf("spawn animal at (%d, %d): tile not walkable", x, y)
 	}
 	id := g.entities.Next()
@@ -112,7 +112,7 @@ func (g *Game) randomTileAway(minR int) (int, int, bool) {
 	cx, cy := g.grid.Width()/2, g.grid.Height()/2
 	for try := 0; try < 400; try++ {
 		x, y := g.rng.IntN(g.grid.Width()), g.rng.IntN(g.grid.Height())
-		if weapon.Distance(x, y, cx, cy) >= minR && g.grid.Walkable(x, y) {
+		if weapon.Distance(x, y, cx, cy) >= minR && g.dryWalkable(x, y) {
 			return x, y, true
 		}
 	}
@@ -342,6 +342,9 @@ func (g *Game) findPrey(id entity.EntityID, pos Position, def animal.Def) entity
 			g.callPack(id, pos, best)
 		}
 		return best
+	}
+	if !g.predatorsHuntColonists() { // story.go: difficulty (NG-1)
+		return 0
 	}
 	best, _, _ = g.nearestWhere(pos.X, pos.Y, def.AggroRadius, ckPawn, func(o entity.EntityID, _ Position) bool {
 		return g.standingPawn(o)

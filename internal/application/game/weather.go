@@ -56,14 +56,14 @@ func (g *Game) phaseWeather() {
 	now := g.clock.Now()
 	if uint64(now)%weatherBlockTicks == 0 && !g.weatherFix {
 		mean := float64(g.climate.DailyMean(now)) / 10
-		wet := biome.DefOf(g.biome).Wetness // rain and snow odds, percent of temperate
-		g.weather = weather.NextWet(g.weatherSeed(), uint64(now)/weatherBlockTicks, g.weather, mean, temperature.Season(now), wet)
+		wet := g.weatherWet(biome.DefOf(g.biome).Wetness) // rain and snow odds, percent of temperate (weather_ng1.go: still air)
+		g.weather = weather.NextWet(g.weatherSeed(), uint64(now)/weatherBlockTicks, g.weather, mean, g.season(uint64(now)), wet)
 	}
 	if uint64(now)%climateInterval != 0 {
 		return
 	}
 	tempC := float64(g.climate.Outdoor(now)) / 10
-	g.weather = g.weather.Step(climateInterval, tempC, temperature.Season(now))
+	g.weather = g.weather.Step(climateInterval, tempC, g.season(uint64(now)))
 	g.weatherThoughts()
 	g.stainDecay() // stains.go: fade, and wash under rain or snow
 }

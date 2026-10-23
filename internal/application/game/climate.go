@@ -28,6 +28,10 @@ type MessageView struct {
 	// Focus is the creature the message is about (0: none), for a
 	// jump-to link that follows it.
 	Focus entity.EntityID
+	// Letter: show it once in a letter window titled Title ("Continue"):
+	// the scenario's intro, extreme weather (NG-1).
+	Letter bool
+	Title  string
 }
 
 // temperatureAt is the air temperature on a tile: enclosed rooms hold the

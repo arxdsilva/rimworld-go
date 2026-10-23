@@ -37,7 +37,7 @@ func (g *Game) SetGround(x0, y0, x1, y1 int, ground, stone, ore string) bool {
 	}
 	if ore != "" {
 		found := false
-		for _, c := range geology.Ores() {
+		for _, c := range minedOres() {
 			if c.String() == ore {
 				o, found = c, true
 			}

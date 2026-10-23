@@ -167,7 +167,7 @@ func (g *Game) doResearch(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
-	if g.workTick(id) && g.research.Add(g.researchCur, 1) {
+	if u := g.workProgress(id, skIntellectual, true); u > 0 && g.research.Add(g.researchCur, g.researchPoints(u)) { // skills.go
 		d := research.DefOf(g.researchCur)
 		pos, _ := g.positions.Get(id)
 		msg := "Research finished: " + d.Label + "."

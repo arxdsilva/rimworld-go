@@ -60,9 +60,10 @@ func (g *Game) carriedBy(id entity.EntityID) entity.EntityID {
 	return 0
 }
 
-// freeBedFor finds the nearest bed the patient may lie in.
+// freeBedFor finds the bed the patient may lie in: a hospital bed if one
+// is free, else the nearest bed (NG-1 §5.6).
 func (g *Game) freeBedFor(patient entity.EntityID, from Position) (entity.EntityID, bool) {
-	best, bestD := entity.EntityID(0), 1<<30
+	best, bestD, bestHosp := entity.EntityID(0), 1<<30, false
 	for _, bid := range g.bldgIDs {
 		b, ok := g.bldgs.Get(bid)
 		if !ok || !b.Kind.Sleeps() {
@@ -74,8 +75,10 @@ func (g *Game) freeBedFor(patient entity.EntityID, from Position) (entity.Entity
 		if owner, taken := g.reserve.EntityOwner(bid); taken && owner != patient {
 			continue
 		}
-		if d := manhattan(from.X, from.Y, b.X, b.Y); d < bestD || (d == bestD && bid < best) {
-			best, bestD = bid, d
+		hosp := b.Kind == construction.HospitalBed
+		d := manhattan(from.X, from.Y, b.X, b.Y)
+		if best == 0 || hosp && !bestHosp || hosp == bestHosp && (d < bestD || d == bestD && bid < best) {
+			best, bestD, bestHosp = bid, d, hosp
 		}
 	}
 	return best, best != 0
@@ -248,28 +251,30 @@ func (g *Game) doTend(id entity.EntityID, j job.Record) {
 			return
 		}
 	}
-	if !g.workTick(id) {
+	u := g.workProgress(id, skMedicine, true) // skills.go
+	if u == 0 {
 		g.jobs.Set(id, j)
 		return
 	}
-	j.WorkLeft--
+	j.WorkLeft -= u
 	if j.WorkLeft > 0 {
 		g.jobs.Set(id, j)
 		return
 	}
 	care := g.tendCare(id, j.Target, j)
+	heal := g.tendHealBy(id, care) // skills.go: tier, hospital bed, Medicine skill
 	if j.Carry != 0 {
 		g.deleteItem(j.Carry)
 		j.Carry = 0
 	}
-	v.Injury = max(0, v.Injury-tendHeal(care))
+	v.Injury = max(0, v.Injury-heal)
 	if v.Status == health.Downed && v.Cause == health.CauseInjury && v.Injury <= health.RecoverInjury {
 		v.Status, v.Cause = health.Alive, health.CauseNone
 	}
 	g.vital.Set(j.Target, v)
 	g.tendedUntil[j.Target] = uint64(g.clock.Now()) + TendTicks
 	g.logPair(j.Target, id, logTendedBy, logTended, 0, 0)
-	g.closeWound(j.Target, care)
+	g.closeWound(j.Target, care, id)
 	j.State = job.Complete
 	g.jobs.Set(id, j)
 }

@@ -408,11 +408,12 @@ func (g *Game) doBury(id entity.EntityID, j job.Record) {
 		fail(job.TargetGone)
 		return
 	}
-	if !g.workTick(id) {
+	u := g.workProgress(id, skNone, false) // skills.go
+	if u == 0 {
 		g.jobs.Set(id, j)
 		return
 	}
-	j.WorkLeft--
+	j.WorkLeft -= u
 	if j.WorkLeft > 0 {
 		g.jobs.Set(id, j)
 		return

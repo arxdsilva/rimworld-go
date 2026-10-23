@@ -38,6 +38,9 @@ func (t Temperament) String() string {
 // temperamentOf derives a stable temperament from the colonist's name, so
 // each colonist keeps the same character across sessions.
 func (g *Game) temperamentOf(id entity.EntityID) Temperament {
+	if p, ok := g.bioFor(id); ok { // skills.go: from the bio (legacy bios: this same name hash)
+		return Temperament(p.Temperament)
+	}
 	n := g.nameOf(id)
 	h := uint32(2166136261)
 	for i := 0; i < len(n); i++ {
@@ -225,6 +228,9 @@ func (g *Game) doIdle(id entity.EntityID, j job.Record) {
 	}
 	if j.WorkLeft <= 0 {
 		j.State = job.Complete
+		if j.Kind == job.Chat {
+			g.learn(id, skSocial, chatXP) // skills.go
+		}
 	}
 	g.jobs.Set(id, j)
 }

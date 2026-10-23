@@ -479,8 +479,8 @@ func (g *Game) doRepair(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
-	if g.workTick(id) && uint64(g.clock.Now())%3 == 0 {
-		b.Damage = max(0, b.Damage-repairPerTick)
+	if u := g.workProgress(id, skConstruction, true); u > 0 && uint64(g.clock.Now())%3 == 0 { // skills.go
+		b.Damage = max(0, b.Damage-repairPerTick*u)
 		g.bldgs.Set(j.Target, b)
 	}
 	j.WorkLeft = b.Damage

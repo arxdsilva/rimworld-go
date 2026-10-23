@@ -4,6 +4,7 @@ import (
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/world/region"
 )
 
 // Fences (SIM-028). A fence keeps every animal out (or in); a fence gate
@@ -24,22 +25,13 @@ const (
 
 // fenceIndex marks the cells holding a built fence (fencePost) or gate
 // (fenceGate). built is false until the next query after a building
-// change; gen counts rebuilds. reach caches, per animal kind (0 wild, 1
-// tame), which connected area each walkable cell belongs to while fences
-// stand, so grazers never pick food behind a fence.
+// change; gen counts rebuilds. Which side of a fence a cell is on comes
+// from the region labels (regions.go: the tame and wild layers).
 type fenceIndex struct {
 	built bool
 	cells []uint8
 	n     int
 	gen   uint64
-	reach [2]fenceReach
-}
-
-type fenceReach struct {
-	gen     uint64
-	gridVer uint64
-	label   []int32
-	ok      bool
 }
 
 // fences is the current fence index, rebuilt from the buildings when
@@ -110,12 +102,15 @@ func (g *Game) fenceSlow(x, y, base int) int {
 }
 
 // fenceQuery is an animal's walkability with fences shut (gates open for
-// tame ones).
+// tame ones). g and gen tie it to the fence index it copied (regions.go:
+// its region extensions hold only while that index stands).
 type fenceQuery struct {
 	pathing.Query
 	cells  []uint8
 	w      int
 	gateOK bool
+	g      *Game
+	gen    uint64
 }
 
 func (q fenceQuery) Walkable(x, y int) bool {
@@ -139,13 +134,13 @@ func (g *Game) animalQuery(tame bool, base pathing.Query) pathing.Query {
 	if f.n == 0 {
 		return base
 	}
-	return fenceQuery{Query: base, cells: f.cells, w: g.grid.Width(), gateOK: tame}
+	return fenceQuery{Query: base, cells: f.cells, w: g.grid.Width(), gateOK: tame, g: g, gen: f.gen}
 }
 
 // animalBase is the walkability an animal plans with before fences.
 func (g *Game) animalBase(tame bool) pathing.Query {
 	if tame {
-		return g.grid // the colony's own animals use its doors
+		return colonyQuery{g} // the grid: the colony's own animals use its doors
 	}
 	return g.hostileMap()
 }
@@ -159,18 +154,21 @@ func (g *Game) fenceReachable(a *animal.State, pos Position) func(x, y int) bool
 	if f.n == 0 {
 		return nil
 	}
-	label := g.fenceLabels(a.Tame)
-	w, h := g.grid.Width(), g.grid.Height()
 	if !g.grid.InBounds(pos.X, pos.Y) {
 		return nil
 	}
-	own := label[pos.Y*w+pos.X]
+	l := region.Wild
+	if a.Tame {
+		l = region.Tame
+	}
+	m := g.regionsNow()
+	w, h := g.grid.Width(), g.grid.Height()
+	own := m.Label(l, pos.X, pos.Y)
 	if own < 0 {
 		// standing on a fence cell (built around it): any neighbour's area
 		for _, d := range stepDirs {
-			x, y := pos.X+d[0], pos.Y+d[1]
-			if x >= 0 && y >= 0 && x < w && y < h && label[y*w+x] >= 0 {
-				own = label[y*w+x]
+			if lb := m.Label(l, pos.X+d[0], pos.Y+d[1]); lb >= 0 {
+				own = lb
 				break
 			}
 		}
@@ -182,78 +180,17 @@ func (g *Game) fenceReachable(a *animal.State, pos Position) func(x, y int) bool
 		if x < 0 || y < 0 || x >= w || y >= h {
 			return false
 		}
-		if l := label[y*w+x]; l >= 0 {
-			return l == own
+		if lb := m.Label(l, x, y); lb >= 0 {
+			return lb == own
 		}
 		if f.cells[y*w+x] != fenceNone {
 			return false // food on a fence cell is behind it
 		}
 		for _, d := range stepDirs { // a tree or trough: eaten from beside
-			nx, ny := x+d[0], y+d[1]
-			if nx >= 0 && ny >= 0 && nx < w && ny < h && label[ny*w+nx] == own {
+			if m.Label(l, x+d[0], y+d[1]) == own {
 				return true
 			}
 		}
 		return false
 	}
-}
-
-// fenceLabels labels the connected areas (4-neighbour flood: paths never
-// cut corners) of the animal map, cached until the fences or the grid
-// change.
-func (g *Game) fenceLabels(tame bool) []int32 {
-	f := g.fences()
-	k := 0
-	if tame {
-		k = 1
-	}
-	r := &f.reach[k]
-	if r.ok && r.gen == f.gen && r.gridVer == g.grid.Version() {
-		return r.label
-	}
-	w, h := g.grid.Width(), g.grid.Height()
-	if len(r.label) != w*h {
-		r.label = make([]int32, w*h)
-	}
-	q := g.animalQuery(tame, g.animalBase(tame))
-	for i := range r.label {
-		r.label[i] = -2 // unvisited
-	}
-	var next int32
-	stack := make([]int, 0, 64)
-	for i := range r.label {
-		if r.label[i] != -2 {
-			continue
-		}
-		if !q.Walkable(i%w, i/w) {
-			r.label[i] = -1
-			continue
-		}
-		r.label[i] = next
-		stack = append(stack[:0], i)
-		for len(stack) > 0 {
-			c := stack[len(stack)-1]
-			stack = stack[:len(stack)-1]
-			cx, cy := c%w, c/w
-			for _, d := range [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {
-				nx, ny := cx+d[0], cy+d[1]
-				if nx < 0 || ny < 0 || nx >= w || ny >= h {
-					continue
-				}
-				ni := ny*w + nx
-				if r.label[ni] != -2 {
-					continue
-				}
-				if !q.Walkable(nx, ny) {
-					r.label[ni] = -1
-					continue
-				}
-				r.label[ni] = next
-				stack = append(stack, ni)
-			}
-		}
-		next++
-	}
-	r.gen, r.gridVer, r.ok = f.gen, g.grid.Version(), true
-	return r.label
 }

@@ -54,6 +54,8 @@ type Def struct {
 	MaxCount      int
 	PointsPct     int // raid points multiplier
 	Leaders       []string
+	// Accent is the faction type's UI accent colour ("#rrggbb", original).
+	Accent string
 }
 
 // Leader is a faction leader.
@@ -110,21 +112,21 @@ const (
 )
 
 var defs = [NumTypes]Def{
-	Player: {Key: "player", Label: "Colony", Tech: Industrial, Hidden: true, PointsPct: 100},
+	Player: {Key: "player", Label: "Colony", Tech: Industrial, Hidden: true, PointsPct: 100, Accent: "#d8c27a"},
 	Settlers: {Key: "settlers", Label: "Settlers", Tech: Industrial, GoodwillMin: -20, GoodwillMax: 60,
 		Baseline: 10, CanBeFriendly: true, PerTenK: 12, MaxCount: 4, PointsPct: 100,
-		Leaders: []string{"Warden", "Steward"}},
+		Leaders: []string{"Warden", "Steward"}, Accent: "#5b8fb9"},
 	Clans: {Key: "clans", Label: "Clans", Tech: Neolithic, GoodwillMin: -40, GoodwillMax: 40,
 		Baseline: 0, CanBeFriendly: true, PerTenK: 16, MaxCount: 4, PointsPct: 100,
-		Leaders: []string{"Elder", "Hearth-mother", "Hearth-father"}},
+		Leaders: []string{"Elder", "Hearth-mother", "Hearth-father"}, Accent: "#7f9e4c"},
 	Drifters: {Key: "drifters", Label: "Drifters", Tech: Industrial, GoodwillMin: -60, GoodwillMax: 10,
 		Baseline: -30, CanBeFriendly: true, PerTenK: 10, MaxCount: 3, PointsPct: 100,
-		Leaders: []string{"Boss", "Caller"}},
+		Leaders: []string{"Boss", "Caller"}, Accent: "#c0904e"},
 	Freebooters: {Key: "freebooters", Label: "Freebooters", Tech: Industrial, GoodwillMin: -100, GoodwillMax: -100,
 		Fixed: true, Baseline: -100, PerTenK: 8, MaxCount: 3, PointsPct: 120,
-		Leaders: []string{"Captain", "Ringleader"}},
+		Leaders: []string{"Captain", "Ringleader"}, Accent: "#b84a42"},
 	Swarm: {Key: "swarm", Label: "Swarm", Tech: Neolithic, GoodwillMin: -100, GoodwillMax: -100,
-		Fixed: true, Baseline: -100, Hidden: true, MaxCount: 1, PointsPct: 100},
+		Fixed: true, Baseline: -100, Hidden: true, MaxCount: 1, PointsPct: 100, Accent: "#8b6bb3"},
 }
 
 func init() {

@@ -295,11 +295,12 @@ func (g *Game) doRefuel(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
-	if !g.workTick(id) {
+	u := g.workProgress(id, skNone, false) // skills.go
+	if u == 0 {
 		g.jobs.Set(id, j)
 		return
 	}
-	if j.WorkLeft--; j.WorkLeft > 0 {
+	if j.WorkLeft -= u; j.WorkLeft > 0 {
 		g.jobs.Set(id, j)
 		return
 	}

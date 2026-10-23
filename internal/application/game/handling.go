@@ -99,16 +99,17 @@ func (g *Game) doTame(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
-	if !g.workTick(id) {
+	u := g.workProgress(id, skAnimals, true) // skills.go
+	if u == 0 {
 		return
 	}
-	if j.WorkLeft--; j.WorkLeft > 0 {
+	if j.WorkLeft -= u; j.WorkLeft > 0 {
 		g.jobs.Set(id, j)
 		return
 	}
 	def := animal.DefOf(a.Species)
 	now := uint64(g.clock.Now())
-	if g.rng.IntN(100) < def.TameChance {
+	if g.rng.IntN(100) < g.tameChance(id, def.TameChance) { // skills.go
 		a.Tame, a.TameMark, a.Designated = true, false, false
 		a.Name = petNames[g.rng.IntN(len(petNames))]
 		a.Mode, a.Target, a.Attacker, a.Path, a.PathI = animal.Wander, 0, 0, nil, 0
@@ -119,7 +120,7 @@ func (g *Game) doTame(id entity.EntityID, j job.Record) {
 		a.TameRetry = now + animal.TameRetryTicks
 		g.logEvent(j.Target, logEntry{Kind: logResistedTaming, Other: id, Name: g.name(id)})
 		g.logEvent(id, logEntry{Kind: logFailedTame, Other: j.Target, Name: a.Species.Label()})
-		if g.rng.IntN(100) < def.TameRevenge {
+		if g.rng.IntN(100) < g.revengePct(def.TameRevenge) { // story.go: difficulty (NG-1)
 			g.enrage(j.Target, &a, id, now)
 		} else {
 			g.message(ap.X, ap.Y, "%s failed to tame the %s.", g.name(id), a.Species.Label())
@@ -154,7 +155,7 @@ func (g *Game) provoked(id entity.EntityID, a *animal.State, by entity.EntityID)
 		return
 	}
 	now := uint64(g.clock.Now())
-	if !a.Enraged(now) && g.rng.IntN(100) < animal.DefOf(a.Species).Revenge {
+	if !a.Enraged(now) && g.rng.IntN(100) < g.revengePct(animal.DefOf(a.Species).Revenge) { // story.go: difficulty (NG-1)
 		g.enrage(id, a, by, now)
 	}
 }

@@ -10,7 +10,6 @@ import (
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/biome"
-	"rimworld-go/internal/domain/world/temperature"
 )
 
 // Wildlife (SIM-019, SIM-025). Which species live on the map follows the
@@ -145,7 +144,7 @@ func wildWeight(s animal.Species, b biome.ID, season string) int {
 // pickSpecies draws one species of the map's biome passing keep, weighted
 // for the current season; ok is false when none qualifies.
 func (g *Game) pickSpecies(keep func(animal.Species) bool) (animal.Species, bool) {
-	season := temperature.Season(g.clock.Now())
+	season := g.season(uint64(g.clock.Now())) // setup.go: the map's own calendar
 	total := 0
 	for _, s := range animal.All() {
 		if keep(s) {
@@ -316,7 +315,7 @@ func (g *Game) mapEdgeTile() (int, int, bool) {
 		default:
 			x, y = w-2, g.rng.IntN(h)
 		}
-		if g.grid.Walkable(x, y) {
+		if g.dryWalkable(x, y) {
 			return x, y, true
 		}
 	}

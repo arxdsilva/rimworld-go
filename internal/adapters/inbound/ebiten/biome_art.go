@@ -47,9 +47,14 @@ type terrainFallback struct {
 }
 
 var terrainFallbacks = map[string]terrainFallback{
-	"sand":  {"gravel", colorScale{1.35, 1.15, 0.7, 1}},
-	"marsh": {"soil", colorScale{0.55, 0.78, 0.66, 1}},
-	"ice":   {"gravel", colorScale{0.78, 0.95, 1.3, 1}},
+	"sand": {"gravel", colorScale{1.35, 1.15, 0.7, 1}},
+	// NG-1 ground before its art: water as a cool tint, mud and a track as soil
+	"shallow_water": {"gravel", colorScale{0.45, 0.78, 1.25, 1}},
+	"deep_water":    {"gravel", colorScale{0.18, 0.38, 0.8, 1}},
+	"mud":           {"soil", colorScale{0.62, 0.5, 0.38, 1}},
+	"track":         {"gravel", colorScale{1.1, 1.0, 0.85, 1}},
+	"marsh":         {"soil", colorScale{0.55, 0.78, 0.66, 1}},
+	"ice":           {"gravel", colorScale{0.78, 0.95, 1.3, 1}},
 	// smooth stone before its art: rough stone, a touch lighter
 	"stone_smooth": {"stone", colorScale{1.12, 1.12, 1.12, 1}},
 	"rock_smooth":  {"stone", colorScale{1.12, 1.12, 1.12, 1}},

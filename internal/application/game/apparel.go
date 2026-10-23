@@ -16,7 +16,13 @@ import (
 type worn [3]item.Kind
 
 // bandsOf is a colonist's comfortable range given what it wears.
-func (g *Game) bandsOf(id entity.EntityID) exposure.Bands { return bandsWearing(g.apparel[id]) }
+func (g *Game) bandsOf(id entity.EntityID) exposure.Bands {
+	b := bandsWearing(g.apparel[id])
+	if c, h := g.comfortShift(id); c != 0 || h != 0 {
+		b = b.Wearing(-c, h) // skills.go: build and traits (Cold-hardy)
+	}
+	return b
+}
 
 func bandsWearing(w worn) exposure.Bands {
 	b := exposure.Everyday

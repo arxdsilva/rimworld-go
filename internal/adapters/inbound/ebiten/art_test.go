@@ -299,7 +299,7 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 	// ART-015: every baked variant a linked family can be asked for, and
 	// the stone, ore and smoothing singles.
 	for _, prefix := range []string{"rock/rock_wall", "rock/rock_smooth", "rock/ore_steel", "rock/ore_silver", "rock/ore_gold",
-		"structure/wall_wood", "structure/wall_stone", "structure/wall_steel"} {
+		"rock/ore_machinery", "structure/wall_wood", "structure/wall_stone", "structure/wall_steel"} {
 		keys = append(keys, linkedKeys(prefix)...)
 	}
 	for _, ew := range []bool{false, true} {
@@ -315,6 +315,7 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 	}
 	keys = append(keys, itemSprite("granite chunk"), itemSprite("marble blocks"), itemSprite("steel"),
 		itemSprite("silver"), itemSprite("gold"), smoothMarkKey)
+	keys = append(keys, ng1ArtKeys()...) // water, mud, track, caves, pods, components, medicine, cabinet, hospital bed
 	for f := faceSouth; f <= faceWest; f++ {
 		for _, l := range []string{"body", "pants_basic", "shirt_basic", "vest_utility", "parka_leather", "duster_leather"} {
 			keys = append(keys, "pawn/"+l+"_"+f.String())

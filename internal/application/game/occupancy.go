@@ -771,7 +771,7 @@ func (g *Game) asideRoute(id entity.EntityID, pos Position, avoid []Position, wc
 func (g *Game) queryFor(id entity.EntityID) pathing.Query {
 	if a, ok := g.animals.Get(id); ok {
 		if a.Tame {
-			return g.animalQuery(true, g.grid) // fences.go: gates open, fences shut
+			return g.animalQuery(true, g.animalBase(true)) // fences.go: gates open, fences shut
 		}
 		return g.animalQuery(false, g.phaseHostileMap())
 	}
@@ -802,8 +802,9 @@ type crowdCost struct {
 
 func (c crowdCost) ExtraCost(x, y int) int {
 	o := &c.g.occ
+	ground := c.g.groundExtra(x, y) // water.go: slow ground costs extra, so A* wades only when it pays
 	if id := o.at(x, y); id != 0 && id != c.self {
-		return occupiedCost
+		return occupiedCost + ground
 	}
 	for _, d := range stepDirs {
 		id := o.at(x+d[0], y+d[1])
@@ -811,10 +812,10 @@ func (c crowdCost) ExtraCost(x, y int) int {
 			continue
 		}
 		if _, walking := c.g.walkNext(id); !walking {
-			return besideCost
+			return besideCost + ground
 		}
 	}
-	return 0
+	return ground
 }
 
 func (g *Game) costedQuery(id entity.EntityID) pathing.Query {
