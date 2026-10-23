@@ -103,11 +103,11 @@ Primary entry point for a play session.
 
 ## Primary actions
 
--   [-] New Game (opens scenario stub; no live scenario defs)
--   [-] Load Game (empty stub; no persistence)
--   [-] Continue (visible, disabled: no saves yet)
+-   [x] New Game (opens Choose Scenario; the wizard keeps its draft until the menu or Start)
+-   [x] Load Game (save list: slot, game date, colonists, file time; commitment saves tagged)
+-   [x] Continue (loads the most recent save, commitment ones included; disabled with "no saves yet" when there are none)
 -   [-] Plugins (visible, disabled)
--   [x] Options (Audio/Graphics/Gameplay/Accessibility tabs, saved to settings.json; Controls deferred)
+-   [x] Options (Audio/Graphics/Gameplay/Accessibility/Controls tabs, saved to settings.json; a Story tab appears during play)
 -   [-] Tutorial/Help (visible, disabled)
 -   [x] Credits (creator, originality notice, asset credits)
 -   [x] Quit
@@ -156,11 +156,11 @@ character; - original narrative description.
 
 ## Actions
 
--   [-] choose scenario; (3 hardcoded names)
--   [-] inspect details; (placeholder description/summary)
--   [ ] create/edit custom scenario;
--   [ ] load custom scenario;
--   [-] continue. (Next only)
+-   [x] choose scenario; (Broken Hull, Ember Clan, Gilded Expedition, Bare Hands; searchable list with hardness pips)
+-   [x] inspect details; (people, technology, kit, research, special rules, original narrative)
+-   [x] create/edit custom scenario; (New and Edit a copy open the Scenario Editor)
+-   [x] load custom scenario; (custom JSON files are listed beside the built-ins, with delete)
+-   [x] continue. (Next stamps a copy of the scenario into the draft)
 
 Plugins may register scenarios.
 
@@ -192,6 +192,16 @@ Create data-driven custom starting rules without modifying code.
 Invalid combinations must identify the offending part rather than
 failing when the game starts.
 
+Status (NG-1):
+
+-   [x] scenario metadata; (name, summary, description, mandatory setup)
+-   [x] ordered scenario-part list; (14 part kinds, move up/down/remove)
+-   [x] add-part browser; (modal picker)
+-   [x] selected-part editor; (per-part fields and a live preview)
+-   [x] validation panel; (names the offending part; errors block Done, warnings do not)
+-   [x] save/load/reset. (versioned JSON files, atomic writes; Reset restores the opening state)
+-   [ ] plugin-registered parts.
+
 ------------------------------------------------------------------------
 
 # 5. Storyteller & Difficulty Screen
@@ -218,11 +228,11 @@ adaptation, resource yield and other supported parameters.
 
 ## Actions
 
--   [-] select storyteller; (3 placeholder cards)
--   [-] select preset; (Forgiving/Standard/Harsh labels)
--   [ ] customize;
--   [ ] reset;
--   [-] continue. (Next only)
+-   [x] select storyteller; (portrait cards for Orla Vane, Bram Holloway, Kestrel Quay with bios and an example pacing sparkline)
+-   [x] select preset; (Wanderer, Gentle, Settled, Seasoned, Grim, Merciless)
+-   [-] customize; (Custom Difficulty dialog with 19 settings; disease frequency has no effect yet, a few sliders lack tooltips)
+-   [x] reset; (copy from a preset, reset, cancel)
+-   [x] continue. (Next; the save mode, Reload anytime or Commitment, is chosen on the same screen)
 
 ------------------------------------------------------------------------
 
@@ -250,14 +260,14 @@ Show phase/progress while keeping UI responsive.
 Transition into landing-site selection without discarding generated
 world state.
 
-Status (UI-014):
+Status (NG-1):
 
--   [x] seed; (typed digit field with Dice)
--   [-] world coverage/size; (label only)
--   [-] temperature; (label only: follows the chosen biome)
--   [-] rainfall; (label only: follows the chosen biome)
--   [ ] faction/population density;
--   [-] Generate. (enabled; builds from the seed and goes to the biome picker; no progress phases)
+-   [x] seed; (free text, original two-word phrases; random button)
+-   [x] world coverage/size; (30, 50 or 100 % of the globe)
+-   [x] temperature; (five stops)
+-   [x] rainfall; (five stops)
+-   [x] faction/population density; (population stops and a faction table with counts)
+-   [x] Generate. (progress dialog with phases; unchanged settings reuse the world; Next goes to the landing screen)
 
 ------------------------------------------------------------------------
 
@@ -288,14 +298,15 @@ forage; - useful known resources; - nearby settlements/factions.
 The player should be able to understand why one tile is easier or harder
 than another.
 
-Status (UI-014): there is no world map yet; the screen is a biome picker.
+Status (NG-1):
 
--   [-] selected-tile panel; (biome card with icon, temperatures, growing days, ground, plants, top wildlife; no elevation, roads, forage, settlements)
--   [ ] interactive planet/world map;
--   [ ] inspect tiles / search features;
--   [-] choose tile; (choose a biome directly)
--   [-] regenerate/back; (Back and Dice)
--   [x] continue. (Next to pawns)
+-   [x] selected-tile panel; (terrain, elevation, temperatures, rainfall, growing period, stones, water, caves, roads, forage, wildlife, nearest settlement, movement difficulty, warnings)
+-   [x] interactive planet/world map; (rotating hex globe with biome, temperature, rainfall and elevation views, rivers, roads, faction-tinted settlements)
+-   [-] inspect tiles / search features; (inspect and hover yes; no feature search, only Random site and the Factions dialog)
+-   [x] choose tile; (invalid tiles give the reason on the disabled Next button)
+-   [x] regenerate/back; (Back keeps the draft, Create World regenerates, Random site)
+-   [x] continue. (Next to Create Characters)
+-   [-] map size and starting season. (Advanced dialog; sizes 200 to 500 show "Not available yet" because `game.MaxEnabledSide` is 120 until the engine frame-rate gate passes, see ENG-001)
 
 ------------------------------------------------------------------------
 
@@ -337,6 +348,15 @@ Choose the initial colonists and understand team strengths/weaknesses.
 
 Warn about important capability gaps such as no doctor, cook, grower,
 constructor, researcher, or violence-capable pawn.
+
+Status (NG-1):
+
+-   [x] candidate roster; (selected and left-behind lists, drag, swap, reorder)
+-   [x] selected pawn and details; (portrait by build, age, backstories, traits, skills with passions, incapabilities, health conditions)
+-   [x] reroll/randomize, rename (validated, unique nicknames), start;
+-   [x] team analysis. (nobody can fight, no doctor, cook, grower, builder or researcher, everyone very young or old)
+-   [ ] relationships; (no relationship system)
+-   [ ] per-pawn starting gear. (the kit belongs to the scenario)
 
 ------------------------------------------------------------------------
 
@@ -1867,13 +1887,13 @@ Agents should implement screens approximately in this dependency order.
 
 ## Wave UI-3 --- Understand pawns
 
--   [ ] Character
+-   [-] Character (Bio tab: identity, backstories, traits, skills with passions, incapabilities, conditions; no Social/Gear tabs)
 -   [-] Needs/Mood (food/rest bars; no recreation/mood/thoughts)
 -   [ ] Health
 -   [ ] Social
 -   [ ] Gear
 -   [ ] Detailed Stats
--   [ ] Alerts/Letters
+-   [-] Alerts/Letters (alert list and letter windows with Continue; no letter stack or history)
 
 ## Wave UI-4 --- Production and defense
 
@@ -1889,17 +1909,17 @@ Agents should implement screens approximately in this dependency order.
 -   [ ] Wildlife
 -   [ ] Prisoner
 -   [ ] Trade
--   [ ] Factions
+-   [-] Factions (window with the faction table, 60-day goodwill sparkline and last five events; goodwill only, no trade or communication)
 -   [ ] History
 
 ## Wave UI-6 --- Complete new-game flow
 
--   [-] Scenario (hardcoded list + Next/Back; no editor/plugins)
--   [ ] Scenario Editor
--   [-] Storyteller/Difficulty (3 cards + presets; no custom sliders)
--   [-] World Generation (placeholder controls; Generate disabled)
--   [-] Landing Site (placeholder tile card; no world map)
--   [-] Starting Pawns (fake roster + Start; no reroll)
+-   [x] Scenario (built-ins, custom files, search, details; no plugin-registered scenarios)
+-   [x] Scenario Editor
+-   [-] Storyteller/Difficulty (cards, six presets, save mode, Custom Difficulty dialog; disease frequency has no effect and a few sliders lack tooltips)
+-   [x] World Generation (seed, coverage, rainfall, temperature, population, factions, progress)
+-   [-] Landing Site (globe and full tile panel, Advanced, Factions dialog; no feature search, map sizes above 120 not yet enabled)
+-   [x] Starting Pawns (generated candidates, reroll, rename, team warnings, Start with a loading screen; no relationships)
 
 These can begin earlier once their underlying definitions exist, but are
 required before a polished external build.
@@ -1916,10 +1936,10 @@ required before a polished external build.
 
 -   [ ] Endgame Ship
 -   [ ] Victory
--   [ ] Save
--   [-] Load (empty stub from main menu; pause Load disabled)
--   [-] Pause Menu (Resume/Options/Main Menu/Quit; Save/Load/Help disabled)
--   [x] Options (Audio/Graphics/Gameplay/Accessibility tabs, saved to settings.json; Controls deferred)
+-   [-] Save (pause > Save writes the colony's slot; no name prompt; commitment colonies save themselves and offer Save & Quit)
+-   [x] Load (save list from the main menu and pause; corrupt saves listed disabled with the reason; disabled with a reason in commitment mode)
+-   [-] Pause Menu (Resume/Save/Load/Options/Main Menu/Quit; Help disabled; Save & Quit in commitment mode)
+-   [x] Options (Audio/Graphics/Gameplay/Accessibility/Controls tabs, saved to settings.json; Story tab during play)
 -   [ ] Tutorial
 -   [ ] Help
 
@@ -1991,6 +2011,8 @@ COLONY
   ├── World Map
   └── Menu
 ```
+
+NG-1 routing: Scenario opens the Scenario Editor (and the add-part picker as a modal); Storyteller/Difficulty opens the Custom Difficulty modal; World Generation opens a progress modal; Landing Site opens the Advanced and Factions modals; Starting Pawns leads to a loading screen and then the colony. The colony's Factions entry opens the Factions window. Back keeps the wizard draft; Back from Scenario asks before discarding.
 
 Not every conceptual screen must become a full-screen route. Pawn
 screens, bills and similar surfaces may be tabs/windows inside the main

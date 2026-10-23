@@ -1235,7 +1235,7 @@ the player what just happened and what requires attention.
 -   [ ] **Letter stack**
     -   Persistent until opened/dismissed.
     -   Categories such as positive, neutral, negative and major threat.
--   [ ] **Letter window**
+-   [-] **Letter window** (NG-1: a message with a letter flag opens a window once, with title, text and Continue; used for the scenario intro, heat waves, cold snaps; no entity/faction links, jump-to-location or choices)
     -   Title.
     -   generated original narrative.
     -   relevant entities/faction.
@@ -1320,22 +1320,22 @@ the player what just happened and what requires attention.
 -   [ ] **World button/tab**
     -   Switch from local map to planet.
     -   Preserve local camera.
--   [ ] **Planet navigation**
+-   [-] **Planet navigation** (NG-1: setup only. The landing globe rotates with drag, inertia and keys, zooms and picks tiles; there is no world view inside a running colony)
     -   Rotate/pan/zoom or equivalent world navigation.
     -   Select world tile/object.
 
 ## 25.2 World tile inspector
 
--   [-] **Biome** (UI-014: top bar names the biome; no world tile inspector)
--   [ ] **Terrain/hilliness**
--   [ ] **Elevation**
--   [ ] **Temperature**
--   [ ] **Rainfall**
--   [ ] **Growing period**
--   [ ] **Movement difficulty**
--   [ ] **Road/river**
--   [ ] **Forage**
--   [ ] **Settlement/faction if occupied**
+-   [-] **Biome** (NG-1: shown on the landing screen's tile panel; the colony top bar names it; no world tab in the colony)
+-   [-] **Terrain/hilliness** (landing screen only)
+-   [-] **Elevation** (landing screen only)
+-   [-] **Temperature** (landing screen only: mean, summer high, winter low)
+-   [-] **Rainfall** (landing screen only)
+-   [-] **Growing period** (landing screen only)
+-   [-] **Movement difficulty** (landing screen only; informational until world travel exists)
+-   [-] **Road/river** (landing screen only)
+-   [-] **Forage** (landing screen only)
+-   [-] **Settlement/faction if occupied** (landing screen only: nearest settlement and the Factions dialog; an occupied tile cannot be chosen)
 -   [ ] **Distance/travel estimate when route context exists**
 
 ## 25.3 World objects
@@ -1362,16 +1362,16 @@ the player what just happened and what requires attention.
 ## 26.1 New-world setup
 
 -   [x] **World seed input** (UI-014: typed digit field with Dice; same seed and biome give the same site)
--   [-] **Planet coverage/size option** (placeholder label)
--   [-] **Temperature/rainfall/population options where supported** (placeholder labels)
--   [-] **Generate button** (UI-014: enabled, builds from the seed and goes on to the biome picker; no progress)
--   [ ] **Generation progress**
+-   [x] **Planet coverage/size option** (NG-1: 30 / 50 / 100 % of the globe; 5 % in dev mode)
+-   [x] **Temperature/rainfall/population options where supported** (NG-1: five temperature and rainfall stops, three population stops, plus the faction table)
+-   [x] **Generate button** (NG-1: builds the globe behind a progress dialog; unchanged settings reuse the world, changed ones mark it stale)
+-   [x] **Generation progress** (NG-1: phase and percentage; the builder runs a fixed budget per frame so the UI stays responsive)
     -   UI remains responsive.
 
 ## 26.2 Landing-site selection
 
--   [ ] **Select world tile**
--   [-] **Detailed tile card** (UI-014: biome picker card shows temperatures, growing days, ground, plants and top wildlife; no world map or tile selection)
+-   [x] **Select world tile** (NG-1: click on the rotating hex globe; ocean, lakes and occupied tiles show why they cannot be chosen)
+-   [x] **Detailed tile card** (NG-1: terrain, coordinates, elevation, mean/summer/winter temperature, rainfall, growing period, stones, water, caves, roads, nearest settlement, movement difficulty, forage, wildlife and warnings; biome hover card)
     -   biome.
     -   temperature range.
     -   growing period.
@@ -1380,10 +1380,10 @@ the player what just happened and what requires attention.
     -   movement difficulty.
     -   stone/resource context if known.
     -   nearby factions.
--   [ ] **Search/find world features**
+-   [ ] **Search/find world features** (not in NG-1 scope: only a Random site button and the Factions dialog's find-capital click)
     -   Optional high-value usability feature.
--   [-] **Settle/start command** (Next to pawns; Start is on the pawn screen)
--   [-] **Back/regenerate** (Back and Dice for a new seed)
+-   [x] **Settle/start command** (NG-1: Next goes to Create Characters; Start there builds the colony)
+-   [x] **Back/regenerate** (NG-1: Back keeps the draft; Create World regenerates; Random site picks another tile)
 
 ------------------------------------------------------------------------
 
@@ -1391,69 +1391,69 @@ the player what just happened and what requires attention.
 
 ## 27.1 Main menu
 
--   [-] **New game** (opens scenario stub)
--   [-] **Load game** (empty stub)
--   [-] **Options** (stub)
+-   [x] **New game** (NG-1: opens the Choose Scenario wizard)
+-   [x] **Load game** (save list; Continue loads the newest, commitment saves included)
+-   [x] **Options** (Audio, Graphics, Gameplay, Accessibility, Controls, and Story during play)
 -   [-] **Plugins** (disabled)
--   [-] **Credits** (stub)
+-   [x] **Credits** (creator, originality notice, asset credits)
 -   [x] **Quit**
 -   [-] **Version/build identifier** (shows `dev` / AppConfig.Version; no commit id)
 
 ## 27.2 Scenario selection
 
--   [-] **Scenario list** (3 hardcoded names; not data-driven)
+-   [x] **Scenario list** (NG-1: Broken Hull, Ember Clan, Gilded Expedition, Bare Hands and custom files; searchable)
     -   Standard crash start.
     -   tribal/low-tech.
     -   difficult solo.
     -   rich solo/high-tech.
     -   custom scenarios.
--   [-] **Scenario detail** (placeholder description/summary)
+-   [x] **Scenario detail** (NG-1: people, equipment, research, special rules and the original narrative)
     -   Starting people.
     -   equipment.
     -   research.
     -   special rules.
     -   original narrative description.
--   [-] **Scenario editor entry** (disabled button)
+-   [x] **Scenario editor entry** (New, Edit a copy)
 
 ## 27.3 Scenario editor
 
--   [ ] **Scenario parts list**
--   [ ] **Add/remove part**
--   [ ] **Configure values**
--   [ ] **Validation**
--   [ ] **Save/load custom scenario**
--   [ ] **Plugin scenario parts**
+-   [x] **Scenario parts list** (NG-1: ordered list, 14 part kinds)
+-   [x] **Add/remove part** (add-part picker, remove, reorder)
+-   [x] **Configure values** (per-part fields plus a live preview)
+-   [x] **Validation** (a panel names the offending part; errors block Done, warnings do not)
+-   [x] **Save/load custom scenario** (versioned JSON files, atomic writes)
+-   [ ] **Plugin scenario parts** (no scenario-part plugin API yet)
 
 ## 27.4 Storyteller selection
 
--   [-] **Storyteller cards** (3 placeholder names; no art)
+-   [x] **Storyteller cards** (NG-1: Orla Vane the Steady Hand, Bram Holloway the Hearthkeeper, Kestrel Quay the Gambler, each with an original bust)
     -   Paced.
     -   relaxed.
     -   random.
     -   original characters/names/art.
--   [-] **Behavior description** (one-line placeholder text)
+-   [x] **Behavior description** (NG-1: a bio and an example pacing sparkline per storyteller, no formulas)
     -   Explain pacing differences without revealing unnecessary
         implementation formulas.
 
 ## 27.5 Difficulty
 
--   [-] **Preset difficulties** (Forgiving/Standard/Harsh labels)
--   [ ] **Custom difficulty**
+-   [x] **Preset difficulties** (NG-1: Wanderer, Gentle, Settled, Seasoned, Grim, Merciless)
+-   [-] **Custom difficulty** (NG-1: 19 sliders and toggles in groups with dependent fields; the Disease frequency slider has no effect because disease events do not exist)
     -   Threat scale.
     -   economy.
     -   mood.
     -   disease.
     -   adaptation.
     -   other exposed factors.
--   [ ] **Reset preset**
--   [ ] **Tooltip each setting**
+-   [x] **Reset preset** (Copy from a preset, Reset, Cancel)
+-   [-] **Tooltip each setting** (most have one; the economy yields, infection chance and pain tolerance do not yet)
 
 ## 27.6 Starting pawn screen
 
--   [-] **Candidate pawn cards** (3 fake roster lines)
--   [ ] **Select starting roster**
--   [-] **Randomize/reroll** (disabled)
--   [ ] **Character details**
+-   [x] **Candidate pawn cards** (NG-1: generated candidates with portraits by build, backstories and traits)
+-   [x] **Select starting roster** (selected and left-behind lists; drag, swap, reorder)
+-   [x] **Randomize/reroll** (per candidate and Randomize all; rename; undo; deterministic from the seed)
+-   [-] **Character details** (NG-1: all but relationships, which do not exist yet)
     -   age.
     -   skills/passions.
     -   traits.
@@ -1461,13 +1461,13 @@ the player what just happened and what requires attention.
     -   health.
     -   incapabilities.
     -   relationships.
--   [ ] **Team warnings**
+-   [x] **Team warnings** (NG-1: nobody can fight, no doctor, cook, grower, builder or researcher, everyone very young or old)
     -   No capable doctor.
     -   no grower.
     -   no constructor.
     -   no cook.
     -   no violence-capable pawn, etc.
--   [x] **Start colony** (creates sim via SimFactory; roster is still a placeholder)
+-   [x] **Start colony** (NG-1: builds the Setup with the chosen roster behind a loading screen)
 
 ------------------------------------------------------------------------
 
@@ -1606,7 +1606,7 @@ the player what just happened and what requires attention.
 -   [x] **Resume**
 -   [x] **Save** (writes the colony's slot, "saved <slot>" hint)
 -   [x] **Load** (pause and main menu open the save list; main menu Continue loads the newest)
--   [-] **Options** (opens stub, Back returns to pause)
+-   [x] **Options** (opens the Options screen, Back returns to pause)
 -   [x] **Return to main menu**
 -   [x] **Quit**
 
@@ -1619,7 +1619,7 @@ the player what just happened and what requires attention.
 -   [ ] **Enabled plugin summary**
 -   [ ] **Overwrite confirmation**
 -   [ ] **Saving progress/error**
--   [ ] **Commitment/ironman restrictions**
+-   [x] **Commitment/ironman restrictions** (NG-1: one save slot that the game updates itself at each day, on return to menu, on quit and on window close; Pause offers Save & Quit; Load is disabled with its reason; developer mode is locked; saves are tagged Commitment)
 
 ## 33.3 Load dialog
 
@@ -2118,10 +2118,10 @@ Complete:
 
 Complete:
 
--   [ ] World map.
--   [ ] World generation.
--   [ ] Landing selection.
--   [ ] New-game flow.
+-   [-] World map. (the rotating globe exists at setup only; no world view in a running colony)
+-   [x] World generation.
+-   [x] Landing selection.
+-   [-] New-game flow. (complete, but map sizes above 120 are gated off by `game.MaxEnabledSide` until the ENG-001 frame-rate gate passes)
 -   [ ] Caravan formation.
 -   [ ] Caravan inspector.
 -   [ ] Quests.

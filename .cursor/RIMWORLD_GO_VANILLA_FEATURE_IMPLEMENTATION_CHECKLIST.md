@@ -135,7 +135,7 @@ vanilla system depends on them.
     -   Create/start a colony without renderer/audio.
     -   Advance a requested number of ticks.
     -   Emit metrics and final state hash.
--   [ ] **Deterministic benchmark runner**
+-   [-] **Deterministic benchmark runner** (NG-1 ENG-001: `cmd/benchmark` and the grown-colony fixture time ticks, phases and allocations at 120, 250 and 500 tiles a side with 20 colonists; the colonist-count scales of 100 to 1,000 are not covered)
     -   Fixed scenarios for 3, 20, 100, 500, and 1,000 colonist-scale
         testing.
     -   Record tick cost and allocations.
@@ -148,14 +148,14 @@ The first playable surface.
 
 ## 2.1 Local map grid
 
--   [-] **Finite tile map** (rectangular grid with walkability implemented and tested; cell occupant queries are not indexed)
+-   [x] **Finite tile map** (rectangular grid with walkability as a bitset; per-cell indexes for plants, buildings, frames and items; maps tested up to 500x500, sizes above 120 are not yet offered in the wizard, ENG-001)
     -   Rectangular local map.
     -   Every cell can hold terrain and spatial occupants.
     -   Efficient cell queries.
--   [ ] **Chunk partitioning**
+-   [x] **Chunk partitioning** (ENG-001: 16x16 chunks with dirty tracking, walk regions, incremental rooms, per-chunk plant growth, baked render chunks)
     -   Partition maps into chunks for spatial indexing, rendering,
         sleeping, dirty flags, and localized rebuilds.
--   [-] **Terrain definitions** (soil, rich soil, gravel, rough stone, natural rock with walkability + fertility; no water)
+-   [-] **Terrain definitions** (soil, rich soil, gravel, rough stone, natural rock, sand, marsh, ice, shallow and deep water, mud, dirt track with walkability, walk cost, wetness + fertility; no beauty/flammability per terrain)
     -   Soil/fertility-bearing ground.
     -   Rough natural terrain.
     -   Stone/rock terrain.
@@ -215,14 +215,14 @@ interchangeable workers.
 
 ## 3.1 Pawn identity
 
--   [-] **Human pawn definition** (display name only: Ada/Bo/Cora or `Colonist N`; no age/gender/faction/backstory)
+-   [-] **Human pawn definition** (NG-1 SIM-032: names, age, sex, build, look, backstories, traits, skills; neutral legacy bios for old saves; no per-pawn faction field)
     -   Name.
     -   Biological/chronological age representation.
     -   Sex/gender field as required by game mechanics.
     -   Faction.
     -   Player-control state.
     -   Story/character metadata.
--   [ ] **Procedural pawn generation**
+-   [-] **Procedural pawn generation** (NG-1: deterministic from (seed, slot, roll) with scenario constraints; no relationships)
     -   Generate coherent pawn data from seed.
     -   Skills, passions, traits, backstories, age, health, and
         relationships use deterministic generation.
@@ -230,7 +230,7 @@ interchangeable workers.
 
 ## 3.2 Backstories
 
--   [ ] **Childhood and adulthood background system**
+-   [-] **Childhood and adulthood background system** (NG-1: 59 original backstories with skill changes and incapabilities, adults have both; defined in Go, not yet data files or moddable)
     -   Backgrounds modify starting skills/stats.
     -   Backgrounds may prohibit categories of work.
     -   Adults can have both childhood and adulthood histories; younger
@@ -241,19 +241,19 @@ interchangeable workers.
 
 ## 3.3 Traits
 
--   [ ] **Permanent trait system**
+-   [x] **Permanent trait system** (NG-1: 19 original traits, conflict groups, declared stat/thought/work modifiers)
     -   Traits modify statistics, needs, mood behavior, work behavior,
         social behavior, combat, movement, or mental-break tendencies.
     -   Trait definitions declare modifiers rather than hardcoding all
         trait effects.
     -   Support mutually exclusive/conflicting traits.
--   [ ] **Trait-aware stat calculation**
+-   [-] **Trait-aware stat calculation** (NG-1: fixed layers base, body, age, conditions, traits, difficulty; no equipment or environment layers)
     -   Fixed deterministic modifier pipeline:
         `base -> body/health -> skills -> traits -> equipment -> environment -> temporary effects`.
 
 ## 3.4 Skills
 
--   [ ] **Core skill set**
+-   [-] **Core skill set** (NG-1: 11 skills, no Artistic)
     -   Shooting.
     -   Melee.
     -   Construction.
@@ -266,15 +266,15 @@ interchangeable workers.
     -   Medical.
     -   Social.
     -   Intellectual/research.
--   [ ] **Skill levels**
+-   [x] **Skill levels** (NG-1: 0 to 20; work speed 580 to 1780 permille, yields, accuracy, fumbles below Plants 4)
     -   Numeric proficiency.
     -   Skill influences speed, quality, success chance, accuracy,
         yield, or other system-specific outcomes.
--   [ ] **Passions**
+-   [x] **Passions** (NG-1: none/minor/major learn at 35/100/150 %, joy while working, a thought for a major passion)
     -   No passion / minor passion / major passion equivalents.
     -   Passion changes learning speed and can affect enjoyment/mood
         while performing relevant work.
--   [ ] **Skill XP**
+-   [x] **Skill XP** (NG-1: work, combat and chats grant experience, 4000 per skill per day saturation, decay above level 10 with a no-flap band)
     -   Work and relevant activities grant XP.
     -   Skill progression is deterministic.
     -   Add skill decay only if the chosen vanilla target version
@@ -282,7 +282,7 @@ interchangeable workers.
 
 ## 3.5 Work incapabilities
 
--   [ ] **Disabled work categories**
+-   [x] **Disabled work categories** (NG-1: backstories and traits set incapabilities; the Work tab hatches those cells with the reason, priorities are forced to 0 and orders are refused)
     -   Pawn history/traits/condition may prohibit categories such as
         violence, skilled labor, caring, dumb labor, etc.
     -   Work UI clearly shows unavailable work.
@@ -557,12 +557,12 @@ This is the heart of autonomous colony behavior.
     -   Stuff/material-based buildings where relevant.
     -   Different materials influence HP, beauty, flammability,
         work/material cost, etc.
--   [-] **Resource delivery** (material hauled to frames until `Need`, several frames per trip, in-flight amounts prevent over-delivery (HAUL-001))
+-   [-] **Resource delivery** (material hauled to frames until `Need`, several frames per trip, in-flight amounts prevent over-delivery (HAUL-001); NG-1: frames of advanced buildings then wait for components)
     -   Haulers/builders deliver required materials.
 -   [-] **Construction frame** (delivered materials tracked per frame with in-flight amounts; UI-015 frame inspector shows them)
     -   Delivered materials are committed to a partially constructed
         entity.
--   [-] **Construction work** (fixed WorkTicks; no skill)
+-   [-] **Construction work** (NG-1: Construction skill scales the work speed; no quality or failed construction)
     -   Construction skill affects speed and result.
     -   Failed construction may waste resources if independently chosen
         balance supports it.
@@ -991,7 +991,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 11.5 Medical care
 
--   [ ] **Medical care policy**
+-   [-] **Medical care policy** (NG-1 SIM-034: care tiers untreated, tended, herbal and industrial medicine; the doctor picks by severity, no per-patient policy setting)
     -   No care.
     -   no medicine.
     -   herbal-equivalent.
@@ -1004,7 +1004,7 @@ treatment, and surgery are major colony-management systems.
     -   quality depends on skill, medicine, environment, capacities.
 -   [x] **Self-tend** (only when no other doctor; weaker care)
     -   Optional with reduced effectiveness.
--   [-] **Medical beds**
+-   [-] **Medical beds** (NG-1: the hospital bed gives 115 % healing and half the infection chance, and rescuers prefer it; patients do not yet seek it out or have beds marked for medical use)
     -   Mark beds for medical use.
     -   injured/sick pawns seek treatment/rest.
 -   [x] **Rescue**
@@ -1012,7 +1012,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 11.6 Infection
 
--   [x] **Wound infection chance** (untended 8h: 40%; self-tended 20%, tended 12%, herbal medicine 3%)
+-   [x] **Wound infection chance** (untended 8h: 40%; self-tended 20%, tended 12%, herbal medicine 3%, industrial medicine 1%; halved in a hospital bed)
     -   Eligible untreated/poorly treated wounds can become infected.
 -   [-] **Infection progression vs immunity** (hourly severity: +4 untreated, -5 tended, -9 with medicine; fatal at 100; no immunity race)
     -   Disease severity progresses.
@@ -1155,8 +1155,8 @@ treatment, and surgery are major colony-management systems.
 
 ## 12.6 Environmental events
 
--   [ ] **Heat wave**
--   [ ] **Cold snap**
+-   [-] **Heat wave** (NG-1: colonies from the wizard with the Extreme weather setting on; +12 C for 2 to 4 days in summer, 6 % a day, 3-day cooldown; letter and top-strip chip)
+-   [-] **Cold snap** (NG-1: same, -14 C in winter)
 -   [ ] **Eclipse**
     -   Reduces sunlight and solar generation; affects crops.
 -   [ ] **Solar flare**
@@ -1239,9 +1239,9 @@ treatment, and surgery are major colony-management systems.
 -   [x] **Cooking** (stove: 2 raw food -> 1 simple meal)
 -   [x] **Tailoring/apparel production** (tailoring bench sews leather parkas, tuques and dusters; butchering yields leather)
 -   [-] **Smithing/weapon production** (workbench: 4 wood -> wooden club, 3 stone -> knife, 5 wood -> spear)
--   [ ] **Machining/advanced fabrication equivalents**
+-   [-] **Machining/advanced fabrication equivalents** (NG-1: the Fabrication research unlocks one recipe, components, plus tool cabinet and hospital bed)
 -   [ ] **Drug production**
--   [ ] **Component production in late tech**
+-   [x] **Component production in late tech** (NG-1: Fabricate component, 12 steel into 1 at the workbench with Crafting 6; components also come from buried machinery ore)
 
 ## 14.4 Quality
 
@@ -1594,7 +1594,7 @@ change relationships, and settlements exist on the world map.
 
 ## 20.1 Faction definitions
 
--   [ ] **Faction types**
+-   [-] **Faction types** (NG-1 SIM-030: settlers, clans, drifters, freebooters, swarm and the player; no mechanoid or ancient factions)
     -   Player colony.
     -   tribal-level human factions.
     -   industrial/outlander-like factions.
@@ -1602,24 +1602,24 @@ change relationships, and settlements exist on the world map.
     -   mechanoid faction.
     -   insect faction.
     -   ancients/neutral special faction as required.
--   [ ] **Faction tech level**
+-   [-] **Faction tech level** (NG-1: neolithic or industrial; decides whether raiders carry rifles and the faction's name style; no effect on settlements or traders)
     -   Influences equipment, settlements, trader inventory, raid
         methods.
--   [ ] **Faction naming**
+-   [x] **Faction naming** (NG-1: original procedural faction, leader and settlement names, unique per world)
     -   Original procedural faction/settlement names.
 
 ## 20.2 Goodwill
 
--   [ ] **Relationship score**
+-   [x] **Relationship score** (NG-1: goodwill -100..100 with hysteresis: hostile at -50 or less, calm again at -10; friendly at +50, neutral again below +30)
     -   Hostile / neutral / ally states derived from goodwill/rules.
--   [ ] **Goodwill changes**
+-   [-] **Goodwill changes** (NG-1: a repelled raid costs the raiding faction 5 goodwill and goodwill drifts toward a baseline daily; no gifts, quests, visitors or aid)
     -   Gifts.
     -   attacks.
     -   harming visitors.
     -   quest outcomes.
     -   assistance.
     -   settlement proximity if included.
--   [ ] **Permanent hostility**
+-   [x] **Permanent hostility** (NG-1: freebooters and the swarm are fixed at -100)
     -   Some factions cannot become friendly.
 
 ## 20.3 Visitors
@@ -1722,18 +1722,18 @@ local colony map. citeturn1search4
 
 ## 22.1 Planet
 
--   [ ] **Seeded world generation**
--   [ ] **World tile graph**
+-   [x] **Seeded world generation** (NG-1 SIM-030: free-text seed; the same seed and settings give the same planet on every machine)
+-   [x] **World tile graph**
     -   Hex-like adjacency or an independently implemented equivalent
         supporting travel.
--   [ ] **Latitude**
--   [ ] **Elevation**
--   [ ] **Rainfall**
--   [ ] **Temperature**
--   [ ] **Seasonality**
--   [ ] **Movement difficulty**
--   [ ] **Roads**
--   [ ] **Rivers**
+-   [x] **Latitude**
+-   [x] **Elevation**
+-   [x] **Rainfall** (latitude bands, distance from the sea, rain shadow; arid shrubland is about 40 % of land, a tuning follow-up)
+-   [x] **Temperature**
+-   [x] **Seasonality** (hemisphere-aware peak day, amplitude by latitude and continentality)
+-   [-] **Movement difficulty** (shown on the tile card; informational until world travel exists)
+-   [x] **Roads** (settlements joined by roads; they become dirt tracks on the local map)
+-   [x] **Rivers** (flow downhill to the sea, lakes in basins; become rivers on the local map)
     -   If part of chosen base-game target.
 
 ## 22.2 Biomes
@@ -1758,30 +1758,30 @@ Each biome defines: - terrain mix; - plant density/species; -
 wildlife; - rainfall; - temperature profile; - disease frequency; -
 forage; - local map appearance.
 
-SIM-023: all twelve exist as `world/biome` data and are picked directly in the new-game wizard (no world-map tile choice). Each defines climate, wetness, ground mix, wild plants, grass density/regrowth and wildlife density; disease frequency is not modelled.
+SIM-023: all twelve exist as `world/biome` data. NG-1 now classifies them on the generated globe from temperature, rain, hills and elevation, and the player picks a world tile. Each defines climate, wetness, ground mix, wild plants, grass density/regrowth and wildlife density; disease frequency is not modelled.
 
 ## 22.3 Terrain topology
 
--   [ ] **Flat**
--   [ ] **Small hills**
--   [ ] **Large hills**
--   [ ] **Mountainous**
+-   [x] **Flat** (NG-1: per-tile hilliness drives the local map's rock thresholds)
+-   [x] **Small hills**
+-   [x] **Large hills**
+-   [x] **Mountainous** (with a ridge band and caves)
 
 ## 22.4 Local map generation
 
--   [-] **Terrain from biome/topology** (SIM-023: ground mix per biome incl. sand, marsh, ice; no topology/hilliness)
+-   [x] **Terrain from biome/topology** (SIM-023 ground mix per biome; NG-1 hills level changes rock, stone and ridge thresholds)
 -   [x] **Rock/mountain mass** (noise outcrops biased to map edges, stone ground ring, open start area; 2-3 stone types per map in regions, SIM-029; overhead mountain roof tracked under roofs)
 -   [x] **Ore/resource deposits** (SIM-029: steel, silver and gold veins grown inside rock; mined for metal)
--   [ ] **Water**
+-   [x] **Water** (NG-1 SIM-033: coast, rivers with deep cores, mud banks and fords, lakes, wet ground, tracks, a reachability pass; no bridges or fishing)
 -   [x] **Wild vegetation** (trees, berry bushes; grass is simulated ground cover removed by building, sowing and Cut plants (UI-011))
 -   [x] **Wildlife** (SIM-023/025: per-biome density, species weights, sex and age at spawn, carrying capacity)
 -   [ ] **Ancient ruins/debris**
--   [ ] **Starting clear/landing area**
+-   [x] **Starting clear/landing area** (NG-1: open start radius, no water within 7 tiles of the centre, drop pods land on dry ground)
 
 ## 22.5 Faction settlements
 
--   [ ] **Settlement placement**
--   [ ] **Faction territory distribution**
+-   [x] **Settlement placement** (NG-1: Poisson-disc over land, capitals first, density by type and population setting)
+-   [-] **Faction territory distribution** (preferred biomes and clustering near the capital; no territory ownership)
 -   [ ] **Settlement trade inventory**
 -   [ ] **Hostile settlement attack map**
 -   [ ] **Settlement destruction**
@@ -1790,7 +1790,7 @@ SIM-023: all twelve exist as `world/biome` data and are picked directly in the n
 
 ## 22.6 Landing-site UI
 
--   [ ] **Inspect world tile**
+-   [x] **Inspect world tile** (NG-1: the landing screen's tile panel)
     -   Biome.
     -   terrain.
     -   temperature.
@@ -1798,8 +1798,8 @@ SIM-023: all twelve exist as `world/biome` data and are picked directly in the n
     -   growing period.
     -   movement difficulty.
     -   nearby factions.
--   [ ] **Choose starting tile**
--   [ ] **Generate colony map from world tile**
+-   [x] **Choose starting tile**
+-   [x] **Generate colony map from world tile**
 
 ------------------------------------------------------------------------
 
@@ -1812,7 +1812,7 @@ colonists. citeturn1search8turn1search9
 
 ## 23.1 Scenario system
 
--   [ ] **Scenario definition**
+-   [x] **Scenario definition** (NG-1: people, age and trait constraints, research, items, animals, conditions, scheduled and disabled incidents, forbidden buildings, intro)
     -   Starting pawn count.
     -   pawn constraints.
     -   starting research.
@@ -1820,49 +1820,49 @@ colonists. citeturn1search8turn1search9
     -   starting animals.
     -   initial conditions.
     -   recurring/permanent scenario effects.
--   [ ] **Crashlanded-like standard start**
+-   [x] **Crashlanded-like standard start** (NG-1: Broken Hull, three colonists in drop pods)
     -   Three colonists.
     -   practical starting supplies/weapons.
     -   basic technology.
--   [ ] **Single-survivor difficult start**
--   [ ] **Tribal/low-tech group start**
--   [ ] **Rich solo high-tech start**
+-   [x] **Single-survivor difficult start** (Bare Hands)
+-   [x] **Tribal/low-tech group start** (Ember Clan, five colonists standing, neolithic)
+-   [x] **Rich solo high-tech start** (Gilded Expedition)
     -   Use original scenario names and prose.
--   [ ] **Scenario editor**
+-   [x] **Scenario editor** (NG-1: 14 part kinds, validation, save and load of JSON files)
     -   Optional but important vanilla feature.
     -   Add/remove scenario parts and conditions.
     -   Save custom scenarios.
 
 ## 23.2 Pawn selection
 
--   [ ] **Starting pawn roster generation**
--   [ ] **Reroll/randomize candidates**
--   [ ] **Display skills/traits/incapabilities/health/relationships**
+-   [x] **Starting pawn roster generation**
+-   [x] **Reroll/randomize candidates**
+-   [-] **Display skills/traits/incapabilities/health/relationships** (all but relationships)
 
 ## 23.3 Difficulty
 
--   [ ] **Difficulty profile**
+-   [-] **Difficulty profile** (NG-1 SIM-031: six presets covering threat scale, yields, mood, adaptation, infection, revenge, weather; the disease frequency has no effect because there are no disease events; no death/downing options)
     -   Threat scaling.
     -   economy/yields.
     -   disease.
     -   mood.
     -   adaptation.
     -   death/downing behavior as appropriate.
--   [ ] **Custom difficulty**
+-   [x] **Custom difficulty** (NG-1: every setting editable, copy from a preset, compact codec)
     -   Expose major multipliers/toggles.
 
 ## 23.4 Storyteller framework
 
--   [-] **Storyteller component** (deterministic threat schedule: first threat day 5, then every 5 to 9 days)
+-   [x] **Storyteller component** (NG-1: per-storyteller `Plan` from the colony state, loss easing, peaceful days, adaptation; the legacy profile keeps first threat day 5 then every 5 to 9 days)
     -   Reads colony state.
     -   schedules incidents.
     -   tracks cooldowns/threat pacing.
     -   deterministic from storyteller RNG stream.
--   [ ] **Paced storyteller**
+-   [x] **Paced storyteller** (Orla Vane: 8 days of pressure, 5 of rest, points ramp per cycle)
     -   Regular pressure and recovery cadence.
--   [ ] **Relaxed storyteller**
+-   [x] **Relaxed storyteller** (Bram Holloway: long gaps, eases after a loss)
     -   Longer building/recovery windows.
--   [ ] **Random storyteller**
+-   [x] **Random storyteller** (Kestrel Quay: daily dice with rising odds, occasional double threats; positive-event bias is defined but not applied yet)
     -   Less predictable event timing/type.
 
 Use original names rather than copying RimWorld storyteller characters.
@@ -1878,16 +1878,16 @@ Use original names rather than copying RimWorld storyteller characters.
     -   buildings.
     -   pawns/animals where appropriate.
     -   Expose wealth history.
--   [ ] **Threat points**
+-   [x] **Threat points** (NG-1: colonists, a wealth curve, threat scale, adaptation and optional time escalation, for colonies from the wizard)
     -   Storyteller converts colony state, population, wealth, time,
         adaptation/difficulty into threat budget.
     -   Exact RimWorld formula is not required and should not be copied.
 
 ## 24.2 Raid generation
 
--   [ ] **Select hostile faction**
+-   [x] **Select hostile faction** (NG-1: a hostile human faction weighted by settlement count; none means no raid)
 -   [x] **Generate raider group from point budget** (wealth/40 + 30 per standing colonist + 2 per day; clubs 60, rifles 90; up to 8)
--   [ ] **Generate equipment based on faction/tech**
+-   [-] **Generate equipment based on faction/tech** (NG-1: neolithic factions field clubs only, industrial ones rifles)
 -   [ ] **Map-edge arrival**
 -   [ ] **Immediate attack**
 -   [ ] **Prepare-before-attack behavior**
@@ -1997,8 +1997,8 @@ and other colony incidents. citeturn2search2turn2search7
 -   [ ] **Blight**
     -   Crop disease spreads/destroys plants.
 -   [ ] **Toxic fallout**
--   [ ] **Heat wave**
--   [ ] **Cold snap**
+-   [-] **Heat wave** (NG-1: see 12.6; fired by the day rollover, not the storyteller schedule)
+-   [-] **Cold snap** (NG-1: see 12.6)
 -   [ ] **Eclipse**
 -   [ ] **Solar flare**
 -   [ ] **Flashstorm**
@@ -2406,7 +2406,7 @@ the player-facing system.
 
 -   [x] **Manual save** (pause > Save writes the colony's slot)
 -   [x] **Load game** (pause > Load and main menu Load/Continue)
--   [-] **Save metadata** (slot name, in-game date, day, colonists, format version; no seed/plugins/content hash)
+-   [-] **Save metadata** (slot name, in-game date, day, colonists, format version 2, plus commitment, storyteller, difficulty, map size and biome; no plugins/content hash)
     -   Colony.
     -   world seed.
     -   tick/date.
@@ -2418,11 +2418,11 @@ the player-facing system.
     -   Consistent snapshot without long simulation stall.
 -   [ ] **Rotating autosaves**
 -   [-] **Save naming/overwrite** (one slot per colony, named at start, overwritten on save; no name prompt)
--   [ ] **Ironman/commitment-style save mode**
+-   [x] **Ironman/commitment-style save mode** (NG-1: chosen at setup and fixed; one save slot written by the game itself at each day, on return to menu, on quit and on window close; Load and developer mode disabled)
     -   Restricts ordinary save-scumming behavior if selected.
--   [ ] **Schema migration**
+-   [-] **Schema migration** (NG-1: version 1 saves still load, with neutral legacy bios for old colonists; no migration tool or warning dialog)
 -   [-] **Corruption validation** (unreadable or wrong-version files listed but not loadable)
--   [x] **Safe atomic writes** (temp file + rename)
+-   [x] **Safe atomic writes** (temp file + fsync + rename)
 -   [x] **Save/replay deterministic equality tests** (save mid-game, load, run both in lock step: identical)
 
 ------------------------------------------------------------------------
@@ -2840,7 +2840,7 @@ substantially larger colonies and maps with lower resource usage.
 
 ## 40.2 Analytical progression
 
--   [ ] **Plants**
+-   [-] **Plants** (NG-1: grown per chunk once per 250 ticks from the elapsed span with `plant.GrowSpan`; other systems still tick)
     -   Advance growth from elapsed ticks.
 -   [ ] **Rot/deterioration**
 -   [ ] **Needs where safe**
@@ -2850,8 +2850,8 @@ substantially larger colonies and maps with lower resource usage.
 
 ## 40.3 Invalidation
 
--   [ ] **Navigation dirty regions**
--   [-] **Room dirty regions**
+-   [x] **Navigation dirty regions** (NG-1: a walkability change marks its 16x16 chunk dirty; walk regions and labels rebuild for dirty chunks only)
+-   [x] **Room dirty regions** (NG-1: incremental rooms from room regions per chunk, checked against full detection in tests)
 -   [ ] **Power topology dirty**
 -   [ ] **Temperature topology dirty**
 -   [ ] **Beauty dirty**
@@ -2862,16 +2862,16 @@ substantially larger colonies and maps with lower resource usage.
 
 ## 40.4 Spatial indexes
 
--   [ ] **Entities at cell**
+-   [x] **Entities at cell** (NG-1: per-cell indexes for plants, buildings, frames and items)
 -   [ ] **Pawns in chunk/region**
 -   [ ] **Items by category/region**
--   [ ] **Work opportunities**
+-   [x] **Work opportunities** (NG-1: maintained candidate sets for frames, deconstruct and harvest/cut marks, refuel and feed targets)
 -   [ ] **Storage destinations**
--   [ ] **Hostiles**
--   [ ] **Haulables**
+-   [-] **Hostiles** (threat scans are indexed)
+-   [x] **Haulables** (stacks not already in a matching stockpile)
 -   [ ] **Medical patients**
 -   [ ] **Fires**
--   [ ] **Plants ready for work**
+-   [x] **Plants ready for work** (harvest- and cut-marked plants)
 
 ## 40.5 Large-colony UX
 

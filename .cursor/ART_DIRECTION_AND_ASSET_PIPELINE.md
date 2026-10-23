@@ -1019,14 +1019,14 @@ resolve metadata conflicts, and update the catalog.
 
 -   [x] validator (`assets/source/tools/validate_assets.py`, `make art-check`; Go port pending)
 -   [x] raster export (`make art`, headless Blender; reproducible to ±1/255 GPU noise)
--   [ ] atlas/manifest
+-   [-] atlas/manifest (NG-1 ART-014: `cmd/atlasgen` packs the pawn family, about 15k sprites with masks and normals, into six pages with `assets/metadata/atlas/pawn.yaml`; other families are not packed)
 -   [x] contact sheets (`make art-preview`)
 -   [x] screenshot test scene (`bin/game -capture out.png` / `make art-capture` renders a scripted colony in the real renderer; `compose_scene.py` for the full §34 set)
 -   [-] building/item/terrain/icon/pawn templates (`template.blend` + per-family builders; animal family with trot frames; 2×2/3×N and decal not yet)
 
 ### ART Wave 2 --- First playable
 
--   [-] soil/stone/water (domain terrain drawn in-game: soil/rich soil/gravel/stone/smooth stone variants with soft edge transitions, natural rock walls with baked corners tinted per stone (ART-015); water missing)
+-   [x] soil/stone/water (domain terrain drawn in-game: soil/rich soil/gravel/stone/smooth stone variants with soft edge transitions, natural rock walls with baked corners tinted per stone (ART-015); NG-1 adds shallow and deep water with a ripple shader, mud and dirt tracks, ART-014)
 -   [x] wall/door/floor (wood/stone/steel walls with 16 masks plus baked inner corners, 47 per material; wood and steel doors; wood and stone floors; all drawn in-game, ART-015)
 -   [x] blueprint/frame (blueprint overlay on every frame, scaffold once wood is delivered)
 -   [x] pawn base: original compositional pawns (body/pants/shirt/vest/hair layers, 4 facings, EntityID-stable tints) with an 8-frame Blender walk cycle synced to tile progress, idle breathing, work swings, lying/in-bed/carried poses; vendor pack kept as fallback
@@ -1039,7 +1039,7 @@ resolve metadata conflicts, and update the catalog.
 -   [-] bed/table/chair (1×1 cot drawn in-game for the current single-cell bed; 1×2 bed, table, chair generated in 4 facings for when the domain has footprints/furniture)
 -   [x] food/crops/wild plants/trees (oak, birch and pine in 3 variants with autumn and bare winter looks; bushes and berry bushes; 12 grass tufts; 8 crops × 6 stages × 3 variants)
 -   [ ] stove/butcher workstation
--   [ ] medicine
+-   [-] medicine (NG-1: industrial medicine stacks and the hospital bed; no other medical art)
 -   [x] blood/injury effects
 
 ### ART Wave 4 --- Production
@@ -1061,8 +1061,8 @@ resolve metadata conflicts, and update the catalog.
 
 ### ART Wave 6 --- Pawn variety
 
--   [ ] body/head variants
--   [ ] hair/facial hair library
+-   [-] body/head variants (NG-1 ART-014: six body builds; heads are shared; the sexes read weakly at 1x)
+-   [-] hair/facial hair library (NG-1: eight hair styles, three beards; beards are nearly invisible facing north)
 -   [ ] apparel/armor library
 -   [ ] tint validation
 -   [x] sleeping/downed/dead presentation
@@ -1078,10 +1078,10 @@ resolve metadata conflicts, and update the catalog.
 
 ### ART Wave 8 --- World/factions
 
--   [ ] faction emblems
--   [ ] settlement/caravan/quest icons
+-   [x] faction emblems (`ui_icon/faction_<settlers|clans|drifters|freebooters|swarm|player>`)
+-   [-] settlement/caravan/quest icons (settlement icons for neolithic and industrial factions; no caravan or quest icons)
 -   [ ] trade icons
--   [ ] world terrain
+-   [-] world terrain (the globe is vertex-coloured from `assets/palettes/world.yaml` with no sprite terrain; storyteller busts, scenario, skill, passion and trait icons added alongside, ART-014)
 
 ### ART Wave 9 --- Endgame
 

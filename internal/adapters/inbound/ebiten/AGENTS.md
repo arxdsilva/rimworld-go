@@ -6,15 +6,19 @@ authoritative simulation stores.
 
 ## Purpose
 
-Host the player-facing session: boot, menus, new-game stubs, pause, and
-the colony viewport with HUD chrome. Screens consume read models
+Host the player-facing session: boot, menus, the new-game wizard (scenario,
+scenario editor, storyteller and difficulty, world, landing site on a globe,
+characters, loading), pause, and the colony viewport with HUD chrome. Screens consume read models
 (`Snapshot()`, `World()`) and emit session intents plus typed gameplay
 commands via `Enqueue`. Domain code does not import this package.
 
 ## Owned concepts
 
 - `App` — `ebiten.Game` shell, screen stack, overlay (pause), HUD
-- widgets: panel, label, button (hover/disabled)
+- widgets: panel, label, button (hover/disabled), and the immediate-mode widget kit (see below)
+- the real font (`font.go`, Noto Sans embedded from `fontdata/`)
+- the new-game wizard screens (`screen_*.go`, draft in `newgame_state.go`), the setup backdrop and the globe (`globe.go`, `globemath/`)
+- big-map rendering: chunk read models, zoom tiers (`lod.go`, `chunk_cache.go`) and the minimap (`minimap.go`)
 - UI chrome tokens (`assets/palettes/ui.yaml`, mirrored in Go)
 - colony HUD: Food/Wood/time strip, colonist bar, Architect, Work, inspector
 - main-menu colonist splash (original PNG, left of the action rail)
@@ -36,6 +40,7 @@ commands via `Enqueue`. Domain code does not import this package.
   `Tick`, `Date`, `Activity`)
 - `internal/domain` types that appear on that read model (`clock`,
   `entity`, `schedule`, `command`)
+- NG-1 setup types the wizard draft and read models carry: `domain/world/planet` and `site` (a finished, read-only planet), `scenario`, `difficulty`, `storyteller`, `faction`, `pawn/pawngen`, `pawn/look`; the wizard builds a `game.Setup` from them and never reaches into game internals
 - Ebitengine, image/png, OS path lookup for generated art, the vendor pack and menu splash
 - `internal/platform/config` (the settings type)
 - `internal/platform/input` (the key-binding registry and resolver)
@@ -53,9 +58,14 @@ commands via `Enqueue`. Domain code does not import this package.
 
 ## Contracts
 
-- Simulation is created only by `SimFactory` when the player presses
-  Start. Menus must run with `renderer == nil`.
-- `cmd/game` constructs `game.NewColony` in the factory (Ada/Bo/Cora kit).
+- Simulation is created only when the player presses Start (or a capture
+  starts one). Menus must run with `renderer == nil`.
+- The wizard turns its draft into a `game.Setup` and builds the colony step
+  by step behind a progress screen through the consumer-owned `SimBuilder`;
+  `cmd/game` wraps `game.NewColonyBuilder` as the `NewSimBuilder` hook. The
+  one-shot `SimFactory` (`game.NewColony`, the legacy start) serves
+  `-scenario` set pieces, captures and tests. No stub rosters or fixed kits
+  live in this package.
 - Return to main menu drops the renderer so the menu stays headless.
 - Pause overlay skips `Renderer.advance` and map input.
 - HUD, inspector, Architect, and Work consume pointer hits before map selection.
@@ -98,6 +108,46 @@ commands via `Enqueue`. Domain code does not import this package.
   actions use the consumer-owned `devTools` interface (`devmode.go`).
 - Tests drive `App.Update` with `fakeInput` (`input_ui_test.go`).
 
+## Widget kit and text (NG-1)
+
+- Immediate mode (`ui_kit.go`, `ui_state.go`). A screen declares its widgets once
+  per `Update` from a hook it registers in an `init()` with
+  `registerScreenUI`; the hook runs right after input is polled, before the
+  click path, and only while the screen is on top with no overlay. Widgets
+  read the input, mutate the value they are bound to, register a hit
+  rectangle and queue their drawing; `App.Draw` calls `uiPaint` for the queue,
+  the modal stack and the tooltip. State is `a.ui` (`uiSt()`).
+- Widgets: `ui_check.go` (checkbox, radio), `ui_slider.go`, `ui_textfield.go`
+  (single and multi-line; `CtxText` stops global shortcuts, Esc restores),
+  `ui_scroll.go` (virtualised, wheel routed away from the camera),
+  `ui_tooltip.go`, `ui_modal.go` (stack, `CtxModal`), `ui_table.go`,
+  `ui_tabs.go`, `ui_progress.go`, `ui_spark.go`, `ui_layout.go` (`rect`, the
+  setup dialog frame, the 1280x720 minimum). Ids carry a per-screen prefix
+  (`scen.`, `sced.`, `story.`, `diff.`, `world.`, `land.`, `pawns.`, `fac.`,
+  `modal.`). Esc order: text edit, top modal, Back.
+- Text goes through `font.go`: `textStyle` (`tsSmall` 11, `tsBody` 13,
+  `tsLabel` 13 bold, `tsLarge` 16 bold, `tsTitle` 22 bold, `tsHuge` 32 bold),
+  `drawText`, `measure`, `lineH`, `wrapPx`, `ellipsize`, `setUIScale`.
+  `drawLabel` and `debugPrintAt` forward to it. Never assume a glyph width or
+  line height: measure, wrap or ellipsize.
+- Wizard draft state lives in `newgame_state.go` and survives Back/Next; it
+  becomes a `game.Setup` only on Start. Map sizes come from `game.MapSizes()`
+  (gated by `game.MaxEnabledSide`).
+- The globe (`globe.go`) is one triangle batch over a finished
+  `*planet.Planet`; it never changes the planet. The setup backdrop and the
+  globe freeze under Reduced Motion.
+- Chunk LOD (`lod.go`): tile size 48 px or more draws live, 16 to 48 px draws
+  baked 16 px chunk images (`chunk_cache.go`, LRU, rebaked when
+  `game.ChunkView.Ver` moves), under 16 px draws one 4 px whole-map bake.
+  Bakes are unlit and lit per tile at draw time. The renderer reads
+  `ChunkLayer`, `PlantsIn` and `MinimapLayer` from the `Simulation` interface
+  and never loops over the whole map per frame.
+- Minimap (`minimap.go`): maps over 150 tiles, Shift+M, click recentres.
+- Commitment colonies (`saves.go`): one save slot written by the game itself;
+  pause shows Save & Quit, Load and developer mode are disabled.
+- Captures: `-capture-ui` states for the wizard live in `capture.go`
+  (`menuCaptures`, scripted clicks) and for colony UI in `capture_colony.go`.
+
 ## Invariants
 
 - Screen IDs and widget bounds never enter domain or save state.
@@ -113,8 +163,9 @@ commands via `Enqueue`. Domain code does not import this package.
 
 ## Hot paths
 
-Colony `Draw` (terrain, world overlays, pawns, daylight). Keep off-screen culling.
-Menu `Draw` is cheap vector fills plus debug text.
+Colony `Draw` (terrain, world overlays, pawns, daylight). Keep off-screen culling
+and the chunk tiers; no full-map loops per frame. Menu `Draw` is cheap vector
+fills plus real-font text; the globe is 0.3-0.5 ms per frame.
 
 ## Determinism
 
@@ -125,7 +176,7 @@ the simulation the factory created; speed tiers only change how often
 ## Tests
 
 `nav_test.go` and `app_test.go` cover routing, disabled clicks, Start
-creating a sim, and pause blocking `Step`. `hud_test.go` covers colonist
+creating a sim, and pause blocking `Step`. `ui_kit_test.go` covers the widget kit and each `screen_*_test.go` its screen. `hud_test.go` covers colonist
 bar select, Work overlay, Architect palette, Escape order, Work cell
 toggles, inspector names, and HUD hit-testing. `splash_test.go`
 covers the right-rail menu and PNG decode. `widgets_test.go`
@@ -134,7 +185,7 @@ open a window. Existing renderer unit tests stay headless.
 
 ## Benchmarks
 
-None yet. Add them when colony draw or UI layout shows up in profiles.
+`BenchmarkDrawArt500` / `BenchmarkDrawArt250` (`draw_bench_test.go`, with a draw-call count), `BenchmarkGlobeFrame`, `BenchmarkChunkLayer500` and `BenchmarkMinimapLayer500`. `-fpsprobe N` on `cmd/game` logs real frame stats.
 
 ## Original art (ART-006)
 

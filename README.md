@@ -104,18 +104,26 @@ Media updated 2026-10-22 · regenerate with `make media clips`
 - Blueprint inspector: click a blueprint or frame to see its status, materials delivered, on the way and in stock, work left, haulers and builder; cancelling refunds delivered materials. Blocked or unreachable work is put off so colonists move on to something else, and the colonist inspector shows why.
 - Floors, fences and forbid: floors can go under beds and benches; wood and stone fences and gates keep animals in (tame animals use gates, colonists climb fences slowly); forbid items with the Forbid/Allow tools or F so colonists leave them alone.
 - Defences and combat: sandbags, spike traps, breaching raiders, rebuilding after breaches, ranged and melee combat with floating damage numbers.
-- Health: injuries, rescue and tending, infections, herbal medicine and a healroot crop.
+- Health: injuries, rescue and tending, infections, herbal medicine and a healroot crop, industrial medicine for severe wounds, and hospital beds that heal faster and cut infections in half.
 - Blood: hits spray blood (ichor from hive insects), wounded colonists and animals look bloodied until they heal, and the floor keeps splats, drip trails and pools that dry to brown, fade over 7 days and wash off in rain or snow.
 - Dirt and cleaning: colonists pick up dirt outdoors (more in rain and field work) and track it into rooms; entrance carpets of straw, wood, leather or cloth catch 30-70% of it; colonists sweep dirt and blood inside the Home area you paint, and dirty rooms lose impressiveness.
 - Animals: 61 species (livestock, wild grazers and predators, pets, birds, reptiles, hive insects and a rare legendary stag) that spawn by season and habitat, hunt, flee, gore and kick; hunting, butchering, taming, pens, manhunter packs and hive swarms.
-- Research: a research bench with five projects that unlock buildings and work.
+- Research: a research bench with seven projects that unlock buildings and work, including Fabrication (components, tool cabinets, hospital beds) and Pharmacology (industrial medicine).
 - Weather: rain, storms, snow and blizzards with wind, puddles and snow cover; rain douses outdoor fires, snow chills the air, and colonists get soaked.
 - A living world: grass, crops and trees wave in gusting wind and part around anyone walking through; trees turn in autumn and stand bare and snowy in winter.
 - Sun, moon and shadows: every sprite has a normal map, lit by a sun that rises in the east and sets in the west (lower in winter) and by a cool moon at night; shadows swing and stretch with it, long at dawn and dusk. Colonists and animals cast their own animated silhouettes, sharp at the feet and soft at the tip, plus shadows away from campfires and lamps at night.
 - Roofs: colonists roof closed rooms on their own, or wherever you plan one within 6 tiles of a wall; unroofed rooms lose their heat, roofs keep rain and snow off, and unsupported roofs collapse. Press Shift+R for the roof overlay.
 - Death and burial: the dead leave bodies that rot to bones; colonists mourn, dig graves with headstones, bury their own, or cremate on a funeral pyre.
 - Sound and options: animal calls, cries, attacks and deaths for every species; code-made sound effects that pan with the camera and fade as you zoom out, ambience for day, night and rain, and composed music for the menu, colony life and raids. Options cover volumes, fullscreen, effects detail, autosave interval, edge scrolling and reduced motion, and are saved between runs.
-- Save and load, with an autosave every in-game day (adjustable in Options).
+- Save and load, with an autosave every in-game day (adjustable in Options). Commitment mode keeps one save per colony that the game updates itself: no reloading, Save & Quit, no developer mode.
+- A full new-game flow: pick a scenario (Broken Hull, Ember Clan, Gilded Expedition, Bare Hands, or build your own in the Scenario Editor with validation and saved files), a storyteller (Orla Vane, Bram Holloway or Kestrel Quay, each pacing threats differently), and a difficulty (six presets or a custom one with 19 settings).
+- A generated world: type a seed and get a rotating hex globe with continents, climate by latitude and altitude, rain shadows, twelve biomes, hills, rivers, lakes, roads and named factions. Pick a landing site from a full tile panel (temperature, rainfall, growing period, stones, water, caves, nearest settlement), choose the starting season, and open the Factions dialog.
+- Create your characters: generated candidates you can reroll, rename, reorder and swap, with backstories, traits, skills and passions, what each cannot do, health conditions and warnings when the team has no doctor, cook, grower, builder, researcher or fighter. Colonists arrive in drop pods (or on foot, or standing in a ring, by scenario).
+- Colonist identity and skills: eleven skills with passions that set work speed and learning, 19 traits, 59 original backstories that can rule out kinds of work, six body builds with new hair and beards, and a Bio tab and a Work tab that hatches the cells a colonist cannot do. Older saves keep their colonists as before.
+- Factions: settlers, clans, drifters, freebooters and the hive swarm settle the globe; raids come from a named hostile faction, goodwill moves with raids and drifts back, and a Factions window shows goodwill history. Storyteller threat points follow wealth, colonists, time and an adaptation that eases after losses; heat waves and cold snaps come with the Extreme weather setting.
+- Water and landing-site maps: the chosen tile shapes the map with hills, caves, coasts, rivers with fords, lakes, mud, wet ground and dirt tracks, always leaving the start able to walk out. Water is rendered with a ripple shader and sounds; wading soaks colonists and washes their boots, and nothing can be built on water.
+- Components and industrial medicine: fabricate components from steel or mine buried machinery, refine herbal medicine, and build tool cabinets that speed benches and hospital beds.
+- Real font and minimap: Noto Sans throughout the menus, HUD and inspectors, and a minimap (Shift+M, click to move) on big maps. Engine work tested up to 500x500 maps, which the new-game screen will offer once the frame-rate gate passes (it offers up to 120x120 now).
 
 The full backlogs are in the [vanilla feature checklist](.cursor/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md) and the [UI/UX checklist](.cursor/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md).
 
@@ -136,6 +144,8 @@ make build          # build every command into bin/
 make test           # unit tests with the race detector and coverage
 make simulate       # headless simulation run for quick checks
 ```
+
+Developer flags for `cmd/game`: `-scenario <name>` starts a set piece (for example `-scenario grown -width 250 -height 250` is the large-map benchmark colony), `-fpsprobe N` runs the colony for N seconds of real frames at `-capture-speed` and `-capture-zoom` and logs fps, 1% low and update/draw times, and `-cpuprofile`, `-memprofile` and `-trace` write Go profiles. `go run ./cmd/benchmark` prints per-tick percentiles for the grown colony at 120, 250 and 500 tiles a side.
 
 Sound plays through your default audio device; `go run ./cmd/game -noaudio`
 (or `RIMWORLD_GO_NOAUDIO=1`) runs silently. On Linux, audio needs cgo and
@@ -158,7 +168,7 @@ swapping; Reset to defaults puts them back).
 | Selected | R draft / undraft (all selected), F forbid / allow, B H Y N J U M K I L O P the panel's buttons in order |
 | Orders | right-click (drafted: the group spreads around the tile; right-drag lines them up), Shift queues |
 | Architect | Q / E rotate, or change the shape of drag tools (line, rectangle, oval, filled or empty); Ctrl squares the shape; C Cancel tool, X Deconstruct tool |
-| Overlays | Shift+R roofs, G room stats, hold Alt for cell details |
+| Overlays | Shift+R roofs, G room stats, Shift+M minimap on maps over 150 tiles, hold Alt for cell details |
 | Amounts | Ctrl x10, Shift x100, Ctrl+Shift x1000 on bill +/- |
 | Developer mode (Options › Gameplay) | 4 ultrafast, Numpad + one tick while paused, / debug actions, ` debug log, ' debug inspector |
 
