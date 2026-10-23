@@ -9,6 +9,7 @@ import (
 
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/plant"
+	"rimworld-go/internal/domain/world/site"
 	"rimworld-go/internal/domain/world/terrain"
 	"rimworld-go/pkg/noise"
 	"rimworld-go/pkg/randx"
@@ -27,6 +28,9 @@ type Result struct {
 	Plants  []PlantSpawn
 	// Clear is the plant- and rock-free start area (inclusive bounds).
 	ClearX0, ClearY0, ClearX1, ClearY1 int
+	// Cave marks rock that cave tunnels carved into rough stone ground
+	// (GenerateSite); the game keeps a natural roof over it. Nil: none.
+	Cave []bool
 }
 
 // StartRadius is the half-size of the guaranteed open start area.
@@ -104,49 +108,20 @@ func GenerateBiome(seed uint64, w, h int, b biome.Def) Result {
 	if b.Legacy {
 		return Generate(seed, w, h)
 	}
-	r := randx.New(seed ^ 0x6d61706765)
-	rock := noise.New(r, w, h, 11)
-	rock2 := noise.New(r, w, h, 4)
-	fert := noise.New(r, w, h, 7)
-	m := terrain.NewMap(w, h)
-	cx, cy := w/2, h/2
-	res := Result{
-		Terrain: m,
-		ClearX0: cx - StartRadius, ClearY0: cy - StartRadius,
-		ClearX1: cx + StartRadius, ClearY1: cy + StartRadius,
-	}
-	inClear := func(x, y int) bool {
-		return x >= res.ClearX0 && x <= res.ClearX1 && y >= res.ClearY0 && y <= res.ClearY1
-	}
-	noRock := b.Ground.Ice >= 1000
-	soft := make([]int32, 0, w*h)
-	fv := make([]float64, w*h)
-	for y := 0; y < h; y++ {
-		for x := 0; x < w; x++ {
-			dx := math.Abs(float64(x-cx)) / float64(w/2+1)
-			dy := math.Abs(float64(y-cy)) / float64(h/2+1)
-			v := 0.75*rock.At(x, y) + 0.25*rock2.At(x, y) + 0.28*math.Max(dx, dy)
-			i := y*w + x
-			switch {
-			case noRock:
-			case v > 0.80 && !inClear(x, y):
-				m.Cells[i] = terrain.Rock
-				continue
-			case v > 0.71:
-				m.Cells[i] = terrain.Stone
-				continue
-			}
-			fv[i] = fert.At(x, y)
-			soft = append(soft, int32(i))
-		}
-	}
-	// rank the soft tiles by fertility (ties by index) and cut the ranks
-	// at the mix's cumulative weights, low band first
+	r := randx.New(seed ^ mapSalt)
+	res := newResult(w, h)
+	baseTerrain(r, &res, b, hillsTable[site.HillsDefault], nil)
+	spawnPlants(r, &res, b)
+	return res
+}
+
+// rankGround ranks the soft tiles by fertility (ties by index) and cuts
+// the ranks at the mix's cumulative weights, low band first.
+func rankGround(m terrain.Map, soft []int32, fv []float64, g biome.Ground) {
 	sort.Slice(soft, func(a, c int) bool {
 		fa, fc := fv[soft[a]], fv[soft[c]]
 		return fa < fc || fa == fc && soft[a] < soft[c]
 	})
-	g := b.Ground
 	bands := [...]struct {
 		t terrain.Type
 		w int
@@ -170,22 +145,6 @@ func GenerateBiome(seed uint64, w, h int, b biome.Def) Result {
 		}
 		m.Cells[i] = bands[band].t
 	}
-	for y := 0; y < h; y++ {
-		for x := 0; x < w; x++ {
-			if inClear(x, y) || m.At(x, y).Fertility() == 0 {
-				continue
-			}
-			roll, acc := r.IntN(1000), 0
-			for _, pd := range b.Plants {
-				if acc += pd.Permil; roll < acc {
-					res.Plants = append(res.Plants, PlantSpawn{X: x, Y: y, Species: pd.Species,
-						Growth: startGrowth(r, pd.Species)})
-					break
-				}
-			}
-		}
-	}
-	return res
 }
 
 // startGrowth is a wild plant's growth at generation: trees 60-100% grown,

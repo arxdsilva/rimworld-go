@@ -14,6 +14,11 @@ const (
 	Traps
 	// Gunsmithing: crude rifles at the workbench.
 	Gunsmithing
+	// Fabrication: components at the workbench, tool cabinets and hospital
+	// beds (NG-1 §4.8).
+	Fabrication
+	// Pharmacology: herbal medicine refined into industrial medicine.
+	Pharmacology
 	NumProjects
 )
 
@@ -41,6 +46,11 @@ var defs = [NumProjects]Def{
 		Desc: "Spike traps that spring on raiders and predators.", Unlocks: []string{"build:spike trap"}},
 	Gunsmithing: {Project: Gunsmithing, Name: "gunsmithing", Label: "Gunsmithing", Cost: 6000, Requires: []Project{Traps},
 		Desc: "Crude rifles made at the workbench.", Unlocks: []string{"recipe:make_rifle"}},
+	Fabrication: {Project: Fabrication, Name: "fabrication", Label: "Fabrication", Cost: 5000, Requires: []Project{Gunsmithing},
+		Desc:    "Machine steel into components for advanced furniture.",
+		Unlocks: []string{"recipe:fabricate_component", "build:tool cabinet", "build:hospital bed"}},
+	Pharmacology: {Project: Pharmacology, Name: "pharmacology", Label: "Pharmacology", Cost: 4000, Requires: []Project{Herbalism},
+		Desc: "Refine herbal medicine into stronger industrial medicine.", Unlocks: []string{"recipe:refine_medicine"}},
 }
 
 // DefOf returns the definition of p.
@@ -103,6 +113,36 @@ func (pr *Progress) Add(p Project, n int) bool {
 	}
 	pr[p] = min(DefOf(p).Cost, pr[p]+n)
 	return pr.Done(p)
+}
+
+// V1Projects is how many projects a save from before NG-1 holds.
+const V1Projects = 5
+
+// V1 is the research array of a version-1 save: gob only decodes an array
+// of the exact length it was written with.
+type V1 [V1Projects]int
+
+// V1 is the first V1Projects entries, for a save field old saves decode.
+func (pr Progress) V1() V1 {
+	var v V1
+	copy(v[:], pr[:])
+	return v
+}
+
+// FromV1 is the progress of a version-1 save (later projects at zero).
+func FromV1(v V1) Progress { return FromSlice(v[:]) }
+
+// Slice is the progress as a plain slice, indexed by Project. Saves should
+// store this rather than the fixed-size array: gob refuses an array whose
+// length changed, and appending a project changes NumProjects.
+func (pr Progress) Slice() []int { return append([]int(nil), pr[:]...) }
+
+// FromSlice rebuilds progress from Slice's output; projects missing from an
+// older, shorter slice start at zero and extra entries are ignored.
+func FromSlice(pts []int) Progress {
+	var pr Progress
+	copy(pr[:], pts)
+	return pr
 }
 
 // All researched, for sandboxes and tests.

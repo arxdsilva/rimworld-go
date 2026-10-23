@@ -15,6 +15,8 @@ const (
 	SelfTended
 	Tended   // by a doctor, without medicine
 	Medicine // by a doctor with herbal medicine
+	// IndustrialMedicine: by a doctor with industrial medicine (NG-1 §4.8).
+	IndustrialMedicine
 )
 
 const (
@@ -32,6 +34,8 @@ const (
 // Chance is the percent chance a wound becomes infected given its care.
 func Chance(c Care) int {
 	switch c {
+	case IndustrialMedicine:
+		return 1
 	case Medicine:
 		return 3
 	case Tended:
@@ -46,6 +50,8 @@ func Chance(c Care) int {
 // medicine), climbing otherwise. Results are clamped to [0, Fatal].
 func Step(severity int, treated bool, c Care) int {
 	switch {
+	case treated && c == IndustrialMedicine:
+		severity -= 12
 	case treated && c == Medicine:
 		severity -= 9
 	case treated:
@@ -54,4 +60,19 @@ func Step(severity int, treated bool, c Care) int {
 		severity += 4
 	}
 	return max(0, min(Fatal, severity))
+}
+
+// HealPct is how much of a plain tend's healing a tend with care c gives,
+// in percent: medicine doubles it, industrial medicine gives 2.5×, a
+// self-tend half.
+func HealPct(c Care) int {
+	switch c {
+	case IndustrialMedicine:
+		return 250
+	case Medicine:
+		return 200
+	case SelfTended:
+		return 50
+	}
+	return 100
 }

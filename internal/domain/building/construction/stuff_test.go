@@ -69,7 +69,7 @@ func TestStuffsLists(t *testing.T) {
 		{Wall, append(slices.Clone(withBlocks), item.Steel)},
 		{Floor, withBlocks},
 		{Door, []item.Kind{item.Wood, item.Steel}},
-		{Table, []item.Kind{item.Wood}},
+		{Table, []item.Kind{item.Wood, item.Steel}},
 	}
 	for _, tc := range tests {
 		got := Stuffs(tc.k)

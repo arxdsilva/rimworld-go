@@ -170,7 +170,10 @@ type saveState struct {
 	Carrying    map[entity.EntityID]entity.EntityID
 	TendedUntil map[entity.EntityID]uint64
 	Wounds      map[entity.EntityID]wound
-	Research    research.Progress
+	// Research is the first five projects (the pre-NG-1 array, which old
+	// saves decode); ResearchAll is every project and wins when present.
+	Research    research.V1
+	ResearchAll []int
 	ResearchCur research.Project
 	ResearchSet bool
 	Pens        []pen
@@ -269,7 +272,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 		AteAt: g.ateAt, Draft: g.draft, SleptAt: g.sleptAt,
 		AnimalIDs: g.animalIDs, Animals: exportStore(g.animals), Equip: g.equip, Traces: g.traces, Wild: g.wild, Wildlife: g.wl,
 		Carrying: g.carrying, TendedUntil: g.tendedUntil, Wounds: g.wounds,
-		Research: g.research, ResearchCur: g.researchCur, ResearchSet: g.researchSet, RockDamage: g.rockDamage, Residual: g.residual,
+		Research: g.research.V1(), ResearchAll: g.research.Slice(), ResearchCur: g.researchCur, ResearchSet: g.researchSet, RockDamage: g.rockDamage, Residual: g.residual,
 		Motion: g.exportMotion(), Strikes: g.lastStrike, Hits: g.lastHit,
 		Weather: g.weather, Graves: g.graves, Roofs: g.exportRoofs(),
 	}
@@ -389,7 +392,10 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	setMap(&g.carrying, s.Carrying)
 	setMap(&g.tendedUntil, s.TendedUntil)
 	setMap(&g.wounds, s.Wounds)
-	g.research, g.researchCur, g.researchSet = s.Research, s.ResearchCur, s.ResearchSet
+	g.research, g.researchCur, g.researchSet = research.FromV1(s.Research), s.ResearchCur, s.ResearchSet
+	if s.ResearchAll != nil {
+		g.research = research.FromSlice(s.ResearchAll)
+	}
 	setMap(&g.rockDamage, s.RockDamage)
 	g.residual = s.Residual
 	g.motion = importStore(s.Motion)

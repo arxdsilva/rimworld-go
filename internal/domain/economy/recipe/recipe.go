@@ -4,6 +4,7 @@ import (
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/world/geology"
 )
 
@@ -47,6 +48,11 @@ const (
 	CutLimestone
 	CutSlate
 	CutMarble
+	// FabricateComponent and RefineMedicine (NG-1 §4.8): components from
+	// steel, industrial medicine from herbal medicine, both at the
+	// workbench behind research and a minimum skill.
+	FabricateComponent
+	RefineMedicine
 	numRecipes
 )
 
@@ -82,6 +88,10 @@ type Def struct {
 	OutQty int
 	Work   int
 	Skill  work.Type // work type that does it
+	// Learn is the skill the work trains and is sped up by; MinSkill is
+	// the level a pawn needs before taking the bill (0: anyone).
+	Learn    skill.ID
+	MinSkill uint8
 	// Extra is a by-product made alongside Output (leather from butchering).
 	Extra    item.Kind
 	ExtraQty int
@@ -97,59 +107,66 @@ type Def struct {
 
 var defs = [numRecipes]Def{
 	SimpleMeal: {ID: SimpleMeal, Name: "simple_meal", Label: "Cook simple meal", Bench: construction.Stove,
-		Input: Input{AnyRaw: true, Qty: 2}, Output: item.Meal, OutQty: 1, Work: 120, Skill: work.Cook},
+		Input: Input{AnyRaw: true, Qty: 2}, Output: item.Meal, OutQty: 1, Work: 120, Skill: work.Cook, Learn: skill.Cooking},
 	Club: {ID: Club, Name: "club", Label: "Make wooden club", Bench: construction.Workbench,
-		Input: Input{Kind: item.Wood, Qty: 4}, Output: item.Club, OutQty: 1, Work: 240, Skill: work.Craft},
+		Input: Input{Kind: item.Wood, Qty: 4}, Output: item.Club, OutQty: 1, Work: 240, Skill: work.Craft, Learn: skill.Crafting},
 	ButcherDustbuck: {ID: ButcherDustbuck, Name: "butcher_dustbuck", Label: "Butcher dustbuck", Bench: construction.ButcherTable,
-		Input: Input{Kind: item.CorpseDustbuck, Qty: 1}, Output: item.Meat, OutQty: 12, Work: 200, Skill: work.Cook,
+		Input: Input{Kind: item.CorpseDustbuck, Qty: 1}, Output: item.Meat, OutQty: 12, Work: 200, Skill: work.Cook, Learn: skill.Cooking,
 		Extra: item.Leather, ExtraQty: 5, Legacy: true},
 	ButcherRidgewolf: {ID: ButcherRidgewolf, Name: "butcher_ridgewolf", Label: "Butcher ridgewolf", Bench: construction.ButcherTable,
-		Input: Input{Kind: item.CorpseRidgewolf, Qty: 1}, Output: item.Meat, OutQty: 6, Work: 200, Skill: work.Cook,
+		Input: Input{Kind: item.CorpseRidgewolf, Qty: 1}, Output: item.Meat, OutQty: 6, Work: 200, Skill: work.Cook, Learn: skill.Cooking,
 		Extra: item.Leather, ExtraQty: 4, Legacy: true},
 	ButcherAnimal: {ID: ButcherAnimal, Name: "butcher_animal", Label: "Butcher animal", Bench: construction.ButcherTable,
-		Input: Input{Kind: item.CorpseAnimal, Qty: 1}, Output: item.Meat, Work: 200, Skill: work.Cook,
+		Input: Input{Kind: item.CorpseAnimal, Qty: 1}, Output: item.Meat, Work: 200, Skill: work.Cook, Learn: skill.Cooking,
 		Extra: item.Leather, BySpecies: true},
 	// Cooking over an open fire is half again as slow as at a stove.
 	CampfireMeal: {ID: CampfireMeal, Name: "simple_meal_campfire", Label: "Cook simple meal over the fire",
 		Bench: construction.Campfire, Input: Input{AnyRaw: true, Qty: 2}, Output: item.Meal, OutQty: 1,
-		Work: 180, Skill: work.Cook},
+		Work: 180, Skill: work.Cook, Learn: skill.Cooking},
 	// Tailoring: a parka takes the hides of about three deer.
 	MakeParka: {ID: MakeParka, Name: "make_parka", Label: "Sew leather parka", Bench: construction.TailoringBench,
-		Input: Input{Kind: item.Leather, Qty: 14}, Output: item.Parka, OutQty: 1, Work: 900, Skill: work.Craft},
+		Input: Input{Kind: item.Leather, Qty: 14}, Output: item.Parka, OutQty: 1, Work: 900, Skill: work.Craft, Learn: skill.Crafting},
 	MakeTuque: {ID: MakeTuque, Name: "make_tuque", Label: "Sew leather tuque", Bench: construction.TailoringBench,
-		Input: Input{Kind: item.Leather, Qty: 4}, Output: item.Tuque, OutQty: 1, Work: 300, Skill: work.Craft},
+		Input: Input{Kind: item.Leather, Qty: 4}, Output: item.Tuque, OutQty: 1, Work: 300, Skill: work.Craft, Learn: skill.Crafting},
 	MakeDuster: {ID: MakeDuster, Name: "make_duster", Label: "Sew leather duster", Bench: construction.TailoringBench,
-		Input: Input{Kind: item.Leather, Qty: 10}, Output: item.Duster, OutQty: 1, Work: 700, Skill: work.Craft},
+		Input: Input{Kind: item.Leather, Qty: 10}, Output: item.Duster, OutQty: 1, Work: 700, Skill: work.Craft, Learn: skill.Crafting},
 	// A crude rifle: a long, careful job (needs Gunsmithing research).
 	MakeRifle: {ID: MakeRifle, Name: "make_rifle", Label: "Make crude rifle", Bench: construction.Workbench,
-		Input: Input{Kind: item.Wood, Qty: 12}, Output: item.Rifle, OutQty: 1, Work: 1500, Skill: work.Craft},
+		Input: Input{Kind: item.Wood, Qty: 12}, Output: item.Rifle, OutQty: 1, Work: 1500, Skill: work.Craft, Learn: skill.Crafting},
 	Knife: {ID: Knife, Name: "knife", Label: "Make stone knife", Bench: construction.Workbench,
-		Input: Input{AnyStoneBlocks: true, Qty: 3}, Output: item.Knife, OutQty: 1, Work: 200, Skill: work.Craft},
+		Input: Input{AnyStoneBlocks: true, Qty: 3}, Output: item.Knife, OutQty: 1, Work: 200, Skill: work.Craft, Learn: skill.Crafting},
 	Spear: {ID: Spear, Name: "spear", Label: "Make wooden spear", Bench: construction.Workbench,
-		Input: Input{Kind: item.Wood, Qty: 5}, Output: item.Spear, OutQty: 1, Work: 320, Skill: work.Craft},
+		Input: Input{Kind: item.Wood, Qty: 5}, Output: item.Spear, OutQty: 1, Work: 320, Skill: work.Craft, Learn: skill.Crafting},
 	Cremate: {ID: Cremate, Name: "cremate", Label: "Cremate corpse", Bench: construction.Pyre,
-		Input: Input{Kind: item.CorpseHuman, Qty: 1}, Work: 300, Skill: work.Craft,
+		Input: Input{Kind: item.CorpseHuman, Qty: 1}, Work: 300, Skill: work.Craft, Learn: skill.Crafting,
 		Extra: item.Wood, ExtraQty: 2},
 	DryFood: {ID: DryFood, Name: "dry_food", Label: "Dry food", Bench: construction.DryingRack,
-		Input: Input{AnyDryable: true, Qty: 1, Max: RackCapacity}, Work: 90, Skill: work.Cook, Dry: true},
+		Input: Input{AnyDryable: true, Qty: 1, Max: RackCapacity}, Work: 90, Skill: work.Cook, Learn: skill.Cooking, Dry: true},
 	// Entrance carpets: the better the material, the more dirt it catches.
 	MakeStrawCarpet: {ID: MakeStrawCarpet, Name: "make_straw_carpet", Label: "Weave straw carpet", Bench: construction.Workbench,
-		Input: Input{Kind: item.Straw, Qty: 10}, Output: item.CarpetStraw, OutQty: 1, Work: 300, Skill: work.Craft},
+		Input: Input{Kind: item.Straw, Qty: 10}, Output: item.CarpetStraw, OutQty: 1, Work: 300, Skill: work.Craft, Learn: skill.Crafting},
 	MakeWoodCarpet: {ID: MakeWoodCarpet, Name: "make_wood_carpet", Label: "Make wood slat carpet", Bench: construction.Workbench,
-		Input: Input{Kind: item.Wood, Qty: 6}, Output: item.CarpetWood, OutQty: 1, Work: 250, Skill: work.Craft},
+		Input: Input{Kind: item.Wood, Qty: 6}, Output: item.CarpetWood, OutQty: 1, Work: 250, Skill: work.Craft, Learn: skill.Crafting},
 	SewClothCarpet: {ID: SewClothCarpet, Name: "sew_cloth_carpet", Label: "Sew cloth carpet", Bench: construction.TailoringBench,
-		Input: Input{Kind: item.Cloth, Qty: 8}, Output: item.CarpetCloth, OutQty: 1, Work: 400, Skill: work.Craft},
+		Input: Input{Kind: item.Cloth, Qty: 8}, Output: item.CarpetCloth, OutQty: 1, Work: 400, Skill: work.Craft, Learn: skill.Crafting},
 	SewLeatherCarpet: {ID: SewLeatherCarpet, Name: "sew_leather_carpet", Label: "Sew leather carpet", Bench: construction.TailoringBench,
-		Input: Input{Kind: item.Leather, Qty: 6}, Output: item.CarpetLeather, OutQty: 1, Work: 400, Skill: work.Craft},
+		Input: Input{Kind: item.Leather, Qty: 6}, Output: item.CarpetLeather, OutQty: 1, Work: 400, Skill: work.Craft, Learn: skill.Crafting},
 	KnitWoolParka: {ID: KnitWoolParka, Name: "knit_wool_parka", Label: "Knit wool parka", Bench: construction.TailoringBench,
-		Input: Input{Kind: item.Wool, Qty: 16}, Output: item.WoolParka, OutQty: 1, Work: 1000, Skill: work.Craft},
+		Input: Input{Kind: item.Wool, Qty: 16}, Output: item.WoolParka, OutQty: 1, Work: 1000, Skill: work.Craft, Learn: skill.Crafting},
 	WeaveWoolCarpet: {ID: WeaveWoolCarpet, Name: "weave_wool_carpet", Label: "Weave wool carpet", Bench: construction.TailoringBench,
-		Input: Input{Kind: item.Wool, Qty: 8}, Output: item.CarpetWool, OutQty: 1, Work: 450, Skill: work.Craft},
+		Input: Input{Kind: item.Wool, Qty: 8}, Output: item.CarpetWool, OutQty: 1, Work: 450, Skill: work.Craft, Learn: skill.Crafting},
 	CutSandstone: cut(CutSandstone, geology.Sandstone),
 	CutGranite:   cut(CutGranite, geology.Granite),
 	CutLimestone: cut(CutLimestone, geology.Limestone),
 	CutSlate:     cut(CutSlate, geology.Slate),
 	CutMarble:    cut(CutMarble, geology.Marble),
+	FabricateComponent: {ID: FabricateComponent, Name: "fabricate_component", Label: "Fabricate component",
+		Bench: construction.Workbench, Input: Input{Kind: item.Steel, Qty: 12}, Output: item.Components, OutQty: 1,
+		Work: 1500, Skill: work.Craft, Learn: skill.Crafting, MinSkill: 6},
+	// Refining medicine is a doctor's job, done at the workbench.
+	RefineMedicine: {ID: RefineMedicine, Name: "refine_medicine", Label: "Refine industrial medicine",
+		Bench: construction.Workbench, Input: Input{Kind: item.HerbalMedicine, Qty: 2}, Output: item.IndustrialMedicine,
+		OutQty: 1, Work: 800, Skill: work.Doctor, Learn: skill.Medicine, MinSkill: 4},
 }
 
 // CutYield is how many blocks one chunk makes at the stonecutter table.
@@ -158,7 +175,7 @@ const CutYield = 10
 func cut(id ID, s geology.Stone) Def {
 	return Def{ID: id, Name: "cut_" + s.String(), Label: "Cut " + s.String() + " blocks",
 		Bench: construction.StonecutterTable, Input: Input{Kind: item.ChunkOf(s), Qty: 1},
-		Output: item.BlocksOf(s), OutQty: CutYield, Work: 300, Skill: work.Craft}
+		Output: item.BlocksOf(s), OutQty: CutYield, Work: 300, Skill: work.Craft, Learn: skill.Crafting}
 }
 
 // RackCapacity is how many items one drying rack holds.

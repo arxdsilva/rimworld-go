@@ -1,0 +1,77 @@
+package construction
+
+import (
+	"slices"
+	"testing"
+
+	"rimworld-go/internal/domain/economy/item"
+)
+
+func TestComponentBuildings(t *testing.T) {
+	t.Parallel()
+	tc := DefOf(ToolCabinet)
+	if tc.Name != "tool cabinet" || tc.Wood != 30 || tc.Work != 120 || tc.Components != 1 || !tc.BlocksMove ||
+		tc.Size != [2]int{} || tc.Placed {
+		t.Fatalf("tool cabinet %+v", tc)
+	}
+	if !slices.Equal(Stuffs(ToolCabinet), []item.Kind{item.Steel}) || DefaultStuff(ToolCabinet) != item.Steel ||
+		StuffOK(ToolCabinet, item.Wood) || !StuffOK(ToolCabinet, item.Steel) {
+		t.Fatal("a tool cabinet is steel only")
+	}
+	hb := DefOf(HospitalBed)
+	if hb.Name != "hospital bed" || hb.Wood != 45 || hb.Work != 200 || hb.Components != 2 || !hb.Rotatable ||
+		hb.Size != [2]int{1, 2} || hb.BlocksMove {
+		t.Fatalf("hospital bed %+v", hb)
+	}
+	if !slices.Equal(Stuffs(HospitalBed), []item.Kind{item.Wood, item.Steel}) || DefaultStuff(HospitalBed) != item.Wood {
+		t.Fatalf("hospital bed stuffs %v", Stuffs(HospitalBed))
+	}
+	if !HospitalBed.Sleeps() || HospitalBed.Sleepers() != 1 || ComponentCost(HospitalBed) != 2 || ComponentCost(Bed) != 0 {
+		t.Fatal("a hospital bed sleeps one like a bed")
+	}
+	if cells, _, _ := Footprint(HospitalBed, East, 3, 3); len(cells) != 2 || cells[0][1] != cells[1][1] {
+		t.Fatalf("hospital bed on its side %v", cells)
+	}
+}
+
+func TestPodShellDeconstructsToSteel(t *testing.T) {
+	t.Parallel()
+	d := DefOf(PodShell)
+	if d.Name != "pod shell" || !d.Placed || d.BlocksMove || !PodShell.Instant() || d.Size != [2]int{} {
+		t.Fatalf("pod shell %+v", d)
+	}
+	if Refund(PodShell) != 6 || DefaultStuff(PodShell) != item.Steel || !slices.Equal(Stuffs(PodShell), []item.Kind{item.Steel}) {
+		t.Fatalf("pod shell salvages 6 steel: refund %d stuff %v", Refund(PodShell), DefaultStuff(PodShell))
+	}
+	for _, k := range All() {
+		if k.Placed && k.Kind != PodShell {
+			t.Fatalf("%s is placed-only", k.Name)
+		}
+	}
+}
+
+func TestComponentFramesWait(t *testing.T) {
+	t.Parallel()
+	f := Frame{Kind: HospitalBed, Need: 45, Wood: 45, CompNeed: 2, Comp: 1}
+	if f.Ready() {
+		t.Fatal("a frame waits for its components")
+	}
+	if f.Comp = 2; !f.Ready() {
+		t.Fatal("materials and components in: ready")
+	}
+	if (Frame{Need: 5, Wood: 5}).Ready() != true || (Frame{Need: 5, Wood: 4}).Ready() {
+		t.Fatal("frames without components keep the old rule")
+	}
+	if (Frame{Need: 30, Wood: 10, CompNeed: 1, Comp: 1}).Ready() {
+		t.Fatal("components alone are not enough")
+	}
+}
+
+func TestSteelFurniture(t *testing.T) {
+	t.Parallel()
+	for _, k := range []Kind{Table, Chair, Bed, DoubleBed} {
+		if !StuffOK(k, item.Steel) || !StuffOK(k, item.Wood) || StuffOK(k, item.GraniteBlocks) {
+			t.Errorf("%s: wood or steel, not stone", k)
+		}
+	}
+}

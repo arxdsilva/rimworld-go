@@ -56,6 +56,13 @@ const (
 	FenceGate
 	// StonecutterTable cuts stone chunks into blocks (SIM-029).
 	StonecutterTable
+	// ToolCabinet is a steel cabinet of tools that speeds nearby benches;
+	// HospitalBed is a bed for patients (NG-1 §4.8). Both need components.
+	ToolCabinet
+	HospitalBed
+	// PodShell is the empty shell of an arrival pod: placed by the arrival,
+	// never designated, walkable, and salvaged for steel.
+	PodShell
 	kindCount
 )
 
@@ -81,6 +88,16 @@ type Def struct {
 	Rotatable  bool
 	StoneOK    bool // may be built from any stone blocks instead of wood
 	MetalOK    bool // may be built from steel
+	// MetalOnly: steel is the only material (wood is refused); Wood is
+	// then the steel needed.
+	MetalOnly bool
+	// Components are delivered after the material, before work starts.
+	Components int
+	// Placed kinds are put down by the game (a drop pod's shell), never
+	// designated from the architect menu.
+	Placed bool
+	// Salvage is what deconstructing a Placed kind returns (of its stuff).
+	Salvage int
 	// Size is the footprint (w, h) when facing south; zero means 1x1.
 	Size [2]int
 	// Spot is the interaction cell relative to the footprint's top-left
@@ -123,11 +140,11 @@ func StuffStats(s item.Kind) (hpPct, workPct int) {
 
 var defs = [kindCount]Def{
 	Wall:         {Kind: Wall, Name: "wall", Wood: 2, Work: 40, Layer: LayerObject, BlocksMove: true, StoneOK: true, MetalOK: true},
-	Bed:          {Kind: Bed, Name: "bed", Wood: 5, Work: 90, Layer: LayerObject, Rotatable: true, Size: [2]int{1, 2}},
+	Bed:          {Kind: Bed, Name: "bed", Wood: 5, Work: 90, Layer: LayerObject, Rotatable: true, Size: [2]int{1, 2}, MetalOK: true},
 	Door:         {Kind: Door, Name: "door", Wood: 2, Work: 50, Layer: LayerObject, MetalOK: true},
 	Floor:        {Kind: Floor, Name: "floor", Wood: 1, Work: 20, Layer: LayerFloor, StoneOK: true},
-	Table:        {Kind: Table, Name: "table", Wood: 3, Work: 50, Layer: LayerObject},
-	Chair:        {Kind: Chair, Name: "chair", Wood: 2, Work: 40, Layer: LayerObject, Rotatable: true},
+	Table:        {Kind: Table, Name: "table", Wood: 3, Work: 50, Layer: LayerObject, MetalOK: true},
+	Chair:        {Kind: Chair, Name: "chair", Wood: 2, Work: 40, Layer: LayerObject, Rotatable: true, MetalOK: true},
 	Lamp:         {Kind: Lamp, Name: "lamp", Wood: 2, Work: 40, Layer: LayerObject},
 	SleepingSpot: {Kind: SleepingSpot, Name: "sleeping spot", Layer: LayerObject, Rotatable: true, Size: [2]int{1, 2}},
 	Workbench: {Kind: Workbench, Name: "workbench", Wood: 6, Work: 160, Layer: LayerObject, BlocksMove: true,
@@ -135,7 +152,7 @@ var defs = [kindCount]Def{
 	Stove: {Kind: Stove, Name: "stove", Wood: 5, Work: 140, Layer: LayerObject, BlocksMove: true,
 		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
 	DoubleBed: {Kind: DoubleBed, Name: "double bed", Wood: 9, Work: 150, Layer: LayerObject, Rotatable: true,
-		Size: [2]int{2, 2}},
+		Size: [2]int{2, 2}, MetalOK: true},
 	ButcherTable: {Kind: ButcherTable, Name: "butcher table", Wood: 5, Work: 120, Layer: LayerObject, BlocksMove: true,
 		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
 	HorseshoePin: {Kind: HorseshoePin, Name: "horseshoe pin", Wood: 3, Work: 50, Layer: LayerObject},
@@ -162,6 +179,11 @@ var defs = [kindCount]Def{
 	FenceGate: {Kind: FenceGate, Name: "fence gate", Wood: 3, Work: 40, Layer: LayerObject, Rotatable: true, AnimalBlock: true, Gate: true},
 	StonecutterTable: {Kind: StonecutterTable, Name: "stonecutter table", Wood: 6, Work: 160, Layer: LayerObject, BlocksMove: true,
 		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
+	ToolCabinet: {Kind: ToolCabinet, Name: "tool cabinet", Wood: 30, Work: 120, Layer: LayerObject, BlocksMove: true,
+		MetalOK: true, MetalOnly: true, Components: 1},
+	HospitalBed: {Kind: HospitalBed, Name: "hospital bed", Wood: 45, Work: 200, Layer: LayerObject, Rotatable: true,
+		Size: [2]int{1, 2}, MetalOK: true, Components: 2},
+	PodShell: {Kind: PodShell, Name: "pod shell", Layer: LayerObject, MetalOK: true, MetalOnly: true, Placed: true, Salvage: 6},
 }
 
 // MaxHP is how much damage a building takes before it is destroyed.
@@ -194,7 +216,9 @@ func CoverPct(k Kind) int {
 }
 
 // Sleeps reports whether k is something to sleep in.
-func (k Kind) Sleeps() bool { return k == Bed || k == SleepingSpot || k == DoubleBed }
+func (k Kind) Sleeps() bool {
+	return k == Bed || k == SleepingSpot || k == DoubleBed || k == HospitalBed
+}
 
 // Sleepers is how many pawns a sleeping place holds side by side.
 func (k Kind) Sleepers() int {
@@ -333,6 +357,9 @@ func (k Kind) String() string {
 // WoodCost is delivered wood required before construction work.
 func WoodCost(k Kind) int { return DefOf(k).Wood }
 
+// ComponentCost is the components delivered after the material.
+func ComponentCost(k Kind) int { return DefOf(k).Components }
+
 // WorkTicks is Do-phase labor after materials are delivered.
 func WorkTicks(k Kind) int { return DefOf(k).Work }
 
@@ -340,8 +367,11 @@ func WorkTicks(k Kind) int { return DefOf(k).Work }
 func DeconstructTicks(k Kind) int { return (DefOf(k).Work + 1) / 2 }
 
 // Refund is the material returned by deconstruction (half, rounded down;
-// a carpet comes back whole).
+// a carpet comes back whole, a placed kind gives its Salvage).
 func Refund(k Kind) int {
+	if s := DefOf(k).Salvage; s > 0 {
+		return s
+	}
 	if DefOf(k).Carpet {
 		return DefOf(k).Wood
 	}
@@ -355,7 +385,7 @@ func StuffOK(k Kind, s item.Kind) bool {
 	}
 	switch {
 	case s == item.Wood:
-		return true
+		return !DefOf(k).MetalOnly
 	case item.IsStoneBlocks(s):
 		return DefOf(k).StoneOK
 	case s == item.Steel:
@@ -369,6 +399,9 @@ func DefaultStuff(k Kind) item.Kind {
 	if DefOf(k).Carpet {
 		return item.CarpetStraw
 	}
+	if DefOf(k).MetalOnly {
+		return item.Steel
+	}
 	return item.Wood
 }
 
@@ -377,6 +410,9 @@ func Stuffs(k Kind) []item.Kind {
 	d := DefOf(k)
 	if d.Carpet {
 		return item.Carpets()
+	}
+	if d.MetalOnly {
+		return []item.Kind{item.Steel}
 	}
 	out := []item.Kind{item.Wood}
 	if d.StoneOK {
@@ -427,13 +463,15 @@ func ParseFacing(v uint8) Facing {
 
 // Frame is a blueprint that accepts wood then construct work.
 type Frame struct {
-	Kind     Kind
-	Stuff    item.Kind
-	Facing   Facing
-	X, Y     int
-	Wood     int
-	Need     int
-	WorkLeft int
+	Kind   Kind
+	Stuff  item.Kind
+	Facing Facing
+	X, Y   int
+	Wood   int
+	Need   int
+	// Comp of CompNeed components delivered (zero for kinds without).
+	Comp, CompNeed int
+	WorkLeft       int
 	// Rebuild marks the blueprint of a smashed building: builders and
 	// haulers see to it before anything else.
 	Rebuild bool
@@ -442,8 +480,8 @@ type Frame struct {
 	Reinstall uint64
 }
 
-// Ready reports materials are in place.
-func (f Frame) Ready() bool { return f.Wood >= f.Need }
+// Ready reports materials and components are in place.
+func (f Frame) Ready() bool { return f.Wood >= f.Need && f.Comp >= f.CompNeed }
 
 // Building is a completed structure.
 type Building struct {

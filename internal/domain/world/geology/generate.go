@@ -2,6 +2,7 @@ package geology
 
 import (
 	"math"
+	"slices"
 
 	"rimworld-go/internal/domain/world/terrain"
 	"rimworld-go/pkg/noise"
@@ -31,7 +32,13 @@ var veinSpecs = [...]veinSpec{
 	{ore: Steel, per: 350, minDeep: 60, minSize: 6, sizeSpan: 9}, // 6–14
 	{ore: Silver, per: 1400, minSize: 4, sizeSpan: 6},            // 4–9
 	{ore: Gold, per: 2800, minSize: 3, sizeSpan: 4},              // 3–6
+	// Buried machinery (NG-1 §4.8) only on site maps (GenerateWith with
+	// stones): legacy maps keep their exact ore.
+	{ore: Machinery, per: 2500, minSize: 1, sizeSpan: 3}, // 1–3
 }
+
+// legacyVeins is the vein table of Generate: the ores before machinery.
+var legacyVeins = veinSpecs[:3]
 
 // count is how many veins a map with deep depth-≥2 cells gets.
 func (v veinSpec) count(deep int) int {
@@ -51,8 +58,32 @@ func Generate(seed uint64, t terrain.Map) Map {
 		return m
 	}
 	r := randx.New(seed ^ Salt)
-	assignStones(&m, t, r)
-	placeOre(&m, t, r)
+	assignStones(&m, t, r, pickStones(r))
+	placeOre(&m, t, r, legacyVeins)
+	return m
+}
+
+// GenerateWith is Generate for a landing site: the stones are the site's
+// (2–3, from the world tile) instead of a random pick, and deep rock also
+// holds buried machinery. Invalid or repeated stones are dropped; with
+// none left it is exactly Generate.
+func GenerateWith(seed uint64, t terrain.Map, stones []Stone) Map {
+	var picked []Stone
+	for _, s := range stones {
+		if s != None && s < numStones && !slices.Contains(picked, s) {
+			picked = append(picked, s)
+		}
+	}
+	if len(picked) == 0 {
+		return Generate(seed, t)
+	}
+	m := NewMap(t.W, t.H)
+	if t.W <= 0 || t.H <= 0 || len(t.Cells) != t.W*t.H {
+		return m
+	}
+	r := randx.New(seed ^ Salt)
+	assignStones(&m, t, r, picked)
+	placeOre(&m, t, r, veinSpecs[:])
 	return m
 }
 
@@ -74,8 +105,7 @@ func natural(t terrain.Type) bool {
 
 // assignStones gives every natural cell the stone whose noise layer is
 // highest there (ties go to the earlier pick).
-func assignStones(m *Map, t terrain.Map, r *randx.Rand) {
-	stones := pickStones(r)
+func assignStones(m *Map, t terrain.Map, r *randx.Rand, stones []Stone) {
 	layers := make([]noise.Value, len(stones))
 	for i := range layers {
 		layers[i] = noise.New(r, t.W, t.H, regionCell)
@@ -142,13 +172,13 @@ func deepCells(t terrain.Map, d []int) []int {
 }
 
 // placeOre seeds each ore's veins in deep rock and grows them.
-func placeOre(m *Map, t terrain.Map, r *randx.Rand) {
+func placeOre(m *Map, t terrain.Map, r *randx.Rand, specs []veinSpec) {
 	deep := deepCells(t, depths(t))
 	if len(deep) == 0 {
 		return
 	}
 	var frontier []int
-	for _, v := range veinSpecs {
+	for _, v := range specs {
 		for n := v.count(len(deep)); n > 0; n-- {
 			start := deep[r.IntN(len(deep))]
 			size := v.minSize + r.IntN(v.sizeSpan)
