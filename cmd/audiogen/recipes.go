@@ -145,4 +145,59 @@ var sounds = []sound{
 		{Wave: s.White, Dur: 10, HighPass: 1500, Grains: 25, GrainLen: 0.006},
 		{Wave: s.White, Dur: 10, BandPass: 3000, Grains: 8, GrainLen: 0.015, Gain: 0.7},
 	}}, 0.7},
+
+	// --- new game (NG-1 §7.4)
+	// A soft tick for a slider moving one step.
+	{s.Recipe{ID: "ui.slider_tick", Seed: 109, Variants: 2, Jitter: 0.04, Layers: []s.Layer{
+		{Wave: s.Sine, Freq: 2600, FreqEnd: 2100, Dur: 0.03, Attack: 0.001, Decay: 0.012, Gain: 0.8},
+		{Wave: s.White, Dur: 0.006, HighPass: 5000, Decay: 0.003, Gain: 0.2},
+	}}, 0.4},
+	// A page turn: a short breath of filtered noise.
+	{s.Recipe{ID: "ui.page", Seed: 110, Variants: 2, Jitter: 0.05, Layers: []s.Layer{
+		{Wave: s.Pink, Dur: 0.22, BandPass: 1500, BandEnd: 3400, Q: 0.7, Attack: 0.05, Decay: 0.09, Gain: 0.6},
+		{Wave: s.White, Start: 0.03, Dur: 0.15, HighPass: 4500, Attack: 0.04, Decay: 0.06, Gain: 0.18},
+	}}, 0.45},
+
+	// --- landing pod
+	// The descent: a whistle climbing over a rumble and rushing air.
+	{s.Recipe{ID: "sfx.pod_fall", Seed: 501, Layers: []s.Layer{
+		{Wave: s.Sine, Freq: 320, FreqEnd: 1900, Dur: 1.4, Attack: 0.5, Release: 0.15, Tremolo: 9, TremoloDepth: 0.15, Gain: 0.5},
+		{Wave: s.Triangle, Freq: 640, FreqEnd: 3700, Dur: 1.4, Attack: 0.6, Release: 0.15, Gain: 0.15},
+		{Wave: s.White, Dur: 1.4, BandPass: 700, BandEnd: 3600, Q: 1.2, Attack: 0.7, Release: 0.15, Gain: 0.45},
+		{Wave: s.Brown, Dur: 1.4, LowPass: 320, Attack: 0.9, Release: 0.1, Gain: 0.9},
+	}}, 0.8},
+	// The impact: a thud, rocks thrown up, dust settling.
+	{s.Recipe{ID: "sfx.pod_land", Seed: 502, Layers: []s.Layer{
+		{Wave: s.Sine, Freq: 95, FreqEnd: 38, Dur: 0.5, Attack: 0.002, Decay: 0.18, Gain: 0.9},
+		{Wave: s.Brown, Dur: 0.6, LowPass: 450, Attack: 0.002, Decay: 0.25},
+		{Wave: s.White, Dur: 0.9, HighPass: 1800, Grains: 90, GrainLen: 0.012, Attack: 0.01, Decay: 0.4, Gain: 0.25},
+		{Wave: s.Pink, Start: 0.05, Dur: 1.0, BandPass: 2200, BandEnd: 1200, Q: 0.6, Attack: 0.05, Decay: 0.45, Gain: 0.3},
+	}}, 0.85},
+	// The hatch: pressure hisses out, then a metal clank.
+	{s.Recipe{ID: "sfx.pod_open", Seed: 503, Layers: []s.Layer{
+		{Wave: s.White, Dur: 0.8, HighPass: 2400, Attack: 0.03, Decay: 0.4, Gain: 0.4},
+		{Wave: s.Pink, Dur: 0.7, BandPass: 1400, Q: 0.8, Attack: 0.04, Decay: 0.3, Gain: 0.3},
+		{Wave: s.Sine, Freq: 1250, Start: 0.6, Dur: 0.5, Attack: 0.001, Decay: 0.2, Gain: 0.4},
+		{Wave: s.Sine, Freq: 1960, Start: 0.6, Dur: 0.3, Attack: 0.001, Decay: 0.1, Gain: 0.25},
+		{Wave: s.Sine, Freq: 310, FreqEnd: 240, Start: 0.6, Dur: 0.25, Attack: 0.001, Decay: 0.1, Gain: 0.6},
+		{Wave: s.White, Start: 0.6, Dur: 0.02, HighPass: 3000, Gain: 0.5},
+	}}, 0.7},
+
+	// --- water (NG-1 §7.4)
+	// A babbling brook: pinkish noise through several band-passes that drift
+	// slowly, with fast gurgling wobble and splashing grains.
+	{s.Recipe{ID: "amb.water_river", Seed: 601, Loop: 8, Layers: []s.Layer{
+		{Wave: s.Pink, Dur: 10, BandPass: 450, BandEnd: 800, Q: 1.4, Tremolo: 7, TremoloDepth: 0.45, Gain: 0.8},
+		{Wave: s.Pink, Dur: 10, BandPass: 1300, BandEnd: 850, Q: 1.6, Tremolo: 11, TremoloDepth: 0.5, Gain: 0.7},
+		{Wave: s.Pink, Dur: 10, BandPass: 2300, BandEnd: 3100, Q: 2, Tremolo: 5, TremoloDepth: 0.6, Gain: 0.45},
+		{Wave: s.White, Dur: 10, BandPass: 3400, BandEnd: 2600, Q: 2.5, Grains: 30, GrainLen: 0.02, Gain: 0.3},
+		{Wave: s.Brown, Dur: 10, LowPass: 260, Gain: 0.35},
+	}}, 0.6},
+	// Waves washing a shore: a slow swell of noise with a fizz of foam at
+	// the crest.
+	{s.Recipe{ID: "amb.water_shore", Seed: 602, Loop: 8, Layers: []s.Layer{
+		{Wave: s.Brown, Dur: 10, LowPass: 700, Tremolo: 0.25, TremoloDepth: 0.85, Gain: 0.8},
+		{Wave: s.Pink, Dur: 10, BandPass: 900, BandEnd: 1500, Q: 0.6, Tremolo: 0.25, TremoloDepth: 0.9, Gain: 0.6},
+		{Wave: s.White, Dur: 10, HighPass: 3500, Tremolo: 0.25, TremoloDepth: 0.95, Grains: 120, GrainLen: 0.01, Gain: 0.25},
+	}}, 0.6},
 }

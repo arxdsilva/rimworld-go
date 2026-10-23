@@ -349,9 +349,14 @@ func (a *App) ngButton(id string, r rect, label string, o btnOpts, fn func()) {
 // ngFooter declares the Back button and the forward button of a setup
 // screen. Enter presses the forward button when it is enabled.
 func (a *App) ngFooter(footer rect, label, nextID string, o btnOpts, onNext func()) {
-	a.ngButton("wizard.back", footerBack(footer), "Back", btnOpts{}, a.goBack)
+	back := func() { a.pageSound(); a.goBack() }
+	a.ngButton("wizard.back", footerBack(footer), "Back", btnOpts{}, back)
 	if o.Style == btnNormal {
 		o.Style = btnPrimary
+	}
+	if nextID == "wizard.next" {
+		inner := onNext
+		onNext = func() { a.pageSound(); inner() }
 	}
 	a.ngButton(nextID, footerNext(footer), label, o, onNext)
 	if a.in.fired(input.Accept) && !o.Disabled && !a.uiModalOpen() && !a.uiTextEditing() {

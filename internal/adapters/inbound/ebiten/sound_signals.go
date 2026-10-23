@@ -63,8 +63,9 @@ type soundMemo struct {
 	mines     map[[2]int]uint8           // marked tile -> its terrain code
 	smooths   map[[2]int]uint8
 	doorsOpen map[[2]int]bool
-	notice    uint64  // newest non-danger message heard
-	plantBuf  []int32 // plantOn's PlantsIn buffer
+	notice    uint64                  // newest non-danger message heard
+	plantBuf  []int32                 // plantOn's PlantsIn buffer
+	pods      map[[3]uint64]podSounds // arrival pods heard so far (listenArrivals)
 }
 
 // listenWorld cues builds finishing, trees falling, rock mined out or
@@ -152,7 +153,8 @@ func (r *Renderer) listenWorld(w game.WorldView, pawns []game.PawnView) {
 		}
 	}
 	*m = soundMemo{init: true, frames: frames, cutPlants: cut, mines: mines, smooths: smooths, doorsOpen: doors,
-		notice: notice, plantBuf: m.plantBuf}
+		notice: notice, plantBuf: m.plantBuf, pods: m.pods}
+	r.listenArrivals(w)
 }
 
 // plantOn is the plant on tile t of w (Simulation.PlantsIn: that tile's
@@ -203,4 +205,45 @@ func (r *Renderer) listenThunder() {
 		r.thunderAt = 0
 		r.globalCue("sfx.thunder")
 	}
+}
+
+// podFallLead is how long before landing the pod's descent is heard, ticks:
+// the length of sfx.pod_fall at the normal speed, so the thud lands on the
+// last note of the whistle.
+const podFallLead = 84
+
+// podSounds is which of a pod's three sounds have been cued.
+type podSounds struct{ fell, landed, opened bool }
+
+// listenArrivals cues each arrival pod of the world (NG-1 §7.4): the fall
+// when its descent starts, the landing at the stamp's tick, and the hatch
+// when the pod's Landed flag flips. A pod first seen already past a stage
+// is silent for it (a loaded game, a camera that was elsewhere), so each
+// sound is heard once, in order. It runs only while time passes.
+func (r *Renderer) listenArrivals(w game.WorldView) {
+	m := &r.memo
+	now := uint64(r.game.Tick())
+	seen := make(map[[3]uint64]podSounds, len(w.Arrivals))
+	for _, p := range w.Arrivals {
+		key := [3]uint64{uint64(p.X), uint64(p.Y), p.Tick}
+		st, known := m.pods[key]
+		if !known { // first seen past a stage: silent for it
+			st = podSounds{fell: now >= p.Tick, landed: now >= p.Tick, opened: p.Landed}
+		}
+		x, y := float64(p.X)+0.5, float64(p.Y)+0.5
+		if !st.fell && now+podFallLead >= p.Tick {
+			st.fell = true
+			r.cue("sfx.pod_fall", x, y, 1)
+		}
+		if !st.landed && now >= p.Tick {
+			st.landed = true
+			r.cue("sfx.pod_land", x, y, 1)
+		}
+		if !st.opened && p.Landed {
+			st.opened = true
+			r.cue("sfx.pod_open", x, y, 1)
+		}
+		seen[key] = st
+	}
+	m.pods = seen
 }

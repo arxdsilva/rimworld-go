@@ -101,6 +101,7 @@ func (a *App) uiSlider(id string, r rect, val *float64, sp sliderSpec) bool {
 			v = math.Round(v)
 		}
 		if v != *val {
+			a.sliderCue(sp, lo, hi, *val, v)
 			*val, changed = v, true
 		}
 	}

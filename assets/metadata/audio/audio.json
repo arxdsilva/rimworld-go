@@ -66,6 +66,32 @@
       "reviewed_by": "arxdsilva"
     },
     {
+      "id": "amb.water_river",
+      "bus": "ambience",
+      "loop": true,
+      "volume": 0.6,
+      "files": [
+        "ambience/water_river.wav"
+      ],
+      "source": "procedural",
+      "recipe": "amb.water_river",
+      "seed": 601,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "amb.water_shore",
+      "bus": "ambience",
+      "loop": true,
+      "volume": 0.6,
+      "files": [
+        "ambience/water_shore.wav"
+      ],
+      "source": "procedural",
+      "recipe": "amb.water_shore",
+      "seed": 602,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
       "id": "animal.bird_large.attack",
       "bus": "effects",
       "volume": 0.85,
@@ -775,6 +801,42 @@
       "license": "original, made in code (CC0, this repo)"
     },
     {
+      "id": "sfx.pod_fall",
+      "bus": "effects",
+      "volume": 0.8,
+      "files": [
+        "sfx/pod_fall_0.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.pod_fall",
+      "seed": 501,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.pod_land",
+      "bus": "effects",
+      "volume": 0.85,
+      "files": [
+        "sfx/pod_land_0.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.pod_land",
+      "seed": 502,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.pod_open",
+      "bus": "effects",
+      "volume": 0.7,
+      "files": [
+        "sfx/pod_open_0.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.pod_open",
+      "seed": 503,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
       "id": "sfx.rock_break",
       "bus": "effects",
       "volume": 0.8,
@@ -922,6 +984,19 @@
       "license": "original, made in code (CC0, this repo)"
     },
     {
+      "id": "ui.page",
+      "bus": "ui",
+      "volume": 0.45,
+      "files": [
+        "ui/page_0.wav",
+        "ui/page_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "ui.page",
+      "seed": 110,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
       "id": "ui.pause",
       "bus": "ui",
       "volume": 0.45,
@@ -943,6 +1018,19 @@
       "source": "procedural",
       "recipe": "ui.resume",
       "seed": 106,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "ui.slider_tick",
+      "bus": "ui",
+      "volume": 0.4,
+      "files": [
+        "ui/slider_tick_0.wav",
+        "ui/slider_tick_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "ui.slider_tick",
+      "seed": 109,
       "license": "original, made in code (CC0, this repo)"
     },
     {

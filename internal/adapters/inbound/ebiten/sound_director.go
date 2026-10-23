@@ -5,6 +5,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"rimworld-go/internal/application/game"
 )
 
 // The sound director (SND-001) decides, once per frame, what the player
@@ -111,6 +113,32 @@ func (a *App) uiSound(b button) {
 	default:
 		a.cfg.Sound.Play("ui.click", 1, 0)
 	}
+}
+
+// pageSound is the soft swish of a wizard page turning (Next or Back).
+func (a *App) pageSound() { a.cfg.Sound.Play("ui.page", 1, 0) }
+
+// sliderTickSteps is how finely a continuous slider ticks: 20 steps along
+// its track when it has no step of its own.
+const sliderTickSteps = 20
+
+// sliderCue ticks when a slider moves from old to cur across a step: any
+// change of a discrete slider, one tick per sliderTickSteps-th of a
+// continuous one (or per sp.Step), so a drag ticks as it moves, not every
+// frame.
+func (a *App) sliderCue(sp sliderSpec, lo, hi, old, cur float64) {
+	if sp.discrete() {
+		a.play("ui.slider_tick", 1, 0)
+		return
+	}
+	step := sp.Step
+	if step <= 0 {
+		step = (hi - lo) / sliderTickSteps
+	}
+	if step <= 0 || math.Floor((old-lo)/step) == math.Floor((cur-lo)/step) {
+		return
+	}
+	a.play("ui.slider_tick", 1, 0)
 }
 
 // soundFrame runs the director once per Update.
@@ -262,6 +290,9 @@ func (a *App) colonyAmbience(want map[string]loopWant) {
 	}
 	want["amb.night"] = loopWant{id: "amb.night", vol: (1 - day) * (1 - 0.5*rain) * crickets * inside}
 	want["amb.rain"] = loopWant{id: "amb.rain", vol: rain * inside}
+	water, shore := r.waterOnScreen(w, v)
+	want["amb.water_river"] = loopWant{id: "amb.water_river", vol: math.Min(1, water*waterRiverGain) * inside}
+	want["amb.water_shore"] = loopWant{id: "amb.water_shore", vol: math.Min(1, shore*waterShoreGain) * inside}
 	type fire struct {
 		key      string
 		vol, pan float64
@@ -288,6 +319,58 @@ func (a *App) colonyAmbience(want map[string]loopWant) {
 			delete(want, key)
 		}
 	}
+}
+
+const (
+	// waterSamples is the most tiles sampled across the view each way
+	// (strided on big views, so the cost never grows with the map).
+	waterSamples = 40
+	// waterRiverGain and waterShoreGain turn an on-screen fraction into a
+	// volume: a sixth of the view in water, or a tenth of it shoreline,
+	// is the full bed.
+	waterRiverGain = 6.0
+	waterShoreGain = 10.0
+)
+
+// waterOnScreen is the share of the visible tiles that are water (shallow
+// or deep) and the share that are shore: water with land beside it. It
+// samples a strided grid of at most waterSamples x waterSamples tiles.
+func (r *Renderer) waterOnScreen(w game.WorldView, v viewport) (water, shore float64) {
+	if w.TerrainW <= 0 || len(w.Terrain) == 0 {
+		return 0, 0
+	}
+	h := len(w.Terrain) / w.TerrainW
+	x0f, y0f := r.screenToWorld(int(v.x0), int(v.y0))
+	x1f, y1f := r.screenToWorld(int(v.x1), int(v.y1))
+	x0, y0 := max(0, int(math.Floor(x0f))), max(0, int(math.Floor(y0f)))
+	x1, y1 := min(w.TerrainW-1, int(math.Ceil(x1f))), min(h-1, int(math.Ceil(y1f)))
+	if x1 < x0 || y1 < y0 {
+		return 0, 0
+	}
+	stride := max(1, (max(x1-x0, y1-y0)+waterSamples)/waterSamples)
+	isWater := func(x, y int) (wet, ok bool) {
+		if x < 0 || y < 0 || x >= w.TerrainW || y >= h {
+			return false, false
+		}
+		return isWaterCode[w.Terrain[y*w.TerrainW+x]], true
+	}
+	n, wet, edge := 0, 0, 0
+	for y := y0; y <= y1; y += stride {
+		for x := x0; x <= x1; x += stride {
+			n++
+			if here, _ := isWater(x, y); !here {
+				continue
+			}
+			wet++
+			for _, d := range [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {
+				if nw, in := isWater(x+d[0], y+d[1]); in && !nw {
+					edge++
+					break
+				}
+			}
+		}
+	}
+	return float64(wet) / float64(n), float64(edge) / float64(n)
 }
 
 // underThreat is a raid in progress or a threat that arrived recently.

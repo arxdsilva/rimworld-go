@@ -5,6 +5,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"rimworld-go/pkg/audiomanifest"
@@ -122,5 +123,68 @@ func TestGenerateKeepsComposedMusic(t *testing.T) {
 	}
 	if _, ok := m.Lookup("music.menu"); !ok {
 		t.Fatal("make audio dropped the composed theme")
+	}
+}
+
+// TestNewRecipesDeterministic: the new-game sounds (NG-1 §7.4) exist, render
+// the same twice, have the planned lengths and loops, and land in the right
+// buses.
+func TestNewRecipesDeterministic(t *testing.T) {
+	t.Parallel()
+	want := map[string]struct {
+		loop        bool
+		minLen, max float64
+	}{
+		"ui.slider_tick":  {false, 0.01, 0.1},
+		"ui.page":         {false, 0.1, 0.4},
+		"sfx.pod_fall":    {false, 1.3, 1.5},
+		"sfx.pod_land":    {false, 0.6, 1.5},
+		"sfx.pod_open":    {false, 0.6, 1.5},
+		"amb.water_river": {true, 4, 20},
+		"amb.water_shore": {true, 4, 20},
+	}
+	seen := 0
+	for _, snd := range sounds {
+		w, ok := want[snd.recipe.ID]
+		if !ok {
+			continue
+		}
+		seen++
+		a, b := sfxsynth.Render(snd.recipe, 0), sfxsynth.Render(snd.recipe, 0)
+		if len(a) == 0 {
+			t.Fatalf("%s renders nothing", snd.recipe.ID)
+		}
+		for i := range a {
+			if a[i] != b[i] {
+				t.Fatalf("%s differs between renders at sample %d", snd.recipe.ID, i)
+			}
+		}
+		if got := snd.recipe.Length(); got < w.minLen || got > w.max {
+			t.Fatalf("%s is %.2f s, want %.2f..%.2f", snd.recipe.ID, got, w.minLen, w.max)
+		}
+		if (snd.recipe.Loop > 0) != w.loop {
+			t.Fatalf("%s loop = %v, want %v", snd.recipe.ID, snd.recipe.Loop > 0, w.loop)
+		}
+	}
+	if seen != len(want) {
+		t.Fatalf("found %d of %d new recipes", seen, len(want))
+	}
+	dir := t.TempDir()
+	if _, err := generate(dir); err != nil {
+		t.Fatal(err)
+	}
+	m, err := readManifest(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for id := range want {
+		e, ok := m.Lookup(id)
+		if !ok {
+			t.Fatalf("%s missing from the sound list", id)
+		}
+		wantBus := map[string]string{"ui": audiomanifest.BusUI, "sfx": audiomanifest.BusEffects, "amb": audiomanifest.BusAmbience}[id[:strings.Index(id, ".")]]
+		if e.Bus != wantBus {
+			t.Fatalf("%s bus = %q, want %q", id, e.Bus, wantBus)
+		}
 	}
 }
