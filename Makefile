@@ -151,3 +151,7 @@ clips:  ## README animated WebP clips in docs/clips (needs python3 + Pillow)
 .PHONY: clean
 clean:
 	rm -rf $(BIN_DIR)
+
+.PHONY: run
+run:  ## Run the game
+	go run ./cmd/game
