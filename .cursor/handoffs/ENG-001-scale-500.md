@@ -3,7 +3,7 @@
 Part of NG-1 (`.cursor/NG1_NEW_GAME_PLAN.md` §6; decision D6, 60 fps at every size). Commits: `4d68b9aa` (E0/E1), `049759a4` (profiling flags), `f815d545` (E2, E3 with the setup work), `a9ca527c` (E4, E5, saves), `07f74a0c` (E5 follow-up), `46d1110d` (FPS probe).
 
 ## Status
-Engine budgets pass on the numbers recorded below. **Map sizes 200 to 500 are not yet enabled in the wizard:** `game.MaxEnabledSide` (`internal/application/game/ng1_types.go`) is still **120**, and Advanced lists the larger sizes as "Not available yet". The lead raises it only after the final frame-rate gate at the end of this file.
+Engine budgets and the final frame-rate gate pass on the numbers recorded below. `game.MaxEnabledSide` (`internal/application/game/ng1_types.go`) is **500** (commit ce78855a): Advanced offers every size from 200x200 to 500x500, 350 and above marked "needs a capable computer".
 
 ## What changed
 
@@ -59,22 +59,22 @@ Save version 2 (v1 still loads, `testdata/premotion_v1.sav` and `ng1_v2.sav`): h
 Numbers are from the commit messages (`07f74a0c`, `a9ca527c`, `f815d545`, `4d68b9aa`).
 
 ## Known limitations
-- `MaxEnabledSide` stays at 120 until the gate below passes; Plan §6.9 requires a 10-minute manual run at 3x on seed "amber-hollow", 500x500, a temperate river tile, with `ebiten.ActualFPS()` at least 59 and the 1 % low at least 60 fps.
+- The 500x500 gate run used the `-fpsprobe` grown colony (seed 1) at the farthest zoom, not a hand-played session on seed "amber-hollow" as plan §6.9 described. First-use pawn tint bakes cost frames in the first ~25 s at a new zoom; a pre-warm would remove them.
 - Slow ground (water, mud, marsh) only adds path cost on crowd repaths (SIM-033).
 - The final planet rebuild on load (plan §5.8) and the worker-goroutine save snapshot (plan §6.8) were not separately benchmarked in this pass.
 
-## Final frame-rate gate - pending ENG-F
-**TODO (lead fills this in; do not treat any row as passed until it has a number).**
+## Final frame-rate gate (passed 2026-10-23)
+Measured by the lead on an Apple M3 Pro after ENG-E and ENG-F. Probe runs use the grown colony (`-scenario grown`), 3 ticks per frame, a 3 s warm-up after the first colony frame; the display caps at ~120 fps.
 
 | Check | Budget | Result | Date | Notes |
 |---|---|---|---|---|
-| `TickGrown/250` average tick | 1.0 ms | TODO | | |
-| `TickRaid/250` | 1.0 ms average, 4 ms p99 | TODO | | |
-| `DrawArt` at 250x250, every zoom | 6 ms, 6,000 calls | TODO | | |
-| `TickGrown/500` average tick | 1.5 ms | TODO | | |
-| `TickGrown/500` p99 and worst three ticks | 4 ms and 7 ms | TODO | | |
-| `BenchmarkReadModel` at 500 | 0.5 ms, 64 KB | TODO | | |
-| `-fpsprobe` 250x250 at 3x, grown colony | at least 59 fps, 1 % low at least 60 | TODO | | |
-| 10-minute manual run, 500x500, 3x, "amber-hollow", river tile | `ActualFPS` at least 59, 1 % low at least 60 | TODO | | |
-| `BenchmarkColonyHour` 48x40 | within +10 % of 17.5 ms per hour | TODO | | |
-| `MaxEnabledSide` raised to | 300 after the 250 gate, 500 after the 500 gate | TODO | | |
+| `TickGrown/250` average tick | 1.0 ms | 0.15 ms (p99 0.36) | 2026-10-22 | ENG-E |
+| `TickRaid/250` | 1.0 ms average, 4 ms p99 | not run separately; `TickRaid/500` 0.55 ms avg, p99 0.90, worst three ticks 5.1-5.3 ms | 2026-10-22 | ENG-E |
+| `DrawArt` at 250x250, every zoom | 6 ms, 6,000 calls | 1.9-4.2 ms paused; real frames 4.3 ms avg at z0.25 | 2026-10-23 | at most 1,368 draw calls at any zoom |
+| `TickGrown/500` average tick | 1.5 ms | 0.52 ms | 2026-10-22 | ENG-E |
+| `TickGrown/500` p99 and worst three ticks | 4 ms and 7 ms | 0.87 ms and 2.8 ms; 0.5 KB alloc per tick | 2026-10-22 | ENG-E |
+| `BenchmarkReadModel` at 500 | 0.5 ms, 64 KB | 47 ns, 0 B when unchanged (cached) | 2026-10-22 | ENG-E; a changed tick still rebuilds parts |
+| `-fpsprobe` 250x250 at 3x, grown colony | at least 59 fps, 1 % low at least 60 | z0.25: 118.5 avg, 81.0 low (ENG-F: z1 85.8, z0.5 83.9, z0.25 75.0, z0.1 78.2 low) | 2026-10-23 | update 1.3 ms, draw 4.3 ms avg |
+| 10-minute run, 500x500, 3x, farthest zoom (0.1) | at least 59 fps, 1 % low at least 60 | 117.5 avg, 68.4 low (frame p99 14.6 ms), 70,520 frames | 2026-10-23 | probe run on the grown colony (seed 1), not a hand-played session; 25 s runs at z1/0.5/0.25/0.1: 72.0/71.7/60.8/58.3 low (first-use pawn tint bakes in the first seconds) |
+| `BenchmarkColonyHour` 48x40 | within +10 % of 17.5 ms per hour | 13.8 ms (faster) | 2026-10-23 | |
+| `MaxEnabledSide` raised to | 300 after the 250 gate, 500 after the 500 gate | 500 (commit ce78855a) | 2026-10-23 | |

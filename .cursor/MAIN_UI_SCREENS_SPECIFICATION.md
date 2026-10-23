@@ -306,7 +306,7 @@ Status (NG-1):
 -   [x] choose tile; (invalid tiles give the reason on the disabled Next button)
 -   [x] regenerate/back; (Back keeps the draft, Create World regenerates, Random site)
 -   [x] continue. (Next to Create Characters)
--   [-] map size and starting season. (Advanced dialog; sizes 200 to 500 show "Not available yet" because `game.MaxEnabledSide` is 120 until the engine frame-rate gate passes, see ENG-001)
+-   [x] map size and starting season. (Advanced dialog; 200x200 to 500x500, 250 default, 350+ marked "needs a capable computer")
 
 ------------------------------------------------------------------------
 
@@ -1918,7 +1918,7 @@ Agents should implement screens approximately in this dependency order.
 -   [x] Scenario Editor
 -   [-] Storyteller/Difficulty (cards, six presets, save mode, Custom Difficulty dialog; disease frequency has no effect and a few sliders lack tooltips)
 -   [x] World Generation (seed, coverage, rainfall, temperature, population, factions, progress)
--   [-] Landing Site (globe and full tile panel, Advanced, Factions dialog; no feature search, map sizes above 120 not yet enabled)
+-   [-] Landing Site (globe and full tile panel, Advanced, Factions dialog; no feature search)
 -   [x] Starting Pawns (generated candidates, reroll, rename, team warnings, Start with a loading screen; no relationships)
 
 These can begin earlier once their underlying definitions exist, but are

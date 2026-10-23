@@ -2121,7 +2121,7 @@ Complete:
 -   [-] World map. (the rotating globe exists at setup only; no world view in a running colony)
 -   [x] World generation.
 -   [x] Landing selection.
--   [-] New-game flow. (complete, but map sizes above 120 are gated off by `game.MaxEnabledSide` until the ENG-001 frame-rate gate passes)
+-   [x] New-game flow. (map sizes 200 to 500 enabled after the ENG-001 frame-rate gate)
 -   [ ] Caravan formation.
 -   [ ] Caravan inspector.
 -   [ ] Quests.

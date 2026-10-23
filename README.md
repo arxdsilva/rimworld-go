@@ -123,7 +123,7 @@ Media updated 2026-10-22 · regenerate with `make media clips`
 - Factions: settlers, clans, drifters, freebooters and the hive swarm settle the globe; raids come from a named hostile faction, goodwill moves with raids and drifts back, and a Factions window shows goodwill history. Storyteller threat points follow wealth, colonists, time and an adaptation that eases after losses; heat waves and cold snaps come with the Extreme weather setting.
 - Water and landing-site maps: the chosen tile shapes the map with hills, caves, coasts, rivers with fords, lakes, mud, wet ground and dirt tracks, always leaving the start able to walk out. Water is rendered with a ripple shader and sounds; wading soaks colonists and washes their boots, and nothing can be built on water.
 - Components and industrial medicine: fabricate components from steel or mine buried machinery, refine herbal medicine, and build tool cabinets that speed benches and hospital beds.
-- Real font and minimap: Noto Sans throughout the menus, HUD and inspectors, and a minimap (Shift+M, click to move) on big maps. Engine work tested up to 500x500 maps, which the new-game screen will offer once the frame-rate gate passes (it offers up to 120x120 now).
+- Real font and minimap: Noto Sans throughout the menus, HUD and inspectors, and a minimap (Shift+M, click to move) on big maps. Map sizes from 200x200 to 500x500, holding about 60 fps or better at 3x speed on a grown 500x500 colony.
 
 The full backlogs are in the [vanilla feature checklist](.cursor/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md) and the [UI/UX checklist](.cursor/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md).
 

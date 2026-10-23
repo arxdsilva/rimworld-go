@@ -41,7 +41,7 @@ All draw over `setup_backdrop.go`: the dimmed menu diorama, a starfield and a di
 - **Start and loading** (`screen_loading.go`): Start builds the `game.Setup` and runs `game.ColonyBuilder` in steps behind a progress screen; the old seed and biome placeholders are gone.
 
 ### Map sizes
-The size list comes from `game.MapSizes()`, gated by `game.MaxEnabledSide` (`ng1_types.go`), currently **120**. Sizes 200-500 are listed in Advanced as "Not available yet" and the default falls back to 120 ("120 x 120 (pre-release)"). They open when the lead raises `MaxEnabledSide` after the gates in ENG-001.
+The size list comes from `game.MapSizes()`, gated by `game.MaxEnabledSide` (`ng1_types.go`), now **500** after the ENG-001 gate passed: all sizes 200-500 are selectable, 250 is the default, and 350 and above carry "needs a capable computer".
 
 ### Commitment-mode UI
 Chosen on Choose Storyteller and fixed for the colony. In play (`saves.go`, `screen_pause.go`): one save slot, tagged "Commitment" in lists; the game saves at every day rollover, on return to the menu, on quit and on window close; pause offers **Save & Quit to Menu** instead of Save; Load is disabled with "Commitment: one timeline"; developer mode is locked ("Commitment mode"). Options › Story shows the mode read-only.
@@ -70,7 +70,6 @@ Chosen on Choose Storyteller and fixed for the colony. In play (`saves.go`, `scr
 - Globe: `BenchmarkGlobeFrame` (`globe_test.go`) measured 0.3-0.5 ms per frame at full coverage with no allocations (from the commit message).
 
 ## Known limitations
-- Map sizes above 120 are not selectable yet (`MaxEnabledSide = 120`).
 - No `pause-commitment` or `minimap` capture state was added (the plan listed them).
 - The landing screen has no feature search, only Random site (out of NG-1 scope).
 - Character details show no relationships (there is no relationship system).
