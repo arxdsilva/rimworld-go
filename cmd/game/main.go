@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"runtime"
+	"runtime/pprof"
+	"runtime/trace"
 	"strings"
 
 	"rimworld-go/internal/domain/animal"
@@ -45,7 +48,11 @@ func main() {
 	captureUI := flag.String("capture-ui", "", "dev: UI state for -capture: picker | wild | trough | inspector | architect | orders | bills | pawn | combat | melee | follow | grow | corridor | crowd | lategame | weather | grass | burial | roofs | roofs-overlay | home | carpet | plant | item | pawnactions | paused-stockpile | move | copy | menu | credits | options | options-graphics | options-gameplay | options-access | zones | paths | log | frame | fence | forbid | zoo | controls | search | rooms | multiselect | drawstyle | hideui | scenario | scenario-editor | scenario-editor-addpart | storyteller | difficulty-custom | worldgen | worldgen-progress | landing | landing-advanced | landing-factions | pawns | pawns-reroll")
 	captureTimelapse := flag.Int("capture-timelapse", 0, "dev: with -capture-frames, step this many sim ticks per recorded frame (a time-lapse)")
 	noAudio := flag.Bool("noaudio", false, "dev: run without sound")
+	cpuProfile := flag.String("cpuprofile", "", "dev: write a CPU profile to this file")
+	memProfile := flag.String("memprofile", "", "dev: write a heap profile to this file on exit")
+	traceOut := flag.String("trace", "", "dev: write an execution trace to this file")
 	flag.Parse()
+	stopProfiles := startProfiles(*cpuProfile, *traceOut)
 
 	var shot *uiadapter.Capture
 	if *capture != "" {
@@ -348,6 +355,8 @@ func main() {
 	if err := ebiten.RunGame(app); err != nil {
 		log.Fatal(err)
 	}
+	stopProfiles()
+	writeHeapProfile(*memProfile)
 	if err := app.CaptureErr(); err != nil {
 		log.Fatal(err)
 	}
@@ -762,4 +771,46 @@ func scenarioStore(capturing bool) uiadapter.ScenarioStore {
 		return nil
 	}
 	return scenarioFiles{s}
+}
+
+// startProfiles starts the dev CPU profile and execution trace (ENG-A
+// workflow); the returned func stops them. Observation only.
+func startProfiles(cpuPath, tracePath string) func() {
+	var stops []func()
+	if cpuPath != "" {
+		if f, err := os.Create(cpuPath); err == nil && pprof.StartCPUProfile(f) == nil {
+			stops = append(stops, func() { pprof.StopCPUProfile(); f.Close() })
+		} else {
+			log.Printf("cpuprofile: %v", err)
+		}
+	}
+	if tracePath != "" {
+		if f, err := os.Create(tracePath); err == nil && trace.Start(f) == nil {
+			stops = append(stops, func() { trace.Stop(); f.Close() })
+		} else {
+			log.Printf("trace: %v", err)
+		}
+	}
+	return func() {
+		for _, s := range stops {
+			s()
+		}
+	}
+}
+
+// writeHeapProfile writes a heap profile after a GC (dev).
+func writeHeapProfile(path string) {
+	if path == "" {
+		return
+	}
+	f, err := os.Create(path)
+	if err != nil {
+		log.Printf("memprofile: %v", err)
+		return
+	}
+	defer f.Close()
+	runtime.GC()
+	if err := pprof.WriteHeapProfile(f); err != nil {
+		log.Printf("memprofile: %v", err)
+	}
 }
