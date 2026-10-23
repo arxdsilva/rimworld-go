@@ -311,7 +311,7 @@ func (a *App) cameraInput(v viewport) camInput {
 	if f.fired(input.ZoomOut) {
 		c.zoom--
 	}
-	if f.raw.wheelY != 0 && !a.renderer.wheelTaken {
+	if f.raw.wheelY != 0 && !a.renderer.wheelTaken && !a.uiWheelOver(mx, my) { // a scroll view under the cursor owns the wheel
 		c.wheel, c.wx, c.wy = f.raw.wheelY, float64(mx), float64(my)
 	}
 	switch {

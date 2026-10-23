@@ -63,10 +63,21 @@ func (a *App) pollInput() {
 		a.src = &ebitenInput{}
 	}
 	raw := a.src.poll()
+	a.uiPreInput(&raw) // widget kit: held keys, Esc for a modal, Tab focus (ui_state.go)
 	a.in = newFrame(raw)
 	a.in.stack = a.contextStack()
 	a.in.res = input.Resolve(input.Frame{Pressed: raw.pressed, Held: raw.held, Mods: raw.mods}, a.bindings(), a.in.stack)
+	a.uiBegin() // widget kit: tooltips, modals, the screen's widgets (ui_state.go)
 }
+
+// repeatFire reports a key held for n consecutive frames fires: on the
+// first, then after 24 frames and every 3 frames after that.
+func repeatFire(n int) bool { return n == 1 || (n >= 25 && (n-25)%3 == 0) }
+
+// keyRepeat reports the key went down this frame or is repeating while
+// held (first repeat after 24 frames, then every 3). Text fields and list
+// navigation read it.
+func (a *App) keyRepeat(name string) bool { return a.in.key(name) || repeatFire(a.uiSt().heldN[name]) }
 
 // bindings are the live key bindings (the settings' overrides over the
 // defaults).
@@ -85,6 +96,8 @@ func (a *App) textActive() bool {
 	case a.search.open && a.colonyLive():
 		return true
 	case a.nav.screen() == screenWorldGen && a.wiz.editing:
+		return true
+	case a.uiTextEditing(): // a widget-kit text field (ui_textfield.go)
 		return true
 	}
 	return false
@@ -111,11 +124,14 @@ func (a *App) contextStack() []input.Context {
 		return []input.Context{input.CtxText}
 	}
 	if !a.colonyLive() {
+		if a.uiModalOpen() {
+			return []input.Context{input.CtxModal, input.CtxGlobal}
+		}
 		return []input.Context{input.CtxGlobal}
 	}
 	var s []input.Context
 	switch {
-	case a.modalOpen():
+	case a.modalOpen() || a.uiModalOpen():
 		s = append(s, input.CtxModal)
 	default:
 		if a.toolActive() {
@@ -151,6 +167,8 @@ func (a *App) handleTextInput() {
 		return
 	}
 	switch {
+	case a.uiTextEditing():
+		a.uiTextInput() // ui_textfield.go
 	case a.rebind.on && a.nav.screen() == screenOptions:
 		a.captureBinding() // controls_ui.go
 	case a.search.open:
@@ -162,6 +180,9 @@ func (a *App) handleTextInput() {
 
 // pressAccept is Enter outside a text field: the wizard's Next/Start.
 func (a *App) pressAccept() {
+	if a.uiModalOpen() || a.uiTextEditing() {
+		return // Enter belongs to the dialog or the field, not the wizard
+	}
 	sw, sh := a.size()
 	for _, b := range a.layoutButtons(sw, sh) {
 		switch b.id {

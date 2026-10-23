@@ -79,7 +79,7 @@ func testApp(sim Simulation) *App {
 
 func click(t *testing.T, a *App, id string) {
 	t.Helper()
-	for _, b := range a.layoutButtons(a.sw, a.sh) {
+	for _, b := range a.layoutHits(a.sw, a.sh) {
 		if b.id != id {
 			continue
 		}

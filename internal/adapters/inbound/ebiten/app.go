@@ -96,6 +96,8 @@ type AppConfig struct {
 // App is the ebiten.Game shell: screen routing, widgets, and (once
 // started) the colony renderer. Menus do not own or step a simulation.
 type App struct {
+	// ui is the widget kit's state (NG-1 §1.4, ui_state.go).
+	ui  uiState
 	cfg AppConfig
 	nav nav
 
@@ -287,7 +289,7 @@ func (a *App) Update() error {
 			a.in.take(mbLeft)
 		} else {
 			mx, my := a.currentCursor()
-			if b, ok := hitButton(a.layoutButtons(sw, sh), mx, my); ok {
+			if b, ok := hitButton(a.layoutHits(sw, sh), mx, my); ok {
 				a.in.take(mbLeft)
 				a.uiSound(b)
 				if b.disabled {
@@ -472,6 +474,9 @@ func (a *App) finishBoot() {
 }
 
 func (a *App) applyClick(id string) {
+	if a.uiClick(id) { // widget kit ids (ui_state.go)
+		return
+	}
 	switch {
 	case id == roofButtonID:
 		a.renderer.toggleRoofOverlayIfAny()
@@ -771,6 +776,7 @@ func (a *App) Draw(screen *ebiten.Image) {
 		screen.Fill(uiSpace)
 	}
 
+	a.uiPaint(screen) // widget kit: widgets, modals, tooltips (ui_state.go)
 	a.drawHoverHint(screen, sw, sh)
 	if a.shot.pending { // F10: this frame, before the toast that reports it
 		a.shot.pending = false
@@ -790,7 +796,7 @@ func (a *App) drawHoverHint(screen *ebiten.Image, sw, sh int) {
 		return
 	}
 	mx, my := a.currentCursor()
-	if b, ok := hitButton(a.layoutButtons(sw, sh), mx, my); ok {
+	if b, ok := hitButton(a.layoutHits(sw, sh), mx, my); ok {
 		if b.disabled && b.reason != "" {
 			debugPrintAt(screen, b.reason, 16, sh-22)
 			return
