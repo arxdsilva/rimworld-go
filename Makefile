@@ -34,7 +34,7 @@ test: test-unit
 
 .PHONY: test-unit
 test-unit:
-	go test -timeout 30s -race -cover ./...
+	go test -race -timeout 10m -cover ./...  # always -race, same budget as CI
 
 .PHONY: simulate
 simulate:
@@ -79,8 +79,8 @@ normals:  ## write <sprite>_n.png normal maps (pkg/spritenormals, a port of spri
 art-check:  ## validate generated sprites against metadata, orphans and plant outlines
 	python3 assets/source/tools/validate_assets.py
 	go run ./cmd/atlasgen -family pawn -check
-	go test -count=1 -run 'TestNoOrphanSprites|TestPlantRecipesHaveNoOutline' ./internal/adapters/inbound/ebiten/
-	go test -count=1 -run 'TestAudioFilesMatchManifest' ./pkg/audiomanifest/
+	go test -race -count=1 -run 'TestNoOrphanSprites|TestPlantRecipesHaveNoOutline' ./internal/adapters/inbound/ebiten/
+	go test -race -count=1 -run 'TestAudioFilesMatchManifest' ./pkg/audiomanifest/
 
 .PHONY: atlas
 atlas:  ## pack atlas families into texture pages (cmd/atlasgen, NG-1)

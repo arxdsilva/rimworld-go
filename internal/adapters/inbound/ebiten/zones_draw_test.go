@@ -161,14 +161,7 @@ func TestZoneLabelOncePerZone(t *testing.T) {
 // the zones laid on them. Pixels can't be read outside the game loop, so
 // the test checks the layer order of a frame with a floor and a zone.
 func TestZoneDrawsOverFloor(t *testing.T) {
-	root, err := LocateArt()
-	if err != nil {
-		t.Skip("generated art not present:", err)
-	}
-	art, err := loadArtCatalog(root)
-	if err != nil {
-		t.Fatal(err)
-	}
+	art := testArt(t)
 	g := game.NewColony(game.Config{Seed: 7, Width: 40, Height: 30})
 	r := New(g)
 	r.art = art

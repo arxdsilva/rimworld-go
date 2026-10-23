@@ -28,7 +28,7 @@ Non-negotiable rules:
 - Avoid global scans; use indexes, batching, sleeping, and invalidation.
 - Animals make full decisions every 60 ticks through the bucket index (`internal/application/game/animal_index.go`, `animal_needs.go`); never scan all creatures per tick. Biome data lives in `internal/domain/world/biome`, nature-event definitions in `internal/domain/incident`.
 - Every need-, threat- or threshold-driven behaviour must start and stop at different thresholds (hysteresis), or have a minimum duration or retry cooldown, so actors don't flap between two activities. Any new one ships with a no-flap test (see `internal/application/game/sleep_test.go`).
-- Run relevant tests and benchmarks.
+- Run relevant tests and benchmarks. Tests always run with `-race` (`make test`, CI, agents, one-off `go test`); keep the suite inside CI's 10-minute `-race` budget (tests that need real art index it lazily: `realArt`/`testArt`/`atlasArt` in the ebiten package).
 - Do not weaken tests to pass CI.
 - Do not copy proprietary code, assets, text, or balancing data.
 - Remove unused assets and resources in the same change that makes them unused: sprites, sounds, fonts, metadata, palette entries, vendor packs, generated files and their loaders. Never keep a fallback asset nobody draws. An alias may stay only while something still reads it; delete it in the change that removes the last reader. `make art-check` fails on orphans not listed with a reason in `assets/metadata/orphan_allow.txt`.

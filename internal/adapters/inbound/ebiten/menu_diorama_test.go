@@ -122,7 +122,7 @@ func TestArtCatalogSkipsMenuFamily(t *testing.T) {
 	if err != nil {
 		t.Skip(err)
 	}
-	c, err := loadArtCatalog(root)
+	c, err := indexArtCatalog(root, false)
 	if err != nil {
 		t.Fatal(err)
 	}

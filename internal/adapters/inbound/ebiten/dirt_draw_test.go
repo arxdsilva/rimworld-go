@@ -243,14 +243,7 @@ func TestCarpetDrawnUnderPawns(t *testing.T) {
 // TestCarpetFramePass: a carpet and its frame draw in the floor pass
 // without panicking, with or without art.
 func TestCarpetFramePass(t *testing.T) {
-	root, err := LocateArt()
-	if err != nil {
-		t.Skip("generated art not present:", err)
-	}
-	art, err := loadArtCatalog(root)
-	if err != nil {
-		t.Fatal(err)
-	}
+	art := testArt(t)
 	g := game.NewColony(game.Config{Seed: 7, Width: 40, Height: 30})
 	r := New(&carpetSim{Game: g})
 	r.art = art

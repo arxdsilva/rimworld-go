@@ -572,14 +572,7 @@ func TestNewBuildingCards(t *testing.T) {
 }
 
 func TestNewBuildingArtExists(t *testing.T) {
-	root, err := LocateArt()
-	if err != nil {
-		t.Skip("generated art not present:", err)
-	}
-	c, err := loadArtCatalog(root)
-	if err != nil {
-		t.Fatal(err)
-	}
+	c := realArt(t)
 	for _, key := range []string{"ui_icon/tool_cabinet", "ui_icon/hospital_bed", "furniture/tool_cabinet", "furniture/hospital_bed_south"} {
 		if !c.has(key) {
 			t.Errorf("art %q missing", key)

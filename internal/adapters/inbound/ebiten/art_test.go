@@ -1,11 +1,15 @@
 package ebiten
 
 import (
+	"bytes"
 	"fmt"
 	"image"
 	"image/color"
+	"path/filepath"
 	"strings"
 	"testing"
+
+	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/animal"
@@ -216,14 +220,7 @@ func animalSpriteKeys(base, attack string) []string {
 // set (four facings of stand, trot, its attack kind, graze and flinch),
 // three corpse poses and an icon; dimorphic species add the female set.
 func TestEverySpeciesHasArt(t *testing.T) {
-	root, err := LocateArt()
-	if err != nil {
-		t.Skip("generated art not present:", err)
-	}
-	c, err := loadArtCatalog(root)
-	if err != nil {
-		t.Fatal(err)
-	}
+	c := realArt(t)
 	for _, s := range animal.All() {
 		ro := animal.RosterOf(s)
 		keys := animalSpriteKeys("animal/"+ro.Key, ro.Attack.String())
@@ -249,14 +246,7 @@ func TestEverySpeciesHasArt(t *testing.T) {
 // TestGeneratedArtCoversRenderer guards against renderer/art drift: every
 // sprite key the draw path can request must exist in assets/.
 func TestGeneratedArtCoversRenderer(t *testing.T) {
-	root, err := LocateArt()
-	if err != nil {
-		t.Skip("generated art not present:", err)
-	}
-	c, err := loadArtCatalog(root)
-	if err != nil {
-		t.Fatal(err)
-	}
+	c := realArt(t)
 	var keys []string
 	for v := 0; v < soilVariants; v++ {
 		keys = append(keys, artKey("terrain", "soil", v))
@@ -392,5 +382,64 @@ func TestArtFrameNames(t *testing.T) {
 	}
 	if r.framed("pawn/body_south", "_walk04") != "pawn/body_south" {
 		t.Fatal("missing frames fall back to the static pose")
+	}
+}
+
+// The test index serves the same sprites as the game's eager load, but
+// decodes a sprite only when it is handed out.
+func TestIndexCatalogMatchesLoad(t *testing.T) {
+	root, err := LocateArt()
+	if err != nil {
+		t.Skip(err)
+	}
+	idx, err := indexArtCatalog(root, false) // the game's sprite set
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := realArt(t) // the tests' index: packed sprites from their own files
+	if len(idx.sprites) != len(files.sprites) {
+		t.Fatalf("game index %d sprites, file-preferring index %d", len(idx.sprites), len(files.sprites))
+	}
+	for k := range idx.sprites {
+		if !files.has(k) {
+			t.Fatalf("file-preferring index lacks %s", k)
+		}
+	}
+	for _, key := range []string{"rock/rock_wall_15_cf", "structure/wall_stone_06", "rock/ore_steel_03"} {
+		if !idx.has(key) {
+			t.Fatalf("index lacks %s", key)
+		}
+		sp := idx.sprites[key]
+		if sp.pix != nil {
+			t.Fatalf("%s decoded before use", key)
+		}
+		want, err := decodeNRGBA(sp.file.image)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := idx.sprite(key)
+		if got.pix == nil || !bytes.Equal(got.pix.Pix, want.Pix) {
+			t.Fatalf("%s: lazy pixels differ from the file", key)
+		}
+		if (got.meta.TintMask != "") != (got.mask != nil) {
+			t.Fatalf("%s: mask %v for tint mask %q", key, got.mask != nil, got.meta.TintMask)
+		}
+	}
+}
+
+// A sprite whose file can't be decoded is handed out without pixels and
+// draws nothing, rather than panicking mid-frame.
+func TestLazySpriteWithBadFileDrawsNothing(t *testing.T) {
+	c := &artCatalog{sprites: map[string]*artSprite{
+		"rock/x": {file: &fileSrc{image: filepath.Join(t.TempDir(), "missing.png")}},
+	}, tinted: map[tintKey]*ebiten.Image{}, normals: map[*ebiten.Image]*ebiten.Image{}}
+	if img := c.image("rock/x", color.NRGBA{}); img != nil {
+		t.Fatal("a sprite with no pixels drew")
+	}
+	if c.sprites["rock/x"].file.err == nil {
+		t.Fatal("decode error not kept")
+	}
+	if err := c.decodeFiles(); err == nil {
+		t.Fatal("the eager load must report the bad file")
 	}
 }

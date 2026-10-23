@@ -113,14 +113,7 @@ func TestTreeFadeDroppedOutOfView(t *testing.T) {
 }
 
 func treeArtRenderer(t *testing.T) *Renderer {
-	root, err := LocateArt()
-	if err != nil {
-		t.Skip("generated art not present:", err)
-	}
-	c, err := loadArtCatalog(root)
-	if err != nil {
-		t.Fatal(err)
-	}
+	c := testArt(t)
 	r := fadeRenderer()
 	r.art = c
 	return r

@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	"runtime"
 	"sync"
 	"testing"
 
@@ -13,9 +14,16 @@ var (
 	realArtOnce sync.Once
 	realArtCat  *artCatalog
 	realArtErr  error
+
+	atlasArtOnce sync.Once
+	atlasArtCat  *artCatalog
+	atlasArtErr  error
 )
 
-// realArt loads the generated art catalog once, or skips.
+// realArt indexes the generated art catalog once, or skips. It is shared
+// by parallel tests: key lookups and the (once-guarded) lazy decode are
+// safe, but drawing also writes texture caches, so a test that draws
+// takes its own testArt.
 func realArt(t *testing.T) *artCatalog {
 	t.Helper()
 	realArtOnce.Do(func() {
@@ -24,7 +32,7 @@ func realArt(t *testing.T) *artCatalog {
 			realArtErr = err
 			return
 		}
-		realArtCat, realArtErr = loadArtCatalog(root)
+		realArtCat, realArtErr = indexArtCatalog(root, true)
 	})
 	if realArtErr != nil {
 		t.Skip(realArtErr)
@@ -32,9 +40,79 @@ func realArt(t *testing.T) *artCatalog {
 	return realArtCat
 }
 
+// atlasArt is the game's view of the generated art, packed families
+// served from their atlas pages, shared by the tests that need the pages
+// themselves. Every page layer is cut once up front on all cores
+// (cutPageAside is safe per page and layer): one by one under the race
+// detector that takes minutes.
+func atlasArt(t *testing.T) *artCatalog {
+	t.Helper()
+	atlasArtOnce.Do(func() {
+		root, err := LocateArt()
+		if err != nil {
+			atlasArtErr = err
+			return
+		}
+		if atlasArtCat, atlasArtErr = indexArtCatalog(root, false); atlasArtErr != nil {
+			return
+		}
+		type job struct {
+			a         *spriteAtlas
+			pg, layer int
+		}
+		jobs := make(chan job)
+		var wg sync.WaitGroup
+		for range runtime.GOMAXPROCS(0) {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				var z deflater
+				for j := range jobs {
+					j.a.cutPageAside(j.pg, j.layer, &z)
+				}
+			}()
+		}
+		seen := map[*spriteAtlas]bool{}
+		for _, sp := range atlasArtCat.sprites {
+			if sp.src == nil || seen[sp.src.atlas] {
+				continue
+			}
+			a := sp.src.atlas
+			seen[a] = true
+			for pg := range a.byPage {
+				for layer := 0; layer < atlasLayers; layer++ {
+					jobs <- job{a, pg, layer}
+				}
+			}
+		}
+		close(jobs)
+		wg.Wait()
+	})
+	if atlasArtErr != nil {
+		t.Skip(atlasArtErr)
+	}
+	return atlasArtCat
+}
+
+// testArt is a fresh lazy index of the generated art for one test that
+// draws, or skips: it decodes only the sprites the test hands out, which
+// keeps the race-enabled suite fast.
+func testArt(t testing.TB) *artCatalog {
+	t.Helper()
+	root, err := LocateArt()
+	if err != nil {
+		t.Skip("generated art not present:", err)
+	}
+	c, err := indexArtCatalog(root, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return c
+}
+
 func TestPortraitWithoutRenderer(t *testing.T) {
 	t.Parallel()
-	art := realArt(t)
+	art := atlasArt(t) // portrait builds live only in the pawn atlas
 	dst := ebiten.NewImage(200, 240)
 	for _, sex := range []look.Sex{look.Male, look.Female} {
 		for _, build := range []look.Build{look.Average, look.Thin, look.Heavy} {

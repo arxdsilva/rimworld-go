@@ -13,6 +13,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	"rimworld-go/internal/platform/assetroot"
 
@@ -243,6 +244,12 @@ type artSprite struct {
 	// nil for a sprite loaded from its own files. pix and mask are cut out
 	// of the atlas the first time the catalog hands the sprite out.
 	src *atlasSrc
+	// file is where a sprite indexed but not yet decoded reads its own
+	// PNGs from (indexArtCatalog); nil once loaded eagerly.
+	file *fileSrc
+	// filled guards the one lazy fill from src or file, so catalogs shared
+	// across goroutines (tests) stay race-free.
+	filled sync.Once
 	// opaqueH caches opaqueHeightPx (0: not measured yet).
 	opaqueH float64
 }
@@ -313,9 +320,57 @@ func LocateArt() (string, error) {
 	return root, nil
 }
 
+// fileSrc is a sprite's own image and tint mask files, decoded on first
+// use; err keeps a failed decode.
+type fileSrc struct {
+	image, mask string
+	err         error
+}
+
+func (f *fileSrc) fill(sp *artSprite) {
+	if sp.pix, f.err = decodeNRGBA(f.image); f.err != nil {
+		return
+	}
+	if f.mask != "" {
+		sp.mask, f.err = decodeNRGBA(f.mask)
+	}
+}
+
 // loadArtCatalog reads every world sprite's metadata, PNG and tint mask
-// under root (the assets directory).
+// under root (the assets directory): the game decodes everything up
+// front, so no sprite is decoded mid-frame.
 func loadArtCatalog(root string) (*artCatalog, error) {
+	c, err := indexArtCatalog(root, false)
+	if err != nil {
+		return nil, err
+	}
+	if err := c.decodeFiles(); err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
+// decodeFiles decodes every indexed sprite that reads its own files.
+func (c *artCatalog) decodeFiles() error {
+	for _, sp := range c.sprites {
+		if sp.file == nil {
+			continue
+		}
+		sp.filled.Do(func() { sp.file.fill(sp) })
+		if sp.file.err != nil {
+			return sp.file.err
+		}
+	}
+	return nil
+}
+
+// indexArtCatalog reads every world sprite's metadata like loadArtCatalog
+// but decodes no pixels: each sprite is decoded the first time the
+// catalog hands it out. Tests use it; key lookups (has) never decode.
+// preferFiles serves a packed family's sprites from their own files where
+// they still exist (cheap to decode one by one) instead of cutting whole
+// atlas pages; the key set is the same either way.
+func indexArtCatalog(root string, preferFiles bool) (*artCatalog, error) {
 	c := &artCatalog{sprites: map[string]*artSprite{}, tinted: map[tintKey]*ebiten.Image{},
 		normals: map[*ebiten.Image]*ebiten.Image{}}
 	base, err := os.ReadFile(filepath.Join(root, "palettes", "base.yaml"))
@@ -330,12 +385,22 @@ func loadArtCatalog(root string) (*artCatalog, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Packed families (metadata/atlas/<family>.yaml), whether or not their
+	// individual files are still around.
+	packed, _ := filepath.Glob(filepath.Join(metaRoot, atlasMetaDir, "*.yaml"))
+	for _, p := range packed {
+		if err := c.loadAtlas(root, strings.TrimSuffix(filepath.Base(p), ".yaml")); err != nil {
+			return nil, err
+		}
+	}
 	for _, fam := range families {
 		if !fam.IsDir() || fam.Name() == menuMetaFamily || fam.Name() == atlasMetaDir { // not sprite families
 			continue
 		}
-		if _, err := os.Stat(filepath.Join(metaRoot, atlasMetaDir, fam.Name()+".yaml")); err == nil {
-			continue // packed by cmd/atlasgen: served from its atlas pages below
+		_, err := os.Stat(filepath.Join(metaRoot, atlasMetaDir, fam.Name()+".yaml"))
+		isPacked := err == nil
+		if isPacked && !preferFiles {
+			continue // packed by cmd/atlasgen: served from its atlas pages
 		}
 		files, err := os.ReadDir(filepath.Join(metaRoot, fam.Name()))
 		if err != nil {
@@ -353,28 +418,21 @@ func loadArtCatalog(root string) (*artCatalog, error) {
 			if err != nil {
 				return nil, fmt.Errorf("%s/%s: %w", fam.Name(), f.Name(), err)
 			}
-			sp := &artSprite{meta: m}
-			if sp.pix, err = decodeNRGBA(filepath.Join(root, filepath.FromSlash(m.Image))); err != nil {
-				return nil, err
-			}
-			if m.TintMask != "" {
-				if sp.mask, err = decodeNRGBA(filepath.Join(root, filepath.FromSlash(m.TintMask))); err != nil {
-					return nil, err
+			img := filepath.Join(root, filepath.FromSlash(m.Image))
+			if isPacked {
+				if _, err := os.Stat(img); err != nil {
+					continue // pruned: the atlas page serves it
 				}
+			}
+			sp := &artSprite{meta: m, file: &fileSrc{image: img}}
+			if m.TintMask != "" {
+				sp.file.mask = filepath.Join(root, filepath.FromSlash(m.TintMask))
 			}
 			np := filepath.Join(root, filepath.FromSlash(strings.TrimSuffix(m.Image, ".png")+"_n.png"))
 			if _, err := os.Stat(np); err == nil {
 				sp.normalPath = np
 			}
 			c.sprites[fam.Name()+"/"+strings.TrimSuffix(f.Name(), ".yaml")] = sp
-		}
-	}
-	// Packed families (metadata/atlas/<family>.yaml), whether or not their
-	// individual files are still around.
-	packed, _ := filepath.Glob(filepath.Join(metaRoot, atlasMetaDir, "*.yaml"))
-	for _, p := range packed {
-		if err := c.loadAtlas(root, strings.TrimSuffix(filepath.Base(p), ".yaml")); err != nil {
-			return nil, err
 		}
 	}
 	if len(c.sprites) == 0 {
@@ -414,8 +472,14 @@ func (c *artCatalog) sprite(key string) *artSprite {
 		return nil
 	}
 	sp := c.sprites[key]
-	if sp != nil && sp.src != nil && sp.pix == nil {
-		sp.src.fill(sp)
+	if sp != nil && (sp.src != nil || sp.file != nil) {
+		sp.filled.Do(func() {
+			if sp.src != nil {
+				sp.src.fill(sp)
+			} else {
+				sp.file.fill(sp)
+			}
+		})
 	}
 	return sp
 }
@@ -426,6 +490,9 @@ func (c *artCatalog) image(key string, tint color.NRGBA) *ebiten.Image {
 	sp := c.sprite(key)
 	if sp == nil {
 		return nil
+	}
+	if sp.img == nil && sp.pix == nil {
+		return nil // its files failed to decode: draw nothing rather than panic
 	}
 	if sp.mask == nil || tint.A == 0 {
 		if sp.img == nil {

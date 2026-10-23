@@ -286,10 +286,7 @@ func TestAtlasCoversKeys(t *testing.T) {
 	if len(idxs) == 0 {
 		t.Skip("no atlas generated (go run ./cmd/atlasgen)")
 	}
-	c, err := loadArtCatalog(root)
-	if err != nil {
-		t.Fatal(err)
-	}
+	c := atlasArt(t)
 	for _, idx := range idxs {
 		family := strings.TrimSuffix(filepath.Base(idx), ".yaml")
 		raw, err := os.ReadFile(idx)

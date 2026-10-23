@@ -410,14 +410,7 @@ func TestPlannedCornersFillAcrossFramesAndWalls(t *testing.T) {
 
 func TestGhostAndFrameWallsDrawWithArt(t *testing.T) {
 	t.Parallel()
-	root, err := LocateArt()
-	if err != nil {
-		t.Skip("generated art not present:", err)
-	}
-	art, err := loadArtCatalog(root)
-	if err != nil {
-		t.Fatal(err)
-	}
+	art := testArt(t)
 	r := testStoneArt()
 	r.art, r.game = art, &stubSim{w: 8, h: 8}
 	if !r.drawLinked(ebiten.NewImage(256, 256), "structure/wall_stone", 2, 2, wallE|wallS, cornerSE, r.stuffTint("granite blocks"), ghostOKCS, 32, 256, 256) {
