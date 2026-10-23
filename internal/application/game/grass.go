@@ -154,7 +154,7 @@ func (g *Game) grassCutList() [][2]int {
 // fillGrassView copies grass and its cut marks into the view.
 func (g *Game) fillGrassView(w *WorldView) {
 	s := g.seedGrass()
-	w.Grass = append([]uint8(nil), s.cells...)
+	w.Grass = shareLayer(&g.viewGrass, s.cells) // indexes.go: shared, copy-on-write
 	w.GrassCut = g.grassCutList()
 }
 

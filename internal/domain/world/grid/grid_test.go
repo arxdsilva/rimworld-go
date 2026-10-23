@@ -82,3 +82,58 @@ func TestVersionChangesOnlyWithWalkability(t *testing.T) {
 		t.Fatal("an out-of-bounds SetWalkable changed Version")
 	}
 }
+
+func TestBlockedRoundTripsThroughRestore(t *testing.T) {
+	g := New(70, 3) // 210 tiles: spans four words, the last partial
+	want := []int{0, 1, 63, 64, 65, 127, 128, 200, 209}
+	for _, i := range want {
+		g.SetWalkable(i%70, i/70, false)
+	}
+	got := g.Blocked()
+	if len(got) != len(want) {
+		t.Fatalf("Blocked() = %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("Blocked() = %v, want %v", got, want)
+		}
+	}
+	r := Restore(70, 3, append(got, -1, 210, 99999)) // out of range: ignored
+	for y := 0; y < 3; y++ {
+		for x := 0; x < 70; x++ {
+			if r.Walkable(x, y) != g.Walkable(x, y) {
+				t.Fatalf("restored (%d,%d) differs", x, y)
+			}
+		}
+	}
+	if len(r.Blocked()) != len(want) {
+		t.Fatalf("restored Blocked() = %v", r.Blocked())
+	}
+}
+
+func TestWalkableNegativeCoordinates(t *testing.T) {
+	g := New(3, 3)
+	if g.Walkable(-1, 1) || g.Walkable(1, -1) || g.Walkable(3, 0) || g.Walkable(0, 3) {
+		t.Fatal("out-of-bounds tile walkable")
+	}
+}
+
+func TestEmptyBlocked(t *testing.T) {
+	if b := New(5, 5).Blocked(); len(b) != 0 || b == nil {
+		t.Fatalf("Blocked() = %#v, want empty non-nil", b)
+	}
+}
+
+func BenchmarkWalkable(b *testing.B) {
+	g := New(500, 500)
+	for i := 0; i < 500; i += 3 {
+		g.SetWalkable(i, i, false)
+	}
+	n := 0
+	for i := 0; i < b.N; i++ {
+		if g.Walkable(i%500, (i/500)%500) {
+			n++
+		}
+	}
+	_ = n
+}

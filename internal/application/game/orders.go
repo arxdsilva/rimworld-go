@@ -337,16 +337,6 @@ func (g *Game) workSpot(id entity.EntityID, x, y int) (int, int) {
 	return x, y
 }
 
-func (g *Game) plantAt(x, y int) entity.EntityID {
-	for _, id := range g.plantIDs {
-		p, ok := g.plants.Get(id)
-		if ok && p.X == x && p.Y == y {
-			return id
-		}
-	}
-	return 0
-}
-
 func (g *Game) prioritize(id entity.EntityID, o command.Order, x, y int, layer construction.Layer) {
 	if !g.alive(id) {
 		return
@@ -364,6 +354,7 @@ func (g *Game) prioritize(id entity.EntityID, o command.Order, x, y int, layer c
 	if o == command.OrderMine {
 		g.interrupt(id, job.Cancelled)
 		g.mines[[2]int{x, y}] = true
+		g.minesVer++
 		g.startMine(id, x, y, true)
 		return
 	}

@@ -159,6 +159,7 @@ func (g *Game) moveBuilding(bid entity.EntityID, f construction.Facing, x, y int
 		WorkLeft:  max(minReinstallWork, construction.WorkFor(b.Kind, b.Stuff)/2),
 		Reinstall: uint64(bid),
 	})
+	g.noteFrame(id) // indexes.go
 }
 
 // dropReinstall deletes any reinstall frame planned for bid.
@@ -193,6 +194,7 @@ func (g *Game) completeMove(id entity.EntityID, fr construction.Frame) {
 	oldCells, _, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
 	b.X, b.Y, b.Facing = fr.X, fr.Y, fr.Facing
 	g.bldgs.Set(bid, b)
+	g.noteBuilding(bid) // indexes.go: it stands somewhere new
 	if blocks {
 		for _, c := range oldCells {
 			g.grid.SetWalkable(c[0], c[1], g.terr.At(c[0], c[1]).Walkable() && g.layerBlockerAt(c[0], c[1]) == 0)

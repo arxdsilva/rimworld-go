@@ -23,7 +23,10 @@ import (
 // Step would do first. While paused the clock does not move, so this is the
 // same state the first phase of that Step would reach (the UI calls it so
 // paused actions show at once).
-func (g *Game) ApplyPending() { g.phaseCommands() }
+func (g *Game) ApplyPending() {
+	g.viewGen++ // view cache (indexes.go): commands may change the state
+	g.phaseCommands()
+}
 
 func (g *Game) phaseCommands() {
 	cmds := g.pending
@@ -1165,6 +1168,7 @@ func (g *Game) completeFrame(id entity.EntityID, fr construction.Frame) {
 	g.frameIDs = kept
 	g.bldgIDs = append(g.bldgIDs, id)
 	g.bldgs.Set(id, construction.Building{Kind: fr.Kind, Stuff: fr.Stuff, Facing: fr.Facing, X: fr.X, Y: fr.Y})
+	g.noteBuilding(id) // indexes.go
 	g.markRoomsDirty()
 	g.structVer++                              // SIM-029: link/autotile caches
 	g.autoHome(fr.Kind, fr.Facing, fr.X, fr.Y) // home.go
@@ -1395,18 +1399,30 @@ func (g *Game) itemAt(x, y int) entity.EntityID {
 
 func (g *Game) deleteItem(id entity.EntityID) {
 	g.stacks.Delete(id)
-	kept := g.itemIDs[:0]
-	for _, iid := range g.itemIDs {
-		if iid != id {
-			kept = append(kept, iid)
-		}
-	}
-	g.itemIDs = kept
+	g.itemIDs = dropIDs(g.itemIDs, func(iid entity.EntityID) bool { return iid == id })
 }
 
 // mergeOrSet puts stack id down at st's tile, merging into a same-kind
 // stack there up to StackLimit; any overflow spills to a nearby tile.
-func (g *Game) mergeOrSet(id entity.EntityID, st item.Stack) {
+func (g *Game) mergeOrSet(id entity.EntityID, st item.Stack) { g.mergeOrSetFrom(id, st, nil) }
+
+// spillStep is one tile a spilling stack was tried on, with its quantity.
+type spillStep struct{ x, y, qty int }
+
+// mergeOrSetFrom is mergeOrSet along a spill chain. Arriving again on a
+// tile with the same quantity means nothing merged since the last visit,
+// so the chain would repeat forever (spillTile accepts a same-kind stack
+// that CanMerge refuses, e.g. two corpses of different species side by
+// side): the stack is set down where it is, as when no spill tile is
+// found. Chains that end on their own never revisit a tile that way, so
+// they are unchanged.
+func (g *Game) mergeOrSetFrom(id entity.EntityID, st item.Stack, seen []spillStep) {
+	here := spillStep{st.X, st.Y, st.Qty}
+	if slices.Contains(seen, here) {
+		g.stacks.Set(id, st)
+		return
+	}
+	seen = append(seen, here)
 	for _, oid := range g.itemIDs {
 		if oid == id {
 			continue
@@ -1435,7 +1451,7 @@ func (g *Game) mergeOrSet(id entity.EntityID, st item.Stack) {
 	if g.otherStackAt(id, st.X, st.Y) {
 		if x, y, ok := g.spillTile(st.Kind, st.X, st.Y); ok {
 			st.X, st.Y = x, y
-			g.mergeOrSet(id, st)
+			g.mergeOrSetFrom(id, st, seen)
 			return
 		}
 	}

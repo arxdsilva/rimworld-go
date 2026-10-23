@@ -145,7 +145,9 @@ func (g *Game) spawnPlant(s plant.Species, x, y, growth int) (entity.EntityID, e
 	}
 	id := g.entities.Next()
 	g.plantIDs = append(g.plantIDs, id)
-	g.plants.Set(id, plant.Plant{Species: s, X: x, Y: y, Growth: growth})
+	p := plant.Plant{Species: s, X: x, Y: y, Growth: growth}
+	g.plants.Set(id, p)
+	g.notePlant(id, p) // indexes.go
 	return id, nil
 }
 
@@ -160,13 +162,7 @@ func (g *Game) SpawnPlantSpecies(species string, x, y, growth int) (entity.Entit
 
 func (g *Game) removePlant(id entity.EntityID) {
 	g.plants.Delete(id)
-	kept := g.plantIDs[:0]
-	for _, pid := range g.plantIDs {
-		if pid != id {
-			kept = append(kept, pid)
-		}
-	}
-	g.plantIDs = kept
+	g.plantIDs = dropIDs(g.plantIDs, func(pid entity.EntityID) bool { return pid == id })
 }
 
 // phasePlants grows every plant on fertile ground, and grass back on
@@ -212,15 +208,30 @@ func (g *Game) markMine(x1, y1, x2, y2 int, on bool) {
 			k := [2]int{x, y}
 			if on && terrain.IsRockWall(g.terr.At(x, y)) && g.grid.InBounds(x, y) {
 				g.mines[k] = true
+				g.minesVer++
 			} else if !on {
 				delete(g.mines, k)
+				g.minesVer++
 			}
 		}
 	}
 }
 
-// mineList is the mine designations in a stable order.
+// mineList is the mine designations in a stable order (y, then x): a
+// shared read-only slice, rebuilt only when minesVer moves.
 func (g *Game) mineList() [][2]int {
+	c := &g.mineCache
+	if c.ok && c.ver == g.minesVer {
+		if selfCheck() && !slices.Equal(c.list, g.scanMineList()) {
+			panic("mineList: mines changed without a minesVer bump")
+		}
+		return c.list
+	}
+	c.list, c.ver, c.ok = g.scanMineList(), g.minesVer, true
+	return c.list
+}
+
+func (g *Game) scanMineList() [][2]int {
 	out := make([][2]int, 0, len(g.mines))
 	for k := range g.mines {
 		out = append(out, k)
@@ -374,6 +385,7 @@ func (g *Game) doMine(id entity.EntityID, j job.Record) {
 	g.setTerrain(j.DestX, j.DestY, terrain.Stone) // clears the ore; the stone stays
 	g.roofOnMined(j.DestX, j.DestY)
 	delete(g.mines, [2]int{j.DestX, j.DestY})
+	g.minesVer++
 	if ore != geology.NoOre {
 		g.dropStack(oreMetal(ore), OreYield[ore], j.DestX, j.DestY)
 	} else {

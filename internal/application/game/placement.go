@@ -254,52 +254,10 @@ func (g *Game) placeFrameStuff(kind construction.Kind, stuff item.Kind, f constr
 		WorkLeft: construction.WorkFor(kind, stuff),
 	}
 	g.frames.Set(id, fr)
+	g.noteFrame(id) // indexes.go
 	if kind.Instant() {
 		g.completeFrame(id, fr) // a marking: nothing to haul or build
 	}
-}
-
-func (g *Game) layerFrameAt(x, y int, layer construction.Layer) entity.EntityID {
-	for _, id := range g.frameIDs {
-		fr, ok := g.frames.Get(id)
-		if ok && construction.DefOf(fr.Kind).Layer == layer && construction.Covers(fr.Kind, fr.Facing, fr.X, fr.Y, x, y) {
-			return id
-		}
-	}
-	return 0
-}
-
-// layerBlockerAt is a completed movement-blocking building covering (x, y).
-func (g *Game) layerBlockerAt(x, y int) entity.EntityID {
-	for _, id := range g.bldgIDs {
-		b, ok := g.bldgs.Get(id)
-		if ok && construction.DefOf(b.Kind).BlocksMove && construction.Covers(b.Kind, b.Facing, b.X, b.Y, x, y) {
-			return id
-		}
-	}
-	return 0
-}
-
-func (g *Game) layerBldgAt(x, y int, layer construction.Layer) entity.EntityID {
-	for _, id := range g.bldgIDs {
-		b, ok := g.bldgs.Get(id)
-		if ok && construction.DefOf(b.Kind).Layer == layer && construction.Covers(b.Kind, b.Facing, b.X, b.Y, x, y) {
-			return id
-		}
-	}
-	return 0
-}
-
-// blockingFrameAt is a planned movement-blocking object covering (x, y)
-// (so interaction spots are not planned under future benches/walls).
-func (g *Game) blockingFrameAt(x, y int) entity.EntityID {
-	for _, id := range g.frameIDs {
-		fr, ok := g.frames.Get(id)
-		if ok && construction.DefOf(fr.Kind).BlocksMove && construction.Covers(fr.Kind, fr.Facing, fr.X, fr.Y, x, y) {
-			return id
-		}
-	}
-	return 0
 }
 
 // ejectPawns moves anyone standing on a tile that just became blocked to

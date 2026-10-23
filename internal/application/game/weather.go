@@ -27,6 +27,18 @@ const (
 // terrain (the Game keeps no seed of its own), so a loaded game continues
 // the same sky.
 func (g *Game) weatherSeed() uint64 {
+	c := &g.seedCache // cached per structVer, which every terrain change bumps
+	if c.ok && c.ver == g.structVer {
+		if selfCheck() && c.seed != g.scanWeatherSeed() {
+			panic("weatherSeed: terrain changed without a structVer bump")
+		}
+		return c.seed
+	}
+	c.seed, c.ver, c.ok = g.scanWeatherSeed(), g.structVer, true
+	return c.seed
+}
+
+func (g *Game) scanWeatherSeed() uint64 {
 	h := uint64(0xcbf29ce484222325) ^ uint64(g.terr.W)<<32 ^ uint64(g.terr.H)
 	for _, c := range g.terr.Cells {
 		h = (h ^ uint64(c)) * 0x100000001b3

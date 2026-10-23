@@ -1,6 +1,8 @@
 package game
 
 import (
+	"slices"
+
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
@@ -257,16 +259,18 @@ func (g *Game) digIn(gi int, now uint64) {
 // sapperMap is the map as sappers see it when planning a tunnel: walls,
 // doors and rock all give way; traps are stepped around.
 func (g *Game) sapperBreaks() tileSet {
-	set := g.buildingCells(construction.Wall, construction.Door)
-	w := g.grid.Width()
-	for y := 0; y < g.grid.Height(); y++ {
-		for x := 0; x < w; x++ {
-			if terrain.IsRockWall(g.terr.At(x, y)) {
-				set[y*w+x] = true
+	return g.sapperSet.get(g.structVer, func() tileSet {
+		set := slices.Clone(g.buildingCells(construction.Wall, construction.Door))
+		w := g.grid.Width()
+		for y := 0; y < g.grid.Height(); y++ {
+			for x := 0; x < w; x++ {
+				if terrain.IsRockWall(g.terr.At(x, y)) {
+					set.add(y*w + x)
+				}
 			}
 		}
-	}
-	return set
+		return set
+	})
 }
 
 // sapper reports a raider of a sapper raid.
@@ -282,7 +286,7 @@ type sapperMap struct {
 }
 
 func (s sapperMap) Walkable(x, y int) bool {
-	return s.hostileMap.Walkable(x, y) && !s.traps[y*s.g.grid.Width()+x]
+	return s.hostileMap.Walkable(x, y) && !s.traps.has(y*s.g.grid.Width()+x)
 }
 
 // digRock: a sapper hacks at a rock tile; it opens up at zero.

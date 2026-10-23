@@ -512,6 +512,27 @@ type Game struct {
 	enterHook func(id entity.EntityID, from, to Position) (stepVerdict, Position)
 	// haul: in-flight material deliveries (haul_route.go, HAUL-001).
 	haul haulState
+	// phaseObs: optional per-phase timing observer (phases.go); set only
+	// from cmd/* and benchmarks, never read by gameplay.
+	phaseObs PhaseObserver
+	// idx: derived per-cell lookups (indexes.go), never saved.
+	idx indexes
+	// cellSets and sapperSet: building/terrain cell sets cached per
+	// structVer (defense.go, raid_plans.go), never saved.
+	cellSets  map[uint64]*cellCache
+	sapperSet cellCache
+	// views, viewGen, viewTerr: read-model caches (indexes.go).
+	views    viewCache
+	viewGen  uint64
+	viewTerr layerCache
+	// viewGrass, viewHome, viewRoof: copy-on-write read-model layers
+	// (indexes.go shareLayer).
+	viewGrass, viewHome, viewRoof layerCache
+	// minesVer bumps on every mine designation change (mineList cache);
+	// seedCache is weatherSeed's (indexes.go). Never saved.
+	minesVer  uint64
+	mineCache mineCache
+	seedCache seedCache
 }
 
 // New builds a Game from cfg. Width/Height must be positive.
@@ -713,6 +734,11 @@ func (g *Game) SetWork(id entity.EntityID, t work.Type, on bool) {
 // Step advances the simulation by n ticks.
 // Phases: commands → needs/health → AI/jobs → movement → clock.
 func (g *Game) Step(n int) {
+	g.viewGen++ // view cache (indexes.go): a new state
+	if g.phaseObs != nil {
+		g.stepObserved(n)
+		return
+	}
 	for i := 0; i < n; i++ {
 		g.phaseCommands()
 		g.phasePlants()
@@ -731,7 +757,20 @@ func (g *Game) Step(n int) {
 }
 
 // Snapshot returns a read-only view of every pawn, in insertion order.
+// With the view cache on (SetViewCache) repeated calls between ticks share
+// one result: treat it as read only.
 func (g *Game) Snapshot() []PawnView {
+	if g.views.on {
+		if g.views.pawnsOK && g.views.pawnsKey == g.viewKey() {
+			return g.views.pawns
+		}
+		g.views.pawns, g.views.pawnsKey, g.views.pawnsOK = g.snapshot(), g.viewKey(), true
+		return g.views.pawns
+	}
+	return g.snapshot()
+}
+
+func (g *Game) snapshot() []PawnView {
 	act := g.Activity()
 	views := make([]PawnView, 0, len(g.pawnIDs))
 	for _, id := range g.pawnIDs {
@@ -824,8 +863,22 @@ func (g *Game) Snapshot() []PawnView {
 	return views
 }
 
-// World returns the non-pawn read model.
+// World returns the non-pawn read model. Per-tile layers (Terrain,
+// RoomGrid, StoneType, Ore) are shared read-only slices replaced, never
+// rewritten, when they change. With the view cache on (SetViewCache)
+// repeated calls between ticks share one result: treat it as read only.
 func (g *Game) World() WorldView {
+	if g.views.on {
+		if g.views.worldOK && g.views.worldKey == g.viewKey() {
+			return g.views.world
+		}
+		g.views.world, g.views.worldKey, g.views.worldOK = g.world(), g.viewKey(), true
+		return g.views.world
+	}
+	return g.world()
+}
+
+func (g *Game) world() WorldView {
 	bd := biome.DefOf(g.biome)
 	w := WorldView{
 		Biome: bd.Name, BiomeKey: bd.Key,
@@ -941,16 +994,13 @@ func (g *Game) World() WorldView {
 		}
 	}
 	w.TerrainW = g.terr.W
-	w.Terrain = make([]uint8, len(g.terr.Cells))
-	for i, t := range g.terr.Cells {
-		w.Terrain[i] = uint8(t)
-	}
+	w.Terrain = g.terrainView() // indexes.go: shared, rebuilt per structVer
 	w.Mines = g.mineList()
 	w.Smooths = g.smoothList()
 	w.StoneType, w.Ore = g.stoneLayers()
 	w.StructVer = g.structVer
 	g.ensureRooms()
-	w.RoomGrid = append([]int(nil), g.roomGrid...)
+	w.RoomGrid = g.roomGrid // shared read-only: ensureRooms replaces it, never writes in place
 	w.Rooms = g.roomViews()
 	w.Animals = g.animalViews()
 	w.Traces = g.traceViews()

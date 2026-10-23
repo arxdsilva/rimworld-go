@@ -100,7 +100,7 @@ func (g *Game) startHome() {
 // fillHomeView copies the Home area into the view.
 func (g *Game) fillHomeView(w *WorldView) {
 	if n := g.grid.Width() * g.grid.Height(); len(g.homeArea.cells) == n {
-		w.Home = slices.Clone(g.homeArea.cells)
+		w.Home = shareLayer(&g.viewHome, g.homeArea.cells) // indexes.go: shared, copy-on-write
 	} else {
 		w.Home = make([]uint8, n)
 	}

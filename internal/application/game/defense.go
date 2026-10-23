@@ -34,13 +34,66 @@ const (
 	rebuildFirst = 1000
 )
 
-// tileSet is a set of map cells (index y*w+x) built once per query.
-type tileSet map[int]bool
+// tileSet is a set of map cells (index y*w+x), one bit per cell. Sets
+// from buildingCells and sapperBreaks are shared caches: read only.
+type tileSet []uint64
 
-// buildingCells indexes object-layer buildings of the given kinds.
+func newTileSet(cells int) tileSet { return make(tileSet, (cells+63)/64) }
+
+// has reports cell i (false off the set).
+func (s tileSet) has(i int) bool {
+	return i >= 0 && i>>6 < len(s) && s[i>>6]&(1<<(uint(i)&63)) != 0
+}
+
+func (s tileSet) add(i int) {
+	if i >= 0 && i>>6 < len(s) {
+		s[i>>6] |= 1 << (uint(i) & 63)
+	}
+}
+
+// cellCache is a tileSet derived from buildings (and terrain), rebuilt
+// when structVer — bumped by every building and terrain change — moves.
+type cellCache struct {
+	set tileSet
+	ver uint64
+	ok  bool
+}
+
+func (c *cellCache) get(ver uint64, build func() tileSet) tileSet {
+	if !c.ok || c.ver != ver {
+		c.set, c.ver, c.ok = build(), ver, true
+	} else if selfCheck() {
+		if fresh := build(); !slices.Equal(fresh, c.set) {
+			panic("cellCache: stale building/terrain cell set (structVer not bumped?)")
+		}
+	}
+	return c.set
+}
+
+// buildingCells indexes buildings of the given kinds (a shared cached
+// set: read only).
 func (g *Game) buildingCells(kinds ...construction.Kind) tileSet {
-	set := tileSet{}
+	var mask uint64
+	for _, k := range kinds {
+		if k >= 64 {
+			return g.scanBuildingCells(kinds) // not maskable: uncached
+		}
+		mask |= 1 << uint(k)
+	}
+	if g.cellSets == nil {
+		g.cellSets = map[uint64]*cellCache{}
+	}
+	c := g.cellSets[mask]
+	if c == nil {
+		c = &cellCache{}
+		g.cellSets[mask] = c
+	}
+	return c.get(g.structVer, func() tileSet { return g.scanBuildingCells(kinds) })
+}
+
+func (g *Game) scanBuildingCells(kinds []construction.Kind) tileSet {
 	w := g.grid.Width()
+	set := newTileSet(w * g.grid.Height())
 	for _, id := range g.bldgIDs {
 		b, ok := g.bldgs.Get(id)
 		if !ok {
@@ -52,7 +105,7 @@ func (g *Game) buildingCells(kinds ...construction.Kind) tileSet {
 			}
 			cells, _, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
 			for _, c := range cells {
-				set[c[1]*w+c[0]] = true
+				set.add(c[1]*w + c[0])
 			}
 		}
 	}
@@ -73,7 +126,7 @@ func (g *Game) hostileMap() hostileMap {
 func (h hostileMap) Width() int  { return h.g.grid.Width() }
 func (h hostileMap) Height() int { return h.g.grid.Height() }
 func (h hostileMap) Walkable(x, y int) bool {
-	return h.g.grid.Walkable(x, y) && !h.doors[y*h.g.grid.Width()+x]
+	return h.g.grid.Walkable(x, y) && !h.doors.has(y*h.g.grid.Width()+x)
 }
 
 // breachMap is the map with every door and wall knocked down: raiders
@@ -89,7 +142,7 @@ func (b breachMap) Walkable(x, y int) bool {
 	if !b.g.grid.InBounds(x, y) {
 		return false
 	}
-	return b.g.grid.Walkable(x, y) || b.breaks[y*b.g.grid.Width()+x]
+	return b.g.grid.Walkable(x, y) || b.breaks.has(y*b.g.grid.Width()+x)
 }
 
 // pathQuery is the walkability a mover plans with.

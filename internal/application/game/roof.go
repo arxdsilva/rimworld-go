@@ -407,12 +407,7 @@ func (g *Game) roofOnMined(x, y int) {
 // fillRoofView copies roofs and collapses into the view (World fills the
 // sun clock).
 func (g *Game) fillRoofView(w *WorldView) {
-	if len(g.roofs) > 0 {
-		w.RoofCells = make([]uint8, len(g.roofs))
-		for i, c := range g.roofs {
-			w.RoofCells[i] = uint8(c)
-		}
-	}
+	w.RoofCells = shareLayer(&g.viewRoof, g.roofs) // indexes.go: shared, copy-on-write
 	if len(g.roofCollapses) > 0 {
 		w.RoofCollapses = make([]RoofCollapseView, len(g.roofCollapses))
 		for i, s := range g.roofCollapses {

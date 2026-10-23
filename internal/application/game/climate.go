@@ -101,7 +101,8 @@ func (g *Game) rotItems() {
 	}
 	lost := map[item.Kind]*loss{}
 	var order []item.Kind
-	for _, id := range append([]entity.EntityID(nil), g.itemIDs...) {
+	var drop map[entity.EntityID]bool // removed from itemIDs once, in order, after the pass
+	for _, id := range g.itemIDs {
 		st, ok := g.stacks.Get(id)
 		if !ok || st.Shelf() == 0 {
 			continue
@@ -124,12 +125,19 @@ func (g *Game) rotItems() {
 		if _, taken := g.reserve.EntityOwner(id); taken {
 			continue
 		}
-		g.deleteItem(id)
+		g.stacks.Delete(id) // deleteItem, with the list compacted below
+		if drop == nil {
+			drop = map[entity.EntityID]bool{}
+		}
+		drop[id] = true
 		if lost[st.Kind] == nil {
 			lost[st.Kind] = &loss{x: x, y: y}
 			order = append(order, st.Kind)
 		}
 		lost[st.Kind].qty += st.Qty
+	}
+	if drop != nil {
+		g.itemIDs = dropIDs(g.itemIDs, func(id entity.EntityID) bool { return drop[id] })
 	}
 	for _, k := range order {
 		l := lost[k]
@@ -150,7 +158,8 @@ func (g *Game) frostCrops() {
 	var order []plant.Species
 	var fx, fy int
 	hot := map[plant.Species]bool{}
-	for _, id := range append([]entity.EntityID(nil), g.plantIDs...) {
+	var gone map[entity.EntityID]bool // removed from plantIDs once, in order, after the pass
+	for _, id := range g.plantIDs {
 		p, ok := g.plants.Get(id)
 		if !ok {
 			continue
@@ -159,7 +168,11 @@ func (g *Game) frostCrops() {
 		if !plant.Frostbitten(p.Species, t) && !plant.Killed(p.Species, t) {
 			continue
 		}
-		g.removePlant(id)
+		g.plants.Delete(id) // removePlant, with the list compacted below
+		if gone == nil {
+			gone = map[entity.EntityID]bool{}
+		}
+		gone[id] = true
 		if dead[p.Species] == 0 {
 			order = append(order, p.Species)
 			fx, fy = p.X, p.Y
@@ -167,6 +180,9 @@ func (g *Game) frostCrops() {
 			hot[p.Species] = d.HeatKill != 0 && t > d.HeatKill
 		}
 		dead[p.Species]++
+	}
+	if gone != nil {
+		g.plantIDs = dropIDs(g.plantIDs, func(id entity.EntityID) bool { return gone[id] })
 	}
 	for _, s := range order {
 		n := dead[s]
