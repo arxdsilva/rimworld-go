@@ -239,6 +239,10 @@ type artSprite struct {
 	normalPath string
 	normal     *ebiten.Image
 	normalDone bool
+	// src is where an atlas-packed sprite's pixels come from (art_atlas.go);
+	// nil for a sprite loaded from its own files. pix and mask are cut out
+	// of the atlas the first time the catalog hands the sprite out.
+	src *atlasSrc
 	// opaqueH caches opaqueHeightPx (0: not measured yet).
 	opaqueH float64
 }
@@ -327,8 +331,11 @@ func loadArtCatalog(root string) (*artCatalog, error) {
 		return nil, err
 	}
 	for _, fam := range families {
-		if !fam.IsDir() || fam.Name() == menuMetaFamily { // menu art is not a sprite
+		if !fam.IsDir() || fam.Name() == menuMetaFamily || fam.Name() == atlasMetaDir { // not sprite families
 			continue
+		}
+		if _, err := os.Stat(filepath.Join(metaRoot, atlasMetaDir, fam.Name()+".yaml")); err == nil {
+			continue // packed by cmd/atlasgen: served from its atlas pages below
 		}
 		files, err := os.ReadDir(filepath.Join(metaRoot, fam.Name()))
 		if err != nil {
@@ -360,6 +367,14 @@ func loadArtCatalog(root string) (*artCatalog, error) {
 				sp.normalPath = np
 			}
 			c.sprites[fam.Name()+"/"+strings.TrimSuffix(f.Name(), ".yaml")] = sp
+		}
+	}
+	// Packed families (metadata/atlas/<family>.yaml), whether or not their
+	// individual files are still around.
+	packed, _ := filepath.Glob(filepath.Join(metaRoot, atlasMetaDir, "*.yaml"))
+	for _, p := range packed {
+		if err := c.loadAtlas(root, strings.TrimSuffix(filepath.Base(p), ".yaml")); err != nil {
+			return nil, err
 		}
 	}
 	if len(c.sprites) == 0 {
@@ -398,7 +413,11 @@ func (c *artCatalog) sprite(key string) *artSprite {
 	if c == nil {
 		return nil
 	}
-	return c.sprites[key]
+	sp := c.sprites[key]
+	if sp != nil && sp.src != nil && sp.pix == nil {
+		sp.src.fill(sp)
+	}
+	return sp
 }
 
 // image returns the GPU texture for key, tinted when the sprite has a
@@ -429,10 +448,14 @@ func (c *artCatalog) image(key string, tint color.NRGBA) *ebiten.Image {
 func (c *artCatalog) linkNormal(img *ebiten.Image, sp *artSprite) {
 	if !sp.normalDone {
 		sp.normalDone = true
-		if sp.normalPath != "" {
-			if n, err := decodeNRGBA(sp.normalPath); err == nil && n.Bounds().Size() == sp.pix.Bounds().Size() {
-				sp.normal = ebiten.NewImageFromImage(n)
-			}
+		var n *image.NRGBA
+		if sp.src != nil {
+			n = sp.src.normalImage(sp)
+		} else if sp.normalPath != "" {
+			n, _ = decodeNRGBA(sp.normalPath)
+		}
+		if n != nil && n.Bounds().Size() == sp.pix.Bounds().Size() {
+			sp.normal = ebiten.NewImageFromImage(n)
 		}
 	}
 	if sp.normal != nil && c.normals != nil {

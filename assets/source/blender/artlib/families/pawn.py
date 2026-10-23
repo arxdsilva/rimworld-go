@@ -9,6 +9,7 @@ correctly. Neutral greys + tint masks give skin/hair/cloth variety.
 Original proportions: compact geometric torso, short legs, large head.
 """
 import math
+import os
 
 import bmesh
 
@@ -22,64 +23,175 @@ MARGINS = (0.125, 0.125, 0.10, 0.125)
 HEAD_Z = 0.84
 
 
+# ------------------------------------------------------------- builds
+# NG-1 (plan 7.1): one rig, six builds. Every dimension the body and the
+# clothing read comes from the active build (`use_build`), and the joint
+# pivots (shoulder, hip) and the hand attachments follow it, so poses,
+# held items and hair line up on every build. `m_avg` reproduces the
+# pre-NG-1 numbers exactly: its files keep the un-suffixed names.
+#
+#   W      torso half-width (tiles) at z = KNOT_Z: hip, waist, chest, top
+#   F, B   extra half-depth (front = -Y, back = +Y) at the same knots:
+#          bust and belly in front, hips behind
+#   d      base torso half-depth
+#   shoulder  x of the shoulder joint / arm centre    leg_x  x of the hip joint
+#   limb   radius scale of arms, hands, legs and sleeves
+#   neck   neck radius       head  head scale about its centre (+-3 %)
+KNOT_Z = (0.32, 0.46, 0.55, 0.63)
+BUILDS = {
+    "m_thin": dict(W=(0.128, 0.122, 0.136, 0.142), F=(0, 0, 0, 0), B=(0, 0, 0, 0), d=0.088,
+                   shoulder=0.176, leg_x=0.068, limb=0.86, neck=0.052, head=1.03),
+    "m_avg": dict(W=(0.150, 0.150, 0.150, 0.150), F=(0, 0, 0, 0), B=(0, 0, 0, 0), d=0.100,
+                  shoulder=0.190, leg_x=0.075, limb=1.0, neck=0.060, head=1.0),
+    "m_heavy": dict(W=(0.182, 0.196, 0.186, 0.170), F=(0, 0.030, 0.010, 0), B=(0, 0.004, 0, 0), d=0.118,
+                    shoulder=0.220, leg_x=0.092, limb=1.16, neck=0.072, head=0.97),
+    "f_thin": dict(W=(0.156, 0.104, 0.108, 0.108), F=(0, 0, 0.014, 0.005), B=(0.010, 0, 0, 0), d=0.080,
+                   shoulder=0.146, leg_x=0.070, limb=0.78, neck=0.046, head=1.02),
+    "f_avg": dict(W=(0.180, 0.122, 0.128, 0.122), F=(0, 0, 0.020, 0.008), B=(0.014, 0, 0, 0), d=0.092,
+                  shoulder=0.160, leg_x=0.080, limb=0.88, neck=0.052, head=0.985),
+    "f_heavy": dict(W=(0.206, 0.164, 0.164, 0.146), F=(0, 0.030, 0.030, 0.010), B=(0.018, 0, 0, 0), d=0.115,
+                    shoulder=0.186, leg_x=0.092, limb=1.06, neck=0.062, head=0.97),
+}
+BUILD_KEYS = tuple(BUILDS)
+LEGACY_BUILD = "m_avg"        # un-suffixed file names
+_build_key = LEGACY_BUILD
+_build = BUILDS[_build_key]
+
+
+def use_build(key):
+    """Select the build every builder below reads from."""
+    global _build, _build_key
+    _build_key, _build = key, BUILDS[key]
+
+
+def _sx(delta=0.0):
+    """x of an arm part's centre: the shoulder joint plus its offset."""
+    return _build["shoulder"] + delta
+
+
+def _knot(vals, z):
+    """Smooth profile through the KNOT_Z knots, held flat beyond them."""
+    zs = KNOT_Z
+    if z <= zs[0]:
+        return vals[0]
+    for i in range(len(zs) - 1):
+        if z <= zs[i + 1]:
+            t = (z - zs[i]) / (zs[i + 1] - zs[i])
+            t = t * t * (3.0 - 2.0 * t)
+            return vals[i] + (vals[i + 1] - vals[i]) * t
+    return vals[-1]
+
+
+def _taper(ob, fx, fy_front, fy_back, cuts):
+    """Reshape a box: after cutting loops at `cuts`, a vertex at height z
+    is scaled so its x extent is fx(z) and its y extent fy_front(z) (-Y)
+    or fy_back(z) (+Y). The box must have been built at the maxima."""
+    bm = bmesh.new()
+    bm.from_mesh(ob.data)
+    _bisect(bm, cuts)
+    xs = [abs(v.co.x - CX) for v in bm.verts]
+    xmax = max(xs)
+    yf = max([CY - v.co.y for v in bm.verts] + [1e-6])
+    yb = max([v.co.y - CY for v in bm.verts] + [1e-6])
+    for v in bm.verts:
+        z = v.co.z
+        v.co.x = CX + (v.co.x - CX) * fx(z) / xmax
+        if v.co.y < CY:
+            v.co.y = CY + (v.co.y - CY) * fy_front(z) / yf
+        else:
+            v.co.y = CY + (v.co.y - CY) * fy_back(z) / yb
+    bm.to_mesh(ob.data)
+    bm.free()
+    ob.data.update()
+
+
+def _loft(name, gx, gy, z0, z1, mat, bevel=0.06, segments=2):
+    """A torso-shaped box: the build's half-width and half-depth profile
+    plus gx / gy of clothing thickness, between z0 and z1. Builds with a
+    flat profile (m_avg) get the plain box."""
+    b = _build
+    W, F, B, d = b["W"], b["F"], b["B"], b["d"]
+    wmax, fmax, bmax = max(W) + gx, d + max(F) + gy, d + max(B) + gy
+    ob = S.box(name, CX - wmax, CY - fmax, z0, CX + wmax, CY + bmax, z1, mat, bevel=bevel, segments=segments)
+    if len(set(W)) == 1 and not any(F) and not any(B):
+        return ob
+    cuts = [z for z in (0.32, 0.39, 0.46, 0.505, 0.55, 0.60, 0.63) if z0 + 0.012 < z < z1 - 0.012]
+    _taper(ob, lambda z: _knot(W, z) + gx, lambda z: d + _knot(F, z) + gy,
+           lambda z: d + _knot(B, z) + gy, cuts)
+    return ob
+
+
 def _body():
+    b = _build
+    L, h, lx = b["limb"], b["head"], b["leg_x"]
     objs = []
     for sx in (-1, 1):
-        objs.append(S.cyl("leg", CX + sx * 0.075, CY, 0.062, 0.0, 0.32, "skin", segs=10))
-        objs.append(S.cyl("arm", CX + sx * 0.19, CY, 0.048, 0.33, 0.60, "skin", segs=10))
-        objs.append(S.ellipsoid("hand", CX + sx * 0.195, CY - 0.01, 0.31, 0.055, 0.055, 0.05, "skin", segs=10, rings=6))
-    objs.append(S.box("torso", CX - 0.15, CY - 0.10, 0.28, CX + 0.15, CY + 0.10, 0.63, "skin", bevel=0.06, segments=2))
-    objs.append(S.cyl("neck", CX, CY, 0.06, 0.60, 0.70, "skin", segs=10))
-    objs.append(S.ellipsoid("head", CX, CY, HEAD_Z, 0.19, 0.175, 0.19, "skin", segs=24, rings=14))
+        objs.append(S.cyl("leg", CX + sx * lx, CY, 0.062 * L, 0.0, 0.32, "skin", segs=10))
+        objs.append(S.cyl("arm", CX + sx * _sx(), CY, 0.048 * L, 0.33, 0.60, "skin", segs=10))
+        objs.append(S.ellipsoid("hand", CX + sx * _sx(0.005), CY - 0.01, 0.31, 0.055 * L, 0.055 * L, 0.05 * L,
+                                "skin", segs=10, rings=6))
+    objs.append(_loft("torso", 0.0, 0.0, 0.28, 0.63, "skin"))
+    objs.append(S.cyl("neck", CX, CY, b["neck"], 0.60, 0.70, "skin", segs=10))
+    objs.append(S.ellipsoid("head", CX, CY, HEAD_Z, 0.19 * h, 0.175 * h, 0.19 * h, "skin", segs=24, rings=14))
     for sx in (-1, 1):
-        objs.append(S.ellipsoid("eye", CX + sx * 0.068, CY - 0.158, HEAD_Z - 0.01, 0.026, 0.02, 0.034,
-                                "metal_dark", segs=10, rings=6))
-    objs.append(S.ellipsoid("nose", CX, CY - 0.175, HEAD_Z - 0.06, 0.03, 0.02, 0.03, "skin", segs=8, rings=6))
+        objs.append(S.ellipsoid("eye", CX + sx * 0.068 * h, CY - 0.158 * h, HEAD_Z - 0.01 * h,
+                                0.026 * h, 0.02 * h, 0.034 * h, "metal_dark", segs=10, rings=6))
+    objs.append(S.ellipsoid("nose", CX, CY - 0.175 * h, HEAD_Z - 0.06 * h, 0.03 * h, 0.02 * h, 0.03 * h,
+                            "skin", segs=8, rings=6))
     return objs
 
 
 def _pants():
+    L, lx = _build["limb"], _build["leg_x"]
     for sx in (-1, 1):
-        S.cyl("pleg", CX + sx * 0.075, CY, 0.074, 0.05, 0.34, "cloth", segs=12)
-    S.box("hips", CX - 0.16, CY - 0.11, 0.26, CX + 0.16, CY + 0.11, 0.40, "cloth", bevel=0.05, segments=2)
-    S.box("belt", CX - 0.165, CY - 0.115, 0.38, CX + 0.165, CY + 0.115, 0.42, "leather", bevel=0.02)
+        S.cyl("pleg", CX + sx * lx, CY, 0.074 * L, 0.05, 0.34, "cloth", segs=12)
+    _loft("hips", 0.01, 0.01, 0.26, 0.40, "cloth", bevel=0.05)
+    _loft("belt", 0.015, 0.015, 0.38, 0.42, "leather", bevel=0.02, segments=1)
 
 
 def _shirt():
-    S.box("shirt", CX - 0.162, CY - 0.112, 0.36, CX + 0.162, CY + 0.112, 0.645, "cloth", bevel=0.07, segments=2)
+    L, n = _build["limb"], _build["neck"] / 0.06
+    _loft("shirt", 0.012, 0.012, 0.36, 0.645, "cloth", bevel=0.07)
     for sx in (-1, 1):
-        S.cyl("sleeve", CX + sx * 0.19, CY, 0.06, 0.45, 0.62, "cloth", segs=12)
-    S.cyl("collar", CX, CY, 0.075, 0.62, 0.67, "cloth", segs=12)
+        S.cyl("sleeve", CX + sx * _sx(), CY, 0.06 * L, 0.45, 0.62, "cloth", segs=12)
+    S.cyl("collar", CX, CY, 0.075 * n, 0.62, 0.67, "cloth", segs=12)
 
 
 def _vest():
-    S.box("vest", CX - 0.172, CY - 0.122, 0.40, CX + 0.172, CY + 0.122, 0.635, "cloth", bevel=0.06, segments=2)
+    _loft("vest", 0.022, 0.022, 0.40, 0.635, "cloth", bevel=0.06)
+    # pockets and straps sit on the chest, at the build's chest depth
+    fy = _build["d"] + _build["F"][2] + 0.035
+    by = _build["d"] + max(_build["B"]) + 0.027
+    w = min(0.085, _build["W"][2] * 0.57)
     for sx in (-1, 1):
-        S.box("pocket", CX + sx * 0.085 - 0.05, CY - 0.135, 0.43, CX + sx * 0.085 + 0.05, CY - 0.10, 0.52,
+        S.box("pocket", CX + sx * w - 0.05, CY - fy, 0.43, CX + sx * w + 0.05, CY - fy + 0.035, 0.52,
               "leather", bevel=0.012)
-        S.box("strap", CX + sx * 0.09 - 0.025, CY - 0.127, 0.40, CX + sx * 0.09 + 0.025, CY + 0.127, 0.645,
-              "leather", bevel=0.008)
+        S.box("strap", CX + sx * (w + 0.005) - 0.025, CY - fy + 0.008, 0.40, CX + sx * (w + 0.005) + 0.025,
+              CY + by, 0.645, "leather", bevel=0.008)
 
 
 def _parka():
     """Leather parka over the shirt: padded body to the hips, sleeves, and
     a fur ruff around the neck."""
-    S.box("parka", CX - 0.182, CY - 0.132, 0.26, CX + 0.182, CY + 0.132, 0.655, "leather", bevel=0.075, segments=2)
+    L, n = _build["limb"], _build["neck"] / 0.06
+    _loft("parka", 0.032, 0.032, 0.26, 0.655, "leather", bevel=0.075)
     for sx in (-1, 1):
-        S.cyl("psleeve", CX + sx * 0.195, CY, 0.068, 0.33, 0.63, "leather", segs=12)
-        S.cyl("pcuff", CX + sx * 0.195, CY, 0.072, 0.33, 0.37, "fur_cream", segs=12)
-    S.cyl("ruff", CX, CY, 0.11, 0.62, 0.70, "fur_cream", segs=14)
-    S.box("hem", CX - 0.186, CY - 0.136, 0.26, CX + 0.186, CY + 0.136, 0.30, "fur_cream", bevel=0.03)
+        S.cyl("psleeve", CX + sx * _sx(0.005), CY, 0.068 * L, 0.33, 0.63, "leather", segs=12)
+        S.cyl("pcuff", CX + sx * _sx(0.005), CY, 0.072 * L, 0.33, 0.37, "fur_cream", segs=12)
+    S.cyl("ruff", CX, CY, 0.11 * n, 0.62, 0.70, "fur_cream", segs=14)
+    _loft("hem", 0.036, 0.036, 0.26, 0.30, "fur_cream", bevel=0.03, segments=1)
 
 
 def _duster():
     """Long leather duster: open coat down past the knees, wide lapels."""
-    S.box("duster", CX - 0.176, CY - 0.126, 0.12, CX + 0.176, CY + 0.126, 0.645, "leather", bevel=0.06, segments=2)
+    L = _build["limb"]
+    _loft("duster", 0.026, 0.026, 0.12, 0.645, "leather", bevel=0.06)
+    fy = _build["d"] + _build["F"][2] + 0.026
     for sx in (-1, 1):
-        S.cyl("dsleeve", CX + sx * 0.193, CY, 0.064, 0.36, 0.63, "leather", segs=12)
-        S.box("lapel", CX + sx * 0.06 - 0.04, CY - 0.14, 0.44, CX + sx * 0.06 + 0.04, CY - 0.12, 0.64, "bark",
-              bevel=0.01)
-    S.box("dbelt", CX - 0.18, CY - 0.13, 0.36, CX + 0.18, CY + 0.13, 0.40, "bark", bevel=0.015)
+        S.cyl("dsleeve", CX + sx * _sx(0.003), CY, 0.064 * L, 0.36, 0.63, "leather", segs=12)
+        S.box("lapel", CX + sx * 0.06 - 0.04, CY - fy - 0.014, 0.44, CX + sx * 0.06 + 0.04, CY - fy + 0.006, 0.64,
+              "bark", bevel=0.01)
+    _loft("dbelt", 0.03, 0.03, 0.36, 0.40, "bark", bevel=0.015, segments=1)
 
 
 def _tuque():
@@ -101,7 +213,9 @@ def _cut(ob, keep):
 
 
 def _hair_shell(name, grow, keep, mat="hair"):
-    ob = S.ellipsoid(name, CX, CY, HEAD_Z, 0.19 + grow, 0.175 + grow, 0.19 + grow, mat, segs=28, rings=16)
+    h = _build["head"]
+    ob = S.ellipsoid(name, CX, CY, HEAD_Z, 0.19 * h + grow, 0.175 * h + grow, 0.19 * h + grow, mat,
+                     segs=28, rings=16)
     _cut(ob, keep)
     # give the shell thickness so the outline has a body to follow
     sol = ob.modifiers.new("solid", "SOLIDIFY")
@@ -122,6 +236,80 @@ def _hair(style):
         _hair_shell("hair", 0.022, lambda x, y, z: z > HEAD_Z + 0.03 or (y > front and z > HEAD_Z - 0.16))
         S.ellipsoid("bun", CX, CY + 0.17, HEAD_Z + 0.12, 0.085, 0.08, 0.085, "hair", segs=14, rings=8)
         S.cyl("tie", CX, CY + 0.13, 0.05, HEAD_Z + 0.08, HEAD_Z + 0.10, "food_red", segs=10, ry=0.04)
+    elif style == "hair_long":
+        _hair_shell("hair", 0.026, lambda x, y, z: z > HEAD_Z + 0.04 or (y > front and z > HEAD_Z - 0.2))
+        S.box("fringe", CX - 0.13, CY - 0.19, HEAD_Z + 0.07, CX + 0.08, CY - 0.13, HEAD_Z + 0.15, "hair",
+              bevel=0.025)
+        # a curtain behind the head and a lock down each side of the face,
+        # to the shoulders
+        S.box("hair_back", CX - 0.178, CY + 0.04, 0.50, CX + 0.178, CY + 0.205, HEAD_Z + 0.02, "hair",
+              bevel=0.06, segments=2)
+        for sx in (-1, 1):
+            S.box("lock", CX + sx * 0.185 - 0.03, CY - 0.05, 0.56, CX + sx * 0.185 + 0.03, CY + 0.12,
+                  HEAD_Z + 0.03, "hair", bevel=0.02, segments=2)
+    elif style == "hair_braid":
+        _hair_shell("hair", 0.024, lambda x, y, z: z > HEAD_Z + 0.04 or (y > front and z > HEAD_Z - 0.14))
+        S.box("fringe", CX - 0.10, CY - 0.19, HEAD_Z + 0.07, CX + 0.07, CY - 0.13, HEAD_Z + 0.14, "hair",
+              bevel=0.025)
+        # one braid over the right shoulder (+X), tied at the end
+        n = 6
+        for i in range(n):
+            t = i / (n - 1)
+            r = 0.044 - 0.014 * t
+            S.ellipsoid("braid", CX + 0.163 - 0.012 * t, CY + 0.02 - 0.15 * t, HEAD_Z - 0.09 - 0.30 * t,
+                        r, r, 0.052, "hair", segs=10, rings=6)
+        S.cyl("tie", CX + 0.151, CY - 0.13, 0.03, HEAD_Z - 0.42, HEAD_Z - 0.40, "food_red", segs=10)
+    elif style == "hair_shaved":
+        # stubble: a thin skin-tight cap
+        _hair_shell("hair", 0.008, lambda x, y, z: z > HEAD_Z + 0.06 or (y > CY + 0.02 and z > HEAD_Z - 0.05))
+    elif style == "hair_curls":
+        _hair_shell("hair", 0.035, lambda x, y, z: z > HEAD_Z - 0.01 or (y > front and z > HEAD_Z - 0.14))
+        # two rings of curls round the head and three on the crown
+        for k in range(9):
+            a = 2 * math.pi * k / 9 + 0.3
+            x, y = CX + 0.2 * math.cos(a), CY + 0.185 * math.sin(a)
+            if y > CY - 0.09 or abs(x - CX) > 0.1:
+                S.ellipsoid("curl", x, y, HEAD_Z + 0.02, 0.05, 0.05, 0.05, "hair", segs=10, rings=6)
+        for k in range(8):
+            a = 2 * math.pi * k / 8 + 0.1
+            S.ellipsoid("curl", CX + 0.13 * math.cos(a), CY + 0.12 * math.sin(a), HEAD_Z + 0.13,
+                        0.055, 0.055, 0.05, "hair", segs=10, rings=6)
+        for x, y in ((0.0, 0.0), (0.06, 0.04), (-0.06, 0.03)):
+            S.ellipsoid("curl", CX + x, CY + y, HEAD_Z + 0.2, 0.055, 0.055, 0.05, "hair", segs=10, rings=6)
+    elif style == "hair_tail":
+        _hair_shell("hair", 0.02, lambda x, y, z: z > HEAD_Z + 0.05 or (y > front and z > HEAD_Z - 0.06))
+        S.box("fringe", CX - 0.11, CY - 0.19, HEAD_Z + 0.07, CX + 0.07, CY - 0.13, HEAD_Z + 0.14, "hair",
+              bevel=0.025)
+        # a high ponytail hanging behind the head
+        S.cyl("tie", CX, CY + 0.17, 0.045, HEAD_Z + 0.06, HEAD_Z + 0.085, "food_red", segs=10, ry=0.04)
+        for i, (dy, dz, r, rz) in enumerate(((0.20, 0.03, 0.05, 0.07), (0.225, -0.07, 0.055, 0.08),
+                                             (0.235, -0.18, 0.05, 0.08), (0.24, -0.28, 0.036, 0.07))):
+            S.ellipsoid("tail", CX + 0.008 * i, CY + dy, HEAD_Z + dz, r, r, rz, "hair", segs=10, rings=6)
+    else:
+        raise KeyError(style)
+
+
+def _beard(style):
+    """Beards (males): shells and masses on the lower face, tinted like hair."""
+    if style == "beard_short":
+        _hair_shell("beard", 0.014, lambda x, y, z: y < CY + 0.0 and HEAD_Z - 0.2 < z < HEAD_Z - 0.085)
+    elif style == "beard_full":
+        _hair_shell("beard", 0.03, lambda x, y, z: (y < CY + 0.04 and z < HEAD_Z - 0.05) or
+                    (abs(x - CX) > 0.13 and z < HEAD_Z + 0.03 and CY - 0.05 < y < CY + 0.06))
+        S.ellipsoid("chin", CX, CY - 0.07, HEAD_Z - 0.2, 0.095, 0.075, 0.085, "hair", segs=14, rings=8)
+        for sx in (-1, 1):
+            S.ellipsoid("mous", CX + sx * 0.045, CY - 0.16, HEAD_Z - 0.105, 0.058, 0.035, 0.024, "hair",
+                        segs=10, rings=6)
+    elif style == "beard_moustache":
+        for sx in (-1, 1):
+            S.ellipsoid("mous", CX + sx * 0.05, CY - 0.158, HEAD_Z - 0.105, 0.062, 0.034, 0.024, "hair",
+                        segs=10, rings=6)
+        S.ellipsoid("mous", CX, CY - 0.163, HEAD_Z - 0.098, 0.04, 0.03, 0.022, "hair", segs=10, rings=6)
+        for sx in (-1, 1):   # tips curling round the cheeks; they also show past the head from behind
+            S.ellipsoid("mous", CX + sx * 0.135, CY - 0.108, HEAD_Z - 0.1, 0.03, 0.028, 0.026, "hair",
+                        segs=10, rings=6)
+            S.ellipsoid("mous", CX + sx * 0.17, CY - 0.062, HEAD_Z - 0.095, 0.03, 0.03, 0.03, "hair",
+                        segs=10, rings=6)
     else:
         raise KeyError(style)
 
@@ -154,7 +342,7 @@ ELBOW_Z = 0.465
 WRIST_Z = 0.345
 WAIST_Z = 0.34
 NECK_Z = 0.68
-SHOULDER_X = 0.19
+SHOULDER_X = 0.19    # m_avg; the active build's values are used (`_sx`, `_build["leg_x"]`)
 LEG_X = 0.075
 THIGH, SHIN = HIP_Z - KNEE_Z, KNEE_Z
 ARM_PARTS = ("arm", "hand", "sleeve", "psleeve", "pcuff", "dsleeve")
@@ -169,6 +357,12 @@ HAND = {  # where held equipment's grip goes (kept for older callers)
 }
 HAND_R = HAND["south"]
 HAND_L = (CX - 0.195, CY - 0.06, 0.34)
+
+
+def _hand(side):
+    """Grip point of the +X (side 1) or -X fist in the rest pose, on the active build."""
+    return (CX + side * _sx(0.005), CY - 0.06, 0.34)
+
 HEAD_CENTER = (CX, CY, HEAD_Z)
 
 # Pose parameters (degrees unless noted; r = the +X arm/leg, which holds
@@ -256,7 +450,7 @@ def _arm_matrix(p, side, fe=1.0, fw=1.0, rigid=True):
     False) or slides the rigid hand down to the stretched wrist."""
     Matrix = _M()
     k = "r" if side > 0 else "l"
-    sx = CX + side * SHOULDER_X
+    sx = CX + side * _sx()
     L = 1.0 + p["l" + k]
     ez = SHOULDER_Z + L * (ELBOW_Z - SHOULDER_Z)
     wz = SHOULDER_Z + L * (WRIST_Z - SHOULDER_Z)
@@ -282,7 +476,7 @@ def _set_shoulder(p, side, rot):
 
 def _leg_matrix(p, side):
     k = "r" if side > 0 else "l"
-    hip = (CX + side * LEG_X, CY, HIP_Z)
+    hip = (CX + side * _build["leg_x"], CY, HIP_Z)
     return _pelvis(p) @ _about(hip, _R(-side * p["x" + k], "Y") @ _R(-p["h" + k], "X"))
 
 
@@ -306,9 +500,9 @@ def _arm_ik(p, side, target, pole=None):
     (up to STRETCH_MAX), which reads as a smear at sprite scale."""
     from mathutils import Quaternion, Vector
     k = "r" if side > 0 else "l"
-    sx = CX + side * SHOULDER_X
+    sx = CX + side * _sx()
     S = Vector((sx, CY, SHOULDER_Z))
-    grip = Vector(HAND_R if side > 0 else HAND_L)
+    grip = Vector(_hand(side))
     world = Vector((CX + target[0], CY - target[1], target[2]))
     T = _torso_matrix(p).inverted() @ world - S          # trunk frame, from the shoulder
     q0 = dict(ZERO)
@@ -762,14 +956,17 @@ def _layer(name, facing, builder, body_holdout=True, frame=None):
     top = int(-(-((C.SHEAR_K * zm + MARGINS[2]) * C.PPT) // 1))
     origin = (int(round(MARGINS[0] * C.PPT)), top)
     att = {}
-    for key, point in (("hand", (HAND_R, "arm_r")), ("hand_l", (HAND_L, "arm_l"))):
+    for key, point in (("hand", (_hand(1), "arm_r")), ("hand_l", (_hand(-1), "arm_l"))):
         h = _attach(facing, frame, point)
         att[key] = _project(h.x, h.y, h.z, origin)
     if name == "body":
         hd = _attach(facing, frame, (HEAD_CENTER, "head"))
         att["head"] = _project(hd.x, hd.y, hd.z, origin)
-    sprite = "%s_%s" % (name, facing) + ("_" + frame if frame else "")
+    tag = name if _build_key == LEGACY_BUILD or name not in POSE_LAYERS else "%s_%s" % (name, _build_key)
+    sprite = "%s_%s" % (tag, facing) + ("_" + frame if frame else "")
     extra = {"layer": name, "facing": facing, "attachments": att}
+    if tag != name:
+        extra["build"] = _build_key
     if frame:
         extra["frame"] = frame
     return S.render_asset("pawn", sprite, zmax=zm, margins=MARGINS, extra=extra)
@@ -785,12 +982,30 @@ LAYERS = {
     "hair_short": lambda: _hair("hair_short"),
     "hair_crop": lambda: _hair("hair_crop"),
     "hair_bun": lambda: _hair("hair_bun"),
+    "hair_long": lambda: _hair("hair_long"),
+    "hair_braid": lambda: _hair("hair_braid"),
+    "hair_shaved": lambda: _hair("hair_shaved"),
+    "hair_curls": lambda: _hair("hair_curls"),
+    "hair_tail": lambda: _hair("hair_tail"),
+    "beard_short": lambda: _beard("beard_short"),
+    "beard_full": lambda: _beard("beard_full"),
+    "beard_moustache": lambda: _beard("beard_moustache"),
 }
 
 
-def build(walk_only=False, work_only=False, frames=None, facings=None, layers=None):
-    """Every layer x facing x frame. frames/facings/layers narrow a
-    review build (e.g. frames=["aim"], layers=["body", "shirt_basic"])."""
+def _env_list(name):
+    v = os.environ.get(name, "").strip()
+    return [x for x in v.split(",") if x] or None
+
+
+def build(walk_only=False, work_only=False, frames=None, facings=None, layers=None, builds=None):
+    """Every build x layer x facing x frame. frames/facings/layers/builds
+    narrow a review build (e.g. frames=["aim"], layers=["body", "shirt_basic"],
+    builds=["f_avg"]); RWG_PAWN_BUILDS / RWG_PAWN_LAYERS (comma lists) do the
+    same for headless runs. Only POSE_LAYERS depend on the build; hair, beards
+    and hats are shared and rendered once, with the legacy m_avg head."""
+    builds = builds or _env_list("RWG_PAWN_BUILDS") or list(BUILD_KEYS)
+    layers = layers or _env_list("RWG_PAWN_LAYERS")
     out = []
     todo = [None] + FRAMES
     if walk_only:
@@ -799,15 +1014,22 @@ def build(walk_only=False, work_only=False, frames=None, facings=None, layers=No
         todo = list(WORK_FRAMES)
     if frames is not None:
         todo = list(frames)
-    for f in facings or FACINGS:
-        for name in ["body"] + list(LAYERS):
-            if layers is not None and name not in layers:
-                continue
-            for fr in todo:
-                if fr is not None and name not in POSE_LAYERS:
-                    continue
-                if name == "body":
-                    out.append(_layer("body", f, _body, body_holdout=False, frame=fr))
-                else:
-                    out.append(_layer(name, f, LAYERS[name], frame=fr))
+    try:
+        for bk in builds:
+            use_build(bk)
+            for f in facings or FACINGS:
+                for name in ["body"] + list(LAYERS):
+                    if layers is not None and name not in layers:
+                        continue
+                    if name not in POSE_LAYERS and bk != LEGACY_BUILD:
+                        continue          # shared layers: one render, on m_avg
+                    for fr in todo:
+                        if fr is not None and name not in POSE_LAYERS:
+                            continue
+                        if name == "body":
+                            out.append(_layer("body", f, _body, body_holdout=False, frame=fr))
+                        else:
+                            out.append(_layer(name, f, LAYERS[name], frame=fr))
+    finally:
+        use_build(LEGACY_BUILD)
     return out

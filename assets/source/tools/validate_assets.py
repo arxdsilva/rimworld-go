@@ -157,6 +157,16 @@ WALK_FRAMES = tuple("walk%02d" % i for i in range(1, 13))
 WORK_FRAMES = tuple("work%d" % i for i in range(1, 7))
 TROT_FRAMES = tuple("walk%02d" % i for i in range(1, 9))
 ANIM_LAYERS = ("body", "pants_basic", "shirt_basic", "vest_utility", "parka_leather", "duster_leather")
+# NG-1 builds (families/pawn.py BUILDS): m_avg keeps the un-suffixed keys, the rest are
+# <layer>_<build>_<facing>_<frame>. Hair and beards are shared by every build.
+PAWN_BUILDS = ("m_thin", "m_avg", "m_heavy", "f_thin", "f_avg", "f_heavy")
+LEGACY_BUILD = "m_avg"
+HAIR_LAYERS = ("hair_short", "hair_crop", "hair_bun", "hair_long", "hair_braid", "hair_shaved", "hair_curls",
+               "hair_tail", "beard_short", "beard_full", "beard_moustache")
+FACINGS = ("south", "east", "north", "west")
+ATLAS_META = os.path.join(META, "atlas")
+ATLAS_GEN = os.path.join(ROOT, "generated", "atlas")
+ATLAS_MAX = 4096
 
 
 def _set(name, n):
@@ -177,25 +187,155 @@ GEAR_END = {"weapon": ("muzzle", "tip"), "tool": ("head",)}
 GEAR_LEVEL = {"tool/bowl"}
 
 
-def check_pawn_layers():
+def parse_atlas(path):
+    """metadata/atlas/<family>.yaml (cmd/atlasgen): header fields and, per sprite,
+    page, rect [x, y, w, h], trim, normal, canvas, tint mask and attachments."""
+    out = {"family": None, "max": 0, "pages": 0, "sprites": {}}
+    cur, parent, in_sprites = None, None, False
+    for line in open(path, encoding="utf-8"):
+        line = line.rstrip()
+        if not line or line.lstrip().startswith("#"):
+            continue
+        indent = len(line) - len(line.lstrip(" "))
+        k, _, v = line.strip().partition(":")
+        v = v.strip().strip('"')
+        if indent == 0 and not in_sprites:
+            if k == "family":
+                out["family"] = v
+            elif k in ("max", "pages"):
+                out[k] = int(v)
+            elif k == "sprites":
+                in_sprites = True
+        elif in_sprites and indent == 2:
+            cur = out["sprites"][k] = {"attach": {}, "mask": False}
+        elif in_sprites and cur is not None and indent == 4:
+            parent = k if not v else None
+            if k == "page":
+                cur["page"] = int(v)
+            elif k in ("rect", "trim", "canvas"):
+                cur[k] = ints(v)
+            elif k == "normal":
+                cur["normal"] = v == "true"
+            elif k == "layer":
+                cur["layer"] = v
+        elif in_sprites and cur is not None and indent == 6:
+            if parent == "tint" and k == "mask":
+                cur["mask"] = True
+            elif parent == "attachments":
+                cur["attach"][k] = ints(v)
+    return out
+
+
+def check_atlas():
+    """Atlas integrity (NG-1 plan 7.1): pages exist and fit, rects lie inside their page
+    without overlapping, mask/normal pages match their sprite page, every sprite that
+    still has individual metadata is in the atlas. Returns {family: {key: entry}}."""
+    atlases = {}
+    if not os.path.isdir(ATLAS_META):
+        return atlases
+    for f in sorted(os.listdir(ATLAS_META)):
+        if not f.endswith(".yaml"):
+            continue
+        fam = f[:-5]
+        a = parse_atlas(os.path.join(ATLAS_META, f))
+        atlases[fam] = a["sprites"]
+        where = "atlas/%s" % fam
+        if a["family"] != fam:
+            err("%s: family field is %r" % (where, a["family"]))
+        if not a["sprites"]:
+            err("%s: no sprites" % where)
+        sizes = []
+        for p in range(a["pages"]):
+            path = os.path.join(ATLAS_GEN, "%s_%d.png" % (fam, p))
+            if not os.path.exists(path):
+                err("%s: missing page %d" % (where, p))
+                sizes.append((0, 0))
+                continue
+            sizes.append(Image.open(path).size)
+            if max(sizes[-1]) > min(a["max"] or ATLAS_MAX, ATLAS_MAX):
+                err("%s: page %d is %s, above %d" % (where, p, sizes[-1], ATLAS_MAX))
+        by_page = {}
+        for key, s in a["sprites"].items():
+            if "page" not in s or "rect" not in s or "canvas" not in s:
+                err("%s/%s: incomplete atlas entry" % (where, key))
+                continue
+            p, (x, y, w, h) = s["page"], s["rect"]
+            if not 0 <= p < len(sizes):
+                err("%s/%s: page %d out of range" % (where, key, p))
+                continue
+            pw, ph = sizes[p]
+            if w < 1 or h < 1 or x < 0 or y < 0 or x + w > pw or y + h > ph:
+                err("%s/%s: rect %s outside page %d (%dx%d)" % (where, key, s["rect"], p, pw, ph))
+            tx, ty = s.get("trim", (0, 0))
+            if tx < 0 or ty < 0 or tx + w > s["canvas"][0] or ty + h > s["canvas"][1]:
+                err("%s/%s: trim %s + %dx%d exceeds canvas %s" % (where, key, s.get("trim"), w, h, s["canvas"]))
+            by_page.setdefault(p, []).append((x, y, w, h, key))
+        for p, rs in by_page.items():
+            rs.sort()
+            for i, (x, y, w, h, key) in enumerate(rs):
+                for x2, y2, w2, h2, key2 in rs[i + 1:]:
+                    if x2 >= x + w:
+                        break
+                    if y2 < y + h and y < y2 + h2:
+                        err("%s: page %d: %s and %s overlap" % (where, p, key, key2))
+        for p, sz in enumerate(sizes):
+            for suffix, need in (("_mask", any(s["mask"] and s.get("page") == p for s in a["sprites"].values())),
+                                 ("_n", any(s.get("normal") and s.get("page") == p for s in a["sprites"].values()))):
+                path = os.path.join(ATLAS_GEN, "%s_%d%s.png" % (fam, p, suffix))
+                if need and not os.path.exists(path):
+                    err("%s: missing page file %s_%d%s.png" % (where, fam, p, suffix))
+                elif need and Image.open(path).size != sz:
+                    err("%s: %s_%d%s.png is %s, its sprite page is %s" % (where, fam, p, suffix, Image.open(path).size, sz))
+        md = os.path.join(META, fam)
+        for g in sorted(os.listdir(md)) if os.path.isdir(md) else ():
+            if g.endswith(".yaml") and g[:-5] not in a["sprites"]:
+                err("%s/%s: has metadata but is not in the atlas (run atlasgen)" % (where, g[:-5]))
+    return atlases
+
+
+def pawn_keys(atlas):
+    """Every pawn sprite key: individual files plus the atlas."""
     d = os.path.join(GEN, "pawn")
+    keys = {f[:-4] for f in os.listdir(d)
+            if f.endswith(".png") and not f.endswith("_mask.png") and not f.endswith("_n.png")}
+    return keys | set(atlas)
+
+
+def build_key(layer, build, facing, frame=None):
+    """<layer>_<build>_<facing>[_<frame>]; m_avg keeps the pre-NG-1 un-suffixed name."""
+    tag = layer if build == LEGACY_BUILD else "%s_%s" % (layer, build)
+    return "%s_%s" % (tag, facing) + ("_" + frame if frame else "")
+
+
+def check_pawn_layers(atlas=None):
+    atlas = (atlas or {}).get("pawn", {})
+    d = os.path.join(GEN, "pawn")
+    have = pawn_keys(atlas)
     sizes = {}
     for f in os.listdir(d):
         m = re.match(r"^(\w+?)_(south|east|north|west)(?:_[a-z_]+\d*)?\.png$", f)
         if m and not f.endswith("_mask.png") and not f.endswith("_n.png"):
             sizes.setdefault(m.group(2), set()).add(Image.open(os.path.join(d, f)).size)
-    # every animated layer has the full walk cycle (frames share a canvas)
-    for layer in ANIM_LAYERS:
-        for facing in ("south", "east", "north", "west"):
-            for fr in WALK_FRAMES:
-                if not os.path.exists(os.path.join(d, "%s_%s_%s.png" % (layer, facing, fr))):
-                    err("pawn/%s_%s: missing walk frame %s" % (layer, facing, fr))
-            for fr in WORK_FRAMES:
-                if not os.path.exists(os.path.join(d, "%s_%s_%s.png" % (layer, facing, fr))):
-                    err("pawn/%s_%s: missing work frame %s" % (layer, facing, fr))
-            for fr in ACTION_FRAMES:
-                if not os.path.exists(os.path.join(d, "%s_%s_%s.png" % (layer, facing, fr))):
-                    err("pawn/%s_%s: missing action frame %s" % (layer, facing, fr))
+    for key, s in atlas.items():
+        m = re.match(r"^\w+?_(south|east|north|west)(?:_[a-z_]+\d*)?$", key)
+        if m and "canvas" in s:
+            sizes.setdefault(m.group(1), set()).add(tuple(s["canvas"]))
+    # every animated layer of every build has the full walk cycle, work swing and
+    # action poses (frames share a canvas)
+    for build in PAWN_BUILDS:
+        for layer in ANIM_LAYERS:
+            for facing in FACINGS:
+                for kind, frames in (("walk", WALK_FRAMES), ("work", WORK_FRAMES), ("action", ACTION_FRAMES)):
+                    for fr in frames:
+                        if build_key(layer, build, facing, fr) not in have:
+                            err("pawn/%s: missing %s frame %s" % (build_key(layer, build, facing), kind, fr))
+                if build_key(layer, build, facing) not in have:
+                    err("pawn/%s: missing standing frame" % build_key(layer, build, facing))
+    # shared hair, beards and hats: one sprite per facing, whatever the build
+    for layer in HAIR_LAYERS + ("tuque_knit",):
+        for facing in FACINGS:
+            if "%s_%s" % (layer, facing) not in have:
+                err("pawn/%s_%s: missing" % (layer, facing))
     # hair and hats follow the body's head anchor (ART §27.1)
     md = os.path.join(META, "pawn")
     for f in sorted(os.listdir(md)) if os.path.isdir(md) else ():
@@ -205,6 +345,11 @@ def check_pawn_layers():
                 for key in ("head", "hand", "hand_l"):
                     if not re.search(r"^\s+%s:\s*\[" % key, text, re.M):
                         err("pawn/%s: missing %s attachment" % (f[:-5], key))
+    for key, s in sorted(atlas.items()):
+        if key.startswith("body_"):
+            for a in ("head", "hand", "hand_l"):
+                if a not in s["attach"]:
+                    err("pawn/%s: missing %s attachment" % (key, a))
     for facing, s in sizes.items():
         if len(s) != 1:
             err("pawn/%s: layers disagree on canvas %s" % (facing, sorted(s)))
@@ -301,9 +446,10 @@ def main():
             img = re.search(r"^image: (\S+)", open(os.path.join(META, family, f)).read(), re.M)
             if img and not os.path.exists(os.path.join(ROOT, img.group(1))):
                 err("%s/%s: metadata points at missing image %s" % (family, f, img.group(1)))
+    atlases = check_atlas()
     check_terrain_seams()
     check_autotile()
-    check_pawn_layers()
+    check_pawn_layers(atlases)
     check_animals()
     check_gear()
     for e in errors:

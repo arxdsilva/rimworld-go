@@ -47,6 +47,7 @@ BLENDER ?= $(shell command -v blender 2>/dev/null || echo /Applications/Blender.
 art:  ## re-render every world sprite from assets/source/blender, then their normal maps
 	"$(BLENDER)" -b --factory-startup -P assets/source/blender/build.py -- $(FAMILIES)
 	$(MAKE) normals
+	$(MAKE) atlas
 	python3 assets/source/tools/validate_assets.py
 
 .PHONY: art-menu
@@ -77,6 +78,11 @@ normals:  ## write <sprite>_n.png normal maps (pkg/spritenormals, a port of spri
 .PHONY: art-check
 art-check:  ## validate generated sprites against metadata
 	python3 assets/source/tools/validate_assets.py
+	go run ./cmd/atlasgen -family pawn -check
+
+.PHONY: atlas
+atlas:  ## pack atlas families into texture pages (cmd/atlasgen, NG-1)
+	go run ./cmd/atlasgen -family pawn
 
 .PHONY: art-capture
 art-capture:  ## in-game screenshot of a scripted colony (real renderer)

@@ -10,3 +10,17 @@ _to_delete/
 
 # ElevenLabs downloads before review (scripts/audio_import.sh imports approved takes)
 assets/source/audio/elevenlabs/raw/
+
+# NG-1: per-sprite renders of the non-legacy pawn builds are intermediates;
+# the committed artifact is the packed atlas (assets/generated/atlas/pawn_*,
+# assets/metadata/atlas/pawn.yaml). Rebuild with make art + make atlas.
+assets/generated/world/pawn/*_m_thin_*
+assets/generated/world/pawn/*_m_heavy_*
+assets/generated/world/pawn/*_f_thin_*
+assets/generated/world/pawn/*_f_avg_*
+assets/generated/world/pawn/*_f_heavy_*
+assets/metadata/pawn/*_m_thin_*
+assets/metadata/pawn/*_m_heavy_*
+assets/metadata/pawn/*_f_thin_*
+assets/metadata/pawn/*_f_avg_*
+assets/metadata/pawn/*_f_heavy_*
