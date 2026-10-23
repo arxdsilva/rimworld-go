@@ -43,7 +43,10 @@ type Setup struct {
 
 // MaxEnabledSide is the largest map side the wizard offers; raised by the
 // lead only after the engine gates pass (NG-1 §6.9).
-const MaxEnabledSide = 120
+// Raised to 500 after the gate passed: 500x500 grown colony at 3 ticks per
+// frame held avg 117.5 fps, 1% low 68.4 fps over 10 minutes at the
+// farthest zoom (ENG-001).
+const MaxEnabledSide = 500
 
 // MapSizeView is one map size option.
 type MapSizeView struct {
