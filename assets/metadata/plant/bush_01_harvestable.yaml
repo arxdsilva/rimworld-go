@@ -10,9 +10,9 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.79
-  h: 0.259
-  d: 0.654
+  w: 0.802
+  h: 0.243
+  d: 0.629
 species: berry_bush
 variant: 1
 harvestable: true

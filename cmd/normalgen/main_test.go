@@ -212,3 +212,74 @@ func TestLinkedNormalsKeepSpriteAlpha(t *testing.T) {
 		}
 	}
 }
+
+func TestFlatNormalFlag(t *testing.T) {
+	for meta, want := range map[string]bool{
+		"id: x\nflat_normal: true\n":    true,
+		"flat_normal: false\n":          false,
+		"  flat_normal: true\n":         false, // nested keys do not count
+		"species: grass\n":              false,
+		"flat_normal: true # comment\n": true,
+	} {
+		if got := flatNormal(meta); got != want {
+			t.Errorf("flatNormal(%q) = %v, want %v", meta, got, want)
+		}
+	}
+}
+
+func TestFlatNormalsKeepAlphaAndPointUp(t *testing.T) {
+	src := image.NewNRGBA(image.Rect(0, 0, 6, 6))
+	src.SetNRGBA(2, 2, color.NRGBA{10, 200, 30, 255})
+	src.SetNRGBA(3, 3, color.NRGBA{10, 200, 30, 90})
+	n := flatNormals(src)
+	if got := n.NRGBAAt(2, 2); got != (color.NRGBA{128, 128, 255, 255}) {
+		t.Errorf("opaque pixel = %v, want flat up normal", got)
+	}
+	if got := n.NRGBAAt(3, 3); got.A != 90 || got.B != 255 {
+		t.Errorf("translucent pixel = %v, want alpha 90 and up normal", got)
+	}
+	if got := n.NRGBAAt(0, 0); got != (color.NRGBA{}) {
+		t.Errorf("transparent pixel = %v, want zero", got)
+	}
+}
+
+func TestRunWritesFlatNormalForFlaggedSprite(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, "generated", "world", "plant")
+	metaDir := filepath.Join(root, "metadata", "plant")
+	for _, d := range []string{dir, metaDir} {
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeSprite(t, filepath.Join(dir, "grass.png"))
+	writeSprite(t, filepath.Join(dir, "bush.png"))
+	if err := os.WriteFile(filepath.Join(metaDir, "grass.yaml"), []byte("flat_normal: true\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := run([]string{dir}, true); err != nil {
+		t.Fatal(err)
+	}
+	read := func(name string) *image.NRGBA {
+		f, err := os.Open(filepath.Join(dir, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer f.Close()
+		im, err := png.Decode(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return im.(*image.NRGBA)
+	}
+	flat, dome := read("grass_n.png"), read("bush_n.png")
+	if got := flat.NRGBAAt(2, 5); got != (color.NRGBA{128, 128, 255, 255}) {
+		t.Errorf("flagged sprite edge = %v, want flat normal", got)
+	}
+	if got := dome.NRGBAAt(2, 5); got == (color.NRGBA{128, 128, 255, 255}) {
+		t.Errorf("unflagged sprite edge is flat: %v", got)
+	}
+	if flat.NRGBAAt(0, 0).A != 0 {
+		t.Error("flat map must keep transparent pixels transparent")
+	}
+}

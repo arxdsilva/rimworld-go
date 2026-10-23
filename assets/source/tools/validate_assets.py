@@ -442,6 +442,8 @@ def main():
                 check_sprite(family, f[:-4], os.path.join(d, f))
                 count += 1
     for family in sorted(os.listdir(META)):
+        if not os.path.isdir(os.path.join(META, family)):
+            continue  # e.g. orphan_allow.txt (asset housekeeping list)
         for f in os.listdir(os.path.join(META, family)):
             img = re.search(r"^image: (\S+)", open(os.path.join(META, family, f)).read(), re.M)
             if img and not os.path.exists(os.path.join(ROOT, img.group(1))):

@@ -3,15 +3,16 @@ version: 1
 id: "core:plant/reeds_01"
 image: generated/world/plant/reeds_01.png
 scale: 2
-canvas: [180, 229]
+canvas: [180, 225]
 footprint: [1, 1]
-origin_px: [26, 82]
+origin_px: [26, 78]
 projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.625
-  h: 0.984
-  d: 0.554
+  w: 0.455
+  h: 0.933
+  d: 0.383
 species: reeds
+stage: mature
 variant: 1

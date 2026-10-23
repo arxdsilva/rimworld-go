@@ -3,16 +3,16 @@ version: 1
 id: "core:plant/tree_birch_02_bare"
 image: generated/world/plant/tree_birch_02_bare.png
 scale: 2
-canvas: [220, 286]
+canvas: [220, 308]
 footprint: [1, 1]
-origin_px: [46, 126]
+origin_px: [46, 148]
 projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.98
-  h: 1.619
-  d: 0.72
+  w: 0.714
+  h: 1.968
+  d: 0.739
 species: tree
 kind: birch
 variant: 2

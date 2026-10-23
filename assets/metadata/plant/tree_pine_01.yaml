@@ -3,16 +3,16 @@ version: 1
 id: "core:plant/tree_pine_01"
 image: generated/world/plant/tree_pine_01.png
 scale: 2
-canvas: [220, 299]
+canvas: [220, 288]
 footprint: [1, 1]
-origin_px: [46, 139]
+origin_px: [46, 128]
 projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 1.477
-  h: 1.83
-  d: 1.455
+  w: 0.807
+  h: 1.66
+  d: 0.902
 species: tree
 kind: pine
 variant: 1

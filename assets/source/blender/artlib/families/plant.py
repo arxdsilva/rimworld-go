@@ -23,125 +23,406 @@ from .plant_base import CX, CY, _Z, _asset, _ball, _blade, _cluster, _leaf, _lim
 from .trees import _tree  # noqa: F401  (scenes/menu.py calls plant._tree)
 
 BUSH_M = (0.2, 0.2, 0.12, 0.15)
+GRASS_M = (0.15, 0.15, 0.1, 0.12)
+STAGE_S = {"young": 0.66, "mature": 1.0, "harvestable": 1.0, "dormant": 0.92}
 
 
-def _bush_geo(i):
-    if i == 0:  # round and full
-        _cluster("b0", CX, CY, 0.0, 0.34, "foliage", 41)
-        _cluster("b1", CX - 0.2, CY + 0.08, 0.04, 0.2, "vegetation", 42)
-        _cluster("b2", CX + 0.18, CY - 0.1, 0.06, 0.2, "foliage", 43)
-        _cluster("b3", CX, CY + 0.02, 0.22, 0.18, "vegetation", 44)
-    elif i == 1:  # wide and low
-        for k, (dx, r) in enumerate([(-0.3, 0.2), (-0.1, 0.25), (0.12, 0.24), (0.32, 0.18)]):
-            _cluster("b%d" % k, CX + dx, CY + 0.02 * (-1) ** k, 0.0, r, "foliage" if k % 2 == 0 else "vegetation",
-                     50 + k, squash=0.7)
-    elif i == 2:  # tall and narrow with visible twigs
-        for k in range(3):
-            _limb("tw%d" % k, (CX + (k - 1) * 0.05, CY, 0.0), (CX + (k - 1) * 0.12, CY, 0.28), 0.022, 0.012, "bark", 5)
-        _cluster("b0", CX, CY, 0.04, 0.26, "foliage", 61, squash=0.95)
-        _cluster("b1", CX + 0.04, CY, 0.28, 0.2, "vegetation", 62, squash=0.95)
-        _cluster("b2", CX - 0.02, CY + 0.02, 0.48, 0.14, "vegetation", 63, squash=1.0)
-    else:  # spiky leaf rosette
-        for k in range(9):
-            a = 2 * math.pi * k / 9 + 0.2
-            _leaf("l%d" % k, CX + math.cos(a) * 0.05, CY + math.sin(a) * 0.05, 0.04, a, 0.75 if k % 2 else 0.5,
-                  0.42 if k % 2 else 0.34, 0.14, "leaf_light" if k % 2 else "vegetation", thick=0.04)
-        _cluster("b0", CX, CY, 0.04, 0.17, "foliage", 71, squash=1.0)
+# ------------------------------------------------------------ new primitives
+def _lobe(name, x, y, z, az, rl, rt, rz, mat, segs=10):
+    """Ellipsoid whose long axis (rl) points along azimuth az, centred at x,y,z."""
+    m = Matrix.Translation((x, y, z)) @ Matrix.Rotation(az, 4, "Z") @ Matrix.Diagonal((rl, rt, rz, 1))
+    bm = bmesh.new()
+    bmesh.ops.create_uvsphere(bm, u_segments=segs, v_segments=6, radius=1.0, matrix=m)
+    _top(z + rz)
+    return S._obj(name, bm, mat, smooth=True)
 
 
-def _bush(i):
-    return _asset(lambda: _bush_geo(i), "bush_%02d" % i, {"species": "bush", "variant": i}, BUSH_M)
+def _gblade(name, x, y, h, az, lean, mat, r=0.022):
+    """Tapered blade in three short segments that curl over towards `az`."""
+    pts = [(x, y, 0.0)]
+    for t, f in ((0.4, 0.12), (0.75, 0.45), (1.0, 1.0)):
+        pts.append((x + math.cos(az) * lean * f, y + math.sin(az) * lean * f, h * t))
+    rs = (r, r * 0.8, r * 0.5, 0.003)
+    for k in range(3):
+        _limb("%s%d" % (name, k), pts[k], pts[k + 1], rs[k], rs[k + 1], mat, segs=4)
 
 
-def _berry_geo(i, ripe):
-    rng = random.Random(800 + i)
-    parts = (((0.0, 0.0, 0.32), (-0.2, 0.06, 0.2), (0.2, -0.06, 0.2)),
-             ((-0.12, 0.0, 0.26), (0.12, 0.04, 0.26), (0.0, -0.1, 0.22), (0.0, 0.14, 0.2)),
-             ((0.0, 0.0, 0.3), (-0.22, -0.04, 0.16), (0.22, 0.02, 0.18), (0.04, 0.0, 0.18)))[i]
-    cl = []
-    for k, (dx, dy, r) in enumerate(parts):
-        z = 0.0 if k == 0 or i == 1 else (0.2 if k == len(parts) - 1 and i == 2 else 0.04)
-        _cluster("b%d" % k, CX + dx, CY + dy, z, r, "foliage" if k % 2 == 0 else "vegetation", 810 + 10 * i + k,
-                 squash=0.85)
-        cl.append((CX + dx, CY + dy, z, r))
-    for k in range(9 if ripe else 3):
-        x, y, z, r = cl[k % len(cl)]
-        a = rng.uniform(0, 2 * math.pi)
-        e = rng.uniform(0.25, 1.0)
-        px = x + math.cos(a) * math.cos(e) * r * 0.95
-        py = y + math.sin(a) * math.cos(e) * r * 0.95
-        pz = z + math.sin(e) * r * 0.8
-        if ripe:
-            _ball("berry%d" % k, px, py, pz, 0.05, 0.05, 0.05, "food_red")
-        else:
-            _ball("bud%d" % k, px, py, pz, 0.03, 0.03, 0.025, "blossom", segs=7, rings=4)
+def _gmat(k, i=0):
+    """Blade colour: mostly grass green, some forest base, a few sage tips."""
+    return ("pl_grass", "pl_forest", "pl_grass", "pl_sage", "pl_grass", "pl_forest")[(k + i) % 6]
 
 
-def _berry(i, ripe):
-    name = "berry_bush_%02d%s" % (i, "_harvestable" if ripe else "")
-    return _asset(lambda: _berry_geo(i, ripe), name,
-                  {"species": "berry_bush", "variant": i, "harvestable": ripe}, BUSH_M)
+def _flat(extra, flat):
+    if flat:
+        extra = dict(extra, flat_normal=True)
+    return extra
+
+
+def _plant_asset(build, name, extra, margins=BUSH_M, flat=False):
+    return _asset(build, name, _flat(extra, flat), margins, outline=False, shadow=False)
 
 
 # ------------------------------------------------------------------ grass
-GRASS_M = (0.15, 0.15, 0.1, 0.12)
-
-
-def _grass_geo(i):
-    rng = random.Random(70 + 3 * i)
-    n = (3, 4, 5, 5, 6, 6, 7, 7)[i]
+def _grass_short_geo(i, dormant=False):
+    rng = random.Random(70 + 3 * i + (400 if dormant else 0))
+    n = (5, 7, 4, 9, 6, 8)[i] if not dormant else (5, 4, 6)[i]
     for k in range(n):
-        a = 2 * math.pi * k / n + rng.uniform(-0.3, 0.3)
-        rr = rng.uniform(0.02, 0.14)
-        _blade("g%d" % k, CX + math.cos(a) * rr, CY + math.sin(a) * rr, rng.uniform(0.26, 0.45), a,
-               rng.uniform(0.06, 0.18), ("vegetation", "foliage", "leaf_light")[(k + i) % 3])
-    flower = {2: "blossom", 5: "blossom", 3: "corn_yellow", 7: "corn_yellow"}.get(i)
-    if flower:
-        for k in range(2 if i < 4 else 3):
-            a = 1.1 + 2.1 * k + i
-            x, y = CX + math.cos(a) * 0.1, CY + math.sin(a) * 0.1
-            h = 0.3 + 0.05 * k
-            _limb("stem%d" % k, (x, y, 0.0), (x + 0.02, y, h), 0.012, 0.008, "vegetation", segs=4)
-            _ball("fl%d" % k, x + 0.02, y, h + 0.01, 0.045, 0.045, 0.034, flower)
-            _ball("fc%d" % k, x + 0.02, y, h + 0.03, 0.014, 0.014, 0.01, "corn_yellow" if flower == "blossom"
-                  else "tuber", segs=6, rings=4)
-    if i in (4, 1):  # clover patch at the foot of the tuft
-        for k in range(3):
-            a = 2 * math.pi * k / 3 + 0.5
-            _ball("cl%d" % k, CX + math.cos(a) * 0.15, CY + math.sin(a) * 0.12 - 0.04, 0.03, 0.055, 0.045, 0.014,
-                  "leaf_light", segs=8, rings=4)
-        if i == 4:
-            _ball("clf", CX + 0.15, CY - 0.05, 0.07, 0.025, 0.025, 0.02, "blossom", segs=7, rings=4)
-
-
-def _grass(i):
-    return _asset(lambda: _grass_geo(i), "grass_%02d" % i, {"species": "grass", "variant": i, "decoration": True},
-                  GRASS_M, outline=True, shadow=False)
+        a = 2 * math.pi * k / n + rng.uniform(-0.35, 0.35)
+        rr = rng.uniform(0.0, 0.08)
+        h = rng.uniform(0.24, 0.42) * (0.8 if dormant else 1.0)
+        lean = rng.uniform(0.04, 0.16) * (1.6 if dormant else 1.0)
+        mat = ("pl_dried", "pl_khaki", "pl_stem")[(k + i) % 3] if dormant else (
+            "pl_dry" if (k + i) % 7 == 0 else _gmat(k, i))
+        _gblade("g%d" % k, CX + math.cos(a) * rr, CY + math.sin(a) * rr, h, a, lean, mat,
+                r=0.018 if not dormant else 0.014)
 
 
 def _grass_tall_geo(i):
     rng = random.Random(170 + 5 * i)
-    n = (9, 10, 8, 11)[i]
+    n = (9, 11, 8, 12)[i]
     for k in range(n):
         a = 2 * math.pi * k / n + rng.uniform(-0.3, 0.3)
-        rr = rng.uniform(0.02, 0.2)
-        x, y = CX + math.cos(a) * rr, CY + math.sin(a) * rr
-        h = rng.uniform(0.7, 1.05)
-        _blade("t%d" % k, x, y, h, a, rng.uniform(0.08, 0.2), ("vegetation", "foliage", "leaf_light")[(k + i) % 3],
-               r=0.034)
-        if i in (1, 3) and k % 3 == 0:  # seed heads
-            _ball("seed%d" % k, x + math.cos(a) * 0.17, y + math.sin(a) * 0.17, h + 0.02, 0.02, 0.02, 0.05, "straw",
-                  segs=6, rings=4)
-    if i == 2:
-        for k in range(2):
-            _limb("ts%d" % k, (CX + 0.1 * k, CY - 0.05, 0.0), (CX + 0.12 * k, CY - 0.05, 0.42), 0.012, 0.008,
-                  "vegetation", segs=4)
-            _ball("tf%d" % k, CX + 0.12 * k, CY - 0.05, 0.44, 0.035, 0.035, 0.026, "corn_yellow")
+        rr = rng.uniform(0.0, 0.12)
+        h = rng.uniform(0.45, 0.74)
+        lean = rng.uniform(0.06, 0.22)
+        mat = "pl_dry" if (k + i) % 8 == 0 else ("pl_forest" if k % 3 == 0 else _gmat(k, i))
+        _gblade("t%d" % k, CX + math.cos(a) * rr, CY + math.sin(a) * rr, h, a, lean, mat, r=0.022)
+
+
+def _grass_short(i):
+    return _plant_asset(lambda: _grass_short_geo(i), "grass_short_v%d" % i,
+                        {"species": "grass", "stage": "mature", "variant": i, "decoration": True},
+                        GRASS_M, flat=True)
+
+
+def _grass_dormant(i):
+    return _plant_asset(lambda: _grass_short_geo(i, True), "grass_short_dormant_v%d" % i,
+                        {"species": "grass", "stage": "dormant", "variant": i, "decoration": True},
+                        GRASS_M, flat=True)
 
 
 def _grass_tall(i):
-    return _asset(lambda: _grass_tall_geo(i), "grass_tall_%02d" % i,
-                  {"species": "grass_tall", "variant": i, "decoration": True}, GRASS_M, outline=True, shadow=False)
+    return _plant_asset(lambda: _grass_tall_geo(i), "grass_tall_v%d" % i,
+                        {"species": "grass_tall", "stage": "mature", "variant": i, "decoration": True},
+                        GRASS_M, flat=True)
+
+
+# legacy ids, rendered from the new tufts until the renderer switches
+def _grass(i):
+    return _plant_asset(lambda: _grass_short_geo(i % 6), "grass_%02d" % i,
+                        {"species": "grass", "variant": i, "decoration": True}, GRASS_M, flat=True)
+
+
+def _grass_tall_legacy(i):
+    return _plant_asset(lambda: _grass_tall_geo(i), "grass_tall_%02d" % i,
+                        {"species": "grass_tall", "variant": i, "decoration": True}, GRASS_M, flat=True)
+
+
+# ------------------------------------------------------------ bush mounds
+# (dx, dy, radius, z) clusters, back to front; wider than tall.
+BUSH_LAYOUT = (
+    ((0.0, 0.0, 0.3, 0.0), (-0.22, 0.05, 0.2, 0.0), (0.22, -0.04, 0.21, 0.0), (0.02, 0.04, 0.2, 0.14)),
+    ((-0.12, 0.0, 0.26, 0.0), (0.14, 0.03, 0.27, 0.0), (0.0, -0.1, 0.2, 0.0), (0.0, 0.12, 0.17, 0.12)),
+    ((-0.26, -0.02, 0.17, 0.0), (-0.06, 0.02, 0.28, 0.0), (0.2, -0.05, 0.2, 0.0), (0.34, 0.0, 0.11, 0.0),
+     (-0.08, 0.04, 0.16, 0.16)),
+    ((-0.3, 0.0, 0.16, 0.0), (-0.1, 0.04, 0.2, 0.0), (0.12, 0.0, 0.2, 0.0), (0.3, -0.02, 0.16, 0.0),
+     (0.0, -0.08, 0.15, 0.0)),
+)
+LIVE = ("pl_dark", "pl_forest", "pl_dark", "pl_forest", "pl_grass")
+DRIED = ("pl_dried", "pl_stem", "pl_dried", "pl_khaki", "pl_dried")
+
+
+def _mound_geo(v, stage, berries=0):
+    s = STAGE_S[stage]
+    dorm = stage == "dormant"
+    lay = BUSH_LAYOUT[v % 4]
+    cl = []
+    if dorm:  # bare twigs under thin dried clumps
+        rng = random.Random(900 + v)
+        for k in range(9):
+            a = 2 * math.pi * k / 9 + rng.uniform(-0.2, 0.2)
+            ln = rng.uniform(0.2, 0.36) * s
+            _limb("tw%d" % k, (CX, CY, 0.0), (CX + math.cos(a) * ln, CY + math.sin(a) * ln * 0.8,
+                                              rng.uniform(0.12, 0.26) * s), 0.014, 0.006, "pl_stem", segs=4)
+    for k, (dx, dy, r, z) in enumerate(lay):
+        if stage == "young" and k >= 3:
+            continue
+        if dorm and k % 2:
+            continue
+        r2 = r * s * (0.8 if dorm else 1.0)
+        mat = (DRIED if dorm else LIVE)[k % 5]
+        x, y = CX + dx * s, CY + dy * s
+        _cluster("b%d" % k, x, y, z * s, r2, mat, 41 + 7 * v + k, lumps=0.34, squash=0.7)
+        cl.append((x, y, z * s, r2))
+        if not dorm and k < 3:  # lighter, smaller clump on the crown of the big ones
+            _cluster("m%d" % k, x - 0.02, y, z * s + r2 * 0.4, r2 * 0.55, "pl_grass" if k != 1 else "pl_sage",
+                     60 + 5 * v + k, lumps=0.3, squash=0.6)
+    rng = random.Random(950 + v)
+    for k in range(berries):
+        x, y, z, r = cl[k % len(cl)]
+        a = rng.uniform(0, 2 * math.pi)
+        d = rng.uniform(0.2, 0.9) * r
+        _ball("berry%d" % k, x + math.cos(a) * d, y + math.sin(a) * d * 0.8, z + r * 0.55, 0.032, 0.032, 0.03,
+              "pl_berry", segs=7, rings=4)
+
+
+def _bush(i):
+    """Legacy bush_0N: the mature bush."""
+    return _plant_asset(lambda: _mound_geo(i, "mature"), "bush_%02d" % i,
+                        {"species": "bush", "variant": i})
+
+
+def _berry_legacy(i, ripe):
+    name = "berry_bush_%02d%s" % (i, "_harvestable" if ripe else "")
+    return _plant_asset(lambda: _mound_geo(i, "mature", 11 if ripe else 4), name,
+                        {"species": "berry_bush", "variant": i, "harvestable": ripe})
+
+
+def _alias_berry(i):
+    return _plant_asset(lambda: _mound_geo(i, "mature", 11), "bush_%02d_harvestable" % i,
+                        {"species": "berry_bush", "variant": i, "harvestable": True})
+
+
+# ---------------------------------------------------------------- rosettes
+def _fan(n, length, width, pitch, mats, rng, z=0.03, r0=0.02, thick=0.03, a0=0.0, span=2 * math.pi, jit=0.12,
+         name="lf"):
+    for k in range(n):
+        a = a0 + span * (k + 0.5) / n + rng.uniform(-jit, jit)
+        _leaf("%s%d" % (name, k), CX + math.cos(a) * r0, CY + math.sin(a) * r0, z + 0.01 * (k % 2), a,
+              pitch + rng.uniform(-0.12, 0.12), length * rng.uniform(0.85, 1.12), width, mats[k % len(mats)],
+              thick=thick)
+
+
+def _shrub_geo(v, stage):
+    rng = random.Random(1500 + v)
+    s = STAGE_S[stage]
+    n = {"young": 6, "mature": (9, 8, 11, 10)[v], "dormant": (7, 6, 8, 7)[v]}[stage]
+    dorm = stage == "dormant"
+    mats = ("pl_dried", "pl_stem", "pl_khaki") if dorm else ("pl_grass", "pl_forest", "pl_sage")
+    _fan(n, 0.3 * s, 0.13 * s, 0.2 if dorm else 0.38, mats, rng, thick=0.035)
+    if not dorm:
+        _fan(max(n // 2, 3), 0.2 * s, 0.1 * s, 0.75, ("pl_sage", "pl_grass"), rng, z=0.07, a0=0.4, name="in")
+
+
+def _reeds_geo(v, stage):
+    rng = random.Random(1700 + v)
+    s = STAGE_S[stage]
+    n = {"young": 6, "mature": (10, 12, 9, 11)[v], "dormant": (8, 7, 9, 8)[v]}[stage]
+    dorm = stage == "dormant"
+    for k in range(n):
+        a = 2 * math.pi * k / n + rng.uniform(-0.3, 0.3)
+        rr = rng.uniform(0.02, 0.17)
+        h = rng.uniform(0.55, 0.95) * s
+        x, y = CX + math.cos(a) * rr, CY + math.sin(a) * rr * 0.7
+        lean = rng.uniform(0.02, 0.1) * (2.2 if dorm else 1.0)
+        mat = ("pl_dried", "pl_khaki")[k % 2] if dorm else ("pl_grass", "pl_forest", "pl_sage")[k % 3]
+        _gblade("r%d" % k, x, y, h, a, lean, mat, r=0.016)
+        if stage != "young" and k % 3 == 0:
+            ex, ey = x + math.cos(a) * lean, y + math.sin(a) * lean
+            _ball("head%d" % k, ex, ey, h - 0.06, 0.03, 0.03, 0.085, "pl_stem", segs=7, rings=5)
+
+
+def _cactus_geo(v, stage):
+    s = STAGE_S[stage]
+    mat = "pl_khaki" if stage == "dormant" else "pl_cactus"
+    young = stage == "young"
+    H = (0.72, 0.6, 0.66, 0.5)[v] * s
+    cols = [(0.0, 0.0, H)]
+    if v == 3:
+        cols = [(-0.1, 0.0, H), (0.12, 0.02, H * 0.78)]
+    for k, (dx, dy, h) in enumerate(cols):
+        S.cyl("col%d" % k, CX + dx, CY + dy, 0.1 * s, 0.0, h, mat, segs=8, r_top=0.085 * s, bevel=0.0)
+        _ball("cap%d" % k, CX + dx, CY + dy, h, 0.085 * s, 0.085 * s, 0.07 * s, mat, segs=8, rings=4)
+        for r in range(4):  # faint ribs: thin darker strips down the column
+            a = 2 * math.pi * r / 4 + 0.4
+            _limb("rb%d_%d" % (k, r), (CX + dx + math.cos(a) * 0.1 * s, CY + dy + math.sin(a) * 0.1 * s, 0.03),
+                  (CX + dx + math.cos(a) * 0.085 * s, CY + dy + math.sin(a) * 0.085 * s, h - 0.02), 0.012, 0.01,
+                  "pl_forest" if stage != "dormant" else "pl_dried", segs=4)
+    if young or v == 3:
+        return
+    arms = {0: ((-1, 0.32), (1, 0.44)), 1: (), 2: ((1, 0.34),)}[v]
+    for sgn, h in arms:
+        h *= s
+        _limb("armh%d" % sgn, (CX + sgn * 0.07 * s, CY, h), (CX + sgn * 0.24 * s, CY, h), 0.055 * s, 0.055 * s,
+              mat, segs=7)
+        _limb("armv%d" % sgn, (CX + sgn * 0.24 * s, CY, h), (CX + sgn * 0.24 * s, CY, h + 0.22 * s), 0.055 * s,
+              0.047 * s, mat, segs=7)
+        _ball("armc%d" % sgn, CX + sgn * 0.24 * s, CY, h + 0.22 * s, 0.047 * s, 0.047 * s, 0.045 * s, mat,
+              segs=7, rings=4)
+
+
+def _healroot_geo(v, stage):
+    rng = random.Random(30 + v)
+    s = STAGE_S[stage]
+    n = {"young": 5, "mature": (8, 9, 7, 10)[v], "dormant": (6, 5, 7, 6)[v]}[stage]
+    dorm = stage == "dormant"
+    mats = ("pl_dried", "pl_stem") if dorm else ("pl_grass", "pl_forest", "pl_sage")
+    _fan(n, 0.27 * s, 0.085 * s, 0.25 if dorm else 0.55, mats, rng, thick=0.03)
+    if not dorm:
+        _ball("heart", CX, CY, 0.05, 0.05 * s, 0.05 * s, 0.035, "pl_forest", segs=8, rings=4)
+
+
+def _bramble_geo(v, stage):
+    rng = random.Random(1900 + v)
+    s = STAGE_S[stage]
+    n = {"young": 9, "mature": (20, 17, 22, 18)[v], "dormant": (18, 15, 19, 16)[v]}[stage]
+    dorm = stage == "dormant"
+    ends = []
+    for k in range(n):
+        a = rng.uniform(0, 2 * math.pi)
+        ln = rng.uniform(0.3, 0.5) * s
+        ox, oy = rng.uniform(-0.12, 0.12) * s, rng.uniform(-0.08, 0.08) * s
+        z0 = rng.uniform(0.03, 0.09)
+        mid = (CX + ox + math.cos(a + 0.35) * ln * 0.5, CY + oy + math.sin(a + 0.35) * ln * 0.4,
+               z0 + rng.uniform(0.04, 0.12) * s)
+        end = (CX + ox + math.cos(a) * ln, CY + oy + math.sin(a) * ln * 0.75, z0 + rng.uniform(0.0, 0.07))
+        st = ("pl_stem", "pl_dark", "pl_stem")[k % 3] if not dorm else ("pl_stem", "pl_dried")[k % 2]
+        _limb("st%d" % k, (CX + ox, CY + oy, z0), mid, 0.024, 0.018, st, segs=5)
+        _limb("sv%d" % k, mid, end, 0.018, 0.008, st, segs=5)
+        ends.append((mid, end))
+    if not dorm:
+        for k in range(n * 2 if stage == "mature" else n):
+            p = ends[k % len(ends)][k % 2]
+            _cluster("lc%d" % k, p[0], p[1], p[2] + 0.01, 0.075 * s, ("pl_forest", "pl_grass", "pl_dark")[k % 3],
+                     1950 + k, lumps=0.35, squash=0.55)
+    else:
+        for k in range(4):
+            p = ends[k][1]
+            _leaf("dl%d" % k, p[0], p[1], p[2], k * 1.7, -0.1, 0.09, 0.05, "pl_dried", thick=0.02, segs=6)
+
+
+def _moss_geo(v, stage):
+    rng = random.Random(2100 + v)
+    s = STAGE_S[stage]
+    n = {"young": 4, "mature": (8, 7, 9, 8)[v], "dormant": (7, 6, 7, 6)[v]}[stage]
+    dorm = stage == "dormant"
+    mats = ("pl_dried", "pl_khaki", "pl_stem") if dorm else ("pl_moss", "pl_moss_dark", "pl_sage")
+    for k in range(n):
+        a = 2 * math.pi * k / n + rng.uniform(-0.4, 0.4)
+        d = rng.uniform(0.04, 0.22) * s
+        r = rng.uniform(0.09, 0.15) * s
+        S.blob("mo%d" % k, CX + math.cos(a) * d, CY + math.sin(a) * d * 0.75, 0.0, r, mats[k % 3],
+               seed=2110 + 9 * v + k, lumps=0.4, squash=0.22)
+        _top(r * 0.25)
+
+
+def _agave_geo(v, stage):
+    rng = random.Random(2300 + v)
+    s = STAGE_S[stage]
+    n = {"young": 8, "mature": (12, 10, 14, 11)[v], "dormant": (9, 8, 10, 9)[v]}[stage]
+    dorm = stage == "dormant"
+    mats = ("pl_khaki", "pl_dry") if dorm else ("pl_agave", "pl_agave", "pl_cactus")
+    _fan(n, 0.36 * s, 0.1 * s, 0.35 if dorm else 0.6, mats, rng, thick=0.055, r0=0.02)
+    if not dorm:
+        _fan(max(n // 2, 4), 0.26 * s, 0.08 * s, 1.05, ("pl_agave", "pl_sage"), rng, z=0.04, a0=0.3, thick=0.05,
+             r0=0.01, name="up")
+
+
+def _ball_cactus_geo(v, stage):
+    s = STAGE_S[stage]
+    dorm = stage == "dormant"
+    n = (8, 9, 10, 8)[v]
+    R = (0.17, 0.2, 0.18, 0.15)[v] * s
+    H = R * 0.95
+    mats = ("pl_khaki", "pl_dry") if dorm else ("pl_cactus", "pl_forest")
+    for k in range(n):
+        a = 2 * math.pi * k / n
+        _lobe("rib%d" % k, CX + math.cos(a) * R * 0.45, CY + math.sin(a) * R * 0.45, H, a, R * 0.62, R * 0.36 + 0.01,
+              H, mats[k % 2], segs=10)
+    _ball("top", CX, CY, H * 1.5, R * 0.4, R * 0.4, H * 0.35, mats[0], segs=8, rings=4)
+    if stage == "mature":
+        _ball("bloom", CX, CY, H * 1.78, 0.04, 0.04, 0.025, "pl_dandelion", segs=7, rings=4)
+
+
+def _arrow(name, x, y, z, az, pitch, length, width, mat, vein="pl_sage"):
+    """Sagittate leaf on a short stalk with a pale central vein."""
+    st = 0.07 * length
+    sx, sy = x + math.cos(az) * st, y + math.sin(az) * st
+    sz = z + st * math.sin(pitch) * 0.6
+    _limb(name + "p", (x, y, z), (sx, sy, sz), 0.012, 0.01, "pl_stem", segs=4)
+    _leaf(name, sx, sy, sz, az, pitch, length * 0.78, width, mat, thick=0.035)
+    for sgn in (-1, 1):  # basal lobes make the arrow head
+        _leaf(name + "l%d" % sgn, sx, sy, sz, az + sgn * 2.45, pitch * 0.5, length * 0.34, width * 0.6, mat,
+              thick=0.035, segs=6)
+    d = (math.cos(az) * math.cos(pitch), math.sin(az) * math.cos(pitch), math.sin(pitch))
+    p0 = (sx, sy, sz + 0.02)
+    p1 = (sx + d[0] * length * 0.7, sy + d[1] * length * 0.7, sz + 0.02 + d[2] * length * 0.7)
+    _limb(name + "v", p0, p1, 0.011, 0.005, vein, segs=4)
+
+
+def _elephant_ear_geo(v, stage):
+    rng = random.Random(2500 + v)
+    s = STAGE_S[stage]
+    n = {"young": 5, "mature": (8, 7, 9, 6)[v], "dormant": (5, 4, 6, 4)[v]}[stage]
+    dorm = stage == "dormant"
+    mats = ("pl_dried", "pl_stem") if dorm else ("pl_forest", "pl_dark", "pl_forest", "pl_grass")
+    for k in range(n):
+        a = 2 * math.pi * (k + 0.5) / n + rng.uniform(-0.15, 0.15)
+        _arrow("ea%d" % k, CX + math.cos(a) * 0.02, CY + math.sin(a) * 0.02, 0.03 + 0.015 * (k % 2), a,
+               0.12 if dorm else 0.42 + rng.uniform(-0.08, 0.1), 0.5 * s * rng.uniform(0.9, 1.08), 0.25 * s,
+               mats[k % len(mats)], "pl_dried" if dorm else "pl_sage")
+
+
+def _fire_lily_geo(v, stage):
+    rng = random.Random(2700 + v)
+    s = STAGE_S[stage]
+    n = {"young": 5, "mature": (8, 7, 9, 8)[v], "dormant": (6, 5, 6, 5)[v]}[stage]
+    dorm = stage == "dormant"
+    base = (-1.3, -1.0, -1.6, -1.15)[v]
+    mats = ("pl_dried", "pl_stem") if dorm else ("pl_grass", "pl_forest", "pl_sage")
+    _fan(n, 0.5 * s, 0.065 * s, 0.4 if dorm else 1.0, mats, rng, thick=0.025, a0=base - 1.25, span=2.5, name="st")
+    if stage == "mature":
+        for k in range(2 + (v % 2)):
+            a = base + (k - 1) * 0.5
+            x, y = CX + math.cos(a) * 0.04, CY + math.sin(a) * 0.04
+            h = 0.42 + 0.08 * k
+            _limb("fs%d" % k, (x, y, 0.0), (x + 0.03 * (k - 1), y, h), 0.01, 0.008, "pl_forest", segs=4)
+            for j in range(3):
+                b = 2 * math.pi * j / 3 + k
+                _ball("fl%d_%d" % (k, j), x + 0.03 * (k - 1) + math.cos(b) * 0.03, y + math.sin(b) * 0.025,
+                      h + 0.015 * j, 0.036, 0.036, 0.032, "pl_fire", segs=7, rings=4)
+
+
+def _dandelion_geo(v, stage):
+    rng = random.Random(2900 + v)
+    s = STAGE_S[stage]
+    dorm = stage == "dormant"
+    n = {"young": 5, "mature": (7, 6, 8, 7)[v], "dormant": 5}[stage]
+    mats = ("pl_dried", "pl_stem") if dorm else ("pl_grass", "pl_forest")
+    _fan(n, 0.13 * s, 0.045, 0.2, mats, rng, thick=0.02, r0=0.01)
+    if stage == "mature":
+        for k in range(1 + (v % 2)):
+            a = rng.uniform(0, 2 * math.pi)
+            x, y = CX + math.cos(a) * 0.04, CY + math.sin(a) * 0.04
+            h = 0.12 + 0.05 * k
+            _limb("ds%d" % k, (x, y, 0.0), (x + 0.015, y, h), 0.007, 0.005, "pl_grass", segs=4)
+            _ball("dd%d" % k, x + 0.015, y, h + 0.012, 0.03, 0.03, 0.02, "pl_dandelion", segs=7, rings=4)
+
+
+# kinds: key -> (builder, stages, variant count, flat)
+KINDS = {
+    "bush": (lambda v, st: _mound_geo(v, st), ("young", "mature", "dormant"), 4, False),
+    "berry_bush": (lambda v, st: _mound_geo(v, "mature" if st == "harvestable" else st,
+                                            {"young": 2, "mature": 4, "harvestable": 11, "dormant": 0}[st]),
+                   ("young", "mature", "harvestable", "dormant"), 4, False),
+    "shrub": (_shrub_geo, ("young", "mature", "dormant"), 4, False),
+    "reeds": (_reeds_geo, ("young", "mature", "dormant"), 4, False),
+    "cactus": (_cactus_geo, ("young", "mature", "dormant"), 4, False),
+    "healroot_wild": (_healroot_geo, ("young", "mature", "dormant"), 4, False),
+    "bramble": (_bramble_geo, ("young", "mature", "dormant"), 4, False),
+    "moss": (_moss_geo, ("young", "mature", "dormant"), 4, True),
+    "agave": (_agave_geo, ("young", "mature", "dormant"), 4, False),
+    "ball_cactus": (_ball_cactus_geo, ("young", "mature", "dormant"), 4, False),
+    "elephant_ear": (_elephant_ear_geo, ("young", "mature", "dormant"), 4, False),
+    "fire_lily": (_fire_lily_geo, ("young", "mature", "dormant"), 4, False),
+    "dandelion": (_dandelion_geo, ("young", "mature", "dormant"), 4, True),
+}
+
+
+def _ground(key, stage, v, name=None):
+    fn, _, _, flat = KINDS[key]
+    return _plant_asset(lambda: fn(v, stage), name or "%s_%s_v%d" % (key, stage, v),
+                        {"species": key, "stage": stage, "variant": v}, BUSH_M, flat=flat)
 
 
 # ------------------------------------------------------------------ crops
@@ -492,111 +773,45 @@ def _crop_geo(species, st, v):
 
 def _crop(species, st, v, name):
     return _asset(lambda: _crop_geo(species, st, v), name,
-                  {"species": species, "growth": st, "variant": v}, CROP_M)
-
-
-# ------------------------------------------------------------ biome plants
-# pine in snow, jungle tree, cactus, shrub and reeds (biome work).
-# Like the other trees these are drawn at one size and scaled by the
-# renderer with Growth; dry cactus/shrub is the withered look.
-def _cactus(i, dry):
-    mat = "cactus_dry" if dry else "cactus"
-    if i == 0:  # saguaro: tall column, two arms
-        S.cyl("col", CX, CY, 0.11, 0.0, 0.72, mat, segs=8, r_top=0.09, bevel=0.0)
-        _ball("cap", CX, CY, 0.72, 0.09, 0.09, 0.07, mat, segs=8, rings=4)
-        for sgn, h in ((-1, 0.34), (1, 0.46)):
-            _limb("armh%d" % sgn, (CX + sgn * 0.08, CY, h), (CX + sgn * 0.26, CY, h), 0.06, 0.06, mat, segs=7)
-            _limb("armv%d" % sgn, (CX + sgn * 0.26, CY, h), (CX + sgn * 0.26, CY, h + 0.26), 0.06, 0.05, mat, segs=7)
-            _ball("armc%d" % sgn, CX + sgn * 0.26, CY, h + 0.26, 0.05, 0.05, 0.05, mat, segs=7, rings=4)
-        bloom = (CX, CY, 0.79)
-    elif i == 1:  # barrel
-        _ball("barrel", CX, CY, 0.24, 0.2, 0.2, 0.26, mat, segs=10, rings=7)
-        for k in range(6):
-            a = 2 * math.pi * k / 6
-            _limb("rib%d" % k, (CX + math.cos(a) * 0.19, CY + math.sin(a) * 0.19, 0.04),
-                  (CX + math.cos(a) * 0.1, CY + math.sin(a) * 0.1, 0.5), 0.016, 0.01,
-                  "shrub_dry" if not dry else "cactus", segs=4)
-        bloom = (CX, CY, 0.5)
-    else:  # prickly pear pads
-        for k, (dx, z, rx, rz) in enumerate(((0.0, 0.0, 0.22, 0.24), (-0.1, 0.3, 0.17, 0.2), (0.15, 0.26, 0.16, 0.18))):
-            _ball("pad%d" % k, CX + dx, CY, z + rz, rx, 0.07, rz, mat, segs=9, rings=5)
-        bloom = (CX - 0.1, CY, 0.52)
-    if not dry:
-        _ball("bloom", bloom[0], bloom[1], bloom[2], 0.05, 0.05, 0.04, "cactus_bloom", segs=7, rings=4)
-
-
-def _shrub(i, dry):
-    leaf = "shrub_dry" if dry else "shrub_leaf"
-    rng = random.Random(1500 + i)
-    n = (6, 5, 7)[i]
-    for k in range(n):
-        a = 2 * math.pi * k / n + rng.uniform(-0.3, 0.3)
-        ln = rng.uniform(0.34, 0.55)
-        el = rng.uniform(0.7, 1.2)
-        p0 = (CX, CY, 0.0)
-        p1 = (CX + math.cos(a) * math.cos(el) * ln, CY + math.sin(a) * math.cos(el) * ln, math.sin(el) * ln)
-        _limb("tw%d" % k, p0, p1, 0.02, 0.008, "bark", segs=4)
-        if not dry or k % 2 == 0:
-            _cluster("sl%d" % k, p1[0], p1[1], p1[2] - 0.02, 0.15 if not dry else 0.09, leaf,
-                     seed=1510 + 10 * i + k, lumps=0.3, squash=0.8)
-    if not dry:
-        _cluster("core", CX, CY, 0.06, 0.22, leaf, seed=1530 + i, squash=0.8)
-
-
-def _reeds(i):
-    rng = random.Random(1700 + i)
-    n = (14, 16, 12)[i]
-    for k in range(n):
-        a = 2 * math.pi * k / n + rng.uniform(-0.3, 0.3)
-        rr = rng.uniform(0.03, 0.2)
-        h = rng.uniform(0.6, 1.0)
-        _blade("r%d" % k, CX + math.cos(a) * rr, CY + math.sin(a) * rr, h, a, rng.uniform(0.04, 0.16),
-               ("reed", "vegetation")[k % 2], r=0.04)
-        if k % 3 == 0:  # cattail head
-            _ball("head%d" % k, CX + math.cos(a) * (rr + 0.09), CY + math.sin(a) * (rr + 0.09), h - 0.1,
-                  0.045, 0.045, 0.12, "reed_head", segs=7, rings=5)
-
-
-def _build_biome_plants():
-    out = []
-    for i in range(3):
-        for dry in (False, True):
-            sfx = "_dry" if dry else ""
-            out.append(_asset(lambda i=i, d=dry: _cactus(i, d), "cactus_%02d%s" % (i, sfx),
-                              {"species": "cactus", "variant": i, "dry": dry}, BUSH_M))
-            out.append(_asset(lambda i=i, d=dry: _shrub(i, d), "shrub_%02d%s" % (i, sfx),
-                              {"species": "shrub", "variant": i, "dry": dry}, BUSH_M))
-        out.append(_asset(lambda i=i: _reeds(i), "reeds_%02d" % i, {"species": "reeds", "variant": i}, BUSH_M))
-    return out
+                  {"species": species, "growth": st, "variant": v}, CROP_M, outline=False)
 
 
 # ------------------------------------------------------------------ build
 def build():
     out = []
-    for i in range(4):
-        out.append(_bush(i))
-    for i in range(3):
-        out.append(_berry(i, False))
-        out.append(_berry(i, True))
-    for i in range(8):
-        out.append(_grass(i))
+    for i in range(6):
+        out.append(_grass_short(i))
     for i in range(4):
         out.append(_grass_tall(i))
+    for i in range(3):
+        out.append(_grass_dormant(i))
+    for key, (_, stages, nv, _flat) in KINDS.items():
+        for st in stages:
+            for v in range(nv):
+                out.append(_ground(key, st, v))
     for sp in CROPS:
         for st in STAGES:
             for v in range(3):
                 out.append(_crop(sp, st, v, "%s_%s_v%d" % (sp, st, v)))
     # legacy aliases, to be deleted by the lead once the renderer switches
+    for i in range(8):
+        out.append(_grass(i))
+    for i in range(4):
+        out.append(_grass_tall_legacy(i))
+        out.append(_bush(i))
+    for i in range(3):
+        out.append(_berry_legacy(i, False))
+        out.append(_berry_legacy(i, True))
+        for dry in (False, True):
+            sfx = "_dry" if dry else ""
+            st = "dormant" if dry else "mature"
+            out.append(_ground("cactus", st, i, "cactus_%02d%s" % (i, sfx)))
+            out.append(_ground("shrub", st, i, "shrub_%02d%s" % (i, sfx)))
+        out.append(_ground("reeds", "mature", i, "reeds_%02d" % i))
     for i in range(2):
         out.append(_alias_berry(i))
     out.append(_crop("radish", "sown", 0, "crop_sown"))
     for sp in CROPS:
         for st in ("young", "mature", "harvestable"):
             out.append(_crop(sp, st, 1, "%s_%s" % (sp, st)))
-    out += _build_biome_plants()
     return out
-
-
-def _alias_berry(i):
-    return _asset(lambda: _berry_geo(i, True), "bush_%02d_harvestable" % i,
-                  {"species": "berry_bush", "variant": i, "harvestable": True}, BUSH_M)

@@ -3,16 +3,16 @@ version: 1
 id: "core:plant/tree_oak_02_bare"
 image: generated/world/plant/tree_oak_02_bare.png
 scale: 2
-canvas: [220, 276]
+canvas: [220, 296]
 footprint: [1, 1]
-origin_px: [46, 116]
+origin_px: [46, 136]
 projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 1.317
-  h: 1.454
-  d: 1.3
+  w: 0.935
+  h: 1.762
+  d: 0.821
 species: tree
 kind: oak
 variant: 2

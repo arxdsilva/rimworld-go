@@ -3,16 +3,17 @@ version: 1
 id: "core:plant/grass_06"
 image: generated/world/plant/grass_06.png
 scale: 2
-canvas: [166, 188]
+canvas: [166, 182]
 footprint: [1, 1]
-origin_px: [19, 45]
+origin_px: [19, 39]
 projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.366
-  h: 0.447
-  d: 0.389
+  w: 0.232
+  h: 0.363
+  d: 0.215
 species: grass
 variant: 6
 decoration: true
+flat_normal: true

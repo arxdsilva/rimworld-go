@@ -1,0 +1,20 @@
+# Ground vegetation palette (ART spec 9.1). Flat two-band materials: the
+# token is the base band, shadow and light sit one small step either side.
+# Merged over materials.yaml by the palette loader (materials_*.yaml).
+version: 1
+materials:
+  pl_dark:      {light: "#4d5b3b", base: "#414e32", shadow: "#343f28"}
+  pl_forest:    {light: "#617250", base: "#556442", shadow: "#46543a"}
+  pl_grass:     {light: "#7e8e5f", base: "#708052", shadow: "#5f6e45"}
+  pl_sage:      {light: "#9aa57f", base: "#87936c", shadow: "#75815b"}
+  pl_dry:       {light: "#a2a26f", base: "#91915f", shadow: "#7d7d51"}
+  pl_khaki:     {light: "#b5ac85", base: "#a49b70", shadow: "#8d845e"}
+  pl_stem:      {light: "#867257", base: "#766247", shadow: "#62513a"}
+  pl_dried:     {light: "#978862", base: "#857651", shadow: "#6f6243"}
+  pl_agave:     {light: "#6f9283", base: "#5f7f72", shadow: "#4d6a5e"}
+  pl_cactus:    {light: "#7a9a68", base: "#6b8a5c", shadow: "#58744c"}
+  pl_moss:      {light: "#8a9679", base: "#78856a", shadow: "#657258"}
+  pl_moss_dark: {light: "#6d7a60", base: "#5d6a50", shadow: "#4e5a43"}
+  pl_berry:     {light: "#7a76a8", base: "#5e5a8e", shadow: "#47446f"}
+  pl_fire:      {light: "#e89448", base: "#d2742e", shadow: "#a85a22"}
+  pl_dandelion: {light: "#f2e6a0", base: "#e4d27a", shadow: "#c2b05c"}

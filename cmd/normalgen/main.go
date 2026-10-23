@@ -144,8 +144,11 @@ func one(in, out string, s spritenormals.Settings) error {
 		nrgba = image.NewNRGBA(src.Bounds())
 		draw.Draw(nrgba, nrgba.Bounds(), src, src.Bounds().Min, draw.Src)
 	}
-	n, err := normalsFor(nrgba, linkedMaskOf(in), s)
-	if err != nil {
+	meta := metaOf(in)
+	var n *image.NRGBA
+	if flatNormal(meta) {
+		n = flatNormals(nrgba)
+	} else if n, err = normalsFor(nrgba, linkedMask(meta), s); err != nil {
 		return err
 	}
 	w, err := os.Create(out)
@@ -168,21 +171,49 @@ const (
 	linkW = 8
 )
 
-// linkedMaskOf reads the autotile mask from the sprite's metadata
-// (generated/world/<fam>/<name>.png -> metadata/<fam>/<name>.yaml); -1
-// when the sprite isn't autotiled or has no metadata.
-func linkedMaskOf(png string) int {
+// metaOf reads a sprite's metadata sidecar (generated/world/<fam>/<name>.png
+// -> metadata/<fam>/<name>.yaml); empty when there is none.
+func metaOf(png string) string {
 	p := filepath.ToSlash(png)
 	i := strings.LastIndex(p, "/generated/world/")
 	if i < 0 {
-		return -1
+		return ""
 	}
 	meta := p[:i] + "/metadata/" + strings.TrimSuffix(p[i+len("/generated/world/"):], ".png") + ".yaml"
 	src, err := os.ReadFile(filepath.FromSlash(meta))
 	if err != nil {
-		return -1
+		return ""
 	}
-	return linkedMask(string(src))
+	return string(src)
+}
+
+// flatNormal reports a top-level `flat_normal: true` in sprite metadata:
+// low cover (grass, moss) is lit flat so it can be mirrored freely.
+func flatNormal(meta string) bool {
+	for _, line := range strings.Split(meta, "\n") {
+		k, v, ok := strings.Cut(line, ":")
+		if !ok || k != "flat_normal" {
+			continue
+		}
+		v, _, _ = strings.Cut(v, "#")
+		return strings.TrimSpace(v) == "true"
+	}
+	return false
+}
+
+// flatNormals is a normal map pointing straight at the viewer (0,0,1)
+// wherever src has alpha, keeping src's alpha.
+func flatNormals(src *image.NRGBA) *image.NRGBA {
+	b := src.Bounds()
+	out := image.NewNRGBA(b)
+	for y := b.Min.Y; y < b.Max.Y; y++ {
+		for x := b.Min.X; x < b.Max.X; x++ {
+			if a := src.NRGBAAt(x, y).A; a > 0 {
+				out.SetNRGBA(x, y, color.NRGBA{128, 128, 255, a})
+			}
+		}
+	}
+	return out
 }
 
 // linkedMask is the top-level `mask:` of an `autotile:` sprite, else -1.
