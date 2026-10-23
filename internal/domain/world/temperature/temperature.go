@@ -114,10 +114,20 @@ func Indoor(t clock.Tick) Temp { return Temperate.Indoor(t) }
 
 // Season names the time of year, centred on the temperature curve: summer
 // is the 15 days around the warmest day, winter the 15 around the coldest.
-func Season(t clock.Tick) string {
+// It is the legacy (northern, PeakDay 15) calendar; a map with its own
+// climate uses Climate.SeasonAt.
+func Season(t clock.Tick) string { return seasonAt(t, peakDay) }
+
+// SeasonAt is Season for this climate: the seasons centre on c.PeakDay, so
+// a southern-hemisphere site (PeakDay 45) has winter when the north has
+// summer (NG-1 §4.2).
+func (c Climate) SeasonAt(t clock.Tick) string { return seasonAt(t, c.PeakDay) }
+
+func seasonAt(t clock.Tick, peak int) string {
 	day := int(t/clock.TicksPerDay) % clock.DaysPerYear
 	q := clock.DaysPerQuadrum
-	switch (day - peakDay + q/2 + clock.DaysPerYear) % clock.DaysPerYear / q {
+	peak = (peak%clock.DaysPerYear + clock.DaysPerYear) % clock.DaysPerYear
+	switch (day - peak + q/2 + clock.DaysPerYear) % clock.DaysPerYear / q {
 	case 0:
 		return "Summer"
 	case 1:

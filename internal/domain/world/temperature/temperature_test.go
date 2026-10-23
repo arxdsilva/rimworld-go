@@ -62,3 +62,32 @@ func TestClimateCurves(t *testing.T) {
 		t.Fatalf("growing days temperate %d, cold %d", g, c)
 	}
 }
+
+func TestSeasonAtSouthernShift(t *testing.T) {
+	north := Temperate
+	south := Temperate
+	south.PeakDay = (Temperate.PeakDay + 30) % clock.DaysPerYear // 45
+	for d := 0; d < clock.DaysPerYear; d++ {
+		tick := at(d, 12)
+		if got, want := north.SeasonAt(tick), Season(tick); got != want {
+			t.Fatalf("day %d: northern SeasonAt %q, legacy Season %q", d, got, want)
+		}
+	}
+	opposite := map[string]string{"Summer": "Winter", "Winter": "Summer", "Spring": "Fall", "Fall": "Spring"}
+	for d := 0; d < clock.DaysPerYear; d++ {
+		tick := at(d, 6)
+		if got, want := south.SeasonAt(tick), opposite[north.SeasonAt(tick)]; got != want {
+			t.Fatalf("day %d: south %q, want %q (north %q)", d, got, want, north.SeasonAt(tick))
+		}
+	}
+	if got := south.SeasonAt(at(45, 0)); got != "Summer" {
+		t.Errorf("southern peak day 45 is %q, want Summer", got)
+	}
+	if got := south.SeasonAt(at(15, 0)); got != "Winter" {
+		t.Errorf("southern day 15 is %q, want Winter", got)
+	}
+	// A negative or out-of-year PeakDay wraps like the calendar.
+	if (Climate{PeakDay: -45}).SeasonAt(at(15, 0)) != "Summer" {
+		t.Error("PeakDay -45 should wrap to day 15")
+	}
+}

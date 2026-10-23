@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/geology"
 	"rimworld-go/internal/domain/world/site"
+	"rimworld-go/pkg/randx"
 )
 
 // Frequency is the icosphere subdivision: 10*F*F+2 tiles on the full globe.
@@ -47,6 +48,17 @@ const (
 )
 
 // Planet is a generated world (struct of arrays indexed by tile).
+//
+// Geometry: Center is the unit-sphere tile centre. Corners[CornerOff[i]:
+// CornerOff[i+1]] is tile i's polygon (5 or 6 unit vectors, counter-
+// clockwise seen from outside). Neigh[NeighOff[i]:NeighOff[i+1]] are the
+// kept neighbours, also counter-clockwise; for a tile with all its
+// neighbours kept (every tile at 100% coverage), corner k lies between
+// neighbour k and neighbour k+1, so the edge shared with neighbour k runs
+// from corner k-1 to corner k. North is +Z; Lat/Lon come from Center.
+//
+// Water tiles keep Biome 0 (TemperateForest) except Sea Ice, which is
+// frozen ocean stored as land (Water Land, Biome SeaIce, Elev < 0).
 type Planet struct {
 	Params     Params
 	Seed       uint64
@@ -66,9 +78,31 @@ type Planet struct {
 	RiverTo    []int32
 	Caves      []bool
 	Stones     [][3]geology.Stone
-	Settlement []int32 // index into Factions' settlements, -1 none
+	Settlement []int32 // global settlement index (factions in order, capital first), -1 none
 	Roads      [][2]int32
 	Factions   []faction.Faction
+
+	// CoastDist is the hop distance to the nearest ocean tile (0 on the
+	// ocean, capped at 255).
+	CoastDist []uint8
+	// Pole is the centre of the coverage cap; CapCos its cosine radius
+	// (a direction d is covered when dot(d, Pole) >= CapCos).
+	Pole   [3]float32
+	CapCos float32
+
+	settlements []settlementRef
+	radCos      []float32 // cos of the tile's largest centre-corner angle
+	buckets     []int32   // TileAt lat/lon grid
+	stepCos     float64   // cos of the largest neighbour angle
+	landCum     []uint32  // RandomLanding cumulative weights
+	landTile    []int32
+	hopMark     []uint32 // Hops scratch (not safe for concurrent use)
+	hopGen      uint32
+}
+
+type settlementRef struct {
+	faction, k int
+	tile       int32
 }
 
 // Builder runs generation in steps of a given number of work units.
@@ -76,37 +110,25 @@ type Builder struct {
 	p     Params
 	phase Phase
 	out   *Planet
+
+	w      *Planet
+	stage  int
+	began  bool
+	cursor int
+	count  int
+	g      gen
+
+	genFactions func([]faction.Slot, *randx.Rand) []faction.Faction
+	place       func(faction.Globe, []faction.Faction, int, *randx.Rand)
 }
 
 // NewBuilder starts generating a planet.
-func NewBuilder(p Params) *Builder { return &Builder{p: p} } // NG-1 stub (PLANET)
-
-// Step does up to units of work and reports progress.
-func (b *Builder) Step(units int) (Phase, float32, bool) { return PhaseDone, 1, true } // NG-1 stub (PLANET)
+func NewBuilder(p Params) *Builder {
+	return &Builder{p: p, genFactions: faction.Generate, place: faction.PlaceSettlements}
+}
 
 // Planet is the finished world (nil until done).
-func (b *Builder) Planet() *Planet { return b.out } // NG-1 stub (PLANET)
+func (b *Builder) Planet() *Planet { return b.out }
 
 // TileCount is the number of generated tiles.
 func (p *Planet) TileCount() int { return len(p.Center) }
-
-// ValidLanding reports whether a colony may land on tile i, and why not.
-func (p *Planet) ValidLanding(i int) (bool, string) { return false, "" } // NG-1 stub (PLANET)
-
-// Site is the local map's parameters for tile i in the given hemisphere season.
-func (p *Planet) Site(i int) site.Site { return site.Site{} } // NG-1 stub (PLANET)
-
-// GrowingDays is the growing period at tile i (of 60).
-func (p *Planet) GrowingDays(i int) int { return 0 } // NG-1 stub (PLANET)
-
-// TileAt is the tile under a unit direction.
-func (p *Planet) TileAt(dir [3]float32) int { return -1 } // NG-1 stub (PLANET)
-
-// RandomLanding picks a valid tile deterministically for the n-th press.
-func (p *Planet) RandomLanding(n int) int { return -1 } // NG-1 stub (PLANET)
-
-// Hops is the hop distance between tiles (capped at limit).
-func (p *Planet) Hops(a, b, limit int) int { return limit } // NG-1 stub (PLANET)
-
-// Key hashes the params (a planet is reused when its key matches).
-func (p Params) Key() string { return "" } // NG-1 stub (PLANET)

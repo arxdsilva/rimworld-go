@@ -65,5 +65,22 @@ func (s Site) Zero() bool {
 		!s.Caves && len(s.Stones) == 0 && s.Road == 0
 }
 
-// Label names a hills value.
-func (h Hills) Label() string { return "" } // NG-1 stub (PLANET)
+var hillLabels = [...]string{HillsDefault: "Default", Flat: "Flat", SmallHills: "Small hills", LargeHills: "Large hills", Mountainous: "Mountainous"}
+
+// Label names a hills value ("Small hills"); unknown values are "".
+func (h Hills) Label() string {
+	if int(h) >= len(hillLabels) {
+		return ""
+	}
+	return hillLabels[h]
+}
+
+var riverLabels = [...]string{NoRiver: "", Creek: "Creek", River: "River", LargeRiver: "Large river"}
+
+// Label names a river size ("Large river"); NoRiver is "".
+func (r RiverSize) Label() string {
+	if int(r) >= len(riverLabels) {
+		return ""
+	}
+	return riverLabels[r]
+}
