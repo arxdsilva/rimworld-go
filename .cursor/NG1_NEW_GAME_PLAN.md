@@ -1828,7 +1828,7 @@ type Config struct { Seed uint64; Width, Height int; Biome biome.ID; Setup *Setu
   - **Orla Vane:** late 50s, close-cropped silver hair, dispatcher's headset around the neck, quilted navy jacket with a reflective stripe, calm half-smile.
   - **Bram Holloway:** 60s, broad, ruddy, short white beard, knitted cardigan over an apron, holding a steaming mug.
   - **Kestrel Quay:** 30s, angular, asymmetric dark hair with one shaved side, long coat with brass buttons, a card held between two fingers, one raised eyebrow.
-- **Outputs:** `ui/portrait/<key>.png` (512×640) and a 120×150 thumbnail.
+- **Outputs:** `ui_portrait/<key>` (generated/ui/portraits/<key>.png) (512×640) and a 120×150 thumbnail.
 - **Never** reference RimWorld storyteller art. Silhouettes, palettes and props must differ clearly.
 
 ### 7.3 World and UI art
