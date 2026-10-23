@@ -175,7 +175,42 @@ func (a *App) currentAlerts() []alert {
 	if a.renderer == nil {
 		return nil
 	}
-	return buildAlerts(append(a.renderer.snapshot(), a.renderer.hostiles()...), a.renderer.world())
+	// Several HUD passes ask every frame (chips, alert rows, hit layout):
+	// build once per update while the read models are the same ones.
+	r := a.renderer
+	snap, w := r.game.Snapshot(), r.world()
+	k := alertsKey{
+		renderer: r, present: r.present, pawns: litFirst(snap), nPawns: len(snap),
+		animals: litFirst(w.Animals), nAnimals: len(w.Animals), items: litFirst(w.Items), nItems: len(w.Items),
+		bldgs: litFirst(w.Buildings), nBldgs: len(w.Buildings), frames: litFirst(w.Frames), nFrames: len(w.Frames),
+		food: w.Food,
+	}
+	if m := &a.alerts; r.viewCached && m.ok && m.key == k {
+		return m.out
+	}
+	out := buildAlerts(append(r.snapshot(), r.hostiles()...), w)
+	a.alerts = alertsMemo{key: k, out: out, ok: true}
+	return out
+}
+
+// alertsMemo is currentAlerts' last result and the read models it came
+// from (identity of their lists, the update counter). Callers only read it.
+type alertsMemo struct {
+	key alertsKey
+	out []alert
+	ok  bool
+}
+
+type alertsKey struct {
+	renderer                         *Renderer
+	present                          uint64
+	pawns                            *game.PawnView
+	animals                          *game.AnimalView
+	items                            *game.ItemView
+	bldgs                            *game.BuildingView
+	frames                           *game.FrameView
+	nPawns, nAnimals, nItems, nBldgs int
+	nFrames, food                    int
 }
 
 func alertRect(sw, i int) button {

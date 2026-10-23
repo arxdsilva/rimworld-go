@@ -805,6 +805,8 @@ func (g *Game) Snapshot() []PawnView {
 
 func (g *Game) snapshot() []PawnView {
 	act := g.Activity()
+	live := g.postponedTops(g.views.postBuf) // postpone.go: one pass for every colonist
+	g.views.postBuf = live
 	views := make([]PawnView, 0, len(g.pawnIDs))
 	for _, id := range g.pawnIDs {
 		pos, _ := g.positions.Get(id)
@@ -879,7 +881,7 @@ func (g *Game) snapshot() []PawnView {
 		for _, q := range g.orderQueue[id] {
 			pv.QueuedOrders = append(pv.QueuedOrders, QueuedOrderView{Label: q.label, X: q.cmd.X, Y: q.cmd.Y})
 		}
-		pv.Postponed = g.postponedLines(id) // postpone.go (SIM-027)
+		pv.Postponed = g.postponedLinesIn(live, id) // postpone.go (SIM-027)
 		if pos, ok := g.positions.Get(id); ok {
 			pv.Temp = int(g.temperatureAt(pos.X, pos.Y))
 		}
@@ -1013,20 +1015,7 @@ func (g *Game) world() WorldView {
 		g.fillGraveView(bv, id, b)   // burial.go
 		bv.MovingTo = g.movingTo(id) // move.go
 	}
-	for _, id := range g.plantIDs {
-		p, ok := g.plants.Get(id)
-		if !ok {
-			continue
-		}
-		w.Plants = append(w.Plants, PlantView{
-			ID: id, X: p.X, Y: p.Y, Designated: p.Designated, Harvestable: p.Harvestable(),
-			Species: p.Species.String(), Growth: p.Percent(), Stage: p.Stage(), Cut: p.Cut,
-		})
-		g.fillPlantWeather(&w.Plants[len(w.Plants)-1], p) // weather.go
-		if z, ok := g.zoneAt(p.X, p.Y); ok {
-			w.Plants[len(w.Plants)-1].Zone = plant.DefOf(plant.Species(z.Crop)).Name
-		}
-	}
+	w.Plants = g.plantViews(w.Plants) // plant_view.go
 	w.TerrainW = g.terr.W
 	w.Terrain = g.terrainView() // indexes.go: shared, rebuilt per structVer
 	w.Mines = g.mineList()

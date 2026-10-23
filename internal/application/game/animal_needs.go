@@ -678,7 +678,7 @@ func (g *Game) fillAnimalNeeds(av *AnimalView, a animal.State) {
 	if !a.HasSex || animal.NeedsFree(a.Species) {
 		av.Food, av.Rest = 100, 100
 	}
-	av.Diet = animal.EcologyOf(a.Species).Diet.String()
+	av.Diet = speciesViewOf(a.Species).diet // animal_view_species.go
 	av.Leaving = a.Leaving || a.Mode == animal.Leave
 	av.Herd = a.Herd
 	days := animal.AgeDays(a.Born, now, a.Species)

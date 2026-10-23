@@ -369,6 +369,13 @@ func (r *Renderer) creatureCasters(w game.WorldView, pawns []game.PawnView) []cr
 	}
 	for i := range w.Animals {
 		an := &w.Animals[i]
+		// cull on the cell first: the drawn position stays within a few
+		// tiles of it (interpolation and corrections), and most of a big
+		// map's animals are far off screen
+		if fx, fy := float64(an.X), float64(an.Y); !v.empty() &&
+			(fx+1+drawnReach < v.x0-mg || fy+1+drawnReach < v.y0-mg || fx-drawnReach > v.x1+mg || fy-drawnReach > v.y1+mg) {
+			continue
+		}
 		wx, wy := r.interpAnimal(*an)
 		if !inView(wx, wy) {
 			continue

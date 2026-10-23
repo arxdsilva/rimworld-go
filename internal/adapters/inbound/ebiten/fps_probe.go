@@ -15,6 +15,9 @@ type FPSProbe struct {
 	Seconds int
 	Zoom    float64
 	Speed   int // 1, 2 (3 ticks/frame) or 3 (6 ticks/frame); 0 means 2
+	// Measuring, when set, runs once as the warm-up ends (dev: start a
+	// CPU profile of the measured span only).
+	Measuring func()
 }
 
 type fpsProbeState struct {
@@ -27,7 +30,13 @@ type fpsProbeState struct {
 	upStart  time.Time
 	warmupTo time.Time
 	report   string
+	measured bool
+	drawn    bool // the first colony frame is done (warm-up runs from it)
 }
+
+// probeWarmup is the unmeasured time after the first colony frame
+// (atlas pages, first bakes).
+const probeWarmup = 3 * time.Second
 
 // fpsProbeUpdate starts the probe's colony and reports when time is up
 // (true: quit). It times each Update.
@@ -62,13 +71,19 @@ func (a *App) fpsProbeUpdate() bool {
 		a.renderer.cam.offsetX = (float64(a.renderer.game.Width())/2+0.5)*tile - float64(a.sw)/2
 		a.renderer.cam.offsetY = (float64(a.renderer.game.Height())/2)*tile - float64(a.sh)/2
 		st.started, st.begin = true, now
-		st.warmupTo = now.Add(3 * time.Second) // atlas pages, first bakes
+		st.warmupTo = now.Add(probeWarmup) // atlas pages, first bakes
 		return false
 	}
-	if now.Sub(st.begin) > time.Duration(p.Seconds)*time.Second+3*time.Second {
+	if st.drawn && now.Sub(st.begin) > time.Duration(p.Seconds)*time.Second+probeWarmup {
 		st.report = fpsReport(st)
 		log.Print(st.report)
 		return true
+	}
+	if !st.measured && st.drawn && now.After(st.warmupTo) {
+		st.measured = true
+		if p.Measuring != nil {
+			p.Measuring()
+		}
 	}
 	st.upStart = now
 	return false
@@ -76,7 +91,7 @@ func (a *App) fpsProbeUpdate() bool {
 
 // fpsProbeAfterUpdate records the Update's CPU time.
 func (a *App) fpsProbeAfterUpdate() {
-	if st := &a.fps; a.cfg.FPSProbe != nil && st.started && !st.upStart.IsZero() && time.Now().After(st.warmupTo) {
+	if st := &a.fps; a.cfg.FPSProbe != nil && st.started && st.drawn && st.upStart.After(st.warmupTo) {
 		st.update = append(st.update, time.Since(st.upStart))
 	}
 }
@@ -88,7 +103,13 @@ func (a *App) fpsProbeDraw(start time.Time) {
 		return
 	}
 	now := time.Now()
-	if now.After(st.warmupTo) {
+	if !st.drawn {
+		// The first colony frame loads art and bakes for seconds: the
+		// warm-up (and the run) counts from its end.
+		st.drawn = true
+		st.begin, st.warmupTo = now, now.Add(probeWarmup)
+	}
+	if start.After(st.warmupTo) {
 		if !st.last.IsZero() {
 			st.frames = append(st.frames, now.Sub(st.last))
 		}

@@ -174,13 +174,13 @@ func (r *Renderer) plantOn(w *game.WorldView, t [2]int) (entity.EntityID, bool) 
 // (shots where they are fired).
 func (r *Renderer) traceSound(t game.TraceView) {
 	voiced := false
-	if an, ok := r.voice.byID[t.Attacker]; ok && t.Attacker != 0 {
+	if sp, ok := r.voice.byID[t.Attacker]; ok && t.Attacker != 0 {
 		ax, ay := float64(t.FromX)+0.5, float64(t.FromY)+0.5
-		voiced = r.cueAnimal(an.Species, voiceAttack, ax, ay, volAttack)
+		voiced = r.cueAnimal(sp, voiceAttack, ax, ay, volAttack)
 	}
-	if an, ok := r.voice.byID[t.Target]; ok && t.Target != 0 && t.Hit && !t.Building {
+	if sp, ok := r.voice.byID[t.Target]; ok && t.Target != 0 && t.Hit && !t.Building {
 		tx, ty := float64(t.ToX)+0.5, float64(t.ToY)+0.5
-		voiced = r.cueAnimal(an.Species, voiceHurt, tx, ty, volHurt) || voiced
+		voiced = r.cueAnimal(sp, voiceHurt, tx, ty, volHurt) || voiced
 	}
 	switch {
 	case t.Hit && t.Building:

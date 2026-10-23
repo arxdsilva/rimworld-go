@@ -632,11 +632,12 @@ func (g *Game) animalViews() []AnimalView {
 			continue
 		}
 		p, _ := g.positions.Get(id)
+		sv := speciesViewOf(a.Species) // animal_view_species.go
 		out = append(out, AnimalView{
-			ID: id, Species: a.Species.String(), Label: a.Species.Label(), X: p.X, Y: p.Y,
-			Attack: animal.RosterOf(a.Species).Attack.String(), Female: animalFemale(id, a),
-			Size:       animal.BodyLength(a.Species),
-			Health:     a.HP() * 100 / animal.DefOf(a.Species).MaxHP,
+			ID: id, Species: a.Species.String(), Label: sv.label, X: p.X, Y: p.Y,
+			Attack: sv.attack, Female: animalFemale(id, a),
+			Size:       sv.size,
+			Health:     a.HP() * 100 / sv.maxHP,
 			Mode:       a.Mode.String(),
 			Designated: a.Designated,
 			Hostile:    g.hostile(a) || a.Enraged(uint64(g.clock.Now())),

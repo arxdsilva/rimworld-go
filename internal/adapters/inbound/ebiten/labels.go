@@ -21,8 +21,9 @@ func (r *Renderer) drawStackCounts(screen *ebiten.Image, w game.WorldView, tile 
 	if tile < stackCountMinTile {
 		return
 	}
-	for _, it := range w.Items {
-		if it.Carried || it.Qty <= 1 {
+	for i := range w.Items {
+		it := &w.Items[i]
+		if it.Carried || it.Qty <= 1 || !r.lod.inView(it.X, it.Y, 1, 1) { // lod.go: off screen
 			continue
 		}
 		s := strconv.Itoa(it.Qty)
@@ -94,8 +95,9 @@ func (r *Renderer) drawHostileMarker(screen *ebiten.Image, p game.PawnView, wx, 
 
 // drawBuildingDamage puts a small health bar under damaged buildings.
 func (r *Renderer) drawBuildingDamage(screen *ebiten.Image, w game.WorldView, tile float64) {
-	for _, b := range w.Buildings {
-		if b.Floor || b.HPPct >= 100 || b.HPPct <= 0 {
+	for i := range w.Buildings {
+		b := &w.Buildings[i]
+		if b.Floor || b.HPPct >= 100 || b.HPPct <= 0 || !r.lod.inView(b.X, b.Y, 4, 1) { // lod.go: off screen
 			continue
 		}
 		sx, sy := r.worldToScreen(b.X, b.Y)

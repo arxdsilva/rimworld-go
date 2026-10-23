@@ -190,8 +190,9 @@ func (r *Renderer) drawMinimap(screen *ebiten.Image, v viewport) {
 			dot(p.X, p.Y, minimapColonistClr)
 		}
 	}
-	for _, an := range r.game.World().Animals {
-		if an.Manhunter {
+	animals := r.game.World().Animals
+	for i := range animals {
+		if an := &animals[i]; an.Manhunter {
 			dot(an.X, an.Y, minimapHostileClr)
 		}
 	}

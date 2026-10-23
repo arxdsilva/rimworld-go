@@ -34,6 +34,14 @@ const (
 	corrFrames  = 6     // longest correction blend, in updates
 	movingSpeed = 1e-4  // tiles/tick below which a creature is standing
 	velH        = 1e-3  // finite-difference step, ticks
+	// drawnReach bounds how far (tiles) a drawn creature can be from its
+	// read-model cell (the trailing step plus a correction): cell-based
+	// culls pad by it before paying for the motion sample.
+	drawnReach = 3.0
+	// motionViewPad: animals within this many tiles of the last frame's
+	// view keep a motion track (syncAnimals); every pass that samples
+	// their motion culls tighter (objects, shadows, plant contacts).
+	motionViewPad = contactViewPad + 2
 )
 
 // motionState is the Renderer's presentation motion bookkeeping: the
@@ -159,8 +167,10 @@ func (mo *motionState) observe(id entity.EntityID, v moView, face facing) *moTra
 	}
 	k.gen = mo.gen
 	ref := mo.ref
-	oldDrawn, oldDrawnV := k.drawn(ref), k.drawn(ref).sub(k.drawn(ref-velH)).scale(1/velH)
-	oldModel, oldModelV := k.model(ref), k.model(ref+velH).sub(k.model(ref)).scale(1/velH)
+	oldDrawn := k.drawn(ref)
+	oldDrawnV := oldDrawn.sub(k.drawn(ref - velH)).scale(1 / velH)
+	oldModel := k.model(ref)
+	oldModelV := k.model(ref + velH).sub(oldModel).scale(1 / velH)
 
 	if v.x != k.x || v.y != k.y {
 		if abs(v.x-k.x) > 1 || abs(v.y-k.y) > 1 {
@@ -380,6 +390,7 @@ type moTrack struct {
 	turnLeft    int
 	chordX      float64
 	gen         uint64
+	lens        [maxSegs + 1]geomLen // arc-length memo per step index (lengths)
 }
 
 // moSample is the corrected part of the motion.
@@ -455,12 +466,13 @@ func (k *moTrack) model(t float64) moSample {
 	}
 	s := &k.segs[i]
 	g := k.geom(i)
+	l1, ln := k.lengths(i, g)
 	if t < s.end() {
-		smp := g.eval(s, t)
+		smp := g.evalL(s, t, l1)
 		smp.blend = k.blendAt(i, smp.stride)
 		return smp
 	}
-	done := moSample{x: float64(s.tx), y: float64(s.ty), stride: s.base + g.length()}
+	done := moSample{x: float64(s.tx), y: float64(s.ty), stride: s.base + ln}
 	if i+1 < len(k.segs) {
 		return done // waiting between steps
 	}
@@ -514,7 +526,37 @@ func (k *moTrack) geom(i int) moGeom {
 	return segGeom(&k.segs[i], nx, ny, nd, ok)
 }
 
-func (k *moTrack) segLen(i int) float64 { return k.geom(i).length() }
+func (k *moTrack) segLen(i int) float64 {
+	_, l := k.lengths(i, k.geom(i))
+	return l
+}
+
+// geomLen memoises one step's arc lengths (h1 alone and the whole path):
+// a creature's few steps are sampled many times per update and frame,
+// and the Gauss-Legendre sums dominate. Keyed by the geometry itself, so
+// any change to the step or what follows it misses.
+type geomLen struct {
+	g      moGeom
+	l1, l  float64
+	cached bool
+}
+
+// lengths is g's h1 arc length and total length (g = k.geom(i)), from
+// the memo when its geometry matches; the same values length() gives.
+func (k *moTrack) lengths(i int, g moGeom) (l1, l float64) {
+	if i < len(k.lens) {
+		c := &k.lens[i]
+		if c.cached && c.g == g {
+			return c.l1, c.l
+		}
+		l1 = g.h1.arc(1)
+		l = l1 + g.h2.arc(1)
+		*c = geomLen{g: g, l1: l1, l: l, cached: true}
+		return l1, l
+	}
+	l1 = g.h1.arc(1)
+	return l1, l1 + g.h2.arc(1)
+}
 
 // blendAt is the walk weight at stride st inside segs[i]'s walk: it eases
 // in over the first blendTiles and out over the last.
@@ -579,12 +621,21 @@ func warp(u, m0, m1 float64) float64 {
 
 func (g moGeom) eval(s *moSeg, t float64) moSample {
 	w := warp((t-s.start)/s.dur, g.m0, g.m1)
+	if w < 0.5 {
+		return g.evalL(s, t, 0)
+	}
+	return g.evalL(s, t, g.h1.arc(1))
+}
+
+// evalL is eval with h1's arc length (g.h1.arc(1)) known.
+func (g moGeom) evalL(s *moSeg, t, l1 float64) moSample {
+	w := warp((t-s.start)/s.dur, g.m0, g.m1)
 	var p vec
 	var l float64
 	if w < 0.5 {
 		p, l = g.h1.at(2*w), g.h1.arc(2*w)
 	} else {
-		p, l = g.h2.at(2*w-1), g.h1.arc(1)+g.h2.arc(2*w-1)
+		p, l = g.h2.at(2*w-1), l1+g.h2.arc(2*w-1)
 	}
 	return moSample{x: p.x, y: p.y, stride: s.base + l}
 }

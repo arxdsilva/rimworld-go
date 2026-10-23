@@ -182,14 +182,20 @@ type Renderer struct {
 	parts     []particle
 	seenTrace map[[3]uint64]bool
 	itemBorn  map[entity.EntityID]uint64
-	itemsInit bool
-	drawW     game.WorldView  // world for the frame being drawn
-	drawPawns []game.PawnView // pawns for the frame being drawn
-	mo        motionState     // per-creature motion and the animT clock (motion.go)
-	anims     *animState      // body-animation bookkeeping (anim.go)
-	smooth    camSmooth       // eased pan and zoom (camera_smooth.go)
-	env       envState        // wind, contact springs and weather (environment.go)
-	lit       litRenderer     // sun, moon and lamp lighting (light.go)
+	itemLive  map[entity.EntityID]bool // syncItems' reused live set
+	// viewCached: the simulation caches its read models (viewCacher), so a
+	// read model handed out again is the same, unchanged one and memos
+	// keyed on its identity hold (split, App.alerts).
+	viewCached bool
+	split      pawnSplit
+	itemsInit  bool
+	drawW      game.WorldView  // world for the frame being drawn
+	drawPawns  []game.PawnView // pawns for the frame being drawn
+	mo         motionState     // per-creature motion and the animT clock (motion.go)
+	anims      *animState      // body-animation bookkeeping (anim.go)
+	smooth     camSmooth       // eased pan and zoom (camera_smooth.go)
+	env        envState        // wind, contact springs and weather (environment.go)
+	lit        litRenderer     // sun, moon and lamp lighting (light.go)
 	// cast, while set, turns world sprite draws into shadow silhouettes
 	// (shadow_cast.go).
 	cast *shadowCast
@@ -261,11 +267,13 @@ type viewCacher interface{ SetViewCache(on bool) }
 // New returns a Renderer for sim. Sprites are optional: call LoadPack
 // after New. Without a pack, pawns fall back to colored rectangles.
 func New(sim Simulation) *Renderer {
-	if vc, ok := sim.(viewCacher); ok {
+	vc, cached := sim.(viewCacher)
+	if cached {
 		vc.SetViewCache(true)
 	}
 	return &Renderer{
 		game:          sim,
+		viewCached:    cached,
 		speed:         speedNormal,
 		cam:           camera{zoom: 1},
 		pauseOnThreat: true,
@@ -673,25 +681,45 @@ func (r *Renderer) Selected() entity.EntityID { return r.selected }
 // snapshot is the player's colonists (raiders are left out: they are only
 // drawn, never listed, selected or ordered).
 func (r *Renderer) snapshot() []game.PawnView {
-	all := r.game.Snapshot()
-	out := all[:0:0]
-	for _, p := range all {
-		if !p.Hostile {
-			out = append(out, p)
-		}
-	}
-	return out
+	r.splitPawns()
+	return r.split.colonists
 }
 
 // hostiles is the raiders on the map.
 func (r *Renderer) hostiles() []game.PawnView {
-	var out []game.PawnView
-	for _, p := range r.game.Snapshot() {
-		if p.Hostile {
-			out = append(out, p)
+	r.splitPawns()
+	return r.split.raiders
+}
+
+// pawnSplit is the snapshot split into colonists and raiders, kept while
+// the simulation hands out the same snapshot (the view cache: the HUD
+// asks many times a frame). Both lists are full slices (cap == len), so
+// a caller's append copies instead of writing into them.
+type pawnSplit struct {
+	src                []game.PawnView
+	colonists, raiders []game.PawnView
+}
+
+func (r *Renderer) splitPawns() {
+	all := r.game.Snapshot()
+	s := &r.split
+	if r.viewCached && s.src != nil && len(all) == len(s.src) && litFirst(all) == litFirst(s.src) {
+		return
+	}
+	s.src = all
+	if all == nil {
+		s.src = []game.PawnView{}
+	}
+	s.colonists, s.raiders = all[:0:0], nil
+	for _, p := range all {
+		if !p.Hostile {
+			s.colonists = append(s.colonists, p)
+		} else {
+			s.raiders = append(s.raiders, p)
 		}
 	}
-	return out
+	s.colonists = s.colonists[:len(s.colonists):len(s.colonists)]
+	s.raiders = s.raiders[:len(s.raiders):len(s.raiders)]
 }
 
 func (r *Renderer) world() game.WorldView { return r.game.World() }

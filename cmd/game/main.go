@@ -54,7 +54,15 @@ func main() {
 	traceOut := flag.String("trace", "", "dev: write an execution trace to this file")
 	fpsProbe := flag.Int("fpsprobe", 0, "dev: run the colony for this many seconds at -capture-speed (2 = 3 ticks/frame) and -capture-zoom, log frame stats and quit")
 	flag.Parse()
-	stopProfiles := startProfiles(*cpuProfile, *traceOut)
+	probe := fpsProbeOf(*fpsProbe, *captureZoom, *captureSpeed)
+	profilePath := *cpuProfile
+	var probeProfile func() // with -fpsprobe the CPU profile covers only the measured span
+	if probe != nil && profilePath != "" {
+		path := profilePath
+		probe.Measuring = func() { probeProfile = startProfiles(path, "") }
+		profilePath = ""
+	}
+	stopProfiles := startProfiles(profilePath, *traceOut)
 
 	var shot *uiadapter.Capture
 	if *capture != "" {
@@ -82,7 +90,7 @@ func main() {
 		Saves:        saveHooks(),
 		Settings:     settingsHooks(shot != nil),
 		Scenarios:    scenarioStore(shot != nil),
-		FPSProbe:     fpsProbeOf(*fpsProbe, *captureZoom, *captureSpeed),
+		FPSProbe:     probe,
 		NewSimBuilder: func(ng uiadapter.NewGame) (uiadapter.SimBuilder, error) {
 			return &colonyBuilder{b: game.NewColonyBuilder(game.Config{Seed: ng.Seed, Biome: ng.Biome, Setup: ng.Setup})}, nil
 		},
@@ -366,6 +374,9 @@ func main() {
 		log.Fatal(err)
 	}
 	stopProfiles()
+	if probeProfile != nil {
+		probeProfile()
+	}
 	writeHeapProfile(*memProfile)
 	if err := app.CaptureErr(); err != nil {
 		log.Fatal(err)

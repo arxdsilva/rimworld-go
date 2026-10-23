@@ -51,6 +51,9 @@ const (
 	contactPush   = 0.9 // push per tile/s of creature speed (fraction of the lean limit)
 	contactCap    = 1.2 // the push saturates here
 	contactMinSpd = 0.3 // tiles/s; slower creatures are standing
+	// contactViewPad: creatures this many tiles past the view still push
+	// plants (the view's own pad, the drawn reach and a margin).
+	contactViewPad = visPad + int(drawnReach) + 2
 
 	canopyLag   = 0.3 // s: a tree's canopy follows its trunk this late
 	shakeFrames = 45  // a brushed tree shakes this long
@@ -339,13 +342,18 @@ func (r *Renderer) stepContacts(w game.WorldView, pawns []game.PawnView) {
 		}
 	}
 	if perSec > 0 {
+		// only creatures near the last frame's view push plants: a spring
+		// settles in about a second, so one off screen is never seen
+		l := &r.lod
 		for _, p := range pawns {
-			if !p.Embodied {
+			if !p.Embodied && l.inView(p.X, p.Y, contactViewPad, contactViewPad) {
 				add(r.pawnMotion(p.ID))
 			}
 		}
-		for _, an := range w.Animals {
-			add(r.animalMotion(an.ID))
+		for i := range w.Animals {
+			if an := &w.Animals[i]; l.inView(an.X, an.Y, contactViewPad, contactViewPad) {
+				add(r.animalMotion(an.ID))
+			}
 		}
 	}
 	for _, m := range e.movers {

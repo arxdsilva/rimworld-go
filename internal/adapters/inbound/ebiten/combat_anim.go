@@ -372,8 +372,8 @@ func (r *Renderer) creatureSpot(id entity.EntityID) (vec, bool) {
 			return vec{float64(q.X) + 0.5, float64(q.Y) + 0.4}, true
 		}
 	}
-	for _, an := range r.drawW.Animals {
-		if an.ID == id {
+	for i := range r.drawW.Animals {
+		if an := &r.drawW.Animals[i]; an.ID == id {
 			return vec{float64(an.X) + 0.5, float64(an.Y) + 0.4}, true
 		}
 	}

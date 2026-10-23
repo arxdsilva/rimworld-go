@@ -584,9 +584,14 @@ func (r *Renderer) animate(w game.WorldView, pawns []game.PawnView, running bool
 		}
 		r.stepDust(st, p.ID, r.pawnMotion(p.ID), false)
 	}
-	for _, an := range w.Animals {
-		if an.Mode != "wandering" {
+	for i := range w.Animals {
+		an := &w.Animals[i]
+		switch {
+		case an.Mode == "wandering":
+		case r.lod.inView(an.X, an.Y, motionViewPad, motionViewPad):
 			r.stepDust(st, an.ID, r.animalMotion(an.ID), true)
+		default: // no motion track off screen (syncAnimals): start afresh
+			delete(st.prevStride, an.ID)
 		}
 	}
 	r.animateWork(w, pawns)
@@ -599,8 +604,13 @@ func (r *Renderer) syncItems(w game.WorldView) {
 	if r.itemBorn == nil {
 		r.itemBorn = map[entity.EntityID]uint64{}
 	}
-	live := make(map[entity.EntityID]bool, len(w.Items))
-	for _, it := range w.Items {
+	if r.itemLive == nil {
+		r.itemLive = map[entity.EntityID]bool{}
+	}
+	live := r.itemLive // reused: one set per update, no allocation
+	clear(live)
+	for i := range w.Items {
+		it := &w.Items[i]
 		live[it.ID] = true
 		if _, ok := r.itemBorn[it.ID]; !ok {
 			if r.itemsInit {

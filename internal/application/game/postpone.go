@@ -334,23 +334,99 @@ func (g *Game) importOrders(in map[entity.EntityID]savedOrder) {
 // first, at most postViewLines ("build wall: blocked, retry in 12 s",
 // "haul to stockpile: can't reach"). Read-only.
 func (g *Game) postponedLines(id entity.EntityID) []string {
+	return g.postponedLinesIn(g.postponedTops(nil), id)
+}
+
+// postTop is one pawn's first postViewLines postponed entries in view
+// order: soonest retry first, ties by key (sortPostEntries' order).
+type postTop struct {
+	pawn entity.EntityID
+	n    int
+	e    [postViewLines]postEntry
+}
+
+// postViewBefore is the view order of postponed entries: retry time, then
+// key (the order a key sort followed by a stable sort on Until gives).
+func postViewBefore(a, b *postEntry) bool {
+	if a.Until != b.Until {
+		return a.Until < b.Until
+	}
+	x, y := a.Key, b.Key
+	if x.Pawn != y.Pawn {
+		return x.Pawn < y.Pawn
+	}
+	if x.Kind != y.Kind {
+		return x.Kind < y.Kind
+	}
+	if x.Target != y.Target {
+		return x.Target < y.Target
+	}
+	if x.X != y.X {
+		return x.X < y.X
+	}
+	return x.Y < y.Y
+}
+
+// postponedTops is, per pawn, the postponed work a view shows (not
+// expired, not about to clear, target still there), its first
+// postViewLines entries only, in one pass over the map (no sort): the
+// snapshot gathers it once for every colonist. It reuses buf.
+func (g *Game) postponedTops(buf []postTop) []postTop {
 	p := &g.postponed
+	buf = buf[:0]
 	if len(p.m) == 0 {
-		return nil
+		return buf
 	}
 	now := uint64(g.clock.Now())
 	stale := p.rev != g.grid.Version() // out-of-reach entries about to clear
-	var es []postEntry
 	for k, v := range p.m {
-		if k.Pawn != id || now >= v.Until || v.Unreach && stale || g.postTargetGone(k) {
+		if now >= v.Until || v.Unreach && stale || g.postTargetGone(k) {
 			continue
 		}
-		es = append(es, postEntry{k, v.Until, v.Unreach})
+		e := postEntry{k, v.Until, v.Unreach}
+		var t *postTop
+		for i := range buf {
+			if buf[i].pawn == k.Pawn {
+				t = &buf[i]
+				break
+			}
+		}
+		if t == nil {
+			buf = append(buf, postTop{pawn: k.Pawn})
+			t = &buf[len(buf)-1]
+		}
+		// insert e into the pawn's sorted top list, dropping the last
+		i := t.n
+		for i > 0 && postViewBefore(&e, &t.e[i-1]) {
+			i--
+		}
+		if i >= postViewLines {
+			continue
+		}
+		if t.n < postViewLines {
+			t.n++
+		}
+		copy(t.e[i+1:t.n], t.e[i:t.n-1])
+		t.e[i] = e
 	}
-	sortPostEntries(es)
-	sort.SliceStable(es, func(i, j int) bool { return es[i].Until < es[j].Until })
+	return buf
+}
+
+// postponedLinesIn is postponedLines over tops, postponedTops' result.
+func (g *Game) postponedLinesIn(tops []postTop, id entity.EntityID) []string {
+	var t *postTop
+	for i := range tops {
+		if tops[i].pawn == id {
+			t = &tops[i]
+			break
+		}
+	}
+	if t == nil || t.n == 0 {
+		return nil
+	}
+	now := uint64(g.clock.Now())
 	var out []string
-	for _, e := range es {
+	for _, e := range t.e[:t.n] {
 		if len(out) == postViewLines {
 			break
 		}

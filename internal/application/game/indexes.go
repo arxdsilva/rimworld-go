@@ -1,6 +1,7 @@
 package game
 
 import (
+	"bytes"
 	"fmt"
 	"sync/atomic"
 
@@ -434,6 +435,14 @@ type viewCache struct {
 	worldKey, pawnsKey [2]uint64
 	worldOK, pawnsOK   bool
 	pawns              []PawnView
+	// postBuf is the snapshot's reused postponed-work scratch (postponedTops).
+	postBuf []postTop
+	// logs memoises logLines per creature (eventlog.go).
+	logs map[entity.EntityID]logLinesMemo
+	// stains memoises the sorted stains (stains.go fillStainView).
+	stains stainMemo
+	// plants memoises the plant views (plant_view.go).
+	plants plantMemo
 }
 
 // SetViewCache turns the read-model cache on or off (see viewCache). The
@@ -460,6 +469,15 @@ type layerCache struct {
 func shareLayer[T ~uint8](c *layerCache, src []T) []uint8 {
 	if len(src) == 0 {
 		return nil
+	}
+	if raw, ok := any(src).([]uint8); ok { // plain bytes: memcmp and memmove
+		if c.ok && bytes.Equal(c.cells, raw) {
+			return c.cells
+		}
+		out := make([]uint8, len(raw))
+		copy(out, raw)
+		c.cells, c.ok = out, true
+		return out
 	}
 	if c.ok && len(c.cells) == len(src) {
 		same := true

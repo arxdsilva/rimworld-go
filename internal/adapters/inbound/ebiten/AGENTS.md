@@ -167,6 +167,17 @@ Colony `Draw` (terrain, world overlays, pawns, daylight). Keep off-screen cullin
 and the chunk tiers; no full-map loops per frame. Menu `Draw` is cheap vector
 fills plus real-font text; the globe is 0.3-0.5 ms per frame.
 
+`Renderer.advance` runs once per update on the same read models (ENG-F):
+- Only animals within `motionViewPad` tiles of the last frame's view keep a
+  motion track (`syncAnimals`); one further away has none (`motionOf` is not
+  ok, it is drawn on its cell) and starts afresh when it nears the view.
+  Plant contacts, step dust, shadow casters, stack counts and trace ends cull
+  by cell before sampling motion. Arc lengths are memoised per track step.
+- Memos keyed on read-model identity (`Renderer.split`, `App.alerts`) apply
+  only to a simulation with the view cache (`viewCacher`); a test double
+  without it is re-read every call.
+- Loop over `[]AnimalView` / `[]BuildingView` by index: the structs are large.
+
 ## Determinism
 
 This adapter is not in the authoritative tick. `Step(n)` still runs on

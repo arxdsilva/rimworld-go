@@ -142,12 +142,42 @@ func (g *Game) logLines(id entity.EntityID) []LogLineView {
 	if len(l) == 0 {
 		return nil
 	}
+	// With the view cache on, an unchanged log keeps its lines: entries are
+	// only ever appended past the end or copied out to a new array, so the
+	// same first element and length mean the same entries (the cache holds
+	// the slice, so its array cannot be reused meanwhile).
+	vc := &g.views
+	if vc.on {
+		if c, ok := vc.logs[id]; ok && len(c.src) == len(l) && &c.src[0] == &l[0] {
+			return c.out
+		}
+	}
 	out := make([]LogLineView, 0, len(l))
 	for i := len(l) - 1; i >= 0; i-- {
 		d := clock.DateAt(clock.Tick(l[i].Tick))
 		out = append(out, LogLineView{Tick: l[i].Tick, Day: d.Day + 1, Hour: d.Hour, Text: logText(l[i])})
 	}
+	if vc.on {
+		if vc.logs == nil {
+			vc.logs = map[entity.EntityID]logLinesMemo{}
+		}
+		if len(vc.logs) > 2*len(g.logs)+64 { // drop the dead creatures' lines
+			for k := range vc.logs {
+				if _, ok := g.logs[k]; !ok {
+					delete(vc.logs, k)
+				}
+			}
+		}
+		vc.logs[id] = logLinesMemo{src: l, out: out}
+	}
 	return out
+}
+
+// logLinesMemo is one creature's cached logLines and the log it was built
+// from (viewCache).
+type logLinesMemo struct {
+	src []logEntry
+	out []LogLineView
 }
 
 // strikeVerb is an animal blow's verb ("Bit", "Clawed"), passive

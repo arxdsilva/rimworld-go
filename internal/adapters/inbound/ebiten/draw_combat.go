@@ -23,10 +23,18 @@ import (
 func (r *Renderer) syncAnimals(w game.WorldView) {
 	tick := r.game.Tick()
 	running := r.mo.stepped > 0
-	for _, an := range w.Animals {
+	l := &r.lod
+	for i := range w.Animals {
+		an := &w.Animals[i]
+		if !l.inView(an.X, an.Y, motionViewPad, motionViewPad) {
+			// far off screen (a big map's wildlife): no motion track; it
+			// starts afresh, on its cell, when it nears the view again
+			delete(r.last, an.ID)
+			continue
+		}
 		prev, seen := r.last[an.ID]
 		v := nextVisualStep(prev, seen, an.X, an.Y, tick, r.present, an.StepTicks)
-		k := r.mo.observe(an.ID, animalMoView(an), v.facing)
+		k := r.mo.observe(an.ID, animalMoView(*an), v.facing)
 		want, moving := k.wantFacing(r.mo.ref)
 		if !moving {
 			want = faceAttack(pawnVisual{facing: want}, w.Traces, an.X, an.Y).facing
@@ -62,22 +70,24 @@ func (r *Renderer) interpAnimal(an game.AnimalView) (float64, float64) {
 // own: a vector stroke between two sprite draws flushes the vector batch,
 // a path fill per animal (milliseconds a frame with the map in view).
 func (r *Renderer) drawAnimalOverlays(screen *ebiten.Image, w game.WorldView, tile float64, sw, sh int) {
-	for _, an := range w.Animals {
+	for i := range w.Animals {
+		an := &w.Animals[i]
 		if !r.lod.inView(an.X, an.Y, 3, 4) { // lod.go: off screen, as the figure pass culls
 			continue
 		}
 		// the map tier (< 16 px tiles) draws no decals (lod.go): a snore's
 		// "z" would be under two pixels there
-		if an.Sleeping && r.lod.tier != lodMap && r.animalResting(an) {
-			wx, wy := r.interpAnimal(an)
+		if an.Sleeping && r.lod.tier != lodMap && r.animalResting(*an) {
+			wx, wy := r.interpAnimal(*an)
 			r.drawSnoreFor(screen, uint64(an.ID), wx+0.25, wy+0.1-an.Size*0.1, tile)
 		}
 	}
-	for _, an := range w.Animals {
+	for i := range w.Animals {
+		an := &w.Animals[i]
 		if !r.lod.inView(an.X, an.Y, 3, 4) {
 			continue
 		}
-		wx, wy := r.interpAnimal(an)
+		wx, wy := r.interpAnimal(*an)
 		switch {
 		case an.Manhunter:
 			r.drawHostileMarker(screen, game.PawnView{}, wx, wy-(animalMarkerLift(an.Size)-animalMarkBase), tile)
@@ -160,9 +170,17 @@ func (r *Renderer) traceList(w game.WorldView) []reactTrace {
 }
 
 // traceSpots maps each occupied cell to where its creature is drawn.
-func (r *Renderer) traceSpots(w game.WorldView) map[[2]int]vec {
+func (r *Renderer) traceSpots(w game.WorldView) map[[2]int]vec { return r.traceSpotsAt(w, nil) }
+
+// traceSpotsAt is traceSpots for the cells in want only (nil: every
+// cell): a frame samples the motion of just the creatures its traces
+// touch, not of every creature on the map.
+func (r *Renderer) traceSpotsAt(w game.WorldView, want map[[2]int]bool) map[[2]int]vec {
 	spots := map[[2]int]vec{}
 	put := func(x, y int, id entity.EntityID) {
+		if want != nil && !want[[2]int{x, y}] {
+			return
+		}
 		if m, ok := r.motionOf(id); ok {
 			spots[[2]int{x, y}] = vec{m.X, m.Y}
 		}
@@ -172,8 +190,8 @@ func (r *Renderer) traceSpots(w game.WorldView) map[[2]int]vec {
 			put(p.X, p.Y, p.ID)
 		}
 	}
-	for _, an := range w.Animals {
-		put(an.X, an.Y, an.ID)
+	for i := range w.Animals {
+		put(w.Animals[i].X, w.Animals[i].Y, w.Animals[i].ID)
 	}
 	return spots
 }
@@ -201,7 +219,11 @@ func (r *Renderer) drawTraces(screen *ebiten.Image, w game.WorldView, tile float
 	if len(rs) == 0 {
 		return
 	}
-	spots := r.traceSpots(w)
+	want := make(map[[2]int]bool, 2*len(rs))
+	for _, rt := range rs {
+		want[[2]int{rt.FromX, rt.FromY}], want[[2]int{rt.ToX, rt.ToY}] = true, true
+	}
+	spots := r.traceSpotsAt(w, want)
 	for _, rt := range rs {
 		tr := rt.TraceView
 		from, to := traceEnds(spots, tr)

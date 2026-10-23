@@ -299,8 +299,8 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 		l.occupied[[2]int{p.X, p.Y}] = true
 		l.creatures[[2]int{p.X, p.Y}] = true
 	}
-	for _, an := range w.Animals {
-		l.creatures[[2]int{an.X, an.Y}] = true
+	for i := range w.Animals {
+		l.creatures[[2]int{w.Animals[i].X, w.Animals[i].Y}] = true
 	}
 	r.drawPaths(screen, sw, sh, tile) // paths_draw.go
 	draws := r.draws[:0]

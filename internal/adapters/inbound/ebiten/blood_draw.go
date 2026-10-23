@@ -486,8 +486,8 @@ func sprayFor(dmg int) (n int, speed float64) {
 // sprayKind is what a hit target bleeds: ichor for hive insects.
 func sprayKind(w game.WorldView, target entity.EntityID) partKind {
 	if target != 0 {
-		for _, an := range w.Animals {
-			if an.ID == target {
+		for i := range w.Animals {
+			if an := &w.Animals[i]; an.ID == target {
 				if isHiveSpecies(an.Species) {
 					return partIchor
 				}

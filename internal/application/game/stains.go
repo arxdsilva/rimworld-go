@@ -302,7 +302,12 @@ func (g *Game) exportStains() []stain.Stain {
 // fillStainView copies the stains into the view, sorted y then x.
 func (g *Game) fillStainView(w *WorldView) {
 	now := uint64(g.clock.Now())
-	for _, s := range g.exportStains() {
+	src := g.sortedStains()
+	if len(src) > 0 {
+		w.Stains = make([]StainView, 0, len(src))
+	}
+	for i := range src {
+		s := &src[i].s
 		age := uint64(0)
 		if now > s.Born {
 			age = now - s.Born
@@ -312,6 +317,55 @@ func (g *Game) fillStainView(w *WorldView) {
 			Amount: float64(s.Amount) / stain.Full, AgeTicks: age, Variant: s.Variant,
 		})
 	}
+}
+
+// stainMemo is the view cache's last sorted stain list: every stain
+// with its tile key, in exportStains' order. Stains fade a few at a time,
+// so most ticks the list still matches the map and the sort is skipped.
+type stainMemo struct {
+	list []stainKeyed
+	ok   bool
+}
+
+type stainKeyed struct {
+	k [2]int
+	s stain.Stain
+}
+
+// sortedStains is the stains sorted y then x (as exportStains, without
+// the fade remainders): the memo while it still matches every tile, else
+// a fresh sort. Read only.
+func (g *Game) sortedStains() []stainKeyed {
+	tiles := g.stains.tiles
+	m := &g.views.stains
+	if g.views.on && m.ok && len(m.list) == len(tiles) {
+		same := true
+		for i := range m.list {
+			if s, ok := tiles[m.list[i].k]; !ok || s != m.list[i].s {
+				same = false
+				break
+			}
+		}
+		if same {
+			return m.list
+		}
+	}
+	if len(tiles) == 0 {
+		m.list, m.ok = m.list[:0], g.views.on
+		return nil
+	}
+	// a fresh array: the views built from the last one keep reading it
+	out := make([]stainKeyed, 0, len(tiles))
+	for k, s := range tiles {
+		out = append(out, stainKeyed{k, s})
+	}
+	slices.SortFunc(out, func(a, b stainKeyed) int {
+		return stainLess([2]int{a.s.X, a.s.Y}, [2]int{b.s.X, b.s.Y})
+	})
+	if g.views.on {
+		m.list, m.ok = out, true
+	}
+	return out
 }
 
 // importStains installs saved stains (nil: an older save, no stains).

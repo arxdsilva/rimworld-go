@@ -103,6 +103,8 @@ type AppConfig struct {
 type App struct {
 	// fps is the dev frame-rate probe (fps_probe.go).
 	fps fpsProbeState
+	// alerts memoises currentAlerts per update (alerts.go).
+	alerts alertsMemo
 	// ui is the widget kit's state (NG-1 §1.4, ui_state.go).
 	ui  uiState
 	cfg AppConfig
