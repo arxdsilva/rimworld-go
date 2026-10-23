@@ -13,8 +13,8 @@ Ground decals are one full 128 px tile and draw on top of the terrain:
 - frost_00..03: faint crystalline overlays, mostly transparent.
 
 Particles are small sprites (footprint [0, 0], origin at their centre):
-raindrop (thin streak, head at the bottom), splash_00..02 (crown splash
-frames: small, tall, spent), snowflake_00..03 (soft flakes, small to large).
+splash_00..02 (crown splash frames: small, tall, spent; rain streaks
+are drawn in code), snowflake_00..03 (soft flakes, small to large).
 
     make art FAMILIES=weather
 """
@@ -292,21 +292,6 @@ def _soft(img, cov, rgb, alpha=1.0):
     img[..., 3] = out_a
 
 
-def _raindrop():
-    gl, bl = _mat("glass"), _mat("blossom")
-    w, h = 8, 24
-    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32) + 0.5
-    cx = w / 2
-    t = yy / h                                    # 0 tail (top) .. 1 head (bottom)
-    half = 0.55 + 1.35 * t ** 0.7
-    cov = np.clip(1.0 - (np.abs(xx - cx) - half) / 0.9, 0, 1) * _smooth(0.0, 0.35, t)
-    img = np.zeros((h, w, 4), np.float32)
-    img[..., :3] = gl["light"]
-    _soft(img, cov, _mix(gl["light"], bl["light"], 0.7), 0.85)
-    img[..., 3] *= 0.35 + 0.65 * t
-    return _particle("raindrop", img, {"weather": "rain"})
-
-
 def _splash(i):
     gl, bl = _mat("glass"), _mat("blossom")
     w, h = 24, 16
@@ -367,7 +352,6 @@ def build():
     out += [_snow_drift(i) for i in range(4)]
     out += [_puddle(i) for i in range(6)]
     out += [_frost(i) for i in range(4)]
-    out += [_raindrop()]
     out += [_splash(i) for i in range(3)]
     out += [_snowflake(i) for i in range(4)]
     return out

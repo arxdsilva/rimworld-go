@@ -76,9 +76,11 @@ normals:  ## write <sprite>_n.png normal maps (pkg/spritenormals, a port of spri
 	go run ./cmd/normalgen -dirs assets/generated/world $(NORMALS_ARGS)
 
 .PHONY: art-check
-art-check:  ## validate generated sprites against metadata
+art-check:  ## validate generated sprites against metadata, orphans and plant outlines
 	python3 assets/source/tools/validate_assets.py
 	go run ./cmd/atlasgen -family pawn -check
+	go test -count=1 -run 'TestNoOrphanSprites|TestPlantRecipesHaveNoOutline' ./internal/adapters/inbound/ebiten/
+	go test -count=1 -run 'TestAudioFilesMatchManifest' ./pkg/audiomanifest/
 
 .PHONY: atlas
 atlas:  ## pack atlas families into texture pages (cmd/atlasgen, NG-1)

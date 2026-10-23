@@ -1,0 +1,3 @@
+# Generated files the orphan check (orphan_assets_test.go, audio manifest test) lets through.
+# Format: <glob relative to assets/>  # reason      (path.Match globs; * does not cross '/')
+# Each line must still match a file, or the check fails.
