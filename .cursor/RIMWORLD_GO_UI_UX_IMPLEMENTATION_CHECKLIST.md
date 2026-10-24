@@ -688,7 +688,7 @@ understandable.
 ## 10.5 Operations
 
 -   [x] **Operations list** (Health tab operations queue)
--   [-] **Add operation dialog** (add from the Health tab; no risk preview)
+-   [-] **Add operation dialog** (SIM-049: every valid operation listed incl. replacing healthy parts, unavailable ones greyed with the reason — research, stock, reach, second doctor; queued rows show what they wait for; no risk preview)
     -   Valid surgeries only.
     -   Required medicine/body part/item.
     -   Risk information.

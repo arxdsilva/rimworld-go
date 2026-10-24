@@ -92,7 +92,7 @@ func (b *Body) CanOperate(op Operation) bool {
 	}
 	switch op.Kind {
 	case InstallImplant:
-		return Fits(op.Item, op.Part) && b.isMissing(op.Part) && !b.Implants[op.Part].IsImplant() && !b.replaced(op.Part)
+		return Fits(op.Item, op.Part) && b.CanReplace(op.Part)
 	case RemoveImplant:
 		return b.Implants[op.Part].IsImplant()
 	case Amputate:
@@ -117,6 +117,9 @@ func (b *Body) Apply(op Operation, o Outcome, roll func(int) int, now uint64) bo
 	case Success:
 		switch op.Kind {
 		case InstallImplant:
+			if !b.isMissing(op.Part) {
+				b.destroy(op.Part)
+			}
 			return b.Install(op.Part, op.Item)
 		case RemoveImplant:
 			_, ok := b.Remove(op.Part)

@@ -19,6 +19,53 @@ import (
 
 const billRowH = 26
 
+const (
+	billPickBtn  = "bill.pick"
+	billPickID   = "bill.picker"
+	billPickList = "bill.picker.list"
+)
+
+// openBillPicker opens the recipe pick list for bench b; locked recipes
+// are listed but cannot be picked.
+func (a *App) openBillPicker(b game.BuildingView) {
+	recipes := a.recipesFor(b.Kind)
+	sel := -1
+	a.uiPushModal(modal{
+		id: billPickID, title: "Add bill", w: 360, h: 380,
+		draw: func(a *App, r rect) {
+			if len(recipes) == 0 {
+				a.uiLabel(r.X, r.Y, "This bench has no recipes.", dimText())
+				return
+			}
+			a.uiList(billPickList, r, len(recipes), &sel, listSpec{
+				RowH:  26,
+				Label: func(i int) string { return recipes[i].Label },
+				Disabled: func(i int) string {
+					if p := a.lockedBy("recipe:" + recipes[i].Name); p != "" {
+						return "Needs research: " + p
+					}
+					return ""
+				},
+			})
+		},
+		buttons: []modalButton{
+			{id: "bill.picker.ok", label: "Add", style: btnPrimary, closes: true,
+				disabled: func() string {
+					if sel < 0 || sel >= len(recipes) {
+						return "Pick a recipe first."
+					}
+					return ""
+				},
+				onClick: func() {
+					if sel >= 0 && sel < len(recipes) {
+						a.applyBuildingClick("bill.add." + strconv.Itoa(int(recipes[sel].ID)))
+					}
+				}},
+			{id: "bill.picker.cancel", label: "Cancel", closes: true},
+		},
+	})
+}
+
 // billMaxCount caps a bill's target.
 const billMaxCount = 9999
 
@@ -137,16 +184,10 @@ func (a *App) buildingButtons() []button {
 		)
 		y += billRowH
 	}
-	y += 8
-	for _, rc := range a.recipesFor(b.Kind) {
-		add := button{id: "bill.add." + strconv.Itoa(int(rc.ID)), label: "+ " + rc.Label,
-			x: r.x + 12, y: y, w: 230, h: 22}
-		if p := a.lockedBy("recipe:" + rc.Name); p != "" {
-			add.disabled, add.reason, add.label, add.quiet = true, "Needs research: "+p, rc.Label+" (locked)", true
-		}
-		out = append(out, add)
-		y += 26
-	}
+	// One "Add bill" button opens a pick list, so every recipe is
+	// reachable however many the bench has and none crowds Move/Copy.
+	out = append(out, button{id: billPickBtn, label: "+ Add bill", x: r.x + 132, y: r.y + r.h - 62, w: 130, h: 22,
+		tip: "Add bill\nPick a recipe for this bench."})
 	return out
 }
 
@@ -296,6 +337,10 @@ func (a *App) applyBuildingClick(id string) {
 		if f, ok := pendingMoveFrame(a.renderer.world(), b.ID); ok {
 			a.renderer.enqueue(moveCancelRect(f))
 		}
+		return
+	}
+	if id == billPickBtn {
+		a.openBillPicker(b)
 		return
 	}
 	parts := strings.Split(id, ".")

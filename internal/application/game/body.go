@@ -6,6 +6,7 @@ import (
 
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/weapon"
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/mood"
@@ -393,11 +394,16 @@ func plural(n int) string {
 	return "s"
 }
 
-// operationLabel is how the Health tab lists op.
-func operationLabel(op body.Operation) string {
+// operationLabel is how the Health tab lists op on body b: fitting an
+// implant where the part is missing installs it, where it is still there
+// replaces it (SIM-049).
+func operationLabel(b *body.Body, op body.Operation) string {
 	part := op.Part.Label()
 	switch op.Kind {
 	case body.InstallImplant:
+		if op.Part < body.NumParts && b.Missing&(1<<op.Part) == 0 {
+			return fmt.Sprintf("Replace %s with %s", part, op.Item)
+		}
 		return fmt.Sprintf("Install %s (%s)", op.Item, part)
 	case body.RemoveImplant:
 		return fmt.Sprintf("Remove implant (%s)", part)
@@ -407,9 +413,21 @@ func operationLabel(op body.Operation) string {
 	return "Operation (" + part + ")"
 }
 
+// implantKinds are the implant item kinds in kind order.
+var implantKinds = func() []item.Kind {
+	var out []item.Kind
+	for k := item.Kind(1); k != 0; k++ {
+		if k.IsImplant() {
+			out = append(out, k)
+		}
+	}
+	return out
+}()
+
 // healthView builds the Health tab: capacities, pain, every part in
-// body.Part order (Parts[i] is body.Part(i)), queued operations and drug
-// lines. Humanlike pawns only.
+// body.Part order (Parts[i] is body.Part(i)), queued operations with what
+// each waits for, the operations the picker offers, and drug lines.
+// Humanlike pawns only.
 func (g *Game) healthView(id entity.EntityID) (HealthView, bool) {
 	if !g.isPawn(id) {
 		return HealthView{}, false
@@ -426,25 +444,63 @@ func (g *Game) healthView(id entity.EntityID) (HealthView, bool) {
 	ps := b.Parts()
 	hv.Parts = make([]PartView, 0, len(ps))
 	for _, s := range ps {
-		hv.Parts = append(hv.Parts, PartView{Label: s.Label, Status: partStatus(b, s), HP: s.HP})
+		pv := PartView{Label: s.Label, Status: partStatus(b, s), HP: s.HP, Part: int(s.Part)}
+		if s.Fitted {
+			pv.Implant = s.Implant.String()
+		}
+		hv.Parts = append(hv.Parts, pv)
 	}
 	for i, op := range g.operationsOf(id) {
-		hv.Operations = append(hv.Operations, OperationView{Label: operationLabel(op), Slot: i})
+		why, ready := g.surgeryWait(id, op) // surgery.go: Blocked needs the player
+		hv.Operations = append(hv.Operations, OperationView{Label: operationLabel(b, op), Slot: i, Status: why, Blocked: !ready})
 	}
+	hv.Options = g.operationOptions(id, b)
 	return hv, true
 }
 
-// missingPart reports a part gone with nothing standing in for it.
-func missingPart(b *body.Body) bool {
-	if b == nil || b.Missing == 0 {
-		return false
+// operationOptions lists every operation the picker can queue on id now,
+// in a fixed order: each implant on each part it fits and could take
+// (missing: install; still there: replace), by part then kind, then
+// removing each implant, then amputating each part still there that is
+// not vital. Ones already queued on that part are left out. An option
+// that can't be started yet (research, stock, reach, no other doctor:
+// opBlocked) is Disabled with its reason, and can still be queued.
+func (g *Game) operationOptions(id entity.EntityID, b *body.Body) []OperationOptionView {
+	q := g.operationsOf(id)
+	var out []OperationOptionView
+	add := func(op body.Operation) {
+		if !b.CanOperate(op) {
+			return
+		}
+		for _, x := range q {
+			if x.Kind == op.Kind && x.Part == op.Part {
+				return
+			}
+		}
+		why, _ := g.opBlocked(id, 0, b, op, false) // surgery.go
+		out = append(out, OperationOptionView{Label: operationLabel(b, op), Kind: uint8(op.Kind), Part: uint8(op.Part),
+			Item: uint8(op.Item), Disabled: why != "", Reason: why})
 	}
 	for p := body.Part(0); p < body.NumParts; p++ {
-		if b.Missing&(1<<p) != 0 && !b.Implants[p].IsImplant() && !coveredByImplant(b, p) {
-			return true
+		for _, k := range implantKinds {
+			if body.Fits(k, p) {
+				add(body.Operation{Kind: body.InstallImplant, Part: p, Item: k})
+			}
 		}
 	}
-	return false
+	for p := body.Part(0); p < body.NumParts; p++ {
+		add(body.Operation{Kind: body.RemoveImplant, Part: p})
+	}
+	for p := body.Part(0); p < body.NumParts; p++ {
+		add(body.Operation{Kind: body.Amputate, Part: p})
+	}
+	return out
+}
+
+// missingPart reports a part gone with nothing standing in for it (a
+// glass eye or a wooden nose covers its part too; SIM-049).
+func missingPart(b *body.Body) bool {
+	return b != nil && b.Missing != 0 && b.MissingUncovered() > 0
 }
 
 // bodyThoughts are id's body state thoughts: missing a part (no implant in

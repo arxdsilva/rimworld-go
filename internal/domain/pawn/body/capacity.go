@@ -24,6 +24,7 @@ const (
 	WoodenHandEff     = 500
 	DentureEff        = 800
 	HearingTrumpetEff = 600
+	ProstheticFootEff = 750
 )
 
 // ImplantEfficiency is the permille a kind restores (0: not an implant).
@@ -41,6 +42,8 @@ func ImplantEfficiency(k item.Kind) int32 {
 		return DentureEff
 	case item.HearingTrumpet:
 		return HearingTrumpetEff
+	case item.ProstheticFoot:
+		return ProstheticFootEff
 	}
 	return 0
 }

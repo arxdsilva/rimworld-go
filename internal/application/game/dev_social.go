@@ -2,6 +2,7 @@ package game
 
 import (
 	"rimworld-go/internal/domain/pawn/body"
+	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/social"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -90,6 +91,55 @@ func (g *Game) DevScar(pawn entity.EntityID, part string) bool {
 	b.Wounds = append(b.Wounds, body.Wound{Part: p, Dmg: 1, Kind: body.Cut, Tended: true, At: uint64(g.clock.Now()), Permanent: true})
 	g.ensurePerson(pawn)
 	g.refreshSig(pawn)
+	return true
+}
+
+// DevLosePart destroys pawn's named part ("left leg", "left eye", ...) as
+// a hit would: it and the parts below it go missing with their wounds,
+// then Injury, the capacities and the stat sheet follow (SIM-049). A part
+// already gone, a vital part or a dead pawn reports false.
+func (g *Game) DevLosePart(pawn entity.EntityID, part string) bool {
+	p, ok := partByLabel(part)
+	if !ok || !g.isPawn(pawn) {
+		return false
+	}
+	v, ok := g.vital.Get(pawn)
+	if !ok || v.Status == health.Dead {
+		return false
+	}
+	op := body.Operation{Kind: body.Amputate, Part: p}
+	if !g.viewBody(pawn).CanOperate(op) {
+		return false
+	}
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
+	b := g.ensureBody(pawn, &v)
+	b.Apply(op, body.Success, func(int) int { return 0 }, uint64(g.clock.Now())) // a success rolls nothing
+	g.bodyChanged(pawn, b, &v)                                                   // body.go
+	if v.Status == health.Alive && unconscious(b) {
+		g.down(pawn, health.CauseInjury)
+	}
+	g.ensurePerson(pawn)
+	g.refreshSig(pawn) // a lost face part disfigures
+	return true
+}
+
+// DevSpawnImplants drops one of each implant kind on free tiles near
+// pawn near, nearest first (SIM-049).
+func (g *Game) DevSpawnImplants(near entity.EntityID) bool {
+	pos, ok := g.positions.Get(near)
+	if !ok || !g.isPawn(near) {
+		return false
+	}
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
+	used := make([][2]int, 0, len(implantKinds))
+	for _, k := range implantKinds {
+		x, y, ok := g.freeLandNear(pos.X, pos.Y, 8, used) // arrival.go
+		if !ok {
+			x, y = pos.X, pos.Y // crowded: they pile on the pawn's tile
+		}
+		used = append(used, [2]int{x, y})
+		g.dropStack(k, 1, x, y) // world.go
+	}
 	return true
 }
 

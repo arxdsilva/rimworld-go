@@ -1,12 +1,18 @@
 package game
 
 import (
+	"fmt"
+
 	"rimworld-go/internal/domain/ai/job"
+	"rimworld-go/internal/domain/ai/pathing"
+	"rimworld-go/internal/domain/ai/work"
+	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/mood"
+	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
@@ -34,12 +40,15 @@ const (
 )
 
 // surgeryState is the queued operations per patient, who lies under an
-// anaesthetic until when, and who gave up waiting for a surgeon until when
-// (ENG-003, M1); nil until the first operation.
+// anaesthetic until when, who gave up waiting for a surgeon until when
+// (ENG-003, M1), and the hospital bed a patient claimed only to wait for
+// surgery in, given back once it is up again (SIM-049); nil until the
+// first operation.
 type surgeryState struct {
 	ops   map[entity.EntityID][]body.Operation
 	under map[entity.EntityID]uint64
 	rest  map[entity.EntityID]uint64
+	hosp  map[entity.EntityID]entity.EntityID
 }
 
 // surgerySave is surgeryState in the save, in id order.
@@ -47,6 +56,7 @@ type surgerySave struct {
 	Ops   []entry[[]body.Operation]
 	Under []entry[uint64]
 	Rest  []entry[uint64]
+	Hosp  []entry[entity.EntityID]
 }
 
 func (s *surgeryState) ensure() {
@@ -54,6 +64,9 @@ func (s *surgeryState) ensure() {
 		s.ops = make(map[entity.EntityID][]body.Operation)
 		s.under = make(map[entity.EntityID]uint64)
 		s.rest = make(map[entity.EntityID]uint64)
+	}
+	if s.hosp == nil {
+		s.hosp = make(map[entity.EntityID]entity.EntityID)
 	}
 }
 
@@ -80,10 +93,10 @@ func importValues[T any](es []entry[T]) map[entity.EntityID]T {
 
 // exportSurgery is the Surgery save field (nil: nothing queued or pending).
 func (g *Game) exportSurgery() *surgerySave {
-	if g.surg == nil || len(g.surg.ops) == 0 && len(g.surg.under) == 0 && len(g.surg.rest) == 0 {
+	if g.surg == nil || len(g.surg.ops) == 0 && len(g.surg.under) == 0 && len(g.surg.rest) == 0 && len(g.surg.hosp) == 0 {
 		return nil
 	}
-	return &surgerySave{Ops: exportValues(g.surg.ops), Under: exportValues(g.surg.under), Rest: exportValues(g.surg.rest)}
+	return &surgerySave{Ops: exportValues(g.surg.ops), Under: exportValues(g.surg.under), Rest: exportValues(g.surg.rest), Hosp: exportValues(g.surg.hosp)}
 }
 
 // importSurgery restores exportSurgery's state (nil: an older save).
@@ -92,7 +105,7 @@ func (g *Game) importSurgery(s *surgerySave) {
 	if s == nil {
 		return
 	}
-	g.surg = &surgeryState{ops: importValues(s.Ops), under: importValues(s.Under), rest: importValues(s.Rest)}
+	g.surg = &surgeryState{ops: importValues(s.Ops), under: importValues(s.Under), rest: importValues(s.Rest), hosp: importValues(s.Hosp)}
 }
 
 // operationsOf is patient id's queue (read only).
@@ -171,8 +184,9 @@ func opNeedsItem(op body.Operation) item.Kind {
 	return 0
 }
 
-// readyOp is the first operation in id's queue a doctor could start now:
-// valid on the body, with its implant (if any) in stock and free.
+// readyOp is the first operation in id's queue doctor could start now:
+// valid on the body, with its implant (if any) in stock, free and within
+// the doctor's reach (opBlocked).
 func (g *Game) readyOp(doctor, id entity.EntityID) (int, entity.EntityID, bool) {
 	q := g.operationsOf(id)
 	if len(q) == 0 {
@@ -180,36 +194,221 @@ func (g *Game) readyOp(doctor, id entity.EntityID) (int, entity.EntityID, bool) 
 	}
 	b := g.viewBody(id)
 	for i, op := range q {
-		if !b.CanOperate(op) {
-			continue
-		}
-		k := opNeedsItem(op)
-		if k == 0 {
-			return i, 0, true
-		}
-		if sid, _ := g.ingredientFor(doctor, recipe.Input{Kind: k, Qty: 1, Max: 1}); sid != 0 {
+		if why, sid := g.opBlocked(id, doctor, b, op, false); why == "" {
 			return i, sid, true
 		}
 	}
 	return 0, 0, false
 }
 
-// awaitingSurgery: id has an operation a doctor could do now, someone else
-// to do it, and has not just given up waiting (patientRest, infection.go).
+// awaitingSurgery: id has an operation a doctor could start now (the same
+// test surgeryWait reports on), someone else to do it, and has not just
+// given up waiting (patientRest, infection.go). A patient already lying
+// down keeps waiting while its implant is only briefly taken (a hauler
+// moving it): it lies down on a strict test and gets up on a looser one,
+// so a passing reservation does not flap it (SIM-049).
 func (g *Game) awaitingSurgery(id entity.EntityID) bool {
 	if g.surg == nil || len(g.surg.ops[id]) == 0 {
 		return false
 	}
-	if owner, taken := g.reserve.EntityOwner(id); taken {
-		if j, _ := g.jobs.Get(owner); j.Kind == job.Surgery && j.Target == id {
-			return true // the surgeon is on the way (its implant is reserved)
-		}
+	if g.surgeonComing(id, -1) {
+		return true // the surgeon is on the way (its implant is reserved)
 	}
 	if uint64(g.clock.Now()) < g.surg.rest[id] || !g.otherDoctor(id) {
 		return false
 	}
-	_, _, ok := g.readyOp(id, id)
-	return ok
+	b, lying := g.viewBody(id), g.lyingForCare(id)
+	for _, op := range g.surg.ops[id] {
+		if why, _ := g.opBlocked(id, 0, b, op, lying); why == "" {
+			return true
+		}
+	}
+	return false
+}
+
+// surgeonComing: a surgeon holds patient for an operation of code (any
+// operation when code < 0).
+func (g *Game) surgeonComing(patient entity.EntityID, code int) bool {
+	owner, taken := g.reserve.EntityOwner(patient)
+	if !taken {
+		return false
+	}
+	j, _ := g.jobs.Get(owner)
+	return j.Kind == job.Surgery && j.Target == patient && (code < 0 || j.Count == code)
+}
+
+// Waiting reasons of a queued operation (OperationView.Status and the
+// picker's disabled options; SIM-049).
+const (
+	waitBody      = "can't be done on the body as it is"
+	waitResearch  = "needs research: "
+	waitNoDoctor  = "needs another colonist who can doctor"
+	waitLieDown   = "waiting for the patient to lie down"
+	waitOnTheWay  = "a doctor is on the way"
+	waitNoStockFm = "no %s in stock"
+	waitReachFm   = "the %s can't be reached"
+)
+
+// opBlocked is why doctor can't start op on patient (body b) now, ""
+// with the implant stack to fetch (0: none needed) when it can. Doctor 0
+// asks about any other colonist who doctors. The reasons come in order:
+// the operation no longer fits the body, the implant needs research, none
+// in stock (free: unforbidden, uncarried, unreserved), none in reach, no
+// one else to operate. Loose counts a stack a hauler holds as in stock
+// (a waiting patient stays down; awaitingSurgery).
+func (g *Game) opBlocked(patient, doctor entity.EntityID, b *body.Body, op body.Operation, loose bool) (string, entity.EntityID) {
+	if !b.CanOperate(op) {
+		return waitBody, 0
+	}
+	var sid entity.EntityID
+	if k := opNeedsItem(op); k != 0 {
+		var why string
+		if sid, why = g.implantFor(patient, doctor, k, loose); sid == 0 {
+			return why, 0
+		}
+	}
+	if doctor == 0 && !g.otherDoctor(patient) {
+		return waitNoDoctor, 0
+	}
+	return "", sid
+}
+
+// implantFor is the nearest free stack of implant k that doctor (0: any
+// other colonist who doctors) can reach, or why there is none: its recipe
+// still needs research and there is none to be had, none is in stock, or
+// none can be reached (reachable: region labels, no search). Loose also
+// takes a stack carried or reserved by someone else.
+func (g *Game) implantFor(patient, doctor entity.EntityID, k item.Kind, loose bool) (entity.EntityID, string) {
+	from := doctor
+	if from == 0 {
+		from = patient
+	}
+	pos, _ := g.positions.Get(from)
+	var best entity.EntityID
+	bestD, stocked := 1<<30, false
+	for _, iid := range g.itemIDs {
+		sp := g.stacks.Ref(iid)
+		if sp == nil || sp.Kind != k || sp.Qty < 1 || sp.Forbidden {
+			continue
+		}
+		x, y, carried := sp.X, sp.Y, sp.Carrier != 0 // copied: reachable may search
+		if !loose {
+			if carried {
+				continue
+			}
+			if owner, taken := g.reserve.EntityOwner(iid); taken && (doctor == 0 || owner != doctor) {
+				continue
+			}
+		}
+		stocked = true
+		d := pathing.Dist(pos.X, pos.Y, x, y)
+		if best != 0 && (d > bestD || d == bestD && iid > best) {
+			continue
+		}
+		if !carried && !g.canFetch(patient, doctor, x, y) {
+			continue
+		}
+		best, bestD = iid, d
+	}
+	switch {
+	case best != 0:
+		return best, ""
+	case stocked:
+		return 0, fmt.Sprintf(waitReachFm, k)
+	}
+	if p := g.implantResearch(k); p != "" {
+		return 0, waitResearch + p
+	}
+	return 0, fmt.Sprintf(waitNoStockFm, k)
+}
+
+// canFetch: doctor (0: any standing colonist besides patient who does
+// Doctor work; with none, the patient itself, so a lone colonist hears
+// that it needs a doctor rather than about reach) could walk to (x, y).
+func (g *Game) canFetch(patient, doctor entity.EntityID, x, y int) bool {
+	if doctor != 0 {
+		return g.reachable(doctor, x, y)
+	}
+	found := false
+	for _, pid := range g.pawnIDs {
+		if pid != patient && g.standingPawn(pid) && g.prioOf(pid)[work.Doctor] > 0 {
+			if g.reachable(pid, x, y) {
+				return true
+			}
+			found = true
+		}
+	}
+	return !found && g.reachable(patient, x, y)
+}
+
+// implantResearch names the project still locking every recipe that
+// makes implant k ("" when one is open, or none makes it).
+func (g *Game) implantResearch(k item.Kind) string {
+	locked := ""
+	for _, r := range recipe.All() {
+		if r.Output != k {
+			continue
+		}
+		p := g.lockedBy("recipe:" + r.Name) // research.go
+		if p == "" {
+			return ""
+		}
+		if locked == "" {
+			locked = p
+		}
+	}
+	return locked
+}
+
+// lieInHospitalBed puts a patient waiting for surgery in a free hospital
+// bed (freeBedFor ranks them first), claimed only for the stay: its own
+// bed stays its own, and leaveHospitalBed gives this one back once it is
+// up again. False when there is none free (or it can't be reached), and
+// nothing changes then.
+func (g *Game) lieInHospitalBed(id entity.EntityID) bool {
+	pos, _ := g.positions.Get(id)
+	bid, ok := g.freeBedFor(id, pos) // medical.go
+	if !ok {
+		return false
+	}
+	b, _ := g.bldgs.Get(bid)
+	if b.Kind != construction.HospitalBed {
+		return false
+	}
+	owned := b.SlotOf(uint64(id)) >= 0
+	if !owned {
+		b = b.Claim(uint64(id))
+		g.bldgs.Set(bid, b)
+	}
+	sx, sy := g.sleepCellFor(id, b)
+	if !g.startJob(id, job.Record{Kind: job.Sleep, Target: bid, TX: sx, TY: sy, WorkLeft: needs.SleepWorkMin}) {
+		if !owned {
+			g.bldgs.Set(bid, b.Release(uint64(id)))
+		}
+		return false
+	}
+	g.sleptAt[id] = bid
+	if !owned {
+		g.surg.ensure()
+		g.surg.hosp[id] = bid
+	}
+	return true
+}
+
+// leaveHospitalBed gives back the hospital bed a patient claimed for
+// surgery once it stands and is not lying in it (still down: it stays).
+func (g *Game) leaveHospitalBed(id entity.EntityID, v *health.Record) {
+	bid, ok := g.surg.hosp[id]
+	if !ok || v.Status == health.Downed {
+		return
+	}
+	if j, _ := g.jobs.Get(id); v.Status == health.Alive && j.Kind == job.Sleep && j.Target == bid {
+		return
+	}
+	delete(g.surg.hosp, id)
+	if b, ok := g.bldgs.Get(bid); ok && b.SlotOf(uint64(id)) >= 0 {
+		g.bldgs.Set(bid, b.Release(uint64(id)))
+	}
 }
 
 // surgeryGaveUp: the patient lay patientWait in bed and no surgeon came;
@@ -429,7 +628,13 @@ func operationDone(op body.Operation, o body.Outcome) string {
 // wakeFromAnaesthetic stands a patient back up an hour after surgery (or
 // leaves it down from its wounds if they are bad enough).
 func (g *Game) wakeFromAnaesthetic(id entity.EntityID, v *health.Record, now uint64) {
-	if g.surg == nil || len(g.surg.under) == 0 {
+	if g.surg == nil {
+		return
+	}
+	if len(g.surg.hosp) > 0 {
+		g.leaveHospitalBed(id, v)
+	}
+	if len(g.surg.under) == 0 {
 		return
 	}
 	until, ok := g.surg.under[id]
@@ -461,4 +666,22 @@ func (g *Game) UnderAnaesthetic(id entity.EntityID) bool {
 // the patient's opinion of the surgeon).
 func (g *Game) onSurgeryBotched(surgeon, patient entity.EntityID) {
 	g.socialBotchedSurgery(surgeon, patient) // social.go: the patient's resentment
+}
+
+// surgeryWait says what queued operation op on patient waits for: why it
+// can't be started (opBlocked's reasons, ready false), or, once it can,
+// the patient to lie down or the doctor on the way ("" and true when a
+// doctor could start it this moment; SIM-049).
+func (g *Game) surgeryWait(patient entity.EntityID, op body.Operation) (string, bool) {
+	if g.surgeonComing(patient, opCode(op)) {
+		return waitOnTheWay, true
+	}
+	lying := g.lyingForCare(patient)
+	if why, _ := g.opBlocked(patient, 0, g.viewBody(patient), op, lying); why != "" {
+		return why, false
+	}
+	if !lying {
+		return waitLieDown, true
+	}
+	return "", true
 }

@@ -439,7 +439,7 @@ func (g *Game) phaseAI() {
 			if j.Kind != job.None && j.State != job.Idle {
 				g.interrupt(id, job.Interrupted)
 			}
-			g.assignSleep(id) // lie down and wait for a doctor
+			g.lieDownForCare(id) // infection.go: lie down and wait for a doctor
 			continue
 		}
 		n, _ := g.need.Get(id)

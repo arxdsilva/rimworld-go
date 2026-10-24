@@ -698,6 +698,35 @@ def _hearing_trumpet():
     return S.render_asset("item", "hearing_trumpet", zmax=0.3, extra={"item": "hearing trumpet"})
 
 
+def _prosthetic_foot():
+    """A carved wooden foot: heel block, toe wedge and a leather ankle strap."""
+    from .plant_base import _limb
+    S.box("sole", 0.2, -0.7, 0.0, 0.5, -0.5, 0.07, "wood", bevel=0.03)
+    S.box("toe", 0.14, -0.67, 0.0, 0.24, -0.53, 0.05, "wood_plank", bevel=0.025)
+    _limb("ankle", (0.46, -0.6, 0.07), (0.62, -0.54, 0.1), 0.055, 0.045, "wood", segs=10)
+    S.cyl("cuff", 0.62, -0.54, 0.07, 0.09, 0.15, "leather", r_top=0.08, segs=12, bevel=0.01)
+    S.box("strap", 0.38, -0.69, 0.07, 0.43, -0.51, 0.1, "leather", bevel=0.008)
+    return S.render_asset("item", "prosthetic_foot", zmax=0.18, extra={"item": "prosthetic foot"})
+
+
+def _glass_eye():
+    """A small glass eyeball: white sphere, blue iris and a dark pupil."""
+    S.ellipsoid("ball", 0.5, -0.55, 0.1, 0.11, 0.11, 0.1, "ceramic", segs=16, rings=10)
+    S.ellipsoid("iris", 0.5, -0.55, 0.19, 0.055, 0.055, 0.02, "glass", segs=12, rings=6)
+    S.ellipsoid("pupil", 0.5, -0.55, 0.205, 0.025, 0.025, 0.012, "metal_dark", segs=8, rings=4)
+    return S.render_asset("item", "glass_eye", zmax=0.22, extra={"item": "glass eye"})
+
+
+def _wooden_nose():
+    """A small carved wooden nose with two nostrils and a leather tie."""
+    S.ellipsoid("bridge", 0.5, -0.5, 0.06, 0.07, 0.15, 0.06, "wood", segs=12, rings=8)
+    S.ellipsoid("tip", 0.5, -0.62, 0.07, 0.1, 0.07, 0.07, "wood", segs=12, rings=8)
+    for k, dx in enumerate((-0.04, 0.04)):
+        S.ellipsoid("nos%d" % k, 0.5 + dx, -0.66, 0.1, 0.022, 0.02, 0.015, "metal_dark", segs=6, rings=4)
+    S.box("tie", 0.3, -0.52, 0.0, 0.7, -0.49, 0.025, "leather", bevel=0.006)
+    return S.render_asset("item", "wooden_nose", zmax=0.16, extra={"item": "wooden nose"})
+
+
 def build():
     return [_wood(), _food(), _steel(), _stone(), _stone_chunk(), _silver(), _gold(), _berries(), _ration(), _meat(), _meal(), _club(), _rifle_item(), _knife_item(), _spear_item(),
             _potatoes(), _corn(), _wheat(), _beans(), _lettuce(), _radishes(), _pumpkins(),
@@ -711,4 +740,5 @@ def build_ng1():
 
 def build_social():
     return [_brewgrain_item(), _ashleaf_item(), _beer(), _ashleaf_tea(), _spark_tablet(), _peg_leg(), _prosthetic_leg(),
-            _prosthetic_arm(), _wooden_hand(), _denture(), _hearing_trumpet()]
+            _prosthetic_arm(), _wooden_hand(), _denture(), _hearing_trumpet(),
+            _prosthetic_foot(), _glass_eye(), _wooden_nose()]

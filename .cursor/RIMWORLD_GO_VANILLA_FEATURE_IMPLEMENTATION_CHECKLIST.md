@@ -1053,7 +1053,7 @@ treatment, and surgery are major colony-management systems.
     -   Add/remove scheduled medical operations.
 -   [x] **Anesthesia** (SIM-039: anaesthetic lasts 1h)
     -   Required for appropriate surgery.
--   [-] **Surgery success/failure** (SIM-039: skill/bed/medicine curve, minor/catastrophic failure, botched opinion memory; no manipulation/sight term)
+-   [-] **Surgery success/failure** (SIM-039: skill/bed/medicine and surgeon manipulation/sight, minor/catastrophic failure, botched opinion memory; SIM-049: patients prefer a hospital bed; no room-cleanliness factor)
     -   Doctor skill.
     -   medicine.
     -   manipulation/sight.
@@ -1064,7 +1064,7 @@ treatment, and surgery are major colony-management systems.
     -   harvested organ becomes item.
     -   missing vital organs can kill.
     -   transplant restores/replaces functionality.
--   [-] **Prosthetics/bionics** (SIM-039: peg leg, prosthetic leg/arm, wooden hand, denture, hearing trumpet; no bionics)
+-   [-] **Prosthetics/bionics** (SIM-039/SIM-049: peg leg, prosthetic leg/arm/foot, wooden hand, denture, hearing trumpet, glass eye, wooden nose; fitted to missing or healthy parts (replaced); no bionics)
     -   Replace missing/damaged body parts with artificial parts of
         varying efficiency.
 

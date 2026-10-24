@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 
@@ -251,16 +252,14 @@ func TestBenchBillsPanel(t *testing.T) {
 	if !a.selectBuildingAt(7, 6) { // second cell of the 2x1 stove
 		t.Fatal("clicking any stove cell selects it")
 	}
-	var add string
-	for _, b := range a.buildingButtons() {
-		if strings.HasPrefix(b.id, "bill.add.") {
-			add = b.id
-		}
+	if _, ok := hasButton(a.buildingButtons(), billPickBtn); !ok {
+		t.Fatal("stove should offer the recipe picker")
 	}
-	if add == "" {
+	rcs := a.recipesFor("stove")
+	if len(rcs) == 0 {
 		t.Fatal("stove should offer a recipe")
 	}
-	click(t, a, add)
+	a.applyBuildingClick("bill.add." + strconv.Itoa(int(rcs[0].ID)))
 	g.Step(1)
 	b, _ := a.selectedBuilding()
 	if len(b.Bills) != 1 || b.Bills[0].Target != 1 {

@@ -63,7 +63,7 @@ var defs = [NumProjects]Def{
 		Desc:     "Grow ashleaf and steep or press it into stimulants.",
 		Unlocks:  []string{"crop:ashleaf", "build:drug table", "recipe:press_tablet"}},
 	Prosthetics: {Project: Prosthetics, Name: "prosthetics", Label: "Prosthetics", Cost: 4000, Requires: []Project{Herbalism},
-		Desc: "Steel limbs to replace lost legs and arms.", Unlocks: []string{"recipe:make_prosthetic_leg", "recipe:make_prosthetic_arm"}},
+		Desc: "Steel limbs to replace lost legs and arms.", Unlocks: []string{"recipe:make_prosthetic_leg", "recipe:make_prosthetic_arm", "recipe:make_glass_eye"}},
 }
 
 // DefOf returns the definition of p.

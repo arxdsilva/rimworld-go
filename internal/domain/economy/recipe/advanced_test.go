@@ -54,7 +54,7 @@ func TestFabricateAndRefineRecipes(t *testing.T) {
 func TestEveryRecipeLearnsItsSkill(t *testing.T) {
 	t.Parallel()
 	minSkill := map[recipe.ID]uint8{recipe.FabricateComponent: 6, recipe.RefineMedicine: 4,
-		recipe.PressTablet: 4, recipe.MakeProstheticLeg: 5, recipe.MakeProstheticArm: 5}
+		recipe.PressTablet: 4, recipe.MakeProstheticLeg: 5, recipe.MakeProstheticArm: 5, recipe.MakeGlassEye: 4}
 	for _, d := range recipe.All() {
 		want, ok := skill.ForWork(d.Skill)
 		if !ok {

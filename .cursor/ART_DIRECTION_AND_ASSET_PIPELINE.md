@@ -1345,7 +1345,8 @@ cover it. Every family follows §12-§17 (pivots, palette, outline rules) and
   the growing-zone menu.
 - **Items:** `item/beer`, `item/ashleaf_tea`, `item/spark_tablet`,
   `item/peg_leg`, `item/prosthetic_leg`, `item/prosthetic_arm`,
-  `item/wooden_hand`, `item/denture`, `item/hearing_trumpet` (the item
+  `item/wooden_hand`, `item/denture`, `item/hearing_trumpet`,
+  `item/prosthetic_foot`, `item/glass_eye`, `item/wooden_nose` (the item
   names have spaces: map them to these keys in the renderer's
   `itemSprite` when the art lands).
 - **Social interaction icons** (log lines, speech bubbles):

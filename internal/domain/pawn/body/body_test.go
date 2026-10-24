@@ -278,7 +278,7 @@ func TestDisfigured(t *testing.T) {
 func TestImplants(t *testing.T) {
 	var b Body
 	if b.Install(LegL, item.PegLeg) {
-		t.Fatal("part not missing")
+		t.Fatal("Install needs a missing part")
 	}
 	b.destroy(LegL)
 	if b.Install(LegL, item.WoodenHand) || b.Install(NumParts, item.PegLeg) {
@@ -362,8 +362,8 @@ func TestRollOutcome(t *testing.T) {
 func TestApply(t *testing.T) {
 	var b Body
 	install := Operation{InstallImplant, LegL, item.PegLeg}
-	if b.Apply(install, Success, fixed(0), 1) {
-		t.Fatal("part present")
+	if b.Apply(Operation{InstallImplant, LegL, item.WoodenHand}, Success, fixed(0), 1) {
+		t.Fatal("wrong kind")
 	}
 	if !b.Apply(Operation{Kind: Amputate, Part: LegL}, Success, fixed(0), 1) || !b.isMissing(FootL) {
 		t.Fatal("amputate")
@@ -417,5 +417,104 @@ func TestPartsAndGob(t *testing.T) {
 	var got Body
 	if err := gob.NewDecoder(&buf).Decode(&got); err != nil || got.Missing != b.Missing || got.Implants != b.Implants || len(got.Wounds) != 3 {
 		t.Fatalf("%v %+v", err, got)
+	}
+}
+
+func TestReplaceHealthyLeg(t *testing.T) {
+	var b Body
+	b.Wounds = append(b.Wounds, Wound{Part: FootL, Dmg: 3}, Wound{Part: LegL, Dmg: 1, Permanent: true}, Wound{Part: LegR, Dmg: 2})
+	op := Operation{InstallImplant, LegL, item.ProstheticLeg}
+	if !b.CanOperate(op) {
+		t.Fatal("healthy leg replaceable")
+	}
+	if !b.Apply(op, Success, fixed(0), 1) {
+		t.Fatal("apply")
+	}
+	if !b.isMissing(LegL) || !b.isMissing(FootL) || b.Implants[LegL] != item.ProstheticLeg || b.ArtificialParts() != 1 {
+		t.Fatalf("%b %v", b.Missing, b.Implants)
+	}
+	if len(b.Wounds) != 1 || b.Wounds[0].Part != LegR {
+		t.Fatalf("wounds %+v", b.Wounds)
+	}
+	if got := b.Capacity(Moving); got != (850+950)/2 {
+		t.Fatalf("moving %d", got)
+	}
+	if b.CanOperate(Operation{InstallImplant, FootL, item.ProstheticFoot}) || b.CanOperate(op) {
+		t.Fatal("covered/occupied")
+	}
+	if b.MissingUncovered() != 0 {
+		t.Fatal("prosthetic leg covers leg and foot")
+	}
+}
+
+func TestReplaceFailureKeepsPart(t *testing.T) {
+	for _, o := range []Outcome{MinorFail, Catastrophic} {
+		var b Body
+		op := Operation{InstallImplant, LegL, item.PegLeg}
+		if b.Apply(op, o, fixed(0), 1) {
+			t.Fatal("failure must not install")
+		}
+		if b.Implants[LegL] != 0 || len(b.Wounds) != 1 || b.Wounds[0].Kind != Surgical {
+			t.Fatalf("%v %+v", o, b.Wounds)
+		}
+		if o == MinorFail && b.isMissing(LegL) {
+			t.Fatal("leg kept")
+		}
+	}
+}
+
+func TestInstallBlockedByMissingAncestor(t *testing.T) {
+	var b Body
+	b.destroy(ArmL)
+	if b.CanOperate(Operation{InstallImplant, HandL, item.WoodenHand}) {
+		t.Fatal("hand under missing arm")
+	}
+	if !b.CanOperate(Operation{InstallImplant, ArmL, item.ProstheticArm}) {
+		t.Fatal("arm ok")
+	}
+	if b.CanOperate(Operation{InstallImplant, HandR, item.ProstheticArm}) || b.CanReplace(NumParts) || b.CanReplace(Heart) {
+		t.Fatal("bad targets")
+	}
+	if got := b.InstallOptions(item.WoodenHand); len(got) != 1 || got[0] != HandR {
+		t.Fatalf("%v", got)
+	}
+	if got := b.InstallOptions(item.ProstheticArm); len(got) != 2 || got[0] != ArmL || got[1] != ArmR {
+		t.Fatalf("%v", got)
+	}
+}
+
+func TestProstheticFoot(t *testing.T) {
+	var b Body
+	if !b.Apply(Operation{InstallImplant, FootL, item.ProstheticFoot}, Success, fixed(0), 1) {
+		t.Fatal("foot")
+	}
+	if got := b.Capacity(Moving); got != (750+1000)/2 {
+		t.Fatalf("moving %d", got)
+	}
+	if Fits(item.ProstheticFoot, LegL) || ImplantEfficiency(item.ProstheticFoot) != 750 {
+		t.Fatal("fit/eff")
+	}
+}
+
+func TestCosmeticImplants(t *testing.T) {
+	var b Body
+	if !b.Apply(Operation{InstallImplant, EyeL, item.GlassEye}, Success, fixed(0), 1) {
+		t.Fatal("eye")
+	}
+	if b.ArtificialParts() != 1 || b.Capacity(Sight) != 500 || b.MissingUncovered() != 0 {
+		t.Fatalf("%d %d %d", b.ArtificialParts(), b.Capacity(Sight), b.MissingUncovered())
+	}
+	if !b.Disfigured() {
+		t.Fatal("missing face part still disfigures")
+	}
+	if !b.Apply(Operation{InstallImplant, Nose, item.WoodenNose}, Success, fixed(0), 1) || b.ArtificialParts() != 2 {
+		t.Fatal("nose")
+	}
+	if Fits(item.WoodenNose, EyeL) || Fits(item.GlassEye, Nose) {
+		t.Fatal("fits")
+	}
+	b.destroy(EarL)
+	if b.MissingUncovered() != 1 {
+		t.Fatal("bare missing ear")
 	}
 }

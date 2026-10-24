@@ -9,6 +9,7 @@ import (
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/platform/input"
 )
@@ -28,6 +29,8 @@ type devTools interface {
 	Raid(n int)
 	SpawnStack(kind item.Kind, qty, x, y int) (entity.EntityID, error)
 	SetNeeds(id entity.EntityID, hunger, rest int)
+	DevLosePart(pawn entity.EntityID, part string) bool
+	DevSpawnImplants(near entity.EntityID) bool
 }
 
 var _ devTools = (*game.Game)(nil)
@@ -94,7 +97,18 @@ func (a *App) devActions(tx, ty int) []devAction {
 			return pawnLabel(p) + " fed and rested"
 		}
 	}
-	return append(out, kill, feed)
+	lose := devAction{label: "Lose a part...", reason: "select a colonist first"}
+	spawnImp := devAction{label: "Spawn implants", reason: "select a colonist first"}
+	if p, ok := a.selectedPawn(); ok {
+		lose.reason, lose.run = "", func(d devTools) string { a.openDevLosePicker(p, d); return "" }
+		spawnImp.reason, spawnImp.run = "", func(d devTools) string {
+			if d.DevSpawnImplants(p.ID) {
+				return "Implants spawned near " + pawnLabel(p)
+			}
+			return "No room for implants"
+		}
+	}
+	return append(out, kill, feed, lose, spawnImp)
 }
 
 // handleDevKeys runs the Dev context's actions.
@@ -168,7 +182,9 @@ func (a *App) applyDevClick(id string) {
 		a.toast("Debug actions need the full game")
 		return
 	}
-	a.toast(acts[i].run(d))
+	if msg := acts[i].run(d); msg != "" {
+		a.toast(msg)
+	}
 }
 
 // drawDevPanels draws the debug menu, log and inspector.
@@ -285,3 +301,46 @@ const (
 	devStep    = 15  // line pitch
 	devLogMaxW = 460 // widest log line, px
 )
+
+const devLosePickID, devLosePickList = "dev.lose", "dev.lose.list"
+
+// devLoseParts are the part labels the Lose a part picker offers.
+func devLoseParts() []string {
+	out := make([]string, 0, body.NumParts)
+	for p := body.Part(0); p < body.NumParts; p++ {
+		out = append(out, p.Label())
+	}
+	return out
+}
+
+// openDevLosePicker lists the body parts; the pick is lost by p through d.
+func (a *App) openDevLosePicker(p game.PawnView, d devTools) {
+	parts := devLoseParts()
+	sel := -1
+	a.uiPushModal(modal{
+		id: devLosePickID, title: "Lose a part", w: 300, h: 420,
+		draw: func(a *App, r rect) {
+			a.uiList(devLosePickList, r, len(parts), &sel, listSpec{RowH: 24, Label: func(i int) string { return parts[i] }})
+		},
+		buttons: []modalButton{
+			{id: "dev.lose.ok", label: "Lose it", style: btnDanger, closes: true,
+				disabled: func() string {
+					if sel < 0 {
+						return "Pick a part first."
+					}
+					return ""
+				},
+				onClick: func() {
+					if sel < 0 || sel >= len(parts) {
+						return
+					}
+					if d.DevLosePart(p.ID, parts[sel]) {
+						a.toast(pawnLabel(p) + " lost the " + parts[sel])
+					} else {
+						a.toast("Could not remove " + parts[sel])
+					}
+				}},
+			{id: "dev.lose.cancel", label: "Cancel", closes: true},
+		},
+	})
+}

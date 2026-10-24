@@ -77,6 +77,17 @@ func (g *Game) patientRest(id entity.EntityID) bool {
 	return g.wounds[id].Infection >= infection.Sick || v.Injury >= painInjury
 }
 
+// lieDownForCare puts a patient to bed to wait for a doctor (tick.go): one
+// waiting for surgery takes a free hospital bed when there is one
+// (surgery.go, SIM-049); anyone else its own bed, or the ground
+// (assignSleep).
+func (g *Game) lieDownForCare(id entity.EntityID) {
+	if g.awaitingSurgery(id) && g.lieInHospitalBed(id) {
+		return
+	}
+	g.assignSleep(id)
+}
+
 // lyingForCare: the patient is down, in bed, or asleep (a doctor can work
 // on them where they lie).
 func (g *Game) lyingForCare(id entity.EntityID) bool {

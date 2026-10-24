@@ -189,7 +189,7 @@ func (a *App) healthOps(p game.PawnView, r rect, h game.HealthView) {
 	switch {
 	case dead:
 		reason = "The dead need no surgery."
-	case len(healthOptions(h)) == 0:
+	case len(pickerOptions(h)) == 0:
 		reason = "No operation fits this body."
 	}
 	if a.uiButton(healthAddID, addR, "Add operation", btnOpts{Disabled: reason != "", Reason: reason,
@@ -205,7 +205,14 @@ func (a *App) healthOps(p game.PawnView, r rect, h game.HealthView) {
 		if y+healthOpRowH > r.bottom() {
 			break
 		}
-		a.uiLabel(r.X, y+4, fitText(op.Label, tsBody, r.W-96), tsBody)
+		if op.Status != "" {
+			a.uiLabel(r.X, y, fitText(op.Label, tsBody, r.W-96), tsBody)
+			st := tsSmall
+			st.Color = opStatusColor(op)
+			a.uiLabel(r.X, y+float32(lineStep(tsBody))-2, fitText(op.Status, st, r.W-96), st)
+		} else {
+			a.uiLabel(r.X, y+4, fitText(op.Label, tsBody, r.W-96), tsBody)
+		}
 		if a.uiButton(healthRemoveID(op.Slot), rect{r.right() - 80, y, 80, healthOpRowH - 2}, "Cancel",
 			btnOpts{Style: btnDanger, Tip: "Cancel\nTake " + op.Label + " off the queue."}) {
 			a.renderer.game.Enqueue(command.Command{Kind: command.RemoveOperation, Pawn: uint64(p.ID), Index: op.Slot})
@@ -214,12 +221,45 @@ func (a *App) healthOps(p game.PawnView, r rect, h game.HealthView) {
 	}
 }
 
+// opStatusColor is a queued operation's status colour: a warning when the
+// wait needs the player (stock, research, reach, a second doctor), dim
+// while it is only a matter of time.
+func opStatusColor(op game.OperationView) color.Color {
+	if op.Blocked {
+		return uiWarning
+	}
+	return uiTextDim
+}
+
 // healthOption is one operation the picker offers.
 type healthOption struct {
 	label string
 	op    body.OpKind
 	part  body.Part
 	item  item.Kind
+	// reason is why it can't happen yet ("" when it can); it can still be queued.
+	reason string
+}
+
+// pickerOptions are the operations the picker lists: the view's own
+// Options (with their reasons), else the local derivation for views
+// that carry none.
+func pickerOptions(h game.HealthView) []healthOption {
+	if len(h.Options) == 0 {
+		return healthOptions(h)
+	}
+	out := make([]healthOption, 0, len(h.Options))
+	for _, o := range h.Options {
+		r := ""
+		if o.Disabled {
+			r = o.Reason
+			if r == "" {
+				r = "Not possible yet."
+			}
+		}
+		out = append(out, healthOption{label: o.Label, op: body.OpKind(o.Kind), part: body.Part(o.Part), item: item.Kind(o.Item), reason: r})
+	}
+	return out
 }
 
 // healthOptions lists the operations that fit the body as the view shows
@@ -246,14 +286,14 @@ func healthOptions(h game.HealthView) []healthOption {
 		case pv.Status == game.PartMissing:
 			for k := item.Kind(1); k != 0; k++ {
 				if k.IsImplant() && body.Fits(k, part) {
-					add(healthOption{fmt.Sprintf("Install %s (%s)", k, pv.Label), body.InstallImplant, part, k})
+					add(healthOption{label: fmt.Sprintf("Install %s (%s)", k, pv.Label), op: body.InstallImplant, part: part, item: k})
 				}
 			}
 		case strings.HasPrefix(pv.Status, game.PartArtificial):
-			add(healthOption{fmt.Sprintf("Remove implant (%s)", pv.Label), body.RemoveImplant, part, 0})
+			add(healthOption{label: fmt.Sprintf("Remove implant (%s)", pv.Label), op: body.RemoveImplant, part: part})
 		case pv.Status == game.PartReplaced:
 		case !body.DefOf(part).Vital:
-			add(healthOption{"Amputate " + pv.Label, body.Amputate, part, 0})
+			add(healthOption{label: "Amputate " + pv.Label, op: body.Amputate, part: part})
 		}
 	}
 	sort.SliceStable(out, func(i, j int) bool { return out[i].op < out[j].op })
@@ -268,7 +308,7 @@ func (a *App) openHealthPicker(id entity.EntityID) {
 		if !ok {
 			return nil
 		}
-		return healthOptions(h)
+		return pickerOptions(h)
 	}
 	a.uiPushModal(modal{
 		id: healthPickID, title: "Add operation", w: healthPickW, h: healthPickH,
@@ -282,12 +322,15 @@ func (a *App) openHealthPicker(id entity.EntityID) {
 				return
 			}
 			a.uiList(healthPickList, r, len(opts), &sel, listSpec{
-				RowH:  28,
+				RowH:  36,
 				Label: func(i int) string { return opts[i].label },
 				Draw: func(dst *ebiten.Image, i int, row rect, hover, selected bool) {
 					a.paintOptionRow(dst, row, opts[i], hover, selected)
 				},
 				Tip: func(i int) string {
+					if opts[i].reason != "" {
+						return opts[i].label + "\n" + opts[i].reason + "\nYou can queue it anyway; it waits until it can happen."
+					}
 					if opts[i].item != 0 {
 						return opts[i].label + "\nNeeds a " + opts[i].item.String() + " in stock and a doctor."
 					}
@@ -331,8 +374,18 @@ func (a *App) paintOptionRow(dst *ebiten.Image, row rect, o healthOption, hover,
 		}
 	}
 	st := tsBody
+	if o.reason != "" {
+		st.Color = uiTextDim
+	}
 	if selected {
 		st.Color = uiAccent
 	}
-	drawText(dst, fitText(o.label, st, row.right()-textX-4), float64(textX), float64(row.Y)+(float64(row.H)-lineH(st))/2, st)
+	if o.reason == "" {
+		drawText(dst, fitText(o.label, st, row.right()-textX-4), float64(textX), float64(row.Y)+(float64(row.H)-lineH(st))/2, st)
+		return
+	}
+	sm := tsSmall
+	sm.Color = uiWarning
+	drawText(dst, fitText(o.label, st, row.right()-textX-4), float64(textX), float64(row.Y)+1, st)
+	drawText(dst, fitText(o.reason, sm, row.right()-textX-4), float64(textX), float64(row.Y)+lineH(st)+1, sm)
 }

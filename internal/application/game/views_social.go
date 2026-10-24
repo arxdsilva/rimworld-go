@@ -45,6 +45,20 @@ type HealthView struct {
 	Pain       int
 	Operations []OperationView
 	Drugs      []DrugLineView
+	// Options are the operations the picker offers, each with why it
+	// can't happen yet (SIM-049).
+	Options []OperationOptionView
+}
+
+// OperationOptionView is one operation the Health tab can queue:
+// Disabled options can still be queued (a bill may make the item later).
+type OperationOptionView struct {
+	Label    string
+	Kind     uint8 // body.OpKind
+	Part     uint8 // body.Part
+	Item     uint8 // item.Kind (0: none)
+	Disabled bool
+	Reason   string
 }
 
 // CapacityView is one capacity ("Moving", 85 percent).
@@ -55,15 +69,21 @@ type CapacityView struct {
 
 // PartView is one hurt, missing, scarred or artificial body part.
 type PartView struct {
-	Label  string
-	Status string
-	HP     int
+	Label   string
+	Status  string
+	HP      int
+	Part    int    // body.Part (SIM-049)
+	Implant string // fitted implant's name, "" if none
 }
 
 // OperationView is one queued operation.
 type OperationView struct {
-	Label string
-	Slot  int
+	Label  string
+	Slot   int
+	Status string // what it waits for ("no peg leg in stock"; SIM-049)
+	// Blocked: the wait needs the player (no stock, research, reach, a
+	// second doctor), not just time.
+	Blocked bool
 }
 
 // DrugLineView is one drug effect, tolerance or addiction line.

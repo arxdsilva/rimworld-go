@@ -65,6 +65,10 @@ const (
 	MakeWoodenHand
 	MakeDenture
 	MakeHearingTrumpet
+	// SIM-049 implants.
+	MakeProstheticFoot
+	MakeGlassEye
+	MakeWoodenNose
 	numRecipes
 )
 
@@ -202,6 +206,13 @@ var defs = [numRecipes]Def{
 	MakeHearingTrumpet: {ID: MakeHearingTrumpet, Name: "make_hearing_trumpet", Label: "Make hearing trumpet",
 		Bench: construction.Workbench, Input: Input{Kind: item.Steel, Qty: 6}, Output: item.HearingTrumpet, OutQty: 1,
 		Work: 500, Skill: work.Craft, Learn: skill.Crafting},
+	MakeProstheticFoot: {ID: MakeProstheticFoot, Name: "make_prosthetic_foot", Label: "Carve prosthetic foot", Bench: construction.Workbench,
+		Input: Input{Kind: item.Wood, Qty: 6}, Output: item.ProstheticFoot, OutQty: 1, Work: 450, Skill: work.Craft, Learn: skill.Crafting},
+	MakeGlassEye: {ID: MakeGlassEye, Name: "make_glass_eye", Label: "Make glass eye", Bench: construction.Workbench,
+		Input: Input{Kind: item.Steel, Qty: 2}, Output: item.GlassEye, OutQty: 1, Work: 400, Skill: work.Craft, Learn: skill.Crafting,
+		MinSkill: 4},
+	MakeWoodenNose: {ID: MakeWoodenNose, Name: "make_wooden_nose", Label: "Carve wooden nose", Bench: construction.Workbench,
+		Input: Input{Kind: item.Wood, Qty: 3}, Output: item.WoodenNose, OutQty: 1, Work: 300, Skill: work.Craft, Learn: skill.Crafting},
 }
 
 // CutYield is how many blocks one chunk makes at the stonecutter table.

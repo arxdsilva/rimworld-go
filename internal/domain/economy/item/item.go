@@ -102,6 +102,10 @@ const (
 	WoodenHand
 	Denture
 	HearingTrumpet
+	// SIM-049: a foot for a lost foot, and two cosmetic face pieces.
+	ProstheticFoot
+	GlassEye
+	WoodenNose
 	numKinds
 )
 
@@ -115,7 +119,8 @@ var kindNames = [numKinds]string{"food", "wood", "stone", "berries", "potatoes",
 	"steel", "silver", "gold",
 	"components", "industrial medicine",
 	"beer", "ashleaf tea", "spark tablet", "brewgrain", "ashleaf",
-	"peg leg", "prosthetic leg", "prosthetic arm", "wooden hand", "denture", "hearing trumpet"}
+	"peg leg", "prosthetic leg", "prosthetic arm", "wooden hand", "denture", "hearing trumpet",
+	"prosthetic foot", "glass eye", "wooden nose"}
 
 // IsWeapon reports whether k can be equipped.
 func (k Kind) IsWeapon() bool { return k == Club || k == Rifle || k == Knife || k == Spear }
@@ -165,7 +170,9 @@ func Foods() []Kind {
 func (k Kind) IsDrug() bool { return k == Beer || k == AshleafTea || k == SparkTablet }
 
 // IsImplant reports a prosthetic installed by surgery (ENG-003).
-func (k Kind) IsImplant() bool { return k >= PegLeg && k <= HearingTrumpet }
+func (k Kind) IsImplant() bool {
+	return k >= PegLeg && k <= HearingTrumpet || k >= ProstheticFoot && k <= WoodenNose
+}
 
 func (k Kind) String() string {
 	if k >= numKinds {

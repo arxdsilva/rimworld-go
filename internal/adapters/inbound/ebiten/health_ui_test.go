@@ -84,8 +84,8 @@ func TestHealthOptionsFollowTheBody(t *testing.T) {
 		if o.part == body.Heart || o.part == body.Brain || o.part == body.Torso {
 			t.Fatalf("vital parts are never amputated: %+v", o)
 		}
-		if o.part == body.FootL && o.op == body.InstallImplant {
-			t.Fatalf("nothing fits a missing foot: %+v", o)
+		if o.part == body.FootL && o.op == body.InstallImplant && o.item != item.ProstheticFoot {
+			t.Fatalf("only a prosthetic foot fits a missing foot: %+v", o)
 		}
 	}
 }
