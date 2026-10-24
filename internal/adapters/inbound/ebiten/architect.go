@@ -467,7 +467,9 @@ func (a *App) drawArchitect(screen *ebiten.Image) {
 			placeFill:   "Drag to fill",
 			placeArea:   "Drag an area",
 		}[t.mode]
-		if bv, ok := buildable(t.build); ok && bv.Rotatable {
+		if t.build == "door" || t.build == "fence gate" {
+			hint += "  faces along the wall or fence; " + a.rotateKeys() + " sets a free-standing one (" + facingNames[a.archFacing] + ")"
+		} else if bv, ok := buildable(t.build); ok && bv.Rotatable {
 			hint += "  " + a.rotateKeys() + " rotate (" + facingNames[a.archFacing] + ")"
 		}
 		if len(toolStyles(t)) > 1 {
@@ -559,9 +561,18 @@ type ghostCell struct {
 	x, y   int
 	ok     bool
 	reason string
-	// replaces names the wall or fence a door/gate here takes the place of.
+	// replaces names the wall or fence a door/gate here takes the place of,
+	// or the swap label ("wood wall → steel") for an in-place material swap.
 	replaces string
+	// facing is the facing the sim would store here (door/gate auto-orient).
+	facing string
+	// same: the same piece in the same material is already here; the cell
+	// is neutral, does nothing and is not submitted.
+	same bool
 }
+
+// isSwapLabel reports a material-swap label; the "→" marks it.
+func isSwapLabel(s string) bool { return strings.Contains(s, "→") }
 
 // previewCells is what the current tool would affect right now: the
 // dragged span, or the hovered cell when not dragging. An area tool in
@@ -589,8 +600,13 @@ func (a *App) previewCells() (archTool, []ghostCell) {
 	}
 	out := make([]ghostCell, 0, len(cells))
 	for _, c := range cells {
-		ok, reason := a.renderer.game.CanPlaceAt(t.build, a.toolStuff(t), facingNames[a.archFacing], c[0], c[1])
-		gc := ghostCell{x: c[0], y: c[1], ok: ok, reason: reason}
+		fc := facingNames[a.archFacing]
+		ok, reason := a.renderer.game.CanPlaceAt(t.build, a.toolStuff(t), fc, c[0], c[1])
+		gc := ghostCell{x: c[0], y: c[1], ok: ok, reason: reason,
+			facing: a.renderer.game.AutoFacingAt(t.build, fc, c[0], c[1])}
+		if !ok && reason == game.ReasonSame {
+			gc.same, gc.reason = true, ""
+		}
 		if ok {
 			gc.replaces = a.renderer.game.ReplacesAt(t.build, a.toolStuff(t), c[0], c[1])
 		}
@@ -664,7 +680,7 @@ func (a *App) submitArchitect() {
 	}
 	stuff, _ := game.StuffID(a.toolStuff(t))
 	for _, c := range cells {
-		if c.ok {
+		if c.ok && !c.same {
 			a.renderer.enqueue(command.Command{Kind: command.DesignateBuild, Build: id, Facing: a.archFacing, Stuff: stuff, X: c.x, Y: c.y})
 		}
 	}
@@ -705,6 +721,9 @@ func (a *App) drawArchitectGhost(screen *ebiten.Image) {
 	a.renderer.drawPlacementGhost(screen, t.build, a.toolStuff(t), facingNames[a.archFacing], cells)
 	valid, firstBad, replaces := 0, "", ""
 	for _, c := range cells {
+		if c.same {
+			continue // nothing to do here: not counted, not an error
+		}
 		if c.ok {
 			valid++
 			if replaces == "" {
@@ -717,7 +736,11 @@ func (a *App) drawArchitectGhost(screen *ebiten.Image) {
 	bv, _ := buildable(t.build)
 	msg := fmt.Sprintf("%s x%d  %d %s", t.label, valid, valid*bv.Wood, a.toolStuff(t))
 	if replaces != "" {
-		msg += "   replaces " + replaces
+		if isSwapLabel(replaces) {
+			msg += "   " + replaces
+		} else {
+			msg += "   replaces " + replaces
+		}
 	}
 	if firstBad != "" {
 		msg += "   can't place: " + firstBad

@@ -35,14 +35,22 @@ func TestReplaceCanPlaceRules(t *testing.T) {
 	if g.ReplacesAt("door", "wood", 1, 1) != "" || g.ReplacesAt("wall", "wood", x, y) != "" {
 		t.Fatal("replaces nothing expected")
 	}
-	if ok, r := g.CanPlaceAt("wall", "wood", "south", x, y); ok || r != ReasonOccupied {
+	// PLAY-011: the same piece in the same material is a neutral refusal;
+	// in another material it is an in-place swap
+	if ok, r := g.CanPlaceAt("wall", "wood", "south", x, y); ok || r != ReasonSame {
 		t.Fatalf("wall on wall: %v %q", ok, r)
+	}
+	if ok, r := g.CanPlaceAt("wall", "steel", "south", x, y); !ok {
+		t.Fatalf("steel wall on wood wall (swap): %q", r)
 	}
 	if ok, r := g.CanPlaceAt("wall", "wood", "south", 8, 4); ok || r != ReasonOccupied {
 		t.Fatalf("wall over door: %v %q", ok, r)
 	}
-	if ok, r := g.CanPlaceAt("door", "wood", "south", 8, 4); ok || r != ReasonOccupied {
+	if ok, r := g.CanPlaceAt("door", "wood", "south", 8, 4); ok || r != ReasonSame {
 		t.Fatalf("door on door: %v %q", ok, r)
+	}
+	if ok, r := g.CanPlaceAt("door", "steel", "south", 8, 4); !ok {
+		t.Fatalf("steel door on wood door (swap): %q", r)
 	}
 	if ok, r := g.CanPlaceAt("carpet", "straw carpet", "south", x, y); ok || r != ReasonOccupied {
 		t.Fatalf("carpet on wall: %v %q", ok, r)

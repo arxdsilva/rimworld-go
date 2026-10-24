@@ -123,3 +123,17 @@ func TestGraveAndPyre(t *testing.T) {
 		t.Fatalf("pyre: %+v", p)
 	}
 }
+
+func TestMovableExcludesFixedPieces(t *testing.T) {
+	t.Parallel()
+	for _, k := range []Kind{Wall, Door, Grave, Floor, Fence, FenceGate} {
+		if Movable(k) {
+			t.Errorf("%s should not be movable", DefOf(k).Name)
+		}
+	}
+	for _, k := range []Kind{Bed, Table, Chair} {
+		if !Movable(k) {
+			t.Errorf("%s should be movable", DefOf(k).Name)
+		}
+	}
+}

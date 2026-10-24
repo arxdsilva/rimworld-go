@@ -243,12 +243,24 @@ func (a *App) drawBuildingInspector(screen *ebiten.Image) {
 	}
 	a.drawTroughSection(screen, b, r)
 	a.drawBedSection(screen, b, r)
+	if ln := swapLine(b); ln != "" {
+		drawFitSmall(screen, ln, float64(r.x)+12, float64(r.y+r.h)-108, float64(r.w)-24, tsBody)
+	}
 	if ln := movingLine(b); ln != "" {
 		drawFitSmall(screen, ln, float64(r.x)+134, float64(r.y+r.h)-88, float64(r.w)-146, tsBody)
 	}
 	mx, my := a.currentCursor()
 	a.drawButtons(screen, a.buildingButtons(), mx, my)
 	a.drawBuildingSelection(screen, b)
+}
+
+// swapLine is the inspector text while an in-place material swap is
+// pending on the building. "" otherwise.
+func swapLine(b game.BuildingView) string {
+	if b.SwapTo == "" {
+		return ""
+	}
+	return fmt.Sprintf("Changing to %s (%d%%)", b.SwapTo, b.SwapPct)
 }
 
 // carpetLine is a carpet's inspector text: the share of tracked dirt it

@@ -230,18 +230,29 @@ func TestPredatorBlockedByFence(t *testing.T) {
 func TestFenceViewInWorld(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 1, Width: 10, Height: 8})
-	if !g.BuildNow("fence", "wood", "south", 2, 2) || !g.BuildNow("fence gate", "wood", "east", 3, 2) {
+	// a gate at the end of an east-west fence run follows the run (PLAY-011);
+	// a free-standing gate keeps the player's facing
+	if !g.BuildNow("fence", "wood", "south", 2, 2) || !g.BuildNow("fence gate", "wood", "east", 3, 2) ||
+		!g.BuildNow("fence gate", "wood", "east", 7, 5) {
 		t.Fatal("not built")
 	}
 	got := map[string]BuildingView{}
+	var free BuildingView
 	for _, b := range g.World().Buildings {
+		if b.X == 7 {
+			free = b
+			continue
+		}
 		got[b.Kind] = b
 	}
 	if f, ok := got["fence"]; !ok || f.X != 2 || f.Facing != "south" || f.Floor {
 		t.Fatalf("fence view %+v %v", f, ok)
 	}
-	if gv, ok := got["fence gate"]; !ok || gv.X != 3 || gv.Facing != "east" {
+	if gv, ok := got["fence gate"]; !ok || gv.X != 3 || gv.Facing != "south" {
 		t.Fatalf("gate view %+v %v", gv, ok)
+	}
+	if free.Kind != "fence gate" || free.Facing != "east" {
+		t.Fatalf("free-standing gate view %+v", free)
 	}
 	var stone bool
 	for _, b := range Buildables() {

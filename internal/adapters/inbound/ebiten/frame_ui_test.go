@@ -266,6 +266,10 @@ func TestFenceSpriteKeys(t *testing.T) {
 	if got := buildSpriteStuff("fence gate", "wood", "", 0, false, false); got != "structure/fence_gate_south" {
 		t.Fatal(got)
 	}
+	// the gate takes the sim's auto-oriented facing, never the links mask
+	if got := buildSpriteStuff("fence gate", "wood", "west", 15, doorAxisEW("west"), false); got != "structure/fence_gate_west" {
+		t.Fatal(got)
+	}
 	w := game.WorldView{
 		Buildings: []game.BuildingView{{Kind: "fence", X: 1, Y: 1}, {Kind: "fence gate", X: 2, Y: 1}, {Kind: "wall", X: 1, Y: 0}, {Kind: "bed", X: 0, Y: 1}},
 	}

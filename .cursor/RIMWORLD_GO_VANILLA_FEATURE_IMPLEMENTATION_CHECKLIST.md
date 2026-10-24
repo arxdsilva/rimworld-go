@@ -549,7 +549,7 @@ This is the heart of autonomous colony behavior.
 
 ## 7.2 Construction lifecycle
 
--   [-] **Blueprint** (`CanPlace` shared by preview and sim: bounds, layer occupancy, blocked, items under walls; floor + object layers share a tile; doors and gates may replace walls and fences (deconstruct first, UI-021); no research/support checks)
+-   [-] **Blueprint** (`CanPlace` shared by preview and sim: bounds, layer occupancy, blocked, items under walls; floor + object layers share a tile; doors and gates may replace walls and fences (deconstruct first, UI-021); doors and gates face along their walls and fences by themselves, and placing the same piece in another material swaps it in place (UI-022); no research/support checks)
     -   Placement preview.
     -   Validate terrain, occupancy, research, material, and support
         requirements.

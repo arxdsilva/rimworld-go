@@ -69,6 +69,7 @@ var (
 	blueprintCS = colorScale{0.55, 0.85, 1.25, 0.5}
 	ghostOKCS   = colorScale{0.7, 1.25, 0.7, 0.65}
 	ghostBadCS  = colorScale{1.3, 0.45, 0.4, 0.6}
+	ghostSameCS = colorScale{0.9, 0.9, 0.9, 0.5}
 	// driedCS browns and darkens food that came off a drying rack;
 	// rottenCS sickens a rotten corpse.
 	driedCS  = colorScale{0.86, 0.68, 0.48, 1}
@@ -177,16 +178,15 @@ func (r *Renderer) drawPlacementGhost(screen *ebiten.Image, kind, stuff, facing 
 	tint := r.stuffTint(stuff)
 	for _, c := range cells {
 		cs := ghostOKCS
-		if !c.ok {
+		switch {
+		case c.same:
+			cs = ghostSameCS
+		case !c.ok:
 			cs = ghostBadCS
 		}
 		if r.art == nil {
 			sx, sy := r.worldToScreen(c.x, c.y)
-			clr := color.RGBA{90, 200, 90, 120}
-			if !c.ok {
-				clr = color.RGBA{220, 70, 60, 120}
-			}
-			vector.FillRect(screen, sx, sy, float32(tile), float32(tile), clr, false)
+			vector.FillRect(screen, sx, sy, float32(tile), float32(tile), ghostFill(c), false)
 			continue
 		}
 		mask, corners := 0, 0
@@ -197,23 +197,45 @@ func (r *Renderer) drawPlacementGhost(screen *ebiten.Image, kind, stuff, facing 
 		if kind == "wall" && r.drawLinked(screen, wallPrefix(stuff), c.x, c.y, mask, corners, tint, cs, tile, sw, sh) {
 			continue
 		}
-		key := r.buildKey(kind, stuff, facing, mask, mask&(wallE|wallW) != 0, false)
+		cf := ghostFacing(c, facing)
+		key := r.buildKey(kind, stuff, cf, mask, doorAxisEW(cf), false)
 		if !r.art.has(key) {
 			sx, sy := r.worldToScreen(c.x, c.y)
 			if isFenceKind(kind) {
 				drawFenceVector(screen, sx, sy, float32(tile), kind, mask, false, isStoneStuff(stuff), 170)
 				continue
 			}
-			clr := color.RGBA{90, 200, 90, 120}
-			if !c.ok {
-				clr = color.RGBA{220, 70, 60, 120}
-			}
-			vector.FillRect(screen, sx, sy, float32(tile), float32(tile), clr, false)
+			vector.FillRect(screen, sx, sy, float32(tile), float32(tile), ghostFill(c), false)
 			continue
 		}
 		r.drawSpriteCS(screen, key, color.NRGBA{}, float64(c.x), float64(c.y), tile, sw, sh, mulCS(tintCS(tint), cs))
 	}
 }
+
+// ghostFacing is the facing a ghost cell draws with: the sim's
+// auto-orientation for that cell, else the tool's.
+func ghostFacing(c ghostCell, tool string) string {
+	if c.facing != "" {
+		return c.facing
+	}
+	return tool
+}
+
+// ghostFill is the plain fill of a ghost cell without art: green, red
+// when blocked, grey for a same-material cell that does nothing.
+func ghostFill(c ghostCell) color.RGBA {
+	switch {
+	case c.same:
+		return color.RGBA{150, 150, 150, 110}
+	case !c.ok:
+		return color.RGBA{220, 70, 60, 120}
+	}
+	return color.RGBA{90, 200, 90, 120}
+}
+
+// doorAxisEW is the door sprite axis for a stored facing: South/North
+// doors span east-west ("ew"), East/West doors north-south ("ns").
+func doorAxisEW(facing string) bool { return facing != "east" && facing != "west" }
 
 // buildKey is buildSpriteStuff with a fallback to the wood sprite when a
 // material's art (steel doors, stone fences) is missing.
@@ -503,8 +525,6 @@ func (r *Renderer) drawBuildingObj(dst *ebiten.Image, b *game.BuildingView, tile
 	switch {
 	case b.Kind == "wall":
 		mask, corners = r.links.mask(b.X, b.Y), r.links.corners(b.X, b.Y)
-	case b.Kind == "door":
-		mask = r.links.mask(b.X, b.Y)
 	case isFenceKind(b.Kind):
 		mask, open = r.links.mask(b.X, b.Y), l.creatures[[2]int{b.X, b.Y}]
 	}
@@ -520,7 +540,7 @@ func (r *Renderer) drawBuildingObj(dst *ebiten.Image, b *game.BuildingView, tile
 				break
 			}
 		}
-		key := r.buildKey(b.Kind, b.Stuff, b.Facing, mask, mask&(wallE|wallW) != 0, open)
+		key := r.buildKey(b.Kind, b.Stuff, b.Facing, mask, doorAxisEW(b.Facing), open)
 		if b.Kind == troughKind {
 			key = troughKey(*b)
 			if !r.art.has(key) {
@@ -569,7 +589,7 @@ func (r *Renderer) drawFrameObj(dst *ebiten.Image, f *game.FrameView, tile float
 			return
 		}
 	}
-	key := r.buildKey(f.Kind, f.Stuff, f.Facing, pm, pm&(wallE|wallW) != 0, false)
+	key := r.buildKey(f.Kind, f.Stuff, f.Facing, pm, doorAxisEW(f.Facing), false)
 	if isFenceKind(f.Kind) && !r.art.has(key) {
 		sx, sy := r.worldToScreen(f.X, f.Y)
 		drawFenceVector(dst, sx, sy, float32(tile), f.Kind, pm, false, isStoneStuff(f.Stuff), 140)

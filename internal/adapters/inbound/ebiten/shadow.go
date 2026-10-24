@@ -318,7 +318,7 @@ func (r *Renderer) shadowCasters(w game.WorldView, pawns []game.PawnView) []shad
 		if b.Floor || b.Kind == "sleeping spot" || isFenceKind(b.Kind) || !near(b.X, b.Y) {
 			return // fences cast no sun shadow (art: shadow kind none)
 		}
-		key := buildSpriteStuff(b.Kind, b.Stuff, b.Facing, 0, false, false)
+		key := buildSpriteStuff(b.Kind, b.Stuff, b.Facing, 0, doorAxisEW(b.Facing), false)
 		addBox(key, float64(b.X), float64(b.Y), float64(max(b.W, 1)), float64(max(b.H, 1)), 1)
 	}
 	plant := func(p *game.PlantView) {

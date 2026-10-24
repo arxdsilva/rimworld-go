@@ -223,7 +223,8 @@ func (g *Game) cancelRect(x1, y1, x2, y2 int) {
 		fr, _ := g.frames.Get(id)
 		g.unmarkReplaced(fr)
 		g.frames.Delete(id)
-		g.refundFrame(id, fr) // frame_view.go: delivered materials back
+		g.refundFrame(id, fr)                               // frame_view.go: delivered materials back
+		g.reorientFootprint(fr.Kind, fr.Facing, fr.X, fr.Y) // a cancelled wall no longer lines doors up
 	}
 	g.markDeconstruct(x1, y1, x2, y2, false)
 	g.markCut(x1, y1, x2, y2, false)
@@ -1264,6 +1265,10 @@ func (g *Game) completeFrame(id entity.EntityID, fr construction.Frame) {
 		g.completeMove(id, fr) // move.go: the same building moves here
 		return
 	}
+	if b, ok := g.bldgs.Get(fr.Swaps); ok && fr.Swaps != 0 && b.Kind == fr.Kind && b.X == fr.X && b.Y == fr.Y {
+		g.completeSwap(id, fr, b) // placement.go: the same building, new material
+		return
+	}
 	g.frames.Delete(id)
 	kept := g.frameIDs[:0]
 	for _, fid := range g.frameIDs {
@@ -1276,8 +1281,9 @@ func (g *Game) completeFrame(id entity.EntityID, fr construction.Frame) {
 	g.bldgs.Set(id, construction.Building{Kind: fr.Kind, Stuff: fr.Stuff, Facing: fr.Facing, X: fr.X, Y: fr.Y})
 	g.noteBuilding(id) // indexes.go
 	g.markRoomsDirty()
-	g.structVer++                              // SIM-029: link/autotile caches
-	g.autoHome(fr.Kind, fr.Facing, fr.X, fr.Y) // home.go
+	g.structVer++                                       // SIM-029: link/autotile caches
+	g.reorientFootprint(fr.Kind, fr.Facing, fr.X, fr.Y) // doors and gates beside it line up
+	g.autoHome(fr.Kind, fr.Facing, fr.X, fr.Y)          // home.go
 	g.defaultBills(id, fr.Kind)
 	// bushes and crops under the footprint are cleared below
 	cells, _, _ := construction.Footprint(fr.Kind, fr.Facing, fr.X, fr.Y)

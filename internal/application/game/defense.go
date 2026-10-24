@@ -446,8 +446,8 @@ func (g *Game) assignRepair(id entity.EntityID) bool {
 		bestD := 1 << 30
 		for _, bid := range g.bldgIDs {
 			b := g.bldgs.Ref(bid) // read only: nothing below changes the store
-			if b == nil || b.Damage <= 0 || b.Deconstruct {
-				continue
+			if b == nil || b.Damage <= 0 || b.Deconstruct || g.swapFrameFor(bid) != 0 {
+				continue // a pending material change repairs it anyway (PLAY-011)
 			}
 			if _, taken := g.reserve.EntityOwner(bid); taken {
 				continue

@@ -354,6 +354,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 		Research: g.research.V1(), ResearchAll: g.research.Slice(), NG1: g.exportSetupState(), ResearchCur: g.researchCur, ResearchSet: g.researchSet, RockDamage: g.rockDamage, Residual: g.residual,
 		Motion: g.exportMotion(), Strikes: g.lastStrike, Hits: g.lastHit,
 		Weather: g.weather, Graves: g.graves, Roofs: g.exportRoofs(),
+		DoorsOriented: true, // PLAY-011: door facings are stored
 	}
 	s.Grass, s.GrassCut = g.exportGrass()
 	s.GrassGrowth = g.exportGrassGrowth() // grass.go
@@ -549,6 +550,9 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.areas, g.history = area.Import(s.Areas), s.History
 	if err := g.importStreams(s.RNGStreams); err != nil {
 		return nil, info, fmt.Errorf("restore rng streams: %w", err)
+	}
+	if !s.DoorsOriented {
+		g.orientDoors() // placement.go: an older save's doors take their walls' axis (PLAY-011)
 	}
 	g.warmIndexes(true) // jobindex.go: indexes, rooms and regions now, not on the first tick
 	return g, info, nil

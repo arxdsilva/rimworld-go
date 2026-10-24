@@ -198,7 +198,9 @@ func TestCannotMoveWallOrGrave(t *testing.T) {
 	wall := built(t, g, "wall", "south", 2, 2)
 	grave := built(t, g, "grave", "south", 5, 5)
 	chair := built(t, g, "chair", "south", 8, 8)
-	for _, bid := range []entity.EntityID{wall, grave, 999} {
+	fence := built(t, g, "fence", "south", 12, 5)
+	gate := built(t, g, "fence gate", "south", 13, 5)
+	for _, bid := range []entity.EntityID{wall, grave, fence, gate, 999} {
 		if ok, why := g.CanMoveTo(bid, "south", 10, 2); ok || why != "can't move this" {
 			t.Fatalf("%d: ok=%v why=%q", bid, ok, why)
 		}

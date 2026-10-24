@@ -1063,6 +1063,7 @@ func (g *Game) world() WorldView {
 		bv.W, bv.H, bv.SpotX, bv.SpotY, bv.HasSpot = footprintView(b.Kind, b.Facing, b.X, b.Y)
 		g.fillGraveView(bv, id, b)   // burial.go
 		bv.MovingTo = g.movingTo(id) // move.go
+		g.fillSwapView(bv, id)       // placement.go: pending material change (PLAY-011)
 	}
 	w.Plants = g.plantViews(w.Plants) // plant_view.go
 	w.TerrainW = g.terr.W

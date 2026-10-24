@@ -81,7 +81,11 @@ func (g *Game) generate(seed uint64) generation.Result {
 }
 
 func (g *Game) setTerrain(x, y int, t terrain.Type) {
+	wasRock := terrain.IsRockWall(g.terr.At(x, y))
 	g.terr.Set(x, y, t)
+	if wasRock != terrain.IsRockWall(t) {
+		defer g.reorientAround(x, y) // a door cut into a cliff lines up with the rock (PLAY-011)
+	}
 	if t != terrain.Rock {
 		g.geo.SetOre(x, y, geology.NoOre) // ore only lives in rough rock
 	}

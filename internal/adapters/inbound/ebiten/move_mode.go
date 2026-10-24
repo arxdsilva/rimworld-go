@@ -34,13 +34,13 @@ type bldgMoveState struct {
 func (a *App) moveSt() *bldgMoveState { return &a.bldgMove }
 
 // movableKind mirrors construction.Movable by name: everything except
-// walls, doors, floors and graves.
+// walls, doors, fences, gates, floors and graves.
 func movableKind(kind string, floor bool) bool {
 	if floor {
 		return false
 	}
 	switch kind {
-	case "wall", "door", "grave":
+	case "wall", "door", "grave", "fence", "fence gate":
 		return false
 	}
 	return true

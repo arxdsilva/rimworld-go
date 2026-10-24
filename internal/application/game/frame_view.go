@@ -16,6 +16,7 @@ import (
 // Frame status lines (FrameView.Status), first match wins.
 const (
 	frameMoving     = "Moving %s here: needs no materials"
+	frameChanging   = "Changing to %s" // an in-place material swap (PLAY-011)
 	frameNoStock    = "No %s in stock"
 	frameOnTheWay   = "Materials on the way"
 	frameCompsWay   = "Components on the way"
@@ -97,6 +98,9 @@ func (g *Game) fillFrameViews(views []FrameView) {
 		fv.Builder = builders[fv.ID]
 		fv.Haulers = haulers[fv.ID]
 		fv.Status = frameStatus(fr, *fv)
+		if fr.Swaps != 0 && g.bldgs.Has(fr.Swaps) {
+			fv.Status = fmt.Sprintf(frameChanging, fr.Stuff.String())
+		}
 		if bid := g.replacedStanding(fr); bid != 0 {
 			b, _ := g.bldgs.Get(bid)
 			fv.Status = "Waiting for the " + construction.DefOf(b.Kind).Name + " to be removed"
@@ -202,6 +206,7 @@ func (g *Game) cancelFrame(id entity.EntityID) {
 	}
 	g.frameIDs = kept
 	g.refundFrame(id, fr)
+	g.reorientFootprint(fr.Kind, fr.Facing, fr.X, fr.Y) // a cancelled wall no longer lines doors up
 }
 
 // refundFrame settles a frame that was just deleted (cancelled): the

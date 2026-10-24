@@ -57,6 +57,23 @@ func TestCanPlaceReasons(t *testing.T) {
 	if ok, r := g.CanPlace("bed", 5, 5); ok || r != ReasonBlocked {
 		t.Fatalf("blocked: %v %q", ok, r)
 	}
+	// same kind on a built piece (PLAY-011): no material given is occupied,
+	// the same material is a neutral refusal, another one a swap
+	if !g.BuildNow("wall", "wood", "south", 6, 1) {
+		t.Fatal("wall not built")
+	}
+	if ok, r := g.CanPlace("wall", 6, 1); ok || r != ReasonOccupied {
+		t.Fatalf("wall on wall, no material: %v %q", ok, r)
+	}
+	if ok, r := g.CanPlaceAt("wall", "wood", "south", 6, 1); ok || r != ReasonSame {
+		t.Fatalf("wood wall on wood wall: %v %q", ok, r)
+	}
+	if ok, r := g.CanPlaceAt("wall", "steel", "south", 6, 1); !ok {
+		t.Fatalf("steel wall on wood wall: %q", r)
+	}
+	if ok, r := g.CanPlaceAt("chair", "wood", "south", 6, 1); ok || r != ReasonOccupied {
+		t.Fatalf("chair on wall: %v %q", ok, r)
+	}
 }
 
 func TestBuildFloorAndTableOnSameTile(t *testing.T) {

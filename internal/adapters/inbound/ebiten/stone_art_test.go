@@ -61,6 +61,8 @@ func TestBuildSpriteStuffMaterials(t *testing.T) {
 		{"door", "steel", 10, true, true, "structure/door_steel_ew_open"},
 		{"door", "steel", 5, false, false, "structure/door_steel_ns_closed"},
 		{"door", "wood", 5, false, false, "structure/door_wood_ns_closed"},
+		{"door", "wood", 0, doorAxisEW("south"), false, "structure/door_wood_ew_closed"}, // axis from the stored facing, not the links mask
+		{"door", "steel", 15, doorAxisEW("west"), true, "structure/door_steel_ns_open"},
 		{"floor", "granite blocks", 0, false, false, "structure/floor_stone"},
 		{"fence", "marble blocks", 15, false, false, "structure/fence_stone_15"},
 	}

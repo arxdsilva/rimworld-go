@@ -1,6 +1,8 @@
 package game
 
 import (
+	"strings"
+
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
@@ -113,7 +115,7 @@ func (g *Game) CanPlaceAt(kind, stuff, facing string, x, y int) (bool, string) {
 	if p := g.lockedBy("build:" + k.String()); p != "" {
 		return false, "needs research: " + p
 	}
-	return g.canPlaceAt(k, parseFacingName(facing), x, y)
+	return g.canPlaceStuffAt(k, s, parseFacingName(facing), x, y)
 }
 
 func parseFacingName(f string) construction.Facing {
@@ -125,12 +127,32 @@ func parseFacingName(f string) construction.Facing {
 	return construction.South
 }
 
+// noStuff: no material given (CanPlace, BuildNow, arrivals): the same
+// kind on a built piece is then never a swap, only occupied.
+const noStuff = item.Kind(255)
+
+// canPlaceAt is canPlaceStuffAt without a material.
 func (g *Game) canPlaceAt(k construction.Kind, f construction.Facing, x, y int) (bool, string) {
+	return g.canPlaceStuffAt(k, noStuff, f, x, y)
+}
+
+// canPlaceStuffAt is the full footprint rule for kind k in stuff facing f
+// at (x, y). The same piece in another material is an in-place swap: its
+// cells skip the occupied and blocked checks; in the same material it is
+// the neutral ReasonSame (PLAY-011).
+func (g *Game) canPlaceStuffAt(k construction.Kind, stuff item.Kind, f construction.Facing, x, y int) (bool, string) {
+	swap, same := g.swapCheck(k, stuff, f, x, y)
+	if same {
+		return false, ReasonSame
+	}
 	cells, spot, hasSpot := construction.Footprint(k, f, x, y)
 	for _, c := range cells {
-		if ok, r := g.canPlace(k, c[0], c[1]); !ok {
+		if ok, r := g.canPlaceCell(k, c[0], c[1], swap != 0); !ok {
 			return false, r
 		}
+	}
+	if swap != 0 {
+		return true, "" // the piece already stands there, spot and all
 	}
 	if hasSpot {
 		sx, sy := spot[0], spot[1]
@@ -167,7 +189,14 @@ func (g *Game) isWorkSpot(x, y int) bool {
 	return false
 }
 
+// canPlace is the one-cell rule for a new piece of kind k at (x, y).
 func (g *Game) canPlace(k construction.Kind, x, y int) (bool, string) {
+	return g.canPlaceCell(k, x, y, false)
+}
+
+// canPlaceCell is the one-cell rule; swap: the cell holds the piece an
+// in-place swap converts, so it is neither occupied nor blocked.
+func (g *Game) canPlaceCell(k construction.Kind, x, y int, swap bool) (bool, string) {
 	if !g.grid.InBounds(x, y) {
 		return false, ReasonOutside
 	}
@@ -176,6 +205,9 @@ func (g *Game) canPlace(k construction.Kind, x, y int) (bool, string) {
 	}
 	layer := construction.DefOf(k).Layer
 	rep := g.replaceTarget(k, x, y) // a door or gate may stand where a wall or fence does
+	if swap {
+		rep = g.layerBldgAt(x, y, layer) // the swapped piece stands here (PLAY-011)
+	}
 	if rep == 0 && g.layerBldgAt(x, y, layer) != 0 {
 		return false, ReasonOccupied
 	}
@@ -231,12 +263,154 @@ func (g *Game) replaceTarget(k construction.Kind, x, y int) entity.EntityID {
 // player's facing would get (doors and gates face along their walls and
 // fences, PLAY-011); read-only, for the Architect ghost.
 func (g *Game) AutoFacingAt(kind, facing string, x, y int) string {
-	return facing
+	k, ok := construction.Parse(kind)
+	if !ok || !autoOriented(k) {
+		return facing
+	}
+	return g.autoFacing(k, x, y, parseFacingName(facing)).String()
 }
 
-// ReplacesAt names what a door or gate of kind would replace at (x, y)
-// ("wall", "fence", ...); "" when it replaces nothing. Read-only; the
-// Architect ghost reads "replaces wall".
+// autoOriented: doors and fence gates face along their walls or fences.
+func autoOriented(k construction.Kind) bool {
+	return k == construction.Door || k == construction.FenceGate
+}
+
+// orientPiece: a piece a door or gate lines up with (wall, door, fence,
+// gate).
+func orientPiece(k construction.Kind) bool {
+	switch k {
+	case construction.Wall, construction.Door, construction.Fence, construction.FenceGate:
+		return true
+	}
+	return false
+}
+
+// solidAt reports a neighbour a door or gate lines up with: a wall, door,
+// fence or gate on the object layer, built or planned, or natural rock.
+func (g *Game) solidAt(x, y int) bool {
+	if !g.grid.InBounds(x, y) {
+		return false
+	}
+	if terrain.IsRockWall(g.terr.At(x, y)) {
+		return true
+	}
+	if bid := g.layerBldgAt(x, y, construction.LayerObject); bid != 0 {
+		if b, ok := g.bldgs.Get(bid); ok && orientPiece(b.Kind) {
+			return true
+		}
+	}
+	if fid := g.layerFrameAt(x, y, construction.LayerObject); fid != 0 {
+		if fr, ok := g.frames.Get(fid); ok && orientPiece(fr.Kind) {
+			return true
+		}
+	}
+	return false
+}
+
+// autoFacing is the facing a door or gate of kind k at (x, y) takes: it
+// spans the axis with more solid neighbours (east+west: south, art "ew";
+// north+south: east, art "ns"). A tie keeps prefer, the current facing,
+// so a piece never flips back and forth (hysteresis). Other kinds keep
+// prefer. Neighbours are read in fixed N, E, S, W order; no RNG.
+func (g *Game) autoFacing(k construction.Kind, x, y int, prefer construction.Facing) construction.Facing {
+	if !autoOriented(k) {
+		return prefer
+	}
+	h, v := 0, 0
+	if g.solidAt(x, y-1) {
+		v++
+	}
+	if g.solidAt(x+1, y) {
+		h++
+	}
+	if g.solidAt(x, y+1) {
+		v++
+	}
+	if g.solidAt(x-1, y) {
+		h++
+	}
+	switch {
+	case h > v:
+		return construction.South
+	case v > h:
+		return construction.East
+	}
+	return prefer
+}
+
+// reorientAround re-evaluates the doors and gates (built and planned) on
+// the four orthogonal neighbours of (x, y) after that cell changed; O(1).
+func (g *Game) reorientAround(x, y int) {
+	for _, d := range [4][2]int{{0, -1}, {1, 0}, {0, 1}, {-1, 0}} { // N, E, S, W
+		g.reorientAt(x+d[0], y+d[1])
+	}
+}
+
+// reorientAt re-faces the door or gate building and frame on (x, y); a
+// piece is written only when its facing changes.
+func (g *Game) reorientAt(x, y int) {
+	if !g.grid.InBounds(x, y) {
+		return
+	}
+	if bid := g.layerBldgAt(x, y, construction.LayerObject); bid != 0 {
+		if b, ok := g.bldgs.Get(bid); ok && autoOriented(b.Kind) {
+			if f := g.autoFacing(b.Kind, x, y, b.Facing); f != b.Facing {
+				b.Facing = f
+				g.bldgs.Set(bid, b)
+				g.structVer++ // SIM-029: link/autotile caches
+			}
+		}
+	}
+	if fid := g.layerFrameAt(x, y, construction.LayerObject); fid != 0 {
+		if fr, ok := g.frames.Get(fid); ok && autoOriented(fr.Kind) {
+			if f := g.autoFacing(fr.Kind, x, y, fr.Facing); f != fr.Facing {
+				fr.Facing = f
+				g.frames.Set(fid, fr)
+				g.structVer++
+			}
+		}
+	}
+}
+
+// reorientFootprint calls reorientAround for every cell of a wall, door,
+// fence or gate of kind k that appeared or went away (other kinds change
+// nothing a door lines up with).
+func (g *Game) reorientFootprint(k construction.Kind, f construction.Facing, x, y int) {
+	if !orientPiece(k) {
+		return
+	}
+	cells, _, _ := construction.Footprint(k, f, x, y)
+	for _, c := range cells {
+		g.reorientAround(c[0], c[1])
+	}
+}
+
+// orientDoors gives every door (built or planned) of an older save the
+// facing of its neighbours, once on load; a tie keeps the stored south.
+// Gates keep their player-chosen facing.
+func (g *Game) orientDoors() {
+	for _, id := range g.bldgIDs {
+		if b, ok := g.bldgs.Get(id); ok && b.Kind == construction.Door {
+			if f := g.autoFacing(b.Kind, b.X, b.Y, b.Facing); f != b.Facing {
+				b.Facing = f
+				g.bldgs.Set(id, b)
+			}
+		}
+	}
+	for _, id := range g.frameIDs {
+		if fr, ok := g.frames.Get(id); ok && fr.Kind == construction.Door {
+			if f := g.autoFacing(fr.Kind, fr.X, fr.Y, fr.Facing); f != fr.Facing {
+				fr.Facing = f
+				g.frames.Set(id, fr)
+			}
+		}
+	}
+}
+
+// ReplacesAt names what a piece of kind in stuff would replace at (x, y):
+// a door or gate over a wall or fence gives its name ("wall"); the same
+// piece in another material gives the swap ("wood wall → steel",
+// PLAY-011); "" otherwise. Read-only, for the Architect ghost.
 func (g *Game) ReplacesAt(kind, stuff string, x, y int) string {
 	k, ok := construction.Parse(kind)
 	if !ok {
@@ -246,7 +420,140 @@ func (g *Game) ReplacesAt(kind, stuff string, x, y int) string {
 		b, _ := g.bldgs.Get(bid)
 		return construction.DefOf(b.Kind).Name
 	}
+	s, ok := item.ParseKind(stuff)
+	if !ok || !g.grid.InBounds(x, y) {
+		return ""
+	}
+	b, ok := g.bldgs.Get(g.layerBldgAt(x, y, construction.DefOf(k).Layer))
+	if !ok {
+		return ""
+	}
+	if swap, _ := g.swapCheck(k, s, b.Facing, x, y); swap != 0 {
+		return stuffWord(b.Stuff) + " " + construction.DefOf(k).Name + " → " + stuffWord(s)
+	}
 	return ""
+}
+
+// stuffWord is a material's short label: "granite" for granite blocks,
+// "cloth" for a cloth carpet.
+func stuffWord(s item.Kind) string {
+	w := strings.TrimSuffix(s.String(), " carpet")
+	return strings.TrimSuffix(w, " blocks")
+}
+
+// swapCheck: the same piece of kind k already stands at origin (x, y)
+// with the same footprint (and facing, for a multi-tile kind; doors and
+// gates face automatically), alone on its cells and with no frame
+// planned there. swap is that building when stuff is another valid
+// material; same reports it is already of stuff. A missing material
+// (noStuff) is neither.
+func (g *Game) swapCheck(k construction.Kind, stuff item.Kind, f construction.Facing, x, y int) (swap entity.EntityID, same bool) {
+	if stuff == noStuff || !k.Valid() || !g.grid.InBounds(x, y) {
+		return 0, false
+	}
+	def := construction.DefOf(k)
+	bid := g.layerBldgAt(x, y, def.Layer)
+	b, ok := g.bldgs.Get(bid)
+	if !ok || b.Kind != k || b.X != x || b.Y != y {
+		return 0, false
+	}
+	if !def.Rotatable {
+		f = construction.South
+	}
+	if multiTile(k) && b.Facing != f {
+		return 0, false
+	}
+	cells, _, _ := construction.Footprint(k, b.Facing, x, y)
+	for _, c := range cells {
+		if g.layerBldgAt(c[0], c[1], def.Layer) != bid || g.layerFrameAt(c[0], c[1], def.Layer) != 0 {
+			return 0, false
+		}
+	}
+	if b.Stuff == stuff {
+		return 0, true
+	}
+	if construction.StuffOK(k, stuff) {
+		return bid, false
+	}
+	return 0, false
+}
+
+// multiTile: kind k covers more than one cell.
+func multiTile(k construction.Kind) bool {
+	s := construction.DefOf(k).Size
+	return s[0] > 1 || s[1] > 1
+}
+
+// swapFrameFor is the pending swap frame that converts building bid (0:
+// none); O(1) through the frame index at its origin.
+func (g *Game) swapFrameFor(bid entity.EntityID) entity.EntityID {
+	b, ok := g.bldgs.Get(bid)
+	if !ok {
+		return 0
+	}
+	fid := g.layerFrameAt(b.X, b.Y, construction.DefOf(b.Kind).Layer)
+	if fr, ok := g.frames.Get(fid); ok && fr.Swaps == bid {
+		return fid
+	}
+	return 0
+}
+
+// releaseSwap turns the swap frame of building bid into an ordinary
+// blueprint, because the building is going away (deconstructed, smashed or
+// moved): it will be built new, components and all.
+func (g *Game) releaseSwap(bid entity.EntityID) {
+	fid := g.swapFrameFor(bid)
+	if fid == 0 {
+		return
+	}
+	fr, _ := g.frames.Get(fid)
+	fr.Swaps = 0
+	fr.CompNeed = construction.ComponentCost(fr.Kind)
+	g.frames.Set(fid, fr)
+}
+
+// completeSwap finishes swap frame id: the same building takes the new
+// material at full hit points, keeping its facing, owners, bills and
+// contents; the old material is refunded as a deconstruction would.
+func (g *Game) completeSwap(id entity.EntityID, fr construction.Frame, b construction.Building) {
+	g.frames.Delete(id)
+	kept := g.frameIDs[:0]
+	for _, fid := range g.frameIDs {
+		if fid != id {
+			kept = append(kept, fid)
+		}
+	}
+	g.frameIDs = kept
+	old := b
+	b.Stuff, b.Damage = fr.Stuff, 0
+	g.bldgs.Set(fr.Swaps, b)
+	g.markRoomsDirty() // stone walls change beauty and impressiveness
+	g.structVer++      // SIM-029: the tint changes
+	r := construction.Refund(old.Kind)
+	if r <= 0 {
+		return
+	}
+	g.dropStack(refundStuff(old), r, old.X, old.Y)
+	if !construction.DefOf(old.Kind).BlocksMove {
+		return
+	}
+	cells, _, _ := construction.Footprint(old.Kind, old.Facing, old.X, old.Y)
+	g.clearItemsFrom(old.X, old.Y, cells) // defense.go: not inside the wall
+	if g.itemAt(old.X, old.Y) != 0 {
+		g.message(old.X, old.Y, "No room to drop the %s from the old %s.", refundStuff(old), construction.DefOf(old.Kind).Name)
+	}
+}
+
+// fillSwapView sets a building view's pending swap: the new material and
+// the percent of its work done.
+func (g *Game) fillSwapView(bv *BuildingView, id entity.EntityID) {
+	fr, ok := g.frames.Get(g.swapFrameFor(id))
+	if !ok {
+		return
+	}
+	total := max(1, construction.WorkFor(fr.Kind, fr.Stuff))
+	bv.SwapTo = fr.Stuff.String()
+	bv.SwapPct = min(100, max(0, (total-fr.WorkLeft)*100/total))
 }
 
 // replacedStanding is the piece frame fr replaces while it still stands
@@ -328,18 +635,27 @@ func (g *Game) CanPlaceStuff(kind, stuff string, x, y int) (bool, string) {
 	if !ok || !construction.StuffOK(k, s) {
 		return false, ReasonStuff
 	}
-	return g.canPlace(k, x, y)
+	swap, same := g.swapCheck(k, s, construction.South, x, y)
+	if same {
+		return false, ReasonSame
+	}
+	return g.canPlaceCell(k, x, y, swap != 0)
 }
 
 func (g *Game) placeFrameStuff(kind construction.Kind, stuff item.Kind, f construction.Facing, x, y int) {
 	if !kind.Valid() || !construction.StuffOK(kind, stuff) {
 		return
 	}
-	if !construction.DefOf(kind).Rotatable {
-		f = construction.South
+	if !construction.DefOf(kind).Rotatable && kind != construction.Door {
+		f = construction.South // a door's facing is stored: it follows its walls (PLAY-011)
 	}
-	if ok, _ := g.canPlaceAt(kind, f, x, y); !ok {
+	f = g.autoFacing(kind, x, y, f) // the player's facing only breaks a tie
+	if ok, _ := g.canPlaceStuffAt(kind, stuff, f, x, y); !ok {
 		return
+	}
+	swap, _ := g.swapCheck(kind, stuff, f, x, y)
+	if b, ok := g.bldgs.Get(swap); ok {
+		f = b.Facing // a swap keeps the piece as it stands
 	}
 	id := g.entities.Next()
 	g.frameIDs = append(g.frameIDs, id)
@@ -353,7 +669,10 @@ func (g *Game) placeFrameStuff(kind construction.Kind, stuff item.Kind, f constr
 		CompNeed: construction.ComponentCost(kind), // delivered after the material (haul_route.go)
 		WorkLeft: construction.WorkFor(kind, stuff),
 	}
-	if cells, _, _ := construction.Footprint(kind, f, x, y); len(cells) > 0 {
+	if swap != 0 {
+		fr.Swaps = swap // converted in place: nothing comes down (PLAY-011)
+		fr.CompNeed = 0 // the components already in it are kept
+	} else if cells, _, _ := construction.Footprint(kind, f, x, y); len(cells) > 0 {
 		if rep := g.replaceTarget(kind, cells[0][0], cells[0][1]); rep != 0 {
 			fr.Replaces = rep // the old piece comes down first
 			if b, _ := g.bldgs.Get(rep); !b.Deconstruct {
@@ -364,7 +683,8 @@ func (g *Game) placeFrameStuff(kind construction.Kind, stuff item.Kind, f constr
 		}
 	}
 	g.frames.Set(id, fr)
-	g.noteFrame(id) // indexes.go
+	g.noteFrame(id)                    // indexes.go
+	g.reorientFootprint(kind, f, x, y) // a planned wall already turns the doors beside it
 	if kind.Instant() {
 		g.completeFrame(id, fr) // a marking: nothing to haul or build
 	}
@@ -439,6 +759,7 @@ func (g *Game) removeBuilding(id entity.EntityID) {
 	if !ok {
 		return
 	}
+	g.releaseSwap(id) // a pending material change becomes a new build
 	g.bldgs.Delete(id)
 	delete(g.fuel, id)
 	delete(g.banked, id)
@@ -462,6 +783,7 @@ func (g *Game) removeBuilding(id entity.EntityID) {
 	delete(g.bills, id)
 	g.markRoomsDirty()
 	g.structVer++ // SIM-029: link/autotile caches
+	g.reorientFootprint(b.Kind, b.Facing, b.X, b.Y)
 	for _, c := range []uint64{b.Claimant, b.Claimant2} {
 		if c != 0 {
 			delete(g.sleptAt, entity.EntityID(c))

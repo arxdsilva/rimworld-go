@@ -41,6 +41,9 @@ func (g *Game) canMoveTo(bid entity.EntityID, f construction.Facing, x, y int) (
 	if !ok || !construction.Movable(b.Kind) || b.Deconstruct {
 		return false, ReasonCantMove
 	}
+	if g.swapFrameFor(bid) != 0 {
+		return false, ReasonSwapPending
+	}
 	def := construction.DefOf(b.Kind)
 	if !def.Rotatable {
 		f = construction.South
@@ -192,6 +195,7 @@ func (g *Game) completeMove(id entity.EntityID, fr construction.Frame) {
 	if !ok || b.Deconstruct {
 		return // gone or being taken down: the move is dropped
 	}
+	g.releaseSwap(bid) // placement.go: a material change left behind is built new
 	blocks := construction.DefOf(b.Kind).BlocksMove
 	oldCells, _, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
 	b.X, b.Y, b.Facing = fr.X, fr.Y, fr.Facing

@@ -68,7 +68,7 @@ func TestMoveButtonDisabledForWalls(t *testing.T) {
 	if cp, ok := findBtn(a, "bldg.copy"); !ok || cp.disabled {
 		t.Fatalf("copy must work on walls: %+v", cp)
 	}
-	for _, k := range []string{"door", "grave"} {
+	for _, k := range []string{"door", "grave", "fence", "fence gate"} {
 		if movableKind(k, false) {
 			t.Fatalf("%s must not be movable", k)
 		}

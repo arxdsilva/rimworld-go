@@ -330,9 +330,14 @@ func Covers(k Kind, f Facing, x, y, px, py int) bool {
 
 // DefOf returns the definition for k.
 // Movable reports a building that can be moved (reinstalled) elsewhere:
-// everything but walls, doors, floors and graves.
+// everything but walls, doors, fences, fence gates, floors and graves
+// (PLAY-011: fixed pieces change material in place instead).
 func Movable(k Kind) bool {
-	return k != Wall && k != Door && k != Grave && DefOf(k).Layer != LayerFloor
+	switch k {
+	case Wall, Door, Fence, FenceGate, Grave:
+		return false
+	}
+	return DefOf(k).Layer != LayerFloor
 }
 
 func DefOf(k Kind) Def {
