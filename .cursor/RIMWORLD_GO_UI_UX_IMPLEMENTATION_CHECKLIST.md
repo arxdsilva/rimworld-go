@@ -532,7 +532,7 @@ interfaces.
     -   Name/portrait.
     -   relevant status.
     -   sortable.
--   [-] **Work-type columns** (Grow/Bld/Haul clickable Y/-; other columns `-`)
+-   [-] **Work-type columns** (Grow/Bld/Haul clickable Y/-; other columns `-`; ENG-003 Warden column, off by default; no patient/bed rest/basic/art/plant-cut columns)
     -   Firefight, patient, doctor, bed rest, basic, warden, handle,
         cook, hunt, construct, grow, mine, plant cut, craft categories,
         art, haul, clean, research.

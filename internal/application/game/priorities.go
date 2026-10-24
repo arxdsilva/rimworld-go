@@ -2,6 +2,7 @@ package game
 
 import (
 	"rimworld-go/internal/domain/ai/work"
+	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
@@ -36,6 +37,8 @@ func workTypeOf(c command.WorkType) (work.Type, bool) {
 		return work.Clean, true
 	case command.WorkHandle:
 		return work.Handle, true
+	case command.WorkWarden:
+		return work.Warden, true
 	}
 	return 0, false
 }
@@ -94,7 +97,12 @@ func (g *Game) assignWorkType(id entity.EntityID, t work.Type) bool {
 	}
 	switch t {
 	case work.Doctor:
-		return g.assignDoctor(id)
+		// tending first, then animals and operations, then doctoring bills
+		// (refining medicine) at a bench
+		return g.assignDoctor(id) || g.assignTendAnimal(id) || g.assignSurgery(id) || // bonds.go, surgery.go
+			g.anyBillFor(work.Doctor) && g.assignBill(id, work.Mask(0).Set(work.Doctor, true))
+	case work.Warden:
+		return g.assignWarden(id) // prisoners.go
 	case work.Haul:
 		return g.assignRefuel(id) || g.fillTroughs(id) || g.assignBury(id) || g.assignHaul(id) // fillTroughs: trough_feed.go
 	case work.Construct:
@@ -104,7 +112,7 @@ func (g *Game) assignWorkType(id entity.EntityID, t work.Type) bool {
 	case work.Hunt:
 		return g.assignHunt(id)
 	case work.Handle: // SIM-026: taming moved here from Hunt
-		return g.assignTame(id) || g.assignCollect(id) // animal_products.go
+		return g.assignTame(id) || g.assignTrain(id) || g.assignCollect(id) // bonds.go, animal_products.go
 	case work.Grow:
 		if g.woodLow() && g.assignCut(id) {
 			return true // short of wood: designated trees come first
@@ -151,4 +159,20 @@ func (g *Game) setSchedule(id entity.EntityID, hour int, a schedule.Activity) {
 	s := g.scheduleOf(id)
 	s[hour] = a
 	g.scheds[id] = s
+}
+
+// anyBillFor reports a bench holding a bill of work type t. It spares a
+// doctor with nothing to tend assignBill's full bench scan when no bench
+// has doctoring bills (the usual case). It ranges over the bills map, a
+// handful of benches, rather than every building: an existence check, so
+// the map's order never shows in the result.
+func (g *Game) anyBillFor(t work.Type) bool {
+	for _, bills := range g.bills {
+		for _, bl := range bills {
+			if recipe.DefOf(bl.Recipe).Skill == t {
+				return true
+			}
+		}
+	}
+	return false
 }

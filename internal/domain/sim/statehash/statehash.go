@@ -27,7 +27,14 @@ func Of(v any) uint64 {
 	return Bytes(e.buf)
 }
 
-type encoder struct{ buf []byte }
+// encoder appends a canonical encoding to buf. sparse (OfFields) encodes
+// structs as their non-zero exported fields by name and arrays without
+// trailing zero elements, so a field or array slot appended at its zero
+// value never moves a hash.
+type encoder struct {
+	buf    []byte
+	sparse bool
+}
 
 func (e *encoder) u64(x uint64) { e.buf = binary.LittleEndian.AppendUint64(e.buf, x) }
 
@@ -59,7 +66,14 @@ func (e *encoder) value(v reflect.Value) {
 		e.u64(uint64(v.Len()))
 		e.buf = append(e.buf, v.String()...)
 	case reflect.Array:
-		for i := 0; i < v.Len(); i++ {
+		n := v.Len()
+		if e.sparse {
+			for n > 0 && isZero(v.Index(n-1)) {
+				n--
+			}
+			e.u64(uint64(n))
+		}
+		for i := 0; i < n; i++ {
 			e.value(v.Index(i))
 		}
 	case reflect.Slice:
@@ -88,9 +102,20 @@ func (e *encoder) value(v reflect.Value) {
 	case reflect.Struct:
 		t := v.Type()
 		for i := 0; i < v.NumField(); i++ {
-			if t.Field(i).IsExported() {
-				e.value(v.Field(i))
+			if !t.Field(i).IsExported() {
+				continue
 			}
+			if e.sparse {
+				if isZero(v.Field(i)) {
+					continue
+				}
+				e.tag(2)
+				e.value(reflect.ValueOf(t.Field(i).Name))
+			}
+			e.value(v.Field(i))
+		}
+		if e.sparse {
+			e.tag(3)
 		}
 	default: // func, chan, unsafe pointer: not state
 	}
@@ -107,7 +132,7 @@ func (e *encoder) mapValue(v reflect.Value) {
 	entries := make([]kv, 0, v.Len())
 	it := v.MapRange()
 	for it.Next() {
-		var ke, ve encoder
+		ke, ve := encoder{sparse: e.sparse}, encoder{sparse: e.sparse}
 		ke.value(it.Key())
 		ve.value(it.Value())
 		entries = append(entries, kv{ke.buf, ve.buf})
@@ -122,7 +147,9 @@ func (e *encoder) mapValue(v reflect.Value) {
 // OfFields hashes named values in ascending name order, skipping zero
 // values (nil or empty slices and maps included): a field added at its
 // zero value, or renamed, leaves the hash alone, so golden pins follow
-// behaviour rather than a save format.
+// behaviour rather than a save format. Values are encoded sparsely
+// (ENG-003): inside them too, a struct field or trailing array slot
+// appended at its zero value leaves the hash alone.
 func OfFields(fields map[string]any) uint64 {
 	names := make([]string, 0, len(fields))
 	for n, v := range fields {
@@ -131,7 +158,7 @@ func OfFields(fields map[string]any) uint64 {
 		}
 	}
 	slices.Sort(names)
-	var e encoder
+	e := encoder{sparse: true}
 	for _, n := range names {
 		e.value(reflect.ValueOf(n))
 		e.value(reflect.ValueOf(fields[n]))

@@ -11,6 +11,9 @@ const (
 	SadWander       // wanders aimlessly in a daze
 	FoodBinge       // eats far past full
 	HideInRoom      // shuts itself away in its room
+	// SocialFight is a brawl two colonists fall into after an insult
+	// (ENG-003). It is not a mood break: Kinds never offers it.
+	SocialFight
 	numKinds
 )
 
@@ -27,6 +30,8 @@ var defs = [numKinds]Def{
 	SadWander:  {"sad wander", "%s is wandering around in a daze.", 8 * hour},
 	FoodBinge:  {"food binge", "%s is binge eating.", 4 * hour},
 	HideInRoom: {"hiding in room", "%s has locked themselves away.", 10 * hour},
+	// the minimum: a fight usually ends sooner, when one side goes down
+	SocialFight: {"social fight", "%s is in a fight.", 420},
 }
 
 // DefOf returns the break definition.

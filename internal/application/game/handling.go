@@ -112,7 +112,8 @@ func (g *Game) doTame(id entity.EntityID, j job.Record) {
 	}
 	def := animal.DefOf(a.Species)
 	now := uint64(g.clock.Now())
-	if g.rng.IntN(100) < g.tameChance(id, def.TameChance) { // skills.go
+	tamed := g.rng.IntN(100) < g.tameChance(id, def.TameChance) // skills.go
+	if tamed {
 		a.Tame, a.TameMark, a.Designated = true, false, false
 		a.Name = petNames[g.rng.IntN(len(petNames))]
 		a.Mode, a.Target, a.Attacker, a.Path, a.PathI = animal.Wander, 0, 0, nil, 0
@@ -130,6 +131,9 @@ func (g *Game) doTame(id entity.EntityID, j job.Record) {
 		}
 	}
 	g.animals.Set(j.Target, a)
+	if tamed {
+		g.onTamed(id, j.Target) // bonds.go: a chance of a bond with the tamer
+	}
 	j.State = job.Complete
 	g.jobs.Set(id, j)
 }

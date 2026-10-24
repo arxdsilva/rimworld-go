@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"rimworld-go/internal/domain/ai/pathing"
+	"rimworld-go/internal/domain/animal/training"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
@@ -512,6 +513,9 @@ const (
 	Rest
 	Hunt
 	Leave
+	// Confused (ENG-003): a bonded animal lost without its master,
+	// wandering aimlessly until ConfusedUntil.
+	Confused
 )
 
 func (m Mode) String() string {
@@ -528,6 +532,8 @@ func (m Mode) String() string {
 		return "hunting"
 	case Leave:
 		return "leaving"
+	case Confused:
+		return "confused"
 	default:
 		return "wandering"
 	}
@@ -615,6 +621,17 @@ type State struct {
 	// NextCharge the first tick it may roll for another.
 	ChargeSince uint64
 	NextCharge  uint64
+	// Masters, training and bonds (ENG-003, M10; zero in older saves):
+	// Master and Bond are colonist ids (0: none); Trained the steps learnt
+	// per training.Skill, decaying from TrainDecay; NextBondCheck the next
+	// bond roll; ConfusedUntil ends Confused; Mother the animal's mother.
+	Master        uint64
+	Bond          uint64
+	Trained       [training.NumSkills]uint8
+	TrainDecay    uint64
+	NextBondCheck uint64
+	ConfusedUntil uint64
+	Mother        uint64
 }
 
 // Enraged reports a manhunter at tick now.

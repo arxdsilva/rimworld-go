@@ -69,6 +69,11 @@ type AnimalView struct {
 	Sleeping    bool
 	Leaving     bool
 	Herd        uint32
+	// ENG-003 (M10): the master's and bonded colonist's names, and which
+	// training.Skill steps are learnt. Empty until M10 fills them.
+	Master  string
+	Bond    string
+	Trained []bool
 }
 
 // Wildlife at colony start (wildlife.go has the draw; population.go the
@@ -625,6 +630,7 @@ func (g *Game) killAnimal(id, by entity.EntityID) {
 	if by != 0 && by != id {
 		g.logEvent(by, logEntry{Kind: logKilled, Other: id, Name: animalLabel(a)})
 	}
+	g.onAnimalDied(id, by) // bonds.go: the bonded colonist's grief, before the state goes
 	g.removeAnimal(id)
 	g.stainAnimalDeath(a.Species, pos) // stains.go
 	corpse := g.dropCorpse(a.Species, pos.X, pos.Y)

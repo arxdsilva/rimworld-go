@@ -208,6 +208,7 @@ func (g *Game) doRescue(id entity.EntityID, j job.Record) {
 	g.positions.Set(j.Target, Position{X: cx, Y: cy})
 	g.sleptAt[j.Target] = j.Dest
 	g.logPair(j.Target, id, logRescuedBy, logRescued, 0, 0)
+	g.onRescued(id, j.Target) // social.go: the patient's gratitude
 	j.State = job.Complete
 	g.jobs.Set(id, j)
 }

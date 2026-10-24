@@ -11,6 +11,8 @@ var value = [numKinds]int{
 	SandstoneBlocks: 1, GraniteBlocks: 1, LimestoneBlocks: 1, SlateBlocks: 1, MarbleBlocks: 1,
 	Steel: 2, Silver: 1, Gold: 10,
 	Components: 28, IndustrialMedicine: 24,
+	Beer: 12, AshleafTea: 10, SparkTablet: 18, Brewgrain: 1, AshleafLeaf: 2,
+	PegLeg: 15, ProstheticLeg: 120, ProstheticArm: 120, WoodenHand: 12, Denture: 10, HearingTrumpet: 20,
 }
 
 // Value is the market value of one unit of k.

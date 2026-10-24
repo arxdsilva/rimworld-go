@@ -225,10 +225,13 @@ func (g *Game) thoughts(id entity.EntityID) []mood.Thought {
 	if v, _ := g.vital.Get(id); v.Status != health.Dead && g.unburiedNear(pos) {
 		states = append(states, mood.UnburiedCorpse)
 	}
-	return g.traitThoughts(id, mood.Active(g.memories[id].Prune(uint64(g.clock.Now())), states...)) // skills.go
+	ts := g.traitThoughts(id, mood.Active(g.memories[id].Prune(uint64(g.clock.Now())), states...)) // skills.go
+	return append(ts, g.socialThoughts(id)...)                                                     // social_mood.go
 }
 
-func (g *Game) moodOf(id entity.EntityID) int { return mood.Level(g.thoughts(id)) }
+// moodOf is the colonist's mood: the level its thoughts add up to, as the
+// social layer smooths it (social_mood.go).
+func (g *Game) moodOf(id entity.EntityID) int { return g.smoothedMood(id, mood.Level(g.thoughts(id))) }
 
 // afterSleep records how and where pawn id slept.
 func (g *Game) afterSleep(id entity.EntityID) {

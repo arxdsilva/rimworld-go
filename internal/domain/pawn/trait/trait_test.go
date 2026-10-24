@@ -11,8 +11,8 @@ import (
 
 func TestCatalogue(t *testing.T) {
 	all := All()
-	if len(all) != 19 {
-		t.Fatalf("%d traits, want 19", len(all))
+	if len(all) != 40 {
+		t.Fatalf("%d traits, want 40", len(all))
 	}
 	keys, labels := map[string]bool{}, map[string]bool{}
 	for i, d := range all {
@@ -106,5 +106,51 @@ func TestTraitStatMods(t *testing.T) {
 	s := stat.Build(stat.Base(), DefOf(Tireless).Mods, DefOf(FleetFooted).Mods, DefOf(Sunny).Mods)
 	if s[stat.WorkSpeed] != 1200 || s[stat.MoveSpeed] != 1150 || s[stat.MoodOffset] != 8 {
 		t.Fatalf("%v", s)
+	}
+}
+
+// TestGenerated: legacy rules roll only the original 19 traits (old seeds
+// keep their pawns); otherwise every trait, in ID order.
+func TestGenerated(t *testing.T) {
+	legacy, all := Generated(true), Generated(false)
+	if len(legacy) != 19 || legacy[0] != Tireless || legacy[18] != Sturdy {
+		t.Fatalf("legacy = %v", legacy)
+	}
+	if len(all) != int(NumTraits)-1 || all[len(all)-1] != NaturalPurist {
+		t.Fatalf("all = %v", all)
+	}
+	for i, id := range all {
+		if id != ID(i+1) {
+			t.Fatalf("all[%d] = %d", i, id)
+		}
+	}
+}
+
+// TestSocialTraitGroups: the ENG-003 groups exclude each other within, and
+// orientation traits are rare.
+func TestSocialTraitGroups(t *testing.T) {
+	for _, c := range [][2]ID{{Striking, Grotesque}, {Fair, Homely}, {Gay, Bisexual}, {Asexual, Gay},
+		{Abstainer, Hedonist}, {Indulgent, Abstainer}, {AugmentFan, NaturalPurist}, {DistrustsMen, DistrustsWomen},
+		{Idle, Tireless}, {Bloodthirsty, Gentle}} {
+		if !Conflicts(c[0], c[1]) {
+			t.Errorf("%s and %s should conflict", DefOf(c[0]).Label, DefOf(c[1]).Label)
+		}
+	}
+	if Conflicts(Striking, Gay) || Conflicts(Gracious, ColdHearted) {
+		t.Error("false conflict")
+	}
+	if DefOf(Gay).Rarity != 10 || DefOf(Bisexual).Rarity != 10 || DefOf(Asexual).Rarity != 20 || DefOf(Striking).Rarity != 0 {
+		t.Error("orientation rarity")
+	}
+	if DefOf(Striking).Beauty != 2 || DefOf(Grotesque).Beauty != -2 {
+		t.Error("beauty")
+	}
+	if e := DefOf(Idle).Effects(); !strings.Contains(e, "Work speed -40%") {
+		t.Errorf("idle effects %q", e)
+	}
+	for _, d := range All() {
+		if strings.Contains(d.Note, "{") {
+			t.Errorf("%s: placeholder in note %q", d.Label, d.Note)
+		}
 	}
 }

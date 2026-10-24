@@ -354,7 +354,7 @@ func (a *App) moveCopyButtons(b game.BuildingView, r button) []button {
 }
 
 func hasBuildTool(kind string) bool {
-	for _, t := range archTools {
+	for _, t := range allArchTools() {
 		if t.build == kind {
 			return true
 		}

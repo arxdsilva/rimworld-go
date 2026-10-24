@@ -40,6 +40,7 @@ var archCategories = []struct{ id, label string }{
 	{"furniture", "Furniture"},
 	{"production", "Production"},
 	{"security", "Security"},
+	{"misc", "Misc"}, // ENG-003: marriage and party spots
 }
 
 var archTools = []archTool{
@@ -135,8 +136,31 @@ var archTools = []archTool{
 		desc: "Springs on raiders and predators that walk over it, then is re-laid as a blueprint. Colonists step around it safely."},
 }
 
+// archToolsPendingArt (ENG-003) are tools whose world sprites and icons
+// the art pipeline does not generate yet (ART_DIRECTION "Social & host
+// systems asset list"): the card draws drawIconFallback, the building and
+// its blueprint pendingArtFallback. Each moves to archTools, and so under
+// TestGeneratedArtCoversRenderer, with its art; TestPendingArtToolsLackArt
+// fails as soon as that art exists.
+var archToolsPendingArt = []archTool{
+	{id: "brewing_bench", label: "Brewing bench", category: "production", icon: "brewing_bench", mode: placeSingle, build: "brewing bench",
+		desc: "Brews brewgrain into beer (2x1). Select it to add bills. Q/E rotates."},
+	{id: "drug_table", label: "Drug table", category: "production", icon: "drug_table", mode: placeSingle, build: "drug table",
+		desc: "Steeps ashleaf into tea and presses spark tablets (2x1). Select it to add bills. Q/E rotates."},
+	{id: "marriage_spot", label: "Marriage spot", category: "misc", icon: "marriage_spot", mode: placeSingle, build: "marriage spot",
+		desc: "Where engaged couples hold their wedding (2x1). Free and instant. Q/E rotates."},
+	{id: "party_spot", label: "Party spot", category: "misc", icon: "party_spot", mode: placeSingle, build: "party spot",
+		desc: "Where the colony gathers for parties. Free and instant."},
+}
+
+// allArchTools is every architect tool: the ones with art, then the ones
+// still waiting for it.
+func allArchTools() []archTool {
+	return append(append(make([]archTool, 0, len(archTools)+len(archToolsPendingArt)), archTools...), archToolsPendingArt...)
+}
+
 func toolByID(id string) (archTool, bool) {
-	for _, t := range archTools {
+	for _, t := range allArchTools() {
 		if t.id == id {
 			return t, true
 		}
@@ -146,7 +170,7 @@ func toolByID(id string) (archTool, bool) {
 
 func toolsIn(category string) []archTool {
 	var out []archTool
-	for _, t := range archTools {
+	for _, t := range allArchTools() {
 		if t.category == category {
 			out = append(out, t)
 		}

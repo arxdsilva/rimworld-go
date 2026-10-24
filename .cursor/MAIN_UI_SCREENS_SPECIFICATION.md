@@ -616,6 +616,24 @@ duration where knowable.
 Add/cancel/reorder valid procedures and show required materials/medicine
 and relevant risks.
 
+## ENG-003 contract (inspector Health tab)
+
+-   **Entry:** the pawn inspector's Health tab (live since ENG-003).
+-   **Regions:** capacities with percent; pain; body-part rows (hurt,
+    missing, scarred, artificial); queued operations; drug lines
+    (highs, tolerance, addictions).
+-   **Information:** `Simulation.Health(id)` → `game.HealthView`
+    (`Capacities`, `Parts`, `Pain`, `Operations`, `Drugs`). Read-only.
+-   **Actions / Commands:** add operation (`command.AddOperation`:
+    `Pawn`, `Index`=body.OpKind, `Build`=part, `Stuff`=implant item),
+    cancel operation (`command.RemoveOperation`), drug policy
+    (`command.SetDrugPolicy`, `Mode`=drug.Preset). Not wired yet (M1, M2).
+-   **States:** `ok == false` shows "No data yet." in dim text; a dead
+    pawn shows the last state; operation buttons explain why disabled
+    (no doctor, no medicine, no implant item).
+-   [-] Tab live with the read model and the placeholder; body rows,
+    operations and drug lines arrive with M1/M2.
+
 ------------------------------------------------------------------------
 
 # 15. Pawn Social Screen
@@ -634,6 +652,24 @@ Explain relationships and social opinion.
 -   off-map relationships.
 
 Opinion breakdown distinguishes A→B from B→A.
+
+## ENG-003 contract (inspector Social tab)
+
+-   **Entry:** the pawn inspector's Social tab (live since ENG-003).
+-   **Regions:** relation table (relation label, name, my opinion /
+    their opinion, status: on map, prisoner, away, dead); hover card
+    with both opinion breakdowns; romance note line; social log below
+    with an interaction icon per line (`ui_icon/social_*`).
+-   **Information:** `Simulation.Social(id)` → `game.SocialView`
+    (`Relations []RelationRowView`, `Log []SocialLogLineView`).
+    Opinions are points (the sim keeps centi-points). A→B and B→A are
+    separate columns and separate breakdowns (`TermsTo`, `TermsFrom`).
+-   **Actions / Commands:** read-only; clicking a row selects/jumps to
+    that pawn when on the map. Weighty log lines also go to History.
+-   **States:** `ok == false` shows "No data yet."; empty relations show
+    "Knows nobody yet."; off-map people show their whereabouts.
+-   [-] Tab live with the read model and the placeholder; rows, hover
+    breakdowns and the log arrive with M3/M4.
 
 ------------------------------------------------------------------------
 
@@ -734,6 +770,21 @@ maintenance.
 -   sowing toggle;
 -   plant requirements;
 -   growth/yield information.
+
+## ENG-003 contract (allowed areas)
+
+-   **Entry:** Architect → Zones → Areas, and a per-pawn "Area" picker
+    on the Schedule/Assign screen.
+-   **Regions:** list of up to 10 areas (name, cell count), paint/clear
+    tools, rename field.
+-   **Information:** `Simulation.Areas()` → `[]game.AreaView`
+    (`Index`, `Name`, `Cells`).
+-   **Commands:** `command.PaintArea` (`Index`, X..X2/Y..Y2, `Enabled`
+    paints or clears), `command.RenameArea` (`Index`, `Name`),
+    `command.AssignArea` (`Pawn`, `Index`, -1 = unrestricted).
+-   **States:** no areas yet: "No areas: add one to restrict where
+    colonists go."; the 10-area cap disables "New area" with the reason.
+-   [ ] Not wired yet (M9).
 
 ------------------------------------------------------------------------
 
@@ -1015,6 +1066,24 @@ Manage captured pawns.
 Show recent warden progress and explain missing warden/food/bed
 problems.
 
+## ENG-003 contract (inspector Prisoner tab)
+
+-   **Entry:** selecting a prisoner shows a Prisoner tab in the pawn
+    inspector; the Capture / Arrest orders come from the right-click
+    menu on a downed or targetable pawn.
+-   **Regions:** mode selector (none, reduce resistance, recruit,
+    release, execute); resistance bar; assigned warden; bed line.
+-   **Information:** `Simulation.Prisoner(id)` → `game.PrisonerView`
+    (`Mode` = prisoner.Mode, `Resistance`, `Warden`, `ForPrisonersBed`).
+-   **Commands:** `command.SetPrisonerMode` (`Target`, `Mode`),
+    `command.ReleasePrisoner` (`Target`), `command.Capture` /
+    `command.Arrest` (`Pawn`, `Target`), `command.SetBedForPrisoners`
+    (`Target` = bed, `Enabled`). Wardening is the Warden work column
+    (off by default).
+-   **States:** `ok == false`: no tab; no warden enabled, no prisoner
+    bed or no food each show a warning line with the fix.
+-   [ ] Not wired yet (M8).
+
 ------------------------------------------------------------------------
 
 # 28. Trade Screen
@@ -1111,6 +1180,18 @@ notable accomplishments.
 
 Long graphs require downsampling rather than rendering every sample.
 
+## ENG-003 contract (History tab)
+
+-   **Entry:** bottom-bar History tab.
+-   **Regions:** chronological list, newest first, filter chips by kind
+    (social, death, wedding, fight, recruit).
+-   **Information:** `Simulation.History()` → `[]game.HistoryEntryView`
+    (`Tick`, `Text`, `Kind`, `Pawns`).
+-   **Actions:** click a line to select/jump to a pawn named in it
+    (when on the map). Read-only; no commands.
+-   **States:** empty: "Nothing worth remembering has happened yet."
+-   [ ] Not wired yet (M4).
+
 ------------------------------------------------------------------------
 
 # 31. Quest Screen
@@ -1200,6 +1281,20 @@ movement cost, forage and ownership.
 
 Show path, travel time, terrain cost and invalid route reasons.
 
+## ENG-003 contract (World tab)
+
+-   **Entry:** bottom-bar World tab (the globe view of §7 in read-only
+    colony mode).
+-   **Regions:** globe with the colony tile and caravan markers; caravan
+    list on the side.
+-   **Information:** `Simulation.WorldMap()` → `game.WorldMapView`
+    (`Tile`, `Caravans []CaravanView`).
+-   **Actions / Commands:** "Form caravan" opens §34; selecting a
+    caravan opens §35.
+-   **States:** no caravans: the list says so; the colony tile is always
+    marked.
+-   [ ] Not wired yet (M9).
+
 ------------------------------------------------------------------------
 
 # 34. Form Caravan Screen
@@ -1242,6 +1337,17 @@ Build an expedition and verify it can survive the journey.
 -   send;
 -   cancel.
 
+## ENG-003 contract (minimal slice)
+
+-   **Entry:** World tab → Form caravan.
+-   **Regions:** colonist and animal pick lists (checkboxes), the
+    destination tile picked on the globe, a summary (count, speed).
+-   **Commands:** `command.FormCaravan` (`Name` = comma-separated member
+    ids, `Count` = destination tile).
+-   **States:** no members picked or no destination: Send disabled with
+    the reason; downed or drafted colonists are listed disabled.
+-   [ ] Not wired yet (M9); no goods or mass budget in this slice.
+
 ------------------------------------------------------------------------
 
 # 35. Caravan Inspector
@@ -1271,6 +1377,16 @@ Manage an active world-traveling group.
 -   attack;
 -   settle;
 -   return/reform where appropriate.
+
+## ENG-003 contract (minimal slice)
+
+-   **Entry:** selecting a caravan on the World tab.
+-   **Information:** `game.CaravanView` (`ID`, `Members`, `Tile`,
+    `Dest`, `Progress` percent to the next tile, `State`).
+-   **Commands:** `command.CaravanReturn` (`Target` = caravan id).
+-   **States:** arrived caravans show "Waiting at destination";
+    returning ones show the trip home.
+-   [ ] Not wired yet (M9).
 
 ------------------------------------------------------------------------
 

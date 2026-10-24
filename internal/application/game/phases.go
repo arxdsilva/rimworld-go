@@ -11,9 +11,11 @@ const (
 	PhaseNeeds     = "needs"
 	PhaseAI        = "ai"
 	PhaseJobs      = "jobs"
+	PhaseSocial    = "social" // ENG-003: after jobs
 	PhaseAnimals   = "animals"
 	PhaseThreats   = "threats"
 	PhaseIncidents = "incidents"
+	PhaseWorld     = "world" // ENG-003: after incidents
 	PhaseWeather   = "weather"
 	PhaseMovement  = "movement"
 )
@@ -21,7 +23,7 @@ const (
 // Phases lists the phase names in Step order.
 func Phases() []string {
 	return []string{PhaseCommands, PhasePlants, PhaseClimate, PhaseInfection, PhaseNeeds, PhaseAI,
-		PhaseJobs, PhaseAnimals, PhaseThreats, PhaseIncidents, PhaseWeather, PhaseMovement}
+		PhaseJobs, PhaseSocial, PhaseAnimals, PhaseThreats, PhaseIncidents, PhaseWorld, PhaseWeather, PhaseMovement}
 }
 
 // PhaseObserver receives the wall-clock duration of every Step phase
@@ -41,8 +43,9 @@ func (g *Game) stepObserved(n int) {
 	}{
 		{PhaseCommands, g.phaseCommands}, {PhasePlants, g.phasePlants}, {PhaseClimate, g.phaseClimate},
 		{PhaseInfection, g.phaseInfection}, {PhaseNeeds, g.phaseNeeds}, {PhaseAI, g.phaseAI},
-		{PhaseJobs, g.phaseJobs}, {PhaseAnimals, g.phaseAnimals}, {PhaseThreats, g.phaseThreats},
-		{PhaseIncidents, g.phaseIncidents}, {PhaseWeather, g.phaseWeather}, {PhaseMovement, g.phaseMovement},
+		{PhaseJobs, g.phaseJobs}, {PhaseSocial, g.phaseSocial}, {PhaseAnimals, g.phaseAnimals},
+		{PhaseThreats, g.phaseThreats}, {PhaseIncidents, g.phaseIncidents}, {PhaseWorld, g.phaseWorld},
+		{PhaseWeather, g.phaseWeather}, {PhaseMovement, g.phaseMovement},
 	}
 	for i := 0; i < n; i++ {
 		for _, p := range phases {

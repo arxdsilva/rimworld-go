@@ -236,6 +236,7 @@ func (g *Game) finishSetup() {
 		g.grantResearch(p)
 	}
 	g.scheduleThreats() // raids.go: the storyteller's first plan
+	g.seedFamilies()    // people.go: the founders' relations
 }
 
 // grantResearch finishes project p and everything it requires.

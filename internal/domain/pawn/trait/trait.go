@@ -37,8 +37,37 @@ const (
 	Gentle
 	ColdHardy
 	Sturdy
+	// Social and host systems (ENG-003, append only, saved): looks,
+	// temperament, orientation, voice, distrust, pace, appetite for
+	// drugs and for implants. Generation offers them only outside Legacy
+	// rules (Generated).
+	Striking
+	Fair
+	Homely
+	Grotesque
+	Gracious
+	ColdHearted
+	Bloodthirsty
+	Austere
+	Asexual
+	Gay
+	Bisexual
+	GratingVoice
+	RaspingBreath
+	DistrustsMen
+	DistrustsWomen
+	Idle
+	Abstainer
+	Indulgent
+	Hedonist
+	AugmentFan
+	NaturalPurist
 	NumTraits
 )
+
+// legacyTraits is how many traits (None included) generation knew before
+// ENG-003: Legacy rules draw from these only, so old seeds keep their pawns.
+const legacyTraits = Sturdy + 1
 
 // Conflict groups: traits sharing a non-zero group exclude each other.
 const (
@@ -50,6 +79,12 @@ const (
 	GroupAppetite
 	GroupStandards
 	GroupTrigger
+	// ENG-003.
+	GroupBeauty
+	GroupOrientation
+	GroupChem
+	GroupAugment
+	GroupMisanthropy
 )
 
 // Def is one trait's definition.
@@ -68,6 +103,14 @@ type Def struct {
 	// Needs is what the trait is pointless without: it never pairs with a
 	// backstory incapable of any of these (Green thumb needs Plants).
 	Needs backstory.Bits
+	// Rarity (ENG-003): 0 is the normal generation weight; N > 0 makes the
+	// trait N times rarer.
+	Rarity uint8
+	// Note is a plain summary of an effect no stat mod expresses ("Beauty
+	// +2"), shown with Effects.
+	Note string
+	// Beauty is the trait's looks (-2..+2), read by social opinion.
+	Beauty int8
 }
 
 var defs = [NumTraits]Def{
@@ -132,6 +175,66 @@ var defs = [NumTraits]Def{
 	Sturdy: {Key: "sturdy", Label: "Sturdy",
 		Desc: "{name} keeps going through injuries that would floor most people.",
 		Mods: []stat.Mod{{Stat: stat.PainTolerance, Add: 15}}},
+	// ENG-003. Effects beyond stat mods are read by the social, drug and
+	// body systems; Note says what they are.
+	Striking: {Key: "striking", Label: "Striking", Group: GroupBeauty, Beauty: 2, Note: "Beauty +2",
+		Desc: "Heads turn when {name} walks into a room, and {they} stopped noticing years ago."},
+	Fair: {Key: "fair", Label: "Fair", Group: GroupBeauty, Beauty: 1, Note: "Beauty +1",
+		Desc: "{name} has the kind of open, pleasant face that people warm to without knowing why."},
+	Homely: {Key: "homely", Label: "Homely", Group: GroupBeauty, Beauty: -1, Note: "Beauty -1",
+		Desc: "Nobody would call {name} handsome, and people sometimes forget to look at {them} at all."},
+	Grotesque: {Key: "grotesque", Label: "Grotesque", Group: GroupBeauty, Beauty: -2, Note: "Beauty -2",
+		Desc: "{name}'s face makes strangers flinch, which has taught {them} a great deal about strangers."},
+	Gracious: {Key: "gracious", Label: "Gracious", Note: "Never insults or slights anyone",
+		Desc: "{name} has a kind word for everyone and means most of them."},
+	ColdHearted: {Key: "cold_hearted", Label: "Cold-hearted", Note: "Unmoved by death, grief and the suffering of others",
+		Desc: "{name} weighs people like tools and feels nothing much when one breaks."},
+	Bloodthirsty: {Key: "bloodthirsty", Label: "Bloodthirsty", Needs: backstory.Violence, Note: "Enjoys fighting and killing",
+		Desc: "{name} comes alive in a fight, and the quiet days leave {them} restless."},
+	Austere: {Key: "austere", Label: "Austere", Note: "Indifferent to fine rooms; content with little",
+		Desc: "{name} wants a roof, a blanket and nothing more, and distrusts anyone who wants more."},
+	Asexual: {Key: "asexual", Label: "Asexual", Group: GroupOrientation, Rarity: 20, Note: "Feels no romantic attraction",
+		Desc: "{name} likes people well enough but has never felt the pull others talk about."},
+	Gay: {Key: "gay", Label: "Gay", Group: GroupOrientation, Rarity: 10, Note: "Attracted to the same sex",
+		Desc: "{name} is drawn to people of {their} own sex."},
+	Bisexual: {Key: "bisexual", Label: "Bisexual", Group: GroupOrientation, Rarity: 10, Note: "Attracted to either sex",
+		Desc: "{name} falls for a person, never for a man or a woman as such."},
+	GratingVoice: {Key: "grating_voice", Label: "Grating voice", Note: "Others find the voice off-putting",
+		Desc: "{name}'s voice sets teeth on edge, however pleasant the words."},
+	RaspingBreath: {Key: "rasping_breath", Label: "Rasping breath", Note: "Others find the breathing a little off-putting",
+		Desc: "Every breath {name} takes rattles like a loose shutter in the wind."},
+	DistrustsMen: {Key: "distrusts_men", Label: "Distrusts men", Group: GroupMisanthropy, Note: "Thinks less of men",
+		Desc: "Something long ago taught {name} to keep men at arm's length."},
+	DistrustsWomen: {Key: "distrusts_women", Label: "Distrusts women", Group: GroupMisanthropy, Note: "Thinks less of women",
+		Desc: "{name} expects the worst of women and is rarely talked out of it."},
+	Idle: {Key: "idle", Label: "Idle", Group: GroupPace,
+		Desc: "{name} treats every job as a suggestion and every chair as an invitation.",
+		Mods: []stat.Mod{{Stat: stat.WorkSpeed, Mul: 600}}},
+	Abstainer: {Key: "abstainer", Label: "Abstainer", Group: GroupChem, Note: "Refuses drugs; dislikes using them",
+		Desc: "{name} has seen what a bottle does to people and wants no part of it."},
+	Indulgent: {Key: "indulgent", Label: "Indulgent", Group: GroupChem, Note: "Craves drugs now and then",
+		Desc: "{name} rarely says no to a drink, and sometimes goes looking for one."},
+	Hedonist: {Key: "hedonist", Label: "Hedonist", Group: GroupChem, Note: "Craves drugs; needs a steady supply",
+		Desc: "For {name}, a day without something to take the edge off is a day wasted."},
+	AugmentFan: {Key: "augment_fan", Label: "Augment fan", Group: GroupAugment, Note: "Happier with artificial parts",
+		Desc: "{name} sees the body as a first draft and dreams of upgrades."},
+	NaturalPurist: {Key: "natural_purist", Label: "Natural purist", Group: GroupAugment, Note: "Unhappy with artificial parts",
+		Desc: "{name} would rather limp than walk on something made in a workshop."},
+}
+
+// Generated lists the traits pawn generation may roll, in ID order: under
+// legacy rules only the original set (so existing seeds keep their pawns),
+// otherwise every trait.
+func Generated(legacy bool) []ID {
+	n := NumTraits
+	if legacy {
+		n = legacyTraits
+	}
+	out := make([]ID, 0, n-1)
+	for t := ID(1); t < n; t++ {
+		out = append(out, t)
+	}
+	return out
 }
 
 func init() {
@@ -204,6 +307,9 @@ func (d Def) Effects() string {
 	var parts []string
 	for _, m := range d.Mods {
 		parts = append(parts, stat.Format(m))
+	}
+	if d.Note != "" {
+		parts = append(parts, d.Note)
 	}
 	for _, k := range sortedKinds(d.ThoughtScale) {
 		parts = append(parts, "\""+mood.DefOf(k).Label+"\" x"+pct(int(d.ThoughtScale[k])))

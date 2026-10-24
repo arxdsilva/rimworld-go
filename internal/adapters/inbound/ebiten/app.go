@@ -593,6 +593,10 @@ func (a *App) applyClick(id string) {
 		a.inspectTab = "gear"
 	case id == "inspector.log":
 		a.inspectTab = "log"
+	case id == "inspector.health":
+		a.inspectTab = "health"
+	case id == "inspector.social":
+		a.inspectTab = "social"
 	case a.applyWizardClick(id):
 	default:
 		a.apply(a.clickIntent(id))

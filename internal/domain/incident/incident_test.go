@@ -23,8 +23,8 @@ func TestPickDeterministic(t *testing.T) {
 		}
 		seen[a] = true
 	}
-	if len(seen) != 5 {
-		t.Fatalf("picked %v, want all 5 nature events", seen)
+	if len(seen) != 8 { // ENG-003 added visitors, wanderer joins and party
+		t.Fatalf("picked %v, want all 8 nature events", seen)
 	}
 }
 

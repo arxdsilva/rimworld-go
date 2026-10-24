@@ -23,6 +23,11 @@ const (
 	TakenALiking // a wild animal tames itself
 	TimbergnawGnawing
 	MadAnimal // one wild animal goes manhunter (threat pool)
+	// ENG-003 (our weights): a group of visitors stops by, a wanderer asks
+	// to join, the colony throws a party.
+	VisitorGroup
+	WandererJoins
+	Party
 	NumIDs
 )
 
@@ -48,7 +53,10 @@ var defs = [NumIDs]Def{
 	TakenALiking: {Key: "taken_a_liking", Name: "Taken a liking", Category: Nature, Weight: 10, Cooldown: 8, MinDay: 6},
 	TimbergnawGnawing: {Key: "timbergnaw_gnawing", Name: "Timbergnaw gnawing", Category: Nature, Weight: 7, Cooldown: 20, MinDay: 10,
 		Biomes: biome.Of(biome.BorealForest, biome.Tundra, biome.ColdBog, biome.TemperateForest)},
-	MadAnimal: {Key: "mad_animal", Name: "Mad animal", Category: Threat, Weight: 1, Cooldown: 10, MinDay: 6},
+	MadAnimal:     {Key: "mad_animal", Name: "Mad animal", Category: Threat, Weight: 1, Cooldown: 10, MinDay: 6},
+	VisitorGroup:  {Key: "visitor_group", Name: "Visitors", Category: Nature, Weight: 12, Cooldown: 8, MinDay: 4},
+	WandererJoins: {Key: "wanderer_joins", Name: "Wanderer joins", Category: Nature, Weight: 6, Cooldown: 20, MinDay: 8},
+	Party:         {Key: "party", Name: "Party", Category: Nature, Weight: 8, Cooldown: 10, MinDay: 6},
 }
 
 func init() {

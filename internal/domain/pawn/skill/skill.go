@@ -113,6 +113,8 @@ func ForWork(t work.Type) (ID, bool) {
 		return Medicine, true
 	case work.Research:
 		return Intellectual, true
+	case work.Warden:
+		return Social, true
 	}
 	return 0, false
 }

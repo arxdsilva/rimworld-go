@@ -67,6 +67,15 @@ type Simulation interface {
 	ChunkLayer(cx, cy int) game.ChunkView
 	PlantsIn(x0, y0, x1, y1 int, buf []int32) []int32
 	MinimapLayer(ver uint64) (game.MinimapView, bool)
+	// ENG-003 social and host-system read models: a colonist's Social and
+	// Health tabs, a prisoner's tab (ok false: nothing to show), the World
+	// tab, the allowed areas and the colony History.
+	Social(id entity.EntityID) (game.SocialView, bool)
+	Health(id entity.EntityID) (game.HealthView, bool)
+	Prisoner(id entity.EntityID) (game.PrisonerView, bool)
+	WorldMap() game.WorldMapView
+	Areas() []game.AreaView
+	History() []game.HistoryEntryView
 }
 
 var _ Simulation = (*game.Game)(nil)

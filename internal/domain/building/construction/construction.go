@@ -66,6 +66,14 @@ const (
 	// PodShell is the empty shell of an arrival pod: placed by the arrival,
 	// never designated, walkable, and salvaged for steel.
 	PodShell
+	// Social and host systems (ENG-003, append only, saved): a brewing
+	// bench and a drug table (2x1 benches), and two free floor markings
+	// placed instantly like a sleeping spot: a 2x1 marriage spot where
+	// weddings are held and a 1x1 party spot where parties gather.
+	BrewingBench
+	DrugTable
+	MarriageSpot
+	PartySpot
 	kindCount
 )
 
@@ -187,6 +195,12 @@ var defs = [kindCount]Def{
 	HospitalBed: {Kind: HospitalBed, Name: "hospital bed", Wood: 45, Work: 200, Layer: LayerObject, Rotatable: true,
 		Size: [2]int{1, 2}, MetalOK: true, Components: 2},
 	PodShell: {Kind: PodShell, Name: "pod shell", Layer: LayerObject, MetalOK: true, MetalOnly: true, Placed: true, Salvage: 6},
+	BrewingBench: {Kind: BrewingBench, Name: "brewing bench", Wood: 8, Work: 150, Layer: LayerObject, BlocksMove: true,
+		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
+	DrugTable: {Kind: DrugTable, Name: "drug table", Wood: 8, Work: 180, Layer: LayerObject, BlocksMove: true,
+		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
+	MarriageSpot: {Kind: MarriageSpot, Name: "marriage spot", Layer: LayerObject, Rotatable: true, Size: [2]int{2, 1}},
+	PartySpot:    {Kind: PartySpot, Name: "party spot", Layer: LayerObject},
 }
 
 // MaxHP is how much damage a building takes before it is destroyed.
@@ -503,6 +517,8 @@ type Building struct {
 	Deconstruct bool   // designated for removal
 	WorkLeft    int    // remaining deconstruct work once started
 	Damage      int    // damage taken (raiders bashing, bullets); repaired by builders
+	// ForPrisoners marks a bed for prisoners only (ENG-003).
+	ForPrisoners bool
 }
 
 // HP is the building's remaining hit points.

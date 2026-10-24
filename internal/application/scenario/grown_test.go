@@ -64,6 +64,11 @@ func TestGrownGolden(t *testing.T) {
 	if testing.Short() {
 		t.Skip("long golden run")
 	}
+	// Re-pinned (ENG-003): StateHash's sparse encoding (encoding only, on
+	// f957fc8a with no other change), then CompleteResearch also completing
+	// the three new projects (Brewing, Herbal remedies, Prosthetics): after
+	// Build and 1 000 and 5 000 ticks every saved field is identical except
+	// Research, and the new social fields are empty.
 	// Re-pinned (PLAY-010): animals react to every attack, predators charge
 	// colonists who come close, unarmed colonists flee sooner, colonists
 	// and tame animals walk through each other, and grass regrows from
@@ -80,7 +85,7 @@ func TestGrownGolden(t *testing.T) {
 	// Re-pinned earlier: CompleteResearch now also completes the NG-1 research
 	// projects (more unlocks), and StateHash became format-independent;
 	// identical with and without the E1 engine changes.
-	const want uint64 = 0xf9db977252c82e01
+	const want uint64 = 0x685eaed536cbc5c3
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

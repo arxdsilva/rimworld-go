@@ -28,15 +28,19 @@ import (
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
+	"rimworld-go/internal/domain/pawn/body"
+	"rimworld-go/internal/domain/pawn/drug"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/mentalbreak"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/needs"
+	"rimworld-go/internal/domain/pawn/prisoner"
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/component"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/area"
 	"rimworld-go/internal/domain/world/geology"
 	"rimworld-go/internal/domain/world/grid"
 	"rimworld-go/internal/domain/world/plant"
@@ -167,9 +171,12 @@ type saveState struct {
 	OrderQueue map[entity.EntityID][]savedOrder
 	Apparel    map[entity.EntityID]worn
 	// Prio is the priorities as saved before animal handling (11 work
-	// types); Prios replaces it (SIM-026).
+	// types); Prios replaces it (SIM-026), with 12 types; PrioList (ENG-003)
+	// replaces that, as plain slices so appending a work type never breaks
+	// a save again (gob refuses an array whose length changed).
 	Prio       map[entity.EntityID]legacyPriorities
-	Prios      map[entity.EntityID]work.Priorities // absent in older saves
+	Prios      map[entity.EntityID]priorities12 // absent in older saves
+	PrioList   map[entity.EntityID][]uint8      // absent in older saves
 	RaiderIDs  []entity.EntityID
 	Raiders    map[entity.EntityID]raiderState
 	RaidGroups []raidGroup
@@ -280,6 +287,18 @@ type saveState struct {
 	Geo       geology.Map
 	Smooths   map[[2]int]bool
 	StructVer uint64
+	// Social and host systems (ENG-003), all absent in older saves (nil:
+	// fresh). Each block is filled by its milestone; RNGStreams holds the
+	// base seed and the state of every stream used so far.
+	Social     *socialSave
+	People     *peopleSave
+	Bodies     []entry[body.Body]
+	Drugs      []entry[drug.State]
+	Prisoners  []entry[prisoner.State]
+	World      *worldSave
+	Areas      *area.Set
+	History    []historyEntry
+	RNGStreams map[string][]byte
 }
 
 // Info describes the game for a save header.
@@ -320,7 +339,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 		Exposure: map[entity.EntityID][2]int{}, NoComfort: g.noComfort,
 		NoFood: g.noFood, Postponed: g.exportPostponed(), PostSweep: g.postponed.sweepAt, PostOrders: g.exportOrders(), RestedFree: g.restedFree, Calm: g.calm, Banked: g.banked,
 		OrderQueue: map[entity.EntityID][]savedOrder{}, Apparel: g.apparel, Joy: g.joy,
-		Prios: g.prio, Scheds: g.scheds,
+		PrioList: exportPrios(g.prio), Scheds: g.scheds,
 		RaiderIDs: g.raiderIDs, Raiders: g.raiders, RaidGroups: g.raidGroups, NextThreat: g.nextThreat, ThreatsOn: g.threatsOn,
 		Breaks: map[entity.EntityID]savedBreak{}, RoomGrid: g.roomGrid, RoomTemps: g.roomTemps,
 		Memories: g.memories, Claims: g.reserve.Export(), Pending: g.pending,
@@ -354,6 +373,12 @@ func (g *Game) Save(w io.Writer, name string) error {
 	s.ZoneMap, s.Logs, s.Incoming = g.exportZones(), g.exportLogs(), g.exportIncoming()
 	s.Deliveries = g.exportDeliveries()
 	s.Geo, s.Smooths, s.StructVer = g.geo, g.smooths, g.structVer
+	s.Social, s.People, s.World = g.exportSocial(), g.exportPeople(), g.exportWorld()
+	s.Bodies, s.Drugs, s.Prisoners = g.exportBodies(), g.exportDrugs(), g.exportPrisoners()
+	s.Areas, s.History = g.areas.Export(), slices.Clone(g.history)
+	if s.RNGStreams, err = g.exportStreams(); err != nil {
+		return fmt.Errorf("save rng streams: %w", err)
+	}
 	// BestSpeed: a fifth of the default level's time for a file about a
 	// sixth larger (NG-1 §6.8: a 500² save in ≤ 300 ms, ≤ 4 MB).
 	zw, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
@@ -440,8 +465,12 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	setMap(&g.calm, s.Calm)
 	setMap(&g.banked, s.Banked)
 	setMap(&g.apparel, s.Apparel)
-	setMap(&g.prio, s.Prios)
-	if s.Prios == nil {
+	switch {
+	case s.PrioList != nil:
+		g.prio = importPrios(s.PrioList)
+	case s.Prios != nil:
+		g.migrateWarden(s.Prios)
+	default:
 		g.migrateHandling(s.Prio)
 	}
 	setMap(&g.raiders, s.Raiders)
@@ -505,6 +534,16 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.importDeliveries(s.Deliveries)
 	g.afterLoadAnimals() // legacy corpses and bills (wildlife.go)
 	g.importGeology(s.Geo, s.Smooths, s.StructVer)
+	g.importSocial(s.Social)
+	g.importPeople(s.People)
+	g.importWorld(s.World)
+	g.importBodies(s.Bodies)
+	g.importDrugs(s.Drugs)
+	g.importPrisoners(s.Prisoners)
+	g.areas, g.history = area.Import(s.Areas), s.History
+	if err := g.importStreams(s.RNGStreams); err != nil {
+		return nil, info, fmt.Errorf("restore rng streams: %w", err)
+	}
 	g.warmIndexes(true) // jobindex.go: indexes, rooms and regions now, not on the first tick
 	return g, info, nil
 }
@@ -613,6 +652,41 @@ func setMap[K comparable, V any](dst *map[K]V, src map[K]V) {
 
 // legacyPriorities is work.Priorities before the Handle work type.
 type legacyPriorities [work.Handle]uint8
+
+// priorities12 is work.Priorities before the Warden work type (ENG-003).
+type priorities12 [work.Warden]uint8
+
+// exportPrios is the PrioList save field: each colonist's priorities as a
+// plain slice in work.Type order.
+func exportPrios(m map[entity.EntityID]work.Priorities) map[entity.EntityID][]uint8 {
+	out := make(map[entity.EntityID][]uint8, len(m))
+	for id, p := range m {
+		out[id] = slices.Clone(p[:])
+	}
+	return out
+}
+
+// importPrios rebuilds exportPrios' map: work types missing from an older,
+// shorter list load off, extra ones are ignored.
+func importPrios(m map[entity.EntityID][]uint8) map[entity.EntityID]work.Priorities {
+	out := make(map[entity.EntityID]work.Priorities, len(m))
+	for id, l := range m {
+		var p work.Priorities
+		copy(p[:], l)
+		out[id] = p
+	}
+	return out
+}
+
+// migrateWarden loads the priorities of a save from before the Warden work
+// type (12 types): every work type keeps its priority, Warden is off.
+func (g *Game) migrateWarden(old map[entity.EntityID]priorities12) {
+	for id, op := range old {
+		var p work.Priorities
+		copy(p[:], op[:])
+		g.prio[id] = p
+	}
+}
 
 // migrateHandling loads the priorities of a save from before animal
 // handling: every work type keeps its priority, and Handle (taming moved

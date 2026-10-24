@@ -1317,3 +1317,45 @@ If a contributor can add a new bed, weapon, plant, hairstyle, animal,
 building, icon, or plugin asset without asking how scale, pivots,
 palette, lighting, naming, metadata, or export work, this pipeline is
 doing its job.
+
+## 37. Social & host systems asset list (ENG-003)
+
+Normative key list for the social and host-system feature set
+(`.cursor/SOCIAL_SYSTEM_CONTRACT.md`). None of these exist yet: until each
+is generated the renderer draws its vector stand-in (`social_art.go`,
+`drawIconFallback`) and the Architect keeps the tool in
+`archToolsPendingArt`. When an asset lands, move its tool to `archTools`
+(TestPendingArtToolsLackArt fails until you do), add its keys to the
+renderer's sprite lookups, and only then let `TestGeneratedArtCoversRenderer`
+cover it. Every family follows §12-§17 (pivots, palette, outline rules) and
+§24 metadata; all designs original.
+
+- **Furniture / markings** (rotatable ones in four facings):
+  - `furniture/brewing_bench_<facing>` (2x1 bench, barrels and a mash tub),
+    `furniture/drug_table_<facing>` (2x1, mortar, drying leaves).
+  - `overlay/marriage_spot_<facing>` (2x1 floor marking, ribbon arch
+    feel), `overlay/party_spot` (1x1 floor marking, lantern ring).
+  - Icons `ui_icon/brewing_bench`, `ui_icon/drug_table`,
+    `ui_icon/marriage_spot`, `ui_icon/party_spot`.
+- **Crops (never an outline or contour, like every plant):**
+  `plant/brewgrain_<young|mature|harvestable>`,
+  `plant/ashleaf_<young|mature|harvestable>`, their item sprites
+  `item/brewgrain`, `item/ashleaf` and icons `ui_icon/brewgrain`,
+  `ui_icon/ashleaf`. Adding them to `plant.Crops()` is what puts them in
+  the growing-zone menu.
+- **Items:** `item/beer`, `item/ashleaf_tea`, `item/spark_tablet`,
+  `item/peg_leg`, `item/prosthetic_leg`, `item/prosthetic_arm`,
+  `item/wooden_hand`, `item/denture`, `item/hearing_trumpet` (the item
+  names have spaces: map them to these keys in the renderer's
+  `itemSprite` when the art lands).
+- **Social interaction icons** (log lines, speech bubbles):
+  `ui_icon/social_chitchat`, `social_deep_talk`, `social_slight`,
+  `social_insult`, `social_kind_words`, `social_romance`, `social_rebuff`,
+  `social_proposal`, `social_breakup`, `social_fight`, `social_lovin`.
+- **Order and tab icons:** `ui_icon/capture`, `ui_icon/arrest`,
+  `ui_icon/prisoner`, `ui_icon/caravan`, `ui_icon/history`,
+  `ui_icon/surgery`.
+- **Overlays:** a social-fight lightning indicator over both brawlers
+  (`overlay/fight_lightning`), and a face-scar portrait overlay for
+  disfigured colonists (`pawn/face_scar_<facing>`, drawn over the head on
+  portraits and in the world at portrait LOD).

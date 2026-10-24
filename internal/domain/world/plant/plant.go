@@ -39,6 +39,10 @@ const (
 	ElephantEar
 	FireLily
 	Dandelion
+	// Drug crops (ENG-003, append only, saved): brewgrain is brewed into
+	// beer, ashleaf into tea and tablets. Neither ever has an outline.
+	Brewgrain
+	Ashleaf
 	numSpecies
 )
 
@@ -164,6 +168,11 @@ var defs = [numSpecies]Def{
 	// Cotton: a warm-season fibre crop; five bolls of cloth a plant.
 	Cotton: {Species: Cotton, Name: "cotton", Label: "cloth", GrowTicks: growDays(9), HarvestWork: 40, Yield: 5,
 		Yields: item.Cloth, CutWork: 10, Crop: true, Sens: 70, SowWork: 25, FrostKill: -10},
+	// ENG-003: brewgrain grows like wheat, ashleaf like healroot.
+	Brewgrain: {Species: Brewgrain, Name: "brewgrain", Label: "brewgrain", GrowTicks: growDays(10), HarvestWork: 35, Yield: 8,
+		Yields: item.Brewgrain, CutWork: 10, Crop: true, Sens: 80, SowWork: 20, FrostKill: -80},
+	Ashleaf: {Species: Ashleaf, Name: "ashleaf", Label: "ashleaf", GrowTicks: growDays(6.5), HarvestWork: 40, Yield: 2,
+		Yields: item.AshleafLeaf, CutWork: 8, Crop: true, Sens: 80, SowWork: 35, FrostKill: -20},
 }
 
 // Growth temperature, tenths of a degree C: nothing grows at or below
@@ -204,7 +213,9 @@ func Killed(s Species, tenthsC int) bool {
 	return d.ColdKill != 0 && tenthsC < d.ColdKill || d.HeatKill != 0 && tenthsC > d.HeatKill
 }
 
-// Crops lists the farm crops in menu order (fastest first).
+// Crops lists the farm crops in menu order (fastest first). Brewgrain and
+// ashleaf (ENG-003) join the menu with their crop art (ART_DIRECTION
+// "Social & host systems asset list"); until then they can't be sown.
 func Crops() []Species {
 	return []Species{Radish, Lettuce, Beans, Healroot, Potato, Corn, Pumpkin, Cotton, Wheat}
 }

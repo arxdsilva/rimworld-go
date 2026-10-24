@@ -15,7 +15,7 @@ import (
 	"rimworld-go/internal/domain/sim/command"
 )
 
-var workColumns = []string{"FF", "Doc", "Grow", "Cook", "Bld", "Hunt", "Haul", "Cln", "Rsh", "Mine", "Crft", "Hndl"}
+var workColumns = []string{"FF", "Doc", "Grow", "Cook", "Bld", "Hunt", "Haul", "Cln", "Rsh", "Mine", "Crft", "Hndl", "Ward"}
 
 // workLive maps live work columns (indexes into workColumns, which follow
 // work.Type order) to their command and pawn flag.
@@ -34,6 +34,7 @@ var workLive = map[int]struct {
 	9:  {command.WorkMine, func(p game.PawnView) bool { return p.WorkMine }},
 	10: {command.WorkCraft, func(p game.PawnView) bool { return p.WorkCraft }},
 	11: {command.WorkHandle, func(p game.PawnView) bool { return false }}, // priorities carry it
+	12: {command.WorkWarden, func(p game.PawnView) bool { return false }}, // ENG-003: off by default
 }
 
 // workPriority is the colonist's priority for a work column (0 = off).
@@ -76,6 +77,7 @@ var workColSkill = [...]struct {
 	9:  {skill.Mining, true},
 	10: {skill.Crafting, true},
 	11: {skill.Animals, true},
+	12: {skill.Social, true},
 }
 
 // workHelp is the header hover card of each work column.
@@ -92,6 +94,7 @@ var workHelp = [...]string{
 	9:  "Mining\nDig out rock and ore. Skill: Mining.",
 	10: "Crafting\nWork at benches: workbench, tailoring, stonecutting. Skill: Crafting.",
 	11: "Handling\nTame, milk, shear and collect from animals. Skill: Animals.",
+	12: "Warden\nChat with prisoners, recruit them and bring them food. Off unless you turn it on. Skill: Social.",
 }
 
 // workIncapable reports colonist p can never do work column col, and why

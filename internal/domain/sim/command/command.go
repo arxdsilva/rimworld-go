@@ -88,6 +88,47 @@ const (
 	// SetDifficulty sets the difficulty: Name is a preset key, or
 	// "custom:" + difficulty.Encode(settings) (NG-1 §2.4).
 	SetDifficulty
+	// Social and host systems (ENG-003). Field use per
+	// .cursor/SOCIAL_SYSTEM_CONTRACT.md C1.
+	//
+	// AddOperation queues surgery on patient Pawn: Index is the body.OpKind,
+	// Build the body part, Stuff the item kind (an implant).
+	AddOperation
+	// RemoveOperation drops Pawn's queued operation in slot Index.
+	RemoveOperation
+	// SetDrugPolicy sets Pawn's drug policy to Mode (a drug.Preset).
+	SetDrugPolicy
+	// AssignBedOwner gives bed Target's slot Index to Pawn (0 clears it).
+	AssignBedOwner
+	// SetAnimalMaster makes Pawn the master of animal Target (0 clears).
+	SetAnimalMaster
+	// SetTraining turns training skill Index on animal Target on or off
+	// (Enabled).
+	SetTraining
+	// GiftAnimal gives animal Target to visitor Pawn.
+	GiftAnimal
+	// Capture sends captor Pawn to take downed pawn Target prisoner.
+	Capture
+	// Arrest sends arrester Pawn to arrest Target.
+	Arrest
+	// SetPrisonerMode sets prisoner Target's interaction to Mode (a
+	// prisoner.Mode).
+	SetPrisonerMode
+	// SetBedForPrisoners marks bed Target for prisoners (Enabled) or not.
+	SetBedForPrisoners
+	// FormCaravan sends the comma-separated member ids in Name to world
+	// tile Count.
+	FormCaravan
+	// CaravanReturn brings caravan Target home.
+	CaravanReturn
+	// PaintArea paints (Enabled) or clears area Index over X..X2, Y..Y2.
+	PaintArea
+	// RenameArea names area Index Name.
+	RenameArea
+	// AssignArea restricts Pawn to area Index (-1: unrestricted).
+	AssignArea
+	// ReleasePrisoner lets prisoner Target go.
+	ReleasePrisoner
 )
 
 // WorkType is a compact work-column id for SetWorkEnabled.
@@ -106,6 +147,7 @@ const (
 	WorkResearch
 	WorkClean
 	WorkHandle // taming, milking, shearing (SIM-026)
+	WorkWarden // prisoners (ENG-003)
 )
 
 // Order is a player-forced job for Prioritize.

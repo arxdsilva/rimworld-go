@@ -39,16 +39,56 @@ const (
 	Landed
 	LovesWork
 	Difficulty
+	// Social and host systems (ENG-003, append only, saved): social
+	// interactions, romance, gatherings, drugs, animal bonds, prisoners,
+	// the body and grief. Grief and PartnerOpinion carry their magnitude in
+	// Memory.Value (the def's Value is 0).
+	Insulted
+	KindWords
+	RebuffedMood
+	HadToRebuff
+	CheatedOn
+	ProposalRejected
+	GotMarried
+	AttendedWedding
+	AttendedParty
+	BrokenUpWith
+	Divorced
+	Lovin
+	PartnerOpinion
+	SleptAlone
+	Hungover
+	Drunk
+	Withdrawal
+	HighOnDrug
+	BondedMaster
+	BondedNotMaster
+	BondedDied
+	BondedLost
+	BondedGivenAway
+	BondedReleased
+	Imprisoned
+	ColonistLost
+	DisfiguredSelf
+	MissingPart
+	Surgery
+	Grief
 	numKinds
 )
 
 // Def is a thought's label, mood effect and duration (0 = state thought,
 // recomputed every tick instead of remembered).
+//
+// StackLimit and StackFactor (ENG-003) are how many memories of the kind
+// may stack and the permille weight of each further one; zero means the
+// default, 1 and 1000 (no stacking).
 type Def struct {
-	Label    string
-	Value    int
-	Duration uint64
-	Group    uint8 // thoughts sharing a non-zero group replace each other
+	Label       string
+	Value       int
+	Duration    uint64
+	Group       uint8 // thoughts sharing a non-zero group replace each other
+	StackLimit  uint8
+	StackFactor int32
 }
 
 const (
@@ -67,43 +107,90 @@ const (
 const day = uint64(clock.TicksPerDay)
 
 var defs = [numKinds]Def{
-	SleptOutside:      {"slept outside", -6, day, groupSleepPlace},
-	SleptOnGround:     {"slept on the ground", -4, day, groupSleepPlace},
-	SleptInBed:        {"slept in a bed", 2, day, groupSleepPlace},
-	SleptInAwfulRoom:  {"slept in an awful room", -4, day, groupSleepRoom},
-	SleptInNiceRoom:   {"slept in a nice room", 5, day, groupSleepRoom},
-	AteMeal:           {"ate a cooked meal", 4, day, groupMealKind},
-	AteRaw:            {"ate raw food", -5, day, groupMealKind},
-	AteAtTable:        {"ate at a table", 3, day, groupMealTable},
-	AteWithoutTable:   {"ate without a table", -3, day, groupMealTable},
-	Hungry:            {"hungry", -8, 0, groupNone},
-	Tired:             {"tired", -5, 0, groupNone},
-	Cold:              {"cold", -4, 0, groupNone},
-	Freezing:          {"freezing", -10, 0, groupNone},
-	Hot:               {"hot", -4, 0, groupNone},
-	Sweltering:        {"sweltering", -10, 0, groupNone},
-	RecreationStarved: {"recreation-starved", -12, 0, groupNone},
-	Bored:             {"bored", -5, 0, groupNone},
-	Entertained:       {"entertained", 4, 0, groupNone},
-	Catharsis:         {"catharsis", 30, day, groupNone},
-	Sick:              {"sick", -8, 0, groupNone},
-	InPain:            {"in pain", -6, 0, groupNone},
-	ColonistDied:      {"a colonist died", -6, 3 * day, groupNone},
-	UnburiedCorpse:    {"unburied corpse nearby", -2, 0, groupNone},
-	LaidToRest:        {"laid a friend to rest", 3, day, groupLaidToRest},
-	Soaked:            {"soaked", -3, day / 4, groupSoaked},
-	SnowDay:           {"snow day", 2, day, groupSnowDay},
-	Landed:            {"rough landing", -4, day, groupNone},
-	LovesWork:         {"doing work I love", 2, 0, groupLovesWork},
-	Difficulty:        {"the way of the world", 0, 0, groupNone},
+	SleptOutside:      {"slept outside", -6, day, groupSleepPlace, 0, 0},
+	SleptOnGround:     {"slept on the ground", -4, day, groupSleepPlace, 0, 0},
+	SleptInBed:        {"slept in a bed", 2, day, groupSleepPlace, 0, 0},
+	SleptInAwfulRoom:  {"slept in an awful room", -4, day, groupSleepRoom, 0, 0},
+	SleptInNiceRoom:   {"slept in a nice room", 5, day, groupSleepRoom, 0, 0},
+	AteMeal:           {"ate a cooked meal", 4, day, groupMealKind, 0, 0},
+	AteRaw:            {"ate raw food", -5, day, groupMealKind, 0, 0},
+	AteAtTable:        {"ate at a table", 3, day, groupMealTable, 0, 0},
+	AteWithoutTable:   {"ate without a table", -3, day, groupMealTable, 0, 0},
+	Hungry:            {"hungry", -8, 0, groupNone, 0, 0},
+	Tired:             {"tired", -5, 0, groupNone, 0, 0},
+	Cold:              {"cold", -4, 0, groupNone, 0, 0},
+	Freezing:          {"freezing", -10, 0, groupNone, 0, 0},
+	Hot:               {"hot", -4, 0, groupNone, 0, 0},
+	Sweltering:        {"sweltering", -10, 0, groupNone, 0, 0},
+	RecreationStarved: {"recreation-starved", -12, 0, groupNone, 0, 0},
+	Bored:             {"bored", -5, 0, groupNone, 0, 0},
+	Entertained:       {"entertained", 4, 0, groupNone, 0, 0},
+	Catharsis:         {"catharsis", 30, day, groupNone, 0, 0},
+	Sick:              {"sick", -8, 0, groupNone, 0, 0},
+	InPain:            {"in pain", -6, 0, groupNone, 0, 0},
+	ColonistDied:      {"a colonist died", -3, 6 * day, groupNone, 0, 0},
+	UnburiedCorpse:    {"unburied corpse nearby", -2, 0, groupNone, 0, 0},
+	LaidToRest:        {"laid a friend to rest", 3, day, groupLaidToRest, 0, 0},
+	Soaked:            {"soaked", -3, day / 4, groupSoaked, 0, 0},
+	SnowDay:           {"snow day", 2, day, groupSnowDay, 0, 0},
+	Landed:            {"rough landing", -4, day, groupNone, 0, 0},
+	LovesWork:         {"doing work I love", 2, 0, groupLovesWork, 0, 0},
+	Difficulty:        {"the way of the world", 0, 0, groupNone, 0, 0},
+	// ENG-003: values follow the published RimWorld wiki by explicit user
+	// decision (balance override); labels are original. "stack" kinds
+	// stack up to 5 at 900 permille each.
+	Insulted:         {"insulted", -5, 2 * day, groupNone, stackLimit, stackFactor},
+	KindWords:        {"kind words", 5, 2 * day, groupNone, stackLimit, stackFactor},
+	RebuffedMood:     {"rebuffed", -5, 3 * day, groupNone, 0, 0},
+	HadToRebuff:      {"had to turn someone down", -3, 3 * day, groupNone, 0, 0},
+	CheatedOn:        {"cheated on", -20, 25 * day, groupNone, 0, 0},
+	ProposalRejected: {"proposal turned down", -18, 25 * day, groupNone, 0, 0},
+	GotMarried:       {"got married", 40, 30 * day, groupNone, 0, 0},
+	AttendedWedding:  {"attended a wedding", 20, 10 * day, groupNone, 0, 0},
+	AttendedParty:    {"attended a party", 8, 10 * day, groupNone, 0, 0},
+	BrokenUpWith:     {"was dumped", -15, 25 * day, groupNone, 0, 0},
+	Divorced:         {"divorced", -20, 30 * day, groupNone, 0, 0},
+	Lovin:            {"intimacy", 8, 3 * day, groupNone, stackLimit, stackFactor},
+	PartnerOpinion:   {"feelings for my partner", 0, 0, groupNone, 0, 0},
+	SleptAlone:       {"sleeping alone", -4, 0, groupNone, 0, 0},
+	Hungover:         {"hungover", -5, day / 2, groupNone, 0, 0},
+	Drunk:            {"tipsy", 6, 0, groupNone, 0, 0},
+	Withdrawal:       {"withdrawal", -15, 0, groupNone, 0, 0},
+	HighOnDrug:       {"high", 10, 0, groupNone, 0, 0},
+	BondedMaster:     {"my bonded animal", 5, 0, groupNone, 0, 0},
+	BondedNotMaster:  {"kept from my bonded animal", -3, 0, groupNone, 0, 0},
+	BondedDied:       {"bonded animal died", -8, 20 * day, groupNone, stackLimit, stackFactor},
+	BondedLost:       {"bonded animal lost", -8, 20 * day, groupNone, stackLimit, stackFactor},
+	BondedGivenAway:  {"gave my bonded animal away", -10, 60 * day, groupNone, stackLimit, stackFactor},
+	BondedReleased:   {"released my bonded animal", -5, 15 * day, groupNone, stackLimit, stackFactor},
+	Imprisoned:       {"imprisoned", -10, 0, groupNone, 0, 0},
+	ColonistLost:     {"a colonist went missing", -3, 6 * day, groupNone, 0, 0},
+	DisfiguredSelf:   {"disfigured", 0, 0, groupNone, 0, 0},
+	MissingPart:      {"missing a body part", -5, 0, groupNone, 0, 0},
+	Surgery:          {"had surgery", -3, day, groupNone, 0, 0},
+	Grief:            {"grief", 0, 0, groupNone, 0, 0},
 }
+
+// stackLimit and stackFactor are the "stack" kinds' StackLimit and
+// StackFactor (ENG-003).
+const (
+	stackLimit  = 5
+	stackFactor = 900
+)
 
 // DefOf returns the thought definition.
 func DefOf(k Kind) Def {
 	if k >= numKinds {
 		return Def{}
 	}
-	return defs[k]
+	d := defs[k]
+	if d.StackLimit == 0 {
+		d.StackLimit = 1
+	}
+	if d.StackFactor == 0 {
+		d.StackFactor = 1000
+	}
+	return d
 }
 
 // Base is mood with no thoughts.
@@ -112,10 +199,14 @@ const Base = 50
 // LowMood is the threshold below which work slows down.
 const LowMood = 30
 
-// Memory is a remembered thought that expires.
+// Memory is a remembered thought that expires. Subject is the pawn or
+// animal it is about (0: none) and Value overrides the def's mood effect
+// (0: use Def.Value); both ENG-003, zero in older saves.
 type Memory struct {
 	Kind    Kind
 	Expires uint64
+	Subject uint64
+	Value   int
 }
 
 // Memories is a pawn's remembered thoughts (one per kind, newest wins).
@@ -179,7 +270,11 @@ func Active(m Memories, states ...Kind) []Thought {
 	var out []Thought
 	for _, x := range m {
 		d := DefOf(x.Kind)
-		out = append(out, Thought{x.Kind, d.Label, d.Value})
+		v := d.Value
+		if x.Value != 0 {
+			v = x.Value
+		}
+		out = append(out, Thought{x.Kind, d.Label, v})
 	}
 	for _, k := range states {
 		d := DefOf(k)

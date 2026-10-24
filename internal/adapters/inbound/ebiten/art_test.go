@@ -355,6 +355,28 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 	}
 }
 
+// TestPendingArtToolsLackArt (ENG-003): the tools still waiting for art
+// draw vector stand-ins; once an icon or world sprite of one is generated
+// it must move to archTools, where TestGeneratedArtCoversRenderer covers
+// it.
+func TestPendingArtToolsLackArt(t *testing.T) {
+	c := realArt(t)
+	for _, tl := range archToolsPendingArt {
+		if c.has("ui_icon/" + tl.icon) {
+			t.Errorf("%s: ui_icon/%s exists; move the tool to archTools", tl.id, tl.icon)
+		}
+		if k := buildSprite(tl.build, "south", 0, false, false); k != "" {
+			t.Errorf("%s: buildSprite gives %q; move the tool to archTools", tl.id, k)
+		}
+		if _, ok := pendingArtKinds[tl.build]; !ok {
+			t.Errorf("%s: no vector stand-in for %q", tl.id, tl.build)
+		}
+		if _, ok := buildable(tl.build); !ok {
+			t.Errorf("%s builds unknown kind %q", tl.id, tl.build)
+		}
+	}
+}
+
 func TestArtFrameNames(t *testing.T) {
 	t.Parallel()
 	if walkFrames != 12 || workFrames != 6 || trotFrames != 8 {

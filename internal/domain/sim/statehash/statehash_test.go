@@ -88,3 +88,34 @@ func TestOfFieldsSkipsZeroAndOrders(t *testing.T) {
 		t.Fatal("value or name change not seen")
 	}
 }
+
+// TestOfFieldsAppendedZeroFields: OfFields encodes values sparsely, so a
+// struct field or array slot appended at its zero value (an additive save
+// field deep inside a record) keeps the hash, while any non-zero value,
+// even in the new field, still changes it.
+func TestOfFieldsAppendedZeroFields(t *testing.T) {
+	type v1 struct {
+		A int
+		P [2]uint8
+	}
+	type v2 struct {
+		A int
+		P [3]uint8
+		B bool
+		S []int
+	}
+	old := OfFields(map[string]any{"M": map[v1]v1{{A: 1}: {A: 2}}})
+	if OfFields(map[string]any{"M": map[v1]v1{{A: 1}: {A: 2, P: [2]uint8{0, 0}}}}) != old {
+		t.Fatal("zero map value slot moved the hash")
+	}
+	if a, b := OfFields(map[string]any{"X": []v1{{1, [2]uint8{4, 0}}}}), OfFields(map[string]any{"X": []v2{{A: 1, P: [3]uint8{4}}}}); a != b {
+		t.Fatal("appended zero field or array slot moved the hash")
+	}
+	base := OfFields(map[string]any{"X": []v2{{A: 1}}})
+	for name, c := range map[string]v2{"new field": {A: 1, B: true}, "new slot": {A: 1, P: [3]uint8{0, 0, 1}},
+		"moved value": {P: [3]uint8{1}}, "slice": {A: 1, S: []int{0}}} {
+		if OfFields(map[string]any{"X": []v2{c}}) == base {
+			t.Errorf("%s: same hash", name)
+		}
+	}
+}

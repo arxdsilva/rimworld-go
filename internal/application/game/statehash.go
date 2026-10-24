@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"encoding/gob"
 	"fmt"
+	"maps"
 	"reflect"
 	"slices"
 
@@ -71,6 +72,18 @@ func normalisedFields(info SaveInfo, s *saveState) map[string]any {
 	// still hold. TestSaveV2RoundTripSetup checks it survives a save.
 	for _, k := range [...]string{"SkillLive", "StainDrip", "PostSweep"} {
 		delete(f, k)
+	}
+	// ENG-003: priorities are saved as slices (PrioList) now; they are
+	// hashed as the fixed-size arrays they were (a new work type at its
+	// zero value leaves the sparse encoding alone). The streams' base seed
+	// is configuration: the streams themselves are hashed once used.
+	if l := s.PrioList; l != nil {
+		delete(f, "PrioList")
+		f["Prios"] = importPrios(l)
+	}
+	if st := maps.Clone(s.RNGStreams); st != nil {
+		delete(st, streamSeedKey)
+		f["RNGStreams"] = st
 	}
 	return f
 }

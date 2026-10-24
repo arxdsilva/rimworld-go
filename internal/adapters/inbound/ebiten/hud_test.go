@@ -223,7 +223,7 @@ func TestArchitectCategoriesListEveryTool(t *testing.T) {
 			seen[b.id] = true
 		}
 	}
-	for _, tool := range archTools {
+	for _, tool := range allArchTools() {
 		if !seen["arch.tool."+tool.id] {
 			t.Fatalf("tool %s is not reachable from any category", tool.id)
 		}

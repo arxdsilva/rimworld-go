@@ -32,6 +32,10 @@ const (
 	CauseHypothermia
 	CauseHeatstroke
 	CauseInfection
+	// CauseExecution and CauseSurgery (ENG-003): an executed prisoner, and a
+	// botched operation.
+	CauseExecution
+	CauseSurgery
 )
 
 func (c Cause) String() string {
@@ -48,6 +52,10 @@ func (c Cause) String() string {
 		return "heatstroke"
 	case CauseInfection:
 		return "infection"
+	case CauseExecution:
+		return "executed"
+	case CauseSurgery:
+		return "botched surgery"
 	default:
 		return ""
 	}

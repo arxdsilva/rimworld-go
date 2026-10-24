@@ -87,11 +87,31 @@ const (
 	Shear
 	// Smooth: working a rock wall or stone floor smooth (SIM-029).
 	Smooth
+	// Social and host systems (ENG-003, append only, saved): surgery,
+	// taking a drug, intimacy, joining a gathering, a social fight,
+	// capturing a downed pawn, wardening, carrying food to a prisoner,
+	// socialising, training an animal, arresting, a raider kidnapping,
+	// walking off the map, tending an animal and a visit.
+	Surgery
+	Ingest
+	Lovin
+	Gather
+	Brawl
+	Capture
+	Warden
+	DeliverFood
+	SocialRelax
+	Train
+	Arrest
+	Kidnap
+	ExitMap
+	TendAnimal
+	Visit
 )
 
 // IsIdle reports a free-time behaviour that any real work may replace.
 func (k Kind) IsIdle() bool {
-	return k == Wander || k == Chat || k == Relax || k == FireSide || k == Horseshoes
+	return k == Wander || k == Chat || k == Relax || k == FireSide || k == Horseshoes || k == SocialRelax || k == Gather
 }
 
 func (k Kind) String() string {
@@ -166,6 +186,36 @@ func (k Kind) String() string {
 		return "milk"
 	case Shear:
 		return "shear"
+	case Surgery:
+		return "operate"
+	case Ingest:
+		return "take drug"
+	case Lovin:
+		return "make love"
+	case Gather:
+		return "join gathering"
+	case Brawl:
+		return "brawl"
+	case Capture:
+		return "capture"
+	case Warden:
+		return "warden"
+	case DeliverFood:
+		return "deliver food"
+	case SocialRelax:
+		return "socialise"
+	case Train:
+		return "train"
+	case Arrest:
+		return "arrest"
+	case Kidnap:
+		return "kidnap"
+	case ExitMap:
+		return "leave the map"
+	case TendAnimal:
+		return "tend animal"
+	case Visit:
+		return "visit"
 	default:
 		return "idle"
 	}

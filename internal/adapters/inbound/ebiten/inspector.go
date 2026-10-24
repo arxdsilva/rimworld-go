@@ -51,11 +51,12 @@ func (a *App) inspectorButtons() []button {
 		bio.disabled, bio.reason, bio.selected = true, "No biography for this colonist", false
 	}
 	tabs := []buttonSpec{
-		{id: "inspector.character", label: "Character", selected: a.inspectTab != "needs" && a.inspectTab != "gear" && a.inspectTab != "log" && !bioOn, w: tabW("Character"), h: 22},
+		{id: "inspector.character", label: "Character", selected: a.inspectTab != "needs" && a.inspectTab != "gear" && a.inspectTab != "log" &&
+			a.inspectTab != "health" && a.inspectTab != "social" && !bioOn, w: tabW("Character"), h: 22},
 		{id: "inspector.needs", label: "Needs", selected: a.inspectTab == "needs", w: tabW("Needs"), h: 22},
 		bio,
-		{id: "inspector.health", label: "Health", disabled: true, reason: "not implemented", w: tabW("Health"), h: 22},
-		{id: "inspector.social", label: "Social", disabled: true, reason: "not implemented", w: tabW("Social"), h: 22},
+		{id: "inspector.health", label: "Health", selected: a.inspectTab == "health", w: tabW("Health"), h: 22},
+		{id: "inspector.social", label: "Social", selected: a.inspectTab == "social", w: tabW("Social"), h: 22},
 		{id: "inspector.gear", label: "Gear", selected: a.inspectTab == "gear", w: tabW("Gear"), h: 22},
 		{id: "inspector.log", label: "Log", selected: a.inspectTab == "log", w: tabW("Log"), h: 22},
 	}
@@ -273,8 +274,9 @@ func (a *App) drawInspector(screen *ebiten.Image) {
 	}
 	r := inspectorRect()
 	drawPanel(screen, r.x, r.y, r.w, r.h)
-	if a.bioTabOn() {
-		// bio_ui.go declares and paints the tab's content with the widget kit.
+	if a.bioTabOn() || a.kitTabOn() {
+		// bio_ui.go and social_tabs_ui.go declare and paint the tab's
+		// content with the widget kit.
 		mx, my := a.currentCursor()
 		a.drawButtons(screen, a.inspectorButtons(), mx, my)
 		return

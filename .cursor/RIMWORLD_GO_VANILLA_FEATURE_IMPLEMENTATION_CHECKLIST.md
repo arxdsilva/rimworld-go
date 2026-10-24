@@ -190,7 +190,7 @@ The first playable surface.
 
 ## 2.3 Inspect UI
 
--   [-] **Generic inspect panel** (name, job, status/reason, tile, food/rest bars; Health/Social/Gear tabs disabled)
+-   [-] **Generic inspect panel** (name, job, status/reason, tile, food/rest bars; Gear tab live; Health/Social tabs live with a "No data yet." placeholder until their read models fill, ENG-003)
     -   Label/type.
     -   Hit points/condition where relevant.
     -   Position.

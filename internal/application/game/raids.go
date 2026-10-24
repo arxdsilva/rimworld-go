@@ -264,6 +264,7 @@ func (g *Game) raidFrom(kit []item.Kind, plan raidPlan, fac int) {
 		g.vital.Set(id, health.Record{Status: health.Alive})
 		g.equip[id] = kit[spawned]
 		g.raiders[id] = raiderState{Group: group, Arrived: uint64(g.clock.Now())}
+		g.raiderPerson(id, fac) // people.go: a world person (relations, capture)
 		spawned++
 	}
 	g.raidGroups[group].Size = spawned

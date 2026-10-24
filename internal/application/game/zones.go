@@ -167,7 +167,8 @@ func allows(s zone.Zone, k item.Kind) bool {
 		return s.Food
 	case k == item.Leather, k == item.HerbalMedicine, k == item.Cloth, k == item.Straw, k.IsCarpet(), k.IsApparel(), k.IsWeapon(),
 		k == item.Wool, k == item.EmberOil, item.IsMetal(k),
-		k == item.Components, k == item.IndustrialMedicine:
+		k == item.Components, k == item.IndustrialMedicine,
+		k.IsDrug(), k.IsImplant(), k == item.AshleafLeaf: // ENG-003
 		return true // goods: always welcome
 	}
 	return false

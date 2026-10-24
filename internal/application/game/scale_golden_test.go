@@ -17,6 +17,12 @@ import (
 // Re-pin: go test -run TestScaleGolden -v ./internal/application/game/
 // and copy the "got" values.
 //
+// Re-pinned (ENG-003): StateHash encodes saved values sparsely (struct
+// fields by name, zero ones skipped; arrays without trailing zeros), so
+// the social contract's appended record fields and work slot leave pins
+// alone. Encoding only: computed on f957fc8a with no other change, and
+// unchanged by the contract's enum and field additions.
+//
 // Re-pinned (PLAY-010): animals react to every attack (fight or flee,
 // penned ones inside the pen), predators charge colonists within 3 tiles,
 // unarmed colonists flee from 12 tiles, colonists and tame animals walk
@@ -42,12 +48,12 @@ import (
 // values are identical when computed on the contract commit (fbc76fd6)
 // and on the new save format.
 var scaleGolden = map[string]uint64{
-	"48x40/seed1":    0xb31191f837c3c677,
-	"48x40/seed7":    0x342dda381c866916,
-	"48x40/seed42":   0xe4d0a0b0e1c666af,
-	"120x120/seed1":  0xc1d1e177077c4082,
-	"120x120/seed7":  0xe5ec76240bab6cc3,
-	"120x120/seed42": 0x4019b650e8e4a53d,
+	"48x40/seed1":    0x1be2465b75aa16e,
+	"48x40/seed7":    0x6cde503330d642d7,
+	"48x40/seed42":   0x16b8cbab704dfc69,
+	"120x120/seed1":  0x6bef6f64166919c6,
+	"120x120/seed7":  0xb3e1c560d68a5398,
+	"120x120/seed42": 0x28d82550949d33ab,
 }
 
 const scaleGoldenTicks = 20000

@@ -63,6 +63,10 @@ type Rules struct {
 	Tech           backstory.Tag
 	NoClothes      bool
 	Taken          map[string]bool // nicknames already used
+	// Legacy rolls traits from the original set with the original weights
+	// (trait.Generated), so a seed makes exactly the pawn it made before
+	// the ENG-003 traits existed.
+	Legacy bool
 }
 
 // DaysPerYear converts AgeDays to years.
@@ -128,7 +132,7 @@ func Generate(seed uint64, slot, roll int, r Rules) Pawn {
 	if years >= adultAge {
 		p.Adulthood = pickBackstory(rng, backstory.Adulthood, r.Tech, p.Traits)
 	}
-	p.Traits = rollTraits(rng, p.Traits, p.Childhood, p.Adulthood)
+	p.Traits = rollTraits(rng, p.Traits, p.Childhood, p.Adulthood, r.Legacy)
 	p.Skills = rollSkills(rng, p, years)
 	p.Conditions = rollConditions(rng, r)
 	p.Look = rollLook(rng, p.Look, years, r.NoClothes)
@@ -250,17 +254,27 @@ func pickBackstory(rng *randx.Rand, slot backstory.Slot, tech backstory.Tag, tra
 	return cands[len(cands)-1].ID
 }
 
-// traitWeight: Gentle is rarer than the rest.
-func traitWeight(t trait.ID) int {
+// traitWeight: Gentle is rarer than the rest. Outside legacy rules the
+// weights are doubled so a trait's Rarity N can divide them (Rarity 10:
+// a tenth as likely; never below 1).
+func traitWeight(t trait.ID, legacy bool) int {
+	w := 10
 	if t == trait.Gentle {
-		return 4
+		w = 4
 	}
-	return 10
+	if legacy {
+		return w
+	}
+	w *= 2
+	if n := int(trait.DefOf(t).Rarity); n > 0 {
+		w = max(1, w/n)
+	}
+	return w
 }
 
 // rollTraits tops forced up to 1 (30%), 2 (50%) or 3 (20%) traits that
 // neither conflict with each other nor clash with the backstories.
-func rollTraits(rng *randx.Rand, forced []trait.ID, child, adult backstory.ID) []trait.ID {
+func rollTraits(rng *randx.Rand, forced []trait.ID, child, adult backstory.ID, legacy bool) []trait.ID {
 	out := append([]trait.ID(nil), forced...)
 	n := 1
 	switch x := rng.IntN(100); {
@@ -273,19 +287,19 @@ func rollTraits(rng *randx.Rand, forced []trait.ID, child, adult backstory.ID) [
 	for len(out) < n {
 		total := 0
 		var cands []trait.ID
-		for t := trait.ID(1); t < trait.NumTraits; t++ {
+		for _, t := range trait.Generated(legacy) {
 			if conflictsAny(t, out) || trait.Clashes(t, cb) || (adult != 0 && trait.Clashes(t, ab)) {
 				continue
 			}
 			cands = append(cands, t)
-			total += traitWeight(t)
+			total += traitWeight(t, legacy)
 		}
 		if total == 0 {
 			break
 		}
 		x := rng.IntN(total)
 		for _, t := range cands {
-			if x -= traitWeight(t); x < 0 {
+			if x -= traitWeight(t, legacy); x < 0 {
 				out = append(out, t)
 				break
 			}

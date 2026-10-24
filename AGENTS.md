@@ -31,6 +31,7 @@ Non-negotiable rules:
 - Run relevant tests and benchmarks. Tests always run with `-race` (`make test`, CI, agents, one-off `go test`); keep the suite inside CI's 10-minute `-race` budget (tests that need real art index it lazily: `realArt`/`testArt`/`atlasArt` in the ebiten package).
 - Do not weaken tests to pass CI.
 - Do not copy proprietary code, assets, text, or balancing data.
+  Exception (ENG-003): the social/host-system feature set uses published RimWorld wiki numbers by explicit user decision; names and prose stay original.
 - Remove unused assets and resources in the same change that makes them unused: sprites, sounds, fonts, metadata, palette entries, vendor packs, generated files and their loaders. Never keep a fallback asset nobody draws. An alias may stay only while something still reads it; delete it in the change that removes the last reader. `make art-check` fails on orphans not listed with a reason in `assets/metadata/orphan_allow.txt`.
 - Grass and plants (ground plants, bushes, crops, trees) never have a contour or outline.
 - Every scoped task must leave a concise handoff in `.cursor/handoffs/`.

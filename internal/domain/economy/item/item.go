@@ -88,6 +88,20 @@ const (
 	// industrial medicine is refined from herbal (NG-1 §4.8).
 	Components
 	IndustrialMedicine
+	// Social and host systems (ENG-003, append only, saved): drugs, their
+	// crops' harvests and the simple prosthetics. Brewgrain is a raw food;
+	// ashleaf is not food.
+	Beer
+	AshleafTea
+	SparkTablet
+	Brewgrain
+	AshleafLeaf
+	PegLeg
+	ProstheticLeg
+	ProstheticArm
+	WoodenHand
+	Denture
+	HearingTrumpet
 	numKinds
 )
 
@@ -99,7 +113,9 @@ var kindNames = [numKinds]string{"food", "wood", "stone", "berries", "potatoes",
 	"sandstone chunk", "granite chunk", "limestone chunk", "slate chunk", "marble chunk",
 	"sandstone blocks", "granite blocks", "limestone blocks", "slate blocks", "marble blocks",
 	"steel", "silver", "gold",
-	"components", "industrial medicine"}
+	"components", "industrial medicine",
+	"beer", "ashleaf tea", "spark tablet", "brewgrain", "ashleaf",
+	"peg leg", "prosthetic leg", "prosthetic arm", "wooden hand", "denture", "hearing trumpet"}
 
 // IsWeapon reports whether k can be equipped.
 func (k Kind) IsWeapon() bool { return k == Club || k == Rifle || k == Knife || k == Spear }
@@ -114,12 +130,12 @@ func (k Kind) IsCorpse() bool {
 // play: grains and dry beans are dense, leafy greens are light.
 var nutrition = [numKinds]int{Food: 4000, Berries: 1500, Meat: 2200, Meal: 6000,
 	Potatoes: 1600, Corn: 1700, Wheat: 2400, Beans: 2400, Lettuce: 450, Radishes: 500, Pumpkins: 800,
-	Milk: 900, Egg: 700}
+	Milk: 900, Egg: 700, Brewgrain: 1200}
 
 // preference ranks food choice: higher is eaten first.
 // Raw grain, dry beans and raw potatoes are edible but unappealing.
 var preference = [numKinds]int{Meal: 4, Food: 3, Berries: 2, Corn: 2, Lettuce: 2, Radishes: 2, Pumpkins: 2,
-	Potatoes: 1, Beans: 1, Wheat: 1, Meat: 1, Milk: 2, Egg: 1}
+	Potatoes: 1, Beans: 1, Wheat: 1, Meat: 1, Milk: 2, Egg: 1, Brewgrain: 1}
 
 // Nutrition is the hunger restored by eating one unit of k (0 if inedible).
 func (k Kind) Nutrition() int {
@@ -142,8 +158,14 @@ func (k Kind) Raw() bool { return k.IsFood() && k != Food && k != Meal }
 
 // Foods lists every edible kind.
 func Foods() []Kind {
-	return []Kind{Food, Berries, Potatoes, Corn, Wheat, Beans, Lettuce, Radishes, Pumpkins, Meat, Meal, Milk, Egg}
+	return []Kind{Food, Berries, Potatoes, Corn, Wheat, Beans, Lettuce, Radishes, Pumpkins, Meat, Meal, Milk, Egg, Brewgrain}
 }
+
+// IsDrug reports a drug: taken for its effect, not its nutrition (ENG-003).
+func (k Kind) IsDrug() bool { return k == Beer || k == AshleafTea || k == SparkTablet }
+
+// IsImplant reports a prosthetic installed by surgery (ENG-003).
+func (k Kind) IsImplant() bool { return k >= PegLeg && k <= HearingTrumpet }
 
 func (k Kind) String() string {
 	if k >= numKinds {

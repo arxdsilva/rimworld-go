@@ -390,6 +390,9 @@ func (g *Game) phaseAI() {
 		if g.mentalBreakTick(id, j) {
 			continue // acting out: no orders, no work
 		}
+		if g.socialDuty(id, j) {
+			continue // gathering.go: a party, wedding or social fight
+		}
 		// an unarmed colonist runs from an attacker before its orders,
 		// work or sleep; queued orders wait for it to calm down (flee.go)
 		if !g.drafted(id) && !g.fightsBack(id) && g.defend(id, j) {
@@ -496,7 +499,7 @@ func (g *Game) phaseAI() {
 			idling = j
 		}
 		if !needs.WorkScheduled(act) {
-			if g.assignWear(id) {
+			if g.assignWear(id) || g.assignDrugUse(id) { // drugs.go: a drink or a craving first
 				continue
 			}
 			g.keepIdling(id, idling) // recreation: free time
@@ -505,7 +508,7 @@ func (g *Game) phaseAI() {
 		if g.assignWorkByPriority(id) {
 			continue
 		}
-		if g.assignWear(id) {
+		if g.assignWear(id) || g.assignDrugUse(id) {
 			continue
 		}
 		g.keepIdling(id, idling) // nothing to do: free time
@@ -686,6 +689,9 @@ func (g *Game) assignSleepInPlace(id entity.EntityID) {
 func (g *Game) assignSleep(id entity.EntityID) {
 	if !g.alive(id) {
 		g.assignSleepInPlace(id)
+		return
+	}
+	if bid, slot, ok := g.partnerBed(id); ok && g.sleepInPartnerBed(id, bid, slot) { // beds.go
 		return
 	}
 	pos, _ := g.positions.Get(id)
@@ -952,6 +958,37 @@ func (g *Game) phaseJobs() {
 			g.doClean(id, j) // clean.go
 		case job.Wander, job.Chat, job.Relax, job.FireSide, job.Horseshoes, job.Hide:
 			g.doIdle(id, j)
+		// ENG-003: social and host-system jobs, each in its owner's file.
+		case job.Surgery:
+			g.doSurgery(id, j) // surgery.go
+		case job.Ingest:
+			g.doIngest(id, j) // drugs.go
+		case job.Lovin:
+			g.doLovin(id, j) // beds.go
+		case job.Gather:
+			g.doGather(id, j) // gathering.go
+		case job.Brawl:
+			g.doBrawl(id, j) // social_fight.go
+		case job.Capture:
+			g.doCapture(id, j) // prisoners.go
+		case job.Warden:
+			g.doWarden(id, j) // prisoners.go
+		case job.DeliverFood:
+			g.doDeliverFood(id, j) // prisoners.go
+		case job.SocialRelax:
+			g.doSocialRelax(id, j) // social.go
+		case job.Train:
+			g.doTrain(id, j) // bonds.go
+		case job.Arrest:
+			g.doArrest(id, j) // prisoners.go
+		case job.Kidnap:
+			g.doKidnap(id, j) // world_state.go
+		case job.ExitMap:
+			g.doExitMap(id, j) // world_state.go
+		case job.TendAnimal:
+			g.doTendAnimal(id, j) // bonds.go
+		case job.Visit:
+			g.doVisit(id, j) // world_state.go
 		default:
 			j.State = job.Complete
 			g.jobs.Set(id, j)

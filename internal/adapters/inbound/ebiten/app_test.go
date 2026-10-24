@@ -30,7 +30,30 @@ type stubSim struct {
 	incapable  map[entity.EntityID]map[work.Type]string
 	learned    map[entity.EntityID][skill.NumSkills]int
 	buildables []game.BuildableView
+	// ENG-003 social and host-system read models (nil/zero: none).
+	social    map[entity.EntityID]game.SocialView
+	health    map[entity.EntityID]game.HealthView
+	prisoners map[entity.EntityID]game.PrisonerView
+	worldMap  game.WorldMapView
+	areas     []game.AreaView
+	history   []game.HistoryEntryView
 }
+
+func (s *stubSim) Social(id entity.EntityID) (game.SocialView, bool) {
+	v, ok := s.social[id]
+	return v, ok
+}
+func (s *stubSim) Health(id entity.EntityID) (game.HealthView, bool) {
+	v, ok := s.health[id]
+	return v, ok
+}
+func (s *stubSim) Prisoner(id entity.EntityID) (game.PrisonerView, bool) {
+	v, ok := s.prisoners[id]
+	return v, ok
+}
+func (s *stubSim) WorldMap() game.WorldMapView      { return s.worldMap }
+func (s *stubSim) Areas() []game.AreaView           { return s.areas }
+func (s *stubSim) History() []game.HistoryEntryView { return s.history }
 
 func (s *stubSim) Step(n int) {
 	s.steps += n

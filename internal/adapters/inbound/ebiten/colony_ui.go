@@ -23,6 +23,7 @@ func (a *App) colonyUI(sw, sh int) {
 	}
 	a.factionsTabUI(sw, sh)
 	a.bioUI()
+	a.socialTabsUI() // social_tabs_ui.go: Health and Social tabs (ENG-003)
 	a.workTipsUI(sw, sh)
 	a.statusChipsUI(sw)
 }

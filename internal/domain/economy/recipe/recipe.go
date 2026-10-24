@@ -53,6 +53,18 @@ const (
 	// workbench behind research and a minimum skill.
 	FabricateComponent
 	RefineMedicine
+	// Social and host systems (ENG-003, append only, saved): beer at the
+	// brewing bench, ashleaf tea and spark tablets at the drug table, and
+	// the simple prosthetics at the workbench.
+	BrewBeer
+	BrewTea
+	PressTablet
+	MakePegLeg
+	MakeProstheticLeg
+	MakeProstheticArm
+	MakeWoodenHand
+	MakeDenture
+	MakeHearingTrumpet
 	numRecipes
 )
 
@@ -167,6 +179,29 @@ var defs = [numRecipes]Def{
 	RefineMedicine: {ID: RefineMedicine, Name: "refine_medicine", Label: "Refine industrial medicine",
 		Bench: construction.Workbench, Input: Input{Kind: item.HerbalMedicine, Qty: 2}, Output: item.IndustrialMedicine,
 		OutQty: 1, Work: 800, Skill: work.Doctor, Learn: skill.Medicine, MinSkill: 4},
+	// ENG-003: drugs (brewing is a cook's job) and prosthetics.
+	BrewBeer: {ID: BrewBeer, Name: "brew_beer", Label: "Brew beer", Bench: construction.BrewingBench,
+		Input: Input{Kind: item.Brewgrain, Qty: 6}, Output: item.Beer, OutQty: 3, Work: 600, Skill: work.Cook, Learn: skill.Cooking},
+	BrewTea: {ID: BrewTea, Name: "brew_tea", Label: "Brew ashleaf tea", Bench: construction.DrugTable,
+		Input: Input{Kind: item.AshleafLeaf, Qty: 4}, Output: item.AshleafTea, OutQty: 2, Work: 500, Skill: work.Craft, Learn: skill.Crafting},
+	PressTablet: {ID: PressTablet, Name: "press_tablet", Label: "Press spark tablet", Bench: construction.DrugTable,
+		Input: Input{Kind: item.AshleafLeaf, Qty: 6}, Output: item.SparkTablet, OutQty: 1, Work: 900, Skill: work.Craft,
+		Learn: skill.Crafting, MinSkill: 4},
+	MakePegLeg: {ID: MakePegLeg, Name: "make_peg_leg", Label: "Carve peg leg", Bench: construction.Workbench,
+		Input: Input{Kind: item.Wood, Qty: 10}, Output: item.PegLeg, OutQty: 1, Work: 600, Skill: work.Craft, Learn: skill.Crafting},
+	MakeProstheticLeg: {ID: MakeProstheticLeg, Name: "make_prosthetic_leg", Label: "Make prosthetic leg",
+		Bench: construction.Workbench, Input: Input{Kind: item.Steel, Qty: 20}, Output: item.ProstheticLeg, OutQty: 1,
+		Work: 1400, Skill: work.Craft, Learn: skill.Crafting, MinSkill: 5},
+	MakeProstheticArm: {ID: MakeProstheticArm, Name: "make_prosthetic_arm", Label: "Make prosthetic arm",
+		Bench: construction.Workbench, Input: Input{Kind: item.Steel, Qty: 20}, Output: item.ProstheticArm, OutQty: 1,
+		Work: 1400, Skill: work.Craft, Learn: skill.Crafting, MinSkill: 5},
+	MakeWoodenHand: {ID: MakeWoodenHand, Name: "make_wooden_hand", Label: "Carve wooden hand", Bench: construction.Workbench,
+		Input: Input{Kind: item.Wood, Qty: 8}, Output: item.WoodenHand, OutQty: 1, Work: 500, Skill: work.Craft, Learn: skill.Crafting},
+	MakeDenture: {ID: MakeDenture, Name: "make_denture", Label: "Carve denture", Bench: construction.Workbench,
+		Input: Input{Kind: item.Wood, Qty: 4}, Output: item.Denture, OutQty: 1, Work: 400, Skill: work.Craft, Learn: skill.Crafting},
+	MakeHearingTrumpet: {ID: MakeHearingTrumpet, Name: "make_hearing_trumpet", Label: "Make hearing trumpet",
+		Bench: construction.Workbench, Input: Input{Kind: item.Steel, Qty: 6}, Output: item.HearingTrumpet, OutQty: 1,
+		Work: 500, Skill: work.Craft, Learn: skill.Crafting},
 }
 
 // CutYield is how many blocks one chunk makes at the stonecutter table.

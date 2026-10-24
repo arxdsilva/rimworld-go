@@ -49,10 +49,12 @@ func TestFabricateAndRefineRecipes(t *testing.T) {
 }
 
 // TestEveryRecipeLearnsItsSkill: a recipe trains the skill of the work
-// type that does it (cremating is crafting); only the two advanced
-// recipes ask for a minimum level.
+// type that does it (cremating is crafting); only the advanced recipes
+// ask for a minimum level (ENG-003: spark tablets 4, steel prosthetics 5).
 func TestEveryRecipeLearnsItsSkill(t *testing.T) {
 	t.Parallel()
+	minSkill := map[recipe.ID]uint8{recipe.FabricateComponent: 6, recipe.RefineMedicine: 4,
+		recipe.PressTablet: 4, recipe.MakeProstheticLeg: 5, recipe.MakeProstheticArm: 5}
 	for _, d := range recipe.All() {
 		want, ok := skill.ForWork(d.Skill)
 		if !ok {
@@ -61,8 +63,8 @@ func TestEveryRecipeLearnsItsSkill(t *testing.T) {
 		if d.Learn != want {
 			t.Errorf("%s learns %s, want %s", d.Name, d.Learn.Key(), want.Key())
 		}
-		if d.ID != recipe.FabricateComponent && d.ID != recipe.RefineMedicine && d.MinSkill != 0 {
-			t.Errorf("%s: min skill %d", d.Name, d.MinSkill)
+		if d.MinSkill != minSkill[d.ID] {
+			t.Errorf("%s: min skill %d, want %d", d.Name, d.MinSkill, minSkill[d.ID])
 		}
 	}
 	if recipe.DefOf(recipe.Cremate).Learn != skill.Crafting || recipe.DefOf(recipe.ButcherAnimal).Learn != skill.Cooking {

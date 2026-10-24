@@ -23,6 +23,11 @@ const (
 	PainTolerance            // percent
 	LearnRate                // permille
 	RecreationRate           // permille: how fast recreation drains
+	// Social and host systems (ENG-003), all permille.
+	SocialImpact
+	NegotiationAbility
+	TradePriceImprovement
+	ArrestSuccess
 	NumStats
 )
 
@@ -50,20 +55,24 @@ var meta = [NumStats]struct {
 	label string
 	unit  unit
 }{
-	WorkSpeed:      {"Work speed", unitRate},
-	MoveSpeed:      {"Move speed", unitRate},
-	HungerRate:     {"Hunger rate", unitRate},
-	RestRate:       {"Rest rate", unitRate},
-	MoodOffset:     {"Mood", unitPoints},
-	BreakThreshold: {"Break threshold", unitPoints},
-	ColdComfort:    {"Cold comfort", unitTenthsC},
-	HeatComfort:    {"Heat comfort", unitTenthsC},
-	ShootAcc:       {"Shooting accuracy", unitPoints},
-	MeleeAcc:       {"Melee accuracy", unitPoints},
-	AimCooldown:    {"Aim time", unitRate},
-	PainTolerance:  {"Pain tolerance", unitPercent},
-	LearnRate:      {"Learning rate", unitRate},
-	RecreationRate: {"Recreation drain", unitRate},
+	WorkSpeed:             {"Work speed", unitRate},
+	MoveSpeed:             {"Move speed", unitRate},
+	HungerRate:            {"Hunger rate", unitRate},
+	RestRate:              {"Rest rate", unitRate},
+	MoodOffset:            {"Mood", unitPoints},
+	BreakThreshold:        {"Break threshold", unitPoints},
+	ColdComfort:           {"Cold comfort", unitTenthsC},
+	HeatComfort:           {"Heat comfort", unitTenthsC},
+	ShootAcc:              {"Shooting accuracy", unitPoints},
+	MeleeAcc:              {"Melee accuracy", unitPoints},
+	AimCooldown:           {"Aim time", unitRate},
+	PainTolerance:         {"Pain tolerance", unitPercent},
+	LearnRate:             {"Learning rate", unitRate},
+	RecreationRate:        {"Recreation drain", unitRate},
+	SocialImpact:          {"Social impact", unitRate},
+	NegotiationAbility:    {"Negotiation ability", unitRate},
+	TradePriceImprovement: {"Trade price improvement", unitRate},
+	ArrestSuccess:         {"Arrest success chance", unitRate},
 }
 
 // Label is the display name of a stat.
@@ -77,7 +86,8 @@ func (id ID) Label() string {
 // Base is the neutral sheet: rates 1000, offsets 0.
 func Base() Sheet {
 	var s Sheet
-	for _, id := range []ID{WorkSpeed, MoveSpeed, HungerRate, RestRate, AimCooldown, LearnRate, RecreationRate} {
+	for _, id := range []ID{WorkSpeed, MoveSpeed, HungerRate, RestRate, AimCooldown, LearnRate, RecreationRate,
+		SocialImpact, NegotiationAbility, TradePriceImprovement, ArrestSuccess} {
 		s[id] = 1000
 	}
 	return s

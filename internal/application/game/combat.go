@@ -211,15 +211,22 @@ func (g *Game) hurt(target entity.EntityID, dmg int, by entity.EntityID) {
 	v.Injury += dmg
 	g.vital.Set(target, v)
 	g.woundOpened(target)
+	if by != 0 {
+		g.onHarmed(target, by) // social.go: the victim's opinion of the attacker
+	}
 	switch {
 	case v.Injury >= health.MaxHP:
-		g.die(target, health.CauseInjury)
+		g.dieBy(target, health.CauseInjury, by)
 	case v.Injury >= g.downedAt(target) && v.Status == health.Alive: // skills.go: pain tolerance
 		g.down(target, health.CauseInjury)
 	}
 }
 
-func (g *Game) die(id entity.EntityID, cause health.Cause) {
+// die kills pawn id with no known killer.
+func (g *Game) die(id entity.EntityID, cause health.Cause) { g.dieBy(id, cause, 0) }
+
+// dieBy kills pawn id; killer is who dealt the last blow (0: none).
+func (g *Game) dieBy(id entity.EntityID, cause health.Cause, killer entity.EntityID) {
 	g.stainDeath(id) // stains.go
 	g.interrupt(id, job.Cancelled)
 	g.releaseBed(id)
@@ -229,8 +236,9 @@ func (g *Game) die(id entity.EntityID, cause health.Cause) {
 	v.Status, v.Cause = health.Dead, cause
 	g.vital.Set(id, v)
 	g.spawnCorpse(id)
-	g.dropRaiderGear(id) // the weapon falls beside the body
-	g.forbidRaidBody(id) // forbid.go: a raider's body starts forbidden
+	g.dropRaiderGear(id)        // the weapon falls beside the body
+	g.forbidRaidBody(id)        // forbid.go: a raider's body starts forbidden
+	g.socialOnDeath(id, killer) // social_grief.go: relations, grief, killer opinion
 	g.mourn(id)
 }
 

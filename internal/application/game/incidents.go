@@ -152,6 +152,8 @@ func (g *Game) incidentFits(id incident.ID, now uint64) bool {
 		return len(g.wl.Gnaw.IDs) == 0 && g.livingTrees(gnawTrees) >= gnawTrees
 	case incident.MadAnimal:
 		return len(g.madCandidates(now)) > 0
+	case incident.VisitorGroup, incident.WandererJoins, incident.Party:
+		return false // TODO(M5, M8): never eligible until their milestones wire them
 	}
 	return false
 }

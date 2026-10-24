@@ -533,6 +533,9 @@ func (r *Renderer) drawBuildingObj(dst *ebiten.Image, b *game.BuildingView, tile
 			drawFenceVector(dst, sx, sy, float32(tile), b.Kind, mask, open, isStoneStuff(b.Stuff), 255)
 			break
 		}
+		if r.pendingArtFallback(dst, b.Kind, key, b.X, b.Y, b.W, b.H, tile, 255) { // social_art.go
+			break
+		}
 		t := none
 		if (b.Kind == "bed" || b.Kind == "double bed") && len(l.cloth) > 0 {
 			t = r.art.tint("cloth", l.cloth[mix64(uint64(b.ID))%uint64(len(l.cloth))])
@@ -570,6 +573,9 @@ func (r *Renderer) drawFrameObj(dst *ebiten.Image, f *game.FrameView, tile float
 		}
 	}
 	key := r.buildKey(f.Kind, f.Stuff, f.Facing, pm, pm&(wallE|wallW) != 0, false)
+	if r.pendingArtFallback(dst, f.Kind, key, f.X, f.Y, f.W, f.H, tile, 120) { // social_art.go
+		return
+	}
 	if isFenceKind(f.Kind) && !r.art.has(key) {
 		sx, sy := r.worldToScreen(f.X, f.Y)
 		drawFenceVector(dst, sx, sy, float32(tile), f.Kind, pm, false, isStoneStuff(f.Stuff), 140)

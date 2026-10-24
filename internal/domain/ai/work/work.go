@@ -19,6 +19,9 @@ const (
 	// Handle is animal handling: taming, milking, shearing (SIM-026).
 	// Appended: saved priorities of older saves are migrated on load.
 	Handle
+	// Warden is talking to prisoners: chats, recruiting, feeding
+	// (ENG-003). Appended and off by default; older saves load it at 0.
+	Warden
 	NumTypes
 )
 
@@ -97,4 +100,4 @@ func (p Priorities) Set(t Type, v int) Priorities {
 }
 
 // Order is the tie-break among work types sharing a priority.
-var Order = []Type{Doctor, Haul, Construct, Cook, Craft, Hunt, Handle, Grow, Mine, Research, Clean}
+var Order = []Type{Doctor, Warden, Haul, Construct, Cook, Craft, Hunt, Handle, Grow, Mine, Research, Clean}

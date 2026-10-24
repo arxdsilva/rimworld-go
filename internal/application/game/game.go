@@ -19,16 +19,20 @@ import (
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
+	"rimworld-go/internal/domain/pawn/body"
+	"rimworld-go/internal/domain/pawn/drug"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/look"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/needs"
+	"rimworld-go/internal/domain/pawn/prisoner"
 	"rimworld-go/internal/domain/pawn/recreation"
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/component"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/area"
 	"rimworld-go/internal/domain/world/filth"
 	"rimworld-go/internal/domain/world/geology"
 	"rimworld-go/internal/domain/world/grid"
@@ -189,6 +193,16 @@ type PawnView struct {
 	DropX, DropY int
 	// Log (LOG-001) is what happened to the creature, newest first.
 	Log []LogLineView
+	// ENG-003: the interaction shown in a bubble (Interaction, an icon key
+	// suffix, since InteractTick), the mood the smoothed mood is heading
+	// for, and whether the pawn is a prisoner, a visitor or in a social
+	// fight. Zero until their milestones fill them.
+	Interaction  string
+	InteractTick uint64
+	MoodTarget   int
+	Prisoner     bool
+	Visitor      bool
+	SocialFight  bool
 }
 
 // ItemView is a ground stack.
@@ -564,6 +578,17 @@ type Game struct {
 	// ng: the new-game setup's live state (setup.go, NG-1 SETUP); zero
 	// for a legacy colony.
 	ng ng1State
+	// Social and host systems (ENG-003): each container is nil until its
+	// milestone first needs it, and saved as an additive field.
+	soc       *socialState                        // social_state.go
+	people    *peopleRegistry                     // people.go
+	bodies    map[entity.EntityID]*body.Body      // body.go
+	drugs     map[entity.EntityID]*drug.State     // drugs.go
+	prisoners map[entity.EntityID]*prisoner.State // prisoners.go
+	worldSt   *worldState                         // world_state.go
+	areas     *area.Set                           // areas.go
+	history   []historyEntry                      // history.go
+	streams   rngStreams                          // rng_streams.go: never g.rng
 }
 
 // New builds a Game from cfg. Width/Height must be positive.
@@ -627,6 +652,7 @@ func New(cfg Config) *Game {
 		motion:      component.NewStore[motionRec](),
 		lastStrike:  make(map[entity.EntityID]strikeRec),
 		lastHit:     make(map[entity.EntityID]hitRec),
+		streams:     rngStreams{seed: cfg.Seed},
 	}
 }
 
@@ -724,6 +750,7 @@ func (g *Game) LoadStartKit() error {
 			return err
 		}
 	}
+	g.seedFamilies() // people.go: the founders' relations
 	return nil
 }
 
@@ -787,9 +814,11 @@ func (g *Game) Step(n int) {
 		g.phaseNeeds()
 		g.phaseAI()
 		g.phaseJobs()
+		g.phaseSocial() // social.go: interactions (ENG-003)
 		g.phaseAnimals()
 		g.phaseThreats()
 		g.phaseIncidents() // incidents.go: nature events, departures (SIM-025)
+		g.phaseWorld()     // world_state.go: caravans (ENG-003)
 		g.phaseWeather()
 		g.phaseMovement()
 		g.clock.Advance(1)

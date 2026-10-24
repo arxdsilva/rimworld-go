@@ -30,7 +30,7 @@ func TestForWork(t *testing.T) {
 	want := map[work.Type]ID{
 		work.Hunt: Shooting, work.Construct: Construction, work.Mine: Mining,
 		work.Cook: Cooking, work.Grow: Plants, work.Handle: Animals,
-		work.Craft: Crafting, work.Doctor: Medicine, work.Research: Intellectual,
+		work.Craft: Crafting, work.Doctor: Medicine, work.Research: Intellectual, work.Warden: Social,
 	}
 	for wt := work.Type(0); wt < work.NumTypes; wt++ {
 		got, ok := ForWork(wt)

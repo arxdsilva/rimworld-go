@@ -19,6 +19,11 @@ const (
 	Fabrication
 	// Pharmacology: herbal medicine refined into industrial medicine.
 	Pharmacology
+	// ENG-003: Brewing (brewgrain and the brewing bench), HerbalRemedies
+	// (ashleaf, the drug table, spark tablets) and Prosthetics (steel limbs).
+	Brewing
+	HerbalRemedies
+	Prosthetics
 	NumProjects
 )
 
@@ -51,6 +56,14 @@ var defs = [NumProjects]Def{
 		Unlocks: []string{"recipe:fabricate_component", "build:tool cabinet", "build:hospital bed"}},
 	Pharmacology: {Project: Pharmacology, Name: "pharmacology", Label: "Pharmacology", Cost: 4000, Requires: []Project{Herbalism},
 		Desc: "Refine herbal medicine into stronger industrial medicine.", Unlocks: []string{"recipe:refine_medicine"}},
+	Brewing: {Project: Brewing, Name: "brewing", Label: "Brewing", Cost: 2500,
+		Desc: "Grow brewgrain and brew it into beer.", Unlocks: []string{"crop:brewgrain", "build:brewing bench"}},
+	HerbalRemedies: {Project: HerbalRemedies, Name: "herbal_remedies", Label: "Herbal remedies", Cost: 3500,
+		Requires: []Project{Herbalism},
+		Desc:     "Grow ashleaf and steep or press it into stimulants.",
+		Unlocks:  []string{"crop:ashleaf", "build:drug table", "recipe:press_tablet"}},
+	Prosthetics: {Project: Prosthetics, Name: "prosthetics", Label: "Prosthetics", Cost: 4000, Requires: []Project{Herbalism},
+		Desc: "Steel limbs to replace lost legs and arms.", Unlocks: []string{"recipe:make_prosthetic_leg", "recipe:make_prosthetic_arm"}},
 }
 
 // DefOf returns the definition of p.

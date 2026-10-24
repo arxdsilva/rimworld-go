@@ -729,7 +729,7 @@ func (a *App) drawArchitectGhost(screen *ebiten.Image) {
 // selected (never toggling it off), the material and facing preset, as
 // the building panel's Copy does. False when no tool builds kind.
 func (a *App) presetArchTool(kind, stuff, facing string) bool {
-	for _, t := range archTools {
+	for _, t := range allArchTools() {
 		if t.build != kind {
 			continue
 		}
