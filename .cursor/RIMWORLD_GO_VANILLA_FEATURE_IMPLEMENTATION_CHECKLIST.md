@@ -454,11 +454,11 @@ This is the heart of autonomous colony behavior.
 
 ## 5.7 Allowed areas
 
--   [ ] **Named allowed areas**
+-   [-] **Named allowed areas** (SIM-046: up to 10 areas painted, renamed and assigned via Assign tab and area manager; no delete or overlay)
     -   Paint cells.
     -   invert/clear.
     -   assign pawn.
--   [ ] **Area-aware AI**
+-   [x] **Area-aware AI** (SIM-046: pathing and job filtering respect the area; drafted pawns ignore it)
     -   Pawn chooses work/destinations inside assigned area.
     -   Path traversal semantics should emulate vanilla's distinction
         between allowed destination and traversal where appropriate.
@@ -633,7 +633,7 @@ This is the heart of autonomous colony behavior.
 -   [-] **Home area** (SIM-021: painted, auto-grown around buildings, drives cleaning; no firefighting or repair yet)
     -   Influences firefighting/cleaning/repair behavior.
 -   [x] **Roof build/remove areas** (SIM-018)
--   [ ] **Allowed areas**
+-   [-] **Allowed areas** (SIM-046: Assign tab and area manager; no overlay or delete)
     -   Already introduced in Phase 5 but integrated with zone UI.
 
 ------------------------------------------------------------------------
@@ -741,7 +741,7 @@ derived from thoughts and traits and low mood creates mental-break risk.
     -   Schedule-aware.
     -   Select owned/assigned bed if available.
     -   Fall back to available sleeping location.
--   [-] **Beds** (claim on Sleep; no comfort/medical/prisoner)
+-   [-] **Beds** (SIM-042/045: partner double beds, owner assignment UI, prisoner beds; no comfort/medical; claim on Sleep; no comfort/medical/prisoner)
     -   Assign ownership.
     -   sleeping slots.
     -   rest effectiveness.
@@ -888,7 +888,7 @@ derived from thoughts and traits and low mood creates mental-break risk.
     -   Pawn A's opinion of Pawn B is directional.
     -   Influenced by relationship, traits, memories, social
         interactions.
--   [ ] **Social fight**
+-   [x] **Social fight** (SIM-043: from insults/slights, fists-only brawl, cathartic/angering opinions; insulting-spree break not done)
     -   Negative interaction can escalate to non-lethal melee conflict.
 
 ## 10.4 Relationships
@@ -898,16 +898,16 @@ derived from thoughts and traits and low mood creates mental-break risk.
     -   sibling.
     -   spouse/partner.
     -   other close-family links needed for social thoughts.
--   [ ] **Romance**
+-   [x] **Romance** (SIM-042: attraction, attempts, lovers, rebuff memories; no manual Romance button by design)
     -   Attraction/compatibility.
     -   romance attempt.
     -   lover relationship.
     -   rejection memories.
--   [ ] **Marriage**
+-   [x] **Marriage** (SIM-042: proposal, engagement, rejection cooldown, wedding gathering/ceremony/reception, save-safe)
     -   Proposal/engagement.
     -   marriage ceremony/event.
     -   relationship/mood consequences.
--   [ ] **Breakups**
+-   [x] **Breakups** (SIM-042: breakup, divorce, affairs and ex memories)
     -   Relationship can end.
     -   social/mood memories.
 -   [x] **Relationship death reactions** (SIM-041: grief via the relationship graph incl. off-map relatives, killer opinion; Cold-hearted exempt)
@@ -1499,12 +1499,12 @@ children systems.
 ## 18.5 Training
 
 -   [ ] **Trainability**
--   [ ] **Obedience**
--   [-] **Release/attack training** (release; tame wolves guard against raiders and hostile animals untrained)
+-   [x] **Obedience** (SIM-047: training steps, cooldown, master follow when drafted)
+-   [-] **Release/attack training** (SIM-047: obedience/guard/release training; guard and release have no behaviour yet; release; tame wolves guard against raiders and hostile animals untrained)
 -   [x] **Rescue**
 -   [ ] **Hauling**
     -   Only species capable of relevant training.
--   [ ] **Training decay/maintenance**
+-   [x] **Training decay/maintenance** (SIM-047: skills decay)
     -   Skills can require reinforcement if matching target behavior.
 
 ## 18.6 Animal zones/pens
@@ -1544,30 +1544,30 @@ children systems.
 
 ## 19.1 Capture
 
--   [ ] **Capture downed hostile**
+-   [x] **Capture downed hostile** (SIM-045)
     -   Carry to prisoner-designated bed/room.
--   [ ] **Prisoner state**
+-   [-] **Prisoner state** (SIM-045: room-bound; no escape behaviour)
     -   Faction remains distinct until recruited.
     -   Restricted movement/escape behavior.
 
 ## 19.2 Prisoner needs
 
--   [ ] **Food/rest/health/mood**
+-   [x] **Food/rest/health/mood** (SIM-045: Imprisoned mood)
     -   Prisoners remain simulated pawns with reduced player control.
--   [ ] **Prisoner feeding**
--   [ ] **Prisoner medical care**
+-   [x] **Prisoner feeding** (SIM-045: warden delivery with hysteresis)
+-   [x] **Prisoner medical care** (SIM-045: doctors tend in place)
 
 ## 19.3 Warden interactions
 
--   [ ] **Prisoner interaction mode**
+-   [x] **Prisoner interaction mode** (SIM-045: reduce resistance, recruit, release, execute)
     -   No interaction.
     -   reduce resistance.
     -   recruit.
     -   release.
     -   execute/medical operations if allowed by game rules.
--   [ ] **Resistance/recruitment difficulty**
+-   [x] **Resistance/recruitment difficulty** (SIM-045: opinion and mood factors x social impact)
     -   Warden social skill and prisoner mood influence progress.
--   [ ] **Recruitment**
+-   [x] **Recruitment** (SIM-045: keeps relations, recruited-me opinion)
     -   Successful recruit joins player's faction.
 
 ## 19.4 Prison breaks
@@ -1578,7 +1578,7 @@ children systems.
 ## 19.5 Other recruitment
 
 -   [ ] **Rescue/recovery join chance**
--   [ ] **Wanderer/migrant joins event**
+-   [x] **Wanderer/migrant joins event** (SIM-046)
 -   [ ] **Refugee/visitor join opportunity where part of base event
     set**
 -   [ ] **Quest-related joins when quest system is implemented**
@@ -1624,7 +1624,7 @@ change relationships, and settlements exist on the world map.
 
 ## 20.3 Visitors
 
--   [ ] **Friendly visitor group**
+-   [x] **Friendly visitor group** (SIM-046: friendly/neutral factions wander, socialise, leave)
     -   Enters map.
     -   wanders/stays.
     -   leaves.
@@ -1973,8 +1973,8 @@ and other colony incidents. citeturn2search2turn2search7
 
 -   [ ] **Trader caravan**
 -   [ ] **Orbital trader**
--   [ ] **Friendly visitors**
--   [ ] **Wanderer joins**
+-   [x] **Friendly visitors** (SIM-046)
+-   [x] **Wanderer joins** (SIM-046)
 -   [ ] **Transport pod crash / downed stranger**
 -   [ ] **Resource meteorite**
 -   [ ] **Cargo pod drop**
@@ -1982,8 +1982,8 @@ and other colony incidents. citeturn2search2turn2search7
 -   [x] **Farm animals wander in** (SIM-025)
 -   [x] **Rare self-tame animal** (SIM-025: taken a liking)
 -   [x] **Wild animal migration**
--   [ ] **Party**
--   [ ] **Marriage**
+-   [x] **Party** (SIM-042)
+-   [x] **Marriage** (SIM-042: wedding gathering)
 -   [ ] **Psychic soothe-like temporary positive mood event**
     -   Original presentation/content.
 
@@ -2157,7 +2157,7 @@ relocation. citeturn2search12
 
 ## 28.1 Caravan formation
 
--   [ ] **Form caravan dialog**
+-   [-] **Form caravan dialog** (SIM-046: colonists and destination; no animals, prisoners or items)
     -   Select colonists.
     -   animals.
     -   prisoners.
@@ -2166,19 +2166,19 @@ relocation. citeturn2search12
     -   destination.
 -   [ ] **Mass/carry capacity**
     -   Pawns and pack animals carry limited mass.
--   [ ] **Travel supplies**
+-   [-] **Travel supplies** (SIM-046: food days only)
     -   Estimate food and travel time.
 -   [ ] **Gather/loading phase**
     -   Pawns collect assigned cargo before departure.
--   [ ] **Exit map**
+-   [x] **Exit map** (SIM-046: walks to the edge, becomes a world object)
     -   Caravan becomes world object.
 
 ## 28.2 World movement
 
--   [ ] **World pathfinding**
+-   [-] **World pathfinding** (SIM-046: route over the rebuilt planet)
     -   Route across world tiles.
     -   Terrain/roads affect movement.
--   [ ] **Travel speed**
+-   [-] **Travel speed** (SIM-046: slowest Moving speed; no mass/terrain/weather)
     -   Pawn/animal capacities.
     -   mass.
     -   terrain.
@@ -2191,7 +2191,7 @@ relocation. citeturn2search12
 
 ## 28.3 Caravan needs
 
--   [ ] **Food consumption**
+-   [-] **Food consumption** (SIM-046: food days)
 -   [ ] **Health/disease progression**
 -   [ ] **Mood effects**
 -   [x] **Animal feeding** (SIM-024: animals graze, eat carcasses and crops, and are fed from troughs)
@@ -2201,13 +2201,13 @@ Use aggregated/analytical updates rather than simulating local-map jobs.
 
 ## 28.4 Caravan interactions
 
--   [ ] **Visit friendly settlement**
+-   [-] **Visit friendly settlement** (SIM-046: one day; no trade or gifts)
     -   Trade.
     -   gifts.
 -   [ ] **Attack hostile settlement**
 -   [ ] **Enter event/quest map**
 -   [ ] **Ambush encounter**
--   [ ] **Return to colony**
+-   [x] **Return to colony** (SIM-046)
 -   [ ] **Settle new colony**
     -   If multiple colonies are supported by target scope.
 
@@ -2450,7 +2450,7 @@ the player-facing system.
 -   [x] **Fertility**
 -   [ ] **Terrain/path cost debug**
 -   [-] **Home area** (SIM-021: painted, auto-grown around buildings, drives cleaning; no firefighting or repair yet)
--   [ ] **Allowed areas**
+-   [-] **Allowed areas** (SIM-046: see 8.x)
 -   [ ] **Storage zones**
 -   [ ] **Growing zones**
 -   [ ] **Temperature**
@@ -2919,11 +2919,11 @@ Do not call the vanilla milestone complete until this audit passes.
 -   [ ] Generate power.
 -   [ ] Refrigerate food.
 -   [ ] Trade.
--   [ ] Recruit prisoners.
--   [ ] Tame/train animals.
+-   [x] Recruit prisoners.
+-   [x] Tame/train animals.
 -   [ ] Defend raids.
 -   [ ] Survive environmental events.
--   [ ] Form caravans.
+-   [-] Form caravans. (SIM-046: no trade or cargo)
 -   [ ] Complete world quests.
 -   [ ] Build/activate endgame ship.
 -   [ ] Survive final assault period.
@@ -2933,7 +2933,7 @@ Do not call the vanilla milestone complete until this audit passes.
 
 -   [ ] Pawns have meaningfully different skills/traits.
 -   [x] Pawns form opinions and relationships.
--   [-] Relationships create gameplay consequences. (grief, opinion, mood memories; no romance, fights or caravans yet)
+-   [x] Relationships create gameplay consequences. (grief, opinion, romance, fights, prisoners, caravans, animal bonds)
 -   [-] Injuries have anatomically meaningful consequences. (SIM-039: parts, capacities, scars, surgery; no bleeding or disease framework)
 -   [x] Mood responds to environment and memories.
 -   [ ] Low mood creates autonomous disruptive behavior.

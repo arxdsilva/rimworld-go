@@ -116,7 +116,7 @@ func (g *Game) socialOnDeath(dead, killer entity.EntityID) {
 	}
 	now := uint64(g.clock.Now())
 	p := g.ensurePerson(dead)
-	wasColonist := p.Where == whereColony
+	wasColonist := p.Where == whereColony || p.Where == whereCaravan // one of the colony's, at home or away
 	p.Where, p.DiedAt, p.KilledBy = whereDead, now, killer
 	if g.soc != nil {
 		delete(g.soc.next, dead)
@@ -130,6 +130,12 @@ func (g *Game) socialOnDeath(dead, killer entity.EntityID) {
 // socialOnLost: colonist id went missing (kidnapped, a caravan lost:
 // M9). Its ties grieve by the lost table, the colony misses it.
 func (g *Game) socialOnLost(id entity.EntityID) {
+	g.socialOnLostAs(id, "lost", g.personName(id)+" went missing.")
+}
+
+// socialOnLostAs is socialOnLost with the history line (kind, text) that
+// says how id was lost (kidnap.go: "kidnapped").
+func (g *Game) socialOnLostAs(id entity.EntityID, kind, text string) {
 	now := uint64(g.clock.Now())
 	g.ensurePerson(id)
 	g.grieve(id, 0, true, now)
@@ -142,7 +148,7 @@ func (g *Game) socialOnLost(id entity.EntityID) {
 		}
 		g.remember(c, mood.ColonistLost)
 	}
-	g.addHistory("lost", g.personName(id)+" went missing.", id)
+	g.addHistory(kind, text, id)
 }
 
 // socialOnReturned: missing colonist id is back, so the grief over it

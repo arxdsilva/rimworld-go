@@ -203,6 +203,8 @@ type PawnView struct {
 	Prisoner     bool
 	Visitor      bool
 	SocialFight  bool
+	// Disfigured: a scar on the face (body.Disfigured); the renderer draws it.
+	Disfigured bool
 }
 
 // ItemView is a ground stack.
@@ -934,6 +936,7 @@ func (g *Game) snapshot() []PawnView {
 		g.fillPawnWeather(&views[i])           // weather.go
 		views[i].Log = g.logLines(views[i].ID) // eventlog.go
 		g.fillPawnBio(&views[i])               // skills.go: NG-1 identity
+		views[i].Disfigured = g.bodies[views[i].ID] != nil && g.bodies[views[i].ID].Disfigured()
 	}
 	return views
 }

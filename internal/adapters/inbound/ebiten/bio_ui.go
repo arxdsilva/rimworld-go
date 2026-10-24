@@ -139,7 +139,7 @@ func (a *App) bioTab(p game.PawnView) {
 	u.queue(func(dst *ebiten.Image) {
 		fillRect(dst, pr, uiField)
 		strokeRect(dst, pr, uiPanelBorder)
-		if !drawLookPortrait(dst, a.art, b.Look, float64(pr.X), float64(pr.Y), float64(pr.W), float64(pr.H)) {
+		if !drawPortrait(dst, a.art, b.Look, p.Disfigured, float64(pr.X), float64(pr.Y), float64(pr.W), float64(pr.H)) {
 			drawSilhouette(dst, pr, name)
 		}
 	})

@@ -508,15 +508,15 @@ the player's primary world-editing command surface.
 
 ## 6.5 Allowed areas
 
--   [ ] **Area manager**
+-   [-] **Area manager** (SIM-046: create, rename, assign; no delete)
     -   Create.
     -   rename.
     -   delete.
     -   invert.
     -   clear.
--   [ ] **Paint allowed area**
+-   [x] **Paint allowed area** (SIM-046)
 -   [ ] **Area overlay selector**
--   [ ] **Assign pawn/animal to area**
+-   [-] **Assign pawn/animal to area** (SIM-046: via Assign tab and area manager)
     -   Integrated later with Schedule/Assign/Animals.
 
 ------------------------------------------------------------------------
@@ -976,8 +976,8 @@ This screen centralizes per-pawn behavioral policies.
 -   [ ] **Apparel policy**
 -   [-] **Drug policy** (SIM-040: preset selector on the Assign tab (F3); no policy manager)
 -   [ ] **Medical care**
--   [ ] **Allowed area where chosen UX places it**
--   [ ] **Bed ownership shortcut where useful**
+-   [x] **Allowed area where chosen UX places it** (SIM-046: Assign tab)
+-   [x] **Bed ownership shortcut where useful** (SIM-042: bed owner assignment UI)
 
 ## 17.2 Policy manager
 
@@ -1022,7 +1022,7 @@ This screen centralizes per-pawn behavioral policies.
 
 ## 18.1 Social tab
 
--   [-] **Known relationships** (UI-022: relations table with perspective labels; no ex/lover until romance (M5))
+-   [x] **Known relationships** (SIM-042: lover, spouse, ex-lover, ex-spouse; UI-022: relations table with perspective labels; no ex/lover until romance (M5))
     -   Parent.
     -   child.
     -   sibling.
@@ -1047,10 +1047,10 @@ This screen centralizes per-pawn behavioral policies.
 
 ## 18.3 Relationship events
 
--   [ ] **Romance notification**
--   [ ] **Engagement/marriage**
--   [ ] **Breakup**
--   [ ] **Social fight**
+-   [-] **Romance notification** (SIM-042: history entries and mood memories; no dedicated letter)
+-   [-] **Engagement/marriage** (SIM-042: gathering banner and history entries; no dedicated letter)
+-   [-] **Breakup** (SIM-042: history entries; no dedicated letter)
+-   [-] **Social fight** (SIM-043: fight marker and history entries; no dedicated letter)
 -   [x] **Relation death** (UI-022: History tab (F9) entries click to select)
     -   Link messages to relevant pawns.
 
@@ -1060,7 +1060,7 @@ This screen centralizes per-pawn behavioral policies.
 
 ## 19.1 Animals tab
 
--   [-] **Owned animal table** (UI-014: Animals tab Colony view lists tame animals with species, state, sex/stage/age, Handle work column; no health, master, area, training columns)
+-   [-] **Owned animal table** (UI-014, SIM-047: master and training columns; no health or area; UI-014: Animals tab Colony view lists tame animals with species, state, sex/stage/age, Handle work column; no health, master, area, training columns)
     -   Name.
     -   species.
     -   sex.
@@ -1073,15 +1073,15 @@ This screen centralizes per-pawn behavioral policies.
 -   [x] **Slaughter toggle**
 -   [ ] **Medical care**
 -   [ ] **Rename**
--   [ ] **Master assignment**
+-   [x] **Master assignment** (SIM-047)
 
 ## 19.2 Training matrix
 
--   [ ] **Obedience**
+-   [x] **Obedience** (SIM-047)
 -   [x] **Release**
 -   [ ] **Rescue**
 -   [ ] **Haul**
--   [ ] **Current training progress**
+-   [x] **Current training progress** (SIM-047: steps, cooldown, decay)
 -   [ ] **Trainability/ineligible explanation**
 
 ## 19.3 Pen UI
@@ -1111,27 +1111,27 @@ This screen centralizes per-pawn behavioral policies.
 
 ## 20.1 Prisoner tab
 
--   [ ] **Prisoner status**
+-   [x] **Prisoner status** (SIM-045: Prisoner tab)
 -   [ ] **Faction**
--   [ ] **Resistance**
--   [ ] **Recruitment difficulty**
--   [ ] **Mood**
+-   [x] **Resistance** (SIM-045)
+-   [-] **Recruitment difficulty** (SIM-045: resistance only; no difficulty estimate)
+-   [x] **Mood** (SIM-045)
 -   [x] **Health**
--   [ ] **Interaction mode**
+-   [x] **Interaction mode** (SIM-045)
 
 ## 20.2 Interaction modes
 
--   [ ] **No interaction**
--   [ ] **Reduce resistance**
--   [ ] **Recruit**
--   [ ] **Release**
--   [ ] **Execute where supported**
+-   [x] **No interaction** (SIM-045)
+-   [x] **Reduce resistance** (SIM-045)
+-   [x] **Recruit** (SIM-045)
+-   [x] **Release** (SIM-045)
+-   [x] **Execute where supported** (SIM-045)
 -   [ ] **Medical/operation controls through Health UI**
 
 ## 20.3 Warden feedback
 
 -   [ ] **Last interaction**
--   [ ] **Resistance/recruitment progress**
+-   [x] **Resistance/recruitment progress** (SIM-045)
 -   [ ] **Social skill effect**
 -   [ ] **No warden/food/bed warning**
 
@@ -1317,10 +1317,10 @@ the player what just happened and what requires attention.
 
 ## 25.1 World/local transition
 
--   [ ] **World button/tab**
+-   [-] **World button/tab** (SIM-046: World tab (F8))
     -   Switch from local map to planet.
     -   Preserve local camera.
--   [-] **Planet navigation** (NG-1: setup only. The landing globe rotates with drag, inertia and keys, zooms and picks tiles; there is no world view inside a running colony)
+-   [-] **Planet navigation** (SIM-046: World tab globe plus setup globe; no object selection; NG-1: setup only. The landing globe rotates with drag, inertia and keys, zooms and picks tiles; there is no world view inside a running colony)
     -   Rotate/pan/zoom or equivalent world navigation.
     -   Select world tile/object.
 
@@ -1342,7 +1342,7 @@ the player what just happened and what requires attention.
 
 -   [ ] **Player colony**
 -   [ ] **Faction settlement**
--   [ ] **Caravan**
+-   [-] **Caravan** (SIM-046: caravan list and globe marker)
 -   [ ] **Quest site**
 -   [ ] **Temporary encounter**
 -   [ ] **Distant endgame objective**
@@ -1475,13 +1475,13 @@ the player what just happened and what requires attention.
 
 ## 28.1 Form caravan dialog
 
--   [ ] **Destination selection**
--   [ ] **People list**
+-   [x] **Destination selection** (SIM-046)
+-   [-] **People list** (SIM-046: colonists only)
     -   Colonists.
     -   prisoners.
 -   [ ] **Animals**
 -   [ ] **Items**
--   [ ] **Food**
+-   [-] **Food** (SIM-046: food days)
 -   [ ] **Medicine**
 -   [ ] **Currency**
 -   [ ] **Mass summary**
@@ -1496,7 +1496,7 @@ the player what just happened and what requires attention.
     -   no capable handler.
     -   overloaded.
     -   dangerous temperature.
--   [ ] **Send command**
+-   [x] **Send command** (SIM-046)
 
 ## 28.2 Caravan loading status
 
@@ -1510,7 +1510,7 @@ the player what just happened and what requires attention.
 
 # 29. Caravan World Inspector
 
--   [ ] **Caravan member list**
+-   [-] **Caravan member list** (SIM-046: World tab caravan list)
 -   [ ] **Inventory**
 -   [ ] **Food remaining**
 -   [ ] **Travel speed**
@@ -2066,7 +2066,7 @@ Complete:
 -   [ ] Growing-zone settings.
 -   [-] Work.
 -   [ ] Schedule.
--   [ ] Allowed areas.
+-   [-] Allowed areas. (SIM-046: area manager and Assign tab; no delete or overlay)
 
 **Player outcome:** Can organize labor and physically build a
 functioning settlement.
@@ -2080,7 +2080,7 @@ Complete:
 -   [ ] Character/skills.
 -   [ ] Gear.
 -   [ ] Social.
--   [ ] Prisoner basics.
+-   [x] Prisoner basics. (SIM-045)
 -   [ ] Alerts/messages.
 
 **Player outcome:** Can understand why individual colonists behave,
@@ -2118,12 +2118,12 @@ Complete:
 
 Complete:
 
--   [-] World map. (the rotating globe exists at setup only; no world view in a running colony)
+-   [-] World map. (SIM-046: World tab (F8) with globe and caravan list; no object selection)
 -   [x] World generation.
 -   [x] Landing selection.
 -   [x] New-game flow. (map sizes 200 to 500 enabled after the ENG-001 frame-rate gate)
--   [ ] Caravan formation.
--   [ ] Caravan inspector.
+-   [-] Caravan formation. (SIM-046: colonists and destination only)
+-   [-] Caravan inspector. (SIM-046: caravan list in the World tab)
 -   [ ] Quests.
 -   [ ] Transport pods.
 

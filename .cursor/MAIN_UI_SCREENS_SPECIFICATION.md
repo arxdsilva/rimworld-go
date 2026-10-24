@@ -2000,14 +2000,14 @@ Agents should implement screens approximately in this dependency order.
 -   [ ] growing settings
 -   [-] Work (overlay from snapshot; Grow/Bld/Haul toggle Y/-; not virtualized)
 -   [ ] Schedule
--   [ ] Area Manager
+-   [-] Area Manager (SIM-046: create, rename, paint, assign; no delete or overlay)
 
 ## Wave UI-3 --- Understand pawns
 
 -   [-] Character (Bio tab: identity, backstories, traits, skills with passions, incapabilities, conditions; no Social/Gear tabs)
 -   [-] Needs/Mood (food/rest bars; no recreation/mood/thoughts)
 -   [-] Health (capacities, pain, part rows, operations queue; no bleeding or conditions)
--   [-] Social (relations, breakdowns, log; no romance events)
+-   [x] Social (relations incl. lovers/spouses/exes, breakdowns, log, romance, wedding and fight events)
 -   [ ] Gear
 -   [ ] Detailed Stats
 -   [-] Alerts/Letters (alert list and letter windows with Continue; no letter stack or history)
@@ -2022,9 +2022,9 @@ Agents should implement screens approximately in this dependency order.
 
 ## Wave UI-5 --- Colony ecosystem
 
--   [ ] Animals
+-   [-] Animals (SIM-047: master and training columns; no health or area)
 -   [ ] Wildlife
--   [ ] Prisoner
+-   [-] Prisoner (SIM-045: Prisoner tab with modes and resistance; no prison break or chat history)
 -   [ ] Trade
 -   [-] Factions (window with the faction table, 60-day goodwill sparkline and last five events; goodwill only, no trade or communication)
 -   [ ] History
@@ -2043,9 +2043,9 @@ required before a polished external build.
 
 ## Wave UI-7 --- World gameplay
 
--   [ ] World Map
--   [ ] Caravan Formation
--   [ ] Caravan Inspector
+-   [-] World Map (SIM-046: World tab F8 with globe and caravan list; no object selection)
+-   [-] Caravan Formation (SIM-046: colonists and destination only)
+-   [-] Caravan Inspector (SIM-046: caravan list in the World tab)
 -   [ ] Quest
 -   [ ] Transport Pod
 

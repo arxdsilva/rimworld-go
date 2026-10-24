@@ -290,9 +290,11 @@ func (g *Game) startExit(id entity.EntityID) bool {
 	return g.startJob(id, job.Record{Kind: job.ExitMap, TX: x, TY: y})
 }
 
-// doKidnap carries a downed colonist off the map.
+// doKidnap: kidnapping is a raider's job, run from the raid AI
+// (kidnap.go stepKidnap); a pawn on pawnIDs never kidnaps, so one found
+// with the job just ends it.
 func (g *Game) doKidnap(id entity.EntityID, j job.Record) {
-	g.endStubJob(id, j) // TODO(M8)
+	g.endStubJob(id, j)
 }
 
 // doExitMap: a pawn at the map edge on job.ExitMap leaves the map. A

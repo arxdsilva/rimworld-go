@@ -196,6 +196,7 @@ func (r *Renderer) drawPawnFigure(dst *ebiten.Image, p game.PawnView, wx, wy, ti
 	headPs.dx += hdx
 	headPs.dy += hdy
 	blood := r.pawnBlood(p) // body and apparel only (blood_draw.go)
+	scar := p.Disfigured
 	for _, ly := range r.pawnLayers(r.look(p), face, p.Apparel...) {
 		lp := ps
 		if isHeadLayer(ly.key) {
@@ -203,14 +204,31 @@ func (r *Renderer) drawPawnFigure(dst *ebiten.Image, p game.PawnView, wx, wy, ti
 		}
 		r.figureBlood = layerBlood(ly.key, blood)
 		r.drawSpritePose(dst, r.framed(ly.key, suffix), ly.tint, wx, wy, tile, lp)
+		if scar && strings.HasPrefix(ly.key, "pawn/hair_") {
+			scar = false
+			r.drawFaceScar(dst, face, suffix, wx, wy, tile, headPs)
+		}
 	}
 	r.figureBlood = 0
+	if scar { // no hair layer: the scar still goes on the face
+		r.drawFaceScar(dst, face, suffix, wx, wy, tile, headPs)
+	}
 	r.drawHeld(dst, p, face, suffix, item, wx, wy, tile, ps, false) // the parts in front
 	for _, q := range r.drawPawns {
 		if q.CarriedBy != 0 && q.CarriedBy == p.ID {
 			r.drawCarried(dst, q, face, wx+ps.dx, wy+ps.dy, tile)
 		}
 	}
+}
+
+// drawFaceScar draws a disfigured pawn's face scar (pawn/face_scar_<facing>)
+// on its head, over the hair; nothing while the art is missing.
+func (r *Renderer) drawFaceScar(dst *ebiten.Image, f facing, suffix string, wx, wy, tile float64, headPs pose) {
+	key := "pawn/face_scar_" + f.String()
+	if !r.art.has(key) {
+		return
+	}
+	r.drawSpritePose(dst, r.framed(key, suffix), color.NRGBA{}, wx, wy, tile, headPs)
 }
 
 // layersSouth draws the figure facing south with a pose.
@@ -221,6 +239,9 @@ func (r *Renderer) drawFigure(screen *ebiten.Image, p game.PawnView, wx, wy, til
 		r.drawSpritePose(screen, ly.key, ly.tint, wx, wy, tile, ps)
 	}
 	r.figureBlood = 0
+	if p.Disfigured {
+		r.drawFaceScar(screen, faceSouth, "", wx, wy, tile, ps)
+	}
 }
 
 // drawLyingPawn: in a bed under the blanket, or fallen on the ground

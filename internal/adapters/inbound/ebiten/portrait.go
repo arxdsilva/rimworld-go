@@ -55,6 +55,12 @@ func pick(names []string, i uint8) string {
 
 // portraitLayers lists the portrait's sprites in draw order for a look.
 func portraitLayers(art *artCatalog, l look.Look) []portraitLayer {
+	return scarredLayers(art, l, false)
+}
+
+// scarredLayers is portraitLayers; scarred adds the face scar over the
+// hair (a disfigured pawn).
+func scarredLayers(art *artCatalog, l look.Look, scarred bool) []portraitLayer {
 	skin := art.tint("skin", pick(art.tintNames("skin"), l.Skin))
 	cloths := art.clothTints()
 	cloth := func(i uint8) color.NRGBA { return art.tint("cloth", pick(cloths, i)) }
@@ -83,6 +89,9 @@ func portraitLayers(art *artCatalog, l look.Look) []portraitLayer {
 	if n := len(look.HairStyles); n > 0 {
 		out = append(out, portraitLayer{"pawn/hair_" + look.HairStyles[int(l.HairStyle)%n] + "_south", hair})
 	}
+	if scarred {
+		out = append(out, portraitLayer{"pawn/face_scar_south", color.NRGBA{}})
+	}
 	return out
 }
 
@@ -90,6 +99,12 @@ func portraitLayers(art *artCatalog, l look.Look) []portraitLayer {
 // w, h) of dst. It reports whether anything was drawn (false while the art
 // is missing, so the caller can draw a stand-in).
 func drawLookPortrait(dst *ebiten.Image, art *artCatalog, l look.Look, x, y, w, h float64) bool {
+	return drawPortrait(dst, art, l, false, x, y, w, h)
+}
+
+// drawPortrait is drawLookPortrait with the face scar of a disfigured
+// pawn (scarred).
+func drawPortrait(dst *ebiten.Image, art *artCatalog, l look.Look, scarred bool, x, y, w, h float64) bool {
 	if art == nil || !art.has(pawnKey("body", l, "south", false)) {
 		return false
 	}
@@ -97,7 +112,7 @@ func drawLookPortrait(dst *ebiten.Image, art *artCatalog, l look.Look, x, y, w, 
 	s := min(w/cw, h/ch)
 	ox, oy := x+(w-cw*s)/2, y+(h-ch*s)/2
 	drew := false
-	for _, ly := range portraitLayers(art, l) {
+	for _, ly := range scarredLayers(art, l, scarred) {
 		img := art.image(ly.key, ly.tint)
 		if img == nil {
 			continue

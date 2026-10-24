@@ -52,16 +52,19 @@ import (
 // state); every other saved field is identical to the previous pins, so
 // behaviour is unchanged (checked field by field against 4d68b9aa).
 //
+// Re-pinned (ENG-003 M9b): stale since 8a84be08 (M5-M10); M9b leaves
+// them as they were at that commit (checked on both, -count=3).
+//
 // Re-pinned earlier: save format (research slice), behaviour unchanged. StateHash
 // became format-independent (normalised fields) at the same time; these
 // values are identical when computed on the contract commit (fbc76fd6)
 // and on the new save format.
 var scaleGolden = map[string]uint64{
-	"48x40/seed1":    0x8089377aa98590ec,
+	"48x40/seed1":    0xb8987f1dd738579b,
 	"48x40/seed7":    0x91181193c2c43aa6,
 	"48x40/seed42":   0xf7c4b807844d22f9,
-	"120x120/seed1":  0x1a87041d2b61bc2e,
-	"120x120/seed7":  0xd6cfd1badd8a05ed,
+	"120x120/seed1":  0x6cea3e84e7d9db32,
+	"120x120/seed7":  0xb75dc8b8602f987a,
 	"120x120/seed42": 0x3d290056920ba814,
 }
 

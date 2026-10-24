@@ -7,7 +7,6 @@ import (
 
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/faction"
-	"rimworld-go/internal/domain/pawn/backstory"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/pawn/pawngen"
@@ -97,6 +96,8 @@ func (g *Game) visitorsArrive(now uint64) bool {
 		return false
 	}
 	n := 2 + r.IntN(3)
+	wantKin := g.relativeRoll(relativeVisitPermille) // relative_world.go
+	var kin entity.EntityID
 	var used [][2]int
 	var ids []entity.EntityID
 	for k := 0; k < n; k++ {
@@ -105,12 +106,23 @@ func (g *Game) visitorsArrive(now uint64) bool {
 			break
 		}
 		used = append(used, [2]int{x, y})
+		if wantKin {
+			wantKin = false
+			if kin = g.relativeFor(fac, whereVisitor, techTag(f)); kin != 0 {
+				g.placeVisitor(kin, fac, x, y, now)
+				ids = append(ids, kin)
+				continue
+			}
+		}
 		ids = append(ids, g.spawnVisitor(fac, f, x, y, now))
 	}
 	if len(ids) == 0 {
 		return false
 	}
 	g.letter("Visitors", fmt.Sprintf("%d people of %s have come to visit. They will stay about half a day.", len(ids), f.Name), ids[0])
+	if kin != 0 {
+		g.relativeLetter("Relative arrives", kin, "visitors from "+f.Name)
+	}
 	return true
 }
 
@@ -143,31 +155,29 @@ func (g *Game) inset(x, y int) bool {
 	return x >= visitorInset && y >= visitorInset && x < w-visitorInset && y < h-visitorInset
 }
 
-// spawnVisitor puts one visitor of faction fac on (x, y).
+// spawnVisitor puts one new visitor of faction fac on (x, y).
 func (g *Game) spawnVisitor(fac int, f *faction.Faction, x, y int, now uint64) entity.EntityID {
 	id := g.entities.Next()
-	tag := backstory.TagIndustrial
-	if faction.DefOf(f.Type).Tech == faction.Neolithic {
-		tag = backstory.TagNeolithic
-	}
-	p := pawngen.Generate(g.ng.setup.Seed^visitorSalt, int(id), 0, pawngen.Rules{Tech: tag})
-	name := p.Nick
-	if name == "" {
-		name = p.First
-	}
+	p := pawngen.Generate(g.ng.setup.Seed^visitorSalt, int(id), 0, pawngen.Rules{Tech: techTag(f)})
+	g.peopleReg().add(&person{ID: id, Bio: p, HasBio: true, Faction: fac, Where: whereVisitor})
+	g.socState().sig[id] = personSig{}
+	g.placeVisitor(id, fac, x, y, now)
+	return id
+}
+
+// placeVisitor puts registered person id (Where Visitor) on (x, y) as a
+// visitor of faction fac.
+func (g *Game) placeVisitor(id entity.EntityID, fac, x, y int, now uint64) {
 	g.raiderIDs = withID(g.raiderIDs, id) // prisoners.go
 	g.positions.Set(id, Position{X: x, Y: y})
-	g.names.Set(id, name)
+	g.names.Set(id, bioName(g.personOf(id).Bio))
 	g.jobs.Set(id, job.Record{})
 	g.need.Set(id, needs.NewFull())
 	g.vital.Set(id, health.Record{Status: health.Alive})
 	g.raiders[id] = raiderState{Group: visitorGroup, Arrived: now, Leaving: true, Idle: now, RetryAt: math.MaxUint64}
-	g.peopleReg().add(&person{ID: id, Bio: p, HasBio: true, Faction: fac, Where: whereVisitor})
-	g.socState().sig[id] = personSig{}
 	w := g.worldS()
 	w.visitors = append(w.visitors, visitorRec{ID: id, Faction: fac, LeaveAt: now + visitorStay})
 	g.invalidateCreatures()
-	return id
 }
 
 // visitorsTick drives every visitor: keep it out of the released-prisoner

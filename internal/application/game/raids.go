@@ -48,6 +48,8 @@ type raiderState struct {
 	Hungry    bool
 	FoodRetry uint64
 	Warden    entity.EntityID
+	// KidnapAt: a kidnap failed; no new one before this tick (kidnap.go).
+	KidnapAt uint64
 }
 
 type raidGroup struct {
@@ -257,17 +259,33 @@ func (g *Game) raidFrom(kit []item.Kind, plan raidPlan, fac int) {
 	g.raidGroups = append(g.raidGroups, grp)
 	group := len(g.raidGroups) - 1
 	spawned := 0
+	// relative_world.go: now and then one raider is a colonist's relative
+	wantKin := f != nil && g.relativeRoll(relativeRaidPermille)
+	var kin entity.EntityID
 	for i := 0; i < n*6 && spawned < n; i++ {
 		x, y := ex+g.rng.IntN(5)-2, ey+g.rng.IntN(5)-2
 		if !g.grid.InBounds(x, y) || !g.dryWalkable(x, y) {
 			continue
 		}
-		id := g.entities.Next()
-		g.raiderIDs = append(g.raiderIDs, id)
-		g.positions.Set(id, Position{X: x, Y: y})
-		if f != nil {
-			g.names.Set(id, g.raiderName(id, f)) // story.go
+		var id entity.EntityID
+		if wantKin {
+			wantKin = false
+			kin = g.relativeFor(fac, whereRaider, techTag(f))
+			id = kin
+		}
+		if id != 0 {
+			g.raiderIDs = withID(g.raiderIDs, id) // a known person's id may be older
 		} else {
+			id = g.entities.Next()
+			g.raiderIDs = append(g.raiderIDs, id)
+		}
+		g.positions.Set(id, Position{X: x, Y: y})
+		switch {
+		case id == kin:
+			g.names.Set(id, bioName(g.personOf(id).Bio))
+		case f != nil:
+			g.names.Set(id, g.raiderName(id, f)) // story.go
+		default:
 			g.names.Set(id, raiderNames[g.rng.IntN(len(raiderNames))])
 		}
 		g.jobs.Set(id, job.Record{})
@@ -275,7 +293,9 @@ func (g *Game) raidFrom(kit []item.Kind, plan raidPlan, fac int) {
 		g.vital.Set(id, health.Record{Status: health.Alive})
 		g.equip[id] = kit[spawned]
 		g.raiders[id] = raiderState{Group: group, Arrived: uint64(g.clock.Now())}
-		g.raiderPerson(id, fac) // people.go: a world person (relations, capture)
+		if id != kin {
+			g.raiderPerson(id, fac) // people.go: a world person (relations, capture)
+		}
 		spawned++
 	}
 	g.raidGroups[group].Size = spawned
@@ -284,6 +304,9 @@ func (g *Game) raidFrom(kit []item.Kind, plan raidPlan, fac int) {
 		return
 	}
 	if f != nil {
+		if kin != 0 { // relative_world.go: before the raid alert, which stays the latest message
+			g.relativeLetter("Relative among the raiders", kin, "raiders")
+		}
 		g.raidMessage(ex, ey, spawned, plan, f) // story.go
 		return
 	}
@@ -360,6 +383,7 @@ func (g *Game) thinkRaider(id entity.EntityID, now uint64) {
 		}
 		return // its body stays until it is buried or cremated (burial.go)
 	case v.Status == health.Downed:
+		g.dropPatient(id) // kidnap.go: a downed kidnapper lets go
 		if r.Downed == 0 {
 			r.Downed = now
 			g.raiders[id] = r
@@ -372,6 +396,10 @@ func (g *Game) thinkRaider(id entity.EntityID, now uint64) {
 		return
 	}
 	j, _ := g.jobs.Get(id)
+	if j.Kind == job.Kidnap {
+		g.stepKidnap(id, j, now) // kidnap.go: committed until it ends
+		return
+	}
 	if r.Arrived == 0 {
 		r.Arrived = now // raiders from before this field existed
 	}
@@ -388,6 +416,9 @@ func (g *Game) thinkRaider(id entity.EntityID, now uint64) {
 		w, h := g.grid.Width(), g.grid.Height()
 		if pos.X == 0 || pos.Y == 0 || pos.X == w-1 || pos.Y == h-1 {
 			g.removeRaider(id) // gone home
+			return
+		}
+		if g.tryKidnap(id, pos, now) { // kidnap.go
 			return
 		}
 		if !j.Active() || (now+uint64(id))%120 == 0 && j.Kind != job.Move {
@@ -422,6 +453,7 @@ func (g *Game) thinkRaider(id entity.EntityID, now uint64) {
 				r.Idle = now
 				g.raiders[id] = r
 			}
+			g.tryKidnap(id, pos, now) // kidnap.go: no one left standing
 			return
 		}
 		r.Idle = 0
@@ -504,7 +536,14 @@ func (g *Game) dropRaiderGear(id entity.EntityID) {
 	}
 }
 
+// removeRaider takes raider (or visitor, prisoner) id off the map. A
+// raider who got away is an off-map person again, its relations kept;
+// whatever it carried is put down first.
 func (g *Game) removeRaider(id entity.EntityID) {
+	if p := g.personOf(id); p != nil && p.Where == whereRaider {
+		p.Where = whereOffMap
+	}
+	g.dropPatient(id)
 	g.reserve.ReleaseOwner(id)
 	g.positions.Delete(id)
 	g.names.Delete(id)

@@ -47,9 +47,17 @@ func (g *Game) phaseSocial() {
 			g.stepMood(id) // social_mood.go
 		}
 	}
+	if g.worldSt != nil {
+		// visitors.go: visitors start conversations too (arrival order)
+		for _, v := range g.worldSt.visitors {
+			if (now+uint64(v.ID)*socialStagger)%socialPeriod == 0 {
+				g.socialCheck(v.ID, now)
+			}
+		}
+	}
 }
 
-// socialCheck is colonist id's periodic social turn.
+// socialCheck is colonist (or visitor) id's periodic social turn.
 func (g *Game) socialCheck(id entity.EntityID, now uint64) {
 	if !g.alive(id) {
 		return

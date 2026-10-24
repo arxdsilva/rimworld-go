@@ -1,0 +1,82 @@
+package ebiten
+
+import (
+	"slices"
+	"strings"
+	"testing"
+
+	ebiten "github.com/hajimehoshi/ebiten/v2"
+
+	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/pawn/look"
+)
+
+// scarArt is figureArt plus the face scar sprites.
+func scarArt() *artCatalog {
+	c := figureArt()
+	for f := faceSouth; f <= faceWest; f++ {
+		c.sprites["pawn/face_scar_"+f.String()] = fakeSprite([2]int{160, 297}, pt{16, 153}, nil)
+	}
+	return c
+}
+
+// figureKeys draws p's standing figure and lists the sprite keys in draw order.
+func figureKeys(r *Renderer, p game.PawnView) []string {
+	var keys []string
+	r.lit.onDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
+	defer func() { r.lit.onDraw = nil }()
+	r.drawPawns = []game.PawnView{p}
+	r.drawPawnFigure(ebiten.NewImage(512, 512), p, 2, 2, 64, r.pawnFigurePoseOf(p))
+	return keys
+}
+
+func TestFaceScarDrawnOverHairWhenDisfigured(t *testing.T) {
+	t.Parallel()
+	r := New(&stubSim{w: 64, h: 64, tick: 100})
+	r.art = scarArt()
+	p := game.PawnView{ID: 1, X: 2, Y: 2, Health: 100, Status: "alive"}
+	for _, k := range figureKeys(r, p) {
+		if strings.HasPrefix(k, "pawn/face_scar_") {
+			t.Fatalf("an unscarred pawn drew %s", k)
+		}
+	}
+	p.Disfigured = true
+	keys := figureKeys(r, p)
+	scar := slices.IndexFunc(keys, func(k string) bool { return strings.HasPrefix(k, "pawn/face_scar_") })
+	hair := slices.IndexFunc(keys, func(k string) bool { return strings.HasPrefix(k, "pawn/hair_") })
+	if scar < 0 || hair < 0 || scar < hair {
+		t.Fatalf("scar at %d, hair at %d: %v", scar, hair, keys)
+	}
+	// no scar art: nothing breaks, nothing drawn for it
+	r.art = figureArt()
+	for _, k := range figureKeys(r, p) {
+		if strings.HasPrefix(k, "pawn/face_scar_") {
+			t.Fatalf("drew %s without the art", k)
+		}
+	}
+}
+
+func TestPortraitFaceScar(t *testing.T) {
+	t.Parallel()
+	art := testArt(t)
+	l := look.Look{Sex: look.Male, Skin: 1, Hair: 1, HairStyle: 2}
+	has := func(ls []portraitLayer) int {
+		return slices.IndexFunc(ls, func(ly portraitLayer) bool { return ly.key == "pawn/face_scar_south" })
+	}
+	if has(portraitLayers(art, l)) >= 0 {
+		t.Fatal("an unscarred portrait has the scar")
+	}
+	ls := scarredLayers(art, l, true)
+	i := has(ls)
+	hair := slices.IndexFunc(ls, func(ly portraitLayer) bool { return strings.HasPrefix(ly.key, "pawn/hair_") })
+	if i < 0 || i < hair {
+		t.Fatalf("scar at %d, hair at %d", i, hair)
+	}
+	if !art.has("pawn/face_scar_south") {
+		t.Fatal("no generated face scar art")
+	}
+	dst := ebiten.NewImage(200, 240)
+	if !drawPortrait(dst, art, l, true, 20, 20, 160, 200) {
+		t.Fatal("nothing drawn")
+	}
+}
