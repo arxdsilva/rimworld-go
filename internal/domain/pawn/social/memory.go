@@ -171,29 +171,59 @@ func HasMemory(ms []OpinionMemory, k MemKind, subject ID, now uint64) bool {
 // subject (stacked diminishing, each copy at its own Scale), in kind
 // order. Chitchat is capped.
 func MemoryTerms(ms []OpinionMemory, subject ID, now uint64) []Term {
-	var out []Term
-	for k := MemKind(0); k < NumMemKinds; k++ {
-		d := memDefs[k]
-		n := 0
-		var sum int64
-		f := int64(1000)
-		for _, m := range ms {
-			if m.Kind != k || m.Subject != subject || m.Expires <= now {
-				continue
-			}
-			n++
-			sum += int64(d.Value) * m.scaleOf() / 1000 * f / 1000
-			f = f * int64(d.StackFactor) / 1000
-		}
-		if n == 0 {
+	return appendMemoryTerms(nil, ms, subject, now)
+}
+
+// appendMemoryTerms appends MemoryTerms(ms, subject, now) to out.
+func appendMemoryTerms(out []Term, ms []OpinionMemory, subject ID, now uint64) []Term {
+	if len(ms) == 0 {
+		return out
+	}
+	eachMemoryTerm(ms, subject, now, func(t Term) { out = append(out, t) })
+	return out
+}
+
+// memorySum is the sum of MemoryTerms(ms, subject, now)'s values (no list).
+func memorySum(ms []OpinionMemory, subject ID, now uint64) int32 {
+	var sum int32
+	if len(ms) > 0 {
+		eachMemoryTerm(ms, subject, now, func(t Term) { sum += t.Value })
+	}
+	return sum
+}
+
+// eachMemoryTerm calls fn with each of MemoryTerms(ms, subject, now), in
+// order.
+func eachMemoryTerm(ms []OpinionMemory, subject ID, now uint64, fn func(Term)) {
+	// one pass over ms, each kind's copies stacked in their order
+	type acc struct {
+		n      int
+		sum, f int64
+	}
+	var per [NumMemKinds]acc
+	for _, m := range ms {
+		if m.Kind >= NumMemKinds || m.Subject != subject || m.Expires <= now {
 			continue
 		}
+		a, d := &per[m.Kind], &memDefs[m.Kind]
+		if a.n == 0 {
+			a.f = 1000
+		}
+		a.n++
+		a.sum += int64(d.Value) * m.scaleOf() / 1000 * a.f / 1000
+		a.f = a.f * int64(d.StackFactor) / 1000
+	}
+	for k := MemKind(0); k < NumMemKinds; k++ {
+		a := &per[k]
+		if a.n == 0 {
+			continue
+		}
+		sum := a.sum
 		if k == MemChitchat && sum > ChitchatCap {
 			sum = ChitchatCap
 		}
-		out = append(out, Term{Label: d.Label, Value: int32(sum)})
+		fn(Term{Label: memDefs[k].Label, Value: int32(sum)})
 	}
-	return out
 }
 
 // Sum is the total memory opinion about subject.

@@ -344,7 +344,11 @@ type Thought struct {
 
 // Active lists memories plus current state thoughts.
 func Active(m Memories, states ...Kind) []Thought {
-	var out []Thought
+	return AppendActive(nil, m, states...)
+}
+
+// AppendActive appends Active(m, states...) to out.
+func AppendActive(out []Thought, m Memories, states ...Kind) []Thought {
 	var seen [numKinds]int
 	for _, x := range m {
 		d := DefOf(x.Kind)

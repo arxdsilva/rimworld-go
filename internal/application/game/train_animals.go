@@ -136,12 +136,12 @@ func trainDue(id entity.EntityID, a animal.State, now uint64) bool {
 }
 
 // trainable reports whether a handler may train animal id now.
-func (g *Game) trainable(id entity.EntityID, a animal.State, now uint64) bool {
-	if !a.Tame || a.Dead() || a.Enraged(now) || sleeping(a) || a.Leaving ||
-		a.Mode == animal.Flee || a.Mode == animal.Attack || a.Mode == animal.Confused || !trainDue(id, a, now) {
+func (g *Game) trainable(id entity.EntityID, a *animal.State, now uint64) bool {
+	if !a.Tame || a.Dead() || a.Enraged(now) || sleeping(*a) || a.Leaving ||
+		a.Mode == animal.Flee || a.Mode == animal.Attack || a.Mode == animal.Confused || !trainDue(id, *a, now) {
 		return false
 	}
-	_, ok := nextTrainSkill(a, now)
+	_, ok := nextTrainSkill(*a, now)
 	return ok
 }
 
@@ -164,15 +164,14 @@ func (g *Game) cmdSetTraining(id entity.EntityID, s int, on bool) {
 // session is due.
 func (g *Game) assignTrain(id entity.EntityID) bool {
 	now := uint64(g.clock.Now())
-	if !g.anyAnimal(func(aid entity.EntityID, a animal.State) bool { return g.trainable(aid, a, now) }) {
+	if !g.anyAnimal(func(aid entity.EntityID, a *animal.State) bool { return g.trainable(aid, a, now) }) {
 		return false
 	}
 	pos, _ := g.positions.Get(id)
 	var best entity.EntityID
 	bestD := 1 << 30
 	for _, aid := range g.animalIDs {
-		a, ok := g.animals.Get(aid)
-		if !ok || !g.trainable(aid, a, now) {
+		if a := g.animals.Ref(aid); a == nil || !g.trainable(aid, a, now) {
 			continue
 		}
 		if _, taken := g.reserve.EntityOwner(aid); taken {

@@ -245,7 +245,7 @@ func (g *Game) replacedStanding(fr construction.Frame) entity.EntityID {
 	if fr.Replaces == 0 {
 		return 0
 	}
-	if _, ok := g.bldgs.Get(fr.Replaces); !ok {
+	if !g.bldgs.Has(fr.Replaces) {
 		return 0
 	}
 	return fr.Replaces

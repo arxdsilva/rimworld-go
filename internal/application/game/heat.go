@@ -203,8 +203,8 @@ func (g *Game) assignRefuel(id entity.EntityID) bool {
 	}
 	var fires []cand
 	for _, bid := range g.bldgIDs {
-		b, ok := g.bldgs.Get(bid)
-		if !ok || b.Kind != construction.Campfire || b.Deconstruct || g.fuel[bid] >= refuelBelow {
+		b := g.bldgs.Ref(bid) // read only: nothing below changes the store
+		if b == nil || b.Kind != construction.Campfire || b.Deconstruct || g.fuel[bid] >= refuelBelow {
 			continue
 		}
 		if owner, taken := g.reserve.EntityOwner(bid); taken && owner != id {
@@ -494,7 +494,7 @@ func (g *Game) ClearPlants(x0, y0, x1, y1 int) {
 func (g *Game) woodLow() bool {
 	fires := 0
 	for _, bid := range g.bldgIDs {
-		if b, ok := g.bldgs.Get(bid); ok && b.Kind == construction.Campfire {
+		if b := g.bldgs.Ref(bid); b != nil && b.Kind == construction.Campfire {
 			fires++
 		}
 	}

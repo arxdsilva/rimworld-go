@@ -102,10 +102,11 @@ func (g *Game) assignWear(id entity.EntityID) bool {
 	var bst item.Stack
 	bestGain, bestD := 0, 1<<30
 	for _, sid := range g.itemIDs {
-		st, ok := g.stacks.Get(sid)
-		if !ok || st.Carrier != 0 || st.Forbidden || !st.Kind.IsApparel() {
+		sp := g.stacks.Ref(sid)
+		if sp == nil || sp.Carrier != 0 || sp.Forbidden || !sp.Kind.IsApparel() {
 			continue
 		}
+		st := *sp // a garment: copied (the loop only reads)
 		if _, taken := g.reserve.EntityOwner(sid); taken {
 			continue
 		}

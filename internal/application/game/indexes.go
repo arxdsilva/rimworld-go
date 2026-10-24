@@ -160,7 +160,7 @@ func (g *Game) plantAtIndexed(x, y int) entity.EntityID {
 		return g.plantAtScan(x, y)
 	}
 	if id := ix.slots[0][i]; id != 0 {
-		if p, ok := g.plants.Get(id); ok && p.X == x && p.Y == y {
+		if p := g.plants.Ref(id); p != nil && p.X == x && p.Y == y {
 			return id
 		}
 	}

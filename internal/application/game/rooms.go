@@ -188,8 +188,21 @@ func (g *Game) remember(id entity.EntityID, k mood.Kind) {
 }
 
 func (g *Game) thoughts(id entity.EntityID) []mood.Thought {
+	return g.appendThoughts(nil, id)
+}
+
+// thoughtLevel is mood.Level(g.thoughts(id)), the list built in a reused
+// buffer (the mood checks run it for every working colonist).
+func (g *Game) thoughtLevel(id entity.EntityID) int {
+	g.thoughtBuf = g.appendThoughts(g.thoughtBuf[:0], id)
+	return mood.Level(g.thoughtBuf)
+}
+
+// appendThoughts appends the colonist's thoughts to dst.
+func (g *Game) appendThoughts(dst []mood.Thought, id entity.EntityID) []mood.Thought {
 	n, _ := g.need.Get(id)
-	var states []mood.Kind
+	var stateBuf [12]mood.Kind
+	states := stateBuf[:0]
 	if n.Hungry() {
 		states = append(states, mood.Hungry)
 	}
@@ -225,15 +238,15 @@ func (g *Game) thoughts(id entity.EntityID) []mood.Thought {
 	if v, _ := g.vital.Get(id); v.Status != health.Dead && g.unburiedNear(pos) {
 		states = append(states, mood.UnburiedCorpse)
 	}
-	ts := g.traitThoughts(id, mood.Active(g.memories[id].Prune(uint64(g.clock.Now())), states...)) // skills.go
-	ts = append(ts, g.bodyThoughts(id)...)                                                         // body.go
-	ts = append(ts, g.drugThoughts(id)...)                                                         // drugs.go
-	return append(ts, g.socialThoughts(id)...)                                                     // social_mood.go
+	ts := g.traitThoughts(id, mood.AppendActive(dst, g.memories[id].Prune(uint64(g.clock.Now())), states...)) // skills.go
+	ts = append(ts, g.bodyThoughts(id)...)                                                                    // body.go
+	ts = append(ts, g.drugThoughts(id)...)                                                                    // drugs.go
+	return append(ts, g.socialThoughts(id)...)                                                                // social_mood.go
 }
 
 // moodOf is the colonist's mood: the level its thoughts add up to, as the
 // social layer smooths it (social_mood.go).
-func (g *Game) moodOf(id entity.EntityID) int { return g.smoothedMood(id, mood.Level(g.thoughts(id))) }
+func (g *Game) moodOf(id entity.EntityID) int { return g.smoothedMood(id, g.thoughtLevel(id)) }
 
 // afterSleep records how and where pawn id slept.
 func (g *Game) afterSleep(id entity.EntityID) {

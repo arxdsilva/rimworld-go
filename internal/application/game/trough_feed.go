@@ -31,8 +31,10 @@ const (
 
 // isTrough reports a standing feeding trough.
 func (g *Game) isTrough(id entity.EntityID) (construction.Building, bool) {
-	b, ok := g.bldgs.Get(id)
-	return b, ok && b.Kind == construction.FeedingTrough
+	if b := g.bldgs.Ref(id); b != nil && b.Kind == construction.FeedingTrough {
+		return *b, true
+	}
+	return construction.Building{}, false
 }
 
 // troughFeeds reports that a trough set to filter f takes item kind k.
@@ -214,10 +216,11 @@ func (g *Game) fillTroughs(id entity.EntityID) bool {
 		var bst item.Stack
 		bestD := 1 << 30
 		for _, sid := range g.itemIDs {
-			st, ok := g.stacks.Get(sid)
-			if !ok || st.Carrier != 0 || st.Forbidden || st.Qty <= 0 || st.Rotten() || !troughFeeds(f, st.Kind) {
+			sp := g.stacks.Ref(sid)
+			if sp == nil || sp.Carrier != 0 || sp.Forbidden || sp.Qty <= 0 || sp.Rotten() || !troughFeeds(f, sp.Kind) {
 				continue
 			}
+			st := *sp // a candidate (the loop only reads)
 			if st.X == b.X && st.Y == b.Y {
 				continue // already lying on the trough
 			}

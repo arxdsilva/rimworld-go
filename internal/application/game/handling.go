@@ -61,7 +61,7 @@ func (g *Game) beingTamed(id entity.EntityID) bool {
 
 // assignTame sends a hunter to the nearest animal marked for taming.
 func (g *Game) assignTame(id entity.EntityID) bool {
-	if !g.anyAnimal(func(_ entity.EntityID, a animal.State) bool { return a.TameMark && !a.Tame }) {
+	if !g.anyAnimal(func(_ entity.EntityID, a *animal.State) bool { return a.TameMark && !a.Tame }) {
 		return false // jobindex.go: nothing marked for taming
 	}
 	now := uint64(g.clock.Now())

@@ -103,7 +103,7 @@ func (g *Game) benchAt(x, y int) (entity.EntityID, construction.Building, bool) 
 func (g *Game) stockOf(k item.Kind) int {
 	n := 0
 	for _, id := range g.itemIDs {
-		if st, ok := g.stacks.Get(id); ok && st.Kind == k {
+		if st := g.stacks.Ref(id); st != nil && st.Kind == k {
 			n += st.Qty
 		}
 	}
@@ -154,11 +154,12 @@ func (g *Game) ingredientFor(id entity.EntityID, in recipe.Input) (entity.Entity
 	var bst item.Stack
 	bestD := 1 << 30
 	for _, iid := range g.itemIDs {
-		st, ok := g.stacks.Get(iid)
+		sp := g.stacks.Ref(iid)
 		// a rotten body still burns on a pyre
-		if !ok || st.Carrier != 0 || st.Forbidden || st.Qty < in.Qty || !in.AcceptsStack(st) || st.Rotten() && st.Kind != item.CorpseHuman {
+		if sp == nil || sp.Carrier != 0 || sp.Forbidden || sp.Qty < in.Qty || !in.AcceptsStack(*sp) || sp.Rotten() && sp.Kind != item.CorpseHuman {
 			continue
 		}
+		st := *sp // a candidate (the loop only reads)
 		if owner, taken := g.reserve.EntityOwner(iid); taken && owner != id {
 			continue
 		}
@@ -172,10 +173,11 @@ func (g *Game) ingredientFor(id entity.EntityID, in recipe.Input) (entity.Entity
 
 func (g *Game) assignBill(id entity.EntityID, m work.Mask) bool {
 	for _, bid := range g.bldgIDs {
-		b, ok := g.bldgs.Get(bid)
-		if !ok || !construction.DefOf(b.Kind).Bench {
+		bp := g.bldgs.Ref(bid)
+		if bp == nil || !construction.DefOf(bp.Kind).Bench {
 			continue
 		}
+		b := *bp // a bench: copied before anything below can change the store
 		if owner, taken := g.reserve.EntityOwner(bid); taken && owner != id {
 			continue
 		}

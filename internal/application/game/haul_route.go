@@ -149,10 +149,11 @@ func (g *Game) planDelivery(id entity.EntityID, pos Position) (job.Record, []hau
 	}
 	var free []freeStack
 	for _, iid := range g.itemIDs {
-		st, ok := g.stacks.Get(iid)
-		if !ok || st.Qty <= 0 || st.Carrier != 0 || st.Forbidden || !slices.Contains(kinds, st.Kind) {
+		sp := g.stacks.Ref(iid)
+		if sp == nil || sp.Qty <= 0 || sp.Carrier != 0 || sp.Forbidden || !slices.Contains(kinds, sp.Kind) {
 			continue
 		}
+		st := *sp // a candidate (the loop only reads)
 		if _, taken := g.reserve.EntityOwner(iid); taken {
 			continue
 		}

@@ -165,6 +165,18 @@ func (s *Store[T]) Len() int {
 	return len(s.denseEntities)
 }
 
+// AnyRef reports whether fn accepts some stored value, calling it in
+// insertion order with a pointer to each (no copy) until one does. fn
+// must not mutate the store or write through the pointer.
+func (s *Store[T]) AnyRef(fn func(entity.EntityID, *T) bool) bool {
+	for i, id := range s.denseEntities {
+		if fn(id, &s.denseValues[i]) {
+			return true
+		}
+	}
+	return false
+}
+
 // All calls fn for every stored (id, value) pair in insertion order.
 // Do not mutate the store from within fn.
 func (s *Store[T]) All(fn func(entity.EntityID, T)) {

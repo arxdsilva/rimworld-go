@@ -25,9 +25,9 @@ func productJob(p animal.Product) job.Kind {
 }
 
 // collectReady: a tame animal whose product is full and free to collect.
-func (g *Game) collectReady(aid entity.EntityID, a animal.State, now uint64) bool {
+func (g *Game) collectReady(aid entity.EntityID, a *animal.State, now uint64) bool {
 	if !a.Tame || a.Leaving || a.Enraged(now) || a.Product < animal.ProductFull ||
-		!animal.Produces(a.Species, a.Female, g.grown(a, now)) {
+		!animal.Produces(a.Species, a.Female, g.grown(*a, now)) {
 		return false
 	}
 	_, taken := g.reserve.EntityOwner(aid)
@@ -38,14 +38,14 @@ func (g *Game) collectReady(aid entity.EntityID, a animal.State, now uint64) boo
 // with a full product (the creature index, nearest first).
 func (g *Game) assignCollect(id entity.EntityID) bool {
 	now := uint64(g.clock.Now())
-	if !g.anyAnimal(func(o entity.EntityID, a animal.State) bool { return g.collectReady(o, a, now) }) {
+	if !g.anyAnimal(func(o entity.EntityID, a *animal.State) bool { return g.collectReady(o, a, now) }) {
 		return false // jobindex.go: no product ready anywhere
 	}
 	pos, _ := g.positions.Get(id)
 	r := max(g.grid.Width(), g.grid.Height())
 	best, bp, ok := g.nearestWhere(pos.X, pos.Y, r, ckAnimal, func(o entity.EntityID, _ Position) bool {
-		a, ok := g.animals.Get(o)
-		return ok && g.collectReady(o, a, now)
+		a := g.animals.Ref(o)
+		return a != nil && g.collectReady(o, a, now)
 	})
 	if !ok {
 		return false

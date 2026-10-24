@@ -428,6 +428,9 @@ type Game struct {
 	rng      *randx.Rand
 	sched    schedule.Grid
 	wl       wildlifeState // SIM-019 wildlife events (wildlife.go)
+	// thoughtBuf is thoughtLevel's reused thought list (rooms.go; never
+	// saved, never handed out).
+	thoughtBuf []mood.Thought
 
 	messages []MessageView
 

@@ -40,13 +40,15 @@ type edge struct {
 	pair   social.Pair
 	friend [2]bool
 	rival  [2]bool
-	// derived opinion cache (never saved)
-	ok     [2]bool
-	op     [2]int32
-	terms  [2][]social.Term
-	until  [2]uint64
-	relVer [2]uint64
-	sigVer [2][2]uint64
+	// derived opinion cache (never saved); terms are kept only once a
+	// caller asked for them (termsOK)
+	ok      [2]bool
+	op      [2]int32
+	terms   [2][]social.Term
+	termsOK [2]bool
+	until   [2]uint64
+	relVer  [2]uint64
+	sigVer  [2][2]uint64
 }
 
 // dir is the direction index of from's view.
@@ -305,10 +307,14 @@ func (g *Game) opinionTerms(from, to entity.EntityID, withTerms bool) (int32, []
 	if g.soc != nil {
 		s = g.soc
 	}
+	cached := false
 	if e != nil {
 		d := e.dir(from)
 		if e.ok[d] && now < e.until[d] && e.relVer[d] == s.relVer && e.sigVer[d] == [2]uint64{s.sigVer[from], s.sigVer[to]} {
-			return e.op[d], e.terms[d]
+			if !withTerms || e.termsOK[d] {
+				return e.op[d], e.terms[d]
+			}
+			cached = true // the value holds; only its breakdown is missing
 		}
 	}
 	in := social.Inputs{Observer: g.socialPerson(from), Target: g.socialPerson(to), Relations: g.kinOf(from, to), Now: now}
@@ -322,13 +328,27 @@ func (g *Game) opinionTerms(from, to entity.EntityID, withTerms bool) (int32, []
 			}
 		}
 	}
-	v, terms := social.Opinion(in)
+	if cached {
+		// a view's breakdown never changes the cached value the
+		// simulation reads
+		d := e.dir(from)
+		_, terms := social.Opinion(in)
+		e.terms[d], e.termsOK[d] = terms, true
+		return e.op[d], terms
+	}
+	var v int32
+	var terms []social.Term
+	if withTerms {
+		v, terms = social.Opinion(in)
+	} else {
+		v = social.OpinionValue(in) // the simulation's reads: no breakdown built
+	}
 	if e != nil && s != nil {
 		d := e.dir(from)
 		_, okFrom := s.sig[from]
 		_, okTo := s.sig[to]
 		if okFrom && okTo {
-			e.ok[d], e.op[d], e.terms[d], e.until[d] = true, v, terms, until
+			e.ok[d], e.op[d], e.terms[d], e.termsOK[d], e.until[d] = true, v, terms, withTerms, until
 			e.relVer[d], e.sigVer[d] = s.relVer, [2]uint64{s.sigVer[from], s.sigVer[to]}
 		}
 	}

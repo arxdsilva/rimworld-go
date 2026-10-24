@@ -769,23 +769,33 @@ func (g *Game) haulToStockpile(id entity.EntityID, pos Position) bool {
 	var tried []entity.EntityID
 	var full []item.Kind
 	var takes [256]int8 // filterMatches per kind (0 unknown, 1 yes, -1 no): zones don't change here
+	var postBuf [8]entity.EntityID
 	for range workTries {
 		var best item.Stack
 		var bestID entity.EntityID
 		bestD := 1 << 30
 		found := false
+		// For a stack not put off, postponedFor is false and prunes
+		// nothing: its pure filters then run cheapest-first (most loose
+		// stacks already lie on a stockpile that takes them). A put-off
+		// one keeps the original order, so pruning is unchanged.
+		post := g.postponedTargets(id, job.Haul, postBuf[:0])
 		for _, iid := range g.itemIDs {
-			st, ok := g.stacks.Get(iid)
-			if !ok || st.Qty <= 0 || st.Carrier != 0 || st.Forbidden {
+			st := g.stacks.Ref(iid) // read only: nothing below changes the store
+			if st == nil || st.Qty <= 0 || st.Carrier != 0 || st.Forbidden {
+				continue
+			}
+			off := len(post) > 0 && slices.Contains(post, iid)
+			if !off && g.inMatchingStockpileAt(st.Kind, st.X, st.Y) {
 				continue
 			}
 			if _, taken := g.reserve.EntityOwner(iid); taken {
 				continue
 			}
-			if slices.Contains(tried, iid) || slices.Contains(full, st.Kind) || g.postponedFor(id, job.Haul, iid, 0, 0) {
+			if slices.Contains(tried, iid) || slices.Contains(full, st.Kind) || off && g.postponedFor(id, job.Haul, iid, 0, 0) {
 				continue
 			}
-			if g.inMatchingStockpile(st) {
+			if off && g.inMatchingStockpileAt(st.Kind, st.X, st.Y) {
 				continue
 			}
 			if takes[st.Kind] == 0 {
@@ -799,7 +809,7 @@ func (g *Game) haulToStockpile(id entity.EntityID, pos Position) bool {
 			}
 			d := pathing.Dist(pos.X, pos.Y, st.X, st.Y)
 			if !found || d < bestD || (d == bestD && iid < bestID) {
-				found, bestD, bestID, best = true, d, iid, st
+				found, bestD, bestID, best = true, d, iid, *st
 			}
 		}
 		if !found {
@@ -843,8 +853,8 @@ func (g *Game) constructTry(id entity.EntityID, tried []entity.EntityID) (entity
 	bestD := 1 << 30
 	var bx, by int
 	for _, fid := range g.frameIDs {
-		fr, ok := g.frames.Get(fid)
-		if !ok || !fr.Ready() || g.replacedStanding(fr) != 0 {
+		fr := g.frames.Ref(fid) // read only: nothing below changes the store
+		if fr == nil || !fr.Ready() || g.replacedStanding(*fr) != 0 {
 			continue // a door waits for the wall it replaces to come down
 		}
 		if _, taken := g.reserve.EntityOwner(fid); taken {
@@ -862,8 +872,8 @@ func (g *Game) constructTry(id entity.EntityID, tried []entity.EntityID) (entity
 		}
 	}
 	for _, bid := range g.bldgIDs {
-		b, ok := g.bldgs.Get(bid)
-		if !ok || !b.Deconstruct {
+		b := g.bldgs.Ref(bid)
+		if b == nil || !b.Deconstruct {
 			continue
 		}
 		if _, taken := g.reserve.EntityOwner(bid); taken {
@@ -1493,8 +1503,7 @@ func (g *Game) arrive(id entity.EntityID, j job.Record) {
 
 func (g *Game) itemAt(x, y int) entity.EntityID {
 	for _, id := range g.itemIDs {
-		st, ok := g.stacks.Get(id)
-		if ok && st.Carrier == 0 && st.X == x && st.Y == y {
+		if st := g.stacks.Ref(id); st != nil && st.Carrier == 0 && st.X == x && st.Y == y {
 			return id
 		}
 	}
@@ -1539,10 +1548,11 @@ func (g *Game) mergeOrSetFrom(id entity.EntityID, st item.Stack, seen []spillSte
 		if oid == id {
 			continue
 		}
-		other, ok := g.stacks.Get(oid)
-		if !ok || !item.CanMerge(st, other) {
+		op := g.stacks.Ref(oid)
+		if op == nil || !item.CanMerge(st, *op) {
 			continue
 		}
+		other := *op // copied before the store changes below
 		room := item.StackLimit - other.Qty
 		if room <= 0 {
 			break
@@ -1575,7 +1585,7 @@ func (g *Game) otherStackAt(id entity.EntityID, x, y int) bool {
 		if oid == id {
 			continue
 		}
-		if o, ok := g.stacks.Get(oid); ok && o.Carrier == 0 && o.X == x && o.Y == y {
+		if o := g.stacks.Ref(oid); o != nil && o.Carrier == 0 && o.X == x && o.Y == y {
 			return true
 		}
 	}

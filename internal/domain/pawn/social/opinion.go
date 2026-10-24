@@ -53,14 +53,29 @@ func clampI32(v, lo, hi int32) int32 {
 // Opinion is Observer's opinion of Target in centi-points (clamped to
 // +-100 points) and the terms that make it up.
 func Opinion(in Inputs) (centi int32, terms []Term) {
+	return opinion(in, true)
+}
+
+// OpinionValue is Opinion's value alone (no terms list is built).
+func OpinionValue(in Inputs) int32 {
+	v, _ := opinion(in, false)
+	return v
+}
+
+func opinion(in Inputs, withTerms bool) (int32, []Term) {
+	var terms []Term
+	var sum int32
 	o, t := in.Observer, in.Target
 	add := func(label string, v int32) {
 		if v != 0 {
-			terms = append(terms, Term{label, v})
+			sum += v
+			if withTerms {
+				terms = append(terms, Term{label, v})
+			}
 		}
 	}
-	var kin []Kind
-	var romance []Kind
+	var kinBuf, romanceBuf [8]Kind
+	kin, romance := kinBuf[:0], romanceBuf[:0]
 	for _, k := range in.Relations {
 		if IsRomantic(k) {
 			romance = append(romance, k)
@@ -141,11 +156,14 @@ func Opinion(in Inputs) (centi int32, terms []Term) {
 	if o.Has(trait.NaturalPurist) && t.ArtificialParts > 0 {
 		add("artificial parts", clampI32(int32(t.ArtificialParts)*PuristPerPart, PuristCap, 0))
 	}
-	terms = append(terms, MemoryTerms(in.Memories, t.ID, in.Now)...)
-
-	var sum int32
-	for _, x := range terms {
-		sum += x.Value
+	if withTerms {
+		n := len(terms)
+		terms = appendMemoryTerms(terms, in.Memories, t.ID, in.Now)
+		for _, x := range terms[n:] {
+			sum += x.Value
+		}
+	} else {
+		sum += memorySum(in.Memories, t.ID, in.Now)
 	}
 	return clampI32(sum, OpinionMin, OpinionMax), terms
 }

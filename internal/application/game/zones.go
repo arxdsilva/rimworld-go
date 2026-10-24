@@ -154,24 +154,58 @@ func (g *Game) CanZoneAt(kind string, x, y int) bool {
 // Stockpiles.
 
 func allows(s zone.Zone, k item.Kind) bool {
+	switch stockCats[k] {
+	case stockFood:
+		return s.Food
+	case stockWood:
+		return s.Wood
+	case stockStone:
+		return s.Stone
+	case stockGoods:
+		return true
+	}
+	return false
+}
+
+// stockCat is the stockpile filter an item kind falls under.
+type stockCat uint8
+
+const (
+	stockNone  stockCat = iota // never stored (the dead, unknown kinds)
+	stockFood                  // the Food filter
+	stockWood                  // the Wood filter
+	stockStone                 // the Stone filter
+	stockGoods                 // goods: always welcome
+)
+
+// stockCats is stockCatOf for every kind, worked out once (allows runs
+// for every loose item in the hauling search).
+var stockCats = func() (t [256]stockCat) {
+	for k := range t {
+		t[k] = stockCatOf(item.Kind(k))
+	}
+	return t
+}()
+
+func stockCatOf(k item.Kind) stockCat {
 	switch {
 	case k == item.CorpseHuman, k == item.Bones:
-		return false // the dead go to graves and pyres, not shelves
+		return stockNone // the dead go to graves and pyres, not shelves
 	case k.IsFood(), k.IsCorpse():
-		return s.Food
+		return stockFood
 	case k == item.Wood:
-		return s.Wood
+		return stockWood
 	case k == item.Stone, item.IsChunk(k), item.IsStoneBlocks(k):
-		return s.Stone
+		return stockStone
 	case k == item.FertileEgg: // SIM-026: kept with the food; they hatch in place
-		return s.Food
+		return stockFood
 	case k == item.Leather, k == item.HerbalMedicine, k == item.Cloth, k == item.Straw, k.IsCarpet(), k.IsApparel(), k.IsWeapon(),
 		k == item.Wool, k == item.EmberOil, item.IsMetal(k),
 		k == item.Components, k == item.IndustrialMedicine,
 		k.IsDrug(), k.IsImplant(), k == item.AshleafLeaf: // ENG-003
-		return true // goods: always welcome
+		return stockGoods
 	}
-	return false
+	return stockNone
 }
 
 // filterMatches: some stockpile takes kind k.
@@ -185,8 +219,13 @@ func (g *Game) filterMatches(k item.Kind) bool {
 }
 
 func (g *Game) inMatchingStockpile(st item.Stack) bool {
-	z, ok := g.zoneOf(zone.KindStockpile, st.X, st.Y)
-	return ok && allows(z, st.Kind)
+	return g.inMatchingStockpileAt(st.Kind, st.X, st.Y)
+}
+
+// inMatchingStockpileAt reports a stockpile on (x, y) that takes kind k.
+func (g *Game) inMatchingStockpileAt(k item.Kind, x, y int) bool {
+	z, ok := g.zoneOf(zone.KindStockpile, x, y)
+	return ok && allows(z, k)
 }
 
 // stockpileCell is where a load of kind k goes, nearest (nearX, nearY)

@@ -146,8 +146,8 @@ func (g *Game) bestFood(id entity.EntityID) (entity.EntityID, int, int) {
 	bestPref, bestD := -1, 1<<30
 	var bx, by int
 	for _, iid := range g.itemIDs {
-		st, ok := g.stacks.Get(iid)
-		if !ok || !st.Kind.IsFood() || st.Qty <= 0 || st.Carrier != 0 || st.Forbidden {
+		st := g.stacks.Ref(iid) // read only: nothing below changes the store
+		if st == nil || !st.Kind.IsFood() || st.Qty <= 0 || st.Carrier != 0 || st.Forbidden {
 			continue
 		}
 		if owner, taken := g.reserve.EntityOwner(iid); taken && owner != id {

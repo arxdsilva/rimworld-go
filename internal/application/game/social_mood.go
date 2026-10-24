@@ -83,7 +83,7 @@ func (g *Game) stepMood(id entity.EntityID) {
 		}
 		return
 	}
-	target := int32(mood.Level(g.thoughts(id))) * 1000
+	target := int32(g.thoughtLevel(id)) * 1000
 	s := g.socState()
 	cur, ok := s.moodM[id]
 	if !ok {

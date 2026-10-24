@@ -148,19 +148,22 @@ func (g *Game) plantCands(id entity.EntityID, k job.Kind, want func(plant.Plant)
 	s := g.plantMarks()
 	cs := g.idx.jobs.cands[:0]
 	stale := false
+	// postponedFor is false (and prunes nothing) for a plant not put off
+	var postBuf [8]entity.EntityID
+	post := g.postponedTargets(id, k, postBuf[:0])
 	for _, pid := range s.ids {
-		p, ok := g.plants.Get(pid)
-		if !ok || !plantMarked(p) {
+		p := g.plants.Ref(pid) // read only: nothing below changes the store
+		if p == nil || !plantMarked(*p) {
 			stale = true
 			continue
 		}
-		if !want(p) {
+		if !want(*p) {
 			continue
 		}
 		if _, taken := g.reserve.EntityOwner(pid); taken {
 			continue
 		}
-		if g.postponedFor(id, k, pid, 0, 0) {
+		if len(post) > 0 && slices.Contains(post, pid) && g.postponedFor(id, k, pid, 0, 0) {
 			continue
 		}
 		cs = append(cs, plantCand{pid, pathing.Dist(pos.X, pos.Y, p.X, p.Y)})
@@ -217,8 +220,8 @@ func (g *Game) looseOnStockpiles() []entity.EntityID {
 		jx.loose, jx.looseCells = make([]entity.EntityID, n), jx.looseCells[:0]
 	}
 	for _, iid := range g.itemIDs {
-		st, has := g.stacks.Get(iid)
-		if !has || st.Carrier != 0 {
+		st := g.stacks.Ref(iid)
+		if st == nil || st.Carrier != 0 {
 			continue
 		}
 		if _, zoned := g.zoneOf(zone.KindStockpile, st.X, st.Y); !zoned {
@@ -244,16 +247,14 @@ func (g *Game) releaseLoose() {
 // ---- animals ----
 
 // anyAnimal reports whether some animal in the store passes ok: a quick
-// pass over the store's dense values (no id lookups) that lets the animal
-// job givers (hunt, tame, collect) skip their search when nothing is
-// marked or ready — the common case. The store holds every animal those
-// searches can find, so "none here" means they would find none.
-func (g *Game) anyAnimal(ok func(entity.EntityID, animal.State) bool) bool {
-	found := false
-	g.animals.All(func(id entity.EntityID, a animal.State) {
-		found = found || ok(id, a)
-	})
-	return found
+// pass over the store's dense values (no id lookups, no copies, stopping
+// at the first match) that lets the animal job givers (hunt, tame,
+// collect, train, tend) skip their search when nothing is marked or
+// ready — the common case. The store holds every animal those searches
+// can find, so "none here" means they would find none. ok must be a pure
+// read (it may run on any prefix of the store).
+func (g *Game) anyAnimal(ok func(entity.EntityID, *animal.State) bool) bool {
+	return g.animals.AnyRef(ok)
 }
 
 // ---- beds ----

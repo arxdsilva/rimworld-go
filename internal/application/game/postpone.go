@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -61,7 +62,12 @@ type postEntry struct {
 // Maps are only looked up in decisions; whole-map passes (walkability
 // clear, sweep) only delete, so iteration order never matters.
 type postState struct {
-	m       map[postKey]postVal
+	m map[postKey]postVal
+	// kinds lists m's keys per pawn and job kind (in no particular order:
+	// only membership is read), so a giver's candidate loop can tell which
+	// targets are put off without hashing a full key per candidate. Never
+	// saved: rebuilt with m.
+	kinds   map[postPawnKind][]postKey
 	rev     uint64 // grid revision the out-of-reach entries were judged at
 	sweepAt uint64
 	// orders is the player order each colonist is following now, so a
@@ -69,8 +75,55 @@ type postState struct {
 	orders map[entity.EntityID]queuedOrder
 }
 
+// postPawnKind is the part of a postKey postState.kinds groups by.
+type postPawnKind struct {
+	Pawn entity.EntityID
+	Kind job.Kind
+}
+
 func newPostState() postState {
-	return postState{m: make(map[postKey]postVal), orders: make(map[entity.EntityID]queuedOrder)}
+	return postState{m: make(map[postKey]postVal), kinds: make(map[postPawnKind][]postKey),
+		orders: make(map[entity.EntityID]queuedOrder)}
+}
+
+// put records k (listed once however often it is renewed).
+func (p *postState) put(k postKey, v postVal) {
+	if _, ok := p.m[k]; !ok {
+		if p.kinds == nil {
+			p.kinds = make(map[postPawnKind][]postKey)
+		}
+		pk := postPawnKind{k.Pawn, k.Kind}
+		p.kinds[pk] = append(p.kinds[pk], k)
+	}
+	p.m[k] = v
+}
+
+// drop forgets k, which is in m.
+func (p *postState) drop(k postKey) {
+	delete(p.m, k)
+	pk := postPawnKind{k.Pawn, k.Kind}
+	l := p.kinds[pk]
+	if i := slices.Index(l, k); i >= 0 {
+		l[i] = l[len(l)-1]
+		l = l[:len(l)-1]
+	}
+	if len(l) == 0 {
+		delete(p.kinds, pk)
+	} else {
+		p.kinds[pk] = l
+	}
+}
+
+// reindex rebuilds kinds from m.
+func (p *postState) reindex() {
+	if p.kinds == nil {
+		p.kinds = make(map[postPawnKind][]postKey, len(p.m))
+	}
+	clear(p.kinds)
+	for k := range p.m {
+		pk := postPawnKind{k.Pawn, k.Kind}
+		p.kinds[pk] = append(p.kinds[pk], k)
+	}
 }
 
 // postponable reports job kinds whose givers skip postponed targets.
@@ -133,7 +186,7 @@ func (g *Game) postpone(k postKey, why job.FailReason) {
 	if why == job.Unreachable {
 		v = postVal{Until: now + postUnreachTicks, Unreach: true}
 	}
-	p.m[k] = v
+	p.put(k, v)
 }
 
 // postponeTile puts tile work (mining, roofing, cleaning, grass) off as
@@ -150,15 +203,44 @@ func (g *Game) postponedFor(id entity.EntityID, kind job.Kind, target entity.Ent
 	}
 	g.postSync()
 	k := postKey{id, kind, target, x, y}
+	if len(p.kinds[postPawnKind{id, kind}]) == 0 {
+		if selfCheck() {
+			if _, ok := p.m[k]; ok {
+				panic(fmt.Sprintf("postponedFor(%v): unlisted entry", k))
+			}
+		}
+		return false // nothing of this kind put off for this pawn
+	}
 	v, ok := p.m[k]
 	if !ok {
 		return false
 	}
 	if uint64(g.clock.Now()) >= v.Until {
-		delete(p.m, k) // lazily pruned
+		p.drop(k) // lazily pruned
 		return false
 	}
 	return true
+}
+
+// postponedTargets is the entity targets of pawn id's put-off work of
+// this kind, copied into buf (reused; empty when there are none). For any
+// target not in it postponedFor(id, kind, target, 0, 0) is false and
+// prunes nothing, so a giver's candidate loop may skip that call (and
+// order its other, pure, filters as it likes) for such targets. Its
+// postSync is unobservable: every read of the entries syncs first.
+func (g *Game) postponedTargets(id entity.EntityID, kind job.Kind, buf []entity.EntityID) []entity.EntityID {
+	p := &g.postponed
+	buf = buf[:0]
+	if len(p.m) == 0 {
+		return buf
+	}
+	g.postSync()
+	for _, k := range p.kinds[postPawnKind{id, kind}] {
+		if k.Target != 0 {
+			buf = append(buf, k.Target)
+		}
+	}
+	return buf
 }
 
 // postSync drops every out-of-reach entry once walkability has changed
@@ -172,7 +254,7 @@ func (g *Game) postSync() {
 	p.rev = rev
 	for k, v := range p.m {
 		if v.Unreach {
-			delete(p.m, k)
+			p.drop(k)
 		}
 	}
 }
@@ -189,7 +271,7 @@ func (g *Game) postSweep() {
 	g.postSync()
 	for k, v := range p.m {
 		if now >= v.Until || !g.postPawnHere(k.Pawn) || g.postTargetGone(k) {
-			delete(p.m, k)
+			p.drop(k)
 		}
 	}
 	for id := range p.orders {
@@ -311,6 +393,7 @@ func (g *Game) importPostponed(in []postEntry) {
 	for _, e := range in {
 		g.postponed.m[e.Key] = postVal{e.Until, e.Unreach}
 	}
+	g.postponed.reindex()
 	g.postponed.rev = g.grid.Version()
 }
 

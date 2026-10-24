@@ -22,7 +22,7 @@ import (
 const animalHealEvery = 10 * animal.DecideEvery
 
 // needsVet reports whether tame animal id (state a) wants tending now.
-func (g *Game) needsVet(id entity.EntityID, a animal.State, now uint64) bool {
+func (g *Game) needsVet(id entity.EntityID, a *animal.State, now uint64) bool {
 	return a.Tame && a.Injury > 0 && !a.Dead() && !a.Enraged(now) && !g.tended(id) &&
 		a.Mode != animal.Flee && a.Mode != animal.Attack && !a.Leaving
 }
@@ -30,15 +30,14 @@ func (g *Game) needsVet(id entity.EntityID, a animal.State, now uint64) bool {
 // assignTendAnimal sends doctor id to tend the nearest hurt tame animal.
 func (g *Game) assignTendAnimal(id entity.EntityID) bool {
 	now := uint64(g.clock.Now())
-	if !g.anyAnimal(func(aid entity.EntityID, a animal.State) bool { return g.needsVet(aid, a, now) }) {
+	if !g.anyAnimal(func(aid entity.EntityID, a *animal.State) bool { return g.needsVet(aid, a, now) }) {
 		return false
 	}
 	pos, _ := g.positions.Get(id)
 	var best entity.EntityID
 	bestD := 1 << 30
 	for _, aid := range g.animalIDs {
-		a, ok := g.animals.Get(aid)
-		if !ok || !g.needsVet(aid, a, now) {
+		if a := g.animals.Ref(aid); a == nil || !g.needsVet(aid, a, now) {
 			continue
 		}
 		if _, taken := g.reserve.EntityOwner(aid); taken {

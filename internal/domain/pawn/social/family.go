@@ -12,24 +12,30 @@ type ancestor struct {
 	gen int
 }
 
-// ancestors lists id's ancestors up to MaxFamilyDepth generations, nearest
-// first, in a deterministic order.
-func ancestors(id ID, g Graph) []ancestor {
-	out := []ancestor{}
-	level := []ID{id}
+// maxAncestors is how many ancestors MaxFamilyDepth generations can hold
+// (2 + 4 + ... parents): the walk's buffers are this big, so the usual
+// family never allocates.
+const maxAncestors = 2<<MaxFamilyDepth - 2
+
+// appendAncestors appends id's ancestors up to MaxFamilyDepth generations
+// to dst, nearest first, in a deterministic order.
+func appendAncestors(dst []ancestor, id ID, g Graph) []ancestor {
+	var bufA, bufB [1 << MaxFamilyDepth]ID
+	level := append(bufA[:0], id)
+	next := bufB[:0]
 	for gen := 1; gen <= MaxFamilyDepth; gen++ {
-		var next []ID
+		next = next[:0]
 		for _, x := range level {
 			for _, p := range g.Parents(x) {
 				if p != 0 {
-					out = append(out, ancestor{p, gen})
+					dst = append(dst, ancestor{p, gen})
 					next = append(next, p)
 				}
 			}
 		}
-		level = next
+		level, next = next, level
 	}
-	return out
+	return dst
 }
 
 func genOf(list []ancestor, id ID) int {
@@ -67,7 +73,8 @@ func KinOf(a, b ID, g Graph) []Kind {
 }
 
 func bloodKin(a, b ID, g Graph) (Kind, bool) {
-	ancA, ancB := ancestors(a, g), ancestors(b, g)
+	var bufA, bufB [maxAncestors]ancestor
+	ancA, ancB := appendAncestors(bufA[:0], a, g), appendAncestors(bufB[:0], b, g)
 	if gen := genOf(ancA, b); gen > 0 {
 		return [...]Kind{0, Parent, Grandparent, GreatGrandparent, Kin}[gen], true
 	}

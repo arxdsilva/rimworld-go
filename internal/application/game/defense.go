@@ -387,7 +387,7 @@ func (g *Game) trapAt(x, y int) entity.EntityID {
 // hasTraps is a cheap check before looking for traps under movers.
 func (g *Game) hasTraps() bool {
 	for _, id := range g.bldgIDs {
-		if b, ok := g.bldgs.Get(id); ok && b.Kind == construction.SpikeTrap {
+		if b := g.bldgs.Ref(id); b != nil && b.Kind == construction.SpikeTrap {
 			return true
 		}
 	}
@@ -445,8 +445,8 @@ func (g *Game) assignRepair(id entity.EntityID) bool {
 		var best entity.EntityID
 		bestD := 1 << 30
 		for _, bid := range g.bldgIDs {
-			b, ok := g.bldgs.Get(bid)
-			if !ok || b.Damage <= 0 || b.Deconstruct {
+			b := g.bldgs.Ref(bid) // read only: nothing below changes the store
+			if b == nil || b.Damage <= 0 || b.Deconstruct {
 				continue
 			}
 			if _, taken := g.reserve.EntityOwner(bid); taken {

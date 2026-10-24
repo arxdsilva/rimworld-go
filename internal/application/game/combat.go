@@ -385,7 +385,7 @@ func (g *Game) hostile(a animal.State) bool {
 // The next nearest animal is tried when one can't be started (out of
 // reach, postponed: SIM-027), at most workTries animals.
 func (g *Game) assignHunt(id entity.EntityID) bool {
-	if !g.anyAnimal(func(_ entity.EntityID, a animal.State) bool { return a.Designated && !a.Dead() }) {
+	if !g.anyAnimal(func(_ entity.EntityID, a *animal.State) bool { return a.Designated && !a.Dead() }) {
 		return false // jobindex.go: nothing marked for hunting
 	}
 	pos, _ := g.positions.Get(id)

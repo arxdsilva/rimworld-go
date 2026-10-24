@@ -59,9 +59,9 @@ type rec struct {
 type Map struct {
 	w, h  int
 	cell  []ID
-	zones map[ID]*rec
-	ids   []ID // live zone ids, sorted
-	next  ID   // last id handed out; ids are never reused
+	zones []*rec // by ID (nil: none); ids are small and never reused
+	ids   []ID   // live zone ids, sorted
+	next  ID     // last id handed out; ids are never reused
 }
 
 // NewMap is an empty zone layer.
@@ -72,7 +72,26 @@ func NewMap(w, h int) *Map {
 	if h < 0 {
 		h = 0
 	}
-	return &Map{w: w, h: h, cell: make([]ID, w*h), zones: map[ID]*rec{}}
+	return &Map{w: w, h: h, cell: make([]ID, w*h)}
+}
+
+// rec is zone id's record, nil when there is none.
+func (m *Map) rec(id ID) *rec {
+	if int(id) < len(m.zones) {
+		return m.zones[id]
+	}
+	return nil
+}
+
+// setRec records r as zone id (nil forgets it).
+func (m *Map) setRec(id ID, r *rec) {
+	if int(id) >= len(m.zones) {
+		if r == nil {
+			return
+		}
+		m.zones = append(m.zones, make([]*rec, int(id)+1-len(m.zones))...)
+	}
+	m.zones[id] = r
 }
 
 func (m *Map) in(x, y int) bool { return x >= 0 && y >= 0 && x < m.w && y < m.h }
@@ -88,8 +107,8 @@ func (m *Map) At(x, y int) (ID, bool) {
 
 // Zone is zone id's settings.
 func (m *Map) Zone(id ID) (Zone, bool) {
-	r, ok := m.zones[id]
-	if !ok {
+	r := m.rec(id)
+	if r == nil {
 		return Zone{}, false
 	}
 	return r.z, true
@@ -99,7 +118,7 @@ func (m *Map) Zone(id ID) (Zone, bool) {
 func (m *Map) Zones() []Zone {
 	out := make([]Zone, len(m.ids))
 	for i, id := range m.ids {
-		out[i] = m.zones[id].z
+		out[i] = m.rec(id).z
 	}
 	return out
 }
@@ -107,7 +126,7 @@ func (m *Map) Zones() []Zone {
 // Each calls fn for every zone in id order until fn returns false.
 func (m *Map) Each(fn func(Zone) bool) {
 	for _, id := range m.ids {
-		if !fn(m.zones[id].z) {
+		if !fn(m.rec(id).z) {
 			return
 		}
 	}
@@ -115,8 +134,8 @@ func (m *Map) Each(fn func(Zone) bool) {
 
 // Cells lists zone id's tiles, row-major.
 func (m *Map) Cells(id ID) [][2]int {
-	r, ok := m.zones[id]
-	if !ok {
+	r := m.rec(id)
+	if r == nil {
 		return nil
 	}
 	out := make([][2]int, len(r.idx))
@@ -129,8 +148,8 @@ func (m *Map) Cells(id ID) [][2]int {
 // EachCell calls fn for zone id's tiles in row-major order until fn
 // returns false (no allocation).
 func (m *Map) EachCell(id ID, fn func(x, y int) bool) {
-	r, ok := m.zones[id]
-	if !ok {
+	r := m.rec(id)
+	if r == nil {
 		return
 	}
 	for _, c := range r.idx {
@@ -142,8 +161,8 @@ func (m *Map) EachCell(id ID, fn func(x, y int) bool) {
 
 // Bounds is zone id's bounding box.
 func (m *Map) Bounds(id ID) (Rect, bool) {
-	r, ok := m.zones[id]
-	if !ok {
+	r := m.rec(id)
+	if r == nil {
 		return Rect{}, false
 	}
 	if r.dirt {
@@ -173,7 +192,7 @@ func (m *Map) newZone(z Zone) *rec {
 	m.next++
 	z.ID, z.Cells = m.next, 0
 	r := &rec{z: z, dirt: true}
-	m.zones[z.ID] = r
+	m.setRec(z.ID, r)
 	i := sort.Search(len(m.ids), func(i int) bool { return m.ids[i] >= z.ID })
 	m.ids = append(m.ids, 0)
 	copy(m.ids[i+1:], m.ids[i:])
@@ -182,7 +201,7 @@ func (m *Map) newZone(z Zone) *rec {
 }
 
 func (m *Map) drop(id ID) {
-	delete(m.zones, id)
+	m.setRec(id, nil)
 	i := sort.Search(len(m.ids), func(i int) bool { return m.ids[i] >= id })
 	if i < len(m.ids) && m.ids[i] == id {
 		m.ids = append(m.ids[:i], m.ids[i+1:]...)
@@ -191,7 +210,7 @@ func (m *Map) drop(id ID) {
 
 // absorb moves every tile of zone from into zone into.
 func (m *Map) absorb(into, from ID) {
-	dst, src := m.zones[into], m.zones[from]
+	dst, src := m.rec(into), m.rec(from)
 	for _, c := range src.idx {
 		m.cell[c] = into
 	}
@@ -265,7 +284,7 @@ func (m *Map) Paint(kind Kind, proto Zone, r Rect, ok func(x, y int) bool) ID {
 					}
 					continue
 				}
-				if id := m.cell[n]; id != 0 && compatible(m.zones[id].z, proto) {
+				if id := m.cell[n]; id != 0 && compatible(m.rec(id).z, proto) {
 					cp.ids = appendID(cp.ids, id)
 				}
 			}
@@ -321,7 +340,7 @@ func (m *Map) Paint(kind Kind, proto Zone, r Rect, ok func(x, y int) bool) ID {
 		if len(ids) == 0 {
 			target = m.newZone(proto)
 		} else {
-			target = m.zones[ids[0]]
+			target = m.rec(ids[0])
 			for _, id := range ids[1:] {
 				m.absorb(ids[0], id)
 			}
@@ -368,7 +387,7 @@ func (m *Map) Clear(r Rect) {
 	}
 	sort.Slice(hit, func(a, b int) bool { return hit[a] < hit[b] })
 	for _, id := range hit {
-		z := m.zones[id]
+		z := m.rec(id)
 		kept := z.idx[:0]
 		for _, c := range z.idx {
 			if m.cell[c] == id {
@@ -386,7 +405,7 @@ func (m *Map) Clear(r Rect) {
 
 // split breaks zone id into its 4-connected pieces.
 func (m *Map) split(id ID) {
-	z := m.zones[id]
+	z := m.rec(id)
 	piece := m.flood(id, z.idx[0])
 	if len(piece) == len(z.idx) {
 		return
@@ -442,8 +461,8 @@ func (m *Map) flood(id ID, start int) []int {
 // stay. A grow zone switched to the crop of a touching zone merges with it
 // (the lower id survives).
 func (m *Map) Set(id ID, z Zone) {
-	r, ok := m.zones[id]
-	if !ok {
+	r := m.rec(id)
+	if r == nil {
 		return
 	}
 	z.ID, z.Kind, z.Cells = r.z.ID, r.z.Kind, r.z.Cells
@@ -452,7 +471,7 @@ func (m *Map) Set(id ID, z Zone) {
 	for _, c := range r.idx {
 		x, y := c%m.w, c/m.w
 		for _, d := range [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {
-			if nid, ok := m.At(x+d[0], y+d[1]); ok && nid != id && compatible(m.zones[nid].z, z) {
+			if nid, ok := m.At(x+d[0], y+d[1]); ok && nid != id && compatible(m.rec(nid).z, z) {
 				ids = appendID(ids, nid)
 			}
 		}
@@ -486,10 +505,10 @@ func Import(s Saved) *Map {
 	m := NewMap(s.W, s.H)
 	m.next = s.Next
 	for _, z := range s.Zones {
-		if z.ID == 0 || z.Kind == 0 || m.zones[z.ID] != nil {
+		if z.ID == 0 || z.Kind == 0 || m.rec(z.ID) != nil {
 			continue
 		}
-		m.zones[z.ID] = &rec{z: z, dirt: true}
+		m.setRec(z.ID, &rec{z: z, dirt: true})
 		m.ids = append(m.ids, z.ID)
 		if z.ID > m.next {
 			m.next = z.ID
@@ -498,15 +517,15 @@ func Import(s Saved) *Map {
 	sort.Slice(m.ids, func(a, b int) bool { return m.ids[a] < m.ids[b] })
 	for c := 0; c < len(m.cell) && c < len(s.Cells); c++ {
 		id := s.Cells[c]
-		r, ok := m.zones[id]
-		if !ok {
+		r := m.rec(id)
+		if r == nil {
 			continue
 		}
 		m.cell[c] = id
 		r.idx = append(r.idx, c)
 	}
 	for _, id := range append([]ID(nil), m.ids...) {
-		r := m.zones[id]
+		r := m.rec(id)
 		r.z.Cells = len(r.idx)
 		if r.z.Cells == 0 {
 			m.drop(id)

@@ -1,6 +1,7 @@
 package social
 
 import (
+	"math/rand/v2"
 	"reflect"
 	"testing"
 
@@ -1099,6 +1100,77 @@ func TestGriefLabel(t *testing.T) {
 	for _, c := range cases {
 		if got := GriefLabel(c.k, c.male, c.friend, c.rival, c.lost); got != c.want {
 			t.Errorf("GriefLabel(%v) = %q, want %q", c, got, c.want)
+		}
+	}
+}
+
+// TestOpinionValueMatchesOpinion: the value-only path (no terms list) is
+// Opinion's value for any mix of relations, traits and memories.
+func TestOpinionValueMatchesOpinion(t *testing.T) {
+	rng := rand.New(rand.NewPCG(3, 9))
+	traits := []trait.ID{trait.Gracious, trait.GratingVoice, trait.DistrustsMen, trait.Abstainer, trait.Indulgent}
+	for i := 0; i < 2000; i++ {
+		person := func(id ID) Person {
+			q := Person{ID: id, Male: rng.IntN(2) == 0, Beauty: int8(rng.IntN(5) - 2), Disfigured: rng.IntN(5) == 0,
+				ArtificialParts: rng.IntN(3), Addicted: rng.IntN(4) == 0}
+			for _, tr := range traits {
+				if rng.IntN(4) == 0 {
+					q.Traits = append(q.Traits, tr)
+				}
+			}
+			return q
+		}
+		in := Inputs{Observer: person(1), Target: person(2), Now: uint64(rng.IntN(100))}
+		for n := rng.IntN(3); n > 0; n-- {
+			in.Relations = append(in.Relations, Kind(rng.IntN(int(NumKinds))))
+		}
+		for n := rng.IntN(12); n > 0; n-- {
+			in.Memories = append(in.Memories, OpinionMemory{Kind: MemKind(rng.IntN(int(NumMemKinds))),
+				Subject: ID(1 + rng.IntN(3)), Expires: uint64(rng.IntN(200)), Scale: int16(rng.IntN(1500))})
+		}
+		want, terms := Opinion(in)
+		if got := OpinionValue(in); got != want {
+			t.Fatalf("case %d: OpinionValue = %d, Opinion = %d (%v)", i, got, want, terms)
+		}
+	}
+}
+
+// TestMemoryTermsMatchPerKindScan: the one-pass memory terms equal the
+// per-kind scan they replace (stacking in memory order, chitchat capped).
+func TestMemoryTermsMatchPerKindScan(t *testing.T) {
+	ref := func(ms []OpinionMemory, subject ID, now uint64) []Term {
+		var out []Term
+		for k := MemKind(0); k < NumMemKinds; k++ {
+			d := memDefs[k]
+			n, sum, f := 0, int64(0), int64(1000)
+			for _, m := range ms {
+				if m.Kind != k || m.Subject != subject || m.Expires <= now {
+					continue
+				}
+				n++
+				sum += int64(d.Value) * m.scaleOf() / 1000 * f / 1000
+				f = f * int64(d.StackFactor) / 1000
+			}
+			if n == 0 {
+				continue
+			}
+			if k == MemChitchat && sum > ChitchatCap {
+				sum = ChitchatCap
+			}
+			out = append(out, Term{Label: d.Label, Value: int32(sum)})
+		}
+		return out
+	}
+	rng := rand.New(rand.NewPCG(5, 11))
+	for i := 0; i < 2000; i++ {
+		var ms []OpinionMemory
+		for n := rng.IntN(30); n > 0; n-- {
+			ms = append(ms, OpinionMemory{Kind: MemKind(rng.IntN(int(NumMemKinds) + 1)), Subject: ID(1 + rng.IntN(2)),
+				Expires: uint64(rng.IntN(100)), Scale: int16(rng.IntN(1600))})
+		}
+		now := uint64(rng.IntN(100))
+		if got, want := MemoryTerms(ms, 1, now), ref(ms, 1, now); !reflect.DeepEqual(got, want) {
+			t.Fatalf("case %d: got %v, want %v", i, got, want)
 		}
 	}
 }

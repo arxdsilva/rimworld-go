@@ -74,3 +74,22 @@ func TestAllIteratesInInsertionOrder(t *testing.T) {
 		}
 	}
 }
+
+func TestAnyRefStopsAtFirstMatchInInsertionOrder(t *testing.T) {
+	s := NewStore[int]()
+	s.Set(3, 30)
+	s.Set(1, 10)
+	s.Set(2, 20)
+
+	var seen []entity.EntityID
+	found := s.AnyRef(func(id entity.EntityID, v *int) bool {
+		seen = append(seen, id)
+		return *v == 10
+	})
+	if !found || len(seen) != 2 || seen[0] != 3 || seen[1] != 1 {
+		t.Fatalf("AnyRef = %v after %v, want true after [3 1]", found, seen)
+	}
+	if s.AnyRef(func(entity.EntityID, *int) bool { return false }) {
+		t.Fatal("AnyRef with no match = true")
+	}
+}
