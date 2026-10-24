@@ -212,6 +212,9 @@ type saveState struct {
 	// NG1 is the new-game setup and its live state (scenario, storyteller,
 	// difficulty, factions, climate, conditions, arrival); nil = legacy.
 	NG1 *SetupState
+	// DoorsOriented: door facings are stored (PLAY-011); a save without it
+	// re-derives every door's facing from its neighbours on load.
+	DoorsOriented bool
 	// Bios, Skills, WorkCarry (NG-1 §5.4): each colonist's identity, skills
 	// and fractional work progress; absent in older saves (neutral bios).
 	Bios      map[entity.EntityID]pawngen.Pawn

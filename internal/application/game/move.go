@@ -17,9 +17,11 @@ import (
 // ReasonTree, ReasonItem and ReasonSpot are passed through).
 const (
 	ReasonCantMove = "can't move this"
-	ReasonBounds   = "out of bounds"
-	ReasonMoveHit  = "blocked"
-	ReasonThere    = "already there"
+	// ReasonSwapPending: a material change is under way (PLAY-011).
+	ReasonSwapPending = "Material change in progress"
+	ReasonBounds      = "out of bounds"
+	ReasonMoveHit     = "blocked"
+	ReasonThere       = "already there"
 )
 
 // minReinstallWork is the least work a reinstall takes, in ticks.

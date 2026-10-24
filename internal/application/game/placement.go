@@ -21,6 +21,9 @@ const (
 	ReasonTree     = "tree in the way"
 	ReasonStuff    = "cannot be built from that"
 	ReasonSpot     = "work spot is blocked"
+	// ReasonSame: the same piece in the same material is already here
+	// (a neutral refusal: the Architect skips it silently, PLAY-011).
+	ReasonSame = "already that material"
 )
 
 // BuildableView is the read model of one buildable definition.
@@ -224,10 +227,17 @@ func (g *Game) replaceTarget(k construction.Kind, x, y int) entity.EntityID {
 	return 0
 }
 
+// AutoFacingAt is the facing a piece of kind placed at (x, y) with the
+// player's facing would get (doors and gates face along their walls and
+// fences, PLAY-011); read-only, for the Architect ghost.
+func (g *Game) AutoFacingAt(kind, facing string, x, y int) string {
+	return facing
+}
+
 // ReplacesAt names what a door or gate of kind would replace at (x, y)
 // ("wall", "fence", ...); "" when it replaces nothing. Read-only; the
 // Architect ghost reads "replaces wall".
-func (g *Game) ReplacesAt(kind string, x, y int) string {
+func (g *Game) ReplacesAt(kind, stuff string, x, y int) string {
 	k, ok := construction.Parse(kind)
 	if !ok {
 		return ""

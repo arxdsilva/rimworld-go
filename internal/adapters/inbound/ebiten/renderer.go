@@ -41,7 +41,10 @@ type Simulation interface {
 	CanPlaceAt(kind, stuff, facing string, x, y int) (bool, string)
 	// ReplacesAt names the wall or fence a door or gate would replace
 	// there ("" when none): the ghost reads "replaces wall".
-	ReplacesAt(kind string, x, y int) string
+	ReplacesAt(kind, stuff string, x, y int) string
+	// AutoFacingAt is the facing the sim would give a piece placed here
+	// (doors and gates face along their walls, PLAY-011).
+	AutoFacingAt(kind, facing string, x, y int) string
 	// OrdersAt lists what a pawn can be ordered to do at a tile.
 	OrdersAt(pawn entity.EntityID, x, y int) []game.OrderOption
 	// CanZoneAt reports whether a zone of kind ("stockpile", "grow",

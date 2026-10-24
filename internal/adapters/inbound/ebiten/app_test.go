@@ -94,7 +94,8 @@ func (s *stubSim) CanPlaceAt(kind, stuff, facing string, x, y int) (bool, string
 	}
 	return true, ""
 }
-func (s *stubSim) ReplacesAt(kind string, x, y int) string { return "" }
+func (s *stubSim) ReplacesAt(kind, stuff string, x, y int) string    { return "" }
+func (s *stubSim) AutoFacingAt(kind, facing string, x, y int) string { return facing }
 func (s *stubSim) OrdersAt(pawn entity.EntityID, x, y int) []game.OrderOption {
 	return s.orders
 }

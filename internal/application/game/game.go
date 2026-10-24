@@ -272,12 +272,16 @@ type BuildingView struct {
 	Floor       bool
 	Deconstruct bool
 	Stuff       string
-	W, H        int // footprint in tiles (after facing)
-	HasSpot     bool
-	SpotX       int
-	SpotY       int
-	Bench       bool
-	Bills       []BillView
+	// SwapTo is the material a pending in-place swap turns it into, with
+	// SwapPct of the work done (PLAY-011); "" when none.
+	SwapTo  string
+	SwapPct int
+	W, H    int // footprint in tiles (after facing)
+	HasSpot bool
+	SpotX   int
+	SpotY   int
+	Bench   bool
+	Bills   []BillView
 	// Drying rack contents: DryQty items of DryKind, DryPct percent dry.
 	DryKind string
 	DryQty  int

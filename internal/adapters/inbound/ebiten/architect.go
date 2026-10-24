@@ -592,7 +592,7 @@ func (a *App) previewCells() (archTool, []ghostCell) {
 		ok, reason := a.renderer.game.CanPlaceAt(t.build, a.toolStuff(t), facingNames[a.archFacing], c[0], c[1])
 		gc := ghostCell{x: c[0], y: c[1], ok: ok, reason: reason}
 		if ok {
-			gc.replaces = a.renderer.game.ReplacesAt(t.build, c[0], c[1])
+			gc.replaces = a.renderer.game.ReplacesAt(t.build, a.toolStuff(t), c[0], c[1])
 		}
 		out = append(out, gc)
 	}

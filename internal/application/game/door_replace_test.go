@@ -29,10 +29,10 @@ func TestReplaceCanPlaceRules(t *testing.T) {
 	if ok, r := g.CanPlaceAt("door", "wood", "south", x, y); !ok {
 		t.Fatalf("door over wall: %q", r)
 	}
-	if got := g.ReplacesAt("door", x, y); got != "wall" {
+	if got := g.ReplacesAt("door", "wood", x, y); got != "wall" {
 		t.Fatalf("ReplacesAt = %q", got)
 	}
-	if g.ReplacesAt("door", 1, 1) != "" || g.ReplacesAt("wall", x, y) != "" {
+	if g.ReplacesAt("door", "wood", 1, 1) != "" || g.ReplacesAt("wall", "wood", x, y) != "" {
 		t.Fatal("replaces nothing expected")
 	}
 	if ok, r := g.CanPlaceAt("wall", "wood", "south", x, y); ok || r != ReasonOccupied {

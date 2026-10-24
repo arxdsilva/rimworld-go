@@ -501,6 +501,10 @@ type Frame struct {
 	// (so cancelling the frame clears it again).
 	Replaces      entity.EntityID
 	ReplaceMarked bool
+	// Swaps is the building this frame turns into its own material in
+	// place (same kind, same footprint, PLAY-011): built without taking
+	// the old piece down.
+	Swaps entity.EntityID
 }
 
 // Ready reports materials and components are in place.
