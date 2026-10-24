@@ -85,7 +85,10 @@ func TestGrownGolden(t *testing.T) {
 	// Re-pinned earlier: CompleteResearch now also completes the NG-1 research
 	// projects (more unlocks), and StateHash became format-independent;
 	// identical with and without the E1 engine changes.
-	const want uint64 = 0x685eaed536cbc5c3
+	// Re-pinned (ENG-003 M1-M3): bodies, social interactions, chat
+	// mirroring and smoothed mood change behaviour by design; stable over
+	// -count=3.
+	const want uint64 = 0x4e8d67074b2c5498
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

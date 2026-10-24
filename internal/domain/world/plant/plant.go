@@ -169,9 +169,9 @@ var defs = [numSpecies]Def{
 	Cotton: {Species: Cotton, Name: "cotton", Label: "cloth", GrowTicks: growDays(9), HarvestWork: 40, Yield: 5,
 		Yields: item.Cloth, CutWork: 10, Crop: true, Sens: 70, SowWork: 25, FrostKill: -10},
 	// ENG-003: brewgrain grows like wheat, ashleaf like healroot.
-	Brewgrain: {Species: Brewgrain, Name: "brewgrain", Label: "brewgrain", GrowTicks: growDays(10), HarvestWork: 35, Yield: 8,
+	Brewgrain: {Species: Brewgrain, Name: "brewgrain", Label: "brewgrain", GrowTicks: growDays(11), HarvestWork: 35, Yield: 8,
 		Yields: item.Brewgrain, CutWork: 10, Crop: true, Sens: 80, SowWork: 20, FrostKill: -80},
-	Ashleaf: {Species: Ashleaf, Name: "ashleaf", Label: "ashleaf", GrowTicks: growDays(6.5), HarvestWork: 40, Yield: 2,
+	Ashleaf: {Species: Ashleaf, Name: "ashleaf", Label: "ashleaf", GrowTicks: growDays(7), HarvestWork: 40, Yield: 2,
 		Yields: item.AshleafLeaf, CutWork: 8, Crop: true, Sens: 80, SowWork: 35, FrostKill: -20},
 }
 
@@ -213,11 +213,10 @@ func Killed(s Species, tenthsC int) bool {
 	return d.ColdKill != 0 && tenthsC < d.ColdKill || d.HeatKill != 0 && tenthsC > d.HeatKill
 }
 
-// Crops lists the farm crops in menu order (fastest first). Brewgrain and
-// ashleaf (ENG-003) join the menu with their crop art (ART_DIRECTION
-// "Social & host systems asset list"); until then they can't be sown.
+// Crops lists the farm crops in menu order (fastest first); ashleaf and
+// brewgrain (ENG-003) are research-gated like healroot.
 func Crops() []Species {
-	return []Species{Radish, Lettuce, Beans, Healroot, Potato, Corn, Pumpkin, Cotton, Wheat}
+	return []Species{Radish, Lettuce, Beans, Healroot, Ashleaf, Potato, Corn, Pumpkin, Cotton, Wheat, Brewgrain}
 }
 
 // Rate is the growth speed in percent on soil of the given fertility

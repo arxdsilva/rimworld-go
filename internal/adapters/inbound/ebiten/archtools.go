@@ -134,15 +134,6 @@ var archTools = []archTool{
 		desc: "Waist-high cover. Colonists right behind them are much harder to shoot. Drag to draw a line."},
 	{id: "spike_trap", label: "Spike trap", category: "security", icon: "spike_trap", mode: placeSingle, build: "spike trap",
 		desc: "Springs on raiders and predators that walk over it, then is re-laid as a blueprint. Colonists step around it safely."},
-}
-
-// archToolsPendingArt (ENG-003) are tools whose world sprites and icons
-// the art pipeline does not generate yet (ART_DIRECTION "Social & host
-// systems asset list"): the card draws drawIconFallback, the building and
-// its blueprint pendingArtFallback. Each moves to archTools, and so under
-// TestGeneratedArtCoversRenderer, with its art; TestPendingArtToolsLackArt
-// fails as soon as that art exists.
-var archToolsPendingArt = []archTool{
 	{id: "brewing_bench", label: "Brewing bench", category: "production", icon: "brewing_bench", mode: placeSingle, build: "brewing bench",
 		desc: "Brews brewgrain into beer (2x1). Select it to add bills. Q/E rotates."},
 	{id: "drug_table", label: "Drug table", category: "production", icon: "drug_table", mode: placeSingle, build: "drug table",
@@ -153,11 +144,8 @@ var archToolsPendingArt = []archTool{
 		desc: "Where the colony gathers for parties. Free and instant."},
 }
 
-// allArchTools is every architect tool: the ones with art, then the ones
-// still waiting for it.
-func allArchTools() []archTool {
-	return append(append(make([]archTool, 0, len(archTools)+len(archToolsPendingArt)), archTools...), archToolsPendingArt...)
-}
+// allArchTools is every architect tool.
+func allArchTools() []archTool { return archTools }
 
 func toolByID(id string) (archTool, bool) {
 	for _, t := range allArchTools() {
@@ -295,6 +283,14 @@ func buildSprite(kind, facing string, mask int, ew, open bool) string {
 		return "furniture/bed_basic_" + facingOr(facing)
 	case "sleeping spot":
 		return "overlay/sleeping_spot_" + facingOr(facing)
+	case "marriage spot":
+		return "overlay/marriage_spot_" + facingOr(facing)
+	case "party spot":
+		return "overlay/party_spot"
+	case "brewing bench":
+		return "furniture/brewing_bench_" + facingOr(facing)
+	case "drug table":
+		return "furniture/drug_table_" + facingOr(facing)
 	case "workbench":
 		return "furniture/workbench_basic_" + facingOr(facing)
 	case "stove":

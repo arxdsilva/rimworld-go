@@ -112,30 +112,30 @@ type HistoryEntryView struct {
 
 // Social is colonist id's Social tab (ok false: nothing to show yet).
 func (g *Game) Social(id entity.EntityID) (SocialView, bool) {
-	return SocialView{}, false // TODO(M4)
+	return g.socialView(id)
 }
 
 // Health is colonist id's Health tab (ok false: nothing to show yet).
 func (g *Game) Health(id entity.EntityID) (HealthView, bool) {
-	return HealthView{}, false // TODO(M1)
+	return g.healthView(id)
 }
 
 // Prisoner is prisoner id's tab (ok false: not a prisoner).
 func (g *Game) Prisoner(id entity.EntityID) (PrisonerView, bool) {
-	return PrisonerView{}, false // TODO(M8)
+	return g.prisonerView(id)
 }
 
 // WorldMap is the World tab.
 func (g *Game) WorldMap() WorldMapView {
-	return WorldMapView{} // TODO(M9)
+	return g.worldMapView()
 }
 
 // Areas lists the colony's allowed areas.
 func (g *Game) Areas() []AreaView {
-	return nil // TODO(M9)
+	return g.areaViews()
 }
 
 // History lists the colony's history, oldest first.
 func (g *Game) History() []HistoryEntryView {
-	return nil // TODO(M4)
+	return g.historyViews()
 }

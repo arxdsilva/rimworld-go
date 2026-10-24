@@ -293,6 +293,7 @@ type saveState struct {
 	Social     *socialSave
 	People     *peopleSave
 	Bodies     []entry[body.Body]
+	Surgery    *surgerySave
 	Drugs      []entry[drug.State]
 	Prisoners  []entry[prisoner.State]
 	World      *worldSave
@@ -375,6 +376,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 	s.Geo, s.Smooths, s.StructVer = g.geo, g.smooths, g.structVer
 	s.Social, s.People, s.World = g.exportSocial(), g.exportPeople(), g.exportWorld()
 	s.Bodies, s.Drugs, s.Prisoners = g.exportBodies(), g.exportDrugs(), g.exportPrisoners()
+	s.Surgery = g.exportSurgery()
 	s.Areas, s.History = g.areas.Export(), slices.Clone(g.history)
 	if s.RNGStreams, err = g.exportStreams(); err != nil {
 		return fmt.Errorf("save rng streams: %w", err)
@@ -538,6 +540,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.importPeople(s.People)
 	g.importWorld(s.World)
 	g.importBodies(s.Bodies)
+	g.importSurgery(s.Surgery)
 	g.importDrugs(s.Drugs)
 	g.importPrisoners(s.Prisoners)
 	g.areas, g.history = area.Import(s.Areas), s.History

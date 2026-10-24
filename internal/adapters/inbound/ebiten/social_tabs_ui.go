@@ -25,6 +25,7 @@ func (a *App) kitTabOn() bool {
 
 // socialTabsUI declares the Health or Social tab's content while it is open.
 func (a *App) socialTabsUI() {
+	a.historyTabUI(a.sw, a.sh) // history_ui.go: the HUD's History tab
 	if a.renderer == nil || !a.renderer.HasSelect() || a.workOpen || a.archOpen || !a.kitTabOn() {
 		return
 	}
@@ -32,29 +33,16 @@ func (a *App) socialTabsUI() {
 	r := inspectorRect()
 	in := rect{r.x + 12, r.y + 10, r.w - 24, r.h - 10 - bioActionH}
 	a.uiLabel(in.X, in.Y, ellipsize(pawnLabel(p), tsLabel, float64(in.W)-bioCloseGap), withColor(tsLabel, uiHeading))
-	lines, ok := a.healthLines(p), true
 	if a.inspectTab == "social" {
-		lines = a.socialLines(p)
+		a.socialTab(p, in) // social_ui.go
+		return
 	}
-	if len(lines) == 0 {
-		lines, ok = []string{noDataYet}, false
-	}
-	st := tsBody
-	if !ok {
-		st = dimText()
-	}
-	y := in.Y + float32(lineStep(tsLabel)) + 8
-	for _, ln := range lines {
-		if y > in.Y+in.H-float32(lineH(st)) {
-			break
-		}
-		a.uiLabel(in.X, y, ellipsize(ln, st, float64(in.W)), st)
-		y += float32(lineStep(st))
-	}
+	a.healthTab(p, in) // health_ui.go
 }
 
-// healthLines is the Health tab's text: capacities, pain, hurt parts,
-// queued operations and drug lines (nil: no data).
+// healthLines is the Health tab's plain text: capacities, pain, parts,
+// queued operations and drug lines (nil: no data); the tab itself is
+// health_ui.go.
 func (a *App) healthLines(p game.PawnView) []string {
 	h, ok := a.renderer.game.Health(p.ID)
 	if !ok {
@@ -79,8 +67,8 @@ func (a *App) healthLines(p game.PawnView) []string {
 	return out
 }
 
-// socialLines is the Social tab's text: each relation with both opinions,
-// then the social log (nil: no data).
+// socialLines is the Social tab's plain text: each relation with both
+// opinions, then the social log (nil: no data).
 func (a *App) socialLines(p game.PawnView) []string {
 	s, ok := a.renderer.game.Social(p.ID)
 	if !ok {

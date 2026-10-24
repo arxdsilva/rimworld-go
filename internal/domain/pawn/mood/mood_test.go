@@ -93,3 +93,75 @@ func TestSocialThoughtDefs(t *testing.T) {
 		t.Fatal("out of range")
 	}
 }
+
+func TestAddForStacksAndRefreshesOldest(t *testing.T) {
+	t.Parallel()
+	var m Memories
+	lim := int(DefOf(Insulted).StackLimit)
+	for i := 0; i < lim; i++ {
+		m = m.AddFor(Insulted, 7, uint64(100+i))
+	}
+	if len(m) != lim {
+		t.Fatalf("len %d want %d", len(m), lim)
+	}
+	m = m.AddFor(Insulted, 7, 9000)
+	if len(m) != lim || m[0].Expires != 9000+DefOf(Insulted).Duration {
+		t.Fatalf("oldest not refreshed: %+v", m)
+	}
+	m = m.AddFor(Insulted, 8, 10) // other subject stacks separately
+	if len(m) != lim+1 {
+		t.Fatalf("other subject: %d", len(m))
+	}
+	// non-stacking kind refreshes
+	m = Memories(nil).AddFor(CheatedOn, 1, 5).AddFor(CheatedOn, 1, 50)
+	if len(m) != 1 || m[0].Expires != 50+DefOf(CheatedOn).Duration {
+		t.Fatalf("%+v", m)
+	}
+}
+
+func TestAddForGroupReplacement(t *testing.T) {
+	t.Parallel()
+	m := Memories(nil).AddFor(SleptOnGround, 0, 1).AddFor(SleptInBed, 0, 2)
+	if len(m) != 1 || m[0].Kind != SleptInBed {
+		t.Fatalf("%+v", m)
+	}
+}
+
+func TestAddValueAndDiminishingActive(t *testing.T) {
+	t.Parallel()
+	m := Memories(nil).AddValue(Grief, 3, -20, 0)
+	if m[0].Value != -20 {
+		t.Fatalf("%+v", m)
+	}
+	m = m.AddValue(Grief, 3, -30, 5) // limit 1: replaced
+	if len(m) != 1 || m[0].Value != -30 {
+		t.Fatalf("%+v", m)
+	}
+	var s Memories
+	for i := 0; i < 3; i++ {
+		s = s.AddFor(KindWords, uint64(i+1), 0)
+	}
+	ts := Active(s)
+	if ts[0].Value != 5 || ts[1].Value != 4 || ts[2].Value != 3 {
+		t.Fatalf("%+v", ts)
+	}
+}
+
+func TestApproach(t *testing.T) {
+	t.Parallel()
+	if got := Approach(50000, 90000, 2500); got != 62000 {
+		t.Fatalf("rise %d", got)
+	}
+	if got := Approach(50000, 10000, 2500); got != 42000 {
+		t.Fatalf("fall %d", got)
+	}
+	if got := Approach(50000, 50500, 2500); got != 50500 {
+		t.Fatalf("snap up %d", got)
+	}
+	if got := Approach(50000, 49500, 2500); got != 49500 {
+		t.Fatalf("snap down %d", got)
+	}
+	if got := Approach(50000, 50000, 99); got != 50000 {
+		t.Fatalf("same %d", got)
+	}
+}

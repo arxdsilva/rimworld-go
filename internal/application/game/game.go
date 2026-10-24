@@ -583,6 +583,7 @@ type Game struct {
 	soc       *socialState                        // social_state.go
 	people    *peopleRegistry                     // people.go
 	bodies    map[entity.EntityID]*body.Body      // body.go
+	surg      *surgeryState                       // surgery.go
 	drugs     map[entity.EntityID]*drug.State     // drugs.go
 	prisoners map[entity.EntityID]*prisoner.State // prisoners.go
 	worldSt   *worldState                         // world_state.go
@@ -885,6 +886,7 @@ func (g *Game) snapshot() []PawnView {
 		ts := g.thoughts(id)
 		pv := &views[len(views)-1]
 		pv.Mood, pv.MoodLabel, pv.Thoughts = mood.Level(ts), mood.Label(mood.Level(ts)), thoughtViews(ts)
+		g.fillSocialPawn(pv, pv.Mood) // social_view.go: smoothed mood, target, bubble (ENG-003)
 		pv.Health = v.HP() * 100 / health.MaxHP
 		pv.Infection, pv.Wounded = g.wounds[id].Infection, g.wounds[id].At != 0 && v.Injury > 0
 		pv.Weapon = weaponDefOf(g, id).Name

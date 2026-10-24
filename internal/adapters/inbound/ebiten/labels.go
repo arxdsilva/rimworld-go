@@ -10,6 +10,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/sim/clock"
 )
 
 // stackCountMinTile: below this tile size (px) counts would just clutter.
@@ -37,26 +38,95 @@ func (r *Renderer) drawStackCounts(screen *ebiten.Image, w game.WorldView, tile 
 	}
 }
 
-// drawChatBubbles floats a small speech bubble over colonists chatting.
+// interactBubbleTicks is how long a social interaction's bubble stays over
+// the colonist after InteractTick.
+const interactBubbleTicks = 300
+
+// interactionKinds are the interaction kinds that have a bubble icon
+// (ui_icon/social_<kind>).
+var interactionKinds = map[string]bool{
+	"chitchat": true, "deep_talk": true, "slight": true, "insult": true, "kind_words": true,
+	"romance": true, "rebuff": true, "proposal": true, "breakup": true, "fight": true, "lovin": true,
+}
+
+// interactionIconKey is the art key of an interaction kind's icon ("" for
+// an unknown kind).
+func interactionIconKey(kind string) string {
+	if !interactionKinds[kind] {
+		return ""
+	}
+	return "ui_icon/social_" + kind
+}
+
+// interactionRecent reports p has a social interaction whose bubble is
+// still showing at tick now.
+func interactionRecent(p game.PawnView, now clock.Tick) bool {
+	if p.Interaction == "" {
+		return false
+	}
+	t := uint64(now)
+	return t < p.InteractTick || t-p.InteractTick <= interactBubbleTicks
+}
+
+// drawChatBubbles floats a small speech bubble over colonists chatting and
+// over colonists with a recent social interaction (with the interaction's
+// icon when the art has it), and a red lightning marker over colonists in
+// a social fight.
 func (r *Renderer) drawChatBubbles(screen *ebiten.Image, tile float64) {
+	now := r.game.Tick()
 	for _, p := range r.drawPawns {
-		if !strings.HasPrefix(p.Job, "chat do") {
+		if p.SocialFight {
+			wx, wy := r.interpWorld(p)
+			r.drawFightMarker(screen, wx, wy, tile)
+		}
+		social := interactionRecent(p, now)
+		if !social && !strings.HasPrefix(p.Job, "chat do") {
 			continue
 		}
-		// bubbles come and go so two chatting colonists take turns
-		if (r.present/50+uint64(p.ID))%2 == 1 {
+		// chat bubbles come and go so two chatting colonists take turns
+		if !social && (r.present/50+uint64(p.ID))%2 == 1 {
 			continue
 		}
 		wx, wy := r.interpWorld(p)
 		sx, sy := r.worldToScreenF(wx+0.75, wy-0.55)
 		bw, bh := float32(tile*0.42), float32(tile*0.24)
+		var icon *ebiten.Image
+		if social {
+			if key := interactionIconKey(p.Interaction); key != "" {
+				icon = r.art.image(key, noTint)
+			}
+			if icon != nil {
+				bh = bw // a square bubble around the icon
+			}
+		}
 		vector.FillRect(screen, sx-bw/2, sy-bh/2, bw, bh, color.RGBA{250, 248, 240, 235}, true)
 		vector.StrokeRect(screen, sx-bw/2, sy-bh/2, bw, bh, 1, color.RGBA{60, 50, 40, 220}, true)
 		vector.FillCircle(screen, sx-bw/2+bw*0.2, sy+bh/2+2, float32(tile*0.035), color.RGBA{250, 248, 240, 235}, true)
+		if icon != nil {
+			drawIcon(screen, icon, float64(sx-bw/2)+2, float64(sy-bh/2)+2, float64(bw)-4)
+			continue
+		}
 		for i := -1; i <= 1; i++ {
 			vector.FillCircle(screen, sx+float32(i)*bw*0.25, sy, float32(tile*0.025), color.RGBA{70, 60, 50, 255}, true)
 		}
 	}
+}
+
+// drawFightMarker floats a red lightning bolt over a colonist in a social
+// fight (overlay/fight_lightning; vector bolt while the art is missing).
+func (r *Renderer) drawFightMarker(screen *ebiten.Image, wx, wy, tile float64) {
+	sx, sy := r.worldToScreenF(wx+0.5, wy-0.95)
+	if img := r.art.image("overlay/fight_lightning", noTint); img != nil {
+		size := tile * 0.32
+		drawIcon(screen, img, float64(sx)-size/2, float64(sy)-size/2, size)
+		return
+	}
+	c := color.RGBA{220, 40, 36, 245}
+	h, w := float32(tile*0.12), float32(tile*0.06)
+	th := float32(tile * 0.035)
+	vector.StrokeLine(screen, sx+w, sy-h, sx-w, sy, th, c, true)
+	vector.StrokeLine(screen, sx-w, sy, sx+w, sy, th, c, true)
+	vector.StrokeLine(screen, sx+w, sy, sx-w, sy+h, th, c, true)
 }
 
 // drawBreakClouds floats a small dark storm cloud over colonists having a

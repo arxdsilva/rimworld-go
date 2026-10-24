@@ -49,10 +49,16 @@ func TestColonyHUDDrawsEveryState(t *testing.T) {
 	t.Parallel()
 	a, f := colonyApp(t, drawSim())
 	a.renderer.Select(1)
-	for _, tab := range []string{"character", "needs", "bio", "gear", "log"} {
+	s := a.renderer.game.(*stubSim)
+	s.social = map[entity.EntityID]game.SocialView{1: socialFixture()}
+	s.history = []game.HistoryEntryView{{Tick: 100, Text: "Colony founded.", Kind: "colony"}, {Tick: 5000, Text: "Ada and Bo married.", Pawns: []uint64{1}}}
+	for _, tab := range []string{"character", "needs", "bio", "gear", "log", "health", "social"} {
 		a.inspectTab = tab
 		drawFrame(t, a, f)
 	}
+	a.openHistory()
+	drawFrame(t, a, f)
+	a.uiCloseTop()
 	a.renderer.Select(2) // a colonist with no biography still shows the Bio tab's disabled state
 	a.inspectTab = "bio"
 	drawFrame(t, a, f)

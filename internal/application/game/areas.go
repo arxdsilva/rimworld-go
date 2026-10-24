@@ -10,3 +10,15 @@ import "rimworld-go/internal/domain/sim/entity"
 func (g *Game) inArea(id entity.EntityID, x, y int) bool {
 	return true // TODO(M9)
 }
+
+// areaViews lists the colony's allowed areas (M9).
+func (g *Game) areaViews() []AreaView { return nil }
+
+// cmdPaintArea paints (on) or clears area i over the rectangle (M9).
+func (g *Game) cmdPaintArea(i, x, y, x2, y2 int, on bool) {}
+
+// cmdRenameArea renames area i (M9).
+func (g *Game) cmdRenameArea(i int, name string) {}
+
+// cmdAssignArea restricts pawn to area i (-1: unrestricted; M9).
+func (g *Game) cmdAssignArea(pawn entity.EntityID, i int) {}

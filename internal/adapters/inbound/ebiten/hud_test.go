@@ -66,9 +66,9 @@ func TestWorkTabOpensOverlay(t *testing.T) {
 func TestDisabledTabsDoNotNavigate(t *testing.T) {
 	t.Parallel()
 	a, _, _ := liveColony(t, 0)
-	click(t, a, "tab.assign")
+	click(t, a, "tab.world")
 	if a.workOpen || a.archOpen {
-		t.Fatal("disabled Assign tab opened a colony overlay")
+		t.Fatal("disabled World tab opened a colony overlay")
 	}
 	if a.nav.screen() != screenColony || a.nav.overlay() != overlayNone {
 		t.Fatalf("disabled tab navigated to %s/%s", a.nav.screen(), a.nav.overlay())

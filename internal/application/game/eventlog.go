@@ -68,6 +68,9 @@ const (
 	logHatched   // SIM-026: hatched from an egg
 	logCharged   // PLAY-010: a predator charged Name
 	logChargedBy // PLAY-010: charged by Name ("a cougar")
+	logIngested  // ENG-003 M2: took a drug (Name: "beer")
+	logSurgery   // ENG-003 M1: Name is the operation's outcome line
+	logScarred   // ENG-003 M1: a wound left a scar (Name: the part)
 )
 
 // logEntry is one stored event (plain data; text is built for the view).
@@ -209,6 +212,10 @@ func logText(e logEntry) string {
 		with = " with " + n
 	}
 	switch e.Kind {
+	case logIngested:
+		return "Took " + e.Name
+	case logSurgery, logScarred:
+		return e.Name
 	case logHit:
 		return fmt.Sprintf("Hit %s%s (-%d)", e.Name, with, e.Amount)
 	case logAttacked:

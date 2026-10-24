@@ -462,6 +462,13 @@ ICONS = {
     "industrial_medicine": ("item", "industrial_medicine_m"),
     "tool_cabinet": ("furniture", "tool_cabinet"),
     "hospital_bed": ("furniture", "hospital_bed_south"),
+    # ENG-003 social & host systems
+    "brewing_bench": ("furniture", "brewing_bench_south"),
+    "drug_table": ("furniture", "drug_table_south"),
+    "marriage_spot": ("overlay", "marriage_spot_south"),
+    "party_spot": ("overlay", "party_spot"),
+    "brewgrain": ("item", "brewgrain"),
+    "ashleaf": ("item", "ashleaf"),
 }
 ICON_PX = 128          # @2x of a 64 px icon
 ICON_PAD = 10
@@ -1125,6 +1132,292 @@ def _ng1_icons():
     return out
 
 
+# ------------------------------------------------ social & host systems (ENG-003, ART §37)
+def _arc(xx, yy, cx, cy, r, a0, a1):
+    """Distance to a circular arc from angle a0 to a1 (degrees, +y down, 0 = right)."""
+    ang = np.degrees(np.arctan2(yy - cy, xx - cx)) % 360.0
+    lo, hi = a0 % 360.0, a1 % 360.0
+    inside = (ang >= lo) & (ang <= hi) if lo <= hi else (ang >= lo) | (ang <= hi)
+    d_ring = np.abs(np.hypot(xx - cx, yy - cy) - r)
+    ends = [(cx + r * np.cos(np.radians(a)), cy + r * np.sin(np.radians(a))) for a in (a0, a1)]
+    d_end = np.minimum(np.hypot(xx - ends[0][0], yy - ends[0][1]), np.hypot(xx - ends[1][0], yy - ends[1][1]))
+    return np.where(inside, d_ring, d_end)
+
+
+def _dot(xx, yy, x, y, r=1.5):
+    return np.hypot(xx - x, yy - y) - r
+
+
+def _heart(xx, yy, cx, cy, s=1.0):
+    a = np.abs(np.hypot(xx - (cx - 8 * s), yy - (cy - 5 * s)) - 9 * s)
+    b = np.abs(np.hypot(xx - (cx + 8 * s), yy - (cy - 5 * s)) - 9 * s)
+    v = np.minimum(_seg(xx, yy, cx - 16 * s, cy, cx, cy + 17 * s), _seg(xx, yy, cx + 16 * s, cy, cx, cy + 17 * s))
+    return np.minimum(np.minimum(a, b), v)
+
+
+def _bubble(xx, yy, c, cy_off=-3, hw=22, hh=15):
+    d = np.abs(_rbox(xx, yy, c, c + cy_off, hw, hh, 8))
+    return np.minimum(d, _seg(xx, yy, c - 9, c + cy_off + hh, c - 15, c + cy_off + hh + 9))
+
+
+def _g_s_chitchat(xx, yy, c):  # a speech bubble with three dots
+    d = _bubble(xx, yy, c)
+    for ox in (-10, 0, 10):
+        d = np.minimum(d, _dot(xx, yy, c + ox, c - 3))
+    return d
+
+
+def _g_s_deep(xx, yy, c):  # two stacked bubbles with text lines: a long conversation
+    a = np.abs(_rbox(xx, yy, c - 6, c - 10, 20, 11, 6))
+    b = np.abs(_rbox(xx, yy, c + 6, c + 12, 20, 11, 6))
+    d = np.minimum(a, b)
+    d = np.minimum(d, _seg(xx, yy, c - 18, c - 10, c + 4, c - 10))
+    d = np.minimum(d, _seg(xx, yy, c - 6, c + 12, c + 18, c + 12))
+    return np.minimum(d, _seg(xx, yy, c - 16, c - 1, c - 20, c + 4))
+
+
+def _g_s_slight(xx, yy, c):  # a frowning face
+    d = np.abs(np.hypot(xx - c, yy - c) - 22)
+    d = np.minimum(d, _dot(xx, yy, c - 8, c - 6, 2))
+    d = np.minimum(d, _dot(xx, yy, c + 8, c - 6, 2))
+    return np.minimum(d, _arc(xx, yy, c, c + 20, 12, 215, 325))
+
+
+def _g_s_insult(xx, yy, c):  # a bubble with a hard exclamation mark
+    d = _bubble(xx, yy, c)
+    d = np.minimum(d, _seg(xx, yy, c, c - 14, c, c - 1))
+    return np.minimum(d, _dot(xx, yy, c, c + 5, 2))
+
+
+def _g_s_kind(xx, yy, c):  # a smiling face
+    d = np.abs(np.hypot(xx - c, yy - c) - 22)
+    d = np.minimum(d, _dot(xx, yy, c - 8, c - 6, 2))
+    d = np.minimum(d, _dot(xx, yy, c + 8, c - 6, 2))
+    return np.minimum(d, _arc(xx, yy, c, c + 2, 13, 30, 150))
+
+
+def _g_s_romance(xx, yy, c):  # a heart
+    return _heart(xx, yy, c, c - 2, 1.15)
+
+
+def _g_s_rebuff(xx, yy, c):  # a small heart struck out by a slash ring
+    d = _heart(xx, yy, c, c - 4, 0.8)
+    d = np.minimum(d, np.abs(np.hypot(xx - c, yy - c) - 24))
+    return np.minimum(d, _seg(xx, yy, c - 17, c - 17, c + 17, c + 17))
+
+
+def _g_s_proposal(xx, yy, c):  # a ring with a gem
+    d = np.abs(np.hypot(xx - c, yy - (c + 6)) - 15)
+    gem = [(c, c - 22), (c + 8, c - 14), (c, c - 6), (c - 8, c - 14)]
+    for i in range(4):
+        ax, ay = gem[i]
+        bx, by = gem[(i + 1) % 4]
+        d = np.minimum(d, _seg(xx, yy, ax, ay, bx, by))
+    return d
+
+
+def _g_s_breakup(xx, yy, c):  # a heart broken down a zigzag, the halves apart
+    d = _heart(xx, yy, c, c - 2, 1.15)
+    zig = np.minimum(_seg(xx, yy, c + 2, c - 18, c - 5, c - 6), _seg(xx, yy, c - 5, c - 6, c + 4, c + 4))
+    zig = np.minimum(zig, _seg(xx, yy, c + 4, c + 4, c - 2, c + 20))
+    return np.minimum(d, zig)
+
+
+def _g_s_fight(xx, yy, c):  # a lightning bolt
+    pts = [(c + 8, c - 24), (c - 10, c + 2), (c + 2, c + 2), (c - 8, c + 24), (c + 12, c - 6), (c, c - 6), (c + 8, c - 24)]
+    d = np.full(xx.shape, 1e9, np.float32)
+    for i in range(len(pts) - 1):
+        d = np.minimum(d, _seg(xx, yy, *pts[i], *pts[i + 1]))
+    return d
+
+
+def _g_s_lovin(xx, yy, c):  # two hearts, one behind the other
+    return np.minimum(_heart(xx, yy, c - 7, c - 5, 0.8), _heart(xx, yy, c + 8, c + 3, 0.95))
+
+
+def _g_capture(xx, yy, c):  # a round net: ring and lattice
+    d = np.abs(np.hypot(xx - c, yy - c) - 22)
+    for o in (-11, 0, 11):
+        d = np.minimum(d, _seg(xx, yy, c + o, c - 20, c + o, c + 20) + (np.hypot(xx - c, yy - c) > 22) * 99)
+        d = np.minimum(d, _seg(xx, yy, c - 20, c + o, c + 20, c + o) + (np.hypot(xx - c, yy - c) > 22) * 99)
+    return d
+
+
+def _g_arrest(xx, yy, c):  # handcuffs: two cuffs joined by a chain
+    d = np.minimum(np.abs(np.hypot(xx - (c - 14), yy - c) - 10), np.abs(np.hypot(xx - (c + 14), yy - c) - 10))
+    d = np.minimum(d, _seg(xx, yy, c - 4, c, c + 4, c))
+    d = np.minimum(d, _seg(xx, yy, c - 14, c - 10, c - 14, c - 18))
+    return np.minimum(d, _seg(xx, yy, c + 14, c - 10, c + 14, c - 18))
+
+
+def _g_prisoner(xx, yy, c):  # a barred window
+    d = np.abs(_rbox(xx, yy, c, c, 20, 24, 8))
+    for o in (-10, 0, 10):
+        d = np.minimum(d, _seg(xx, yy, c + o, c - 22, c + o, c + 22))
+    return d
+
+
+def _g_caravan(xx, yy, c):  # a covered wagon
+    d = np.minimum(_seg(xx, yy, c - 22, c + 6, c + 22, c + 6), _seg(xx, yy, c - 22, c + 6, c - 22, c - 4))
+    d = np.minimum(d, _seg(xx, yy, c + 22, c + 6, c + 22, c - 4))
+    d = np.minimum(d, _arc(xx, yy, c, c - 4, 22, 180, 360))
+    d = np.minimum(d, np.abs(np.hypot(xx - (c - 12), yy - (c + 14)) - 6))
+    d = np.minimum(d, np.abs(np.hypot(xx - (c + 12), yy - (c + 14)) - 6))
+    return np.minimum(d, _seg(xx, yy, c + 22, c + 6, c + 30, c + 12))
+
+
+def _g_history(xx, yy, c):  # a clock with a counter-clockwise arrow
+    d = _arc(xx, yy, c, c, 22, 0, 300)
+    d = np.minimum(d, _seg(xx, yy, c, c, c, c - 13))
+    d = np.minimum(d, _seg(xx, yy, c, c, c + 9, c + 5))
+    d = np.minimum(d, _seg(xx, yy, c + 22, c, c + 14, c - 8))
+    return np.minimum(d, _seg(xx, yy, c + 22, c, c + 28, c - 9))
+
+
+def _g_surgery(xx, yy, c):  # a scalpel
+    d = _seg(xx, yy, c - 22, c + 22, c + 2, c - 2)
+    d = np.minimum(d, _seg(xx, yy, c + 2, c - 2, c + 22, c - 24))
+    d = np.minimum(d, _seg(xx, yy, c + 22, c - 24, c + 14, c - 2))
+    return np.minimum(d, _seg(xx, yy, c + 14, c - 2, c + 2, c - 2))
+
+
+SOCIAL_ICONS = (
+    ("social_chitchat", _g_s_chitchat, (0.80, 0.85, 0.92)), ("social_deep_talk", _g_s_deep, (0.55, 0.75, 0.95)),
+    ("social_slight", _g_s_slight, (0.86, 0.62, 0.40)), ("social_insult", _g_s_insult, (0.93, 0.40, 0.34)),
+    ("social_kind_words", _g_s_kind, (0.98, 0.85, 0.45)), ("social_romance", _g_s_romance, (0.95, 0.55, 0.70)),
+    ("social_rebuff", _g_s_rebuff, (0.70, 0.60, 0.82)), ("social_proposal", _g_s_proposal, (0.98, 0.82, 0.45)),
+    ("social_breakup", _g_s_breakup, (0.76, 0.55, 0.62)), ("social_fight", _g_s_fight, (0.88, 0.32, 0.24)),
+    ("social_lovin", _g_s_lovin, (0.98, 0.45, 0.60)),
+    ("capture", _g_capture, (0.78, 0.55, 0.32)), ("arrest", _g_arrest, (0.62, 0.72, 0.86)),
+    ("prisoner", _g_prisoner, (0.72, 0.72, 0.76)), ("caravan", _g_caravan, (0.88, 0.72, 0.42)),
+    ("history", _g_history, (0.72, 0.78, 0.90)), ("surgery", _g_surgery, (0.46, 0.86, 0.66)),
+)
+
+MARRIAGE_FACINGS = SPOT_FACINGS
+
+
+def _marriage_spot(facing):
+    """A wedding place marked on the floor: a dashed chalk border, two ribbon
+    bows at the ends and a pair of linked rings in the middle. Authored 2x1
+    (south/north) and turned to 1x2 for east/west."""
+    horizontal = facing in ("south", "north")
+    w, h = (2, 1) if horizontal else (1, 2)
+    W, H = w * N, h * N
+    yy, xx = np.mgrid[0:H, 0:W].astype(np.float32) + 0.5
+    if not horizontal:   # draw upright in a 2x1 frame, then read it transposed
+        xx, yy = yy, xx
+    LW, LH = 2 * N, N
+    img = np.zeros((H, W, 4), np.float32)   # drawn in the long-axis frame (xx runs along the 2-tile side)
+    chalk, ink, rose = (0.95, 0.91, 0.82), (0.10, 0.09, 0.08), (0.93, 0.55, 0.62)
+    cx, cy = LW / 2, LH / 2
+    outside = _rbox(xx, yy, cx, cy, LW / 2 - 12, LH / 2 - 12, 16)
+    ring = np.abs(outside)
+    dash = (np.floor(xx / 12.0) % 2) == 0
+    dash = dash | (np.abs(xx - cx) > LW / 2 - 40)
+    _paint(img, _cov(outside), ink, 0.14)
+    _paint(img, _cov(ring - 2.6) * dash, ink, 0.45)
+    _paint(img, _cov(ring - 1.8) * dash, chalk, 0.9)
+    for sx in (-1, 1):   # ribbon bows at both ends
+        bx = cx + sx * (LW / 2 - 34)
+        for k in (-1, 1):
+            _paint(img, _cov(np.hypot((xx - (bx + k * 9)) / 1.4, yy - (cy - 2)) - 8), ink, 0.45)
+            _paint(img, _cov(np.hypot((xx - (bx + k * 9)) / 1.4, yy - (cy - 2)) - 6.6), rose, 0.95)
+        _paint(img, _cov(np.hypot(xx - bx, yy - (cy - 2)) - 4.5), chalk, 0.95)
+        for k in (-1, 1):
+            _paint(img, _cov(_cap(xx, yy, bx, cy + 2, bx + k * 8, cy + 20, 2.4)), rose, 0.9)
+    for sx in (-1, 1):   # two linked rings
+        r = np.abs(np.hypot(xx - (cx + sx * 9), yy - cy) - 15)
+        _paint(img, _cov(r - 4.5), ink, 0.5)
+        _paint(img, _cov(r - 3.0), (0.97, 0.82, 0.42) if sx < 0 else chalk, 0.95)
+    name = "marriage_spot_" + facing
+    S.write_png(img, S.out_path("overlay", name))
+    meta.write("overlay", name, {"image": "generated/world/overlay/%s.png" % name, "scale": C.SCALE,
+                                 "canvas": [W, H], "footprint": [w, h], "origin_px": [0, 0],
+                                 "overlay": "marriage_spot", "marking": True, "facing": facing,
+                                 "rotatable": True})
+    return S.out_path("overlay", name)
+
+
+def _party_spot():
+    """A party place: a dashed chalk ring with eight small paper lanterns."""
+    xx, yy = _grid()
+    img = np.zeros((N, N, 4), np.float32)
+    c = N / 2
+    chalk, ink = (0.95, 0.91, 0.82), (0.10, 0.09, 0.08)
+    ring = np.abs(np.hypot(xx - c, yy - c) - 44)
+    ang = np.arctan2(yy - c, xx - c)
+    dash = (np.floor((ang + np.pi) * 44 / 12.0) % 2) == 0
+    _paint(img, _cov(np.hypot(xx - c, yy - c) - 44), ink, 0.12)
+    _paint(img, _cov(ring - 2.6) * dash, ink, 0.45)
+    _paint(img, _cov(ring - 1.8) * dash, chalk, 0.9)
+    cols = ((1.0, 0.78, 0.30), (0.95, 0.45, 0.38), (0.55, 0.80, 0.90), (0.62, 0.85, 0.50))
+    for k in range(8):
+        a = 2 * np.pi * k / 8 + np.pi / 8
+        lx, ly = c + 44 * np.cos(a), c + 44 * np.sin(a)
+        col = cols[k % 4]
+        d = np.hypot(xx - lx, yy - ly)
+        _paint(img, _cov(d - 15), col, 0.18)     # warm glow
+        _paint(img, _cov(d - 8.2), ink, 0.55)
+        _paint(img, _cov(d - 6.6), col, 1.0)
+        _paint(img, _cov(np.hypot(xx - (lx - 2), yy - (ly - 2)) - 2.2), (1, 1, 0.9), 0.8)
+    for k, (px, py) in enumerate(((c - 12, c - 6), (c + 10, c + 8), (c + 2, c - 16), (c - 8, c + 14), (c + 18, c - 4))):
+        _paint(img, _cov(_rbox(xx, yy, px, py, 3.0, 1.6, 0.6)), cols[k % 4], 0.9)   # confetti
+    return _save("party_spot", img, {"overlay": "party_spot", "marking": True})
+
+
+def _triangulate(pts):
+    """Ear-clip a simple polygon (any winding) into triangles for `_poly`."""
+    pts = list(pts)
+    area = sum(pts[i][0] * pts[(i + 1) % len(pts)][1] - pts[(i + 1) % len(pts)][0] * pts[i][1] for i in range(len(pts)))
+    if area < 0:
+        pts.reverse()
+
+    def cross(o, a, b):
+        return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+
+    def inside(p, a, b, c):
+        return cross(a, b, p) >= 0 and cross(b, c, p) >= 0 and cross(c, a, p) >= 0
+
+    tris = []
+    while len(pts) > 3:
+        for i in range(len(pts)):
+            a, b, c = pts[i - 1], pts[i], pts[(i + 1) % len(pts)]
+            if cross(a, b, c) <= 0:
+                continue
+            if any(inside(p, a, b, c) for p in pts if p not in (a, b, c)):
+                continue
+            tris.append((a, b, c))
+            del pts[i]
+            break
+        else:
+            break
+    tris.append(tuple(pts))
+    return tris
+
+
+def _fight_lightning():
+    """A red lightning bolt with a dark halo and a hot core, floated over the
+    heads of two brawlers (or a portrait). 1x1, origin at the top left."""
+    xx, yy = _grid()
+    img = np.zeros((N, N, 4), np.float32)
+    c = N / 2
+    red, hot, ink = (0.88, 0.28, 0.20), (1.0, 0.82, 0.55), (0.10, 0.07, 0.06)
+    bolt = [(c + 4, c - 56), (c + 28, c - 56), (c + 12, c - 14), (c + 32, c - 14), (c - 12, c + 56),
+            (c - 2, c + 6), (c - 24, c + 6)]
+    d = np.full(xx.shape, 1e9, np.float32)
+    for tri in _triangulate(bolt):
+        d = np.minimum(d, _poly(xx, yy, tri))
+    _paint(img, _cov(d - 4.0), ink, 0.9)
+    _paint(img, _cov(d), red)
+    core = np.minimum(_seg(xx, yy, c + 14, c - 48, c - 2, c - 4), _seg(xx, yy, c + 10, c - 8, c - 6, c + 36))
+    _paint(img, _cov(core - 2.0), hot, 0.9)
+    return _save("fight_lightning", img, {"overlay": "fight_lightning", "marking": True})
+
+
+def _social_icons(t):
+    return [_badge_icon(n, t, g, rgb) for n, g, rgb in SOCIAL_ICONS]
+
+
 def build():
     t = _base_tokens()
     out = [_selection(t), _designation("designation_cut", t, _g_cut),
@@ -1155,6 +1448,8 @@ def build():
             _badge_icon("home_clear", t, _g_home_clear, t["danger"])]
     out += [_biome_icon(k) for k in BIOMES]
     out += _ng1_icons()
+    out += [_marriage_spot(f) for f in MARRIAGE_FACINGS] + [_party_spot(), _fight_lightning()]
+    out += _social_icons(t)
     out += [_shadow_blob(), _shadow_box(), _roof_tile("roof_built", "built"),
             _roof_tile("roof_natural", "natural"), _roof_tile("roof_plan", "plan"),
             _roof_tile("roof_remove", "remove")]

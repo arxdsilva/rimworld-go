@@ -649,22 +649,22 @@ understandable.
 
 -   [ ] **Overall state**
     -   Healthy/injured/sick/downed/dead.
--   [ ] **Pain**
+-   [x] **Pain** (UI-022: Health tab)
 -   [ ] **Blood loss**
--   [ ] **Consciousness**
--   [ ] **Moving**
--   [ ] **Manipulation**
--   [ ] **Sight/hearing/talking and other capacities**
+-   [x] **Consciousness** (Health tab capacity row)
+-   [x] **Moving** (Health tab capacity row)
+-   [x] **Manipulation** (Health tab capacity row)
+-   [x] **Sight/hearing/talking and other capacities** (Health tab capacity rows)
 -   [ ] **Bleeding rate / time-to-danger where useful**
 
 ## 10.2 Body-part tree
 
--   [ ] **Hierarchical anatomy**
+-   [-] **Hierarchical anatomy** (parts listed per body part; not a collapsible tree)
     -   Torso/head/limbs/organs/subparts.
--   [ ] **Injury attached to part**
--   [ ] **Missing/destroyed part**
--   [ ] **Artificial/replaced part**
--   [ ] **Part health/severity**
+-   [x] **Injury attached to part** (Health tab part rows)
+-   [x] **Missing/destroyed part** (Health tab part rows)
+-   [x] **Artificial/replaced part** (prosthetics shown on the part rows)
+-   [x] **Part health/severity** (Health tab part rows)
 
 ## 10.3 Conditions
 
@@ -687,13 +687,13 @@ understandable.
 
 ## 10.5 Operations
 
--   [ ] **Operations list**
--   [ ] **Add operation dialog**
+-   [x] **Operations list** (Health tab operations queue)
+-   [-] **Add operation dialog** (add from the Health tab; no risk preview)
     -   Valid surgeries only.
     -   Required medicine/body part/item.
     -   Risk information.
--   [ ] **Queued operations**
--   [ ] **Cancel/reorder operation**
+-   [x] **Queued operations** (Health tab)
+-   [-] **Cancel/reorder operation** (remove works; no reorder)
 
 ## 10.6 Rich explanation
 
@@ -718,7 +718,7 @@ understandable.
 -   [ ] **Traits**
 -   [ ] **Work incapabilities**
 -   [ ] **Faction/origin**
--   [ ] **Relationship summary**
+-   [x] **Relationship summary** (UI-022: Bio tab relationship summary)
 
 ## 11.2 Skills
 
@@ -974,7 +974,7 @@ This screen centralizes per-pawn behavioral policies.
 -   [ ] **Pawn rows**
 -   [ ] **Food restriction**
 -   [ ] **Apparel policy**
--   [ ] **Drug policy**
+-   [-] **Drug policy** (SIM-040: preset selector on the Assign tab (F3); no policy manager)
 -   [ ] **Medical care**
 -   [ ] **Allowed area where chosen UX places it**
 -   [ ] **Bed ownership shortcut where useful**
@@ -1022,27 +1022,27 @@ This screen centralizes per-pawn behavioral policies.
 
 ## 18.1 Social tab
 
--   [ ] **Known relationships**
+-   [-] **Known relationships** (UI-022: relations table with perspective labels; no ex/lover until romance (M5))
     -   Parent.
     -   child.
     -   sibling.
     -   lover/spouse.
     -   ex.
     -   friend/rival where modeled.
--   [ ] **Directional opinion**
+-   [x] **Directional opinion** (UI-022: A->B big, (B->A) beside it, 5-band colour)
     -   Selected pawn's opinion of each known pawn.
--   [ ] **Relationship status**
--   [ ] **Recent social memories**
--   [ ] **Off-map relation marker**
+-   [x] **Relationship status** (UI-022: tags off-map, dead, prisoner, kidnapped, in caravan)
+-   [x] **Recent social memories** (UI-022: social log with icons and opinion breakdown)
+-   [x] **Off-map relation marker** (UI-022)
 
 ## 18.2 Opinion explanation
 
--   [ ] **Opinion breakdown tooltip**
+-   [x] **Opinion breakdown tooltip** (UI-022: both directions)
     -   Relationship.
     -   traits.
     -   social memories.
     -   injuries/disfigurement modifiers only if game models them.
--   [ ] **Reciprocal opinion**
+-   [x] **Reciprocal opinion** (UI-022)
     -   Clearly distinguish A→B from B→A.
 
 ## 18.3 Relationship events
@@ -1051,7 +1051,7 @@ This screen centralizes per-pawn behavioral policies.
 -   [ ] **Engagement/marriage**
 -   [ ] **Breakup**
 -   [ ] **Social fight**
--   [ ] **Relation death**
+-   [x] **Relation death** (UI-022: History tab (F9) entries click to select)
     -   Link messages to relevant pawns.
 
 ------------------------------------------------------------------------
@@ -1278,7 +1278,7 @@ the player what just happened and what requires attention.
 
 ## 24.1 History screen
 
--   [ ] **Colony timeline**
+-   [-] **Colony timeline** (UI-022: History tab (F9) lists major events with click-to-select; no category filter or date ordering controls)
     -   Major events ordered by game date.
     -   raids.
     -   deaths.
@@ -1453,7 +1453,7 @@ the player what just happened and what requires attention.
 -   [x] **Candidate pawn cards** (NG-1: generated candidates with portraits by build, backstories and traits)
 -   [x] **Select starting roster** (selected and left-behind lists; drag, swap, reorder)
 -   [x] **Randomize/reroll** (per candidate and Randomize all; rename; undo; deterministic from the seed)
--   [-] **Character details** (NG-1: all but relationships, which do not exist yet)
+-   [-] **Character details** (NG-1: all but relationships; SIM-041 seeds starting families but the starting-pawn screen does not show them yet)
     -   age.
     -   skills/passions.
     -   traits.

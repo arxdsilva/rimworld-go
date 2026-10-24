@@ -414,7 +414,8 @@ CROP_M = (0.15, 0.15, 0.12, 0.15)
 LEAF_Z = 0.07
 BROWN = ("tuber", "burlap", "straw")
 SEED_MAT = {"radish": "food_red", "lettuce": "leaf_light", "beans": "burlap", "potato": "tuber",
-            "corn": "corn_yellow", "wheat": "straw", "pumpkin": "straw", "healroot": "vegetation", "cotton": "ceramic"}
+            "corn": "corn_yellow", "wheat": "straw", "pumpkin": "straw", "healroot": "vegetation", "cotton": "ceramic",
+            "brewgrain": "straw", "ashleaf": "leaf_pine_hi"}
 
 
 def _mound():
@@ -727,8 +728,61 @@ def _pumpkin(st, v):
             _top(r * 1.7)
 
 
+def _brewgrain(st, v):
+    """Brewgrain: barley-like tufts whose heavy ears nod over, bristling with awns."""
+    rng = random.Random(110 + v)
+    cnt = int({"sprout": 5, "young": 10, "mature": 14, "harvestable": 16, "wilted": 9}[st] * (0.85, 1.0, 1.15)[v])
+    h0 = {"sprout": 0.1, "young": 0.26, "mature": 0.44, "harvestable": 0.48, "wilted": 0.36}[st]
+    for k in range(cnt):
+        a = rng.uniform(0, 2 * math.pi)
+        rr = rng.uniform(0.0, 0.18)
+        x, y = CX + math.cos(a) * rr, CY + math.sin(a) * rr
+        h = h0 * rng.uniform(0.8, 1.1)
+        la = rng.uniform(0, 2 * math.pi)
+        d = (math.cos(la), math.sin(la))
+        lean = rng.uniform(0.03, 0.08) if st != "wilted" else rng.uniform(0.12, 0.24)
+        top = (x + d[0] * lean, y + d[1] * lean, 0.05 + h * (1.0 if st != "wilted" else 0.8))
+        mat = {"harvestable": "straw", "wilted": "tuber"}.get(st, "vegetation" if k % 3 else "foliage")
+        _limb("stem%d" % k, (x, y, 0.05), top, 0.012, 0.007, mat, segs=4)
+        if st in ("sprout", "young"):
+            continue
+        ear = {"harvestable": "corn_yellow", "wilted": "burlap"}.get(st, "leaf_light")
+        drop = 0.07 if st != "wilted" else 0.05
+        tip = (top[0] + d[0] * drop, top[1] + d[1] * drop, top[2] - 0.04)
+        _limb("ear%d" % k, top, tip, 0.03, 0.022, ear, segs=6)          # the nodding ear
+        for j in (-1, 1):                                                # awns fanning off the tip
+            aw = (tip[0] + d[0] * 0.07 - d[1] * 0.03 * j, tip[1] + d[1] * 0.07 + d[0] * 0.03 * j, tip[2] - 0.05)
+            _limb("awn%d_%d" % (k, j), tip, aw, 0.007, 0.002, "straw" if st != "wilted" else "burlap", segs=3)
+
+
+def _ashleaf(st, v):
+    """Ashleaf: a low rosette of broad, dusty blue-green leaves; pale flower spikes when ready."""
+    rng = random.Random(120 + v)
+    n = (7, 9, 8)[v]
+    L = (0.26, 0.3, 0.28)[v]
+    if st == "sprout":
+        _sprout_leaves(v, "leaf_pine_hi", length=0.1, width=0.06)
+    elif st == "young":
+        _ring(n - 2, L * 0.62, 0.1, 0.45, ("leaf_pine_hi", "leaf_pine"), v, rng)
+    elif st in ("mature", "harvestable"):
+        _ring(n, L, 0.14, 0.35 - 0.05 * v, ("leaf_pine", "leaf_pine_hi"), v, rng)
+        _ring(n - 3, L * 0.7, 0.11, 0.8, ("leaf_pine_hi", "leaf_pine"), v + 1, rng, z=0.14, r0=0.02)
+        if st == "harvestable":
+            for k in range(3 + (v == 1)):
+                a = 2 * math.pi * k / 4 + 0.6 + v
+                x, y = CX + 0.06 * math.cos(a), CY + 0.06 * math.sin(a)
+                h = 0.3 + 0.04 * (k % 2)
+                _limb("spike%d" % k, (x, y, 0.1), (x, y, h), 0.011, 0.007, "leaf_pine_hi", segs=5)
+                for j in range(3):
+                    _ball("bl%d_%d" % (k, j), x, y, h - 0.05 * j, 0.032 - 0.004 * j, 0.032 - 0.004 * j, 0.03,
+                          "blossom", segs=7, rings=5)
+    else:
+        _ring(n - 2, L * 0.85, 0.09, -0.25, BROWN, v, rng)
+
+
 CROPS = {"radish": _radish, "lettuce": _lettuce, "beans": _beans, "potato": _potato,
-         "corn": _corn, "wheat": _wheat, "pumpkin": _pumpkin, "healroot": _healroot, "cotton": _cotton}
+         "corn": _corn, "wheat": _wheat, "pumpkin": _pumpkin, "healroot": _healroot, "cotton": _cotton,
+         "brewgrain": _brewgrain, "ashleaf": _ashleaf}
 STAGES = ("sown", "sprout", "young", "mature", "harvestable", "wilted")
 
 

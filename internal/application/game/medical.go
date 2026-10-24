@@ -118,7 +118,7 @@ func (g *Game) assignDoctor(id entity.EntityID) bool {
 		case !g.tended(pid):
 			rec = job.Record{Kind: job.Tend, Target: pid, WorkLeft: TendWork}
 		}
-		if pv, _ := g.vital.Get(pid); rec.Kind == job.Tend && pv.Injury <= 0 && g.wounds[pid].Infection == 0 {
+		if pv, _ := g.vital.Get(pid); rec.Kind == job.Tend && !g.openInjury(pid, pv) && g.wounds[pid].Infection == 0 {
 			continue // exposure needs a bed, not a bandage
 		}
 		if rec.Kind == job.None {
@@ -235,7 +235,7 @@ func (g *Game) followCarriers() {
 
 func (g *Game) doTend(id entity.EntityID, j job.Record) {
 	v, ok := g.vital.Get(j.Target)
-	if !ok || v.Status == health.Dead || v.Injury <= 0 && g.wounds[j.Target].Infection == 0 {
+	if !ok || v.Status == health.Dead || !g.openInjury(j.Target, v) && g.wounds[j.Target].Infection == 0 {
 		j.State = job.Complete
 		g.jobs.Set(id, j)
 		return
@@ -267,8 +267,10 @@ func (g *Game) doTend(id entity.EntityID, j job.Record) {
 		g.deleteItem(j.Carry)
 		j.Carry = 0
 	}
-	v.Injury = max(0, v.Injury-heal)
-	if v.Status == health.Downed && v.Cause == health.CauseInjury && v.Injury <= health.RecoverInjury {
+	if !g.healBody(j.Target, &v, heal, true) { // body.go: tends every open wound, then heals
+		v.Injury = max(0, v.Injury-heal)
+	}
+	if v.Status == health.Downed && v.Cause == health.CauseInjury && v.Injury <= health.RecoverInjury && g.consciousEnough(j.Target) {
 		v.Status, v.Cause = health.Alive, health.CauseNone
 	}
 	g.vital.Set(j.Target, v)

@@ -186,6 +186,51 @@ def _stove():
     return (2, 1), 1.10
 
 
+def _brewing_bench():
+    # 2 x 1, the brewer stands on the south side. Barrels on a plank counter, a mash tub and a spigot.
+    for i, x in enumerate([0.12, 1.88]):
+        for j, y in enumerate([-0.18, -0.82]):
+            S.box("leg%d%d" % (i, j), x - 0.06, y - 0.06, 0.0, x + 0.06, y + 0.06, 0.50, "bark", bevel=0.015)
+    S.box("shelf", 0.10, -0.86, 0.12, 1.90, -0.14, 0.16, "wood", bevel=0.015)
+    S.box("top", 0.04, -0.94, 0.50, 1.96, -0.06, 0.58, "wood_plank", bevel=0.03)
+    for k, cx in enumerate([0.36, 0.78]):   # two lying-upright barrels at the back, banded
+        S.cyl("barrel%d" % k, cx, -0.34, 0.17, 0.58, 0.98, "wood", r_top=0.17, segs=16, bevel=0.03)
+        for z in (0.66, 0.90):
+            S.cyl("hoop%d%d" % (k, int(z * 10)), cx, -0.34, 0.178, z, z + 0.05, "metal_dark", segs=16, bevel=0.0)
+        S.cyl("lid%d" % k, cx, -0.34, 0.15, 0.98, 1.0, "wood_plank", segs=16, bevel=0.0)
+    S.cyl("tub", 1.44, -0.58, 0.30, 0.58, 0.82, "bark", r_top=0.33, segs=22, bevel=0.025)
+    S.cyl("tub_rim", 1.44, -0.58, 0.335, 0.76, 0.80, "metal_dark", segs=22, bevel=0.0)
+    S.cyl("mash", 1.44, -0.58, 0.29, 0.80, 0.85, "crop_fruit", segs=22, bevel=0.0)
+    S.ellipsoid("foam", 1.50, -0.52, 0.86, 0.07, 0.06, 0.02, "snow", segs=10, rings=5)
+    S.box("paddle", 1.18, -0.96, 0.58, 1.26, -0.88, 1.12, "wood", bevel=0.01)
+    S.cyl("spigot", 0.57, -0.70, 0.03, 0.66, 0.72, "steel", segs=8, ry=0.03, bevel=0.0)
+    S.cyl("mug", 0.57, -0.80, 0.055, 0.58, 0.68, "ceramic", segs=12, bevel=0.01)
+    return (2, 1), 1.12
+
+
+def _drug_table():
+    # 2 x 1, the worker stands on the south side. Mortar and pestle, leaf bundles drying on a rail.
+    for i, x in enumerate([0.14, 1.86]):
+        for j, y in enumerate([-0.20, -0.80]):
+            S.box("leg%d%d" % (i, j), x - 0.06, y - 0.06, 0.0, x + 0.06, y + 0.06, 0.52, "wood", bevel=0.015)
+    S.box("top", 0.04, -0.94, 0.52, 1.96, -0.06, 0.60, "wood_plank", bevel=0.03)
+    S.box("brace", 0.10, -0.86, 0.16, 1.90, -0.14, 0.20, "bark", bevel=0.015)
+    S.cyl("mortar", 0.50, -0.55, 0.17, 0.60, 0.76, "stone_dark", r_top=0.2, segs=18, bevel=0.025)
+    S.cyl("paste", 0.50, -0.55, 0.15, 0.755, 0.77, "vegetation", segs=18, bevel=0.0)
+    S.cyl("pestle", 0.58, -0.50, 0.03, 0.70, 1.02, "stone", segs=8, r_top=0.045, bevel=0.01, ry=0.03)
+    S.box("rail_l", 1.12, -0.24, 0.60, 1.18, -0.18, 1.10, "bark", bevel=0.01)
+    S.box("rail_r", 1.88, -0.24, 0.60, 1.94, -0.18, 1.10, "bark", bevel=0.01)
+    S.box("rail", 1.12, -0.24, 1.04, 1.94, -0.18, 1.10, "bark", bevel=0.01)
+    for k, x in enumerate([1.26, 1.46, 1.66, 1.80]):   # leaf bundles hanging to dry
+        S.box("twine%d" % k, x - 0.01, -0.225, 0.90, x + 0.01, -0.195, 1.04, "straw", bevel=0.0)
+        S.ellipsoid("leaves%d" % k, x, -0.21, 0.82, 0.07, 0.04, 0.12, "leaf_light" if k % 2 else "vegetation", segs=10, rings=6)
+    S.box("tray", 1.02, -0.80, 0.60, 1.60, -0.40, 0.64, "wood", bevel=0.01)
+    S.ellipsoid("pile", 1.30, -0.60, 0.68, 0.2, 0.14, 0.05, "leaf_light", segs=12, rings=6)
+    S.cyl("jar", 1.78, -0.62, 0.08, 0.60, 0.76, "glass", segs=12, bevel=0.01)
+    S.cyl("jar_lid", 1.78, -0.62, 0.085, 0.76, 0.80, "wood", segs=12, bevel=0.005)
+    return (2, 1), 1.10
+
+
 def _butcher_table():
     # 2 x 1, the butcher stands on the south side.
     for i, x in enumerate([0.14, 1.86]):
@@ -655,6 +700,8 @@ BUILDERS = {
     "stonecutter_table": (_stonecutter_table, {"attachments": {"worker": [0.5, 1.15]}}),
     "stove_basic": (_stove, {"attachments": {"cook": [0.25, 1.5]}}),
     "butcher_table": (_butcher_table, {"attachments": {"worker": [0.5, 1.15]}}),
+    "brewing_bench": (_brewing_bench, {"attachments": {"worker": [0.5, 1.15]}, "building": "brewing bench"}),
+    "drug_table": (_drug_table, {"attachments": {"worker": [0.5, 1.15]}, "building": "drug table"}),
     "campfire": (_campfire, {}),
     "feeding_trough_empty": (lambda: _trough(False), {"building": "feeding trough", "state": "empty"}),
     "feeding_trough_full": (lambda: _trough(True), {"building": "feeding trough", "state": "full"}),
@@ -680,7 +727,7 @@ BUILDERS = {
 }
 FACINGS_ONLY = {"grave_dug": ("south", "east"), "grave_filled": ("south", "east")}
 ROTATABLE = {"hospital_bed", "grave_dug", "grave_filled", "bed_basic", "bed_double", "chair_basic", "workbench_basic", "stonecutter_table", "stove_basic", "butcher_table",
-             "drying_rack", "tailoring_bench", "research_bench", "feeding_trough_empty", "feeding_trough_full"}
+             "drying_rack", "tailoring_bench", "research_bench", "brewing_bench", "drug_table", "feeding_trough_empty", "feeding_trough_full"}
 
 
 # Blanket overlays: drawn over a sleeper so they read as tucked in. The

@@ -50,3 +50,12 @@ func (g *Game) importWorld(s *worldSave) {
 	}
 	// TODO(M9)
 }
+
+// worldMapView builds the World tab (M9).
+func (g *Game) worldMapView() WorldMapView { return WorldMapView{} }
+
+// cmdFormCaravan sends the listed members to tile dest (M9).
+func (g *Game) cmdFormCaravan(members string, dest int) {}
+
+// cmdCaravanReturn sends caravan id home (M9).
+func (g *Game) cmdCaravanReturn(id entity.EntityID) {}

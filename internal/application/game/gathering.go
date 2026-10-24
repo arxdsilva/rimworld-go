@@ -15,3 +15,9 @@ func (g *Game) socialDuty(id entity.EntityID, j job.Record) bool {
 func (g *Game) doGather(id entity.EntityID, j job.Record) {
 	g.endStubJob(id, j) // TODO(M5)
 }
+
+// partyFits reports whether a party can be thrown now (M5).
+func (g *Game) partyFits(now uint64) bool { return false }
+
+// throwParty starts a party gathering (M5).
+func (g *Game) throwParty(now uint64) bool { return false }

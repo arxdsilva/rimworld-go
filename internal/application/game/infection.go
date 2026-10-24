@@ -51,7 +51,7 @@ func (g *Game) needsTending(id entity.EntityID) bool {
 	}
 	w := g.wounds[id]
 	v, _ := g.vital.Get(id)
-	return w.At != 0 && v.Injury > 0 || w.Infection > 0
+	return w.At != 0 && g.openInjury(id, v) || w.Infection > 0 // body.go
 }
 
 // otherDoctor reports a standing colonist besides id who does Doctor work.
@@ -64,8 +64,12 @@ func (g *Game) otherDoctor(id entity.EntityID) bool {
 	return false
 }
 
-// patientRest: a sick or badly hurt colonist should lie down for a doctor.
+// patientRest: a sick or badly hurt colonist, or one with an operation a
+// doctor could do now, should lie down for a doctor.
 func (g *Game) patientRest(id entity.EntityID) bool {
+	if g.awaitingSurgery(id) { // surgery.go: lie down for a queued operation
+		return true
+	}
 	if !g.needsTending(id) || !g.otherDoctor(id) {
 		return false
 	}
@@ -108,8 +112,15 @@ func (g *Game) withMedicine(id entity.EntityID, rec job.Record) job.Record {
 // pickUpMedicine: the doctor reached the medicine; take one dose and head
 // for the patient. Reports false if the job had to end.
 func (g *Game) pickUpMedicine(id entity.EntityID, j *job.Record) bool {
+	return g.pickUpItem(id, j, isMedicine)
+}
+
+// pickUpItem: the doctor reached j.Dest; take one of it (if accept likes
+// its kind) and head for the patient at DestX/DestY. Reports false while
+// walking, or if the job had to end (surgery.go fetches implants with it).
+func (g *Game) pickUpItem(id entity.EntityID, j *job.Record, accept func(item.Kind) bool) bool {
 	st, ok := g.stacks.Get(j.Dest)
-	if !ok || st.Carrier != 0 || !isMedicine(st.Kind) {
+	if !ok || st.Carrier != 0 || !accept(st.Kind) {
 		j.Dest = 0 // gone: tend without it
 	} else {
 		carry := j.Dest

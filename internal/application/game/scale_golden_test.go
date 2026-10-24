@@ -17,6 +17,15 @@ import (
 // Re-pin: go test -run TestScaleGolden -v ./internal/application/game/
 // and copy the "got" values.
 //
+// Re-pinned (ENG-003 M3 social core): the founders get families (off-map
+// relatives take entity ids, the social stream rolls), raiders and
+// colonists are registered people, colonists interact every ~1250 ticks
+// (opinion memories, insult and kind-words moods, a social log), idle
+// chats stand both pawns together, social relaxing at tables and fires,
+// and mood is smoothed (mental breaks follow the smoothed value). Three
+// identical runs; taken on a tree that also carries the in-flight M1/M2
+// host-system changes (4 of 6 pins had moved with social disabled).
+//
 // Re-pinned (ENG-003): StateHash encodes saved values sparsely (struct
 // fields by name, zero ones skipped; arrays without trailing zeros), so
 // the social contract's appended record fields and work slot leave pins
@@ -48,12 +57,12 @@ import (
 // values are identical when computed on the contract commit (fbc76fd6)
 // and on the new save format.
 var scaleGolden = map[string]uint64{
-	"48x40/seed1":    0x1be2465b75aa16e,
-	"48x40/seed7":    0x6cde503330d642d7,
-	"48x40/seed42":   0x16b8cbab704dfc69,
-	"120x120/seed1":  0x6bef6f64166919c6,
-	"120x120/seed7":  0xb3e1c560d68a5398,
-	"120x120/seed42": 0x28d82550949d33ab,
+	"48x40/seed1":    0x8089377aa98590ec,
+	"48x40/seed7":    0x91181193c2c43aa6,
+	"48x40/seed42":   0xf7c4b807844d22f9,
+	"120x120/seed1":  0x1a87041d2b61bc2e,
+	"120x120/seed7":  0xd6cfd1badd8a05ed,
+	"120x120/seed42": 0x3d290056920ba814,
 }
 
 const scaleGoldenTicks = 20000

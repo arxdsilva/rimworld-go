@@ -208,16 +208,24 @@ func (g *Game) hurt(target entity.EntityID, dmg int, by entity.EntityID) {
 	if !ok || v.Status == health.Dead {
 		return
 	}
-	v.Injury += dmg
-	g.vital.Set(target, v)
+	b := g.ensureBody(target, &v) // body.go: a humanlike takes a wound on a part
+	if b != nil && dmg > 0 {
+		g.woundBody(b, dmg, g.woundKindBy(by), now)
+		g.bodyChanged(target, b, &v) // Injury = the body's damage
+	} else {
+		v.Injury += dmg
+		g.vital.Set(target, v)
+	}
 	g.woundOpened(target)
 	if by != 0 {
 		g.onHarmed(target, by) // social.go: the victim's opinion of the attacker
 	}
 	switch {
-	case v.Injury >= health.MaxHP:
+	case v.Injury >= health.MaxHP || b != nil && b.VitalLost():
 		g.dieBy(target, health.CauseInjury, by)
 	case v.Injury >= g.downedAt(target) && v.Status == health.Alive: // skills.go: pain tolerance
+		g.down(target, health.CauseInjury)
+	case v.Status == health.Alive && unconscious(b): // body.go: knocked out by pain or a head wound
 		g.down(target, health.CauseInjury)
 	}
 }
@@ -263,8 +271,10 @@ func (g *Game) heal(id entity.EntityID, v *health.Record, now uint64) {
 	if (now+uint64(id))%every != 0 {
 		return
 	}
-	v.Injury--
-	if v.Status == health.Downed && v.Cause == health.CauseInjury && v.Injury <= health.RecoverInjury {
+	if !g.healBody(id, v, 1, false) { // body.go: smallest open wound first; may scar
+		v.Injury--
+	}
+	if v.Status == health.Downed && v.Cause == health.CauseInjury && v.Injury <= health.RecoverInjury && g.consciousEnough(id) {
 		v.Status, v.Cause = health.Alive, health.CauseNone
 	}
 	g.vital.Set(id, *v)

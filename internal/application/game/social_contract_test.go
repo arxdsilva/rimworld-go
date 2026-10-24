@@ -141,12 +141,6 @@ func TestSocialStubsAreNoOps(t *testing.T) {
 	g := NewColony(Config{Seed: 3, Width: 48, Height: 40})
 	g.Step(600)
 	id := g.pawnIDs[0]
-	if _, ok := g.Social(id); ok {
-		t.Fatal("social view before M4")
-	}
-	if _, ok := g.Health(id); ok {
-		t.Fatal("health view before M1")
-	}
 	if !g.inArea(id, 0, 0) {
 		t.Fatal("the area stub restricts")
 	}

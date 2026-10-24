@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"rimworld-go/internal/domain/pawn/social"
 	"slices"
 
 	"rimworld-go/internal/domain/ai/job"
@@ -93,6 +94,9 @@ func (g *Game) mourn(id entity.EntityID) {
 	}
 	for _, pid := range g.pawnIDs {
 		if v, ok := g.vital.Get(pid); ok && pid != id && v.Status != health.Dead {
+			if bio, _ := g.bioFor(pid); social.ExemptFromGrief(bio.Traits) {
+				continue // cold-hearted: no grief
+			}
 			g.remember(pid, mood.ColonistDied)
 		}
 	}

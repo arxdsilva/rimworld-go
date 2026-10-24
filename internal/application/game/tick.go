@@ -51,6 +51,11 @@ func (g *Game) applyOne(c command.Command) {
 		defer g.followPlainOrder(id, c) // order_queue.go: kept to retry if blocked
 	}
 	switch c.Kind {
+	case command.AddOperation, command.RemoveOperation, command.SetDrugPolicy, command.AssignBedOwner,
+		command.SetAnimalMaster, command.SetTraining, command.GiftAnimal, command.Capture, command.Arrest,
+		command.SetPrisonerMode, command.SetBedForPrisoners, command.FormCaravan, command.CaravanReturn,
+		command.PaintArea, command.RenameArea, command.AssignArea, command.ReleasePrisoner:
+		g.applyHostCommand(c) // host_commands.go (ENG-003)
 	case command.SetStoryteller:
 		g.cmdSetStoryteller(c.Name) // story.go (NG-1)
 	case command.SetDifficulty:
@@ -241,7 +246,9 @@ func (g *Game) phaseNeeds() {
 		if v.Status == health.Dead {
 			continue
 		}
+		g.wakeFromAnaesthetic(id, &v, now) // surgery.go
 		g.heal(id, &v, now)
+		g.drugTick(id, now) // drugs.go: hourly, staggered
 		if v.Status == health.Downed {
 			g.stainDowned(id, now) // stains.go: an untended body pools
 			n, _ := g.need.Get(id)
@@ -1093,8 +1100,12 @@ func (g *Game) sleepDone(id entity.EntityID, n needs.Pair, j job.Record) bool {
 	default: // Work hours
 		done = n.Rest > needs.CriticalRest && j.WorkLeft <= 0
 	}
-	if done && g.patientRest(id) && j.WorkLeft > -patientWait {
-		done = false // stay put: a doctor is coming
+	if done && g.patientRest(id) {
+		if j.WorkLeft > -patientWait {
+			done = false // stay put: a doctor is coming
+		} else {
+			g.surgeryGaveUp(id) // surgery.go: no surgeon came; don't lie straight back down
+		}
 	}
 	return done
 }

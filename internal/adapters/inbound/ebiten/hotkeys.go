@@ -78,6 +78,14 @@ func (a *App) handleTabKeys() {
 		a.applyClick("tab.schedule")
 	case f.fired(input.TabResearch):
 		a.applyClick("tab.research")
+	case f.fired(input.TabAssign):
+		a.toggleAssign()
+	case f.fired(input.TabHistory):
+		if a.uiModalTop() == historyModalID {
+			a.uiCloseTop()
+		} else {
+			a.openHistory()
+		}
 	case f.fired(input.TabAnimals):
 		a.openAnimals(false)
 	case f.fired(input.TabWildlife):

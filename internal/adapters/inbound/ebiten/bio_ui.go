@@ -183,16 +183,31 @@ func (a *App) bioTab(p game.PawnView) {
 	}
 	y += 26
 
-	// Conditions at the bottom, skills above them.
+	// Relations and conditions at the bottom, skills above them.
+	rel := a.bioRelations(p)
+	relH := float32(0)
+	if len(rel) > 0 {
+		relH = 16 + float32(len(rel)-1)*14
+	}
 	condH := float32(18)
 	if len(b.Conditions) > 1 {
 		condH += float32(len(b.Conditions)-1) * 14
 	}
 	top := y
-	avail := in.bottom() - condH - top - bioHdrH
+	avail := in.bottom() - condH - relH - top - bioHdrH
 	rowH := min(float32(bioRowMax), max(float32(bioRowMin), avail/float32(max(len(b.Skills), 1))))
 	a.bioSkills(rect{in.X, top, in.W, bioHdrH + rowH*float32(len(b.Skills))}, b, week, rowH)
 
+	if len(rel) > 0 {
+		ry := in.bottom() - condH - relH + 2
+		a.uiLabel(in.X, ry, "Relations:", tsLabel)
+		rs := tsSmall
+		rs.Color = uiTextDim
+		for i, ln := range rel {
+			a.uiLabel(in.X+74, ry+1+float32(i)*14, fitText(ln, rs, in.W-74), rs)
+		}
+		a.uiTip("bio.relations", rect{in.X, ry, in.W, relH}, "Relations\n"+strings.Join(rel, "\n")+"\nSee the Social tab for opinions.")
+	}
 	cy := in.bottom() - condH + 2
 	a.uiLabel(in.X, cy, "Health:", tsLabel)
 	text, st := "No conditions", tsSmall
@@ -283,4 +298,33 @@ func (a *App) drawPassion(dst *ebiten.Image, p int, x, y, size float64, st textS
 		return
 	}
 	drawText(dst, strings.Repeat("*", min(p, 2)), x, ty, st)
+}
+
+// bioRelationMax is how many relations the Bio tab summarises.
+const bioRelationMax = 3
+
+// bioRelationLines is the Bio tab's relations summary: the first rows of
+// the Social read model as "Wife: Bo".
+func bioRelationLines(rows []game.RelationRowView) []string {
+	var out []string
+	for _, r := range rows {
+		if len(out) == bioRelationMax {
+			break
+		}
+		if r.Label == "" {
+			out = append(out, r.Name)
+		} else {
+			out = append(out, r.Label+": "+r.Name)
+		}
+	}
+	return out
+}
+
+// bioRelations reads colonist p's relations summary.
+func (a *App) bioRelations(p game.PawnView) []string {
+	s, ok := a.renderer.game.Social(p.ID)
+	if !ok {
+		return nil
+	}
+	return bioRelationLines(s.Relations)
 }

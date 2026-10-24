@@ -226,6 +226,8 @@ func (g *Game) thoughts(id entity.EntityID) []mood.Thought {
 		states = append(states, mood.UnburiedCorpse)
 	}
 	ts := g.traitThoughts(id, mood.Active(g.memories[id].Prune(uint64(g.clock.Now())), states...)) // skills.go
+	ts = append(ts, g.bodyThoughts(id)...)                                                         // body.go
+	ts = append(ts, g.drugThoughts(id)...)                                                         // drugs.go
 	return append(ts, g.socialThoughts(id)...)                                                     // social_mood.go
 }
 

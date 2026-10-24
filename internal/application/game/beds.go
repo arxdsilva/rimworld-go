@@ -21,3 +21,6 @@ func (g *Game) sleepInPartnerBed(id, bid entity.EntityID, slot int) bool {
 func (g *Game) doLovin(id entity.EntityID, j job.Record) {
 	g.endStubJob(id, j) // TODO(M5)
 }
+
+// cmdAssignBedOwner makes owner (0: nobody) sleep in slot of bed (M5).
+func (g *Game) cmdAssignBedOwner(bed, owner entity.EntityID, slot int) {}

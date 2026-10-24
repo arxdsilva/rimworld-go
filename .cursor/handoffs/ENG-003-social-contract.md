@@ -92,3 +92,5 @@ and cannot load the module.
 ## Follow-ups
 
 Wave A (M1, M2, M3-domain) fills the domain packages.
+
+Progress: Wave A landed as SIM-039-body-surgery.md, SIM-040-drugs.md, SIM-041-social-core.md, UI-022-social-tab-history.md and ART-019-social-host-assets.md.

@@ -1,23 +1,287 @@
 package game
 
 import (
+	"fmt"
 	"slices"
 
+	"rimworld-go/internal/domain/animal"
+	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/pawn/body"
+	"rimworld-go/internal/domain/pawn/health"
+	"rimworld-go/internal/domain/pawn/mood"
+	"rimworld-go/internal/domain/pawn/stat"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
-// Bodies (ENG-003, M1): g.bodies holds each humanlike's body; nil until
-// the first one is made. Saved as Bodies.
+// Bodies (ENG-003, M1): g.bodies holds each humanlike's body (colonists
+// and raiders), made on the first wound, heal or tend. Animals keep the
+// plain Injury model. health.Record.Injury stays the derived cache
+// body.Damage(), so the downed and death thresholds, and everything else
+// that reads Injury, keep working unchanged. Hit locations and scar rolls
+// come from the body stream (rng_streams.go), never g.rng. Saved as Bodies.
+
+const (
+	// maxSpill bounds how many parts one hit may spread over.
+	maxSpill = 8
+	// consciousRecover is the consciousness (permille) a pawn downed by
+	// losing it needs to stand again: it goes down at 0 (hysteresis).
+	consciousRecover = 300
+	// sightAccPoints is the shooting accuracy (points) total blindness
+	// costs; one eye costs half.
+	sightAccPoints = 30
+)
+
+// ensureBody is humanlike id's body, made on first use, with v's injury
+// reconciled into it: an older save (or a fixture) that only knows Injury
+// gets that much as a torso bruise; a lower Injury set from outside trims
+// open wounds. Nil for animals and unknown ids.
+func (g *Game) ensureBody(id entity.EntityID, v *health.Record) *body.Body {
+	if !g.isPawn(id) {
+		return nil
+	}
+	b := g.bodies[id]
+	if b == nil {
+		if g.bodies == nil {
+			g.bodies = make(map[entity.EntityID]*body.Body)
+		}
+		b = &body.Body{}
+		g.bodies[id] = b
+	}
+	reconcileInjury(b, v.Injury, uint64(g.clock.Now()))
+	return b
+}
+
+// reconcileInjury makes b's damage match injury where wounds allow it.
+func reconcileInjury(b *body.Body, injury int, now uint64) {
+	d := b.Damage()
+	switch {
+	case injury > d:
+		b.Wounds = append(b.Wounds, body.Wound{Part: body.Torso, Dmg: injury - d, Kind: body.Bruise, At: now})
+	case injury < d:
+		trimOpen(b, d-injury)
+	}
+}
+
+// trimOpen removes n points of open-wound damage, smallest wound first,
+// without scarring (an outside correction, not healing).
+func trimOpen(b *body.Body, n int) {
+	for n > 0 {
+		idx := -1
+		for i, w := range b.Wounds {
+			if !w.Permanent && (idx < 0 || w.Dmg < b.Wounds[idx].Dmg) {
+				idx = i
+			}
+		}
+		if idx < 0 {
+			return
+		}
+		w := &b.Wounds[idx]
+		if w.Dmg > n {
+			w.Dmg -= n
+			return
+		}
+		n -= w.Dmg
+		b.Wounds = slices.Delete(b.Wounds, idx, idx+1)
+	}
+}
+
+// partDmg is the wound damage on part p.
+func partDmg(b *body.Body, p body.Part) int {
+	n := 0
+	for _, w := range b.Wounds {
+		if w.Part == p {
+			n += w.Dmg
+		}
+	}
+	return n
+}
+
+// woundBody deals dmg of kind to b on parts picked by coverage. A vital
+// part is never destroyed by a hit: what it cannot take spills to the next
+// pick, so the body's Damage rises by exactly dmg and death still comes
+// at health.MaxHP. Other parts may be destroyed (lost).
+func (g *Game) woundBody(b *body.Body, dmg int, kind body.WoundKind, now uint64) {
+	rng := g.stream(streamBody)
+	left := dmg
+	for try := 0; left > 0 && try < maxSpill; try++ {
+		drawn := -1
+		roll := func(n int) int { // one draw, replayed so Hurt picks the same part
+			if drawn < 0 {
+				drawn = rng.IntN(n)
+			}
+			return drawn
+		}
+		p, ok := b.PickPart(roll)
+		if !ok {
+			break
+		}
+		hit := left
+		if body.DefOf(p).Vital {
+			room := body.DefOf(p).MaxHP - partDmg(b, p) - 1
+			if room <= 0 {
+				continue
+			}
+			hit = min(hit, room)
+		}
+		before := b.Damage()
+		b.Hurt(roll, hit, kind, now)
+		left -= b.Damage() - before
+	}
+	if left > 0 { // nothing left to take it: it all lands on the torso
+		b.Wounds = append(b.Wounds, body.Wound{Part: body.Torso, Dmg: left, Kind: kind, At: now})
+	}
+}
+
+// woundKindBy is the kind of wound attacker by deals (0: a trap, a burst
+// or a fixture, which bruise).
+func (g *Game) woundKindBy(by entity.EntityID) body.WoundKind {
+	if by == 0 {
+		return body.Bruise
+	}
+	wk := g.weaponOf(by)
+	if a, ok := g.animals.Get(by); ok {
+		wk = animal.DefOf(a.Species).Attack
+	}
+	switch wk {
+	case weapon.Knife, weapon.Spear, weapon.Rifle, weapon.Claw, weapon.Gore:
+		return body.Cut
+	case weapon.Bite:
+		return body.Bite
+	case weapon.Peck:
+		return body.Scratch
+	}
+	return body.Bruise
+}
+
+// bodyKey is the capacities the stat sheet was built from: Moving,
+// Manipulation, Sight (permille).
+type bodyKey [3]int32
+
+var healthyKey = bodyKey{1000, 1000, 1000}
+
+func keyOf(b *body.Body) bodyKey {
+	if b == nil {
+		return healthyKey
+	}
+	return bodyKey{b.Capacity(body.Moving), b.Capacity(body.Manipulation), b.Capacity(body.Sight)}
+}
+
+// bodyMods is the body's step of id's stat sheet: Moving scales MoveSpeed,
+// Manipulation WorkSpeed, and Sight costs shooting accuracy (nil when
+// healthy).
+func bodyMods(k bodyKey) []stat.Mod {
+	if k == healthyKey {
+		return nil
+	}
+	var ms []stat.Mod
+	if k[0] != 1000 {
+		ms = append(ms, stat.Mod{Stat: stat.MoveSpeed, Mul: max(k[0], 1)})
+	}
+	if k[1] != 1000 {
+		ms = append(ms, stat.Mod{Stat: stat.WorkSpeed, Mul: max(k[1], 1)})
+	}
+	if k[2] != 1000 {
+		ms = append(ms, stat.Mod{Stat: stat.ShootAcc, Add: (k[2] - 1000) * sightAccPoints / 1000})
+	}
+	return ms
+}
+
+// bodyChanged follows a change to id's body: Injury is re-derived, the
+// stat sheet is rebuilt only when a capacity it uses moved, and a pawn
+// with no consciousness left goes down.
+func (g *Game) bodyChanged(id entity.EntityID, b *body.Body, v *health.Record) {
+	v.Injury = b.Damage()
+	g.vital.Set(id, *v)
+	cur := healthyKey
+	if fx := g.sk.stats[id]; fx != nil {
+		cur = fx.body
+	}
+	if keyOf(b) != cur {
+		g.sk.ensure()
+		g.rebuildStats(id) // skills.go: the body layer
+	}
+}
+
+// unconscious reports b out cold (it downs the pawn).
+func unconscious(b *body.Body) bool { return b != nil && b.Capacity(body.Consciousness) == 0 }
+
+// consciousEnough: id may stand up (no body, or consciousness back over
+// consciousRecover).
+func (g *Game) consciousEnough(id entity.EntityID) bool {
+	b := g.bodies[id]
+	return b == nil || b.Capacity(body.Consciousness) >= consciousRecover
+}
+
+// healBody heals amount on id's body, tending its open wounds first when
+// tend is set (scars are rolled on the body stream and logged); it reports
+// false for a pawn without a body (an animal).
+func (g *Game) healBody(id entity.EntityID, v *health.Record, amount int, tend bool) bool {
+	b := g.ensureBody(id, v)
+	if b == nil {
+		return false
+	}
+	if tend {
+		b.Tend()
+	}
+	before := scarsByPart(b)
+	if b.Heal(g.stream(streamBody).IntN, amount) {
+		after := scarsByPart(b)
+		for p := body.Part(0); p < body.NumParts; p++ {
+			if after[p] > before[p] {
+				g.logEvent(id, logEntry{Kind: logScarred, Name: "A wound on the " + p.Label() + " healed into a scar"})
+			}
+		}
+	}
+	g.bodyChanged(id, b, v)
+	return true
+}
+
+// scarsByPart counts b's scars on each part.
+func scarsByPart(b *body.Body) (n [body.NumParts]uint8) {
+	for _, w := range b.Wounds {
+		if w.Permanent && w.Part < body.NumParts {
+			n[w.Part]++
+		}
+	}
+	return n
+}
+
+// openInjury reports injury on id a tend can still help: no body yet, an
+// open wound, or Injury set past the body from outside (scars and lost
+// parts alone need no tending).
+func (g *Game) openInjury(id entity.EntityID, v health.Record) bool {
+	if v.Injury <= 0 {
+		return false
+	}
+	b := g.bodies[id]
+	return b == nil || hasOpenWound(b) || v.Injury > b.Damage()
+}
+
+// hasOpenWound reports a wound on b that can still heal.
+func hasOpenWound(b *body.Body) bool {
+	for _, w := range b.Wounds {
+		if !w.Permanent {
+			return true
+		}
+	}
+	return false
+}
 
 // exportBodies is the Bodies save field in id order (nil: none).
 func (g *Game) exportBodies() []entry[body.Body] {
 	return exportMap(g.bodies)
 }
 
-// importBodies restores exportBodies' state.
+// importBodies restores exportBodies' state and rebuilds the stat sheets
+// the bodies change (the sheets are derived, not saved).
 func (g *Game) importBodies(es []entry[body.Body]) {
 	g.bodies = importMap(es)
+	for _, e := range es {
+		if keyOf(g.bodies[e.ID]) != healthyKey {
+			g.sk.ensure()
+			g.rebuildStats(e.ID)
+		}
+	}
 }
 
 // exportMap lists a pointer map's entries in id order (nil when empty).
@@ -52,4 +316,143 @@ func importMap[T any](es []entry[T]) map[entity.EntityID]*T {
 		m[e.ID] = &v
 	}
 	return m
+}
+
+// capacityLabels name body.Capacity values for the Health tab.
+var capacityLabels = [body.NumCaps]string{
+	body.Consciousness: "Consciousness", body.Moving: "Moving", body.Manipulation: "Manipulation",
+	body.Sight: "Sight", body.Hearing: "Hearing", body.Talking: "Talking", body.Breathing: "Breathing",
+}
+
+// Part status words of the Health tab (PartView.Status starts with one).
+const (
+	PartHealthy    = "healthy"
+	PartMissing    = "missing"
+	PartReplaced   = "replaced"   // under an artificial limb
+	PartArtificial = "artificial" // "artificial: peg leg"
+	PartWounded    = "wounded"    // "wounded: 2 wounds (tended), 1 scar"
+	PartScarred    = "scarred"
+)
+
+// viewBody is id's body for a read model: its own, or for a pawn never hurt
+// since an older save, the body its Injury would migrate to (built aside,
+// so a view never changes the game).
+func (g *Game) viewBody(id entity.EntityID) *body.Body {
+	if b := g.bodies[id]; b != nil {
+		return b
+	}
+	b := &body.Body{}
+	if v, _ := g.vital.Get(id); v.Injury > 0 {
+		reconcileInjury(b, v.Injury, 0)
+	}
+	return b
+}
+
+// coveredByImplant reports a missing part p standing under an implant on
+// one of its ancestors (a foot under a prosthetic leg).
+func coveredByImplant(b *body.Body, p body.Part) bool {
+	for q, i := body.DefOf(p).Parent, 0; i < int(body.NumParts); q, i = body.DefOf(q).Parent, i+1 {
+		if b.Implants[q].IsImplant() {
+			return true
+		}
+		if body.DefOf(q).Parent == q {
+			return false
+		}
+	}
+	return false
+}
+
+// partStatus is the Health tab's status line for one part.
+func partStatus(b *body.Body, s body.PartStatus) string {
+	switch {
+	case s.Missing && s.Fitted:
+		return PartArtificial + ": " + s.Implant.String()
+	case s.Missing && coveredByImplant(b, s.Part):
+		return PartReplaced
+	case s.Missing:
+		return PartMissing
+	case s.Wounds > 0:
+		t := fmt.Sprintf("%s: %d wound%s", PartWounded, s.Wounds, plural(s.Wounds))
+		if s.Tended {
+			t += " (tended)"
+		}
+		if s.Scars > 0 {
+			t += fmt.Sprintf(", %d scar%s", s.Scars, plural(s.Scars))
+		}
+		return t
+	case s.Scars > 0:
+		return fmt.Sprintf("%s: %d scar%s", PartScarred, s.Scars, plural(s.Scars))
+	}
+	return PartHealthy
+}
+
+func plural(n int) string {
+	if n == 1 {
+		return ""
+	}
+	return "s"
+}
+
+// operationLabel is how the Health tab lists op.
+func operationLabel(op body.Operation) string {
+	part := op.Part.Label()
+	switch op.Kind {
+	case body.InstallImplant:
+		return fmt.Sprintf("Install %s (%s)", op.Item, part)
+	case body.RemoveImplant:
+		return fmt.Sprintf("Remove implant (%s)", part)
+	case body.Amputate:
+		return fmt.Sprintf("Amputate %s", part)
+	}
+	return "Operation (" + part + ")"
+}
+
+// healthView builds the Health tab: capacities, pain, every part in
+// body.Part order (Parts[i] is body.Part(i)), queued operations and drug
+// lines. Humanlike pawns only.
+func (g *Game) healthView(id entity.EntityID) (HealthView, bool) {
+	if !g.isPawn(id) {
+		return HealthView{}, false
+	}
+	if _, ok := g.vital.Get(id); !ok {
+		return HealthView{}, false
+	}
+	b := g.viewBody(id)
+	hv := HealthView{Pain: int(b.Pain()) / 10, Drugs: g.drugLines(id)} // drugs.go
+	hv.Capacities = make([]CapacityView, 0, body.NumCaps)
+	for c := body.Capacity(0); c < body.NumCaps; c++ {
+		hv.Capacities = append(hv.Capacities, CapacityView{Label: capacityLabels[c], Pct: int(b.Capacity(c)) / 10})
+	}
+	ps := b.Parts()
+	hv.Parts = make([]PartView, 0, len(ps))
+	for _, s := range ps {
+		hv.Parts = append(hv.Parts, PartView{Label: s.Label, Status: partStatus(b, s), HP: s.HP})
+	}
+	for i, op := range g.operationsOf(id) {
+		hv.Operations = append(hv.Operations, OperationView{Label: operationLabel(op), Slot: i})
+	}
+	return hv, true
+}
+
+// missingPart reports a part gone with nothing standing in for it.
+func missingPart(b *body.Body) bool {
+	if b == nil || b.Missing == 0 {
+		return false
+	}
+	for p := body.Part(0); p < body.NumParts; p++ {
+		if b.Missing&(1<<p) != 0 && !b.Implants[p].IsImplant() && !coveredByImplant(b, p) {
+			return true
+		}
+	}
+	return false
+}
+
+// bodyThoughts are id's body state thoughts: missing a part (no implant in
+// its place). Being disfigured has no thought of its own (others see it).
+func (g *Game) bodyThoughts(id entity.EntityID) []mood.Thought {
+	if !missingPart(g.bodies[id]) {
+		return nil
+	}
+	d := mood.DefOf(mood.MissingPart)
+	return []mood.Thought{{Kind: mood.MissingPart, Label: d.Label, Value: d.Value}}
 }

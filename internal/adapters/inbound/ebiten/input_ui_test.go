@@ -167,7 +167,20 @@ func TestFunctionKeysOpenTabs(t *testing.T) {
 	if !a.archOpen {
 		t.Fatal("Tab opens the Architect")
 	}
-	for _, k := range []string{"F3", "F7", "F8", "F9", "V", "T"} {
+	f.key(t, a, "F3", 0)
+	if a.uiModalTop() != assignModalID {
+		t.Fatalf("F3 should open Assign, top modal %q", a.uiModalTop())
+	}
+	f.key(t, a, "F3", 0)
+	f.key(t, a, "F9", 0)
+	if a.uiModalTop() != historyModalID {
+		t.Fatalf("F9 should open History, top modal %q", a.uiModalTop())
+	}
+	f.key(t, a, "F9", 0)
+	if a.uiModalTop() == historyModalID {
+		t.Fatal("F9 again closes History")
+	}
+	for _, k := range []string{"F7", "F8", "V", "T"} {
 		f.key(t, a, k, 0)
 		ts := a.liveToasts()
 		if len(ts) == 0 || !strings.Contains(ts[len(ts)-1].text, input.NotYet) {

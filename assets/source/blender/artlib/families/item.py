@@ -570,12 +570,145 @@ def _industrial_medicine(size):
                           extra={"item": "industrial medicine", "stack": True, "stack_size": size})
 
 
+# ---- social & host systems items (ENG-003, ART §37)
+def _brewgrain_item():
+    """A small burlap sack of malted grain, a few loose kernels beside it."""
+    S.cyl("sack", 0.5, -0.55, 0.22, 0.0, 0.26, "burlap", r_top=0.17, segs=16)
+    S.cyl("mouth", 0.5, -0.55, 0.19, 0.25, 0.29, "leather", segs=16, bevel=0.01)
+    S.cyl("grain", 0.5, -0.55, 0.15, 0.285, 0.31, "corn_yellow", segs=16, bevel=0.0)
+    for k, (x, y) in enumerate([(0.26, -0.78), (0.34, -0.82), (0.72, -0.80), (0.80, -0.72), (0.76, -0.84)]):
+        S.ellipsoid("kern%d" % k, x, y, 0.02, 0.03, 0.016, 0.016, "straw" if k % 2 else "corn_yellow", segs=6, rings=4)
+    return S.render_asset("item", "brewgrain", zmax=0.34, extra={"item": "brewgrain", "stack": True})
+
+
+def _ashleaf_item():
+    """A loose bundle of broad dusty blue-green leaves tied with twine."""
+    from .plant_base import _leaf
+    for k, (x, y, az) in enumerate([(0.34, -0.52, 0.2), (0.44, -0.46, 0.6), (0.54, -0.5, -0.1), (0.40, -0.58, -0.4),
+                                    (0.58, -0.58, 0.9), (0.48, -0.54, 0.3)]):
+        _leaf("lf%d" % k, x, y, 0.03 + 0.025 * (k % 3), az, 0.15, 0.3, 0.13,
+              "leaf_pine" if k % 2 else "leaf_pine_hi", thick=0.04)
+    S.box("twine", 0.42, -0.62, 0.0, 0.48, -0.40, 0.14, "straw", bevel=0.01)
+    return S.render_asset("item", "ashleaf", zmax=0.2, extra={"item": "ashleaf", "stack": True})
+
+
+def _beer():
+    """A wooden keg tapped for a foaming ceramic tankard."""
+    S.cyl("keg", 0.38, -0.5, 0.2, 0.0, 0.34, "wood", r_top=0.2, segs=18, bevel=0.03)
+    for z in (0.06, 0.26):
+        S.cyl("hoop%d" % int(z * 10), 0.38, -0.5, 0.207, z, z + 0.04, "metal_dark", segs=18, bevel=0.0)
+    S.cyl("tap", 0.38, -0.72, 0.025, 0.14, 0.2, "steel", segs=8, ry=0.07, bevel=0.0)
+    S.cyl("mug", 0.72, -0.6, 0.1, 0.0, 0.22, "ceramic", segs=16, bevel=0.015)
+    S.cyl("ale", 0.72, -0.6, 0.085, 0.2, 0.215, "crop_fruit", segs=16, bevel=0.0)
+    S.ellipsoid("foam", 0.72, -0.6, 0.225, 0.09, 0.09, 0.04, "snow", segs=12, rings=6)
+    S.box("handle", 0.82, -0.62, 0.06, 0.88, -0.58, 0.18, "ceramic", bevel=0.01)
+    return S.render_asset("item", "beer", zmax=0.4, extra={"item": "beer", "stack": True})
+
+
+def _ashleaf_tea():
+    """A steaming cup of pale tea on a saucer, one leaf floating beside it."""
+    from .plant_base import _leaf
+    S.cyl("saucer", 0.5, -0.55, 0.26, 0.0, 0.03, "ceramic", segs=22, bevel=0.005)
+    S.cyl("cup", 0.5, -0.55, 0.14, 0.03, 0.17, "ceramic", r_top=0.17, segs=18, bevel=0.012)
+    S.cyl("tea", 0.5, -0.55, 0.15, 0.165, 0.175, "leaf_light", segs=18, bevel=0.0)
+    S.box("handle", 0.66, -0.57, 0.07, 0.74, -0.53, 0.14, "ceramic", bevel=0.01)
+    S.ellipsoid("steam", 0.5, -0.55, 0.26, 0.05, 0.04, 0.07, "snow", segs=8, rings=5)
+    S.ellipsoid("steam2", 0.54, -0.52, 0.36, 0.035, 0.03, 0.05, "snow", segs=8, rings=5)
+    _leaf("lf", 0.22, -0.74, 0.02, 0.5, 0.1, 0.2, 0.09, "leaf_pine_hi", thick=0.03)
+    return S.render_asset("item", "ashleaf_tea", zmax=0.42, extra={"item": "ashleaf tea", "stack": True})
+
+
+def _spark_tablet():
+    """A foil strip of chalky tablets, each stamped with a small ember bolt."""
+    S.box("strip", 0.24, -0.72, 0.0, 0.76, -0.38, 0.03, "steel", bevel=0.012)
+    for k, (x, y) in enumerate([(0.34, -0.64), (0.50, -0.64), (0.66, -0.64), (0.34, -0.46), (0.50, -0.46), (0.66, -0.46)]):
+        S.cyl("tab%d" % k, x, y, 0.062, 0.03, 0.075, "ceramic" if k < 5 else "glass", segs=12, bevel=0.01)
+        S.box("bolt%d" % k, x - 0.012, y - 0.03, 0.075, x + 0.012, y + 0.03, 0.082, "pumpkin", bevel=0.0)
+    return S.render_asset("item", "spark_tablet", zmax=0.12, extra={"item": "spark tablet", "stack": True})
+
+
+def _peg_leg():
+    """A rough wooden leg: tapered shaft, iron-capped foot, leather strap cuff."""
+    from .plant_base import _limb
+    _limb("shaft", (0.28, -0.62, 0.07), (0.72, -0.44, 0.1), 0.05, 0.035, "wood", segs=10)
+    _limb("foot", (0.24, -0.64, 0.05), (0.3, -0.61, 0.06), 0.055, 0.05, "metal_dark", segs=10)
+    S.cyl("cuff", 0.72, -0.44, 0.07, 0.07, 0.14, "leather", r_top=0.085, segs=12, bevel=0.01)
+    for k, f in enumerate((0.5, 0.64)):
+        S.box("strap%d" % k, 0.28 + 0.44 * f - 0.02, -0.62 + 0.18 * f - 0.07, 0.05, 0.28 + 0.44 * f + 0.02, -0.62 + 0.18 * f + 0.07, 0.13, "leather", bevel=0.008)
+    return S.render_asset("item", "peg_leg", zmax=0.2, extra={"item": "peg leg"})
+
+
+def _prosthetic_leg():
+    """A metal prosthetic leg: steel shin and thigh sockets, a hinge, a cushioned foot."""
+    from .plant_base import _limb
+    _limb("shin", (0.26, -0.66, 0.08), (0.52, -0.54, 0.1), 0.04, 0.034, "steel", segs=10)
+    _limb("thigh", (0.54, -0.53, 0.1), (0.78, -0.42, 0.12), 0.05, 0.058, "steel", segs=10)
+    S.cyl("hinge", 0.53, -0.535, 0.055, 0.04, 0.15, "metal_dark", segs=12, bevel=0.008)
+    S.box("foot", 0.14, -0.78, 0.0, 0.34, -0.58, 0.07, "metal_dark", bevel=0.02)
+    S.box("pad", 0.16, -0.76, 0.07, 0.32, -0.62, 0.095, "leather", bevel=0.01)
+    S.cyl("socket", 0.78, -0.42, 0.075, 0.06, 0.18, "leather", r_top=0.09, segs=12, bevel=0.01)
+    return S.render_asset("item", "prosthetic_leg", zmax=0.22, extra={"item": "prosthetic leg"})
+
+
+def _prosthetic_arm():
+    """A metal prosthetic arm: socket, steel forearm, hinged elbow and a three-finger grip."""
+    from .plant_base import _limb
+    S.cyl("socket", 0.76, -0.4, 0.08, 0.05, 0.17, "leather", r_top=0.1, segs=12, bevel=0.01)
+    _limb("upper", (0.74, -0.42, 0.1), (0.54, -0.52, 0.1), 0.05, 0.04, "steel", segs=10)
+    S.cyl("elbow", 0.53, -0.525, 0.05, 0.04, 0.15, "metal_dark", segs=12, bevel=0.008)
+    _limb("fore", (0.52, -0.53, 0.1), (0.3, -0.62, 0.09), 0.04, 0.034, "steel", segs=10)
+    S.box("palm", 0.18, -0.7, 0.04, 0.32, -0.55, 0.13, "metal_dark", bevel=0.02)
+    for k, dy in enumerate((-0.68, -0.62, -0.56)):
+        _limb("fing%d" % k, (0.2, dy, 0.07), (0.1, dy - 0.04, 0.06), 0.02, 0.014, "steel", segs=6)
+    return S.render_asset("item", "prosthetic_arm", zmax=0.2, extra={"item": "prosthetic arm"})
+
+
+def _wooden_hand():
+    """A carved wooden hand strapped to a leather cuff."""
+    from .plant_base import _limb
+    S.cyl("cuff", 0.7, -0.48, 0.09, 0.0, 0.13, "leather", r_top=0.1, segs=14, bevel=0.012)
+    _limb("wrist", (0.7, -0.48, 0.06), (0.52, -0.54, 0.06), 0.055, 0.05, "wood", segs=10)
+    S.box("palm", 0.36, -0.64, 0.0, 0.54, -0.44, 0.08, "wood", bevel=0.025)
+    for k, dy in enumerate((-0.62, -0.57, -0.52, -0.47)):
+        _limb("fing%d" % k, (0.38, dy, 0.045), (0.2, dy - 0.03 * (k - 1.5), 0.04), 0.022, 0.016, "wood_plank", segs=6)
+    _limb("thumb", (0.44, -0.45, 0.045), (0.34, -0.3, 0.04), 0.024, 0.017, "wood_plank", segs=6)
+    S.box("strap", 0.6, -0.56, 0.0, 0.64, -0.4, 0.12, "bark", bevel=0.008)
+    return S.render_asset("item", "wooden_hand", zmax=0.16, extra={"item": "wooden hand"})
+
+
+def _denture():
+    """A set of dentures: pink gum arches with rows of ceramic teeth, one over the other."""
+    S.box("lower_gum", 0.28, -0.68, 0.0, 0.72, -0.44, 0.06, "food_red", bevel=0.04, segments=2)
+    S.box("upper_gum", 0.3, -0.58, 0.1, 0.7, -0.36, 0.17, "food_red", bevel=0.04, segments=2)
+    for k in range(7):
+        x = 0.31 + 0.063 * k
+        S.box("lt%d" % k, x, -0.69, 0.06, x + 0.05, -0.64, 0.12, "ceramic", bevel=0.012)
+        S.box("ut%d" % k, x + 0.01, -0.59, 0.06, x + 0.06, -0.54, 0.1, "ceramic", bevel=0.012)
+    return S.render_asset("item", "denture", zmax=0.2, extra={"item": "denture"})
+
+
+def _hearing_trumpet():
+    """A flared horn trumpet with a leather-wrapped mouthpiece."""
+    from .plant_base import _limb
+    _limb("bell", (0.2, -0.7, 0.14), (0.52, -0.54, 0.1), 0.15, 0.05, "horn", segs=16)
+    _limb("tube", (0.52, -0.54, 0.1), (0.76, -0.42, 0.08), 0.05, 0.03, "horn", segs=12)
+    S.cyl("rim", 0.2, -0.7, 0.155, 0.13, 0.15, "leather", segs=16, bevel=0.0)
+    S.cyl("tip", 0.78, -0.41, 0.04, 0.06, 0.1, "leather", segs=10, bevel=0.005)
+    S.box("wrap", 0.56, -0.56, 0.04, 0.6, -0.48, 0.16, "leather", bevel=0.008)
+    return S.render_asset("item", "hearing_trumpet", zmax=0.3, extra={"item": "hearing trumpet"})
+
+
 def build():
     return [_wood(), _food(), _steel(), _stone(), _stone_chunk(), _silver(), _gold(), _berries(), _ration(), _meat(), _meal(), _club(), _rifle_item(), _knife_item(), _spear_item(),
             _potatoes(), _corn(), _wheat(), _beans(), _lettuce(), _radishes(), _pumpkins(),
             _leather(), _parka(), _tuque(), _duster(), _herbal_medicine(), _bones(0), _bones(1),
-            _cloth_bolt(), _straw_bundle(), _milk(), _wool(), _eggs(False), _eggs(True), _ember_oil(), _parka_wool()] + [_carpet_rolled(k) for k in _ROLL] + build_ng1()
+            _cloth_bolt(), _straw_bundle(), _milk(), _wool(), _eggs(False), _eggs(True), _ember_oil(), _parka_wool()] + [_carpet_rolled(k) for k in _ROLL] + build_ng1() + build_social()
 
 
 def build_ng1():
     return [_components(z) for z in "sml"] + [_industrial_medicine(z) for z in "sml"]
+
+
+def build_social():
+    return [_brewgrain_item(), _ashleaf_item(), _beer(), _ashleaf_tea(), _spark_tablet(), _peg_leg(), _prosthetic_leg(),
+            _prosthetic_arm(), _wooden_hand(), _denture(), _hearing_trumpet()]

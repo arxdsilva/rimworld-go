@@ -40,8 +40,12 @@ func TestDryingRackDriesMeat(t *testing.T) {
 	if dried != 25 {
 		t.Fatalf("dried = %d, want one full rack (25)", dried)
 	}
-	// dried meat keeps through days of summer heat
-	g.Step(5 * clock.TicksPerDay)
+	// dried meat keeps through days of summer heat (the colonist kept fed
+	// and rested: a starving loner binges, which isn't what this tests)
+	for h := 0; h < 5*24; h++ {
+		g.Step(clock.TicksPerHour)
+		g.SetNeeds(id, needs.Full, needs.Full)
+	}
 	n := 0
 	for _, iid := range g.itemIDs {
 		if st, ok := g.stacks.Get(iid); ok && st.Kind == item.Meat && st.Dried {

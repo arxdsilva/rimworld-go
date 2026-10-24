@@ -631,8 +631,9 @@ and relevant risks.
 -   **States:** `ok == false` shows "No data yet." in dim text; a dead
     pawn shows the last state; operation buttons explain why disabled
     (no doctor, no medicine, no implant item).
--   [-] Tab live with the read model and the placeholder; body rows,
-    operations and drug lines arrive with M1/M2.
+-   [-] Live (SIM-039/040): capacities, pain, part rows, operations queue
+    with add/remove, drug lines; missing: bleeding, conditions list,
+    medical controls, operation reorder/risk preview.
 
 ------------------------------------------------------------------------
 
@@ -668,8 +669,8 @@ Opinion breakdown distinguishes A→B from B→A.
     that pawn when on the map. Weighty log lines also go to History.
 -   **States:** `ok == false` shows "No data yet."; empty relations show
     "Knows nobody yet."; off-map people show their whereabouts.
--   [-] Tab live with the read model and the placeholder; rows, hover
-    breakdowns and the log arrive with M3/M4.
+-   [-] Live (UI-022): relations with A->B / (B->A) opinions, status tags,
+    hover breakdowns, log with icons; missing: romance/ex rows and relationship events (M5).
 
 ------------------------------------------------------------------------
 
@@ -2005,8 +2006,8 @@ Agents should implement screens approximately in this dependency order.
 
 -   [-] Character (Bio tab: identity, backstories, traits, skills with passions, incapabilities, conditions; no Social/Gear tabs)
 -   [-] Needs/Mood (food/rest bars; no recreation/mood/thoughts)
--   [ ] Health
--   [ ] Social
+-   [-] Health (capacities, pain, part rows, operations queue; no bleeding or conditions)
+-   [-] Social (relations, breakdowns, log; no romance events)
 -   [ ] Gear
 -   [ ] Detailed Stats
 -   [-] Alerts/Letters (alert list and letter windows with Continue; no letter stack or history)

@@ -828,7 +828,7 @@ derived from thoughts and traits and low mood creates mental-break risk.
 -   [x] **Mood target**
     -   Sum baseline, expectations, thoughts, traits, health, social
         effects, environment.
--   [ ] **Smoothed current mood**
+-   [x] **Smoothed current mood**
     -   Current mood trends toward target rather than instantaneously
         matching it.
 -   [ ] **Break-risk thresholds**
@@ -881,10 +881,10 @@ derived from thoughts and traits and low mood creates mental-break risk.
 
 ## 10.3 Social interactions
 
--   [ ] **Periodic social interaction**
+-   [x] **Periodic social interaction** (SIM-041: every 60 ticks staggered among nearby same-room pawns; chitchat, deep talk, slight, insult, kind words)
     -   Nearby awake pawns may chat, insult, compliment, etc.
     -   Sparse event-driven relationships, never all-pairs every tick.
--   [ ] **Opinion**
+-   [x] **Opinion** (SIM-041: directional, relation bonus + traits + beauty + memories, clamp +-100)
     -   Pawn A's opinion of Pawn B is directional.
     -   Influenced by relationship, traits, memories, social
         interactions.
@@ -893,7 +893,7 @@ derived from thoughts and traits and low mood creates mental-break risk.
 
 ## 10.4 Relationships
 
--   [ ] **Family relationships**
+-   [x] **Family relationships** (SIM-041: kin derived from parent links; starting families seeded)
     -   Parent/child.
     -   sibling.
     -   spouse/partner.
@@ -910,7 +910,7 @@ derived from thoughts and traits and low mood creates mental-break risk.
 -   [ ] **Breakups**
     -   Relationship can end.
     -   social/mood memories.
--   [ ] **Relationship death reactions**
+-   [x] **Relationship death reactions** (SIM-041: grief via the relationship graph incl. off-map relatives, killer opinion; Cold-hearted exempt)
     -   Death of friend/lover/spouse/family creates stronger memories.
 
 ------------------------------------------------------------------------
@@ -925,17 +925,17 @@ treatment, and surgery are major colony-management systems.
 
 ## 11.1 Anatomy
 
--   [ ] **Species anatomy tree**
+-   [-] **Species anatomy tree** (SIM-039: humanlike tree only; no per-species anatomy)
     -   Body -\> torso/head -\> limbs -\> hands/feet -\> digits, organs,
         etc.
     -   Species can define different anatomy.
--   [ ] **Body-part health**
+-   [x] **Body-part health** (SIM-039: per-part health; non-vital parts destroyed; vital damage spills to the downed/death thresholds)
     -   Each part has maximum health.
     -   Damage can destroy/remove a part.
 
 ## 11.2 Capacities
 
--   [ ] **Pawn capacities**
+-   [x] **Pawn capacities** (SIM-039: consciousness, moving, manipulation, sight, hearing, talking, breathing)
     -   Consciousness.
     -   Moving.
     -   Manipulation.
@@ -944,7 +944,7 @@ treatment, and surgery are major colony-management systems.
     -   Talking.
     -   Breathing.
     -   blood filtration/circulation/metabolism equivalents as needed.
--   [ ] **Capacity derivation**
+-   [x] **Capacity derivation** (SIM-039: feeds MoveSpeed/WorkSpeed/ShootAcc; consciousness 0 downs)
     -   Relevant body parts and health effects combine into functional
         capacity.
     -   Capacity influences work/combat/movement/social/medical
@@ -952,13 +952,13 @@ treatment, and surgery are major colony-management systems.
 
 ## 11.3 Injuries
 
--   [ ] **Damage types**
+-   [-] **Damage types** (SIM-039: cut/bruise/bite/scratch/burn/surgical wound kinds; no armor or explosion damage)
     -   Blunt.
     -   sharp.
     -   burn.
     -   explosion-derived damage.
     -   bite/scratch may map to sharp/blunt variants.
--   [ ] **Wounds**
+-   [-] **Wounds** (SIM-039: per-part wounds with severity, pain and tended flag; no bleeding rate)
     -   Injury assigned to body part.
     -   severity.
     -   bleeding rate.
@@ -968,7 +968,7 @@ treatment, and surgery are major colony-management systems.
     -   Blood loss accumulation.
     -   severe blood loss -\> downing/death.
     -   tending reduces/stops bleeding.
--   [ ] **Pain**
+-   [x] **Pain** (SIM-039: derived from wounds, feeds consciousness)
     -   Derived from injuries/conditions.
     -   affects consciousness/mood/performance.
     -   extreme pain can down pawn.
@@ -976,7 +976,7 @@ treatment, and surgery are major colony-management systems.
     -   Pawn cannot normally act.
     -   can be rescued/captured.
     -   not equivalent to death.
--   [-] **Death** (starvation, injury, infection, exposure; leaves a corpse and drops the weapon; colonists mourn; no social relations)
+-   [x] **Death** (starvation, injury, infection, exposure; leaves a corpse and drops the weapon; SIM-041: grief and opinion memories through the relationship graph)
     -   Vital part destruction or lethal capacity/condition.
     -   create corpse.
     -   release jobs/reservations.
@@ -986,7 +986,7 @@ treatment, and surgery are major colony-management systems.
 
 -   [x] **Natural wound healing**
     -   Healing over time based on pawn state and care.
--   [ ] **Scars/permanent injury**
+-   [x] **Scars/permanent injury** (SIM-039: 10% permanent scar on cut/bite/scratch/burn; disfigurement for face scars)
     -   Some wounds heal into lasting impairment/pain.
 
 ## 11.5 Medical care
@@ -1049,11 +1049,11 @@ treatment, and surgery are major colony-management systems.
 
 ## 11.9 Surgery
 
--   [ ] **Operation bills**
+-   [x] **Operation bills** (SIM-039: install/remove implant, amputate; queue add/remove in the Health tab)
     -   Add/remove scheduled medical operations.
--   [ ] **Anesthesia**
+-   [x] **Anesthesia** (SIM-039: anaesthetic lasts 1h)
     -   Required for appropriate surgery.
--   [ ] **Surgery success/failure**
+-   [-] **Surgery success/failure** (SIM-039: skill/bed/medicine curve, minor/catastrophic failure, botched opinion memory; no manipulation/sight term)
     -   Doctor skill.
     -   medicine.
     -   manipulation/sight.
@@ -1064,7 +1064,7 @@ treatment, and surgery are major colony-management systems.
     -   harvested organ becomes item.
     -   missing vital organs can kill.
     -   transplant restores/replaces functionality.
--   [ ] **Prosthetics/bionics**
+-   [-] **Prosthetics/bionics** (SIM-039: peg leg, prosthetic leg/arm, wooden hand, denture, hearing trumpet; no bionics)
     -   Replace missing/damaged body parts with artificial parts of
         varying efficiency.
 
@@ -1240,7 +1240,7 @@ treatment, and surgery are major colony-management systems.
 -   [x] **Tailoring/apparel production** (tailoring bench sews leather parkas, tuques and dusters; butchering yields leather)
 -   [-] **Smithing/weapon production** (workbench: 4 wood -> wooden club, 3 stone -> knife, 5 wood -> spear)
 -   [-] **Machining/advanced fabrication equivalents** (NG-1: the Fabrication research unlocks one recipe, components, plus tool cabinet and hospital bed)
--   [ ] **Drug production**
+-   [-] **Drug production** (SIM-040: brewing bench (beer) and drug table (tea, tablets); no hard drugs)
 -   [x] **Component production in late tech** (NG-1: Fabricate component, 12 steel into 1 at the workbench with Crafting 6; components also come from buried machinery ore)
 
 ## 14.4 Quality
@@ -1701,7 +1701,7 @@ progression:
 -   [ ] **Cooling/temperature control**
 -   [ ] **Stoneworking**
 -   [ ] **Complex furniture**
--   [ ] **Drug production**
+-   [-] **Drug production** (SIM-040: Brewing, Herbal remedies and Prosthetics research; no hard-drug chain)
 -   [ ] **Microelectronics/communications**
 -   [ ] **Advanced fabrication**
 -   [ ] **Weapon technologies**
@@ -1837,7 +1837,7 @@ colonists. citeturn1search8turn1search9
 
 -   [x] **Starting pawn roster generation**
 -   [x] **Reroll/randomize candidates**
--   [-] **Display skills/traits/incapabilities/health/relationships** (all but relationships)
+-   [-] **Display skills/traits/incapabilities/health/relationships** (all but relationships on this screen; starting families are seeded but not shown here yet)
 
 ## 23.3 Difficulty
 
@@ -2041,7 +2041,7 @@ and other colony incidents. citeturn2search2turn2search7
 
 ## 26.1 Drug definitions
 
--   [ ] **Consumable drug**
+-   [-] **Consumable drug** (SIM-040: beer, ashleaf tea, spark tablet with highs and mood; no overdose)
     -   immediate effects.
     -   health effects.
     -   mood effects.
@@ -2049,7 +2049,7 @@ and other colony incidents. citeturn2search2turn2search7
     -   tolerance.
     -   addiction chance.
     -   overdose/toxicity where appropriate.
--   [ ] **Representative functional categories**
+-   [-] **Representative functional categories** (SIM-040: alcohol, mild stimulant, tablet; no smokeleaf/go-juice/hard drug)
     -   beer/alcohol.
     -   smokeleaf-like relaxant.
     -   psychite tea-like mild stimulant.
@@ -2060,7 +2060,7 @@ and other colony incidents. citeturn2search2turn2search7
 
 ## 26.2 Tolerance
 
--   [ ] **Drug tolerance**
+-   [x] **Drug tolerance** (SIM-040)
     -   Repeated use builds tolerance.
     -   Tolerance reduces effect and/or increases health risk depending
         on definition.
@@ -2068,28 +2068,28 @@ and other colony incidents. citeturn2search2turn2search7
 
 ## 26.3 Addiction
 
--   [ ] **Addiction chance**
--   [ ] **Addiction need**
+-   [x] **Addiction chance** (SIM-040)
+-   [x] **Addiction need** (SIM-040)
     -   Becomes a pawn need.
--   [ ] **Withdrawal**
+-   [x] **Withdrawal** (SIM-040: recovery after 10 days)
     -   Health/mood/stat effects.
     -   Resolves after sufficient abstinence for recoverable addictions.
 
 ## 26.4 Drug policy
 
--   [ ] **Policy definitions**
+-   [-] **Policy definitions** (SIM-040: three presets (No drugs, Social drinking, Unrestricted); no scheduling, thresholds or carry quantity)
     -   Allowed drugs.
     -   recreational use.
     -   scheduled use.
     -   mood threshold.
     -   recreation threshold.
     -   carry quantity.
--   [ ] **Autonomous drug use**
+-   [x] **Autonomous drug use** (SIM-040: craving with hysteresis; policy and traits respected)
     -   Pawn follows policy unless mental state/trait overrides.
 
 ## 26.5 Chemical traits
 
--   [ ] **Chemical-interest/fascination equivalent**
+-   [x] **Chemical-interest/fascination equivalent** (SIM-040: Abstainer/Indulgent/Hedonist)
     -   Alters drug desire/autonomous behavior and chemical need.
 
 ------------------------------------------------------------------------
@@ -2104,7 +2104,7 @@ and other colony incidents. citeturn2search2turn2search7
 -   [ ] **Apparel policy**
     -   Already implemented functionally; expose colony-wide policy
         editor.
--   [ ] **Drug policy**
+-   [-] **Drug policy** (SIM-040: preset selector on the Assign tab (F3); no policy editor)
     -   Already implemented functionally; expose editor.
 -   [ ] **Medical care policy**
     -   Per pawn maximum medicine/care level.
@@ -2458,9 +2458,9 @@ the player-facing system.
 ## 34.3 Pawn tabs
 
 -   [ ] **Needs**
--   [ ] **Health**
+-   [-] **Health** (SIM-039/UI-022: Health tab live)
 -   [ ] **Gear**
--   [ ] **Social**
+-   [x] **Social** (UI-022: Social tab live)
 -   [ ] **Character/bio**
 -   [ ] **Records**
 
@@ -2932,9 +2932,9 @@ Do not call the vanilla milestone complete until this audit passes.
 ## 41.2 Emergent-story audit
 
 -   [ ] Pawns have meaningfully different skills/traits.
--   [ ] Pawns form opinions and relationships.
--   [ ] Relationships create gameplay consequences.
--   [ ] Injuries have anatomically meaningful consequences.
+-   [x] Pawns form opinions and relationships.
+-   [-] Relationships create gameplay consequences. (grief, opinion, mood memories; no romance, fights or caravans yet)
+-   [-] Injuries have anatomically meaningful consequences. (SIM-039: parts, capacities, scars, surgery; no bleeding or disease framework)
 -   [x] Mood responds to environment and memories.
 -   [ ] Low mood creates autonomous disruptive behavior.
 -   [ ] High mood can create positive opportunities.

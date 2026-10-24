@@ -39,3 +39,24 @@ func (g *Game) exportPrisoners() []entry[prisoner.State] { return exportMap(g.pr
 
 // importPrisoners restores exportPrisoners' state.
 func (g *Game) importPrisoners(es []entry[prisoner.State]) { g.prisoners = importMap(es) }
+
+// prisonerView builds prisoner id's tab (M8).
+func (g *Game) prisonerView(id entity.EntityID) (PrisonerView, bool) { return PrisonerView{}, false }
+
+// cmdCapture orders captor to take the downed target prisoner (M8).
+func (g *Game) cmdCapture(captor, target entity.EntityID) {}
+
+// cmdArrest orders arrester to arrest target (M8).
+func (g *Game) cmdArrest(arrester, target entity.EntityID) {}
+
+// cmdSetPrisonerMode sets prisoner's interaction mode (M8).
+func (g *Game) cmdSetPrisonerMode(prisoner entity.EntityID, mode uint8) {}
+
+// cmdSetBedForPrisoners marks bed for prisoners (M8).
+func (g *Game) cmdSetBedForPrisoners(bed entity.EntityID, on bool) {}
+
+// cmdReleasePrisoner releases prisoner (M8).
+func (g *Game) cmdReleasePrisoner(prisoner entity.EntityID) {}
+
+// isPrisoner reports whether id is the colony's prisoner (M8).
+func (g *Game) isPrisoner(id entity.EntityID) bool { return false }

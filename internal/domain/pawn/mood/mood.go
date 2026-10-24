@@ -234,6 +234,75 @@ func (m Memories) Add(k Kind, now uint64) Memories {
 	return append(m, Memory{Kind: k, Expires: exp})
 }
 
+// AddFor remembers k about subject at tick now. Memories of the same kind
+// and subject stack up to Def.StackLimit; beyond it the oldest is
+// refreshed. Group replacement works as in Add.
+func (m Memories) AddFor(k Kind, subject uint64, now uint64) Memories {
+	return m.addMemory(k, subject, 0, now)
+}
+
+// AddValue is AddFor with a computed mood effect (grief and the like).
+func (m Memories) AddValue(k Kind, subject uint64, value int, now uint64) Memories {
+	return m.addMemory(k, subject, value, now)
+}
+
+func (m Memories) addMemory(k Kind, subject uint64, value int, now uint64) Memories {
+	d := DefOf(k)
+	if d.Group != groupNone {
+		out := m[:0]
+		for _, x := range m {
+			if x.Kind == k || DefOf(x.Kind).Group != d.Group {
+				out = append(out, x)
+			}
+		}
+		m = out
+	}
+	exp := now + d.Duration
+	n, oldest := 0, -1
+	for i := range m {
+		if m[i].Kind != k || m[i].Subject != subject {
+			continue
+		}
+		n++
+		if oldest < 0 || m[i].Expires < m[oldest].Expires {
+			oldest = i
+		}
+	}
+	if n >= int(d.StackLimit) && oldest >= 0 {
+		m[oldest].Expires = exp
+		m[oldest].Value = value
+		return m
+	}
+	return append(m, Memory{Kind: k, Expires: exp, Subject: subject, Value: value})
+}
+
+// Approach moves the displayed mood (milli-points) toward the target over
+// ticks: at most 12 points per hour up and 8 per hour down.
+func Approach(curMilli, targetMilli int32, ticks uint64) int32 {
+	switch {
+	case targetMilli > curMilli:
+		step := int64(RiseMilliPerHour) * int64(ticks) / TicksPerHour
+		if int64(targetMilli-curMilli) <= step {
+			return targetMilli
+		}
+		return curMilli + int32(step)
+	case targetMilli < curMilli:
+		step := int64(FallMilliPerHour) * int64(ticks) / TicksPerHour
+		if int64(curMilli-targetMilli) <= step {
+			return targetMilli
+		}
+		return curMilli - int32(step)
+	}
+	return curMilli
+}
+
+// Approach rates (milli-points per hour) and the hour length in ticks.
+const (
+	RiseMilliPerHour = 12000
+	FallMilliPerHour = 8000
+	TicksPerHour     = 2500
+)
+
 // ForgetGroupOf drops memories in k's group (e.g. room quality after a
 // night in an ordinary room).
 func (m Memories) ForgetGroupOf(k Kind) Memories {
@@ -268,11 +337,18 @@ type Thought struct {
 // Active lists memories plus current state thoughts.
 func Active(m Memories, states ...Kind) []Thought {
 	var out []Thought
+	var seen [numKinds]int
 	for _, x := range m {
 		d := DefOf(x.Kind)
 		v := d.Value
 		if x.Value != 0 {
 			v = x.Value
+		}
+		if x.Kind < numKinds {
+			for i := 0; i < seen[x.Kind]; i++ {
+				v = v * int(d.StackFactor) / 1000
+			}
+			seen[x.Kind]++
 		}
 		out = append(out, Thought{x.Kind, d.Label, v})
 	}

@@ -314,6 +314,30 @@ def _beard(style):
         raise KeyError(style)
 
 
+_FACING = ["south"]
+
+
+def _face_scar():
+    """A thin healed scar slanting across the brow and cheek (ENG-003, ART §37):
+    a pink ridge with three dark stitch marks, sitting just proud of the face
+    so it shows over the head on portraits and at portrait LOD. No outline
+    (the layer is rendered with outline off) and no tint."""
+    import math
+    from mathutils import Matrix
+    h = _build["head"]
+    cx, cz = CX + 0.085 * h, HEAD_Z + 0.005 * h
+    # Seen from the north the face is hidden by the head, so that sprite carries the
+    # same scar on the back of the skull (a healed wound that went right across).
+    cy = CY + 0.158 * h if _FACING[0] == "north" else CY - 0.158 * h
+    ridge = S.ellipsoid("scar", cx, cy, cz, 0.014 * h, 0.016 * h, 0.095 * h, "food_red", segs=10, rings=6)
+    marks = [ridge]
+    for k, dz in enumerate((-0.05, 0.0, 0.05)):
+        marks.append(S.ellipsoid("stitch%d" % k, cx, cy - 0.003, cz + dz * h,
+                                 0.036 * h, 0.014 * h, 0.009 * h, "blood_dried", segs=8, rings=4))
+    pivot = Matrix.Translation((cx, cy, cz))
+    S.transform(marks, pivot @ Matrix.Rotation(math.radians(-28), 4, "Y") @ pivot.inverted())
+
+
 def _apply_modifiers():
     import bpy
     for ob in S.objects():
@@ -943,7 +967,8 @@ def point_matrix(p, point):
     return _torso_matrix(p)
 
 
-def _layer(name, facing, builder, body_holdout=True, frame=None):
+def _layer(name, facing, builder, body_holdout=True, frame=None, outline=True):
+    _FACING[0] = facing
     if body_holdout:
         objs = _body()
         S.holdout(objs)
@@ -969,7 +994,7 @@ def _layer(name, facing, builder, body_holdout=True, frame=None):
         extra["build"] = _build_key
     if frame:
         extra["frame"] = frame
-    return S.render_asset("pawn", sprite, zmax=zm, margins=MARGINS, extra=extra)
+    return S.render_asset("pawn", sprite, zmax=zm, margins=MARGINS, extra=extra, outline=outline)
 
 
 LAYERS = {
@@ -990,6 +1015,7 @@ LAYERS = {
     "beard_short": lambda: _beard("beard_short"),
     "beard_full": lambda: _beard("beard_full"),
     "beard_moustache": lambda: _beard("beard_moustache"),
+    "face_scar": _face_scar,
 }
 
 
@@ -1029,7 +1055,7 @@ def build(walk_only=False, work_only=False, frames=None, facings=None, layers=No
                         if name == "body":
                             out.append(_layer("body", f, _body, body_holdout=False, frame=fr))
                         else:
-                            out.append(_layer(name, f, LAYERS[name], frame=fr))
+                            out.append(_layer(name, f, LAYERS[name], frame=fr, outline=name != "face_scar"))
     finally:
         use_build(LEGACY_BUILD)
     return out

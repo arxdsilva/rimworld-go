@@ -28,11 +28,11 @@ var hudTabSpecs = []struct {
 	{"tab.architect", "Architect", true, input.TabArchitect},
 	{"tab.work", "Work", true, input.TabWork},
 	{"tab.schedule", "Schedule", true, input.TabSchedule},
-	{"tab.assign", "Assign", false, input.TabAssign},
+	{"tab.assign", "Assign", true, input.TabAssign},
 	{"tab.animals", "Animals", true, input.TabAnimals},
 	{"tab.research", "Research", true, input.TabResearch},
 	{"tab.world", "World", false, input.TabWorld},
-	{"tab.history", "History", false, input.TabHistory},
+	{"tab.history", "History", true, input.TabHistory},
 	{"tab.factions", "Factions", true, ""},
 	{"tab.menu", "Menu", true, input.Cancel},
 }
@@ -85,6 +85,12 @@ func (a *App) hudTabButtons(sw, sh int) []button {
 		}
 		if t.key != "" {
 			b.tip = t.label + a.keyHint(t.key)
+		}
+		if t.id == "tab.assign" && a.renderer != nil {
+			b.selected = a.uiModalTop() == assignModalID
+		}
+		if t.id == "tab.history" && a.renderer != nil {
+			b.selected = a.uiModalTop() == historyModalID
 		}
 		if t.id == "tab.factions" && a.renderer != nil {
 			if len(a.renderer.game.Factions()) == 0 {

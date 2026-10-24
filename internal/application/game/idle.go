@@ -82,7 +82,7 @@ func (g *Game) assignIdle(id entity.EntityID) bool {
 	}
 	switch pick {
 	case 1:
-		if g.idleChat(id, linger) {
+		if g.idleSocialRelax(id, linger) || g.idleChat(id, linger) {
 			return true
 		}
 	case 2:
@@ -152,8 +152,78 @@ func (g *Game) idleChat(id entity.EntityID, linger int) bool {
 	if !ok {
 		return false
 	}
-	return g.startJob(id, job.Record{Kind: job.Chat, Target: best, TX: sx, TY: sy, WorkLeft: linger})
+	if !g.startJob(id, job.Record{Kind: job.Chat, Target: best, TX: sx, TY: sy, WorkLeft: linger}) {
+		return false
+	}
+	g.mirrorChat(best, id, linger)
+	return true
 }
+
+// mirrorChat has target wait for initiator's chat where it stands (the
+// two-pawn pattern: a job set directly, no reservation), when it is free:
+// no job, a finished one, or a stroll.
+func (g *Game) mirrorChat(target, initiator entity.EntityID, linger int) {
+	tj, _ := g.jobs.Get(target)
+	if tj.Forced || tj.Active() && tj.Kind != job.Wander || !g.alive(target) || g.drafted(target) {
+		return
+	}
+	if _, breaking := g.breaks[target]; breaking {
+		return
+	}
+	if tj.Active() {
+		g.reserve.ReleaseOwner(target)
+	}
+	pos, _ := g.positions.Get(target)
+	g.jobs.Set(target, job.Record{Kind: job.Chat, Target: initiator, TX: pos.X, TY: pos.Y, State: job.Do, WorkLeft: linger})
+}
+
+// chatComing reports p is still walking over to chat with me.
+func (g *Game) chatComing(p, me entity.EntityID) bool {
+	j, _ := g.jobs.Get(p)
+	return j.Kind == job.Chat && j.Target == me && j.State == job.Goto
+}
+
+// idleSocialRelax joins company at a table or burning campfire where
+// another colonist already idles (ENG-003 §12.4): the joy of a chat and
+// interactions sooner (social.go chatting).
+func (g *Game) idleSocialRelax(id entity.EntityID, linger int) bool {
+	pos, _ := g.positions.Get(id)
+	var best construction.Building
+	found, bestD := false, 31
+	for _, bid := range g.bldgIDs {
+		b, ok := g.bldgs.Get(bid)
+		if !ok || !(b.Kind == construction.Table || b.Kind == construction.Campfire && g.burning(bid, b)) {
+			continue
+		}
+		if d := pathing.Dist(pos.X, pos.Y, b.X, b.Y); d < bestD && g.companyAt(id, b.X, b.Y) {
+			best, bestD, found = b, d, true
+		}
+	}
+	if !found {
+		return false
+	}
+	x, y, ok := g.besideSpot(id, best.X, best.Y)
+	if !ok {
+		return false
+	}
+	return g.startJob(id, job.Record{Kind: job.SocialRelax, TX: x, TY: y, DestX: best.X, DestY: best.Y, WorkLeft: linger})
+}
+
+// companyAt reports another colonist idling within socialCompany tiles of
+// (x, y).
+func (g *Game) companyAt(self entity.EntityID, x, y int) bool {
+	o, _, _ := g.nearestWhere(x, y, socialCompany, ckPawn, func(oid entity.EntityID, _ Position) bool {
+		if oid == self {
+			return false
+		}
+		j, _ := g.jobs.Get(oid)
+		return j.State == job.Do && (j.Kind == job.Relax || j.Kind == job.FireSide || j.Kind == job.SocialRelax || j.Kind == job.Chat)
+	})
+	return o != 0
+}
+
+// socialCompany is how near a table or fire company must be.
+const socialCompany = 3
 
 // idleRelax sits on the nearest free chair.
 func (g *Game) idleRelax(id entity.EntityID, linger int) bool {
@@ -222,13 +292,13 @@ func (g *Game) doIdle(id entity.EntityID, j job.Record) {
 	if j.Kind == job.Chat {
 		pos, _ := g.positions.Get(id)
 		op, _ := g.positions.Get(j.Target)
-		if !g.alive(j.Target) || pathing.Dist(pos.X, pos.Y, op.X, op.Y) > 2 {
+		if !g.alive(j.Target) || pathing.Dist(pos.X, pos.Y, op.X, op.Y) > 2 && !g.chatComing(j.Target, id) {
 			j.WorkLeft = 0
 		}
 	}
 	if j.WorkLeft <= 0 {
 		j.State = job.Complete
-		if j.Kind == job.Chat {
+		if j.Kind == job.Chat || j.Kind == job.SocialRelax {
 			g.learn(id, skSocial, chatXP) // skills.go
 		}
 	}
@@ -243,7 +313,7 @@ func activityOf(k job.Kind) recreation.Activity {
 	switch k {
 	case job.Wander:
 		return recreation.Wander
-	case job.Chat:
+	case job.Chat, job.SocialRelax:
 		return recreation.Chat
 	case job.Relax:
 		return recreation.Relax

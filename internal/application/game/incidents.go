@@ -152,8 +152,12 @@ func (g *Game) incidentFits(id incident.ID, now uint64) bool {
 		return len(g.wl.Gnaw.IDs) == 0 && g.livingTrees(gnawTrees) >= gnawTrees
 	case incident.MadAnimal:
 		return len(g.madCandidates(now)) > 0
-	case incident.VisitorGroup, incident.WandererJoins, incident.Party:
-		return false // TODO(M5, M8): never eligible until their milestones wire them
+	case incident.Party:
+		return g.partyFits(now) // gathering.go (M5)
+	case incident.VisitorGroup:
+		return g.visitorsFit(now) // visitors.go (M9)
+	case incident.WandererJoins:
+		return g.wandererFits(now) // visitors.go (M9)
 	}
 	return false
 }
@@ -162,6 +166,12 @@ func (g *Game) incidentFits(id incident.ID, now uint64) bool {
 // no animal).
 func (g *Game) fireIncident(id incident.ID, now uint64) bool {
 	switch id {
+	case incident.Party:
+		return g.throwParty(now) // gathering.go (M5)
+	case incident.VisitorGroup:
+		return g.visitorsArrive(now) // visitors.go (M9)
+	case incident.WandererJoins:
+		return g.wandererJoins(now) // visitors.go (M9)
 	case incident.HerdCrossing:
 		return g.herdCrossing()
 	case incident.StrayJoins:

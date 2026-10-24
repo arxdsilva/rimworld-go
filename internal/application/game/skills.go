@@ -69,7 +69,8 @@ type pawnFx struct {
 	learnPct  [skill.NumSkills]int16 // pawngen.LearnPct
 	incapable backstory.Bits
 	traits    []trait.ID
-	neutral   bool // base sheet, all factors 100%: the fast path
+	neutral   bool    // base sheet, all factors 100%: the fast path
+	body      bodyKey // the capacities the body layer was built from (body.go)
 }
 
 // learnLog is how much each skill learned today and in the last 7 days,
@@ -161,15 +162,25 @@ func (g *Game) bioFor(id entity.EntityID) (pawngen.Pawn, bool) {
 }
 
 // rebuildStats derives id's stat sheet and factors from its bio: body,
-// age, conditions, traits, then the difficulty layer.
+// age, conditions, traits, then the difficulty layer, then the wounded
+// body's capacities (body.go; a pawn without a bio gets that layer alone).
 func (g *Game) rebuildStats(id entity.EntityID) {
+	key := keyOf(g.bodies[id]) // body.go: capacities, recomputed only on change
 	p, ok := g.sk.bios[id]
 	if !ok {
-		delete(g.sk.stats, id)
+		if key == healthyKey {
+			delete(g.sk.stats, id)
+			return
+		}
+		fx := &pawnFx{sheet: stat.Build(stat.Base(), bodyMods(key)), body: key}
+		for sk := skill.ID(0); sk < skill.NumSkills; sk++ {
+			fx.workPct[sk], fx.learnPct[sk] = 100, 100
+		}
+		g.sk.stats[id] = fx
 		return
 	}
-	layers := append(pawngen.StatLayers(p), g.difficultyMods())
-	fx := &pawnFx{sheet: stat.Build(stat.Base(), layers...), incapable: p.Incapable(), traits: p.Traits}
+	layers := append(pawngen.StatLayers(p), g.difficultyMods(), bodyMods(key))
+	fx := &pawnFx{sheet: stat.Build(stat.Base(), layers...), incapable: p.Incapable(), traits: p.Traits, body: key}
 	fx.neutral = fx.sheet == stat.Base()
 	for sk := skill.ID(0); sk < skill.NumSkills; sk++ {
 		fx.workPct[sk] = int16(pawngen.SkillWorkPct(p, sk))

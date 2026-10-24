@@ -35,3 +35,12 @@ func (g *Game) doTrain(id entity.EntityID, j job.Record) {
 func (g *Game) doTendAnimal(id entity.EntityID, j job.Record) {
 	g.endStubJob(id, j) // TODO(M10)
 }
+
+// cmdSetAnimalMaster sets animal's master (0 clears; M10).
+func (g *Game) cmdSetAnimalMaster(animal, master entity.EntityID) {}
+
+// cmdSetTraining turns training skill on or off for animal (M10).
+func (g *Game) cmdSetTraining(animal entity.EntityID, skill int, on bool) {}
+
+// cmdGiftAnimal gives animal to visitor's faction (M9/M10).
+func (g *Game) cmdGiftAnimal(animal, visitor entity.EntityID) {}
