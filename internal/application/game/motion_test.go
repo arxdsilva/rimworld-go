@@ -270,3 +270,31 @@ func TestMotionRecordsOfRemovedCreaturesArePruned(t *testing.T) {
 		t.Fatalf("exported %v for an empty map", out)
 	}
 }
+
+// A creature that never stepped has no motion record; loading a save must
+// not invent one, or the loaded game's StateHash differs from the saved
+// one (regression: Load used to default every mover's record).
+func TestLoadKeepsMissingMotionRecords(t *testing.T) {
+	t.Parallel()
+	g := New(Config{Seed: 3, Width: 20, Height: 20})
+	id, _ := g.SpawnPawn(4, 4)
+	g.setDraft(id, true) // stands where it is: never steps
+	g.Step(5)            // a stepped game (a fresh one warms its indexes on load)
+	if _, ok := g.motion.Get(id); ok {
+		t.Fatal("a pawn that never stepped has a motion record")
+	}
+	h := saveLoad(t, g)
+	if _, ok := h.motion.Get(id); ok {
+		t.Fatal("load gave a never-moved pawn a motion record")
+	}
+	if g.StateHash() != h.StateHash() {
+		t.Fatal("StateHash differs after save/load of a never-moved pawn")
+	}
+	for i := 0; i < 50; i++ {
+		g.Step(1)
+		h.Step(1)
+	}
+	if g.StateHash() != h.StateHash() {
+		t.Fatal("StateHash diverged after stepping the loaded game")
+	}
+}

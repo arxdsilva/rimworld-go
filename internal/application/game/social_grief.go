@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"rimworld-go/internal/domain/pawn/health"
+	"rimworld-go/internal/domain/pawn/look"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/social"
 	"rimworld-go/internal/domain/sim/clock"
@@ -66,9 +67,10 @@ func (g *Game) canGrieve(c entity.EntityID) bool {
 	return true
 }
 
-// addGrief gives c a grief thought about subject lasting days.
-func (g *Game) addGrief(c, subject entity.EntityID, d social.GriefDef, now uint64) {
-	m := g.memories[c].AddValue(mood.Grief, uint64(subject), d.Mood, now)
+// addGrief gives c a grief thought about subject lasting days, shown as
+// label ("": the def's).
+func (g *Game) addGrief(c, subject entity.EntityID, d social.GriefDef, label string, now uint64) {
+	m := g.memories[c].AddLabeled(mood.Grief, uint64(subject), d.Mood, label, now)
 	// mood.Grief has no duration of its own: the relation's sets it.
 	for i := range m {
 		if m[i].Kind == mood.Grief && m[i].Subject == uint64(subject) && m[i].Expires == now {
@@ -82,6 +84,8 @@ func (g *Game) addGrief(c, subject entity.EntityID, d social.GriefDef, now uint6
 // for a death, the opinion of killer (0: none).
 func (g *Game) grieve(id, killer entity.EntityID, lost bool, now uint64) {
 	killerTie := killer != 0 && killer != id && g.humanTie(killer)
+	bio, _ := g.personBio(id)
+	male := bio.Look.Sex == look.Male
 	for _, c := range g.tiesOf(id) {
 		cp := g.personOf(c)
 		if cp == nil || cp.Where == whereDead {
@@ -90,10 +94,11 @@ func (g *Game) grieve(id, killer entity.EntityID, lost bool, now uint64) {
 		ks := g.kinOf(c, id)
 		k, _ := griefKind(ks)
 		if g.canGrieve(c) {
-			bio, _ := g.personBio(c)
-			if !social.ExemptFromGrief(bio.Traits) {
-				if d, ok := social.GriefFor(k, g.friendOf(c, id), g.rivalOf(c, id), lost); ok {
-					g.addGrief(c, id, d, now)
+			cb, _ := g.personBio(c)
+			if !social.ExemptFromGrief(cb.Traits) {
+				friend, rival := g.friendOf(c, id), g.rivalOf(c, id)
+				if d, ok := social.GriefFor(k, friend, rival, lost); ok {
+					g.addGrief(c, id, d, social.GriefLabel(k, male, friend, rival, lost), now)
 				}
 			}
 		}

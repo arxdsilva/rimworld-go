@@ -90,7 +90,7 @@ func scarredLayers(art *artCatalog, l look.Look, scarred bool) []portraitLayer {
 		out = append(out, portraitLayer{"pawn/hair_" + look.HairStyles[int(l.HairStyle)%n] + "_south", hair})
 	}
 	if scarred {
-		out = append(out, portraitLayer{"pawn/face_scar_south", color.NRGBA{}})
+		out = append(out, portraitLayer{faceScarSouth, color.NRGBA{}})
 	}
 	return out
 }

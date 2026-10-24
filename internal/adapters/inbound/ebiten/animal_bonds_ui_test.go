@@ -114,3 +114,50 @@ func TestAnimalsTabMasterAndTrainingColumns(t *testing.T) {
 	screen := ebiten.NewImage(1280, 720)
 	a.drawAnimalsTab(screen, 1280, 720)
 }
+
+// The inspector's blocks (needs, bond rows, training buttons, log, bottom
+// buttons) never overlap and every training label reads in full.
+func TestAnimalInspectorNoOverlap(t *testing.T) {
+	t.Parallel()
+	a, _ := colonyApp(t, bondSim())
+	if !a.selectAnimalAt(6, 6) {
+		t.Fatal("select the dog")
+	}
+	for _, open := range []bool{false, true} {
+		a.animalLogOpen = open
+		an, _ := a.selectedAnimal()
+		r := a.animalPanel()
+		type box struct {
+			name       string
+			x, y, w, h float32
+		}
+		var boxes []box
+		lines, _ := animalBondLayout(an, r)
+		for _, l := range lines {
+			boxes = append(boxes, box{"line " + l.text, float32(l.x), float32(l.y), float32(int(r.w) - bondLabelX - 100), bondRowH - 2})
+		}
+		for _, b := range a.animalButtons() {
+			if b.id == "animal.close" {
+				continue
+			}
+			boxes = append(boxes, box{b.id, b.x, b.y, b.w, b.h})
+			if strings.HasPrefix(b.id, "animal.train.") {
+				if w, _ := measure(b.label, tsBody); w > float64(b.w)-20 {
+					t.Errorf("label %q (%.0f px) is clipped in a %.0f px button", b.label, w, b.w)
+				}
+			}
+		}
+		lx, ly, lw, lh := animalLogRect(r, animalExtraH(an)+animalBondH(an))
+		boxes = append(boxes, box{"log", float32(lx), float32(ly), float32(lw), float32(lh)})
+		for i, p := range boxes {
+			if p.y < r.y || p.y+p.h > r.y+r.h || p.x < r.x || p.x+p.w > r.x+r.w {
+				t.Errorf("log open %v: %s %+v leaves panel %+v", open, p.name, p, r)
+			}
+			for _, q := range boxes[i+1:] {
+				if p.x < q.x+q.w && q.x < p.x+p.w && p.y < q.y+q.h && q.y < p.y+p.h {
+					t.Errorf("log open %v: %s %+v overlaps %s %+v", open, p.name, p, q.name, q)
+				}
+			}
+		}
+	}
+}

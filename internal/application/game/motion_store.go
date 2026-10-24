@@ -126,17 +126,6 @@ func (g *Game) exportMotion() []entry[motionRec] {
 	return out
 }
 
-// defaultMotion gives every creature without a record (an older save)
-// one that is due now and reads a straight step.
-func (g *Game) defaultMotion() {
-	now := uint64(g.clock.Now())
-	for _, mv := range g.movers() {
-		if _, ok := g.motion.Get(mv.id); !ok {
-			g.motion.Set(mv.id, motionRec{NextMoveAt: now, StepTicks: TicksPerCell})
-		}
-	}
-}
-
 // fillPawnMotion copies a colonist's or raider's step timing and next
 // planned cell into its view.
 func (g *Game) fillPawnMotion(pv *PawnView) {

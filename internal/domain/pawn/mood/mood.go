@@ -201,12 +201,14 @@ const LowMood = 30
 
 // Memory is a remembered thought that expires. Subject is the pawn or
 // animal it is about (0: none) and Value overrides the def's mood effect
-// (0: use Def.Value); both ENG-003, zero in older saves.
+// (0: use Def.Value); both ENG-003, zero in older saves. Label overrides
+// the def's label ("": use Def.Label), e.g. "my wife died" for a grief.
 type Memory struct {
 	Kind    Kind
 	Expires uint64
 	Subject uint64
 	Value   int
+	Label   string
 }
 
 // Memories is a pawn's remembered thoughts (one per kind, newest wins).
@@ -238,15 +240,20 @@ func (m Memories) Add(k Kind, now uint64) Memories {
 // and subject stack up to Def.StackLimit; beyond it the oldest is
 // refreshed. Group replacement works as in Add.
 func (m Memories) AddFor(k Kind, subject uint64, now uint64) Memories {
-	return m.addMemory(k, subject, 0, now)
+	return m.addMemory(k, subject, 0, "", now)
 }
 
 // AddValue is AddFor with a computed mood effect (grief and the like).
 func (m Memories) AddValue(k Kind, subject uint64, value int, now uint64) Memories {
-	return m.addMemory(k, subject, value, now)
+	return m.addMemory(k, subject, value, "", now)
 }
 
-func (m Memories) addMemory(k Kind, subject uint64, value int, now uint64) Memories {
+// AddLabeled is AddValue with the line's own label ("": the def's).
+func (m Memories) AddLabeled(k Kind, subject uint64, value int, label string, now uint64) Memories {
+	return m.addMemory(k, subject, value, label, now)
+}
+
+func (m Memories) addMemory(k Kind, subject uint64, value int, label string, now uint64) Memories {
 	d := DefOf(k)
 	if d.Group != groupNone {
 		out := m[:0]
@@ -271,9 +278,10 @@ func (m Memories) addMemory(k Kind, subject uint64, value int, now uint64) Memor
 	if n >= int(d.StackLimit) && oldest >= 0 {
 		m[oldest].Expires = exp
 		m[oldest].Value = value
+		m[oldest].Label = label
 		return m
 	}
-	return append(m, Memory{Kind: k, Expires: exp, Subject: subject, Value: value})
+	return append(m, Memory{Kind: k, Expires: exp, Subject: subject, Value: value, Label: label})
 }
 
 // Approach moves the displayed mood (milli-points) toward the target over
@@ -350,7 +358,11 @@ func Active(m Memories, states ...Kind) []Thought {
 			}
 			seen[x.Kind]++
 		}
-		out = append(out, Thought{x.Kind, d.Label, v})
+		label := d.Label
+		if x.Label != "" {
+			label = x.Label
+		}
+		out = append(out, Thought{x.Kind, label, v})
 	}
 	for _, k := range states {
 		d := DefOf(k)

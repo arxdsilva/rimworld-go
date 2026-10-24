@@ -52,6 +52,11 @@ import (
 // state); every other saved field is identical to the previous pins, so
 // behaviour is unchanged (checked field by field against 4d68b9aa).
 //
+// Re-pinned (ENG-003 polish): conversation memories now land at the
+// speaker's Social impact (spec §13.2), so opinions move; with the scale
+// forced to 1000 the old pins hold. Stable over -count=3, with and
+// without -race.
+//
 // Re-pinned (ENG-003 M9b): stale since 8a84be08 (M5-M10); M9b leaves
 // them as they were at that commit (checked on both, -count=3).
 //
@@ -60,12 +65,12 @@ import (
 // values are identical when computed on the contract commit (fbc76fd6)
 // and on the new save format.
 var scaleGolden = map[string]uint64{
-	"48x40/seed1":    0xb8987f1dd738579b,
-	"48x40/seed7":    0x91181193c2c43aa6,
-	"48x40/seed42":   0xf7c4b807844d22f9,
-	"120x120/seed1":  0x6cea3e84e7d9db32,
-	"120x120/seed7":  0xb75dc8b8602f987a,
-	"120x120/seed42": 0x3d290056920ba814,
+	"48x40/seed1":    0x60275c036f3ba99f,
+	"48x40/seed7":    0x197c4052c3a4068e,
+	"48x40/seed42":   0x719ca9064d7c54ab,
+	"120x120/seed1":  0x241a08d3b42ca524,
+	"120x120/seed7":  0x1299c19a85b06b60,
+	"120x120/seed42": 0xfd5d59470dac83f4,
 }
 
 const scaleGoldenTicks = 20000

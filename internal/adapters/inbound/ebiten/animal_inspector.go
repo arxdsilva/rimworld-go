@@ -90,7 +90,7 @@ func (a *App) animalButtons() []button {
 	if a.animalLogOpen {
 		logLabel = "Less"
 	}
-	out = append(out, button{id: "animal.log", label: logLabel, x: r.x + 248, y: r.y + r.h - 34, w: 40, h: 24, selected: a.animalLogOpen})
+	out = append(out, button{id: "animal.log", label: logLabel, x: r.x + 246, y: r.y + r.h - 34, w: 48, h: 24, selected: a.animalLogOpen})
 	_, bb := animalBondLayout(an, r) // animal_bonds_ui: master and training
 	out = append(out, bb...)
 	switch {
@@ -350,10 +350,11 @@ func (a *App) drawAnimalNeeds(screen *ebiten.Image, an game.AnimalView, r button
 // menu); each learnable skill is a checkbox showing its steps.
 
 const (
-	bondRowH   = 18
-	trainBtnH  = 20
-	trainBtnW  = 90
-	bondLabelX = 12
+	bondRowH    = 18
+	trainBtnH   = 20
+	trainBtnW   = 134 // two per row in the 300 px panel: "Obedience 2/3" fits
+	trainPerRow = 2
+	bondLabelX  = 12
 )
 
 // bondLine is one text line of the bond block.
@@ -399,7 +400,8 @@ func animalTrainable(an game.AnimalView) []game.AnimalTrainingView {
 func animalBondH(an game.AnimalView) int {
 	h := len(animalBondRows(an)) * bondRowH
 	if an.Tame && len(animalTrainable(an)) > 0 {
-		h += trainBtnH + 6
+		rows := (len(animalTrainable(an)) + trainPerRow - 1) / trainPerRow
+		h += rows*(trainBtnH+4) + 2
 	}
 	return h
 }
@@ -426,7 +428,7 @@ func animalBondLayout(an game.AnimalView, r button) ([]bondLine, []button) {
 	if an.Tame {
 		for i, t := range animalTrainable(an) {
 			btns = append(btns, button{id: "animal.train." + strconv.Itoa(t.Skill), label: trainLabel(t),
-				x: float32(x + i*(trainBtnW+4)), y: float32(y), w: trainBtnW, h: trainBtnH, selected: t.On,
+				x: float32(x + i%trainPerRow*(trainBtnW+4)), y: float32(y + i/trainPerRow*(trainBtnH+4)), w: trainBtnW, h: trainBtnH, selected: t.On,
 				tip: "Handlers train it when on"})
 		}
 	}

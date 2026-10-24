@@ -32,10 +32,39 @@ const (
 )
 
 // OpinionMemory is one remembered event shaping an opinion of Subject.
+// Scale is the magnitude the event landed with, permille of the def's
+// Value (the speaker's Social impact for a conversation); 0 means 1000,
+// so older saves read unchanged.
 type OpinionMemory struct {
 	Kind    MemKind
 	Subject ID
 	Expires uint64
+	Scale   int16
+}
+
+// Social impact bounds on a memory's Scale, permille.
+const (
+	MinMemoryScale = 200
+	MaxMemoryScale = 1500
+)
+
+// ImpactScale is the memory Scale for a speaker's Social impact
+// (permille), clamped to MinMemoryScale..MaxMemoryScale; full impact is
+// stored as 0.
+func ImpactScale(impact int32) int16 {
+	s := min(max(impact, MinMemoryScale), MaxMemoryScale)
+	if s == 1000 {
+		return 0
+	}
+	return int16(s)
+}
+
+// scaleOf is m's Scale with the zero default resolved.
+func (m OpinionMemory) scaleOf() int64 {
+	if m.Scale == 0 {
+		return 1000
+	}
+	return int64(m.Scale)
 }
 
 // Def is a memory kind's static definition.
@@ -88,6 +117,13 @@ func MemDef(k MemKind) Def {
 // each further copy counts at StackFactor of the one before; at the limit
 // the oldest copy is refreshed instead of adding another.
 func AddMemory(ms []OpinionMemory, k MemKind, subject ID, now uint64) []OpinionMemory {
+	return AddScaledMemory(ms, k, subject, now, 0)
+}
+
+// AddScaledMemory is AddMemory landing with magnitude scale (permille of
+// the def's Value, 0: full; see ImpactScale). A refreshed copy takes the
+// new scale.
+func AddScaledMemory(ms []OpinionMemory, k MemKind, subject ID, now uint64, scale int16) []OpinionMemory {
 	d := MemDef(k)
 	if d.Duration == 0 {
 		return ms
@@ -104,10 +140,10 @@ func AddMemory(ms []OpinionMemory, k MemKind, subject ID, now uint64) []OpinionM
 	}
 	exp := now + d.Duration
 	if n >= d.StackLimit && oldest >= 0 {
-		ms[oldest].Expires = exp
+		ms[oldest].Expires, ms[oldest].Scale = exp, scale
 		return ms
 	}
-	return append(ms, OpinionMemory{Kind: k, Subject: subject, Expires: exp})
+	return append(ms, OpinionMemory{Kind: k, Subject: subject, Expires: exp, Scale: scale})
 }
 
 // PruneMemories drops expired memories (in place, keeping order).
@@ -132,25 +168,25 @@ func HasMemory(ms []OpinionMemory, k MemKind, subject ID, now uint64) bool {
 }
 
 // MemoryTerms is the opinion contribution of each live memory kind about
-// subject (stacked diminishing), in kind order. Chitchat is capped.
+// subject (stacked diminishing, each copy at its own Scale), in kind
+// order. Chitchat is capped.
 func MemoryTerms(ms []OpinionMemory, subject ID, now uint64) []Term {
 	var out []Term
 	for k := MemKind(0); k < NumMemKinds; k++ {
 		d := memDefs[k]
 		n := 0
+		var sum int64
+		f := int64(1000)
 		for _, m := range ms {
-			if m.Kind == k && m.Subject == subject && m.Expires > now {
-				n++
+			if m.Kind != k || m.Subject != subject || m.Expires <= now {
+				continue
 			}
+			n++
+			sum += int64(d.Value) * m.scaleOf() / 1000 * f / 1000
+			f = f * int64(d.StackFactor) / 1000
 		}
 		if n == 0 {
 			continue
-		}
-		var sum int64
-		f := int64(1000)
-		for i := 0; i < n; i++ {
-			sum += int64(d.Value) * f / 1000
-			f = f * int64(d.StackFactor) / 1000
 		}
 		if k == MemChitchat && sum > ChitchatCap {
 			sum = ChitchatCap

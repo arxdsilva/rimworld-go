@@ -165,3 +165,22 @@ func TestApproach(t *testing.T) {
 		t.Fatalf("same %d", got)
 	}
 }
+
+// A memory's own label replaces the def's in Active; values and stacking
+// are unchanged, and a refresh takes the new label.
+func TestMemoryLabelOverride(t *testing.T) {
+	var m Memories
+	m = m.AddLabeled(Grief, 7, -20, "my wife died", 0)
+	m = m.AddValue(Grief, 8, -10, 0)
+	ts := Active(m)
+	if len(ts) != 2 || ts[0].Label != "my wife died" || ts[0].Value != -20 {
+		t.Fatalf("labelled grief %+v", ts)
+	}
+	if ts[1].Label != DefOf(Grief).Label || ts[1].Value != -10 {
+		t.Fatalf("unlabelled grief keeps the def's line: %+v", ts[1])
+	}
+	m = m.AddLabeled(Grief, 7, -16, "my lover died", 5)
+	if ts := Active(m); len(ts) != 2 || ts[0].Label != "my lover died" || ts[0].Value != -16 {
+		t.Fatalf("refreshed grief %+v", ts)
+	}
+}

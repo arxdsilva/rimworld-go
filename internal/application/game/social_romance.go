@@ -225,7 +225,7 @@ func (g *Game) propose(a, b entity.EntityID, now uint64) bool {
 	if !p.CanPropose(now) || g.engagedElsewhere(a, b) || g.engagedElsewhere(b, a) {
 		return false
 	}
-	accept := int32(g.stream(streamSocial).IntN(1000)) < social.ProposalAccept(g.opinion(b, a))
+	accept := int32(g.stream(streamSocial).IntN(1000)) < social.ProposalAcceptFor(g.opinion(b, a), now-min(p.Since, now))
 	g.addSocialLog(a, b, logProposal, 0, now)
 	if !accept {
 		p.RejectProposal(now)
@@ -233,6 +233,8 @@ func (g *Game) propose(a, b entity.EntityID, now uint64) bool {
 		g.addOpinionMemory(a, b, social.MemRejectedMyProposal, now)
 		g.addOpinionMemory(b, a, social.MemIRejectedProposal, now)
 		g.memories[a] = g.memories[a].AddFor(mood.ProposalRejected, uint64(b), now)
+		g.romanceLetter("Proposal rejected", fmt.Sprintf("%s proposed to %s and was turned down.",
+			g.personName(a), g.personName(b)), a)
 		return true
 	}
 	if !p.Transition(social.PairFiance, now) {
@@ -247,6 +249,12 @@ func (g *Game) propose(a, b entity.EntityID, now uint64) bool {
 
 // romanceLetter posts a letter about pawn focus.
 func (g *Game) romanceLetter(title, text string, focus entity.EntityID) {
+	g.pawnLetter(title, text, focus)
+}
+
+// pawnLetter posts a letter titled title about creature focus (shown once,
+// the jump link follows it).
+func (g *Game) pawnLetter(title, text string, focus entity.EntityID) {
 	pos, _ := g.positions.Get(focus)
 	g.post(MessageView{Tick: uint64(g.clock.Now()), Text: text, X: pos.X, Y: pos.Y, Focus: focus, Letter: true, Title: title})
 }

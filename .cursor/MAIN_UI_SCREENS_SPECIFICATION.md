@@ -2007,7 +2007,7 @@ Agents should implement screens approximately in this dependency order.
 -   [-] Character (Bio tab: identity, backstories, traits, skills with passions, incapabilities, conditions; no Social/Gear tabs)
 -   [-] Needs/Mood (food/rest bars; no recreation/mood/thoughts)
 -   [-] Health (capacities, pain, part rows, operations queue; no bleeding or conditions)
--   [x] Social (relations incl. lovers/spouses/exes, breakdowns, log, romance, wedding and fight events)
+-   [x] Social (relations incl. lovers/spouses/exes, breakdowns with hover tooltip, log, romance, engagement, wedding, breakup, fight and party letters; captured: `-scenario social -capture-ui social`, also health, prisoner, history, world, assign)
 -   [ ] Gear
 -   [ ] Detailed Stats
 -   [-] Alerts/Letters (alert list and letter windows with Continue; no letter stack or history)

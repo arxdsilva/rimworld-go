@@ -53,6 +53,35 @@ func GriefFor(k Kind, friend, rival, lost bool) (GriefDef, bool) {
 	return d, true
 }
 
+// GriefLabel is the grief thought's own line for someone whose person
+// with relation k (NoKind: none) and sex otherMale died, or went missing
+// (lost): "my wife died", "my son is missing"; without a relation the
+// opinion band names them, "my friend died", "my rival died". "" when
+// GriefFor gives no grief.
+func GriefLabel(k Kind, otherMale, friend, rival, lost bool) string {
+	var who string
+	switch {
+	case k < NumKinds:
+		if _, ok := relationGrief(k); ok {
+			who = Label(k, otherMale)
+		}
+	}
+	if who == "" {
+		switch {
+		case friend:
+			who = "friend"
+		case rival:
+			who = "rival"
+		default:
+			return ""
+		}
+	}
+	if lost {
+		return "my " + who + " is missing"
+	}
+	return "my " + who + " died"
+}
+
 // ExemptFromGrief is true for cold-hearted people.
 func ExemptFromGrief(traits []trait.ID) bool {
 	for _, t := range traits {

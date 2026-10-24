@@ -96,3 +96,5 @@ Wave A (M1, M2, M3-domain) fills the domain packages.
 Progress: Wave A landed as SIM-039-body-surgery.md, SIM-040-drugs.md, SIM-041-social-core.md, UI-022-social-tab-history.md and ART-019-social-host-assets.md.
 
 Progress: Wave B landed as SIM-042-romance-weddings.md, SIM-043-social-fights.md, SIM-045-prisoners.md, SIM-046-world-caravans-areas.md and SIM-047-animal-bonds.md (commit 8a84be08); M9b (kidnapping, raider relatives) in progress. Known pre-existing issue: a pawn that never moved gains a default Motion record on load, so StateHash differs after save/load for such pawns (tests work around it).
+
+Progress: SIM-048 (polish) and UI-023 (finish) landed. The motion-on-load StateHash bug is FIXED (Load no longer creates default Motion records); grief labels name the relation ("my wife died"); breakup weight uses affairs and proposal weight uses time together; goldens re-pinned for Social Impact scaling. See SIM-048-social-polish.md and UI-023-social-finish.md.

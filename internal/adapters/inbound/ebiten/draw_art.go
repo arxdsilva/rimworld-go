@@ -795,7 +795,7 @@ func (r *Renderer) drawPawnPortraitArt(screen *ebiten.Image, p game.PawnView, x,
 	s := math.Min(w/cw, h/ch)
 	ox := x + (w-cw*s)/2
 	oy := y + (h-ch*s)/2
-	for _, ly := range r.pawnLayers(r.look(p), faceSouth, p.Apparel...) {
+	for _, ly := range r.pawnPortraitLayers(p) {
 		img := r.art.image(ly.key, ly.tint)
 		if img == nil {
 			continue
@@ -808,6 +808,28 @@ func (r *Renderer) drawPawnPortraitArt(screen *ebiten.Image, p game.PawnView, x,
 	}
 	return true
 }
+
+// pawnPortraitLayers is p's south-facing portrait, bottom first: its
+// figure layers with a disfigured pawn's face scar over the hair (under a
+// hat), or on the face when it has no hair layer; no scar without the art.
+func (r *Renderer) pawnPortraitLayers(p game.PawnView) []portraitLayer {
+	scar := p.Disfigured && r.art.has(faceScarSouth)
+	var out []portraitLayer
+	for _, ly := range r.pawnLayers(r.look(p), faceSouth, p.Apparel...) {
+		out = append(out, portraitLayer{ly.key, ly.tint})
+		if scar && strings.HasPrefix(ly.key, "pawn/hair_") {
+			scar = false
+			out = append(out, portraitLayer{faceScarSouth, color.NRGBA{}})
+		}
+	}
+	if scar {
+		out = append(out, portraitLayer{faceScarSouth, color.NRGBA{}})
+	}
+	return out
+}
+
+// faceScarSouth is the south-facing face scar of a disfigured pawn.
+const faceScarSouth = "pawn/face_scar_south"
 
 // drawTile draws an opaque, tileable 1x1 sprite snapped to whole pixels
 // with a 1 px overlap, so fractional zoom never shows seams between tiles.

@@ -337,12 +337,24 @@ func (g *Game) opinionTerms(from, to entity.EntityID, withTerms bool) (int32, []
 
 // addOpinionMemory makes from remember k about subject (who it concerns).
 func (g *Game) addOpinionMemory(from, subject entity.EntityID, k social.MemKind, now uint64) {
+	g.addScaledOpinionMemory(from, subject, k, now, 0)
+}
+
+// hasOpinionMemory reports from holds a live memory k about subject.
+func (g *Game) hasOpinionMemory(from, subject entity.EntityID, k social.MemKind, now uint64) bool {
+	e := g.edgeOf(from, subject)
+	return e != nil && social.HasMemory(e.mem[e.dir(from)], k, social.ID(subject), now)
+}
+
+// addScaledOpinionMemory is addOpinionMemory landing at scale (permille
+// of the memory's value, 0: full; social.ImpactScale).
+func (g *Game) addScaledOpinionMemory(from, subject entity.EntityID, k social.MemKind, now uint64, scale int16) {
 	if from == subject || from == 0 || subject == 0 {
 		return
 	}
 	e := g.edgeFor(from, subject)
 	d := e.dir(from)
-	e.mem[d] = social.AddMemory(e.mem[d], k, social.ID(subject), now)
+	e.mem[d] = social.AddScaledMemory(e.mem[d], k, social.ID(subject), now, scale)
 	e.invalidate()
 	g.updateFlags(e, d)
 }

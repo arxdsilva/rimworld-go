@@ -40,6 +40,10 @@ type InteractCtx struct {
 	Pair                 PairKind
 	Partnered            bool
 	Attraction           int32 // permille
+	// Affair: the initiator knows its partner (the recipient) cheated on
+	// it; Together: how long the couple has been one, ticks (Pair.Since).
+	Affair   bool
+	Together uint64
 }
 
 // Weights is each interaction's selection weight for c.
@@ -64,9 +68,10 @@ func Weights(c InteractCtx) [NumInteractions]int64 {
 			}
 		}
 	case PairLover, PairFiance, PairSpouse:
-		w[Breakup] = int64(WeightBreakup) * int64(BreakupOpinionCurve.Eval(c.OpinionIR)) / 1000
+		w[Breakup] = int64(WeightBreakup) * int64(BreakupWeight(c.OpinionIR, c.Affair)) / 1000
 		if c.Pair == PairLover {
-			w[Proposal] = int64(WeightProposal) * int64(ProposalOpinionCurve.Eval(c.OpinionIR)) / 1000
+			w[Proposal] = int64(WeightProposal) * int64(ProposalOpinionCurve.Eval(c.OpinionIR)) / 1000 *
+				int64(ProposalTogetherCurve.Eval(togetherDays(c.Together))) / 1000
 		}
 	}
 	return w

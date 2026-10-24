@@ -514,7 +514,7 @@ the player's primary world-editing command surface.
     -   delete.
     -   invert.
     -   clear.
--   [x] **Paint allowed area** (SIM-046)
+-   [-] **Paint allowed area** (SIM-046: Allowed area / Clear allowed area architect tools paint the area picked in the manager; no overlay while painting and no UI test of the tool)
 -   [ ] **Area overlay selector**
 -   [-] **Assign pawn/animal to area** (SIM-046: via Assign tab and area manager)
     -   Integrated later with Schedule/Assign/Animals.
@@ -1047,10 +1047,10 @@ This screen centralizes per-pawn behavioral policies.
 
 ## 18.3 Relationship events
 
--   [-] **Romance notification** (SIM-042: history entries and mood memories; no dedicated letter)
--   [-] **Engagement/marriage** (SIM-042: gathering banner and history entries; no dedicated letter)
--   [-] **Breakup** (SIM-042: history entries; no dedicated letter)
--   [-] **Social fight** (SIM-043: fight marker and history entries; no dedicated letter)
+-   [x] **Romance notification** (SIM-042/048: history entries, mood memories and a letter for new lovers; letters also for a rejected proposal and an affair)
+-   [x] **Engagement/marriage** (SIM-042/048: gathering banner, history entries; engagement, wedding and party letters)
+-   [x] **Breakup** (SIM-042/048: history entries; breakup and divorce letters)
+-   [x] **Social fight** (SIM-043/048: fight marker, history entries and a social fight letter)
 -   [x] **Relation death** (UI-022: History tab (F9) entries click to select)
     -   Link messages to relevant pawns.
 

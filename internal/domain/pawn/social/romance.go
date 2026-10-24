@@ -158,5 +158,19 @@ func BreakupWeight(opinion int32, affair bool) int32 {
 	return w
 }
 
-// ProposalAccept is the permille chance a proposal is accepted.
+// ProposalAccept is the permille chance a proposal is accepted, from the
+// recipient's opinion (centi) alone.
 func ProposalAccept(opinion int32) int32 { return ProposalAcceptCurve.Eval(opinion) }
+
+// ProposalAcceptFor is ProposalAccept for a couple together for together
+// ticks: a new couple is likelier to say not yet, a long one yes (capped
+// at 1000).
+func ProposalAcceptFor(opinion int32, together uint64) int32 {
+	c := int64(ProposalAccept(opinion)) * int64(ProposalAcceptTogetherCurve.Eval(togetherDays(together))) / 1000
+	return int32(min(c, 1000))
+}
+
+// togetherDays is together ticks in whole days (saturating).
+func togetherDays(together uint64) int32 {
+	return int32(min(together/Day, 10000))
+}

@@ -3,6 +3,7 @@ package ebiten
 import (
 	"math"
 	"strconv"
+	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
@@ -507,6 +508,7 @@ func (r *Renderer) drawFigureFacing(screen *ebiten.Image, p game.PawnView, f fac
 	headPs.dx += hdx*c - hdy*s
 	headPs.dy += hdx*s + hdy*c
 	blood := r.pawnBlood(p) // body and apparel only (blood_draw.go)
+	scar := p.Disfigured
 	for _, ly := range r.pawnLayers(r.look(p), f, p.Apparel...) {
 		lp := ps
 		if isHeadLayer(ly.key) {
@@ -514,8 +516,15 @@ func (r *Renderer) drawFigureFacing(screen *ebiten.Image, p game.PawnView, f fac
 		}
 		r.figureBlood = layerBlood(ly.key, blood)
 		r.drawSpritePose(screen, r.framed(ly.key, suffix), ly.tint, wx, wy, tile, lp)
+		if scar && strings.HasPrefix(ly.key, "pawn/hair_") {
+			scar = false
+			r.drawFaceScar(screen, f, suffix, wx, wy, tile, headPs)
+		}
 	}
 	r.figureBlood = 0
+	if scar { // no hair layer: the scar still goes on the face
+		r.drawFaceScar(screen, f, suffix, wx, wy, tile, headPs)
+	}
 }
 
 // --- weapon points and particles -----------------------------------------

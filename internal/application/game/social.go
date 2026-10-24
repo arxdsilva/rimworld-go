@@ -145,16 +145,7 @@ func (g *Game) canHear(a entity.EntityID, pa Position, ra int, b entity.EntityID
 // interact resolves one interaction a starts with b.
 func (g *Game) interact(a, b entity.EntityID, now uint64) {
 	r := g.stream(streamSocial)
-	pa, pb := g.socialPerson(a), g.socialPerson(b)
-	ctx := social.InteractCtx{
-		Initiator: pa, Recipient: pb,
-		OpinionIR: g.opinion(a, b), OpinionRI: g.opinion(b, a),
-		Compat: social.Compatibility(g.streams.seed, social.ID(a), social.ID(b), pa.AgeYears, pb.AgeYears),
-		Pair:   g.pairOf(a, b).Kind,
-		// romance (social_romance.go, M5): an affair weighs less; no
-		// attempt while they are a couple or a rebuff cooldown runs
-		Partnered: g.partneredExcept(a, b), Attraction: g.romanceAttraction(a, b, now),
-	}
+	ctx := g.interactCtx(a, b, now)
 	k := social.Choose(r.IntN, ctx)
 	switch k {
 	case social.RomanceAttempt, social.Breakup, social.Proposal:
@@ -164,6 +155,27 @@ func (g *Game) interact(a, b entity.EntityID, now uint64) {
 	}
 	g.applyInteraction(a, b, k, now)
 	g.soc.next[a] = now + interactCooldown + uint64(r.IntN(interactJitter))
+}
+
+// interactCtx is what a's choice of interaction with b depends on.
+func (g *Game) interactCtx(a, b entity.EntityID, now uint64) social.InteractCtx {
+	pa, pb := g.socialPerson(a), g.socialPerson(b)
+	pair := g.pairOf(a, b)
+	ctx := social.InteractCtx{
+		Initiator: pa, Recipient: pb,
+		OpinionIR: g.opinion(a, b), OpinionRI: g.opinion(b, a),
+		Compat: social.Compatibility(g.streams.seed, social.ID(a), social.ID(b), pa.AgeYears, pb.AgeYears),
+		Pair:   pair.Kind,
+		// romance (social_romance.go, M5): an affair weighs less; no
+		// attempt while they are a couple or a rebuff cooldown runs
+		Partnered: g.partneredExcept(a, b), Attraction: g.romanceAttraction(a, b, now),
+	}
+	if pair.Kind.Active() {
+		// breakup pressure from a known affair; proposals after time together
+		ctx.Affair = g.hasOpinionMemory(a, b, social.MemCheatedOnMe, now)
+		ctx.Together = now - min(pair.Since, now)
+	}
+	return ctx
 }
 
 // onRomanceInteraction resolves a romance attempt, breakup or proposal a
@@ -243,9 +255,12 @@ func (g *Game) applyInteraction(a, b entity.EntityID, k social.Interaction, now 
 	}
 	eff := social.Effects(k)
 	if eff.HasMemory {
-		g.addOpinionMemory(b, a, eff.Memory, now)
+		// Social impact: the initiator's Social skill and Talking set how
+		// hard the words land, kind or cruel (spec §13.2)
+		scale := social.ImpactScale(g.negotiation(a))
+		g.addScaledOpinionMemory(b, a, eff.Memory, now, scale)
 		if k == social.Chitchat || k == social.DeepTalk {
-			g.addOpinionMemory(a, b, eff.Memory, now) // a conversation is mutual
+			g.addScaledOpinionMemory(a, b, eff.Memory, now, scale) // a conversation is mutual
 		}
 	}
 	if eff.HasMood {

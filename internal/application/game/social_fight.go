@@ -152,7 +152,7 @@ func (g *Game) startSocialFight(starter, other entity.EntityID) {
 	}
 	pos, _ := g.positions.Get(starter)
 	text := fmt.Sprintf("%s and %s are fighting!", g.name(starter), g.name(other))
-	g.post(MessageView{Tick: now, Text: text, X: pos.X, Y: pos.Y, Danger: true, Focus: starter})
+	g.post(MessageView{Tick: now, Text: text, X: pos.X, Y: pos.Y, Danger: true, Focus: starter, Letter: true, Title: "Social fight"})
 	g.addHistory("fight", fmt.Sprintf("%s got into a fight with %s.", g.name(starter), g.name(other)), starter, other)
 }
 

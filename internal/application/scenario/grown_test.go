@@ -88,8 +88,9 @@ func TestGrownGolden(t *testing.T) {
 	// Re-pinned (ENG-003 M1-M10): bodies, social interactions, chat
 	// mirroring, smoothed mood, romance, animal bonds and healing change
 	// behaviour by design; stable over
-	// -count=3.
-	const want uint64 = 0x0a5fd331d6029d57
+	// -count=3. Re-pinned (ENG-003 polish): conversation memories land at
+	// the speaker's Social impact (§13.2); stable over -count=3.
+	const want uint64 = 0xf6040a57f46087cf
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

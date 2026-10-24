@@ -81,8 +81,14 @@ func TestSocialStackingAndDeepTalk(t *testing.T) {
 	g, a, b := socialPair(t)
 	g.applyInteraction(a, b, social.Insult, socNow(g))
 	g.applyInteraction(a, b, social.Insult, socNow(g))
-	if got := g.opinion(b, a); got != -1500-1350 {
-		t.Fatalf("two insults = %d centi, want %d", got, -1500-1350)
+	// each lands at a's Social impact (§13.2), the second at 0.9 of that
+	sc := int32(1000)
+	if s := social.ImpactScale(g.negotiation(a)); s != 0 {
+		sc = int32(s)
+	}
+	one := int32(-1500) * sc / 1000
+	if want := one + one*900/1000; g.opinion(b, a) != want {
+		t.Fatalf("two insults = %d centi, want %d", g.opinion(b, a), want)
 	}
 	g2, c, d := socialPair(t)
 	g2.applyInteraction(c, d, social.DeepTalk, socNow(g2))

@@ -117,7 +117,7 @@ func (a *App) scrollLogAt(mx, my int, wy float64) bool {
 	}
 	if an, ok := a.selectedAnimal(); ok && a.animalLogOpen && !a.workOpen && !a.archOpen {
 		r := a.animalPanel()
-		x, y, w, h := animalLogRect(r, animalExtraH(an))
+		x, y, w, h := animalLogRect(r, animalExtraH(an)+animalBondH(an))
 		if mx >= x && mx < x+w && my >= y && my < y+h {
 			a.animalLogScroll = max(0, a.animalLogScroll+step)
 			return true
@@ -169,7 +169,7 @@ func (a *App) syncAnimalLog(id entity.EntityID) {
 // drawAnimalLog draws the animal inspector's Recent list, or the full
 // scrollable log when expanded.
 func (a *App) drawAnimalLog(screen *ebiten.Image, an game.AnimalView, r button) {
-	x, y, w, h := animalLogRect(r, animalExtraH(an))
+	x, y, w, h := animalLogRect(r, animalExtraH(an)+animalBondH(an))
 	if a.animalLogOpen {
 		rows := wrapLogRows(an.Log, float64(w)-12)
 		a.animalLogScroll = drawLogRows(screen, rows, x, y, w, h/logLineH(), a.animalLogScroll)

@@ -226,8 +226,9 @@ type saveState struct {
 	Pens        []pen
 	RockDamage  map[[2]int]int
 	Residual    map[int]temperature.Temp
-	// Motion: step timing per creature on the map (absent in older saves,
-	// which default to due-now straight steps).
+	// Motion: step timing per creature on the map. A creature without a
+	// record (it never stepped, or an older save) is not given one on
+	// load: motionOf reads it as a due-now straight step, as before the save.
 	Motion []entry[motionRec]
 	// Strikes and Hits are the presentation stamps of action_view.go
 	// (absent in older saves: no recent strike or hit).
@@ -493,8 +494,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	}
 	setMap(&g.rockDamage, s.RockDamage)
 	g.residual = s.Residual
-	g.motion = importStore(s.Motion)
-	g.defaultMotion()
+	g.motion = importStore(s.Motion) // a mover without a record reads motionOf's due-now default
 	setMap(&g.lastStrike, s.Strikes)
 	setMap(&g.lastHit, s.Hits)
 	g.weather = s.Weather

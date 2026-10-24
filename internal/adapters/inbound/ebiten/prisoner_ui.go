@@ -37,7 +37,7 @@ var prisonerModes = []struct {
 	tip   string
 }{
 	{prisoner.None, "No interaction", "Wardens only bring food."},
-	{prisoner.Reduce, "Reduce resistance", "Wardens talk the prisoner's resistance down."},
+	{prisoner.Reduce, "Reduce", "Wardens talk the prisoner's resistance down."},
 	{prisoner.Recruit, "Recruit", "Wardens wear resistance down, then try to win the prisoner over."},
 	{prisoner.Release, "Release", "A warden lets the prisoner go home; its faction is grateful."},
 	{prisoner.Execute, "Execute", "A warden kills the prisoner. Its relatives will not forget."},

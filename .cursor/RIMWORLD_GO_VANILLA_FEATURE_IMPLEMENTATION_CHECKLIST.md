@@ -1500,7 +1500,7 @@ children systems.
 
 -   [ ] **Trainability**
 -   [x] **Obedience** (SIM-047: training steps, cooldown, master follow when drafted)
--   [-] **Release/attack training** (SIM-047: obedience/guard/release training; guard and release have no behaviour yet; release; tame wolves guard against raiders and hostile animals untrained)
+-   [x] **Release/attack training** (SIM-047/048: obedience/guard/release training; a guard defends its master against hostiles within 5 tiles or whoever attacked the master in the last 120 ticks; a release-trained animal attacks the drafted master's target; tame wolves guard against raiders and hostile animals untrained)
 -   [x] **Rescue**
 -   [ ] **Hauling**
     -   Only species capable of relevant training.

@@ -164,7 +164,7 @@ func paintRelationRow(dst *ebiten.Image, row rect, r game.RelationRowView, strip
 		fillRect(dst, row, uiStripe)
 	}
 	const (
-		labelW = 74
+		labelW = 92
 		tagW   = 64
 		valW   = 92
 	)

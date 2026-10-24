@@ -320,7 +320,7 @@ func (g *Game) recruitPrisoner(p, w entity.EntityID) {
 	g.addOpinionMemory(p, w, social.MemRecruitedMe, now)
 	pos, _ := g.positions.Get(p)
 	text := g.personName(p) + " has joined the colony, won over by " + g.personName(w) + "."
-	g.post(MessageView{Tick: now, Text: text, X: pos.X, Y: pos.Y, Letter: true, Title: "Recruited"})
+	g.post(MessageView{Tick: now, Text: text, X: pos.X, Y: pos.Y, Focus: p, Letter: true, Title: "Recruited"})
 	g.addHistory("recruit", text, p, w)
 }
 

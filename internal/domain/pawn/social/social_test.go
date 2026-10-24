@@ -327,7 +327,7 @@ func TestChitchatCap(t *testing.T) {
 	// Forced cap path.
 	big := make([]OpinionMemory, 0, 40)
 	for i := 0; i < 40; i++ {
-		big = append(big, OpinionMemory{MemChitchat, 2, 100})
+		big = append(big, OpinionMemory{Kind: MemChitchat, Subject: 2, Expires: 100})
 	}
 	d := memDefs[MemChitchat]
 	memDefs[MemChitchat].StackFactor = 1000
@@ -1016,6 +1016,89 @@ func TestSpecValues(t *testing.T) {
 		d := MemDef(k)
 		if int64(d.Value) != want[0] || int64(d.Duration) != want[1]*Day {
 			t.Errorf("mem %d: %+v want %v", k, d, want)
+		}
+	}
+}
+
+// §13.2 Social impact: a memory lands at its Scale (0 = full, as in older
+// saves), stacking still diminishing per copy; ImpactScale clamps.
+func TestMemoryScale(t *testing.T) {
+	full := AddMemory(nil, MemDeepTalk, 2, 0)
+	if full[0].Scale != 0 || Sum(full, 2, 0) != memDeepTalk {
+		t.Fatalf("unscaled deep talk %d (scale %d)", Sum(full, 2, 0), full[0].Scale)
+	}
+	big := AddScaledMemory(nil, MemDeepTalk, 2, 0, ImpactScale(1370))
+	small := AddScaledMemory(nil, MemDeepTalk, 2, 0, ImpactScale(820))
+	if Sum(big, 2, 0) != memDeepTalk*1370/1000 || Sum(small, 2, 0) != memDeepTalk*820/1000 {
+		t.Fatalf("scaled deep talk %d / %d", Sum(big, 2, 0), Sum(small, 2, 0))
+	}
+	ins := AddScaledMemory(nil, MemInsulted, 2, 0, 1500)
+	ins = AddScaledMemory(ins, MemInsulted, 2, 1, 1500)
+	if want := int32(memInsulted*1500/1000 + memInsulted*1500/1000*stackFactorSocial/1000); Sum(ins, 2, 0) != want {
+		t.Fatalf("two harsh insults %d, want %d (the negative magnitude scales too)", Sum(ins, 2, 0), want)
+	}
+	for in, want := range map[int32]int16{0: MinMemoryScale, 100: MinMemoryScale, 1000: 0, 1200: 1200, 5000: MaxMemoryScale} {
+		if got := ImpactScale(in); got != want {
+			t.Errorf("ImpactScale(%d) = %d, want %d", in, got, want)
+		}
+	}
+	// a refreshed copy at the stack limit takes the new scale
+	var rs []OpinionMemory
+	rs = AddScaledMemory(rs, MemRebuffedMe, 1, 0, 500)
+	rs = AddScaledMemory(rs, MemRebuffedMe, 1, 10, 1500)
+	if len(rs) != 1 || rs[0].Scale != 1500 {
+		t.Fatalf("refresh %+v", rs)
+	}
+}
+
+// Breakup pressure grows with a known affair; proposals with time
+// together, and so does the chance one is accepted.
+func TestRomanceWeightsAffairAndTogether(t *testing.T) {
+	c := InteractCtx{Initiator: p(1, true), Pair: PairLover, OpinionIR: 0}
+	plain := Weights(c)[Breakup]
+	c.Affair = true
+	if cheated := Weights(c)[Breakup]; cheated <= plain || cheated != int64(WeightBreakup)*int64(BreakupWeight(0, true))/1000 {
+		t.Fatalf("breakup weight %d with affair vs %d", cheated, plain)
+	}
+	c = InteractCtx{Initiator: p(1, true), Pair: PairLover, OpinionIR: 6000}
+	fresh := Weights(c)[Proposal]
+	c.Together = 30 * Day
+	long := Weights(c)[Proposal]
+	if fresh <= 0 || long <= fresh*5 {
+		t.Fatalf("proposal weight fresh %d, 30 days %d", fresh, long)
+	}
+	c.Pair = PairSpouse
+	if Weights(c)[Proposal] != 0 {
+		t.Fatal("a married couple proposes")
+	}
+	if a, b := ProposalAcceptFor(4000, 0), ProposalAcceptFor(4000, 40*Day); a >= b || b > 1000 {
+		t.Fatalf("accept fresh %d, long %d", a, b)
+	}
+	if ProposalAcceptFor(20000, 100*Day) != 1000 || ProposalAcceptFor(-100, 100*Day) != 0 {
+		t.Fatal("accept bounds")
+	}
+}
+
+// Grief lines name the relation: "my wife died", "my son is missing",
+// "my friend died", "my rival died"; none without a grief.
+func TestGriefLabel(t *testing.T) {
+	cases := []struct {
+		k                         Kind
+		male, friend, rival, lost bool
+		want                      string
+	}{
+		{Spouse, false, false, false, false, "my wife died"},
+		{Child, true, false, false, true, "my son is missing"},
+		{Sibling, true, true, false, false, "my brother died"},
+		{NoKind, false, true, false, false, "my friend died"},
+		{NoKind, true, false, true, false, "my rival died"},
+		{StepParent, true, true, false, false, "my friend died"},
+		{NoKind, true, false, false, false, ""},
+		{ExLover, true, false, false, false, ""},
+	}
+	for _, c := range cases {
+		if got := GriefLabel(c.k, c.male, c.friend, c.rival, c.lost); got != c.want {
+			t.Errorf("GriefLabel(%v) = %q, want %q", c, got, c.want)
 		}
 	}
 }

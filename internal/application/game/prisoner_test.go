@@ -315,7 +315,7 @@ func TestRecruitKeepsFamilyAndRemembersWarden(t *testing.T) {
 	}
 	letter := false
 	for _, m := range g.World().Messages {
-		letter = letter || m.Letter && m.Title == "Recruited"
+		letter = letter || m.Letter && m.Title == "Recruited" && m.Focus == rid
 	}
 	if !letter || len(g.history) == 0 || g.history[len(g.history)-1].Kind != "recruit" {
 		t.Fatal("recruiting posts a letter and a history line")

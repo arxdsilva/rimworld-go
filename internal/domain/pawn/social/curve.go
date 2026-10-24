@@ -41,6 +41,11 @@ var (
 	ProposalOpinionCurve = Curve{{0, 0}, {2500, 500}, {5000, 1500}, {10000, 3000}}
 	// ProposalAcceptCurve: opinion (centi) to acceptance chance.
 	ProposalAcceptCurve = Curve{{-10000, 0}, {0, 0}, {2000, 500}, {5000, 900}, {10000, 1000}}
+	// ProposalTogetherCurve: days a couple has been together to proposal
+	// multiplier (few propose in the first days, more after weeks).
+	ProposalTogetherCurve = Curve{{0, 100}, {3, 400}, {10, 1000}, {30, 1500}, {60, 2000}}
+	// ProposalAcceptTogetherCurve: days together to acceptance multiplier.
+	ProposalAcceptTogetherCurve = Curve{{0, 500}, {5, 800}, {15, 1000}, {40, 1300}}
 	// RomanceOpinionCurve: opinion (centi) to attraction factor.
 	RomanceOpinionCurve = Curve{{-10000, 0}, {-500, 0}, {2000, 1000}, {10000, 1500}}
 	// RomanceAgeGapCurve: years apart to attraction factor.

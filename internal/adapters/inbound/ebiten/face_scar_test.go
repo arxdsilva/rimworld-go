@@ -80,3 +80,53 @@ func TestPortraitFaceScar(t *testing.T) {
 		t.Fatal("nothing drawn")
 	}
 }
+
+// The colonist bar / HUD portrait shows a disfigured pawn's scar over the
+// hair; an unscarred one, or missing art, shows none.
+func TestPawnPortraitArtFaceScar(t *testing.T) {
+	t.Parallel()
+	r := New(&stubSim{w: 64, h: 64, tick: 100})
+	r.art = scarArt()
+	keys := func(p game.PawnView) []string {
+		var out []string
+		for _, ly := range r.pawnPortraitLayers(p) {
+			out = append(out, ly.key)
+		}
+		return out
+	}
+	p := game.PawnView{ID: 1, Health: 100, Status: "alive"}
+	if slices.Contains(keys(p), faceScarSouth) {
+		t.Fatal("an unscarred portrait has the scar")
+	}
+	p.Disfigured = true
+	ks := keys(p)
+	scar := slices.Index(ks, faceScarSouth)
+	hair := slices.IndexFunc(ks, func(k string) bool { return strings.HasPrefix(k, "pawn/hair_") })
+	if scar < 0 || hair < 0 || scar != hair+1 {
+		t.Fatalf("scar at %d, hair at %d: %v", scar, hair, ks)
+	}
+	if !r.drawPawnPortraitArt(ebiten.NewImage(80, 100), p, 0, 0, 80, 100) {
+		t.Fatal("portrait not drawn")
+	}
+	r.art = figureArt()
+	if slices.Contains(keys(p), faceScarSouth) {
+		t.Fatal("scar layer without the art")
+	}
+}
+
+// A pawn falling (upright frames of the fall) keeps its scar over the hair.
+func TestFallingFigureFaceScar(t *testing.T) {
+	t.Parallel()
+	r := New(&stubSim{w: 64, h: 64, tick: 100})
+	r.art = scarArt()
+	p := game.PawnView{ID: 1, X: 2, Y: 2, Health: 0, Status: "alive", Lying: true, Disfigured: true}
+	var keys []string
+	r.lit.onDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
+	r.drawFigureFacing(ebiten.NewImage(512, 512), p, faceEast, "", 2, 2, 64, pose{px: figurePivotX, py: figurePivotY})
+	r.lit.onDraw = nil
+	scar := slices.IndexFunc(keys, func(k string) bool { return k == "pawn/face_scar_east" })
+	hair := slices.IndexFunc(keys, func(k string) bool { return strings.HasPrefix(k, "pawn/hair_") })
+	if scar < 0 || hair < 0 || scar < hair {
+		t.Fatalf("scar at %d, hair at %d: %v", scar, hair, keys)
+	}
+}

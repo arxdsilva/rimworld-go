@@ -20,7 +20,14 @@ import (
 // them (training.BondTrain). Skills decay from the last session
 // (training.Decay, read on demand: the saved steps are those of the last
 // session, so a learned Obedience keeps its floor). An animal that has
-// learned Obedience follows its drafted master.
+// learned Obedience (or Guard, or Release) follows its drafted master.
+// Guard: it defends its master from a hostile within guardMasterRadius of
+// them, or from whoever just hit them. Release: it joins its drafted
+// master's attack. A duty target is looked for once per
+// animal.DecideEvery ticks (staggered by id, through the creature index);
+// one it has engaged is kept, with a cheap check each tick, until the foe
+// falls, the master's attack moves on, or a guard's foe is farther than
+// guardKeepRadius from the master (enter 5, leave 8: no flapping).
 //
 // Which skills are on lives in the high bit of animal.State.Trained:
 // trainToggled marks a skill the player flipped away from its default
@@ -40,6 +47,14 @@ const (
 	// is farther than this; it then goes right up to them (followNear).
 	followFar  = 3
 	followNear = 1
+	// guardMasterRadius: a guard animal takes on a hostile this close to
+	// its master; guardKeepRadius: it keeps at it until the hostile is
+	// farther than this from the master.
+	guardMasterRadius = 5
+	guardKeepRadius   = 8
+	// guardHitWindow: a hit on the master this recent calls its guard to
+	// whoever struck from there.
+	guardHitWindow = 2 * animal.DecideEvery
 )
 
 var trainLabels = [training.NumSkills]string{training.Obedience: "Obedience", training.Guard: "Guard", training.Release: "Release"}
@@ -237,7 +252,8 @@ func (g *Game) trainSession(trainer, id entity.EntityID, a *animal.State, s trai
 // master, walking up to them once they are more than followFar away. It
 // reports true while it follows.
 func (g *Game) followMaster(id entity.EntityID, a *animal.State, pos Position, now uint64) bool {
-	if a.Master == 0 || !a.Tame || !trainLearned(*a, training.Obedience, now) {
+	if a.Master == 0 || !a.Tame || !trainLearned(*a, training.Obedience, now) &&
+		!trainLearned(*a, training.Guard, now) && !trainLearned(*a, training.Release, now) {
 		return false
 	}
 	m := entity.EntityID(a.Master)
@@ -255,6 +271,101 @@ func (g *Game) followMaster(id entity.EntityID, a *animal.State, pos Position, n
 		g.animalGoTo(id, a, mp.X, mp.Y)
 	}
 	return true
+}
+
+// masterDuty runs a guard- or release-trained animal's fight for its
+// master (see the file comment). It reports true while it fights.
+func (g *Game) masterDuty(id entity.EntityID, a *animal.State, now uint64) bool {
+	if a.Master == 0 || !a.Tame {
+		return false
+	}
+	guard, release := trainLearned(*a, training.Guard, now), trainLearned(*a, training.Release, now)
+	if !guard && !release {
+		return false
+	}
+	m := entity.EntityID(a.Master)
+	mp, ok := g.positions.Get(m)
+	if !ok || !g.alive(m) || !g.isPawn(m) {
+		return false
+	}
+	if a.Target != 0 && a.Mode == animal.Attack && g.dutyKeeps(m, mp, a.Target, guard, release) {
+		g.chase(id, a, now)
+		return true
+	}
+	if (now+uint64(id))%animal.DecideEvery != 0 {
+		return false
+	}
+	t := g.dutyTarget(id, m, mp, guard, release, now)
+	if t == 0 {
+		return false
+	}
+	a.Target, a.HuntSince = t, 0
+	a.Feed, a.FeedLeft = animal.FeedTarget{}, 0 // a resting guard gets up
+	g.chase(id, a, now)
+	return true
+}
+
+// masterAttack is drafted master m's attack target (0: none, or one no
+// longer worth fighting).
+func (g *Game) masterAttack(m entity.EntityID) entity.EntityID {
+	if !g.drafted(m) {
+		return 0
+	}
+	if j, ok := g.jobs.Get(m); ok && j.Kind == job.Attack && j.Active() && g.combatAlive(j.Target) {
+		return j.Target
+	}
+	return 0
+}
+
+// guardFoe reports o is a threat a guard animal fights: a standing raider,
+// or a wild animal attacking the colony.
+func (g *Game) guardFoe(id, o entity.EntityID, now uint64) bool {
+	if g.isRaider(o) {
+		return g.standingRaider(o)
+	}
+	a, ok := g.animals.Get(o)
+	return o != id && ok && !a.Tame && !a.Dead() && (g.hostile(a) || a.Enraged(now))
+}
+
+// dutyKeeps reports engaged foe t is still the animal's business: its
+// master's attack target (release), or a threat still near the master
+// (guard, with the wider keep radius).
+func (g *Game) dutyKeeps(m entity.EntityID, mp Position, t entity.EntityID, guard, release bool) bool {
+	if !g.combatAlive(t) {
+		return false
+	}
+	if release && g.masterAttack(m) == t {
+		return true
+	}
+	if !guard || !g.guardFoe(0, t, uint64(g.clock.Now())) {
+		return false
+	}
+	tp, _ := g.positions.Get(t)
+	return weapon.Distance(mp.X, mp.Y, tp.X, tp.Y) <= guardKeepRadius
+}
+
+// dutyTarget picks the foe animal id should fight for master m at mp:
+// the master's own attack target (release); else a threat within
+// guardMasterRadius of them, or whoever just hit them (guard).
+func (g *Game) dutyTarget(id, m entity.EntityID, mp Position, guard, release bool, now uint64) entity.EntityID {
+	if release {
+		if t := g.masterAttack(m); t != 0 && t != id {
+			return t
+		}
+	}
+	if !guard {
+		return 0
+	}
+	foe := func(o entity.EntityID, _ Position) bool { return g.guardFoe(id, o, now) }
+	if t, _, ok := g.nearestWhere(mp.X, mp.Y, guardMasterRadius, ckRaider|ckAnimal, foe); ok {
+		return t
+	}
+	if h, ok := g.lastHit[m]; ok && h.Tick+guardHitWindow >= now {
+		if t, _, ok := g.nearestWhere(h.FromX, h.FromY, 1, ckRaider|ckAnimal, foe); ok {
+			return t // a shooter beyond the radius
+		}
+	}
+	return 0
 }
 
 // trainViews is a's training rows for the view: every skill, with whether

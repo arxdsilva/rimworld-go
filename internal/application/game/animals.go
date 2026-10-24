@@ -198,7 +198,10 @@ func (g *Game) thinkAnimal(id entity.EntityID, a *animal.State, now uint64) {
 	if g.fleeCheck(id, a, pos, def, now) {
 		return
 	}
-	g.chargeCheck(id, a, pos, now) // a wild predator may rush someone close
+	g.chargeCheck(id, a, pos, now)          // a wild predator may rush someone close
+	if a.Tame && g.masterDuty(id, a, now) { // train_animals.go: guard and release
+		return
+	}
 	if a.Tame && def.Predator {
 		if g.guardCheck(id, a, pos, now) {
 			return
@@ -646,12 +649,19 @@ func (g *Game) killAnimal(id, by entity.EntityID) {
 	}
 	pos, _ := g.positions.Get(id)
 	if a.Tame {
+		var text string
 		if a.Food == 0 && a.Starving != 0 {
-			g.message(pos.X, pos.Y, "%s the %s has starved to death.", a.Name, a.Species.Label())
+			text = fmt.Sprintf("%s the %s has starved to death.", a.Name, a.Species.Label())
 		} else if by != 0 && by != id {
-			g.message(pos.X, pos.Y, "%s the %s was killed by %s.", a.Name, a.Species.Label(), g.killerName(by))
+			text = fmt.Sprintf("%s the %s was killed by %s.", a.Name, a.Species.Label(), g.killerName(by))
 		} else {
-			g.message(pos.X, pos.Y, "%s the %s has died.", a.Name, a.Species.Label())
+			text = fmt.Sprintf("%s the %s has died.", a.Name, a.Species.Label())
+		}
+		if c := entity.EntityID(a.Bond); c != 0 && g.isPawn(c) {
+			// a bonded companion is a letter about the colonist who lost it
+			g.pawnLetter("Bonded animal died", fmt.Sprintf("%s %s has lost a bonded companion.", text, g.personName(c)), c)
+		} else {
+			g.message(pos.X, pos.Y, "%s", text)
 		}
 	}
 	if by != 0 && by != id {

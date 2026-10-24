@@ -658,6 +658,8 @@ func (a *App) captureUI(ui string) {
 			a.renderer.game.Step(10)
 			a.renderer.syncPawns()
 		}
+	case "social", "health", "prisoner", "history", "world", "assign":
+		a.captureSocialUI(ui) // capture_social.go: the -scenario social tabs and windows
 	case "pawn":
 		if snap := a.renderer.snapshot(); len(snap) > 0 {
 			a.renderer.Select(snap[0].ID)
