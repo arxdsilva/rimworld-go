@@ -94,7 +94,10 @@ func (g *Game) name(id entity.EntityID) string {
 // reachable reports whether pawn id could path to (x, y): a region-label
 // comparison (regions.go), never a search.
 func (g *Game) reachable(id entity.EntityID, x, y int) bool {
-	if g.noRegions() {
+	if g.areaOutOfReach(id, x, y) { // areas.go: the regions know no allowed areas
+		return false
+	}
+	if g.noRegions() || g.restrictedArea(id) >= 0 {
 		_, ok := g.pathToVia(id, x, y, false)
 		return ok
 	}

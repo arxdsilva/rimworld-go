@@ -37,6 +37,7 @@ func (g *Game) phaseSocial() {
 	if g.soc != nil && now%clock.TicksPerDay == 0 {
 		g.socialDay(now)
 	}
+	g.gatherTick(now) // gathering.go: weddings and parties (M5)
 	for _, id := range g.pawnIDs {
 		u := uint64(id)
 		if (now+u*socialStagger)%socialPeriod == 0 {
@@ -142,6 +143,9 @@ func (g *Game) interact(a, b entity.EntityID, now uint64) {
 		OpinionIR: g.opinion(a, b), OpinionRI: g.opinion(b, a),
 		Compat: social.Compatibility(g.streams.seed, social.ID(a), social.ID(b), pa.AgeYears, pb.AgeYears),
 		Pair:   g.pairOf(a, b).Kind,
+		// romance (social_romance.go, M5): an affair weighs less; no
+		// attempt while they are a couple or a rebuff cooldown runs
+		Partnered: g.partneredExcept(a, b), Attraction: g.romanceAttraction(a, b, now),
 	}
 	k := social.Choose(r.IntN, ctx)
 	switch k {

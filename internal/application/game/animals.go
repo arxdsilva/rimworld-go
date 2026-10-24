@@ -69,11 +69,31 @@ type AnimalView struct {
 	Sleeping    bool
 	Leaving     bool
 	Herd        uint32
-	// ENG-003 (M10): the master's and bonded colonist's names, and which
-	// training.Skill steps are learnt. Empty until M10 fills them.
-	Master  string
-	Bond    string
-	Trained []bool
+	// ENG-003 (M10): the master's and bonded colonist's names and ids
+	// (tame animals), which training.Skill skills are learnt, and every
+	// skill's row (Training, in training.Skill order). Mother is the
+	// mother's name while she lives on the map; Offspring the names of
+	// her young still on it.
+	Master    string
+	Bond      string
+	Trained   []bool
+	MasterID  entity.EntityID
+	BondID    entity.EntityID
+	Training  []AnimalTrainingView
+	Mother    string
+	Offspring []string
+}
+
+// AnimalTrainingView is one training skill of a tame animal: Allowed if
+// its species can learn it, On if handlers train it, Steps of Needed.
+type AnimalTrainingView struct {
+	Skill   int // training.Skill (SetTraining's Index)
+	Label   string
+	Allowed bool
+	On      bool
+	Learned bool
+	Steps   int
+	Needed  int
 }
 
 // Wildlife at colony start (wildlife.go has the draw; population.go the
@@ -203,9 +223,16 @@ func (g *Game) thinkAnimal(id entity.EntityID, a *animal.State, now uint64) {
 		return
 	case animal.Rest:
 		return // lies down (or walks to its herd's bed)
+	case animal.Confused:
+		if g.confusedStep(id, a, pos, def, now) { // bonds.go: its colonist died
+			return
+		}
 	case animal.Wander:
 	default:
 		a.Mode, a.Path, a.PathI = animal.Wander, nil, 0
+	}
+	if a.Tame && g.followMaster(id, a, pos, now) { // train_animals.go: obedient, master drafted
+		return
 	}
 	if g.lifeMove(id, a, pos, now) { // animal_life.go: mating, following its mother
 		return
@@ -645,6 +672,7 @@ func (g *Game) killAnimal(id, by entity.EntityID) {
 
 func (g *Game) removeAnimal(id entity.EntityID) {
 	delete(g.logs, id)
+	delete(g.tendedUntil, id) // vet_animals.go
 	g.animals.Delete(id)
 	g.positions.Delete(id)
 	kept := g.animalIDs[:0]
@@ -693,6 +721,8 @@ func (g *Game) animalAt(x, y int) entity.EntityID {
 
 func (g *Game) animalViews() []AnimalView {
 	out := make([]AnimalView, 0, len(g.animalIDs))
+	now := uint64(g.clock.Now())
+	young := g.youngByMother() // bond_views.go
 	for _, id := range g.animalIDs {
 		a, ok := g.animals.Get(id)
 		if !ok {
@@ -728,7 +758,8 @@ func (g *Game) animalViews() []AnimalView {
 		if s := g.chargeLine(a); s != "" {
 			av.State = s // action_view.go: "charging Ada"
 		}
-		av.Log = g.logLines(id) // eventlog.go
+		av.Log = g.logLines(id)                  // eventlog.go
+		g.fillAnimalBonds(av, id, a, now, young) // bond_views.go
 	}
 	return out
 }

@@ -44,15 +44,19 @@ func (g *Game) markTame(x1, y1, x2, y2 int, on bool) {
 	}
 }
 
-// beingTamed: a handler has claimed this animal for a taming, milking or
-// shearing job.
+// beingTamed: a handler has claimed this animal for a taming, milking,
+// shearing or training job, or a doctor for tending it.
 func (g *Game) beingTamed(id entity.EntityID) bool {
 	owner, ok := g.reserve.EntityOwner(id)
 	if !ok {
 		return false
 	}
 	j, _ := g.jobs.Get(owner)
-	return (j.Kind == job.Tame || j.Kind == job.Milk || j.Kind == job.Shear) && j.Target == id
+	switch j.Kind {
+	case job.Tame, job.Milk, job.Shear, job.Train, job.TendAnimal:
+		return j.Target == id
+	}
+	return false
 }
 
 // assignTame sends a hunter to the nearest animal marked for taming.
@@ -385,6 +389,7 @@ func (g *Game) releaseAnimal(id entity.EntityID) {
 	}
 	p, _ := g.positions.Get(id)
 	g.message(p.X, p.Y, "%s the %s was released into the wild.", a.Name, a.Species.Label())
+	g.unbondReleased(id, &a) // bonds.go: the bonded colonist's regret
 	a.Tame, a.Name, a.Target, a.Mode = false, "", 0, animal.Wander
 	g.animals.Set(id, a)
 }

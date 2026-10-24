@@ -10,6 +10,7 @@ import (
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
+	"rimworld-go/internal/domain/sim/entity"
 )
 
 // Building selection and the bench bills panel (MAIN_UI_SCREENS §10
@@ -119,6 +120,7 @@ func (a *App) buildingButtons() []button {
 	}
 	out = append(out, a.moveCopyButtons(b, r)...)
 	out = append(out, a.troughButtons(b, r)...)
+	out = append(out, a.bedButtons(b, r)...)
 	if !b.Bench {
 		return out
 	}
@@ -199,6 +201,7 @@ func (a *App) drawBuildingInspector(screen *ebiten.Image) {
 		}
 	}
 	a.drawTroughSection(screen, b, r)
+	a.drawBedSection(screen, b, r)
 	if ln := movingLine(b); ln != "" {
 		drawFitSmall(screen, ln, float64(r.x)+134, float64(r.y+r.h)-88, float64(r.w)-146, tsBody)
 	}
@@ -279,7 +282,7 @@ func (a *App) applyBuildingClick(id string) {
 			X2: b.X + max(b.W, 1) - 1, Y2: b.Y + max(b.H, 1) - 1})
 		return
 	}
-	if a.applyTroughClick(id, b) {
+	if a.applyTroughClick(id, b) || a.applyBedClick(id, b) {
 		return
 	}
 	switch id {
@@ -360,4 +363,161 @@ func hasBuildTool(kind string) bool {
 		}
 	}
 	return false
+}
+
+// Bed owners and the prisoner mark (MAIN_UI_SCREENS §10 bed inspector,
+// ENG-003 M5): one owner row per sleeping slot with a picker that sends
+// AssignBedOwner, and a "For prisoners" toggle that sends
+// SetBedForPrisoners. The rows read BuildingView's claimants back.
+
+const bedOwnerModalID = "bed.owner"
+
+// bedPrisonReader is the read model for the prisoner mark (consumer-owned;
+// the game implements it). Without it the toggle is disabled.
+type bedPrisonReader interface {
+	BedForPrisoners(bed entity.EntityID) bool
+}
+
+// bedSlots is how many sleepers bed kind b holds (0: not a bed).
+func bedSlots(b game.BuildingView) int {
+	switch b.Kind {
+	case "double bed":
+		return 2
+	case "bed", "hospital bed", "sleeping spot":
+		return 1
+	}
+	return 0
+}
+
+// bedOwner is who holds slot of b (0: nobody).
+func bedOwner(b game.BuildingView, slot int) entity.EntityID {
+	if slot == 1 {
+		return b.Claimant2
+	}
+	return b.Claimant
+}
+
+func bedOwnerID(slot int) string { return "bldg.bed.owner." + strconv.Itoa(slot) }
+
+const bedRowY, bedRowH = 46, 28
+
+func (a *App) bedButtons(b game.BuildingView, r button) []button {
+	n := bedSlots(b)
+	if n == 0 {
+		return nil
+	}
+	var out []button
+	for slot := range n {
+		out = append(out, button{id: bedOwnerID(slot), label: "Set owner", x: r.x + r.w - 112, y: r.y + bedRowY + float32(slot*bedRowH),
+			w: 100, h: 22, tip: "Choose who sleeps here"})
+	}
+	pr := button{id: "bldg.bed.prisoners", label: "For prisoners", x: r.x + 12, y: r.y + bedRowY + float32(n*bedRowH) + 6, w: 130, h: 22}
+	if rd, ok := a.renderer.game.(bedPrisonReader); ok {
+		pr.selected = rd.BedForPrisoners(b.ID)
+		pr.tip = "Only prisoners sleep here"
+	} else {
+		pr.disabled, pr.reason, pr.quiet = true, "Prisoner beds are not available in this game.", true
+	}
+	return append(out, pr)
+}
+
+// pawnName is the colonist's label in the snapshot ("" when unknown).
+func (a *App) pawnName(id entity.EntityID) string {
+	for _, p := range a.renderer.snapshot() {
+		if p.ID == id {
+			return pawnLabel(p)
+		}
+	}
+	return ""
+}
+
+func (a *App) drawBedSection(screen *ebiten.Image, b game.BuildingView, r button) {
+	n := bedSlots(b)
+	for slot := range n {
+		who := "nobody"
+		if id := bedOwner(b, slot); id != 0 {
+			if who = a.pawnName(id); who == "" {
+				who = "someone"
+			}
+		}
+		label := "Owner: " + who
+		if n > 1 {
+			label = fmt.Sprintf("Owner %d: %s", slot+1, who)
+		}
+		drawFitSmall(screen, label, float64(r.x)+12, float64(r.y)+bedRowY+float64(slot*bedRowH)+2, float64(r.w)-140, tsBody)
+	}
+}
+
+// applyBedClick opens the owner picker or flips the prisoner mark.
+func (a *App) applyBedClick(id string, b game.BuildingView) bool {
+	if bedSlots(b) == 0 {
+		return false
+	}
+	if id == "bldg.bed.prisoners" {
+		rd, ok := a.renderer.game.(bedPrisonReader)
+		if ok {
+			a.renderer.enqueue(command.Command{Kind: command.SetBedForPrisoners, Target: uint64(b.ID), Enabled: !rd.BedForPrisoners(b.ID)})
+		}
+		return true
+	}
+	s, ok := strings.CutPrefix(id, "bldg.bed.owner.")
+	if !ok {
+		return false
+	}
+	if slot, err := strconv.Atoi(s); err == nil && slot >= 0 && slot < bedSlots(b) {
+		a.openBedOwnerPicker(b.ID, slot)
+	}
+	return true
+}
+
+// openBedOwnerPicker lists the living colonists (and nobody) for slot.
+func (a *App) openBedOwnerPicker(bed entity.EntityID, slot int) {
+	a.uiPushModal(modal{
+		id: bedOwnerModalID, title: "Bed owner", w: 320, h: 420,
+		draw:    func(a *App, body rect) { a.bedOwnerBody(body, bed, slot) },
+		buttons: []modalButton{{id: "close", label: "Cancel", style: btnNormal, closes: true}},
+	})
+}
+
+// bedOwnerPickID is the picker button for owner (0: nobody).
+func bedOwnerPickID(owner entity.EntityID) string {
+	return "bed.owner.pick." + strconv.FormatUint(uint64(owner), 10)
+}
+
+func (a *App) bedOwnerBody(body rect, bed entity.EntityID, slot int) {
+	if a.renderer == nil {
+		return
+	}
+	rows := []struct {
+		id   entity.EntityID
+		name string
+	}{{0, "Nobody"}}
+	for _, p := range a.renderer.snapshot() {
+		if p.Status != "dead" {
+			rows = append(rows, struct {
+				id   entity.EntityID
+				name string
+			}{p.ID, pawnLabel(p)})
+		}
+	}
+	area := a.uiScrollArea("bed.owner.rows", body, float32(len(rows)*assignRowH), scrollOpts{Step: assignRowH * 2})
+	y := area.View.Y - area.Off
+	for _, row := range rows {
+		rr := rect{area.View.X, y, area.View.W, assignRowH - 4}
+		y += assignRowH
+		if rr.Y < area.View.Y || rr.bottom() > area.View.bottom() {
+			continue
+		}
+		if a.uiButton(bedOwnerPickID(row.id), rr, row.name, btnOpts{}) {
+			a.assignBedOwner(bed, slot, row.id)
+		}
+	}
+}
+
+// assignBedOwner sends AssignBedOwner and closes the picker.
+func (a *App) assignBedOwner(bed entity.EntityID, slot int, owner entity.EntityID) {
+	a.renderer.enqueue(command.Command{Kind: command.AssignBedOwner, Target: uint64(bed), Pawn: uint64(owner), Index: slot})
+	if a.uiModalTop() == bedOwnerModalID {
+		a.uiCloseTop()
+	}
 }

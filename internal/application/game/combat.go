@@ -152,6 +152,12 @@ func (g *Game) canHit(from Position, d weapon.Def, tp Position) bool {
 
 // strike resolves one attack and records its trace.
 func (g *Game) strike(attacker, target entity.EntityID, wk weapon.Kind) {
+	g.strikeRoll(attacker, target, wk, g.rng.IntN)
+}
+
+// strikeRoll is strike with the hit rolled from roll (a brawl rolls from
+// the social stream: social_fight.go).
+func (g *Game) strikeRoll(attacker, target entity.EntityID, wk weapon.Kind, roll func(int) int) {
 	d := weapon.DefOf(wk)
 	if a, ok := g.animals.Get(attacker); ok { // a natural weapon hits as hard as its owner is big
 		ad := animal.DefOf(a.Species)
@@ -171,7 +177,7 @@ func (g *Game) strike(attacker, target entity.EntityID, wk weapon.Kind) {
 	if d.Ranged {
 		chance = chance * (100 - g.coverFor(ap, tp)) / 100
 	}
-	hit := g.rng.IntN(100) < chance
+	hit := roll(100) < chance
 	tr := projectile.Trace{
 		FromX: ap.X, FromY: ap.Y, ToX: tp.X, ToY: tp.Y,
 		Tick: uint64(g.clock.Now()), Hit: hit, Melee: !d.Ranged,
@@ -228,6 +234,7 @@ func (g *Game) hurt(target entity.EntityID, dmg int, by entity.EntityID) {
 	case v.Status == health.Alive && unconscious(b): // body.go: knocked out by pain or a head wound
 		g.down(target, health.CauseInjury)
 	}
+	g.fightOnDown(target) // social_fight.go: a downed brawler ends the fight
 }
 
 // die kills pawn id with no known killer.
@@ -243,10 +250,12 @@ func (g *Game) dieBy(id entity.EntityID, cause health.Cause, killer entity.Entit
 	v, _ := g.vital.Get(id)
 	v.Status, v.Cause = health.Dead, cause
 	g.vital.Set(id, v)
+	g.fightOnDown(id) // social_fight.go
 	g.spawnCorpse(id)
 	g.dropRaiderGear(id)        // the weapon falls beside the body
 	g.forbidRaidBody(id)        // forbid.go: a raider's body starts forbidden
 	g.socialOnDeath(id, killer) // social_grief.go: relations, grief, killer opinion
+	g.bondsOnDeath(id)          // bonds.go: bonded animals lose their master
 	g.mourn(id)
 }
 

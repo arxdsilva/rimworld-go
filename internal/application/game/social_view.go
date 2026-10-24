@@ -58,6 +58,7 @@ func (g *Game) socialView(id entity.EntityID) (SocialView, bool) {
 			Other: uint64(o), Name: g.personName(o), Label: label, Status: g.personStatus(o),
 			OpinionTo: centiPoints(to), OpinionFrom: centiPoints(from),
 			TermsTo: termViews(termsTo), TermsFrom: termViews(termsFrom),
+			RomanceNote: g.romanceNote(id, o), // social_romance.go (M5)
 		}, strength})
 	}
 	slices.SortStableFunc(rows, func(a, b ranked) int {

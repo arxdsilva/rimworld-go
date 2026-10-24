@@ -1,15 +1,7 @@
 # Generated files the orphan check (orphan_assets_test.go, audio manifest test) lets through.
 # Format: <glob relative to assets/>  # reason      (path.Match globs; * does not cross '/')
 # Each line must still match a file, or the check fails.
-generated/ui/icons/capture.png  # ENG-003 pending renderer wiring (M8-M10)
-generated/ui/icons/arrest.png  # ENG-003 pending renderer wiring (M8-M10)
-generated/ui/icons/prisoner.png  # ENG-003 pending renderer wiring (M8-M10)
-generated/ui/icons/caravan.png  # ENG-003 pending renderer wiring (M8-M10)
 generated/ui/icons/history.png  # ENG-003 pending renderer wiring (M8-M10)
 generated/ui/icons/surgery.png  # ENG-003 pending renderer wiring (M8-M10)
-metadata/ui_icon/capture.yaml  # ENG-003 pending renderer wiring (M8-M10)
-metadata/ui_icon/arrest.yaml  # ENG-003 pending renderer wiring (M8-M10)
-metadata/ui_icon/prisoner.yaml  # ENG-003 pending renderer wiring (M8-M10)
-metadata/ui_icon/caravan.yaml  # ENG-003 pending renderer wiring (M8-M10)
 metadata/ui_icon/history.yaml  # ENG-003 pending renderer wiring (M8-M10)
 metadata/ui_icon/surgery.yaml  # ENG-003 pending renderer wiring (M8-M10)

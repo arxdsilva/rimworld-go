@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"strings"
 
+	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/pawn/drug"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
@@ -12,17 +13,23 @@ import (
 // The Assign tab (MAIN_UI_SCREENS §21, ENG-003 M2): one row per living
 // colonist with its drug policy. A click cycles the policy (no drugs,
 // social drinking, unrestricted) and emits SetDrugPolicy; the window only
-// reads the policy back. Food, apparel, medical and area columns come with
-// their systems.
+// reads the policy back. The Area column cycles the allowed area
+// (AssignArea). Food, apparel and medical columns come with their systems.
 
 const (
 	assignModalID = "colony.assign"
-	assignW       = 560
+	assignW       = 720
 	assignH       = 480
 	assignRowH    = 30
 	assignNameW   = 220
 	assignHeadH   = 24
+	assignDrugW   = 200
+	assignAreaW   = 160
 )
+
+const assignAreaTip = "Allowed area\n" +
+	"Where the colonist may go: work, meals and free time outside it are left alone. " +
+	"Drafted colonists, direct orders, sleep and medical care ignore it. A click cycles the areas."
 
 // assignPresets is the cycle order of the drug policy button.
 var assignPresets = []drug.Preset{drug.NoDrugs, drug.SocialDrinking, drug.Unrestricted}
@@ -77,11 +84,15 @@ type assignRow struct {
 	name   string
 	policy drug.Preset
 	known  bool // the simulation reports policies
+	area   int  // allowed area, -1 unrestricted
+	areaOK bool // the simulation reports areas
 }
 
-// assignRows lists the living colonists and their drug policies.
+// assignRows lists the living colonists and their drug policies (and
+// allowed areas).
 func (a *App) assignRows() []assignRow {
 	rd, known := a.renderer.game.(drugPolicyReader)
+	ar, areaOK := a.renderer.game.(areaReader)
 	var out []assignRow
 	for _, p := range a.renderer.snapshot() {
 		if p.Status == "dead" {
@@ -90,6 +101,10 @@ func (a *App) assignRows() []assignRow {
 		r := assignRow{id: p.ID, name: pawnLabel(p), known: known}
 		if known {
 			r.policy = drug.Preset(rd.DrugPolicy(p.ID))
+		}
+		r.area, r.areaOK = -1, areaOK
+		if areaOK {
+			r.area = ar.AreaOf(p.ID)
 		}
 		out = append(out, r)
 	}
@@ -126,6 +141,14 @@ func (a *App) assignBody(body rect) {
 	a.uiLabel(head.X, head.Y, "Colonist", hs)
 	a.uiLabel(head.X+assignNameW, head.Y, "Drugs", hs)
 	a.uiTip("assign.head.drugs", rect{head.X + assignNameW, head.Y, 120, head.H}, assignDrugTip)
+	areaX := head.X + assignNameW + assignDrugW + 12
+	a.uiLabel(areaX, head.Y, "Area", hs)
+	a.uiTip("assign.head.area", rect{areaX, head.Y, 60, head.H}, assignAreaTip)
+	if a.uiButton("assign.areas", rect{head.right() - 120, head.Y - 2, 120, head.H}, "Manage areas",
+		btnOpts{Tip: "Allowed areas\nMake, rename and pick the areas the Architect paints."}) {
+		a.openAreas() // areas_ui.go
+	}
+	areas := a.renderer.game.Areas()
 	rows := a.assignRows()
 	if len(rows) == 0 {
 		a.uiLabel(rest.X, rest.Y+6, "No colonists.", dimText())
@@ -140,7 +163,8 @@ func (a *App) assignBody(body rect) {
 			continue // outside the view: no widgets
 		}
 		a.uiLabel(rr.X, rr.Y+(rr.H-float32(lineH(tsBody)))/2, ellipsize(r.name, tsBody, assignNameW-12), tsBody)
-		br := rect{rr.X + assignNameW, rr.Y, min(200, rr.W-assignNameW), rr.H}
+		a.assignAreaButton(r, rect{rr.X + assignNameW + assignDrugW + 12, rr.Y, assignAreaW, rr.H}, areas)
+		br := rect{rr.X + assignNameW, rr.Y, min(assignDrugW, rr.W-assignNameW), rr.H}
 		id := assignDrugID(r.id)
 		if !r.known {
 			a.uiButton(id, br, "-", btnOpts{Disabled: true, Reason: "Drug policies are not available in this game."})
@@ -155,4 +179,20 @@ func (a *App) assignBody(body rect) {
 // assignDrugID is a colonist's drug policy button id.
 func assignDrugID(id entity.EntityID) string {
 	return "assign.drug." + strconv.FormatUint(uint64(id), 10)
+}
+
+// assignAreaButton is a colonist's allowed-area button: a click cycles
+// unrestricted and the areas, emitting AssignArea.
+func (a *App) assignAreaButton(r assignRow, br rect, areas []game.AreaView) {
+	id := "assign.area." + strconv.FormatUint(uint64(r.id), 10)
+	switch {
+	case !r.areaOK:
+		a.uiButton(id, br, "-", btnOpts{Disabled: true, Reason: "Allowed areas are not available in this game."})
+	case len(areas) == 0:
+		a.uiButton(id, br, "Unrestricted", btnOpts{Disabled: true, Reason: areasEmpty})
+	default:
+		if a.uiButton(id, br, ellipsize(areaLabel(areas, r.area), tsBody, float64(br.W-12)), btnOpts{Tip: assignAreaTip}) {
+			a.renderer.enqueue(command.Command{Kind: command.AssignArea, Pawn: uint64(r.id), Index: nextArea(areas, r.area)})
+		}
+	}
 }

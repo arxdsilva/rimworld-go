@@ -153,7 +153,7 @@ func (g *Game) pathQuery(id entity.EntityID) pathing.Query {
 	case g.isRaider(id):
 		return g.hostileMap()
 	}
-	return g.grid
+	return g.areaPathQuery(id, g.grid) // areas.go: a restricted pawn keeps to its area
 }
 
 // doorAt reports a built door on (x, y).

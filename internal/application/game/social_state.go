@@ -94,6 +94,7 @@ type socialState struct {
 	// signature change. Both only key the cache (never saved).
 	relVer uint64
 	sigVer map[entity.EntityID]uint64
+	gath   *gatherState // gatherings and lovin' (gathering.go, M5); nil: none
 }
 
 func newSocial() *socialState {
@@ -468,6 +469,7 @@ type socialSave struct {
 	Next    []tickSave
 	Mood    []moodSave
 	Logs    []logSave
+	Gather  *gatherSave // M5: gatherings, retries, lovin' cooldowns (nil: none)
 }
 
 type edgeSave struct {
@@ -542,7 +544,8 @@ func (g *Game) exportSocial() *socialSave {
 			out.Logs = append(out.Logs, logSave{id, slices.Clone(l)})
 		}
 	}
-	if len(out.Edges) == 0 && len(out.Sigs) == 0 && len(out.Next) == 0 && len(out.Mood) == 0 && len(out.Logs) == 0 {
+	out.Gather = s.gath.export() // gathering.go
+	if len(out.Edges) == 0 && len(out.Sigs) == 0 && len(out.Next) == 0 && len(out.Mood) == 0 && len(out.Logs) == 0 && out.Gather == nil {
 		return nil
 	}
 	return out
@@ -584,4 +587,5 @@ func (g *Game) importSocial(in *socialSave) {
 	for _, x := range in.Logs {
 		s.logs[x.ID] = x.Entries
 	}
+	g.importGather(in.Gather) // gathering.go
 }

@@ -255,6 +255,9 @@ func (g *Game) setupTick(now uint64) {
 // the loss at the day rollover.
 func (g *Game) checkLosses(now uint64) {
 	for _, id := range g.pawnIDs {
+		if g.isStashed(id) {
+			continue // world_stash.go: away from the map, not lost
+		}
 		v, ok := g.vital.Get(id)
 		if !ok || v.Status != health.Dead || slices.Contains(g.ng.dead, id) {
 			continue

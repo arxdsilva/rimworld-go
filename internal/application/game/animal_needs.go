@@ -155,6 +155,7 @@ func nextDecide(id entity.EntityID, now uint64) uint64 {
 // wander. Fleeing, fighting and leaving animals never get here.
 func (g *Game) decideAnimal(id entity.EntityID, a *animal.State, pos Position, now uint64) {
 	a.NextDecide = nextDecide(id, now)
+	g.bondDecide(id, a, pos, now) // bonds.go: healing and the proximity bond, tame animals only
 	if animal.NeedsFree(a.Species) || a.Enraged(now) {
 		return
 	}
@@ -257,8 +258,14 @@ func (g *Game) startLeaving(id entity.EntityID, x, y int) {
 	g.animals.Set(id, a)
 }
 
-// leaveMap removes an animal that walked off the map.
-func (g *Game) leaveMap(id entity.EntityID) { g.removeAnimal(id) }
+// leaveMap removes an animal that walked off the map (a tame one is lost
+// to its bonded colonist).
+func (g *Game) leaveMap(id entity.EntityID) {
+	if a := g.animals.Ref(id); a != nil && a.Tame {
+		g.onAnimalLost(id) // bonds.go
+	}
+	g.removeAnimal(id)
+}
 
 // badlyHurt: below animal.BadlyHurt percent of its hit points.
 func badlyHurt(a animal.State) bool {

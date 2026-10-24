@@ -46,6 +46,7 @@ func buildAlerts(pawns []game.PawnView, w game.WorldView) []alert {
 	colonists := pawns[:0:0]
 	for _, p := range pawns {
 		switch {
+		case p.Prisoner:
 		case !p.Hostile:
 			colonists = append(colonists, p)
 		case !p.Lying && !p.Fleeing:

@@ -80,6 +80,8 @@ func (a *App) handleTabKeys() {
 		a.applyClick("tab.research")
 	case f.fired(input.TabAssign):
 		a.toggleAssign()
+	case f.fired(input.TabWorld):
+		a.toggleWorld() // world_ui.go
 	case f.fired(input.TabHistory):
 		if a.uiModalTop() == historyModalID {
 			a.uiCloseTop()

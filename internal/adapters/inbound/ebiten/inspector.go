@@ -50,9 +50,10 @@ func (a *App) inspectorButtons() []button {
 	if p, ok := a.selectedPawn(); ok && !hasBio(p) {
 		bio.disabled, bio.reason, bio.selected = true, "No biography for this colonist", false
 	}
+	prisonerTab, prisonerOn := a.prisonerTabSpec() // prisoner_ui.go
 	tabs := []buttonSpec{
 		{id: "inspector.character", label: "Character", selected: a.inspectTab != "needs" && a.inspectTab != "gear" && a.inspectTab != "log" &&
-			a.inspectTab != "health" && a.inspectTab != "social" && !bioOn, w: tabW("Character"), h: 22},
+			a.inspectTab != "health" && a.inspectTab != "social" && !bioOn && !(prisonerOn && a.inspectTab == "prisoner"), w: tabW("Character"), h: 22},
 		{id: "inspector.needs", label: "Needs", selected: a.inspectTab == "needs", w: tabW("Needs"), h: 22},
 		bio,
 		{id: "inspector.health", label: "Health", selected: a.inspectTab == "health", w: tabW("Health"), h: 22},
@@ -60,10 +61,13 @@ func (a *App) inspectorButtons() []button {
 		{id: "inspector.gear", label: "Gear", selected: a.inspectTab == "gear", w: tabW("Gear"), h: 22},
 		{id: "inspector.log", label: "Log", selected: a.inspectTab == "log", w: tabW("Log"), h: 22},
 	}
+	if prisonerOn {
+		tabs[5] = prisonerTab // a prisoner, disarmed, has its Prisoner tab where Gear was
+	}
 	out := inspectorTabRow(r, tabs)
 	if p, ok := a.selectedPawn(); ok {
 		out = append(out, a.pawnActionBar(p, r)...)
-		if a.inspectTab == "gear" {
+		if a.inspectTab == "gear" && !prisonerOn {
 			out = append(out, a.equipNearbyButtons(p, r)...)
 		}
 	}
@@ -96,7 +100,7 @@ func (a *App) pawnActionBar(p game.PawnView, r button) []button {
 	case len(p.QueuedOrders) == 0:
 		clear.disabled, clear.reason = true, "no queued orders"
 	}
-	return []button{draft, clear}
+	return append([]button{draft, clear}, a.prisonerActions(p, r)...) // prisoner_ui.go: Capture / Arrest
 }
 
 const (
@@ -274,8 +278,8 @@ func (a *App) drawInspector(screen *ebiten.Image) {
 	}
 	r := inspectorRect()
 	drawPanel(screen, r.x, r.y, r.w, r.h)
-	if a.bioTabOn() || a.kitTabOn() {
-		// bio_ui.go and social_tabs_ui.go declare and paint the tab's
+	if a.bioTabOn() || a.kitTabOn() || a.prisonerTabOn() {
+		// bio_ui.go, social_tabs_ui.go and prisoner_ui.go declare and paint the tab's
 		// content with the widget kit.
 		mx, my := a.currentCursor()
 		a.drawButtons(screen, a.inspectorButtons(), mx, my)

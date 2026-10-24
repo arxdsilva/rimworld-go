@@ -134,7 +134,7 @@ var defs = []Def{
 	{ID: TabWildlife, Label: "Wildlife", Category: "Tabs", Context: CtxGlobal, Kind: Toggle, Defaults: keys("F5")},
 	{ID: TabResearch, Label: "Research", Category: "Tabs", Context: CtxGlobal, Kind: Toggle, Defaults: keys("F6")},
 	{ID: TabQuests, Label: "Quests", Category: "Tabs", Context: CtxGlobal, Kind: Toggle, Defaults: keys("F7"), Reserved: NotYet},
-	{ID: TabWorld, Label: "World", Category: "Tabs", Context: CtxGlobal, Kind: Toggle, Defaults: keys("F8"), Reserved: NotYet},
+	{ID: TabWorld, Label: "World", Category: "Tabs", Context: CtxGlobal, Kind: Toggle, Defaults: keys("F8")},
 	{ID: TabHistory, Label: "History", Category: "Tabs", Context: CtxGlobal, Kind: Toggle, Defaults: keys("F9")},
 
 	{ID: Screenshot, Label: "Screenshot", Category: "View", Context: CtxGlobal, Defaults: keys("F10")},

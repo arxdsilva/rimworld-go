@@ -180,7 +180,15 @@ func TestFunctionKeysOpenTabs(t *testing.T) {
 	if a.uiModalTop() == historyModalID {
 		t.Fatal("F9 again closes History")
 	}
-	for _, k := range []string{"F7", "F8", "V", "T"} {
+	f.key(t, a, "F8", 0)
+	if a.uiModalTop() != worldModalID {
+		t.Fatalf("F8 should open World, top modal %q", a.uiModalTop())
+	}
+	f.key(t, a, "F8", 0)
+	if a.uiModalTop() == worldModalID {
+		t.Fatal("F8 again closes World")
+	}
+	for _, k := range []string{"F7", "V", "T"} {
 		f.key(t, a, k, 0)
 		ts := a.liveToasts()
 		if len(ts) == 0 || !strings.Contains(ts[len(ts)-1].text, input.NotYet) {

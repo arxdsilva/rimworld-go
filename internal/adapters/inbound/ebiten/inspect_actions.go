@@ -32,7 +32,7 @@ func (a *App) colonistActions(tx, ty int, match func(game.OrderOption) bool) []c
 	}
 	var out []colonistAction
 	for _, p := range a.renderer.snapshot() {
-		if p.Hostile || p.Embodied || p.Status != "alive" {
+		if p.Hostile || p.Prisoner || p.Embodied || p.Status != "alive" {
 			continue
 		}
 		for _, o := range a.renderer.game.OrdersAt(p.ID, tx, ty) {

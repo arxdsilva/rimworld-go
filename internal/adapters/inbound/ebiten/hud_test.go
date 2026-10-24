@@ -66,15 +66,17 @@ func TestWorkTabOpensOverlay(t *testing.T) {
 func TestDisabledTabsDoNotNavigate(t *testing.T) {
 	t.Parallel()
 	a, _, _ := liveColony(t, 0)
-	click(t, a, "tab.world")
-	if a.workOpen || a.archOpen {
-		t.Fatal("disabled World tab opened a colony overlay")
+	// the World tab is live now (ENG-003 M9): Factions is the one tab a
+	// legacy colony still has disabled
+	click(t, a, "tab.factions")
+	if a.workOpen || a.archOpen || a.uiModalOpen() {
+		t.Fatal("disabled Factions tab opened something")
 	}
 	if a.nav.screen() != screenColony || a.nav.overlay() != overlayNone {
 		t.Fatalf("disabled tab navigated to %s/%s", a.nav.screen(), a.nav.overlay())
 	}
-	if a.hint != "not implemented" {
-		t.Fatalf("hint = %q, want not implemented", a.hint)
+	if a.hint != "no other peoples in this colony" {
+		t.Fatalf("hint = %q, want the no-peoples reason", a.hint)
 	}
 }
 

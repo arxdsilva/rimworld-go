@@ -31,7 +31,7 @@ var hudTabSpecs = []struct {
 	{"tab.assign", "Assign", true, input.TabAssign},
 	{"tab.animals", "Animals", true, input.TabAnimals},
 	{"tab.research", "Research", true, input.TabResearch},
-	{"tab.world", "World", false, input.TabWorld},
+	{"tab.world", "World", true, input.TabWorld},
 	{"tab.history", "History", true, input.TabHistory},
 	{"tab.factions", "Factions", true, ""},
 	{"tab.menu", "Menu", true, input.Cancel},
@@ -123,7 +123,7 @@ func (a *App) colonistBarButtons(sw, sh int) []button {
 	if a.renderer == nil {
 		return nil
 	}
-	pawns := a.renderer.snapshot()
+	pawns := a.barPawns()
 	y := hudBarY(sh)
 	out := make([]button, 0, len(pawns))
 	for i, p := range pawns {
@@ -217,7 +217,8 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 	a.drawGroupInspector(screen)
 	a.drawGizmoKeys(screen) // gizmo.go
 	a.drawAlerts(screen, sw)
-	a.drawStatusChips(screen, sw) // status_chips.go: heat wave, cold snap, conditions
+	a.drawGatheringBanner(screen, sw) // gathering_ui.go (ENG-003)
+	a.drawStatusChips(screen, sw)     // status_chips.go: heat wave, cold snap, conditions
 	a.drawArchitect(screen)
 	if a.workOpen {
 		a.drawWork(screen, sw, sh)
@@ -230,8 +231,26 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 	a.drawSearch(screen, sw)        // search_ui.go
 }
 
-func (a *App) drawColonistPortraits(screen *ebiten.Image, sh int) {
+// barPawns are the colonists the colonist bar shows: everyone but
+// prisoners (who stay selectable on the map).
+func (a *App) barPawns() []game.PawnView {
 	pawns := a.renderer.snapshot()
+	for i, p := range pawns {
+		if p.Prisoner {
+			out := append(make([]game.PawnView, 0, len(pawns)), pawns[:i]...)
+			for _, q := range pawns[i+1:] {
+				if !q.Prisoner {
+					out = append(out, q)
+				}
+			}
+			return out
+		}
+	}
+	return pawns
+}
+
+func (a *App) drawColonistPortraits(screen *ebiten.Image, sh int) {
+	pawns := a.barPawns()
 	y := float64(hudBarY(sh) + 6)
 	for i, p := range pawns {
 		x := float64(hudPad + i*barSlot + 6)

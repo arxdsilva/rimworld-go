@@ -40,6 +40,14 @@ type raiderState struct {
 	// Arrived is when the raider came onto the map: after raiderGiveUp
 	// it gives up and goes home.
 	Arrived uint64
+	// The colony's prisoners (prisoners.go, M8) stay on this list, out of
+	// the raid AI. Leaving: released, walking off the map (since Idle).
+	// Hungry: the food band (prisonerFoodLow..prisonerFoodFed) wants a
+	// meal brought, not before FoodRetry. Warden: who last visited.
+	Leaving   bool
+	Hungry    bool
+	FoodRetry uint64
+	Warden    entity.EntityID
 }
 
 type raidGroup struct {
@@ -75,15 +83,18 @@ const (
 
 var raiderNames = []string{"Krell", "Vasha", "Dorn", "Mira", "Tobias", "Ilse", "Grit", "Sable", "Hask", "Rook", "Nessa", "Brann"}
 
+// isRaider reports a pawn of another faction on the map: raiders and the
+// colony's prisoners (they path like raiders, so doors hold them), not a
+// released prisoner walking out.
 func (g *Game) isRaider(id entity.EntityID) bool {
-	_, ok := g.raiders[id]
-	return ok
+	r, ok := g.raiders[id]
+	return ok && !r.Leaving
 }
 
-// standingRaider is a raider still on its feet.
+// standingRaider is a hostile raider still on its feet (never a prisoner).
 func (g *Game) standingRaider(id entity.EntityID) bool {
 	v, ok := g.vital.Get(id)
-	return ok && v.Status == health.Alive && g.isRaider(id)
+	return ok && v.Status == health.Alive && g.isRaider(id) && g.prisoners[id] == nil
 }
 
 // phaseThreats runs the storyteller and every raider.
@@ -335,6 +346,10 @@ func (g *Game) groupBroken(group int) bool {
 
 func (g *Game) thinkRaider(id entity.EntityID, now uint64) {
 	r := g.raiders[id]
+	if r.Leaving || g.prisoners[id] != nil {
+		g.thinkPrisoner(id, now) // prisoner_life.go: out of the raid AI
+		return
+	}
 	v, _ := g.vital.Get(id)
 	switch {
 	case v.Status == health.Dead:
@@ -351,7 +366,7 @@ func (g *Game) thinkRaider(id entity.EntityID, now uint64) {
 			pos, _ := g.positions.Get(id)
 			g.message(pos.X, pos.Y, "Raider %s is down.", g.name(id))
 		}
-		if now-r.Downed >= bleedOut {
+		if now-r.Downed >= bleedOut && !g.beingCaptured(id) { // a captive in the arms does not bleed out
 			g.die(id, health.CauseInjury)
 		}
 		return
@@ -522,6 +537,10 @@ func (g *Game) raiderAt(x, y int) entity.EntityID {
 func (g *Game) raiderViews() []PawnView {
 	out := make([]PawnView, 0, len(g.raiderIDs))
 	for _, id := range g.raiderIDs {
+		if g.prisoners[id] != nil || g.raiders[id].Leaving {
+			out = append(out, g.prisonerPawnView(id)) // prisoner_life.go
+			continue
+		}
 		pos, _ := g.positions.Get(id)
 		name, _ := g.names.Get(id)
 		j, _ := g.jobs.Get(id)
@@ -539,9 +558,13 @@ func (g *Game) raiderViews() []PawnView {
 	return out
 }
 
-// Raiders counts raiders on the map (standing ones and all).
+// Raiders counts raiders on the map (standing ones and all), not the
+// colony's prisoners.
 func (g *Game) Raiders() (standing, total int) {
 	for _, id := range g.raiderIDs {
+		if g.prisoners[id] != nil || g.raiders[id].Leaving {
+			continue
+		}
 		total++
 		if g.standingRaider(id) {
 			standing++

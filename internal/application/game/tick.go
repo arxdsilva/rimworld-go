@@ -541,6 +541,14 @@ func (g *Game) keepIdling(id entity.EntityID, idling job.Record) {
 func (g *Game) startJob(id entity.EntityID, rec job.Record) bool {
 	g.reserve.ReleaseOwner(id)
 	g.releaseDelivery(id) // a replaced delivery gives its shares back
+	// areas.go: a job outside the pawn's allowed area fails fast
+	if g.areaRejects(id, rec) {
+		g.rejectOutOfArea(id, rec)
+		return false
+	}
+	if g.areaBypass(id, rec) { // areas.go: a forced or exempt job paths anywhere
+		defer g.endAreaBypass()
+	}
 	if rec.Target != 0 && rec.Kind != job.Attack && rec.Kind != job.Sleep && !g.reserve.TryEntity(id, rec.Target) {
 		rec.State = job.Fail
 		rec.Fail = job.Reserved
@@ -706,7 +714,7 @@ func (g *Game) assignSleep(id entity.EntityID) {
 	bestD := 1 << 30
 	for _, bid := range g.bldgIDs {
 		b, ok := g.bldgs.Get(bid)
-		if !ok || !b.Kind.Sleeps() || !b.CanClaim(uint64(id)) {
+		if !ok || !b.Kind.Sleeps() || !b.CanClaim(uint64(id)) || b.ForPrisoners { // prison beds: prisoners only
 			continue
 		}
 		d := pathing.Dist(pos.X, pos.Y, b.X, b.Y)

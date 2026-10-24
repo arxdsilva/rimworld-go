@@ -282,6 +282,10 @@ func (g *Game) giveBirth(id entity.EntityID, a *animal.State, now uint64) {
 		if !ok {
 			break
 		}
+		if c, ok := g.animals.Get(cid); ok {
+			c.Mother = uint64(id)
+			g.animals.Set(cid, c)
+		}
 		g.logEvent(cid, logEntry{Kind: logBorn, Other: id, Name: animalLabel(*a)})
 		born++
 	}

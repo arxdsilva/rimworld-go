@@ -645,6 +645,9 @@ func (a *App) submitArchitect() {
 		}
 		for _, run := range runs {
 			c := command.Command{Kind: t.cmd, X: x0, Y: y0, X2: x1, Y2: y1, Enabled: t.enable}
+			if t.cmd == command.PaintArea {
+				c.Index = a.areaPaintIndex() // areas_ui.go: the area picked in the manager
+			}
 			if run.y >= 0 { // one oval row
 				c.X, c.Y, c.X2, c.Y2 = run.x0, run.y, run.x1, run.y
 			}

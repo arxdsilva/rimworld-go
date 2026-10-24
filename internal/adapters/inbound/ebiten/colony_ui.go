@@ -23,8 +23,11 @@ func (a *App) colonyUI(sw, sh int) {
 	}
 	a.factionsTabUI(sw, sh)
 	a.assignTabUI(sw, sh) // assign_ui.go: Assign tab (ENG-003)
+	a.gatheringUI(sw)     // gathering_ui.go: wedding/party banner (ENG-003)
 	a.bioUI()
-	a.socialTabsUI() // social_tabs_ui.go: Health and Social tabs (ENG-003)
+	a.socialTabsUI()     // social_tabs_ui.go: Health and Social tabs (ENG-003)
+	a.prisonerUI()       // prisoner_ui.go: Prisoner tab, Capture/Arrest (ENG-003)
+	a.worldTabUI(sw, sh) // world_ui.go: World tab, caravans (ENG-003)
 	a.workTipsUI(sw, sh)
 	a.statusChipsUI(sw)
 }

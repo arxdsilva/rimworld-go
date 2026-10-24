@@ -41,6 +41,9 @@ func (g *Game) mentalBreakTick(id entity.EntityID, j job.Record) bool {
 		g.startBreak(id)
 		return true
 	}
+	if b.kind == mentalbreak.SocialFight {
+		return g.fightTick(id, j, now) // social_fight.go: not a mood break, no catharsis
+	}
 	if now >= b.until {
 		delete(g.breaks, id)
 		g.logEvent(id, logEntry{Kind: logRecovered})

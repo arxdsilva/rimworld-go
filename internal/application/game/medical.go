@@ -68,7 +68,7 @@ func (g *Game) freeBedFor(patient entity.EntityID, from Position) (entity.Entity
 		if !ok || !b.Kind.Sleeps() {
 			continue
 		}
-		if !b.CanClaim(uint64(patient)) {
+		if !b.CanClaim(uint64(patient)) || b.ForPrisoners != g.isPrisoner(patient) {
 			continue
 		}
 		if owner, taken := g.reserve.EntityOwner(bid); taken && owner != patient {
@@ -95,16 +95,17 @@ func (g *Game) assignDoctor(id entity.EntityID) bool {
 		d   int
 	}
 	var best *cand
-	for _, pid := range g.pawnIDs {
+	consider := func(pid entity.EntityID) {
 		if pid == id || g.carriedBy(pid) != 0 {
-			continue
+			return
 		}
-		downed := g.injuredDowned(pid)
+		// prisoners are tended where they lie, never rescued to a colonist bed
+		downed := g.injuredDowned(pid) && !g.isPrisoner(pid)
 		if !downed && !(g.lyingForCare(pid) && g.needsTending(pid)) {
-			continue
+			return
 		}
 		if _, taken := g.reserve.EntityOwner(pid); taken {
-			continue
+			return
 		}
 		pp, _ := g.positions.Get(pid)
 		var rec job.Record
@@ -119,18 +120,26 @@ func (g *Game) assignDoctor(id entity.EntityID) bool {
 			rec = job.Record{Kind: job.Tend, Target: pid, WorkLeft: TendWork}
 		}
 		if pv, _ := g.vital.Get(pid); rec.Kind == job.Tend && !g.openInjury(pid, pv) && g.wounds[pid].Infection == 0 {
-			continue // exposure needs a bed, not a bandage
+			return // exposure needs a bed, not a bandage
 		}
 		if rec.Kind == job.None {
-			continue
+			return
 		}
 		sx, sy, ok := g.besideSpot(id, pp.X, pp.Y)
 		if !ok {
-			continue
+			return
 		}
 		rec.TX, rec.TY = sx, sy
 		if d := manhattan(pos.X, pos.Y, pp.X, pp.Y); best == nil || d < best.d {
 			best = &cand{rec, d}
+		}
+	}
+	for _, pid := range g.pawnIDs {
+		consider(pid)
+	}
+	for _, pid := range g.raiderIDs {
+		if g.isPrisoner(pid) {
+			consider(pid)
 		}
 	}
 	var rec job.Record

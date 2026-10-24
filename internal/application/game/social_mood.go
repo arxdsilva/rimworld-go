@@ -17,9 +17,48 @@ const (
 // socialThoughts are the social and host-system thoughts of pawn id
 // (partner, grief, drugs, bonds, body), appended in thoughts (ENG-003).
 // Grief, insults and kind words are ordinary memories and show already;
-// M5 adds the partner thoughts here.
+// M5 adds the partner thoughts: feelings for the main partner (opinion/10,
+// clamped to +-10) and sleeping alone while that partner is on the map.
 func (g *Game) socialThoughts(id entity.EntityID) []mood.Thought {
-	return nil
+	out := g.prisonerThoughts(id)            // prisoner_life.go
+	out = append(out, g.bondThoughts(id)...) // bonds.go
+	if g.soc == nil {
+		return out
+	}
+	p := g.partnerOf(id) // social_romance.go
+	if p == 0 {
+		return out
+	}
+	if v := partnerMood(g.opinion(id, p)); v != 0 {
+		out = append(out, mood.Thought{Kind: mood.PartnerOpinion, Label: mood.DefOf(mood.PartnerOpinion).Label, Value: v})
+	}
+	if g.sleptAlone(id, p) {
+		d := mood.DefOf(mood.SleptAlone)
+		out = append(out, mood.Thought{Kind: mood.SleptAlone, Label: d.Label, Value: d.Value})
+	}
+	return out
+}
+
+// partnerMood is the partner-opinion thought's value: the opinion (centi)
+// over ten, whole points, clamped to +-partnerMoodCap.
+func partnerMood(opinion int32) int {
+	return max(-partnerMoodCap, min(partnerMoodCap, int(opinion/1000)))
+}
+
+const partnerMoodCap = 10
+
+// sleptAlone reports id's last sleep was not in the bed its partner p
+// slept in, while p is on the map (beds.go keeps sleptAt per sleep).
+func (g *Game) sleptAlone(id, p entity.EntityID) bool {
+	if !g.onMap(p) || !g.onMap(id) {
+		return false
+	}
+	mine, ok := g.sleptAt[id]
+	if !ok {
+		return false // not slept yet
+	}
+	theirs, ok := g.sleptAt[p]
+	return !ok || mine == 0 || mine != theirs
 }
 
 // smoothedMood is the mood moodOf reports: target, approached gradually;

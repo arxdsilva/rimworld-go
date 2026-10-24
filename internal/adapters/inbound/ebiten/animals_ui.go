@@ -37,8 +37,10 @@ const (
 	colProduct = 432
 	colPreg    = 530
 	colHealth  = 600
-	colDoing   = 656
-	colBtn     = 820 // Slaughter, then Release
+	colMaster  = 652
+	colTrain   = 736
+	colDoing   = 856
+	colBtn     = 1040 // Slaughter, then Release
 )
 
 // Column x offsets of the Wild list.
@@ -243,13 +245,13 @@ func (a *App) drawAnimalsTab(screen *ebiten.Image, sw, sh int) {
 
 func (a *App) drawColonyList(screen *ebiten.Image, r button) {
 	x0, y0 := int(r.x), int(r.y)
-	drawFitSmall(screen, "Tame with Architect > Orders > Tame (hunters do it). Handle work tames, milks and shears; pens keep animals in place.", float64(x0+12), float64(y0+34), float64(colBtn-24), tsBody)
+	drawFitSmall(screen, "Tame with Architect > Orders > Tame (hunters do it). Handle work tames, trains, milks and shears; pens keep animals in place. Pick a master and training in the inspector.", float64(x0+12), float64(y0+34), float64(colBtn-24), tsBody)
 	head := y0 + animalsRowTop - 22
 	for _, h := range []struct {
 		x int
 		s string
 	}{{colName, "Name"}, {colSpecies, "Species"}, {colSex, "Sex"}, {colAge, "Age"}, {colFood, "Food"},
-		{colProduct, "Product"}, {colPreg, "Preg."}, {colHealth, "Health"}, {colDoing, "Doing"}} {
+		{colProduct, "Product"}, {colPreg, "Preg."}, {colHealth, "Health"}, {colMaster, "Master"}, {colTrain, "Training"}, {colDoing, "Doing"}} {
 		drawLabel(screen, x0+h.x, head, h.s)
 	}
 	list := a.tameAnimals()
@@ -269,7 +271,9 @@ func (a *App) drawColonyList(screen *ebiten.Image, r button) {
 		}
 		drawLabelClip(screen, x0+colProduct, ty, colPreg-colProduct-6, animalProductText(an))
 		drawLabelClip(screen, x0+colPreg, ty, colHealth-colPreg-6, animalPregCell(an))
-		drawLabelClip(screen, x0+colHealth, ty, colDoing-colHealth-6, fmt.Sprintf("%d%%", an.Health))
+		drawLabelClip(screen, x0+colHealth, ty, colMaster-colHealth-6, fmt.Sprintf("%d%%", an.Health))
+		drawLabelClip(screen, x0+colMaster, ty, colTrain-colMaster-6, animalMasterCell(an))
+		drawLabelClip(screen, x0+colTrain, ty, colDoing-colTrain-6, animalTrainingCell(an))
 		drawLabelClip(screen, x0+colDoing, ty, colBtn-colDoing-8, animalDoing(an))
 	}
 	if len(list) == 0 {
@@ -349,6 +353,29 @@ func animalPregCell(an game.AnimalView) string {
 		return "eggs"
 	}
 	return "-"
+}
+
+// animalMasterCell is the Colony list's Master column ("-": none).
+func animalMasterCell(an game.AnimalView) string {
+	if an.Master == "" {
+		return "-"
+	}
+	return an.Master
+}
+
+// animalTrainingCell is the Colony list's Training column: each skill
+// handlers train, with its steps ("Obedience 2/3, Guard 0/3"), or "-".
+func animalTrainingCell(an game.AnimalView) string {
+	var parts []string
+	for _, t := range an.Training {
+		if t.Allowed && (t.On || t.Steps > 0) {
+			parts = append(parts, fmt.Sprintf("%s %d/%d", t.Label, t.Steps, t.Needed))
+		}
+	}
+	if len(parts) == 0 {
+		return "-"
+	}
+	return strings.Join(parts, ", ")
 }
 
 // animalDoing is what the Colony list's last column says.
