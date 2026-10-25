@@ -282,16 +282,29 @@ func (g *Game) damageBuilding(id entity.EntityID, dmg int) {
 	if !ok || dmg <= 0 {
 		return
 	}
+	if b.Occupant != 0 {
+		g.openCasketGroup(id) // casket.go: harming a sealed casket opens its group
+		b, _ = g.bldgs.Get(id)
+	}
 	b.Damage += dmg
 	if b.HP() > 0 {
 		g.bldgs.Set(id, b)
 		return
 	}
 	g.message(b.X, b.Y, "The %s was smashed down.", b.Kind)
+	if construction.DefOf(b.Kind).Foundation {
+		g.collapseBridge(b) // bridge_remove.go: what it held up goes with it
+	}
 	g.removeBuilding(id)
+	if b.Ancient {
+		return // vault.go: an ancient piece leaves no blueprint to rebuild
+	}
 	// leave a blueprint to rebuild it, as it was (the salvage is set aside)
 	cells, _, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
 	for _, c := range cells {
+		if construction.DefOf(b.Kind).Foundation {
+			break // bridge_remove.go: what lies in the shallows stays there
+		}
 		g.clearItemsFrom(c[0], c[1], cells)
 	}
 	g.placeFrameStuff(b.Kind, b.Stuff, b.Facing, b.X, b.Y)

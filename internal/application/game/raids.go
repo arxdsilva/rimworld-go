@@ -113,6 +113,7 @@ func (g *Game) phaseThreats() {
 		g.thinkRaider(id, now)
 	}
 	g.raiderBuf = ids[:0]
+	g.vaultTick(now) // vault.go (MAPGEN-3): approach warnings, clearing
 }
 
 // scheduleThreats starts the storyteller (colonies, not bare test maps).

@@ -130,6 +130,9 @@ func (g *Game) planDelivery(id entity.EntityID, pos Position) (job.Record, []hau
 		if g.postponedFor(id, job.Haul, fid, 0, 0) {
 			continue // SIM-027: blocked on the way there lately
 		}
+		if g.deckOutOfReach(id, fr) {
+			continue // bridge.go: a span is fed from the shore, cell by cell
+		}
 		for i, k := range [2]item.Kind{fr.Stuff, item.Components} {
 			if needs[i] <= 0 {
 				continue

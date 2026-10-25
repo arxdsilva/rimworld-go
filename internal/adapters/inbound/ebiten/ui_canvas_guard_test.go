@@ -28,6 +28,8 @@ var canvasExempt = map[string]string{
 	"animal_figure.go":      "world: animal figures",
 	"burial_anim.go":        "world: corpses, graves, pyres",
 	"arrival_draw.go":       "world: drop-pod arrivals",
+	"bridge_draw.go":        "world: bridge water shadows and fallback deck",
+	"cave_plants_draw.go":   "world: the duskmoss glow discs",
 	"biome_art.go":          "world: biome terrain and fallbacks",
 	"blood_draw.go":         "world: blood batches",
 	"dirt_draw.go":          "world: dirt batches",

@@ -114,7 +114,7 @@ func buildingAt(w game.WorldView, x, y int) (game.BuildingView, bool) {
 		if x < b.X || y < b.Y || x >= b.X+bw || y >= b.Y+bh {
 			continue
 		}
-		if !b.Floor {
+		if !b.Floor && b.Kind != bridgeKind { // a floor or bridge: only when nothing stands on it
 			return b, true
 		}
 		floor, found = b, true
@@ -137,6 +137,12 @@ func (a *App) clearBuilding() { a.hasBuilding = false }
 func buildingTitle(b game.BuildingView) string {
 	if b.Ruin {
 		return ruinTitle(b)
+	}
+	if b.Kind == bridgeKind {
+		return "Wooden bridge"
+	}
+	if t := casketTitle(b); t != "" {
+		return t
 	}
 	if b.Kind == "carpet" && strings.HasSuffix(b.Stuff, " carpet") {
 		return strings.ToUpper(b.Stuff[:1]) + b.Stuff[1:] // "Straw carpet"
@@ -174,6 +180,7 @@ func (a *App) buildingButtons() []button {
 	out = append(out, a.moveCopyButtons(b, r)...)
 	out = append(out, a.troughButtons(b, r)...)
 	out = append(out, a.bedButtons(b, r)...)
+	out = append(out, a.casketButtons(b, r)...)
 	if !b.Bench {
 		return out
 	}
@@ -234,6 +241,14 @@ func (a *App) drawBuildingInspector(screen *ebiten.Image) {
 	}
 	if ln := carpetLine(b); ln != "" {
 		drawLabel(screen, int(r.x)+12, int(r.y)+46, ln)
+	}
+	if b.Kind == casketKind { // vault_draw.go: the Open casket button's icon
+		if img := a.icon("open_casket"); img != nil {
+			drawIcon(screen, img, float64(r.x)+12, float64(r.y)+72, 22)
+		}
+	}
+	if ln := bridgeLine(b); ln != "" {
+		drawFitSmall(screen, ln, float64(r.x)+12, float64(r.y)+46, float64(r.w)-24, tsBody)
 	}
 	if b.Bench {
 		drawText(screen, "Bills", float64(r.x)+12, float64(r.y)+44, tsLabel)
@@ -344,7 +359,7 @@ func (a *App) applyBuildingClick(id string) {
 			X2: b.X + max(b.W, 1) - 1, Y2: b.Y + max(b.H, 1) - 1})
 		return
 	}
-	if a.applyTroughClick(id, b) || a.applyBedClick(id, b) {
+	if a.applyTroughClick(id, b) || a.applyBedClick(id, b) || a.applyCasketClick(id, b) {
 		return
 	}
 	switch id {

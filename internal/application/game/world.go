@@ -96,7 +96,7 @@ func (g *Game) setTerrain(x, y int, t terrain.Type) {
 	g.clearGrass(x, y) // grass.go: only soil grows grass
 	g.markRoomsDirty()
 	g.roomTouch(x, y) // rooms_index.go: re-read this cell at the rebuild
-	g.grid.SetWalkable(x, y, t.Walkable() && g.layerBlockerAt(x, y) == 0)
+	g.grid.SetWalkable(x, y, g.cellWalkable(x, y))
 	g.fogOpen(x, y) // fog.go: mining may open into a hidden cave
 }
 
@@ -157,6 +157,8 @@ func (g *Game) spawnPlant(s plant.Species, x, y, growth int) (entity.EntityID, e
 	g.plants.Set(id, p)
 	g.notePlant(id, p) // indexes.go
 	g.plantsChanged()  // jobindex.go
+
+	g.plantLightChanged(s) // light.go: a glowing plant moves the light grid
 	return id, nil
 }
 
@@ -171,6 +173,9 @@ func (g *Game) SpawnPlantSpecies(species string, x, y, growth int) (entity.Entit
 }
 
 func (g *Game) removePlant(id entity.EntityID) {
+	if p, ok := g.plants.Get(id); ok {
+		g.plantLightChanged(p.Species) // light.go
+	}
 	g.plants.Delete(id)
 	g.plantIDs = dropIDs(g.plantIDs, func(pid entity.EntityID) bool { return pid == id })
 	g.plantsChanged() // jobindex.go

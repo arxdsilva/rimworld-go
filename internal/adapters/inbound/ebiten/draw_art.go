@@ -278,6 +278,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 		}
 	}
 	r.drawGroundCover(screen, w, sw, sh, tile)
+	r.drawFoundation(screen, w, sw, sh, tile) // bridge_draw.go: over the water, under floors
 	r.drawFloorLayers(screen, w, sw, sh, tile)
 	r.layer("zones")
 	r.drawZones(screen, w, sw, sh, tile) // zones_draw.go
@@ -414,6 +415,8 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	r.draws = draws[:0]
 	r.drawWorkGlow(screen, tile)
 	r.drawFires(screen, w, tile)
+	// cave_plants_draw.go: the duskmoss glow
+	r.drawDuskGlow(screen, w, tile)
 	if lt != lodMap { // no item sprites, so no counts either
 		r.drawStackCounts(screen, w, tile)
 	}
@@ -544,6 +547,9 @@ func (r *Renderer) drawBuildingObj(dst *ebiten.Image, b *game.BuildingView, tile
 			}
 		}
 		key := r.buildKey(b.Kind, b.Stuff, b.Facing, mask, doorAxisEW(b.Facing), open)
+		if b.Kind == casketKind {
+			key = casketSprite(*b) // vault_draw.go: closed or open
+		}
 		if b.Kind == troughKind {
 			key = troughKey(*b)
 			if !r.art.has(key) {
@@ -1185,7 +1191,9 @@ func cleanlinessNote(rm game.RoomView) string {
 
 // onFloor reports a building kind drawn flat in the floor-marking pass,
 // under pawns and furniture, not in the object pass.
-func onFloor(kind string) bool { return kind == "sleeping spot" || kind == "carpet" }
+func onFloor(kind string) bool {
+	return kind == "sleeping spot" || kind == "carpet" || kind == bridgeKind // a bridge: the foundation pass
+}
 
 // drawFloorLayers draws the ground under zones: built floors, then the
 // tracked-in dirt (dirt_draw.go, ART §16.3), then the blood and ichor

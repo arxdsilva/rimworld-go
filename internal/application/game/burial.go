@@ -196,7 +196,7 @@ func (g *Game) layInGrave(bid, cid entity.EntityID) {
 	g.deleteItem(cid)
 	cells, _, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
 	for _, c := range cells {
-		g.grid.SetWalkable(c[0], c[1], false)
+		g.grid.SetWalkable(c[0], c[1], g.cellWalkable(c[0], c[1])) // bridge.go: a filled grave blocks
 	}
 	for _, c := range cells {
 		g.ejectPawns(c[0], c[1])

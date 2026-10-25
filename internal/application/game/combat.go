@@ -202,6 +202,7 @@ func (g *Game) hurt(target entity.EntityID, dmg int, by entity.EntityID) {
 	if a, ok := g.animals.Get(target); ok {
 		a.Injury += dmg
 		a.Attacker = by
+		g.wakeDormant(&a) // vault.go: a hurt vault sleeper wakes
 		g.provoked(target, &a, by)
 		g.animalHurt(target, &a, by, now) // animal_needs.go: wakes it, then it fights back or runs
 		g.animals.Set(target, a)

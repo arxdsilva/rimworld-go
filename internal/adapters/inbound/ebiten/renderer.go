@@ -261,6 +261,8 @@ type Renderer struct {
 	cues []soundCue
 	// steamHeard is each vent's last burst already cued (features_draw.go).
 	steamHeard map[[2]int]uint64
+	caskets    casketMemo  // vault_draw.go: sealed state seen last frame
+	bridges    bridgeCache // bridge_draw.go: the foundation layer's cell set
 	memo       soundMemo
 	thunderAt  uint64
 	threatAt   uint64 // present frame of the newest threat

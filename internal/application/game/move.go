@@ -206,7 +206,7 @@ func (g *Game) completeMove(id entity.EntityID, fr construction.Frame) {
 	g.noteBuilding(bid) // indexes.go: it stands somewhere new
 	if blocks {
 		for _, c := range oldCells {
-			g.grid.SetWalkable(c[0], c[1], g.terr.At(c[0], c[1]).Walkable() && g.layerBlockerAt(c[0], c[1]) == 0)
+			g.grid.SetWalkable(c[0], c[1], g.cellWalkable(c[0], c[1]))
 			g.fogOpen(c[0], c[1]) // fog.go
 		}
 	}

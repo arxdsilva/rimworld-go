@@ -120,6 +120,11 @@ func kitTotals(t testing.TB, g *Game, s *Setup) map[item.Kind]int {
 			out[l.Kind] -= l.Qty
 		}
 	}
+	for _, v := range res.Vaults { // MAPGEN-3: a sealed vault's loot is no kit either
+		for _, l := range v.Loot {
+			out[l.Kind] -= l.Qty
+		}
+	}
 	for k, n := range out {
 		if item.IsChunk(k) || n == 0 {
 			delete(out, k)
@@ -464,7 +469,7 @@ func TestScenarioKitSpawned(t *testing.T) {
 	s := setupFor(t, "broken_hull", nil)
 	g := buildSetup(t, s)
 	stepUntilLanded(t, g)
-	tot := kitTotals(t, g, s) // without the ruins' loot
+	tot := kitTotals(t, g, s) // without the ruins' and vaults' loot
 	want := map[item.Kind]int{
 		item.Steel: 300 + 400, item.Silver: 600, item.Components: 20 + 6, item.Rifle: 2, item.Knife: 1,
 		item.IndustrialMedicine: 12, item.Wood: 200, item.Meal: 10, item.Food: 40 + 8,

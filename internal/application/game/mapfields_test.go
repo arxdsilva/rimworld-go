@@ -1,6 +1,7 @@
 package game
 
 import (
+	"rimworld-go/internal/domain/world/terrain"
 	"testing"
 
 	"rimworld-go/internal/domain/world/mapgen"
@@ -93,5 +94,15 @@ func TestMapFieldLayersLiveLayersFollowTheGame(t *testing.T) {
 	}
 	if fog.Classes[0] != 1 || fog.Classes[1] != 0 {
 		t.Fatalf("fog classes %v", fog.Classes[:2])
+	}
+}
+
+// MAPGEN-3: the terrain layer marks road bridges and sealed vaults over the
+// ground, after the terrain types.
+func TestTerrainLegendHasBridgesAndVaults(t *testing.T) {
+	l := terrainLegend()
+	n := len(terrain.Names())
+	if len(l) != n+2 || l[n].Label != "bridge" || l[n+1].Label != "sealed vault" {
+		t.Fatalf("legend tail %+v", l[n:])
 	}
 }

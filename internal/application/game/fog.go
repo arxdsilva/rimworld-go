@@ -116,6 +116,7 @@ func (g *Game) fogOpen(x, y int) {
 		g.message(x, y, caveMessage)
 	}
 	g.fogChanged()
+	g.vaultsRevealed() // vault.go (MAPGEN-3): a revealed vault is breached
 }
 
 // fogFlood reveals (sx, sy), then floods from it over hidden passable

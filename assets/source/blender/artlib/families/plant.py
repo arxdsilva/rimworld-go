@@ -290,6 +290,47 @@ def _moss_geo(v, stage):
         _top(r * 0.25)
 
 
+def _dusk_strand(name, x, y, az, length, h, r, mat, rng):
+    """Low wandering fibre: five short segments whose heading drifts, rising then settling."""
+    pts = [(x, y, 0.012)]
+    for i in range(1, 6):
+        az += rng.uniform(-0.8, 0.8)
+        step = length / 5
+        x, y = x + math.cos(az) * step, y + math.sin(az) * step * 0.8
+        pts.append((x, y, 0.012 + h * math.sin(math.pi * min(i / 5.0 * 0.9 + 0.1, 1.0)) * 0.9))
+    for k in range(5):
+        _limb("%s%d" % (name, k), pts[k], pts[k + 1], r * (1 - k * 0.14), r * (1 - (k + 1) * 0.14), mat, segs=5)
+    return pts[-1]
+
+
+def _duskmoss_geo(v, stage):
+    """Duskmoss: a charcoal root mass with low, tangled slate / grey-blue fibres wandering
+    outward under flat leafy lobes; dormant is greyer and flatter. No contour."""
+    rng = random.Random(3100 + v)
+    s = STAGE_S[stage]
+    dorm = stage == "dormant"
+    n = {"young": (8, 9, 8, 9)[v], "mature": (18, 17, 19, 18)[v], "dormant": (14, 13, 14, 15)[v]}[stage]
+    mats = (("pl_dusk_dormant", "pl_dusk_char", "pl_dusk_dormant") if dorm
+            else ("pl_dusk_slate", "pl_dusk_grey", "pl_dusk_teal", "pl_dusk_slate", "pl_dusk_char"))
+    S.blob("root", CX, CY, 0.0, 0.10 * s, "pl_dusk_char", seed=3120 + v, lumps=0.3, squash=0.5)
+    _top(0.06)
+    for k in range(n):
+        a = 2 * math.pi * k / n + rng.uniform(-0.4, 0.4)
+        r0 = rng.uniform(0.02, 0.06) * s
+        h = rng.uniform(0.04, 0.085) * s * (0.5 if dorm else 1.0)
+        end = _dusk_strand("ds%d_" % k, CX + math.cos(a) * r0, CY + math.sin(a) * r0 * 0.8, a,
+                           rng.uniform(0.22, 0.42) * s, h, 0.02, mats[k % len(mats)], rng)
+        _top(h + 0.02)
+        if k % 3 == 0:   # a leafy tuft at the fibre tip
+            S.blob("dt%d" % k, end[0], end[1], 0.0, 0.034 * s, mats[(k + 1) % len(mats)],
+                   seed=3140 + 7 * v + k, lumps=0.5, squash=0.22)
+    for k in range(4 if stage == "young" else 8):
+        a = rng.uniform(0, 2 * math.pi)
+        d = rng.uniform(0.05, 0.15) * s
+        S.blob("dl%d" % k, CX + math.cos(a) * d, CY + math.sin(a) * d * 0.8, 0.0, rng.uniform(0.06, 0.09) * s,
+               mats[(k + 2) % len(mats)], seed=3160 + 9 * v + k, lumps=0.4, squash=0.25)
+
+
 def _agave_geo(v, stage):
     rng = random.Random(2300 + v)
     s = STAGE_S[stage]
@@ -395,6 +436,7 @@ KINDS = {
     "healroot_wild": (_healroot_geo, ("young", "mature", "dormant"), 4, False),
     "bramble": (_bramble_geo, ("young", "mature", "dormant"), 4, False),
     "moss": (_moss_geo, ("young", "mature", "dormant"), 4, True),
+    "duskmoss": (_duskmoss_geo, ("young", "mature", "dormant"), 4, True),
     "agave": (_agave_geo, ("young", "mature", "dormant"), 4, False),
     "ball_cactus": (_ball_cactus_geo, ("young", "mature", "dormant"), 4, False),
     "elephant_ear": (_elephant_ear_geo, ("young", "mature", "dormant"), 4, False),

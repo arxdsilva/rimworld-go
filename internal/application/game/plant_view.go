@@ -47,6 +47,7 @@ func (g *Game) plantViews(out []PlantView) []PlantView {
 				ID: id, X: p.X, Y: p.Y, Designated: p.Designated, Harvestable: p.Harvestable(),
 				Species: p.Species.String(), Growth: p.Percent(), Stage: p.Stage(), Cut: p.Cut,
 			}
+			fillPlantLight(&pv, p) // plant_light.go (MAPGEN-3)
 		}
 		g.fillPlantWeather(&pv, p) // weather.go
 		if z, ok := g.zoneAt(p.X, p.Y); ok {

@@ -96,6 +96,23 @@ func (g *Game) generateMapFields() (*mapFieldCache, error) {
 	for i, t := range res.Terrain.Cells {
 		terr[i] = uint8(t)
 	}
+	// MAPGEN-3 features over the ground: road bridges and sealed vaults
+	// (classes after the terrain types, see terrainLegend).
+	nt := uint8(len(terrain.Names()))
+	for _, v := range res.Vaults {
+		for y := v.Y0; y <= v.Y1; y++ {
+			for x := v.X0; x <= v.X1; x++ {
+				if x >= 0 && y >= 0 && x < w && y < h {
+					terr[y*w+x] = nt + 1
+				}
+			}
+		}
+	}
+	for _, b := range res.Bridges {
+		if b.X >= 0 && b.Y >= 0 && b.X < w && b.Y < h {
+			terr[b.Y*w+b.X] = nt
+		}
+	}
 	start := scalar("Start score", f.StartScore)
 	start.Marks = [][2]int{{res.Start.X, res.Start.Y}}
 	return &mapFieldCache{layers: []MapFieldLayer{
@@ -146,7 +163,8 @@ func terrainLegend() []LegendEntry {
 		h := uint32(i+1) * 2654435761
 		out[i] = LegendEntry{n, [4]uint8{uint8(h >> 8), uint8(h >> 16), uint8(h >> 24), 255}}
 	}
-	return out
+	return append(out, LegendEntry{"bridge", [4]uint8{170, 120, 70, 255}},
+		LegendEntry{"sealed vault", [4]uint8{150, 90, 200, 255}})
 }
 
 func (g *Game) liveRoofLayer() MapFieldLayer {

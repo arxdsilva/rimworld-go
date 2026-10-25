@@ -154,7 +154,7 @@ func (g *Game) canPlaceStuffAt(k construction.Kind, stuff item.Kind, f construct
 	}
 	cells, spot, hasSpot := construction.Footprint(k, f, x, y)
 	for _, c := range cells {
-		if ok, r := g.canPlaceCell(k, c[0], c[1], swap != 0); !ok {
+		if ok, r := g.canPlaceCell(k, stuff, c[0], c[1], swap != 0); !ok {
 			return false, r
 		}
 	}
@@ -198,12 +198,13 @@ func (g *Game) isWorkSpot(x, y int) bool {
 
 // canPlace is the one-cell rule for a new piece of kind k at (x, y).
 func (g *Game) canPlace(k construction.Kind, x, y int) (bool, string) {
-	return g.canPlaceCell(k, x, y, false)
+	return g.canPlaceCell(k, noStuff, x, y, false)
 }
 
-// canPlaceCell is the one-cell rule; swap: the cell holds the piece an
-// in-place swap converts, so it is neither occupied nor blocked.
-func (g *Game) canPlaceCell(k construction.Kind, x, y int, swap bool) (bool, string) {
+// canPlaceCell is the one-cell rule for kind k in stuff (noStuff: its
+// default); swap: the cell holds the piece an in-place swap converts, so
+// it is neither occupied nor blocked.
+func (g *Game) canPlaceCell(k construction.Kind, stuff item.Kind, x, y int, swap bool) (bool, string) {
 	if !g.grid.InBounds(x, y) {
 		return false, ReasonOutside
 	}
@@ -216,7 +217,8 @@ func (g *Game) canPlaceCell(k construction.Kind, x, y int, swap bool) (bool, str
 	if g.naturalAt(x, y) { // setup_mapgen.go: nothing goes on a steam vent
 		return false, ReasonNatural
 	}
-	layer := construction.DefOf(k).Layer
+	def := construction.DefOf(k)
+	layer := def.Layer
 	rep := g.replaceTarget(k, x, y) // a door or gate may stand where a wall or fence does
 	if swap {
 		rep = g.layerBldgAt(x, y, layer) // the swapped piece stands here (PLAY-011)
@@ -230,10 +232,20 @@ func (g *Game) canPlaceCell(k construction.Kind, x, y int, swap bool) (bool, str
 	if terrain.IsRockWall(g.terr.At(x, y)) {
 		return false, ReasonRock
 	}
-	if ok, r := g.waterPlacement(x, y); !ok { // water.go: nothing is built on water, floors included
+	if def.Foundation { // bridge.go: a bridge goes over water, marsh or mud, never the sea
+		if ok, r := g.bridgePlacement(x, y); !ok {
+			return false, r
+		}
+	} else if ok, r := g.waterPlacement(x, y); !ok { // water.go: nothing but a bridge is built on water
+		return false, r
+	} else if ok, r := g.supportPlacement(k, stuff, x, y); !ok { // bridge.go: a deck holds light things only
 		return false, r
 	}
-	if layer == construction.LayerFloor {
+	if def.Foundation {
+		if g.layerBlockerAt(x, y) != 0 { // never under a standing wall
+			return false, ReasonBlocked
+		}
+	} else if layer == construction.LayerFloor {
 		// floors go under furniture, even benches that block the way, but
 		// never into a wall, a fence post or a grave (SIM-028)
 		if g.floorBarrierAt(x, y) {
@@ -539,6 +551,7 @@ func (g *Game) completeSwap(id entity.EntityID, fr construction.Frame, b constru
 	g.frameIDs = kept
 	old := b
 	b.Stuff, b.Damage, b.Ruin = fr.Stuff, 0, false // a rebuilt ruin is the colony's
+	b.Ancient = false                              // vault.go: so is a rebuilt vault piece
 	g.bldgs.Set(fr.Swaps, b)
 	g.markRoomsDirty() // stone walls change beauty and impressiveness
 	g.structVer++      // SIM-029: the tint changes
@@ -652,7 +665,7 @@ func (g *Game) CanPlaceStuff(kind, stuff string, x, y int) (bool, string) {
 	if same {
 		return false, ReasonSame
 	}
-	return g.canPlaceCell(k, x, y, swap != 0)
+	return g.canPlaceCell(k, s, x, y, swap != 0)
 }
 
 func (g *Game) placeFrameStuff(kind construction.Kind, stuff item.Kind, f construction.Facing, x, y int) {
@@ -748,9 +761,16 @@ func (g *Game) markDeconstruct(x1, y1, x2, y2 int, on bool) {
 		if on && g.graveFilled(id) {
 			continue // someone lies there (burial.go)
 		}
+		if on && g.bridgeInUse(b) {
+			g.refuseBridge(b) // bridge_remove.go: clear the deck first
+			continue
+		}
 		b.Deconstruct = on
 		if on {
 			b.WorkLeft = construction.DeconstructTicks(b.Kind)
+			if b.Occupant != 0 {
+				b.WorkLeft = casketOpenWork // casket.go: a sealed casket is opened first
+			}
 		}
 		g.bldgs.Set(id, b)
 		if !on {
@@ -771,7 +791,11 @@ func normalizeRect(x1, y1, x2, y2 int) (int, int, int, int) {
 
 // removeBuilding deletes a completed building, refunds wood and frees
 // its tile and bed claim.
-func (g *Game) removeBuilding(id entity.EntityID) {
+func (g *Game) removeBuilding(id entity.EntityID) { g.removeBuildingAs(id, true) }
+
+// removeBuildingAs is removeBuilding; refund false gives nothing back (a
+// piece lost with the bridge under it, bridge_remove.go).
+func (g *Game) removeBuildingAs(id entity.EntityID, refund bool) {
 	b, ok := g.bldgs.Get(id)
 	if !ok {
 		return
@@ -794,9 +818,12 @@ func (g *Game) removeBuilding(id entity.EntityID) {
 	if construction.DefOf(b.Kind).BlocksMove {
 		cells, _, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
 		for _, c := range cells {
-			g.grid.SetWalkable(c[0], c[1], g.terr.At(c[0], c[1]).Walkable())
+			g.grid.SetWalkable(c[0], c[1], g.cellWalkable(c[0], c[1]))
 			g.fogOpen(c[0], c[1]) // fog.go: a wall taken down may open a sealed room
 		}
+	}
+	if construction.DefOf(b.Kind).Foundation {
+		g.foundationGone(b) // bridge_remove.go: footing, creatures and loose things
 	}
 	delete(g.bills, id)
 	g.markRoomsDirty()
@@ -806,6 +833,9 @@ func (g *Game) removeBuilding(id entity.EntityID) {
 		if c != 0 {
 			delete(g.sleptAt, entity.EntityID(c))
 		}
+	}
+	if !refund {
+		return
 	}
 	if r := refundOf(b); r > 0 { // setup_mapgen.go: a ruin gives half
 		g.dropStack(refundStuff(b), r, b.X, b.Y)

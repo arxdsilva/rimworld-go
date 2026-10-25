@@ -379,9 +379,13 @@ func (g *Game) Save(w io.Writer, name string) error {
 	s.CleanQ, s.HomeVer = slices.Clone(g.filth.cleanQ), g.homeArea.ver
 	s.Plan = g.exportPlan() // plan.go
 	s.Fog = g.exportFog()   // fog.go (MAPGEN-2): nil without fog
+
+	s.Vaults = g.exportVaults() // vault.go (MAPGEN-3): nil without vaults
 	for id, e := range g.exposure {
 		s.Exposure[id] = [2]int{e.hypo, e.heat}
 	}
+	// bridge.go (MAPGEN-3): the sea bitset, nil without a sea
+	s.Ocean = g.exportOcean()
 	for id, q := range g.orderQueue {
 		for _, o := range q {
 			s.OrderQueue[id] = append(s.OrderQueue[id], savedOrder{Cmd: o.cmd, Label: o.label, RetryAt: o.retryAt, Tries: o.tries})
@@ -532,12 +536,15 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	setMap(&g.stains.dripN, s.StainDrip)
 	g.importPlan(s.Plan)            // plan.go: older saves have no marks
 	g.importFog(s.Fog)              // fog.go: older saves have no fog
+	g.importVaults(s.Vaults)        // vault.go: older saves have no vaults
 	g.importHome(s.Home, s.HomeVer) // home.go: an older save gets Home around its buildings
 	g.importDirt(s.Dirt, s.Carried) // filth.go
 	g.importCleanQ(s.CleanQ)        // filth.go: half-swept tiles stay queued
 	if !s.CleanWired {
 		g.wireCleaning() // clean.go: an older save switches cleaning on once
 	}
+	// bridge.go (MAPGEN-3): older saves have no sea
+	g.importOcean(s.Ocean)
 	g.seedGrass() // an older save: grass from terrain, bare under buildings
 	for id, e := range s.Exposure {
 		g.exposure[id] = exposureState{e[0], e[1]}

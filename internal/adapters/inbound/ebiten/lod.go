@@ -219,6 +219,8 @@ func (r *Renderer) bakeGround(dst *ebiten.Image, w *game.WorldView, x0, y0, x1, 
 					switch {
 					case b.Floor:
 						r.drawTile(dst, r.buildKey("floor", b.Stuff, "", 0, false, false), float64(b.X), float64(b.Y), tile, sw, sh, tintCS(r.stuffTint(b.Stuff)))
+					case b.Kind == bridgeKind:
+						r.drawBridgeCell(dst, *w, r.bridges.sync(*w), b, tile, sw, sh)
 					case b.Kind == "sleeping spot":
 						r.drawSprite(dst, buildSprite(b.Kind, b.Facing, 0, false, false), none, float64(b.X), float64(b.Y), tile, sw, sh)
 					case b.Kind == "carpet":
@@ -321,6 +323,7 @@ func plantMarkColor(p *game.PlantView) (color.RGBA, float64) {
 var wildMarkColors = map[string]color.RGBA{
 	"bramble":      {92, 84, 52, 255},
 	"moss":         {96, 118, 92, 255},
+	"duskmoss":     {70, 92, 140, 255},
 	"agave":        {80, 124, 112, 255},
 	"ball_cactus":  {88, 130, 80, 255},
 	"elephant_ear": {50, 110, 60, 255},

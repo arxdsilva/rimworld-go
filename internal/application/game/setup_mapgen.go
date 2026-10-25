@@ -50,9 +50,11 @@ func (g *Game) applySite(res mapgen.Result) {
 	if g.grid.InBounds(res.Start.X, res.Start.Y) {
 		g.ng.landing, g.ng.hasLanding = [2]int{res.Start.X, res.Start.Y}, true
 	}
+	g.applyBridges(res) // bridge_remove.go (MAPGEN-3): the sea mask and old road bridges
 	for _, r := range res.Ruins {
 		g.placeRuin(r)
 	}
+	g.placeVaults(res.Vaults) // vault.go (MAPGEN-3): sealed vaults and their sleepers
 	vs := g.ventStuff()
 	for _, v := range res.Vents {
 		g.placeGenerated(construction.Building{Kind: construction.SteamVent, Stuff: vs, X: v.X, Y: v.Y})
@@ -61,7 +63,7 @@ func (g *Game) applySite(res mapgen.Result) {
 		g.dropChunk(c)
 	}
 	for _, p := range res.Plants {
-		if g.layerBlockerAt(p.X, p.Y) != 0 || g.naturalAt(p.X, p.Y) {
+		if g.layerBlockerAt(p.X, p.Y) != 0 || g.naturalAt(p.X, p.Y) || g.bridged(p.X, p.Y) {
 			continue
 		}
 		_, _ = g.spawnPlant(p.Species, p.X, p.Y, p.Growth)
@@ -118,7 +120,8 @@ func (g *Game) dropChunk(c mapgen.ChunkSpawn) {
 
 // placeGenerated stands a finished map-feature building (no frame, no
 // Home, no bills): skipped when its footprint leaves the map, meets rock
-// or water, or its layer is already taken.
+// or water, or its layer is already taken. A foundation (a bridge) goes
+// over bridgeable ground instead (MAPGEN-3).
 func (g *Game) placeGenerated(b construction.Building) entity.EntityID {
 	def := construction.DefOf(b.Kind)
 	cells, _, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
@@ -126,7 +129,16 @@ func (g *Game) placeGenerated(b construction.Building) entity.EntityID {
 		return 0
 	}
 	for _, c := range cells {
-		if !g.grid.InBounds(c[0], c[1]) || !g.terr.At(c[0], c[1]).Walkable() || g.layerBldgAt(c[0], c[1], def.Layer) != 0 {
+		if !g.grid.InBounds(c[0], c[1]) || g.layerBldgAt(c[0], c[1], def.Layer) != 0 {
+			return 0
+		}
+		if def.Foundation { // bridge.go: over water, marsh or mud, never the sea
+			if ok, _ := g.bridgePlacement(c[0], c[1]); !ok {
+				return 0
+			}
+			continue
+		}
+		if !g.terr.At(c[0], c[1]).Walkable() {
 			return 0
 		}
 		if ok, _ := g.waterPlacement(c[0], c[1]); !ok {
@@ -141,8 +153,8 @@ func (g *Game) placeGenerated(b construction.Building) entity.EntityID {
 		if pid := g.plantAt(c[0], c[1]); pid != 0 && def.Layer != construction.LayerFloor {
 			g.removePlant(pid)
 		}
-		if def.BlocksMove {
-			g.grid.SetWalkable(c[0], c[1], false)
+		if def.BlocksMove || def.Foundation {
+			g.grid.SetWalkable(c[0], c[1], g.cellWalkable(c[0], c[1])) // bridge.go
 		}
 	}
 	g.markRoomsDirty()
@@ -223,9 +235,10 @@ func refundOf(b construction.Building) int {
 	return r
 }
 
-// notColonyPiece reports a building that is not the colony's: a ruin or
-// a natural feature (no wealth, no Home anchor, no repairs).
-func notColonyPiece(b construction.Building) bool { return b.Ruin || isNatural(b.Kind) }
+// notColonyPiece reports a building that is not the colony's: a ruin, an
+// ancient vault piece (MAPGEN-3) or a natural feature (no wealth, no Home
+// anchor, no repairs).
+func notColonyPiece(b construction.Building) bool { return b.Ruin || b.Ancient || isNatural(b.Kind) }
 
 // refuseNatural posts why a natural feature can't be deconstructed.
 func (g *Game) refuseNatural(b construction.Building) {

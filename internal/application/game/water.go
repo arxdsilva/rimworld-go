@@ -11,16 +11,17 @@ import (
 // ReasonWater is the placement refusal for any water cell in a footprint.
 const ReasonWater = "Can't build on water"
 
-// isWaterAt reports shallow or deep water on tile (x, y).
+// isWaterAt reports shallow or deep water on tile (x, y); a finished
+// bridge over it is dry footing (bridge.go, MAPGEN-3).
 func (g *Game) isWaterAt(x, y int) bool {
-	return g.grid.InBounds(x, y) && terrain.IsWater(g.terr.At(x, y))
+	return g.grid.InBounds(x, y) && terrain.IsWater(g.terr.At(x, y)) && !g.bridged(x, y)
 }
 
 // dryWalkable is a walkable tile that is not water: where things are
 // spawned, dropped and entered from (animals and raiders cross shallow
-// water on their way but never appear in it).
+// water on their way but never appear in it). A bridge deck is dry.
 func (g *Game) dryWalkable(x, y int) bool {
-	return g.grid.Walkable(x, y) && !terrain.IsWater(g.terr.At(x, y))
+	return g.grid.Walkable(x, y) && !g.isWaterAt(x, y)
 }
 
 // wadeWash is the dirt left on boots after a step through shallow water:
@@ -40,7 +41,7 @@ func (g *Game) stepGain(x, y, base int, grass bool) int {
 }
 
 // waterPlacement is the water rule of canPlace: ok is false, with
-// ReasonWater, for a water cell (shallow or deep).
+// ReasonWater, for a water cell (shallow or deep) with no bridge over it.
 func (g *Game) waterPlacement(x, y int) (bool, string) {
 	if g.isWaterAt(x, y) {
 		return false, ReasonWater

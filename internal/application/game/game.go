@@ -308,6 +308,12 @@ type BuildingView struct {
 	// filter ("plants", "meat", "any").
 	TroughFill, TroughCap int
 	TroughFilter          string
+	// Sleeper casket (MAPGEN-3, casket.go): Sealed while someone (or
+	// something) still sleeps inside; OpenReason why the Open order would
+	// be refused ("" when a colonist can reach it). A sealed casket marked
+	// Deconstruct is ordered opened.
+	Sealed     bool
+	OpenReason string
 }
 
 // PlantView is a wild plant.
@@ -324,6 +330,10 @@ type PlantView struct {
 	// Zone is the crop of the growing zone the plant stands in ("" when
 	// none).
 	Zone string
+	// Light needs (MAPGEN-3, plant_light.go): NeedsDark withers in light
+	// (duskmoss), NeedsLight grows only lit (moss); Withering is losing
+	// growth in the light now.
+	NeedsDark, NeedsLight, Withering bool
 }
 
 // WorldView is the non-pawn read model for HUD and the map.
@@ -577,6 +587,8 @@ type Game struct {
 	cabinets cabinetState
 	// vents: steam vent cells per structVer (vents.go), never saved.
 	vents ventCache
+	// light: the simulation's artificial light grid (light.go), never saved.
+	light lightGrid
 	// phaseObs: optional per-phase timing observer (phases.go); set only
 	// from cmd/* and benchmarks, never read by gameplay.
 	phaseObs PhaseObserver
@@ -606,6 +618,10 @@ type Game struct {
 	ng ng1State
 	// fog: unexplored tiles (fog.go, MAPGEN-2); zero: no fog.
 	fog fogState
+	// vaults: the sealed vaults' lifecycle (vault.go, MAPGEN-3); saved.
+	vaults []vaultSave
+	// br: bridges' open-sea bitset (bridge.go, MAPGEN-3); zero: no sea known.
+	br bridgeState
 	// mapFields caches the developer map-field layers (mapfields.go); never saved.
 	mapFields *mapFieldCache
 	// Social and host systems (ENG-003): each container is nil until its
@@ -1086,6 +1102,7 @@ func (g *Game) world() WorldView {
 		bv.MovingTo = g.movingTo(id) // move.go
 		g.fillSwapView(bv, id)       // placement.go: pending material change (PLAY-011)
 		bv.Ruin = b.Ruin             // MAPGEN-2: an abandoned piece
+		g.fillCasketView(bv, id, b)  // casket.go (MAPGEN-3)
 	}
 	w.Plants = g.plantViews(w.Plants) // plant_view.go
 	w.Landing[0], w.Landing[1] = g.landingSpot()

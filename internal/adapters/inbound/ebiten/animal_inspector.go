@@ -240,6 +240,9 @@ func (a *App) applyAnimalClick(id string) {
 // animalStateLine is what the animal is doing: "Feeding", or "Wild |
 // Wandering" for a wild one (the Mode when the sim gives no State).
 func (a *App) animalStateLine(an game.AnimalView) string {
+	if an.Dormant { // a sealed vault's sleeping defender
+		return "Dormant"
+	}
 	st := an.State
 	if st == "" {
 		st = an.Mode

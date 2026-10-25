@@ -1301,6 +1301,11 @@ func (g *Game) completeFrame(id entity.EntityID, fr construction.Frame) {
 		}
 		g.clearGrass(c[0], c[1]) // grass.go
 	}
+	if construction.DefOf(fr.Kind).Foundation {
+		for _, c := range cells {
+			g.grid.SetWalkable(c[0], c[1], g.cellWalkable(c[0], c[1])) // bridge.go: the deck is footing
+		}
+	}
 	if construction.DefOf(fr.Kind).BlocksMove {
 		for _, c := range cells {
 			g.grid.SetWalkable(c[0], c[1], false)
@@ -1319,6 +1324,14 @@ func (g *Game) doDeconstruct(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
+	if g.bridgeInUse(b) { // bridge_remove.go: something went up on the deck since the mark
+		b.Deconstruct = false
+		g.bldgs.Set(j.Target, b)
+		g.refuseBridge(b)
+		j.State, j.Fail = job.Fail, job.TargetGone
+		g.jobs.Set(id, j)
+		return
+	}
 	u := g.workProgress(id, skConstruction, true) // skills.go
 	if u == 0 {
 		g.jobs.Set(id, j)
@@ -1332,7 +1345,9 @@ func (g *Game) doDeconstruct(id entity.EntityID, j job.Record) {
 		return
 	}
 	g.reserve.ReleaseOwner(id)
-	g.removeBuilding(j.Target)
+	if !g.openedCasket(j.Target, b) { // casket.go: a sealed casket is opened, not taken down
+		g.removeBuilding(j.Target)
+	}
 	j.State = job.Complete
 	g.jobs.Set(id, j)
 }

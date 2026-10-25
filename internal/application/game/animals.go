@@ -69,6 +69,8 @@ type AnimalView struct {
 	Sleeping    bool
 	Leaving     bool
 	Herd        uint32
+	// Dormant (MAPGEN-3): a sealed vault's sleeping defender (vault.go).
+	Dormant bool
 	// ENG-003 (M10): the master's and bonded colonist's names and ids
 	// (tame animals), which training.Skill skills are learnt, and every
 	// skill's row (Training, in training.Skill order). Mother is the
@@ -163,6 +165,9 @@ func (g *Game) phaseAnimals() {
 		a, ok := g.animals.Get(id)
 		if !ok {
 			continue
+		}
+		if a.Dormant {
+			continue // vault.go: a sealed vault's sleeper neither thinks nor needs
 		}
 		if a.Cooldown > 0 {
 			a.Cooldown--
@@ -769,6 +774,7 @@ func (g *Game) animalViews() []AnimalView {
 		if s := g.chargeLine(a); s != "" {
 			av.State = s // action_view.go: "charging Ada"
 		}
+		fillDormantView(av, a)                   // vault.go: a sealed vault's sleeper
 		av.Log = g.logLines(id)                  // eventlog.go
 		g.fillAnimalBonds(av, id, a, now, young) // bond_views.go
 	}

@@ -100,8 +100,11 @@ func (g *Game) zoneable(kind zone.Kind, x, y int) bool {
 		return false
 	}
 	t := g.terr.At(x, y)
-	if terrain.IsRockWall(t) || terrain.IsWater(t) {
-		return false // no zone on rock or on water (NG-1 §5.6)
+	if terrain.IsRockWall(t) || g.isWaterAt(x, y) {
+		return false // no zone on rock or on water (NG-1 §5.6); a bridge deck is dry
+	}
+	if kind == zone.KindGrow && g.bridged(x, y) {
+		return false // bridge.go: nothing grows on a deck (stockpiles are fine)
 	}
 	return kind != zone.KindGrow || t.Fertility() > 0
 }

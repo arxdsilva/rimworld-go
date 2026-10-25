@@ -138,6 +138,78 @@ def _floor_wood():
     S.box("under", -1, -2, -0.08, 2, 1, -0.03, "bark", bevel=0.0)
 
 
+BRIDGE_PLANKS = ("bridge_plank_a", "bridge_plank_b", "bridge_plank_c", "bridge_plank_b", "bridge_plank_a")
+BEAM = 0.10
+
+
+def _bridge(mask):
+    """Timber foundation tile. Mask bits N=1 E=2 S=4 W=8 = sides open to water.
+    Boards run perpendicular to the walking direction (the axis that is NOT open):
+    open E/W only -> walk N-S -> boards run E-W; open N/S only -> boards run N-S;
+    corners / 0 / 15 -> E-W. Boards span the tile edge to edge, so tiles of the
+    same orientation continue each other; an edge beam caps each open side."""
+    ns, ew = bool(mask & 5), bool(mask & 10)
+    vertical = ns and not ew
+    rows = 5
+    for r in range(-1, rows + 1):
+        a0, a1 = r / rows, (r + 1) / rows
+        mat = BRIDGE_PLANKS[r % rows]
+        if vertical:
+            S.box("board", a0 + 0.006, -1 - EXT, -0.03, a1 - 0.006, EXT, -0.01, mat, bevel=0.01)
+        else:
+            S.box("board", -EXT, -a1 + 0.006, -0.03, 1 + EXT, -a0 - 0.006, -0.01, mat, bevel=0.01)
+    S.box("under", -EXT, -1 - EXT, -0.08, 1 + EXT, EXT, -0.03, "bridge_under", bevel=0.0)
+    for bit, (x0, y0, x1, y1) in ((1, (-EXT, -BEAM, 1 + EXT, 0.0)), (4, (-EXT, -1.0, 1 + EXT, -1.0 + BEAM)),
+                                  (8, (0.0, -1 - EXT, BEAM, EXT)), (2, (1.0 - BEAM, -1 - EXT, 1.0, EXT))):
+        if mask & bit:
+            S.box("beam", x0, y0, -0.04, x1, y1, 0.0, "bridge_beam", bevel=0.012)
+    # nail heads along the boards beside each open side
+    for bit, pts in ((1, [(0.2 * k + 0.1, -BEAM - 0.04) for k in range(5)]),
+                     (4, [(0.2 * k + 0.1, -1 + BEAM + 0.04) for k in range(5)]),
+                     (8, [(BEAM + 0.04, -0.2 * k - 0.1) for k in range(5)]),
+                     (2, [(1 - BEAM - 0.04, -0.2 * k - 0.1) for k in range(5)])):
+        if mask & bit:
+            for (x, y) in pts:
+                S.box("nail", x - 0.012, y - 0.012, -0.012, x + 0.012, y + 0.012, -0.004, "metal_dark", bevel=0.0)
+
+
+def _casket(open_):
+    """Sleeper casket, 1x2 (x 0..1, y -2..0), heavy metallic capsule: plinth, bevelled
+    shell with panel seams and rivets, frosted viewport, dim teal status light.
+    open_: lid slid toward the foot (south) and askew, showing the empty cradle."""
+    S.box("plinth", 0.06, -1.94, 0.0, 0.94, -0.06, 0.14, "metal_dark", bevel=0.03)
+    S.box("shell", 0.12, -1.88, 0.14, 0.88, -0.12, 0.54, "steel_dark", bevel=0.07, segments=2)
+    for y in (-0.55, -1.0, -1.45):   # horizontal panel seams across the shell
+        S.box("seam", 0.115, y - 0.012, 0.20, 0.885, y + 0.012, 0.50, "metal_dark", bevel=0.0)
+    for y in (-0.34, -1.66):          # riveted collars at head and foot
+        S.box("collar", 0.10, y - 0.05, 0.16, 0.90, y + 0.05, 0.44, "steel", bevel=0.02)
+        for x in (0.2, 0.8):
+            S.cyl("rivet", x, y, 0.016, 0.44, 0.465, "metal_dark", segs=6, bevel=0.0)
+    # control panel + dim status light on the head end, never covered by the lid
+    S.box("panel", 0.18, -0.46, 0.54, 0.82, -0.16, 0.58, "metal_dark", bevel=0.01)
+    for k in range(3):
+        S.box("key", 0.22 + 0.075 * k, -0.40, 0.58, 0.27 + 0.075 * k, -0.30, 0.595, "steel", bevel=0.004)
+    S.box("status", 0.62, -0.42, 0.58, 0.76, -0.30, 0.61, "casket_light", bevel=0.005)
+    if not open_:
+        S.box("lid", 0.17, -1.83, 0.54, 0.83, -0.52, 0.70, "steel", bevel=0.06, segments=2)
+        S.box("lid_ridge", 0.40, -1.78, 0.69, 0.60, -0.57, 0.73, "steel_dark", bevel=0.03)
+        S.box("view_frame", 0.27, -1.62, 0.70, 0.73, -0.76, 0.735, "metal_dark", bevel=0.015)
+        S.box("viewport", 0.31, -1.58, 0.735, 0.69, -0.80, 0.75, "casket_frost", bevel=0.01)
+    else:
+        # hollow shell: the cradle sits low between raised rails
+        S.box("cradle", 0.20, -1.80, 0.50, 0.80, -0.50, 0.58, "casket_cradle", bevel=0.05, segments=2)
+        S.box("cradle_head", 0.26, -0.98, 0.58, 0.74, -0.58, 0.64, "casket_cradle", bevel=0.05, segments=2)
+        for sx, x0 in ((-1, 0.14), (1, 0.80)):
+            S.box("rail%d" % sx, x0, -1.84, 0.54, x0 + 0.06, -0.52, 0.66, "steel", bevel=0.02)
+        # lid slid south over the foot half, resting a little askew
+        n0 = len(S.objects())
+        S.box("lid", 0.20, -2.16, 0.64, 0.86, -1.04, 0.80, "steel", bevel=0.06, segments=2)
+        S.box("lid_ridge", 0.43, -2.12, 0.79, 0.63, -1.08, 0.83, "steel_dark", bevel=0.03)
+        S.box("view_frame", 0.30, -1.90, 0.80, 0.76, -1.26, 0.835, "metal_dark", bevel=0.015)
+        S.box("viewport", 0.34, -1.86, 0.835, 0.72, -1.30, 0.85, "casket_frost", bevel=0.01)
+        _tilt(n0, (0.53, -1.6, 0.7), rz=-4)
+
+
 def _frame():
     # Construction scaffold (blueprint -> frame -> object, ART §12).
     for i, (x, y) in enumerate([(0.12, -0.12), (0.88, -0.12), (0.12, -0.88), (0.88, -0.88)]):
@@ -328,4 +400,16 @@ def build():
     out.append(_pod_shell())
     out.append(_steam_vent())
     out.extend(_wall_ruin_overlay(k) for k in range(3))
+    for mask in range(16):
+        _bridge(mask)
+        out.append(S.render_asset("structure", "bridge_%02d" % mask, zmax=0.0, margins=(0, 0, 0, 0),
+                                  outline=False, shadow=False,
+                                  extra={"tileable": True, "foundation": "bridge", "mask": mask,
+                                         "open_sides": [n for n, b in BITS if mask & b]}))
+    _casket(False)
+    out.append(S.render_asset("structure", "sleeper_casket_closed", footprint=(1, 2), zmax=0.76,
+                              extra={"building": "sleeper casket", "state": "closed"}))
+    _casket(True)
+    out.append(S.render_asset("structure", "sleeper_casket_open", footprint=(1, 2), zmax=0.86,
+                              extra={"building": "sleeper casket", "state": "open"}))
     return out

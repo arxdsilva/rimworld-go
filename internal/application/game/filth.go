@@ -186,7 +186,7 @@ func (g *Game) dirtStep(id entity.EntityID, to Position) {
 	t := g.treadAt(i)
 	nc := c
 	switch {
-	case g.terr.At(to.X, to.Y) == terrain.ShallowWater:
+	case g.terr.At(to.X, to.Y) == terrain.ShallowWater && t&treadFloor == 0: // a bridge deck stays dry
 		nc = wadeWash(c) // water.go: wading rinses the boots
 		g.remember(id, mood.Soaked)
 	case t&treadCatch != 0:
@@ -286,7 +286,7 @@ func (g *Game) rebuildFilth(grid []int, rooms int) {
 			continue
 		}
 		d := construction.DefOf(b.Kind)
-		if d.Layer != construction.LayerFloor && !d.Carpet {
+		if d.Layer != construction.LayerFloor && !d.Carpet && !d.Foundation { // a bridge deck walks like a floor
 			continue
 		}
 		cells, _, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)

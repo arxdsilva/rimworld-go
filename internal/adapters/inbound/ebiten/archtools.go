@@ -96,6 +96,8 @@ var archTools = []archTool{
 		desc: "Lets colonists through a wall. Faces along the wall by itself."},
 	{id: "floor", label: "Wood floor", category: "structure", icon: "floor", mode: placeFill, build: "floor",
 		desc: "Drag to cover an area. Furniture can stand on it."},
+	{id: "bridge", label: "Bridge", category: "structure", icon: "bridge", mode: placeFill, build: "bridge",
+		desc: "A wooden deck over water, marsh or mud. Holds light things only: no stone walls or floors. Drag to cover an area."},
 	{id: "bed", label: "Bed", category: "furniture", icon: "bed", mode: placeSingle, build: "bed",
 		desc: "A proper two-tile bed. Q/E rotates."},
 	{id: "double_bed", label: "Double bed", category: "furniture", icon: "double_bed", mode: placeSingle, build: "double bed",
@@ -285,6 +287,8 @@ func buildSprite(kind, facing string, mask int, ew, open bool) string {
 		return doorSprite("wood", ew, open)
 	case "floor":
 		return "structure/floor_wood"
+	case bridgeKind:
+		return bridgeKey(mask)
 	case "double bed":
 		return "furniture/bed_double_" + facingOr(facing)
 	case "bed":

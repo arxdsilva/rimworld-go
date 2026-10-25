@@ -87,10 +87,10 @@ func (g *Game) chunkPlants(cg chunk.Grid, c int, fn func(entity.EntityID, plant.
 // over the window that ends now.
 func (g *Game) growPlant(id entity.EntityID, p plant.Plant, now uint64, gp int, fp *frostPass) {
 	t := int(g.temperatureAt(p.X, p.Y))
-	if g.frostKills(id, p, t, fp) || p.Ripe() {
+	if g.frostKills(id, p, t, fp) || !g.lightGrows(id, &p, fp) || p.Ripe() { // plant_light.go (MAPGEN-3)
 		return
 	}
-	rate := plant.Rate(p.Species, g.terr.At(p.X, p.Y).Fertility())
+	rate := plant.Rate(p.Species, plant.Fertility(p.Species, g.terr.At(p.X, p.Y))) // stone feeds cave plants
 	rate = rate * plant.TempFactor(t) / 1000
 	if gp != 100 {
 		rate = rate * gp / 100
@@ -110,6 +110,8 @@ func (g *Game) frostKills(id entity.EntityID, p plant.Plant, t int, fp *frostPas
 	}
 	g.plants.Delete(id) // removePlant, with the list compacted by endFrostPass
 	g.plantsChanged()   // jobindex.go
+
+	g.plantLightChanged(p.Species) // light.go: a glowing plant gone
 	if fp.gone == nil {
 		fp.gone = map[entity.EntityID]bool{}
 	}

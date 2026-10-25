@@ -86,6 +86,7 @@ func plantLines(p game.PlantView) []string {
 	if p.Zone != "" {
 		out = append(out, "In a growing zone ("+capitalize(p.Zone)+")")
 	}
+	out = append(out, plantLightLines(p)...) // cave_plants_draw.go
 	if p.Designated {
 		out = append(out, "Marked to harvest")
 	}

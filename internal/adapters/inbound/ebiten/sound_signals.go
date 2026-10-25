@@ -74,6 +74,7 @@ type soundMemo struct {
 // tile's terrain changed (a cancelled mark is silent).
 func (r *Renderer) listenWorld(w game.WorldView, pawns []game.PawnView) {
 	m := &r.memo
+	r.listenCaskets(w) // vault_draw.go: a casket turning open
 	frames := make(map[entity.EntityID][2]int, len(w.Frames))
 	for _, f := range w.Frames {
 		frames[f.ID] = [2]int{f.X, f.Y}

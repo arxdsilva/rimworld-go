@@ -490,6 +490,9 @@ ICONS = {
     "party_spot": ("overlay", "party_spot"),
     "brewgrain": ("item", "brewgrain"),
     "ashleaf": ("item", "ashleaf"),
+    # MAPGEN-3
+    "bridge": ("structure", "bridge_10"),
+    "open_casket": ("structure", "sleeper_casket_open"),
 }
 ICON_PX = 128          # @2x of a 64 px icon
 ICON_PAD = 10

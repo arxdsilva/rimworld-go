@@ -99,7 +99,7 @@ type groundKeys struct {
 // groundPlants lists the ground plant species.
 var groundPlants = []string{
 	"bush", "berry_bush", "shrub", "reeds", "cactus", "bramble", "moss", "agave",
-	"ball_cactus", "healroot_wild", "elephant_ear", "fire_lily", "dandelion",
+	"ball_cactus", "healroot_wild", "elephant_ear", "fire_lily", "dandelion", "duskmoss",
 }
 
 // groundPick is the sprite key of ground plant p (hash h): dormant when
