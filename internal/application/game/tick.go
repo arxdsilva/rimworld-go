@@ -153,6 +153,8 @@ func (g *Game) applyOne(c command.Command) {
 		g.undesignate(c.Order, c.X, c.Y, c.X2, c.Y2)
 	case command.MoveBuilding:
 		g.moveBuilding(entity.EntityID(c.Target), construction.Facing(c.Facing), c.X, c.Y) // move.go
+	case command.DesignatePlan:
+		g.paintPlan(c.X, c.Y, c.X2, c.Y2, c.Enabled) // plan.go
 	case command.DesignateHome:
 		g.paintHome(c.X, c.Y, c.X2, c.Y2, c.Enabled) // home.go
 	}
@@ -1287,6 +1289,7 @@ func (g *Game) completeFrame(id entity.EntityID, fr construction.Frame) {
 	g.defaultBills(id, fr.Kind)
 	// bushes and crops under the footprint are cleared below
 	cells, _, _ := construction.Footprint(fr.Kind, fr.Facing, fr.X, fr.Y)
+	g.clearPlanFootprint(fr.Kind, cells) // plan.go
 	for _, c := range cells {
 		if pid := g.plantAt(c[0], c[1]); pid != 0 {
 			g.removePlant(pid)

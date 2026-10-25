@@ -207,6 +207,7 @@ func (g *Game) completeMove(id entity.EntityID, fr construction.Frame) {
 		}
 	}
 	cells, _, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
+	g.clearPlanFootprint(b.Kind, cells) // plan.go
 	for _, c := range cells {
 		if pid := g.plantAt(c[0], c[1]); pid != 0 {
 			g.removePlant(pid)

@@ -368,6 +368,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 	s.Dirt, s.Carried = g.exportDirt()
 	s.Home, s.CleanWired = g.exportHome(), true
 	s.CleanQ, s.HomeVer = slices.Clone(g.filth.cleanQ), g.homeArea.ver
+	s.Plan = g.exportPlan() // plan.go
 	for id, e := range g.exposure {
 		s.Exposure[id] = [2]int{e.hypo, e.heat}
 	}
@@ -518,6 +519,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	setMap(&g.troughs, s.Troughs)
 	g.importStains(s.Stains)
 	setMap(&g.stains.dripN, s.StainDrip)
+	g.importPlan(s.Plan)            // plan.go: older saves have no marks
 	g.importHome(s.Home, s.HomeVer) // home.go: an older save gets Home around its buildings
 	g.importDirt(s.Dirt, s.Carried) // filth.go
 	g.importCleanQ(s.CleanQ)        // filth.go: half-swept tiles stay queued

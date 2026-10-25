@@ -540,10 +540,11 @@ type Game struct {
 	// grass is the ground cover layer (grass.go, UI-011).
 	grass grassState
 	// stains are blood and ichor on the ground (stains.go, SIM-020).
-	stains   stainState
-	filth    filthState // tracked-in dirt (SIM-021, filth.go)
-	homeArea homeState  // the Home area (SIM-021, home.go)
-	roofx    roofIndex  // roof.go: derived plan index and roofed counts
+	stains    stainState
+	filth     filthState // tracked-in dirt (SIM-021, filth.go)
+	homeArea  homeState  // the Home area (SIM-021, home.go)
+	planMarks planState  // PLAY-012 plan marks (plan.go)
+	roofx     roofIndex  // roof.go: derived plan index and roofed counts
 	// residual: air temperature of cells of a freshly breached room.
 	residual    map[int]temperature.Temp
 	researchCur research.Project
@@ -1090,6 +1091,7 @@ func (g *Game) world() WorldView {
 	g.fillStainView(&w)    // stains.go
 	g.fillDirtView(&w)     // filth.go
 	g.fillHomeView(&w)     // home.go
+	g.fillPlanView(&w)     // plan.go
 	g.fillSetupView(&w)    // setup_view.go (NG-1)
 	now := uint64(g.clock.Now())
 	w.Hour = float64(now%clock.TicksPerDay) / clock.TicksPerHour
