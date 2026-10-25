@@ -25,3 +25,13 @@ func (g *Game) fireAt(x, y int) int {
 	}
 	return 0
 }
+
+// fireAvoidCost is the extra path cost (percent of a plain step) of
+// stepping onto (x, y) because of fire there. Stub: FIRE-JOBS fills it;
+// AREA-CORE wires it (with the area penalty) into the costed path query.
+func (g *Game) fireAvoidCost(x, y int) int {
+	if g.fireAt(x, y) > 0 {
+		return 1900
+	}
+	return 0
+}
