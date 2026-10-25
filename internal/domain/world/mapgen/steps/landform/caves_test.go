@@ -144,7 +144,7 @@ func TestTunnelShape(t *testing.T) {
 				branched = true
 			}
 			p0 := tu.pts[0]
-			if tu.level == 0 && (p0.w < 3.5 || p0.w > 5.5) {
+			if tu.level == 0 && (p0.w < widthLo || p0.w > widthHi) {
 				t.Fatalf("seed %d: start width %.2f", seed, p0.w)
 			}
 			if tu.level == 0 && tu.open {
@@ -176,14 +176,17 @@ func TestTunnelShape(t *testing.T) {
 	}
 }
 
-// Carved cells near a tunnel's start outnumber those near its end.
+// Carved cells near a tunnel's start outnumber those near its end. A
+// tunnel that ends where another one passes measures the junction, not
+// its own width, so those are left out.
 func TestTunnelCarvedWidthTapers(t *testing.T) {
 	wider := 0
 	total := 0
 	for seed := uint64(0); seed < 10; seed++ {
 		c := bigRock(seed, true)
-		for _, tu := range carve(c, c.Rand("caves")) {
-			if tu.level != 0 || len(tu.pts) < 25 {
+		trs := carve(c, c.Rand("caves"))
+		for k, tu := range trs {
+			if tu.level != 0 || len(tu.pts) < 25 || endsNearOther(trs, k, 8) {
 				continue
 			}
 			near := func(p tracePt) int {
@@ -209,6 +212,23 @@ func TestTunnelCarvedWidthTapers(t *testing.T) {
 	if total == 0 || float64(wider) < 0.75*float64(total) {
 		t.Fatalf("start wider than end in %d of %d tunnels", wider, total)
 	}
+}
+
+// endsNearOther reports whether tunnel k's last point lies within r of
+// another tunnel's path.
+func endsNearOther(trs []trace, k int, r float64) bool {
+	e := trs[k].pts[len(trs[k].pts)-1]
+	for j, o := range trs {
+		if j == k {
+			continue
+		}
+		for _, p := range o.pts {
+			if math.Hypot(p.x-e.x, p.y-e.y) <= r {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func TestCavesDeterministic(t *testing.T) {

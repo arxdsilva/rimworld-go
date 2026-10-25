@@ -33,11 +33,11 @@ func TestRockMaskThresholds(t *testing.T) {
 		}
 	}
 	n := float64(len(f.Elevation))
-	if s := float64(rough) / n; math.Abs(s-0.06) > 0.005 {
-		t.Fatalf("rough band share %.3f, want 0.06", s)
+	if s := float64(rough) / n; math.Abs(s-roughShare) > 0.005 {
+		t.Fatalf("rough band share %.3f, want %.2f", s, roughShare)
 	}
-	if s := float64(gravel) / n; math.Abs(s-0.08) > 0.005 {
-		t.Fatalf("gravel band share %.3f, want 0.08", s)
+	if s := float64(gravel) / n; math.Abs(s-gravelShare) > 0.005 {
+		t.Fatalf("gravel band share %.3f, want %.2f", s, gravelShare)
 	}
 }
 
