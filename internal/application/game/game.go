@@ -335,6 +335,10 @@ type PlantView struct {
 	// (duskmoss), NeedsLight grows only lit (moss); Withering is losing
 	// growth in the light now.
 	NeedsDark, NeedsLight, Withering bool
+	// Damage (PLAY-016) is cold or heat damage 0..100 (dies at 100);
+	// DamageKind "cold", "heat" or "".
+	Damage     int
+	DamageKind string
 }
 
 // WorldView is the non-pawn read model for HUD and the map.

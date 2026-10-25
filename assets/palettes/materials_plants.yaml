@@ -18,3 +18,22 @@ materials:
   pl_berry:     {light: "#7a76a8", base: "#5e5a8e", shadow: "#47446f"}
   pl_fire:      {light: "#e89448", base: "#d2742e", shadow: "#a85a22"}
   pl_dandelion: {light: "#f2e6a0", base: "#e4d27a", shadow: "#c2b05c"}
+  # Crops (PLAY-016, ART spec 9.3): cultivated greens a touch yellower than
+  # wild foliage; produce accents muted toward the grass palette (never
+  # more saturated than pl_fire / pl_dandelion).
+  pl_crop_leaf:    {light: "#89985c", base: "#7a894f", shadow: "#677543"}
+  pl_crop_deep:    {light: "#687a4b", base: "#5b6c40", shadow: "#4b5a35"}
+  pl_crop_stem:    {light: "#8f9a64", base: "#7f8a57", shadow: "#6b7549"}
+  pl_crop_silver:  {light: "#a7ae9a", base: "#949b86", shadow: "#7e8572"}
+  pl_crop_jade:    {light: "#a9bb84", base: "#97a974", shadow: "#829363"}
+  pl_crop_corn:    {light: "#e0c879", base: "#cdb262", shadow: "#ae954f"}
+  pl_crop_straw:   {light: "#d4bf84", base: "#c1aa6d", shadow: "#a38f5a"}
+  pl_crop_bronze:  {light: "#c29a5e", base: "#ab834b", shadow: "#8d6b3d"}
+  pl_crop_pumpkin: {light: "#d98a46", base: "#c47335", shadow: "#a05c2b"}
+  pl_crop_radish:  {light: "#c87068", base: "#b05a54", shadow: "#8f4744"}
+  pl_crop_cotton:  {light: "#f1e9d6", base: "#e3d9c2", shadow: "#c8bda5"}
+  pl_crop_bloom:   {light: "#dfe4ee", base: "#c9d0e0", shadow: "#a9b1c4"}
+  pl_crop_tuber:   {light: "#c9a76f", base: "#b4925c", shadow: "#97794b"}
+  pl_crop_pod:     {light: "#a3b07c", base: "#919e6b", shadow: "#7b875a"}
+  pl_crop_berry:   {light: "#8e4e63", base: "#763f52", shadow: "#5c3141"}
+  pl_crop_wilt:    {light: "#9c8a62", base: "#8a7853", shadow: "#736444"}

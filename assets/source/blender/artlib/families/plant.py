@@ -869,12 +869,25 @@ def build():
         for st in stages:
             for v in range(nv):
                 out.append(_ground(key, st, v))
+    # PLAY-016: crops restyled as units in crops_grain/crops_leafy; species
+    # not moved yet keep the legacy builders below until the lead deletes them
+    from . import crops_common, crops_grain, crops_leafy
+    unit = dict(crops_grain.BUILDERS)
+    unit.update(crops_leafy.BUILDERS)
     for sp in CROPS:
+        if sp in unit:
+            for st in crops_common.STAGES:
+                for v in range(crops_common.VARIANTS):
+                    out.append(crops_common.unit(sp, st, v, unit[sp]))
+            continue
         for st in STAGES:
             for v in range(3):
                 out.append(_crop(sp, st, v, "%s_%s_v%d" % (sp, st, v)))
     out.append(_crop("radish", "sown", 0, "crop_sown"))
     for sp in CROPS:
         for st in ("young", "mature", "harvestable"):
-            out.append(_crop(sp, st, 1, "%s_%s" % (sp, st)))
+            if sp in unit:
+                out.append(crops_common.unit(sp, st, 1, unit[sp], "%s_%s" % (sp, st)))
+            else:
+                out.append(_crop(sp, st, 1, "%s_%s" % (sp, st)))
     return out

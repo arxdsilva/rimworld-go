@@ -337,6 +337,50 @@ no contour; creatures and items stay readable on top.
   thing is there, easing over about 0.2 s (instant with Reduced
   Motion).
 
+### 9.3 Crops (normative, PLAY-016)
+
+Crops belong to the §9.1 family: Blender geometry from the
+`plant_base.py` primitives, the muted two-band palette (`pl_crop_*` in
+`assets/palettes/materials_plants.yaml`), no outline, no baked shadow,
+the bushes' light direction; low crops (lettuce, radish, potato, beans,
+ashleaf, healroot, every sprout and sown mark) carry flat normals so the
+renderer may mirror them.
+
+-   **Unit, not tile.** A crop sprite is one small plant about the size
+    of a grass tuft to a small bush. The renderer composes several per
+    tile (`crop_batch.go`): corn 2; wheat and brewgrain 4 clumps; cotton,
+    potato, beans, healroot, ashleaf 3; lettuce and radish 4; pumpkin 1
+    sprawl. Units are jittered, mirrored and scaled by growth, with a
+    slight row alignment along the field.
+-   **No soil mound.** Tilled furrows are the ground decal
+    `overlay/tilled_0..3` under cells holding a crop or sown seed.
+-   **Silhouettes (ours):** corn a tall thin stalk with arching leaves,
+    tassel and a cob when ripe; wheat a clump of fine stems whose heads
+    bow when ripe; brewgrain like wheat with heavier bronze heads; cotton
+    a branching shrub with cream bolls; potato a leafy mound with small
+    pale flowers and tubers peeking at harvest; beans a twining sprawl
+    with hanging pods; lettuce a rosette closing into a head; radish a
+    short leaf fountain with a red shoulder at the soil line; pumpkin a
+    sprawling vine with big leaves and one or two fruits; healroot a low
+    herb with pale blue-white flowers; ashleaf a silvery broad-leaf
+    rosette.
+-   **Stages** (keys unchanged, `plant/<crop>_<stage>_v0..3`): sown (seed
+    specks only), sprout (2-3 tiny leaves), young (half size, leaves
+    only), mature (full foliage), harvestable (produce visible),
+    wilted (drooping, browned: dying). The `<crop>_{young,mature,
+    harvestable}` aliases stay for fallbacks.
+-   **Palette accents:** corn muted gold, wheat straw, brewgrain bronze,
+    pumpkin burnt orange, radish dusty rose-red, cotton warm cream,
+    healroot pale blue-white, ashleaf silver-sage, potato ochre, beans
+    sage, lettuce pale jade, berries deep plum-red; none more saturated
+    than the dandelion or fire-lily accents.
+-   **Cold and heat:** a damaged crop shows a rime (cold) or scorch
+    (heat) tint, then the wilted sprite while its units shrink and fade
+    out over the hours it takes to die (renderer presentation of
+    `PlantView.Damage`).
+-   **Produce items** keep the item outline rule but share the crop
+    palette and softer, rounder forms.
+
 ## 10. Pawn Visual System
 
 **NG-1 builds (normative):** one parametrised rig (`families/pawn.py` `BUILDS`) gives six builds — `m_thin, m_avg, m_heavy, f_thin, f_avg, f_heavy` — for body and every apparel layer, all frames and facings; keys `pawn/<layer>_<build>_<facing>_<frame>`, the old `pawn/body_…` keys alias `m_avg`. Hair styles short, crop, bun, long, braid, shaved, curls, tail; beards short, full, moustache (males, 40 %); a grey-hair palette entry. The pawn family is atlas-packed by `cmd/atlasgen` (≤4096² pages, `assets/metadata/atlas/<family>.yaml`). Looks are domain data (`pawn/look.Look`); `look.Legacy(id)` reproduces pre-NG-1 looks. See `NG1_NEW_GAME_PLAN.md` §4.6, §7.1.

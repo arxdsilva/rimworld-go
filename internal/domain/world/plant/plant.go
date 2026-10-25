@@ -296,6 +296,10 @@ type Plant struct {
 	// Withering: losing growth in harmful light (MAPGEN-3); it stops only
 	// below WitherStopLight (hysteresis).
 	Withering bool
+	// Damage (PLAY-016) is cold or heat damage, 0..100: the plant dies at
+	// 100. DamageHeat tells heat from cold (presentation).
+	Damage     uint8
+	DamageHeat bool
 }
 
 // Wild is the historical name for Plant.
