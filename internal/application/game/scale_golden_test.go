@@ -66,13 +66,18 @@ import (
 // and on the new save format.
 // Re-pinned (PLAY-015): new colonists start with Firefight on (priority
 // 3); checked field by field on all six runs, only Prios and Labor differ.
+// Re-pinned (PLAY-017): a charging or hunting animal now warns the player
+// (a danger message, and the warned colonist on the animal). Checked field
+// by field against c7d739ac6 on all six runs: only Animals (ChaseWarnedAt,
+// ChaseWarnedTarget) and Messages (e.g. "A timber wolf charges Cora!")
+// differ; seeds 7 (48x40) and 1 (120x120) see no charge and keep their pin.
 var scaleGolden = map[string]uint64{
-	"48x40/seed1":    0xbfaabb35bc87faf7,
+	"48x40/seed1":    0xce4668e447818b0,
 	"48x40/seed7":    0xee46a1f4ce740cae,
-	"48x40/seed42":   0x62bbc1e4b745516f,
+	"48x40/seed42":   0xbae2087ca8fcc39,
 	"120x120/seed1":  0x24d9b4a5e97f473a,
-	"120x120/seed7":  0xa5e79416622973b2,
-	"120x120/seed42": 0x11f03f3b35f9078e,
+	"120x120/seed7":  0x40f7fa02ddb67980,
+	"120x120/seed42": 0x4b3e98040be7af43,
 }
 
 const scaleGoldenTicks = 20000

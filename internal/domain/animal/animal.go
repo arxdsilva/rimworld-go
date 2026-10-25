@@ -642,6 +642,15 @@ type State struct {
 	NextBondCheck uint64
 	ConfusedUntil uint64
 	Mother        uint64
+	// Chase warnings (PLAY-017): ChaseWarnedTarget is the colonist the
+	// player was last warned this animal is chasing; ChaseWarnedAt the
+	// last tick it was seen on that chase. A new warning needs a new
+	// target, or that chase over for an hour.
+	ChaseWarnedAt     uint64
+	ChaseWarnedTarget entity.EntityID
+	// FeedClaim (PLAY-017) is the stack a tame animal holds a reservation
+	// on while it walks to it and eats (0: none).
+	FeedClaim entity.EntityID
 }
 
 // Enraged reports a manhunter at tick now.

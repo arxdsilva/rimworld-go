@@ -100,7 +100,10 @@ func TestGrownGolden(t *testing.T) {
 	// and new colonists start with Firefight on. Checked: same animal
 	// count, one extra building; the old run's single manhunter message is
 	// a roll the shifted stream no longer makes. Stable over -count=3.
-	const want uint64 = 0xc52d50891a1a788c
+	// Re-pinned (PLAY-017): one charge now posts a chase warning ("A
+	// timber wolf charges Settler 8!"); checked field by field against
+	// c7d739ac6, only Messages differs.
+	const want uint64 = 0x32ffe5b168601fcc
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

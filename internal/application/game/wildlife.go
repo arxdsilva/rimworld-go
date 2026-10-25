@@ -1,6 +1,7 @@
 package game
 
 import (
+	"slices"
 	"sort"
 	"strings"
 
@@ -450,25 +451,52 @@ func (g *Game) fillWildlifeView(w *WorldView) {
 	}
 }
 
-// dropCorpse leaves a carcass of s at (x, y), stacking with its species,
-// and returns the stack it lies in (0: none).
+// dropCorpse leaves the colony's own carcass of s at (x, y)
+// (dropCorpseAs).
 func (g *Game) dropCorpse(s animal.Species, x, y int) entity.EntityID {
+	return g.dropCorpseAs(s, x, y, false)
+}
+
+// dropCorpseAs leaves a carcass of s at (x, y), stacking with its
+// species, and returns the stack it lies in (0: none). An unclaimed
+// carcass (the colony had no hand in the death: PLAY-017) waits for a
+// haul mark, and stacks only with other unclaimed ones.
+func (g *Game) dropCorpseAs(s animal.Species, x, y int, unclaimed bool) entity.EntityID {
 	sid, err := g.SpawnStack(item.CorpseAnimal, 1, x, y)
 	if err != nil {
 		return 0
 	}
 	st, _ := g.stacks.Get(sid)
-	st.Animal = uint8(s)
+	st.Animal, st.Unclaimed = uint8(s), unclaimed
 	g.mergeOrSet(sid, st)
 	if _, ok := g.stacks.Get(sid); ok {
 		return sid
 	}
 	for _, id := range g.itemIDs { // merged into the carcasses already there
-		if o, ok := g.stacks.Get(id); ok && o.Carrier == 0 && o.X == x && o.Y == y && o.Kind == item.CorpseAnimal && o.Animal == uint8(s) {
+		if o, ok := g.stacks.Get(id); ok && o.Carrier == 0 && o.X == x && o.Y == y && o.Kind == item.CorpseAnimal && o.Animal == uint8(s) &&
+			o.Unclaimed == unclaimed && !o.HaulMarked {
 			return id
 		}
 	}
 	return 0
+}
+
+// colonyKill reports a death the colony caused (PLAY-017): by is one of
+// its colonists or tame animals, or (by 0) a spike trap sprang on at this
+// tick (defense.go springTrap leaves its trace just before the hit).
+func (g *Game) colonyKill(by entity.EntityID, at Position) bool {
+	if by == 0 {
+		if n := len(g.traces); n > 0 {
+			t := g.traces[n-1]
+			return t.Attacker == 0 && t.Melee && t.Hit && t.Tick == uint64(g.clock.Now()) &&
+				t.FromX == at.X && t.FromY == at.Y && t.ToX == at.X && t.ToY == at.Y
+		}
+		return false
+	}
+	if k := g.animals.Ref(by); k != nil {
+		return k.Tame
+	}
+	return slices.Contains(g.pawnIDs, by) // colonists, never raiders, prisoners or visitors
 }
 
 // afterLoadAnimals converts an older save: dustbuck and ridgewolf

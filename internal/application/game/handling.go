@@ -255,6 +255,19 @@ func (g *Game) guardCheck(id entity.EntityID, a *animal.State, pos Position, now
 	return true
 }
 
+// guardBreaksHunt: a tame predator out hunting (PLAY-017) drops the hunt
+// for a threat its guard duty would fight, looked for on guardCheck's
+// cadence; guardCheck then takes the threat on.
+func (g *Game) guardBreaksHunt(id entity.EntityID, a *animal.State, pos Position, now uint64) {
+	if (now+uint64(id))%animal.ThreatEvery != 0 {
+		return
+	}
+	if t := g.guardTarget(id, pos); t != 0 {
+		g.endFight(a) // animal_needs.go
+		a.Target = t
+	}
+}
+
 // wanderTame: livestock keep to their pen, or roam when they have none
 // (pens.go); other tame animals stay near the colony, inside their
 // allowed area (areas.go inArea).

@@ -133,7 +133,7 @@ func (g *Game) oldAge(id entity.EntityID, a *animal.State, now uint64) bool {
 	g.logEvent(id, logEntry{Kind: logOldAge})
 	g.endMating(id, a)
 	g.removeAnimal(id)
-	g.dropCorpse(a.Species, pos.X, pos.Y)
+	g.dropCorpseAs(a.Species, pos.X, pos.Y, !a.Tame) // wildlife.go: a wild one's is unclaimed (PLAY-017)
 	if animal.DefOf(a.Species).Explosive {
 		g.burst(a.Species, pos)
 	}
@@ -394,6 +394,8 @@ func (g *Game) layEgg(id entity.EntityID, a *animal.State, now uint64) {
 	if fertile {
 		st.Animal, st.Tame = uint8(a.Species), a.Tame
 	}
+	st.Unclaimed = !a.Tame // a wild mother's egg waits for a haul mark (PLAY-017)
+
 	g.mergeOrSet(sid, st) // onto the eggs already there
 }
 

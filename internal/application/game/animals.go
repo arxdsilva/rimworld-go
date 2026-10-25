@@ -59,6 +59,7 @@ type AnimalView struct {
 	State       string
 	Food, Rest  int
 	Diet        string
+	Hunts       bool // PLAY-017: a tame predator (hunts wild animals when hungry)
 	AgeDays     int
 	Adult       bool
 	Stage       string
@@ -194,6 +195,10 @@ func (g *Game) phaseAnimals() {
 		if !g.animals.Has(id) {
 			continue
 		}
+		keepChaseWarned(&a, now) // chase.go
+		if a.Tame || a.FeedClaim != 0 {
+			g.syncFeedClaim(id, &a) // animal_needs.go: a tame eater's reservation
+		}
 		g.animals.Set(id, a) // it steps in phaseMovement
 	}
 }
@@ -223,11 +228,14 @@ func (g *Game) thinkAnimal(id entity.EntityID, a *animal.State, now uint64) {
 	if a.Tame && g.masterDuty(id, a, now) { // train_animals.go: guard and release
 		return
 	}
-	if a.Tame && def.Predator {
+	if a.Tame && def.Predator && a.HuntSince != 0 {
+		g.guardBreaksHunt(id, a, pos, now) // handling.go: a threat comes before a meal
+	}
+	if a.Tame && def.Predator && a.HuntSince == 0 {
 		if g.guardCheck(id, a, pos, now) {
 			return
 		}
-	} else if g.fightCheck(id, a, pos, def, now) {
+	} else if g.fightCheck(id, a, pos, def, now) { // a tame predator's hunt runs as a wild one's (PLAY-017)
 		return
 	}
 	if a.Leaving {
@@ -343,9 +351,10 @@ func (g *Game) fightCheck(id entity.EntityID, a *animal.State, pos Position, def
 		g.endFight(a)
 	}
 	calm := !badlyHurt(*a) && now >= a.FleeUntil
-	if a.Target == 0 && def.Predator && calm && a.Attacker != 0 && g.validPrey(id, a.Attacker) &&
+	if a.Target == 0 && def.Predator && !a.Tame && calm && a.Attacker != 0 && g.validPrey(id, a.Attacker) &&
 		g.reachesFoe(a.Tame, pos, g.posOf(a.Attacker)) { // never one it can't get at (no flee/attack flapping)
-		a.Target = a.Attacker // revenge
+		a.Target = a.Attacker // revenge; on a colonist the player is warned (chase.go)
+		g.warnChase(id, a, a.Target, false)
 	}
 	if a.Target == 0 {
 		a.HuntSince = 0 // its prey died under another's teeth, or was never set
@@ -361,7 +370,8 @@ func (g *Game) fightCheck(id entity.EntityID, a *animal.State, pos Position, def
 	tp, _ := g.positions.Get(a.Target)
 	d := weapon.Distance(pos.X, pos.Y, tp.X, tp.Y)
 	switch {
-	case a.HuntSince != 0 && (now-a.HuntSince > animal.HuntGiveUp || d > huntRadius(def)+animal.HuntLeash):
+	case a.HuntSince != 0 && (now-a.HuntSince > animal.HuntGiveUp || d > huntRadius(def)+animal.HuntLeash ||
+		a.Tame && !g.tameHuntOn(id, a.Target, tp)): // a tame hunter's prey is wild and in its area (PLAY-017)
 		g.endFight(a) // the prey got away: try again later
 		a.NextFeed, a.NextDecide = now+animal.HuntRetry, now
 		return false
@@ -416,6 +426,7 @@ func (g *Game) chargeCheck(id entity.EntityID, a *animal.State, pos Position, no
 	a.Path, a.PathI, a.Feed, a.FeedLeft = nil, 0, animal.FeedTarget{}, 0
 	g.logEvent(who, logEntry{Kind: logChargedBy, Other: id, Name: g.killerName(id)})
 	g.logEvent(id, logEntry{Kind: logCharged, Other: who, Name: g.creatureName(who)})
+	g.warnChase(id, a, who, true) // chase.go: "A cougar charges Ada!" (raiders are skipped)
 }
 
 // posOf is id's position (the zero cell when it has none).
@@ -698,11 +709,17 @@ func (g *Game) killAnimal(id, by entity.EntityID) {
 	if by != 0 && by != id {
 		g.logEvent(by, logEntry{Kind: logKilled, Other: id, Name: animalLabel(a)})
 	}
+	// the colony's death (wildlife.go), else the corpse is unclaimed (PLAY-017)
+	colony := a.Tame || g.colonyKill(by, pos)
 	g.onAnimalDied(id, by) // bonds.go: the bonded colonist's grief, before the state goes
 	g.removeAnimal(id)
 	g.stainAnimalDeath(a.Species, pos) // stains.go
-	corpse := g.dropCorpse(a.Species, pos.X, pos.Y)
+	corpse := g.dropCorpseAs(a.Species, pos.X, pos.Y, !colony)
 	if k, ok := g.animals.Get(by); ok && (animal.DefOf(k.Species).Predator || k.HuntSince != 0) {
+		if k.Tame && k.HuntSince != 0 { // a quiet line: the colony's hunter fed itself
+			g.post(MessageView{Tick: uint64(g.clock.Now()), Text: fmt.Sprintf("%s hunted %s.", animalLabel(k), withArticle(a.Species.Label())),
+				X: pos.X, Y: pos.Y, Focus: by})
+		}
 		g.feedOnKill(by, &k, corpse, pos) // animal_needs.go
 		g.animals.Set(by, k)
 	}
@@ -712,6 +729,9 @@ func (g *Game) killAnimal(id, by entity.EntityID) {
 }
 
 func (g *Game) removeAnimal(id entity.EntityID) {
+	if a := g.animals.Ref(id); a != nil && a.FeedClaim != 0 {
+		g.reserve.ReleaseEntity(id, a.FeedClaim) // a tame eater's stack is free again
+	}
 	delete(g.logs, id)
 	delete(g.tendedUntil, id) // vet_animals.go
 	g.animals.Delete(id)
