@@ -1707,7 +1707,7 @@ progression:
 -   [ ] **Advanced fabrication**
 -   [ ] **Weapon technologies**
 -   [ ] **Armor/apparel technologies**
--   [ ] **Geothermal/advanced power**
+-   [-] **Geothermal/advanced power** (MAPGEN-2: steam vents exist on the map and warm the air; no generator, there is no power system yet)
 -   [ ] **Hospital/medical technology**
 -   [ ] **Transport pods**
 -   [ ] **Ship/endgame technologies**
@@ -1766,18 +1766,18 @@ SIM-023: all twelve exist as `world/biome` data. NG-1 now classifies them on the
 -   [x] **Flat** (NG-1: per-tile hilliness drives the local map's rock thresholds)
 -   [x] **Small hills**
 -   [x] **Large hills**
--   [x] **Mountainous** (with a ridge band and caves)
+-   [x] **Mountainous** (MAPGEN-2: a mountain mass leaning toward the uphill world edge, tapered branching caves)
 
 ## 22.4 Local map generation
 
--   [x] **Terrain from biome/topology** (SIM-023 ground mix per biome; NG-1 hills level changes rock, stone and ridge thresholds)
--   [x] **Rock/mountain mass** (noise outcrops biased to map edges, stone ground ring, open start area; 2-3 stone types per map in regions, SIM-029; overhead mountain roof tracked under roofs)
--   [x] **Ore/resource deposits** (SIM-029: steel, silver and gold veins grown inside rock; mined for metal)
--   [x] **Water** (NG-1 SIM-033: coast, rivers with deep cores, mud banks and fords, lakes, wet ground, tracks, a reachability pass; no bridges or fishing)
--   [x] **Wild vegetation** (trees, berry bushes and seven new ground plants (SIM-038); grass is simulated ground cover removed by building, sowing and Cut plants (UI-011) and regrows from shoots over three days after grazing or cutting)
--   [x] **Wildlife** (SIM-023/025: per-biome density, species weights, sex and age at spawn, carrying capacity)
--   [ ] **Ancient ruins/debris**
--   [x] **Starting clear/landing area** (NG-1: open start radius, no water within 7 tiles of the centre, drop pods land on dry ground)
+-   [x] **Terrain from biome/topology** (MAPGEN-2 SIM-050: staged field generator; warped elevation/fertility/wetness fields, terrain by precedence, data-driven biome patches, patch cleanup; legacy generator frozen for old maps)
+-   [x] **Rock/mountain mass** (MAPGEN-2 SIM-050: rock share by hilliness quantile, coherent mountains with irregular edges and component cleanup, broad stone regions, thin and thick natural roofs (thick: permanent, no drop pods), caves only in large rock bodies)
+-   [x] **Ore/resource deposits** (SIM-029; MAPGEN-2: compact irregular lumps deep in rock with spaced origins; stone debris in small formations near cliffs)
+-   [x] **Water** (NG-1 SIM-033; MAPGEN-2: ragged coasts with depth bands and beaches, meandering rivers with varying width, banks, fertile floodplains, canyons and fords, lakes, wetness field; roads A*-routed and smoothed; no bridges or fishing)
+-   [x] **Wild vegetation** (MAPGEN-2: groves and clearings, local saturation, species clusters and balance, spacing, varied growth; trees, berry bushes and seven new ground plants (SIM-038); grass is simulated ground cover removed by building, sowing and Cut plants (UI-011) and regrows from shoots over three days after grazing or cutting)
+-   [x] **Wildlife** (SIM-023/025: per-biome density, species weights, sex and age at spawn, carrying capacity; MAPGEN-2: herds start in reachable habitat away from the colony, arrivals walk in from a reachable edge)
+-   [-] **Ancient ruins/debris** (MAPGEN-2: small surface ruins (broken wall runs, roofless sheds with old floors, loot, rubble), stone debris, steam vents; no sealed ancient rooms or their threats)
+-   [x] **Starting clear/landing area** (MAPGEN-2: the landing spot is scored (open land, fertility, stone, roads, centre) and repaired locally, ≥ 70% of land reachable; drop pods land on dry ground; fog of war hides what is not reachable from it)
 
 ## 22.5 Faction settlements
 

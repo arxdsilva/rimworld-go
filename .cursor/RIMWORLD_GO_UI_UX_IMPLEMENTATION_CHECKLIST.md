@@ -207,7 +207,7 @@ This is the minimum UI required to interact with a running simulation.
 
 ## 2.1 Main game viewport
 
--   [-] **Map viewport** (grid, pawns, stockpiles, plants, items, frames, buildings from read models; curved, eased, sub-frame pawn/animal motion; no roofs/visibility/effects) (SIM-018, ART-010: roof overlay and sprite lighting done; ART-012: creatures cast their own animated silhouette shadows; no visibility)
+-   [-] **Map viewport** (grid, pawns, stockpiles, plants, items, frames, buildings from read models; curved, eased, sub-frame pawn/animal motion) (SIM-018, ART-010: roof overlay and sprite lighting done; ART-012: creatures cast their own animated silhouette shadows; MAPGEN-2: fog of war over unexplored tiles, black on the minimap)
     -   Occupies the central play area.
     -   Draw terrain, roofs/visibility treatment, structures, items,
         plants, pawns, effects and selection markers.
@@ -939,7 +939,7 @@ understandable.
 
 -   [x] **Roofed** (SIM-018)
 -   [x] **Unroofed** (SIM-018: left unmarked by the overlay; hover line "Unroofed", with "room too large to auto-roof")
--   [ ] **Mountain/thick roof distinction where gameplay requires it**
+-   [x] **Mountain/thick roof distinction where gameplay requires it** (MAPGEN-2: hover "Thick rock overhead (permanent)"; the dev Map fields overlay shows none/thin/thick)
 -   [x] **Build/remove roof designation** (SIM-018)
 
 ## 16.5 Fertility overlay
@@ -1827,7 +1827,7 @@ source and intended for AI-assisted development.
 
 -   [x] **Developer mode toggle** (UI-016: Options › Gameplay; ultrafast 15x and Numpad + single-tick step)
 -   [-] **Debug actions** (UI-016: `/` menu: spawn deer/wolf, add wood, fire nature events, raid, kill animal, fill needs)
--   [ ] **Debug overlays**
+-   [-] **Debug overlays** (MAPGEN-2: "Map fields" cycles 12 layers over the map with a legend: elevation, fertility, wetness, rock types, caves, river distance, terrain classes, vegetation density, start score, roofs, fog, regions; no path/region-cost or temperature overlays)
 -   [-] **Inspector** (UI-016: `'` raw id, position, job and flags of the selection)
 -   [ ] **Profiler**
 -   [ ] **Incident/storyteller tools**

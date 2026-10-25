@@ -477,6 +477,8 @@ World generation has two scales:
 
 All generation is seed-reproducible. Concurrency may calculate independent chunks, but results must merge in stable order.
 
+The local map is built by the staged field generator `internal/domain/world/mapgen` (MAPGEN-2): fields → landforms → water → terrain by precedence → resources and features → landing spot → vegetation → validation and repair, each step on its own named random stream. Design and numbers: `.cursor/PLAY013_PLAN.md`, `.cursor/handoffs/SIM-050-mapgen-pipeline.md`; debug views via `cmd/mapgen` and the in-game "Map fields" overlay.
+
 Do not simulate every individual person in off-map settlements. Off-map locations use aggregate population, wealth, military, production, and relations.
 
 
