@@ -81,7 +81,7 @@ func (v *view) drawPlants(img *image.RGBA) {
 	}
 }
 
-// drawFeatures marks chunks, vents (2x2), ruins and, when roads, the road mask.
+// drawFeatures marks chunks, vents (2x2), ruins, bridges, vaults and, when roads, the road mask.
 func (v *view) drawFeatures(img *image.RGBA, roads bool) {
 	for _, c := range v.res.Chunks {
 		v.set(img, c.X, c.Y, ChunkColor)
@@ -101,6 +101,7 @@ func (v *view) drawFeatures(img *image.RGBA, roads bool) {
 			v.set(img, fl.X, fl.Y, Dim(RuinColor, 0.7))
 		}
 	}
+	v.drawBridgesAndVaults(img)
 	if roads {
 		for i, r := range v.f.Road {
 			if r {

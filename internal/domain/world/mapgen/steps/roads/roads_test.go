@@ -176,9 +176,10 @@ func TestTwoRoadsMeet(t *testing.T) {
 	}
 }
 
-func TestAvoidsDeepWaterAndFordsShallow(t *testing.T) {
+func TestRiverWithFordIsBridged(t *testing.T) {
 	c := fixture(4, 100, 100, dirs(0))
-	// A river across the map at y 30..33; shallow ford only at x in 70..72.
+	// A river across the map at y 30..33 with a shallow ford at x 70..72:
+	// the road crosses on a bridge, never wading.
 	for y := 30; y <= 33; y++ {
 		for x := 0; x < 100; x++ {
 			if x >= 70 && x <= 72 {
@@ -189,10 +190,8 @@ func TestAvoidsDeepWaterAndFordsShallow(t *testing.T) {
 		}
 	}
 	run(t, c)
-	for i := range c.F.Road {
-		if c.F.Road[i] && c.F.Water[i] == mapgen.Deep {
-			t.Fatal("road on deep water")
-		}
+	if strips(t, c) != 1 {
+		t.Fatal("want one bridge")
 	}
 	for y := 30; y <= 33; y++ {
 		for x := 0; x < 100; x++ {
@@ -203,13 +202,6 @@ func TestAvoidsDeepWaterAndFordsShallow(t *testing.T) {
 				t.Fatal("ford terrain overwritten")
 			}
 		}
-	}
-	forded := false
-	for x := 70; x <= 72; x++ {
-		forded = forded || c.F.Road[c.Idx(x, 31)]
-	}
-	if !forded {
-		t.Fatal("road did not cross at the ford")
 	}
 	top := edgeRoadCells(c, func(x, y int) bool { return y == 0 })
 	if len(top) == 0 {
@@ -223,7 +215,7 @@ func TestAvoidsDeepWaterAndFordsShallow(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatal("not connected through the ford")
+		t.Fatal("not connected over the bridge")
 	}
 }
 

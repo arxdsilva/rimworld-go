@@ -43,7 +43,8 @@ func resultHash(r mapgen.Result) uint64 {
 	return h.Sum64()
 }
 
-// goldenMaps pin the generator's output for a spread of biomes and
+// goldenMaps pin the generator's output (re-pinned for MAPGEN-3: sealed
+// vaults, road bridges, duskmoss in dark caves, ocean marks) for a spread of biomes and
 // hilliness: a change of map output moves a pin. Re-pin only for an
 // intended change of generation (and bump mapgen.Version if saved
 // colonies' debug views would then disagree with their maps).
@@ -54,16 +55,16 @@ var goldenMaps = []struct {
 	want  uint64
 }{
 	{biome.TemperateForest, site.Flat, nil, 0x9bf10e93a633370},
-	{biome.TemperateForest, site.LargeHills, func(s *site.Site) { s.River = site.RiverPath{Size: site.River, In: 0, Out: 4}; s.Caves = true }, 0xdd6a6f7cb1d93e63},
-	{biome.BorealForest, site.Mountainous, func(s *site.Site) { s.Caves = true; s.Uphill, s.HasUphill = 2, true }, 0x56cd727bc1e3dad6},
-	{biome.Tundra, site.SmallHills, func(s *site.Site) { s.Lakes = 2 }, 0x843ccb03b04254b3},
+	{biome.TemperateForest, site.LargeHills, func(s *site.Site) { s.River = site.RiverPath{Size: site.River, In: 0, Out: 4}; s.Caves = true }, 0x724ec7298252a2c6},
+	{biome.BorealForest, site.Mountainous, func(s *site.Site) { s.Caves = true; s.Uphill, s.HasUphill = 2, true }, 0xb8d3286928677795},
+	{biome.Tundra, site.SmallHills, func(s *site.Site) { s.Lakes = 2 }, 0xb77accbede180a1c},
 	{biome.ColdBog, site.Flat, func(s *site.Site) { s.Coast = 1 << 6 }, 0xd9080f95a32214b3},
-	{biome.IceSheet, site.LargeHills, nil, 0x375685fa98996425},
+	{biome.IceSheet, site.LargeHills, nil, 0x9bb1e3e269aea4},
 	{biome.SeaIce, site.Flat, nil, 0x9583980065b10be2},
-	{biome.TemperateSwamp, site.SmallHills, func(s *site.Site) { s.River = site.RiverPath{Size: site.Creek, In: 2, Out: 6} }, 0xaebed37e23067b56},
-	{biome.TropicalRainforest, site.LargeHills, func(s *site.Site) { s.Road = 1<<0 | 1<<4; s.Settled = true }, 0x15e8875714716d85},
-	{biome.AridShrubland, site.Mountainous, func(s *site.Site) { s.Stones = []geology.Stone{geology.Sandstone, geology.Granite} }, 0xf42213c8abff5523},
-	{biome.Desert, site.SmallHills, func(s *site.Site) { s.Coast = 1 << 2; s.CoastNear = 1 }, 0x5847f8e73b7f1759},
+	{biome.TemperateSwamp, site.SmallHills, func(s *site.Site) { s.River = site.RiverPath{Size: site.Creek, In: 2, Out: 6} }, 0xf5520695a716bad9},
+	{biome.TropicalRainforest, site.LargeHills, func(s *site.Site) { s.Road = 1<<0 | 1<<4; s.Settled = true }, 0x219700339a766e85},
+	{biome.AridShrubland, site.Mountainous, func(s *site.Site) { s.Stones = []geology.Stone{geology.Sandstone, geology.Granite} }, 0xdbe8b79701c8513f},
+	{biome.Desert, site.SmallHills, func(s *site.Site) { s.Coast = 1 << 2; s.CoastNear = 1 }, 0x9f7b1e99d993ea80},
 	{biome.ExtremeDesert, site.Flat, func(s *site.Site) { s.Road = 1 << 6 }, 0x2ee8cf8bf545533e},
 }
 

@@ -293,6 +293,9 @@ type Plant struct {
 	Designated bool // marked for harvest
 	Cut        bool // marked for cutting
 	Zone       bool // sown by a growing zone
+	// Withering: losing growth in harmful light (MAPGEN-3); it stops only
+	// below WitherStopLight (hysteresis).
+	Withering bool
 }
 
 // Wild is the historical name for Plant.

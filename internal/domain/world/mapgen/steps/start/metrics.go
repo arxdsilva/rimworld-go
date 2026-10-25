@@ -175,12 +175,14 @@ func sinuosity(line []mapgen.PointF) float64 {
 	return length / d
 }
 
-// startReach is the share of dry walkable land reachable from the start.
+// startReach is the share of dry walkable land (vaults aside) reachable
+// from the start, bridges walked.
 func startReach(c *mapgen.Ctx) float64 {
 	reached, _, _ := reach(c)
+	o := newOverlay(c)
 	got, total := 0, 0
-	for i, t := range c.R.Terrain.Cells {
-		if land(t) {
+	for i := range c.R.Terrain.Cells {
+		if o.land(c, i) {
 			total++
 			if reached[i] {
 				got++

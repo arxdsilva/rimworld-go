@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"runtime"
+	"strings"
 	"sync"
 	"testing"
 
@@ -60,6 +61,11 @@ var profiles = []profile{
 	{"mixed", 200, site.Site{Biome: biome.TemperateForest, Hills: site.LargeHills, Stones: stones,
 		River: site.RiverPath{Size: site.River, In: 0, Out: 4}, Coast: 1 << 2, Lakes: 2, Caves: true,
 		Road: 1<<6 | 1<<0, Settled: true, Rain: 900}, nil},
+	// roads from four sides over a river, lakes and a coast: every road
+	// stays connected, crossing water only on bridges (MAPGEN-3)
+	{"crossings", 200, site.Site{Biome: biome.TemperateForest, Hills: site.SmallHills, Stones: stones,
+		River: site.RiverPath{Size: site.River, In: 6, Out: 2}, Coast: 1 << 4, Lakes: 3,
+		Road: 1<<0 | 1<<2 | 1<<4 | 1<<6, Rain: 900}, nil},
 }
 
 func TestProfiles(t *testing.T) {
@@ -141,6 +147,9 @@ func commonChecks(cfg mapgen.Config, r mapgen.Result) error {
 	if v := start.Violations(c); len(v) > 0 {
 		return fmt.Errorf("invariants broken: %v", v)
 	}
+	if err := roadChecks(c); err != nil {
+		return err
+	}
 	mx, my := min(25, r.W/5), min(25, r.H/5)
 	if p := r.Start; p.X < mx || p.Y < my || r.W-1-p.X < mx || r.H-1-p.Y < my {
 		return fmt.Errorf("start %v inside the %d/%d edge margin", p, mx, my)
@@ -198,6 +207,65 @@ func benchGenerate(b *testing.B, size int) {
 		cfg.Debug = false
 		if _, err := Generate(cfg); err != nil {
 			b.Fatal(err)
+		}
+	}
+}
+
+// roadChecks (MAPGEN-3): every road joins its edge to its junction, none
+// was given up, and every road cell over water is a bridge over
+// bridgeable, non-sea terrain.
+func roadChecks(c *mapgen.Ctx) error {
+	r := c.R
+	if b := start.BrokenRoads(c); len(b) > 0 {
+		return fmt.Errorf("roads %v not connected (%v)", b, r.Metrics.Repairs)
+	}
+	for _, rep := range r.Metrics.Repairs {
+		if strings.Contains(rep, "reverted") || strings.Contains(rep, "cannot reach") {
+			return fmt.Errorf("road given up: %s", rep)
+		}
+	}
+	if len(c.F.RoadEnds) != len(r.Roads) {
+		return fmt.Errorf("%d road ends for %d roads", len(c.F.RoadEnds), len(r.Roads))
+	}
+	bridge := make([]bool, r.W*r.H)
+	for _, b := range r.Bridges {
+		i := b.Y*r.W + b.X
+		bridge[i] = true
+		if t := r.Terrain.Cells[i]; !terrain.Bridgeable(t) || r.Ocean[i] || !c.F.Road[i] {
+			return fmt.Errorf("bridge %v on %v (ocean %v, road %v)", b, t, r.Ocean[i], c.F.Road[i])
+		}
+	}
+	for i, t := range r.Terrain.Cells {
+		if c.F.Road[i] && terrain.IsWater(t) && !bridge[i] {
+			return fmt.Errorf("road over water without a bridge at %d,%d", i%r.W, i/r.W)
+		}
+	}
+	return nil
+}
+
+// TestOceanMarksTheSea (MAPGEN-3): Result.Ocean is the kept sea, the coast
+// water, and lies only on water.
+func TestOceanMarksTheSea(t *testing.T) {
+	for _, p := range []profile{profiles[4], profiles[0]} {
+		r, err := Generate(siteCfg(3, 120, p.site))
+		if err != nil {
+			t.Fatal(err)
+		}
+		n := 0
+		for i, o := range r.Ocean {
+			wet := terrain.IsWater(r.Terrain.Cells[i])
+			if o {
+				n++
+				if !wet {
+					t.Fatalf("%s: ocean on %v", p.name, r.Terrain.Cells[i])
+				}
+			}
+			if r.Fields.Coast[i] && r.Fields.Water[i].Wet() && wet && !o {
+				t.Fatalf("%s: coast water at %d,%d not marked ocean", p.name, i%r.W, i/r.W)
+			}
+		}
+		if (p.site.Coast != 0) != (n > 0) {
+			t.Fatalf("%s: %d ocean cells", p.name, n)
 		}
 	}
 }

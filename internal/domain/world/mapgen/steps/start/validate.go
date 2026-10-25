@@ -17,9 +17,10 @@ const (
 )
 
 // Validate is the last pass: local repairs (river continuity, ocean
-// connectivity, reachability from the start, invariants I1–I6 and
-// feature overlap), then the map's Metrics. Every repair is logged in
-// Metrics.Repairs.
+// connectivity, reachability from the start, road connectivity,
+// invariants I1–I6 and feature overlap), then the map's Metrics. Every
+// repair is logged in Metrics.Repairs. Bridges count as walkable ground;
+// vault footprints are sealed (neither walked nor carved to).
 type Validate struct{}
 
 // Name is the step's stream and label key.
@@ -36,6 +37,7 @@ func (Validate) Run(c *mapgen.Ctx) error {
 	add("river: %d gap cells refilled", riverGaps(c))
 	add("ocean: %d stray water cells dropped", strayOcean(c))
 	add("reach: %d crossings carved from the start", carveReach(c))
+	log = append(log, roadsConnected(c)...)
 	log = append(log, invariants(c, true)...)
 	m := metrics(c)
 	m.Repairs = append(c.R.Metrics.Repairs, log...)
@@ -48,7 +50,7 @@ func (Validate) Run(c *mapgen.Ctx) error {
 func Violations(c *mapgen.Ctx) []string { return invariants(c, false) }
 
 // riverGaps re-fills the cells along the river centreline that are no
-// longer water as shallow water. Road fords and the start's dried pad are
+// longer water as shallow water. Road Track and the start's dried pad are
 // left alone.
 func riverGaps(c *mapgen.Ctx) int {
 	pts := c.F.RiverLine
@@ -86,8 +88,16 @@ func nearStart(c *mapgen.Ctx, x, y, r int) bool {
 }
 
 // strayOcean drops coast water cut off from every map edge (water bodies
-// are joined over any water, so an estuary through a river still counts).
+// are joined over any water, so an estuary through a river still counts),
+// and keeps the Ocean mask on water only.
 func strayOcean(c *mapgen.Ctx) int {
+	defer func() {
+		for i, o := range c.R.Ocean {
+			if o && i < len(c.R.Terrain.Cells) && !terrain.IsWater(c.R.Terrain.Cells[i]) {
+				c.R.Ocean[i] = false
+			}
+		}
+	}()
 	water := make([]bool, c.W*c.H)
 	anyCoast := false
 	for i, t := range c.R.Terrain.Cells {
@@ -145,23 +155,25 @@ func carveReach(c *mapgen.Ctx) int {
 	return n
 }
 
-// reach floods (4-connected) from the start over walkable cells.
+// reach floods (4-connected) from the start over walkable cells and
+// bridges.
 func reach(c *mapgen.Ctx) (reached []bool, edge, ok bool) {
 	reached = make([]bool, c.W*c.H)
+	o := newOverlay(c)
 	s := c.Idx(c.R.Start.X, c.R.Start.Y)
-	if !c.R.Terrain.Cells[s].Walkable() {
+	if !o.walk(c, s) {
 		return reached, false, false
 	}
 	src := make([]bool, c.W*c.H)
 	src[s] = true
 	walk := make([]bool, c.W*c.H)
-	for i, t := range c.R.Terrain.Cells {
-		walk[i] = t.Walkable()
+	for i := range walk {
+		walk[i] = o.walk(c, i)
 	}
 	d := mapgen.BFSDist(c.W, c.H, src, walk, false)
 	got, total := 0, 0
-	for i, t := range c.R.Terrain.Cells {
-		isLand := land(t)
+	for i := range c.R.Terrain.Cells {
+		isLand := o.land(c, i)
 		if isLand {
 			total++
 		}
@@ -184,6 +196,7 @@ func reach(c *mapgen.Ctx) (reached []bool, edge, ok bool) {
 // either side of the way. It reports whether anything was opened.
 func carve(c *mapgen.Ctx, reached []bool, edge bool, rad int) bool {
 	n := c.W * c.H
+	o := newOverlay(c)
 	target := make([]bool, n)
 	if !edge {
 		for i := range target {
@@ -192,13 +205,13 @@ func carve(c *mapgen.Ctx, reached []bool, edge bool, rad int) bool {
 		}
 	} else {
 		free := make([]bool, n)
-		for i, t := range c.R.Terrain.Cells {
-			free[i] = !reached[i] && t.Walkable()
+		for i := range free {
+			free[i] = !reached[i] && o.walk(c, i)
 		}
 		label, sizes := mapgen.Components(c.W, c.H, free, false)
 		landN := make([]int, len(sizes))
 		for i, l := range label {
-			if l >= 0 && land(c.R.Terrain.Cells[i]) {
+			if l >= 0 && o.land(c, i) {
 				landN[l]++
 			}
 		}
@@ -245,8 +258,11 @@ func carve(c *mapgen.Ctx, reached []bool, edge bool, rad int) bool {
 					continue
 				}
 				m := int32(c.Idx(nx, ny))
+				if o.vault[m] {
+					continue // sealed: never carved
+				}
 				step := int32(0)
-				if !c.R.Terrain.Cells[m].Walkable() {
+				if !o.walk(c, int(m)) {
 					step = 1
 				}
 				if nc := level + step; nc < cost[m] {
@@ -291,10 +307,13 @@ func openCell(c *mapgen.Ctx, i int) {
 
 // invariants checks I1–I6 (mapgen's Fields/Result doc) and, with fix,
 // repairs them; the terrain is the authority the fields are synced to.
-// It returns one line per broken invariant.
+// Vault cells may carry stone and the natural roof; water under a bridge
+// is sound, but a bridge must stand on bridgeable, non-sea terrain (I6),
+// and the Ocean mask on water. It returns one line per broken invariant.
 func invariants(c *mapgen.Ctx, fix bool) []string {
 	var cnt [7]int
 	g := &c.R.Geology
+	vault := newOverlay(c).vault
 	for i, t := range c.R.Terrain.Cells {
 		rock := terrain.IsRockWall(t)
 		if c.F.Rock[i] != rock { // I1
@@ -304,7 +323,9 @@ func invariants(c *mapgen.Ctx, fix bool) []string {
 			}
 		}
 		needStone := rock || t == terrain.Stone // I2
-		if st := g.Stone[i]; needStone && st == geology.None {
+		if st := g.Stone[i]; vault[i] && !needStone {
+			// a vault's floor and ring keep their stone (or none)
+		} else if needStone && st == geology.None {
 			cnt[2]++
 			if fix {
 				g.Stone[i] = stoneAt(c, i)
@@ -321,7 +342,7 @@ func invariants(c *mapgen.Ctx, fix bool) []string {
 				g.Ore[i] = geology.NoOre
 			}
 		}
-		if c.R.Roof[i] != 0 && !rock && !c.F.Cave[i] { // I4
+		if c.R.Roof[i] != 0 && !rock && !c.F.Cave[i] && !vault[i] { // I4
 			cnt[4]++
 			if fix {
 				c.R.Roof[i] = 0
@@ -337,6 +358,7 @@ func invariants(c *mapgen.Ctx, fix bool) []string {
 			}
 		}
 	}
+	cnt[6] += bridgesAndSea(c, fix)
 	cnt[5] = features(c, fix)
 	var out []string
 	for k := 1; k <= 6; k++ {
@@ -352,12 +374,48 @@ func invariants(c *mapgen.Ctx, fix bool) []string {
 	return out
 }
 
-// features checks I5: no chunk, ruin piece, vent or plant off the map, on
-// water, rock or Track, or on another feature (the earlier one wins, in
-// the order chunks, ruins, vents, plants; a ruin's own pieces may share
-// cells), and F.Blocked marks exactly the feature and road cells. With fix,
-// offenders are dropped and Blocked is rewritten. It returns the number of
-// offending features plus unmarked feature cells.
+// bridgesAndSea checks the I6 additions: every bridge on the map, listed
+// once, over bridgeable terrain that is not the open sea; the Ocean mask
+// only on water. With fix, bad bridges are dropped and the mask cleared.
+func bridgesAndSea(c *mapgen.Ctx, fix bool) int {
+	bad := 0
+	for i, o := range c.R.Ocean {
+		if o && i < len(c.R.Terrain.Cells) && !terrain.IsWater(c.R.Terrain.Cells[i]) {
+			bad++
+			if fix {
+				c.R.Ocean[i] = false
+			}
+		}
+	}
+	seen := make([]bool, c.W*c.H)
+	kept := c.R.Bridges[:0:0]
+	for _, b := range c.R.Bridges {
+		ok := c.In(b.X, b.Y)
+		if ok {
+			i := c.Idx(b.X, b.Y)
+			ok = !seen[i] && terrain.Bridgeable(c.R.Terrain.Cells[i]) && !(i < len(c.R.Ocean) && c.R.Ocean[i])
+			seen[i] = true
+		}
+		if !ok {
+			bad++
+			continue
+		}
+		kept = append(kept, b)
+	}
+	if fix && bad > 0 {
+		c.R.Bridges = kept
+	}
+	return bad
+}
+
+// features checks I5: no vault cell, chunk, ruin piece, vent or plant off
+// the map, on water, rock or Track, or on another feature (the earlier one
+// wins, in the order vaults, chunks, ruins, vents, plants; a ruin's or
+// vault's own pieces may share cells), a vault's caskets, loot and
+// defender spots inside its ring, and F.Blocked marks exactly the feature
+// and road cells. With fix, offenders are dropped (a vault with a bad
+// footprint cell whole) and Blocked is rewritten. It returns the number
+// of offending features plus unmarked feature cells.
 func features(c *mapgen.Ctx, fix bool) int {
 	owner := make([]int32, c.W*c.H)
 	next, bad := int32(1), 0
@@ -380,6 +438,50 @@ func features(c *mapgen.Ctx, fix bool) int {
 		return true
 	}
 
+	vaults := c.R.Vaults[:0:0]
+	for _, v := range c.R.Vaults {
+		id := next
+		next++
+		sound := v.X0 <= v.X1 && v.Y0 <= v.Y1
+		for y := v.Y0; sound && y <= v.Y1; y++ {
+			for x := v.X0; sound && x <= v.X1; x++ {
+				sound = free(x, y, id)
+			}
+		}
+		if !sound {
+			bad++
+			continue
+		}
+		for y := v.Y0; y <= v.Y1; y++ {
+			for x := v.X0; x <= v.X1; x++ {
+				owner[c.Idx(x, y)] = id
+			}
+		}
+		k := v
+		k.Caskets, k.Loot, k.DefenderSpots = nil, nil, nil
+		for _, cs := range v.Caskets {
+			if v.Inside(cs.X, cs.Y) && v.Inside(cs.X, cs.Y+1) {
+				k.Caskets = append(k.Caskets, cs)
+			} else {
+				bad++
+			}
+		}
+		for _, l := range v.Loot {
+			if v.Inside(l.X, l.Y) {
+				k.Loot = append(k.Loot, l)
+			} else {
+				bad++
+			}
+		}
+		for _, p := range v.DefenderSpots {
+			if v.Inside(p.X, p.Y) {
+				k.DefenderSpots = append(k.DefenderSpots, p)
+			} else {
+				bad++
+			}
+		}
+		vaults = append(vaults, k)
+	}
 	chunks := c.R.Chunks[:0:0]
 	for _, ch := range c.R.Chunks {
 		if claim(ch.X, ch.Y, next) {
@@ -449,6 +551,9 @@ func features(c *mapgen.Ctx, fix bool) int {
 	}
 	if fix {
 		c.R.Chunks, c.R.Ruins, c.R.Vents, c.R.Plants = chunks, ruins, vents, plants
+		if len(c.R.Vaults) > 0 {
+			c.R.Vaults = vaults
+		}
 	}
 	return bad
 }

@@ -157,6 +157,7 @@ func (Coast) Run(c *mapgen.Ctx) error {
 	for i := range src {
 		src[i] = f.Coast[i] && f.Water[i].Wet()
 	}
+	copy(c.R.Ocean, src) // MAPGEN-3: the kept sea, never bridged
 	if !anyTrue(src) {
 		return nil
 	}

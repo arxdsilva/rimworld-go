@@ -109,6 +109,7 @@ func (v Vegetation) Run(c *mapgen.Ctx) error {
 	}
 	st.density(d, growable)
 	st.plants(d, elig)
+	st.cave() // cave.go: duskmoss in the dark, moss at the mouths (MAPGEN-3)
 	st.grass()
 	return nil
 }

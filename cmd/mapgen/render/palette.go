@@ -77,6 +77,8 @@ func PlantColor(s plant.Species) color.RGBA {
 	switch s {
 	case plant.Tree, plant.Pine, plant.JungleTree:
 		return color.RGBA{16, 78, 30, 255}
+	case plant.Duskmoss:
+		return color.RGBA{90, 120, 170, 255} // slate-blue cave moss
 	case plant.Shrub, plant.Bramble, plant.BerryBush, plant.Cactus:
 		return color.RGBA{120, 130, 40, 255}
 	}
@@ -91,6 +93,14 @@ var (
 	RoadColor  = color.RGBA{210, 180, 120, 255}
 	CaveColor  = color.RGBA{240, 140, 30, 255}
 	RiverLine  = color.RGBA{255, 60, 60, 255}
+
+	// MAPGEN-3: old road bridges (deck over water) and sealed vaults.
+	BridgeColor     = color.RGBA{176, 124, 62, 255}
+	VaultWallColor  = color.RGBA{190, 70, 90, 255}
+	VaultFloorColor = color.RGBA{90, 70, 100, 255}
+	CasketColor     = color.RGBA{80, 230, 230, 255}
+	LootColor       = color.RGBA{250, 230, 90, 255}
+	DefenderColor   = color.RGBA{255, 120, 20, 255}
 )
 
 // Grey is a grey level for v in [0, 1] (clamped).

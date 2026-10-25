@@ -7,6 +7,7 @@ package roads
 
 import (
 	"container/heap"
+	"fmt"
 	"math"
 
 	"rimworld-go/internal/domain/world/geology"
@@ -22,9 +23,13 @@ const (
 	costOpen    = 2
 	costRough   = 3
 	costSoft    = 8
-	costShallow = 16
+	costWater   = 24 // river or lake water, crossed on a bridge
 	costBlocked = 12
 	costRock    = 50
+
+	diagStep  = 14 // tenths per diagonal step ...
+	diagWater = 22 // ... and per diagonal step into unbridged water, so crossings run square to the flow
+	thickRock = 7  // rock this deep is cut only when no other way exists
 
 	pullWindow   = 80 // longest straight shortcut tried, in path steps
 	smoothRounds = 3
@@ -32,21 +37,49 @@ const (
 	edgeRadius   = 1.6
 )
 
-// Roads is the "roads" pass: writes Road, Roads, Track terrain, Blocked.
+// Roads is the "roads" pass: writes Road, RoadEnds, Roads, Bridges, Track
+// terrain, Blocked.
 type Roads struct{}
 
 // Name is the step's stream and label key.
 func (Roads) Name() string { return "roads" }
 
 type router struct {
-	c     *mapgen.Ctx
-	w, h  int
-	cost  []int16
-	g     []int32
-	prev  []int32
-	cut   []bool // rock cells the current road's straight lines cross
-	dist  []float32
-	touch []int32
+	c      *mapgen.Ctx
+	w, h   int
+	cost   []int16
+	wet    []bool // unbridged river or lake water (crossings are bridged)
+	g      []int32
+	prev   []int32
+	cut    []bool // rock cells the current road's straight lines cross
+	dist   []float32
+	touch  []int32
+	bridge []bool // cells already in Result.Bridges
+	vault  []bool // vault footprints: never crossed
+	thick  bool   // the last strict cost fill left thick rock impassable
+}
+
+func newRouter(c *mapgen.Ctx) *router {
+	n := c.W * c.H
+	rt := &router{c: c, w: c.W, h: c.H, cost: make([]int16, n), wet: make([]bool, n), g: make([]int32, n),
+		prev: make([]int32, n), cut: make([]bool, n), dist: make([]float32, n),
+		bridge: make([]bool, n), vault: make([]bool, n)}
+	for i := range rt.dist {
+		rt.dist[i] = float32(math.Inf(1))
+	}
+	for _, p := range c.R.Bridges {
+		if c.In(p.X, p.Y) {
+			rt.bridge[c.Idx(p.X, p.Y)] = true
+		}
+	}
+	for _, v := range c.R.Vaults {
+		for y := max(0, v.Y0); y <= min(c.H-1, v.Y1); y++ {
+			for x := max(0, v.X0); x <= min(c.W-1, v.X1); x++ {
+				rt.vault[c.Idx(x, y)] = true
+			}
+		}
+	}
+	return rt
 }
 
 // Run is the pass.
@@ -55,15 +88,11 @@ func (Roads) Run(c *mapgen.Ctx) error {
 	if s.Road == 0 || c.W < 2 || c.H < 2 {
 		return nil
 	}
-	n := c.W * c.H
-	rt := &router{c: c, w: c.W, h: c.H, cost: make([]int16, n), g: make([]int32, n),
-		prev: make([]int32, n), cut: make([]bool, n), dist: make([]float32, n)}
-	for i := range rt.dist {
-		rt.dist[i] = float32(math.Inf(1))
-	}
+	rt := newRouter(c)
 	r := c.Rand("roads")
-	rt.fillCost()
+	rt.fillCost(true)
 	junction := rt.junction()
+	n := 0
 	for d := site.Dir8(0); d < 8; d++ {
 		if !s.Road.Has(d) {
 			continue
@@ -73,16 +102,67 @@ func (Roads) Run(c *mapgen.Ctx) error {
 		if !ok {
 			continue
 		}
-		rt.fillCost()
-		path := rt.astar(start, junction)
+		n++
+		path := rt.route(int32(start), int32(junction))
 		if path == nil {
+			c.R.Metrics.Repairs = append(c.R.Metrics.Repairs, fmt.Sprintf("roads: road %d (direction %d) cannot reach the junction", n, d))
 			continue
 		}
-		line := rt.smooth(path)
-		rt.rasterise(line)
-		c.R.Roads = append(c.R.Roads, line)
+		c.R.Roads = append(c.R.Roads, rt.lay(path))
+		c.F.RoadEnds = append(c.F.RoadEnds, [2]mapgen.Point{rt.pt(int32(start)), rt.pt(int32(junction))})
 	}
 	return nil
+}
+
+// Route is the road A* from one cell to another over the map as it is now:
+// rock is cut, river and lake water bridged, the open sea and vaults never
+// crossed. Thick rock is cut only when there is no other way. It returns
+// the cells from from to to (8-connected), or nil when no way exists.
+func Route(c *mapgen.Ctx, from, to mapgen.Point) []mapgen.Point {
+	if !c.In(from.X, from.Y) || !c.In(to.X, to.Y) {
+		return nil
+	}
+	rt := newRouter(c)
+	path := rt.route(int32(c.Idx(from.X, from.Y)), int32(c.Idx(to.X, to.Y)))
+	if path == nil {
+		return nil
+	}
+	out := make([]mapgen.Point, len(path))
+	for k, i := range path {
+		out[k] = rt.pt(i)
+	}
+	return out
+}
+
+// Lay lays a routed path down as road: water crossings straightened into
+// 2-wide wooden bridges between dry banks, the rest smoothed and
+// rasterised as Track with soft gravel edges. Off-map cells are ignored.
+func Lay(c *mapgen.Ctx, path []mapgen.Point) {
+	cells := make([]int32, 0, len(path))
+	for _, p := range path {
+		if c.In(p.X, p.Y) {
+			cells = append(cells, int32(c.Idx(p.X, p.Y)))
+		}
+	}
+	if len(cells) == 0 {
+		return
+	}
+	rt := newRouter(c)
+	rt.fillCost(false)
+	rt.lay(cells)
+}
+
+func (rt *router) pt(i int32) mapgen.Point { return mapgen.Point{X: int(i) % rt.w, Y: int(i) / rt.w} }
+
+// route is A* with thick rock impassable, then, if that fails, with every
+// rock cut at the rock cost.
+func (rt *router) route(a, b int32) []int32 {
+	rt.fillCost(true)
+	if p := rt.astar(int(a), int(b)); p != nil || !rt.thick {
+		return p
+	}
+	rt.fillCost(false)
+	return rt.astar(int(a), int(b))
 }
 
 func (rt *router) isRock(i int) bool {
@@ -90,9 +170,10 @@ func (rt *router) isRock(i int) bool {
 	return c.F.Rock[i] || terrain.IsRockWall(c.R.Terrain.At(i%rt.w, i/rt.w))
 }
 
-func (rt *router) isDeep(i int) bool {
+// isOcean reports open-sea water (the coast), which is never crossed.
+func (rt *router) isOcean(i int) bool {
 	c := rt.c
-	return c.F.Water[i] == mapgen.Deep || c.R.Terrain.At(i%rt.w, i/rt.w) == terrain.DeepWater
+	return (i < len(c.R.Ocean) && c.R.Ocean[i]) || (c.F.Coast[i] && c.F.Water[i].Wet())
 }
 
 func (rt *router) isWater(i int) bool {
@@ -100,22 +181,29 @@ func (rt *router) isWater(i int) bool {
 	return c.F.Water[i].Wet() || terrain.IsWater(c.R.Terrain.At(i%rt.w, i/rt.w))
 }
 
-func (rt *router) fillCost() {
+// fillCost prices every cell; strict leaves thick rock impassable.
+func (rt *router) fillCost(strict bool) {
 	c := rt.c
+	rt.thick = false
 	for i := range rt.cost {
 		var k int16
 		t := c.R.Terrain.At(i%rt.w, i/rt.w)
+		water := rt.isWater(i)
+		rt.wet[i] = water && !c.F.Road[i]
 		switch {
-		case rt.isDeep(i):
+		case rt.vault[i] || (water && rt.isOcean(i)):
 			k = -1
 		case rt.isRock(i):
 			k = costRock
+			if strict && c.F.RockDepth[i] >= thickRock {
+				k, rt.thick = -1, true
+			}
 		case c.F.Road[i]:
 			k = costOpen
 		case c.F.Blocked[i]:
 			k = costBlocked
-		case rt.isWater(i):
-			k = costShallow
+		case water:
+			k = costWater
 		case t == terrain.Marsh || t == terrain.Mud || t == terrain.Sand:
 			k = costSoft
 		case t == terrain.Gravel || t == terrain.Stone || t == terrain.Ice:
@@ -174,8 +262,8 @@ func (rt *router) junction() int {
 }
 
 // endpoint is the edge cell where road direction d leaves the map, shifted
-// along the edge by u*15% of its length, then moved to the nearest cell that
-// is not deep water.
+// along the edge by u*15% of its length, then moved to the nearest dry cell
+// outside any vault.
 func (rt *router) endpoint(d site.Dir8, u float64) (int, bool) {
 	w, h := rt.w, rt.h
 	alongX := func(frac float64, y int) (int, int, bool, int) { // horizontal edge
@@ -219,7 +307,7 @@ func (rt *router) endpoint(d site.Dir8, u float64) (int, bool) {
 			if !horiz {
 				cx, cy = x, p
 			}
-			if i := cy*w + cx; rt.cost[i] >= 0 {
+			if i := cy*w + cx; !rt.isWater(i) && !rt.vault[i] {
 				return i, true
 			}
 		}
@@ -249,7 +337,7 @@ func (q *pq) Pop() any {
 	return v
 }
 
-var nbrs = [8][3]int{{0, -1, 10}, {1, 0, 10}, {0, 1, 10}, {-1, 0, 10}, {1, -1, 14}, {1, 1, 14}, {-1, 1, 14}, {-1, -1, 14}}
+var nbrs = [8][3]int{{0, -1, 10}, {1, 0, 10}, {0, 1, 10}, {-1, 0, 10}, {1, -1, diagStep}, {1, 1, diagStep}, {-1, 1, diagStep}, {-1, -1, diagStep}}
 
 // astar routes from cell a to cell b (8-connected) and returns the cells.
 func (rt *router) astar(a, b int) []int32 {
@@ -300,10 +388,16 @@ func (rt *router) astar(a, b int) []int32 {
 			if k < 0 {
 				continue
 			}
-			if nb[2] == 14 && (rt.cost[y*w+nx] < 0 || rt.cost[ny*w+x] < 0) {
-				continue // no squeezing diagonally between deep cells
+			step := int32(nb[2])
+			if step == diagStep {
+				if rt.cost[y*w+nx] < 0 || rt.cost[ny*w+x] < 0 {
+					continue // no squeezing diagonally between impassable cells
+				}
+				if rt.wet[j] {
+					step = diagWater
+				}
 			}
-			ng := cur.g + int32(k)*int32(nb[2])
+			ng := cur.g + int32(k)*step
 			if ng < rt.g[j] {
 				rt.g[j] = ng
 				rt.prev[j] = int32(i)
@@ -315,8 +409,8 @@ func (rt *router) astar(a, b int) []int32 {
 }
 
 // line walks the Bresenham cells from a (excluded) to b; it returns their
-// summed cost, or -1 if one is impassable or a diagonal step squeezes
-// between impassable cells. out receives the cells.
+// summed cost, or -1 if one is impassable or unbridged water, or a
+// diagonal step squeezes between impassable cells. out receives the cells.
 func (rt *router) line(a, b int, out []int32) (int, []int32) {
 	w := rt.w
 	x0, y0, x1, y1 := a%w, a/w, b%w, b/w
@@ -343,7 +437,7 @@ func (rt *router) line(a, b int, out []int32) (int, []int32) {
 			y0 += sy
 		}
 		k := rt.cost[y0*w+x0]
-		if k < 0 {
+		if k < 0 || rt.wet[y0*w+x0] {
 			return -1, out
 		}
 		if x0 != px && y0 != py && (rt.cost[py*w+x0] < 0 || rt.cost[y0*w+px] < 0) {
@@ -359,9 +453,6 @@ func (rt *router) line(a, b int, out []int32) (int, []int32) {
 // its corners; it returns the centreline in cell units.
 func (rt *router) smooth(path []int32) []mapgen.PointF {
 	w := rt.w
-	for i := range rt.cut {
-		rt.cut[i] = false
-	}
 	pre := make([]int, len(path))
 	for k := 1; k < len(path); k++ {
 		pre[k] = pre[k-1] + int(rt.cost[path[k]])
@@ -433,8 +524,8 @@ func chaikin(p []mapgen.PointF) []mapgen.PointF {
 	return append(out, p[len(p)-1])
 }
 
-// curveOK reports whether the centreline stays off deep water and off rock
-// the straight lines did not already cut.
+// curveOK reports whether the centreline stays off impassable cells,
+// unbridged water and rock the straight lines did not already cut.
 func (rt *router) curveOK(p []mapgen.PointF) bool {
 	for i := 0; i+1 < len(p); i++ {
 		a, b := p[i], p[i+1]
@@ -446,7 +537,7 @@ func (rt *router) curveOK(p []mapgen.PointF) bool {
 				return false
 			}
 			k := y*rt.w + x
-			if rt.cost[k] < 0 || (rt.isRock(k) && !rt.cut[k]) {
+			if rt.cost[k] < 0 || rt.wet[k] || (rt.isRock(k) && !rt.cut[k]) {
 				return false
 			}
 		}
@@ -464,8 +555,11 @@ func segDist(px, py float64, a, b mapgen.PointF) float64 {
 	return math.Hypot(px-(a.X+t*dx), py-(a.Y+t*dy))
 }
 
-// rasterise lays the centreline down as track.
-func (rt *router) rasterise(line []mapgen.PointF) {
+// rasterise lays centrelines down as track with soft edges. Water is
+// skipped, unless bridgeWater, when water within the core radius becomes
+// bridge (a crossing no straight strip fitted). changed collects the cells
+// whose ground changed.
+func (rt *router) rasterise(lines [][]mapgen.PointF, bridgeWater bool, changed map[int]bool) {
 	c := rt.c
 	w, h := rt.w, rt.h
 	rt.touch = rt.touch[:0]
@@ -491,11 +585,13 @@ func (rt *router) rasterise(line []mapgen.PointF) {
 			}
 		}
 	}
-	if len(line) == 1 {
-		one(line[0], line[0])
-	}
-	for i := 0; i+1 < len(line); i++ {
-		one(line[i], line[i+1])
+	for _, line := range lines {
+		if len(line) == 1 {
+			one(line[0], line[0])
+		}
+		for i := 0; i+1 < len(line); i++ {
+			one(line[i], line[i+1])
+		}
 	}
 	// Rock the straight lines cut, and its neighbours, may be cut wide.
 	near := func(i int) bool {
@@ -510,8 +606,6 @@ func (rt *router) rasterise(line []mapgen.PointF) {
 		return false
 	}
 	seed := c.NoiseSeed("roads/edge")
-	keep := c.R.Chunks[:0:0]
-	changed := make(map[int]bool) // lookup only, never iterated
 	for _, ti := range rt.touch {
 		i := int(ti)
 		d := float64(rt.dist[i])
@@ -519,40 +613,70 @@ func (rt *router) rasterise(line []mapgen.PointF) {
 		x, y := i%w, i/w
 		rock := rt.isRock(i)
 		core := d <= coreRadius
+		water := rt.isWater(i)
 		switch {
-		case rt.isDeep(i):
-			continue
+		case rt.cost[i] < 0 && !rock:
+			continue // the sea, a vault
 		case rock && (!core || !near(i)):
 			continue
-		case !core && rt.isWater(i):
+		case water && (!core || !bridgeWater):
 			continue
 		}
 		if c.F.Road[i] {
 			continue // an earlier road's track is never downgraded
 		}
-		asTrack := core || noise2.Gradient(seed, float64(x), float64(y), 3) > 0.5
-		if rt.isWater(i) { // a ford: stays water, still the road
-			c.F.Road[i], c.F.Blocked[i] = true, false
+		if water {
+			rt.addBridge(i)
 			continue
 		}
-		if rock {
-			c.F.Rock[i] = false
-			c.R.Roof[i] = roof.Cell(0)
-			c.F.RockDepth[i] = 0
-		}
-		c.R.Geology.Stone[i] = geology.None
-		c.R.Geology.Ore[i] = geology.NoOre
-		if asTrack {
-			c.R.Terrain.Set(x, y, terrain.Track)
-			c.F.Road[i] = true
-		} else {
-			c.R.Terrain.Set(x, y, terrain.Gravel)
-		}
-		c.F.Blocked[i] = true
+		asTrack := core || noise2.Gradient(seed, float64(x), float64(y), 3) > 0.5
+		rt.ground(i, asTrack)
 		changed[i] = true
 	}
+}
+
+// ground turns cell i into Track (a road cell) or a gravel edge, cutting
+// rock and clearing stone and ore.
+func (rt *router) ground(i int, asTrack bool) {
+	c := rt.c
+	x, y := i%rt.w, i/rt.w
+	if rt.isRock(i) {
+		c.F.Rock[i] = false
+		c.R.Roof[i] = roof.Cell(0)
+		c.F.RockDepth[i] = 0
+	}
+	c.R.Geology.Stone[i] = geology.None
+	c.R.Geology.Ore[i] = geology.NoOre
+	if asTrack {
+		c.R.Terrain.Set(x, y, terrain.Track)
+		c.F.Road[i] = true
+	} else {
+		c.R.Terrain.Set(x, y, terrain.Gravel)
+	}
+	c.F.Blocked[i] = true
+}
+
+// addBridge makes cell i an old wooden bridge: a road cell over
+// unchanged water, marsh or mud.
+func (rt *router) addBridge(i int) {
+	c := rt.c
+	c.F.Road[i], c.F.Blocked[i] = true, true
+	rt.wet[i] = false
+	if !rt.bridge[i] {
+		rt.bridge[i] = true
+		c.R.Bridges = append(c.R.Bridges, rt.pt(int32(i)))
+	}
+}
+
+// dropChunks removes the chunks on changed cells.
+func (rt *router) dropChunks(changed map[int]bool) {
+	c := rt.c
+	if len(changed) == 0 {
+		return
+	}
+	keep := c.R.Chunks[:0:0]
 	for _, ch := range c.R.Chunks {
-		if !changed[ch.Y*w+ch.X] {
+		if !changed[ch.Y*rt.w+ch.X] {
 			keep = append(keep, ch)
 		}
 	}
