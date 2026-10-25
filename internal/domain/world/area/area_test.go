@@ -69,3 +69,45 @@ func TestExportImportGob(t *testing.T) {
 		t.Fatal("roundtrip")
 	}
 }
+
+// PLAY-015: stable ids, colours, delete and invert.
+func TestIDsDeleteInvert(t *testing.T) {
+	s := New(5, 3) // 15 cells: one partial word
+	a, b := s.Add("A"), s.Add("B")
+	if s.Areas[a].ID != 1 || s.Areas[b].ID != 2 || s.Areas[a].Color == s.Areas[b].Color {
+		t.Fatalf("ids/colours %+v", s.Areas)
+	}
+	s.Paint(a, 0, 0, 1, 0, true)
+	if !s.Invert(a) || s.Contains(a, 0, 0) || !s.Contains(a, 4, 2) || s.Count(a) != 13 {
+		t.Fatalf("invert: count %d", s.Count(a))
+	}
+	if s.Areas[a].Bits[0]>>15 != 0 {
+		t.Fatal("invert set padding bits")
+	}
+	if s.Invert(9) || s.Index(0) != -1 || s.Index(7) != -1 {
+		t.Fatal("bad index handling")
+	}
+	if !s.Delete(1) || s.Delete(1) || len(s.Areas) != 1 || s.Index(2) != 0 {
+		t.Fatal("delete")
+	}
+	if c := s.Add("C"); s.Areas[c].ID != 3 {
+		t.Fatalf("ids are never reused: got %d", s.Areas[c].ID)
+	}
+	if ColorOf(0) != ColorOf(1) || ColorOf(11) != ColorOf(1) {
+		t.Fatal("palette cycles")
+	}
+}
+
+func TestImportGivesOldSetsIDs(t *testing.T) {
+	old := &Set{W: 2, H: 2, Areas: []Area{{Name: "x", Bits: []uint64{1}}, {Name: "y", Bits: []uint64{2}}}}
+	s := Import(old)
+	if s.Areas[0].ID != 1 || s.Areas[1].ID != 2 || s.LastID != 2 || s.Areas[1].Color != ColorOf(2) {
+		t.Fatalf("migrated %+v", s)
+	}
+	if old.Areas[0].ID != 0 {
+		t.Fatal("import must not touch the saved set")
+	}
+	if Import(nil) != nil {
+		t.Fatal("nil")
+	}
+}

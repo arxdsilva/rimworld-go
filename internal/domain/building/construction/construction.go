@@ -85,6 +85,9 @@ const (
 	// salvaged for steel.
 	Bridge
 	SleeperCasket
+	// PenMarker (PLAY-015) is a small signpost: the enclosed region around
+	// it (fences, gates, walls, rock) is an animal pen with its settings.
+	PenMarker
 	kindCount
 )
 
@@ -226,6 +229,7 @@ var defs = [kindCount]Def{
 	Bridge: {Kind: Bridge, Name: "bridge", Wood: 6, Work: 110, Layer: LayerFoundation, Foundation: true},
 	SleeperCasket: {Kind: SleeperCasket, Name: "sleeper casket", Layer: LayerObject, BlocksMove: true, Rotatable: true,
 		Size: [2]int{1, 2}, MetalOK: true, MetalOnly: true, Placed: true, Salvage: 20},
+	PenMarker: {Kind: PenMarker, Name: "pen marker", Wood: 10, Work: 40, Layer: LayerObject},
 }
 
 // Requires is the support kind k built from stuff needs under it

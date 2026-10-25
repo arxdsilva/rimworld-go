@@ -200,6 +200,20 @@ var sounds = []sound{
 		{Wave: s.Brown, Start: 0.6, Dur: 0.9, BandPass: 260, BandEnd: 180, Q: 1.2, Attack: 0.1, Decay: 0.5, Tremolo: 14, TremoloDepth: 0.5, Gain: 0.7},
 	}}, 0.6},
 
+	// --- fire (PLAY-015): a roaring, popping blaze (louder and denser than
+	// the campfire) and the sharp crack of a lightning strike that lands.
+	{s.Recipe{ID: "amb.fire", Seed: 703, Loop: 8, Layers: []s.Layer{
+		{Wave: s.Brown, Dur: 10, LowPass: 380, Tremolo: 0.7, TremoloDepth: 0.35, Gain: 0.8},
+		{Wave: s.Pink, Dur: 10, BandPass: 900, Q: 0.5, Tremolo: 1.3, TremoloDepth: 0.4, Gain: 0.45},
+		{Wave: s.White, Dur: 10, HighPass: 1800, Grains: 60, GrainLen: 0.008, Gain: 0.9},
+		{Wave: s.White, Dur: 10, BandPass: 2600, Grains: 14, GrainLen: 0.02, Gain: 0.6},
+	}}, 0.75},
+	{s.Recipe{ID: "sfx.lightning_strike", Seed: 704, Variants: 2, Jitter: 0.1, Layers: []s.Layer{
+		{Wave: s.White, Dur: 0.06, HighPass: 1500, Attack: 0.001, Decay: 0.03, Gain: 1},
+		{Wave: s.White, Start: 0.02, Dur: 0.5, BandPass: 2200, BandEnd: 600, Q: 0.6, Decay: 0.25, Gain: 0.6},
+		{Wave: s.Brown, Start: 0.04, Dur: 1.6, LowPass: 260, Attack: 0.01, Decay: 0.9, Gain: 0.9},
+	}}, 0.9},
+
 	// --- water (NG-1 §7.4)
 	// A babbling brook: pinkish noise through several band-passes that drift
 	// slowly, with fast gurgling wobble and splashing grains.

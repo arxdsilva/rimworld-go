@@ -135,6 +135,29 @@ const (
 	// OpenCasket orders the sealed sleeper casket Target opened (MAPGEN-3):
 	// a colonist walks there and works it open, waking its whole group.
 	OpenCasket
+	// PLAY-015 areas: CreateArea adds an area named Name; DeleteArea and
+	// InvertArea act on area id Index. AssignArea's Index is an area id,
+	// AreaUnrestricted or AreaHome; its Pawn may be a colonist or an animal.
+	CreateArea
+	DeleteArea
+	InvertArea
+	// SetHomeAuto turns automatic Home expansion on (Enabled) or off.
+	SetHomeAuto
+	// DesignateSnowClear paints (Enabled) or clears the snow clearing area
+	// over X,Y..X2,Y2.
+	DesignateSnowClear
+	// SetPenSettings sets pen marker Target's settings from Name (the
+	// encoded species/sex and auto-cut lists, see game.EncodePenSettings).
+	SetPenSettings
+	// DevStartFire starts a fire at X, Y (developer mode).
+	DevStartFire
+)
+
+// Area references for AssignArea's Index (PLAY-015): any other value is an
+// area id.
+const (
+	AreaUnrestricted = -1
+	AreaHome         = -2
 )
 
 // WorkType is a compact work-column id for SetWorkEnabled.
@@ -176,6 +199,9 @@ const (
 	OrderEquip  // pick up and wield the weapon at X, Y
 	OrderTame   // Undesignate only: the taming mark
 	OrderSmooth // smooth the rock wall or stone floor at X, Y (SIM-029)
+	// OrderExtinguish (PLAY-015): beat out the fire at X, Y (anywhere: a
+	// forced order ignores Home and the allowed area).
+	OrderExtinguish
 )
 
 // Command is applied on a simulation tick, never by the UI directly.

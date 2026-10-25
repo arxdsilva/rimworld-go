@@ -32,6 +32,19 @@
       "reviewed_by": "arxdsilva"
     },
     {
+      "id": "amb.fire",
+      "bus": "ambience",
+      "loop": true,
+      "volume": 0.75,
+      "files": [
+        "ambience/fire.wav"
+      ],
+      "source": "procedural",
+      "recipe": "amb.fire",
+      "seed": 703,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
       "id": "amb.night",
       "bus": "ambience",
       "loop": true,
@@ -5008,6 +5021,19 @@
       "source": "procedural",
       "recipe": "sfx.harvest",
       "seed": 208,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.lightning_strike",
+      "bus": "effects",
+      "volume": 0.9,
+      "files": [
+        "sfx/lightning_strike_0.wav",
+        "sfx/lightning_strike_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.lightning_strike",
+      "seed": 704,
       "license": "original, made in code (CC0, this repo)"
     },
     {

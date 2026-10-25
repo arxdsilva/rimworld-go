@@ -71,6 +71,12 @@ type AnimalView struct {
 	Herd        uint32
 	// Dormant (MAPGEN-3): a sealed vault's sleeping defender (vault.go).
 	Dormant bool
+	// PLAY-015: Penned livestock show Pen (the pen's name, "Roaming" or
+	// "Being roped"); other tame animals have an allowed area AreaRef
+	// (command.AreaUnrestricted, command.AreaHome or an area id).
+	Penned  bool
+	Pen     string
+	AreaRef int
 	// ENG-003 (M10): the master's and bonded colonist's names and ids
 	// (tame animals), which training.Skill skills are learnt, and every
 	// skill's row (Training, in training.Skill order). Mother is the

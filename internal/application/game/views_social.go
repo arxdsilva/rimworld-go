@@ -120,6 +120,13 @@ type AreaView struct {
 	Index int
 	Name  string
 	Cells int
+	// PLAY-015: the stable id (AssignArea's Index), overlay colour, and
+	// the member bitset (row-major over the map, shared read-only; Ver
+	// changes whenever the area does).
+	ID    uint16
+	Color [4]uint8
+	Bits  []uint64
+	Ver   uint64
 }
 
 // HistoryEntryView is one History line.

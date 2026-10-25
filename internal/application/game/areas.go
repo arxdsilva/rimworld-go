@@ -237,7 +237,7 @@ func (g *Game) areaViews() []AreaView {
 	}
 	out := make([]AreaView, 0, len(g.areas.Areas))
 	for i, a := range g.areas.Areas {
-		out = append(out, AreaView{Index: i, Name: a.Name, Cells: g.areas.Count(i)})
+		out = append(out, AreaView{Index: i, Name: a.Name, Cells: g.areas.Count(i), ID: a.ID, Color: a.Color, Bits: a.Bits})
 	}
 	return out
 }

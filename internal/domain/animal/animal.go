@@ -184,6 +184,10 @@ type Roster struct {
 	Dimorphic bool // separate female art (renderer picks by id)
 	Explosive bool // bursts when it dies
 	SmallPrey bool // a predator of small animals only
+	// Penned (PLAY-015): farm livestock, kept in pens by fences and pen
+	// markers and roped by handlers; every other tame animal uses allowed
+	// areas instead.
+	Penned bool
 }
 
 var roster = [numSpecies]Roster{

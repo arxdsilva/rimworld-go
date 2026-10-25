@@ -107,6 +107,11 @@ const (
 	ExitMap
 	TendAnimal
 	Visit
+	// PLAY-015: lead a penned animal to its pen; beat out a fire; shovel
+	// snow off a cell of the snow clearing area.
+	Rope
+	FightFire
+	ClearSnow
 )
 
 // IsIdle reports a free-time behaviour that any real work may replace.

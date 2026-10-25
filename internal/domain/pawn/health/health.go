@@ -36,6 +36,8 @@ const (
 	// botched operation.
 	CauseExecution
 	CauseSurgery
+	// CauseBurns (PLAY-015): burned to death in a fire.
+	CauseBurns
 )
 
 func (c Cause) String() string {
@@ -56,6 +58,8 @@ func (c Cause) String() string {
 		return "executed"
 	case CauseSurgery:
 		return "botched surgery"
+	case CauseBurns:
+		return "burns"
 	default:
 		return ""
 	}

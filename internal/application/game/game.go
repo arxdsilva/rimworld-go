@@ -439,6 +439,18 @@ type WorldView struct {
 	Fog     []uint8
 	FogVer  uint64
 	Landing [2]int
+	// PLAY-015: per-tile snow depth (0..255; empty: none), the snow
+	// clearing area (1 per tile), burning cells, the pens and whether the
+	// Home area expands automatically. Each *Ver changes with its layer.
+	Snow         []uint8
+	SnowVer      uint64
+	SnowClear    []uint8
+	SnowClearVer uint64
+	Fires        []FireView
+	FireVer      uint64
+	Pens         []PenView
+	PenVer       uint64
+	HomeAuto     bool
 	// NG-1 setup (setup_view.go): arrival pods for the fall streak and dust
 	// (Tick is the landing tick), the permanent conditions' keys and the
 	// heat wave or cold snap in progress ("" when none).
@@ -618,6 +630,10 @@ type Game struct {
 	ng ng1State
 	// fog: unexplored tiles (fog.go, MAPGEN-2); zero: no fog.
 	fog fogState
+	// PLAY-015: fires, per-tile snow and the pens' settings.
+	fire fireState
+	snow snowState
+	pens []penSave
 	// vaults: the sealed vaults' lifecycle (vault.go, MAPGEN-3); saved.
 	vaults []vaultSave
 	// br: bridges' open-sea bitset (bridge.go, MAPGEN-3); zero: no sea known.

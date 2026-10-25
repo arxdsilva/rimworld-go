@@ -25,6 +25,9 @@ const (
 	// NaturalThick (with Natural): deep overhead rock from map generation
 	// (MAPGEN-2). Nothing drops through it and no tool removes it.
 	NaturalThick
+	// AreaBuild (PLAY-015): the build-roof area. Colonists keep a roof
+	// built here (rebuilding after a collapse) until the area is cleared.
+	AreaBuild
 )
 
 const (

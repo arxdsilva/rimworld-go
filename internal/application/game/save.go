@@ -12,6 +12,7 @@ import (
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/pawn/pawngen"
 	"rimworld-go/internal/domain/pawn/skill"
+	"rimworld-go/internal/domain/world/fire"
 	"slices"
 
 	"rimworld-go/internal/domain/incident"
@@ -251,6 +252,13 @@ type saveState struct {
 	// deep water is bridgeable); Vaults the sealed vaults' state.
 	Ocean  []uint64
 	Vaults []vaultSave
+	// PLAY-015: NoHomeAuto (zero: Home expands automatically), per-tile
+	// snow and the snow clearing area, burning fires, pen marker settings.
+	NoHomeAuto bool
+	Snow       []byte
+	SnowClear  []uint64
+	Fires      []fire.Fire
+	PenMarkers []penSave
 	// Grass and GrassCut (UI-011); absent in older saves, which reseed.
 	Grass    []uint8
 	GrassCut [][2]int
