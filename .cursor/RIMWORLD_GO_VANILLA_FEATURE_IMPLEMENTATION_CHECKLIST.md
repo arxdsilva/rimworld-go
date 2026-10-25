@@ -699,7 +699,7 @@ This is the heart of autonomous colony behavior.
     -   temperature/light requirements.
 -   [x] **Sowing** (Grow work sows empty fertile zone cells; prioritizable from the order menu; tree zones are planted, chopped when grown and replanted (UI-011))
     -   Growers plant designated crops in growing zones.
--   [-] **Plant growth** (integer per-tick growth scaled by fertility x soil sensitivity x temperature; daylight only; frost kills crops; no plant health)
+-   [-] **Plant growth** (integer per-tick growth scaled by fertility x soil sensitivity x temperature; daylight only; PLAY-016: cold and heat damage plants over hours (25%/h at the threshold, faster beyond, healing below 60% once safe, dying from 60%), shown in the plant view and cutting the harvest; no other plant health (blight, fire burns them via PLAY-015))
     -   Analytical/bucketed growth.
     -   Depends on temperature, light, fertility, plant health.
 -   [x] **Harvest maturity** (plants ripen at GrowTicks; berry bushes regrow to 35% after harvest)
