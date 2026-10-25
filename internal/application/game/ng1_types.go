@@ -39,6 +39,10 @@ type Setup struct {
 	Season      Season
 	Colonists   []pawngen.Pawn
 	Seed        uint64
+	// GenVersion is the map generator that built the colony
+	// (mapgen.Version; 0: the pre-MAPGEN-2 site generator). Debug views
+	// regenerate fields only for their own version.
+	GenVersion uint16
 }
 
 // MaxEnabledSide is the largest map side the wizard offers; raised by the

@@ -276,6 +276,8 @@ type BuildingView struct {
 	// SwapPct of the work done (PLAY-011); "" when none.
 	SwapTo  string
 	SwapPct int
+	// Ruin: an abandoned piece from map generation (MAPGEN-2).
+	Ruin    bool
 	W, H    int // footprint in tiles (after facing)
 	HasSpot bool
 	SpotX   int
@@ -421,6 +423,12 @@ type WorldView struct {
 	// PlanVer changes whenever it does.
 	Plan    []uint8
 	PlanVer uint32
+	// Fog (MAPGEN-2) is 1 per unexplored tile (row-major, TerrainW wide;
+	// empty: no fog); FogVer changes whenever it does. Landing is the
+	// colony's landing spot (the map centre for legacy colonies).
+	Fog     []uint8
+	FogVer  uint64
+	Landing [2]int
 	// NG-1 setup (setup_view.go): arrival pods for the fall streak and dust
 	// (Tick is the landing tick), the permanent conditions' keys and the
 	// heat wave or cold snap in progress ("" when none).
@@ -594,6 +602,8 @@ type Game struct {
 	// ng: the new-game setup's live state (setup.go, NG-1 SETUP); zero
 	// for a legacy colony.
 	ng ng1State
+	// fog: unexplored tiles (fog.go, MAPGEN-2); zero: no fog.
+	fog fogState
 	// Social and host systems (ENG-003): each container is nil until its
 	// milestone first needs it, and saved as an additive field.
 	soc       *socialState                        // social_state.go

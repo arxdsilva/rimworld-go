@@ -27,8 +27,12 @@ import (
 // ng1State is the live state of a colony started from a Setup. The zero
 // value is a legacy colony.
 type ng1State struct {
-	setup *Setup           // nil: legacy
-	fx    scenario.Effects // setup.Scenario.Apply() (derived, not saved)
+	setup *Setup // nil: legacy
+	// landing is the landing spot chosen by the map generator (MAPGEN-2);
+	// hasLanding false means the map centre (legacy and older saves).
+	landing    [2]int
+	hasLanding bool
+	fx         scenario.Effects // setup.Scenario.Apply() (derived, not saved)
 	// factions are the world's other peoples (copied from the Setup).
 	factions []faction.Faction
 	// story is the storyteller's memory; plan the pending threat (its
@@ -423,4 +427,13 @@ func (g *Game) importSetupState(s *SetupState) {
 	if s.Climate != (temperature.Climate{}) {
 		g.climate = s.Climate
 	}
+}
+
+// landingSpot is where the colony landed: the generator's choice, or the
+// map centre for legacy colonies and older saves.
+func (g *Game) landingSpot() (int, int) {
+	if g.ng.hasLanding {
+		return g.ng.landing[0], g.ng.landing[1]
+	}
+	return g.grid.Width() / 2, g.grid.Height() / 2
 }

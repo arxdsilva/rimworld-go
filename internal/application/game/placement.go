@@ -19,10 +19,12 @@ const (
 	ReasonPlanned  = "already planned here"
 	ReasonItem     = "items in the way"
 	ReasonUnknown  = "unknown building"
-	ReasonRock     = "rock in the way"
-	ReasonTree     = "tree in the way"
-	ReasonStuff    = "cannot be built from that"
-	ReasonSpot     = "work spot is blocked"
+	// ReasonFogged: the tile is unexplored (fog of war, MAPGEN-2).
+	ReasonFogged = "unexplored"
+	ReasonRock   = "rock in the way"
+	ReasonTree   = "tree in the way"
+	ReasonStuff  = "cannot be built from that"
+	ReasonSpot   = "work spot is blocked"
 	// ReasonSame: the same piece in the same material is already here
 	// (a neutral refusal: the Architect skips it silently, PLAY-011).
 	ReasonSame = "already that material"

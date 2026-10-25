@@ -243,6 +243,10 @@ type saveState struct {
 	// Roofs (SIM-018): roof.Cell flags per tile; absent in older saves,
 	// whose closed rooms are auto-roofed on load.
 	Roofs []uint8
+	// Fog (MAPGEN-2) is the unexplored-tile bitset; absent: no fog.
+	// Landing is the landing spot (x, y); absent: the map centre.
+	Fog     []uint64
+	Landing []int
 	// Grass and GrassCut (UI-011); absent in older saves, which reseed.
 	Grass    []uint8
 	GrassCut [][2]int
