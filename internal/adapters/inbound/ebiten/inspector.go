@@ -193,7 +193,7 @@ func titleCase(s string) string {
 // equipListY is the top of the "Equip nearby" buttons on the Gear tab,
 // below the wearing list and comfort line.
 func equipListY(r button, p game.PawnView) float32 {
-	return r.y + insBodyY + gearLayoutFor(len(p.Apparel)).equipList
+	return r.y + insBodyY + gearLayoutFor(len(gearRows(p))-1).equipList
 }
 
 // equipNearbyButtons builds the Gear tab's "Equip nearby" list as buttons
@@ -474,13 +474,15 @@ type gearLayout struct {
 	weaponVal, wearing, clothes, comfort, equipHead, equipList float32
 }
 
-func gearLayoutFor(apparel int) gearLayout {
+// gearLayoutFor lays the tab out for lines Wearing rows below "everyday
+// clothes".
+func gearLayoutFor(lines int) gearLayout {
 	hs, ss := lineStep(tsLabel), lineStep(tsSmall)
 	var g gearLayout
 	g.weaponVal = hs
 	g.wearing = hs + ss + 6
 	g.clothes = g.wearing + hs
-	g.comfort = g.clothes + float32(apparel+1)*ss + 6
+	g.comfort = g.clothes + float32(lines+1)*ss + 6
 	g.equipHead = g.comfort + ss + 6
 	g.equipList = g.equipHead + hs + 2
 	return g
@@ -489,7 +491,8 @@ func gearLayoutFor(apparel int) gearLayout {
 // drawGear lists what the colonist carries and wears and the comfortable
 // temperature range that gives it.
 func drawGear(screen *ebiten.Image, p game.PawnView, x, y int) {
-	g := gearLayoutFor(len(p.Apparel))
+	rows := gearRows(p)
+	g := gearLayoutFor(len(rows) - 1)
 	fx, fy := float64(x), float64(y)
 	head := withColor(tsLabel, uiHeading)
 	drawText(screen, "Weapon", fx, fy, head)
@@ -497,13 +500,31 @@ func drawGear(screen *ebiten.Image, p game.PawnView, x, y int) {
 	drawText(screen, "Wearing", fx, fy+float64(g.wearing), head)
 	ly := fy + float64(g.clothes)
 	ss := float64(lineStep(tsSmall))
-	drawText(screen, "everyday clothes", fx+12, ly, tsSmall)
-	for _, a := range p.Apparel {
+	for _, row := range rows {
+		drawText(screen, row, fx+12, ly, tsSmall)
 		ly += ss
-		drawText(screen, gearLine(a), fx+12, ly, tsSmall)
 	}
 	drawText(screen, fmt.Sprintf("Comfortable  %s to %s", fmtTemp(p.ComfortMin), fmtTemp(p.ComfortMax)), fx, fy+float64(g.comfort), tsSmall)
 	drawText(screen, "Equip nearby", fx, fy+float64(g.equipHead), head)
+}
+
+// gearRows is the Wearing list (PLAY-017): everyday clothes, each garment
+// (by name and "(you chose this)" when the player ordered it, else with
+// what it does), and the garment the colonist is walking to put on.
+func gearRows(p game.PawnView) []string {
+	rows := []string{"everyday clothes"}
+	for i, a := range p.Apparel {
+		l := gearLine(a)
+		if i < len(p.ApparelForced) && p.ApparelForced[i] {
+			name, _, _ := strings.Cut(l, " (")
+			l = strings.TrimSpace(name) + "  (you chose this)"
+		}
+		rows = append(rows, l)
+	}
+	if p.ChangingInto != "" {
+		rows = append(rows, "Changing into: "+p.ChangingInto)
+	}
+	return rows
 }
 
 func gearLine(a string) string {

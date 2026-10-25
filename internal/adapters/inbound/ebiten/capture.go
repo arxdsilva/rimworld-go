@@ -41,6 +41,18 @@ type Capture struct {
 	// Bare skips the scripted starter orders (blueprints, cut and mine
 	// marks), for set-piece scenarios that build their own scene.
 	Bare bool
+	// UIScale > 0 shoots at that UI scale (a 1280s x 720s frame, device
+	// scale 1) to review scaled layouts; 0 keeps captures at scale 1
+	// (PLAY-017).
+	UIScale float64
+}
+
+// captureScale is the UI scale a capture asks for (0: none).
+func (a *App) captureScale() float64 {
+	if c := a.cfg.Capture; c != nil && c.UIScale > 0 {
+		return c.UIScale
+	}
+	return 0
 }
 
 // speed is the game speed tier a frame sequence records at.

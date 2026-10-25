@@ -422,7 +422,8 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	r.drawWorldFires(screen, w, tile) // fire_world_draw.go: PLAY-015 flames
 	// cave_plants_draw.go: the duskmoss glow
 	r.drawDuskGlow(screen, w, tile)
-	if lt != lodMap { // no item sprites, so no counts either
+	r.drawZoneLabels(screen, w, sw, sh, tile) // zones_draw.go: over the stacks and crops
+	if lt != lodMap {                         // no item sprites, so no counts either
 		r.drawStackCounts(screen, w, tile)
 	}
 	r.drawBuildingDamage(screen, w, tile)
@@ -448,6 +449,9 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 				r.drawSprite(screen, "overlay/designation_harvest", none, float64(p.X), float64(p.Y), tile, sw, sh)
 			}
 		}
+	}
+	if lt != lodMap { // the map bake draws no item sprites, so no marks over them
+		r.drawHaulMarks(screen, &w, views, tile, sw, sh)
 	}
 	for _, m := range w.Mines {
 		if l.near(m[0], m[1], 1, 1) {
@@ -1099,6 +1103,24 @@ func (r *Renderer) rockDraw(w *game.WorldView, x, y int) (linkedDraw, bool) {
 // smoothMarkKey is the smoothing designation; older art falls back to the
 // mine mark cooled blue.
 const smoothMarkKey = "overlay/designation_smooth"
+
+// haulMarkKey is the designation drawn over a stack marked for hauling.
+const haulMarkKey = "overlay/designation_haul"
+
+// drawHaulMarks draws the haul designation over every marked stack of the
+// chunks in view, on top of the objects like the other designations.
+func (r *Renderer) drawHaulMarks(screen *ebiten.Image, w *game.WorldView, views []game.ChunkView, tile float64, sw, sh int) {
+	for _, cv := range views {
+		for _, i := range cv.Items {
+			if int(i) >= len(w.Items) {
+				continue
+			}
+			if it := &w.Items[i]; it.HaulMarked && !it.Carried && r.lod.near(it.X, it.Y, 1, 1) {
+				r.drawSprite(screen, haulMarkKey, color.NRGBA{}, float64(it.X), float64(it.Y), tile, sw, sh)
+			}
+		}
+	}
+}
 
 var smoothFallbackCS = colorScale{0.65, 0.9, 1.35, 1}
 

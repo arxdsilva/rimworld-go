@@ -16,7 +16,8 @@ import (
 // captures stay byte-identical.
 //
 // World-space drawing (anything the camera positions) stays raw, in
-// physical pixels; see TestUIDrawsThroughCanvas for the files allowed to.
+// physical pixels; see TestUIDrawsThroughCanvas for the functions allowed to,
+// and for the rule that world-anchored labels use worldText / worldIcon.
 
 // canvasTrace, when set (tests only, never in parallel), sees each
 // rectangle the canvas fills, strokes or draws an image into, in
@@ -28,11 +29,57 @@ var canvasTrace func(kind string, x, y, w, h float32)
 // (App.Draw sets it; the visual tests read it, PLAY-017).
 var tracePass = "hud"
 
+// setTracePass sets tracePass, only while a test trace is installed (those
+// tests never run in parallel; an unconditional write would race between
+// parallel tests that draw frames).
+func setTracePass(p string) {
+	if canvasTrace != nil || drawTrace != nil {
+		tracePass = p
+	}
+}
+
+// traceEvent is one draw call the canvas saw, in physical pixels (the
+// rectangle it covers; a line, circle, polygon or triangle batch reports
+// its bounding box, a text run the box of its glyphs).
+type traceEvent struct {
+	Kind string // fill, stroke, line, circle, poly, tris, image or text
+	Text string // the string, for Kind "text"
+	X, Y float32
+	W, H float32
+	Pass string // tracePass when drawn: "world" or "hud"
+	Via  string // "worldText" or "worldIcon" when drawn through those helpers
+}
+
+// drawTrace, when set (tests only, never in parallel), sees EVERY draw the
+// canvas makes: everything canvasTrace sees plus text, lines, circles,
+// polygons and triangle batches, tagged with the pass they were drawn in
+// (PLAY-017 visual tests). It is a separate hook so canvasTrace's exact
+// fill/stroke/image streams, which older tests count, never change. It
+// costs one nil check per draw when unset.
+var drawTrace func(e traceEvent)
+
+// traceVia is set by worldText/worldIcon while they draw (see traceEvent.Via).
+var traceVia string
+
+// emitTrace reports one event to drawTrace (callers check it is set).
+func emitTrace(kind, txt string, x, y, w, h float32) {
+	drawTrace(traceEvent{Kind: kind, Text: txt, X: x, Y: y, W: w, H: h, Pass: tracePass, Via: traceVia})
+}
+
+// emitBox reports the bounding box of the physical points (x0,y0), (x1,y1)
+// grown by pad on every side.
+func emitBox(kind string, x0, y0, x1, y1, pad float32) {
+	emitTrace(kind, "", min(x0, x1)-pad, min(y0, y1)-pad, abs32(x1-x0)+2*pad, abs32(y1-y0)+2*pad)
+}
+
 // uiFillRect is vector.FillRect in logical pixels.
 func uiFillRect(dst *ebiten.Image, x, y, w, h float32, clr color.Color, aa bool) {
 	s := float32(uiScale())
 	if canvasTrace != nil {
 		canvasTrace("fill", x*s, y*s, w*s, h*s)
+	}
+	if drawTrace != nil {
+		emitTrace("fill", "", x*s, y*s, w*s, h*s)
 	}
 	vector.FillRect(dst, x*s, y*s, w*s, h*s, clr, aa)
 }
@@ -43,24 +90,36 @@ func uiStrokeRect(dst *ebiten.Image, x, y, w, h, width float32, clr color.Color,
 	if canvasTrace != nil {
 		canvasTrace("stroke", x*s, y*s, w*s, h*s)
 	}
+	if drawTrace != nil {
+		emitTrace("stroke", "", x*s, y*s, w*s, h*s)
+	}
 	vector.StrokeRect(dst, x*s, y*s, w*s, h*s, width*s, clr, aa)
 }
 
 // uiLine is vector.StrokeLine in logical pixels.
 func uiLine(dst *ebiten.Image, x0, y0, x1, y1, width float32, clr color.Color, aa bool) {
 	s := float32(uiScale())
+	if drawTrace != nil {
+		emitBox("line", x0*s, y0*s, x1*s, y1*s, 0)
+	}
 	vector.StrokeLine(dst, x0*s, y0*s, x1*s, y1*s, width*s, clr, aa)
 }
 
 // uiFillCircle is vector.FillCircle in logical pixels.
 func uiFillCircle(dst *ebiten.Image, cx, cy, r float32, clr color.Color, aa bool) {
 	s := float32(uiScale())
+	if drawTrace != nil {
+		emitBox("circle", cx*s, cy*s, cx*s, cy*s, r*s)
+	}
 	vector.FillCircle(dst, cx*s, cy*s, r*s, clr, aa)
 }
 
 // uiStrokeCircle is vector.StrokeCircle in logical pixels.
 func uiStrokeCircle(dst *ebiten.Image, cx, cy, r, width float32, clr color.Color, aa bool) {
 	s := float32(uiScale())
+	if drawTrace != nil {
+		emitBox("circle", cx*s, cy*s, cx*s, cy*s, r*s)
+	}
 	vector.StrokeCircle(dst, cx*s, cy*s, r*s, width*s, clr, aa)
 }
 
@@ -70,6 +129,14 @@ func uiFillPoly(dst *ebiten.Image, pts [][2]float32, clr color.Color, aa bool) {
 		return
 	}
 	s := float32(uiScale())
+	if drawTrace != nil {
+		x0, y0, x1, y1 := pts[0][0]*s, pts[0][1]*s, pts[0][0]*s, pts[0][1]*s
+		for _, q := range pts[1:] {
+			x0, y0 = min(x0, q[0]*s), min(y0, q[1]*s)
+			x1, y1 = max(x1, q[0]*s), max(y1, q[1]*s)
+		}
+		emitBox("poly", x0, y0, x1, y1, 0)
+	}
 	var p vector.Path
 	p.MoveTo(pts[0][0]*s, pts[0][1]*s)
 	for _, q := range pts[1:] {
@@ -98,7 +165,7 @@ func uiDrawImage(dst, img *ebiten.Image, op *ebiten.DrawImageOptions) {
 	}
 	o := *op
 	uiImageOp(&o)
-	if canvasTrace != nil {
+	if canvasTrace != nil || drawTrace != nil {
 		traceImage(img, o.GeoM)
 	}
 	dst.DrawImage(img, &o)
@@ -109,7 +176,17 @@ func traceImage(img *ebiten.Image, m ebiten.GeoM) {
 	b := img.Bounds()
 	x0, y0 := m.Apply(0, 0)
 	x1, y1 := m.Apply(float64(b.Dx()), float64(b.Dy()))
-	canvasTrace("image", float32(min(x0, x1)), float32(min(y0, y1)), float32(abs64(x1-x0)), float32(abs64(y1-y0)))
+	traceImageRect(float32(min(x0, x1)), float32(min(y0, y1)), float32(abs64(x1-x0)), float32(abs64(y1-y0)))
+}
+
+// traceImageRect reports an image draw to both hooks.
+func traceImageRect(x, y, w, h float32) {
+	if canvasTrace != nil {
+		canvasTrace("image", x, y, w, h)
+	}
+	if drawTrace != nil {
+		emitTrace("image", "", x, y, w, h)
+	}
 }
 
 func abs64(v float64) float64 {
@@ -126,6 +203,10 @@ func abs64(v float64) float64 {
 // drawText with physical coordinates (PLAY-017; TestUIDrawsThroughCanvas).
 func worldText(dst *ebiten.Image, s string, physX, physY float64, st textStyle) {
 	k := 1 / uiScale()
+	if drawTrace != nil {
+		defer func(old string) { traceVia = old }(traceVia)
+		traceVia = "worldText"
+	}
 	drawText(dst, s, physX*k, physY*k, st)
 }
 
@@ -133,6 +214,10 @@ func worldText(dst *ebiten.Image, s string, physX, physY float64, st textStyle) 
 // stays logical, so the icon grows with the UI scale like the HUD's.
 func worldIcon(dst, img *ebiten.Image, physX, physY, size float64) {
 	k := 1 / uiScale()
+	if drawTrace != nil {
+		defer func(old string) { traceVia = old }(traceVia)
+		traceVia = "worldIcon"
+	}
 	drawIcon(dst, img, physX*k, physY*k, size)
 }
 
@@ -151,9 +236,9 @@ func uiImage(dst, img *ebiten.Image, x, y, w, h float64, opts *ebiten.DrawImageO
 	o.GeoM.Scale(w/float64(b.Dx()), h/float64(b.Dy()))
 	o.GeoM.Translate(x, y)
 	uiImageOp(&o)
-	if canvasTrace != nil {
+	if canvasTrace != nil || drawTrace != nil {
 		s := float32(uiScale())
-		canvasTrace("image", float32(x)*s, float32(y)*s, float32(w)*s, float32(h)*s)
+		traceImageRect(float32(x)*s, float32(y)*s, float32(w)*s, float32(h)*s)
 	}
 	dst.DrawImage(img, &o)
 }
@@ -161,12 +246,33 @@ func uiImage(dst, img *ebiten.Image, x, y, w, h float64, opts *ebiten.DrawImageO
 // uiTriangles is dst.DrawTriangles for vertices in logical pixels (the
 // caller's slice is not changed).
 func uiTriangles(dst *ebiten.Image, vs []ebiten.Vertex, is []uint16, img *ebiten.Image, opts *ebiten.DrawTrianglesOptions) {
-	dst.DrawTriangles(scaledVerts(vs), is, img, opts)
+	sv := scaledVerts(vs)
+	if drawTrace != nil {
+		traceVerts(sv)
+	}
+	dst.DrawTriangles(sv, is, img, opts)
 }
 
 // uiTriangles32 is uiTriangles with 32-bit indices.
 func uiTriangles32(dst *ebiten.Image, vs []ebiten.Vertex, is []uint32, img *ebiten.Image, opts *ebiten.DrawTrianglesOptions) {
-	dst.DrawTriangles32(scaledVerts(vs), is, img, opts)
+	sv := scaledVerts(vs)
+	if drawTrace != nil {
+		traceVerts(sv)
+	}
+	dst.DrawTriangles32(sv, is, img, opts)
+}
+
+// traceVerts reports the physical bounding box of a triangle batch.
+func traceVerts(vs []ebiten.Vertex) {
+	if len(vs) == 0 {
+		return
+	}
+	x0, y0, x1, y1 := vs[0].DstX, vs[0].DstY, vs[0].DstX, vs[0].DstY
+	for _, v := range vs[1:] {
+		x0, y0 = min(x0, v.DstX), min(y0, v.DstY)
+		x1, y1 = max(x1, v.DstX), max(y1, v.DstY)
+	}
+	emitBox("tris", x0, y0, x1, y1, 0)
 }
 
 func scaledVerts(vs []ebiten.Vertex) []ebiten.Vertex {

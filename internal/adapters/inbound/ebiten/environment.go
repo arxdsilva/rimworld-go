@@ -1341,8 +1341,11 @@ func weatherLabel(w game.WorldView) string {
 	return fmt.Sprintf("%s %s %.1f", name, windArrows[oct], s)
 }
 
-// drawWeatherLabel draws weatherLabel at (x, y). The debug font has no
-// arrows, so the wind arrow is drawn as lines, pointing the true way.
+// drawWeatherLabel draws weatherLabel at the logical position (x, y). The
+// wind arrow is drawn as lines (the font has no arrows), pointing the true
+// way, between the measured name and the speed. It is HUD, so every stroke
+// goes through the canvas (uiLine): raw vector calls here ignored the UI
+// scale and left the arrow behind at 1.5x and 2x (PLAY-017).
 func drawWeatherLabel(screen *ebiten.Image, x, y int, w game.WorldView) {
 	lbl := weatherLabel(w)
 	if lbl == "" {
@@ -1355,16 +1358,17 @@ func drawWeatherLabel(screen *ebiten.Image, x, y int, w game.WorldView) {
 	name, rest, _ := strings.Cut(lbl, " ")
 	_, speed, _ := strings.Cut(rest, " ")
 	drawLabel(screen, x, y, name)
-	cx, cy := float32(x+len(name)*6+10), float32(y+8)
+	nameW := textW(name, tsBody)
+	cx, cy := float32(x)+nameW+10, float32(y+8)
 	ux, uy := unit(w.WindX, w.WindY)
 	fx, fy := float32(ux), float32(uy)
 	clr := color.RGBA{230, 230, 220, 255}
 	tipX, tipY := cx+fx*6, cy+fy*6
-	vector.StrokeLine(screen, cx-fx*6, cy-fy*6, tipX, tipY, 1.5, clr, true)
+	uiLine(screen, cx-fx*6, cy-fy*6, tipX, tipY, 1.5, clr, true)
 	for _, s := range [2]float32{1, -1} { // arrow head
 		hx := tipX - fx*4 + s*-fy*3
 		hy := tipY - fy*4 + s*fx*3
-		vector.StrokeLine(screen, tipX, tipY, hx, hy, 1.5, clr, true)
+		uiLine(screen, tipX, tipY, hx, hy, 1.5, clr, true)
 	}
-	drawLabel(screen, x+len(name)*6+20, y, speed)
+	drawLabel(screen, x+int(nameW)+20, y, speed)
 }

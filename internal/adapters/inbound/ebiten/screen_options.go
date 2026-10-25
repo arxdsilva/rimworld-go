@@ -164,6 +164,8 @@ func optionRows(tab string) []optionRow {
 	case "gameplay":
 		return []optionRow{
 			toggleRow("pausethreat", "Pause on threat", func(s *config.Settings) *bool { return &s.Gameplay.PauseOnThreat }),
+			withTip(toggleRow("runinbackground", "Run in background", func(s *config.Settings) *bool { return &s.Gameplay.RunInBackground }),
+				"Keep the colony running while the window is in the background or minimised. Off: the game pauses until you come back."),
 			{key: "autosave", label: "Autosave", kind: rowChoice,
 				value: func(s config.Settings) string { return autosaveLabel(s.Gameplay.AutosaveDays) },
 				apply: func(s *config.Settings, _ int) {

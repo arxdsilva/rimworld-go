@@ -1589,12 +1589,21 @@ def _g_roof_area(xx, yy, c):  # roof chevron inside dashed corner brackets
     return d
 
 
+def _g_haul(xx, yy, c):  # crate with a plank band, up arrow lifting it away
+    d = np.abs(_rbox(xx, yy, c, c + 11, 16, 11, 2))
+    d = np.minimum(d, _seg(xx, yy, c - 16, c + 7, c + 16, c + 7))   # lid band
+    d = np.minimum(d, _seg(xx, yy, c, c - 4, c, c - 24))            # arrow shaft
+    d = np.minimum(d, _seg(xx, yy, c - 9, c - 15, c, c - 24))       # arrow head
+    return np.minimum(d, _seg(xx, yy, c + 9, c - 15, c, c - 24))
+
+
 def build():
     t = _base_tokens()
     out = [_selection(t), _designation("designation_cut", t, _g_cut),
            _designation("designation_harvest", t, _g_harvest), _designation("designation_mine", t, _g_mine), _designation("designation_smooth", t, _g_smooth),
            _designation("designation_deconstruct", t, _g_deconstruct),
            _designation("designation_hunt", t, _g_hunt),
+           _designation("designation_haul", t, _g_haul),
            _designation("designation_tame", t, _g_tame), _pen_zone(t), _forbidden_marker(t),
            _stockpile(t), _blueprint(t), _grow_zone(t)] + [_sleeping_spot(f) for f in SPOT_FACINGS]
     out += [_badge_icon("order_harvest", t, _g_harvest, t["designation"]),
@@ -1613,6 +1622,7 @@ def build():
             _badge_icon("roof_remove", t, _g_roof_remove, t["danger"]),
             _badge_icon("overlay_roof", t, _g_overlay_roof, (0.45, 0.65, 0.90)),
             _badge_icon("order_forbid", t, _g_forbid, t["danger"]),
+            _badge_icon("order_haul", t, _g_haul, t["blueprint"]),
             _badge_icon("order_allow", t, _g_allow, (0.45, 0.78, 0.36)),
             _badge_icon("overlay_rooms", t, _g_rooms, (0.35, 0.72, 0.70)),
             _badge_icon("home", t, _g_home, (0.29, 0.50, 0.83)),

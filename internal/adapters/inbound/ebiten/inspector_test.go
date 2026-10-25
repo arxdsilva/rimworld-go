@@ -1,10 +1,12 @@
 package ebiten
 
 import (
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
@@ -176,5 +178,23 @@ func TestPostponedLine(t *testing.T) {
 	got := postponedLine([]string{"build wall: blocked, retry in 12 s", "haul wood: can't reach"})
 	if got != "put off: build wall: blocked, retry in 12 s (+1)" {
 		t.Fatalf("line %q", got)
+	}
+}
+
+// PLAY-017: the Gear tab marks the garments the player chose and names the
+// one the colonist is walking to put on; the layout below follows.
+func TestGearRows(t *testing.T) {
+	p := game.PawnView{Apparel: []string{"parka", "tuque"}, ApparelForced: []bool{true, false}, ChangingInto: "duster"}
+	rows := gearRows(p)
+	want := []string{"everyday clothes", "leather parka  (you chose this)", "knitted tuque  (warmer)", "Changing into: duster"}
+	if !slices.Equal(rows, want) {
+		t.Fatalf("rows %q\nwant %q", rows, want)
+	}
+	if got := gearRows(game.PawnView{}); !slices.Equal(got, []string{"everyday clothes"}) {
+		t.Fatalf("bare colonist rows %q", got)
+	}
+	r := inspectorRect()
+	if got, want := equipListY(r, p), r.y+insBodyY+gearLayoutFor(len(rows)-1).equipList; got != want {
+		t.Fatalf("Equip nearby at %v, want %v (below every row)", got, want)
 	}
 }

@@ -33,6 +33,15 @@ type camSmooth struct {
 	boost        float64 // fast-pan multiplier this frame (Shift); 0 means 1
 }
 
+// halt stops all camera motion: pan velocity and input, and a zoom ease in
+// flight (the zoom stays where it is). A jump to a point calls it so the
+// camera does not drift off the target afterwards. The pan-speed setting
+// is kept.
+func (s *camSmooth) halt() {
+	s.vx, s.vy, s.dirX, s.dirY = 0, 0, 0, 0
+	s.zooming, s.pendingScale = false, 0
+}
+
 // pushPan records held-pan input for the next step; dx, dy are directions
 // (-1, 0, 1), summed and clamped to unit range per axis.
 func (s *camSmooth) pushPan(dx, dy float64) {

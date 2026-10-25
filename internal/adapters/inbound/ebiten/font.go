@@ -129,7 +129,23 @@ func drawText(dst *ebiten.Image, s string, x, y float64, st textStyle) {
 		c = uiText
 	}
 	op.ColorScale.ScaleWithColor(c)
+	if drawTrace != nil && s != "" {
+		traceText(s, f, op, x*sc, y*sc, st.Align)
+	}
 	text.Draw(dst, s, f, op)
+}
+
+// traceText reports a text run to drawTrace: the physical box its glyphs
+// cover, from the anchor (px, py) its alignment is about (tests only).
+func traceText(s string, f *text.GoTextFace, op *text.DrawOptions, px, py float64, a align) {
+	w, h := text.Measure(s, f, op.LineSpacing)
+	switch a {
+	case alignCenter:
+		px -= w / 2
+	case alignRight:
+		px -= w
+	}
+	emitTrace("text", s, float32(px), float32(py), float32(w), float32(h))
 }
 
 // measure is the logical size of s drawn in st: measured on the scaled

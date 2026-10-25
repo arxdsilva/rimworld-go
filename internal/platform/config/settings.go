@@ -11,7 +11,9 @@ import (
 // the defaults, so new fields arrive with their default values.
 // Version 2 (PLAY-012) added Accessibility.UIScaleAuto and Graphics.HiDPI;
 // Normalize migrates anything older with both on.
-const SettingsVersion = 2
+// Version 3 (PLAY-017) added Gameplay.RunInBackground; older files decode
+// over the defaults, so it arrives off.
+const SettingsVersion = 3
 
 // Settings are the player's preferences (Options screen).
 type Settings struct {
@@ -70,6 +72,10 @@ type Gameplay struct {
 	AutosaveDays  int  `json:"autosave_days"`
 	EdgeScroll    bool `json:"edge_scroll"`
 	PanSpeed      int  `json:"pan_speed"` // percent, PanSpeedMin..PanSpeedMax
+	// RunInBackground keeps the colony running while the window is in the
+	// background or minimised. Off (the default): the game pauses until
+	// the player comes back.
+	RunInBackground bool `json:"run_in_background"`
 	// DevMode turns on the developer keys: ultrafast speed, single-tick
 	// stepping, debug actions, the debug log and the debug inspector.
 	DevMode bool `json:"dev_mode"`

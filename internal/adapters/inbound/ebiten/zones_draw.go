@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"image/color"
+	"math"
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -101,6 +102,10 @@ type zoneGeom struct {
 	hash  uint64
 	cells map[[2]int]bool
 	runs  []edgeRun
+	// The bounding box and the label anchor in tile coordinates
+	// (zoneLabelAnchor).
+	minX, minY, maxX, maxY int
+	ax, ay                 float64
 }
 
 func zoneHash(z game.ZoneView) uint64 {
@@ -122,6 +127,7 @@ func (r *Renderer) zoneGeomOf(z game.ZoneView) *zoneGeom {
 		g.cells[c] = true
 	}
 	g.runs = zoneEdgeRuns(g.cells, z.Cells)
+	g.minX, g.minY, g.maxX, g.maxY, g.ax, g.ay = zoneLabelAnchor(z.Cells)
 	if r.zoneGeoms == nil || len(r.zoneGeoms) > 256 {
 		r.zoneGeoms = map[uint16]*zoneGeom{}
 	}
@@ -153,8 +159,27 @@ func zoneSpriteKey(kind string) (key string, fill color.RGBA) {
 	return "overlay/stockpile", stockFillClr
 }
 
-// drawZones fills every zone tile, outlines the outer edges and labels
-// each zone once at its top-left tile.
+// zoneLabelCap is the biggest a zone label may be with tiles tileL
+// logical px wide: zoomed in (big tiles) a label stays modest, so it
+// doesn't bury the stacks and crops of the zone it names; zoomed out it
+// may grow to zoneLabelMax, so a field's name reads from afar (PLAY-017).
+func zoneLabelCap(tileL float64) float64 {
+	if tileL <= 0 {
+		return zoneLabelMax
+	}
+	return min(zoneLabelMax, max(zoneLabelNear, zoneLabelCapArea/tileL))
+}
+
+// drawZoneLabels names every zone once (drawZoneLabel). It runs after the
+// objects, so stacks and crops never cover a zone's name.
+func (r *Renderer) drawZoneLabels(screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
+	for _, z := range w.Zones {
+		r.drawZoneLabel(screen, z, r.zoneGeomOf(z), sw, sh, tile)
+	}
+}
+
+// drawZones fills every zone tile and outlines the outer edges; the
+// labels come later (drawZoneLabels).
 func (r *Renderer) drawZones(screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
 	none := color.NRGBA{}
 	for _, z := range w.Zones {
@@ -178,7 +203,6 @@ func (r *Renderer) drawZones(screen *ebiten.Image, w game.WorldView, sw, sh int,
 		for _, run := range g.runs {
 			r.drawZoneRun(screen, z.Kind, run, sw, sh, tile)
 		}
-		r.drawZoneLabel(screen, z, sw, sh, tile)
 	}
 }
 
@@ -344,15 +368,145 @@ func zoneLabelText(z game.ZoneView) string {
 	return "Stockpile"
 }
 
-func (r *Renderer) drawZoneLabel(screen *ebiten.Image, z game.ZoneView, sw, sh int, tile float64) {
-	if len(z.Cells) == 0 || tile < 40 {
+// Zone label metrics (PLAY-017), in logical pixels.
+const (
+	zoneLabelMin  = 11.0 // the smallest label (tsSmall); ellipsized only here
+	zoneLabelMax  = 40.0 // the biggest, zoomed out
+	zoneLabelNear = 16.0 // the biggest when zoomed in (zoneLabelCap)
+	// zoneLabelCapArea sets the zoom cap: cap = area / tile (logical px),
+	// so the cap shrinks as tiles grow (zoneLabelCap).
+	zoneLabelCapArea = 640.0
+	zoneLabelFrac    = 0.45 // label size as a share of the zone's shorter side
+	zoneLabelFit     = 0.9  // widest plate as a share of the zone's width
+)
+
+// zoneLabelPlateClr is the soft dark plate behind a zone label.
+var zoneLabelPlateClr = color.RGBA{16, 12, 8, 150}
+
+// zoneLabelAnchor is a zone's bounding box and where its label is
+// centred, in tile coordinates (a tile spans x..x+1): the exact centre of
+// a full rectangle, otherwise the centre of the zone cell nearest the
+// bounding box centre (the first one in cell order on a tie), so an
+// L-shaped zone keeps its label on the zone.
+func zoneLabelAnchor(cells [][2]int) (minX, minY, maxX, maxY int, ax, ay float64) {
+	if len(cells) == 0 {
 		return
 	}
-	sx, sy := r.worldToScreen(z.Cells[0][0], z.Cells[0][1])
-	if !visible(sx, sy, float32(tile), float32(tile), sw, sh) {
+	minX, minY, maxX, maxY = cells[0][0], cells[0][1], cells[0][0], cells[0][1]
+	for _, c := range cells {
+		minX, maxX = min(minX, c[0]), max(maxX, c[0])
+		minY, maxY = min(minY, c[1]), max(maxY, c[1])
+	}
+	cx, cy := float64(minX+maxX+1)/2, float64(minY+maxY+1)/2
+	if len(cells) == (maxX-minX+1)*(maxY-minY+1) {
+		return minX, minY, maxX, maxY, cx, cy
+	}
+	best := math.Inf(1)
+	for _, c := range cells {
+		x, y := float64(c[0])+0.5, float64(c[1])+0.5
+		if d := (x-cx)*(x-cx) + (y-cy)*(y-cy); d < best {
+			best, ax, ay = d, x, y
+		}
+	}
+	return minX, minY, maxX, maxY, ax, ay
+}
+
+// zoneLabelPad is the plate padding around a label of the given size.
+func zoneLabelPad(size float64) (px, py float64) {
+	return max(3, math.Round(size*0.3)), max(1, math.Round(size*0.1))
+}
+
+// zoneLabelPlan is a laid-out zone label, in logical pixels.
+type zoneLabelPlan struct {
+	ok     bool      // false: hidden
+	text   string    // the label, ellipsized when it had to be
+	style  textStyle // centre-aligned about tx
+	plate  rect      // the dark plate behind the text
+	tx, ty float64   // the text's top-centre
+}
+
+// zoneLabelLayout lays out a zone's label, centred on (cx, cy), for a
+// zone whose bounding box is boxW x boxH on screen. Everything is in
+// logical pixels.
+//
+// Size: 0.45 x the zone's shorter side, from 11 px to capSize
+// (zoneLabelCap: smaller zoomed in) in half steps (the face cache is
+// keyed on whole pixels). The plate then has to fit 90% of
+// the zone's width, so the size shrinks as far as needed; at 11 px the
+// text is ellipsized, and the label is hidden when not even a letter and
+// the ellipsis fit, or the plate is taller than the zone.
+func zoneLabelLayout(text string, boxW, boxH, cx, cy, capSize float64) zoneLabelPlan {
+	if text == "" || boxW <= 0 || boxH <= 0 {
+		return zoneLabelPlan{}
+	}
+	style := func(sz float64) textStyle { return textStyle{Size: sz, Align: alignCenter} }
+	maxW := zoneLabelFit * boxW
+	fits := func(sz float64) bool {
+		px, _ := zoneLabelPad(sz)
+		w, _ := measure(text, style(sz))
+		return w+2*px <= maxW
+	}
+	want := math.Round(min(capSize, max(zoneLabelMin, zoneLabelFrac*min(boxW, boxH)))*2) / 2
+	size := want
+	if !fits(size) {
+		// start from the width at 11 px scaled to the room, then settle on
+		// the biggest half step that fits (two or three measures)
+		w11, _ := measure(text, style(zoneLabelMin))
+		est := maxW / (w11/zoneLabelMin + 0.6) // plate width per px of size
+		size = max(zoneLabelMin, min(want, math.Floor(est*2)/2))
+		for size < want && fits(size+0.5) {
+			size += 0.5
+		}
+		for size > zoneLabelMin && !fits(size) {
+			size -= 0.5
+		}
+	}
+	st := style(size)
+	px, py := zoneLabelPad(size)
+	label := text
+	if !fits(size) { // only possible at the 11 px floor
+		if label = ellipsize(text, st, maxW-2*px); label == "…" {
+			return zoneLabelPlan{}
+		}
+	}
+	tw, _ := measure(label, st)
+	w, h := tw+2*px, lineH(st)-2+2*py // lineH has 2 px of leading below the glyphs
+	if h > boxH {
+		return zoneLabelPlan{}
+	}
+	return zoneLabelPlan{ok: true, text: label, style: st,
+		plate: rect{X: float32(cx - w/2), Y: float32(cy - h/2), W: float32(w), H: float32(h)},
+		tx:    cx, ty: cy - h/2 + py}
+}
+
+// drawZoneLabel names a zone once, in the middle of it, on a dark plate.
+// The label scales with the zone (zoneLabelLayout) and is anchored to the
+// zone cell nearest its middle; layout is in logical pixels, from the
+// physical on-screen box.
+func (r *Renderer) drawZoneLabel(screen *ebiten.Image, z game.ZoneView, g *zoneGeom, sw, sh int, tile float64) {
+	if len(z.Cells) == 0 {
 		return
 	}
-	lbl := ellipsize(zoneLabelText(z), tsSmall, tile*float64(max(1, z.MaxX-z.MinX+1))-8)
-	drawText(screen, lbl, float64(sx)+5, float64(sy)+4, withColor(tsSmall, color.RGBA{0, 0, 0, 170})) // shadow
-	drawText(screen, lbl, float64(sx)+4, float64(sy)+3, tsSmall)
+	ox, oy := r.worldToScreenF(float64(g.minX), float64(g.minY))
+	bw, bh := float64(g.maxX-g.minX+1)*tile, float64(g.maxY-g.minY+1)*tile
+	if !visible(ox, oy, float32(bw), float32(bh), sw, sh) {
+		return
+	}
+	ax, ay := r.worldToScreenF(g.ax, g.ay)
+	k := 1 / uiScale()
+	plan := zoneLabelLayout(zoneLabelText(z), bw*k, bh*k, float64(ax)*k, float64(ay)*k, zoneLabelCap(tile*k))
+	if !plan.ok {
+		return
+	}
+	s := uiScale()
+	if pr := plan.plate; !visible(pr.X*float32(s), pr.Y*float32(s), pr.W*float32(s), pr.H*float32(s), sw, sh) {
+		return
+	}
+	paintZoneLabelPlate(screen, plan.plate)
+	worldText(screen, plan.text, plan.tx*s, plan.ty*s, plan.style) // physical anchor in, logical out
+}
+
+// paintZoneLabelPlate fills a zone label's plate (logical pixels).
+func paintZoneLabelPlate(screen *ebiten.Image, p rect) {
+	uiFillRect(screen, p.X, p.Y, p.W, p.H, zoneLabelPlateClr, false)
 }

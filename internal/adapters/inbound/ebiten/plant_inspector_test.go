@@ -1,11 +1,15 @@
 package ebiten
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"testing"
 
+	ebiten "github.com/hajimehoshi/ebiten/v2"
+
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -200,4 +204,139 @@ func TestPlantPanelClosesWhenPlantGone(t *testing.T) {
 		t.Fatal("panel must close with no buttons")
 	}
 	a.applyPlantClick("plant.harvest") // no-op, no panic
+}
+
+// ---- growth state (PLAY-017) ----
+
+func TestPlantGrowCaption(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct {
+		name string
+		p    game.PlantView
+		want string
+	}{
+		{"older view, no state", game.PlantView{Species: "corn", Growth: 42}, ""},
+		{"growing", game.PlantView{Species: "corn", Growth: 42, GrowState: "growing"}, "42% · growing"},
+		{"resting at night", game.PlantView{Species: "corn", Growth: 42, GrowState: "resting"}, "42% · resting (night)"},
+		{"dark", game.PlantView{Species: "corn", Growth: 42, GrowState: "dark"}, "too dark: needs sun or a lamp nearby"},
+		{"cold", game.PlantView{Species: "corn", Growth: 7, GrowState: "cold"}, "7% · too cold"},
+		{"hot", game.PlantView{Species: "corn", Growth: 7, GrowState: "hot"}, "7% · too hot"},
+		{"ripe crop", game.PlantView{Species: "corn", Growth: 100, GrowState: "ripe", Harvestable: true}, "ripe"},
+		{"full-grown tree", game.PlantView{Species: "tree", Growth: 100, GrowState: "ripe"}, "fully grown"},
+		{"unknown state", game.PlantView{Species: "corn", GrowState: "weird"}, ""},
+	} {
+		if got := plantGrowCaption(c.p); got != c.want {
+			t.Errorf("%s: caption %q, want %q", c.name, got, c.want)
+		}
+	}
+}
+
+func TestPlantRipeLine(t *testing.T) {
+	t.Parallel()
+	d := clock.TicksPerDay
+	for _, c := range []struct {
+		name string
+		p    game.PlantView
+		want string
+	}{
+		{"unknown", game.PlantView{Species: "corn", RipeIn: -1}, ""},
+		{"unset", game.PlantView{Species: "corn"}, ""},
+		{"under two days: one decimal", game.PlantView{Species: "corn", RipeIn: d * 14 / 10}, "Ripe in about 1.4 days"},
+		{"just under two reads as two", game.PlantView{Species: "corn", RipeIn: d*2 - 1}, "Ripe in about 2 days"},
+		{"1.9 stays decimal", game.PlantView{Species: "corn", RipeIn: d * 19 / 10}, "Ripe in about 1.9 days"},
+		{"two days and more: whole", game.PlantView{Species: "corn", RipeIn: d*3 + d/3}, "Ripe in about 3 days"},
+		{"rounds", game.PlantView{Species: "corn", RipeIn: d*7 + d*6/10}, "Ripe in about 8 days"},
+		{"an hour left", game.PlantView{Species: "corn", RipeIn: clock.TicksPerHour}, "Ripe in about 0.1 days"},
+		{"a tree is fully grown, not ripe", game.PlantView{Species: "tree", RipeIn: d * 30}, "Fully grown in about 30 days"},
+		{"moss is fully grown", game.PlantView{Species: "moss", RipeIn: d * 2}, "Fully grown in about 2 days"},
+		{"a berry bush ripens", game.PlantView{Species: "berry_bush", RipeIn: d}, "Ripe in about 1.0 days"},
+		{"nothing once harvestable", game.PlantView{Species: "corn", RipeIn: d, Harvestable: true}, ""},
+	} {
+		if got := plantRipeLine(c.p); got != c.want {
+			t.Errorf("%s: %q, want %q", c.name, got, c.want)
+		}
+	}
+}
+
+// TestPlantLinesCarryRipeIn: the ripening estimate sits right under the
+// progress line, and the old lines stay as they were.
+func TestPlantLinesCarryRipeIn(t *testing.T) {
+	t.Parallel()
+	got := plantLines(game.PlantView{Species: "potato", Growth: 42, Zone: "potato", GrowState: "growing", RipeIn: clock.TicksPerDay * 3})
+	want := []string{"Not ready (42%)", "Ripe in about 3 days", "In a growing zone (Potato)"}
+	if strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Fatalf("lines = %v, want %v", got, want)
+	}
+}
+
+// TestPlantPanelShowsLiveGrowthState: a crop sown in the colony shows the
+// state the game gives it and a ripening estimate when it is growing.
+func TestPlantPanelShowsLiveGrowthState(t *testing.T) {
+	t.Parallel()
+	a, g, _ := liveColony(t, 0)
+	id, _ := g.SpawnCrop("potato", 8, 8, 30)
+	selectPlantTile(t, a, id, 8, 8)
+	p := plantByID(a, id)
+	if p.GrowState == "" {
+		t.Fatalf("the game gave the view no growth state: %+v", p)
+	}
+	if plantGrowCaption(p) == "" {
+		t.Fatalf("no caption for state %q", p.GrowState)
+	}
+	line := plantRipeLine(p)
+	if growing := p.RipeIn > 0; growing != (line != "") {
+		t.Fatalf("state %q, RipeIn %d, line %q", p.GrowState, p.RipeIn, line)
+	}
+}
+
+// TestPlantPanelTextFitsAtScale1_5: at UI scale 1.5 the caption and the body
+// lines stay inside the panel, above the "now" chips, even for a crop with
+// the most lines a growing one carries.
+func TestPlantPanelTextFitsAtScale1_5(t *testing.T) {
+	withUIScale(t, 1.5)
+	r := plantRect()
+	for _, p := range []game.PlantView{
+		{Species: "potato", Growth: 42, Zone: "potato", GrowState: "resting", RipeIn: clock.TicksPerDay * 3},
+		{Species: "potato", Growth: 42, Zone: "potato", GrowState: "dark", RipeIn: -1, Designated: true},
+		{Species: "potato", Growth: 42, Zone: "potato", GrowState: "cold", RipeIn: -1, Wilted: true, Cut: true},
+		{Species: "moss", Growth: 42, GrowState: "dark", RipeIn: -1, NeedsLight: true},
+		{Species: "tree", Growth: 90, GrowState: "growing", RipeIn: clock.TicksPerDay * 12},
+	} {
+		rows, bottom := plantTextRows(p, float64(r.w)-24)
+		if limit := float64(r.h) - 56; bottom > limit {
+			t.Errorf("%s/%s: text reaches y=%.1f, the chips start at %.1f", p.Species, p.GrowState, bottom, limit)
+		}
+		var texts []string
+		for _, row := range rows {
+			texts = append(texts, row.text)
+			if row.y < 62+12 {
+				t.Errorf("%s/%s: %q at y=%.1f is on the growth bar", p.Species, p.GrowState, row.text, row.y)
+			}
+		}
+		if w := maxTextW(texts, tsSmall); float64(w) > float64(r.w)-24 {
+			t.Errorf("%s/%s: widest line %.0f px, panel text width %d", p.Species, p.GrowState, w, int(r.w)-24)
+		}
+		if c := plantGrowCaption(p); c != "" && (len(rows) == 0 || rows[0].text != c) {
+			t.Errorf("%s/%s: caption %q is not the first row (%v)", p.Species, p.GrowState, c, texts)
+		}
+	}
+}
+
+// TestPlantInspectorDrawsAtScale1_5: the panel with the new caption draws
+// at UI scale 1.5 inside its scaled frame.
+func TestPlantInspectorDrawsAtScale1_5(t *testing.T) {
+	a, g, _ := liveColony(t, 0) // starting a colony resets the scale: set it after
+	id, _ := g.SpawnCrop("corn", 8, 8, 30)
+	selectPlantTile(t, a, id, 8, 8)
+	withUIScale(t, 1.5)
+	got := traceCanvas(t)
+	a.drawPlantInspector(ebiten.NewImage(900, 700))
+	r := plantRect()
+	want := fmt.Sprintf("%g,%g %gx%g", float64(r.x)*1.5, float64(r.y)*1.5, float64(r.w)*1.5, float64(r.h)*1.5)
+	for _, c := range *got {
+		if strings.HasSuffix(c, want) {
+			return
+		}
+	}
+	t.Fatalf("no panel frame %q among %q", want, *got)
 }

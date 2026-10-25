@@ -3,12 +3,14 @@ package ebiten
 import (
 	"fmt"
 	"image/color"
+	"math"
 	"strconv"
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
@@ -18,7 +20,7 @@ import (
 // grown, and Harvest / Cut (or Chop) with "now" orders per colonist.
 
 // plantRect is the plant panel's frame (the inspector's top-left slot).
-func plantRect() button { return button{x: hudPad, y: hudTopH + hudPad, w: 340, h: 210} }
+func plantRect() button { return button{x: hudPad, y: hudTopH + hudPad, w: 340, h: 226} }
 
 // maxPlantChips is how many "now" colonist chips fit in the panel's row.
 const maxPlantChips = 3
@@ -67,6 +69,68 @@ func plantStageWord(p game.PlantView) string {
 	return [...]string{"sown", "sprouting", "young", "mature"}[clampStage(p.Stage)]
 }
 
+// plantGrowCaption is the growth bar's caption (PLAY-017): the progress and
+// why the plant is or isn't growing now, from the game's GrowState. "" for
+// a view without one.
+func plantGrowCaption(p game.PlantView) string {
+	var word string
+	switch p.GrowState {
+	case "growing":
+		word = "growing"
+	case "resting":
+		word = "resting (night)"
+	case "dark":
+		return "too dark: needs sun or a lamp nearby"
+	case "cold":
+		word = "too cold"
+	case "hot":
+		word = "too hot"
+	case "ripe":
+		if plantYields(p) {
+			return "ripe"
+		}
+		return "fully grown"
+	default:
+		return ""
+	}
+	return fmt.Sprintf("%d%% · %s", p.Growth, word)
+}
+
+// plantCaptionWarns reports a state that needs the player's attention (a
+// roof, a lamp or a fire), drawn in the warning colour.
+func plantCaptionWarns(p game.PlantView) bool {
+	switch p.GrowState {
+	case "dark", "cold", "hot":
+		return true
+	}
+	return false
+}
+
+// plantYields reports a plant that is picked when ripe (crops, berry
+// bushes, reeds); the rest (trees, moss) are just full grown.
+func plantYields(p game.PlantView) bool {
+	sp, ok := plant.Parse(p.Species)
+	return ok && plant.DefOf(sp).Yield > 0
+}
+
+// plantRipeLine is "Ripe in about N days" from the game's RipeIn estimate
+// (one decimal under two days, whole days after); "" when the plant is not
+// growing or is ready.
+func plantRipeLine(p game.PlantView) string {
+	if p.RipeIn <= 0 || p.Harvestable {
+		return ""
+	}
+	days := math.Round(math.Max(float64(p.RipeIn)/clock.TicksPerDay, 0.1)*10) / 10
+	n := strconv.Itoa(int(math.Round(days)))
+	if days < 2 {
+		n = strconv.FormatFloat(days, 'f', 1, 64)
+	}
+	if plantYields(p) {
+		return "Ripe in about " + n + " days"
+	}
+	return "Fully grown in about " + n + " days"
+}
+
 // plantLines are the body lines under the growth bar.
 func plantLines(p game.PlantView) []string {
 	var out []string
@@ -76,6 +140,9 @@ func plantLines(p game.PlantView) []string {
 		out = append(out, "Ready to harvest")
 	default:
 		out = append(out, fmt.Sprintf("Not ready (%d%%)", p.Growth))
+	}
+	if l := plantRipeLine(p); l != "" {
+		out = append(out, l)
 	}
 	if l := plantDamageLine(p); l != "" { // crop_batch.go: cold or heat damage
 		out = append(out, l)
@@ -97,6 +164,44 @@ func plantLines(p game.PlantView) []string {
 		out = append(out, "Marked to cut")
 	}
 	return out
+}
+
+// The growth bar's place in the panel (offsets from its top).
+const (
+	plantBarY = 62
+	plantBarH = 12
+)
+
+// plantTextRow is one drawn line of the panel's text, y from the panel top.
+type plantTextRow struct {
+	text    string
+	y       float64
+	caption bool // a line of the growth caption
+}
+
+// plantTextRows lays out the text under the growth bar in a column w wide:
+// the caption (if the view has a state), then the body lines, wrapped. It
+// also returns the bottom of the last row, which must stay above the "now"
+// chips.
+func plantTextRows(p game.PlantView, w float64) ([]plantTextRow, float64) {
+	var rows []plantTextRow
+	step := float64(lineStep(tsSmall))
+	y := float64(plantBarY + plantBarH + 22) // below the bar, where the body always began
+	if c := plantGrowCaption(p); c != "" {
+		y = float64(plantBarY + plantBarH + 4)
+		for _, wl := range wrapPx(c, tsSmall, w) {
+			rows = append(rows, plantTextRow{wl, y, true})
+			y += step
+		}
+		y += 4
+	}
+	for _, l := range plantLines(p) {
+		for _, wl := range wrapPx(l, tsSmall, w) {
+			rows = append(rows, plantTextRow{text: wl, y: y})
+			y += step
+		}
+	}
+	return rows, y
 }
 
 // slowsWalking reports a plant whose cell costs extra step time (bramble,
@@ -217,13 +322,17 @@ func (a *App) drawPlantInspector(screen *ebiten.Image) {
 	x, y := int(r.x), int(r.y)
 	drawText(screen, ellipsize(plantTitle(p), tsLabel, float64(r.w)-60-40), float64(x+60), float64(y+10), withColor(tsLabel, uiHeading))
 	drawText(screen, ellipsize(plantCategory(p), tsSmall, float64(r.w)-60-12), float64(x+60), float64(y+32), withColor(tsSmall, uiTextDim))
-	drawNeedBar(screen, x+12, y+62, int(r.w)-24, 12, p.Growth, plantStageWord(p))
-	ly := float64(y + 84)
-	for _, l := range plantLines(p) {
-		for _, wl := range wrapPx(l, tsSmall, float64(r.w)-24) {
-			drawText(screen, wl, float64(x+12), ly, tsSmall)
-			ly += float64(lineStep(tsSmall))
+	drawNeedBar(screen, x+12, y+plantBarY, int(r.w)-24, plantBarH, p.Growth, plantStageWord(p))
+	rows, _ := plantTextRows(p, float64(r.w)-24)
+	for _, row := range rows {
+		st := tsSmall
+		if row.caption {
+			st = withColor(tsSmall, uiTextDim)
+			if plantCaptionWarns(p) {
+				st = withColor(tsSmall, uiWarning)
+			}
 		}
+		drawText(screen, row.text, float64(x+12), float64(y)+row.y, st)
 	}
 	drawText(screen, "now:", float64(x+12), float64(y)+float64(r.h)-56+(20-lineH(tsSmall))/2, withColor(tsSmall, uiTextDim))
 	mx, my := a.currentCursor()

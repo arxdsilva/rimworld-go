@@ -428,8 +428,12 @@ func (a *App) groupButtons() []button {
 			button{id: "group.undraft", label: "Undraft all", x: r.x + 160, y: y, w: 120, h: 24})
 	case selItem:
 		out = append(out,
-			button{id: "group.forbid", label: "Forbid all" + a.keyHint(input.Forbid), x: r.x + 12, y: y, w: 140, h: 24},
-			button{id: "group.allow", label: "Allow all", x: r.x + 160, y: y, w: 120, h: 24})
+			button{id: "group.forbid", label: "Forbid all" + a.keyHint(input.Forbid), x: r.x + 12, y: y, w: 128, h: 24},
+			button{id: "group.allow", label: "Allow all", x: r.x + 146, y: y, w: 92, h: 24})
+		if haulMarkable(a.selectedItems()) {
+			out = append(out, button{id: "group.haulmark", label: "Mark for hauling", x: r.x + 244, y: y, w: r.w - 244 - 12, h: 24,
+				tip: "Colonists will haul the stacks found on the map"})
+		}
 	}
 	for i, row := range rows {
 		if i == groupListMax {
@@ -439,6 +443,17 @@ func (a *App) groupButtons() []button {
 			x: r.x + 12, y: r.y + 66 + float32(i)*21, w: r.w - 24, h: 20, tip: "Select only this one"})
 	}
 	return out
+}
+
+// haulMarkable reports whether any stack in items was found on the map and
+// is not marked for hauling yet.
+func haulMarkable(items []game.ItemView) bool {
+	for _, it := range items {
+		if it.Unclaimed && !it.HaulMarked {
+			return true
+		}
+	}
+	return false
 }
 
 // pruneGroup drops members that are gone; a group of one becomes the
@@ -479,6 +494,12 @@ func (a *App) applyGroupClick(id string) {
 		for _, it := range a.selectedItems() {
 			if it.Forbidden != on {
 				a.renderer.enqueue(command.Command{Kind: command.SetForbidden, Target: uint64(it.ID), Enabled: on})
+			}
+		}
+	case "group.haulmark":
+		for _, it := range a.selectedItems() {
+			if it.Unclaimed && !it.HaulMarked {
+				a.renderer.enqueue(command.Command{Kind: command.SetHaulMark, Target: uint64(it.ID), Enabled: true})
 			}
 		}
 	default:

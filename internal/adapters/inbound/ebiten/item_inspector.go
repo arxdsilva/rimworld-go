@@ -105,6 +105,12 @@ func itemLines(it game.ItemView, stored bool) []string {
 	if it.Forbidden {
 		out = append(out, "Forbidden: colonists leave it alone")
 	}
+	switch {
+	case it.Unclaimed && it.HaulMarked:
+		out = append(out, "Found here. Marked: colonists will haul it.")
+	case it.Unclaimed:
+		out = append(out, "Found here. Colonists won't haul it until you mark it.")
+	}
 	if stored {
 		return append(out, "In a stockpile")
 	}
@@ -177,6 +183,31 @@ func itemForbidButton(r button, it game.ItemView) button {
 	return button{id: "item.forbid", label: label, x: r.x + r.w - 96, y: r.y + 34, w: 84, h: 22}
 }
 
+// itemHaulMarkButton toggles the haul mark (SetHaulMark) of a stack found
+// on the map, beside Forbid. Colony stacks haul by themselves, so they get
+// none.
+func itemHaulMarkButton(r button, it game.ItemView) (button, bool) {
+	if !it.Unclaimed {
+		return button{}, false
+	}
+	b := button{id: "item.haulmark", label: "Mark for hauling", x: r.x + r.w - 96 - 4 - 120, y: r.y + 34, w: 120, h: 22,
+		tip: "Colonists will haul it to a stockpile"}
+	if it.HaulMarked {
+		b.label, b.tip = "Unmark", "Colonists leave it where it lies"
+	}
+	return b, true
+}
+
+// itemActionButtons are the buttons beside the category word: Forbid and,
+// for a stack found on the map, the haul mark.
+func itemActionButtons(r button, it game.ItemView) []button {
+	out := []button{itemForbidButton(r, it)}
+	if b, ok := itemHaulMarkButton(r, it); ok {
+		out = append(out, b)
+	}
+	return out
+}
+
 // itemButtons are the item panel's buttons (ids "item.*").
 func (a *App) itemButtons() []button {
 	it, ok := a.selectedItem()
@@ -185,7 +216,7 @@ func (a *App) itemButtons() []button {
 	}
 	stored := inStockpile(a.renderer.world(), it.X, it.Y)
 	r := itemRect()
-	return append(itemPanelButtons(r, a.itemRows(it, stored)), itemForbidButton(r, it))
+	return append(itemPanelButtons(r, a.itemRows(it, stored)), itemActionButtons(r, it)...)
 }
 
 // drawItemInspector draws the item panel when an item is selected.
@@ -210,7 +241,11 @@ func (a *App) drawItemInspector(screen *ebiten.Image) {
 	}
 	x, y := float64(r.x), float64(r.y)
 	drawText(screen, ellipsize(itemTitle(it), tsLabel, float64(r.w)-60-40), x+60, y+10, withColor(tsLabel, uiHeading))
-	drawText(screen, ellipsize(itemCategory(it), tsSmall, float64(r.w)-60-100), x+60, y+32, withColor(tsSmall, uiTextDim))
+	catW := float64(r.w) - 60 - 100
+	if b, ok := itemHaulMarkButton(r, it); ok {
+		catW = float64(b.x-r.x) - 60 - 4 // stays clear of the mark button
+	}
+	drawText(screen, ellipsize(itemCategory(it), tsSmall, catW), x+60, y+32, withColor(tsSmall, uiTextDim))
 	ly := y + 62
 	for _, l := range itemLines(it, stored) {
 		for _, wl := range wrapPx(l, tsSmall, float64(r.w)-24) {
@@ -224,7 +259,7 @@ func (a *App) drawItemInspector(screen *ebiten.Image) {
 		drawText(screen, row.Verb, x+12, ry+(20-lineH(tsSmall))/2, withColor(tsSmall, uiTextDim))
 	}
 	mx, my := a.currentCursor()
-	a.drawButtons(screen, append(itemPanelButtons(r, rows), itemForbidButton(r, it)), mx, my)
+	a.drawButtons(screen, append(itemPanelButtons(r, rows), itemActionButtons(r, it)...), mx, my)
 	if a.renderer.art != nil {
 		a.renderer.drawSprite(screen, "overlay/selection", color.NRGBA{}, float64(it.X), float64(it.Y), a.renderer.tilePx(), a.pw, a.ph) // physical, like the map
 	}
@@ -242,6 +277,12 @@ func (a *App) applyItemClick(id string) {
 	}
 	if id == "item.forbid" {
 		a.renderer.enqueue(command.Command{Kind: command.SetForbidden, Target: uint64(it.ID), Enabled: !it.Forbidden})
+		return
+	}
+	if id == "item.haulmark" {
+		if it.Unclaimed { // colony stacks have no mark
+			a.renderer.enqueue(command.Command{Kind: command.SetHaulMark, Target: uint64(it.ID), Enabled: !it.HaulMarked})
+		}
 		return
 	}
 	n, err := strconv.Atoi(strings.TrimPrefix(id, "item.act."))

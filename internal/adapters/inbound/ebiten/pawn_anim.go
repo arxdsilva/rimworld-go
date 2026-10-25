@@ -142,7 +142,7 @@ func (r *Renderer) drawPawnArt(screen *ebiten.Image, p game.PawnView, wx, wy, ti
 	if p.Drafted {
 		if img := r.art.image("ui_icon/draft", color.NRGBA{}); img != nil {
 			sx, sy := r.worldToScreenF(wx+0.62+ps.dx, wy-0.95+ps.dy)
-			drawIcon(screen, img, float64(sx), float64(sy), tile*0.3)
+			worldIcon(screen, img, float64(sx), float64(sy), tile*0.3/uiScale()) // tile is physical
 		}
 	}
 }

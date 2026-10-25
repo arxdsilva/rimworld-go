@@ -296,9 +296,18 @@ func animalDietLine(an game.AnimalView) string {
 	return "Diet: " + an.Diet
 }
 
+// animalHuntLine is the note under a tame predator's diet (PLAY-017).
+func animalHuntLine(an game.AnimalView) string {
+	if !an.Hunts || an.Diet == "" {
+		return ""
+	}
+	return "Hunts wild animals when hungry"
+}
+
 // animalExtraH is how tall the needs block is: Food and Rest bars, the
-// product bar, a pregnancy line, the diet line and a wild animal's tame
-// chance (the bond block under it adds animalBondH).
+// product bar, a pregnancy line, the diet line (and a tame predator's
+// hunting note) and a wild animal's tame chance (the bond block under it
+// adds animalBondH).
 func animalExtraH(an game.AnimalView) int {
 	if !animalHasNeeds(an) {
 		return 0
@@ -311,6 +320,9 @@ func animalExtraH(an game.AnimalView) int {
 		h += 16
 	}
 	if animalDietLine(an) != "" {
+		h += 16
+	}
+	if animalHuntLine(an) != "" {
 		h += 16
 	}
 	if !an.Tame {
@@ -337,6 +349,10 @@ func (a *App) drawAnimalNeeds(screen *ebiten.Image, an game.AnimalView, r button
 		y += 16
 	}
 	if l := animalDietLine(an); l != "" {
+		drawLabel(screen, x, y, l)
+		y += 16
+	}
+	if l := animalHuntLine(an); l != "" {
 		drawLabel(screen, x, y, l)
 		y += 16
 	}

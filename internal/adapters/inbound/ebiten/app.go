@@ -198,6 +198,8 @@ type App struct {
 	in      inputFrame
 	binds   input.Bindings
 	updates uint64
+	bg      bgState       // Run in background (background.go)
+	barClk  barClick      // last colonist-bar click, for the double click (hud.go)
 	rebind  rebindState   // Options › Controls key capture (controls_ui.go)
 	search  searchState   // Z search box (search_ui.go)
 	form    formationDrag // drafted colonists' right-drag line (formation.go)
@@ -287,6 +289,7 @@ func (a *App) Update() error {
 	a.updates++
 	a.syncUIScale() // ui_scale.go: before any measure or hit test
 	a.pollInput()
+	a.syncBackground() // background.go: Run in background, from this frame's focus
 	a.handleTextInput()
 	if a.in.fired(input.Cancel) {
 		a.pressEscape()
@@ -436,7 +439,7 @@ func (a *App) tick() {
 	case screenBoot:
 		a.tickBoot()
 	case screenColony:
-		if a.nav.overlay() == overlayNone && a.renderer != nil {
+		if a.nav.overlay() == overlayNone && a.renderer != nil && !a.bg.paused { // background.go
 			a.renderer.voice.view = a.mapViewport() // animal calls only on screen (physical, like worldToScreen)
 			a.renderer.advance()
 			a.markUpdate()
@@ -509,9 +512,11 @@ func (a *App) applyClick(id string) {
 				a.toggleInSet(selCand{selPawn, entity.EntityID(n)})
 				break
 			}
-			a.group = selGroup{}
-			a.renderer.Select(entity.EntityID(n))
-			a.clearBuilding()
+			pid := entity.EntityID(n)
+			a.selectCand(selCand{selPawn, pid}) // clears every other selection
+			if a.barDoubleClick(pid) {
+				a.centreOnPawn(pid)
+			}
 		}
 	case strings.HasPrefix(id, "research.pick."):
 		a.pickResearch(id)
@@ -748,7 +753,8 @@ func (a *App) dropSession() {
 // Draw paints the current full screen and any overlay.
 func (a *App) Draw(screen *ebiten.Image) {
 	defer a.fpsProbeDraw(time.Now())
-	a.syncUIScale() // ui_scale.go: the canvas and the font draw at this scale
+	defer a.capBackgroundDraw() // background.go: ~20 fps while running in the background
+	a.syncUIScale()             // ui_scale.go: the canvas and the font draw at this scale
 	a.setPhysical(screen.Bounds().Dx(), screen.Bounds().Dy())
 	sw, sh := a.sw, a.sh // logical
 
@@ -773,10 +779,10 @@ func (a *App) Draw(screen *ebiten.Image) {
 		if a.renderer != nil {
 			a.renderer.setAlpha(a.frameAlpha())
 			a.syncTreeFocus() // tree_focus.go: hover, selection and ghost see through canopies
-			tracePass = "world"
+			setTracePass("world")
 			a.renderer.Draw(screen)
 			a.drawMapFields(screen) // mapfields_overlay.go: dev only
-			tracePass = "hud"
+			setTracePass("hud")
 		} else {
 			screen.Fill(uiSpace)
 		}

@@ -8,6 +8,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/platform/input"
 )
 
@@ -116,6 +117,25 @@ func (a *App) hudTabButtons(sw, sh int) []button {
 		out = append(out, b)
 	}
 	return out
+}
+
+// barClick is the last click on a colonist's bar slot.
+type barClick struct {
+	id entity.EntityID
+	at uint64 // App.updates of the click; 0: none
+}
+
+// barDoubleClick records a bar click on id and reports it is the second
+// of a double click (same colonist within doubleClickFrames, the map's
+// window). A double click is spent: the next click starts a new pair.
+func (a *App) barDoubleClick(id entity.EntityID) bool {
+	last := a.barClk
+	if last.at > 0 && last.id == id && a.updates-last.at <= doubleClickFrames {
+		a.barClk = barClick{}
+		return true
+	}
+	a.barClk = barClick{id: id, at: a.updates}
+	return false
 }
 
 func (a *App) colonistBarButtons(sw, sh int) []button {
@@ -476,7 +496,7 @@ const (
 
 // hudTimeText is the right-aligned clock text of the top strip.
 func (a *App) hudTimeText() string {
-	return fmt.Sprintf("%s  %s  %s", a.renderer.date(), a.renderer.speedRate(), a.renderer.activity())
+	return fmt.Sprintf("%s  %s  %s", a.renderer.date(), a.speedLabel(), a.renderer.activity())
 }
 
 // roofButtons is the HUD Roof toggle: top strip, left of the clock

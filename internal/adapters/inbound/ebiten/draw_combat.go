@@ -65,6 +65,14 @@ func (r *Renderer) interpAnimal(an game.AnimalView) (float64, float64) {
 	return m.X, m.Y
 }
 
+// animalMarkTrace, when set (tests only, never in parallel), sees each mark
+// the animal overlays put in the world pass, in physical pixels:
+// "hostile-marker" (a, b: the animal's top-left), "chase-line" (a, b the
+// animal's centre, c, d the target's), "name-plate" (a, b, c, d: x, y,
+// width, height) and "name-text" (a, b: the text's anchor, as handed to
+// worldText).
+var animalMarkTrace func(kind string, a, b, c, d float32)
+
 // drawAnimalOverlays draws hunt marks and health bars above animals, then
 // the sleepers' snores. The snores (vector strokes) go in a pass of their
 // own: a vector stroke between two sprite draws flushes the vector batch,
@@ -82,6 +90,7 @@ func (r *Renderer) drawAnimalOverlays(screen *ebiten.Image, w game.WorldView, ti
 			r.drawSnoreFor(screen, uint64(an.ID), wx+0.25, wy+0.1-an.Size*0.1, tile)
 		}
 	}
+	r.drawChaseLines(screen, w, tile) // PLAY-017: under the marks
 	for i := range w.Animals {
 		an := &w.Animals[i]
 		if !r.lod.inView(an.X, an.Y, 3, 4) {
@@ -89,7 +98,11 @@ func (r *Renderer) drawAnimalOverlays(screen *ebiten.Image, w game.WorldView, ti
 		}
 		wx, wy := r.interpAnimal(*an)
 		switch {
-		case an.Manhunter:
+		case an.Hostile || an.Manhunter: // PLAY-017: every hostile animal, not only manhunters
+			if animalMarkTrace != nil {
+				sx, sy := r.worldToScreenF(wx, wy)
+				animalMarkTrace("hostile-marker", sx, sy, 0, 0)
+			}
 			r.drawHostileMarker(screen, game.PawnView{}, wx, wy-(animalMarkerLift(an.Size)-animalMarkBase), tile)
 		case an.Designated:
 			spin := pose{px: 0.5, py: 0.5, sx: 0.5, sy: 0.5, rot: float64(r.present) * 0.035}
@@ -99,10 +112,7 @@ func (r *Renderer) drawAnimalOverlays(screen *ebiten.Image, w game.WorldView, ti
 			r.drawSpritePose(screen, "overlay/designation_tame", color.NRGBA{}, wx, wy-animalMarkerLift(an.Size)-0.05*math.Sin(float64(r.present)*0.08), tile, bob)
 		}
 		if an.Tame && an.Name != "" && tile >= stackCountMinTile {
-			sx, sy := r.worldToScreenF(wx+0.5, wy+1.0)
-			tw := textW(an.Name, tsSmall) + 6
-			r.solidRect(screen, sx-tw/2, sy, tw, 14, color.RGBA{16, 12, 8, 150})
-			drawText(screen, an.Name, float64(sx-tw/2)+3, float64(sy)-2, tsSmall)
+			r.drawAnimalName(screen, an.Name, wx+0.5, wy+1.0)
 		}
 		if an.Health < 100 {
 			sx, sy := r.worldToScreenF(wx+0.15, wy-animalBarLift(an.Size))
@@ -111,6 +121,79 @@ func (r *Renderer) drawAnimalOverlays(screen *ebiten.Image, w game.WorldView, ti
 			r.solidRect(screen, sx, sy, bw*float32(an.Health)/100, 4, healthColor(an.Health))
 		}
 	}
+}
+
+// chaseLineClr is the chase line's colour: the hostile marker's red,
+// translucent so it reads without hiding the ground.
+var chaseLineClr = color.NRGBA{R: 220, G: 50, B: 40, A: 170}
+
+const (
+	// chaseDotStep is the gap between the line's dots, as a share of a
+	// tile, and chaseDotSize a dot's side; chaseMaxDots caps a very long
+	// line.
+	chaseDotStep = 0.22
+	chaseDotSize = 0.05
+	chaseMaxDots = 120
+)
+
+// drawChaseLines draws a dotted red line from every hostile animal to the
+// pawn it is chasing, between the positions they are drawn at (world
+// pass, physical pixels). Dots are sprite draws of the white pixel
+// (solidRect), not a vector stroke, which would flush the batch for every
+// line. A line with both ends off screen is skipped.
+func (r *Renderer) drawChaseLines(screen *ebiten.Image, w game.WorldView, tile float64) {
+	for i := range w.Animals {
+		an := &w.Animals[i]
+		if !an.Hostile || an.TargetID == 0 {
+			continue
+		}
+		p, ok := chasedPawn(r.drawPawns, an.TargetID) // chase_ui.go
+		if !ok || (!r.lod.inView(an.X, an.Y, 3, 4) && !r.lod.inView(p.X, p.Y, 3, 4)) {
+			continue
+		}
+		ax, ay := r.interpAnimal(*an)
+		px, py := r.interpWorld(p)
+		x0, y0 := r.worldToScreenF(ax+0.5, ay+0.5)
+		x1, y1 := r.worldToScreenF(px+0.5, py+0.5)
+		if animalMarkTrace != nil {
+			animalMarkTrace("chase-line", x0, y0, x1, y1)
+		}
+		dist := math.Hypot(float64(x1-x0), float64(y1-y0))
+		n := min(chaseMaxDots, max(1, int(math.Round(dist/(tile*chaseDotStep)))))
+		d := float32(max(2.5, tile*chaseDotSize))
+		for k := 0; k <= n; k++ {
+			t := float32(k) / float32(n)
+			r.solidRect(screen, x0+(x1-x0)*t-d/2, y0+(y1-y0)*t-d/2, d, d, chaseLineClr)
+		}
+	}
+}
+
+// Name plate metrics, in logical pixels like the text they back: the
+// padding around the name, the plate's height, and how far the text sits
+// above the plate's top edge.
+const (
+	namePlatePad  = 6
+	namePlateH    = 14
+	nameTextRaise = 2
+)
+
+// drawAnimalName puts a tame animal's name on a dark plate, centred
+// under the tile point (wx, wy) in tiles. The anchor is a world
+// position (physical pixels): the text goes through worldText, which
+// converts it to logical once, and the plate is sized in physical pixels
+// from the same logical text size, so both scale with the UI together.
+func (r *Renderer) drawAnimalName(screen *ebiten.Image, name string, wx, wy float64) {
+	sx, sy := r.worldToScreenF(wx, wy)
+	k := float32(uiScale())
+	pw, ph := (textW(name, tsSmall)+namePlatePad)*k, float32(namePlateH)*k
+	if animalMarkTrace != nil {
+		animalMarkTrace("name-plate", sx-pw/2, sy, pw, ph)
+		animalMarkTrace("name-text", sx, sy-nameTextRaise*k, 0, 0)
+	}
+	r.solidRect(screen, sx-pw/2, sy, pw, ph, color.RGBA{16, 12, 8, 150})
+	st := tsSmall
+	st.Align = alignCenter
+	worldText(screen, name, float64(sx), float64(sy-nameTextRaise*k), st)
 }
 
 // Trace styling.

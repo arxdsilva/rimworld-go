@@ -106,7 +106,9 @@ func (r *Renderer) drawChatBubbles(screen *ebiten.Image, tile float64) {
 		vector.StrokeRect(screen, sx-bw/2, sy-bh/2, bw, bh, 1, color.RGBA{60, 50, 40, 220}, true)
 		vector.FillCircle(screen, sx-bw/2+bw*0.2, sy+bh/2+2, float32(tile*0.035), color.RGBA{250, 248, 240, 235}, true)
 		if icon != nil {
-			drawIcon(screen, icon, float64(sx-bw/2)+2, float64(sy-bh/2)+2, float64(bw)-4)
+			// physical anchor and size (the bubble is world-sized): the
+			// icon size is logical, so divide the physical size by the UI scale
+			worldIcon(screen, icon, float64(sx-bw/2)+2, float64(sy-bh/2)+2, float64(bw-4)/uiScale())
 			continue
 		}
 		for i := -1; i <= 1; i++ {
@@ -120,8 +122,8 @@ func (r *Renderer) drawChatBubbles(screen *ebiten.Image, tile float64) {
 func (r *Renderer) drawFightMarker(screen *ebiten.Image, wx, wy, tile float64) {
 	sx, sy := r.worldToScreenF(wx+0.5, wy-0.95)
 	if img := r.art.image("overlay/fight_lightning", noTint); img != nil {
-		size := tile * 0.32
-		drawIcon(screen, img, float64(sx)-size/2, float64(sy)-size/2, size)
+		size := tile * 0.32 // physical, like the position; worldIcon takes it logical
+		worldIcon(screen, img, float64(sx)-size/2, float64(sy)-size/2, size/uiScale())
 		return
 	}
 	c := color.RGBA{220, 40, 36, 245}

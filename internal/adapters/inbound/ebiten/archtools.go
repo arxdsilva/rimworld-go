@@ -64,6 +64,8 @@ var archTools = []archTool{
 		desc: "Colonists leave forbidden items alone. Drag over the items."},
 	{id: "allow", label: "Allow", category: "orders", icon: "order_allow", mode: placeArea, cmd: command.DesignateForbid,
 		desc: "Let colonists use forbidden items again. Drag over the items."},
+	{id: "haul", label: "Haul things", category: "orders", icon: "order_haul", mode: placeArea, cmd: command.DesignateHaul, enable: true,
+		desc: "Mark things found on the map for hauling. Colonists haul the colony's own goods by themselves; anything else waits for this mark."},
 	{id: "hunt", label: "Hunt", category: "orders", icon: "order_hunt", mode: placeArea, cmd: command.DesignateHunt,
 		desc: "Mark animals for hunters. Hunters need a rifle; kills drop meat."},
 	{id: "tame", label: "Tame", category: "orders", icon: "order_tame", mode: placeArea, cmd: command.DesignateTame,

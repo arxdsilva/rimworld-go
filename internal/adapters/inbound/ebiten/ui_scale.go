@@ -94,6 +94,9 @@ func (a *App) deviceScale() float64 {
 // (points) x dev. It records the physical size, the UI scale and the
 // logical size (physical / s, rounded up) every layout and hit test reads.
 func (a *App) LayoutF(outsideW, outsideH float64) (float64, float64) {
+	if s := a.captureScale(); s > 0 {
+		outsideW, outsideH = DefaultWindowWidth*s, DefaultWindowHeight*s
+	}
 	if outsideW < 1 {
 		outsideW = DefaultWindowWidth
 	}
@@ -119,6 +122,9 @@ func (a *App) Layout(outsideWidth, outsideHeight int) (int, int) {
 // size and the last device factor (LayoutF and applySettings).
 func (a *App) updateScale() {
 	a.scale = computeUIScale(a.settings, a.outW, a.outH, a.devRaw, a.cfg.Capture != nil)
+	if s := a.captureScale(); s > 0 {
+		a.scale = uiScaleState{dev: 1, ui: s, s: s}
+	}
 	if a.pw > 0 && a.ph > 0 {
 		a.setPhysical(a.pw, a.ph)
 	}

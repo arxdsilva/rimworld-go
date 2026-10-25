@@ -144,3 +144,40 @@ func TestUIScaleAutoAndHiDPIDefaultOn(t *testing.T) {
 		t.Fatalf("round trip %+v, %v", back, err)
 	}
 }
+
+// PLAY-017: Gameplay.RunInBackground defaults off, a version 2 file loads
+// with it off (and its other choices kept), and an explicit on survives a
+// round trip.
+func TestRunInBackgroundDefaultsOffAndMigrates(t *testing.T) {
+	t.Parallel()
+	if Defaults().Gameplay.RunInBackground {
+		t.Fatal("run in background must default off")
+	}
+	old, err := Decode(strings.NewReader(`{"version": 2, "gameplay": {"autosave_days": 7, "pause_on_threat": false}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if old.Gameplay.RunInBackground || old.Gameplay.AutosaveDays != 7 || old.Gameplay.PauseOnThreat {
+		t.Fatalf("version 2 file: %+v, want RunInBackground off and the rest kept", old.Gameplay)
+	}
+	if old.Version != SettingsVersion || SettingsVersion < 3 {
+		t.Fatalf("migrated version %d, current %d, want the PLAY-017 bump (>= 3)", old.Version, SettingsVersion)
+	}
+	cur, err := Decode(strings.NewReader(`{"version": 3, "gameplay": {"run_in_background": true}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cur.Gameplay.RunInBackground {
+		t.Fatalf("current file lost run_in_background: %+v", cur.Gameplay)
+	}
+	var buf bytes.Buffer
+	if err := Encode(&buf, cur); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(buf.String(), `"run_in_background": true`) {
+		t.Fatalf("encoded settings do not persist the option:\n%s", buf.String())
+	}
+	if back, err := Decode(&buf); err != nil || !back.Gameplay.RunInBackground {
+		t.Fatalf("round trip %+v, %v", back.Gameplay, err)
+	}
+}

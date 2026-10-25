@@ -40,6 +40,7 @@ var warnClr = color.RGBA{R: 0xE0, G: 0xA8, B: 0x40, A: 0xFF}
 // buildAlerts derives the current alerts from pawns and the world.
 func buildAlerts(pawns []game.PawnView, w game.WorldView) []alert {
 	var out []alert
+	allPawns := pawns // the chased colonist is named from the whole list
 	// raiders are listed with the colonists; split them off first
 	var raiders [][2]int
 	plan := ""
@@ -71,20 +72,8 @@ func buildAlerts(pawns []game.PawnView, w game.WorldView) []alert {
 		out = append(out, a)
 	}
 
-	var hostiles [][2]int
-	species := ""
-	for _, an := range w.Animals {
-		if an.Hostile {
-			hostiles = append(hostiles, [2]int{an.X, an.Y})
-			species = an.Species
-		}
-	}
-	if len(hostiles) > 0 {
-		label := "A " + species + " is attacking!"
-		if len(hostiles) > 1 {
-			label = fmt.Sprintf("%d animals are attacking!", len(hostiles))
-		}
-		out = append(out, alert{key: "hostile", label: label, danger: true, targets: hostiles})
+	if al, ok := hostileAlert(allPawns, w); ok {
+		out = append(out, al)
 	}
 
 	if al, ok := fireAlert(w); ok {
@@ -173,6 +162,45 @@ func buildAlerts(pawns []game.PawnView, w game.WorldView) []alert {
 	}
 	group("unhappy", false, unhappy, func(n string) string { return n + " is unhappy" }, "colonists are unhappy")
 	return out
+}
+
+// hostileAlert is the "hostile" alert for animals attacking colonists: one
+// animal says what it is and, when it is chasing someone, whom ("A timber
+// wolf is chasing Ada!"); several are only counted. pawns is every pawn
+// the target may be among.
+func hostileAlert(pawns []game.PawnView, w game.WorldView) (alert, bool) {
+	var targets [][2]int
+	var first game.AnimalView
+	for _, an := range w.Animals {
+		if !an.Hostile {
+			continue
+		}
+		if len(targets) == 0 {
+			first = an
+		}
+		targets = append(targets, [2]int{an.X, an.Y})
+	}
+	if len(targets) == 0 {
+		return alert{}, false
+	}
+	label := withArticle(animalLabel(first)) + " is attacking!"
+	if first.TargetID != 0 {
+		if p, ok := chasedPawn(pawns, first.TargetID); ok && p.Name != "" {
+			label = withArticle(animalLabel(first)) + " is chasing " + p.Name + "!"
+		}
+	}
+	if len(targets) > 1 {
+		label = fmt.Sprintf("%d animals are attacking!", len(targets))
+	}
+	return alert{key: "hostile", label: label, danger: true, targets: targets}, true
+}
+
+// withArticle puts "A" or "An" before a noun phrase ("An arctic fox").
+func withArticle(noun string) string {
+	if noun != "" && strings.ContainsRune("aeiouAEIOU", rune(noun[0])) {
+		return "An " + noun
+	}
+	return "A " + noun
 }
 
 func (a *App) currentAlerts() []alert {

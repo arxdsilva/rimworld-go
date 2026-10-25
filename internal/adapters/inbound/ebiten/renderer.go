@@ -797,6 +797,7 @@ func (r *Renderer) drawWorld(screen *ebiten.Image, sw, sh int, tile float64) {
 		}
 		vector.FillRect(screen, sx+4, sy+4, float32(tile)-8, float32(tile)-8, c, false)
 	}
+	r.drawZoneLabels(screen, w, sw, sh, tile) // zones_draw.go: over the objects
 }
 
 func (r *Renderer) drawGhostRect(screen *ebiten.Image, x0, y0, x1, y1 int) {

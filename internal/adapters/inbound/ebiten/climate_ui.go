@@ -166,12 +166,21 @@ func (a *App) focusMessage(id string) {
 	}
 }
 
+// messageStyle is a notice's text style: threats are drawn red.
+func messageStyle(m game.MessageView) textStyle {
+	st := tsBody
+	if m.Danger {
+		st.Color = uiDanger
+	}
+	return st
+}
+
 func (a *App) drawMessages(screen *ebiten.Image) {
 	sw, _ := a.size()
 	for i, m := range a.liveMessages() {
 		r := a.messageRect(sw, i, m)
 		uiFillRect(screen, r.x, r.y, r.w, r.h, color.RGBA{20, 16, 12, 200}, false)
-		drawLabel(screen, int(r.x)+8, int(r.y)+3, messageLine(m))
+		drawText(screen, messageLine(m), float64(int(r.x)+8), float64(int(r.y)+3+labelDY), messageStyle(m))
 	}
 }
 

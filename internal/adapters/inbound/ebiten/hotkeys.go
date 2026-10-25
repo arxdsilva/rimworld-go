@@ -219,10 +219,12 @@ func (a *App) cycleColonist(d int) {
 	a.centreOnPawn(p.ID)
 }
 
-// centreOnPawn moves the camera onto a colonist (where it is drawn).
+// centreOnPawn moves the camera onto a colonist (where it is drawn) and
+// stops any pan or zoom ease in flight, so it stays there.
 func (a *App) centreOnPawn(id entity.EntityID) {
 	for _, p := range a.renderer.snapshot() {
 		if p.ID == id {
+			a.renderer.smooth.halt()
 			wx, wy := a.renderer.interpWorld(p)
 			a.centerOnMap(wx+0.5, wy+0.5)
 			return
