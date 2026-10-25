@@ -132,6 +132,9 @@ const (
 	// DesignatePlan paints (Enabled) or erases plan marks over the
 	// rectangle X,Y..X2,Y2: purely visual layout placeholders (PLAY-012).
 	DesignatePlan
+	// OpenCasket orders the sealed sleeper casket Target opened (MAPGEN-3):
+	// a colonist walks there and works it open, waking its whole group.
+	OpenCasket
 )
 
 // WorkType is a compact work-column id for SetWorkEnabled.

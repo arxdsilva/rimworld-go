@@ -585,6 +585,9 @@ type State struct {
 	TameMark  bool
 	TameRetry uint64
 	Manhunter uint64
+	// Dormant (MAPGEN-3): a sealed vault's sleeping defender; it neither
+	// thinks nor needs until the vault is breached or it is hurt.
+	Dormant bool
 	// RetryAt: after a failed path search, no new search before this tick.
 	RetryAt uint64
 

@@ -191,6 +191,15 @@ var sounds = []sound{
 		{Wave: s.Brown, Dur: 1.2, LowPass: 220, Attack: 0.1, Decay: 0.6, Gain: 0.35},
 	}}, 0.45},
 
+	// --- sealed vault (MAPGEN-3): a sleeper casket's seal cracks, old air
+	// hisses out, and the lid grinds aside.
+	{s.Recipe{ID: "sfx.casket_open", Seed: 702, Layers: []s.Layer{
+		{Wave: s.White, Dur: 0.03, HighPass: 2500, Decay: 0.015, Gain: 0.7},
+		{Wave: s.Sine, Freq: 180, FreqEnd: 120, Dur: 0.12, Attack: 0.001, Decay: 0.06, Gain: 0.6},
+		{Wave: s.White, Start: 0.05, Dur: 1.1, HighPass: 2000, Attack: 0.04, Decay: 0.6, Gain: 0.4},
+		{Wave: s.Brown, Start: 0.6, Dur: 0.9, BandPass: 260, BandEnd: 180, Q: 1.2, Attack: 0.1, Decay: 0.5, Tremolo: 14, TremoloDepth: 0.5, Gain: 0.7},
+	}}, 0.6},
+
 	// --- water (NG-1 §7.4)
 	// A babbling brook: pinkish noise through several band-passes that drift
 	// slowly, with fast gurgling wobble and splashing grains.

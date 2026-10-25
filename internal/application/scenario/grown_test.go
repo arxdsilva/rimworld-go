@@ -90,7 +90,10 @@ func TestGrownGolden(t *testing.T) {
 	// behaviour by design; stable over
 	// -count=3. Re-pinned (ENG-003 polish): conversation memories land at
 	// the speaker's Social impact (§13.2); stable over -count=3.
-	const want uint64 = 0xf6040a57f46087cf
+	// Re-pinned (MAPGEN-3): CompleteResearch also completes the new Bridges
+	// project; with it left unfinished the hash is the previous pin
+	// (f6040a57), so behaviour is unchanged.
+	const want uint64 = 0xaa0807e2ccd471dd
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

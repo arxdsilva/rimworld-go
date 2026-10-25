@@ -4903,6 +4903,18 @@
       "license": "original, made in code (CC0, this repo)"
     },
     {
+      "id": "sfx.casket_open",
+      "bus": "effects",
+      "volume": 0.6,
+      "files": [
+        "sfx/casket_open_0.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.casket_open",
+      "seed": 702,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
       "id": "sfx.chop",
       "bus": "effects",
       "volume": 0.8,

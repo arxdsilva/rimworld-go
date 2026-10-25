@@ -53,6 +53,33 @@ func (t Type) Wetness() int {
 	return 0
 }
 
+// Support is how much a cell can hold up (MAPGEN-3): None (open water),
+// Light (a bridge: wooden walls and furniture), Medium, Heavy (firm
+// ground: anything).
+type Support uint8
+
+const (
+	SupportNone Support = iota
+	SupportLight
+	SupportMedium
+	SupportHeavy
+)
+
+// GroundSupport is what the terrain itself holds up: nothing on water,
+// anything on land (today's building rules on land are unchanged).
+func GroundSupport(t Type) Support {
+	if IsWater(t) {
+		return SupportNone
+	}
+	return SupportHeavy
+}
+
+// Bridgeable reports terrain a bridge foundation may be built over: water,
+// marsh and mud (the open sea is refused by the game, not by terrain).
+func Bridgeable(t Type) bool {
+	return t == ShallowWater || t == DeepWater || t == Marsh || t == Mud
+}
+
 // IsRockWall reports a solid natural wall: rough or smoothed rock.
 func IsRockWall(t Type) bool { return t == Rock || t == RockSmooth }
 

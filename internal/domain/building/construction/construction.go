@@ -5,6 +5,7 @@ package construction
 import (
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/terrain"
 )
 
 // Kind is a buildable structure.
@@ -78,6 +79,12 @@ const (
 	// (MAPGEN-2): walkable, never built, deconstructed or moved; it warms
 	// the air around it.
 	SteamVent
+	// Bridge (MAPGEN-3) is a wooden foundation over water, marsh or mud: it
+	// makes the cell walkable and holds light things up. SleeperCasket is
+	// a sealed vault's 1x2 casket: placed by map generation, opened, then
+	// salvaged for steel.
+	Bridge
+	SleeperCasket
 	kindCount
 )
 
@@ -90,6 +97,9 @@ type Layer uint8
 const (
 	LayerObject Layer = iota
 	LayerFloor
+	// LayerFoundation (MAPGEN-3) is under everything: a bridge over water,
+	// marsh or mud. Append only: saved.
+	LayerFoundation
 )
 
 // Def is the static definition of a buildable kind.
@@ -130,6 +140,9 @@ type Def struct {
 	// Natural: a map feature (with Placed), never deconstructed, moved or
 	// swapped.
 	Natural bool
+	// Foundation (MAPGEN-3): built over bridgeable terrain only (water,
+	// marsh, mud), in LayerFoundation, holding up light things.
+	Foundation bool
 }
 
 // StoneWorkPct is the work multiplier (percent) for granite, the legacy
@@ -210,6 +223,35 @@ var defs = [kindCount]Def{
 	PartySpot:    {Kind: PartySpot, Name: "party spot", Layer: LayerObject},
 	SteamVent: {Kind: SteamVent, Name: "steam vent", Layer: LayerObject, Placed: true, Natural: true,
 		Size: [2]int{2, 2}},
+	Bridge: {Kind: Bridge, Name: "bridge", Wood: 6, Work: 110, Layer: LayerFoundation, Foundation: true},
+	SleeperCasket: {Kind: SleeperCasket, Name: "sleeper casket", Layer: LayerObject, BlocksMove: true, Rotatable: true,
+		Size: [2]int{1, 2}, MetalOK: true, MetalOnly: true, Placed: true, Salvage: 20},
+}
+
+// Requires is the support kind k built from stuff needs under it
+// (MAPGEN-3): stone and steel walls and floors need firm ground; a bridge
+// holds everything else (wooden walls, doors, fences, furniture). A
+// bridge itself needs nothing (it is the support).
+func Requires(k Kind, stuff item.Kind) terrain.Support {
+	d := DefOf(k)
+	switch {
+	case d.Foundation:
+		return terrain.SupportNone
+	case d.Layer == LayerFloor || d.Carpet:
+		return terrain.SupportHeavy
+	case k == Wall && stuff != item.Wood:
+		return terrain.SupportHeavy
+	}
+	return terrain.SupportLight
+}
+
+// Provides is the support a finished foundation kind gives (a bridge:
+// light); none for every other kind.
+func Provides(k Kind) terrain.Support {
+	if DefOf(k).Foundation {
+		return terrain.SupportLight
+	}
+	return terrain.SupportNone
 }
 
 // MaxHP is how much damage a building takes before it is destroyed.
@@ -343,7 +385,7 @@ func Covers(k Kind, f Facing, x, y, px, py int) bool {
 // (PLAY-011: fixed pieces change material in place instead).
 func Movable(k Kind) bool {
 	switch k {
-	case Wall, Door, Fence, FenceGate, Grave:
+	case Wall, Door, Fence, FenceGate, Grave, Bridge, SleeperCasket:
 		return false
 	}
 	return DefOf(k).Layer != LayerFloor
@@ -540,6 +582,14 @@ type Building struct {
 	// Ruin: an abandoned piece left by map generation (MAPGEN-2): not
 	// colony wealth, not a Home anchor, salvaged for half.
 	Ruin bool
+	// Ancient (MAPGEN-3): an intact piece of a sealed vault (walls, floor,
+	// caskets): not colony wealth, not a Home anchor, not repaired.
+	Ancient bool
+	// Sealed sleeper caskets (MAPGEN-3): Occupant is a vault.Occupant
+	// (0: open or empty shell); CasketGroup the vault id whose caskets open
+	// together.
+	Occupant    uint8
+	CasketGroup int
 }
 
 // HP is the building's remaining hit points.

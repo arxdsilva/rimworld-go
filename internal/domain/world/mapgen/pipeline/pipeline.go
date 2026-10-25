@@ -31,6 +31,7 @@ var steps = []mapgen.Step{
 	resources.Chunks{},      // ChunkDensity, Chunks, Blocked
 	roads.Roads{},           // Road, Roads, Track terrain, Blocked
 	start.Start{},           // StartScore, Start (local repair)
+	features.Vaults{},       // Vaults, Blocked (MAPGEN-3)
 	features.Ruins{},        // Ruins, Blocked
 	features.Vents{},        // Vents, Blocked
 	vegetation.Vegetation{}, // VegDensity, Plants, Grass
@@ -44,7 +45,7 @@ var labels = map[string]string{
 	"coast": "Rivers and shores", "river": "Rivers and shores", "lakes": "Rivers and shores",
 	"rocks": "Laying stone", "terrain": "Laying stone", "ores": "Ores and debris", "chunks": "Ores and debris",
 	"roads": "Roads and ruins", "start": "Choosing the landing spot", "ruins": "Roads and ruins",
-	"vents": "Roads and ruins", "vegetation": "Planting", "validate": "Checking the map",
+	"vents": "Roads and ruins", "vaults": "Roads and ruins", "vegetation": "Planting", "validate": "Checking the map",
 }
 
 // Label is a step's player-facing phase name.

@@ -52,6 +52,7 @@ func NewCtx(cfg Config) *Ctx {
 		Geology: geology.NewMap(cfg.W, cfg.H),
 		Roof:    make([]roof.Cell, n),
 		Grass:   make([]bool, n),
+		Ocean:   make([]bool, n),
 		Start:   Point{cfg.W / 2, cfg.H / 2},
 	}
 	return &Ctx{Cfg: cfg, W: cfg.W, H: cfg.H, F: f, R: r, base: cfg.Seed ^ versionSalt}

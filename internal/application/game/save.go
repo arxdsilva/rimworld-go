@@ -247,6 +247,10 @@ type saveState struct {
 	// Landing is the landing spot (x, y); absent: the map centre.
 	Fog     []uint64
 	Landing []int
+	// MAPGEN-3: Ocean is the open-sea bitset (absent: no sea known, every
+	// deep water is bridgeable); Vaults the sealed vaults' state.
+	Ocean  []uint64
+	Vaults []vaultSave
 	// Grass and GrassCut (UI-011); absent in older saves, which reseed.
 	Grass    []uint8
 	GrassCut [][2]int

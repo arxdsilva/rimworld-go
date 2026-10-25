@@ -43,6 +43,9 @@ const (
 	// beer, ashleaf into tea and tablets. Neither ever has an outline.
 	Brewgrain
 	Ashleaf
+	// Duskmoss (MAPGEN-3, append only, saved): blue-grey moss of dark
+	// caves; grows without light and withers in it.
+	Duskmoss
 	numSpecies
 )
 
@@ -87,7 +90,17 @@ type Def struct {
 	// Ground: a low ground plant (moss, wildflowers, brambles) that never
 	// blocks building; placing a building clears it.
 	Ground bool
+	// Light (MAPGEN-3, percent of full daylight on the cell): MinLight is
+	// the light it needs to grow (0: no rule); DiesInLight the light that
+	// makes it wither (0: never); Glow the faint light it gives off.
+	MinLight, DiesInLight, Glow int
+	// Cave: grows wild on cave floor (stone counts as CaveFertility).
+	Cave bool
 }
+
+// CaveFertility is the fertility (percent) stone cave floor gives a Cave
+// species (MAPGEN-3); other species get nothing from stone.
+const CaveFertility = 40
 
 // ZoneSowable reports whether a growing zone may sow this species.
 func (d Def) ZoneSowable() bool { return d.Crop || d.Sowable }
@@ -126,7 +139,11 @@ var defs = [numSpecies]Def{
 	Bramble: {Species: Bramble, Name: "bramble", GrowTicks: 40000, CutWork: 30, ColdKill: -300, HeatKill: 450,
 		Browse: true, WalkCost: 150, Ground: true},
 	Moss: {Species: Moss, Name: "moss", GrowTicks: 30000, CutWork: 10, ColdKill: -500, HeatKill: 350,
-		Browse: true, Ground: true},
+		Browse: true, Ground: true, MinLight: 35},
+	// Duskmoss (MAPGEN-3, our numbers): very slow, catches feet, a faint
+	// glow; needs darkness.
+	Duskmoss: {Species: Duskmoss, Name: "duskmoss", GrowTicks: growDays(40), CutWork: 12, ColdKill: -400, HeatKill: 450,
+		Browse: true, Ground: true, WalkCost: 125, DiesInLight: 45, Glow: 10, Cave: true},
 	Agave: {Species: Agave, Name: "agave", GrowTicks: 50000, CutWork: 25, ColdKill: -50, HeatKill: 650, Ground: true},
 	BallCactus: {Species: BallCactus, Name: "ball_cactus", GrowTicks: 60000, CutWork: 20, ColdKill: -80, HeatKill: 700,
 		Ground: true},

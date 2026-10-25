@@ -21,10 +21,15 @@ const (
 	ReasonUnknown  = "unknown building"
 	// ReasonFogged: the tile is unexplored (fog of war, MAPGEN-2).
 	ReasonFogged = "unexplored"
-	ReasonRock   = "rock in the way"
-	ReasonTree   = "tree in the way"
-	ReasonStuff  = "cannot be built from that"
-	ReasonSpot   = "work spot is blocked"
+	// Bridges (MAPGEN-3).
+	ReasonNotBridgeable = "needs water, marsh or mud"
+	ReasonOpenSea       = "too deep to bridge (open sea)"
+	ReasonNoSupport     = "needs firmer ground than a bridge"
+	ReasonBridgeInUse   = "remove what stands on it first"
+	ReasonRock          = "rock in the way"
+	ReasonTree          = "tree in the way"
+	ReasonStuff         = "cannot be built from that"
+	ReasonSpot          = "work spot is blocked"
 	// ReasonSame: the same piece in the same material is already here
 	// (a neutral refusal: the Architect skips it silently, PLAY-011).
 	ReasonSame = "already that material"

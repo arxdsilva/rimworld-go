@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/world/terrain"
 )
 
 func TestComponentBuildings(t *testing.T) {
@@ -44,7 +45,7 @@ func TestPodShellDeconstructsToSteel(t *testing.T) {
 		t.Fatalf("pod shell salvages 6 steel: refund %d stuff %v", Refund(PodShell), DefaultStuff(PodShell))
 	}
 	for _, k := range All() {
-		if k.Placed && k.Kind != PodShell && k.Kind != SteamVent {
+		if k.Placed && k.Kind != PodShell && k.Kind != SteamVent && k.Kind != SleeperCasket {
 			t.Fatalf("%s is placed-only", k.Name)
 		}
 	}
@@ -88,5 +89,39 @@ func TestSteelFurniture(t *testing.T) {
 		if !StuffOK(k, item.Steel) || !StuffOK(k, item.Wood) || StuffOK(k, item.GraniteBlocks) {
 			t.Errorf("%s: wood or steel, not stone", k)
 		}
+	}
+}
+
+// MAPGEN-3: a bridge is a foundation holding light things; a stone or
+// steel wall or a floor needs firm ground.
+func TestBridgeSupport(t *testing.T) {
+	t.Parallel()
+	if d := DefOf(Bridge); !d.Foundation || d.Layer != LayerFoundation || Provides(Bridge) != terrain.SupportLight || Movable(Bridge) {
+		t.Fatalf("bridge %+v", d)
+	}
+	cases := []struct {
+		k    Kind
+		s    item.Kind
+		want terrain.Support
+	}{
+		{Wall, item.Wood, terrain.SupportLight},
+		{Wall, item.GraniteBlocks, terrain.SupportHeavy},
+		{Wall, item.Steel, terrain.SupportHeavy},
+		{Floor, item.Wood, terrain.SupportHeavy},
+		{Carpet, item.CarpetStraw, terrain.SupportHeavy},
+		{Bed, item.Wood, terrain.SupportLight},
+		{Door, item.Steel, terrain.SupportLight},
+		{Bridge, item.Wood, terrain.SupportNone},
+	}
+	for _, c := range cases {
+		if got := Requires(c.k, c.s); got != c.want {
+			t.Errorf("Requires(%s, %v) = %d, want %d", DefOf(c.k).Name, c.s, got, c.want)
+		}
+	}
+	if Provides(Wall) != terrain.SupportNone {
+		t.Fatal("only foundations provide support")
+	}
+	if d := DefOf(SleeperCasket); !d.Placed || d.Size != [2]int{1, 2} || Refund(SleeperCasket) != 20 || Movable(SleeperCasket) {
+		t.Fatalf("casket %+v", d)
 	}
 }

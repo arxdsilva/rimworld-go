@@ -107,7 +107,7 @@ func coversCell(k construction.Kind, f construction.Facing, x, y, px, py int) bo
 
 func layerOf(k construction.Kind) construction.Layer { return construction.DefOf(k).Layer }
 
-const numLayers = int(construction.LayerFloor) + 1
+const numLayers = int(construction.LayerFoundation) + 1
 
 // ---- plants ----
 

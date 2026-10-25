@@ -158,6 +158,8 @@ func (g *Game) applyOne(c command.Command) {
 		g.moveBuilding(entity.EntityID(c.Target), construction.Facing(c.Facing), c.X, c.Y) // move.go
 	case command.DesignatePlan:
 		g.paintPlan(c.X, c.Y, c.X2, c.Y2, c.Enabled) // plan.go
+	case command.OpenCasket:
+		g.orderOpenCasket(entity.EntityID(c.Target)) // casket.go
 	case command.DesignateHome:
 		g.paintHome(c.X, c.Y, c.X2, c.Y2, c.Enabled) // home.go
 	}

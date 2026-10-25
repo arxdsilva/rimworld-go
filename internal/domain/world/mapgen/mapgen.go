@@ -23,6 +23,7 @@ import (
 	"rimworld-go/internal/domain/world/roof"
 	"rimworld-go/internal/domain/world/site"
 	"rimworld-go/internal/domain/world/terrain"
+	"rimworld-go/internal/domain/world/vault"
 )
 
 // Version is the generator version saved with a colony (Setup.GenVersion):
@@ -112,6 +113,9 @@ type Fields struct {
 	// Road marks road cells; Blocked marks cells a feature took (road,
 	// ruin, vent, debris chunk), so later steps leave them alone.
 	Road, Blocked []bool
+	// RoadEnds (MAPGEN-3) is each laid road's edge point and junction, in
+	// Result.Roads order: validation checks they stay connected.
+	RoadEnds [][2]Point
 }
 
 // PlantSpawn is one wild plant placed at generation. Growth is in growth
@@ -168,6 +172,30 @@ type Ruin struct {
 	Rubble []ChunkSpawn
 }
 
+// Casket is a sealed sleeper casket in a vault (MAPGEN-3): its top cell
+// (it is 1x2, the second cell below) and what sleeps inside.
+type Casket struct {
+	X, Y     int
+	Occupant vault.Occupant
+}
+
+// Vault is a sealed chamber cut into rock (MAPGEN-3): an intact wall ring,
+// a tiled floor, caskets in bays, loot and dormant defenders' spots.
+type Vault struct {
+	ID int
+	// Bounds (inclusive) of the footprint, wall ring included.
+	X0, Y0, X1, Y1 int
+	Walls          []Point
+	WallStuff      item.Kind // the local stone's blocks or steel
+	Floors         []RuinFloor
+	Caskets        []Casket
+	Loot           []Loot
+	DefenderSpots  []Point
+}
+
+// Inside reports whether (x, y) is inside the vault's wall ring.
+func (v Vault) Inside(x, y int) bool { return x > v.X0 && x < v.X1 && y > v.Y0 && y < v.Y1 }
+
 // Metrics are the map's quality measurements (debug tool, profile tests);
 // they never fail a map on their own.
 type Metrics struct {
@@ -203,6 +231,13 @@ type Result struct {
 	// Roads are the smoothed road centrelines (road cells are already
 	// Track terrain).
 	Roads [][]PointF
+	// Bridges (MAPGEN-3) are the cells of old wooden road bridges: the
+	// terrain underneath stays water (or marsh, mud).
+	Bridges []Point
+	// Ocean marks open-sea water (the coast), which is never bridged.
+	Ocean []bool
+	// Vaults are the sealed vaults (MAPGEN-3).
+	Vaults []Vault
 	// Start is the landing spot.
 	Start   Point
 	Metrics Metrics
