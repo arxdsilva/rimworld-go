@@ -20,8 +20,8 @@ func (RockMask) Name() string { return "rockmask" }
 
 const (
 	shareJitter = 0.25 // ± seeded variation of the rock share
-	roughShare  = 0.06 // rough stone ground just below rock
-	gravelShare = 0.08 // gravel below the rough band
+	roughShare  = 0.04 // rough stone ground just below rock
+	gravelShare = 0.06 // gravel below the rough band
 	tauGap      = 1e-6 // smallest gap between two thresholds
 )
 

@@ -24,36 +24,36 @@ type Caves struct{}
 func (Caves) Name() string { return "caves" }
 
 const (
-	caveMin250     = 450.0  // smallest body with caves at 250², cells
-	caveMinFloor   = 200    // …and on any map
-	cellsPerOpen   = 1800.0 // one open tunnel per this much rock (1..3)
-	maxOpen        = 3
+	caveMin250     = 450.0 // smallest body with caves at 250², cells
+	caveMinFloor   = 200   // …and on any map
+	cellsPerOpen   = 900.0 // one open tunnel per this much rock (1..3)
+	maxOpen        = 5
 	closedFrom     = 3000.0 // bodies this big get a closed tunnel too
 	closedDepth    = 6      // closed tunnels start this deep
 	edgeMargin     = 2      // no cave cell this close to the map edge
 	minWidth       = 1.3
-	widthLo        = 3.5
-	widthHi        = 5.5
-	taper250       = 0.045 // width lost per step at 250² (slower on bigger maps)
+	widthLo        = 4.5
+	widthHi        = 7.0
+	taper250       = 0.030 // width lost per step at 250² (slower on bigger maps)
 	branchAfter    = 12    // steps before a tunnel may branch
-	branchChance   = 0.07  // per step after that
+	branchChance   = 0.09  // per step after that
 	branchWidth    = 0.7   // a branch's width factor
 	branchBudget   = 0.6   // a branch's share of the remaining budget
 	maxLevel       = 2     // main tunnel 0, branches 1 and 2
-	turnCell       = 9.0   // steps per turn-noise lattice cell
-	turnGain       = 3.0   // turn noise gain before the clamp
+	turnCell       = 6.0   // steps per turn-noise lattice cell
+	turnGain       = 4.0   // turn noise gain before the clamp
 	openSpacing    = 14.0  // between open-tunnel mouths in one body, cells
 	closedSpacing  = 10.0
 	startAttempts  = 30
 	probeDist      = 6.0 // an open start must find rock this deep…
 	probeDepth     = 3   // …this many cells inward
-	budgetLo       = 70.0
-	budgetSpan     = 50.0
+	budgetLo       = 100.0
+	budgetSpan     = 70.0
 	branchMinWidth = minWidth + 0.2
 )
 
 // maxTurn is the largest heading change per step: 25° per 6 steps.
-var maxTurn = 25.0 / 6 * math.Pi / 180
+var maxTurn = 40.0 / 6 * math.Pi / 180
 
 // Run is the pass.
 func (Caves) Run(c *mapgen.Ctx) error {

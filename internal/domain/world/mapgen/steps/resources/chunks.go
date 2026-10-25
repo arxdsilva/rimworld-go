@@ -17,11 +17,11 @@ type Chunks struct{}
 func (Chunks) Name() string { return "chunks" }
 
 const (
-	chunkRate     = 0.004 // per eligible cell, times the density
+	chunkRate     = 0.003 // per eligible cell, times the density
 	chunkNoise    = 60.0  // noise cell size at 250×250
 	nearRockCells = 6     // within this many cells of rock the density peaks
 	nearRockMul   = 1.6
-	openMul       = 0.6
+	openMul       = 0.2
 	roughMul      = 1.3
 	falloffCells  = 8 // the near-rock boost fades over this many more cells
 )
