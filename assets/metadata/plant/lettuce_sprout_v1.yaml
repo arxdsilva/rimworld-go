@@ -3,16 +3,18 @@ version: 1
 id: "core:plant/lettuce_sprout_v1"
 image: generated/world/plant/lettuce_sprout_v1.png
 scale: 2
-canvas: [166, 176]
+canvas: [166, 164]
 footprint: [1, 1]
-origin_px: [19, 29]
+origin_px: [19, 21]
 projection:
   shear_k: 0.5
 shadow:
-  kind: blob
-  w: 0.6
-  h: 0.15
-  d: 0.6
+  kind: none
+  w: 0.074
+  h: 0.033
+  d: 0.078
 species: lettuce
 growth: sprout
 variant: 1
+unit: true
+flat_normal: true

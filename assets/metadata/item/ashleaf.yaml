@@ -10,8 +10,8 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.483
-  h: 0.14
-  d: 0.434
+  w: 0.432
+  h: 0.222
+  d: 0.53
 item: ashleaf
 stack: true

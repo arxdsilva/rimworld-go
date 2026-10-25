@@ -3,16 +3,17 @@ version: 1
 id: "core:plant/pumpkin_harvestable_v1"
 image: generated/world/plant/pumpkin_harvestable_v1.png
 scale: 2
-canvas: [166, 189]
+canvas: [166, 171]
 footprint: [1, 1]
-origin_px: [19, 42]
+origin_px: [19, 28]
 projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 1.007
-  h: 0.382
-  d: 0.984
+  w: 0.508
+  h: 0.182
+  d: 0.586
 species: pumpkin
 growth: harvestable
 variant: 1
+unit: true

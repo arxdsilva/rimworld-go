@@ -3,16 +3,18 @@ version: 1
 id: "core:plant/healroot_young_v0"
 image: generated/world/plant/healroot_young_v0.png
 scale: 2
-canvas: [166, 189]
+canvas: [166, 164]
 footprint: [1, 1]
-origin_px: [19, 42]
+origin_px: [19, 21]
 projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.456
-  h: 0.334
-  d: 0.447
+  w: 0.14
+  h: 0.06
+  d: 0.141
 species: healroot
 growth: young
 variant: 0
+unit: true
+flat_normal: true

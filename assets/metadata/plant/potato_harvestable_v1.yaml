@@ -3,16 +3,18 @@ version: 1
 id: "core:plant/potato_harvestable_v1"
 image: generated/world/plant/potato_harvestable_v1.png
 scale: 2
-canvas: [166, 200]
+canvas: [166, 172]
 footprint: [1, 1]
-origin_px: [19, 53]
+origin_px: [19, 29]
 projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.942
-  h: 0.558
-  d: 0.725
+  w: 0.395
+  h: 0.212
+  d: 0.37
 species: potato
 growth: harvestable
 variant: 1
+unit: true
+flat_normal: true

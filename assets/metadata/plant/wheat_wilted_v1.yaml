@@ -3,16 +3,17 @@ version: 1
 id: "core:plant/wheat_wilted_v1"
 image: generated/world/plant/wheat_wilted_v1.png
 scale: 2
-canvas: [166, 218]
+canvas: [166, 179]
 footprint: [1, 1]
-origin_px: [19, 71]
+origin_px: [19, 36]
 projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.721
-  h: 0.834
-  d: 0.682
+  w: 0.554
+  h: 0.318
+  d: 0.731
 species: wheat
 growth: wilted
 variant: 1
+unit: true

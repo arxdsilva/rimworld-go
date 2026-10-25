@@ -3,16 +3,17 @@ version: 1
 id: "core:plant/brewgrain_wilted_v1"
 image: generated/world/plant/brewgrain_wilted_v1.png
 scale: 2
-canvas: [166, 202]
+canvas: [166, 179]
 footprint: [1, 1]
-origin_px: [19, 55]
+origin_px: [19, 36]
 projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.814
-  h: 0.578
-  d: 0.981
+  w: 0.561
+  h: 0.322
+  d: 0.68
 species: brewgrain
 growth: wilted
 variant: 1
+unit: true

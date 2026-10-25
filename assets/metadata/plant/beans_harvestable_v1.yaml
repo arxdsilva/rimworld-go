@@ -3,16 +3,18 @@ version: 1
 id: "core:plant/beans_harvestable_v1"
 image: generated/world/plant/beans_harvestable_v1.png
 scale: 2
-canvas: [166, 224]
+canvas: [166, 171]
 footprint: [1, 1]
-origin_px: [19, 77]
+origin_px: [19, 28]
 projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.788
-  h: 0.902
-  d: 0.746
+  w: 0.379
+  h: 0.178
+  d: 0.386
 species: beans
 growth: harvestable
 variant: 1
+unit: true
+flat_normal: true

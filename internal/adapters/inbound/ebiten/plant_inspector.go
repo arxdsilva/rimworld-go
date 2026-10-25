@@ -77,6 +77,9 @@ func plantLines(p game.PlantView) []string {
 	default:
 		out = append(out, fmt.Sprintf("Not ready (%d%%)", p.Growth))
 	}
+	if l := plantDamageLine(p); l != "" { // crop_batch.go: cold or heat damage
+		out = append(out, l)
+	}
 	if p.Wilted {
 		out = append(out, "Wilting: too cold")
 	}

@@ -1464,7 +1464,7 @@ def _ash(k):
     # darker charred core
     _paint(img, np.clip((rad * 0.62 - d) / 8.0, 0, 1) * (blot > 0.3), char["shadow"], 0.7)
     # grey ash drifts: soft lobes of lighter powder
-    for _ in range(9):
+    for _ in range(13):
         px, py, r = cx + rng.uniform(-32, 32), cy + rng.uniform(-32, 32), rng.uniform(6, 15)
         m = np.clip((r - np.hypot((xx - px) * 0.8, yy - py)) / 4.0, 0, 1) * (blot > 0.5)
         _paint(img, m, grey["base"] if rng.rand() < 0.6 else grey["shadow"], 0.55)
@@ -1476,6 +1476,68 @@ def _ash(k):
         _paint(img, np.clip(1.4 - np.hypot(xx - px, yy - py) / 2.0, 0, 1) * (blot > 0.6), emb["shadow"], 0.95)
         _paint(img, np.clip(1.2 - np.hypot(xx - px, yy - py) / 0.9, 0, 1) * (blot > 0.6), emb["base"], 0.9)
     return _save_flat("ash_%d" % k, N, N, img, {"overlay": "ash", "variant": k, "tileable": False, "marking": True})
+
+
+# ------------------------------------------------------------ PLAY-016 tilled furrows
+FURROW_ROWS = 3        # furrows per tile (period N / 3 px, whole cycles so rows meet across tiles)
+
+
+def _pnoise(rng, terms, xx, yy, kmin=0, kmax=4):
+    """Doubly periodic (period N) sum of sines, roughly in -1..1: integer wave
+    numbers on both axes so the decal tiles along x and y."""
+    out = np.zeros_like(xx)
+    for _ in range(terms):
+        kx, ky = rng.randint(kmin, kmax + 1), rng.randint(kmin, kmax + 1)
+        out += np.sin(2 * np.pi * (kx * xx + ky * yy) / N + rng.uniform(0, 6.2832)) * rng.uniform(0.5, 1.0)
+    return out / (terms * 0.6)
+
+
+def _tilled(k):
+    """Tilled-soil decal, 128x128 (one tile): soft parallel furrows running left
+    to right, darker turned soil in the troughs and lighter crumbled ridges
+    between them, lit from the north-west. No outline. Every variant shares the
+    row phase and the slow wobble, so the rows continue unbroken into any
+    neighbouring tile along the furrow (E/W) whatever its variant; the cross-row
+    (N/S) border sits on the zero crossing of the row profile, so the decal
+    fades to nothing there. The renderer may rotate it 90 degrees for a
+    vertical field."""
+    from .effect import _mat
+    soil, rich = _mat("soil"), _mat("soil_rich")
+    yy, xx = np.mgrid[0:N, 0:N].astype(np.float32) + 0.5
+    shared = np.random.RandomState(1600)              # identical in every variant
+    rng = np.random.RandomState(1610 + k)             # per-variant detail
+    wob = _pnoise(shared, 2, xx, yy * 0.0, 1, 2) * 1.7    # slow along-row wobble of the row line (px)
+    th = 2 * np.pi * FURROW_ROWS * (yy + wob) / N
+    s, c = np.sin(th), np.cos(th)                     # +s ridge crest, -s trough; 0 at the N/S border
+    edge = np.minimum(yy, N - yy)                     # exactly zero at N/S, one 5 px in
+    guard = np.clip(edge / 5.0, 0.0, 1.0)
+    guard = guard * guard * (3 - 2 * guard)
+    win = np.sin(np.pi * xx / N) ** 2                 # per-variant detail stays off the E/W borders
+    # per-variant depth along each half-row (trough or ridge); the half-rows meet where both layers are zero
+    x1 = np.arange(N, dtype=np.float32) + 0.5
+    per_seg = np.stack([_pnoise(rng, 4, x1, x1 * 0.0, 1, 6) for _ in range(2 * FURROW_ROWS)])
+    seg = np.clip(((yy + wob) * 2 * FURROW_ROWS / N).astype(np.int32), 0, 2 * FURROW_ROWS - 1)
+    own = per_seg[seg, (xx - 0.5).astype(np.int32)]
+    depth = 1.0 + 0.12 * _pnoise(shared, 2, xx, yy * 0.0 + 5.0, 1, 2) + 0.26 * win * own
+    trough = np.clip(-s, 0.0, 1.0) ** 0.7
+    ridge = np.clip(s, 0.0, 1.0) ** 1.2
+    img = np.zeros((N, N, 4), np.float32)
+    # turned soil in the trough, its north wall in the ridge's shade, deeper at the centre
+    dark = np.clip(trough * depth * (1.0 - 0.28 * c), 0.0, 1.0)
+    _paint(img, dark * guard, rich["base"], 0.46)
+    _paint(img, np.clip(dark - 0.6, 0.0, 1.0) * 2.2 * guard, rich["shadow"], 0.34)
+    # crumbled, sun-dried ridge crests, brighter on the north-facing flank
+    lit = np.clip(ridge * (1.0 + 0.3 * c) * (1.0 + 0.5 * (depth - 1.0)), 0.0, 1.3)
+    _paint(img, np.clip(lit, 0.0, 1.0) * guard, soil["light"], 0.30)
+    # a few soft crumbs along the rows, away from the E/W borders
+    for _ in range(13):
+        px, py = rng.uniform(14, N - 14), (rng.randint(0, FURROW_ROWS) + rng.choice([0.25, 0.75])) * N / FURROW_ROWS
+        r = rng.uniform(2.5, 4.5)
+        m = np.clip(1.0 - np.hypot(xx - px, (yy - py) * 1.1) / r, 0.0, 1.0)
+        m = m * m * (3 - 2 * m) * guard
+        _paint(img, m, rich["shadow"] if rng.rand() < 0.5 else soil["light"], 0.32)
+    return _save_flat("tilled_%d" % k, N, N, img, {"overlay": "tilled", "variant": k, "tileable": True,
+                                                    "marking": True, "furrow": "horizontal", "rows": FURROW_ROWS})
 
 
 def _g_extinguish(xx, yy, c):  # water drop
@@ -1557,7 +1619,7 @@ def build():
             _badge_icon("home_clear", t, _g_home_clear, t["danger"]),
             _badge_icon("plan", t, _g_plan, (0.72, 0.83, 0.94)),
             _badge_icon("plan_clear", t, _g_plan_clear, t["danger"]),
-            _ash(0), _ash(1), _ash(2),
+            _ash(0), _ash(1), _ash(2), _tilled(0), _tilled(1), _tilled(2), _tilled(3),
             _badge_icon("extinguish", t, _g_extinguish, (0.40, 0.70, 0.95)),
             _badge_icon("start_fire", t, _g_start_fire, (0.98, 0.58, 0.22)),
             _badge_icon("pen_marker", t, _g_pen_marker, (0.78, 0.55, 0.32)),

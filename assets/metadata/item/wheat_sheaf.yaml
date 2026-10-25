@@ -10,8 +10,8 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.422
-  h: 0.61
-  d: 0.298
+  w: 0.556
+  h: 0.65
+  d: 0.47
 item: wheat
 stack: true

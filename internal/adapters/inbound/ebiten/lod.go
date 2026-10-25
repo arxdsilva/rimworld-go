@@ -88,6 +88,7 @@ type lodState struct {
 	baking              bool                    // drawLit draws unlit albedo (a bake)
 	bakeCast            shadowCast
 	grass               grassBatch // grass_batch.go: tuft atlas, mask, batch buffers
+	crops               cropBatch  // crop_batch.go: crop unit atlas, batches, furrows
 	// budget is how many chunk bakes this frame may still do.
 	budget int
 }
@@ -305,13 +306,13 @@ func (r *Renderer) solidRect(dst *ebiten.Image, x, y, w, h float32, c color.Colo
 }
 
 // plantMarkColor is a plant's mark in the map bake: trees dark, crops
-// golden green, other plants green.
+// by stage and damage (cropMarkColor), other plants green.
 func plantMarkColor(p *game.PlantView) (color.RGBA, float64) {
 	switch {
 	case isTreePlant(p.Species):
 		return color.RGBA{34, 70, 36, 255}, 0.8
 	case isCropSpecies(p.Species):
-		return color.RGBA{150, 160, 70, 255}, 0.5
+		return cropMarkColor(p), 0.5
 	}
 	if c, ok := wildMarkColors[p.Species]; ok {
 		return c, 0.4

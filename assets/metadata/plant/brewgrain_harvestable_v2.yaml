@@ -3,16 +3,17 @@ version: 1
 id: "core:plant/brewgrain_harvestable_v2"
 image: generated/world/plant/brewgrain_harvestable_v2.png
 scale: 2
-canvas: [166, 221]
+canvas: [166, 188]
 footprint: [1, 1]
-origin_px: [19, 74]
+origin_px: [19, 45]
 projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.751
-  h: 0.879
-  d: 0.799
+  w: 0.621
+  h: 0.463
+  d: 0.586
 species: brewgrain
 growth: harvestable
 variant: 2
+unit: true

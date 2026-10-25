@@ -3,16 +3,17 @@ version: 1
 id: "core:plant/cotton_harvestable_v2"
 image: generated/world/plant/cotton_harvestable_v2.png
 scale: 2
-canvas: [166, 230]
+canvas: [166, 205]
 footprint: [1, 1]
-origin_px: [19, 83]
+origin_px: [19, 62]
 projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.718
-  h: 1.013
-  d: 0.746
+  w: 0.49
+  h: 0.717
+  d: 0.489
 species: cotton
 growth: harvestable
 variant: 2
+unit: true

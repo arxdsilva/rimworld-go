@@ -3,16 +3,17 @@ version: 1
 id: "core:plant/cotton_wilted_v0"
 image: generated/world/plant/cotton_wilted_v0.png
 scale: 2
-canvas: [166, 216]
+canvas: [166, 186]
 footprint: [1, 1]
-origin_px: [19, 69]
+origin_px: [19, 43]
 projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.728
-  h: 0.778
-  d: 0.697
+  w: 0.537
+  h: 0.431
+  d: 0.354
 species: cotton
 growth: wilted
 variant: 0
+unit: true

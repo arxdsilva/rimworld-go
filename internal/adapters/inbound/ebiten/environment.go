@@ -526,7 +526,7 @@ var treeSpecies = [...]string{"oak", "birch", "pine"}
 // plantKeyTable holds every plant sprite key, built once so drawing never
 // concatenates strings.
 type plantKeyTable struct {
-	crops    map[string]*[numCropStages][3]string
+	crops    map[string]*[numCropStages][cropVariants]string
 	trees    [3][3]string
 	fallback map[string][]string
 	seasonal map[string][2]string // autumn, bare
@@ -536,18 +536,11 @@ type plantKeyTable struct {
 var plantKeys = buildPlantKeys()
 
 func buildPlantKeys() plantKeyTable {
-	t := plantKeyTable{crops: map[string]*[numCropStages][3]string{}, fallback: map[string][]string{}, seasonal: map[string][2]string{}}
+	t := plantKeyTable{crops: map[string]*[numCropStages][cropVariants]string{}, fallback: map[string][]string{}, seasonal: map[string][2]string{}}
 	for _, c := range game.Crops() {
-		ks := &[numCropStages][3]string{}
+		ks := &[numCropStages][cropVariants]string{}
 		for st, name := range cropStageNames {
-			legacy := "plant/" + c.Name + "_" + name
-			switch st {
-			case stSown, stSprout:
-				legacy = "plant/crop_sown"
-			case stWilted:
-				legacy = "plant/" + c.Name + "_mature"
-			}
-			for v := 0; v < 3; v++ {
+			for v := 0; v < cropVariants; v++ {
 				k := fmt.Sprintf("plant/%s_%s_v%d", c.Name, name, v)
 				ks[st][v] = k
 				var fb []string
@@ -560,7 +553,9 @@ func buildPlantKeys() plantKeyTable {
 						fb = append(fb, "plant/"+c.Name+"_sown_v0")
 					}
 				}
-				t.fallback[k] = append(fb, legacy)
+				if len(fb) > 0 {
+					t.fallback[k] = fb
+				}
 			}
 		}
 		t.crops[c.Name] = ks
@@ -581,11 +576,17 @@ func buildPlantKeys() plantKeyTable {
 	return t
 }
 
-// cropStage is a crop's drawn stage.
+// cropStage is a crop's drawn stage: the wilted look from cropWiltDamage
+// (cold or heat, PLAY-016), else the stage its growth has reached.
 func cropStage(p game.PlantView) int {
-	if p.Wilted {
+	if p.Damage >= cropWiltDamage {
 		return stWilted
 	}
+	return cropGrowthStage(p)
+}
+
+// cropGrowthStage is the stage a crop's growth has reached, damage aside.
+func cropGrowthStage(p game.PlantView) int {
 	switch clampStage(p.Stage) {
 	case 0:
 		if p.Growth >= 8 {

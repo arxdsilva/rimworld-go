@@ -3,16 +3,18 @@ version: 1
 id: "core:plant/ashleaf_mature_v2"
 image: generated/world/plant/ashleaf_mature_v2.png
 scale: 2
-canvas: [166, 198]
+canvas: [166, 166]
 footprint: [1, 1]
-origin_px: [19, 51]
+origin_px: [19, 23]
 projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.835
-  h: 0.475
-  d: 0.821
+  w: 0.286
+  h: 0.104
+  d: 0.284
 species: ashleaf
 growth: mature
 variant: 2
+unit: true
+flat_normal: true

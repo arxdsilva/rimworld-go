@@ -10,8 +10,8 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.426
-  h: 0.31
-  d: 0.426
+  w: 0.639
+  h: 0.374
+  d: 0.496
 item: beans
 stack: true

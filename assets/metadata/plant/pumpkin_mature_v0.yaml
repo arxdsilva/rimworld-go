@@ -3,16 +3,17 @@ version: 1
 id: "core:plant/pumpkin_mature_v0"
 image: generated/world/plant/pumpkin_mature_v0.png
 scale: 2
-canvas: [166, 182]
+canvas: [166, 170]
 footprint: [1, 1]
-origin_px: [19, 35]
+origin_px: [19, 27]
 projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.867
-  h: 0.262
-  d: 1.009
+  w: 0.601
+  h: 0.162
+  d: 0.479
 species: pumpkin
 growth: mature
 variant: 0
+unit: true

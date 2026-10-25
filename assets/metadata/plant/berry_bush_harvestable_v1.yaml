@@ -11,7 +11,7 @@ projection:
 shadow:
   kind: blob
   w: 0.802
-  h: 0.243
+  h: 0.226
   d: 0.629
 species: berry_bush
 stage: harvestable

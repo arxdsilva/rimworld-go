@@ -3,16 +3,18 @@ version: 1
 id: "core:plant/radish_mature_v1"
 image: generated/world/plant/radish_mature_v1.png
 scale: 2
-canvas: [166, 191]
+canvas: [166, 168]
 footprint: [1, 1]
-origin_px: [19, 44]
+origin_px: [19, 25]
 projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.919
-  h: 0.371
-  d: 0.834
+  w: 0.24
+  h: 0.127
+  d: 0.279
 species: radish
 growth: mature
 variant: 1
+unit: true
+flat_normal: true

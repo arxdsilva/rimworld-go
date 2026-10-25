@@ -3,16 +3,17 @@ version: 1
 id: "core:plant/corn_mature_v1"
 image: generated/world/plant/corn_mature_v1.png
 scale: 2
-canvas: [166, 284]
+canvas: [166, 251]
 footprint: [1, 1]
-origin_px: [19, 137]
+origin_px: [19, 108]
 projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 1.031
-  h: 1.841
-  d: 0.975
+  w: 0.766
+  h: 1.443
+  d: 0.559
 species: corn
 growth: mature
 variant: 1
+unit: true

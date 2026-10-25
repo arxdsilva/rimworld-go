@@ -10,8 +10,8 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.535
-  h: 0.289
-  d: 0.365
+  w: 0.538
+  h: 0.311
+  d: 0.426
 item: pumpkins
 stack: true

@@ -418,20 +418,22 @@ func TestCropStageAndVariantKey(t *testing.T) {
 		stage, growth int
 		want, legacy  string
 	}{
-		{0, 3, "sown", "plant/crop_sown"},
-		{0, 8, "sprout", "plant/crop_sown"},
-		{1, 30, "young", "plant/potato_young"},
-		{2, 60, "mature", "plant/potato_mature"},
-		{3, 100, "harvestable", "plant/potato_harvestable"},
+		{0, 3, "sown", "plant/potato_sown_v0"},
+		{0, 8, "sprout", "plant/potato_sown_v0"},
+		{1, 30, "young", "plant/potato_young_v0"},
+		{2, 60, "mature", "plant/potato_mature_v0"},
+		{3, 100, "harvestable", "plant/potato_harvestable_v0"},
 	}
-	legacy := envArt("plant/crop_sown", "plant/potato_young", "plant/potato_mature", "plant/potato_harvestable")
+	// PLAY-016: a missing variant falls back to the stage's v0 (a sprout to
+	// the sown v0); the old alias sprites are gone
+	legacy := envArt("plant/potato_sown_v0", "plant/potato_young_v0", "plant/potato_mature_v0", "plant/potato_harvestable_v0")
 	r := New(&stubSim{w: 64, h: 64})
 	for _, c := range cases {
 		seen := map[string]bool{}
 		for x := 0; x < 30; x++ {
 			p := game.PlantView{X: x, Y: 4, Species: "potato", Stage: c.stage, Growth: c.growth}
 			k, scale := plantSprite(p)
-			v := int(tileHash(x, 4) % 3)
+			v := int(tileHash(x, 4) % cropVariants)
 			want := "plant/potato_" + c.want + "_v" + string(rune('0'+v))
 			if k != want || scale != 1 {
 				t.Fatalf("stage %d growth %d at x=%d: %s (scale %v), want %s", c.stage, c.growth, x, k, scale, want)
@@ -451,8 +453,8 @@ func TestCropStageAndVariantKey(t *testing.T) {
 				t.Fatalf("%s without its variant: %s, want %s", k, got, v0)
 			}
 		}
-		if len(seen) != 3 {
-			t.Fatalf("stage %s uses %d variants, want 3", c.want, len(seen))
+		if len(seen) != cropVariants {
+			t.Fatalf("stage %s uses %d variants, want %d", c.want, len(seen), cropVariants)
 		}
 	}
 }
@@ -497,17 +499,21 @@ func TestBushVariantKey(t *testing.T) {
 func TestWiltedKey(t *testing.T) {
 	t.Parallel()
 	r := New(&stubSim{w: 64, h: 64})
-	r.art = envArt("plant/corn_mature", "plant/crop_sown")
+	r.art = envArt("plant/corn_wilted_v0")
 	for stage := 0; stage <= 3; stage++ {
-		p := game.PlantView{X: 3, Y: 3, Species: "corn", Stage: stage, Growth: 25 * stage, Wilted: true}
+		p := game.PlantView{X: 3, Y: 3, Species: "corn", Stage: stage, Growth: 25 * stage, Damage: cropWiltDamage, DamageKind: "cold"}
 		k, _ := plantSprite(p)
-		want := "plant/corn_wilted_v" + string(rune('0'+int(tileHash(3, 3)%3)))
+		want := "plant/corn_wilted_v" + string(rune('0'+int(tileHash(3, 3)%cropVariants)))
 		if k != want {
 			t.Fatalf("wilted corn at stage %d: %s, want %s", stage, k, want)
 		}
-		if got := r.seasonKey(k, game.WorldView{}); got != "plant/corn_mature" {
+		if got := r.seasonKey(k, game.WorldView{}); got != "plant/corn_wilted_v0" {
 			t.Fatalf("wilted corn falls back to %s", got)
 		}
+	}
+	// the plain Wilted flag (near frost, no damage yet) keeps the normal look
+	if k, _ := plantSprite(game.PlantView{X: 3, Y: 3, Species: "corn", Stage: 2, Growth: 60, Wilted: true}); strings.Contains(k, "wilted") {
+		t.Fatalf("a flagged but undamaged crop wilted: %s", k)
 	}
 	// only crops wilt
 	tree, _ := plantSprite(game.PlantView{X: 3, Y: 3, Species: "tree", Growth: 100, Wilted: true})

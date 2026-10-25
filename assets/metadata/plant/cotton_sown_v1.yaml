@@ -3,16 +3,18 @@ version: 1
 id: "core:plant/cotton_sown_v1"
 image: generated/world/plant/cotton_sown_v1.png
 scale: 2
-canvas: [166, 172]
+canvas: [166, 164]
 footprint: [1, 1]
-origin_px: [19, 25]
+origin_px: [19, 21]
 projection:
   shear_k: 0.5
 shadow:
-  kind: blob
-  w: 0.6
-  h: 0.109
-  d: 0.6
+  kind: none
+  w: 0.195
+  h: 0.008
+  d: 0.051
 species: cotton
 growth: sown
 variant: 1
+unit: true
+flat_normal: true

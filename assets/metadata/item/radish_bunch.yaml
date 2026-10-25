@@ -10,8 +10,8 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.35
-  h: 0.12
-  d: 0.335
+  w: 0.434
+  h: 0.182
+  d: 0.417
 item: radishes
 stack: true

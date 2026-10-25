@@ -14,5 +14,4 @@ materials:
   carpet_wood:         {light: "#a68256", base: "#8a6a44", shadow: "#644c30"}
   carpet_wood_alt:     {light: "#b48f60", base: "#977650", shadow: "#6e5538"}
   carpet_wood_edge:    {light: "#54402b", base: "#3f2f1f", shadow: "#2a1e12"}
-  cloth_white:         {light: "#fbf6ea", base: "#e8dfca", shadow: "#b8ad94"}
   cotton_boll:         {light: "#ffffff", base: "#f3f1ec", shadow: "#bcc1cc"}

@@ -326,6 +326,12 @@ func (r *Renderer) shadowCasters(w game.WorldView, pawns []game.PawnView) []shad
 			return
 		}
 		key, scale := plantSprite(*p)
+		if f := damageShadowFactor(*p); f < 1 { // PLAY-016: dying plants' shadows thin out
+			if f <= 0 {
+				return
+			}
+			scale *= f
+		}
 		key = r.seasonKey(key, w)
 		fw, fd := r.footprintOf(key)
 		addBox(key, float64(p.X), float64(p.Y), fw, fd, scale)

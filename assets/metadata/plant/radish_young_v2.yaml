@@ -3,16 +3,18 @@ version: 1
 id: "core:plant/radish_young_v2"
 image: generated/world/plant/radish_young_v2.png
 scale: 2
-canvas: [166, 183]
+canvas: [166, 165]
 footprint: [1, 1]
-origin_px: [19, 36]
+origin_px: [19, 22]
 projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.443
-  h: 0.247
-  d: 0.451
+  w: 0.171
+  h: 0.081
+  d: 0.172
 species: radish
 growth: young
 variant: 2
+unit: true
+flat_normal: true

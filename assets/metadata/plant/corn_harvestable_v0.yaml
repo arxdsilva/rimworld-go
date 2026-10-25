@@ -3,16 +3,17 @@ version: 1
 id: "core:plant/corn_harvestable_v0"
 image: generated/world/plant/corn_harvestable_v0.png
 scale: 2
-canvas: [166, 286]
+canvas: [166, 254]
 footprint: [1, 1]
-origin_px: [19, 139]
+origin_px: [19, 111]
 projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 1.038
-  h: 1.873
-  d: 0.914
+  w: 0.733
+  h: 1.491
+  d: 0.413
 species: corn
 growth: harvestable
 variant: 0
+unit: true

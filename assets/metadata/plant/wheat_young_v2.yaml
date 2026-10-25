@@ -3,16 +3,17 @@ version: 1
 id: "core:plant/wheat_young_v2"
 image: generated/world/plant/wheat_young_v2.png
 scale: 2
-canvas: [166, 205]
+canvas: [166, 173]
 footprint: [1, 1]
-origin_px: [19, 58]
+origin_px: [19, 30]
 projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.43
-  h: 0.614
-  d: 0.515
+  w: 0.388
+  h: 0.232
+  d: 0.51
 species: wheat
 growth: young
 variant: 2
+unit: true

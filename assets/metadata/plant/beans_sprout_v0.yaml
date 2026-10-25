@@ -3,16 +3,18 @@ version: 1
 id: "core:plant/beans_sprout_v0"
 image: generated/world/plant/beans_sprout_v0.png
 scale: 2
-canvas: [166, 175]
+canvas: [166, 164]
 footprint: [1, 1]
-origin_px: [19, 28]
+origin_px: [19, 21]
 projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.6
-  h: 0.14
-  d: 0.6
+  w: 0.069
+  h: 0.08
+  d: 0.097
 species: beans
 growth: sprout
 variant: 0
+unit: true
+flat_normal: true

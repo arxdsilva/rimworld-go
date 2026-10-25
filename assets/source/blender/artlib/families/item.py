@@ -74,12 +74,21 @@ def _gold():
 
 
 def _berries():
-    S.cyl("basket", 0.5, -0.55, 0.26, 0.0, 0.16, "wood", r_top=0.30, segs=18)
-    S.cyl("rim", 0.5, -0.55, 0.31, 0.15, 0.19, "bark", segs=18, bevel=0.01)
-    for k, (x, y) in enumerate([(0.40, -0.50), (0.52, -0.46), (0.62, -0.54), (0.46, -0.62),
-                                (0.58, -0.64), (0.50, -0.56), (0.38, -0.60), (0.62, -0.44)]):
-        S.ellipsoid("b%d" % k, x, y, 0.20 + 0.03 * (k % 3), 0.055, 0.055, 0.05, "food_red", segs=10, rings=6)
-    S.ellipsoid("leaf", 0.66, -0.40, 0.24, 0.07, 0.035, 0.015, "foliage", segs=8, rings=4)
+    """A shallow woven basket heaped with plum-red berries, a leaf or two."""
+    import math
+    from .plant_base import _leaf
+    S.cyl("basket", 0.5, -0.55, 0.25, 0.0, 0.12, "pl_dried", r_top=0.28, segs=22, bevel=0.015)
+    S.cyl("weave", 0.5, -0.55, 0.265, 0.05, 0.065, "pl_stem", r_top=0.268, segs=22, bevel=0.0)
+    S.cyl("rim", 0.5, -0.55, 0.285, 0.115, 0.145, "pl_stem", segs=22, bevel=0.01)
+    pts = [(0.0, 0.0, 0.245)]
+    pts += [(0.115 * math.cos(a), 0.115 * math.sin(a) * 0.9, 0.215) for a in [i * 2 * math.pi / 6 + 0.3 for i in range(6)]]
+    pts += [(0.2 * math.cos(a), 0.2 * math.sin(a) * 0.9, 0.165) for a in [i * 2 * math.pi / 9 + 0.1 for i in range(9)]]
+    for k, (dx, dy, z) in enumerate(pts):
+        _ell("b%d" % k, (0.5 + dx, -0.55 + dy, z), (0.056, 0.056, 0.052), "pl_crop_berry", segs=12, rings=8)
+    for k, (x, y) in enumerate([(0.24, -0.80), (0.80, -0.32)]):
+        _ell("fall%d" % k, (x, y, 0.045), (0.048, 0.048, 0.046), "pl_crop_berry", segs=12, rings=8)
+    _leaf("lf0", 0.60, -0.50, 0.25, 0.4, 0.15, 0.17, 0.09, "pl_crop_leaf", thick=0.03)
+    _leaf("lf1", 0.42, -0.46, 0.24, 2.2, 0.15, 0.15, 0.08, "pl_crop_deep", thick=0.03)
     return S.render_asset("item", "berries_basket", zmax=0.32, extra={"item": "berries", "stack": True})
 
 
@@ -146,65 +155,156 @@ def _rifle_item():
     return S.render_asset("item", "rifle_ground", zmax=0.12, extra={"item": "rifle"})
 
 
-# --- farm produce ----------------------------------------------------------
+# --- farm produce (PLAY-016, ART spec 9.3) ---------------------------------
+# Produce keeps the item outline rule and canvas but wears the muted
+# pl_crop_* palette and softer, rounder, smooth-shaded forms (no facets).
+
+def _ell(name, c, r, mat, yaw=0.0, pitch=0.0, segs=16, rings=10):
+    """Smooth ellipsoid centred on `c` with radii `r`, tipped `pitch` degrees
+    (positive lifts +x) and turned `yaw` degrees about Z."""
+    import math
+    from mathutils import Matrix
+    ob = S.ellipsoid(name, 0, 0, 0, r[0], r[1], r[2], mat, segs=segs, rings=rings)
+    ob.data.transform(Matrix.Translation(c) @ Matrix.Rotation(math.radians(yaw), 4, "Z")
+                      @ Matrix.Rotation(math.radians(-pitch), 4, "Y"))
+    return ob
+
+
+def _lumpy(name, c, r, mat, seed, amp=0.1, yaw=0.0):
+    """A smooth, slightly irregular ellipsoid (a tuber, a pebble of produce)."""
+    import math
+    import numpy as np
+    from mathutils import Matrix
+    ob = S.ellipsoid(name, 0, 0, 0, r[0], r[1], r[2], mat, segs=16, rings=10)
+    rng = np.random.RandomState(seed)
+    dirs = rng.normal(size=(4, 3))
+    dirs /= np.linalg.norm(dirs, axis=1, keepdims=True)
+    amps = rng.uniform(-amp, amp, 4)
+    for v in ob.data.vertices:
+        n = np.array(v.co[:]) / max(v.co.length, 1e-6)
+        k = 1.0 + float(np.sum(amps * np.maximum(dirs @ n, 0) ** 2))
+        v.co.x *= k
+        v.co.y *= k
+        v.co.z *= k
+    ob.data.transform(Matrix.Translation(c) @ Matrix.Rotation(math.radians(yaw), 4, "Z"))
+    return ob
+
 
 def _potatoes():
-    for k, (x, y, z, r) in enumerate([(0.36, -0.58, 0.0, 0.10), (0.56, -0.62, 0.0, 0.11), (0.66, -0.44, 0.0, 0.09),
-                                       (0.44, -0.42, 0.0, 0.09), (0.50, -0.52, 0.12, 0.09)]):
-        S.blob("potato%d" % k, x, y, z, r, "tuber", seed=120 + k, lumps=0.18, squash=0.8)
+    spec = [(0.35, -0.58, 0.0, 0.105, 0.09, 0.075, 10, "pl_crop_tuber"),
+            (0.57, -0.61, 0.0, 0.115, 0.095, 0.08, -25, "pl_crop_bronze"),
+            (0.68, -0.45, 0.0, 0.095, 0.08, 0.07, 40, "pl_crop_tuber"),
+            (0.45, -0.42, 0.0, 0.1, 0.085, 0.072, -10, "pl_crop_bronze"),
+            (0.30, -0.42, 0.0, 0.08, 0.07, 0.06, 60, "pl_crop_tuber"),
+            (0.50, -0.52, 0.09, 0.095, 0.08, 0.07, 20, "pl_crop_tuber")]
+    for k, (x, y, z, rx, ry, rz, yaw, m) in enumerate(spec):
+        _lumpy("potato%d" % k, (x, y, z + rz), (rx, ry, rz), m, 120 + k, amp=0.14, yaw=yaw)
     return S.render_asset("item", "potatoes", zmax=0.24, extra={"item": "potatoes", "stack": True})
 
 
 def _corn():
     import math
-    from mathutils import Matrix
-    for k, (x, y, z, a) in enumerate([(0.30, -0.62, 0.05, 8), (0.30, -0.46, 0.05, -6), (0.36, -0.54, 0.14, 2)]):
-        S.ellipsoid("cob%d" % k, 0, 0, 0, 0.26, 0.065, 0.065, "corn_yellow", segs=14, rings=8)
-        S.objects()[-1].matrix_world = Matrix.Translation((x + 0.2, y, z + 0.06)) @ Matrix.Rotation(math.radians(a), 4, "Z")
-        S.ellipsoid("husk%d" % k, 0, 0, 0, 0.12, 0.07, 0.06, "leaf_light", segs=10, rings=6)
-        S.objects()[-1].matrix_world = Matrix.Translation((x + 0.44, y, z + 0.06)) @ Matrix.Rotation(math.radians(a), 4, "Z")
+    from .plant_base import _leaf
+    for k, (x, y, z, a) in enumerate([(0.32, -0.64, 0.0, 8), (0.30, -0.46, 0.0, -8), (0.38, -0.55, 0.11, 3)]):
+        # a plump cob with a pale silk tuft at its tip, husk leaves folded back from its base
+        _ell("cob%d" % k, (x + 0.2, y, z + 0.075), (0.2, 0.072, 0.07), "pl_crop_corn", yaw=a)
+        _ell("tip%d" % k, (x + 0.40, y, z + 0.075), (0.06, 0.05, 0.048), "pl_crop_straw", yaw=a)
+        for j, da in enumerate((-0.5, 0.0, 0.5)):
+            az = math.pi + math.radians(a) + da
+            _leaf("husk%d_%d" % (k, j), x + 0.14, y + 0.07 * (j - 1), z + 0.06, az, 0.22, 0.24, 0.12,
+                  "pl_crop_leaf" if j % 2 == 0 else "pl_crop_deep", thick=0.045)
     return S.render_asset("item", "corn_pile", zmax=0.28, extra={"item": "corn", "stack": True})
 
 
 def _wheat():
+    import math
     import random
+    from .plant_base import _limb
     rnd = random.Random(5)
-    for i in range(22):
-        x, y = 0.5 + rnd.uniform(-0.12, 0.12), -0.5 + rnd.uniform(-0.1, 0.1)
-        S.cyl("straw%d" % i, x, y, 0.02, 0.0, 0.46, "straw", segs=5, bevel=0.0)
-        S.ellipsoid("ear%d" % i, x + rnd.uniform(-0.08, 0.08), y, 0.52, 0.04, 0.04, 0.09, "corn_yellow",
-                    segs=6, rings=5)
-    S.cyl("tie", 0.5, -0.5, 0.15, 0.18, 0.24, "leather", segs=16, bevel=0.005)
+    n = 24
+    for i in range(n):
+        a = i * 2 * math.pi / n + rnd.uniform(-0.2, 0.2)
+        spread = rnd.uniform(0.08, 0.2)
+        x0, y0 = 0.5 + rnd.uniform(-0.03, 0.03), -0.5 + rnd.uniform(-0.03, 0.03)
+        top = (x0 + math.cos(a) * spread, y0 + math.sin(a) * spread * 0.8, 0.44 + rnd.uniform(0.0, 0.08))
+        mid = (x0 + (top[0] - x0) * 0.25, y0 + (top[1] - y0) * 0.25, 0.2)
+        _limb("stem%d" % i, (x0, y0, 0.0), mid, 0.017, 0.015, "pl_crop_straw", segs=5)
+        _limb("stemu%d" % i, mid, top, 0.015, 0.011, "pl_crop_straw", segs=5)
+        # the ear bows outward and down
+        _ell("ear%d" % i, (top[0] + math.cos(a) * 0.028, top[1] + math.sin(a) * 0.022, top[2] + 0.055),
+             (0.032, 0.032, 0.09), "pl_crop_corn" if i % 3 else "pl_crop_straw", yaw=math.degrees(a), pitch=-30, segs=10, rings=6)
+    S.cyl("tie", 0.5, -0.5, 0.085, 0.13, 0.21, "pl_stem", segs=16, bevel=0.01)
     return S.render_asset("item", "wheat_sheaf", zmax=0.64, extra={"item": "wheat", "stack": True})
 
 
 def _beans():
-    S.cyl("sack", 0.5, -0.55, 0.22, 0.0, 0.26, "leather", r_top=0.18, segs=16)
-    S.cyl("mouth", 0.5, -0.55, 0.19, 0.25, 0.29, "bark", segs=16, bevel=0.01)
-    for k, (x, y) in enumerate([(0.44, -0.52), (0.54, -0.50), (0.50, -0.60), (0.58, -0.58), (0.42, -0.60),
-                                (0.48, -0.46)]):
-        S.ellipsoid("bean%d" % k, x, y, 0.29, 0.035, 0.022, 0.02, "ceramic" if k % 2 else "tuber", segs=8, rings=5)
+    S.cyl("sack", 0.5, -0.55, 0.22, 0.0, 0.24, "burlap", r_top=0.18, segs=20, bevel=0.03)
+    S.cyl("collar", 0.5, -0.55, 0.2, 0.2, 0.27, "pl_dried", segs=20, bevel=0.025)
+    # plump sage pods heaped to fill the mouth, a few spilled beside the sack
+    spec = [(-0.07, -0.05, 0.30, 20, 6, "pl_crop_pod"), (0.06, -0.07, 0.30, -30, 6, "pl_crop_jade"),
+            (-0.01, 0.06, 0.30, 80, 5, "pl_crop_pod"), (0.09, 0.04, 0.31, 5, 10, "pl_crop_jade"),
+            (-0.08, 0.04, 0.31, -50, 8, "pl_crop_jade"), (0.0, -0.01, 0.34, 35, 10, "pl_crop_pod"),
+            (0.05, -0.02, 0.33, 100, 12, "pl_crop_jade"), (-0.04, -0.07, 0.31, 140, 8, "pl_crop_jade"),
+            (0.0, 0.09, 0.29, 10, 4, "pl_crop_pod")]
+    for k, (dx, dy, z, yaw, pitch, m) in enumerate(spec):
+        _ell("pod%d" % k, (0.5 + dx, -0.55 + dy, z), (0.1, 0.034, 0.03), m, yaw=yaw, pitch=pitch, segs=10, rings=6)
+    for k, (x, y, yaw) in enumerate([(0.24, -0.72, 25), (0.32, -0.80, -15), (0.76, -0.74, 60)]):
+        _ell("spill%d" % k, (x, y, 0.03), (0.08, 0.03, 0.03), "pl_crop_pod" if k % 2 else "pl_crop_jade", yaw=yaw, segs=10, rings=6)
     return S.render_asset("item", "beans_sack", zmax=0.32, extra={"item": "beans", "stack": True})
 
 
+def _lettuce_head(k, hx, hy, r):
+    import math
+    from .plant_base import _leaf
+    _ell("core%d" % k, (hx, hy, r * 0.62), (r * 0.82, r * 0.82, r * 0.7), "pl_crop_jade")
+    for i in range(5):    # outer flare: broad leaves resting low
+        a = i * 2 * math.pi / 5 + k * 0.6
+        _leaf("fl%d_%d" % (k, i), hx + math.cos(a) * r * 0.3, hy + math.sin(a) * r * 0.3, 0.01, a,
+              math.radians(14), r * 1.9, r * 1.5, "pl_crop_leaf", thick=0.05)
+    for i in range(6):    # wrapper leaves cupping the head
+        a = i * 2 * math.pi / 6 + k * 0.6 + 0.5
+        _leaf("wr%d_%d" % (k, i), hx + math.cos(a) * r * 0.5, hy + math.sin(a) * r * 0.5, 0.03, a,
+              math.radians(64), r * 1.7, r * 1.2, "pl_crop_jade", thick=0.05)
+
+
 def _lettuce():
-    for k, (x, y, r) in enumerate([(0.38, -0.56, 0.15), (0.62, -0.54, 0.14)]):
-        S.ellipsoid("head%d" % k, x, y, r * 0.8, r, r, r * 0.8, "leaf_light", segs=16, rings=10)
-        S.ellipsoid("outer%d" % k, x, y - 0.02, r * 0.5, r * 1.15, r * 1.1, r * 0.55, "vegetation", segs=16, rings=8)
+    _lettuce_head(0, 0.37, -0.56, 0.13)
+    _lettuce_head(1, 0.63, -0.52, 0.12)
     return S.render_asset("item", "lettuce_heads", zmax=0.28, extra={"item": "lettuce", "stack": True})
 
 
 def _radishes():
-    for k, (x, y) in enumerate([(0.40, -0.60), (0.52, -0.56), (0.62, -0.62), (0.48, -0.68)]):
-        S.ellipsoid("radish%d" % k, x, y, 0.06, 0.065, 0.065, 0.06, "food_red", segs=12, rings=8)
-        S.cyl("leaves%d" % k, x - 0.02, y + 0.10, 0.03, 0.04, 0.10, "vegetation", segs=6, r_top=0.05, bevel=0.0)
+    import math
+    from .plant_base import _leaf, _limb
+    # four radishes fanned out, roots toward the viewer, leaves trailing away
+    for k, (x, y, a) in enumerate([(0.40, -0.58, 225), (0.50, -0.55, 250), (0.60, -0.58, 290), (0.47, -0.50, 205)]):
+        ar = math.radians(a)
+        dx, dy = math.cos(ar), math.sin(ar)
+        _ell("root%d" % k, (x + dx * 0.04, y + dy * 0.04, 0.055), (0.09, 0.056, 0.055), "pl_crop_radish", yaw=a)
+        _limb("tail%d" % k, (x + dx * 0.11, y + dy * 0.11, 0.045), (x + dx * 0.19, y + dy * 0.19, 0.02), 0.026, 0.007,
+              "pl_crop_radish", segs=6)
+        for j, da in enumerate((-0.5, 0.0, 0.5)):
+            _leaf("lf%d_%d" % (k, j), x - dx * 0.03, y - dy * 0.03, 0.07, ar + math.pi + da, math.radians(16 + 8 * j),
+                  0.21, 0.09, "pl_crop_jade" if (j + k) % 2 else "pl_crop_leaf", thick=0.03)
+    _ell("twine", (0.52, -0.52, 0.07), (0.035, 0.1, 0.045), "pl_stem", yaw=45, segs=10, rings=6)
     return S.render_asset("item", "radish_bunch", zmax=0.18, extra={"item": "radishes", "stack": True})
 
 
+def _pumpkin(k, x, y, r, rot):
+    import math
+    from .plant_base import _limb
+    rz = r * 0.74
+    _ell("core%d" % k, (x, y, rz), (r * 0.75, r * 0.75, rz * 0.97), "pl_crop_pumpkin")
+    for i in range(7):    # soft ribs: overlapping lobes round a core
+        a = rot + i * 2 * math.pi / 7
+        _ell("rib%d_%d" % (k, i), (x + math.cos(a) * r * 0.4, y + math.sin(a) * r * 0.4, rz),
+             (r * 0.58, r * 0.58, rz), "pl_crop_pumpkin", segs=14, rings=9)
+    _limb("stem%d" % k, (x, y, rz * 1.88), (x + 0.02, y + 0.01, rz * 1.88 + 0.07), 0.026, 0.016, "pl_crop_stem", segs=6)
+
+
 def _pumpkins():
-    for k, (x, y, r) in enumerate([(0.40, -0.58, 0.17), (0.64, -0.50, 0.13)]):
-        S.ellipsoid("pumpkin%d" % k, x, y, r * 0.75, r, r * 0.95, r * 0.75, "pumpkin", segs=18, rings=10)
-        S.cyl("stem%d" % k, x, y, 0.018, r * 1.4, r * 1.7, "bark", segs=6, bevel=0.0)
+    _pumpkin(1, 0.66, -0.46, 0.13, 0.3)
+    _pumpkin(0, 0.40, -0.60, 0.17, 0.0)
     return S.render_asset("item", "pumpkins", zmax=0.32, extra={"item": "pumpkins", "stack": True})
 
 
@@ -243,14 +343,23 @@ def _duster():
 
 
 def _herbal_medicine():
-    """Herbal medicine: bundles of dried healroot bound with twine, a few
-    knobbly roots beside them."""
-    for k, (x, y, a) in enumerate([(0.42, -0.56, 0.0), (0.58, -0.50, 0.0)]):
-        S.box("bundle%d" % k, x - 0.07, y - 0.20, 0.0, x + 0.07, y + 0.12, 0.09, "vegetation", bevel=0.035, segments=2)
-        S.box("tips%d" % k, x - 0.08, y + 0.10, 0.01, x + 0.08, y + 0.20, 0.08, "leaf_light", bevel=0.03)
-        S.box("twine%d" % k, x - 0.075, y - 0.06, 0.0, x + 0.075, y - 0.02, 0.10, "straw", bevel=0.01)
-    for k, (x, y) in enumerate([(0.30, -0.72), (0.70, -0.74)]):
-        S.blob("root%d" % k, x, y, 0.02, 0.055, "tuber", seed=120 + k, lumps=0.3, squash=0.6)
+    """Herbal medicine: two bundles of dried healroot, a little cluster of pale
+    blue-white blooms at each tip, bound with twine; a few knobbly roots."""
+    import math
+    from .plant_base import _leaf
+    for k, (bx, by, az0) in enumerate([(0.18, -0.64, 0.1), (0.26, -0.40, 0.3)]):
+        for j, da in enumerate((-0.35, -0.17, 0.0, 0.17, 0.35)):
+            az = az0 + da
+            ln = 0.36 - 0.04 * (j % 2)
+            _leaf("hb%d_%d" % (k, j), bx, by, 0.02 + 0.012 * (j % 2), az, 0.06, ln, 0.065,
+                  "pl_crop_pod" if j % 2 else "pl_crop_silver", thick=0.035)
+        tx, ty = bx + math.cos(az0) * 0.36, by + math.sin(az0) * 0.36
+        for j, (ox, oy) in enumerate([(0.0, 0.0), (-0.035, 0.03), (-0.03, -0.035)]):
+            _ell("fl%d_%d" % (k, j), (tx + ox, ty + oy, 0.05 + 0.01 * j), (0.032, 0.03, 0.028), "pl_crop_bloom", segs=10, rings=6)
+        _ell("tw%d" % k, (bx + math.cos(az0) * 0.08, by + math.sin(az0) * 0.08, 0.04), (0.035, 0.08, 0.05), "pl_stem",
+             yaw=math.degrees(az0), segs=12, rings=6)
+    for k, (x, y) in enumerate([(0.62, -0.74), (0.76, -0.62)]):
+        _lumpy("root%d" % k, (x, y, 0.04), (0.07, 0.05, 0.04), "pl_crop_tuber", 120 + k, amp=0.25, yaw=30 * k)
     return S.render_asset("item", "herbal_medicine", zmax=0.14, extra={"item": "herbal medicine", "stack": True})
 
 
@@ -317,19 +426,19 @@ def _roll_matrix(cx, cy, r, ln, yaw):
 
 
 def _cloth_bolt():
-    """Three off-white bolts of cloth rolled on wooden cores, two below and
-    one on top, each with a burlap wrapper band."""
+    """Three warm-cream cotton bolts rolled on wooden cores, two below and
+    one on top, each with a straw-coloured wrapper band."""
     import math
     yaw = -38
     r, ln = 0.105, 0.56
     n = (-math.sin(math.radians(yaw)), math.cos(math.radians(yaw)))   # sideways on the ground
     for k, (off, z) in enumerate(((-0.115, r), (0.115, r), (0.0, r * 2.55))):
         n0 = len(S.objects())
-        S.cyl("bolt", 0, 0, r, 0.0, ln, "cloth_white", segs=18, bevel=0.01)
-        S.cyl("core", 0, 0, 0.04, ln, ln + 0.012, "wood", segs=10, bevel=0.0)
-        S.cyl("layer", 0, 0, 0.075, ln, ln + 0.006, "ceramic", segs=14, bevel=0.0)
-        S.cyl("band", 0, 0, r + 0.006, ln * 0.45, ln * 0.45 + 0.07, "burlap", segs=18, bevel=0.0)
-        S.cyl("edge", 0, 0, r + 0.003, ln * 0.12, ln * 0.12 + 0.02, "ceramic", segs=18, bevel=0.0)
+        S.cyl("bolt", 0, 0, r, 0.0, ln, "pl_crop_cotton", segs=24, bevel=0.03)
+        S.cyl("core", 0, 0, 0.04, ln, ln + 0.012, "pl_stem", segs=10, bevel=0.0)
+        S.cyl("layer", 0, 0, 0.075, ln, ln + 0.006, "pl_crop_bloom", segs=16, bevel=0.0)
+        S.cyl("band", 0, 0, r + 0.006, ln * 0.45, ln * 0.45 + 0.07, "pl_crop_straw", segs=24, bevel=0.0)
+        S.cyl("edge", 0, 0, r + 0.003, ln * 0.12, ln * 0.12 + 0.02, "pl_crop_bloom", segs=24, bevel=0.0)
         m = _roll_matrix(0.5 + n[0] * off, -0.52 + n[1] * off, z, ln, yaw)
         for ob in S.objects()[n0:]:
             ob.matrix_world = m
@@ -572,23 +681,31 @@ def _industrial_medicine(size):
 
 # ---- social & host systems items (ENG-003, ART §37)
 def _brewgrain_item():
-    """A small burlap sack of malted grain, a few loose kernels beside it."""
-    S.cyl("sack", 0.5, -0.55, 0.22, 0.0, 0.26, "burlap", r_top=0.17, segs=16)
-    S.cyl("mouth", 0.5, -0.55, 0.19, 0.25, 0.29, "leather", segs=16, bevel=0.01)
-    S.cyl("grain", 0.5, -0.55, 0.15, 0.285, 0.31, "corn_yellow", segs=16, bevel=0.0)
-    for k, (x, y) in enumerate([(0.26, -0.78), (0.34, -0.82), (0.72, -0.80), (0.80, -0.72), (0.76, -0.84)]):
-        S.ellipsoid("kern%d" % k, x, y, 0.02, 0.03, 0.016, 0.016, "straw" if k % 2 else "corn_yellow", segs=6, rings=4)
+    """A squat burlap sack of malted grain, heaped with bronze kernels, a few
+    loose kernels beside it."""
+    import math
+    S.cyl("sack", 0.5, -0.55, 0.25, 0.0, 0.2, "burlap", r_top=0.2, segs=22, bevel=0.03)
+    S.cyl("collar", 0.5, -0.55, 0.2, 0.17, 0.235, "pl_dried", segs=22, bevel=0.025)
+    _ell("grain", (0.5, -0.55, 0.225), (0.17, 0.16, 0.085), "pl_crop_bronze")
+    for k in range(7):    # kernels studding the heap
+        a = k * 2 * math.pi / 7
+        _ell("hk%d" % k, (0.5 + math.cos(a) * 0.09, -0.55 + math.sin(a) * 0.08, 0.3 - 0.01 * (k % 2)),
+             (0.04, 0.026, 0.024), "pl_crop_straw" if k % 2 else "pl_crop_bronze", yaw=math.degrees(a) + 40, segs=8, rings=5)
+    for k, (x, y) in enumerate([(0.26, -0.78), (0.34, -0.83), (0.72, -0.80), (0.80, -0.72), (0.76, -0.86)]):
+        _ell("kern%d" % k, (x, y, 0.025), (0.034, 0.02, 0.02), "pl_crop_straw" if k % 2 else "pl_crop_bronze",
+             yaw=k * 37, segs=8, rings=5)
     return S.render_asset("item", "brewgrain", zmax=0.34, extra={"item": "brewgrain", "stack": True})
 
 
 def _ashleaf_item():
-    """A loose bundle of broad dusty blue-green leaves tied with twine."""
+    """A loose bundle of broad silver-sage leaves tied with twine."""
+    import math
     from .plant_base import _leaf
-    for k, (x, y, az) in enumerate([(0.34, -0.52, 0.2), (0.44, -0.46, 0.6), (0.54, -0.5, -0.1), (0.40, -0.58, -0.4),
-                                    (0.58, -0.58, 0.9), (0.48, -0.54, 0.3)]):
-        _leaf("lf%d" % k, x, y, 0.03 + 0.025 * (k % 3), az, 0.15, 0.3, 0.13,
-              "leaf_pine" if k % 2 else "leaf_pine_hi", thick=0.04)
-    S.box("twine", 0.42, -0.62, 0.0, 0.48, -0.40, 0.14, "straw", bevel=0.01)
+    for k, (da, ln, pitch, z) in enumerate([(-0.85, 0.34, 0.10, 0.02), (-0.52, 0.42, 0.14, 0.045), (-0.18, 0.37, 0.08, 0.03),
+                                             (0.16, 0.43, 0.16, 0.055), (0.5, 0.36, 0.1, 0.035), (0.85, 0.38, 0.12, 0.02),
+                                             (0.0, 0.4, 0.3, 0.1)]):
+        _leaf("lf%d" % k, 0.26, -0.58, z, 0.35 + da, pitch, ln, 0.17, "pl_crop_jade" if k % 2 else "pl_crop_silver", thick=0.045)
+    _ell("twine", (0.31, -0.57, 0.06), (0.035, 0.1, 0.06), "pl_stem", yaw=20, segs=12, rings=6)
     return S.render_asset("item", "ashleaf", zmax=0.2, extra={"item": "ashleaf", "stack": True})
 
 

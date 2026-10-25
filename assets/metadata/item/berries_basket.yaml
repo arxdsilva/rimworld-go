@@ -10,8 +10,8 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.611
-  h: 0.31
-  d: 0.617
+  w: 0.656
+  h: 0.297
+  d: 0.582
 item: berries
 stack: true

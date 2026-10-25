@@ -264,6 +264,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	r.setView(sw, sh, tile)
 	r.links.sync(w, r.game.Width(), r.game.Height()) // linkgrid.go: rebuilt only on StructVer
 	r.lod.tier = lodFor(tile)
+	r.lod.crops.begin()
 	r.syncFrameChunks() // lod.go: the chunk lists in view
 	r.lod.chunks.frame++
 	views := r.lod.views
@@ -274,6 +275,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	} else {
 		r.drawGroundLOD(screen, &w, sw, sh, tile) // lod.go: chunk or map bakes
 		if lt == lodChunk {
+			r.drawFurrows(screen, w, tile) // crop_batch.go: tilled ground under crops
 			r.drawTufts(screen, w, sw, sh, tile)
 		}
 	}
@@ -412,7 +414,8 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	for i := range draws {
 		r.runDraw(screen, &w, &draws[i], tile, sw, sh)
 	}
-	clear(draws) // drop this frame's closures; keep the buffer
+	r.flushCrops(screen) // crop_batch.go: the last run of units
+	clear(draws)         // drop this frame's closures; keep the buffer
 	r.draws = draws[:0]
 	r.drawWorkGlow(screen, tile)
 	r.drawFires(screen, w, tile)
@@ -495,6 +498,9 @@ func creatureAt(wx, wy, tile, ct float64) (float64, float64) {
 
 // runDraw draws one queued object.
 func (r *Renderer) runDraw(dst *ebiten.Image, w *game.WorldView, d *artDraw, tile float64, sw, sh int) {
+	if d.fn != nil || d.kind != objPlant {
+		r.flushCrops(dst) // queued crop units draw before whatever comes next
+	}
 	if d.fn != nil {
 		d.fn()
 		return
@@ -610,20 +616,26 @@ func (r *Renderer) drawFrameObj(dst *ebiten.Image, f *game.FrameView, tile float
 	r.drawSpriteCS(dst, key, none, float64(f.X), float64(f.Y), tile, sw, sh, mulCS(tintCS(tint), blueprintCS))
 }
 
-// drawPlantObj draws a plant swaying (plantPose) in its season's look.
+// drawPlantObj draws a plant swaying (plantPose) in its season's look. A
+// crop queues its units instead (crop_batch.go); cold or heat damage
+// tints, shrinks and fades any plant (plantDamageLook).
 func (r *Renderer) drawPlantObj(dst *ebiten.Image, w *game.WorldView, p *game.PlantView, tile float64) {
+	if isCropPlant(p) {
+		r.drawCropObj(dst, w, p, tile)
+		return
+	}
+	r.flushCrops(dst)
 	key, scale := plantSprite(*p)
 	key = r.seasonKey(key, *w)
 	amount, kind := 0.035, kindBush
 	switch p.Species {
 	case "tree", "pine", "jungle_tree":
 		amount, kind = 0.022, kindTree
-	case "wheat", "corn", "brewgrain":
-		amount, kind = 0.07, kindCrop
-	case "radish", "lettuce", "potato", "beans", "pumpkin", "healroot", "cotton", "ashleaf":
-		amount, kind = 0.04, kindCrop
 	}
 	ps := r.plantPose(p.X, p.Y, kind, amount, scale)
+	dcs, dk := plantDamageLook(*p)
+	ps.cs = dcs
+	ps.sx, ps.sy = ps.sx*dk, ps.sy*dk
 	if kind == kindTree {
 		if trunk, canopy, ok := r.treePartKeys(key); ok {
 			// PLAY-010 2.9: the trunk stays opaque, the canopy turns
@@ -631,7 +643,7 @@ func (r *Renderer) drawPlantObj(dst *ebiten.Image, w *game.WorldView, p *game.Pl
 			r.layer("tree_trunk")
 			r.drawSpritePose(dst, trunk, color.NRGBA{}, float64(p.X), float64(p.Y), tile, ps)
 			if a := r.treeCanopyAlpha(p.X, p.Y); a < 1 {
-				ps.cs = colorScale{1, 1, 1, a}
+				ps.cs = mulCS(ps.cs, colorScale{1, 1, 1, a})
 			}
 			r.layer("tree_canopy")
 			r.drawSpritePose(dst, canopy, color.NRGBA{}, float64(p.X), float64(p.Y), tile, ps)
@@ -988,6 +1000,7 @@ func (r *Renderer) drawTerrainArt(screen *ebiten.Image, w game.WorldView, sw, sh
 			r.drawGroundTile(screen, &w, x, y, tile, sw, sh)
 		}
 	}
+	r.drawFurrows(screen, w, tile) // crop_batch.go: tilled ground under crops
 	r.drawTufts(screen, w, sw, sh, tile)
 }
 
@@ -1151,7 +1164,7 @@ func plantSprite(p game.PlantView) (string, float64) {
 		return k, sc
 	}
 	if ks, ok := plantKeys.crops[p.Species]; ok {
-		return ks[cropStage(p)][h%3], 1
+		return ks[cropStage(p)][h%cropVariants], 1 // the inspector's icon and the shadow; drawCropObj composes the units
 	}
 	if k, sc, ok := newPlantKey(p, h); ok {
 		return k, sc

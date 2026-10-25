@@ -10,8 +10,8 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.7
-  h: 0.377
-  d: 0.676
+  w: 0.695
+  h: 0.379
+  d: 0.672
 item: cloth
 stack: true

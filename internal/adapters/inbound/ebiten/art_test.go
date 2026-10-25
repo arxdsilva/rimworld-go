@@ -256,7 +256,6 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 	}
 	keys = append(keys, "plant/grass_short_v0", "plant/grass_short_v1", "plant/bush_mature_v0", "plant/bush_mature_v1",
 		"plant/berry_bush_harvestable_v0", "plant/berry_bush_harvestable_v1", "overlay/grow_zone",
-		"plant/crop_sown",
 		itemSprite("food"), itemSprite("berries"), itemSprite("meat"),
 		itemSprite("meal"), itemSprite("stone"), "rock/rock_wall_15", "terrain/stone_edge_15",
 		"structure/wall_stone_15", "structure/floor_stone",
@@ -267,9 +266,12 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 		"tool/hammer", "tool/axe", "tool/pickaxe",
 		"overlay/sleeping_spot_south", "overlay/sleeping_spot_east", "overlay/sleeping_spot_north",
 		"overlay/sleeping_spot_west", "ui_icon/sleeping_spot")
+	for v := 0; v < 4; v++ { // PLAY-016: the furrow decals under crop cells
+		keys = append(keys, fmt.Sprintf("overlay/tilled_%d", v))
+	}
 	for _, c := range game.Crops() {
-		for _, st := range []string{"young", "mature", "harvestable"} {
-			keys = append(keys, "plant/"+c.Name+"_"+st)
+		for _, row := range plantKeys.crops[c.Name] { // PLAY-016: every unit sprite crop_batch.go draws
+			keys = append(keys, row[:]...)
 		}
 		keys = append(keys, itemSprite(c.Label), "ui_icon/"+strings.ReplaceAll(c.Label, " ", "_"))
 	}

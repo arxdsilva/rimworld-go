@@ -10,8 +10,8 @@ projection:
   shear_k: 0.5
 shadow:
   kind: blob
-  w: 0.496
-  h: 0.1
-  d: 0.493
+  w: 0.636
+  h: 0.098
+  d: 0.602
 item: herbal medicine
 stack: true
