@@ -375,6 +375,27 @@ def _g_home_clear(xx, yy, c):  # house with a cross
     return np.minimum(d, _seg(xx, yy, c + 8, c + 4, c - 8, c + 20))
 
 
+def _g_plan(xx, yy, c):  # dotted square with a pencil across its corner
+    d = np.full(xx.shape, 1e9, np.float32)
+    lo, hi = c - 22, c + 22
+    for t in (0.0, 0.5):  # dashes along each side, two per side
+        for a, b in (((lo, lo), (hi, lo)), ((hi, lo), (hi, hi)), ((hi, hi), (lo, hi)), ((lo, hi), (lo, lo))):
+            for k in (0.08, 0.58):
+                p0 = (a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k)
+                p1 = (a[0] + (b[0] - a[0]) * (k + 0.22), a[1] + (b[1] - a[1]) * (k + 0.22))
+                d = np.minimum(d, _seg(xx, yy, p0[0], p0[1], p1[0], p1[1]))
+        break
+    # pencil: body from lower-left toward upper-right, tip at (c - 8, c + 8)
+    d = np.minimum(d, _seg(xx, yy, c - 8, c + 8, c + 16, c - 16))
+    d = np.minimum(d, _seg(xx, yy, c - 14, c + 14, c - 8, c + 8))
+    return np.minimum(d, _seg(xx, yy, c + 12, c - 20, c + 20, c - 12))
+
+
+def _g_plan_clear(xx, yy, c):  # the same, crossed out
+    d = _g_plan(xx, yy, c)
+    return np.minimum(d, _seg(xx, yy, c - 24, c - 24, c + 24, c + 24))
+
+
 def _roof_tile(name, kind):
     xx, yy = _grid()
     img = np.zeros((N, N, 4), np.float32)
@@ -1445,7 +1466,9 @@ def build():
             _badge_icon("order_allow", t, _g_allow, (0.45, 0.78, 0.36)),
             _badge_icon("overlay_rooms", t, _g_rooms, (0.35, 0.72, 0.70)),
             _badge_icon("home", t, _g_home, (0.29, 0.50, 0.83)),
-            _badge_icon("home_clear", t, _g_home_clear, t["danger"])]
+            _badge_icon("home_clear", t, _g_home_clear, t["danger"]),
+            _badge_icon("plan", t, _g_plan, (0.72, 0.83, 0.94)),
+            _badge_icon("plan_clear", t, _g_plan_clear, t["danger"])]
     out += [_biome_icon(k) for k in BIOMES]
     out += _ng1_icons()
     out += [_marriage_spot(f) for f in MARRIAGE_FACINGS] + [_party_spot(), _fight_lightning()]

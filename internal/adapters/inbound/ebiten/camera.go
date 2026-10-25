@@ -9,9 +9,21 @@ type viewport struct{ x0, y0, x1, y1 float64 }
 func (v viewport) w() float64 { return v.x1 - v.x0 }
 func (v viewport) h() float64 { return v.y1 - v.y0 }
 
-// colonyViewport is the map viewport for a sw x sh screen.
+// colonyViewport is the map viewport for a sw x sh logical screen, in
+// logical pixels (UI layout).
 func colonyViewport(sw, sh int) viewport {
 	return viewport{0, hudTopH, float64(sw), float64(hudBarY(sh))}
+}
+
+// colonyViewportPhysical is colonyViewport in physical pixels (logical x
+// the UI scale s), for the renderer's culling, camera clamp and
+// screenToWorld, so the map's visible area matches the scaled chrome.
+// TODO(PLAY-012 HIDPI-MAP): the camera (app.go applyCamera, clampCamera,
+// minimap, capture framing) still passes the logical viewport; switch the
+// map-side callers to this with the tile size x dev.
+func colonyViewportPhysical(sw, sh int, s float64) viewport {
+	v := colonyViewport(sw, sh)
+	return viewport{v.x0 * s, v.y0 * s, v.x1 * s, v.y1 * s}
 }
 
 const (

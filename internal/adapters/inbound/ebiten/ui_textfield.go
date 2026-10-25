@@ -4,7 +4,6 @@ import (
 	"sort"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
 // Text field (NG-1 §1.4), single and multi-line. A click focuses it and
@@ -185,11 +184,11 @@ func (u *uiState) fieldLines(id string, rs []rune, w float32) []textSpan {
 		u.lines = map[string]lineCache{}
 	}
 	s := string(rs)
-	if c, ok := u.lines[id]; ok && c.text == s && c.w == w && c.scale == uiScale {
+	if c, ok := u.lines[id]; ok && c.text == s && c.w == w && c.scale == uiScale() {
 		return c.spans
 	}
 	spans := layoutLines(rs, tsBody, float64(w))
-	u.lines[id] = lineCache{s, w, uiScale, spans}
+	u.lines[id] = lineCache{s, w, uiScale(), spans}
 	return spans
 }
 
@@ -598,5 +597,5 @@ func (a *App) drawTextField(dst *ebiten.Image, id string, r rect, s string, sp t
 	cx, _ := measure(string(rs[ln.start:max(ln.start, min(u.caret, ln.end))]), tsBody)
 	cy := ty + float32(k)*lh - sy
 	x := in.X - sx + float32(cx)
-	vector.StrokeLine(clip, x, cy+1, x, cy+lh-1, 1, uiAccent, false)
+	uiLine(clip, x, cy+1, x, cy+lh-1, 1, uiAccent, false)
 }

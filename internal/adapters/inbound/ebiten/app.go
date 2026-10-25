@@ -9,7 +9,6 @@ import (
 	"time"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/pawn/schedule"
@@ -109,7 +108,16 @@ type App struct {
 	cfg AppConfig
 	nav nav
 
+	// sw, sh are the logical screen size every layout and hit test reads;
+	// pw, ph the physical one (sw x scale.s). outW, outH are the window in
+	// points and devRaw the screen's device factor from the last LayoutF;
+	// devFn replaces the monitor in tests (ui_scale.go).
 	sw, sh     int
+	pw, ph     int
+	scale      uiScaleState
+	outW, outH float64
+	devRaw     float64
+	devFn      func() float64
 	bootFrames int
 	artTried   bool
 	art        *artCatalog
@@ -253,6 +261,9 @@ func NewApp(cfg AppConfig) *App {
 		nav: newNav(),
 		sw:  DefaultWindowWidth,
 		sh:  DefaultWindowHeight,
+
+		scale:  unitUIScale,
+		devRaw: 1,
 	}
 	a.loadSettings()
 	a.applySettings()
@@ -274,6 +285,7 @@ func (a *App) Update() error {
 		return ebiten.Termination
 	}
 	a.updates++
+	a.syncUIScale() // ui_scale.go: before any measure or hit test
 	a.pollInput()
 	a.handleTextInput()
 	if a.in.fired(input.Cancel) {
@@ -478,6 +490,8 @@ func (a *App) applyClick(id string) {
 		a.renderer.toggleRoofOverlayIfAny()
 	case id == homeButtonID:
 		a.renderer.toggleHomeOverlayIfAny()
+	case id == planButtonID:
+		a.renderer.togglePlanOverlayIfAny()
 	case id == roomsButtonID:
 		a.rooms = !a.rooms
 	case strings.HasPrefix(id, "group."):
@@ -732,8 +746,9 @@ func (a *App) dropSession() {
 // Draw paints the current full screen and any overlay.
 func (a *App) Draw(screen *ebiten.Image) {
 	defer a.fpsProbeDraw(time.Now())
-	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
-	a.sw, a.sh = sw, sh
+	a.syncUIScale() // ui_scale.go: the canvas and the font draw at this scale
+	a.setPhysical(screen.Bounds().Dx(), screen.Bounds().Dy())
+	sw, sh := a.sw, a.sh // logical
 
 	switch a.nav.screen() {
 	case screenBoot:
@@ -920,25 +935,26 @@ func (a *App) fillMenu(screen *ebiten.Image, sw, sh int, title string, body []st
 	}
 }
 
-// Layout uses the window size so menus and the colony viewport share one surface.
-func (a *App) Layout(outsideWidth, outsideHeight int) (int, int) {
-	if outsideWidth < 1 {
-		outsideWidth = DefaultWindowWidth
-	}
-	if outsideHeight < 1 {
-		outsideHeight = DefaultWindowHeight
-	}
-	a.sw, a.sh = outsideWidth, outsideHeight
-	return outsideWidth, outsideHeight
-}
-
 func formatVersion(v string) string {
 	return fmt.Sprintf("rimworld-go  %s", v)
 }
 
+// currentCursor is the pointer in logical UI pixels: what the widget kit,
+// layoutHits, hitButton and every HUD/menu hit test read. a.cursor
+// (captures, tests) is logical.
 func (a *App) currentCursor() (int, int) {
 	if a.cursor != nil {
 		return a.cursor[0], a.cursor[1]
+	}
+	return a.in.ui.mx, a.in.ui.my
+}
+
+// mapCursor is the pointer in physical pixels, for the map (screenToWorld,
+// selection, globe picking): the raw device position, or a.cursor x s.
+func (a *App) mapCursor() (int, int) {
+	if a.cursor != nil {
+		s := a.scale.s
+		return int(float64(a.cursor[0]) * s), int(float64(a.cursor[1]) * s)
 	}
 	return a.in.raw.mx, a.in.raw.my
 }
@@ -951,7 +967,7 @@ func (a *App) paintMenu(screen *ebiten.Image, sw, sh int, title string, body []s
 }
 
 func drawDim(screen *ebiten.Image, sw, sh int) {
-	vector.FillRect(screen, 0, 0, float32(sw), float32(sh), uiDim, false)
+	uiFillRect(screen, 0, 0, float32(sw), float32(sh), uiDim, false)
 }
 
 func (a *App) toggleWorkCell(id string) {

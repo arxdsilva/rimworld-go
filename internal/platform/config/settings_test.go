@@ -94,3 +94,53 @@ func TestControlsAndDevModeDecodeOverDefaults(t *testing.T) {
 		t.Fatalf("an old file gets default controls: %+v %v", old.Controls, err)
 	}
 }
+
+func TestUIScalePresetsSnap(t *testing.T) {
+	t.Parallel()
+	for in, want := range map[int]int{0: 100, 50: 75, 75: 75, 80: 75, 85: 90, 96: 100, 100: 100, 107: 100, 110: 115, 120: 115, 125: 130, 140: 130, 141: 150, 160: 150, 165: 175, 190: 200, 250: 200} {
+		s := Defaults()
+		s.Accessibility.UIScale = in
+		if got := s.Normalize().Accessibility.UIScale; got != want {
+			t.Errorf("UIScale %d -> %d, want %d", in, got, want)
+		}
+	}
+	if UIScalePresets[0] != UIScaleMin || UIScalePresets[len(UIScalePresets)-1] != UIScaleMax {
+		t.Fatalf("presets %v do not span %d..%d", UIScalePresets, UIScaleMin, UIScaleMax)
+	}
+}
+
+func TestUIScaleAutoAndHiDPIDefaultOn(t *testing.T) {
+	t.Parallel()
+	d := Defaults()
+	if !d.Accessibility.UIScaleAuto || !d.Graphics.HiDPI {
+		t.Fatalf("defaults: auto %v hidpi %v, want both on", d.Accessibility.UIScaleAuto, d.Graphics.HiDPI)
+	}
+	// An old (version 1) file has neither field and an explicit 100 %:
+	// it loads with Auto and HiDPI on.
+	old, err := Decode(strings.NewReader(`{"version": 1, "accessibility": {"ui_scale": 100}, "graphics": {"vsync": true}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !old.Accessibility.UIScaleAuto || !old.Graphics.HiDPI {
+		t.Fatalf("old file: auto %v hidpi %v, want both on", old.Accessibility.UIScaleAuto, old.Graphics.HiDPI)
+	}
+	// The zero value (a hand-built Settings) migrates the same way.
+	if z := (Settings{}).Normalize(); !z.Accessibility.UIScaleAuto || !z.Graphics.HiDPI || z.Accessibility.UIScale != 100 {
+		t.Fatalf("zero settings normalize to %+v", z.Accessibility)
+	}
+	// A current file keeps an explicit off.
+	cur, err := Decode(strings.NewReader(`{"version": 2, "accessibility": {"ui_scale": 150, "ui_scale_auto": false}, "graphics": {"hidpi": false}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cur.Accessibility.UIScaleAuto || cur.Graphics.HiDPI || cur.Accessibility.UIScale != 150 {
+		t.Fatalf("current file: %+v %+v", cur.Accessibility, cur.Graphics)
+	}
+	var buf bytes.Buffer
+	if err := Encode(&buf, cur); err != nil {
+		t.Fatal(err)
+	}
+	if back, err := Decode(&buf); err != nil || !reflect.DeepEqual(back, cur) {
+		t.Fatalf("round trip %+v, %v", back, err)
+	}
+}

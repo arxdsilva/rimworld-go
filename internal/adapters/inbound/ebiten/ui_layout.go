@@ -4,7 +4,6 @@ import (
 	"image"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
 // Layout system (NG-1 §1.3): a float rectangle with the splitting helpers
@@ -139,8 +138,9 @@ func (r rect) asButton(id, label string) button {
 
 // clipTo returns dst restricted to r, so drawing with absolute
 // coordinates is clipped to it.
+// r is logical; the clip is its physical rectangle.
 func clipTo(dst *ebiten.Image, r rect) *ebiten.Image {
-	b := r.pixels().Intersect(dst.Bounds())
+	b := uiPhysRect(r).pixels().Intersect(dst.Bounds())
 	if b.Empty() {
 		return dst.SubImage(image.Rect(0, 0, 0, 0)).(*ebiten.Image)
 	}
@@ -175,7 +175,7 @@ func tooSmall(sw, sh int) bool { return sw < minSetupW || sh < minSetupH }
 
 // drawTooSmall dims the window and says it is too small for the screen.
 func drawTooSmall(dst *ebiten.Image, sw, sh int) {
-	vector.FillRect(dst, 0, 0, float32(sw), float32(sh), uiDim, false)
+	uiFillRect(dst, 0, 0, float32(sw), float32(sh), uiDim, false)
 	st := tsLarge
 	st.Align = alignCenter
 	cx, cy := float32(sw)/2, float32(sh)/2
@@ -183,5 +183,5 @@ func drawTooSmall(dst *ebiten.Image, sw, sh int) {
 	sub := tsBody
 	sub.Align = alignCenter
 	sub.Color = uiTextDim
-	drawText(dst, "Enlarge the window to at least 1280 x 720.", float64(cx), float64(cy)+4, sub)
+	drawText(dst, "Enlarge the window to at least 1280 x 720 or lower the UI scale.", float64(cx), float64(cy)+4, sub)
 }

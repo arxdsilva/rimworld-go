@@ -37,10 +37,11 @@ func (a *App) setSettings(s config.Settings) {
 	}
 }
 
-// applySettings pushes the settings into the window, the colony renderer
-// and the sound.
+// applySettings pushes the settings into the UI scale, the window, the
+// colony renderer and the sound.
 func (a *App) applySettings() {
 	a.binds = input.FromSettings(a.settings.Controls.Bindings)
+	a.updateScale() // UI scale and HiDPI apply live (ui_scale.go)
 	if !a.settings.Gameplay.DevMode {
 		a.dev = devState{}
 	}

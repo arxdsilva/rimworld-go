@@ -9,7 +9,9 @@ import (
 
 // SettingsVersion is the settings file format. Older files decode over
 // the defaults, so new fields arrive with their default values.
-const SettingsVersion = 1
+// Version 2 (PLAY-012) added Accessibility.UIScaleAuto and Graphics.HiDPI;
+// Normalize migrates anything older with both on.
+const SettingsVersion = 2
 
 // Settings are the player's preferences (Options screen).
 type Settings struct {
@@ -54,6 +56,9 @@ type Graphics struct {
 	Fullscreen bool   `json:"fullscreen"`
 	VSync      bool   `json:"vsync"`
 	Effects    string `json:"effects"`
+	// HiDPI renders at the screen's true resolution (device scale factor)
+	// instead of upscaling; it is presentation-only.
+	HiDPI bool `json:"hidpi"`
 }
 
 // AutosaveChoices are the autosave intervals in in-game days (0 = off).
@@ -81,8 +86,11 @@ type Gameplay struct {
 type Accessibility struct {
 	ReducedMotion   bool `json:"reduced_motion"`
 	ReducedFlashing bool `json:"reduced_flashing"`
-	// UIScale is the text and UI scale in percent (UIScaleMin..UIScaleMax; 0 = 100).
+	// UIScale is the UI scale in percent, one of UIScalePresets (0 = 100).
+	// It applies when UIScaleAuto is off.
 	UIScale int `json:"ui_scale,omitempty"`
+	// UIScaleAuto sizes the UI from the window (PLAY-012 B.1).
+	UIScaleAuto bool `json:"ui_scale_auto"`
 }
 
 // Ranges and steps.
@@ -93,21 +101,41 @@ const (
 	PanSpeedStep = 25
 )
 
-// Defaults are the settings of a fresh install.
-// UI scale range (NG-1 §1.1).
+// UI scale range (PLAY-012 B.1): a fixed scale is one of the presets.
 const (
-	UIScaleMin  = 90
-	UIScaleMax  = 130
-	UIScaleStep = 5
+	UIScaleMin = 75
+	UIScaleMax = 200
 )
 
+// UIScalePresets are the fixed UI scales in percent, ascending.
+var UIScalePresets = []int{75, 90, 100, 115, 130, 150, 175, 200}
+
+// snapPreset is the preset nearest v (the lower one on a tie).
+func snapPreset(v int) int {
+	best := UIScalePresets[0]
+	for _, p := range UIScalePresets {
+		if abs(p-v) < abs(best-v) {
+			best = p
+		}
+	}
+	return best
+}
+
+func abs(v int) int {
+	if v < 0 {
+		return -v
+	}
+	return v
+}
+
+// Defaults are the settings of a fresh install.
 func Defaults() Settings {
 	return Settings{
 		Version:       SettingsVersion,
 		Audio:         Audio{Master: 80, Music: 60, Effects: 80, Ambience: 70, UI: 70, MuteUnfocused: true},
-		Graphics:      Graphics{VSync: true, Effects: EffectsFull},
+		Graphics:      Graphics{VSync: true, Effects: EffectsFull, HiDPI: true},
 		Gameplay:      Gameplay{PauseOnThreat: true, AutosaveDays: 1, PanSpeed: 100},
-		Accessibility: Accessibility{UIScale: 100},
+		Accessibility: Accessibility{UIScale: 100, UIScaleAuto: true},
 	}
 }
 
@@ -120,6 +148,10 @@ func snap(v, lo, hi, step int) int {
 // with their defaults.
 func (s Settings) Normalize() Settings {
 	d := Defaults()
+	if s.Version < 2 { // before PLAY-012: no Auto or HiDPI field, both default on
+		s.Accessibility.UIScaleAuto = true
+		s.Graphics.HiDPI = true
+	}
 	s.Version = SettingsVersion
 	for _, v := range []*int{&s.Audio.Master, &s.Audio.Music, &s.Audio.Effects, &s.Audio.Ambience, &s.Audio.UI} {
 		*v = snap(*v, 0, 100, VolumeStep)
@@ -134,7 +166,7 @@ func (s Settings) Normalize() Settings {
 	if s.Accessibility.UIScale == 0 {
 		s.Accessibility.UIScale = 100
 	}
-	s.Accessibility.UIScale = snap(s.Accessibility.UIScale, UIScaleMin, UIScaleMax, UIScaleStep)
+	s.Accessibility.UIScale = snapPreset(s.Accessibility.UIScale)
 	s.Controls = s.Controls.normalize()
 	return s
 }

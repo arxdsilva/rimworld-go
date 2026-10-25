@@ -53,7 +53,7 @@ func (a *App) uiPreInput(raw *rawInput) {
 	if a.textActive() {
 		return
 	}
-	mx, my := raw.mx, raw.my
+	mx, my := a.toLogical(raw.mx, raw.my)
 	if a.cursor != nil {
 		mx, my = a.cursor[0], a.cursor[1]
 	}

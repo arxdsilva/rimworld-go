@@ -4,6 +4,7 @@ import (
 	"bytes"
 	_ "embed"
 	"image/color"
+	"math"
 	"strings"
 	"sync"
 
@@ -37,7 +38,9 @@ type textStyle struct {
 	Align align
 }
 
-// The type scale (NG-1 §1.1); UI scale multiplies Size.
+// The type scale (NG-1 §1.1) in logical pixels. Faces are rasterised at
+// Size x the UI scale (PLAY-012), so text is always sharp; positions and
+// metrics stay logical.
 var (
 	tsSmall = textStyle{Size: 11}
 	tsBody  = textStyle{Size: 13}
@@ -47,6 +50,7 @@ var (
 	tsHuge  = textStyle{Size: 32, Bold: true}
 )
 
+// faceKey is a face's pixel size and weight.
 type faceKey struct {
 	size float64
 	bold bool
@@ -56,14 +60,31 @@ var (
 	fontMu      sync.Mutex
 	fontSources [2]*text.GoTextFaceSource
 	fontFaces   = map[faceKey]*text.GoTextFace{}
-	uiScale     = 1.0 // Accessibility UI scale (settings), 0.9..1.3
 )
 
-// face returns the cached face for a style (call with fontMu held).
-func face(st textStyle) *text.GoTextFace {
-	k := faceKey{st.Size * uiScale, st.Bold}
+// faceSize is the pixel size a style is rasterised at under UI scale s,
+// and k = that size / the style size (the glyph scale). At s = 1 it is
+// the style size. Otherwise it is floored to whole pixels: the shaper
+// rounds a fractional size up to the next whole ppem, which would make
+// text wider than the layout measured. Whole sizes scale linearly, so
+// logical widths (physical / k) match s = 1 to well under a pixel, and
+// the drawn text never exceeds its scaled box (it may be up to one ppem
+// smaller).
+func faceSize(size, s float64) (px, k float64) {
+	if s == 1 || size <= 0 {
+		return size, 1
+	}
+	px = max(1, math.Floor(size*s+1e-6))
+	return px, px / size
+}
+
+// face returns the cached face for a style at UI scale s and its glyph
+// scale k (call with fontMu held).
+func face(st textStyle, s float64) (*text.GoTextFace, float64) {
+	px, sc := faceSize(st.Size, s)
+	k := faceKey{px, st.Bold}
 	if f, ok := fontFaces[k]; ok {
-		return f
+		return f, sc
 	}
 	i := 0
 	if st.Bold {
@@ -82,18 +103,21 @@ func face(st textStyle) *text.GoTextFace {
 	}
 	f := &text.GoTextFace{Source: fontSources[i], Size: k.size}
 	fontFaces[k] = f
-	return f
+	return f, sc
 }
 
-// drawText draws s with its top-left at (x, y) (or its top-centre/
+// drawText draws s with its top-left at logical (x, y) (or its top-centre/
 // top-right for centred/right-aligned styles). Newlines start new lines.
+// It draws at physical (x, y) x the UI scale with a face of that size, a
+// logical line height apart.
 func drawText(dst *ebiten.Image, s string, x, y float64, st textStyle) {
+	sc := uiScale()
 	fontMu.Lock()
 	defer fontMu.Unlock()
-	f := face(st)
+	f, k := face(st, sc)
 	op := &text.DrawOptions{}
-	op.GeoM.Translate(x, y)
-	op.LineSpacing = lineHeightOf(f)
+	op.GeoM.Translate(x*sc, y*sc)
+	op.LineSpacing = logicalLineH(f, k) * sc
 	switch st.Align {
 	case alignCenter:
 		op.PrimaryAlign = text.AlignCenter
@@ -108,24 +132,36 @@ func drawText(dst *ebiten.Image, s string, x, y float64, st textStyle) {
 	text.Draw(dst, s, f, op)
 }
 
-// measure is the size of s drawn in st.
+// measure is the logical size of s drawn in st: measured on the scaled
+// face, divided by its glyph scale.
 func measure(s string, st textStyle) (w, h float64) {
+	sc := uiScale()
 	fontMu.Lock()
 	defer fontMu.Unlock()
-	f := face(st)
-	return text.Measure(s, f, lineHeightOf(f))
+	f, k := face(st, sc)
+	w, h = text.Measure(s, f, logicalLineH(f, k)*k)
+	if k != 1 {
+		w, h = w/k, h/k
+	}
+	return w, h
 }
 
-// lineH is the line height of st: ascent + descent + 2 px leading.
+// lineH is the logical line height of st: ascent + descent + 2 px leading.
 func lineH(st textStyle) float64 {
+	sc := uiScale()
 	fontMu.Lock()
 	defer fontMu.Unlock()
-	return lineHeightOf(face(st))
+	return logicalLineH(face(st, sc))
 }
 
-func lineHeightOf(f *text.GoTextFace) float64 {
+// logicalLineH is a face's line height in logical pixels (glyph scale k):
+// ascent + descent + 2 px leading.
+func logicalLineH(f *text.GoTextFace, k float64) float64 {
 	m := f.Metrics()
-	return m.HAscent + m.HDescent + 2
+	if k == 1 {
+		return m.HAscent + m.HDescent + 2
+	}
+	return (m.HAscent+m.HDescent)/k + 2
 }
 
 // wrapPx breaks s into lines no wider than maxW, on spaces; a word wider
@@ -179,15 +215,4 @@ func ellipsize(s string, st textStyle, maxW float64) string {
 		}
 	}
 	return "…"
-}
-
-// setUIScale sets the Accessibility UI scale (percent) and drops cached faces.
-func setUIScale(pct int) {
-	fontMu.Lock()
-	defer fontMu.Unlock()
-	s := float64(max(90, min(130, pct))) / 100
-	if s != uiScale {
-		uiScale = s
-		fontFaces = map[faceKey]*text.GoTextFace{}
-	}
 }

@@ -25,9 +25,4 @@ func TestFontMeasureAndWrap(t *testing.T) {
 	if e := ellipsize("Gilded Expedition", tsBody, 50); e == "Gilded Expedition" || len(e) == 0 {
 		t.Fatalf("ellipsize = %q", e)
 	}
-	setUIScale(130)
-	if w2, _ := measure("Broken Hull", tsBody); w2 <= w {
-		t.Fatal("UI scale enlarges text")
-	}
-	setUIScale(100)
 }

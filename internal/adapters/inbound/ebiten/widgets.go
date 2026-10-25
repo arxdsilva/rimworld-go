@@ -4,7 +4,6 @@ import (
 	"image/color"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
 // UI chrome tokens. Hex values must match assets/palettes/ui.yaml.
@@ -93,11 +92,11 @@ func drawMenuBackdrop(dst *ebiten.Image, sw, sh int) {
 		c := lerpRGBA(uiSpace, uiHorizon, t*t)
 		c.A = uint8(28 + t*110)
 		y := float32(sh) * float32(i) / menuBackdropBands
-		vector.FillRect(dst, 0, y, float32(sw), h, c, false)
+		uiFillRect(dst, 0, y, float32(sw), h, c, false)
 	}
 	glow := uiDust
 	glow.A = 70
-	vector.FillCircle(dst, float32(sw)/2, float32(sh)*1.08, float32(sw)*0.52, glow, false)
+	uiFillCircle(dst, float32(sw)/2, float32(sh)*1.08, float32(sw)*0.52, glow, false)
 }
 
 func lerpRGBA(a, b color.RGBA, t float64) color.RGBA {
@@ -168,8 +167,8 @@ func stackButtons(x, y, w, h, gap float32, specs []buttonSpec) []button {
 }
 
 func drawPanel(dst *ebiten.Image, x, y, w, h float32) {
-	vector.FillRect(dst, x, y, w, h, uiPanel, false)
-	vector.StrokeRect(dst, x, y, w, h, 1, uiPanelBorder, false)
+	uiFillRect(dst, x, y, w, h, uiPanel, false)
+	uiStrokeRect(dst, x, y, w, h, 1, uiPanelBorder, false)
 }
 
 func drawButton(dst *ebiten.Image, b button, hover bool) {
@@ -182,12 +181,12 @@ func drawButton(dst *ebiten.Image, b button, hover bool) {
 	case hover:
 		fill = uiBtnHover
 	}
-	vector.FillRect(dst, b.x, b.y, b.w, b.h, fill, false)
+	uiFillRect(dst, b.x, b.y, b.w, b.h, fill, false)
 	border := uiBtnBorder
 	if b.selected {
 		border = uiAccent
 	}
-	vector.StrokeRect(dst, b.x, b.y, b.w, b.h, 1, border, false)
+	uiStrokeRect(dst, b.x, b.y, b.w, b.h, 1, border, false)
 	label := b.label
 	if b.disabled && label != "" && !b.quiet {
 		if w, _ := measure(label+"  (disabled)", tsBody); w <= float64(b.w)-16 {

@@ -2,7 +2,6 @@ package ebiten
 
 import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
 // Modal stack (NG-1 §1.4): dialogs over a modal_dim scrim. The top modal
@@ -116,7 +115,7 @@ func (a *App) uiRunModals() {
 		u.queue(func(dst *ebiten.Image) { fillRect(dst, winRect(sw, sh), uiModalDim) })
 		u.queue(func(dst *ebiten.Image) {
 			drawPanel(dst, frame.X, frame.Y, frame.W, frame.H)
-			vector.StrokeLine(dst, frame.X, titleR.bottom(), frame.right(), titleR.bottom(), 1, uiPanelBorder, false)
+			uiLine(dst, frame.X, titleR.bottom(), frame.right(), titleR.bottom(), 1, uiPanelBorder, false)
 			st := tsLarge
 			st.Color = uiHeading
 			drawText(dst, fitText(m.title, st, titleR.W-modalCloseW-3*modalPad), float64(titleR.X+modalPad), float64(titleR.Y)+(float64(titleR.H)-lineH(st))/2, st)

@@ -4,7 +4,6 @@ import (
 	"image/color"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
 const (
@@ -65,8 +64,8 @@ func (a *App) uiCheck(id string, r rect, label string, val *bool, o checkOpts) b
 			if o.Disabled {
 				c = uiTextDisabled
 			}
-			vector.StrokeLine(dst, box.X+3, box.Y+8, box.X+6.5, box.Y+12, 2, c, true)
-			vector.StrokeLine(dst, box.X+6, box.Y+12, box.X+13, box.Y+3.5, 2, c, true)
+			uiLine(dst, box.X+3, box.Y+8, box.X+6.5, box.Y+12, 2, c, true)
+			uiLine(dst, box.X+6, box.Y+12, box.X+13, box.Y+3.5, 2, c, true)
 		}
 		st := tsBody
 		st.Color = tc
@@ -152,14 +151,14 @@ func (a *App) uiRadio(id string, r rect, labels []string, sel *int, o radioOpts)
 			if u.hot == optID(id, i) && !dis {
 				border = uiAccent
 			}
-			vector.FillCircle(dst, cx, cy, radioRadius, uiField, true)
-			vector.StrokeCircle(dst, cx, cy, radioRadius, 1, border, true)
+			uiFillCircle(dst, cx, cy, radioRadius, uiField, true)
+			uiStrokeCircle(dst, cx, cy, radioRadius, 1, border, true)
 			if *sel == i {
 				c := uiAccent
 				if dis {
 					c = uiTextDisabled
 				}
-				vector.FillCircle(dst, cx, cy, radioRadius-3, c, true)
+				uiFillCircle(dst, cx, cy, radioRadius-3, c, true)
 			}
 			st := tsBody
 			if dis {

@@ -222,6 +222,10 @@ type Renderer struct {
 	// homeOverlay is the Home area overlay toggle; homeOverlayForced holds
 	// it on while a Home tool is in hand (SIM-021, home_draw.go, hud.go).
 	homeOverlay, homeOverlayForced bool
+	// planHidden hides the Plan overlay (visible by default); planForced
+	// holds it on while a Plan tool is in hand (PLAY-012, plan_draw.go).
+	planHidden, planForced bool
+	planDraw               planDrawState // the Plan overlay's cached geometry
 
 	gridClr   color.RGBA
 	pawnClr   color.RGBA

@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
 // Slider geometry (NG-1 §1.4): a 6 px track under a 14x18 knob. The
@@ -172,7 +171,7 @@ func drawSlider(dst *ebiten.Image, r, track rect, v float64, sp sliderSpec, hot 
 	n := len(sp.Stops)
 	for i, l := range sp.Stops {
 		x := track.X + track.W*float32(i)/float32(n-1)
-		vector.StrokeLine(dst, x, track.bottom()+1, x, track.bottom()+4, 1, uiPanelBorder, false)
+		uiLine(dst, x, track.bottom()+1, x, track.bottom()+4, 1, uiPanelBorder, false)
 		st := tsSmall
 		st.Color = uiTextDim
 		if math.Round(v) == float64(i) {

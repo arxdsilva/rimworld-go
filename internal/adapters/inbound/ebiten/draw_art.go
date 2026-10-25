@@ -281,6 +281,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	r.drawFloorLayers(screen, w, sw, sh, tile)
 	r.layer("zones")
 	r.drawZones(screen, w, sw, sh, tile) // zones_draw.go
+	r.drawPlanOverlay(screen, w, sw, sh, tile)
 	for _, f := range w.Frames {
 		r.drawSprite(screen, "overlay/blueprint", none, float64(f.X), float64(f.Y), tile, sw, sh)
 	}

@@ -9,12 +9,19 @@ import (
 // Ebitengine, and take() a mouse button they used so no later handler
 // acts on the same click.
 type inputFrame struct {
+	// raw is the devices as polled: raw.mx/my are physical pixels (the
+	// map reads them through App.mapCursor). ui is the same pointer in
+	// logical UI pixels (raw / s), read through App.currentCursor.
 	raw   rawInput
+	ui    uiPoint
 	keys  map[string]bool // keys pressed this frame
 	res   input.Result
 	stack []input.Context
 	taken [numMouse]bool
 }
+
+// uiPoint is a pointer position in logical UI pixels.
+type uiPoint struct{ mx, my int }
 
 func newFrame(raw rawInput) inputFrame {
 	f := inputFrame{raw: raw, keys: make(map[string]bool, len(raw.pressed))}
@@ -65,6 +72,7 @@ func (a *App) pollInput() {
 	raw := a.src.poll()
 	a.uiPreInput(&raw) // widget kit: held keys, Esc for a modal, Tab focus (ui_state.go)
 	a.in = newFrame(raw)
+	a.in.ui.mx, a.in.ui.my = a.toLogical(raw.mx, raw.my)
 	a.in.stack = a.contextStack()
 	a.in.res = input.Resolve(input.Frame{Pressed: raw.pressed, Held: raw.held, Mods: raw.mods}, a.bindings(), a.in.stack)
 	a.uiBegin() // widget kit: tooltips, modals, the screen's widgets (ui_state.go)

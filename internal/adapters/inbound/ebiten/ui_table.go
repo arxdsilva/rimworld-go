@@ -5,7 +5,6 @@ import (
 	"sort"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
 // Table (NG-1 §1.4): a header row with sortable columns above a list.
@@ -221,12 +220,5 @@ func drawCell(dst *ebiten.Image, cell rect, s string, al align, sts ...textStyle
 }
 
 func fillTri(dst *ebiten.Image, x0, y0, x1, y1, x2, y2 float32) {
-	var p vector.Path
-	p.MoveTo(x0, y0)
-	p.LineTo(x1, y1)
-	p.LineTo(x2, y2)
-	p.Close()
-	op := &vector.DrawPathOptions{AntiAlias: true}
-	op.ColorScale.ScaleWithColor(uiHeading)
-	vector.FillPath(dst, &p, nil, op)
+	uiFillPoly(dst, [][2]float32{{x0, y0}, {x1, y1}, {x2, y2}}, uiHeading, true)
 }

@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
 // Immediate-mode widget kit (NG-1 §1.4). A screen declares its widgets
@@ -323,8 +322,8 @@ func (a *App) uiButton(id string, r rect, label string, o btnOpts) bool {
 		if o.Disabled {
 			fill, border, text = uiBtnDisabled, uiBtnBorder, uiTextDisabled
 		}
-		vector.FillRect(dst, r.X, r.Y, r.W, r.H, fill, false)
-		vector.StrokeRect(dst, r.X, r.Y, r.W, r.H, 1, border, false)
+		uiFillRect(dst, r.X, r.Y, r.W, r.H, fill, false)
+		uiStrokeRect(dst, r.X, r.Y, r.W, r.H, 1, border, false)
 		st := tsLabel
 		st.Color, st.Align = text, alignCenter
 		cx, cy := r.center()
@@ -346,12 +345,12 @@ func (a *App) uiPanel(r rect) {
 
 // strokeRect outlines r with a 1 px line.
 func strokeRect(dst *ebiten.Image, r rect, c color.Color) {
-	vector.StrokeRect(dst, r.X, r.Y, r.W, r.H, 1, c, false)
+	uiStrokeRect(dst, r.X, r.Y, r.W, r.H, 1, c, false)
 }
 
 // fillRect fills r.
 func fillRect(dst *ebiten.Image, r rect, c color.Color) {
-	vector.FillRect(dst, r.X, r.Y, r.W, r.H, c, false)
+	uiFillRect(dst, r.X, r.Y, r.W, r.H, c, false)
 }
 
 func uiNum(n int) string { return strconv.Itoa(n) }

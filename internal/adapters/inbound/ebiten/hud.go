@@ -151,6 +151,7 @@ func (a *App) colonyButtons(sw, sh int) []button {
 	out = append(out, a.searchButtons(sw)...)
 	out = append(out, a.roofButtons(sw)...)
 	out = append(out, a.homeButtons(sw)...)
+	out = append(out, a.planButtons(sw)...)
 	out = append(out, a.roomsButtons(sw)...)
 	out = append(out, a.groupButtons()...)
 	out = append(out, a.hudTabButtons(sw, sh)...)
@@ -200,6 +201,7 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 	drawLabel(screen, sw-int(textW(time, tsBody))-hudPad, 10, time)
 	a.drawRoofButton(screen, sw)
 	a.drawHomeButton(screen, sw)
+	a.drawPlanButton(screen, sw)
 	a.drawRoomsButton(screen, sw)
 
 	drawPanel(screen, 0, hudBarY(sh), float32(sw), hudBarH)
@@ -334,7 +336,7 @@ func (a *App) drawHoverRoom(screen *ebiten.Image, sh int) {
 	} else {
 		lines = append(lines, "Temperature "+fmtTemp(t))
 	}
-	for _, lbl := range []string{roomLabelAt(w, tx, ty), homeLabelAt(w, tx, ty), roofLabelAt(w, tx, ty), plantLabelAt(w, tx, ty), grassLabelAt(w, tx, ty), fenceLabelAt(w, tx, ty), itemLabelAt(w, tx, ty)} {
+	for _, lbl := range []string{roomLabelAt(w, tx, ty), homeLabelAt(w, tx, ty), planLabelAt(w, tx, ty), roofLabelAt(w, tx, ty), plantLabelAt(w, tx, ty), grassLabelAt(w, tx, ty), fenceLabelAt(w, tx, ty), itemLabelAt(w, tx, ty)} {
 		if lbl != "" {
 			lines = append(lines, lbl)
 		}
@@ -532,6 +534,7 @@ func roofForced(archOpen bool, toolID string) bool { return archOpen && roofTool
 // forced flag) in step with the Architect.
 func (a *App) syncRoofForce() {
 	a.syncHomeForce()
+	a.syncPlanForce()
 	if a.renderer != nil {
 		a.renderer.roofOverlayForced = roofForced(a.archOpen, a.archTool)
 	}
@@ -630,6 +633,72 @@ func homeLabelAt(w game.WorldView, x, y int) string {
 	}
 	if i := y*w.TerrainW + x; i < len(w.Home) && w.Home[i] != 0 {
 		return "Home area"
+	}
+	return ""
+}
+
+// ---------------------------------------------------------- Plan overlay (PLAY-012)
+
+const (
+	planButtonID = "hud.plan"
+	planButtonW  = 48
+)
+
+// planToolID reports id is one of the two Plan Architect tools.
+func planToolID(id string) bool { return id == "plan" || id == "unplan" }
+
+// planForced is whether the Plan overlay must be forced on: a Plan tool is
+// in hand.
+func planForced(archOpen bool, toolID string) bool { return archOpen && planToolID(toolID) }
+
+// syncPlanForce keeps renderer.planForced in step with the Architect.
+func (a *App) syncPlanForce() {
+	if a.renderer != nil {
+		a.renderer.planForced = planForced(a.archOpen, a.archTool)
+	}
+}
+
+// planShown reports the Plan overlay is showing (default on, tool held).
+func (r *Renderer) planShown() bool { return r.planOverlayOn() }
+
+// togglePlanOverlayIfAny is the HUD Plans button action; it tolerates a nil
+// renderer (menus).
+func (r *Renderer) togglePlanOverlayIfAny() {
+	if r != nil {
+		r.planHidden = !r.planHidden
+	}
+}
+
+// planButtons is the HUD Plans toggle, immediately left of the Home button.
+func (a *App) planButtons(sw int) []button {
+	hb := a.homeButtons(sw)
+	if len(hb) == 0 {
+		return nil
+	}
+	return []button{{id: planButtonID, label: "Plans", x: hb[0].x - planButtonW - hudPad/2, y: 4, w: planButtonW, h: hudTopH - 8, selected: a.renderer.planShown()}}
+}
+
+func (a *App) drawPlanButton(screen *ebiten.Image, sw int) {
+	mx, my := a.currentCursor()
+	for _, b := range a.planButtons(sw) {
+		drawButton(screen, b, b.contains(mx, my))
+		if img := a.icon("plan"); img != nil {
+			vector.FillRect(screen, b.x+2, b.y+2, b.w-4, b.h-4, uiBtn, false)
+			if b.selected {
+				vector.FillRect(screen, b.x+2, b.y+2, b.w-4, b.h-4, uiBtnSelected, false)
+			}
+			drawIcon(screen, img, float64(b.x)+(float64(b.w)-float64(b.h)+4)/2, float64(b.y)+2, float64(b.h)-4)
+		}
+	}
+}
+
+// planLabelAt is "Planned" when the tile carries a plan mark.
+func planLabelAt(w game.WorldView, x, y int) string {
+	if w.TerrainW <= 0 || x < 0 || y < 0 || x >= w.TerrainW {
+		return ""
+	}
+	if i := y*w.TerrainW + x; i < len(w.Plan) && w.Plan[i] != 0 {
+		return "Planned"
 	}
 	return ""
 }

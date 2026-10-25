@@ -4,7 +4,6 @@ import (
 	"image/color"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 )
 
 const sparkPad = 3
@@ -40,12 +39,12 @@ func sparkPoints(vals []int, r rect) [][2]float32 {
 func drawSparkline(dst *ebiten.Image, r rect, vals []int, c color.Color) {
 	base := uiPanelBorder
 	base.A = 0x90
-	vector.StrokeLine(dst, r.X, r.bottom()-0.5, r.right(), r.bottom()-0.5, 1, base, false)
+	uiLine(dst, r.X, r.bottom()-0.5, r.right(), r.bottom()-0.5, 1, base, false)
 	pts := sparkPoints(vals, r)
 	for i := 1; i < len(pts); i++ {
-		vector.StrokeLine(dst, pts[i-1][0], pts[i-1][1], pts[i][0], pts[i][1], 1.5, c, true)
+		uiLine(dst, pts[i-1][0], pts[i-1][1], pts[i][0], pts[i][1], 1.5, c, true)
 	}
 	if n := len(pts); n > 0 {
-		vector.FillCircle(dst, pts[n-1][0], pts[n-1][1], 2.5, c, true)
+		uiFillCircle(dst, pts[n-1][0], pts[n-1][1], 2.5, c, true)
 	}
 }
