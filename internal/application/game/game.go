@@ -231,6 +231,10 @@ type ItemView struct {
 	Catch int
 	// Forbidden: colonists leave this stack alone (UI-016).
 	Forbidden bool
+	// Unclaimed: found on the map, so haulers leave it unless HaulMarked
+	// (PLAY-017, haul_claim.go).
+	Unclaimed  bool
+	HaulMarked bool
 }
 
 // FrameView is a construction blueprint.
@@ -339,6 +343,12 @@ type PlantView struct {
 	// DamageKind "cold", "heat" or "".
 	Damage     int
 	DamageKind string
+	// GrowState (PLAY-017) says why the plant is or isn't growing now:
+	// "growing", "resting" (night), "dark" (needs sun or a strong lamp),
+	// "cold", "hot" or "ripe"; RipeIn is the estimated ticks until ripe at
+	// the current conditions (-1 unknown or not growing).
+	GrowState string
+	RipeIn    int
 }
 
 // WorldView is the non-pawn read model for HUD and the map.
@@ -785,6 +795,9 @@ func (g *Game) SpawnStack(kind item.Kind, qty, x, y int) (entity.EntityID, error
 	id := g.entities.Next()
 	g.itemIDs = append(g.itemIDs, id)
 	g.stacks.Set(id, item.Stack{Kind: kind, Qty: qty, X: x, Y: y})
+	if kind.IsApparel() {
+		g.noteApparel(id) // apparel.go: the free-clothes index
+	}
 	return id, nil
 }
 
@@ -1058,6 +1071,7 @@ func (g *Game) world() WorldView {
 			FreshDays: freshDays(st), Rotten: st.Rotten(), Dried: st.Dried,
 			RotRate: item.RotRate(int(g.temperatureAt(st.X, st.Y))),
 			Catch:   filth.Catch(st.Kind) / 10, Forbidden: st.Forbidden,
+			Unclaimed: st.Unclaimed, HaulMarked: st.HaulMarked,
 		})
 		g.fillCorpseView(&w.Items[len(w.Items)-1], st) // burial.go
 		if st.Carrier == 0 {

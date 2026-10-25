@@ -28,7 +28,9 @@ type AnimalView struct {
 	Mode       string
 	Designated bool
 	Hostile    bool // attacking a colonist
-	StepTicks  int  // duration of the current step in ticks (for lerp)
+	// TargetID is who a hostile animal is chasing (0 = none, PLAY-017).
+	TargetID  entity.EntityID
+	StepTicks int // duration of the current step in ticks (for lerp)
 	// Tame animals belong to the colony and have a Name; TameMark: marked
 	// for taming; Manhunter: enraged, hunting colonists.
 	Tame      bool
@@ -777,6 +779,7 @@ func (g *Game) animalViews() []AnimalView {
 			Mode:       a.Mode.String(),
 			Designated: a.Designated,
 			Hostile:    g.hostile(a) || a.Enraged(uint64(g.clock.Now())),
+			TargetID:   g.chaseTarget(a),
 			Tame:       a.Tame,
 			Name:       a.Name,
 			TameMark:   a.TameMark,

@@ -828,31 +828,6 @@ func (r *Renderer) pawnLayers(l pawnLook, f facing, apparel ...string) []struct 
 	return out
 }
 
-// drawPawnPortrait draws the layered pawn (facing south) fitted into a
-// w x h box for HUD chrome.
-func (r *Renderer) drawPawnPortraitArt(screen *ebiten.Image, p game.PawnView, x, y, w, h float64) bool {
-	body := r.art.sprite("pawn/body_south")
-	if body == nil {
-		return false
-	}
-	cw, ch := float64(body.meta.Canvas[0]), float64(body.meta.Canvas[1])
-	s := math.Min(w/cw, h/ch)
-	ox := x + (w-cw*s)/2
-	oy := y + (h-ch*s)/2
-	for _, ly := range r.pawnPortraitLayers(p) {
-		img := r.art.image(ly.key, ly.tint)
-		if img == nil {
-			continue
-		}
-		op := &ebiten.DrawImageOptions{}
-		op.GeoM.Scale(s, s)
-		op.GeoM.Translate(ox, oy)
-		op.Filter = ebiten.FilterLinear
-		screen.DrawImage(img, op)
-	}
-	return true
-}
-
 // pawnPortraitLayers is p's south-facing portrait, bottom first: its
 // figure layers with a disfigured pawn's face scar over the hair (under a
 // hat), or on the face when it has no hair layer; no scar without the art.

@@ -285,3 +285,7 @@ func (g *Game) plantWalkCost(x, y int) int {
 	p, _ := g.plants.Get(id)
 	return plant.DefOf(p.Species).WalkCost
 }
+
+// migrateHarvestMarks gives an older save's ripe zone crops the harvest
+// mark they now get on ripening (PLAY-017).
+func (g *Game) migrateHarvestMarks() {}

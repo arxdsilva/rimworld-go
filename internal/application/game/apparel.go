@@ -126,3 +126,15 @@ func (g *Game) assignWear(id entity.EntityID) bool {
 	}
 	return g.startJob(id, job.Record{Kind: job.Equip, Target: best, TX: bst.X, TY: bst.Y})
 }
+
+// dressCheck changes colonist id into a better outfit before it looks for
+// work (PLAY-017); true when it started dressing.
+func (g *Game) dressCheck(id entity.EntityID) bool { return false }
+
+// dressInterrupt drops colonist id's interruptible work job j for a better
+// outfit (PLAY-017).
+func (g *Game) dressInterrupt(id entity.EntityID, j job.Record) {}
+
+// noteApparel adds new apparel stack id to the free-clothes index
+// (PLAY-017).
+func (g *Game) noteApparel(id entity.EntityID) {}

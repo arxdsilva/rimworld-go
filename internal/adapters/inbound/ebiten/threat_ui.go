@@ -35,6 +35,7 @@ func (r *Renderer) watchThreats(w game.WorldView) {
 	if r.pauseOnThreat && r.speed != speedPaused {
 		r.speed = speedPaused
 		r.threatPaused = true
+		r.onThreatPause(w, newest) // chase_ui.go: show the player the chase
 	}
 }
 

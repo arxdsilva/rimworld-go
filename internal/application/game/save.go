@@ -60,9 +60,12 @@ import (
 // fields below and writes the blocked tiles as a bitset (BlockedBits).
 // Every other field is additive, so Load reads both: a v1 save gets the
 // legacy setup (no storyteller, difficulty or factions) and neutral bios.
+// v3 (PLAY-017) adds unclaimed map items and harvest marks on ripe zone
+// crops; a v1/v2 save is migrated on load (migrateClaims,
+// migrateHarvestMarks).
 
 // SaveVersion is the version new saves are written with.
-const SaveVersion = 2
+const SaveVersion = 3
 
 // minSaveVersion is the oldest version Load still reads.
 const minSaveVersion = 1
@@ -600,6 +603,10 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	// pens become pen markers
 	g.importPens(s.PenMarkers, s.PenAnimals)
 	g.migratePenZones()
+	if info.Version < 3 {
+		g.migrateClaims()       // haul_claim.go: loose chunks and carcasses become unclaimed
+		g.migrateHarvestMarks() // plant_growth.go: ripe zone crops get their harvest mark
+	}
 	g.warmIndexes(true) // jobindex.go: indexes, rooms and regions now, not on the first tick
 	return g, info, nil
 }

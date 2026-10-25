@@ -212,10 +212,14 @@ func (g *Game) hurtAs(target entity.EntityID, dmg int, by entity.EntityID, kind 
 	if a, ok := g.animals.Get(target); ok {
 		a.Injury += dmg
 		a.Attacker = by
+		was := g.chaseTarget(a)
 		g.wakeDormant(&a) // vault.go: a hurt vault sleeper wakes
 		g.provoked(target, &a, by)
 		g.animalHurt(target, &a, by, now) // animal_needs.go: wakes it, then it fights back or runs
 		g.animals.Set(target, a)
+		if t := g.chaseTarget(a); t != 0 && t != was && !a.Dead() {
+			g.noteChase(target, t) // chase.go: it turned on a colonist
+		}
 		if a.Dead() {
 			g.killAnimal(target, by)
 		}

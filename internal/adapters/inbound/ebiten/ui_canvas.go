@@ -23,6 +23,11 @@ import (
 // physical pixels (unit tests cannot read GPU pixels back).
 var canvasTrace func(kind string, x, y, w, h float32)
 
+// tracePass is the draw pass running now: "world" while the renderer
+// draws the map (camera-positioned, physical pixels), "hud" otherwise
+// (App.Draw sets it; the visual tests read it, PLAY-017).
+var tracePass = "hud"
+
 // uiFillRect is vector.FillRect in logical pixels.
 func uiFillRect(dst *ebiten.Image, x, y, w, h float32, clr color.Color, aa bool) {
 	s := float32(uiScale())
@@ -93,7 +98,42 @@ func uiDrawImage(dst, img *ebiten.Image, op *ebiten.DrawImageOptions) {
 	}
 	o := *op
 	uiImageOp(&o)
+	if canvasTrace != nil {
+		traceImage(img, o.GeoM)
+	}
 	dst.DrawImage(img, &o)
+}
+
+// traceImage reports the physical bounding box of img drawn through m.
+func traceImage(img *ebiten.Image, m ebiten.GeoM) {
+	b := img.Bounds()
+	x0, y0 := m.Apply(0, 0)
+	x1, y1 := m.Apply(float64(b.Dx()), float64(b.Dy()))
+	canvasTrace("image", float32(min(x0, x1)), float32(min(y0, y1)), float32(abs64(x1-x0)), float32(abs64(y1-y0)))
+}
+
+func abs64(v float64) float64 {
+	if v < 0 {
+		return -v
+	}
+	return v
+}
+
+// worldText draws s at a world-pass position (physical pixels, e.g. from
+// worldToScreen) with st scaled with the UI like any label: drawText takes
+// logical pixels, so the position is divided by the UI scale once here.
+// Every world-anchored label goes through this (or worldIcon), never
+// drawText with physical coordinates (PLAY-017; TestUIDrawsThroughCanvas).
+func worldText(dst *ebiten.Image, s string, physX, physY float64, st textStyle) {
+	k := 1 / uiScale()
+	drawText(dst, s, physX*k, physY*k, st)
+}
+
+// worldIcon is drawIcon at a world-pass position (physical pixels); size
+// stays logical, so the icon grows with the UI scale like the HUD's.
+func worldIcon(dst, img *ebiten.Image, physX, physY, size float64) {
+	k := 1 / uiScale()
+	drawIcon(dst, img, physX*k, physY*k, size)
 }
 
 // uiImage draws img stretched into the logical rectangle (x, y, w, h).

@@ -513,6 +513,7 @@ func (g *Game) phaseAI() {
 				g.assignSleep(id)
 				continue
 			}
+			g.dressInterrupt(id, j) // apparel.go: drop work for a better outfit
 			continue
 		}
 
@@ -534,6 +535,9 @@ func (g *Game) phaseAI() {
 				continue
 			}
 			g.keepIdling(id, idling) // recreation: free time
+			continue
+		}
+		if g.dressCheck(id) { // apparel.go: change into a better outfit before work
 			continue
 		}
 		if g.assignWorkByPriority(id) {

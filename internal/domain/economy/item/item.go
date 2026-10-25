@@ -292,6 +292,12 @@ type Stack struct {
 	// Forbidden stacks are left alone by colonists' autonomous work
 	// (hauling, eating, building, crafting) until allowed (UI-016).
 	Forbidden bool
+	// Unclaimed stacks were found on the map, not made or brought by the
+	// colony (ruin loot, stone chunks, a predator's kill): haulers leave
+	// them where they lie unless HaulMarked. Picking one up or storing it
+	// claims it (PLAY-017).
+	Unclaimed  bool
+	HaulMarked bool
 }
 
 // Shelf is how many full-speed rot ticks the stack keeps (0 = forever).
@@ -345,7 +351,7 @@ func DryRate(tenthsC int) int {
 func CanMerge(a, b Stack) bool {
 	return a.Kind == b.Kind && a.Carrier == 0 && b.Carrier == 0 && a.X == b.X && a.Y == b.Y &&
 		a.Rotten() == b.Rotten() && a.Dried == b.Dried && a.Of == b.Of && a.Animal == b.Animal && a.Tame == b.Tame &&
-		a.Forbidden == b.Forbidden
+		a.Forbidden == b.Forbidden && a.Unclaimed == b.Unclaimed && a.HaulMarked == b.HaulMarked
 }
 
 // ConvertLegacy turns a save's former dustbuck or ridgewolf corpse into a

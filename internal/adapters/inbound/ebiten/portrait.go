@@ -3,9 +3,11 @@ package ebiten
 import (
 	"image"
 	"image/color"
+	"math"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/pawn/look"
 )
 
@@ -133,4 +135,31 @@ func drawPortrait(dst *ebiten.Image, art *artCatalog, l look.Look, scarred bool,
 		drew = true
 	}
 	return drew
+}
+
+// drawPawnPortraitArt draws the layered pawn (facing south) fitted into
+// the logical w x h box at (x, y), for HUD chrome (the colonist bar, the
+// inspector); it draws through the UI canvas, so the art scales with the
+// UI like the names beside it (PLAY-017).
+func (r *Renderer) drawPawnPortraitArt(screen *ebiten.Image, p game.PawnView, x, y, w, h float64) bool {
+	body := r.art.sprite("pawn/body_south")
+	if body == nil {
+		return false
+	}
+	cw, ch := float64(body.meta.Canvas[0]), float64(body.meta.Canvas[1])
+	s := math.Min(w/cw, h/ch)
+	ox := x + (w-cw*s)/2
+	oy := y + (h-ch*s)/2
+	for _, ly := range r.pawnPortraitLayers(p) {
+		img := r.art.image(ly.key, ly.tint)
+		if img == nil {
+			continue
+		}
+		op := &ebiten.DrawImageOptions{}
+		op.GeoM.Scale(s, s)
+		op.GeoM.Translate(ox, oy)
+		op.Filter = ebiten.FilterLinear
+		uiDrawImage(screen, img, op)
+	}
+	return true
 }

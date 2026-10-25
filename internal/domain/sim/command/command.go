@@ -156,6 +156,11 @@ const (
 	// SetAnimalFollow sets whether trained animal Target follows its
 	// drafted master (Enabled).
 	SetAnimalFollow
+	// DesignateHaul marks (Enabled) or unmarks every unclaimed stack in
+	// X..X2, Y..Y2 for hauling; SetHaulMark does it for stack Target
+	// (PLAY-017).
+	DesignateHaul
+	SetHaulMark
 )
 
 // Area references for AssignArea's Index (PLAY-015): any other value is an

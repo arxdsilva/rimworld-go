@@ -134,6 +134,23 @@ func (g *Game) doSow(id entity.EntityID, j job.Record) {
 	g.jobs.Set(id, j)
 }
 
+// markRipeHarvest gives plant id its harvest mark when it is ripe on a
+// growing-zone cell (PLAY-017): zone crops are harvested through the
+// mark, so the overlay shows and "Cancel harvest" holds until the next
+// ripening.
+func (g *Game) markRipeHarvest(id entity.EntityID) {
+	p, ok := g.plants.Get(id)
+	if !ok || p.Designated || !p.Harvestable() {
+		return
+	}
+	if _, in := g.zoneAt(p.X, p.Y); !in {
+		return
+	}
+	p.Designated = true
+	g.plants.Set(id, p)
+	g.notePlantMark(id) // jobindex.go
+}
+
 // wantsHarvest: ripe food plants that are designated or zone crops.
 func wantsHarvest(p plant.Plant) bool {
 	return p.Harvestable() && (p.Designated || p.Zone)
