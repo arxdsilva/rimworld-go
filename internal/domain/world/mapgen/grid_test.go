@@ -1,6 +1,9 @@
 package mapgen
 
-import "testing"
+import (
+	"math"
+	"testing"
+)
 
 func mask(rows ...string) (int, int, []bool) {
 	w, h := len(rows[0]), len(rows)
@@ -88,6 +91,10 @@ func TestQuantileAndRank(t *testing.T) {
 	one := []float32{7}
 	if RankNormalise(one); one[0] != 0 {
 		t.Fatal("single value ranks 0")
+	}
+	neg := []float32{0.5, -1, float32(math.Copysign(0, -1)), 0, -3}
+	if RankNormalise(neg); neg[4] != 0 || neg[1] != 0.25 || neg[2] != 0.5 || neg[3] != 0.75 || neg[0] != 1 {
+		t.Fatalf("negatives and signed zero %v", neg)
 	}
 	ties := []float32{2, 2, 2}
 	if RankNormalise(ties); ties[0] != 0 || ties[2] != 1 {

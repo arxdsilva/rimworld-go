@@ -1,6 +1,9 @@
 package mapgen
 
-import "slices"
+import (
+	"math"
+	"slices"
+)
 
 // Shared grid helpers for the steps (lead-owned). Grids are row-major w×h.
 
@@ -129,7 +132,9 @@ func Quantile(vals []float32, q float64) float32 {
 }
 
 // RankNormalise replaces every value by its rank share in [0, 1] (ties
-// broken by index), so a threshold t keeps exactly a share 1-t above it.
+// broken by index, -0 equal to 0), so a threshold t keeps exactly a share
+// 1-t above it. It sorts packed (order-preserving bits, index) keys: much
+// faster than a comparator sort on big maps.
 func RankNormalise(vals []float32) {
 	n := len(vals)
 	if n < 2 {
@@ -138,21 +143,22 @@ func RankNormalise(vals []float32) {
 		}
 		return
 	}
-	idx := make([]int32, n)
-	for i := range idx {
-		idx[i] = int32(i)
-	}
-	slices.SortStableFunc(idx, func(a, b int32) int {
-		switch {
-		case vals[a] < vals[b]:
-			return -1
-		case vals[a] > vals[b]:
-			return 1
+	keys := make([]uint64, n)
+	for i, v := range vals {
+		b := math.Float32bits(v)
+		if v == 0 {
+			b = 0
 		}
-		return 0
-	})
-	for r, i := range idx {
-		vals[i] = float32(r) / float32(n-1)
+		if b&(1<<31) != 0 { // negatives below positives
+			b = ^b
+		} else {
+			b |= 1 << 31
+		}
+		keys[i] = uint64(b)<<32 | uint64(i)
+	}
+	slices.Sort(keys)
+	for r, k := range keys {
+		vals[uint32(k)] = float32(r) / float32(n-1)
 	}
 }
 
