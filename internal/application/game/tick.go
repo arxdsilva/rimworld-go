@@ -1403,10 +1403,11 @@ func (g *Game) doHarvest(id entity.EntityID, j job.Record) {
 		pos, _ := g.positions.Get(id)
 		g.message(pos.X, pos.Y, "%s fumbled the harvest.", g.name(id))
 	} else {
-		g.dropStack(d.Yields, g.skillYield(id, skPlants, g.diffYield(DiffCrop, d.Yield)), p.X, p.Y)
+		// a frost- or heat-damaged plant yields (100 - Damage)% (PLAY-016)
+		g.dropStack(d.Yields, p.DamagedYield(g.skillYield(id, skPlants, g.diffYield(DiffCrop, d.Yield))), p.X, p.Y)
 	}
-	if d.ExtraQty > 0 {
-		g.dropStack(d.Extra, d.ExtraQty, p.X, p.Y) // a by-product: straw with wheat
+	if n := p.DamagedYield(d.ExtraQty); n > 0 {
+		g.dropStack(d.Extra, n, p.X, p.Y) // a by-product: straw with wheat
 	}
 	if d.Regrows {
 		p.Growth = d.GrowTicks * d.RegrowTo / 100

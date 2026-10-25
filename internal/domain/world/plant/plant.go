@@ -73,13 +73,13 @@ type Def struct {
 	SowWork int    // ticks to sow one cell
 	Label   string // player-facing produce name
 	// FrostKill is the air temperature (tenths of a degree C) below which a
-	// crop dies. Tender summer crops die at the first frost; hardy ones
-	// shrug off a few degrees. Only crops die of frost: wild trees and bushes
-	// go dormant.
+	// crop takes frost damage, dying within hours (damage.go). Tender
+	// summer crops suffer at the first frost; hardy ones shrug off a few
+	// degrees. Only crops die of frost: wild trees and bushes go dormant.
 	FrostKill int
-	// ColdKill and HeatKill (tenths of a degree C, 0 = never) kill a wild
-	// biome plant out of its climate; the original tree and bush only go
-	// dormant.
+	// ColdKill and HeatKill (tenths of a degree C, 0 = never) damage a
+	// wild biome plant out of its climate until it dies (damage.go); the
+	// original tree and bush only go dormant.
 	ColdKill, HeatKill int
 	// Browse: grazing animals eat it down (bushes, shrubs, reeds). Trunk:
 	// a woody plant, chopped for wood and gnawed by tree-eating animals.
@@ -216,15 +216,16 @@ func TempFactor(tenthsC int) int {
 	}
 }
 
-// Frostbitten reports whether a crop of species s dies at air temperature
-// tenthsC.
+// Frostbitten reports whether a crop of species s is past its frost
+// limit at air temperature tenthsC: it takes cold damage (Expose).
 func Frostbitten(s Species, tenthsC int) bool {
 	d := DefOf(s)
 	return d.Crop && tenthsC < d.FrostKill
 }
 
-// Killed reports whether a wild biome plant of species s dies at air
-// temperature tenthsC (crops use Frostbitten).
+// Killed reports whether a wild biome plant of species s is out of its
+// climate at air temperature tenthsC: it takes cold or heat damage
+// (Expose; crops use Frostbitten).
 func Killed(s Species, tenthsC int) bool {
 	d := DefOf(s)
 	return d.ColdKill != 0 && tenthsC < d.ColdKill || d.HeatKill != 0 && tenthsC > d.HeatKill
@@ -297,9 +298,12 @@ type Plant struct {
 	// below WitherStopLight (hysteresis).
 	Withering bool
 	// Damage (PLAY-016) is cold or heat damage, 0..100: the plant dies at
-	// 100. DamageHeat tells heat from cold (presentation).
+	// 100. DamageHeat tells heat from cold (presentation). Damaging: the
+	// air is hurting it now; it stops only DamageStopMargin back on the
+	// safe side (hysteresis, damage.go).
 	Damage     uint8
 	DamageHeat bool
+	Damaging   bool
 }
 
 // Wild is the historical name for Plant.

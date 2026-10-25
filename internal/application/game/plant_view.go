@@ -48,6 +48,7 @@ func (g *Game) plantViews(out []PlantView) []PlantView {
 				Species: p.Species.String(), Growth: p.Percent(), Stage: p.Stage(), Cut: p.Cut,
 			}
 			fillPlantLight(&pv, p) // plant_light.go (MAPGEN-3)
+			fillPlantDamage(&pv, p)
 		}
 		g.fillPlantWeather(&pv, p) // weather.go
 		if z, ok := g.zoneAt(p.X, p.Y); ok {
@@ -62,4 +63,17 @@ func (g *Game) plantViews(out []PlantView) []PlantView {
 		m.spare, m.src, m.views = m.src, src, out
 	}
 	return out
+}
+
+// fillPlantDamage sets PlantView.Damage and DamageKind (PLAY-016): cold or
+// heat damage, "" while unhurt.
+func fillPlantDamage(pv *PlantView, p plant.Plant) {
+	pv.Damage = int(p.Damage)
+	switch {
+	case p.Damage == 0:
+	case p.DamageHeat:
+		pv.DamageKind = "heat"
+	default:
+		pv.DamageKind = "cold"
+	}
 }

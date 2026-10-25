@@ -7,6 +7,7 @@ import (
 
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/temperature"
@@ -220,7 +221,7 @@ func TestBiomePlantsDieOutOfClimate(t *testing.T) {
 	}
 	jumpTo(g, 45, 5) // midwinter night
 	g.SetWeather(weather.Clear, 0)
-	g.frostCrops()
+	frostFor(g, 2*clock.TicksPerHour) // PLAY-016: out of its climate it dies over hours
 	if _, ok := g.plants.Get(jungle); ok {
 		t.Fatal("a jungle tree should die in a temperate winter")
 	}
@@ -235,7 +236,7 @@ func TestBiomePlantsDieOutOfClimate(t *testing.T) {
 	cactus, _ := d.spawnPlant(plant.Cactus, 5, 3, 1000)
 	jumpTo(d, 15, 15) // the hottest afternoon
 	d.SetWeather(weather.Clear, 0)
-	d.frostCrops()
+	frostFor(d, 2*clock.TicksPerHour)
 	if _, ok := d.plants.Get(pine); ok {
 		t.Fatal("a pine should die in a desert summer")
 	}
@@ -246,7 +247,7 @@ func TestBiomePlantsDieOutOfClimate(t *testing.T) {
 	shrub, _ := tu.spawnPlant(plant.Shrub, 3, 3, 1000)
 	jumpTo(tu, 45, 5)
 	tu.SetWeather(weather.Blizzard, 1)
-	tu.frostCrops()
+	frostFor(tu, 2*clock.TicksPerHour)
 	if _, ok := tu.plants.Get(shrub); !ok {
 		t.Fatal("a tundra shrub survives the tundra winter")
 	}

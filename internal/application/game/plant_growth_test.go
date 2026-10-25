@@ -10,14 +10,16 @@ import (
 
 // TestFrostNoticesMergeWithinAnInterval: kills of one species in one
 // climate interval read as one notice whose count adds up, whichever
-// passes (staggered chunks) they came from.
+// passes (staggered chunks) they came from. The corn is left one window
+// from dying (PLAY-016: frost kills over hours).
 func TestFrostNoticesMergeWithinAnInterval(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 40, Height: 16})
 	bareGround(g)
 	jumpTo(g, 45, 5) // midwinter night
 	g.SetWeather(weather.Clear, 0)
 	for x := 2; x < 4; x++ {
-		_, _ = g.spawnPlant(plant.Corn, x, 3, 100)
+		id, _ := g.spawnPlant(plant.Corn, x, 3, 100)
+		nearDeath(g, id)
 	}
 	g.frostCrops()
 	n := len(g.messages)
@@ -25,14 +27,16 @@ func TestFrostNoticesMergeWithinAnInterval(t *testing.T) {
 		t.Fatalf("first pass: %q", m)
 	}
 	for x := 20; x < 23; x++ { // another chunk, the same interval
-		_, _ = g.spawnPlant(plant.Corn, x, 3, 100)
+		id, _ := g.spawnPlant(plant.Corn, x, 3, 100)
+		nearDeath(g, id)
 	}
 	g.frostCrops()
 	if len(g.messages) != n || g.messages[n-1].Text != "Frost killed the corn (5 plants)" {
 		t.Fatalf("second pass: %d messages, last %q", len(g.messages), g.messages[len(g.messages)-1].Text)
 	}
 	g.clock.Advance(climateInterval) // the next interval gets its own notice
-	_, _ = g.spawnPlant(plant.Corn, 30, 3, 100)
+	id, _ := g.spawnPlant(plant.Corn, 30, 3, 100)
+	nearDeath(g, id)
 	g.frostCrops()
 	if len(g.messages) != n+1 || g.messages[n].Text != "Frost killed a corn plant" {
 		t.Fatalf("next interval: %d messages, last %q", len(g.messages), g.messages[len(g.messages)-1].Text)
