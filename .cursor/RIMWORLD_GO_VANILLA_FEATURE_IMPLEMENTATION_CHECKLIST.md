@@ -587,6 +587,7 @@ This is the heart of autonomous colony behavior.
     -   Opening delay.
     -   faction/permission interaction.
     -   affect pathing and room boundaries.
+-   [x] **Bridges** (MAPGEN-3: research-gated wooden foundation layer over water, marsh or mud, never the open sea; walkable at full speed, holds light things (wooden walls, doors, fences, furniture) but not stone/steel walls or floors; a destroyed bridge breaks what it held and sinks items on deep water; generated road bridges)
 -   [-] **Floors** (buildable/deconstructable separate layer; SIM-028: may go under any furniture, not on rock, walls, fences/gates or dug graves; no movement/beauty/cleanliness stats)
     -   Construct/remove.
     -   movement, beauty, cleanliness, flammability attributes.
@@ -1132,9 +1133,9 @@ treatment, and surgery are major colony-management systems.
 ## 12.4 Lighting
 
 -   [-] **Day/night light** (outdoor level is a pure function of tick; indoor/roofed and artificial lights not yet) (ART-010, SIM-018: sun/moon, indoor and lamp light; no light gameplay effects)
--   [-] **Roof/indoor darkness** (ART-010, SIM-018: indoor ambient under roofs; no light-level gameplay effects)
+-   [-] **Roof/indoor darkness** (ART-010, SIM-018: indoor ambient under roofs; MAPGEN-3: roofed cells are dark to plants unless lit; no work/mood effects)
 -   [x] **Artificial lights**
--   [ ] **Light affects plants**
+-   [-] **Light affects plants** (MAPGEN-3: simulation cell light from daylight, lamps, campfires and glowing plants; moss needs light, duskmoss grows in the dark and withers in light; crops and trees have no light rule yet)
 -   [-] **Light can affect work/mood/accuracy where appropriate**
 
 ## 12.5 Fire
@@ -1773,10 +1774,10 @@ SIM-023: all twelve exist as `world/biome` data. NG-1 now classifies them on the
 -   [x] **Terrain from biome/topology** (MAPGEN-2 SIM-050: staged field generator; warped elevation/fertility/wetness fields, terrain by precedence, data-driven biome patches, patch cleanup; legacy generator frozen for old maps)
 -   [x] **Rock/mountain mass** (MAPGEN-2 SIM-050: rock share by hilliness quantile, coherent mountains with irregular edges and component cleanup, broad stone regions, thin and thick natural roofs (thick: permanent, no drop pods), caves only in large rock bodies)
 -   [x] **Ore/resource deposits** (SIM-029; MAPGEN-2: compact irregular lumps deep in rock with spaced origins; stone debris in small formations near cliffs)
--   [x] **Water** (NG-1 SIM-033; MAPGEN-2: ragged coasts with depth bands and beaches, meandering rivers with varying width, banks, fertile floodplains, canyons and fords, lakes, wetness field; roads A*-routed and smoothed; no bridges or fishing)
--   [x] **Wild vegetation** (MAPGEN-2: groves and clearings, local saturation, species clusters and balance, spacing, varied growth; trees, berry bushes and seven new ground plants (SIM-038); grass is simulated ground cover removed by building, sowing and Cut plants (UI-011) and regrows from shoots over three days after grazing or cutting)
+-   [x] **Water** (NG-1 SIM-033; MAPGEN-2: ragged coasts with depth bands and beaches, meandering rivers with varying width, banks, fertile floodplains, canyons and fords, lakes, wetness field; roads A*-routed and smoothed; MAPGEN-3: roads cross rivers on straight wooden bridges and are re-routed if a repair breaks them; no fishing)
+-   [x] **Wild vegetation** (MAPGEN-3: duskmoss clusters on dark cave floor, moss at lit cave mouths; MAPGEN-2: groves and clearings, local saturation, species clusters and balance, spacing, varied growth; trees, berry bushes and seven new ground plants (SIM-038); grass is simulated ground cover removed by building, sowing and Cut plants (UI-011) and regrows from shoots over three days after grazing or cutting)
 -   [x] **Wildlife** (SIM-023/025: per-biome density, species weights, sex and age at spawn, carrying capacity; MAPGEN-2: herds start in reachable habitat away from the colony, arrivals walk in from a reachable edge)
--   [-] **Ancient ruins/debris** (MAPGEN-2: small surface ruins (broken wall runs, roofless sheds with old floors, loot, rubble), stone debris, steam vents; no sealed ancient rooms or their threats)
+-   [x] **Ancient ruins/debris** (MAPGEN-2: small surface ruins, stone debris, steam vents; MAPGEN-3: sealed vaults cut into rock with intact walls, a tiled floor, loot, dormant hive defenders scaled by threat (none when peaceful), a one-time "Ominous walls" warning, and grouped sleeper caskets whose occupants may join, attack, or be empty)
 -   [x] **Starting clear/landing area** (MAPGEN-2: the landing spot is scored (open land, fertility, stone, roads, centre) and repaired locally, ≥ 70% of land reachable; drop pods land on dry ground; fog of war hides what is not reachable from it)
 
 ## 22.5 Faction settlements
