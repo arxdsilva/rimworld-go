@@ -34,3 +34,6 @@ func (a *App) toggleWildlifeTab() {}
 
 // mainWindowUI declares the open window's widget-kit parts (stub).
 func (a *App) mainWindowUI(sw, sh int) {}
+
+// windowState is this region's presentation state (App.hst).
+type windowState struct{}

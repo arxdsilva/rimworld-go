@@ -39,3 +39,6 @@ func (a *App) rightClickRightColumn(mx, my int) bool { return false }
 
 // rightColumnUI declares the column's widget-kit parts (stub).
 func (a *App) rightColumnUI(sw, sh int) {}
+
+// rightState is this region's presentation state (App.hst).
+type rightState struct{}

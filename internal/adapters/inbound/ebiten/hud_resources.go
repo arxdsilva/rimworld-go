@@ -33,3 +33,6 @@ func (a *App) rightClickResources(mx, my int) bool { return false }
 
 // resourcesUI declares the list's widget-kit parts (stub).
 func (a *App) resourcesUI(sw, sh int) {}
+
+// resourcesState is this region's presentation state (App.hst).
+type resourcesState struct{}

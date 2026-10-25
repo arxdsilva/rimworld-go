@@ -99,6 +99,9 @@ type AppConfig struct {
 // App is the ebiten.Game shell: screen routing, widgets, and (once
 // started) the colony renderer. Menus do not own or step a simulation.
 type App struct {
+	// hst is the colony HUD regions' own state (PLAY-018, hud.go): each
+	// region's owner keeps its fields in its own struct type.
+	hst hudStates
 	// fps is the dev frame-rate probe (fps_probe.go).
 	fps fpsProbeState
 	// alerts memoises currentAlerts per update (alerts.go).

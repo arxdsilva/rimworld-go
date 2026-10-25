@@ -134,3 +134,6 @@ func (a *App) drawPawnPortrait(screen *ebiten.Image, p game.PawnView, x, y, w, h
 		a.renderer.drawPawnPortraitArt(screen, p, x, y, w, h)
 	}
 }
+
+// barState is this region's presentation state (App.hst).
+type barState struct{}

@@ -20,6 +20,20 @@ import (
 //	hud_window.go      main-tab windows                        (WINDOWS)
 //	learn_ui.go        the learning helper                     (LEARN)
 
+// hudStates is the HUD regions' presentation state, one struct per owner,
+// each declared in its owner's file (App.hst).
+type hudStates struct {
+	res    resourcesState // hud_resources.go
+	bar    barState       // hud_colonistbar.go
+	right  rightState     // hud_right.go
+	global globalState    // hud_global.go
+	pane   paneState      // hud_inspect.go
+	cmds   cmdsState      // hud_commands.go
+	win    windowState    // hud_window.go
+	learn  learnState     // learn_ui.go
+	arch   archState      // cmds_arch.go
+}
+
 // Legacy chrome sizes, kept while regions still draw the old way; deleted
 // once the last caller is gone.
 const (

@@ -137,3 +137,6 @@ func (a *App) paneUI(sw, sh int) {}
 func (a *App) groupPane() paneSpec { return paneSpec{} }
 
 var _ = entity.EntityID(0)
+
+// paneState is this region's presentation state (App.hst).
+type paneState struct{}

@@ -309,3 +309,6 @@ func planLabelAt(w game.WorldView, x, y int) string {
 	}
 	return ""
 }
+
+// globalState is this region's presentation state (App.hst).
+type globalState struct{}

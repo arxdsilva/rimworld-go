@@ -19,3 +19,6 @@ func (a *App) archChrome() []rect {
 	r := a.architectRect()
 	return []rect{{r.x, r.y, r.w, r.h}}
 }
+
+// archState is this region's presentation state (App.hst).
+type archState struct{}

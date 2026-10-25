@@ -99,3 +99,6 @@ func (a *App) commandGridUI(sw, sh int) {}
 // hintAnchor is where disabled-reason hints and toasts sit: their left
 // edge and the bottom they rest on (legacy: just above the colonist bar).
 func (a *App) hintAnchor(sh int) (x, bottom float32) { return hudPad, hudBarY(sh) - 4 }
+
+// cmdsState is this region's presentation state (App.hst).
+type cmdsState struct{}

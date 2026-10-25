@@ -22,3 +22,6 @@ func (a *App) applyLearnClick(id string) {}
 
 // learnUI declares the helper's widget-kit parts (stub).
 func (a *App) learnUI(sw, sh int) {}
+
+// learnState is this region's presentation state (App.hst).
+type learnState struct{}
