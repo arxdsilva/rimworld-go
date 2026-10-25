@@ -131,7 +131,7 @@ func postponable(k job.Kind) bool {
 	switch k {
 	case job.Haul, job.Construct, job.Deconstruct, job.Harvest, job.Cut, job.Mine, job.Smooth, job.Sow,
 		job.Bill, job.Hunt, job.Refuel, job.Repair, job.Research, job.Clean, job.Bury,
-		job.Roof, job.Unroof:
+		job.Roof, job.Unroof, job.Equip:
 		return true
 	}
 	return false
@@ -187,6 +187,13 @@ func (g *Game) postpone(k postKey, why job.FailReason) {
 		v = postVal{Until: now + postUnreachTicks, Unreach: true}
 	}
 	p.put(k, v)
+}
+
+// putOff records k as put off until tick until (not as out of reach): the
+// dress cooldown (apparel.go).
+func (g *Game) putOff(k postKey, until uint64) {
+	g.postSync()
+	g.postponed.put(k, postVal{Until: until})
 }
 
 // postponeTile puts tile work (mining, roofing, cleaning, grass) off as
@@ -463,8 +470,8 @@ func (g *Game) postponedTops(buf []postTop) []postTop {
 	now := uint64(g.clock.Now())
 	stale := p.rev != g.grid.Version() // out-of-reach entries about to clear
 	for k, v := range p.m {
-		if now >= v.Until || v.Unreach && stale || g.postTargetGone(k) {
-			continue
+		if now >= v.Until || v.Unreach && stale || g.postTargetGone(k) || k.Kind == job.Equip && k.Target == 0 {
+			continue // (an Equip with no target: a dress cooldown, not work)
 		}
 		e := postEntry{k, v.Until, v.Unreach}
 		var t *postTop
@@ -560,6 +567,10 @@ func (g *Game) postLabel(k postKey) string {
 	case job.Hunt:
 		if a, ok := g.animals.Get(t); ok {
 			return "hunt " + animalLabel(a)
+		}
+	case job.Equip:
+		if st, ok := g.stacks.Get(t); ok && st.Kind.IsApparel() {
+			return "wear " + st.Kind.String()
 		}
 	case job.Mine:
 		return "mine rock"

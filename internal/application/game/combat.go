@@ -455,7 +455,8 @@ func (g *Game) assignEquip(id entity.EntityID, k item.Kind) bool {
 	return g.startJob(id, job.Record{Kind: job.Equip, Target: sid, TX: x, TY: y})
 }
 
-// doEquip takes one weapon from the stack and drops the old one.
+// doEquip takes one weapon or garment from the stack and drops the old
+// one; a garment the player ordered ("Wear X") makes its slot theirs.
 func (g *Game) doEquip(id entity.EntityID, j job.Record) {
 	st, ok := g.stacks.Get(j.Target)
 	if !ok || st.Qty <= 0 || st.Carrier != 0 || !st.Kind.IsWeapon() && !st.Kind.IsApparel() {
@@ -464,7 +465,7 @@ func (g *Game) doEquip(id entity.EntityID, j job.Record) {
 		return
 	}
 	if st.Kind.IsApparel() {
-		g.wear(id, j.Target, st)
+		g.wear(id, j.Target, st, j.Forced) // apparel.go
 		j.State = job.Complete
 		g.jobs.Set(id, j)
 		return

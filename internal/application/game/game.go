@@ -121,7 +121,12 @@ type PawnView struct {
 	MentalBreak string
 	// Apparel is what the colonist wears over everyday clothes; ComfortMin
 	// and ComfortMax its comfortable range (tenths of a degree C).
+	// ApparelForced is, per Apparel entry, whether the player chose it
+	// ("Wear X": kept until another garment is ordered for the slot);
+	// ChangingInto the garment it is walking to put on ("" when none).
 	Apparel                []string
+	ApparelForced          []bool
+	ChangingInto           string
 	ComfortMin, ComfortMax int
 	// Priorities is the work priority per work.Type (0 off, 1 first .. 4);
 	// Schedule the activity per hour.
@@ -540,6 +545,7 @@ type Game struct {
 	banked     map[entity.EntityID]bool   // campfires banked by their room thermostat (heat.go)
 	orderQueue map[entity.EntityID][]queuedOrder
 	apparel    map[entity.EntityID]worn
+	clothes    apparelIndex // free apparel stacks (apparel.go), never saved
 	prio       map[entity.EntityID]work.Priorities
 	raiderIDs  []entity.EntityID
 	raiders    map[entity.EntityID]raiderState
@@ -990,6 +996,7 @@ func (g *Game) snapshot() []PawnView {
 		pv.Schedule = append([]schedule.Activity(nil), sg[:]...)
 		pv.Activity = g.activityOf(id)
 		pv.Apparel = g.Wearing(id)
+		pv.ApparelForced, pv.ChangingInto = g.wornForced(id), g.changingInto(id) // apparel.go
 		pv.Recreation = g.joy[id] * 100 / recreation.Full
 		if b, ok := g.breaks[id]; ok {
 			pv.MentalBreak = b.kind.String()
