@@ -4,6 +4,7 @@ import (
 	"math"
 
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/lighting"
 	"rimworld-go/internal/domain/world/plant"
 )
@@ -11,13 +12,15 @@ import (
 // The simulation's light (MAPGEN-3): what plants that need light, or
 // wither in it, see. The renderer's sprite lighting is separate.
 //
-// Artificial light per cell comes from lamps, campfires and glowing
-// plants (duskmoss), each falling off linearly with distance to its
+// Artificial light per cell comes from lamps, burning campfires and
+// glowing plants (duskmoss), each falling off linearly with distance to its
 // radius and stopped by rock, walls and doors (the line-of-sight rule
 // bullets use). Overlapping lights take the brightest, not the sum. The
 // grid is cached and rebuilt only when structVer moves (any building or
-// terrain change: lamps and fires come and go with it) or a glowing
-// plant is added or removed (lightVer); a cell's light is then one read.
+// terrain change: lamps and fires come and go with it), a glowing plant is
+// added or removed, or a campfire's fuel goes between 0 and above 0
+// (ver, PLAY-017: a fire with no fuel gives no light); a cell's light is
+// then one read.
 const (
 	lampRadius     = 6
 	lampLight      = 0.7
@@ -31,7 +34,8 @@ type lightGrid struct {
 	ok        bool
 	w, h      int
 	structVer uint64
-	// ver bumps when a glowing plant is added or removed.
+	// ver bumps when a glowing plant is added or removed, or a campfire
+	// lights or burns out (setFuel).
 	ver, builtVer uint64
 	bldgs, plants any // the stores it was built from (a load swaps them)
 	art           []float32
@@ -66,6 +70,15 @@ func (g *Game) plantLightChanged(s plant.Species) {
 	}
 }
 
+// setFuel sets campfire bid's fuel to v, moving the light grid when the fire
+// lights (0 to above 0) or burns out. Every write to g.fuel goes through it.
+func (g *Game) setFuel(bid entity.EntityID, v int) {
+	if (g.fuel[bid] > 0) != (v > 0) {
+		g.light.ver++
+	}
+	g.fuel[bid] = v
+}
+
 // lightCells returns the artificial light grid, rebuilt if stale.
 func (g *Game) lightCells() []float32 {
 	c := &g.light
@@ -88,7 +101,9 @@ func (g *Game) lightCells() []float32 {
 		case construction.Lamp:
 			g.stampLight(c.art, b.X, b.Y, lampRadius, lampLight)
 		case construction.Campfire:
-			g.stampLight(c.art, b.X, b.Y, campfireRadius, campfireLight)
+			if g.fuel[id] > 0 { // PLAY-017: only a fire with fuel gives light
+				g.stampLight(c.art, b.X, b.Y, campfireRadius, campfireLight)
+			}
 		}
 	}
 	for _, id := range g.plantIDs {

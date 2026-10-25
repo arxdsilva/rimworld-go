@@ -7,6 +7,7 @@ import (
 
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/terrain"
@@ -192,5 +193,99 @@ func TestGrassSaveLoadRoundTrip(t *testing.T) {
 	}
 	if b.Grass[on[0][1]*b.TerrainW+on[0][0]] != 0 {
 		t.Fatal("a cut tile stays bare after loading")
+	}
+}
+
+// ---- grass and light (PLAY-017) ----
+
+// TestOutdoorGrassGrowsInTheSunWindowOnly: open grass regrows between
+// sunrise and sunset, not through the night.
+func TestOutdoorGrassGrowsInTheSunWindowOnly(t *testing.T) {
+	g := mildGame()
+	x, y := grassTile(t, g, 2, 2, 20, 12)
+	jumpTo(g, 10, 21) // an hour after sunset (a window looks back a tenth of an hour)
+	regrowNow(t, g, x, y)
+	g.Step(8 * clock.TicksPerHour) // 21:00 to 05:00
+	if got := g.grassGrowthAt(x, y); got != plant.GrassShoots {
+		t.Fatalf("grass grew to %d through the night", got)
+	}
+	g.Step(5 * clock.TicksPerHour) // dawn and the morning
+	if got := g.grassGrowthAt(x, y); got <= plant.GrassShoots {
+		t.Fatalf("grass stood still at dawn: %d", got)
+	}
+}
+
+// TestOutdoorGrassDailyTotalUnchanged: whatever hour a day starts at, open
+// grass gains the day's regrowth it always did (a third of the way from
+// shoots to full), now all in the sun's hours.
+func TestOutdoorGrassDailyTotalUnchanged(t *testing.T) {
+	want := plant.GrassGrowSpan(plant.TempFactor(150), 0, clock.TicksPerDay) // round the clock, as before
+	if want < 27 || want > 29 {
+		t.Fatalf("legacy day total %d", want)
+	}
+	for _, h := range []int{0, 5, 6, 12, 19, 20, 23} {
+		g := mildGame()
+		x, y := grassTile(t, g, 2, 2, 20, 12)
+		jumpTo(g, 10, h)
+		regrowNow(t, g, x, y)
+		g.Step(clock.TicksPerDay)
+		if got := g.grassGrowthAt(x, y) - plant.GrassShoots; got < want-1 || got > want+1 {
+			t.Errorf("day from %02d:00: grass gained %d, want %d (+-1)", h, got, want)
+		}
+	}
+}
+
+// TestRoofedGrassNeedsAStrongLamp: grass under a roof does not regrow in a
+// day; a lamp one tile away (0.6) grows it round the clock, one four tiles
+// away (0.3) is not enough.
+func TestRoofedGrassNeedsAStrongLamp(t *testing.T) {
+	g := mildGame()
+	a, b := grassTile(t, g, 2, 2, 20, 12)
+	lx, ly := a+1, b
+	if g.hasGrass(lx, ly) {
+		g.clearGrass(lx, ly)
+	}
+	ax, ay := grassTile(t, g, 12, 2, 22, 12)
+	cx, cy := grassTile(t, g, 2, 12, 20, 15)
+	for _, c := range [][2]int{{a, b}, {ax, ay}, {cx, cy}} {
+		regrowNow(t, g, c[0], c[1])
+	}
+	roofOver(g, 0, 0, 23, 15)
+	placeBuilt(t, g, construction.Lamp, construction.South, lx, ly)
+	if l := g.artificialLight(a, b); !plant.StrongLight(l) {
+		t.Fatalf("lamp one tile away gives %.2f", l)
+	}
+	if l := g.artificialLight(ax, ay); plant.StrongLight(l) {
+		t.Fatalf("test needs a tile the lamp leaves dim, got %.2f", l)
+	}
+	jumpTo(g, 10, 12)
+	g.Step(clock.TicksPerDay)
+	if got := g.grassGrowthAt(ax, ay); got != plant.GrassShoots {
+		t.Fatalf("roofed unlit grass grew to %d", got)
+	}
+	if got := g.grassGrowthAt(cx, cy); got != plant.GrassShoots {
+		t.Fatalf("roofed unlit grass grew to %d", got)
+	}
+	want := plant.GrassGrowSpan(plant.TempFactor(150), 0, clock.TicksPerDay)
+	if got := g.grassGrowthAt(a, b) - plant.GrassShoots; got < want-1 || got > want+1 {
+		t.Fatalf("lamp-lit roofed grass gained %d in a day, want %d", got, want)
+	}
+}
+
+// TestLampGrowsRoofedGrassAtNight: lamplight grows roofed grass through
+// the night too.
+func TestLampGrowsRoofedGrassAtNight(t *testing.T) {
+	g := mildGame()
+	x, y := grassTile(t, g, 2, 2, 20, 12)
+	if g.hasGrass(x+1, y) {
+		g.clearGrass(x+1, y)
+	}
+	regrowNow(t, g, x, y)
+	roofOver(g, 0, 0, 23, 15)
+	placeBuilt(t, g, construction.Lamp, construction.South, x+1, y)
+	jumpTo(g, 10, 22)
+	g.Step(4 * clock.TicksPerHour)
+	if got := g.grassGrowthAt(x, y); got <= plant.GrassShoots {
+		t.Fatalf("lamp-lit grass stood still at night: %d", got)
 	}
 }

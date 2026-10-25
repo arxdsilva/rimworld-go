@@ -41,30 +41,121 @@ func (g *Game) addGrowZone(x1, y1, x2, y2 int, crop uint8) {
 	if !plant.DefOf(s).ZoneSowable() {
 		s = plant.Potato
 	}
+	// plants on cells no zone holds yet: once painted, the ripe ones get
+	// their harvest mark (a plant already in a zone keeps the mark, or the
+	// cancel, it has)
+	minX, minY, maxX, maxY := zone.Normalize(x1, y1, x2, y2)
+	var fresh []entity.EntityID
+	for _, id := range g.plantIDs {
+		p := g.plants.Ref(id) // read only
+		if p == nil || p.X < minX || p.X > maxX || p.Y < minY || p.Y > maxY {
+			continue
+		}
+		if _, zoned := g.zones.At(p.X, p.Y); !zoned {
+			fresh = append(fresh, id)
+		}
+	}
 	g.paintZone(zone.KindGrow, zone.Zone{Crop: uint8(s)}, x1, y1, x2, y2)
+	for _, id := range fresh {
+		g.markRipeHarvest(id)
+	}
 }
 
 // sowable reports whether a zone cell can be sown now.
 func (g *Game) sowable(x, y int) bool {
-	if g.terr.At(x, y).Fertility() <= 0 || !g.grid.Walkable(x, y) {
+	return g.sowableIgnoringPlant(x, y) && g.plantAt(x, y) == 0
+}
+
+// sowableIgnoringPlant is sowable for a cell that may still hold a plant:
+// the season, soil, walkability and buildings allow sowing once the plant
+// is gone (assignZoneClear cuts only on such cells).
+func (g *Game) sowableIgnoringPlant(x, y int) bool {
+	if g.terr.At(x, y).Fertility() <= 0 || !g.grid.Walkable(x, y) || !g.growingSeason(x, y) {
 		return false
 	}
-	if g.plantAt(x, y) != 0 || !g.growingSeason(x, y) {
-		return false
-	}
-	if g.layerBldgAt(x, y, construction.LayerObject) != 0 || g.layerBldgAt(x, y, construction.LayerFloor) != 0 ||
-		g.layerFrameAt(x, y, construction.LayerObject) != 0 || g.layerFrameAt(x, y, construction.LayerFloor) != 0 {
-		return false
-	}
-	return true
+	return g.layerBldgAt(x, y, construction.LayerObject) == 0 && g.layerBldgAt(x, y, construction.LayerFloor) == 0 &&
+		g.layerFrameAt(x, y, construction.LayerObject) == 0 && g.layerFrameAt(x, y, construction.LayerFloor) == 0
 }
 
 // zoneAt is the grow zone on tile (x, y).
 func (g *Game) zoneAt(x, y int) (zone.Zone, bool) { return g.zoneOf(zone.KindGrow, x, y) }
 
+// wrongForZone: plant p stands where zone z wants its own crop: it was not
+// sown by a growing zone (wild plants, ground plants, bushes, trees), or it
+// is a crop of another species.
+func wrongForZone(p plant.Plant, z zone.Zone) bool {
+	return !p.Zone || p.Species != plant.Species(z.Crop)
+}
+
+// assignZoneClear sends grower id to cut the nearest plant that stands in
+// the way of a growing zone (PLAY-017): a wrong plant (wrongForZone) on a
+// cell that could otherwise be sown now. A ripe one is left to the harvest
+// (its mark, see markRipeHarvest); one another pawn has reserved, or this
+// pawn has put off, is passed over. It is the ordinary cut job, so doCut is
+// unchanged and the next assignSow sows the emptied cell.
+func (g *Game) assignZoneClear(id entity.EntityID) bool {
+	pos, _ := g.positions.Get(id)
+	var tried []entity.EntityID
+	for range workTries { // SIM-027: the next nearest plant when one can't be started
+		var best entity.EntityID
+		bestD := 1 << 30
+		g.zones.Each(func(z zone.Zone) bool {
+			if z.Kind != zone.KindGrow {
+				return true
+			}
+			g.zones.EachCell(z.ID, func(x, y int) bool {
+				d := pathing.Dist(pos.X, pos.Y, x, y)
+				if d >= bestD {
+					return true
+				}
+				pid := g.plantAt(x, y)
+				if pid == 0 {
+					return true
+				}
+				p := g.plants.Ref(pid) // read only: nothing below changes the store
+				if p == nil || !wrongForZone(*p, z) || p.Harvestable() || !g.sowableIgnoringPlant(x, y) {
+					return true
+				}
+				if _, taken := g.reserve.EntityOwner(pid); taken || slices.Contains(tried, pid) ||
+					g.postponedFor(id, job.Cut, pid, 0, 0) {
+					return true
+				}
+				best, bestD = pid, d
+				return true
+			})
+			return true
+		})
+		if best == 0 {
+			return false
+		}
+		p, _ := g.plants.Get(best)
+		if !g.reachable(id, p.X, p.Y) {
+			g.postpone(postKey{Pawn: id, Kind: job.Cut, Target: best}, job.Unreachable)
+			tried = append(tried, best)
+			continue
+		}
+		if g.startJob(id, job.Record{Kind: job.Cut, Target: best, TX: p.X, TY: p.Y, WorkLeft: plant.DefOf(p.Species).CutWork}) {
+			return true
+		}
+		tried = append(tried, best)
+	}
+	return false
+}
+
+// sowWorkOf is the labour to sow one cell of zone z: its species' own.
+func sowWorkOf(z zone.Zone) int {
+	if w := plant.DefOf(plant.Species(z.Crop)).SowWork; w > 0 {
+		return w
+	}
+	return SowWork
+}
+
 func (g *Game) assignSow(id entity.EntityID) bool {
 	if g.assignZoneChop(id) {
 		return true // grown zone trees are felled before their cells are resown
+	}
+	if g.assignZoneClear(id) {
+		return true // wrong plants are cut before their cells are sown
 	}
 	pos, _ := g.positions.Get(id)
 	var tried [][2]int
@@ -95,8 +186,8 @@ func (g *Game) assignSow(id entity.EntityID) bool {
 			return false
 		}
 		work := SowWork
-		if z, ok := g.zoneAt(bx, by); ok && plant.DefOf(plant.Species(z.Crop)).SowWork > 0 {
-			work = plant.DefOf(plant.Species(z.Crop)).SowWork
+		if z, ok := g.zoneAt(bx, by); ok {
+			work = sowWorkOf(z)
 		}
 		if g.startJob(id, job.Record{Kind: job.Sow, TX: bx, TY: by, WorkLeft: work}) {
 			return true
@@ -151,9 +242,11 @@ func (g *Game) markRipeHarvest(id entity.EntityID) {
 	g.notePlantMark(id) // jobindex.go
 }
 
-// wantsHarvest: ripe food plants that are designated or zone crops.
+// wantsHarvest: ripe food plants that carry a harvest mark. Zone crops get
+// theirs when they ripen or when a zone is drawn over them
+// (markRipeHarvest), so "Cancel harvest" cancels until the next ripening.
 func wantsHarvest(p plant.Plant) bool {
-	return p.Harvestable() && (p.Designated || p.Zone)
+	return p.Harvestable() && p.Designated
 }
 
 // bestFood picks the most preferred free food, nearest first.

@@ -102,3 +102,58 @@ func TestWitherLoss(t *testing.T) {
 		t.Fatal("no loss without a rule or exposure")
 	}
 }
+
+// TestStrongLight: a lamp within two tiles (0.5 and up) grows plants at
+// any hour; a dimmer one does not. The bound tolerates the float32 grid.
+func TestStrongLight(t *testing.T) {
+	t.Parallel()
+	if StrongGrowLight != 0.5 {
+		t.Fatalf("StrongGrowLight = %v, want 0.5", StrongGrowLight)
+	}
+	for _, c := range []struct {
+		l    float64
+		want bool
+	}{{0.7, true}, {0.6, true}, {0.5, true}, {float64(float32(0.5)), true}, {0.4999, false}, {0.3, false}, {0, false}} {
+		if got := StrongLight(c.l); got != c.want {
+			t.Errorf("StrongLight(%v) = %v, want %v", c.l, got, c.want)
+		}
+	}
+}
+
+// TestOwnLightRules: moss, duskmoss and the other cave species keep their
+// own light rules; every other species follows the sun-or-lamp rule.
+func TestOwnLightRules(t *testing.T) {
+	t.Parallel()
+	for s := Species(0); s < numSpecies; s++ {
+		want := s == Moss || s == Duskmoss
+		if got := OwnLightRules(s); got != want {
+			t.Errorf("%v: OwnLightRules = %v, want %v", s, got, want)
+		}
+	}
+}
+
+// TestRoundClockSpan: a lamp's growth counts every tick of the window, so
+// it telescopes like GrowSpan and is never less than the sun-only span.
+func TestRoundClockSpan(t *testing.T) {
+	t.Parallel()
+	if got := RoundClockSpan(100, 0, 1000); got != 1000 {
+		t.Fatalf("rate 100 over 1000 ticks = %d", got)
+	}
+	if RoundClockSpan(0, 0, 1000) != 0 || RoundClockSpan(-5, 0, 1000) != 0 || RoundClockSpan(100, 500, 500) != 0 {
+		t.Fatal("no rate or an empty span grows nothing")
+	}
+	for _, r := range []int{40, 100, 137} {
+		if a, b := RoundClockSpan(r, 100, 900), RoundClockSpan(r, 100, 400)+RoundClockSpan(r, 400, 900); a != b {
+			t.Fatalf("rate %d: span %d vs split %d", r, a, b)
+		}
+		for _, t0 := range []uint64{0, 4000, 14500, 20000 + 10} {
+			if GrowSpan(r, t0, t0+250) > RoundClockSpan(r, t0, t0+250) {
+				t.Fatalf("rate %d at %d: the sun span beats the lamp's", r, t0)
+			}
+		}
+	}
+	// a whole day round the clock is the rate times the day
+	if got := RoundClockSpan(100, 0, clock.TicksPerDay); got != clock.TicksPerDay {
+		t.Fatalf("a day at rate 100 = %d", got)
+	}
+}

@@ -134,7 +134,7 @@ func (g *Game) heatRooms() {
 		if !g.burning(bid, b) {
 			continue // banked, or doused by rain or snow
 		}
-		g.fuel[bid] = max(0, g.fuel[bid]-climateInterval)
+		g.setFuel(bid, max(0, g.fuel[bid]-climateInterval)) // light.go: a burnt-out fire stops lighting
 		if r := g.roomAt(b.X, b.Y); r >= 0 && r < len(heat) {
 			heat[r] += campfireHeat
 		}
@@ -311,7 +311,7 @@ func (g *Game) doRefuel(id entity.EntityID, j job.Record) {
 	}
 	if st, ok := g.stacks.Get(j.Carry); ok && len(j.Route) > 0 {
 		give := min(st.Qty, g.fuelRoom(j.Dest, st.Kind))
-		g.fuel[j.Dest] = min(CampfireCapacity*TicksPerWood, g.fuel[j.Dest]+give*fuelTicks(st.Kind))
+		g.setFuel(j.Dest, min(CampfireCapacity*TicksPerWood, g.fuel[j.Dest]+give*fuelTicks(st.Kind)))
 		if st.Qty -= give; st.Qty > 0 {
 			g.stacks.Set(j.Carry, st)
 			j.RouteI = len(j.Route)
@@ -321,7 +321,7 @@ func (g *Game) doRefuel(id entity.EntityID, j job.Record) {
 			return
 		}
 	} else if ok {
-		g.fuel[j.Dest] = min(CampfireCapacity*TicksPerWood, g.fuel[j.Dest]+st.Qty*fuelTicks(st.Kind))
+		g.setFuel(j.Dest, min(CampfireCapacity*TicksPerWood, g.fuel[j.Dest]+st.Qty*fuelTicks(st.Kind)))
 	}
 	g.deleteItem(j.Carry)
 	j.Carry = 0
@@ -333,7 +333,7 @@ func (g *Game) doRefuel(id entity.EntityID, j job.Record) {
 func (g *Game) FuelCampfire(x, y int) {
 	g.viewGen++ // view cache (indexes.go): this hook changes the state
 	if bid := g.layerBldgAt(x, y, construction.LayerObject); bid != 0 {
-		g.fuel[bid] = CampfireCapacity * TicksPerWood
+		g.setFuel(bid, CampfireCapacity*TicksPerWood)
 	}
 }
 

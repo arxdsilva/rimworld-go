@@ -16,8 +16,9 @@ type plantMemo struct {
 
 // plantViews appends every plant's view to out (World().Plants, in
 // plantIDs order). With the view cache on, a plant whose state equals the
-// one its last view was built from reuses that view; Wilted and Zone,
-// which follow the weather and the zones, are always redone.
+// one its last view was built from reuses that view; Wilted, Zone,
+// GrowState and RipeIn, which follow the weather, the zones, the hour and
+// the lamps, are always redone.
 func (g *Game) plantViews(out []PlantView) []PlantView {
 	m := &g.views.plants
 	memo := g.views.on && len(m.src) == len(m.views)
@@ -25,6 +26,7 @@ func (g *Game) plantViews(out []PlantView) []PlantView {
 	if g.views.on {
 		src = m.spare[:0]
 	}
+	now := g.growNowOf()
 	j := 0 // the memo entry expected next (plantIDs keeps its order)
 	for _, id := range g.plantIDs {
 		p, ok := g.plants.Get(id)
@@ -50,7 +52,8 @@ func (g *Game) plantViews(out []PlantView) []PlantView {
 			fillPlantLight(&pv, p) // plant_light.go (MAPGEN-3)
 			fillPlantDamage(&pv, p)
 		}
-		g.fillPlantWeather(&pv, p) // weather.go
+		g.fillPlantWeather(&pv, p)     // weather.go
+		g.fillPlantGrowth(&pv, p, now) // plant_light.go: follows the hour and the lamps (PLAY-017)
 		if z, ok := g.zoneAt(p.X, p.Y); ok {
 			pv.Zone = plant.DefOf(plant.Species(z.Crop)).Name
 		}

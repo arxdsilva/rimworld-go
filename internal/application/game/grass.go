@@ -453,15 +453,21 @@ func (g *Game) setGrassGrowth(x, y, v int) {
 }
 
 // growGrassChunk grows chunk c's regrowing grass over the climate
-// interval that ends now: plant.GrassGrowSpan at the tile's air
-// temperature. Snow cover and frost pause it; a tile reaching full, or
-// one that lost its grass, leaves the growing set.
+// interval that ends now, at the tile's air temperature, by the same
+// sun-or-lamp rule as plants (PLAY-017): in the open it grows only in the
+// sun's hours, at 24/14 of the round-the-clock speed so a day's regrowth is
+// what it was (plant.GrassSunSpan); under a strong lamp it grows every
+// hour (plant.GrassGrowSpan); roofed and not strongly lit it doesn't grow.
+// Snow cover and frost pause it; a tile reaching full, or one that lost its
+// grass, leaves the growing set.
 func (g *Game) growGrassChunk(c int, now uint64) {
 	s := g.grassSt()
 	if s.nGrowing == 0 || len(s.growing[c]) == 0 {
 		return
 	}
 	w := g.grid.Width()
+	art := g.lightCells() // one read per tile below
+	t0 := now - min(now, climateInterval)
 	l := s.growing[c]
 	kept := l[:0]
 	for _, i := range l {
@@ -477,7 +483,13 @@ func (g *Game) growGrassChunk(c int, now uint64) {
 			continue
 		}
 		tf := plant.TempFactor(int(g.temperatureAt(x, y)))
-		n := plant.GrassGrowSpan(tf, now-min(now, climateInterval), now)
+		n := 0
+		if !g.roofAt(x, y).Roofed() {
+			n = plant.GrassSunSpan(tf, t0, now)
+		}
+		if plant.StrongLight(float64(art[i])) {
+			n = max(n, plant.GrassGrowSpan(tf, t0, now))
+		}
 		if n <= 0 {
 			kept = append(kept, i)
 			continue

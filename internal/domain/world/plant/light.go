@@ -8,6 +8,39 @@ import (
 // Light rules (MAPGEN-3). Light is in permille of full daylight (the
 // simulation's cell light × 1000), compared against the Def's percents.
 
+// StrongGrowLight is the artificial light (0..1) that grows a plant at any
+// hour (PLAY-017): a lamp within two tiles, or a burning campfire beside
+// it. Dimmer lamps give no growth; the sun does the rest by day.
+const StrongGrowLight = 0.5
+
+// strongLightEps lets a light rounded through the float32 light grid
+// still count at exactly StrongGrowLight.
+const strongLightEps = 1e-6
+
+// StrongLight reports artificial light l (0..1) strong enough to grow a
+// plant round the clock.
+func StrongLight(l float64) bool { return l >= StrongGrowLight-strongLightEps }
+
+// OwnLightRules reports a species with light rules of its own (ordinary
+// moss needs light, duskmoss withers in it and grows in caves): it keeps
+// them and the plain GrowSpan, and the sun-or-lamp rule leaves it alone.
+func OwnLightRules(s Species) bool {
+	d := DefOf(s)
+	return d.MinLight > 0 || d.DiesInLight > 0 || d.Cave
+}
+
+// RoundClockSpan is the growth (ticks) a plant growing at rate percent
+// gains over the ticks t0+1 .. t1 counting every hour: what a strong lamp
+// gives (GrowSpan counts only the sun's hours, so this is never less). It
+// telescopes like GrowSpan.
+func RoundClockSpan(rate int, t0, t1 uint64) int {
+	if rate <= 0 || t1 <= t0 {
+		return 0
+	}
+	f := uint64(rate)
+	return int(t1*f/100 - t0*f/100)
+}
+
 // WitherStopLight (percent) is the light a withering plant must fall
 // below to stop withering: harm starts at DiesInLight and stops only
 // under this, so a light flickering at the threshold doesn't flap.

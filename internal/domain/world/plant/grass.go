@@ -82,6 +82,29 @@ func GrassGrowSpan(tempFactor int, t0, t1 uint64) int {
 	return int(t1*f/den - t0*f/den)
 }
 
+// GrassSunSpan is the growth (percent points) grass in the open gains over
+// ticks t0+1..t1 when it grows only in the sun's hours (GrowFromHour ..
+// GrowToHour, PLAY-017): 24/growHours of GrassGrowSpan's speed in them, so
+// a whole day gains what round-the-clock growth always did. It is a running
+// total like GrassGrowSpan, so spans telescope.
+func GrassSunSpan(tempFactor int, t0, t1 uint64) int {
+	if tempFactor <= 0 || t1 <= t0 {
+		return 0
+	}
+	const den = 1000 * GrassFillTicks * growHours
+	f := uint64(tempFactor) * (GrassFull - GrassShoots) * 24
+	total := 0
+	for day := t0 / clock.TicksPerDay; day*clock.TicksPerDay <= t1; day++ {
+		// the day's growing ticks are (s, e], like GrowSpan's
+		s := day*clock.TicksPerDay + GrowFromHour*clock.TicksPerHour - 1
+		e := day*clock.TicksPerDay + GrowToHour*clock.TicksPerHour - 1
+		if lo, hi := max(s, t0), min(e, t1); hi > lo {
+			total += int(hi*f/den - lo*f/den)
+		}
+	}
+	return total
+}
+
 // GrassMeal is the food of grazing a tile at growth percent, out of a
 // full tile's meal full: in proportion, never under GrassMinMeal percent.
 func GrassMeal(full, growth int) int {

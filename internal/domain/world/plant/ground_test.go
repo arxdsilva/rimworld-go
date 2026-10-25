@@ -93,3 +93,40 @@ func TestGrazeFood(t *testing.T) {
 		}
 	}
 }
+
+// TestGrassSunSpanKeepsTheDay: outdoors, grass grows only in the sun
+// window (GrowFromHour..GrowToHour) at 24/14 of the round-the-clock rate,
+// so a whole day's regrowth is what it always was, and the span telescopes.
+func TestGrassSunSpanKeepsTheDay(t *testing.T) {
+	t.Parallel()
+	mild := TempFactor(150)
+	for _, day := range []uint64{0, 1, 7, 123} {
+		t0, t1 := day*clock.TicksPerDay, (day+1)*clock.TicksPerDay
+		sun, round := GrassSunSpan(mild, t0, t1), GrassGrowSpan(mild, t0, t1)
+		if d := sun - round; d < -1 || d > 1 {
+			t.Fatalf("day %d: sun-window growth %d, round-the-clock %d", day, sun, round)
+		}
+	}
+	for _, h := range []int{0, 3, 5} { // before sunrise
+		t0 := uint64(h * clock.TicksPerHour)
+		if GrassSunSpan(mild, t0, t0+clock.TicksPerHour) != 0 {
+			t.Fatalf("grass grew at hour %d", h)
+		}
+	}
+	for _, h := range []int{20, 22, 23} { // after sunset
+		t0 := uint64(h * clock.TicksPerHour)
+		if GrassSunSpan(mild, t0, t0+clock.TicksPerHour) != 0 {
+			t.Fatalf("grass grew at hour %d", h)
+		}
+	}
+	noon := uint64(12 * clock.TicksPerHour)
+	if GrassSunSpan(mild, noon, noon+clock.TicksPerHour) <= GrassGrowSpan(mild, noon, noon+clock.TicksPerHour) {
+		t.Fatal("in the sun grass grows faster than round the clock")
+	}
+	if a, b := GrassSunSpan(mild, 100, 30000), GrassSunSpan(mild, 100, 15000)+GrassSunSpan(mild, 15000, 30000); a != b {
+		t.Fatalf("span %d vs split %d", a, b)
+	}
+	if GrassSunSpan(0, 0, 1_000_000) != 0 || GrassSunSpan(mild, 600, 500) != 0 || GrassSunSpan(mild, 500, 500) != 0 {
+		t.Fatal("frozen grass or an empty span grows nothing")
+	}
+}

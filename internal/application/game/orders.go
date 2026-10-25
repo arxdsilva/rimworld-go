@@ -192,14 +192,13 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		if !ok {
 			return job.Record{}, ReasonGone
 		}
-		_ = z
 		if !m.Enabled(work.Grow) {
 			return job.Record{}, ReasonNoGrow
 		}
 		if !g.sowable(x, y) {
 			return job.Record{}, ReasonNotSowable
 		}
-		return job.Record{Kind: job.Sow, TX: x, TY: y, WorkLeft: SowWork}, ""
+		return job.Record{Kind: job.Sow, TX: x, TY: y, WorkLeft: sowWorkOf(z)}, "" // food.go: the species' own work
 	case command.OrderCut:
 		pid := g.plantAt(x, y)
 		p, ok := g.plants.Get(pid)
