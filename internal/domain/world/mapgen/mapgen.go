@@ -1,6 +1,7 @@
 // Package mapgen is the field-based colony-map generator for landing sites
 // (MAPGEN-2, .cursor/PLAY013_PLAN.md). It builds a map in ordered passes
-// (steps): continuous fields first (elevation, fertility, wetness, stone
+// (steps, in package mapgen/pipeline; each pass lives in mapgen/steps/...):
+// continuous fields first (elevation, fertility, wetness, stone
 // material), then landforms (rock, caves, water), then the discrete map
 // (terrain by precedence, ore, debris, roads, the landing spot, ruins,
 // vents, plants), then validation with local repair. Every step draws from
@@ -212,63 +213,13 @@ type Result struct {
 // ErrSize is returned for an empty map.
 var ErrSize = errors.New("mapgen: map size must be positive")
 
-// Generate builds the whole map.
-func Generate(cfg Config) (Result, error) {
-	b, err := NewBuilder(cfg)
-	if err != nil {
-		return Result{}, err
+// Finish is the Result once every step has run: Fields are kept only with
+// Config.Debug.
+func (c *Ctx) Finish() Result {
+	r := *c.R
+	r.W, r.H = c.W, c.H
+	if c.Cfg.Debug {
+		r.Fields = c.F
 	}
-	for {
-		if _, _, done, err := b.Step(); err != nil {
-			return Result{}, err
-		} else if done {
-			return b.Result(), nil
-		}
-	}
+	return r
 }
-
-// Builder runs the pipeline one step at a time (the loading screen).
-type Builder struct {
-	ctx  *Ctx
-	next int
-	res  Result
-	done bool
-}
-
-// NewBuilder prepares cfg's map.
-func NewBuilder(cfg Config) (*Builder, error) {
-	if cfg.W <= 0 || cfg.H <= 0 {
-		return nil, ErrSize
-	}
-	return &Builder{ctx: newCtx(cfg)}, nil
-}
-
-// Step runs the next step. label is the player-facing phase of the step
-// that will run next ("" once done) and frac the share done.
-func (b *Builder) Step() (label string, frac float32, done bool, err error) {
-	if b.done {
-		return "", 1, true, nil
-	}
-	if b.next < len(pipeline) {
-		if err := pipeline[b.next].Run(b.ctx); err != nil {
-			return "", 0, false, err
-		}
-		b.next++
-	}
-	if b.next >= len(pipeline) {
-		b.done = true
-		b.res = *b.ctx.R
-		b.res.W, b.res.H = b.ctx.W, b.ctx.H
-		if b.ctx.Cfg.Debug {
-			b.res.Fields = b.ctx.F
-		}
-		return "", 1, true, nil
-	}
-	return Label(pipeline[b.next].Name()), float32(b.next) / float32(len(pipeline)), false, nil
-}
-
-// Result is the finished map (zero until Step reports done).
-func (b *Builder) Result() Result { return b.res }
-
-// Steps is the number of pipeline steps.
-func Steps() int { return len(pipeline) }

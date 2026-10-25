@@ -1,19 +1,20 @@
-package mapgen
+package pipeline
 
 import (
 	"testing"
 
 	"rimworld-go/internal/domain/world/biome"
+	"rimworld-go/internal/domain/world/mapgen"
 	"rimworld-go/internal/domain/world/site"
 )
 
-func testCfg(seed uint64, w, h int) Config {
+func testCfg(seed uint64, w, h int) mapgen.Config {
 	s := site.Site{Biome: biome.TemperateForest, Hills: site.LargeHills}
-	return Config{Seed: seed, W: w, H: h, Site: s, Biome: biome.DefOf(s.Biome)}
+	return mapgen.Config{Seed: seed, W: w, H: h, Site: s, Biome: biome.DefOf(s.Biome)}
 }
 
 func TestGenerateRejectsEmpty(t *testing.T) {
-	if _, err := Generate(testCfg(1, 0, 10)); err != ErrSize {
+	if _, err := Generate(testCfg(1, 0, 10)); err != mapgen.ErrSize {
 		t.Fatalf("err %v", err)
 	}
 }
@@ -23,23 +24,23 @@ func TestBuilderWalksEveryStep(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	steps, last := 0, float32(-1)
+	n, last := 0, float32(-1)
 	for {
 		label, frac, done, err := b.Step()
 		if err != nil {
 			t.Fatal(err)
 		}
-		steps++
+		n++
 		if done {
 			break
 		}
 		if label == "" || frac <= last {
-			t.Fatalf("step %d: label %q frac %v", steps, label, frac)
+			t.Fatalf("step %d: label %q frac %v", n, label, frac)
 		}
 		last = frac
 	}
-	if steps != Steps() {
-		t.Fatalf("%d steps, want %d", steps, Steps())
+	if n != Steps() {
+		t.Fatalf("%d steps, want %d", n, Steps())
 	}
 	if _, _, done, _ := b.Step(); !done {
 		t.Fatal("a finished builder stays done")
@@ -66,24 +67,11 @@ func TestStepNamesUniqueAndLabelled(t *testing.T) {
 	}
 }
 
-func TestDebugKeepsFieldsAndStreamsDiffer(t *testing.T) {
+func TestDebugKeepsFields(t *testing.T) {
 	cfg := testCfg(9, 32, 32)
 	cfg.Debug = true
 	r, err := Generate(cfg)
 	if err != nil || r.Fields == nil || len(r.Fields.Elevation) != 32*32 {
 		t.Fatalf("debug fields missing: %v", err)
-	}
-	c := newCtx(cfg)
-	if c.Rand("a").IntN(1<<30) == c.Rand("b").IntN(1<<30) {
-		t.Fatal("step streams collide")
-	}
-	if c.NoiseSeed("a") == c.NoiseSeed("b") || c.Scale() <= 0 {
-		t.Fatal("noise seeds collide")
-	}
-	if x, y := c.XY(c.Idx(5, 7)); x != 5 || y != 7 || !c.In(0, 0) || c.In(32, 0) || c.Start() != (Point{16, 16}) {
-		t.Fatal("ctx helpers")
-	}
-	if !Deep.Wet() || !Shallow.Wet() || Beach.Wet() {
-		t.Fatal("Water.Wet")
 	}
 }

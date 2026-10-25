@@ -25,7 +25,9 @@ type Ctx struct {
 	base uint64
 }
 
-func newCtx(cfg Config) *Ctx {
+// NewCtx allocates every field and result grid for cfg (W, H > 0): the
+// pipeline's start, and step tests' fixture.
+func NewCtx(cfg Config) *Ctx {
 	n := cfg.W * cfg.H
 	far := func() []float32 {
 		s := make([]float32, n)
