@@ -105,14 +105,14 @@ func (Coast) Run(c *mapgen.Ctx) error {
 			across = float64(min(c.W, c.H)) / math.Sqrt2
 		}
 		width := math.Min(base*(0.9+0.2*r.Float64()), coastMaxShare*across)
-		wobble := math.Min((6+4*r.Float64())*sc, 0.5*width)
+		wobble := math.Min((14+10*r.Float64())*sc, 0.6*width)
 		off := float64(r.IntN(1 << 16))
 		name := "coast/" + string(rune('0'+d))
 		shore, shelf, beach := c.NoiseSeed(name+"/shore"), c.NoiseSeed(name+"/shelf"), c.NoiseSeed(name+"/beach")
 		e := coastEdge{d: d, sea: make([]float64, n), shelf: make([]float64, n), beach: make([]float64, n)}
 		for k := range n {
 			a := float64(k) + off
-			wob := 2*noise2.FBm(shore, a, 0.5, 3, coastShoreCell*sc, 0.5) - 1
+			wob := 2*noise2.FBm(shore, a, 0.5, 4, coastShoreCell*sc, 0.6) - 1
 			e.sea[k] = width + wobble*math.Max(-1, math.Min(1, 2.2*wob))
 			e.shelf[k] = coastShelfMin + (coastShelfMax-coastShelfMin)*spread(noise2.FBm(shelf, a, 0.5, 2, coastBandCell, 0.5))
 			e.beach[k] = coastBeachMin + (coastBeachMax-coastBeachMin)*spread(noise2.FBm(beach, a, 0.5, 2, coastBandCell, 0.5))
@@ -120,10 +120,13 @@ func (Coast) Run(c *mapgen.Ctx) error {
 		edges = append(edges, e)
 	}
 
+	// the sea first; each cell keeps the beach width of the edge whose sea
+	// is nearest
 	f := c.F
+	beachW := make([]float32, c.W*c.H)
 	for y := 0; y < c.H; y++ {
 		for x := 0; x < c.W; x++ {
-			best := mapgen.Dry
+			best, bestDepth, bw := mapgen.Dry, math.Inf(-1), 0.0
 			for _, e := range edges {
 				dist, along := coastFrame(c.W, c.H, e.d, float64(x)+0.5, float64(y)+0.5)
 				depth := at(e.sea, along) - dist // > 0: in the sea
@@ -133,19 +136,18 @@ func (Coast) Run(c *mapgen.Ctx) error {
 					w = mapgen.Deep
 				case depth > 0:
 					w = mapgen.Shallow
-				case depth > -at(e.beach, along):
-					w = mapgen.Beach
 				}
 				if rank(w) > rank(best) {
 					best = w
 				}
+				if depth > bestDepth {
+					bestDepth, bw = depth, at(e.beach, along)
+				}
 			}
 			i := c.Idx(x, y)
-			switch {
-			case best.Wet():
+			beachW[i] = float32(bw)
+			if best.Wet() {
 				f.Water[i], f.Coast[i], f.Rock[i] = best, true, false
-			case best == mapgen.Beach && !f.Rock[i]: // cliffs stay rock
-				f.Water[i], f.Coast[i] = best, true
 			}
 		}
 	}
@@ -155,10 +157,35 @@ func (Coast) Run(c *mapgen.Ctx) error {
 	for i := range src {
 		src[i] = f.Coast[i] && f.Water[i].Wet()
 	}
-	if anyTrue(src) {
-		copy(f.CoastDist, distFrom(c.W, c.H, src))
+	if !anyTrue(src) {
+		return nil
 	}
+	copy(f.CoastDist, distFrom(c.W, c.H, src))
+	// the beach hugs the sea that is actually there; cliffs stay rock
+	for i, d := range f.CoastDist {
+		if d > 0 && d <= beachW[i] && !f.Rock[i] {
+			f.Water[i], f.Coast[i] = mapgen.Beach, true
+		}
+	}
+	dropStrayBeach(c)
 	return nil
+}
+
+// dropStrayBeach removes beach pockets that do not touch the sea.
+func dropStrayBeach(c *mapgen.Ctx) {
+	f := c.F
+	label, sizes := mapgen.Components(c.W, c.H, f.Coast, false)
+	sea := make([]bool, len(sizes))
+	for i, l := range label {
+		if l >= 0 && f.Water[i].Wet() {
+			sea[l] = true
+		}
+	}
+	for i, l := range label {
+		if l >= 0 && !sea[l] {
+			f.Water[i], f.Coast[i] = mapgen.Dry, false
+		}
+	}
 }
 
 // rank orders the coast classes from the sea inland.

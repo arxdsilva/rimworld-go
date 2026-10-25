@@ -22,35 +22,41 @@ func (River) Name() string { return "river" }
 
 // River tuning (our own numbers).
 const (
-	riverMinSide   = 4    // smaller maps get no river
-	meanderMin     = 0.10 // meander amplitude, share of the river's length
-	meanderMax     = 0.16
-	meanderEnds    = 0.15 // share of the length at each end that eases out of the meander
-	widthVary      = 0.20 // smooth width variation along the river
-	widthCell      = 50.0 // lattice of the width variation
-	bankCell       = 15.0 // lattice of the bank width
-	plainCell      = 25.0 // lattice of the floodplain width
-	bankMin        = 1.2  // bank width range (cells); above 1 so every cell beside the channel is bank
-	bankMax        = 3.0
-	canyonBank     = 3.0 // walkable cut beside the channel through rock
-	plainMin       = 2.0 // floodplain width range (cells)
-	plainSpan      = 2.0 // noise adds up to this
-	plainBend      = 2.0 // the inside of a tight bend adds up to this
-	bendRadius     = 40.0
-	curveHalfSpan  = 6 // points either side for the curvature estimate
-	fordFirstMin   = 20.0
-	fordFirstMax   = 40.0
-	fordGapMin     = 60.0
-	fordGapMax     = 86.0
-	fordLenMin     = 3.0
-	fordLenMax     = 5.0
-	uBendDepthMin  = 0.45 // U-bend handle length, share of the map across
-	uBendDepthMax  = 0.60
-	edgeSpreadMin  = 0.25 // where on its edge the river enters or leaves
-	edgeSpreadMax  = 0.75
-	uEdgeNear      = 0.15 // U-bend ends: the first in [near, near+0.2], the second mirrored
-	plainMaxCells  = plainMin + plainSpan + plainBend
-	halfWidthFloor = 1.0 // keeps every channel 4-connected
+	riverMinSide      = 4    // smaller maps get no river
+	meanderMin        = 0.16 // meander amplitude, share of the river's length
+	meanderMax        = 0.24
+	meanderEnds       = 0.15 // share of the length at each end that eases out of the meander
+	widthVary         = 0.20 // smooth width variation along the river
+	widthCell         = 50.0 // lattice of the width variation
+	bankCell          = 15.0 // lattice of the bank width
+	plainCell         = 25.0 // lattice of the floodplain width
+	bankMin           = 1.2  // bank width range (cells); above 1 so every cell beside the channel is bank
+	bankMax           = 3.0
+	canyonBank        = 3.0 // walkable cut beside the channel through rock
+	plainMin          = 2.0 // floodplain width range (cells)
+	plainSpan         = 2.0 // noise adds up to this
+	plainBend         = 2.0 // the inside of a tight bend adds up to this
+	bendRadius        = 40.0
+	curveHalfSpan     = 6 // points either side for the curvature estimate
+	fordFirstMin      = 20.0
+	fordFirstMax      = 40.0
+	fordGapMin        = 60.0
+	fordGapMax        = 86.0
+	fordLenMin        = 3.0
+	fordLenMax        = 5.0
+	uBendDepthMin     = 0.45 // U-bend handle length, share of the map across
+	uBendDepthMax     = 0.60
+	edgeSpreadMin     = 0.25 // where on its edge the river enters or leaves
+	edgeSpreadMax     = 0.75
+	uEdgeNear         = 0.15 // U-bend ends: the first in [near, near+0.2], the second mirrored
+	plainMaxCells     = plainMin + plainSpan + plainBend
+	fordFixes         = 6    // rounds of the crossing check
+	fordCheckHalf     = 3.0  // half length of the strip the check walks across
+	meanderFixes      = 30   // rounds of local meander damping
+	meanderSmallFloor = 0.2  // the big meander is damped only once the wiggles are this small
+	meanderDamp       = 0.85 // displacement kept per round where a meander misbehaves
+	meanderDampSpan   = 5    // cells over which a damping fades out
+	halfWidthFloor    = 1.0  // keeps every channel 4-connected
 )
 
 // riverWidth is the channel width at Scale 1 (×√Scale), riverCore the
@@ -123,24 +129,24 @@ func riverCentre(c *mapgen.Ctx, r *randx.Rand, rp site.RiverPath) []mapgen.Point
 	// meanders: smooth sideways displacement along the length
 	L := float64(len(base) - 1)
 	amp := frac(meanderMin, meanderMax) * L
-	cell1, cell2 := math.Max(1, L/2.5), math.Max(1, L/8)
+	cell1, cell2 := math.Max(1, L/3), math.Max(1, L/7)
 	s1, s2 := c.NoiseSeed("river/meander"), c.NoiseSeed("river/wiggle")
 	y1, y2 := (float64(r.IntN(1000))+0.37)*cell1, (float64(r.IntN(1000))+0.61)*cell2
 	ease := math.Max(1, meanderEnds*L)
-	bent := make([]mapgen.PointF, len(base))
-	for k, p := range base {
+	big, small := make([]float64, len(base)), make([]float64, len(base))
+	nx, ny := make([]float64, len(base)), make([]float64, len(base))
+	for k := range base {
 		lo, hi := base[max(0, k-1)], base[min(len(base)-1, k+1)]
 		tx, ty := hi.X-lo.X, hi.Y-lo.Y
-		tl := math.Hypot(tx, ty)
-		if tl == 0 {
-			bent[k] = p
-			continue
+		if tl := math.Hypot(tx, ty); tl > 0 {
+			nx[k], ny[k] = -ty/tl, tx/tl
 		}
 		s := float64(k)
 		env := mapgen.Smoothstep(0, ease, s) * mapgen.Smoothstep(0, ease, L-s)
-		d := env * (amp*(2*noise2.Gradient(s1, s, y1, cell1)-1) + amp/3*(2*noise2.Gradient(s2, s, y2, cell2)-1))
-		bent[k] = clampMap(c, mapgen.PointF{X: p.X - ty/tl*d, Y: p.Y + tx/tl*d})
+		big[k] = env * amp * (2*noise2.Gradient(s1, s, y1, cell1) - 1)
+		small[k] = env * amp / 2 * (2*noise2.Gradient(s2, s, y2, cell2) - 1)
 	}
+	bent := tameMeanders(c, base, nx, ny, big, small, riverWidth[rp.Size]*math.Sqrt(c.Scale())*(1+widthVary)/2)
 	line := resample(bent, 1)
 
 	// run on past both edges
@@ -155,6 +161,96 @@ func riverCentre(c *mapgen.Ctx, r *randx.Rand, rp site.RiverPath) []mapgen.Point
 		full = append(full, mapgen.PointF{X: end.X - nb.X*float64(k), Y: end.Y - nb.Y*float64(k)})
 	}
 	return full
+}
+
+// tameMeanders displaces base by big+small along its normals, then damps
+// the displacement locally (smoothly; the small wiggles first, the big
+// meander only once they are nearly gone) wherever the result bends tighter than
+// minRadius, comes back within minSep of a non-adjacent part of itself, or
+// pushes the river toward the map border inside its outer bands.
+func tameMeanders(c *mapgen.Ctx, base []mapgen.PointF, nx, ny, big, small []float64, hw float64) []mapgen.PointF {
+	n := len(base)
+	minRadius := hw + canyonBank + 2
+	minSep := 4*hw + 2
+	margin := hw + canyonBank + plainMaxCells + 1
+	border := func(p mapgen.PointF) float64 {
+		return math.Min(math.Min(p.X, float64(c.W)-p.X), math.Min(p.Y, float64(c.H)-p.Y))
+	}
+	fb, fs := make([]float64, n), make([]float64, n)
+	for k := range fb {
+		fb[k], fs[k] = 1, 1
+	}
+	bent := make([]mapgen.PointF, n)
+	arc := make([]float64, n)
+	theta := make([]float64, n)
+	bad := make([]bool, n)
+	for range meanderFixes {
+		for k, p := range base {
+			d := big[k]*fb[k] + small[k]*fs[k]
+			bent[k] = clampMap(c, mapgen.PointF{X: p.X + nx[k]*d, Y: p.Y + ny[k]*d})
+		}
+		for k := range bent {
+			if k > 0 {
+				arc[k] = arc[k-1] + math.Hypot(bent[k].X-bent[k-1].X, bent[k].Y-bent[k-1].Y)
+			}
+			lo, hi := bent[max(0, k-1)], bent[min(n-1, k+1)]
+			theta[k] = math.Atan2(hi.Y-lo.Y, hi.X-lo.X)
+		}
+		found := false
+		for k := range bent {
+			bad[k] = border(bent[k]) < math.Min(margin, border(base[k]))-1e-9
+			lo, hi := max(0, k-curveHalfSpan), min(n-1, k+curveHalfSpan)
+			if ds := arc[hi] - arc[lo]; ds > 0 && math.Abs(math.Remainder(theta[hi]-theta[lo], 2*math.Pi))*minRadius > ds {
+				bad[k] = true
+			}
+			found = found || bad[k]
+		}
+		// non-adjacent parts too close (every second point is enough)
+		for i := 0; i < n; i += 2 {
+			for j := i + 2; j < n; j += 2 {
+				if arc[j]-arc[i] > 2*minSep && math.Hypot(bent[i].X-bent[j].X, bent[i].Y-bent[j].Y) < minSep {
+					bad[i], bad[j], found = true, true, true
+				}
+			}
+		}
+		if !found {
+			break
+		}
+		for k := range fb {
+			switch {
+			case !bad[k]:
+			case fs[k] > meanderSmallFloor:
+				fs[k] *= meanderDamp
+			default:
+				fb[k] *= meanderDamp
+			}
+		}
+		fb, fs = smoothMin(fb, meanderDampSpan), smoothMin(fs, meanderDampSpan)
+	}
+	return bent
+}
+
+// smoothMin is a moving minimum over ±h followed by a moving average over
+// ±h: never above v anywhere, and smooth.
+func smoothMin(v []float64, h int) []float64 {
+	n := len(v)
+	m := make([]float64, n)
+	for k := range v {
+		m[k] = v[k]
+		for j := max(0, k-h); j <= min(n-1, k+h); j++ {
+			m[k] = math.Min(m[k], v[j])
+		}
+	}
+	out := make([]float64, n)
+	for k := range m {
+		s, cnt := 0.0, 0
+		for j := max(0, k-h); j <= min(n-1, k+h); j++ {
+			s += m[j]
+			cnt++
+		}
+		out[k] = s / float64(cnt)
+	}
+	return out
 }
 
 // riverProfile is the river's shape sampled at every centreline point.
@@ -320,24 +416,95 @@ func fords(c *mapgen.Ctx, r *randx.Rand, line []mapgen.PointF, p riverProfile, k
 	if len(at) == 0 {
 		at = append(at, (s0+s1)/2)
 	}
-	f := c.F
 	for _, s := range at {
 		k := min(k1, max(k0, sort.SearchFloat64s(p.arc, s)))
 		half := (fordLenMin + (fordLenMax-fordLenMin)*r.Float64()) / 2
-		ctr, tx, ty := line[k], p.tx[k], p.ty[k]
-		lat := p.half[k] + 2
-		rad := hwMax + 3
-		for y := max(0, int(ctr.Y-rad)); y <= min(c.H-1, int(ctr.Y+rad)); y++ {
-			for x := max(0, int(ctr.X-rad)); x <= min(c.W-1, int(ctr.X+rad)); x++ {
-				i := c.Idx(x, y)
-				if !f.River[i] || f.Water[i] != mapgen.Deep {
-					continue
-				}
-				dx, dy := float64(x)+0.5-ctr.X, float64(y)+0.5-ctr.Y
-				if math.Abs(dx*tx+dy*ty) <= half && math.Abs(dy*tx-dx*ty) <= lat {
-					f.Water[i] = mapgen.Shallow
+		ford(c, line, p, k, half, p.half[k]+2, hwMax+3)
+	}
+	// check: walk the river and add a wider ford in the middle of every
+	// stretch still longer than fordGapMax without a crossing
+	reach := hwMax + canyonBank + 3
+	for range fordFixes {
+		prev, fixed := s0, false
+		gap := func(s float64) {
+			if s-prev > fordGapMax {
+				m := min(k1, max(k0, sort.SearchFloat64s(p.arc, (s+prev)/2)))
+				ford(c, line, p, m, fordLenMax/2+1, hwMax+3, hwMax+4)
+				fixed = true
+			}
+			prev = s
+		}
+		for k := k0; k <= k1; k += 2 {
+			if crosses(c, line, p, k, fordCheckHalf, reach) {
+				gap(p.arc[k])
+			}
+		}
+		gap(s1)
+		if !fixed {
+			return
+		}
+	}
+}
+
+// ford turns the river's deep cells in a strip across centreline point k
+// (half its length along the river, lat to each side) shallow.
+func ford(c *mapgen.Ctx, line []mapgen.PointF, p riverProfile, k int, half, lat, rad float64) {
+	f := c.F
+	ctr, tx, ty := line[k], p.tx[k], p.ty[k]
+	for y := max(0, int(ctr.Y-rad)); y <= min(c.H-1, int(ctr.Y+rad)); y++ {
+		for x := max(0, int(ctr.X-rad)); x <= min(c.W-1, int(ctr.X+rad)); x++ {
+			i := c.Idx(x, y)
+			if !f.River[i] || f.Water[i] != mapgen.Deep {
+				continue
+			}
+			dx, dy := float64(x)+0.5-ctr.X, float64(y)+0.5-ctr.Y
+			if math.Abs(dx*tx+dy*ty) <= half && math.Abs(dy*tx-dx*ty) <= lat {
+				f.Water[i] = mapgen.Shallow
+			}
+		}
+	}
+}
+
+// crosses reports a walk from dry ground on one side of the river to dry
+// ground on the other inside the strip across point k (half along the
+// river, reach to each side), never through deep water or rock.
+func crosses(c *mapgen.Ctx, line []mapgen.PointF, p riverProfile, k int, half, reach float64) bool {
+	f := c.F
+	ctr, tx, ty := line[k], p.tx[k], p.ty[k]
+	x0, x1 := max(0, int(ctr.X-reach)-1), min(c.W-1, int(ctr.X+reach)+1)
+	y0, y1 := max(0, int(ctr.Y-reach)-1), min(c.H-1, int(ctr.Y+reach)+1)
+	lw, lh := x1-x0+1, y1-y0+1
+	if lw <= 0 || lh <= 0 {
+		return false
+	}
+	src, pass := make([]bool, lw*lh), make([]bool, lw*lh)
+	var dst []int
+	for y := y0; y <= y1; y++ {
+		for x := x0; x <= x1; x++ {
+			dx, dy := float64(x)+0.5-ctr.X, float64(y)+0.5-ctr.Y
+			b := dy*tx - dx*ty
+			i, li := c.Idx(x, y), (y-y0)*lw+(x-x0)
+			if math.Abs(dx*tx+dy*ty) > half || math.Abs(b) > reach || f.Rock[i] || f.Water[i] == mapgen.Deep {
+				continue
+			}
+			pass[li] = true
+			if !f.Water[i].Wet() {
+				if b > 0 {
+					src[li] = true
+				} else {
+					dst = append(dst, li)
 				}
 			}
 		}
 	}
+	if len(dst) == 0 {
+		return false
+	}
+	d := mapgen.BFSDist(lw, lh, src, pass, false)
+	for _, i := range dst {
+		if d[i] >= 0 {
+			return true
+		}
+	}
+	return false
 }
