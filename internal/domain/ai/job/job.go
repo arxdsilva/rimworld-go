@@ -221,6 +221,12 @@ func (k Kind) String() string {
 		return "tend animal"
 	case Visit:
 		return "visit"
+	case Rope:
+		return "rope animal"
+	case FightFire:
+		return "fight fire"
+	case ClearSnow:
+		return "clear snow"
 	default:
 		return "idle"
 	}

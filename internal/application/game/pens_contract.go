@@ -52,6 +52,13 @@ type PenView struct {
 	GrazePerDay, DemandPerDay, TroughStock int
 }
 
+// penAnimalSave is one penned animal's unpenned clock (PLAY-015): Since
+// is the tick it last lost its pen (roping or penning resets it).
+type penAnimalSave struct {
+	Animal entity.EntityID
+	Since  uint64
+}
+
 // penSave is one pen marker's saved settings.
 type penSave struct {
 	Marker   entity.EntityID
