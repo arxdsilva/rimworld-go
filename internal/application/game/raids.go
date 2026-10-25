@@ -523,18 +523,29 @@ func (g *Game) nearestColonist(p Position) (entity.EntityID, Position, bool) {
 	return best, bp, best != 0
 }
 
-// dropRaiderGear leaves a dead pawn's (raider's or colonist's) weapon
-// where it fell.
+// dropRaiderGear leaves a dead pawn's (raider's, visitor's or colonist's)
+// weapon where it fell: a stranger's is found, not the colony's
+// (haul_claim.go), and a raider's starts forbidden too.
 func (g *Game) dropRaiderGear(id entity.EntityID) {
 	pos, _ := g.positions.Get(id)
 	if k, ok := g.equip[id]; ok {
-		if g.isRaider(id) {
-			g.dropForbidden(k, 1, pos.X, pos.Y) // forbid.go: raid loot starts forbidden
-		} else {
+		switch {
+		case g.isRaider(id):
+			g.spawnUnclaimed(k, 1, pos.X, pos.Y, true)
+		case g.strangerGear(id):
+			g.spawnUnclaimed(k, 1, pos.X, pos.Y, false)
+		default:
 			g.dropStack(k, 1, pos.X, pos.Y)
 		}
 		delete(g.equip, id)
 	}
+}
+
+// strangerGear: id is a visitor (dead or alive), so its gear is not the
+// colony's.
+func (g *Game) strangerGear(id entity.EntityID) bool {
+	p := g.personOf(id)
+	return p != nil && p.Where == whereVisitor
 }
 
 // removeRaider takes raider (or visitor, prisoner) id off the map. A

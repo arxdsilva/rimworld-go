@@ -129,7 +129,7 @@ func (g *Game) placeVaults(vs []mapgen.Vault) {
 		}
 		for _, l := range v.Loot {
 			if l.Qty > 0 && g.dryWalkable(l.X, l.Y) {
-				g.dropStack(l.Kind, l.Qty, l.X, l.Y)
+				g.spawnUnclaimed(l.Kind, l.Qty, l.X, l.Y, false) // haul_claim.go: found, not the colony's
 			}
 		}
 		if n > 0 {

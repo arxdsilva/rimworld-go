@@ -73,8 +73,8 @@ func (g *Game) emptyRack(id entity.EntityID, x, y int) {
 	}
 }
 
-// dropStackOf spawns a copy of st (kind, quantity, rot, dried) at (x, y),
-// merging into a matching stack there.
+// dropStackOf spawns a copy of st (kind, quantity, rot, dried, found and
+// marked) at (x, y), merging into a matching stack there.
 func (g *Game) dropStackOf(st item.Stack, x, y int) {
 	sid, err := g.SpawnStack(st.Kind, st.Qty, x, y)
 	if err != nil {
@@ -82,6 +82,7 @@ func (g *Game) dropStackOf(st item.Stack, x, y int) {
 	}
 	if s, ok := g.stacks.Get(sid); ok {
 		s.Rot, s.Dried = st.Rot, st.Dried
+		s.Unclaimed, s.HaulMarked = st.Unclaimed, st.HaulMarked
 		g.mergeOrSet(sid, s)
 	}
 }

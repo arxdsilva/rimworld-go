@@ -169,8 +169,9 @@ func TestForbidMergeRules(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 10, Height: 8})
 	f1, _ := g.SpawnStack(item.Wood, 3, 4, 4)
 	g.setForbidden(f1, true)
-	// forbidden loot dropped on it joins it; allowed wood spills beside
-	g.dropForbidden(item.Wood, 2, 4, 4)
+	// forbidden wood set down on it joins it; allowed wood spills beside
+	f2, _ := g.SpawnStack(item.Wood, 2, 4, 4)
+	g.setForbidden(f2, true)
 	if st, _ := g.stacks.Get(f1); st.Qty != 5 || !st.Forbidden {
 		t.Fatalf("forbidden stacks merge: %+v", st)
 	}

@@ -131,6 +131,10 @@ func (g *Game) applyOne(c command.Command) {
 		g.setForbidden(entity.EntityID(c.Target), c.Enabled) // forbid.go
 	case command.DesignateForbid:
 		g.markForbidden(c.X, c.Y, c.X2, c.Y2, c.Enabled)
+	case command.SetHaulMark:
+		g.setHaulMark(entity.EntityID(c.Target), c.Enabled) // haul_claim.go
+	case command.DesignateHaul:
+		g.markHaul(c.X, c.Y, c.X2, c.Y2, c.Enabled)
 	case command.DesignateDeconstruct:
 		g.markDeconstruct(c.X, c.Y, c.X2, c.Y2, true)
 	case command.DesignateHunt:
@@ -252,6 +256,7 @@ func (g *Game) cancelRect(x1, y1, x2, y2 int) {
 	g.markSmooth(x1, y1, x2, y2, false)
 	g.markHunt(x1, y1, x2, y2, false)
 	g.markTame(x1, y1, x2, y2, false)
+	g.markHaul(x1, y1, x2, y2, false)                                        // haul_claim.go
 	g.zones.Clear(zone.Rect{MinX: minX, MinY: minY, MaxX: maxX, MaxY: maxY}) // zones.go: shrinks or splits
 	g.clearRoofPlans(minX, minY, maxX, maxY)
 	g.unmarkGrass(minX, minY, maxX, maxY) // grass.go
@@ -374,6 +379,7 @@ func (g *Game) dropCarry(id entity.EntityID) {
 	}
 	st.Carrier = 0
 	st.X, st.Y = pos.X, pos.Y
+	claim(&st) // haul_claim.go: what a colonist put down is the colony's
 	g.mergeOrSet(j.Carry, st)
 	j.Carry = 0
 	g.jobs.Set(id, j)
@@ -816,8 +822,8 @@ func (g *Game) haulToStockpile(id entity.EntityID, pos Position) bool {
 		post := g.postponedTargets(id, job.Haul, postBuf[:0])
 		for _, iid := range g.itemIDs {
 			st := g.stacks.Ref(iid) // read only: nothing below changes the store
-			if st == nil || st.Qty <= 0 || st.Carrier != 0 || st.Forbidden {
-				continue
+			if st == nil || st.Qty <= 0 || st.Carrier != 0 || st.Forbidden || leftFound(st) {
+				continue // leftFound (haul_claim.go): found on the map, unmarked
 			}
 			off := len(post) > 0 && slices.Contains(post, iid)
 			if !off && g.inMatchingStockpileAt(st.Kind, st.X, st.Y) {
@@ -1172,7 +1178,8 @@ func (g *Game) doHaul(id entity.EntityID, j job.Record) {
 	pos, _ := g.positions.Get(id)
 	if j.Carry == 0 {
 		st, ok := g.stacks.Get(j.Target)
-		if !ok || st.Qty <= 0 {
+		if !ok || st.Qty <= 0 || !j.Forced && j.Dest == 0 && len(j.Route) == 0 && leftFound(&st) {
+			// gone, or a find whose haul mark was taken off on the way
 			j.State = job.Fail
 			j.Fail = job.TargetGone
 			g.jobs.Set(id, j)
@@ -1198,6 +1205,7 @@ func (g *Game) doHaul(id entity.EntityID, j job.Record) {
 			st = splitLoad(st, take)
 		}
 		st.Carrier = id
+		claim(&st) // haul_claim.go: picked up, the colony's
 		g.stacks.Set(carry, st)
 		j.Carry = carry
 		if len(j.Route) > 0 {
@@ -1245,6 +1253,7 @@ func (g *Game) finishHaulDrop(id entity.EntityID, j job.Record) {
 	}
 	st.Carrier = 0
 	st.X, st.Y = j.DestX, j.DestY
+	claim(&st) // haul_claim.go: stored, the colony's
 	fid := j.Dest
 	fr, isFrame := g.frames.Get(fid)
 	if fid != 0 && isFrame && st.Kind == fr.Stuff {
@@ -1598,6 +1607,9 @@ func (g *Game) mergeOrSetFrom(id entity.EntityID, st item.Stack, seen []spillSte
 		return
 	}
 	seen = append(seen, here)
+	if (st.Unclaimed || st.HaulMarked) && st.Carrier == 0 && g.inMatchingStockpileAt(st.Kind, st.X, st.Y) {
+		claim(&st) // haul_claim.go: set down in a stockpile that takes it, stored
+	}
 	if g.isWaterAt(st.X, st.Y) && st.Carrier == 0 {
 		// a load set down in water floats to the nearest dry ground
 		if x, y, ok := g.spillTile(st.Kind, st.X, st.Y); ok {
@@ -1700,7 +1712,9 @@ func (g *Game) VitalOf(id entity.EntityID) health.Record {
 }
 
 // splitLoad is the take-sized load split off stack st: same kind, place,
-// age and drying, and the same body (species, who, when) for corpses.
+// age and drying, and the same body (species, who, when) for corpses. It
+// is the colony's, allowed and unmarked (PLAY-017: picked up); the rest
+// keeps st's flags.
 func splitLoad(st item.Stack, take int) item.Stack {
 	return item.Stack{Kind: st.Kind, Qty: take, X: st.X, Y: st.Y, Rot: st.Rot, Dried: st.Dried,
 		Animal: st.Animal, Of: st.Of, DiedAt: st.DiedAt, Hatch: st.Hatch, Tame: st.Tame}

@@ -102,7 +102,7 @@ func (g *Game) placeRuin(r mapgen.Ruin) {
 	}
 	for _, l := range r.Loot {
 		if l.Qty > 0 && g.dryWalkable(l.X, l.Y) {
-			g.dropStack(l.Kind, l.Qty, l.X, l.Y)
+			g.spawnUnclaimed(l.Kind, l.Qty, l.X, l.Y, false) // haul_claim.go: found, not the colony's
 		}
 	}
 	for _, c := range r.Rubble {
@@ -110,12 +110,13 @@ func (g *Game) placeRuin(r mapgen.Ruin) {
 	}
 }
 
-// dropChunk lays one stone chunk on open dry ground.
+// dropChunk lays one stone chunk, found on the map (haul_claim.go), on
+// open dry ground.
 func (g *Game) dropChunk(c mapgen.ChunkSpawn) {
 	if c.Stone == geology.None || !g.dryWalkable(c.X, c.Y) {
 		return
 	}
-	g.dropStack(item.ChunkOf(c.Stone), 1, c.X, c.Y)
+	g.spawnUnclaimed(item.ChunkOf(c.Stone), 1, c.X, c.Y, false)
 }
 
 // placeGenerated stands a finished map-feature building (no frame, no

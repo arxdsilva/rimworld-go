@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/terrain"
 )
@@ -333,7 +334,8 @@ func (g *Game) clearItemsFrom(x, y int, cells [][2]int) {
 						continue
 					}
 					g.deleteItem(sid)
-					g.dropStack(st.Kind, st.Qty, nx, ny)
+					// found or marked stays so (haul_claim.go)
+					g.dropStackOf(item.Stack{Kind: st.Kind, Qty: st.Qty, Unclaimed: st.Unclaimed, HaulMarked: st.HaulMarked}, nx, ny)
 					moved = true
 				}
 			}

@@ -276,7 +276,7 @@ func (g *Game) casketRemains(b construction.Building, v *vaultSave) {
 	kit := meleeKit[int(g.entities.Peek())%len(meleeKit)]
 	id := g.casketHostile(b, v, kit)
 	if id == 0 {
-		g.dropStack(kit, 1, b.X, b.Y)
+		g.spawnUnclaimed(kit, 1, b.X, b.Y, false) // haul_claim.go: found, not the colony's
 		g.message(b.X, b.Y, "Old remains crumble in the casket, beside their gear.")
 		return
 	}
