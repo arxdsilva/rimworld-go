@@ -57,4 +57,3 @@ func dirVec(d site.Dir8) (float64, float64) {
 	l := math.Hypot(v[0], v[1])
 	return v[0] / l, v[1] / l
 }
-
