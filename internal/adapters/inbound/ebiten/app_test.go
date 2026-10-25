@@ -60,11 +60,12 @@ func (s *stubSim) Step(n int) {
 	s.tick += clock.Tick(n)
 }
 
-func (s *stubSim) Snapshot() []game.PawnView { return s.pawns }
-func (s *stubSim) Width() int                { return s.w }
-func (s *stubSim) Height() int               { return s.h }
-func (s *stubSim) Tick() clock.Tick          { return s.tick }
-func (s *stubSim) Date() clock.Date          { return clock.DateAt(s.tick) }
+func (s *stubSim) Snapshot() []game.PawnView  { return s.pawns }
+func (s *stubSim) Width() int                 { return s.w }
+func (s *stubSim) TemperatureAt(x, y int) int { return 150 }
+func (s *stubSim) Height() int                { return s.h }
+func (s *stubSim) Tick() clock.Tick           { return s.tick }
+func (s *stubSim) Date() clock.Date           { return clock.DateAt(s.tick) }
 func (s *stubSim) Activity() schedule.Activity {
 	return schedule.Work
 }

@@ -74,8 +74,10 @@ Every subagent runs on the **cheapest model that can do its job well**. Choose p
 | Tier | `Agent` `model:` | Use for |
 | --- | --- | --- |
 | 1 | `haiku` | Mechanical, fully specified work: repo searches and inventories (Explore), running captures and benchmarks and collecting the output, checklist and handoff edits from facts the lead supplies, fixtures |
-| 2 | `sonnet` | Standard implementation against a written contract: renderer and UI features, screens, Blender family edits against an exact spec, outbound adapters, unit tests, docs prose |
-| 3 | `opus` | Hard reasoning: tick order and determinism, pathing and movement arbitration, reservations and jobs, save migrations, concurrency and workers, interpolation and timing math, architecture and plan review |
+| 2 | `sonnet` | Standard implementation against a written contract: renderer and UI features, screens, outbound adapters, unit tests, docs prose |
+| 3 | `opus` | Hard reasoning: tick order and determinism, pathing and movement arbitration, reservations and jobs, save migrations, concurrency and workers, interpolation and timing math, architecture and plan review. **All art** (see below) |
+
+**Art always runs on the best model (user decision, 2026-10-25).** Every agent that makes, changes or visually reviews art (palettes, UI chrome colours, icons, sprites, Blender families, contact-sheet and capture review) runs on `opus` and loads skill `rimworld-go-art-assets`. Art is never put on a lower tier to save cost; split art out of a mixed agent instead. Only mechanical capture runs (running commands, collecting files) may stay on `haiku`.
 
 | Do | Don't |
 | --- | --- |

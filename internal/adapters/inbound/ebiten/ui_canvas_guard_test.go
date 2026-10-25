@@ -185,6 +185,7 @@ var hudFiles = []string{
 	"threat_ui.go", "climate_ui.go", "chase_ui.go", "widgets.go", "gizmo.go",
 	"search_ui.go", "animals_ui.go", "archtools.go", "letters.go", "toast.go",
 	"screen_*.go", "ui_*.go", "*_ui.go", "portrait.go",
+	"hud_*.go", "cmds_*.go", // PLAY-018 HUD regions
 }
 
 // hudFilesNot are files the globs above catch that are not HUD files.

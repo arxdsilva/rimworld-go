@@ -32,4 +32,13 @@ func (a *App) colonyUI(sw, sh int) {
 	a.statusChipsUI(sw)
 	a.animalsTabUI(sw, sh)    // animals_ui.go: Area / Pen dropdowns
 	a.areaSelectorsUI(sw, sh) // area_select.go: Schedule column, inspector line, overlay sync
+	// PLAY-018 HUD regions (each owner's file)
+	a.resourcesUI(sw, sh)   // hud_resources.go
+	a.colonistBarUI(sw, sh) // hud_colonistbar.go
+	a.rightColumnUI(sw, sh) // hud_right.go
+	a.globalUI(sw, sh)      // hud_global.go
+	a.paneUI(sw, sh)        // hud_inspect.go
+	a.commandGridUI(sw, sh) // hud_commands.go
+	a.learnUI(sw, sh)       // learn_ui.go
+	a.mainWindowUI(sw, sh)  // hud_window.go
 }

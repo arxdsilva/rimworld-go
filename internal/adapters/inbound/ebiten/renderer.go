@@ -27,6 +27,10 @@ import (
 // implementation satisfying it can be swapped in without touching this
 // adapter.
 type Simulation interface {
+	// TemperatureAt is the air temperature on a tile, in tenths of a degree C
+	// (rooms, weather, vents, fire): the lower-right temperature line
+	// follows the cursor with it (PLAY-018).
+	TemperatureAt(x, y int) int
 	Step(ticks int)
 	Snapshot() []game.PawnView
 	World() game.WorldView
@@ -180,6 +184,9 @@ type pawnVisual struct {
 
 // Renderer drives an Ebitengine window from a running Simulation.
 type Renderer struct {
+	// onEnqueue, when set, sees every command the player sends (PLAY-018:
+	// the learning helper marks lessons done from the player's own orders).
+	onEnqueue  func(command.Command)
 	layerTrace func(string) // test hook: ground layers in draw order
 	treeFx     treeFx       // see-through tree canopies (tree_fade.go)
 	game       Simulation
@@ -719,6 +726,9 @@ type pendingApplier interface{ ApplyPending() }
 // instead of on unpause; running, it waits for the next Step.
 func (r *Renderer) enqueue(c command.Command) {
 	r.game.Enqueue(c)
+	if r.onEnqueue != nil {
+		r.onEnqueue(c) // learn_ui.go: lessons done by the player's own orders
+	}
 	if r.speed == speedPaused {
 		if p, ok := r.game.(pendingApplier); ok {
 			p.ApplyPending()

@@ -13,7 +13,14 @@ import (
 // Normalize migrates anything older with both on.
 // Version 3 (PLAY-017) added Gameplay.RunInBackground; older files decode
 // over the defaults, so it arrives off.
-const SettingsVersion = 3
+// Version 4 (PLAY-018) added the learning helper (ShowLearningHelper,
+// LearnCollapsed, LearnedLessons), CategorizedResources and
+// ShowColonistBar; Normalize turns the helper and the bar on for anything
+// older.
+const SettingsVersion = 4
+
+// MaxLearnedLessons caps the learning helper's done list.
+const MaxLearnedLessons = 64
 
 // Settings are the player's preferences (Options screen).
 type Settings struct {
@@ -76,6 +83,13 @@ type Gameplay struct {
 	// background or minimised. Off (the default): the game pauses until
 	// the player comes back.
 	RunInBackground bool `json:"run_in_background"`
+	// PLAY-018: the learning helper (shown, collapsed, the lessons done),
+	// the resource list's grouping and whether the colonist bar shows.
+	ShowLearningHelper   bool     `json:"show_learning_helper"`
+	LearnCollapsed       bool     `json:"learn_collapsed,omitempty"`
+	LearnedLessons       []string `json:"learned_lessons,omitempty"`
+	CategorizedResources bool     `json:"categorized_resources,omitempty"`
+	ShowColonistBar      bool     `json:"show_colonist_bar"`
 	// DevMode turns on the developer keys: ultrafast speed, single-tick
 	// stepping, debug actions, the debug log and the debug inspector.
 	DevMode bool `json:"dev_mode"`
@@ -140,7 +154,7 @@ func Defaults() Settings {
 		Version:       SettingsVersion,
 		Audio:         Audio{Master: 80, Music: 60, Effects: 80, Ambience: 70, UI: 70, MuteUnfocused: true},
 		Graphics:      Graphics{VSync: true, Effects: EffectsFull, HiDPI: true},
-		Gameplay:      Gameplay{PauseOnThreat: true, AutosaveDays: 1, PanSpeed: 100},
+		Gameplay:      Gameplay{PauseOnThreat: true, AutosaveDays: 1, PanSpeed: 100, ShowLearningHelper: true, ShowColonistBar: true},
 		Accessibility: Accessibility{UIScale: 100, UIScaleAuto: true},
 	}
 }
@@ -158,7 +172,12 @@ func (s Settings) Normalize() Settings {
 		s.Accessibility.UIScaleAuto = true
 		s.Graphics.HiDPI = true
 	}
+	if s.Version < 4 { // before PLAY-018: no helper or bar switch, both on
+		s.Gameplay.ShowLearningHelper = true
+		s.Gameplay.ShowColonistBar = true
+	}
 	s.Version = SettingsVersion
+	s.Gameplay.LearnedLessons = dedupeLessons(s.Gameplay.LearnedLessons)
 	for _, v := range []*int{&s.Audio.Master, &s.Audio.Music, &s.Audio.Effects, &s.Audio.Ambience, &s.Audio.UI} {
 		*v = snap(*v, 0, 100, VolumeStep)
 	}
@@ -241,4 +260,21 @@ func (g Graphics) FX() float64 {
 		return 0.2
 	}
 	return 1
+}
+
+// dedupeLessons keeps the first of each lesson id, at most
+// MaxLearnedLessons of them.
+func dedupeLessons(ids []string) []string {
+	if len(ids) == 0 {
+		return nil
+	}
+	seen := map[string]bool{}
+	out := make([]string, 0, len(ids))
+	for _, id := range ids {
+		if id != "" && !seen[id] && len(out) < MaxLearnedLessons {
+			seen[id] = true
+			out = append(out, id)
+		}
+	}
+	return out
 }

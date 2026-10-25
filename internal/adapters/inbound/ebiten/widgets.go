@@ -42,6 +42,21 @@ var (
 	// PLAY-012 plan marks: a soft fill and a brighter edge.
 	uiPlanFill = color.RGBA{R: 0xB8, G: 0xD4, B: 0xF0, A: 0x30}
 	uiPlanEdge = color.RGBA{R: 0xD8, G: 0xE8, B: 0xFF, A: 0x90}
+	// PLAY-018: letter kinds, alert backings, the learning helper's warm
+	// set and the mood bar (placeholders until the charcoal palette).
+	uiLetterThreat  = color.RGBA{R: 0xD2, G: 0x56, B: 0x4A, A: 0xFF}
+	uiLetterCaution = color.RGBA{R: 0xE0, G: 0xA0, B: 0x40, A: 0xFF}
+	uiLetterInfo    = color.RGBA{R: 0x8F, G: 0xA8, B: 0xC0, A: 0xFF}
+	uiLetterGood    = color.RGBA{R: 0x7F, G: 0xB8, B: 0x6A, A: 0xFF}
+	uiAlertDangerBg = color.RGBA{R: 0x5A, G: 0x1E, B: 0x1A, A: 0xE6}
+	uiAlertWarnBg   = color.RGBA{R: 0x5A, G: 0x3E, B: 0x14, A: 0xE6}
+	uiTutorPanel    = color.RGBA{R: 0x5E, G: 0x3F, B: 0x26, A: 0xF0}
+	uiTutorBorder   = color.RGBA{R: 0xA0, G: 0x7A, B: 0x44, A: 0xFF}
+	uiTutorHeading  = color.RGBA{R: 0xF2, G: 0xD9, B: 0xA6, A: 0xFF}
+	uiTutorText     = color.RGBA{R: 0xF0, G: 0xE6, B: 0xD2, A: 0xFF}
+	uiMoodGood      = color.RGBA{R: 0x7F, G: 0xB8, B: 0x6A, A: 0xFF}
+	uiMoodMid       = color.RGBA{R: 0xD8, G: 0xB0, B: 0x4A, A: 0xFF}
+	uiMoodBad       = color.RGBA{R: 0xD2, G: 0x56, B: 0x4A, A: 0xFF}
 )
 
 var uiTokens = map[string]color.RGBA{
@@ -77,6 +92,19 @@ var uiTokens = map[string]color.RGBA{
 	"ui.modal_dim":       uiModalDim,
 	"ui.plan_fill":       uiPlanFill,
 	"ui.plan_edge":       uiPlanEdge,
+	"ui.letter_threat":   uiLetterThreat,
+	"ui.letter_caution":  uiLetterCaution,
+	"ui.letter_info":     uiLetterInfo,
+	"ui.letter_good":     uiLetterGood,
+	"ui.alert_danger_bg": uiAlertDangerBg,
+	"ui.alert_warn_bg":   uiAlertWarnBg,
+	"ui.tutor_panel":     uiTutorPanel,
+	"ui.tutor_border":    uiTutorBorder,
+	"ui.tutor_heading":   uiTutorHeading,
+	"ui.tutor_text":      uiTutorText,
+	"ui.mood_good":       uiMoodGood,
+	"ui.mood_mid":        uiMoodMid,
+	"ui.mood_bad":        uiMoodBad,
 }
 
 const menuBackdropBands = 12

@@ -30,6 +30,9 @@ type MessageView struct {
 	// the scenario's intro, extreme weather (NG-1).
 	Letter bool
 	Title  string
+	// Kind (PLAY-018) colours a letter in the right-side stack: "threat",
+	// "caution", "info" or "good" ("" reads as info, or threat if Danger).
+	Kind string
 }
 
 // temperatureAt is the air temperature on a tile: enclosed rooms hold the

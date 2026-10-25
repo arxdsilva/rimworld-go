@@ -326,6 +326,12 @@ func (a *App) Update() error {
 		}
 	}
 
+	if a.colonyLive() && !a.hideUI && a.in.clicked(mbRight) {
+		if mx, my := a.currentCursor(); a.hudRightClick(mx, my) { // hud.go: letters, alerts, command options
+			a.in.take(mbRight)
+		}
+	}
+
 	if a.colonyLive() {
 		a.pruneGroup()
 		a.handleColonyKeys() // hotkeys.go
@@ -499,6 +505,20 @@ func (a *App) applyClick(id string) {
 		a.renderer.togglePlanOverlayIfAny()
 	case id == roomsButtonID:
 		a.rooms = !a.rooms
+	case strings.HasPrefix(id, "letter."):
+		a.applyLetterClick(id) // hud_right.go
+	case strings.HasPrefix(id, "speed."):
+		a.applySpeedClick(id) // hud_global.go
+	case strings.HasPrefix(id, "learn."):
+		a.applyLearnClick(id) // learn_ui.go
+	case strings.HasPrefix(id, "res."):
+		a.applyResourceClick(id) // hud_resources.go
+	case strings.HasPrefix(id, "cmd."):
+		a.applyCommandClick(id) // hud_commands.go
+	case strings.HasPrefix(id, "win."):
+		a.applyWindowClick(id) // hud_window.go
+	case id == "tab.wildlife":
+		a.toggleWildlifeTab() // hud_window.go
 	case strings.HasPrefix(id, "group."):
 		a.applyGroupClick(id) // multiselect.go
 	case strings.HasPrefix(id, "search."):
@@ -606,18 +626,8 @@ func (a *App) applyClick(id string) {
 		if a.renderer != nil {
 			a.renderer.ClearSelect()
 		}
-	case id == "inspector.character":
-		a.inspectTab = "character"
-	case id == "inspector.needs":
-		a.inspectTab = "needs"
-	case id == "inspector.gear":
-		a.inspectTab = "gear"
-	case id == "inspector.log":
-		a.inspectTab = "log"
-	case id == "inspector.health":
-		a.inspectTab = "health"
-	case id == "inspector.social":
-		a.inspectTab = "social"
+	case strings.HasPrefix(id, "inspector."):
+		a.selectPaneTab(id) // hud_inspect.go: open (or collapse) a tab
 	case a.applyWizardClick(id):
 	default:
 		a.apply(a.clickIntent(id))
@@ -858,9 +868,10 @@ func (a *App) drawBottomHint(screen *ebiten.Image, s string, sh int) {
 	}
 	w := int(textW(s, tsBody)) + 16
 	h := int(lineStep(tsBody)) + 4
-	y := int(hudBarY(sh)) - h - 4
-	drawPanel(screen, 8, float32(y), float32(w), float32(h))
-	drawLabel(screen, 16, y+4, s)
+	hx, hb := a.hintAnchor(sh) // hud_commands.go: above the command buttons or the pane
+	x, y := int(hx), int(hb)-h
+	drawPanel(screen, float32(x), float32(y), float32(w), float32(h))
+	drawLabel(screen, x+8, y+4, s)
 }
 
 func (a *App) layoutButtons(sw, sh int) []button {

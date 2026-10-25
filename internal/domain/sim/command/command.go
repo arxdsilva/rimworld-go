@@ -161,6 +161,8 @@ const (
 	// (PLAY-017).
 	DesignateHaul
 	SetHaulMark
+	// DismissLetter removes letter Target from the letter stack (PLAY-018).
+	DismissLetter
 )
 
 // Area references for AssignArea's Index (PLAY-015): any other value is an

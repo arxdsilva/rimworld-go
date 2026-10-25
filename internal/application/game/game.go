@@ -242,6 +242,26 @@ type ItemView struct {
 	HaulMarked bool
 }
 
+// LetterView is one letter in the right-side stack (PLAY-018).
+type LetterView struct {
+	ID    uint64 // stable, for DismissLetter
+	Tick  uint64
+	Kind  string // "threat", "caution", "info" or "good"
+	Title string
+	Text  string
+	X, Y  int             // where it happened (-1: nowhere)
+	Focus entity.EntityID // the creature it is about (0: none)
+	Intro bool            // the scenario's opening letter (opens by itself)
+}
+
+// StoredResourceView is one row of the resource list (PLAY-018).
+type StoredResourceView struct {
+	Kind     string // item kind key ("wood")
+	Label    string // "Wood"
+	Category string // "Food", "Materials", "Medicine", "Apparel", "Weapons", "Manufactured", "Corpses"
+	Qty      int
+}
+
 // FrameView is a construction blueprint.
 type FrameView struct {
 	ID       entity.EntityID
@@ -410,6 +430,13 @@ type WorldView struct {
 	SnowDepth, Wetness float64
 	// Messages are recent event notices, oldest first.
 	Messages []MessageView
+	// Letters (PLAY-018) are the letter stack, newest last: kept and saved
+	// until the player dismisses one (command.DismissLetter), at most 40.
+	Letters []LetterView
+	// Stored (PLAY-018) is what the colony holds in its stockpiles, one row
+	// per item kind, for the resource list (the Food/Wood/... totals above
+	// still count every loose stack).
+	Stored []StoredResourceView
 	// Schedule is the colony default schedule (new colonists get a copy).
 	Schedule []schedule.Activity
 	// Research projects (Research tab) and still-locked unlock keys
