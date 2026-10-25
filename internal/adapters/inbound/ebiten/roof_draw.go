@@ -22,6 +22,7 @@ const (
 	roofPlanRemove
 	roofSupported
 	roofNoAuto
+	roofThick // with roofNatural: deep rock overhead (MAPGEN-2)
 )
 
 // roofAutoMax mirrors roof.AutoMaxCells: larger rooms are not auto-roofed.
@@ -70,6 +71,8 @@ func roofLabelAt(w game.WorldView, x, y int) string {
 		return "Roof removal planned"
 	case c&roofPlanBuild != 0:
 		return "Roof planned"
+	case c&(roofNatural|roofThick) == roofNatural|roofThick:
+		return "Thick rock overhead (permanent)"
 	case c&roofNatural != 0:
 		return "Natural roof (rock)"
 	case c&roofBuilt != 0:

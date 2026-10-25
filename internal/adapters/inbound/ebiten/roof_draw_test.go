@@ -16,7 +16,7 @@ func TestRoofFlagsMirrorDomain(t *testing.T) {
 	pairs := [][2]uint8{
 		{roofBuilt, uint8(roof.Built)}, {roofNatural, uint8(roof.Natural)},
 		{roofPlanBuild, uint8(roof.PlanBuild)}, {roofPlanRemove, uint8(roof.PlanRemove)},
-		{roofSupported, uint8(roof.Supported)}, {roofNoAuto, uint8(roof.NoAuto)},
+		{roofSupported, uint8(roof.Supported)}, {roofNoAuto, uint8(roof.NoAuto)}, {roofThick, uint8(roof.NaturalThick)},
 	}
 	for _, p := range pairs {
 		if p[0] != p[1] {
@@ -44,6 +44,7 @@ func roofLabelWorld() game.WorldView {
 	w.RoofCells[11] = roofPlanBuild
 	w.RoofCells[12] = roofNatural
 	w.RoofCells[13] = roofBuilt
+	w.RoofCells[20] = roofNatural | roofThick
 	return w
 }
 
@@ -58,6 +59,7 @@ func TestRoofLabels(t *testing.T) {
 		{1, 1, "Roof planned"},
 		{2, 1, "Natural roof (rock)"},
 		{3, 1, "Roofed"},
+		{0, 2, "Thick rock overhead (permanent)"},
 		{6, 2, "Unroofed (room too large to auto-roof)"},
 		{0, 3, "Unroofed"},
 		{4, 0, ""},  // a wall
