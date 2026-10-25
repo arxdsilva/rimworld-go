@@ -38,6 +38,9 @@ func (g *Game) CanMoveTo(bid entity.EntityID, facing string, x, y int) (bool, st
 // and pending reinstall frame treated as free.
 func (g *Game) canMoveTo(bid entity.EntityID, f construction.Facing, x, y int) (bool, string) {
 	b, ok := g.bldgs.Get(bid)
+	if ok && isNatural(b.Kind) {
+		return false, ReasonNatural // setup_mapgen.go: a steam vent stays
+	}
 	if !ok || !construction.Movable(b.Kind) || b.Deconstruct {
 		return false, ReasonCantMove
 	}
@@ -204,6 +207,7 @@ func (g *Game) completeMove(id entity.EntityID, fr construction.Frame) {
 	if blocks {
 		for _, c := range oldCells {
 			g.grid.SetWalkable(c[0], c[1], g.terr.At(c[0], c[1]).Walkable() && g.layerBlockerAt(c[0], c[1]) == 0)
+			g.fogOpen(c[0], c[1]) // fog.go
 		}
 	}
 	cells, _, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)

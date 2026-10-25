@@ -117,8 +117,12 @@ func (r *Renderer) clampCamera(v viewport) {
 	mw, mh := float64(r.game.Width())*t, float64(r.game.Height())*t
 	if !r.cam.placed {
 		r.cam.placed = true
-		r.cam.offsetX = mw/2 - (v.x0+v.x1)/2
-		r.cam.offsetY = mh/2 - (v.y0+v.y1)/2
+		cx, cy := mw/2, mh/2
+		if l := r.game.World().Landing; l != [2]int{} && l != [2]int{r.game.Width() / 2, r.game.Height() / 2} {
+			cx, cy = (float64(l[0])+0.5)*t, (float64(l[1])+0.5)*t // a new colony starts on its landing spot
+		}
+		r.cam.offsetX = cx - (v.x0+v.x1)/2
+		r.cam.offsetY = cy - (v.y0+v.y1)/2
 	}
 	r.cam.offsetX = clampAxis(r.cam.offsetX, mw, v.x0, v.x1, edgeSlack*v.w())
 	r.cam.offsetY = clampAxis(r.cam.offsetY, mh, v.y0, v.y1, edgeSlack*v.h())

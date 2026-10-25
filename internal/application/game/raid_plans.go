@@ -63,7 +63,7 @@ func (g *Game) Wealth() int {
 		}
 	}
 	for _, id := range g.bldgIDs {
-		if b, ok := g.bldgs.Get(id); ok {
+		if b, ok := g.bldgs.Get(id); ok && !notColonyPiece(b) { // ruins and vents are no one's wealth
 			v := construction.WoodCost(b.Kind)*2 + construction.WorkTicks(b.Kind)/20
 			if item.IsStoneBlocks(b.Stuff) || b.Stuff == item.Stone {
 				v = v * 3 / 2

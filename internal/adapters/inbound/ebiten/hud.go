@@ -326,6 +326,10 @@ func (a *App) drawHoverRoom(screen *ebiten.Image, sh int) {
 	}
 	tx, ty := a.renderer.TileAt(a.mapCursor()) // physical: the map's pixels
 	w := a.renderer.world()
+	if fl := unexploredLines(w, tx, ty); fl != nil { // fog_draw.go
+		drawHoverPanel(screen, sw, int(hudBarY(sh)), fl)
+		return
+	}
 	lines := soilLines(w, tx, ty)
 	if len(lines) == 0 {
 		return

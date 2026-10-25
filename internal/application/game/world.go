@@ -97,6 +97,7 @@ func (g *Game) setTerrain(x, y int, t terrain.Type) {
 	g.markRoomsDirty()
 	g.roomTouch(x, y) // rooms_index.go: re-read this cell at the rebuild
 	g.grid.SetWalkable(x, y, t.Walkable() && g.layerBlockerAt(x, y) == 0)
+	g.fogOpen(x, y) // fog.go: mining may open into a hidden cave
 }
 
 // naturalStone reports ground that has a stone type: rock walls and
@@ -187,7 +188,7 @@ func (g *Game) markCut(x1, y1, x2, y2 int, on bool) {
 	minX, minY, maxX, maxY := normalizeRect(x1, y1, x2, y2)
 	for _, id := range g.plantIDs {
 		p, ok := g.plants.Get(id)
-		if !ok || p.X < minX || p.X > maxX || p.Y < minY || p.Y > maxY {
+		if !ok || p.X < minX || p.X > maxX || p.Y < minY || p.Y > maxY || g.fogged(p.X, p.Y) {
 			continue
 		}
 		p.Cut = on
@@ -205,7 +206,9 @@ func (g *Game) markMine(x1, y1, x2, y2 int, on bool) {
 	for y := minY; y <= maxY; y++ {
 		for x := minX; x <= maxX; x++ {
 			k := [2]int{x, y}
-			if on && terrain.IsRockWall(g.terr.At(x, y)) && g.grid.InBounds(x, y) {
+			// fog.go: any hidden tile may be marked (the marks don't give a
+			// cave away); a reveal drops the ones that aren't rock
+			if on && (terrain.IsRockWall(g.terr.At(x, y)) || g.fogged(x, y)) && g.grid.InBounds(x, y) {
 				g.mines[k] = true
 				g.minesVer++
 			} else if !on {

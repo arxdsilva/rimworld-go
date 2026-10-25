@@ -135,6 +135,9 @@ func (a *App) selectBuildingAt(tx, ty int) bool {
 func (a *App) clearBuilding() { a.hasBuilding = false }
 
 func buildingTitle(b game.BuildingView) string {
+	if b.Ruin {
+		return ruinTitle(b)
+	}
 	if b.Kind == "carpet" && strings.HasSuffix(b.Stuff, " carpet") {
 		return strings.ToUpper(b.Stuff[:1]) + b.Stuff[1:] // "Straw carpet"
 	}
@@ -162,6 +165,9 @@ func (a *App) buildingButtons() []button {
 	}
 	r := buildingRect()
 	out := []button{{id: "bldg.close", label: "X", x: r.x + r.w - 28, y: r.y + 6, w: 22, h: 22}}
+	if b.Kind == steamVentKind {
+		return out // natural: no deconstruct, move or copy
+	}
 	if !b.Deconstruct {
 		out = append(out, button{id: "bldg.deconstruct", label: "Deconstruct", x: r.x + r.w - 130, y: r.y + r.h - 32, w: 120, h: 24})
 	}
@@ -222,6 +228,9 @@ func (a *App) drawBuildingInspector(screen *ebiten.Image) {
 	drawFitSmall(screen, state, float64(r.x)+12, float64(r.y)+27, float64(r.w)-24, tsBody)
 	for i, ln := range graveLines(b) {
 		drawLabel(screen, int(r.x)+12, int(r.y)+46+i*18, ln)
+	}
+	if ln := ventLine(b); ln != "" {
+		drawFitSmall(screen, ln, float64(r.x)+12, float64(r.y)+46, float64(r.w)-24, tsBody)
 	}
 	if ln := carpetLine(b); ln != "" {
 		drawLabel(screen, int(r.x)+12, int(r.y)+46, ln)

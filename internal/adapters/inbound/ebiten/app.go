@@ -772,6 +772,7 @@ func (a *App) Draw(screen *ebiten.Image) {
 			a.renderer.setAlpha(a.frameAlpha())
 			a.syncTreeFocus() // tree_focus.go: hover, selection and ghost see through canopies
 			a.renderer.Draw(screen)
+			a.drawMapFields(screen) // mapfields_overlay.go: dev only
 		} else {
 			screen.Fill(uiSpace)
 		}

@@ -31,7 +31,7 @@ func (g *Game) markForbidden(x1, y1, x2, y2 int, on bool) {
 	minX, minY, maxX, maxY := zone.Normalize(x1, y1, x2, y2)
 	for _, id := range append([]entity.EntityID(nil), g.itemIDs...) {
 		st, ok := g.stacks.Get(id)
-		if ok && st.Carrier == 0 && st.X >= minX && st.X <= maxX && st.Y >= minY && st.Y <= maxY {
+		if ok && st.Carrier == 0 && st.X >= minX && st.X <= maxX && st.Y >= minY && st.Y <= maxY && !g.fogged(st.X, st.Y) {
 			g.setForbidden(id, on)
 		}
 	}

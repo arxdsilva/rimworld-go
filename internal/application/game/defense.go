@@ -449,6 +449,9 @@ func (g *Game) assignRepair(id entity.EntityID) bool {
 			if b == nil || b.Damage <= 0 || b.Deconstruct || g.swapFrameFor(bid) != 0 {
 				continue // a pending material change repairs it anyway (PLAY-011)
 			}
+			if notColonyPiece(*b) {
+				continue // setup_mapgen.go: nobody mends a ruin
+			}
 			if _, taken := g.reserve.EntityOwner(bid); taken {
 				continue
 			}

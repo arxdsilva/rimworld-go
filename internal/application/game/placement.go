@@ -202,8 +202,14 @@ func (g *Game) canPlaceCell(k construction.Kind, x, y int, swap bool) (bool, str
 	if !g.grid.InBounds(x, y) {
 		return false, ReasonOutside
 	}
+	if g.fogged(x, y) { // fog.go: nothing is built in the dark
+		return false, ReasonFogged
+	}
 	if g.scenarioForbids(k) { // setup.go: the scenario disallows it (NG-1)
 		return false, ReasonScenario
+	}
+	if g.naturalAt(x, y) { // setup_mapgen.go: nothing goes on a steam vent
+		return false, ReasonNatural
 	}
 	layer := construction.DefOf(k).Layer
 	rep := g.replaceTarget(k, x, y) // a door or gate may stand where a wall or fence does
@@ -527,11 +533,11 @@ func (g *Game) completeSwap(id entity.EntityID, fr construction.Frame, b constru
 	}
 	g.frameIDs = kept
 	old := b
-	b.Stuff, b.Damage = fr.Stuff, 0
+	b.Stuff, b.Damage, b.Ruin = fr.Stuff, 0, false // a rebuilt ruin is the colony's
 	g.bldgs.Set(fr.Swaps, b)
 	g.markRoomsDirty() // stone walls change beauty and impressiveness
 	g.structVer++      // SIM-029: the tint changes
-	r := construction.Refund(old.Kind)
+	r := refundOf(old) // setup_mapgen.go: a ruin gives half
 	if r <= 0 {
 		return
 	}
@@ -720,10 +726,14 @@ func (g *Game) markDeconstruct(x1, y1, x2, y2 int, on bool) {
 	}()
 	for _, id := range g.bldgIDs {
 		b, ok := g.bldgs.Get(id)
-		if !ok || b.X < minX || b.X > maxX || b.Y < minY || b.Y > maxY {
+		if !ok || b.X < minX || b.X > maxX || b.Y < minY || b.Y > maxY || g.fogged(b.X, b.Y) {
 			continue
 		}
 		if b.Deconstruct == on {
+			continue
+		}
+		if on && isNatural(b.Kind) {
+			g.refuseNatural(b) // setup_mapgen.go: a steam vent stays
 			continue
 		}
 		if on && b.Kind.Instant() && !construction.DefOf(b.Kind).Placed { // a pod shell is salvaged, not erased
@@ -780,6 +790,7 @@ func (g *Game) removeBuilding(id entity.EntityID) {
 		cells, _, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
 		for _, c := range cells {
 			g.grid.SetWalkable(c[0], c[1], g.terr.At(c[0], c[1]).Walkable())
+			g.fogOpen(c[0], c[1]) // fog.go: a wall taken down may open a sealed room
 		}
 	}
 	delete(g.bills, id)
@@ -791,7 +802,7 @@ func (g *Game) removeBuilding(id entity.EntityID) {
 			delete(g.sleptAt, entity.EntityID(c))
 		}
 	}
-	if r := construction.Refund(b.Kind); r > 0 {
+	if r := refundOf(b); r > 0 { // setup_mapgen.go: a ruin gives half
 		g.dropStack(refundStuff(b), r, b.X, b.Y)
 	}
 	if n := componentRefund(b.Kind); n > 0 {

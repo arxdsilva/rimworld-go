@@ -133,5 +133,37 @@ def _pod_dust():
     return _save("pod_dust", img, (int(cx), int(cy)), {"effect": "pod_dust"})
 
 
+def _steam_puff(k):
+    """Frame k (0..3) of a soft rising steam plume, 128x192, origin at the base
+    centre (the vent). White-grey, semi-transparent, no outline. Frame 0 is a
+    low wisp, 1-2 the plume at full height, 3 a thinning, widening dissipation."""
+    w, h = 128, 192
+    cl = _mat("dust_cloud")
+    white = np.array(palette.hex_to_srgb(S.pal()[0]["med_white"]["base"]), np.float32)
+    grey = np.array(palette.hex_to_srgb(S.pal()[0]["med_white"]["shadow"]), np.float32)
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32) + 0.5
+    base = (w / 2, h - 10.0)
+    height = (60, 120, 160, 176)[k]
+    spread = (0.7, 1.0, 1.3, 1.7)[k]
+    fade = (0.75, 0.62, 0.48, 0.28)[k]
+    rng = np.random.RandomState(777)
+    cov = np.zeros((h, w), np.float32)
+    for i in range(14):
+        t = (i + rng.uniform(0, 0.8)) / 14.0
+        py = base[1] - t * height
+        px = base[0] + np.sin(t * 5.0 + 1.3) * 9 * t + rng.uniform(-5, 5) * t
+        r = (9 + 18 * t) * spread * rng.uniform(0.85, 1.15)
+        d = np.hypot(xx - px, (yy - py) * 1.1) / r
+        cov = np.maximum(cov, np.clip(1.2 - d, 0, 1) * (1.0 - 0.8 * t ** 1.5))
+    shade = _smooth(0.0, 1.0, (yy - (base[1] - height)) / max(height, 1))   # grey low and inside, white high
+    rgb = np.empty((h, w, 3), np.float32)
+    rgb[:] = _mix(white, grey, 0.35 * shade[..., None])
+    rgb = _mix(rgb, cl["light"], 0.12)
+    img = np.zeros((h, w, 4), np.float32)
+    img[..., :3] = rgb
+    img[..., 3] = _smooth(0.05, 0.8, cov) * fade
+    return _save("steam_puff_%d" % k, img, (int(base[0]), int(base[1])), {"effect": "steam_puff", "frame": k})
+
+
 def build():
-    return [_pod_fall(), _pod_dust()]
+    return [_pod_fall(), _pod_dust()] + [_steam_puff(k) for k in range(4)]

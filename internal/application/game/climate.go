@@ -41,7 +41,7 @@ func (g *Game) temperatureAt(x, y int) temperature.Temp {
 	if t, ok := g.residual[y*g.grid.Width()+x]; ok {
 		return t // a freshly breached room still holds some warmth
 	}
-	return g.climate.Outdoor(g.clock.Now()) + g.weatherTempDelta(x, y)
+	return g.climate.Outdoor(g.clock.Now()) + g.weatherTempDelta(x, y) + g.ventWarmth(x, y) // vents.go
 }
 
 // sowMinMean is the lowest daily mean temperature (tenths of a degree C)

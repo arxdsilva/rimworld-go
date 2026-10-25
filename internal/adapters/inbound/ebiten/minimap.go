@@ -40,6 +40,7 @@ type minimapState struct {
 	img    *ebiten.Image
 	pix    []byte
 	w, h   int
+	fogVer uint64 // FogVer the image was built for
 	polled uint64 // present frame of the last poll
 	polls  int    // layer fetches that changed it (tests)
 }
@@ -144,11 +145,16 @@ func (r *Renderer) syncMinimap() {
 		return
 	}
 	m.polled = r.present
-	v, changed := r.game.MinimapLayer(m.ver)
+	fw := r.game.World()
+	ver := m.ver
+	if len(fw.Fog) > 0 && fw.FogVer != m.fogVer {
+		ver = 0 // the fog moved: rebuild from the layer
+	}
+	v, changed := r.game.MinimapLayer(ver)
 	if !changed || v.W <= 0 || v.H <= 0 || len(v.Cells) < v.W*v.H {
 		return
 	}
-	m.ver = v.Ver
+	m.ver, m.fogVer = v.Ver, fw.FogVer
 	if m.img == nil || m.w != v.W || m.h != v.H {
 		if m.img != nil {
 			m.img.Deallocate()
@@ -162,6 +168,9 @@ func (r *Renderer) syncMinimap() {
 	m.pix = m.pix[:4*n]
 	for i, cell := range v.Cells[:n] {
 		c := minimapColor(cell)
+		if len(fw.Fog) > i && fw.Fog[i] != 0 && v.W == fw.TerrainW {
+			c = fogClr // unexplored: black
+		}
 		m.pix[4*i], m.pix[4*i+1], m.pix[4*i+2], m.pix[4*i+3] = c.R, c.G, c.B, 255
 	}
 	m.img.WritePixels(m.pix)
@@ -182,6 +191,7 @@ func (r *Renderer) drawMinimap(screen *ebiten.Image, ui, v viewport) {
 		uiImage(screen, m.img, mx, my, mw, mh, &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear})
 	}
 	gw, gh := float64(r.game.Width()), float64(r.game.Height())
+	fw0 := r.game.World()
 	dot := func(x, y int, c color.RGBA) {
 		px, py := mx+(float64(x)+0.5)/gw*mw, my+(float64(y)+0.5)/gh*mh
 		uiFillRect(screen, float32(px-1.5), float32(py-1.5), 3, 3, c, false)
@@ -190,15 +200,18 @@ func (r *Renderer) drawMinimap(screen *ebiten.Image, ui, v viewport) {
 		if p.Embodied || p.CarriedBy != 0 {
 			continue
 		}
+		if worldFogged(fw0, p.X, p.Y) {
+			continue
+		}
 		if p.Hostile {
 			dot(p.X, p.Y, minimapHostileClr)
 		} else {
 			dot(p.X, p.Y, minimapColonistClr)
 		}
 	}
-	animals := r.game.World().Animals
+	animals := fw0.Animals
 	for i := range animals {
-		if an := &animals[i]; an.Manhunter {
+		if an := &animals[i]; an.Manhunter && !worldFogged(fw0, an.X, an.Y) {
 			dot(an.X, an.Y, minimapHostileClr)
 		}
 	}

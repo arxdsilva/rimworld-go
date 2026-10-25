@@ -149,6 +149,7 @@ func (g *Game) heatRooms() {
 		}
 		g.residual[i] = t
 	}
+	vents := g.ventRoomHeats(len(g.roomTemps)) // vents.go: nil without vents
 	for r := range g.roomTemps {
 		cells := max(1, g.rooms[r].contents.Cells)
 		t := g.roomTemps[r]
@@ -158,6 +159,9 @@ func (g *Game) heatRooms() {
 		if f := g.roomRoofed(r); f < 1000 {
 			target = raw + temperature.IndoorBonus*temperature.Temp(f)/1000
 			leak = min(1000, leak*temperature.Temp(1000+4*(1000-f))/1000)
+		}
+		if vents != nil {
+			target += vents[r] // a steam vent warms the room it stands in
 		}
 		t += (target - t) * leak / 1000
 		t += temperature.Temp(heat[r] / cells)

@@ -23,7 +23,9 @@ import (
 //     the per-room roofed counts consistent;
 //   - Supported is derived from the room grid's boundaries on every room
 //     rebuild; unsupported Built roofs fall at the next climate interval;
-//   - Natural roofs never collapse and cannot be removed.
+//   - Natural roofs never collapse and cannot be removed; removing a
+//     thick one (NaturalThick, MAPGEN-2: deep rock overhead) is refused
+//     with ReasonThickRoof, and no drop pod lands under one.
 // No RNG, no map iteration, no wall clock: ties go by row-major index.
 
 // RoofCollapseView is a recent roof collapse, for presentation (dust).
@@ -55,6 +57,9 @@ type roofIndex struct {
 const roofTries = 3
 
 const roofPlans = roof.PlanBuild | roof.PlanRemove
+
+// ReasonThickRoof is why a thick natural roof can't be removed.
+const ReasonThickRoof = "Thick rock overhead"
 
 // ensureRoofGrid sizes the roof grid on first use.
 func (g *Game) ensureRoofGrid() {
@@ -181,10 +186,14 @@ func (g *Game) designateRoof(x1, y1, x2, y2 int, build bool) {
 	g.ensureRoofGrid()
 	minX, minY, maxX, maxY := g.clipRect(x1, y1, x2, y2)
 	w := g.grid.Width()
+	thick := -1 // the first thick roof a removal met
 	for y := minY; y <= maxY; y++ {
 		for x := minX; x <= maxX; x++ {
 			i := y*w + x
 			c := g.roofs[i]
+			if !build && thick < 0 && c.Thick() {
+				thick = i
+			}
 			if build {
 				c &^= roof.PlanRemove | roof.NoAuto
 				if g.roomGrid[i] != room.Wall && c.Has(roof.Supported) && !c.Roofed() {
@@ -198,6 +207,9 @@ func (g *Game) designateRoof(x1, y1, x2, y2 int, build bool) {
 			}
 			g.setRoof(i, c)
 		}
+	}
+	if thick >= 0 {
+		g.message(thick%w, thick/w, "%s: that roof can't be removed.", ReasonThickRoof)
 	}
 }
 

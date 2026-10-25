@@ -365,6 +365,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 	}
 	s.Grass, s.GrassCut = g.exportGrass()
 	s.GrassGrowth = g.exportGrassGrowth() // grass.go
+	s.Landing = g.exportLanding()         // setup_mapgen.go: nil for the map centre
 	s.Bios, s.Skills, s.WorkCarry = g.exportBios()
 	s.SkillLive = g.exportSkillLive()
 	s.Biome, s.GrassRegrow, s.Incidents, s.Troughs = g.biome, g.grass.regrow, g.incidents, g.troughs
@@ -373,6 +374,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 	s.Home, s.CleanWired = g.exportHome(), true
 	s.CleanQ, s.HomeVer = slices.Clone(g.filth.cleanQ), g.homeArea.ver
 	s.Plan = g.exportPlan() // plan.go
+	s.Fog = g.exportFog()   // fog.go (MAPGEN-2): nil without fog
 	for id, e := range g.exposure {
 		s.Exposure[id] = [2]int{e.hypo, e.heat}
 	}
@@ -517,6 +519,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.importGrassGrowth(s.GrassGrowth) // grass.go: older saves load full
 	g.biome, g.climate, g.incidents = s.Biome, biome.DefOf(s.Biome).Climate, s.Incidents
 	g.importSetupState(s.NG1)                   // setup.go: overrides the climate from the site
+	g.importLanding(s.Landing)                  // setup_mapgen.go: after importSetupState
 	g.importBios(s.Bios, s.Skills, s.WorkCarry) // skills.go: older saves get neutral bios
 	g.importSkillLive(s.SkillLive)
 	g.grass.regrow = s.GrassRegrow
@@ -524,6 +527,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.importStains(s.Stains)
 	setMap(&g.stains.dripN, s.StainDrip)
 	g.importPlan(s.Plan)            // plan.go: older saves have no marks
+	g.importFog(s.Fog)              // fog.go: older saves have no fog
 	g.importHome(s.Home, s.HomeVer) // home.go: an older save gets Home around its buildings
 	g.importDirt(s.Dirt, s.Carried) // filth.go
 	g.importCleanQ(s.CleanQ)        // filth.go: half-swept tiles stay queued

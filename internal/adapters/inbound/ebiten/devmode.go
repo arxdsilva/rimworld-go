@@ -42,6 +42,8 @@ type devState struct {
 	tx, ty int  // the tile under it
 	log    bool // debug log panel
 	insp   bool // debug inspector panel
+
+	fields mapFieldsOverlay // Map fields overlay (mapfields_overlay.go)
 }
 
 // devMode reports developer mode is on.
@@ -108,7 +110,7 @@ func (a *App) devActions(tx, ty int) []devAction {
 			return "No room for implants"
 		}
 	}
-	return append(out, kill, feed, lose, spawnImp)
+	return append(out, kill, feed, lose, spawnImp, a.mapFieldsAction())
 }
 
 // handleDevKeys runs the Dev context's actions.
@@ -201,6 +203,7 @@ func (a *App) drawDevPanels(screen *ebiten.Image, sw, sh int) {
 			drawButton(screen, b, b.contains(mx, my))
 		}
 	}
+	a.drawMapFieldLegend(screen)
 	if a.dev.log {
 		a.drawDebugLog(screen, sw, sh)
 	}

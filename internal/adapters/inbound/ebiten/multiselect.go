@@ -195,17 +195,17 @@ func (r *Renderer) inRect(wx, wy float64, x0, y0, x1, y1 float32) bool {
 func (a *App) thingsIn(x0, y0, x1, y1 float32) (selKind, []entity.EntityID) {
 	r := a.renderer
 	var ids []entity.EntityID
+	w := r.world()
 	for _, p := range r.snapshot() {
-		if wx, wy := r.interpWorld(p); !p.Embodied && r.inRect(wx, wy, x0, y0, x1, y1) {
+		if wx, wy := r.interpWorld(p); !p.Embodied && !worldFogged(w, p.X, p.Y) && r.inRect(wx, wy, x0, y0, x1, y1) {
 			ids = append(ids, p.ID)
 		}
 	}
 	if len(ids) > 0 {
 		return selPawn, ids
 	}
-	w := r.world()
 	for _, an := range w.Animals {
-		if wx, wy := r.interpAnimal(an); r.inRect(wx, wy, x0, y0, x1, y1) {
+		if wx, wy := r.interpAnimal(an); !worldFogged(w, an.X, an.Y) && r.inRect(wx, wy, x0, y0, x1, y1) {
 			ids = append(ids, an.ID)
 		}
 	}
@@ -213,7 +213,7 @@ func (a *App) thingsIn(x0, y0, x1, y1 float32) (selKind, []entity.EntityID) {
 		return selAnimal, ids
 	}
 	for _, it := range w.Items {
-		if !it.Carried && r.inRect(float64(it.X), float64(it.Y), x0, y0, x1, y1) {
+		if !it.Carried && !worldFogged(w, it.X, it.Y) && r.inRect(float64(it.X), float64(it.Y), x0, y0, x1, y1) {
 			ids = append(ids, it.ID)
 		}
 	}

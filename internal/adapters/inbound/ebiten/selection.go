@@ -39,6 +39,9 @@ type selCycle struct {
 // selectablesAt lists what a click on (tx, ty) can select, in precedence.
 func selectablesAt(w game.WorldView, pawns []game.PawnView, tx, ty int) []selCand {
 	var out []selCand
+	if worldFogged(w, tx, ty) {
+		return nil // unexplored: nothing to pick
+	}
 	for _, p := range pawns {
 		if p.X == tx && p.Y == ty && !p.Embodied {
 			out = append(out, selCand{selPawn, p.ID})

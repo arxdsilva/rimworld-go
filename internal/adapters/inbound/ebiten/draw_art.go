@@ -422,8 +422,10 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	r.drawBreakClouds(screen, tile)
 	r.drawOrderRoute(screen, tile)
 	r.drawParticles(screen, tile)
-	r.drawArrivals(screen, w, tile) // arrival_draw.go
+	r.drawArrivals(screen, w, tile)   // arrival_draw.go
+	r.drawSteamPuffs(screen, w, tile) // features_draw.go
 	r.drawWeather(screen, w, sw, sh, tile)
+	r.drawFog(screen, w, sw, sh, tile) // fog_draw.go: unexplored tiles over everything
 	r.drawFloaters(screen, tile)
 
 	for _, cv := range views {
@@ -561,6 +563,7 @@ func (r *Renderer) drawBuildingObj(dst *ebiten.Image, b *game.BuildingView, tile
 		// stone walls, fences and floors take their stone's tint
 		r.drawSpriteCS(dst, key, t, float64(b.X), float64(b.Y), tile, sw, sh, tintCS(r.stuffTint(b.Stuff)))
 	}
+	r.drawRuinOverlay(dst, b, tile, sw, sh) // features_draw.go
 	if b.DryQty > 0 {
 		r.drawRackLoad(dst, *b, tile, sw, sh)
 	}

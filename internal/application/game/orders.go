@@ -112,6 +112,9 @@ func (g *Game) reachable(id entity.EntityID, x, y int) bool {
 
 // forcedJob builds the job a Prioritize order would start, or a reason.
 func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer construction.Layer) (job.Record, string) {
+	if g.fogOrderRefused(o, x, y) { // fog_view.go: only hidden rock can be ordered mined
+		return job.Record{}, ReasonFogged
+	}
 	if why := g.incapableOrder(id, o); why != "" {
 		return job.Record{}, why // skills.go: "Incapable: Violence (trait: Gentle)"
 	}
@@ -433,6 +436,9 @@ func (g *Game) prioritize(id entity.EntityID, o command.Order, x, y int, layer c
 func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 	if !g.grid.InBounds(x, y) {
 		return nil
+	}
+	if g.fogged(x, y) {
+		return g.fogOrders(pawn, x, y) // fog_view.go: the dark shows nothing to do
 	}
 	if v, ok := g.vital.Get(pawn); !ok || v.Status != health.Alive {
 		return []OrderOption{{Label: "Go here", Disabled: true, Reason: ReasonIncapable}}

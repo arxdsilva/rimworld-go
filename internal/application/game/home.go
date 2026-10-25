@@ -93,7 +93,7 @@ func (g *Game) autoHome(k construction.Kind, f construction.Facing, x, y int) {
 // startHome is a new colony's Home around its landing spot (the start
 // kit's centre).
 func (g *Game) startHome() {
-	cx, cy := g.grid.Width()/2, g.grid.Height()/2
+	cx, cy := g.landingSpot() // setup.go: the map centre for legacy colonies
 	g.paintHome(cx-startHomeHalf, cy-startHomeHalf, cx+startHomeHalf, cy+startHomeHalf, true)
 }
 
@@ -128,7 +128,7 @@ func (g *Game) importHome(cells []uint8, ver uint32) {
 		g.homeArea.ver = ver
 	} else {
 		for _, id := range g.bldgIDs {
-			if b, ok := g.bldgs.Get(id); ok {
+			if b, ok := g.bldgs.Get(id); ok && !notColonyPiece(b) { // ruins and vents anchor no Home
 				g.autoHome(b.Kind, b.Facing, b.X, b.Y)
 			}
 		}

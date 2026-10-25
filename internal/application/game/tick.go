@@ -36,6 +36,9 @@ func (g *Game) phaseCommands() {
 }
 
 func (g *Game) applyOne(c command.Command) {
+	if g.fogRefuses(c) { // fog_view.go: no walking into the dark
+		return
+	}
 	if c.Kind == command.MovePawn || c.Kind == command.Prioritize || c.Kind == command.DraftPawn {
 		if _, breaking := g.breaks[entity.EntityID(c.Pawn)]; breaking {
 			return // a colonist in a mental break won't take orders
@@ -74,7 +77,7 @@ func (g *Game) applyOne(c command.Command) {
 		minX, minY, maxX, maxY := zone.Normalize(c.X, c.Y, c.X2, c.Y2)
 		for _, id := range g.plantIDs {
 			p, ok := g.plants.Get(id)
-			if !ok || !p.Harvestable() {
+			if !ok || !p.Harvestable() || g.fogged(p.X, p.Y) {
 				continue
 			}
 			if p.X >= minX && p.X <= maxX && p.Y >= minY && p.Y <= maxY {

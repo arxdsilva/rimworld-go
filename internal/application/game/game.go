@@ -575,6 +575,8 @@ type Game struct {
 	haul haulState
 	// cabinets: tool cabinet bonus per bench, per structVer (items_ng1.go), never saved.
 	cabinets cabinetState
+	// vents: steam vent cells per structVer (vents.go), never saved.
+	vents ventCache
 	// phaseObs: optional per-phase timing observer (phases.go); set only
 	// from cmd/* and benchmarks, never read by gameplay.
 	phaseObs PhaseObserver
@@ -604,6 +606,8 @@ type Game struct {
 	ng ng1State
 	// fog: unexplored tiles (fog.go, MAPGEN-2); zero: no fog.
 	fog fogState
+	// mapFields caches the developer map-field layers (mapfields.go); never saved.
+	mapFields *mapFieldCache
 	// Social and host systems (ENG-003): each container is nil until its
 	// milestone first needs it, and saved as an additive field.
 	soc       *socialState                        // social_state.go
@@ -962,7 +966,7 @@ func (g *Game) snapshot() []PawnView {
 		g.fillPawnBio(&views[i])               // skills.go: NG-1 identity
 		views[i].Disfigured = g.bodies[views[i].ID] != nil && g.bodies[views[i].ID].Disfigured()
 	}
-	return views
+	return g.fogPawns(views) // fog_view.go: strangers in the dark don't show
 }
 
 // World returns the non-pawn read model. Per-tile layers (Terrain,
@@ -1003,7 +1007,7 @@ func (g *Game) world() WorldView {
 
 	for _, id := range g.itemIDs {
 		st, ok := g.stacks.Get(id)
-		if !ok {
+		if !ok || g.fogged(st.X, st.Y) { // fog.go: hidden items neither show nor count
 			continue
 		}
 		w.Items = append(w.Items, ItemView{
@@ -1081,8 +1085,10 @@ func (g *Game) world() WorldView {
 		g.fillGraveView(bv, id, b)   // burial.go
 		bv.MovingTo = g.movingTo(id) // move.go
 		g.fillSwapView(bv, id)       // placement.go: pending material change (PLAY-011)
+		bv.Ruin = b.Ruin             // MAPGEN-2: an abandoned piece
 	}
 	w.Plants = g.plantViews(w.Plants) // plant_view.go
+	w.Landing[0], w.Landing[1] = g.landingSpot()
 	w.TerrainW = g.terr.W
 	w.Terrain = g.terrainView() // indexes.go: shared, rebuilt per structVer
 	w.Mines = g.mineList()
@@ -1103,6 +1109,7 @@ func (g *Game) world() WorldView {
 	g.fillHomeView(&w)     // home.go
 	g.fillPlanView(&w)     // plan.go
 	g.fillSetupView(&w)    // setup_view.go (NG-1)
+	g.fillFogView(&w)      // fog_view.go (MAPGEN-2)
 	now := uint64(g.clock.Now())
 	w.Hour = float64(now%clock.TicksPerDay) / clock.TicksPerHour
 	w.DayOfYear = int(now/clock.TicksPerDay) % clock.DaysPerYear

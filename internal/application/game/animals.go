@@ -132,9 +132,10 @@ func (g *Game) spawnAnimal(s animal.Species, x, y int) (entity.EntityID, error) 
 }
 
 // randomTileAway finds a walkable tile at least minR (Chebyshev) from
-// the map centre; ok is false after a bounded number of tries.
+// the landing spot (the map centre for legacy colonies); ok is false
+// after a bounded number of tries.
 func (g *Game) randomTileAway(minR int) (int, int, bool) {
-	cx, cy := g.grid.Width()/2, g.grid.Height()/2
+	cx, cy := g.landingSpot() // setup.go
 	for try := 0; try < 400; try++ {
 		x, y := g.rng.IntN(g.grid.Width()), g.rng.IntN(g.grid.Height())
 		if weapon.Distance(x, y, cx, cy) >= minR && g.dryWalkable(x, y) {
@@ -714,7 +715,7 @@ func (g *Game) markHunt(x1, y1, x2, y2 int, on bool) {
 			continue
 		}
 		p, _ := g.positions.Get(id)
-		if p.X >= minX && p.X <= maxX && p.Y >= minY && p.Y <= maxY {
+		if p.X >= minX && p.X <= maxX && p.Y >= minY && p.Y <= maxY && !g.fogged(p.X, p.Y) {
 			a.Designated = on
 			g.animals.Set(id, a)
 		}

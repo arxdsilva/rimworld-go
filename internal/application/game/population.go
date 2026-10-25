@@ -213,7 +213,18 @@ func (g *Game) wildArrival(room, n, preds int) (int, bool) {
 	if !ok {
 		return 0, false
 	}
-	x, y, ok := g.edgeTile()
+	var hab *habitat
+	var x, y int
+	if g.hasSetup() {
+		hab = g.newHabitat()       // wildlife_habitat.go
+		x, y, ok = hab.pickEdge(s) // at a map edge, never mid-map
+		if !ok {
+			x, y, ok = g.edgeTile()
+			hab = nil
+		}
+	} else {
+		x, y, ok = g.edgeTile()
+	}
 	if !ok {
 		return 0, false
 	}
@@ -221,7 +232,7 @@ func (g *Game) wildArrival(room, n, preds int) (int, bool) {
 	if isPredator(s) {
 		size = min(size, startPredatorMax)
 	}
-	return len(g.spawnHerd(s, x, y, size)), isPredator(s)
+	return len(g.spawnHerdIn(hab, s, x, y, size)), isPredator(s)
 }
 
 // herdLeaves sends the newest herd (highest Herd id) whose going keeps the

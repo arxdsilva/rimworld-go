@@ -258,7 +258,9 @@ type Renderer struct {
 
 	// sound (sound_signals.go): cues for the App's director, last frame's
 	// world to hear changes, the pending thunder and the world this frame.
-	cues       []soundCue
+	cues []soundCue
+	// steamHeard is each vent's last burst already cued (features_draw.go).
+	steamHeard map[[2]int]uint64
 	memo       soundMemo
 	thunderAt  uint64
 	threatAt   uint64 // present frame of the newest threat
@@ -278,6 +280,7 @@ type Renderer struct {
 	// chunk lists (lod.go, chunk_cache.go); mini the minimap (minimap.go).
 	lod  lodState
 	mini minimapState
+	fogc fogCache // fog_draw.go
 }
 
 // viewCacher is a simulation that can cache its read models between

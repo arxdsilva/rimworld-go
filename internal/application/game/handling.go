@@ -37,7 +37,7 @@ func (g *Game) markTame(x1, y1, x2, y2 int, on bool) {
 		if !ok || on && (a.Tame || animal.DefOf(a.Species).TameChance == 0) {
 			continue // hive insects are never tamed
 		}
-		if p, _ := g.positions.Get(id); p.X >= minX && p.X <= maxX && p.Y >= minY && p.Y <= maxY {
+		if p, _ := g.positions.Get(id); p.X >= minX && p.X <= maxX && p.Y >= minY && p.Y <= maxY && !g.fogged(p.X, p.Y) {
 			a.TameMark = on
 			g.animals.Set(id, a)
 		}
@@ -306,7 +306,7 @@ func (g *Game) nearestPredator(id entity.EntityID, pos Position, r int) (Positio
 }
 
 // home is roughly where the colony lives: its first standing colonist's
-// bed, else the map centre.
+// bed, else the landing spot (the map centre for legacy colonies).
 func (g *Game) home() (int, int) {
 	for _, id := range g.pawnIDs {
 		if bid := g.bedOf(id); bid != 0 {
@@ -314,7 +314,7 @@ func (g *Game) home() (int, int) {
 			return b.X, b.Y
 		}
 	}
-	return g.grid.Width() / 2, g.grid.Height() / 2
+	return g.landingSpot() // setup.go
 }
 
 // bedOf is the bed a colonist has claimed (0: none).

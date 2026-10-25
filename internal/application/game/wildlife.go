@@ -145,10 +145,19 @@ func wildWeight(s animal.Species, b biome.ID, season string) int {
 // for the current season; ok is false when none qualifies.
 func (g *Game) pickSpecies(keep func(animal.Species) bool) (animal.Species, bool) {
 	season := g.season(uint64(g.clock.Now())) // setup.go: the map's own calendar
+	// Setup games never draw domestic or pet species wild; legacy colonies
+	// keep their draws (and RNG sequence) exactly.
+	setup := g.hasSetup()
+	weight := func(s animal.Species) int {
+		if setup && !isWildSpecies(s) {
+			return 0
+		}
+		return wildWeight(s, g.biome, season)
+	}
 	total := 0
 	for _, s := range animal.All() {
 		if keep(s) {
-			total += wildWeight(s, g.biome, season)
+			total += weight(s)
 		}
 	}
 	if total <= 0 {
@@ -159,7 +168,7 @@ func (g *Game) pickSpecies(keep func(animal.Species) bool) (animal.Species, bool
 		if !keep(s) {
 			continue
 		}
-		if roll -= wildWeight(s, g.biome, season); roll < 0 {
+		if roll -= weight(s); roll < 0 {
 			return s, true
 		}
 	}
@@ -182,6 +191,12 @@ func (g *Game) herdSizeOf(s animal.Species) int {
 // with a random sex, an age from 0.2 to 0.8 of its lifespan (at least one
 // grown), and food and rest between 60 and 100 percent.
 func (g *Game) spawnHerd(s animal.Species, x, y, n int) []entity.EntityID {
+	return g.spawnHerdIn(nil, s, x, y, n)
+}
+
+// spawnHerdIn is spawnHerd with its members kept on open habitat cells
+// (wildlife_habitat.go) when h is set; h nil is the legacy placement.
+func (g *Game) spawnHerdIn(h *habitat, s animal.Species, x, y, n int) []entity.EntityID {
 	var out []entity.EntityID
 	g.wl.LastHerd++
 	herd := g.wl.LastHerd
@@ -190,6 +205,9 @@ func (g *Game) spawnHerd(s animal.Species, x, y, n int) []entity.EntityID {
 	for i := 0; i < n; i++ {
 		for try := 0; try < 12; try++ {
 			hx, hy := x+g.rng.IntN(5)-2, y+g.rng.IntN(5)-2
+			if h != nil && !h.open(hx, hy) {
+				continue
+			}
 			id, err := g.spawnAnimal(s, hx, hy)
 			if err != nil {
 				continue
@@ -255,13 +273,24 @@ func (g *Game) spawnWildlife() {
 		copy(picks[1:], rest)
 	}
 	count, preds := 0, 0
+	var hab *habitat
+	if g.hasSetup() {
+		hab = g.newHabitat() // wildlife_habitat.go: Setup games place by habitat
+	}
 	place := func(s animal.Species, room int) {
 		size, r := min(g.herdSizeOf(s), room), wildStartRadius
 		if isPredator(s) {
 			size, r = min(size, startPredatorMax), wolfStartRadius
 		}
-		if x, y, ok := g.randomTileAway(r); ok {
-			k := len(g.spawnHerd(s, x, y, size))
+		var x, y int
+		var ok bool
+		if hab != nil {
+			x, y, ok = hab.pick(s)
+		} else {
+			x, y, ok = g.randomTileAway(r)
+		}
+		if ok {
+			k := len(g.spawnHerdIn(hab, s, x, y, size))
 			count += k
 			if isPredator(s) {
 				preds += k

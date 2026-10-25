@@ -183,6 +183,14 @@ var sounds = []sound{
 		{Wave: s.White, Start: 0.6, Dur: 0.02, HighPass: 3000, Gain: 0.5},
 	}}, 0.7},
 
+	// --- steam vent (MAPGEN-2): a breathy rush of hiss that swells and
+	// trails off, over a low rumble from the fissure.
+	{s.Recipe{ID: "sfx.steam_vent", Seed: 701, Variants: 2, Jitter: 0.08, Layers: []s.Layer{
+		{Wave: s.White, Dur: 1.6, HighPass: 2200, Attack: 0.15, Decay: 0.9, Gain: 0.45},
+		{Wave: s.Pink, Dur: 1.5, BandPass: 1600, BandEnd: 900, Q: 0.7, Attack: 0.12, Decay: 0.8, Gain: 0.4},
+		{Wave: s.Brown, Dur: 1.2, LowPass: 220, Attack: 0.1, Decay: 0.6, Gain: 0.35},
+	}}, 0.45},
+
 	// --- water (NG-1 §7.4)
 	// A babbling brook: pinkish noise through several band-passes that drift
 	// slowly, with fast gurgling wobble and splashing grains.

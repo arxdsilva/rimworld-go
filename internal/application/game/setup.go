@@ -12,8 +12,8 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/storyteller"
 	"rimworld-go/internal/domain/world/biome"
-	"rimworld-go/internal/domain/world/generation"
-	"rimworld-go/internal/domain/world/geology"
+	"rimworld-go/internal/domain/world/mapgen"
+	"rimworld-go/internal/domain/world/mapgen/pipeline"
 	"rimworld-go/internal/domain/world/temperature"
 )
 
@@ -55,20 +55,20 @@ type ng1State struct {
 	introDone bool
 }
 
-// Builder phases (NG-1 §2.10), in order.
-var buildPhases = [...]string{
-	"Preparing the site",
-	"Shaping the land",
-	"Placing rock and ore",
-	"Seeding plants and animals",
-	"Arrival",
-}
+// Builder phases (NG-1 §2.10, MAPGEN-2 §7): "Preparing the site", one
+// build step per map-generator step (its pipeline.Label), then these two.
+const (
+	phasePrepare = "Preparing the site"
+	phasePlace   = "Placing the colony"
+	phaseArrival = "Arrival"
+)
 
 // ColonyBuilder builds a new colony step by step.
 type ColonyBuilder struct {
 	cfg  Config
 	g    *Game
-	res  generation.Result
+	gen  *pipeline.Builder // the map generator (nil after a failed start)
+	res  mapgen.Result
 	step int
 	done bool
 }
@@ -76,6 +76,23 @@ type ColonyBuilder struct {
 // NewColonyBuilder starts building cfg's colony. A nil cfg.Setup builds the
 // legacy colony in one step.
 func NewColonyBuilder(cfg Config) *ColonyBuilder { return &ColonyBuilder{cfg: cfg} }
+
+// buildSteps is the number of build steps of a Setup colony.
+func buildSteps() int { return pipeline.Steps() + 3 }
+
+// buildPhase names build step i.
+func buildPhase(i int) string {
+	n := pipeline.Steps()
+	switch {
+	case i <= 0:
+		return phasePrepare
+	case i <= n:
+		return pipeline.Label(pipeline.StepNames()[i-1])
+	case i == n+1:
+		return phasePlace
+	}
+	return phaseArrival
+}
 
 // Step does up to units of work (at least one build step); phase names the
 // step now in progress for the loading screen ("" once done) and frac the
@@ -94,7 +111,7 @@ func (b *ColonyBuilder) Step(units int) (phase string, frac float32, done bool) 
 	if b.done {
 		return "", 1, true
 	}
-	return buildPhases[b.step], float32(b.step) / float32(len(buildPhases)), false
+	return buildPhase(b.step), float32(b.step) / float32(buildSteps()), false
 }
 
 // Game is the built colony (nil until done).
@@ -105,25 +122,30 @@ func (b *ColonyBuilder) Game() *Game {
 	return b.g
 }
 
-// runStep runs the next build step.
+// runStep runs the next build step: the game, each generator step, the
+// site and its wildlife, then the arrival.
 func (b *ColonyBuilder) runStep() {
 	s := b.cfg.Setup
-	switch b.step {
-	case 0:
+	n := pipeline.Steps()
+	switch {
+	case b.step == 0:
 		b.g = newSetupGame(b.cfg, s)
-	case 1:
+		b.g.ng.setup.GenVersion = mapgen.Version
 		side := b.g.grid.Width()
-		b.res = generation.GenerateSite(s.Seed, side, side, biome.DefOf(s.Site.Biome), s.Site)
-	case 2:
-		b.g.applySite(b.res, s)
-	case 3:
-		g := b.g
-		for _, p := range b.res.Plants {
-			_, _ = g.spawnPlant(p.Species, p.X, p.Y, p.Growth)
+		b.gen, _ = pipeline.NewBuilder(mapgen.Config{Seed: s.Seed, W: side, H: side, Site: s.Site, Biome: biome.DefOf(s.Site.Biome)})
+	case b.step <= n:
+		if b.gen == nil {
+			break
 		}
-		g.seedGrass() // before anything is built, as in NewColony
-		g.spawnWildlife()
-	case 4:
+		if _, _, done, err := b.gen.Step(); err != nil {
+			b.gen = nil // a failed generator leaves the plain map
+		} else if done {
+			b.res = b.gen.Result()
+		}
+	case b.step == n+1:
+		b.g.applySite(b.res) // setup_mapgen.go
+		b.g.spawnWildlife()
+	default:
 		b.g.finishSetup()
 		b.g.warmIndexes(true) // jobindex.go: not on the first tick
 		b.done = true
@@ -213,29 +235,12 @@ func withConditions(c temperature.Climate, conds []scenario.Condition) temperatu
 	return c
 }
 
-// applySite lays the generated site on the map: terrain, the site's
-// stones and ore (with machinery), and a natural roof over the caves.
-func (g *Game) applySite(res generation.Result, s *Setup) {
-	for y := 0; y < g.grid.Height(); y++ {
-		for x := 0; x < g.grid.Width(); x++ {
-			g.setTerrain(x, y, res.Terrain.At(x, y))
-		}
-	}
-	g.geo = geology.GenerateWith(s.Seed, g.terr, s.Site.Stones)
-	g.structVer++
-	w := g.grid.Width()
-	for i, c := range res.Cave {
-		if c {
-			g.roofOnMined(i%w, i/w)
-		}
-	}
-}
-
 // finishSetup is the last build step: arrival, Home, research, scenario
 // rules and the storyteller (§5.1 steps 3-10).
 func (g *Game) finishSetup() {
 	g.landColony() // arrival.go
-	g.startHome()  // home.go: around the landing spot (the map centre)
+	g.initFog()    // fog.go: the map is unexplored beyond the landing spot
+	g.startHome()  // home.go: around the landing spot
 	for _, p := range g.ng.fx.Research {
 		g.grantResearch(p)
 	}

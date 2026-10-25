@@ -24,6 +24,8 @@ import (
 	"rimworld-go/internal/domain/storyteller"
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/geology"
+	"rimworld-go/internal/domain/world/mapgen"
+	"rimworld-go/internal/domain/world/mapgen/pipeline"
 	"rimworld-go/internal/domain/world/site"
 	"rimworld-go/internal/domain/world/temperature"
 	"rimworld-go/internal/domain/world/weather"
@@ -57,7 +59,7 @@ func setupFor(t testing.TB, key string, edit func(*Setup)) *Setup {
 func buildSetup(t testing.TB, s *Setup) *Game {
 	t.Helper()
 	b := NewColonyBuilder(Config{Setup: s})
-	for i := 0; i < 20; i++ {
+	for i := 0; i <= buildSteps(); i++ {
 		if _, _, done := b.Step(1); done {
 			return b.Game()
 		}
@@ -99,6 +101,28 @@ func itemTotals(g *Game) map[item.Kind]int {
 	for _, id := range g.itemIDs {
 		if st, ok := g.stacks.Get(id); ok {
 			out[st.Kind] += st.Qty
+		}
+	}
+	return out
+}
+
+// kitTotals is itemTotals less what map generation left lying (ruin loot
+// and stone chunks): what the scenario brought.
+func kitTotals(t testing.TB, g *Game, s *Setup) map[item.Kind]int {
+	t.Helper()
+	res, err := pipeline.Generate(mapgen.Config{Seed: s.Seed, W: g.Width(), H: g.Height(), Site: s.Site, Biome: biome.DefOf(s.Site.Biome)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := itemTotals(g)
+	for _, r := range res.Ruins {
+		for _, l := range r.Loot {
+			out[l.Kind] -= l.Qty
+		}
+	}
+	for k, n := range out {
+		if item.IsChunk(k) || n == 0 {
+			delete(out, k)
 		}
 	}
 	return out
@@ -149,7 +173,7 @@ func TestColonyBuilderStepsToDone(t *testing.T) {
 	var phases []string
 	last := float32(-1)
 	for i := 0; ; i++ {
-		if i > 10 {
+		if i > buildSteps() {
 			t.Fatal("never done")
 		}
 		if b.Game() != nil {
@@ -168,7 +192,13 @@ func TestColonyBuilderStepsToDone(t *testing.T) {
 		last = frac
 		phases = append(phases, phase)
 	}
-	if want := buildPhases[1:]; !slices.Equal(phases, want[:]) {
+	// one phase per map-generator step, by its label, then the colony
+	var want []string
+	for _, n := range pipeline.StepNames() {
+		want = append(want, pipeline.Label(n))
+	}
+	want = append(want, "Placing the colony", "Arrival")
+	if !slices.Equal(phases, want) {
 		t.Fatalf("phases %q, want %q", phases, want)
 	}
 	if b.Game() == nil {
@@ -276,7 +306,7 @@ func TestPodArrivalPlacesEveryoneOnLand(t *testing.T) {
 		t.Fatalf("%d pods: one per colonist plus kit pods", pods)
 	}
 	start := uint64(g.clock.Now())
-	cx, cy := g.Width()/2, g.Height()/2
+	cx, cy := g.landingSpot() // the generator's landing spot
 	for _, p := range g.ng.pods {
 		if p.Tick < start || p.Tick > start+podFall+podStagger {
 			t.Fatalf("pod lands at %d, outside the stagger", p.Tick-start)
@@ -329,7 +359,8 @@ func TestStandingArrivalRing(t *testing.T) {
 	if len(g.ng.pods) != 0 {
 		t.Fatal("the standing arrival has no pods")
 	}
-	c := Position{g.Width() / 2, g.Height() / 2}
+	lx, ly := g.landingSpot()
+	c := Position{lx, ly}
 	seen := map[Position]bool{}
 	for _, id := range g.pawnIDs {
 		p, _ := g.positions.Get(id)
@@ -357,7 +388,8 @@ func TestWalkInFromEdge(t *testing.T) {
 		t.Fatalf("%d walked in", len(g.pawnIDs))
 	}
 	w, h := g.Width(), g.Height()
-	c := Position{w / 2, h / 2}
+	lx, ly := g.landingSpot()
+	c := Position{lx, ly}
 	start := map[entity.EntityID]int{}
 	for _, id := range g.pawnIDs {
 		p, _ := g.positions.Get(id)
@@ -429,9 +461,10 @@ func TestIntroLetterOnce(t *testing.T) {
 
 func TestScenarioKitSpawned(t *testing.T) {
 	t.Parallel()
-	g := buildSetup(t, setupFor(t, "broken_hull", nil))
+	s := setupFor(t, "broken_hull", nil)
+	g := buildSetup(t, s)
 	stepUntilLanded(t, g)
-	tot := itemTotals(g)
+	tot := kitTotals(t, g, s) // without the ruins' loot
 	want := map[item.Kind]int{
 		item.Steel: 300 + 400, item.Silver: 600, item.Components: 20 + 6, item.Rifle: 2, item.Knife: 1,
 		item.IndustrialMedicine: 12, item.Wood: 200, item.Meal: 10, item.Food: 40 + 8,
@@ -453,17 +486,19 @@ func TestScenarioKitSpawned(t *testing.T) {
 	if pets != 1 {
 		t.Fatalf("%d pets, want 1", pets)
 	}
-	ge := buildSetup(t, setupFor(t, "gilded_expedition", nil))
+	gs := setupFor(t, "gilded_expedition", nil)
+	ge := buildSetup(t, gs)
 	stepUntilLanded(t, ge)
-	if tot := itemTotals(ge); tot[item.Silver] != 3000 || tot[item.Gold] != 30 {
+	if tot := kitTotals(t, ge, gs); tot[item.Silver] != 3000 || tot[item.Gold] != 30 {
 		t.Fatalf("gilded: silver %d gold %d", tot[item.Silver], tot[item.Gold])
 	}
 	if len(ge.ng.pods) > 1+maxKitPods {
 		t.Fatalf("%d pods", len(ge.ng.pods))
 	}
-	bh := buildSetup(t, setupFor(t, "bare_hands", nil))
+	bs := setupFor(t, "bare_hands", nil)
+	bh := buildSetup(t, bs)
 	stepUntilLanded(t, bh)
-	if len(itemTotals(bh)) != 0 || len(bh.ng.pods) != 1 {
+	if len(kitTotals(t, bh, bs)) != 0 || len(bh.ng.pods) != 1 {
 		t.Fatalf("bare hands: items %v pods %d", itemTotals(bh), len(bh.ng.pods))
 	}
 }

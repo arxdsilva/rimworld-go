@@ -5104,6 +5104,19 @@
       "license": "original, made in code (CC0, this repo)"
     },
     {
+      "id": "sfx.steam_vent",
+      "bus": "effects",
+      "volume": 0.45,
+      "files": [
+        "sfx/steam_vent_0.wav",
+        "sfx/steam_vent_1.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.steam_vent",
+      "seed": 701,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
       "id": "sfx.sweep",
       "bus": "effects",
       "volume": 0.45,

@@ -52,7 +52,7 @@ func (g *Game) markSmooth(x0, y0, x1, y1 int, on bool) {
 	for y := minY; y <= maxY; y++ {
 		for x := minX; x <= maxX; x++ {
 			k := [2]int{x, y}
-			if on && g.smoothable(x, y) {
+			if on && g.smoothable(x, y) && !g.fogged(x, y) {
 				g.smooths[k] = true
 			} else if !on {
 				delete(g.smooths, k)

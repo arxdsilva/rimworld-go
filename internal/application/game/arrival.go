@@ -12,12 +12,12 @@ import (
 )
 
 // Arrival (NG-1 §2.11). Drop pods: one per colonist plus one per podValue
-// of kit, landing within podRadius of the map centre on dry ground,
+// of kit, landing within podRadius of the landing spot on dry ground,
 // staggered over podStagger ticks; each leaves a pod shell, its colonist
 // steps out with a rough-landing thought and its kit is dropped beside
-// it. Standing: the colonists stand in a ring round the centre with the
-// kit piled in the middle. Walk in: they enter at a reachable map edge and
-// walk to the centre. The scenario's scattered items and starting animals
+// it. Standing: the colonists stand in a ring round the landing spot with
+// the kit piled in the middle. Walk in: they enter at a reachable map edge
+// and walk to the landing spot (the map centre for legacy colonies). The scenario's scattered items and starting animals
 // come with them, and its intro letter is posted once everyone is down.
 // All randomness is g.rng, drawn at build time.
 
@@ -53,7 +53,7 @@ func clonePods(ps []podState) []podState {
 
 // landColony brings the colonists, kit, scattered items and animals in.
 func (g *Game) landColony() {
-	cx, cy := g.grid.Width()/2, g.grid.Height()/2
+	cx, cy := g.landingSpot() // setup.go: the generator's landing spot
 	switch g.ng.fx.Arrival {
 	case scenario.Standing:
 		g.arriveStanding(cx, cy)
@@ -163,8 +163,8 @@ func (g *Game) podSpot(cx, cy int, taken [][2]int) (int, int, bool) {
 }
 
 func (g *Game) podFree(x, y int, taken [][2]int) bool {
-	if !g.grid.InBounds(x, y) || !g.dryWalkable(x, y) {
-		return false
+	if !g.grid.InBounds(x, y) || !g.dryWalkable(x, y) || g.roofAt(x, y).Thick() {
+		return false // never under thick rock (roof.go)
 	}
 	for _, t := range taken {
 		if abs(t[0]-x) <= 1 && abs(t[1]-y) <= 1 {
@@ -380,7 +380,8 @@ func (g *Game) introLetter() {
 	if text == "" {
 		return
 	}
-	g.post(MessageView{Tick: uint64(g.clock.Now()), Text: text, X: g.grid.Width() / 2, Y: g.grid.Height() / 2,
+	x, y := g.landingSpot()
+	g.post(MessageView{Tick: uint64(g.clock.Now()), Text: text, X: x, Y: y,
 		Letter: true, Title: g.ng.setup.Scenario.Name})
 }
 

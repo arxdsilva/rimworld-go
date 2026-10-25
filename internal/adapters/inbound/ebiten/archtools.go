@@ -341,6 +341,8 @@ func buildSprite(kind, facing string, mask int, ew, open bool) string {
 		return "furniture/hospital_bed_" + facingOr(facing)
 	case "pod shell":
 		return "structure/pod_shell"
+	case steamVentKind:
+		return "structure/steam_vent"
 	}
 	return ""
 }
