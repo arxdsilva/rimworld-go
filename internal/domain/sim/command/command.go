@@ -129,6 +129,9 @@ const (
 	AssignArea
 	// ReleasePrisoner lets prisoner Target go.
 	ReleasePrisoner
+	// DesignatePlan paints (Enabled) or erases plan marks over the
+	// rectangle X,Y..X2,Y2: purely visual layout placeholders (PLAY-012).
+	DesignatePlan
 )
 
 // WorkType is a compact work-column id for SetWorkEnabled.

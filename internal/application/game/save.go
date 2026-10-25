@@ -279,6 +279,9 @@ type saveState struct {
 	CleanQ []int32
 	// HomeVer is the Home area's change counter (WorldView.HomeVer).
 	HomeVer uint32
+	// Plan is the sorted tile indexes with a plan mark (PLAY-012); nil
+	// when none, so saves without plans hash as before.
+	Plan []int32
 	// Incoming (HAUL-001): material on its way to each frame or fuel user.
 	Incoming map[entity.EntityID]int
 	// Deliveries (HAUL-001): each hauler's shares of Incoming, route order.

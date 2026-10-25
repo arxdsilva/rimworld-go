@@ -40,6 +40,9 @@ var (
 	uiTooltip      = color.RGBA{R: 0x12, G: 0x0D, B: 0x0A, A: 0xF2}
 	uiTooltipEdge  = color.RGBA{R: 0x8A, G: 0x6A, B: 0x48, A: 0xFF}
 	uiModalDim     = color.RGBA{R: 0x00, G: 0x00, B: 0x00, A: 0xB0}
+	// PLAY-012 plan marks: a soft fill and a brighter edge.
+	uiPlanFill = color.RGBA{R: 0xB8, G: 0xD4, B: 0xF0, A: 0x30}
+	uiPlanEdge = color.RGBA{R: 0xD8, G: 0xE8, B: 0xFF, A: 0x90}
 )
 
 var uiTokens = map[string]color.RGBA{
@@ -73,6 +76,8 @@ var uiTokens = map[string]color.RGBA{
 	"ui.tooltip":         uiTooltip,
 	"ui.tooltip_border":  uiTooltipEdge,
 	"ui.modal_dim":       uiModalDim,
+	"ui.plan_fill":       uiPlanFill,
+	"ui.plan_edge":       uiPlanEdge,
 }
 
 const menuBackdropBands = 12

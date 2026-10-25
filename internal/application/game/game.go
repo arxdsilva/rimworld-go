@@ -416,6 +416,11 @@ type WorldView struct {
 	// HomeVer changes whenever it does, so the renderer can cache.
 	Home    []uint8
 	HomeVer uint32
+	// Plan is 1 per tile with a plan mark (PLAY-012: visual placeholders,
+	// no gameplay effect; cleared when a building is finished on the tile);
+	// PlanVer changes whenever it does.
+	Plan    []uint8
+	PlanVer uint32
 	// NG-1 setup (setup_view.go): arrival pods for the fall streak and dust
 	// (Tick is the landing tick), the permanent conditions' keys and the
 	// heat wave or cold snap in progress ("" when none).
@@ -577,6 +582,7 @@ type Game struct {
 	// viewGrass, viewHome, viewRoof: copy-on-write read-model layers
 	// (indexes.go shareLayer).
 	viewGrass, viewHome, viewRoof layerCache
+	viewPlan                      layerCache // PLAY-012 plan marks
 	// minesVer bumps on every mine designation change (mineList cache);
 	// seedCache is weatherSeed's (indexes.go). Never saved.
 	minesVer  uint64
