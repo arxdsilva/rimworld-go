@@ -508,15 +508,15 @@ the player's primary world-editing command surface.
 
 ## 6.5 Allowed areas
 
--   [-] **Area manager** (SIM-046: create, rename, assign; no delete)
+-   [x] **Area manager** (SIM-046; PLAY-015 UI-025: create, rename, invert, delete with confirm, colour swatches; opened from Architect, Schedule, Animals, Assign)
     -   Create.
     -   rename.
     -   delete.
     -   invert.
     -   clear.
--   [-] **Paint allowed area** (SIM-046: Allowed area / Clear allowed area architect tools paint the area picked in the manager; no overlay while painting and no UI test of the tool)
--   [ ] **Area overlay selector**
--   [-] **Assign pawn/animal to area** (SIM-046: via Assign tab and area manager)
+-   [x] **Paint allowed area** (PLAY-015: Expand/Clear allowed area submenus list the areas; tinted overlay while painting)
+-   [x] **Area overlay selector** (PLAY-015: the armed or hovered area shows in its colour)
+-   [x] **Assign pawn/animal to area** (PLAY-015: Schedule tab dropdown per colonist, Animals tab Area/Pen column, pawn inspector line; Unrestricted, Home or an area)
     -   Integrated later with Schedule/Assign/Animals.
 
 ------------------------------------------------------------------------
@@ -1060,7 +1060,7 @@ This screen centralizes per-pawn behavioral policies.
 
 ## 19.1 Animals tab
 
--   [-] **Owned animal table** (UI-014, SIM-047: master and training columns; no health or area; UI-014: Animals tab Colony view lists tame animals with species, state, sex/stage/age, Handle work column; no health, master, area, training columns)
+-   [x] **Owned animal table** (UI-014, SIM-047; PLAY-015: Master dropdown, Follow drafted toggle, Area/Pen column (area dropdown or pen name/Roaming/Being roped), health and training columns)
     -   Name.
     -   species.
     -   sex.
@@ -1086,13 +1086,13 @@ This screen centralizes per-pawn behavioral policies.
 
 ## 19.3 Pen UI
 
--   [ ] **Pen marker inspector**
+-   [x] **Pen marker inspector** (PLAY-015: Animals (species, male/female), Food (grazing vs demand, trough stock, verdict), Auto-cut)
 -   [x] **Pen boundary visualization** (brown wash, fence rails and posts; ART-014: buildable wood/stone fences and gates with autotiled art)
--   [ ] **Enclosure validity**
--   [ ] **Assigned species**
--   [-] **Nutrition/grazing capacity** (UI-014: feeding trough panel shows stock and filter; no grass capacity readout)
+-   [x] **Enclosure validity** (PLAY-015: pen outline when selected; open pens dashed red "Not enclosed")
+-   [x] **Assigned species** (PLAY-015: per-species and per-sex filters)
+-   [x] **Nutrition/grazing capacity** (PLAY-015: grazing per day vs herd demand in the pen inspector)
 -   [-] **Animal count vs food capacity** (UI-014: pen full alert only; no capacity ratio)
--   [ ] **Missing gate/breach warning** (fences and gates are buildable (SIM-028) but no pen validity warning)
+-   [x] **Missing gate/breach warning** (PLAY-015: "Pen N is open" alert)
 
 ## 19.4 Wildlife tab
 
@@ -1866,7 +1866,7 @@ source and intended for AI-assisted development.
 -   [ ] **Beauty**
 -   [ ] **Cover**
 -   [ ] **Roof**
--   [ ] **Fire active set**
+-   [x] **Fire active set** (PLAY-015: per-chunk fire lists; flames, smoke, light and sound only for burning cells)
 
 ## 38.4 Debug actions
 
@@ -2066,7 +2066,7 @@ Complete:
 -   [ ] Growing-zone settings.
 -   [-] Work.
 -   [ ] Schedule.
--   [-] Allowed areas. (SIM-046: area manager and Assign tab; no delete or overlay)
+-   [x] Allowed areas. (PLAY-015: see 6.5)
 
 **Player outcome:** Can organize labor and physically build a
 functioning settlement.

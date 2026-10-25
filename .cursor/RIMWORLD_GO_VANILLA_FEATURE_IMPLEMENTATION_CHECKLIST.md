@@ -454,11 +454,11 @@ This is the heart of autonomous colony behavior.
 
 ## 5.7 Allowed areas
 
--   [-] **Named allowed areas** (SIM-046: up to 10 areas painted, renamed and assigned via Assign tab and area manager; no delete or overlay)
+-   [x] **Named allowed areas** (SIM-046; PLAY-015 SIM-055: up to 10 areas with stable ids and colours; paint, clear, rename, invert, delete (users fall back to Unrestricted); Home as an area choice; colonists and tame non-penned animals; coloured overlay)
     -   Paint cells.
     -   invert/clear.
     -   assign pawn.
--   [x] **Area-aware AI** (SIM-046: pathing and job filtering respect the area; drafted pawns ignore it)
+-   [x] **Area-aware AI** (SIM-046; PLAY-015: destinations (work, haul destination, food, beds, recreation, wander, hunting) must be inside; paths may cross outside at a cost; drafted, mental, fleeing, attack, rescue/tend and following a drafted master override it)
     -   Pawn chooses work/destinations inside assigned area.
     -   Path traversal semantics should emulate vanilla's distinction
         between allowed destination and traversal where appropriate.
@@ -632,10 +632,10 @@ This is the heart of autonomous colony behavior.
 ## 7.5 Specialized zones
 
 -   [x] **Growing zones** (painted tiles sowing the chosen crop; never on taken tiles or infertile rough stone/rock; same-crop neighbours merge; cancel clears tiles; resow after harvest (ZONE-001))
--   [-] **Home area** (SIM-021: painted, auto-grown around buildings, drives cleaning; no firefighting or repair yet)
+-   [x] **Home area** (SIM-021; PLAY-015: auto-expansion toggle, grows around buildings, new zones and pen markers; bounds cleaning, repairs and firefighting together with the pawn's area)
     -   Influences firefighting/cleaning/repair behavior.
 -   [x] **Roof build/remove areas** (SIM-018)
--   [-] **Allowed areas** (SIM-046: Assign tab and area manager; no overlay or delete)
+-   [x] **Allowed areas** (SIM-046; PLAY-015: manager with invert/delete, Architect submenus, overlay, Schedule/Animals/inspector selectors)
     -   Already introduced in Phase 5 but integrated with zone UI.
 
 ------------------------------------------------------------------------
@@ -1123,7 +1123,7 @@ treatment, and surgery are major colony-management systems.
     -   fog.
     -   snow where climate supports it.
     -   thunderstorm/flashstorm-like weather.
--   [-] **Weather effects** (outdoor chill in snow, outdoor campfires doused, slower walking in rain and snow, soaked/snow-day thoughts; light only darkens visually)
+-   [-] **Weather effects** (outdoor chill in snow, outdoor campfires doused, slower walking in rain and snow, soaked/snow-day thoughts; PLAY-015 SIM-057: snow lies per tile (none under roofs) and slows walkers and grass per cell; a snow clearing area is shovelled under Cleaning; light only darkens visually)
     -   light.
     -   temperature.
     -   fire suppression.
@@ -1140,17 +1140,17 @@ treatment, and surgery are major colony-management systems.
 
 ## 12.5 Fire
 
--   [ ] **Flammability**
+-   [x] **Flammability** (PLAY-015 SIM-058: grass, plants (trees, duskmoss), crops, wooden buildings and bridges, flammable items; stone, steel and terrain never burn)
     -   Terrain/buildings/items/plants define flammability.
--   [ ] **Ignition**
+-   [-] **Ignition** (PLAY-015: lightning strikes in storms, bursting animals, developer action; no weapon or overheat sources yet)
     -   Weapon/explosion/lightning/random event/overheat sources.
--   [ ] **Fire spread**
+-   [x] **Fire spread** (PLAY-015: active fires in per-chunk lists; spreads to flammable neighbours, downwind more, barely into roofed cells; rain and snow put outdoor fires out)
     -   Active-set simulation only.
     -   nearby flammable objects.
     -   weather/rain influences.
--   [ ] **Fire damage**
+-   [x] **Fire damage** (PLAY-015: buildings (bridge collapse cascade), plants, grass, items destroyed, pawns take burn wounds, ash left behind; fires heat rooms and warm the air)
     -   Buildings/items/plants/pawns take burn damage.
--   [ ] **Firefighting work**
+-   [x] **Firefighting work** (PLAY-015: Firefight work type on by default; fires inside Home and the pawn's area; drafted Extinguish order anywhere; pawns and animals avoid and flee flames)
     -   Pawns extinguish fire in home area/urgent contexts.
 -   [ ] **Automatic rain after major fire**
     -   Optional vanilla-equivalent storyteller/environment behavior.
@@ -1511,8 +1511,8 @@ children systems.
 
 ## 18.6 Animal zones/pens
 
--   [ ] **Animal allowed areas for zonable animals**
--   [-] **Pen system for appropriate livestock** (pen zones of any shape, merged when adjacent, drawn with one fence; tame animals keep inside or stay near the colony; SIM-024: feeding troughs with plant/meat/any filter filled by haulers, animals graze in the pen; UI-014 pen-full alert; SIM-028: buildable wood/stone fences and gates (animals can't cross fences, tame animals pass gates, colonists climb fences at x3 cost; pathing doesn't prefer gates, no stone gate art), no rope/lead, no enclosure validity or capacity readout)
+-   [x] **Animal allowed areas for zonable animals** (PLAY-015: tame non-penned animals use allowed areas; Animals tab dropdown)
+-   [x] **Pen system for appropriate livestock** (PLAY-015 SIM-056: pen markers whose flood-filled enclosure (fences, gates, walls, doors, rock) makes the pen; 29 penned species; gates and doors hold livestock unless a handler ropes and leads it; species/sex filters, grazing vs demand, auto-cut; open-pen and unpenned alerts; unpenned livestock roam and may wander off; painted pens convert on load; SIM-024 troughs; SIM-028 fences and gates)
     -   Pen markers/boundaries.
     -   rope/lead jobs.
     -   enclosure validity.

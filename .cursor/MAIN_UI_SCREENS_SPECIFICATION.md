@@ -785,7 +785,33 @@ maintenance.
     `command.AssignArea` (`Pawn`, `Index`, -1 = unrestricted).
 -   **States:** no areas yet: "No areas: add one to restrict where
     colonists go."; the 10-area cap disables "New area" with the reason.
--   [ ] Not wired yet (M9).
+-   [x] Wired (SIM-046), rebuilt in PLAY-015 (below).
+
+## PLAY-015 contract (allowed areas, pens, Home, fire)
+
+-   **Area manager** (modal): rows = colour swatch, inline rename,
+    Invert, red ✕ Delete (confirm when pawns use it); "New area" (off at
+    10), "Close". Opened from Architect → Zone → Expand/Clear allowed
+    area ▸ "Manage allowed areas…", the Schedule, Animals and Assign
+    tabs. Commands carry the area **id** (`AreaView.ID`):
+    `CreateArea{Name}`, `RenameArea`, `InvertArea`, `DeleteArea`,
+    `PaintArea`, `AssignArea{Pawn, Index: id | AreaUnrestricted (-1) |
+    AreaHome (-2)}`.
+-   **Overlay:** the armed or hovered area tints its cells
+    (`AreaView.Bits`, rebuilt on `Ver`).
+-   **Selectors:** Schedule tab "Allowed area" column per colonist; pawn
+    inspector line "Area: …"; Animals tab "Area / Pen" column (area
+    animals: dropdown; penned: pen name, "Roaming", "Being roped").
+-   **Pen marker inspector:** Animals (per species allow + ♂/♀, All/
+    None), Food (grazing/day, demand/day, trough stock, verdict, "Not
+    enclosed"), Auto-cut (plant checklist) → `SetPenSettings`.
+    Architect → Misc "Pen marker".
+-   **Home:** the "Auto" toggle in the top strip (`SetHomeAuto`);
+    Architect → Zone "Expand/Clear home area", "Build/Remove roof area",
+    "Snow clearing area"/"Clear snow clearing area".
+-   **Fire:** right-click a burning cell with a drafted pawn → "Extinguish
+    fire"; Work tab Firefight column; "Fire in the colony!" alert; dev
+    "Start fire here".
 
 ------------------------------------------------------------------------
 
