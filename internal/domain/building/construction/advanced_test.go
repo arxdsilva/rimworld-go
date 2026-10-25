@@ -44,8 +44,23 @@ func TestPodShellDeconstructsToSteel(t *testing.T) {
 		t.Fatalf("pod shell salvages 6 steel: refund %d stuff %v", Refund(PodShell), DefaultStuff(PodShell))
 	}
 	for _, k := range All() {
-		if k.Placed && k.Kind != PodShell {
+		if k.Placed && k.Kind != PodShell && k.Kind != SteamVent {
 			t.Fatalf("%s is placed-only", k.Name)
+		}
+	}
+}
+
+// MAPGEN-2: a steam vent is a natural 2x2 map feature, walkable and
+// never built, salvaged or swapped.
+func TestSteamVentIsNatural(t *testing.T) {
+	t.Parallel()
+	d := DefOf(SteamVent)
+	if d.Name != "steam vent" || !d.Placed || !d.Natural || d.BlocksMove || d.Size != [2]int{2, 2} || Refund(SteamVent) != 0 {
+		t.Fatalf("steam vent %+v", d)
+	}
+	for _, k := range All() {
+		if k.Natural && k.Kind != SteamVent {
+			t.Fatalf("%s is natural", k.Name)
 		}
 	}
 }

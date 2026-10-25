@@ -57,6 +57,20 @@ type Site struct {
 	Stones   []geology.Stone
 	Road     Dir8Set
 	Latitude int16 // tenths of a degree; negative = south
+
+	// World-tile context for the field generator (MAPGEN-2, mapgen);
+	// additive, and the legacy generator never reads it.
+	// Uphill is the map edge facing the highest neighbouring world tile
+	// (valid when HasUphill): mountains lean that way.
+	Uphill    Dir8
+	HasUphill bool
+	// Rain is the tile's yearly rain in mm (0: unknown, the biome decides).
+	Rain int16
+	// CoastNear is the hop distance to the nearest ocean tile (0: none
+	// known or on the coast itself).
+	CoastNear uint8
+	// Settled: a settlement on this tile or a neighbour (more ruins).
+	Settled bool
 }
 
 // Zero reports the legacy (unset) site.

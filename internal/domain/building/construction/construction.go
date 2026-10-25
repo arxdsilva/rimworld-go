@@ -74,6 +74,10 @@ const (
 	DrugTable
 	MarriageSpot
 	PartySpot
+	// SteamVent is a natural 2x2 geothermal vent left by map generation
+	// (MAPGEN-2): walkable, never built, deconstructed or moved; it warms
+	// the air around it.
+	SteamVent
 	kindCount
 )
 
@@ -123,6 +127,9 @@ type Def struct {
 	// AnimalBlock: animals can't cross it (fences); Gate lets tame ones
 	// through (SIM-028).
 	AnimalBlock, Gate bool
+	// Natural: a map feature (with Placed), never deconstructed, moved or
+	// swapped.
+	Natural bool
 }
 
 // StoneWorkPct is the work multiplier (percent) for granite, the legacy
@@ -201,6 +208,8 @@ var defs = [kindCount]Def{
 		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
 	MarriageSpot: {Kind: MarriageSpot, Name: "marriage spot", Layer: LayerObject, Rotatable: true, Size: [2]int{2, 1}},
 	PartySpot:    {Kind: PartySpot, Name: "party spot", Layer: LayerObject},
+	SteamVent: {Kind: SteamVent, Name: "steam vent", Layer: LayerObject, Placed: true, Natural: true,
+		Size: [2]int{2, 2}},
 }
 
 // MaxHP is how much damage a building takes before it is destroyed.
@@ -528,6 +537,9 @@ type Building struct {
 	Damage      int    // damage taken (raiders bashing, bullets); repaired by builders
 	// ForPrisoners marks a bed for prisoners only (ENG-003).
 	ForPrisoners bool
+	// Ruin: an abandoned piece left by map generation (MAPGEN-2): not
+	// colony wealth, not a Home anchor, salvaged for half.
+	Ruin bool
 }
 
 // HP is the building's remaining hit points.

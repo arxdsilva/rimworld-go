@@ -35,3 +35,21 @@ func (r *Rand) UnmarshalBinary(b []byte) error {
 func (r *Rand) IntN(n int) int {
 	return r.src.IntN(n)
 }
+
+// Derive returns an independent stream for name under seed: the same
+// (seed, name) always gives the same sequence, and different names give
+// unrelated ones, so one pass's draws never shift another's.
+func Derive(seed uint64, name string) *Rand {
+	h := uint64(0xcbf29ce484222325) // FNV-1a over the name
+	for i := 0; i < len(name); i++ {
+		h ^= uint64(name[i])
+		h *= 0x100000001b3
+	}
+	z := seed ^ h
+	z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9
+	z = (z ^ (z >> 27)) * 0x94d049bb133111eb
+	return New(z ^ (z >> 31))
+}
+
+// Float64 returns a pseudo-random number in [0, 1).
+func (r *Rand) Float64() float64 { return r.src.Float64() }

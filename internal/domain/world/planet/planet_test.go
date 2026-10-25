@@ -840,3 +840,39 @@ func BenchmarkTileAt(b *testing.B) {
 		p.TileAt(c)
 	}
 }
+
+// MAPGEN-2: the site carries the tile's rain, coast distance, settlement
+// and the edge facing its highest neighbour.
+func TestSiteWorldContext(t *testing.T) {
+	p := world(t, "amber-hollow", 100)
+	var uphill bool
+	for i := 0; i < p.TileCount(); i++ {
+		if p.Water[i] != Land {
+			continue
+		}
+		s := p.Site(i)
+		if s.Rain != p.Rain[i] || s.CoastNear != p.CoastDist[i] {
+			t.Fatalf("tile %d: rain/coast %d/%d, want %d/%d", i, s.Rain, s.CoastNear, p.Rain[i], p.CoastDist[i])
+		}
+		top, want := p.Elev[i], -1
+		for _, nb := range p.Neighbours(i) {
+			if p.Elev[nb] > top {
+				top, want = p.Elev[nb], int(nb)
+			}
+		}
+		if (want >= 0) != s.HasUphill || (want >= 0 && s.Uphill != site.Dir8(p.bearing(i, want))) {
+			t.Fatalf("tile %d: uphill %v/%d, want neighbour %d", i, s.HasUphill, s.Uphill, want)
+		}
+		near := p.Settlement[i] >= 0
+		for _, nb := range p.Neighbours(i) {
+			near = near || p.Settlement[nb] >= 0
+		}
+		if s.Settled != near {
+			t.Fatalf("tile %d: settled %v, want %v", i, s.Settled, near)
+		}
+		uphill = uphill || s.HasUphill
+	}
+	if !uphill {
+		t.Fatal("no tile has an uphill edge")
+	}
+}

@@ -22,6 +22,9 @@ const (
 	Supported
 	// NoAuto: the player removed this roof; auto-roofing leaves it off.
 	NoAuto
+	// NaturalThick (with Natural): deep overhead rock from map generation
+	// (MAPGEN-2). Nothing drops through it and no tool removes it.
+	NaturalThick
 )
 
 const (
@@ -37,6 +40,9 @@ const (
 
 // Roofed reports any roof, built or natural.
 func (c Cell) Roofed() bool { return c&(Built|Natural) != 0 }
+
+// Thick reports deep natural rock overhead.
+func (c Cell) Thick() bool { return c.Has(Natural | NaturalThick) }
 
 // Has reports every flag of f set.
 func (c Cell) Has(f Cell) bool { return c&f == f }

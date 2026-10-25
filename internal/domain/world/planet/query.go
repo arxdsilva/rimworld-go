@@ -120,8 +120,27 @@ func (p *Planet) Site(i int) site.Site {
 			s.Stones = append(s.Stones, st)
 		}
 	}
+	if len(p.Rain) > i {
+		s.Rain = p.Rain[i]
+	}
+	if len(p.CoastDist) > i {
+		s.CoastNear = p.CoastDist[i]
+	}
+	if len(p.Settlement) > i && p.Settlement[i] >= 0 {
+		s.Settled = true
+	}
+	top := int16(0)
+	if len(p.Elev) > i {
+		top = p.Elev[i]
+	}
 	lakes := 0
 	for _, nb := range p.Neighbours(i) {
+		if len(p.Elev) > int(nb) && p.Elev[nb] > top {
+			top, s.Uphill, s.HasUphill = p.Elev[nb], site.Dir8(p.bearing(i, int(nb))), true
+		}
+		if len(p.Settlement) > int(nb) && p.Settlement[nb] >= 0 {
+			s.Settled = true
+		}
 		switch p.Water[nb] {
 		case Ocean:
 			s.Coast |= 1 << p.bearing(i, int(nb))

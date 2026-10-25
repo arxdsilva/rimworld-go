@@ -38,3 +38,20 @@ func TestIntNStaysInRange(t *testing.T) {
 		}
 	}
 }
+
+func TestDeriveStreams(t *testing.T) {
+	a, b := Derive(42, "plants"), Derive(42, "plants")
+	c := Derive(42, "caves")
+	same, diff := true, false
+	for i := 0; i < 20; i++ {
+		x, y, z := a.IntN(1<<30), b.IntN(1<<30), c.IntN(1<<30)
+		same = same && x == y
+		diff = diff || x != z
+	}
+	if !same || !diff {
+		t.Fatalf("Derive: same name equal=%v, other name differs=%v", same, diff)
+	}
+	if f := Derive(1, "f").Float64(); f < 0 || f >= 1 {
+		t.Fatalf("Float64 %v", f)
+	}
+}
