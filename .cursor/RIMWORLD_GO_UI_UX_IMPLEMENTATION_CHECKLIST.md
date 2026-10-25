@@ -108,7 +108,7 @@ use these primitives.
 
 ## 1.2 Visual design tokens
 
--   [-] **UI scale and density system** (PLAY-012 UI-024: the UI lays out in logical pixels and draws through a scaling canvas, text at the real font size; Auto plus 75–200 % presets; map coordinates unaffected; spacing/row heights are still per-file constants, not a central token set)
+-   [-] **UI scale and density system** (PLAY-012 UI-024: the UI lays out in logical pixels and draws through a scaling canvas, text at the real font size; Auto plus 75–200 % presets; map coordinates unaffected; PLAY-017: portraits and world labels fixed at every scale, guarded by a per-function draw check and frame-invariance tests, `-capture-ui-scale` for scaled captures; spacing/row heights are still per-file constants, not a central token set)
     -   Support multiple UI scales.
     -   Define spacing, row heights, icon sizes, text sizes, border
         widths, modal sizes, and minimum click targets centrally.
@@ -262,7 +262,7 @@ This is the minimum UI required to interact with a running simulation.
     -   quadrum/season.
     -   year.
     -   Optional world temperature/weather nearby.
--   [ ] **Forced-pause feedback**
+-   [x] **Forced-pause feedback** ("paused (threat)", "Paused (window in background)"; PLAY-017: an animal chasing a colonist pauses with a red message, and an off-screen chase is centred)
     -   If major threats/settings pause the game, visually explain why.
 
 ## 2.4 Minimal top-level HUD
@@ -286,7 +286,7 @@ building, item, plant, animal, corpse or tile.
 
 ## 3.1 Generic selection panel
 
--   [-] **Selected entity header** (pawn, animal, building, plant and item panels with name, icon, category and condition (UI-011); UI-014 animal inspector adds state, food/rest bars, sex/stage/age, pregnancy %, product bar, diet and tame chance; no faction/ownership line)
+-   [-] **Selected entity header** (pawn, animal, building, plant and item panels with name, icon, category and condition (UI-011); UI-014 animal inspector adds state, food/rest bars, sex/stage/age, pregnancy %, product bar, diet and tame chance; PLAY-017: plant panel shows why a plant is or isn't growing and when it ripens; no faction/ownership line)
     -   Display label/name.
     -   entity category.
     -   faction/ownership where relevant.
@@ -350,7 +350,7 @@ building, item, plant, animal, corpse or tile.
 
 ## 4.1 Colonist bar
 
--   [-] **Always-visible colonist portraits** (snapshot slots, click selects, layered original portrait, display name; no double-click center)
+-   [x] **Always-visible colonist portraits** (snapshot slots, click selects, double-click centres the camera on the colonist (PLAY-017), layered original portrait drawn in its slot at every UI scale, display name)
     -   Compact representation of each colonist.
     -   Click selects; double-click centers.
     -   Preserve identity at a glance.
@@ -437,11 +437,12 @@ the player's primary world-editing command surface.
 
 -   [ ] **Mine**
 -   [x] **Cut plants** (trees, bushes and grass (UI-011))
--   [x] **Harvest** (wild plants via Architect; zone crops automatic)
+-   [x] **Harvest** (wild plants via Architect; ripe zone crops get the mark automatically (PLAY-017))
 -   [x] **Hunt**
 -   [x] **Deconstruct**
 -   [x] **Cancel** (blueprints, harvest and deconstruct marks, zones)
 -   [x] **Forbid/unforbid** (Orders › Forbid/Allow area tools, the item panel button and F on the selection, UI-016)
+-   [x] **Haul things** (PLAY-017: Orders › Haul things marks items found on the map for hauling; item panel and group buttons, "Found here" line, a haul mark on the map; Cancel unmarks)
 -   [ ] **Remove floor**
 -   [x] **Remove roof** (SIM-018)
 -   [ ] **Claim structure where base-game semantics require it**
@@ -468,6 +469,7 @@ the player's primary world-editing command surface.
 -   [ ] **Select existing zone**
 -   [x] **Zone color/outline** (borderless fill per tile plus one outline along the zone's outer edge: stockpile dashed gold, grow zone solid green, pen fence)
     -   Distinct but unobtrusive.
+-   [x] **Zone labels** (PLAY-017: each zone named once on a plate, pinned to the zone at every UI scale, sized with the zone, readable zoomed out, capped smaller zoomed in and drawn over stacks and crops)
 
 ## 6.2 Stockpile configuration panel
 
@@ -815,7 +817,7 @@ understandable.
 -   [x] **Damage indicators** (floating -N over hit pawns, animals and buildings; "miss" for missed shots)
 -   [x] **Projectile/impact feedback**
 -   [x] **Downed/death feedback**
--   [x] **Threat markers** (red chevron over raiders, orange while fleeing; Raid alert and arrival message)
+-   [x] **Threat markers** (red chevron over raiders, orange while fleeing; Raid alert and arrival message; PLAY-017: every hostile animal gets the red marker and a red chase line to its target; the hostile alert names who is chased)
 -   [-] **Hostile faction coloring/icons** (raiders wear a reserved maroon cloth tint)
 -   [x] **Pause-on-threat option** (on by default, Options screen toggle; HUD reads "paused (threat)")
 
@@ -1663,7 +1665,8 @@ the player what just happened and what requires attention.
 
 ## 34.3 Gameplay
 
--   [ ] **Pause on threat**
+-   [x] **Pause on threat** (Options › Gameplay, on by default; PLAY-017: animal chases trigger it)
+-   [x] **Run in background** (PLAY-017: Options › Gameplay; off pauses the colony while the window is away, on keeps it running at a capped frame rate)
 -   [ ] **Autosave interval**
 -   [ ] **Default speed behavior**
 -   [ ] **Edge scrolling**

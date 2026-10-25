@@ -524,7 +524,7 @@ This is the heart of autonomous colony behavior.
 
 ## 6.4 Hauling
 
--   [-] **Haul loose item to storage** (up to 100 per trip to the nearest accepting stockpile tile, topping up stacks first)
+-   [-] **Haul loose item to storage** (up to 100 per trip to the nearest accepting stockpile tile, topping up stacks first; PLAY-017: only the colony's own goods (made, brought, harvested, chopped, mined, hunted) are hauled by themselves, items found on the map (ruin and vault loot, map chunks, predator kills, wild eggs) wait for a Haul mark)
 -   [-] **Haul construction resources** (a full load of wood or stone feeds a route of up to 8 nearby frames; leftovers go to the nearest stockpile, or only the needed amount is carried when storage has no room (HAUL-001))
 -   [ ] **Haul production ingredients**
 -   [ ] **Haul finished products**
@@ -542,7 +542,7 @@ This is the heart of autonomous colony behavior.
 -   [x] **Deconstruct designation** (Architect Orders rectangle; cancel clears it)
 -   [x] **Mine designation** (Architect Orders rectangle over rock; Mine work type; cancel clears)
 -   [x] **Cut plant designation** (trees drop wood scaled by growth; bushes cleared)
--   [x] **Harvest designation** (wild plants by order; zone crops harvest automatically; Grow work type)
+-   [x] **Harvest designation** (wild plants by order; PLAY-017: zone crops get the harvest mark when they ripen, and Cancel holds until the next ripening; Grow work type)
 -   [x] **Hunt designation**
 -   [x] **Plan designation** (PLAY-012 UI-023: Plan / Remove plan paint visual layout marks with no gameplay effect; a mark clears when any building is finished on its tile; Plans button hides the overlay)
 -   [-] **Cancel designation** (frames refund delivered materials (UI-015 `CancelFrame` and the Cancel area), harvest marks, deconstruct marks; zones lose just the cancelled tiles (ZONE-001))
@@ -697,9 +697,9 @@ This is the heart of autonomous colony behavior.
     -   yield.
     -   minimum sowing skill.
     -   temperature/light requirements.
--   [x] **Sowing** (Grow work sows empty fertile zone cells; prioritizable from the order menu; tree zones are planted, chopped when grown and replanted (UI-011))
+-   [x] **Sowing** (Grow work sows empty fertile zone cells; prioritizable from the order menu; tree zones are planted, chopped when grown and replanted (UI-011); PLAY-017: growers first cut a wrong plant (wild, moss, bush, tree or another crop) off a zone cell, a ripe one is harvested)
     -   Growers plant designated crops in growing zones.
--   [-] **Plant growth** (integer per-tick growth scaled by fertility x soil sensitivity x temperature; daylight only; PLAY-016: cold and heat damage plants over hours (25%/h at the threshold, faster beyond, healing below 60% once safe, dying from 60%), shown in the plant view and cutting the harvest; no other plant health (blight, fire burns them via PLAY-015))
+-   [-] **Plant growth** (integer per-tick growth scaled by fertility x soil sensitivity x temperature; PLAY-017: in the sun window on unroofed cells, or at any hour under a strong lamp (50 % light); PLAY-016: cold and heat damage plants over hours (25%/h at the threshold, faster beyond, healing below 60% once safe, dying from 60%), shown in the plant view and cutting the harvest; no other plant health (blight, fire burns them via PLAY-015))
     -   Analytical/bucketed growth.
     -   Depends on temperature, light, fertility, plant health.
 -   [x] **Harvest maturity** (plants ripen at GrowTicks; berry bushes regrow to 35% after harvest)
@@ -1135,7 +1135,7 @@ treatment, and surgery are major colony-management systems.
 -   [-] **Day/night light** (outdoor level is a pure function of tick; indoor/roofed and artificial lights not yet) (ART-010, SIM-018: sun/moon, indoor and lamp light; no light gameplay effects)
 -   [-] **Roof/indoor darkness** (ART-010, SIM-018: indoor ambient under roofs; MAPGEN-3: roofed cells are dark to plants unless lit; no work/mood effects)
 -   [x] **Artificial lights**
--   [-] **Light affects plants** (MAPGEN-3: simulation cell light from daylight, lamps, campfires and glowing plants; moss needs light, duskmoss grows in the dark and withers in light; crops and trees have no light rule yet)
+-   [x] **Light affects plants** (MAPGEN-3: simulation cell light from daylight, lamps, campfires and glowing plants; moss needs light, duskmoss grows in the dark and withers in light; PLAY-017: every other plant, grass included, grows only with sun on unroofed cells or a strong lamp; campfires light only while burning)
 -   [-] **Light can affect work/mood/accuracy where appropriate**
 
 ## 12.5 Fire
@@ -1332,7 +1332,7 @@ treatment, and surgery are major colony-management systems.
     -   Conflicting body layers/slots cannot be worn together.
 -   [ ] **Apparel deterioration**
     -   Worn apparel can lose condition.
--   [-] **Apparel policy** (colonists put on free garments that suit the season and take off ones that don't; no player policy screen)
+-   [-] **Apparel policy** (PLAY-017: colonists change straight into the best body and head outfit for their comfortable range, before work and by dropping interruptible work, with a 1 C dead band and a per-slot cooldown; a Wear order keeps its slot; changes logged on the colonist; no player policy screen)
     -   Allowed categories.
     -   minimum condition.
     -   quality filters.
@@ -1477,10 +1477,10 @@ children systems.
     -   Spawn species appropriate to biome/climate.
 -   [x] **Animal hunger/rest** (SIM-024: every animal has Food and Rest; states Wander/Feed/Rest/Hunt/Flee/Leave with hysteresis; herds bed down together, night and day sleepers, starvation)
     -   Simpler needs than humans.
--   [x] **Grazing/foraging** (SIM-024: grazing grass, browsing, crop raiding, carcass eating, timbergnaw tree felling; feeding troughs in pens; SIM-038: grazers prefer fuller grass, meals scale with growth)
+-   [x] **Grazing/foraging** (SIM-024: grazing grass, browsing, crop raiding, carcass eating, timbergnaw tree felling; feeding troughs in pens; SIM-038: grazers prefer fuller grass, meals scale with growth; PLAY-017: tame animals eat the nearest food their diet allows, stockpiles included, and tame predators hunt wild prey and eat it)
 -   [x] **Predation** (SIM-019: predators hunt prey no bigger than themselves; small-prey predators XS/S only; packs share targets)
     -   Predators select prey and hunt.
--   [x] **Wild animal flee/fight response** (flee within 5 tiles and run until clear of 9; enraged animals don't flee; PLAY-010 SIM-035: every animal hit by an attacker fights back or flees, one that can't fight back flees on every hit (penned ones inside the pen), predators may charge colonists within 3 tiles unless asleep (off on Wanderer/Gentle); SIM-036: unarmed undrafted colonists flee from an animal coming for them within 12 tiles, even mid-order or asleep; armed ones keep their target)
+-   [x] **Wild animal flee/fight response** (flee within 5 tiles and run until clear of 9; enraged animals don't flee; PLAY-010 SIM-035: every animal hit by an attacker fights back or flees, one that can't fight back flees on every hit (penned ones inside the pen), predators may charge colonists within 3 tiles unless asleep (off on Wanderer/Gentle); SIM-036: unarmed undrafted colonists flee from an animal coming for them within 12 tiles, even mid-order or asleep; armed ones keep their target; PLAY-017: an animal starting to chase a colonist posts a danger message (once per chase) that auto-pauses the game)
 
 ## 18.3 Hunting
 
