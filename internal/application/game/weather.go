@@ -20,7 +20,6 @@ const weatherBlockTicks = clock.TicksPerHour * 6
 
 const (
 	dousedIntensity = 0.3 // rain or snow at least this hard puts out a fire
-	deepSnow        = 0.3 // snow deeper than this slows walking
 )
 
 // weatherSeed is a stable seed for the weather, derived from the saved
@@ -54,11 +53,15 @@ func (g *Game) outdoorsAt(x, y int) bool { return g.underSky(x, y) }
 // and ground build-up every climate interval.
 func (g *Game) phaseWeather() {
 	now := g.clock.Now()
+	g.phaseSnowSeed()    // snow.go: a global depth with no layer yet seeds it
+	defer g.snowChunks() // snow.go: per-tile snow, a few chunks a tick, after the step
 	if uint64(now)%weatherBlockTicks == 0 && !g.weatherFix {
 		mean := float64(g.climate.DailyMean(now)) / 10
 		wet := g.weatherWet(biome.DefOf(g.biome).Wetness) // rain and snow odds, percent of temperate (weather_ng1.go: still air)
 		g.weather = weather.NextWet(g.weatherSeed(), uint64(now)/weatherBlockTicks, g.weather, mean, g.season(uint64(now)), wet)
 	}
+	g.stepLightning() // lightning.go (PLAY-015): storms strike
+	g.stepFires()     // fire.go (PLAY-015): every fire.StepTicks
 	if uint64(now)%climateInterval != 0 {
 		return
 	}
@@ -127,7 +130,7 @@ func (g *Game) weatherSlow(x, y int, base int) int {
 	case weather.Blizzard:
 		pct = 0.40
 	}
-	if g.weather.SnowDepth > deepSnow {
+	if g.snowAt(x, y) > snowDeep { // snow.go: this cell's own snow (PLAY-015)
 		pct = math.Max(pct, 0.20)
 	}
 	if pct == 0 || !g.outdoorsAt(x, y) {

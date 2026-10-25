@@ -310,7 +310,9 @@ type lightGrid struct {
 	cw        int // chunks per row
 	sky, lamp []float32
 	litRooms  []bool
-	fires     [][2]int // burning campfires
+	fires     [][2]int  // burning campfires
+	blaze     []float32 // lamp light of burning cells per tile (fire_world_draw.go)
+	keyFire   uint64    // WorldView.FireVer the blaze was built from
 	// built[c] is the generation chunk c was last built at; gen moves
 	// whenever an input changes, so every chunk goes stale at once and is
 	// rebuilt when next read.
@@ -353,10 +355,11 @@ func (g *lightGrid) sync(w *game.WorldView) {
 	g.view = w
 	lens := [5]int{len(w.RoomGrid), len(w.RoofCells), len(w.Buildings), len(w.Rooms), w.TerrainW}
 	if g.built != nil && g.keyRooms == litFirst(w.RoomGrid) && g.keyRoofs == litFirst(w.RoofCells) &&
-		g.keyBlds == litFirst(w.Buildings) && g.keyRm == litFirst(w.Rooms) && g.keyLens == lens {
+		g.keyBlds == litFirst(w.Buildings) && g.keyRm == litFirst(w.Rooms) && g.keyLens == lens && g.keyFire == w.FireVer {
 		return
 	}
 	g.keyRooms, g.keyRoofs, g.keyBlds, g.keyRm, g.keyLens = litFirst(w.RoomGrid), litFirst(w.RoofCells), litFirst(w.Buildings), litFirst(w.Rooms), lens
+	g.keyFire = w.FireVer
 	g.litRooms = g.litRooms[:0]
 	sum := uint64(0x6c69676874)
 	for _, rm := range w.Rooms {
@@ -375,6 +378,7 @@ func (g *lightGrid) sync(w *game.WorldView) {
 			sum = mix64(sum ^ uint64(b.X)<<20 ^ uint64(b.Y)<<40 ^ 0xf1)
 		}
 	}
+	sum = mix64(sum ^ w.FireVer ^ uint64(len(w.Fires))<<32 ^ 0xb1a2e)
 	for _, n := range [3]int{lens[0], lens[1], lens[4]} { // layer sizes; the lists are compared by content
 		sum = mix64(sum ^ uint64(n))
 	}
@@ -388,6 +392,7 @@ func (g *lightGrid) sync(w *game.WorldView) {
 	}
 	g.cw = (g.w + chunkTiles - 1) / chunkTiles
 	n := g.w * g.h
+	g.blaze = blazeLight(g.blaze, w.Fires, g.w, g.h)
 	nc := g.cw * ((g.h + chunkTiles - 1) / chunkTiles)
 	if sum != g.sum || !layersSame || g.w != w0 || g.h != h0 || len(g.built) != nc {
 		g.sum = sum
@@ -416,6 +421,9 @@ func (g *lightGrid) base(w *game.WorldView, i int) (sky, lamp float32) {
 		if id := w.RoomGrid[i]; id >= 0 && id < len(g.litRooms) && g.litRooms[id] {
 			return sky, 1
 		}
+	}
+	if i < len(g.blaze) {
+		lamp = g.blaze[i]
 	}
 	x, y := i%g.w, i/g.w
 	for _, f := range g.fires {

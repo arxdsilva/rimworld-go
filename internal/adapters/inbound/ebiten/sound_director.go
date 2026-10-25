@@ -314,6 +314,7 @@ func (a *App) colonyAmbience(want map[string]loopWant) {
 		}
 		want[f.key] = loopWant{id: "amb.campfire", vol: f.vol, pan: f.pan}
 	}
+	r.blazeAmbience(want, w, v)
 	for key, l := range want { // drop silent beds instead of keeping them at 0
 		if l.vol <= 0.001 {
 			delete(want, key)

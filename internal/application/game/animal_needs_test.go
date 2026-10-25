@@ -355,7 +355,9 @@ func TestPenTroughFeedsInWinter(t *testing.T) {
 	}
 	g.setPriority(ada, work.Haul, work.DefaultPriority)
 	g.SpawnStack(item.Berries, 40, 3, 15)
-	g.Enqueue(command.Command{Kind: command.DesignatePen, X: 15, Y: 5, X2: 22, Y2: 12})
+	// PLAY-015: a fenced pen with a marker (painted pens are gone)
+	fenceRing(t, g, 14, 4, 23, 13, [2]int{18, 13})
+	buildMarker(t, g, 16, 10)
 	placeBuilt(t, g, construction.FeedingTrough, construction.South, 18, 8)
 	var bid entity.EntityID
 	for _, id := range g.bldgIDs {
@@ -407,7 +409,8 @@ func buildingView(g *Game, id entity.EntityID) BuildingView {
 
 func TestTroughFilterCommand(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 30, Height: 20})
-	g.Enqueue(command.Command{Kind: command.DesignatePen, X: 15, Y: 5, X2: 22, Y2: 12})
+	fenceRing(t, g, 14, 4, 23, 13, [2]int{18, 13}) // PLAY-015: a marker pen
+	buildMarker(t, g, 16, 10)
 	wolf, _ := g.SpawnAnimal("timber_wolf", 16, 6)
 	g.TameAnimal(wolf, "Ash")
 	placeBuilt(t, g, construction.FeedingTrough, construction.South, 18, 8)

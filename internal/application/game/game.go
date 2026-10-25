@@ -85,6 +85,7 @@ type PawnView struct {
 	WorkDoctor    bool
 	WorkResearch  bool
 	WorkClean     bool
+	WorkFirefight bool // PLAY-015 (firefight.go)
 	// NG-1 identity (PAWN-G fills): sex, build, age, look, incapable work,
 	// skill levels and passions (skill.ID order), adulthood title.
 	Sex       string
@@ -451,6 +452,10 @@ type WorldView struct {
 	Pens         []PenView
 	PenVer       uint64
 	HomeAuto     bool
+
+	// Strikes are the lightning strikes of the last hour (lightning.go):
+	// the renderer flashes and thunders from them.
+	Strikes []StrikeView
 	// NG-1 setup (setup_view.go): arrival pods for the fall streak and dust
 	// (Tick is the landing tick), the permanent conditions' keys and the
 	// heat wave or cold snap in progress ("" when none).
@@ -634,6 +639,7 @@ type Game struct {
 	fire fireState
 	snow snowState
 	pens []penSave
+	pen  penState // pens.go: fills, alerts, unpenned clocks
 	// vaults: the sealed vaults' lifecycle (vault.go, MAPGEN-3); saved.
 	vaults []vaultSave
 	// br: bridges' open-sea bitset (bridge.go, MAPGEN-3); zero: no sea known.
@@ -939,6 +945,7 @@ func (g *Game) snapshot() []PawnView {
 			WorkDoctor:    m.Enabled(work.Doctor),
 			WorkResearch:  m.Enabled(work.Research),
 			WorkClean:     m.Enabled(work.Clean),
+			WorkFirefight: m.Enabled(work.Firefight),
 			Dirt:          g.carriedPct(id),
 			Ate:           g.ateAt[id],
 			LastMeal:      lastMealName(g, id),
@@ -1140,9 +1147,12 @@ func (g *Game) world() WorldView {
 	g.fillStainView(&w)    // stains.go
 	g.fillDirtView(&w)     // filth.go
 	g.fillHomeView(&w)     // home.go
+	g.fillSnowView(&w)     // snow_clear.go (PLAY-015)
+	g.fillPenView(&w)      // pens.go
 	g.fillPlanView(&w)     // plan.go
 	g.fillSetupView(&w)    // setup_view.go (NG-1)
 	g.fillFogView(&w)      // fog_view.go (MAPGEN-2)
+	g.fillFireView(&w)     // fire.go (PLAY-015)
 	now := uint64(g.clock.Now())
 	w.Hour = float64(now%clock.TicksPerDay) / clock.TicksPerHour
 	w.DayOfYear = int(now/clock.TicksPerDay) % clock.DaysPerYear

@@ -238,6 +238,7 @@ type Renderer struct {
 	// holds it on while a Plan tool is in hand (PLAY-012, plan_draw.go).
 	planHidden, planForced bool
 	planDraw               planDrawState // the Plan overlay's cached geometry
+	areaOv                 areaOverlay   // the allowed-area overlay (area_overlay.go)
 
 	gridClr   color.RGBA
 	pawnClr   color.RGBA
@@ -265,6 +266,7 @@ type Renderer struct {
 	bridges    bridgeCache // bridge_draw.go: the foundation layer's cell set
 	memo       soundMemo
 	thunderAt  uint64
+	fireFx     fireFx // fire_world_draw.go: clusters and shown strikes
 	threatAt   uint64 // present frame of the newest threat
 	heard      game.WorldView
 	dangerInit bool

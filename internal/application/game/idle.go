@@ -107,7 +107,7 @@ func (g *Game) idleWander(id entity.EntityID, linger int) bool {
 	for try := 0; try < 8; try++ {
 		x := pos.X + g.rng.IntN(2*r+1) - r
 		y := pos.Y + g.rng.IntN(2*r+1) - r
-		if x == pos.X && y == pos.Y || !g.grid.Walkable(x, y) || g.bedCovering(x, y) {
+		if x == pos.X && y == pos.Y || !g.grid.Walkable(x, y) || g.bedCovering(x, y) || g.idleFireBlocked(x, y) || !g.inArea(id, x, y) { // areas.go
 			continue
 		}
 		if _, taken := g.reserve.TileOwner(x, y); taken {
@@ -140,7 +140,7 @@ func (g *Game) idleChat(id entity.EntityID, linger int) bool {
 			continue
 		}
 		op, _ := g.positions.Get(oid)
-		if d := pathing.Dist(pos.X, pos.Y, op.X, op.Y); d < bestD {
+		if d := pathing.Dist(pos.X, pos.Y, op.X, op.Y); d < bestD && g.inArea(id, op.X, op.Y) { // areas.go
 			best, bestD = oid, d
 		}
 	}
@@ -195,7 +195,7 @@ func (g *Game) idleSocialRelax(id entity.EntityID, linger int) bool {
 		if !ok || !(b.Kind == construction.Table || b.Kind == construction.Campfire && g.burning(bid, b)) {
 			continue
 		}
-		if d := pathing.Dist(pos.X, pos.Y, b.X, b.Y); d < bestD && g.companyAt(id, b.X, b.Y) {
+		if d := pathing.Dist(pos.X, pos.Y, b.X, b.Y); d < bestD && g.areaAllows(id, b.X, b.Y) && g.companyAt(id, b.X, b.Y) { // areas.go
 			best, bestD, found = b, d, true
 		}
 	}
@@ -248,7 +248,7 @@ func (g *Game) idleAt(id entity.EntityID, linger int, kind job.Kind,
 	bestD := 1 << 30
 	for _, bid := range g.bldgIDs {
 		b, ok := g.bldgs.Get(bid)
-		if !ok || !want(b, bid) {
+		if !ok || !want(b, bid) || !g.areaAllows(id, b.X, b.Y) { // areas.go
 			continue
 		}
 		if !beside {
@@ -333,7 +333,7 @@ func (g *Game) idleHorseshoes(id entity.EntityID, linger int) bool {
 	found, bestD := false, 31
 	for _, bid := range g.bldgIDs {
 		b, ok := g.bldgs.Get(bid)
-		if !ok || b.Kind != construction.HorseshoePin {
+		if !ok || b.Kind != construction.HorseshoePin || !g.areaAllows(id, b.X, b.Y) { // areas.go
 			continue
 		}
 		if d := pathing.Dist(pos.X, pos.Y, b.X, b.Y); d < bestD {
@@ -345,7 +345,7 @@ func (g *Game) idleHorseshoes(id entity.EntityID, linger int) bool {
 	}
 	for _, d := range [][2]int{{0, 3}, {3, 0}, {0, -3}, {-3, 0}, {2, 2}, {-2, 2}, {2, -2}, {-2, -2}} {
 		x, y := best.X+d[0], best.Y+d[1]
-		if !g.grid.Walkable(x, y) || g.bedCovering(x, y) {
+		if !g.grid.Walkable(x, y) || g.bedCovering(x, y) || !g.inArea(id, x, y) { // areas.go
 			continue
 		}
 		if _, taken := g.reserve.TileOwner(x, y); taken {

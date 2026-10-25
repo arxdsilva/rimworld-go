@@ -3,28 +3,40 @@ package game
 import (
 	"fmt"
 	"math/bits"
+	"slices"
 	"strings"
 
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
+	"rimworld-go/internal/domain/animal"
+	"rimworld-go/internal/domain/pawn/health"
+	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/area"
 )
 
-// Allowed areas (ENG-003, M9): g.areas is the colony's area set (up to
-// area.MaxAreas named bitsets, overlapping zones freely); nil until the
-// first area is made. Saved as Areas; each pawn's assignment lives in the
-// world state (worldState.areaOf, saved with World). A restricted pawn
-// plans its paths over its area only (pathQuery) and its jobs must target
-// cells in it (startJob turns the rest down, with the postponement or
-// food cooldown so the giver moves on). Drafted and breaking pawns and
-// the player's own orders ignore areas; so do sleep, warmth, rescue and
-// medical care, fights and a caravan's walk out. A restricted pawn caught
-// outside its area (painted out, newly assigned) walks back in.
+// Allowed areas (ENG-003 M9, rebuilt for PLAY-015): g.areas is the
+// colony's area set (up to area.MaxAreas named bitsets with stable ids,
+// overlapping zones freely); nil until the first area is made. Saved as
+// Areas. Each colonist's and tame animal's assignment is an area ref
+// (worldState.areaOf, saved with World): an area id, or command.AreaHome
+// for the live Home mask; absent means unrestricted.
+//
+// Areas are soft (spec-faithful): a restricted pawn's paths prefer its
+// area (cells outside cost areaOutsidePct more, area_soft.go) but may
+// cross outside; only destinations must lie inside (startJob turns the
+// rest down, area_dest.go, with the postponement or food cooldown so the
+// giver moves on). Drafted, breaking and downed pawns ignore areas; so do
+// the player's own orders, rescue, medical care, warmth, fights, fleeing,
+// a caravan's walk out, and animals following a drafted master. Penned
+// livestock (animal.Roster.Penned) keep to pens instead. A restricted pawn
+// or animal caught outside its area (painted out, newly assigned) walks
+// back in.
 
 const (
 	areaNameMax = 24
-	// areaDefaultName names an area made by painting ("Area 1").
+	// areaDefaultName names an area created unnamed
+	// ("Area 1").
 	areaDefaultName = "Area %d"
 )
 
@@ -36,173 +48,124 @@ func (g *Game) areaSet() *area.Set {
 	return g.areas
 }
 
-// areaFor is pawn id's allowed area (-1: unrestricted).
-func (g *Game) areaFor(id entity.EntityID) int {
-	if g.worldSt == nil || g.areas == nil || len(g.worldSt.areaOf) == 0 {
-		return -1
+// areaRef is id's assigned area ref: an area id (> 0), command.AreaHome,
+// or 0 for unrestricted (also once its area is gone).
+func (g *Game) areaRef(id entity.EntityID) int {
+	if g.worldSt == nil || len(g.worldSt.areaOf) == 0 {
+		return 0
 	}
-	a, ok := g.worldSt.areaOf[id]
-	if !ok || a < 0 || a >= len(g.areas.Areas) {
-		return -1
+	r, ok := g.worldSt.areaOf[id]
+	switch {
+	case !ok:
+		return 0
+	case r == command.AreaHome:
+		return r
+	case r > 0 && g.areas.Index(uint16(r)) >= 0:
+		return r
 	}
-	return a
+	return 0
 }
 
-// restrictedArea is the area that binds id right now (-1: none): drafted
-// and breaking pawns go anywhere.
-func (g *Game) restrictedArea(id entity.EntityID) int {
-	a := g.areaFor(id)
-	if a < 0 || g.drafted(id) || g.breaking(id) {
-		return -1
+// restrictedRef is the area ref that binds id right now (0: none). The
+// overrides: drafted, breaking or downed colonists; wild animals, penned
+// livestock (pens bind them, pens.go) and animals following a drafted
+// master.
+func (g *Game) restrictedRef(id entity.EntityID) int {
+	r := g.areaRef(id)
+	if r == 0 {
+		return 0
 	}
-	return a
+	if a := g.animals.Ref(id); a != nil {
+		if !areaAnimal(*a) || a.Master != 0 && g.drafted(entity.EntityID(a.Master)) {
+			return 0
+		}
+		return r
+	}
+	if g.drafted(id) || g.breaking(id) {
+		return 0
+	}
+	if v, ok := g.vital.Get(id); ok && v.Status == health.Downed {
+		return 0
+	}
+	return r
 }
 
-// inArea reports whether pawn id may go to (x, y) under its allowed area.
+// areaAnimal reports a tame animal that allowed areas bind (not penned
+// livestock, which pens hold).
+func areaAnimal(a animal.State) bool {
+	return a.Tame && !a.Dead() && !animal.RosterOf(a.Species).Penned
+}
+
+// inArea reports whether pawn or animal id may go to (x, y) under its
+// allowed area: the one shared area test (always true for the
+// unrestricted, the overridden and penned livestock).
 func (g *Game) inArea(id entity.EntityID, x, y int) bool {
-	a := g.restrictedArea(id)
-	return a < 0 || g.areas.Contains(a, x, y)
+	r := g.restrictedRef(id)
+	return r == 0 || g.refContains(r, x, y)
 }
 
-// AreaOf is colonist id's allowed area for the Assign tab (-1:
-// unrestricted).
-func (g *Game) AreaOf(id entity.EntityID) int { return g.areaFor(id) }
-
-// areaQuery is a path query limited to one area's cells.
-type areaQuery struct {
-	base pathing.Query
-	set  *area.Set
-	i    int
-}
-
-func (q areaQuery) Width() int  { return q.base.Width() }
-func (q areaQuery) Height() int { return q.base.Height() }
-func (q areaQuery) Walkable(x, y int) bool {
-	return q.set.Contains(q.i, x, y) && q.base.Walkable(x, y)
-}
-
-// areaPathQuery is base limited to pawn id's area while id stands inside
-// it; a pawn outside its area walks unrestricted (so it can get back), and
-// so does one on a forced or exempt job (being started, or walked).
-func (g *Game) areaPathQuery(id entity.EntityID, base pathing.Query) pathing.Query {
-	a := g.restrictedArea(id)
-	if a < 0 || g.worldSt.pathFree == id {
-		return base
+// refContains reports whether (x, y) lies in area ref r (an id or Home).
+func (g *Game) refContains(r, x, y int) bool {
+	if r == command.AreaHome {
+		return g.grid.InBounds(x, y) && g.inHome(y*g.grid.Width()+x)
 	}
-	if j, _ := g.jobs.Get(id); j.Kind != job.None && (j.Forced || areaExempt(j.Kind)) {
-		return base
-	}
-	if p, ok := g.positions.Get(id); !ok || !g.areas.Contains(a, p.X, p.Y) {
-		return base
-	}
-	return areaQuery{base: base, set: g.areas, i: a}
+	return g.areas.Contains(g.areas.Index(uint16(r)), x, y)
 }
 
-// areaOutOfReach reports that a pawn keeping to its area cannot reach
-// (x, y) at all: neither the cell nor any cell beside it is in the area.
-// (Anything else a restricted pawn may reach is answered by a search over
-// its area, since the regions know no allowed areas.)
-func (g *Game) areaOutOfReach(id entity.EntityID, x, y int) bool {
-	a := g.restrictedArea(id)
-	if a < 0 {
+// refAllows reports that area ref r admits a destination at (x, y): the
+// cell itself, or for a cell nobody stands on (a building or wall worked
+// from beside) any cell beside it.
+func (g *Game) refAllows(r, x, y int) bool {
+	if g.refContains(r, x, y) {
+		return true
+	}
+	if g.grid.Walkable(x, y) {
 		return false
-	}
-	if p, ok := g.positions.Get(id); !ok || !g.areas.Contains(a, p.X, p.Y) {
-		return false // outside its area it walks free
 	}
 	for dy := -1; dy <= 1; dy++ {
 		for dx := -1; dx <= 1; dx++ {
-			if g.areas.Contains(a, x+dx, y+dy) {
-				return false
+			if (dx != 0 || dy != 0) && g.refContains(r, x+dx, y+dy) {
+				return true
 			}
 		}
-	}
-	return true
-}
-
-// areaExempt are the jobs an area never stops: the player's moves and
-// a caravan's walk out, rest, warmth, rescue and medicine, fights, and
-// gatherings and visits.
-func areaExempt(k job.Kind) bool {
-	switch k {
-	case job.Move, job.Sleep, job.Warm, job.Rescue, job.Tend, job.Surgery, job.Hide, job.Attack, job.Brawl,
-		job.Kidnap, job.ExitMap, job.Visit, job.Gather, job.Lovin, job.None:
-		return true
 	}
 	return false
 }
 
-// areaRejects reports that job rec would take pawn id out of its allowed
-// area: its target cell (a walkable one) or every cell beside it (a
-// building or wall worked from beside) lies outside.
-func (g *Game) areaRejects(id entity.EntityID, rec job.Record) bool {
-	if rec.Forced || areaExempt(rec.Kind) {
-		return false
-	}
-	a := g.restrictedArea(id)
-	if a < 0 {
-		return false
-	}
-	if g.areas.Contains(a, rec.TX, rec.TY) {
-		return false
-	}
-	if g.grid.Walkable(rec.TX, rec.TY) {
-		return true
-	}
-	for dy := -1; dy <= 1; dy++ {
-		for dx := -1; dx <= 1; dx++ {
-			if g.areas.Contains(a, rec.TX+dx, rec.TY+dy) {
-				return false
-			}
-		}
-	}
-	return true
+// areaAllows is refAllows for id's binding area (true when unrestricted):
+// the filter work givers use on a target cell.
+func (g *Game) areaAllows(id entity.EntityID, x, y int) bool {
+	r := g.restrictedRef(id)
+	return r == 0 || g.refAllows(r, x, y)
 }
 
-// areaBypass reports that job rec of pawn id paths free of its area (a
-// forced or exempt job of a restricted pawn) and marks it so for the
-// search startJob is about to run; endAreaBypass clears the mark.
-func (g *Game) areaBypass(id entity.EntityID, rec job.Record) bool {
-	if !rec.Forced && !areaExempt(rec.Kind) || g.restrictedArea(id) < 0 {
-		return false
+// AreaOf is colonist or animal id's allowed area ref for the Schedule and
+// Animals tabs: command.AreaUnrestricted, command.AreaHome or an area id
+// (AreaView.ID).
+func (g *Game) AreaOf(id entity.EntityID) int {
+	if r := g.areaRef(id); r != 0 {
+		return r
 	}
-	g.worldSt.pathFree = id
-	return true
+	return command.AreaUnrestricted
 }
 
-func (g *Game) endAreaBypass() { g.worldSt.pathFree = 0 }
-
-// rejectOutOfArea fails job rec of pawn id for leaving its area, with the
-// cooldown its giver honours: no meal search for a while, the work put
-// off as out of reach.
-func (g *Game) rejectOutOfArea(id entity.EntityID, rec job.Record) {
-	g.reserve.ReleaseOwner(id)
-	rec.State, rec.Fail, rec.Path = job.Fail, job.Unreachable, nil
-	g.jobs.Set(id, rec)
-	if rec.Kind == job.Eat {
-		g.noFood[id] = uint64(g.clock.Now()) + foodRetry
-		return
-	}
-	g.postpone(postKeyOf(id, rec), job.Unreachable) // postpone.go
-}
-
-// areasTick (every worldStep) walks each restricted colonist standing
-// outside its area, with nothing pressing to do, back in.
+// areasTick (every worldStep) walks each restricted colonist and tame
+// animal standing outside its area, with nothing pressing to do, back in.
 func (g *Game) areasTick(now uint64) {
 	for _, id := range g.pawnIDs {
-		a := g.restrictedArea(id)
-		if a < 0 || !g.standingPawn(id) {
+		r := g.restrictedRef(id)
+		if r == 0 || !g.standingPawn(id) {
 			continue
 		}
 		p, _ := g.positions.Get(id)
-		if g.areas.Contains(a, p.X, p.Y) {
+		if g.refContains(r, p.X, p.Y) {
 			continue
 		}
 		j, _ := g.jobs.Get(id)
 		if j.Active() && !j.Kind.IsIdle() {
 			continue
 		}
-		x, y, ok := g.nearestAreaCell(a, p)
+		x, y, ok := g.nearestRefCell(r, p)
 		if !ok {
 			continue
 		}
@@ -211,90 +174,228 @@ func (g *Game) areasTick(now uint64) {
 		}
 		g.startJob(id, job.Record{Kind: job.Move, TX: x, TY: y})
 	}
+	g.areaAnimalsTick(now)
 }
 
-// nearestAreaCell is area a's walkable cell nearest to p (Chebyshev, then
-// row-major), ok false for an empty area.
-func (g *Game) nearestAreaCell(a int, p Position) (int, int, bool) {
-	s := g.areas
+// areaAnimalsTick walks restricted tame animals outside their area, idle
+// (wandering, not on the way somewhere), back in.
+func (g *Game) areaAnimalsTick(now uint64) {
+	for _, id := range g.animalIDs {
+		r := g.restrictedRef(id)
+		if r == 0 {
+			continue
+		}
+		a := g.animals.Ref(id)
+		if a == nil || a.Mode != animal.Wander || a.PathI < len(a.Path) && g.refContains(r, a.GoalX, a.GoalY) {
+			continue
+		}
+		p, _ := g.positions.Get(id)
+		if g.refContains(r, p.X, p.Y) || now < a.RetryAt {
+			continue
+		}
+		if x, y, ok := g.nearestRefCell(r, p); ok {
+			g.animalGoTo(id, a, x, y)
+		}
+	}
+}
+
+// nearestRefCell is area ref r's walkable cell nearest to p (octile,
+// then row-major), ok false for an empty area.
+func (g *Game) nearestRefCell(r int, p Position) (int, int, bool) {
+	w := g.grid.Width()
 	best, bx, by := 1<<30, 0, 0
-	for wi, word := range s.Areas[a].Bits {
-		for ; word != 0; word &= word - 1 {
-			n := wi*64 + bits.TrailingZeros64(word)
-			x, y := n%s.W, n/s.W
-			if d := max(abs(x-p.X), abs(y-p.Y)); d < best && g.grid.Walkable(x, y) {
-				best, bx, by = d, x, y
+	try := func(n int) {
+		x, y := n%w, n/w
+		if d := pathing.Octile(x, y, p.X, p.Y); d < best && g.grid.Walkable(x, y) {
+			best, bx, by = d, x, y
+		}
+	}
+	if r == command.AreaHome {
+		for n, c := range g.homeArea.cells {
+			if c != 0 {
+				try(n)
 			}
+		}
+		return bx, by, best < 1<<30
+	}
+	i := g.areas.Index(uint16(r))
+	if i < 0 {
+		return 0, 0, false
+	}
+	for wi, word := range g.areas.Areas[i].Bits {
+		for ; word != 0; word &= word - 1 {
+			try(wi*64 + bits.TrailingZeros64(word))
 		}
 	}
 	return bx, by, best < 1<<30
 }
 
-// areaViews lists the colony's allowed areas.
+// areaViews lists the colony's allowed areas. Bits is shared read-only:
+// every change to an area replaces its slice (copy-on-write) and bumps
+// its Ver, so the renderer may cache by (ID, Ver).
 func (g *Game) areaViews() []AreaView {
 	if g.areas == nil {
 		return nil
 	}
 	out := make([]AreaView, 0, len(g.areas.Areas))
 	for i, a := range g.areas.Areas {
-		out = append(out, AreaView{Index: i, Name: a.Name, Cells: g.areas.Count(i), ID: a.ID, Color: a.Color, Bits: a.Bits})
+		out = append(out, AreaView{Index: i, Name: a.Name, Cells: g.areas.Count(i), ID: a.ID, Color: a.Color,
+			Bits: a.Bits, Ver: g.areaVer(a.ID)})
 	}
 	return out
 }
 
-// ensureArea makes area i when it is the next one (i == the count, below
-// the cap) and reports whether area i exists.
-func (g *Game) ensureArea(i int, name string) bool {
-	s := g.areaSet()
-	if i == len(s.Areas) {
-		if name == "" {
-			name = fmt.Sprintf(areaDefaultName, i+1)
-		}
-		return s.Add(name) == i
+// areaVer is area id's version (0 until its first change this session).
+func (g *Game) areaVer(id uint16) uint64 {
+	if g.worldSt == nil {
+		return 0
 	}
-	return i >= 0 && i < len(s.Areas)
+	return g.worldSt.areaVer[id]
 }
 
-// cmdPaintArea paints (on) or clears area i over the rectangle; painting
-// the next index makes a new area.
-func (g *Game) cmdPaintArea(i, x, y, x2, y2 int, on bool) {
-	if !g.ensureArea(i, "") {
+// touchArea readies area i for a change: its bits get a fresh copy (views
+// handed out keep the old one) and its version a new number.
+func (g *Game) touchArea(i int, copyBits bool) {
+	a := &g.areas.Areas[i]
+	if copyBits {
+		a.Bits = slices.Clone(a.Bits)
+	}
+	w := g.worldS()
+	if w.areaVer == nil {
+		w.areaVer = map[uint16]uint64{}
+	}
+	w.areaGen++
+	w.areaVer[a.ID] = w.areaGen
+}
+
+// cmdPaintArea paints (on) or clears area id ref (AreaView.ID) over the
+// rectangle; an unknown id is ignored (CreateArea makes areas).
+func (g *Game) cmdPaintArea(ref, x, y, x2, y2 int, on bool) {
+	i := g.areaIndexOf(ref)
+	if i < 0 {
 		return
 	}
+	g.touchArea(i, true)
 	g.areas.Paint(i, x, y, x2, y2, on)
 }
 
-// cmdRenameArea renames area i (the next index: a new area so named).
-func (g *Game) cmdRenameArea(i int, name string) {
+// areaName trims a player-typed name to areaNameMax runes ("" if blank).
+func areaName(name string) string {
 	name = strings.TrimSpace(name)
-	if name == "" {
-		return
-	}
 	if r := []rune(name); len(r) > areaNameMax {
 		name = string(r[:areaNameMax])
 	}
-	if g.areas != nil && g.areas.Rename(i, name) {
-		return
-	}
-	g.ensureArea(i, name) // the next index: a new area so named
+	return name
 }
 
-// cmdAssignArea restricts colonist pawn to area i (-1: unrestricted); a
-// job outside the new area ends.
-func (g *Game) cmdAssignArea(pawn entity.EntityID, i int) {
-	w := g.worldS()
+// cmdRenameArea renames area id ref (a blank name or unknown id: no-op).
+func (g *Game) cmdRenameArea(ref int, name string) {
+	i := g.areaIndexOf(ref)
+	if name = areaName(name); name == "" || i < 0 {
+		return
+	}
+	g.areas.Rename(i, name)
+	g.touchArea(i, false)
+}
+
+// cmdCreateArea adds an empty area named name ("Area n", n its id, when
+// blank), below the cap.
+func (g *Game) cmdCreateArea(name string) {
+	s := g.areaSet()
+	if name = areaName(name); name == "" {
+		name = fmt.Sprintf(areaDefaultName, s.LastID+1)
+	}
+	if i := s.Add(name); i >= 0 {
+		g.touchArea(i, false)
+	}
+}
+
+// areaIndexOf is the position of the area with id ref (a command's
+// Index), or -1.
+func (g *Game) areaIndexOf(ref int) int {
+	if ref <= 0 || ref > 0xffff || g.areas == nil {
+		return -1
+	}
+	return g.areas.Index(uint16(ref))
+}
+
+// cmdDeleteArea deletes area id ref; every colonist and animal assigned
+// to it becomes unrestricted, with one message saying how many.
+func (g *Game) cmdDeleteArea(ref int) {
+	i := g.areaIndexOf(ref)
 	if i < 0 {
-		delete(w.areaOf, pawn)
 		return
 	}
-	if g.areas == nil || i >= len(g.areas.Areas) || !g.alive(pawn) && !g.isStashed(pawn) {
+	g.areas.Delete(uint16(ref))
+	n := 0
+	if w := g.worldSt; w != nil {
+		for id, r := range w.areaOf {
+			if r == ref {
+				delete(w.areaOf, id) // ids are counted, not ordered: no output depends on the order
+				n++
+			}
+		}
+		delete(w.areaVer, uint16(ref))
+	}
+	switch {
+	case n == 1:
+		g.message(0, 0, "1 pawn is now unrestricted") // no place to jump to
+	case n > 1:
+		g.message(0, 0, "%d pawns are now unrestricted", n)
+	}
+}
+
+// cmdInvertArea swaps area id ref's member and non-member cells.
+func (g *Game) cmdInvertArea(ref int) {
+	if i := g.areaIndexOf(ref); i >= 0 {
+		g.touchArea(i, true)
+		g.areas.Invert(i)
+	}
+}
+
+// cmdAssignArea restricts colonist or tame animal pawn to area ref r (an
+// area id, command.AreaHome, or command.AreaUnrestricted / 0 to free
+// it); a job or walk ending outside the new area stops.
+func (g *Game) cmdAssignArea(pawn entity.EntityID, r int) {
+	if r == command.AreaUnrestricted || r == 0 {
+		if g.worldSt != nil {
+			delete(g.worldSt.areaOf, pawn)
+		}
 		return
 	}
+	if r != command.AreaHome && g.areaIndexOf(r) < 0 {
+		return
+	}
+	a := g.animals.Ref(pawn)
+	switch {
+	case a != nil:
+		if !areaAnimal(*a) {
+			return // wild, dead, or penned livestock (pens hold those)
+		}
+	case !g.isPawn(pawn) || g.isRaider(pawn) || !g.alive(pawn) && !g.isStashed(pawn):
+		return
+	}
+	w := g.worldS()
 	if w.areaOf == nil {
 		w.areaOf = map[entity.EntityID]int{}
 	}
-	w.areaOf[pawn] = i
+	w.areaOf[pawn] = r
+	if a != nil {
+		if a.PathI < len(a.Path) && !g.inArea(pawn, a.GoalX, a.GoalY) {
+			a.Path, a.PathI = nil, 0 // it decides again, inside
+		}
+		return
+	}
 	if j, ok := g.jobs.Get(pawn); ok && j.Active() && g.areaRejects(pawn, j) {
 		g.interrupt(pawn, job.Interrupted)
 	}
+}
+
+// importAreaRef is a saved assignment as an area ref: a Version 1 save
+// held area positions, which import as ids 1..n (area.Import).
+func importAreaRef(version uint8, v int) int {
+	if version < worldSaveVersion && v >= 0 {
+		return v + 1
+	}
+	return v
 }

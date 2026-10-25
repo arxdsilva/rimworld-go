@@ -6,7 +6,6 @@ import (
 
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
-	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
 )
@@ -147,7 +146,8 @@ func TestTameAnimalUsesGateWildDoesNot(t *testing.T) {
 	bareGround(g)
 	gate := [2]int{8, 4}
 	fenceRing(t, g, 4, 4, 12, 10, gate)
-	pet, _ := g.SpawnAnimal("deer", 8, 7)
+	// PLAY-015: an area animal (livestock keep to their pen: pens_test.go)
+	pet, _ := g.SpawnAnimal("husky", 8, 7)
 	g.TameAnimal(pet, "Clover")
 	wild, _ := g.SpawnAnimal("deer", 18, 7)
 	through := func(p []pathing.Point, x, y int) bool {
@@ -161,7 +161,7 @@ func TestTameAnimalUsesGateWildDoesNot(t *testing.T) {
 	a := animalOf(g, pet)
 	g.animalGoTo(pet, &a, 8, 1)
 	if len(a.Path) == 0 || !through(a.Path, gate[0], gate[1]) {
-		t.Fatalf("the tame deer walks out through the gate: %v", a.Path)
+		t.Fatalf("the tame husky walks out through the gate: %v", a.Path)
 	}
 	w := animalOf(g, wild)
 	g.animalGoTo(wild, &w, 8, 7)
@@ -198,10 +198,10 @@ func TestPredatorBlockedByFence(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 30, Height: 20})
 	bareGround(g)
 	fenceRing(t, g, 12, 6, 20, 14, [2]int{16, 6})
-	// the hare belongs to the pen: an unpenned tame animal may wander out
-	// of the gate on its own (PLAY-010 made the seeded walk leave)
-	zoneCmd(g, command.DesignatePen, 13, 7, 19, 13, 0)
-	hare, _ := g.SpawnAnimal("hare", 16, 10)
+	// the goat belongs to the pen: livestock don't pass gates on their own
+	// (PLAY-015; a tame hare is an area animal and could walk out)
+	buildMarker(t, g, 14, 8)
+	hare, _ := g.SpawnAnimal("goat", 16, 10)
 	g.TameAnimal(hare, "Bun")
 	wolf, _ := g.SpawnAnimal("timber_wolf", 5, 10)
 	setAnimal(g, wolf, func(a *animal.State) {
@@ -223,7 +223,7 @@ func TestPredatorBlockedByFence(t *testing.T) {
 		setAnimal(g, hare, func(a *animal.State) { a.Food = animal.Full })
 	}
 	if h := animalOf(g, hare); h.Dead() || h.HP() < animal.DefOf(h.Species).MaxHP {
-		t.Fatalf("the hare behind the fence was hurt: %+v", h)
+		t.Fatalf("the goat behind the fence was hurt: %+v", h)
 	}
 }
 

@@ -100,10 +100,10 @@ func TestHomeToolCatalog(t *testing.T) {
 			t.Fatalf("tool %q = %+v ok=%v", id, tool, ok)
 		}
 	}
-	if tool, _ := toolByID("home"); tool.label != "Home" {
+	if tool, _ := toolByID("home"); tool.label != "Expand home area" {
 		t.Fatalf("label = %q", tool.label)
 	}
-	if tool, _ := toolByID("unhome"); tool.label != "Clear home" {
+	if tool, _ := toolByID("unhome"); tool.label != "Clear home area" {
 		t.Fatalf("label = %q", tool.label)
 	}
 }

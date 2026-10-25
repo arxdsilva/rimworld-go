@@ -325,8 +325,9 @@ func TestWorldDeterminism(t *testing.T) {
 	run := func() uint64 {
 		g := worldGame(t)
 		dest := nearDest(t, g)
-		g.Enqueue(command.Command{Kind: command.PaintArea, Index: 0, X: 10, Y: 10, X2: 50, Y2: 50, Enabled: true})
-		g.Enqueue(command.Command{Kind: command.AssignArea, Pawn: uint64(g.pawnIDs[2]), Index: 0})
+		g.Enqueue(command.Command{Kind: command.CreateArea}) // PLAY-015: area id 1
+		g.Enqueue(command.Command{Kind: command.PaintArea, Index: 1, X: 10, Y: 10, X2: 50, Y2: 50, Enabled: true})
+		g.Enqueue(command.Command{Kind: command.AssignArea, Pawn: uint64(g.pawnIDs[2]), Index: 1})
 		formCaravan(t, g, dest, g.pawnIDs[0])
 		g.visitorsArrive(uint64(g.clock.Now()))
 		g.Step(4000)

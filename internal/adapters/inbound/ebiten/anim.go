@@ -577,6 +577,7 @@ func (r *Renderer) animate(w game.WorldView, pawns []game.PawnView, running bool
 		return
 	}
 	r.emitFireParticles(w)
+	r.emitBlazeParticles(w) // fire_world_draw.go
 	st := r.animState()
 	for _, p := range pawns {
 		if p.Lying || p.CarriedBy != 0 {

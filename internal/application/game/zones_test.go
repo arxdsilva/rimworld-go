@@ -192,7 +192,7 @@ func TestLoadMigratesLegacyZoneRects(t *testing.T) {
 		t.Fatal(err)
 	}
 	w := h.World()
-	if len(w.Zones) != 3 {
+	if len(w.Zones) != 2 {
 		t.Fatalf("zones %+v", w.Zones)
 	}
 	if st := zoneOwner(t, h, 5, 1); st.Kind != ZoneStockpile || len(st.Cells) != 20 || !st.Food || st.Wood {
@@ -201,8 +201,10 @@ func TestLoadMigratesLegacyZoneRects(t *testing.T) {
 	if gz := zoneOwner(t, h, 6, 6); gz.Kind != ZoneGrow || gz.Crop != "radish" || len(gz.Cells) != 25-4 {
 		t.Fatalf("the grow zone keeps only free tiles: %+v", gz)
 	}
-	if p := zoneOwner(t, h, 11, 11); p.Kind != ZonePen || len(p.Cells) != 9 {
-		t.Fatalf("pen %+v", p)
+	// PLAY-015: the pen rectangle became a pen marker in its middle (open:
+	// no fence around it)
+	if len(w.Pens) != 1 || w.Pens[0].X != 11 || w.Pens[0].Y != 11 || w.Pens[0].Enclosed {
+		t.Fatalf("pen %+v", w.Pens)
 	}
 	// and the migrated map round-trips through a new save
 	var again bytes.Buffer
@@ -218,37 +220,41 @@ func TestLoadMigratesLegacyZoneRects(t *testing.T) {
 	}
 }
 
-// A tame animal keeps to a pen that is not a rectangle.
+// A tame animal keeps to a pen that is not a rectangle (PLAY-015: a
+// fenced L with a pen marker).
 func TestTameAnimalKeepsToLShapedPen(t *testing.T) {
 	g := New(Config{Seed: 3, Width: 30, Height: 20})
-	buck, _ := g.SpawnAnimal("dustbuck", 2, 2)
+	in := func(x, y int) bool {
+		return x >= 14 && x <= 22 && y >= 8 && y <= 9 || x >= 14 && x <= 15 && y >= 10 && y <= 16
+	}
+	for y := 7; y <= 17; y++ {
+		for x := 13; x <= 23; x++ {
+			near := false
+			for _, d := range [][2]int{{0, 0}, {1, 0}, {-1, 0}, {0, 1}, {0, -1}, {1, 1}, {-1, 1}, {1, -1}, {-1, -1}} {
+				near = near || in(x+d[0], y+d[1])
+			}
+			if near && !in(x, y) && !g.BuildNow("fence", "wood", "south", x, y) {
+				t.Fatalf("fence at %d,%d", x, y)
+			}
+		}
+	}
+	m := buildMarker(t, g, 15, 12)
+	if c := g.penRegion(m); !c.enclosed || c.cells != 9*2+2*7 {
+		t.Fatalf("the L is one pen: %+v", *c)
+	}
+	buck, _ := g.SpawnAnimal("dustbuck", 18, 8)
 	g.TameAnimal(buck, "Moss")
-	zoneCmd(g, command.DesignatePen, 14, 8, 22, 9, 0)
-	zoneCmd(g, command.DesignatePen, 14, 10, 15, 16, 0)
-	if len(g.World().Zones) != 1 {
-		t.Fatal("the two drags make one pen")
-	}
-	inside := func() bool {
-		p, _ := g.positions.Get(buck)
-		id, ok := g.zones.At(p.X, p.Y)
-		z, _ := g.zones.Zone(id)
-		return ok && z.Kind == zone.KindPen
-	}
-	for i := 0; i < 200 && !inside(); i++ {
-		g.Step(50)
-	}
-	if !inside() {
-		t.Fatal("the animal walks into its pen")
-	}
 	// wandering inside, every walk ends on a pen tile
 	for i := 0; i < 60; i++ {
 		g.Step(25)
 		a, _ := g.animals.Get(buck)
 		if n := len(a.Path); n > 0 {
-			end := a.Path[n-1]
-			if z, ok := g.zoneOf(zone.KindPen, end.X, end.Y); !ok || z.Cells != 9*2+2*7 {
+			if end := a.Path[n-1]; !in(end.X, end.Y) {
 				t.Fatalf("wanders out of the pen to %v", end)
 			}
+		}
+		if p, _ := g.positions.Get(buck); !in(p.X, p.Y) {
+			t.Fatalf("out of the pen at %v", p)
 		}
 	}
 }

@@ -1,0 +1,12 @@
+# PLAY-015 fire, ash and sign paint. Original colours; fire entries are emissive-looking
+# painted bands (core / body / tip), ash entries the burnt-ground decal.
+version: 1
+materials:
+  fire_core:     {light: "#fff6c8", base: "#ffe27a", shadow: "#ffc23f"}
+  fire_body:     {light: "#ffb43a", base: "#ff8a24", shadow: "#f06418"}
+  fire_tip:      {light: "#e8461c", base: "#c42a14", shadow: "#8c1a10"}
+  fire_smoke:    {light: "#6b6560", base: "#4d4945", shadow: "#33302d"}
+  ash_char:      {light: "#3a3532", base: "#2a2725", shadow: "#1b1918"}
+  ash_grey:      {light: "#a9a6a0", base: "#8b8883", shadow: "#6a6764"}
+  ash_ember:     {light: "#ff9a3c", base: "#d8541e", shadow: "#8c2a12"}
+  sign_paint:    {light: "#f1e6c8", base: "#e0d1a8", shadow: "#bba97f"}

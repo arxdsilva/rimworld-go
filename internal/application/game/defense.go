@@ -153,7 +153,7 @@ func (g *Game) pathQuery(id entity.EntityID) pathing.Query {
 	case g.isRaider(id):
 		return g.hostileMap()
 	}
-	return g.areaPathQuery(id, g.grid) // areas.go: a restricted pawn keeps to its area
+	return g.softPathQuery(id, g.grid) // area_soft.go: a restricted pawn prefers its area; fire costs
 }
 
 // doorAt reports a built door on (x, y).
@@ -464,6 +464,12 @@ func (g *Game) assignRepair(id entity.EntityID) bool {
 			}
 			if notColonyPiece(*b) {
 				continue // setup_mapgen.go: nobody mends a ruin
+			}
+			if !g.inHome(b.Y*g.grid.Width() + b.X) {
+				continue // PLAY-015: only buildings inside Home are mended
+			}
+			if !g.areaAllows(id, b.X, b.Y) {
+				continue // areas.go: and inside the repairer's allowed area
 			}
 			if _, taken := g.reserve.EntityOwner(bid); taken {
 				continue

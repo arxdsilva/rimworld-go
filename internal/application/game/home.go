@@ -6,6 +6,7 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/world/filth"
+	"rimworld-go/internal/domain/world/roof"
 )
 
 // The Home area (SIM-021): tiles the colony keeps clean. Painted with
@@ -21,6 +22,7 @@ const (
 type homeState struct {
 	cells []uint8
 	ver   uint32 // bumped on every change (WorldView.HomeVer)
+	off   bool   // PLAY-015: automatic expansion is off (saved as NoHomeAuto)
 }
 
 // inHome reports whether tile i is in the Home area.
@@ -74,6 +76,9 @@ func (g *Game) paintHome(x, y, x2, y2 int, on bool) {
 // autoHome extends the Home area around a completed building (floors and
 // graves excepted).
 func (g *Game) autoHome(k construction.Kind, f construction.Facing, x, y int) {
+	if g.homeArea.off {
+		return
+	}
 	if construction.DefOf(k).Layer == construction.LayerFloor || k == construction.Grave {
 		return
 	}
@@ -88,6 +93,23 @@ func (g *Game) autoHome(k construction.Kind, f construction.Facing, x, y int) {
 	}
 	r := autoHomeRadius
 	g.paintHome(minX-r, minY-r, maxX+r, maxY+r, true)
+}
+
+// autoHomeRect extends Home around a newly painted zone rectangle
+// (stockpile, growing zone, pen) with the same margin as a building.
+func (g *Game) autoHomeRect(x1, y1, x2, y2 int) {
+	if g.homeArea.off {
+		return
+	}
+	r := autoHomeRadius
+	minX, minY, maxX, maxY := zone.Normalize(x1, y1, x2, y2)
+	g.paintHome(minX-r, minY-r, maxX+r, maxY+r, true)
+}
+
+// setHomeAuto turns automatic Home expansion on or off; the existing
+// Home stays either way.
+func (g *Game) setHomeAuto(on bool) {
+	g.homeArea.off = !on
 }
 
 // startHome is a new colony's Home around its landing spot (the start
@@ -105,6 +127,7 @@ func (g *Game) fillHomeView(w *WorldView) {
 		w.Home = make([]uint8, n)
 	}
 	w.HomeVer = g.homeArea.ver
+	w.HomeAuto = !g.homeArea.off
 }
 
 // exportHome and importHome save and restore the Home area and its
@@ -134,4 +157,14 @@ func (g *Game) importHome(cells []uint8, ver uint32) {
 		}
 	}
 	g.refreshFilth()
+}
+
+// areaRoofPlan re-raises a build plan on a tile of the build-roof area
+// that lost its roof (collapse) once it is supported again; a tile marked
+// for removal, a wall and a roofed tile are left alone.
+func areaRoofPlan(c roof.Cell, wall bool) roof.Cell {
+	if !wall && c.Has(roof.AreaBuild|roof.Supported) && !c.Roofed() && c&roof.PlanRemove == 0 {
+		c |= roof.PlanBuild
+	}
+	return c
 }

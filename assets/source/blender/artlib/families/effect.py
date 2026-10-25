@@ -165,5 +165,68 @@ def _steam_puff(k):
     return _save("steam_puff_%d" % k, img, (int(base[0]), int(base[1])), {"effect": "steam_puff", "frame": k})
 
 
+FIRE_SIZES = {  # name: (canvas w, h, flame height px, flame half-width px, tongues, smoke)
+    "small": (128, 128, 92, 30, 3, False),
+    "medium": (128, 192, 150, 44, 4, False),
+    "large": (192, 328, 226, 64, 5, True),
+}
+
+
+def _fire(size, k):
+    """Frame k (0..3) of a stylised flame, no outline. Layered tongues: deep red
+    tips, orange body, yellow core. The base sits on the tile bottom centre; the
+    tongues sway and change height per frame. Large adds a dark smoke wisp on top."""
+    w, h, fh, hw, nt, smoke = FIRE_SIZES[size]
+    core, body, tip, smk = _mat("fire_core"), _mat("fire_body"), _mat("fire_tip"), _mat("fire_smoke")
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32) + 0.5
+    base = (w / 2, h - 8.0)
+    rng = np.random.RandomState({"small": 31, "medium": 32, "large": 33}[size])
+    tongues = []
+    for i in range(nt):
+        u = (i + 0.5) / nt * 2 - 1                                  # -1..1 across the base
+        tongues.append((u * hw * 0.62, fh * (1.0 - 0.38 * abs(u)) * rng.uniform(0.85, 1.0),
+                        hw * rng.uniform(0.34, 0.46), rng.uniform(0, 6.28), rng.uniform(0.6, 1.0)))
+    img = np.zeros((h, w, 4), np.float32)
+    ph = k * math.pi / 2
+
+    def layer(scale_w, scale_h, rgb_fn, a=1.0):
+        cov = np.zeros((h, w), np.float32)
+        for off, th, tw, p0, amp in tongues:
+            hh = th * scale_h * (0.9 + 0.1 * math.sin(ph * 1.0 + p0 * 3))
+            t = np.clip((base[1] - yy) / hh, -0.2, 1.2)
+            sway = math.sin(ph + p0) * amp * 0.16 * hw * t ** 1.5
+            wid = tw * scale_w * np.clip(np.sin(np.clip(t, 0, 1) * 1.57 * 0.9 + 0.3) * (1 - np.clip(t, 0, 1)) ** 0.7 * 1.7 + 0.12 * (1 - np.clip(t, 0, 1)), 0, None)
+            d = np.abs(xx - base[0] - off * (1 - 0.3 * t) - sway) - wid
+            c = np.clip(0.5 - d / 1.2, 0, 1) * (t >= 0) * (t <= 1.0)
+            cov = np.maximum(cov, c)
+        return cov, t
+
+    # smoke first (behind): a few drifting dark puffs above the flame tips
+    if smoke:
+        for j in range(5):
+            tt = j / 4.0
+            py = base[1] - fh * (0.95 + 0.34 * tt) - 6 * math.sin(ph + j)
+            px = base[0] + math.sin(ph * 0.7 + j * 1.7) * (10 + 14 * tt)
+            r = 16 + 12 * tt
+            cov = np.clip(1.15 - np.hypot(xx - px, (yy - py) * 1.15) / r, 0, 1)
+            _over(img, cov * (1 - 0.45 * tt), _mix(smk["base"], smk["light"], tt), 0.55)
+    for sw, sh, col, a in ((1.0, 1.0, tip["base"], 1.0), (0.78, 0.86, body["base"], 1.0), (0.5, 0.62, core["base"], 1.0),
+                           (0.24, 0.36, core["light"], 1.0)):
+        cov, t = layer(sw, sh, None)
+        # tip band: darker toward the very top of each layer
+        _over(img, cov, col, a)
+    # lower glow: bright body near the base, hot red edge hint at the tips
+    gl = np.clip(1.0 - np.hypot((xx - base[0]) / (hw * 0.9), (yy - base[1]) / (fh * 0.22)), 0, 1)
+    _over(img, gl * (img[..., 3] > 0.5), core["base"], 0.55)
+    # embers
+    for _ in range({"small": 2, "medium": 4, "large": 6}[size]):
+        sx = base[0] + rng.uniform(-hw, hw) + math.sin(ph) * 4
+        sy = base[1] - rng.uniform(0.55, 1.05) * fh - 8 * (k % 2)
+        _over(img, np.clip(1.4 - np.hypot(xx - sx, yy - sy) / 2.2, 0, 1), body["light"], 0.9)
+    return _save("fire_%s_%d" % (size, k), img, (int(base[0]), int(base[1])),
+                 {"effect": "fire_" + size, "frame": k, "frames": 4, "fps": 8})
+
+
 def build():
-    return [_pod_fall(), _pod_dust()] + [_steam_puff(k) for k in range(4)]
+    return [_pod_fall(), _pod_dust()] + [_steam_puff(k) for k in range(4)] \
+        + [_fire(sz, k) for sz in ("small", "medium", "large") for k in range(4)]

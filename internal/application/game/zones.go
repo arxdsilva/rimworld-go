@@ -236,6 +236,12 @@ func (g *Game) inMatchingStockpileAt(k item.Kind, x, y int) bool {
 // still has room (topping up), else an empty walkable stockpile tile with
 // no item, planned or built object, or reservation.
 func (g *Game) stockpileCell(k item.Kind, nearX, nearY int) (x, y int, ok bool) {
+	return g.stockpileCellWhere(k, nearX, nearY, nil)
+}
+
+// stockpileCellWhere is stockpileCell over the cells keep admits (nil:
+// all; area_dest.go keeps a hauler to its allowed area).
+func (g *Game) stockpileCellWhere(k item.Kind, nearX, nearY int, keep func(x, y int) bool) (x, y int, ok bool) {
 	w := g.Width()
 	// loose items on stockpile tiles, the first per tile (as itemAt; 0:
 	// none), in a reused per-tile scratch (jobindex.go)
@@ -253,7 +259,7 @@ func (g *Game) stockpileCell(k item.Kind, nearX, nearY int) (x, y int, ok bool) 
 	}
 	g.eachStockpileCell(k, func(cx, cy int) {
 		oid := loose[cy*w+cx]
-		if oid == 0 || !better(cx, cy) {
+		if oid == 0 || !better(cx, cy) || keep != nil && !keep(cx, cy) {
 			return
 		}
 		o, _ := g.stacks.Get(oid)
@@ -265,7 +271,7 @@ func (g *Game) stockpileCell(k item.Kind, nearX, nearY int) (x, y int, ok bool) 
 		return x, y, true
 	}
 	g.eachStockpileCell(k, func(cx, cy int) {
-		if loose[cy*w+cx] != 0 || !better(cx, cy) || !g.grid.Walkable(cx, cy) || !free(cx, cy) {
+		if loose[cy*w+cx] != 0 || !better(cx, cy) || !g.grid.Walkable(cx, cy) || !free(cx, cy) || keep != nil && !keep(cx, cy) {
 			return
 		}
 		if g.layerFrameAt(cx, cy, construction.LayerObject) != 0 || g.layerBldgAt(cx, cy, construction.LayerObject) != 0 {
@@ -286,39 +292,6 @@ func (g *Game) eachStockpileCell(k item.Kind, fn func(x, y int)) {
 	})
 }
 
-// Pens.
-
-// nearestPen is the pen holding pos, else the one whose middle is
-// nearest (ties: lower id).
-func (g *Game) nearestPen(pos Position) (zone.ID, bool) {
-	if z, ok := g.zoneOf(zone.KindPen, pos.X, pos.Y); ok {
-		return z.ID, true
-	}
-	best, bestD := zone.ID(0), 1<<30
-	g.zones.Each(func(z zone.Zone) bool {
-		if z.Kind != zone.KindPen {
-			return true
-		}
-		b, _ := g.zones.Bounds(z.ID)
-		if d := pathing.Dist(pos.X, pos.Y, (b.MinX+b.MaxX)/2, (b.MinY+b.MaxY)/2); d < bestD {
-			best, bestD = z.ID, d
-		}
-		return true
-	})
-	return best, best != 0
-}
-
-// penGoal is the tile of pen id nearest its middle (a pen need not be a
-// rectangle, so the middle may lie outside it).
-func (g *Game) penGoal(id zone.ID) (int, int) {
-	b, _ := g.zones.Bounds(id)
-	mx, my := (b.MinX+b.MaxX)/2, (b.MinY+b.MaxY)/2
-	gx, gy, bestD := mx, my, 1<<30
-	g.zones.EachCell(id, func(x, y int) bool {
-		if d := pathing.Dist(mx, my, x, y); d < bestD {
-			gx, gy, bestD = x, y, d
-		}
-		return bestD > 0
-	})
-	return gx, gy
-}
+// Pens: painted pen zones are legacy (older saves, the DesignatePen
+// command); a load turns them into pen markers (pens.go migratePenZones),
+// and nothing else reads them.

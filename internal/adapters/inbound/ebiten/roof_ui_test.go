@@ -25,15 +25,15 @@ func TestArchitectHasRoofTools(t *testing.T) {
 		label, desc, icon string
 		cmd               command.Kind
 	}{
-		"roof":   {"Build roof", "Colonists roof these tiles. A roof needs a wall within 6 tiles; closed rooms are roofed automatically.", "roof_build", command.DesignateRoof},
-		"noroof": {"Remove roof", "Take roofs down and keep them off, even in closed rooms.", "roof_remove", command.DesignateRemoveRoof},
+		"roof":   {"Build roof area", "Colonists roof these tiles and rebuild the roof if it falls. A roof needs a wall within 6 tiles; closed rooms are roofed automatically.", "roof_area", command.DesignateRoof},
+		"noroof": {"Remove roof area", "Take roofs down and keep them off, even in closed rooms.", "roof_remove", command.DesignateRemoveRoof},
 	}
 	for id, w := range want {
 		tool, ok := toolByID(id)
 		if !ok {
 			t.Fatalf("tool %q missing", id)
 		}
-		if tool.category != "structure" || tool.mode != placeArea || tool.label != w.label ||
+		if tool.category != "zones" || tool.mode != placeArea || tool.label != w.label ||
 			tool.desc != w.desc || tool.icon != w.icon || tool.cmd != w.cmd {
 			t.Fatalf("tool %q = %+v", id, tool)
 		}
@@ -44,7 +44,7 @@ func roofToolEmits(t *testing.T, id string, kind command.Kind) {
 	t.Helper()
 	a, s := roofStubApp(t)
 	click(t, a, "tab.architect")
-	click(t, a, "arch.cat.structure")
+	click(t, a, "arch.cat.zones")
 	click(t, a, "arch.tool."+id)
 	a.archDrag = true
 	a.archX0, a.archY0, a.archX1, a.archY1 = 2, 3, 6, 7
@@ -93,7 +93,7 @@ func TestRoofToolForcesOverlay(t *testing.T) {
 	t.Parallel()
 	a, _ := roofStubApp(t)
 	click(t, a, "tab.architect")
-	click(t, a, "arch.cat.structure")
+	click(t, a, "arch.cat.zones")
 	click(t, a, "arch.tool.roof")
 	if !a.renderer.roofOverlayForced || !a.renderer.roofOverlayOn() {
 		t.Fatal("roof tool should force the overlay")
@@ -107,7 +107,7 @@ func TestRoofToolForcesOverlay(t *testing.T) {
 		t.Fatal("deselect should clear the forced overlay")
 	}
 	click(t, a, "arch.tool.roof")
-	click(t, a, "arch.tool.wall")
+	click(t, a, "arch.tool.stockpile") // another zone tool
 	if a.renderer.roofOverlayForced {
 		t.Fatal("another tool should not force the overlay")
 	}

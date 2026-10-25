@@ -13,8 +13,8 @@ import (
 
 // Animal handling. Hunters also tame: an animal marked for taming holds
 // still while a handler coaxes it, then is tamed (or not; a botched try
-// can enrage it). Tame animals have names, live in animal pens when there
-// are any (else around the colony), pass through the colony's doors and
+// can enrage it). Tame animals have names; livestock live in pens (pens.go)
+// and the rest around the colony; they pass through the colony's doors and
 // never spring its traps; tame ridgewolves guard the colony against
 // raiders and hostile animals. Wild animals hurt by colonists may go
 // manhunter, hunting every colonist for a day; the storyteller also sends
@@ -53,7 +53,7 @@ func (g *Game) beingTamed(id entity.EntityID) bool {
 	}
 	j, _ := g.jobs.Get(owner)
 	switch j.Kind {
-	case job.Tame, job.Milk, job.Shear, job.Train, job.TendAnimal:
+	case job.Tame, job.Milk, job.Shear, job.Train, job.TendAnimal, job.Rope:
 		return j.Target == id
 	}
 	return false
@@ -255,36 +255,49 @@ func (g *Game) guardCheck(id entity.EntityID, a *animal.State, pos Position, now
 	return true
 }
 
-// wanderTame: tame animals keep to the pens (or near the colony).
+// wanderTame: livestock keep to their pen, or roam when they have none
+// (pens.go); other tame animals stay near the colony, inside their
+// allowed area (areas.go inArea).
 func (g *Game) wanderTame(id entity.EntityID, a *animal.State, pos Position, def animal.Def, now uint64) {
 	a.Target = 0
 	if a.PathI < len(a.Path) || now < a.NextThink {
 		return
 	}
 	a.NextThink = now + 240 + uint64(g.rng.IntN(480))
-	if p, ok := g.nearestPen(pos); ok {
-		if at, _ := g.zones.At(pos.X, pos.Y); at != p {
-			gx, gy := g.penGoal(p)
-			g.animalGoTo(id, a, gx, gy)
+	if penned(a) {
+		r := penRoamRadius
+		_, c := g.homePen(id, a, pos)
+		if c != nil {
+			r = def.WanderRadius
+		}
+		x, y := pos.X+g.rng.IntN(2*r+1)-r, pos.Y+g.rng.IntN(2*r+1)-r
+		x, y = clampInt(x, 0, g.grid.Width()-1), clampInt(y, 0, g.grid.Height()-1)
+		if c != nil && !g.inPenCells(c, x, y) { // pens need not be rectangles
 			return
 		}
-		r := def.WanderRadius
-		b, _ := g.zones.Bounds(p)
-		x := clampInt(pos.X+g.rng.IntN(2*r+1)-r, b.MinX, b.MaxX)
-		y := clampInt(pos.Y+g.rng.IntN(2*r+1)-r, b.MinY, b.MaxY)
-		if at, _ := g.zones.At(x, y); at == p { // pens need not be rectangles
-			g.animalGoTo(id, a, x, y)
+		if c == nil {
+			// roaming: never towards a wild predator in sight (it would
+			// only run again: no flee/roam flapping)
+			if pp, near := g.nearestPredator(id, pos, r+def.FleeRadius+animal.FleeRelease); near &&
+				cellDistSq(Position{X: x, Y: y}, pp) < cellDistSq(pos, pp) {
+				return
+			}
 		}
+		g.animalGoTo(id, a, x, y)
 		return
 	}
-	// no pen: stay near the colony
+	// stay near the colony, inside the allowed area
 	hx, hy := g.home()
 	r := def.WanderRadius
+	var x, y int
 	if weapon.Distance(pos.X, pos.Y, hx, hy) > 12 {
-		g.animalGoTo(id, a, hx+g.rng.IntN(7)-3, hy+g.rng.IntN(7)-3)
-		return
+		x, y = hx+g.rng.IntN(7)-3, hy+g.rng.IntN(7)-3
+	} else {
+		x, y = pos.X+g.rng.IntN(2*r+1)-r, pos.Y+g.rng.IntN(2*r+1)-r
 	}
-	g.animalGoTo(id, a, pos.X+g.rng.IntN(2*r+1)-r, pos.Y+g.rng.IntN(2*r+1)-r)
+	if g.inArea(id, x, y) {
+		g.animalGoTo(id, a, x, y)
+	}
 }
 
 // combatAlive: a raider still standing or a living animal.

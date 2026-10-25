@@ -254,7 +254,7 @@ func (b *builder) pen() {
 			b.buildNow("fence", "wood", x, y)
 		}
 	}
-	b.g.Enqueue(command.Command{Kind: command.DesignatePen, X: x0 + 1, Y: y0 + 1, X2: x1 - 1, Y2: y1 - 1})
+	b.buildNow("pen marker", "wood", (x0+x1)/2, (y0+y1)/2) // PLAY-015: the fenced field is a marker pen
 	b.buildNow("feeding trough", "wood", x0+2, y0+2)
 	b.buildNow("feeding trough", "wood", x0+2, y0+6)
 	species := []string{"dustbuck", "dustbuck", "ridgewolf", "dustbuck", "dustbuck"}

@@ -57,7 +57,9 @@ func (g *Game) applyOne(c command.Command) {
 	case command.AddOperation, command.RemoveOperation, command.SetDrugPolicy, command.AssignBedOwner,
 		command.SetAnimalMaster, command.SetTraining, command.GiftAnimal, command.Capture, command.Arrest,
 		command.SetPrisonerMode, command.SetBedForPrisoners, command.FormCaravan, command.CaravanReturn,
-		command.PaintArea, command.RenameArea, command.AssignArea, command.ReleasePrisoner:
+		command.PaintArea, command.RenameArea, command.AssignArea, command.ReleasePrisoner,
+		command.CreateArea, command.DeleteArea, command.InvertArea, // areas.go (PLAY-015)
+		command.SetAnimalFollow: // train_animals.go (PLAY-015)
 		g.applyHostCommand(c) // host_commands.go (ENG-003)
 	case command.SetStoryteller:
 		g.cmdSetStoryteller(c.Name) // story.go (NG-1)
@@ -69,6 +71,7 @@ func (g *Game) applyOne(c command.Command) {
 		g.cmdMove(entity.EntityID(c.Pawn), c.X, c.Y)
 	case command.DesignateStockpile:
 		g.paintZone(zone.KindStockpile, zone.Zone{Food: true, Wood: true, Stone: true}, c.X, c.Y, c.X2, c.Y2)
+		g.autoHomeRect(c.X, c.Y, c.X2, c.Y2) // home.go
 	case command.DesignateWall:
 		g.placeFrame(construction.Wall, c.X, c.Y)
 	case command.DesignateBed:
@@ -107,13 +110,17 @@ func (g *Game) applyOne(c command.Command) {
 	case command.DesignateGrowZone:
 		if !g.cropLocked(plant.Species(c.Build)) {
 			g.addGrowZone(c.X, c.Y, c.X2, c.Y2, c.Build)
+			g.autoHomeRect(c.X, c.Y, c.X2, c.Y2) // home.go
 		}
 	case command.SetResearch:
 		g.setResearch(research.Project(c.Build))
 	case command.DesignateTame:
 		g.markTame(c.X, c.Y, c.X2, c.Y2, true)
+	case command.SetPenSettings:
+		g.setPenSettings(entity.EntityID(c.Target), c.Name) // pens.go
 	case command.DesignatePen:
 		g.paintZone(zone.KindPen, zone.Zone{}, c.X, c.Y, c.X2, c.Y2)
+		g.autoHomeRect(c.X, c.Y, c.X2, c.Y2) // home.go
 	case command.ReleaseAnimal:
 		g.releaseAnimal(entity.EntityID(c.Pawn))
 	case command.SetTroughFilter:
@@ -160,8 +167,14 @@ func (g *Game) applyOne(c command.Command) {
 		g.paintPlan(c.X, c.Y, c.X2, c.Y2, c.Enabled) // plan.go
 	case command.OpenCasket:
 		g.orderOpenCasket(entity.EntityID(c.Target)) // casket.go
+	case command.SetHomeAuto:
+		g.setHomeAuto(c.Enabled) // home.go
+	case command.DesignateSnowClear:
+		g.paintSnowClear(c.X, c.Y, c.X2, c.Y2, c.Enabled) // snow_clear.go
 	case command.DesignateHome:
 		g.paintHome(c.X, c.Y, c.X2, c.Y2, c.Enabled) // home.go
+	case command.DevStartFire:
+		g.devStartFire(c.X, c.Y) // fire.go (PLAY-015)
 	}
 }
 
@@ -405,6 +418,9 @@ func (g *Game) phaseAI() {
 		if g.mentalBreakTick(id, j) {
 			continue // acting out: no orders, no work
 		}
+		if g.fireDanger(id, j) {
+			continue // fire_danger.go: caught in fire, or idling beside it
+		}
 		if g.socialDuty(id, j) {
 			continue // gathering.go: a party, wedding or social fight
 		}
@@ -625,7 +641,7 @@ func (g *Game) pathToVia(id entity.EntityID, tx, ty int, regions bool) ([]pathin
 	q := g.pathQuery(id)
 	reach := g.reachFrom(id, pos, regions)
 	if !regions {
-		q = plainQuery{q} // regions.go: a plain search (self-check reference)
+		q = plainSoft(q) // area_soft.go: a plain search (self-check reference), same costs
 	}
 	if q.Walkable(tx, ty) {
 		if !reach.ok(tx, ty) {
@@ -694,6 +710,7 @@ func (g *Game) seekFood(id entity.EntityID) bool {
 func (g *Game) assignEat(id entity.EntityID) {
 	best, bx, by := g.bestFood(id)
 	if best == 0 {
+		g.noFood[id] = uint64(g.clock.Now()) + foodRetry // areas.go: all the food lies outside the allowed area
 		return
 	}
 	if !g.startJob(id, job.Record{
@@ -706,7 +723,8 @@ func (g *Game) assignEat(id entity.EntityID) {
 func (g *Game) assignSleepInPlace(id entity.EntityID) {
 	pos, _ := g.positions.Get(id)
 	g.sleptAt[id] = 0
-	g.startJob(id, job.Record{Kind: job.Sleep, TX: pos.X, TY: pos.Y, WorkLeft: needs.SleepWorkMin})
+	fx, fy := g.sleepFloorSpot(id, pos) // area_dest.go: on the floor inside the allowed area
+	g.startJob(id, job.Record{Kind: job.Sleep, TX: fx, TY: fy, WorkLeft: needs.SleepWorkMin})
 }
 
 func (g *Game) assignSleep(id entity.EntityID) {
@@ -724,6 +742,9 @@ func (g *Game) assignSleep(id entity.EntityID) {
 		b, ok := g.bldgs.Get(bid)
 		if !ok || !b.Kind.Sleeps() || !b.CanClaim(uint64(id)) || b.ForPrisoners { // prison beds: prisoners only
 			continue
+		}
+		if !g.areaAllows(id, b.X, b.Y) {
+			continue // areas.go: a bed outside the allowed area
 		}
 		d := pathing.Dist(pos.X, pos.Y, b.X, b.Y)
 		if b.SlotOf(uint64(id)) >= 0 {
@@ -749,7 +770,8 @@ func (g *Game) assignSleep(id entity.EntityID) {
 		return
 	}
 	g.sleptAt[id] = 0
-	g.startJob(id, job.Record{Kind: job.Sleep, TX: pos.X, TY: pos.Y, WorkLeft: needs.SleepWorkMin})
+	fx, fy := g.sleepFloorSpot(id, pos) // area_dest.go: on the floor inside the allowed area
+	g.startJob(id, job.Record{Kind: job.Sleep, TX: fx, TY: fy, WorkLeft: needs.SleepWorkMin})
 }
 
 func (g *Game) assignHaul(id entity.EntityID) bool {
@@ -823,7 +845,7 @@ func (g *Game) haulToStockpile(id entity.EntityID, pos Position) bool {
 		if !found {
 			return false
 		}
-		dx, dy, ok := g.stockpileCell(best.Kind, best.X, best.Y)
+		dx, dy, ok := g.areaStockpileCell(id, best.Kind, best.X, best.Y) // area_dest.go
 		if !ok {
 			full = append(full, best.Kind)
 			continue
@@ -987,8 +1009,12 @@ func (g *Game) phaseJobs() {
 			g.doTame(id, j)
 		case job.Milk, job.Shear:
 			g.doCollect(id, j) // animal_products.go
+		case job.ClearSnow:
+			g.doClearSnow(id, j) // snow_clear.go
 		case job.Clean:
 			g.doClean(id, j) // clean.go
+		case job.FightFire:
+			g.doFightFire(id, j) // firefight.go
 		case job.Wander, job.Chat, job.Relax, job.FireSide, job.Horseshoes, job.Hide:
 			g.doIdle(id, j)
 		// ENG-003: social and host-system jobs, each in its owner's file.
@@ -1022,6 +1048,8 @@ func (g *Game) phaseJobs() {
 			g.doTendAnimal(id, j) // bonds.go
 		case job.Visit:
 			g.doVisit(id, j) // world_state.go
+		case job.Rope:
+			g.doRope(id, j) // rope.go
 		default:
 			j.State = job.Complete
 			g.jobs.Set(id, j)

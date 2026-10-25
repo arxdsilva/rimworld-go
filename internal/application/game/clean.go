@@ -51,6 +51,9 @@ func (g *Game) assignClean(id entity.EntityID) bool {
 		if g.postponedFor(id, job.Clean, 0, x, y) {
 			continue // SIM-027: out of reach lately
 		}
+		if !g.inArea(id, x, y) {
+			continue // areas.go: outside the cleaner's allowed area
+		}
 		if n < len(best) {
 			n++
 		}

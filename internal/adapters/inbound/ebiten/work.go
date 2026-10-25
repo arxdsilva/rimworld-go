@@ -22,6 +22,7 @@ var workLive = map[int]struct {
 	cmd command.WorkType
 	on  func(game.PawnView) bool
 }{
+	0:  {command.WorkFirefight, func(p game.PawnView) bool { return p.WorkFirefight }}, // PLAY-015
 	1:  {command.WorkDoctor, func(p game.PawnView) bool { return p.WorkDoctor }},
 	2:  {command.WorkGrow, func(p game.PawnView) bool { return p.WorkGrow }},
 	3:  {command.WorkCook, func(p game.PawnView) bool { return p.WorkCook }},
@@ -81,7 +82,7 @@ var workColSkill = [...]struct {
 
 // workHelp is the header hover card of each work column.
 var workHelp = [...]string{
-	0:  "Firefighting\nPutting out fires. Not available yet.",
+	0:  "Firefighting\nBeat out fires inside the Home area and your allowed area. No skill.",
 	1:  "Doctor\nTend the wounded and the sick, and carry the downed to bed. Skill: Medicine.",
 	2:  "Growing\nSow, harvest and cut plants, and cut grass. Skill: Plants.",
 	3:  "Cooking\nCook meals at a stove or campfire and butcher animals. Skill: Cooking.",

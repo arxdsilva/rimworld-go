@@ -73,12 +73,20 @@ type worldState struct {
 	caravans    []caravanRec // ascending ID
 	stashed     []stashRec   // ascending ID (world_stash.go)
 	visitors    []visitorRec // ascending ID (visitors.go)
-	// areaOf is each restricted pawn's allowed area (areas.go); absent
-	// means unrestricted. Looked up only, never iterated unsorted.
+	// areaOf is each restricted colonist's or tame animal's allowed area
+	// ref (areas.go): an area id, or command.AreaHome; absent means
+	// unrestricted. Looked up only, never iterated for output unsorted.
 	areaOf map[entity.EntityID]int
 	// pathFree is the pawn whose job startJob is pathing free of its area
 	// right now (areas.go; transient, 0 between calls).
 	pathFree entity.EntityID
+	// huntOut is, per hunter, the prey of its chase and when it was first
+	// seen outside the hunter's area (area_dest.go; saved).
+	huntOut map[entity.EntityID]huntOutRec
+	// areaVer is each area's version (by id), areaGen the last one handed
+	// out (areas.go; not saved: views only).
+	areaVer map[uint16]uint64
+	areaGen uint64
 }
 
 // caravanRec is one caravan with the colony's bookkeeping around it.
@@ -102,8 +110,14 @@ type worldSave struct {
 	Caravans []caravanRec
 	Stashed  []stashRec
 	Visitors []visitorRec
-	AreaOf   []areaAssign
+	// AreaOf is the allowed-area assignments: Version 1 saves hold area
+	// positions (index i is id i+1 now), Version 2 area refs (PLAY-015).
+	AreaOf  []areaAssign
+	HuntOut []huntOutRec // area_dest.go
 }
+
+// worldSaveVersion is the format exportWorld writes (2: area refs).
+const worldSaveVersion = 2
 
 // areaAssign is one pawn's allowed area in a save.
 type areaAssign struct {
@@ -673,10 +687,10 @@ func (g *Game) worldEdge() (int, int, bool) {
 // exportWorld is the World save field (nil: nothing yet).
 func (g *Game) exportWorld() *worldSave {
 	w := g.worldSt
-	if w == nil || len(w.caravans) == 0 && len(w.stashed) == 0 && len(w.visitors) == 0 && len(w.areaOf) == 0 {
+	if w == nil || len(w.caravans) == 0 && len(w.stashed) == 0 && len(w.visitors) == 0 && len(w.areaOf) == 0 && len(w.huntOut) == 0 {
 		return nil
 	}
-	s := &worldSave{Version: 1, Stashed: slices.Clone(w.stashed), Visitors: slices.Clone(w.visitors)}
+	s := &worldSave{Version: worldSaveVersion, Stashed: slices.Clone(w.stashed), Visitors: slices.Clone(w.visitors)}
 	for _, c := range w.caravans {
 		s.Caravans = append(s.Caravans, c.clone())
 	}
@@ -684,6 +698,7 @@ func (g *Game) exportWorld() *worldSave {
 		s.AreaOf = append(s.AreaOf, areaAssign{Pawn: id, Area: a})
 	}
 	slices.SortFunc(s.AreaOf, func(a, b areaAssign) int { return cmp.Compare(a.Pawn, b.Pawn) })
+	s.HuntOut = exportHuntOut(w.huntOut) // area_dest.go
 	return s
 }
 
@@ -713,8 +728,9 @@ func (g *Game) importWorld(s *worldSave) {
 		if w.areaOf == nil {
 			w.areaOf = map[entity.EntityID]int{}
 		}
-		w.areaOf[a.Pawn] = a.Area
+		w.areaOf[a.Pawn] = importAreaRef(s.Version, a.Area) // areas.go
 	}
+	w.huntOut = importHuntOut(s.HuntOut) // area_dest.go
 }
 
 // caravanStateLabel is the caravan inspector's state line.

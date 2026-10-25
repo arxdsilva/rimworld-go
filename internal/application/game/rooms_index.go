@@ -353,6 +353,7 @@ func (g *Game) refreshRoofSupportAround(bchanged []int32) {
 				if grid[i] == room.Wall {
 					n &^= roof.PlanBuild
 				}
+				n = areaRoofPlan(n, grid[i] == room.Wall) // home.go: the build-roof area keeps its roof
 				if n.Has(roof.Built) && !n.Has(roof.Supported) && !n.Has(roof.Natural) {
 					g.roofx.unsupported = true
 				}

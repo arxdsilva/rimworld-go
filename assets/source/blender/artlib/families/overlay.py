@@ -1442,6 +1442,91 @@ def _social_icons(t):
     return [_badge_icon(n, t, g, rgb) for n, g, rgb in SOCIAL_ICONS]
 
 
+# ------------------------------------------------------------ PLAY-015 fire: ash decal and icons
+def _ash(k):
+    """Burnt-ground decal, 128x128 (one tile): a ragged charcoal blotch with grey ash
+    drifts and a few dim ember specks. No outline; edges fade to nothing."""
+    from .effect import _mat
+    char, grey, emb = _mat("ash_char"), _mat("ash_grey"), _mat("ash_ember")
+    yy, xx = np.mgrid[0:N, 0:N].astype(np.float32) + 0.5
+    rng = np.random.RandomState(1500 + k)
+    cx, cy = N / 2 + rng.uniform(-4, 4), N / 2 + rng.uniform(-4, 4)
+    ang = np.arctan2(yy - cy, xx - cx)
+    rad = 44 + sum(rng.uniform(3, 7) * np.sin(ang * f + rng.uniform(0, 6.28)) for f in (2, 3, 5, 7))
+    d = np.hypot(xx - cx, yy - cy)
+    blot = np.clip((rad - d) / 7.0, 0, 1)
+    for _ in range(7):                                   # extra scorched lobes
+        px, py, r = cx + rng.uniform(-34, 34), cy + rng.uniform(-34, 34), rng.uniform(9, 18)
+        blot = np.maximum(blot, np.clip((r - np.hypot(xx - px, yy - py)) / 5.0, 0, 1) * 0.9)
+    img = np.zeros((N, N, 4), np.float32)
+    img[..., :3] = char["base"]
+    img[..., 3] = blot * 0.88
+    # darker charred core
+    _paint(img, np.clip((rad * 0.62 - d) / 8.0, 0, 1) * (blot > 0.3), char["shadow"], 0.7)
+    # grey ash drifts: soft lobes of lighter powder
+    for _ in range(9):
+        px, py, r = cx + rng.uniform(-32, 32), cy + rng.uniform(-32, 32), rng.uniform(6, 15)
+        m = np.clip((r - np.hypot((xx - px) * 0.8, yy - py)) / 4.0, 0, 1) * (blot > 0.5)
+        _paint(img, m, grey["base"] if rng.rand() < 0.6 else grey["shadow"], 0.55)
+    for _ in range(10):                                  # fine light flecks
+        px, py = cx + rng.uniform(-40, 40), cy + rng.uniform(-40, 40)
+        _paint(img, np.clip(1.4 - np.hypot(xx - px, yy - py) / 1.6, 0, 1) * (blot > 0.5), grey["light"], 0.6)
+    for _ in range(5):                                   # a few dim ember specks
+        px, py = cx + rng.uniform(-26, 26), cy + rng.uniform(-26, 26)
+        _paint(img, np.clip(1.4 - np.hypot(xx - px, yy - py) / 2.0, 0, 1) * (blot > 0.6), emb["shadow"], 0.95)
+        _paint(img, np.clip(1.2 - np.hypot(xx - px, yy - py) / 0.9, 0, 1) * (blot > 0.6), emb["base"], 0.9)
+    return _save_flat("ash_%d" % k, N, N, img, {"overlay": "ash", "variant": k, "tileable": False, "marking": True})
+
+
+def _g_extinguish(xx, yy, c):  # water drop
+    ring = np.abs(np.hypot(xx - c, yy - (c + 8)) - 13)
+    ring = np.where(yy > c + 2, ring, 1e9)
+    d = np.minimum(_seg(xx, yy, c, c - 22, c - 11, c + 2), _seg(xx, yy, c, c - 22, c + 11, c + 2))
+    return np.minimum(ring, d)
+
+
+def _g_start_fire(xx, yy, c):  # flame with an inner tongue
+    pts = [(c + 2, c - 24), (c + 14, c - 2), (c + 12, c + 14), (c, c + 22), (c - 12, c + 14), (c - 14, c - 2),
+           (c - 5, c - 9), (c + 2, c - 24)]
+    d = np.full(xx.shape, 1e9, np.float32)
+    for a, b in zip(pts, pts[1:]):
+        d = np.minimum(d, _seg(xx, yy, a[0], a[1], b[0], b[1]))
+    return np.minimum(d, _seg(xx, yy, c, c + 14, c, c + 8))
+
+
+def _g_pen_marker(xx, yy, c):  # post with a sign board carrying a small animal
+    d = _seg(xx, yy, c, c + 24, c, c + 8)
+    d = np.minimum(d, np.abs(_rbox(xx, yy, c, c - 7, 21, 14, 3)))
+    d = np.minimum(d, _seg(xx, yy, c - 9, c - 7, c + 7, c - 7))     # body
+    d = np.minimum(d, _seg(xx, yy, c - 9, c - 7, c - 9, c - 1))     # legs
+    return np.minimum(d, _seg(xx, yy, c + 7, c - 7, c + 7, c - 1))
+
+
+def _g_snow_clear(xx, yy, c):  # snowflake over a scraped line
+    d = np.full(xx.shape, 1e9, np.float32)
+    for a in (90, 30, -30):
+        r = np.radians(a)
+        dx, dy = np.cos(r) * 17, np.sin(r) * 17
+        d = np.minimum(d, _seg(xx, yy, c - dx, c - 4 - dy, c + dx, c - 4 + dy))
+    return np.minimum(d, _seg(xx, yy, c - 20, c + 20, c + 20, c + 20))
+
+
+def _g_home_auto(xx, yy, c):  # house with an auto-expanding plus
+    d = _g_house(xx + 5, yy - 4, c)
+    d = np.minimum(d, _seg(xx, yy, c + 21, c - 28, c + 21, c - 14))
+    return np.minimum(d, _seg(xx, yy, c + 14, c - 21, c + 28, c - 21))
+
+
+def _g_roof_area(xx, yy, c):  # roof chevron inside dashed corner brackets
+    d = _g_roof(xx, yy - 4, c)
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            x0, y0 = c + sx * 26, c + sy * 22
+            d = np.minimum(d, _seg(xx, yy, x0, y0, x0 - sx * 11, y0))
+            d = np.minimum(d, _seg(xx, yy, x0, y0, x0, y0 - sy * 9))
+    return d
+
+
 def build():
     t = _base_tokens()
     out = [_selection(t), _designation("designation_cut", t, _g_cut),
@@ -1471,7 +1556,14 @@ def build():
             _badge_icon("home", t, _g_home, (0.29, 0.50, 0.83)),
             _badge_icon("home_clear", t, _g_home_clear, t["danger"]),
             _badge_icon("plan", t, _g_plan, (0.72, 0.83, 0.94)),
-            _badge_icon("plan_clear", t, _g_plan_clear, t["danger"])]
+            _badge_icon("plan_clear", t, _g_plan_clear, t["danger"]),
+            _ash(0), _ash(1), _ash(2),
+            _badge_icon("extinguish", t, _g_extinguish, (0.40, 0.70, 0.95)),
+            _badge_icon("start_fire", t, _g_start_fire, (0.98, 0.58, 0.22)),
+            _badge_icon("pen_marker", t, _g_pen_marker, (0.78, 0.55, 0.32)),
+            _badge_icon("snow_clear", t, _g_snow_clear, (0.80, 0.90, 0.98)),
+            _badge_icon("home_auto", t, _g_home_auto, (0.29, 0.50, 0.83)),
+            _badge_icon("roof_area", t, _g_roof_area, (0.45, 0.65, 0.90))]
     out += [_biome_icon(k) for k in BIOMES]
     out += _ng1_icons()
     out += [_marriage_spot(f) for f in MARRIAGE_FACINGS] + [_party_spot(), _fight_lightning()]

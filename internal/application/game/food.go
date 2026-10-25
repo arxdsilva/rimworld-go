@@ -153,6 +153,9 @@ func (g *Game) bestFood(id entity.EntityID) (entity.EntityID, int, int) {
 		if owner, taken := g.reserve.EntityOwner(iid); taken && owner != id {
 			continue
 		}
+		if !g.inArea(id, st.X, st.Y) {
+			continue // areas.go: food outside the allowed area
+		}
 		pref := st.Kind.Preference()
 		d := pathing.Dist(pos.X, pos.Y, st.X, st.Y)
 		if pref > bestPref || pref == bestPref && (d < bestD || d == bestD && iid < best) {

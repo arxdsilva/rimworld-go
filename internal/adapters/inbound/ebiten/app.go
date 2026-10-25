@@ -490,6 +490,8 @@ func (a *App) applyClick(id string) {
 		a.renderer.toggleRoofOverlayIfAny()
 	case id == homeButtonID:
 		a.renderer.toggleHomeOverlayIfAny()
+	case id == homeAutoButtonID:
+		a.toggleHomeAuto() // home_auto_ui.go
 	case id == planButtonID:
 		a.renderer.togglePlanOverlayIfAny()
 	case id == roomsButtonID:

@@ -209,18 +209,13 @@ func (g *Game) nothingToEat(id entity.EntityID, a *animal.State, pos Position, n
 }
 
 // startRest beds an animal down (T6): a wild one beside a resting herd
-// mate when one is near, a tame one inside its pen, else where it stands.
+// mate when one is near, else where it stands (a tame one too: livestock
+// can't leave their pen, pens.go).
 func (g *Game) startRest(id entity.EntityID, a *animal.State, pos Position) {
 	a.Mode, a.Path, a.PathI = animal.Rest, nil, 0
 	a.Feed, a.FeedLeft = animal.FeedTarget{}, 0
 	if a.Tame {
-		if p, ok := g.nearestPen(pos); ok {
-			if at, _ := g.zones.At(pos.X, pos.Y); at != p {
-				gx, gy := g.penGoal(p)
-				g.animalGoTo(id, a, gx, gy)
-			}
-		}
-		return
+		return // livestock sleep in their pen or where they roam; pets where they are
 	}
 	if a.Herd == 0 {
 		return
@@ -333,25 +328,30 @@ func (g *Game) feedOnKill(by entity.EntityID, k *animal.State, corpse entity.Ent
 
 // --- the food search (plan 2.4) -------------------------------------------
 
-// pickFeed finds an animal's next meal and sets off for it: a penned tame
-// animal first eats its pen's grass and plants, then from the pen's
-// trough; anyone else the nearest food within animal.FeedRadius, by kind:
+// pickFeed finds an animal's next meal and sets off for it: a tame animal
+// in an enclosed pen first eats its pen's grass and plants, then from the
+// pen's troughs; anyone else (an area animal inside its allowed area) the
+// nearest food within animal.FeedRadius, by kind:
 // carcass, loose raw food (wild only), grass, wild plants, crops (wild
 // only), living trees (tree-eaters).
 func (g *Game) pickFeed(id entity.EntityID, a *animal.State, pos Position, now uint64) bool {
 	diet := animal.EcologyOf(a.Species).Diet
+	var allow func(x, y int) bool
 	if a.Tame {
-		if z, ok := g.zoneOf(zone.KindPen, pos.X, pos.Y); ok {
-			inPen := func(x, y int) bool { p, ok := g.zones.At(x, y); return ok && p == z.ID }
+		if m, c := g.penAt(pos.X, pos.Y); m != 0 { // pens.go
+			inPen := func(x, y int) bool { return g.inPenCells(c, x, y) }
 			if t, ok := g.findFeed(a, pos, diet, inPen); ok {
 				return g.startFeed(a, t, now)
 			}
-			if t, ok := g.penTrough(a, z.ID, pos, diet); ok { // trough_feed.go
+			if t, ok := g.penTrough(a, m, pos, diet); ok { // trough_feed.go
 				return g.startFeed(a, t, now)
 			}
 		}
+		if !penned(a) {
+			allow = func(x, y int) bool { return g.inArea(id, x, y) } // areas.go: an area animal eats inside it
+		}
 	}
-	if t, ok := g.findFeed(a, pos, diet, nil); ok {
+	if t, ok := g.findFeed(a, pos, diet, allow); ok {
 		return g.startFeed(a, t, now)
 	}
 	return false

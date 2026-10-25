@@ -118,7 +118,8 @@ func TestRegionsDoNotChangeState(t *testing.T) {
 }
 
 // TestFenceReachableUsesLayers: an animal's food filter follows the
-// fences (tame through the gate, wild not).
+// fences (a tame area animal through the gate; wild animals and, PLAY-015,
+// livestock not).
 func TestFenceReachableUsesLayers(t *testing.T) {
 	g := NewColony(Config{Seed: 2, Width: 40, Height: 30})
 	g.SetGround(0, 0, 39, 29, "soil", "", "")
@@ -133,7 +134,7 @@ func TestFenceReachableUsesLayers(t *testing.T) {
 		}
 	}
 	for _, tame := range []bool{true, false} {
-		a := animal.State{Tame: tame}
+		a := animal.State{Species: animal.Husky, Tame: tame}
 		ok := g.fenceReachable(&a, Position{X: 5, Y: 5})
 		if ok == nil {
 			t.Fatal("fences stand: want a filter")
@@ -147,5 +148,9 @@ func TestFenceReachableUsesLayers(t *testing.T) {
 		if ok(20, 3) {
 			t.Fatalf("tame=%v: food on a fence counted", tame)
 		}
+	}
+	cow := animal.State{Species: animal.Cow, Tame: true}
+	if ok := g.fenceReachable(&cow, Position{X: 5, Y: 5}); ok(30, 10) || !ok(10, 10) {
+		t.Fatal("livestock feed on their own side of a gate")
 	}
 }

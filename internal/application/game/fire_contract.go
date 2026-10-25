@@ -10,18 +10,19 @@ type FireView struct {
 	Size int // 1..100
 }
 
-// fireState is the active fires. Stub: FIRE-SIM.
+// fireState is the active fires (fire.go): fires sorted y then x, the
+// only saved part; rt holds derived lookups and recent lightning strikes
+// (fire.go, lightning.go), never saved.
 type fireState struct {
 	fires []fire.Fire
 	ver   uint64
+	rt    fireRuntime
 }
 
 // fireAt is the fire size on (x, y) (0: none).
 func (g *Game) fireAt(x, y int) int {
-	for _, f := range g.fire.fires {
-		if f.X == x && f.Y == y {
-			return int(f.Size)
-		}
+	if i := g.fireIndex(x, y); i >= 0 {
+		return int(g.fire.fires[i].Size)
 	}
 	return 0
 }
@@ -30,8 +31,5 @@ func (g *Game) fireAt(x, y int) int {
 // stepping onto (x, y) because of fire there. Stub: FIRE-JOBS fills it;
 // AREA-CORE wires it (with the area penalty) into the costed path query.
 func (g *Game) fireAvoidCost(x, y int) int {
-	if g.fireAt(x, y) > 0 {
-		return 1900
-	}
-	return 0
+	return g.fireDangerCost(x, y) // fire_danger.go
 }

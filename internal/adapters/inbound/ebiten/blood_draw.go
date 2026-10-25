@@ -270,7 +270,7 @@ func (r *Renderer) buildStains(b *stainBatch, w game.WorldView, sw, sh int, tile
 	var q [4]ebiten.Vertex
 	n := 0
 	for _, s := range w.Stains {
-		if s.Amount <= 0 {
+		if s.Amount <= 0 || s.Kind == ashKind { // ash is a sprite decal (fire_world_draw.go)
 			continue
 		}
 		l := stainLookOf(s)

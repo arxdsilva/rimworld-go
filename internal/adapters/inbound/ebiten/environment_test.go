@@ -887,11 +887,9 @@ func TestEnvironmentDrawsWithAndWithoutArt(t *testing.T) {
 	// puddles without their art, a lightning flash, the HUD label
 	w := game.WorldView{Weather: "storm", WeatherIntensity: 1, WindX: 2, WindY: -1, Wetness: 1, Season: "Fall"}
 	sim := &stubSim{w: 30, h: 20}
-	b := uint64(0)
-	for !lightningAt(w.Weather, w.WeatherIntensity, b) {
-		b++
-	}
+	b := uint64(7)
 	sim.tick = clock.Tick(b * lightningBucket)
+	w.Strikes = []game.StrikeView{{X: 3, Y: 4, Tick: uint64(sim.tick)}} // the sim's strike this tick
 	r := New(sim)
 	screen := ebiten.NewImage(640, 400)
 	for f := 0; f < 50; f++ {

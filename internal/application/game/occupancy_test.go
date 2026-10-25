@@ -530,7 +530,7 @@ func TestPathAroundUsesMoverQuery(t *testing.T) {
 	if !g.BuildNow("door", "wood", "east", 6, 5) {
 		t.Fatal("door not built")
 	}
-	wild, _ := g.SpawnAnimal("dustbuck", 3, 5)
+	wild, _ := g.SpawnAnimal("husky", 3, 5)
 	rebuild(g)
 	if _, ok := g.pathAround(wild, 9, 5); ok {
 		t.Fatal("a wild animal must not plan through a door")
@@ -540,6 +540,12 @@ func TestPathAroundUsesMoverQuery(t *testing.T) {
 	g.animals.Set(wild, a)
 	if p, ok := g.pathAround(wild, 9, 5); !ok || p[len(p)-1] != (pathing.Point{X: 9, Y: 5}) {
 		t.Fatalf("a tame animal uses the door: %v %v", p, ok)
+	}
+	// PLAY-015: livestock (tame or not) keep out of doors unless led
+	a.Species = animal.Cow
+	g.animals.Set(wild, a)
+	if _, ok := g.pathAround(wild, 9, 5); ok {
+		t.Fatal("a tame cow must not plan through a door on its own")
 	}
 	col := mustPawn(t, g, 3, 7)
 	rebuild(g)

@@ -259,6 +259,7 @@ type saveState struct {
 	SnowClear  []uint64
 	Fires      []fire.Fire
 	PenMarkers []penSave
+	PenAnimals []penAnimalSave
 	// Grass and GrassCut (UI-011); absent in older saves, which reseed.
 	Grass    []uint8
 	GrassCut [][2]int
@@ -384,11 +385,16 @@ func (g *Game) Save(w io.Writer, name string) error {
 	s.Stains, s.StainDrip = g.exportStains(), g.stains.dripN
 	s.Dirt, s.Carried = g.exportDirt()
 	s.Home, s.CleanWired = g.exportHome(), true
+	s.NoHomeAuto = g.homeArea.off
+	s.Snow, s.SnowClear = g.exportSnow() // snow_clear.go: nil without snow or an area
 	s.CleanQ, s.HomeVer = slices.Clone(g.filth.cleanQ), g.homeArea.ver
 	s.Plan = g.exportPlan() // plan.go
 	s.Fog = g.exportFog()   // fog.go (MAPGEN-2): nil without fog
 
 	s.Vaults = g.exportVaults() // vault.go (MAPGEN-3): nil without vaults
+	s.Fires = g.exportFires()   // fire.go (PLAY-015): nil while nothing burns
+	// pens.go (PLAY-015): marker settings, unpenned clocks
+	s.PenMarkers, s.PenAnimals = slices.Clone(g.pens), g.exportPenAnimals()
 	for id, e := range g.exposure {
 		s.Exposure[id] = [2]int{e.hypo, e.heat}
 	}
@@ -545,7 +551,11 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.importPlan(s.Plan)            // plan.go: older saves have no marks
 	g.importFog(s.Fog)              // fog.go: older saves have no fog
 	g.importVaults(s.Vaults)        // vault.go: older saves have no vaults
+	g.importFires(s.Fires)          // fire.go: older saves have no fires
 	g.importHome(s.Home, s.HomeVer) // home.go: an older save gets Home around its buildings
+	g.homeArea.off = s.NoHomeAuto
+	// snow_clear.go (PLAY-015): an older save seeds from its global depth
+	g.importSnow(s.Snow, s.SnowClear)
 	g.importDirt(s.Dirt, s.Carried) // filth.go
 	g.importCleanQ(s.CleanQ)        // filth.go: half-swept tiles stay queued
 	if !s.CleanWired {
@@ -586,6 +596,10 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	if !s.DoorsOriented {
 		g.orientDoors() // placement.go: an older save's doors take their walls' axis (PLAY-011)
 	}
+	// pens.go (PLAY-015): settings and clocks; an older save's painted
+	// pens become pen markers
+	g.importPens(s.PenMarkers, s.PenAnimals)
+	g.migratePenZones()
 	g.warmIndexes(true) // jobindex.go: indexes, rooms and regions now, not on the first tick
 	return g, info, nil
 }

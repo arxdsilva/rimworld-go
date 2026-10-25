@@ -592,6 +592,9 @@ type State struct {
 	// Dormant (MAPGEN-3): a sealed vault's sleeping defender; it neither
 	// thinks nor needs until the vault is breached or it is hurt.
 	Dormant bool
+	// NoFollow (PLAY-015): the player turned off following the drafted
+	// master (zero: a trained animal follows, as before).
+	NoFollow bool
 	// RetryAt: after a failed path search, no new search before this tick.
 	RetryAt uint64
 

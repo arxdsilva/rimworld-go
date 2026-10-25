@@ -282,16 +282,16 @@ func TestGrassRegrowsAsShootsAndFillsOut(t *testing.T) {
 func TestGrassGrowthPausesUnderSnowAndFrost(t *testing.T) {
 	for _, c := range []struct {
 		name string
-		set  func(g *Game)
+		set  func(g *Game, x, y int)
 	}{
-		{"snow", func(g *Game) { g.weather.SnowDepth = 0.5 }},
-		{"frost", func(g *Game) { g.climate = temperature.Climate{YearMean: -50} }},
+		{"snow", func(g *Game, x, y int) { g.setSnowCell(y*g.grid.Width()+x, 128) }}, // PLAY-015: the tile's own snow
+		{"frost", func(g *Game, _, _ int) { g.climate = temperature.Climate{YearMean: -50} }},
 	} {
 		g := mildGame()
 		x, y := grassTile(t, g, 2, 2, 20, 12)
 		regrowNow(t, g, x, y)
 		for i := 0; i < clock.TicksPerDay/climateInterval; i++ {
-			c.set(g) // snow would melt at 15 C: keep it lying
+			c.set(g, x, y) // snow would melt at 15 C: keep it lying
 			g.Step(climateInterval)
 		}
 		if got := g.grassGrowthAt(x, y); got != plant.GrassShoots {

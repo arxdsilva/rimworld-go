@@ -150,6 +150,7 @@ func (a *App) colonyButtons(sw, sh int) []button {
 	out = append(out, a.searchButtons(sw)...)
 	out = append(out, a.roofButtons(sw)...)
 	out = append(out, a.homeButtons(sw)...)
+	out = append(out, a.homeAutoButtons(sw)...) // home_auto_ui.go
 	out = append(out, a.planButtons(sw)...)
 	out = append(out, a.roomsButtons(sw)...)
 	out = append(out, a.groupButtons()...)
@@ -179,6 +180,7 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 	a.drawFormation(screen)   // formation.go
 	a.drawBoxSelect(screen)
 	a.drawArchitectGhost(screen)
+	a.drawPenOutline(screen)  // pen_draw.go: selected pen, or all while the Pen marker tool is held
 	a.drawMoveMarkers(screen) // move_mode.go: pending moves
 	a.drawMoveMode(screen)
 	drawPanel(screen, 0, 0, float32(sw), hudTopH)
@@ -200,6 +202,7 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 	drawLabel(screen, sw-int(textW(time, tsBody))-hudPad, 10, time)
 	a.drawRoofButton(screen, sw)
 	a.drawHomeButton(screen, sw)
+	a.drawHomeAutoButton(screen, sw) // home_auto_ui.go
 	a.drawPlanButton(screen, sw)
 	a.drawRoomsButton(screen, sw)
 
@@ -304,7 +307,7 @@ func (a *App) colonyChromeHit(mx, my, sw, sh int) bool {
 	if p, ok := a.selectedPawn(); ok && len(p.QueuedOrders) > 0 && !a.workOpen && orderQueueRect(len(p.QueuedOrders)).contains(mx, my) {
 		return true
 	}
-	if a.hasBuilding && !a.workOpen && !a.archOpen && buildingRect().contains(mx, my) {
+	if a.hasBuilding && !a.workOpen && !a.archOpen && a.buildingPanelRect().contains(mx, my) {
 		return true
 	}
 	if _, ok := a.selectedFrame(); ok && !a.workOpen && !a.archOpen && frameRect().contains(mx, my) {
@@ -538,6 +541,7 @@ func roofForced(archOpen bool, toolID string) bool { return archOpen && roofTool
 func (a *App) syncRoofForce() {
 	a.syncHomeForce()
 	a.syncPlanForce()
+	a.syncSnowClearForce() // snow_clear_draw.go (PLAY-015)
 	if a.renderer != nil {
 		a.renderer.roofOverlayForced = roofForced(a.archOpen, a.archTool)
 	}

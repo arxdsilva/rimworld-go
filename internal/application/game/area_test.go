@@ -8,7 +8,7 @@ import (
 )
 
 // areaGame is a bare 30x20 map with one colonist at (3, 3) restricted to
-// area 0, the strip x 0..9 (all rows).
+// area id 1 (index 0), the strip x 0..9 (all rows).
 func areaGame(t *testing.T) (*Game, entity.EntityID) {
 	t.Helper()
 	g := New(Config{Seed: 5, Width: 30, Height: 20})
@@ -16,10 +16,11 @@ func areaGame(t *testing.T) (*Game, entity.EntityID) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	g.Enqueue(command.Command{Kind: command.PaintArea, Index: 0, X: 0, Y: 0, X2: 9, Y2: 19, Enabled: true})
-	g.Enqueue(command.Command{Kind: command.AssignArea, Pawn: uint64(id), Index: 0})
+	g.Enqueue(command.Command{Kind: command.CreateArea})
+	g.Enqueue(command.Command{Kind: command.PaintArea, Index: 1, X: 0, Y: 0, X2: 9, Y2: 19, Enabled: true})
+	g.Enqueue(command.Command{Kind: command.AssignArea, Pawn: uint64(id), Index: 1})
 	g.ApplyPending()
-	if g.areaFor(id) != 0 {
+	if g.areaRef(id) != 1 {
 		t.Fatal("setup: pawn not restricted")
 	}
 	return g, id
@@ -28,10 +29,12 @@ func areaGame(t *testing.T) (*Game, entity.EntityID) {
 func TestAreaCommandsAndViews(t *testing.T) {
 	t.Parallel()
 	g, id := areaGame(t)
-	g.Enqueue(command.Command{Kind: command.RenameArea, Index: 0, Name: "  Inner yard  "})
-	g.Enqueue(command.Command{Kind: command.RenameArea, Index: 1, Name: "Fields"})
-	g.Enqueue(command.Command{Kind: command.RenameArea, Index: 5, Name: "skipped"})
-	g.Enqueue(command.Command{Kind: command.PaintArea, Index: 1, X: 20, Y: 0, X2: 21, Y2: 1, Enabled: true})
+	g.Enqueue(command.Command{Kind: command.RenameArea, Index: 1, Name: "  Inner yard  "})
+	g.Enqueue(command.Command{Kind: command.CreateArea, Name: "Fields"})
+	g.Enqueue(command.Command{Kind: command.RenameArea, Index: 5, Name: "skipped"}) // no such id
+	g.Enqueue(command.Command{Kind: command.RenameArea, Index: 2, Name: "   "})     // blank: kept
+	g.Enqueue(command.Command{Kind: command.PaintArea, Index: 2, X: 20, Y: 0, X2: 21, Y2: 1, Enabled: true})
+	g.Enqueue(command.Command{Kind: command.PaintArea, Index: 9, X: 0, Y: 0, X2: 29, Y2: 19, Enabled: true}) // no such id: ignored
 	g.ApplyPending()
 	v := g.Areas()
 	if len(v) != 2 || v[0].Name != "Inner yard" || v[0].Cells != 200 || v[1].Name != "Fields" || v[1].Cells != 4 {
@@ -39,11 +42,11 @@ func TestAreaCommandsAndViews(t *testing.T) {
 	}
 	g.Enqueue(command.Command{Kind: command.AssignArea, Pawn: uint64(id), Index: -1})
 	g.ApplyPending()
-	if g.AreaOf(id) != -1 || !g.inArea(id, 25, 5) {
+	if g.AreaOf(id) != command.AreaUnrestricted || !g.inArea(id, 25, 5) {
 		t.Fatal("unassigned pawn still restricted")
 	}
 	for i := 2; i < 12; i++ {
-		g.Enqueue(command.Command{Kind: command.PaintArea, Index: i, X: 0, Y: 0, X2: 0, Y2: 0, Enabled: true})
+		g.Enqueue(command.Command{Kind: command.CreateArea})
 	}
 	g.ApplyPending()
 	if n := len(g.Areas()); n != 10 {
@@ -76,15 +79,19 @@ func TestAreaRestrictedPawnNeverLeaves(t *testing.T) {
 	}
 }
 
-func TestAreaPathStaysInside(t *testing.T) {
+// PLAY-015: soft areas: the route keeps inside where that is not much
+// longer (four times the cost outside), and a cell outside is still
+// reachable (only destinations are filtered).
+func TestAreaPathPrefersArea(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 5, Width: 30, Height: 20})
 	id, _ := g.SpawnNamedPawn(1, 1, "Ada")
 	// a U: down the left, along the bottom, up the right
+	g.Enqueue(command.Command{Kind: command.CreateArea})
 	for _, r := range [][4]int{{0, 0, 2, 19}, {0, 17, 20, 19}, {18, 0, 20, 19}} {
-		g.Enqueue(command.Command{Kind: command.PaintArea, Index: 0, X: r[0], Y: r[1], X2: r[2], Y2: r[3], Enabled: true})
+		g.Enqueue(command.Command{Kind: command.PaintArea, Index: 1, X: r[0], Y: r[1], X2: r[2], Y2: r[3], Enabled: true})
 	}
-	g.Enqueue(command.Command{Kind: command.AssignArea, Pawn: uint64(id), Index: 0})
+	g.Enqueue(command.Command{Kind: command.AssignArea, Pawn: uint64(id), Index: 1})
 	g.ApplyPending()
 	path, ok := g.pathTo(id, 19, 1)
 	if !ok || len(path) < 40 {
@@ -95,8 +102,8 @@ func TestAreaPathStaysInside(t *testing.T) {
 			t.Fatalf("path leaves the area at %v", p)
 		}
 	}
-	if _, ok := g.pathTo(id, 10, 5); ok {
-		t.Fatal("a path to a cell outside the area")
+	if _, ok := g.pathTo(id, 10, 5); !ok || !g.reachable(id, 10, 5) {
+		t.Fatal("soft areas: a cell outside must stay reachable")
 	}
 	g.setDraft(id, true)
 	if path, ok := g.pathTo(id, 19, 1); !ok || len(path) > 25 {
@@ -139,7 +146,7 @@ func TestAreaSaveLoad(t *testing.T) {
 	g, id := areaGame(t)
 	g.Step(5) // a stepped game (a fresh one warms its indexes on load)
 	h := saveLoad(t, g)
-	if h.areaFor(id) != 0 || h.areas.Count(0) != 200 || h.StateHash() != g.StateHash() {
+	if h.areaRef(id) != 1 || h.areas.Count(0) != 200 || h.StateHash() != g.StateHash() {
 		t.Fatal("areas or assignments lost in the round trip")
 	}
 }

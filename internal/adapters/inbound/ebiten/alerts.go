@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"image/color"
 	"math"
+	"math/bits"
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -86,6 +87,9 @@ func buildAlerts(pawns []game.PawnView, w game.WorldView) []alert {
 		out = append(out, alert{key: "hostile", label: label, danger: true, targets: hostiles})
 	}
 
+	if al, ok := fireAlert(w); ok {
+		out = append(out, al)
+	}
 	out = append(out, animalAlerts(w)...)
 
 	var rescue, starving, collapsed, unhappy []game.PawnView
@@ -338,25 +342,64 @@ func animalAlerts(w game.WorldView) []alert {
 		}
 		out = append(out, alert{key: "timbergnaw", label: label, targets: gnaws})
 	}
-	for _, z := range w.Zones {
-		if z.Kind != game.ZonePen || len(z.Cells) == 0 {
+	out = append(out, penAlerts(w)...)
+	return out
+}
+
+// fireAlert is "Fire in the colony!" (PLAY-015) while any fire burns
+// inside Home; clicking cycles the burning Home cells.
+func fireAlert(w game.WorldView) (alert, bool) {
+	var at [][2]int
+	for _, f := range w.Fires {
+		if i := f.Y*w.TerrainW + f.X; f.X >= 0 && f.X < w.TerrainW && i >= 0 && i < len(w.Home) && w.Home[i] != 0 {
+			at = append(at, [2]int{f.X, f.Y})
+		}
+	}
+	if len(at) == 0 {
+		return alert{}, false
+	}
+	return alert{key: "fire", label: "Fire in the colony!", danger: true, targets: at}, true
+}
+
+// penAlerts are the pen alerts (PLAY-015): each open pen ("Pen 2 is
+// open"), each pen holding more tame animals than its cells / penFullDiv,
+// and the livestock with no pen ("Unpenned livestock: N").
+func penAlerts(w game.WorldView) []alert {
+	var out []alert
+	inBits := func(b []uint64, x, y int) bool {
+		i := y*w.TerrainW + x
+		return w.TerrainW > 0 && x >= 0 && x < w.TerrainW && i >= 0 && i>>6 < len(b) && b[i>>6]&(1<<(uint(i)&63)) != 0
+	}
+	for _, p := range w.Pens {
+		if !p.Enclosed {
+			out = append(out, alert{key: fmt.Sprintf("penopen.%d", p.ID), label: p.Name + " is open",
+				danger: true, targets: [][2]int{{p.X, p.Y}}})
 			continue
 		}
-		in := map[[2]int]bool{}
-		for _, c := range z.Cells {
-			in[c] = true
+		cells := 0
+		for _, word := range p.Bits {
+			cells += bits.OnesCount64(word)
 		}
 		var pos [][2]int
 		for _, an := range w.Animals {
-			if an.Tame && in[[2]int{an.X, an.Y}] {
+			if an.Tame && inBits(p.Bits, an.X, an.Y) {
 				pos = append(pos, [2]int{an.X, an.Y})
 			}
 		}
-		if len(pos) > len(z.Cells)/penFullDiv {
-			out = append(out, alert{key: fmt.Sprintf("penfull.%d", z.ID),
-				label:   fmt.Sprintf("Pen full: %d animals in a %d-tile pen", len(pos), len(z.Cells)),
+		if len(pos) > cells/penFullDiv {
+			out = append(out, alert{key: fmt.Sprintf("penfull.%d", p.ID),
+				label:   fmt.Sprintf("%s full: %d animals in %d tiles", p.Name, len(pos), cells),
 				targets: pos})
 		}
+	}
+	var roaming [][2]int
+	for _, an := range w.Animals {
+		if an.Penned && an.Pen == "Roaming" {
+			roaming = append(roaming, [2]int{an.X, an.Y})
+		}
+	}
+	if len(roaming) > 0 {
+		out = append(out, alert{key: "unpenned", label: fmt.Sprintf("Unpenned livestock: %d", len(roaming)), targets: roaming})
 	}
 	return out
 }

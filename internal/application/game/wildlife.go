@@ -406,12 +406,13 @@ func chebyshev(a, b Position) int {
 }
 
 // burst: an explosive animal dying at pos hurts every creature within 1.5
-// tiles (15 beside it, 10 diagonally) and leaves a stamp for the renderer.
-// The fire domain has no ignition yet, so nothing catches fire.
+// tiles (15 beside it, 10 diagonally) and leaves a stamp for the renderer;
+// its cell and the burnable cells around it catch fire (fire.go).
 func (g *Game) burst(s animal.Species, pos Position) {
 	now := uint64(g.clock.Now())
 	g.wl.Bursts = append(g.wl.Bursts, burstStamp{X: pos.X, Y: pos.Y, Tick: now, Species: s})
 	g.message(pos.X, pos.Y, "The %s burst into flames!", s.Label())
+	g.igniteBurst(pos.X, pos.Y) // fire.go (PLAY-015)
 	var hit []entity.EntityID
 	g.within(pos.X, pos.Y, 1, ckAll, func(id entity.EntityID, _ Position) { hit = append(hit, id) })
 	for _, id := range hit {

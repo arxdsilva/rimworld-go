@@ -119,7 +119,7 @@ func (g *Game) actionOf(id entity.EntityID, j job.Record) string {
 		return ActionBuild
 	case job.Breach:
 		return ActionBreach
-	case job.Clean:
+	case job.Clean, job.ClearSnow: // snow_clear.go: shovelling reads as sweeping
 		return ActionClean
 	}
 	return ""
@@ -192,8 +192,8 @@ func (g *Game) workTotal(id entity.EntityID, j job.Record) int {
 		return roof.RemoveWork
 	case job.Refuel:
 		return refuelWork
-	case job.Clean:
-		return j.Count // set from the tile's filth when the job starts
+	case job.Clean, job.ClearSnow:
+		return j.Count // set from the tile's filth (or snow) when the job starts
 	case job.Bill:
 		if bills := g.bills[j.Dest]; j.BillIndex < len(bills) {
 			return recipe.DefOf(bills[j.BillIndex].Recipe).Work

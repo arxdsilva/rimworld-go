@@ -7,7 +7,6 @@ import (
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
-	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
@@ -51,18 +50,11 @@ func troughFeeds(f uint8, k item.Kind) bool {
 	return false
 }
 
-// troughPen is the pen trough b serves: the one holding its tile or a
-// neighbouring cell (lowest id first).
-func (g *Game) troughPen(b construction.Building) (zone.ID, bool) {
-	best, found := zone.ID(0), false
-	for dy := -1; dy <= 1; dy++ {
-		for dx := -1; dx <= 1; dx++ {
-			if z, ok := g.zoneOf(zone.KindPen, b.X+dx, b.Y+dy); ok && (!found || z.ID < best) {
-				best, found = z.ID, true
-			}
-		}
-	}
-	return best, found
+// troughPen is the enclosed pen trough b serves (pens.go troughMarker):
+// the one holding its tile or a neighbouring cell (lowest marker first).
+func (g *Game) troughPen(b construction.Building) (entity.EntityID, bool) {
+	m, _ := g.troughMarker(b)
+	return m, m != 0
 }
 
 // trough is trough id's state, created on first use with the filter its
@@ -82,7 +74,7 @@ func (g *Game) trough(id entity.EntityID) troughState {
 					continue
 				}
 				p, _ := g.positions.Get(aid)
-				if z, in := g.zones.At(p.X, p.Y); in && z == pen {
+				if g.inPenCells(g.penRegion(pen), p.X, p.Y) {
 					d := animal.EcologyOf(a.Species).Diet
 					plants = plants || d.Plants()
 					meat = meat || d == animal.Carnivore
@@ -247,7 +239,7 @@ func (g *Game) fillTroughs(id entity.EntityID) bool {
 
 // penTrough is the nearest trough of pen holding feed for diet, as a feed
 // target.
-func (g *Game) penTrough(a *animal.State, pen zone.ID, pos Position, diet animal.Diet) (animal.FeedTarget, bool) {
+func (g *Game) penTrough(a *animal.State, pen entity.EntityID, pos Position, diet animal.Diet) (animal.FeedTarget, bool) {
 	var best animal.FeedTarget
 	bestD, found := 1<<30, false
 	for _, bid := range g.bldgIDs {

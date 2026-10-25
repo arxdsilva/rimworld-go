@@ -39,6 +39,8 @@ func workTypeOf(c command.WorkType) (work.Type, bool) {
 		return work.Handle, true
 	case command.WorkWarden:
 		return work.Warden, true
+	case command.WorkFirefight:
+		return work.Firefight, true // firefight.go
 	}
 	return 0, false
 }
@@ -96,6 +98,8 @@ func (g *Game) assignWorkType(id entity.EntityID, t work.Type) bool {
 		return false // skills.go: incapable work is never assigned
 	}
 	switch t {
+	case work.Firefight:
+		return g.assignFightFire(id) // firefight.go
 	case work.Doctor:
 		// tending first, then animals and operations, then doctoring bills
 		// (refining medicine) at a bench
@@ -112,7 +116,7 @@ func (g *Game) assignWorkType(id entity.EntityID, t work.Type) bool {
 	case work.Hunt:
 		return g.assignHunt(id)
 	case work.Handle: // SIM-026: taming moved here from Hunt
-		return g.assignTame(id) || g.assignTrain(id) || g.assignCollect(id) // bonds.go, animal_products.go
+		return g.assignRope(id) || g.assignTame(id) || g.assignTrain(id) || g.assignCollect(id) // rope.go, bonds.go, animal_products.go
 	case work.Grow:
 		if g.woodLow() && g.assignCut(id) {
 			return true // short of wood: designated trees come first
@@ -123,7 +127,7 @@ func (g *Game) assignWorkType(id entity.EntityID, t work.Type) bool {
 	case work.Research:
 		return g.assignResearch(id)
 	case work.Clean:
-		return g.assignClean(id) // clean.go
+		return g.assignClean(id) || g.assignClearSnow(id) // clean.go, snow_clear.go
 	}
 	return false
 }

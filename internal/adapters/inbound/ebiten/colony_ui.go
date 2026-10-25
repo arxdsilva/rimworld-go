@@ -30,4 +30,6 @@ func (a *App) colonyUI(sw, sh int) {
 	a.worldTabUI(sw, sh) // world_ui.go: World tab, caravans (ENG-003)
 	a.workTipsUI(sw, sh)
 	a.statusChipsUI(sw)
+	a.animalsTabUI(sw, sh)    // animals_ui.go: Area / Pen dropdowns
+	a.areaSelectorsUI(sw, sh) // area_select.go: Schedule column, inspector line, overlay sync
 }

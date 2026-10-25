@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"rimworld-go/internal/domain/animal"
-	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/clock"
@@ -379,8 +378,8 @@ func (g *Game) layEgg(id entity.EntityID, a *animal.State, now uint64) {
 	pos, _ := g.positions.Get(id)
 	x, y := pos.X, pos.Y
 	if a.Tame {
-		if z, ok := g.zoneOf(zone.KindPen, x, y); ok {
-			x, y = g.eggBox(z.ID, x, y)
+		if m, _ := g.penAt(x, y); m != 0 { // pens.go
+			x, y = g.eggBox(m, x, y)
 		}
 	}
 	kind := item.Egg
@@ -400,7 +399,7 @@ func (g *Game) layEgg(id entity.EntityID, a *animal.State, now uint64) {
 
 // eggBox is where a hen in pen lays: the walkable pen cell nearest the
 // pen's trough (the one nearest (x, y)), else (x, y).
-func (g *Game) eggBox(pen zone.ID, x, y int) (int, int) {
+func (g *Game) eggBox(pen entity.EntityID, x, y int) (int, int) {
 	var tb Position
 	bestD, found := 1<<30, false
 	for _, bid := range g.bldgIDs {
@@ -419,14 +418,16 @@ func (g *Game) eggBox(pen zone.ID, x, y int) (int, int) {
 		return x, y
 	}
 	bx, by, bestD := x, y, 1<<30
-	g.zones.EachCell(pen, func(cx, cy int) bool {
-		if (cx != tb.X || cy != tb.Y) && g.grid.Walkable(cx, cy) {
-			if d := weapon.Distance(tb.X, tb.Y, cx, cy); d < bestD {
-				bx, by, bestD = cx, cy, d
+	c := g.penRegion(pen)
+	for cy := tb.Y - 2; cy <= tb.Y+2 && bestD > 1; cy++ {
+		for cx := tb.X - 2; cx <= tb.X+2 && bestD > 1; cx++ {
+			if (cx != tb.X || cy != tb.Y) && g.inPenCells(c, cx, cy) {
+				if d := weapon.Distance(tb.X, tb.Y, cx, cy); d < bestD {
+					bx, by, bestD = cx, cy, d
+				}
 			}
 		}
-		return bestD > 1
-	})
+	}
 	return bx, by
 }
 

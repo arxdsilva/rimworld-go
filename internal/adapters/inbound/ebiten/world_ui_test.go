@@ -97,47 +97,32 @@ func TestFormCaravanDialog(t *testing.T) {
 	}
 }
 
-func TestAssignAreaColumnAndManager(t *testing.T) {
+// The Assign tab no longer has an Area column (areas live in Schedule and
+// Animals); its "Manage areas" button still opens the manager.
+func TestAssignTabHasNoAreaColumnAndOpensManager(t *testing.T) {
 	t.Parallel()
 	s := worldStub()
-	s.areas = []game.AreaView{{Index: 0, Name: "Yard", Cells: 40}, {Index: 1, Name: "Fields", Cells: 9}}
-	s.area = map[entity.EntityID]int{1: 0}
+	s.areas = []game.AreaView{{Index: 0, ID: 1, Name: "Yard", Cells: 40}, {Index: 1, ID: 2, Name: "Fields", Cells: 9}}
+	s.area = map[entity.EntityID]int{1: 1}
 	a, f := colonyApp(t, s.stubSim)
 	a.renderer.game = s
 	a.openAssign()
 	f.frame(t, a)
-	if w, _ := a.uiSt().find("assign.area.1"); w.label != "Yard" {
-		t.Fatalf("Ada's area button %q", w.label)
+	if hasWidget(a, "assign.area.1") {
+		t.Fatal("the Assign tab still has an Area button")
 	}
-	press(t, a, f, "assign.area.1")
-	if n := len(s.cmds); n != 1 || s.cmds[0].Kind != command.AssignArea || s.cmds[0].Pawn != 1 || s.cmds[0].Index != 1 {
-		t.Fatalf("commands %+v, want Ada to area 1", s.cmds)
+	if !hasWidget(a, assignDrugID(1)) {
+		t.Fatal("the drug policy column is gone")
 	}
 	press(t, a, f, "assign.areas")
 	f.frame(t, a)
-	if a.uiModalTop() != areasModalID || !hasWidget(a, "areas.name.1") {
+	if a.uiModalTop() != areasModalID || !hasWidget(a, "areas.name.2") {
 		t.Fatalf("area manager not open: %q", a.uiModalTop())
-	}
-	press(t, a, f, "areas.paint.1")
-	if a.areaPaintIndex() != 1 {
-		t.Fatal("Paint did not pick the area")
-	}
-	press(t, a, f, "modal."+areasModalID+".areas.new")
-	last := s.cmds[len(s.cmds)-1]
-	if last.Kind != command.RenameArea || last.Index != 2 || last.Name != "Area 3" {
-		t.Fatalf("New area emitted %+v", last)
 	}
 }
 
 func TestAreaHelpers(t *testing.T) {
 	t.Parallel()
-	areas := []game.AreaView{{Index: 0, Name: "A"}, {Index: 1, Name: "B"}}
-	if nextArea(areas, -1) != 0 || nextArea(areas, 0) != 1 || nextArea(areas, 1) != -1 || nextArea(nil, -1) != -1 {
-		t.Fatal("area cycle")
-	}
-	if areaLabel(areas, 1) != "B" || areaLabel(areas, -1) != "Unrestricted" {
-		t.Fatal("area labels")
-	}
 	if memberList([]entity.EntityID{3, 12}) != "3,12" {
 		t.Fatal("member list")
 	}

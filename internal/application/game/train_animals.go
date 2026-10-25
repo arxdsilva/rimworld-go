@@ -146,6 +146,17 @@ func (g *Game) trainable(id entity.EntityID, a *animal.State, now uint64) bool {
 }
 
 // cmdSetTraining turns training skill on or off for animal.
+// cmdSetAnimalFollow sets whether tame animal id follows its drafted
+// master (PLAY-015).
+func (g *Game) cmdSetAnimalFollow(id entity.EntityID, on bool) {
+	a, ok := g.animals.Get(id)
+	if !ok || !a.Tame {
+		return
+	}
+	a.NoFollow = !on
+	g.animals.Set(id, a)
+}
+
 func (g *Game) cmdSetTraining(id entity.EntityID, s int, on bool) {
 	a, ok := g.animals.Get(id)
 	if !ok || !a.Tame || s < 0 || s >= int(training.NumSkills) || !canLearn(a.Species, training.Skill(s)) {
@@ -251,7 +262,7 @@ func (g *Game) trainSession(trainer, id entity.EntityID, a *animal.State, s trai
 // master, walking up to them once they are more than followFar away. It
 // reports true while it follows.
 func (g *Game) followMaster(id entity.EntityID, a *animal.State, pos Position, now uint64) bool {
-	if a.Master == 0 || !a.Tame || !trainLearned(*a, training.Obedience, now) &&
+	if a.Master == 0 || !a.Tame || a.NoFollow || !trainLearned(*a, training.Obedience, now) &&
 		!trainLearned(*a, training.Guard, now) && !trainLearned(*a, training.Release, now) {
 		return false
 	}

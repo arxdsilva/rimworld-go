@@ -169,6 +169,9 @@ func (a *App) buildingButtons() []button {
 	if !ok || a.workOpen || a.archOpen {
 		return nil
 	}
+	if isPenMarker(b) { // pen_ui.go: the pen marker's own panel
+		return a.penButtons(b)
+	}
 	r := buildingRect()
 	out := []button{{id: "bldg.close", label: "X", x: r.x + r.w - 28, y: r.y + 6, w: 22, h: 22}}
 	if b.Kind == steamVentKind {
@@ -207,6 +210,10 @@ func (a *App) buildingButtons() []button {
 func (a *App) drawBuildingInspector(screen *ebiten.Image) {
 	b, ok := a.selectedBuilding()
 	if !ok || a.workOpen || a.archOpen {
+		return
+	}
+	if isPenMarker(b) { // pen_ui.go
+		a.drawPenPanel(screen, b)
 		return
 	}
 	r := buildingRect()
@@ -359,7 +366,7 @@ func (a *App) applyBuildingClick(id string) {
 			X2: b.X + max(b.W, 1) - 1, Y2: b.Y + max(b.H, 1) - 1})
 		return
 	}
-	if a.applyTroughClick(id, b) || a.applyBedClick(id, b) || a.applyCasketClick(id, b) {
+	if a.applyTroughClick(id, b) || a.applyBedClick(id, b) || a.applyCasketClick(id, b) || a.applyPenClick(id, b) {
 		return
 	}
 	switch id {

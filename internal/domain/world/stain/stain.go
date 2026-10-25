@@ -11,11 +11,15 @@ type Kind uint8
 const (
 	Blood Kind = iota // creatures and people
 	Ichor             // hive insects
+	Ash               // what a fire leaves (PLAY-015, appended)
 )
 
 func (k Kind) String() string {
-	if k == Ichor {
+	switch k {
+	case Ichor:
 		return "ichor"
+	case Ash:
+		return "ash"
 	}
 	return "blood"
 }

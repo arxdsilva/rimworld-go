@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/terrain"
@@ -198,6 +199,15 @@ func (g *Game) strikeRoll(attacker, target entity.EntityID, wk weapon.Kind, roll
 
 // hurt applies damage to an animal or a colonist.
 func (g *Game) hurt(target entity.EntityID, dmg int, by entity.EntityID) {
+	g.hurtAs(target, dmg, by, woundByAttacker, health.CauseInjury)
+}
+
+// woundByAttacker: hurtAs picks the wound kind from the attacker's weapon.
+const woundByAttacker body.WoundKind = 255
+
+// hurtAs is hurt with a wound kind for humanlikes (fire.go: burns) and the
+// cause of death should it kill.
+func (g *Game) hurtAs(target entity.EntityID, dmg int, by entity.EntityID, kind body.WoundKind, cause health.Cause) {
 	now := uint64(g.clock.Now())
 	if a, ok := g.animals.Get(target); ok {
 		a.Injury += dmg
@@ -217,7 +227,10 @@ func (g *Game) hurt(target entity.EntityID, dmg int, by entity.EntityID) {
 	}
 	b := g.ensureBody(target, &v) // body.go: a humanlike takes a wound on a part
 	if b != nil && dmg > 0 {
-		g.woundBody(b, dmg, g.woundKindBy(by), now)
+		if kind == woundByAttacker {
+			kind = g.woundKindBy(by)
+		}
+		g.woundBody(b, dmg, kind, now)
 		g.bodyChanged(target, b, &v) // Injury = the body's damage
 	} else {
 		v.Injury += dmg
@@ -229,7 +242,7 @@ func (g *Game) hurt(target entity.EntityID, dmg int, by entity.EntityID) {
 	}
 	switch {
 	case v.Injury >= health.MaxHP || b != nil && b.VitalLost():
-		g.dieBy(target, health.CauseInjury, by)
+		g.dieBy(target, cause, by)
 	case v.Injury >= g.downedAt(target) && v.Status == health.Alive: // skills.go: pain tolerance
 		g.down(target, health.CauseInjury)
 	case v.Status == health.Alive && unconscious(b): // body.go: knocked out by pain or a head wound
@@ -302,8 +315,13 @@ func (g *Game) doCombat(id entity.EntityID, j job.Record, now uint64) {
 		ok = a.Designated
 	}
 	if !ok {
+		g.clearHuntOut(id) // area_dest.go
 		j.State, j.Path = job.Complete, nil
 		g.jobs.Set(id, j)
+		return
+	}
+	if j.Kind == job.Hunt && g.huntGivenUp(id, j, tp, now) { // area_dest.go: the prey stayed out of the area
+		g.abandonHunt(id, j)
 		return
 	}
 	pos, _ := g.positions.Get(id)

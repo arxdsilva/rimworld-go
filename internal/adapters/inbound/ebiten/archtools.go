@@ -68,30 +68,32 @@ var archTools = []archTool{
 		desc: "Mark animals for hunters. Hunters need a rifle; kills drop meat."},
 	{id: "tame", label: "Tame", category: "orders", icon: "order_tame", mode: placeArea, cmd: command.DesignateTame,
 		desc: "Mark animals for taming. Hunters coax them; a failed try can enrage the animal. Tame wolves guard the colony."},
-	{id: "pen", label: "Animal pen", category: "zones", icon: "zone_pen", mode: placeArea, cmd: command.DesignatePen,
-		desc: "Tame animals live inside pens (without one they stay near the colony)."},
 	{id: "stockpile", label: "Stockpile", category: "zones", icon: "zone_stockpile", mode: placeArea, cmd: command.DesignateStockpile,
 		desc: "Storage area. Haulers bring food and wood here."},
 	{id: "grow", label: "Growing zone", category: "zones", icon: "zone_grow", mode: placeArea, cmd: command.DesignateGrowZone,
 		crop: "potato", desc: "Pick a crop or trees below. Colonists sow it and harvest when ripe; crops grow in daylight, faster on rich soil."},
-	{id: "home", label: "Home", category: "zones", icon: "home", mode: placeArea, cmd: command.DesignateHome, enable: true,
+	{id: "home", label: "Expand home area", category: "zones", icon: "home", mode: placeArea, cmd: command.DesignateHome, enable: true,
 		desc: "Paint the Home area: colonists sweep dirt off these tiles. It grows around new buildings."},
-	{id: "unhome", label: "Clear home", category: "zones", icon: "home_clear", mode: placeArea, cmd: command.DesignateHome,
+	{id: "unhome", label: "Clear home area", category: "zones", icon: "home_clear", mode: placeArea, cmd: command.DesignateHome,
 		desc: "Take tiles out of the Home area so colonists leave them dirty."},
-	{id: "allowed_area", label: "Allowed area", category: "zones", icon: "colonist", mode: placeArea, cmd: command.PaintArea, enable: true,
-		desc: "Paint an allowed area (pick which in Assign → Manage areas). Colonists restricted to it work, eat and idle only inside it."},
-	{id: "allowed_area_clear", label: "Clear allowed area", category: "zones", icon: "home_clear", mode: placeArea, cmd: command.PaintArea,
-		desc: "Take tiles out of the picked allowed area."},
+	{id: "roof", label: "Build roof area", category: "zones", icon: "roof_area", mode: placeArea, cmd: command.DesignateRoof,
+		desc: "Colonists roof these tiles and rebuild the roof if it falls. A roof needs a wall within 6 tiles; closed rooms are roofed automatically."},
+	{id: "noroof", label: "Remove roof area", category: "zones", icon: "roof_remove", mode: placeArea, cmd: command.DesignateRemoveRoof,
+		desc: "Take roofs down and keep them off, even in closed rooms."},
+	{id: "snow_clear", label: "Snow clearing area", category: "zones", icon: "snow_clear", mode: placeArea, cmd: command.DesignateSnowClear, enable: true,
+		desc: "Paint where colonists shovel snow away once it lies 15% deep: paths, yards, a landing spot. Cleaning work."},
+	{id: "unsnow_clear", label: "Clear snow clearing area", category: "zones", icon: "snow_clear", mode: placeArea, cmd: command.DesignateSnowClear,
+		desc: "Take tiles out of the snow clearing area; their snow is left to lie."},
+	{id: "allowed_area", label: "Expand allowed area >", category: "zones", icon: "colonist", mode: placeArea, cmd: command.PaintArea, enable: true,
+		desc: "Pick an allowed area, then drag to paint it. Pawns restricted to it keep to it; Manage allowed areas makes, renames and deletes them."},
+	{id: "allowed_area_clear", label: "Clear allowed area >", category: "zones", icon: "home_clear", mode: placeArea, cmd: command.PaintArea,
+		desc: "Pick an allowed area, then drag to take tiles out of it."},
 	{id: "wall", label: "Wall", category: "structure", icon: "wall", mode: placeLine, build: "wall",
 		desc: "Blocks movement. Drag to draw a line."},
 	{id: "fence", label: "Fence", category: "structure", icon: "fence", mode: placeLine, build: "fence",
 		desc: "Animals can't cross; colonists climb over (slow). Drag to draw a line."},
 	{id: "fence_gate", label: "Fence gate", category: "structure", icon: "fence_gate", mode: placeSingle, build: "fence gate",
 		desc: "Animals can't cross; colonists climb over (slow). A gate lets colonists and tame animals through. Faces along the fence by itself."},
-	{id: "roof", label: "Build roof", category: "structure", icon: "roof_build", mode: placeArea, cmd: command.DesignateRoof,
-		desc: "Colonists roof these tiles. A roof needs a wall within 6 tiles; closed rooms are roofed automatically."},
-	{id: "noroof", label: "Remove roof", category: "structure", icon: "roof_remove", mode: placeArea, cmd: command.DesignateRemoveRoof,
-		desc: "Take roofs down and keep them off, even in closed rooms."},
 	{id: "door", label: "Door", category: "structure", icon: "door", mode: placeSingle, build: "door",
 		desc: "Lets colonists through a wall. Faces along the wall by itself."},
 	{id: "floor", label: "Wood floor", category: "structure", icon: "floor", mode: placeFill, build: "floor",
@@ -150,6 +152,8 @@ var archTools = []archTool{
 		desc: "Steeps ashleaf into tea and presses spark tablets (2x1). Select it to add bills. Q/E rotates."},
 	{id: "marriage_spot", label: "Marriage spot", category: "misc", icon: "marriage_spot", mode: placeSingle, build: "marriage spot",
 		desc: "Where engaged couples hold their wedding (2x1). Free and instant. Q/E rotates."},
+	{id: "pen_marker", label: "Pen marker", category: "misc", icon: "pen_marker", mode: placeSingle, build: "pen marker",
+		desc: "Marks a pen: the area fenced in around it. Fence it in, then pick which animals it takes, its food and plants to cut when you select it."},
 	{id: "party_spot", label: "Party spot", category: "misc", icon: "party_spot", mode: placeSingle, build: "party spot",
 		desc: "Where the colony gathers for parties. Free and instant."},
 }
@@ -347,6 +351,8 @@ func buildSprite(kind, facing string, mask int, ew, open bool) string {
 		return "structure/pod_shell"
 	case steamVentKind:
 		return "structure/steam_vent"
+	case "pen marker":
+		return "structure/pen_marker"
 	}
 	return ""
 }

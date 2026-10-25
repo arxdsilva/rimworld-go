@@ -5,54 +5,59 @@ import (
 	"strings"
 	"sync"
 
+	ebiten "github.com/hajimehoshi/ebiten/v2"
+
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
-// The allowed-area manager (MAIN_UI_SCREENS §18 ENG-003 contract): the
-// colony's areas (name, cell count) with a rename field each, the area
-// the Architect's "Allowed area" tools paint, and "New area" (disabled at
-// the cap). Opened from the Assign tab. Reads Simulation.Areas; emits
-// RenameArea (a new area is the next index, so named).
+// The allowed-area manager (PLAY-015 §1.3): a centred modal listing the
+// colony's areas: colour swatch, inline rename, cell count, Invert and a
+// red X Delete (with a confirm when colonists or animals use the area),
+// then "New area" (disabled at the cap) and "Close". Reachable from the
+// Architect submenu, the Schedule, Animals and Assign tabs (every caller
+// uses a.openAreaManager). Reads Simulation.Areas; emits Create/Rename/
+// Invert/DeleteArea by area id.
 
 const (
 	areasModalID = "colony.areas"
-	areasW       = 520
+	areasW       = 600
 	areasH       = 460
 	areasRowH    = 34
 	areasMax     = 10 // area.MaxAreas
 	areasEmpty   = "No areas: add one to restrict where colonists go."
 	areasCapWhy  = "A colony has at most 10 areas."
+	areasConfirm = "colony.areas.confirm"
 )
 
-// areaPaint is the area each App's Architect area tools paint (an App's
-// presentation choice, not simulation state).
+// areaPaint is the area id each App's Architect area tools paint (an
+// App's presentation choice, not simulation state).
 var areaPaint = struct {
 	sync.Mutex
 	m map[*App]int
 }{m: map[*App]int{}}
 
-// areaPaintIndex is the area the Architect's area tools paint now: the
-// one picked in the manager, else the first.
+// areaPaintIndex is the id of the area the Architect's area tools paint
+// now: the one chosen in the submenu.
 func (a *App) areaPaintIndex() int {
 	areaPaint.Lock()
 	defer areaPaint.Unlock()
 	return areaPaint.m[a]
 }
 
-func (a *App) setAreaPaint(i int) {
+func (a *App) setAreaPaint(id int) {
 	areaPaint.Lock()
-	areaPaint.m[a] = i
+	areaPaint.m[a] = id
 	areaPaint.Unlock()
 }
 
-// openAreas opens the area manager.
-func (a *App) openAreas() {
+// openAreaManager opens the area manager (exported for the Animals tab).
+func (a *App) openAreaManager() {
 	if a.renderer == nil {
 		return
 	}
-	names := map[int]string{}
+	names := map[int]*string{}
 	a.uiPushModal(modal{
 		id: areasModalID, title: "Allowed areas", w: areasW, h: areasH,
 		draw: func(a *App, body rect) { a.areasBody(body, names) },
@@ -68,85 +73,121 @@ func (a *App) openAreas() {
 	})
 }
 
-// newArea makes the next area ("Area N") and picks it for painting.
+// newArea asks for a new empty area ("Area N").
 func (a *App) newArea() {
 	n := len(a.renderer.game.Areas())
 	if n >= areasMax {
 		return
 	}
-	a.renderer.enqueue(command.Command{Kind: command.RenameArea, Index: n, Name: fmt.Sprintf("Area %d", n+1)})
-	a.setAreaPaint(n)
+	a.renderer.enqueue(command.Command{Kind: command.CreateArea, Name: fmt.Sprintf("Area %d", n+1)})
 }
 
-// areasBody declares one row per area: rename field, cell count, Paint.
-func (a *App) areasBody(body rect, names map[int]string) {
+// areaUsers counts the colonists and animals whose allowed area is id.
+func (a *App) areaUsers(id int) int {
+	n := 0
+	rd, ok := a.renderer.game.(areaReader)
+	if ok {
+		for _, p := range a.renderer.snapshot() {
+			if p.Status != "dead" && areaRef(rd.AreaOf(p.ID)) == id {
+				n++
+			}
+		}
+	}
+	for _, an := range a.renderer.world().Animals {
+		if an.Tame && !an.Penned && areaRef(an.AreaRef) == id {
+			n++
+		}
+	}
+	return n
+}
+
+// deleteArea deletes area ar, asking first when pawns use it.
+func (a *App) deleteArea(ar game.AreaView) {
+	del := func() {
+		a.renderer.enqueue(command.Command{Kind: command.DeleteArea, Index: int(ar.ID)})
+	}
+	n := a.areaUsers(int(ar.ID))
+	if n == 0 {
+		del()
+		return
+	}
+	who := fmt.Sprintf("%d colonists and animals use", n)
+	if n == 1 {
+		who = "1 colonist or animal uses"
+	}
+	a.uiConfirm(areasConfirm, "Delete area",
+		fmt.Sprintf("%s \"%s\". Deleting it makes them unrestricted.", who, ar.Name), "Delete", true, del)
+}
+
+// areasBody declares one row per area.
+func (a *App) areasBody(body rect, names map[int]*string) {
 	areas := a.renderer.game.Areas()
 	head, rest := body.splitV(28)
-	a.uiLabel(head.X, head.Y, "Architect → Zones → Allowed area paints the picked area.", withColor(tsSmall, uiTextDim))
+	a.uiLabel(head.X, head.Y, "Architect > Zones > Expand allowed area paints one.", withColor(tsSmall, uiTextDim))
 	if len(areas) == 0 {
 		a.uiLabel(rest.X, rest.Y+4, areasEmpty, dimText())
 		return
 	}
-	paint := a.areaPaintIndex()
-	area := a.uiScrollArea("areas.list", rest, float32(len(areas)*areasRowH), scrollOpts{Step: areasRowH * 2})
-	y := area.View.Y - area.Off
+	sa := a.uiScrollArea("areas.list", rest, float32(len(areas)*areasRowH), scrollOpts{Step: areasRowH * 2})
+	y := sa.View.Y - sa.Off
 	for _, ar := range areas {
-		rr := rect{area.View.X, y, area.View.W - 4, areasRowH - 6}
+		rr := rect{sa.View.X, y, sa.View.W - 4, areasRowH - 6}
 		y += areasRowH
-		if rr.Y < area.View.Y || rr.bottom() > area.View.bottom() {
+		if rr.Y < sa.View.Y || rr.bottom() > sa.View.bottom() {
 			continue
 		}
-		v, ok := names[ar.Index]
-		if !ok {
-			v = ar.Name
+		id := int(ar.ID)
+		tint := areaTint(ar)
+		a.uiSt().queue(func(dst *ebiten.Image) {
+			uiFillRect(dst, rr.X, rr.Y+3, 20, rr.H-6, tint, false)
+			uiStrokeRect(dst, rr.X, rr.Y+3, 20, rr.H-6, 1, uiPanelBorder, false)
+		})
+		// The field edits a value that outlives the frame; it follows the
+		// game's name whenever it is not being edited.
+		fid := fmt.Sprintf("areas.name.%d", id)
+		v := names[id]
+		if v == nil {
+			v = new(string)
+			*v = ar.Name
+			names[id] = v
 		}
-		fr := rect{rr.X, rr.Y, rr.W - 210, rr.H}
-		changed, committed := a.uiTextField(fmt.Sprintf("areas.name.%d", ar.Index), fr, &v, textFieldSpec{
+		fr := rect{rr.X + 28, rr.Y, rr.W - 28 - 190, rr.H}
+		_, committed := a.uiTextField(fid, fr, v, textFieldSpec{
 			MaxLen: 24, Placeholder: "Area name", Normalize: strings.TrimSpace})
-		if changed {
-			names[ar.Index] = v
-		}
-		if committed && v != "" && v != ar.Name {
-			a.renderer.enqueue(command.Command{Kind: command.RenameArea, Index: ar.Index, Name: v})
-			delete(names, ar.Index)
+		if committed && *v != "" && *v != ar.Name {
+			a.renderer.enqueue(command.Command{Kind: command.RenameArea, Index: id, Name: *v})
+		} else if a.uiSt().edit.id != fid {
+			*v = ar.Name
 		}
 		a.uiLabel(fr.right()+8, rr.Y+(rr.H-float32(lineH(tsSmall)))/2, fmt.Sprintf("%d cells", ar.Cells), withColor(tsSmall, uiTextDim))
-		if a.uiButton(fmt.Sprintf("areas.paint.%d", ar.Index), rect{rr.right() - 96, rr.Y, 96, rr.H}, "Paint", btnOpts{
-			Selected: paint == ar.Index, Tip: "Paint\nThe Architect's Allowed area tools paint and clear this area."}) {
-			a.setAreaPaint(ar.Index)
+		if a.uiButton(fmt.Sprintf("areas.invert.%d", id), rect{rr.right() - 86, rr.Y, 56, rr.H}, "Invert", btnOpts{
+			Tip: "Invert\nSwap the area's tiles: painted become empty and the rest becomes painted."}) {
+			a.renderer.enqueue(command.Command{Kind: command.InvertArea, Index: id})
+		}
+		if a.uiButton(fmt.Sprintf("areas.delete.%d", id), rect{rr.right() - 26, rr.Y, 26, rr.H}, "X", btnOpts{
+			Style: btnDanger, Tip: "Delete\nRemove this area. Anyone restricted to it becomes unrestricted."}) {
+			a.deleteArea(ar)
 		}
 	}
 }
 
-// areaReader is the per-pawn area the Assign tab shows (consumer-owned;
-// the game implements it).
+// areaReader is the per-colonist area ref the Schedule tab, the inspector
+// and the manager read (consumer-owned; the game implements it): -1
+// unrestricted, -2 Home, else an area id.
 type areaReader interface {
 	AreaOf(id entity.EntityID) int
 }
 
-// areaLabel is the Assign tab's area button label.
-func areaLabel(areas []game.AreaView, i int) string {
-	for _, ar := range areas {
-		if ar.Index == i {
-			return ar.Name
-		}
-	}
-	return "Unrestricted"
+// assignArea emits AssignArea for pawn with ref.
+func (a *App) assignArea(pawn entity.EntityID, ref int) {
+	a.renderer.enqueue(command.Command{Kind: command.AssignArea, Pawn: uint64(pawn), Index: ref})
 }
 
-// nextArea is the assignment after i in the cycle: unrestricted, then
-// each area in turn.
-func nextArea(areas []game.AreaView, i int) int {
-	if len(areas) == 0 {
-		return -1
+// colonistArea is colonist id's area ref (unrestricted when the game does
+// not report areas) and whether the game reports them.
+func (a *App) colonistArea(id entity.EntityID) (int, bool) {
+	if rd, ok := a.renderer.game.(areaReader); ok {
+		return areaRef(rd.AreaOf(id)), true
 	}
-	for k, ar := range areas {
-		if ar.Index == i {
-			if k+1 < len(areas) {
-				return areas[k+1].Index
-			}
-			return -1
-		}
-	}
-	return areas[0].Index
+	return command.AreaUnrestricted, false
 }

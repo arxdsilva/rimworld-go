@@ -174,7 +174,7 @@ func main() {
 				// taming, and a manhunter on its way
 				cx, cy := *width/2, *height/2
 				g.ClearPlants(cx+4, cy-6, cx+12, cy+2)
-				g.Enqueue(command.Command{Kind: command.DesignatePen, X: cx + 5, Y: cy - 5, X2: cx + 11, Y2: cy + 1})
+				markerPen(g, cx+4, cy-6, cx+12, cy+2, true)
 				for _, t := range []struct {
 					species, name string
 					x, y          int
@@ -614,7 +614,7 @@ func lateGame(g *game.Game) {
 		_, _ = g.SpawnStack(k, 20+i*5, 27+i, 17)
 	}
 	// a pen with tame animals east of the compound
-	g.Enqueue(command.Command{Kind: command.DesignatePen, X: 42, Y: 5, X2: 46, Y2: 11})
+	markerPen(g, 41, 4, 47, 12, true)
 	for i, a := range [][2]string{{"dustbuck", "Clover"}, {"dustbuck", "Moss"}, {"ridgewolf", "Ash"}} {
 		if id, err := g.SpawnAnimal(a[0], 43+i, 7+i); err == nil {
 			g.TameAnimal(id, a[1])
@@ -721,7 +721,7 @@ func zoo(g *game.Game) {
 	rows := (len(species) + cols - 1) / cols
 	x1, y1 := x0+cols*step, y0+rows*step
 	g.ClearPlants(x0-1, y0-1, x1, y1)
-	g.Enqueue(command.Command{Kind: command.DesignatePen, X: x0 - 1, Y: y0 - 1, X2: x1, Y2: y1})
+	markerPen(g, x0-2, y0-2, x1+1, y1+1, false)
 	for i, s := range species {
 		x, y := x0+(i%cols)*step, y0+(i/cols)*step
 		for _, d := range [][2]int{{0, 0}, {1, 0}, {0, 1}, {-1, 0}, {0, -1}, {1, 1}, {-1, 1}, {1, -1}, {-1, -1}} {
@@ -738,7 +738,7 @@ func zoo(g *game.Game) {
 // animals, a marked wild deer, and a few wild animals about.
 func penScene(g *game.Game, cx, cy int) {
 	g.ClearPlants(cx+3, cy-8, cx+14, cy+3)
-	g.Enqueue(command.Command{Kind: command.DesignatePen, X: cx + 4, Y: cy - 6, X2: cx + 11, Y2: cy + 1})
+	markerPen(g, cx+3, cy-7, cx+12, cy+2, true)
 	g.BuildNow("feeding trough", "wood", "south", cx+7, cy-3)
 	for _, t := range []struct {
 		species, name string
@@ -754,6 +754,27 @@ func penScene(g *game.Game, cx, cy int) {
 		}
 	}
 	g.Step(1)
+}
+
+// markerPen fences the rectangle's border (with a gate in the middle of
+// its south side when gate) and puts a pen marker in its north-west
+// corner: a pen is a marker in a fenced field (PLAY-015; cmd only: dev
+// hooks).
+func markerPen(g *game.Game, x0, y0, x1, y1 int, gate bool) {
+	g.ClearPlants(x0, y0, x1, y1)
+	for y := y0; y <= y1; y++ {
+		for x := x0; x <= x1; x++ {
+			if x != x0 && x != x1 && y != y0 && y != y1 {
+				continue
+			}
+			kind := "fence"
+			if gate && y == y1 && x == (x0+x1)/2 {
+				kind = "fence gate"
+			}
+			g.BuildNow(kind, "wood", "south", x, y)
+		}
+	}
+	g.BuildNow("pen marker", "wood", "south", x0+1, y0+1)
 }
 
 // fenceField builds a wooden fence rectangle with a gate in its south

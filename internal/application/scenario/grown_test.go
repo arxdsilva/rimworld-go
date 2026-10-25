@@ -93,7 +93,14 @@ func TestGrownGolden(t *testing.T) {
 	// Re-pinned (MAPGEN-3): CompleteResearch also completes the new Bridges
 	// project; with it left unfinished the hash is the previous pin
 	// (f6040a57), so behaviour is unchanged.
-	const want uint64 = 0xaa0807e2ccd471dd
+	// Re-pinned (PLAY-015), behaviour changed by design: the grown set
+	// piece builds a pen marker instead of painting a pen zone (one more
+	// building, so later entity ids and the RNG stream shift), livestock
+	// is held by gates and pens while the tame wolves use allowed areas,
+	// and new colonists start with Firefight on. Checked: same animal
+	// count, one extra building; the old run's single manhunter message is
+	// a roll the shifted stream no longer makes. Stable over -count=3.
+	const want uint64 = 0xc52d50891a1a788c
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

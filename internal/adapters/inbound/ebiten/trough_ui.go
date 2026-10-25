@@ -56,23 +56,32 @@ func (a *App) applyTroughClick(id string, b game.BuildingView) bool {
 }
 
 // penAnimals are the tame animals standing in the pen that holds tile
-// (x, y): the trough's herd.
+// (x, y): the trough's herd. The trough itself blocks movement, so it is
+// not a pen cell: the pen is the one holding a cell next to it.
 func penAnimals(w game.WorldView, x, y int) []game.AnimalView {
-	cells := map[[2]int]bool{}
-	for _, z := range w.Zones {
-		if z.Kind != game.ZonePen {
+	var bits []uint64
+	for _, p := range w.Pens {
+		if !p.Enclosed {
 			continue
 		}
-		// the trough's own tile may not be a pen cell; its bounding box is
-		if x >= z.MinX && x <= z.MaxX && y >= z.MinY && y <= z.MaxY {
-			for _, c := range z.Cells {
-				cells[c] = true
+		for dy := -1; dy <= 1 && bits == nil; dy++ {
+			for dx := -1; dx <= 1; dx++ {
+				if bitAt(p.Bits, w.TerrainW, x+dx, y+dy) {
+					bits = p.Bits
+					break
+				}
 			}
 		}
+		if bits != nil {
+			break
+		}
+	}
+	if bits == nil {
+		return nil
 	}
 	var out []game.AnimalView
 	for _, an := range w.Animals {
-		if an.Tame && cells[[2]int{an.X, an.Y}] {
+		if an.Tame && bitAt(bits, w.TerrainW, an.X, an.Y) {
 			out = append(out, an)
 		}
 	}

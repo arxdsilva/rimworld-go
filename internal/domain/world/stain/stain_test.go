@@ -87,3 +87,9 @@ func TestAddCaps(t *testing.T) {
 		t.Fatal("kind names")
 	}
 }
+
+func TestAshKind(t *testing.T) {
+	if Ash.String() != "ash" || Blood.String() != "blood" || Ichor.String() != "ichor" {
+		t.Fatal("kind names")
+	}
+}

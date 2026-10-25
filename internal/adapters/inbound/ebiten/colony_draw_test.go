@@ -192,7 +192,7 @@ func TestColonyToolGhostsAndHoverDraw(t *testing.T) {
 	drawFrame(t, a, f) // the hover card over a plant
 
 	a.openArchitect()
-	for _, c := range []struct{ cat, tool string }{{"structure", "wall"}, {"zones", "grow"}, {"zones", "stockpile"}, {"structure", "roof"}, {"orders", "mine"}, {"furniture", "hospital_bed"}} {
+	for _, c := range []struct{ cat, tool string }{{"structure", "wall"}, {"zones", "grow"}, {"zones", "stockpile"}, {"zones", "roof"}, {"orders", "mine"}, {"furniture", "hospital_bed"}} {
 		a.selectArchCategory(c.cat)
 		a.selectArchTool(c.tool)
 		a.archDrag = true

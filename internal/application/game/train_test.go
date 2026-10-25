@@ -375,3 +375,37 @@ func TestGuardAnimalClosesOnThreatStepped(t *testing.T) {
 		}
 	}
 }
+
+// PLAY-015: the player can stop a trained animal following its drafted
+// master; the view says whether it can and does.
+func TestAnimalFollowSetting(t *testing.T) {
+	t.Parallel()
+	g, ada, dog := bondYard(t, 24)
+	a, _ := g.animals.Get(dog)
+	a.Master = uint64(ada)
+	a.Trained[training.Obedience], a.TrainDecay = 3, uint64(g.clock.Now())
+	g.animals.Set(dog, a)
+	applyNow(g, command.Command{Kind: command.DraftPawn, Pawn: uint64(ada), Enabled: true})
+	view := func() AnimalView {
+		for _, av := range g.World().Animals {
+			if av.ID == dog {
+				return av
+			}
+		}
+		t.Fatal("dog not in view")
+		return AnimalView{}
+	}
+	if v := view(); !v.CanFollow || !v.Follows {
+		t.Fatalf("trained dog: can %v follows %v", v.CanFollow, v.Follows)
+	}
+	applyNow(g, command.Command{Kind: command.SetAnimalFollow, Target: uint64(dog), Enabled: false})
+	a, _ = g.animals.Get(dog)
+	if g.followMaster(dog, &a, g.posOf(dog), uint64(g.clock.Now())) || view().Follows {
+		t.Fatal("following turned off: stays")
+	}
+	applyNow(g, command.Command{Kind: command.SetAnimalFollow, Target: uint64(dog), Enabled: true})
+	a, _ = g.animals.Get(dog)
+	if !g.followMaster(dog, &a, g.posOf(dog), uint64(g.clock.Now())) {
+		t.Fatal("turned back on: follows")
+	}
+}

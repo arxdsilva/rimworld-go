@@ -158,6 +158,7 @@ func (g *Game) refreshRoofSupport() {
 		if grid[i] == room.Wall {
 			n &^= roof.PlanBuild
 		}
+		n = areaRoofPlan(n, grid[i] == room.Wall) // home.go: the build-roof area keeps its roof
 		if n.Has(roof.Built) && !n.Has(roof.Supported) && !n.Has(roof.Natural) {
 			g.roofx.unsupported = true
 		}
@@ -196,11 +197,14 @@ func (g *Game) designateRoof(x1, y1, x2, y2 int, build bool) {
 			}
 			if build {
 				c &^= roof.PlanRemove | roof.NoAuto
+				if g.roomGrid[i] != room.Wall && !c.Has(roof.Natural) {
+					c |= roof.AreaBuild
+				}
 				if g.roomGrid[i] != room.Wall && c.Has(roof.Supported) && !c.Roofed() {
 					c |= roof.PlanBuild
 				}
 			} else {
-				c = c&^roof.PlanBuild | roof.NoAuto
+				c = c&^(roof.PlanBuild|roof.AreaBuild) | roof.NoAuto
 				if c.Has(roof.Built) && !c.Has(roof.Natural) {
 					c |= roof.PlanRemove
 				}
@@ -230,7 +234,7 @@ func (g *Game) clearRoofPlans(minX, minY, maxX, maxY int) {
 	w := g.grid.Width()
 	for y := minY; y <= maxY; y++ {
 		for x := minX; x <= maxX; x++ {
-			g.setRoof(y*w+x, g.roofs[y*w+x]&^roofPlans)
+			g.setRoof(y*w+x, g.roofs[y*w+x]&^(roofPlans|roof.AreaBuild))
 		}
 	}
 }

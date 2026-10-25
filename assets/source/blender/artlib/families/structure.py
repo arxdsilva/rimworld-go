@@ -372,6 +372,28 @@ def _wall_ruin_overlay(k):
     return path
 
 
+def _pen_marker():
+    """Pen marker, 1x1: a short wooden post with a painted sign board on the
+    upper half carrying a simple livestock silhouette (body, head, horns, legs)."""
+    cx, cy = 0.5, -0.5
+    S.cyl("base_mound", cx, cy, 0.12, 0.0, 0.025, "soil", segs=14, bevel=0.0)
+    S.box("post", cx - 0.055, cy - 0.055, 0.0, cx + 0.055, cy + 0.055, 0.78, "wood", bevel=0.012)
+    S.box("brace", cx - 0.02, cy - 0.10, 0.12, cx + 0.02, cy + 0.10, 0.20, "wood_plank", bevel=0.005)
+    S.box("board", cx - 0.30, cy - 0.04, 0.42, cx + 0.30, cy + 0.04, 0.86, "wood_plank", bevel=0.015)
+    S.box("paint", cx - 0.26, cy - 0.052, 0.46, cx + 0.26, cy + 0.052, 0.82, "sign_paint", bevel=0.004)
+    # livestock silhouette (dark, facing east), on the south face
+    f = cy - 0.056
+    m = "leather"
+    S.box("an_body", cx - 0.15, f - 0.006, 0.585, cx + 0.07, f + 0.006, 0.69, m, bevel=0.0)
+    S.box("an_neck", cx + 0.04, f - 0.006, 0.62, cx + 0.12, f + 0.006, 0.74, m, bevel=0.0)
+    S.box("an_head", cx + 0.09, f - 0.006, 0.64, cx + 0.19, f + 0.006, 0.72, m, bevel=0.0)
+    S.box("an_horn", cx + 0.10, f - 0.006, 0.72, cx + 0.125, f + 0.006, 0.77, m, bevel=0.0)
+    for x in (-0.14, -0.08, 0.0, 0.05):
+        S.box("an_leg", cx + x, f - 0.006, 0.50, cx + x + 0.03, f + 0.006, 0.585, m, bevel=0.0)
+    return S.render_asset("structure", "pen_marker", footprint=(1, 1), zmax=0.9,
+                          extra={"building": "pen marker"})
+
+
 def build():
     out = []
     for mat, body, cap, trim, kind in WALLS:
@@ -406,6 +428,7 @@ def build():
                                   outline=False, shadow=False,
                                   extra={"tileable": True, "foundation": "bridge", "mask": mask,
                                          "open_sides": [n for n, b in BITS if mask & b]}))
+    out.append(_pen_marker())
     _casket(False)
     out.append(S.render_asset("structure", "sleeper_casket_closed", footprint=(1, 2), zmax=0.76,
                               extra={"building": "sleeper casket", "state": "closed"}))

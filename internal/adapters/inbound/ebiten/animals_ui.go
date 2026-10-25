@@ -29,16 +29,18 @@ func (a *App) tameAnimals() []game.AnimalView {
 // Column x offsets (px from the panel's left) of the Colony list.
 const (
 	colName    = 52
-	colSpecies = 140
-	colSex     = 262
-	colAge     = 292
-	colFood    = 346
-	colProduct = 432
-	colPreg    = 530
-	colHealth  = 600
-	colMaster  = 652
-	colTrain   = 736
-	colDoing   = 856
+	colSpecies = 134
+	colSex     = 232
+	colAge     = 258
+	colFood    = 322
+	colProduct = 396
+	colPreg    = 468
+	colHealth  = 512
+	colMaster  = 558 // a dropdown button (PLAY-015)
+	colFollow  = 650 // follows its drafted master
+	colArea    = 706 // area dropdown, or the pen's name
+	colTrain   = 828
+	colDoing   = 932
 	colBtn     = 1040 // Slaughter, then Release
 )
 
@@ -110,9 +112,16 @@ func (a *App) animalsTabButtons() []button {
 			slaughter = "Spare"
 		}
 		out = append(out,
+			button{id: "animals.master." + id, label: animalMasterCell(an), x: r.x + colMaster - 2, y: y, w: 88, h: 24,
+				tip: "Master\nPick the colonist who handles this animal."},
 			button{id: "animals.slaughter." + id, label: slaughter, x: r.x + colBtn, y: y, w: 100, h: 24, selected: an.Designated},
 			button{id: "animals.release." + id, label: "Release", x: r.x + colBtn + 106, y: y, w: 90, h: 24},
 		)
+		if an.CanFollow { // PLAY-015: follow the drafted master, on or off
+			out = append(out, button{id: "animals.follow." + id, label: followCell(an), x: r.x + colFollow - 2, y: y,
+				w: colArea - colFollow - 8, h: 24, selected: an.Follows,
+				tip: "Follow drafted\nWhether it follows its master while the master is drafted."})
+		}
 	}
 	return out
 }
@@ -144,6 +153,8 @@ func (a *App) applyAnimalsTab(id string) {
 			continue
 		}
 		switch parts[1] {
+		case "master":
+			a.openAnimalMasterMenu(an)
 		case "slaughter":
 			c := command.Command{Kind: command.DesignateHunt, X: an.X, Y: an.Y, X2: an.X, Y2: an.Y}
 			if an.Designated { // only the mark: the pen stays
@@ -152,6 +163,8 @@ func (a *App) applyAnimalsTab(id string) {
 			a.renderer.enqueue(c)
 		case "release":
 			a.renderer.enqueue(command.Command{Kind: command.ReleaseAnimal, Pawn: n})
+		case "follow":
+			a.renderer.enqueue(command.Command{Kind: command.SetAnimalFollow, Target: n, Enabled: !an.Follows})
 		}
 	}
 }
@@ -228,7 +241,7 @@ func (a *App) drawAnimalsTab(screen *ebiten.Image, sw, sh int) {
 			marked++
 		}
 	}
-	drawText(screen, fmt.Sprintf("Animals  (%d tame, %d marked for taming, %d pens)", len(a.tameAnimals()), marked, countZones(w, game.ZonePen)), float64(r.x)+12, float64(r.y)+8, tsLabel)
+	drawText(screen, fmt.Sprintf("Animals  (%d tame, %d marked for taming, %d pens)", len(a.tameAnimals()), marked, len(w.Pens)+countZones(w, game.ZonePen)), float64(r.x)+12, float64(r.y)+8, tsLabel)
 	mx, my := a.currentCursor()
 	if a.animalsWild {
 		a.drawWildList(screen, r)
@@ -250,7 +263,7 @@ func (a *App) drawColonyList(screen *ebiten.Image, r button) {
 		x int
 		s string
 	}{{colName, "Name"}, {colSpecies, "Species"}, {colSex, "Sex"}, {colAge, "Age"}, {colFood, "Food"},
-		{colProduct, "Product"}, {colPreg, "Preg."}, {colHealth, "Health"}, {colMaster, "Master"}, {colTrain, "Training"}, {colDoing, "Doing"}} {
+		{colProduct, "Product"}, {colPreg, "Preg."}, {colHealth, "Health"}, {colMaster, "Master"}, {colFollow, "Follow"}, {colArea, "Area / Pen"}, {colTrain, "Training"}, {colDoing, "Doing"}} {
 		drawLabel(screen, x0+h.x, head, h.s)
 	}
 	list := a.tameAnimals()
@@ -271,7 +284,12 @@ func (a *App) drawColonyList(screen *ebiten.Image, r button) {
 		drawLabelClip(screen, x0+colProduct, ty, colPreg-colProduct-6, animalProductText(an))
 		drawLabelClip(screen, x0+colPreg, ty, colHealth-colPreg-6, animalPregCell(an))
 		drawLabelClip(screen, x0+colHealth, ty, colMaster-colHealth-6, fmt.Sprintf("%d%%", an.Health))
-		drawLabelClip(screen, x0+colMaster, ty, colTrain-colMaster-6, animalMasterCell(an))
+		if !an.CanFollow { // trained animals get the on/off toggle button
+			drawLabelClip(screen, x0+colFollow, ty, colArea-colFollow-6, followCell(an))
+		}
+		if an.Penned { // area animals have the dropdown widget (animalsTabUI)
+			drawLabelClip(screen, x0+colArea, ty, colTrain-colArea-6, animalAreaCell(an, nil))
+		}
 		drawLabelClip(screen, x0+colTrain, ty, colDoing-colTrain-6, animalTrainingCell(an))
 		drawLabelClip(screen, x0+colDoing, ty, colBtn-colDoing-8, animalDoing(an))
 	}
@@ -424,4 +442,71 @@ func countZones(w game.WorldView, kind string) int {
 		}
 	}
 	return n
+}
+
+// followCell is the Follow column: "on"/"off" for an animal trained to
+// follow its drafted master (the player's setting), else "-".
+func followCell(an game.AnimalView) string {
+	switch {
+	case !an.CanFollow:
+		return "-"
+	case an.Follows:
+		return "on"
+	}
+	return "off"
+}
+
+// animalAreaCell is the Area / Pen column's text: a penned animal's pen
+// ("Pen 1", "Roaming", "Being roped"), else its allowed area.
+func animalAreaCell(an game.AnimalView, areas []game.AreaView) string {
+	if an.Penned {
+		if an.Pen == "" {
+			return "Roaming"
+		}
+		return an.Pen
+	}
+	return areaRefLabel(areas, an.AreaRef)
+}
+
+// animalsTabUI declares the Area dropdown of every visible non-penned
+// animal row (the AREA-UI selector, keyed by the animal's id).
+func (a *App) animalsTabUI(sw, sh int) {
+	if a.renderer == nil || !a.workOpen || a.panelMode != "animals" || a.animalsWild {
+		return
+	}
+	r := workRect(sw, sh)
+	for i, an := range a.tameAnimals() {
+		y := r.y + animalsRowTop + float32(i*animalRowH)
+		if y+animalRowH > r.y+r.h {
+			break
+		}
+		if an.Penned {
+			continue
+		}
+		an := an
+		a.areaDropdown("animals.area."+strconv.FormatUint(uint64(an.ID), 10),
+			rect{r.x + colArea - 2, y, colTrain - colArea - 4, 24}, an.AreaRef,
+			func(ref int) { a.assignArea(an.ID, ref) })
+	}
+}
+
+// openAnimalMasterMenu lists the colonists (and "No master") as
+// SetAnimalMaster choices under the animal's Master button.
+func (a *App) openAnimalMasterMenu(an game.AnimalView) {
+	var opts []game.OrderOption
+	for _, p := range a.renderer.snapshot() {
+		o := game.OrderOption{Label: p.Name, Cmd: command.Command{Kind: command.SetAnimalMaster, Target: uint64(an.ID), Pawn: uint64(p.ID)}}
+		if p.ID == an.MasterID {
+			o.Label += " (master)"
+		}
+		opts = append(opts, o)
+	}
+	opts = append(opts, game.OrderOption{Label: "No master", Cmd: command.Command{Kind: command.SetAnimalMaster, Target: uint64(an.ID)}})
+	r := workRect(a.size())
+	for i, t := range a.tameAnimals() {
+		if t.ID == an.ID {
+			a.float = floatMenu{open: true, x: r.x + colMaster - 2, y: r.y + animalsRowTop + float32(i*animalRowH) + 26, opts: opts}
+			return
+		}
+	}
 }

@@ -1087,7 +1087,7 @@ func (g *Game) asideRoute(id entity.EntityID, pos Position, avoid []Position, wc
 // doors, tame ones use them; pawns plan as pathTo does.
 func (g *Game) queryFor(id entity.EntityID) pathing.Query {
 	if a := g.animals.Ref(id); a != nil {
-		if a.Tame {
+		if g.gatesOpen(id, a) { // rope.go: livestock only when led
 			return g.animalPathQuery(true, false) // fences.go: gates open, fences shut
 		}
 		return g.animalPathQuery(false, true)
@@ -1122,7 +1122,7 @@ type crowdCost struct {
 
 func (c crowdCost) ExtraCost(x, y int) int {
 	o := &c.g.occ
-	ground := c.g.groundExtra(x, y) // water.go: slow ground costs extra, so A* wades only when it pays
+	ground := c.g.groundExtra(x, y) + softExtra(c.Query, x, y) // water.go: slow ground costs extra, so A* wades only when it pays; area_soft.go
 	i, ok := o.index(x, y)
 	if !ok || o.near[i] == 0 && (c.partner || o.pnear[i] == 0) {
 		return ground // no creature in the way on the cell or beside it
@@ -1152,7 +1152,7 @@ func (c crowdCost) in(x, y int) entity.EntityID {
 
 func (g *Game) costedQuery(id entity.EntityID) pathing.Query {
 	g.occIndex()
-	return crowdCost{Query: g.queryFor(id), g: g, self: id, partner: g.partner(id)}
+	return crowdCost{Query: g.softAnimalQuery(id, g.queryFor(id)), g: g, self: id, partner: g.partner(id)} // area_soft.go
 }
 
 // pathAround replans from id's cell to (tx, ty), treating cells taken by

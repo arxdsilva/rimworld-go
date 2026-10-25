@@ -448,6 +448,9 @@ func TestNoMatingFlap(t *testing.T) {
 		}
 	}
 	g := New(Config{Seed: 7, Width: 30, Height: 20})
+	// PLAY-015: tame goats are livestock; penned, they stay together
+	fenceRing(t, g, 10, 6, 18, 14)
+	buildMarker(t, g, 14, 8)
 	billy := spawnSexed(t, g, "goat", 13, 10, false, true, "Billy")
 	nan := spawnSexed(t, g, "goat", 15, 10, true, true, "Nan")
 	day := uint64(1)

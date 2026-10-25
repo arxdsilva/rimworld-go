@@ -83,7 +83,7 @@ func (a *App) drawFloat(screen *ebiten.Image) {
 	drawPanel(screen, r.x-2, r.y-2, r.w+4, r.h+4)
 	drawText(screen, "Shift: queue (max 3)", float64(r.x)+10, float64(r.y+r.h)-floatHintH, withColor(tsSmall, uiTextDim))
 	mx, my := a.currentCursor()
-	for _, b := range a.floatButtons() {
+	for i, b := range a.floatButtons() {
 		fill := uiBtn
 		if b.disabled {
 			fill = uiBtnDisabled
@@ -95,6 +95,9 @@ func (a *App) drawFloat(screen *ebiten.Image) {
 		ts := tsBody
 		if b.disabled {
 			ts = withColor(tsBody, uiTextDim)
+		}
+		if ic := floatIcon(a.float.opts[i]); ic != "" {
+			drawIcon(screen, a.icon(ic), float64(b.x+b.w)-floatRowH+3, float64(b.y)+3, floatRowH-6)
 		}
 		drawText(screen, ellipsize(b.label, ts, float64(b.w)-20), float64(b.x)+10, float64(b.y)+(float64(b.h)-lineH(ts))/2, ts)
 	}
@@ -136,6 +139,10 @@ func (a *App) openOrders(tx, ty int, sx, sy float32) {
 func (a *App) rightClickTile(tx, ty int, sx, sy float32) {
 	p, ok := a.selectedPawn()
 	if !ok {
+		return
+	}
+	if opts := fireOrders(p, a.renderer.world(), tx, ty); opts != nil && !a.creatureAt(tx, ty, p.ID) {
+		a.float = floatMenu{open: true, x: sx + 6, y: sy + 4, opts: opts, tx: tx, ty: ty} // fire_world_draw.go
 		return
 	}
 	if p.Drafted && !a.creatureAt(tx, ty, p.ID) {

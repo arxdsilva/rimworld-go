@@ -117,7 +117,7 @@ func TestZoneGhostCellsColourPerCell(t *testing.T) {
 
 func TestZoneToolsMapToKinds(t *testing.T) {
 	t.Parallel()
-	want := map[string]string{"stockpile": game.ZoneStockpile, "grow": game.ZoneGrow, "pen": game.ZonePen, "mine": ""}
+	want := map[string]string{"stockpile": game.ZoneStockpile, "grow": game.ZoneGrow, "mine": ""}
 	for id, kind := range want {
 		tool, ok := toolByID(id)
 		if !ok || zoneKindOf(tool) != kind {

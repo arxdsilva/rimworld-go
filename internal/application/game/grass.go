@@ -388,9 +388,6 @@ func (g *Game) grassCanRegrow(x, y int) bool {
 // staggered per-chunk plant pass (plant_growth.go), so the work is the
 // few regrowing tiles of this tick's chunks, never a map scan.
 
-// grassSnowCover is the snow depth that buries grass and stops it growing.
-const grassSnowCover = 0.1
-
 // grassGrowthAt is the growth percent of the grass on (x, y): 100 for a
 // full tile, 0 where there is no grass.
 func (g *Game) grassGrowthAt(x, y int) int {
@@ -464,7 +461,6 @@ func (g *Game) growGrassChunk(c int, now uint64) {
 	if s.nGrowing == 0 || len(s.growing[c]) == 0 {
 		return
 	}
-	snow := g.weather.SnowDepth >= grassSnowCover
 	w := g.grid.Width()
 	l := s.growing[c]
 	kept := l[:0]
@@ -476,7 +472,7 @@ func (g *Game) growGrassChunk(c int, now uint64) {
 			continue
 		}
 		x, y := int(i)%w, int(i)/w
-		if snow && g.outdoorsAt(x, y) {
+		if g.snowAt(x, y) >= snowGrassCover { // snow.go: this tile's own snow (PLAY-015)
 			kept = append(kept, i)
 			continue
 		}

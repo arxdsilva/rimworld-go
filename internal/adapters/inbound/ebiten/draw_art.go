@@ -283,6 +283,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	r.layer("zones")
 	r.drawZones(screen, w, sw, sh, tile) // zones_draw.go
 	r.drawPlanOverlay(screen, w, sw, sh, tile)
+	r.drawSnowClearOverlay(screen, w, sw, sh, tile) // snow_clear_draw.go (PLAY-015)
 	for _, f := range w.Frames {
 		r.drawSprite(screen, "overlay/blueprint", none, float64(f.X), float64(f.Y), tile, sw, sh)
 	}
@@ -415,6 +416,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	r.draws = draws[:0]
 	r.drawWorkGlow(screen, tile)
 	r.drawFires(screen, w, tile)
+	r.drawWorldFires(screen, w, tile) // fire_world_draw.go: PLAY-015 flames
 	// cave_plants_draw.go: the duskmoss glow
 	r.drawDuskGlow(screen, w, tile)
 	if lt != lodMap { // no item sprites, so no counts either
@@ -1223,6 +1225,7 @@ func (r *Renderer) drawFloorLayers(screen *ebiten.Image, w game.WorldView, sw, s
 	if len(w.Stains) > 0 {
 		r.layer("stains")
 		r.drawStains(screen, w, sw, sh, tile)
+		r.drawAshStains(screen, w, sw, sh, tile) // fire_world_draw.go
 	}
 }
 

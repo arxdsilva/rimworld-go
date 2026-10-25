@@ -259,38 +259,54 @@ func TestTroughFilterEmitsCommand(t *testing.T) {
 	}
 }
 
+// PLAY-015: the trough's herd is the tame animals in the marker pen next to
+// it (the trough's own tile blocks movement, so it is not a pen cell).
 func TestPenAnimalsListsTheTroughsHerd(t *testing.T) {
 	t.Parallel()
+	cell := func(x, y int) uint64 { return 1 << (y*10 + x) }
 	w := game.WorldView{
-		Zones: []game.ZoneView{{Kind: game.ZonePen, Cells: [][2]int{{1, 1}, {2, 1}, {1, 2}}, MinX: 1, MinY: 1, MaxX: 2, MaxY: 2}},
+		TerrainW: 10,
+		Pens: []game.PenView{
+			{Enclosed: true, Bits: []uint64{cell(1, 1) | cell(2, 1) | cell(1, 2)}},
+			{Enclosed: false, X: 2, Y: 3}, // an open pen holds nothing
+		},
 		Animals: []game.AnimalView{
 			{ID: 1, Tame: true, X: 1, Y: 1}, {ID: 2, Tame: true, X: 9, Y: 9}, {ID: 3, Tame: false, X: 2, Y: 1},
 		},
 	}
-	got := penAnimals(w, 2, 2) // the trough's tile is not a pen cell but is inside its box
+	got := penAnimals(w, 2, 2)
 	if len(got) != 1 || got[0].ID != 1 {
 		t.Fatalf("pen animals = %+v", got)
+	}
+	if penAnimals(w, 8, 8) != nil {
+		t.Fatal("a trough by no pen has no herd")
 	}
 }
 
 func TestAnimalAlerts(t *testing.T) {
 	t.Parallel()
-	pen := game.ZoneView{ID: 3, Kind: game.ZonePen, Cells: [][2]int{{0, 0}, {1, 0}, {0, 1}, {1, 1}}}
+	// PLAY-015: a 2x2 marker pen (cells 0, 1, 10, 11 of a 10-wide map), an
+	// open pen and a roaming cow
+	pen := game.PenView{ID: 3, Name: "Pen 1", Enclosed: true, Bits: []uint64{1<<0 | 1<<1 | 1<<10 | 1<<11}}
+	open := game.PenView{ID: 7, Name: "Pen 2", X: 6, Y: 6}
 	grow := game.ZoneView{ID: 4, Kind: game.ZoneGrow, Cells: [][2]int{{5, 5}}}
 	w := game.WorldView{
-		Zones: []game.ZoneView{pen, grow},
+		TerrainW: 10,
+		Zones:    []game.ZoneView{grow},
+		Pens:     []game.PenView{pen, open},
 		Animals: []game.AnimalView{
 			{ID: 1, Tame: true, State: "wandering", Food: 10, X: 0, Y: 0},
 			{ID: 2, Tame: true, State: "wandering", Food: 90, X: 1, Y: 0},
 			{ID: 3, Species: "deer", State: "feeding", X: 5, Y: 5},
 			{ID: 4, Species: "timbergnaw", X: 9, Y: 9},
+			{ID: 5, Species: "cow", Tame: true, Penned: true, Pen: "Roaming", Food: 90, X: 8, Y: 2},
 		},
 	}
 	keys := map[string]bool{}
 	for _, al := range animalAlerts(w) {
 		keys[al.key] = true
 	}
-	for _, want := range []string{"animalhungry", "cropraid", "timbergnaw", "penfull.3"} {
+	for _, want := range []string{"animalhungry", "cropraid", "timbergnaw", "penfull.3", "penopen.7", "unpenned"} {
 		if !keys[want] {
 			t.Errorf("missing alert %q in %v", want, keys)
 		}

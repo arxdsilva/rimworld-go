@@ -94,10 +94,7 @@ func (g *Game) name(id entity.EntityID) string {
 // reachable reports whether pawn id could path to (x, y): a region-label
 // comparison (regions.go), never a search.
 func (g *Game) reachable(id entity.EntityID, x, y int) bool {
-	if g.areaOutOfReach(id, x, y) { // areas.go: the regions know no allowed areas
-		return false
-	}
-	if g.noRegions() || g.restrictedArea(id) >= 0 {
+	if g.noRegions() {
 		_, ok := g.pathToVia(id, x, y, false)
 		return ok
 	}
@@ -300,6 +297,8 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 			return job.Record{}, ReasonGone
 		}
 		return job.Record{Kind: job.Attack, Target: aid, TX: x, TY: y, WorkLeft: aimTicks(weaponDefOf(g, id))}, ""
+	case command.OrderExtinguish:
+		return g.extinguishJob(id, x, y) // firefight.go
 	case command.OrderEquip:
 		iid := g.itemAt(x, y)
 		st, ok := g.stacks.Get(iid)
@@ -554,6 +553,9 @@ func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 			add(fmt.Sprintf("Eat %s", st.Kind), command.OrderEat, construction.LayerObject)
 		}
 		add(fmt.Sprintf("Haul %d %s to stockpile", st.Qty, st.Kind), command.OrderHaul, construction.LayerObject)
+	}
+	if g.drafted(pawn) && g.fireAt(x, y) > 0 { // firefight.go: any fire, forced
+		add("Extinguish fire", command.OrderExtinguish, construction.LayerObject)
 	}
 	return out
 }

@@ -1,7 +1,7 @@
 // Package work is colonist work types: enable flags and 1-4 priorities.
 package work
 
-// Type is a labor column. Only Haul, Construct, and Grow are wired.
+// Type is a labor column.
 type Type uint8
 
 const (
@@ -28,9 +28,11 @@ const (
 // Mask is a bitset of enabled work types.
 type Mask uint16
 
-// DefaultColonist enables every work type except firefighting.
+// DefaultColonist enables every work type except warden work (PLAY-015:
+// firefighting is on).
 func DefaultColonist() Mask {
 	var m Mask
+	m = m.Set(Firefight, true)
 	m = m.Set(Haul, true)
 	m = m.Set(Construct, true)
 	m = m.Set(Grow, true)
@@ -100,4 +102,4 @@ func (p Priorities) Set(t Type, v int) Priorities {
 }
 
 // Order is the tie-break among work types sharing a priority.
-var Order = []Type{Doctor, Warden, Haul, Construct, Cook, Craft, Hunt, Handle, Grow, Mine, Research, Clean}
+var Order = []Type{Firefight, Doctor, Warden, Haul, Construct, Cook, Craft, Hunt, Handle, Grow, Mine, Research, Clean}

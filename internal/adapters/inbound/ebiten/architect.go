@@ -364,6 +364,9 @@ func (a *App) selectArchTool(id string) {
 	if !ok {
 		return
 	}
+	if a.areaToolPick(id) { // area_menu.go: the allowed-area tools open a submenu
+		return
+	}
 	a.archCat = t.category
 	defer a.syncRoofForce()
 	if a.archTool == id {

@@ -3,7 +3,6 @@ package game
 import (
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
-	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -141,16 +140,9 @@ func cellDistSq(p, q Position) int {
 // (pos); with it, pos itself is never the answer. ok is false when it
 // can't move at all.
 func (g *Game) fleeSpot(a *animal.State, pos, threat Position, dist int, mustMove bool) (Position, bool) {
-	q := g.animalPathQuery(a.Tame, false)
-	if a.Tame {
-		// a penned animal flees within its pen, never out of the gate
-		if z, ok := g.zoneOf(zone.KindPen, pos.X, pos.Y); ok {
-			q = penQuery{Query: q, in: func(x, y int) bool {
-				id, ok := g.zones.At(x, y)
-				return ok && id == z.ID
-			}}
-		}
-	}
+	// livestock flee within their pen, never out of the gate (rope.go:
+	// gates shut to them unless led)
+	q := g.animalPathQuery(a.Tame && !animal.RosterOf(a.Species).Penned, false)
 	fx, fy := animal.FleeGoal(pos.X, pos.Y, threat.X, threat.Y, dist)
 	if x, y, ok := g.walkableNear(fx, fy, 3); ok && (x != pos.X || y != pos.Y) && q.Walkable(x, y) && g.layerReach(q, pos, x, y) {
 		return Position{X: x, Y: y}, true

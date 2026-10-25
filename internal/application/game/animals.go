@@ -82,14 +82,17 @@ type AnimalView struct {
 	// skill's row (Training, in training.Skill order). Mother is the
 	// mother's name while she lives on the map; Offspring the names of
 	// her young still on it.
-	Master    string
-	Bond      string
-	Trained   []bool
-	MasterID  entity.EntityID
-	BondID    entity.EntityID
-	Training  []AnimalTrainingView
-	Mother    string
-	Offspring []string
+	Master   string
+	Bond     string
+	Trained  []bool
+	MasterID entity.EntityID
+	// CanFollow (PLAY-015): trained enough to follow a drafted master;
+	// Follows: it will (the player can turn it off).
+	CanFollow, Follows bool
+	BondID             entity.EntityID
+	Training           []AnimalTrainingView
+	Mother             string
+	Offspring          []string
 }
 
 // AnimalTrainingView is one training skill of a tame animal: Allowed if
@@ -166,6 +169,7 @@ func (g *Game) phaseAnimals() {
 	g.rebuildCreatures()                            // animal_index.go
 	g.troughDeliveries(now)                         // trough_feed.go: loads haulers brought this tick
 	g.lifePhase(now)                                // animal_life.go: eggs incubate
+	g.penTick(now)                                  // pens.go: unpenned days, open pens, auto-cut
 	g.wl.ids = append(g.wl.ids[:0], g.animalIDs...) // the list changes as animals die or leave
 	for _, id := range g.wl.ids {
 		a, ok := g.animals.Get(id)
@@ -200,6 +204,9 @@ func (g *Game) thinkAnimal(id entity.EntityID, a *animal.State, now uint64) {
 	def := animal.DefOf(a.Species)
 	pos, _ := g.positions.Get(id)
 	if g.thinkManhunter(id, a, now) {
+		return
+	}
+	if g.ropedStep(id, a, pos, now) { // rope.go: roped, or led to its pen
 		return
 	}
 	if g.beingTamed(id) { // holds still for the handler
@@ -293,6 +300,9 @@ func (g *Game) fleeCheck(id entity.EntityID, a *animal.State, pos Position, def 
 	// to run (running would take it out through a gate, into the threat)
 	if threat && !g.reachesFoe(false, tp, pos) {
 		threat = false
+	}
+	if !threat && scan {
+		tp, threat = g.animalFireThreat(a, pos) // fire_danger.go: every animal runs from fire
 	}
 	if now < a.FleeUntil && a.Attacker != 0 {
 		if p, ok := g.positions.Get(a.Attacker); ok {
@@ -517,14 +527,15 @@ func (g *Game) callPack(id entity.EntityID, pos Position, prey entity.EntityID) 
 // animalGoTo paths towards (gx, gy), clamped to the map and nudged to a
 // nearby walkable tile.
 func (g *Game) animalGoTo(id entity.EntityID, a *animal.State, gx, gy int) {
+	gates := g.gatesOpen(id, a) // rope.go: livestock pass gates only when led
 	w, h := g.grid.Width(), g.grid.Height()
 	gx, gy = clampInt(gx, 0, w-1), clampInt(gy, 0, h-1)
-	if !g.grid.Walkable(gx, gy) || g.fenceBars(a.Tame, gx, gy) {
+	if !g.grid.Walkable(gx, gy) || g.fenceBars(gates, gx, gy) {
 		found := false
 		for r := 1; r <= 3 && !found; r++ {
 			for dy := -r; dy <= r && !found; dy++ {
 				for dx := -r; dx <= r && !found; dx++ {
-					if g.grid.Walkable(gx+dx, gy+dy) && !g.fenceBars(a.Tame, gx+dx, gy+dy) {
+					if g.grid.Walkable(gx+dx, gy+dy) && !g.fenceBars(gates, gx+dx, gy+dy) {
 						gx, gy, found = gx+dx, gy+dy, true
 					}
 				}
@@ -534,6 +545,11 @@ func (g *Game) animalGoTo(id entity.EntityID, a *animal.State, gx, gy int) {
 			return
 		}
 	}
+	if g.animalFireBlocked(a, gx, gy) { // fire_danger.go: no walk up to a fire
+		a.Path, a.PathI = nil, 0
+		a.RetryAt = uint64(g.clock.Now()) + pathRetry
+		return
+	}
 	pos, _ := g.positions.Get(id)
 	if pos.X == gx && pos.Y == gy {
 		a.Path, a.PathI = nil, 0
@@ -541,7 +557,7 @@ func (g *Game) animalGoTo(id entity.EntityID, a *animal.State, gx, gy int) {
 	}
 	// the colony's own animals use its doors and gates; no animal
 	// crosses a fence (fences.go)
-	q := g.animalPathQuery(a.Tame, false)
+	q := g.softAnimalQuery(id, g.animalPathQuery(gates, false)) // area_soft.go: areas and fire cost extra
 	path, ok := g.searcher().Find(q, pos.X, pos.Y, gx, gy)
 	if !ok {
 		// no way there (a shut door, say): don't search again for a while
@@ -579,7 +595,8 @@ func (g *Game) moveAnimal(id entity.EntityID, m motionRec, now uint64) {
 	}
 	a := *ar
 	next := a.Path[a.PathI]
-	if !g.grid.Walkable(next.X, next.Y) || !a.Tame && g.doorAt(next.X, next.Y) || g.fenceBars(a.Tame, next.X, next.Y) {
+	gates := g.gatesOpen(id, &a) // rope.go: livestock pass gates only when led
+	if !g.grid.Walkable(next.X, next.Y) || !gates && g.doorAt(next.X, next.Y) || g.fenceBars(gates, next.X, next.Y) {
 		a.Path, a.PathI = nil, 0
 		g.animals.Set(id, a)
 		return
@@ -783,6 +800,8 @@ func (g *Game) animalViews() []AnimalView {
 		fillDormantView(av, a)                   // vault.go: a sealed vault's sleeper
 		av.Log = g.logLines(id)                  // eventlog.go
 		g.fillAnimalBonds(av, id, a, now, young) // bond_views.go
+		av.AreaRef = g.AreaOf(id)                // areas.go
+		g.fillAnimalPen(av, id, &a)              // pens.go: Penned, Pen
 	}
 	return out
 }

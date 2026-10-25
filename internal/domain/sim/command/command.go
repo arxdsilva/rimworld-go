@@ -121,11 +121,13 @@ const (
 	FormCaravan
 	// CaravanReturn brings caravan Target home.
 	CaravanReturn
-	// PaintArea paints (Enabled) or clears area Index over X..X2, Y..Y2.
+	// PaintArea paints (Enabled) or clears the area with id Index over
+	// X..X2, Y..Y2 (an unknown id is ignored).
 	PaintArea
-	// RenameArea names area Index Name.
+	// RenameArea names the area with id Index Name.
 	RenameArea
-	// AssignArea restricts Pawn to area Index (-1: unrestricted).
+	// AssignArea restricts Pawn (a colonist or a tame non-penned animal)
+	// to area ref Index: an area id, AreaUnrestricted or AreaHome.
 	AssignArea
 	// ReleasePrisoner lets prisoner Target go.
 	ReleasePrisoner
@@ -151,6 +153,9 @@ const (
 	SetPenSettings
 	// DevStartFire starts a fire at X, Y (developer mode).
 	DevStartFire
+	// SetAnimalFollow sets whether trained animal Target follows its
+	// drafted master (Enabled).
+	SetAnimalFollow
 )
 
 // Area references for AssignArea's Index (PLAY-015): any other value is an
@@ -177,6 +182,8 @@ const (
 	WorkClean
 	WorkHandle // taming, milking, shearing (SIM-026)
 	WorkWarden // prisoners (ENG-003)
+	// WorkFirefight (PLAY-015): beating out fires in Home.
+	WorkFirefight
 )
 
 // Order is a player-forced job for Prioritize.

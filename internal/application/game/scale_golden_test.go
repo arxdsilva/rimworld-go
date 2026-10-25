@@ -64,13 +64,15 @@ import (
 // became format-independent (normalised fields) at the same time; these
 // values are identical when computed on the contract commit (fbc76fd6)
 // and on the new save format.
+// Re-pinned (PLAY-015): new colonists start with Firefight on (priority
+// 3); checked field by field on all six runs, only Prios and Labor differ.
 var scaleGolden = map[string]uint64{
-	"48x40/seed1":    0x60275c036f3ba99f,
-	"48x40/seed7":    0x197c4052c3a4068e,
-	"48x40/seed42":   0x719ca9064d7c54ab,
-	"120x120/seed1":  0x241a08d3b42ca524,
-	"120x120/seed7":  0x1299c19a85b06b60,
-	"120x120/seed42": 0xfd5d59470dac83f4,
+	"48x40/seed1":    0xbfaabb35bc87faf7,
+	"48x40/seed7":    0xee46a1f4ce740cae,
+	"48x40/seed42":   0x62bbc1e4b745516f,
+	"120x120/seed1":  0x24d9b4a5e97f473a,
+	"120x120/seed7":  0xa5e79416622973b2,
+	"120x120/seed42": 0x11f03f3b35f9078e,
 }
 
 const scaleGoldenTicks = 20000

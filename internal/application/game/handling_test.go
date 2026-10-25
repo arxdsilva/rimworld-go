@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/sim/command"
 )
 
@@ -99,24 +100,35 @@ func TestTameWolfGuardsAgainstRaiders(t *testing.T) {
 	t.Fatal("a tame wolf goes for a raider near the colony")
 }
 
+// PLAY-015: livestock go into their pen on a handler's rope, through the
+// pen's door (alone they can't pass it).
 func TestTameAnimalsKeepToPensAndUseDoors(t *testing.T) {
 	g := New(Config{Seed: 7, Width: 30, Height: 14})
 	hut(t, g, 16, 2, 24, 10) // a walled pen with a door
+	buildMarker(t, g, 20, 6)
 	buck, _ := g.SpawnAnimal("dustbuck", 4, 6)
 	g.TameAnimal(buck, "Clover")
-	g.Enqueue(command.Command{Kind: command.DesignatePen, X: 17, Y: 3, X2: 23, Y2: 9})
+	ada, _ := g.SpawnNamedPawn(2, 2, "Ada")
+	handlerOnly(g, ada)
 	inside := false
 	for i := 0; i < 200 && !inside; i++ {
+		g.SetNeeds(ada, needs.Full, needs.Full)
 		g.Step(50)
 		p, _ := g.positions.Get(buck)
 		inside = p.X >= 17 && p.X <= 23 && p.Y >= 3 && p.Y <= 9
 	}
 	if !inside {
 		p, _ := g.positions.Get(buck)
-		t.Fatalf("a tame animal walks through the door into its pen (at %v)", p)
+		t.Fatalf("a handler leads the tame animal through the door into its pen (at %v)", p)
 	}
-	if len(zonesOf(g.World(), ZonePen)) != 1 {
+	if len(g.World().Pens) != 1 {
 		t.Fatal("pen in the world view")
+	}
+	// legacy painted pens: still a zone kind to paint and cancel
+	g.Enqueue(command.Command{Kind: command.DesignatePen, X: 17, Y: 3, X2: 23, Y2: 9})
+	g.Step(1)
+	if len(zonesOf(g.World(), ZonePen)) != 1 {
+		t.Fatal("pen zone in the world view")
 	}
 	g.Enqueue(command.Command{Kind: command.DesignateCancel, X: 17, Y: 3, X2: 23, Y2: 9})
 	g.Step(1)

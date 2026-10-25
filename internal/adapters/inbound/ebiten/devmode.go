@@ -10,6 +10,7 @@ import (
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
+	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/platform/input"
 )
@@ -54,6 +55,7 @@ type devAction struct {
 	label  string
 	reason string // why it is disabled ("" enabled)
 	run    func(d devTools) string
+	icon   string // ui_icon/<name>, drawn at the row's right
 }
 
 // needsFull is a colonist's full hunger and rest (domain needs.Full).
@@ -110,7 +112,11 @@ func (a *App) devActions(tx, ty int) []devAction {
 			return "No room for implants"
 		}
 	}
-	return append(out, kill, feed, lose, spawnImp, a.mapFieldsAction())
+	start := devAction{label: "Start fire here", icon: "start_fire", run: func(devTools) string {
+		a.renderer.enqueue(command.Command{Kind: command.DevStartFire, X: tx, Y: ty})
+		return "Fire started"
+	}}
+	return append(out, kill, feed, lose, spawnImp, start, a.mapFieldsAction())
 }
 
 // handleDevKeys runs the Dev context's actions.
@@ -199,8 +205,12 @@ func (a *App) drawDevPanels(screen *ebiten.Image, sw, sh int) {
 		r := a.devMenuRect()
 		drawPanel(screen, r.x, r.y, r.w, r.h)
 		drawText(screen, fmt.Sprintf("Debug actions at (%d, %d)", a.dev.tx, a.dev.ty), float64(r.x)+8, float64(r.y)+3, tsLabel)
-		for _, b := range a.devButtons() {
+		acts := a.devActions(a.dev.tx, a.dev.ty)
+		for i, b := range a.devButtons() {
 			drawButton(screen, b, b.contains(mx, my))
+			if i < len(acts) && acts[i].icon != "" {
+				drawIcon(screen, a.icon(acts[i].icon), float64(b.x+b.w)-devRowH+2, float64(b.y), devRowH-4)
+			}
 		}
 	}
 	a.drawMapFieldLegend(screen)

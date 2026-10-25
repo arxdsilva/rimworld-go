@@ -20,6 +20,8 @@ func (g *Game) applyHostCommand(c command.Command) {
 		g.cmdAssignBedOwner(target, pawn, c.Index) // beds.go
 	case command.SetAnimalMaster:
 		g.cmdSetAnimalMaster(target, pawn) // bonds.go
+	case command.SetAnimalFollow:
+		g.cmdSetAnimalFollow(target, c.Enabled) // train_animals.go
 	case command.SetTraining:
 		g.cmdSetTraining(target, c.Index, c.Enabled) // bonds.go
 	case command.GiftAnimal:
@@ -44,5 +46,11 @@ func (g *Game) applyHostCommand(c command.Command) {
 		g.cmdRenameArea(c.Index, c.Name) // areas.go
 	case command.AssignArea:
 		g.cmdAssignArea(pawn, c.Index) // areas.go
+	case command.CreateArea:
+		g.cmdCreateArea(c.Name) // areas.go
+	case command.DeleteArea:
+		g.cmdDeleteArea(c.Index) // areas.go
+	case command.InvertArea:
+		g.cmdInvertArea(c.Index) // areas.go
 	}
 }

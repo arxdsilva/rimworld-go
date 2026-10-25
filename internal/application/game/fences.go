@@ -8,7 +8,9 @@ import (
 )
 
 // Fences (SIM-028). A fence keeps every animal out (or in); a fence gate
-// lets the colony's tame animals through but no wild ones. Colonists and
+// lets the colony's tame area animals through but no wild ones, and
+// livestock only while a handler leads them (PLAY-015, rope.go
+// gatesOpen; the same holds for doors). Colonists and
 // raiders climb over a fence at fenceClimb times the step cost and walk
 // through a gate. Fence cells are a derived per-map index, rebuilt after
 // any building change (markRoomsDirty), so saves need nothing extra.
@@ -195,8 +197,8 @@ func (g *Game) fenceReachable(a *animal.State, pos Position) func(x, y int) bool
 	if !g.grid.InBounds(pos.X, pos.Y) {
 		return nil
 	}
-	l := region.Wild
-	if a.Tame {
+	l := region.Wild // livestock (rope.go) feed inside their pen, like wild animals behind fences
+	if a.Tame && !animal.RosterOf(a.Species).Penned {
 		l = region.Tame
 	}
 	m := g.regionsNow()
