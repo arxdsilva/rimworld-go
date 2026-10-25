@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
 )
@@ -79,7 +78,7 @@ func (a *App) drawGatheringBanner(screen *ebiten.Image, sw int) {
 	}
 	fill := uiAccent
 	fill.A = 0x40
-	vector.FillRect(screen, r.X, r.Y, r.W, r.H, fill, false)
-	vector.StrokeRect(screen, r.X, r.Y, r.W, r.H, 1, uiAccent, false)
+	uiFillRect(screen, r.X, r.Y, r.W, r.H, fill, false)
+	uiStrokeRect(screen, r.X, r.Y, r.W, r.H, 1, uiAccent, false)
 	drawText(screen, fitText(s, tsBody, r.W-2*gatherBannerPad), float64(r.X)+gatherBannerPad, float64(r.Y)+2, tsBody)
 }

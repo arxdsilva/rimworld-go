@@ -5,7 +5,6 @@ import (
 	"image/color"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/domain/faction"
 )
@@ -129,7 +128,7 @@ func addableTypes(slots []faction.Slot) []faction.Type {
 func (a *App) drawEmblem(dst *ebiten.Image, key string, tint color.NRGBA, x, y float32, size float64) {
 	img := a.art.image(key, color.NRGBA{})
 	if img == nil {
-		vector.FillCircle(dst, x+float32(size)/2, y+float32(size)/2, float32(size)*0.32, tint, true)
+		uiFillCircle(dst, x+float32(size)/2, y+float32(size)/2, float32(size)*0.32, tint, true)
 		return
 	}
 	s := size / float64(img.Bounds().Dx())
@@ -137,5 +136,5 @@ func (a *App) drawEmblem(dst *ebiten.Image, key string, tint color.NRGBA, x, y f
 	op.ColorScale.ScaleWithColor(tint)
 	op.GeoM.Scale(s, s)
 	op.GeoM.Translate(float64(x), float64(y))
-	dst.DrawImage(img, op)
+	uiDrawImage(dst, img, op)
 }

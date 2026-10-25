@@ -98,7 +98,7 @@ func (r *Renderer) drawPaths(screen *ebiten.Image, sw, sh int, tile float64) {
 	if len(plans) == 0 {
 		return
 	}
-	th := float32(min(3, max(1, r.cam.zoom*1.5)))
+	th := pathStroke(r.cam.zoom)
 	style := func(match func(pawnPathPlan) bool, w float32, c color.NRGBA) {
 		var path vector.Path
 		any := false
@@ -119,7 +119,7 @@ func (r *Renderer) drawPaths(screen *ebiten.Image, sw, sh int, tile float64) {
 	style(func(p pawnPathPlan) bool { return !p.drafted && !p.selected }, th, color.NRGBA{255, 255, 255, 140})
 	style(func(p pawnPathPlan) bool { return p.drafted && !p.selected }, th*5/3, color.NRGBA{232, 90, 70, 217})
 	style(func(p pawnPathPlan) bool { return p.selected }, th*4/3, color.NRGBA{255, 255, 255, 235})
-	rad := float32(max(3, tile*0.16))
+	rad := float32(max(3*screenDev(), tile*0.16))
 	for _, pl := range plans {
 		c := color.NRGBA{255, 255, 255, 150}
 		switch {
@@ -144,4 +144,10 @@ func colorScaleOf(c color.NRGBA) ebiten.ColorScale {
 	var cs ebiten.ColorScale
 	cs.ScaleWithColor(c)
 	return cs
+}
+
+// pathStroke is the path line width: 1..3 points at the zoom, in physical
+// pixels (x dev) so it keeps its apparent thickness.
+func pathStroke(zoom float64) float32 {
+	return float32(min(3, max(1, zoom*1.5)) * screenDev())
 }

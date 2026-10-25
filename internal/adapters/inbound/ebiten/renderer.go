@@ -152,6 +152,18 @@ type camera struct {
 	offsetX, offsetY float64
 	zoom             float64
 	placed           bool // clampCamera has centred it on the map once
+	// dev is the screen's device pixel density the tile size is
+	// multiplied by (PLAY-012: the map renders at physical resolution);
+	// 0 means 1, as in a bake's camera (lod.go withBake). syncDev sets it.
+	dev float64
+}
+
+// tile is the on-screen size of one tile in physical pixels.
+func (c *camera) tile() float64 {
+	if c.dev > 0 {
+		return float64(TileSize) * c.zoom * c.dev
+	}
+	return float64(TileSize) * c.zoom
 }
 
 type pawnVisual struct {
@@ -421,26 +433,29 @@ func (r *Renderer) applyCamera(v viewport, in camInput) {
 	r.smooth.step(1/float64(ebiten.TPS()), &r.cam, r.camLimits(v))
 }
 
-// edgeBand is how close (px) the cursor must be to a viewport edge to pan.
+// edgeBand is how close (points) the cursor must be to a viewport edge to
+// pan.
 const edgeBand = 6
 
-// edgePan is the pan direction for a cursor at (mx, my): towards any
-// viewport edge within edgeBand, nothing when the cursor is outside it.
+// edgePan is the pan direction for a physical cursor at (mx, my) in the
+// physical viewport v: towards any edge within edgeBand points, nothing
+// when the cursor is outside it.
 func edgePan(mx, my int, v viewport) (dx, dy float64) {
 	x, y := float64(mx), float64(my)
 	if x < v.x0 || x >= v.x1 || y < v.y0 || y >= v.y1 {
 		return 0, 0
 	}
+	band := edgeBand * screenDev()
 	switch {
-	case x < v.x0+edgeBand:
+	case x < v.x0+band:
 		dx = -1
-	case x >= v.x1-edgeBand:
+	case x >= v.x1-band:
 		dx = 1
 	}
 	switch {
-	case y < v.y0+edgeBand:
+	case y < v.y0+band:
 		dy = -1
-	case y >= v.y1-edgeBand:
+	case y >= v.y1-band:
 		dy = 1
 	}
 	return dx, dy
@@ -456,8 +471,10 @@ func clampZoom(z float64) float64 {
 	return z
 }
 
+// screenToWorld maps a physical screen pixel (App.mapCursor) to world
+// tile coordinates.
 func (r *Renderer) screenToWorld(sx, sy int) (float64, float64) {
-	tile := float64(TileSize) * r.cam.zoom
+	tile := r.cam.tile()
 	return (float64(sx) + r.cam.offsetX) / tile, (float64(sy) + r.cam.offsetY) / tile
 }
 
@@ -476,14 +493,16 @@ func (r *Renderer) worldToScreen(wx, wy int) (float32, float32) {
 }
 
 func (r *Renderer) worldToScreenF(wx, wy float64) (float32, float32) {
-	tile := float64(TileSize) * r.cam.zoom
+	tile := r.cam.tile()
 	sx := wx*tile - r.cam.offsetX
 	sy := wy*tile - r.cam.offsetY
 	return float32(sx), float32(sy)
 }
 
+// tilePx is one tile in physical pixels: TileSize x zoom x dev (the UI
+// scale never zooms the map).
 func (r *Renderer) tilePx() float64 {
-	return float64(TileSize) * r.cam.zoom
+	return r.cam.tile()
 }
 
 func visible(x, y, w, h float32, sw, sh int) bool {
@@ -493,6 +512,7 @@ func visible(x, y, w, h float32, sw, sh int) bool {
 // Draw renders terrain, pawns, and selection. HUD chrome is App-owned.
 func (r *Renderer) Draw(screen *ebiten.Image) {
 	screen.Fill(color.RGBA{R: 28, G: 42, B: 32, A: 255})
+	r.syncDev() // camera.go: the screen is physical
 
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
 	tile := r.tilePx()

@@ -135,7 +135,7 @@ func (a *App) focusHistoryPawn(id uint64) {
 			continue
 		}
 		a.renderer.Select(p.ID)
-		a.renderer.centerOn(float64(p.X)+0.5, float64(p.Y)+0.5, a.sw, a.sh)
+		a.centerOnMap(float64(p.X)+0.5, float64(p.Y)+0.5)
 		a.uiCloseTop()
 		return
 	}

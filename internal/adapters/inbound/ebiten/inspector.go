@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/economy/item"
@@ -429,9 +428,9 @@ func drawNeedBar(screen *ebiten.Image, x, y, w, h, pct int, label string) {
 		fill = healthColor(pct)
 	}
 	const lw = 100 // label column ("health  100", measured: ~80 px)
-	vector.FillRect(screen, float32(x+lw), float32(y), float32(w-lw), float32(h), bg, false)
+	uiFillRect(screen, float32(x+lw), float32(y), float32(w-lw), float32(h), bg, false)
 	fw := float32(w-lw) * float32(pct) / 100
-	vector.FillRect(screen, float32(x+lw), float32(y), fw, float32(h), fill, false)
+	uiFillRect(screen, float32(x+lw), float32(y), fw, float32(h), fill, false)
 }
 
 func (a *App) selectedPawn() (game.PawnView, bool) {

@@ -108,6 +108,17 @@ commands via `Enqueue`. Domain code does not import this package.
   actions use the consumer-owned `devTools` interface (`devmode.go`).
 - Tests drive `App.Update` with `fakeInput` (`input_ui_test.go`).
 
+## UI scale (PLAY-012, UI-024)
+
+- The UI lays out in logical pixels (`a.sw/a.sh`, `currentCursor()`) and
+  draws through `ui_canvas.go` (`uiFillRect`, `uiStrokeRect`, `uiLine`,
+  `uiImage`, `uiTriangles`, …) and `drawText`; the scale is `uiScale()`.
+- Anything placed by the camera stays raw in physical pixels: use
+  `mapCursor()`, `a.mapViewport()`, `r.cam.tile()`. Convert a world anchor
+  for a UI element with `toLogical`.
+- `TestUIDrawsThroughCanvas` rejects raw drawing outside its exemption list
+  (each entry has a reason).
+
 ## Widget kit and text (NG-1)
 
 - Immediate mode (`ui_kit.go`, `ui_state.go`). A screen declares its widgets once

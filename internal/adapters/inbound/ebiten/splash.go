@@ -66,11 +66,15 @@ func (a *App) drawMenuSplash(screen *ebiten.Image, sw, sh int) {
 	if a.splash == nil {
 		return
 	}
+	// Full-screen background: physical size, unscaled.
+	if b := screen.Bounds(); b.Dx() > 0 && b.Dy() > 0 {
+		sw, sh = b.Dx(), b.Dy()
+	}
 	iw, ih := a.splash.Bounds().Dx(), a.splash.Bounds().Dy()
 	if iw < 1 || ih < 1 {
 		return
 	}
-	h := float64(sh - splashTop)
+	h := float64(sh) - splashTop*uiScale()
 	w := h * float64(iw) / float64(ih)
 	maxW := float64(sw) * 0.55
 	if w > maxW {

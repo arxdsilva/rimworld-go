@@ -99,13 +99,15 @@ func (a *App) selectionSet() (selKind, []entity.EntityID) {
 // double click) and then the right button (orders, formation.go).
 func (a *App) handleMapMouse() {
 	f := &a.in
-	mx, my := a.currentCursor()
+	mx, my := a.mapCursor() // physical: the press, the box and the double click live in map pixels
+	sc := max(1, a.scale.s)
+	boxMin, dblPx := int(boxMinPx*sc), int(doubleClickPx*sc)
 	switch {
 	case f.clicked(mbLeft):
 		f.take(mbLeft)
 		p := a.press
 		double := p.lastAt > 0 && a.updates-p.lastAt <= doubleClickFrames &&
-			abs(mx-p.lastX) <= doubleClickPx && abs(my-p.lastY) <= doubleClickPx
+			abs(mx-p.lastX) <= dblPx && abs(my-p.lastY) <= dblPx
 		a.press = pressState{on: true, x: mx, y: my, shift: f.shift(), lastAt: a.updates, lastX: mx, lastY: my}
 		switch {
 		case double:
@@ -117,7 +119,7 @@ func (a *App) handleMapMouse() {
 			a.clickSelect()
 		}
 	case a.press.on && f.down(mbLeft):
-		if !a.press.box && (abs(mx-a.press.x) > boxMinPx || abs(my-a.press.y) > boxMinPx) {
+		if !a.press.box && (abs(mx-a.press.x) > boxMin || abs(my-a.press.y) > boxMin) {
 			a.press.box = true
 		}
 	case a.press.on:
@@ -131,7 +133,7 @@ func (a *App) handleMapMouse() {
 
 // candUnderCursor is what a plain click would select first.
 func (a *App) candUnderCursor() (selCand, bool) {
-	mx, my := a.currentCursor()
+	mx, my := a.mapCursor() // physical
 	if id, ok := a.renderer.pawnUnderCursor(mx, my); ok {
 		return selCand{selPawn, id}, true
 	}
@@ -247,7 +249,7 @@ func (a *App) selectSameOnScreen() {
 		a.clickSelect()
 		return
 	}
-	v := colonyViewport(a.size())
+	v := a.mapViewport() // physical, like worldToScreenF
 	x0, y0, x1, y1 := float32(v.x0), float32(v.y0), float32(v.x1), float32(v.y1)
 	r := a.renderer
 	w := r.world()
@@ -503,7 +505,7 @@ func (a *App) drawGroupInspector(screen *ebiten.Image) {
 	for _, b := range bs {
 		if strings.HasPrefix(b.id, "group.pick.") {
 			if b.contains(mx, my) {
-				vector.FillRect(screen, b.x, b.y, b.w, b.h, uiBtnHover, false)
+				uiFillRect(screen, b.x, b.y, b.w, b.h, uiBtnHover, false)
 			}
 			drawText(screen, ellipsize(b.label, tsBody, float64(b.w)-8), float64(b.x)+4, float64(b.y)+(float64(b.h)-lineH(tsBody))/2, tsBody)
 			continue
@@ -544,10 +546,14 @@ func (a *App) drawBoxSelect(screen *ebiten.Image) {
 	if !a.press.on || !a.press.box {
 		return
 	}
-	mx, my := a.currentCursor()
-	x0, y0, x1, y1 := screenRect(a.press.x, a.press.y, mx, my)
+	// The press and cursor are physical (map pixels); the box is UI-canvas
+	// drawing, so its corners go to logical.
+	pmx, pmy := a.mapCursor()
+	lx0, ly0 := a.toLogical(a.press.x, a.press.y)
+	lx1, ly1 := a.toLogical(pmx, pmy)
+	x0, y0, x1, y1 := screenRect(lx0, ly0, lx1, ly1)
 	fill := uiAccent
 	fill.A = 40
-	vector.FillRect(screen, x0, y0, x1-x0, y1-y0, fill, false)
-	vector.StrokeRect(screen, x0, y0, x1-x0, y1-y0, 1, uiAccent, false)
+	uiFillRect(screen, x0, y0, x1-x0, y1-y0, fill, false)
+	uiStrokeRect(screen, x0, y0, x1-x0, y1-y0, 1, uiAccent, false)
 }

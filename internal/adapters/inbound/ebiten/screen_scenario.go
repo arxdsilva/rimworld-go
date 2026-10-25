@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/domain/scenario"
 )
@@ -358,7 +357,7 @@ func (a *App) paintScenarioRow(dst *ebiten.Image, view rect, row scenRow, y floa
 				if i < e.hardness {
 					c = uiAccent
 				}
-				vector.FillRect(dst, px+float32(i)*13, r.Y+10, 10, 10, c, false)
+				uiFillRect(dst, px+float32(i)*13, r.Y+10, 10, 10, c, false)
 			}
 		}
 	}

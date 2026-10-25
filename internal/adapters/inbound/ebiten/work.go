@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/ai/work"
@@ -305,7 +304,7 @@ func (a *App) drawWork(screen *ebiten.Image, sw, sh int) {
 			}
 			if pr := workPriority(p, col); pr > 0 {
 				// brighter for more urgent work
-				vector.FillRect(screen, cell.X, cell.Y, cell.W, cell.H,
+				uiFillRect(screen, cell.X, cell.Y, cell.W, cell.H,
 					color.RGBA{uint8(150 - pr*22), uint8(120 - pr*16), 50, 255}, false)
 			}
 			a.drawWorkSkill(screen, p, col, cell)
@@ -332,11 +331,11 @@ func (a *App) drawWorkSkill(screen *ebiten.Image, p game.PawnView, col int, cell
 // drawHatch fills r with the disabled colour and diagonal stripes: work the
 // colonist can never do.
 func drawHatch(dst *ebiten.Image, r rect) {
-	vector.FillRect(dst, r.X, r.Y, r.W, r.H, uiBtnDisabled, false)
+	uiFillRect(dst, r.X, r.Y, r.W, r.H, uiBtnDisabled, false)
 	sub := clipTo(dst, r)
 	c := uiTextDisabled
 	for d := float32(-r.H); d < r.W; d += 6 {
-		vector.StrokeLine(sub, r.X+d, r.bottom(), r.X+d+r.H, r.Y, 1, c, false)
+		uiLine(sub, r.X+d, r.bottom(), r.X+d+r.H, r.Y, 1, c, false)
 	}
 	strokeRect(dst, r, uiBtnBorder)
 }

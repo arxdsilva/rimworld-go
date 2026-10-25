@@ -34,7 +34,7 @@ func (a *App) syncTreeFocus() {
 	var hover [2]int
 	hovered := !a.hideUI && !a.colonyChromeHit(mx, my, sw, sh)
 	if hovered {
-		hover[0], hover[1] = r.TileAt(mx, my)
+		hover[0], hover[1] = r.TileAt(a.mapCursor()) // the map is physical
 	}
 	a.treeSel = a.treeSel[:0]
 	if r.hasSelect {

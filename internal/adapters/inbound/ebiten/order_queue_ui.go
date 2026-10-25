@@ -94,7 +94,8 @@ func (r *Renderer) drawOrderRoute(screen *ebiten.Image, tile float64) {
 			n++
 			label = strconv.Itoa(n)
 		}
-		drawText(screen, label, float64(sx), float64(sy)-lineH(tsSmall)/2, textStyle{Size: tsSmall.Size, Bold: true, Align: alignCenter})
+		k := 1 / uiScale() // sx, sy are physical (world); text is logical
+		drawText(screen, label, float64(sx)*k, float64(sy)*k-lineH(tsSmall)/2, textStyle{Size: tsSmall.Size, Bold: true, Align: alignCenter})
 	}
 }
 

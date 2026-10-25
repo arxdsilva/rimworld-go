@@ -232,7 +232,7 @@ func (a *App) drawBuildingInspector(screen *ebiten.Image) {
 		for _, bl := range b.Bills {
 			line := billLine(bl)
 			if bl.Status != "" {
-				vector.FillRect(screen, r.x+8, float32(y), 4, 22, uiBtnDisabled, false)
+				uiFillRect(screen, r.x+8, float32(y), 4, 22, uiBtnDisabled, false)
 			}
 			drawFitSmall(screen, line, float64(r.x)+16, float64(y)+2, float64(r.w)-150-22, tsBody)
 			y += billRowH

@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/pawn/schedule"
@@ -84,7 +83,7 @@ func (a *App) drawSchedule(screen *ebiten.Image, sw, sh int) {
 		}
 		drawButton(screen, b, b.contains(mx, my))
 		v, _ := strconv.Atoi(strings.TrimPrefix(b.id, "sched.brush."))
-		vector.FillRect(screen, b.x+b.w-16, b.y+8, 10, 10, schedColor(schedule.Activity(v)), false)
+		uiFillRect(screen, b.x+b.w-16, b.y+8, 10, 10, schedColor(schedule.Activity(v)), false)
 	}
 	gx := int(r.x) + 12 + workNameW
 	for h := 0; h < 24; h += 3 {
@@ -112,9 +111,9 @@ func (a *App) drawSchedule(screen *ebiten.Image, sw, sh int) {
 			if grid != nil && h < len(grid) {
 				c = schedColor(grid[h])
 			}
-			vector.FillRect(screen, x, float32(y), schedCellW-2, schedRowH-3, c, false)
+			uiFillRect(screen, x, float32(y), schedCellW-2, schedRowH-3, c, false)
 			if h == now {
-				vector.StrokeRect(screen, x, float32(y), schedCellW-2, schedRowH-3, 2, color.RGBA{250, 240, 200, 255}, false)
+				uiStrokeRect(screen, x, float32(y), schedCellW-2, schedRowH-3, 2, color.RGBA{250, 240, 200, 255}, false)
 			}
 		}
 	}

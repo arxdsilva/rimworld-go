@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/platform/input"
@@ -260,7 +259,7 @@ func (a *App) drawColonistPortraits(screen *ebiten.Image, sh int) {
 		if p.Drafted {
 			drawIcon(screen, a.icon("draft"), x+24, y-2, 18)
 		}
-		vector.FillRect(screen, float32(x), float32(y)+46, 40*float32(p.Mood)/100, 3, moodColor(p.Mood), false)
+		uiFillRect(screen, float32(x), float32(y)+46, 40*float32(p.Mood)/100, 3, moodColor(p.Mood), false)
 		drawText(screen, ellipsize(pawnLabel(p), tsSmall, barSlot-4), x, float64(hudBarY(sh))+hudBarH-lineH(tsSmall)-1, tsSmall)
 	}
 }
@@ -325,7 +324,7 @@ func (a *App) drawHoverRoom(screen *ebiten.Image, sh int) {
 	if a.colonyChromeHit(mx, my, sw, sh) {
 		return
 	}
-	tx, ty := a.renderer.TileAt(mx, my)
+	tx, ty := a.renderer.TileAt(a.mapCursor()) // physical: the map's pixels
 	w := a.renderer.world()
 	lines := soilLines(w, tx, ty)
 	if len(lines) == 0 {
@@ -490,9 +489,9 @@ func (a *App) drawRoofButton(screen *ebiten.Image, sw int) {
 		drawButton(screen, b, b.contains(mx, my))
 		if img := a.icon("overlay_roof"); img != nil {
 			// Icon replaces the text label: blank it with the button fill, then draw.
-			vector.FillRect(screen, b.x+2, b.y+2, b.w-4, b.h-4, uiBtn, false)
+			uiFillRect(screen, b.x+2, b.y+2, b.w-4, b.h-4, uiBtn, false)
 			if b.selected {
-				vector.FillRect(screen, b.x+2, b.y+2, b.w-4, b.h-4, uiBtnSelected, false)
+				uiFillRect(screen, b.x+2, b.y+2, b.w-4, b.h-4, uiBtnSelected, false)
 			}
 			drawIcon(screen, img, float64(b.x)+(float64(b.w)-float64(b.h)+4)/2, float64(b.y)+2, float64(b.h)-4)
 		}
@@ -617,9 +616,9 @@ func (a *App) drawHomeButton(screen *ebiten.Image, sw int) {
 	for _, b := range a.homeButtons(sw) {
 		drawButton(screen, b, b.contains(mx, my))
 		if img := a.icon("home"); img != nil {
-			vector.FillRect(screen, b.x+2, b.y+2, b.w-4, b.h-4, uiBtn, false)
+			uiFillRect(screen, b.x+2, b.y+2, b.w-4, b.h-4, uiBtn, false)
 			if b.selected {
-				vector.FillRect(screen, b.x+2, b.y+2, b.w-4, b.h-4, uiBtnSelected, false)
+				uiFillRect(screen, b.x+2, b.y+2, b.w-4, b.h-4, uiBtnSelected, false)
 			}
 			drawIcon(screen, img, float64(b.x)+(float64(b.w)-float64(b.h)+4)/2, float64(b.y)+2, float64(b.h)-4)
 		}
@@ -683,9 +682,9 @@ func (a *App) drawPlanButton(screen *ebiten.Image, sw int) {
 	for _, b := range a.planButtons(sw) {
 		drawButton(screen, b, b.contains(mx, my))
 		if img := a.icon("plan"); img != nil {
-			vector.FillRect(screen, b.x+2, b.y+2, b.w-4, b.h-4, uiBtn, false)
+			uiFillRect(screen, b.x+2, b.y+2, b.w-4, b.h-4, uiBtn, false)
 			if b.selected {
-				vector.FillRect(screen, b.x+2, b.y+2, b.w-4, b.h-4, uiBtnSelected, false)
+				uiFillRect(screen, b.x+2, b.y+2, b.w-4, b.h-4, uiBtnSelected, false)
 			}
 			drawIcon(screen, img, float64(b.x)+(float64(b.w)-float64(b.h)+4)/2, float64(b.y)+2, float64(b.h)-4)
 		}

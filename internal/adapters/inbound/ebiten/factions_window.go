@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/faction"
@@ -213,7 +212,7 @@ func drawGoodwillChart(dst *ebiten.Image, plot rect, hist []int, line color.RGBA
 	}{{100, chartGrid}, {50, chartGrid}, {0, chartZero}, {-50, chartGrid}, {-100, chartGrid}} {
 		y := plot.bottom() - plot.H*float32(g.v+100)/200
 		if g.v != 100 && g.v != -100 {
-			vector.StrokeLine(dst, plot.X, y, plot.right(), y, 1, g.c, false)
+			uiLine(dst, plot.X, y, plot.right(), y, 1, g.c, false)
 		}
 		drawText(dst, goodwillAxis(g.v), float64(plot.X-6), float64(y)-lineH(ls)/2, ls)
 	}
@@ -225,10 +224,10 @@ func drawGoodwillChart(dst *ebiten.Image, plot rect, hist []int, line color.RGBA
 	}
 	pts := chartPoints(hist, plot)
 	for i := 1; i < len(pts); i++ {
-		vector.StrokeLine(dst, pts[i-1][0], pts[i-1][1], pts[i][0], pts[i][1], 1.5, line, true)
+		uiLine(dst, pts[i-1][0], pts[i-1][1], pts[i][0], pts[i][1], 1.5, line, true)
 	}
 	last := pts[len(pts)-1]
-	vector.FillCircle(dst, last[0], last[1], 3, line, true)
+	uiFillCircle(dst, last[0], last[1], 3, line, true)
 	es := tsSmall
 	es.Color = uiTextDim
 	drawText(dst, "60 days ago", float64(plot.X), float64(plot.bottom())+3, es)

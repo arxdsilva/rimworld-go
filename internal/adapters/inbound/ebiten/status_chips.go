@@ -4,7 +4,6 @@ import (
 	"image/color"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/scenario"
@@ -82,8 +81,8 @@ func (a *App) drawStatusChips(screen *ebiten.Image, sw int) {
 	for i, r := range a.chipRects(chips, sw) {
 		fill := chips[i].edge
 		fill.A = 0x38
-		vector.FillRect(screen, r.X, r.Y, r.W, r.H, fill, false)
-		vector.StrokeRect(screen, r.X, r.Y, r.W, r.H, 1, chips[i].edge, false)
+		uiFillRect(screen, r.X, r.Y, r.W, r.H, fill, false)
+		uiStrokeRect(screen, r.X, r.Y, r.W, r.H, 1, chips[i].edge, false)
 		drawLabel(screen, int(r.X)+chipPad, int(r.Y)+2, chips[i].label)
 	}
 }

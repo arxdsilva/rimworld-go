@@ -67,15 +67,16 @@ func (a *App) fpsProbeUpdate() bool {
 		if p.Zoom > 0 {
 			a.renderer.cam.zoom = clampZoom(p.Zoom)
 		}
+		a.renderer.syncDev() // the probe frames the physical screen
 		tile := a.renderer.tilePx()
-		a.renderer.cam.offsetX = (float64(a.renderer.game.Width())/2+0.5)*tile - float64(a.sw)/2
-		a.renderer.cam.offsetY = (float64(a.renderer.game.Height())/2)*tile - float64(a.sh)/2
+		a.renderer.cam.offsetX = (float64(a.renderer.game.Width())/2+0.5)*tile - float64(a.pw)/2
+		a.renderer.cam.offsetY = (float64(a.renderer.game.Height())/2)*tile - float64(a.ph)/2
 		st.started, st.begin = true, now
 		st.warmupTo = now.Add(probeWarmup) // atlas pages, first bakes
 		return false
 	}
 	if st.drawn && now.Sub(st.begin) > time.Duration(p.Seconds)*time.Second+probeWarmup {
-		st.report = fpsReport(st)
+		st.report = fpsReport(st, a.scale) + fmt.Sprintf(", %dx%d physical", a.pw, a.ph)
 		log.Print(st.report)
 		return true
 	}
@@ -118,7 +119,9 @@ func (a *App) fpsProbeDraw(start time.Time) {
 	st.last = now
 }
 
-func fpsReport(st *fpsProbeState) string {
+// fpsReport summarises the measured frames at UI scale sc (s and dev,
+// PLAY-012: HiDPI renders the map at dev x the pixels).
+func fpsReport(st *fpsProbeState, sc uiScaleState) string {
 	pct := func(d []time.Duration, q float64) time.Duration {
 		if len(d) == 0 {
 			return 0
@@ -145,6 +148,6 @@ func fpsReport(st *fpsProbeState) string {
 	if p := pct(st.frames, 0.99); p > 0 {
 		low = float64(time.Second) / float64(p)
 	}
-	return fmt.Sprintf("fps probe: %d frames, avg %.1f fps, 1%% low %.1f fps (frame p99 %v); update avg %v p99 %v; draw avg %v p99 %v",
-		len(st.frames), fps, low, pct(st.frames, 0.99), avg(st.update), pct(st.update, 0.99), avg(st.draw), pct(st.draw, 0.99))
+	return fmt.Sprintf("fps probe: %d frames, avg %.1f fps, 1%% low %.1f fps (frame p99 %v); update avg %v p99 %v; draw avg %v p99 %v; scale s %g dev %g",
+		len(st.frames), fps, low, pct(st.frames, 0.99), avg(st.update), pct(st.update, 0.99), avg(st.draw), pct(st.draw, 0.99), sc.s, sc.dev)
 }

@@ -223,7 +223,14 @@ func (a *App) loadMenuScene() {
 
 // drawMenuDiorama draws the diorama dimmed by dim (0..1); false when
 // there is none and the caller should draw the gradient backdrop.
+//
+// It is a full-screen background: it fills the screen at its physical
+// size, whatever the UI scale (sw, sh, the logical size, are ignored
+// unless the screen is empty).
 func (a *App) drawMenuDiorama(screen *ebiten.Image, sw, sh int, dim float64) bool {
+	if b := screen.Bounds(); b.Dx() > 0 && b.Dy() > 0 {
+		sw, sh = b.Dx(), b.Dy()
+	}
 	d := a.menu
 	if d == nil || len(d.levels) == 0 || sw < 1 || sh < 1 {
 		return false
@@ -280,7 +287,8 @@ func (a *App) drawMenuDiorama(screen *ebiten.Image, sw, sh int, dim float64) boo
 		d.scrim = ebiten.NewImageFromImage(buildMenuScrim(sw, sh))
 		d.scrimW, d.scrimH = sw, sh
 	}
-	drawImage(screen, d.scrim, 0, 0, float64(sw), float64(sh), false)
+	op = &ebiten.DrawImageOptions{}
+	screen.DrawImage(d.scrim, op)
 	if dim > 0 {
 		vector.FillRect(screen, 0, 0, float32(sw), float32(sh), fade(uiSpace, dim), false)
 	}

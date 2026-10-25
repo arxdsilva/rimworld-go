@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
@@ -93,8 +92,8 @@ func (a *App) drawTroughSection(screen *ebiten.Image, b game.BuildingView, r but
 	drawText(screen, fmt.Sprintf("Feed  %d / %d", b.TroughFill, b.TroughCap), fx, fy, tsBody)
 	bx := float32(x + 130)
 	by := float32(y) + (lineStep(tsBody)-14)/2
-	vector.FillRect(screen, bx, by, 200, 14, uiBtnDisabled, false)
-	vector.FillRect(screen, bx, by, float32(200*pct/100), 14, uiAccent, false)
+	uiFillRect(screen, bx, by, 200, 14, uiBtnDisabled, false)
+	uiFillRect(screen, bx, by, float32(200*pct/100), 14, uiAccent, false)
 	dim := withColor(tsSmall, uiTextDim)
 	drawText(screen, "Haulers fill it with feed matching the filter.", fx, fy+float64(lineStep(tsBody)), dim)
 	drawText(screen, "Accepts:", fx, fy+float64(lineStep(tsBody)+lineStep(tsSmall)), dim)

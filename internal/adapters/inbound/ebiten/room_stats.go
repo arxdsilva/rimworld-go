@@ -38,9 +38,9 @@ func (a *App) drawRoomsButton(screen *ebiten.Image, sw int) {
 	for _, b := range a.roomsButtons(sw) {
 		drawButton(screen, b, b.contains(mx, my))
 		if img := a.icon("overlay_rooms"); img != nil {
-			vector.FillRect(screen, b.x+2, b.y+2, b.w-4, b.h-4, uiBtn, false)
+			uiFillRect(screen, b.x+2, b.y+2, b.w-4, b.h-4, uiBtn, false)
 			if b.selected {
-				vector.FillRect(screen, b.x+2, b.y+2, b.w-4, b.h-4, uiBtnSelected, false)
+				uiFillRect(screen, b.x+2, b.y+2, b.w-4, b.h-4, uiBtnSelected, false)
 			}
 			drawIcon(screen, img, float64(b.x)+(float64(b.w)-float64(b.h)+4)/2, float64(b.y)+2, float64(b.h)-4)
 		}
@@ -83,7 +83,8 @@ func (a *App) drawRoomOverlay(screen *ebiten.Image) {
 	sw, sh := a.size()
 	tile := r.tilePx()
 	x0, y0 := r.TileAt(0, 0)
-	x1, y1 := r.TileAt(sw, sh)
+	ps := uiScale()
+	x1, y1 := r.TileAt(int(float64(sw)*ps), int(float64(sh)*ps))
 	for y := max(y0-1, 0); y <= y1+1; y++ {
 		for x := max(x0-1, 0); x <= x1+1; x++ {
 			id := roomIDAt(w, x, y)
@@ -127,7 +128,7 @@ func (a *App) drawRoomCard(screen *ebiten.Image) {
 		return
 	}
 	w := a.renderer.world()
-	tx, ty := a.renderer.TileAt(mx, my)
+	tx, ty := a.renderer.TileAt(a.mapCursor())
 	id := roomIDAt(w, tx, ty)
 	if id < 0 || id >= len(w.Rooms) {
 		return
@@ -138,7 +139,7 @@ func (a *App) drawRoomCard(screen *ebiten.Image) {
 	pw, ph := wid+24, len(lines)*rowH+12
 	x, y := min(mx+18, sw-pw-4), min(my+18, int(hudBarY(sh))-ph-4)
 	drawPanel(screen, float32(x), float32(y), float32(pw), float32(ph))
-	vector.FillRect(screen, float32(x)+1, float32(y)+1, 4, float32(ph)-2, opaque(roomTint(w.Rooms[id].Score)), false)
+	uiFillRect(screen, float32(x)+1, float32(y)+1, 4, float32(ph)-2, opaque(roomTint(w.Rooms[id].Score)), false)
 	for i, l := range lines {
 		st := tsBody
 		if i == 0 {

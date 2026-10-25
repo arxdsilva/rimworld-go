@@ -18,12 +18,56 @@ func colonyViewport(sw, sh int) viewport {
 // colonyViewportPhysical is colonyViewport in physical pixels (logical x
 // the UI scale s), for the renderer's culling, camera clamp and
 // screenToWorld, so the map's visible area matches the scaled chrome.
-// TODO(PLAY-012 HIDPI-MAP): the camera (app.go applyCamera, clampCamera,
-// minimap, capture framing) still passes the logical viewport; switch the
-// map-side callers to this with the tile size x dev.
 func colonyViewportPhysical(sw, sh int, s float64) viewport {
 	v := colonyViewport(sw, sh)
 	return viewport{v.x0 * s, v.y0 * s, v.x1 * s, v.y1 * s}
+}
+
+// mapViewport is the colony map's viewport in physical pixels: what the
+// camera, edge scrolling, culling and the sound director use. The
+// logical size is rounded up, so the right and bottom edges are capped at
+// the physical screen.
+func (a *App) mapViewport() viewport {
+	v := colonyViewportPhysical(a.sw, a.sh, a.scale.s)
+	if a.pw > 0 {
+		v.x1 = math.Min(v.x1, float64(a.pw))
+	}
+	if a.ph > 0 {
+		v.y1 = math.Min(v.y1, float64(a.ph))
+	}
+	return v
+}
+
+// screenDev is the screen's device pixel density the map renders at (1
+// when unset): the map's tile size is TileSize x zoom x screenDev.
+func screenDev() float64 {
+	if d := curUIScale.dev; d > 0 && !math.IsNaN(d) && !math.IsInf(d, 0) {
+		return d
+	}
+	return 1
+}
+
+// syncDev adopts the screen's density, rescaling the camera's physical
+// offsets and velocity so every point-space position keeps showing the
+// same world point (HiDPI toggled, or the window moved to another
+// screen). The zoom is apparent, so it does not change.
+func (r *Renderer) syncDev() {
+	d := screenDev()
+	old := r.cam.dev
+	if old <= 0 {
+		old = 1
+	}
+	if d == r.cam.dev {
+		return
+	}
+	k := d / old
+	r.cam.offsetX *= k
+	r.cam.offsetY *= k
+	r.smooth.vx *= k
+	r.smooth.vy *= k
+	r.smooth.anchorX *= k
+	r.smooth.anchorY *= k
+	r.cam.dev = d
 }
 
 const (
@@ -41,9 +85,12 @@ const (
 // minZoomFor is the furthest zoom-out for this map and viewport: the whole
 // map fits with a small margin, unless that would leave more than
 // 1-minCover of the screen black along its wider side.
+// v and the map are in physical pixels (one tile is TileSize x dev at
+// zoom 1), so the limit is the same apparent zoom at any density.
 func (r *Renderer) minZoomFor(v viewport) float64 {
-	mw := float64(r.game.Width() * TileSize)
-	mh := float64(r.game.Height() * TileSize)
+	unit := (&camera{zoom: 1, dev: r.cam.dev}).tile()
+	mw := float64(r.game.Width()) * unit
+	mh := float64(r.game.Height()) * unit
 	if v.w() <= 0 || v.h() <= 0 || mw <= 0 || mh <= 0 {
 		return minZoom
 	}
@@ -56,7 +103,10 @@ func (r *Renderer) minZoomFor(v viewport) float64 {
 // may be scrolled at most edgeSlack of the viewport inside it; on an axis
 // where the map is smaller than that it is centred instead. The first call
 // centres the camera on the map.
+//
+// v is the physical map viewport (App.mapViewport).
 func (r *Renderer) clampCamera(v viewport) {
+	r.syncDev()
 	if v.w() <= 0 || v.h() <= 0 {
 		return
 	}

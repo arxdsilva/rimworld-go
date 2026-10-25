@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/storyteller"
@@ -134,10 +133,8 @@ func (a *App) portraitImage(key string, thumb bool) *ebiten.Image {
 func drawFit(dst, img *ebiten.Image, box rect) {
 	iw, ih := float64(img.Bounds().Dx()), float64(img.Bounds().Dy())
 	s := min(float64(box.W)/iw, float64(box.H)/ih)
-	op := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear}
-	op.GeoM.Scale(s, s)
-	op.GeoM.Translate(float64(box.X)+(float64(box.W)-iw*s)/2, float64(box.Y)+(float64(box.H)-ih*s)/2)
-	dst.DrawImage(img, op)
+	uiImage(dst, img, float64(box.X)+(float64(box.W)-iw*s)/2, float64(box.Y)+(float64(box.H)-ih*s)/2,
+		iw*s, ih*s, &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear})
 }
 
 // drawSilhouette is the stand-in for a missing portrait: a head and
@@ -147,8 +144,8 @@ func drawSilhouette(dst *ebiten.Image, box rect, name string) {
 	strokeRect(dst, box, uiPanelBorder)
 	cx := box.X + box.W/2
 	c := uiPanelBorder
-	vector.FillCircle(dst, cx, box.Y+box.H*0.36, box.W*0.2, c, true)
-	vector.FillCircle(dst, cx, box.Y+box.H*0.95, box.W*0.42, c, true)
+	uiFillCircle(dst, cx, box.Y+box.H*0.36, box.W*0.2, c, true)
+	uiFillCircle(dst, cx, box.Y+box.H*0.95, box.W*0.42, c, true)
 	st := tsSmall
 	st.Align, st.Color = alignCenter, uiTextDim
 	drawText(dst, fitText(name, st, box.W-8), float64(cx), float64(box.bottom())-lineH(st)-4, st)
@@ -165,7 +162,7 @@ func (a *App) paintStoryCard(dst *ebiten.Image, r rect, p storyteller.Profile, s
 	}
 	fillRect(dst, r, fill)
 	if selected {
-		vector.StrokeRect(dst, r.X, r.Y, r.W, r.H, 2, uiAccent, false)
+		uiStrokeRect(dst, r.X, r.Y, r.W, r.H, 2, uiAccent, false)
 	} else {
 		strokeRect(dst, r, uiPanelBorder)
 	}
@@ -280,7 +277,7 @@ func drawPacing(dst *ebiten.Image, r rect, vals []int) {
 			continue
 		}
 		h := (chart.H - 6) * float32(v) / float32(hi)
-		vector.FillRect(dst, chart.X+float32(i)*bw+1, chart.bottom()-3-h, max(1, bw-2), h, uiAccent, false)
+		uiFillRect(dst, chart.X+float32(i)*bw+1, chart.bottom()-3-h, max(1, bw-2), h, uiAccent, false)
 	}
 	for d := 0; d <= sparkDays; d += 10 {
 		x := chart.X + float32(d)*bw
@@ -400,10 +397,10 @@ func (a *App) storyRight(ng *newGameState, r rect) {
 				fillRect(sub, rr.inset(1), uiBtnHover)
 			}
 			cx, cy := rr.X+16, rr.Y+12
-			vector.FillCircle(sub, cx, cy, radioRadius, uiField, true)
-			vector.StrokeCircle(sub, cx, cy, radioRadius, 1, uiFieldBorder, true)
+			uiFillCircle(sub, cx, cy, radioRadius, uiField, true)
+			uiStrokeCircle(sub, cx, cy, radioRadius, 1, uiFieldBorder, true)
 			if sr.selected {
-				vector.FillCircle(sub, cx, cy, radioRadius-3, uiAccent, true)
+				uiFillCircle(sub, cx, cy, radioRadius-3, uiAccent, true)
 			}
 			drawText(sub, sr.label, float64(rr.X+32), float64(rr.Y)+3, tsLabel)
 			ds := tsSmall

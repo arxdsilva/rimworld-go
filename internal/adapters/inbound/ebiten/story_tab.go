@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/difficulty"
@@ -179,10 +178,10 @@ func paintDiffRow(dst *ebiten.Image, r rect, label, desc string, selected, hot b
 		fillRect(dst, r.inset(1), uiBtnHover)
 	}
 	cx, cy := r.X+16, r.Y+r.H/2
-	vector.FillCircle(dst, cx, cy, radioRadius, uiField, true)
-	vector.StrokeCircle(dst, cx, cy, radioRadius, 1, uiFieldBorder, true)
+	uiFillCircle(dst, cx, cy, radioRadius, uiField, true)
+	uiStrokeCircle(dst, cx, cy, radioRadius, 1, uiFieldBorder, true)
 	if selected {
-		vector.FillCircle(dst, cx, cy, radioRadius-3, uiAccent, true)
+		uiFillCircle(dst, cx, cy, radioRadius-3, uiAccent, true)
 	}
 	drawText(dst, label, float64(r.X+32), float64(r.Y)+5, tsLabel)
 	ds := tsSmall

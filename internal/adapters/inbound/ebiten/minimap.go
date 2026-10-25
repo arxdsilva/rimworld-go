@@ -4,7 +4,6 @@ import (
 	"image/color"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
 )
@@ -15,6 +14,12 @@ import (
 // Simulation.MinimapLayer: terrain colours, water, floors, buildings and
 // plants), colonists as light dots, hostiles as red dots and the camera's
 // view as a rectangle; a click on it centres the camera there.
+//
+// The box is UI (PLAY-012 B.4): laid out in logical pixels against the
+// logical viewport and drawn through the canvas, the map image stretched
+// into the scaled box. The camera works in physical pixels, so a click
+// converts logical box coordinates to tiles and centres the physical
+// map viewport on them.
 
 const (
 	minimapSide    = 180 // px, the box
@@ -52,7 +57,8 @@ func (r *Renderer) toggleMinimap() {
 }
 
 // minimapBox is the minimap's box and the map's rectangle inside it (the
-// map keeps its aspect, centred) for viewport v.
+// map keeps its aspect, centred) for the logical viewport v, in logical
+// pixels.
 func (r *Renderer) minimapBox(v viewport) (bx, by float64, mx, my, mw, mh float64) {
 	bx, by = v.x1-minimapMargin-minimapSide, v.y1-minimapMargin-minimapSide-minimapAbove
 	gw, gh := float64(r.game.Width()), float64(r.game.Height())
@@ -61,13 +67,15 @@ func (r *Renderer) minimapBox(v viewport) (bx, by float64, mx, my, mw, mh float6
 	return bx, by, bx + (minimapSide-mw)/2, by + (minimapSide-mh)/2, mw, mh
 }
 
-// minimapClick centres the camera on the tile under (sx, sy) when it is
-// on the minimap; false (nothing done) elsewhere or when it is hidden.
-func (r *Renderer) minimapClick(sx, sy int, v viewport) bool {
+// minimapClick centres the camera on the tile under the logical point
+// (sx, sy) when it is on the minimap; false (nothing done) elsewhere or
+// when it is hidden. ui is the logical viewport (the box), v the physical
+// map viewport the camera is centred in.
+func (r *Renderer) minimapClick(sx, sy int, ui, v viewport) bool {
 	if !r.minimapOn() {
 		return false
 	}
-	bx, by, mx, my, mw, mh := r.minimapBox(v)
+	bx, by, mx, my, mw, mh := r.minimapBox(ui)
 	x, y := float64(sx), float64(sy)
 	if x < bx || y < by || x >= bx+minimapSide || y >= by+minimapSide {
 		return false
@@ -160,25 +168,23 @@ func (r *Renderer) syncMinimap() {
 	m.polls++
 }
 
-// drawMinimap draws the minimap for viewport v when it is shown.
-func (r *Renderer) drawMinimap(screen *ebiten.Image, v viewport) {
+// drawMinimap draws the minimap when it is shown: the box in the logical
+// viewport ui, the view frame for the physical map viewport v.
+func (r *Renderer) drawMinimap(screen *ebiten.Image, ui, v viewport) {
 	if !r.minimapOn() {
 		return
 	}
 	r.syncMinimap()
 	m := &r.mini
-	bx, by, mx, my, mw, mh := r.minimapBox(v)
-	vector.FillRect(screen, float32(bx-2), float32(by-2), minimapSide+4, minimapSide+4, minimapBackClr, false)
+	bx, by, mx, my, mw, mh := r.minimapBox(ui)
+	uiFillRect(screen, float32(bx-2), float32(by-2), minimapSide+4, minimapSide+4, minimapBackClr, false)
 	if m.img != nil {
-		op := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear}
-		op.GeoM.Scale(mw/float64(m.w), mh/float64(m.h))
-		op.GeoM.Translate(mx, my)
-		screen.DrawImage(m.img, op)
+		uiImage(screen, m.img, mx, my, mw, mh, &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear})
 	}
 	gw, gh := float64(r.game.Width()), float64(r.game.Height())
 	dot := func(x, y int, c color.RGBA) {
 		px, py := mx+(float64(x)+0.5)/gw*mw, my+(float64(y)+0.5)/gh*mh
-		vector.FillRect(screen, float32(px-1.5), float32(py-1.5), 3, 3, c, false)
+		uiFillRect(screen, float32(px-1.5), float32(py-1.5), 3, 3, c, false)
 	}
 	for _, p := range r.game.Snapshot() {
 		if p.Embodied || p.CarriedBy != 0 {
@@ -205,5 +211,5 @@ func (r *Renderer) drawMinimap(screen *ebiten.Image, v viewport) {
 	vx1, vy1 := (v.x1+r.cam.offsetX)/t, (v.y1+r.cam.offsetY)/t
 	fx0, fy0 := mx+min(max(vx0/gw, 0), 1)*mw, my+min(max(vy0/gh, 0), 1)*mh
 	fx1, fy1 := mx+min(max(vx1/gw, 0), 1)*mw, my+min(max(vy1/gh, 0), 1)*mh
-	vector.StrokeRect(screen, float32(fx0), float32(fy0), float32(fx1-fx0), float32(fy1-fy0), 1, minimapFrameClr, false)
+	uiStrokeRect(screen, float32(fx0), float32(fy0), float32(fx1-fx0), float32(fy1-fy0), 1, minimapFrameClr, false)
 }

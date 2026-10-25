@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
 )
@@ -243,9 +242,9 @@ func (a *App) drawAlerts(screen *ebiten.Image, sw int) {
 			pulse := 0.55 + 0.45*math.Sin(float64(a.renderer.present)/9)
 			edge, bg = fade(alertClr, pulse), color.RGBA{60, 18, 14, 235}
 		}
-		vector.FillRect(screen, r.x, r.y, r.w, r.h, bg, false)
-		vector.FillRect(screen, r.x, r.y, 4, r.h, edge, false)
-		vector.StrokeRect(screen, r.x, r.y, r.w, r.h, 1, edge, false)
+		uiFillRect(screen, r.x, r.y, r.w, r.h, bg, false)
+		uiFillRect(screen, r.x, r.y, 4, r.h, edge, false)
+		uiStrokeRect(screen, r.x, r.y, r.w, r.h, 1, edge, false)
 		drawFitSmall(screen, al.label, float64(r.x)+12, float64(r.y)+(float64(r.h)-lineH(tsBody))/2, float64(r.w)-18, tsBody)
 	}
 }
@@ -262,18 +261,32 @@ func (a *App) focusAlert(id string) {
 		}
 		t := al.targets[a.alertCycle[key]%len(al.targets)]
 		a.alertCycle[key]++
-		a.renderer.centerOn(float64(t[0])+0.5, float64(t[1])+0.5, a.sw, a.sh)
+		a.centerOnMap(float64(t[0])+0.5, float64(t[1])+0.5)
 		return
 	}
 }
 
 // centerOn moves the camera so world point (wx, wy) is mid-screen.
+// sw x sh is the screen in the map's pixels (captures run at scale 1).
 func (r *Renderer) centerOn(wx, wy float64, sw, sh int) {
+	r.centerOnView(wx, wy, viewport{0, 0, float64(sw), float64(sh)}, colonyViewport(sw, sh))
+}
+
+// centerOnView centres the camera on a world point in the middle of the
+// physical screen `screen`, clamped to the physical map viewport v.
+func (r *Renderer) centerOnView(wx, wy float64, screen, v viewport) {
 	tile := r.tilePx()
-	r.cam.offsetX = wx*tile - float64(sw)/2
-	r.cam.offsetY = wy*tile - float64(sh)/2
+	r.cam.offsetX = wx*tile - (screen.x0+screen.x1)/2
+	r.cam.offsetY = wy*tile - (screen.y0+screen.y1)/2
 	r.cam.placed = true // an explicit jump; don't recentre on the map
-	r.clampCamera(colonyViewport(sw, sh))
+	r.clampCamera(v)
+}
+
+// centerOnMap is the UI's "jump to": the target goes to the middle of the
+// physical map viewport.
+func (a *App) centerOnMap(wx, wy float64) {
+	v := a.mapViewport()
+	a.renderer.centerOnView(wx, wy, v, v)
 }
 
 // hungryAlertBelow is the food percent under which a tame animal raises

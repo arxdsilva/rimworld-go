@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
 )
@@ -150,20 +149,20 @@ func (a *App) focusMessage(id string) {
 		for _, an := range a.renderer.world().Animals {
 			if an.ID == m.Focus {
 				a.selectCand(selCand{selAnimal, an.ID})
-				a.renderer.centerOn(float64(an.X)+0.5, float64(an.Y)+0.5, a.sw, a.sh)
+				a.centerOnMap(float64(an.X)+0.5, float64(an.Y)+0.5)
 				return
 			}
 		}
 		for _, p := range a.renderer.snapshot() {
 			if p.ID == m.Focus {
 				a.renderer.Select(p.ID)
-				a.renderer.centerOn(float64(p.X)+0.5, float64(p.Y)+0.5, a.sw, a.sh)
+				a.centerOnMap(float64(p.X)+0.5, float64(p.Y)+0.5)
 				return
 			}
 		}
 	}
 	if m.X != 0 || m.Y != 0 {
-		a.renderer.centerOn(float64(m.X)+0.5, float64(m.Y)+0.5, a.sw, a.sh)
+		a.centerOnMap(float64(m.X)+0.5, float64(m.Y)+0.5)
 	}
 }
 
@@ -171,7 +170,7 @@ func (a *App) drawMessages(screen *ebiten.Image) {
 	sw, _ := a.size()
 	for i, m := range a.liveMessages() {
 		r := a.messageRect(sw, i, m)
-		vector.FillRect(screen, r.x, r.y, r.w, r.h, color.RGBA{20, 16, 12, 200}, false)
+		uiFillRect(screen, r.x, r.y, r.w, r.h, color.RGBA{20, 16, 12, 200}, false)
 		drawLabel(screen, int(r.x)+8, int(r.y)+3, messageLine(m))
 	}
 }

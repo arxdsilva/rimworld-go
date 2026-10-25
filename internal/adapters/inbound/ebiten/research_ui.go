@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
@@ -89,15 +88,15 @@ func (a *App) drawResearch(screen *ebiten.Image, sw, sh int) {
 }
 
 func drawResearchBar(screen *ebiten.Image, x, y, w, h float32, p game.ResearchView) {
-	vector.FillRect(screen, x, y, w, h, color.RGBA{30, 26, 22, 255}, false)
+	uiFillRect(screen, x, y, w, h, color.RGBA{30, 26, 22, 255}, false)
 	c := color.RGBA{90, 160, 210, 255}
 	if p.Done {
 		c = color.RGBA{120, 200, 90, 255}
 	}
 	if p.Cost > 0 {
-		vector.FillRect(screen, x, y, w*float32(min(p.Progress, p.Cost))/float32(p.Cost), h, c, false)
+		uiFillRect(screen, x, y, w*float32(min(p.Progress, p.Cost))/float32(p.Cost), h, c, false)
 	}
-	vector.StrokeRect(screen, x, y, w, h, 1, color.RGBA{90, 80, 70, 255}, false)
+	uiStrokeRect(screen, x, y, w, h, 1, color.RGBA{90, 80, 70, 255}, false)
 }
 
 func (a *App) hasResearchBench() bool {

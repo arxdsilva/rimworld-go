@@ -224,7 +224,7 @@ func (a *App) centreOnPawn(id entity.EntityID) {
 	for _, p := range a.renderer.snapshot() {
 		if p.ID == id {
 			wx, wy := a.renderer.interpWorld(p)
-			a.renderer.centerOn(wx+0.5, wy+0.5, a.sw, a.sh)
+			a.centerOnMap(wx+0.5, wy+0.5)
 			return
 		}
 	}
@@ -312,7 +312,9 @@ func (a *App) cameraInput(v viewport) camInput {
 		c.dy++
 	}
 	c.fast = f.shift() && f.top() != input.CtxText
-	mx, my := a.currentCursor()
+	// v and the camera are physical: edge scroll, the wheel's anchor and
+	// the middle drag read the physical cursor; UI hit tests the logical one.
+	mx, my := a.mapCursor()
 	if a.renderer.edgeScroll && f.raw.focused {
 		ex, ey := edgePan(mx, my, v)
 		c.dx, c.dy = c.dx+ex, c.dy+ey
@@ -323,7 +325,7 @@ func (a *App) cameraInput(v viewport) camInput {
 	if f.fired(input.ZoomOut) {
 		c.zoom--
 	}
-	if f.raw.wheelY != 0 && !a.renderer.wheelTaken && !a.uiWheelOver(mx, my) { // a scroll view under the cursor owns the wheel
+	if lx, ly := a.currentCursor(); f.raw.wheelY != 0 && !a.renderer.wheelTaken && !a.uiWheelOver(lx, ly) { // a scroll view under the cursor owns the wheel
 		c.wheel, c.wx, c.wy = f.raw.wheelY, float64(mx), float64(my)
 	}
 	switch {

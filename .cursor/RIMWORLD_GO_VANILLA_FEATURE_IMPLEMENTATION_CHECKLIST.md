@@ -544,6 +544,7 @@ This is the heart of autonomous colony behavior.
 -   [x] **Cut plant designation** (trees drop wood scaled by growth; bushes cleared)
 -   [x] **Harvest designation** (wild plants by order; zone crops harvest automatically; Grow work type)
 -   [x] **Hunt designation**
+-   [x] **Plan designation** (PLAY-012 UI-023: Plan / Remove plan paint visual layout marks with no gameplay effect; a mark clears when any building is finished on its tile; Plans button hides the overlay)
 -   [-] **Cancel designation** (frames refund delivered materials (UI-015 `CancelFrame` and the Cancel area), harvest marks, deconstruct marks; zones lose just the cancelled tiles (ZONE-001))
 -   [x] **Forbid/unforbid designation/action** (SIM-028 Forbid/Allow area tools and item toggle; UI-016 F key)
 

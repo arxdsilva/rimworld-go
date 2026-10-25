@@ -2,10 +2,10 @@ package ebiten
 
 import (
 	"fmt"
+	"math"
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/platform/config"
 )
@@ -29,6 +29,8 @@ type optionRow struct {
 	value      func(config.Settings) string
 	frac       func(config.Settings) float64   // stepper bar fill, 0..1
 	apply      func(s *config.Settings, d int) // d: -1/+1 for steppers, 0 to toggle/cycle
+	live       func(a *App) string             // value that needs the running app (Auto UI scale); overrides value
+	tip        string                          // hover line
 }
 
 var optionTabLabels = map[string]string{"audio": "Audio", "graphics": "Graphics", "gameplay": "Gameplay", "controls": "Controls", "access": "Accessibility", "story": "Story"}
@@ -98,6 +100,52 @@ func autosaveLabel(days int) string {
 	return fmt.Sprintf("Every %d days", days)
 }
 
+func withTip(r optionRow, tip string) optionRow { r.tip = tip; return r }
+
+// uiScaleLabel names a UI scale choice; Auto is shown with its live value.
+func uiScaleLabel(s config.Settings) string {
+	if s.Accessibility.UIScaleAuto {
+		return "Auto"
+	}
+	return fmt.Sprintf("%d%%", s.Accessibility.UIScale)
+}
+
+// uiScaleRow cycles Auto, then every preset, then Auto again. The text
+// size follows it; there is no separate slider.
+func uiScaleRow() optionRow {
+	return optionRow{key: "uiscale", label: "UI scale", kind: rowChoice,
+		tip:   "Scales text and every panel. Auto fits the window.",
+		value: uiScaleLabel,
+		live: func(a *App) string {
+			if a.settings.Accessibility.UIScaleAuto {
+				return fmt.Sprintf("Auto (%d%%)", int(math.Round(a.scale.ui*100)))
+			}
+			return uiScaleLabel(a.settings)
+		},
+		apply: func(s *config.Settings, _ int) {
+			ac := &s.Accessibility
+			if ac.UIScaleAuto {
+				ac.UIScaleAuto, ac.UIScale = false, config.UIScalePresets[0]
+				return
+			}
+			for i, p := range config.UIScalePresets {
+				if p == ac.UIScale && i+1 < len(config.UIScalePresets) {
+					ac.UIScale = config.UIScalePresets[i+1]
+					return
+				}
+			}
+			ac.UIScaleAuto = true
+		}}
+}
+
+// rowValue is the text of a row's control.
+func (a *App) rowValue(r optionRow) string {
+	if r.live != nil {
+		return r.live(a)
+	}
+	return r.value(a.settings)
+}
+
 // optionRows are the rows of a tab.
 func optionRows(tab string) []optionRow {
 	switch tab {
@@ -105,6 +153,8 @@ func optionRows(tab string) []optionRow {
 		return []optionRow{
 			toggleRow("fullscreen", "Fullscreen", func(s *config.Settings) *bool { return &s.Graphics.Fullscreen }),
 			toggleRow("vsync", "VSync", func(s *config.Settings) *bool { return &s.Graphics.VSync }),
+			withTip(toggleRow("hidpi", "Sharp on high-density screens", func(s *config.Settings) *bool { return &s.Graphics.HiDPI }),
+				"Render at the screen's true resolution. Costs GPU time on very large maps."),
 			{key: "effects", label: "Effects", kind: rowChoice,
 				value: func(s config.Settings) string {
 					return strings.ToUpper(s.Graphics.Effects[:1]) + s.Graphics.Effects[1:]
@@ -134,6 +184,7 @@ func optionRows(tab string) []optionRow {
 		return nil // story_tab.go declares its own widgets
 	case "access":
 		return []optionRow{
+			uiScaleRow(),
 			toggleRow("reducedmotion", "Reduced motion", func(s *config.Settings) *bool { return &s.Accessibility.ReducedMotion }),
 			toggleRow("reducedflash", "Reduced flashing", func(s *config.Settings) *bool { return &s.Accessibility.ReducedFlashing }),
 		}
@@ -150,7 +201,6 @@ func optionRows(tab string) []optionRow {
 
 // optionNotes is the dim line under a tab's rows.
 var optionNotes = map[string]string{
-	"access":   "Text size and UI scale: planned (needs the new font and layout pass).",
 	"gameplay": "Developer mode: 4 ultrafast, Numpad + one tick (paused), / debug actions, ` log, ' inspector.",
 }
 
@@ -182,8 +232,8 @@ func (a *App) optionsButtons(sw, sh int) []button {
 			continue
 		}
 		lock := a.optionLock(r.key) // saves.go: developer mode is locked in commitment mode
-		out = append(out, button{id: "options." + r.key, label: r.value(a.settings), x: optCtrlX, y: y, w: 160, h: optBtnH,
-			disabled: lock != "", reason: lock})
+		out = append(out, button{id: "options." + r.key, label: a.rowValue(r), x: optCtrlX, y: y, w: 160, h: optBtnH,
+			disabled: lock != "", reason: lock, tip: r.tip})
 	}
 	return append(out, button{id: "options.back", label: "Back", x: 40, y: footerY(sh), w: 140, h: 36})
 }
@@ -245,9 +295,9 @@ func (a *App) drawOptions(screen *ebiten.Image, sw, sh int) {
 		}
 		bx := float32(optCtrlX + optBtnH + 8)
 		by := y + optBtnH/2 - 6
-		vector.FillRect(screen, bx, by, optBarW, 12, uiBtnDisabled, false)
-		vector.FillRect(screen, bx, by, optBarW*float32(clamp01(r.frac(a.settings))), 12, uiAccent, false)
-		vector.StrokeRect(screen, bx, by, optBarW, 12, 1, uiPanelBorder, false)
+		uiFillRect(screen, bx, by, optBarW, 12, uiBtnDisabled, false)
+		uiFillRect(screen, bx, by, optBarW*float32(clamp01(r.frac(a.settings))), 12, uiAccent, false)
+		uiStrokeRect(screen, bx, by, optBarW, 12, 1, uiPanelBorder, false)
 		drawText(screen, r.value(a.settings), optCtrlX+2*optBtnH+optBarW+28, ty, tsBody)
 	}
 	if note := optionNotes[tab]; note != "" {

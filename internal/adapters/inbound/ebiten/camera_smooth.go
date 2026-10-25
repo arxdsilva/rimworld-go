@@ -21,7 +21,7 @@ type camLimits struct {
 // screen point. It never touches domain state. With instant set (capture
 // mode) pan and zoom apply at once and deterministically.
 type camSmooth struct {
-	vx, vy       float64 // pan velocity, px/s
+	vx, vy       float64 // pan velocity, physical px/s
 	dirX, dirY   float64 // pan input pushed this frame, consumed by step
 	targetZoom   float64
 	zooming      bool
@@ -40,7 +40,8 @@ func (s *camSmooth) pushPan(dx, dy float64) {
 	s.dirY = math.Max(-1, math.Min(1, s.dirY+dy))
 }
 
-// zoomAt requests a zoom change by factor, anchored at screen point (sx, sy).
+// zoomAt requests a zoom change by factor, anchored at physical screen
+// point (sx, sy).
 func (s *camSmooth) zoomAt(factor, sx, sy float64) {
 	if factor <= 0 {
 		return
@@ -81,10 +82,10 @@ func (s *camSmooth) stepZoom(dt float64, c *camera, lim camLimits) {
 	} else {
 		s.zooming = false
 	}
-	old := float64(TileSize) * c.zoom
+	old := c.tile()
 	wx, wy := (s.anchorX+c.offsetX)/old, (s.anchorY+c.offsetY)/old
 	c.zoom = next
-	t := float64(TileSize) * c.zoom
+	t := c.tile()
 	c.offsetX, c.offsetY = wx*t-s.anchorX, wy*t-s.anchorY
 }
 
@@ -92,6 +93,9 @@ func (s *camSmooth) stepPan(dt float64, c *camera) {
 	boost := 1.0
 	if s.boost > 0 {
 		boost = s.boost
+	}
+	if c.dev > 0 { // pan speeds are in points: the same apparent speed on a dense screen
+		boost *= c.dev
 	}
 	if s.instant {
 		c.offsetX += s.dirX * panPixels * boost
@@ -121,7 +125,7 @@ func (s *camSmooth) stepPan(dt float64, c *camera) {
 // clamp bounds the offsets with clampAxis and kills velocity on an axis that
 // hit its limit, so the camera never overshoots and then rebounds.
 func (s *camSmooth) clamp(c *camera, lim camLimits) {
-	t := float64(TileSize) * c.zoom
+	t := c.tile()
 	cx := clampAxis(c.offsetX, lim.mapW*t, lim.v.x0, lim.v.x1, edgeSlack*lim.v.w())
 	cy := clampAxis(c.offsetY, lim.mapH*t, lim.v.y0, lim.v.y1, edgeSlack*lim.v.h())
 	if cx != c.offsetX {

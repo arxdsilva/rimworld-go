@@ -224,8 +224,9 @@ type globeInput struct {
 	Blocked bool
 }
 
-// globeInputFrom adapts the App's frame. blocked is whether the pointer is
-// over screen chrome.
+// globeInputFrom adapts the App's frame: w x h is the logical screen, the
+// pointer the raw (physical) one the globe picks and drags with. blocked
+// is whether the pointer is over screen chrome.
 func globeInputFrom(in *inputFrame, w, h int, blocked bool) globeInput {
 	return globeInput{
 		W: w, H: h, MX: in.raw.mx, MY: in.raw.my, Wheel: in.raw.wheelY,
@@ -264,7 +265,8 @@ type globeView struct {
 	hlLeft   int
 
 	area   [4]float64 // x, y, w, h of the globe's screen area (zero w: whole screen)
-	sw, sh int
+	areaPx bool       // area is in physical pixels (SetAreaPx), not logical UI pixels
+	sw, sh int        // the logical screen (the default area)
 
 	// geometry, built once per planet
 	cornerID  []uint32
@@ -555,16 +557,38 @@ func (g *globeView) Highlight(tiles []int, frames int) {
 	g.hlLeft = frames
 }
 
-// SetArea sets the screen rectangle the globe is centred in (default: the
-// whole screen). Call it when the layout changes, e.g. to leave room for a
-// side panel.
-func (g *globeView) SetArea(x, y, w, h float64) { g.area = [4]float64{x, y, w, h} }
+// SetArea sets the screen rectangle the globe is centred in, in logical
+// UI pixels (default: the whole logical screen). Call it when the layout
+// changes, e.g. to leave room for a side panel.
+//
+// The globe itself works in physical pixels (PLAY-012 B.4): it is drawn at
+// physical size inside the rectangle x the UI scale, and picks and drags
+// with the raw (physical) cursor, so it stays sharp at any scale.
+func (g *globeView) SetArea(x, y, w, h float64) {
+	g.area, g.areaPx = [4]float64{x, y, w, h}, false
+}
 
-func (g *globeView) areaRect() (x, y, w, h float64) {
-	if g.area[2] > 0 && g.area[3] > 0 {
-		return g.area[0], g.area[1], g.area[2], g.area[3]
+// SetAreaPx is SetArea in physical pixels, unscaled: for a globe rendered
+// into its own image (the setup backdrop's disc).
+func (g *globeView) SetAreaPx(x, y, w, h float64) {
+	g.area, g.areaPx = [4]float64{x, y, w, h}, true
+}
+
+// k is the factor from the area's units to physical pixels.
+func (g *globeView) k() float64 {
+	if g.areaPx {
+		return 1
 	}
-	return 0, 0, float64(g.sw), float64(g.sh)
+	return uiScale()
+}
+
+// areaRect is the globe's area in physical pixels.
+func (g *globeView) areaRect() (x, y, w, h float64) {
+	k := g.k()
+	if g.area[2] > 0 && g.area[3] > 0 {
+		return g.area[0] * k, g.area[1] * k, g.area[2] * k, g.area[3] * k
+	}
+	return 0, 0, float64(g.sw) * k, float64(g.sh) * k
 }
 
 func (g *globeView) viewport() globemath.Viewport {
@@ -572,7 +596,8 @@ func (g *globeView) viewport() globemath.Viewport {
 	return g.cam.Viewport(x, y, w, h)
 }
 
-// pickTile is the tile under a screen point: a tile index, globeUncovered
+// pickTile is the tile under a physical screen point (the raw cursor): a
+// tile index, globeUncovered
 // over the part of the sphere without tiles, or globeNone off the globe.
 func (g *globeView) pickTile(mx, my int) int {
 	w, ok := g.cam.Pick(g.viewport(), float64(mx), float64(my))
@@ -586,7 +611,8 @@ func (g *globeView) pickTile(mx, my int) int {
 	return t
 }
 
-// tilePx is roughly how many pixels one tile spans at the view centre.
+// tilePx is roughly how many physical pixels one tile spans at the view
+// centre.
 func (g *globeView) tilePx() float64 {
 	vp := g.viewport()
 	return globeTilePx1 * vp.F / (g.cam.Dist - 1)
@@ -675,7 +701,7 @@ func (g *globeView) Update(in globeInput, reducedMotion bool) (clicked, hovered 
 	}
 	if d.on {
 		if in.Down[mbLeft] {
-			if !d.moved && sqr(in.MX-d.sx)+sqr(in.MY-d.sy) > globeDragPx*globeDragPx {
+			if dp := globeDragPx * g.k(); !d.moved && float64(sqr(in.MX-d.sx)+sqr(in.MY-d.sy)) > dp*dp {
 				d.moved = true
 				d.lx, d.ly = d.sx, d.sy
 			}
@@ -745,7 +771,7 @@ func (g *globeView) click(mx, my int) int {
 	}
 	g.selected = t
 	if d.lastTile == t && g.tick-d.lastClickT <= globeDoubleFrames &&
-		sqr(mx-d.lastClickX)+sqr(my-d.lastClickY) <= globeDoublePx*globeDoublePx {
+		float64(sqr(mx-d.lastClickX)+sqr(my-d.lastClickY)) <= globeDoublePx*globeDoublePx*g.k()*g.k() {
 		g.Center(t)
 		d.lastTile = globeNone
 	} else {
@@ -959,9 +985,11 @@ func (g *globeView) tileFacing(i int) bool {
 // buildOverlay adds rivers, roads and the outlines on top of the tiles.
 func (g *globeView) buildOverlay() {
 	g.ov, g.oi = g.ov[:0], g.oi[:0]
-	scale := float32(globeClamp(g.tilePx()/14, 0.6, 3))
+	lk := float32(g.k()) // line widths are in area units: physical x lk
+	zs := float32(globeClamp(g.tilePx()/(14*float64(lk)), 0.6, 3))
+	scale := zs * lk
 	river := ovFrom(worldPalette["river"], 1)
-	if scale >= 0.75 {
+	if zs >= 0.75 {
 		for k := range g.rivers {
 			s := &g.rivers[k]
 			g.ovLine(&s.a, &s.b, (0.7+0.9*float32(s.w))*scale, river)
@@ -992,16 +1020,16 @@ func (g *globeView) buildOverlay() {
 		for _, t := range g.hl {
 			if t >= 0 && t < g.p.TileCount() && g.tileFacing(t) {
 				g.ovFill(t, warm)
-				g.ovOutline(t, 1.6, edge)
+				g.ovOutline(t, 1.6*lk, edge)
 			}
 		}
 	}
 	if h := g.hovered; h >= 0 && h != g.selected && g.tileFacing(h) {
-		g.ovOutline(h, 1.6, ovColour{0.95, 0.94, 0.9, 0.9})
+		g.ovOutline(h, 1.6*lk, ovColour{0.95, 0.94, 0.9, 0.9})
 	}
 	if s := g.selected; s >= 0 && g.tileFacing(s) {
-		g.ovOutline(s, 4.2, ovColour{0.05, 0.04, 0.03, 0.55})
-		g.ovOutline(s, 2.4, ovColour{0.91, 0.75, 0.44, 1})
+		g.ovOutline(s, 4.2*lk, ovColour{0.05, 0.04, 0.03, 0.55})
+		g.ovOutline(s, 2.4*lk, ovColour{0.91, 0.75, 0.44, 1})
 	}
 }
 
@@ -1021,10 +1049,15 @@ func (g *globeView) ensureGPU(sw, sh int) {
 	}
 }
 
-// Draw renders the globe over a starfield into dst (sw x sh).
+// Draw renders the globe over a starfield into dst (the logical screen
+// sw x sh; dst and the starfield are physical).
 func (g *globeView) Draw(dst *ebiten.Image, sw, sh int) {
 	g.sw, g.sh = sw, sh
-	g.ensureGPU(sw, sh)
+	if b := dst.Bounds(); b.Dx() > 0 && b.Dy() > 0 {
+		g.ensureGPU(b.Dx(), b.Dy())
+	} else {
+		g.ensureGPU(sw, sh)
+	}
 	dst.Fill(uiSpace)
 	dst.DrawImage(g.stars, nil)
 	g.drawBody(dst)
@@ -1050,9 +1083,12 @@ func (g *globeView) drawBody(dst *ebiten.Image) {
 }
 
 // drawMarks draws the settlement emblems (scaled with zoom) and, when
-// zoomed in, their names.
+// zoomed in, their names. Positions and sizes are physical; the names go
+// through the canvas's text path (logical).
 func (g *globeView) drawMarks(dst *ebiten.Image) {
-	size := globeClamp(g.tilePx()*2, 12, 46)
+	pk := g.k()
+	size := globeClamp(g.tilePx()*2, 12*pk, 46*pk)
+	ts := uiScale() // drawText takes logical coordinates
 	labels := g.cam.Dist <= 1.9
 	for k := range g.marks {
 		m := &g.marks[k]
@@ -1079,9 +1115,9 @@ func (g *globeView) drawMarks(dst *ebiten.Image) {
 			st := tsSmall
 			st.Align = alignCenter
 			st.Color = color.RGBA{10, 14, 20, 230}
-			drawText(dst, m.label, x+1, y+size*0.58+1, st)
+			drawText(dst, m.label, (x+pk)/ts, (y+size*0.58+pk)/ts, st)
 			st.Color = uiText
-			drawText(dst, m.label, x, y+size*0.58, st)
+			drawText(dst, m.label, x/ts, (y+size*0.58)/ts, st)
 		}
 	}
 }

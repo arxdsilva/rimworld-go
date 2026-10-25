@@ -225,7 +225,7 @@ func (a *App) drawPlantInspector(screen *ebiten.Image) {
 	mx, my := a.currentCursor()
 	a.drawButtons(screen, a.plantButtons(), mx, my)
 	if a.renderer.art != nil {
-		a.renderer.drawSprite(screen, "overlay/selection", color.NRGBA{}, float64(p.X), float64(p.Y), a.renderer.tilePx(), a.sw, a.sh)
+		a.renderer.drawSprite(screen, "overlay/selection", color.NRGBA{}, float64(p.X), float64(p.Y), a.renderer.tilePx(), a.pw, a.ph) // physical, like the map
 	}
 }
 

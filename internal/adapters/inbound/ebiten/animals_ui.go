@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
@@ -216,7 +215,7 @@ func (a *App) focusWild(species string) {
 	key := "wild." + species
 	an := list[a.alertCycle[key]%len(list)]
 	a.alertCycle[key]++
-	a.renderer.centerOn(float64(an.X)+0.5, float64(an.Y)+0.5, a.sw, a.sh)
+	a.centerOnMap(float64(an.X)+0.5, float64(an.Y)+0.5)
 }
 
 func (a *App) drawAnimalsTab(screen *ebiten.Image, sw, sh int) {
@@ -392,17 +391,17 @@ func animalDoing(an game.AnimalView) string {
 // drawMiniBar is a thin percent bar; low ones are red.
 func drawMiniBar(screen *ebiten.Image, x, y, w, h, pct int, low bool) {
 	pct = max(0, min(100, pct))
-	vector.FillRect(screen, float32(x), float32(y), float32(w), float32(h), color.RGBA{R: 40, G: 30, B: 24, A: 255}, false)
+	uiFillRect(screen, float32(x), float32(y), float32(w), float32(h), color.RGBA{R: 40, G: 30, B: 24, A: 255}, false)
 	fill := color.RGBA{R: 120, G: 170, B: 70, A: 255}
 	if low {
 		fill = alertClr
 	}
-	vector.FillRect(screen, float32(x), float32(y), float32(w*pct/100), float32(h), fill, false)
+	uiFillRect(screen, float32(x), float32(y), float32(w*pct/100), float32(h), fill, false)
 }
 
 // drawWarning is a red "!" disc: the predator flag.
 func drawWarning(screen *ebiten.Image, cx, cy float32) {
-	vector.FillCircle(screen, cx, cy, 8, alertClr, true)
+	uiFillCircle(screen, cx, cy, 8, alertClr, true)
 	drawCentered(screen, "!", float64(cx), float64(cy), tsLabel)
 }
 

@@ -64,6 +64,10 @@ func resetSetupBackdrop() {
 func (a *App) drawSetupBackdrop(screen *ebiten.Image, sw, sh int, p *planet.Planet) {
 	setupBackdropMu.Lock()
 	defer setupBackdropMu.Unlock()
+	// Full-screen background: physical size, unscaled.
+	if bd := screen.Bounds(); bd.Dx() > 0 && bd.Dy() > 0 {
+		sw, sh = bd.Dx(), bd.Dy()
+	}
 	b := &setupBackdrop
 	b.frame++
 	if !a.drawMenuDiorama(screen, sw, sh, backdropDiorama) {
@@ -138,7 +142,7 @@ func (b *setupBackdropState) drawPlanet(screen *ebiten.Image, sw, sh int, p *pla
 	if b.view == nil || b.viewOf != src {
 		g := newGlobeView(src, nil)
 		g.rivers, g.roads, g.marks = nil, nil, nil // far away: the bare tiles
-		g.SetArea(0, 0, backdropDiscArea, backdropDiscArea)
+		g.SetAreaPx(0, 0, backdropDiscArea, backdropDiscArea)
 		g.cam.SetDist(backdropDiscDist)
 		g.cam.Lat, g.cam.Lon = 0.35, float64(src.Seed%628)/100
 		b.view, b.viewOf = g, src

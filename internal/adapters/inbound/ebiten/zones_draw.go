@@ -137,9 +137,10 @@ var (
 	penFillClr   = color.RGBA{R: 150, G: 104, B: 62, A: 60}
 )
 
-// zoneStroke is the outline width at the current zoom, clamped 1..3 px.
+// zoneStroke is the outline width at the current zoom, clamped 1..3 points
+// and drawn in physical pixels (x dev) so it keeps its apparent thickness.
 func zoneStroke(zoom float64) float32 {
-	return float32(min(3, max(1, 2*zoom)))
+	return float32(min(3, max(1, 2*zoom)) * screenDev())
 }
 
 func zoneSpriteKey(kind string) (key string, fill color.RGBA) {
@@ -251,7 +252,7 @@ func (r *Renderer) drawZoneRun(screen *ebiten.Image, kind string, run edgeRun, s
 	ax, ay = ax+float32(run.nx)*off, ay+float32(run.ny)*off
 	bx, by = bx+float32(run.nx)*off, by+float32(run.ny)*off
 	if kind == game.ZoneStockpile {
-		dash := float32(max(4, tile*0.16))
+		dash := float32(max(4*screenDev(), tile*0.16))
 		dashedRun(screen, ax, ay, bx, by, th, dash, dash*0.8, stockEdgeClr)
 		return
 	}
@@ -308,9 +309,9 @@ func (r *Renderer) drawFenceRun(screen *ebiten.Image, run edgeRun, tile float64)
 	sax, say := r.worldToScreenF(ax, ay)
 	sbx, sby := r.worldToScreenF(bx, by)
 	rail := color.RGBA{150, 104, 62, 220}
-	vector.StrokeLine(screen, sax, say, sbx, sby, float32(max(2, tile*0.05)), rail, true)
+	vector.StrokeLine(screen, sax, say, sbx, sby, float32(max(2*screenDev(), tile*0.05)), rail, true)
 	post := color.RGBA{110, 74, 44, 240}
-	ps := float32(max(3, tile*0.09))
+	ps := float32(max(3*screenDev(), tile*0.09))
 	dot := func(x, y float32) { vector.FillRect(screen, x-ps/2, y-ps/2, ps, ps, post, false) }
 	dot(sax, say)
 	dot(sbx, sby)

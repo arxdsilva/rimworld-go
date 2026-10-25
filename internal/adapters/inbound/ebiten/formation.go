@@ -231,7 +231,7 @@ func (a *App) handleOrders() {
 	}
 	f := &a.in
 	mx, my := a.currentCursor()
-	tx, ty := a.renderer.TileAt(mx, my)
+	tx, ty := a.renderer.TileAt(a.mapCursor()) // the map is physical
 	if a.form.on {
 		if f.down(mbRight) {
 			a.form.x1, a.form.y1 = tx, ty

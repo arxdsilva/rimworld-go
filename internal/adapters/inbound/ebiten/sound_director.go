@@ -206,7 +206,7 @@ func (a *App) setLoops(want map[string]loopWant) {
 // the fastest speed only the nearest few.
 func (a *App) colonyCues() {
 	r := a.renderer
-	v := colonyViewport(a.sw, a.sh)
+	v := a.mapViewport() // physical, like worldToScreen
 	_, _, perID := zoomEar(r.cam.zoom, r.minZoomFor(v))
 	type placed struct {
 		id       string
@@ -262,7 +262,7 @@ func dayWeight(hour float64) float64 {
 func (a *App) colonyAmbience(want map[string]loopWant) {
 	r := a.renderer
 	w := r.heard
-	v := colonyViewport(a.sw, a.sh)
+	v := a.mapViewport() // physical, like worldToScreen
 	rain := 0.0
 	switch w.Weather {
 	case "rain":

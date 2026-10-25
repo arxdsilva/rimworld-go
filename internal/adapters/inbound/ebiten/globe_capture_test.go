@@ -123,7 +123,7 @@ func TestGlobeCapture(t *testing.T) {
 		p := planet.Build(backdropShowcase)
 		g := newGlobeView(p, nil)
 		g.rivers, g.roads, g.marks = nil, nil, nil
-		g.SetArea(0, 0, backdropDiscArea, backdropDiscArea)
+		g.SetAreaPx(0, 0, backdropDiscArea, backdropDiscArea)
 		g.cam.SetDist(backdropDiscDist)
 		g.cam.Lat, g.cam.Lon = 0.35, float64(p.Seed%628)/100
 		g.sw, g.sh = backdropDiscArea, backdropDiscArea

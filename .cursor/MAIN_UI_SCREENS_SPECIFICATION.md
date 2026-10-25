@@ -1565,8 +1565,8 @@ presentation only, never the simulation; captures ignore them.
 -   [x] window: fullscreen toggle (the window resizes freely; no
     resolution presets);
 -   [-] VSync/frame cap (VSync toggle; Ebitengine has no frame cap);
--   [ ] UI scale (needs a font and layout pass: hand-placed px layouts and
-    a fixed bitmap font);
+-   [x] UI scale (UI-024: Accessibility row Auto / 75–200 %; "Sharp on
+    high-density screens" (HiDPI) on the Graphics tab);
 -   [x] effects/detail (Full/Reduced/Minimal: particles, weather drops,
     menu embers and dust);
 -   [ ] far-zoom detail.
@@ -1600,7 +1600,7 @@ presentation only, never the simulation; captures ignore them.
 
 ### Accessibility
 
--   [ ] text/UI scale (see Graphics UI scale);
+-   [x] text/UI scale (UI-024: one UI scale row, Auto or 75–200 %, text included);
 -   [ ] color-vision support;
 -   [x] reduced effects/flashing (Reduced flashing caps lightning; Reduced
     motion freezes the menu drift, drops embers and dust, and snaps the
@@ -2186,7 +2186,7 @@ A main screen is complete only when:
 -   [ ] loading/error states exist where applicable;
 -   [ ] search/sort/filter work where specified;
 -   [ ] large lists virtualize;
--   [ ] supported resolutions/UI scales work;
+-   [x] supported resolutions/UI scales work (UI-024);
 -   [ ] important information is not color-only;
 -   [ ] tooltips explain non-obvious mechanics;
 -   [ ] no full-world scan occurs every render frame;

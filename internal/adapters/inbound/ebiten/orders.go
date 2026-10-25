@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
@@ -91,8 +90,8 @@ func (a *App) drawFloat(screen *ebiten.Image) {
 		} else if b.contains(mx, my) {
 			fill = uiBtnHover
 		}
-		vector.FillRect(screen, b.x, b.y, b.w, b.h, fill, false)
-		vector.StrokeRect(screen, b.x, b.y, b.w, b.h, 1, uiPanelBorder, false)
+		uiFillRect(screen, b.x, b.y, b.w, b.h, fill, false)
+		uiStrokeRect(screen, b.x, b.y, b.w, b.h, 1, uiPanelBorder, false)
 		ts := tsBody
 		if b.disabled {
 			ts = withColor(tsBody, uiTextDim)

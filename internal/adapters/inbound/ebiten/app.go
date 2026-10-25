@@ -317,7 +317,7 @@ func (a *App) Update() error {
 				}
 			} else if a.colonyLive() && a.colonyChromeHit(mx, my, sw, sh) {
 				a.in.take(mbLeft)
-			} else if a.colonyLive() && !a.hideUI && a.renderer.minimapClick(mx, my, colonyViewport(sw, sh)) {
+			} else if a.colonyLive() && !a.hideUI && a.renderer.minimapClick(mx, my, colonyViewport(sw, sh), a.mapViewport()) {
 				a.in.take(mbLeft) // minimap (minimap.go): the camera moved
 			}
 		}
@@ -328,7 +328,7 @@ func (a *App) Update() error {
 		a.handleColonyKeys() // hotkeys.go
 		a.renderer.wheelTaken = a.handleLogWheel()
 		if a.cfg.Capture == nil { // captures frame the camera themselves
-			a.renderer.applyCamera(colonyViewport(sw, sh), a.cameraInput(colonyViewport(sw, sh)))
+			a.renderer.applyCamera(a.mapViewport(), a.cameraInput(a.mapViewport())) // physical (camera.go)
 		}
 		a.handleScheduleDrag()
 		if (a.float.open || a.dev.menu) && a.in.clicked(mbLeft) {
@@ -437,7 +437,7 @@ func (a *App) tick() {
 		a.tickBoot()
 	case screenColony:
 		if a.nav.overlay() == overlayNone && a.renderer != nil {
-			a.renderer.voice.view = colonyViewport(a.sw, a.sh) // animal calls only on screen
+			a.renderer.voice.view = a.mapViewport() // animal calls only on screen (physical, like worldToScreen)
 			a.renderer.advance()
 			a.markUpdate()
 			a.tickAutosave()
@@ -776,7 +776,7 @@ func (a *App) Draw(screen *ebiten.Image) {
 			screen.Fill(uiSpace)
 		}
 		if !a.hideUI {
-			a.renderer.drawMinimap(screen, colonyViewport(sw, sh)) // minimap.go: big maps only
+			a.renderer.drawMinimap(screen, colonyViewport(sw, sh), a.mapViewport()) // minimap.go: big maps only
 			a.drawColonyHUD(screen, sw, sh)
 		}
 		if a.nav.overlay() == overlayPause {

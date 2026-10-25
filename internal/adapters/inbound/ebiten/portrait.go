@@ -129,7 +129,7 @@ func drawPortrait(dst *ebiten.Image, art *artCatalog, l look.Look, scarred bool,
 		op := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear}
 		op.GeoM.Scale(s/k, s/k)
 		op.GeoM.Translate(ox+float64(crop.Min.X-int(float64(portraitCrop.Min.X)*k))*s/k, oy+float64(crop.Min.Y-int(float64(portraitCrop.Min.Y)*k))*s/k)
-		dst.DrawImage(sub, op)
+		uiDrawImage(dst, sub, op)
 		drew = true
 	}
 	return drew

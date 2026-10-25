@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
@@ -146,8 +145,8 @@ func drawAnimalIcon(dst *ebiten.Image, art *artCatalog, an game.AnimalView, x, y
 		return
 	}
 	r := float32(size) / 2
-	vector.FillCircle(dst, float32(x)+r, float32(y)+r, r, iconDiscClr, true)
-	vector.StrokeCircle(dst, float32(x)+r, float32(y)+r, r, 1.5, color.RGBA{R: 0xC8, G: 0xB0, B: 0x82, A: 0xFF}, true)
+	uiFillCircle(dst, float32(x)+r, float32(y)+r, r, iconDiscClr, true)
+	uiStrokeCircle(dst, float32(x)+r, float32(y)+r, r, 1.5, color.RGBA{R: 0xC8, G: 0xB0, B: 0x82, A: 0xFF}, true)
 	drawCentered(dst, animalInitial(animalLabel(an)), x+float64(r), y+float64(r), tsLabel)
 }
 
@@ -197,7 +196,7 @@ func (a *App) drawAnimalInspector(screen *ebiten.Image) {
 	a.drawButtons(screen, a.animalButtons(), mx, my)
 	if a.renderer.art != nil {
 		wx, wy := a.renderer.interpAnimal(an)
-		a.renderer.drawSprite(screen, "overlay/selection", color.NRGBA{}, wx, wy, a.renderer.tilePx(), a.sw, a.sh)
+		a.renderer.drawSprite(screen, "overlay/selection", color.NRGBA{}, wx, wy, a.renderer.tilePx(), a.pw, a.ph) // physical, like the map
 	}
 }
 

@@ -27,6 +27,7 @@ import (
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/weather"
+	"rimworld-go/internal/platform/config"
 )
 
 // version is the build's version, shown on the main menu. Release builds
@@ -52,7 +53,14 @@ func main() {
 	memProfile := flag.String("memprofile", "", "dev: write a heap profile to this file on exit")
 	traceOut := flag.String("trace", "", "dev: write an execution trace to this file")
 	fpsProbe := flag.Int("fpsprobe", 0, "dev: run the colony for this many seconds at -capture-speed (2 = 3 ticks/frame) and -capture-zoom, log frame stats and quit")
+	hidpi := flag.Bool("hidpi", true, "dev: render at the screen's true resolution; overrides the Graphics setting for this run without saving it")
 	flag.Parse()
+	var hidpiOverride *bool
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == "hidpi" {
+			hidpiOverride = hidpi
+		}
+	})
 	probe := fpsProbeOf(*fpsProbe, *captureZoom, *captureSpeed)
 	profilePath := *cpuProfile
 	var probeProfile func() // with -fpsprobe the CPU profile covers only the measured span
@@ -86,7 +94,7 @@ func main() {
 		Version:      version,
 		Capture:      shot,
 		Saves:        saveHooks(),
-		Settings:     settingsHooks(shot != nil),
+		Settings:     settingsHooks(shot != nil, hidpiOverride),
 		Scenarios:    scenarioStore(shot != nil),
 		FPSProbe:     probe,
 		NewSimBuilder: func(ng uiadapter.NewGame) (uiadapter.SimBuilder, error) {
@@ -425,7 +433,9 @@ func openSound(off bool) *ebitenaudio.Engine {
 
 // settingsHooks wires the Options to the per-user settings file. Captures
 // get none, so screenshots always use the default settings.
-func settingsHooks(capturing bool) uiadapter.SettingsHooks {
+// A non-nil hidpi (the dev -hidpi flag) overrides Graphics.HiDPI for this
+// run; settings are then not saved, so the override never persists.
+func settingsHooks(capturing bool, hidpi *bool) uiadapter.SettingsHooks {
 	if capturing {
 		return uiadapter.SettingsHooks{}
 	}
@@ -433,6 +443,13 @@ func settingsHooks(capturing bool) uiadapter.SettingsHooks {
 	if err != nil {
 		log.Printf("settings not saved: %v", err)
 		return uiadapter.SettingsHooks{}
+	}
+	if hidpi != nil {
+		return uiadapter.SettingsHooks{Load: func() (config.Settings, error) {
+			s, err := store.Load()
+			s.Graphics.HiDPI = *hidpi
+			return s, err
+		}}
 	}
 	return uiadapter.SettingsHooks{Load: store.Load, Save: store.Save}
 }

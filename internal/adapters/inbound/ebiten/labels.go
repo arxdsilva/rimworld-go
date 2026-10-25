@@ -29,11 +29,14 @@ func (r *Renderer) drawStackCounts(screen *ebiten.Image, w game.WorldView, tile 
 		}
 		s := strconv.Itoa(it.Qty)
 		sx, sy := r.worldToScreen(it.X, it.Y)
+		// the tag is UI chrome anchored to a world tile: place it in
+		// logical pixels (world position / ui scale), text and rect via the canvas
+		k := float32(1 / uiScale())
 		tw := textW(s, tsSmall) + 6
 		th := lineStep(tsSmall) - 2
-		x := sx + float32(tile) - tw - 2
-		y := sy + float32(tile) - th - 2
-		vector.FillRect(screen, x, y, tw, th, color.RGBA{16, 12, 8, 190}, false)
+		x := sx*k + float32(tile)*k - tw - 2
+		y := sy*k + float32(tile)*k - th - 2
+		uiFillRect(screen, x, y, tw, th, color.RGBA{16, 12, 8, 190}, false)
 		drawText(screen, s, float64(x)+3, float64(y)-1, tsSmall)
 	}
 }

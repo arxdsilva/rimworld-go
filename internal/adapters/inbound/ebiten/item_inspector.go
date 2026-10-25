@@ -226,7 +226,7 @@ func (a *App) drawItemInspector(screen *ebiten.Image) {
 	mx, my := a.currentCursor()
 	a.drawButtons(screen, append(itemPanelButtons(r, rows), itemForbidButton(r, it)), mx, my)
 	if a.renderer.art != nil {
-		a.renderer.drawSprite(screen, "overlay/selection", color.NRGBA{}, float64(it.X), float64(it.Y), a.renderer.tilePx(), a.sw, a.sh)
+		a.renderer.drawSprite(screen, "overlay/selection", color.NRGBA{}, float64(it.X), float64(it.Y), a.renderer.tilePx(), a.pw, a.ph) // physical, like the map
 	}
 }
 

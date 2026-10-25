@@ -9,7 +9,6 @@ import (
 	"unicode/utf8"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/clock"
@@ -183,7 +182,7 @@ func (a *App) searchTyping() {
 func (a *App) pickSearch(h searchHit) {
 	a.closeSearch()
 	a.selectCand(h.c)
-	a.renderer.centerOn(float64(h.x)+0.5, float64(h.y)+0.5, a.sw, a.sh)
+	a.centerOnMap(float64(h.x)+0.5, float64(h.y)+0.5)
 }
 
 func (a *App) searchRect(sw int) button {
@@ -219,8 +218,8 @@ func (a *App) drawSearch(screen *ebiten.Image, sw int) {
 	}
 	r := a.searchRect(sw)
 	drawPanel(screen, r.x, r.y, r.w, r.h)
-	vector.FillRect(screen, r.x+8, r.y+8, r.w-16, 24, uiSpace, false)
-	vector.StrokeRect(screen, r.x+8, r.y+8, r.w-16, 24, 1, uiAccent, false)
+	uiFillRect(screen, r.x+8, r.y+8, r.w-16, 24, uiSpace, false)
+	uiStrokeRect(screen, r.x+8, r.y+8, r.w-16, 24, 1, uiAccent, false)
 	cursor := ""
 	if (a.updates/30)%2 == 0 {
 		cursor = "_"
@@ -250,7 +249,7 @@ func (a *App) drawSearch(screen *ebiten.Image, sw int) {
 		case b.contains(mx, my):
 			fill = uiBtnHover
 		}
-		vector.FillRect(screen, b.x, b.y, b.w, b.h, fill, false)
+		uiFillRect(screen, b.x, b.y, b.w, b.h, fill, false)
 		kind := hits[i].kind
 		ty := float64(b.y) + (float64(b.h)-lineH(tsBody))/2
 		kw := float64(textW(kind, tsSmall))

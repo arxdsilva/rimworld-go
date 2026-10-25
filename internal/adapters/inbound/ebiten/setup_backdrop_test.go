@@ -88,7 +88,7 @@ func TestBackdropDrawsWithAndWithoutPlanet(t *testing.T) {
 		t.Fatal("disc not rebuilt for the new world")
 	}
 	// A resize rebakes the stars.
-	a.drawSetupBackdrop(screen, 1600, 900, q)
+	a.drawSetupBackdrop(ebiten.NewImage(1600, 900), 1600, 900, q)
 	if setupBackdrop.starW != 1600 {
 		t.Fatal("stars not rebaked for the new size")
 	}

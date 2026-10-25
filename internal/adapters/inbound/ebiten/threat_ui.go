@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
 )
@@ -96,6 +95,9 @@ func (r *Renderer) drawFloaters(screen *ebiten.Image, tile float64) {
 		kept = append(kept, f)
 		rise := float64(age) / floaterLife * 0.7
 		sx, sy := r.worldToScreenF(f.x, f.y-rise)
+		// the anchor is world space (physical); the label is UI (logical)
+		ls := float32(uiScale())
+		sx, sy = sx/ls, sy/ls
 		// text scale follows the zoom, in half steps so few faces are cached
 		k := math.Round(min(3, max(1.5, tile/36))*2) / 2
 		st := textStyle{Size: tsSmall.Size * k, Bold: true, Align: alignCenter}
@@ -105,7 +107,7 @@ func (r *Renderer) drawFloaters(screen *ebiten.Image, tile float64) {
 		if age > floaterLife/2 {
 			fade = float32(floaterLife-age) / float32(floaterLife/2)
 		}
-		vector.FillRect(screen, sx-w/2, sy-h/2, w, h, color.RGBA{16, 12, 8, uint8(170 * fade)}, false)
+		uiFillRect(screen, sx-w/2, sy-h/2, w, h, color.RGBA{16, 12, 8, uint8(170 * fade)}, false)
 		st.Color = color.NRGBA{f.clr.R, f.clr.G, f.clr.B, uint8(255 * fade)}
 		drawText(screen, f.text, float64(sx), float64(sy-h/2), st)
 	}

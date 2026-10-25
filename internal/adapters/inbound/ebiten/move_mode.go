@@ -160,7 +160,8 @@ func (a *App) handleMoveMode() (consumed bool) {
 	}
 	mx, my := a.currentCursor()
 	sw, sh := a.size()
-	tx, ty := a.renderer.TileAt(mx, my)
+	pmx, pmy := a.mapCursor()
+	tx, ty := a.renderer.TileAt(pmx, pmy)
 	onMap := !a.colonyChromeHit(mx, my, sw, sh)
 	cancel := f.clicked(mbRight)
 	left := f.clicked(mbLeft)
@@ -184,7 +185,8 @@ func (a *App) drawMoveMode(screen *ebiten.Image) {
 	if a.colonyChromeHit(mx, my, sw, sh) {
 		return
 	}
-	tx, ty := a.renderer.TileAt(mx, my)
+	pmx, pmy := a.mapCursor()
+	tx, ty := a.renderer.TileAt(pmx, pmy)
 	okMove, why := a.moveValid(b, tx, ty)
 	a.renderer.drawPlacementGhost(screen, b.Kind, b.Stuff, facingNames[a.moveSt().facing],
 		[]ghostCell{{x: tx, y: ty, ok: okMove, reason: why}})
@@ -194,7 +196,7 @@ func (a *App) drawMoveMode(screen *ebiten.Image) {
 	} else if bv, ok := buildable(b.Kind); ok && bv.Rotatable {
 		msg += "   " + a.rotateKeys() + " rotate"
 	}
-	vector.FillRect(screen, float32(mx+16), float32(my+18), textW(msg, tsBody)+16, lineStep(tsBody)+4, uiPanel, false)
+	uiFillRect(screen, float32(mx+16), float32(my+18), textW(msg, tsBody)+16, lineStep(tsBody)+4, uiPanel, false)
 	drawText(screen, msg, float64(mx+24), float64(my+20), tsBody)
 }
 
@@ -208,7 +210,7 @@ func (a *App) drawMoveMarkers(screen *ebiten.Image) {
 			continue
 		}
 		sx, sy := a.renderer.worldToScreen(f.X, f.Y)
-		drawText(screen, "->", float64(sx)+2, float64(sy)+2, withColor(tsSmall, uiAccent))
+		drawText(screen, "->", float64(sx)/uiScale()+2, float64(sy)/uiScale()+2, withColor(tsSmall, uiAccent))
 	}
 }
 

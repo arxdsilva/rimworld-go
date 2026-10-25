@@ -132,8 +132,8 @@ func (a *App) handleDevKeys() {
 			a.toast("Pause first to step one tick")
 		}
 	case f.fired(input.DevActions):
-		mx, my := a.currentCursor()
-		tx, ty := r.TileAt(mx, my)
+		mx, my := a.currentCursor()       // logical: where the menu panel is drawn
+		tx, ty := r.TileAt(a.mapCursor()) // physical: the map tile under the cursor
 		a.dev.menu = !a.dev.menu
 		a.dev.mx, a.dev.my, a.dev.tx, a.dev.ty = mx, my, tx, ty
 	case f.fired(input.DevLog):

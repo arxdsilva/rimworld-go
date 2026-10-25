@@ -25,7 +25,7 @@ func TestMinimapClickMovesCamera(t *testing.T) {
 	}
 	// a click a quarter of the way in centres the camera on tile (50, 150)
 	cx, cy := mx+mw*0.25, my+mh*0.75
-	if !r.minimapClick(int(cx), int(cy), v) {
+	if !r.minimapClick(int(cx), int(cy), v, v) {
 		t.Fatal("click on the minimap not taken")
 	}
 	tile := r.tilePx()
@@ -34,15 +34,15 @@ func TestMinimapClickMovesCamera(t *testing.T) {
 	if math.Abs(centreX-50) > 1.5 || math.Abs(centreY-150) > 1.5 {
 		t.Fatalf("camera centred on (%.1f, %.1f), want (50, 150)", centreX, centreY)
 	}
-	if r.minimapClick(int(bx)-5, int(by)+10, v) {
+	if r.minimapClick(int(bx)-5, int(by)+10, v, v) {
 		t.Fatal("a click beside the minimap was taken")
 	}
 	r.toggleMinimap()
-	if r.minimapClick(int(cx), int(cy), v) {
+	if r.minimapClick(int(cx), int(cy), v, v) {
 		t.Fatal("a hidden minimap took a click")
 	}
 	small := New(&stubSim{w: 150, h: 150})
-	if small.minimapOn() || small.minimapClick(int(cx), int(cy), v) {
+	if small.minimapOn() || small.minimapClick(int(cx), int(cy), v, v) {
 		t.Fatal("a 150² map has no minimap")
 	}
 }
@@ -54,24 +54,24 @@ func TestMinimapPollsLayer(t *testing.T) {
 	r := New(sim)
 	screen := ebiten.NewImage(1280, 800)
 	v := colonyViewport(1280, 800)
-	r.drawMinimap(screen, v)
+	r.drawMinimap(screen, v, v)
 	if r.mini.polls != 1 || r.mini.img == nil || r.mini.w != 160 {
 		t.Fatalf("first draw: polls %d img %v", r.mini.polls, r.mini.img != nil)
 	}
 	r.present += minimapPoll
-	r.drawMinimap(screen, v)
+	r.drawMinimap(screen, v, v)
 	if r.mini.polls != 1 {
 		t.Fatal("an unchanged layer was rebuilt")
 	}
 	t2 := append([]uint8(nil), w.Terrain...)
 	t2[0] = 4
 	sim.world.Terrain, sim.world.StructVer = t2, 9
-	r.drawMinimap(screen, v) // within the poll interval: not asked yet
+	r.drawMinimap(screen, v, v) // within the poll interval: not asked yet
 	if r.mini.polls != 1 {
 		t.Fatal("polled before the interval")
 	}
 	r.present += minimapPoll
-	r.drawMinimap(screen, v)
+	r.drawMinimap(screen, v, v)
 	if r.mini.polls != 2 {
 		t.Fatalf("a changed ground was not picked up: polls %d", r.mini.polls)
 	}

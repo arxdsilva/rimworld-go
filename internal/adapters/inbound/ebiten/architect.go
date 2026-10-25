@@ -397,7 +397,7 @@ func drawIconCS(dst, img *ebiten.Image, x, y, size float64, cs colorScale) {
 	if cs != noCS {
 		op.ColorScale.Scale(cs[0], cs[1], cs[2], cs[3])
 	}
-	dst.DrawImage(img, op)
+	uiDrawImage(dst, img, op)
 }
 
 func (a *App) drawArchitect(screen *ebiten.Image) {
@@ -538,7 +538,8 @@ func (a *App) handleArchitectInput() {
 	mx, my := a.currentCursor()
 	sw, sh := a.size()
 	onMap := !a.colonyChromeHit(mx, my, sw, sh)
-	tx, ty := a.renderer.TileAt(mx, my)
+	pmx, pmy := a.mapCursor()
+	tx, ty := a.renderer.TileAt(pmx, pmy)
 	if onMap && f.clicked(mbLeft) {
 		f.take(mbLeft)
 		a.archDrag = true
@@ -620,8 +621,7 @@ func (a *App) previewCells() (archTool, []ghostCell) {
 func (a *App) dragSpan() (x0, y0, x1, y1 int) {
 	x0, y0, x1, y1 = a.archX0, a.archY0, a.archX1, a.archY1
 	if !a.archDrag {
-		mx, my := a.currentCursor()
-		x0, y0 = a.renderer.TileAt(mx, my)
+		x0, y0 = a.renderer.TileAt(a.mapCursor())
 		x1, y1 = x0, y0
 	}
 	if t, ok := toolByID(a.archTool); ok && a.archCtrl && a.curStyle(t) != styleLine && len(toolStyles(t)) > 0 {
@@ -747,7 +747,7 @@ func (a *App) drawArchitectGhost(screen *ebiten.Image) {
 	}
 	mw := int(textW(msg, tsBody))
 	lx := min(mx+16, sw-mw-18) // keep the label on screen
-	vector.FillRect(screen, float32(lx), float32(my+18), float32(mw+12), lineStep(tsBody)+4, uiPanel, false)
+	uiFillRect(screen, float32(lx), float32(my+18), float32(mw+12), lineStep(tsBody)+4, uiPanel, false)
 	drawLabel(screen, lx+6, my+20, msg)
 }
 
@@ -834,7 +834,7 @@ func (a *App) drawZoneGhost(screen *ebiten.Image, kind string, x0, y0, x1, y1 in
 	sw, sh := a.size()
 	tile := r.tilePx()
 	cx0, cy0 := r.TileAt(0, 0)
-	cx1, cy1 := r.TileAt(sw, sh)
+	cx1, cy1 := r.TileAt(int(float64(sw)*uiScale()), int(float64(sh)*uiScale()))
 	clip := [4]int{cx0 - 1, cy0 - 1, cx1 + 1, cy1 + 1}
 	for _, c := range zoneGhostCells(x0, y0, x1, y1, clip, func(x, y int) bool { return r.game.CanZoneAt(kind, x, y) }) {
 		sx, sy := r.worldToScreen(c.x, c.y)
@@ -849,8 +849,8 @@ func (a *App) drawZoneGhost(screen *ebiten.Image, kind string, x0, y0, x1, y1 in
 // drawIconFallback is a plain tile with the tool's initial, for a card
 // whose icon is missing from the art catalog.
 func drawIconFallback(screen *ebiten.Image, t archTool, x, y float32) {
-	vector.FillRect(screen, x, y, 40, 40, uiBtnDisabled, false)
-	vector.StrokeRect(screen, x, y, 40, 40, 1, uiBtnBorder, false)
+	uiFillRect(screen, x, y, 40, 40, uiBtnDisabled, false)
+	uiStrokeRect(screen, x, y, 40, 40, 1, uiBtnBorder, false)
 	if t.label != "" {
 		drawLabel(screen, int(x)+16, int(y)+15, t.label[:1])
 	}

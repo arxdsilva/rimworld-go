@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/clock"
@@ -201,7 +200,7 @@ func (a *App) drawFrameInspector(screen *ebiten.Image) {
 		bw, bh := max(f.W, 1), max(f.H, 1)
 		for dy := 0; dy < bh; dy++ {
 			for dx := 0; dx < bw; dx++ {
-				a.renderer.drawSprite(screen, "overlay/selection", color.NRGBA{}, float64(f.X+dx), float64(f.Y+dy), a.renderer.tilePx(), a.sw, a.sh)
+				a.renderer.drawSprite(screen, "overlay/selection", color.NRGBA{}, float64(f.X+dx), float64(f.Y+dy), a.renderer.tilePx(), a.pw, a.ph) // physical, like the map
 			}
 		}
 	}
@@ -210,6 +209,6 @@ func (a *App) drawFrameInspector(screen *ebiten.Image) {
 // drawFracBar is a thin bar filled to frac (0..1).
 func drawFracBar(screen *ebiten.Image, x, y, w, h int, frac float64) {
 	frac = max(0, min(1, frac))
-	vector.FillRect(screen, float32(x), float32(y), float32(w), float32(h), color.RGBA{R: 40, G: 30, B: 24, A: 255}, false)
-	vector.FillRect(screen, float32(x), float32(y), float32(float64(w)*frac), float32(h), color.RGBA{R: 120, G: 170, B: 70, A: 255}, false)
+	uiFillRect(screen, float32(x), float32(y), float32(w), float32(h), color.RGBA{R: 40, G: 30, B: 24, A: 255}, false)
+	uiFillRect(screen, float32(x), float32(y), float32(float64(w)*frac), float32(h), color.RGBA{R: 120, G: 170, B: 70, A: 255}, false)
 }

@@ -108,7 +108,7 @@ use these primitives.
 
 ## 1.2 Visual design tokens
 
--   [ ] **UI scale and density system**
+-   [-] **UI scale and density system** (PLAY-012 UI-024: the UI lays out in logical pixels and draws through a scaling canvas, text at the real font size; Auto plus 75–200 % presets; map coordinates unaffected; spacing/row heights are still per-file constants, not a central token set)
     -   Support multiple UI scales.
     -   Define spacing, row heights, icon sizes, text sizes, border
         widths, modal sizes, and minimum click targets centrally.
@@ -1648,7 +1648,7 @@ the player what just happened and what requires attention.
 
 -   [ ] **Resolution/window mode**
 -   [ ] **VSync/frame cap**
--   [ ] **UI scale**
+-   [x] **UI scale** (UI-024: Options › Accessibility, Auto (follows the window, 1280×720 = 100 %) or 75–200 %, applies live)
 -   [ ] **Rendering quality toggles**
 -   [ ] **Animation/effects density**
 -   [ ] **Far-zoom detail**
@@ -1683,7 +1683,7 @@ the player what just happened and what requires attention.
 -   [ ] **Color-independent state indicators**
 -   [ ] **Color-vision-friendly palette option**
 -   [ ] **Reduced flashing/effects**
--   [ ] **Text size**
+-   [-] **Text size** (text scales with the UI scale (UI-024); no separate text-size setting)
 -   [ ] **Tooltip delay**
 -   [ ] **Pause-friendly interaction**
 -   [ ] **Keyboard navigation where practical**
@@ -2265,7 +2265,7 @@ A UI checkbox is complete only when all applicable items below pass.
 -   [ ] Tooltip/help text exists for non-obvious mechanics.
 -   [ ] Scrolling works at realistic data size.
 -   [ ] Lists/tables are virtualized when scale requires it.
--   [ ] Layout works at supported UI scales/resolutions.
+-   [x] Layout works at supported UI scales/resolutions. (UI-024: setup screens, HUD, panels, tools and Options tested at 100/150/200 %; HiDPI renders at the screen's true resolution)
 -   [ ] Important states are not communicated by color alone.
 -   [ ] No expensive world scan occurs every frame.
 -   [ ] Automated tests cover controller/view-model logic where

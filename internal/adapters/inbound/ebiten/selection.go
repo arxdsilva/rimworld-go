@@ -87,7 +87,7 @@ func selectablesAt(w game.WorldView, pawns []game.PawnView, tx, ty int) []selCan
 	return append(out, floorFrames...)
 }
 
-// pawnUnderCursor is the colonist drawn under screen pixel (mx, my), even
+// pawnUnderCursor is the colonist drawn under physical pixel (mx, my), even
 // mid-step onto a neighbouring tile.
 func (r *Renderer) pawnUnderCursor(mx, my int) (entity.EntityID, bool) {
 	wx, wy := r.screenToWorld(mx, my)
@@ -100,9 +100,10 @@ func (r *Renderer) pawnUnderCursor(mx, my int) (entity.EntityID, bool) {
 	return 0, false
 }
 
-// clickSelect selects what is under the cursor (a map left click).
+// clickSelect selects what is under the cursor (a map left click), in
+// physical pixels (mapCursor).
 func (a *App) clickSelect() {
-	mx, my := a.currentCursor()
+	mx, my := a.mapCursor()
 	tx, ty := a.renderer.TileAt(mx, my)
 	cands := selectablesAt(a.renderer.world(), a.renderer.snapshot(), tx, ty)
 	tile := [2]int{tx, ty}

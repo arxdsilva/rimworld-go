@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/platform/input"
 )
@@ -78,7 +77,7 @@ func (a *App) drawGizmoKeys(screen *ebiten.Image) {
 		}
 		w := textW(l, tsSmall) + 4
 		x, y := b.x+b.w-w-1, b.y+1
-		vector.FillRect(screen, x, y, w, 13, uiSpace, false)
+		uiFillRect(screen, x, y, w, 13, uiSpace, false)
 		drawText(screen, l, float64(x)+2, float64(y)-3, tsSmall)
 	}
 }
