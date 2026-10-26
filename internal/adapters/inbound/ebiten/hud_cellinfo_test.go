@@ -72,6 +72,16 @@ func TestCellInfoOnlyWithNothingSelected(t *testing.T) {
 		t.Fatal("selection cleared: expected cell info back")
 	}
 
+	// PLAY-020: a selected zone has its pane there too
+	a.zoneSel, a.hasZone = 1, true
+	if got := a.cellInfoLines(); len(got) != 0 {
+		t.Errorf("a zone is selected, cell info = %q", got)
+	}
+	if a.learnSelection() == "" {
+		t.Error("a selected zone counts as a selection for the learning helper")
+	}
+	a.clearZone()
+
 	a.archOpen = true
 	if got := a.cellInfoLines(); len(got) != 0 {
 		t.Errorf("the Architect is open, cell info = %q", got)

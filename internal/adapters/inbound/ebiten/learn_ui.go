@@ -205,6 +205,8 @@ func (a *App) learnSelection() string {
 		return fmt.Sprintf("i%d", a.selItem)
 	case a.hasFrame:
 		return fmt.Sprintf("f%d", a.selFrame)
+	case a.hasZone:
+		return fmt.Sprintf("z%d", a.zoneSel)
 	}
 	return ""
 }

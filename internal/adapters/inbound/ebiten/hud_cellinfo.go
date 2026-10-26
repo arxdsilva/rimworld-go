@@ -20,11 +20,11 @@ const (
 	cellInfoBacking = 0x70 // the backing's alpha over the map
 )
 
-// nothingSelected reports no pawn, animal, item, plant, building, frame or
-// group is selected.
+// nothingSelected reports no pawn, animal, item, plant, building, frame,
+// zone or group is selected.
 func (a *App) nothingSelected() bool {
 	return a.renderer != nil && !a.grouped() && !a.renderer.HasSelect() &&
-		!a.hasAnimal && !a.hasItem && !a.hasPlant && !a.hasBuilding && !a.hasFrame
+		!a.hasAnimal && !a.hasItem && !a.hasPlant && !a.hasBuilding && !a.hasFrame && !a.hasZone
 }
 
 // hoveredCell is the map cell under the cursor: not over the HUD, on the

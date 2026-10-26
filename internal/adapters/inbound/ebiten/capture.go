@@ -417,6 +417,8 @@ func (a *App) captureUI(ui string) {
 		a.captureInspect(ui)
 	case "zones":
 		a.captureZones(at)
+	case "zone", "zone-shrink":
+		a.captureZone(ui == "zone-shrink", at)
 	case "paths":
 		// every colonist walking somewhere: dotted routes, one drafted
 		g := a.renderer.game
@@ -846,6 +848,29 @@ func (a *App) captureInspect(ui string) {
 
 // captureZones lays out two touching stockpiles, a grow zone and a grow
 // drag ghost running over rough stone (red where it cannot be sown).
+// captureZone selects the colony's first growing zone, its pane and
+// commands showing (PLAY-020); with shrink, its Shrink tool is held over
+// the zone's west half mid-drag.
+func (a *App) captureZone(shrink bool, at func(tx, ty int) (int, int)) {
+	for _, z := range a.renderer.game.World().Zones {
+		if z.Kind != game.ZoneGrow {
+			continue
+		}
+		a.selectCand(selCand{kind: selZone, id: entity.EntityID(z.ID)})
+		sw, sh := a.size()
+		a.renderer.centerOn(float64(z.MinX+z.MaxX)/2, float64(z.MinY+z.MaxY)/2, sw, sh)
+		if shrink {
+			a.startZoneTool(zoneToolShrink)
+			st := a.zoneSt()
+			st.fresh, st.drag = false, true
+			st.x0, st.y0, st.x1, st.y1 = z.MinX, z.MinY, (z.MinX+z.MaxX)/2, z.MaxY
+			x, y := at(st.x1, st.y1)
+			a.cursor = &[2]int{x, y}
+		}
+		return
+	}
+}
+
 func (a *App) captureZones(at func(tx, ty int) (int, int)) {
 	g := a.renderer.game
 	cx, cy := g.Width()/2, g.Height()/2
