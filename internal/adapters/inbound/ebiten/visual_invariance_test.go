@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"fmt"
+	"image"
 	"math"
 	"regexp"
 	"strconv"
@@ -25,8 +26,12 @@ import (
 //   - Anchors: labels sit where they belong (zone names in their zone, the
 //     animal's name under it, portraits in their bar slot, stack counts on
 //     their stack, the draft/chat/fight markers over their colonist);
+//   - Regions: no HUD draw straddles the edge of a layout region
+//     (computeHUDLayout): each region draws inside its own rect, and
+//     nothing else draws over it;
 //   - Panels: every inspector, tab, the options screen and a letter stay
-//     inside the screen and their own panel, and scale like the rest.
+//     inside the screen and their own layout regions, and scale like the
+//     rest.
 //
 // Raw draws (vector, DrawImage) are invisible to the trace; the AST guard
 // (ui_canvas_guard_test.go) covers them.
@@ -42,8 +47,6 @@ var (
 )
 
 const (
-	draftIconSize = 18 // hud.go drawColonistPortraits: logical size of the draft icon
-
 	visPanX = 2 // the pan test moves the camera right 2 tiles ...
 	visPanY = 1 // ... and down 1: the world moves left 2, up 1
 	posTol  = 1 // pixels: pan tolerance
@@ -269,32 +272,127 @@ func (s *visualScene) checkAnchors(ev []traceEvent, sc, tile float64) []string {
 	return bad
 }
 
-// checkPortraits verifies every colonist-bar portrait image sits inside
-// its bar slot, and that every colonist has one.
+// checkPortraits verifies every image the HUD draws over the colonist bar
+// sits inside one of the layout's BarSlots, and that every shown
+// colonist's slot draws a portrait (an image that is not a status mark).
 func (s *visualScene) checkPortraits(ev []traceEvent, sc float64) []string {
 	var bad []string
 	a := s.a
-	n := len(a.barPawns())
-	top, bottom := float64(hudBarY(a.sh))*sc, float64(hudBarY(a.sh)+hudBarH)*sc
+	l := a.hud()
+	n := barShown(l)
+	if want := len(a.barPawns()); n != want || l.BarMore != 0 {
+		bad = append(bad, fmt.Sprintf("the bar shows %d of %d colonists (+%d)", n, want, l.BarMore))
+	}
+	bar := visScaled(l.Bar, sc)
+	mark := float64(max(barIconMin, barIconSize*l.BarScale)) * sc // a status mark's size
 	have := map[int]bool{}
 	for _, e := range visPass(ev, "hud") {
-		if e.Kind != "image" || float64(e.Y) >= bottom || float64(e.Y+e.H) <= top {
+		if e.Kind != "image" || !visOverlaps(e, bar, 0.5) {
 			continue
 		}
-		slot := int(math.Floor((float64(e.X)/sc - hudPad) / barSlot))
-		left, right := float64(hudPad+slot*barSlot)*sc, float64(hudPad+(slot+1)*barSlot)*sc
-		if slot < 0 || slot >= n || !visInside(e, left, top, right, bottom, 0.5) {
-			bad = append(bad, fmt.Sprintf("bar image %s is outside its colonist-bar slot (slot %d of %d, x %.0f..%.0f, bar y %.0f..%.0f)", e, slot, n, left, right, top, bottom))
+		slot := -1
+		for i, r := range l.BarSlots {
+			if sr := visScaled(r, sc); visInside(e, sr.x0, sr.y0, sr.x1, sr.y1, 0.5) {
+				slot = i
+				break
+			}
+		}
+		if slot < 0 || slot >= n {
+			bad = append(bad, fmt.Sprintf("bar image %s is outside every colonist-bar slot (bar %s, %d slots)", e, bar, n))
 			continue
 		}
-		draftIcon := math.Abs(float64(e.W)-draftIconSize*sc) < 0.5 && math.Abs(float64(e.H)-draftIconSize*sc) < 0.5
-		if !draftIcon { // the drafted colonist's icon is not a portrait layer
+		statusMark := math.Abs(float64(e.W)-mark) < 0.5 && math.Abs(float64(e.H)-mark) < 0.5
+		if !statusMark { // a status mark (drafted, sleeping, ...) is not a portrait layer
 			have[slot] = true
 		}
 	}
 	for i := 0; i < n; i++ {
 		if !have[i] {
 			bad = append(bad, fmt.Sprintf("colonist-bar slot %d draws no portrait image", i))
+		}
+	}
+	return bad
+}
+
+// visBox is a rectangle in physical pixels.
+type visBox struct{ x0, y0, x1, y1 float64 }
+
+func (b visBox) String() string {
+	return fmt.Sprintf("(%.0f,%.0f)-(%.0f,%.0f)", b.x0, b.y0, b.x1, b.y1)
+}
+
+// visScaled is the logical rect r on the physical screen at scale sc.
+func visScaled(r rect, sc float64) visBox {
+	return visBox{float64(r.X) * sc, float64(r.Y) * sc, float64(r.right()) * sc, float64(r.bottom()) * sc}
+}
+
+// visOverlaps reports the event's rectangle and b share more than tol
+// pixels each way.
+func visOverlaps(e traceEvent, b visBox, tol float64) bool {
+	return math.Min(float64(e.X+e.W), b.x1)-math.Max(float64(e.X), b.x0) > tol &&
+		math.Min(float64(e.Y+e.H), b.y1)-math.Max(float64(e.Y), b.y0) > tol
+}
+
+// visVisible is the part of the draw its destination shows: a draw into a
+// clipped sub-image (clipTo: a scrolled list, the pane's body, a tab's
+// panel) is cut to the clip. False when none of it shows.
+func visVisible(e traceEvent) (traceEvent, bool) {
+	c := e.Clip
+	if c.Empty() {
+		return e, true
+	}
+	x0, y0 := math.Max(float64(e.X), float64(c.Min.X)), math.Max(float64(e.Y), float64(c.Min.Y))
+	x1, y1 := math.Min(float64(e.X+e.W), float64(c.Max.X)), math.Min(float64(e.Y+e.H), float64(c.Max.Y))
+	if x1 <= x0 || y1 <= y0 {
+		return e, false
+	}
+	e.X, e.Y, e.W, e.H = float32(x0), float32(y0), float32(x1-x0), float32(y1-y0)
+	return e, true
+}
+
+// visRegion is one named region of the HUD layout.
+type visRegion struct {
+	name string
+	r    rect
+}
+
+// visRegions are the layout's shown regions (each command cell is its own).
+func visRegions(l hudLayout) []visRegion {
+	var out []visRegion
+	for _, r := range []visRegion{{"tabs", l.Tabs}, {"pane", l.Pane}, {"pane tabs", l.PaneTabs}, {"expanded", l.Expanded},
+		{"arch cats", l.ArchCats}, {"arch desc", l.ArchDesc}, {"window", l.Window}, {"global", l.Global},
+		{"minimap", l.Minimap}, {"letters", l.Letters}, {"learn", l.Learn}, {"alerts", l.Alerts},
+		{"bar", l.Bar}, {"resources", l.Resources}, {"messages", l.Messages}} {
+		if !r.r.empty() {
+			out = append(out, r)
+		}
+	}
+	for i, c := range l.GridCells {
+		out = append(out, visRegion{fmt.Sprintf("command %d", i), c})
+	}
+	return out
+}
+
+// checkRegions verifies no HUD draw straddles a layout region's edge: a
+// draw that reaches into a region lies wholly inside it (the part of it
+// that shows, for a clipped draw). A region drawing past its rect, or
+// something else drawing over a region, fails.
+func (s *visualScene) checkRegions(ev []traceEvent, sc float64) []string {
+	return visCheckRegions(ev, visRegions(s.a.hud()), sc)
+}
+
+func visCheckRegions(ev []traceEvent, regions []visRegion, sc float64) []string {
+	var bad []string
+	for _, e := range visPass(ev, "hud") {
+		e, shown := visVisible(e)
+		if !shown {
+			continue
+		}
+		for _, rg := range regions {
+			b := visScaled(rg.r, sc)
+			if visOverlaps(e, b, 1) && !visInside(e, b.x0, b.y0, b.x1, b.y1, 1) {
+				bad = append(bad, fmt.Sprintf("%s reaches into the %s region %s without staying inside it", e, rg.name, b))
+			}
 		}
 	}
 	return bad
@@ -341,11 +439,17 @@ func visReport(t *testing.T, what string, bad []string) {
 func TestFrameInvariance(t *testing.T) {
 	art := visArt(t)
 	s := newVisualScene(t, art, false)
+	// Nothing gets selected here, so the learning helper holds still: it
+	// stays up and every check below covers it too.
+	s.a.settings.Gameplay.ShowLearningHelper = true
 
 	// The scale-1 reference: the HUD does not depend on the zoom.
 	ref := visPass(s.frame(s.configure(t, 1, 1, 1)), "hud")
 	if len(ref) < 50 {
 		t.Fatalf("the reference HUD drew only %d things", len(ref))
+	}
+	if s.a.hud().Learn.empty() {
+		t.Fatal("the learning helper is not up: the frame checks would not cover it")
 	}
 
 	for _, dev := range visDevs {
@@ -359,6 +463,7 @@ func TestFrameInvariance(t *testing.T) {
 
 					visReport(t, "anchors", s.checkAnchors(a, sc, tile))
 					visReport(t, "portraits", s.checkPortraits(a, sc))
+					visReport(t, "regions", s.checkRegions(a, sc))
 					visReport(t, "on screen", visCheckOnScreen(a, s.a.pw, s.a.ph))
 					if zoom == visZooms[0] && sc != 1 {
 						visReport(t, "scale", visCheckScale(ref, visPass(a, "hud"), sc))
@@ -374,21 +479,60 @@ func TestFrameInvariance(t *testing.T) {
 }
 
 // visPanel is one screen state of the panel test: how to open it and,
-// when the state has a panel of known size, where (logical pixels).
+// when the state has a known place on the HUD, the layout regions it may
+// draw in (logical pixels; a draw lies inside one of them).
 type visPanel struct {
-	name string
-	open func(t *testing.T, s *visualScene)
-	rect func(s *visualScene) (button, bool)
+	name    string
+	open    func(t *testing.T, s *visualScene)
+	regions func(s *visualScene) []rect
+}
+
+// visSelRegions are a selection's regions: the inspect pane, its tabs, an
+// open tab's panel and the occupied command cells, plus the resource list,
+// which gives way to whatever the lower-left holds (it shrinks and scrolls
+// inside its own rect).
+func visSelRegions(s *visualScene) []rect {
+	l := s.a.hud()
+	return append([]rect{l.Pane, l.PaneTabs, l.Expanded, l.Resources}, l.GridCells...)
+}
+
+// visPawnRegions are a selected colonist's: the selection's, plus its own
+// colonist-bar card (which turns selected).
+func visPawnRegions(s *visualScene) []rect {
+	out := visSelRegions(s)
+	l := s.a.hud()
+	for i, p := range s.a.barPawns() {
+		if i < barShown(l) && s.a.barSelected(p.ID) {
+			out = append(out, l.BarSlots[i])
+		}
+	}
+	return out
+}
+
+// visWindowRegions are a main tab's: the Window rect (and the resource
+// list giving way to it).
+func visWindowRegions(s *visualScene) []rect {
+	l := s.a.hud()
+	return []rect{l.Window, l.Resources}
 }
 
 func visPanels() []visPanel {
 	var ps []visPanel
-	// the colonist inspector, every tab
+	// the colonist pane, collapsed ("character") and with every tab open
 	for _, tab := range []string{"character", "needs", "bio", "health", "social", "gear", "log"} {
 		ps = append(ps, visPanel{
 			name: "colonist_" + tab,
-			open: func(t *testing.T, s *visualScene) { s.a.renderer.Select(s.pawns[3]); s.a.inspectTab = tab },
-			rect: func(*visualScene) (button, bool) { return inspectorRect(), true },
+			open: func(t *testing.T, s *visualScene) {
+				s.a.renderer.Select(s.pawns[3])
+				if tab == "character" {
+					return
+				}
+				s.a.selectPaneTab("inspector." + tab)
+				if s.a.paneOpenTab() != "inspector."+tab {
+					t.Fatalf("the %s tab did not open (open %q)", tab, s.a.paneOpenTab())
+				}
+			},
+			regions: visPawnRegions,
 		})
 	}
 	ps = append(ps,
@@ -396,38 +540,39 @@ func visPanels() []visPanel {
 			if !s.a.selectAnimalAt(visAnimal[0], visAnimal[1]) {
 				t.Fatal("animal not selectable")
 			}
-		}, func(s *visualScene) (button, bool) { return s.a.animalPanel(), true }},
+		}, visSelRegions},
 		visPanel{"item", func(t *testing.T, s *visualScene) {
 			if !s.a.selectItemAt(visStacks[0].x, visStacks[0].y) {
 				t.Fatal("item not selectable")
 			}
-		}, func(*visualScene) (button, bool) { return itemRect(), true }},
+		}, visSelRegions},
 		visPanel{"plant", func(t *testing.T, s *visualScene) {
 			if !s.a.selectPlantAt(visPlant[0], visPlant[1]) {
 				t.Fatal("plant not selectable")
 			}
-		}, func(*visualScene) (button, bool) { return plantRect(), true }},
+		}, visSelRegions},
 		visPanel{"building", func(t *testing.T, s *visualScene) {
 			if !s.a.selectBuildingAt(visBuilding[0], visBuilding[1]) {
 				t.Fatal("building not selectable")
 			}
-		}, func(s *visualScene) (button, bool) { return s.a.buildingPanelRect(), true }},
+		}, visSelRegions},
 	)
-	// the main tabs (the first four open the work panel, which fills the map)
-	for _, tab := range []string{"work", "schedule", "research", "animals"} {
+	// the main tabs' windows, all in the Window rect
+	for _, tab := range []string{"work", "schedule", "research", "animals", "wildlife", "assign", "world", "history"} {
 		ps = append(ps, visPanel{
-			name: "tab_" + tab,
-			open: func(t *testing.T, s *visualScene) { s.a.applyClick("tab." + tab) },
-			rect: func(s *visualScene) (button, bool) { return workRect(s.a.sw, s.a.sh), true },
+			name:    "tab_" + tab,
+			open:    func(t *testing.T, s *visualScene) { s.a.applyClick("tab." + tab) },
+			regions: visWindowRegions,
 		})
 	}
 	ps = append(ps,
 		visPanel{"tab_architect", func(t *testing.T, s *visualScene) { s.a.applyClick("tab.architect") },
-			func(s *visualScene) (button, bool) { return s.a.architectRect(), true }},
-		// modal windows and screens: no single panel rect, the screen bounds them
-		visPanel{"tab_assign", func(t *testing.T, s *visualScene) { s.a.applyClick("tab.assign") }, nil},
-		visPanel{"tab_world", func(t *testing.T, s *visualScene) { s.a.applyClick("tab.world") }, nil},
-		visPanel{"tab_history", func(t *testing.T, s *visualScene) { s.a.applyClick("tab.history") }, nil},
+			func(s *visualScene) []rect {
+				l := s.a.hud()
+				return append([]rect{l.ArchCats, l.ArchDesc, l.Resources}, l.GridCells...)
+			}},
+		// the pause overlay, a letter and the options screens: no single
+		// region, the screen bounds them
 		visPanel{"pause_menu", func(t *testing.T, s *visualScene) { s.a.applyClick("tab.menu") }, nil},
 		visPanel{"letter", func(t *testing.T, s *visualScene) {
 			s.a.openLetter(game.MessageView{Tick: 1, Title: "Heat wave", Letter: true,
@@ -467,8 +612,9 @@ func visAdded(base, got []traceEvent) []traceEvent {
 // TestPanelsStayInTheirPanel opens every inspector, main tab, the options
 // screens, the pause menu and a letter, and checks at scale 1 and at
 // larger scales that everything the state draws stays on the screen and
-// (where the panel has a known rectangle) inside it, and that the HUD
-// scales like the scale-1 HUD does.
+// (where the state has its regions on the HUD layout) inside them, that no
+// HUD draw straddles a region's edge, and that the HUD scales like the
+// scale-1 HUD does.
 func TestPanelsStayInTheirPanel(t *testing.T) {
 	art := visArt(t)
 	type cfg struct{ dev, ui float64 }
@@ -495,16 +641,32 @@ func TestPanelsStayInTheirPanel(t *testing.T) {
 					t.Fatalf("opening %s drew nothing new at scale %g", p.name, sc)
 				}
 				visReport(t, fmt.Sprintf("scale %g on screen", sc), visCheckOnScreen(hud, s.a.pw, s.a.ph))
-				if p.rect != nil {
-					r, _ := p.rect(s)
-					x0, y0, x1, y1 := float64(r.x)*sc, float64(r.y)*sc, float64(r.x+r.w)*sc, float64(r.y+r.h)*sc
-					var bad []string
-					for _, e := range added {
-						if !visInside(e, x0, y0, x1, y1, 1) {
-							bad = append(bad, fmt.Sprintf("%s is outside its panel (%.0f,%.0f)-(%.0f,%.0f)", e, x0, y0, x1, y1))
+				if p.regions != nil {
+					var boxes []visBox
+					for _, r := range p.regions(s) {
+						if !r.empty() {
+							boxes = append(boxes, visScaled(r, sc))
 						}
 					}
-					visReport(t, fmt.Sprintf("scale %g panel", sc), bad)
+					if len(boxes) == 0 {
+						t.Fatalf("%s has no region on the HUD at scale %g", p.name, sc)
+					}
+					var bad []string
+					for _, e := range added {
+						e, shown := visVisible(e)
+						if !shown {
+							continue
+						}
+						in := false
+						for _, b := range boxes {
+							in = in || visInside(e, b.x0, b.y0, b.x1, b.y1, 1)
+						}
+						if !in {
+							bad = append(bad, fmt.Sprintf("%s is outside its regions %v", e, boxes))
+						}
+					}
+					visReport(t, fmt.Sprintf("scale %g regions", sc), bad)
+					visReport(t, fmt.Sprintf("scale %g region edges", sc), s.checkRegions(hud, sc))
 				}
 				if sc == 1 {
 					ref = hud
@@ -578,6 +740,29 @@ func TestVisualCheckersCatchTheBugs(t *testing.T) {
 	auto2 := []traceEvent{{Kind: "text", Text: "Auto (200%)", X: 540, Y: 342, W: 146, H: 35.4, Pass: "hud"}}
 	if bad := visCheckScale(auto1, auto2, 2); len(bad) != 0 {
 		t.Errorf("the Options \"Auto (n%%)\" label names the scale by design: %q", bad)
+	}
+
+	// regions: a draw reaching past a region's edge is flagged, a clipped
+	// draw only for the part that shows
+	regions := []visRegion{{"pane", rect{0, 500, 400, 188}}, {"tabs", rect{0, 692, 1280, 28}}}
+	inPane := traceEvent{Kind: "text", Text: "Tile", X: 12, Y: 600, W: 80, H: 18, Pass: "hud"}
+	if bad := visCheckRegions([]traceEvent{inPane, hudBox}, regions[:1], 1); len(bad) != 0 {
+		t.Errorf("draws inside or away from a region were flagged: %q", bad)
+	}
+	straddle := inPane
+	straddle.Y = 680 // 680..698: through the pane's bottom into the tabs
+	if bad := visCheckRegions([]traceEvent{straddle}, regions, 1); len(bad) != 2 {
+		t.Errorf("a draw straddling the pane and the tabs = %q, want both regions flagged", bad)
+	}
+	clipped := straddle
+	clipped.Clip = image.Rect(0, 500, 400, 688) // drawn into the pane's clipped body
+	if bad := visCheckRegions([]traceEvent{clipped}, regions, 1); len(bad) != 0 {
+		t.Errorf("a draw clipped to the pane was flagged: %q", bad)
+	}
+	hidden := straddle
+	hidden.Clip = image.Rect(0, 500, 400, 600) // scrolled out of its view
+	if _, shown := visVisible(hidden); shown {
+		t.Error("a draw wholly outside its clip shows")
 	}
 
 	// panel diff and screen bounds

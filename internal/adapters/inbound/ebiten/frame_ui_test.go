@@ -92,10 +92,11 @@ func TestFrameInspectorLines(t *testing.T) {
 func TestFrameCancelEmitsCancelFrame(t *testing.T) {
 	t.Parallel()
 	a, s := frameApp(t, wallFrame())
-	if _, ok := hasButton(a.frameButtons(), "frame.cancel"); !ok {
-		t.Fatal("no cancel button")
+	cancel, ok := bldCmd(a.frameCommands(7), "frame.cancel")
+	if !ok {
+		t.Fatal("no cancel command")
 	}
-	click(t, a, "frame.cancel")
+	a.applyClick(cancel.ID) // what a click on the command button does
 	c := lastCmd(t, s)
 	if c.Kind != command.CancelFrame || c.Target != 7 {
 		t.Fatalf("cmd = %+v", c)
@@ -122,7 +123,7 @@ func TestFrameEscClosesAndVanishedClears(t *testing.T) {
 func TestFrameInspectorDrawsWithoutPanic(t *testing.T) {
 	t.Parallel()
 	a, _ := frameApp(t, wallFrame())
-	a.drawFrameInspector(ebiten.NewImage(a.sw, a.sh))
+	a.drawFrameMark(ebiten.NewImage(a.sw, a.sh))
 }
 
 func TestCarpetCardStockLines(t *testing.T) {
@@ -240,7 +241,7 @@ func TestItemForbidToggle(t *testing.T) {
 		t.Fatalf("cmd = %+v", c)
 	}
 	s.world.Items[0].Forbidden = true
-	if b, _ := hasButton(a.itemButtons(), "item.forbid"); b.label != "Allow" {
+	if b, _ := hasButton(a.commandGridButtons(), "item.forbid"); b.label != "Allow" { // the command button in the grid
 		t.Fatalf("label = %q", b.label)
 	}
 	click(t, a, "item.forbid")

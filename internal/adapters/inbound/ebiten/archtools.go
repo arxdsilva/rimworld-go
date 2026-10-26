@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"strings"
+	"sync"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
@@ -182,13 +183,21 @@ func toolsIn(category string) []archTool {
 	return out
 }
 
-func buildable(kind string) (game.BuildableView, bool) {
-	for _, b := range game.Buildables() {
-		if b.Kind == kind {
-			return b, true
-		}
+// buildableCatalog is the static catalog by kind, read once: game.Buildables
+// rebuilds it on every call and the Architect asks several times a frame.
+// The views are shared and read-only.
+var buildableCatalog = sync.OnceValue(func() map[string]game.BuildableView {
+	all := game.Buildables()
+	out := make(map[string]game.BuildableView, len(all))
+	for _, b := range all {
+		out[b.Kind] = b
 	}
-	return game.BuildableView{}, false
+	return out
+})
+
+func buildable(kind string) (game.BuildableView, bool) {
+	b, ok := buildableCatalog()[kind]
+	return b, ok
 }
 
 // placementCells returns the cells a drag from (x0, y0) to (x1, y1)

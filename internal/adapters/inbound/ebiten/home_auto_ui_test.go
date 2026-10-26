@@ -20,15 +20,19 @@ func TestHomeAutoButtonEmitsAndShowsState(t *testing.T) {
 	if find().selected {
 		t.Fatal("button selected while the view says auto is off")
 	}
+	// left to right: Roof, Home, Auto home, Plans, Rooms (each its own rect)
 	hb, _ := hasButton(a.colonyButtons(sw, sh), homeButtonID)
-	if b := find(); b.x+b.w > hb.x {
+	if b := find(); b.x < hb.x+hb.w {
 		t.Fatalf("Home auto %+v overlaps Home %+v", b, hb)
 	}
 	for _, o := range []string{planButtonID, roomsButtonID} {
 		ob, _ := hasButton(a.colonyButtons(sw, sh), o)
-		if b := find(); b.x+b.w > ob.x {
+		if b := find(); ob.x < b.x+b.w {
 			t.Fatalf("Home auto %+v overlaps %s %+v", b, o, ob)
 		}
+	}
+	if g := a.hud().Global; find().x < g.X || find().x+find().w > g.right() {
+		t.Fatalf("Home auto %+v is outside Global %+v", find(), g)
 	}
 	s.world.HomeAuto = true
 	if !find().selected {

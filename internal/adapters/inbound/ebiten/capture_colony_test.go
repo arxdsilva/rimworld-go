@@ -50,6 +50,19 @@ func captureColony(t *testing.T, ui string, ticks int) (*App, *fakeInput) {
 	return a, f
 }
 
+// captureCursorOnTool checks the capture's cursor rests on tool id's
+// command button (its tooltip is what the shot shows).
+func captureCursorOnTool(t *testing.T, a *App, id string) {
+	t.Helper()
+	cell, ok := a.archToolCell(id)
+	if !ok {
+		t.Fatalf("no %s button in the grid", id)
+	}
+	if a.cursor == nil || !cell.hit(a.cursor[0], a.cursor[1]) {
+		t.Fatalf("cursor %v is not on the %s button %+v", a.cursor, id, cell)
+	}
+}
+
 func TestCaptureColonyStates(t *testing.T) {
 	t.Parallel()
 	for _, c := range []struct {
@@ -107,14 +120,17 @@ func TestCaptureColonyStates(t *testing.T) {
 			if !a.archOpen || a.archCat != "furniture" || a.cursor == nil {
 				t.Fatalf("architect open %v cat %q cursor %v", a.archOpen, a.archCat, a.cursor)
 			}
+			captureCursorOnTool(t, a, "hospital_bed")
 		}},
 		{"arch-cabinet", 60, func(t *testing.T, a *App) {
 			if !a.archOpen || a.archCat != "production" || a.cursor == nil {
 				t.Fatalf("architect open %v cat %q cursor %v", a.archOpen, a.archCat, a.cursor)
 			}
+			captureCursorOnTool(t, a, "tool_cabinet")
 		}},
 		{"arch-locked", 60, func(t *testing.T, a *App) {
-			for _, b := range a.architectButtons() {
+			captureCursorOnTool(t, a, "campfire")
+			for _, b := range a.commandGridButtons() { // the tools are command buttons
 				if b.id == "arch.tool.campfire" {
 					if !b.disabled || b.reason != game.ReasonScenario {
 						t.Fatalf("campfire = %+v, want locked by the scenario", b)
@@ -139,6 +155,9 @@ func TestCaptureColonyStates(t *testing.T) {
 				f.frame(t, a)
 			}
 			c.check(t, a)
+			if c.ui != "factions-colony" && c.ui != "letter-intro" && c.ui != "options-story" && a.uiModalOpen() {
+				t.Fatalf("%s: a window (%q) sits over the shot", c.ui, a.uiModalTop())
+			}
 			drawFrame(t, a, f) // and it paints
 		})
 	}

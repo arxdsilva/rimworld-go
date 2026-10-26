@@ -14,9 +14,9 @@ import (
 
 // Frame inspector (UI-015, MAIN_UI §10 inspector): click a blueprint or
 // frame to see its materials, work and who is on it. Reads only FrameView;
-// the one action is Cancel blueprint (command.CancelFrame).
-
-func frameRect() button { return button{x: hudPad, y: hudTopH + hudPad, w: 380, h: 262} }
+// the one action is Cancel blueprint (command.CancelFrame). PLAY-018: the
+// pane (cmds_build.go framePane) shows it; this file keeps the selection,
+// the click handler and the text the pane is built from.
 
 func (a *App) selectedFrame() (game.FrameView, bool) {
 	if !a.hasFrame || a.renderer == nil {
@@ -32,17 +32,6 @@ func (a *App) selectedFrame() (game.FrameView, bool) {
 }
 
 func (a *App) clearFrame() { a.hasFrame = false }
-
-func (a *App) frameButtons() []button {
-	if _, ok := a.selectedFrame(); !ok || a.workOpen || a.archOpen {
-		return nil
-	}
-	r := frameRect()
-	return []button{
-		{id: "frame.close", label: "X", x: r.x + r.w - 28, y: r.y + 6, w: 22, h: 22},
-		{id: "frame.cancel", label: "Cancel blueprint", x: r.x + r.w - 150, y: r.y + r.h - 32, w: 140, h: 24},
-	}
-}
 
 // applyFrameClick handles a "frame.*" button.
 func (a *App) applyFrameClick(id string) {
@@ -165,37 +154,13 @@ func buildInfo(f game.FrameView, w game.WorldView) frameInfo {
 	return in
 }
 
-func (a *App) drawFrameInspector(screen *ebiten.Image) {
+// drawFrameMark marks the selected blueprint's tiles on the map. The
+// pane (cmds_build.go) is the blueprint's panel now.
+func (a *App) drawFrameMark(screen *ebiten.Image) {
 	f, ok := a.selectedFrame()
 	if !ok || a.workOpen || a.archOpen {
 		return
 	}
-	in := buildInfo(f, a.renderer.world())
-	r := frameRect()
-	drawPanel(screen, r.x, r.y, r.w, r.h)
-	x, y := int(r.x)+12, int(r.y)+10
-	drawText(screen, in.Title, float64(x), float64(y)-2, tsLabel)
-	drawFitSmall(screen, "Status: "+in.Status, float64(x), float64(y+20), float64(r.w)-24, tsBody)
-	barW := int(r.w) - 24
-	y += 48
-	if in.Material != "" {
-		drawFitSmall(screen, "Materials  "+in.Material, float64(x), float64(y), float64(barW), tsBody)
-		drawFracBar(screen, x, y+18, barW, 8, in.MatFrac)
-		y += 32
-		if in.Stock != "" {
-			drawFitSmall(screen, "In stock  "+in.Stock, float64(x), float64(y), float64(barW), tsBody)
-			y += 20
-		}
-	}
-	if in.Work != "" {
-		drawFitSmall(screen, "Work  "+in.Work, float64(x), float64(y), float64(barW), tsBody)
-		drawFracBar(screen, x, y+18, barW, 8, in.WorkFrac)
-		y += 32
-	}
-	drawFitSmall(screen, in.People, float64(x), float64(y), float64(barW), tsBody)
-	drawFitSmall(screen, in.Foot, float64(x), float64(y+20), float64(barW), tsBody)
-	mx, my := a.currentCursor()
-	a.drawButtons(screen, a.frameButtons(), mx, my)
 	if a.renderer.art != nil {
 		bw, bh := max(f.W, 1), max(f.H, 1)
 		for dy := 0; dy < bh; dy++ {
@@ -209,6 +174,6 @@ func (a *App) drawFrameInspector(screen *ebiten.Image) {
 // drawFracBar is a thin bar filled to frac (0..1).
 func drawFracBar(screen *ebiten.Image, x, y, w, h int, frac float64) {
 	frac = max(0, min(1, frac))
-	uiFillRect(screen, float32(x), float32(y), float32(w), float32(h), color.RGBA{R: 40, G: 30, B: 24, A: 255}, false)
-	uiFillRect(screen, float32(x), float32(y), float32(float64(w)*frac), float32(h), color.RGBA{R: 120, G: 170, B: 70, A: 255}, false)
+	uiFillRect(screen, float32(x), float32(y), float32(w), float32(h), uiField, false)
+	uiFillRect(screen, float32(x), float32(y), float32(float64(w)*frac), float32(h), uiGood, false)
 }

@@ -2,17 +2,19 @@ package ebiten
 
 import "math"
 
-// viewport is the part of the screen the map can be seen through: the
-// screen minus the fixed top bar and the colonist bar / tab strip below.
+// viewport is the part of the screen the map can be seen through. Since
+// PLAY-018 that is the whole window: the HUD floats over the map.
 type viewport struct{ x0, y0, x1, y1 float64 }
 
 func (v viewport) w() float64 { return v.x1 - v.x0 }
 func (v viewport) h() float64 { return v.y1 - v.y0 }
 
 // colonyViewport is the map viewport for a sw x sh logical screen, in
-// logical pixels (UI layout).
+// logical pixels (UI layout): the whole screen. The camera clamps, the edge
+// scroll, the zoom anchor, "jump to" and the minimap's view frame all work
+// against it, so tiles can be scrolled out from under the HUD's panels.
 func colonyViewport(sw, sh int) viewport {
-	return viewport{0, hudTopH, float64(sw), float64(hudBarY(sh))}
+	return viewport{0, 0, float64(sw), float64(sh)}
 }
 
 // colonyViewportPhysical is colonyViewport in physical pixels (logical x
@@ -73,7 +75,8 @@ func (r *Renderer) syncDev() {
 const (
 	// edgeSlack is how far past the map edge the camera may scroll, as a
 	// fraction of the viewport, so edge tiles can be pulled out from under
-	// side panels (architect, inspector, alerts). The gap shows as black.
+	// the HUD that floats over the map (pane, command buttons, the right
+	// column, the tab strip). The gap shows as black.
 	edgeSlack = 0.18
 	// fitSlack is the spare room around the whole map at full zoom-out.
 	fitSlack = 0.08

@@ -54,25 +54,25 @@ func TestItemHaulMarkButtonEmitsAndFlips(t *testing.T) {
 	a, s := stubColony(t)
 	s.world = game.WorldView{Items: foundItems()}
 	a.selectCand(selCand{selItem, 21})
-	b, ok := hasButton(a.itemButtons(), "item.haulmark")
-	if !ok || b.label != "Mark for hauling" {
-		t.Fatalf("unclaimed unmarked stack: button = %+v", b)
+	b, ok := thingFind(a.itemCommands(21), "item.haulmark")
+	if !ok || b.Label != "Mark for hauling" {
+		t.Fatalf("unclaimed unmarked stack: command = %+v", b)
 	}
 	click(t, a, "item.haulmark")
 	if c := lastCmd(t, s); c.Kind != command.SetHaulMark || c.Target != 21 || !c.Enabled {
 		t.Fatalf("cmd = %+v, want SetHaulMark(21) on", c)
 	}
 	s.world.Items[0].HaulMarked = true
-	if b, _ := hasButton(a.itemButtons(), "item.haulmark"); b.label != "Unmark" {
-		t.Fatalf("marked label = %q", b.label)
+	if b, _ := thingFind(a.itemCommands(21), "item.haulmark"); b.Label != "Unmark" {
+		t.Fatalf("marked label = %q", b.Label)
 	}
 	click(t, a, "item.haulmark")
 	if c := lastCmd(t, s); c.Kind != command.SetHaulMark || c.Target != 21 || c.Enabled {
 		t.Fatalf("cmd = %+v, want SetHaulMark(21) off", c)
 	}
-	// the Forbid button stays beside it
-	if _, ok := hasButton(a.itemButtons(), "item.forbid"); !ok {
-		t.Fatal("Forbid button gone")
+	// the Forbid command stays beside it
+	if _, ok := thingFind(a.itemCommands(21), "item.forbid"); !ok {
+		t.Fatal("Forbid command gone")
 	}
 }
 
@@ -81,7 +81,7 @@ func TestItemHaulMarkButtonHiddenForColonyStacks(t *testing.T) {
 	a, s := stubColony(t)
 	s.world = game.WorldView{Items: foundItems()}
 	a.selectCand(selCand{selItem, 23})
-	if _, ok := hasButton(a.itemButtons(), "item.haulmark"); ok {
+	if _, ok := thingFind(a.itemCommands(23), "item.haulmark"); ok {
 		t.Fatal("a claimed stack needs no mark button")
 	}
 	// a stale click does nothing
@@ -119,12 +119,12 @@ func TestItemInspectorKeepsForcedHaulChip(t *testing.T) {
 	s.orders = []game.OrderOption{{Label: "Haul", Cmd: command.Command{Kind: command.Prioritize, Order: command.OrderHaul, Pawn: 1}}}
 	a.selectCand(selCand{selItem, 21})
 	it, _ := a.selectedItem()
-	if rows := a.itemRows(it, false); len(rows) != 1 || rows[0].Verb != "Haul:" {
-		t.Fatalf("a found stack still offers the forced Haul chip: %+v", rows)
+	if vs := itemVerbs(it, false); len(vs) != 1 || vs[0].id != "cmd.item.haul" {
+		t.Fatalf("a found stack still offers the forced Haul command: %+v", vs)
 	}
-	click(t, a, "item.act.0")
+	click(t, a, "cmd.item.haul")
 	if c := lastCmd(t, s); c.Kind != command.Prioritize || c.Order != command.OrderHaul {
-		t.Fatalf("chip cmd = %+v", c)
+		t.Fatalf("haul option cmd = %+v", c)
 	}
 }
 
@@ -176,14 +176,15 @@ func TestGroupMarkButtonHiddenWithoutFoundStacks(t *testing.T) {
 	}
 }
 
-// At UI scale 1.5 the item panel is laid out in logical pixels: every
-// button sits inside the panel, its label fits, and the worst-case body
-// (every status line) ends above the chip rows.
+// At UI scale 1.5 the item pane and its commands are laid out in logical
+// pixels: every command has a grid cell right of the pane that overlaps no
+// other, every label word fits its cell, the worst-case body (every status
+// line) is in the pane, and drawing both states does not panic.
 func TestItemInspectorAtScale1_5(t *testing.T) {
 	withUIScale(t, 1.5)
 	a, s := stubColony(t)
 	s.world = game.WorldView{Items: []game.ItemView{
-		{ID: 21, Kind: "rifle", Qty: 1, X: 2, Y: 2, Unclaimed: true, Forbidden: true, FreshDays: 12},
+		{ID: 21, Kind: "rifle", Qty: 1, X: 2, Y: 2, Unclaimed: true, Forbidden: true, FreshDays: 12, RotRate: 500},
 	}}
 	s.orders = []game.OrderOption{
 		{Label: "Equip", Cmd: command.Command{Kind: command.Prioritize, Order: command.OrderEquip}},
@@ -191,73 +192,87 @@ func TestItemInspectorAtScale1_5(t *testing.T) {
 	}
 	s.pawns = []game.PawnView{{ID: 1, Name: "Ada", X: 5, Y: 5, Status: "alive"}, {ID: 2, Name: "Bo", X: 6, Y: 5, Status: "alive"}}
 	a.selectCand(selCand{selItem, 21})
-	it, _ := a.selectedItem()
-	r := itemRect()
-	bs := a.itemButtons()
-	if _, ok := hasButton(bs, "item.haulmark"); !ok {
-		t.Fatalf("no mark button: %+v", bs)
+	cs := a.itemCommands(21)
+	if _, ok := thingFind(cs, "item.haulmark"); !ok {
+		t.Fatalf("no mark command: %v", thingIDs(cs))
 	}
-	for _, b := range bs {
-		if b.x < r.x || b.y < r.y || b.x+b.w > r.x+r.w || b.y+b.h > r.y+r.h {
-			t.Errorf("%s (%v,%v %vx%v) leaves the panel %+v", b.id, b.x, b.y, b.w, b.h, r)
+	sw, sh := a.size()
+	l := computeHUDLayout(sw, sh, hudState{PaneShown: true, Commands: len(cs)})
+	if len(l.GridCells) != len(cs) {
+		t.Fatalf("%d commands, %d cells", len(cs), len(l.GridCells))
+	}
+	for i, c := range cs {
+		cell := l.GridCells[i]
+		if cell.X < l.Pane.right() || cell.right() > l.Global.X || cell.bottom() > l.Tabs.Y {
+			t.Errorf("%s: cell %+v leaves the grid band", c.ID, cell)
 		}
-		if w, _ := measure(b.label, tsBody); w > float64(b.w)-4 && !strings.HasPrefix(b.id, "item.act.") {
-			t.Errorf("%s label %q (%.0fpx) does not fit %.0fpx", b.id, b.label, w, b.w)
+		for _, w := range strings.Fields(c.Label) {
+			if tw := textW(w, tsSmall); tw > cell.W-8 {
+				t.Errorf("%s label word %q (%.0fpx) does not fit its %.0fpx cell", c.ID, w, tw, cell.W)
+			}
 		}
-		for _, o := range bs {
-			if o.id < b.id && b.x < o.x+o.w && o.x < b.x+b.w && b.y < o.y+o.h && o.y < b.y+b.h {
-				t.Errorf("%s overlaps %s", b.id, o.id)
+		for j, o := range l.GridCells[:i] {
+			if !cell.intersect(o).empty() {
+				t.Errorf("%s overlaps command %d", c.ID, j)
 			}
 		}
 	}
-	// body lines stay clear of the chip rows
-	rows := a.itemRows(it, false)
-	if len(rows) == 0 {
-		t.Fatal("no chip rows")
+	// the worst-case body: every status line is on the pane, storage last
+	sp := a.itemPane(21)
+	for _, want := range []string{"Forbidden: colonists leave it alone", "Found here. Colonists won't haul it until you mark it.", "Not stored"} {
+		if !contains(sp.Lines, want) {
+			t.Errorf("pane lines %q lack %q", sp.Lines, want)
+		}
 	}
-	bodyEnd := float64(r.y) + 62
-	for _, l := range itemLines(it, false) {
-		bodyEnd += float64(len(wrapPx(l, tsSmall, float64(r.w)-24))) * float64(lineStep(tsSmall))
-	}
-	chipTop := float64(r.y+r.h) - 30 - float64(len(rows)-1)*26
-	if bodyEnd > chipTop {
-		t.Errorf("body ends at %.0f, chips start at %.0f", bodyEnd, chipTop)
-	}
-	// the category word stays clear of the mark button
-	mb, _ := hasButton(bs, "item.haulmark")
-	if w, _ := measure(itemCategory(it), tsSmall); float64(r.x)+60+w > float64(mb.x) {
-		t.Errorf("category (%.0fpx) runs under the mark button at %v", w, mb.x)
+	if sp.Lines[len(sp.Lines)-1] != "Not stored" || sp.Subtitle != "weapon" {
+		t.Errorf("pane = %+v", sp)
 	}
 	// drawing both states does not panic
 	img := ebiten.NewImage(1280, 720)
-	a.drawItemInspector(img)
+	a.drawItemMark(img)
 	s.world.Items[0].HaulMarked = true
-	a.drawItemInspector(img)
+	a.drawItemMark(img)
 }
 
+// At UI scale 1.5 a group of stacks is laid out in logical pixels: its
+// members are rows of the pane, its commands sit in grid cells right of
+// the pane (inside the grid band, overlapping nothing) and every label word
+// fits its cell.
 func TestGroupInspectorAtScale1_5(t *testing.T) {
 	withUIScale(t, 1.5)
 	a, s := stubColony(t)
 	s.world = game.WorldView{Items: foundItems()}
 	a.setGroup(selItem, []entity.EntityID{21, 22, 23})
-	r := groupRect(3)
-	for _, b := range a.groupButtons() {
-		if b.x < r.x || b.y < r.y || b.x+b.w > r.x+r.w || b.y+b.h > r.y+r.h {
-			t.Errorf("%s leaves the group panel", b.id)
+	l := a.hud()
+	if l.Pane.empty() {
+		t.Fatal("a group has a pane")
+	}
+	if spec := a.groupPane(); len(spec.Rows) != 3 {
+		t.Fatalf("the pane lists the members: %+v", spec.Rows)
+	}
+	bs := a.groupButtons()
+	if len(bs) == 0 {
+		t.Fatal("no group commands")
+	}
+	for i, b := range bs {
+		r := rect{b.x, b.y, b.w, b.h}
+		if r.X < l.Pane.right() || r.right() > l.Global.X || r.bottom() > l.Tabs.Y {
+			t.Errorf("%s (%+v) leaves the grid band", b.id, r)
 		}
-		if strings.HasPrefix(b.id, "group.pick.") || strings.HasSuffix(b.id, ".close") {
-			continue
+		for _, word := range strings.Fields(b.label) {
+			if w := textW(word, tsSmall); w > b.w-8 {
+				t.Errorf("%s label word %q (%.0fpx) does not fit %.0fpx", b.id, word, w, b.w)
+			}
 		}
-		if w, _ := measure(b.label, tsBody); w > float64(b.w)-4 {
-			t.Errorf("%s label %q (%.0fpx) does not fit %.0fpx", b.id, b.label, w, b.w)
-		}
-		for _, o := range a.groupButtons() {
-			if o.id < b.id && b.x < o.x+o.w && o.x < b.x+b.w && b.y < o.y+o.h && o.y < b.y+b.h {
+		for _, o := range bs[:i] {
+			if b.x < o.x+o.w && o.x < b.x+b.w && b.y < o.y+o.h && o.y < b.y+b.h {
 				t.Errorf("%s overlaps %s", b.id, o.id)
 			}
 		}
 	}
-	a.drawGroupInspector(ebiten.NewImage(1280, 720))
+	img := ebiten.NewImage(1280, 720)
+	a.drawPane(img) // the group's pane and merged command buttons draw
+	a.drawCommandGrid(img)
 }
 
 // haulOverlay draws one live-tier frame of items over a stub world with a

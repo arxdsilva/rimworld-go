@@ -9,14 +9,11 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 )
 
-// Creature logs (LOG-001): the colonist inspector's Log tab and the
-// animal inspector's Recent / Log section render LogLineView read models,
+// Creature logs (LOG-001): the colonist pane's Log tab and the animal
+// pane's Log tab (animal_inspector.go) render LogLineView read models,
 // newest first.
 
-const (
-	logEmptyText  = "Nothing has happened yet."
-	logRecentRows = 4 // animal inspector's Recent list
-)
+const logEmptyText = "Nothing has happened yet."
 
 // logStyle is the log's text: the small size, so a panel shows many rows.
 var logStyle = tsSmall
@@ -75,15 +72,10 @@ func drawLogRows(screen *ebiten.Image, rows []string, x, y, w, visible, scroll i
 	return scroll
 }
 
-// logPanelRect is the pawn Log tab's text area inside the inspector.
-func logPanelRect() (x, y, w, h int) {
-	r := inspectorRect()
-	return int(r.x) + 12, int(r.y) + insBodyY, int(r.w) - 24, int(r.h) - insBodyY - 70
-}
-
-// animalLogRect is the animal inspector's expanded log area.
-func animalLogRect(r button, extra int) (x, y, w, h int) {
-	return int(r.x) + 12, int(r.y) + 106 + extra, int(r.w) - 24, int(r.h) - 106 - extra - 44
+// logBodyRect is the pawn Log tab's text area: r, the expanded panel's
+// inner rectangle, in whole pixels.
+func logBodyRect(r rect) (x, y, w, h int) {
+	return int(r.X), int(r.Y), int(r.W), int(r.H)
 }
 
 // handleLogWheel scrolls the log under the cursor with the mouse wheel and
@@ -100,30 +92,31 @@ func (a *App) handleLogWheel() bool {
 	return a.scrollLogAt(mx, my, wy)
 }
 
+// scrollLogAt scrolls the colonist Log tab under the cursor (the animal's
+// Log tab is a widget-kit scroll area: declareAnimalLog).
 func (a *App) scrollLogAt(mx, my int, wy float64) bool {
-	step := 0
+	return a.paneOpenTab() == "inspector.log" && a.inspectorVisible() && a.scrollLogIn(a.expandedRect().inset(paneInset), mx, my, wy)
+}
+
+// scrollLogIn scrolls the selected colonist's Log tab, whose expanded
+// panel's inner rectangle is r, when the cursor (mx, my) is over its text
+// area; wy is the wheel. It reports it used the wheel.
+func (a *App) scrollLogIn(r rect, mx, my int, wy float64) bool {
+	p, ok := a.selectedPawn()
+	if !ok || wy == 0 {
+		return false
+	}
+	step := 3
 	if wy > 0 {
 		step = -3
-	} else if wy < 0 {
-		step = 3
 	}
-	if p, ok := a.selectedPawn(); ok && a.inspectTab == "log" && a.inspectorVisible() {
-		x, y, w, h := logPanelRect()
-		if mx >= x && mx < x+w && my >= y && my < y+h {
-			a.logScroll = max(0, a.logScroll+step)
-			a.syncLogFor(p.ID)
-			return true
-		}
+	x, y, w, h := logBodyRect(r)
+	if mx < x || mx >= x+w || my < y || my >= y+h {
+		return false
 	}
-	if an, ok := a.selectedAnimal(); ok && a.animalLogOpen && !a.workOpen && !a.archOpen {
-		r := a.animalPanel()
-		x, y, w, h := animalLogRect(r, animalExtraH(an)+animalBondH(an))
-		if mx >= x && mx < x+w && my >= y && my < y+h {
-			a.animalLogScroll = max(0, a.animalLogScroll+step)
-			return true
-		}
-	}
-	return false
+	a.logScroll = max(0, a.logScroll+step)
+	a.syncLogFor(p.ID)
+	return true
 }
 
 func (a *App) inspectorVisible() bool {
@@ -138,44 +131,18 @@ func (a *App) syncLogFor(id entity.EntityID) {
 	}
 }
 
-// drawPawnLog is the Log tab body.
-func (a *App) drawPawnLog(screen *ebiten.Image, p game.PawnView) {
+// drawPawnLog is colonist id's Log tab body, drawn into r, the expanded
+// panel's inner rectangle.
+func (a *App) drawPawnLog(screen *ebiten.Image, id entity.EntityID, r rect) {
+	if p, ok := a.pawnView(id); ok {
+		a.drawPawnLogRows(screen, p, r)
+	}
+}
+
+// drawPawnLogRows draws p's log, newest first, in the text area r.
+func (a *App) drawPawnLogRows(screen *ebiten.Image, p game.PawnView, r rect) {
 	a.syncLogFor(p.ID)
-	x, y, w, h := logPanelRect()
+	x, y, w, h := logBodyRect(r)
 	rows := wrapLogRows(p.Log, float64(w)-12)
 	a.logScroll = drawLogRows(screen, rows, x, y, w, h/logLineH(), a.logScroll)
-}
-
-// recentLogRows is the animal inspector's Recent list: the newest
-// logRecentRows lines, each clipped to one row of at most maxW px.
-func recentLogRows(log []game.LogLineView, maxW float64) []string {
-	if len(log) > logRecentRows {
-		log = log[:logRecentRows]
-	}
-	rows := make([]string, 0, len(log))
-	for _, l := range log {
-		rows = append(rows, ellipsize(logLineText(l), logStyle, maxW))
-	}
-	return rows
-}
-
-// syncAnimalLog resets the animal log view when another animal is selected.
-func (a *App) syncAnimalLog(id entity.EntityID) {
-	if a.animalLogFor != id {
-		a.animalLogFor, a.animalLogScroll, a.animalLogOpen = id, 0, false
-	}
-}
-
-// drawAnimalLog draws the animal inspector's Recent list, or the full
-// scrollable log when expanded.
-func (a *App) drawAnimalLog(screen *ebiten.Image, an game.AnimalView, r button) {
-	x, y, w, h := animalLogRect(r, animalExtraH(an)+animalBondH(an))
-	if a.animalLogOpen {
-		rows := wrapLogRows(an.Log, float64(w)-12)
-		a.animalLogScroll = drawLogRows(screen, rows, x, y, w, h/logLineH(), a.animalLogScroll)
-		return
-	}
-	drawText(screen, "Recent:", float64(x), float64(y)-2, withColor(tsSmall, uiTextDim))
-	rows := recentLogRows(an.Log, float64(w)-12)
-	drawLogRows(screen, rows, x, y+logLineH(), w, logRecentRows, 0)
 }

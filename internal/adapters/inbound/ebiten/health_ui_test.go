@@ -35,7 +35,7 @@ func healthApp(t *testing.T) (*App, *fakeInput, *stubSim) {
 	a, f := colonyApp(t, s)
 	a.renderer.Select(1)
 	f.frame(t, a)
-	click(t, a, "inspector.health")
+	openPawnTab(t, a, "health") // the pane's Health tab
 	f.frame(t, a)
 	return a, f, s
 }

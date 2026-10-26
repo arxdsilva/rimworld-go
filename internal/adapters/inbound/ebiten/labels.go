@@ -36,7 +36,7 @@ func (r *Renderer) drawStackCounts(screen *ebiten.Image, w game.WorldView, tile 
 		th := lineStep(tsSmall) - 2
 		x := sx*k + float32(tile)*k - tw - 2
 		y := sy*k + float32(tile)*k - th - 2
-		uiFillRect(screen, x, y, tw, th, color.RGBA{16, 12, 8, 190}, false)
+		uiFillRect(screen, x, y, tw, th, uiShade(190), false)
 		drawText(screen, s, float64(x)+3, float64(y)-1, tsSmall)
 	}
 }
@@ -179,13 +179,13 @@ func (r *Renderer) drawBuildingDamage(screen *ebiten.Image, w game.WorldView, ti
 		bw := float32(tile) * float32(max(1, b.W)) * 0.8
 		x := sx + (float32(tile)*float32(max(1, b.W))-bw)/2
 		y := sy + float32(tile)*float32(max(1, b.H)) - 7
-		vector.FillRect(screen, x-1, y-1, bw+2, 6, color.RGBA{16, 12, 8, 210}, false)
-		c := color.RGBA{120, 200, 90, 255}
+		vector.FillRect(screen, x-1, y-1, bw+2, 6, uiShade(210), false)
+		c := uiGood
 		switch {
 		case b.HPPct < 35:
-			c = color.RGBA{224, 81, 60, 255}
+			c = uiDanger
 		case b.HPPct < 70:
-			c = color.RGBA{230, 190, 70, 255}
+			c = uiWarning
 		}
 		vector.FillRect(screen, x, y, bw*float32(b.HPPct)/100, 4, c, false)
 	}

@@ -46,21 +46,38 @@ func clickAtLogical(t *testing.T, a *App, f *fakeInput, x, y float32) {
 
 func TestArchitectCardClickAtScale(t *testing.T) {
 	a, _, f := scaledColony(t)
+	a.openArchitect() // opens on Structure
+	card, ok := a.archToolCell("wall")
+	if !ok {
+		t.Fatalf("no wall cell in the command grid (%d cells for %d tools)", len(a.hud().GridCells), len(a.archToolCommands()))
+	}
+	// The grid is laid out in logical pixels: the click lands on the
+	// cell's logical centre x 1.5 and selects the tool.
+	clickAtLogical(t, a, f, card.X+card.W/2, card.Y+card.H/2)
+	if a.archTool != "wall" {
+		t.Fatalf("archTool = %q after a tool click at s=1.5, want wall", a.archTool)
+	}
+}
+
+func TestArchitectCategoryClickAtScale(t *testing.T) {
+	a, _, f := scaledColony(t)
 	a.openArchitect()
-	var card button
+	var cat button
 	for _, b := range a.architectButtons() {
-		if b.id == "arch.tool.wall" {
-			card = b
+		if b.id == "arch.cat.zones" {
+			cat = b
 		}
 	}
-	if card.id == "" {
-		t.Fatal("no wall card in the Architect palette")
+	if cat.id == "" {
+		t.Fatal("no Zones button in the category panel")
 	}
-	// The palette is laid out in logical pixels: the click lands on the
-	// card's logical centre x 1.5 and selects the tool.
-	clickAtLogical(t, a, f, card.x+card.w/2, card.y+card.h/2)
-	if a.archTool != "wall" {
-		t.Fatalf("archTool = %q after a card click at s=1.5, want wall", a.archTool)
+	l := a.hud()
+	if !l.ArchCats.contains(cat.x+cat.w/2, cat.y+cat.h/2) {
+		t.Fatalf("Zones button %+v is outside ArchCats %+v", cat, l.ArchCats)
+	}
+	clickAtLogical(t, a, f, cat.x+cat.w/2, cat.y+cat.h/2)
+	if a.archCat != "zones" {
+		t.Fatalf("archCat = %q after a category click at s=1.5, want zones", a.archCat)
 	}
 }
 

@@ -188,19 +188,6 @@ func TestLinkKeyFallback(t *testing.T) { // not parallel: AllocsPerRun
 	}
 }
 
-func TestResourceReadouts(t *testing.T) {
-	t.Parallel()
-	got := resourceReadouts(game.WorldView{Food: 3, Wood: 40, Stone: 12, Steel: 0})
-	want := []string{"Food 3", "Wood 40", "Stone 12", "Steel 0"}
-	if !slices.Equal(got, want) {
-		t.Fatalf("readouts = %q", got)
-	}
-	got = resourceReadouts(game.WorldView{Stone: 1, Steel: 20, Silver: 25, Gold: 8})
-	if !slices.Contains(got, "Silver 25") || !slices.Contains(got, "Gold 8") || !slices.Contains(got, "Steel 20") {
-		t.Fatalf("precious metals show once mined: %q", got)
-	}
-}
-
 func TestArchStockLineShowsSelectedStuff(t *testing.T) {
 	t.Parallel()
 	w := game.WorldView{Stone: 30, Items: []game.ItemView{

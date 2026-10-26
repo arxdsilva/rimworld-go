@@ -6,8 +6,8 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 )
 
-// TestColonyHUDDrawsAtScale (PLAY-012 B.4): the colony HUD (strip, chips,
-// alerts, gizmo keys, group panel, drag box) draws at s = 1.5 without
+// TestColonyHUDDrawsAtScale (PLAY-012 B.4): the colony HUD (every layout
+// region, conditions, alerts, drag box) draws at s = 1.5 without
 // panicking, every canvas rect stays inside the physical screen, and each
 // HUD button's logical centre is inside the logical screen and hits it.
 func TestColonyHUDDrawsAtScale(t *testing.T) {
@@ -22,9 +22,6 @@ func TestColonyHUDDrawsAtScale(t *testing.T) {
 	a.drawColonyHUD(screen, a.sw, a.sh)
 	a.drawStatusChips(screen, a.sw)
 	a.drawAlerts(screen, a.sw)
-	a.drawGizmoKeys(screen)
-	a.drawOrderQueue(screen)
-	a.drawGroupInspector(screen)
 	a.drawBoxSelect(screen)
 	if len(rects) == 0 {
 		t.Fatal("HUD drew nothing through the canvas")

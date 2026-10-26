@@ -124,9 +124,9 @@ var canvasExempt = map[string]string{
 	"labels.go:drawChatBubbles":                   "world: chat bubbles over colonists",
 	"labels.go:drawFightMarker":                   "world: fight marker over colonists",
 	"labels.go:drawHostileMarker":                 "world: hostile chevron over raiders",
-	"building_inspector.go:drawBuildingSelection": "mixed: the selection outline is world (the panel uses the canvas)",
+	"building_inspector.go:drawBuildingSelection": "world: the selected building's outline on the map (the pane uses the canvas)",
 	"room_stats.go:drawRoomOverlay":               "mixed: the room tile tint is world (the hover card uses the canvas)",
-	"multiselect.go:drawGroupMarks":               "world: group marks on tiles (panel and drag box use the canvas)",
+	"multiselect.go:drawGroupMarks":               "world: group marks on tiles (the pane and the drag box use the canvas)",
 	"order_queue_ui.go:dashed":                    "world: order route over the map (text goes through the canvas)",
 	"order_queue_ui.go:drawOrderRoute":            "world: order route over the map",
 	"formation.go:drawFormation":                  "world: formation markers on tiles",
@@ -182,7 +182,7 @@ var worldPixelHelpers = map[string]bool{
 // 1 and 2 cover them per function.
 var hudFiles = []string{
 	"hud.go", "inspector.go", "*_inspector.go", "alerts.go", "status_chips.go",
-	"threat_ui.go", "climate_ui.go", "chase_ui.go", "widgets.go", "gizmo.go",
+	"threat_ui.go", "climate_ui.go", "chase_ui.go", "widgets.go",
 	"search_ui.go", "animals_ui.go", "archtools.go", "letters.go", "toast.go",
 	"screen_*.go", "ui_*.go", "*_ui.go", "portrait.go",
 	"hud_*.go", "cmds_*.go", // PLAY-018 HUD regions
@@ -199,10 +199,10 @@ var hudFilesNot = []string{
 // hudCallsWorldHelper are HUD functions that call a world pixel helper on
 // purpose, with the reason it is right.
 var hudCallsWorldHelper = map[string]string{
-	"animal_inspector.go:drawAnimalInspector": "marks the selected animal on the map with overlay/selection: world tile, physical pixels, like the map",
-	"frame_inspector.go:drawFrameInspector":   "marks the selected frame's tiles on the map with overlay/selection: world tiles, physical pixels",
-	"item_inspector.go:drawItemInspector":     "marks the selected stack on the map with overlay/selection: world tile, physical pixels",
-	"plant_inspector.go:drawPlantInspector":   "marks the selected plant on the map with overlay/selection: world tile, physical pixels",
+	"animal_inspector.go:drawAnimalMark": "marks the selected animal on the map with overlay/selection: world tile, physical pixels, like the map",
+	"frame_inspector.go:drawFrameMark":   "marks the selected frame's tiles on the map with overlay/selection: world tiles, physical pixels",
+	"item_inspector.go:drawItemMark":     "marks the selected stack on the map with overlay/selection: world tile, physical pixels",
+	"plant_inspector.go:drawPlantMark":   "marks the selected plant on the map with overlay/selection: world tile, physical pixels",
 }
 
 // funcScan is what the guard found in one function (all functions of one

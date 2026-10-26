@@ -39,7 +39,6 @@ const (
 	boxMinPx          = 6  // drag this far before a press becomes a box
 	doubleClickFrames = 18 // two clicks this close (Update frames) are a double click
 	doubleClickPx     = 6
-	groupListMax      = 14
 )
 
 // grouped reports a multi-selection is active.
@@ -395,54 +394,152 @@ func (a *App) groupRows() []groupRow {
 	return out
 }
 
-// groupNoun is "3 colonists" / "2 animals" / "4 stacks".
+// groupNoun is "3 colonists" / "2 animals" / "4 items".
 func groupNoun(k selKind, n int) string {
-	noun := map[selKind]string{selPawn: "colonist", selAnimal: "animal", selItem: "stack"}[k]
+	noun := map[selKind]string{selPawn: "colonist", selAnimal: "animal", selItem: "item"}[k]
 	if n != 1 {
 		noun += "s"
 	}
 	return fmt.Sprintf("%d %s", n, noun)
 }
 
-func groupRect(rows int) button {
-	r := inspectorRect()
-	return button{x: r.x, y: r.y, w: r.w, h: float32(80 + min(rows, groupListMax)*21)}
-}
-
-// groupButtons are the group panel's buttons ("group.*").
+// groupButtons are the group's command buttons in the grid (the pane's
+// close and member rows are paneButtons).
 func (a *App) groupButtons() []button {
 	if !a.grouped() || a.workOpen || a.archOpen || a.renderer == nil {
 		return nil
 	}
-	rows := a.groupRows()
-	if len(rows) < 2 {
+	if len(a.groupRows()) < 2 {
 		return nil // pruneGroup falls back to one
 	}
-	r := groupRect(len(rows))
-	out := []button{{id: "group.close", label: "X", x: r.x + r.w - 28, y: r.y + 6, w: 22, h: 22}}
-	y := r.y + 34
+	return a.cellButtons()
+}
+
+// groupPane is the pane for a group selection: its size, and the members
+// as clickable rows.
+func (a *App) groupPane() paneSpec {
+	rows := a.groupRows()
+	if len(rows) < 2 {
+		return paneSpec{} // pruneGroup falls back to one
+	}
+	spec := paneSpec{
+		Title:    groupNoun(a.group.kind, len(rows)),
+		Subtitle: "Shift+click adds or removes",
+		Close:    "group.close",
+	}
+	for _, r := range rows {
+		spec.Rows = append(spec.Rows, paneRow{ID: "group.pick." + strconv.FormatUint(uint64(r.id), 10), Label: r.label, Tip: "Select only this one"})
+	}
+	return spec
+}
+
+// groupOwnKeys are the commands a group provides itself (they act on every
+// member at once through applyGroupClick); members' commands under these
+// keys are not merged again.
+var groupOwnKeys = map[string]bool{
+	"draft": true, "pawn.draft": true, "undraft": true,
+	"forbid": true, "item.forbid": true, "allow": true,
+	"haulmark": true, "item.haulmark": true,
+}
+
+// groupOwnCommands are the group-wide commands that already exist
+// (applyGroupClick), each pair as the old panel had it: Draft and Undraft
+// for colonists; Forbid, Allow and Mark for hauling for items. Draft and
+// Forbid show how many members already are (On: all, Mixed: some).
+func (a *App) groupOwnCommands() []cmdButton {
 	switch a.group.kind {
 	case selPawn:
-		out = append(out,
-			button{id: "group.draft", label: "Draft all" + a.keyHint(input.Draft), x: r.x + 12, y: y, w: 140, h: 24},
-			button{id: "group.undraft", label: "Undraft all", x: r.x + 160, y: y, w: 120, h: 24})
+		pawns := a.selectedPawns()
+		on := 0
+		for _, p := range pawns {
+			if p.Drafted {
+				on++
+			}
+		}
+		draft := cmdButton{ID: "group.draft", Key: "draft", Label: "Draft", Icon: "draft", Hotkey: input.Draft,
+			Desc: "Draft every selected colonist."}
+		draft.On = len(pawns) > 0 && on == len(pawns)
+		draft.Mixed = on > 0 && on < len(pawns)
+		return []cmdButton{draft, {ID: "group.undraft", Key: "undraft", Label: "Undraft", Icon: "draft",
+			Desc: "Stand every selected colonist down."}}
 	case selItem:
-		out = append(out,
-			button{id: "group.forbid", label: "Forbid all" + a.keyHint(input.Forbid), x: r.x + 12, y: y, w: 128, h: 24},
-			button{id: "group.allow", label: "Allow all", x: r.x + 146, y: y, w: 92, h: 24})
-		if haulMarkable(a.selectedItems()) {
-			out = append(out, button{id: "group.haulmark", label: "Mark for hauling", x: r.x + 244, y: y, w: r.w - 244 - 12, h: 24,
-				tip: "Colonists will haul the stacks found on the map"})
+		items := a.selectedItems()
+		on := 0
+		for _, it := range items {
+			if it.Forbidden {
+				on++
+			}
+		}
+		forbid := cmdButton{ID: "group.forbid", Key: "forbid", Label: "Forbid", Icon: "order_forbid", Hotkey: input.Forbid,
+			Desc: "Colonists will not touch forbidden stacks."}
+		forbid.On = len(items) > 0 && on == len(items)
+		forbid.Mixed = on > 0 && on < len(items)
+		out := []cmdButton{forbid, {ID: "group.allow", Key: "allow", Label: "Allow", Icon: "order_allow",
+			Desc: "Let colonists use these stacks again."}}
+		if haulMarkable(items) {
+			out = append(out, cmdButton{ID: "group.haulmark", Key: "haulmark", Label: "Mark for hauling", Icon: "order_haul",
+				Desc: "Colonists will haul the stacks found on the map."})
+		}
+		return out
+	}
+	return nil
+}
+
+// groupCommands are a group's commands: its own group-wide ones, then its
+// members' commands merged by key (mergeCommands).
+func (a *App) groupCommands() []cmdButton {
+	own := a.groupOwnCommands()
+	return append(own, a.groupMerged()...)
+}
+
+// groupMerged are the members' commands merged by key, without the keys
+// the group handles itself. It is remembered for one Update (and one
+// selection): the layout asks many times a frame.
+func (a *App) groupMerged() []cmdButton {
+	m := &a.hst.cmds.memo
+	if m.ok && m.updates == a.updates && m.kind == a.group.kind && slicesEqualIDs(m.ids, a.group.ids) {
+		return m.out
+	}
+	kind := a.group.kind
+	ids := append([]entity.EntityID(nil), a.group.ids...)
+	sets := make([][]cmdButton, len(ids))
+	for i, id := range ids {
+		for _, c := range a.commandsFor(kind, id) {
+			if !groupOwnKeys[c.mergeKey()] {
+				sets[i] = append(sets[i], c)
+			}
 		}
 	}
-	for i, row := range rows {
-		if i == groupListMax {
-			break
-		}
-		out = append(out, button{id: "group.pick." + strconv.FormatUint(uint64(row.id), 10), label: row.label,
-			x: r.x + 12, y: r.y + 66 + float32(i)*21, w: r.w - 24, h: 20, tip: "Select only this one"})
-	}
+	out := mergeCommands(sets, func(a *App, member int, c cmdButton) { a.runMember(kind, ids[member], c) })
+	*m = groupMemo{updates: a.updates, kind: kind, ids: ids, out: out, ok: true}
 	return out
+}
+
+func slicesEqualIDs(a, b []entity.EntityID) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// runMember runs member id's command c for one member of the group. A
+// legacy command (an id, no Run or Cmds) acts on the single selection, so
+// the member is selected for the call and the group put back after.
+func (a *App) runMember(kind selKind, id entity.EntityID, c cmdButton) {
+	if c.Run != nil || len(c.Cmds) > 0 || c.Options != nil {
+		a.runCommand(c)
+		return
+	}
+	saved := a.group
+	a.selectCand(selCand{kind, id})
+	a.applyClick(c.ID)
+	a.clearSelections(selNone)
+	a.group = saved
 }
 
 // haulMarkable reports whether any stack in items was found on the map and
@@ -506,32 +603,6 @@ func (a *App) applyGroupClick(id string) {
 		if n, err := strconv.ParseUint(strings.TrimPrefix(id, "group.pick."), 10, 64); err == nil {
 			a.selectCand(selCand{a.group.kind, entity.EntityID(n)})
 		}
-	}
-}
-
-// drawGroupInspector draws the group panel and marks every member.
-func (a *App) drawGroupInspector(screen *ebiten.Image) {
-	bs := a.groupButtons()
-	if len(bs) == 0 {
-		return
-	}
-	rows := a.groupRows()
-	r := groupRect(len(rows))
-	drawPanel(screen, r.x, r.y, r.w, r.h)
-	drawText(screen, groupNoun(a.group.kind, len(rows))+" selected", float64(r.x)+12, float64(r.y)+9, withColor(tsLabel, uiHeading))
-	if len(rows) > groupListMax {
-		drawText(screen, fmt.Sprintf("... and %d more", len(rows)-groupListMax), float64(r.x)+12, float64(r.y+r.h)-lineH(tsSmall)-3, withColor(tsSmall, uiTextDim))
-	}
-	mx, my := a.currentCursor()
-	for _, b := range bs {
-		if strings.HasPrefix(b.id, "group.pick.") {
-			if b.contains(mx, my) {
-				uiFillRect(screen, b.x, b.y, b.w, b.h, uiBtnHover, false)
-			}
-			drawText(screen, ellipsize(b.label, tsBody, float64(b.w)-8), float64(b.x)+4, float64(b.y)+(float64(b.h)-lineH(tsBody))/2, tsBody)
-			continue
-		}
-		drawButton(screen, b, b.contains(mx, my))
 	}
 }
 

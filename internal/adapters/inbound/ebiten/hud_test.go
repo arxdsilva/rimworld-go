@@ -40,8 +40,8 @@ func TestColonistBarClickSelects(t *testing.T) {
 	if !a.renderer.HasSelect() || a.renderer.Selected() != id {
 		t.Fatalf("select = %v/%d, want %d", a.renderer.HasSelect(), a.renderer.Selected(), id)
 	}
-	if len(a.inspectorButtons()) == 0 {
-		t.Fatal("inspector should be visible after bar select")
+	if !a.paneShown() || len(a.paneButtons()) == 0 {
+		t.Fatal("the inspect pane should be visible after bar select")
 	}
 }
 
@@ -138,13 +138,18 @@ func TestColonyChromeHitBeforeMap(t *testing.T) {
 	t.Parallel()
 	a, _, id := liveColony(t, 0)
 	sw, sh := a.sw, a.sh
-	if !a.colonyChromeHit(10, 10, sw, sh) {
-		t.Fatal("top resource/time strip should consume hits")
+	hits := func(r rect) bool {
+		x, y := r.center()
+		return a.colonyChromeHit(int(x), int(y), sw, sh)
 	}
-	if !a.colonyChromeHit(10, sh-8, sw, sh) {
+	l := a.hud()
+	if l.Global.empty() || !hits(l.Global) {
+		t.Fatal("the lower-right time, speed and toggles should consume hits")
+	}
+	if !hits(l.Tabs) || !a.colonyChromeHit(10, sh-8, sw, sh) {
 		t.Fatal("bottom tabs should consume hits")
 	}
-	if !a.colonyChromeHit(hudPad+8, int(hudBarY(sh))+8, sw, sh) {
+	if len(l.BarSlots) == 0 || !hits(l.BarSlots[0]) {
 		t.Fatal("colonist bar should consume hits")
 	}
 	if a.colonyChromeHit(sw/2, sh/2, sw, sh) {
@@ -152,15 +157,13 @@ func TestColonyChromeHitBeforeMap(t *testing.T) {
 	}
 
 	a.renderer.Select(id)
-	ir := inspectorRect()
-	if !a.colonyChromeHit(int(ir.x)+20, int(ir.y)+20, sw, sh) {
-		t.Fatal("inspector window should consume hits")
+	if l := a.hud(); l.Pane.empty() || !hits(l.Pane) || !hits(l.PaneTabs) {
+		t.Fatal("the inspect pane and its tabs should consume hits")
 	}
 
 	click(t, a, "tab.work")
-	wr := workRect(sw, sh)
-	if !a.colonyChromeHit(int(wr.x)+20, int(wr.y)+40, sw, sh) {
-		t.Fatal("Work overlay should consume hits")
+	if w := a.hud().Window; w.empty() || !hits(w) || !a.colonyChromeHit(int(w.X)+20, int(w.Y)+40, sw, sh) {
+		t.Fatal("Work window should consume hits")
 	}
 }
 
@@ -197,8 +200,11 @@ func TestInspectorShowsNameAndJob(t *testing.T) {
 	if p.Job == "" {
 		t.Fatal("expected job line")
 	}
+	if spec := a.selectionPane(); spec.Title != p.Name {
+		t.Fatalf("pane title = %q, want the colonist's name %q", spec.Title, p.Name)
+	}
 	found := false
-	for _, b := range a.inspectorButtons() {
+	for _, b := range a.paneButtons() {
 		if b.id == "inspector.needs" && !b.disabled {
 			found = true
 		}
@@ -221,7 +227,8 @@ func TestArchitectCategoriesListEveryTool(t *testing.T) {
 		if a.archCat != c.id {
 			t.Fatalf("category %s not selected", c.id)
 		}
-		for _, b := range a.architectButtons() {
+		// categories in ArchCats, the tools as command buttons in the grid
+		for _, b := range append(a.architectButtons(), a.commandGridButtons()...) {
 			seen[b.id] = true
 		}
 	}

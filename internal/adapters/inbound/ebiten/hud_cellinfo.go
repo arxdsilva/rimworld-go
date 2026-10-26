@@ -9,37 +9,71 @@ import (
 	"rimworld-go/internal/application/game"
 )
 
-// Cell info: what is under the cursor (PLAY-018: GLOBAL owns it; it moves
-// into the inspect pane when nothing is selected).
+// Cell info (PLAY-018: GLOBAL owns it): what is under the cursor, as plain
+// text on a subtle translucent backing at the lower-left, built bottom-up
+// from (8, Tabs.Y - 8). It is not chrome (a click on it reaches the map)
+// and shows only while nothing is selected and no Architect or window is
+// open; it hides when the cursor is over the HUD.
 
-// drawCellInfo draws the hovered cell's info.
-func (a *App) drawCellInfo(screen *ebiten.Image, sh int) { a.drawHoverRoom(screen, sh) }
+const (
+	cellInfoPad     = 6
+	cellInfoBacking = 0x70 // the backing's alpha over the map
+)
 
-// drawHoverRoom shows what is under the cursor (soil, room, plant, items)
-// as a panel in the bottom-right corner, above the colonist bar.
-func (a *App) drawHoverRoom(screen *ebiten.Image, sh int) {
+// nothingSelected reports no pawn, animal, item, plant, building, frame or
+// group is selected.
+func (a *App) nothingSelected() bool {
+	return a.renderer != nil && !a.grouped() && !a.renderer.HasSelect() &&
+		!a.hasAnimal && !a.hasItem && !a.hasPlant && !a.hasBuilding && !a.hasFrame
+}
+
+// hoveredCell is the map cell under the cursor: not over the HUD, on the
+// map.
+func (a *App) hoveredCell() (tx, ty int, ok bool) {
 	if a.renderer == nil {
-		return
+		return 0, 0, false
 	}
 	mx, my := a.currentCursor()
-	sw, _ := a.size()
+	sw, sh := a.size()
 	if a.colonyChromeHit(mx, my, sw, sh) {
-		return
+		return 0, 0, false
 	}
-	tx, ty := a.renderer.TileAt(a.mapCursor()) // physical: the map's pixels
+	if m := a.hud().Minimap; !m.empty() && m.hit(mx, my) { // not chrome (own click path), but not the map either
+		return 0, 0, false
+	}
+	tx, ty = a.renderer.TileAt(a.mapCursor()) // physical: the map's pixels
+	if tx < 0 || ty < 0 || tx >= a.renderer.game.Width() || ty >= a.renderer.game.Height() {
+		return 0, 0, false
+	}
+	return tx, ty, true
+}
+
+// cellInfoLines are the hovered cell's lines: the ground, its fertility,
+// the temperature, and what stands or lies there. Nil when cell info is
+// not showing.
+func (a *App) cellInfoLines() []string {
+	if a.renderer == nil || a.hideUI || a.archOpen || a.workOpen || !a.nothingSelected() {
+		return nil
+	}
+	if !a.hud().Window.empty() {
+		return nil
+	}
+	tx, ty, ok := a.hoveredCell()
+	if !ok {
+		return nil
+	}
 	w := a.renderer.world()
 	if fl := unexploredLines(w, tx, ty); fl != nil { // fog_draw.go
-		drawHoverPanel(screen, sw, int(hudBarY(sh)), fl)
-		return
+		return fl
 	}
 	lines := soilLines(w, tx, ty)
 	if len(lines) == 0 {
-		return
+		return nil
 	}
-	if t, indoors := tileTemp(w, tx, ty); indoors {
-		lines = append(lines, "Temperature "+fmtTemp(t)+" (indoors)")
+	if _, indoors := tileTemp(w, tx, ty); indoors {
+		lines = append(lines, "Temperature "+fmtTemp(a.renderer.game.TemperatureAt(tx, ty))+" (indoors)")
 	} else {
-		lines = append(lines, "Temperature "+fmtTemp(t))
+		lines = append(lines, "Temperature "+fmtTemp(a.renderer.game.TemperatureAt(tx, ty)))
 	}
 	for _, lbl := range []string{roomLabelAt(w, tx, ty), homeLabelAt(w, tx, ty), planLabelAt(w, tx, ty), roofLabelAt(w, tx, ty), bridgeLabelAt(w, tx, ty), plantLabelAt(w, tx, ty), plantDamageLabelAt(w, tx, ty), grassLabelAt(w, tx, ty), fenceLabelAt(w, tx, ty), itemLabelAt(w, tx, ty)} {
 		if lbl != "" {
@@ -49,20 +83,44 @@ func (a *App) drawHoverRoom(screen *ebiten.Image, sh int) {
 	if a.in.alt() { // Alt held: the detailed cell lines (room_stats.go)
 		lines = append(lines, detailLines(w, tx, ty)...)
 	}
-	drawHoverPanel(screen, sw, int(hudBarY(sh)), lines)
+	return lines
 }
 
-// drawHoverPanel draws lines in a right-aligned panel whose bottom edge sits
-// just above bottomY. The first line is the title.
-func drawHoverPanel(screen *ebiten.Image, sw, bottomY int, lines []string) {
-	const pad = 8
-	step := int(lineStep(tsBody))
-	wid := int(maxTextW(lines, tsBody))
-	pw, ph := wid+pad*2, len(lines)*step+pad*2-4
-	px, py := sw-pw-hudPad, bottomY-ph-hudPad
-	drawPanel(screen, float32(px), float32(py), float32(pw), float32(ph))
+// cellInfoRect is where cell info draws: its lines' box with the bottom-left
+// corner at (8, Tabs.Y - 8). Empty while it is not showing.
+func (a *App) cellInfoRect() rect {
+	lines := a.cellInfoLines()
+	if len(lines) == 0 {
+		return rect{}
+	}
+	return cellInfoBox(lines, a.hud().Tabs.Y)
+}
+
+// cellInfoBox is the box of lines whose bottom edge sits hudMargin above
+// tabsY.
+func cellInfoBox(lines []string, tabsY float32) rect {
+	w := maxTextW(lines, tsLabel) + 2*cellInfoPad
+	h := float32(len(lines))*lineStep(tsBody) + 2*cellInfoPad
+	return rect{hudMargin, tabsY - hudMargin - h, w, h}
+}
+
+// drawCellInfo draws the hovered cell's lines.
+func (a *App) drawCellInfo(screen *ebiten.Image, sh int) {
+	lines := a.cellInfoLines()
+	if len(lines) == 0 {
+		return
+	}
+	r := cellInfoBox(lines, a.hud().Tabs.Y)
+	back := uiDim
+	back.A = cellInfoBacking
+	uiFillRect(screen, r.X, r.Y, r.W, r.H, back, false)
+	step := float64(lineStep(tsBody))
 	for i, l := range lines {
-		drawLabel(screen, px+pad, py+pad-2+i*step, l)
+		st := tsBody
+		if i == 0 {
+			st = withColor(tsLabel, uiHeading)
+		}
+		drawText(screen, l, float64(r.X+cellInfoPad), float64(r.Y+cellInfoPad)+float64(i)*step, st)
 	}
 }
 

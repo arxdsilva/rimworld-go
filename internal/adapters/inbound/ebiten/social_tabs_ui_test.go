@@ -20,16 +20,16 @@ func TestHealthSocialTabs(t *testing.T) {
 	f.frame(t, a)
 	for _, tab := range []string{"health", "social"} {
 		id := "inspector." + tab
-		for _, b := range a.inspectorButtons() {
-			if b.id == id && b.disabled {
-				t.Fatalf("%s is disabled: %s", id, b.reason)
-			}
+		if b, ok := findButton(a, id); !ok || b.disabled {
+			t.Fatalf("%s is missing or disabled: %+v", id, b)
 		}
-		click(t, a, id)
+		openPawnTab(t, a, tab) // the pane's tab click
 		f.frame(t, a)
-		if a.inspectTab != tab || !a.kitTabOn() || a.bioTabOn() {
-			t.Fatalf("tab = %q after clicking %s", a.inspectTab, id)
+		if !a.kitTabOn() || a.bioTabOn() {
+			t.Fatalf("tab = %q after opening %s", a.inspectTab, id)
 		}
+		tb, _ := paneTabByID(a.pawnPane(1), id)
+		tb.Declare(innerFor(1280, 720, tb)) // no data yet: the tab says so
 	}
 	p := s.pawns[0]
 	if a.healthLines(p) != nil || a.socialLines(p) != nil {
@@ -47,8 +47,13 @@ func TestHealthSocialTabs(t *testing.T) {
 	if !strings.Contains(so, "Sister Bo  +30 / -5") || !strings.Contains(so, "Ada and Bo chatted.") {
 		t.Errorf("social lines = %q", so)
 	}
-	f.frame(t, a) // draws with data
-	click(t, a, "inspector.character")
+	for _, tab := range []string{"health", "social"} {
+		a.inspectTab = tab
+		tb, _ := paneTabByID(a.pawnPane(1), "inspector."+tab)
+		tb.Declare(innerFor(1280, 720, tb)) // declares with data
+		drawFrame(t, a, f)
+	}
+	a.inspectTab = "character" // the pane itself: no tab open
 	if a.kitTabOn() {
 		t.Fatal("Character tab still shows the kit tab")
 	}

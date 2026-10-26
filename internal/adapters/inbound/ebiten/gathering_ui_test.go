@@ -43,16 +43,16 @@ func TestBedInspectorOwnersAndPrisonerToggle(t *testing.T) {
 	if !ok {
 		t.Fatal("bed not selected")
 	}
-	ids := map[string]button{}
-	for _, bt := range a.buildingButtons() {
-		ids[bt.id] = bt
+	ids := map[string]cmdButton{}
+	for _, bt := range a.buildingCommands(40) {
+		ids[bt.ID] = bt
 	}
 	for _, id := range []string{bedOwnerID(0), bedOwnerID(1), "bldg.bed.prisoners"} {
 		if _, ok := ids[id]; !ok {
-			t.Fatalf("no %s button: %v", id, ids)
+			t.Fatalf("no %s command: %v", id, ids)
 		}
 	}
-	if ids["bldg.bed.prisoners"].disabled || ids["bldg.bed.prisoners"].selected {
+	if ids["bldg.bed.prisoners"].Disabled || ids["bldg.bed.prisoners"].On {
 		t.Fatalf("toggle %+v", ids["bldg.bed.prisoners"])
 	}
 	if bedOwner(b, 0) != 1 || bedOwner(b, 1) != 0 || a.pawnName(1) != "Ada" {
@@ -82,21 +82,21 @@ func TestBedInspectorOwnersAndPrisonerToggle(t *testing.T) {
 		t.Fatalf("SetBedForPrisoners %+v", pr)
 	}
 	s.prison[40] = true
-	for _, bt := range a.buildingButtons() {
-		if bt.id == "bldg.bed.prisoners" && !bt.selected {
+	for _, bt := range a.buildingCommands(40) {
+		if bt.ID == "bldg.bed.prisoners" && !bt.On {
 			t.Fatal("toggle does not read the mark back")
 		}
 	}
 
 	// without the read model the toggle is disabled and says why
 	a.renderer.game = s.stubSim
-	for _, bt := range a.buildingButtons() {
-		if bt.id == "bldg.bed.prisoners" && (!bt.disabled || bt.reason == "") {
+	for _, bt := range a.buildingCommands(40) {
+		if bt.ID == "bldg.bed.prisoners" && (!bt.Disabled || bt.Reason == "") {
 			t.Fatalf("toggle without the read model %+v", bt)
 		}
 	}
 	scr := ebiten.NewImage(a.sw, a.sh)
-	a.drawBuildingInspector(scr)
+	a.drawBuildingMark(scr)
 }
 
 // The banner shows while a gathering runs, from the read model only.
@@ -113,8 +113,17 @@ func TestGatheringBanner(t *testing.T) {
 	if !ok || text != "Wedding of Ada and Bo: ceremony" {
 		t.Fatalf("banner %q %v", text, ok)
 	}
-	if r.Y < hudTopH || r.X <= 0 || r.X+r.W >= float32(a.sw) {
-		t.Fatalf("banner rect %+v off the top centre", r)
+	l := a.hud()
+	if r.Y < l.Bar.bottom() || r.Y < l.Messages.bottom() || r.X <= 0 || r.X+r.W >= float32(a.sw) {
+		t.Fatalf("banner rect %+v not under the bar %+v and messages %+v", r, l.Bar, l.Messages)
+	}
+	if cx := r.X + r.W/2; cx < float32(a.sw)/2-1 || cx > float32(a.sw)/2+1 {
+		t.Fatalf("banner rect %+v is not centred on the bar (screen centre %d)", r, a.sw/2)
+	}
+	for name, other := range map[string]rect{"right column": l.Right, "resources": l.Resources, "messages": l.Messages} {
+		if !other.empty() && r.X < other.right() && other.X < r.right() && r.Y < other.bottom() && other.Y < r.bottom() {
+			t.Fatalf("banner %+v overlaps the %s %+v", r, name, other)
+		}
 	}
 	a.gatheringUI(a.sw)
 	if tip := tipOf(t, a, "hud.gathering"); !strings.Contains(tip, "Wedding of Ada and Bo") {
@@ -130,4 +139,22 @@ func TestGatheringBanner(t *testing.T) {
 		t.Fatal("banner without the read model")
 	}
 	f.frame(t, a)
+}
+
+// With notices up the banner sits below them, never over them (PLAY-018).
+func TestGatheringBannerClearsTheMessages(t *testing.T) {
+	t.Parallel()
+	s := bedStub()
+	s.world.Messages = []game.MessageView{{Tick: 1, Text: "A long notice about the wedding preparations"}, {Tick: 2, Text: "Another"}}
+	a, _ := colonyApp(t, s.stubSim)
+	a.renderer.game = s
+	s.gatherings = []game.GatheringView{{Kind: "party", Phase: "under way", Hosts: []string{"Ada"}}}
+	_, r, ok := a.gatheringBanner(a.sw)
+	l := a.hud()
+	if !ok || l.Messages.empty() {
+		t.Fatalf("banner %v, messages %+v", ok, l.Messages)
+	}
+	if r.Y < l.Messages.bottom() {
+		t.Fatalf("banner %+v is not below the messages %+v", r, l.Messages)
+	}
 }

@@ -2,7 +2,6 @@ package ebiten
 
 import (
 	"fmt"
-	"image/color"
 	"strconv"
 	"strings"
 
@@ -157,7 +156,7 @@ func (a *App) workTipsUI(sw, sh int) {
 	if !a.workOpen || (a.panelMode != "work" && a.panelMode != "") {
 		return
 	}
-	r := workRect(sw, sh)
+	r := a.windowRect()
 	for col := range workColumns {
 		cr := workCellRect(r, 0, col)
 		a.uiTip("work.hdr."+uiNum(col), rect{cr.X, r.y + 22, cr.W, 22}, workHelp[col])
@@ -179,17 +178,14 @@ func (a *App) workTipsUI(sw, sh int) {
 	}
 }
 
-func workRect(sw, sh int) button {
-	h := hudBarY(sh) - float32(hudTopH) - 2*hudPad
-	if h < 80 {
-		h = 80
+// workWant is the Work window's wanted size: the name column, every work
+// column, and a row per colonist.
+func (a *App) workWant() (float32, float32) {
+	n := 0
+	if a.renderer != nil {
+		n = len(a.renderer.snapshot())
 	}
-	return button{
-		x: hudPad,
-		y: hudTopH + hudPad,
-		w: float32(sw) - 2*hudPad,
-		h: h,
-	}
+	return float32(12 + workNameW + len(workColumns)*workCellW + 8), float32(max(160, 48+n*workRowH+20))
 }
 
 func workCellValue(p game.PawnView, col int) string {
@@ -202,8 +198,11 @@ func workCellValue(p game.PawnView, col int) string {
 	return "-"
 }
 
+// workButtons are the open hand-drawn window's buttons (Work, Schedule,
+// Research, Animals); a kit window (History, Assign, World, Factions)
+// declares its own widgets and has none here.
 func (a *App) workButtons() []button {
-	if a.renderer == nil || !a.workOpen {
+	if a.renderer == nil || !a.workOpen || !a.legacyWindow() {
 		return nil
 	}
 	if a.panelMode == "schedule" {
@@ -215,7 +214,7 @@ func (a *App) workButtons() []button {
 	if a.panelMode == "animals" {
 		return a.animalsTabButtons()
 	}
-	r := workRect(a.sw, a.sh)
+	r := a.windowRect()
 	hx := int(r.x) + 12 + workNameW
 	pawns := a.renderer.snapshot()
 	out := make([]button, 0)
@@ -268,7 +267,7 @@ func (a *App) drawWork(screen *ebiten.Image, sw, sh int) {
 		a.drawAnimalsTab(screen, sw, sh)
 		return
 	}
-	r := workRect(sw, sh)
+	r := a.windowRect()
 	drawPanel(screen, r.x, r.y, r.w, r.h)
 	drawText(screen, "Work priorities", float64(r.x)+12, float64(r.y)+8, withColor(tsLabel, uiHeading))
 	hintX := float64(r.x) + 12 + float64(textW("Work priorities", tsLabel)) + 16
@@ -306,7 +305,7 @@ func (a *App) drawWork(screen *ebiten.Image, sw, sh int) {
 			if pr := workPriority(p, col); pr > 0 {
 				// brighter for more urgent work
 				uiFillRect(screen, cell.X, cell.Y, cell.W, cell.H,
-					color.RGBA{uint8(150 - pr*22), uint8(120 - pr*16), 50, 255}, false)
+					lerpRGBA(uiSliderFill, uiBtnSelected, float64(pr-1)/3), false)
 			}
 			a.drawWorkSkill(screen, p, col, cell)
 			drawText(screen, v, float64(cell.X+cell.W/2), float64(cell.Y)+(float64(cell.H)-lineH(tsBody))/2, textStyle{Size: tsBody.Size, Align: alignCenter})

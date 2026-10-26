@@ -26,20 +26,19 @@ func TestCasketSpriteAndTitleByState(t *testing.T) {
 	}
 }
 
-func TestCasketButton(t *testing.T) {
+func TestCasketCommand(t *testing.T) {
 	t.Parallel()
-	r := button{x: 10, y: 10, w: 380, h: 330}
-	ok := casketButton(r, true, "")
-	if ok.disabled || ok.label != "Open casket" || ok.tip != "Opens every casket in this vault" || ok.id != casketBtnID {
-		t.Errorf("sealed button = %+v", ok)
+	ok := casketCommand(true, "")
+	if ok.Disabled || ok.Label != "Open casket" || ok.Desc != "Opens every casket in this vault" || ok.ID != casketBtnID || ok.Icon != "open_casket" {
+		t.Errorf("sealed command = %+v", ok)
 	}
-	open := casketButton(r, false, "")
-	if !open.disabled || open.reason == "" {
-		t.Errorf("an open casket's button must be disabled with a reason: %+v", open)
+	open := casketCommand(false, "")
+	if !open.Disabled || open.Reason == "" {
+		t.Errorf("an open casket's command must be disabled with a reason: %+v", open)
 	}
-	refused := casketButton(r, true, "No colonist can reach it.")
-	if !refused.disabled || refused.reason != "No colonist can reach it." {
-		t.Errorf("refused button = %+v", refused)
+	refused := casketCommand(true, "No colonist can reach it.")
+	if !refused.Disabled || refused.Reason != "No colonist can reach it." {
+		t.Errorf("refused command = %+v", refused)
 	}
 }
 
@@ -67,25 +66,24 @@ func TestOpenCasketButtonEmitsCommand(t *testing.T) {
 	}
 }
 
-// The button shows the game's own refusal (BuildingView.OpenReason).
-func TestCasketButtonsAskTheGame(t *testing.T) {
+// The command shows the game's own refusal (BuildingView.OpenReason).
+func TestCasketCommandsAskTheGame(t *testing.T) {
 	a, _, _ := liveColony(t, 0)
 	b := game.BuildingView{ID: 5, Kind: casketKind, Sealed: true, OpenReason: "Nobody can reach it."}
-	r := buildingRect()
-	got := a.casketButtons(b, r)
-	if len(got) != 1 || !got[0].disabled || got[0].reason != "Nobody can reach it." {
+	got := a.casketCommands(b)
+	if len(got) != 1 || !got[0].Disabled || got[0].Reason != "Nobody can reach it." {
 		t.Fatalf("refused: %+v", got)
 	}
 	b.OpenReason = ""
-	if got = a.casketButtons(b, r); got[0].disabled {
+	if got = a.casketCommands(b); got[0].Disabled {
 		t.Errorf("accepted: %+v", got[0])
 	}
 	b.Sealed = false
-	if got = a.casketButtons(b, r); !got[0].disabled {
+	if got = a.casketCommands(b); !got[0].Disabled {
 		t.Errorf("opened casket must be disabled: %+v", got[0])
 	}
-	if a.casketButtons(game.BuildingView{Kind: "wall"}, r) != nil {
-		t.Error("walls have no casket button")
+	if a.casketCommands(game.BuildingView{Kind: "wall"}) != nil {
+		t.Error("walls have no casket command")
 	}
 }
 

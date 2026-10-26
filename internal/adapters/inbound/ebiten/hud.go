@@ -23,30 +23,15 @@ import (
 // hudStates is the HUD regions' presentation state, one struct per owner,
 // each declared in its owner's file (App.hst).
 type hudStates struct {
-	res    resourcesState // hud_resources.go
-	bar    barState       // hud_colonistbar.go
-	right  rightState     // hud_right.go
-	global globalState    // hud_global.go
-	pane   paneState      // hud_inspect.go
-	cmds   cmdsState      // hud_commands.go
-	win    windowState    // hud_window.go
-	learn  learnState     // learn_ui.go
-	arch   archState      // cmds_arch.go
+	res   resourcesState // hud_resources.go
+	bar   barState       // hud_colonistbar.go
+	right rightState     // hud_right.go
+	pane  paneState      // hud_inspect.go
+	cmds  cmdsState      // hud_commands.go
+	win   windowState    // hud_window.go
+	learn learnState     // learn_ui.go
+	arch  archState      // cmds_arch.go
 }
-
-// Legacy chrome sizes, kept while regions still draw the old way; deleted
-// once the last caller is gone.
-const (
-	hudTopH = 32
-	hudTabH = 32
-	hudBarH = 56
-	hudPad  = 8
-	barSlot = 52
-)
-
-func hudTabY(sh int) float32 { return float32(sh - hudTabH) }
-
-func hudBarY(sh int) float32 { return float32(sh - hudTabH - hudBarH) }
 
 // hud is this frame's HUD layout. The state comes from each region's
 // owner; none of those accessors may call hud().
@@ -85,15 +70,8 @@ func (a *App) colonyButtons(sw, sh int) []button {
 	out = append(out, a.colonistBarButtons(sw, sh)...) // hud_colonistbar.go
 	out = append(out, a.commandGridButtons()...)       // hud_commands.go
 	out = append(out, a.paneButtons()...)              // hud_inspect.go
-	out = append(out, a.inspectorButtons()...)
-	out = append(out, a.orderQueueButtons()...)
-	out = append(out, a.buildingButtons()...)
-	out = append(out, a.animalButtons()...)
-	out = append(out, a.plantButtons()...)
-	out = append(out, a.itemButtons()...)
-	out = append(out, a.frameButtons()...)
-	out = append(out, a.rightColumnButtons(sw)...) // hud_right.go
-	out = append(out, a.resourceButtons()...)      // hud_resources.go
+	out = append(out, a.rightColumnButtons(sw)...)     // hud_right.go
+	out = append(out, a.resourceButtons()...)          // hud_resources.go
 	out = append(out, a.architectButtons()...)
 	out = append(out, a.workButtons()...)
 	return out
@@ -117,17 +95,9 @@ func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
 	a.drawResources(screen, sw, sh)      // hud_resources.go
 	a.drawColonistBar(screen, sw, sh)    // hud_colonistbar.go
 	a.drawTabs(screen, sw, sh)           // hud_tabs.go
+	a.drawSelectionMarks(screen)         // each kind's file: the map marker
 	a.drawPane(screen)                   // hud_inspect.go
-	a.drawInspector(screen)
-	a.drawOrderQueue(screen)
-	a.drawBuildingInspector(screen)
-	a.drawAnimalInspector(screen)
-	a.drawPlantInspector(screen)
-	a.drawItemInspector(screen)
-	a.drawFrameInspector(screen)
-	a.drawGroupInspector(screen)
-	a.drawCommandGrid(screen) // hud_commands.go
-	a.drawGizmoKeys(screen)   // gizmo.go
+	a.drawCommandGrid(screen)            // hud_commands.go
 	a.drawArchitect(screen)
 	a.drawWindows(screen, sw, sh)     // hud_window.go
 	a.drawRightColumn(screen, sw, sh) // hud_right.go
@@ -166,20 +136,20 @@ func (a *App) colonyChromeHit(mx, my, sw, sh int) bool {
 	return false
 }
 
-// chromeRects are the HUD's areas: the layout's regions plus each owner's
-// legacy areas while it still draws the old way.
+// chromeRects are the HUD's areas: the layout's regions, plus the
+// learning helper's lesson card, which opens beside its region.
 func (a *App) chromeRects(sw, sh int) []rect {
-	out := a.hud().chrome()
-	out = append(out, a.tabsChrome(sw, sh)...)        // hud_tabs.go
-	out = append(out, a.colonistBarChrome(sw, sh)...) // hud_colonistbar.go
-	out = append(out, a.resourcesChrome()...)         // hud_resources.go
-	out = append(out, a.globalChrome(sw)...)          // hud_global.go
-	out = append(out, a.rightColumnChrome(sw)...)     // hud_right.go
-	out = append(out, a.paneChrome()...)              // hud_inspect.go
-	out = append(out, a.commandGridChrome()...)       // hud_commands.go
-	out = append(out, a.archChrome()...)              // cmds_arch.go
-	out = append(out, a.windowChrome(sw, sh)...)      // hud_window.go
-	return append(out, a.learnChrome()...)            // learn_ui.go
+	return append(a.hud().chrome(), a.learnChrome()...) // learn_ui.go
+}
+
+// drawSelectionMarks marks the selected thing on the map (each kind's
+// file); the pane and the command grid show the rest.
+func (a *App) drawSelectionMarks(screen *ebiten.Image) {
+	a.drawBuildingMark(screen) // building_inspector.go
+	a.drawAnimalMark(screen)   // animal_inspector.go
+	a.drawPlantMark(screen)    // plant_inspector.go
+	a.drawItemMark(screen)     // item_inspector.go
+	a.drawFrameMark(screen)    // frame_inspector.go
 }
 
 // hudRightClick lets a HUD region answer a right-click (dismiss a letter,

@@ -50,6 +50,13 @@ func (a *App) gatheringBanner(sw int) (string, rect, bool) {
 	if a.renderer == nil {
 		return "", rect{}, false
 	}
+	return a.gatheringBannerIn(sw, a.hud())
+}
+
+// gatheringBannerIn is gatheringBanner for the layout l: centred under the
+// colonist bar (and under the messages, when some are up), never wider
+// than the gap between the resource list and the right column.
+func (a *App) gatheringBannerIn(sw int, l hudLayout) (string, rect, bool) {
 	rd, ok := a.renderer.game.(gatheringReader)
 	if !ok {
 		return "", rect{}, false
@@ -59,8 +66,16 @@ func (a *App) gatheringBanner(sw int) (string, rect, bool) {
 		return "", rect{}, false
 	}
 	s := gatheringText(vs[0])
-	w := min(textW(s, tsBody)+2*gatherBannerPad, float32(sw)-2*hudPad)
-	return s, rect{(float32(sw) - w) / 2, hudTopH + 4, w, gatherBannerH}, true
+	room := float32(sw) - 2*(2*hudMargin+rightW)
+	w := min(textW(s, tsBody)+2*gatherBannerPad, max(room, 120))
+	y := float32(hudMargin)
+	if !l.Bar.empty() {
+		y = l.Bar.bottom() + hudGap
+	}
+	if !l.Messages.empty() {
+		y = max(y, l.Messages.bottom()+hudGap)
+	}
+	return s, rect{(float32(sw) - w) / 2, y, w, gatherBannerH}, true
 }
 
 // gatheringUI declares the banner's tooltip (call from the colony UI).
@@ -72,8 +87,17 @@ func (a *App) gatheringUI(sw int) {
 
 // drawGatheringBanner paints the banner (call from the HUD draw).
 func (a *App) drawGatheringBanner(screen *ebiten.Image, sw int) {
-	s, r, ok := a.gatheringBanner(sw)
-	if !ok || a.hideUI {
+	if a.renderer != nil {
+		a.drawGatheringBannerIn(screen, sw, a.hud())
+	}
+}
+
+func (a *App) drawGatheringBannerIn(screen *ebiten.Image, sw int, l hudLayout) {
+	if a.hideUI || a.renderer == nil {
+		return
+	}
+	s, r, ok := a.gatheringBannerIn(sw, l)
+	if !ok {
 		return
 	}
 	fill := uiAccent

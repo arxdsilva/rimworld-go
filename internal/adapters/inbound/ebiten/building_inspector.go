@@ -13,9 +13,12 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 )
 
-// Building selection and the bench bills panel (MAIN_UI_SCREENS §10
-// inspector, UI checklist §14.1 workbench inspector). Bills are typed
-// AddBill/SetBill/RemoveBill commands; the panel only reads BillView.
+// Building selection and the bench's Bills tab (MAIN_UI_SCREENS §10
+// inspector, UI checklist §14.1 workbench inspector). PLAY-018: the pane
+// and the command buttons are cmds_build.go; this file keeps the selection,
+// the click handlers, the Bills tab opened above the pane, and the bed
+// owner picker. Bills are typed AddBill/SetBill/RemoveBill commands; the
+// tab only reads BillView.
 
 const billRowH = 26
 
@@ -93,15 +96,10 @@ const (
 )
 
 func (a *App) selectedBuilding() (game.BuildingView, bool) {
-	if !a.hasBuilding || a.renderer == nil {
+	if !a.hasBuilding {
 		return game.BuildingView{}, false
 	}
-	for _, b := range a.renderer.world().Buildings {
-		if b.ID == a.selBuilding {
-			return b, true
-		}
-	}
-	return game.BuildingView{}, false
+	return a.buildingView(a.selBuilding)
 }
 
 // buildingAt is the completed object-layer building covering (x, y),
@@ -160,129 +158,87 @@ func (a *App) recipesFor(kind string) []game.RecipeView {
 	return out
 }
 
-func buildingRect() button {
-	return button{x: hudPad, y: hudTopH + hudPad, w: 380, h: 330}
-}
-
-func (a *App) buildingButtons() []button {
-	b, ok := a.selectedBuilding()
-	if !ok || a.workOpen || a.archOpen {
-		return nil
-	}
-	if isPenMarker(b) { // pen_ui.go: the pen marker's own panel
-		return a.penButtons(b)
-	}
-	r := buildingRect()
-	out := []button{{id: "bldg.close", label: "X", x: r.x + r.w - 28, y: r.y + 6, w: 22, h: 22}}
-	if b.Kind == steamVentKind {
-		return out // natural: no deconstruct, move or copy
-	}
-	if !b.Deconstruct {
-		out = append(out, button{id: "bldg.deconstruct", label: "Deconstruct", x: r.x + r.w - 130, y: r.y + r.h - 32, w: 120, h: 24})
-	}
-	out = append(out, a.moveCopyButtons(b, r)...)
-	out = append(out, a.troughButtons(b, r)...)
-	out = append(out, a.bedButtons(b, r)...)
-	out = append(out, a.casketButtons(b, r)...)
-	if !b.Bench {
-		return out
-	}
-	y := r.y + 64
-	for i, bl := range b.Bills {
-		ix := strconv.Itoa(i)
-		x := r.x + r.w - 150
-		out = append(out,
-			button{id: "bill.minus." + ix, label: "-", x: x, y: y, w: 22, h: 22, tip: "Fewer (Ctrl x10, Shift x100, both x1000)"},
-			button{id: "bill.plus." + ix, label: "+", x: x + 24, y: y, w: 22, h: 22, tip: "More (Ctrl x10, Shift x100, both x1000)"},
-			button{id: "bill.mode." + ix, label: "M", x: x + 48, y: y, w: 22, h: 22},
-			button{id: "bill.pause." + ix, label: "||", x: x + 72, y: y, w: 26, h: 22, selected: bl.Suspended},
-			button{id: "bill.del." + ix, label: "x", x: x + 100, y: y, w: 22, h: 22},
-		)
-		y += billRowH
-	}
-	// One "Add bill" button opens a pick list, so every recipe is
-	// reachable however many the bench has and none crowds Move/Copy.
-	out = append(out, button{id: billPickBtn, label: "+ Add bill", x: r.x + 132, y: r.y + r.h - 62, w: 130, h: 22,
-		tip: "Add bill\nPick a recipe for this bench."})
-	return out
-}
-
-func (a *App) drawBuildingInspector(screen *ebiten.Image) {
+// drawBuildingMark marks the selected building on the map. The pane
+// (cmds_build.go) is the building's panel now.
+func (a *App) drawBuildingMark(screen *ebiten.Image) {
 	b, ok := a.selectedBuilding()
 	if !ok || a.workOpen || a.archOpen {
 		return
 	}
-	if isPenMarker(b) { // pen_ui.go
-		a.drawPenPanel(screen, b)
-		return
-	}
-	r := buildingRect()
-	drawPanel(screen, r.x, r.y, r.w, r.h)
-	drawFitSmall(screen, buildingTitle(b), float64(r.x)+12, float64(r.y)+8, float64(r.w)-48, tsLabel)
-	state := fmt.Sprintf("tile (%d, %d)", b.X, b.Y)
-	if b.Deconstruct {
-		state += "   marked for deconstruction"
-	}
-	if lbl := roomLabelAt(a.renderer.world(), b.X, b.Y); lbl != "" {
-		state += "   " + lbl
-	}
-	if b.Fuel {
-		switch {
-		case b.FuelPct == 0:
-			state += "   out of fuel"
-		case b.Burning:
-			state += fmt.Sprintf("   burning, fuel %d%%", b.FuelPct)
-		default:
-			state += fmt.Sprintf("   banked (warm enough), fuel %d%%", b.FuelPct)
-		}
-	}
-	if b.DryQty > 0 {
-		state += fmt.Sprintf("   drying %d %s, %d%%", b.DryQty, b.DryKind, b.DryPct)
-	}
-	drawFitSmall(screen, state, float64(r.x)+12, float64(r.y)+27, float64(r.w)-24, tsBody)
-	for i, ln := range graveLines(b) {
-		drawLabel(screen, int(r.x)+12, int(r.y)+46+i*18, ln)
-	}
-	if ln := ventLine(b); ln != "" {
-		drawFitSmall(screen, ln, float64(r.x)+12, float64(r.y)+46, float64(r.w)-24, tsBody)
-	}
-	if ln := carpetLine(b); ln != "" {
-		drawLabel(screen, int(r.x)+12, int(r.y)+46, ln)
-	}
-	if b.Kind == casketKind { // vault_draw.go: the Open casket button's icon
-		if img := a.icon("open_casket"); img != nil {
-			drawIcon(screen, img, float64(r.x)+12, float64(r.y)+72, 22)
-		}
-	}
-	if ln := bridgeLine(b); ln != "" {
-		drawFitSmall(screen, ln, float64(r.x)+12, float64(r.y)+46, float64(r.w)-24, tsBody)
-	}
-	if b.Bench {
-		drawText(screen, "Bills", float64(r.x)+12, float64(r.y)+44, tsLabel)
-		y := int(r.y) + 64
-		for _, bl := range b.Bills {
-			line := billLine(bl)
-			if bl.Status != "" {
-				uiFillRect(screen, r.x+8, float32(y), 4, 22, uiBtnDisabled, false)
-			}
-			drawFitSmall(screen, line, float64(r.x)+16, float64(y)+2, float64(r.w)-150-22, tsBody)
-			y += billRowH
-		}
-		if len(b.Bills) == 0 {
-			drawLabel(screen, int(r.x)+16, y+4, "No bills yet - add one below.")
-		}
-	}
-	a.drawTroughSection(screen, b, r)
-	a.drawBedSection(screen, b, r)
-	if ln := swapLine(b); ln != "" {
-		drawFitSmall(screen, ln, float64(r.x)+12, float64(r.y+r.h)-108, float64(r.w)-24, tsBody)
-	}
-	if ln := movingLine(b); ln != "" {
-		drawFitSmall(screen, ln, float64(r.x)+134, float64(r.y+r.h)-88, float64(r.w)-146, tsBody)
-	}
-	mx, my := a.currentCursor()
-	a.drawButtons(screen, a.buildingButtons(), mx, my)
 	a.drawBuildingSelection(screen, b)
+}
+
+// ---- the Bills tab -------------------------------------------------------
+
+const (
+	billsPanelW = 520 // the Bills tab's panel
+	billBtnH    = 22
+	billBtnsW   = 122 // minus, plus, mode, pause and delete
+	billAddW    = 130
+)
+
+// billsPanelH is the Bills tab's wanted panel height for n bills: the
+// list, the Add bill button under it and the panel's inset all round.
+func billsPanelH(n int) float32 {
+	return 2*paneInset + float32(max(n, 1))*billRowH + bodyGap + billBtnH
+}
+
+// billsTab is the Bills tab of bench b.
+func (a *App) billsTab(b game.BuildingView) paneTab {
+	id := b.ID
+	return paneTab{ID: "inspector.bills", Label: "Bills", WantW: billsPanelW, WantH: billsPanelH(len(b.Bills)),
+		Declare: func(r rect) { a.billsTabUI(id, r) }}
+}
+
+// billsLayout splits the Bills tab's inner rectangle r: the scrolling list
+// of bills and the Add bill button under it.
+func billsLayout(r rect) (list, add rect) {
+	list, foot := r.splitV(-(billBtnH + bodyGap))
+	return list, rect{foot.X, foot.Y + bodyGap, billAddW, billBtnH}
+}
+
+// billsBody lays out bench b's bills, viewW wide: a line of text and the
+// five buttons (fewer, more, mode, pause, delete) per bill.
+func billsBody(b game.BuildingView, viewW float32) tabBody {
+	var body tabBody
+	if len(b.Bills) == 0 {
+		body.labels = []tabLabel{{text: "No bills yet - add one below.", x: 8, y: 4, w: viewW - 8, st: tsBody}}
+		body.h = billRowH
+		return body
+	}
+	x := viewW - billBtnsW
+	for i, bl := range b.Bills {
+		y := float32(i) * billRowH
+		ix := strconv.Itoa(i)
+		if bl.Status != "" {
+			body.fills = append(body.fills, tabFill{rect{0, y, 4, billBtnH}, uiBtnDisabled})
+		}
+		body.labels = append(body.labels, tabLabel{text: billLine(bl), x: 8, y: y + 2, w: x - 8 - bodyGap, st: tsBody})
+		body.buttons = append(body.buttons,
+			button{id: "bill.minus." + ix, label: "-", x: x, y: y, w: 22, h: billBtnH, tip: "Fewer (Ctrl x10, Shift x100, both x1000)"},
+			button{id: "bill.plus." + ix, label: "+", x: x + 24, y: y, w: 22, h: billBtnH, tip: "More (Ctrl x10, Shift x100, both x1000)"},
+			button{id: "bill.mode." + ix, label: "M", x: x + 48, y: y, w: 22, h: billBtnH},
+			button{id: "bill.pause." + ix, label: "||", x: x + 72, y: y, w: 26, h: billBtnH, selected: bl.Suspended},
+			button{id: "bill.del." + ix, label: "x", x: x + 100, y: y, w: 22, h: billBtnH},
+		)
+	}
+	body.h = float32(len(b.Bills)) * billRowH
+	return body
+}
+
+// billsTabUI declares the Bills tab of bench id in r, the expanded panel's
+// inner rectangle. One "+ Add bill" button opens a pick list, so every
+// recipe is reachable however many the bench has.
+func (a *App) billsTabUI(id entity.EntityID, r rect) {
+	b, ok := a.buildingView(id)
+	if !ok || !b.Bench {
+		return
+	}
+	list, add := billsLayout(r)
+	a.declareTabBody("bill.rows", list, billsBody(b, list.W-scrollBarW), a.applyBuildingClick)
+	if a.uiButton(billPickBtn, add, "+ Add bill", btnOpts{Tip: "Add bill\nPick a recipe for this bench."}) {
+		a.applyBuildingClick(billPickBtn)
+	}
 }
 
 // swapLine is the inspector text while an in-place material swap is
@@ -366,7 +322,7 @@ func (a *App) applyBuildingClick(id string) {
 			X2: b.X + max(b.W, 1) - 1, Y2: b.Y + max(b.H, 1) - 1})
 		return
 	}
-	if a.applyTroughClick(id, b) || a.applyBedClick(id, b) || a.applyCasketClick(id, b) || a.applyPenClick(id, b) {
+	if a.applyBedClick(id, b) || a.applyCasketClick(id, b) || a.applyPenClick(id, b) {
 		return
 	}
 	switch id {
@@ -423,27 +379,6 @@ func (a *App) applyBuildingClick(id string) {
 	a.renderer.enqueue(set)
 }
 
-// moveCopyButtons are the Move / Copy / Cancel-move buttons along the
-// panel's bottom edge.
-func (a *App) moveCopyButtons(b game.BuildingView, r button) []button {
-	y := r.y + r.h - 32
-	mv := button{id: "bldg.move", label: "Move", x: r.x + 12, y: y, w: 56, h: 24}
-	if !movableKind(b.Kind, b.Floor) {
-		mv.disabled, mv.reason, mv.quiet = true, "can't be moved", true
-	}
-	cp := button{id: "bldg.copy", label: "Copy", x: r.x + 72, y: y, w: 56, h: 24}
-	if p := a.lockedBy("build:" + b.Kind); p != "" {
-		cp.disabled, cp.reason, cp.quiet = true, "needs research: "+p, true
-	} else if !hasBuildTool(b.Kind) {
-		cp.disabled, cp.reason, cp.quiet = true, "not buildable", true
-	}
-	out := []button{mv, cp}
-	if b.MovingTo != nil {
-		out = append(out, button{id: "bldg.cancelmove", label: "Cancel move", x: r.x + 12, y: y - 30, w: 112, h: 24})
-	}
-	return out
-}
-
 func hasBuildTool(kind string) bool {
 	for _, t := range allArchTools() {
 		if t.build == kind {
@@ -487,24 +422,57 @@ func bedOwner(b game.BuildingView, slot int) entity.EntityID {
 
 func bedOwnerID(slot int) string { return "bldg.bed.owner." + strconv.Itoa(slot) }
 
-const bedRowY, bedRowH = 46, 28
+// bedOwnerName is who holds slot of b ("nobody" when free).
+func (a *App) bedOwnerName(b game.BuildingView, slot int) string {
+	id := bedOwner(b, slot)
+	if id == 0 {
+		return "nobody"
+	}
+	if who := a.pawnName(id); who != "" {
+		return who
+	}
+	return "someone"
+}
 
-func (a *App) bedButtons(b game.BuildingView, r button) []button {
+// bedLines are a bed's owner lines and the prisoner mark.
+func (a *App) bedLines(b game.BuildingView) []string {
+	n := bedSlots(b)
+	var out []string
+	for slot := range n {
+		label := "Owner: " + a.bedOwnerName(b, slot)
+		if n > 1 {
+			label = fmt.Sprintf("Owner %d: %s", slot+1, a.bedOwnerName(b, slot))
+		}
+		out = append(out, label)
+	}
+	if rd, ok := a.renderer.game.(bedPrisonReader); ok && n > 0 && rd.BedForPrisoners(b.ID) {
+		out = append(out, "For prisoners")
+	}
+	return out
+}
+
+// bedCommands are a bed's owner buttons (one per sleeping slot; each opens
+// the owner picker) and the "For prisoners" toggle.
+func (a *App) bedCommands(b game.BuildingView) []cmdButton {
 	n := bedSlots(b)
 	if n == 0 {
 		return nil
 	}
-	var out []button
+	var out []cmdButton
 	for slot := range n {
-		out = append(out, button{id: bedOwnerID(slot), label: "Set owner", x: r.x + r.w - 112, y: r.y + bedRowY + float32(slot*bedRowH),
-			w: 100, h: 22, tip: "Choose who sleeps here"})
+		label := "Owner"
+		if n > 1 {
+			label = fmt.Sprintf("Owner %d", slot+1)
+		}
+		out = append(out, cmdButton{ID: bedOwnerID(slot), Label: label,
+			Desc: "Choose who sleeps here. Now: " + a.bedOwnerName(b, slot) + "."})
 	}
-	pr := button{id: "bldg.bed.prisoners", label: "For prisoners", x: r.x + 12, y: r.y + bedRowY + float32(n*bedRowH) + 6, w: 130, h: 22}
+	pr := cmdButton{ID: "bldg.bed.prisoners", Label: "Prisoners", Toggle: true,
+		Desc: "Only prisoners sleep here."}
 	if rd, ok := a.renderer.game.(bedPrisonReader); ok {
-		pr.selected = rd.BedForPrisoners(b.ID)
-		pr.tip = "Only prisoners sleep here"
+		pr.On = rd.BedForPrisoners(b.ID)
 	} else {
-		pr.disabled, pr.reason, pr.quiet = true, "Prisoner beds are not available in this game.", true
+		pr.Disabled, pr.Reason = true, "Prisoner beds are not available in this game."
 	}
 	return append(out, pr)
 }
@@ -517,23 +485,6 @@ func (a *App) pawnName(id entity.EntityID) string {
 		}
 	}
 	return ""
-}
-
-func (a *App) drawBedSection(screen *ebiten.Image, b game.BuildingView, r button) {
-	n := bedSlots(b)
-	for slot := range n {
-		who := "nobody"
-		if id := bedOwner(b, slot); id != 0 {
-			if who = a.pawnName(id); who == "" {
-				who = "someone"
-			}
-		}
-		label := "Owner: " + who
-		if n > 1 {
-			label = fmt.Sprintf("Owner %d: %s", slot+1, who)
-		}
-		drawFitSmall(screen, label, float64(r.x)+12, float64(r.y)+bedRowY+float64(slot*bedRowH)+2, float64(r.w)-140, tsBody)
-	}
 }
 
 // applyBedClick opens the owner picker or flips the prisoner mark.

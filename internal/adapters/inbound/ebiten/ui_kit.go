@@ -249,9 +249,9 @@ func (a *App) uiOK() {
 type btnStyle uint8
 
 const (
-	btnNormal  btnStyle = iota // brown
-	btnPrimary                 // gold: the screen's forward action
-	btnDanger                  // red
+	btnNormal  btnStyle = iota // the plain button
+	btnPrimary                 // accent: the screen's forward action
+	btnDanger                  // danger
 )
 
 // btnOpts are a button's optional parts.
@@ -268,7 +268,7 @@ func (s btnStyle) colors(hover, down, selected bool) (fill, border, text color.R
 	case btnPrimary:
 		fill, border, text = lerpRGBA(uiBtnSelected, uiAccent, 0.45), uiAccent, uiField
 	case btnDanger:
-		fill, border, text = color.RGBA{0x7A, 0x2E, 0x27, 0xFF}, uiDanger, uiText
+		fill, border, text = lerpRGBA(uiBtn, uiDanger, 0.35), uiDanger, uiText
 	default:
 		fill, border, text = uiBtn, uiBtnBorder, uiText
 		if selected {

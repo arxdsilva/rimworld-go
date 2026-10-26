@@ -32,25 +32,31 @@ func TestPrisonerTabReplacesGearAndFits(t *testing.T) {
 		t.Fatal("a prisoner's Gear tab gives way to its Prisoner tab")
 	}
 	tab, ok := findButton(a, prisonerTabID)
-	r := inspectorRect()
-	if !ok || tab.x+tab.w > r.x+r.w {
-		t.Fatalf("Prisoner tab %+v (%v) must fit the panel", tab, ok)
+	if !ok || tab.disabled {
+		t.Fatalf("Prisoner tab %+v (%v)", tab, ok)
 	}
-	a.prisonerUI() // colony_ui.go declares it every Update
-	click(t, a, prisonerTabID)
-	if a.inspectTab != "prisoner" || !a.prisonerTabOn() {
+	// the tab opens a panel above the pane that fits the layout's width range
+	pt, _ := paneTabByID(a.pawnPane(2), prisonerTabID)
+	if r := expandedFor(1280, 720, pt); r.W < pt.WantW || r.W > expandMaxW {
+		t.Fatalf("Prisoner panel %+v for want %vx%v", r, pt.WantW, pt.WantH)
+	}
+	a.inspectTab = "prisoner"
+	if !a.prisonerTabOn() {
 		t.Fatalf("tab = %q", a.inspectTab)
 	}
-	if b, _ := findButton(a, "inspector.character"); b.selected {
+	if b, _ := findButton(a, prisonerTabID); !b.selected {
+		t.Fatal("the Prisoner tab is the selected one")
+	}
+	if b, _ := findButton(a, "inspector.needs"); b.selected {
 		t.Fatal("only the Prisoner tab is selected")
 	}
-	// a colonist has no Prisoner tab, and the Character tab takes over
+	// a colonist has no Prisoner tab, and its pane falls back to no open tab
 	a.renderer.Select(1)
 	if _, ok := findButton(a, prisonerTabID); ok || a.prisonerTabOn() {
 		t.Fatal("no Prisoner tab for a colonist")
 	}
-	if b, _ := findButton(a, "inspector.character"); !b.selected {
-		t.Fatal("a colonist falls back to Character")
+	if b, ok := findButton(a, "inspector.gear"); !ok || b.disabled {
+		t.Fatal("a colonist keeps Gear")
 	}
 }
 
@@ -61,7 +67,7 @@ func TestPrisonerTabModesAndRelease(t *testing.T) {
 	a.renderer.Select(2)
 	a.inspectTab = "prisoner"
 	f.frame(t, a)
-	a.prisonerUI()
+	declarePrisonerTab(t, a)
 	for _, m := range prisonerModes {
 		if !hasWidget(a, prisonerModeID(m.mode)) {
 			t.Fatalf("mode %s missing", m.label)
@@ -71,12 +77,12 @@ func TestPrisonerTabModesAndRelease(t *testing.T) {
 		t.Fatal("a standing prisoner can be released")
 	}
 	a.uiClick(prisonerModeID(prisoner.Reduce))
-	a.prisonerUI()
+	declarePrisonerTab(t, a)
 	if c := lastCmd(t, s); c.Kind != command.SetPrisonerMode || c.Target != 2 || c.Mode != uint8(prisoner.Reduce) {
 		t.Fatalf("mode command %+v", c)
 	}
 	a.uiClick(prisonerRelease)
-	a.prisonerUI()
+	declarePrisonerTab(t, a)
 	if c := lastCmd(t, s); c.Kind != command.ReleasePrisoner || c.Target != 2 {
 		t.Fatalf("release command %+v", c)
 	}
@@ -100,6 +106,17 @@ func TestPrisonerWarningsClearWhenAllSet(t *testing.T) {
 	}
 }
 
+// declarePrisonerTab declares the selected prisoner's tab the way the pane
+// does each Update: into the expanded panel the layout gives it.
+func declarePrisonerTab(t *testing.T, a *App) {
+	t.Helper()
+	tb, ok := paneTabByID(a.pawnPane(a.renderer.Selected()), prisonerTabID)
+	if !ok || tb.Declare == nil {
+		t.Fatal("no Prisoner tab to declare")
+	}
+	tb.Declare(innerFor(1280, 720, tb))
+}
+
 func TestCaptureAndArrestActions(t *testing.T) {
 	t.Parallel()
 	s := prisonerSim()
@@ -110,13 +127,11 @@ func TestCaptureAndArrestActions(t *testing.T) {
 	if !ok || b.disabled {
 		t.Fatalf("Ada can capture the downed raider: %+v", b)
 	}
-	a.prisonerUI()
-	click(t, a, prisonerCapture)
+	pressCmd(a, mustCmd(t, a.pawnCommands(1), prisonerCapture))
 	if c := lastCmd(t, s); c.Kind != command.Capture || c.Pawn != 1 || c.Target != 3 {
 		t.Fatalf("capture command %+v", c)
 	}
-	a.prisonerUI()
-	click(t, a, prisonerArrest)
+	pressCmd(a, mustCmd(t, a.pawnCommands(1), prisonerArrest))
 	if c := lastCmd(t, s); c.Kind != command.Arrest || c.Target != 1 || c.Pawn != 0 {
 		t.Fatalf("arrest command %+v", c)
 	}

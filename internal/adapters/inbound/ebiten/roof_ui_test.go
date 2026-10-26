@@ -144,8 +144,11 @@ func TestHUDRoofButtonToggles(t *testing.T) {
 		t.Fatal("second click should turn it off")
 	}
 	b := find()
-	if my := int(b.y) + 1; my >= hudTopH || !a.colonyChromeHit(int(b.x)+1, my, sw, sh) {
-		t.Fatal("button should sit in the top strip and consume the pointer")
+	if g := a.hud().Global; b.x < g.X || b.x+b.w > g.right() || b.y < g.Y || b.y+b.h > g.bottom() {
+		t.Fatalf("button %+v should sit inside Global %+v", b, g)
+	}
+	if !a.colonyChromeHit(int(b.x)+1, int(b.y)+1, sw, sh) {
+		t.Fatal("button should consume the pointer")
 	}
 }
 

@@ -19,7 +19,7 @@ const barPawnID = entity.EntityID(7) // hidpiColony's colonist, at tile (21, 19)
 func clickBarSlot(t *testing.T, a *App, f *fakeInput, id entity.EntityID) {
 	t.Helper()
 	for _, b := range a.colonistBarButtons(a.sw, a.sh) {
-		if b.id == barID(id) {
+		if b.id == barSlotID(id) {
 			f.cur.mx = int(float64(b.x+b.w/2) * a.scale.s)
 			f.cur.my = int(float64(b.y+b.h/2) * a.scale.s)
 			f.click(t, a, mbLeft, 0)

@@ -1,7 +1,6 @@
 package ebiten
 
 import (
-	"fmt"
 	"image/color"
 	"strconv"
 
@@ -13,40 +12,9 @@ import (
 
 // Order queue UI: Shift while choosing an order (or right-clicking with a
 // drafted colonist) queues it behind the current order. The selected
-// colonist's queue is listed under the inspector with a Clear button, and
-// its route is drawn on the map as numbered waypoints.
-
-const queueRowH = 20
-
-// orderQueueRect is the panel listing n queued orders below the inspector.
-func orderQueueRect(n int) button {
-	r := inspectorRect()
-	return button{x: r.x, y: r.y + r.h + 6, w: r.w, h: float32(30 + n*queueRowH)}
-}
-
-func (a *App) orderQueueButtons() []button {
-	p, ok := a.selectedPawn()
-	if !ok || len(p.QueuedOrders) == 0 || a.workOpen || a.archOpen {
-		return nil
-	}
-	r := orderQueueRect(len(p.QueuedOrders))
-	return []button{{id: "pawn.clearorders", label: "Clear", x: r.x + r.w - 70, y: r.y + 4, w: 62, h: 20}}
-}
-
-func (a *App) drawOrderQueue(screen *ebiten.Image) {
-	p, ok := a.selectedPawn()
-	if !ok || len(p.QueuedOrders) == 0 || a.workOpen || a.archOpen {
-		return
-	}
-	r := orderQueueRect(len(p.QueuedOrders))
-	drawPanel(screen, r.x, r.y, r.w, r.h)
-	drawText(screen, fmt.Sprintf("Queued orders %d/%d", len(p.QueuedOrders), game.MaxQueuedOrders), float64(r.x)+12, float64(r.y)+5, withColor(tsLabel, uiHeading))
-	for i, q := range p.QueuedOrders {
-		drawText(screen, ellipsize(fmt.Sprintf("%d. %s", i+1, q.Label), tsBody, float64(r.w)-32), float64(r.x)+16, float64(r.y)+28+float64(i*queueRowH), tsBody)
-	}
-	mx, my := a.currentCursor()
-	a.drawButtons(screen, a.orderQueueButtons(), mx, my)
-}
+// colonist's queue is listed in the pane's lines ("Queued orders 2/3" and
+// each order; cmds_pawn.go) and cleared by the Clear orders command; its
+// route is drawn on the map as numbered waypoints.
 
 // drawOrderRoute draws the selected colonist's current order target and
 // queued orders as a dotted route with numbered waypoints.
@@ -73,7 +41,7 @@ func (r *Renderer) drawOrderRoute(screen *ebiten.Image, tile float64) {
 	for _, q := range p.QueuedOrders {
 		pts = append(pts, pt{float64(q.X) + 0.5, float64(q.Y) + 0.5})
 	}
-	line := color.RGBA{250, 220, 120, 200}
+	line := routeTint(uiAccent, 200)
 	for i := 1; i < len(pts); i++ {
 		ax, ay := r.worldToScreenF(pts[i-1].x, pts[i-1].y)
 		bx, by := r.worldToScreenF(pts[i].x, pts[i].y)
@@ -83,9 +51,9 @@ func (r *Renderer) drawOrderRoute(screen *ebiten.Image, tile float64) {
 	for i := 1; i < len(pts); i++ {
 		sx, sy := r.worldToScreenF(pts[i].x, pts[i].y)
 		rad := float32(tile * 0.17)
-		fill := color.RGBA{60, 46, 24, 230}
+		fill := routeTint(uiBtn, 230)
 		if i == 1 && p.HasOrder {
-			fill = color.RGBA{150, 110, 30, 235} // the order in progress
+			fill = routeTint(uiBtnSelected, 235) // the order in progress
 		}
 		vector.FillCircle(screen, sx, sy, rad, fill, true)
 		vector.StrokeCircle(screen, sx, sy, rad, 1.5, line, true)
@@ -97,6 +65,13 @@ func (r *Renderer) drawOrderRoute(screen *ebiten.Image, tile float64) {
 		k := 1 / uiScale() // sx, sy are physical (world); text is logical
 		drawText(screen, label, float64(sx)*k, float64(sy)*k-lineH(tsSmall)/2, textStyle{Size: tsSmall.Size, Bold: true, Align: alignCenter})
 	}
+}
+
+// routeTint is palette token c at alpha a, premultiplied the way the
+// vector fills expect.
+func routeTint(c color.RGBA, a uint8) color.RGBA {
+	k := func(v uint8) uint8 { return uint8(uint16(v) * uint16(a) / 255) }
+	return color.RGBA{R: k(c.R), G: k(c.G), B: k(c.B), A: a}
 }
 
 // dashed draws a dashed line from a to b.

@@ -9,6 +9,7 @@ import (
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/pawn/skill"
+	"rimworld-go/internal/domain/sim/entity"
 )
 
 // uiStripe is the faint stripe of every other table row (non-premultiplied,
@@ -20,17 +21,19 @@ var uiStripe = color.NRGBA{R: uiPanelBorder.R, G: uiPanelBorder.G, B: uiPanelBor
 // backstories and traits with hover cards, what they can't do, the eleven
 // skills with level, passion, experience bar and "This week: +N", and
 // conditions. The tab's content is declared and painted with the widget
-// kit every Update (colony_ui.go calls bioUI); inspector.go only draws the
-// panel and the legacy tab row around it.
+// kit every Update, into the expanded panel the colonist pane opens above
+// itself (cmds_pawn.go's Bio paneTab calls bioTab with that rectangle).
 
 const (
-	bioPortW    = 84
-	bioPortH    = 108
-	bioHdrH     = 20 // the skill table's header row
-	bioRowMax   = 18
-	bioRowMin   = 14
-	bioActionH  = 68 // the Draft / Clear orders row and the tab row under the content
-	bioCloseGap = 26 // room kept for the inspector's X button
+	bioPortW  = 84
+	bioPortH  = 108
+	bioHdrH   = 20 // the skill table's header row
+	bioRowMax = 18
+	bioRowMin = 14
+	// bioScrollRows is the fewest skill rows the table keeps in view (it
+	// scrolls when it cannot show them all) before the relations give way.
+	bioScrollRows = 6
+	bioSkillsID   = "bio.skills"
 )
 
 // hasBio reports the colonist carries an identity (colonies started from a
@@ -41,27 +44,6 @@ func hasBio(p game.PawnView) bool { return p.Sex != "" }
 func (a *App) bioTabOn() bool {
 	p, ok := a.selectedPawn()
 	return ok && a.inspectTab == "bio" && hasBio(p)
-}
-
-// bioUI declares the Bio tab's tab-row click and, while it is open, its
-// content.
-func (a *App) bioUI() {
-	if a.renderer == nil || !a.renderer.HasSelect() || a.workOpen || a.archOpen {
-		return
-	}
-	p, ok := a.selectedPawn()
-	if !ok {
-		return
-	}
-	u := a.uiSt()
-	for _, b := range a.inspectorButtons() {
-		if b.id == "inspector.bio" && !b.disabled {
-			u.add(uiWidget{id: b.id, label: b.label, r: rect{b.x, b.y, b.w, b.h}, click: func() { a.inspectTab = "bio" }})
-		}
-	}
-	if a.bioTabOn() {
-		a.bioTab(p)
-	}
 }
 
 // bioName is `First "Nick" Last`; the nickname is left out when it repeats
@@ -121,10 +103,18 @@ func bioSkillTip(s game.SkillView, week int) string {
 	return t
 }
 
-// bioTab declares the Bio tab of colonist p inside the inspector panel.
-func (a *App) bioTab(p game.PawnView) {
-	r := inspectorRect()
-	in := rect{r.x + 12, r.y + 10, r.w - 24, r.h - 10 - bioActionH}
+// bioTab declares the Bio tab of colonist id inside r, the expanded panel's
+// inner rectangle.
+// The skills table takes what the panel has left under the identity block
+// and above the relations and conditions; when that is less than the full
+// table it scrolls, and the relations give way once it would show fewer
+// than bioScrollRows rows.
+func (a *App) bioTab(id entity.EntityID, r rect) {
+	p, ok := a.pawnView(id)
+	if !ok || a.renderer == nil {
+		return
+	}
+	in := r
 	b, ok := a.renderer.game.Bio(p.ID)
 	if !ok {
 		a.uiLabel(in.X, in.Y, "No biography for this colonist.", dimText())
@@ -144,7 +134,7 @@ func (a *App) bioTab(p game.PawnView) {
 		}
 	})
 	tx := pr.right() + 12
-	tw := in.right() - tx - bioCloseGap
+	tw := in.right() - tx
 	nm := tsLarge
 	nm.Color = uiHeading
 	y := in.Y
@@ -162,7 +152,7 @@ func (a *App) bioTab(p game.PawnView) {
 	a.backstoryLine(tx, y, in.right()-tx, "Adulthood", b.Adulthood, b.AdulthoodDesc, "bio.adult")
 
 	// Traits.
-	y = max(pr.bottom()+10, y+26)
+	y = max(pr.bottom()+6, y+22)
 	y = a.traitChips(in.X, y, in.W, game.CandidateView{BioView: b})
 
 	// Incapable of.
@@ -181,22 +171,24 @@ func (a *App) bioTab(p game.PawnView) {
 	if full != "" {
 		a.uiTip("bio.incap", rect{in.X, iy, in.W, 18}, "Incapable of\n"+full)
 	}
-	y += 26
+	y += 22
 
 	// Relations and conditions at the bottom, skills above them.
 	rel := a.bioRelations(p)
-	relH := float32(0)
-	if len(rel) > 0 {
-		relH = 16 + float32(len(rel)-1)*14
-	}
+	relH := bioRelationsH(len(rel))
 	condH := float32(18)
 	if len(b.Conditions) > 1 {
 		condH += float32(len(b.Conditions)-1) * 14
 	}
 	top := y
+	if in.bottom()-condH-relH-top < bioHdrH+bioScrollRows*bioRowMin {
+		rel, relH = nil, 0 // too tight for a useful table: the relations go first (the Social tab has them)
+	}
 	avail := in.bottom() - condH - relH - top - bioHdrH
 	rowH := min(float32(bioRowMax), max(float32(bioRowMin), avail/float32(max(len(b.Skills), 1))))
-	a.bioSkills(rect{in.X, top, in.W, bioHdrH + rowH*float32(len(b.Skills))}, b, week, rowH)
+	// the table scrolls when the room is less than its rows; never beyond the bottom blocks
+	tableH := min(bioHdrH+rowH*float32(len(b.Skills)), max(in.bottom()-condH-relH-top, bioHdrH))
+	a.bioSkills(rect{in.X, top, in.W, tableH}, b, week, rowH)
 
 	if len(rel) > 0 {
 		ry := in.bottom() - condH - relH + 2
@@ -218,20 +210,38 @@ func (a *App) bioTab(p game.PawnView) {
 	u.queue(func(dst *ebiten.Image) { drawText(dst, text, float64(in.X+60), float64(cy)+1, st) })
 }
 
-// bioSkills draws the skill table of the Bio tab: icon and name, passion,
-// level, experience bar, and this week's learning.
+// bioRelationsH is the height of the Relations block for n summary lines.
+func bioRelationsH(n int) float32 {
+	if n == 0 {
+		return 0
+	}
+	return 16 + float32(n-1)*14
+}
+
+// bioSkills draws the skill table of the Bio tab in r: a header, then the
+// rows (icon and name, passion, level, experience bar, this week's
+// learning). When the rows are taller than the room under the header the
+// body scrolls (wheel, thumb) and is clipped to it.
 func (a *App) bioSkills(r rect, b game.BioView, week [skill.NumSkills]int, rowH float32) {
 	u := a.uiSt()
-	for i, s := range b.Skills {
-		row := rect{r.X, r.Y + bioHdrH + float32(i)*rowH, r.W, rowH}
-		a.uiTip(fmt.Sprintf("bio.skill.%d", i), row, bioSkillTip(s, week[i]))
+	view := rect{r.X, r.Y + bioHdrH, r.W, max(0, r.H-bioHdrH)}
+	var off float32
+	if contentH := rowH * float32(len(b.Skills)); contentH > view.H+0.5 {
+		area := a.uiScrollArea(bioSkillsID, view, contentH, scrollOpts{Step: rowH * 2})
+		view, off = area.View, area.Off
+	}
+	rowAt := func(i int) rect { return rect{view.X, view.Y + float32(i)*rowH - off, view.W, rowH} }
+	for i := range b.Skills {
+		if row := rowAt(i).intersect(view); !row.empty() {
+			a.uiTip(fmt.Sprintf("bio.skill.%d", i), row, bioSkillTip(b.Skills[i], week[i]))
+		}
 	}
 	const (
 		passX = 108
 		lvlX  = 150
 		barX  = 164
 	)
-	barW := r.W - barX - 52
+	barW := view.W - barX - 52
 	u.queue(func(dst *ebiten.Image) {
 		hs := tsSmall
 		hs.Color = uiHeading
@@ -245,11 +255,15 @@ func (a *App) bioSkills(r rect, b game.BioView, week [skill.NumSkills]int, rowH 
 		lh.Align = alignRight
 		drawText(dst, "Lvl", float64(r.X+lvlX+10), hy, lh)
 		drawText(dst, "Experience", float64(r.X+barX), hy, hs)
-		drawText(dst, "This week", float64(r.right()-6), hy, lh)
+		drawText(dst, "This week", float64(view.right()-6), hy, lh)
+		body := clipTo(dst, view)
 		for i, s := range b.Skills {
-			row := rect{r.X, r.Y + bioHdrH + float32(i)*rowH, r.W, rowH}
+			row := rowAt(i)
+			if row.bottom() < view.Y || row.Y > view.bottom() {
+				continue
+			}
 			if i%2 == 1 {
-				fillRect(dst, row, uiStripe)
+				fillRect(body, row, uiStripe)
 			}
 			st := tsSmall
 			if s.Incapable {
@@ -257,23 +271,23 @@ func (a *App) bioSkills(r rect, b game.BioView, week [skill.NumSkills]int, rowH 
 			}
 			ty := float64(row.Y) + (float64(row.H)-lineH(st))/2
 			if img := a.art.image("ui_icon/skill_"+s.Key, noTint); img != nil {
-				drawIcon(dst, img, float64(row.X+6), float64(row.Y)+(float64(row.H)-12)/2, 12)
+				drawIcon(body, img, float64(row.X+6), float64(row.Y)+(float64(row.H)-12)/2, 12)
 			}
-			drawText(dst, s.Label, float64(row.X+22), ty, st)
+			drawText(body, s.Label, float64(row.X+22), ty, st)
 			if !s.Incapable && s.Passion > 0 {
-				a.drawPassion(dst, s.Passion, float64(row.X+passX), float64(row.Y)+(float64(row.H)-12)/2, 12, st, ty)
+				a.drawPassion(body, s.Passion, float64(row.X+passX), float64(row.Y)+(float64(row.H)-12)/2, 12, st, ty)
 			}
 			lt := st
 			lt.Align = alignRight
-			drawText(dst, skillLevelText(s), float64(row.X+lvlX+10), ty, lt)
+			drawText(body, skillLevelText(s), float64(row.X+lvlX+10), ty, lt)
 			if s.Incapable {
-				drawText(dst, "incapable", float64(row.X+barX), ty, st)
+				drawText(body, "incapable", float64(row.X+barX), ty, st)
 				continue
 			}
 			bar := rect{row.X + barX, row.Y + (row.H-6)/2, barW, 6}
-			fillRect(dst, bar, uiSliderTrack)
-			fillRect(dst, rect{bar.X, bar.Y, bar.W * float32(s.XPPct) / 100, bar.H}, uiSliderFill)
-			strokeRect(dst, bar, uiPanelBorder)
+			fillRect(body, bar, uiSliderTrack)
+			fillRect(body, rect{bar.X, bar.Y, bar.W * float32(s.XPPct) / 100, bar.H}, uiSliderFill)
+			strokeRect(body, bar, uiPanelBorder)
 			wt := st
 			wt.Align = alignRight
 			if week[i] <= 0 {
@@ -281,7 +295,7 @@ func (a *App) bioSkills(r rect, b game.BioView, week [skill.NumSkills]int, rowH 
 			} else {
 				wt.Color = uiGood
 			}
-			drawText(dst, weekText(week[i]), float64(row.right()-6), ty, wt)
+			drawText(body, weekText(week[i]), float64(row.right()-6), ty, wt)
 		}
 	})
 }

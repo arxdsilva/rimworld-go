@@ -66,7 +66,7 @@ func TestColonyHUDDrawsEveryState(t *testing.T) {
 
 	// The Work tab, with the cursor on an incapable cell and on a header.
 	a.workOpen, a.panelMode = true, "work"
-	r := workRect(a.sw, a.sh)
+	r := a.windowRect()
 	for _, c := range []rect{workCellRect(r, 0, 6), workCellRect(r, 0, 2), {workCellRect(r, 0, 4).X, r.y + 24, 30, 16}} {
 		x, y := c.center()
 		f.cur.mx, f.cur.my = int(x), int(y)
@@ -82,11 +82,8 @@ func TestColonyHUDDrawsEveryState(t *testing.T) {
 	a.openArchitect()
 	for _, c := range archCategories {
 		a.selectArchCategory(c.id)
-		for _, b := range a.architectButtons() {
-			if len(b.id) > 10 && b.id[:10] == "arch.tool." {
-				f.cur.mx, f.cur.my = int(b.x+b.w/2), int(b.y+b.h/2)
-				break
-			}
+		if cells := a.hud().GridCells; len(cells) > 0 { // hover the category's first tool
+			f.cur.mx, f.cur.my = int(cells[0].X+cells[0].W/2), int(cells[0].Y+cells[0].H/2)
 		}
 		drawFrame(t, a, f)
 	}
@@ -112,8 +109,15 @@ func TestColonyWindowsDraw(t *testing.T) {
 	drawFrame(t, a, f)
 	a.uiCloseTop()
 
-	// A letter, and the letter's message line in the strip.
+	// A letter in the stack with its message line, then opened from the
+	// stack by a click (PLAY-018: only the intro opens by itself).
 	s.world.Messages = []game.MessageView{{Tick: 0, Text: "A heat wave has settled over the land.", Letter: true, Title: "Heat wave"}}
+	s.world.Letters = []game.LetterView{{ID: 3, Tick: 0, Kind: "caution", Title: "Heat wave", Text: "A heat wave has settled over the land.", X: -1, Y: -1}}
+	drawFrame(t, a, f)
+	if len(a.letterRows(a.hud())) != 1 {
+		t.Fatal("the letter should be in the stack")
+	}
+	pressButton(t, a, f, "letter.3")
 	drawFrame(t, a, f)
 	if !a.uiModalOpen() {
 		t.Fatal("the letter should be open")

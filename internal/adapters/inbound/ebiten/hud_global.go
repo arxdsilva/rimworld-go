@@ -2,114 +2,491 @@ package ebiten
 
 import (
 	"fmt"
+	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/sim/clock"
+	"rimworld-go/internal/platform/config"
 	"rimworld-go/internal/platform/input"
 )
 
-// The lower-right global controls (PLAY-018: GLOBAL owns them): overlay
-// toggles, speed buttons, date, time, weather, temperature and conditions.
-// Until migrated they are the legacy top strip.
+// The lower-right global controls (PLAY-018: GLOBAL owns them). One panel,
+// the layout's Global rect, holds a measured stack. Bottom-up from the
+// tab strip:
+//
+//	overlay toggles   24 px icons in rows of 8, right-aligned
+//	speed buttons     pause, normal, fast, superfast (52x24)
+//	speed reason      only while the game paused itself (threat, background)
+//	hour line         clock and the schedule's current activity
+//	date line         the calendar date and the season
+//	weather           the weather and the wind arrow
+//	temperature       the hovered cell's air: "Indoors 18 °C"
+//	conditions        one line per active condition (status_chips.go)
+//	roof legend       only while the roof overlay is on
+//
+// globalHeight() is that stack's measured height; the layout reserves it
+// (hud.go a.hud()), so nothing here may call a.hud() while measuring.
 
-// drawGlobalControls draws the global controls (legacy: the top strip with
-// season, weather, clock and the overlay toggles, and the status chips).
-func (a *App) drawGlobalControls(screen *ebiten.Image, sw, sh int) {
-	drawPanel(screen, 0, 0, float32(sw), hudTopH)
-	wld := a.renderer.world()
-	x := hudPad // legacy: after the resource readouts (hud_resources.go)
-	for _, l := range resourceReadouts(wld) {
-		x += max(90, int(textW(l, tsBody))+18)
-	}
-	if wld.Season != "" {
-		season := seasonText(wld)
-		drawLabel(screen, x, 10, season)
-		seasonW := int(textW(season, tsBody))
-		defer a.drawBiomeTooltip(screen, x, seasonW)
-		x += seasonW + 18
-	}
-	drawWeatherLabel(screen, x, 10, wld)
-	time := a.hudTimeText()
-	drawLabel(screen, sw-int(textW(time, tsBody))-hudPad, 10, time)
-	a.drawRoofButton(screen, sw)
-	a.drawHomeButton(screen, sw)
-	a.drawHomeAutoButton(screen, sw) // home_auto_ui.go
-	a.drawPlanButton(screen, sw)
-	a.drawRoomsButton(screen, sw)
-	a.drawStatusChips(screen, sw) // status_chips.go: heat wave, cold snap, conditions
+const (
+	globalPad     = 4  // inside the panel
+	globalIconPx  = 24 // an overlay toggle
+	globalIconGap = 4  // between toggles and between speed buttons
+	globalPerRow  = 8  // toggles per row
+	speedBtnW     = 52
+	speedBtnH     = 24
+	globalGap     = 4 // between the button rows and the text above
+	globalInnerW  = rightW - 2*globalPad
+
+	learnButtonID  = "hud.learn"
+	barButtonID    = "hud.bar"
+	rescatButtonID = "hud.rescat"
+)
+
+// globalToggle is one overlay toggle. The legacy five route through
+// applyClick (app.go) as plain buttons; the settings toggles (run != nil)
+// are widget-kit widgets, which applyClick answers through uiClick.
+type globalToggle struct {
+	id, icon, short string
+	on              func(a *App) bool
+	tip             func(a *App) string
+	run             func(a *App)
 }
 
-// globalButtons are the global controls' buttons (legacy: the overlay
-// toggles in the top strip).
-func (a *App) globalButtons(sw int) []button {
-	out := a.roofButtons(sw)
-	out = append(out, a.homeButtons(sw)...)
-	out = append(out, a.homeAutoButtons(sw)...) // home_auto_ui.go
-	out = append(out, a.planButtons(sw)...)
-	return append(out, a.roomsButtons(sw)...)
+// toggleGameplay flips one gameplay setting and saves it the way the
+// Options screen does.
+func (a *App) toggleGameplay(flip func(g *config.Gameplay)) {
+	s := a.settings
+	flip(&s.Gameplay)
+	a.setSettings(s)
 }
 
-// globalChrome is the global controls' area while drawn the legacy way.
-func (a *App) globalChrome(sw int) []rect { return []rect{{0, 0, float32(sw), hudTopH}} }
+// globalToggleList is the toggles, left to right.
+var globalToggleList = []globalToggle{
+	{id: roofButtonID, icon: "overlay_roof", short: "Roof",
+		on:  func(a *App) bool { return a.renderer.roofOverlayOn() },
+		tip: func(a *App) string { return "Roof overlay" + a.keyHint(input.RoofOverlay) }},
+	{id: homeButtonID, icon: "home", short: "Home",
+		on:  func(a *App) bool { return a.renderer.homeShown() },
+		tip: func(a *App) string { return "Home area overlay" }},
+	{id: homeAutoButtonID, icon: "home_auto", short: "Auto",
+		on: func(a *App) bool { return a.renderer.world().HomeAuto },
+		tip: func(a *App) string {
+			if a.renderer.world().HomeAuto {
+				return "Home auto-expand: on (click to turn off)"
+			}
+			return "Home auto-expand: off (click to turn on)"
+		}},
+	{id: planButtonID, icon: "plan", short: "Plans",
+		on:  func(a *App) bool { return a.renderer.planShown() },
+		tip: func(a *App) string { return "Plans overlay" }},
+	{id: roomsButtonID, icon: "overlay_rooms", short: "Rooms",
+		on:  func(a *App) bool { return a.rooms },
+		tip: func(a *App) string { return "Room stats overlay" + a.keyHint(input.RoomStats) }},
+	{id: learnButtonID, icon: "learn", short: "Help",
+		on: func(a *App) bool { return a.settings.Gameplay.ShowLearningHelper },
+		tip: func(a *App) string {
+			return "Learning helper" + stateSuffix(a.settings.Gameplay.ShowLearningHelper) + "\nShort lessons in the top-right corner. Click to show or hide them."
+		},
+		run: func(a *App) {
+			a.toggleGameplay(func(g *config.Gameplay) { g.ShowLearningHelper = !g.ShowLearningHelper })
+		}},
+	{id: barButtonID, icon: "colonist", short: "Bar",
+		on: func(a *App) bool { return a.settings.Gameplay.ShowColonistBar },
+		tip: func(a *App) string {
+			return "Colonist bar" + stateSuffix(a.settings.Gameplay.ShowColonistBar) + "\nThe portraits along the top. Click to show or hide them."
+		},
+		run: func(a *App) { a.toggleGameplay(func(g *config.Gameplay) { g.ShowColonistBar = !g.ShowColonistBar }) }},
+	{id: rescatButtonID, icon: "zone_stockpile", short: "Res", // the list counts stockpiled goods
+		on: func(a *App) bool { return a.settings.Gameplay.CategorizedResources },
+		tip: func(a *App) string {
+			return "Categorised resources" + stateSuffix(a.settings.Gameplay.CategorizedResources) + "\nGroup the resource list by category. Click to switch."
+		},
+		run: func(a *App) {
+			a.toggleGameplay(func(g *config.Gameplay) { g.CategorizedResources = !g.CategorizedResources })
+		}},
+}
+
+func stateSuffix(on bool) string {
+	if on {
+		return " (on)"
+	}
+	return " (off)"
+}
+
+// speedButtons are the four speed buttons, left to right.
+var speedButtons = []struct {
+	id, icon, short string
+	speed           speed
+	act             input.Action
+	name            string
+}{
+	{"speed.0", "speed_pause", "||", speedPaused, input.Pause, "Pause / resume"},
+	{"speed.1", "speed_normal", ">", speedNormal, input.Speed1, "Normal speed"},
+	{"speed.2", "speed_fast", ">>", speedFast, input.Speed2, "Fast speed"},
+	{"speed.3", "speed_superfast", ">>>", speedVeryFast, input.Speed3, "Superfast speed"},
+}
+
+// globalPlan is the stack's content, found without the layout.
+type globalPlan struct {
+	reason  string       // why the game is paused ("" none)
+	weather bool         // a weather row
+	chips   []statusChip // active conditions, one line each
+	legend  []string     // the roof legend, wrapped ("" none)
+}
+
+// textRowH is a text row of the stack: the body line, whose height already
+// holds its leading.
+func textRowH() float32 { return lineStep(tsBody) }
+
+// globalPlan reads the stack's content from the world and the renderer.
+func (a *App) globalPlan() globalPlan {
+	if a.renderer == nil {
+		return globalPlan{}
+	}
+	w := a.renderer.world()
+	p := globalPlan{reason: a.speedReason(), weather: w.Weather != "", chips: statusChips(w)}
+	if line := a.roofLegend(); line != "" {
+		p.legend = wrapPx(line, tsBody, globalInnerW)
+	}
+	return p
+}
+
+// globalRowRects are the stack's rows. Text rows are the Global rect's
+// inner width; a condition's rect is as wide as its label, flush right.
+type globalRowRects struct {
+	Toggles                           []rect
+	Speed                             [4]rect
+	Reason, Hour, Date, Weather, Temp rect
+	Conds                             []rect
+	Legend                            rect
+	top                               float32 // where the stack ends, pad included
+}
+
+// layoutGlobal places the stack bottom-up from the bottom of g.
+func layoutGlobal(g rect, p globalPlan, nToggles int) globalRowRects {
+	var o globalRowRects
+	text := textRowH()
+	right := g.right() - globalPad
+	y := g.bottom() - globalPad
+	rows := (nToggles + globalPerRow - 1) / globalPerRow
+	o.Toggles = make([]rect, nToggles)
+	for row := rows - 1; row >= 0; row-- {
+		y -= globalIconPx
+		first, last := row*globalPerRow, min(nToggles, (row+1)*globalPerRow)
+		x := right - float32(last-first)*globalIconPx - float32(last-first-1)*globalIconGap
+		for i := first; i < last; i++ {
+			o.Toggles[i] = rect{x, y, globalIconPx, globalIconPx}
+			x += globalIconPx + globalIconGap
+		}
+		if row > 0 {
+			y -= globalIconGap
+		}
+	}
+	y -= globalGap + speedBtnH
+	x := right - 4*speedBtnW - 3*globalIconGap
+	for i := range o.Speed {
+		o.Speed[i] = rect{x, y, speedBtnW, speedBtnH}
+		x += speedBtnW + globalIconGap
+	}
+	y -= globalGap
+	next := func() rect {
+		y -= text
+		return rect{g.X + globalPad, y, g.W - 2*globalPad, text}
+	}
+	if p.reason != "" {
+		o.Reason = next()
+	}
+	o.Hour = next()
+	o.Date = next()
+	if p.weather {
+		o.Weather = next()
+	}
+	o.Temp = next()
+	o.Conds = make([]rect, len(p.chips))
+	for i := len(p.chips) - 1; i >= 0; i-- {
+		r := next()
+		w := min(textW(p.chips[i].label, tsBody)+2*globalPad, g.W)
+		o.Conds[i] = rect{g.right() - w, r.Y, w, r.H}
+	}
+	if n := len(p.legend); n > 0 {
+		y -= float32(n) * text
+		o.Legend = rect{g.X + globalPad, y, g.W - 2*globalPad, float32(n) * text}
+	}
+	o.top = y - globalPad
+	return o
+}
+
+// globalStackHeight is the stack's measured height.
+func globalStackHeight(p globalPlan, nToggles int) float32 {
+	return -layoutGlobal(rect{0, 0, rightW, 0}, p, nToggles).top
+}
 
 // globalHeight is the lower-right controls' height the layout reserves
-// (0 while drawn the legacy way).
-func (a *App) globalHeight() float32 { return 0 }
+// (hud.go a.hud()); it never calls a.hud(). The minimap sits above Global,
+// so the renderer's minimap learns the height here too.
+func (a *App) globalHeight() float32 {
+	if a.renderer == nil {
+		return 0
+	}
+	h := globalStackHeight(a.globalPlan(), len(globalToggleList))
+	a.renderer.mini.globalH = h
+	return h
+}
+
+// globalRows is this frame's stack, placed in the layout's Global rect.
+func (a *App) globalRows() globalRowRects {
+	return layoutGlobal(a.hud().Global, a.globalPlan(), len(globalToggleList))
+}
 
 // minimapOn reports the layout should reserve the minimap's square.
-func (a *App) minimapOn() bool { return false }
+func (a *App) minimapOn() bool { return a.renderer != nil && a.renderer.minimapOn() }
 
-// applySpeedClick handles a speed button ("speed.<n>").
-func (a *App) applySpeedClick(id string) {}
+// globalToggleRect is the rect of toggle id.
+func (a *App) globalToggleRect(id string) (rect, bool) {
+	if a.renderer == nil {
+		return rect{}, false
+	}
+	rows := a.globalRows()
+	for i, tg := range globalToggleList {
+		if tg.id == id {
+			return rows.Toggles[i], true
+		}
+	}
+	return rect{}, false
+}
 
-// globalUI declares the global controls' widget-kit parts (stub).
-func (a *App) globalUI(sw, sh int) {}
+// toggleButton is toggle i as a button at r.
+func (a *App) toggleButton(i int, r rect) button {
+	tg := globalToggleList[i]
+	return button{id: tg.id, label: tg.short, x: r.X, y: r.Y, w: r.W, h: r.H, selected: tg.on(a), tip: tg.tip(a)}
+}
+
+// globalButtons are the global controls' buttons: the legacy overlay
+// toggles and the four speed buttons.
+func (a *App) globalButtons(sw int) []button {
+	if a.renderer == nil {
+		return nil
+	}
+	rows := a.globalRows()
+	var out []button
+	for i, tg := range globalToggleList {
+		if tg.run == nil {
+			out = append(out, a.toggleButton(i, rows.Toggles[i]))
+		}
+	}
+	for i, sb := range speedButtons {
+		r := rows.Speed[i]
+		out = append(out, button{id: sb.id, label: sb.short, x: r.X, y: r.Y, w: r.W, h: r.H,
+			selected: a.renderer.speed == sb.speed, tip: sb.name + a.keyHint(sb.act)})
+	}
+	return out
+}
+
+// applySpeedClick handles a speed button ("speed.<n>"): the same intents
+// the time keys use.
+func (a *App) applySpeedClick(id string) {
+	r := a.renderer
+	if r == nil {
+		return
+	}
+	for _, sb := range speedButtons {
+		if sb.id != id {
+			continue
+		}
+		if sb.speed == speedPaused {
+			r.togglePause()
+		} else {
+			r.setSpeed(sb.speed)
+		}
+		return
+	}
+}
+
+// globalUI declares the global controls' widget-kit parts: the settings
+// toggles (clickable) and the hover cards of the text rows.
+func (a *App) globalUI(sw, sh int) {
+	if a.renderer == nil {
+		return
+	}
+	rows := a.globalRows()
+	u := a.uiSt()
+	for i, tg := range globalToggleList {
+		if tg.run == nil {
+			continue
+		}
+		u.add(uiWidget{id: tg.id, label: tg.short, r: rows.Toggles[i], tip: tg.tip(a), click: func() { tg.run(a) }})
+	}
+	w := a.renderer.world()
+	a.uiTip("hud.tip.hour", rows.Hour, "Time\n"+a.hudTimeText())
+	a.uiTip("hud.tip.date", rows.Date, a.dateTip(w))
+	if !rows.Weather.empty() {
+		a.uiTip("hud.tip.weather", rows.Weather, "Weather\nThe sky and the wind (the arrow shows where it blows).")
+	}
+	a.uiTip("hud.tip.temp", rows.Temp, "Temperature\nThe air under the cursor: indoors inside a room, outdoors elsewhere. Over the HUD it shows the outdoor temperature.")
+	if !rows.Reason.empty() {
+		a.uiTip("hud.tip.reason", rows.Reason, "Paused\n"+a.speedReason())
+	}
+}
+
+// ---------------------------------------------------------------- Text rows
+
+// hudTimeText is the clock text with the speed: the date, the speed label
+// (which says why the game paused itself) and the schedule's activity.
+func (a *App) hudTimeText() string {
+	return fmt.Sprintf("%s  %s  %s", a.renderer.date(), a.speedLabel(), a.renderer.activity())
+}
+
+// speedReason says why the game is paused when the game did it itself: the
+// window went to the background, or a threat arrived. "" otherwise.
+func (a *App) speedReason() string {
+	if a.bg.paused {
+		return bgPausedLabel
+	}
+	r := a.renderer
+	if r == nil {
+		return ""
+	}
+	r.speedRate() // drops a stale threat flag once the game runs again
+	if r.threatPaused && r.speed == speedPaused {
+		return "Paused (threat)"
+	}
+	return ""
+}
+
+// hourLine is the clock and the schedule's current activity.
+func (a *App) hourLine() string {
+	d := a.renderer.date()
+	return fmt.Sprintf("%02d:%02d  %s · %s", d.Hour, d.Minute, d.Period(), a.renderer.activity())
+}
+
+// dateLine is the calendar date and the season.
+func (a *App) dateLine() string {
+	return dateSeasonLine(a.renderer.date(), a.renderer.world().Season, globalInnerW)
+}
+
+// dateSeasonLine is the date and the season in at most maxW px: the long
+// form, else a compact one.
+func dateSeasonLine(d clock.Date, season string, maxW float64) string {
+	forms := []string{
+		fmt.Sprintf("Day %d, Quadrum %d, Year %d", d.Day+1, d.Quadrum+1, d.Year+1),
+		fmt.Sprintf("D%d Q%d Y%d", d.Day+1, d.Quadrum+1, d.Year+1),
+	}
+	var s string
+	for _, f := range forms {
+		s = f
+		if season != "" {
+			s += " · " + season
+		}
+		if w, _ := measure(s, tsBody); w <= maxW {
+			return s
+		}
+	}
+	return ellipsize(s, tsBody, maxW)
+}
+
+// dateTip is the date row's hover card: the biome and its climate, else
+// the full date.
+func (a *App) dateTip(w game.WorldView) string {
+	lines := biomeTooltip(w)
+	if len(lines) == 0 {
+		return "Date\n" + a.renderer.date().String()
+	}
+	return seasonText(w) + "\n" + strings.Join(lines[1:], "\n")
+}
+
+// fmtDegrees is a temperature in tenths of a degree C as "18 °C",
+// rounding half away from zero like fmtTemp.
+func fmtDegrees(tenths int) string {
+	if tenths < 0 {
+		return fmt.Sprintf("%d °C", (tenths-5)/10)
+	}
+	return fmt.Sprintf("%d °C", (tenths+5)/10)
+}
+
+// temperatureLine is "Indoors 18 °C" or "Outdoors 9 °C" for the cell under
+// the cursor; over the HUD (or off the map) it is the outdoor temperature.
+func (a *App) temperatureLine() string {
+	w := a.renderer.world()
+	t, indoors := w.OutdoorTemp, false
+	if tx, ty, ok := a.hoveredCell(); ok { // hud_cellinfo.go
+		t = a.renderer.game.TemperatureAt(tx, ty)
+		_, indoors = tileTemp(w, tx, ty)
+	}
+	where := "Outdoors"
+	if indoors {
+		where = "Indoors"
+	}
+	return where + " " + fmtDegrees(t)
+}
+
+// ---------------------------------------------------------------- Drawing
+
+// rightText draws s right-aligned at x in the text row r.
+func rightText(screen *ebiten.Image, s string, x float32, r rect, st textStyle) {
+	st.Align = alignRight
+	drawText(screen, s, float64(x), float64(r.Y), st)
+}
+
+// drawGlobalControls draws the Global panel and its stack.
+func (a *App) drawGlobalControls(screen *ebiten.Image, sw, sh int) {
+	if a.renderer == nil {
+		return
+	}
+	g := a.hud().Global
+	if g.empty() {
+		return
+	}
+	plan := a.globalPlan()
+	rows := layoutGlobal(g, plan, len(globalToggleList))
+	drawPanel(screen, g.X, g.Y, g.W, g.H)
+	right := g.right() - globalPad
+	w := a.renderer.world()
+	mx, my := a.currentCursor()
+
+	for i, l := range plan.legend {
+		r := rect{rows.Legend.X, rows.Legend.Y + float32(i)*textRowH(), rows.Legend.W, textRowH()}
+		rightText(screen, l, right, r, withColor(tsBody, uiTextDim))
+	}
+	drawConditionLines(screen, plan.chips, rows.Conds) // status_chips.go
+	rightText(screen, a.temperatureLine(), right, rows.Temp, tsBody)
+	if !rows.Weather.empty() {
+		drawWeatherLabelRight(screen, int(right), int(rows.Weather.Y)+2, w) // environment.go: drawLabel lifts its text 2 px
+	}
+	rightText(screen, a.dateLine(), right, rows.Date, tsBody)
+	rightText(screen, a.hourLine(), right, rows.Hour, tsBody)
+	if !rows.Reason.empty() {
+		rightText(screen, a.speedReason(), right, rows.Reason, withColor(tsBody, uiWarning))
+	}
+	for i, sb := range speedButtons {
+		a.drawGlobalButton(screen, rows.Speed[i], sb.id, sb.icon, sb.short, a.renderer.speed == sb.speed, mx, my)
+	}
+	for i, tg := range globalToggleList {
+		a.drawGlobalButton(screen, rows.Toggles[i], tg.id, tg.icon, tg.short, tg.on(a), mx, my)
+	}
+}
+
+// drawGlobalButton draws a square or speed button: its icon, or its short
+// label while the icon is not drawn yet.
+func (a *App) drawGlobalButton(screen *ebiten.Image, r rect, id, icon, short string, on bool, mx, my int) {
+	b := button{id: id, x: r.X, y: r.Y, w: r.W, h: r.H, selected: on}
+	drawButton(screen, b, b.contains(mx, my))
+	if img := a.icon(icon); img != nil && icon != "" {
+		size := min(r.W, r.H) - 4
+		drawIcon(screen, img, float64(r.X+(r.W-size)/2), float64(r.Y+(r.H-size)/2), float64(size))
+		return
+	}
+	cx, cy := r.center()
+	drawCentered(screen, short, float64(cx), float64(cy), tsSmall)
+}
 
 // ---------------------------------------------------------- Roof overlay (UI-010)
 
 const (
 	roofButtonID  = "hud.roof"
-	roofButtonW   = 48
 	roofLegendTxt = "Roof: blue built · slate natural · dashed planned · hatched removal"
 )
-
-// hudTimeText is the right-aligned clock text of the top strip.
-func (a *App) hudTimeText() string {
-	return fmt.Sprintf("%s  %s  %s", a.renderer.date(), a.speedLabel(), a.renderer.activity())
-}
-
-// roofButtons is the HUD Roof toggle: top strip, left of the clock
-// (clicks route through applyClick).
-func (a *App) roofButtons(sw int) []button {
-	if a.renderer == nil {
-		return nil
-	}
-	x := float32(sw-int(textW(a.hudTimeText(), tsBody))-hudPad) - roofButtonW - hudPad
-	return []button{{id: roofButtonID, label: "Roof", x: x, y: 4, w: roofButtonW, h: hudTopH - 8, selected: a.renderer.roofOverlayOn(),
-		tip: "Roof overlay" + a.keyHint(input.RoofOverlay)}}
-}
-
-func (a *App) drawRoofButton(screen *ebiten.Image, sw int) {
-	mx, my := a.currentCursor()
-	for _, b := range a.roofButtons(sw) {
-		drawButton(screen, b, b.contains(mx, my))
-		if img := a.icon("overlay_roof"); img != nil {
-			// Icon replaces the text label: blank it with the button fill, then draw.
-			uiFillRect(screen, b.x+2, b.y+2, b.w-4, b.h-4, uiBtn, false)
-			if b.selected {
-				uiFillRect(screen, b.x+2, b.y+2, b.w-4, b.h-4, uiBtnSelected, false)
-			}
-			drawIcon(screen, img, float64(b.x)+(float64(b.w)-float64(b.h)+4)/2, float64(b.y)+2, float64(b.h)-4)
-		}
-		if line := a.roofLegend(); line != "" { // a tab under the bar, clear of the readouts
-			lw := textW(line, tsBody) + 2*hudPad
-			lx := min(b.x+b.w, float32(sw-hudPad)) - lw
-			drawPanel(screen, lx, hudTopH+2, lw, lineStep(tsBody)+6)
-			drawLabel(screen, int(lx)+hudPad, int(hudTopH)+7, line)
-		}
-	}
-}
 
 // roofLegend is the one-line key shown while the Roof overlay is on.
 func (a *App) roofLegend() string {
@@ -179,10 +556,7 @@ func (a *App) drawRoofToolGhost(screen *ebiten.Image, x0, y0, x1, y1 int) {
 
 // ---------------------------------------------------------- Home overlay (SIM-021)
 
-const (
-	homeButtonID = "hud.home"
-	homeButtonW  = 48
-)
+const homeButtonID = "hud.home"
 
 // homeToolID reports id is one of the two Home Architect tools.
 func homeToolID(id string) bool { return id == "home" || id == "unhome" }
@@ -209,30 +583,6 @@ func (r *Renderer) toggleHomeOverlayIfAny() {
 	}
 }
 
-// homeButtons is the HUD Home toggle, immediately left of the Roof button.
-// Clicks route through applyClick (id homeButtonID).
-func (a *App) homeButtons(sw int) []button {
-	rb := a.roofButtons(sw)
-	if len(rb) == 0 {
-		return nil
-	}
-	return []button{{id: homeButtonID, label: "Home", x: rb[0].x - homeButtonW - hudPad/2, y: 4, w: homeButtonW, h: hudTopH - 8, selected: a.renderer.homeShown()}}
-}
-
-func (a *App) drawHomeButton(screen *ebiten.Image, sw int) {
-	mx, my := a.currentCursor()
-	for _, b := range a.homeButtons(sw) {
-		drawButton(screen, b, b.contains(mx, my))
-		if img := a.icon("home"); img != nil {
-			uiFillRect(screen, b.x+2, b.y+2, b.w-4, b.h-4, uiBtn, false)
-			if b.selected {
-				uiFillRect(screen, b.x+2, b.y+2, b.w-4, b.h-4, uiBtnSelected, false)
-			}
-			drawIcon(screen, img, float64(b.x)+(float64(b.w)-float64(b.h)+4)/2, float64(b.y)+2, float64(b.h)-4)
-		}
-	}
-}
-
 // homeLabelAt is "Home area" when the tile is in the Home area.
 func homeLabelAt(w game.WorldView, x, y int) string {
 	if w.TerrainW <= 0 || x < 0 || y < 0 || x >= w.TerrainW {
@@ -246,10 +596,7 @@ func homeLabelAt(w game.WorldView, x, y int) string {
 
 // ---------------------------------------------------------- Plan overlay (PLAY-012)
 
-const (
-	planButtonID = "hud.plan"
-	planButtonW  = 48
-)
+const planButtonID = "hud.plan"
 
 // planToolID reports id is one of the two Plan Architect tools.
 func planToolID(id string) bool { return id == "plan" || id == "unplan" }
@@ -276,29 +623,6 @@ func (r *Renderer) togglePlanOverlayIfAny() {
 	}
 }
 
-// planButtons is the HUD Plans toggle, immediately left of the Home button.
-func (a *App) planButtons(sw int) []button {
-	hb := a.homeButtons(sw)
-	if len(hb) == 0 {
-		return nil
-	}
-	return []button{{id: planButtonID, label: "Plans", x: hb[0].x - planButtonW - hudPad/2, y: 4, w: planButtonW, h: hudTopH - 8, selected: a.renderer.planShown()}}
-}
-
-func (a *App) drawPlanButton(screen *ebiten.Image, sw int) {
-	mx, my := a.currentCursor()
-	for _, b := range a.planButtons(sw) {
-		drawButton(screen, b, b.contains(mx, my))
-		if img := a.icon("plan"); img != nil {
-			uiFillRect(screen, b.x+2, b.y+2, b.w-4, b.h-4, uiBtn, false)
-			if b.selected {
-				uiFillRect(screen, b.x+2, b.y+2, b.w-4, b.h-4, uiBtnSelected, false)
-			}
-			drawIcon(screen, img, float64(b.x)+(float64(b.w)-float64(b.h)+4)/2, float64(b.y)+2, float64(b.h)-4)
-		}
-	}
-}
-
 // planLabelAt is "Planned" when the tile carries a plan mark.
 func planLabelAt(w game.WorldView, x, y int) string {
 	if w.TerrainW <= 0 || x < 0 || y < 0 || x >= w.TerrainW {
@@ -309,6 +633,3 @@ func planLabelAt(w game.WorldView, x, y int) string {
 	}
 	return ""
 }
-
-// globalState is this region's presentation state (App.hst).
-type globalState struct{}

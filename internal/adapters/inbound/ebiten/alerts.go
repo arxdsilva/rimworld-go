@@ -1,10 +1,11 @@
 package ebiten
 
 import (
+	"cmp"
 	"fmt"
-	"image/color"
 	"math"
 	"math/bits"
+	"slices"
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -12,22 +13,32 @@ import (
 	"rimworld-go/internal/application/game"
 )
 
-// Alert list (UI checklist §alerts): a stack on the right edge under the
-// top bar, rebuilt from the read model each frame. Danger alerts are
-// red; warnings amber. Clicking an alert centres the camera on its next
-// target, cycling through them.
+// Alert list (PLAY-018, MAIN_UI §32): a stack in the right column, in the
+// layout's Alerts rect (hud_layout.go) from below the Learning Helper down
+// to the letters, rebuilt from the read model each frame. Dangers come
+// first (their backing pulses), then warnings, each group by key so the
+// order never reshuffles while the alerts persist. Hovering a row shows
+// what is wrong and what to do in a card to its left; a click centres the
+// camera on the alert's next target, a right-click on the previous one.
+
+// alertSev is how urgent an alert is; the list is ordered by it.
+type alertSev uint8
+
+const (
+	sevDanger alertSev = iota
+	sevWarning
+)
 
 type alert struct {
 	key     string // stable id for click cycling
 	label   string
 	danger  bool
+	sev     alertSev // sevDanger for danger alerts (set by buildAlerts)
+	explain string   // what is wrong and what to do (set by buildAlerts)
 	targets [][2]int
 }
 
 const (
-	alertW   = 260
-	alertH   = 24
-	alertGap = 4
 	// lowFoodPerColonist: fewer ground food items per colonist than
 	// this raises "Low food".
 	lowFoodPerColonist = 4
@@ -35,10 +46,29 @@ const (
 	exposureAlert = 200
 )
 
-var warnClr = color.RGBA{R: 0xE0, G: 0xA8, B: 0x40, A: 0xFF}
-
-// buildAlerts derives the current alerts from pawns and the world.
+// buildAlerts derives the current alerts from pawns and the world, most
+// urgent first: dangers before warnings, then by key.
 func buildAlerts(pawns []game.PawnView, w game.WorldView) []alert {
+	out := raiseAlerts(pawns, w)
+	for i := range out {
+		al := &out[i]
+		al.sev = sevWarning
+		if al.danger {
+			al.sev = sevDanger
+		}
+		al.explain = alertExplain(al.key)
+	}
+	slices.SortStableFunc(out, func(a, b alert) int {
+		if c := cmp.Compare(a.sev, b.sev); c != 0 {
+			return c
+		}
+		return strings.Compare(a.key, b.key)
+	})
+	return out
+}
+
+// raiseAlerts collects the alerts in the order the checks run.
+func raiseAlerts(pawns []game.PawnView, w game.WorldView) []alert {
 	var out []alert
 	allPawns := pawns // the chased colonist is named from the whole list
 	// raiders are listed with the colonists; split them off first
@@ -245,45 +275,123 @@ type alertsKey struct {
 	nFrames, food                    int
 }
 
-func alertRect(sw, i int) button {
-	return button{x: float32(sw - alertW - hudPad), y: float32(hudTopH + hudPad + i*(alertH+alertGap)), w: alertW, h: alertH}
+// alertRow is one row of the stack: an alert, or the "+N more" row that
+// stands for the alerts that did not fit.
+type alertRow struct {
+	r      rect
+	al     alert   // zero for the "+N more" row
+	more   int     // > 0: the "+N more" row
+	hidden []alert // what the "+N more" row stands for
 }
 
-func (a *App) alertButtons(sw int) []button {
-	if a.workOpen {
+// alertRowLabel is the text a row shows.
+func alertRowLabel(r alertRow) string {
+	if r.more > 0 {
+		return fmt.Sprintf("+%d more", r.more)
+	}
+	return r.al.label
+}
+
+// stackSplit says how many of total entries a stack of rows rows shows
+// and how many it folds into its "+N" row. limit caps the entries shown
+// before the "+N" row appears at all (the letter stack's eight). With one
+// row there is no room for the count, so it shows an entry.
+func stackSplit(total, rows, limit int) (shown, folded int) {
+	switch {
+	case total <= 0 || rows <= 0:
+		return 0, max(total, 0)
+	case total <= limit && total <= rows:
+		return total, 0
+	case rows == 1:
+		return 1, 0
+	}
+	shown = min(rows-1, limit)
+	return shown, total - shown
+}
+
+// alertRows lays the alert stack out in l's Alerts rect: the most urgent
+// alerts first, the last row counting the rest when they do not fit.
+func (a *App) alertRows(l hudLayout) []alertRow {
+	als := a.currentAlerts()
+	if len(als) == 0 || l.AlertRows <= 0 || l.Alerts.empty() {
 		return nil
 	}
+	shown, more := stackSplit(len(als), l.AlertRows, len(als))
+	rows := make([]alertRow, 0, shown+1)
+	at := func(i int) rect {
+		return rect{l.Alerts.X, l.Alerts.Y + float32(i)*(alertRowH+hudGap), l.Alerts.W, alertRowH}
+	}
+	for i := 0; i < shown; i++ {
+		rows = append(rows, alertRow{r: at(i), al: als[i]})
+	}
+	if more > 0 {
+		rows = append(rows, alertRow{r: at(shown), more: more, hidden: als[shown:]})
+	}
+	return rows
+}
+
+// alertButtons are the alert rows as click targets, ids "alert.<key>".
+func (a *App) alertButtons(sw int) []button { return a.alertButtonsIn(a.hud()) }
+
+func (a *App) alertButtonsIn(l hudLayout) []button {
 	var out []button
-	for i, al := range a.currentAlerts() {
-		r := alertRect(sw, i)
-		r.id, r.label = "alert."+al.key, al.label
-		out = append(out, r)
+	for _, row := range a.alertRows(l) {
+		if row.more > 0 {
+			continue // the count is not a place to jump to
+		}
+		out = append(out, button{id: "alert." + row.al.key, label: row.al.label, x: row.r.X, y: row.r.Y, w: row.r.W, h: row.r.H})
 	}
 	return out
 }
 
-func (a *App) drawAlerts(screen *ebiten.Image, sw int) {
-	if a.workOpen {
+// alertPulse is the danger backing's brightness (0.55..1) at presentation
+// frame present; reduced motion holds it steady.
+func alertPulse(present uint64, reduced bool) float64 {
+	if reduced {
+		return 1
+	}
+	return 0.775 + 0.225*math.Sin(float64(present)/9)
+}
+
+func (a *App) drawAlerts(screen *ebiten.Image, sw int) { a.drawAlertsIn(screen, a.hud()) }
+
+func (a *App) drawAlertsIn(screen *ebiten.Image, l hudLayout) {
+	rows := a.alertRows(l)
+	if len(rows) == 0 {
 		return
 	}
-	for i, al := range a.currentAlerts() {
-		r := alertRect(sw, i)
-		edge := warnClr
-		bg := color.RGBA{48, 36, 22, 230}
-		if al.danger {
-			pulse := 0.55 + 0.45*math.Sin(float64(a.renderer.present)/9)
-			edge, bg = fade(alertClr, pulse), color.RGBA{60, 18, 14, 235}
+	pulse := alertPulse(a.renderer.present, a.renderer.reducedMotion)
+	mx, my := a.currentCursor()
+	for _, row := range rows {
+		r := row.r
+		edge, bg, text := uiWarning, uiAlertWarnBg, uiText
+		switch {
+		case row.more > 0:
+			edge, bg, text = uiPanelBorder, uiPanel, uiTextDim
+		case row.al.sev == sevDanger:
+			edge, bg = uiDanger, fade(uiAlertDangerBg, pulse)
 		}
-		uiFillRect(screen, r.x, r.y, r.w, r.h, bg, false)
-		uiFillRect(screen, r.x, r.y, 4, r.h, edge, false)
-		uiStrokeRect(screen, r.x, r.y, r.w, r.h, 1, edge, false)
-		drawFitSmall(screen, al.label, float64(r.x)+12, float64(r.y)+(float64(r.h)-lineH(tsBody))/2, float64(r.w)-18, tsBody)
+		fillRect(screen, r, bg)
+		if row.more == 0 {
+			fillRect(screen, rect{r.X, r.Y, 4, r.H}, edge)
+		}
+		border := edge
+		if row.more > 0 || !r.hit(mx, my) {
+			border = fade(edge, 0.5)
+		}
+		strokeRect(screen, r, border)
+		drawText(screen, fitText(alertRowLabel(row), tsBody, r.W-20), float64(r.X)+12, float64(r.Y)+(float64(r.H)-lineH(tsBody))/2, withColor(tsBody, text))
 	}
 }
 
 // focusAlert centres the camera on the alert's next target.
-func (a *App) focusAlert(id string) {
-	key := strings.TrimPrefix(id, "alert.")
+func (a *App) focusAlert(id string) { a.cycleAlert(strings.TrimPrefix(id, "alert."), 1) }
+
+// cycleAlert centres the camera on the alert's next target (dir 1) or
+// previous one (dir -1), wrapping round. alertCycle holds one more than
+// the index of the target on show (0: none yet), so a fresh alert going
+// back starts at its last.
+func (a *App) cycleAlert(key string, dir int) {
 	for _, al := range a.currentAlerts() {
 		if al.key != key || len(al.targets) == 0 {
 			continue
@@ -291,8 +399,16 @@ func (a *App) focusAlert(id string) {
 		if a.alertCycle == nil {
 			a.alertCycle = map[string]int{}
 		}
-		t := al.targets[a.alertCycle[key]%len(al.targets)]
-		a.alertCycle[key]++
+		n, v := len(al.targets), a.alertCycle[key]
+		idx := v % n
+		if dir < 0 {
+			idx = n - 1
+			if v > 0 {
+				idx = ((v-2)%n + n) % n
+			}
+		}
+		a.alertCycle[key] = idx + 1
+		t := al.targets[idx]
 		a.centerOnMap(float64(t[0])+0.5, float64(t[1])+0.5)
 		return
 	}
@@ -445,4 +561,38 @@ func waitingFramesAlert(w game.WorldView) (alert, bool) {
 		return alert{}, false
 	}
 	return alert{key: "waitingframes", label: fmt.Sprintf("Blueprints waiting for materials (%d)", len(at)), targets: at}, true
+}
+
+// alertExplanations say, for each alert key, what is wrong and what to do
+// (the card shown while the alert is hovered). Keys with a numeric suffix
+// ("penopen.3") share the text of their prefix.
+var alertExplanations = map[string]string{
+	"hostile":       "Wild animals are attacking colonists. Draft your fighters and keep everyone else indoors until the threat is dead or gone.",
+	"fire":          "Something inside the colony is burning, and fire spreads along wood and dry grass. Send colonists to put it out and clear what it can reach.",
+	"animalhungry":  "Tame animals are running low on food. Put something they eat within reach, or build a feeding trough in their pen.",
+	"cropraid":      "Wild animals are eating a field. Drive them off or fence the crops in before the harvest is lost.",
+	"timbergnaw":    "Timbergnaws are gnawing trees down. Hunt them, or keep them away from the wood you still need.",
+	"penopen":       "A pen has a gap in its fence, so the animals inside can wander out. Close the gap or add a gate.",
+	"penfull":       "A pen holds more animals than it comfortably fits. Make it bigger or build a second pen.",
+	"unpenned":      "Tame livestock are roaming with no pen. Give them one so they stay where you can feed and tend them.",
+	"rescue":        "A wounded colonist is lying where they fell. Send a healthy colonist to carry them to a bed so they can heal.",
+	"starving":      "A colonist has collapsed from hunger. Get food within reach and carry them to a bed to recover.",
+	"collapsed":     "A colonist dropped from exhaustion with nowhere to sleep. Build enough beds so everyone can rest.",
+	"food":          "There is little food for the number of colonists. Plant and harvest crops, hunt, or stop food going to waste before anyone starves.",
+	"raid":          "Armed raiders are on the map. Draft your fighters, take cover near your defences and hold a line.",
+	"break":         "A colonist is having a mental break and may act on their own. Keep others out of the way, then work on lifting their mood.",
+	"hypothermia":   "Colonists are freezing. Bring them indoors beside a fire and give them warm clothes.",
+	"heatstroke":    "Colonists are overheating. Move them into shade or a cool room and keep them off heavy work.",
+	"nofuel":        "A fire has burned out of wood. Add wood to keep the room warm and lit.",
+	"spoiling":      "Stored food is about to rot. Eat it, or move it somewhere cool, before it is lost.",
+	"waitingframes": "Some blueprints need materials that are not in stock. Gather or make what they need, or cancel the blueprints.",
+	"unhappy":       "Colonists are in a poor mood and close to breaking. Look at what drags it down: hunger, rest, comfort and room to breathe.",
+}
+
+// alertExplain is the explanation for an alert key.
+func alertExplain(key string) string {
+	if e, ok := alertExplanations[strings.SplitN(key, ".", 2)[0]]; ok {
+		return e
+	}
+	return "Select this alert to look at the cause."
 }

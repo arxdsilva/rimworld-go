@@ -2,7 +2,6 @@ package ebiten
 
 import (
 	"fmt"
-	"image/color"
 	"strconv"
 	"strings"
 
@@ -57,6 +56,80 @@ const (
 	animalsRowTop = 84
 )
 
+// animalCol is a column of the Colony or Wild list that is left out when
+// the window is narrow: its x in the full layout (the constants above) and
+// its width.
+type animalCol struct{ x, w int }
+
+// The columns left out first when the window is narrower than the full
+// layout, in that order, and the full layouts' widths (right padding
+// included). The ones kept are the ones the buttons need.
+var (
+	colonyDrops = []animalCol{{colDoing, colBtn - colDoing}, {colTrain, colDoing - colTrain}, {colPreg, colHealth - colPreg},
+		{colProduct, colPreg - colProduct}, {colAge, colFood - colAge}, {colSex, colAge - colSex}}
+	wildDrops = []animalCol{{wildMarks, wildBtn - wildMarks}, {wildMeat, wildMarks - wildMeat}, {wildDiet, wildPred - wildDiet}}
+)
+
+const (
+	colonyFullW = colBtn + 196 + 12
+	wildFullW   = wildBtn + 272 + 12
+)
+
+// animalCols are the columns of a list left out to fit a window.
+type animalCols []animalCol
+
+// animalColsFor is the columns the Colony (or Wild) list leaves out in a
+// window w px wide.
+func animalColsFor(w float32, wild bool) animalCols {
+	drops, full := colonyDrops, colonyFullW
+	if wild {
+		drops, full = wildDrops, wildFullW
+	}
+	var out animalCols
+	for _, d := range drops {
+		if float32(full) <= w {
+			break
+		}
+		out = append(out, d)
+		full -= d.w
+	}
+	return out
+}
+
+// shown reports the column at full-layout x is kept.
+func (c animalCols) shown(x int) bool {
+	for _, h := range c {
+		if h.x == x {
+			return false
+		}
+	}
+	return true
+}
+
+// at is the x of the column at full-layout x once the left-out columns
+// before it are gone.
+func (c animalCols) at(x int) int {
+	out := x
+	for _, h := range c {
+		if h.x < x {
+			out -= h.w
+		}
+	}
+	return out
+}
+
+// animalsWant is the Animals (or Wildlife) window's wanted size: the full
+// layout, and a row per tame animal or wild species.
+func (a *App) animalsWant() (float32, float32) {
+	w, rows := colonyFullW, 0
+	if a.animalsWild {
+		w, rows = wildFullW, len(a.wildlife())
+	} else if a.renderer != nil {
+		rows = len(a.tameAnimals())
+	}
+	return float32(w), float32(max(160, animalsRowTop+rows*animalRowH+8))
+}
+
 // wildlife is the game's wild species list, read again only when the
 // simulation tick moves.
 func (a *App) wildlife() []game.WildlifeRow {
@@ -81,7 +154,8 @@ func (a *App) wildRow(species string) (game.WildlifeRow, bool) {
 }
 
 func (a *App) animalsTabButtons() []button {
-	r := workRect(a.sw, a.sh)
+	r := a.windowRect()
+	cols := animalColsFor(r.w, a.animalsWild)
 	out := []button{
 		{id: "animals.view.colony", label: "Colony", x: r.x + r.w - 190, y: r.y + 6, w: 84, h: 24, selected: !a.animalsWild},
 		{id: "animals.view.wild", label: "Wild", x: r.x + r.w - 100, y: r.y + 6, w: 84, h: 24, selected: a.animalsWild},
@@ -93,10 +167,10 @@ func (a *App) animalsTabButtons() []button {
 				break
 			}
 			out = append(out,
-				button{id: "animals.focus." + row.Species, x: r.x + 12, y: y, w: wildBtn - 24, h: animalRowH - 2},
-				button{id: "animals.wild.hunt." + row.Species, label: "Hunt all", x: r.x + wildBtn, y: y, w: 90, h: 24, selected: row.Hunted > 0},
-				button{id: "animals.wild.tame." + row.Species, label: "Tame one", x: r.x + wildBtn + 96, y: y, w: 90, h: 24, selected: row.TameMarked > 0},
-				button{id: "animals.wild.cancel." + row.Species, label: "Cancel", x: r.x + wildBtn + 192, y: y, w: 80, h: 24},
+				button{id: "animals.focus." + row.Species, x: r.x + 12, y: y, w: float32(cols.at(wildBtn) - 24), h: animalRowH - 2},
+				button{id: "animals.wild.hunt." + row.Species, label: "Hunt all", x: r.x + float32(cols.at(wildBtn)), y: y, w: 90, h: 24, selected: row.Hunted > 0},
+				button{id: "animals.wild.tame." + row.Species, label: "Tame one", x: r.x + float32(cols.at(wildBtn)) + 96, y: y, w: 90, h: 24, selected: row.TameMarked > 0},
+				button{id: "animals.wild.cancel." + row.Species, label: "Cancel", x: r.x + float32(cols.at(wildBtn)) + 192, y: y, w: 80, h: 24},
 			)
 		}
 		return out
@@ -112,13 +186,13 @@ func (a *App) animalsTabButtons() []button {
 			slaughter = "Spare"
 		}
 		out = append(out,
-			button{id: "animals.master." + id, label: animalMasterCell(an), x: r.x + colMaster - 2, y: y, w: 88, h: 24,
+			button{id: "animals.master." + id, label: animalMasterCell(an), x: r.x + float32(cols.at(colMaster)) - 2, y: y, w: 88, h: 24,
 				tip: "Master\nPick the colonist who handles this animal."},
-			button{id: "animals.slaughter." + id, label: slaughter, x: r.x + colBtn, y: y, w: 100, h: 24, selected: an.Designated},
-			button{id: "animals.release." + id, label: "Release", x: r.x + colBtn + 106, y: y, w: 90, h: 24},
+			button{id: "animals.slaughter." + id, label: slaughter, x: r.x + float32(cols.at(colBtn)), y: y, w: 100, h: 24, selected: an.Designated},
+			button{id: "animals.release." + id, label: "Release", x: r.x + float32(cols.at(colBtn)) + 106, y: y, w: 90, h: 24},
 		)
 		if an.CanFollow { // PLAY-015: follow the drafted master, on or off
-			out = append(out, button{id: "animals.follow." + id, label: followCell(an), x: r.x + colFollow - 2, y: y,
+			out = append(out, button{id: "animals.follow." + id, label: followCell(an), x: r.x + float32(cols.at(colFollow)) - 2, y: y,
 				w: colArea - colFollow - 8, h: 24, selected: an.Follows,
 				tip: "Follow drafted\nWhether it follows its master while the master is drafted."})
 		}
@@ -232,7 +306,7 @@ func (a *App) focusWild(species string) {
 }
 
 func (a *App) drawAnimalsTab(screen *ebiten.Image, sw, sh int) {
-	r := workRect(sw, sh)
+	r := a.windowRect()
 	drawPanel(screen, r.x, r.y, r.w, r.h)
 	w := a.renderer.world()
 	marked := 0
@@ -241,7 +315,11 @@ func (a *App) drawAnimalsTab(screen *ebiten.Image, sw, sh int) {
 			marked++
 		}
 	}
-	drawText(screen, fmt.Sprintf("Animals  (%d tame, %d marked for taming, %d pens)", len(a.tameAnimals()), marked, len(w.Pens)+countZones(w, game.ZonePen)), float64(r.x)+12, float64(r.y)+8, tsLabel)
+	title := fmt.Sprintf("Animals  (%d tame, %d marked for taming, %d pens)", len(a.tameAnimals()), marked, len(w.Pens)+countZones(w, game.ZonePen))
+	if a.animalsWild {
+		title = fmt.Sprintf("Wildlife  (%d species)", len(a.wildlife()))
+	}
+	drawText(screen, ellipsize(title, tsLabel, float64(r.w)-12-200), float64(r.x)+12, float64(r.y)+8, tsLabel)
 	mx, my := a.currentCursor()
 	if a.animalsWild {
 		a.drawWildList(screen, r)
@@ -257,14 +335,17 @@ func (a *App) drawAnimalsTab(screen *ebiten.Image, sw, sh int) {
 
 func (a *App) drawColonyList(screen *ebiten.Image, r button) {
 	x0, y0 := int(r.x), int(r.y)
-	drawFitSmall(screen, "Tame with Architect > Orders > Tame (hunters do it). Handle work tames, trains, milks and shears; pens keep animals in place. Pick a master and training in the inspector.", float64(x0+12), float64(y0+34), float64(colBtn-24), tsBody)
+	cols := animalColsFor(r.w, false)
+	drawFitSmall(screen, "Tame with Architect > Orders > Tame (hunters do it). Handle work tames, trains, milks and shears; pens keep animals in place. Pick a master and training in the inspector.", float64(x0+12), float64(y0+34), float64(r.w)-24, tsBody)
 	head := y0 + animalsRowTop - 22
 	for _, h := range []struct {
 		x int
 		s string
 	}{{colName, "Name"}, {colSpecies, "Species"}, {colSex, "Sex"}, {colAge, "Age"}, {colFood, "Food"},
 		{colProduct, "Product"}, {colPreg, "Preg."}, {colHealth, "Health"}, {colMaster, "Master"}, {colFollow, "Follow"}, {colArea, "Area / Pen"}, {colTrain, "Training"}, {colDoing, "Doing"}} {
-		drawLabel(screen, x0+h.x, head, h.s)
+		if cols.shown(h.x) {
+			drawLabel(screen, x0+cols.at(h.x), head, h.s)
+		}
 	}
 	list := a.tameAnimals()
 	for i, an := range list {
@@ -274,24 +355,36 @@ func (a *App) drawColonyList(screen *ebiten.Image, r button) {
 		}
 		drawAnimalIcon(screen, a.renderer.art, an, float64(r.x)+16, float64(y), 26)
 		ty := y + 6
-		drawLabelClip(screen, x0+colName, ty, colSpecies-colName-6, an.Name)
-		drawLabelClip(screen, x0+colSpecies, ty, colSex-colSpecies-6, animalLabel(an))
-		drawLabelClip(screen, x0+colSex, ty, colAge-colSex-4, animalSexLetter(an))
-		drawLabelClip(screen, x0+colAge, ty, colFood-colAge-6, animalAgeText(an))
-		if animalHasNeeds(an) {
-			drawMiniBar(screen, x0+colFood, y+8, 70, 10, an.Food, an.Food < hungryBelow)
+		drawLabelClip(screen, x0+cols.at(colName), ty, colSpecies-colName-6, an.Name)
+		drawLabelClip(screen, x0+cols.at(colSpecies), ty, colSex-colSpecies-6, animalLabel(an))
+		if cols.shown(colSex) {
+			drawLabelClip(screen, x0+cols.at(colSex), ty, colAge-colSex-4, animalSexLetter(an))
 		}
-		drawLabelClip(screen, x0+colProduct, ty, colPreg-colProduct-6, animalProductText(an))
-		drawLabelClip(screen, x0+colPreg, ty, colHealth-colPreg-6, animalPregCell(an))
-		drawLabelClip(screen, x0+colHealth, ty, colMaster-colHealth-6, fmt.Sprintf("%d%%", an.Health))
+		if cols.shown(colAge) {
+			drawLabelClip(screen, x0+cols.at(colAge), ty, colFood-colAge-6, animalAgeText(an))
+		}
+		if animalHasNeeds(an) {
+			drawMiniBar(screen, x0+cols.at(colFood), y+8, 70, 10, an.Food, an.Food < hungryBelow)
+		}
+		if cols.shown(colProduct) {
+			drawLabelClip(screen, x0+cols.at(colProduct), ty, colPreg-colProduct-6, animalProductText(an))
+		}
+		if cols.shown(colPreg) {
+			drawLabelClip(screen, x0+cols.at(colPreg), ty, colHealth-colPreg-6, animalPregCell(an))
+		}
+		drawLabelClip(screen, x0+cols.at(colHealth), ty, colMaster-colHealth-6, fmt.Sprintf("%d%%", an.Health))
 		if !an.CanFollow { // trained animals get the on/off toggle button
-			drawLabelClip(screen, x0+colFollow, ty, colArea-colFollow-6, followCell(an))
+			drawLabelClip(screen, x0+cols.at(colFollow), ty, colArea-colFollow-6, followCell(an))
 		}
 		if an.Penned { // area animals have the dropdown widget (animalsTabUI)
-			drawLabelClip(screen, x0+colArea, ty, colTrain-colArea-6, animalAreaCell(an, nil))
+			drawLabelClip(screen, x0+cols.at(colArea), ty, colTrain-colArea-6, animalAreaCell(an, nil))
 		}
-		drawLabelClip(screen, x0+colTrain, ty, colDoing-colTrain-6, animalTrainingCell(an))
-		drawLabelClip(screen, x0+colDoing, ty, colBtn-colDoing-8, animalDoing(an))
+		if cols.shown(colTrain) {
+			drawLabelClip(screen, x0+cols.at(colTrain), ty, colDoing-colTrain-6, animalTrainingCell(an))
+		}
+		if cols.shown(colDoing) {
+			drawLabelClip(screen, x0+cols.at(colDoing), ty, colBtn-colDoing-8, animalDoing(an))
+		}
 	}
 	if len(list) == 0 {
 		drawLabel(screen, int(r.x)+52, int(r.y)+animalsRowTop, "No tame animals yet.")
@@ -300,13 +393,16 @@ func (a *App) drawColonyList(screen *ebiten.Image, r button) {
 
 func (a *App) drawWildList(screen *ebiten.Image, r button) {
 	x0, y0 := int(r.x), int(r.y)
-	drawFitSmall(screen, "Wild animals on the map. Click a row to look at one; Hunt all marks every animal of it, Tame one marks a single animal.", float64(x0+12), float64(y0+34), float64(wildBtn-24), tsBody)
+	cols := animalColsFor(r.w, true)
+	drawFitSmall(screen, "Wild animals on the map. Click a row to look at one; Hunt all marks every animal of it, Tame one marks a single animal.", float64(x0+12), float64(y0+34), float64(r.w)-24, tsBody)
 	head := y0 + animalsRowTop - 22
 	for _, h := range []struct {
 		x int
 		s string
 	}{{wildLabel, "Species"}, {wildCount, "Count"}, {wildDiet, "Diet"}, {wildPred, "Pred."}, {wildTame, "Tame chance"}, {wildMeat, "Meat each"}, {wildMarks, "Marked"}} {
-		drawLabel(screen, x0+h.x, head, h.s)
+		if cols.shown(h.x) {
+			drawLabel(screen, x0+cols.at(h.x), head, h.s)
+		}
 	}
 	rows := a.wildlife()
 	for i, row := range rows {
@@ -317,14 +413,20 @@ func (a *App) drawWildList(screen *ebiten.Image, r button) {
 		drawAnimalIcon(screen, a.renderer.art, game.AnimalView{Species: row.Species, Label: row.Label}, float64(r.x)+16, float64(y), 26)
 		ty := y + 6
 		drawLabelClip(screen, x0+wildLabel, ty, wildCount-wildLabel-6, row.Label)
-		drawLabelClip(screen, x0+wildCount, ty, wildDiet-wildCount-6, fmt.Sprintf("x%d", row.Count))
-		drawLabelClip(screen, x0+wildDiet, ty, wildPred-wildDiet-6, row.Diet)
-		if row.Predator {
-			drawWarning(screen, float32(x0+wildPred+6), float32(y+13))
+		drawLabelClip(screen, x0+cols.at(wildCount), ty, wildDiet-wildCount-6, fmt.Sprintf("x%d", row.Count))
+		if cols.shown(wildDiet) {
+			drawLabelClip(screen, x0+cols.at(wildDiet), ty, wildPred-wildDiet-6, row.Diet)
 		}
-		drawLabelClip(screen, x0+wildTame, ty, wildMeat-wildTame-6, fmt.Sprintf("%d%%", row.TameChance))
-		drawLabelClip(screen, x0+wildMeat, ty, wildMarks-wildMeat-6, strconv.Itoa(row.Meat))
-		drawLabelClip(screen, x0+wildMarks, ty, wildBtn-wildMarks-8, fmt.Sprintf("hunt %d, tame %d", row.Hunted, row.TameMarked))
+		if row.Predator {
+			drawWarning(screen, float32(x0+cols.at(wildPred)+6), float32(y+13))
+		}
+		drawLabelClip(screen, x0+cols.at(wildTame), ty, wildMeat-wildTame-6, fmt.Sprintf("%d%%", row.TameChance))
+		if cols.shown(wildMeat) {
+			drawLabelClip(screen, x0+cols.at(wildMeat), ty, wildMarks-wildMeat-6, strconv.Itoa(row.Meat))
+		}
+		if cols.shown(wildMarks) {
+			drawLabelClip(screen, x0+cols.at(wildMarks), ty, wildBtn-wildMarks-8, fmt.Sprintf("hunt %d, tame %d", row.Hunted, row.TameMarked))
+		}
 	}
 	if len(rows) == 0 {
 		drawLabel(screen, x0+52, y0+animalsRowTop, "No wild animals in sight.")
@@ -409,8 +511,8 @@ func animalDoing(an game.AnimalView) string {
 // drawMiniBar is a thin percent bar; low ones are red.
 func drawMiniBar(screen *ebiten.Image, x, y, w, h, pct int, low bool) {
 	pct = max(0, min(100, pct))
-	uiFillRect(screen, float32(x), float32(y), float32(w), float32(h), color.RGBA{R: 40, G: 30, B: 24, A: 255}, false)
-	fill := color.RGBA{R: 120, G: 170, B: 70, A: 255}
+	uiFillRect(screen, float32(x), float32(y), float32(w), float32(h), uiField, false)
+	fill := uiGood
 	if low {
 		fill = alertClr
 	}
@@ -474,7 +576,8 @@ func (a *App) animalsTabUI(sw, sh int) {
 	if a.renderer == nil || !a.workOpen || a.panelMode != "animals" || a.animalsWild {
 		return
 	}
-	r := workRect(sw, sh)
+	r := a.windowRect()
+	cols := animalColsFor(r.w, false)
 	for i, an := range a.tameAnimals() {
 		y := r.y + animalsRowTop + float32(i*animalRowH)
 		if y+animalRowH > r.y+r.h {
@@ -485,7 +588,7 @@ func (a *App) animalsTabUI(sw, sh int) {
 		}
 		an := an
 		a.areaDropdown("animals.area."+strconv.FormatUint(uint64(an.ID), 10),
-			rect{r.x + colArea - 2, y, colTrain - colArea - 4, 24}, an.AreaRef,
+			rect{r.x + float32(cols.at(colArea)) - 2, y, colTrain - colArea - 4, 24}, an.AreaRef,
 			func(ref int) { a.assignArea(an.ID, ref) })
 	}
 }
@@ -502,10 +605,11 @@ func (a *App) openAnimalMasterMenu(an game.AnimalView) {
 		opts = append(opts, o)
 	}
 	opts = append(opts, game.OrderOption{Label: "No master", Cmd: command.Command{Kind: command.SetAnimalMaster, Target: uint64(an.ID)}})
-	r := workRect(a.size())
+	r := a.windowRect()
+	cols := animalColsFor(r.w, false)
 	for i, t := range a.tameAnimals() {
 		if t.ID == an.ID {
-			a.float = floatMenu{open: true, x: r.x + colMaster - 2, y: r.y + animalsRowTop + float32(i*animalRowH) + 26, opts: opts}
+			a.float = floatMenu{open: true, x: r.x + float32(cols.at(colMaster)) - 2, y: r.y + animalsRowTop + float32(i*animalRowH) + 26, opts: opts}
 			return
 		}
 	}

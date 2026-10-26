@@ -20,8 +20,11 @@ func TestMinimapClickMovesCamera(t *testing.T) {
 		t.Fatal("a 200² map should show the minimap")
 	}
 	bx, by, mx, my, mw, mh := r.minimapBox(v)
-	if bx+minimapSide != v.x1-minimapMargin || by+minimapSide != v.y1-minimapMargin-minimapAbove { // right edge, above the cell readout
-		t.Fatalf("box (%v,%v) not at the right edge above the readout in %+v", bx, by, v)
+	// the box is the layout's Minimap: 180 square, 8 px from the right edge,
+	// 8 px above Global (which sits 8 px above the tab strip)
+	if want := computeHUDLayout(sw, sh, hudState{MinimapOn: true}).Minimap; bx != float64(want.X) || by != float64(want.Y) ||
+		bx+minimapSide != v.x1-hudMargin || by+minimapSide != v.y1-tabsH-hudMargin-hudMargin {
+		t.Fatalf("box (%v,%v) is not the layout's Minimap %+v in %+v", bx, by, want, v)
 	}
 	// a click a quarter of the way in centres the camera on tile (50, 150)
 	cx, cy := mx+mw*0.25, my+mh*0.75
@@ -77,5 +80,60 @@ func TestMinimapPollsLayer(t *testing.T) {
 	}
 	if c := minimapColor(game.MinimapStructure | 1); c != minimapStructureClr {
 		t.Fatal("structures take the structure colour")
+	}
+}
+
+// The minimap is the layout's Minimap rect: a 180 square just above
+// Global, only on big maps, never chrome (it keeps its own click path),
+// and a click on it recentres the camera.
+func TestMinimapIsTheLayoutRect(t *testing.T) {
+	big := &globalSim{stubSim: &stubSim{w: 200, h: 200}, world: game.WorldView{TerrainW: 200, Terrain: make([]uint8, 200*200)}}
+	for _, sc := range globalScales {
+		a, f := globalColony(t, big, sc.ui, sc.ww, sc.wh)
+		l := a.hud()
+		m := l.Minimap
+		if m.W != minimapSize || m.H != minimapSize {
+			t.Fatalf("ui %d: minimap %+v, want a %d square", sc.ui, m, minimapSize)
+		}
+		if m.bottom() != l.Global.Y-hudMargin || m.right() != float32(a.sw)-hudMargin {
+			t.Errorf("ui %d: minimap %+v should sit just above Global %+v at the right edge", sc.ui, m, l.Global)
+		}
+		bx, by, _, _, _, _ := a.renderer.minimapBox(colonyViewport(a.sw, a.sh))
+		if float32(bx) != m.X || float32(by) != m.Y {
+			t.Errorf("ui %d: minimapBox (%v,%v) disagrees with the layout %+v", sc.ui, bx, by, m)
+		}
+		cx, cy := m.center()
+		if a.colonyChromeHit(int(cx), int(cy), a.sw, a.sh) {
+			t.Errorf("ui %d: the minimap is chrome; it keeps its own click path", sc.ui)
+		}
+		before := a.renderer.cam.offsetX
+		a.renderer.cam.offsetX = before + 1                   // so a recentre is visible
+		f.onRect(a, rect{m.X + m.W*0.1, m.Y + m.H*0.5, 1, 1}) // near the left of the map
+		f.click(t, a, mbLeft, 0)
+		if a.renderer.cam.offsetX == before+1 {
+			t.Errorf("ui %d: clicking the minimap did not move the camera", sc.ui)
+		}
+	}
+	small, _ := globalColonyP(t, newGlobalSim())
+	if m := small.hud().Minimap; !m.empty() {
+		t.Errorf("a 16x16 map has a minimap: %+v", m)
+	}
+}
+
+// The minimap's frame is the camera's view of the whole window, from the
+// screen's top-left corner.
+func TestMinimapFrameCoversTheWholeScreen(t *testing.T) {
+	t.Parallel()
+	v := colonyViewport(1280, 720)
+	r := New(&stubSim{w: 200, h: 200})
+	r.cam.zoom, r.cam.placed = 1, true
+	r.cam.offsetX, r.cam.offsetY = 0, 0
+	fx0, fy0, fx1, fy1 := r.minimapView(v, 100, 50, 180, 180)
+	tile := r.tilePx()
+	if fx0 != 100 || fy0 != 50 {
+		t.Errorf("frame starts at (%v,%v), want the map's corner (100,50): the view begins at the screen's corner", fx0, fy0)
+	}
+	if wantW, wantH := 1280/tile/200*180, 720/tile/200*180; math.Abs(fx1-fx0-wantW) > 1e-6 || math.Abs(fy1-fy0-wantH) > 1e-6 {
+		t.Errorf("frame %vx%v, want %vx%v: the whole window", fx1-fx0, fy1-fy0, wantW, wantH)
 	}
 }

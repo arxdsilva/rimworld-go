@@ -155,11 +155,14 @@ func TestHomeButtonToggle(t *testing.T) {
 	if b.selected {
 		t.Fatal("active while overlay off")
 	}
-	if rb, _ := hasButton(a.colonyButtons(sw, sh), roofButtonID); b.x+b.w > rb.x {
-		t.Fatalf("Home button %+v overlaps Roof %+v", b, rb)
+	if rb, _ := hasButton(a.colonyButtons(sw, sh), roofButtonID); b.x < rb.x+rb.w {
+		t.Fatalf("Home button %+v overlaps Roof %+v (Home follows Roof, left to right)", b, rb)
 	}
-	if my := int(b.y) + 1; my >= hudTopH || !a.colonyChromeHit(int(b.x)+1, my, sw, sh) {
-		t.Fatal("button should sit in the top strip and consume the pointer")
+	if g := a.hud().Global; b.x < g.X || b.x+b.w > g.right() || b.y < g.Y || b.y+b.h > g.bottom() {
+		t.Fatalf("button %+v should sit inside Global %+v", b, g)
+	}
+	if !a.colonyChromeHit(int(b.x)+1, int(b.y)+1, sw, sh) {
+		t.Fatal("button should consume the pointer")
 	}
 	a.renderer.toggleHomeOverlayIfAny()
 	if !a.renderer.homeOverlay || !find().selected {
@@ -206,7 +209,7 @@ func TestCarpetToolAndMaterialButtons(t *testing.T) {
 	if !stuffs[0].selected || a.toolStuff(tool) != bv.Stuffs[0] {
 		t.Fatalf("default material should be selected first: %q", a.toolStuff(tool))
 	}
-	if stuffs[0].x+stuffs[0].w > stuffs[1].x || stuffs[len(stuffs)-1].x+stuffs[len(stuffs)-1].w > archW+hudPad {
+	if stuffs[0].x+stuffs[0].w > stuffs[1].x || stuffs[len(stuffs)-1].x+stuffs[len(stuffs)-1].w > a.hud().ArchDesc.right() {
 		t.Fatalf("buttons overlap or overflow the panel: %+v", stuffs)
 	}
 	click(t, a, "arch.stuff.cloth carpet")
@@ -218,8 +221,7 @@ func TestCarpetToolAndMaterialButtons(t *testing.T) {
 func TestWallMaterialButtonsStillWoodStone(t *testing.T) {
 	t.Parallel()
 	a, _ := stubColony(t)
-	click(t, a, "tab.architect")
-	click(t, a, "arch.cat.structure")
+	click(t, a, "tab.architect") // opens on Structure
 	click(t, a, "arch.tool.wall")
 	// wood, every stone's blocks and steel, labelled and inside the panel
 	want := map[string]string{"wood": "Wood", "sandstone blocks": "Sandstone blocks", "granite blocks": "Granite blocks",

@@ -93,11 +93,15 @@ func (a *App) factionsTabUI(sw, sh int) {
 		if b.id != "tab.factions" || b.disabled {
 			continue
 		}
-		a.uiSt().add(uiWidget{id: b.id, label: b.label, r: rect{b.x, b.y, b.w, b.h}, click: a.openColonyFactions})
+		a.uiSt().add(uiWidget{id: b.id, label: b.label, r: rect{b.x, b.y, b.w, b.h}, click: a.toggleColonyFactions})
 	}
 }
 
-// openColonyFactions opens the window on the first faction.
+// toggleColonyFactions opens the window, or closes it when it is the open one.
+func (a *App) toggleColonyFactions() { a.toggleKitWindow(colFacModalID, a.openColonyFactions) }
+
+// openColonyFactions opens the window on the first faction: a main-tab
+// window in the Window rect (hud_window.go).
 func (a *App) openColonyFactions() {
 	if a.renderer == nil {
 		return
@@ -105,8 +109,8 @@ func (a *App) openColonyFactions() {
 	sel := 0
 	a.uiPushModal(modal{
 		id: colFacModalID, title: "Factions", w: colFacW, h: colFacH,
-		draw:    func(a *App, body rect) { a.colonyFactionsBody(body, &sel) },
-		buttons: []modalButton{{id: "close", label: "Close", style: btnPrimary, closes: true}},
+		modeless: true, anchor: (*App).windowAnchor,
+		draw: func(a *App, body rect) { a.colonyFactionsBody(body, &sel) },
 	})
 }
 

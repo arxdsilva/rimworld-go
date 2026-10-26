@@ -126,11 +126,10 @@ func (a *App) captureColonyUI(ui string) {
 	sw, sh := a.size()
 	a.uiSt().lastScreen = a.nav.screen() // a window opened now must survive the kit's screen-change reset
 	pawns := a.renderer.snapshot()
-	cardAt := func(id string) {
-		for _, b := range a.architectButtons() {
-			if b.id == "arch.tool."+id {
-				a.cursor = &[2]int{int(b.x + b.w/2), int(b.y + b.h/2)}
-			}
+	cardAt := func(id string) { // the tool's command button in the grid
+		if c, ok := a.archToolCell(id); ok {
+			x, y := c.center()
+			a.cursor = &[2]int{int(x), int(y)}
 		}
 	}
 	if ui != "letter-intro" { // the intro letter would sit over every other shot
@@ -151,7 +150,7 @@ func (a *App) captureColonyUI(ui string) {
 		for _, p := range pawns {
 			if hasBio(p) {
 				a.renderer.Select(p.ID)
-				a.inspectTab = "bio"
+				a.openPaneTab("bio")
 				a.renderer.centerOn(float64(p.X)+4, float64(p.Y), sw, sh)
 				break
 			}
@@ -161,7 +160,7 @@ func (a *App) captureColonyUI(ui string) {
 		for row, p := range pawns {
 			for col := range workColumns {
 				if _, live := workLive[col]; live && p.Incapable.Enabled(work.Type(col)) && a.cursor == nil {
-					c := workCellRect(workRect(sw, sh), row, col)
+					c := workCellRect(a.windowRect(), row, col)
 					x, y := c.center()
 					a.cursor = &[2]int{int(x), int(y)}
 				}

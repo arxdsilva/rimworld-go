@@ -245,16 +245,17 @@ func TestInspectorAreaLine(t *testing.T) {
 	if !ok || w.label != "Area: Indoors" {
 		t.Fatalf("inspector area line: found=%v label %q", ok, w.label)
 	}
-	press(t, a, f, "inspector.area")
+	click(t, a, "inspector.area") // the pane's chip answers through its widget
 	f.frame(t, a)
 	press(t, a, f, "areapick.row.-2")
 	if c := lastAreaCmd(s); c.Kind != command.AssignArea || c.Pawn != 1 || c.Index != command.AreaHome {
 		t.Fatalf("inspector pick %+v", c)
 	}
+	// PLAY-018: the chip is on the pane itself, so it shows whatever tab is open
 	a.inspectTab = "needs"
 	f.frame(t, a)
-	if hasWidget(a, "inspector.area") {
-		t.Fatal("the Area line shows on the Needs tab")
+	if !hasWidget(a, "inspector.area") {
+		t.Fatal("the Area chip shows on every tab")
 	}
 }
 

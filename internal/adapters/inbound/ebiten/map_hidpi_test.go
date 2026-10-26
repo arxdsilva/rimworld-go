@@ -123,10 +123,15 @@ func TestUIScaleLeavesMapTileSize(t *testing.T) {
 	if got := a.renderer.tilePx(); got != TileSize*a.renderer.cam.zoom {
 		t.Fatalf("tile %v at zoom %v: the UI scale zoomed the map", got, a.renderer.cam.zoom)
 	}
-	// The map's viewport is the physical one: the HUD bars take hudTopH x s.
+	// The map's viewport is the physical screen: the map fills all of it
+	// and the HUD floats over it (PLAY-018), so its edges are the physical
+	// size, not the logical one.
 	v := a.mapViewport()
-	if v.y0 != hudTopH*1.5 || v.x1 != float64(a.pw) {
-		t.Fatalf("map viewport %+v, want top %v and right edge %d", v, hudTopH*1.5, a.pw)
+	if v.x0 != 0 || v.y0 != 0 || v.x1 != float64(a.pw) || v.y1 != float64(a.ph) {
+		t.Fatalf("map viewport %+v, want the physical screen 0,0-%d,%d", v, a.pw, a.ph)
+	}
+	if a.pw == a.sw {
+		t.Fatalf("physical width %d equals the logical %d at scale 1.5: the check proves nothing", a.pw, a.sw)
 	}
 }
 

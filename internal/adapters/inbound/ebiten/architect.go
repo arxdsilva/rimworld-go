@@ -18,59 +18,11 @@ func (a *App) rotateKeys() string {
 	return a.bindings().Label(input.RotateLeft) + "/" + a.bindings().Label(input.RotateRight)
 }
 
-const (
-	archW        = 276
-	archCardW    = 126
-	archCardH    = 58
-	archCardGap  = 8
-	archTop      = 80 // cards start below the header and two category rows
-	archInfoH    = 70
-	archMaxGhost = 400
-)
-
-// Crop picker (growing-zone tool): 4 crops per row, then a stats line.
-const (
-	archCropCols = 4
-	archCropBtnW = 62
-	archCropBtnH = 22
-	archCropRows = 3 // eight crops and the tree entry
-	archCropH    = archCropRows*(archCropBtnH+4) + 72
-)
-
-// archCardRows is the card rows the current category needs (min 2).
-func (a *App) archCardRows() int {
-	rows := (len(toolsIn(a.archCat)) + 1) / 2
-	if rows < 2 {
-		rows = 2
-	}
-	return rows
-}
-
-// archStride is the distance between card rows: the card and its gap,
-// with the gap squeezed (to 2 px) when a long category (furniture) would
-// run the panel into the bottom bar.
-func (a *App) archStride() float32 {
-	stride := float32(archCardH + archCardGap)
-	_, sh := a.size()
-	avail := hudBarY(sh) - float32(hudTopH+2*hudPad) - archTop - archInfoH - float32(a.archStuffExtra())
-	if a.archCropOpen() {
-		avail -= archCropH
-	}
-	rows := float32(a.archCardRows())
-	if need := stride * rows; need > avail {
-		stride = max(float32(archCardH+2), avail/rows)
-	}
-	return stride
-}
-
-// archCropOpen reports the selected tool sows a crop.
-func (a *App) archCropOpen() bool {
-	t, ok := toolByID(a.archTool)
-	return ok && t.crop != ""
-}
+// archMaxGhost caps the cells a placement preview judges.
+const archMaxGhost = 400
 
 func (a *App) selectedCrop() game.CropView {
-	crops := game.ZoneSpecies()
+	crops := zoneSpecies()
 	for _, c := range crops {
 		if c.Name == a.archCrop {
 			return c
@@ -89,8 +41,8 @@ func (a *App) selectedCrop() game.CropView {
 // second row, and long names ("Sandstone blocks") take fewer per row.
 const archStuffPerRow = 3
 
-// archStuffGrid lays out a buildable's material buttons: per row, rows,
-// and the button width.
+// archStuffGrid lays out a buildable's material buttons inside the
+// description box: per row, rows, and the button width.
 func archStuffGrid(bv game.BuildableView) (perRow, rows int, bw float32) {
 	n := len(bv.Stuffs)
 	if n == 0 {
@@ -100,7 +52,7 @@ func archStuffGrid(bv game.BuildableView) (perRow, rows int, bw float32) {
 	if n > 4 {
 		perRow = archStuffPerRow
 	}
-	width := func(k int) float32 { return (archW - 20 - 6*float32(k-1)) / float32(k) }
+	width := func(k int) float32 { return (archInnerW - archBtnGap*float32(k-1)) / float32(k) }
 	need := 0
 	if !bv.Carpet { // carpet labels carry counts and keep their three per row
 		for _, s := range bv.Stuffs {
@@ -114,98 +66,40 @@ func archStuffGrid(bv game.BuildableView) (perRow, rows int, bw float32) {
 	return perRow, (n + perRow - 1) / perRow, bw
 }
 
-// archStuffExtra is the extra panel height the material rows need.
-func (a *App) archStuffExtra() int {
-	if t, ok := toolByID(a.archTool); ok {
-		if bv, ok := buildable(t.build); ok && len(bv.Stuffs) > 1 {
-			_, rows, _ := archStuffGrid(bv)
-			return max(rows-1, 0) * 26
-		}
-	}
-	return 0
-}
-
+// architectRect is the Architect's area on the HUD: the description box
+// above the category panel (zero while it is closed).
 func (a *App) architectRect() button {
-	h := archTop + float32(a.archCardRows())*a.archStride() + archInfoH + float32(a.archStuffExtra())
-	if a.archCropOpen() {
-		h += archCropH
+	if !a.archOpen {
+		return button{}
 	}
-	return button{x: hudPad, y: hudTopH + hudPad, w: archW, h: h}
+	l := a.hud()
+	r := boundsOf([]rect{l.ArchCats, l.ArchDesc})
+	return button{x: r.X, y: r.Y, w: r.W, h: r.H}
 }
 
-// archCropTop is the y of the crop picker block.
-func (a *App) archCropTop(r button) float32 {
-	return r.y + archTop + float32(a.archCardRows())*a.archStride()
-}
-
+// architectButtons are the category buttons and, for the armed tool, its
+// material and crop buttons. The tools themselves are command buttons in
+// the grid (archToolCommands).
 func (a *App) architectButtons() []button {
 	if !a.archOpen {
 		return nil
 	}
-	r := a.architectRect()
-	out := make([]button, 0, len(archCategories)+6)
-	cx, cy := r.x+10, r.y+30
-	for _, c := range archCategories {
-		w := textW(c.label, tsBody) + 20
-		if cx+w > r.x+r.w-10 { // wrap to a second row
-			cx, cy = r.x+10, cy+24
-		}
-		out = append(out, button{
-			id: "arch.cat." + c.id, label: c.label, x: cx, y: cy, w: w, h: 22,
-			selected: a.archCat == c.id,
-		})
-		cx += w + 4
+	l := a.hud()
+	if l.ArchCats.empty() {
+		return nil
 	}
-	for i, t := range toolsIn(a.archCat) {
+	out := make([]button, 0, len(archCategories)+16)
+	for i, c := range archCategories {
 		col, row := i%2, i/2
-		b := button{
-			id: "arch.tool." + t.id,
-			x:  r.x + 10 + float32(col)*(archCardW+archCardGap),
-			y:  r.y + archTop + float32(row)*a.archStride(),
-			w:  archCardW, h: archCardH,
-			selected: a.archTool == t.id,
-		}
-		if t.build != "" {
-			if why := a.toolLock(t); why != "" {
-				b.disabled, b.reason, b.selected, b.quiet = true, why, false, true
-			}
-		}
-		out = append(out, b)
+		out = append(out, button{
+			id: "arch.cat." + c.id, label: c.label,
+			x: l.ArchCats.X + archPad + float32(col)*(archCatW+archCatGap),
+			y: l.ArchCats.Y + archPad + float32(row)*(archCatH+archCatGap),
+			w: archCatW, h: archCatH, selected: a.archCat == c.id,
+		})
 	}
-	if a.archCropOpen() {
-		sel := a.selectedCrop().Name
-		top := a.archCropTop(r)
-		for i, c := range game.ZoneSpecies() {
-			col, row := i%archCropCols, i/archCropCols
-			b := button{
-				id: "arch.crop." + c.Name, label: strings.ToUpper(c.Name[:1]) + c.Name[1:],
-				x: r.x + 10 + float32(col)*(archCropBtnW+2), y: top + float32(row)*(archCropBtnH+4),
-				w: archCropBtnW, h: archCropBtnH, selected: c.Name == sel,
-			}
-			if p := a.lockedBy("crop:" + c.Name); p != "" {
-				b.disabled, b.reason, b.selected, b.quiet = true, "Needs research: "+p, false, true
-			}
-			out = append(out, b)
-		}
-	}
-	if t, ok := toolByID(a.archTool); ok {
-		if bv, ok := buildable(t.build); ok && len(bv.Stuffs) > 1 {
-			// One button per material, default first, shrunk to fit the
-			// panel (a carpet shows one per carpet material).
-			perRow, rows, bw := archStuffGrid(bv)
-			for i, s := range bv.Stuffs {
-				row, col := i/perRow, i%perRow
-				label := stuffLabel(s)
-				if bv.Carpet && a.renderer != nil {
-					label = fmt.Sprintf("%s (%d)", label, stockOf(a.renderer.world(), s))
-				}
-				out = append(out, button{
-					id: "arch.stuff." + s, label: label, x: r.x + 10 + float32(col)*(bw+6),
-					y: r.y + r.h - 28 - float32(rows-1-row)*26, w: bw, h: 22,
-					selected: a.toolStuff(t) == s,
-				})
-			}
-		}
+	if !l.ArchDesc.empty() {
+		out = append(out, a.archDescButtons(l.ArchDesc)...)
 	}
 	return out
 }
@@ -339,7 +233,7 @@ func (a *App) openArchitect() {
 	a.workOpen = false
 	a.closeFloat()
 	if a.archCat == "" {
-		a.archCat = "structure"
+		a.archCat, a.hst.arch.dflt = "structure", "structure"
 	}
 }
 
@@ -350,8 +244,17 @@ func (a *App) closeArchitect() {
 	a.syncRoofForce()
 }
 
+// selectArchCategory opens category id; the open category again collapses
+// it (no tools shown, none armed). The category the Architect opened on by
+// itself does not count as chosen: clicking it first confirms it.
 func (a *App) selectArchCategory(id string) {
 	defer a.syncRoofForce()
+	dflt := a.hst.arch.dflt
+	a.hst.arch.dflt = ""
+	if a.archCat == id && dflt != id {
+		a.archCat, a.archTool, a.archDrag = "", "", false
+		return
+	}
 	a.archCat = id
 	if t, ok := toolByID(a.archTool); !ok || t.category != id {
 		a.archTool = ""
@@ -367,6 +270,7 @@ func (a *App) selectArchTool(id string) {
 	if a.areaToolPick(id) { // area_menu.go: the allowed-area tools open a submenu
 		return
 	}
+	a.hst.arch.dflt = "" // the player is working in the open category
 	a.archCat = t.category
 	defer a.syncRoofForce()
 	if a.archTool == id {
@@ -403,107 +307,29 @@ func drawIconCS(dst, img *ebiten.Image, x, y, size float64, cs colorScale) {
 	uiDrawImage(dst, img, op)
 }
 
+// drawArchitect draws the category panel and the description box; the
+// tools are drawn by the command grid.
 func (a *App) drawArchitect(screen *ebiten.Image) {
 	if !a.archOpen {
 		return
 	}
-	r := a.architectRect()
-	drawPanel(screen, r.x, r.y, r.w, r.h)
-	drawText(screen, "Architect", float64(r.x)+12, float64(r.y)+6, tsLabel)
+	l := a.hud()
+	if l.ArchCats.empty() {
+		return
+	}
+	drawPanel(screen, l.ArchCats.X, l.ArchCats.Y, l.ArchCats.W, l.ArchCats.H)
+	if d := l.ArchDesc; !d.empty() {
+		drawPanel(screen, d.X, d.Y, d.W, d.H)
+		for _, ln := range a.archPlan().lines {
+			if ln.y+lineStep(ln.style) > d.H {
+				continue // a clamped box on a small screen shows what fits
+			}
+			drawText(screen, ln.text, float64(d.X+archPad), float64(d.Y+ln.y), ln.style)
+		}
+	}
 	mx, my := a.currentCursor()
-	wood := 0
-	if a.renderer != nil {
-		wood = a.renderer.world().Wood
-	}
-	var hover *archTool
 	for _, b := range a.architectButtons() {
-		if !strings.HasPrefix(b.id, "arch.tool.") {
-			drawButton(screen, b, b.contains(mx, my))
-			continue
-		}
-		t, _ := toolByID(strings.TrimPrefix(b.id, "arch.tool."))
 		drawButton(screen, b, b.contains(mx, my))
-		if img := a.icon(t.icon); img != nil {
-			drawIcon(screen, img, float64(b.x)+6, float64(b.y)+8, 40)
-		} else {
-			drawIconFallback(screen, t, b.x+6, b.y+8)
-		}
-		tw := float64(b.w) - 54
-		drawFitSmall(screen, t.label, float64(b.x)+50, float64(b.y)+8, tw, tsBody)
-		sub := ""
-		if b.disabled {
-			sub = lockWord(b.reason)
-		} else if bv, ok := buildable(t.build); ok && bv.Carpet {
-			sub = "1 carpet"
-		} else if ok {
-			sub = fmt.Sprintf("%d %s", bv.Wood, strings.TrimSuffix(a.toolStuff(t), " blocks"))
-		} else {
-			sub = map[placeMode]string{placeArea: "drag area"}[t.mode]
-		}
-		drawText(screen, ellipsize(sub, tsSmall, tw), float64(b.x)+50, float64(b.y)+31, withColor(tsSmall, uiTextDim))
-		if b.contains(mx, my) {
-			tt := t
-			hover = &tt
-		}
-	}
-	if a.archCropOpen() {
-		y := int(a.archCropTop(r)) + archCropRows*(archCropBtnH+4) + 2
-		for i, ln := range cropLines(a.selectedCrop()) {
-			drawLabel(screen, int(r.x)+12, y+i*int(lineStep(tsBody)), ln)
-		}
-	}
-	step := 18
-	iy := int(r.y+r.h) - archInfoH - a.archStuffExtra() + 6
-	stuff := ""
-	if t, ok := toolByID(a.archTool); ok {
-		if bv, ok := buildable(t.build); ok && !bv.Carpet {
-			stuff = a.toolStuff(t)
-		}
-	}
-	if a.renderer != nil {
-		drawLabel(screen, int(r.x)+12, iy, archStockLine(a.renderer.world(), wood, stuff))
-	}
-	if t, ok := toolByID(a.archTool); ok {
-		hint := map[placeMode]string{
-			placeSingle: "Click to place",
-			placeLine:   "Drag for a line",
-			placeFill:   "Drag to fill",
-			placeArea:   "Drag an area",
-		}[t.mode]
-		if t.build == "door" || t.build == "fence gate" {
-			hint += "  faces along the wall or fence; " + a.rotateKeys() + " sets a free-standing one (" + facingNames[a.archFacing] + ")"
-		} else if bv, ok := buildable(t.build); ok && bv.Rotatable {
-			hint += "  " + a.rotateKeys() + " rotate (" + facingNames[a.archFacing] + ")"
-		}
-		if len(toolStyles(t)) > 1 {
-			hint = styleNames[a.curStyle(t)] + "  " + a.rotateKeys() + " shape, Ctrl square"
-		}
-		drawLabel(screen, int(r.x)+12, iy+step, hint)
-		if bv, ok := buildable(t.build); !ok || len(bv.Stuffs) < 2 {
-			drawLabel(screen, int(r.x)+12, iy+2*step, "Right-click: stop placing")
-		}
-	} else {
-		drawLabel(screen, int(r.x)+12, iy+step, "Pick something to place")
-	}
-	if hover != nil {
-		a.drawArchTooltip(screen, *hover, wood, int(r.x+r.w)+6, int(r.y)+archTop)
-	}
-}
-
-func (a *App) drawArchTooltip(screen *ebiten.Image, t archTool, wood, x, y int) {
-	stock := 0
-	if a.renderer != nil {
-		stock = stockOf(a.renderer.world(), a.toolStuff(t))
-	}
-	lines := archTooltipLines(t, a.toolStuff(t), wood, stock)
-	if why := a.toolLock(t); why != "" {
-		lines = append(lines, "Locked: "+why)
-	}
-	step := int(lineStep(tsBody))
-	w := int(maxTextW(lines, tsBody))
-	drawPanel(screen, float32(x), float32(y), float32(w+20), float32(len(lines)*step+12))
-	for i, l := range lines {
-		drawLabel(screen, x+10, y+6+i*step, l)
 	}
 }
 
@@ -849,7 +675,7 @@ func (a *App) drawZoneGhost(screen *ebiten.Image, kind string, x0, y0, x1, y1 in
 	}
 }
 
-// drawIconFallback is a plain tile with the tool's initial, for a card
+// drawIconFallback is a plain tile with the tool's initial, for a button
 // whose icon is missing from the art catalog.
 func drawIconFallback(screen *ebiten.Image, t archTool, x, y float32) {
 	uiFillRect(screen, x, y, 40, 40, uiBtnDisabled, false)

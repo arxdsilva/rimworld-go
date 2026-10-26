@@ -74,33 +74,38 @@ func TestWorkbenchBillPickerReachesEveryRecipe(t *testing.T) {
 	if !a.selectBuildingAt(8, 8) {
 		t.Fatal("select bench")
 	}
+	// the bills live in the pane's Bills tab (PLAY-018), declared into the
+	// expanded panel
+	tab, ok := bldTab(a.buildingPane(77), "inspector.bills")
+	if !ok {
+		t.Fatal("a bench has a Bills tab")
+	}
+	r := rect{0, 180, tab.WantW, tab.WantH}.inset(paneInset) // what the pane hands Declare
+	setHook(a.uiSt(), func(a *App) { tab.Declare(r) })
 	f.frame(t, a)
-	r := buildingRect()
-	type box struct {
-		id         string
-		x, y, w, h float32
-	}
-	var boxes []box
-	for _, b := range a.buildingButtons() {
-		if strings.HasPrefix(b.id, "bill.add.") {
-			t.Errorf("per-recipe button %s would overflow the panel", b.id)
+	for _, w := range a.uiSt().cur {
+		if strings.HasPrefix(w.id, "bill.add.") {
+			t.Errorf("per-recipe button %s would overflow the panel", w.id)
 		}
-		if b.x < r.x || b.y < r.y || b.x+b.w > r.x+r.w || b.y+b.h > r.y+r.h {
-			t.Errorf("%s outside the panel", b.id)
+		if w.r.X < r.X || w.r.Y < r.Y || w.r.right() > r.right() || w.r.bottom() > r.bottom() {
+			t.Errorf("%s outside the panel", w.id)
 		}
-		boxes = append(boxes, box{b.id, b.x, b.y, b.w, b.h})
 	}
-	for i, p := range boxes {
-		for _, q := range boxes[i+1:] {
-			if p.x < q.x+q.w && q.x < p.x+p.w && p.y < q.y+q.h && q.y < p.y+p.h {
+	cur := a.uiSt().cur
+	for i, p := range cur {
+		for _, q := range cur[i+1:] {
+			if p.id == "bill.rows" || q.id == "bill.rows" { // the scroll view holds the rows
+				continue
+			}
+			if p.r.X < q.r.right() && q.r.X < p.r.right() && p.r.Y < q.r.bottom() && q.r.Y < p.r.bottom() {
 				t.Errorf("%s overlaps %s", p.id, q.id)
 			}
 		}
 	}
-	if _, ok := hasButton(a.buildingButtons(), billPickBtn); !ok {
+	if !hasWidget(a, billPickBtn) {
 		t.Fatal("no Add bill button")
 	}
-	a.applyBuildingClick(billPickBtn)
+	press(t, a, f, billPickBtn)
 	f.frame(t, a)
 	if a.uiModalTop() != billPickID {
 		t.Fatal("picker not open")

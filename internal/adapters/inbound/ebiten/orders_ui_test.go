@@ -252,7 +252,17 @@ func TestBenchBillsPanel(t *testing.T) {
 	if !a.selectBuildingAt(7, 6) { // second cell of the 2x1 stove
 		t.Fatal("clicking any stove cell selects it")
 	}
-	if _, ok := hasButton(a.buildingButtons(), billPickBtn); !ok {
+	// the bills live in the pane's Bills tab (PLAY-018)
+	f := fakeOn(a)
+	a.renderer.speed = speedPaused
+	tab, ok := bldTab(a.buildingPane(a.selBuilding), "inspector.bills")
+	if !ok {
+		t.Fatal("a stove has a Bills tab")
+	}
+	panel := rect{0, 100, tab.WantW, 400}
+	setHook(a.uiSt(), func(a *App) { tab.Declare(panel) })
+	f.frame(t, a)
+	if !hasWidget(a, billPickBtn) {
 		t.Fatal("stove should offer the recipe picker")
 	}
 	rcs := a.recipesFor("stove")
@@ -265,9 +275,9 @@ func TestBenchBillsPanel(t *testing.T) {
 	if len(b.Bills) != 1 || b.Bills[0].Target != 1 {
 		t.Fatalf("bills = %+v", b.Bills)
 	}
-	click(t, a, "bill.plus.0")
+	press(t, a, f, "bill.plus.0")
 	g.Step(1)
-	click(t, a, "bill.mode.0")
+	press(t, a, f, "bill.mode.0")
 	g.Step(1)
 	b, _ = a.selectedBuilding()
 	if b.Bills[0].Target != 2 || b.Bills[0].Mode != "forever" {
@@ -276,12 +286,16 @@ func TestBenchBillsPanel(t *testing.T) {
 	if !strings.Contains(billLine(b.Bills[0]), "forever") {
 		t.Fatalf("line = %q", billLine(b.Bills[0]))
 	}
-	click(t, a, "bill.del.0")
+	press(t, a, f, "bill.del.0")
 	g.Step(1)
 	if b, _ = a.selectedBuilding(); len(b.Bills) != 0 {
 		t.Fatal("delete removes the bill")
 	}
-	click(t, a, "bldg.deconstruct")
+	dc, ok := bldCmd(a.buildingCommands(a.selBuilding), "bldg.deconstruct")
+	if !ok {
+		t.Fatal("a stove can be deconstructed")
+	}
+	a.applyClick(dc.ID) // what a click on the command button does
 	g.Step(1)
 	if b, _ = a.selectedBuilding(); !b.Deconstruct {
 		t.Fatal("deconstruct button marks the building")

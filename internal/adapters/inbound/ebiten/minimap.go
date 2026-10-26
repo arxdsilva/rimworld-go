@@ -8,26 +8,24 @@ import (
 	"rimworld-go/internal/application/game"
 )
 
-// Minimap (NG-1 §2.12): on maps over 150² a 180×180 overview sits in the
-// bottom-right corner of the map viewport, toggled with the Minimap
-// action. It shows the ground (one pixel per tile from the read model
-// Simulation.MinimapLayer: terrain colours, water, floors, buildings and
-// plants), colonists as light dots, hostiles as red dots and the camera's
-// view as a rectangle; a click on it centres the camera there.
+// Minimap (NG-1 §2.12; PLAY-018): on maps over 150² a 180×180 overview sits
+// in the right column, just above the global controls (the layout's
+// Minimap rect), toggled with the Minimap action. It shows the ground (one
+// pixel per tile from the read model Simulation.MinimapLayer: terrain
+// colours, water, floors, buildings and plants), colonists as light dots,
+// hostiles as red dots and the camera's view (the whole window, the map
+// fills it) as a rectangle; a click on it centres the camera there.
 //
 // The box is UI (PLAY-012 B.4): laid out in logical pixels against the
-// logical viewport and drawn through the canvas, the map image stretched
+// logical screen and drawn through the canvas, the map image stretched
 // into the scaled box. The camera works in physical pixels, so a click
 // converts logical box coordinates to tiles and centres the physical
 // map viewport on them.
 
 const (
-	minimapSide    = 180 // px, the box
-	minimapMargin  = 10  // px from the viewport's corner
-	minimapMinSide = 150 // tiles: maps larger than this get a minimap
-	// minimapAbove keeps the box above the hover cell readout, which shares
-	// the bottom-right corner (hud.go, up to ~8 lines).
-	minimapAbove = 150
+	minimapSide    = minimapSize // px, the box (hud_layout.go)
+	minimapInset   = 2           // px of frame inside the box
+	minimapMinSide = 150         // tiles: maps larger than this get a minimap
 	// minimapPoll is how many frames apart the layer is asked for (it
 	// changes when the ground or the plants' places change).
 	minimapPoll = 30
@@ -43,6 +41,9 @@ type minimapState struct {
 	fogVer uint64 // FogVer the image was built for
 	polled uint64 // present frame of the last poll
 	polls  int    // layer fetches that changed it (tests)
+	// globalH is the global controls' height (hud_global.go sets it): the
+	// minimap sits above them.
+	globalH float32
 }
 
 // minimapOn reports the minimap is shown: a large map, not hidden.
@@ -57,20 +58,27 @@ func (r *Renderer) toggleMinimap() {
 	}
 }
 
+// minimapRect is the minimap's box for the logical screen ui: the
+// layout's Minimap rect.
+func (r *Renderer) minimapRect(ui viewport) rect {
+	return computeHUDLayout(int(ui.x1), int(ui.y1), hudState{MinimapOn: true, GlobalH: r.mini.globalH}).Minimap
+}
+
 // minimapBox is the minimap's box and the map's rectangle inside it (the
-// map keeps its aspect, centred) for the logical viewport v, in logical
+// map keeps its aspect, centred) for the logical screen ui, in logical
 // pixels.
-func (r *Renderer) minimapBox(v viewport) (bx, by float64, mx, my, mw, mh float64) {
-	bx, by = v.x1-minimapMargin-minimapSide, v.y1-minimapMargin-minimapSide-minimapAbove
+func (r *Renderer) minimapBox(ui viewport) (bx, by float64, mx, my, mw, mh float64) {
+	b := r.minimapRect(ui)
+	bx, by = float64(b.X), float64(b.Y)
 	gw, gh := float64(r.game.Width()), float64(r.game.Height())
-	s := minimapSide / max(gw, gh, 1)
+	s := float64(minimapSide-2*minimapInset) / max(gw, gh, 1)
 	mw, mh = gw*s, gh*s
 	return bx, by, bx + (minimapSide-mw)/2, by + (minimapSide-mh)/2, mw, mh
 }
 
 // minimapClick centres the camera on the tile under the logical point
 // (sx, sy) when it is on the minimap; false (nothing done) elsewhere or
-// when it is hidden. ui is the logical viewport (the box), v the physical
+// when it is hidden. ui is the logical screen (the box), v the physical
 // map viewport the camera is centred in.
 func (r *Renderer) minimapClick(sx, sy int, ui, v viewport) bool {
 	if !r.minimapOn() {
@@ -116,10 +124,6 @@ var (
 	minimapPlantClr     = color.RGBA{48, 88, 40, 255}
 	minimapFloorClr     = color.RGBA{136, 122, 100, 255}
 	minimapStructureClr = color.RGBA{196, 186, 166, 255}
-	minimapColonistClr  = color.RGBA{240, 240, 220, 255}
-	minimapHostileClr   = color.RGBA{230, 50, 40, 255}
-	minimapFrameClr     = color.RGBA{250, 236, 160, 255}
-	minimapBackClr      = color.RGBA{14, 12, 10, 220}
 )
 
 // minimapColor is one cell's colour.
@@ -177,8 +181,23 @@ func (r *Renderer) syncMinimap() {
 	m.polls++
 }
 
+// minimapView is the camera's view as a rectangle inside the map's
+// rectangle (mx, my, mw, mh), clamped to it: the physical map viewport v,
+// which is the whole window.
+func (r *Renderer) minimapView(v viewport, mx, my, mw, mh float64) (fx0, fy0, fx1, fy1 float64) {
+	t := r.tilePx()
+	if t <= 0 {
+		return mx, my, mx, my
+	}
+	gw, gh := float64(r.game.Width()), float64(r.game.Height())
+	vx0, vy0 := (v.x0+r.cam.offsetX)/t, (v.y0+r.cam.offsetY)/t
+	vx1, vy1 := (v.x1+r.cam.offsetX)/t, (v.y1+r.cam.offsetY)/t
+	return mx + min(max(vx0/gw, 0), 1)*mw, my + min(max(vy0/gh, 0), 1)*mh,
+		mx + min(max(vx1/gw, 0), 1)*mw, my + min(max(vy1/gh, 0), 1)*mh
+}
+
 // drawMinimap draws the minimap when it is shown: the box in the logical
-// viewport ui, the view frame for the physical map viewport v.
+// screen ui, the view frame for the physical map viewport v.
 func (r *Renderer) drawMinimap(screen *ebiten.Image, ui, v viewport) {
 	if !r.minimapOn() {
 		return
@@ -186,7 +205,7 @@ func (r *Renderer) drawMinimap(screen *ebiten.Image, ui, v viewport) {
 	r.syncMinimap()
 	m := &r.mini
 	bx, by, mx, my, mw, mh := r.minimapBox(ui)
-	uiFillRect(screen, float32(bx-2), float32(by-2), minimapSide+4, minimapSide+4, minimapBackClr, false)
+	drawPanel(screen, float32(bx), float32(by), minimapSide, minimapSide)
 	if m.img != nil {
 		uiImage(screen, m.img, mx, my, mw, mh, &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear})
 	}
@@ -204,25 +223,21 @@ func (r *Renderer) drawMinimap(screen *ebiten.Image, ui, v viewport) {
 			continue
 		}
 		if p.Hostile {
-			dot(p.X, p.Y, minimapHostileClr)
+			dot(p.X, p.Y, uiDanger)
 		} else {
-			dot(p.X, p.Y, minimapColonistClr)
+			dot(p.X, p.Y, uiText)
 		}
 	}
 	animals := fw0.Animals
 	for i := range animals {
 		if an := &animals[i]; an.Manhunter && !worldFogged(fw0, an.X, an.Y) {
-			dot(an.X, an.Y, minimapHostileClr)
+			dot(an.X, an.Y, uiDanger)
 		}
 	}
 	// the camera's view
-	t := r.tilePx()
-	if t <= 0 {
+	if r.tilePx() <= 0 {
 		return
 	}
-	vx0, vy0 := (v.x0+r.cam.offsetX)/t, (v.y0+r.cam.offsetY)/t
-	vx1, vy1 := (v.x1+r.cam.offsetX)/t, (v.y1+r.cam.offsetY)/t
-	fx0, fy0 := mx+min(max(vx0/gw, 0), 1)*mw, my+min(max(vy0/gh, 0), 1)*mh
-	fx1, fy1 := mx+min(max(vx1/gw, 0), 1)*mw, my+min(max(vy1/gh, 0), 1)*mh
-	uiStrokeRect(screen, float32(fx0), float32(fy0), float32(fx1-fx0), float32(fy1-fy0), 1, minimapFrameClr, false)
+	fx0, fy0, fx1, fy1 := r.minimapView(v, mx, my, mw, mh)
+	uiStrokeRect(screen, float32(fx0), float32(fy0), float32(fx1-fx0), float32(fy1-fy0), 1, uiAccent, false)
 }

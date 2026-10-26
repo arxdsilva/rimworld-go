@@ -56,6 +56,43 @@ func penApp(t *testing.T, s *stubSim) *App {
 	return a
 }
 
+// penTabApp is penApp with the Pen tab declared into its expanded panel.
+func penTabApp(t *testing.T, s *stubSim) (*App, *fakeInput, rect) {
+	t.Helper()
+	a, f := colonyApp(t, s)
+	a.selBuilding, a.hasBuilding = 70, true
+	tab, ok := bldTab(a.buildingPane(70), "inspector.pen")
+	if !ok {
+		t.Fatal("a pen marker has a Pen tab")
+	}
+	panel := rect{0, 180, tab.WantW, tab.WantH}.inset(paneInset) // what the pane hands Declare
+	setHook(a.uiSt(), func(a *App) { tab.Declare(panel) })
+	f.frame(t, a)
+	return a, f, panel
+}
+
+// penBody is the Pen tab's laid-out content for the app's pen.
+func penBody(t *testing.T, a *App) tabBody {
+	t.Helper()
+	b, ok := a.buildingView(70)
+	if !ok {
+		t.Fatal("no marker")
+	}
+	pv, ok := a.penOf(b)
+	if !ok {
+		t.Fatal("no pen")
+	}
+	return penTabBody(a.renderer.world(), pv, penTabW-2*paneInset-scrollBarW)
+}
+
+func penBodyButtons(body tabBody) map[string]button {
+	ids := map[string]button{}
+	for _, b := range body.buttons {
+		ids[b.id] = b
+	}
+	return ids
+}
+
 func penSettingsOf(t *testing.T, c command.Command) game.PenSettings {
 	t.Helper()
 	if c.Kind != command.SetPenSettings || c.Target != 70 {
@@ -80,15 +117,16 @@ func penRow(ps game.PenSettings, key string) (game.PenSpecies, bool) {
 func TestPenInspectorListsPennedSpeciesOnly(t *testing.T) {
 	t.Parallel()
 	a := penApp(t, penSim())
-	ids := map[string]button{}
-	for _, b := range a.buildingButtons() {
-		ids[b.id] = b
-	}
+	body := penBody(t, a)
+	ids := penBodyButtons(body)
 	for _, id := range []string{"bldg.pen.sp.cow", "bldg.pen.sp.cow.m", "bldg.pen.sp.cow.f",
-		"bldg.pen.sp.chicken", "bldg.pen.sp.chicken.m", "bldg.pen.sp.chicken.f", "bldg.pen.all", "bldg.pen.none", "bldg.close"} {
+		"bldg.pen.sp.chicken", "bldg.pen.sp.chicken.m", "bldg.pen.sp.chicken.f", "bldg.pen.all", "bldg.pen.none"} {
 		if _, ok := ids[id]; !ok {
 			t.Errorf("missing button %s", id)
 		}
+	}
+	if a.buildingPane(70).Close != "bldg.close" {
+		t.Error("the pane has a close button")
 	}
 	if _, ok := ids["bldg.pen.sp.labrador"]; ok {
 		t.Error("a pet is not a penned species")
@@ -100,10 +138,22 @@ func TestPenInspectorListsPennedSpeciesOnly(t *testing.T) {
 	if !ids["bldg.pen.sp.chicken"].selected || !ids["bldg.pen.sp.chicken.m"].selected || !ids["bldg.pen.sp.chicken.f"].selected {
 		t.Error("an unlisted species defaults to every sex allowed")
 	}
-	panel := a.buildingPanelRect()
+	viewW := float32(penTabW - 2*paneInset - scrollBarW)
 	for _, b := range ids {
-		if b.y+b.h > panel.y+panel.h || b.x+b.w > panel.x+panel.w {
-			t.Errorf("button %s falls out of the panel", b.id)
+		if b.y+b.h > body.h || b.x+b.w > viewW || b.x < 0 || b.y < 0 {
+			t.Errorf("button %s falls out of the tab body", b.id)
+		}
+	}
+	// the live widgets sit inside the expanded panel too
+	a2, _, panel := penTabApp(t, penSim())
+	for _, id := range []string{"bldg.pen.sp.cow", "bldg.pen.all", "bldg.pen.cut.cactus"} {
+		w, ok := a2.uiSt().find(id)
+		if !ok {
+			t.Errorf("no widget %s", id)
+			continue
+		}
+		if w.r.X < panel.X || w.r.right() > panel.right() || w.r.Y < panel.Y || w.r.bottom() > panel.bottom() {
+			t.Errorf("widget %s at %+v falls out of the panel %+v", id, w.r, panel)
 		}
 	}
 }
@@ -111,8 +161,8 @@ func TestPenInspectorListsPennedSpeciesOnly(t *testing.T) {
 func TestPenInspectorEmitsSettings(t *testing.T) {
 	t.Parallel()
 	s := penSim()
-	a := penApp(t, s)
-	click(t, a, "bldg.pen.sp.cow.f") // cow females on
+	a, f, _ := penTabApp(t, s)
+	press(t, a, f, "bldg.pen.sp.cow.f") // cow females on
 	ps := penSettingsOf(t, s.cmds[len(s.cmds)-1])
 	if sp, ok := penRow(ps, "cow"); !ok || !sp.Allow || !sp.Male || !sp.Female {
 		t.Fatalf("cow after female toggle: %+v", ps)
@@ -123,12 +173,12 @@ func TestPenInspectorEmitsSettings(t *testing.T) {
 	if len(ps.AutoCut) != 1 || ps.AutoCut[0] != "bramble" {
 		t.Fatalf("auto-cut is kept: %v", ps.AutoCut)
 	}
-	click(t, a, "bldg.pen.sp.chicken") // chicken allow off
+	press(t, a, f, "bldg.pen.sp.chicken") // chicken allow off
 	ps = penSettingsOf(t, s.cmds[len(s.cmds)-1])
 	if sp, _ := penRow(ps, "chicken"); sp.Allow {
 		t.Fatalf("chicken allow should toggle off: %+v", sp)
 	}
-	click(t, a, "bldg.pen.sp.cow.m") // cow males off
+	press(t, a, f, "bldg.pen.sp.cow.m") // cow males off
 	ps = penSettingsOf(t, s.cmds[len(s.cmds)-1])
 	if sp, _ := penRow(ps, "cow"); sp.Male {
 		t.Fatalf("cow male should toggle off: %+v", sp)
@@ -138,15 +188,15 @@ func TestPenInspectorEmitsSettings(t *testing.T) {
 func TestPenInspectorAllNone(t *testing.T) {
 	t.Parallel()
 	s := penSim()
-	a := penApp(t, s)
-	click(t, a, "bldg.pen.none")
+	a, f, _ := penTabApp(t, s)
+	press(t, a, f, "bldg.pen.none")
 	ps := penSettingsOf(t, s.cmds[len(s.cmds)-1])
 	for _, k := range []string{"cow", "chicken"} {
 		if sp, ok := penRow(ps, k); !ok || sp.Allow || sp.Male || sp.Female {
 			t.Errorf("None clears %s: %+v", k, sp)
 		}
 	}
-	click(t, a, "bldg.pen.all")
+	press(t, a, f, "bldg.pen.all")
 	ps = penSettingsOf(t, s.cmds[len(s.cmds)-1])
 	for _, k := range []string{"cow", "chicken"} {
 		if sp, ok := penRow(ps, k); !ok || !sp.Allow || !sp.Male || !sp.Female {
@@ -186,18 +236,15 @@ func TestPenNotEnclosedWarning(t *testing.T) {
 		t.Fatalf("an enclosed pen is not warned: %q", got)
 	}
 	screen := ebiten.NewImage(1280, 720)
-	a.drawBuildingInspector(screen)
+	a.drawBuildingMark(screen)
 	a.drawPenOutline(screen) // an open pen draws a red dashed box: must not panic
 }
 
 func TestPenAutoCutChecklist(t *testing.T) {
 	t.Parallel()
 	s := penSim()
-	a := penApp(t, s)
-	ids := map[string]button{}
-	for _, b := range a.buildingButtons() {
-		ids[b.id] = b
-	}
+	a, f, _ := penTabApp(t, s)
+	ids := penBodyButtons(penBody(t, a))
 	for _, k := range []string{"tree", "pine", "jungle_tree", "cactus", "bramble", "shrub"} {
 		if _, ok := ids["bldg.pen.cut."+k]; !ok {
 			t.Errorf("auto-cut lacks %s (defaults plus plants inside the pen)", k)
@@ -212,12 +259,12 @@ func TestPenAutoCutChecklist(t *testing.T) {
 	if !ids["bldg.pen.cut.bramble"].selected || ids["bldg.pen.cut.cactus"].selected {
 		t.Error("checked state follows Settings.AutoCut")
 	}
-	click(t, a, "bldg.pen.cut.cactus")
+	press(t, a, f, "bldg.pen.cut.cactus")
 	ps := penSettingsOf(t, s.cmds[len(s.cmds)-1])
 	if len(ps.AutoCut) != 2 || ps.AutoCut[0] != "bramble" || ps.AutoCut[1] != "cactus" {
 		t.Fatalf("cactus joins the list: %v", ps.AutoCut)
 	}
-	click(t, a, "bldg.pen.cut.bramble")
+	press(t, a, f, "bldg.pen.cut.bramble")
 	ps = penSettingsOf(t, s.cmds[len(s.cmds)-1])
 	if len(ps.AutoCut) != 0 {
 		t.Fatalf("bramble leaves the list: %v", ps.AutoCut)
@@ -230,20 +277,28 @@ func TestPenAutoCutChecklist(t *testing.T) {
 func TestPenMarkerHasNoGenericBuildingExtras(t *testing.T) {
 	t.Parallel()
 	a := penApp(t, penSim())
-	for _, b := range a.buildingButtons() {
-		if strings.HasPrefix(b.id, "bill.") {
-			t.Errorf("a marker has no bills: %s", b.id)
+	for _, c := range a.buildingCommands(70) {
+		if strings.HasPrefix(c.ID, "bill.") {
+			t.Errorf("a marker has no bills: %s", c.ID)
+		}
+	}
+	for _, tab := range a.buildingPane(70).Tabs {
+		if tab.ID == "inspector.bills" {
+			t.Error("a marker has no Bills tab")
 		}
 	}
 	screen := ebiten.NewImage(1280, 720)
-	a.drawBuildingInspector(screen)
+	a.drawBuildingMark(screen)
 	a.drawPenOutline(screen)
-	if r := a.buildingPanelRect(); r.h <= buildingRect().h {
-		t.Errorf("the pen panel is taller than the generic one: %v", r.h)
+	// the Pen tab asks for a taller panel than the plain pane's header
+	tab, _ := bldTab(a.buildingPane(70), "inspector.pen")
+	if tab.WantH <= 2*paneInset {
+		t.Errorf("the Pen tab wants %v", tab.WantH)
 	}
+	// other buildings have no Pen tab
 	a.selBuilding = 71
-	if a.buildingPanelRect() != buildingRect() {
-		t.Error("other buildings keep the generic rect")
+	if got := a.buildingPane(71).Tabs; len(got) != 0 {
+		t.Errorf("a wall has tabs: %+v", got)
 	}
 }
 

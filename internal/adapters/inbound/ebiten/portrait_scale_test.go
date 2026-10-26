@@ -8,7 +8,8 @@ import (
 
 // PLAY-017: the colonist bar's portrait art sits inside its bar slot at
 // every UI scale. It floated mid-screen at scale 2: the portrait drew
-// logical coordinates straight onto the physical screen.
+// logical coordinates straight onto the physical screen. The slots are the
+// layout's (PLAY-018: computeHUDLayout's BarSlots, top-centre).
 func TestBarPortraitsInTheirSlotsAtScale(t *testing.T) {
 	art := testArt(t)
 	for _, s := range []float64{1, 1.5, 2} {
@@ -28,14 +29,31 @@ func TestBarPortraitsInTheirSlotsAtScale(t *testing.T) {
 		if len(imgs) == 0 {
 			t.Fatalf("s=%v: no portrait image traced", s)
 		}
-		top, bottom := float64(hudBarY(a.sh))*s, float64(hudBarY(a.sh)+hudBarH)*s
+		l := a.hud()
 		n := len(a.barPawns())
+		if len(l.BarSlots) != n {
+			t.Fatalf("s=%v: %d bar slots for %d colonists", s, len(l.BarSlots), n)
+		}
+		have := map[int]bool{}
 		for _, r := range imgs {
 			x, y, w, h := float64(r[0]), float64(r[1]), float64(r[2]), float64(r[3])
-			slot := int((x/s - hudPad) / barSlot)
-			left, right := float64(hudPad+slot*barSlot)*s, float64(hudPad+(slot+1)*barSlot)*s
-			if slot < 0 || slot >= n || x < left-0.5 || x+w > right+0.5 || y < top-0.5 || y+h > bottom+0.5 {
-				t.Errorf("s=%v: portrait image %v outside its bar slot (bar y %v..%v)", s, r, top, bottom)
+			slot := -1
+			for i, sl := range l.BarSlots {
+				left, top, right, bottom := float64(sl.X)*s, float64(sl.Y)*s, float64(sl.right())*s, float64(sl.bottom())*s
+				if x >= left-0.5 && x+w <= right+0.5 && y >= top-0.5 && y+h <= bottom+0.5 {
+					slot = i
+					break
+				}
+			}
+			if slot < 0 {
+				t.Errorf("s=%v: portrait image %v outside every bar slot (bar %+v)", s, r, l.Bar)
+				continue
+			}
+			have[slot] = true
+		}
+		for i := 0; i < n; i++ {
+			if !have[i] {
+				t.Errorf("s=%v: bar slot %d draws no portrait", s, i)
 			}
 		}
 	}

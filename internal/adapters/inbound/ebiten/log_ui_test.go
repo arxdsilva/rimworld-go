@@ -35,48 +35,41 @@ func TestLogLineTextAndWrap(t *testing.T) {
 	}
 }
 
-func TestRecentShowsFourNewest(t *testing.T) {
-	t.Parallel()
-	rows := recentLogRows(logs(7), 300)
-	if len(rows) != 4 || !strings.Contains(rows[0], "event A") || !strings.Contains(rows[3], "event D") {
-		t.Fatalf("rows = %q", rows)
-	}
-}
-
 func TestLogTabButtonAndRendering(t *testing.T) {
 	a, _, id := liveColony(t, 0)
 	selectPawn(t, a, id)
-	if _, ok := findButton(a, "inspector.log"); !ok {
+	tab, ok := paneTabByID(a.pawnPane(id), "inspector.log")
+	if !ok || tab.Draw == nil {
 		t.Fatal("no Log tab")
 	}
-	r := inspectorRect()
-	for _, b := range a.inspectorButtons() {
-		if b.id != "pawn.draft" && b.id != "pawn.clearorders" && b.id != "inspector.close" && b.x+b.w > r.x+r.w {
-			t.Fatalf("tab %s overflows the panel", b.id)
-		}
+	r := innerFor(1280, 720, tab)
+	if r.W < expandMinW-2*paneInset || r.W > expandMaxW {
+		t.Fatalf("Log panel %+v", r)
 	}
-	click(t, a, "inspector.log")
-	if a.inspectTab != "log" {
-		t.Fatalf("tab = %q", a.inspectTab)
+	// the tab sits inside the pane's tab strip and the panel inside the screen
+	if r.X < 0 || r.right() > 1280 || r.Y < 0 || r.bottom() > 720 {
+		t.Fatalf("Log panel %+v is off the screen", r)
 	}
+	a.inspectTab = "log"
 	p, _ := a.selectedPawn()
 	p.Log = logs(40)
 	// drawing (pixels cannot be read in tests) must not panic, with or
 	// without lines
-	img := ebiten.NewImage(640, 480)
-	a.drawPawnLog(img, p)
+	img := ebiten.NewImage(1280, 720)
+	a.drawPawnLogRows(img, p, r)
 	empty := p
 	empty.Log = nil
-	a.drawPawnLog(img, empty)
+	a.drawPawnLogRows(img, empty, r)
+	tab.Draw(img, r)
 	if rows := wrapLogRows(empty.Log, 300); len(rows) != 0 {
 		t.Fatal("no lines, no rows (the empty message is drawn instead)")
 	}
 	// the wheel scrolls inside the panel, and not outside it
-	x, y, _, _ := logPanelRect()
-	if !a.scrollLogAt(x+5, y+5, -1) || a.logScroll == 0 {
+	x, y, _, _ := logBodyRect(r)
+	if !a.scrollLogIn(r, x+5, y+5, -1) || a.logScroll == 0 {
 		t.Fatalf("wheel over the log must scroll it (scroll %d)", a.logScroll)
 	}
-	if a.scrollLogAt(600, 460, -1) {
+	if a.scrollLogIn(r, 1270, 710, -1) {
 		t.Fatal("wheel elsewhere must not be taken")
 	}
 	a.logFor = 0
@@ -86,21 +79,28 @@ func TestLogTabButtonAndRendering(t *testing.T) {
 	}
 }
 
+// The animal's Log is a pane tab (PLAY-018): it opens the expanded panel
+// above the pane and a second click folds it again.
 func TestAnimalLogToggle(t *testing.T) {
 	a, g, _ := liveColony(t, 0)
 	if _, err := g.SpawnAnimal("dustbuck", 10, 10); err != nil {
 		t.Fatal(err)
 	}
-	a.selectAnimalAt(10, 10)
-	h0 := a.animalPanel().h
-	click(t, a, "animal.log")
-	if !a.animalLogOpen || a.animalPanel().h <= h0 {
-		t.Fatal("Log expands the panel")
+	if !a.selectAnimalAt(10, 10) {
+		t.Fatal("animal not selectable")
 	}
-	screen := ebiten.NewImage(640, 480)
-	a.drawAnimalInspector(screen)
-	click(t, a, "animal.log")
-	if a.animalLogOpen {
+	if !a.hud().Expanded.empty() {
+		t.Fatal("the pane starts folded")
+	}
+	click(t, a, "inspector.log")
+	l := a.hud()
+	if a.paneOpenTab() != "inspector.log" || l.Expanded.empty() || l.Expanded.bottom() != l.PaneTabs.Y {
+		t.Fatalf("Log expands the panel above the pane: open %q, expanded %+v", a.paneOpenTab(), l.Expanded)
+	}
+	screen := ebiten.NewImage(1280, 720)
+	a.drawPane(screen)
+	click(t, a, "inspector.log")
+	if a.paneOpenTab() != "" || !a.hud().Expanded.empty() {
 		t.Fatal("toggles back")
 	}
 }

@@ -153,6 +153,11 @@ func newVisualScene(t *testing.T, art *artCatalog, extras bool) *visualScene {
 	}
 	a.art, a.renderer.art = art, art
 	a.renderer.speed = speedPaused
+	// The learning helper reacts to what a panel test selects (a lesson done
+	// flashes, the next one slides in), so it would change between the
+	// scales a test compares: it is off here. TestFrameInvariance, which
+	// selects nothing, turns it back on so the frame checks cover it.
+	a.settings.Gameplay.ShowLearningHelper = false
 	s.a = a
 	t.Cleanup(func() {
 		curUIScale = unitUIScale
@@ -214,6 +219,7 @@ func (s *visualScene) update(t testing.TB) {
 func (s *visualScene) closeAll(t testing.TB) {
 	t.Helper()
 	a := s.a
+	a.closePaneTab()
 	a.clearSelections(selNone)
 	a.workOpen = false
 	a.closeArchitect()

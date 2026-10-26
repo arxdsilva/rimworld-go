@@ -180,9 +180,8 @@ type App struct {
 	archDrag                       bool
 	archX0, archY0, archX1, archY1 int
 	inspectTab                     string
-	logScroll, animalLogScroll     int // log_ui.go
+	logScroll                      int // log_ui.go
 	logFor, animalLogFor           entity.EntityID
-	animalLogOpen                  bool
 	capture                        captureState
 	msgSeen                        map[string]uint64 // message key -> frame first shown
 	saveSlot                       string            // current colony's save slot
@@ -413,6 +412,12 @@ func (a *App) handleColonyEscape() bool {
 		a.workOpen = false
 		return true
 	}
+	if a.closeLearnCard() { // learn_ui.go: the lesson detail card goes first
+		return true
+	}
+	if a.closePaneTab() { // hud_inspect.go: an open inspector tab goes before the selection
+		return true
+	}
 	if a.hasBuilding {
 		a.clearBuilding()
 		return true
@@ -601,8 +606,6 @@ func (a *App) applyClick(id string) {
 		}
 	case strings.HasPrefix(id, "animal."):
 		a.applyAnimalClick(id)
-	case strings.HasPrefix(id, "pawn.equip."):
-		a.applyPawnEquipClick(id) // inspector.go
 	case strings.HasPrefix(id, "plant."):
 		a.applyPlantClick(id) // plant_inspector.go
 	case strings.HasPrefix(id, "item."):
@@ -871,7 +874,7 @@ func (a *App) drawBottomHint(screen *ebiten.Image, s string, sh int) {
 	}
 	w := int(textW(s, tsBody)) + 16
 	h := int(lineStep(tsBody)) + 4
-	hx, hb := a.hintAnchor(sh) // hud_commands.go: above the command buttons or the pane
+	hx, hb := a.hintAnchor() // hud_commands.go: above the command buttons or the pane
 	x, y := int(hx), int(hb)-h
 	drawPanel(screen, float32(x), float32(y), float32(w), float32(h))
 	drawLabel(screen, x+8, y+4, s)

@@ -33,14 +33,16 @@ func (a *App) captureSocialUI(ui string) {
 	switch ui {
 	case "social":
 		pick("Maren")
-		a.inspectTab = "social"
-		a.cursor = &[2]int{int(inspectorRect().x) + 120, int(inspectorRect().y) + 48} // the first row's tooltip
+		a.openPaneTab("social")
+		if r := a.expandedRect(); !r.empty() { // the first row's tooltip, under the tab's heading
+			a.cursor = &[2]int{int(r.X) + paneInset + 120, int(r.Y) + paneInset + 48}
+		}
 	case "health":
 		pick("Cyrus")
-		a.inspectTab = "health"
+		a.openPaneTab("health")
 	case "prisoner":
 		pick("Garr")
-		a.inspectTab = "prisoner"
+		a.openPaneTab("prisoner")
 	case "history":
 		a.openHistory()
 	case "world":

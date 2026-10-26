@@ -42,6 +42,7 @@ type searchHit struct {
 
 const (
 	searchW       = 440
+	searchMinW    = 200 // the box never gets narrower, however small the window
 	searchMaxHits = 8
 	searchRowH    = 22
 	searchMaxLen  = 32
@@ -185,9 +186,21 @@ func (a *App) pickSearch(h searchHit) {
 	a.centerOnMap(float64(h.x)+0.5, float64(h.y)+0.5)
 }
 
+// searchRect is the search box (PLAY-018): centred under the colonist bar
+// (the top when the bar is off), kept between the resource list and the
+// right column, so it covers neither them nor the bar.
 func (a *App) searchRect(sw int) button {
 	n := len(a.searchHits())
-	return button{x: float32((sw - searchW) / 2), y: hudTopH + 40, w: searchW, h: float32(46 + max(n, 1)*searchRowH)}
+	l := a.hud()
+	y := float32(hudMargin)
+	if !l.Bar.empty() {
+		y = l.Bar.bottom()
+	}
+	side := float32(rightW + 2*hudMargin) // the bar keeps this much clear on both sides; so does the box
+	w := max(min(searchW, float32(sw)-2*side), searchMinW)
+	x := (float32(sw) - w) / 2
+	x = max(min(x, float32(sw)-side-w), hudMargin+resourcesW+hudMargin) // a narrow window pushes it left of the right column
+	return button{x: float32(int(x)), y: y + hudMargin, w: w, h: float32(46 + max(n, 1)*searchRowH)}
 }
 
 // searchButtons are the result rows ("search.pick.N").

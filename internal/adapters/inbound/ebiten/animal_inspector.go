@@ -14,7 +14,8 @@ import (
 
 // Animal selection, its inspector (hunt toggle) and the hostile alert.
 
-var alertClr = color.RGBA{R: 0xD8, G: 0x4A, B: 0x3C, A: 0xFF}
+// alertClr is the hostile-animal marker and alert colour: the danger token.
+var alertClr = uiDanger
 
 func animalAt(w game.WorldView, x, y int) (game.AnimalView, bool) {
 	for _, an := range w.Animals {
@@ -50,61 +51,6 @@ func (a *App) selectedAnimal() (game.AnimalView, bool) {
 	return game.AnimalView{}, false
 }
 
-const (
-	animalPanelH     = 222 // with the Recent list
-	animalPanelFullH = 340 // with the full scrollable log open
-)
-
-// animalPanel is the inspector rect; it grows while the full log is open.
-func (a *App) animalPanel() button {
-	h := float32(animalPanelH)
-	if a.animalLogOpen {
-		h = animalPanelFullH
-	}
-	if an, ok := a.selectedAnimal(); ok {
-		h += float32(animalExtraH(an) + animalBondH(an))
-	}
-	return button{x: hudPad, y: hudTopH + hudPad, w: 300, h: h}
-}
-
-func (a *App) animalButtons() []button {
-	an, ok := a.selectedAnimal()
-	if !ok || a.workOpen || a.archOpen {
-		return nil
-	}
-	a.syncAnimalLog(an.ID)
-	r := a.animalPanel()
-	label := "Hunt"
-	switch {
-	case an.Designated:
-		label = "Cancel hunt"
-	case an.Tame:
-		label = "Slaughter"
-	}
-	out := []button{
-		{id: "animal.close", label: "X", x: r.x + r.w - 28, y: r.y + 6, w: 22, h: 22},
-		{id: "animal.hunt", label: label, x: r.x + 12, y: r.y + r.h - 34, w: 120, h: 24, selected: an.Designated},
-	}
-	logLabel := "Log"
-	if a.animalLogOpen {
-		logLabel = "Less"
-	}
-	out = append(out, button{id: "animal.log", label: logLabel, x: r.x + 246, y: r.y + r.h - 34, w: 48, h: 24, selected: a.animalLogOpen})
-	_, bb := animalBondLayout(an, r) // animal_bonds_ui: master and training
-	out = append(out, bb...)
-	switch {
-	case an.Tame:
-		out = append(out, button{id: "animal.release", label: "Release", x: r.x + 140, y: r.y + r.h - 34, w: 100, h: 24})
-	case !an.Manhunter:
-		tl := "Tame"
-		if an.TameMark {
-			tl = "Cancel tame"
-		}
-		out = append(out, button{id: "animal.tame", label: tl, x: r.x + 140, y: r.y + r.h - 34, w: 100, h: 24, selected: an.TameMark})
-	}
-	return out
-}
-
 // animalLabel is the species' display name ("arctic fox"): the view's
 // Label, else the key with its underscores spaced out.
 func animalLabel(an game.AnimalView) string {
@@ -135,8 +81,6 @@ func animalInitial(label string) string {
 	return "?"
 }
 
-var iconDiscClr = color.RGBA{R: 0x4A, G: 0x3C, B: 0x2C, A: 0xFF}
-
 // drawAnimalIcon draws the species' ui_icon at (x, y), size px square; a
 // species without one gets its initial on a disc.
 func drawAnimalIcon(dst *ebiten.Image, art *artCatalog, an game.AnimalView, x, y, size float64) {
@@ -145,55 +89,18 @@ func drawAnimalIcon(dst *ebiten.Image, art *artCatalog, an game.AnimalView, x, y
 		return
 	}
 	r := float32(size) / 2
-	uiFillCircle(dst, float32(x)+r, float32(y)+r, r, iconDiscClr, true)
-	uiStrokeCircle(dst, float32(x)+r, float32(y)+r, r, 1.5, color.RGBA{R: 0xC8, G: 0xB0, B: 0x82, A: 0xFF}, true)
+	uiFillCircle(dst, float32(x)+r, float32(y)+r, r, uiBtn, true)
+	uiStrokeCircle(dst, float32(x)+r, float32(y)+r, r, 1.5, uiBtnBorder, true)
 	drawCentered(dst, animalInitial(animalLabel(an)), x+float64(r), y+float64(r), tsLabel)
 }
 
-func (a *App) drawAnimalInspector(screen *ebiten.Image) {
+// drawAnimalMark draws the selection mark on the animal's tile; the
+// panel itself is the inspect pane (animalPane).
+func (a *App) drawAnimalMark(screen *ebiten.Image) {
 	an, ok := a.selectedAnimal()
 	if !ok || a.workOpen || a.archOpen {
 		return
 	}
-	a.syncAnimalLog(an.ID)
-	r := a.animalPanel()
-	drawPanel(screen, r.x, r.y, r.w, r.h)
-	drawAnimalIcon(screen, a.renderer.art, an, float64(r.x)+12, float64(r.y)+10, 40)
-	drawFitSmall(screen, animalTitle(an), float64(r.x)+60, float64(r.y)+8, float64(r.w)-60-36, tsLabel)
-	state := an.Mode
-	switch {
-	case an.Manhunter:
-		state = "MANHUNTER: hunting colonists!"
-	case an.Hostile:
-		state = "attacking a colonist!"
-	case an.TameMark:
-		state += ", marked for taming"
-	}
-	if st := a.animalStateLine(an); st != "" && !an.Manhunter && !an.Hostile {
-		state = st
-		if an.TameMark {
-			state += ", marked for taming"
-		}
-	}
-	drawFitSmall(screen, state, float64(r.x)+60, float64(r.y)+27, float64(r.w)-72, tsSmall)
-	if l := animalLifeLine(an); l != "" {
-		drawFitSmall(screen, l, float64(r.x)+60, float64(r.y)+41, float64(r.w)-72, tsSmall)
-	}
-	for i, ln := range wrapPx(animalBlurb(an.Species), withColor(tsSmall, uiTextDim), float64(r.w)-24) {
-		if i > 1 {
-			break
-		}
-		drawText(screen, ln, float64(r.x)+12, float64(r.y)+55+float64(i*13), withColor(tsSmall, uiTextDim))
-	}
-	drawNeedBar(screen, int(r.x)+12, int(r.y)+84, 270, 14, an.Health, "health")
-	a.drawAnimalNeeds(screen, an, r)
-	a.drawAnimalBonds(screen, an, r)
-	a.drawAnimalLog(screen, an, r)
-	if an.Designated {
-		drawLabel(screen, int(r.x)+150, int(r.y+r.h)-28, "marked for hunting")
-	}
-	mx, my := a.currentCursor()
-	a.drawButtons(screen, a.animalButtons(), mx, my)
 	if a.renderer.art != nil {
 		wx, wy := a.renderer.interpAnimal(an)
 		a.renderer.drawSprite(screen, "overlay/selection", color.NRGBA{}, wx, wy, a.renderer.tilePx(), a.pw, a.ph) // physical, like the map
@@ -208,9 +115,6 @@ func (a *App) applyAnimalClick(id string) {
 	switch id {
 	case "animal.close":
 		a.clearAnimal()
-	case "animal.log":
-		a.animalLogOpen = !a.animalLogOpen
-		a.animalLogScroll = 0
 	case "animal.hunt":
 		c := command.Command{Kind: command.DesignateHunt, X: an.X, Y: an.Y, X2: an.X, Y2: an.Y}
 		if an.Designated { // only the mark: a pen or zone underneath stays
@@ -225,8 +129,10 @@ func (a *App) applyAnimalClick(id string) {
 		a.renderer.enqueue(c)
 	case "animal.release":
 		a.renderer.enqueue(command.Command{Kind: command.ReleaseAnimal, Pawn: uint64(an.ID)})
-	case "animal.master":
-		a.openMasterPicker(an)
+	case "animal.area": // the pane's allowed-area chip (a tame animal that is not penned)
+		if an.Tame && !an.Penned {
+			a.openAreaPicker("Allowed area", an.AreaRef, true, func(ref int) { a.assignArea(an.ID, ref) })
+		}
 	default:
 		if s, ok := strings.CutPrefix(id, "animal.train."); ok {
 			a.toggleTraining(an, s)
@@ -304,84 +210,11 @@ func animalHuntLine(an game.AnimalView) string {
 	return "Hunts wild animals when hungry"
 }
 
-// animalExtraH is how tall the needs block is: Food and Rest bars, the
-// product bar, a pregnancy line, the diet line (and a tame predator's
-// hunting note) and a wild animal's tame chance (the bond block under it
-// adds animalBondH).
-func animalExtraH(an game.AnimalView) int {
-	if !animalHasNeeds(an) {
-		return 0
-	}
-	h := 40 // food, rest
-	if an.Product != "" {
-		h += 20
-	}
-	if animalPregLine(an) != "" {
-		h += 16
-	}
-	if animalDietLine(an) != "" {
-		h += 16
-	}
-	if animalHuntLine(an) != "" {
-		h += 16
-	}
-	if !an.Tame {
-		h += 16 // tame chance
-	}
-	return h
-}
+// Master, bond, training and family (ENG-003, M10): the pane's Master,
+// Bond, Mother and Young lines; Master and each learnable skill are
+// command buttons (cmds_thing.go).
 
-func (a *App) drawAnimalNeeds(screen *ebiten.Image, an game.AnimalView, r button) {
-	if !animalHasNeeds(an) {
-		return
-	}
-	x, y := int(r.x)+12, int(r.y)+104
-	drawNeedBar(screen, x, y, 270, 14, an.Food, "food")
-	y += 20
-	drawNeedBar(screen, x, y, 270, 14, an.Rest, "rest")
-	y += 20
-	if an.Product != "" {
-		drawNeedBar(screen, x, y, 270, 14, an.ProductPct, an.Product)
-		y += 20
-	}
-	if l := animalPregLine(an); l != "" {
-		drawLabel(screen, x, y, l)
-		y += 16
-	}
-	if l := animalDietLine(an); l != "" {
-		drawLabel(screen, x, y, l)
-		y += 16
-	}
-	if l := animalHuntLine(an); l != "" {
-		drawLabel(screen, x, y, l)
-		y += 16
-	}
-	if !an.Tame {
-		if row, ok := a.wildRow(an.Species); ok {
-			drawLabel(screen, x, y, fmt.Sprintf("Tame chance %d%%", row.TameChance))
-		}
-	}
-}
-
-// Master, bond, training and family (ENG-003, M10): the inspector's block
-// under the needs. Master opens a pick list of colonists (the order
-// menu); each learnable skill is a checkbox showing its steps.
-
-const (
-	bondRowH    = 18
-	trainBtnH   = 20
-	trainBtnW   = 134 // two per row in the 300 px panel: "Obedience 2/3" fits
-	trainPerRow = 2
-	bondLabelX  = 12
-)
-
-// bondLine is one text line of the bond block.
-type bondLine struct {
-	x, y int
-	text string
-}
-
-// animalBondRows are the bond block's text lines (no layout).
+// animalBondRows are the Master, Bond, Mother and Young lines.
 func animalBondRows(an game.AnimalView) []string {
 	var rows []string
 	if an.Tame {
@@ -414,66 +247,9 @@ func animalTrainable(an game.AnimalView) []game.AnimalTrainingView {
 	return out
 }
 
-// animalBondH is how tall the bond block is.
-func animalBondH(an game.AnimalView) int {
-	h := len(animalBondRows(an)) * bondRowH
-	if an.Tame && len(animalTrainable(an)) > 0 {
-		rows := (len(animalTrainable(an)) + trainPerRow - 1) / trainPerRow
-		h += rows*(trainBtnH+4) + 2
-	}
-	return h
-}
-
 // trainLabel is a training checkbox's label: "Obedience 2/3".
 func trainLabel(t game.AnimalTrainingView) string {
 	return fmt.Sprintf("%s %d/%d", t.Label, t.Steps, t.Needed)
-}
-
-// animalBondLayout places the bond block's lines and buttons in panel r.
-func animalBondLayout(an game.AnimalView, r button) ([]bondLine, []button) {
-	x := int(r.x) + bondLabelX
-	y := int(r.y) + 104 + animalExtraH(an)
-	var lines []bondLine
-	var btns []button
-	for i, row := range animalBondRows(an) {
-		lines = append(lines, bondLine{x: x, y: y, text: row})
-		if i == 0 && an.Tame {
-			btns = append(btns, button{id: "animal.master", label: "Change", x: r.x + r.w - 92, y: float32(y) - 2, w: 80, h: bondRowH - 1,
-				tip: "Pick this animal's master"})
-		}
-		y += bondRowH
-	}
-	if an.Tame {
-		for i, t := range animalTrainable(an) {
-			btns = append(btns, button{id: "animal.train." + strconv.Itoa(t.Skill), label: trainLabel(t),
-				x: float32(x + i%trainPerRow*(trainBtnW+4)), y: float32(y + i/trainPerRow*(trainBtnH+4)), w: trainBtnW, h: trainBtnH, selected: t.On,
-				tip: "Handlers train it when on"})
-		}
-	}
-	return lines, btns
-}
-
-func (a *App) drawAnimalBonds(screen *ebiten.Image, an game.AnimalView, r button) {
-	lines, _ := animalBondLayout(an, r)
-	for _, l := range lines {
-		drawLabelClip(screen, l.x, l.y, int(r.w)-bondLabelX-100, l.text)
-	}
-}
-
-// openMasterPicker lists the colonists (and "No master") as SetAnimalMaster
-// choices in the order menu beside the inspector.
-func (a *App) openMasterPicker(an game.AnimalView) {
-	var opts []game.OrderOption
-	for _, p := range a.renderer.snapshot() {
-		o := game.OrderOption{Label: p.Name, Cmd: command.Command{Kind: command.SetAnimalMaster, Target: uint64(an.ID), Pawn: uint64(p.ID)}}
-		if p.ID == an.MasterID {
-			o.Label += " (master)"
-		}
-		opts = append(opts, o)
-	}
-	opts = append(opts, game.OrderOption{Label: "No master", Cmd: command.Command{Kind: command.SetAnimalMaster, Target: uint64(an.ID)}})
-	r := a.animalPanel()
-	a.float = floatMenu{open: true, x: r.x + r.w + 6, y: r.y + 104, opts: opts}
 }
 
 // toggleTraining flips one training checkbox (SetTraining).
@@ -486,5 +262,98 @@ func (a *App) toggleTraining(an game.AnimalView, s string) {
 		if t.Skill == n && t.Allowed {
 			a.renderer.enqueue(command.Command{Kind: command.SetTraining, Target: uint64(an.ID), Index: n, Enabled: !t.On})
 		}
+	}
+}
+
+// The pane's tabs (PLAY-018): the Log, and for a tame animal that can
+// learn, Training. A tab body draws into the inner rectangle of the
+// expanded panel (the panel inset by paneInset), clipped to it.
+
+const (
+	animalTabW      = 480 // the expanded panel's wanted width
+	animalLogTabH   = 240
+	animalTrainRowH = 24
+	animalTrainBarW = 120
+	animalTrainBarH = 8
+	animalTrainLblW = 140
+	animalLogID     = "pane.animal.log" // the Log tab's scroll area
+)
+
+const trainingIntro = "Handlers train an animal in these skills while they are on. " +
+	"Turn each on or off with its command button."
+
+// animalLogRows are the Log tab's rows, wrapped for a body w px wide.
+func animalLogRows(an game.AnimalView, w float32) []string {
+	return wrapLogRows(an.Log, float64(w-scrollBarW)-4)
+}
+
+// declareAnimalLog declares the Log tab's scroll area over inner (the wheel
+// and the scrollbar).
+func (a *App) declareAnimalLog(an game.AnimalView, inner rect) {
+	rows := animalLogRows(an, inner.W)
+	a.uiScrollArea(animalLogID, inner, float32(len(rows)*logLineH()), scrollOpts{Step: float32(3 * logLineH())})
+}
+
+// drawAnimalLogTab is the Log tab body: the animal's full log, newest
+// first, scrolled by the area declareAnimalLog declared.
+func (a *App) drawAnimalLogTab(screen *ebiten.Image, an game.AnimalView, inner rect) {
+	rows := animalLogRows(an, inner.W)
+	if len(rows) == 0 {
+		drawText(screen, logEmptyText, float64(inner.X), float64(inner.Y), withColor(logStyle, uiTextDim))
+		return
+	}
+	lh := logLineH()
+	off := a.uiSt().scroll[animalLogID]
+	for i, row := range rows {
+		y := inner.Y + float32(i*lh) - off
+		if y+float32(lh) < inner.Y || y > inner.bottom() {
+			continue
+		}
+		drawText(screen, row, float64(inner.X), float64(y), logStyle)
+	}
+}
+
+// animalTrainingTabH is the Training tab's wanted panel height for the
+// skills an can learn: the intro, then a row each, inside the panel inset.
+func animalTrainingTabH(an game.AnimalView) float32 {
+	return 2*paneInset + 2*lineStep(tsSmall) + 8 + float32(len(animalTrainable(an))*animalTrainRowH)
+}
+
+// trainState is a skill row's state word.
+func trainState(t game.AnimalTrainingView) string {
+	switch {
+	case t.Learned:
+		return "learned"
+	case t.On:
+		return "training"
+	}
+	return "off"
+}
+
+// drawAnimalTrainingTab is the Training tab body: one row per learnable
+// skill with its steps.
+func (a *App) drawAnimalTrainingTab(screen *ebiten.Image, an game.AnimalView, inner rect) {
+	x, y := float64(inner.X), float64(inner.Y)
+	dim := withColor(tsSmall, uiTextDim)
+	for i, ln := range wrapPx(trainingIntro, dim, float64(inner.W)) {
+		if i > 1 {
+			break
+		}
+		drawText(screen, ln, x, y+float64(i)*float64(lineStep(tsSmall)), dim)
+	}
+	y += float64(2*lineStep(tsSmall)) + 8
+	for _, t := range animalTrainable(an) {
+		drawText(screen, t.Label, x, y+(animalTrainRowH-lineH(tsBody))/2, tsBody)
+		bx, by := float32(x)+animalTrainLblW, float32(y)+(animalTrainRowH-animalTrainBarH)/2
+		fillRect(screen, rect{bx, by, animalTrainBarW, animalTrainBarH}, uiScrollTrack)
+		if t.Needed > 0 {
+			fill := uiSliderFill
+			if t.Learned {
+				fill = uiGood
+			}
+			fillRect(screen, rect{bx, by, animalTrainBarW * float32(min(t.Steps, t.Needed)) / float32(t.Needed), animalTrainBarH}, fill)
+		}
+		drawText(screen, fmt.Sprintf("%d/%d  %s", t.Steps, t.Needed, trainState(t)), float64(bx)+animalTrainBarW+10, y+(animalTrainRowH-lineH(tsSmall))/2, dim)
+		y += animalTrainRowH
 	}
 }

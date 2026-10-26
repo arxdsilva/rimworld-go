@@ -25,6 +25,11 @@ type floatMenu struct {
 	x, y   float32
 	opts   []game.OrderOption
 	tx, ty int
+	// pick, when set, makes this a command's options menu (PLAY-018): the
+	// entries carry labels and reasons only, picking entry i calls pick(i),
+	// and the menu has no Shift-queue footer.
+	pick func(i int)
+	up   bool // the menu opens upward from y (y is the anchor's top)
 }
 
 // floatHintH is the footer row under the order menu.
@@ -46,14 +51,21 @@ func (a *App) floatRect() button {
 			w = n
 		}
 	}
-	h := len(a.float.opts)*floatRowH + floatHintH
+	h := len(a.float.opts) * floatRowH
+	if a.float.pick == nil {
+		h += floatHintH
+	}
 	x, y := a.float.x, a.float.y
+	if a.float.up {
+		y -= float32(h)
+	}
 	if sw, sh := a.size(); sw > 0 {
 		if x+float32(w) > float32(sw) {
 			x = float32(sw - w - 4)
 		}
-		if y+float32(h) > hudBarY(sh) {
-			y = hudBarY(sh) - float32(h) - 4
+		// the menu stays above the tab strip (the layout's Tabs rect)
+		if tabsTop := float32(sh - tabsH); y+float32(h) > tabsTop {
+			y = tabsTop - float32(h) - 4
 		}
 	}
 	return button{x: x, y: y, w: float32(w), h: float32(h)}
@@ -81,7 +93,9 @@ func (a *App) drawFloat(screen *ebiten.Image) {
 	}
 	r := a.floatRect()
 	drawPanel(screen, r.x-2, r.y-2, r.w+4, r.h+4)
-	drawText(screen, "Shift: queue (max 3)", float64(r.x)+10, float64(r.y+r.h)-floatHintH, withColor(tsSmall, uiTextDim))
+	if a.float.pick == nil {
+		drawText(screen, "Shift: queue (max 3)", float64(r.x)+10, float64(r.y+r.h)-floatHintH, withColor(tsSmall, uiTextDim))
+	}
 	mx, my := a.currentCursor()
 	for i, b := range a.floatButtons() {
 		fill := uiBtn
@@ -113,10 +127,22 @@ func (a *App) chooseFloat(id string) {
 		a.hint = o.Reason
 		return
 	}
+	if pick := a.float.pick; pick != nil {
+		a.closeFloat()
+		pick(i)
+		return
+	}
 	c := o.Cmd
 	c.Queue = a.queueing() // Shift: queue behind the current order
 	a.renderer.enqueue(c)
 	a.closeFloat()
+}
+
+// openPick opens a menu over entries (labels and reasons; their Cmd is
+// unused) at (x, y), upward from y when up. Picking entry i closes the menu
+// and calls pick(i); a disabled entry shows its reason and keeps it open.
+func (a *App) openPick(x, y float32, up bool, entries []game.OrderOption, pick func(i int)) {
+	a.float = floatMenu{open: true, x: x, y: y, opts: entries, pick: pick, up: up}
 }
 
 // openOrders opens the order menu for the selected pawn at tile (tx, ty).

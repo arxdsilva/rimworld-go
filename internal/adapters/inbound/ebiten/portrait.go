@@ -163,3 +163,40 @@ func (r *Renderer) drawPawnPortraitArt(screen *ebiten.Image, p game.PawnView, x,
 	}
 	return true
 }
+
+// bustCrop is the part of the 160x297 pawn canvas the colonist bar shows:
+// the hair, head, shoulders and chest (the figure is a chibi, its head a
+// third of its height).
+var bustCrop = image.Rect(36, 66, 124, 166)
+
+// drawPawnBustArt draws the layered pawn's head and chest (the bustCrop of
+// the south-facing figure) fitted into the logical w x h box at (x, y), for
+// the colonist bar; it draws through the UI canvas like drawPawnPortraitArt.
+func (r *Renderer) drawPawnBustArt(screen *ebiten.Image, p game.PawnView, x, y, w, h float64) bool {
+	body := r.art.sprite("pawn/body_south")
+	if body == nil {
+		return false
+	}
+	canvasW := float64(body.meta.Canvas[0])
+	cw, ch := float64(bustCrop.Dx()), float64(bustCrop.Dy())
+	s := math.Min(w/cw, h/ch)
+	ox, oy := x+(w-cw*s)/2, y+(h-ch*s)/2
+	for _, ly := range r.pawnPortraitLayers(p) {
+		img := r.art.image(ly.key, ly.tint)
+		if img == nil {
+			continue
+		}
+		b := img.Bounds()
+		k := float64(b.Dx()) / canvasW // image pixels per canvas pixel (1 unless the art is @2x)
+		x0, y0 := int(float64(bustCrop.Min.X)*k), int(float64(bustCrop.Min.Y)*k)
+		crop := image.Rect(x0, y0, int(float64(bustCrop.Max.X)*k), int(float64(bustCrop.Max.Y)*k)).Intersect(b)
+		if crop.Empty() {
+			continue
+		}
+		op := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear}
+		op.GeoM.Scale(s/k, s/k)
+		op.GeoM.Translate(ox+float64(crop.Min.X-x0)*s/k, oy+float64(crop.Min.Y-y0)*s/k)
+		uiDrawImage(screen, img.SubImage(crop).(*ebiten.Image), op)
+	}
+	return true
+}

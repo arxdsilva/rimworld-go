@@ -8,9 +8,10 @@ import (
 )
 
 // The allowed-area selectors that live on legacy panels (PLAY-015 §1.3):
-// the Schedule tab's "Allowed area" column and the pawn inspector's
-// "Area: ..." line. Each is areaDropdown (area_menu.go) declared from the
-// colony's widget hook, over the legacy panel's own layout.
+// the Schedule tab's "Allowed area" column (areaDropdown, area_menu.go,
+// declared from the colony's widget hook over the panel's own layout) and
+// the colonist pane's "Area: ..." chip (PLAY-018), which opens the same
+// picker.
 
 const (
 	schedAreaW    = 170 // the Schedule column's width
@@ -35,7 +36,7 @@ func (a *App) areaSelectorsUI(sw, sh int) {
 // scheduleAreaRect is the column of colonist row `row` of the Schedule
 // tab (row 0, Everyone, has none); ok false when the panel is too narrow.
 func (a *App) scheduleAreaRect(row int) (rect, bool) {
-	r := workRect(a.sw, a.sh)
+	r := a.windowRect()
 	x := r.x + 12 + workNameW + 24*schedCellW + schedAreaGap
 	w := min(schedAreaW, r.x+r.w-12-x)
 	if w < schedAreaMinW {
@@ -51,7 +52,7 @@ func (a *App) scheduleAreaUI() {
 	if !a.workOpen || a.panelMode != "schedule" {
 		return
 	}
-	r := workRect(a.sw, a.sh)
+	r := a.windowRect()
 	if hr, ok := a.scheduleAreaRect(0); ok {
 		a.uiLabel(hr.X, hr.Y-float32(lineH(tsSmall))-1, "Allowed area", withColor(tsSmall, uiTextDim))
 	}
@@ -72,52 +73,56 @@ func (a *App) scheduleAreaUI() {
 	}
 }
 
-// inspectorAreaOn reports the inspector's info rows (and so the Area line)
-// are showing for the selected pawn p.
-func (a *App) inspectorAreaOn(p game.PawnView) bool {
-	if a.workOpen || a.archOpen || p.Status == "dead" {
-		return false
+// areaChip is the pane's allowed-area chip for colonist p, "Area: Indoors"
+// (ok false: a dead colonist, or a game that reports no areas). A click on
+// it opens the same picker as the Schedule tab's dropdown.
+func (a *App) areaChip(p game.PawnView) (paneChip, bool) {
+	if a.renderer == nil || p.Status == "dead" {
+		return paneChip{}, false
 	}
-	switch a.inspectTab {
-	case "needs", "gear", "log", "health", "social", "bio", "prisoner":
-		return false
+	ref, known := a.colonistArea(p.ID)
+	if !known {
+		return paneChip{}, false
 	}
-	return true
+	return paneChip{ID: paneAreaChipID, Label: "Area: " + areaRefLabel(a.renderer.game.Areas(), ref), Tip: assignAreaTip}, true
 }
 
-// inspectorAreaRect is the Area line's rectangle: the row below the info
-// rows (job, activity, tile, weapon and the optional postponed and
-// dirty-boots lines).
-func inspectorAreaRect(p game.PawnView) rect {
-	r := inspectorRect()
-	rows := 4
-	if postponedLine(p.Postponed) != "" {
-		rows++
-	}
-	if dirtyBootsLine(p) != "" {
-		rows++
-	}
-	rowH := float32(lineStep(tsBody))
-	return rect{r.x + 72, r.y + insInfoY + float32(rows)*rowH, r.w - 84, rowH}
-}
-
-// inspectorAreaUI is the pawn inspector's "Area: Indoors" line; a click
-// opens the same dropdown as the Schedule tab.
+// inspectorAreaUI answers the pane's area chip: a widget with the chip's
+// id, over the chip's button when the pane has drawn it, whose click opens
+// the area picker (applyClick runs a clicked widget id's action first, so
+// app.go needs no case for it).
 func (a *App) inspectorAreaUI() {
 	if !a.renderer.HasSelect() {
 		return
 	}
 	p, ok := a.selectedPawn()
-	if !ok || !a.inspectorAreaOn(p) {
+	if !ok {
 		return
 	}
-	ref, known := a.colonistArea(p.ID)
+	chip, ok := a.areaChip(p)
+	if !ok {
+		return
+	}
+	var r rect
+	for _, b := range a.paneButtons() {
+		if b.id == chip.ID {
+			r = rect{b.x, b.y, b.w, b.h}
+			break
+		}
+	}
+	pawn := p.ID
+	a.uiSt().add(uiWidget{id: chip.ID, label: chip.Label, r: r, click: func() { a.openAreaChip(pawn) }})
+}
+
+// openAreaChip opens colonist id's allowed-area picker; a pick emits
+// AssignArea.
+func (a *App) openAreaChip(id entity.EntityID) {
+	if a.renderer == nil {
+		return
+	}
+	ref, known := a.colonistArea(id)
 	if !known {
 		return
 	}
-	br := inspectorAreaRect(p)
-	label := "Area: " + areaRefLabel(a.renderer.game.Areas(), ref)
-	if a.uiButton("inspector.area", br, label, btnOpts{Tip: assignAreaTip}) {
-		a.openAreaPicker("Allowed area", ref, true, func(ref int) { a.assignArea(p.ID, ref) })
-	}
+	a.openAreaPicker("Allowed area", ref, true, func(ref int) { a.assignArea(id, ref) })
 }

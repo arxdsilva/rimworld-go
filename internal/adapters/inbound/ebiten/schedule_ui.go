@@ -25,20 +25,26 @@ const (
 
 var schedBrushes = []schedule.Activity{schedule.Anything, schedule.Work, schedule.Recreation, schedule.Sleep}
 
+// The sleep hour's blue: no chrome token is this deep, and it has to stay
+// apart from the cool panels around the grid and from the other activities.
+var schedSleepBlue = color.RGBA{R: 0x3F, G: 0x5F, B: 0xA8, A: 0xFF}
+
+// schedColor is an activity's cell colour: amber work, green recreation,
+// blue sleep, slate for anything.
 func schedColor(a schedule.Activity) color.RGBA {
 	switch a {
 	case schedule.Work:
-		return color.RGBA{196, 150, 70, 255}
+		return uiWarning
 	case schedule.Recreation:
-		return color.RGBA{150, 100, 180, 255}
+		return uiGood
 	case schedule.Sleep:
-		return color.RGBA{70, 100, 170, 255}
+		return schedSleepBlue
 	}
-	return color.RGBA{110, 110, 104, 255}
+	return uiBtnHover
 }
 
 func (a *App) scheduleButtons() []button {
-	r := workRect(a.sw, a.sh)
+	r := a.windowRect()
 	var out []button
 	for i, b := range schedBrushes {
 		out = append(out, button{id: "sched.brush." + strconv.Itoa(int(b)), label: b.String(),
@@ -69,8 +75,19 @@ func (a *App) scheduleRows() []uint64 {
 	return rows
 }
 
+// scheduleWant is the Schedule window's wanted size: the name column, the
+// 24 hour cells, the allowed-area column, and a row for everyone and each
+// colonist.
+func (a *App) scheduleWant() (float32, float32) {
+	rows := 1
+	if a.renderer != nil {
+		rows = len(a.scheduleRows())
+	}
+	return float32(12 + workNameW + 24*schedCellW + schedAreaGap + schedAreaW + 12), float32(max(160, schedTop+rows*schedRowH+20))
+}
+
 func (a *App) drawSchedule(screen *ebiten.Image, sw, sh int) {
-	r := workRect(sw, sh)
+	r := a.windowRect()
 	drawPanel(screen, r.x, r.y, r.w, r.h)
 	drawText(screen, "Schedule", float64(r.x)+12, float64(r.y)+6, withColor(tsLabel, uiHeading))
 	hintX := float64(r.x) + 12 + float64(textW("Schedule", tsLabel)) + 16
@@ -107,13 +124,13 @@ func (a *App) drawSchedule(screen *ebiten.Image, sw, sh int) {
 		drawText(screen, ellipsize(name, tsBody, workNameW-8), float64(r.x)+12, float64(y)+(schedRowH-3-lineH(tsBody))/2, tsBody)
 		for h := 0; h < 24; h++ {
 			x := float32(gx + h*schedCellW)
-			c := color.RGBA{60, 56, 50, 255}
+			c := uiBtnDisabled
 			if grid != nil && h < len(grid) {
 				c = schedColor(grid[h])
 			}
 			uiFillRect(screen, x, float32(y), schedCellW-2, schedRowH-3, c, false)
 			if h == now {
-				uiStrokeRect(screen, x, float32(y), schedCellW-2, schedRowH-3, 2, color.RGBA{250, 240, 200, 255}, false)
+				uiStrokeRect(screen, x, float32(y), schedCellW-2, schedRowH-3, 2, uiText, false)
 			}
 		}
 	}

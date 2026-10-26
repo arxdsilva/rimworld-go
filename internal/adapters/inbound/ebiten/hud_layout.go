@@ -33,6 +33,12 @@ const (
 	letterRowH  = 28
 	maxLetters  = 8 // then a "+N older" row
 	alertRowH   = 24
+	// minAlertRows are kept for alerts before the letters take the rest
+	// of the right column: problems to act on beat news.
+	minAlertRows = 3
+	// minLetterRows are kept for the newest letters before the learning
+	// helper unfolds.
+	minLetterRows = 2
 
 	barSlotW = 52 // a colonist bar slot at scale 1
 	barSlotH = 64
@@ -45,6 +51,7 @@ const (
 	msgRowH   = 22
 	msgStride = msgRowH + 2
 	msgMaxW   = 480
+	msgMinW   = 160 // narrower than this, the messages hide (a wide window)
 	maxMsgs   = 5
 
 	archCatsW = 212 // the Architect's two category columns
@@ -85,7 +92,7 @@ type hudLayout struct {
 	Pane, PaneTabs, Expanded rect
 	Grid                     rect   // bounding box of the occupied command cells
 	GridCells                []rect // one per command, bottom row first, left to right
-	GridCols                 int
+	GridCols                 int    // cells in the bottom row's width
 	ArchCats, ArchDesc       rect
 	Window                   rect
 
@@ -125,16 +132,33 @@ func computeHUDLayout(sw, sh int, st hudState) hudLayout {
 		stackBottom = l.Minimap.Y
 	}
 	top := float32(hudMargin)
+	alertReserve := float32(0) // kept for alerts, with their margin above the letters
+	if st.Alerts > 0 {
+		alertReserve = float32(min(st.Alerts, minAlertRows))*(alertRowH+hudGap) + hudMargin
+	}
+	letterReserve := float32(0) // the newest letters, before the learning helper unfolds
+	if st.Letters > 0 {
+		letterReserve = float32(min(st.Letters, minLetterRows))*(letterRowH+hudGap) + hudMargin
+	}
 	if st.LearnH > 0 {
-		l.Learn = rect{rx, hudMargin, rightW, st.LearnH}
-		top = l.Learn.bottom() + hudMargin
+		h := st.LearnH
+		// the least urgent panel: open only if the alerts and the newest
+		// letters keep their rows below it (and it never reaches the
+		// minimap or the time controls)
+		if room := stackBottom - 2*hudMargin - alertReserve - letterReserve; h > room {
+			h = min(learnHeaderH, stackBottom-2*hudMargin) // the header alone
+		}
+		if h > 0 {
+			l.Learn = rect{rx, hudMargin, rightW, h}
+			top = l.Learn.bottom() + hudMargin
+		}
 	}
 	if st.Letters > 0 {
 		rows := min(st.Letters, maxLetters)
 		if st.Letters > maxLetters {
 			rows++ // "+N older"
 		}
-		room := int((stackBottom - hudMargin - top + hudGap) / (letterRowH + hudGap))
+		room := int((stackBottom - hudMargin - top - alertReserve + hudGap) / (letterRowH + hudGap))
 		rows = max(0, min(rows, room))
 		if rows > 0 {
 			h := float32(rows)*(letterRowH+hudGap) - hudGap
@@ -162,12 +186,6 @@ func computeHUDLayout(sw, sh int, st hudState) hudLayout {
 	barBottom := float32(hudMargin)
 	if !l.Bar.empty() {
 		barBottom = l.Bar.bottom()
-	}
-
-	// messages: right-aligned against the right column, under the bar
-	if n := min(st.Messages, maxMsgs); n > 0 {
-		w := min(float32(msgMaxW), rx-hudMargin-(hudMargin+resourcesW+hudMargin))
-		l.Messages = rect{rx - hudMargin - w, barBottom + hudMargin, w, float32(n)*msgStride - (msgStride - msgRowH)}
 	}
 
 	// a main-tab window takes the lower-left above the tabs; the inspect
@@ -204,21 +222,44 @@ func computeHUDLayout(sw, sh int, st hudState) hudLayout {
 	}
 
 	// command buttons: right of the pane (or the Architect's categories),
-	// bottom row first, wrapping upward, stopping short of the right column
+	// bottom row first, wrapping upward, stopping short of the right column.
+	// A row beside an open tab's panel or the Architect's description box
+	// (both wider than what is under them) starts right of it, so no cell
+	// covers them.
 	if st.Commands > 0 && gridX0 > 0 {
 		x1 := rx - hudMargin
-		cols := int((x1 - gridX0 + hudGap) / cmdStride)
 		bottom := l.Tabs.Y - hudMargin
 		maxRows := min(cmdMaxRows, int((bottom-barBottom-hudMargin+hudGap)/cmdStride))
-		if cols > 0 && maxRows > 0 {
-			n := min(st.Commands, cols*maxRows)
-			l.GridCols = cols
-			l.GridCells = make([]rect, n)
-			for i := range n {
-				r, c := i/cols, i%cols
-				l.GridCells[i] = rect{gridX0 + float32(c)*cmdStride, bottom - cmdCell - float32(r)*cmdStride, cmdCell, cmdCell}
+		l.GridCols = max(0, int((x1-gridX0+hudGap)/cmdStride))
+		for r := 0; r < maxRows && len(l.GridCells) < st.Commands; r++ {
+			y := bottom - cmdCell - float32(r)*cmdStride
+			x0 := gridX0
+			for _, p := range []rect{l.Expanded, l.ArchDesc} {
+				if !p.empty() && y < p.bottom() && y+cmdCell > p.Y {
+					x0 = max(x0, p.right()+hudMargin)
+				}
 			}
-			l.Grid = boundsOf(l.GridCells)
+			for x := x0; x+cmdCell <= x1 && len(l.GridCells) < st.Commands; x += cmdStride {
+				l.GridCells = append(l.GridCells, rect{x, y, cmdCell, cmdCell})
+			}
+		}
+		l.Grid = boundsOf(l.GridCells)
+	}
+
+	// messages: right-aligned against the right column, under the bar, and
+	// clear of whatever the lower-left holds in their rows (an open tab's
+	// panel, the Architect's description, a window): they narrow to the room
+	// left, and hide while a wide window leaves less than msgMinW
+	if n := min(st.Messages, maxMsgs); n > 0 {
+		band := rect{0, barBottom + hudMargin, W, float32(n)*msgStride - (msgStride - msgRowH)}
+		left := float32(hudMargin + resourcesW + hudMargin)
+		for _, r := range append([]rect{l.Window, l.ArchCats, l.ArchDesc, l.Pane, l.PaneTabs, l.Expanded}, l.GridCells...) {
+			if !r.empty() && r.Y < band.bottom() && r.bottom() > band.Y {
+				left = max(left, r.right()+hudMargin)
+			}
+		}
+		if w := min(float32(msgMaxW), rx-hudMargin-left); w >= msgMinW {
+			l.Messages = rect{rx - hudMargin - w, band.Y, w, band.H}
 		}
 	}
 

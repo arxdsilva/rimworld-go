@@ -324,6 +324,7 @@ func (a *App) captureUI(ui string) {
 			a.renderer.syncPawns()
 		}
 		a.selectBuildingAt(cx+1, cy+6)
+		a.openPaneTab("bills") // hud_inspect.go: the Bills tab open above the pane
 		tile := a.renderer.tilePx()
 		a.renderer.cam.offsetX = float64(cx+1)*tile - float64(a.sw)/2 + 180
 		a.renderer.cam.offsetY = float64(cy+5)*tile - float64(a.sh)/2
@@ -442,7 +443,7 @@ func (a *App) captureUI(ui string) {
 		// the colonist inspector's Log tab
 		if pawns := a.renderer.snapshot(); len(pawns) > 0 {
 			a.renderer.Select(pawns[0].ID)
-			a.inspectTab = "log"
+			a.openPaneTab("log")
 		}
 	case "paused-stockpile":
 		// a stockpile painted while paused shows at once
@@ -517,7 +518,7 @@ func (a *App) captureUI(ui string) {
 		if pawns := a.renderer.snapshot(); len(pawns) > 0 {
 			p := pawns[0]
 			a.renderer.selected, a.renderer.hasSelect = p.ID, true
-			a.inspectTab = "gear"
+			a.openPaneTab("gear")
 			sw, sh := a.size()
 			a.renderer.centerOn(float64(p.X)-2, float64(p.Y)+0.5, sw, sh)
 		}
@@ -819,7 +820,7 @@ func (a *App) captureInspect(ui string) {
 		if pawns := a.renderer.snapshot(); len(pawns) > 0 {
 			a.renderer.Select(pawns[0].ID)
 			bx, by = pawns[0].X, pawns[0].Y
-			a.inspectTab = "gear"
+			a.openPaneTab("gear")
 		}
 	case "move", "copy":
 		for _, b := range w.Buildings {

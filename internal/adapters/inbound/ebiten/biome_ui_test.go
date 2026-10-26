@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -132,9 +133,15 @@ func TestAnimalInspectorLines(t *testing.T) {
 	if got := animalDietLine(doe); got != "Diet: plants" {
 		t.Errorf("diet = %q", got)
 	}
-	// Food + Rest, product bar, pregnancy line, diet line
-	if h := animalExtraH(doe); h != 40+20+16+16 {
-		t.Errorf("extra height = %d", h)
+	// Food + Rest, the product, the pregnancy and the diet (the pane's lines)
+	ls := a.animalPaneLines(doe)
+	for _, want := range []string{"Pregnant 40%", "Diet: plants", "Milk: 70%"} {
+		if !slices.Contains(ls, want) {
+			t.Errorf("pane lines %q lack %q", ls, want)
+		}
+	}
+	if !animalHasNeeds(doe) {
+		t.Error("a goat has Food and Rest")
 	}
 	kid := game.AnimalView{State: "resting", Female: false, AgeDays: 6, Stage: "young", Scale: 0.6}
 	if got := animalLifeLine(kid); got != "Male | young | 6 days old" {
@@ -144,8 +151,8 @@ func TestAnimalInspectorLines(t *testing.T) {
 	if got := a.animalStateLine(wild); got != "Wild | Wandering" {
 		t.Errorf("wild state = %q", got)
 	}
-	if animalExtraH(game.AnimalView{}) != 0 {
-		t.Error("an animal view without needs adds no height")
+	if animalHasNeeds(game.AnimalView{}) {
+		t.Error("an animal view without needs has no Food and Rest")
 	}
 }
 
@@ -243,8 +250,21 @@ func TestTroughFilterEmitsCommand(t *testing.T) {
 	if _, ok := a.selectedBuilding(); !ok {
 		t.Fatal("the trough should be selected")
 	}
-	click(t, a, "bldg.trough.meat")
-	click(t, a, "bldg.trough.any")
+	// the filter is one command button with the three filters as options
+	// (PLAY-018); picking an option enqueues its command
+	filter, ok := bldCmd(a.buildingCommands(77), "cmd.bldg.trough")
+	if !ok || filter.Options == nil {
+		t.Fatal("the trough should offer its filter options")
+	}
+	opts := filter.Options(a)
+	if len(opts) != 3 || opts[0].Label != "Plants" || opts[1].Label != "Meat" || opts[2].Label != "Any" {
+		t.Fatalf("options = %+v", opts)
+	}
+	if !opts[0].Disabled {
+		t.Fatal("the current filter (plants) is not offered again")
+	}
+	a.renderer.enqueue(*opts[1].Cmd) // Meat
+	a.renderer.enqueue(*opts[2].Cmd) // Any
 	var modes []uint8
 	for _, c := range sim.cmds {
 		if c.Kind == command.SetTroughFilter {

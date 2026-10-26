@@ -26,10 +26,29 @@ func TestInspectorShowsWaitingFor(t *testing.T) {
 	}
 }
 
+// findButton finds id among what the selected colonist offers: its command
+// buttons (the label carries the live key, as the grid's badge does), the
+// pane's tabs and its chips.
 func findButton(a *App, id string) (button, bool) {
-	for _, b := range a.inspectorButtons() {
-		if b.id == id {
-			return b, true
+	p, ok := a.selectedPawn()
+	if !ok {
+		return button{}, false
+	}
+	for _, c := range a.pawnCommands(p.ID) {
+		if c.ID == id {
+			return button{id: c.ID, label: c.Label + a.keyHint(c.Hotkey), disabled: c.Disabled, reason: c.Reason, tip: c.Desc, selected: c.On}, true
+		}
+	}
+	spec := a.pawnPane(p.ID)
+	for _, tb := range spec.Tabs {
+		if tb.ID == id {
+			return button{id: tb.ID, label: tb.Label, disabled: tb.Disabled, reason: tb.Reason,
+				selected: a.inspectTab == strings.TrimPrefix(tb.ID, "inspector.")}, true
+		}
+	}
+	for _, c := range spec.Chips {
+		if c.ID == id {
+			return button{id: c.ID, label: c.Label, disabled: c.Disabled, reason: c.Reason, tip: c.Tip}, true
 		}
 	}
 	return button{}, false
@@ -44,22 +63,39 @@ func selectPawn(t *testing.T, a *App, id entity.EntityID) {
 	}
 }
 
-// The action bar shows Draft and Clear orders on every tab.
+// equipOptions are the options of the selected colonist's Equip command.
+func equipOptions(t *testing.T, a *App) []cmdOption {
+	t.Helper()
+	b, ok := findCmd(a, "cmd.pawn.equip")
+	if !ok || b.Options == nil {
+		t.Fatalf("no Equip command with options: %+v ok=%v", b, ok)
+	}
+	return b.Options(a)
+}
+
+// findCmd finds a command button of the selected colonist.
+func findCmd(a *App, id string) (cmdButton, bool) {
+	p, ok := a.selectedPawn()
+	if !ok {
+		return cmdButton{}, false
+	}
+	return cmdByID(a.pawnCommands(p.ID), id)
+}
+
+// Draft and Clear orders are commands whatever tab is open; the legacy
+// inspector panel no longer has an action bar.
 func TestPawnActionBar(t *testing.T) {
 	a, _, id := liveColony(t, 0)
 	selectPawn(t, a, id)
 	for _, tab := range []string{"character", "needs", "gear"} {
 		a.inspectTab = tab
 		for _, want := range []string{"pawn.draft", "pawn.clearorders"} {
-			b, ok := findButton(a, want)
-			if !ok {
-				t.Fatalf("tab %s: no %s button", tab, want)
-			}
-			if b.y < inspectorRect().y+inspectorRect().h-70 {
-				t.Fatalf("tab %s: %s not on the bottom bar (y=%v)", tab, want, b.y)
+			if _, ok := findButton(a, want); !ok {
+				t.Fatalf("tab %s: no %s command", tab, want)
 			}
 		}
 	}
+	assertButtonsInRegions(t, a) // the legacy panel has no action bar any more
 }
 
 func TestClearOrdersDisabledWhenEmpty(t *testing.T) {
@@ -86,29 +122,50 @@ func TestClearOrdersDisabledWhenEmpty(t *testing.T) {
 func TestEquipNearbyListsReachableWeapons(t *testing.T) {
 	a, g, id := liveColony(t, 0)
 	near, _ := g.SpawnStack(item.Rifle, 1, 5, 2)
-	far, _ := g.SpawnStack(item.Rifle, 1, 12, 2)
+	g.SpawnStack(item.Rifle, 1, 12, 2)
 	selectPawn(t, a, id)
+	opts := equipOptions(t, a)
+	if len(opts) != 2 {
+		t.Fatalf("options = %+v, want the near and the far rifle", opts)
+	}
+	n := opts[0]
+	if !strings.Contains(n.Label, "3 tiles") || !strings.Contains(strings.ToLower(n.Label), "rifle") || !strings.HasPrefix(n.Label, "Equip") {
+		t.Fatalf("near rifle option = %+v", n)
+	}
+	if n.Cmd == nil || n.Cmd.Order != command.OrderEquip {
+		t.Fatalf("near rifle option carries the OrderEquip command: %+v", n.Cmd)
+	}
+	if !strings.Contains(opts[1].Label, "10 tiles") {
+		t.Fatalf("far rifle should be listed: %+v", opts[1])
+	}
+	// the Gear tab no longer lists weapons: the Equip command does
 	a.inspectTab = "gear"
-	n, ok := findButton(a, "pawn.equip."+eid(near))
-	if !ok || !strings.Contains(n.label, "3 tiles") || !strings.HasPrefix(n.label, "rifle") && !strings.HasPrefix(n.label, "Rifle") {
-		t.Fatalf("near rifle button = %+v ok=%v", n, ok)
-	}
-	if _, ok := findButton(a, "pawn.equip."+eid(far)); !ok {
-		t.Fatal("far rifle should be listed")
-	}
-	// Other tabs do not list weapons.
-	a.inspectTab = "needs"
 	if _, ok := findButton(a, "pawn.equip."+eid(near)); ok {
-		t.Fatal("equip list belongs to the gear tab")
+		t.Fatal("equip rows moved to the Equip command's options")
+	}
+}
+
+// Garments lying about are offered too (Wear is an OrderEquip).
+func TestEquipNearbyOffersGarments(t *testing.T) {
+	a, g, id := liveColony(t, 0)
+	if _, err := g.SpawnStack(item.Parka, 1, 4, 2); err != nil {
+		t.Fatal(err)
+	}
+	selectPawn(t, a, id)
+	opts := equipOptions(t, a)
+	if len(opts) != 1 || !strings.HasPrefix(opts[0].Label, "Wear") || !strings.Contains(opts[0].Label, "2 tiles") {
+		t.Fatalf("options = %+v, want one Wear parka option", opts)
+	}
+	if opts[0].Cmd == nil || opts[0].Cmd.Order != command.OrderEquip {
+		t.Fatalf("Wear is an OrderEquip: %+v", opts[0].Cmd)
 	}
 }
 
 func TestEquipNearbyNoWeapons(t *testing.T) {
 	a, _, id := liveColony(t, 0)
 	selectPawn(t, a, id)
-	a.inspectTab = "gear"
-	b, ok := findButton(a, "pawn.equip.none")
-	if !ok || !b.disabled || b.reason != "no weapons in reach" {
+	b, ok := findButton(a, "cmd.pawn.equip")
+	if !ok || !b.disabled || b.reason != "nothing to equip in reach" {
 		t.Fatalf("empty list = %+v ok=%v", b, ok)
 	}
 }
@@ -121,27 +178,20 @@ func TestEquipNearbyCapsAtFour(t *testing.T) {
 		}
 	}
 	selectPawn(t, a, id)
-	a.inspectTab = "gear"
-	n := 0
-	for _, b := range a.inspectorButtons() {
-		if strings.HasPrefix(b.id, "pawn.equip.") {
-			n++
-		}
-	}
-	if n != 4 {
-		t.Fatalf("equip buttons = %d, want 4", n)
+	if n := len(equipOptions(t, a)); n != 4 {
+		t.Fatalf("equip options = %d, want 4", n)
 	}
 }
 
 func TestEquipNearbyEnqueuesOrder(t *testing.T) {
 	a, g, id := liveColony(t, 0)
-	rid, _ := g.SpawnStack(item.Rifle, 1, 6, 2)
+	g.SpawnStack(item.Rifle, 1, 6, 2)
 	selectPawn(t, a, id)
-	a.inspectTab = "gear"
-	if _, ok := findButton(a, "pawn.equip."+eid(rid)); !ok {
-		t.Fatal("no equip button")
+	opts := equipOptions(t, a)
+	if len(opts) != 1 || opts[0].Cmd == nil {
+		t.Fatalf("options = %+v", opts)
 	}
-	a.applyPawnEquipClick("pawn.equip." + eid(rid)) // routed from applyClick by the lead
+	a.renderer.enqueue(*opts[0].Cmd) // what picking the option does
 	g.Step(1)
 	p, _ := a.selectedPawn()
 	if p.Job == "" || !strings.Contains(strings.ToLower(p.Job), "equip") {
@@ -160,10 +210,10 @@ func TestDeadPawnActionsDisabled(t *testing.T) {
 	if p.Status == "alive" {
 		t.Skipf("pawn survived: %s", p.Status)
 	}
-	for _, b := range a.inspectorButtons() {
-		if b.id == "pawn.draft" || b.id == "pawn.clearorders" || strings.HasPrefix(b.id, "pawn.equip.") {
-			if !b.disabled || b.reason != p.Status {
-				t.Fatalf("%s: disabled=%v reason=%q, want reason %q", b.id, b.disabled, b.reason, p.Status)
+	for _, c := range a.pawnCommands(p.ID) {
+		if c.ID == "pawn.draft" || c.ID == "pawn.clearorders" || c.ID == "cmd.pawn.equip" {
+			if !c.Disabled || c.Reason != p.Status {
+				t.Fatalf("%s: disabled=%v reason=%q, want reason %q", c.ID, c.Disabled, c.Reason, p.Status)
 			}
 		}
 	}
@@ -193,8 +243,9 @@ func TestGearRows(t *testing.T) {
 	if got := gearRows(game.PawnView{}); !slices.Equal(got, []string{"everyday clothes"}) {
 		t.Fatalf("bare colonist rows %q", got)
 	}
-	r := inspectorRect()
-	if got, want := equipListY(r, p), r.y+insBodyY+gearLayoutFor(len(rows)-1).equipList; got != want {
-		t.Fatalf("Equip nearby at %v, want %v (below every row)", got, want)
+	// the comfort line (and the hint after it) sit below every Wearing row
+	g := gearLayoutFor(len(rows) - 1)
+	if last := g.clothes + float32(len(rows))*lineStep(tsSmall); g.comfort < last || g.hint <= g.comfort {
+		t.Fatalf("comfort at %v, hint at %v, want both below the last row ending at %v", g.comfort, g.hint, last)
 	}
 }

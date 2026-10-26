@@ -3,7 +3,6 @@ package ebiten
 import (
 	"fmt"
 	"image/color"
-	"strconv"
 	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -12,14 +11,9 @@ import (
 	"rimworld-go/internal/domain/sim/command"
 )
 
-// Item panel (UI-011, MAIN_UI §10): what the stack is and its condition,
-// and per-colonist Equip / Wear / Haul / Eat orders.
-
-// itemRect is the item panel's frame (the inspector's top-left slot).
-func itemRect() button { return button{x: hudPad, y: hudTopH + hudPad, w: 340, h: 210} }
-
-// maxItemChips is how many colonist chips fit in one action row.
-const maxItemChips = 3
+// Item inspection (UI-011, MAIN_UI §10): what the stack is and its
+// condition (itemPane), and Forbid, the haul mark and per-colonist Equip /
+// Wear / Eat / Haul orders (itemCommands, cmds_thing.go).
 
 var (
 	weaponKinds = map[string]bool{"club": true, "rifle": true, "knife": true, "spear": true}
@@ -117,149 +111,58 @@ func itemLines(it game.ItemView, stored bool) []string {
 	return append(out, "Not stored")
 }
 
-// itemChipRow is one labelled row of colonist chips.
-type itemChipRow struct {
-	Verb  string // "Equip:", "Wear:", "Eat:", "Haul:"
-	Chips []colonistAction
+// itemVerb is one colonist action on a stack: a command whose options are
+// the colonists able to do it.
+type itemVerb struct {
+	id, label, icon, desc string
+	match                 func(game.OrderOption) bool
 }
 
-// itemRows builds the action rows for it: the verb row for its category,
-// then Haul when it is not in a stockpile.
-func (a *App) itemRows(it game.ItemView, stored bool) []itemChipRow {
-	var rows []itemChipRow
-	add := func(verb string, m func(game.OrderOption) bool) {
-		if acts := a.colonistActions(it.X, it.Y, m); len(acts) > 0 {
-			if len(acts) > maxItemChips {
-				acts = acts[:maxItemChips]
-			}
-			rows = append(rows, itemChipRow{verb, acts})
-		}
-	}
-	equip := orderIs(command.OrderEquip)
+// itemVerbs are the actions for it: the verb of its category (Equip, Wear
+// or Eat), then Haul when it is not in a stockpile.
+func itemVerbs(it game.ItemView, stored bool) []itemVerb {
+	var out []itemVerb
 	switch itemCategory(it) {
 	case "weapon":
-		add("Equip:", equip)
+		out = append(out, itemVerb{"cmd.item.equip", "Equip", "equip",
+			"Have a colonist pick it up and wield it. A click sends the nearest; right-click picks who.", orderIs(command.OrderEquip)})
 	case "apparel":
-		add("Wear:", equip)
+		out = append(out, itemVerb{"cmd.item.wear", "Wear", "wear",
+			"Have a colonist put it on. A click sends the nearest; right-click picks who.", orderIs(command.OrderEquip)})
 	case "food":
-		add("Eat:", orderIs(command.OrderEat))
+		out = append(out, itemVerb{"cmd.item.eat", "Eat", "eat",
+			"Have a colonist eat it now. A click sends the nearest; right-click picks who.", orderIs(command.OrderEat)})
 	}
 	if !stored {
-		add("Haul:", orderIs(command.OrderHaul))
-	}
-	return rows
-}
-
-// itemPanelButtons lays out the close button and the chips; chip n gets
-// the id "item.act.<n>", counted row by row.
-func itemPanelButtons(r button, rows []itemChipRow) []button {
-	out := []button{{id: "item.close", label: "X", x: r.x + r.w - 28, y: r.y + 6, w: 22, h: 22}}
-	n := 0
-	for i, row := range rows {
-		y := r.y + r.h - 30 - float32(len(rows)-1-i)*26
-		for j, c := range row.Chips {
-			out = append(out, button{id: "item.act." + strconv.Itoa(n), label: chipLabel(c),
-				x: r.x + 56 + float32(j)*90, y: y, w: 88, h: 20, disabled: c.Disabled, reason: c.Reason, quiet: true})
-			n++
-		}
+		out = append(out, itemVerb{"cmd.item.haul", "Haul", "order_haul",
+			"Have a colonist carry it to a stockpile. A click sends the nearest; right-click picks who.", orderIs(command.OrderHaul)})
 	}
 	return out
 }
 
-func flattenChips(rows []itemChipRow) []colonistAction {
-	var out []colonistAction
-	for _, r := range rows {
-		out = append(out, r.Chips...)
+// drawItemIcon draws the stack's icon, size px square at (x, y): its
+// ui_icon, else its stone sprite. Nothing without art.
+func (a *App) drawItemIcon(dst *ebiten.Image, it game.ItemView, x, y, size float64) {
+	if a.renderer == nil || a.renderer.art == nil {
+		return
 	}
-	return out
+	key := "ui_icon/" + strings.ReplaceAll(it.Kind, " ", "_") // "cloth carpet" -> cloth_carpet
+	cs := noCS
+	if !a.renderer.art.has(key) {
+		key, cs = a.renderer.stoneItem(itemSpriteSpecies(it.Kind, it.Animal, it.X, it.Y), it.Kind, noCS)
+	}
+	if img := a.renderer.art.image(key, color.NRGBA{}); img != nil {
+		drawIconCS(dst, img, x, y, size, cs)
+	}
 }
 
-// itemForbidButton toggles the stack's forbidden flag (SetForbidden).
-func itemForbidButton(r button, it game.ItemView) button {
-	label := "Forbid"
-	if it.Forbidden {
-		label = "Allow"
-	}
-	return button{id: "item.forbid", label: label, x: r.x + r.w - 96, y: r.y + 34, w: 84, h: 22}
-}
-
-// itemHaulMarkButton toggles the haul mark (SetHaulMark) of a stack found
-// on the map, beside Forbid. Colony stacks haul by themselves, so they get
-// none.
-func itemHaulMarkButton(r button, it game.ItemView) (button, bool) {
-	if !it.Unclaimed {
-		return button{}, false
-	}
-	b := button{id: "item.haulmark", label: "Mark for hauling", x: r.x + r.w - 96 - 4 - 120, y: r.y + 34, w: 120, h: 22,
-		tip: "Colonists will haul it to a stockpile"}
-	if it.HaulMarked {
-		b.label, b.tip = "Unmark", "Colonists leave it where it lies"
-	}
-	return b, true
-}
-
-// itemActionButtons are the buttons beside the category word: Forbid and,
-// for a stack found on the map, the haul mark.
-func itemActionButtons(r button, it game.ItemView) []button {
-	out := []button{itemForbidButton(r, it)}
-	if b, ok := itemHaulMarkButton(r, it); ok {
-		out = append(out, b)
-	}
-	return out
-}
-
-// itemButtons are the item panel's buttons (ids "item.*").
-func (a *App) itemButtons() []button {
-	it, ok := a.selectedItem()
-	if !ok || a.workOpen || a.archOpen {
-		return nil
-	}
-	stored := inStockpile(a.renderer.world(), it.X, it.Y)
-	r := itemRect()
-	return append(itemPanelButtons(r, a.itemRows(it, stored)), itemActionButtons(r, it)...)
-}
-
-// drawItemInspector draws the item panel when an item is selected.
-func (a *App) drawItemInspector(screen *ebiten.Image) {
+// drawItemMark draws the selection mark on the stack's tile; the
+// panel itself is the inspect pane (itemPane).
+func (a *App) drawItemMark(screen *ebiten.Image) {
 	it, ok := a.selectedItem()
 	if !ok || a.workOpen || a.archOpen {
 		return
 	}
-	w := a.renderer.world()
-	stored := inStockpile(w, it.X, it.Y)
-	r := itemRect()
-	drawPanel(screen, r.x, r.y, r.w, r.h)
-	if a.renderer.art != nil {
-		key := "ui_icon/" + strings.ReplaceAll(it.Kind, " ", "_") // "cloth carpet" -> cloth_carpet
-		cs := noCS
-		if !a.renderer.art.has(key) {
-			key, cs = a.renderer.stoneItem(itemSpriteSpecies(it.Kind, it.Animal, it.X, it.Y), it.Kind, noCS)
-		}
-		if img := a.renderer.art.image(key, color.NRGBA{}); img != nil {
-			drawIconCS(screen, img, float64(r.x)+12, float64(r.y)+10, 40, cs)
-		}
-	}
-	x, y := float64(r.x), float64(r.y)
-	drawText(screen, ellipsize(itemTitle(it), tsLabel, float64(r.w)-60-40), x+60, y+10, withColor(tsLabel, uiHeading))
-	catW := float64(r.w) - 60 - 100
-	if b, ok := itemHaulMarkButton(r, it); ok {
-		catW = float64(b.x-r.x) - 60 - 4 // stays clear of the mark button
-	}
-	drawText(screen, ellipsize(itemCategory(it), tsSmall, catW), x+60, y+32, withColor(tsSmall, uiTextDim))
-	ly := y + 62
-	for _, l := range itemLines(it, stored) {
-		for _, wl := range wrapPx(l, tsSmall, float64(r.w)-24) {
-			drawText(screen, wl, x+12, ly, tsSmall)
-			ly += float64(lineStep(tsSmall))
-		}
-	}
-	rows := a.itemRows(it, stored)
-	for i, row := range rows {
-		ry := y + float64(r.h) - 30 - float64(len(rows)-1-i)*26
-		drawText(screen, row.Verb, x+12, ry+(20-lineH(tsSmall))/2, withColor(tsSmall, uiTextDim))
-	}
-	mx, my := a.currentCursor()
-	a.drawButtons(screen, append(itemPanelButtons(r, rows), itemActionButtons(r, it)...), mx, my)
 	if a.renderer.art != nil {
 		a.renderer.drawSprite(screen, "overlay/selection", color.NRGBA{}, float64(it.X), float64(it.Y), a.renderer.tilePx(), a.pw, a.ph) // physical, like the map
 	}
@@ -284,13 +187,5 @@ func (a *App) applyItemClick(id string) {
 			a.renderer.enqueue(command.Command{Kind: command.SetHaulMark, Target: uint64(it.ID), Enabled: !it.HaulMarked})
 		}
 		return
-	}
-	n, err := strconv.Atoi(strings.TrimPrefix(id, "item.act."))
-	if err != nil || !strings.HasPrefix(id, "item.act.") {
-		return
-	}
-	acts := flattenChips(a.itemRows(it, inStockpile(a.renderer.world(), it.X, it.Y)))
-	if n >= 0 && n < len(acts) && !acts[n].Disabled {
-		a.renderer.enqueue(acts[n].Cmd)
 	}
 }

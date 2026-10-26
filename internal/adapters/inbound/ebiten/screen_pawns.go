@@ -2,7 +2,6 @@ package ebiten
 
 import (
 	"fmt"
-	"image/color"
 	"strings"
 	"unicode"
 
@@ -625,7 +624,7 @@ func (a *App) skillsTable(r rect, v game.CandidateView, rowH float32) {
 		for i, s := range v.Skills {
 			row := rect{r.X, r.Y + pawnSkillHdrH + float32(i)*rowH, r.W, rowH}
 			if i%2 == 1 {
-				fillRect(dst, row, color.RGBA{0x1B, 0x15, 0x10, 0x28}) // premultiplied wash
+				fillRect(dst, row, uiFade(uiField, 0x28)) // premultiplied wash
 			}
 			st := tsBody
 			if s.Incapable {

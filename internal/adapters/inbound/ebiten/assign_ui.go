@@ -50,24 +50,19 @@ func (a *App) assignTabUI(sw, sh int) {
 	}
 }
 
-// toggleAssign opens the window, or closes it when it is on top.
-func (a *App) toggleAssign() {
-	if a.uiModalTop() == assignModalID {
-		a.uiCloseTop()
-		return
-	}
-	a.openAssign()
-}
+// toggleAssign opens the window, or closes it when it is the open one.
+func (a *App) toggleAssign() { a.toggleKitWindow(assignModalID, a.openAssign) }
 
-// openAssign opens the Assign window.
+// openAssign opens the Assign window: a main-tab window in the Window rect
+// (hud_window.go). Its X, Escape and a click on the open tab close it.
 func (a *App) openAssign() {
 	if a.renderer == nil {
 		return
 	}
 	a.uiPushModal(modal{
 		id: assignModalID, title: "Assign", w: assignW, h: assignH,
-		draw:    func(a *App, body rect) { a.assignBody(body) },
-		buttons: []modalButton{{id: "close", label: "Close", style: btnPrimary, closes: true}},
+		modeless: true, anchor: (*App).windowAnchor,
+		draw: func(a *App, body rect) { a.assignBody(body) },
 	})
 }
 

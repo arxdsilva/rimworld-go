@@ -49,19 +49,23 @@ func (a *App) historyTabUI(sw, sh int) {
 		if b.id != "tab.history" || b.disabled {
 			continue
 		}
-		a.uiSt().add(uiWidget{id: b.id, label: b.label, r: rect{b.x, b.y, b.w, b.h}, click: a.openHistory})
+		a.uiSt().add(uiWidget{id: b.id, label: b.label, r: rect{b.x, b.y, b.w, b.h}, click: a.toggleHistory})
 	}
 }
 
-// openHistory opens the History window.
+// toggleHistory opens the window, or closes it when it is the open one.
+func (a *App) toggleHistory() { a.toggleKitWindow(historyModalID, a.openHistory) }
+
+// openHistory opens the History window: a main-tab window in the Window
+// rect (hud_window.go).
 func (a *App) openHistory() {
 	if a.renderer == nil {
 		return
 	}
 	a.uiPushModal(modal{
 		id: historyModalID, title: "History", w: 640, h: 520,
-		draw:    func(a *App, body rect) { a.historyBody(body) },
-		buttons: []modalButton{{id: "close", label: "Close", style: btnPrimary, closes: true}},
+		modeless: true, anchor: (*App).windowAnchor,
+		draw: func(a *App, body rect) { a.historyBody(body) },
 	})
 }
 

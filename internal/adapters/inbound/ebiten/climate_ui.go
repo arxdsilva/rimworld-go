@@ -9,6 +9,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/sim/entity"
 )
 
 // fmtTemp renders tenths of a degree C as whole degrees ("-3C").
@@ -78,17 +79,30 @@ func spoilingAlert(w game.WorldView) (alert, bool) {
 	return a, true
 }
 
-// Messages: recent event notices stacked top-left under the top bar; each
-// shows for messageFrames presentation frames after it first appears.
+// Messages (PLAY-018): recent event notices stacked in the layout's
+// Messages rect, right-aligned against the right column under the colonist
+// bar. Each shows for messageFrames presentation frames after it first
+// appears and fades out over the last messageFadeFrames.
 const (
-	messageFrames = 600
-	messageShown  = 5
+	messageFrames     = 600
+	messageFadeFrames = 60
+	messageShown      = maxMsgs
+	messageEdgeW      = 3 // the kind-coloured edge on a row's left
+	messagePadX       = 8
 )
 
 func messageKey(m game.MessageView) string { return fmt.Sprintf("%d|%s", m.Tick, m.Text) }
 
-// liveMessages are the notices still on screen, oldest first.
-func (a *App) liveMessages() []game.MessageView {
+// liveMessage is a notice still on screen and how many presentation
+// frames it has been there.
+type liveMessage struct {
+	m   game.MessageView
+	age uint64
+}
+
+// liveMessageList are the notices still on screen with their ages, oldest
+// first. The first call that sees a notice starts its clock.
+func (a *App) liveMessageList() []liveMessage {
 	if a.renderer == nil {
 		return nil
 	}
@@ -97,15 +111,15 @@ func (a *App) liveMessages() []game.MessageView {
 	}
 	now := a.renderer.present
 	msgs := a.renderer.world().Messages
-	var live []game.MessageView
+	var live []liveMessage
 	for _, m := range msgs {
 		k := messageKey(m)
 		first, ok := a.msgSeen[k]
 		if !ok {
 			a.msgSeen[k], first = now, now
 		}
-		if now-first < messageFrames {
-			live = append(live, m)
+		if age := now - first; now >= first && age < messageFrames {
+			live = append(live, liveMessage{m, age})
 		}
 	}
 	if len(live) > messageShown {
@@ -114,26 +128,92 @@ func (a *App) liveMessages() []game.MessageView {
 	return live
 }
 
-// messageRect is the i-th notice's rect: centred under the top bar,
-// clear of the side panels and alerts.
-func (a *App) messageRect(sw, i int, m game.MessageView) button {
-	w := int(textW(messageLine(m), tsBody)) + 16
-	return button{x: float32((sw - w) / 2), y: float32(hudTopH + hudPad + i*26), w: float32(w), h: float32(lineStep(tsBody)) + 2}
+// liveMessages are the notices still on screen, oldest first.
+func (a *App) liveMessages() []game.MessageView {
+	live := a.liveMessageList()
+	out := make([]game.MessageView, len(live))
+	for i, lm := range live {
+		out[i] = lm.m
+	}
+	return out
+}
+
+// messageAlpha is how opaque a notice of the given age is: fully until
+// the last messageFadeFrames, then fading to nothing.
+func messageAlpha(age uint64) float64 {
+	left := int64(messageFrames) - int64(age)
+	switch {
+	case left <= 0:
+		return 0
+	case left >= messageFadeFrames:
+		return 1
+	}
+	return float64(left) / messageFadeFrames
+}
+
+// messageRow is one notice and where it sits.
+type messageRow struct {
+	r     rect
+	msg   game.MessageView
+	idx   int // position in the live list (the click id msg.<idx>)
+	alpha float64
+}
+
+// messageRows places the live notices in l's Messages rect, oldest on top,
+// each as wide as its line (up to the rect) and right-aligned.
+func (a *App) messageRows(l hudLayout) []messageRow {
+	if l.Messages.empty() {
+		return nil
+	}
+	live := a.liveMessageList()
+	var rows []messageRow
+	for i, lm := range live {
+		y := l.Messages.Y + float32(i)*msgStride
+		if y+msgRowH > l.Messages.bottom()+0.01 {
+			break
+		}
+		w := min(textW(messageLine(lm.m), messageStyle(lm.m))+2*messagePadX+messageEdgeW, l.Messages.W)
+		rows = append(rows, messageRow{r: rect{l.Messages.right() - w, y, w, msgRowH}, msg: lm.m, idx: i, alpha: messageAlpha(lm.age)})
+	}
+	return rows
 }
 
 // messageButtons make the notices clickable: a click jumps to the
 // creature (or place) the message is about.
-func (a *App) messageButtons(sw int) []button {
+func (a *App) messageButtons(sw int) []button { return a.messageButtonsIn(a.hud()) }
+
+func (a *App) messageButtonsIn(l hudLayout) []button {
 	var out []button
-	for i, m := range a.liveMessages() {
-		if m.Focus == 0 && m.X == 0 && m.Y == 0 {
+	for _, row := range a.messageRows(l) {
+		if row.msg.Focus == 0 && row.msg.X == 0 && row.msg.Y == 0 {
 			continue
 		}
-		r := a.messageRect(sw, i, m)
-		r.id = "msg." + strconv.Itoa(i)
-		out = append(out, r)
+		out = append(out, button{id: "msg." + strconv.Itoa(row.idx), x: row.r.X, y: row.r.Y, w: row.r.W, h: row.r.H})
 	}
 	return out
+}
+
+// focusEntity selects creature id (an animal or a colonist) and centres
+// the camera on it. False when nothing has that id.
+func (a *App) focusEntity(id entity.EntityID) bool {
+	if a.renderer == nil || id == 0 {
+		return false
+	}
+	for _, an := range a.renderer.world().Animals {
+		if an.ID == id {
+			a.selectCand(selCand{selAnimal, an.ID})
+			a.centerOnMap(float64(an.X)+0.5, float64(an.Y)+0.5)
+			return true
+		}
+	}
+	for _, p := range a.renderer.snapshot() {
+		if p.ID == id {
+			a.renderer.Select(p.ID)
+			a.centerOnMap(float64(p.X)+0.5, float64(p.Y)+0.5)
+			return true
+		}
+	}
+	return false
 }
 
 // focusMessage centres the camera on message i's creature (selecting
@@ -145,21 +225,8 @@ func (a *App) focusMessage(id string) {
 		return
 	}
 	m := live[i]
-	if m.Focus != 0 {
-		for _, an := range a.renderer.world().Animals {
-			if an.ID == m.Focus {
-				a.selectCand(selCand{selAnimal, an.ID})
-				a.centerOnMap(float64(an.X)+0.5, float64(an.Y)+0.5)
-				return
-			}
-		}
-		for _, p := range a.renderer.snapshot() {
-			if p.ID == m.Focus {
-				a.renderer.Select(p.ID)
-				a.centerOnMap(float64(p.X)+0.5, float64(p.Y)+0.5)
-				return
-			}
-		}
+	if a.focusEntity(m.Focus) {
+		return
 	}
 	if m.X != 0 || m.Y != 0 {
 		a.centerOnMap(float64(m.X)+0.5, float64(m.Y)+0.5)
@@ -175,12 +242,44 @@ func messageStyle(m game.MessageView) textStyle {
 	return st
 }
 
-func (a *App) drawMessages(screen *ebiten.Image) {
-	sw, _ := a.size()
-	for i, m := range a.liveMessages() {
-		r := a.messageRect(sw, i, m)
-		uiFillRect(screen, r.x, r.y, r.w, r.h, color.RGBA{20, 16, 12, 200}, false)
-		drawText(screen, messageLine(m), float64(int(r.x)+8), float64(int(r.y)+3+labelDY), messageStyle(m))
+// messageEdge is the colour of a notice's left edge: red for a danger, the
+// kind's colour for a kinded notice, and none (zero alpha) otherwise.
+func messageEdge(m game.MessageView) color.RGBA {
+	switch {
+	case m.Danger:
+		return uiLetterThreat
+	case m.Kind != "":
+		return letterColor(m.Kind)
+	}
+	return color.RGBA{}
+}
+
+// fadeColor is c with its opacity scaled by k.
+func fadeColor(c color.Color, k float64) color.Color {
+	r, g, b, a := c.RGBA()
+	if a == 0 {
+		return c
+	}
+	return color.NRGBA{uint8(r * 255 / a), uint8(g * 255 / a), uint8(b * 255 / a), uint8(float64(a>>8) * k)}
+}
+
+func (a *App) drawMessages(screen *ebiten.Image) { a.drawMessagesIn(screen, a.hud()) }
+
+func (a *App) drawMessagesIn(screen *ebiten.Image, l hudLayout) {
+	for _, row := range a.messageRows(l) {
+		r, k := row.r, row.alpha
+		fillRect(screen, r, fadeColor(uiTooltip, 0.85*k))
+		if e := messageEdge(row.msg); e.A != 0 {
+			fillRect(screen, rect{r.X, r.Y, messageEdgeW, r.H}, fadeColor(e, k))
+		}
+		st := messageStyle(row.msg)
+		base := st.Color
+		if base == nil {
+			base = uiText
+		}
+		st.Color = fadeColor(base, k)
+		line := fitText(messageLine(row.msg), st, r.W-2*messagePadX-messageEdgeW)
+		drawText(screen, line, float64(r.X+messageEdgeW+messagePadX), float64(r.Y)+(float64(r.H)-lineH(st))/2, st)
 	}
 }
 

@@ -1,7 +1,6 @@
 package ebiten
 
 import (
-	"fmt"
 	"image/color"
 	"strings"
 
@@ -277,20 +276,4 @@ func defaultStoneStuff(w game.WorldView) string {
 		}
 	}
 	return defaultStone + " blocks"
-}
-
-// resourceReadouts are the HUD resource labels: food, wood, stone blocks
-// and steel always; silver and gold once the colony has some.
-func resourceReadouts(w game.WorldView) []string {
-	out := []string{
-		fmt.Sprintf("Food %d", w.Food), fmt.Sprintf("Wood %d", w.Wood),
-		fmt.Sprintf("Stone %d", w.Stone), fmt.Sprintf("Steel %d", w.Steel),
-	}
-	if w.Silver > 0 {
-		out = append(out, fmt.Sprintf("Silver %d", w.Silver))
-	}
-	if w.Gold > 0 {
-		out = append(out, fmt.Sprintf("Gold %d", w.Gold))
-	}
-	return out
 }

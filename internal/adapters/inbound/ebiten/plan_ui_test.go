@@ -86,8 +86,15 @@ func TestPlanButtonToggle(t *testing.T) {
 	if !b.selected {
 		t.Fatal("overlay is on by default")
 	}
-	if hb, _ := hasButton(a.colonyButtons(sw, sh), homeButtonID); b.x+b.w > hb.x {
-		t.Fatalf("Plans button %+v overlaps Home %+v", b, hb)
+	// left to right in Global: Roof, Home, Auto home, Plans, Rooms; none shares a rect
+	for _, o := range []string{homeButtonID, roomsButtonID} {
+		ob, _ := hasButton(a.colonyButtons(sw, sh), o)
+		if i := (rect{b.x, b.y, b.w, b.h}).intersect(rect{ob.x, ob.y, ob.w, ob.h}); i.W > 0 && i.H > 0 {
+			t.Fatalf("Plans button %+v overlaps %s %+v", b, o, ob)
+		}
+	}
+	if g := a.hud().Global; b.x < g.X || b.x+b.w > g.right() || b.y < g.Y || b.y+b.h > g.bottom() {
+		t.Fatalf("Plans button %+v is outside Global %+v", b, g)
 	}
 	click(t, a, planButtonID)
 	if !a.renderer.planHidden || find().selected {

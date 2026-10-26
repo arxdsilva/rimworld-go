@@ -1,6 +1,10 @@
 package ebiten
 
-import "testing"
+import (
+	"fmt"
+	"math"
+	"testing"
+)
 
 func TestClampAxis(t *testing.T) {
 	// map 1000px, viewport 0..500, slack 50
@@ -16,5 +20,134 @@ func TestClampAxis(t *testing.T) {
 	// map 200px in a 500px viewport is centred: left edge at 150
 	if got := clampAxis(0, 200, 0, 500, 50); got != -150 {
 		t.Errorf("small map: got %v, want -150", got)
+	}
+}
+
+// The map fills the whole window and the HUD floats over it (PLAY-018):
+// the logical viewport is the screen, the physical one is the same
+// scaled, and the App's map viewport is the physical window.
+func TestColonyViewportIsTheWholeScreen(t *testing.T) {
+	for _, s := range []float64{1, 1.5, 2} {
+		l := colonyViewport(1280, 720)
+		if l != (viewport{0, 0, 1280, 720}) {
+			t.Fatalf("logical viewport %+v, want the whole 1280x720 screen", l)
+		}
+		if p := colonyViewportPhysical(1280, 720, s); p != (viewport{0, 0, 1280 * s, 720 * s}) {
+			t.Fatalf("s=%v: physical viewport %+v", s, p)
+		}
+	}
+	for _, sc := range globalScales {
+		a, _ := globalColony(t, newGlobalSim(), sc.ui, sc.ww, sc.wh)
+		if v := a.mapViewport(); v != (viewport{0, 0, sc.ww, sc.wh}) {
+			t.Errorf("ui %d: map viewport %+v, want the whole %vx%v window", sc.ui, v, sc.ww, sc.wh)
+		}
+	}
+}
+
+// The first call centres the camera on the middle of the whole screen, and
+// a camera pushed to any limit keeps the map within the slack of the
+// screen's own edges, not of an inner area.
+func TestCameraClampsToTheWholeScreen(t *testing.T) {
+	t.Parallel()
+	v := colonyViewport(1280, 720)
+	r := New(&stubSim{w: 40, h: 40})
+	r.cam.zoom = 1
+	r.clampCamera(v) // first call: centred on the map
+	tile := r.tilePx()
+	if cx := (v.x0+v.x1)/2 + r.cam.offsetX; cx != 20*tile {
+		t.Errorf("map centre at %v, want %v: not centred on the screen", cx, 20*tile)
+	}
+	if cy := (v.y0+v.y1)/2 + r.cam.offsetY; cy != 20*tile {
+		t.Errorf("map centre y at %v, want %v", cy, 20*tile)
+	}
+	r.cam.offsetX, r.cam.offsetY = -1e6, -1e6 // pushed to the top-left limit
+	r.clampCamera(v)
+	if left := -r.cam.offsetX; left > edgeSlack*v.w()+1e-6 {
+		t.Errorf("the map's left edge is %v px in, more than the slack %v", left, edgeSlack*v.w())
+	}
+	if top := -r.cam.offsetY; top > edgeSlack*v.h()+1e-6 {
+		t.Errorf("the map's top edge is %v px in, more than the slack %v", top, edgeSlack*v.h())
+	}
+	if top := -r.cam.offsetY; top < edgeSlack*v.h()-1e-6 {
+		t.Errorf("the top limit %v is short of the screen's slack %v: something still reserves a top strip", top, edgeSlack*v.h())
+	}
+	r.cam.offsetX, r.cam.offsetY = 1e6, 1e6 // and the bottom-right
+	r.clampCamera(v)
+	if right := 40*tile - r.cam.offsetX; right < v.x1-edgeSlack*v.w()-1e-6 {
+		t.Errorf("the map's right edge %v is further in than the slack from %v", right, v.x1)
+	}
+	if bottom := 40*tile - r.cam.offsetY; bottom < v.y1-edgeSlack*v.h()-1e-6 || bottom > v.y1-edgeSlack*v.h()+1e-6 {
+		t.Errorf("the map's bottom edge %v should end the slack %v above the screen's bottom %v", bottom, edgeSlack*v.h(), v.y1)
+	}
+}
+
+// centerOnMap puts the target in the middle of the whole window.
+func TestCenterOnMapTargetsTheWindowCentre(t *testing.T) {
+	for _, sc := range globalScales {
+		sim := &stubSim{w: 80, h: 80}
+		a, _ := globalColony(t, sim, sc.ui, sc.ww, sc.wh)
+		a.renderer.cam.zoom = 1
+		a.centerOnMap(40.5, 40.5)
+		x, y := a.renderer.worldToScreenF(40.5, 40.5)
+		v := a.mapViewport()
+		if wantX, wantY := (v.x0+v.x1)/2, (v.y0+v.y1)/2; math.Abs(float64(x)-wantX) > 1 || math.Abs(float64(y)-wantY) > 1 {
+			t.Errorf("ui %d: target drawn at (%v,%v), want the window centre (%v,%v)", sc.ui, x, y, wantX, wantY)
+		}
+	}
+}
+
+// Edge scrolling works at every edge and corner of the window, including
+// over the places the HUD floats (the tab strip, the right column): the
+// viewport is the whole window.
+func TestEdgeScrollAtEveryScreenEdge(t *testing.T) {
+	for _, sc := range globalScales {
+		t.Run(fmt.Sprintf("ui%d", sc.ui), func(t *testing.T) {
+			a, f := globalColony(t, &stubSim{w: 80, h: 80}, sc.ui, sc.ww, sc.wh)
+			a.renderer.edgeScroll = true
+			f.cur.focused = true
+			w, h := a.pw, a.ph
+			for _, c := range []struct {
+				name   string
+				x, y   int
+				dx, dy float64
+			}{
+				{"top-left corner", 0, 0, -1, -1},
+				{"top edge (the old top strip)", w / 2, 0, 0, -1},
+				{"top-right corner", w - 1, 0, 1, -1},
+				{"right edge (the right column)", w - 1, h / 2, 1, 0},
+				{"bottom-right corner", w - 1, h - 1, 1, 1},
+				{"bottom edge (the tab strip)", w / 2, h - 1, 0, 1},
+				{"bottom-left corner", 0, h - 1, -1, 1},
+				{"left edge", 0, h / 2, -1, 0},
+				{"middle of the screen", w / 2, h / 2, 0, 0},
+				{"just inside the band", w / 2, int(6*screenDev()) + 2, 0, 0},
+			} {
+				f.cur.mx, f.cur.my = c.x, c.y
+				f.frame(t, a)
+				in := a.cameraInput(a.mapViewport())
+				if in.dx != c.dx || in.dy != c.dy {
+					t.Errorf("%s (%d,%d): pan (%v,%v), want (%v,%v)", c.name, c.x, c.y, in.dx, in.dy, c.dx, c.dy)
+				}
+			}
+		})
+	}
+}
+
+// The wheel zooms about the cursor everywhere on the map, including where
+// the top strip used to be.
+func TestZoomAnchorsOverTheFormerTopStrip(t *testing.T) {
+	a, f := globalColony(t, &stubSim{w: 80, h: 80}, 100, 1280, 720)
+	r := a.renderer
+	r.smooth.instant = true
+	a.centerOnMap(40, 40)
+	x, y := 700, 10 // physical, in the old strip
+	wx, wy := r.screenToWorld(x, y)
+	f.cur.mx, f.cur.my, f.cur.wheelY = x, y, 2
+	f.frame(t, a)
+	if r.cam.zoom <= 1 {
+		t.Fatalf("zoom %v after wheel steps in", r.cam.zoom)
+	}
+	if gx, gy := r.screenToWorld(x, y); math.Abs(gx-wx) > 0.01 || math.Abs(gy-wy) > 0.01 {
+		t.Fatalf("the cursor's world point moved: (%v,%v), want (%v,%v)", gx, gy, wx, wy)
 	}
 }

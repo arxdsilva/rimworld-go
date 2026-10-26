@@ -31,6 +31,14 @@ type optionRow struct {
 	apply      func(s *config.Settings, d int) // d: -1/+1 for steppers, 0 to toggle/cycle
 	live       func(a *App) string             // value that needs the running app (Auto UI scale); overrides value
 	tip        string                          // hover line
+	extra      *optionAction                   // a second button beside the control
+}
+
+// optionAction is a one-shot button on a row (e.g. Reset lessons): it
+// changes the settings once and holds no value of its own.
+type optionAction struct {
+	key, label, tip string
+	apply           func(s *config.Settings)
 }
 
 var optionTabLabels = map[string]string{"audio": "Audio", "graphics": "Graphics", "gameplay": "Gameplay", "controls": "Controls", "access": "Accessibility", "story": "Story"}
@@ -138,6 +146,16 @@ func uiScaleRow() optionRow {
 		}}
 }
 
+// learningHelperRow shows or hides the learning helper (PLAY-018) and, beside
+// it, starts its lessons again.
+func learningHelperRow() optionRow {
+	r := withTip(toggleRow("learnhelper", "Learning helper", func(s *config.Settings) *bool { return &s.Gameplay.ShowLearningHelper }),
+		"Short lessons in the top-right corner, done as you play. Turning it off keeps your progress.")
+	r.extra = &optionAction{key: "reset", label: "Reset lessons", tip: "Mark every lesson as not learned yet",
+		apply: func(s *config.Settings) { s.Gameplay.LearnedLessons = nil }}
+	return r
+}
+
 // rowValue is the text of a row's control.
 func (a *App) rowValue(r optionRow) string {
 	if r.live != nil {
@@ -172,6 +190,7 @@ func optionRows(tab string) []optionRow {
 					s.Gameplay.AutosaveDays = cycle(config.AutosaveChoices, s.Gameplay.AutosaveDays)
 				}},
 			toggleRow("edgescroll", "Edge scrolling", func(s *config.Settings) *bool { return &s.Gameplay.EdgeScroll }),
+			learningHelperRow(),
 			{key: "panspeed", label: "Camera pan speed", kind: rowStep,
 				value: func(s config.Settings) string { return fmt.Sprintf("%d%%", s.Gameplay.PanSpeed) },
 				frac: func(s config.Settings) float64 {
@@ -236,6 +255,9 @@ func (a *App) optionsButtons(sw, sh int) []button {
 		lock := a.optionLock(r.key) // saves.go: developer mode is locked in commitment mode
 		out = append(out, button{id: "options." + r.key, label: a.rowValue(r), x: optCtrlX, y: y, w: 160, h: optBtnH,
 			disabled: lock != "", reason: lock, tip: r.tip})
+		if x := r.extra; x != nil {
+			out = append(out, button{id: "options." + r.key + "." + x.key, label: x.label, x: optCtrlX + 160 + 8, y: y, w: 150, h: optBtnH, tip: x.tip})
+		}
 	}
 	return append(out, button{id: "options.back", label: "Back", x: 40, y: footerY(sh), w: 140, h: 36})
 }
@@ -253,6 +275,15 @@ func (a *App) applyOption(id string) {
 		a.applyControlsClick(key) // controls_ui.go
 		a.cfg.Sound.Play("ui.toggle", 1, 0)
 		return
+	}
+	for _, r := range optionRows(a.currentOptionsTab()) {
+		if x := r.extra; x != nil && key == r.key+"."+x.key {
+			s := a.settings
+			x.apply(&s)
+			a.setSettings(s)
+			a.cfg.Sound.Play("ui.toggle", 1, 0)
+			return
+		}
 	}
 	d := 0
 	if k, ok := strings.CutSuffix(key, ".dec"); ok {

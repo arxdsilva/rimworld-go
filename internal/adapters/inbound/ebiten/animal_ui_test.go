@@ -24,18 +24,16 @@ func TestAnimalInspectorTogglesHunt(t *testing.T) {
 	if !ok || !an.Designated {
 		t.Fatalf("hunt button should mark it: %+v", an)
 	}
-	labelled := false
-	for _, b := range a.animalButtons() {
-		if b.id == "animal.hunt" && b.label == "Cancel hunt" {
-			labelled = true
-		}
+	if hunt := thingCmd(t, a.animalCommands(an.ID), "animal.hunt"); hunt.Label != "Cancel hunt" || !hunt.On {
+		t.Fatalf("button flips to Cancel hunt: %+v", hunt)
 	}
-	if !labelled {
-		t.Fatal("button flips to Cancel hunt")
+	// the pane has the close button the click below uses
+	if sp := a.animalPane(an.ID); sp.Close != "animal.close" {
+		t.Fatalf("pane close = %q", sp.Close)
 	}
 	// drawing the inspector and the world must not panic without art
 	screen := ebiten.NewImage(640, 480)
-	a.drawAnimalInspector(screen)
+	a.drawAnimalMark(screen)
 	a.drawAlerts(screen, 640)
 	click(t, a, "animal.hunt")
 	g.Step(1)

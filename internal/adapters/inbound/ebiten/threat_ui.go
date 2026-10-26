@@ -108,7 +108,7 @@ func (r *Renderer) drawFloaters(screen *ebiten.Image, tile float64) {
 		if age > floaterLife/2 {
 			fade = float32(floaterLife-age) / float32(floaterLife/2)
 		}
-		uiFillRect(screen, sx-w/2, sy-h/2, w, h, color.RGBA{16, 12, 8, uint8(170 * fade)}, false)
+		uiFillRect(screen, sx-w/2, sy-h/2, w, h, uiShade(uint8(170*fade)), false)
 		st.Color = color.NRGBA{f.clr.R, f.clr.G, f.clr.B, uint8(255 * fade)}
 		drawText(screen, f.text, float64(sx), float64(sy-h/2), st)
 	}

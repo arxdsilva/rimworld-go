@@ -71,16 +71,11 @@ func (a *App) worldTabUI(sw, sh int) {
 	}
 }
 
-// toggleWorld opens the World tab, or closes it when it is on top.
-func (a *App) toggleWorld() {
-	if a.uiModalTop() == worldModalID {
-		a.uiCloseTop()
-		return
-	}
-	a.openWorld()
-}
+// toggleWorld opens the World tab, or closes it when it is the open one.
+func (a *App) toggleWorld() { a.toggleKitWindow(worldModalID, a.openWorld) }
 
-// openWorld opens the World tab.
+// openWorld opens the World tab: a main-tab window in the Window rect
+// (hud_window.go), with Form caravan in its footer.
 func (a *App) openWorld() {
 	if a.renderer == nil {
 		return
@@ -91,10 +86,10 @@ func (a *App) openWorld() {
 	}
 	a.uiPushModal(modal{
 		id: worldModalID, title: "World", w: worldW, h: worldH,
+		modeless: true, anchor: (*App).windowAnchor,
 		draw: func(a *App, body rect) { a.worldBody(st, body) },
 		buttons: []modalButton{
-			{id: "close", label: "Close", style: btnPrimary, closes: true},
-			{id: "world.form", label: "Form caravan", disabled: func() string {
+			{id: "world.form", label: "Form caravan", style: btnPrimary, disabled: func() string {
 				if !st.hasMap {
 					return worldNoMap
 				}
@@ -216,7 +211,7 @@ func drawCaravanMarks(dst *ebiten.Image, g *globeView, art *artCatalog, cs []gam
 		if vz < g.zh+0.04 {
 			continue
 		}
-		vector.FillCircle(dst, sx, sy, float32(size*0.56), color.RGBA{10, 14, 20, 170}, true)
+		vector.FillCircle(dst, sx, sy, float32(size*0.56), color.RGBA{R: uiSpace.R, G: uiSpace.G, B: uiSpace.B, A: 170}, true)
 		var img *ebiten.Image
 		if art != nil {
 			img = art.image(worldCaravanIcon, color.NRGBA{})

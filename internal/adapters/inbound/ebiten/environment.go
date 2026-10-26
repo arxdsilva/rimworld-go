@@ -1341,6 +1341,26 @@ func weatherLabel(w game.WorldView) string {
 	return fmt.Sprintf("%s %s %.1f", name, windArrows[oct], s)
 }
 
+// weatherLabelW is the logical width drawWeatherLabel takes: the name, the
+// arrow's room and the speed; a calm label is plain text.
+func weatherLabelW(w game.WorldView) float32 {
+	lbl := weatherLabel(w)
+	if lbl == "" {
+		return 0
+	}
+	if strings.HasSuffix(lbl, ", calm") {
+		return textW(lbl, tsBody)
+	}
+	name, rest, _ := strings.Cut(lbl, " ")
+	_, speed, _ := strings.Cut(rest, " ")
+	return textW(name, tsBody) + 20 + textW(speed, tsBody)
+}
+
+// drawWeatherLabelRight is drawWeatherLabel with its right edge at x.
+func drawWeatherLabelRight(screen *ebiten.Image, x, y int, w game.WorldView) {
+	drawWeatherLabel(screen, x-int(weatherLabelW(w)+0.5), y, w)
+}
+
 // drawWeatherLabel draws weatherLabel at the logical position (x, y). The
 // wind arrow is drawn as lines (the font has no arrows), pointing the true
 // way, between the measured name and the speed. It is HUD, so every stroke

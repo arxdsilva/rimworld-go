@@ -632,7 +632,7 @@ func (a *App) infoBlocks(ti tileInfo, w float32) []infoBlock {
 			for i, l := range lines {
 				drawText(dst, l, float64(r.X+landLabelW), float64(r.Y+2)+float64(i)*lineH(vs), vs)
 			}
-			fillRect(dst, rect{r.X, r.bottom() - 1, r.W, 1}, color.RGBA{0x6B, 0x53, 0x40, 0x50})
+			fillRect(dst, rect{r.X, r.bottom() - 1, r.W, 1}, uiFade(uiPanelBorder, 0x50))
 		}})
 	}
 	return out

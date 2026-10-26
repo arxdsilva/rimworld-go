@@ -5,21 +5,20 @@ import (
 	"sort"
 	"strings"
 
-	ebiten "github.com/hajimehoshi/ebiten/v2"
-
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
+	"rimworld-go/internal/domain/sim/entity"
 )
 
-// Pen marker inspector (PLAY-015 §2.3): Animals (which penned species and
-// sexes the pen takes), Food (grazing against the herd's demand) and
-// Auto-cut (plant species designated for cutting inside). Reads
-// WorldView.Pens; every edit emits SetPenSettings with the whole settings.
+// Pen marker (PLAY-015 §2.3, PLAY-018): the pane shows the pen's status
+// and Food (grazing against the herd's demand); the Pen tab above it holds
+// Animals (which penned species and sexes the pen takes) and Auto-cut
+// (plant species designated for cutting inside). Reads WorldView.Pens;
+// every edit emits SetPenSettings with the whole settings.
 
 const (
 	penMarkerKind = "pen marker"
 	penToolID     = "pen_marker"
-	penPanelW     = 380
 	penRowH       = 22
 	penBtnH       = 20
 	penCutCols    = 2
@@ -137,116 +136,78 @@ func penStatusLine(pv game.PenView) string {
 	return fmt.Sprintf("%s   %d animals", pv.Name, pv.Animals)
 }
 
-// penPanelRect is the pen marker panel, anchored where the building panel
-// is and tall enough for its three sections.
-func (a *App) penPanelRect(b game.BuildingView) button {
-	r := buildingRect()
-	pv, ok := a.penOf(b)
-	if !ok {
-		return r
-	}
-	rows := max(len(penSpeciesRows(a.renderer.world(), pv)), 1)
-	cuts := (len(penCutKeys(a.renderer.world(), pv)) + penCutCols - 1) / penCutCols
-	r.h = float32(50 + 24 + rows*penRowH + 10 + 24 + len(penFoodLines(pv))*18 + 10 + 24 + cuts*penRowH + 46)
-	return r
-}
+// ---- the Pen tab ---------------------------------------------------------
 
-// buildingPanelRect is the selected building's inspector rect: the pen
-// marker's own, else the generic one.
-func (a *App) buildingPanelRect() button {
-	if b, ok := a.selectedBuilding(); ok && isPenMarker(b) && a.renderer != nil {
-		return a.penPanelRect(b)
-	}
-	return buildingRect()
-}
+const penTabW = 400 // the Pen tab's panel
 
-// penButtons are the pen marker inspector's buttons (and its bounds).
-func (a *App) penButtons(b game.BuildingView) []button {
-	r := a.penPanelRect(b)
-	out := []button{{id: "bldg.close", label: "X", x: r.x + r.w - 28, y: r.y + 6, w: 22, h: 22}}
-	pv, ok := a.penOf(b)
-	if !ok {
-		return out
-	}
-	w := a.renderer.world()
-	y := r.y + 50
-	out = append(out,
-		button{id: "bldg.pen.all", label: "All", x: r.x + r.w - 130, y: y, w: 56, h: penBtnH},
-		button{id: "bldg.pen.none", label: "None", x: r.x + r.w - 68, y: y, w: 56, h: penBtnH})
+// penTabBody lays out the pen's settings, viewW wide: which penned species
+// and sexes the pen takes (with All / None), and the auto-cut checklist.
+// The status and food lines are the pane's.
+func penTabBody(w game.WorldView, pv game.PenView, viewW float32) tabBody {
+	var body tabBody
+	y := float32(0)
+	body.labels = append(body.labels, tabLabel{text: "Animals", y: y, st: tsLabel})
+	body.buttons = append(body.buttons,
+		button{id: "bldg.pen.all", label: "All", x: viewW - 118, y: y, w: 56, h: penBtnH},
+		button{id: "bldg.pen.none", label: "None", x: viewW - 56, y: y, w: 56, h: penBtnH})
 	y += 24
-	for _, row := range penSpeciesRows(w, pv) {
-		out = append(out,
-			button{id: "bldg.pen.sp." + row.key, label: row.label, x: r.x + 12, y: y, w: 190, h: penBtnH, selected: row.set.Allow},
-			button{id: "bldg.pen.sp." + row.key + ".m", label: "M", x: r.x + 212, y: y, w: 44, h: penBtnH, selected: row.set.Male,
+	rows := penSpeciesRows(w, pv)
+	for _, row := range rows {
+		body.buttons = append(body.buttons,
+			button{id: "bldg.pen.sp." + row.key, label: row.label, x: 0, y: y, w: 190, h: penBtnH, selected: row.set.Allow},
+			button{id: "bldg.pen.sp." + row.key + ".m", label: "M", x: 200, y: y, w: 44, h: penBtnH, selected: row.set.Male,
 				tip: "Males\nTake male " + row.label + " animals."},
-			button{id: "bldg.pen.sp." + row.key + ".f", label: "F", x: r.x + 262, y: y, w: 44, h: penBtnH, selected: row.set.Female,
+			button{id: "bldg.pen.sp." + row.key + ".f", label: "F", x: 250, y: y, w: 44, h: penBtnH, selected: row.set.Female,
 				tip: "Females\nTake female " + row.label + " animals."})
 		y += penRowH
 	}
-	if len(penSpeciesRows(w, pv)) == 0 {
+	if len(rows) == 0 {
+		body.labels = append(body.labels, tabLabel{text: "No penned animals in the colony yet.", x: 4, y: y + 2, w: viewW - 4, st: tsBody})
 		y += penRowH
 	}
-	y += 10 + 24 + float32(len(penFoodLines(pv))*18) + 10 + 24
+	y += 10
+	body.labels = append(body.labels, tabLabel{text: "Auto-cut (every 2 hours, inside an enclosed pen)", y: y, w: viewW, st: tsLabel})
+	y += 24
 	cut := map[string]bool{}
 	for _, k := range pv.Settings.AutoCut {
 		cut[k] = true
 	}
-	for i, k := range penCutKeys(w, pv) {
-		out = append(out, button{id: "bldg.pen.cut." + k, label: penPlantLabel(k),
-			x: r.x + 12 + float32(i%penCutCols)*176, y: y + float32(i/penCutCols*penRowH), w: 170, h: penBtnH, selected: cut[k]})
+	keys := penCutKeys(w, pv)
+	for i, k := range keys {
+		body.buttons = append(body.buttons, button{id: "bldg.pen.cut." + k, label: penPlantLabel(k),
+			x: float32(i%penCutCols) * 176, y: y + float32(i/penCutCols*penRowH), w: 170, h: penBtnH, selected: cut[k]})
 	}
-	if !b.Deconstruct {
-		out = append(out, button{id: "bldg.deconstruct", label: "Deconstruct", x: r.x + r.w - 130, y: r.y + r.h - 32, w: 120, h: 24})
+	body.h = y + float32((len(keys)+penCutCols-1)/penCutCols*penRowH)
+	return body
+}
+
+// penTab is the Pen tab of pen marker b.
+func (a *App) penTab(b game.BuildingView) paneTab {
+	id := b.ID
+	h := float32(2 * paneInset)
+	if pv, ok := a.penOf(b); ok {
+		h += penTabBody(a.renderer.world(), pv, penTabW-2*paneInset-scrollBarW).h
 	}
-	return out
+	return paneTab{ID: "inspector.pen", Label: "Pen", WantW: penTabW, WantH: h,
+		Declare: func(r rect) { a.penTabUI(id, r) }}
+}
+
+// penTabUI declares the Pen tab of marker id in r, the expanded panel's
+// inner rectangle.
+func (a *App) penTabUI(id entity.EntityID, r rect) {
+	b, ok := a.buildingView(id)
+	if !ok || !isPenMarker(b) {
+		return
+	}
+	pv, ok := a.penOf(b)
+	if !ok {
+		return
+	}
+	a.declareTabBody("bldg.pen.body", r, penTabBody(a.renderer.world(), pv, r.W-scrollBarW), a.applyBuildingClick)
 }
 
 // penPlantLabel is a plant species key as words ("jungle_tree").
 func penPlantLabel(k string) string { return strings.ReplaceAll(k, "_", " ") }
-
-// drawPenPanel draws the pen marker inspector.
-func (a *App) drawPenPanel(screen *ebiten.Image, b game.BuildingView) {
-	r := a.penPanelRect(b)
-	drawPanel(screen, r.x, r.y, r.w, r.h)
-	drawFitSmall(screen, "Pen marker", float64(r.x)+12, float64(r.y)+8, float64(r.w)-48, tsLabel)
-	if pv, ok := a.penOf(b); ok {
-		st := tsBody
-		if !pv.Enclosed {
-			st.Bold, st.Color = true, alertClr
-		}
-		drawFitSmall(screen, penStatusLine(pv), float64(r.x)+12, float64(r.y)+27, float64(r.w)-24, st)
-		w := a.renderer.world()
-		x, y := int(r.x)+12, int(r.y)+50
-		drawText(screen, "Animals", float64(x), float64(y), tsLabel)
-		y += 24
-		rows := penSpeciesRows(w, pv)
-		y += len(rows) * penRowH
-		if len(rows) == 0 {
-			drawLabel(screen, x+4, y+2, "No penned animals in the colony yet.")
-			y += penRowH
-		}
-		y += 10
-		drawText(screen, "Food", float64(x), float64(y), tsLabel)
-		y += 24
-		lines := penFoodLines(pv)
-		for i, ln := range lines {
-			st := tsBody
-			if i == len(lines)-1 {
-				st.Bold = true
-				if strings.HasPrefix(ln, "Short") {
-					st.Color = alertClr
-				}
-			}
-			drawFitSmall(screen, ln, float64(x), float64(y), float64(r.w)-24, st)
-			y += 18
-		}
-		y += 10
-		drawText(screen, "Auto-cut (every 2 hours, inside an enclosed pen)", float64(x), float64(y), tsLabel)
-	}
-	mx, my := a.currentCursor()
-	a.drawButtons(screen, a.penButtons(b), mx, my)
-	a.drawBuildingSelection(screen, b)
-}
 
 // applyPenClick handles the pen marker inspector's bldg.pen.* ids.
 func (a *App) applyPenClick(id string, b game.BuildingView) bool {

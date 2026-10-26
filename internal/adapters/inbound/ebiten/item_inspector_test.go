@@ -24,20 +24,22 @@ func TestItemEquipChipsPerColonist(t *testing.T) {
 	a, g, _ := liveColony(t, 1)
 	id, _ := g.SpawnStack(item.Rifle, 1, 8, 8)
 	selectItemTile(t, a, id, 8, 8)
-	chips := 0
-	for _, b := range a.itemButtons() {
-		// Haul chips are disabled (no stockpile); only Equip chips are checked.
-		if strings.HasPrefix(b.id, "item.act.") && b.reason != "no stockpile space" {
-			chips++
-			if b.disabled {
-				t.Fatalf("reachable colonist chip disabled: %+v", b)
-			}
+	cs := a.itemCommands(id)
+	equip := thingCmd(t, cs, "cmd.item.equip")
+	opts := equip.Options(a)
+	if len(opts) < 2 {
+		t.Fatalf("want one Equip option per colonist, got %+v", opts)
+	}
+	for _, o := range opts {
+		if o.Disabled || o.Cmd == nil {
+			t.Fatalf("reachable colonist option disabled: %+v", o)
 		}
 	}
-	if chips < 2 {
-		t.Fatalf("want one Equip chip per colonist, got %d", chips)
+	// Haul is disabled (no stockpile); only Equip is checked above.
+	if haul := thingCmd(t, cs, "cmd.item.haul"); !haul.Disabled || haul.Reason != "no stockpile space" {
+		t.Fatalf("haul with no stockpile = %+v", haul)
 	}
-	click(t, a, "item.act.0")
+	thingPress(a, equip) // the nearest colonist
 	click(t, a, "item.close")
 	if a.hasItem {
 		t.Fatal("close clears the selection")
@@ -46,20 +48,21 @@ func TestItemEquipChipsPerColonist(t *testing.T) {
 
 func TestItemChipsDisabledWithReason(t *testing.T) {
 	t.Parallel()
-	rows := []itemChipRow{
-		{"Equip:", []colonistAction{{Pawn: 1, Name: "Ada"}, {Pawn: 2, Name: "Bo", Disabled: true, Reason: "cannot reach"}}},
-		{"Haul:", []colonistAction{{Pawn: 1, Name: "Ada"}}},
+	equip := colonistOptions([]colonistAction{{Pawn: 1, Name: "Ada"}, {Pawn: 2, Name: "Bo", Disabled: true, Reason: "cannot reach"}})
+	haul := colonistOptions([]colonistAction{{Pawn: 1, Name: "Ada"}})
+	if b := equip[1]; !b.Disabled || b.Reason != "cannot reach" || b.Label != "Bo" || b.Cmd != nil {
+		t.Fatalf("option 1 = %+v", b)
 	}
-	bs := itemPanelButtons(itemRect(), rows)
-	b, ok := btnByID(bs, "item.act.1")
-	if !ok || !b.disabled || b.reason != "cannot reach" || b.label != "Bo ×" {
-		t.Fatalf("chip 1 = %+v", b)
+	// the Haul command sits after the Equip one in the grid
+	var ids []string
+	for _, v := range itemVerbs(game.ItemView{Kind: "rifle"}, false) {
+		ids = append(ids, v.id)
 	}
-	if h, _ := btnByID(bs, "item.act.2"); h.y <= b.y {
-		t.Fatalf("haul row should sit below equip row: %+v vs %+v", h, b)
+	if strings.Join(ids, ",") != "cmd.item.equip,cmd.item.haul" {
+		t.Fatalf("verbs = %v", ids)
 	}
-	if n := len(flattenChips(rows)); n != 3 {
-		t.Fatalf("flatten = %d", n)
+	if n := len(equip) + len(haul); n != 3 {
+		t.Fatalf("options = %d", n)
 	}
 }
 
@@ -75,15 +78,17 @@ func TestItemUnreachableColonistDisabled(t *testing.T) {
 	}
 	id, _ := g.SpawnStack(item.Rifle, 1, 8, 8)
 	selectItemTile(t, a, id, 8, 8)
-	for _, b := range a.itemButtons() {
-		if strings.HasPrefix(b.id, "item.act.") {
-			if !b.disabled || b.reason == "" {
-				t.Fatalf("walled-in rifle chip should be disabled with a reason: %+v", b)
-			}
-			return
-		}
+	equip := thingCmd(t, a.itemCommands(id), "cmd.item.equip")
+	opts := equip.Options(a)
+	if len(opts) == 0 {
+		t.Skip("walls were not built instantly")
 	}
-	t.Skip("walls were not built instantly")
+	if !opts[0].Disabled || opts[0].Reason == "" {
+		t.Fatalf("walled-in rifle option should be disabled with a reason: %+v", opts[0])
+	}
+	if !equip.Disabled || equip.Reason != opts[0].Reason {
+		t.Fatalf("the command says why nobody can: %+v", equip)
+	}
 }
 
 func TestItemHaulOnlyWhenUnstored(t *testing.T) {
@@ -92,11 +97,11 @@ func TestItemHaulOnlyWhenUnstored(t *testing.T) {
 	id, _ := g.SpawnStack(item.Wood, 25, 8, 8)
 	selectItemTile(t, a, id, 8, 8)
 	it, _ := a.selectedItem()
-	if rows := a.itemRows(it, false); len(rows) != 1 || rows[0].Verb != "Haul:" {
-		t.Fatalf("unstored wood rows = %+v", rows)
+	if vs := itemVerbs(it, false); len(vs) != 1 || vs[0].label != "Haul" {
+		t.Fatalf("unstored wood verbs = %+v", vs)
 	}
-	if rows := a.itemRows(it, true); len(rows) != 0 {
-		t.Fatalf("stored wood must have no Haul row: %+v", rows)
+	if vs := itemVerbs(it, true); len(vs) != 0 {
+		t.Fatalf("stored wood must have no Haul: %+v", vs)
 	}
 	if got := itemLines(it, false); got[len(got)-1] != "Not stored" {
 		t.Fatalf("lines = %v", got)
@@ -161,14 +166,14 @@ func TestItemFoodAndApparelRows(t *testing.T) {
 	id, _ := g.SpawnStack(item.Meal, 2, 6, 6)
 	selectItemTile(t, a, id, 6, 6)
 	it, _ := a.selectedItem()
-	if rows := a.itemRows(it, true); len(rows) != 1 || rows[0].Verb != "Eat:" {
-		t.Fatalf("meal rows = %+v", rows)
+	if vs := itemVerbs(it, true); len(vs) != 1 || vs[0].id != "cmd.item.eat" || vs[0].label != "Eat" {
+		t.Fatalf("meal verbs = %+v", vs)
 	}
 	pid, _ := g.SpawnStack(item.Parka, 1, 7, 7)
 	selectItemTile(t, a, pid, 7, 7)
 	it, _ = a.selectedItem()
-	if rows := a.itemRows(it, true); len(rows) != 1 || rows[0].Verb != "Wear:" {
-		t.Fatalf("parka rows = %+v", rows)
+	if vs := itemVerbs(it, true); len(vs) != 1 || vs[0].id != "cmd.item.wear" || vs[0].label != "Wear" {
+		t.Fatalf("parka verbs = %+v", vs)
 	}
 	a.applyItemClick("item.act.99")
 	a.applyItemClick("item.act.x")
@@ -179,7 +184,7 @@ func TestItemPanelClosesWhenItemGone(t *testing.T) {
 	t.Parallel()
 	a, _, _ := liveColony(t, 0)
 	a.selItem, a.hasItem = 9999, true
-	if len(a.itemButtons()) != 0 || a.hasItem {
+	if len(a.commandGridButtons()) != 0 || len(a.itemCommands(9999)) != 0 || a.itemPane(9999).Title != "" || a.hasItem {
 		t.Fatal("panel must close")
 	}
 	a.applyItemClick("item.close")
@@ -192,9 +197,9 @@ func TestInspectorsDrawWithoutArt(t *testing.T) {
 	iid, _ := g.SpawnStack(item.Rifle, 1, 10, 10)
 	screen := ebiten.NewImage(640, 480)
 	selectPlantTile(t, a, pid, 8, 8)
-	a.drawPlantInspector(screen)
+	a.drawPlantMark(screen)
 	selectItemTile(t, a, iid, 10, 10)
-	a.drawItemInspector(screen)
+	a.drawItemMark(screen)
 	if got := capitalize(""); got != "" {
 		t.Fatalf("capitalize empty = %q", got)
 	}

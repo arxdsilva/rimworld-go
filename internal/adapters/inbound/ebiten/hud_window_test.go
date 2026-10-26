@@ -1,0 +1,921 @@
+package ebiten
+
+import (
+	"fmt"
+	"math"
+	"strings"
+	"testing"
+
+	ebiten "github.com/hajimehoshi/ebiten/v2"
+
+	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/platform/input"
+)
+
+// PLAY-018 WINDOWS: the 11-tab strip and the main-tab windows (Work,
+// Schedule, Research, Animals, Wildlife, Assign, History, Factions, World)
+// that open bottom-left in the layout's Window rect.
+
+// winStub is a colony with something in every window: n colonists, tame
+// animals, wild species, research projects (one under way), history and
+// factions.
+func winStub(n int) *stubSim {
+	s := &stubSim{}
+	for i := 0; i < n; i++ {
+		s.pawns = append(s.pawns, game.PawnView{ID: entity.EntityID(i + 1), Name: fmt.Sprintf("Colonist%d", i+1), X: 4 + i%8, Y: 4 + i/8, Status: "alive"})
+	}
+	for i := 0; i < 6; i++ {
+		s.world.Animals = append(s.world.Animals, game.AnimalView{ID: entity.EntityID(50 + i), Species: "dustbuck", Label: "Dustbuck",
+			Name: fmt.Sprintf("Pet%d", i), Tame: true, Adult: true, Health: 100, Food: 60, AgeDays: 40, Mode: "wandering", AreaRef: -1})
+	}
+	for i := 0; i < 8; i++ {
+		s.world.Research = append(s.world.Research, game.ResearchView{ID: uint8(i), Name: fmt.Sprintf("proj%d", i), Label: fmt.Sprintf("Project %d", i),
+			Desc: "A project", Cost: 100, Progress: 10 * i, Available: true, Current: i == 3, Unlocks: []string{"thing"}})
+	}
+	s.wild = []game.WildlifeRow{
+		{Species: "deer", Label: "Deer", Count: 4, Diet: "plants", TameChance: 40, Meat: 30},
+		{Species: "wolf", Label: "Wolf", Count: 2, Diet: "meat", Predator: true, TameChance: 5, Meat: 40},
+		{Species: "boar", Label: "Boar", Count: 3, Diet: "plants", TameChance: 20, Meat: 35},
+	}
+	for i := 0; i < 40; i++ {
+		s.history = append(s.history, game.HistoryEntryView{Tick: uint64(100 * i), Text: fmt.Sprintf("Something happened %d.", i), Kind: "colony"})
+	}
+	s.factions = factionViews()
+	s.worldMap = game.WorldMapView{Tile: 7, Caravans: []game.CaravanView{{ID: 40, Members: []string{"Cora"}, Tile: 8, Dest: 9, Progress: 25, State: "Travelling"}}}
+	return s
+}
+
+// winCase is one main-tab window: how it opens, what is open when it does,
+// and the widget/button id prefixes its contents use.
+type winCase struct {
+	name     string
+	tab      string // the tab strip button id
+	kit      string // the kit modal id (assign, history, factions, world), "" for the legacy windows
+	prefixes []string
+	open     func(a *App)
+}
+
+func winCases() []winCase {
+	click := func(id string) func(a *App) { return func(a *App) { a.applyClick(id) } }
+	return []winCase{
+		{"work", "tab.work", "", []string{"work."}, click("tab.work")},
+		{"schedule", "tab.schedule", "", []string{"sched."}, click("tab.schedule")},
+		{"research", "tab.research", "", []string{"research."}, click("tab.research")},
+		{"animals", "tab.animals", "", []string{"animals."}, click("tab.animals")},
+		{"wildlife", "tab.wildlife", "", []string{"animals."}, click("tab.wildlife")},
+		{"assign", "tab.assign", assignModalID, []string{"assign.", "modal." + assignModalID}, func(a *App) { a.openAssign() }},
+		{"history", "tab.history", historyModalID, []string{"history.", "modal." + historyModalID}, func(a *App) { a.openHistory() }},
+		{"factions", "tab.factions", colFacModalID, []string{"fac.", "colfac.", "modal." + colFacModalID}, func(a *App) { a.openColonyFactions() }},
+		{"world", "tab.world", worldModalID, []string{"world.", "modal." + worldModalID}, func(a *App) { a.openWorld() }},
+	}
+}
+
+func winApp(t *testing.T, s *stubSim) (*App, *fakeInput) {
+	t.Helper()
+	a, f := colonyApp(t, s)
+	f.cur.mx, f.cur.my = -50, -50
+	return a, f
+}
+
+// ---- the tab strip ------------------------------------------------------
+
+func TestTabStripHasElevenEqualTabs(t *testing.T) {
+	t.Parallel()
+	a, _ := winApp(t, winStub(3))
+	for _, size := range [][2]int{{1280, 720}, {1920, 1080}, {1113, 626}} {
+		a.sw, a.sh = size[0], size[1]
+		bs := a.hudTabButtons(a.sw, a.sh)
+		want := []string{"tab.architect", "tab.work", "tab.schedule", "tab.assign", "tab.animals", "tab.wildlife", "tab.research", "tab.world", "tab.history", "tab.factions", "tab.menu"}
+		if len(bs) != len(want) {
+			t.Fatalf("%v: %d tabs, want %d", size, len(bs), len(want))
+		}
+		w := float32(a.sw) / float32(len(want))
+		for i, b := range bs {
+			if b.id != want[i] {
+				t.Errorf("%v: tab %d is %q, want %q", size, i, b.id, want[i])
+			}
+			if math.Abs(float64(b.w-w)) > 0.01 || math.Abs(float64(b.x-float32(i)*w)) > 0.01 {
+				t.Errorf("%v: %s is x %v w %v, want x %v w %v", size, b.id, b.x, b.w, float32(i)*w, w)
+			}
+			if b.y != float32(a.sh-tabsH) || b.h != tabsH {
+				t.Errorf("%v: %s is y %v h %v, want y %d h %d", size, b.id, b.y, b.h, a.sh-tabsH, tabsH)
+			}
+		}
+		if last := bs[len(bs)-1]; math.Abs(float64(last.x+last.w-float32(a.sw))) > 0.01 {
+			t.Errorf("%v: the strip ends at %v, want the screen's edge", size, last.x+last.w)
+		}
+	}
+}
+
+func TestTabStripIsTheLayoutsTabsRect(t *testing.T) {
+	t.Parallel()
+	a, _ := winApp(t, winStub(3))
+	tabs := a.hud().Tabs
+	if tabs != (rect{0, float32(a.sh - 28), float32(a.sw), 28}) {
+		t.Fatalf("Tabs = %+v", tabs)
+	}
+	for _, b := range a.hudTabButtons(a.sw, a.sh) {
+		if !(rect{b.x, b.y, b.w, b.h}).intersect(tabs).empty() && (b.y != tabs.Y || b.h != tabs.H) {
+			t.Errorf("%s leaves the Tabs rect: %+v", b.id, b)
+		}
+	}
+	assertChromeIsTheLayout(t, a) // the layout covers the strip
+	a.applyClick("tab.work")
+	assertChromeIsTheLayout(t, a) // and the window
+}
+
+func TestTabStripShowsKeyHints(t *testing.T) {
+	t.Parallel()
+	a, _ := winApp(t, winStub(1))
+	tips := map[string]string{}
+	for _, b := range a.hudTabButtons(a.sw, a.sh) {
+		tips[b.id] = b.tip
+	}
+	for id, key := range map[string]string{"tab.work": "[F1]", "tab.animals": "[F4]", "tab.wildlife": "[F5]", "tab.research": "[F6]", "tab.history": "[F9]"} {
+		if !strings.Contains(tips[id], key) {
+			t.Errorf("%s tip %q lacks %s", id, tips[id], key)
+		}
+	}
+	if !strings.HasPrefix(tips["tab.wildlife"], "Wildlife") {
+		t.Errorf("Wildlife tip %q", tips["tab.wildlife"])
+	}
+}
+
+// Labels shrink with an ellipsis when a tab is narrow; they never run
+// into the next tab.
+func TestTabLabelsEllipsizeWhenNarrow(t *testing.T) {
+	a, _ := winApp(t, winStub(1))
+	sw, sh := 640, 360 // 58 px a tab
+	a.sw, a.sh = sw, sh
+	img := ebiten.NewImage(sw, sh)
+	var ev []traceEvent
+	drawTrace = func(e traceEvent) { ev = append(ev, e) }
+	defer func() { drawTrace = nil }()
+	a.drawTabs(img, sw, sh)
+	drawTrace = nil
+	bs := a.hudTabButtons(sw, sh)
+	shortened := 0
+	for _, e := range ev {
+		if e.Kind != "text" {
+			continue
+		}
+		in := false
+		for _, b := range bs {
+			if e.X >= b.x-0.5 && e.X+e.W <= b.x+b.w+0.5 && e.Y >= b.y-0.5 && e.Y+e.H <= b.y+b.h+0.5 {
+				in = true
+			}
+		}
+		if strings.HasSuffix(e.Text, "…") {
+			shortened++
+		}
+		if !in {
+			t.Errorf("label %q at %.1f,%.1f %.1fx%.1f is outside every tab", e.Text, e.X, e.Y, e.W, e.H)
+		}
+	}
+	if shortened == 0 {
+		t.Error("no label was ellipsized at 58 px a tab")
+	}
+}
+
+// Research shows a thin fill for the project under way.
+func TestResearchTabShowsProgressFill(t *testing.T) {
+	s := winStub(1)
+	s.world.Research[3].Progress, s.world.Research[3].Cost = 50, 100
+	a, _ := winApp(t, s)
+	img := ebiten.NewImage(a.sw, a.sh)
+	fills := func() []traceEvent {
+		var ev []traceEvent
+		drawTrace = func(e traceEvent) { ev = append(ev, e) }
+		defer func() { drawTrace = nil }()
+		a.drawTabs(img, a.sw, a.sh)
+		var out []traceEvent
+		for _, b := range a.hudTabButtons(a.sw, a.sh) {
+			if b.id != "tab.research" {
+				continue
+			}
+			for _, e := range ev {
+				if e.Kind == "fill" && e.H <= 4 && e.X >= b.x && e.X+e.W <= b.x+b.w+0.5 && e.Y >= b.y+b.h-8 {
+					out = append(out, e)
+				}
+			}
+		}
+		return out
+	}
+	got := fills()
+	if len(got) < 2 { // the track and the fill
+		t.Fatalf("research tab draws %d thin fills, want a track and a fill: %v", len(got), got)
+	}
+	track, fill := got[0], got[len(got)-1]
+	if fill.W <= 0 || math.Abs(float64(fill.W/track.W)-0.5) > 0.05 {
+		t.Errorf("fill %.1f of a %.1f track, want half", fill.W, track.W)
+	}
+	s.world.Research[3].Current = false
+	if n := len(fills()); n != 0 {
+		t.Errorf("no project under way, yet %d thin fills", n)
+	}
+}
+
+// ---- toggling -----------------------------------------------------------
+
+func TestWildlifeTabOpensTheWildlifeList(t *testing.T) {
+	t.Parallel()
+	a, f := winApp(t, winStub(2))
+	click(t, a, "tab.wildlife")
+	f.frame(t, a)
+	if !a.workOpen || a.panelMode != "animals" || !a.animalsWild {
+		t.Fatalf("Wildlife tab: open %v mode %q wild %v", a.workOpen, a.panelMode, a.animalsWild)
+	}
+	sel := map[string]bool{}
+	for _, b := range a.hudTabButtons(a.sw, a.sh) {
+		sel[b.id] = b.selected
+	}
+	if !sel["tab.wildlife"] || sel["tab.animals"] {
+		t.Fatalf("selected tabs %v: only Wildlife", sel)
+	}
+	if w := a.hud().Window; w.empty() {
+		t.Fatal("the Wildlife list opens in the Window rect")
+	}
+	click(t, a, "animals.focus.deer") // the list is the wild species table
+	// clicking the open tab again closes it
+	click(t, a, "tab.wildlife")
+	if a.workOpen {
+		t.Fatal("the open Wildlife tab closes it")
+	}
+}
+
+func TestAnimalsTabWhileWildlifeIsOpenShowsTheColony(t *testing.T) {
+	t.Parallel()
+	a, f := winApp(t, winStub(2))
+	click(t, a, "tab.wildlife")
+	f.frame(t, a)
+	click(t, a, "tab.animals") // switching tabs replaces the window; it never just closes it
+	if !a.workOpen || a.panelMode != "animals" || a.animalsWild {
+		t.Fatalf("Animals over Wildlife: open %v mode %q wild %v", a.workOpen, a.panelMode, a.animalsWild)
+	}
+	sel := map[string]bool{}
+	for _, b := range a.hudTabButtons(a.sw, a.sh) {
+		sel[b.id] = b.selected
+	}
+	if !sel["tab.animals"] || sel["tab.wildlife"] {
+		t.Fatalf("selected tabs %v: only Animals", sel)
+	}
+	click(t, a, "tab.animals")
+	if a.workOpen {
+		t.Fatal("the open Animals tab closes it")
+	}
+	click(t, a, "tab.animals")
+	click(t, a, "tab.wildlife") // and Wildlife replaces Animals
+	if !a.workOpen || !a.animalsWild {
+		t.Fatalf("Wildlife over Animals: open %v wild %v", a.workOpen, a.animalsWild)
+	}
+}
+
+// Switching tabs replaces the window and clicking the open tab closes it,
+// for every pair of windows.
+func TestTabsReplaceAndToggleWindows(t *testing.T) {
+	t.Parallel()
+	cases := winCases()
+	for _, from := range cases {
+		for _, to := range cases {
+			t.Run(from.name+"_to_"+to.name, func(t *testing.T) {
+				a, f := winApp(t, winStub(3))
+				click(t, a, from.tab)
+				f.frame(t, a)
+				if !a.windowOpenFor(from.tab) {
+					t.Fatalf("%s tab did not open its window", from.name)
+				}
+				if from.tab == to.tab {
+					click(t, a, to.tab)
+					f.frame(t, a)
+					if a.workOpen || a.uiModalTop() != "" {
+						t.Fatalf("the open %s tab should close its window (open %v, mode %q, top %q)", from.name, a.workOpen, a.panelMode, a.uiModalTop())
+					}
+					return
+				}
+				click(t, a, to.tab)
+				f.frame(t, a)
+				if !a.windowOpenFor(to.tab) {
+					t.Fatalf("%s tab did not replace %s (mode %q top %q)", to.name, from.name, a.panelMode, a.uiModalTop())
+				}
+				if a.windowOpenFor(from.tab) {
+					t.Fatalf("%s is still open next to %s", from.name, to.name)
+				}
+			})
+		}
+	}
+}
+
+// windowOpenFor reports the window of tab is the one open.
+func (a *App) windowOpenFor(tab string) bool {
+	for _, c := range winCases() {
+		if c.tab != tab {
+			continue
+		}
+		if c.kit != "" {
+			return a.uiModalTop() == c.kit && a.workOpen
+		}
+		if !a.workOpen || a.uiModalTop() != "" {
+			return false
+		}
+		switch tab {
+		case "tab.work":
+			return a.panelMode == "work"
+		case "tab.schedule":
+			return a.panelMode == "schedule"
+		case "tab.research":
+			return a.panelMode == "research"
+		case "tab.animals":
+			return a.panelMode == "animals" && !a.animalsWild
+		case "tab.wildlife":
+			return a.panelMode == "animals" && a.animalsWild
+		}
+	}
+	return false
+}
+
+func TestEscapeClosesEveryWindow(t *testing.T) {
+	t.Parallel()
+	for _, c := range winCases() {
+		t.Run(c.name, func(t *testing.T) {
+			a, f := winApp(t, winStub(3))
+			c.open(a)
+			f.frame(t, a)
+			if !a.workOpen {
+				t.Fatalf("%s did not open", c.name)
+			}
+			f.key(t, a, "Escape", 0)
+			if a.workOpen || a.uiModalTop() != "" {
+				t.Fatalf("Escape left %s open (open %v, top %q)", c.name, a.workOpen, a.uiModalTop())
+			}
+			if a.nav.overlay() != overlayNone {
+				t.Fatal("the Escape that closes a window must not pause")
+			}
+		})
+	}
+}
+
+// The documented order holds with a window open: window, then selection,
+// then pause.
+func TestEscapeOrderWindowSelectionPause(t *testing.T) {
+	t.Parallel()
+	a, f := winApp(t, winStub(3))
+	a.renderer.Select(1)
+	a.openAssign()
+	f.frame(t, a)
+	f.key(t, a, "Escape", 0)
+	if a.workOpen || !a.renderer.HasSelect() {
+		t.Fatalf("first Escape: window open %v selection %v", a.workOpen, a.renderer.HasSelect())
+	}
+	f.key(t, a, "Escape", 0)
+	if a.renderer.HasSelect() || a.nav.overlay() != overlayNone {
+		t.Fatalf("second Escape: selection %v overlay %v", a.renderer.HasSelect(), a.nav.overlay())
+	}
+	f.key(t, a, "Escape", 0)
+	if a.nav.overlay() != overlayPause {
+		t.Fatalf("third Escape: overlay %v, want pause", a.nav.overlay())
+	}
+}
+
+// The window keys toggle too, and they replace the open window.
+func TestWindowKeysToggleAndReplace(t *testing.T) {
+	t.Parallel()
+	a, f := winApp(t, winStub(3))
+	f.key(t, a, "F3", 0)
+	if a.uiModalTop() != assignModalID {
+		t.Fatalf("F3 top %q", a.uiModalTop())
+	}
+	f.key(t, a, "F9", 0)
+	if a.uiModalTop() != historyModalID {
+		t.Fatalf("F9 over Assign: top %q", a.uiModalTop())
+	}
+	f.key(t, a, "F9", 0)
+	if a.uiModalTop() != "" || a.workOpen {
+		t.Fatalf("F9 again: top %q open %v", a.uiModalTop(), a.workOpen)
+	}
+	f.key(t, a, "F1", 0)
+	f.key(t, a, "F3", 0)
+	if a.uiModalTop() != assignModalID {
+		t.Fatalf("F3 over Work: top %q", a.uiModalTop())
+	}
+	f.key(t, a, "F5", 0)
+	if !a.workOpen || a.panelMode != "animals" || !a.animalsWild || a.uiModalTop() != "" {
+		t.Fatalf("F5 over Assign: open %v mode %q wild %v top %q", a.workOpen, a.panelMode, a.animalsWild, a.uiModalTop())
+	}
+}
+
+func TestWindowCloseClick(t *testing.T) {
+	t.Parallel()
+	a, f := winApp(t, winStub(3))
+	a.openHistory()
+	f.frame(t, a)
+	press(t, a, f, "modal."+historyModalID+".close")
+	if a.workOpen || a.uiModalTop() != "" {
+		t.Fatal("the X closes the window")
+	}
+	a.applyClick("tab.work")
+	a.applyWindowClick("win.close")
+	if a.workOpen {
+		t.Fatal("win.close closes the open window")
+	}
+}
+
+// Opening a window closes the Architect, like the Work tab always did.
+func TestWindowClosesTheArchitect(t *testing.T) {
+	t.Parallel()
+	a, _ := winApp(t, winStub(3))
+	a.openArchitect()
+	a.openAssign()
+	if a.archOpen {
+		t.Fatal("the Architect should give way to a window")
+	}
+}
+
+// ---- geometry -----------------------------------------------------------
+
+// winScreen sets the logical screen size and UI scale. It changes package
+// globals: never in parallel.
+func winScreen(t *testing.T, a *App, w, h int, ui float64) *ebiten.Image {
+	t.Helper()
+	old := curUIScale
+	t.Cleanup(func() { curUIScale = old; drawTrace = nil; tracePass = "hud" })
+	a.scale = uiScaleState{dev: 1, ui: ui, s: ui}
+	a.syncUIScale()
+	pw, ph := int(math.Round(float64(w)*ui)), int(math.Round(float64(h)*ui))
+	a.setPhysical(pw, ph)
+	if a.sw != w || a.sh != h {
+		t.Fatalf("logical screen %dx%d, want %dx%d", a.sw, a.sh, w, h)
+	}
+	return ebiten.NewImage(pw, ph)
+}
+
+func winTrace(a *App, img *ebiten.Image) []traceEvent {
+	var ev []traceEvent
+	drawTrace = func(e traceEvent) { ev = append(ev, e) }
+	defer func() { drawTrace = nil }()
+	img.Clear()
+	a.Draw(img)
+	return winPass(ev)
+}
+
+var winScreens = []struct {
+	w, h int
+	ui   float64
+}{{1280, 720, 1}, {1280, 720, 1.5}, {1280, 720, 2}, {1920, 1080, 1}, {1920, 1080, 1.5}, {1920, 1080, 2}}
+
+// Every window sits in the Window rect, bottom-left above the tabs, and
+// everything it draws stays inside it (the resource list, which re-flows
+// above a tall window, stays inside its own rect).
+func TestWindowsStayInsideTheWindowRect(t *testing.T) {
+	for _, sc := range winScreens {
+		for _, c := range winCases() {
+			t.Run(fmt.Sprintf("%dx%d_ui%g_%s", sc.w, sc.h, sc.ui, c.name), func(t *testing.T) {
+				a, f := winApp(t, winStub(8))
+				img := winScreen(t, a, sc.w, sc.h, sc.ui)
+				f.frame(t, a)
+				base := winTrace(a, img)
+				c.open(a)
+				f.frame(t, a)
+				w := a.hud().Window
+				if w.empty() {
+					t.Fatalf("%s: no Window rect", c.name)
+				}
+				if w.X != 0 || w.bottom() != a.hud().Tabs.Y {
+					t.Errorf("%s: Window %+v, want bottom-left above the tabs (Tabs.Y %v)", c.name, w, a.hud().Tabs.Y)
+				}
+				if w.right() > a.hud().Right.X-hudMargin+0.01 {
+					t.Errorf("%s: Window right %v reaches the right column at %v", c.name, w.right(), a.hud().Right.X)
+				}
+				got := winTrace(a, img)
+				added := winAdded(base, got)
+				if len(added) == 0 {
+					t.Fatalf("%s: opening it drew nothing", c.name)
+				}
+				s := sc.ui
+				// the resource list gives way to a tall window: it shrinks and
+				// scrolls (a scroll bar appears), inside its own rect only
+				res := a.hud().Resources
+				var bad []string
+				for _, e := range added {
+					if !res.empty() && winInside(e, float64(res.X)*s, float64(res.Y)*s, float64(res.right())*s, float64(res.bottom())*s, 1) {
+						continue
+					}
+					if !winInside(e, float64(w.X)*s, float64(w.Y)*s, float64(w.right())*s, float64(w.bottom())*s, 1) {
+						bad = append(bad, fmt.Sprintf("%s is outside the window (%.0f,%.0f)-(%.0f,%.0f)", winString(e), float64(w.X)*s, float64(w.Y)*s, float64(w.right())*s, float64(w.bottom())*s))
+					}
+				}
+				winReport(t, c.name, bad)
+				// and the window is what covers the area: the HUD hit-test sees it
+				cx, cy := w.center()
+				if !a.colonyChromeHit(int(cx), int(cy), a.sw, a.sh) {
+					t.Errorf("%s: the window's centre does not consume clicks", c.name)
+				}
+			})
+		}
+	}
+}
+
+// A window never covers the colonist bar, the alerts, the letters, the
+// lower-right controls, the minimap, the resource list or the tab strip.
+func TestWindowsNeverCoverTheHUD(t *testing.T) {
+	for _, n := range []int{6, 30} {
+		for _, sc := range winScreens {
+			for _, c := range winCases() {
+				t.Run(fmt.Sprintf("%dcol_%dx%d_ui%g_%s", n, sc.w, sc.h, sc.ui, c.name), func(t *testing.T) {
+					a, f := winApp(t, winStub(n))
+					winScreen(t, a, sc.w, sc.h, sc.ui)
+					c.open(a)
+					f.frame(t, a)
+					l := a.hud()
+					if l.Window.empty() {
+						t.Fatalf("%s: no Window rect", c.name)
+					}
+					for name, r := range map[string]rect{"Bar": l.Bar, "Alerts": l.Alerts, "Letters": l.Letters, "Learn": l.Learn,
+						"Global": l.Global, "Minimap": l.Minimap, "Resources": l.Resources, "Messages": l.Messages, "Tabs": l.Tabs, "Right": l.Right} {
+						if r.empty() {
+							continue
+						}
+						if !l.Window.intersect(r).empty() {
+							t.Errorf("%s: Window %+v covers %s %+v", c.name, l.Window, name, r)
+						}
+					}
+					if l.Window.Y < l.Bar.bottom() && !l.Bar.empty() {
+						t.Errorf("%s: Window top %v is inside the bar (bottom %v)", c.name, l.Window.Y, l.Bar.bottom())
+					}
+					// the inspect pane and the command grid give way
+					if !l.Pane.empty() || !l.Expanded.empty() || !l.Grid.empty() || !l.ArchCats.empty() {
+						t.Errorf("%s: the pane or the grid is still up beside the window", c.name)
+					}
+				})
+			}
+		}
+	}
+}
+
+// What a window declares (buttons and kit widgets) lies inside it.
+func TestWindowContentsLieInsideTheWindow(t *testing.T) {
+	t.Parallel()
+	for _, c := range winCases() {
+		t.Run(c.name, func(t *testing.T) {
+			a, f := winApp(t, winStub(8))
+			c.open(a)
+			f.frame(t, a)
+			f.frame(t, a)
+			w := a.hud().Window
+			tol := float32(0.5)
+			inside := func(id string, r rect) {
+				if r.X < w.X-tol || r.Y < w.Y-tol || r.right() > w.right()+tol || r.bottom() > w.bottom()+tol {
+					t.Errorf("%s: %s %+v leaves the window %+v", c.name, id, r, w)
+				}
+			}
+			n := 0
+			for _, b := range a.colonyButtons(a.sw, a.sh) {
+				for _, p := range c.prefixes {
+					if strings.HasPrefix(b.id, p) {
+						inside(b.id, rect{b.x, b.y, b.w, b.h})
+						n++
+					}
+				}
+			}
+			for _, wd := range a.uiSt().cur {
+				for _, p := range c.prefixes {
+					if strings.HasPrefix(wd.id, p) {
+						inside(wd.id, wd.r)
+						n++
+					}
+				}
+			}
+			if n == 0 {
+				t.Fatalf("%s: found no content to check", c.name)
+			}
+		})
+	}
+}
+
+// The wheel over a window never zooms the map.
+func TestWheelOverAWindowIsNotTheMapsWheel(t *testing.T) {
+	t.Parallel()
+	for _, c := range winCases() {
+		t.Run(c.name, func(t *testing.T) {
+			a, f := winApp(t, winStub(4))
+			if a.uiWheelOver(5, 5) {
+				t.Fatal("nothing open: the wheel is the map's")
+			}
+			c.open(a)
+			f.frame(t, a)
+			w := a.hud().Window
+			cx, cy := w.center()
+			if !a.uiWheelOver(int(cx), int(cy)) {
+				t.Errorf("%s: the wheel over the window's middle is still the map's", c.name)
+			}
+			if a.uiWheelOver(int(w.right())+20, int(w.Y)-20) {
+				t.Errorf("%s: the wheel outside the window is not the map's", c.name)
+			}
+		})
+	}
+}
+
+// The windows' wanted sizes are real sizes, not zero, and the layout hands
+// each the room it asks for when the screen has it.
+func TestWindowWantsAreSizes(t *testing.T) {
+	t.Parallel()
+	for _, c := range winCases() {
+		t.Run(c.name, func(t *testing.T) {
+			a, f := winApp(t, winStub(5))
+			if w, h := a.windowWant(); w != 0 || h != 0 {
+				t.Fatalf("nothing open, yet the want is %vx%v", w, h)
+			}
+			c.open(a)
+			f.frame(t, a)
+			w, h := a.windowWant()
+			if w < 300 || h < 150 {
+				t.Fatalf("%s wants %vx%v", c.name, w, h)
+			}
+			a.sw, a.sh = 1920, 1080
+			f.frame(t, a)
+			win := a.hud().Window
+			if win.W != w || win.H > h+0.01 {
+				t.Errorf("%s: wants %vx%v, got %vx%v on a 1920x1080 screen", c.name, w, h, win.W, win.H)
+			}
+		})
+	}
+}
+
+// ---- the Work/Schedule/Research/Animals windows keep working ----------
+
+func TestWorkWindowCellsStillToggle(t *testing.T) {
+	t.Parallel()
+	a, f := winApp(t, winStub(3))
+	click(t, a, "tab.work")
+	f.frame(t, a)
+	n := 0
+	for _, b := range a.layoutHits(a.sw, a.sh) {
+		if strings.HasPrefix(b.id, "work.cell.") {
+			n++
+		}
+	}
+	if n == 0 {
+		t.Fatal("the Work window has no cells")
+	}
+	click(t, a, "work.cell.1.2")
+}
+
+// The Schedule window holds the 24 hour cells of every row and the brushes.
+func TestScheduleWindowKeepsItsCells(t *testing.T) {
+	t.Parallel()
+	a, f := winApp(t, winStub(3))
+	click(t, a, "tab.schedule")
+	f.frame(t, a)
+	have := map[string]bool{}
+	for _, b := range a.layoutHits(a.sw, a.sh) {
+		have[b.id] = true
+	}
+	for _, id := range []string{"sched.brush.0", "sched.cell.0.0", "sched.cell.0.23", "sched.cell.3.12"} {
+		if !have[id] {
+			t.Errorf("Schedule window lacks %s", id)
+		}
+	}
+}
+
+func TestResearchWindowKeepsItsProjects(t *testing.T) {
+	t.Parallel()
+	a, f := winApp(t, winStub(3))
+	click(t, a, "tab.research")
+	f.frame(t, a)
+	have := map[string]bool{}
+	for _, b := range a.layoutHits(a.sw, a.sh) {
+		have[b.id] = true
+	}
+	if !have["research.pick.0"] || !have["research.pick.3"] {
+		t.Fatal("the Research window lists its projects")
+	}
+}
+
+// At 1280 the Colony list drops its low-priority columns instead of running
+// off the window, and the buttons stay inside.
+func TestAnimalsWindowFitsNarrowScreens(t *testing.T) {
+	t.Parallel()
+	for _, size := range [][2]int{{1280, 720}, {1113, 626}, {1920, 1080}} {
+		for _, wild := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%dx%d_wild%v", size[0], size[1], wild), func(t *testing.T) {
+				a, f := winApp(t, winStub(3))
+				a.sw, a.sh = size[0], size[1]
+				a.workOpen, a.panelMode, a.animalsWild = true, "animals", wild
+				f.frame(t, a)
+				w := a.hud().Window
+				n := 0
+				for _, b := range a.animalsTabButtons() {
+					n++
+					if b.x < w.X || b.x+b.w > w.right() || b.y < w.Y || b.y+b.h > w.bottom() {
+						t.Errorf("%s %+v leaves the window %+v", b.id, b, w)
+					}
+				}
+				if n < 3 {
+					t.Fatalf("only %d buttons", n)
+				}
+			})
+		}
+	}
+}
+
+// The lists keep every column when the window has room and leave the
+// low-priority ones out, never the buttons, when it does not.
+func TestAnimalColumnsDropToFit(t *testing.T) {
+	t.Parallel()
+	if c := animalColsFor(colonyFullW, false); len(c) != 0 {
+		t.Fatalf("a full-width window drops %v", c)
+	}
+	if c := animalColsFor(wildFullW, true); len(c) != 0 {
+		t.Fatalf("a full-width wild list drops %v", c)
+	}
+	for _, w := range []float32{1672, 1248, 1032, 900, 865, 830} {
+		c := animalColsFor(w, false)
+		if end := float32(c.at(colBtn) + 196 + 12); end > w {
+			t.Errorf("colony list at %v px ends at %v with %d dropped", w, end, len(c))
+		}
+		if c.at(colBtn) < colMaster || !c.shown(colName) || !c.shown(colMaster) || !c.shown(colArea) || !c.shown(colFollow) {
+			t.Errorf("colony list at %v px lost a needed column: %v", w, c)
+		}
+	}
+	for _, w := range []float32{984, 865, 700} {
+		c := animalColsFor(w, true)
+		if end := float32(c.at(wildBtn) + 272 + 12); end > w {
+			t.Errorf("wild list at %v px ends at %v", w, end)
+		}
+	}
+	// Doing and Training go first, then Preg., and the columns before a
+	// dropped one stay put
+	c := animalColsFor(1100, false)
+	if c.shown(colDoing) || c.shown(colTrain) || !c.shown(colPreg) || c.at(colBtn) != colBtn-108-104 || c.at(colMaster) != colMaster {
+		t.Errorf("1100 px drops %v, buttons at %d, Master at %d", c, c.at(colBtn), c.at(colMaster))
+	}
+	c = animalColsFor(1032, false)
+	if c.shown(colPreg) || c.at(colBtn) != colBtn-108-104-44 || c.at(colMaster) != colMaster-44 || c.at(colHealth) != colHealth-44 || c.at(colProduct) != colProduct {
+		t.Errorf("1032 px drops %v, buttons at %d, Master at %d", c, c.at(colBtn), c.at(colMaster))
+	}
+}
+
+// ---- the modal stack's new options -------------------------------------
+
+func TestModalsStayCentredWhenNotAnchored(t *testing.T) {
+	t.Parallel()
+	m := modal{id: "x", title: "X", w: 400, h: 300}
+	frame, title, body, footer := modalGeometry(1280, 720, m)
+	if frame != (rect{440, 210, 400, 300}) {
+		t.Fatalf("frame %+v, want centred", frame)
+	}
+	if title.Y != frame.Y || title.H != modalTitleH || body.X != frame.X+modalPad || !footer.empty() {
+		t.Fatalf("title %+v body %+v footer %+v", title, body, footer)
+	}
+	// a modal that is too big is shrunk to the screen edge clearance
+	frame, _, _, _ = modalGeometry(1280, 720, modal{id: "y", w: 5000, h: 5000})
+	if frame != (rect{modalEdge, modalEdge, 1280 - 2*modalEdge, 720 - 2*modalEdge}) {
+		t.Fatalf("big frame %+v", frame)
+	}
+}
+
+func TestAnchoredModalSitsOnItsAnchor(t *testing.T) {
+	t.Parallel()
+	a, f := winApp(t, winStub(1))
+	anchor := rect{0, 300, 500, 380}
+	var body rect
+	a.uiPushModal(modal{id: "anch", title: "Anchored", w: 900, h: 900,
+		anchor:  func(*App) rect { return anchor },
+		draw:    func(_ *App, b rect) { body = b },
+		buttons: []modalButton{{id: "ok", label: "OK", closes: true}},
+	})
+	f.frame(t, a)
+	if !a.uiModalOpen() || a.uiModalTop() != "anch" {
+		t.Fatal("an anchored modal is still a stacked, blocking modal")
+	}
+	if body.X != anchor.X+modalPad || body.Y != anchor.Y+modalTitleH+modalPad || body.W != anchor.W-2*modalPad {
+		t.Fatalf("body %+v in anchor %+v", body, anchor)
+	}
+	x, ok := a.uiSt().find("modal.anch.close")
+	if !ok || x.r.right() > anchor.right() || x.r.Y < anchor.Y || x.r.bottom() > anchor.Y+modalTitleH {
+		t.Fatalf("the X %+v is not in the anchored title bar", x.r)
+	}
+	// Esc closes it like any modal
+	f.key(t, a, "Escape", 0)
+	if a.uiModalOpen() {
+		t.Fatal("Escape closes an anchored modal")
+	}
+}
+
+// A modeless modal is a window: no scrim, the HUD stays live (it is not on
+// the stack, so no modal input context), and the window reaches Escape,
+// uiCloseTop and uiModalTop like a modal does.
+func TestModelessModalIsAWindow(t *testing.T) {
+	t.Parallel()
+	a, f := winApp(t, winStub(2))
+	closed := 0
+	a.uiPushModal(modal{id: "win1", title: "One", w: 500, h: 300, modeless: true, anchor: (*App).windowAnchor,
+		draw: func(a *App, b rect) { a.uiLabel(b.X, b.Y, "hello", tsBody) }, onClose: func() { closed++ }})
+	f.frame(t, a)
+	if a.uiModalOpen() {
+		t.Fatal("a modeless modal is not on the stack")
+	}
+	if a.uiModalTop() != "win1" || !a.workOpen {
+		t.Fatalf("top %q open %v", a.uiModalTop(), a.workOpen)
+	}
+	for _, c := range a.in.stack {
+		if c == input.CtxModal {
+			t.Fatal("a modeless window must not take the modal input context")
+		}
+	}
+	if w := a.hud().Window; w.empty() || w.W != 500 {
+		t.Fatalf("Window %+v", w)
+	}
+	// a second one replaces it
+	a.uiPushModal(modal{id: "win2", title: "Two", w: 400, h: 300, modeless: true, anchor: (*App).windowAnchor})
+	if a.uiModalTop() != "win2" {
+		t.Fatalf("top %q, want the replacement", a.uiModalTop())
+	}
+	// a real modal opens over it
+	a.uiPushModal(modal{id: "dlg", title: "Dialog", w: 300, h: 200})
+	if a.uiModalTop() != "dlg" || !a.uiModalOpen() {
+		t.Fatalf("top %q", a.uiModalTop())
+	}
+	a.uiCloseTop()
+	if a.uiModalTop() != "win2" {
+		t.Fatalf("top %q after the dialog closes", a.uiModalTop())
+	}
+	a.uiCloseTop()
+	if a.uiModalTop() != "" || a.workOpen {
+		t.Fatalf("top %q open %v after closing the window", a.uiModalTop(), a.workOpen)
+	}
+	// onClose runs when the window is closed by uiCloseTop
+	a.uiPushModal(modal{id: "win3", title: "Three", w: 400, h: 300, modeless: true, anchor: (*App).windowAnchor, onClose: func() { closed++ }})
+	a.uiCloseTop()
+	if closed != 1 {
+		t.Fatalf("onClose ran %d times, want once (for win3)", closed)
+	}
+}
+
+func TestEscapeInPanelAndModelessKeepsTheHUDLive(t *testing.T) {
+	t.Parallel()
+	a, f := winApp(t, winStub(2))
+	a.openHistory()
+	f.frame(t, a)
+	// a tab click works with the window open (a stacked modal would swallow it)
+	click(t, a, "tab.work")
+	if !a.workOpen || a.panelMode != "work" || a.uiModalTop() != "" {
+		t.Fatalf("Work over History: open %v mode %q top %q", a.workOpen, a.panelMode, a.uiModalTop())
+	}
+}
+
+// winPass is the HUD draws of a trace.
+func winPass(ev []traceEvent) []traceEvent {
+	var out []traceEvent
+	for _, e := range ev {
+		if e.Pass == "hud" {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
+// winAdded is the events of got that base does not hold (a multiset
+// difference): what opening a window drew.
+func winAdded(base, got []traceEvent) []traceEvent {
+	have := map[string]int{}
+	for _, e := range base {
+		have[winKey(e)]++
+	}
+	var out []traceEvent
+	for _, e := range got {
+		if k := winKey(e); have[k] > 0 {
+			have[k]--
+		} else {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
+// winKey names a draw: kind, text and rectangle.
+func winKey(e traceEvent) string {
+	return fmt.Sprintf("%s|%s|%.2f|%.2f|%.2f|%.2f", e.Kind, e.Text, e.X, e.Y, e.W, e.H)
+}
+
+// winString is a draw for failure messages.
+func winString(e traceEvent) string {
+	return fmt.Sprintf("%s %q %.1f,%.1f %.1fx%.1f", e.Kind, e.Text, e.X, e.Y, e.W, e.H)
+}
+
+// winInside reports the event's rectangle lies in [x0,x1] x [y0,y1].
+func winInside(e traceEvent, x0, y0, x1, y1, tol float64) bool {
+	return float64(e.X) >= x0-tol && float64(e.Y) >= y0-tol && float64(e.X+e.W) <= x1+tol && float64(e.Y+e.H) <= y1+tol
+}
+
+// winReport fails t with the problems, capped so a systematic bug stays readable.
+func winReport(t *testing.T, what string, bad []string) {
+	t.Helper()
+	if len(bad) == 0 {
+		return
+	}
+	if len(bad) > 8 {
+		bad = append(bad[:8], fmt.Sprintf("... and %d more", len(bad)-8))
+	}
+	t.Errorf("%s: %d problem(s):\n\t%s", what, len(bad), strings.Join(bad, "\n\t"))
+}

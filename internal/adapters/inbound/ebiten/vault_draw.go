@@ -7,8 +7,8 @@ import (
 )
 
 // Sealed vaults (MAPGEN-3 §4.3): the sleeper caskets in a vault draw
-// closed or open, the inspector says which and offers one "Open casket"
-// button (the game opens every casket of the vault), and the renderer cues
+// closed or open, the pane says which and offers one "Open casket"
+// command (the game opens every casket of the vault), and the renderer cues
 // sfx.casket_open when a sealed casket turns open.
 
 const (
@@ -52,26 +52,27 @@ const (
 	casketOpenMsg = "This casket is already open."
 )
 
-// casketButton is the Open casket button of a casket in panel r: disabled
-// with a reason once opened or when the game refuses.
-func casketButton(r button, sealed bool, refusal string) button {
-	b := button{id: casketBtnID, label: "Open casket", x: r.x + 40, y: r.y + 70, w: 150, h: 26, tip: casketBtnTip}
+// casketCommand is the Open casket command of a casket: disabled with a
+// reason once opened or when the game refuses. The click goes through
+// applyBuildingClick (applyCasketClick).
+func casketCommand(sealed bool, refusal string) cmdButton {
+	c := cmdButton{ID: casketBtnID, Label: "Open casket", Icon: "open_casket", Desc: casketBtnTip}
 	switch {
 	case !sealed:
-		b.disabled, b.reason, b.quiet = true, casketOpenMsg, true
+		c.Disabled, c.Reason = true, casketOpenMsg
 	case refusal != "":
-		b.disabled, b.reason, b.quiet = true, refusal, true
+		c.Disabled, c.Reason = true, refusal
 	}
-	return b
+	return c
 }
 
-// casketButtons are the inspector buttons of building b (none unless it
-// is a casket).
-func (a *App) casketButtons(b game.BuildingView, r button) []button {
-	return a.casketButtonsFor(b, r, casketSealed(b))
+// casketCommands are the commands of building b (none unless it is a
+// casket).
+func (a *App) casketCommands(b game.BuildingView) []cmdButton {
+	return a.casketCommandsFor(b, casketSealed(b))
 }
 
-func (a *App) casketButtonsFor(b game.BuildingView, r button, sealed bool) []button {
+func (a *App) casketCommandsFor(b game.BuildingView, sealed bool) []cmdButton {
 	if b.Kind != casketKind {
 		return nil
 	}
@@ -79,7 +80,7 @@ func (a *App) casketButtonsFor(b game.BuildingView, r button, sealed bool) []but
 	if sealed {
 		refusal = b.OpenReason // the game's refusal ("" when it would accept)
 	}
-	return []button{casketButton(r, sealed, refusal)}
+	return []cmdButton{casketCommand(sealed, refusal)}
 }
 
 // applyCasketClick sends OpenCasket for the Open casket button.

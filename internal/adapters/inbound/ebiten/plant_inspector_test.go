@@ -2,7 +2,6 @@ package ebiten
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -47,8 +46,8 @@ func TestPlantPanelHarvestStates(t *testing.T) {
 	young, _ := g.SpawnCrop("corn", 10, 10, 30)
 
 	selectPlantTile(t, a, ripe, 8, 8)
-	b, ok := btnByID(a.plantButtons(), "plant.harvest")
-	if !ok || b.disabled || b.label != "Harvest" {
+	b, ok := thingFind(a.plantCommands(ripe), "plant.harvest")
+	if !ok || b.Disabled || b.Label != "Harvest" {
 		t.Fatalf("ripe crop harvest button = %+v", b)
 	}
 	click(t, a, "plant.harvest")
@@ -56,7 +55,7 @@ func TestPlantPanelHarvestStates(t *testing.T) {
 	if !plantByID(a, ripe).Designated {
 		t.Fatal("Harvest marks the plant")
 	}
-	if b, _ := btnByID(a.plantButtons(), "plant.harvest"); b.label != "Cancel harvest" || !b.selected {
+	if b, _ := thingFind(a.plantCommands(ripe), "plant.harvest"); b.Label != "Cancel harvest" || !b.On {
 		t.Fatalf("marked plant should offer Cancel harvest: %+v", b)
 	}
 	click(t, a, "plant.harvest")
@@ -66,8 +65,8 @@ func TestPlantPanelHarvestStates(t *testing.T) {
 	}
 
 	selectPlantTile(t, a, young, 10, 10)
-	b, _ = btnByID(a.plantButtons(), "plant.harvest")
-	if !b.disabled || b.reason != "not ready" {
+	b, _ = thingFind(a.plantCommands(young), "plant.harvest")
+	if !b.Disabled || b.Reason != "not ready" {
 		t.Fatalf("unripe crop harvest must be disabled 'not ready': %+v", b)
 	}
 	lines := strings.Join(plantLines(plantByID(a, young)), "|")
@@ -101,8 +100,8 @@ func TestPlantCutUsesUndesignate(t *testing.T) {
 	if !plantByID(a, id).Cut {
 		t.Fatal("Cut marks the plant")
 	}
-	if b, _ := btnByID(a.plantButtons(), "plant.cut"); b.label != "Cancel cut" {
-		t.Fatalf("label = %q", b.label)
+	if b, _ := thingFind(a.plantCommands(id), "plant.cut"); b.Label != "Cancel cut" {
+		t.Fatalf("label = %q", b.Label)
 	}
 	click(t, a, "plant.cut")
 	g.Step(1)
@@ -116,11 +115,11 @@ func TestTreeSaysChop(t *testing.T) {
 	a, g, _ := liveColony(t, 0)
 	id, _ := g.SpawnCrop("tree", 8, 8, 100)
 	selectPlantTile(t, a, id, 8, 8)
-	bs := a.plantButtons()
-	if b, ok := btnByID(bs, "plant.cut"); !ok || b.label != "Chop" {
+	cs := a.plantCommands(id)
+	if b, ok := thingFind(cs, "plant.cut"); !ok || b.Label != "Chop" {
 		t.Fatalf("tree cut button = %+v", b)
 	}
-	if _, ok := btnByID(bs, "plant.harvest"); ok {
+	if _, ok := thingFind(cs, "plant.harvest"); ok {
 		t.Fatal("trees have no Harvest button")
 	}
 	p := plantByID(a, id)
@@ -162,19 +161,19 @@ func TestPlantNowChips(t *testing.T) {
 	a, g, pawn := liveColony(t, 0)
 	id, _ := g.SpawnCrop("potato", 5, 5, 100)
 	selectPlantTile(t, a, id, 5, 5)
-	var chip button
-	for _, b := range a.plantButtons() {
-		if strings.HasPrefix(b.id, "plant.now.") {
-			chip = b
-		}
+	now, ok := thingFind(a.plantCommands(id), "cmd.plant.now")
+	if !ok || now.Disabled {
+		t.Fatalf("expected an enabled now command, got %+v", now)
 	}
-	if chip.id == "" || chip.disabled {
-		t.Fatalf("expected an enabled now chip, got %+v", chip)
+	opts := now.Options(a)
+	if len(opts) == 0 || opts[0].Disabled || opts[0].Cmd == nil {
+		t.Fatalf("expected an enabled option, got %+v", opts)
 	}
-	if !strings.HasSuffix(chip.id, "."+strconv.Itoa(int(pawn))) {
-		t.Fatalf("chip id %q should name pawn %d", chip.id, pawn)
+	if opts[0].Cmd.Pawn != uint64(pawn) || opts[0].Cmd.Order != command.OrderHarvest {
+		t.Fatalf("option %+v should send pawn %d to harvest", opts[0].Cmd, pawn)
 	}
-	click(t, a, chip.id)
+	thingPress(a, now) // the nearest colonist
+	click(t, a, "cmd.plant.now")
 	a.applyPlantClick("plant.now.notanumber")
 	a.applyPlantClick("plant.close")
 	if a.hasPlant {
@@ -185,11 +184,9 @@ func TestPlantNowChips(t *testing.T) {
 
 func TestPlantPanelButtonsDisabledChip(t *testing.T) {
 	t.Parallel()
-	bs := plantPanelButtons(plantRect(), game.PlantView{Species: "corn"},
-		[]colonistAction{{Pawn: 7, Name: "Ada", Disabled: true, Reason: "cannot reach"}})
-	b, ok := btnByID(bs, "plant.now.7")
-	if !ok || !b.disabled || b.reason != "cannot reach" || b.label != "Ada ×" {
-		t.Fatalf("chip = %+v", b)
+	opts := colonistOptions([]colonistAction{{Pawn: 7, Name: "Ada", Disabled: true, Reason: "cannot reach"}})
+	if len(opts) != 1 || !opts[0].Disabled || opts[0].Reason != "cannot reach" || opts[0].Label != "Ada" {
+		t.Fatalf("option = %+v", opts)
 	}
 }
 
@@ -200,7 +197,7 @@ func TestPlantPanelClosesWhenPlantGone(t *testing.T) {
 	if _, ok := a.selectedPlant(); ok {
 		t.Fatal("a vanished plant is not selected")
 	}
-	if a.hasPlant || len(a.plantButtons()) != 0 {
+	if len(a.commandGridButtons()) != 0 || len(a.plantCommands(9999)) != 0 || a.plantPane(9999).Title != "" || a.hasPlant {
 		t.Fatal("panel must close with no buttons")
 	}
 	a.applyPlantClick("plant.harvest") // no-op, no panic
@@ -289,12 +286,12 @@ func TestPlantPanelShowsLiveGrowthState(t *testing.T) {
 	}
 }
 
-// TestPlantPanelTextFitsAtScale1_5: at UI scale 1.5 the caption and the body
-// lines stay inside the panel, above the "now" chips, even for a crop with
-// the most lines a growing one carries.
+// TestPlantPanelTextFitsAtScale1_5: at UI scale 1.5 the caption and the
+// body lines, wrapped to the pane's text width, stay inside it, even for a
+// crop with the most lines a growing one carries; the caption leads.
 func TestPlantPanelTextFitsAtScale1_5(t *testing.T) {
 	withUIScale(t, 1.5)
-	r := plantRect()
+	width := float64(paneW - 2*paneInset - scrollBarW - 4) // the pane body's wrap width
 	for _, p := range []game.PlantView{
 		{Species: "potato", Growth: 42, Zone: "potato", GrowState: "resting", RipeIn: clock.TicksPerDay * 3},
 		{Species: "potato", Growth: 42, Zone: "potato", GrowState: "dark", RipeIn: -1, Designated: true},
@@ -302,41 +299,37 @@ func TestPlantPanelTextFitsAtScale1_5(t *testing.T) {
 		{Species: "moss", Growth: 42, GrowState: "dark", RipeIn: -1, NeedsLight: true},
 		{Species: "tree", Growth: 90, GrowState: "growing", RipeIn: clock.TicksPerDay * 12},
 	} {
-		rows, bottom := plantTextRows(p, float64(r.w)-24)
-		if limit := float64(r.h) - 56; bottom > limit {
-			t.Errorf("%s/%s: text reaches y=%.1f, the chips start at %.1f", p.Species, p.GrowState, bottom, limit)
-		}
+		lines := plantPaneLines(p)
 		var texts []string
-		for _, row := range rows {
-			texts = append(texts, row.text)
-			if row.y < 62+12 {
-				t.Errorf("%s/%s: %q at y=%.1f is on the growth bar", p.Species, p.GrowState, row.text, row.y)
-			}
+		for _, l := range lines {
+			texts = append(texts, wrapPx(l, tsBody, width)...)
 		}
-		if w := maxTextW(texts, tsSmall); float64(w) > float64(r.w)-24 {
-			t.Errorf("%s/%s: widest line %.0f px, panel text width %d", p.Species, p.GrowState, w, int(r.w)-24)
+		if w := maxTextW(texts, tsBody); float64(w) > width {
+			t.Errorf("%s/%s: widest line %.0f px, pane text width %.0f", p.Species, p.GrowState, w, width)
 		}
-		if c := plantGrowCaption(p); c != "" && (len(rows) == 0 || rows[0].text != c) {
-			t.Errorf("%s/%s: caption %q is not the first row (%v)", p.Species, p.GrowState, c, texts)
+		if c := plantGrowCaption(p); c != "" && (len(lines) == 0 || lines[0] != c) {
+			t.Errorf("%s/%s: caption %q is not the first line (%v)", p.Species, p.GrowState, c, lines)
+		}
+		if !strings.HasSuffix(strings.Join(lines, "|"), strings.Join(plantLines(p), "|")) {
+			t.Errorf("%s/%s: the body lines follow the caption: %v", p.Species, p.GrowState, lines)
 		}
 	}
 }
 
-// TestPlantInspectorDrawsAtScale1_5: the panel with the new caption draws
-// at UI scale 1.5 inside its scaled frame.
+// TestPlantInspectorDrawsAtScale1_5: at UI scale 1.5 the legacy draw call
+// paints no panel frame any more (the pane replaced it) and does not panic.
 func TestPlantInspectorDrawsAtScale1_5(t *testing.T) {
 	a, g, _ := liveColony(t, 0) // starting a colony resets the scale: set it after
 	id, _ := g.SpawnCrop("corn", 8, 8, 30)
 	selectPlantTile(t, a, id, 8, 8)
 	withUIScale(t, 1.5)
 	got := traceCanvas(t)
-	a.drawPlantInspector(ebiten.NewImage(900, 700))
-	r := plantRect()
-	want := fmt.Sprintf("%g,%g %gx%g", float64(r.x)*1.5, float64(r.y)*1.5, float64(r.w)*1.5, float64(r.h)*1.5)
+	a.drawPlantMark(ebiten.NewImage(900, 700))
+	r := rect{8, 40, 340, 226} // the old panel, top-left
+	frame := fmt.Sprintf("%g,%g %gx%g", float64(r.X)*1.5, float64(r.Y)*1.5, float64(r.W)*1.5, float64(r.H)*1.5)
 	for _, c := range *got {
-		if strings.HasSuffix(c, want) {
-			return
+		if strings.HasSuffix(c, frame) {
+			t.Fatalf("the old panel frame %q is still drawn: %q", frame, *got)
 		}
 	}
-	t.Fatalf("no panel frame %q among %q", want, *got)
 }

@@ -159,7 +159,7 @@ func (a *App) devMenuRect() button {
 	w, h := float32(260), float32(24+n*devRowH)
 	x, y := float32(a.dev.mx+8), float32(a.dev.my)
 	x = min(x, float32(sw)-w-4)
-	y = max(hudTopH, min(y, hudBarY(sh)-h-4))
+	y = max(hudMargin, min(y, float32(sh)-tabsH-h-4)) // clear of the tab strip
 	return button{x: x, y: y, w: w, h: h}
 }
 
@@ -195,7 +195,8 @@ func (a *App) applyDevClick(id string) {
 	}
 }
 
-// drawDevPanels draws the debug menu, log and inspector.
+// drawDevPanels draws the debug menu, the map-fields legend, the log and
+// the inspector. The three panels stack in the dev column (devStack).
 func (a *App) drawDevPanels(screen *ebiten.Image, sw, sh int) {
 	if !a.devMode() || a.renderer == nil {
 		return
@@ -213,13 +214,82 @@ func (a *App) drawDevPanels(screen *ebiten.Image, sw, sh int) {
 			}
 		}
 	}
+	st := a.devStack()
 	a.drawMapFieldLegend(screen)
-	if a.dev.log {
-		a.drawDebugLog(screen, sw, sh)
+	if !st.Log.empty() {
+		a.drawDebugLog(screen, st.Log)
+	}
+	if !st.Insp.empty() {
+		a.drawDebugInspector(screen, st.Insp)
+	}
+}
+
+// devColumn is the free band of the screen the developer panels live in:
+// right of the resource list, under the colonist bar and the messages,
+// above the lower-left stack (pane, Architect, window, command buttons)
+// and left of the right column. Empty when there is no room.
+func devColumn(l hudLayout) rect {
+	x := max(l.Resources.right(), hudMargin+resourcesW) + hudMargin
+	y := float32(hudMargin)
+	for _, r := range []rect{l.Bar, l.Messages} {
+		if !r.empty() {
+			y = max(y, r.bottom()+hudMargin)
+		}
+	}
+	bottom := l.Tabs.Y - hudMargin
+	for _, r := range []rect{l.Window, l.Expanded, l.PaneTabs, l.ArchDesc, l.ArchCats, l.Grid} {
+		if !r.empty() {
+			bottom = min(bottom, r.Y-hudMargin)
+		}
+	}
+	w, h := l.Right.X-hudMargin-x, bottom-y
+	if w <= 0 || h <= 0 {
+		return rect{}
+	}
+	return rect{x, y, w, h}
+}
+
+// devPanelRects are the developer panels' rects (empty: not shown).
+type devPanelRects struct{ Fields, Insp, Log rect }
+
+// devStack stacks the panels that are on, top to bottom in the dev column:
+// the map-fields legend, the debug inspector, then the debug log, which
+// takes the lines that fit.
+func (a *App) devStack() devPanelRects {
+	var st devPanelRects
+	if !a.devMode() || a.renderer == nil {
+		return st
+	}
+	col := devColumn(a.hud())
+	if col.empty() {
+		return st
+	}
+	y := col.Y
+	place := func(w, h float32) rect {
+		if h <= 0 || y+h > col.bottom() {
+			return rect{}
+		}
+		r := rect{col.X, y, min(w, col.W), h}
+		y += h + hudGap
+		return r
+	}
+	if a.dev.fields.shown {
+		st.Fields = place(a.mapFieldLegendSize())
 	}
 	if a.dev.insp {
-		a.drawDebugInspector(screen, sw)
+		st.Insp = place(a.debugInspectorSize())
 	}
+	if a.dev.log {
+		lines := a.debugLogShown(int((col.bottom()-y-devLogChrome)/devStep), col.W-20)
+		if len(lines) > 0 {
+			var w float32
+			for _, l := range lines {
+				w = max(w, textW(l, tsSmall))
+			}
+			st.Log = place(w+20, float32(len(lines)*devStep+devLogChrome))
+		}
+	}
+	return st
 }
 
 // debugLogLines is the last messages (with their tick) and every
@@ -244,23 +314,29 @@ func debugLogLines(w game.WorldView, pawns []game.PawnView, n int) []string {
 	return out
 }
 
-func (a *App) drawDebugLog(screen *ebiten.Image, sw, sh int) {
+// debugLogShown is the debug log's lines, at most n, each cut to the log's
+// width (at most devLogMaxW, and maxW when the column is narrower).
+func (a *App) debugLogShown(n int, maxW float32) []string {
 	lines := debugLogLines(a.renderer.world(), a.renderer.snapshot(), 12)
 	if len(lines) > 18 {
 		lines = lines[:18]
 	}
-	var w float32
-	for i, l := range lines {
-		lines[i] = ellipsize(l, tsSmall, devLogMaxW)
-		w = max(w, textW(lines[i], tsSmall))
+	if n < len(lines) {
+		lines = lines[:max(n, 0)]
 	}
-	pw, ph := w+20, float32(len(lines)*devStep+28)
-	x, y := float32(sw)-pw-hudPad, hudBarY(sh)-ph-hudPad-120
-	y = max(y, hudTopH+hudPad)
-	drawPanel(screen, x, y, pw, ph)
-	drawText(screen, "Debug log ("+a.bindings().Label(input.DevLog)+")", float64(x)+8, float64(y)+3, tsLabel)
 	for i, l := range lines {
-		drawText(screen, l, float64(x)+8, float64(y)+24+float64(i*devStep), tsSmall)
+		lines[i] = ellipsize(l, tsSmall, min(devLogMaxW, float64(maxW)))
+	}
+	return lines
+}
+
+// drawDebugLog paints the debug log in r.
+func (a *App) drawDebugLog(screen *ebiten.Image, r rect) {
+	lines := a.debugLogShown(int((r.H-devLogChrome)/devStep), r.W-20)
+	drawPanel(screen, r.X, r.Y, r.W, r.H)
+	drawText(screen, "Debug log ("+a.bindings().Label(input.DevLog)+")", float64(r.X)+8, float64(r.Y)+3, tsLabel)
+	for i, l := range lines {
+		drawText(screen, l, float64(r.X)+8, float64(r.Y)+24+float64(i*devStep), tsSmall)
 	}
 }
 
@@ -298,21 +374,30 @@ func (a *App) debugInspectLines() []string {
 	return []string{"nothing selected"}
 }
 
-func (a *App) drawDebugInspector(screen *ebiten.Image, sw int) {
-	lines := append([]string{fmt.Sprintf("Debug inspector  tick %d", a.renderer.game.Tick())}, a.debugInspectLines()...)
-	pw, ph := maxTextW(lines, tsSmall)+20, float32(len(lines)*devStep+12)
-	x := float32(sw) - pw - hudPad
-	y := float32(hudTopH + 30)
-	drawPanel(screen, x, y, pw, ph)
-	for i, l := range lines {
-		drawText(screen, l, float64(x)+8, float64(y)+4+float64(i*devStep), tsSmall)
+// debugInspectorLines are the inspector panel's lines, title first.
+func (a *App) debugInspectorLines() []string {
+	return append([]string{fmt.Sprintf("Debug inspector  tick %d", a.renderer.game.Tick())}, a.debugInspectLines()...)
+}
+
+// debugInspectorSize is the inspector panel's size.
+func (a *App) debugInspectorSize() (w, h float32) {
+	lines := a.debugInspectorLines()
+	return maxTextW(lines, tsSmall) + 20, float32(len(lines)*devStep + 12)
+}
+
+// drawDebugInspector paints the debug inspector in r.
+func (a *App) drawDebugInspector(screen *ebiten.Image, r rect) {
+	drawPanel(screen, r.X, r.Y, r.W, r.H)
+	for i, l := range a.debugInspectorLines() {
+		drawText(screen, l, float64(r.X)+8, float64(r.Y)+4+float64(i*devStep), tsSmall)
 	}
 }
 
 // Debug panels use the small type so a long log stays on one screen.
 const (
-	devStep    = 15  // line pitch
-	devLogMaxW = 460 // widest log line, px
+	devStep      = 15  // line pitch
+	devLogMaxW   = 460 // widest log line, px
+	devLogChrome = 28  // the log panel's title and padding
 )
 
 const devLosePickID, devLosePickList = "dev.lose", "dev.lose.list"

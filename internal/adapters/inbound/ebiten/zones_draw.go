@@ -381,7 +381,7 @@ const (
 )
 
 // zoneLabelPlateClr is the soft dark plate behind a zone label.
-var zoneLabelPlateClr = color.RGBA{16, 12, 8, 150}
+var zoneLabelPlateClr = uiShade(150)
 
 // zoneLabelAnchor is a zone's bounding box and where its label is
 // centred, in tile coordinates (a tile spans x..x+1): the exact centre of

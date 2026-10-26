@@ -2,16 +2,14 @@ package ebiten
 
 import (
 	"fmt"
-	"strings"
-
-	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
 )
 
-// Feeding trough inspector section (plan 6.2): a fill bar, the Plants /
-// Meat / Any filter (SetTroughFilter) and the pen's tame animals.
+// Feeding trough (plan 6.2, PLAY-018): the pane shows a fill bar, what the
+// trough accepts and the pen's tame animals; one command button holds the
+// Plants / Meat / Any filter (SetTroughFilter) as options.
 
 const troughKind = "feeding trough"
 
@@ -29,30 +27,27 @@ const maxTroughAnimals = 6
 
 func isTrough(b game.BuildingView) bool { return b.Kind == troughKind }
 
-func (a *App) troughButtons(b game.BuildingView, r button) []button {
+// troughCommands is the trough's filter button. Its options are the three
+// filters, the current one disabled, so a left-click switches to the first
+// other filter and a right-click picks.
+func (a *App) troughCommands(b game.BuildingView) []cmdButton {
 	if !isTrough(b) {
 		return nil
 	}
-	out := make([]button, 0, len(troughFilters))
-	for i, f := range troughFilters {
-		out = append(out, button{id: "bldg.trough." + f.key, label: f.label,
-			x: r.x + 12 + float32(i*88), y: r.y + 104, w: 82, h: 24, selected: b.TroughFilter == f.key})
-	}
-	return out
-}
-
-// applyTroughClick enqueues SetTroughFilter for a filter button.
-func (a *App) applyTroughClick(id string, b game.BuildingView) bool {
-	key, ok := strings.CutPrefix(id, "bldg.trough.")
-	if !ok || !isTrough(b) {
-		return false
-	}
+	opts := make([]cmdOption, 0, len(troughFilters))
 	for _, f := range troughFilters {
-		if f.key == key {
-			a.renderer.enqueue(command.Command{Kind: command.SetTroughFilter, Target: uint64(b.ID), Mode: f.mode})
+		o := cmdOption{Label: f.label, Cmd: &command.Command{Kind: command.SetTroughFilter, Target: uint64(b.ID), Mode: f.mode}}
+		if b.TroughFilter == f.key {
+			o.Disabled, o.Reason = true, "Already set"
 		}
+		opts = append(opts, o)
 	}
-	return true
+	desc := "Which feed haulers put in."
+	if b.TroughFilter != "" {
+		desc += " Now: " + b.TroughFilter + "."
+	}
+	return []cmdButton{{ID: "cmd.bldg.trough", Label: "Feed", Options: func(*App) []cmdOption { return opts },
+		Desc: desc + " Click to switch; right-click to pick."}}
 }
 
 // penAnimals are the tame animals standing in the pen that holds tile
@@ -88,37 +83,27 @@ func penAnimals(w game.WorldView, x, y int) []game.AnimalView {
 	return out
 }
 
-func (a *App) drawTroughSection(screen *ebiten.Image, b game.BuildingView, r button) {
+// troughLines are the trough's pane lines: what it takes and its herd.
+func (a *App) troughLines(b game.BuildingView) []string {
 	if !isTrough(b) {
-		return
+		return nil
 	}
-	x, y := int(r.x)+12, int(r.y)+46
-	pct := 0
-	if b.TroughCap > 0 {
-		pct = b.TroughFill * 100 / b.TroughCap
+	var out []string
+	if b.TroughFilter != "" {
+		out = append(out, "Accepts: "+b.TroughFilter)
 	}
-	fx, fy := float64(x), float64(y)
-	drawText(screen, fmt.Sprintf("Feed  %d / %d", b.TroughFill, b.TroughCap), fx, fy, tsBody)
-	bx := float32(x + 130)
-	by := float32(y) + (lineStep(tsBody)-14)/2
-	uiFillRect(screen, bx, by, 200, 14, uiBtnDisabled, false)
-	uiFillRect(screen, bx, by, float32(200*pct/100), 14, uiAccent, false)
-	dim := withColor(tsSmall, uiTextDim)
-	drawText(screen, "Haulers fill it with feed matching the filter.", fx, fy+float64(lineStep(tsBody)), dim)
-	drawText(screen, "Accepts:", fx, fy+float64(lineStep(tsBody)+lineStep(tsSmall)), dim)
 	list := penAnimals(a.renderer.world(), b.X, b.Y)
-	drawText(screen, fmt.Sprintf("Pen animals (%d)", len(list)), fx, float64(r.y)+138, withColor(tsLabel, uiHeading))
-	ly, ss := float64(r.y)+162, float64(lineStep(tsSmall))
+	out = append(out, fmt.Sprintf("Pen animals (%d)", len(list)))
 	for i, an := range list {
 		if i >= maxTroughAnimals {
-			drawText(screen, fmt.Sprintf("... and %d more", len(list)-i), fx, ly, dim)
+			out = append(out, fmt.Sprintf("... and %d more", len(list)-i))
 			break
 		}
 		line := fmt.Sprintf("%s (%s)", an.Name, animalLabel(an))
 		if animalHasNeeds(an) {
 			line += fmt.Sprintf("  food %d%%", an.Food)
 		}
-		drawText(screen, ellipsize(line, tsSmall, float64(r.w)-32), fx+8, ly, tsSmall)
-		ly += ss
+		out = append(out, line)
 	}
+	return out
 }

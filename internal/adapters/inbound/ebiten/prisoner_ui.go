@@ -9,25 +9,30 @@ import (
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/pawn/prisoner"
 	"rimworld-go/internal/domain/sim/command"
+	"rimworld-go/internal/domain/sim/entity"
 )
 
-// The pawn inspector's Prisoner tab and the Capture / Arrest actions
+// The colonist pane's Prisoner tab and the Capture / Arrest commands
 // (ENG-003 M8, MAIN_UI_SCREENS §27). The tab reads only
 // Simulation.Prisoner and the snapshot and emits SetPrisonerMode and
-// ReleasePrisoner; the actions emit Capture (the selected colonist is the
-// captor) and Arrest (of the selected colonist, by whoever the game picks). prisonerUI declares all of it
-// with the widget kit every Update; inspector.go lists the tab and the
-// action buttons and draws the panel around them.
+// ReleasePrisoner; the commands emit Capture (the selected colonist is the
+// captor) and Arrest (of the selected colonist, by whoever the game
+// picks). The tab is declared with the widget kit every Update into the
+// expanded panel (cmds_pawn.go's Prisoner paneTab calls prisonerTabBody);
+// the commands are cmds_pawn.go's pawnCommands entries.
 
 const (
-	prisonerTabID   = "inspector.prisoner"
-	prisonerCapture = "pawn.capture"
-	prisonerArrest  = "pawn.arrest"
+	prisonerTabID = "inspector.prisoner"
+	// Capture and Arrest never had an app.go click handler (they were
+	// widget buttons), so they are new-style commands: "cmd." ids that carry
+	// their command in Cmds.
+	prisonerCapture = "cmd.pawn.capture"
+	prisonerArrest  = "cmd.pawn.arrest"
 	prisonerRelease = "prisoner.release"
 	// prisonerResMax is the resistance a full bar shows (the most a new
 	// prisoner starts with).
 	prisonerResMax = prisoner.MaxInitialResistance / prisoner.ResistanceUnit
-	prisonerIcon   = 16 // icon size on the action buttons and the tab
+	prisonerIcon   = 16 // icon size in the tab
 )
 
 // prisonerModes are the interaction modes in the order the tab offers them.
@@ -65,34 +70,28 @@ func (a *App) prisonerTabOn() bool {
 	return ok
 }
 
-// prisonerTabSpec is the Prisoner tab's entry in the inspector's tab row
-// (ok false: the selected pawn is no prisoner).
-func (a *App) prisonerTabSpec() (buttonSpec, bool) {
-	if _, _, ok := a.selectedPrisoner(); !ok {
-		return buttonSpec{}, false
+// isPrisoner reports colonist id is the colony's prisoner.
+func (a *App) isPrisoner(id entity.EntityID) bool {
+	if a.renderer == nil {
+		return false
 	}
-	return buttonSpec{id: prisonerTabID, label: "Prisoner", selected: a.inspectTab == "prisoner", w: tabW("Prisoner"), h: 22}, true
+	_, ok := a.renderer.game.Prisoner(id)
+	return ok
 }
 
-// prisonerAction is one action-bar button with its command and icon.
-type prisonerAction struct {
-	b    button
-	cmd  command.Command
-	icon string
-}
-
-// prisonerActionList is the action bar's two icon buttons for a selected
-// colonist p, right of Clear orders: Capture (p takes the downed enemy
-// nearest to it) and Arrest (the nearest other colonist arrests p).
-// Raiders are not selectable, so the captor is the one selected.
-func (a *App) prisonerActionList(p game.PawnView, r button) []prisonerAction {
+// prisonerCommands are colonist p's Capture and Arrest buttons (nil for a
+// prisoner, a raider, an embodied player or the dead). Capture sends p to
+// take the downed enemy nearest to it; Arrest has the nearest other
+// colonist take p to a prisoner bed. Raiders are not selectable, so the
+// captor is the one selected.
+func (a *App) prisonerCommands(p game.PawnView) []cmdButton {
 	if p.Prisoner || p.Hostile || p.Embodied || p.Status == "dead" {
 		return nil
 	}
-	y := r.y + r.h - 62
-	capture := button{id: prisonerCapture, x: r.x + 268, y: y, w: 58, h: 24, quiet: true}
-	arrest := button{id: prisonerArrest, x: r.x + 330, y: y, w: 58, h: 24, quiet: true,
-		tip: "Arrest " + p.Name + ": another colonist takes them to a prisoner bed."}
+	capture := cmdButton{ID: prisonerCapture, Label: "Capture", Icon: "capture"}
+	arrest := cmdButton{ID: prisonerArrest, Label: "Arrest", Icon: "arrest",
+		Desc: "Arrest " + p.Name + ": another colonist takes them to a prisoner bed.",
+		Cmds: []command.Command{{Kind: command.Arrest, Target: uint64(p.ID)}}}
 	var target game.PawnView
 	found := false
 	for _, h := range a.renderer.hostiles() {
@@ -105,55 +104,23 @@ func (a *App) prisonerActionList(p game.PawnView, r button) []prisonerAction {
 	}
 	switch {
 	case p.Status != "alive":
-		capture.disabled, capture.reason = true, p.Status
+		capture.Disabled, capture.Reason = true, p.Status
+		capture.Desc = "Capture a downed enemy and carry them to a bed marked For prisoners."
 	case !found:
-		capture.disabled, capture.reason = true, "no downed enemy to capture"
+		capture.Disabled, capture.Reason = true, "no downed enemy to capture"
+		capture.Desc = "Capture a downed enemy and carry them to a bed marked For prisoners."
 	default:
-		capture.tip = "Capture " + target.Name + ": carry them to a bed marked For prisoners."
+		capture.Desc = "Capture " + target.Name + ": carry them to a bed marked For prisoners."
+		capture.Cmds = []command.Command{{Kind: command.Capture, Pawn: uint64(p.ID), Target: uint64(target.ID)}}
 	}
-	return []prisonerAction{
-		{capture, command.Command{Kind: command.Capture, Pawn: uint64(p.ID), Target: uint64(target.ID)}, "ui_icon/capture"},
-		{arrest, command.Command{Kind: command.Arrest, Target: uint64(p.ID)}, "ui_icon/arrest"},
-	}
+	return []cmdButton{capture, arrest}
 }
 
-// prisonerActions are prisonerActionList's buttons (inspector.go's bar).
-func (a *App) prisonerActions(p game.PawnView, r button) []button {
-	var out []button
-	for _, pa := range a.prisonerActionList(p, r) {
-		out = append(out, pa.b)
-	}
-	return out
-}
-
-// prisonerUI declares the Prisoner tab button, the Capture / Arrest
-// actions (with their icons) and, while open, the tab's content.
-func (a *App) prisonerUI() {
-	if a.renderer == nil || !a.renderer.HasSelect() || a.workOpen || a.archOpen {
-		return
-	}
-	p, ok := a.selectedPawn()
-	if !ok {
-		return
-	}
-	u := a.uiSt()
-	r := inspectorRect()
-	for _, b := range a.inspectorButtons() {
-		if b.id == prisonerTabID {
-			u.add(uiWidget{id: b.id, label: b.label, r: rect{b.x, b.y, b.w, b.h}, click: func() { a.inspectTab = "prisoner" }})
-		}
-	}
-	for _, pa := range a.prisonerActionList(p, r) {
-		b, cmd := pa.b, pa.cmd
-		w := uiWidget{id: b.id, label: b.label, r: rect{b.x, b.y, b.w, b.h}, disabled: b.disabled, reason: b.reason, tip: b.tip}
-		if !b.disabled {
-			w.click = func() { a.renderer.enqueue(cmd) }
-		}
-		u.add(w)
-		a.queueIcon(pa.icon, b.x+(b.w-prisonerIcon)/2, b.y+(b.h-prisonerIcon)/2)
-	}
-	if a.prisonerTabOn() {
-		a.prisonerTab(p, rect{r.x + 12, r.y + 10, r.w - 24, r.h - 10 - bioActionH})
+// prisonerTabBody declares the Prisoner tab of colonist id inside r, the
+// expanded panel's inner rectangle.
+func (a *App) prisonerTabBody(id entity.EntityID, r rect) {
+	if p, ok := a.pawnView(id); ok && a.renderer != nil {
+		a.prisonerTab(p, r)
 	}
 }
 
@@ -174,7 +141,7 @@ func (a *App) prisonerTab(p game.PawnView, in rect) {
 	if !ok {
 		return // stale selection: the tab goes with the prisoner
 	}
-	a.uiLabel(in.X, in.Y, ellipsize(pawnLabel(p), tsLabel, float64(in.W)-bioCloseGap), withColor(tsLabel, uiHeading))
+	a.uiLabel(in.X, in.Y, ellipsize(pawnLabel(p), tsLabel, float64(in.W)), withColor(tsLabel, uiHeading))
 	y := in.Y + float32(lineStep(tsLabel)) + 8
 	a.queueIcon("ui_icon/prisoner", in.X, y+2)
 	a.uiLabel(in.X+prisonerIcon+6, y, "Prisoner of the colony", tsBody)

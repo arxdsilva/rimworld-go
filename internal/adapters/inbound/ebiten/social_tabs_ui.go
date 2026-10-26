@@ -4,14 +4,16 @@ import (
 	"fmt"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/sim/entity"
 )
 
-// The pawn inspector's Health and Social tabs (ENG-003 C4,
+// The colonist pane's Health and Social tabs (ENG-003 C4,
 // MAIN_UI_SCREENS §14 and §15). Like the Bio tab they read only their read
 // models (Simulation.Health, Simulation.Social) and are declared with the
-// widget kit every Update (colony_ui.go calls socialTabsUI); inspector.go
-// draws the panel and the tab row around them. Until the body and social
-// milestones fill the read models, ok is false and the tab says so.
+// widget kit every Update, into the expanded panel the pane opens above
+// itself (cmds_pawn.go's Health and Social paneTabs call kitTabBody with
+// that rectangle). Until the body and social milestones fill the read
+// models, ok is false and the tab says so.
 
 // noDataYet is what a tab shows while its read model has nothing.
 const noDataYet = "No data yet."
@@ -23,20 +25,27 @@ func (a *App) kitTabOn() bool {
 	return ok && (a.inspectTab == "health" || a.inspectTab == "social")
 }
 
-// socialTabsUI declares the Health or Social tab's content while it is open.
+// socialTabsUI declares the History tab's widgets (history_ui.go); the
+// Health and Social tabs' own bodies come from the pane (kitTabBody).
 func (a *App) socialTabsUI() {
 	a.historyTabUI(a.sw, a.sh) // history_ui.go: the HUD's History tab
-	if a.renderer == nil || !a.renderer.HasSelect() || a.workOpen || a.archOpen || !a.kitTabOn() {
+}
+
+// kitTabBody declares the Health or Social tab ("health" or "social") of
+// colonist id inside r, the expanded panel's inner rectangle: a heading,
+// then the tab.
+func (a *App) kitTabBody(id entity.EntityID, tab string, r rect) {
+	p, ok := a.pawnView(id)
+	if !ok || a.renderer == nil {
 		return
 	}
-	p, _ := a.selectedPawn()
-	r := inspectorRect()
-	in := rect{r.x + 12, r.y + 10, r.w - 24, r.h - 10 - bioActionH}
-	a.uiLabel(in.X, in.Y, ellipsize(pawnLabel(p), tsLabel, float64(in.W)-bioCloseGap), withColor(tsLabel, uiHeading))
-	if a.inspectTab == "social" {
+	in := r
+	if tab == "social" {
+		a.uiLabel(in.X, in.Y, "Social", withColor(tsLabel, uiHeading))
 		a.socialTab(p, in) // social_ui.go
 		return
 	}
+	a.uiLabel(in.X, in.Y, "Health", withColor(tsLabel, uiHeading))
 	a.healthTab(p, in) // health_ui.go
 }
 

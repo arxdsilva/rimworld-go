@@ -49,23 +49,18 @@ func bldgApp(t *testing.T, kind, stuff, facing string) (*App, *recSim, game.Buil
 	return a, rs, b
 }
 
-func findBtn(a *App, id string) (button, bool) {
-	for _, b := range a.buildingButtons() {
-		if b.id == id {
-			return b, true
-		}
-	}
-	return button{}, false
+func findBtn(a *App, id string) (cmdButton, bool) {
+	return bldCmd(a.buildingCommands(a.selBuilding), id)
 }
 
 func TestMoveButtonDisabledForWalls(t *testing.T) {
 	t.Parallel()
 	a, _, _ := bldgApp(t, "wall", "wood", "south")
 	mv, ok := findBtn(a, "bldg.move")
-	if !ok || !mv.disabled || mv.reason != "can't be moved" {
+	if !ok || !mv.Disabled || mv.Reason != "can't be moved" {
 		t.Fatalf("move button = %+v ok=%v", mv, ok)
 	}
-	if cp, ok := findBtn(a, "bldg.copy"); !ok || cp.disabled {
+	if cp, ok := findBtn(a, "bldg.copy"); !ok || cp.Disabled {
 		t.Fatalf("copy must work on walls: %+v", cp)
 	}
 	for _, k := range []string{"door", "grave", "fence", "fence gate"} {
@@ -173,7 +168,7 @@ func TestCopyDisabledWhenLocked(t *testing.T) {
 	a, rs, _ := bldgApp(t, "butcher table", "wood", "south")
 	rs.locked = map[string]string{"build:butcher table": "Smithing"}
 	cp, ok := findBtn(a, "bldg.copy")
-	if !ok || !cp.disabled || cp.reason != "needs research: Smithing" {
+	if !ok || !cp.Disabled || cp.Reason != "needs research: Smithing" {
 		t.Fatalf("copy = %+v", cp)
 	}
 	if hasBuildTool("no such kind") {
@@ -194,8 +189,7 @@ func TestPendingMoveShowsCancel(t *testing.T) {
 	if got := movingLine(b); got != "Moving to (4, 5)" {
 		t.Fatalf("line = %q", got)
 	}
-	r := buildingRect()
-	if out := a.moveCopyButtons(b, r); len(out) != 3 || out[2].id != "bldg.cancelmove" {
+	if out := a.moveCommands(b); len(out) != 3 || out[2].ID != "bldg.cancelmove" {
 		t.Fatalf("buttons = %+v", out)
 	}
 	f := game.FrameView{X: 4, Y: 5, Moving: true, MovingFrom: b.ID}

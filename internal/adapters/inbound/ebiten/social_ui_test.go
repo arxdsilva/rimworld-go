@@ -75,7 +75,7 @@ func TestSocialTabRowsAndEmpty(t *testing.T) {
 	a, f := colonyApp(t, s)
 	a.renderer.Select(1)
 	f.frame(t, a)
-	click(t, a, "inspector.social")
+	openPawnTab(t, a, "social") // the pane's Social tab
 	f.frame(t, a)
 	f.frame(t, a)
 	if !a.kitTabOn() {
@@ -123,7 +123,7 @@ func TestSocialRowsScroll(t *testing.T) {
 	a, f := colonyApp(t, s)
 	a.renderer.Select(1)
 	f.frame(t, a)
-	click(t, a, "inspector.social")
+	openPawnTab(t, a, "social") // the pane's Social tab
 	f.frame(t, a)
 	f.frame(t, a)
 	if hasWidget(a, "social.row.39") {
@@ -194,7 +194,7 @@ func TestBioTabShowsRelations(t *testing.T) {
 	a, f := colonyApp(t, s)
 	a.renderer.Select(1)
 	f.frame(t, a)
-	press(t, a, f, "inspector.bio")
+	openPawnTab(t, a, "bio") // the pane's Bio tab
 	f.frame(t, a)
 	if !hasWidget(a, "bio.relations") {
 		t.Fatal("Bio tab has no relations block")

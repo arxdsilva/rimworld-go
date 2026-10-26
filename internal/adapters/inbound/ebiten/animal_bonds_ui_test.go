@@ -41,21 +41,26 @@ func TestAnimalInspectorBondBlock(t *testing.T) {
 			t.Fatalf("bond rows %q lack %q", rows, want)
 		}
 	}
-	ids := map[string]button{}
-	for _, b := range a.animalButtons() {
-		ids[b.id] = b
+	// the pane shows those rows, and the commands carry the training skills
+	if lines := thingLines(a.animalPane(an.ID)); !strings.Contains(lines, rows) {
+		t.Fatalf("pane lines %q lack the bond rows %q", lines, rows)
+	}
+	cs := a.animalCommands(an.ID)
+	ids := map[string]cmdButton{}
+	for _, c := range cs {
+		ids[c.ID] = c
 	}
 	if _, ok := ids["animal.train.2"]; ok {
 		t.Fatal("a skill the species can't learn has no checkbox")
 	}
-	if !ids["animal.train.0"].selected || ids["animal.train.1"].selected || ids["animal.train.0"].label != "Obedience 2/3" {
+	if !ids["animal.train.0"].On || ids["animal.train.1"].On || ids["animal.train.0"].Label != "Obedience 2/3" {
 		t.Fatalf("checkboxes %+v %+v", ids["animal.train.0"], ids["animal.train.1"])
 	}
-	panel := a.animalPanel()
-	for _, b := range ids {
-		if b.y+b.h > panel.y+panel.h {
-			t.Fatalf("button %s falls out of the panel", b.id)
-		}
+	// every command has a cell in the grid beside the pane (the old panel
+	// check that no button fell out of it)
+	l := computeHUDLayout(1280, 720, hudState{PaneShown: true, Commands: len(cs)})
+	if len(l.GridCells) != len(cs) {
+		t.Fatalf("%d commands, %d grid cells", len(cs), len(l.GridCells))
 	}
 	click(t, a, "animal.train.1")
 	click(t, a, "animal.train.0")
@@ -68,7 +73,7 @@ func TestAnimalInspectorBondBlock(t *testing.T) {
 	if c := s.cmds[1]; c.Kind != command.SetTraining || c.Index != 0 || c.Enabled {
 		t.Fatalf("obedience off: %+v", c)
 	}
-	click(t, a, "animal.master")
+	click(t, a, "cmd.animal.master")
 	if !a.float.open || len(a.float.opts) != 3 {
 		t.Fatalf("the master picker lists both colonists and none: %+v", a.float.opts)
 	}
@@ -80,7 +85,7 @@ func TestAnimalInspectorBondBlock(t *testing.T) {
 		t.Fatalf("pick Bo: %+v", c)
 	}
 	screen := ebiten.NewImage(1280, 720)
-	a.drawAnimalInspector(screen) // no art: must not panic
+	a.drawAnimalMark(screen) // no art: must not panic
 }
 
 func TestWildAnimalHasNoMasterRow(t *testing.T) {
@@ -90,9 +95,13 @@ func TestWildAnimalHasNoMasterRow(t *testing.T) {
 	if len(rows) != 1 || rows[0] != "Mother: a deer" {
 		t.Fatalf("wild rows %v", rows)
 	}
-	_, btns := animalBondLayout(an, button{w: 300})
-	if len(btns) != 0 {
-		t.Fatal("no master or training buttons for a wild animal")
+	st := &stubSim{world: game.WorldView{Animals: []game.AnimalView{an}}}
+	a, _ := colonyApp(t, st)
+	a.selectCand(selCand{selAnimal, 9})
+	for _, c := range a.animalCommands(9) {
+		if strings.Contains(c.ID, "master") || strings.Contains(c.ID, "train") {
+			t.Fatalf("no master or training command for a wild animal: %s", c.ID)
+		}
 	}
 }
 
@@ -105,59 +114,116 @@ func TestAnimalsTabMasterAndTrainingColumns(t *testing.T) {
 	if got := animalTrainingCell(an); got != "Obedience 2/3" {
 		t.Fatalf("training cell %q", got)
 	}
-	if colBtn+196 > 1280-2*hudPad {
-		t.Fatal("the Colony list fits a 1280 px window")
-	}
 	s := bondSim()
 	a, _ := colonyApp(t, s)
 	click(t, a, "tab.animals")
+	// the Colony list fits the window at 1280 px: columns give way, and
+	// every button stays inside the Window rect
+	if w := a.hud().Window; a.sw != 1280 || w.empty() {
+		t.Fatalf("no window at %d px: %+v", a.sw, w)
+	} else {
+		for _, b := range a.animalsTabButtons() {
+			if b.x < w.X-0.5 || b.x+b.w > w.right()+0.5 || b.y < w.Y-0.5 || b.y+b.h > w.bottom()+0.5 {
+				t.Errorf("%s %v,%v %vx%v runs out of the window %+v", b.id, b.x, b.y, b.w, b.h, w)
+			}
+		}
+	}
 	screen := ebiten.NewImage(1280, 720)
 	a.drawAnimalsTab(screen, 1280, 720)
 }
 
-// The inspector's blocks (needs, bond rows, training buttons, log, bottom
-// buttons) never overlap and every training label reads in full.
-func TestAnimalInspectorNoOverlap(t *testing.T) {
-	t.Parallel()
-	a, _ := colonyApp(t, bondSim())
-	if !a.selectAnimalAt(6, 6) {
-		t.Fatal("select the dog")
+// The pane's tab bodies (the log and the training rows) draw only inside
+// the inner rectangle the pane gives them (the expanded panel less its
+// inset), at both UI scales, and every training label reads in full in its
+// command cell. (Not parallel: the draw trace is global.)
+func TestAnimalTabBodiesStayInTheirPanel(t *testing.T) {
+	s := bondSim()
+	s.world.Animals[0].Log = thingLog(40)
+	a, _ := colonyApp(t, s)
+	a.selectCand(selCand{selAnimal, 50})
+	sp := a.animalPane(50)
+	for _, scale := range []float64{1, 1.5} {
+		withUIScale(t, scale)
+		for _, id := range []string{"inspector.log", "inspector.training"} {
+			tb, ok := thingTab(sp, id)
+			if !ok {
+				t.Fatalf("no tab %s", id)
+			}
+			if tb.WantW < expandMinW || tb.WantW > expandMaxW {
+				t.Errorf("%s wants %v px wide, the panel clamps to %d..%d", id, tb.WantW, expandMinW, expandMaxW)
+			}
+			inner := rect{X: 40, Y: 260, W: tb.WantW - 2*paneInset, H: tb.WantH - 2*paneInset}
+			img := ebiten.NewImage(1280, 720)
+			events := thingTraceDraw(t, func() { tb.Draw(img, inner) })
+			if len(events) == 0 {
+				t.Errorf("%s drew nothing", id)
+			}
+			for _, e := range events {
+				x0, y0 := inner.X*float32(scale), inner.Y*float32(scale)
+				x1, y1 := inner.right()*float32(scale), inner.bottom()*float32(scale)
+				// the log scrolls: a row cut by the bottom edge is clipped by the
+				// pane, so it only has to start inside; everything else must fit
+				bottom := y1 + 0.5
+				if id == "inspector.log" {
+					bottom = y1 - 1
+					if e.Y+e.H < y0 {
+						t.Errorf("scale %v: %q is above the log view", scale, e.Text)
+					}
+				}
+				edge := e.Y + e.H
+				if id == "inspector.log" {
+					edge = e.Y
+				}
+				if e.X < x0-0.5 || e.Y < y0-0.5 || e.X+e.W > x1+0.5 || edge > bottom {
+					t.Errorf("scale %v, %s: %s %q (%.0f,%.0f %.0fx%.0f) leaves the body (%.0f,%.0f)-(%.0f,%.0f)",
+						scale, id, e.Kind, e.Text, e.X, e.Y, e.W, e.H, x0, y0, x1, y1)
+				}
+			}
+		}
 	}
-	for _, open := range []bool{false, true} {
-		a.animalLogOpen = open
-		an, _ := a.selectedAnimal()
-		r := a.animalPanel()
-		type box struct {
-			name       string
-			x, y, w, h float32
+	for _, c := range a.animalCommands(50) {
+		if !strings.HasPrefix(c.ID, "animal.train.") {
+			continue
 		}
-		var boxes []box
-		lines, _ := animalBondLayout(an, r)
-		for _, l := range lines {
-			boxes = append(boxes, box{"line " + l.text, float32(l.x), float32(l.y), float32(int(r.w) - bondLabelX - 100), bondRowH - 2})
-		}
-		for _, b := range a.animalButtons() {
-			if b.id == "animal.close" {
-				continue
-			}
-			boxes = append(boxes, box{b.id, b.x, b.y, b.w, b.h})
-			if strings.HasPrefix(b.id, "animal.train.") {
-				if w, _ := measure(b.label, tsBody); w > float64(b.w)-20 {
-					t.Errorf("label %q (%.0f px) is clipped in a %.0f px button", b.label, w, b.w)
-				}
+		for _, word := range strings.Fields(c.Label) {
+			if w := textW(word, tsSmall); w > cmdCell-8 {
+				t.Errorf("%s: %q (%.0f px) is clipped in a %d px cell", c.ID, word, w, cmdCell)
 			}
 		}
-		lx, ly, lw, lh := animalLogRect(r, animalExtraH(an)+animalBondH(an))
-		boxes = append(boxes, box{"log", float32(lx), float32(ly), float32(lw), float32(lh)})
-		for i, p := range boxes {
-			if p.y < r.y || p.y+p.h > r.y+r.h || p.x < r.x || p.x+p.w > r.x+r.w {
-				t.Errorf("log open %v: %s %+v leaves panel %+v", open, p.name, p, r)
-			}
-			for _, q := range boxes[i+1:] {
-				if p.x < q.x+q.w && q.x < p.x+p.w && p.y < q.y+q.h && q.y < p.y+p.h {
-					t.Errorf("log open %v: %s %+v overlaps %s %+v", open, p.name, p, q.name, q)
-				}
-			}
-		}
+	}
+}
+
+// The Log tab scrolls with the wheel over its panel (and the camera does not
+// zoom), starts at the top for another animal, and a short log has nothing
+// to scroll.
+func TestAnimalLogTabScrollsWithWheel(t *testing.T) {
+	t.Parallel()
+	s := bondSim()
+	s.world.Animals[0].Log = thingLog(80)
+	a, f := colonyApp(t, s)
+	a.selectCand(selCand{selAnimal, 50})
+	f.frame(t, a)
+	a.selectPaneTab("inspector.log")
+	f.frame(t, a)
+	exp := a.expandedRect()
+	if exp.empty() {
+		t.Fatal("the Log tab opens an expanded panel")
+	}
+	cx, cy := exp.center()
+	zoom := a.renderer.cam.zoom
+	f.cur.mx, f.cur.my, f.cur.wheelY = int(cx), int(cy), -1
+	f.frame(t, a)
+	if off := a.uiSt().scroll[animalLogID]; off <= 0 {
+		t.Fatalf("the wheel scrolled the log by %v", off)
+	}
+	if a.renderer.cam.zoom != zoom {
+		t.Fatal("the wheel over the panel must not zoom the map")
+	}
+	// another animal starts at the top
+	s.world.Animals = append(s.world.Animals, game.AnimalView{ID: 51, Species: "labrador", Label: "labrador", X: 7, Y: 7, Tame: true, Name: "Ash", Log: thingLog(80)})
+	a.selectCand(selCand{selAnimal, 51})
+	f.frame(t, a)
+	if off := a.uiSt().scroll[animalLogID]; off != 0 {
+		t.Fatalf("a new animal's log scrolls from the top, got %v", off)
 	}
 }

@@ -68,7 +68,7 @@ func TestAssignTabOpensPolicyTable(t *testing.T) {
 		t.Fatalf("commands %+v, want Bo to social drinking", got)
 	}
 
-	// Its key (F3) closes the window again; the modal covers the tab.
+	// Its key (F3) closes the window again.
 	a.toggleAssign()
 	f.frame(t, a)
 	if a.uiModalTop() == assignModalID {

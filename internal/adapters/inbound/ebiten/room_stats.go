@@ -10,7 +10,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
-	"rimworld-go/internal/platform/input"
 )
 
 // Room stats overlay (UI-016, G): every room tinted by impressiveness,
@@ -18,34 +17,7 @@ import (
 // cleanliness, temperature, light, roof) from game.RoomView. Plus the
 // Alt-held detailed cell lines of the hover panel.
 
-const (
-	roomsButtonID = "hud.rooms"
-	roomsButtonW  = 48
-)
-
-// roomsButtons is the HUD Rooms toggle, left of the Home button.
-func (a *App) roomsButtons(sw int) []button {
-	hb := a.homeButtons(sw)
-	if len(hb) == 0 {
-		return nil
-	}
-	return []button{{id: roomsButtonID, label: "Rooms", x: hb[0].x - roomsButtonW - hudPad/2, y: 4, w: roomsButtonW, h: hudTopH - 8,
-		selected: a.rooms, tip: "Room stats overlay" + a.keyHint(input.RoomStats)}}
-}
-
-func (a *App) drawRoomsButton(screen *ebiten.Image, sw int) {
-	mx, my := a.currentCursor()
-	for _, b := range a.roomsButtons(sw) {
-		drawButton(screen, b, b.contains(mx, my))
-		if img := a.icon("overlay_rooms"); img != nil {
-			uiFillRect(screen, b.x+2, b.y+2, b.w-4, b.h-4, uiBtn, false)
-			if b.selected {
-				uiFillRect(screen, b.x+2, b.y+2, b.w-4, b.h-4, uiBtnSelected, false)
-			}
-			drawIcon(screen, img, float64(b.x)+(float64(b.w)-float64(b.h)+4)/2, float64(b.y)+2, float64(b.h)-4)
-		}
-	}
-}
+const roomsButtonID = "hud.rooms" // the HUD Rooms toggle (hud_global.go places it)
 
 // roomTint colours a room by impressiveness: red (awful) through amber
 // and yellow to green (impressive).
@@ -137,7 +109,7 @@ func (a *App) drawRoomCard(screen *ebiten.Image) {
 	wid := int(maxTextW(lines, tsBody))
 	rowH := int(lineStep(tsBody))
 	pw, ph := wid+24, len(lines)*rowH+12
-	x, y := min(mx+18, sw-pw-4), min(my+18, int(hudBarY(sh))-ph-4)
+	x, y := min(mx+18, sw-pw-4), min(my+18, int(a.hud().Tabs.Y)-ph-4)
 	drawPanel(screen, float32(x), float32(y), float32(pw), float32(ph))
 	uiFillRect(screen, float32(x)+1, float32(y)+1, 4, float32(ph)-2, opaque(roomTint(w.Rooms[id].Score)), false)
 	for i, l := range lines {

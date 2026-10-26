@@ -161,19 +161,34 @@ func (a *App) drawMapFields(screen *ebiten.Image) {
 	screen.DrawImage(img, op)
 }
 
-// drawMapFieldLegend is the legend panel (logical pixels, canvas helpers).
+// mapFieldLegendSize is the legend panel's size.
+func (a *App) mapFieldLegendSize() (w, h float32) {
+	o := &a.dev.fields
+	if !o.shown {
+		return 0, 0
+	}
+	l := o.layers[o.sel]
+	lines := fieldLegendLines(l)
+	title := "Map fields: " + l.Name
+	return max(textW(title, tsLabel), maxTextW(lines, tsSmall)+22) + 16, float32(len(lines)*devStep + 30)
+}
+
+// drawMapFieldLegend is the legend panel (logical pixels, canvas helpers),
+// first in the dev column (devmode.go).
 func (a *App) drawMapFieldLegend(screen *ebiten.Image) {
 	o := &a.dev.fields
 	if !o.shown {
 		return
 	}
+	r := a.devStack().Fields
+	if r.empty() {
+		return
+	}
 	l := o.layers[o.sel]
 	lines := fieldLegendLines(l)
 	title := "Map fields: " + l.Name
-	w := max(textW(title, tsLabel), maxTextW(lines, tsSmall)+22) + 16
-	h := float32(len(lines)*devStep + 30)
-	x, y := float32(hudPad), float32(hudTopH+hudPad)
-	drawPanel(screen, x, y, w, h)
+	x, y := r.X, r.Y
+	drawPanel(screen, x, y, r.W, r.H)
 	drawText(screen, title, float64(x)+8, float64(y)+3, tsLabel)
 	for i, s := range lines {
 		ry := y + 24 + float32(i*devStep)

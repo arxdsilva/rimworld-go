@@ -135,7 +135,7 @@ func (a *App) handleMapKeys() {
 	}
 	for i, g := range input.Gizmos {
 		if f.fired(g) {
-			a.pressGizmo(i) // gizmo.go
+			a.pressCommandKey(i) // hud_commands.go
 		}
 	}
 }

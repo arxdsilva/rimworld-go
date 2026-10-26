@@ -177,13 +177,13 @@ func TestBioTabFields(t *testing.T) {
 	a.renderer.Select(1)
 	f.frame(t, a)
 
-	if !hasWidget(a, "inspector.bio") {
-		t.Fatal("the inspector has no Bio tab")
+	if tab, ok := paneTabByID(a.pawnPane(1), "inspector.bio"); !ok || tab.Disabled {
+		t.Fatalf("the inspector has no live Bio tab: %+v %v", tab, ok)
 	}
-	press(t, a, f, "inspector.bio")
+	pressButton(t, a, f, "inspector.bio") // the pane's tab strip, the real mouse path
 	f.frame(t, a)
-	if a.inspectTab != "bio" || !a.bioTabOn() {
-		t.Fatalf("tab = %q, want bio", a.inspectTab)
+	if a.inspectTab != "bio" || a.paneOpenTab() != "inspector.bio" || !a.bioTabOn() {
+		t.Fatalf("tab = %q (pane %q), want bio", a.inspectTab, a.paneOpenTab())
 	}
 
 	b := s.bios[1]
@@ -227,10 +227,11 @@ func TestBioTabFields(t *testing.T) {
 
 	// A colonist without a bio has the tab disabled.
 	s.pawns[0].Sex = ""
-	for _, b := range a.inspectorButtons() {
-		if b.id == "inspector.bio" && (!b.disabled || b.reason == "") {
-			t.Fatalf("Bio tab = %+v, want disabled", b)
-		}
+	if tab, ok := paneTabByID(a.pawnPane(1), "inspector.bio"); !ok || !tab.Disabled || tab.Reason == "" {
+		t.Fatalf("Bio tab = %+v (%v), want disabled with a reason", tab, ok)
+	}
+	if b, ok := hasButton(a.paneButtons(), "inspector.bio"); !ok || !b.disabled || b.reason == "" {
+		t.Fatalf("Bio tab button = %+v (%v), want disabled with a reason", b, ok)
 	}
 	if a.bioTabOn() {
 		t.Fatal("the Bio tab can't be on for a colonist without one")
@@ -413,9 +414,12 @@ func TestOptionsStoryTabLegacyColonyReadOnly(t *testing.T) {
 
 // ---- Letters ----------------------------------------------------------------
 
+// letterSim is a colony whose scenario intro letter (the stack's
+// WorldView.Letters, PLAY-018) arrived at tick 5, with its message line.
 func letterSim() *stubSim {
 	s := &stubSim{pawns: []game.PawnView{{ID: 1, Name: "Ada", Status: "alive"}}, tick: 10}
 	s.world.Messages = []game.MessageView{{Tick: 5, Text: "The lifeboats strike the ground.", Letter: true, Title: "Broken Hull"}}
+	s.world.Letters = []game.LetterView{{ID: 1, Tick: 5, Kind: "info", Title: "Broken Hull", Text: "The lifeboats strike the ground.", Intro: true, X: -1, Y: -1}}
 	return s
 }
 
@@ -440,11 +444,16 @@ func TestIntroLetterShownOnce(t *testing.T) {
 		t.Fatal("the letter must not open again")
 	}
 
-	// A new message is a new letter; a colony started later shows its own.
+	// A new letter joins the stack and waits there (only the intro opens by
+	// itself, PLAY-018); a colony started later shows its own intro.
 	s.world.Messages = append(s.world.Messages, game.MessageView{Tick: 8, Text: "A heat wave has settled.", Letter: true, Title: "Heat wave"})
+	s.world.Letters = append(s.world.Letters, game.LetterView{ID: 2, Tick: 8, Kind: "caution", Title: "Heat wave", Text: "A heat wave has settled.", X: -1, Y: -1})
 	f.frame(t, a)
-	if !a.uiModalOpen() || a.uiSt().modals[0].title != "Heat wave" {
-		t.Fatalf("modals = %+v, want the heat wave letter", a.uiSt().modals)
+	if a.uiModalOpen() {
+		t.Fatalf("modals = %+v: a new letter must wait in the stack", a.uiSt().modals)
+	}
+	if n := len(a.letterRows(a.hud())); n != 2 {
+		t.Fatalf("the stack holds %d letters, want the intro and the heat wave", n)
 	}
 	a.uiCloseTop()
 	a.dropSession()
@@ -492,7 +501,7 @@ func TestArchitectLockedByScenario(t *testing.T) {
 	a.selectArchCategory("furniture")
 
 	var fire, lamp button
-	for _, b := range a.architectButtons() {
+	for _, b := range a.commandGridButtons() { // the tools are command buttons
 		switch b.id {
 		case "arch.tool.campfire":
 			fire = b
@@ -557,17 +566,25 @@ func TestNewBuildingCards(t *testing.T) {
 	for cat, id := range map[string]string{"production": "tool_cabinet", "furniture": "hospital_bed"} {
 		a.selectArchCategory(cat)
 		found := false
-		for _, b := range a.architectButtons() {
+		for _, b := range a.commandGridButtons() { // the tools are command buttons
 			found = found || b.id == "arch.tool."+id
 		}
 		if !found {
 			t.Errorf("no %s card in %s", id, cat)
 		}
 	}
-	// The longest category still fits above the bottom bar.
+	// The longest category still fits: every tool has a grid cell, and the
+	// Architect (categories, description, grid) ends above the tab strip.
 	a.selectArchCategory("furniture")
-	if r := a.architectRect(); r.y+r.h > hudBarY(a.sh) {
-		t.Errorf("architect panel ends at %v, below the bottom bar at %v", r.y+r.h, hudBarY(a.sh))
+	l := a.hud()
+	if n := len(a.archToolCommands()); len(l.GridCells) != n {
+		t.Errorf("furniture has %d tools but the grid shows %d", n, len(l.GridCells))
+	}
+	if r := a.architectRect(); r.y+r.h > l.Tabs.Y {
+		t.Errorf("architect panel ends at %v, below the tab strip at %v", r.y+r.h, l.Tabs.Y)
+	}
+	if l.Grid.bottom() > l.Tabs.Y {
+		t.Errorf("the tool grid ends at %v, below the tab strip at %v", l.Grid.bottom(), l.Tabs.Y)
 	}
 }
 
@@ -603,8 +620,8 @@ func TestStatusChipsFromWorld(t *testing.T) {
 	a, f := colonyApp(t, s)
 	f.frame(t, a)
 	rs := a.chipRects(chips, a.sw)
-	if len(rs) != 2 || rs[0].right() != float32(a.sw-hudPad) || rs[1].Y <= rs[0].Y {
-		t.Fatalf("chip rects = %+v, want a right-aligned stack", rs)
+	if g := a.hud().Global; len(rs) != 2 || rs[0].right() != g.right() || rs[1].Y <= rs[0].Y || rs[0].Y < g.Y || rs[1].bottom() > g.bottom() {
+		t.Fatalf("chip rects = %+v, want a right-aligned stack inside Global %+v", rs, g)
 	}
 	if got := tipOf(t, a, "hud.chip.1"); !strings.Contains(got, "Ashfall sky") {
 		t.Fatalf("chip tip = %q", got)

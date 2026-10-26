@@ -110,7 +110,7 @@ func inputColony(t *testing.T, at ...[2]int) (*App, *stubSim, *fakeInput) {
 	a.renderer.speed = speedPaused
 	// Tile (x, y) at screen (64x, 64y+32): rows 0..8 and, right of the
 	// inspector panels, columns 6..19 are open map.
-	a.renderer.cam.offsetX, a.renderer.cam.offsetY = 0, -hudTopH
+	a.renderer.cam.offsetX, a.renderer.cam.offsetY = 0, -32
 	return a, s, f
 }
 
@@ -551,6 +551,11 @@ func TestBillQuantityModifiers(t *testing.T) {
 	s.world.Buildings = []game.BuildingView{{ID: 30, Kind: "stove", X: 4, Y: 4, W: 2, H: 1, Bench: true,
 		Bills: []game.BillView{{Label: "Cook meal", Target: 5}}}}
 	a.selectCand(selCand{selBuilding, 30})
+	// the bills live in the pane's Bills tab (PLAY-018): open it with the mouse
+	pressButton(t, a, f, "inspector.bills")
+	if a.paneOpenTab() != "inspector.bills" {
+		t.Fatalf("the Bills tab did not open: %q", a.paneOpenTab())
+	}
 	for _, c := range []struct {
 		mods input.Mod
 		id   string
@@ -558,9 +563,10 @@ func TestBillQuantityModifiers(t *testing.T) {
 	}{{0, "bill.plus.0", 6}, {input.ModCtrl, "bill.plus.0", 15}, {input.ModShift, "bill.plus.0", 105},
 		{input.ModCtrl | input.ModShift, "bill.plus.0", 1005}, {input.ModShift, "bill.minus.0", 1}} {
 		s.cmds = nil
-		f.cur.mods = c.mods
 		f.frame(t, a)
-		click(t, a, c.id)
+		x, y := widgetAt(t, a, c.id)
+		f.cur.mx, f.cur.my = x, y
+		f.click(t, a, mbLeft, c.mods)
 		if set := cmdsOf(s, command.SetBill); len(set) != 1 || set[0].Count != c.want {
 			t.Fatalf("%s with mods %v: %+v, want %d", c.id, c.mods, set, c.want)
 		}
@@ -732,15 +738,15 @@ func TestGizmoKeysPressInspectorButtons(t *testing.T) {
 	a, s, f := inputColony(t)
 	s.world.Items = []game.ItemView{{ID: 90, Kind: "wood", Qty: 3, X: 3, Y: 3}}
 	a.selectCand(selCand{selItem, 90})
-	gs := a.gizmoButtons()
+	cs := a.selectionCommands()
 	i := -1
-	for j, b := range gs {
-		if b.id == "item.forbid" {
+	for j, c := range cs {
+		if c.ID == "item.forbid" {
 			i = j
 		}
 	}
-	if i < 0 {
-		t.Fatalf("the Forbid button is a command: %+v", gs)
+	if i < 0 || i >= len(input.Gizmos) {
+		t.Fatalf("the Forbid button is a command with a key: %+v", cs)
 	}
 	f.key(t, a, a.bindings().Of(input.Gizmos[i])[0].Key, 0)
 	if c := cmdsOf(s, command.SetForbidden); len(c) != 1 || c[0].Target != 90 {

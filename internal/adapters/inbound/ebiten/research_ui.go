@@ -2,7 +2,6 @@ package ebiten
 
 import (
 	"fmt"
-	"image/color"
 	"strconv"
 	"strings"
 
@@ -25,8 +24,17 @@ func (a *App) lockedBy(key string) string {
 	return a.renderer.world().Locked[key]
 }
 
+// researchWant is the Research window's wanted size: a row per project.
+func (a *App) researchWant() (float32, float32) {
+	n := 0
+	if a.renderer != nil {
+		n = len(a.renderer.world().Research)
+	}
+	return 760, float32(max(160, 44+n*researchRowH+8))
+}
+
 func (a *App) researchButtons() []button {
-	r := workRect(a.sw, a.sh)
+	r := a.windowRect()
 	var out []button
 	for i, p := range a.renderer.world().Research {
 		y := r.y + 44 + float32(i*researchRowH)
@@ -55,7 +63,7 @@ func (a *App) pickResearch(id string) {
 }
 
 func (a *App) drawResearch(screen *ebiten.Image, sw, sh int) {
-	r := workRect(sw, sh)
+	r := a.windowRect()
 	drawPanel(screen, r.x, r.y, r.w, r.h)
 	drawText(screen, "Research", float64(r.x)+12, float64(r.y)+6, withColor(tsLabel, uiHeading))
 	hintX := float64(r.x) + 12 + float64(textW("Research", tsLabel)) + 16
@@ -88,15 +96,15 @@ func (a *App) drawResearch(screen *ebiten.Image, sw, sh int) {
 }
 
 func drawResearchBar(screen *ebiten.Image, x, y, w, h float32, p game.ResearchView) {
-	uiFillRect(screen, x, y, w, h, color.RGBA{30, 26, 22, 255}, false)
-	c := color.RGBA{90, 160, 210, 255}
+	uiFillRect(screen, x, y, w, h, uiField, false)
+	c := uiSliderFill
 	if p.Done {
-		c = color.RGBA{120, 200, 90, 255}
+		c = uiGood
 	}
 	if p.Cost > 0 {
 		uiFillRect(screen, x, y, w*float32(min(p.Progress, p.Cost))/float32(p.Cost), h, c, false)
 	}
-	uiStrokeRect(screen, x, y, w, h, 1, color.RGBA{90, 80, 70, 255}, false)
+	uiStrokeRect(screen, x, y, w, h, 1, uiPanelBorder, false)
 }
 
 func (a *App) hasResearchBench() bool {
