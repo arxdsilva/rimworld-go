@@ -33,6 +33,12 @@ type fpsProbeState struct {
 	report   string
 	measured bool
 	drawn    bool // the first colony frame is done (warm-up runs from it)
+	// speed is the probe's speed, held every frame (a threat or the
+	// window losing focus would pause it and make the numbers meaningless);
+	// tick0 the game tick at the start, held how often it was put back.
+	speed speed
+	tick0 uint64
+	held  int
 }
 
 // probeWarmup is the unmeasured time after the first colony frame
@@ -65,6 +71,7 @@ func (a *App) fpsProbeUpdate() bool {
 		default:
 			a.renderer.speed = speedFast
 		}
+		st.speed, st.tick0 = a.renderer.speed, uint64(a.renderer.game.Tick())
 		if p.Zoom > 0 {
 			a.renderer.cam.zoom = clampZoom(p.Zoom)
 		}
@@ -77,9 +84,14 @@ func (a *App) fpsProbeUpdate() bool {
 		return false
 	}
 	if st.drawn && now.Sub(st.begin) > time.Duration(p.Seconds)*time.Second+probeWarmup {
-		st.report = fpsReport(st, a.scale) + fmt.Sprintf(", %dx%d physical; %v", a.pw, a.ph, a.art.memStats())
+		st.report = fpsReport(st, a.scale) + fmt.Sprintf(", %dx%d physical; %d ticks, speed held %d times; %v",
+			a.pw, a.ph, uint64(a.renderer.game.Tick())-st.tick0, st.held, a.art.memStats())
 		log.Print(st.report)
 		return true
+	}
+	if a.renderer.speed != st.speed { // a threat pause or the window losing focus
+		a.renderer.speed = st.speed
+		st.held++
 	}
 	if !st.measured && st.drawn && now.After(st.warmupTo) {
 		st.measured = true
