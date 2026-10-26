@@ -6,7 +6,6 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/pawn/backstory"
-	"rimworld-go/internal/domain/pawn/infection"
 	"rimworld-go/internal/domain/pawn/look"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/needs"
@@ -604,32 +603,6 @@ func (g *Game) traitThoughts(id entity.EntityID, ts []mood.Thought) []mood.Thoug
 		ts = append(ts, mood.Thought{Kind: mood.Difficulty, Label: mood.DefOf(mood.Difficulty).Label, Value: off})
 	}
 	return ts
-}
-
-// tendHealBy is the injury doctor's finished tend mends: the care tier
-// and hospital bed (WATER's medicineHealPct) × (100 + 5·(L−7))% for its
-// Medicine level (exactly tendHeal for a neutral doctor out of a
-// hospital bed).
-func (g *Game) tendHealBy(doctor entity.EntityID, care infection.Care) int {
-	h := tendHeal(care)
-	if _, c, ok := g.tendCareOf(doctor); ok && c == care {
-		if pct := g.medicineHealPct(doctor); pct != infection.HealPct(care) {
-			h = TendHeal * pct / 100
-		}
-	}
-	if pct := g.skillPct(doctor, skill.Medicine, 5, 0, 1000); pct != 100 {
-		h = h * pct / 100
-	}
-	return h
-}
-
-// doctorInfectionPct scales a tend's infection chance by the doctor's
-// Medicine: ×max(10, 100 − 6·(L−7))% (100 for a neutral doctor).
-func (g *Game) doctorInfectionPct(doctor entity.EntityID) int {
-	if doctor == 0 {
-		return 100
-	}
-	return g.skillPct(doctor, skill.Medicine, -6, 10, 1000)
 }
 
 // comfortShift is id's ColdComfort and HeatComfort (tenths of a degree

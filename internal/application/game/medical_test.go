@@ -36,8 +36,10 @@ func TestDoctorRescuesToBedAndTends(t *testing.T) {
 	if !g.tended(patient) {
 		t.Fatal("doctor should tend the patient in bed")
 	}
-	if v := g.VitalOf(patient); v.Injury >= start {
-		t.Fatalf("tending reduces injury: %d -> %d", start, v.Injury)
+	// MED-02: a tend heals nothing at once; it stops the bleeding and
+	// marks every wound tended (they heal faster from now on)
+	if g.needsTending(patient) || g.bleedingNow(patient) || g.VitalOf(patient).Injury > start {
+		t.Fatalf("tended: needs tending %v, bleeding %v, injury %d -> %d", g.needsTending(patient), g.bleedingNow(patient), start, g.VitalOf(patient).Injury)
 	}
 	p := g.Snapshot()[0]
 	if !p.InBed || !p.Lying || !p.Tended || p.CarriedBy != 0 {

@@ -30,7 +30,7 @@ func (g *Game) phaseMedical() {
 		return
 	}
 	g.stepBloodLoss()
-	g.stepInfections(now)
+	g.stepCare(now)   // infection.go (MED-02): infections, races, healing
 	g.sweepPatients() // patients.go (MED-00): the well and the dead leave the index
 }
 

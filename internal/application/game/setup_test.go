@@ -843,9 +843,9 @@ func TestDifficultyHooks(t *testing.T) {
 		infection50, revenge50, infection90 int
 		huntColonists                       bool
 	}{
-		{difficulty.Wanderer, 13, 13, 12, 13, 12, 20, 25, 36, false},
-		{difficulty.Seasoned, 10, 10, 10, 10, 0, 50, 50, 90, true},
-		{difficulty.Merciless, 8, 8, 8, 9, -8, 65, 65, 100, true},
+		{difficulty.Wanderer, 13, 13, 12, 13, 12, 200, 25, 360, false},
+		{difficulty.Seasoned, 10, 10, 10, 10, 0, 500, 50, 900, true},
+		{difficulty.Merciless, 8, 8, 8, 9, -8, 650, 65, 1000, true},
 	}
 	for _, c := range cases {
 		g := bareSetupGame(c.preset)
@@ -854,8 +854,8 @@ func TestDifficultyHooks(t *testing.T) {
 		if !slices.Equal(got, want) {
 			t.Fatalf("%s yields/mood %v, want %v", c.preset, got, want)
 		}
-		if g.infectionPct(50) != c.infection50 || g.revengePct(50) != c.revenge50 || g.infectionPct(90) != c.infection90 {
-			t.Fatalf("%s chances %d %d %d", c.preset, g.infectionPct(50), g.revengePct(50), g.infectionPct(90))
+		if int(g.infectionChance(500)) != c.infection50 || g.revengePct(50) != c.revenge50 || int(g.infectionChance(900)) != c.infection90 { // permille (MED-02)
+			t.Fatalf("%s chances %d %d %d", c.preset, g.infectionChance(500), g.revengePct(50), g.infectionChance(900))
 		}
 		if g.predatorsHuntColonists() != c.huntColonists {
 			t.Fatalf("%s predators hunt colonists %v", c.preset, g.predatorsHuntColonists())
@@ -876,7 +876,7 @@ func TestDifficultyHooks(t *testing.T) {
 		t.Fatal("a mine yield of 1 never rounds to 0")
 	}
 	legacy := New(Config{Width: 10, Height: 10})
-	if legacy.infectionPct(37) != 37 || legacy.revengePct(37) != 37 || !legacy.predatorsHuntColonists() {
+	if legacy.infectionChance(370) != 370 || legacy.revengePct(37) != 37 || !legacy.predatorsHuntColonists() {
 		t.Fatal("legacy hooks must be neutral")
 	}
 }

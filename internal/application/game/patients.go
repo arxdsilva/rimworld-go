@@ -19,9 +19,18 @@ import (
 // give (TestPatientsIndexMatchesScan). It is derived state: never saved,
 // rebuilt on load from the bodies.
 
-// medState is the medical system's runtime state.
+// medState is the medical system's runtime state. legacyWounds holds an
+// older save's per-pawn wound records between loading and migrating them
+// (migrateWoundInfections, infection.go); nil otherwise.
 type medState struct {
-	patients []entity.EntityID // sorted, unique
+	patients     []entity.EntityID // sorted, unique
+	legacyWounds map[entity.EntityID]legacyWound
+}
+
+// indexedPatient reports id in the patients index.
+func (g *Game) indexedPatient(id entity.EntityID) bool {
+	_, found := slices.BinarySearch(g.med.patients, id)
+	return found
 }
 
 // needsCare reports b has something to treat: an open wound, a condition

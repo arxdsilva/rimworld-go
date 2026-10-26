@@ -20,6 +20,8 @@ import "fmt"
 const (
 	// CondNone is no condition.
 	CondNone CondKind = iota
+	// CondInfection is a wound infection on a part (MED-02, cond_infection.go).
+	CondInfection
 	// NumCondKinds counts the kinds (keep last).
 	NumCondKinds
 )
@@ -31,7 +33,7 @@ type CondEntry struct {
 }
 
 // condTables lists every phase's definition table (one line per phase).
-var condTables = [][]CondEntry{}
+var condTables = [][]CondEntry{condsInfection}
 
 // condDefs is every kind's definition, indexed by kind.
 var condDefs = buildCondDefs(condTables)

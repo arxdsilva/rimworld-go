@@ -63,11 +63,14 @@ import (
 // migrateHarvestMarks). v4 (PLAY-020) adds medical beds: an older save's
 // hospital beds become medical (migrateMedicalBeds). v5 (PLAY-021) adds
 // electricity (Power): lamps need power, so an older save's lamps are to
-// become torch lamps (the v < 5 step). migrateSave runs the steps a save's
-// version is missing.
+// become torch lamps (the v < 5 step). v6 (MED-02) makes infections body
+// conditions racing immunity: an older save's per-pawn infections
+// (Wounds, now read only) become infection conditions on each pawn's
+// worst open wound (migrateWoundInfections). migrateSave runs the steps a
+// save's version is missing.
 
 // SaveVersion is the version new saves are written with.
-const SaveVersion = 5
+const SaveVersion = 6
 
 // minSaveVersion is the oldest version Load still reads.
 const minSaveVersion = 1
@@ -215,7 +218,7 @@ type saveState struct {
 
 	Carrying    map[entity.EntityID]entity.EntityID
 	TendedUntil map[entity.EntityID]uint64
-	Wounds      map[entity.EntityID]wound
+	Wounds      map[entity.EntityID]legacyWound // read only: saves up to v5 (migrateWoundInfections)
 	// Research is the first five projects (the pre-NG-1 array, which old
 	// saves decode); ResearchAll is every project and wins when present.
 	Research    research.V1
@@ -414,7 +417,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 		Memories: g.memories, Claims: g.reserve.Export(), Pending: g.pending,
 		AteAt: g.ateAt, Draft: g.draft, SleptAt: g.sleptAt,
 		AnimalIDs: g.animalIDs, Animals: exportStore(g.animals), Equip: g.equip, Traces: g.traces, Wild: g.wild, Wildlife: g.wl,
-		Carrying: g.carrying, TendedUntil: g.tendedUntil, Wounds: g.wounds,
+		Carrying: g.carrying, TendedUntil: g.tendedUntil,
 		Research: g.research.V1(), ResearchAll: g.research.Slice(), NG1: g.exportSetupState(), ResearchCur: g.researchCur, ResearchSet: g.researchSet, RockDamage: g.rockDamage, Residual: g.residual,
 		Motion: g.exportMotion(), Strikes: g.lastStrike, Hits: g.lastHit,
 		Weather: g.weather, Graves: g.graves, Roofs: g.exportRoofs(),
@@ -569,7 +572,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	setMap(&g.equip, s.Equip)
 	setMap(&g.carrying, s.Carrying)
 	setMap(&g.tendedUntil, s.TendedUntil)
-	setMap(&g.wounds, s.Wounds)
+	g.med.legacyWounds = s.Wounds // infection.go: migrated by migrateSave (v < 6)
 	g.research, g.researchCur, g.researchSet = research.FromV1(s.Research), s.ResearchCur, s.ResearchSet
 	if s.ResearchAll != nil {
 		g.research = research.FromSlice(s.ResearchAll)
@@ -668,7 +671,11 @@ func (g *Game) migrateSave(v int) {
 		fallthrough
 	case v < 5:
 		g.migrateLampsToTorches() // PLAY-021: lamps need power now
+		fallthrough
+	case v < 6:
+		g.migrateWoundInfections() // infection.go (MED-02): infections become conditions
 	}
+	g.med.legacyWounds = nil // read only: a v6 save never writes Wounds
 }
 
 // torchFullFuel is a full tank of a torch lamp, in ticks of fuel (the

@@ -29,6 +29,8 @@ const (
 	healthStateID   = "health.state" // MED-01: the headline line
 	healthBloodID   = "health.blood" // MED-01: the blood loss row
 	healthBloodBarH = 3
+	healthCondBarH  = 3  // MED-02: a condition's severity and immunity bars
+	healthCondRowH  = 34 // one condition row: its line and two bars
 	healthAddID     = "health.op.add"
 	healthPickID    = "health.addop"
 	healthPickList  = "health.addop.list"
@@ -42,6 +44,9 @@ const (
 
 // healthRemoveID is the cancel button of queued operation slot i.
 func healthRemoveID(i int) string { return fmt.Sprintf("health.op.rm.%d", i) }
+
+// healthCondID is condition row i (MED-02).
+func healthCondID(i int) string { return fmt.Sprintf("health.cond.%d", i) }
 
 // healthCapColor tints a capacity: red when crippled, amber when impaired.
 func healthCapColor(pct int) color.RGBA {
@@ -78,17 +83,23 @@ func (a *App) healthTab(p game.PawnView, in rect) {
 	upper, ops := body.splitV(body.H * (1 - healthOpsShare))
 	left, right := upper.splitH(upper.W * healthCapsShare)
 	a.healthCaps(left.insetXY(0, 0), h)
-	a.healthParts(rect{right.X + 8, right.Y, right.W - 8, right.H - 6}, h.Parts)
+	partsR := rect{right.X + 8, right.Y, right.W - 8, right.H - 6}
+	if n := len(h.Conditions); n > 0 { // MED-02: the conditions sit under the part rows
+		condH := min(float32(lineStep(tsLabel))+2+float32(n)*healthCondRowH, partsR.H/2)
+		partsR.H -= condH
+		a.healthConds(rect{partsR.X, partsR.bottom(), partsR.W, condH}, h.Conditions)
+	}
+	a.healthParts(partsR, h.Parts)
 	a.healthOps(p, ops, h)
 }
 
-// healthStateColor tints the Health tab's headline: red while bleeding,
-// amber while downed or injured.
+// healthStateColor tints the Health tab's headline: red while bleeding
+// or losing to an infection, amber while downed, injured or fighting one.
 func healthStateColor(h game.HealthView) color.RGBA {
 	switch {
-	case h.BleedPerDay > 0:
+	case h.BleedPerDay > 0, strings.HasSuffix(h.State, ": losing"):
 		return uiDanger
-	case h.State == "Downed" || h.State == "Injured":
+	case h.State == "Downed" || h.State == "Injured" || strings.HasSuffix(h.State, ": winning"):
 		return uiWarning
 	}
 	return uiText
@@ -96,11 +107,78 @@ func healthStateColor(h game.HealthView) color.RGBA {
 
 // healthStateTip is the hover card of the headline.
 func healthStateTip(h game.HealthView) string {
-	if h.BleedPerDay > 0 {
+	switch {
+	case h.BleedPerDay > 0:
 		return fmt.Sprintf("%s\nOpen wounds lose %d%% of the blood a day. Untended, the blood runs out in about %d hours. A tend stops the bleeding.",
 			h.State, h.BleedPerDay, h.DeathInHours)
+	case strings.HasSuffix(h.State, ": losing") && h.DeathInHours >= 0:
+		return fmt.Sprintf("%s\nAt this rate it kills in about %d hours, before immunity builds. A better tend slows it.", h.State, h.DeathInHours)
+	case strings.HasSuffix(h.State, ": winning"):
+		return h.State + "\nImmunity should build before it gets worse. Keep it tended."
 	}
 	return h.State + "\nNothing is bleeding."
+}
+
+// healthCondDue is a condition row's tend marker: "needs tend now",
+// "needs tend in Nh", or "" for one that takes no tending.
+func healthCondDue(c game.ConditionView) string {
+	switch {
+	case c.Due:
+		return "needs tend now"
+	case c.DueInHours > 0:
+		return fmt.Sprintf("needs tend in %dh", c.DueInHours)
+	}
+	return ""
+}
+
+// healthConds is the conditions section under the part rows (MED-02):
+// each condition's name and tend marker, then its severity bar (danger)
+// over its immunity bar (good), with the tooltip from the view.
+func (a *App) healthConds(r rect, conds []game.ConditionView) {
+	a.uiLabel(r.X, r.Y, "Conditions", tsLabel)
+	y := r.Y + float32(lineStep(tsLabel)) + 2
+	step := float32(lineStep(tsBody))
+	u := a.uiSt()
+	for i, c := range conds {
+		if y+healthCondRowH > r.bottom()+1 {
+			break
+		}
+		st := tsBody
+		st.Color = uiWarning
+		if c.Losing {
+			st.Color = uiDanger
+		}
+		due := healthCondDue(c)
+		a.uiLabel(r.X, y, fitText(c.Label, st, r.W-120), st)
+		if due != "" {
+			ds := tsSmall
+			ds.Color, ds.Align = uiTextDim, alignRight
+			if c.Due {
+				ds.Color = uiDanger
+			}
+			a.uiLabel(r.right()-4, y+2, due, ds)
+		}
+		sev := rect{r.X, y + step, r.W - 4, healthCondBarH}
+		imm := rect{r.X, sev.bottom() + 2, r.W - 4, healthCondBarH}
+		sevW := sev.W * float32(min(max(c.SevPct, 0), 100)) / 100
+		immW := imm.W * float32(min(max(c.ImmPct, 0), 100)) / 100
+		u.queue(func(dst *ebiten.Image) {
+			fillRect(dst, sev, uiSliderTrack)
+			fillRect(dst, imm, uiSliderTrack)
+			if sevW > 0 {
+				fillRect(dst, rect{sev.X, sev.Y, sevW, sev.H}, uiDanger)
+			}
+			if immW > 0 {
+				fillRect(dst, rect{imm.X, imm.Y, immW, imm.H}, uiGood)
+			}
+		})
+		label := fmt.Sprintf("%s: severity %d%%, immunity %d%%", c.Label, c.SevPct, c.ImmPct)
+		if due != "" {
+			label += ", " + due
+		}
+		u.add(uiWidget{id: healthCondID(i), r: rect{r.X, y, r.W, healthCondRowH - 2}, label: label, tip: c.Tip})
+		y += healthCondRowH
+	}
 }
 
 // healthBloodTip is the hover card of the blood loss row.
@@ -219,6 +297,9 @@ func (a *App) healthParts(r rect, parts []game.PartView) {
 		}
 		if pt.Bleed > 0 { // MED-01
 			tip += fmt.Sprintf("\nBleeding: %d%%/day", pt.Bleed)
+		}
+		if pt.TendTip != "" { // MED-02: each wound's tend quality
+			tip += "\n" + pt.TendTip
 		}
 		u.add(uiWidget{id: fmt.Sprintf("health.part.%d", rows[v.i]), r: hit, label: healthPartLine(pt), tip: tip})
 	}

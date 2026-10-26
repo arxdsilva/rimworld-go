@@ -9,7 +9,6 @@ import (
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/exposure"
 	"rimworld-go/internal/domain/pawn/health"
-	"rimworld-go/internal/domain/pawn/infection"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/clock"
@@ -261,9 +260,7 @@ func TestColdAndTiredDoesNotFlap(t *testing.T) {
 func TestColdPatientDoesNotFlap(t *testing.T) {
 	g, id := warmHut(t)
 	g.SpawnNamedPawn(3, 10, "Doc")
-	w := g.wounds[id]
-	w.Infection = infection.Sick
-	g.wounds[id] = w
+	g.Infect(id, 20) // sick until immune (MED-02)
 	if !g.patientRest(id) {
 		t.Fatal("setup: should be a patient")
 	}

@@ -3,14 +3,17 @@ package game
 import (
 	"fmt"
 	"slices"
+	"strings"
 
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
+	"rimworld-go/internal/domain/pawn/infection"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/stat"
+	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -130,7 +133,7 @@ func (g *Game) woundBody(b *body.Body, dmg int, kind body.WoundKind, now uint64)
 		left -= b.Damage() - before
 	}
 	if left > 0 { // nothing left to take it: it all lands on the torso
-		b.Wounds = append(b.Wounds, body.Wound{Part: body.Torso, Dmg: left, Kind: kind, At: now})
+		b.Wounds = append(b.Wounds, body.Wound{Part: body.Torso, Dmg: left, Kind: kind, At: now, Size: int32(left)})
 	}
 }
 
@@ -211,51 +214,6 @@ func (g *Game) bodyChanged(id entity.EntityID, b *body.Body, v *health.Record) {
 func (g *Game) consciousEnough(id entity.EntityID) bool {
 	b := g.bodies[id]
 	return b == nil || b.Capacity(body.Consciousness) >= consciousRecover
-}
-
-// healBody heals amount on id's body, tending its open wounds first when
-// tend is set (scars are rolled on the body stream and logged); it reports
-// false for a pawn without a body (an animal).
-func (g *Game) healBody(id entity.EntityID, v *health.Record, amount int, tend bool) bool {
-	b := g.ensureBody(id, v)
-	if b == nil {
-		return false
-	}
-	if tend {
-		b.Tend()
-	}
-	before := scarsByPart(b)
-	if b.Heal(g.stream(streamBody).IntN, amount) {
-		after := scarsByPart(b)
-		for p := body.Part(0); p < body.NumParts; p++ {
-			if after[p] > before[p] {
-				g.logEvent(id, logEntry{Kind: logScarred, Name: "A wound on the " + p.Label() + " healed into a scar"})
-			}
-		}
-	}
-	g.bodyChanged(id, b, v)
-	return true
-}
-
-// scarsByPart counts b's scars on each part.
-func scarsByPart(b *body.Body) (n [body.NumParts]uint8) {
-	for _, w := range b.Wounds {
-		if w.Permanent && w.Part < body.NumParts {
-			n[w.Part]++
-		}
-	}
-	return n
-}
-
-// openInjury reports injury on id a tend can still help: no body yet, an
-// open wound, or Injury set past the body from outside (scars and lost
-// parts alone need no tending).
-func (g *Game) openInjury(id entity.EntityID, v health.Record) bool {
-	if v.Injury <= 0 {
-		return false
-	}
-	b := g.bodies[id]
-	return b == nil || hasOpenWound(b) || v.Injury > b.Damage()
 }
 
 // hasOpenWound reports a wound on b that can still heal, or a fresh
@@ -498,6 +456,7 @@ func (g *Game) healthView(id entity.EntityID) (HealthView, bool) {
 	hv := HealthView{Pain: int(b.Pain()) / 10, Drugs: g.drugLines(id), // drugs.go
 		State: healthState(v, b), BloodLossPct: int(b.BloodLoss) / 10, BleedPerDay: int(b.BleedPerDay()) / 10,
 		DeathInHours: b.BleedDeathHours()} // bleed.go (MED-01)
+	g.conditionRows(id, b, &hv) // MED-02: conditions, the infection headline and its death clock
 	if v.Status == health.Dead {
 		hv.DeathInHours = -1
 	}
@@ -509,7 +468,7 @@ func (g *Game) healthView(id entity.EntityID) (HealthView, bool) {
 	hv.Parts = make([]PartView, 0, len(ps))
 	for _, s := range ps {
 		pv := PartView{Label: s.Label, Status: partStatus(b, s), HP: s.HP, Part: int(s.Part),
-			Bleed: int(b.PartBleedPerDay(s.Part)) / 10}
+			Bleed: int(b.PartBleedPerDay(s.Part)) / 10, TendTip: partTendTip(b, s.Part)}
 		if s.Fitted {
 			pv.Implant = s.Implant.String()
 		}
@@ -576,4 +535,110 @@ func (g *Game) bodyThoughts(id entity.EntityID) []mood.Thought {
 	}
 	d := mood.DefOf(mood.MissingPart)
 	return []mood.Thought{{Kind: mood.MissingPart, Label: d.Label, Value: d.Value}}
+}
+
+// woundKindLabels name body.WoundKind values for the Health tab.
+var woundKindLabels = [...]string{body.Cut: "cut", body.Bruise: "bruise", body.Bite: "bite", body.Scratch: "scratch",
+	body.Burn: "burn", body.Surgical: "surgical cut"}
+
+func woundKindLabel(k body.WoundKind) string {
+	if int(k) < len(woundKindLabels) {
+		return woundKindLabels[k]
+	}
+	return "wound"
+}
+
+// partTendTip lists p's open wounds with their tend quality, one a line
+// ("" when it has none).
+func partTendTip(b *body.Body, p body.Part) string {
+	var lines []string
+	for _, w := range b.Wounds {
+		if w.Part != p || w.Permanent {
+			continue
+		}
+		t := fmt.Sprintf("%s, %d HP: ", woundKindLabel(w.Kind), w.Dmg)
+		if w.Tended {
+			t += fmt.Sprintf("tended %d%%", int(w.TendQ)/10)
+		} else {
+			t += "untended"
+		}
+		lines = append(lines, t)
+	}
+	return strings.Join(lines, "\n")
+}
+
+// conditionRows fills the Health tab's condition rows (MED-02) and lets
+// a condition set the headline when nothing bleeds ("Infection: losing"
+// or "winning") and shorten the death clock.
+func (g *Game) conditionRows(id entity.EntityID, b *body.Body, hv *HealthView) {
+	if len(b.Conds) == 0 {
+		return
+	}
+	now := uint64(g.clock.Now())
+	imm := g.immunityGain(id)
+	losing := false
+	for _, c := range b.Conds {
+		d := body.DefOfCond(c.Kind)
+		tended := now < c.TendUntil
+		cv := ConditionView{Label: conditionLabel(c, d), SevPct: int(c.Sev) / 10, ImmPct: int(c.Immunity) / 10,
+			TendPct: int(c.TendQ) / 10, Losing: infection.Losing(c, d, tended, imm)}
+		if d.TendEvery > 0 {
+			if tended {
+				cv.DueInHours = int((c.TendUntil - now + clock.TicksPerHour - 1) / clock.TicksPerHour)
+			} else {
+				cv.Due = true
+			}
+		}
+		cv.Tip = conditionTip(c, d, cv, tended)
+		losing = losing || cv.Losing
+		hv.Conditions = append(hv.Conditions, cv)
+	}
+	if hv.BleedPerDay == 0 && hv.State != "Dead" {
+		hv.State = "Infection: winning"
+		if losing {
+			hv.State = "Infection: losing"
+		}
+	}
+	if h := g.condDeathHours(id, b); h >= 0 && (hv.DeathInHours < 0 || h < hv.DeathInHours) {
+		hv.DeathInHours = h
+	}
+}
+
+// conditionLabel is a condition row's name: kind, stage and part
+// ("Infection (major), left arm").
+func conditionLabel(c body.Condition, d body.CondDef) string {
+	l := d.Label
+	if l != "" {
+		l = strings.ToUpper(l[:1]) + l[1:]
+	}
+	if int(c.Stage) < len(d.Stages) && d.Stages[c.Stage].Label != "" {
+		l += " (" + d.Stages[c.Stage].Label + ")"
+	}
+	if c.Part != body.Torso || c.Kind == body.CondInfection {
+		l += ", " + c.Part.Label()
+	}
+	return l
+}
+
+// conditionTip is a condition row's hover card: severity and immunity,
+// the tend and its quality, and how the race goes.
+func conditionTip(c body.Condition, d body.CondDef, cv ConditionView, tended bool) string {
+	t := fmt.Sprintf("%s\nSeverity %d%% · immunity %d%%.", cv.Label, cv.SevPct, cv.ImmPct)
+	switch {
+	case tended:
+		t += fmt.Sprintf("\nTended at %d%% quality: slowed by %d%% a day for %d more hours.", cv.TendPct, int(d.TendMax*c.TendQ/1000)/10, cv.DueInHours)
+	case d.TendEvery > 0 && c.TendQ > 0:
+		t += fmt.Sprintf("\nLast tended at %d%% quality; it needs tending again now.", cv.TendPct)
+	case d.TendEvery > 0:
+		t += "\nUntended: it needs a doctor now."
+	}
+	switch {
+	case c.Immunity >= infection.Full:
+		t += "\nImmune: it is receding."
+	case cv.Losing:
+		t += "\nLosing: at this rate it kills before immunity builds. Better tends (skill, medicine, a hospital bed) slow it."
+	default:
+		t += "\nWinning: immunity should build before it gets worse."
+	}
+	return t
 }

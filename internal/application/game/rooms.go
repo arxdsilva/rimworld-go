@@ -5,7 +5,6 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/health"
-	"rimworld-go/internal/domain/pawn/infection"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/recreation"
 	"rimworld-go/internal/domain/sim/entity"
@@ -228,7 +227,7 @@ func (g *Game) appendThoughts(dst []mood.Thought, id entity.EntityID) []mood.Tho
 	case joy >= recreation.Entertained:
 		states = append(states, mood.Entertained)
 	}
-	if g.wounds[id].Infection >= infection.Sick {
+	if g.sick(id) { // infection.go (MED-02)
 		states = append(states, mood.Sick)
 	}
 	if v, _ := g.vital.Get(id); v.Injury >= painInjury {

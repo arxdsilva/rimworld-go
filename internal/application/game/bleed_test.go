@@ -61,11 +61,13 @@ func TestUntendedCutBleedsOut(t *testing.T) {
 			downedAt = h
 		}
 		if v.Status == health.Dead {
-			if h != want || v.Cause != health.CauseBloodLoss {
-				t.Fatalf("died at hour %d of %v, want hour %d of blood loss", h, v.Cause, want)
+			// MED-02: the cut heals a point every 3 hours meanwhile, so it
+			// bleeds a little slower than the first projection
+			if h < want || h > want+1 || v.Cause != health.CauseBloodLoss {
+				t.Fatalf("died at hour %d of %v, want hour %d-%d of blood loss", h, v.Cause, want, want+1)
 			}
-			if downedAt != 8 { // 600 ‰ (extreme: consciousness capped at 10 %) after 8 h
-				t.Fatalf("downed at hour %d, want 8", downedAt)
+			if downedAt < 8 || downedAt > 9 { // 600 ‰ (extreme: consciousness capped at 10 %) after 8 h, 9 with the healing
+				t.Fatalf("downed at hour %d, want 8-9", downedAt)
 			}
 			if _, found := g.patientIndexed(id); found {
 				t.Fatal("the dead leave the patients index")
@@ -294,7 +296,9 @@ func TestHealthViewBleeding(t *testing.T) {
 		t.Fatalf("pawn view bleeding %v %d", pv.Bleeding, pv.BleedDeathHours)
 	}
 	v, _ := g.vital.Get(id)
-	g.healBody(id, &v, 0, true) // tended
+	b := g.bodies[id]
+	b.TendAll(0, uint64(g.clock.Now())) // tended (MED-02)
+	g.bodyChanged(id, b, &v)
 	hv, _ = g.healthView(id)
 	if hv.State != "Injured" || hv.DeathInHours != -1 || hv.BleedPerDay != 0 {
 		t.Fatalf("tended view %+v", hv)
@@ -329,11 +333,11 @@ func TestBloodStateSurvivesSave(t *testing.T) {
 	b := addWound(t, g, id, body.Torso, 10, body.Cut)
 	b.Fresh = 1 << body.HandL
 	b.Missing |= 1 << body.HandL
-	for range 6 { // 3000 ‰/day with the stump: 750 after 6 h
+	for range 6 { // 3000 ‰/day with the stump: 750 after 6 h, less the cut healing a point every 3 h (MED-02)
 		medHour(g)
 	}
 	want := *g.bodies[id]
-	if v, _ := g.vital.Get(id); want.BloodLoss != 750 || want.BloodStage != body.BloodStageExtreme || v.Status != health.Downed {
+	if v, _ := g.vital.Get(id); want.BloodLoss != 744 || want.BloodStage != body.BloodStageExtreme || v.Status != health.Downed {
 		t.Fatalf("fixture: %+v", want)
 	}
 	got := saveLoad(t, g).bodies[id]
@@ -352,8 +356,8 @@ func TestBruisedRaiderGetsUpAndFlees(t *testing.T) {
 	if v, _ := g.vital.Get(rid); v.Status != health.Downed {
 		t.Fatalf("pain shock downs: %+v", v)
 	}
-	for i := 0; i < 40; i++ {
-		g.Step(250)
+	for i := 0; i < 100; i++ { // MED-02: 6 HP at 12 a day lying on the ground: about 12 h
+		g.Step(clock.TicksPerHour / 4)
 		if r, ok := g.raiders[rid]; !ok || r.Mode == raidFlee {
 			break
 		}

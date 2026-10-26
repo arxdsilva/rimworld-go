@@ -116,7 +116,10 @@ func TestGrownGolden(t *testing.T) {
 	// blood loss downs and kills, pain shock and capacities decide downed,
 	// raiders bleed for real instead of a timer. The previous pin still
 	// holds at MED-00 (acd15b55); the new value is stable over -count=2.
-	const want uint64 = 0x9017cd3229fe6e21
+	// Re-pinned (MED-02), behaviour changed by design: tend quality, wiki
+	// healing rates and per-wound infection racing immunity; stable over
+	// -count=2.
+	const want uint64 = 0x15aa8af06fa3437b
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

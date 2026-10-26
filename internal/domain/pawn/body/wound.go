@@ -14,10 +14,6 @@ const (
 	Surgical
 )
 
-// scarChance is the permille chance a closed cut, bite, scratch or burn
-// leaves a permanent scar.
-const scarChance = 100
-
 // scarDmg is the residual damage a scar keeps.
 const scarDmg = 1
 
@@ -28,6 +24,10 @@ const scarDmg = 1
 // (0: untended or tended before quality existed), TendAt the tick it was
 // tended, InfectAt the tick its infection roll is due (0: none due) and
 // Bleed its cached bleed rate (permille of blood per day).
+//
+// MED-02 appends HealAcc, the healing accumulated towards the next HP
+// (milli-HP × hours a day, tend.go), and Size, the damage the wound was
+// made with (scar odds; 0 for wounds older than MED-02).
 type Wound struct {
 	Part      Part
 	Dmg       int
@@ -39,6 +39,8 @@ type Wound struct {
 	TendAt    uint64
 	InfectAt  uint64
 	Bleed     int32
+	HealAcc   int32
+	Size      int32
 }
 
 // Body is one humanlike's wounds, missing parts (a bit per Part),
@@ -147,7 +149,7 @@ func (b *Body) hurtPart(p Part, dmg int, kind WoundKind, now uint64) {
 		}
 		return
 	}
-	b.Wounds = append(b.Wounds, Wound{Part: p, Dmg: dmg, Kind: kind, At: now})
+	b.Wounds = append(b.Wounds, Wound{Part: p, Dmg: dmg, Kind: kind, At: now, Size: int32(dmg)})
 }
 
 // destroy removes p and everything under it, with their wounds and implants.
@@ -176,61 +178,6 @@ func (b *Body) VitalLost() bool {
 		}
 	}
 	return false
-}
-
-// Heal heals amount of damage, smallest open wound first; scarred reports a
-// closed wound that left a permanent scar.
-func (b *Body) Heal(roll func(int) int, amount int) (scarred bool) {
-	for amount > 0 {
-		idx := -1
-		for i, w := range b.Wounds {
-			if w.Permanent {
-				continue
-			}
-			if idx < 0 || w.Dmg < b.Wounds[idx].Dmg {
-				idx = i
-			}
-		}
-		if idx < 0 {
-			return scarred
-		}
-		w := &b.Wounds[idx]
-		if w.Dmg > amount {
-			w.Dmg -= amount
-			return scarred
-		}
-		amount -= w.Dmg
-		w.Dmg = 0
-		switch w.Kind {
-		case Cut, Bite, Scratch, Burn:
-			if roll(1000) < scarChance {
-				w.Dmg, w.Permanent, w.Tended = scarDmg, true, false
-				scarred = true
-				continue
-			}
-		}
-		b.Wounds = append(b.Wounds[:idx], b.Wounds[idx+1:]...)
-	}
-	return scarred
-}
-
-// Tend marks every open wound tended and closes every fresh stump; it
-// returns how many it changed.
-func (b *Body) Tend() int {
-	n := 0
-	for i := range b.Wounds {
-		if !b.Wounds[i].Permanent && !b.Wounds[i].Tended {
-			b.Wounds[i].Tended = true
-			n++
-		}
-	}
-	for p := Part(0); p < NumParts; p++ {
-		if b.Fresh&bit(p) != 0 {
-			n++
-		}
-	}
-	b.Fresh = 0
-	return n
 }
 
 // replaced reports p covered by an implant on itself or an ancestor.

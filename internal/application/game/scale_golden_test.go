@@ -91,12 +91,21 @@ import (
 // the three with no one hurt keep their pins. Same-seed runs identical
 // (TestStepIsDeterministicForSameSeed, TestBodiesAreDeterministic, and
 // TestScaleGolden -count=2 printed the same values).
+// Re-pinned (MED-02 tend quality and immunity): tends roll a quality on the
+// medical stream (no instant heal), wounds heal per wound at the wiki's
+// 8 HP a day (faster tended and lying) in the hourly medical pass instead
+// of a point every 300 ticks, scars are rolled on the wound's depth, and
+// infection rolls come 6–18 h after the wound on the medical stream (no
+// longer g.rng). The same three runs with a hurt colonist move; the three
+// with no one hurt keep their pins. Same-seed runs identical
+// (TestStepIsDeterministicForSameSeed, TestBodiesAreDeterministic, and
+// TestScaleGolden -count=2 printed the same values).
 var scaleGolden = map[string]uint64{
-	"48x40/seed1":    0xd35284b973bbfa13,
+	"48x40/seed1":    0xe0741d9f0ddd90e8,
 	"48x40/seed7":    0xee46a1f4ce740cae,
-	"48x40/seed42":   0x2e19907738249db9,
+	"48x40/seed42":   0xb1380f278ba0cb52,
 	"120x120/seed1":  0x24d9b4a5e97f473a,
-	"120x120/seed7":  0x9b0c8eb684a7186a,
+	"120x120/seed7":  0x4118850af9407833,
 	"120x120/seed42": 0x4b3e98040be7af43,
 }
 

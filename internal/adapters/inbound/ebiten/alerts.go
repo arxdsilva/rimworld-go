@@ -47,6 +47,9 @@ const (
 	// bleedAlertHours: a colonist this close to bleeding out raises the
 	// "bleeding" alert (MED-01).
 	bleedAlertHours = 12
+	// untendedAlertHours: a colonist's open wound left untended this long
+	// raises the "untended" alert (MED-02).
+	untendedAlertHours = 4
 )
 
 // buildAlerts derives the current alerts from pawns and the world, most
@@ -114,11 +117,17 @@ func raiseAlerts(pawns []game.PawnView, w game.WorldView) []alert {
 	}
 	out = append(out, animalAlerts(w)...)
 
-	var rescue, starving, collapsed, unhappy, bleeding []game.PawnView
+	var rescue, starving, collapsed, unhappy, bleeding, infected, untended []game.PawnView
 	alive := 0
 	for _, p := range pawns {
 		if p.Status != "dead" && p.Bleeding && p.BleedDeathHours <= bleedAlertHours {
 			bleeding = append(bleeding, p)
+		}
+		if p.Status != "dead" && p.Infection > 0 && p.InfectionLosing { // MED-02
+			infected = append(infected, p)
+		}
+		if p.Status != "dead" && p.Wounded && p.UntendedHours >= untendedAlertHours {
+			untended = append(untended, p)
 		}
 		switch {
 		case p.Status == "dead":
@@ -136,6 +145,8 @@ func raiseAlerts(pawns []game.PawnView, w game.WorldView) []alert {
 		}
 	}
 	group("bleeding", true, bleeding, func(n string) string { return n + " is bleeding out" }, "colonists are bleeding out")
+	group("infection", false, infected, func(n string) string { return n + " is losing to an infection" }, "colonists are losing to infections")
+	group("untended", false, untended, func(n string) string { return n + " has an untended wound" }, "colonists have untended wounds")
 	group("rescue", true, rescue, func(n string) string { return n + " needs rescue" }, "colonists need rescue")
 	group("starving", true, starving, func(n string) string { return n + " is starving" }, "colonists are starving")
 	group("collapsed", false, collapsed, func(n string) string { return n + " collapsed from exhaustion" }, "colonists collapsed")
@@ -585,6 +596,8 @@ func waitingFramesAlert(w game.WorldView) (alert, bool) {
 // ("penopen.3") share the text of their prefix.
 var alertExplanations = map[string]string{
 	"bleeding":      "A colonist will bleed to death within hours. Get a doctor to tend the wounds now: a tend stops the bleeding at once, with or without medicine.",
+	"infection":     "An infection is set to kill a colonist before their immunity builds. Keep it tended every 12 hours with the best medicine you have, by your most skilled doctor, ideally in a hospital bed.",
+	"untended":      "A colonist's wound has gone untended for hours. Untended wounds bleed, heal slowly and fester more often. Let a doctor tend it, or let the colonist rest so a doctor can reach them.",
 	"hostile":       "Wild animals are attacking colonists. Draft your fighters and keep everyone else indoors until the threat is dead or gone.",
 	"fire":          "Something inside the colony is burning, and fire spreads along wood and dry grass. Send colonists to put it out and clear what it can reach.",
 	"animalhungry":  "Tame animals are running low on food. Put something they eat within reach, or build a feeding trough in their pen.",

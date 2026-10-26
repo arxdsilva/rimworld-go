@@ -1,10 +1,8 @@
 package game
 
 import (
-	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
-	"rimworld-go/internal/domain/pawn/infection"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/geology"
 )
@@ -57,10 +55,11 @@ func supplyHave(fr construction.Frame, k item.Kind) int {
 const severeInjury = 50
 
 const (
-	// bedHealPct is a tend's healing for a patient lying in a hospital bed;
-	// bedInfectionPct the share of the infection chance that remains.
-	bedHealPct      = 115
-	bedInfectionPct = 50
+	// hospitalTendOffset is added to the quality of a tend on a patient
+	// in a hospital bed (permille; MED-02). wiki: Hospital bed (+10 %
+	// medical tend quality). Lying in it also heals faster
+	// (body.LieHospital, lyingHeal in infection.go).
+	hospitalTendOffset = 100
 	// cabinetPct is the bench work bonus of one tool cabinet; cabinetMax
 	// cabinets count; cabinetReach is how near (Chebyshev tiles) they must be.
 	cabinetPct   = 6
@@ -76,7 +75,7 @@ func isMedicine(k item.Kind) bool { return k == item.HerbalMedicine || k == item
 // each falling back to the other.
 func (g *Game) medicineTiers(patient entity.EntityID) [2]item.Kind {
 	v, _ := g.vital.Get(patient)
-	if v.Injury >= severeInjury || g.wounds[patient].Infection > 0 {
+	if _, infected := g.worstInfection(patient); v.Injury >= severeInjury || infected {
 		return [2]item.Kind{item.IndustrialMedicine, item.HerbalMedicine}
 	}
 	return [2]item.Kind{item.HerbalMedicine, item.IndustrialMedicine}
@@ -90,52 +89,6 @@ func (g *Game) inHospitalBed(patient entity.EntityID) bool {
 	}
 	b, _ := g.bldgs.Get(bid)
 	return b.Kind == construction.HospitalBed
-}
-
-// infectionChance is the percent chance a tend with care c leaves a
-// wound infected: halved (rounded up) for a patient in a hospital bed.
-func (g *Game) infectionChance(patient entity.EntityID, c infection.Care) int {
-	pct := infection.Chance(c)
-	if g.inHospitalBed(patient) {
-		pct = (pct*bedInfectionPct + 50) / 100
-	}
-	return pct
-}
-
-// tendCareOf is the treatment doctor's current tend job gives: what it
-// carries, or none yet. The patient is the job's target.
-func (g *Game) tendCareOf(doctor entity.EntityID) (patient entity.EntityID, c infection.Care, ok bool) {
-	j, found := g.jobs.Get(doctor)
-	if !found || j.Kind != job.Tend {
-		return 0, infection.Untreated, false
-	}
-	return j.Target, g.tendCare(doctor, j.Target, j), true
-}
-
-// medicineHealPct is the percent of a plain tend's healing (TendHeal)
-// that doctor's current tend job mends: the medicine tier it carries
-// times the hospital bed bonus. 100 when doctor is not tending.
-func (g *Game) medicineHealPct(doctor entity.EntityID) int {
-	patient, c, ok := g.tendCareOf(doctor)
-	if !ok {
-		return 100
-	}
-	pct := infection.HealPct(c)
-	if g.inHospitalBed(patient) {
-		pct = pct * bedHealPct / 100
-	}
-	return pct
-}
-
-// medicineInfectionPct is the percent chance that doctor's current tend
-// leaves the wound infected (care tier, halved in a hospital bed). 0 when
-// doctor is not tending.
-func (g *Game) medicineInfectionPct(doctor entity.EntityID) int {
-	patient, c, ok := g.tendCareOf(doctor)
-	if !ok {
-		return 0
-	}
-	return g.infectionChance(patient, c)
 }
 
 // cabinetState caches tool cabinet counts per bench for one structVer.

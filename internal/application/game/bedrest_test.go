@@ -10,6 +10,7 @@ import (
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/needs"
+	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -25,10 +26,12 @@ func restingIn(g *Game, id, bid entity.EntityID) bool {
 func setInjury(g *Game, id entity.EntityID, hp int, open bool) {
 	v, _ := g.vital.Get(id)
 	v.Injury = hp
-	g.vital.Set(id, v)
-	if open {
-		g.woundOpened(id)
+	b := g.ensureBody(id, &v) // MED-02: the injury becomes wounds on the body
+	if !open {
+		b.TendAll(500, uint64(g.clock.Now())) // closed: already tended
 	}
+	g.bodyChanged(id, b, &v)
+	g.woundOpened(id)
 }
 
 // restFed keeps every colonist fed and rested while stepping n ticks.
@@ -107,7 +110,7 @@ func TestInjuredColonistRestsUntilHealed(t *testing.T) {
 		t.Fatal("a colonist in pain lies down in bed")
 	}
 	start := g.rest.since[pat]
-	for i := 0; i < 40000 && g.onBedRest(pat); i++ {
+	for i := 0; i < 3*clock.TicksPerDay && g.onBedRest(pat); i++ { // MED-02: wounds heal about 20 HP a day in bed, tended
 		v, _ := g.vital.Get(pat)
 		if g.healingInjury(pat, v) > restWellInjury && !restingIn(g, pat, bed) {
 			j, _ := g.jobs.Get(pat)
@@ -252,7 +255,7 @@ func TestPatientPrefersMedicalBedThenGivesItBack(t *testing.T) {
 	if b, _ := g.bldgs.Get(own); b.Claimant != uint64(pat) || g.rest.bed[pat] != med {
 		t.Fatalf("its own bed stays its own (claimant %d), the medical one is a stay (%v)", b.Claimant, g.rest.bed[pat])
 	}
-	if !restFedUntil(g, 40000, func() bool { return !g.onBedRest(pat) && !restingIn(g, pat, med) }) {
+	if !restFedUntil(g, 3*clock.TicksPerDay, func() bool { return !g.onBedRest(pat) && !restingIn(g, pat, med) }) { // MED-02: wiki healing rates
 		t.Fatal("well again, the patient gets up")
 	}
 	restFed(g, 2)

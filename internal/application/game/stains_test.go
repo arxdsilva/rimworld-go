@@ -181,7 +181,7 @@ func TestBleedingColonistDripsEvery3Tiles(t *testing.T) {
 	}
 	// a tended wound (MED-01) no longer bleeds, and resets the count
 	g.stainStep(id, Position{13, 3})
-	b.Tend()
+	b.TendAll(0, 0)
 	g.stainStep(id, Position{14, 3})
 	if g.stains.dripN[id] != 0 {
 		t.Fatalf("count not reset: %v", g.stains.dripN)
@@ -212,7 +212,7 @@ func TestTendedColonistStopsDripping(t *testing.T) {
 	b := hurtWound(t, g, id, 25)
 	g.stainStep(id, Position{9, 3})
 	g.stainStep(id, Position{10, 3})
-	b.Tend() // a tend stops the bleeding (MED-01)
+	b.TendAll(0, 0) // a tend stops the bleeding (MED-01)
 	g.stainStep(id, Position{11, 3})
 	if len(g.stains.tiles) != 0 || g.stains.dripN[id] != 0 {
 		t.Fatalf("tended colonist dripped: %v %v", g.stains.tiles, g.stains.dripN)
@@ -289,7 +289,7 @@ func TestDownedPools(t *testing.T) {
 	g2 := stainGame(t)
 	id2, _ := g2.SpawnNamedPawn(5, 5, "Ada")
 	b2 := hurtWound(t, g2, id2, 10)
-	b2.Tend()
+	b2.TendAll(0, 0)
 	g2.stainDowned(id2, hour)
 	if len(g2.stains.tiles) != 0 {
 		t.Fatal("tended body pooled")

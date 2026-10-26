@@ -342,13 +342,13 @@ func (g *Game) cmdSetDifficulty(v string) {
 
 // --- difficulty hooks -------------------------------------------------------
 
-// infectionPct scales a wound's infection chance by the difficulty
-// (clamped 0..100); a legacy colony's is unchanged.
-func (g *Game) infectionPct(base int) int {
+// infectionChance scales a wound's infection chance (permille) by the
+// difficulty, clamped 0..1000 (MED-02); a legacy colony's is unchanged.
+func (g *Game) infectionChance(base int32) int32 {
 	if !g.hasSetup() {
 		return base
 	}
-	return min(max(base*g.ng.setup.Difficulty.Infection/100, 0), 100)
+	return min(max(base*int32(g.ng.setup.Difficulty.Infection)/100, 0), 1000)
 }
 
 // revengePct scales an animal's revenge chance by the difficulty.

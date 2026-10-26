@@ -218,8 +218,10 @@ func pawnStatusLines(p game.PawnView, name func(entity.EntityID) string) []strin
 		out = append(out, fmt.Sprintf("Bleeding (death in %dh)", p.BleedDeathHours))
 	}
 	switch {
+	case p.Infection > 0 && p.InfectionLosing: // MED-02: the race against immunity
+		out = append(out, fmt.Sprintf("Infection: losing (%d%%)", p.Infection))
 	case p.Infection > 0:
-		out = append(out, fmt.Sprintf("Infection %d%%", p.Infection))
+		out = append(out, fmt.Sprintf("Infection: winning (%d%%)", p.Infection))
 	case p.Wounded:
 		out = append(out, "Wound untended")
 	}

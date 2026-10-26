@@ -105,8 +105,8 @@ func TestInjuryDownsThenHeals(t *testing.T) {
 	if g.Snapshot()[0].Reason != "injured" || g.Snapshot()[0].Health != 25 {
 		t.Fatalf("view: %+v", g.Snapshot()[0])
 	}
-	g.SetNeeds(p, 1<<20, 1<<20) // keep needs out of the way
-	for i := 0; i < 100 && g.VitalOf(p).Status != health.Alive; i++ {
+	g.SetNeeds(p, 1<<20, 1<<20)                                       // keep needs out of the way
+	for i := 0; i < 220 && g.VitalOf(p).Status != health.Alive; i++ { // MED-02: 15 HP at 12 a day on the ground
 		g.Step(500)
 		g.SetNeeds(p, 1<<20, 1<<20)
 	}

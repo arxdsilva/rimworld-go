@@ -219,7 +219,7 @@ func TestPawnPaneStatusLines(t *testing.T) {
 	s.pawns[0].Infection = 40
 	s.pawns[0].Wounded = true
 	s.pawns[0].Status, s.pawns[0].Reason = "downed", "bleeding"
-	for _, w := range []string{"Drafted", "MENTAL BREAK: berserk", "Hypothermia 25%", "Infection 40%", "Downed (bleeding)", "Waiting for"} {
+	for _, w := range []string{"Drafted", "MENTAL BREAK: berserk", "Hypothermia 25%", "Infection: winning (40%)", "Downed (bleeding)", "Waiting for"} {
 		if !has(w) {
 			t.Errorf("status lines lack %q: %q", w, a.pawnPane(1).Lines)
 		}

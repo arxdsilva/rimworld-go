@@ -8,7 +8,8 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/economy/item"
-	"rimworld-go/internal/domain/pawn/infection"
+	"rimworld-go/internal/domain/pawn/body"
+	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
@@ -345,9 +346,7 @@ func TestMedicineChoiceNoFlap(t *testing.T) {
 	if tiers := g.medicineTiers(patient); tiers[0] != item.IndustrialMedicine || tiers[1] != item.HerbalMedicine {
 		t.Fatalf("an infected patient: %v", tiers)
 	}
-	w := g.wounds[patient]
-	w.Infection = 0
-	g.wounds[patient] = w
+	g.bodies[patient].RemoveCond(body.CondInfection) // MED-02: infections are conditions
 	// a severe injury: the dose is picked at the start and carried, so it
 	// never changes mid-job even when the patient stops being a severe case
 	g.Injure(patient, 75)
@@ -399,10 +398,21 @@ func TestMedicineChoiceNoFlap(t *testing.T) {
 	}
 }
 
-func TestIndustrialCareHeals(t *testing.T) {
+// TestIndustrialCareTendsBest (MED-02): with the same doctor, an
+// industrial tend's quality always reaches at least the best herbal one
+// (potency 1000 vs 600, max 1000 vs 700).
+func TestIndustrialCareTendsBest(t *testing.T) {
 	t.Parallel()
-	if got := tendHeal(infection.IndustrialMedicine); got != 20 || got <= tendHeal(infection.Medicine) {
-		t.Fatalf("industrial tend mends %d, want 20 (2.5x)", got)
+	g := New(Config{Seed: 2, Width: 12, Height: 8})
+	doc, _ := g.SpawnNamedPawn(4, 5, "Doc")
+	patient, _ := g.SpawnNamedPawn(5, 5, "Patient")
+	minInd, maxHerb := int32(1<<30), int32(0)
+	for i := 0; i < 40; i++ {
+		minInd = min(minInd, g.tendQualityFor(doc, patient, item.IndustrialMedicine))
+		maxHerb = max(maxHerb, g.tendQualityFor(doc, patient, item.HerbalMedicine))
+	}
+	if minInd < maxHerb || maxHerb > 700 {
+		t.Fatalf("industrial at least %d, herbal at most %d", minInd, maxHerb)
 	}
 }
 
@@ -438,46 +448,43 @@ func TestToolCabinetBonusCap(t *testing.T) {
 	}
 }
 
+// TestHospitalBedHeal (MED-02): a hospital bed adds 10 % to a tend's
+// quality and heals faster than a bed, which heals faster than the
+// ground; standing gets no lying bonus.
 func TestHospitalBedHeal(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 2, Width: 20, Height: 12})
 	patient, _ := g.SpawnNamedPawn(5, 5, "Patient")
 	doc, _ := g.SpawnNamedPawn(4, 5, "Doc")
-	g.jobs.Set(doc, job.Record{Kind: job.Tend, Target: patient})
-	// on the ground: a plain tend, the full infection chance
-	if g.medicineHealPct(doc) != 100 || g.medicineInfectionPct(doc) != infection.Chance(infection.Tended) {
-		t.Fatalf("plain tend: heal %d infection %d", g.medicineHealPct(doc), g.medicineInfectionPct(doc))
+	mean := func() int32 {
+		var sum int32
+		for i := 0; i < 60; i++ {
+			sum += g.tendQualityFor(doc, patient, noMedicine)
+		}
+		return sum / 60
 	}
-	// a hospital bed adds 15% healing and halves the infection chance
+	floor := mean()
+	if g.lyingHeal(patient) != 0 {
+		t.Fatal("standing: no lying bonus")
+	}
 	bid := buildNow(t, g, construction.HospitalBed, item.Steel, construction.South, 5, 5)
 	b, _ := g.bldgs.Get(bid)
 	g.bldgs.Set(bid, b.Claim(uint64(patient)))
 	if !g.inHospitalBed(patient) {
 		t.Fatal("the patient lies in the hospital bed")
 	}
-	if got := g.medicineHealPct(doc); got != 115 {
-		t.Fatalf("hospital bed heal %d%%, want 115", got)
+	if g.lyingHeal(patient) != body.LieHospital {
+		t.Fatalf("hospital bed heal %d", g.lyingHeal(patient))
 	}
-	if got := g.medicineInfectionPct(doc); got != 6 {
-		t.Fatalf("hospital bed infection chance %d%%, want 6 (half of 12)", got)
+	if bed := mean(); bed < floor+hospitalTendOffset*3/4 {
+		t.Fatalf("tend quality in a hospital bed %d, on the floor %d: want about +%d", bed, floor, hospitalTendOffset)
 	}
-	// with industrial medicine in hand: 2.5x, then the bed on top
-	g.stacks.Set(900, item.Stack{Kind: item.IndustrialMedicine, Qty: 1, Carrier: doc})
-	g.itemIDs = append(g.itemIDs, 900)
-	g.jobs.Set(doc, job.Record{Kind: job.Tend, Target: patient, Carry: 900})
-	if got := g.medicineHealPct(doc); got != 250*115/100 {
-		t.Fatalf("industrial in a hospital bed heals %d%%, want %d", got, 250*115/100)
-	}
-	if got := g.medicineInfectionPct(doc); got != 1 {
-		t.Fatalf("industrial in a hospital bed infection %d%%", got)
-	}
-	// not tending: neutral
-	other, _ := g.SpawnNamedPawn(9, 9, "Idle")
-	if g.medicineHealPct(other) != 100 || g.medicineInfectionPct(other) != 0 {
-		t.Fatal("an idle colonist has no medicine bonus")
+	g.down(patient, health.CauseInjury)
+	g.removeBuilding(bid)
+	if g.lyingHeal(patient) != body.LieGround {
+		t.Fatalf("downed on the ground heals %d", g.lyingHeal(patient))
 	}
 }
-
 func TestRescuePrefersHospitalBed(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 2, Width: 20, Height: 12})

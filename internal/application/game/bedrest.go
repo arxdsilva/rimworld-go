@@ -8,7 +8,6 @@ import (
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/pawn/health"
-	"rimworld-go/internal/domain/pawn/infection"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
@@ -144,14 +143,14 @@ func (g *Game) healingInjury(id entity.EntityID, v health.Record) int {
 // an operation.
 func (g *Game) needsBedRest(id entity.EntityID) bool {
 	v, _ := g.vital.Get(id)
-	return g.healingInjury(id, v) >= painInjury || g.wounds[id].Infection >= infection.Sick ||
+	return g.healingInjury(id, v) >= painInjury || g.sick(id) ||
 		g.needsTending(id) || g.awaitingSurgery(id)
 }
 
 // restOver: a resting colonist is well enough to get up.
 func (g *Game) restOver(id entity.EntityID) bool {
 	v, _ := g.vital.Get(id)
-	return g.healingInjury(id, v) <= restWellInjury && g.wounds[id].Infection < infection.Sick &&
+	return g.healingInjury(id, v) <= restWellInjury && !g.sick(id) &&
 		!g.needsTending(id) && !g.awaitingSurgery(id)
 }
 

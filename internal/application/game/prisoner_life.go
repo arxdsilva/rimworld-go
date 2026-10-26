@@ -249,7 +249,7 @@ func (g *Game) prisonerPawnView(id entity.EntityID) PawnView {
 	pv.InBed = g.inBed(id)
 	pv.CarriedBy = g.carriedBy(id)
 	pv.Tended = g.tended(id)
-	pv.Infection, pv.Wounded = g.wounds[id].Infection, g.wounds[id].At != 0 && v.Injury > 0
+	pv.Infection, pv.Wounded = g.woundView(id) // infection.go (MED-02)
 	g.fillPawnAction(&pv, id, j)
 	return pv
 }

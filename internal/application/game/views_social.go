@@ -66,12 +66,17 @@ type HealthView struct {
 
 // ConditionView is one condition row of the Health tab: severity,
 // immunity and tend quality in percent, Due when it needs tending now,
-// and the tooltip text.
+// and the tooltip text. MED-02: TendPct is the last tend's quality (0:
+// never tended), DueInHours the whole hours until it needs its next tend
+// (0 when Due or it takes no tending), Losing whether it is on course to
+// kill before immunity wins.
 type ConditionView struct {
 	Label                   string
 	SevPct, ImmPct, TendPct int
 	Due                     bool
 	Tip                     string
+	DueInHours              int
+	Losing                  bool
 }
 
 // OperationOptionView is one operation the Health tab can queue:
@@ -99,6 +104,9 @@ type PartView struct {
 	Part    int    // body.Part (SIM-049)
 	Implant string // fitted implant's name, "" if none
 	Bleed   int    // the part's bleeding, percent of blood per day (MED-01)
+	// TendTip lists the part's open wounds with their tend quality, one
+	// a line ("cut, 6 HP: tended 74%"; "" when none; MED-02).
+	TendTip string
 }
 
 // OperationView is one queued operation.

@@ -79,7 +79,7 @@ func TestStepBlood(t *testing.T) {
 	if h := b.BleedDeathHours(); h != 16 {
 		t.Fatalf("death in %d h", h)
 	}
-	b.Tend()
+	b.TendAll(0, 0)
 	if b.BleedPerDay() != 0 || b.BleedDeathHours() != -1 {
 		t.Fatal("tending stops the bleeding")
 	}
@@ -110,7 +110,7 @@ func TestPainPerHP(t *testing.T) {
 	if open.Pain() != 100 { // 12.5 per HP
 		t.Fatalf("open pain %d", open.Pain())
 	}
-	open.Tend()
+	open.TendAll(0, 0)
 	if open.Pain() != 100 {
 		t.Fatalf("tending keeps pain: %d", open.Pain())
 	}
@@ -137,7 +137,7 @@ func TestFreshStumpHurtsAndBleedsUntilTended(t *testing.T) {
 	if b.FreshStump(HandL) || !b.FreshStump(ArmL) || b.BleedPerDay() != 35*2*60 {
 		t.Fatalf("stumps %b bleed %d", b.Fresh, b.BleedPerDay())
 	}
-	if b.Tend() != 1 || b.Fresh != 0 || b.BleedPerDay() != 0 || b.Pain() != 0 {
+	if b.TendAll(0, 0) != 1 || b.Fresh != 0 || b.BleedPerDay() != 0 || b.Pain() != 0 {
 		t.Fatalf("tended stump: bleed %d pain %d", b.BleedPerDay(), b.Pain())
 	}
 	b.hurtPart(LegL, 40, Burn, 0) // a burn sears the stump shut

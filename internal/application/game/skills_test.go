@@ -106,8 +106,8 @@ func TestNeutralPawnTimingsUnchanged(t *testing.T) {
 	if g.skillYield(happy, skill.Plants, 7) != 7 || g.butcherYield(happy, 13) != 13 || g.tameChance(happy, 37) != 37 {
 		t.Error("yields moved for a neutral pawn")
 	}
-	if g.researchPoints(1) != 1 || g.tendHealBy(happy, 0) != tendHeal(0) || g.doctorInfectionPct(happy) != 100 {
-		t.Error("research or medicine moved for a neutral pawn")
+	if g.researchPoints(1) != 1 { // tends: TestTendQualityFormula (MED-02)
+		t.Error("research moved for a neutral pawn")
 	}
 	if g.breakOffset(happy) != 0 || g.painShockAt(happy) != health.PainShock {
 		t.Error("break or downed threshold moved")

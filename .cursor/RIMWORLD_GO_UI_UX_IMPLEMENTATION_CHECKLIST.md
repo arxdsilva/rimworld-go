@@ -670,14 +670,14 @@ understandable.
 
 ## 10.3 Conditions
 
--   [ ] **Disease/health-effect list**
+-   [-] **Disease/health-effect list** (MED-02: Health-tab conditions section lists infections; diseases arrive in MED-04)
     -   Name.
     -   severity.
     -   stage.
     -   immunity.
     -   treatment quality.
     -   progression.
--   [ ] **Immunity vs disease visualization**
+-   [x] **Immunity vs disease visualization** (MED-02: red severity bar beside a green immunity bar, "needs tend in Nh" marker, losing/winning in the pawn status and an infection alert)
     -   Easy to compare which is winning.
 
 ## 10.4 Medical settings
@@ -701,7 +701,7 @@ understandable.
 
 -   [ ] **Capacity breakdown tooltip**
     -   Show which injuries/body parts/effects cause final capacity.
--   [ ] **Treatment tooltip**
+-   [x] **Treatment tooltip** (MED-02: each wound's tend quality and the tend window in part-row tooltips; condition tooltips show the last tend quality)
     -   Tend quality, remaining duration, medicine used.
 -   [ ] **Prognosis information**
     -   Avoid omniscient information the simulation does not intend to

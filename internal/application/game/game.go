@@ -111,6 +111,11 @@ type PawnView struct {
 	// Infection severity (0-100, 0: none); Wounded: an open, untended wound.
 	Infection int
 	Wounded   bool
+	// InfectionLosing: an infection is on course to kill before immunity
+	// wins at today's tend; UntendedHours is how long the oldest untended
+	// open wound has waited (whole hours, 0: none) (MED-02).
+	InfectionLosing bool
+	UntendedHours   int
 	// MED-00 (filled by MED-01/MED-03): Bleeding, the body is losing
 	// blood; CareLevel, the pawn's medical care policy (medcare.Policy).
 	// BleedDeathHours is the hours left before bleeding out (MED-01;
@@ -659,8 +664,6 @@ type Game struct {
 
 	carrying    map[entity.EntityID]entity.EntityID // rescuer -> patient
 	tendedUntil map[entity.EntityID]uint64
-	// wounds: open wounds and infections of colonists.
-	wounds map[entity.EntityID]wound
 	// research progress and the current project (researchSet: one is picked)
 	research research.Progress
 	// rockDamage: rock tiles sappers are hacking through.
@@ -819,7 +822,6 @@ func New(cfg Config) *Game {
 		equip:       make(map[entity.EntityID]item.Kind),
 		carrying:    make(map[entity.EntityID]entity.EntityID),
 		tendedUntil: make(map[entity.EntityID]uint64),
-		wounds:      make(map[entity.EntityID]wound),
 		rockDamage:  make(map[[2]int]int),
 		research:    research.Complete(), // sandbox: everything known
 		motion:      component.NewStore[motionRec](),
@@ -1065,7 +1067,8 @@ func (g *Game) snapshot() []PawnView {
 		pv.Mood, pv.MoodLabel, pv.Thoughts = mood.Level(ts), mood.Label(mood.Level(ts)), thoughtViews(ts)
 		g.fillSocialPawn(pv, pv.Mood) // social_view.go: smoothed mood, target, bubble (ENG-003)
 		pv.Health = v.HP() * 100 / health.MaxHP
-		pv.Infection, pv.Wounded = g.wounds[id].Infection, g.wounds[id].At != 0 && v.Injury > 0
+		pv.Infection, pv.Wounded = g.woundView(id) // infection.go (MED-02)
+		pv.InfectionLosing, pv.UntendedHours = g.infectionLosing(id), g.untendedHours(id)
 		pv.Bleeding, pv.BleedDeathHours = g.bleedingNow(id), g.bleedDeathHours(id) // bleed.go (MED-01)
 		pv.Weapon = weaponDefOf(g, id).Name
 		pv.Lying = v.Status != health.Alive || (j.Kind == job.Sleep && (j.State == job.Do || j.State == job.Complete))

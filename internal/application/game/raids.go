@@ -567,7 +567,6 @@ func (g *Game) removeRaider(id entity.EntityID) {
 	g.jobs.Delete(id)
 	g.need.Delete(id)
 	g.vital.Delete(id)
-	delete(g.wounds, id) // infection.go: no one is left to tend
 	delete(g.equip, id)
 	delete(g.raiders, id)
 	delete(g.logs, id)

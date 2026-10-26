@@ -275,34 +275,22 @@ func (g *Game) dieBy(id entity.EntityID, cause health.Cause, killer entity.Entit
 	g.mourn(id)
 }
 
-// heal regenerates injury over time and stands injured pawns back up.
+// heal: humanlikes heal by the wound, an hour at a time, in the medical
+// phase (stepCare, infection.go; MED-02), which also stands them up. On
+// its cadence this only catches a hurt pawn the patients index does not
+// know: one with no body yet (an older save) or an Injury set from
+// outside; ensureBody turns that injury into wounds and it joins the
+// patients.
 func (g *Game) heal(id entity.EntityID, v *health.Record, now uint64) {
-	if v.Injury <= 0 {
+	if v.Injury <= 0 || (now+uint64(id))%health.HealTicks != 0 {
 		return
 	}
-	every := uint64(health.HealTicks)
-	j, _ := g.jobs.Get(id)
-	switch {
-	case g.inBed(id):
-		every /= 2
-	case v.Status == health.Downed:
-		every *= 2
-	case j.Kind == job.Sleep && j.State == job.Do && g.sleptAt[id] != 0:
-		every /= 2
-	}
-	if g.tended(id) {
-		every /= 2
-	}
-	if (now+uint64(id))%every != 0 {
+	if b := g.bodies[id]; b != nil && (g.indexedPatient(id) || v.Injury == b.Damage()) {
 		return
 	}
-	if !g.healBody(id, v, 1, false) { // body.go: smallest open wound first; may scar
-		v.Injury--
+	if b := g.ensureBody(id, v); b != nil {
+		g.bodyChanged(id, b, v) // patients.go: joins the index while it needs care
 	}
-	if v.Status == health.Downed && v.Cause == health.CauseInjury && g.standsUp(id, *v) { // bleed.go: past the band
-		v.Status, v.Cause = health.Alive, health.CauseNone
-	}
-	g.vital.Set(id, *v)
 }
 
 // doCombat runs a Hunt or Attack job: close in until the target is in

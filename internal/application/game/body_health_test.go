@@ -6,7 +6,6 @@ import (
 	"reflect"
 	"testing"
 
-	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
@@ -75,63 +74,59 @@ func TestDownedAndDeathThresholdsUnchanged(t *testing.T) {
 	}
 }
 
-func TestHealingSpeedUnchangedForAPlainWound(t *testing.T) {
+// TestPlainWoundHealsAtWikiRate (MED-02; replaces the old 300-tick
+// cadence): an untended bruise on a standing colonist heals 8 HP a day,
+// a point every 3 hours, and Injury follows the body.
+func TestPlainWoundHealsAtWikiRate(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 12, Height: 8})
 	p, _ := g.SpawnNamedPawn(4, 4, "Ada")
-	g.setPriority(p, work.Doctor, 0) // no self-tending: plain healing only
-	g.hurt(p, 6, 0)                  // bruises: they never scar
-	prev := g.VitalOf(p).Injury
-	for i := 0; i < 6*health.HealTicks+health.HealTicks && prev > 0; i++ {
-		g.SetNeeds(p, 1<<20, 1<<20)
-		g.Step(1)
-		now := uint64(g.clock.Now())
+	addWound(t, g, p, body.LegL, 6, body.Bruise) // bruises never scar
+	for h := 1; h <= 18; h++ {
+		medHour(g)
 		v := g.VitalOf(p)
-		if v.Injury == prev {
-			continue
-		}
-		if prev-v.Injury != 1 {
-			t.Fatalf("one point heals at a time: %d -> %d", prev, v.Injury)
-		}
-		if (now-1+uint64(p))%uint64(health.HealTicks) != 0 {
-			t.Fatalf("healed off the %d-tick cadence at tick %d", health.HealTicks, now)
+		if want := 6 - h/3; v.Injury != want {
+			t.Fatalf("after %d h: Injury %d, want %d", h, v.Injury, want)
 		}
 		if v.Injury != g.bodies[p].Damage() {
 			t.Fatalf("Injury %d drifted from the body %d", v.Injury, g.bodies[p].Damage())
 		}
-		prev = v.Injury
 	}
-	if prev != 0 {
-		t.Fatalf("a 6-point bruise heals in 6 cadences: %d left", prev)
+	if g.indexedPatient(p) {
+		t.Fatal("healed: the sweep drops the patient")
 	}
 }
 
+// TestClosedCutsMayScarDeterministically: deep cuts close and some scar
+// (20 per mille for a 14+ HP cut), the same ones for the same seed.
 func TestClosedCutsMayScarDeterministically(t *testing.T) {
 	scars := func() (int, []entry[savedBody]) {
 		g := New(Config{Seed: 9, Width: 12, Height: 8})
 		p, _ := g.SpawnNamedPawn(4, 4, "Ada")
 		v := g.VitalOf(p)
 		b := g.ensureBody(p, &v)
-		for i := 0; i < 60; i++ {
-			b.Wounds = append(b.Wounds, body.Wound{Part: body.Torso, Dmg: 1, Kind: body.Cut})
+		for i := 0; i < 600; i++ {
+			b.Wounds = append(b.Wounds, body.Wound{Part: body.Torso, Dmg: 1, Kind: body.Cut, Tended: true, Size: 20})
 		}
 		g.bodyChanged(p, b, &v)
-		for i := 0; i < 60; i++ {
-			g.healBody(p, &v, 1, false)
+		for i := 0; i < 3; i++ {
+			medHour(g)
 		}
 		n := 0
 		for _, w := range g.bodies[p].Wounds {
-			if w.Permanent {
-				n++
+			if !w.Permanent {
+				t.Fatalf("a 1 HP tended cut closes in 2 hours: %+v", w)
 			}
+			n++
 		}
-		if v.Injury != n || g.VitalOf(p).Injury != n {
+		v = g.VitalOf(p)
+		if v.Injury != n {
 			t.Fatalf("scars keep a point each: Injury %d for %d scars", v.Injury, n)
 		}
 		return n, g.exportBodies()
 	}
 	n, a := scars()
-	if n == 0 || n > 20 {
-		t.Fatalf("about a tenth of closed cuts scar: %d of 60", n)
+	if n == 0 || n > 30 {
+		t.Fatalf("about 2%% of closed deep cuts scar: %d of 600", n)
 	}
 	if m, b := scars(); m != n || !reflect.DeepEqual(a, b) {
 		t.Fatalf("scars follow the seed: %d vs %d", n, m)

@@ -131,51 +131,12 @@ func TestDamageMapping(t *testing.T) {
 	}
 }
 
-func TestHealSmallestFirstAndScar(t *testing.T) {
-	var b Body
-	b.Wounds = []Wound{{Part: Torso, Dmg: 10, Kind: Bruise}, {Part: ArmL, Dmg: 3, Kind: Cut}}
-	if b.Heal(fixed(500), 2) || b.Wounds[1].Dmg != 1 || b.Wounds[0].Dmg != 10 {
-		t.Fatalf("%+v", b.Wounds)
-	}
-	if !b.Heal(fixed(50), 1) { // cut closes, roll 50 < 100: scar
-		t.Fatal("expected scar")
-	}
-	if !b.Wounds[1].Permanent || b.Wounds[1].Dmg != scarDmg {
-		t.Fatalf("%+v", b.Wounds)
-	}
-	if b.Heal(fixed(0), 100) || len(b.Wounds) != 1 || !b.Wounds[0].Permanent {
-		t.Fatalf("bruise heals clean, scar stays: %+v", b.Wounds)
-	}
-	if b.Heal(fixed(0), 5) {
-		t.Fatal("nothing left")
-	}
-	b.Wounds = []Wound{{Part: ArmL, Dmg: 3, Kind: Burn, Tended: true}}
-	if b.Heal(fixed(500), 3) || len(b.Wounds) != 0 {
-		t.Fatal("no scar on high roll")
-	}
-}
-
-func TestScarRate(t *testing.T) {
-	r := rand.New(rand.NewSource(42))
-	scars := 0
-	const n = 20000
-	for i := 0; i < n; i++ {
-		b := Body{Wounds: []Wound{{Part: ArmL, Dmg: 1, Kind: Cut}}}
-		if b.Heal(r.Intn, 1) {
-			scars++
-		}
-	}
-	if scars < n*8/100 || scars > n*12/100 {
-		t.Fatalf("scar rate %d/%d", scars, n)
-	}
-}
-
 func TestTendAndPain(t *testing.T) {
 	b := Body{Wounds: []Wound{{Part: Torso, Dmg: 10, Kind: Cut}, {Part: Torso, Dmg: 5, Kind: Cut, Permanent: true}}}
 	if b.Pain() != 130 { // 12.5 per open HP, 1 per scar HP (MED-01)
 		t.Fatalf("pain %d", b.Pain())
 	}
-	if b.Tend() != 1 || b.Tend() != 0 || b.Pain() != 130 { // tending stops bleeding, not pain
+	if b.TendAll(0, 0) != 1 || b.TendAll(0, 0) != 0 || b.Pain() != 130 { // tending stops bleeding, not pain
 		t.Fatalf("tended pain %d", b.Pain())
 	}
 	b.Wounds = []Wound{{Part: Torso, Dmg: 500, Kind: Cut}}

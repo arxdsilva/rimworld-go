@@ -207,3 +207,54 @@ func TestPawnStatusSaysBleeding(t *testing.T) {
 		t.Fatalf("the dead do not bleed: %v", got)
 	}
 }
+
+// TestHealthTabConditions (MED-02): an infection gets a row under the
+// part rows with its severity and immunity, its tend marker and the
+// view's tooltip; the headline turns red while losing; a part tooltip
+// lists each wound's tend quality; the pane's status says how the race
+// goes.
+func TestHealthTabConditions(t *testing.T) {
+	t.Parallel()
+	a, f, s := healthApp(t)
+	h := healthSimView()
+	h.State, h.DeathInHours = "Infection: losing", 20
+	h.Parts[body.ArmR].TendTip = "cut, 10 HP: tended 74%"
+	h.Conditions = []game.ConditionView{
+		{Label: "Infection (major), right arm", SevPct: 42, ImmPct: 30, TendPct: 74, DueInHours: 5, Losing: true, Tip: "Infection (major), right arm\nTended at 74% quality"},
+		{Label: "Infection (minor), left hand", SevPct: 5, Due: true, Tip: "untended"},
+	}
+	s.health = map[entity.EntityID]game.HealthView{1: h}
+	drawFrame(t, a, f)
+	w, ok := a.uiSt().find(healthCondID(0))
+	if !ok || w.label != "Infection (major), right arm: severity 42%, immunity 30%, needs tend in 5h" || !strings.Contains(w.tip, "74% quality") {
+		t.Fatalf("condition row %+v", w)
+	}
+	if w, ok := a.uiSt().find(healthCondID(1)); !ok || !strings.HasSuffix(w.label, "needs tend now") {
+		t.Fatalf("due row %+v", w)
+	}
+	if healthStateColor(h) != uiDanger || healthStateColor(game.HealthView{State: "Infection: winning"}) != uiWarning {
+		t.Fatal("losing is red, winning amber")
+	}
+	if w, _ := a.uiSt().find(healthStateID); !strings.Contains(w.tip, "20 hours") {
+		t.Fatalf("losing headline tip %q", w.tip)
+	}
+	if w, ok := a.uiSt().find("health.part.13"); !ok || !strings.Contains(w.tip, "tended 74%") {
+		t.Fatalf("arm tooltip %+v", w)
+	}
+	if healthCondDue(game.ConditionView{}) != "" {
+		t.Fatal("no tending, no marker")
+	}
+	h.Conditions = nil
+	s.health = map[entity.EntityID]game.HealthView{1: h}
+	drawFrame(t, a, f)
+	if hasWidget(a, healthCondID(0)) {
+		t.Fatal("no conditions, no rows")
+	}
+	name := func(entity.EntityID) string { return "" }
+	if got := pawnStatusLines(game.PawnView{Status: "alive", Infection: 42, InfectionLosing: true}, name); !slices.Contains(got, "Infection: losing (42%)") {
+		t.Fatalf("losing lines %v", got)
+	}
+	if got := pawnStatusLines(game.PawnView{Status: "alive", Infection: 42}, name); !slices.Contains(got, "Infection: winning (42%)") {
+		t.Fatalf("winning lines %v", got)
+	}
+}

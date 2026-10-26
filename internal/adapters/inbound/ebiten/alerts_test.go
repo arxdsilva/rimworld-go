@@ -189,7 +189,8 @@ func TestEveryAlertCarriesAnExplanation(t *testing.T) {
 		game.PawnView{ID: 4, Name: "Dee", Status: "downed", Reason: "no food", X: 1, Y: 1},
 		game.PawnView{ID: 5, Name: "Eli", Status: "alive", Mood: 80, MentalBreak: "wander", X: 2, Y: 2},
 		game.PawnView{ID: 6, Name: "Fay", Status: "alive", Mood: 80, Hypothermia: 500, Heatstroke: 500, X: 3, Y: 3},
-		game.PawnView{ID: 7, Name: "Gil", Status: "alive", Mood: 80, Bleeding: true, BleedDeathHours: 5, X: 4, Y: 4})
+		game.PawnView{ID: 7, Name: "Gil", Status: "alive", Mood: 80, Bleeding: true, BleedDeathHours: 5, X: 4, Y: 4},
+		game.PawnView{ID: 8, Name: "Hal", Status: "alive", Mood: 80, Infection: 40, InfectionLosing: true, Wounded: true, UntendedHours: 6, X: 5, Y: 5})
 	got := buildAlerts(pawns, w)
 	seen := map[string]bool{}
 	for _, al := range got {
@@ -201,7 +202,7 @@ func TestEveryAlertCarriesAnExplanation(t *testing.T) {
 			t.Errorf("alert %q fell back to the generic explanation", al.key)
 		}
 	}
-	for _, k := range []string{"bleeding", "hostile", "raid", "rescue", "starving", "collapsed", "food", "break", "hypothermia",
+	for _, k := range []string{"bleeding", "infection", "untended", "hostile", "raid", "rescue", "starving", "collapsed", "food", "break", "hypothermia",
 		"heatstroke", "nofuel", "waitingframes", "unhappy", "fire", "penopen", "unpenned", "timbergnaw"} {
 		if !seen[k] {
 			t.Errorf("fixture does not raise %q (got %v)", k, alertKeys(got))
@@ -454,5 +455,45 @@ func TestBleedingAlert(t *testing.T) {
 		if a.key == "bleeding" && a.label != "2 colonists are bleeding out" {
 			t.Fatalf("two bleeding: %q", a.label)
 		}
+	}
+}
+
+// TestInfectionAlert (MED-02): a colonist losing to an infection and one
+// with a wound untended 4 hours or more raise warnings; a winning
+// infection, a fresh wound, the dead and prisoners do not.
+func TestInfectionAlert(t *testing.T) {
+	t.Parallel()
+	pawns := []game.PawnView{
+		{ID: 1, Name: "Ada", Status: "alive", Mood: 80, Infection: 40, InfectionLosing: true, X: 3, Y: 4},
+		{ID: 2, Name: "Bo", Status: "alive", Mood: 80, Infection: 40},
+		{ID: 3, Name: "Cy", Status: "dead", Infection: 90, InfectionLosing: true, Wounded: true, UntendedHours: 9},
+		{ID: 4, Name: "Dorn", Status: "downed", Prisoner: true, Infection: 60, InfectionLosing: true, Wounded: true, UntendedHours: 9},
+		{ID: 5, Name: "Eve", Status: "alive", Mood: 80, Wounded: true, UntendedHours: 4, X: 5, Y: 6},
+		{ID: 6, Name: "Fin", Status: "alive", Mood: 80, Wounded: true, UntendedHours: 3},
+	}
+	got := buildAlerts(pawns, game.WorldView{Food: 100})
+	find := func(key string) []alert {
+		var out []alert
+		for _, a := range got {
+			if a.key == key {
+				out = append(out, a)
+			}
+		}
+		return out
+	}
+	inf := find("infection")
+	if len(inf) != 1 || inf[0].label != "Ada is losing to an infection" || inf[0].danger || inf[0].sev != sevWarning ||
+		len(inf[0].targets) != 1 || inf[0].targets[0] != [2]int{3, 4} || inf[0].explain == alertExplain("no-such-alert") {
+		t.Fatalf("infection alerts %+v (all %v)", inf, alertKeys(got))
+	}
+	un := find("untended")
+	if len(un) != 1 || un[0].label != "Eve has an untended wound" || un[0].danger || un[0].targets[0] != [2]int{5, 6} ||
+		un[0].explain == alertExplain("no-such-alert") {
+		t.Fatalf("untended alerts %+v (all %v)", un, alertKeys(got))
+	}
+	pawns[1].InfectionLosing = true
+	got = buildAlerts(pawns, game.WorldView{Food: 100})
+	if inf := find("infection"); len(inf) != 1 || inf[0].label != "2 colonists are losing to infections" {
+		t.Fatalf("two losing: %+v", inf)
 	}
 }

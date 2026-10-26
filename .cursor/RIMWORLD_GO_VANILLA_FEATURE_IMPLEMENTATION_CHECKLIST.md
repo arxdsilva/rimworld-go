@@ -986,9 +986,9 @@ treatment, and surgery are major colony-management systems.
 
 ## 11.4 Healing
 
--   [x] **Natural wound healing**
+-   [x] **Natural wound healing** (MED-02: per wound at wiki rates: 8 HP/day, tended +4 + 0.8 % of tend quality, lying +4 ground / +8 bed / +14 hospital bed)
     -   Healing over time based on pawn state and care.
--   [x] **Scars/permanent injury** (SIM-039: 10% permanent scar on cut/bite/scratch/burn; disfigurement for face scars)
+-   [x] **Scars/permanent injury** (SIM-039: disfigurement for face scars; MED-02: scar odds 2 % × clamp((damage − 4)/10) on cut/bite/scratch/burn)
     -   Some wounds heal into lasting impairment/pain.
 
 ## 11.5 Medical care
@@ -999,7 +999,7 @@ treatment, and surgery are major colony-management systems.
     -   herbal-equivalent.
     -   industrial-equivalent.
     -   best medicine-equivalent.
--   [x] **Tending** (doctor fetches herbal medicine when there is some; patients down, in bed or asleep)
+-   [x] **Tending** (doctor fetches herbal medicine when there is some; patients down, in bed or asleep; MED-02: tend quality from Medicine skill, manipulation, sight, medicine potency and cap, hospital bed +10 %, self-tend ×0.7, ±25 % roll; one tend per 12 h window)
     -   Doctor reserves patient.
     -   fetches medicine if policy allows.
     -   performs treatment.
@@ -1015,9 +1015,9 @@ treatment, and surgery are major colony-management systems.
 
 ## 11.6 Infection
 
--   [x] **Wound infection chance** (untended 8h: 40%; self-tended 20%, tended 12%, herbal medicine 3%, industrial medicine 1%; halved in a hospital bed)
+-   [x] **Wound infection chance** (MED-02: rolled 6–18 h after the wound; bite/burn 30 %, other bleeding wounds 15 %, bruises 0; × tend factor 85 % → 5 % with quality; × 50 % in a clean roofed, floored room)
     -   Eligible untreated/poorly treated wounds can become infected.
--   [-] **Infection progression vs immunity** (hourly severity: +4 untreated, -5 tended, -9 with medicine; fatal at 100; no immunity race)
+-   [x] **Infection progression vs immunity** (MED-02: per-wound infection condition racing severity +84 %/day (tend cuts up to 53 %/day) against immunity +64 %/day, −70 %/day once immune; stages 33/78/87 %, death at 100 %; shared race engine for diseases; raiders and prisoners included)
     -   Disease severity progresses.
     -   immunity grows based on treatment/rest/health.
     -   reaching immunity first allows recovery; severity first can

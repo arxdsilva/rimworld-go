@@ -12,17 +12,28 @@ import (
 )
 
 // Medical care (Doctor work): carry injured, downed colonists to a bed
-// (they heal faster there) and tend their wounds (an immediate injury
-// reduction, then faster healing for a day).
+// (they heal faster there) and tend their wounds. A tend has a quality
+// (body.TendQuality, MED-02): it stops the bleeding, speeds the healing of
+// every wound it tends and slows an infection for its window
+// (infection.go). Animals have no wounds yet: a tend mends some of their
+// injury at once (animalTendHeal).
 
 const (
 	// TendWork is the ticks a doctor spends tending one patient.
 	TendWork = 300
-	// TendHeal is injury removed immediately by tending.
+	// TendHeal is the injury a plain tend mends on an animal at once.
 	TendHeal = 8
-	// TendTicks is how long a tend keeps speeding up healing.
+	// TendTicks is how long a tend shows as tended (PawnView.Tended) and
+	// keeps an animal from being tended again.
 	TendTicks = clock.TicksPerDay
 )
+
+// animalTendHeal is the injury a tend of quality q (permille) mends on an
+// animal at once: TendHeal × (250 + q) / 500, so about 9 for a plain tend
+// by a level-8 doctor, 14 with herbal and 20 with industrial medicine
+// (original tuning near the old care tiers, until animals get wounds in
+// MED-09).
+func animalTendHeal(q int32) int { return TendHeal * int(250+q) / 500 }
 
 // injuredDowned: a colonist lying down from injury.
 func (g *Game) injuredDowned(id entity.EntityID) bool {
@@ -133,14 +144,11 @@ func (g *Game) assignDoctor(id entity.EntityID) bool {
 		case downed && !g.inBed(pid):
 			if _, ok := g.freeBedFor(pid, pp); ok {
 				rec = job.Record{Kind: job.Rescue, Target: pid}
-			} else if !g.tended(pid) {
+			} else if g.needsTending(pid) {
 				rec = job.Record{Kind: job.Tend, Target: pid, WorkLeft: TendWork}
 			}
-		case !g.tended(pid):
+		case g.needsTending(pid): // infection.go: one tend per wound, one per condition window (MED-02)
 			rec = job.Record{Kind: job.Tend, Target: pid, WorkLeft: TendWork}
-		}
-		if pv, _ := g.vital.Get(pid); rec.Kind == job.Tend && !g.openInjury(pid, pv) && g.wounds[pid].Infection == 0 {
-			return // exposure needs a bed, not a bandage
 		}
 		if rec.Kind == job.None {
 			return
@@ -271,9 +279,13 @@ func (g *Game) followCarriers() {
 	}
 }
 
+// doTend: fetch the dose if the job carries one, work beside the patient,
+// then tend it (body.TendAll) at a quality rolled from the doctor, the
+// medicine and the bed (tendQualityFor, infection.go). A patient with
+// nothing left to tend (another doctor got there first) ends the job.
 func (g *Game) doTend(id entity.EntityID, j job.Record) {
 	v, ok := g.vital.Get(j.Target)
-	if !ok || v.Status == health.Dead || !g.openInjury(j.Target, v) && g.wounds[j.Target].Infection == 0 {
+	if !ok || v.Status == health.Dead || !g.needsTending(j.Target) {
 		j.State = job.Complete
 		g.jobs.Set(id, j)
 		return
@@ -299,22 +311,22 @@ func (g *Game) doTend(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
-	care := g.tendCare(id, j.Target, j)
-	heal := g.tendHealBy(id, care) // skills.go: tier, hospital bed, Medicine skill
+	now := uint64(g.clock.Now())
+	q := g.tendQualityFor(id, j.Target, g.tendMedicine(j)) // infection.go (MED-02)
 	if j.Carry != 0 {
 		g.deleteItem(j.Carry)
 		j.Carry = 0
 	}
-	if !g.healBody(j.Target, &v, heal, true) { // body.go: tends every open wound, then heals
-		v.Injury = max(0, v.Injury-heal)
+	if b := g.ensureBody(j.Target, &v); b != nil { // body.go: an older save's Injury becomes wounds first
+		b.TendAll(q, now)
+		g.bodyChanged(j.Target, b, &v)
 	}
 	if v.Status == health.Downed && v.Cause == health.CauseInjury && g.standsUp(j.Target, v) { // bleed.go
 		v.Status, v.Cause = health.Alive, health.CauseNone
 	}
 	g.vital.Set(j.Target, v)
-	g.tendedUntil[j.Target] = uint64(g.clock.Now()) + TendTicks
+	g.tendedUntil[j.Target] = now + TendTicks
 	g.logPair(j.Target, id, logTendedBy, logTended, 0, 0)
-	g.closeWound(j.Target, care, id)
 	j.State = job.Complete
 	g.jobs.Set(id, j)
 }

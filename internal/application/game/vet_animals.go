@@ -93,7 +93,7 @@ func (g *Game) doTendAnimal(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
-	heal := g.tendHealBy(id, g.tendCare(id, j.Target, j)) // skills.go, infection.go
+	heal := animalTendHeal(g.tendQualityFor(id, j.Target, g.tendMedicine(j))) // medical.go, infection.go (MED-02)
 	if j.Carry != 0 {
 		g.deleteItem(j.Carry)
 		j.Carry = 0
