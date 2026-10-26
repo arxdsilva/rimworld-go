@@ -1649,10 +1649,11 @@ the player what just happened and what requires attention.
 ## 34.1 Graphics
 
 -   [ ] **Resolution/window mode**
--   [ ] **VSync/frame cap**
+-   [-] **VSync/frame cap** (VSync toggle in Options › Graphics; Ebitengine has no frame cap)
 -   [x] **UI scale** (UI-024: Options › Accessibility, Auto (follows the window, 1280×720 = 100 %) or 75–200 %, applies live)
--   [ ] **Rendering quality toggles**
--   [ ] **Animation/effects density**
+-   [x] **Rendering quality toggles** (PLAY-019: Quality High/Medium/Low/Custom picked from the hardware at the first start, Detect again; Shadows, Lighting, Water, Grass rows applied live; the player's own changes always kept)
+-   [x] **Animation/effects density** (Effects Full/Reduced/Minimal scales particles and weather; PLAY-019: Grass full/reduced/sparse thins tufts per tile)
+-   [x] **Hardware check** (PLAY-019: RAM and cores read once at startup; a low-memory notice on the main menu and per-size memory warnings in the new-game wizard; warns only)
 -   [ ] **Far-zoom detail**
 
 ## 34.2 Audio

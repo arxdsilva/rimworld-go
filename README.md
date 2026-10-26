@@ -121,7 +121,7 @@ Media updated 2026-10-23 · regenerate with `make media clips`
 - Sun, moon and shadows: every sprite has a normal map, lit by a sun that rises in the east and sets in the west (lower in winter) and by a cool moon at night; shadows swing and stretch with it, long at dawn and dusk. Colonists and animals cast their own animated silhouettes, sharp at the feet and soft at the tip, plus shadows away from campfires and lamps at night.
 - Roofs: colonists roof closed rooms on their own, or wherever you plan one within 6 tiles of a wall; unroofed rooms lose their heat, roofs keep rain and snow off, and unsupported roofs collapse. Press Shift+R for the roof overlay.
 - Death and burial: the dead leave bodies that rot to bones; colonists mourn, dig graves with headstones, bury their own, or cremate on a funeral pyre.
-- Sound and options: every species has its own call, attack, hurt and death voice (generated with ElevenLabs, reviewed by ear); code-made sound effects that pan with the camera and fade as you zoom out, ambience for day, night and rain, and composed music for the menu, colony life and raids. Options cover volumes, fullscreen, effects detail, autosave interval, edge scrolling, reduced motion and running in the background (off pauses the colony while the window is away), and are saved between runs. The UI scales sharply with the window (Auto, or 75–200 %) and renders at full resolution on high-density screens.
+- Sound and options: every species has its own call, attack, hurt and death voice (generated with ElevenLabs, reviewed by ear); code-made sound effects that pan with the camera and fade as you zoom out, ambience for day, night and rain, and composed music for the menu, colony life and raids. Options cover volumes, fullscreen, graphics quality (High, Medium or Low, picked for your computer at the first start, with Shadows, Lighting, Water and Grass rows you can change), effects detail, autosave interval, edge scrolling, reduced motion and running in the background (off pauses the colony while the window is away), and are saved between runs. The UI scales sharply with the window (Auto, or 75–200 %) and renders at full resolution on high-density screens.
 - Save and load, with an autosave every in-game day (adjustable in Options). Commitment mode keeps one save per colony that the game updates itself: no reloading, Save & Quit, no developer mode.
 - A full new-game flow: pick a scenario (Broken Hull, Ember Clan, Gilded Expedition, Bare Hands, or build your own in the Scenario Editor with validation and saved files), a storyteller (Orla Vane, Bram Holloway or Kestrel Quay, each pacing threats differently), and a difficulty (six presets or a custom one with 19 settings).
 - A generated world: type a seed and get a rotating hex globe with continents, climate by latitude and altitude, rain shadows, twelve biomes, hills, rivers, lakes, roads and named factions. Pick a landing site from a full tile panel (temperature, rainfall, growing period, stones, water, caves, nearest settlement), choose the starting season, and open the Factions dialog.
@@ -150,6 +150,11 @@ Ready-made builds for Windows, macOS (Apple Silicon and Intel) and Linux are on
 the [Releases](https://github.com/arxdsilva/rimworld-go/releases) page: unpack
 the archive and run `rimworld-go`, keeping the `assets` folder next to it. The
 macOS build is unsigned, so open it the first time with right-click → Open.
+
+**System requirements:** 64-bit Windows, macOS or Linux, 6 GB of RAM or more (8 GB recommended), and a GPU with Metal (macOS), DirectX 11 (Windows) or OpenGL (Linux) drivers.
+- The game uses about 1.1 GB of resident memory, and its peak footprint is 2.2 GB on a 250×250 map and 3.4 GB on a grown 500×500 colony.
+- At the first start it reads your RAM and cores and picks a graphics tier: High from 12 GB and 6 cores, Medium from 8 GB, Low below that. You can change it in Options › Graphics, where "Detect again" re-applies the tier.
+- With less than 6 GB, the main menu warns once. Map sizes whose estimate exceeds 70% of your RAM say so in the new-game wizard; nothing is blocked.
 Pushing a `v*` tag builds and publishes a new release
 ([`release.yml`](.github/workflows/release.yml)).
 
@@ -162,12 +167,13 @@ make test           # unit tests with the race detector and coverage
 make simulate       # headless simulation run for quick checks
 ```
 
-Developer flags for `cmd/game`: `-scenario <name>` starts a set piece (for example `-scenario grown -width 250 -height 250` is the large-map benchmark colony), `-fpsprobe N` runs the colony for N seconds of real frames at `-capture-speed` and `-capture-zoom` and logs fps, 1% low and update/draw times, and `-cpuprofile`, `-memprofile` and `-trace` write Go profiles. `-capture-ui-scale 1.5` (or 2) takes a `-capture` at that UI scale, to review scaled layouts. `go run ./cmd/benchmark` prints per-tick percentiles for the grown colony at 120, 250 and 500 tiles a side.
+Developer flags for `cmd/game`: `-scenario <name>` starts a set piece (for example `-scenario grown -width 250 -height 250` is the large-map benchmark colony), `-fpsprobe N` runs the colony for N seconds of real frames at `-capture-speed` and `-capture-zoom` and logs fps, 1% low and update/draw times, and `-cpuprofile`, `-memprofile` and `-trace` write Go profiles. `-capture-ui-scale 1.5` (or 2) takes a `-capture` at that UI scale, to review scaled layouts. `-graphics low` (or `medium`, `high`) applies that graphics tier for one run, captures and `-fpsprobe` included, without saving it; the probe's report ends with the Go heap and the art memory (sprites freed, prewarm, tint bakes). `go run ./cmd/benchmark` prints per-tick percentiles for the grown colony at 120, 250 and 500 tiles a side.
 
 Sound plays through your default audio device; `go run ./cmd/game -noaudio`
 (or `RIMWORLD_GO_NOAUDIO=1`) runs silently. On Linux, audio needs cgo and
 the ALSA headers (`sudo apt install libasound2-dev`). Options (volumes,
-fullscreen, effects, autosave, edge scrolling, reduced motion) are saved to
+fullscreen, graphics quality and detail, effects, autosave, edge scrolling,
+reduced motion) are saved to
 `settings.json` in your user config folder, next to the saves.
 
 ### Controls

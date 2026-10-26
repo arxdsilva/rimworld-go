@@ -111,6 +111,9 @@ Primary entry point for a play session.
 -   [-] Tutorial/Help (visible, disabled)
 -   [x] Credits (creator, originality notice, asset credits)
 -   [x] Quit
+-   [x] Low-memory notice (PLAY-019: a warning card under the rail when
+    the computer has less RAM than the game needs to run smoothly; warns
+    only, "Got it" hides it until the amount of RAM changes)
 
 ## Information
 
@@ -306,7 +309,7 @@ Status (NG-1):
 -   [x] choose tile; (invalid tiles give the reason on the disabled Next button)
 -   [x] regenerate/back; (Back keeps the draft, Create World regenerates, Random site)
 -   [x] continue. (Next to Create Characters)
--   [x] map size and starting season. (Advanced dialog; 200x200 to 500x500, 250 default, 350+ marked "needs a capable computer")
+-   [x] map size and starting season. (Advanced dialog; 200x200 to 500x500, 250 default; PLAY-019: a size whose estimated memory is over 70% of the computer's RAM says "Needs about N GB; this computer has M GB." in the picker and the site panel and stays selectable; with unknown hardware 350+ notes "Large map: needs a capable computer")
 
 ------------------------------------------------------------------------
 
@@ -1656,6 +1659,14 @@ presentation only, never the simulation; captures ignore them.
     high-density screens" (HiDPI) on the Graphics tab);
 -   [x] effects/detail (Full/Reduced/Minimal: particles, weather drops,
     menu embers and dust);
+-   [x] quality preset (PLAY-019: High / Medium / Low, picked from the
+    computer's RAM and cores at the first start and saved; "Custom" once
+    a row is changed by hand, and those rows survive a new preset;
+    "Detect again" re-applies the detected tier);
+-   [x] detail rows (PLAY-019: Shadows, Lighting (normal-map light; off
+    keeps the hour, weather and lamp tint), Water (animated / simple),
+    Grass (full / reduced / sparse tufts), each with a cost tooltip and
+    applied live);
 -   [ ] far-zoom detail.
 
 ### Audio
