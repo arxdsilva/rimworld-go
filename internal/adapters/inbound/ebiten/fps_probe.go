@@ -77,7 +77,7 @@ func (a *App) fpsProbeUpdate() bool {
 		return false
 	}
 	if st.drawn && now.Sub(st.begin) > time.Duration(p.Seconds)*time.Second+probeWarmup {
-		st.report = fpsReport(st, a.scale) + fmt.Sprintf(", %dx%d physical", a.pw, a.ph)
+		st.report = fpsReport(st, a.scale) + fmt.Sprintf(", %dx%d physical; %v", a.pw, a.ph, a.art.memStats())
 		log.Print(st.report)
 		return true
 	}

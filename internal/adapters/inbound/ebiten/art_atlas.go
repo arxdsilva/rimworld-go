@@ -303,7 +303,9 @@ func (c *artCatalog) prewarmAtlases() (held int) {
 // with the goroutine's own compressor; the lock is held only to publish
 // a page layer's copies, and one a draw cut meanwhile is left as it is.
 // The result is what cutPage leaves (the compressed copies; see prewarm).
-// The returned channel is closed when it is done (tests).
+// A second goroutine decodes the file families every colony shows ahead
+// (prewarmFiles, art_memory.go). The returned channel is closed when both
+// are done (tests); both end on their own.
 func (c *artCatalog) prewarmAsync() <-chan struct{} {
 	done := make(chan struct{})
 	if c == nil {
@@ -318,8 +320,11 @@ func (c *artCatalog) prewarmAsync() <-chan struct{} {
 			atlases = append(atlases, sp.src.atlas)
 		}
 	}
+	files := c.prewarmFileKeys()
+	var wg sync.WaitGroup
+	wg.Add(2)
 	go func() {
-		defer close(done)
+		defer wg.Done()
 		var z deflater
 		for _, a := range atlases {
 			for pg := range a.byPage {
@@ -328,6 +333,14 @@ func (c *artCatalog) prewarmAsync() <-chan struct{} {
 				}
 			}
 		}
+	}()
+	go func() {
+		defer wg.Done()
+		c.prewarmFiles(files)
+	}()
+	go func() {
+		wg.Wait()
+		close(done)
 	}()
 	return done
 }

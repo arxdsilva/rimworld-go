@@ -1,0 +1,17 @@
+//kage:unit pixels
+
+// tint.kage: a tint bake on the GPU (art_memory.go; Go twins tintTexel and
+// tintNRGBA). Images[0] is the sprite over its tint mask's coverage box,
+// Images[1] the mask over the same box (opaque grey, red = coverage k).
+// Where the mask covers, the sprite's colour is multiplied toward Tint:
+// rgb * mix(1, Tint, k), alpha kept. The sprite is premultiplied, and the
+// factor scales colour only, so it applies to premultiplied rgb as is.
+package main
+
+var Tint vec3
+
+func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
+	c := imageSrc0UnsafeAt(srcPos)
+	k := imageSrc1UnsafeAt(srcPos).r
+	return vec4(c.rgb*mix(vec3(1), Tint, k), c.a)
+}

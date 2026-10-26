@@ -201,7 +201,8 @@ func parseHex(h string) (color.NRGBA, error) {
 }
 
 // tintNRGBA multiplies src by tint where mask is white (mask red channel
-// is coverage). Pure; used once per (sprite, tint) and cached.
+// is coverage). Pure: the CPU twin of the GPU tint bake (tint.kage,
+// bakeTint), which the game uses so tinted sprites keep no CPU pixels.
 func tintNRGBA(src, mask *image.NRGBA, tint color.NRGBA) *image.NRGBA {
 	b := src.Bounds()
 	dst := image.NewNRGBA(b)
@@ -252,6 +253,12 @@ type artSprite struct {
 	filled sync.Once
 	// opaqueH caches opaqueHeightPx (0: not measured yet).
 	opaqueH float64
+	// maskImg is the tint mask's coverage box on the GPU (maskBox, in the
+	// sprite's pixels) for tint bakes (bakeTint), made on the first bake;
+	// maskDone marks it made (nil when the mask covers nothing).
+	maskImg  *ebiten.Image
+	maskBox  image.Rectangle
+	maskDone bool
 }
 
 // opaqueAlphaMin is the alpha (0..255) a pixel needs to count as part of
@@ -299,15 +306,24 @@ type tintKey struct {
 	tint color.NRGBA
 }
 
-// artCatalog is the loaded original sprite set. Decoded pixels live on
-// the CPU; GPU images are created lazily on first draw.
+// artCatalog is the loaded original sprite set. Pixels are decoded on
+// first use and GPU images created on first draw; the game's catalog then
+// frees the CPU pixels (art_memory.go).
 type artCatalog struct {
 	sprites map[string]*artSprite // "family/name"
 	tints   map[string]map[string]color.NRGBA
-	tinted  map[tintKey]*ebiten.Image
+	// tinted holds the tint bakes by (sprite, tint); tints orders them for
+	// eviction past tintBudget bytes (0: defaultTintBudget).
+	tinted     map[tintKey]*ebiten.Image
+	tintBudget int
 	// normals maps every drawn sprite image (tinted or not) to its normal
 	// map, for the lit draw (light.go).
 	normals map[*ebiten.Image]*ebiten.Image
+	// freeCPU releases a sprite's CPU pixels once its GPU image exists
+	// (the game's catalog; the tests' index keeps them to compare pixels).
+	freeCPU bool
+	mem     *artMem
+	tintLRU tintLRU
 }
 
 // LocateArt finds assets/metadata above the working directory or the
@@ -321,36 +337,58 @@ func LocateArt() (string, error) {
 }
 
 // fileSrc is a sprite's own image and tint mask files, decoded on first
-// use; err keeps a failed decode.
+// use; err keeps a failed decode. warm holds the layers the background
+// prewarm decoded ahead, deflated, until a fill takes them; taken marks
+// the layers a fill took (no copy is published after). Both are guarded
+// by mem.mu; mem is nil for a catalog built by hand (no prewarm).
 type fileSrc struct {
 	image, mask string
 	err         error
+	mem         *artMem
+	warm        [atlasLayers]warmCopy
+	taken       [atlasLayers]bool
 }
 
 func (f *fileSrc) fill(sp *artSprite) {
-	if sp.pix, f.err = decodeNRGBA(f.image); f.err != nil {
+	pix, mask := f.takeWarm(layerPix), f.takeWarm(layerMask)
+	if pix != nil {
+		sp.pix = pix
+		f.mem.warmFills.Add(1)
+	} else {
+		if sp.pix, f.err = decodeNRGBA(f.image); f.err != nil {
+			return
+		}
+		if f.mem != nil {
+			f.mem.coldFills.Add(1)
+		}
+	}
+	if f.mask == "" {
 		return
 	}
-	if f.mask != "" {
+	if mask != nil {
+		sp.mask = mask
+	} else {
 		sp.mask, f.err = decodeNRGBA(f.mask)
 	}
 }
 
-// loadArtCatalog reads every world sprite's metadata, PNG and tint mask
-// under root (the assets directory): the game decodes everything up
-// front, so no sprite is decoded mid-frame.
+// loadArtCatalog is the game's catalog of every world sprite under root
+// (the assets directory): indexed like indexArtCatalog with packed
+// families served from their atlas pages, decoded on first use (and ahead
+// by prewarmAsync), and releasing each sprite's CPU pixels once its GPU
+// image exists (art_memory.go). Decoding everything up front held ~1 GB
+// of pixels, most of them animals no map shows.
 func loadArtCatalog(root string) (*artCatalog, error) {
 	c, err := indexArtCatalog(root, false)
 	if err != nil {
 		return nil, err
 	}
-	if err := c.decodeFiles(); err != nil {
-		return nil, err
-	}
+	c.freeCPU = true
 	return c, nil
 }
 
-// decodeFiles decodes every indexed sprite that reads its own files.
+// decodeFiles decodes every indexed sprite that reads its own files (an
+// eager check that every file decodes; the game decodes on first use).
 func (c *artCatalog) decodeFiles() error {
 	for _, sp := range c.sprites {
 		if sp.file == nil {
@@ -372,7 +410,7 @@ func (c *artCatalog) decodeFiles() error {
 // atlas pages; the key set is the same either way.
 func indexArtCatalog(root string, preferFiles bool) (*artCatalog, error) {
 	c := &artCatalog{sprites: map[string]*artSprite{}, tinted: map[tintKey]*ebiten.Image{},
-		normals: map[*ebiten.Image]*ebiten.Image{}}
+		normals: map[*ebiten.Image]*ebiten.Image{}, mem: &artMem{}}
 	base, err := os.ReadFile(filepath.Join(root, "palettes", "base.yaml"))
 	if err != nil {
 		return nil, err
@@ -424,7 +462,7 @@ func indexArtCatalog(root string, preferFiles bool) (*artCatalog, error) {
 					continue // pruned: the atlas page serves it
 				}
 			}
-			sp := &artSprite{meta: m, file: &fileSrc{image: img}}
+			sp := &artSprite{meta: m, file: &fileSrc{image: img, mem: c.mem}}
 			if m.TintMask != "" {
 				sp.file.mask = filepath.Join(root, filepath.FromSlash(m.TintMask))
 			}
@@ -485,28 +523,31 @@ func (c *artCatalog) sprite(key string) *artSprite {
 }
 
 // image returns the GPU texture for key, tinted when the sprite has a
-// mask and tint is non-zero.
+// mask and tint is non-zero. The sprite's own image is made first (its
+// normal map linked, then its CPU pixels released in the game); a tint is
+// baked from it on the GPU and cached (bounded, art_memory.go).
 func (c *artCatalog) image(key string, tint color.NRGBA) *ebiten.Image {
 	sp := c.sprite(key)
 	if sp == nil {
 		return nil
 	}
-	if sp.img == nil && sp.pix == nil {
-		return nil // its files failed to decode: draw nothing rather than panic
+	if sp.img == nil {
+		if sp.pix == nil {
+			return nil // its files failed to decode: draw nothing rather than panic
+		}
+		sp.img = ebiten.NewImageFromImage(sp.pix)
+		c.linkNormal(sp.img, sp)
+		c.release(key, sp)
 	}
 	if sp.mask == nil || tint.A == 0 {
-		if sp.img == nil {
-			sp.img = ebiten.NewImageFromImage(sp.pix)
-			c.linkNormal(sp.img, sp)
-		}
 		return sp.img
 	}
 	k := tintKey{key: key, tint: tint}
-	if img, ok := c.tinted[k]; ok {
+	if img := c.cachedTint(k); img != nil {
 		return img
 	}
-	img := ebiten.NewImageFromImage(tintNRGBA(sp.pix, sp.mask, tint))
-	c.tinted[k] = img
+	img := c.bakeTint(sp, tint)
+	c.addTint(k, img)
 	c.linkNormal(img, sp)
 	return img
 }
@@ -518,6 +559,8 @@ func (c *artCatalog) linkNormal(img *ebiten.Image, sp *artSprite) {
 		var n *image.NRGBA
 		if sp.src != nil {
 			n = sp.src.normalImage(sp)
+		} else if sp.file != nil {
+			n = sp.file.normalNRGBA(sp)
 		} else if sp.normalPath != "" {
 			n, _ = decodeNRGBA(sp.normalPath)
 		}

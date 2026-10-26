@@ -235,7 +235,13 @@ open a window. Existing renderer unit tests stay headless.
   once wood arrives.
 - Pawn look (skin/hair/style/clothes) is a pure function of EntityID;
   facing comes from the last tile step. Both are presentation-only.
-- Tinted textures are baked once per (sprite, tint) on the CPU and cached.
+- Art memory (PLAY-019, `art_memory.go`): the game indexes the art and
+  decodes a sprite on first use; a background prewarm keeps deflated copies
+  of every file family except animals. CPU pixels are freed after the GPU
+  upload, except for crop units, tilled overlays and grass tufts, whose
+  bakes read them back: a new CPU reader of sprite pixels must add its keys
+  to `cpuReadKeys`. Tinted textures are baked on the GPU (`tint.kage`) per
+  (sprite, tint) in a 128 MiB LRU.
 - `TestGeneratedArtCoversRenderer` fails if the renderer asks for a sprite
   that `make art` does not produce.
 - `game -capture out.png` boots, starts a colony, enqueues a fixed set of
