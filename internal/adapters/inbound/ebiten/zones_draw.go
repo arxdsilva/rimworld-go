@@ -179,16 +179,27 @@ func (r *Renderer) drawZoneLabels(screen *ebiten.Image, w game.WorldView, sw, sh
 }
 
 // drawZones fills every zone tile and outlines the outer edges; the
-// labels come later (drawZoneLabels).
+// labels come later (drawZoneLabels). A growing zone leaves its fill off
+// the cells holding the plants it grows (PLAY-020): the furrows and the
+// plants show there, and far out, where plants are baked under the zones,
+// the fill would cover them.
 func (r *Renderer) drawZones(screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
 	none := color.NRGBA{}
+	planted := r.zonePlantCells(&w)
 	for _, z := range w.Zones {
 		key, fill := zoneSpriteKey(z.Kind)
+		var skip map[[2]int]bool
+		if z.Kind == game.ZoneGrow {
+			skip = planted
+		}
 		useArt := r.art != nil
-		filled := useArt && r.zoneFill(screen, key, z.Cells, tile, sw, sh) // one batch for every cell
+		filled := useArt && r.zoneFill(screen, key, z.Cells, skip, tile, sw, sh) // one batch for every cell
 		for _, c := range z.Cells {
 			if filled {
 				break
+			}
+			if skip[c] {
+				continue
 			}
 			if useArt {
 				r.drawSprite(screen, key, none, float64(c[0]), float64(c[1]), tile, sw, sh)
@@ -206,12 +217,12 @@ func (r *Renderer) drawZones(screen *ebiten.Image, w game.WorldView, sw, sh int,
 	}
 }
 
-// zoneFill draws the zone sprite key on every visible cell as one
-// triangle batch: the quads drawSprite would draw one call each (an
+// zoneFill draws the zone sprite key on every visible cell not in skip as
+// one triangle batch: the quads drawSprite would draw one call each (an
 // unlit overlay: the same geometry, source and filter), so a big zoomed-
 // out colony's zones cost one call, not thousands. False when the
 // sprite is missing (the caller falls back).
-func (r *Renderer) zoneFill(screen *ebiten.Image, key string, cells [][2]int, tile float64, sw, sh int) bool {
+func (r *Renderer) zoneFill(screen *ebiten.Image, key string, cells [][2]int, skip map[[2]int]bool, tile float64, sw, sh int) bool {
 	sp := r.art.sprite(key)
 	if sp == nil {
 		return false
@@ -225,6 +236,9 @@ func (r *Renderer) zoneFill(screen *ebiten.Image, key string, cells [][2]int, ti
 	l := &r.lod
 	l.verts, l.idx = l.verts[:0], l.idx[:0]
 	for _, c := range cells {
+		if skip[c] {
+			continue
+		}
 		px, py := r.worldToScreenF(float64(c[0]), float64(c[1]))
 		x, y, s := artOrigin(sp.meta, float64(px), float64(py), tile)
 		w, h := float64(sp.meta.Canvas[0])*s, float64(sp.meta.Canvas[1])*s
@@ -253,6 +267,40 @@ func (r *Renderer) zoneFill(screen *ebiten.Image, key string, cells [][2]int, ti
 		screen.DrawTriangles32(l.verts, l.idx, img, &ebiten.DrawTrianglesOptions{Filter: ebiten.FilterLinear})
 	}
 	return true
+}
+
+// zonePlantCells is this frame's set of cells holding the plant their
+// growing zone grows (its crop, or any tree in a tree zone), from the
+// chunk lists in view, or every plant of w when w is not the frame's
+// world (tests). Nil when there is no growing zone.
+func (r *Renderer) zonePlantCells(w *game.WorldView) map[[2]int]bool {
+	grow := false
+	for i := range w.Zones {
+		grow = grow || w.Zones[i].Kind == game.ZoneGrow
+	}
+	if !grow {
+		return nil
+	}
+	r.zonePlants = resetCells(r.zonePlants)
+	one := func(p *game.PlantView) {
+		if p.Zone != "" && (p.Species == p.Zone || p.Zone == "tree" && isTreePlant(p.Species)) {
+			r.zonePlants[[2]int{p.X, p.Y}] = true
+		}
+	}
+	if r.frameLists(w) {
+		for _, cv := range r.lod.views {
+			for _, i := range cv.Plants {
+				if int(i) < len(w.Plants) {
+					one(&w.Plants[i])
+				}
+			}
+		}
+	} else {
+		for i := range w.Plants {
+			one(&w.Plants[i])
+		}
+	}
+	return r.zonePlants
 }
 
 func (r *Renderer) runVisible(run edgeRun, sw, sh int, pad float32) bool {

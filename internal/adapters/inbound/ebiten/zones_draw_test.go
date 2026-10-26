@@ -534,3 +534,62 @@ func TestZoneLabelsDrawnAfterObjects(t *testing.T) {
 		t.Fatalf("drawZoneLabels drew %d labels, want 1", n)
 	}
 }
+
+// --- PLAY-020: a growing zone's fill leaves its own plants uncovered -------
+
+// fillQuads draws w's zones at zoom and counts the fill batch's quads.
+func fillQuads(t *testing.T, art *artCatalog, w game.WorldView, zoom float64) int {
+	t.Helper()
+	r := New(&stubSim{w: 32, h: 32})
+	r.art = art
+	r.cam.zoom = zoom
+	tile := r.tilePx()
+	r.setView(640, 400, tile)
+	r.drawZones(ebiten.NewImage(640, 400), w, 640, 400, tile)
+	return len(r.lod.idx) / 6
+}
+
+// lineZone is a one-row zone of kind and crop over x0..x1 at y.
+func lineZone(kind, crop string, x0, x1, y int) game.ZoneView {
+	z := game.ZoneView{ID: 1, Kind: kind, Crop: crop, MinX: x0, MinY: y, MaxX: x1, MaxY: y}
+	for x := x0; x <= x1; x++ {
+		z.Cells = append(z.Cells, [2]int{x, y})
+	}
+	return z
+}
+
+// TestGrowZoneFillSkipsItsPlants: the potato zone's fill is not drawn on
+// the cell holding a potato it grows (the furrows and the plant show
+// there), at a live zoom and at the far zoom where plants are baked under
+// the zones; wild grass in the zone and empty cells keep the fill, and a
+// stockpile over a plant keeps every cell.
+func TestGrowZoneFillSkipsItsPlants(t *testing.T) {
+	art := testArt(t)
+	plants := []game.PlantView{
+		{X: 2, Y: 2, Species: "potato", Zone: "potato"},
+		{X: 3, Y: 2, Species: "grass", Zone: "potato"},
+	}
+	for _, zoom := range []float64{1, 0.2} {
+		w := game.WorldView{Zones: []game.ZoneView{lineZone(game.ZoneGrow, "potato", 2, 5, 2)}, Plants: plants}
+		if n := fillQuads(t, art, w, zoom); n != 3 {
+			t.Errorf("zoom %g: %d fill quads, want 3 (not under the potato)", zoom, n)
+		}
+		w.Zones = []game.ZoneView{lineZone(game.ZoneStockpile, "", 2, 5, 2)}
+		if n := fillQuads(t, art, w, zoom); n != 4 {
+			t.Errorf("zoom %g: stockpile %d fill quads, want all 4", zoom, n)
+		}
+	}
+}
+
+// TestTreeZoneFillSkipsItsTrees: a tree zone's fill is not drawn under the
+// trees it grows.
+func TestTreeZoneFillSkipsItsTrees(t *testing.T) {
+	art := testArt(t)
+	w := game.WorldView{
+		Zones:  []game.ZoneView{lineZone(game.ZoneGrow, "tree", 2, 4, 2)},
+		Plants: []game.PlantView{{X: 4, Y: 2, Species: "pine", Zone: "tree"}},
+	}
+	if n := fillQuads(t, art, w, 1); n != 2 {
+		t.Fatalf("%d fill quads, want 2 (not under the pine)", n)
+	}
+}
