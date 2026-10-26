@@ -3,10 +3,10 @@
 > **Purpose:** Canonical visual-production specification for human and
 > AI agents creating `rimworld-go` art in parallel.
 >
-> **Target:** A highly readable, minimalist, top-down sci-fi
-> colony-simulator aesthetic with strong silhouettes, restrained detail,
-> composited characters, consistent materials, and excellent readability
-> at gameplay zoom.
+> **Target:** A highly readable, top-down colony-simulator aesthetic
+> close to RimWorld's look (style only), with strong silhouettes,
+> bold outlines, a muted palette, composited characters, consistent
+> materials, and excellent readability at gameplay zoom.
 >
 > **Clean-room rule:** Never trace, extract, recolor, vectorize, or
 > closely reconstruct proprietary RimWorld sprites, textures, icons, UI
@@ -48,11 +48,15 @@ features when useful. Avoid photorealism, noisy textures, excessive
 gradients/specular highlights, tiny decoration, and inconsistent
 perspective.
 
-The visual identity should be original: slightly geometric industrial
-construction, clean modern sci-fi forms, distinctive pawn proportions,
-consistent shadows, stronger material differentiation, original
+The visual identity is close to RimWorld's readable top-down look, with
+entirely original assets: broad forms, bold dark outlines, a muted warm
+palette, limbless round-headed pawns, consistent shadows, original
 iconography, and a UI designed to remain readable at very large colony
-sizes.
+sizes. The clean-room rule above still governs every asset.
+
+ART-025 (2026-10-26, user decision): the look moves close to RimWorld's
+readable style (style only, no traced or referenced art). It replaces the
+earlier "distinctive pawn proportions / geometric industrial" identity.
 
 ## 3. Canonical Scale and Coordinates
 
@@ -99,6 +103,11 @@ Use a primarily orthographic top-down presentation with no strong
 perspective convergence. Objects may show subtle top/front thickness to
 communicate volume while remaining grid-aligned.
 
+Contracts (`artlib/contracts.py`, ART-025): oblique shear `SHEAR_K = 0.35`
+(a flatter camera; the renderer's `projShearK` in `light.go` matches it),
+upright figures (pawns) leaned `FIGURE_LEAN_DEG = 82`, animals
+`ANIMAL_LEAN_DEG = 70`. Previously 0.5, 55 and 40.
+
 Never mix strongly isometric furniture, pure top-down structures, and
 side-view objects without an explicit category rule. A sprite that looks
 good alone but inconsistent beside existing assets fails review.
@@ -121,6 +130,12 @@ light.
 At 64 px/tile, target roughly 2--3 px major outer contours and 1--2 px
 internal separators. Use dark neutral/chromatic outlines rather than
 pure black everywhere. Internal lines should be weaker than silhouettes.
+
+Outline contract (ART-025; was 4 px, darken 0.32, saturate 1.25):
+- `OUTLINE_PX = 6` at @2x (about 3 px at 1x), `OUTLINE_DARKEN = 0.18`, `OUTLINE_SATURATE = 1.05`: the outline is the neighbouring colour darkened, still chromatic.
+- `OUTLINE_INNER_PX = 2` for the `pawn` family: layers are outlined against a figure holdout so hair, hat and pants outlines never spill onto the face or body.
+- Toon bands use `RAMP_INTERP = "EASE"` (`RAMP_SOFT` 0.06) so band edges are soft; `SHADOW_T` 0.30 and `LIGHT_T` 0.80 set the band thresholds.
+- Grass and plants (ground plants, bushes, crops, trees) are never outlined.
 
 Sprites carry **no baked drop shadow** (ART-010): shadows are cast at
 runtime by the sun and moon (§6.1). The upper-left toon banding stays as
@@ -183,6 +198,13 @@ ceramic, flesh/organic, and bone.
 Use restrained saturation. Strong saturation is primarily for gameplay
 signaling, faction accents, emissives, danger, selection, and
 exceptional items.
+
+ART-025: the palettes get a muted warm pass through
+`tools/palette_mute.py --contrast 0.8 --outline 0.18,3`: saturation and
+light/shadow spread x0.8 toward base, light band value x0.96, shadows up
+to 8 degrees warmer. Emissive entries and neutral tint greys are skipped,
+and a header marker stops it being applied twice. Do not hand-saturate
+palette entries back up.
 
 Prefer neutral source art plus explicit runtime tint masks for clothing,
 hair, faction accents, fabrics, and paintable objects.
@@ -395,7 +417,7 @@ renderer may mirror them.
 
 ## 10. Pawn Visual System
 
-**NG-1 builds (normative):** one parametrised rig (`families/pawn.py` `BUILDS`) gives six builds — `m_thin, m_avg, m_heavy, f_thin, f_avg, f_heavy` — for body and every apparel layer, all frames and facings; keys `pawn/<layer>_<build>_<facing>_<frame>`, the old `pawn/body_…` keys alias `m_avg`. Hair styles short, crop, bun, long, braid, shaved, curls, tail; beards short, full, moustache (males, 40 %); a grey-hair palette entry. The pawn family is atlas-packed by `cmd/atlasgen` (≤4096² pages, `assets/metadata/atlas/<family>.yaml`). Looks are domain data (`pawn/look.Look`); `look.Legacy(id)` reproduces pre-NG-1 looks. See `NG1_NEW_GAME_PLAN.md` §4.6, §7.1.
+**NG-1 builds (normative):** one parametrised rig (`families/pawn.py` `BUILDS`) gives six builds — `m_thin, m_avg, m_heavy, f_thin, f_avg, f_heavy` — for body and every apparel layer, every facing; keys `pawn/<layer>_<build>_<facing>`, the old `pawn/body_…` keys alias `m_avg`. Hair styles short, crop, bun, long, braid, shaved, curls, tail; beards short, full, moustache (males, 40 %); a grey-hair palette entry. The pawn family is atlas-packed by `cmd/atlasgen` (≤4096² pages, `assets/metadata/atlas/<family>.yaml`). Looks are domain data (`pawn/look.Look`); `look.Legacy(id)` reproduces pre-NG-1 looks. See `NG1_NEW_GAME_PLAN.md` §4.6, §7.1.
 
 
 Pawns are compositional, not one flattened sprite per colonist.
@@ -419,9 +441,12 @@ damage/status effects
 selection/status UI
 ```
 
-Create an original silhouette: compact/geometric body, large readable
-head, simplified limbs, minimal world-scale facial detail, and
-apparel-driven identity.
+Create an original silhouette (ART-025): a round head on a rounded body
+capsule, dot eyes (two facing south, one east, none north), and **no
+arms, legs or hands**. Identity comes from build, hair, beard and apparel.
+- Six builds are capsule widths and head scales; apparel layers are thin shells over the body.
+- Rendered facings are south, east and north; west is east mirrored by the renderer. There are no walk or work frames (§27).
+- Body attachments: `head` (hair and hats), `hold` (held items grip here) and `back` (slung items).
 
 Support reusable body types, multiple head shapes, tintable skin/hair,
 separate facial hair, layered apparel, headgear, and separate rotatable
@@ -434,8 +459,8 @@ aiming, fire/status, damage, and selection where possible.
 
 Species must be identifiable by silhouette at normal zoom: body length,
 head, ears/horns, tail, and proportions matter more than detail. Prefer
-a small direction set (`north/east/south/west`) and mirror only where
-asymmetry permits. Life stages may use scale or dedicated juvenile
+a small direction set (`south/east/north`, ART-025) and mirror east for
+west. Life stages may use scale or dedicated juvenile
 silhouettes.
 
 ### 11.1 Roster and builder (normative, ART-011)
@@ -461,12 +486,13 @@ silhouettes.
   | tortoise | |
   | beetle, brute, crawler | hive insects |
 
-- **Per species and facing (south/east/north/west):**
+- **Per species and rendered facing (south/east/north; west is east mirrored by the renderer; canvases are centred on the tile, lean `ANIMAL_LEAN_DEG` 70):**
 
   | Sprite | Frames |
   |---|---|
   | standing | 1 |
   | trot | `walk01..08` |
+  | rest (lying) | `rest` |
   | attack (by the species' natural weapon) | `bite1..4`, `claw1..4`, `kick1..4`, `gore1..4`, `headbutt1..4` or `peck1..4` |
   | graze | `graze1..2` |
   | flinch | `flinch1..2` |
@@ -653,10 +679,10 @@ bodies become `item/bones_00..01`. Graves (`furniture/grave_dug_*`,
 
 ## 17. UI Art
 
-Use an original high-information-density interface: neutral/dark
-surfaces, restrained borders, clear typography, modest texture, strong
-hover/selected states. Do not duplicate RimWorld's exact panel art,
-iconography, typography, or visual layouts.
+Use an original high-information-density interface: neutral charcoal
+surfaces with a warm gold accent (§33), restrained borders, clear
+typography, modest texture, strong hover/selected states. No copied
+panel art, icons, typography, text or visual layouts.
 
 Create coherent icon families for architect categories, orders, work,
 speed, pawn status, health, needs, research, factions, trade, overlays,
@@ -963,22 +989,25 @@ appearances when appearance has not changed.
 
 ### 27.1 Movement and body motion (normative)
 
-Frames (rendered in Blender, one set per facing):
+ART-025 (2026-10-26, user decision): pawns are limbless and have no
+animation frames; all pawn motion is renderer transforms (walk bob, sway,
+lean, squash, rotation) applied to the standing sprites. Animal frames
+are kept.
 
-| Set | Frames | Layers | Notes |
-|---|---|---|---|
-| Pawn walk | `walk01`..`walk12` | body, pants, shirt, vest, parka, duster (+ masks) | one full gait cycle: 01 right heel contact, 02 loading, 03 mid-stance, 04 terminal stance, 05 pre-swing, 06 swing; 07-12 mirror for the left foot |
-| Pawn work | `work1`..`work6` | same layers | 1-2 wind-up, 3-4 swing, 5 strike, 6 recover; smoothstep eased |
-| Animal trot | `walk01`..`walk08` | per species | diagonal leg pairs, body bob, head nod |
+| Set | Frames | Notes |
+|---|---|---|
+| Pawn | none | standing sprite per layer and facing (S/E/N, west mirrored); the renderer moves the whole figure |
+| Animal trot | `walk01`..`walk08` | per species; diagonal leg pairs, body bob, head nod |
+| Animal rest | `rest` | lying pose, all animal sets |
 
-Every pawn body frame carries `hand` and `head` attachments (canvas px).
-Hair and hats are drawn at the body's `head` offset for that frame; held
-tools and weapons at its `hand` point.
+Pawn attachments are `head` (hair, hats), `hold` (held items grip here;
+no hands are drawn) and `back` (slung items), in canvas px per facing.
+Items are drawn behind the body when facing north.
 
 Clocks:
 
 - `animT` (sim ticks plus the elapsed fraction of the current frame):
-  movement, walk cycle, work swings, combat reactions. It freezes when
+  movement, walk bob/sway, work motion, combat reactions. It freezes when
   paused and scales with game speed.
 - `present` (real frames): breathing, wind, fire, particles, UI pulses.
 - Tracers, recoil, hit flashes and floaters stay visible for at least
@@ -995,11 +1024,12 @@ Path and gait:
   incoming and outgoing steps, through the shared tile centre.
 - Starting from rest and stopping (arrival or blocked) ease with
   smoothstep; the walk pose blends in and out over 0.3 tiles.
-- The walk cycle advances with distance travelled along the drawn path:
-  one 12-frame cycle per 1.6 tiles, so feet don't slide on diagonals.
-- Bob peaks once per footfall (frames 01 and 07); sway (north/south
-  facing) and forward lean (east/west) scale with speed; a short
-  lean-back on deceleration.
+- The walk phase advances with distance travelled along the drawn path:
+  one cycle per 1.6 tiles, so the bob never slides against the ground on
+  diagonals (animal trot frames advance with the same stride).
+- The pawn bob peaks once per footfall; sway (north/south facing) and
+  forward lean (east/west) scale with speed; a short lean-back on
+  deceleration.
 - Facing uses the smoothed velocity with 20% axis hysteresis; a
   north/south reversal passes through a side facing for 4 frames.
 - A blocked creature eases to a stop, faces the creature in its way and
@@ -1008,58 +1038,46 @@ Path and gait:
 
 ### 27.2 Action animation (normative)
 
-Pose sets (Blender, every facing; body, pants, shirt, vest, parka and
-duster layers; hair and hats follow `head`):
+Pawn actions are transforms of the standing figure and its held item, not
+pose sets (ART-025):
 
-| Set | Frames | Pose |
-|---|---|---|
-| `ready` | 1 | rifle at low ready, both hands, elbows bent |
-| `aim` | 1 | rifle shouldered, cheek on stock, support arm out, slight lean in |
-| `fire1..3` | 3 | recoil: shoulder driven back, muzzle rise, recover |
-| `stab1..6` | 6 | knife: guard, chamber, step-thrust, full extension, withdraw, guard |
-| `thrust1..6` | 6 | spear, two hands: rear hand at the butt, lunge, full reach, recover |
-| `swing1..6` | 6 | club, one hand: cock over the shoulder, twist, diagonal strike, follow-through |
-| `punch1..4` | 4 | guard, jab, cross, guard |
-| `chop1..6` | 6 | axe, two hands: raise over the far shoulder, diagonal drive, rebound |
-| `mine1..6` | 6 | pickaxe, two hands: high overhead, vertical drive, knees bent, pry |
-| `hammer1..4` | 4 | hammer in the right hand, left hand steadying, short arcs |
-| `kneel`, `plant1..4` | 5 | one knee down; dig, place the seed, press the soil |
-| `pick1..4` | 4 | crouch, both hands into the plant, pull, drop into the bag |
-| `bench1..4` | 4 | hands at waist height working a bench (craft, cook, tailor, research) |
-| `tend1..4` | 4 | kneeling, both hands bandaging low in front |
-| `eat1..4` | 4 | bowl in the left hand at the chest, spoon to the mouth and back |
-| `carry`, `carry_walk01..12` | 13 | forearms forward and level holding a load; legs as in the walk |
-| `flinch1..3` | 3 | hit: torso snaps back, arms up, head turns away |
-| `fall1..4` | 4 | knees buckle, torso folds, hands out; the renderer finishes lying down |
-| `offer1..2` | 2 | crouched, hand held out low (taming) |
+| Action | Motion |
+|---|---|
+| aim / fire | held item raised on `hold`; lean in while aiming, recoil kick on the shot |
+| melee (stab, thrust, swing, punch) | tool arc or lunge toward the target, then recover |
+| chop, mine, hammer | overhead tool arc with a lean and dip on the strike |
+| plant, pick, tend, bench, eat | lean and dip, with the job's tool or item at `hold` |
+| carry | load slung on `back` or held at `hold` while walking |
+| hit | flinch: short recoil away from the attacker |
+| fall | knees-buckle dip, then rotation to lying, falling away from the last hit |
 
-Animals (ART-011): every species has its natural weapon's set (`bite`, `claw`, `kick`, `gore`, `headbutt` or `peck`, `1..4`), and all have `graze1..2` and
-`flinch1..2`.
+Animals (ART-011) keep frames: every species has its natural weapon's set
+(`bite`, `claw`, `kick`, `gore`, `headbutt` or `peck`, `1..4`), and all
+have `graze1..2` and `flinch1..2`.
 
-Every pawn body frame carries `hand` (right), `hand_l` (left) and `head`.
-
-Holding: a two-handed item puts its `grip` on `hand` and turns so its
-`support` lies on the line to `hand_l`; one-handed items hang from `hand`
-along the forearm. Off duty (not drafted, not attacking) the rifle is
-slung on the back, the knife rides on the belt (not drawn), the spear is
-carried upright in the right hand and the club stays in hand. Working
-swaps the weapon for the job's tool.
+Holding: items grip on the body's `hold` attachment (the item's `grip`
+sits on `hold`; two-handed items turn so their `support` points along the
+aim). Off duty (not drafted, not attacking) the rifle is slung on the back
+(`back`), the knife rides on the belt (not drawn), the spear is carried
+upright and the club stays held. Working swaps the weapon for the job's
+tool. West uses the mirrored east sprites, and the lit shader inverts the
+normal X for mirrored draws.
 
 Timing (with §27.1 clocks):
 
-- Aiming blends `ready` to `aim` over the first 60% of the attack cycle
-  (`PawnView.AttackCycle`); strike frames (`fire1`, the stab, thrust,
-  swing and punch peaks, animal bite and kick) land on the tick the
-  attack's trace appears (`TraceView.Attacker`, age 0).
-- A hit (`PawnView.HitTick`, `HitFromX/Y`) plays `flinch1..3` and
+- Aiming blends from the low-ready to the raised hold over the first 60% of the attack cycle
+  (`PawnView.AttackCycle`); the strike (pawn tool arc or lunge peak, animal
+  bite and kick frames) lands on the tick the attack's trace appears
+  (`TraceView.Attacker`, age 0).
+- A hit (`PawnView.HitTick`, `HitFromX/Y`) plays the pawn flinch and
   staggers 0.12 tile away from the attacker over 10 sim ticks; blood
-  sprays away from the attacker. A pawn going down plays `fall1..4`, then
-  lies down falling away from the last hit.
+  sprays away from the attacker. A pawn going down buckles, then rotates
+  to lying, falling away from the last hit.
 - Work loops run on `animT` with a per-action period; each strike throws
   that action's particles: chop wood chips, mine sparks and rock dust,
   build sawdust, sow soil, harvest leaves, cook steam, butcher blood.
   Each shot throws muzzle flash and smoke at `muzzle` and a shell casing.
-- Everything keeps the §27.1 minimum of 8 visible frames.
+- Every transform motion lasts at least 8 visible frames.
 
 ### 27.3 Environment motion (normative)
 
@@ -1168,9 +1186,9 @@ resolve metadata conflicts, and update the catalog.
 ### ART Wave 0 --- Freeze contracts
 
 -   [x] tile reference scale (64 px/tile @1x, exported @2x; `artlib/contracts.py`)
--   [x] camera/perspective (orthographic top-down + oblique shear k=0.5; figures leaned 55° — category rule in `contracts.py`)
+-   [x] camera/perspective (orthographic top-down + oblique shear k=0.35; figures leaned 82°, animals 70° — ART-025, category rule in `contracts.py`)
 -   [x] pivots (`origin_px` = footprint top-left; named `attachments`)
--   [x] outlines (post-pass chromatic contour, 2 px @1x)
+-   [x] outlines (post-pass chromatic contour, 6 px @2x, darken 0.18; ART-025)
 -   [x] base/material palettes (`palettes/base.yaml`, `palettes/materials.yaml`)
 -   [x] light direction (upper-left key, 3 toon bands, lower-right contact shadow)
 -   [x] naming (`core:<family>/<name>`, lowercase snake_case, facing/variant suffixes)
@@ -1184,14 +1202,14 @@ resolve metadata conflicts, and update the catalog.
 -   [-] atlas/manifest (NG-1 ART-014: `cmd/atlasgen` packs the pawn family, about 15k sprites with masks and normals, into six pages with `assets/metadata/atlas/pawn.yaml`; other families are not packed)
 -   [x] contact sheets (`make art-preview`)
 -   [x] screenshot test scene (`bin/game -capture out.png` / `make art-capture` renders a scripted colony in the real renderer; `compose_scene.py` for the full §34 set)
--   [-] building/item/terrain/icon/pawn templates (`template.blend` + per-family builders; animal family with trot frames; 2×2/3×N and decal not yet)
+-   [-] building/item/terrain/icon/pawn templates (`template.blend` + per-family builders; animal family with trot frames, pawn without frames; 2×2/3×N and decal not yet)
 
 ### ART Wave 2 --- First playable
 
 -   [x] soil/stone/water (domain terrain drawn in-game: soil/rich soil/gravel/stone/smooth stone variants with soft edge transitions, natural rock walls with baked corners tinted per stone (ART-015); NG-1 adds shallow and deep water with a ripple shader, mud and dirt tracks, ART-014)
 -   [x] wall/door/floor (wood/stone/steel walls with 16 masks plus baked inner corners, 47 per material; wood and steel doors; wood and stone floors; all drawn in-game, ART-015)
 -   [x] blueprint/frame (blueprint overlay on every frame, scaffold once wood is delivered)
--   [x] pawn base: original compositional pawns (body/pants/shirt/vest/hair layers, 4 facings, EntityID-stable tints) with an 8-frame Blender walk cycle synced to tile progress, idle breathing, work swings, lying/in-bed/carried poses
+-   [x] pawn base: original compositional pawns (ART-025: limbless round-headed figure, body/pants/shirt/vest/hair layers, S/E/N rendered with west mirrored, EntityID-stable tints; walk, work, lying/in-bed/carried motion are renderer transforms, no frames)
 -   [x] first hair/apparel (3 hairstyles, pants/shirt/vest, runtime tint masks, in-game)
 -   [-] basic resources/items (wood/food drawn in-game; steel/stone generated, no domain items yet)
 -   [x] selection/designation markers (original selection brackets, harvest designation, stockpile zone in-game; cut/mine glyphs ready for when those orders exist)
@@ -1223,7 +1241,7 @@ resolve metadata conflicts, and update the catalog.
 
 ### ART Wave 6 --- Pawn variety
 
--   [-] body/head variants (NG-1 ART-014: six body builds; heads are shared; the sexes read weakly at 1x)
+-   [-] body/head variants (NG-1 ART-014 / ART-025: six body builds as capsule widths, shared round head; the sexes read weakly at 1x)
 -   [-] hair/facial hair library (NG-1: eight hair styles, three beards; beards are nearly invisible facing north)
 -   [ ] apparel/armor library
 -   [ ] tint validation
@@ -1262,12 +1280,12 @@ resolve metadata conflicts, and update the catalog.
 
 ### ART Wave 11 --- Polish
 
--   [ ] material/outline/palette consistency
+-   [x] material/outline/palette consistency (ART-025: one outline contract, muted palettes)
 -   [ ] pivot/scale audit
--   [ ] normal/far zoom audit
--   [ ] light/dark terrain contrast
+-   [-] normal/far zoom audit (ART-025 re-render reviewed at normal zoom; far zoom not audited)
+-   [-] light/dark terrain contrast (muted palette brings wall tops, rich soil and mud close in value; walls rely on the outline and darker south face)
 -   [ ] large-colony performance
--   [ ] full contact-sheet review
+-   [x] full contact-sheet review (ART-025)
 
 ## 33. Palette Deliverables
 

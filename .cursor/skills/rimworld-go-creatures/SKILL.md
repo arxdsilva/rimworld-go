@@ -38,7 +38,7 @@ Canonical sources (read by section, never paste whole files):
 ### 2. Art (Blender animal rig)
 - [ ] `animal_roster.py`: the mirrored row with a **features** brief (silhouette, proportions, palette, signature traits) and the `attack` field matching Go.
 - [ ] Builder spec in `families/animals/<archetype>.py` (`quadruped.py`, `bird.py`, `reptile.py`, `insect.py`); new materials additively (`materials.yaml` or a `materials_*.yaml` extension).
-- [ ] Render with a private temp dir: `TMPDIR=<scratch>/tmp ANIMALS=<key> make art FAMILIES=animal`, then `FAMILIES=overlay` for the icon. Full set per facing: standing, `walk01..08`, attack set `<attack>1..4`, `graze1..2`, `flinch1..2`; corpses `v0..v2`; `_f` set when dimorphic.
+- [ ] Render with a private temp dir: `TMPDIR=<scratch>/tmp ANIMALS=<key> make art FAMILIES=animal`, then `FAMILIES=overlay` for the icon. Full set per rendered facing (south, east, north; west is mirrored by the renderer): standing, `walk01..08`, attack set `<attack>1..4`, `graze1..2`, `flinch1..2`; corpses `v0..v2`; `_f` set when dimorphic.
 - [ ] `make normals` and `make art-check` (0 errors); review a contact sheet + 64 px silhouette + in-game `-scenario zoo` capture by eye.
 
 ### 3. Sounds (generated, mandatory)

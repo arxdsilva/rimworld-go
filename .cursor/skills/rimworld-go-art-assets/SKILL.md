@@ -91,7 +91,8 @@ gameplay requirement
 10. If the work also maps to a vanilla or UI checklist item, update that checkbox in the same change.
 11. Delete every asset, alias, metadata file and loader the change leaves unused (spec §25 housekeeping); `make art-check` must report no orphans.
 12. Plants and grass: no contour (`outline_width=0`, spec §9).
-13. Write a concise handoff including visual/art impact.
+13. Pawns are limbless (round head, body capsule; attachments `head`, `hold`, `back`; S/E/N rendered, west mirrored; no frames). Camera, lean and outline values live in `artlib/contracts.py` (spec §5-6, ART-025); never hard-code them.
+14. Write a concise handoff including visual/art impact.
 
 ## Task packet extras
 

@@ -278,9 +278,15 @@ open a window. Existing renderer unit tests stay headless.
   when paused, scales with speed) drives movement, walk cycles, work swings
   and combat reactions. `present` drives breathing, wind, fire, particles and
   UI pulses. Captures use no sub-frame interpolation, so they stay deterministic.
-- Frames: pawn walk `walk01..walk12` and animal trot `walk01..walk08` advance
-  with stride (one cycle per 1.6 tiles); work `work1..work6` runs on `animT`.
-  Hair and hats follow the body frame's `head` attachment; tools its `hand`.
+- Pawns have no frames (ART-025): walk bob, sway and lean follow stride (one
+  cycle per 1.6 tiles); per-action tool arcs, lunges, recoil, lean and dip run
+  on `animT`; a fall is a buckle then a rotation. Strikes land at trace age 0.
+  Animal trot `walk01..walk08` advances with stride. Hair and hats follow the
+  body's `head` attachment; held items grip on `hold`, slung ones hang on
+  `back`. West is east mirrored (`facingKey`, also held items, face scar,
+  shadows, animals); the lit shader inverts the normal X for mirrored draws.
+  `figureLayers` serves the colony, portraits and the colonist bar.
+  `projShearK` (`light.go`) must match the metadata shear (0.35).
 - `camera_smooth.go`: eased pan and cursor-anchored zoom; capture writes the
   camera directly.
 - The colonist inspector shows "waiting for <name>" while `BlockedBy` is set.

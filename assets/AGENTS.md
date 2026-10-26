@@ -48,12 +48,13 @@ Rules:
   (`stone_tint`) so the metal flecks keep their colour.
   `cmd/normalgen` extends linked edges before beveling, so joined tiles
   light as one surface.
-- Pawns: draw `body`, `pants_*`, `shirt_*`, `vest_*`, `hair_*` for the
-  same facing and frame at the same anchor; held weapons attach their `grip`
-  to the body's `hand` attachment (behind the body when facing north), and
-  hair/hats shift by the body frame's `head` attachment. Frames per ART
-  §27.1: walk `walk01..walk12`, work `work1..work6`, animal trot
-  `walk01..walk08`, animal rest pose `rest` (all animal sets).
+- Pawns (ART-025): limbless figures with no walk/work frames. Draw `body`,
+  `pants_*`, `shirt_*`, `vest_*`, `hair_*` for the same facing at the same
+  anchor; S/E/N are rendered and west is east mirrored by the renderer.
+  Attachments are `head` (hair/hats), `hold` (held items attach their `grip`
+  here, behind the body when facing north) and `back` (slung items). Motion
+  is renderer transforms (ART §27.1). Animals keep frames: trot
+  `walk01..walk08` and a `rest` pose (all animal sets), S/E/N only.
 - Renders are reproducible to ±1/255 per channel (GPU float noise).
 
 ## Layout
