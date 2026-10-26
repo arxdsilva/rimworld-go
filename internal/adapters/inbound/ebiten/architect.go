@@ -156,6 +156,9 @@ func archTooltipLines(t archTool, stuff string, wood, stock int) []string {
 		cost += fmt.Sprintf(" + %d %s", n, componentWord(n))
 	}
 	lines = append(lines, fmt.Sprintf("%s   Work: %d", cost, bv.Work))
+	if pl := archPowerLine(bv); pl != "" { // PLAY-021: draw, output or store
+		lines = append(lines, pl)
+	}
 	if stuff == "wood" && bv.Wood > wood {
 		lines = append(lines, fmt.Sprintf("Only %d wood in the colony", wood))
 	}
@@ -548,6 +551,7 @@ func (a *App) drawArchitectGhost(screen *ebiten.Image) {
 		return
 	}
 	a.renderer.drawPlacementGhost(screen, t.build, a.toolStuff(t), facingNames[a.archFacing], cells)
+	a.drawPowerGhostLinks(screen, t, cells) // power_overlay.go: the link a powered building would make
 	valid, firstBad, replaces := 0, "", ""
 	for _, c := range cells {
 		if c.same {

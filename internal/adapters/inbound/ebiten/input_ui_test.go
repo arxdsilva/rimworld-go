@@ -188,7 +188,7 @@ func TestFunctionKeysOpenTabs(t *testing.T) {
 	if a.uiModalTop() == worldModalID {
 		t.Fatal("F8 again closes World")
 	}
-	for _, k := range []string{"F7", "V", "T"} {
+	for _, k := range []string{"F7", "T"} { // V is live since PLAY-021 (TestVHotkeyFlicksTheSelectedDevice)
 		f.key(t, a, k, 0)
 		ts := a.liveToasts()
 		if len(ts) == 0 || !strings.Contains(ts[len(ts)-1].text, input.NotYet) {

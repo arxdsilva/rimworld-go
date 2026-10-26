@@ -175,14 +175,12 @@ func raiseAlerts(pawns []game.PawnView, w game.WorldView) []alert {
 	}
 	group("hypothermia", true, hypo, func(n string) string { return n + " has hypothermia" }, "colonists have hypothermia")
 	group("heatstroke", true, heat, func(n string) string { return n + " has heatstroke" }, "colonists have heatstroke")
-	var cold [][2]int
-	for _, b := range w.Buildings {
-		if b.Fuel && b.FuelPct == 0 {
-			cold = append(cold, [2]int{b.X, b.Y})
-		}
+	if al, ok := noFuelAlert(w); ok { // alerts_power.go: campfires, torches, generators
+		out = append(out, al)
 	}
-	if len(cold) > 0 {
-		out = append(out, alert{key: "nofuel", label: "Campfire out of wood", targets: cold})
+	out = append(out, brownoutAlerts(w)...) // alerts_power.go (PLAY-021)
+	if al, ok := notConnectedAlert(w); ok {
+		out = append(out, al)
 	}
 	if al, ok := spoilingAlert(w); ok {
 		out = append(out, al)
@@ -241,18 +239,24 @@ func (a *App) currentAlerts() []alert {
 	// build once per update while the read models are the same ones.
 	r := a.renderer
 	snap, w := r.game.Snapshot(), r.world()
-	k := alertsKey{
-		renderer: r, present: r.present, pawns: litFirst(snap), nPawns: len(snap),
-		animals: litFirst(w.Animals), nAnimals: len(w.Animals), items: litFirst(w.Items), nItems: len(w.Items),
-		bldgs: litFirst(w.Buildings), nBldgs: len(w.Buildings), frames: litFirst(w.Frames), nFrames: len(w.Frames),
-		food: w.Food,
-	}
+	k := newAlertsKey(r, snap, w)
 	if m := &a.alerts; r.viewCached && m.ok && m.key == k {
 		return m.out
 	}
 	out := buildAlerts(append(r.snapshot(), r.hostiles()...), w)
 	a.alerts = alertsMemo{key: k, out: out, ok: true}
 	return out
+}
+
+// newAlertsKey is the identity of the read models the alerts are built
+// from (the power data included: the nets, their version and the flare).
+func newAlertsKey(r *Renderer, snap []game.PawnView, w game.WorldView) alertsKey {
+	return alertsKey{
+		renderer: r, present: r.present, pawns: litFirst(snap), nPawns: len(snap),
+		animals: litFirst(w.Animals), nAnimals: len(w.Animals), items: litFirst(w.Items), nItems: len(w.Items),
+		bldgs: litFirst(w.Buildings), nBldgs: len(w.Buildings), frames: litFirst(w.Frames), nFrames: len(w.Frames),
+		food: w.Food, powerVer: w.PowerVer, nets: litFirst(w.PowerNets), nNets: len(w.PowerNets), flare: w.SolarFlare,
+	}
 }
 
 // alertsMemo is currentAlerts' last result and the read models it came
@@ -273,6 +277,12 @@ type alertsKey struct {
 	frames                           *game.FrameView
 	nPawns, nAnimals, nItems, nBldgs int
 	nFrames, food                    int
+	// power data (PLAY-021): a net's brownout moves PowerVer and the nets
+	// list; the flare is a flag of its own
+	powerVer uint64
+	nets     *game.PowerNetView
+	nNets    int
+	flare    bool
 }
 
 // alertRow is one row of the stack: an alert, or the "+N more" row that
@@ -583,7 +593,9 @@ var alertExplanations = map[string]string{
 	"break":         "A colonist is having a mental break and may act on their own. Keep others out of the way, then work on lifting their mood.",
 	"hypothermia":   "Colonists are freezing. Bring them indoors beside a fire and give them warm clothes.",
 	"heatstroke":    "Colonists are overheating. Move them into shade or a cool room and keep them off heavy work.",
-	"nofuel":        "A fire has burned out of wood. Add wood to keep the room warm and lit.",
+	"nofuel":        "A campfire, torch lamp or wood-fired generator has burned out of wood. Haulers refill them from the stockpile, so keep logs in stock; a generator makes no power until then.",
+	"brownout":      "A grid is asked for more power than it makes and has switched devices off. Build another generator or a battery, or switch off what you can do without.",
+	"notconnected":  "Some electrical devices have no grid in reach. Run conduit to within three tiles of each one, or place a power switch or battery on the line.",
 	"spoiling":      "Stored food is about to rot. Eat it, or move it somewhere cool, before it is lost.",
 	"waitingframes": "Some blueprints need materials that are not in stock. Gather or make what they need, or cancel the blueprints.",
 	"unhappy":       "Colonists are in a poor mood and close to breaking. Look at what drags it down: hunger, rest, comfort and room to breathe.",

@@ -24,7 +24,7 @@ import (
 //	weather           the weather and the wind arrow
 //	temperature       the hovered cell's air: "Indoors 18 °C"
 //	conditions        one line per active condition (status_chips.go)
-//	roof legend       only while the roof overlay is on
+//	legends           the roof and power keys, while those overlays are on
 //
 // globalHeight() is that stack's measured height; the layout reserves it
 // (hud.go a.hud()), so nothing here may call a.hud() while measuring.
@@ -45,8 +45,9 @@ const (
 )
 
 // globalToggle is one overlay toggle. The legacy five route through
-// applyClick (app.go) as plain buttons; the settings toggles (run != nil)
-// are widget-kit widgets, which applyClick answers through uiClick.
+// applyClick (app.go) as plain buttons; the settings toggles and the power
+// grid toggle (run != nil) are widget-kit widgets, which applyClick
+// answers through uiClick.
 type globalToggle struct {
 	id, icon, short string
 	on              func(a *App) bool
@@ -106,6 +107,11 @@ var globalToggleList = []globalToggle{
 		run: func(a *App) {
 			a.toggleGameplay(func(g *config.Gameplay) { g.CategorizedResources = !g.CategorizedResources })
 		}},
+	// PLAY-021: the ninth, so it opens a second row (power_overlay.go).
+	{id: powerButtonID, icon: "overlay_power", short: "Power",
+		on:  func(a *App) bool { return a.renderer.powerShown() },
+		tip: func(a *App) string { return a.powerToggleTip() },
+		run: func(a *App) { a.renderer.togglePowerOverlayIfAny() }},
 }
 
 func stateSuffix(on bool) string {
@@ -133,7 +139,7 @@ type globalPlan struct {
 	reason  string       // why the game is paused ("" none)
 	weather bool         // a weather row
 	chips   []statusChip // active conditions, one line each
-	legend  []string     // the roof legend, wrapped ("" none)
+	legend  []string     // the roof and power legends, wrapped (nil: none)
 }
 
 // textRowH is a text row of the stack: the body line, whose height already
@@ -149,6 +155,9 @@ func (a *App) globalPlan() globalPlan {
 	p := globalPlan{reason: a.speedReason(), weather: w.Weather != "", chips: statusChips(w)}
 	if line := a.roofLegend(); line != "" {
 		p.legend = wrapPx(line, tsBody, globalInnerW)
+	}
+	if line := a.powerLegend(); line != "" { // power_overlay.go
+		p.legend = append(p.legend, wrapPx(line, tsBody, globalInnerW)...)
 	}
 	return p
 }

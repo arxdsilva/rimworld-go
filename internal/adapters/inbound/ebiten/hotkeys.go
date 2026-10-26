@@ -116,10 +116,14 @@ func (a *App) handleMapKeys() {
 		a.draftSelection()
 	case f.fired(input.Forbid):
 		a.forbidSelection()
+	case f.fired(input.Power):
+		a.powerSelection() // cmds_power.go (PLAY-021)
 	case f.fired(input.RoofOverlay):
 		a.renderer.toggleRoofOverlay()
 	case f.fired(input.RoomStats):
 		a.rooms = !a.rooms
+	case f.fired(input.PowerOverlay):
+		a.renderer.togglePowerOverlay() // power_overlay.go (PLAY-021)
 	case f.fired(input.Search):
 		a.openSearch() // search_ui.go
 	case f.fired(input.PrevColonist):
@@ -281,7 +285,7 @@ func (a *App) cycleCell() {
 	if !ok {
 		return
 	}
-	cands := selectablesAt(a.renderer.world(), a.renderer.snapshot(), tx, ty)
+	cands := a.selectables(a.renderer.world(), tx, ty)
 	if len(cands) < 2 {
 		return
 	}

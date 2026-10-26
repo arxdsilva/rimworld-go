@@ -25,6 +25,7 @@ func (a *App) colonyUI(sw, sh int) {
 	a.socialTabsUI()      // social_tabs_ui.go: the History tab (ENG-003)
 	a.worldTabUI(sw, sh)  // world_ui.go: World tab, caravans (ENG-003)
 	a.workTipsUI(sw, sh)
+	a.researchUI(sw, sh) // research_ui.go: the project list's scroll view
 	a.statusChipsUI(sw)
 	a.animalsTabUI(sw, sh)    // animals_ui.go: Area / Pen dropdowns
 	a.areaSelectorsUI(sw, sh) // area_select.go: Schedule column, inspector line, overlay sync

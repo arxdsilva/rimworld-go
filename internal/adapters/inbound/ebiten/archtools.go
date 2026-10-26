@@ -1,10 +1,13 @@
 package ebiten
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/building/power"
 	"rimworld-go/internal/domain/sim/command"
 )
 
@@ -34,9 +37,11 @@ type archTool struct {
 	enable   bool         // area command paints (Enabled) rather than clears
 }
 
-// PLAY-021 categories: Power (conduits, switch, generators, battery) and
-// Temperature (heater, cooler, campfire). Every entry of archCategories
-// gets a button, so each joins the list with its first tools (POWERUI).
+// PLAY-021 categories: Power (conduits, switch, generators, battery). The
+// category panel holds four rows of two (hud_layout.go archCatsH), so a
+// ninth category does not fit: the heater and cooler sit in Misc and the
+// campfire stays in Furniture. archCatTemperature stays unlisted until
+// the panel grows a row; every listed category gets a button.
 const (
 	archCatPower       = "power"
 	archCatTemperature = "temperature"
@@ -48,8 +53,9 @@ var archCategories = []struct{ id, label string }{
 	{"structure", "Structure"},
 	{"furniture", "Furniture"},
 	{"production", "Production"},
+	{archCatPower, "Power"}, // PLAY-021
 	{"security", "Security"},
-	{"misc", "Misc"}, // ENG-003: marriage and party spots
+	{"misc", "Misc"}, // ENG-003: marriage and party spots; PLAY-021: heater and cooler
 }
 
 var archTools = []archTool{
@@ -128,13 +134,17 @@ var archTools = []archTool{
 	{id: "carpet", label: "Carpet", category: "furniture", icon: "carpet", mode: placeSingle, build: "carpet",
 		desc: "Wipes dirt off boots. Lay it on the tile just inside a door. Pick a carpet below."},
 	{id: "lamp", label: "Lamp", category: "furniture", icon: "lamp", mode: placeSingle, build: "lamp",
-		desc: "Lights its room at night."},
+		desc: "An electric light: lights its room at night while it has power. Needs a conduit within 3 tiles."},
+	{id: "torch_lamp", label: "Torch lamp", category: "furniture", icon: "torch_lamp", mode: placeSingle, build: torchLampKind,
+		desc: "Burns wood to light its room; no power needed. Haulers keep it fuelled, and rain or snow puts it out outdoors."},
 	{id: "trough", label: "Feeding trough", category: "furniture", icon: "feeding_trough", mode: placeSingle, build: "feeding trough",
 		desc: "Pen animals eat from it when the grass is gone. Haulers fill it; choose plants, meat or any when you select it. Q/E rotates."},
 	{id: "workbench", label: "Workbench", category: "production", icon: "workbench", mode: placeSingle, build: "workbench",
 		desc: "Crafting station (2x1). Select it to add bills. Q/E rotates."},
 	{id: "stove", label: "Stove", category: "production", icon: "stove", mode: placeSingle, build: "stove",
 		desc: "Cooks meals from raw food (2x1). Select it to add bills."},
+	{id: "electric_stove", label: "Electric stove", category: "production", icon: "electric_stove", mode: placeSingle, build: "electric stove",
+		desc: "Cooks the stove's meals 40% faster while it has power, and nothing without (2x1). Select it to add bills. Q/E rotates."},
 	{id: "butcher", label: "Butcher table", category: "production", icon: "butcher_table", mode: placeSingle, build: "butcher table",
 		desc: "Butchers hunted carcasses into meat (2x1). Starts with butcher bills."},
 	{id: "campfire", label: "Campfire", category: "furniture", icon: "campfire", mode: placeSingle, build: "campfire",
@@ -145,12 +155,16 @@ var archTools = []archTool{
 		desc: "Funeral pyre: burn the dead (2 wood per body)."},
 	{id: "tailor", label: "Tailoring bench", category: "production", icon: "tailoring_bench", mode: placeSingle, build: "tailoring bench",
 		desc: "Sews leather into parkas, tuques and dusters (2x1). Select it to add bills."},
+	{id: "electric_tailor", label: "Electric tailoring bench", category: "production", icon: "electric_tailoring_bench", mode: placeSingle, build: "electric tailoring bench",
+		desc: "Sews the tailoring bench's clothes 40% faster while it has power, and nothing without (2x1). Select it to add bills. Q/E rotates."},
 	{id: "drying", label: "Drying rack", category: "production", icon: "drying_rack", mode: placeSingle, build: "drying rack",
 		desc: "Dries up to 25 perishable food at a time so it never rots (2x1). Starts with a Dry food bill."},
 	{id: "stonecutter", label: "Stonecutter table", category: "production", icon: "stonecutter_table", mode: placeSingle, build: "stonecutter table",
 		desc: "Cuts stone chunks into stone blocks for building (2x1). Select it to add bills. Q/E rotates."},
 	{id: "research", label: "Research bench", category: "production", icon: "research_bench", mode: placeSingle, build: "research bench",
 		desc: "A desk to study at (2x1). Pick a project in the Research tab; colonists with Research work sit here. Q/E rotates."},
+	{id: "electric_research", label: "Electric research bench", category: "production", icon: "electric_research_bench", mode: placeSingle, build: "electric research bench",
+		desc: "A powered desk: research goes 40% faster here while it has power, and stops without (2x1). Q/E rotates."},
 	{id: "tool_cabinet", label: "Tool cabinet", category: "production", icon: "tool_cabinet", mode: placeSingle, build: "tool cabinet",
 		desc: "Tools on hand: benches within 6 tiles work 6% faster (two cabinets count)."},
 	{id: "sandbags", label: "Sandbags", category: "security", icon: "sandbags", mode: placeLine, build: "sandbags",
@@ -167,6 +181,28 @@ var archTools = []archTool{
 		desc: "Marks a pen: the area fenced in around it. Fence it in, then pick which animals it takes, its food and plants to cut when you select it."},
 	{id: "party_spot", label: "Party spot", category: "misc", icon: "party_spot", mode: placeSingle, build: "party spot",
 		desc: "Where the colony gathers for parties. Free and instant."},
+	// PLAY-021 temperature (Misc: see archCatTemperature).
+	{id: "heater", label: "Heater", category: "misc", icon: "heater", mode: placeSingle, build: heaterKind,
+		desc: "Warms its room up to its thermostat target, then idles. Select it to set the target."},
+	{id: "cooler", label: "Cooler", category: "misc", icon: "cooler", mode: placeSingle, build: coolerKind,
+		desc: "Set into a wall gap, facing the room to cool: it pumps the heat out of its back. Select it to set the target. Q/E rotates."},
+	// PLAY-021 power: the grid's pieces.
+	{id: "conduit", label: "Power conduit", category: archCatPower, icon: "power_conduit", mode: placeLine, build: conduitKind,
+		desc: "Carries power along the line; generators, batteries and devices within 3 tiles join it. Drag to draw a line."},
+	{id: "hidden_conduit", label: "Hidden conduit", category: archCatPower, icon: "hidden_conduit", mode: placeLine, build: hiddenConduitKind,
+		desc: "A conduit buried out of sight: it carries power the same way, shows only in the power overlay and never shorts out. Drag to draw a line."},
+	{id: "power_switch", label: "Power switch", category: archCatPower, icon: "power_switch", mode: placeSingle, build: powerSwitchKind,
+		desc: "Joins the conduits on either side while on; switched off, it cuts the grid in two there. A colonist flicks it."},
+	{id: "wood_generator", label: "Wood-fired generator", category: archCatPower, icon: "wood_fired_generator", mode: placeSingle, build: woodGeneratorKind,
+		desc: "Burns wood for steady power, day and night (2x2). Haulers keep it fuelled."},
+	{id: "solar_panel", label: "Solar panel", category: archCatPower, icon: "solar_panel", mode: placeSingle, build: solarPanelKind,
+		desc: "Turns daylight into power: most at noon, nothing at night or under a roof (3x3)."},
+	{id: "wind_turbine", label: "Wind turbine", category: archCatPower, icon: "wind_turbine", mode: placeSingle, build: windTurbineKind,
+		desc: "Power from the wind, more in a gale (1x2). Walls, rock and trees close by steal its wind. Q/E rotates."},
+	{id: "geothermal", label: "Geothermal generator", category: archCatPower, icon: "geothermal_generator", mode: placeSingle, build: geothermalKind,
+		desc: "Built over a steam vent: steady power day and night, no fuel (2x2)."},
+	{id: "battery", label: "Battery", category: archCatPower, icon: "battery", mode: placeSingle, build: batteryKind,
+		desc: "Stores the grid's spare power for the night and lean hours, and slowly leaks it (1x2). Q/E rotates."},
 }
 
 // allArchTools is every architect tool.
@@ -206,6 +242,26 @@ var buildableCatalog = sync.OnceValue(func() map[string]game.BuildableView {
 func buildable(kind string) (game.BuildableView, bool) {
 	b, ok := buildableCatalog()[kind]
 	return b, ok
+}
+
+// archPowerLine is an electrical card's power line, from the simulation's
+// own numbers: what a consumer draws, a producer makes at most or a
+// battery holds. "" for conduits and switches (they only carry power) and
+// for everything that is not electrical.
+func archPowerLine(bv game.BuildableView) string {
+	s := power.SpecOf(construction.Kind(bv.ID))
+	switch s.Role {
+	case power.Consumer:
+		if s.Idle == s.Draw {
+			return fmt.Sprintf("Power: uses %d W", s.Draw)
+		}
+		return fmt.Sprintf("Power: uses %d W working, %d W idle", s.Draw, s.Idle)
+	case power.Producer:
+		return fmt.Sprintf("Power: makes up to %d W", s.Peak)
+	case power.Storage:
+		return fmt.Sprintf("Power: stores %d Wh", s.CapWh)
+	}
+	return ""
 }
 
 // placementCells returns the cells a drag from (x0, y0) to (x1, y1)

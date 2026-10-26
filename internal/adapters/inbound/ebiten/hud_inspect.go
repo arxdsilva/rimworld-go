@@ -437,7 +437,11 @@ func (a *App) drawPaneBody(screen *ebiten.Image, spec paneSpec, g paneGeom, mx, 
 		if ly+step < g.body.Y || ly > g.body.bottom() {
 			continue
 		}
-		drawText(sub, ln, float64(g.body.X), float64(ly), tsBody)
+		st := tsBody
+		if paneLineWarns(ln) { // cmds_power.go: a power warning
+			st = withColor(st, uiWarning)
+		}
+		drawText(sub, ln, float64(g.body.X), float64(ly), st)
 	}
 	for i, row := range spec.Rows {
 		r := rect{view.X, g.body.Y + g.rowsY0 + float32(i)*paneRowH - off, view.W, paneRowH}

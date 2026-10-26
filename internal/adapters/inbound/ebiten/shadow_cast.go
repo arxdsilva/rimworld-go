@@ -440,7 +440,8 @@ func (r *Renderer) addContact(b *triBatch, c creatureCaster, a float64, tex *ebi
 
 // pointLights lists the frame's creature-shadow lights near the view:
 // the light sources (light_sources.go, through the synced light grid) —
-// burning campfires and every lamp, which is always on. Daylight no
+// whatever glows now: burning campfires and torch lamps, and lamps while
+// powered (PLAY-021). Daylight no
 // longer empties the list: drawShadows washes it out per creature, only
 // on open sky, so roofed rooms keep their lamp shadows by day.
 func (r *Renderer) pointLights() []pointLight {

@@ -64,11 +64,13 @@ const (
 	Constrain       Action = "arch.constrain"
 
 	RoofOverlay Action = "overlay.roof"
-	RoomStats   Action = "overlay.rooms"
-	Beauty      Action = "overlay.beauty"
-	Detail      Action = "overlay.detail"
-	Search      Action = "overlay.search"
-	Minimap     Action = "overlay.minimap"
+	// PowerOverlay shows the power grid (PLAY-021).
+	PowerOverlay Action = "overlay.power"
+	RoomStats    Action = "overlay.rooms"
+	Beauty       Action = "overlay.beauty"
+	Detail       Action = "overlay.detail"
+	Search       Action = "overlay.search"
+	Minimap      Action = "overlay.minimap"
 
 	Queue   Action = "orders.queue"
 	Qty10   Action = "qty.x10"
@@ -150,7 +152,7 @@ var defs = []Def{
 
 	{ID: Draft, Label: "Draft / undraft", Category: "Selected", Context: CtxMap, Kind: Toggle, Defaults: keys("R")},
 	{ID: Forbid, Label: "Forbid / allow", Category: "Selected", Context: CtxMap, Kind: Toggle, Defaults: keys("F")},
-	{ID: Power, Label: "Power on / off", Category: "Selected", Context: CtxMap, Kind: Toggle, Defaults: keys("V"), Reserved: NotYet},
+	{ID: Power, Label: "Power on / off", Category: "Selected", Context: CtxMap, Kind: Toggle, Defaults: keys("V")},
 
 	gizmo(1, "B"), gizmo(2, "H"), gizmo(3, "Y"), gizmo(4, "N"), gizmo(5, "J"), gizmo(6, "U"),
 	gizmo(7, "M"), gizmo(8, "K"), gizmo(9, "I"), gizmo(10, "L"), gizmo(11, "O"), gizmo(12, "P"),
@@ -162,6 +164,7 @@ var defs = []Def{
 	{ID: Constrain, Label: "Square / circle (drag)", Category: "Architect", Context: CtxTool, Kind: Modifier, Fixed: true, Defaults: keys(KeyCtrl)},
 
 	{ID: RoofOverlay, Label: "Roof overlay", Category: "Overlays", Context: CtxMap, Kind: Toggle, Defaults: []Binding{shift("R")}},
+	{ID: PowerOverlay, Label: "Power grid", Category: "Overlays", Context: CtxMap, Kind: Toggle, Defaults: []Binding{shift("P")}},
 	{ID: RoomStats, Label: "Room stats", Category: "Overlays", Context: CtxMap, Kind: Toggle, Defaults: keys("G")},
 	{ID: Beauty, Label: "Beauty", Category: "Overlays", Context: CtxMap, Kind: Toggle, Defaults: keys("T"), Reserved: NotYet},
 	{ID: Detail, Label: "Detailed cell info (hold)", Category: "Overlays", Context: CtxMap, Kind: Modifier, Fixed: true, Defaults: keys(KeyAlt)},

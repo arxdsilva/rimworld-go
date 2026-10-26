@@ -133,6 +133,9 @@ var canvasExempt = map[string]string{
 	"architect.go:drawZoneGhost":                  "world: zone/drag ghost cells on the map (palette and labels use the canvas)",
 	"move_mode.go:drawMoveMode":                   "world: move-mode footprint outline (hints use the canvas)",
 	"zone_tools.go:drawZoneToolGhost":             "world: the Expand and Shrink ghost cells on the map (the icon and hint use the canvas)",
+	"power_overlay.go:powerDot":                   "world: the power overlay's device marks on tiles",
+	"power_overlay.go:drawPowerLink":              "world: power link lines between tiles (the overlay and the placement ghost)",
+	"power_overlay.go:drawPowerFrame":             "world: the red frame round a device on no power grid",
 
 	// the globe: physical size inside its logical area
 	"globe.go:Draw":                "globe: drawn at physical size inside its logical area (x s); names go through the canvas",

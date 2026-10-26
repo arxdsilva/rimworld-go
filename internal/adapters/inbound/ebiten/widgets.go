@@ -60,6 +60,15 @@ var (
 	uiMoodGood      = color.RGBA{R: 0x8A, G: 0xCF, B: 0x6A, A: 0xFF}
 	uiMoodMid       = color.RGBA{R: 0xE6, G: 0xC2, B: 0x4E, A: 0xFF}
 	uiMoodBad       = color.RGBA{R: 0xFA, G: 0x88, B: 0x7C, A: 0xFF}
+	// PLAY-021 power overlay: a colour per grid, handed out in turn
+	// (power_overlay.go), and grey for pieces on no grid.
+	uiPowerNet1 = color.RGBA{R: 0xF5, G: 0xD5, B: 0x47, A: 0xFF}
+	uiPowerNet2 = color.RGBA{R: 0x4F, G: 0xE0, B: 0xD0, A: 0xFF}
+	uiPowerNet3 = color.RGBA{R: 0xF2, G: 0x7E, B: 0xB8, A: 0xFF}
+	uiPowerNet4 = color.RGBA{R: 0xA3, G: 0xE0, B: 0x5A, A: 0xFF}
+	uiPowerNet5 = color.RGBA{R: 0xA9, G: 0x8B, B: 0xFF, A: 0xFF}
+	uiPowerNet6 = color.RGBA{R: 0x3E, G: 0x8B, B: 0xFF, A: 0xFF}
+	uiPowerNone = color.RGBA{R: 0x9A, G: 0x94, B: 0xA8, A: 0xFF}
 )
 
 var uiTokens = map[string]color.RGBA{
@@ -108,6 +117,13 @@ var uiTokens = map[string]color.RGBA{
 	"ui.mood_good":       uiMoodGood,
 	"ui.mood_mid":        uiMoodMid,
 	"ui.mood_bad":        uiMoodBad,
+	"ui.power_net1":      uiPowerNet1,
+	"ui.power_net2":      uiPowerNet2,
+	"ui.power_net3":      uiPowerNet3,
+	"ui.power_net4":      uiPowerNet4,
+	"ui.power_net5":      uiPowerNet5,
+	"ui.power_net6":      uiPowerNet6,
+	"ui.power_none":      uiPowerNone,
 }
 
 const menuBackdropBands = 12

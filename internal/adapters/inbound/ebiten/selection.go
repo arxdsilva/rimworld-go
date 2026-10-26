@@ -1,6 +1,8 @@
 package ebiten
 
 import (
+	"slices"
+
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -38,6 +40,27 @@ type selCycle struct {
 }
 
 // selectablesAt lists what a click on (tx, ty) can select, in precedence.
+// selectables is selectablesAt for a click on the map: a hidden conduit
+// counts only while the power overlay shows, the only place it is drawn
+// (PLAY-021).
+func (a *App) selectables(w game.WorldView, tx, ty int) []selCand {
+	cands := selectablesAt(w, a.renderer.snapshot(), tx, ty)
+	if a.renderer.powerShown() {
+		return cands
+	}
+	return slices.DeleteFunc(cands, func(c selCand) bool {
+		if c.kind != selBuilding {
+			return false
+		}
+		for i := range w.Buildings {
+			if w.Buildings[i].ID == c.id {
+				return w.Buildings[i].Kind == hiddenConduitKind
+			}
+		}
+		return false
+	})
+}
+
 func selectablesAt(w game.WorldView, pawns []game.PawnView, tx, ty int) []selCand {
 	var out []selCand
 	if worldFogged(w, tx, ty) {
@@ -118,7 +141,7 @@ func (a *App) clickSelect() {
 		a.selCycle = selCycle{}
 		return
 	}
-	cands := selectablesAt(w, a.renderer.snapshot(), tx, ty)
+	cands := a.selectables(w, tx, ty)
 	tile := [2]int{tx, ty}
 	a.zoneSt().noteCell(tile)
 	if c := a.selCycle; c.ok && c.tile == tile && c.n == len(cands) && len(cands) > 1 {

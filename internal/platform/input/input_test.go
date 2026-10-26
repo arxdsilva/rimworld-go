@@ -186,3 +186,15 @@ func TestSwapTradesKeys(t *testing.T) {
 		t.Fatalf("swap left conflicts: %+v", cs)
 	}
 }
+
+// PLAY-021: the power grid overlay is its own map toggle on Shift+P (plain
+// P is the twelfth command button), without a conflict.
+func TestPowerOverlayAction(t *testing.T) {
+	d, ok := input.Lookup(input.PowerOverlay)
+	if !ok || d.Label != "Power grid" || d.Category != "Overlays" || d.Kind != input.Toggle {
+		t.Fatalf("power overlay def %+v (found %v)", d, ok)
+	}
+	if len(d.Defaults) != 1 || d.Defaults[0].String() != "Shift+P" {
+		t.Fatalf("power overlay key %v, want Shift+P", d.Defaults)
+	}
+}

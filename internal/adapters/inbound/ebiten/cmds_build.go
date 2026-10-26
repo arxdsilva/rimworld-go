@@ -48,8 +48,8 @@ func (a *App) frameView(id entity.EntityID) (game.FrameView, bool) {
 }
 
 // buildingCommands are building id's command buttons: the kind's own first
-// (trough filter, bed owners, prisoner mark, casket), then Move, Copy and
-// Deconstruct. A steam vent is natural: nothing to do. A pen marker only
+// (trough filter, bed owners, prisoner mark, casket, the power toggle and
+// thermostat), then Move, Copy and Deconstruct. A steam vent is natural: nothing to do. A pen marker only
 // comes down; its settings are the Pen tab.
 func (a *App) buildingCommands(id entity.EntityID) []cmdButton {
 	b, ok := a.buildingView(id)
@@ -61,6 +61,7 @@ func (a *App) buildingCommands(id entity.EntityID) []cmdButton {
 		out = append(out, a.troughCommands(b)...)
 		out = append(out, a.bedCommands(b)...)
 		out = append(out, a.casketCommands(b)...)
+		out = append(out, a.powerCommands(b)...) // cmds_power.go (PLAY-021)
 		out = append(out, a.moveCommands(b)...)
 	}
 	if !b.Deconstruct {
@@ -119,7 +120,8 @@ func (a *App) buildingPane(id entity.EntityID) paneSpec {
 	return p
 }
 
-// buildingBars are the fuel and feed bars.
+// buildingBars are the fuel, feed and battery charge bars. Any fuel
+// burner has the Fuel bar: a campfire, a torch lamp, a wood-fired generator.
 func (a *App) buildingBars(b game.BuildingView) []paneBar {
 	var out []paneBar
 	if b.Fuel {
@@ -128,7 +130,7 @@ func (a *App) buildingBars(b game.BuildingView) []paneBar {
 	if isTrough(b) && b.TroughCap > 0 {
 		out = append(out, paneBar{Label: "Feed", Pct: bldgPct(b.TroughFill * 100 / b.TroughCap), Color: uiAccent})
 	}
-	return out
+	return append(out, powerBars(b)...)
 }
 
 // buildingLines are the status lines: what the legacy panel said, one per
@@ -145,17 +147,10 @@ func (a *App) buildingLines(b game.BuildingView) []string {
 	if b.Deconstruct {
 		add("Marked for deconstruction")
 	}
-	add(roomLabelAt(a.renderer.world(), b.X, b.Y))
-	if b.Fuel {
-		switch {
-		case b.FuelPct == 0:
-			add("Out of fuel")
-		case b.Burning:
-			add("Burning")
-		default:
-			add("Banked (warm enough)")
-		}
-	}
+	w := a.renderer.world()
+	add(roomLabelAt(w, b.X, b.Y))
+	add(fuelLine(b))
+	add(powerLines(b, w)...)
 	if b.DryQty > 0 {
 		add(fmt.Sprintf("Drying %d %s, %d%%", b.DryQty, b.DryKind, b.DryPct))
 	}

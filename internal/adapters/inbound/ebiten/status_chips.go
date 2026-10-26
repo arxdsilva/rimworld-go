@@ -10,10 +10,11 @@ import (
 )
 
 // Conditions (NG-1 §2.11, §2.12; PLAY-018): the heat wave or cold snap in
-// progress and the scenario's permanent conditions (Ashfall sky, ...), one
-// line each in the Global controls, above the temperature, with the same
-// hover cards the chips had. They read WorldView.Extreme and
-// WorldView.Conditions; the sky's own tint is the light pass's.
+// progress, the solar flare (PLAY-021) and the scenario's permanent
+// conditions (Ashfall sky, ...), one line each in the Global controls,
+// above the temperature, with the same hover cards the chips had. They read
+// WorldView.Extreme, SolarFlare and Conditions; the sky's own tint is the
+// light pass's.
 
 // statusChip is one condition: its label, its hover card and its colour.
 type statusChip struct {
@@ -22,7 +23,8 @@ type statusChip struct {
 }
 
 // statusChips lists the conditions for a world view: the extreme weather
-// first, then the permanent conditions in the scenario's order.
+// first, then the solar flare, then the permanent conditions in the
+// scenario's order.
 func statusChips(w game.WorldView) []statusChip {
 	var out []statusChip
 	switch w.Extreme {
@@ -30,6 +32,9 @@ func statusChips(w game.WorldView) []statusChip {
 		out = append(out, statusChip{"Heat wave", "Heat wave\nA spell of extreme heat: about 12 C hotter than the season, for a few days. Keep everyone out of the midday sun.", uiWarning})
 	case "cold_snap":
 		out = append(out, statusChip{"Cold snap", "Cold snap\nA spell of extreme cold: about 14 C colder than the season, for a few days. Keep the fires fed.", uiLetterInfo})
+	}
+	if w.SolarFlare {
+		out = append(out, statusChip{"Solar flare", "Solar flare\nA burst from the sun has knocked out every electrical device for a few hours. Batteries keep what they hold; torches and campfires still burn.", uiWarning})
 	}
 	for _, key := range w.Conditions {
 		for _, c := range scenario.Conditions() {

@@ -137,7 +137,7 @@ func (a *App) candUnderCursor() (selCand, bool) {
 		return selCand{selPawn, id}, true
 	}
 	tx, ty := a.renderer.TileAt(mx, my)
-	if cands := selectablesAt(a.renderer.world(), a.renderer.snapshot(), tx, ty); len(cands) > 0 {
+	if cands := a.selectables(a.renderer.world(), tx, ty); len(cands) > 0 {
 		return cands[0], true
 	}
 	return selCand{}, false

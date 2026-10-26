@@ -9,6 +9,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -148,10 +149,22 @@ func buildingTitle(b game.BuildingView) string {
 	return materialTitle(b.Kind, b.Stuff) // "Wall", "Granite wall", "Steel door"
 }
 
+// recipeBenchName is the bench kind whose recipes a bench of kind works: an
+// electric bench takes its base bench's (construction.RecipeBench), any
+// other kind is its own.
+func recipeBenchName(kind string) string {
+	if k, ok := construction.Parse(kind); ok {
+		return construction.RecipeBench(k).String()
+	}
+	return kind
+}
+
+// recipesFor lists the recipes a bench of kind can be given as bills.
 func (a *App) recipesFor(kind string) []game.RecipeView {
 	var out []game.RecipeView
+	bench := recipeBenchName(kind)
 	for _, r := range game.Recipes() {
-		if r.Bench == kind {
+		if r.Bench == bench {
 			out = append(out, r)
 		}
 	}

@@ -192,6 +192,7 @@ type Renderer struct {
 	game       Simulation
 	zoneGeoms  map[uint16]*zoneGeom // zones_draw.go outline cache
 	zonePlants map[[2]int]bool      // zones_draw.go: cells holding their zone's own plant, this frame (PLAY-020)
+	pov        powerOverlay         // power_overlay.go: the power overlay toggle, forced flag and net colours (PLAY-021)
 	wheelTaken bool                 // the mouse wheel scrolled a log this frame
 	speed      speed
 	cam        camera
@@ -536,6 +537,7 @@ func (r *Renderer) Draw(screen *ebiten.Image) {
 	if r.art != nil {
 		r.drawArt(screen, sw, sh, tile) // lit by light.go: no veil
 		r.drawRoofOverlay(screen, r.drawW, sw, sh, tile)
+		r.drawPowerOverlay(screen, &r.drawW, sw, sh, tile) // power_overlay.go (PLAY-021)
 		r.drawTraces(screen, r.game.World(), tile)
 		return
 	}
