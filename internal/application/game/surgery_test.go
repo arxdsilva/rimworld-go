@@ -83,7 +83,7 @@ func TestSurgeryInstallsAPegLeg(t *testing.T) {
 	addPegLeg(g, patient)
 	operateUntil(t, g, patient, doc)
 	b := g.bodies[patient]
-	if b.Implants[body.LegL] != item.PegLeg {
+	if b.Implant(body.LegL) != item.PegLeg {
 		t.Fatalf("the peg leg is fitted: %+v", b)
 	}
 	if after := b.Capacity(body.Moving); after <= before {
@@ -126,7 +126,7 @@ func TestBotchedSurgeryWoundsAndReports(t *testing.T) {
 	before := g.VitalOf(patient).Injury
 	operateUntil(t, g, patient, doc)
 	b := g.bodies[patient]
-	if b.Implants[body.LegL].IsImplant() {
+	if b.Implant(body.LegL).IsImplant() {
 		t.Fatal("a botched operation fits nothing")
 	}
 	surgical := false

@@ -13,6 +13,7 @@ All paths below are relative to this `.cursor/` folder unless noted.
 | Adding or changing an animal/creature (roster, art, four generated sounds) | `skills/rimworld-go-creatures/SKILL.md` (rule: `rules/creatures.mdc`) |
 | Ordered vanilla gameplay feature backlog | `RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` |
 | Ordered player-facing UI/UX backlog | `RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` |
+| Medical system gap analysis vs RimWorld, wiki constants, MED phases | `MEDICAL_GAP_ANALYSIS.md` |
 | Per-task AI handoffs | `handoffs/` |
 | Task-specific playbooks (start here for any new task) | `skills/rimworld-go-router/SKILL.md` |
 | Multi-area work across parallel agents | `PARALLEL_WORK.md` (playbook: `skills/parallel-work/SKILL.md`) |

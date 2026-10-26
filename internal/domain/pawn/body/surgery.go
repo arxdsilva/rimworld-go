@@ -9,6 +9,15 @@ const (
 	InstallImplant OpKind = iota
 	RemoveImplant
 	Amputate
+	// MED-00 appends the surgery v2 operations; CanOperate refuses them
+	// until MED-06 implements them.
+	HarvestOrgan
+	InstallOrgan
+	Euthanize
+	Anesthetize
+	ExciseCarcinoma
+	// NumOps counts the operation kinds (keep last).
+	NumOps
 )
 
 // Operation is one queued operation on a part.
@@ -94,11 +103,11 @@ func (b *Body) CanOperate(op Operation) bool {
 	case InstallImplant:
 		return Fits(op.Item, op.Part) && b.CanReplace(op.Part)
 	case RemoveImplant:
-		return b.Implants[op.Part].IsImplant()
+		return b.fitted(op.Part)
 	case Amputate:
 		return !b.isMissing(op.Part) && !defs[op.Part].Vital
 	}
-	return false
+	return false // HarvestOrgan..ExciseCarcinoma: not yet (MED-06)
 }
 
 // Apply carries out op with the given outcome and reports whether the

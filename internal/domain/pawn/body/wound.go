@@ -22,6 +22,12 @@ const scarChance = 100
 const scarDmg = 1
 
 // Wound is damage on one part; Permanent wounds are scars.
+//
+// MED-00 appends the medical fields, all zero-safe (an older save and a
+// fresh wound read them as zero): TendQ is the tend quality in permille
+// (0: untended or tended before quality existed), TendAt the tick it was
+// tended, InfectAt the tick its infection roll is due (0: none due) and
+// Bleed its cached bleed rate (permille of blood per day).
 type Wound struct {
 	Part      Part
 	Dmg       int
@@ -29,16 +35,75 @@ type Wound struct {
 	Tended    bool
 	At        uint64
 	Permanent bool
+	TendQ     int16
+	TendAt    uint64
+	InfectAt  uint64
+	Bleed     int32
 }
 
-// Body is one humanlike's wounds, missing parts (a bit per Part) and
-// installed implants (saved). A part replaced by an implant stays Missing;
-// the implant stands in for it.
+// Body is one humanlike's wounds, missing parts (a bit per Part),
+// installed implants, blood loss and conditions (saved). A part replaced by
+// an implant stays Missing; the implant stands in for it.
+//
+// Fitted holds the implant on each part, indexed by Part and grown lazily
+// (nil: no implants), so appending parts never resizes a saved array; read
+// and write it through Implant and SetImplant. BloodLoss is permille of
+// blood lost; Conds are the body's conditions (condition.go).
 type Body struct {
-	Wounds   []Wound
-	Missing  uint32
-	Implants [NumParts]item.Kind
+	Wounds    []Wound
+	Missing   uint32
+	Fitted    []item.Kind
+	BloodLoss int32
+	Conds     []Condition
 }
+
+// Implant is the implant fitted on p (0: none).
+func (b *Body) Implant(p Part) item.Kind {
+	if int(p) < len(b.Fitted) {
+		return b.Fitted[p]
+	}
+	return 0
+}
+
+// SetImplant puts kind k on p as it is, with no checks (0 clears it):
+// Install and Remove are the checked ways. Fitted grows to reach p and
+// shrinks back to nil once no part carries anything.
+func (b *Body) SetImplant(p Part, k item.Kind) {
+	if p >= NumParts {
+		return
+	}
+	if int(p) >= len(b.Fitted) {
+		if k == 0 {
+			return
+		}
+		b.Fitted = append(b.Fitted, make([]item.Kind, int(p)+1-len(b.Fitted))...)
+	}
+	b.Fitted[p] = k
+	n := len(b.Fitted)
+	for n > 0 && b.Fitted[n-1] == 0 {
+		n--
+	}
+	if n == 0 {
+		b.Fitted = nil
+		return
+	}
+	b.Fitted = b.Fitted[:n]
+}
+
+// FittedFrom is a Fitted slice holding the implants of a per-part array
+// (an older save's fixed-size Implants), nil when it holds none.
+func FittedFrom(a []item.Kind) []item.Kind {
+	var b Body
+	for p, k := range a {
+		if k != 0 {
+			b.SetImplant(Part(p), k)
+		}
+	}
+	return b.Fitted
+}
+
+// fitted reports an implant on p.
+func (b *Body) fitted(p Part) bool { return b.Implant(p).IsImplant() }
 
 // partDmg is the wound damage on p.
 func (b *Body) partDmg(p Part) int {
@@ -79,7 +144,7 @@ func (b *Body) destroy(p Part) {
 	for q := Part(0); q < NumParts; q++ {
 		if under(q, p) {
 			b.Missing |= bit(q)
-			b.Implants[q] = 0
+			b.SetImplant(q, 0)
 		}
 	}
 	kept := b.Wounds[:0]
@@ -152,7 +217,7 @@ func (b *Body) Tend() int {
 // replaced reports p covered by an implant on itself or an ancestor.
 func (b *Body) replaced(p Part) bool {
 	for q := Part(0); q < NumParts; q++ {
-		if b.Implants[q].IsImplant() && under(p, q) {
+		if b.fitted(q) && under(p, q) {
 			return true
 		}
 	}

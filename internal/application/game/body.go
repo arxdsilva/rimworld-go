@@ -201,6 +201,7 @@ func (g *Game) bodyChanged(id entity.EntityID, b *body.Body, v *health.Record) {
 		g.sk.ensure()
 		g.rebuildStats(id) // skills.go: the body layer
 	}
+	g.syncPatient(id, b) // patients.go (MED-00)
 }
 
 // unconscious reports b out cold (it downs the pawn).
@@ -268,21 +269,59 @@ func hasOpenWound(b *body.Body) bool {
 	return false
 }
 
-// exportBodies is the Bodies save field in id order (nil: none).
-func (g *Game) exportBodies() []entry[body.Body] {
-	return exportMap(g.bodies)
+// legacyParts is how many parts the fixed implant array of saves before
+// MED-00 held (body.NumParts may grow; this never does).
+const legacyParts = 20
+
+// savedBody is a body in the save (MED-00). Implants is the fixed array
+// saves up to version 5 wrote, read only: a body saved with Fitted
+// (always written now, nil when nothing is fitted) ignores it. gob
+// matches fields by name, so an older save's body.Body decodes into it.
+type savedBody struct {
+	Wounds    []body.Wound
+	Missing   uint32
+	Implants  [legacyParts]item.Kind // legacy read only
+	Fitted    []item.Kind
+	BloodLoss int32
+	Conds     []body.Condition
 }
 
-// importBodies restores exportBodies' state and rebuilds the stat sheets
-// the bodies change (the sheets are derived, not saved).
-func (g *Game) importBodies(es []entry[body.Body]) {
-	g.bodies = importMap(es)
+// exportBodies is the Bodies save field in id order (nil: none).
+func (g *Game) exportBodies() []entry[savedBody] {
+	es := exportMap(g.bodies)
+	if es == nil {
+		return nil
+	}
+	out := make([]entry[savedBody], len(es))
+	for i, e := range es {
+		b := e.V
+		out[i] = entry[savedBody]{e.ID, savedBody{Wounds: b.Wounds, Missing: b.Missing, Fitted: b.Fitted, BloodLoss: b.BloodLoss, Conds: b.Conds}}
+	}
+	return out
+}
+
+// importBodies restores exportBodies' state (an older save's implant
+// array becomes Fitted), rebuilds the stat sheets the bodies change and
+// the patients index (both derived, not saved). The vital records must be
+// loaded first.
+func (g *Game) importBodies(es []entry[savedBody]) {
+	bs := make([]entry[body.Body], len(es))
+	for i, e := range es {
+		sb := e.V
+		fitted := sb.Fitted
+		if fitted == nil {
+			fitted = body.FittedFrom(sb.Implants[:])
+		}
+		bs[i] = entry[body.Body]{e.ID, body.Body{Wounds: sb.Wounds, Missing: sb.Missing, Fitted: fitted, BloodLoss: sb.BloodLoss, Conds: sb.Conds}}
+	}
+	g.bodies = importMap(bs)
 	for _, e := range es {
 		if keyOf(g.bodies[e.ID]) != healthyKey {
 			g.sk.ensure()
 			g.rebuildStats(e.ID)
 		}
 	}
+	g.rebuildPatients() // patients.go (MED-00)
 }
 
 // exportMap lists a pointer map's entries in id order (nil when empty).
@@ -353,7 +392,7 @@ func (g *Game) viewBody(id entity.EntityID) *body.Body {
 // one of its ancestors (a foot under a prosthetic leg).
 func coveredByImplant(b *body.Body, p body.Part) bool {
 	for q, i := body.DefOf(p).Parent, 0; i < int(body.NumParts); q, i = body.DefOf(q).Parent, i+1 {
-		if b.Implants[q].IsImplant() {
+		if b.Implant(q).IsImplant() {
 			return true
 		}
 		if body.DefOf(q).Parent == q {
@@ -409,6 +448,16 @@ func operationLabel(b *body.Body, op body.Operation) string {
 		return fmt.Sprintf("Remove implant (%s)", part)
 	case body.Amputate:
 		return fmt.Sprintf("Amputate %s", part)
+	case body.HarvestOrgan: // MED-00 placeholders until MED-06
+		return fmt.Sprintf("Harvest %s", part)
+	case body.InstallOrgan:
+		return fmt.Sprintf("Install organ (%s)", part)
+	case body.Euthanize:
+		return "Euthanize"
+	case body.Anesthetize:
+		return "Anesthetize"
+	case body.ExciseCarcinoma:
+		return fmt.Sprintf("Excise carcinoma (%s)", part)
 	}
 	return "Operation (" + part + ")"
 }
@@ -436,7 +485,7 @@ func (g *Game) healthView(id entity.EntityID) (HealthView, bool) {
 		return HealthView{}, false
 	}
 	b := g.viewBody(id)
-	hv := HealthView{Pain: int(b.Pain()) / 10, Drugs: g.drugLines(id)} // drugs.go
+	hv := HealthView{Pain: int(b.Pain()) / 10, Drugs: g.drugLines(id), DeathInHours: -1} // drugs.go; MED-01 fills death
 	hv.Capacities = make([]CapacityView, 0, body.NumCaps)
 	for c := body.Capacity(0); c < body.NumCaps; c++ {
 		hv.Capacities = append(hv.Capacities, CapacityView{Label: capacityLabels[c], Pct: int(b.Capacity(c)) / 10})

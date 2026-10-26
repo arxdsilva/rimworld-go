@@ -22,8 +22,8 @@ func (b *Body) Parts() []PartStatus {
 	for p := Part(0); p < NumParts; p++ {
 		s := PartStatus{Part: p, Label: defs[p].Label, MaxHP: defs[p].MaxHP, Missing: b.isMissing(p), Tended: true}
 		if s.Missing {
-			if b.Implants[p].IsImplant() {
-				s.Implant, s.Fitted = b.Implants[p], true
+			if b.fitted(p) {
+				s.Implant, s.Fitted = b.Implant(p), true
 			}
 			out = append(out, s)
 			continue

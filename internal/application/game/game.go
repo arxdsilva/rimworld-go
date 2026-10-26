@@ -111,6 +111,10 @@ type PawnView struct {
 	// Infection severity (0-100, 0: none); Wounded: an open, untended wound.
 	Infection int
 	Wounded   bool
+	// MED-00 (filled by MED-01/MED-03): Bleeding, the body is losing
+	// blood; CareLevel, the pawn's medical care policy (medcare.Policy).
+	Bleeding  bool
+	CareLevel uint8
 	// Exposure: Hypothermia and Heatstroke severity in permille, and the
 	// air temperature where the colonist is (tenths of a degree C).
 	Hypothermia, Heatstroke int
@@ -741,6 +745,7 @@ type Game struct {
 	soc       *socialState                        // social_state.go
 	people    *peopleRegistry                     // people.go
 	bodies    map[entity.EntityID]*body.Body      // body.go
+	med       medState                            // patients.go (MED-00)
 	surg      *surgeryState                       // surgery.go
 	rest      bedRestState                        // bedrest.go (PLAY-020)
 	drugs     map[entity.EntityID]*drug.State     // drugs.go

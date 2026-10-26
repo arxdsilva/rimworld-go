@@ -51,8 +51,8 @@ func ImplantEfficiency(k item.Kind) int32 {
 // eff is the permille a part works at.
 func (b *Body) eff(p Part) int32 {
 	if b.isMissing(p) {
-		if b.Implants[p].IsImplant() {
-			return ImplantEfficiency(b.Implants[p])
+		if b.fitted(p) {
+			return ImplantEfficiency(b.Implant(p))
 		}
 		if b.replaced(p) {
 			return 1000 // part of a prosthetic limb
@@ -69,36 +69,41 @@ func (b *Body) eff(p Part) int32 {
 
 func avg(a, b int32) int32 { return (a + b) / 2 }
 
-// Capacity is capacity c in permille (1000: healthy).
-func (b *Body) Capacity(c Capacity) int32 {
-	cons := b.consciousness()
+// Capacity is capacity c in permille (1000: healthy), with the current
+// stage of every condition folded in.
+func (b *Body) Capacity(c Capacity) int32 { return b.capacity(c, DefOfCond) }
+
+// capacity is Capacity with condition definitions from look.
+func (b *Body) capacity(c Capacity, look condLookup) int32 {
+	cons := b.consciousness(look)
+	var v int32
 	switch c {
 	case Consciousness:
 		return cons
 	case Moving:
-		v := avg(b.eff(LegL)*b.eff(FootL)/1000, b.eff(LegR)*b.eff(FootR)/1000)
-		return min32(v, cons)
+		v = min32(avg(b.eff(LegL)*b.eff(FootL)/1000, b.eff(LegR)*b.eff(FootR)/1000), cons)
 	case Manipulation:
-		v := avg(b.eff(ArmL)*b.eff(HandL)/1000, b.eff(ArmR)*b.eff(HandR)/1000)
-		return min32(v, cons)
+		v = min32(avg(b.eff(ArmL)*b.eff(HandL)/1000, b.eff(ArmR)*b.eff(HandR)/1000), cons)
 	case Sight:
-		return avg(b.eff(EyeL), b.eff(EyeR))
+		v = avg(b.eff(EyeL), b.eff(EyeR))
 	case Hearing:
-		return avg(b.eff(EarL), b.eff(EarR))
+		v = avg(b.eff(EarL), b.eff(EarR))
 	case Talking:
-		return b.eff(Jaw) * cons / 1000
+		v = b.eff(Jaw) * cons / 1000
 	case Breathing:
-		return avg(b.eff(LungL), b.eff(LungR))
+		v = avg(b.eff(LungL), b.eff(LungR))
+	default:
+		v = 1000
 	}
-	return 1000
+	return b.condCap(c, v, look)
 }
 
-func (b *Body) consciousness() int32 {
-	v := b.eff(Brain) - b.Pain()/2
+func (b *Body) consciousness(look condLookup) int32 {
+	v := b.eff(Brain) - b.pain(look)/2
 	if v < 0 {
-		return 0
+		v = 0
 	}
-	return v
+	return b.condCap(Consciousness, v, look)
 }
 
 func min32(a, b int32) int32 {
@@ -109,8 +114,11 @@ func min32(a, b int32) int32 {
 }
 
 // Pain is the body's pain in permille: open wounds hurt, tended ones less,
-// scars barely.
-func (b *Body) Pain() int32 {
+// scars barely; conditions add their current stage's pain.
+func (b *Body) Pain() int32 { return b.pain(DefOfCond) }
+
+// pain is Pain with condition definitions from look.
+func (b *Body) pain(look condLookup) int32 {
 	var n int32
 	for _, w := range b.Wounds {
 		switch {
@@ -122,8 +130,12 @@ func (b *Body) Pain() int32 {
 			n += int32(w.Dmg) * 8
 		}
 	}
+	n += b.condPain(look)
 	if n > 1000 {
 		return 1000
+	}
+	if n < 0 {
+		return 0
 	}
 	return n
 }

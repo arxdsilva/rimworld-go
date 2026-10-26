@@ -13,6 +13,8 @@ var value = [numKinds]int{
 	Components: 28, IndustrialMedicine: 24,
 	Beer: 12, AshleafTea: 10, SparkTablet: 18, Brewgrain: 1, AshleafLeaf: 2,
 	PegLeg: 15, ProstheticLeg: 120, ProstheticArm: 120, WoodenHand: 12, Denture: 10, HearingTrumpet: 20,
+	// MED-00: original tuning for these original items.
+	ProstheticFoot: 90, GlassEye: 40, WoodenNose: 5,
 }
 
 // Value is the market value of one unit of k.

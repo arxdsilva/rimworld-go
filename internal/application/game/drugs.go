@@ -230,11 +230,59 @@ func (g *Game) ingestDose(id entity.EntityID, k item.Kind) {
 	g.logEvent(id, logEntry{Kind: logIngested, Name: k.String()})
 }
 
-// exportDrugs is the Drugs save field in id order (nil: none).
-func (g *Game) exportDrugs() []entry[drug.State] { return exportMap(g.drugs) }
+// savedDrug is a drug state in the save (MED-00). Tolerance and LastDose
+// are the fixed per-drug arrays saves up to version 5 wrote, read only:
+// Tolerances and LastDoses (always written now) replace them, so drugs can
+// be appended. gob matches fields by name, so an older save's drug.State
+// decodes into it.
+type savedDrug struct {
+	Alcohol    int32
+	Highs      []drug.High
+	Addictions []drug.Addiction
+	Tolerance  [drug.LegacyDrugs]int32 // legacy read only
+	Hangover   uint64
+	Doses      int32
+	Peaked     bool
+	HangPend   bool
+	LastDose   [drug.LegacyDrugs]uint64 // legacy read only
+	Policy     drug.Preset
+	Retry      uint64
+	Tolerances []int32
+	LastDoses  []uint64
+}
 
-// importDrugs restores exportDrugs' state.
-func (g *Game) importDrugs(es []entry[drug.State]) { g.drugs = importMap(es) }
+// exportDrugs is the Drugs save field in id order (nil: none).
+func (g *Game) exportDrugs() []entry[savedDrug] {
+	es := exportMap(g.drugs)
+	if es == nil {
+		return nil
+	}
+	out := make([]entry[savedDrug], len(es))
+	for i, e := range es {
+		s := e.V
+		out[i] = entry[savedDrug]{e.ID, savedDrug{Alcohol: s.Alcohol, Highs: s.Highs, Addictions: s.Addictions,
+			Hangover: s.Hangover, Doses: s.Doses, Peaked: s.Peaked, HangPend: s.HangPend, Policy: s.Policy,
+			Retry: s.Retry, Tolerances: s.Tolerance, LastDoses: s.LastDose}}
+	}
+	return out
+}
+
+// importDrugs restores exportDrugs' state; an older save's arrays become
+// the per-drug slices (used only when neither slice was saved).
+func (g *Game) importDrugs(es []entry[savedDrug]) {
+	ss := make([]entry[drug.State], len(es))
+	for i, e := range es {
+		d := e.V
+		tol, last := d.Tolerances, d.LastDoses
+		if tol == nil && last == nil {
+			tol, last = drug.LegacyLists(d.Tolerance, d.LastDose)
+		}
+		ss[i] = entry[drug.State]{e.ID, drug.State{Alcohol: d.Alcohol, Highs: d.Highs, Addictions: d.Addictions,
+			Tolerance: tol, Hangover: d.Hangover, Doses: d.Doses, Peaked: d.Peaked, HangPend: d.HangPend,
+			LastDose: last, Policy: d.Policy, Retry: d.Retry}}
+	}
+	g.drugs = importMap(ss)
+}
 
 // drugLines lists id's drug effects for the Health tab.
 func (g *Game) drugLines(id entity.EntityID) []DrugLineView {

@@ -5,7 +5,7 @@ import "rimworld-go/internal/domain/economy/item"
 // ArtificialParts counts the installed implants.
 func (b *Body) ArtificialParts() int {
 	n := 0
-	for _, k := range b.Implants {
+	for _, k := range b.Fitted {
 		if k.IsImplant() {
 			n++
 		}
@@ -38,20 +38,20 @@ func Fits(k item.Kind, p Part) bool {
 
 // Install puts implant k on missing part p; it reports success.
 func (b *Body) Install(p Part, k item.Kind) bool {
-	if p >= NumParts || !Fits(k, p) || !b.isMissing(p) || b.Implants[p].IsImplant() || b.replaced(p) {
+	if p >= NumParts || !Fits(k, p) || !b.isMissing(p) || b.fitted(p) || b.replaced(p) {
 		return false
 	}
-	b.Implants[p] = k
+	b.SetImplant(p, k)
 	return true
 }
 
 // Remove takes the implant off p and returns it.
 func (b *Body) Remove(p Part) (item.Kind, bool) {
-	if p >= NumParts || !b.Implants[p].IsImplant() {
+	if p >= NumParts || !b.fitted(p) {
 		return 0, false
 	}
-	k := b.Implants[p]
-	b.Implants[p] = 0
+	k := b.Implant(p)
+	b.SetImplant(p, 0)
 	return k, true
 }
 
@@ -59,7 +59,7 @@ func (b *Body) Remove(p Part) (item.Kind, bool) {
 // so nothing can be fitted on p.
 func (b *Body) blockedAbove(p Part) bool {
 	for q := defs[p].Parent; q != p; q = defs[q].Parent {
-		if b.isMissing(q) || b.Implants[q].IsImplant() {
+		if b.isMissing(q) || b.fitted(q) {
 			return true
 		}
 		p = q
@@ -70,7 +70,7 @@ func (b *Body) blockedAbove(p Part) bool {
 // CanReplace reports p can take an implant at all: it has no implant and no
 // ancestor is missing or replaced (the part itself may be present or missing).
 func (b *Body) CanReplace(p Part) bool {
-	return p < NumParts && !defs[p].Vital && !b.Implants[p].IsImplant() && !b.blockedAbove(p)
+	return p < NumParts && !defs[p].Vital && !b.fitted(p) && !b.blockedAbove(p)
 }
 
 // InstallOptions lists the parts implant kind k could be fitted on now,
@@ -90,7 +90,7 @@ func (b *Body) InstallOptions(k item.Kind) []Part {
 func (b *Body) MissingUncovered() int {
 	n := 0
 	for p := Part(0); p < NumParts; p++ {
-		if b.isMissing(p) && !b.Implants[p].IsImplant() && !b.replaced(p) {
+		if b.isMissing(p) && !b.fitted(p) && !b.replaced(p) {
 			n++
 		}
 	}

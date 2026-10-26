@@ -19,17 +19,21 @@ const (
 	prisonSalt = 0x9215
 	bondSalt   = 0xB04D
 	powerSalt  = 0x90E12
+	// medSalt (MED-00): tend quality, infection, disease and surgery
+	// rolls of the medical system.
+	medSalt = 0x3ED1CA
 )
 
 // Stream names, the RNGStreams save keys.
 const (
-	streamSocial = "social"
-	streamBody   = "body"
-	streamDrug   = "drug"
-	streamWorld  = "world"
-	streamPrison = "prison"
-	streamBond   = "bond"
-	streamPower  = "power"
+	streamSocial  = "social"
+	streamBody    = "body"
+	streamDrug    = "drug"
+	streamWorld   = "world"
+	streamPrison  = "prison"
+	streamBond    = "bond"
+	streamPower   = "power"
+	streamMedical = "medical"
 )
 
 // streamSeedKey holds the base seed in the RNGStreams save map (8 bytes,
@@ -40,7 +44,7 @@ const streamSeedKey = "seed"
 var streamSalts = map[string]uint64{
 	streamSocial: socialSalt, streamBody: bodySalt, streamDrug: drugSalt,
 	streamWorld: worldSalt, streamPrison: prisonSalt, streamBond: bondSalt,
-	streamPower: powerSalt,
+	streamPower: powerSalt, streamMedical: medSalt,
 }
 
 // rngStreams is the base seed and the streams created so far.

@@ -256,7 +256,7 @@ func TestDrugAbstainerNeverDrinks(t *testing.T) {
 			t.Fatalf("the abstainer went for a drink: %+v", j)
 		}
 	}
-	if s := g.drugs[id]; s != nil && s.LastDose != [3]uint64{} {
+	if s := g.drugs[id]; s != nil && len(s.LastDose) != 0 {
 		t.Fatalf("abstainer state %+v", s)
 	}
 }

@@ -63,7 +63,9 @@ func (g *Game) applyOne(c command.Command) {
 		command.SetBedMedical, command.SetPawnBedRest, // med_cmds.go (PLAY-020)
 		command.SetZoneSow, command.SetZoneCut, command.SetZoneHidden, command.RenameZone,
 		command.SetZoneCrop, command.ExpandZone, command.RemoveZoneCells, command.DeleteZone, // zone_cmds.go (PLAY-020)
-		command.SetPowerWanted, command.SetThermostat: // power_flick.go, power_heat.go (PLAY-021)
+		command.SetPowerWanted, command.SetThermostat, // power_flick.go, power_heat.go (PLAY-021)
+		command.SetMedicalCare, command.SetDefaultCare, command.SetSelfTend, // care.go (MED-00)
+		command.EmergencyTend, command.ReorderOperation: // care.go, surgery.go
 		g.applyHostCommand(c) // host_commands.go (ENG-003)
 	case command.SetStoryteller:
 		g.cmdSetStoryteller(c.Name) // story.go (NG-1)

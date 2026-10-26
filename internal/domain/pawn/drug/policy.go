@@ -62,7 +62,7 @@ func (p Preset) Allows(k item.Kind, joyLow bool, s *State, traits []trait.ID, no
 	if k == item.Beer && s.Band() >= Drunk {
 		return false
 	}
-	if last := s.LastDose[i]; last != 0 && now < last+gap {
+	if last := slot(s.LastDose, i); last != 0 && now < last+gap {
 		return false
 	}
 	return true

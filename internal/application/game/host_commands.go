@@ -76,5 +76,15 @@ func (g *Game) applyHostCommand(c command.Command) {
 		g.cmdSetPowerWanted(target, c.Enabled) // power_flick.go (PLAY-021)
 	case command.SetThermostat:
 		g.cmdSetThermostat(target, c.Count) // power_heat.go (PLAY-021)
+	case command.SetMedicalCare:
+		g.cmdSetMedicalCare(pawn, c.Mode) // care.go (MED-00 stub)
+	case command.SetDefaultCare:
+		g.cmdSetDefaultCare(c.Index, c.Mode) // care.go
+	case command.SetSelfTend:
+		g.cmdSetSelfTend(pawn, c.Enabled) // care.go
+	case command.EmergencyTend:
+		g.cmdEmergencyTend(pawn, target) // care.go
+	case command.ReorderOperation:
+		g.cmdReorderOperation(pawn, c.Index, c.Count) // surgery.go
 	}
 }

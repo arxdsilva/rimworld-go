@@ -48,6 +48,30 @@ type HealthView struct {
 	// Options are the operations the picker offers, each with why it
 	// can't happen yet (SIM-049).
 	Options []OperationOptionView
+	// MED-00 contract, filled by the medical phases: State is the headline
+	// ("Bleeding", "Infection: losing"; "" when fine); BloodLossPct the
+	// blood lost and BleedPerDay the bleeding rate (percent of blood per
+	// day); DeathInHours the hours left before bleeding out or a fatal
+	// condition (-1: none coming); Conditions the condition rows; Care the
+	// medical care policy (medcare.Policy) and SelfTend whether the pawn
+	// may tend itself.
+	State        string
+	BloodLossPct int
+	BleedPerDay  int
+	DeathInHours int
+	Conditions   []ConditionView
+	Care         uint8
+	SelfTend     bool
+}
+
+// ConditionView is one condition row of the Health tab: severity,
+// immunity and tend quality in percent, Due when it needs tending now,
+// and the tooltip text.
+type ConditionView struct {
+	Label                   string
+	SevPct, ImmPct, TendPct int
+	Due                     bool
+	Tip                     string
 }
 
 // OperationOptionView is one operation the Health tab can queue:
@@ -84,6 +108,10 @@ type OperationView struct {
 	// Blocked: the wait needs the player (no stock, research, reach, a
 	// second doctor), not just time.
 	Blocked bool
+	// ChancePct is the success chance and ChanceTip its factor breakdown
+	// (MED-00 contract; filled by MED-06).
+	ChancePct int
+	ChanceTip string
 }
 
 // DrugLineView is one drug effect, tolerance or addiction line.

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"math/rand"
+	"slices"
 	"testing"
 
 	"rimworld-go/internal/domain/economy/item"
@@ -75,9 +76,9 @@ func TestHurtWoundAndNoop(t *testing.T) {
 func TestDestroyCascade(t *testing.T) {
 	var b Body
 	b.Hurt(fixed(rollFor(HandL)), 5, Cut, 1)
-	b.Implants[HandL] = item.WoodenHand
+	b.SetImplant(HandL, item.WoodenHand)
 	b.Hurt(fixed(rollFor(ArmL)), 35, Cut, 2)
-	if !b.isMissing(ArmL) || !b.isMissing(HandL) || len(b.Wounds) != 0 || b.Implants[HandL] != 0 {
+	if !b.isMissing(ArmL) || !b.isMissing(HandL) || len(b.Wounds) != 0 || b.Implant(HandL) != 0 {
 		t.Fatalf("cascade %b %v", b.Missing, b.Wounds)
 	}
 	if b.Damage() != 35 {
@@ -124,7 +125,7 @@ func TestDamageMapping(t *testing.T) {
 	if b.Damage() != 70 {
 		t.Fatalf("damage %d", b.Damage())
 	}
-	b.Implants[LegL] = item.PegLeg
+	b.SetImplant(LegL, item.PegLeg)
 	if b.Damage() != 30 {
 		t.Fatalf("replaced leg should not count: %d", b.Damage())
 	}
@@ -198,12 +199,12 @@ func TestCapacities(t *testing.T) {
 	if b.Capacity(Moving) != 500 {
 		t.Fatalf("one leg %d", b.Capacity(Moving))
 	}
-	b.Implants[LegL] = item.ProstheticLeg
+	b.SetImplant(LegL, item.ProstheticLeg)
 	if b.Capacity(Moving) != (850+1000)/2 {
 		t.Fatalf("prosthetic leg %d", b.Capacity(Moving))
 	}
 	b.destroy(ArmR)
-	b.Implants[HandL] = 0
+	b.SetImplant(HandL, 0)
 	if b.Capacity(Manipulation) != 500 {
 		t.Fatal("one arm")
 	}
@@ -212,13 +213,13 @@ func TestCapacities(t *testing.T) {
 		t.Fatal("no arms")
 	}
 	b.destroy(HandL)
-	b.Implants[HandL] = item.WoodenHand
+	b.SetImplant(HandL, item.WoodenHand)
 	b.destroy(LungL)
 	if b.Capacity(Breathing) != 500 {
 		t.Fatal("lung")
 	}
 	b.destroy(EarL)
-	b.Implants[EarL] = item.HearingTrumpet
+	b.SetImplant(EarL, item.HearingTrumpet)
 	if b.Capacity(Hearing) != 800 {
 		t.Fatalf("trumpet %d", b.Capacity(Hearing))
 	}
@@ -227,7 +228,7 @@ func TestCapacities(t *testing.T) {
 func TestWoodenHandOnlyHand(t *testing.T) {
 	var b Body
 	b.destroy(HandL)
-	b.Implants[HandL] = item.WoodenHand
+	b.SetImplant(HandL, item.WoodenHand)
 	if b.Capacity(Manipulation) != (500+1000)/2 {
 		t.Fatalf("%d", b.Capacity(Manipulation))
 	}
@@ -376,7 +377,7 @@ func TestApply(t *testing.T) {
 	if len(b.Wounds) != 1 || b.Wounds[0].Part != Torso || b.Wounds[0].Dmg != 15 || b.Wounds[0].Kind != Surgical {
 		t.Fatalf("%+v", b.Wounds)
 	}
-	if !b.Apply(install, Success, fixed(0), 6) || b.Implants[LegL] != item.PegLeg {
+	if !b.Apply(install, Success, fixed(0), 6) || b.Implant(LegL) != item.PegLeg {
 		t.Fatal("install")
 	}
 	if !b.Apply(Operation{Kind: RemoveImplant, Part: LegL}, Success, fixed(0), 7) || b.ArtificialParts() != 0 {
@@ -402,7 +403,7 @@ func TestApply(t *testing.T) {
 func TestPartsAndGob(t *testing.T) {
 	b := Body{Wounds: []Wound{{Part: Torso, Dmg: 10, Kind: Cut, Tended: true}, {Part: Torso, Dmg: 1, Permanent: true}, {Part: ArmL, Dmg: 99}}}
 	b.destroy(LegL)
-	b.Implants[LegL] = item.PegLeg
+	b.SetImplant(LegL, item.PegLeg)
 	ps := b.Parts()
 	if len(ps) != int(NumParts) || ps[Torso].HP != 49 || ps[Torso].Wounds != 1 || ps[Torso].Scars != 1 || !ps[Torso].Tended {
 		t.Fatalf("%+v", ps[Torso])
@@ -415,7 +416,7 @@ func TestPartsAndGob(t *testing.T) {
 		t.Fatal(err)
 	}
 	var got Body
-	if err := gob.NewDecoder(&buf).Decode(&got); err != nil || got.Missing != b.Missing || got.Implants != b.Implants || len(got.Wounds) != 3 {
+	if err := gob.NewDecoder(&buf).Decode(&got); err != nil || got.Missing != b.Missing || !slices.Equal(got.Fitted, b.Fitted) || len(got.Wounds) != 3 {
 		t.Fatalf("%v %+v", err, got)
 	}
 }
@@ -430,8 +431,8 @@ func TestReplaceHealthyLeg(t *testing.T) {
 	if !b.Apply(op, Success, fixed(0), 1) {
 		t.Fatal("apply")
 	}
-	if !b.isMissing(LegL) || !b.isMissing(FootL) || b.Implants[LegL] != item.ProstheticLeg || b.ArtificialParts() != 1 {
-		t.Fatalf("%b %v", b.Missing, b.Implants)
+	if !b.isMissing(LegL) || !b.isMissing(FootL) || b.Implant(LegL) != item.ProstheticLeg || b.ArtificialParts() != 1 {
+		t.Fatalf("%b %v", b.Missing, b.Fitted)
 	}
 	if len(b.Wounds) != 1 || b.Wounds[0].Part != LegR {
 		t.Fatalf("wounds %+v", b.Wounds)
@@ -454,7 +455,7 @@ func TestReplaceFailureKeepsPart(t *testing.T) {
 		if b.Apply(op, o, fixed(0), 1) {
 			t.Fatal("failure must not install")
 		}
-		if b.Implants[LegL] != 0 || len(b.Wounds) != 1 || b.Wounds[0].Kind != Surgical {
+		if b.Implant(LegL) != 0 || len(b.Wounds) != 1 || b.Wounds[0].Kind != Surgical {
 			t.Fatalf("%v %+v", o, b.Wounds)
 		}
 		if o == MinorFail && b.isMissing(LegL) {

@@ -106,7 +106,7 @@ func TestHealingSpeedUnchangedForAPlainWound(t *testing.T) {
 }
 
 func TestClosedCutsMayScarDeterministically(t *testing.T) {
-	scars := func() (int, []entry[body.Body]) {
+	scars := func() (int, []entry[savedBody]) {
 		g := New(Config{Seed: 9, Width: 12, Height: 8})
 		p, _ := g.SpawnNamedPawn(4, 4, "Ada")
 		v := g.VitalOf(p)
@@ -290,7 +290,7 @@ func TestBodiesSurviveSaveLoad(t *testing.T) {
 }
 
 func TestBodiesAreDeterministic(t *testing.T) {
-	run := func() ([]entry[body.Body], []entity.EntityID) {
+	run := func() ([]entry[savedBody], []entity.EntityID) {
 		g := New(Config{Seed: 77, Width: 16, Height: 10})
 		a, _ := g.SpawnNamedPawn(4, 4, "Ada")
 		b, _ := g.SpawnNamedPawn(8, 4, "Bo")

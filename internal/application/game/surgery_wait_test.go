@@ -258,8 +258,8 @@ func TestHealthyLegReplacedWithProsthetic(t *testing.T) {
 	}
 	operateUntil(t, g, patient, doc)
 	b := g.bodies[patient]
-	if b.Implants[body.LegL] != item.ProstheticLeg || b.Missing&(1<<body.LegL) == 0 || b.Missing&(1<<body.FootL) == 0 {
-		t.Fatalf("the leg (and foot) are replaced: missing %b implants %v", b.Missing, b.Implants)
+	if b.Implant(body.LegL) != item.ProstheticLeg || b.Missing&(1<<body.LegL) == 0 || b.Missing&(1<<body.FootL) == 0 {
+		t.Fatalf("the leg (and foot) are replaced: missing %b implants %v", b.Missing, b.Fitted)
 	}
 	if m := b.Capacity(body.Moving); m == 1000 {
 		t.Fatal("a prosthetic leg is not as good as a healthy one")
@@ -390,7 +390,7 @@ func TestGlassEyeCoversTheMissingPartThought(t *testing.T) {
 	g, patient, _ := legless(t, 10)
 	b := g.bodies[patient]
 	b.Missing = 1 << body.EyeL
-	b.Implants[body.EyeL] = item.GlassEye
+	b.SetImplant(body.EyeL, item.GlassEye)
 	if missingPart(b) || len(g.bodyThoughts(patient)) != 0 {
 		t.Fatal("a glass eye covers the empty socket")
 	}

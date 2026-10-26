@@ -3,6 +3,7 @@ package drug
 import (
 	"bytes"
 	"encoding/gob"
+	"slices"
 	"testing"
 
 	"rimworld-go/internal/domain/economy/item"
@@ -119,7 +120,7 @@ func TestAddictionRoll(t *testing.T) {
 	}
 	// threshold: tolerance scales chance; 60 base, tolerance 200 -> 72
 	s2 := State{}
-	s2.Tolerance[2] = 1000
+	s2.Tolerance = []int32{0, 0, 1000}
 	s2.Ingest(item.SparkTablet, func(int) int { return 100 }, 0)
 	if !s2.Addicted(item.SparkTablet) {
 		t.Fatal("tolerance boosts chance to 120")
@@ -142,15 +143,15 @@ func TestToleranceBuildsAndDecays(t *testing.T) {
 	for i := 0; i < 20; i++ {
 		s.Ingest(item.Beer, never, 0)
 	}
-	if s.Tolerance[0] != 1000 {
-		t.Fatal(s.Tolerance[0])
+	if s.ToleranceOf(item.Beer) != 1000 {
+		t.Fatal(s.ToleranceOf(item.Beer))
 	}
 	s.Tick(10, 10*hr)
-	if s.Tolerance[0] != 900 {
-		t.Fatal(s.Tolerance[0])
+	if s.ToleranceOf(item.Beer) != 900 {
+		t.Fatal(s.ToleranceOf(item.Beer))
 	}
 	s.Tick(200, 210*hr)
-	if s.Tolerance[0] != 0 {
+	if s.ToleranceOf(item.Beer) != 0 {
 		t.Fatal("floor 0")
 	}
 }
@@ -320,7 +321,7 @@ func TestPolicyMatrix(t *testing.T) {
 
 func TestPolicyIntervals(t *testing.T) {
 	now := 100 * hr
-	mk := func() *State { s := &State{}; s.LastDose[0] = now - 5*hr; return s }
+	mk := func() *State { s := &State{}; s.LastDose = []uint64{now - 5*hr}; return s }
 	if SocialDrinking.Allows(item.Beer, true, mk(), nil, now) {
 		t.Fatal("5h < 12h")
 	}
@@ -328,18 +329,18 @@ func TestPolicyIntervals(t *testing.T) {
 		t.Fatal("indulgent 6h: 5h too soon")
 	}
 	s := mk()
-	s.LastDose[0] = now - 6*hr
+	s.LastDose = []uint64{now - 6*hr}
 	if !SocialDrinking.Allows(item.Beer, true, s, []trait.ID{trait.Indulgent}, now) {
 		t.Fatal("indulgent 6h ok")
 	}
 	if !SocialDrinking.Allows(item.Beer, false, mk(), []trait.ID{trait.Hedonist}, now) {
 		t.Fatal("hedonist 3h ok after 5h")
 	}
-	s.LastDose[0] = now - 2*hr
+	s.LastDose = []uint64{now - 2*hr}
 	if SocialDrinking.Allows(item.Beer, false, s, []trait.ID{trait.Hedonist}, now) {
 		t.Fatal("hedonist 2h too soon")
 	}
-	s.LastDose[0] = now - 13*hr
+	s.LastDose = []uint64{now - 13*hr}
 	if !SocialDrinking.Allows(item.Beer, true, s, nil, now) {
 		t.Fatal("12h ok")
 	}
@@ -352,7 +353,7 @@ func TestPolicyNoBingeAndCraving(t *testing.T) {
 		t.Fatal("too drunk")
 	}
 	s = &State{Addictions: []Addiction{{Drug: item.AshleafTea, Need: 100, Seeking: true}}}
-	s.LastDose[1] = now - 1
+	s.LastDose = []uint64{0, now - 1}
 	ab := []trait.ID{trait.Abstainer}
 	if !SocialDrinking.Allows(item.AshleafTea, false, s, ab, now) {
 		t.Fatal("craving overrides abstainer, interval and joy")
@@ -383,7 +384,7 @@ func TestGob(t *testing.T) {
 	if err := gob.NewDecoder(&buf).Decode(&out); err != nil {
 		t.Fatal(err)
 	}
-	if out.Alcohol != s.Alcohol || len(out.Addictions) != 1 || out.Tolerance != s.Tolerance {
+	if out.Alcohol != s.Alcohol || len(out.Addictions) != 1 || !slices.Equal(out.Tolerance, s.Tolerance) {
 		t.Fatal("round trip")
 	}
 }

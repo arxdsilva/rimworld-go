@@ -127,7 +127,7 @@ func opCode(op body.Operation) int {
 // fits it, a removal of an implant, an amputation of a part still there),
 // once.
 func (g *Game) cmdAddOperation(patient entity.EntityID, op int, part, kind uint8) {
-	if !g.isPawn(patient) || op < 0 || op > int(body.Amputate) {
+	if !g.isPawn(patient) || op < 0 || op >= int(body.NumOps) { // CanOperate refuses the kinds MED-06 adds
 		return
 	}
 	if v, ok := g.vital.Get(patient); !ok || v.Status == health.Dead {
@@ -163,6 +163,19 @@ func (g *Game) cmdRemoveOperation(patient entity.EntityID, i int) {
 		return
 	}
 	g.dropOperation(patient, i)
+}
+
+// cmdReorderOperation moves patient's queued operation in slot by one
+// place: up (by -1) or down (by +1), swapping it with its neighbour (MED-00).
+// Any other step, or a slot or neighbour out of range, is a no-op. A
+// running operation finds its own again by opCode, so moving it is safe.
+func (g *Game) cmdReorderOperation(patient entity.EntityID, slot, by int) {
+	q := g.operationsOf(patient)
+	to := slot + by
+	if by != 1 && by != -1 || slot < 0 || slot >= len(q) || to < 0 || to >= len(q) {
+		return
+	}
+	q[slot], q[to] = q[to], q[slot]
 }
 
 // dropOperation removes slot i of patient's queue.
@@ -569,7 +582,7 @@ func (g *Game) operate(surgeon, patient entity.EntityID, slot int, j *job.Record
 	}
 	rng := g.stream(streamBody)
 	outcome := body.RollOutcome(g.surgeryChanceOf(surgeon, patient, med), rng.IntN)
-	removed := b.Implants[op.Part]
+	removed := b.Implant(op.Part)
 	done := b.Apply(op, outcome, rng.IntN, now)
 	if j.Carry != 0 && (outcome != body.MinorFail || opNeedsItem(op) == 0) {
 		g.deleteItem(j.Carry) // medicine is spent; an implant is fitted or ruined

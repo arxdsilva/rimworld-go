@@ -1,6 +1,8 @@
 package drug
 
 import (
+	"slices"
+
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/sim/clock"
@@ -10,6 +12,10 @@ import (
 
 // numDrugs is how many drugs there are (beer, ashleaf tea, spark tablet).
 const numDrugs = 3
+
+// LegacyDrugs is the length of the per-drug arrays saves held before
+// MED-00 (Tolerance and LastDose are slices now, so drugs can be appended).
+const LegacyDrugs = 3
 
 // Tuning (permille unless noted).
 const (
@@ -83,18 +89,20 @@ type Addiction struct {
 	CleanSince uint64 // tick of the last dose
 }
 
-// State is one colonist's drug state (saved).
+// State is one colonist's drug state (saved). Tolerance and LastDose are
+// per drug in definition order, grown lazily (a missing slot reads 0):
+// read them through ToleranceOf and LastDoseOf.
 type State struct {
 	Alcohol    int32 // permille
 	Highs      []High
 	Addictions []Addiction
-	Tolerance  [numDrugs]int32
-	Hangover   uint64 // tick the hangover ends (0: none)
+	Tolerance  []int32 // permille per drug (nil: none)
+	Hangover   uint64  // tick the hangover ends (0: none)
 
-	Doses    int32            // alcohol doses since last sober
-	Peaked   bool             // alcohol reached the drunk band
-	HangPend bool             // a hangover began and was not yet read
-	LastDose [numDrugs]uint64 // tick of last dose, 0 = never
+	Doses    int32    // alcohol doses since last sober
+	Peaked   bool     // alcohol reached the drunk band
+	HangPend bool     // a hangover began and was not yet read
+	LastDose []uint64 // tick of last dose per drug, 0 = never
 
 	// Policy is the colonist's drug policy. The zero value is NoDrugs, so
 	// whoever creates a State sets the default (SocialDrinking).
@@ -103,6 +111,47 @@ type State struct {
 	// cooldown when no allowed drug was in reach).
 	Retry uint64
 }
+
+// LegacyLists are the Tolerance and LastDose slices of an older save's
+// fixed-size arrays (nil when all zero; trailing zero slots dropped).
+func LegacyLists(tol [LegacyDrugs]int32, last [LegacyDrugs]uint64) ([]int32, []uint64) {
+	return trimZeros(tol[:]), trimZeros(last[:])
+}
+
+// trimZeros is a copy of a without its trailing zeros (nil when none are
+// left).
+func trimZeros[T int32 | uint64](a []T) []T {
+	n := len(a)
+	for n > 0 && a[n-1] == 0 {
+		n--
+	}
+	if n == 0 {
+		return nil
+	}
+	return append([]T(nil), a[:n]...)
+}
+
+// grow extends a with zeros so slot i exists.
+func grow[T int32 | uint64](a []T, i int) []T {
+	if i < len(a) {
+		return a
+	}
+	return append(a, make([]T, i+1-len(a))...)
+}
+
+// slot is a[i], 0 when a is too short.
+func slot[T int32 | uint64](a []T, i int) T {
+	if i < 0 || i >= len(a) {
+		return 0
+	}
+	return a[i]
+}
+
+// ToleranceOf is the tolerance to drug k (permille; 0 for a non-drug).
+func (s *State) ToleranceOf(k item.Kind) int32 { return slot(s.Tolerance, index(k)) }
+
+// LastDoseOf is the tick of the last dose of drug k (0: never).
+func (s *State) LastDoseOf(k item.Kind) uint64 { return slot(s.LastDose, index(k)) }
 
 // Ingest takes one dose of drug k at tick now. roll(n) returns a value in
 // [0, n) from the caller's drug RNG stream.
@@ -131,16 +180,18 @@ func (s *State) Ingest(k item.Kind, roll func(int) int, now uint64) {
 			s.Highs = append(s.Highs, High{Drug: k, Severity: 1000, Until: until})
 		}
 	}
+	s.LastDose = grow(s.LastDose, i)
 	s.LastDose[i] = max(now, 1)
 	// Already hooked: the dose satisfies the need.
 	if a := s.addiction(k); a != nil {
 		a.Need, a.Withdrawal, a.Seeking, a.CleanSince = 1000, false, false, now
 	} else if roll != nil && d.AddictChance > 0 {
-		chance := d.AddictChance * (1000 + s.Tolerance[i]) / 1000
+		chance := d.AddictChance * (1000 + slot(s.Tolerance, i)) / 1000
 		if int32(roll(1000)) < chance {
 			s.Addictions = append(s.Addictions, Addiction{Drug: k, Severity: 1000, Need: 1000, CleanSince: now})
 		}
 	}
+	s.Tolerance = grow(s.Tolerance, i)
 	s.Tolerance[i] = min(s.Tolerance[i]+d.ToleranceGain, toleranceMax)
 }
 
@@ -162,6 +213,9 @@ func (s *State) Tick(hours int, now uint64) {
 		s.tickAlcohol(now)
 		for i := range s.Tolerance {
 			s.Tolerance[i] = max(s.Tolerance[i]-toleranceDecayHour, 0)
+		}
+		if s.Tolerance != nil && slices.Max(s.Tolerance) == 0 {
+			s.Tolerance = nil // all gone: nothing to save
 		}
 		for i := range s.Addictions {
 			a := &s.Addictions[i]

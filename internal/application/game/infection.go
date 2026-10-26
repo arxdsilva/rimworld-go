@@ -235,7 +235,11 @@ func (g *Game) setWound(id entity.EntityID, w wound) {
 // grow or recede.
 func (g *Game) phaseInfection() {
 	now := uint64(g.clock.Now())
-	if now%clock.TicksPerHour != 0 || len(g.wounds) == 0 {
+	if now%clock.TicksPerHour != 0 {
+		return
+	}
+	g.sweepPatients() // patients.go (MED-00): the well and the dead leave the index
+	if len(g.wounds) == 0 {
 		return
 	}
 	for _, id := range g.pawnIDs {

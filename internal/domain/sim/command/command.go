@@ -189,6 +189,18 @@ const (
 	// temperature to Count tenths of a degree C.
 	SetPowerWanted
 	SetThermostat
+	// MED-00 medical care (implemented in MED-03): SetMedicalCare sets
+	// patient Pawn's medical care policy to Mode; SetDefaultCare sets the
+	// default policy of group Index (0 colonists, 1 prisoners, 2 guests,
+	// 3 animals) to Mode; SetSelfTend lets colonist Pawn tend itself
+	// (Enabled) or not; EmergencyTend sends drafted doctor Pawn to tend
+	// patient Target now; ReorderOperation moves patient Pawn's queued
+	// operation in slot Index by Count (-1 up, +1 down).
+	SetMedicalCare
+	SetDefaultCare
+	SetSelfTend
+	EmergencyTend
+	ReorderOperation
 )
 
 // Area references for AssignArea's Index (PLAY-015): any other value is an

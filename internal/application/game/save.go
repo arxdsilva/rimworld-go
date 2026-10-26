@@ -29,8 +29,6 @@ import (
 	"rimworld-go/internal/domain/combat/projectile"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
-	"rimworld-go/internal/domain/pawn/body"
-	"rimworld-go/internal/domain/pawn/drug"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/mentalbreak"
 	"rimworld-go/internal/domain/pawn/mood"
@@ -328,9 +326,9 @@ type saveState struct {
 	// base seed and the state of every stream used so far.
 	Social     *socialSave
 	People     *peopleSave
-	Bodies     []entry[body.Body]
+	Bodies     []entry[savedBody] // body.go: slices since MED-00, gob reads the older shape
 	Surgery    *surgerySave
-	Drugs      []entry[drug.State]
+	Drugs      []entry[savedDrug] // drugs.go: slices since MED-00
 	Prisoners  []entry[prisoner.State]
 	World      *worldSave
 	Areas      *area.Set
