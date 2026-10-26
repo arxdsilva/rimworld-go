@@ -71,11 +71,11 @@ const (
 	contactRoofAlpha = 0.20
 	contactLyingW    = 0.8 // tiles: a body lying on the ground
 
-	// point lights: campfires and lamps in lit rooms
+	// point lights: campfires and lamps
 	campfireLightH     = 0.5 // tiles above the ground
 	campfireLightReach = 4.5
 	lampLightH         = 1.6
-	lampLightReach     = 6.0
+	lampLightReach     = lampDefaultRadius // a lamp's reach is its light radius
 	pointShadowAlpha   = 0.30
 	pointMinTipK       = 0.3 // the shortest tip, × the caster's height
 	flickerAlpha       = 0.08
@@ -182,10 +182,13 @@ func shadowProjection(pivotX, pivotY, kappa float64, light lightState, hRef, rho
 // --- the light plan -------------------------------------------------------
 
 // pointLight is a campfire or lamp casting creature shadows: ground
-// position (tiles), height h, reach and the flicker phase (−1..1).
+// position (tiles), height h, reach, the flicker phase (−1..1) and, for a
+// lamp, 1 + its index in the light grid's sources (0: a campfire, whose
+// reach no wall stops).
 type pointLight struct {
 	id                 uint64
 	x, y, h, reach, fl float64
+	lamp               int
 }
 
 // castLight is one silhouette to draw: the shadow's direction, slope and
@@ -206,7 +209,8 @@ type creaturePlan struct {
 // planCreature plans a creature h tiles tall standing at (px, py) (its
 // feet, tiles): a sun or moon silhouette on open sky while there are
 // shadows, the two nearest point lights in reach (fading out with
-// daylight), and a contact pool always.
+// daylight: the caller passes 0 for a roofed creature, so lamps indoors
+// cast by day too), and a contact pool always.
 func planCreature(px, py, h float64, sky bool, l lightState, daylight float64, lights []pointLight) creaturePlan {
 	var pl creaturePlan
 	sa := clamp01(l.ShadowAlpha)
@@ -328,6 +332,7 @@ type creatureCaster struct {
 	opaque float64          // opaque height, source px (κ = h/opaque)
 	lying  bool             // flat on the ground
 	sky    bool             // on open-sky ground
+	tx, ty int              // the tile it stands on (sky, lamp reach)
 	fp     pawnFigurePose
 }
 
@@ -353,7 +358,8 @@ func (r *Renderer) creatureCasters(w game.WorldView, pawns []game.PawnView) []cr
 		}
 		c.w, c.h, c.opaque = s.w, s.h, sp.opaqueHeightPx()
 		c.px, c.py = c.wx+figurePivotX, c.wy+figurePivotY
-		c.sky = skyOpen(w, int(math.Floor(c.wx+0.5)), int(math.Floor(c.wy+0.5)))
+		c.tx, c.ty = int(math.Floor(c.wx+0.5)), int(math.Floor(c.wy+0.5))
+		c.sky = skyOpen(w, c.tx, c.ty)
 		out = append(out, c)
 	}
 	for i := range pawns {
@@ -433,47 +439,51 @@ func (r *Renderer) addContact(b *triBatch, c creatureCaster, a float64, tex *ebi
 }
 
 // pointLights lists the frame's creature-shadow lights near the view:
-// burning campfires and lamps in lit rooms (none in full daylight).
-func (r *Renderer) pointLights(w game.WorldView, daylight float64) []pointLight {
+// the light sources (light_sources.go, through the synced light grid) —
+// burning campfires and every lamp, which is always on. Daylight no
+// longer empties the list: drawShadows washes it out per creature, only
+// on open sky, so roofed rooms keep their lamp shadows by day.
+func (r *Renderer) pointLights() []pointLight {
 	st := &r.env.shadow
 	out := st.lights[:0]
-	defer func() { st.lights = out }()
-	if daylight >= 1 {
-		return out
-	}
+	g := r.syncLight()
 	v := r.env.view
-	mg := lampLightReach + shadowMaxLen + 1
-	for _, b := range w.Buildings {
+	for k := range g.srcs {
+		s := &g.srcs[k]
 		var L pointLight
-		switch {
-		case b.Kind == "campfire" && b.Burning:
-			L = pointLight{h: campfireLightH, reach: campfireLightReach, fl: fireFlicker(float64(r.present) + float64(b.ID)*17)}
-		case b.Kind == "lamp" && litRoomAt(w, b.X, b.Y):
-			L = pointLight{h: lampLightH, reach: lampLightReach}
+		switch s.Kind {
+		case lightCampfire:
+			L = pointLight{h: campfireLightH, reach: campfireLightReach, fl: fireFlicker(float64(r.present) + float64(s.ID)*17)}
+		case lightLamp:
+			L = pointLight{h: lampLightH, reach: s.Radius, lamp: 1 + k}
 		default:
 			continue
 		}
-		L.id = uint64(b.ID)
-		L.x, L.y = float64(b.X)+float64(max(b.W, 1))/2, float64(b.Y)+float64(max(b.H, 1))/2
+		L.id = s.ID
+		L.x, L.y = float64(s.X)+0.5, float64(s.Y)+0.5
+		mg := L.reach + shadowMaxLen + 1
 		if !v.empty() && (L.x < v.x0-mg || L.y < v.y0-mg || L.x > v.x1+mg || L.y > v.y1+mg) {
 			continue
 		}
 		out = append(out, L)
 	}
+	st.lights = out
 	return out
 }
 
-// litRoomAt reports whether tile (x, y) is in a lit room.
-func litRoomAt(w game.WorldView, x, y int) bool {
-	i := y*w.TerrainW + x
-	if w.TerrainW <= 0 || x < 0 || y < 0 || x >= w.TerrainW || i >= len(w.RoomGrid) {
-		return false
-	}
-	id := w.RoomGrid[i]
-	for _, rm := range w.Rooms {
-		if rm.ID == id {
-			return rm.Lit
+// creatureLights writes into st.vis the lights in ls that reach creature
+// c's tile by the light grid (a lamp stops at walls and rooms, so no lamp
+// shadow falls through a wall; campfires keep their reach), and returns
+// them.
+func (r *Renderer) creatureLights(c creatureCaster, ls []pointLight) []pointLight {
+	st := &r.env.shadow
+	g := &r.lit.grid
+	vis := st.vis[:0]
+	for _, L := range ls {
+		if L.lamp == 0 || g.lampReaches(L.lamp-1, c.tx, c.ty) {
+			vis = append(vis, L)
 		}
 	}
-	return false
+	st.vis = vis
+	return vis
 }

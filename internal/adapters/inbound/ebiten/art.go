@@ -48,6 +48,9 @@ type artMeta struct {
 	// "blob", "box" or "none" (or empty: none), and its footprint width W,
 	// height above ground H and depth D, in tiles.
 	Shadow artShadow
+	// LightRadius is a light's reach in tiles (metadata "light_radius",
+	// PLAY-020 §3b); 0 when the sprite gives none.
+	LightRadius float64
 }
 
 // artShadow is a sprite's shadow caster (metadata "shadow:").
@@ -93,6 +96,8 @@ func parseArtMeta(src string) (artMeta, error) {
 			m.Footprint, err = parseIntPair(val)
 		case !nested && key == "origin_px":
 			m.Origin, err = parsePair(val)
+		case !nested && key == "light_radius":
+			m.LightRadius, err = strconv.ParseFloat(val, 64)
 		case nested && parent == "tint" && key == "group":
 			m.TintGroup = val
 		case nested && parent == "tint" && key == "mask":

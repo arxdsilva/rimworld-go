@@ -16,7 +16,8 @@ import (
 
 // Dynamic light (ART §6.1): a sun that rises in the east, crosses the
 // southern sky and sets in the west, a low cool moon at night, indoor
-// ambient under roofs and warm lamp light in lit rooms. Every world sprite
+// ambient under roofs and warm point lamps (light_lamp.go: a falloff,
+// stopped by walls, sprites shading toward the lamp). Every world sprite
 // is drawn through drawLit, which shades its normal map (made by
 // pkg/spritenormals, a port of spritefusion-sprite-normals) with lit.kage.
 // The light comes from the sim clock only, so captures are deterministic.
@@ -32,9 +33,13 @@ type lightState struct {
 	SunColor, MoonColor       [3]float32
 	SkyAmbient, IndoorAmbient [3]float32
 	LampColor                 [3]float32
-	ShadowDir                 [2]float64 // unit ground direction shadows fall
-	ShadowLen                 func(h float64) float64
-	ShadowAlpha               float64 // 0 when no shadows
+	// LampSky is the share of lamp light (lamps, campfires, fires) that
+	// open sky drowns: 0 at night, 1 in full daylight; roofed tiles keep
+	// it all (PLAY-020 §3b: outdoors by day the sun wins).
+	LampSky     float32
+	ShadowDir   [2]float64 // unit ground direction shadows fall
+	ShadowLen   func(h float64) float64
+	ShadowAlpha float64 // 0 when no shadows
 }
 
 // Light model numbers (plan §C, tuned against lit.kage; a flat normal at
@@ -80,6 +85,10 @@ const (
 	litMoonFloor    = 0.12 // moonlight shadow floor (clear sky)
 	litMoonCap      = 0.30
 	litShadowMaxLen = 3.0 // tiles
+	// LampSky ramps over the clear sky ambient's luminance: 0 through the
+	// night keys (≈.21-.23), ≈.17 at 18:00, ≈.27 at 06:00, 1 from ≈08:00.
+	lampSkyLo = 0.24
+	lampSkyHi = 0.50
 )
 
 var (
@@ -186,6 +195,7 @@ func lightAt(hour float64, dayOfYear int, weather string, intensity float64) lig
 	day := (lum3(ls.SkyAmbient) - 0.18) / (0.52 - 0.18)
 	day = min(max(day, 0), 1)
 	ls.LampColor = scale3(lampNight, 1-0.4*day)
+	ls.LampSky = min(max((lum3(ls.SkyAmbient)-lampSkyLo)/(lampSkyHi-lampSkyLo), 0), 1)
 
 	clear := float32(1) // how much of the light reaches the ground through weather
 	if f := weatherSun(weather); f < 1 {
@@ -231,16 +241,19 @@ func horizonFade(sinceRise float64) float64 {
 }
 
 // litFactor is lit.kage's light multiplier for a normal n (already
-// decoded) on a tile with sky exposure and lamp light; the Go twin of the
-// shader for tests and calibration.
+// decoded) on a tile with sky exposure and lamp light (the packed vertex
+// value, light_lamp.go); the Go twin of the shader for tests and
+// calibration. Lamp light is level·(1 + n.xy·V)·(1 − LampSky·sky).
 func litFactor(ls *lightState, n [3]float32, sky, lamp float32) [3]float32 {
 	dot := func(a, b [3]float32) float32 { return max(a[0]*b[0]+a[1]*b[1]+a[2]*b[2], 0) }
 	ds, dm := dot(n, ls.SunL), dot(n, ls.MoonL)
+	level, vx, vy := decodeLamp(lamp)
+	k := level * (1 + (n[0]*vx + n[1]*vy)) * (1 - ls.LampSky*sky)
 	var out [3]float32
 	for i := range out {
 		amb := ls.IndoorAmbient[i] + (ls.SkyAmbient[i]-ls.IndoorAmbient[i])*sky
 		dif := (ls.SunColor[i]*ds + ls.MoonColor[i]*dm) * sky
-		out[i] = amb + dif + ls.LampColor[i]*lamp
+		out[i] = amb + dif + ls.LampColor[i]*k
 	}
 	return out
 }
@@ -284,7 +297,11 @@ type litRenderer struct {
 	pairs    litPairCache
 	verts    [4]ebiten.Vertex
 	opts     ebiten.DrawTrianglesShaderOptions
-	uniforms [7][]float32
+	uniforms [8][]float32
+	// radArt is the catalog the grid's lamp radius was read from (radOK:
+	// read at all), so a new catalog re-reads light_radius.
+	radArt *artCatalog
+	radOK  bool
 	// off turns the normal-map lighting off (Options > Graphics, PLAY-019):
 	// sprites draw plain with the daylight as a colour scale, and no pair
 	// images are made.
@@ -309,17 +326,26 @@ var litIndices = [6]uint32{0, 1, 2, 1, 3, 2}
 // chunk (16×16 tiles) at a time: only the chunks a frame reads are built,
 // and they are rebuilt only after the light's inputs change (NG-1 §6.7).
 // The roof and room layers are shared copy-on-write slices (a new backing
-// array means a change), and the lit rooms and burning campfires are
-// compared by content, since the room and building lists are rebuilt
-// every tick.
+// array means a change), and the light sources are compared by content,
+// since the building list is rebuilt every tick.
 type lightGrid struct {
-	w, h      int
-	cw        int // chunks per row
-	sky, lamp []float32
-	litRooms  []bool
-	fires     [][2]int  // burning campfires
-	blaze     []float32 // lamp light of burning cells per tile (fire_world_draw.go)
-	keyFire   uint64    // WorldView.FireVer the blaze was built from
+	w, h int
+	cw   int // chunks per row
+	sky  []float32
+	// lamp is the packed lamp value per tile (light_lamp.go): the light
+	// level, and the direction toward the dominant lamp.
+	lamp []float32
+	// srcs are the light sources (light_sources.go) and srcRoom the room
+	// id at each source's tile (-1 outdoors).
+	srcs    []lightSource
+	srcRoom []int
+	// sources lists the light sources; nil is appendLightSources (tests
+	// substitute it to prove every light comes from that one helper).
+	sources func(dst []lightSource, w *game.WorldView, lampRadius float64) []lightSource
+	lampR   float64   // a lamp's radius (its sprite's light_radius)
+	near    []int32   // the sources reaching the chunk being built
+	blaze   []float32 // lamp light of burning cells per tile (fire_world_draw.go)
+	keyFire uint64    // WorldView.FireVer the blaze was built from
 	// built[c] is the generation chunk c was last built at; gen moves
 	// whenever an input changes, so every chunk goes stale at once and is
 	// rebuilt when next read.
@@ -328,12 +354,12 @@ type lightGrid struct {
 	view  *game.WorldView // the view the chunks are built from
 	// key is the view the inputs were last checked against (identity of
 	// the shared layers and lists, plus their lengths); sum is the content
-	// key (layer identities, lit rooms, fires) the generation stands for.
+	// key (layer identities, sources) the generation stands for.
 	keyRooms *int
 	keyRoofs *uint8
 	keyBlds  *game.BuildingView
-	keyRm    *game.RoomView
-	keyLens  [5]int
+	keyLens  [4]int
+	keyR     float64
 	sum      uint64
 	genRooms *int
 	genRoofs *uint8
@@ -356,37 +382,35 @@ const (
 // sync points g at w, moving the generation when the light's inputs
 // differ from the last view's. The check is pointer and length compares
 // while the view's lists are the same; a new list costs one scan of the
-// rooms and buildings. It reuses g's slices, so it allocates only while
-// growing.
+// buildings (appendLightSources). It reuses g's slices, so it allocates
+// only while growing.
 func (g *lightGrid) sync(w *game.WorldView) {
 	g.view = w
-	lens := [5]int{len(w.RoomGrid), len(w.RoofCells), len(w.Buildings), len(w.Rooms), w.TerrainW}
+	lens := [4]int{len(w.RoomGrid), len(w.RoofCells), len(w.Buildings), w.TerrainW}
 	if g.built != nil && g.keyRooms == litFirst(w.RoomGrid) && g.keyRoofs == litFirst(w.RoofCells) &&
-		g.keyBlds == litFirst(w.Buildings) && g.keyRm == litFirst(w.Rooms) && g.keyLens == lens && g.keyFire == w.FireVer {
+		g.keyBlds == litFirst(w.Buildings) && g.keyLens == lens && g.keyFire == w.FireVer && g.keyR == g.lampR {
 		return
 	}
-	g.keyRooms, g.keyRoofs, g.keyBlds, g.keyRm, g.keyLens = litFirst(w.RoomGrid), litFirst(w.RoofCells), litFirst(w.Buildings), litFirst(w.Rooms), lens
-	g.keyFire = w.FireVer
-	g.litRooms = g.litRooms[:0]
-	sum := uint64(0x6c69676874)
-	for _, rm := range w.Rooms {
-		if rm.Lit && rm.ID >= 0 {
-			for len(g.litRooms) <= rm.ID {
-				g.litRooms = append(g.litRooms, false)
-			}
-			g.litRooms[rm.ID] = true
-			sum = mix64(sum ^ uint64(rm.ID+1))
-		}
+	g.keyRooms, g.keyRoofs, g.keyBlds, g.keyLens = litFirst(w.RoomGrid), litFirst(w.RoofCells), litFirst(w.Buildings), lens
+	g.keyFire, g.keyR = w.FireVer, g.lampR
+	list := g.sources
+	if list == nil {
+		list = appendLightSources
 	}
-	g.fires = g.fires[:0]
-	for i := range w.Buildings {
-		if b := &w.Buildings[i]; b.Kind == "campfire" && b.Burning {
-			g.fires = append(g.fires, [2]int{b.X, b.Y})
-			sum = mix64(sum ^ uint64(b.X)<<20 ^ uint64(b.Y)<<40 ^ 0xf1)
+	g.srcs = list(g.srcs[:0], w, g.lampR)
+	g.srcRoom = g.srcRoom[:0]
+	sum := uint64(0x6c69676874)
+	for _, s := range g.srcs {
+		home := room.Outdoors
+		if i := s.Y*w.TerrainW + s.X; s.X >= 0 && s.Y >= 0 && s.X < w.TerrainW && i < len(w.RoomGrid) {
+			home = w.RoomGrid[i]
 		}
+		g.srcRoom = append(g.srcRoom, home)
+		sum = mix64(sum ^ uint64(s.Kind) ^ uint64(uint32(s.X))<<8 ^ uint64(uint32(s.Y))<<36)
+		sum = mix64(sum ^ math.Float64bits(s.Radius))
 	}
 	sum = mix64(sum ^ w.FireVer ^ uint64(len(w.Fires))<<32 ^ 0xb1a2e)
-	for _, n := range [3]int{lens[0], lens[1], lens[4]} { // layer sizes; the lists are compared by content
+	for _, n := range [3]int{lens[0], lens[1], lens[3]} { // layer sizes; the sources are compared by content
 		sum = mix64(sum ^ uint64(n))
 	}
 	layersSame := g.genRooms == g.keyRooms && g.genRoofs == g.keyRoofs
@@ -416,71 +440,94 @@ func (g *lightGrid) sync(w *game.WorldView) {
 // chunkTiles is the light grid's chunk side (game.ChunkSize).
 const chunkTiles = game.ChunkSize
 
-// base is tile i's own light: sky 0 under a built or natural roof, else
-// 1; lamp 1 in lit rooms and up to 1 − dist/3.5 near burning campfires.
-func (g *lightGrid) base(w *game.WorldView, i int) (sky, lamp float32) {
+// selectNear keeps in g.near the sources whose reach box meets the tiles
+// x0..x1, y0..y1, so a chunk's tiles loop over a few sources, not all.
+func (g *lightGrid) selectNear(x0, y0, x1, y1 int) {
+	g.near = g.near[:0]
+	for j := range g.srcs {
+		s := &g.srcs[j]
+		r := int(math.Ceil(s.Radius))
+		if s.X+r < x0 || s.X-r > x1 || s.Y+r < y0 || s.Y-r > y1 {
+			continue
+		}
+		g.near = append(g.near, int32(j))
+	}
+}
+
+// base is tile (x, y)'s own light: sky 0 under a built or natural roof,
+// else 1; level the brightest of its lamps (lampAt), burning campfires (up
+// to 1 − dist/3.5) and burning cells; lampLvl and k the dominant lamp's
+// light and source index (-1: none). It reads only g.near.
+func (g *lightGrid) base(w *game.WorldView, x, y int) (sky, level, lampLvl float32, k int) {
 	const roofed = uint8(roof.Built | roof.Natural)
-	sky = 1
+	i := y*g.w + x
+	sky, k = 1, -1
 	if i < len(w.RoofCells) && w.RoofCells[i]&roofed != 0 {
 		sky = 0
 	}
-	if i < len(w.RoomGrid) {
-		if id := w.RoomGrid[i]; id >= 0 && id < len(g.litRooms) && g.litRooms[id] {
-			return sky, 1
-		}
-	}
 	if i < len(g.blaze) {
-		lamp = g.blaze[i]
+		level = g.blaze[i]
 	}
-	x, y := i%g.w, i/g.w
-	for _, f := range g.fires {
-		dx, dy := x-f[0], y-f[1]
-		if dx < -campfireReach || dx > campfireReach || dy < -campfireReach || dy > campfireReach {
-			continue
-		}
-		if d := math.Hypot(float64(dx), float64(dy)); d <= campfireReach {
-			lamp = max(lamp, float32(1-d/campfireFalloff))
+	for _, j := range g.near {
+		s := &g.srcs[j]
+		switch s.Kind {
+		case lightLamp:
+			if l := g.lampAt(int(j), x, y); l > lampLvl {
+				lampLvl, k = l, int(j)
+			}
+		case lightCampfire:
+			dx, dy := float64(x-s.X), float64(y-s.Y)
+			if math.Abs(dx) > s.Radius || math.Abs(dy) > s.Radius {
+				continue
+			}
+			if d := math.Hypot(dx, dy); d <= s.Radius {
+				level = max(level, float32(1-d/campfireFalloff))
+			}
 		}
 	}
-	return sky, lamp
+	return sky, max(level, lampLvl), lampLvl, k
 }
 
 // buildChunk fills chunk c. Boundary tiles (walls, doors and rock,
 // RoomGrid −2) are lit as their open faces are: sky 1 when unroofed or
 // next to an open-sky floor tile (an outer wall, a mountain face), lamp
 // the brightest of their floor neighbours (a lit room's walls glow with
-// it). Lighting every wall as indoors turned outer walls, doors and rock
-// into near-black slabs at noon. Neighbours are read through base, so a
-// chunk never depends on another being built.
+// it), shading toward that neighbour's lamp. Lighting every wall as
+// indoors turned outer walls, doors and rock into near-black slabs at
+// noon. Neighbours are read through base, so a chunk never depends on
+// another being built.
 func (g *lightGrid) buildChunk(c int) {
 	w := g.view
 	x0, y0 := (c%g.cw)*chunkTiles, (c/g.cw)*chunkTiles
 	x1, y1 := min(x0+chunkTiles, g.w), min(y0+chunkTiles, g.h)
+	g.selectNear(x0-1, y0-1, x1, y1) // a tile wider: the walls' neighbours
 	walls := len(w.RoomGrid) >= g.w*g.h
 	for y := y0; y < y1; y++ {
 		for x := x0; x < x1; x++ {
 			i := y*g.w + x
-			sky, lamp := g.base(w, i)
+			sky, level, lampLvl, k := g.base(w, x, y)
 			if walls && w.RoomGrid[i] == room.Wall {
 				// sky from the four sides; lamp also from the diagonals, so a
 				// lit room's wall corners glow with the rest of its walls
-				for k, d := range [8][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {1, 1}, {-1, 1}, {1, -1}, {-1, -1}} {
+				for n, d := range [8][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}, {1, 1}, {-1, 1}, {1, -1}, {-1, -1}} {
 					nx, ny := x+d[0], y+d[1]
 					if nx < 0 || ny < 0 || nx >= g.w || ny >= g.h {
 						continue
 					}
-					j := ny*g.w + nx
-					if w.RoomGrid[j] == room.Wall {
+					if w.RoomGrid[ny*g.w+nx] == room.Wall {
 						continue
 					}
-					ns, nl := g.base(w, j)
-					if k < 4 {
+					ns, nl, nll, nk := g.base(w, nx, ny)
+					if n < 4 {
 						sky = max(sky, ns)
 					}
-					lamp = max(lamp, nl)
+					level = max(level, nl)
+					if nll > lampLvl {
+						lampLvl, k = nll, nk
+					}
 				}
 			}
-			g.sky[i], g.lamp[i] = sky, lamp
+			g.sky[i], g.lamp[i] = sky, g.pack(x, y, level, lampLvl, k)
 		}
 	}
 	g.built[c] = g.gen
@@ -505,11 +552,24 @@ func (g *lightGrid) at(tx, ty int) (sky, lamp float32) {
 	return g.sky[i], g.lamp[i]
 }
 
+// syncLight points the light grid at this frame's view (r.drawW), with
+// the lamp radius from the art's metadata (re-read when the catalog
+// changes), and returns it.
+func (r *Renderer) syncLight() *lightGrid {
+	g := &r.lit.grid
+	if !r.lit.radOK || r.lit.radArt != r.art {
+		r.lit.radArt, r.lit.radOK = r.art, true
+		g.lampR = lampRadiusOf(r.art)
+	}
+	g.sync(&r.drawW)
+	return g
+}
+
 // lightTile is the light at tile (tx, ty): sky 1 under open sky, 0 under
-// a roof; lamp 0..1 from lit rooms and nearby campfires.
+// a roof; lamp the packed lamp value (light_lamp.go) from lamps, nearby
+// campfires and burning cells, passed through as the Custom1 vertex value.
 func (r *Renderer) lightTile(tx, ty int) (sky, lamp float32) {
-	r.lit.grid.sync(&r.drawW)
-	return r.lit.grid.at(tx, ty)
+	return r.syncLight().at(tx, ty)
 }
 
 // litQuad writes the four vertices (top-left, top-right, bottom-left,
@@ -698,8 +758,11 @@ func (c *artCatalog) groundPlane(img *ebiten.Image) bool {
 func (l *litRenderer) syncUniforms() {
 	if l.opts.Uniforms == nil {
 		l.opts.Uniforms = map[string]any{}
-		for i, name := range [...]string{"SunL", "MoonL", "SunColor", "MoonColor", "SkyAmbient", "IndoorAmbient", "LampColor"} {
+		for i, name := range [...]string{"SunL", "MoonL", "SunColor", "MoonColor", "SkyAmbient", "IndoorAmbient", "LampColor", "LampSky"} {
 			l.uniforms[i] = make([]float32, 3)
+			if name == "LampSky" { // a float: one value (a slice, so no boxing per draw)
+				l.uniforms[i] = l.uniforms[i][:1]
+			}
 			l.opts.Uniforms[name] = l.uniforms[i]
 		}
 	}
@@ -707,6 +770,7 @@ func (l *litRenderer) syncUniforms() {
 	for i, v := range [...]*[3]float32{&ls.SunL, &ls.MoonL, &ls.SunColor, &ls.MoonColor, &ls.SkyAmbient, &ls.IndoorAmbient, &ls.LampColor} {
 		copy(l.uniforms[i], v[:])
 	}
+	l.uniforms[7][0] = ls.LampSky
 }
 
 // drawLit draws a world sprite img with geo and colour scale cs, lit as

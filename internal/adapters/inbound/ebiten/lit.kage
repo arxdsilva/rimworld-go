@@ -3,7 +3,9 @@
 // lit.kage: a world sprite lit by the sun, the moon, the sky's ambient
 // and lamps (ART §6.1; Go twins litFactor and decodeNormal in light.go).
 // Per vertex: color is the colour scale (premultiplied), custom.x sky
-// exposure (1 open sky, 0 roofed), custom.y lamp light 0..1, custom.z the
+// exposure (1 open sky, 0 roofed), custom.y the packed lamp light (level
+// 0..1 and the direction toward the dominant lamp, PLAY-020 §3b; Go twins
+// decodeLamp and packLamp in light_lamp.go), custom.z the
 // x offset in pixels from the sprite to its normal map in the same image
 // (0: no normal map, lit flat), custom.w a blood stain on a creature
 // figure (SIM-020; 0 on everything else): w = 32*ichor + 2*wetStep +
@@ -24,6 +26,10 @@ var MoonColor vec3
 var SkyAmbient vec3
 var IndoorAmbient vec3
 var LampColor vec3
+
+// LampSky is the share of lamp light open sky drowns (0 at night, 1 in
+// full daylight); roofed tiles keep all of it.
+var LampSky float
 
 // bilinear is FilterLinear's 4-tap sample (premultiplied colour).
 func bilinear(p vec2) vec4 {
@@ -55,6 +61,21 @@ func bloodNoise(p vec2) float {
 	c := bloodHash(i + vec2(0, 1))
 	d := bloodHash(i + vec2(1, 1))
 	return mix(mix(a, b, u.x), mix(c, d, u.x), u.y)
+}
+
+// lampDecode unpacks custom.y (decodeLamp in light_lamp.go): x the lamp
+// light 0..1, yz the direction vector toward the dominant lamp (0: flat).
+// A value under 4 is a plain level; else v = 4(code+1) + 1 + level with
+// code = 33ix + iy, each axis 33 steps over ±0.6.
+func lampDecode(v float) vec3 {
+	q := floor(v / 4)
+	if q < 1 {
+		return vec3(clamp(v, 0, 1), 0, 0)
+	}
+	c := q - 1
+	ix := floor((c + 0.5) / 33)
+	iy := c - 33*ix
+	return vec3(clamp(v-4*q-1, 0, 1), (ix-16)/16*0.6, (iy-16)/16*0.6)
 }
 
 func Fragment(dstPos vec4, srcPos vec2, color vec4, custom vec4) vec4 {
@@ -94,7 +115,10 @@ func Fragment(dstPos vec4, srcPos vec2, color vec4, custom vec4) vec4 {
 	sky := custom.x
 	amb := mix(IndoorAmbient, SkyAmbient, sky)
 	dif := (SunColor*max(dot(n, SunL), 0) + MoonColor*max(dot(n, MoonL), 0)) * sky
-	lamp := LampColor * custom.y
+	// lamp light shades toward its lamp: a flat normal gets the level, a
+	// face away keeps at least 0.4 of it; open sky drowns it by day
+	lp := lampDecode(custom.y)
+	lamp := LampColor * (lp.x * (1 + dot(n.xy, lp.yz)) * (1 - LampSky*sky))
 	rgb := base.rgb * (amb + dif + lamp)
 	// the wet sheen catches the direct light (sun, moon, lamps) more than
 	// the ambient, so it glints by day and stays dark at night

@@ -209,25 +209,35 @@ func TestLampAddsWarmth(t *testing.T) {
 	t.Parallel()
 	r := &Renderer{}
 	w := roomWorld()
-	w.Buildings = []game.BuildingView{{Kind: "campfire", X: 6, Y: 0, Burning: true}, {Kind: "campfire", X: 0, Y: 3}}
+	// PLAY-020 §3b: a room is no longer lit flat at 1 because the sim calls
+	// it lit; its lamp lights it, full on the lamp's tile and its
+	// neighbours, falling off with distance, and stops at its walls.
+	w.Buildings = []game.BuildingView{{ID: 1, Kind: "lamp", X: 1, Y: 0, W: 1, H: 1},
+		{Kind: "campfire", X: 6, Y: 0, Burning: true}, {Kind: "campfire", X: 0, Y: 3}}
 	r.drawW = w
-	if _, l := r.lightTile(2, 2); l != 1 {
-		t.Fatalf("lit room lamp %v, want 1", l)
+	if l := levelAt(r, 1, 0); l != 1 {
+		t.Fatalf("on the lamp %v, want 1", l)
+	}
+	if l := levelAt(r, 1, 1); l != 1 {
+		t.Fatalf("next to the lamp %v, want 1", l)
+	}
+	if l := levelAt(r, 2, 3); !(l > 0 && l < 1) {
+		t.Fatalf("across the room from the lamp %v, want dimmer but lit", l)
 	}
 	if _, l := r.lightTile(4, 3); l != 0 {
-		t.Fatalf("unlit room beyond the campfire's reach: lamp %v, want 0", l)
+		t.Fatalf("the room beyond the wall, out of the campfire's reach: lamp %v, want 0", l)
 	}
 	if _, l := r.lightTile(6, 0); l != 1 {
 		t.Fatalf("on the campfire lamp %v, want 1", l)
 	}
-	if _, l := r.lightTile(3, 1); l != 1 {
-		t.Fatalf("a lit room's wall glows with it, got %v", l)
+	if l, want := levelAt(r, 3, 1), max(levelAt(r, 2, 0), levelAt(r, 2, 1), levelAt(r, 2, 2)); math.Abs(float64(l-want)) > 2e-3 || l <= 0 {
+		t.Fatalf("a lit room's wall glows with its brightest floor neighbour: %v, want %v", l, want)
 	}
 	if _, l := r.lightTile(6, 3); math.Abs(float64(l)-(1-3/3.5)) > 1e-5 {
 		t.Fatalf("3 tiles from the campfire lamp %v, want %v", l, 1-3/3.5)
 	}
 	if _, l := r.lightTile(0, 2); l != 0 {
-		t.Fatalf("a banked campfire lights nothing, got %v", l)
+		t.Fatalf("a banked campfire lights nothing (and the room lamp not the outdoors), got %v", l)
 	}
 	ls := lightAt(22, summerDay, "clear", 0)
 	dark, lit := litFactor(&ls, flatN, 0, 0), litFactor(&ls, flatN, 0, 1)
@@ -246,6 +256,9 @@ func TestLampAddsWarmth(t *testing.T) {
 func TestLightGridNoAllocAfterWarmup(t *testing.T) {
 	r := &Renderer{}
 	views := [2]game.WorldView{roomWorld(), roomWorld()}
+	for i := range views { // a room lamp and an outdoor one: the lamp paths too
+		views[i].Buildings = []game.BuildingView{{ID: 1, Kind: "lamp", X: 1, Y: 1, W: 1, H: 1}, {ID: 2, Kind: "lamp", X: 6, Y: 2, W: 1, H: 1}}
+	}
 	r.drawW = views[0]
 	r.lightTile(0, 0)
 	i := 0
@@ -334,7 +347,11 @@ func TestDrawLitFlatAndNormalPaths(t *testing.T) {
 	normal := ebiten.NewImage(8, 6)
 	plain := ebiten.NewImage(4, 4)
 	r := &Renderer{art: &artCatalog{normals: map[*ebiten.Image]*ebiten.Image{sprite: normal}}}
-	r.drawW = roomWorld()
+	// PLAY-020 §3b: lamp light comes from a lamp, not from the room's Lit
+	// flag, so the lit room gets its lamp at (1, 1) (its tile: lamp 1).
+	w := roomWorld()
+	w.Buildings = []game.BuildingView{{ID: 1, Kind: "lamp", X: 1, Y: 1, W: 1, H: 1}}
+	r.drawW = w
 	r.lit.light = lightAt(12, summerDay, "clear", 0)
 	dst := ebiten.NewImage(64, 64)
 
@@ -562,12 +579,14 @@ func BenchmarkDrawArtLitAB(b *testing.B) {
 }
 
 // TestLitRoomWallCornersGlow: a lit room's wall corners touch its floor
-// only diagonally; they glow with the rest of its walls.
+// only diagonally; they glow with the rest of its walls. PLAY-020 §3b: the
+// room is lit by a lamp (at (1, 1)) with a falloff, no longer flat 1, so
+// each corner glows with its diagonal floor tile's light.
 func TestLitRoomWallCornersGlow(t *testing.T) {
 	t.Parallel()
 	const w, h = 4, 4 // a wall ring around a 2x2 lit room
 	v := game.WorldView{TerrainW: w, Terrain: make([]uint8, w*h), RoomGrid: make([]int, w*h), RoofCells: make([]uint8, w*h),
-		Rooms: []game.RoomView{{ID: 0, Lit: true}}}
+		Rooms: []game.RoomView{{ID: 0, Lit: true}}, Buildings: []game.BuildingView{{ID: 1, Kind: "lamp", X: 1, Y: 1, W: 1, H: 1}}}
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
 			if x == 0 || y == 0 || x == w-1 || y == h-1 {
@@ -579,9 +598,9 @@ func TestLitRoomWallCornersGlow(t *testing.T) {
 	}
 	r := &Renderer{}
 	r.drawW = v
-	for _, c := range [][2]int{{0, 0}, {3, 0}, {0, 3}, {3, 3}} {
-		if _, l := r.lightTile(c[0], c[1]); l != 1 {
-			t.Fatalf("corner %v lamp %v, want 1", c, l)
+	for _, c := range [][4]int{{0, 0, 1, 1}, {3, 0, 2, 1}, {0, 3, 1, 2}, {3, 3, 2, 2}} {
+		if l, want := levelAt(r, c[0], c[1]), levelAt(r, c[2], c[3]); math.Abs(float64(l-want)) > 2e-3 || l < 0.9 {
+			t.Fatalf("corner %v lamp %v, want its diagonal floor's %v", c[:2], l, want)
 		}
 	}
 	if s, _ := r.lightTile(0, 0); s != 1 {

@@ -243,6 +243,7 @@ type shadowState struct {
 	creatures  []creatureCaster
 	plans      []creaturePlan
 	lights     []pointLight
+	vis        []pointLight // the lights reaching the creature being planned
 	cast       shadowCast
 	castInit   bool
 	blur       *ebiten.Shader
@@ -608,10 +609,13 @@ func (r *Renderer) addBox(b *triBatch, c shadowCaster, l lightState, tile, a flo
 //	(a) box and blob casters at the sun or moon's shadow alpha
 //	(b) creature silhouettes for the sun or moon (open sky only)
 //	    -- roofed tiles cleared --
-//	(c) creature silhouettes for campfires and lamps (kept indoors)
+//	(c) creature silhouettes for campfires and lamps (kept indoors; the
+//	    sun washes them out on open sky only)
 //	(d) contact pools under every creature
 //
-// then one contact-hardening blur into scratch and one composite.
+// then one contact-hardening blur into scratch and one composite. w is
+// the frame's view (r.drawW): the point lights come from the light grid
+// synced to it.
 func (r *Renderer) drawShadows(screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
 	if sw <= 0 || sh <= 0 || r.env.shadow.off {
 		return
@@ -650,10 +654,20 @@ func (r *Renderer) drawShadows(screen *ebiten.Image, w game.WorldView, sw, sh in
 
 	sunEl := sunElevation(l)
 	daylight := daylightOf(sunEl)
-	lights := r.pointLights(w, daylight)
+	lights := r.pointLights()
 	plans := st.plans[:0]
 	for _, c := range creatures {
-		plans = append(plans, planCreature(c.px, c.py, c.h, c.sky, l, daylight, lights))
+		// the sun washes out point-light shadows on open sky only; under a
+		// roof lamps cast by day too (PLAY-020 §3b)
+		dl := 0.0
+		if c.sky {
+			dl = daylight
+		}
+		var near []pointLight
+		if dl < 1 { // full daylight on open sky: no point-light shadow to plan
+			near = r.creatureLights(c, lights)
+		}
+		plans = append(plans, planCreature(c.px, c.py, c.h, c.sky, l, dl, near))
 	}
 	st.plans = plans
 	for i, c := range creatures {

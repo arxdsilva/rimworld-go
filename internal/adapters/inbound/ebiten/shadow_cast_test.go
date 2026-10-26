@@ -466,19 +466,20 @@ func TestPointLightsFromCampfiresAndLitLamps(t *testing.T) {
 	w.Buildings = []game.BuildingView{
 		{ID: 1, Kind: "campfire", X: 2, Y: 8, W: 1, H: 1, Burning: true},
 		{ID: 2, Kind: "campfire", X: 5, Y: 8, W: 1, H: 1}, // out
-		{ID: 3, Kind: "lamp", X: 10, Y: 2, W: 1, H: 1},    // in the lit room
-		{ID: 4, Kind: "lamp", X: 10, Y: 9, W: 1, H: 1},    // in the dark room
+		{ID: 3, Kind: "lamp", X: 10, Y: 2, W: 1, H: 1},    // room 1
+		{ID: 4, Kind: "lamp", X: 10, Y: 9, W: 1, H: 1},    // room 2
 	}
 	r := shadowRenderer(t, w)
-	got := r.pointLights(w, 0)
-	if len(got) != 2 || got[0].id != 1 || got[0].h != campfireLightH || got[1].id != 3 || got[1].h != lampLightH {
+	r.drawW = w
+	// PLAY-020 §3b: lamps are always on, so every lamp is a light, not
+	// only those in a room the sim calls lit; the banked campfire is out.
+	got := r.pointLights()
+	if len(got) != 3 || got[0].id != 1 || got[0].h != campfireLightH || got[1].id != 3 || got[1].h != lampLightH ||
+		got[2].id != 4 || got[1].reach != lampLightReach {
 		t.Fatalf("lights %+v", got)
 	}
 	if got[0].x != 2.5 || got[0].y != 8.5 {
 		t.Fatalf("a light sits at its tile centre: %+v", got[0])
-	}
-	if n := len(r.pointLights(w, 1)); n != 0 {
-		t.Fatalf("%d point lights in full daylight", n)
 	}
 	// the night pass: a pawn by the fire and one in the lamp-lit room
 	// (roofed) each cast a point-light silhouette and a contact pool, and
@@ -500,6 +501,60 @@ func TestPointLightsFromCampfiresAndLitLamps(t *testing.T) {
 	}
 	if n := len(r.env.shadow.contacts.verts); n != 0 {
 		t.Fatalf("contact batch not flushed: %d", n)
+	}
+	// Full daylight no longer empties the light list (the old "no point
+	// lights at daylight 1"): it washes out only open-sky creatures. At
+	// noon pawn 1 casts the sun only (its fire shadow is gone) and pawn 2,
+	// under the roof, keeps its lamp shadow.
+	r.lit.light = lightAt(12, 15, "clear", 0)
+	r.drawShadows(ebiten.NewImage(640, 400), w, 640, 400, r.tilePx())
+	if r.env.shadow.casts != 3+2 {
+		t.Fatalf("noon drew %d silhouettes, want the sun and the indoor lamp", r.env.shadow.casts-3)
+	}
+}
+
+// castsAt draws one shadow frame of pawns in w at hour and returns how
+// many silhouettes it cast.
+func castsAt(t *testing.T, w game.WorldView, hour float64, pawns ...game.PawnView) int {
+	t.Helper()
+	r := shadowRenderer(t, w)
+	r.art = figureArt()
+	r.drawW = w
+	r.drawPawns = pawns
+	r.lit.light = lightAt(hour, 15, "clear", 0)
+	r.drawShadows(ebiten.NewImage(640, 400), w, 640, 400, r.tilePx())
+	return r.env.shadow.casts
+}
+
+func TestOutdoorLampCastsCreatureShadowAtNight(t *testing.T) {
+	t.Parallel()
+	w := shadowWorld(nil)
+	for y := 2; y <= 8; y++ {
+		w.RoomGrid[y*20+12] = -2 // a wall east of the lamp
+	}
+	w.Buildings = []game.BuildingView{lampBuilding(1, 9, 5)}
+	if n := castsAt(t, w, 23, game.PawnView{ID: 1, X: 11, Y: 5}); n != 2 {
+		t.Fatalf("by an outdoor lamp at night: %d silhouettes, want the moon and the lamp", n)
+	}
+	if n := castsAt(t, w, 23, game.PawnView{ID: 1, X: 13, Y: 5}); n != 1 {
+		t.Fatalf("behind the wall at night: %d silhouettes, want the moon only", n)
+	}
+	if n := castsAt(t, w, 12, game.PawnView{ID: 1, X: 11, Y: 5}); n != 1 {
+		t.Fatalf("by an outdoor lamp at noon: %d silhouettes, want the sun only", n)
+	}
+}
+
+func TestRoofedRoomAtNoonKeepsLampShadows(t *testing.T) {
+	t.Parallel()
+	w := shadowWorld(map[int]uint8{})
+	lampRoom(&w, 0, 1, 1, 9, 8)  // inside x 2..8
+	lampRoom(&w, 1, 9, 1, 16, 8) // shares the wall at x 9; inside x 10..15
+	w.Buildings = []game.BuildingView{lampBuilding(1, 7, 4)}
+	if n := castsAt(t, w, 12, game.PawnView{ID: 1, X: 5, Y: 4}); n != 1 {
+		t.Fatalf("a roofed room with a lamp at noon: %d silhouettes, want the lamp only", n)
+	}
+	if n := castsAt(t, w, 23, game.PawnView{ID: 1, X: 10, Y: 4}); n != 0 {
+		t.Fatalf("the next room, 3 tiles from the lamp through a wall: %d silhouettes, want none", n)
 	}
 }
 
