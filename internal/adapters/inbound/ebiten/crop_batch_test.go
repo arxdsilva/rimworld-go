@@ -19,18 +19,28 @@ import (
 // ripe plant, the wilted one.
 var cropTestHeights = [numCropStages]float64{6.0 / 64, 13.0 / 64, 29.0 / 64, 51.0 / 64, 58.0 / 64, 45.0 / 64}
 
+// cropTestRoot is the stored row of a test unit's root: the art's
+// tile-centre point (origin.y + 64 = 136 canvas px, at half size), where
+// crop art stands a unit's root (plant_base.py CX, CY = 0.5, -0.5).
+const cropTestRoot = 68
+
 // cropUnitSprite is a unit sprite h tiles tall: a block whose bottom
-// edge is the foot (metadata foot = (origin.x + 64, origin.y + 128) of a
+// edge is the root (metadata root = (origin.x + 64, origin.y + 64) of a
 // 128×192 canvas stored at half size).
 func cropUnitSprite(h float64) *artSprite {
+	return cropBlockSprite(max(int(math.Round(h*64)), 1), 0) // 64 stored px a tile
+}
+
+// cropBlockSprite is a unit sprite whose block reaches up rows stored
+// px above the root and down rows below it.
+func cropBlockSprite(up, down int) *artSprite {
 	pix := image.NewNRGBA(image.Rect(0, 0, 64, 96))
-	rows := max(int(math.Round(h*64)), 1) // 64 stored px a tile
-	for y := 84 - rows; y < 84; y++ {
+	for y := cropTestRoot - up; y < cropTestRoot+down; y++ {
 		for x := 22; x < 42; x++ {
 			pix.SetNRGBA(x, y, color.NRGBA{120, 150, 80, 255})
 		}
 	}
-	return &artSprite{meta: artMeta{Canvas: [2]int{128, 192}, Origin: [2]float64{0, 40}, Footprint: [2]int{1, 1}}, pix: pix}
+	return &artSprite{meta: artMeta{Canvas: [2]int{128, 192}, Origin: [2]float64{0, 72}, Footprint: [2]int{1, 1}}, pix: pix}
 }
 
 // cropTestArt is a soil catalog with unit sprites (four variants of each
@@ -530,17 +540,24 @@ func TestCropLODTiers(t *testing.T) {
 		t.Fatalf("32 px: %d quads, want one a tile (12)", got)
 	}
 	// the representative unit is larger than a single unit of the tile
-	r = cropRenderer(cropWorld(8, 8, cropPlants("wheat", 1, 1, 1, 1, nil)), 8, 8, "wheat")
-	cropDraw(r, 8, 8, 64)
-	var maxW float64
-	for i := 0; i+3 < len(r.lod.crops.verts); i += 4 {
-		maxW = max(maxW, float64(r.lod.crops.verts[i+1].DstX-r.lod.crops.verts[i].DstX))
+	// where the tile has room for it (a young crop); a ripe one fills the
+	// tile's height either way (PLAY-019: every unit stays on its tile),
+	// so its representative is at least as large as its largest unit
+	widths := func(edit func(*game.PlantView)) (maxW, repW float64) {
+		r := cropRenderer(cropWorld(8, 8, cropPlants("wheat", 1, 1, 1, 1, edit)), 8, 8, "wheat")
+		cropDraw(r, 8, 8, 64)
+		for i := 0; i+3 < len(r.lod.crops.verts); i += 4 {
+			maxW = max(maxW, float64(r.lod.crops.verts[i+1].DstX-r.lod.crops.verts[i].DstX))
+		}
+		r = cropRenderer(cropWorld(8, 8, cropPlants("wheat", 1, 1, 1, 1, edit)), 8, 8, "wheat")
+		cropDraw(r, 8, 8, 32)
+		return maxW, float64(r.lod.crops.verts[1].DstX-r.lod.crops.verts[0].DstX) * 2 // at 64 px
 	}
-	r = cropRenderer(cropWorld(8, 8, cropPlants("wheat", 1, 1, 1, 1, nil)), 8, 8, "wheat")
-	cropDraw(r, 8, 8, 32)
-	repW := float64(r.lod.crops.verts[1].DstX-r.lod.crops.verts[0].DstX) * 2 // at 64 px
-	if repW <= maxW*1.05 {
-		t.Fatalf("representative unit %.1f px wide at 64 px vs %.1f for a unit", repW, maxW)
+	if maxW, repW := widths(func(p *game.PlantView) { p.Growth, p.Stage, p.Harvestable = 37, 1, false }); repW <= maxW*1.05 {
+		t.Fatalf("young: representative unit %.1f px wide at 64 px vs %.1f for a unit", repW, maxW)
+	}
+	if maxW, repW := widths(nil); repW < maxW*0.999 {
+		t.Fatalf("ripe: representative unit %.1f px wide at 64 px vs %.1f for a unit", repW, maxW)
 	}
 }
 

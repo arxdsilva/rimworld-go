@@ -24,6 +24,12 @@ import (
 // and lamp light); the batch is flushed whenever another object comes
 // next in draw order, so units never paint over what stands in front.
 //
+// Placement (PLAY-019): crop art stands a unit's root on the centre of its
+// footprint, so the root is the anchor, the growth scale's base and the
+// sway's pivot. Every unit stays on its own tile (cropFit): one whose top
+// would cross the north edge moves south, then shrinks; the wind never
+// stretches it past that edge.
+//
 // Cold and heat (PlantView.Damage): below cropWiltDamage a unit keeps its
 // sprite under a growing rime (cold) or scorch (heat) tint; from there it
 // shows the wilted sprite, shrinks towards cropMinShrink and, over the
@@ -65,10 +71,34 @@ const (
 	// cropBatchQuads caps a batch (index range of one draw).
 	cropBatchQuads = 12000
 	// cropScaleMin and cropScaleMax bound the growth scale of a stage's
-	// sprite (art whose stages differ wildly in size stays sane).
-	cropScaleMin = 0.4
-	cropScaleMax = 1.4
+	// sprite (art whose stages differ wildly in size stays sane). The
+	// shipped art needs 0.47 (a cotton plant just turned young) to 1.64 (a
+	// young corn about to turn mature), so the clamp never binds on it.
+	cropScaleMin = 0.35
+	cropScaleMax = 2.0
+	// cropRootMax is how far south, in tiles from the tile's top, a unit's
+	// root may move to keep its top on its own tile (cropFit).
+	cropRootMax = 0.95
 )
+
+// cropFit keeps a unit on its own tile (PLAY-019): given its root at dy
+// tiles from the tile's top and its reach above and below the root in
+// tiles at its size, it returns where the root goes and a size factor. A
+// unit that fits stays; one whose top crosses the north edge moves south,
+// its root no further than cropRootMax and its foot not past the south
+// edge (one crossing the south edge moves north); one that still does not
+// fit shrinks until its top meets the north edge.
+func cropFit(dy, above, below float64) (root, f float64) {
+	above, below = max(above, 0), max(below, 0)
+	f = 1
+	if h := above + below; h > 1 {
+		f = 1 / h
+	}
+	if above*f > cropRootMax {
+		f = cropRootMax / above
+	}
+	return min(max(dy, above*f), min(cropRootMax, 1-below*f)), f
+}
 
 // cropUnitsPerTile is how many unit sprites a crop's tile shows.
 var cropUnitsPerTile = map[string]int{
@@ -94,7 +124,7 @@ var cropBase = [5][][2]float64{
 	4: {{0.25, 0.3}, {0.75, 0.3}, {0.0, 0.76}, {0.5, 0.76}},
 }
 
-// cropUnit is one unit plant of a tile: its foot at (dx, dy) tiles from
+// cropUnit is one unit plant of a tile: its root at (dx, dy) tiles from
 // the tile's top-left, its size trim, share of the tile's sway and sway
 // phase, the variant it draws (mod the stage's variants), mirrored or
 // not, and its drop-out rank (0 goes first under damage).
@@ -329,7 +359,9 @@ func cropMarkColor(p *game.PlantView) color.RGBA {
 // --- the atlas ----------------------------------------------------------------
 
 // cropSprite is one unit sprite in the atlas: its source rectangle (px),
-// its foot within it, and tiles per atlas pixel at scale 1.
+// its root within it (the art's tile-centre point: crop art stands a unit
+// on the centre of its footprint, plant_base.py CX, CY = 0.5, -0.5), and
+// tiles per atlas pixel at scale 1.
 type cropSprite struct {
 	sx, sy, w, h float32
 	fx, fy       float32
@@ -346,7 +378,7 @@ type furrowSprite struct {
 
 // cropSet is a species' sprites: per stage the indexes into the atlas's
 // sprites (one per distinct variant that exists), and each stage's
-// nominal height in tiles.
+// nominal height in tiles above the root.
 type cropSet struct {
 	stages  [numCropStages][]int32
 	nominal [numCropStages]float32
@@ -440,7 +472,7 @@ func buildCropAtlas(c *artCatalog, species []string) *cropAtlas {
 					}
 					fw, fh := footprint(sp.meta)
 					fx := (sp.meta.Origin[0]+fw*artTilePx/2)/kpx - float64(box.Min.X)
-					fy := (sp.meta.Origin[1]+fh*artTilePx)/kpx - float64(box.Min.Y)
+					fy := (sp.meta.Origin[1]+fh*artTilePx/2)/kpx - float64(box.Min.Y)
 					idx = int32(len(a.sprites))
 					byKey[key] = idx
 					itemOf = append(itemOf, len(items))
@@ -521,7 +553,9 @@ var cropAnchors = [...]struct {
 
 // height is the drawn height in tiles of a plant at growth percent g: the
 // stages' nominal heights joined by straight lines, so growth is
-// continuous whichever stage's sprite shows.
+// continuous whichever stage's sprite shows, and never falling, so a plant
+// does not shrink as it ripens (a ripe sprite drawn shorter than the
+// mature one, drooping ears, keeps the mature height).
 func (s *cropSet) height(g float64) float64 {
 	var pg, ph float64
 	have := false
@@ -537,6 +571,7 @@ func (s *cropSet) height(g float64) float64 {
 			have, pg, ph = true, an.g, n
 			continue
 		}
+		n = max(n, ph)
 		if g <= an.g {
 			return ph + (n-ph)*(g-pg)/(an.g-pg)
 		}
@@ -675,7 +710,6 @@ func (r *Renderer) drawCropObj(dst *ebiten.Image, w *game.WorldView, p *game.Pla
 	n := cropUnitCount(p.Species)
 	cb.units = cropUnits(p.X, p.Y, n, r.cropVertical(w, p.X, p.Y), cb.units[:0])
 	units := cb.units
-	sortCropUnits(units)
 	gs := set.scale(cropGrowthStage(*p), p.Growth)
 	tint := cropDamageTint(p.Damage, p.DamageKind)
 	live := tile >= lodLiveMin
@@ -690,12 +724,21 @@ func (r *Renderer) drawCropObj(dst *ebiten.Image, w *game.WorldView, p *game.Pla
 			_, al := cropUnitLook(p.Damage, u.rank, n)
 			sum += al
 		}
-		last.dx, last.dy, last.trim = 0.5, 0.6, 1
+		last.dx, last.dy, last.trim = 0.5, 0.6, cropLODScale
 		units = append(units[:0], last)
 		repScale, _ = cropUnitLook(p.Damage, 0, n)
-		repScale *= cropLODScale
 		repAlpha = sum / float64(n)
 	}
+	// every unit on its own tile at its undamaged size (damage only
+	// shrinks it about its root), then drawn north to south
+	for i := range units {
+		u := &units[i]
+		sp := &a.sprites[sprites[int(u.variant)%len(sprites)]]
+		k := gs * u.trim * float64(sp.k)
+		root, f := cropFit(u.dy, float64(sp.fy)*k, float64(sp.h-sp.fy)*k)
+		u.dy, u.trim = root, u.trim*f
+	}
+	sortCropUnits(units)
 
 	ps := r.plantPose(p.X, p.Y, kindCrop, cropSwayAmount(p.Species), 1)
 	lean, hs := -ps.skew, min(max(ps.sy, 0.5), 1.25)
@@ -717,7 +760,11 @@ func (r *Renderer) drawCropObj(dst *ebiten.Image, w *game.WorldView, p *game.Pla
 		sp := &a.sprites[sprites[int(u.variant)%len(sprites)]]
 		ks := float32(gs*u.trim*sc) * tl * sp.k // screen px per atlas px
 		fx, fy := tx+float32(u.dx)*tl, ty+float32(u.dy)*tl
-		above, below := sp.fy*ks*float32(hs), (sp.h-sp.fy)*ks
+		uh := float32(hs) // the wind never stretches a unit past its tile's north edge
+		if up := sp.fy * ks; up > 0 {
+			uh = min(uh, float32(u.dy)*tl/up)
+		}
+		above, below := sp.fy*ks*uh, (sp.h-sp.fy)*ks
 		wq := sp.w * ks
 		left := fx - sp.fx*ks
 		if u.mirror {

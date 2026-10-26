@@ -352,6 +352,14 @@ renderer may mirror them.
     potato, beans, healroot, ashleaf 3; lettuce and radish 4; pumpkin 1
     sprawl. Units are jittered, mirrored and scaled by growth, with a
     slight row alignment along the field.
+-   **Root and containment (PLAY-019).** A unit's root is the art's
+    tile-centre point (`origin.y + 64` atlas px, the shared plant
+    convention in `plant_base.py`), never the footprint's bottom. Every
+    unit stays on its own tile: one whose top would cross the north
+    edge moves south (root at most 0.95 of the tile), then shrinks until
+    it fits (`cropFit`). So tall crops show fewer, full-height plants
+    per tile (ripe corn reads as one stalk). Sway pivots at the root.
+    `TestCropUnitsStayOnTheirTile` checks every crop, stage and pattern.
 -   **No soil mound.** Tilled furrows are the ground decal
     `overlay/tilled_0..3` under cells holding a crop or sown seed.
 -   **Silhouettes (ours):** corn a tall thin stalk with arching leaves,
