@@ -174,6 +174,9 @@ func zoneLabelCap(tileL float64) float64 {
 // objects, so stacks and crops never cover a zone's name.
 func (r *Renderer) drawZoneLabels(screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
 	for _, z := range w.Zones {
+		if z.Hidden {
+			continue // a hidden zone shows no name (while selected, drawZoneSelection)
+		}
 		r.drawZoneLabel(screen, z, r.zoneGeomOf(z), sw, sh, tile)
 	}
 }
@@ -187,6 +190,9 @@ func (r *Renderer) drawZones(screen *ebiten.Image, w game.WorldView, sw, sh int,
 	none := color.NRGBA{}
 	planted := r.zonePlantCells(&w)
 	for _, z := range w.Zones {
+		if z.Hidden {
+			continue // a hidden zone draws no fill or outline (while selected, drawZoneSelection)
+		}
 		key, fill := zoneSpriteKey(z.Kind)
 		var skip map[[2]int]bool
 		if z.Kind == game.ZoneGrow {
@@ -339,6 +345,49 @@ func (r *Renderer) drawZoneRun(screen *ebiten.Image, kind string, run edgeRun, s
 	vector.StrokeLine(screen, ax, ay, bx, by, th, growEdgeClr, false)
 }
 
+var (
+	zoneSelEdgeClr = color.NRGBA{R: 255, G: 238, B: 140, A: 255}
+	zoneSelFillClr = color.NRGBA{R: 255, G: 255, B: 255, A: 34}
+)
+
+// drawZoneHighlight marks zone z as selected (PLAY-020): a brighter fill
+// on its tiles (a growing zone's own plants stay uncovered, as in
+// drawZones) and a heavier, brighter outline, whatever its kind. It draws
+// over a hidden zone too, which is how a hidden zone shows while selected.
+func (r *Renderer) drawZoneHighlight(screen *ebiten.Image, w game.WorldView, z game.ZoneView, sw, sh int, tile float64) {
+	var skip map[[2]int]bool
+	if z.Kind == game.ZoneGrow {
+		skip = r.zonePlantCells(&w)
+	}
+	for _, c := range z.Cells {
+		if skip[c] {
+			continue
+		}
+		if sx, sy := r.worldToScreen(c[0], c[1]); visible(sx, sy, float32(tile), float32(tile), sw, sh) {
+			vector.FillRect(screen, sx, sy, float32(tile), float32(tile), zoneSelFillClr, false)
+		}
+	}
+	th := zoneStroke(r.cam.zoom) * 1.5
+	off := th / 2
+	for _, run := range r.zoneGeomOf(z).runs {
+		if !r.runVisible(run, sw, sh, 8) {
+			continue
+		}
+		ax, ay := r.worldToScreenF(float64(run.x0), float64(run.y0))
+		bx, by := r.worldToScreenF(float64(run.x1), float64(run.y1))
+		ax, ay = ax+float32(run.nx)*off, ay+float32(run.ny)*off
+		bx, by = bx+float32(run.nx)*off, by+float32(run.ny)*off
+		if ax == bx { // solid runs overshoot their ends by half a stroke so corners close
+			ay -= off
+			by += off
+		} else {
+			ax -= off
+			bx += off
+		}
+		vector.StrokeLine(screen, ax, ay, bx, by, th, zoneSelEdgeClr, false)
+	}
+}
+
 // dashedRun draws an axis-aligned dashed line with filled rectangles.
 func dashedRun(screen *ebiten.Image, ax, ay, bx, by, th, dash, gap float32, c color.Color) {
 	horizontal := ay == by
@@ -402,8 +451,12 @@ func (r *Renderer) drawFenceRun(screen *ebiten.Image, run edgeRun, tile float64)
 	}
 }
 
-// zoneLabelText is a zone's one-per-zone map label.
+// zoneLabelText is a zone's one-per-zone map label: the player's name for
+// it, else its crop or kind.
 func zoneLabelText(z game.ZoneView) string {
+	if z.Name != "" {
+		return z.Name
+	}
 	switch z.Kind {
 	case game.ZoneGrow:
 		if z.Crop != "" {
@@ -527,6 +580,17 @@ func zoneLabelLayout(text string, boxW, boxH, cx, cy, capSize float64) zoneLabel
 		tx:    cx, ty: cy - h/2 + py}
 }
 
+// zoneLabelPlanFor lays out zone z's label for tiles tile physical pixels
+// wide: the plan (logical pixels) and the zone's bounding box on screen
+// (physical origin and size).
+func (r *Renderer) zoneLabelPlanFor(z game.ZoneView, g *zoneGeom, tile float64) (plan zoneLabelPlan, ox, oy float32, bw, bh float64) {
+	ox, oy = r.worldToScreenF(float64(g.minX), float64(g.minY))
+	bw, bh = float64(g.maxX-g.minX+1)*tile, float64(g.maxY-g.minY+1)*tile
+	ax, ay := r.worldToScreenF(g.ax, g.ay)
+	k := 1 / uiScale()
+	return zoneLabelLayout(zoneLabelText(z), bw*k, bh*k, float64(ax)*k, float64(ay)*k, zoneLabelCap(tile*k)), ox, oy, bw, bh
+}
+
 // drawZoneLabel names a zone once, in the middle of it, on a dark plate.
 // The label scales with the zone (zoneLabelLayout) and is anchored to the
 // zone cell nearest its middle; layout is in logical pixels, from the
@@ -535,15 +599,8 @@ func (r *Renderer) drawZoneLabel(screen *ebiten.Image, z game.ZoneView, g *zoneG
 	if len(z.Cells) == 0 {
 		return
 	}
-	ox, oy := r.worldToScreenF(float64(g.minX), float64(g.minY))
-	bw, bh := float64(g.maxX-g.minX+1)*tile, float64(g.maxY-g.minY+1)*tile
-	if !visible(ox, oy, float32(bw), float32(bh), sw, sh) {
-		return
-	}
-	ax, ay := r.worldToScreenF(g.ax, g.ay)
-	k := 1 / uiScale()
-	plan := zoneLabelLayout(zoneLabelText(z), bw*k, bh*k, float64(ax)*k, float64(ay)*k, zoneLabelCap(tile*k))
-	if !plan.ok {
+	plan, ox, oy, bw, bh := r.zoneLabelPlanFor(z, g, tile)
+	if !visible(ox, oy, float32(bw), float32(bh), sw, sh) || !plan.ok {
 		return
 	}
 	s := uiScale()
@@ -552,6 +609,25 @@ func (r *Renderer) drawZoneLabel(screen *ebiten.Image, z game.ZoneView, g *zoneG
 	}
 	paintZoneLabelPlate(screen, plan.plate)
 	worldText(screen, plan.text, plan.tx*s, plan.ty*s, plan.style) // physical anchor in, logical out
+}
+
+// zoneLabelAt is the zone whose name plate is under physical pixel
+// (mx, my), the topmost. A hidden zone has no plate, unless it is shown
+// (the selected one, whose name drawZoneSelection draws).
+func (r *Renderer) zoneLabelAt(w game.WorldView, mx, my int, tile float64, shown uint16) (game.ZoneView, bool) {
+	k := 1 / uiScale()
+	px, py := float32(float64(mx)*k), float32(float64(my)*k)
+	for i := len(w.Zones) - 1; i >= 0; i-- {
+		z := w.Zones[i]
+		if len(z.Cells) == 0 || z.Hidden && z.ID != shown {
+			continue
+		}
+		plan, _, _, _, _ := r.zoneLabelPlanFor(z, r.zoneGeomOf(z), tile)
+		if plan.ok && plan.plate.contains(px, py) {
+			return z, true
+		}
+	}
+	return game.ZoneView{}, false
 }
 
 // paintZoneLabelPlate fills a zone label's plate (logical pixels).

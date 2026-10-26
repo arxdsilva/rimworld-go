@@ -107,6 +107,7 @@ var canvasExempt = map[string]string{
 	"zones_draw.go:zoneFill":             "world: zone fill batch",
 	"zones_draw.go:drawZones":            "world: zone tiles",
 	"zones_draw.go:drawZoneRun":          "world: zone outline runs",
+	"zones_draw.go:drawZoneHighlight":    "world: the selected zone's brighter fill and outline on tiles",
 	"zones_draw.go:drawFenceRun":         "world: pen fences",
 	"zones_draw.go:dashedRun":            "world: dashed stockpile outline",
 	"fence.go:drawFenceVector":           "world: fences on tiles",
@@ -132,6 +133,7 @@ var canvasExempt = map[string]string{
 	"formation.go:drawFormation":                  "world: formation markers on tiles",
 	"architect.go:drawZoneGhost":                  "world: zone/drag ghost cells on the map (palette and labels use the canvas)",
 	"move_mode.go:drawMoveMode":                   "world: move-mode footprint outline (hints use the canvas)",
+	"zone_tools.go:drawZoneToolGhost":             "world: the Expand and Shrink ghost cells on the map (the icon and hint use the canvas)",
 
 	// the globe: physical size inside its logical area
 	"globe.go:Draw":                "globe: drawn at physical size inside its logical area (x s); names go through the canvas",

@@ -180,6 +180,7 @@ type App struct {
 	hasFrame                       bool
 	zoneSel                        uint16 // the selected zone's id (zone_select.go, PLAY-020)
 	hasZone                        bool
+	zone                           *zoneState      // the selected zone's tools and last clicked cell (zone_tools.go)
 	selCycle                       selCycle        // last map click, for cycling a tile's stack
 	bldgMove                       bldgMoveState   // the building panel's Move mode (move_mode.go)
 	equipCache                     equipCacheState // the pawn Gear tab's nearby weapons (inspector.go)

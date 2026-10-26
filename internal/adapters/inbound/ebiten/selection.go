@@ -88,7 +88,11 @@ func selectablesAt(w game.WorldView, pawns []game.PawnView, tx, ty int) []selCan
 		}
 	}
 	out = append(out, floor...)
-	return append(out, floorFrames...)
+	out = append(out, floorFrames...)
+	if z, ok := zoneCellAt(w, tx, ty); ok { // PLAY-020: a zone comes last
+		out = append(out, selCand{selZone, entity.EntityID(z.ID)})
+	}
+	return out
 }
 
 // pawnUnderCursor is the colonist drawn under physical pixel (mx, my), even
@@ -109,8 +113,14 @@ func (r *Renderer) pawnUnderCursor(mx, my int) (entity.EntityID, bool) {
 func (a *App) clickSelect() {
 	mx, my := a.mapCursor()
 	tx, ty := a.renderer.TileAt(mx, my)
-	cands := selectablesAt(a.renderer.world(), a.renderer.snapshot(), tx, ty)
+	w := a.renderer.world()
+	if a.selectZoneLabel(w, mx, my, tx, ty) { // zone_select.go: a click on a zone's name plate
+		a.selCycle = selCycle{}
+		return
+	}
+	cands := selectablesAt(w, a.renderer.snapshot(), tx, ty)
 	tile := [2]int{tx, ty}
+	a.zoneSt().noteCell(tile)
 	if c := a.selCycle; c.ok && c.tile == tile && c.n == len(cands) && len(cands) > 1 {
 		i := (c.idx + 1) % len(cands)
 		a.selectCand(cands[i])
@@ -152,6 +162,8 @@ func (a *App) selectCand(c selCand) {
 		a.selPlant, a.hasPlant = c.id, true
 	case selFrame:
 		a.selFrame, a.hasFrame = c.id, true
+	case selZone:
+		a.selectZone(uint16(c.id)) // zone_select.go
 	}
 }
 
@@ -175,6 +187,9 @@ func (a *App) clearSelections(keep selKind) {
 	}
 	if keep != selFrame {
 		a.hasFrame = false
+	}
+	if keep != selZone {
+		a.clearZone() // zone_select.go: also ends its Expand and Shrink tool
 	}
 }
 
