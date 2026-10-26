@@ -477,8 +477,10 @@ func (g *Game) healthView(id entity.EntityID) (HealthView, bool) {
 		hv.Parts = append(hv.Parts, pv)
 	}
 	for i, op := range g.operationsOf(id) {
-		why, ready := g.surgeryWait(id, op) // surgery.go: Blocked needs the player
-		hv.Operations = append(hv.Operations, OperationView{Label: operationLabel(b, op), Slot: i, Status: why, Blocked: !ready})
+		why, ready := g.surgeryWait(id, op)   // surgery.go: Blocked needs the player
+		pct, tip := g.operationChance(id, op) // surgery.go (MED-06): the chance and its factors
+		hv.Operations = append(hv.Operations, OperationView{Label: operationLabel(b, op), Slot: i, Status: why, Blocked: !ready,
+			ChancePct: pct, ChanceTip: tip})
 	}
 	hv.Options = g.operationOptions(id, b)
 	return hv, true
@@ -524,6 +526,7 @@ func (g *Game) operationOptions(id entity.EntityID, b *body.Body) []OperationOpt
 			add(body.Operation{Kind: body.Amputate, Part: p})
 		}
 	}
+	g.moreOperationOptions(b, add) // surgery.go (MED-06): harvest, transplant, anaesthesia, euthanasia
 	return out
 }
 
@@ -600,14 +603,45 @@ func (g *Game) conditionRows(id entity.EntityID, b *body.Body, hv *HealthView) {
 		hv.Conditions = append(hv.Conditions, cv)
 	}
 	if hv.BleedPerDay == 0 && hv.State != "Dead" {
-		hv.State = "Infection: winning"
-		if losing {
-			hv.State = "Infection: losing"
-		}
+		hv.State = conditionHeadline(b, losing)
 	}
 	if h := g.condDeathHours(id, b); h >= 0 && (hv.DeathInHours < 0 || h < hv.DeathInHours) {
 		hv.DeathInHours = h
 	}
+}
+
+// conditionHeadline is the Health tab's headline for b's conditions when
+// nothing bleeds: "Infection: winning/losing" while a wound festers, else
+// its first disease's ("Flu: losing"; a parasite: "Gut worms: needs
+// tending").
+func conditionHeadline(b *body.Body, losing bool) string {
+	name := ""
+	cure, sedated := false, false
+	for _, c := range b.Conds {
+		if c.Kind == body.CondAnesthetic { // no race to win or lose (MED-06)
+			sedated = true
+			continue
+		}
+		if c.Kind == body.CondInfection {
+			name, cure = "Infection", false
+			break
+		}
+		if name == "" {
+			d := body.DefOfCond(c.Kind)
+			name, cure = strings.ToUpper(d.Label[:1])+d.Label[1:], d.CureTendSum > 0
+		}
+	}
+	switch {
+	case name == "" && sedated:
+		return "Under anesthetic"
+	case name == "":
+		return "Infection: winning"
+	case losing:
+		return name + ": losing"
+	case cure:
+		return name + ": needs tending"
+	}
+	return name + ": winning"
 }
 
 // conditionLabel is a condition row's name: kind, stage and part
@@ -631,6 +665,8 @@ func conditionLabel(c body.Condition, d body.CondDef) string {
 func conditionTip(c body.Condition, d body.CondDef, cv ConditionView, tended bool) string {
 	t := fmt.Sprintf("%s\nSeverity %d%% · immunity %d%%.", cv.Label, cv.SevPct, cv.ImmPct)
 	switch {
+	case tended && d.CureTendSum > 0:
+		t += fmt.Sprintf("\nTended at %d%% quality; the next tend can follow in %d hours.", cv.TendPct, cv.DueInHours)
 	case tended:
 		t += fmt.Sprintf("\nTended at %d%% quality: slowed by %d%% a day for %d more hours.", cv.TendPct, int(d.TendMax*c.TendQ/1000)/10, cv.DueInHours)
 	case d.TendEvery > 0 && c.TendQ > 0:
@@ -639,6 +675,8 @@ func conditionTip(c body.Condition, d body.CondDef, cv ConditionView, tended boo
 		t += "\nUntended: it needs a doctor now."
 	}
 	switch {
+	case d.CureTendSum > 0: // MED-04: parasites
+		t += fmt.Sprintf("\nNo immunity: cured by tending once the tends add up to %d%% quality (%d%% so far).", d.CureTendSum/10, int(c.TendSum)/10)
 	case c.Immunity >= infection.Full:
 		t += "\nImmune: it is receding."
 	case cv.Losing:

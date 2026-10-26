@@ -123,6 +123,8 @@ var archTools = []archTool{
 		desc: "A 2x2 bed two colonists share side by side. Q/E rotates."},
 	{id: "hospital_bed", label: "Hospital bed", category: "furniture", icon: "hospital_bed", mode: placeSingle, build: "hospital bed",
 		desc: "A bed for patients: the sick and hurt go here first and are tended better. Q/E rotates."},
+	{id: "vitals_monitor", label: "Vitals monitor", category: "furniture", icon: "vitals_monitor", mode: placeSingle, build: "vitals monitor",
+		desc: "Set it beside a hospital bed: while powered (80 W), the patient there is tended 7% better, operated on 5% more safely and gains immunity 2% faster. One per bed. Q/E rotates."},
 	{id: "spot", label: "Sleeping spot", category: "furniture", icon: "sleeping_spot", mode: placeSingle, build: "sleeping spot",
 		desc: "Marks a bed-sized place to sleep on the floor. Free and instant; a bed is more comfortable. Q/E rotates."},
 	{id: "table", label: "Table", category: "furniture", icon: "table", mode: placeSingle, build: "table",
@@ -423,6 +425,8 @@ func buildSprite(kind, facing string, mask int, ew, open bool) string {
 		return "furniture/tool_cabinet"
 	case "hospital bed":
 		return "furniture/hospital_bed_" + facingOr(facing)
+	case "vitals monitor": // MED-06
+		return "furniture/vitals_monitor_" + facingOr(facing)
 	case "pod shell":
 		return "structure/pod_shell"
 	case steamVentKind:

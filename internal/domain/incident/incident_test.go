@@ -25,9 +25,11 @@ func TestPickDeterministic(t *testing.T) {
 	}
 	// ENG-003 added visitors, wanderer joins and party; PLAY-021 the solar
 	// flare and the short circuit (the game vetoes those two without power
-	// devices; this pure pick has no veto).
-	if len(seen) != 10 {
-		t.Fatalf("picked %v, want all 10 nature events", seen)
+	// devices; this pure pick has no veto). MED-04 added flu, plague, gut
+	// worms and muscle parasites (malaria and sleeping sickness keep to
+	// warm and tropical lands).
+	if len(seen) != 14 {
+		t.Fatalf("picked %v, want all 14 temperate nature events", seen)
 	}
 }
 
@@ -64,5 +66,49 @@ func TestNextNatureAt(t *testing.T) {
 	}
 	if at := NextNatureAt(now, 0, 99); at <= now || at%clock.TicksPerDay != uint64(23*clock.TicksPerHour) {
 		t.Fatalf("clamped: %d", at)
+	}
+}
+
+func TestDiseaseWeightsFollowFrequency(t *testing.T) {
+	now := uint64(20 * clock.TicksPerDay)
+	var st State
+	full := Total(Nature, st, now, biome.TemperateForest, nil)
+	off := TotalAt(Nature, st, now, biome.TemperateForest, 0, nil)
+	double := TotalAt(Nature, st, now, biome.TemperateForest, 200, nil)
+	var dis int
+	for _, d := range All() {
+		if d.Disease && d.Allowed(st, now, biome.TemperateForest) {
+			dis += d.Weight
+		}
+	}
+	if dis == 0 || off != full-dis || double != full+dis {
+		t.Fatalf("totals: full %d, off %d, double %d, disease weight %d", full, off, double, dis)
+	}
+	for roll := 0; roll < off; roll++ {
+		if id, ok := PickAt(Nature, st, now, biome.TemperateForest, 0, roll, nil); !ok || DefOf(id).Disease {
+			t.Fatalf("frequency 0 picked %v", id)
+		}
+	}
+	if w := DefOf(Plague).WeightAt(10); w != 1 {
+		t.Fatalf("a low frequency keeps a disease possible: weight %d", w)
+	}
+	if DefOf(HerdCrossing).WeightAt(0) != DefOf(HerdCrossing).Weight {
+		t.Fatal("other events ignore the disease frequency")
+	}
+}
+
+func TestDiseaseBiomesAndDays(t *testing.T) {
+	now := uint64(20 * clock.TicksPerDay)
+	for b := biome.ID(0); b < biome.NumBiomes; b++ {
+		tropical := b == biome.TropicalRainforest || b == biome.TropicalSwamp
+		if got := DefOf(SleepingSickness).Allowed(State{}, now, b); got != tropical {
+			t.Fatalf("sleeping sickness in %v: %v", b, got)
+		}
+	}
+	if DefOf(Malaria).Allowed(State{}, now, biome.TemperateForest) || !DefOf(Malaria).Allowed(State{}, now, biome.TropicalSwamp) {
+		t.Fatal("malaria keeps to warm lands")
+	}
+	if DefOf(Flu).Allowed(State{}, 14*clock.TicksPerDay, biome.TemperateForest) || !DefOf(Flu).Allowed(State{}, 15*clock.TicksPerDay, biome.TemperateForest) {
+		t.Fatal("diseases from day 15")
 	}
 }

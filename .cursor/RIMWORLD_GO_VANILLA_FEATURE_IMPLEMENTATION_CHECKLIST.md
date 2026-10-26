@@ -1025,13 +1025,13 @@ treatment, and surgery are major colony-management systems.
 
 ## 11.7 Diseases
 
--   [ ] **Disease framework**
+-   [x] **Disease framework** (MED-04: disease conditions on the shared severity-vs-immunity race engine (MED-02), stage capacity/pain/need modifiers, tend windows, cure-by-tending for parasites, bed rest at the major stage until immune)
     -   Severity over time.
     -   stages.
     -   symptoms/stat modifiers.
     -   tendable conditions.
     -   immunity where appropriate.
--   [ ] **Representative vanilla disease classes**
+-   [-] **Representative vanilla disease classes** (MED-04: flu, plague, malaria, sleeping sickness, gut worms, muscle parasites at wiki rates; no food poisoning or toxic buildup yet)
     -   flu-like disease.
     -   plague-like severe disease.
     -   malaria-like tropical disease.
@@ -1052,17 +1052,17 @@ treatment, and surgery are major colony-management systems.
 
 ## 11.9 Surgery
 
--   [x] **Operation bills** (SIM-039: install/remove implant, amputate; queue add/remove in the Health tab)
+-   [x] **Operation bills** (SIM-039: install/remove implant, amputate; queue add/remove in the Health tab; MED-03 reorder; MED-06: harvest organ, install organ, euthanize, anesthetize; colonists, prisoners and guests)
     -   Add/remove scheduled medical operations.
--   [x] **Anesthesia** (SIM-039: anaesthetic lasts 1h)
+-   [x] **Anesthesia** (MED-06: anesthetic condition, sedated 0–6 h, woozy to 12 h, wearing off to 20 h)
     -   Required for appropriate surgery.
--   [-] **Surgery success/failure** (SIM-039: skill/bed/medicine and surgeon manipulation/sight, minor/catastrophic failure, botched opinion memory; SIM-049: patients prefer a hospital bed; no room-cleanliness factor)
+-   [x] **Surgery success/failure** (MED-06: wiki base by Medicine level × manipulation × sight × bed × room cleanliness × light × vitals monitor × medicine × operation factor, capped at 98 %; minor, catastrophic and ridiculous failures; death on failed heart installs; botched opinion memory (SIM-039); every operation consumes medicine within the care level)
     -   Doctor skill.
     -   medicine.
     -   manipulation/sight.
     -   room cleanliness/bed factors.
     -   failure can injure nearby/body parts.
--   [ ] **Organ extraction/transplant**
+-   [-] **Organ extraction/transplant** (MED-06: harvest drops the organ item (a life organ kills), install organ into a missing or damaged inner part, donor and colony mood, faction goodwill; carcinoma excision waits for MED-08)
     -   Removable organs.
     -   harvested organ becomes item.
     -   missing vital organs can kill.
@@ -1710,7 +1710,7 @@ progression:
 -   [ ] **Weapon technologies**
 -   [ ] **Armor/apparel technologies**
 -   [x] **Geothermal/advanced power** (MAPGEN-2: steam vents warm the air; PLAY-021: a geothermal generator stands exactly on a vent, 1800 W)
--   [ ] **Hospital/medical technology**
+-   [x] **Hospital/medical technology** (hospital bed (SIM-034); MED-06: powered vitals monitor beside a hospital bed: tend +7 %, surgery ×1.05, immunity +2 %; MED-05: servo implants, nanomed kit)
 -   [ ] **Transport pods**
 -   [ ] **Ship/endgame technologies**
 
@@ -1996,7 +1996,7 @@ and other colony incidents. citeturn2search2turn2search7
 -   [ ] **Infestation**
 -   [x] **Manhunter pack**
 -   [x] **Animal insanity** (SIM-025: mad animal, a single manhunter)
--   [ ] **Disease outbreak**
+-   [x] **Disease outbreak** (MED-04: six Nature incidents from day 15, biome-gated (malaria warm, sleeping sickness tropical), weights scaled by Disease frequency (0 = none), one or several victims, caution letter)
 -   [ ] **Blight**
     -   Crop disease spreads/destroys plants.
 -   [ ] **Toxic fallout**
@@ -2195,7 +2195,7 @@ relocation. citeturn2search12
 ## 28.3 Caravan needs
 
 -   [-] **Food consumption** (SIM-046: food days)
--   [ ] **Health/disease progression**
+-   [-] **Health/disease progression** (MED-04: hourly in the medical phase; progression while on a caravan not checked)
 -   [ ] **Mood effects**
 -   [x] **Animal feeding** (SIM-024: animals graze, eat carcasses and crops, and are fed from troughs)
 -   [ ] **Prisoner handling**

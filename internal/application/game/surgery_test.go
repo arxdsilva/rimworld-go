@@ -11,6 +11,7 @@ import (
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/pawn/skill"
+	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -26,6 +27,7 @@ func legless(t *testing.T, medicine uint8) (*Game, entity.EntityID, entity.Entit
 	doc, _ := g.SpawnNamedPawn(4, 6, "Doc")
 	placeBuilt(t, g, construction.Bed, construction.South, 12, 2)
 	g.SpawnStack(item.PegLeg, 1, 2, 9)
+	g.SpawnStack(item.HerbalMedicine, 6, 3, 9) // MED-06: every operation uses medicine
 	(*g.sk.skills[doc])[skill.Medicine].Level = medicine
 	v := g.VitalOf(patient)
 	b := g.ensureBody(patient, &v)
@@ -86,9 +88,6 @@ func TestSurgeryInstallsAPegLeg(t *testing.T) {
 	if b.Implant(body.LegL) != item.PegLeg {
 		t.Fatalf("the peg leg is fitted: %+v", b)
 	}
-	if after := b.Capacity(body.Moving); after <= before {
-		t.Fatalf("moving %d -> %d", before, after)
-	}
 	if g.stockOf(item.PegLeg) != 0 {
 		t.Fatal("the peg leg is used up")
 	}
@@ -102,11 +101,15 @@ func TestSurgeryInstallsAPegLeg(t *testing.T) {
 	if !found {
 		t.Fatal("the patient remembers the surgery")
 	}
-	for i := 0; i < 20 && g.UnderAnaesthetic(patient); i++ {
-		g.Step(anaesthTicks / 10)
+	for i := 0; i < 50 && g.UnderAnaesthetic(patient); i++ {
+		g.SetNeeds(patient, needs.Full, needs.Full)
+		g.Step(clock.TicksPerHour / 2) // MED-06: the anaesthetic wears off over 20 hours
 	}
 	if g.UnderAnaesthetic(patient) || g.VitalOf(patient).Status != health.Alive {
 		t.Fatalf("the patient wakes after the anaesthetic: %+v", g.VitalOf(patient))
+	}
+	if after := b.Capacity(body.Moving); after <= before {
+		t.Fatalf("moving %d -> %d", before, after)
 	}
 	if missingPart(b) {
 		t.Fatal("a fitted leg is not a missing part")
@@ -119,7 +122,7 @@ func TestBotchedSurgeryWoundsAndReports(t *testing.T) {
 	db := g.ensureBody(doc, &v)
 	db.Missing |= 1<<body.EyeL | 1<<body.EyeR // a blind surgeon cannot succeed
 	g.bodyChanged(doc, db, &v)
-	if c := g.surgeryChanceOf(doc, patient, item.HerbalMedicine); c != 0 {
+	if c, _ := g.surgeryChanceOf(doc, patient, body.InstallImplant, item.HerbalMedicine); c != 0 {
 		t.Fatalf("blind surgeon chance %d", c)
 	}
 	addPegLeg(g, patient)

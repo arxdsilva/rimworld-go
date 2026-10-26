@@ -98,19 +98,3 @@ func TestBodyGobKeepsMedicalFields(t *testing.T) {
 		t.Fatalf("%+v", got)
 	}
 }
-
-// TestNewOperationsNotYetOperable: the operations MED-06 implements are
-// in the enum (saved numbers fixed) but cannot be carried out yet.
-func TestNewOperationsNotYetOperable(t *testing.T) {
-	var b Body
-	if NumOps != ExciseCarcinoma+1 || HarvestOrgan != Amputate+1 {
-		t.Fatal("operation kinds are append only")
-	}
-	for k := HarvestOrgan; k < NumOps; k++ {
-		for p := Part(0); p < NumParts; p++ {
-			if b.CanOperate(Operation{Kind: k, Part: p}) {
-				t.Fatalf("operation %d on part %d must not be operable yet", k, p)
-			}
-		}
-	}
-}

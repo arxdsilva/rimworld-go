@@ -500,6 +500,8 @@ func causePhrase(cause string) string {
 		return " of blood loss"
 	case health.CauseOrganFailure.String():
 		return " of organ failure"
+	case health.CauseDisease.String():
+		return " of disease"
 	}
 	return ""
 }

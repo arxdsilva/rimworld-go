@@ -244,6 +244,7 @@ func (g *Game) tendQualityFor(doctor, patient entity.EntityID, med item.Kind) in
 	if g.inHospitalBed(patient) {
 		in.BedOffset = hospitalTendOffset // items_ng1.go
 	}
+	in.BedOffset += g.monitorTend(patient) // surgery.go: a powered vitals monitor (MED-06)
 	return body.TendQuality(in)
 }
 
@@ -341,7 +342,9 @@ func (g *Game) rollInfections(id entity.EntityID, b *body.Body, now uint64) {
 
 // immunityGain is id's immunity gain (permille; vitals monitors and
 // organs change it from MED-05/06).
-func (g *Game) immunityGain(id entity.EntityID) int32 { return g.organImmunityGain(id) } // organs.go (MED-05)
+func (g *Game) immunityGain(id entity.EntityID) int32 {
+	return g.organImmunityGain(id) + g.monitorImmunityGain(id) // organs.go (MED-05), surgery.go (MED-06)
+}
 
 // stepConds advances an hour of every condition race on id; it reports
 // id died of one. A beaten condition is removed.
@@ -353,6 +356,9 @@ func (g *Game) stepConds(id entity.EntityID, b *body.Body, now uint64) bool {
 	beaten := false
 	for i := range b.Conds {
 		c := &b.Conds[i]
+		if body.IsDisease(c.Kind) {
+			continue // disease.go steps the diseases (MED-04)
+		}
 		d := body.DefOfCond(c.Kind)
 		dead, cured := infection.StepRace(c, d, now < c.TendUntil, g.immunityGain(id), 1)
 		switch {

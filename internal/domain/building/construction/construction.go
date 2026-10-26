@@ -111,6 +111,10 @@ const (
 	ElectricStove
 	ElectricTailoringBench
 	ElectricResearchBench
+	// VitalsMonitor (MED-06) stands beside a hospital bed: while powered it
+	// raises tend quality, surgery success and immunity gain for the
+	// patient in that bed.
+	VitalsMonitor
 	kindCount
 )
 
@@ -293,6 +297,10 @@ var defs = [kindCount]Def{
 	ElectricResearchBench: {Kind: ElectricResearchBench, Name: "electric research bench", Wood: 65, Work: 250, Layer: LayerObject,
 		BlocksMove: true, Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true,
 		MetalOK: true, MetalOnly: true, Components: 3},
+	// wiki: Vitals monitor (6000 work against the hospital bed's 4000):
+	// 1.5 times our hospital bed's work. The steel is original tuning.
+	VitalsMonitor: {Kind: VitalsMonitor, Name: "vitals monitor", Wood: 40, Work: 300, Layer: LayerObject, BlocksMove: true,
+		Rotatable: true, MetalOK: true, MetalOnly: true, Components: 1},
 }
 
 // RecipeBench is the kind whose recipes and work k runs (PLAY-021): an

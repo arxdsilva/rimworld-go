@@ -497,3 +497,37 @@ func TestInfectionAlert(t *testing.T) {
 		t.Fatalf("two losing: %+v", inf)
 	}
 }
+
+// TestDiseaseAlert (MED-04): a warning lists the colonists with a disease,
+// naming it for one; prisoners and the dead are left out.
+func TestDiseaseAlert(t *testing.T) {
+	t.Parallel()
+	pawns := []game.PawnView{
+		{ID: 1, Name: "Ada", Status: "alive", Mood: 80, Disease: "flu", X: 3, Y: 4},
+		{ID: 2, Name: "Bo", Status: "alive", Mood: 80},
+		{ID: 3, Name: "Cy", Status: "dead", Disease: "plague"},
+		{ID: 4, Name: "Dorn", Status: "alive", Prisoner: true, Disease: "flu"},
+	}
+	find := func(got []alert) []alert {
+		var out []alert
+		for _, a := range got {
+			if a.key == "disease" {
+				out = append(out, a)
+			}
+		}
+		return out
+	}
+	d := find(buildAlerts(pawns, game.WorldView{Food: 100}))
+	if len(d) != 1 || d[0].label != "Ada is sick: flu" || d[0].danger || d[0].sev != sevWarning ||
+		len(d[0].targets) != 1 || d[0].targets[0] != [2]int{3, 4} || d[0].explain == alertExplain("no-such-alert") {
+		t.Fatalf("disease alerts %+v", d)
+	}
+	pawns[1].Disease = "gut worms"
+	if d := find(buildAlerts(pawns, game.WorldView{Food: 100})); len(d) != 1 || d[0].label != "2 colonists are sick" || len(d[0].targets) != 2 {
+		t.Fatalf("two sick: %+v", d)
+	}
+	pawns[0].Disease, pawns[1].Disease = "", ""
+	if d := find(buildAlerts(pawns, game.WorldView{Food: 100})); len(d) != 0 {
+		t.Fatalf("no one sick: %+v", d)
+	}
+}

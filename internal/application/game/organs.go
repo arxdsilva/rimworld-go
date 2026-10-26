@@ -27,11 +27,15 @@ func (g *Game) organImmunityGain(id entity.EntityID) int32 {
 }
 
 // stepOrganFailure kills every living patient whose body has an organ
-// failure (hourly, in id order over the patients index; no scan).
+// failure (hourly, in id order over the patients index; no scan). It
+// first wears anaesthetics off (MED-06): the first hourly pass over the
+// patients.
 func (g *Game) stepOrganFailure() {
 	if len(g.med.patients) == 0 {
 		return
 	}
+	g.stepAnesthetics(uint64(g.clock.Now())) // surgery.go (MED-06): wear anaesthetics off first
+
 	for _, id := range slices.Clone(g.med.patients) { // a death touches the index
 		b := g.bodies[id]
 		v, ok := g.vital.Get(id)

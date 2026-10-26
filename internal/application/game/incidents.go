@@ -16,7 +16,9 @@ import (
 // random hour, the storyteller rolls one event among those the catalogue
 // (domain/incident) allows now and the map can host: a herd crossing the
 // land, a stray pet joining, farm animals wandering in, a wild animal
-// taking a liking to the colony, or timbergnaws come to gnaw the trees.
+// taking a liking to the colony, or timbergnaws come to gnaw the trees;
+// from day 15 a disease, weighted by the difficulty's disease frequency
+// (disease.go, MED-04).
 // Nothing is rolled while a threat is on the map; the roll waits an hour
 // and tries again. The "mad animal" is a threat and is rolled by the
 // threat storyteller (raids.go). All randomness is g.rng (the power events
@@ -114,9 +116,17 @@ func (g *Game) threatActive(now uint64) bool {
 	return false
 }
 
-// rollNature picks and fires one nature event; the map's checks are asked
-// once per event and remembered for the roll (they draw no randomness).
+// rollNature picks and fires one nature event.
 func (g *Game) rollNature(now uint64) {
+	if id, picked := g.pickNature(now); picked && g.fireIncident(id, now) {
+		g.incidents.Fired(id, g.rel(now))
+	}
+}
+
+// pickNature picks one nature event (one g.rng draw when any is
+// eligible); the map's checks are asked once per event and remembered for
+// the roll (they draw no randomness).
+func (g *Game) pickNature(now uint64) (incident.ID, bool) {
 	var fit [incident.NumIDs]int8 // 0 unknown, 1 fits, 2 does not
 	ok := func(id incident.ID) bool {
 		if fit[id] == 0 {
@@ -127,16 +137,13 @@ func (g *Game) rollNature(now uint64) {
 		}
 		return fit[id] == 1
 	}
-	rn := g.rel(now) // setup.go: the catalogue's days count from the landing (now itself on a legacy colony)
-	total := incident.Total(incident.Nature, g.incidents, rn, g.biome, ok)
+	rn := g.rel(now)       // setup.go: the catalogue's days count from the landing (now itself on a legacy colony)
+	freq := g.diseasePct() // disease.go (MED-04): the difficulty's disease frequency
+	total := incident.TotalAt(incident.Nature, g.incidents, rn, g.biome, freq, ok)
 	if total <= 0 {
-		return
+		return 0, false
 	}
-	if id, picked := incident.Pick(incident.Nature, g.incidents, rn, g.biome, g.rng.IntN(total), ok); picked {
-		if g.fireIncident(id, now) {
-			g.incidents.Fired(id, rn)
-		}
-	}
+	return incident.PickAt(incident.Nature, g.incidents, rn, g.biome, freq, g.rng.IntN(total), ok)
 }
 
 // incidentFits is the map's situational check for event id.
@@ -162,6 +169,8 @@ func (g *Game) incidentFits(id incident.ID, now uint64) bool {
 		return g.wandererFits(now) // visitors.go (M9)
 	case incident.SolarFlare, incident.ShortCircuit:
 		return g.powerEventFits(id) // power_events.go (PLAY-021): false with no power devices
+	case incident.Flu, incident.Plague, incident.Malaria, incident.SleepingSickness, incident.GutWorms, incident.MuscleParasites:
+		return g.diseaseFits(id) // disease.go (MED-04)
 	}
 	return false
 }
@@ -192,6 +201,8 @@ func (g *Game) fireIncident(id incident.ID, now uint64) bool {
 		return g.startSolarFlare(now) // power_events.go (PLAY-021)
 	case incident.ShortCircuit:
 		return g.shortCircuit(now) // power_events.go (PLAY-021)
+	case incident.Flu, incident.Plague, incident.Malaria, incident.SleepingSickness, incident.GutWorms, incident.MuscleParasites:
+		return g.diseaseOutbreak(id, now) // disease.go (MED-04)
 	}
 	return false
 }

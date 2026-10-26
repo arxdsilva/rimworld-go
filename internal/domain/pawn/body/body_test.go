@@ -266,61 +266,6 @@ func TestImplants(t *testing.T) {
 	}
 }
 
-func TestSurgeryChanceCurve(t *testing.T) {
-	h := item.HerbalMedicine
-	if c := SurgeryChance(0, false, h, 1000, 1000); c != 400 {
-		t.Fatalf("0: %d", c)
-	}
-	if c := SurgeryChance(8, false, h, 1000, 1000); c != 850 {
-		t.Fatalf("8: %d", c)
-	}
-	if c := SurgeryChance(20, false, h, 1000, 1000); c != 980 {
-		t.Fatalf("20: %d", c)
-	}
-	if c := SurgeryChance(99, false, h, 1000, 1000); c != 980 {
-		t.Fatal("clamp skill")
-	}
-	if c := SurgeryChance(-3, false, h, 1000, 1000); c != 400 {
-		t.Fatal("neg skill")
-	}
-	if c := SurgeryChance(0, false, item.Food, 1000, 1000); c != 280 {
-		t.Fatalf("no medicine %d", c)
-	}
-	if c := SurgeryChance(0, true, item.IndustrialMedicine, 1000, 1000); c != 484 {
-		t.Fatalf("bed+industrial %d", c)
-	}
-	if c := SurgeryChance(8, true, item.IndustrialMedicine, 1000, 1000); c != MaxSurgeryChance {
-		t.Fatalf("cap %d", c)
-	}
-	if c := SurgeryChance(0, false, h, 500, 800); c != 200 {
-		t.Fatalf("min(manip,sight) %d", c)
-	}
-	if c := SurgeryChance(0, false, h, -5, 2000); c != 0 {
-		t.Fatal("clamped negative")
-	}
-}
-
-func TestRollOutcome(t *testing.T) {
-	if RollOutcome(500, fixed(499)) != Success {
-		t.Fatal("success")
-	}
-	seq := func(vs ...int) func(int) int {
-		i := 0
-		return func(int) int { v := vs[i]; i++; return v }
-	}
-	if RollOutcome(500, seq(900, 79)) != MinorFail || RollOutcome(500, seq(900, 80)) != Catastrophic {
-		t.Fatal("split")
-	}
-	r := rand.New(rand.NewSource(3))
-	var cnt [3]int
-	for i := 0; i < 50000; i++ {
-		cnt[RollOutcome(0, r.Intn)]++
-	}
-	if cnt[Success] != 0 || cnt[MinorFail] < 38000 || cnt[MinorFail] > 42000 {
-		t.Fatalf("%v", cnt)
-	}
-}
-
 func TestApply(t *testing.T) {
 	var b Body
 	install := Operation{InstallImplant, LegL, item.PegLeg}

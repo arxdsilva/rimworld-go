@@ -26,6 +26,11 @@ import (
 // MED-03: a care row heads the tab: five care levels (command
 // SetMedicalCare) and a "Self-tend" checkbox (SetSelfTend, colonists
 // only); each queued operation has up and down arrows (ReorderOperation).
+//
+// MED-06: each queued operation shows its success chance ("72 %") with
+// the factor breakdown on hover; the picker also offers organ harvest and
+// transplant, euthanasia and anaesthesia (a carcinoma excision once the
+// condition exists). Prisoners and guests get the same tab.
 
 const (
 	healthRowH      = 20
@@ -74,6 +79,21 @@ func careShort(p medcare.Policy) string {
 	return "Best"
 }
 
+// careIcon is a care level's glyph (ui_icon/care_*, ART-026).
+func careIcon(p medcare.Policy) string {
+	switch p {
+	case medcare.NoCare:
+		return "ui_icon/care_none"
+	case medcare.NoMeds:
+		return "ui_icon/care_nomeds"
+	case medcare.HerbalMax:
+		return "ui_icon/care_herbal"
+	case medcare.IndustrialMax:
+		return "ui_icon/care_industrial"
+	}
+	return "ui_icon/care_best"
+}
+
 // careTip is a care level's hover card.
 func careTip(p medcare.Policy) string {
 	var body string
@@ -94,6 +114,26 @@ func careTip(p medcare.Policy) string {
 
 // healthRemoveID is the cancel button of queued operation slot i.
 func healthRemoveID(i int) string { return fmt.Sprintf("health.op.rm.%d", i) }
+
+// healthChanceID is queued operation slot i's success chance (MED-06).
+func healthChanceID(i int) string { return fmt.Sprintf("health.op.chance.%d", i) }
+
+// healthChanceW is the width of a queued operation's chance column.
+const healthChanceW = 44
+
+// healthChanceText is a queued operation's chance cell ("72 %").
+func healthChanceText(op game.OperationView) string { return fmt.Sprintf("%d %%", op.ChancePct) }
+
+// healthChanceColor tints the chance: red under 50 %, amber under 80 %.
+func healthChanceColor(pct int) color.RGBA {
+	switch {
+	case pct < 50:
+		return uiDanger
+	case pct < 80:
+		return uiWarning
+	}
+	return uiText
+}
 
 // healthCondID is condition row i (MED-02).
 func healthCondID(i int) string { return fmt.Sprintf("health.cond.%d", i) }
@@ -163,11 +203,18 @@ func (a *App) healthCare(p game.PawnView, r rect, h game.HealthView) {
 		w -= healthSelfW + 6
 	}
 	bw := max(w/float32(medcare.NumPolicies), 24)
+	u := a.uiSt()
 	for c := medcare.Policy(0); c < medcare.NumPolicies; c++ {
 		cur := medcare.Policy(h.Care) == c
 		if a.uiButton(healthCareID(c), rect{x, r.Y, bw - 2, r.H}, careShort(c),
 			btnOpts{Selected: cur, Tip: careTip(c), Disabled: dead, Reason: reason}) && !cur {
 			a.renderer.enqueue(command.Command{Kind: command.SetMedicalCare, Pawn: uint64(p.ID), Mode: uint8(c)})
+		}
+		if a.renderer != nil && a.renderer.art != nil && bw >= 2*r.H {
+			if img := a.renderer.art.image(careIcon(c), color.NRGBA{}); img != nil {
+				ix, iy, is := float64(x+3), float64(r.Y+3), float64(r.H-6)
+				u.queue(func(dst *ebiten.Image) { drawIconCS(dst, img, ix, iy, is, noCS) })
+			}
 		}
 		x += bw
 	}
@@ -449,7 +496,7 @@ func (a *App) healthOps(p game.PawnView, r rect, h game.HealthView) {
 		reason = "No operation fits this body."
 	}
 	if a.uiButton(healthAddID, addR, "Add operation", btnOpts{Disabled: reason != "", Reason: reason,
-		Tip: "Add operation\nQueue surgery for a doctor: fit an implant, remove one, or amputate."}) {
+		Tip: "Add operation\nQueue surgery for a doctor: fit an implant or remove one, amputate, harvest or transplant an organ, anesthetize or euthanize. Each uses medicine."}) {
 		a.openHealthPicker(p.ID)
 	}
 	y := r.Y + 30
@@ -461,7 +508,7 @@ func (a *App) healthOps(p game.PawnView, r rect, h game.HealthView) {
 		if y+healthOpRowH > r.bottom() {
 			break
 		}
-		textW := r.W - 96 - 2*healthArrowW
+		textW := r.W - 96 - 2*healthArrowW - healthChanceW
 		if op.Status != "" {
 			a.uiLabel(r.X, y, fitText(op.Label, tsBody, textW), tsBody)
 			st := tsSmall
@@ -472,6 +519,14 @@ func (a *App) healthOps(p game.PawnView, r rect, h game.HealthView) {
 		}
 		// MED-03: move it one place up or down the queue
 		upR := rect{r.right() - 84 - 2*healthArrowW, y, healthArrowW, healthOpRowH - 2}
+		// MED-06: the success chance, its factors on hover
+		if op.ChanceTip != "" {
+			cr := rect{upR.X - healthChanceW - 2, y, healthChanceW, healthOpRowH - 2}
+			cs := tsBody
+			cs.Color, cs.Align = healthChanceColor(op.ChancePct), alignRight
+			a.uiLabel(cr.right()-2, y+4, healthChanceText(op), cs)
+			a.uiSt().add(uiWidget{id: healthChanceID(op.Slot), r: cr, label: healthChanceText(op), tip: op.ChanceTip})
+		}
 		downR := rect{upR.right() + 2, y, healthArrowW, healthOpRowH - 2}
 		upWhy, downWhy := "", ""
 		switch {
@@ -579,6 +634,31 @@ func healthOptions(h game.HealthView) []healthOption {
 	return out
 }
 
+// healthOptionTip is a picker row's hover card: what the operation does
+// (MED-06), then why it can't happen yet or what it needs.
+func healthOptionTip(o healthOption) string {
+	t := o.label
+	switch o.op {
+	case body.HarvestOrgan:
+		t += "\nTakes the organ out whole for storage or transplant. Taking a heart, the liver or the last kidney or lung kills. The patient and the colony think badly of it; a guest's or prisoner's faction loses goodwill."
+	case body.InstallOrgan:
+		t += "\nTransplants a natural organ into the missing or damaged one."
+	case body.Euthanize:
+		t += "\nPuts the patient down painlessly. It cannot fail."
+	case body.Anesthetize:
+		t += "\nPuts the patient under for six hours, woozy for six more."
+	case body.ExciseCarcinoma:
+		t += "\nCuts the carcinoma out. Needs Medicine 10 and industrial medicine; a failure can kill."
+	}
+	switch {
+	case o.reason != "":
+		return t + "\n" + o.reason + "\nYou can queue it anyway; it waits until it can happen."
+	case o.item != 0:
+		return t + "\nNeeds a " + o.item.String() + " in stock, medicine and a doctor."
+	}
+	return t + "\nNeeds medicine and a doctor; the risk falls with Medicine skill, a clean, lit room, a hospital bed and a vitals monitor."
+}
+
 // openHealthPicker opens the Add operation window for patient id.
 func (a *App) openHealthPicker(id entity.EntityID) {
 	sel := -1
@@ -606,15 +686,7 @@ func (a *App) openHealthPicker(id entity.EntityID) {
 				Draw: func(dst *ebiten.Image, i int, row rect, hover, selected bool) {
 					a.paintOptionRow(dst, row, opts[i], hover, selected)
 				},
-				Tip: func(i int) string {
-					if opts[i].reason != "" {
-						return opts[i].label + "\n" + opts[i].reason + "\nYou can queue it anyway; it waits until it can happen."
-					}
-					if opts[i].item != 0 {
-						return opts[i].label + "\nNeeds a " + opts[i].item.String() + " in stock and a doctor."
-					}
-					return opts[i].label + "\nNeeds a doctor; the risk falls with Medicine skill and a hospital bed."
-				},
+				Tip: func(i int) string { return healthOptionTip(opts[i]) },
 			})
 		},
 		buttons: []modalButton{

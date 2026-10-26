@@ -43,6 +43,13 @@ const (
 	// CauseOrganFailure (MED-05): a capacity the body cannot live without
 	// (blood pumping, filtration, breathing, digestion) fell to 0.
 	CauseOrganFailure
+	// CauseDisease (MED-04): flu, plague, malaria or sleeping sickness
+	// ran its course.
+	CauseDisease
+	// CauseEuthanasia (MED-06): put down by a doctor. CauseAnesthetic
+	// (MED-06): lying under an operation's anaesthetic (downed only).
+	CauseEuthanasia
+	CauseAnesthetic
 )
 
 func (c Cause) String() string {
@@ -69,6 +76,12 @@ func (c Cause) String() string {
 		return "blood loss"
 	case CauseOrganFailure:
 		return "organ failure"
+	case CauseDisease:
+		return "disease"
+	case CauseEuthanasia:
+		return "euthanized"
+	case CauseAnesthetic:
+		return "under anesthetic"
 	default:
 		return ""
 	}

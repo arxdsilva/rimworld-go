@@ -139,18 +139,21 @@ func (g *Game) healingInjury(id entity.EntityID, v health.Record) int {
 }
 
 // needsBedRest: colonist id is hurt enough to rest in bed, whatever its
-// setting: in pain, a wound or an infection to tend, sick, or waiting for
-// an operation.
+// setting: in pain, a wound or an infection to tend, sick with an
+// infection, a disease at its major stage or worse (MED-04), or waiting
+// for an operation.
 func (g *Game) needsBedRest(id entity.EntityID) bool {
 	v, _ := g.vital.Get(id)
-	return g.healingInjury(id, v) >= painInjury || g.sick(id) ||
+	return g.healingInjury(id, v) >= painInjury || g.infectionSick(id) || g.diseaseRest(id) ||
 		g.needsTending(id) || g.awaitingSurgery(id)
 }
 
-// restOver: a resting colonist is well enough to get up.
+// restOver: a resting colonist is well enough to get up. A disease keeps
+// it in bed until immune or cured, even once back below its major stage
+// (disease.go: in at major, out at immune).
 func (g *Game) restOver(id entity.EntityID) bool {
 	v, _ := g.vital.Get(id)
-	return g.healingInjury(id, v) <= restWellInjury && !g.sick(id) &&
+	return g.healingInjury(id, v) <= restWellInjury && !g.infectionSick(id) && !g.diseaseSick(id) &&
 		!g.needsTending(id) && !g.awaitingSurgery(id)
 }
 

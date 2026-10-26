@@ -29,3 +29,12 @@ materials:
   brass:         {light: "#efd88f", base: "#e0bd61", shadow: "#b27f42"}
   backdrop:      {light: "#2e313b", base: "#272a33", shadow: "#1c1d25"}
   steel_dark:    {light: "#757d85", base: "#5d656c", shadow: "#444d51"}
+  # MED items (ART-026): the bionic accent, organ specimens and their sterile fluid
+  med_teal:       {light: "#94d3c6", base: "#62ae9f", shadow: "#447f75"}
+  organ_heart:    {light: "#c06b63", base: "#a44c45", shadow: "#773532"}
+  organ_liver:    {light: "#8e5c50", base: "#74463b", shadow: "#53322b"}
+  organ_kidney:   {light: "#a5735a", base: "#895a43", shadow: "#634232"}
+  organ_lung:     {light: "#d7aaa2", base: "#c38f88", shadow: "#9a6d67"}
+  specimen_fluid: {light: "#d6e5de", base: "#bfd6cd", shadow: "#97b4aa"}
+emissive:
+  med_teal_glow: "#74e6cb"

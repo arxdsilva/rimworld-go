@@ -227,7 +227,7 @@ func (g *Game) appendThoughts(dst []mood.Thought, id entity.EntityID) []mood.Tho
 	case joy >= recreation.Entertained:
 		states = append(states, mood.Entertained)
 	}
-	if g.sick(id) { // infection.go (MED-02)
+	if g.feelsSick(id) { // disease.go: infections (MED-02), diseases and parasites (MED-04)
 		states = append(states, mood.Sick)
 	}
 	if v, _ := g.vital.Get(id); v.Injury >= painInjury {

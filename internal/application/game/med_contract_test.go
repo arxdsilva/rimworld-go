@@ -277,21 +277,37 @@ func TestReorderOperation(t *testing.T) {
 	(&Game{}).cmdReorderOperation(patient, 0, 1)
 }
 
-// TestAddOperationRefusesUnimplementedKinds: the surgery v2 operations
-// are in the enum but cannot be queued yet.
+// TestAddOperationRefusesUnimplementedKinds: of the surgery v2
+// operations (MED-06) only what fits the body queues: no harvest or
+// transplant on a hand, no carcinoma to excise, no kind past NumOps;
+// euthanasia and anaesthesia go on the whole body (the torso).
 func TestAddOperationRefusesUnimplementedKinds(t *testing.T) {
 	g, patient, _ := legless(t, 10)
 	for k := body.HarvestOrgan; k <= body.NumOps; k++ {
 		queueOp(g, patient, k, body.HandL, 0)
 	}
-	if n := len(g.operationsOf(patient)); n != 0 {
-		t.Fatalf("queued %d unimplemented operations", n)
+	ops := g.operationsOf(patient)
+	if len(ops) != 2 || ops[0] != (body.Operation{Kind: body.Euthanize, Part: body.Torso}) ||
+		ops[1] != (body.Operation{Kind: body.Anesthetize, Part: body.Torso}) {
+		t.Fatalf("queued %+v", ops)
 	}
+	g.cmdRemoveOperation(patient, 1)
+	g.cmdRemoveOperation(patient, 0)
 	queueOp(g, patient, body.Amputate, body.HandL, 0)
 	if n := len(g.operationsOf(patient)); n != 1 {
 		t.Fatal("amputation still queues")
 	}
 	if l := operationLabel(g.bodies[patient], body.Operation{Kind: body.Euthanize, Part: body.Torso}); l == "" || l == "Operation (torso)" {
 		t.Fatalf("label %q", l)
+	}
+}
+
+// TestHeadlineUnderAnesthetic: a sedated patient's headline says so
+// instead of a race result (MED-06's anesthetic has no race).
+func TestHeadlineUnderAnesthetic(t *testing.T) {
+	var b body.Body
+	b.AddCond(body.Condition{Kind: body.CondAnesthetic})
+	if got := conditionHeadline(&b, false); got != "Under anesthetic" {
+		t.Fatalf("headline %q, want %q", got, "Under anesthetic")
 	}
 }

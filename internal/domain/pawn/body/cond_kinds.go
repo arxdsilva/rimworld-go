@@ -22,6 +22,17 @@ const (
 	CondNone CondKind = iota
 	// CondInfection is a wound infection on a part (MED-02, cond_infection.go).
 	CondInfection
+	// The diseases (MED-04, cond_disease.go): four that race immunity and
+	// two parasites cured by tending.
+	CondFlu
+	CondPlague
+	CondMalaria
+	CondSleepingSickness
+	CondGutWorms
+	CondMuscleParasites
+	// CondAnesthetic is the anaesthetic after an operation (MED-06,
+	// cond_anesthetic.go): it wears off by time.
+	CondAnesthetic
 	// NumCondKinds counts the kinds (keep last).
 	NumCondKinds
 )
@@ -33,7 +44,7 @@ type CondEntry struct {
 }
 
 // condTables lists every phase's definition table (one line per phase).
-var condTables = [][]CondEntry{condsInfection}
+var condTables = [][]CondEntry{condsInfection, condsDisease, condsAnesthetic}
 
 // condDefs is every kind's definition, indexed by kind.
 var condDefs = buildCondDefs(condTables)

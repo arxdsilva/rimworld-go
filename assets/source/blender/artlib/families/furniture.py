@@ -541,6 +541,46 @@ def _electric_research_bench():
     return (2, 1), 1.12
 
 
+def _vitals_monitor():
+    """1x1 vitals monitor (MED-06, ART-026): a wheeled five-spoke stand, a
+    steel pole with a cable tray, and a dark monitor tilted toward its
+    approach side, its screen tracing a teal heartbeat (glow) beside a
+    status lamp on top (glow, so every facing shows a lit part)."""
+    import math
+    from mathutils import Matrix
+    from .plant_base import _limb
+    cx, cy = 0.5, -0.5
+    for k in range(5):
+        a = math.radians(90 + 72 * k)
+        ex, ey = cx + 0.27 * math.cos(a), cy + 0.27 * math.sin(a)
+        _limb("spoke%d" % k, (cx, cy, 0.07), (ex, ey, 0.06), 0.03, 0.022, "metal_dark", segs=8)
+        S.cyl("caster%d" % k, ex, ey, 0.04, 0.0, 0.06, "steel_dark", segs=10, bevel=0.008)
+    S.cyl("hub", cx, cy, 0.07, 0.03, 0.11, "metal_dark", segs=14, bevel=0.012)
+    S.cyl("pole", cx, cy, 0.03, 0.1, 0.66, "steel", segs=10, bevel=0.0)
+    S.cyl("tray", cx, cy - 0.04, 0.15, 0.38, 0.41, "steel_dark", segs=18, bevel=0.008)
+    S.box("pad", cx - 0.08, cy - 0.12, 0.41, cx + 0.06, cy + 0.0, 0.44, "med_white", bevel=0.01)
+    S.box("mount", cx - 0.06, cy - 0.04, 0.62, cx + 0.06, cy + 0.06, 0.72, "metal_dark", bevel=0.012)
+    # the monitor, authored upright with its screen on the south face, then tilted back
+    n0 = len(S.objects())
+    S.box("housing", 0.19, -0.60, 0.66, 0.81, -0.44, 1.04, "steel_dark", bevel=0.03)
+    S.box("screen", 0.23, -0.612, 0.71, 0.77, -0.59, 1.0, "backdrop", bevel=0.006)
+    trace = [(0.24, 0.84), (0.38, 0.84), (0.42, 0.80), (0.46, 0.97), (0.51, 0.75), (0.55, 0.86), (0.60, 0.84),
+             (0.76, 0.84)]
+    for k in range(len(trace) - 1):
+        (x0, z0), (x1, z1) = trace[k], trace[k + 1]
+        P.glow(_limb("beat%d" % k, (x0, -0.618, z0), (x1, -0.618, z1), 0.014, 0.014, "med_teal", segs=6),
+               "med_teal_glow")
+    for k, x in enumerate((0.30, 0.40)):
+        S.box("readout%d" % k, x - 0.04, -0.62, 0.92, x + 0.04, -0.60, 0.95, "med_teal", bevel=0.0)
+    P.glow(S.cyl("status", 0.72, -0.52, 0.03, 1.04, 1.06, "med_teal", segs=10, bevel=0.0), "med_teal_glow")
+    m = (Matrix.Translation((0, -0.5, 0.72)) @ Matrix.Rotation(math.radians(-38), 4, "X")
+         @ Matrix.Translation((0, 0.5, -0.72)))
+    for ob in S.objects()[n0:]:
+        ob.matrix_world = m @ ob.matrix_world
+    S.box("cable", cx + 0.02, cy - 0.01, 0.1, cx + 0.05, cy + 0.02, 0.66, "fur_black", bevel=0.0)
+    return (1, 1), 1.02
+
+
 # ------------------------------------------------------------ burial (W6)
 def _log(name, p0, p1, r, mat, end_mat="wood", z=None):
     """A round log from p0 to p1 (x,y,z each), lying free, end grain lit."""
@@ -870,11 +910,12 @@ BUILDERS = {
     "electric_research_bench": (_electric_research_bench, {"attachments": {"worker": [0.5, 1.15]},
                                                            "building": "electric research bench",
                                                            "recipes": "research bench"}),
+    "vitals_monitor": (_vitals_monitor, {"building": "vitals monitor"}),
 }
 FACINGS_ONLY = {"grave_dug": ("south", "east"), "grave_filled": ("south", "east")}
 ROTATABLE = {"hospital_bed", "grave_dug", "grave_filled", "bed_basic", "bed_double", "chair_basic", "workbench_basic", "stonecutter_table", "stove_basic", "butcher_table",
              "drying_rack", "tailoring_bench", "research_bench", "brewing_bench", "drug_table", "feeding_trough_empty", "feeding_trough_full",
-             "electric_stove", "electric_tailoring_bench", "electric_research_bench"}
+             "electric_stove", "electric_tailoring_bench", "electric_research_bench", "vitals_monitor"}
 
 
 # Blanket overlays: drawn over a sleeper so they read as tucked in. The

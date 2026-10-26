@@ -1219,7 +1219,7 @@ resolve metadata conflicts, and update the catalog.
 -   [-] bed/table/chair (1×1 cot drawn in-game for the current single-cell bed; 1×2 bed, table, chair generated in 4 facings for when the domain has footprints/furniture)
 -   [x] food/crops/wild plants/trees (PLAY-010: restyled to §9.1/§9.2 without outlines; oak, birch, pine and jungle trees with visible trunks and _trunk/_canopy parts; grass tufts composed up to 9 per tile; 13 ground plants with young/mature/dormant looks incl. 7 new ones; PLAY-016 §9.3: 11 crops rebuilt as units in the §9.1 style (6 stages × 4 variants, no mound, muted pl_crop palette) composed several per tile over tilled furrows, cold/heat damage shown as tint, wilt, shrink and fade)
 -   [ ] stove/butcher workstation
--   [-] medicine (NG-1: industrial medicine stacks and the hospital bed; no other medical art)
+-   [x] medicine (NG-1: industrial medicine stacks and the hospital bed; ART-026: nanomed kit, servo/implant parts, valve and pump hearts, synth stomach, organ jars, vitals monitor with glow, care-level icons)
 -   [x] blood/injury effects
 
 ### ART Wave 4 --- Production

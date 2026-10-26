@@ -122,11 +122,11 @@ func (a *App) customDifficultyBody(body rect) {
 	right.sectionTitle(a, "Health and mind")
 	a.diffSlider(right, "mo", "Mood offset", &s.MoodOffset, "mo", signedText, "", "Mood offset\nAdded to every colonist's mood.")
 	a.diffSlider(right, "if", "Infection chance", &s.Infection, "if", pctText, "", "")
-	a.diffSlider(right, "df", "Disease frequency", &s.DiseaseFreq, "df", pctText, "", "Disease frequency\nNo diseases yet — takes effect when they arrive.")
+	a.diffSlider(right, "df", "Disease frequency", &s.DiseaseFreq, "df", pctText, "", diseaseFreqTip)
 	if row, ok := right.row(18); ok {
 		ns := tsSmall
 		ns.Color = uiTextDim
-		a.uiLabel(row.X, row.Y, "No diseases yet — takes effect when they arrive.", ns)
+		a.uiLabel(row.X, row.Y, diseaseFreqNote, ns)
 	}
 	a.diffSlider(right, "pt", "Pain tolerance offset", &s.PainTolerance, "pt", signedText, "", "")
 	right.gap(8)
@@ -143,6 +143,13 @@ func signedText(v int) string { return fmt.Sprintf("%+d", v) }
 
 // diffSlider is a labelled slider row over *v with the range of the
 // difficulty field key. A reason disables it (dimmed, with the reason as
+// The disease frequency slider's tooltip and the dim line under it
+// (MED-04): what the setting does, now that diseases strike.
+const (
+	diseaseFreqTip  = "Disease frequency\nHow often flu, plague, malaria, sleeping sickness, gut worms and muscle parasites strike, from day 15 (malaria in warm lands, sleeping sickness in the tropics). 100% is the normal rate; 0% turns diseases off."
+	diseaseFreqNote = "How often diseases strike; 0% turns them off."
+)
+
 // its tooltip).
 func (a *App) diffSlider(f *formCtx, id, label string, v *int, key string, format func(int) string, disabled, tip string) {
 	row, ok := f.row(diffSliderH)

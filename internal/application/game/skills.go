@@ -619,6 +619,7 @@ func (g *Game) breakOffset(id entity.EntityID) int { return int(g.statOf(id, sta
 // (needs.Decay itself for neutral rates).
 func (g *Game) decayNeeds(id entity.EntityID, n needs.Pair, now uint64) needs.Pair {
 	hr, rr := g.statOf(id, stat.HungerRate), g.statOf(id, stat.RestRate)
+	hr, rr = g.diseaseNeedRates(id, hr, rr) // disease.go (MED-04): gut worms, muscle parasites
 	if hr == 1000 && rr == 1000 {
 		return needs.Decay(n, now)
 	}

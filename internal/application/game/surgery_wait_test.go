@@ -239,6 +239,7 @@ func TestHealthyLegReplacedWithProsthetic(t *testing.T) {
 	placeBuilt(t, g, construction.Bed, construction.South, 12, 2)
 	studyProsthetics(g)
 	g.SpawnStack(item.ProstheticLeg, 1, 2, 9)
+	g.SpawnStack(item.HerbalMedicine, 4, 3, 9) // MED-06: the operation's medicine
 	(*g.sk.skills[doc])[skill.Medicine].Level = 20
 	hv, _ := g.Health(patient)
 	i := slices.IndexFunc(hv.Options, func(o OperationOptionView) bool {
@@ -318,9 +319,9 @@ func TestSurgeryPatientPrefersHospitalBed(t *testing.T) {
 	if !g.inHospitalBed(patient) {
 		t.Fatal("operated in the hospital bed")
 	}
-	for i := 0; i < 40 && (g.UnderAnaesthetic(patient) || g.surg.hosp[patient] != 0); i++ {
+	for i := 0; i < 60 && (g.UnderAnaesthetic(patient) || g.surg.hosp[patient] != 0); i++ {
 		g.SetNeeds(patient, needs.Full, needs.Full)
-		g.Step(anaesthTicks / 10)
+		g.Step(clock.TicksPerHour / 2) // MED-06: the anaesthetic lasts 20 hours
 	}
 	if b, _ := g.bldgs.Get(hosp); b.SlotOf(uint64(patient)) >= 0 {
 		t.Fatal("up again, it gives the hospital bed back")
@@ -368,7 +369,7 @@ func TestHealthOptions(t *testing.T) {
 	last := body.OpKind(0)
 	for _, o := range hv.Options {
 		if body.OpKind(o.Kind) < last {
-			t.Fatalf("installs, then removals, then amputations: %+v", hv.Options)
+			t.Fatalf("installs, then removals, amputations, then the MED-06 operations: %+v", hv.Options)
 		}
 		last = body.OpKind(o.Kind)
 	}

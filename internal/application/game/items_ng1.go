@@ -92,10 +92,20 @@ func (g *Game) inHospitalBed(patient entity.EntityID) bool {
 	return b.Kind == construction.HospitalBed
 }
 
-// cabinetState caches tool cabinet counts per bench for one structVer.
+// cabinetState caches tool cabinet counts per bench, and each hospital
+// bed's vitals monitor (MED-06), for one structVer.
 type cabinetState struct {
 	ver uint64
 	by  map[entity.EntityID]int
+	mon map[entity.EntityID]entity.EntityID
+}
+
+// fresh resets the caches when a building or terrain change moved
+// structVer.
+func (c *cabinetState) fresh(ver uint64) {
+	if c.by == nil || c.ver != ver {
+		c.by, c.mon, c.ver = map[entity.EntityID]int{}, map[entity.EntityID]entity.EntityID{}, ver
+	}
 }
 
 // cabinetBonus is the percent bill-work bonus of bench from tool cabinets
@@ -103,9 +113,7 @@ type cabinetState struct {
 // cached per bench until a building or terrain change moves structVer.
 func (g *Game) cabinetBonus(bench entity.EntityID) int {
 	c := &g.cabinets
-	if c.by == nil || c.ver != g.structVer {
-		c.by, c.ver = map[entity.EntityID]int{}, g.structVer
-	}
+	c.fresh(g.structVer)
 	if pct, ok := c.by[bench]; ok {
 		return pct
 	}
@@ -130,6 +138,43 @@ func (g *Game) countCabinets(bench entity.EntityID) int {
 		}
 	}
 	return n
+}
+
+// bedMonitor is the vitals monitor serving hospital bed bed: the lowest
+// id one touching its footprint (0: none, or not a hospital bed; MED-06).
+// It is cached per bed until a building or terrain change moves
+// structVer, so the scan runs once per bed after a build or deconstruct.
+func (g *Game) bedMonitor(bed entity.EntityID) entity.EntityID {
+	c := &g.cabinets
+	c.fresh(g.structVer)
+	if m, ok := c.mon[bed]; ok {
+		return m
+	}
+	m := g.findMonitor(bed)
+	c.mon[bed] = m
+	return m
+}
+
+func (g *Game) findMonitor(bed entity.EntityID) entity.EntityID {
+	b, ok := g.bldgs.Get(bed)
+	if !ok || b.Kind != construction.HospitalBed {
+		return 0
+	}
+	cells, _, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
+	var best entity.EntityID
+	for _, bid := range g.bldgIDs {
+		o, ok := g.bldgs.Get(bid)
+		if !ok || o.Kind != construction.VitalsMonitor || best != 0 && bid > best {
+			continue
+		}
+		for _, c := range cells {
+			if abs(o.X-c[0]) <= 1 && abs(o.Y-c[1]) <= 1 {
+				best = bid
+				break
+			}
+		}
+	}
+	return best
 }
 
 // minedOres is every ore a rock cell can hold, in code order: the metal

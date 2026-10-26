@@ -670,7 +670,7 @@ understandable.
 
 ## 10.3 Conditions
 
--   [-] **Disease/health-effect list** (MED-02: Health-tab conditions section lists infections; diseases arrive in MED-04)
+-   [x] **Disease/health-effect list** (MED-02/MED-04: Health-tab conditions section lists infections and diseases with stage, severity, immunity, tend window, and tending progress for parasites; disease alert and outbreak letter)
     -   Name.
     -   severity.
     -   stage.
@@ -690,7 +690,7 @@ understandable.
 ## 10.5 Operations
 
 -   [x] **Operations list** (Health tab operations queue)
--   [-] **Add operation dialog** (SIM-049: every valid operation listed incl. replacing healthy parts, unavailable ones greyed with the reason — research, stock, reach, second doctor; queued rows show what they wait for; no risk preview)
+-   [x] **Add operation dialog** (SIM-049: every valid operation listed incl. replacing healthy parts, unavailable ones greyed with the reason; MED-06: harvest, install organ, euthanize, anesthetize; queued rows show the success chance with a factor breakdown)
     -   Valid surgeries only.
     -   Required medicine/body part/item.
     -   Risk information.
@@ -703,7 +703,7 @@ understandable.
     -   Show which injuries/body parts/effects cause final capacity.
 -   [x] **Treatment tooltip** (MED-02: each wound's tend quality and the tend window in part-row tooltips; condition tooltips show the last tend quality)
     -   Tend quality, remaining duration, medicine used.
--   [ ] **Prognosis information**
+-   [x] **Prognosis information** (MED-01/02: death clock for bleeding and losing infections; MED-06: operation success chance with factors)
     -   Avoid omniscient information the simulation does not intend to
         reveal.
 
@@ -1128,7 +1128,7 @@ This screen centralizes per-pawn behavioral policies.
 -   [x] **Recruit** (SIM-045)
 -   [x] **Release** (SIM-045)
 -   [x] **Execute where supported** (SIM-045)
--   [ ] **Medical/operation controls through Health UI**
+-   [x] **Medical/operation controls through Health UI** (MED-06: prisoner and guest Health tabs queue operations; MED-03 care levels)
 
 ## 20.3 Warden feedback
 

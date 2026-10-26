@@ -50,8 +50,9 @@ func (a *App) kitTabBody(id entity.EntityID, tab string, r rect) {
 }
 
 // healthLines is the Health tab's plain text: capacities, pain, parts,
-// queued operations and drug lines (nil: no data); the tab itself is
-// health_ui.go.
+// queued operations with their success chance (MED-06) and drug lines
+// (nil: no data); the tab itself is health_ui.go. Prisoners and guests
+// get the same tab (pawnTabs), so their operations queue there too.
 func (a *App) healthLines(p game.PawnView) []string {
 	h, ok := a.renderer.game.Health(p.ID)
 	if !ok {
@@ -68,7 +69,11 @@ func (a *App) healthLines(p game.PawnView) []string {
 		out = append(out, pt.Label+": "+pt.Status)
 	}
 	for _, op := range h.Operations {
-		out = append(out, "Operation: "+op.Label)
+		ln := "Operation: " + op.Label
+		if op.ChanceTip != "" { // MED-06: its success chance
+			ln += " (" + healthChanceText(op) + ")"
+		}
+		out = append(out, ln)
 	}
 	for _, d := range h.Drugs {
 		out = append(out, fmt.Sprintf("%s %d%%", d.Label, d.Pct))

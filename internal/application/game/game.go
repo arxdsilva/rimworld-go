@@ -123,6 +123,9 @@ type PawnView struct {
 	Bleeding        bool
 	CareLevel       uint8
 	BleedDeathHours int
+	// Disease names the pawn's diseases ("flu", "flu, gut worms"; "":
+	// none) (MED-04).
+	Disease string
 	// Exposure: Hypothermia and Heatstroke severity in permille, and the
 	// air temperature where the colonist is (tenths of a degree C).
 	Hypothermia, Heatstroke int
@@ -1072,6 +1075,7 @@ func (g *Game) snapshot() []PawnView {
 		pv.InfectionLosing, pv.UntendedHours = g.infectionLosing(id), g.untendedHours(id)
 		pv.Bleeding, pv.BleedDeathHours = g.bleedingNow(id), g.bleedDeathHours(id) // bleed.go (MED-01)
 		pv.CareLevel = uint8(g.careOf(id))                                         // care.go (MED-03)
+		pv.Disease = g.diseaseLabel(id)                                            // disease.go (MED-04)
 		pv.Weapon = weaponDefOf(g, id).Name
 		pv.Lying = v.Status != health.Alive || (j.Kind == job.Sleep && (j.State == job.Do || j.State == job.Complete))
 		pv.InBed = g.inBed(id)

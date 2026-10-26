@@ -523,6 +523,21 @@ ICONS = {
     "electric_stove": ("furniture", "electric_stove_south"),
     "electric_tailoring_bench": ("furniture", "electric_tailoring_bench_south"),
     "electric_research_bench": ("furniture", "electric_research_bench_south"),
+    # MED-05 medical tier (ART-026)
+    "nanomed_kit": ("item", "nanomed_kit"),
+    "servo_arm": ("item", "servo_arm"),
+    "servo_leg": ("item", "servo_leg"),
+    "optic_implant": ("item", "optic_implant"),
+    "cochlear_implant": ("item", "cochlear_implant"),
+    "spinal_brace": ("item", "spinal_brace"),
+    "pump_heart": ("item", "pump_heart"),
+    "synth_stomach": ("item", "synth_stomach"),
+    "valve_heart": ("item", "valve_heart"),
+    "kidney": ("item", "kidney"),
+    "lung": ("item", "lung"),
+    "heart": ("item", "heart"),
+    "liver": ("item", "liver"),
+    "vitals_monitor": ("furniture", "vitals_monitor_south"),
 }
 ICON_PX = 128          # @2x of a 64 px icon
 ICON_PAD = 10
@@ -1987,6 +2002,51 @@ def _play021_cut_icons():
                                   "%s:power/wind_turbine_east+wind_turbine_blades_01" % C.NAMESPACE),) if p]
 
 
+# ------------------------------------------------ MED care levels (ART-026)
+# The medical care picker: how good a medicine a doctor may use, from none
+# to the best available. One glyph each on the order-badge disc.
+def _g_care_none(xx, yy, c):  # a ring crossed by an X: no care at all
+    d = np.abs(np.hypot(xx - c, yy - c) - 22)
+    d = np.minimum(d, _seg(xx, yy, c - 12, c - 12, c + 12, c + 12))
+    return np.minimum(d, _seg(xx, yy, c + 12, c - 12, c - 12, c + 12))
+
+
+def _g_care_nomeds(xx, yy, c):  # an open hand: tending without medicine
+    palm = _rbox(xx, yy, c + 1, c + 9, 13, 11, 6)
+    d = palm
+    for k, (x, top) in enumerate(((c - 9, c - 13), (c - 2, c - 19), (c + 5, c - 19), (c + 12, c - 14))):
+        d = np.minimum(d, _cap(xx, yy, x, c + 2, x, top, 2.6))
+    return np.minimum(d, _cap(xx, yy, c - 11, c + 9, c - 21, c - 1, 2.8))
+
+
+def _g_care_herbal(xx, yy, c):  # a leaf with its midrib
+    lx, ly = _rot(xx, yy, c, c, -40)
+    blade = np.maximum(np.hypot(lx - (c + 19), ly - (c - 3)) - 29, np.hypot(lx - (c - 19), ly - (c - 3)) - 29)
+    return [np.abs(blade), _seg(lx, ly, c, c + 16, c, c - 18), _seg(lx, ly, c, c + 18, c, c + 27)]
+
+
+def _g_care_industrial(xx, yy, c):  # a capsule pill beside a plus
+    px, py = _rot(xx, yy, c - 6, c + 6, 45)
+    pill = np.abs(_cap(px, py, c - 6, c - 6, c - 6, c + 18, 9))
+    half = _seg(px, py, c - 15, c + 6, c + 3, c + 6)
+    plus = np.minimum(_seg(xx, yy, c + 6, c - 15, c + 22, c - 15), _seg(xx, yy, c + 14, c - 23, c + 14, c - 7))
+    return [np.minimum(pill, half), plus - 0.5]
+
+
+def _g_care_best(xx, yy, c):  # a bold plus crowned by a star: the best medicine there is
+    plus = np.minimum(_seg(xx, yy, c - 15, c + 4, c + 11, c + 4), _seg(xx, yy, c - 2, c - 9, c - 2, c + 17)) - 2.0
+    return [plus, _star(xx, yy, c + 15, c - 15, 11, 5)]
+
+
+CARE_ICONS = (   # name, glyph, colour
+    ("care_none", _g_care_none, (0.80, 0.42, 0.40)),
+    ("care_nomeds", _g_care_nomeds, (0.90, 0.76, 0.60)),
+    ("care_herbal", _g_care_herbal, (0.45, 0.78, 0.36)),
+    ("care_industrial", _g_care_industrial, (0.45, 0.70, 0.95)),
+    ("care_best", _g_care_best, (0.45, 0.90, 0.78)),
+)
+
+
 def build():
     t = _base_tokens()
     out = [_selection(t), _designation("designation_cut", t, _g_cut),
@@ -2033,6 +2093,7 @@ def build():
     out += _play018_icons(t)
     out += [_badge_icon(n, t, g, t[rgb] if isinstance(rgb, str) else rgb) for n, g, rgb in PLAY020_ICONS]
     out += [_badge_icon(n, t, g, t[rgb] if isinstance(rgb, str) else rgb) for n, g, rgb in PLAY021_ICONS]
+    out += [_badge_icon(n, t, g, rgb) for n, g, rgb in CARE_ICONS]
     out += [_shadow_blob(), _shadow_box(), _roof_tile("roof_built", "built"),
             _roof_tile("roof_natural", "natural"), _roof_tile("roof_plan", "plan"),
             _roof_tile("roof_remove", "remove")]

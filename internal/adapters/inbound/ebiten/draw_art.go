@@ -764,7 +764,7 @@ func itemSprite(kind string) string {
 	if k := biomeItemSprite(kind); k != "" {
 		return k
 	}
-	return "item/" + kind
+	return "item/" + strings.ReplaceAll(kind, " ", "_") // sprite names use underscores ("servo arm" -> item/servo_arm)
 }
 
 func artKey(family, name string, variant int) string {

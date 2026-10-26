@@ -844,11 +844,258 @@ def _wooden_nose():
     return S.render_asset("item", "wooden_nose", zmax=0.16, extra={"item": "wooden nose"})
 
 
+# ---- MED-05 medical tier (ART-026): nanomed kit, servo bionics, organs in sterile jars.
+# Bionics share one look: dark plated metal_dark bodies, steel joints and a
+# single med_teal accent; natural organs sit in a squat glass jar of sterile
+# fluid with the lid set beside it, so they read as stored goods, not gore.
+def _tube(name, cx, cy, r_out, r_in, z0, z1, mat, segs=24):
+    """An open-topped ring wall (a jar's glass side), smooth shaded."""
+    import math
+    import bmesh
+    bm = bmesh.new()
+    rings = []
+    for r, z in ((r_out, z0), (r_out, z1), (r_in, z1), (r_in, z0)):
+        rings.append([bm.verts.new((cx + r * math.cos(2 * math.pi * k / segs),
+                                    cy + r * math.sin(2 * math.pi * k / segs), z)) for k in range(segs)])
+    for a in range(4):
+        A, B = rings[a], rings[(a + 1) % 4]
+        for k in range(segs):
+            k2 = (k + 1) % segs
+            bm.faces.new((A[k], A[k2], B[k2], B[k]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    return S._obj(name, bm, mat, smooth=True)
+
+
+def _nanomed_kit():
+    """A compact sealed med case: dark rounded shell, a steel lid split by a
+    glowing teal seam, a white panel with a teal plus and a carry grip."""
+    S.box("shell", 0.22, -0.76, 0.0, 0.78, -0.36, 0.15, "metal_dark", bevel=0.045, segments=2)
+    S.box("seam", 0.215, -0.765, 0.135, 0.785, -0.355, 0.158, "med_teal_glow", bevel=0.01)
+    S.box("lid", 0.23, -0.75, 0.15, 0.77, -0.37, 0.205, "steel", bevel=0.035, segments=2)
+    S.box("panel", 0.38, -0.66, 0.2, 0.62, -0.46, 0.215, "med_white", bevel=0.02)
+    S.box("plus_h", 0.44, -0.578, 0.215, 0.56, -0.542, 0.222, "med_teal_glow", bevel=0.0)
+    S.box("plus_v", 0.482, -0.62, 0.215, 0.518, -0.50, 0.222, "med_teal_glow", bevel=0.0)
+    for k, x in enumerate((0.30, 0.70)):
+        S.box("latch%d" % k, x - 0.035, -0.775, 0.06, x + 0.035, -0.745, 0.17, "steel_dark", bevel=0.008)
+    S.box("grip", 0.40, -0.40, 0.205, 0.60, -0.36, 0.235, "steel_dark", bevel=0.012)
+    return S.render_asset("item", "nanomed_kit", zmax=0.24, extra={"item": "nanomed kit", "stack": True})
+
+
+def _servo_arm():
+    """A servo arm: a teal-ringed shoulder cap, dark plated upper arm and
+    forearm on a steel elbow, a teal accent strip and a jointed steel hand."""
+    from .plant_base import _limb
+    S.cyl("shoulder", 0.80, -0.36, 0.085, 0.04, 0.17, "metal_dark", segs=16, bevel=0.015)
+    S.cyl("ring", 0.80, -0.36, 0.09, 0.15, 0.185, "med_teal", segs=16, bevel=0.0)
+    _limb("upper", (0.78, -0.38, 0.1), (0.55, -0.50, 0.1), 0.06, 0.05, "metal_dark", segs=12)
+    S.ellipsoid("elbow", 0.54, -0.505, 0.1, 0.06, 0.06, 0.06, "steel", segs=14, rings=8)
+    _limb("fore", (0.53, -0.51, 0.1), (0.30, -0.62, 0.085), 0.05, 0.036, "metal_dark", segs=12)
+    _limb("strip", (0.50, -0.52, 0.145), (0.34, -0.60, 0.122), 0.014, 0.012, "med_teal", segs=6)
+    S.ellipsoid("wrist", 0.29, -0.625, 0.085, 0.04, 0.04, 0.04, "steel", segs=12, rings=6)
+    S.box("palm", 0.16, -0.72, 0.03, 0.29, -0.57, 0.11, "metal_dark", bevel=0.025)
+    for k, dy in enumerate((-0.70, -0.65, -0.60)):
+        _limb("fing%d" % k, (0.17, dy + 0.005, 0.07), (0.07, dy - 0.025, 0.055), 0.018, 0.013, "steel", segs=6)
+    _limb("thumb", (0.24, -0.57, 0.07), (0.20, -0.48, 0.06), 0.018, 0.013, "steel", segs=6)
+    return S.render_asset("item", "servo_arm", zmax=0.2, extra={"item": "servo arm"})
+
+
+def _servo_leg():
+    """A servo leg: dark plated thigh and shin on a steel knee with a teal
+    ring, a sprung steel ankle and a flat dark foot blade."""
+    from .plant_base import _limb
+    S.cyl("hip", 0.80, -0.36, 0.08, 0.05, 0.18, "metal_dark", segs=16, bevel=0.015)
+    S.cyl("hip_ring", 0.80, -0.36, 0.085, 0.16, 0.19, "med_teal", segs=16, bevel=0.0)
+    _limb("thigh", (0.78, -0.38, 0.11), (0.55, -0.50, 0.11), 0.07, 0.055, "metal_dark", segs=12)
+    S.cyl("knee", 0.54, -0.505, 0.06, 0.05, 0.17, "steel", segs=14, bevel=0.012)
+    S.cyl("knee_ring", 0.54, -0.505, 0.064, 0.15, 0.172, "med_teal", segs=14, bevel=0.0)
+    _limb("shin", (0.53, -0.51, 0.1), (0.31, -0.63, 0.08), 0.05, 0.034, "metal_dark", segs=12)
+    _limb("spring", (0.36, -0.60, 0.11), (0.30, -0.635, 0.1), 0.026, 0.026, "steel", segs=8)
+    S.box("foot", 0.12, -0.80, 0.0, 0.33, -0.60, 0.06, "metal_dark", bevel=0.025)
+    S.box("toe", 0.12, -0.80, 0.055, 0.20, -0.62, 0.075, "med_teal", bevel=0.01)
+    return S.render_asset("item", "servo_leg", zmax=0.22, extra={"item": "servo leg"})
+
+
+def _optic_implant():
+    """An optic implant: a dark lens module with a big glass lens, a teal
+    glowing ring and a dark aperture, two copper leads trailing off."""
+    from .plant_base import _limb
+    S.cyl("housing", 0.46, -0.56, 0.17, 0.0, 0.11, "metal_dark", r_top=0.15, segs=24, bevel=0.025)
+    S.cyl("bezel", 0.46, -0.56, 0.135, 0.11, 0.14, "steel", segs=24, bevel=0.01)
+    S.cyl("ring", 0.46, -0.56, 0.11, 0.14, 0.15, "med_teal_glow", segs=24, bevel=0.0)
+    S.ellipsoid("lens", 0.46, -0.56, 0.15, 0.09, 0.09, 0.04, "glass", segs=20, rings=8)
+    S.ellipsoid("pupil", 0.46, -0.56, 0.185, 0.035, 0.035, 0.012, "backdrop", segs=12, rings=4)
+    for k, (dy, ex, ey) in enumerate(((-0.05, 0.82, -0.62), (0.03, 0.80, -0.48))):
+        _limb("lead%d" % k, (0.6, -0.56 + dy, 0.04), (ex, ey, 0.02), 0.016, 0.014, "copper", segs=6)
+        S.box("pin%d" % k, ex - 0.02, ey - 0.02, 0.0, ex + 0.04, ey + 0.02, 0.035, "brass", bevel=0.006)
+    return S.render_asset("item", "optic_implant", zmax=0.2, extra={"item": "optic implant"})
+
+
+def _cochlear_implant():
+    """A cochlear implant: a small dark module curved like the back of an
+    ear, a steel receiver disc with a teal light, and a coiled copper lead."""
+    import math
+    from .plant_base import _limb
+    pts = [(0.5 + 0.2 * math.cos(math.radians(a)), -0.56 + 0.2 * math.sin(math.radians(a))) for a in range(110, 291, 30)]
+    for k in range(len(pts) - 1):
+        r = 0.055 - 0.004 * k
+        _limb("arc%d" % k, (pts[k][0], pts[k][1], 0.06), (pts[k + 1][0], pts[k + 1][1], 0.06), r, r - 0.004,
+              "metal_dark", segs=12)
+    S.cyl("disc", 0.62, -0.48, 0.1, 0.0, 0.07, "steel", segs=20, bevel=0.015)
+    S.cyl("coil", 0.62, -0.48, 0.07, 0.07, 0.085, "metal_dark", segs=20, bevel=0.0)
+    S.cyl("led", 0.62, -0.48, 0.03, 0.085, 0.095, "med_teal_glow", segs=12, bevel=0.0)
+    lead = [(0.6, -0.72), (0.66, -0.76), (0.72, -0.72), (0.76, -0.78), (0.82, -0.74)]
+    for k in range(len(lead) - 1):
+        _limb("lead%d" % k, (lead[k][0], lead[k][1], 0.02), (lead[k + 1][0], lead[k + 1][1], 0.02), 0.015, 0.015,
+              "copper", segs=6)
+    return S.render_asset("item", "cochlear_implant", zmax=0.14, extra={"item": "cochlear implant"})
+
+
+def _spinal_brace():
+    """A spinal brace: a steel rod rail threaded through seven dark plated
+    vertebra blocks with steel side clamps, a teal-capped top block."""
+    from .plant_base import _limb
+    p0, p1 = (0.22, -0.78), (0.78, -0.30)
+    _limb("rod", (p0[0], p0[1], 0.07), (p1[0], p1[1], 0.07), 0.025, 0.025, "steel", segs=8)
+    n0 = len(S.objects())
+    for k in range(7):
+        t = k / 6.0
+        x, y = p0[0] + (p1[0] - p0[0]) * t, p0[1] + (p1[1] - p0[1]) * t
+        w = 0.075 - 0.012 * t
+        mat = "med_teal" if k == 6 else "metal_dark"
+        S.box("vert%d" % k, x - w, y - 0.03, 0.02, x + w, y + 0.03, 0.12, mat, bevel=0.018)
+        S.box("clamp%d" % k, x - w - 0.03, y - 0.018, 0.04, x + w + 0.03, y + 0.018, 0.09, "steel", bevel=0.01)
+    import math
+    from mathutils import Matrix
+    deg = math.degrees(math.atan2(p1[1] - p0[1], p1[0] - p0[0])) - 90
+    # turn each block across the rail about its own centre
+    for k, ob in enumerate(S.objects()[n0:]):
+        t = (k // 2) / 6.0
+        x, y = p0[0] + (p1[0] - p0[0]) * t, p0[1] + (p1[1] - p0[1]) * t
+        ob.matrix_world = (Matrix.Translation((x, y, 0)) @ Matrix.Rotation(math.radians(deg), 4, "Z")
+                           @ Matrix.Translation((-x, -y, 0))) @ ob.matrix_world
+    return S.render_asset("item", "spinal_brace", zmax=0.14, extra={"item": "spinal brace"})
+
+
+def _pump_heart():
+    """A pump heart: a squat dark canister with steel end caps, a glowing teal
+    band and two steel vessel ports angled out of the top."""
+    from .plant_base import _limb
+    S.cyl("body", 0.48, -0.58, 0.16, 0.0, 0.2, "metal_dark", segs=24, bevel=0.03)
+    S.cyl("base", 0.48, -0.58, 0.17, 0.0, 0.04, "steel", segs=24, bevel=0.012)
+    S.cyl("band", 0.48, -0.58, 0.165, 0.1, 0.125, "med_teal_glow", segs=24, bevel=0.0)
+    S.cyl("cap", 0.48, -0.58, 0.14, 0.2, 0.24, "steel", r_top=0.11, segs=24, bevel=0.015)
+    _tube("cap_ring", 0.48, -0.58, 0.1, 0.07, 0.24, 0.25, "med_teal_glow", segs=24)
+    _limb("port_a", (0.44, -0.58, 0.23), (0.34, -0.50, 0.33), 0.04, 0.035, "steel", segs=10)
+    _limb("port_b", (0.53, -0.56, 0.23), (0.62, -0.46, 0.31), 0.035, 0.03, "steel", segs=10)
+    S.cyl("rim_a", 0.34, -0.50, 0.04, 0.32, 0.345, "metal_dark", segs=10, bevel=0.0)
+    for k, x in enumerate((0.36, 0.48, 0.60)):
+        S.box("rib%d" % k, x - 0.012, -0.745, 0.05, x + 0.012, -0.725, 0.18, "steel_dark", bevel=0.0)
+    return S.render_asset("item", "pump_heart", zmax=0.36, extra={"item": "pump heart"})
+
+
+def _synth_stomach():
+    """A synth stomach: a pale pouch-shaped synthetic organ with teal seam
+    ribs and steel port collars at both ends."""
+    import math
+    from .plant_base import _limb
+    _ell("pouch", (0.48, -0.56, 0.1), (0.22, 0.14, 0.1), "med_white", yaw=-25, segs=20, rings=12)
+    _ell("lobe", (0.34, -0.50, 0.11), (0.1, 0.09, 0.08), "med_white", yaw=-25, segs=16, rings=10)
+    for k, f in enumerate((-0.5, 0.0, 0.5)):
+        a = math.radians(-25)
+        x, y = 0.48 + math.cos(a) * 0.2 * f, -0.56 + math.sin(a) * 0.2 * f
+        _ell("rib%d" % k, (x, y, 0.1 + 0.005 * (1 - abs(f))), (0.03, 0.145 - 0.04 * abs(f), 0.11 - 0.025 * abs(f)),
+             "med_teal", yaw=-25, segs=12, rings=8)
+    _limb("port_in", (0.28, -0.44, 0.15), (0.22, -0.36, 0.2), 0.04, 0.035, "steel", segs=10)
+    _limb("port_out", (0.68, -0.66, 0.08), (0.80, -0.70, 0.07), 0.035, 0.03, "steel", segs=10)
+    return S.render_asset("item", "synth_stomach", zmax=0.24, extra={"item": "synth stomach"})
+
+
+def _heart_body(name, cx, cy, z, s, mat):
+    """A plain heart form: two rounded lobes over a tapering tip (pointing south-east)."""
+    _ell(name + "_l", (cx - 0.06 * s, cy + 0.03 * s, z), (0.1 * s, 0.09 * s, 0.085 * s), mat, segs=16, rings=10)
+    _ell(name + "_r", (cx + 0.06 * s, cy + 0.04 * s, z), (0.1 * s, 0.09 * s, 0.085 * s), mat, segs=16, rings=10)
+    _ell(name + "_tip", (cx + 0.02 * s, cy - 0.06 * s, z - 0.01 * s), (0.1 * s, 0.11 * s, 0.07 * s), mat,
+         yaw=-20, segs=16, rings=10)
+
+
+def _valve_heart():
+    """A valve heart: a plain steel heart with a brass valve set in its top,
+    a dark slit across the valve, and a short steel stub."""
+    from .plant_base import _limb
+    _heart_body("hb", 0.5, -0.56, 0.1, 1.3, "steel")
+    S.cyl("valve", 0.47, -0.52, 0.065, 0.16, 0.2, "brass", segs=18, bevel=0.01)
+    S.box("slit", 0.42, -0.528, 0.2, 0.52, -0.512, 0.206, "metal_dark", bevel=0.0)
+    _limb("stub", (0.6, -0.48, 0.15), (0.68, -0.40, 0.2), 0.035, 0.03, "steel", segs=10)
+    S.cyl("stub_rim", 0.68, -0.40, 0.036, 0.19, 0.215, "metal_dark", segs=10, bevel=0.0)
+    return S.render_asset("item", "valve_heart", zmax=0.24, extra={"item": "valve heart"})
+
+
+JAR = (0.5, -0.56, 0.25)   # centre x, y and outer radius of a specimen jar
+
+
+def _jar(organ):
+    """A squat glass specimen jar of sterile fluid with a teal seal ring
+    round its open rim and a white label on the front."""
+    import math
+    x, y, r = JAR
+    S.cyl("fluid", x, y, r - 0.012, 0.0, 0.1, "specimen_fluid", segs=28, bevel=0.0)
+    _tube("glass", x, y, r, r - 0.018, 0.0, 0.12, "glass", segs=28)
+    _tube("seal", x, y, r + 0.008, r - 0.022, 0.12, 0.14, "med_teal", segs=28)
+    S.cyl("foot", x, y, r + 0.005, 0.0, 0.02, "glass", segs=28, bevel=0.005)
+    a = math.radians(-90)
+    lx, ly = x + math.cos(a) * r, y + math.sin(a) * r
+    S.box("label", lx - 0.08, ly - 0.012, 0.03, lx + 0.08, ly + 0.01, 0.09, "med_white", bevel=0.006)
+    return S.render_asset("item", organ, zmax=0.3, extra={"item": organ})
+
+
+def _kidney():
+    """A kidney: a plump bean curled round a pale notch with a vessel stub."""
+    import math
+    from .plant_base import _limb
+    x, y, _ = JAR
+    for k, a in enumerate((165, 125, 90, 55, 15)):
+        ar = math.radians(a)
+        _ell("lobe%d" % k, (x + 0.1 * math.cos(ar), y - 0.06 + 0.1 * math.sin(ar), 0.13),
+             (0.075, 0.07, 0.065), "organ_kidney", yaw=a - 90, segs=16, rings=10)
+    _ell("hilum", (x, y - 0.03, 0.15), (0.04, 0.03, 0.03), "skin_rose", segs=12, rings=8)
+    _limb("vessel", (x, y - 0.03, 0.16), (x + 0.03, y - 0.12, 0.2), 0.024, 0.02, "skin_rose", segs=8)
+    return _jar("kidney")
+
+
+def _lung():
+    """One lung: a tall soft pink lobe with a fissure, an airway stub on top."""
+    from .plant_base import _limb
+    x, y, _ = JAR
+    _lumpy("lobe", (x + 0.01, y - 0.02, 0.13), (0.14, 0.17, 0.085), "organ_lung", 211, amp=0.12, yaw=-10)
+    _ell("upper", (x - 0.02, y + 0.09, 0.16), (0.09, 0.08, 0.06), "organ_lung", segs=14, rings=8)
+    _limb("fissure", (x - 0.1, y - 0.03, 0.205), (x + 0.09, y + 0.03, 0.205), 0.009, 0.009, "skin_rose", segs=6)
+    _limb("airway", (x - 0.03, y + 0.12, 0.2), (x - 0.05, y + 0.2, 0.25), 0.03, 0.026, "ceramic", segs=8)
+    return _jar("lung")
+
+
+def _organ_heart():
+    """A natural heart: red lobes and two pale vessel stubs rising out of the jar."""
+    from .plant_base import _limb
+    x, y, _ = JAR
+    _heart_body("hb", x, y - 0.01, 0.14, 1.35, "organ_heart")
+    _limb("aorta", (x - 0.04, y + 0.06, 0.2), (x - 0.08, y + 0.14, 0.27), 0.04, 0.035, "skin_rose", segs=10)
+    _limb("vein", (x + 0.06, y + 0.07, 0.19), (x + 0.1, y + 0.14, 0.25), 0.03, 0.026, "skin_rose", segs=8)
+    return _jar("heart")
+
+
+def _liver():
+    """A liver: a broad dark wedge of a right lobe beside a smaller left lobe."""
+    x, y, _ = JAR
+    _lumpy("right", (x - 0.04, y + 0.0, 0.13), (0.16, 0.12, 0.065), "organ_liver", 307, amp=0.1, yaw=15)
+    _lumpy("left", (x + 0.11, y - 0.05, 0.125), (0.1, 0.085, 0.055), "organ_liver", 311, amp=0.1, yaw=-20)
+    _ell("gall", (x - 0.01, y - 0.1, 0.15), (0.035, 0.03, 0.03), "pl_crop_jade", segs=10, rings=6)
+    return _jar("liver")
+
 def build():
     return [_wood(), _food(), _steel(), _stone(), _stone_chunk(), _silver(), _gold(), _berries(), _ration(), _meat(), _meal(), _club(), _rifle_item(), _knife_item(), _spear_item(),
             _potatoes(), _corn(), _wheat(), _beans(), _lettuce(), _radishes(), _pumpkins(),
             _leather(), _parka(), _tuque(), _duster(), _herbal_medicine(), _bones(0), _bones(1),
-            _cloth_bolt(), _straw_bundle(), _milk(), _wool(), _eggs(False), _eggs(True), _ember_oil(), _parka_wool()] + [_carpet_rolled(k) for k in _ROLL] + build_ng1() + build_social()
+            _cloth_bolt(), _straw_bundle(), _milk(), _wool(), _eggs(False), _eggs(True), _ember_oil(), _parka_wool()] + [_carpet_rolled(k) for k in _ROLL] + build_ng1() + build_social() + build_med()
 
 
 def build_ng1():
@@ -859,3 +1106,9 @@ def build_social():
     return [_brewgrain_item(), _ashleaf_item(), _beer(), _ashleaf_tea(), _spark_tablet(), _peg_leg(), _prosthetic_leg(),
             _prosthetic_arm(), _wooden_hand(), _denture(), _hearing_trumpet(),
             _prosthetic_foot(), _glass_eye(), _wooden_nose()]
+
+
+def build_med():
+    """MED-05 medical tier (ART-026)."""
+    return [_nanomed_kit(), _servo_arm(), _servo_leg(), _optic_implant(), _cochlear_implant(), _spinal_brace(),
+            _pump_heart(), _synth_stomach(), _valve_heart(), _kidney(), _lung(), _organ_heart(), _liver()]

@@ -117,7 +117,7 @@ func raiseAlerts(pawns []game.PawnView, w game.WorldView) []alert {
 	}
 	out = append(out, animalAlerts(w)...)
 
-	var rescue, starving, collapsed, unhappy, bleeding, infected, untended []game.PawnView
+	var rescue, starving, collapsed, unhappy, bleeding, infected, untended, diseased []game.PawnView
 	alive := 0
 	for _, p := range pawns {
 		if p.Status != "dead" && p.Bleeding && p.BleedDeathHours <= bleedAlertHours {
@@ -128,6 +128,9 @@ func raiseAlerts(pawns []game.PawnView, w game.WorldView) []alert {
 		}
 		if p.Status != "dead" && p.Wounded && p.UntendedHours >= untendedAlertHours {
 			untended = append(untended, p)
+		}
+		if p.Status != "dead" && p.Disease != "" { // MED-04
+			diseased = append(diseased, p)
 		}
 		switch {
 		case p.Status == "dead":
@@ -146,6 +149,12 @@ func raiseAlerts(pawns []game.PawnView, w game.WorldView) []alert {
 	}
 	group("bleeding", true, bleeding, func(n string) string { return n + " is bleeding out" }, "colonists are bleeding out")
 	group("infection", false, infected, func(n string) string { return n + " is losing to an infection" }, "colonists are losing to infections")
+	if len(diseased) == 1 { // MED-04: one patient names the disease
+		p := diseased[0]
+		group("disease", false, diseased, func(n string) string { return n + " is sick: " + p.Disease }, "")
+	} else {
+		group("disease", false, diseased, nil, "colonists are sick")
+	}
 	group("untended", false, untended, func(n string) string { return n + " has an untended wound" }, "colonists have untended wounds")
 	group("rescue", true, rescue, func(n string) string { return n + " needs rescue" }, "colonists need rescue")
 	group("starving", true, starving, func(n string) string { return n + " is starving" }, "colonists are starving")
@@ -597,6 +606,7 @@ func waitingFramesAlert(w game.WorldView) (alert, bool) {
 var alertExplanations = map[string]string{
 	"bleeding":      "A colonist will bleed to death within hours. Get a doctor to tend the wounds now: a tend stops the bleeding at once, with or without medicine.",
 	"infection":     "An infection is set to kill a colonist before their immunity builds. Keep it tended every 12 hours with the best medicine you have, by your most skilled doctor, ideally in a hospital bed.",
+	"disease":       "A colonist has caught a disease. Flu, plague, malaria and sleeping sickness race the body's immunity and can kill: keep the sick in bed and tended on time, with good medicine and your best doctor. Gut worms and muscle parasites never kill but stay until tended away.",
 	"untended":      "A colonist's wound has gone untended for hours. Untended wounds bleed, heal slowly and fester more often. Let a doctor tend it, or let the colonist rest so a doctor can reach them.",
 	"hostile":       "Wild animals are attacking colonists. Draft your fighters and keep everyone else indoors until the threat is dead or gone.",
 	"fire":          "Something inside the colony is burning, and fire spreads along wood and dry grass. Send colonists to put it out and clear what it can reach.",

@@ -111,6 +111,8 @@ func SpecOf(k construction.Kind) Spec {
 		return bench(150)
 	case construction.ElectricResearchBench:
 		return bench(200)
+	case construction.VitalsMonitor: // wiki: Vitals monitor (80 W)
+		return consumer(ClassBench, 80, 80)
 	}
 	return Spec{}
 }

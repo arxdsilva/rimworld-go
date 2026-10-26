@@ -299,11 +299,11 @@ func (a *App) storyCustomBody(body rect, cd *customDiff, formH *float32) {
 	right.sectionTitle(a, "Health and mind")
 	a.diffSlider(right, "mo", "Mood offset", &s.MoodOffset, "mo", signedText, "", "Mood offset\nAdded to every colonist's mood.")
 	a.diffSlider(right, "if", "Infection chance", &s.Infection, "if", pctText, "", "")
-	a.diffSlider(right, "df", "Disease frequency", &s.DiseaseFreq, "df", pctText, "", "Disease frequency\nNo diseases yet — takes effect when they arrive.")
+	a.diffSlider(right, "df", "Disease frequency", &s.DiseaseFreq, "df", pctText, "", diseaseFreqTip)
 	if row, ok := right.row(18); ok {
 		ns := tsSmall
 		ns.Color = uiTextDim
-		a.uiLabel(row.X, row.Y, "No diseases yet — takes effect when they arrive.", ns)
+		a.uiLabel(row.X, row.Y, diseaseFreqNote, ns)
 	}
 	a.diffSlider(right, "pt", "Pain tolerance offset", &s.PainTolerance, "pt", signedText, "", "")
 	right.gap(8)

@@ -73,6 +73,12 @@ const (
 	MissingPart
 	Surgery
 	Grief
+	// Organ harvesting (MED-06, append only, saved): the donor's own
+	// memory, and what the colony thinks of it: an outsider's organ
+	// (a prisoner or guest) or a colonist's.
+	OrganHarvested
+	KnowOrganHarvested
+	KnowColonistOrganHarvested
 	numKinds
 )
 
@@ -169,7 +175,20 @@ var defs = [numKinds]Def{
 	MissingPart:      {"missing a body part", -5, 0, groupNone, 0, 0},
 	Surgery:          {"had surgery", -3, day, groupNone, 0, 0},
 	Grief:            {"grief", 0, 0, groupNone, 0, 0},
+	// MED-06: wiki: Human resources (donor −30 for 7 days; the colony −5,
+	// −6 for a colonist's organ, stacking 5 at 75 %). The 6-day memory
+	// of the colony is original tuning.
+	OrganHarvested:             {"my organ was harvested", -30, 7 * day, groupNone, 0, 0},
+	KnowOrganHarvested:         {"someone's organ was harvested", -5, 6 * day, groupNone, harvestStack, harvestFactor},
+	KnowColonistOrganHarvested: {"a colonist's organ was harvested", -6, 6 * day, groupNone, harvestStack, harvestFactor},
 }
+
+// harvestStack and harvestFactor stack the colony's harvest memories:
+// five at 75 % each further one. wiki: Human resources.
+const (
+	harvestStack  = 5
+	harvestFactor = 750
+)
 
 // stackLimit and stackFactor are the "stack" kinds' StackLimit and
 // StackFactor (ENG-003).

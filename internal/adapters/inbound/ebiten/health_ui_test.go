@@ -352,3 +352,120 @@ func TestHealthReorderButtons(t *testing.T) {
 		t.Fatal("a single operation has nowhere to go")
 	}
 }
+
+// MED-06: a queued operation shows its success chance, the factors on
+// hover, tinted by how risky it is.
+func TestHealthOperationChance(t *testing.T) {
+	t.Parallel()
+	a, f, s := healthApp(t)
+	h := s.health[1]
+	h.Operations[0].ChancePct = 72
+	h.Operations[0].ChanceTip = "Success chance 72% (Doc)\nMedicine skill 8: 80%\nHospital bed: ×115%"
+	s.health[1] = h
+	drawFrame(t, a, f)
+	w, ok := a.uiSt().find(healthChanceID(0))
+	if !ok || w.label != "72 %" || !strings.Contains(w.tip, "Hospital bed: ×115%") {
+		t.Fatalf("chance cell %+v", w)
+	}
+	if l := strings.Join(a.healthLines(s.pawns[0]), "|"); !strings.Contains(l, "Operation: Install peg leg (left leg) (72 %)") {
+		t.Fatalf("plain lines %q", l)
+	}
+	if healthChanceColor(72) != uiWarning || healthChanceColor(40) != uiDanger || healthChanceColor(98) != uiText {
+		t.Fatal("chance tints")
+	}
+	h.Operations[0].ChanceTip = "" // an older view: no chance cell
+	s.health[1] = h
+	drawFrame(t, a, f)
+	if hasWidget(a, healthChanceID(0)) {
+		t.Fatal("no breakdown, no cell")
+	}
+}
+
+// MED-06: the picker offers organ harvest and transplant, euthanasia and
+// anaesthesia with their reasons, and sends the whole-body operations.
+func TestHealthPickerSurgeryOptions(t *testing.T) {
+	t.Parallel()
+	a, f, s := healthApp(t)
+	h := s.health[1]
+	h.Options = []game.OperationOptionView{
+		{Label: "Harvest left kidney", Kind: uint8(body.HarvestOrgan), Part: uint8(body.KidneyL)},
+		{Label: "Install organ (right kidney)", Kind: uint8(body.InstallOrgan), Part: uint8(body.KidneyR), Item: uint8(item.Kidney),
+			Disabled: true, Reason: "no kidney in stock"},
+		{Label: "Euthanize", Kind: uint8(body.Euthanize), Part: uint8(body.Torso)},
+		{Label: "Anesthetize", Kind: uint8(body.Anesthetize), Part: uint8(body.Torso), Disabled: true, Reason: "needs 1 herbal medicine or better"},
+	}
+	s.health[1] = h
+	f.frame(t, a)
+	press(t, a, f, healthAddID)
+	f.frame(t, a)
+	opts := pickerOptions(s.health[1])
+	if len(opts) != 4 || opts[1].reason != "no kidney in stock" || opts[3].reason == "" {
+		t.Fatalf("options %+v", opts)
+	}
+	for i, want := range []string{"cannot", "kills", "Transplants", "woozy"} {
+		_ = i
+		found := false
+		for _, o := range opts {
+			found = found || strings.Contains(healthOptionTip(o), want)
+		}
+		if !found {
+			t.Fatalf("no option tip says %q", want)
+		}
+	}
+	if tip := healthOptionTip(opts[1]); !strings.Contains(tip, "no kidney in stock") || !strings.Contains(tip, "queue it anyway") {
+		t.Fatalf("a blocked option explains why: %q", tip)
+	}
+	press(t, a, f, optID(healthPickList, 2))
+	press(t, a, f, "modal."+healthPickID+".health.addop.ok")
+	c := lastOf(s, command.AddOperation)
+	if c == nil || c.Index != int(body.Euthanize) || c.Build != uint8(body.Torso) || c.Pawn != 1 {
+		t.Fatalf("euthanize = %+v", c)
+	}
+}
+
+// MED-06: a prisoner's (and a guest's) Health tab queues operations too.
+func TestHealthPrisonerQueuesOperations(t *testing.T) {
+	t.Parallel()
+	for _, who := range []string{"prisoner", "guest"} {
+		a, f, s := healthApp(t)
+		if who == "prisoner" {
+			s.pawns[0].Prisoner = true
+		} else {
+			s.pawns[0].Visitor = true
+		}
+		f.frame(t, a)
+		if w, ok := a.uiSt().find(healthAddID); !ok || w.disabled {
+			t.Fatalf("%s: Add operation is open: %+v", who, w)
+		}
+		press(t, a, f, healthAddID)
+		f.frame(t, a)
+		if a.uiModalTop() != healthPickID {
+			t.Fatalf("%s: the picker opens", who)
+		}
+		press(t, a, f, optID(healthPickList, 0))
+		press(t, a, f, "modal."+healthPickID+".health.addop.ok")
+		if c := lastOf(s, command.AddOperation); c == nil || c.Pawn != 1 {
+			t.Fatalf("%s: AddOperation = %+v", who, c)
+		}
+	}
+}
+
+// MED-06: the vitals monitor is an architect tool with its sprite and icon
+// keys (the art pass renders them).
+func TestArchVitalsMonitor(t *testing.T) {
+	t.Parallel()
+	var tool *archTool
+	for i := range archTools {
+		if archTools[i].id == "vitals_monitor" {
+			tool = &archTools[i]
+		}
+	}
+	if tool == nil || tool.build != "vitals monitor" || tool.icon != "vitals_monitor" || tool.category != "furniture" || !strings.Contains(tool.desc, "hospital bed") {
+		t.Fatalf("tool %+v", tool)
+	}
+	for _, f := range []string{"south", "east", "north", "west"} {
+		if got := buildSprite("vitals monitor", f, 0, false, false); got != "furniture/vitals_monitor_"+f {
+			t.Fatalf("sprite %q", got)
+		}
+	}
+}
