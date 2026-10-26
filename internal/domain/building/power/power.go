@@ -10,6 +10,20 @@ const WTicksPerWh = 2500
 // device reaches for a transmitter to join.
 const ConnectRange = 3
 
+// Balance rules (PLAY021_PLAN.md Balance; our numbers).
+const (
+	// ShedTicks is the least time a consumer shed in a brownout stays off
+	// (one game hour).
+	ShedTicks = 2500
+	// HeadroomPct is the margin a net must have over its load plus a shed
+	// consumer's before that consumer comes back.
+	HeadroomPct = 10
+	// ChargePct is the share of a surplus a battery keeps.
+	ChargePct = 75
+	// SelfDischargeW is what each battery leaks.
+	SelfDischargeW = 8
+)
+
 // Role is what a building does on a power grid.
 type Role uint8
 
@@ -64,90 +78,47 @@ type Spec struct {
 }
 
 // SpecOf is kind k's electrical definition (the zero Spec, Role None, for
-// a kind that is not electrical).
+// a kind that is not electrical, the torch lamp included). A lamp has no
+// idle state: it draws its 50 W whenever it is on. The electric benches
+// idle at a tenth of their working draw.
 func SpecOf(k construction.Kind) Spec {
-	return Spec{} // TODO(POWERDOM): the PLAY-021 table (PLAY021_PLAN.md Model and Appendix)
+	switch k {
+	case construction.PowerConduit:
+		return Spec{Role: Transmitter}
+	case construction.HiddenConduit:
+		return Spec{Role: Transmitter, Hidden: true}
+	case construction.PowerSwitch:
+		return Spec{Role: Switch, Toggle: true}
+	case construction.WoodGenerator:
+		return producer(800)
+	case construction.SolarPanel:
+		return producer(900)
+	case construction.WindTurbine:
+		return producer(1100)
+	case construction.GeothermalGenerator:
+		return producer(1800)
+	case construction.Battery:
+		return Spec{Role: Storage, CapWh: 1200}
+	case construction.Lamp:
+		return consumer(ClassLamp, 50, 50)
+	case construction.Heater:
+		return consumer(ClassHeater, 180, 20)
+	case construction.Cooler:
+		return consumer(ClassCooler, 220, 20)
+	case construction.ElectricStove:
+		return bench(250)
+	case construction.ElectricTailoringBench:
+		return bench(150)
+	case construction.ElectricResearchBench:
+		return bench(200)
+	}
+	return Spec{}
 }
 
-// Node is one electrical building for Build: its id (an entity id), role,
-// footprint cells and, for a switch, whether it is closed (conducting).
-type Node struct {
-	ID     uint64
-	Role   Role
-	Cells  [][2]int
-	Closed bool
+func producer(peak int) Spec { return Spec{Role: Producer, Peak: peak, Toggle: true} }
+
+func consumer(c Class, draw, idle int) Spec {
+	return Spec{Role: Consumer, Class: c, Draw: draw, Idle: idle, Toggle: true}
 }
 
-// Link is the transmitter a device joins: its node id and the transmitter
-// cell the link line is drawn to.
-type Link struct {
-	To   uint64
-	X, Y int
-}
-
-// Graph is the topology Build makes: the net every node is on and the
-// transmitter every device links to. Read only.
-type Graph struct{} // TODO(POWERDOM): union-find result
-
-// Net is node id's net: the smallest transmitter id on it; 0 when id is
-// on no net (a device with no transmitter in range).
-func (g *Graph) Net(id uint64) uint64 {
-	return 0 // TODO(POWERDOM)
-}
-
-// Link is the transmitter device id joins (ok false for a transmitter, a
-// switch or a device with none in range).
-func (g *Graph) Link(id uint64) (Link, bool) {
-	return Link{}, false // TODO(POWERDOM)
-}
-
-// Nets lists every net id, ascending.
-func (g *Graph) Nets() []uint64 {
-	return nil // TODO(POWERDOM)
-}
-
-// Builder builds graphs, keeping its scratch between builds. The zero
-// value is ready to use; it is not safe for concurrent use.
-type Builder struct{} // TODO(POWERDOM): union-find scratch
-
-// Build joins nodes on a w×h map into nets. Transmitters (conduits and
-// closed switches) on 4-neighbour cells share a net; an open switch cuts.
-// Each device (producer, consumer, storage) joins the nearest transmitter
-// within ConnectRange of its footprint (ties by distance, then y, then
-// x). It is deterministic in the nodes given, whatever their order.
-func (b *Builder) Build(w, h int, nodes []Node) Graph {
-	return Graph{} // TODO(POWERDOM)
-}
-
-// Dev is one device of a net for Balance. Want is the W a consumer would
-// draw now (0 while switched off), Out the W a producer makes now (after
-// fuel, daylight, wind or a flare). Stored and Cap are a battery's energy
-// and capacity in W·ticks. ShedUntil is the tick a shed consumer stays off
-// until (0: not shed). Balance sets Powered, Stored and ShedUntil.
-type Dev struct {
-	ID          uint64
-	Role        Role
-	Class       Class
-	Want, Out   int
-	Stored, Cap int64
-	ShedUntil   uint64
-	Powered     bool
-}
-
-// NetOut is one net's balance: W generated and W drawn by the consumers
-// that ran, the batteries' energy and capacity (W·ticks) after it, and
-// whether consumers had to be shed.
-type NetOut struct {
-	Gen, Load   int
-	Stored, Cap int64
-	Brownout    bool
-}
-
-// Balance integrates one net over dt ticks ending at tick now: generation
-// covers the load, a surplus charges the batteries (with a loss) and a
-// deficit draws on them; past that, consumers are shed by Class, the
-// newest id first within a class, for a minimum time. It updates devs in
-// place and returns the net's totals.
-func Balance(devs []Dev, dt int, now uint64) NetOut {
-	return NetOut{} // TODO(POWERDOM)
-}
+func bench(draw int) Spec { return consumer(ClassBench, draw, draw/10) }
