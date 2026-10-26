@@ -71,11 +71,12 @@ assets/
 │   │   ├── build.py     # entry point (headless or live via Blender MCP)
 │   │   ├── template.blend
 │   │   └── artlib/      # contracts, stage, post-pass, metadata, families/, scenes/
-│   ├── tools/           # validate_assets.py, contact_sheet.py, compose_scene.py
-│   └── raster/ui/main_menu_colonist.png
+│   ├── tools/           # validate_assets.py, contact_sheet.py, compose_scene.py, portrait_cut.py
+│   └── raster/ui/       # main_menu_colonist.png, portraits/<key>.png + briefs.md
 ├── generated/
 │   ├── world/<family>/<name>.png (+ _mask.png)   # @2x sprites
 │   ├── ui/icons/*.png
+│   ├── ui/portraits/<key>.png (+ _thumb.png)   # storyteller busts (make portraits)
 │   ├── ui/menu/menu_diorama.png (+ menu_glow_lamp/fire.png)  # main-menu scene
 │   ├── contact_sheet.png, prototype_scene*.png, pawn_sheet.png  # review aids
 ├── metadata/<family>/<name>.yaml   # footprint, origin_px, attachments, tint
@@ -86,6 +87,13 @@ assets/
 `source/raster/ui/main_menu_colonist.png` is original title art (cel-shaded
 colonist bust with raven, RGBA cutout). It is not a reconstruction of proprietary RimWorld screenshots. The brief that
 produced it lives at repo-root `ai-bg-rimworld`.
+
+`source/raster/ui/portraits/{steady,hearth,gambler}.png` are the storyteller
+busts (ART-023), painted on a flat magenta field from the prompts in
+`briefs.md`. `make portraits` (`tools/portrait_cut.py`, needs Pillow + numpy)
+keys the field, inks the fringe, fits the bust bottom-flush into 512×640,
+cuts the 120×150 thumbnail and writes `metadata/ui_portrait/`. Never
+hand-edit those outputs.
 
 `generated/ui/menu/` is the main-menu background: one scene composed from
 the family builders and rendered through the same stage (`stage.place`,

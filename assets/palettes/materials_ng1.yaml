@@ -22,27 +22,9 @@ materials:
   pod_paint:     {light: "#e89a4a", base: "#c97429", shadow: "#8e501c"}
   pod_glow:      {light: "#ffe0a0", base: "#ffbf62", shadow: "#e0903a"}
   dust_cloud:    {light: "#d8c9ad", base: "#bcab8d", shadow: "#9b8b70"}
-  # storyteller busts (UI art): fixed colours, never tinted
-  skin_fair:     {light: "#f6d3bd", base: "#e6b496", shadow: "#bf8b72"}
-  skin_ruddy:    {light: "#eba68c", base: "#d6836a", shadow: "#a85b4a"}
-  skin_umber:    {light: "#b57d5a", base: "#935c40", shadow: "#6b412e"}
-  hair_silver:   {light: "#f2f4f6", base: "#c9ced4", shadow: "#8f97a2"}
-  hair_white:    {light: "#ffffff", base: "#ece9e4", shadow: "#b9b6b0"}
-  hair_ink:      {light: "#4a4d5c", base: "#2c2e3a", shadow: "#181921"}
+  # fixed colours, never tinted (shared by power, furniture, item, rock, structure)
   jacket_navy:   {light: "#4a5f8c", base: "#33456b", shadow: "#212d4a"}
-  reflect:       {light: "#fff7b0", base: "#e8dc6a", shadow: "#b3a642"}
-  knit_rust:     {light: "#d98a5b", base: "#b8653a", shadow: "#86452a"}
-  knit_cream:    {light: "#f6eed8", base: "#e2d6b4", shadow: "#b5a784"}
-  apron_canvas:  {light: "#cfc0a0", base: "#aa9b7c", shadow: "#80735a"}
   mug_blue:      {light: "#9bb8d6", base: "#6a8cb2", shadow: "#475f82"}
-  coat_wine:     {light: "#9c4558", base: "#742f40", shadow: "#4e1f2c"}
-  coat_lining:   {light: "#e3b45a", base: "#c28e34", shadow: "#8c6320"}
   brass:         {light: "#ffe58a", base: "#e0b441", shadow: "#a67a1f"}
-  card_paper:    {light: "#ffffff", base: "#f0e9db", shadow: "#c4b9a2"}
-  card_ink:      {light: "#e0504a", base: "#bb2f2c", shadow: "#821d1f"}
   backdrop:      {light: "#2e3340", base: "#242833", shadow: "#171a22"}
-  lip:           {light: "#d9857a", base: "#bb6459", shadow: "#8c4640"}
-  eye_white:     {light: "#ffffff", base: "#f2f0ea", shadow: "#c9c7c2"}
-  stubble:       {light: "#7a5240", base: "#654332", shadow: "#4a3024"}
   steel_dark:    {light: "#7d8892", base: "#59636c", shadow: "#3b434a"}
-  coat_wine_dk:  {light: "#7e3547", base: "#5c2432", shadow: "#3d1620"}

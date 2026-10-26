@@ -121,12 +121,7 @@ func (a *App) portraitImage(key string, thumb bool) *ebiten.Image {
 	if thumb {
 		suffix = "_thumb"
 	}
-	for _, prefix := range []string{"ui_portrait/", "ui/portrait/"} {
-		if img := a.art.image(prefix+key+suffix, noTint); img != nil {
-			return img
-		}
-	}
-	return nil
+	return a.art.image("ui_portrait/"+key+suffix, noTint)
 }
 
 // drawFit draws img inside box keeping its aspect, centred.

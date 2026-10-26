@@ -59,6 +59,10 @@ art-menu:  ## render the main-menu colony diorama (assets/source/blender/artlib/
 	"$(BLENDER)" -b --factory-startup -P assets/source/blender/build.py -- menu
 	python3 assets/source/tools/validate_assets.py
 
+.PHONY: portraits
+portraits:  ## cut the storyteller busts from assets/source/raster/ui/portraits (needs python3 + Pillow + numpy)
+	python3 assets/source/tools/portrait_cut.py
+
 .PHONY: audio
 audio:  ## render the procedural sound effects (cmd/audiogen) and update the sound list
 	go run ./cmd/audiogen

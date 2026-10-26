@@ -1823,7 +1823,7 @@ type Config struct { Seed uint64; Width, Height int; Biome biome.ID; Setup *Setu
   - Portraits (`drawLookPortrait`, §2.9) use the same composer.
 
 ### 7.2 Storyteller busts (D5)
-- **Family:** new `families/portrait.py`, rendered at 512×640 with a transparent background through the same stage and lighting contract, plus a 3/4 view.
+- **Source:** painted raster busts (3/4 view) in `assets/source/raster/ui/portraits/`, cut by `make portraits` (`tools/portrait_cut.py`); the Blender `families/portrait.py` was retired in ART-023.
 - **Characters** (original designs, briefs in the ART spec):
   - **Orla Vane:** late 50s, close-cropped silver hair, dispatcher's headset around the neck, quilted navy jacket with a reflective stripe, calm half-smile.
   - **Bram Holloway:** 60s, broad, ruddy, short white beard, knitted cardigan over an apron, holding a steaming mug.
