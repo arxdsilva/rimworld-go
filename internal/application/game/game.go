@@ -523,6 +523,7 @@ type Game struct {
 	thoughtBuf []mood.Thought
 
 	messages []MessageView
+	letters  letterState // the letter stack (letters.go, PLAY-018)
 
 	pawnIDs   []entity.EntityID
 	positions *component.Store[Position]
@@ -1086,6 +1087,7 @@ func (g *Game) world() WorldView {
 		IndoorTemp:  int(g.climate.Indoor(g.clock.Now())),
 		Season:      temperature.Season(g.clock.Now()),
 		Messages:    append([]MessageView(nil), g.messages...),
+		Letters:     g.letterViews(), // letters.go (PLAY-018)
 		Research:    g.researchViews(),
 		Zones:       g.zoneViews(),
 		Locked:      g.lockedKeys(),
@@ -1095,11 +1097,13 @@ func (g *Game) world() WorldView {
 		w.TreesFelled = felled
 	}
 
+	var stored [256]int // stockpiled quantity per item kind (stored.go)
 	for _, id := range g.itemIDs {
 		st, ok := g.stacks.Get(id)
 		if !ok || g.fogged(st.X, st.Y) { // fog.go: hidden items neither show nor count
 			continue
 		}
+		g.countStored(&stored, st)
 		w.Items = append(w.Items, ItemView{
 			ID: id, Kind: st.Kind.String(), Qty: st.Qty, X: st.X, Y: st.Y, Carried: st.Carrier != 0,
 			FreshDays: freshDays(st), Rotten: st.Rotten(), Dried: st.Dried,
@@ -1129,6 +1133,7 @@ func (g *Game) world() WorldView {
 			}
 		}
 	}
+	w.Stored = storedRows(&stored)
 	for _, id := range g.frameIDs {
 		fr, ok := g.frames.Get(id)
 		if !ok {

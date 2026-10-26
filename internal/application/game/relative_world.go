@@ -300,12 +300,12 @@ func (g *Game) closestKin(id entity.EntityID) (entity.EntityID, social.Kind, boo
 
 // relativeLetter posts title: "<colonist>'s <relation> <name> is among
 // the <among>." with the relative in focus.
-func (g *Game) relativeLetter(title string, id entity.EntityID, among string) {
+func (g *Game) relativeLetter(kind, title string, id entity.EntityID, among string) {
 	c, k, ok := g.closestKin(id)
 	if !ok {
 		return
 	}
 	bio, _ := g.personBio(id)
-	g.letter(title, fmt.Sprintf("%s's %s %s is among the %s.", g.personName(c), social.Label(k, bio.Look.Sex == look.Male),
+	g.letter(kind, title, fmt.Sprintf("%s's %s %s is among the %s.", g.personName(c), social.Label(k, bio.Look.Sex == look.Male),
 		g.personName(id), among), id)
 }

@@ -135,6 +135,8 @@ func (g *Game) applyOne(c command.Command) {
 		g.setHaulMark(entity.EntityID(c.Target), c.Enabled) // haul_claim.go
 	case command.DesignateHaul:
 		g.markHaul(c.X, c.Y, c.X2, c.Y2, c.Enabled)
+	case command.DismissLetter:
+		g.dismissLetter(c.Target) // letters.go: an unknown id is ignored
 	case command.DesignateDeconstruct:
 		g.markDeconstruct(c.X, c.Y, c.X2, c.Y2, true)
 	case command.DesignateHunt:

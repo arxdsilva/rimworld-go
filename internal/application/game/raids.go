@@ -306,7 +306,7 @@ func (g *Game) raidFrom(kit []item.Kind, plan raidPlan, fac int) {
 	}
 	if f != nil {
 		if kin != 0 { // relative_world.go: before the raid alert, which stays the latest message
-			g.relativeLetter("Relative among the raiders", kin, "raiders")
+			g.relativeLetter(letterCaution, "Relative among the raiders", kin, "raiders")
 		}
 		g.raidMessage(ex, ey, spawned, plan, f) // story.go
 		return
@@ -317,11 +317,11 @@ func (g *Game) raidFrom(kit []item.Kind, plan raidPlan, fac int) {
 	}
 	switch plan {
 	case planSiege:
-		g.threat(ex, ey, "Raid! %d %s coming. They look ready to dig in for a siege.", spawned, word)
+		g.threat("Siege", ex, ey, "Raid! %d %s coming. They look ready to dig in for a siege.", spawned, word)
 	case planSappers:
-		g.threat(ex, ey, "Sappers! %d %s tunnelling in through the walls.", spawned, word)
+		g.threat("Sappers", ex, ey, "Sappers! %d %s tunnelling in through the walls.", spawned, word)
 	default:
-		g.threat(ex, ey, "Raid! %d %s coming for the colony.", spawned, word)
+		g.threat("Raid", ex, ey, "Raid! %d %s coming for the colony.", spawned, word)
 	}
 }
 
@@ -353,7 +353,7 @@ func (g *Game) wolfPack(n int) {
 		}
 	}
 	if spawned > 0 {
-		g.threat(ex, ey, "A pack of %d starving %s is prowling near the colony.", spawned, pluralLabel(s))
+		g.threat("Starving predators", ex, ey, "A pack of %d starving %s is prowling near the colony.", spawned, pluralLabel(s))
 	}
 }
 

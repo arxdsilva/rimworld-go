@@ -137,6 +137,11 @@ type saveState struct {
 	BlockedBits []uint64
 
 	Messages []MessageView
+	// Letters is the letter stack, oldest first, and NextLetter how many
+	// ids were ever issued (PLAY-018, additive: an older save has neither
+	// and importLetters builds the stack from its letter messages).
+	Letters    []savedLetter
+	NextLetter uint64
 
 	PawnIDs   []entity.EntityID
 	Positions []entry[Position]
@@ -358,6 +363,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 	s := saveState{
 		Tick: g.clock.Now(), W: g.grid.Width(), H: g.grid.Height(), NextEntity: g.entities.Peek(),
 		RNG: rng, Sched: g.sched, BlockedBits: g.grid.BlockedBits(), Messages: g.messages,
+		Letters: g.letters.list, NextLetter: g.letters.next,
 		PawnIDs: g.pawnIDs, Positions: exportStore(g.positions), Names: exportStore(g.names),
 		Jobs: exportStore(g.jobs), Need: exportStore(g.need), Vital: exportStore(g.vital), Labor: exportStore(g.labor),
 		ItemIDs: g.itemIDs, Stacks: exportStore(g.stacks), FrameIDs: g.frameIDs, Frames: exportStore(g.frames),
@@ -603,6 +609,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	// pens become pen markers
 	g.importPens(s.PenMarkers, s.PenAnimals)
 	g.migratePenZones()
+	g.importLetters(s.Letters, s.NextLetter) // letters.go: an older save's letter messages become letters
 	if info.Version < 3 {
 		g.migrateClaims()       // haul_claim.go: loose chunks and carcasses become unclaimed
 		g.migrateHarvestMarks() // plant_growth.go: ripe zone crops get their harvest mark

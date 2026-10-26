@@ -381,7 +381,7 @@ func (g *Game) weddingCheck(id entity.EntityID, now uint64) {
 		g.startGathering(social.Gathering{Kind: social.Wedding, SpotX: x, SpotY: y,
 			Hosts: [2]social.ID{social.ID(id), social.ID(o)}, Phase: social.PhaseCalling, PhaseAt: now})
 		text := fmt.Sprintf("%s and %s are getting married! The colony gathers for the wedding.", g.personName(id), g.personName(o))
-		g.post(MessageView{Tick: now, Text: text, X: x, Y: y, Focus: id, Letter: true, Title: "Wedding"})
+		g.post(MessageView{Tick: now, Text: text, X: x, Y: y, Focus: id, Letter: true, Title: "Wedding", Kind: letterGood})
 		return
 	}
 }
@@ -445,7 +445,7 @@ func (g *Game) marry(a, b entity.EntityID, now uint64) bool {
 		g.shareSurname(a, b)
 	}
 	text := fmt.Sprintf("%s and %s are now married.", g.personName(a), g.personName(b))
-	g.romanceLetter("Married", text, a) // social_romance.go
+	g.romanceLetter(letterGood, "Married", text, a) // social_romance.go
 	g.addHistory("wedding", text, a, b)
 	return true
 }
@@ -526,7 +526,7 @@ func (g *Game) throwParty(now uint64) bool {
 	g.startGathering(social.Gathering{Kind: social.Party, SpotX: x, SpotY: y,
 		Hosts: [2]social.ID{social.ID(host), 0}, Phase: social.PhaseCalling, PhaseAt: now})
 	g.post(MessageView{Tick: now, Text: fmt.Sprintf("%s is throwing a party! Everyone is welcome.", g.personName(host)),
-		X: x, Y: y, Focus: host, Letter: true, Title: "Party"})
+		X: x, Y: y, Focus: host, Letter: true, Title: "Party", Kind: letterGood})
 	return true
 }
 

@@ -382,7 +382,8 @@ func (g *Game) introLetter() {
 	}
 	x, y := g.landingSpot()
 	g.post(MessageView{Tick: uint64(g.clock.Now()), Text: text, X: x, Y: y,
-		Letter: true, Title: g.ng.setup.Scenario.Name})
+		Letter: true, Title: g.ng.setup.Scenario.Name, Kind: letterInfo})
+	g.markIntroLetter() // letters.go: the stack flags it so the UI opens it by itself
 }
 
 // ArrivalView is one arrival pod for the renderer (NG-1 §2.11): it falls

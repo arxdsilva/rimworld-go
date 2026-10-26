@@ -162,7 +162,7 @@ func (g *Game) tryRomance(a, b entity.EntityID, now uint64) bool {
 	}
 	g.setPair(a, b, p)
 	text := fmt.Sprintf("%s and %s are now lovers.", g.personName(a), g.personName(b))
-	g.romanceLetter("New lovers", text, a)
+	g.romanceLetter(letterGood, "New lovers", text, a)
 	g.addHistory("romance", text, a, b)
 	for _, c := range cheatedA {
 		g.cheatedOn(c, a, b, now)
@@ -180,7 +180,7 @@ func (g *Game) cheatedOn(victim, cheater, other entity.EntityID, now uint64) {
 	}
 	g.addOpinionMemory(victim, cheater, social.MemCheatedOnMe, now)
 	g.memories[victim] = g.memories[victim].AddFor(mood.CheatedOn, uint64(cheater), now)
-	g.romanceLetter("Affair", fmt.Sprintf("%s has been cheating on %s with %s.",
+	g.romanceLetter(letterCaution, "Affair", fmt.Sprintf("%s has been cheating on %s with %s.",
 		g.personName(cheater), g.personName(victim), g.personName(other)), victim)
 }
 
@@ -208,11 +208,11 @@ func (g *Game) breakUp(a, b entity.EntityID, now uint64) bool {
 	na, nb := g.personName(a), g.personName(b)
 	if divorce {
 		text := fmt.Sprintf("%s and %s have divorced.", na, nb)
-		g.romanceLetter("Divorce", text, a)
+		g.romanceLetter(letterCaution, "Divorce", text, a)
 		g.addHistory("divorce", text, a, b)
 	} else {
 		text := fmt.Sprintf("%s broke up with %s.", na, nb)
-		g.romanceLetter("Breakup", text, a)
+		g.romanceLetter(letterCaution, "Breakup", text, a)
 		g.addHistory("breakup", text, a, b)
 	}
 	return true
@@ -233,7 +233,7 @@ func (g *Game) propose(a, b entity.EntityID, now uint64) bool {
 		g.addOpinionMemory(a, b, social.MemRejectedMyProposal, now)
 		g.addOpinionMemory(b, a, social.MemIRejectedProposal, now)
 		g.memories[a] = g.memories[a].AddFor(mood.ProposalRejected, uint64(b), now)
-		g.romanceLetter("Proposal rejected", fmt.Sprintf("%s proposed to %s and was turned down.",
+		g.romanceLetter(letterCaution, "Proposal rejected", fmt.Sprintf("%s proposed to %s and was turned down.",
 			g.personName(a), g.personName(b)), a)
 		return true
 	}
@@ -242,21 +242,21 @@ func (g *Game) propose(a, b entity.EntityID, now uint64) bool {
 	}
 	g.setPair(a, b, p)
 	text := fmt.Sprintf("%s and %s are engaged to be married.", g.personName(a), g.personName(b))
-	g.romanceLetter("Engagement", text, a)
+	g.romanceLetter(letterGood, "Engagement", text, a)
 	g.addHistory("engagement", text, a, b)
 	return true
 }
 
 // romanceLetter posts a letter about pawn focus.
-func (g *Game) romanceLetter(title, text string, focus entity.EntityID) {
-	g.pawnLetter(title, text, focus)
+func (g *Game) romanceLetter(kind, title, text string, focus entity.EntityID) {
+	g.pawnLetter(kind, title, text, focus)
 }
 
 // pawnLetter posts a letter titled title about creature focus (shown once,
 // the jump link follows it).
-func (g *Game) pawnLetter(title, text string, focus entity.EntityID) {
+func (g *Game) pawnLetter(kind, title, text string, focus entity.EntityID) {
 	pos, _ := g.positions.Get(focus)
-	g.post(MessageView{Tick: uint64(g.clock.Now()), Text: text, X: pos.X, Y: pos.Y, Focus: focus, Letter: true, Title: title})
+	g.post(MessageView{Tick: uint64(g.clock.Now()), Text: text, X: pos.X, Y: pos.Y, Focus: focus, Letter: true, Title: title, Kind: kind})
 }
 
 // romanceNote is the Social tab's reason id and o can't become a couple

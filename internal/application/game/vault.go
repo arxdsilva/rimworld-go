@@ -247,7 +247,7 @@ func (g *Game) vaultWarn(v *vaultSave) {
 			continue
 		}
 		v.State = vault.Warned
-		g.letter(vaultWarnTitle, g.personName(id)+" stops near the smooth walls in the rock. Something old is sealed inside, and it does not feel empty.", id)
+		g.letter(letterCaution, vaultWarnTitle, g.personName(id)+" stops near the smooth walls in the rock. Something old is sealed inside, and it does not feel empty.", id)
 		return
 	}
 }
@@ -332,9 +332,9 @@ func (g *Game) breachVault(v *vaultSave) {
 	}
 	g.invalidateCreatures()
 	x, y := v.centre()
-	m := MessageView{Tick: uint64(g.clock.Now()), Text: vaultQuietText, X: x, Y: y, Letter: true, Title: vaultBreachTitle}
+	m := MessageView{Tick: uint64(g.clock.Now()), Text: vaultQuietText, X: x, Y: y, Letter: true, Title: vaultBreachTitle, Kind: letterInfo}
 	if woke > 0 {
-		m.Text, m.Danger = vaultBreachText, true
+		m.Text, m.Danger, m.Kind = vaultBreachText, true, letterThreat
 	}
 	g.post(m)
 	g.addHistory("vault", "The colony broke into a sealed vault.")

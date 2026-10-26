@@ -212,9 +212,9 @@ func (g *Game) caravanOf(id entity.EntityID) *caravanRec {
 }
 
 // letter posts a world letter titled title (shown once, jump to the home).
-func (g *Game) letter(title, text string, focus entity.EntityID) {
+func (g *Game) letter(kind, title, text string, focus entity.EntityID) {
 	x, y := g.home()
-	g.post(MessageView{Tick: uint64(g.clock.Now()), Text: text, X: x, Y: y, Focus: focus, Letter: true, Title: title})
+	g.post(MessageView{Tick: uint64(g.clock.Now()), Text: text, X: x, Y: y, Focus: focus, Letter: true, Title: title, Kind: kind})
 }
 
 // worldNote posts a plain message at the colony (a refused order).
@@ -392,7 +392,7 @@ func (g *Game) departCaravan(c *caravanRec, now uint64) {
 	c.C.FoodDays = caravanFoodDays
 	c.C.State = caravan.Travelling
 	c.NextTalk = now + caravanTalkPeriod
-	g.letter("Caravan departed", fmt.Sprintf("%s set out for %s with %d days of food.",
+	g.letter(letterInfo, "Caravan departed", fmt.Sprintf("%s set out for %s with %d days of food.",
 		joinNames(names), g.tileName(c.C.Dest), caravanFoodDays/1000), 0)
 }
 
@@ -463,7 +463,7 @@ func (g *Game) stepCaravans(now uint64) {
 			continue
 		}
 		if len(c.C.Members) == 0 {
-			g.letter("Caravan lost", "Nobody in the caravan survived the journey.", 0)
+			g.letter(letterCaution, "Caravan lost", "Nobody in the caravan survived the journey.", 0)
 			w.caravans = slices.Delete(w.caravans, i, i+1)
 			i--
 			continue
@@ -493,10 +493,10 @@ func (g *Game) caravanArrived(c *caravanRec, now uint64) {
 		c.C.State = caravan.Visiting
 		c.C.VisitUntil = now + caravanVisitTicks
 		c.C.FoodDays = caravanFoodDays
-		g.letter("Caravan arrived", fmt.Sprintf("The caravan reached %s and stays a day as their guests.", g.tileName(c.C.Tile)), 0)
+		g.letter(letterInfo, "Caravan arrived", fmt.Sprintf("The caravan reached %s and stays a day as their guests.", g.tileName(c.C.Tile)), 0)
 		return
 	}
-	g.letter("Caravan arrived", fmt.Sprintf("The caravan reached %s and waits there for your orders.", g.tileName(c.C.Tile)), 0)
+	g.letter(letterInfo, "Caravan arrived", fmt.Sprintf("The caravan reached %s and waits there for your orders.", g.tileName(c.C.Tile)), 0)
 }
 
 // startReturn turns c for home along the way it came.
@@ -579,7 +579,7 @@ func (g *Game) caravanHome(c *caravanRec) {
 		}
 	}
 	if len(names) > 0 {
-		g.letter("Caravan returned", joinNames(names)+" came back from the journey.", entity.EntityID(c.C.Members[0]))
+		g.letter(letterInfo, "Caravan returned", joinNames(names)+" came back from the journey.", entity.EntityID(c.C.Members[0]))
 	}
 }
 
@@ -607,7 +607,7 @@ func (g *Game) dieAway(id entity.EntityID, cause health.Cause) {
 	if c != nil {
 		c.C.Members = slices.DeleteFunc(c.C.Members, func(m uint64) bool { return m == uint64(id) })
 	}
-	g.letter("Death on the road", g.personName(id)+" died on the caravan's journey.", 0)
+	g.letter(letterCaution, "Death on the road", g.personName(id)+" died on the caravan's journey.", 0)
 }
 
 // caravanTalk pairs two members up for a conversation on the road.

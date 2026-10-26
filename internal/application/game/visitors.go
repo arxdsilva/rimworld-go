@@ -119,9 +119,9 @@ func (g *Game) visitorsArrive(now uint64) bool {
 	if len(ids) == 0 {
 		return false
 	}
-	g.letter("Visitors", fmt.Sprintf("%d people of %s have come to visit. They will stay about half a day.", len(ids), f.Name), ids[0])
+	g.letter(letterInfo, "Visitors", fmt.Sprintf("%d people of %s have come to visit. They will stay about half a day.", len(ids), f.Name), ids[0])
 	if kin != 0 {
-		g.relativeLetter("Relative arrives", kin, "visitors from "+f.Name)
+		g.relativeLetter(letterInfo, "Relative arrives", kin, "visitors from "+f.Name)
 	}
 	return true
 }
@@ -349,7 +349,7 @@ func (g *Game) wandererJoins(now uint64) bool {
 	if tx, ty, ok := g.walkableNear(hx, hy, 4); ok {
 		g.cmdMove(id, tx, ty)
 	}
-	g.letter("Wanderer joins", g.personName(id)+", a wanderer, has asked to join the colony.", id)
+	g.letter(letterGood, "Wanderer joins", g.personName(id)+", a wanderer, has asked to join the colony.", id)
 	g.addHistory("joined", g.personName(id)+" wandered in and joined the colony.", id)
 	return true
 }

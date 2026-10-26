@@ -222,11 +222,11 @@ func (g *Game) raidMessage(ex, ey, n int, plan raidPlan, f *faction.Faction) {
 	from := g.edgeDir(ex, ey)
 	switch plan {
 	case planSiege:
-		g.threat(ex, ey, "Raid! %d %s of %s %s coming from the %s. They look ready to dig in for a siege.", n, noun, f.Name, verb, from)
+		g.threat("Siege", ex, ey, "Raid! %d %s of %s %s coming from the %s. They look ready to dig in for a siege.", n, noun, f.Name, verb, from)
 	case planSappers:
-		g.threat(ex, ey, "Sappers! %d %s of %s %s tunnelling in through the walls from the %s.", n, noun, f.Name, verb, from)
+		g.threat("Sappers", ex, ey, "Sappers! %d %s of %s %s tunnelling in through the walls from the %s.", n, noun, f.Name, verb, from)
 	default:
-		g.threat(ex, ey, "Raid! %d %s of %s %s coming from the %s.", n, noun, f.Name, verb, from)
+		g.threat("Raid", ex, ey, "Raid! %d %s of %s %s coming from the %s.", n, noun, f.Name, verb, from)
 	}
 }
 

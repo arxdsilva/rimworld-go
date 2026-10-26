@@ -52,7 +52,7 @@ func (g *Game) hiveSwarm() {
 		}
 	}
 	if spawned > 0 {
-		g.threat(x, y, "A hive swarm bursts from the rock!")
+		g.threat("Hive swarm", x, y, "A hive swarm bursts from the rock!")
 	}
 }
 

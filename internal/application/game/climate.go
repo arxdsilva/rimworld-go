@@ -70,11 +70,17 @@ func (g *Game) message(x, y int, format string, args ...any) {
 }
 
 // threat posts a danger message: a threat has arrived.
-func (g *Game) threat(x, y int, format string, args ...any) {
-	g.post(MessageView{Tick: uint64(g.clock.Now()), Text: fmt.Sprintf(format, args...), X: x, Y: y, Danger: true})
+func (g *Game) threat(title string, x, y int, format string, args ...any) {
+	// a major threat is a red letter in the stack too (PLAY-018), and a
+	// danger message the UI may pause for
+	g.post(MessageView{Tick: uint64(g.clock.Now()), Text: fmt.Sprintf(format, args...), X: x, Y: y, Danger: true,
+		Letter: true, Title: title, Kind: letterThreat})
 }
 
 func (g *Game) post(m MessageView) {
+	if m.Letter {
+		m.Kind = g.addLetter(m) // letters.go: a letter is also kept in the stack
+	}
 	g.messages = append(g.messages, m)
 	if n := len(g.messages); n > maxMessages {
 		g.messages = append(g.messages[:0:0], g.messages[n-maxMessages:]...)

@@ -185,7 +185,7 @@ func (g *Game) kidnapOff(id, t entity.EntityID) {
 		g.setWhere(t, whereKidnapped)
 		name := g.personName(t)
 		g.socialOnLostAs(t, "kidnapped", name+" was kidnapped by "+by+".") // social_grief.go
-		g.letter("Kidnapped", name+" was kidnapped by "+by+".", t)
+		g.letter(letterThreat, "Kidnapped", name+" was kidnapped by "+by+".", t)
 	}
 	g.removeRaider(id) // raids.go: off the map, an off-map person again
 	g.invalidateCreatures()

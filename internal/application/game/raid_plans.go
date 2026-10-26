@@ -238,7 +238,7 @@ func (g *Game) thinkSiege(id entity.EntityID, r raiderState, now uint64) bool {
 	}
 	if now >= grp.Until {
 		grp.Stormed = true
-		g.threat(pos.X, pos.Y, "The besiegers are storming the colony!")
+		g.threat("Siege assault", pos.X, pos.Y, "The besiegers are storming the colony!")
 		return false
 	}
 	// hold the camp; shoot anyone who comes in range
@@ -271,7 +271,7 @@ func (g *Game) digIn(gi int, now uint64) {
 		g.BuildNow("sandbags", "wood", "south", sx, sy)
 		g.interrupt(rid, job.Cancelled)
 	}
-	g.threat(grp.CampX, grp.CampY, "The raiders have dug in for a siege. They will storm the colony in a few hours.")
+	g.threat("Siege", grp.CampX, grp.CampY, "The raiders have dug in for a siege. They will storm the colony in a few hours.")
 }
 
 // sapperMap is the map as sappers see it when planning a tunnel: walls,

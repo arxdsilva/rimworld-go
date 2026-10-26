@@ -391,7 +391,7 @@ func (g *Game) manhunterPack(n int) {
 	if spawned == 1 {
 		name = s.Label()
 	}
-	g.threat(ex, ey, "A manhunter pack of %d %s is charging the colony!", spawned, name)
+	g.threat("Manhunter pack", ex, ey, "A manhunter pack of %d %s is charging the colony!", spawned, name)
 }
 
 // manhunterSpecies: who forms manhunter packs (grazers and territorial

@@ -701,7 +701,7 @@ func (g *Game) killAnimal(id, by entity.EntityID) {
 		}
 		if c := entity.EntityID(a.Bond); c != 0 && g.isPawn(c) {
 			// a bonded companion is a letter about the colonist who lost it
-			g.pawnLetter("Bonded animal died", fmt.Sprintf("%s %s has lost a bonded companion.", text, g.personName(c)), c)
+			g.pawnLetter(letterCaution, "Bonded animal died", fmt.Sprintf("%s %s has lost a bonded companion.", text, g.personName(c)), c)
 		} else {
 			g.message(pos.X, pos.Y, "%s", text)
 		}

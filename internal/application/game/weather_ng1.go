@@ -75,7 +75,7 @@ func (g *Game) extremeDay(now uint64) {
 	*e = extremeEvent{Kind: kind, Delta: delta, Until: now + uint64(days)*clock.TicksPerDay}
 	g.climate.YearMean += delta
 	g.post(MessageView{Tick: now, Text: text, X: g.grid.Width() / 2, Y: g.grid.Height() / 2, Danger: true,
-		Letter: true, Title: title})
+		Letter: true, Title: title, Kind: letterCaution})
 }
 
 // extremeKey names the event in progress for the view ("" when none).

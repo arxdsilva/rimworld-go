@@ -180,13 +180,13 @@ func (g *Game) releaseOccupant(occ vault.Occupant, b construction.Building, v *v
 		g.casketSleeper(b, v)
 	case vault.Hostile:
 		if id := g.casketHostile(b, v, item.Rifle); id != 0 {
-			g.threat(b.X, b.Y, "%s bursts from a sleeper casket, armed and furious!", g.name(id))
+			g.threat("Casket breakout", b.X, b.Y, "%s bursts from a sleeper casket, armed and furious!", g.name(id))
 			g.noteVaultHostile(v, id)
 		}
 	case vault.SleeperAndCrawler:
 		g.casketSleeper(b, v)
 		if id := g.casketBeast(b, v, animal.HiveCrawler); id != 0 {
-			g.threat(b.X, b.Y, "A hive crawler uncurls from the sleeper's casket!")
+			g.threat("Casket breakout", b.X, b.Y, "A hive crawler uncurls from the sleeper's casket!")
 		}
 	case vault.Beetles:
 		n := 0
@@ -196,7 +196,7 @@ func (g *Game) releaseOccupant(occ vault.Occupant, b construction.Building, v *v
 			}
 		}
 		if n > 0 {
-			g.threat(b.X, b.Y, "Hive beetles scuttle out of the casket!")
+			g.threat("Casket breakout", b.X, b.Y, "Hive beetles scuttle out of the casket!")
 		}
 	case vault.Empty:
 		g.message(b.X, b.Y, casketEmptyText)
@@ -225,7 +225,7 @@ func (g *Game) casketSleeper(b construction.Building, v *vaultSave) {
 	n, _ := g.need.Get(id)
 	n.Rest = needs.Full * pawngen.ExhaustedRest / 100 // dazed from the long sleep
 	g.need.Set(id, n)
-	g.letter(casketJoinTitle, g.personName(id)+" climbs out of the sleeper casket, dazed, and asks to stay. "+g.personName(id)+" has joined the colony.", id)
+	g.letter(letterGood, casketJoinTitle, g.personName(id)+" climbs out of the sleeper casket, dazed, and asks to stay. "+g.personName(id)+" has joined the colony.", id)
 	g.addHistory("joined", g.personName(id)+" woke in a sleeper casket and joined the colony.", id)
 }
 
