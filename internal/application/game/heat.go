@@ -7,7 +7,6 @@ import (
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
-	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/pawn/exposure"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/clock"
@@ -32,11 +31,6 @@ const (
 	// flickering on and off every climate interval.
 	campfireBank    = 200
 	campfireRelight = 160
-	// refuelBelow: haulers top a campfire up once it is half empty.
-	refuelBelow = CampfireCapacity * TicksPerWood / 2
-	refuelWork  = 30
-	// oilWood: one ember oil burns as long as this many logs (SIM-026).
-	oilWood = 3
 	// warmWait is the longest a cold colonist waits in a warm spot.
 	warmWait = 2500
 	// residualLeak (permille per climate interval): a breached room's air
@@ -114,31 +108,14 @@ func isqrt(n int) int {
 }
 
 // heatRooms moves each room toward the outside air and adds heat from its
-// burning campfires, which use up fuel while they burn.
+// burning campfires, which use up fuel while they burn (as torch lamps and
+// generators do, fuel.go).
 func (g *Game) heatRooms() {
 	g.ensureRooms()
 	now := g.clock.Now()
 	outside := g.climate.Outdoor(now) + temperature.IndoorBonus
 	heat := make([]int, len(g.rooms))
-	for _, bid := range g.bldgIDs {
-		b, ok := g.bldgs.Get(bid)
-		if !ok || b.Kind != construction.Campfire || g.fuel[bid] <= 0 {
-			continue
-		}
-		switch t := g.temperatureAt(b.X, b.Y); {
-		case !g.banked[bid] && t >= campfireBank:
-			g.banked[bid] = true
-		case g.banked[bid] && t < campfireRelight:
-			delete(g.banked, bid)
-		}
-		if !g.burning(bid, b) {
-			continue // banked, or doused by rain or snow
-		}
-		g.setFuel(bid, max(0, g.fuel[bid]-climateInterval)) // light.go: a burnt-out fire stops lighting
-		if r := g.roomAt(b.X, b.Y); r >= 0 && r < len(heat) {
-			heat[r] += campfireHeat
-		}
-	}
+	g.burnFuel(heat)       // fuel.go: campfires, torch lamps and generators burn; fires heat their room
 	g.fireRoomHeat(heat)   // fire.go (PLAY-015): a burning room heats like campfires
 	g.thermoRoomHeat(heat) // power_heat.go (PLAY-021): heaters and coolers
 	// breached rooms' air mixes with the outside over a few hours
@@ -168,173 +145,6 @@ func (g *Game) heatRooms() {
 		t += (target - t) * leak / 1000
 		t += temperature.Temp(heat[r] / cells)
 		g.roomTemps[r] = t
-	}
-}
-
-// burning reports a campfire with fuel that is actually burning now.
-func (g *Game) burning(bid entity.EntityID, b construction.Building) bool {
-	return g.fuel[bid] > 0 && !g.doused(bid) && !g.banked[bid]
-}
-
-// --- refuelling ------------------------------------------------------------
-
-// fuelTicks is how long one item of kind k burns in a campfire (0: not a
-// fuel): a log TicksPerWood, an ember oil oilWood logs' worth.
-func fuelTicks(k item.Kind) int {
-	switch k {
-	case item.Wood:
-		return TicksPerWood
-	case item.EmberOil:
-		return oilWood * TicksPerWood
-	}
-	return 0
-}
-
-// fuelRoom is how many items of fuel k campfire bid takes before it is
-// full (a part-burnt one rounds up).
-func (g *Game) fuelRoom(bid entity.EntityID, k item.Kind) int {
-	per := fuelTicks(k)
-	if per <= 0 {
-		return 0
-	}
-	return max(0, (CampfireCapacity*TicksPerWood-g.fuel[bid]+per-1)/per)
-}
-
-// assignRefuel sends a hauler with wood (or, with none about, ember oil)
-// to the emptiest campfire that is half empty or worse.
-func (g *Game) assignRefuel(id entity.EntityID) bool {
-	type cand struct {
-		bid  entity.EntityID
-		fuel int
-	}
-	var fires []cand
-	for _, bid := range g.bldgIDs {
-		b := g.bldgs.Ref(bid) // read only: nothing below changes the store
-		if b == nil || b.Kind != construction.Campfire || b.Deconstruct || g.fuel[bid] >= refuelBelow {
-			continue
-		}
-		if owner, taken := g.reserve.EntityOwner(bid); taken && owner != id {
-			continue
-		}
-		if g.postponedFor(id, job.Refuel, bid, 0, 0) {
-			continue // SIM-027: blocked or out of reach lately
-		}
-		fires = append(fires, cand{bid, g.fuel[bid]})
-	}
-	sort.Slice(fires, func(i, j int) bool {
-		return fires[i].fuel < fires[j].fuel || fires[i].fuel == fires[j].fuel && fires[i].bid < fires[j].bid
-	})
-	for _, f := range fires {
-		b, _ := g.bldgs.Get(f.bid)
-		fuel := item.Wood
-		need := g.fuelRoom(f.bid, fuel)
-		sid, st := g.ingredientFor(id, recipe.Input{Kind: fuel, Qty: 1, Max: need})
-		if sid == 0 {
-			fuel = item.EmberOil
-			need = g.fuelRoom(f.bid, fuel)
-			if sid, st = g.ingredientFor(id, recipe.Input{Kind: fuel, Qty: 1, Max: need}); sid == 0 {
-				return false
-			}
-		}
-		sx, sy, ok := g.besideSpot(id, b.X, b.Y)
-		if !ok {
-			continue
-		}
-		rec := job.Record{Kind: job.Refuel, Target: sid, TX: st.X, TY: st.Y, Dest: f.bid,
-			DestX: sx, DestY: sy, WorkLeft: refuelWork, Count: need}
-		if st.Qty > need {
-			// HAUL-001: a full load when a stockpile cell takes the rest
-			if px, py, ok := g.stockpileCell(fuel, b.X, b.Y); ok {
-				rec.Count = max(need, min(st.Qty, item.CarryLimit))
-				rec.Route, rec.SpareX, rec.SpareY, rec.HasSpare = []entity.EntityID{f.bid}, px, py, true
-			}
-		}
-		if !g.startJob(id, rec) {
-			continue
-		}
-		g.reserve.TryEntity(id, f.bid)
-		return true
-	}
-	return false
-}
-
-func (g *Game) doRefuel(id entity.EntityID, j job.Record) {
-	if j.Carry != 0 && len(j.Route) > 0 && j.RouteI >= len(j.Route) {
-		g.routeArrive(id, j) // fire fed: at the stockpile with the rest
-		return
-	}
-	if _, ok := g.bldgs.Get(j.Dest); !ok {
-		j.State, j.Fail = job.Fail, job.TargetGone
-		g.jobs.Set(id, j)
-		return
-	}
-	if j.Carry == 0 {
-		st, ok := g.stacks.Get(j.Target)
-		if !ok || st.Carrier != 0 || fuelTicks(st.Kind) == 0 {
-			j.State, j.Fail = job.Fail, job.TargetGone
-			g.jobs.Set(id, j)
-			return
-		}
-		carry := j.Target
-		if take := min(st.Qty, max(1, j.Count)); st.Qty > take {
-			st.Qty -= take
-			g.stacks.Set(j.Target, st)
-			carry = g.entities.Next()
-			g.itemIDs = append(g.itemIDs, carry)
-			g.stacks.Set(carry, item.Stack{Kind: st.Kind, Qty: take, X: st.X, Y: st.Y, Carrier: id})
-		} else {
-			st.Carrier = id
-			g.stacks.Set(j.Target, st)
-		}
-		j.Carry = carry
-		path, ok := g.pathTo(id, j.DestX, j.DestY)
-		if !ok {
-			j.State, j.Fail = job.Fail, job.Unreachable
-			g.jobs.Set(id, j)
-			return
-		}
-		j.TX, j.TY = j.DestX, j.DestY
-		j.Path, j.PathI = path, 0
-		if len(path) > 0 {
-			j.State = job.Goto
-		}
-		g.jobs.Set(id, j)
-		return
-	}
-	u := g.workProgress(id, skNone, false) // skills.go
-	if u == 0 {
-		g.jobs.Set(id, j)
-		return
-	}
-	if j.WorkLeft -= u; j.WorkLeft > 0 {
-		g.jobs.Set(id, j)
-		return
-	}
-	if st, ok := g.stacks.Get(j.Carry); ok && len(j.Route) > 0 {
-		give := min(st.Qty, g.fuelRoom(j.Dest, st.Kind))
-		g.setFuel(j.Dest, min(CampfireCapacity*TicksPerWood, g.fuel[j.Dest]+give*fuelTicks(st.Kind)))
-		if st.Qty -= give; st.Qty > 0 {
-			g.stacks.Set(j.Carry, st)
-			j.RouteI = len(j.Route)
-			if !g.routeWalk(id, &j, st.Kind) {
-				g.routeArrive(id, j)
-			}
-			return
-		}
-	} else if ok {
-		g.setFuel(j.Dest, min(CampfireCapacity*TicksPerWood, g.fuel[j.Dest]+st.Qty*fuelTicks(st.Kind)))
-	}
-	g.deleteItem(j.Carry)
-	j.Carry = 0
-	j.State = job.Complete
-	g.jobs.Set(id, j)
-}
-
-// FuelCampfire fills a campfire at (x, y) (dev scenarios and fixtures).
-func (g *Game) FuelCampfire(x, y int) {
-	g.viewGen++ // view cache (indexes.go): this hook changes the state
-	if bid := g.layerBldgAt(x, y, construction.LayerObject); bid != 0 {
-		g.setFuel(bid, CampfireCapacity*TicksPerWood)
 	}
 }
 

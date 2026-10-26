@@ -50,6 +50,10 @@ type roofIndex struct {
 	countsOK bool
 	// unsupported: a Built roof lost its support at the last rebuild.
 	unsupported bool
+	// ver moves whenever a tile gains or loses its roof (Roofed changes),
+	// and never goes back, even when the grid is replaced: what is cached
+	// from the roofs (a wind turbine's band, power_gen.go) is keyed on it.
+	ver uint64
 }
 
 // roofTries is how many of the nearest planned tiles a builder tries
@@ -65,7 +69,7 @@ const ReasonThickRoof = "Thick rock overhead"
 func (g *Game) ensureRoofGrid() {
 	if n := g.grid.Width() * g.grid.Height(); len(g.roofs) != n {
 		g.roofs = make([]roof.Cell, n)
-		g.roofx = roofIndex{}
+		g.roofx = roofIndex{ver: g.roofx.ver + 1}
 	}
 }
 
@@ -86,8 +90,12 @@ func (g *Game) setRoof(i int, c roof.Cell) {
 	}
 	if old.Roofed() != c.Roofed() {
 		g.roofx.countsOK = false
+		g.roofx.ver++
 	}
 }
+
+// roofVer counts the roof changes so far (see roofIndex.ver).
+func (g *Game) roofVer() uint64 { return g.roofx.ver }
 
 // roofAt is the roof cell at (x, y); out of bounds is no roof.
 func (g *Game) roofAt(x, y int) roof.Cell {
@@ -449,7 +457,7 @@ func (g *Game) exportRoofs() []uint8 {
 // every room to be auto-roofed. Either way the rooms are rebuilt, which
 // recomputes support and plans closed rooms.
 func (g *Game) importRoofs(cells []uint8) {
-	g.roofs, g.roofx = nil, roofIndex{}
+	g.roofs, g.roofx = nil, roofIndex{ver: g.roofx.ver + 1}
 	if n := g.grid.Width() * g.grid.Height(); len(cells) == n && n > 0 {
 		g.ensureRoofGrid()
 		for i, c := range cells {

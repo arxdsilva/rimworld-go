@@ -701,7 +701,7 @@ func (g *Game) placePenMarker(x, y int) (entity.EntityID, bool) {
 				}
 				cx, cy := x+dx, y+dy
 				if !g.dryWalkable(cx, cy) || g.fenceAt(cx, cy) != fenceNone ||
-					g.layerBldgAt(cx, cy, construction.LayerObject) != 0 || g.layerFrameAt(cx, cy, construction.LayerObject) != 0 {
+					g.occupiedAt(cx, cy) || g.layerFrameAt(cx, cy, construction.LayerObject) != 0 {
 					continue
 				}
 				if g.BuildNow(construction.DefOf(construction.PenMarker).Name, "wood", "south", cx, cy) {

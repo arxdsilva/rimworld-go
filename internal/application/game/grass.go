@@ -376,7 +376,7 @@ func (g *Game) grassCanRegrow(x, y int) bool {
 	if g.plantAt(x, y) != 0 {
 		return false
 	}
-	return g.layerBldgAt(x, y, construction.LayerObject) == 0 && g.layerBldgAt(x, y, construction.LayerFloor) == 0 &&
+	return !g.occupiedAt(x, y) && g.layerBldgAt(x, y, construction.LayerFloor) == 0 &&
 		g.layerFrameAt(x, y, construction.LayerObject) == 0 && g.layerFrameAt(x, y, construction.LayerFloor) == 0
 }
 

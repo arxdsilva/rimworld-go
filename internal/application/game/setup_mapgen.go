@@ -57,6 +57,9 @@ func (g *Game) applySite(res mapgen.Result) {
 	g.placeVaults(res.Vaults) // vault.go (MAPGEN-3): sealed vaults and their sleepers
 	vs := g.ventStuff()
 	for _, v := range res.Vents {
+		if !g.ventSiteFree(v.X, v.Y) {
+			continue // vents.go: a ruin or vault piece stands there
+		}
 		g.placeGenerated(construction.Building{Kind: construction.SteamVent, Stuff: vs, X: v.X, Y: v.Y})
 	}
 	for _, c := range res.Chunks {
@@ -218,12 +221,14 @@ func (g *Game) ventStuff() item.Kind {
 // isNatural reports a natural map feature (a steam vent).
 func isNatural(k construction.Kind) bool { return construction.DefOf(k).Natural }
 
-// naturalAt reports a natural feature covering (x, y).
+// naturalAt reports a natural feature covering (x, y). Natural features
+// (steam vents) lie in the foundation layer (PLAY-021), under whatever is
+// built over them.
 func (g *Game) naturalAt(x, y int) bool {
 	if !g.grid.InBounds(x, y) {
 		return false
 	}
-	b, ok := g.bldgs.Get(g.layerBldgAt(x, y, construction.LayerObject))
+	b, ok := g.bldgs.Get(g.layerBldgAt(x, y, construction.LayerFoundation))
 	return ok && isNatural(b.Kind)
 }
 

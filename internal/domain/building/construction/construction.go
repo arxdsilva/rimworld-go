@@ -253,7 +253,7 @@ var defs = [kindCount]Def{
 		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true},
 	MarriageSpot: {Kind: MarriageSpot, Name: "marriage spot", Layer: LayerObject, Rotatable: true, Size: [2]int{2, 1}},
 	PartySpot:    {Kind: PartySpot, Name: "party spot", Layer: LayerObject},
-	SteamVent: {Kind: SteamVent, Name: "steam vent", Layer: LayerObject, Placed: true, Natural: true,
+	SteamVent: {Kind: SteamVent, Name: "steam vent", Layer: LayerFoundation, Placed: true, Natural: true,
 		Size: [2]int{2, 2}},
 	Bridge: {Kind: Bridge, Name: "bridge", Wood: 6, Work: 110, Layer: LayerFoundation, Foundation: true},
 	SleeperCasket: {Kind: SleeperCasket, Name: "sleeper casket", Layer: LayerObject, BlocksMove: true, Rotatable: true,

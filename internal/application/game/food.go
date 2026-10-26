@@ -70,7 +70,7 @@ func (g *Game) sowableIgnoringPlant(x, y int) bool {
 	if g.terr.At(x, y).Fertility() <= 0 || !g.grid.Walkable(x, y) || !g.growingSeason(x, y) {
 		return false
 	}
-	return g.layerBldgAt(x, y, construction.LayerObject) == 0 && g.layerBldgAt(x, y, construction.LayerFloor) == 0 &&
+	return !g.occupiedAt(x, y) && g.layerBldgAt(x, y, construction.LayerFloor) == 0 &&
 		g.layerFrameAt(x, y, construction.LayerObject) == 0 && g.layerFrameAt(x, y, construction.LayerFloor) == 0
 }
 

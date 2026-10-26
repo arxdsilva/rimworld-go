@@ -33,7 +33,7 @@ func (g *Game) smoothable(x, y int) bool {
 	case terrain.Rock:
 		return g.geo.OreAt(x, y) == geology.NoOre
 	case terrain.Stone:
-		return g.layerBldgAt(x, y, construction.LayerFloor) == 0 && g.layerBldgAt(x, y, construction.LayerObject) == 0
+		return g.layerBldgAt(x, y, construction.LayerFloor) == 0 && !g.occupiedAt(x, y)
 	}
 	return false
 }

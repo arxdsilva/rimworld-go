@@ -282,7 +282,7 @@ func (g *Game) stockpileCellWhere(k item.Kind, nearX, nearY int, keep func(x, y 
 		if loose[cy*w+cx] != 0 || !better(cx, cy) || !g.grid.Walkable(cx, cy) || !free(cx, cy) || keep != nil && !keep(cx, cy) {
 			return
 		}
-		if g.layerFrameAt(cx, cy, construction.LayerObject) != 0 || g.layerBldgAt(cx, cy, construction.LayerObject) != 0 {
+		if g.layerFrameAt(cx, cy, construction.LayerObject) != 0 || g.occupiedAt(cx, cy) {
 			return
 		}
 		take(cx, cy)
