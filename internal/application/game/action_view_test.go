@@ -110,6 +110,7 @@ func TestActionRescueAndBenches(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 24, Height: 12})
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
 	patient, _ := g.SpawnNamedPawn(6, 5, "Bo")
+	// (benches are placed along y=1, x=2..16)
 	if got := g.actionOf(id, job.Record{Kind: job.Rescue, State: job.Do}); got != ActionRescue {
 		t.Errorf("lifting a patient = %q", got)
 	}
@@ -133,6 +134,9 @@ func TestActionRescueAndBenches(t *testing.T) {
 		{construction.DryingRack, 8, ActionCook},
 		{construction.TailoringBench, 10, ActionTailor},
 		{construction.ButcherTable, 12, ActionButcher},
+		// PLAY-021: an electric bench works its base bench's recipes
+		{construction.ElectricStove, 14, ActionCook},
+		{construction.ElectricTailoringBench, 16, ActionTailor},
 	}
 	for _, b := range benches {
 		placeBuilt(t, g, b.kind, construction.South, b.x, 1)

@@ -128,7 +128,7 @@ func (g *Game) actionOf(id entity.EntityID, j job.Record) string {
 // billAction names the bench work by the bench the bill runs at.
 func (g *Game) billAction(j job.Record) string {
 	if b, ok := g.bldgs.Get(j.Dest); ok {
-		switch b.Kind {
+		switch construction.RecipeBench(b.Kind) { // an electric bench works its base bench's recipes
 		case construction.Stove, construction.Campfire, construction.DryingRack:
 			return ActionCook
 		case construction.TailoringBench:

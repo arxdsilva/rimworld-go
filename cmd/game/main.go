@@ -609,13 +609,16 @@ func lateGame(g *game.Game) {
 	for x := 27; x <= 30; x++ { // bedroom
 		g.BuildNow("bed", "wood", "south", x, 6)
 	}
-	g.BuildNow("lamp", "wood", "south", 27, 13)
+	// torch lamps: the compound has no power grid (PLAY-021 lamps need power)
+	g.BuildNow("torch lamp", "wood", "south", 27, 13)
+	g.FuelCampfire(27, 13)
 	g.BuildNow("stove", "wood", "south", 32, 6) // kitchen and dining
 	g.BuildNow("table", "wood", "south", 33, 11)
 	for _, c := range [][2]int{{32, 11}, {34, 11}, {33, 10}, {33, 12}} {
 		g.BuildNow("chair", "wood", "south", c[0], c[1])
 	}
-	g.BuildNow("lamp", "wood", "south", 35, 14)
+	g.BuildNow("torch lamp", "wood", "south", 35, 14)
+	g.FuelCampfire(35, 14)
 	g.BuildNow("workbench", "wood", "south", 37, 6) // workshop
 	g.BuildNow("tailoring bench", "wood", "south", 37, 9)
 	g.BuildNow("research bench", "wood", "south", 37, 12)
