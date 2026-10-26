@@ -63,6 +63,7 @@ const (
 	ReasonNoStuff    = "no free "
 	ReasonNoMine     = "mining disabled"
 	ReasonNotSowable = "cannot sow here"
+	ReasonSowingOff  = "sowing is off in this zone" // PLAY-020: the zone's Allow sowing
 	ReasonGone       = "no longer there"
 )
 
@@ -194,6 +195,9 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		}
 		if !m.Enabled(work.Grow) {
 			return job.Record{}, ReasonNoGrow
+		}
+		if z.NoSow {
+			return job.Record{}, ReasonSowingOff
 		}
 		if !g.sowable(x, y) {
 			return job.Record{}, ReasonNotSowable

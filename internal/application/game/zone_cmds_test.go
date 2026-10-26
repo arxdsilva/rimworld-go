@@ -164,8 +164,9 @@ func TestForcedSowAndSowableRefuseASowingOffZone(t *testing.T) {
 	if g.sowable(4, 2) {
 		t.Fatal("sowable in a zone with sowing off")
 	}
-	if _, why := g.forcedJob(ada, command.OrderSow, 4, 2, construction.LayerObject); why != ReasonNotSowable {
-		t.Fatalf("forced sow: reason %q, want %q", why, ReasonNotSowable)
+	// the order names the zone's setting, not the general "cannot sow here"
+	if _, why := g.forcedJob(ada, command.OrderSow, 4, 2, construction.LayerObject); why != ReasonSowingOff {
+		t.Fatalf("forced sow: reason %q, want %q", why, ReasonSowingOff)
 	}
 	disabled := false
 	for _, o := range g.OrdersAt(ada, 4, 2) {

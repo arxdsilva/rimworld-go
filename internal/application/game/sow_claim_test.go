@@ -129,3 +129,18 @@ func sownCells(g *Game, x1, y1, x2, y2 int) int {
 	}
 	return n
 }
+
+// TestForcedSowSaysSowingIsOff: with sowing off in the zone, "Sow here" is
+// refused with that reason, not the general "cannot sow here".
+func TestForcedSowSaysSowingIsOff(t *testing.T) {
+	g, ada, _ := twoGrowers(t, 5, 2, 8, 3)
+	z, ok := g.zoneAt(5, 2)
+	if !ok {
+		t.Fatal("no zone")
+	}
+	g.Enqueue(command.Command{Kind: command.SetZoneSow, Target: uint64(z.ID), Enabled: false})
+	g.Step(1)
+	if _, why := g.forcedJob(ada, command.OrderSow, 5, 2, construction.LayerObject); why != ReasonSowingOff {
+		t.Fatalf("reason %q, want %q", why, ReasonSowingOff)
+	}
+}
