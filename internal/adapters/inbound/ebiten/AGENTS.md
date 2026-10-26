@@ -235,6 +235,16 @@ open a window. Existing renderer unit tests stay headless.
   once wood arrives.
 - Pawn look (skin/hair/style/clothes) is a pure function of EntityID;
   facing comes from the last tile step. Both are presentation-only.
+- Light sources (PLAY-020, `light_sources.go`): every lamp and burning
+  campfire the renderer lights or shadows with comes from one helper; never
+  test `Kind == "lamp"` for lighting elsewhere. A lamp's light falls off
+  over its metadata `light_radius`, stays in its room or, outdoors, in its
+  line of sight, and its direction is packed per tile into the lamp vertex
+  value (`light_lamp.go`), so batch builders pass it through unchanged.
+- Zones (PLAY-020): a zone is the last selection candidate on its cell, and
+  its label selects it (`zone_select.go`); its pane and commands are in
+  `cmds_zone.go`, the Expand and Shrink tools in `zone_tools.go` (state on
+  `App.zone`). A growing zone's fill skips the cells holding its plants.
 - Art memory (PLAY-019, `art_memory.go`): the game indexes the art and
   decodes a sprite on first use; a background prewarm keeps deflated copies
   of every file family except animals. CPU pixels are freed after the GPU

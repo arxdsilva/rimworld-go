@@ -464,9 +464,9 @@ the player's primary world-editing command surface.
 
 -   [x] **Create stockpile** (Architect paint, tile by tile: skips tiles another zone owns; the drag ghost marks each tile green or red (ZONE-001))
 -   [x] **Create growing zone** (crop picker incl. tree zones; skips taken tiles and infertile rough stone/rock (ZONE-001))
--   [x] **Expand zone** (painting next to a zone of the same kind, and for grow zones the same crop, extends it; a drag bridging two merges them)
--   [x] **Shrink/delete zone** (the Cancel tool clears just its tiles; a zone cut in two becomes two zones)
--   [ ] **Select existing zone**
+-   [x] **Expand zone** (painting next to a zone of the same kind, and for grow zones the same crop, extends it; a drag bridging two merges them; PLAY-020: a selected zone's Expand tool adds a dragged rectangle to that zone)
+-   [x] **Shrink/delete zone** (the Cancel tool clears just its tiles; a zone cut in two becomes two zones; PLAY-020: a selected zone's Shrink tool removes only its own tiles, and Delete removes it)
+-   [x] **Select existing zone** (PLAY-020: a click on an empty zone tile or its label selects it, repeat clicks on a crop cycle to it; the pane shows size, crop, growing now or too cold/hot, sown and ripe counts, average growth; commands Plant, Allow sowing, Allow cutting, Expand, Shrink, Delete, Hide, Rename)
 -   [x] **Zone color/outline** (borderless fill per tile plus one outline along the zone's outer edge: stockpile dashed gold, grow zone solid green, pen fence)
     -   Distinct but unobtrusive.
 -   [x] **Zone labels** (PLAY-017: each zone named once on a plate, pinned to the zone at every UI scale, sized with the zone, readable zoomed out, capped smaller zoomed in and drawn over stacks and crops)
@@ -489,14 +489,14 @@ the player's primary world-editing command surface.
 
 ## 6.3 Growing-zone configuration
 
--   [-] **Crop selector** (growing-zone tool sows amberroot; no picker until more crops exist)
+-   [-] **Crop selector** (the architect's crop picker and, PLAY-020, a selected zone's "Plant: <crop>" list with research locks; no search, skill, growth time, sensitivity or yield columns)
     -   Searchable plant list.
     -   required skill.
     -   growth time.
     -   fertility sensitivity.
     -   expected yield.
     -   current research lock.
--   [ ] **Allow sowing toggle**
+-   [x] **Allow sowing toggle** (PLAY-020: per zone; harvest goes on; plus Allow cutting)
 -   [x] **Plant-cut/harvest behavior feedback**
 
 ## 6.4 Home area
@@ -1034,7 +1034,7 @@ This screen centralizes per-pawn behavioral policies.
 -   [x] **Directional opinion** (UI-022: A->B big, (B->A) beside it, 5-band colour)
     -   Selected pawn's opinion of each known pawn.
 -   [x] **Relationship status** (UI-022: tags off-map, dead, prisoner, kidnapped, in caravan)
--   [x] **Recent social memories** (UI-022: social log with icons and opinion breakdown)
+-   [x] **Recent social memories** (UI-022: social log with icons and opinion breakdown; PLAY-020: the bubble over chatting colonists is just the round interaction icon, no box)
 -   [x] **Off-map relation marker** (UI-022)
 
 ## 18.2 Opinion explanation
@@ -2067,7 +2067,7 @@ Complete:
 -   [-] Orders.
 -   [-] Zones.
 -   [ ] Stockpile settings.
--   [ ] Growing-zone settings.
+-   [x] Growing-zone settings. (PLAY-020: crop, allow sowing, allow cutting, hide, rename)
 -   [-] Work.
 -   [ ] Schedule.
 -   [x] Allowed areas. (PLAY-015: see 6.5)

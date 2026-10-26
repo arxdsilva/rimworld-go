@@ -372,7 +372,7 @@ This is the heart of autonomous colony behavior.
 -   [-] **Entity reservation** (exclusive pawn→entity; no quantity splits)
 -   [-] **Tile reservation** (haul dest / move target; a delivery route reserves its spare stockpile tile)
 -   [-] **Item quantity reservation** (in-flight material per frame/fuel user: haulers' shares are booked so a frame is never over-delivered (HAUL-001); no split reservations on a source stack)
--   [-] **Bed/patient reservation** (bed `Claimant` for Sleep; no patient/medical)
+-   [-] **Bed/patient reservation** (bed `Claimant` for Sleep; PLAY-020: patients take a medical bed for the length of their rest, and a sowing cell is held by one grower; no per-patient policy)
 -   [ ] **Workstation reservation**
 -   [-] **Automatic reservation cleanup** (complete/cancel/replace/death; no target-deletion index)
     -   Completion.
@@ -383,7 +383,7 @@ This is the heart of autonomous colony behavior.
 
 ## 5.3 Work settings
 
--   [-] **Work types** (Haul/Construct/Grow wired; other columns are UI stubs)
+-   [-] **Work types** (Haul/Construct/Grow wired; other columns are UI stubs; PLAY-020: bed rest is a per-colonist "Rest when hurt" setting, on by default, not a work column)
     -   Firefight.
     -   Patient.
     -   Doctor.
@@ -1006,9 +1006,10 @@ treatment, and surgery are major colony-management systems.
     -   quality depends on skill, medicine, environment, capacities.
 -   [x] **Self-tend** (only when no other doctor; weaker care)
     -   Optional with reduced effectiveness.
--   [-] **Medical beds** (NG-1: the hospital bed gives 115 % healing and half the infection chance, and rescuers prefer it; patients do not yet seek it out or have beds marked for medical use)
+-   [x] **Medical beds** (NG-1: the hospital bed gives 115 % healing and half the infection chance, and rescuers prefer it; PLAY-020: any bed can be marked Medical, that bed only, with no owner; healthy colonists never sleep in it; patients and rescuers prefer it; hospital beds start medical)
     -   Mark beds for medical use.
     -   injured/sick pawns seek treatment/rest.
+-   [x] **Bed rest** (PLAY-020: colonists in pain (healable injury 40+), with an untended wound, sick or waiting for surgery lie in bed until healed (15 or less, nothing to tend, at least 2 h), by default; a hungry patient eats and returns; no free bed retries after 6 h; self-tend in bed without another doctor; per-colonist "Rest when hurt"; no-flap tested)
 -   [x] **Rescue**
     -   Carry downed friendly pawn to valid bed.
 
@@ -1132,7 +1133,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 12.4 Lighting
 
--   [-] **Day/night light** (outdoor level is a pure function of tick; indoor/roofed and artificial lights not yet) (ART-010, SIM-018: sun/moon, indoor and lamp light; no light gameplay effects)
+-   [-] **Day/night light** (outdoor level is a pure function of tick; indoor/roofed and artificial lights not yet) (ART-010, SIM-018: sun/moon, indoor and lamp light; PLAY-020: lamps are point lights with falloff and direction, inside their room or, outdoors, in their line of sight; no light gameplay effects)
 -   [-] **Roof/indoor darkness** (ART-010, SIM-018: indoor ambient under roofs; MAPGEN-3: roofed cells are dark to plants unless lit; no work/mood effects)
 -   [x] **Artificial lights**
 -   [x] **Light affects plants** (MAPGEN-3: simulation cell light from daylight, lamps, campfires and glowing plants; moss needs light, duskmoss grows in the dark and withers in light; PLAY-017: every other plant, grass included, grows only with sun on unroofed cells or a strong lamp; campfires light only while burning)

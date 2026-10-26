@@ -139,6 +139,8 @@ All four are permille; each base is 1000 in `Base()`.
 | `Arrest` | `Pawn`=arrester, `Target` |
 | `SetPrisonerMode` | `Target`=prisoner, `Mode`=prisoner.Mode |
 | `SetBedForPrisoners` | `Target`=bed, `Enabled` |
+| `SetBedMedical` (PLAY-020) | `Target`=bed, `Enabled`: that bed only |
+| `SetPawnBedRest` (PLAY-020) | `Target`=colonist, `Enabled`: rest when hurt |
 | `FormCaravan` | `Name`=comma-separated member ids, `Count`=destination tile |
 | `CaravanReturn` | `Target`=caravan id |
 | `PaintArea` | `Index`=area, X..X2/Y..Y2, `Enabled` (paint or clear) |

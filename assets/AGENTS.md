@@ -91,6 +91,13 @@ produced it lives at repo-root `ai-bg-rimworld`.
 the family builders and rendered through the same stage (`stage.place`,
 `stage.render_scene`). Edit `source/blender/artlib/scenes/menu.py`, then
 `make art-menu`; live, `menu.preview()` writes a quarter-size render.
+The house counts as roofed (PLAY-020): inside it there is no sun shading
+or sun shadow, and its lamp is a point light (`stage.point_light`) that
+shades the furniture toward it; the dusk grade applies outdoors only.
+
+A lamp's `light_radius` metadata is read by the game (PLAY-020): its light
+falls off over that many tiles, inside its room or, outdoors, in its line
+of sight.
 
 The renderer draws the original set (ART-006); without `metadata/` it
 draws plain coloured fallbacks. The old vendor sprite pack was removed in

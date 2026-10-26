@@ -132,7 +132,9 @@ loading it blindly.
     with a slow pan/zoom, lamp and fire glow, the campfire flame, embers
     and dust, and a scrim behind the title, rail and bust. Sub-menus show
     it dimmed. The code-drawn gradient remains the fallback when the
-    files are missing.
+    files are missing. PLAY-020: the house counts as roofed, so its room
+    is lit by its lamp (a point light, furniture shaded toward it, soft
+    shadows away from it), not by the sun.
 
 Menu presentation must not require an active authoritative simulation.
 
@@ -515,7 +517,7 @@ Only valid contextual commands appear.
 Disabled commands show reason.
 
 **Implemented (UI-011):**
-- **Selecting:** a map click selects, in order, a pawn, animal, ground item, building, plant, then floor. A second click on the same tile cycles through what's there.
+- **Selecting:** a map click selects, in order, a pawn, animal, ground item, building, plant, then floor. A second click on the same tile cycles through what's there. PLAY-020: the zone comes last; a click on an empty zone tile or on its label selects the zone.
 - **Pawn panel:** an action bar (Draft, Clear orders), and "Equip nearby" on the Gear tab.
 - **Plant panel:** growth stage, readiness, frost and zone, with Harvest, Cut/Chop and per-colonist "now" orders.
 - **Item panel:** freshness, the body's name and storage, with per-colonist Equip, Wear, Eat and Haul.
@@ -831,10 +833,11 @@ maintenance.
 
 ## Growing settings
 
--   crop;
--   sowing toggle;
--   plant requirements;
--   growth/yield information.
+-   [x] crop (PLAY-020: "Plant: <crop>" on the selected zone, the architect's list and research locks);
+-   [x] sowing toggle (PLAY-020: Allow sowing; harvest goes on; plus Allow cutting);
+-   [-] plant requirements (the pane says growing now, too cold or too hot with the zone's temperature; no fertility or light lines);
+-   [-] growth/yield information (sown and ripe counts and average growth; no yield estimate).
+-   [x] PLAY-020, as RimWorld does: a selected zone also offers Expand and Shrink (drag-rectangle tools for that zone only, active until right-click or Esc), Delete, Hide (the overlay shows again while selected) and Rename (the label shows the name).
 
 ## ENG-003 contract (allowed areas)
 
@@ -2095,7 +2098,7 @@ Agents should implement screens approximately in this dependency order.
 -   [-] placement (drag rect; walls/beds per cell; no rotation/validity colors)
 -   [-] zones (stockpile paint food+wood; no grow-zone/home/allowed)
 -   [ ] stockpile settings
--   [ ] growing settings
+-   [x] growing settings (PLAY-020)
 -   [-] Work (overlay from snapshot; Grow/Bld/Haul toggle Y/-; not virtualized)
 -   [ ] Schedule
 -   [-] Area Manager (SIM-046: create, rename, paint, assign; no delete or overlay)

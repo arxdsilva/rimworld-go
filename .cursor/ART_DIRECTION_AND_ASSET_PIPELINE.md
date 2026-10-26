@@ -360,6 +360,10 @@ renderer may mirror them.
     it fits (`cropFit`). So tall crops show fewer, full-height plants
     per tile (ripe corn reads as one stalk). Sway pivots at the root.
     `TestCropUnitsStayOnTheirTile` checks every crop, stage and pattern.
+-   **Zone fill (PLAY-020).** A growing zone's wash and stripes are not
+    drawn on cells holding the plant it grows (its crop, or a tree in a
+    tree zone): the furrows and plants show there, at every zoom; empty
+    cells, the outline and the label keep the zone visible.
 -   **No soil mound.** Tilled furrows are the ground decal
     `overlay/tilled_0..3` under cells holding a crop or sown seed.
 -   **Silhouettes (ours):** corn a tall thin stalk with arching leaves,
