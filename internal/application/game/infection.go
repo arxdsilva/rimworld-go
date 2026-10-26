@@ -15,8 +15,9 @@ import (
 // tends it; left untended for a few hours it may fester. Tending (better
 // with herbal medicine) closes it with a smaller chance of infection. An
 // infection grows hour by hour unless it is being treated, and kills if it
-// runs its course. Sick or badly hurt colonists rest in bed so a doctor
-// can see to them; with no one else to help, a colonist tends itself.
+// runs its course. Sick, hurt or untended colonists rest in bed until they
+// are well again (bedrest.go); with no one else to help, a colonist tends
+// itself.
 
 // wound is a colonist's open wound and infection.
 type wound struct {
@@ -26,9 +27,11 @@ type wound struct {
 }
 
 const (
-	// patientWait caps how long a patient lies in bed waiting for a doctor.
+	// patientWait caps how long a patient lies in bed waiting for a
+	// surgeon (sleepDone, surgeryGaveUp).
 	patientWait = 6 * clock.TicksPerHour
-	// painInjury: injuries this bad hurt (mood) and send the colonist to bed.
+	// painInjury: injuries this bad hurt (mood) and send the colonist to
+	// bed (counting only injury that can still heal: bedrest.go).
 	painInjury = 40
 )
 
@@ -54,38 +57,55 @@ func (g *Game) needsTending(id entity.EntityID) bool {
 	return w.At != 0 && g.openInjury(id, v) || w.Infection > 0 // body.go
 }
 
-// otherDoctor reports a standing colonist besides id who does Doctor work.
+// otherDoctor reports a standing colonist besides id who does Doctor work
+// and is not on bed rest itself (a resting doctor tends no one else).
 func (g *Game) otherDoctor(id entity.EntityID) bool {
 	for _, pid := range g.pawnIDs {
-		if pid != id && g.standingPawn(pid) && g.prioOf(pid)[work.Doctor] > 0 {
+		if pid != id && g.standingPawn(pid) && g.prioOf(pid)[work.Doctor] > 0 && !g.onBedRest(pid) {
 			return true
 		}
 	}
 	return false
 }
 
-// patientRest: a sick or badly hurt colonist, or one with an operation a
-// doctor could do now, should lie down for a doctor.
+// patientRest: colonist id should start bed rest (bedrest.go) — hurt
+// enough (needsBedRest), with "Rest when hurt" on and no recent failure
+// to find a bed. It needs no other doctor: a lone patient tends itself in
+// bed.
 func (g *Game) patientRest(id entity.EntityID) bool {
-	if g.awaitingSurgery(id) { // surgery.go: lie down for a queued operation
-		return true
-	}
-	if !g.needsTending(id) || !g.otherDoctor(id) {
+	if g.rest.off[id] || uint64(g.clock.Now()) < g.rest.retry[id] {
 		return false
 	}
-	v, _ := g.vital.Get(id)
-	return g.wounds[id].Infection >= infection.Sick || v.Injury >= painInjury
+	return g.needsBedRest(id)
 }
 
-// lieDownForCare puts a patient to bed to wait for a doctor (tick.go): one
-// waiting for surgery takes a free hospital bed when there is one
-// (surgery.go, SIM-049); anyone else its own bed, or the ground
-// (assignSleep).
-func (g *Game) lieDownForCare(id entity.EntityID) {
-	if g.awaitingSurgery(id) && g.lieInHospitalBed(id) {
-		return
+// lieDownForCare puts a resting patient to bed (bedrest.go): one waiting
+// for surgery takes a free hospital bed when there is one (surgery.go,
+// SIM-049); then the nearest free medical bed, held for the stay; then its
+// own bed or the nearest free one it may claim (sleepInBed). With no bed
+// to be had, one waiting for a doctor or a surgeon lies down where it is
+// (as before beds were required), and looks for a bed again after
+// restRetry; anyone else is left as it was (false).
+func (g *Game) lieDownForCare(id entity.EntityID) bool {
+	if _, held := g.rest.bed[id]; !held && g.awaitingSurgery(id) && g.lieInHospitalBed(id) {
+		return true
 	}
-	g.assignSleep(id)
+	if g.restInMedicalBed(id) || g.sleepInBed(id) {
+		return true
+	}
+	if !g.waitsForDoctor(id) {
+		return false
+	}
+	g.noRestBed(id)
+	g.assignSleepInPlace(id)
+	return true
+}
+
+// waitsForDoctor: patient id has an operation to wait for, or a wound or
+// an infection another colonist will come and tend (it can lie down on
+// the floor for them).
+func (g *Game) waitsForDoctor(id entity.EntityID) bool {
+	return g.awaitingSurgery(id) || g.needsTending(id) && g.otherDoctor(id)
 }
 
 // lyingForCare: the patient is down, in bed, or asleep (a doctor can work

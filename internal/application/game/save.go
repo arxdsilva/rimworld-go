@@ -62,10 +62,12 @@ import (
 // legacy setup (no storyteller, difficulty or factions) and neutral bios.
 // v3 (PLAY-017) adds unclaimed map items and harvest marks on ripe zone
 // crops; a v1/v2 save is migrated on load (migrateClaims,
-// migrateHarvestMarks).
+// migrateHarvestMarks). v4 (PLAY-020) adds medical beds: an older save's
+// hospital beds become medical (migrateMedicalBeds). migrateSave runs the
+// steps a save's version is missing.
 
 // SaveVersion is the version new saves are written with.
-const SaveVersion = 3
+const SaveVersion = 4
 
 // minSaveVersion is the oldest version Load still reads.
 const minSaveVersion = 1
@@ -332,6 +334,10 @@ type saveState struct {
 	Areas      *area.Set
 	History    []historyEntry
 	RNGStreams map[string][]byte
+	// BedRest (PLAY-020): "Rest when hurt" settings, who rests since
+	// when, who found no bed, and the medical beds held for a stay; nil
+	// when there is none (absent in older saves).
+	BedRest *bedRestSave
 }
 
 // Info describes the game for a save header.
@@ -423,6 +429,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 	s.Social, s.People, s.World = g.exportSocial(), g.exportPeople(), g.exportWorld()
 	s.Bodies, s.Drugs, s.Prisoners = g.exportBodies(), g.exportDrugs(), g.exportPrisoners()
 	s.Surgery = g.exportSurgery()
+	s.BedRest = g.exportBedRest() // bedrest.go (PLAY-020)
 	s.Areas, s.History = g.areas.Export(), slices.Clone(g.history)
 	if s.RNGStreams, err = g.exportStreams(); err != nil {
 		return fmt.Errorf("save rng streams: %w", err)
@@ -596,6 +603,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.importWorld(s.World)
 	g.importBodies(s.Bodies)
 	g.importSurgery(s.Surgery)
+	g.importBedRest(s.BedRest)
 	g.importDrugs(s.Drugs)
 	g.importPrisoners(s.Prisoners)
 	g.areas, g.history = area.Import(s.Areas), s.History
@@ -610,12 +618,23 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.importPens(s.PenMarkers, s.PenAnimals)
 	g.migratePenZones()
 	g.importLetters(s.Letters, s.NextLetter) // letters.go: an older save's letter messages become letters
-	if info.Version < 3 {
-		g.migrateClaims()       // haul_claim.go: loose chunks and carcasses become unclaimed
-		g.migrateHarvestMarks() // plant_growth.go: ripe zone crops get their harvest mark
-	}
+	g.migrateSave(info.Version)
 	g.warmIndexes(true) // jobindex.go: indexes, rooms and regions now, not on the first tick
 	return g, info, nil
+}
+
+// migrateSave brings a loaded save of version v up to SaveVersion: each
+// case is one version's step, and a save runs every step from its own
+// version on (a new version appends a case after a fallthrough).
+func (g *Game) migrateSave(v int) {
+	switch {
+	case v < 3:
+		g.migrateClaims()       // haul_claim.go: loose chunks and carcasses become unclaimed
+		g.migrateHarvestMarks() // plant_growth.go: ripe zone crops get their harvest mark
+		fallthrough
+	case v < 4:
+		g.migrateMedicalBeds() // bedrest.go (PLAY-020): hospital beds become medical
+	}
 }
 
 // savedSkillLive mirrors the skill state skills.go keeps beside the bios

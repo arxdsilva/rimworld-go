@@ -707,6 +707,7 @@ type Game struct {
 	people    *peopleRegistry                     // people.go
 	bodies    map[entity.EntityID]*body.Body      // body.go
 	surg      *surgeryState                       // surgery.go
+	rest      bedRestState                        // bedrest.go (PLAY-020)
 	drugs     map[entity.EntityID]*drug.State     // drugs.go
 	prisoners map[entity.EntityID]*prisoner.State // prisoners.go
 	worldSt   *worldState                         // world_state.go
@@ -1036,7 +1037,8 @@ func (g *Game) snapshot() []PawnView {
 		if b, ok := g.breaks[id]; ok {
 			pv.MentalBreak = b.kind.String()
 		}
-		g.fillFleeView(pv, id) // an unarmed colonist running from a threat (flee.go)
+		g.fillFleeView(pv, id)       // an unarmed colonist running from a threat (flee.go)
+		g.fillBedRestView(pv, id, j) // bedrest.go: "Rest when hurt", resting in bed
 		b := g.bandsOf(id)
 		pv.ComfortMin, pv.ComfortMax = b.Min, b.Max
 		if j, _ := g.jobs.Get(id); j.Forced && j.Active() {
@@ -1189,6 +1191,7 @@ func (g *Game) world() WorldView {
 		bv.MovingTo = g.movingTo(id) // move.go
 		g.fillSwapView(bv, id)       // placement.go: pending material change (PLAY-011)
 		bv.Ruin = b.Ruin             // MAPGEN-2: an abandoned piece
+		bv.Medical = b.Medical       // PLAY-020: kept for the sick and injured
 		g.fillCasketView(bv, id, b)  // casket.go (MAPGEN-3)
 	}
 	w.Plants = g.plantViews(w.Plants) // plant_view.go

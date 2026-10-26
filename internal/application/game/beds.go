@@ -71,8 +71,8 @@ func (g *Game) partnerBed(id entity.EntityID) (entity.EntityID, int, bool) {
 	ownSlot, freeD := 0, 1<<30
 	for _, bid := range g.bldgIDs {
 		b, ok := g.bldgs.Get(bid)
-		if !ok || b.Kind != construction.DoubleBed || b.ForPrisoners {
-			continue
+		if !ok || b.Kind != construction.DoubleBed || b.ForPrisoners || g.isMedicalBed(b) {
+			continue // medical beds are for patients (bedrest.go)
 		}
 		if ps := b.SlotOf(uint64(p)); ps >= 0 {
 			if o := slotOwner(b, 1-ps); o == 0 || o == uint64(id) {
@@ -136,13 +136,17 @@ func (g *Game) sleepInPartnerBed(id, bid entity.EntityID, slot int) bool {
 }
 
 // cmdAssignBedOwner makes owner (0: nobody) hold slot of bed: the owner
-// gives up any other bed, and whoever held the slot loses it.
+// gives up any other bed, and whoever held the slot loses it. A medical
+// bed has no owner (bedrest.go).
 func (g *Game) cmdAssignBedOwner(bed, owner entity.EntityID, slot int) {
 	b, ok := g.bldgs.Get(bed)
 	if !ok || !b.Kind.Sleeps() || slot < 0 || slot >= b.Kind.Sleepers() {
 		return
 	}
 	if owner != 0 {
+		if g.isMedicalBed(b) {
+			return
+		}
 		if !g.colonist(owner) {
 			return
 		}

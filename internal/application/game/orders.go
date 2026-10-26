@@ -238,6 +238,9 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		if !ok || !b.Kind.Sleeps() {
 			return job.Record{}, ReasonGone
 		}
+		if g.isMedicalBed(b) && !g.mayUseMedicalBed(id) {
+			return job.Record{}, ReasonMedicalBed // bedrest.go: for patients only
+		}
 		if !b.CanClaim(uint64(id)) {
 			return job.Record{}, ReasonOwned + g.name(entity.EntityID(b.Owner(uint64(id))))
 		}
@@ -411,9 +414,14 @@ func (g *Game) prioritize(id entity.EntityID, o command.Order, x, y int, layer c
 		}
 	}
 	if o == command.OrderSleep {
-		g.releaseBed(id)
-		b, _ := g.bldgs.Get(rec.Target)
-		g.bldgs.Set(rec.Target, b.Claim(uint64(id)))
+		if b, _ := g.bldgs.Get(rec.Target); g.isMedicalBed(b) {
+			g.bldgs.Set(rec.Target, b.Claim(uint64(id)))
+			g.holdRestBed(id, rec.Target) // bedrest.go: a patient's stay; its own bed stays its own
+		} else {
+			g.releaseBed(id)
+			b, _ := g.bldgs.Get(rec.Target)
+			g.bldgs.Set(rec.Target, b.Claim(uint64(id)))
+		}
 		g.sleptAt[id] = rec.Target
 	}
 	g.interrupt(id, job.Cancelled)

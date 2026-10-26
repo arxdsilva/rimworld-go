@@ -59,10 +59,10 @@ func (g *Game) carriedBy(id entity.EntityID) entity.EntityID {
 	return 0
 }
 
-// freeBedFor finds the bed the patient may lie in: a hospital bed if one
-// is free, else the nearest bed (NG-1 §5.6).
+// freeBedFor finds the bed the patient may lie in: a free medical bed
+// first (PLAY-020), then a hospital bed (NG-1 §5.6), each the nearest.
 func (g *Game) freeBedFor(patient entity.EntityID, from Position) (entity.EntityID, bool) {
-	best, bestD, bestHosp := entity.EntityID(0), 1<<30, false
+	best, bestD, bestRank := entity.EntityID(0), 1<<30, 0
 	for _, bid := range g.bldgIDs {
 		b, ok := g.bldgs.Get(bid)
 		if !ok || !b.Kind.Sleeps() {
@@ -74,10 +74,16 @@ func (g *Game) freeBedFor(patient entity.EntityID, from Position) (entity.Entity
 		if owner, taken := g.reserve.EntityOwner(bid); taken && owner != patient {
 			continue
 		}
-		hosp := b.Kind == construction.HospitalBed
+		rank := 0
+		if g.isMedicalBed(b) {
+			rank += 2
+		}
+		if b.Kind == construction.HospitalBed {
+			rank++
+		}
 		d := manhattan(from.X, from.Y, b.X, b.Y)
-		if best == 0 || hosp && !bestHosp || hosp == bestHosp && (d < bestD || d == bestD && bid < best) {
-			best, bestD, bestHosp = bid, d, hosp
+		if best == 0 || rank > bestRank || rank == bestRank && (d < bestD || d == bestD && bid < best) {
+			best, bestD, bestRank = bid, d, rank
 		}
 	}
 	return best, best != 0
@@ -208,7 +214,11 @@ func (g *Game) doRescue(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
-	g.releaseBed(j.Target)
+	if dest, _ := g.bldgs.Get(j.Dest); g.isMedicalBed(dest) {
+		g.holdRestBed(j.Target, j.Dest) // bedrest.go: held for the stay; its own bed stays its own
+	} else {
+		g.releaseBed(j.Target)
+	}
 	b, _ := g.bldgs.Get(j.Dest)
 	b = b.Claim(uint64(j.Target))
 	g.bldgs.Set(j.Dest, b)

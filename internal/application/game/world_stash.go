@@ -58,6 +58,7 @@ func (g *Game) stashPawn(id, holder entity.EntityID) bool {
 	delete(g.orderQueue, id)
 	delete(g.calm, id)
 	delete(g.restedFree, id)
+	g.clearBedRest(id) // bedrest.go: "Rest when hurt" stays
 	delete(g.sleptAt, id)
 	delete(g.noComfort, id)
 	delete(g.noFood, id)

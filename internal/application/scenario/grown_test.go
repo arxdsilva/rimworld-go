@@ -103,7 +103,10 @@ func TestGrownGolden(t *testing.T) {
 	// Re-pinned (PLAY-017): one charge now posts a chase warning ("A
 	// timber wolf charges Settler 8!"); checked field by field against
 	// c7d739ac6, only Messages differs.
-	const want uint64 = 0x32ffe5b168601fcc
+	// Re-pinned (PLAY-020): injured colonists now rest in the set piece's
+	// beds until healed (bed rest by default); the same value with and
+	// without the zone settings work.
+	const want uint64 = 0x7aab2f772d82f7b3
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

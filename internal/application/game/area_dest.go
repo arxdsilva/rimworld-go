@@ -5,7 +5,6 @@ import (
 	"slices"
 
 	"rimworld-go/internal/domain/ai/job"
-	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -34,14 +33,14 @@ func areaExempt(k job.Kind) bool {
 }
 
 // areaExemptJob is areaExempt for pawn id's job rec, which also lets a
-// patient rest in a hospital bed wherever it stands.
+// patient rest in a medical bed wherever it stands (PLAY-020).
 func (g *Game) areaExemptJob(id entity.EntityID, rec job.Record) bool {
 	if areaExempt(rec.Kind) {
 		return true
 	}
 	if rec.Kind == job.Sleep && rec.Target != 0 {
 		b, ok := g.bldgs.Get(rec.Target)
-		return ok && b.Kind == construction.HospitalBed
+		return ok && g.isMedicalBed(b)
 	}
 	return false
 }

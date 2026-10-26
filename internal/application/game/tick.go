@@ -401,6 +401,7 @@ func (g *Game) phaseAI() {
 		if v.Status == health.Dead {
 			delete(g.calm, id)
 			delete(g.restedFree, id)
+			g.clearBedRest(id) // bedrest.go
 			g.reserve.ReleaseOwner(id)
 			g.releaseDelivery(id)
 			continue
@@ -426,6 +427,7 @@ func (g *Game) phaseAI() {
 			j = job.Record{}
 		}
 		g.releaseStaleDelivery(id, j) // a delivery swapped out without an interrupt
+		g.updateBedRest(id)           // bedrest.go: starts and ends bed rest
 		if g.mentalBreakTick(id, j) {
 			continue // acting out: no orders, no work
 		}
@@ -470,12 +472,11 @@ func (g *Game) phaseAI() {
 			}
 			g.noComfort[id] = uint64(g.clock.Now()) + warmRetry
 		}
-		if j.Kind != job.Sleep && j.Kind != job.Eat && j.Kind != job.Warm && !j.Forced && g.patientRest(id) {
-			if j.Kind != job.None && j.State != job.Idle {
-				g.interrupt(id, job.Interrupted)
+		if g.onBedRest(id) {
+			if g.bedRestSlot(id, j) { // bedrest.go: in bed until well again
+				continue
 			}
-			g.lieDownForCare(id) // infection.go: lie down and wait for a doctor
-			continue
+			j, _ = g.jobs.Get(id) // no bed to be had: it carries on
 		}
 		n, _ := g.need.Get(id)
 
@@ -743,20 +744,28 @@ func (g *Game) assignSleepInPlace(id entity.EntityID) {
 	g.startJob(id, job.Record{Kind: job.Sleep, TX: fx, TY: fy, WorkLeft: needs.SleepWorkMin})
 }
 
+// assignSleep sends pawn id to bed (sleepInBed), or to sleep on the floor
+// when no bed can be had.
 func (g *Game) assignSleep(id entity.EntityID) {
-	if !g.alive(id) {
+	if !g.alive(id) || !g.sleepInBed(id) {
 		g.assignSleepInPlace(id)
-		return
 	}
+}
+
+// sleepInBed sends pawn id to its partner's or its own bed, else the
+// nearest free bed it may claim (giving up the old one); false, with no
+// bed held, when there is none or it can't be reached. Medical beds are
+// left to patients (bedrest.go: restInMedicalBed holds them for a stay).
+func (g *Game) sleepInBed(id entity.EntityID) bool {
 	if bid, slot, ok := g.partnerBed(id); ok && g.sleepInPartnerBed(id, bid, slot) { // beds.go
-		return
+		return true
 	}
 	pos, _ := g.positions.Get(id)
 	var best entity.EntityID
 	bestD := 1 << 30
 	for _, bid := range g.bldgIDs {
 		b, ok := g.bldgs.Get(bid)
-		if !ok || !b.Kind.Sleeps() || !b.CanClaim(uint64(id)) || b.ForPrisoners { // prison beds: prisoners only
+		if !ok || !b.Kind.Sleeps() || !b.CanClaim(uint64(id)) || b.ForPrisoners || g.isMedicalBed(b) { // prison beds: prisoners only
 			continue
 		}
 		if !g.areaAllows(id, b.X, b.Y) {
@@ -781,13 +790,11 @@ func (g *Game) assignSleep(id entity.EntityID) {
 		sx, sy := g.sleepCellFor(id, b)
 		if !g.startJob(id, job.Record{Kind: job.Sleep, Target: best, TX: sx, TY: sy, WorkLeft: needs.SleepWorkMin}) {
 			g.bldgs.Set(best, b.Release(uint64(id)))
-			g.assignSleepInPlace(id) // the bed is out of reach: the ground will do
+			return false // the bed is out of reach
 		}
-		return
+		return true
 	}
-	g.sleptAt[id] = 0
-	fx, fy := g.sleepFloorSpot(id, pos) // area_dest.go: on the floor inside the allowed area
-	g.startJob(id, job.Record{Kind: job.Sleep, TX: fx, TY: fy, WorkLeft: needs.SleepWorkMin})
+	return false
 }
 
 func (g *Game) assignHaul(id entity.EntityID) bool {
@@ -1142,10 +1149,12 @@ func (g *Game) doSleep(id entity.EntityID, j job.Record, now uint64) {
 }
 
 // sleepDone reports whether a sleeper gets up now. A collapsed colonist
-// sleeps to WakeRest whatever happens; otherwise it wakes to eat, at full
-// rest in Sleep hours (the rest of the block is free time), with the start
-// of Work hours once over the tired line, and at WakeRest in any other
-// block. These gaps keep it from bouncing between bed and work.
+// sleeps to WakeRest whatever happens; a healthy one in a medical bed gets
+// up at once; otherwise it wakes to eat, stays while on bed rest, and
+// wakes at full rest in Sleep hours (the rest of the block is free time),
+// with the start of Work hours once over the tired line, and at WakeRest
+// in any other block. These gaps keep it from bouncing between bed and
+// work.
 func (g *Game) sleepDone(id entity.EntityID, n needs.Pair, j job.Record) bool {
 	if v, ok := g.vital.Get(id); ok && v.Status == health.Downed {
 		if v.Cause != health.CauseNoBed || n.Rest < needs.WakeRest {
@@ -1154,8 +1163,21 @@ func (g *Game) sleepDone(id entity.EntityID, n needs.Pair, j job.Record) bool {
 		v.Status, v.Cause = health.Alive, health.CauseNone
 		g.vital.Set(id, v)
 	}
+	if j.Target != 0 {
+		if b, ok := g.bldgs.Get(j.Target); ok && g.isMedicalBed(b) && !g.mayUseMedicalBed(id) {
+			return true // well again: medical beds are for patients (bedrest.go)
+		}
+	}
 	if n.Hungry() && g.seekFood(id) {
 		return true
+	}
+	if g.onBedRest(id) {
+		// bedrest.go: stays put until well; one only waiting for a
+		// surgeon who never came gets up after patientWait
+		if j.WorkLeft <= -patientWait && g.awaitingSurgery(id) {
+			g.surgeryGaveUp(id) // surgery.go: don't lie straight back down
+		}
+		return false
 	}
 	act := g.activityOf(id)
 	var done bool
@@ -1169,13 +1191,6 @@ func (g *Game) sleepDone(id entity.EntityID, n needs.Pair, j job.Record) bool {
 		done = n.Rest >= needs.WakeRest
 	default: // Work hours
 		done = n.Rest > needs.CriticalRest && j.WorkLeft <= 0
-	}
-	if done && g.patientRest(id) {
-		if j.WorkLeft > -patientWait {
-			done = false // stay put: a doctor is coming
-		} else {
-			g.surgeryGaveUp(id) // surgery.go: no surgeon came; don't lie straight back down
-		}
 	}
 	return done
 }
@@ -1332,7 +1347,8 @@ func (g *Game) completeFrame(id entity.EntityID, fr construction.Frame) {
 	}
 	g.frameIDs = kept
 	g.bldgIDs = append(g.bldgIDs, id)
-	g.bldgs.Set(id, construction.Building{Kind: fr.Kind, Stuff: fr.Stuff, Facing: fr.Facing, X: fr.X, Y: fr.Y})
+	g.bldgs.Set(id, construction.Building{Kind: fr.Kind, Stuff: fr.Stuff, Facing: fr.Facing, X: fr.X, Y: fr.Y,
+		Medical: fr.Kind == construction.HospitalBed}) // PLAY-020: hospital beds start medical
 	g.noteBuilding(id) // indexes.go
 	g.markRoomsDirty()
 	g.structVer++                                       // SIM-029: link/autotile caches

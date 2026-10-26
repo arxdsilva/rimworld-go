@@ -71,12 +71,22 @@ import (
 // by field against c7d739ac6 on all six runs: only Animals (ChaseWarnedAt,
 // ChaseWarnedTarget) and Messages (e.g. "A timber wolf charges Cora!")
 // differ; seeds 7 (48x40) and 1 (120x120) see no charge and keep their pin.
+// Re-pinned (PLAY-020 bed rest): a hurt colonist rests until well. The
+// start colonies have no beds, so one with an untended wound lies down
+// where it is until another colonist tends it (before: only one in pain
+// or sick), and a hurt one finding no bed records its retry (BedRest).
+// Checked field by field on 0a403eb88 plus only the PLAY-020 sim files:
+// the three runs with wounded colonists move in what tending and healing
+// touch (Wounds, TendedUntil, Vital, Bodies, Jobs, Positions, Motion,
+// SleptAt, Logs, Need, Joy, Skills, Social, then the RNG); 48x40/seed42's
+// colonist that ended downed at 69 injury is tended and healed. The three
+// runs where no one is hurt keep their pins. Stable over -count=2.
 var scaleGolden = map[string]uint64{
-	"48x40/seed1":    0xce4668e447818b0,
+	"48x40/seed1":    0xbdffb6d11dde9e6f,
 	"48x40/seed7":    0xee46a1f4ce740cae,
-	"48x40/seed42":   0xbae2087ca8fcc39,
+	"48x40/seed42":   0x3813609e849f6e9b,
 	"120x120/seed1":  0x24d9b4a5e97f473a,
-	"120x120/seed7":  0x40f7fa02ddb67980,
+	"120x120/seed7":  0x7a003675fdf36a80,
 	"120x120/seed42": 0x4b3e98040be7af43,
 }
 
