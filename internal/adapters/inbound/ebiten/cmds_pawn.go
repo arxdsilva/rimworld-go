@@ -7,6 +7,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/platform/input"
 )
@@ -37,9 +38,10 @@ const (
 const paneAreaChipID = "inspector.area"
 
 // pawnCommands are colonist id's command buttons, in declaration order
-// (hotkeys follow it): Draft, Clear orders, Equip nearby, and, for a free
-// colonist, Capture and Arrest. A dead or downed colonist's commands are
-// disabled with their status as the reason.
+// (hotkeys follow it): Draft, Clear orders, Equip nearby, Rest when hurt (a
+// living colonist) and, for a free colonist, Capture and Arrest. A dead or
+// downed colonist's commands are disabled with their status as the reason
+// (Rest when hurt is a setting, so it stays usable).
 func (a *App) pawnCommands(id entity.EntityID) []cmdButton {
 	p, ok := a.pawnView(id)
 	if !ok {
@@ -62,7 +64,30 @@ func (a *App) pawnCommands(id entity.EntityID) []cmdButton {
 		clear.Disabled, clear.Reason = true, "no queued orders"
 	}
 	out := []cmdButton{draft, clear, a.equipCommand(p)}
+	if c, ok := bedRestCommand(p); ok {
+		out = append(out, c)
+	}
 	return append(out, a.prisonerCommands(p)...) // prisoner_ui.go: Capture / Arrest
+}
+
+// bedRestCommand is the colonist's "Rest when hurt" toggle (PLAY-020): on,
+// a colonist in pain, wounded or sick lies in bed to heal. Only for a living
+// colonist: not a prisoner, a raider or a corpse. The click flips the setting
+// as it stands then.
+func bedRestCommand(p game.PawnView) (cmdButton, bool) {
+	if p.Prisoner || p.Hostile || p.Embodied || p.Status == "dead" {
+		return cmdButton{}, false
+	}
+	id := p.ID
+	return cmdButton{
+		ID: "cmd.pawn.bedrest", Label: "Rest when hurt", Icon: "bed_rest", Toggle: true, On: p.RestWhenHurt,
+		Desc: "Lie in bed to heal when in pain, wounded or sick.",
+		Run: func(a *App) {
+			if pv, ok := a.pawnView(id); ok {
+				a.renderer.enqueue(command.Command{Kind: command.SetPawnBedRest, Target: uint64(id), Enabled: !pv.RestWhenHurt})
+			}
+		},
+	}, true
 }
 
 // equipCommand is Equip nearby: its options are the weapons and garments
@@ -166,7 +191,8 @@ func (a *App) pawnChips(p game.PawnView) []paneChip {
 
 // pawnStatusLines are the conditions worth a line of their own, most
 // pressing first: not alive, drafted, a mental break, exposure, infection
-// or an untended wound, and being held up by someone in the way.
+// or an untended wound, resting in bed to heal, and being held up by
+// someone in the way.
 func pawnStatusLines(p game.PawnView, name func(entity.EntityID) string) []string {
 	var out []string
 	if p.Status != "alive" {

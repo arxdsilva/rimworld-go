@@ -395,6 +395,10 @@ func hasBuildTool(kind string) bool {
 
 const bedOwnerModalID = "bed.owner"
 
+// bedMedicalID is the Medical toggle's id: a medical bed is kept for the
+// sick and injured (PLAY-020) and has no owner.
+const bedMedicalID = "bldg.bed.medical"
+
 // bedPrisonReader is the read model for the prisoner mark (consumer-owned;
 // the game implements it). Without it the toggle is disabled.
 type bedPrisonReader interface {
@@ -434,7 +438,7 @@ func (a *App) bedOwnerName(b game.BuildingView, slot int) string {
 	return "someone"
 }
 
-// bedLines are a bed's owner lines and the prisoner mark.
+// bedLines are a bed's owner lines, the prisoner mark and the medical mark.
 func (a *App) bedLines(b game.BuildingView) []string {
 	n := bedSlots(b)
 	var out []string
@@ -448,11 +452,15 @@ func (a *App) bedLines(b game.BuildingView) []string {
 	if rd, ok := a.renderer.game.(bedPrisonReader); ok && n > 0 && rd.BedForPrisoners(b.ID) {
 		out = append(out, "For prisoners")
 	}
+	if n > 0 && b.Medical {
+		out = append(out, "Medical bed")
+	}
 	return out
 }
 
 // bedCommands are a bed's owner buttons (one per sleeping slot; each opens
-// the owner picker) and the "For prisoners" toggle.
+// the owner picker, and none works on a medical bed), the "For prisoners"
+// toggle and the "Medical" toggle.
 func (a *App) bedCommands(b game.BuildingView) []cmdButton {
 	n := bedSlots(b)
 	if n == 0 {
@@ -464,8 +472,12 @@ func (a *App) bedCommands(b game.BuildingView) []cmdButton {
 		if n > 1 {
 			label = fmt.Sprintf("Owner %d", slot+1)
 		}
-		out = append(out, cmdButton{ID: bedOwnerID(slot), Label: label,
-			Desc: "Choose who sleeps here. Now: " + a.bedOwnerName(b, slot) + "."})
+		owner := cmdButton{ID: bedOwnerID(slot), Label: label,
+			Desc: "Choose who sleeps here. Now: " + a.bedOwnerName(b, slot) + "."}
+		if b.Medical {
+			owner.Disabled, owner.Reason = true, "Medical beds have no owner"
+		}
+		out = append(out, owner)
 	}
 	pr := cmdButton{ID: "bldg.bed.prisoners", Label: "Prisoners", Toggle: true,
 		Desc: "Only prisoners sleep here."}
@@ -474,7 +486,9 @@ func (a *App) bedCommands(b game.BuildingView) []cmdButton {
 	} else {
 		pr.Disabled, pr.Reason = true, "Prisoner beds are not available in this game."
 	}
-	return append(out, pr)
+	med := cmdButton{ID: bedMedicalID, Label: "Medical", Icon: "hospital_bed", Toggle: true, On: b.Medical,
+		Desc: "Only the sick and injured rest here. Healthy colonists sleep elsewhere."}
+	return append(out, pr, med)
 }
 
 // pawnName is the colonist's label in the snapshot ("" when unknown).
@@ -497,6 +511,10 @@ func (a *App) applyBedClick(id string, b game.BuildingView) bool {
 		if ok {
 			a.renderer.enqueue(command.Command{Kind: command.SetBedForPrisoners, Target: uint64(b.ID), Enabled: !rd.BedForPrisoners(b.ID)})
 		}
+		return true
+	}
+	if id == bedMedicalID {
+		a.renderer.enqueue(command.Command{Kind: command.SetBedMedical, Target: uint64(b.ID), Enabled: !b.Medical})
 		return true
 	}
 	s, ok := strings.CutPrefix(id, "bldg.bed.owner.")
