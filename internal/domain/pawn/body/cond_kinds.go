@@ -33,6 +33,22 @@ const (
 	// CondAnesthetic is the anaesthetic after an operation (MED-06,
 	// cond_anesthetic.go): it wears off by time.
 	CondAnesthetic
+	// CondOverdose and CondPainkiller are the drug conditions (MED-07,
+	// cond_drug.go): overdose from hard drugs and prophyl, and an acting
+	// numbroot painkiller.
+	CondOverdose
+	CondPainkiller
+	// Aging (MED-08, cond_aging.go): five chronic conditions that come
+	// with age and stay, artery blockage and carcinoma that grow, and the
+	// heart attack (an event condition).
+	CondBadBack
+	CondCataract
+	CondFrail
+	CondDementia
+	CondHearingLoss
+	CondArteryBlockage
+	CondCarcinoma
+	CondHeartAttack
 	// NumCondKinds counts the kinds (keep last).
 	NumCondKinds
 )
@@ -44,7 +60,7 @@ type CondEntry struct {
 }
 
 // condTables lists every phase's definition table (one line per phase).
-var condTables = [][]CondEntry{condsInfection, condsDisease, condsAnesthetic}
+var condTables = [][]CondEntry{condsInfection, condsDisease, condsAnesthetic, condsDrug, condsAging}
 
 // condDefs is every kind's definition, indexed by kind.
 var condDefs = buildCondDefs(condTables)

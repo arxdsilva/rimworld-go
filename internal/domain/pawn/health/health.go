@@ -50,6 +50,13 @@ const (
 	// (MED-06): lying under an operation's anaesthetic (downed only).
 	CauseEuthanasia
 	CauseAnesthetic
+	// CauseOverdose (MED-07): a drug overdose killed it.
+	CauseOverdose
+	// CauseHeartAttack and CauseCarcinoma (MED-08): the heart stopped (a
+	// heart attack, or an artery blockage at its end), and a carcinoma
+	// destroyed a part the body cannot live without.
+	CauseHeartAttack
+	CauseCarcinoma
 )
 
 func (c Cause) String() string {
@@ -82,6 +89,12 @@ func (c Cause) String() string {
 		return "euthanized"
 	case CauseAnesthetic:
 		return "under anesthetic"
+	case CauseOverdose:
+		return "overdose"
+	case CauseHeartAttack:
+		return "heart attack"
+	case CauseCarcinoma:
+		return "carcinoma"
 	default:
 		return ""
 	}

@@ -591,6 +591,10 @@ func (g *Game) conditionRows(id entity.EntityID, b *body.Body, hv *HealthView) {
 		tended := now < c.TendUntil
 		cv := ConditionView{Label: conditionLabel(c, d), SevPct: int(c.Sev) / 10, ImmPct: int(c.Immunity) / 10,
 			TendPct: int(c.TendQ) / 10, Losing: infection.Losing(c, d, tended, imm)}
+		aging := body.IsAging(c.Kind) // aging.go (MED-08): its own label and card
+		if aging {
+			cv.Label, cv.Losing = g.agingLabel(id, c, d), c.Kind == body.CondHeartAttack
+		}
 		if d.TendEvery > 0 {
 			if tended {
 				cv.DueInHours = int((c.TendUntil - now + clock.TicksPerHour - 1) / clock.TicksPerHour)
@@ -599,10 +603,17 @@ func (g *Game) conditionRows(id entity.EntityID, b *body.Body, hv *HealthView) {
 			}
 		}
 		cv.Tip = conditionTip(c, d, cv, tended)
+		if aging {
+			cv.Tip = g.agingTip(id, c, cv.Label)
+		}
 		losing = losing || cv.Losing
 		hv.Conditions = append(hv.Conditions, cv)
 	}
-	if hv.BleedPerDay == 0 && hv.State != "Dead" {
+	switch {
+	case hv.BleedPerDay != 0 || hv.State == "Dead":
+	case agingHeads(b): // aging.go (MED-08): a heart attack, or only age conditions
+		hv.State = agingHeadline(b, hv.State, now)
+	default:
 		hv.State = conditionHeadline(b, losing)
 	}
 	if h := g.condDeathHours(id, b); h >= 0 && (hv.DeathInHours < 0 || h < hv.DeathInHours) {
@@ -620,6 +631,9 @@ func conditionHeadline(b *body.Body, losing bool) string {
 	for _, c := range b.Conds {
 		if c.Kind == body.CondAnesthetic { // no race to win or lose (MED-06)
 			sedated = true
+			continue
+		}
+		if body.IsAging(c.Kind) { // the aging headline's (MED-08)
 			continue
 		}
 		if c.Kind == body.CondInfection {

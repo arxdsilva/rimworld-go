@@ -502,6 +502,12 @@ func causePhrase(cause string) string {
 		return " of organ failure"
 	case health.CauseDisease.String():
 		return " of disease"
+	case health.CauseOverdose.String():
+		return " of an overdose"
+	case health.CauseHeartAttack.String():
+		return " of a heart attack"
+	case health.CauseCarcinoma.String():
+		return " of a carcinoma"
 	}
 	return ""
 }

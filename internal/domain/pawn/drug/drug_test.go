@@ -26,7 +26,7 @@ func TestDefs(t *testing.T) {
 	if _, ok := DefOf(item.Wood); ok {
 		t.Fatal("wood is not a drug")
 	}
-	if len(All()) != 3 {
+	if len(All()) != numDrugs || numDrugs != 5 {
 		t.Fatal("All")
 	}
 	var s State

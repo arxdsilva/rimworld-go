@@ -1,12 +1,17 @@
 package game
 
 import (
+	"bytes"
+	"encoding/gob"
 	"reflect"
 	"testing"
 
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/incident"
+	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/drug"
+	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/pawn/pawngen"
@@ -305,5 +310,310 @@ func TestDrugDeterminismSameSeed(t *testing.T) {
 	}
 	if a, b := run(), run(); a != b {
 		t.Fatalf("hashes %x != %x", a, b)
+	}
+}
+
+// MED-07: medical drugs and overdose.
+
+// drugPain gives id one tended torso bruise of dmg HP (pain 12.5 per HP;
+// a tended bruise neither bleeds nor needs a doctor).
+func drugPain(g *Game, id entity.EntityID, dmg int) *body.Body {
+	v, _ := g.vital.Get(id)
+	b := g.ensureBody(id, &v)
+	b.Wounds = []body.Wound{{Part: body.Torso, Dmg: dmg, Kind: body.Bruise, Tended: true, TendQ: 500}}
+	g.bodyChanged(id, b, &v)
+	return b
+}
+
+// TestOverdoseStagesKill: spark tablets pile up an overdose through the
+// stages (major costs consciousness, extreme downs the colonist) until a
+// dose takes it to 1000 and kills it, of an overdose.
+func TestOverdoseStagesKill(t *testing.T) {
+	g, id := drugColony(t)
+	seen := map[int]bool{}
+	for i := 0; i < 10; i++ {
+		if g.ingestDose(id, item.SparkTablet) {
+			break
+		}
+		b := g.bodies[id]
+		sev := b.Overdose()
+		if sev < 180*int32(i+1) || sev > 350*int32(i+1) {
+			t.Fatalf("dose %d: overdose %d outside 180..350 a dose", i+1, sev)
+		}
+		st := int(b.OverdoseStage())
+		seen[st] = true
+		v, _ := g.vital.Get(id)
+		switch st {
+		case body.OverdoseStageMajor:
+			if b.Capacity(body.Consciousness) != 500 || v.Status != health.Alive {
+				t.Fatalf("major: consciousness %d status %v", b.Capacity(body.Consciousness), v.Status)
+			}
+		case body.OverdoseStageExtreme:
+			if b.Capacity(body.Consciousness) != 100 || v.Status != health.Downed {
+				t.Fatalf("extreme: consciousness %d status %v", b.Capacity(body.Consciousness), v.Status)
+			}
+		}
+	}
+	v, _ := g.vital.Get(id)
+	if v.Status != health.Dead || v.Cause != health.CauseOverdose || v.Cause.String() != "overdose" {
+		t.Fatalf("status %v cause %v: the last dose kills", v.Status, v.Cause)
+	}
+	if !seen[body.OverdoseStageMajor] && !seen[body.OverdoseStageExtreme] {
+		t.Fatalf("stages seen %v", seen)
+	}
+}
+
+// TestOverdoseExtremeMayKill: left at the extreme stage, the hourly roll
+// (mean three days) kills some colonists before it wears off, not all.
+func TestOverdoseExtremeMayKill(t *testing.T) {
+	deaths := 0
+	for seed := uint64(1); seed <= 40; seed++ {
+		g := New(Config{Seed: seed, Width: 16, Height: 8})
+		id, _ := g.SpawnNamedPawn(2, 2, "Ada")
+		g.drugState(id)
+		v, _ := g.vital.Get(id)
+		b := g.ensureBody(id, &v)
+		b.AddOverdose(999, uint64(g.clock.Now()))
+		for h := 0; h < 30; h++ {
+			g.drugTick(id, uint64(h+1)*clock.TicksPerHour-uint64(id)*drugTickStagger%clock.TicksPerHour)
+		}
+		if v, _ := g.vital.Get(id); v.Status == health.Dead {
+			if v.Cause != health.CauseOverdose {
+				t.Fatalf("cause %v", v.Cause)
+			}
+			deaths++
+		}
+	}
+	// six hours at the extreme stage at 1/72 an hour: about 8 %
+	if deaths == 0 || deaths > 12 {
+		t.Fatalf("%d of 40 died at the extreme stage", deaths)
+	}
+}
+
+// TestOverdoseDecays: an overdose falls 1000 a day; the colonist stands up
+// once it leaves the extreme stage and is clear of it within a day.
+func TestOverdoseDecays(t *testing.T) {
+	g, id := drugColony(t)
+	g.ingestDose(id, item.ProphylTablet)
+	sev := g.bodies[id].Overdose()
+	if sev < 80 || sev > 140 {
+		t.Fatalf("prophyl overdose %d, want 80..140", sev)
+	}
+	if pv := g.Snapshot()[0]; pv.OverdosePct != int(sev)/10 || pv.OverdoseStage != 0 {
+		t.Fatalf("view %d %d", pv.OverdosePct, pv.OverdoseStage)
+	}
+	drugStepFed(g, id, 4*clock.TicksPerHour)
+	if got := g.bodies[id].Overdose(); got >= sev || got < sev-5*42 {
+		t.Fatalf("after 4 h: %d from %d (about 42 an hour)", got, sev)
+	}
+	drugStepFed(g, id, 4*clock.TicksPerHour)
+	if b := g.bodies[id]; b != nil && b.Overdose() != 0 {
+		t.Fatalf("after 8 h: %d left", b.Overdose())
+	}
+
+	// extreme: downed, then up again as it wears off
+	g2, id2 := drugColony(t)
+	v, _ := g2.vital.Get(id2)
+	b := g2.ensureBody(id2, &v)
+	b.AddOverdose(800, uint64(g2.clock.Now()))
+	g2.bodyChanged(id2, b, &v)
+	g2.updateDowned(id2, b, &v)
+	g2.drugState(id2)
+	if v, _ := g2.vital.Get(id2); v.Status != health.Downed {
+		t.Fatalf("extreme overdose downs: %v", v.Status)
+	}
+	drugStepFed(g2, id2, 4*clock.TicksPerHour)
+	v, _ = g2.vital.Get(id2)
+	if v.Status == health.Dead {
+		t.Skip("the extreme roll killed (seed-dependent)")
+	}
+	drugStepFed(g2, id2, 2*clock.TicksPerHour)
+	if v, _ := g2.vital.Get(id2); v.Status != health.Alive || g2.bodies[id2].OverdoseStage() != body.OverdoseStageMajor {
+		t.Fatalf("after 6 h: status %v stage %d", v.Status, g2.bodies[id2].OverdoseStage())
+	}
+}
+
+// TestPainkillerHalvesPain: a numbroot dose halves the Health tab's pain
+// for 12 hours and shows as a drug line and a condition row.
+func TestPainkillerHalvesPain(t *testing.T) {
+	g, id := drugColony(t)
+	drugPain(g, id, 36) // pain 450
+	hv, _ := g.Health(id)
+	if hv.Pain != 45 {
+		t.Fatalf("pain %d%%", hv.Pain)
+	}
+	g.ingestDose(id, item.NumbrootTincture)
+	hv, _ = g.Health(id)
+	if hv.Pain != 22 {
+		t.Fatalf("numbed pain %d%%, want 22", hv.Pain)
+	}
+	line, row := false, false
+	for _, l := range hv.Drugs {
+		line = line || l.Label == "numbroot: pain halved" && l.Pct == 100
+	}
+	for _, c := range hv.Conditions {
+		row = row || c.Label == "Numbroot (pain halved)"
+	}
+	if !line || !row {
+		t.Fatalf("drug lines %+v conditions %+v", hv.Drugs, hv.Conditions)
+	}
+	for h := 0; h < 13; h++ {
+		drugPain(g, id, 36) // hold the wound against healing
+		drugStepFed(g, id, clock.TicksPerHour)
+	}
+	if hv, _ = g.Health(id); hv.Pain != 45 || g.bodies[id].Numbed() {
+		t.Fatalf("after 13 h: pain %d%%, numbed %v", hv.Pain, g.bodies[id].Numbed())
+	}
+}
+
+// TestPainkillerUseDoesNotFlap: held at pain 450 with numbroot in reach,
+// a colonist takes a dose, then none while it acts, then one again once
+// it wore off: about one per 12 hours, and few job changes around the
+// moment it wears off.
+func TestPainkillerUseDoesNotFlap(t *testing.T) {
+	g, id := drugColony(t)
+	if _, err := g.SpawnStack(item.NumbrootTincture, 10, 9, 2); err != nil {
+		t.Fatal(err)
+	}
+	drugPain(g, id, 36)
+	for h := 0; h < 48; h++ {
+		drugPain(g, id, 36)
+		drugStepFed(g, id, clock.TicksPerHour)
+	}
+	took := 10 - g.stockOf(item.NumbrootTincture)
+	if took < 3 || took > 4 {
+		t.Fatalf("%d doses in 48 h, want one per 12 h", took)
+	}
+	// pain just under the line once the dose wears off: none taken
+	g2, id2 := drugColony(t)
+	g2.SpawnStack(item.NumbrootTincture, 10, 9, 2)
+	drugPain(g2, id2, 31) // pain 387
+	g2.SetNeeds(id2, needs.Full, needs.Full)
+	if n := kindChanges(g2, id2, 600); n > 4 {
+		t.Fatalf("job kind changed %d times under the pain line", n)
+	}
+	if g2.stockOf(item.NumbrootTincture) != 10 {
+		t.Fatal("no dose under the pain line")
+	}
+	// around the wear-off moment
+	drugPain(g, id, 36)
+	b := g.bodies[id]
+	if c, ok := b.Cond(body.CondPainkiller); ok {
+		c.Since = uint64(g.clock.Now()) - body.PainkillerHours*clock.TicksPerHour + 150
+	}
+	g.SetNeeds(id, needs.Full, needs.Full)
+	if n := kindChanges(g, id, 600); n > 6 {
+		t.Fatalf("job kind changed %d times around the wear-off", n)
+	}
+}
+
+// TestProphylBlocksMalaria: a colonist on prophyl is left out of a
+// malaria, plague or sleeping sickness outbreak (not flu) until five days
+// after the dose.
+func TestProphylBlocksMalaria(t *testing.T) {
+	g, id := drugColony(t)
+	other, _ := g.SpawnNamedPawn(4, 2, "Bo")
+	g.ingestDose(id, item.ProphylTablet)
+	for _, k := range []body.CondKind{body.CondMalaria, body.CondPlague, body.CondSleepingSickness} {
+		if c := g.diseaseCandidates(k); len(c) != 1 || c[0] != other {
+			t.Fatalf("%v candidates %v: the protected colonist is left out", k, c)
+		}
+	}
+	if c := g.diseaseCandidates(body.CondFlu); len(c) != 2 {
+		t.Fatalf("flu candidates %v: prophyl does not stop flu", c)
+	}
+	if !g.diseaseOutbreak(incident.Malaria, uint64(g.clock.Now())) {
+		t.Fatal("outbreak")
+	}
+	if _, has := g.bodies[id].Cond(body.CondMalaria); has {
+		t.Fatal("the protected colonist caught malaria")
+	}
+	if _, has := g.bodies[other].Cond(body.CondMalaria); !has {
+		t.Fatal("the other colonist caught it")
+	}
+	lines := g.drugLines(id)
+	if len(lines) != 1 || lines[0].Label != "protected by prophyl" {
+		t.Fatalf("drug lines %+v", lines)
+	}
+	g.clock.Advance(5 * clock.TicksPerDay)
+	if c := g.diseaseCandidates(body.CondMalaria); len(c) != 1 || c[0] != id {
+		t.Fatalf("after five days: candidates %v", c)
+	}
+}
+
+// TestProphylRetakenEveryFiveDays: under the default policy a colonist
+// takes a prophyl tablet at once, none again before five days, then one.
+func TestProphylRetakenEveryFiveDays(t *testing.T) {
+	g, id := drugColony(t)
+	if _, err := g.SpawnStack(item.ProphylTablet, 5, 9, 2); err != nil {
+		t.Fatal(err)
+	}
+	drugStepFed(g, id, 2*clock.TicksPerHour)
+	if n := g.stockOf(item.ProphylTablet); n != 4 {
+		t.Fatalf("stock %d after 2 h: one taken at once", n)
+	}
+	first := g.drugs[id].LastDoseOf(item.ProphylTablet)
+	if !g.drugs[id].Protected(uint64(g.clock.Now())) {
+		t.Fatal("protected")
+	}
+	g.clock.Advance(int(first + 5*clock.TicksPerDay - 4*clock.TicksPerHour - uint64(g.clock.Now())))
+	drugStepFed(g, id, 3*clock.TicksPerHour)
+	if n := g.stockOf(item.ProphylTablet); n != 4 {
+		t.Fatalf("stock %d before five days: none retaken", n)
+	}
+	drugStepFed(g, id, 4*clock.TicksPerHour)
+	if n := g.stockOf(item.ProphylTablet); n != 3 {
+		t.Fatalf("stock %d after five days: retaken", n)
+	}
+	if last := g.drugs[id].LastDoseOf(item.ProphylTablet); last < first+5*clock.TicksPerDay {
+		t.Fatalf("second dose at %d, first %d", last, first)
+	}
+	// "no drugs": none, ever
+	g.cmdSetDrugPolicy(id, uint8(drug.NoDrugs))
+	g.clock.Advance(6 * clock.TicksPerDay)
+	drugStepFed(g, id, 3*clock.TicksPerHour)
+	if n := g.stockOf(item.ProphylTablet); n != 3 {
+		t.Fatalf("stock %d: no drugs means none", n)
+	}
+}
+
+// legacyDrugState is a drug state as saves up to version 5 wrote it: the
+// per-drug arrays sized for the three original drugs.
+type legacyDrugState struct {
+	Alcohol   int32
+	Tolerance [drug.LegacyDrugs]int32
+	LastDose  [drug.LegacyDrugs]uint64
+	Policy    drug.Preset
+}
+
+// TestLegacyDrugSaveLoadsWithMedicalDrugs: an older save's tolerance and
+// last doses load into the slices, the new drugs read zero, and prophyl
+// is due at once.
+func TestLegacyDrugSaveLoadsWithMedicalDrugs(t *testing.T) {
+	var buf bytes.Buffer
+	old := legacyDrugState{Alcohol: 100, Tolerance: [3]int32{0, 300, 50}, LastDose: [3]uint64{7, 0, 9}, Policy: drug.Unrestricted}
+	if err := gob.NewEncoder(&buf).Encode(old); err != nil {
+		t.Fatal(err)
+	}
+	var sd savedDrug
+	if err := gob.NewDecoder(&buf).Decode(&sd); err != nil {
+		t.Fatal(err)
+	}
+	g, id := drugColony(t)
+	g.importDrugs([]entry[savedDrug]{{id, sd}})
+	s := g.drugs[id]
+	if s.ToleranceOf(item.AshleafTea) != 300 || s.ToleranceOf(item.SparkTablet) != 50 || s.LastDoseOf(item.Beer) != 7 ||
+		s.LastDoseOf(item.SparkTablet) != 9 || s.Policy != drug.Unrestricted {
+		t.Fatalf("legacy state %+v", s)
+	}
+	if s.ToleranceOf(item.ProphylTablet) != 0 || s.LastDoseOf(item.NumbrootTincture) != 0 || s.Protected(0) {
+		t.Fatal("the new drugs start untouched")
+	}
+	if !s.Policy.AllowsMedical(item.ProphylTablet, 0, false, s, uint64(g.clock.Now())) {
+		t.Fatal("prophyl due at once")
+	}
+	g.ingestDose(id, item.ProphylTablet)
+	if out := g.exportDrugs(); len(out) != 1 || out[0].V.LastDoses[4] == 0 {
+		t.Fatalf("the new drug's slot saves: %+v", out)
 	}
 }

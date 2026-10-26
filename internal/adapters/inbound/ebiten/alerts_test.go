@@ -531,3 +531,39 @@ func TestDiseaseAlert(t *testing.T) {
 		t.Fatalf("no one sick: %+v", d)
 	}
 }
+
+// TestOverdoseAlert (MED-07): a major overdose is a warning naming the
+// colonist; any at the extreme stage turns it into a danger; below the
+// major stage, the dead and prisoners raise none.
+func TestOverdoseAlert(t *testing.T) {
+	t.Parallel()
+	pawns := []game.PawnView{
+		{ID: 1, Name: "Ada", Status: "alive", Mood: 80, OverdosePct: 55, OverdoseStage: 1, X: 3, Y: 4},
+		{ID: 2, Name: "Bo", Status: "alive", Mood: 80, OverdosePct: 30},
+		{ID: 3, Name: "Cy", Status: "dead", OverdosePct: 90, OverdoseStage: 2},
+		{ID: 4, Name: "Dorn", Status: "alive", Prisoner: true, OverdosePct: 90, OverdoseStage: 2},
+	}
+	find := func(got []alert) []alert {
+		var out []alert
+		for _, a := range got {
+			if a.key == "overdose" {
+				out = append(out, a)
+			}
+		}
+		return out
+	}
+	d := find(buildAlerts(pawns, game.WorldView{Food: 100}))
+	if len(d) != 1 || d[0].label != "Ada has overdosed" || d[0].danger || d[0].sev != sevWarning ||
+		len(d[0].targets) != 1 || d[0].targets[0] != [2]int{3, 4} || d[0].explain == alertExplain("no-such-alert") {
+		t.Fatalf("overdose alerts %+v", d)
+	}
+	pawns[1].OverdosePct, pawns[1].OverdoseStage = 80, 2
+	d = find(buildAlerts(pawns, game.WorldView{Food: 100}))
+	if len(d) != 1 || d[0].label != "2 colonists have overdosed" || !d[0].danger || len(d[0].targets) != 2 {
+		t.Fatalf("an extreme overdose is a danger: %+v", d)
+	}
+	pawns[0].OverdoseStage, pawns[1].OverdoseStage = 0, 0
+	if d := find(buildAlerts(pawns, game.WorldView{Food: 100})); len(d) != 0 {
+		t.Fatalf("below major: no alert: %+v", d)
+	}
+}

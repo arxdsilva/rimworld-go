@@ -17,7 +17,8 @@ const (
 	// Fabrication: components at the workbench, tool cabinets and hospital
 	// beds (NG-1 §4.8).
 	Fabrication
-	// Pharmacology: herbal medicine refined into industrial medicine.
+	// Pharmacology: herbal medicine refined into industrial medicine;
+	// the medical drugs (MED-07).
 	Pharmacology
 	// ENG-003: Brewing (brewgrain and the brewing bench), HerbalRemedies
 	// (ashleaf, the drug table, spark tablets) and Prosthetics (steel limbs).
@@ -68,7 +69,8 @@ var defs = [NumProjects]Def{
 		Desc:    "Machine steel into components for advanced furniture.",
 		Unlocks: []string{"recipe:fabricate_component", "build:tool cabinet", "build:hospital bed"}},
 	Pharmacology: {Project: Pharmacology, Name: "pharmacology", Label: "Pharmacology", Cost: 4000, Requires: []Project{Herbalism},
-		Desc: "Refine herbal medicine into stronger industrial medicine.", Unlocks: []string{"recipe:refine_medicine"}},
+		Desc:    "Refine herbal medicine into stronger industrial medicine, numbroot painkiller and prophyl tablets.",
+		Unlocks: []string{"recipe:refine_medicine", "recipe:make_numbroot", "recipe:press_prophyl"}}, // MED-07: the medical drugs
 	Brewing: {Project: Brewing, Name: "brewing", Label: "Brewing", Cost: 2500,
 		Desc: "Grow brewgrain and brew it into beer.", Unlocks: []string{"crop:brewgrain", "build:brewing bench"}},
 	HerbalRemedies: {Project: HerbalRemedies, Name: "herbal_remedies", Label: "Herbal remedies", Cost: 3500,

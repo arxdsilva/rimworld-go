@@ -219,7 +219,7 @@ const (
 
 // Pain is the body's pain in permille: 12.5 per point of open or tended
 // wound damage, 1 per point of scar; conditions add their current stage's
-// pain.
+// pain, and an acting painkiller halves the sum (MED-07).
 func (b *Body) Pain() int32 { return b.pain(DefOfCond) }
 
 // pain is Pain with condition definitions from look.
@@ -241,6 +241,7 @@ func (b *Body) pain(look condLookup) int32 {
 	}
 	n := hurt*painPerHPx10/10 + scars*scarPainPerHP
 	n += b.condPain(look)
+	n = b.painkilled(n) // cond_drug.go (MED-07): a painkiller halves it
 	if n > 1000 {
 		return 1000
 	}

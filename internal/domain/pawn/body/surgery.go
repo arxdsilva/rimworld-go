@@ -53,9 +53,9 @@ const (
 // MaxSurgeryChance caps SurgeryChance (permille). wiki: Doctoring (98 %).
 const MaxSurgeryChance = 980
 
-// excisable is the condition ExciseCarcinoma removes. CondNone until
-// MED-08 adds the carcinoma, so the operation is never possible yet.
-const excisable = CondNone
+// excisable is the condition ExciseCarcinoma removes (MED-08): the
+// operation is offered on a part with a carcinoma.
+const excisable = CondCarcinoma
 
 // surgeryBase is the Medical Surgery Success Chance stat by Medicine
 // level 0..20 (permille). wiki: Doctoring.
@@ -326,6 +326,7 @@ func (b *Body) Apply(op Operation, o Outcome, roll func(int) int, now uint64) bo
 
 // succeed applies a successful operation.
 func (b *Body) succeed(op Operation) bool {
+	defer b.dropAgingAfter(op) // aging.go (MED-08): a replaced or removed part takes its age conditions along
 	switch op.Kind {
 	case InstallImplant:
 		if !b.isMissing(op.Part) {

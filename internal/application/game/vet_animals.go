@@ -10,12 +10,16 @@ import (
 )
 
 // Veterinary care (ENG-003, M10; Doctor work). A doctor tends a hurt tame
-// animal like a colonist: with medicine when there is some (it mends
-// more), and the tend holds for TendTicks, so the same animal is not
-// tended again until then (no flapping). A tend may bond them
-// (training.BondTend). Tame animals that are fed also heal on their own,
-// one point every animalHealEvery ticks of their decision cycle (twice as
-// fast while tended); wild ones do not.
+// animal like a colonist: with the medicine its care level allows (MED-03;
+// No care keeps the vet away), at the doctor's tend quality (MED-02). With
+// a body (MED-09, animal_health.go) the tend closes every open wound (it
+// stops bleeding and festers less) and treats a due infection, so the vet
+// comes back only for a new wound or the infection's next window; without
+// one (an older save, starvation) the tend mends Injury at once and holds
+// for TendTicks. A tend may bond them (training.BondTend). Tame
+// animals that are fed also heal on their own, one point every
+// animalHealEvery ticks of their decision cycle (twice as fast while
+// tended); wild ones heal only their wounds (animal_health.go).
 
 // animalHealEvery: a fed tame animal heals one point this often (a
 // multiple of animal.DecideEvery: it runs on the decision cycle).
@@ -23,7 +27,7 @@ const animalHealEvery = 10 * animal.DecideEvery
 
 // needsVet reports whether tame animal id (state a) wants tending now.
 func (g *Game) needsVet(id entity.EntityID, a *animal.State, now uint64) bool {
-	return a.Tame && a.Injury > 0 && !a.Dead() && !a.Enraged(now) && !g.tended(id) &&
+	return a.Tame && !a.Dead() && !a.Enraged(now) && g.animalTendDue(id, a, now) && // animal_health.go
 		a.Mode != animal.Flee && a.Mode != animal.Attack && !a.Leaving &&
 		g.careOf(id).Tends() // care.go (MED-03): no care keeps the vet away
 }
@@ -70,8 +74,9 @@ func (g *Game) assignTendAnimal(id entity.EntityID) bool {
 // doTendAnimal tends a hurt animal: fetch the medicine, work beside it,
 // then mend it.
 func (g *Game) doTendAnimal(id entity.EntityID, j job.Record) {
+	now := uint64(g.clock.Now())
 	a, ok := g.animals.Get(j.Target)
-	if !ok || !a.Tame || a.Injury == 0 {
+	if !ok || !a.Tame || a.Body == nil && a.Injury == 0 || a.Body != nil && !a.Body.TendDue(now) {
 		j.State = job.Complete
 		g.jobs.Set(id, j)
 		return
@@ -94,13 +99,13 @@ func (g *Game) doTendAnimal(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
-	heal := animalTendHeal(g.tendQualityFor(id, j.Target, g.tendMedicine(j))) // medical.go, infection.go (MED-02)
+	q := g.tendQualityFor(id, j.Target, g.tendMedicine(j)) // infection.go (MED-02)
 	if j.Carry != 0 {
 		g.deleteItem(j.Carry)
 		j.Carry = 0
 	}
-	a.Injury = max(0, a.Injury-heal)
-	g.tendedUntil[j.Target] = uint64(g.clock.Now()) + TendTicks
+	tendAnimalBody(&a, q, now) // animal_health.go: its wounds, or (no body) Injury
+	g.tendedUntil[j.Target] = now + TendTicks
 	g.tryBond(j.Target, &a, id, training.BondTend) // bonds.go
 	g.animals.Set(j.Target, a)
 	j.State = job.Complete
@@ -119,5 +124,6 @@ func (g *Game) naturalHeal(id entity.EntityID, a *animal.State, now uint64) {
 	}
 	if (now+uint64(id))%every == 0 {
 		a.Injury--
+		reconcileAnimalBody(a) // animal_health.go: the wounds follow
 	}
 }

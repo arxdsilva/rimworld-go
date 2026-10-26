@@ -9,6 +9,8 @@ const (
 	LineAddiction
 	LineCraving
 	LineWithdrawal
+	// LineProtected (MED-07): a prophylactic still acting.
+	LineProtected
 )
 
 // Line is one read-only row for the UI.
@@ -26,6 +28,10 @@ func (s *State) Lines() []Line {
 	}
 	for _, h := range s.Highs {
 		d, _ := DefOf(h.Drug)
+		if d.Protects {
+			out = append(out, Line{LineProtected, "protected by " + d.Short, h.Severity / 10})
+			continue
+		}
 		out = append(out, Line{LineHigh, "high on " + d.Short, h.Severity / 10})
 	}
 	for _, a := range s.Addictions {

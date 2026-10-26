@@ -211,6 +211,7 @@ func (g *Game) hurtAs(target entity.EntityID, dmg int, by entity.EntityID, kind 
 	now := uint64(g.clock.Now())
 	if a, ok := g.animals.Get(target); ok {
 		a.Injury += dmg
+		g.woundAnimal(target, &a, dmg, kind, by, now) // animal_health.go (MED-09): a wound on its body
 		a.Attacker = by
 		was := g.chaseTarget(a)
 		g.wakeDormant(&a) // vault.go: a hurt vault sleeper wakes

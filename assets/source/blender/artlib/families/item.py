@@ -1091,11 +1091,53 @@ def _liver():
     _ell("gall", (x - 0.01, y - 0.1, 0.15), (0.035, 0.03, 0.03), "pl_crop_jade", segs=10, rings=6)
     return _jar("liver")
 
+# ---- MED-07 medical drugs: a painkiller bottle and a prophylactic blister strip.
+def _numbroot_tincture():
+    """Numbroot tincture: a small stoppered amber bottle lying on its side, a
+    pale label band round its belly with a forked root drawn on it, a cork
+    in the neck."""
+    from .plant_base import _limb
+    n0 = len(S.objects())
+    y, r, z = -0.56, 0.12, 0.12
+    _limb("bottle", (0.22, y, z), (0.60, y, z), r, r, "med_amber", segs=22)
+    _limb("shoulder", (0.60, y, z), (0.68, y, z), r, 0.05, "med_amber", segs=22)
+    _limb("neck", (0.68, y, z), (0.75, y, z), 0.045, 0.045, "med_amber", segs=14)
+    _limb("lip", (0.74, y, z), (0.765, y, z), 0.055, 0.055, "med_amber", segs=14)
+    _limb("cork", (0.765, y, z), (0.83, y, z), 0.042, 0.048, "wood", segs=12)
+    _limb("label", (0.30, y, z), (0.52, y, z), r + 0.005, r + 0.005, "numbroot_label", segs=22)
+    tz = z + r + 0.008    # the band's top face
+    _limb("root", (0.34, y, tz), (0.43, y, tz), 0.011, 0.007, "bark", segs=6)
+    _limb("fork_l", (0.42, y, tz), (0.48, y + 0.035, tz), 0.008, 0.005, "bark", segs=6)
+    _limb("fork_r", (0.42, y, tz), (0.48, y - 0.035, tz), 0.008, 0.005, "bark", segs=6)
+    _spin(n0, 0.52, y, 18)
+    return S.render_asset("item", "numbroot_tincture", zmax=0.3, extra={"item": "numbroot tincture", "stack": True})
+
+
+def _prophyl_tablet():
+    """Prophyl tablets: a white blister strip with a blue edge stripe, two
+    rows of pale-blue oval tablets domed up out of clear blister pockets."""
+    n0 = len(S.objects())
+    cx, cy = 0.5, -0.56
+    S.box("card", cx - 0.28, cy - 0.17, 0.0, cx + 0.28, cy + 0.17, 0.025, "med_white", bevel=0.012)
+    S.box("stripe", cx - 0.28, cy + 0.12, 0.025, cx + 0.28, cy + 0.17, 0.03, "med_blue", bevel=0.0)
+    for k in range(8):
+        tx, ty = cx - 0.195 + 0.13 * (k % 4), cy - 0.07 + 0.12 * (k // 4)
+        S.ellipsoid("bub%d" % k, tx, ty, 0.025, 0.062, 0.05, 0.022, "glass", segs=12, rings=6)
+        S.ellipsoid("tab%d" % k, tx, ty, 0.035, 0.05, 0.037, 0.03, "prophyl_blue", segs=12, rings=6)
+    _spin(n0, cx, cy, -8)
+    return S.render_asset("item", "prophyl_tablet", zmax=0.1, extra={"item": "prophyl tablet", "stack": True})
+
+
+def build_med_drugs():
+    """MED-07 medical drugs."""
+    return [_numbroot_tincture(), _prophyl_tablet()]
+
+
 def build():
     return [_wood(), _food(), _steel(), _stone(), _stone_chunk(), _silver(), _gold(), _berries(), _ration(), _meat(), _meal(), _club(), _rifle_item(), _knife_item(), _spear_item(),
             _potatoes(), _corn(), _wheat(), _beans(), _lettuce(), _radishes(), _pumpkins(),
             _leather(), _parka(), _tuque(), _duster(), _herbal_medicine(), _bones(0), _bones(1),
-            _cloth_bolt(), _straw_bundle(), _milk(), _wool(), _eggs(False), _eggs(True), _ember_oil(), _parka_wool()] + [_carpet_rolled(k) for k in _ROLL] + build_ng1() + build_social() + build_med()
+            _cloth_bolt(), _straw_bundle(), _milk(), _wool(), _eggs(False), _eggs(True), _ember_oil(), _parka_wool()] + [_carpet_rolled(k) for k in _ROLL] + build_ng1() + build_social() + build_med() + build_med_drugs()
 
 
 def build_ng1():

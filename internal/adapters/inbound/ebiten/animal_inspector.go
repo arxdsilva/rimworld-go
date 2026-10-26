@@ -9,6 +9,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/pawn/medcare"
 	"rimworld-go/internal/domain/sim/command"
 )
 
@@ -356,4 +357,76 @@ func (a *App) drawAnimalTrainingTab(screen *ebiten.Image, an game.AnimalView, in
 		drawText(screen, fmt.Sprintf("%d/%d  %s", t.Steps, t.Needed, trainState(t)), float64(bx)+animalTrainBarW+10, y+(animalTrainRowH-lineH(tsSmall))/2, dim)
 		y += animalTrainRowH
 	}
+}
+
+// Animal health (MED-09): the pane's health lines under the state line,
+// read from the view (AnimalView's health block), and for a tame animal a
+// "Care" command whose options are the five care levels (SetMedicalCare
+// on the animal). The Animals table's Health cell marks a bleeding or
+// infected animal the same way.
+
+// animalHealthRows are the pane's health lines: the headline when it is
+// not plain health, blood loss, the worst infection and a due tend.
+func animalHealthRows(an game.AnimalView) []string {
+	var rows []string
+	if an.HealthState != "" && an.HealthState != "Healthy" && an.HealthState != "Injured" {
+		rows = append(rows, an.HealthState) // "Bleeding 25%/day · death in 31h"
+	}
+	if an.BloodLossPct > 0 {
+		s := fmt.Sprintf("Blood loss %d%%", an.BloodLossPct)
+		if an.BloodStage != "" {
+			s += " (" + an.BloodStage + ")"
+		}
+		rows = append(rows, s)
+	}
+	if an.InfectionPct > 0 {
+		s := fmt.Sprintf("Infection %d%% · immunity %d%%", an.InfectionPct, an.ImmunityPct)
+		if an.InfectionLosing {
+			s += " (losing)"
+		}
+		rows = append(rows, s)
+	}
+	if an.NeedsTend {
+		rows = append(rows, "Needs tending")
+	}
+	return rows
+}
+
+// animalHealthAlarm reports a bleeding or infected animal (the Animals
+// table marks its Health cell).
+func animalHealthAlarm(an game.AnimalView) bool { return an.BleedPerDay > 0 || an.InfectionPct > 0 }
+
+// animalHealthCell is the Animals table's Health cell: "62%", with a "!"
+// while the animal bleeds or fights an infection.
+func animalHealthCell(an game.AnimalView) string {
+	if animalHealthAlarm(an) {
+		return fmt.Sprintf("%d%%!", an.Health)
+	}
+	return fmt.Sprintf("%d%%", an.Health)
+}
+
+// animalCareCmd is a tame animal's "Care" command: its care level now,
+// and the five levels as options (the current one marked); a plain click
+// lists them, like the master picker.
+func (a *App) animalCareCmd(an game.AnimalView) cmdButton {
+	cur := medcare.Policy(an.CareLevel)
+	orders := make([]game.OrderOption, 0, medcare.NumPolicies)
+	opts := make([]cmdOption, 0, medcare.NumPolicies)
+	for p := medcare.Policy(0); p < medcare.NumPolicies; p++ {
+		cmd := command.Command{Kind: command.SetMedicalCare, Pawn: uint64(an.ID), Mode: uint8(p)}
+		label := p.Label()
+		if p == cur {
+			label += " (now)"
+		}
+		orders = append(orders, game.OrderOption{Label: label, Cmd: cmd})
+		opts = append(opts, cmdOption{Label: label, Cmd: &cmd})
+	}
+	return cmdButton{ID: "cmd.animal.care", Label: "Care: " + careShort(cur),
+		Icon:    strings.TrimPrefix(careIcon(cur), "ui_icon/"),
+		Desc:    "Pick how a doctor treats it. " + careTip(cur),
+		Options: func(*App) []cmdOption { return opts },
+		Run: func(a *App) {
+			mx, my := a.currentCursor()
+			a.openPick(float32(mx), float32(my), true, orders, func(i int) { a.runOption(opts[i]) })
+		}}
 }

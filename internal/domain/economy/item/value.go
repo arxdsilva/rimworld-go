@@ -22,6 +22,8 @@ var value = [numKinds]int{
 	ServoArm:   1030, ServoLeg: 1030, OpticImplant: 1030, SpinalBrace: 1030, PumpHeart: 1030,
 	CochlearImplant: 785, SynthStomach: 785, ValveHeart: 230,
 	Kidney: 900, Lung: 1000, Heart: 1200, Liver: 1200,
+	// MED-07: numbroot tincture original tuning; wiki: Penoxycyline (18).
+	NumbrootTincture: 16, ProphylTablet: 18,
 }
 
 // Value is the market value of one unit of k.

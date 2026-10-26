@@ -538,6 +538,9 @@ ICONS = {
     "heart": ("item", "heart"),
     "liver": ("item", "liver"),
     "vitals_monitor": ("furniture", "vitals_monitor_south"),
+    # MED-07 medical drugs
+    "numbroot_tincture": ("item", "numbroot_tincture"),
+    "prophyl_tablet": ("item", "prophyl_tablet"),
 }
 ICON_PX = 128          # @2x of a 64 px icon
 ICON_PAD = 10

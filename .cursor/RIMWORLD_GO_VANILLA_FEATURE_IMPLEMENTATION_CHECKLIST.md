@@ -927,7 +927,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 11.1 Anatomy
 
--   [-] **Species anatomy tree** (SIM-039: humanlike tree only; MED-05 adds kidneys, liver and spine (24 parts); no per-species anatomy)
+-   [-] **Species anatomy tree** (SIM-039: humanlike tree only; MED-05 adds kidneys, liver and spine (24 parts); MED-09: animals use a one-part body adapter scaled by size; per-species anatomy deferred)
     -   Body -\> torso/head -\> limbs -\> hands/feet -\> digits, organs,
         etc.
     -   Species can define different anatomy.
@@ -1043,10 +1043,10 @@ treatment, and surgery are major colony-management systems.
 
 ## 11.8 Age/chronic conditions
 
--   [ ] **Biological aging**
+-   [-] **Biological aging** (MED-08: age drives chronic onset after wiki onset ages, rolled daily per colonist; no separate biological vs chronological age or age-based body decline beyond the conditions)
     -   Age increases.
     -   age can influence health/stat factors.
--   [ ] **Age-related chronic conditions**
+-   [x] **Age-related chronic conditions** (MED-08: bad back, cataract, frailty, dementia (confused wandering), hearing loss, artery blockage with heart attacks, carcinoma with excision; cures by spinal brace, eye/ear replacement, artificial or new heart)
     -   Bad back/frailty/cataract-like conditions.
     -   Data-driven health effects.
 
@@ -1062,7 +1062,7 @@ treatment, and surgery are major colony-management systems.
     -   manipulation/sight.
     -   room cleanliness/bed factors.
     -   failure can injure nearby/body parts.
--   [-] **Organ extraction/transplant** (MED-06: harvest drops the organ item (a life organ kills), install organ into a missing or damaged inner part, donor and colony mood, faction goodwill; carcinoma excision waits for MED-08)
+-   [x] **Organ extraction/transplant** (MED-06: harvest drops the organ item (a life organ kills), install organ into a missing or damaged inner part, donor and colony mood, faction goodwill; MED-08: carcinoma excision)
     -   Removable organs.
     -   harvested organ becomes item.
     -   missing vital organs can kill.
@@ -2044,7 +2044,7 @@ and other colony incidents. citeturn2search2turn2search7
 
 ## 26.1 Drug definitions
 
--   [-] **Consumable drug** (SIM-040: beer, ashleaf tea, spark tablet with highs and mood; no overdose)
+-   [x] **Consumable drug** (SIM-040: beer, ashleaf tea, spark tablet with highs and mood; MED-07: overdose condition (wiki stages 50/75/100 %, decay 100 %/day), numbroot tincture painkiller, prophyl tablet)
     -   immediate effects.
     -   health effects.
     -   mood effects.
@@ -2052,7 +2052,7 @@ and other colony incidents. citeturn2search2turn2search7
     -   tolerance.
     -   addiction chance.
     -   overdose/toxicity where appropriate.
--   [-] **Representative functional categories** (SIM-040: alcohol, mild stimulant, tablet; no smokeleaf/go-juice/hard drug)
+-   [-] **Representative functional categories** (SIM-040: alcohol, mild stimulant, spark tablet as the hard drug; MED-07: painkiller and disease prevention; no smokeleaf/go-juice)
     -   beer/alcohol.
     -   smokeleaf-like relaxant.
     -   psychite tea-like mild stimulant.
@@ -2847,7 +2847,7 @@ substantially larger colonies and maps with lower resource usage.
     -   Advance growth from elapsed ticks.
 -   [ ] **Rot/deterioration**
 -   [ ] **Needs where safe**
--   [ ] **Disease/health effects where safe**
+-   [x] **Disease/health effects where safe** (MED-07: painkiller halves pain for 12 h, prophyl blocks plague, malaria and sleeping sickness for 5 days, overdose from hard drugs and prophyl)
 -   [ ] **World settlements/caravans**
     -   Aggregate simulation rather than local entity simulation.
 

@@ -190,6 +190,9 @@ func (a *App) animalPaneLines(an game.AnimalView) []string {
 		}
 	}
 	add(a.animalPaneState(an))
+	for _, r := range animalHealthRows(an) { // animal_inspector.go (MED-09)
+		add(r)
+	}
 	if an.Designated {
 		if an.Tame {
 			add("Marked for slaughter")
@@ -269,6 +272,7 @@ func (a *App) animalCommands(id entity.EntityID) []cmdButton {
 		out = append(out, cmdButton{ID: "animal.release", Label: "Release", Icon: "release",
 			Desc: "Turn it loose. It goes wild again, and a bonded colonist will mind."})
 		out = append(out, a.animalMasterCmd(an))
+		out = append(out, a.animalCareCmd(an)) // animal_inspector.go (MED-09)
 		for _, t := range animalTrainable(an) {
 			out = append(out, animalTrainCmd(t))
 		}

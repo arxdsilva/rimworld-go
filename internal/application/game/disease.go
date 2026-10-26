@@ -79,11 +79,11 @@ func (g *Game) diseasePct() int {
 
 // diseaseCandidates are the colonists at home disease k may strike, in id
 // order: alive, not prisoners, raiders or visitors, without k already,
-// and for gut worms without a synth stomach.
+// not kept from it by prophyl, and for gut worms without a synth stomach.
 func (g *Game) diseaseCandidates(k body.CondKind) []entity.EntityID {
 	var out []entity.EntityID
 	for _, id := range g.homeColonists() { // relative_world.go: alive, on the map
-		if g.isPrisoner(id) || g.isRaider(id) || g.visitor(id) {
+		if g.isPrisoner(id) || g.isRaider(id) || g.visitor(id) || g.prophylaxed(id, k) { // drugs.go (MED-07): prophyl
 			continue
 		}
 		if b := g.bodies[id]; b != nil {

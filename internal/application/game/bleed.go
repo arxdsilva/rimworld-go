@@ -33,7 +33,9 @@ func (g *Game) phaseMedical() {
 	g.stepBloodLoss()
 	g.stepCare(now)     // infection.go (MED-02): infections, races, healing
 	g.stepDiseases(now) // disease.go (MED-04)
+	g.stepAging(now)    // aging.go (MED-08): chronic conditions, heart attacks, the daily onset roll
 	g.sweepPatients()   // patients.go (MED-00): the well and the dead leave the index
+	g.stepAnimalHealth(now)
 }
 
 // stepBloodLoss advances an hour of bleeding on every patient in id

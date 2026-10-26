@@ -4,7 +4,9 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/drug"
+	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/pawn/recreation"
@@ -20,6 +22,16 @@ import (
 // takes a dose when its addiction craves one (the domain's 30%/70% need
 // band) or its policy allows one for fun, through a job.Ingest at the
 // nearest allowed stack.
+//
+// Medical drugs (MED-07). Every policy but "no drugs" has a colonist take
+// numbroot tincture when its pain reaches drug.PainkillerAt and no dose
+// still acts, and a prophyl tablet every five days (drug.AllowsMedical);
+// it looks for one before a recreational dose. Numbroot halves the pain
+// for 12 h (body.CondPainkiller); prophyl keeps plague, malaria and
+// sleeping sickness away while it acts (diseaseCandidates). A hard drug
+// (the spark tablet) or prophyl adds overdose (body.CondOverdose), rolled
+// on the medical stream; the hourly drug tick wears it and the painkiller
+// off, vomits at the major stage and may kill at the extreme one.
 
 const (
 	// drugIngestTicks is how long drinking or swallowing a dose takes.
@@ -35,6 +47,10 @@ const (
 	// drugTickStagger spreads the hourly drug ticks over the hour by id.
 	drugTickStagger = 37
 )
+
+// prophylBlocks lists the diseases an acting prophyl tablet keeps away.
+// wiki: Penoxycyline.
+var prophylBlocks = [...]body.CondKind{body.CondPlague, body.CondMalaria, body.CondSleepingSickness}
 
 // drugState is id's drug state, created with the default policy.
 func (g *Game) drugState(id entity.EntityID) *drug.State {
@@ -89,6 +105,130 @@ func (g *Game) drugTick(id entity.EntityID, now uint64) {
 	if s.ConsumeHangover() {
 		g.remember(id, mood.Hungover)
 	}
+	g.stepDrugBody(id, now)
+}
+
+// stepDrugBody wears an hour of id's painkiller and overdose off (from
+// drugTick): at the extreme stage death strikes with a mean of three days,
+// at the major stage the patient vomits now and then (both rolled on the
+// medical stream); the stats and the downing rule follow a change.
+func (g *Game) stepDrugBody(id entity.EntityID, now uint64) {
+	b := g.bodies[id]
+	if b == nil || !b.Numbed() && b.Overdose() == 0 {
+		return
+	}
+	v, ok := g.vital.Get(id)
+	if !ok || v.Status == health.Dead {
+		return
+	}
+	changed := b.StepPainkiller(now)
+	if c, ok := b.Cond(body.CondOverdose); ok {
+		stage, since := c.Stage, c.Since
+		pos, _ := g.positions.Get(id)
+		if stage >= body.OverdoseStageExtreme && g.stream(streamMedical).IntN(body.OverdoseDeathMTBHours) == 0 {
+			g.message(pos.X, pos.Y, "%s died of an overdose.", g.name(id))
+			g.die(id, health.CauseOverdose)
+			g.clearPatient(id)
+			return
+		}
+		if stage >= body.OverdoseStageMajor && g.stream(streamMedical).IntN(body.OverdoseVomitMTBTenths) < 10 {
+			g.addDirt(pos.Y*g.grid.Width()+pos.X, vomitDirt) // filth.go: as a disease's vomit
+		}
+		var hour uint64
+		if now > since {
+			hour = (now - since) / clock.TicksPerHour
+		}
+		changed = b.StepOverdose(hour) || changed
+	}
+	if changed {
+		g.bodyChanged(id, b, &v) // body.go: stats follow consciousness
+		g.updateDowned(id, b, &v)
+	}
+}
+
+// drugBody puts dose of drug d on id's body at tick now: numbroot numbs
+// it; a hard drug or prophyl adds its overdose, rolled on the medical
+// stream, and a lethal sum kills. It reports whether id died.
+func (g *Game) drugBody(id entity.EntityID, d drug.Def, now uint64) bool {
+	if !d.Painkiller && d.OverdoseMax <= 0 {
+		return false
+	}
+	v, ok := g.vital.Get(id)
+	if !ok || v.Status == health.Dead {
+		return false
+	}
+	b := g.ensureBody(id, &v)
+	if b == nil {
+		return false
+	}
+	if d.Painkiller {
+		b.Numb(now)
+	}
+	if d.OverdoseMax > 0 {
+		sev := d.OverdoseMin + int32(g.stream(streamMedical).IntN(int(d.OverdoseMax-d.OverdoseMin)+1))
+		if b.AddOverdose(sev, now) >= body.OverdoseDeath {
+			pos, _ := g.positions.Get(id)
+			g.message(pos.X, pos.Y, "%s died of an overdose.", g.name(id))
+			g.die(id, health.CauseOverdose)
+			g.clearPatient(id)
+			return true
+		}
+	}
+	g.bodyChanged(id, b, &v)
+	g.updateDowned(id, b, &v)
+	return false
+}
+
+// overdoseView is id's overdose for the pawn view: severity in percent
+// and stage (0, 0: none).
+func (g *Game) overdoseView(id entity.EntityID) (int, int) {
+	b := g.bodies[id]
+	if b == nil {
+		return 0, 0
+	}
+	return int(b.Overdose()) / 10, int(b.OverdoseStage())
+}
+
+// prophylaxed reports colonist id kept from disease k by an acting
+// prophyl tablet (diseaseCandidates).
+func (g *Game) prophylaxed(id entity.EntityID, k body.CondKind) bool {
+	s := g.drugs[id]
+	if s == nil {
+		return false
+	}
+	for _, b := range prophylBlocks {
+		if b == k {
+			return s.Protected(uint64(g.clock.Now()))
+		}
+	}
+	return false
+}
+
+// medicalDrugs are the medical drugs id's policy has it take now: the
+// painkiller while in pain (looked for on the recreational stagger), a
+// scheduled drug once due (looked for in one idle recheck an hour,
+// staggered by id, so a colony without any never scans more often).
+func (g *Game) medicalDrugs(id entity.EntityID, probe *drug.State, now uint64) []item.Kind {
+	if probe.Policy == drug.NoDrugs {
+		return nil
+	}
+	var pain int32
+	numbed := false
+	if b := g.bodies[id]; b != nil {
+		pain, numbed = b.Pain(), b.Numbed()
+	}
+	lookNow := ((now+uint64(id))/idleRecheck+uint64(id))%drugLookEvery == 0
+	hourly := (now+uint64(id)*drugTickStagger)%clock.TicksPerHour < idleRecheck
+	var out []item.Kind
+	for _, d := range drug.Medical() {
+		if d.Painkiller && !lookNow || d.ScheduleDays > 0 && !hourly {
+			continue
+		}
+		if probe.Policy.AllowsMedical(d.Kind, pain, numbed, probe, now) {
+			out = append(out, d.Kind)
+		}
+	}
+	return out
 }
 
 // drugTraits is id's traits (nil for a legacy colonist).
@@ -117,12 +257,21 @@ func (g *Game) assignDrugUse(id entity.EntityID) bool {
 	if s != nil {
 		crave, craving = s.Craving()
 	}
-	if !craving && ((now+uint64(id))/idleRecheck+uint64(id))%drugLookEvery != 0 {
-		return false
-	}
 	probe := s
 	if probe == nil {
 		probe = &drug.State{Policy: drug.SocialDrinking}
+	}
+	// MED-07: a medical dose first; none in reach sets no retry, so the
+	// recreational look below is as before.
+	if !craving {
+		if med := g.medicalDrugs(id, probe, now); len(med) > 0 {
+			if best, bx, by := g.nearestDrug(id, med); best != 0 {
+				return g.startDrugJob(id, best, bx, by, now)
+			}
+		}
+	}
+	if !craving && ((now+uint64(id))/idleRecheck+uint64(id))%drugLookEvery != 0 {
+		return false
 	}
 	joyLow := g.joy[id] < recreation.Bored
 	traits := g.drugTraits(id)
@@ -145,6 +294,13 @@ func (g *Game) assignDrugUse(id entity.EntityID) bool {
 		}
 		return false
 	}
+	return g.startDrugJob(id, best, bx, by, now)
+}
+
+// startDrugJob sends id to take a dose from stack best at (bx, by); a
+// failed start (taken, or the path search deferred) holds off the next
+// search.
+func (g *Game) startDrugJob(id, best entity.EntityID, bx, by int, now uint64) bool {
 	if !g.startJob(id, job.Record{Kind: job.Ingest, Target: best, TX: bx, TY: by, WorkLeft: drugIngestTicks}) {
 		wait := uint64(drugRetry)
 		if j, _ := g.jobs.Get(id); j.Fail == job.Reserved {
@@ -206,20 +362,24 @@ func (g *Game) doIngest(id entity.EntityID, j job.Record) {
 	} else {
 		g.stacks.Set(j.Target, st)
 	}
-	g.ingestDose(id, k)
+	if g.ingestDose(id, k) {
+		return // died of an overdose: die cancelled the job
+	}
 	j.State = job.Complete
 	g.jobs.Set(id, j)
 }
 
 // ingestDose applies one dose of drug k to id: the domain effects (drawn
-// from the drug stream), the recreation it gives, a stimulant's rest and
-// the log line.
-func (g *Game) ingestDose(id entity.EntityID, k item.Kind) {
+// from the drug stream), the recreation it gives, a stimulant's rest, the
+// log line and the body's share (drugBody, MED-07). It reports whether
+// the dose killed id (an overdose).
+func (g *Game) ingestDose(id entity.EntityID, k item.Kind) bool {
 	d, ok := drug.DefOf(k)
 	if !ok {
-		return
+		return false
 	}
-	g.drugState(id).Ingest(k, g.stream(streamDrug).IntN, uint64(g.clock.Now()))
+	now := uint64(g.clock.Now())
+	g.drugState(id).Ingest(k, g.stream(streamDrug).IntN, now)
 	g.joy[id] = recreation.Clamp(g.joy[id] + int(d.Joy)*recreation.Full/1000)
 	if d.RestBoost > 0 {
 		if n, ok := g.need.Get(id); ok {
@@ -228,6 +388,7 @@ func (g *Game) ingestDose(id entity.EntityID, k item.Kind) {
 		}
 	}
 	g.logEvent(id, logEntry{Kind: logIngested, Name: k.String()})
+	return g.drugBody(id, d, now)
 }
 
 // savedDrug is a drug state in the save (MED-00). Tolerance and LastDose
@@ -293,6 +454,11 @@ func (g *Game) drugLines(id entity.EntityID) []DrugLineView {
 	var out []DrugLineView
 	for _, l := range s.Lines() {
 		out = append(out, DrugLineView{Label: l.Label, Pct: int(l.Percent)})
+	}
+	if b := g.bodies[id]; b != nil { // MED-07: an acting numbroot dose
+		if c, ok := b.Cond(body.CondPainkiller); ok {
+			out = append(out, DrugLineView{Label: "numbroot: pain halved", Pct: int(c.Sev) / 10})
+		}
 	}
 	return out
 }

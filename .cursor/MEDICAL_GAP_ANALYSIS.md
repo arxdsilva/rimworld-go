@@ -2,6 +2,27 @@
 
 Scope: bring the medical system (wounds, bleeding, tending, infection, diseases, anatomy, bionics, surgery, drug health effects, aging, animals) to RimWorld-wiki parity of behaviour and numbers. Load only for MED-* tasks. Phase handoffs go in `.cursor/handoffs/MED-0N-*.md`.
 
+## Status (2026-10-26)
+
+All phases MED-00 to MED-09 are implemented. Each has a handoff in
+`.cursor/handoffs/` (`MED-0N-*.md`); the art is in `ART-026-medical-items.md`.
+Sections 2 and 3 below describe the system **before** the overhaul and are
+kept as the analysis record. Section 4's constants are what the code uses,
+with these deviations:
+- Tend curve: the wiki's exact curve (lvl 18 = 1500, lvl 20 = 1550).
+- Sight in tend quality: a linear 70 % weight.
+- The surgery medicine factor and cleanliness curve are original tuning.
+- The ridiculous-failure share is original tuning.
+
+Section 7 lists what is still deferred, plus these follow-ups:
+- the UI capacity-breakdown tooltip (UI checklist 702);
+- food poisoning and toxic buildup;
+- disease while on a caravan;
+- a downed state for animals;
+- per-species anatomy;
+- a vitals-monitor research gate;
+- carcinoma part efficiency.
+
 ## 1. Purpose and decision record
 
 | Item | Decision |

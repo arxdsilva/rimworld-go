@@ -29,13 +29,21 @@ import (
 const emergencyMedReach = 15
 
 // careState is the colony's care settings: per-patient levels set by
-// hand, the group defaults (custom false: medcare.Defaults) and the
-// colonists who may not tend themselves. The zero value is every default.
+// hand (colonists, prisoners, guests and animals), the group defaults
+// (custom false: medcare.Defaults) and the colonists who may not tend
+// themselves. The zero value is every default.
+//
+// animalPatients (MED-09, animal_health.go) is the sorted ids of animals
+// with a body, derived state never saved: animalIdxOK false (a new game,
+// or importCare after a load) rebuilds it on first use.
 type careState struct {
 	per        map[entity.EntityID]medcare.Policy
 	def        [medcare.NumGroups]medcare.Policy
 	custom     bool
 	noSelfTend map[entity.EntityID]bool
+
+	animalPatients []entity.EntityID
+	animalIdxOK    bool
 }
 
 // careSave is the saved careState, in id order. The save field is nil

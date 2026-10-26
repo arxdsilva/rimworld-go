@@ -10,8 +10,9 @@ import (
 
 // Values follow the published RimWorld wiki by explicit user decision (ENG-003 balance override).
 
-// numDrugs is how many drugs there are (beer, ashleaf tea, spark tablet).
-const numDrugs = 3
+// numDrugs is how many drugs there are (beer, ashleaf tea, spark tablet;
+// MED-07: numbroot tincture and prophyl tablet).
+const numDrugs = 5
 
 // LegacyDrugs is the length of the per-drug arrays saves held before
 // MED-00 (Tolerance and LastDose are slices now, so drugs can be appended).
@@ -40,12 +41,46 @@ type Def struct {
 	ToleranceGain int32  // tolerance added per dose (permille)
 	WithdrawFight int32  // fight multiplier while in withdrawal (permille)
 	Recreational  bool   // taken for joy (policies gate these)
+
+	// Medical drugs (MED-07). Painkiller: taken when in pain; the game
+	// puts its effect on the body (body.CondPainkiller). Protects: while
+	// its high lasts the colonist cannot catch plague, malaria or sleeping
+	// sickness (Protected). ScheduleDays: a policy that allows it has it
+	// retaken every so many days. OverdoseMin..OverdoseMax is the overdose
+	// severity one dose adds (permille; 0: none), rolled by the game.
+	Painkiller               bool
+	Protects                 bool
+	ScheduleDays             int
+	OverdoseMin, OverdoseMax int32
 }
+
+// Medical drug tuning (MED-07).
+const (
+	// PainkillerAt is the pain (permille) at which a policy has a
+	// colonist take a painkiller. It is taken again only once the last
+	// dose has worn off and the pain is still this high (the effect's
+	// duration is the hysteresis). Original tuning (MED-07 plan).
+	PainkillerAt = 400
+	// ProphylDays is how long a prophyl tablet protects, and how often a
+	// policy has it retaken. wiki: Penoxycyline (every 5 days).
+	ProphylDays = 5
+)
 
 var defs = [numDrugs]Def{
 	{Kind: item.Beer, Short: "beer", Alcohol: 150, Joy: 200, AddictChance: 10, ToleranceGain: 100, WithdrawFight: 1000, Recreational: true},
 	{Kind: item.AshleafTea, Short: "ashleaf", Joy: 300, HighHours: 12, AddictChance: 30, ToleranceGain: 150, WithdrawFight: 3000, Recreational: true},
-	{Kind: item.SparkTablet, Short: "spark", Joy: 150, HighHours: 6, RestBoost: 400, AddictChance: 60, ToleranceGain: 200, WithdrawFight: 2000, Recreational: true},
+	// MED-07: the spark tablet is a hard drug, so a dose risks an
+	// overdose: +180..350 severity. wiki: Overdose (hard drugs).
+	{Kind: item.SparkTablet, Short: "spark", Joy: 150, HighHours: 6, RestBoost: 400, AddictChance: 60, ToleranceGain: 200, WithdrawFight: 2000, Recreational: true,
+		OverdoseMin: 180, OverdoseMax: 350},
+	// MED-07: numbroot tincture, a mild, non-addictive painkiller (pain
+	// x0.5 for 12 h, body.CondPainkiller; original tuning: the wiki gives
+	// no plain painkiller numbers). Prophyl tablet: protection for five
+	// days, retaken on schedule, +80..140 overdose per dose. wiki:
+	// Penoxycyline, Overdose.
+	{Kind: item.NumbrootTincture, Short: "numbroot", Painkiller: true},
+	{Kind: item.ProphylTablet, Short: "prophyl", HighHours: ProphylDays * 24, Protects: true, ScheduleDays: ProphylDays,
+		OverdoseMin: 80, OverdoseMax: 140},
 }
 
 func index(k item.Kind) int {
@@ -56,6 +91,10 @@ func index(k item.Kind) int {
 		return 1
 	case item.SparkTablet:
 		return 2
+	case item.NumbrootTincture:
+		return 3
+	case item.ProphylTablet:
+		return 4
 	}
 	return -1
 }
@@ -191,8 +230,24 @@ func (s *State) Ingest(k item.Kind, roll func(int) int, now uint64) {
 			s.Addictions = append(s.Addictions, Addiction{Drug: k, Severity: 1000, Need: 1000, CleanSince: now})
 		}
 	}
-	s.Tolerance = grow(s.Tolerance, i)
-	s.Tolerance[i] = min(s.Tolerance[i]+d.ToleranceGain, toleranceMax)
+	if d.ToleranceGain > 0 {
+		s.Tolerance = grow(s.Tolerance, i)
+		s.Tolerance[i] = min(s.Tolerance[i]+d.ToleranceGain, toleranceMax)
+	}
+}
+
+// Protected reports a protecting drug (prophyl) still acting at tick now:
+// no plague, malaria or sleeping sickness can strike (MED-07).
+func (s *State) Protected(now uint64) bool {
+	if s == nil {
+		return false
+	}
+	for _, h := range s.Highs {
+		if d, ok := DefOf(h.Drug); ok && d.Protects && h.Until > now {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *State) addiction(k item.Kind) *Addiction {
@@ -232,10 +287,14 @@ func (s *State) Tick(hours int, now uint64) {
 			}
 		}
 	}
-	// Expire highs.
+	// Expire highs; a medical one's severity is the share still to run
+	// (the UI's bar).
 	kept := s.Highs[:0]
 	for _, h := range s.Highs {
 		if h.Until > now {
+			if d, ok := DefOf(h.Drug); ok && !d.Recreational && d.HighHours > 0 {
+				h.Severity = int32((h.Until - now) * 1000 / (uint64(d.HighHours) * hourTicks))
+			}
 			kept = append(kept, h)
 		}
 	}
@@ -271,8 +330,11 @@ func (s *State) Thoughts() []mood.Kind {
 	if s.Band() >= Tipsy {
 		out = append(out, mood.Drunk)
 	}
-	if len(s.Highs) > 0 {
-		out = append(out, mood.HighOnDrug)
+	for _, h := range s.Highs {
+		if d, ok := DefOf(h.Drug); ok && d.Recreational {
+			out = append(out, mood.HighOnDrug) // a medical drug is no high
+			break
+		}
 	}
 	for _, a := range s.Addictions {
 		if a.Withdrawal {

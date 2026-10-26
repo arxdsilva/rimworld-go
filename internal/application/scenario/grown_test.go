@@ -123,7 +123,11 @@ func TestGrownGolden(t *testing.T) {
 	// hits land, three new capacities, the doctor's work runs as ordered
 	// steps under care levels; MED-05 alone gives this value on a clean
 	// copy; stable over -count=2.
-	const want uint64 = 0xde4879ac9bcfeb75
+	// Re-pinned (MED-09 animal medicine): hurt animals now get a body that
+	// bleeds, heals at the wiki rates and can be infected; with that combat
+	// hook off the hash is the previous pin, so MED-07 and MED-08 do not move
+	// it (the run never reaches midnight or an overdose); stable over -count=2.
+	const want uint64 = 0x925a9872fa91e0db
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

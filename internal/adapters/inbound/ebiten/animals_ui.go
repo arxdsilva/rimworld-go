@@ -372,7 +372,7 @@ func (a *App) drawColonyList(screen *ebiten.Image, r button) {
 		if cols.shown(colPreg) {
 			drawLabelClip(screen, x0+cols.at(colPreg), ty, colHealth-colPreg-6, animalPregCell(an))
 		}
-		drawLabelClip(screen, x0+cols.at(colHealth), ty, colMaster-colHealth-6, fmt.Sprintf("%d%%", an.Health))
+		drawLabelClip(screen, x0+cols.at(colHealth), ty, colMaster-colHealth-6, animalHealthCell(an))
 		if !an.CanFollow { // trained animals get the on/off toggle button
 			drawLabelClip(screen, x0+cols.at(colFollow), ty, colArea-colFollow-6, followCell(an))
 		}

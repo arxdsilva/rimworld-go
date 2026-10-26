@@ -283,6 +283,9 @@ func (g *Game) phaseNeeds() {
 		g.wakeFromAnaesthetic(id, &v, now) // surgery.go
 		g.heal(id, &v, now)
 		g.drugTick(id, now) // drugs.go: hourly, staggered
+		if v, _ = g.vital.Get(id); v.Status == health.Dead {
+			continue // an overdose killed it; the stale record must not undo that
+		}
 		if v.Status == health.Downed {
 			g.stainDowned(id, now) // stains.go: an untended body pools
 			n, _ := g.need.Get(id)

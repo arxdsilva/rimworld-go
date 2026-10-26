@@ -36,5 +36,9 @@ materials:
   organ_kidney:   {light: "#a5735a", base: "#895a43", shadow: "#634232"}
   organ_lung:     {light: "#d7aaa2", base: "#c38f88", shadow: "#9a6d67"}
   specimen_fluid: {light: "#d6e5de", base: "#bfd6cd", shadow: "#97b4aa"}
+  # MED drugs (MED-07): numbroot's amber glass and root label, prophyl's pale tablets
+  med_amber:      {light: "#c98d4f", base: "#a86b34", shadow: "#7a4b26"}
+  numbroot_label: {light: "#ece2c8", base: "#d9cba8", shadow: "#ae9f80"}
+  prophyl_blue:   {light: "#d3e4ee", base: "#b5cfe0", shadow: "#8aa8bd"}
 emissive:
   med_teal_glow: "#74e6cb"

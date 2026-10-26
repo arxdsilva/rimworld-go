@@ -1073,7 +1073,7 @@ This screen centralizes per-pawn behavioral policies.
     -   training.
     -   pregnancy/product state where applicable.
 -   [x] **Slaughter toggle**
--   [ ] **Medical care**
+-   [x] **Medical care** (MED-09: animal inspector health block with bleeding, blood loss, infection vs immunity and "needs tending"; Care picker per tame animal; Animals table health cell flags bleeding or infection)
 -   [ ] **Rename**
 -   [x] **Master assignment** (SIM-047)
 

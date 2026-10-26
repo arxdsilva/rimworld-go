@@ -96,6 +96,24 @@ type AnimalView struct {
 	Training           []AnimalTrainingView
 	Mother             string
 	Offspring          []string
+	// MED-09 (animal_health.go): the health block. HealthState is the
+	// headline ("Bleeding 25%/day · death in 31h", "Injured", "Healthy");
+	// BleedPerDay permille of blood a day (0: not bleeding) with
+	// BleedDeathHours (-1: not bleeding); BloodLossPct and BloodStage (""
+	// or "minor".."extreme"); InfectionPct the worst infection's severity
+	// (0: none), ImmunityPct its immunity and InfectionLosing on course to
+	// kill; NeedsTend a tame animal a tend would help now; CareLevel its
+	// medical care level (medcare.Policy).
+	HealthState     string
+	BleedPerDay     int
+	BleedDeathHours int
+	BloodLossPct    int
+	BloodStage      string
+	InfectionPct    int
+	ImmunityPct     int
+	InfectionLosing bool
+	NeedsTend       bool
+	CareLevel       uint8
 }
 
 // AnimalTrainingView is one training skill of a tame animal: Allowed if
@@ -825,6 +843,7 @@ func (g *Game) animalViews() []AnimalView {
 		g.fillAnimalBonds(av, id, a, now, young) // bond_views.go
 		av.AreaRef = g.AreaOf(id)                // areas.go
 		g.fillAnimalPen(av, id, &a)              // pens.go: Penned, Pen
+		g.fillAnimalHealth(av, id, a, now)       // animal_health.go (MED-09)
 	}
 	return out
 }

@@ -7,6 +7,7 @@ import (
 	"rimworld-go/internal/domain/animal/training"
 	"rimworld-go/internal/domain/combat/weapon"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -651,6 +652,13 @@ type State struct {
 	// FeedClaim (PLAY-017) is the stack a tame animal holds a reservation
 	// on while it walks to it and eats (0: none).
 	FeedClaim entity.EntityID
+	// Body (MED-09) is a wounded animal's lightweight medical body: its
+	// wounds on one virtual part, blood loss and infections (the humanlike
+	// body model, no species anatomy). Made on the first wound, dropped
+	// once nothing is left to treat; nil otherwise, so it is saved only
+	// while present and older saves load with none. Injury stays the hit
+	// point scalar; the wounds never add up to more than it.
+	Body *body.Body
 }
 
 // Enraged reports a manhunter at tick now.

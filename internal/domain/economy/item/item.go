@@ -122,6 +122,10 @@ const (
 	Lung
 	Heart
 	Liver
+	// MED-07 (append only, saved): the medical drugs, a painkiller and a
+	// prophylactic against plague, malaria and sleeping sickness.
+	NumbrootTincture
+	ProphylTablet
 	numKinds
 )
 
@@ -138,7 +142,8 @@ var kindNames = [numKinds]string{"food", "wood", "stone", "berries", "potatoes",
 	"peg leg", "prosthetic leg", "prosthetic arm", "wooden hand", "denture", "hearing trumpet",
 	"prosthetic foot", "glass eye", "wooden nose",
 	"nanomed kit", "servo arm", "servo leg", "optic implant", "cochlear implant", "spinal brace", "pump heart",
-	"synth stomach", "valve heart", "kidney", "lung", "heart", "liver"}
+	"synth stomach", "valve heart", "kidney", "lung", "heart", "liver",
+	"numbroot tincture", "prophyl tablet"}
 
 // IsWeapon reports whether k can be equipped.
 func (k Kind) IsWeapon() bool { return k == Club || k == Rifle || k == Knife || k == Spear }
@@ -185,7 +190,10 @@ func Foods() []Kind {
 }
 
 // IsDrug reports a drug: taken for its effect, not its nutrition (ENG-003).
-func (k Kind) IsDrug() bool { return k == Beer || k == AshleafTea || k == SparkTablet }
+// MED-07 adds the medical drugs (numbroot tincture, prophyl tablet).
+func (k Kind) IsDrug() bool {
+	return k == Beer || k == AshleafTea || k == SparkTablet || k == NumbrootTincture || k == ProphylTablet
+}
 
 // IsImplant reports a prosthetic installed by surgery (ENG-003; the
 // servo tier and the valve heart from MED-05). Natural organs are not

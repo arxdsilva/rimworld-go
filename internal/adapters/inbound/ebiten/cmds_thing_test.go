@@ -390,7 +390,7 @@ func TestAnimalCommandsTame(t *testing.T) {
 	a, _ := colonyApp(t, s)
 	a.selectCand(selCand{selAnimal, 50})
 	cs := a.animalCommands(50)
-	if got := strings.Join(thingIDs(cs), ","); got != "animal.hunt,animal.release,cmd.animal.master,animal.train.0,animal.train.1" {
+	if got := strings.Join(thingIDs(cs), ","); got != "animal.hunt,animal.release,cmd.animal.master,cmd.animal.care,animal.train.0,animal.train.1" {
 		t.Fatalf("tame commands = %s", got)
 	}
 	slaughter := thingCmd(t, cs, "animal.hunt")

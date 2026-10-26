@@ -79,6 +79,9 @@ const (
 	MakePumpHeart
 	MakeSynthStomach
 	MakeValveHeart
+	// MED-07: the medical drugs at the drug table, behind Pharmacology.
+	MakeNumbroot
+	PressProphyl
 	numRecipes
 )
 
@@ -236,6 +239,15 @@ var defs = [numRecipes]Def{
 	MakeValveHeart: {ID: MakeValveHeart, Name: "make_valve_heart", Label: "Make valve heart", Bench: construction.Workbench,
 		Input: Input{Kind: item.Steel, Qty: 25}, Output: item.ValveHeart, OutQty: 1, Work: 1400, Skill: work.Craft,
 		Learn: skill.Crafting, MinSkill: 5},
+	// MED-07 (original tuning; a recipe takes one input): numbroot
+	// tincture steeped from herbal medicine, prophyl tablets pressed from
+	// industrial medicine (two per unit), both at the drug table.
+	MakeNumbroot: {ID: MakeNumbroot, Name: "make_numbroot", Label: "Steep numbroot tincture", Bench: construction.DrugTable,
+		Input: Input{Kind: item.HerbalMedicine, Qty: 1}, Output: item.NumbrootTincture, OutQty: 1, Work: 450, Skill: work.Craft,
+		Learn: skill.Crafting},
+	PressProphyl: {ID: PressProphyl, Name: "press_prophyl", Label: "Press prophyl tablets", Bench: construction.DrugTable,
+		Input: Input{Kind: item.IndustrialMedicine, Qty: 1}, Output: item.ProphylTablet, OutQty: 2, Work: 700, Skill: work.Craft,
+		Learn: skill.Crafting, MinSkill: 4},
 }
 
 // servoSkill and servoWork are the servo tier's crafting level and work

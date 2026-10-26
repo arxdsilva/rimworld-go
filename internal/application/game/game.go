@@ -126,6 +126,10 @@ type PawnView struct {
 	// Disease names the pawn's diseases ("flu", "flu, gut worms"; "":
 	// none) (MED-04).
 	Disease string
+	// OverdosePct is the pawn's overdose severity in percent, and
+	// OverdoseStage its stage (1 major, 2 extreme; 0: none or below major)
+	// (MED-07).
+	OverdosePct, OverdoseStage int
 	// Exposure: Hypothermia and Heatstroke severity in permille, and the
 	// air temperature where the colonist is (tenths of a degree C).
 	Hypothermia, Heatstroke int
@@ -1076,6 +1080,7 @@ func (g *Game) snapshot() []PawnView {
 		pv.Bleeding, pv.BleedDeathHours = g.bleedingNow(id), g.bleedDeathHours(id) // bleed.go (MED-01)
 		pv.CareLevel = uint8(g.careOf(id))                                         // care.go (MED-03)
 		pv.Disease = g.diseaseLabel(id)                                            // disease.go (MED-04)
+		pv.OverdosePct, pv.OverdoseStage = g.overdoseView(id)                      // drugs.go (MED-07)
 		pv.Weapon = weaponDefOf(g, id).Name
 		pv.Lying = v.Status != health.Alive || (j.Kind == job.Sleep && (j.State == job.Do || j.State == job.Complete))
 		pv.InBed = g.inBed(id)
