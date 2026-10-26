@@ -71,10 +71,11 @@ func interactionRecent(p game.PawnView, now clock.Tick) bool {
 	return t < p.InteractTick || t-p.InteractTick <= interactBubbleTicks
 }
 
-// drawChatBubbles floats a small speech bubble over colonists chatting and
-// over colonists with a recent social interaction (with the interaction's
-// icon when the art has it), and a red lightning marker over colonists in
-// a social fight.
+// drawChatBubbles floats a speech bubble over colonists chatting and over
+// colonists with a recent social interaction, and a red lightning marker
+// over colonists in a social fight. The bubble is the interaction's round
+// icon (the chit-chat one for a plain chat) with nothing behind it
+// (PLAY-020); without art it is a small dark disc with three dots.
 func (r *Renderer) drawChatBubbles(screen *ebiten.Image, tile float64) {
 	now := r.game.Tick()
 	for _, p := range r.drawPawns {
@@ -92,27 +93,25 @@ func (r *Renderer) drawChatBubbles(screen *ebiten.Image, tile float64) {
 		}
 		wx, wy := r.interpWorld(p)
 		sx, sy := r.worldToScreenF(wx+0.75, wy-0.55)
-		bw, bh := float32(tile*0.42), float32(tile*0.24)
-		var icon *ebiten.Image
+		bw := float32(tile * 0.42)
+		key := "ui_icon/social_chitchat" // a plain chat
 		if social {
-			if key := interactionIconKey(p.Interaction); key != "" {
-				icon = r.art.image(key, noTint)
-			}
-			if icon != nil {
-				bh = bw // a square bubble around the icon
-			}
+			key = interactionIconKey(p.Interaction)
 		}
-		vector.FillRect(screen, sx-bw/2, sy-bh/2, bw, bh, color.RGBA{250, 248, 240, 235}, true)
-		vector.StrokeRect(screen, sx-bw/2, sy-bh/2, bw, bh, 1, color.RGBA{60, 50, 40, 220}, true)
-		vector.FillCircle(screen, sx-bw/2+bw*0.2, sy+bh/2+2, float32(tile*0.035), color.RGBA{250, 248, 240, 235}, true)
+		var icon *ebiten.Image
+		if key != "" {
+			icon = r.art.image(key, noTint)
+		}
 		if icon != nil {
 			// physical anchor and size (the bubble is world-sized): the
 			// icon size is logical, so divide the physical size by the UI scale
-			worldIcon(screen, icon, float64(sx-bw/2)+2, float64(sy-bh/2)+2, float64(bw-4)/uiScale())
+			worldIcon(screen, icon, float64(sx-bw/2)+2, float64(sy-bw/2)+2, float64(bw-4)/uiScale())
 			continue
 		}
+		s := float32(uiScale()) // the canvas takes logical pixels
+		uiFillCircle(screen, sx/s, sy/s, bw*0.42/s, uiPanel, true)
 		for i := -1; i <= 1; i++ {
-			vector.FillCircle(screen, sx+float32(i)*bw*0.25, sy, float32(tile*0.025), color.RGBA{70, 60, 50, 255}, true)
+			uiFillCircle(screen, (sx+float32(i)*bw*0.2)/s, sy/s, float32(tile*0.025)/s, uiTextDim, true)
 		}
 	}
 }

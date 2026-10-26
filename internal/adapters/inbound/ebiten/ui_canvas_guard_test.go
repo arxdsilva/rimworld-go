@@ -122,7 +122,6 @@ var canvasExempt = map[string]string{
 	// overlays anchored to tiles (the UI around them uses the canvas)
 	"labels.go:drawBreakClouds":                   "world: storm clouds over colonists (stack counts and icons use the canvas)",
 	"labels.go:drawBuildingDamage":                "world: damage bars under buildings",
-	"labels.go:drawChatBubbles":                   "world: chat bubbles over colonists",
 	"labels.go:drawFightMarker":                   "world: fight marker over colonists",
 	"labels.go:drawHostileMarker":                 "world: hostile chevron over raiders",
 	"building_inspector.go:drawBuildingSelection": "world: the selected building's outline on the map (the pane uses the canvas)",
