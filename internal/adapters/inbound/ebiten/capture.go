@@ -417,9 +417,12 @@ func (a *App) captureUI(ui string) {
 		a.captureInspect(ui)
 	case "zones":
 		a.captureZones(at)
-	case "power-overlay":
-		// PLAY-021: the power grid overlay on (with -scenario power)
-		a.renderer.pov.on = true
+	case "power", "power-overlay":
+		// PLAY-021 (with -scenario power): the base north of the start,
+		// and the power grid overlay on for power-overlay
+		sw, sh := a.size()
+		a.renderer.centerOn(float64(a.renderer.game.Width())/2, float64(a.renderer.game.Height())/2-9, sw, sh)
+		a.renderer.pov.on = ui == "power-overlay"
 	case "zone", "zone-shrink":
 		a.captureZone(ui == "zone-shrink", at)
 	case "paths":

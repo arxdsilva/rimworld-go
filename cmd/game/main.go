@@ -48,7 +48,7 @@ func main() {
 	hour := flag.Int("hour", -1, "dev: jump to this hour (0-23) of the scenario's day, or the next day's if past")
 	captureFrames := flag.Int("capture-frames", 0, "dev: record this many consecutive frames (PATH_NNN.png) instead of one still")
 	captureSpeed := flag.Int("capture-speed", 1, "dev: game speed (1-3) while recording -capture-frames")
-	captureUI := flag.String("capture-ui", "", "dev: UI state for -capture: picker | wild | trough | inspector | architect | orders | bills | pawn | combat | melee | follow | grow | corridor | crowd | lategame | weather | grass | burial | roofs | roofs-overlay | home | carpet | plant | item | pawnactions | paused-stockpile | move | copy | menu | credits | options | options-graphics | options-gameplay | options-access | zones | zone | zone-shrink | power-overlay | paths | log | frame | fence | forbid | zoo | controls | search | rooms | multiselect | drawstyle | hideui | scenario | scenario-editor | scenario-editor-addpart | storyteller | difficulty-custom | worldgen | worldgen-progress | landing | landing-advanced | landing-factions | pawns | pawns-reroll | factions-colony | bio | work-incapable | arrival | options-story | letter-intro | arch-hospital | arch-cabinet | arch-locked | chips | social | health | prisoner | history | world | assign")
+	captureUI := flag.String("capture-ui", "", "dev: UI state for -capture: picker | wild | trough | inspector | architect | orders | bills | pawn | combat | melee | follow | grow | corridor | crowd | lategame | weather | grass | burial | roofs | roofs-overlay | home | carpet | plant | item | pawnactions | paused-stockpile | move | copy | menu | credits | options | options-graphics | options-gameplay | options-access | zones | zone | zone-shrink | power | power-overlay | paths | log | frame | fence | forbid | zoo | controls | search | rooms | multiselect | drawstyle | hideui | scenario | scenario-editor | scenario-editor-addpart | storyteller | difficulty-custom | worldgen | worldgen-progress | landing | landing-advanced | landing-factions | pawns | pawns-reroll | factions-colony | bio | work-incapable | arrival | options-story | letter-intro | arch-hospital | arch-cabinet | arch-locked | chips | social | health | prisoner | history | world | assign")
 	captureUIScale := flag.Float64("capture-ui-scale", 0, "dev: with -capture, shoot at this UI scale (1280s x 720s frame) to review scaled layouts; 0 = scale 1")
 	captureTimelapse := flag.Int("capture-timelapse", 0, "dev: with -capture-frames, step this many sim ticks per recorded frame (a time-lapse)")
 	noAudio := flag.Bool("noaudio", false, "dev: run without sound")
@@ -949,6 +949,10 @@ func hardware(capture bool) func() sysinfo.Info {
 	return func() sysinfo.Info { return info }
 }
 
+// powerBaseRow is how far north of the start the power base's conduit
+// line runs (the capture state "power" centres there too).
+const powerBaseRow = 9
+
 // powerBase builds a small powered base around (cx, cy) for the -scenario
 // power captures (cmd only: dev hooks): a fuelled wood-fired generator,
 // a solar panel and a wind turbine feed a battery through a conduit line
@@ -956,7 +960,8 @@ func hardware(capture bool) func() sysinfo.Info {
 // stove draw on it; a lamp east of a gap is off the grid, and a torch lamp
 // burns west of it all.
 func powerBase(g *game.Game, cx, cy int) {
-	y := cy - 2
+	y := cy - powerBaseRow // north of the start's house and fields
+	g.ClearPlants(cx-15, y-4, cx+13, y+4) // trees would block the pieces
 	for x := cx - 9; x <= cx+8; x++ {
 		kind := "power conduit"
 		switch {
