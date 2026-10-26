@@ -4,11 +4,13 @@ import (
 	"rimworld-go/internal/application/game"
 )
 
-// Light sources (PLAY-020 §3b): every building the renderer lights the
-// world with comes from appendLightSources, and nothing else in the
-// package tests a building's kind for light. The light grid (light.go)
+// Light sources (PLAY-020 §3b, PLAY-021): every building the renderer
+// lights the world with comes from appendLightSources, and nothing else in
+// the package tests a building's kind for light. The light grid (light.go)
 // and the creature-shadow point lights (shadow_cast.go) both read its
-// list, so PLAY-021 (power, torches) gates lights in this one place.
+// list. Whether a building gives light is the simulation's call
+// (BuildingView.Glow: a powered lamp, a burning torch or campfire), never
+// a kind check here.
 
 // lightKind is how a source lights: its falloff and its shadow height.
 type lightKind uint8
@@ -32,17 +34,27 @@ type lightSource struct {
 const lampDefaultRadius = 6.0
 
 // appendLightSources appends w's light sources to dst, in building order:
-// every lamp (lamps are always on) with reach lampRadius, and every
-// burning campfire. It reuses dst, so it allocates only while dst grows.
+// every building whose view says it Glows. A campfire lights as a
+// campfire (lightCampfire, campfireReach: the renderer keeps its 3-tile
+// look, though the sim's GlowRadius for it is 5); anything else is a point
+// lamp reaching lampRadius (the standing lamp's metadata light_radius) for
+// a lamp, else its GlowRadius (a torch), else lampRadius. It reuses dst,
+// so it allocates only while dst grows.
 func appendLightSources(dst []lightSource, w *game.WorldView, lampRadius float64) []lightSource {
 	for i := range w.Buildings {
 		b := &w.Buildings[i]
-		switch {
-		case b.Kind == "lamp":
-			dst = append(dst, lightSource{ID: uint64(b.ID), X: b.X, Y: b.Y, Radius: lampRadius, Kind: lightLamp})
-		case b.Kind == "campfire" && b.Burning:
-			dst = append(dst, lightSource{ID: uint64(b.ID), X: b.X, Y: b.Y, Radius: campfireReach, Kind: lightCampfire})
+		if !b.Glow {
+			continue
 		}
+		if b.Kind == "campfire" {
+			dst = append(dst, lightSource{ID: uint64(b.ID), X: b.X, Y: b.Y, Radius: campfireReach, Kind: lightCampfire})
+			continue
+		}
+		reach := lampRadius
+		if b.Kind != "lamp" && b.GlowRadius > 0 {
+			reach = float64(b.GlowRadius)
+		}
+		dst = append(dst, lightSource{ID: uint64(b.ID), X: b.X, Y: b.Y, Radius: reach, Kind: lightLamp})
 	}
 	return dst
 }

@@ -297,7 +297,8 @@ func carpetSprite(stuff string) string {
 }
 
 // buildSprite is the world sprite for a building kind; neighbours only
-// matter for walls (autotile) and doors (axis). open draws doors open.
+// matter for walls and conduits (autotile) and doors (axis). open draws
+// doors open and a power switch off.
 func buildSprite(kind, facing string, mask int, ew, open bool) string {
 	switch kind {
 	case fenceKind:
@@ -372,6 +373,46 @@ func buildSprite(kind, facing string, mask int, ew, open bool) string {
 		return "structure/steam_vent"
 	case "pen marker":
 		return "structure/pen_marker"
+	}
+	return powerSprite(kind, facing, mask, open)
+}
+
+// powerSprite is buildSprite for the PLAY-021 kinds: conduits by link
+// mask (power_draw.go), a switch on or (open circuit) off, the rest by
+// facing where they rotate.
+func powerSprite(kind, facing string, mask int, open bool) string {
+	switch kind {
+	case conduitKind:
+		return "power/power_conduit_" + twoDigits(mask&15)
+	case hiddenConduitKind:
+		return "power/hidden_conduit_" + twoDigits(mask&15)
+	case powerSwitchKind:
+		if open {
+			return "power/power_switch_off"
+		}
+		return "power/power_switch_on"
+	case woodGeneratorKind:
+		return "power/wood_fired_generator"
+	case solarPanelKind:
+		return "power/solar_panel"
+	case windTurbineKind:
+		return "power/wind_turbine_" + facingOr(facing)
+	case geothermalKind:
+		return "power/geothermal_generator"
+	case batteryKind:
+		return "power/battery_" + facingOr(facing)
+	case torchLampKind:
+		return "furniture/torch_lamp"
+	case heaterKind:
+		return "power/heater"
+	case coolerKind:
+		return "power/cooler_" + facingOr(facing)
+	case "electric stove":
+		return "furniture/electric_stove_" + facingOr(facing)
+	case "electric tailoring bench":
+		return "furniture/electric_tailoring_bench_" + facingOr(facing)
+	case "electric research bench":
+		return "furniture/electric_research_bench_" + facingOr(facing)
 	}
 	return ""
 }

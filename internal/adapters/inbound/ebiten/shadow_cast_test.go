@@ -464,15 +464,15 @@ func TestPointLightsFromCampfiresAndLitLamps(t *testing.T) {
 	}
 	w.Rooms = []game.RoomView{{ID: 1, Lit: true}, {ID: 2}}
 	w.Buildings = []game.BuildingView{
-		{ID: 1, Kind: "campfire", X: 2, Y: 8, W: 1, H: 1, Burning: true},
-		{ID: 2, Kind: "campfire", X: 5, Y: 8, W: 1, H: 1}, // out
-		{ID: 3, Kind: "lamp", X: 10, Y: 2, W: 1, H: 1},    // room 1
-		{ID: 4, Kind: "lamp", X: 10, Y: 9, W: 1, H: 1},    // room 2
+		{ID: 1, Kind: "campfire", X: 2, Y: 8, W: 1, H: 1, Burning: true, Glow: true, GlowRadius: 5},
+		{ID: 2, Kind: "campfire", X: 5, Y: 8, W: 1, H: 1},                         // out
+		{ID: 3, Kind: "lamp", Glow: true, GlowRadius: 6, X: 10, Y: 2, W: 1, H: 1}, // room 1
+		{ID: 4, Kind: "lamp", Glow: true, GlowRadius: 6, X: 10, Y: 9, W: 1, H: 1}, // room 2
 	}
 	r := shadowRenderer(t, w)
 	r.drawW = w
-	// PLAY-020 §3b: lamps are always on, so every lamp is a light, not
-	// only those in a room the sim calls lit; the banked campfire is out.
+	// PLAY-020 §3b, PLAY-021: every lamp that glows (powered) is a light,
+	// not only those in a room the sim calls lit; the banked campfire is out.
 	got := r.pointLights()
 	if len(got) != 3 || got[0].id != 1 || got[0].h != campfireLightH || got[1].id != 3 || got[1].h != lampLightH ||
 		got[2].id != 4 || got[1].reach != lampLightReach {

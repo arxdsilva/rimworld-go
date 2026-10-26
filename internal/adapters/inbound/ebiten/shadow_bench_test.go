@@ -87,8 +87,8 @@ func BenchmarkCreatureShadows(b *testing.B) {
 	for i := range w.RoomGrid {
 		w.RoomGrid[i] = -1
 	}
-	w.Buildings = []game.BuildingView{{ID: 1, Kind: "campfire", X: 13, Y: 10, W: 1, H: 1, Burning: true},
-		{ID: 2, Kind: "campfire", X: 15, Y: 10, W: 1, H: 1, Burning: true}}
+	w.Buildings = []game.BuildingView{{ID: 1, Kind: "campfire", X: 13, Y: 10, W: 1, H: 1, Burning: true, Glow: true, GlowRadius: 5},
+		{ID: 2, Kind: "campfire", X: 15, Y: 10, W: 1, H: 1, Burning: true, Glow: true, GlowRadius: 5}}
 	// everyone stands within both fires' reach
 	at := func(i int) (int, int) { return 12 + i%5, 8 + (i/5)%5 }
 	r := benchShadowRenderer(mw, mh)

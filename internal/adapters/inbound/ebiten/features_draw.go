@@ -41,7 +41,13 @@ func steamPhase(x, y int) uint64 {
 // tick now; ok is false between bursts. The burst fades out as it plays.
 func steamPuff(now uint64, x, y int) (frame int, alpha float64, ok bool) {
 	period := uint64(steamPeriod(x, y))
-	t := (now + steamPhase(x, y)) % period
+	return puffAt((now + steamPhase(x, y)) % period)
+}
+
+// puffAt is the puff frame and alpha t ticks into a period (ok false once
+// the four frames have played): the vents' and the generators' exhaust
+// (power_draw.go machinePuff).
+func puffAt(t uint64) (frame int, alpha float64, ok bool) {
 	if t >= steamFrameTicks*steamFrames {
 		return 0, 0, false
 	}
@@ -49,15 +55,29 @@ func steamPuff(now uint64, x, y int) (frame int, alpha float64, ok bool) {
 }
 
 // drawSteamPuffs draws a puff over every vent in view, unlit like the other
-// particles. Reduced Motion holds one frame and only fades.
+// particles, and the exhaust of running generators (PLAY-021: smoke from
+// the wood-fired generator, steam from the geothermal one, power_draw.go).
+// A vent under a geothermal generator vents through it instead. Reduced
+// Motion holds one frame and only fades.
 func (r *Renderer) drawSteamPuffs(screen *ebiten.Image, w game.WorldView, tile float64) {
 	if r.art == nil {
 		return
 	}
 	now := uint64(r.game.Tick())
+	covers := r.power.covers[:0]
+	for i := range w.Buildings {
+		if b := &w.Buildings[i]; b.Kind == geothermalKind {
+			covers = append(covers, [4]int{b.X, b.Y, max(b.W, 1), max(b.H, 1)})
+		}
+	}
+	r.power.covers = covers
 	for i := range w.Buildings {
 		b := &w.Buildings[i]
-		if b.Kind != steamVentKind || !r.onScreenTile(screen, b.X, b.Y, tile) {
+		if b.PowerOut > 0 && (b.Kind == woodGeneratorKind || b.Kind == geothermalKind) {
+			r.drawMachinePuff(screen, now, b, tile)
+			continue
+		}
+		if b.Kind != steamVentKind || coveredVent(covers, b) || !r.onScreenTile(screen, b.X, b.Y, tile) {
 			continue
 		}
 		f, a, ok := steamPuff(now, b.X, b.Y)
@@ -68,20 +88,27 @@ func (r *Renderer) drawSteamPuffs(screen *ebiten.Image, w game.WorldView, tile f
 		if r.reducedMotion {
 			f = 1
 		}
-		key := "effect/steam_puff_" + string(rune('0'+f))
-		sp, img := r.art.sprite(key), r.art.image(key, color.NRGBA{})
-		if sp == nil || img == nil {
-			continue
-		}
 		sx, sy := r.worldToScreenF(float64(b.X)+1, float64(b.Y)+1) // footprint centre
-		geo := ebiten.GeoM{}
-		geo.Translate(-float64(sp.meta.Origin[0]), -float64(sp.meta.Origin[1]))
-		geo.Scale(tile/artTilePx, tile/artTilePx)
-		geo.Translate(float64(sx), float64(sy))
-		op := &ebiten.DrawImageOptions{GeoM: geo, Filter: ebiten.FilterLinear}
-		op.ColorScale.Scale(float32(a), float32(a), float32(a), float32(a))
-		screen.DrawImage(img, op)
+		if r.drawPuff(screen, f, sx, sy, tile, 1, colorScale{1, 1, 1, float32(a)}) && r.power.trace != nil {
+			r.powerTrace("vent", ventTraceKey(f, b.X, b.Y))
+		}
 	}
+}
+
+// drawPuff draws steam puff frame f with its origin on screen point (sx,
+// sy), scaled by k and multiplied by cs (alpha in cs[3]), unlit.
+func (r *Renderer) drawPuff(screen *ebiten.Image, f int, sx, sy float32, tile, k float64, cs colorScale) bool {
+	key := "effect/steam_puff_" + string(rune('0'+f))
+	sp, img := r.art.sprite(key), r.art.image(key, color.NRGBA{})
+	if sp == nil || img == nil {
+		return false
+	}
+	geo := ebiten.GeoM{}
+	geo.Translate(-float64(sp.meta.Origin[0]), -float64(sp.meta.Origin[1]))
+	geo.Scale(tile/artTilePx*k, tile/artTilePx*k)
+	geo.Translate(float64(sx), float64(sy))
+	r.drawUnlit(screen, img, geo, cs)
+	return true
 }
 
 // steamHiss cues the vent's hiss once per burst (the first frame drawn of

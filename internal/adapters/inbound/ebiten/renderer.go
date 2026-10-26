@@ -285,6 +285,7 @@ type Renderer struct {
 	// stoneArt memoises stone tints and resolved linked keys, and draws
 	// is the reused per-frame object queue (stone_art.go, draw_art.go).
 	links    linkGrid
+	power    powerDraw // power_draw.go: turbine blade phases, glow keys, vent covers
 	stoneArt stoneArtCache
 	draws    []artDraw
 	// ENG-D fields

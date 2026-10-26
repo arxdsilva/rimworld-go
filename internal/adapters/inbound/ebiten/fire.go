@@ -12,10 +12,11 @@ import (
 // fireHeight lifts the flame (tiles) to sit on the logs.
 const fireHeight = 0.22
 
-// drawFires draws the flame and glow of every burning campfire.
+// drawFires draws the flame and glow of every burning campfire (the
+// torch lamp burns its own flame, power_draw.go; the generator shows none).
 func (r *Renderer) drawFires(screen *ebiten.Image, w game.WorldView, tile float64) {
 	for _, b := range w.Buildings {
-		if !b.Burning {
+		if !b.Burning || ownsFlame(b.Kind) {
 			continue
 		}
 		// ground glow, then tongues that sway and shrink upward, red to yellow
@@ -27,7 +28,7 @@ func (r *Renderer) drawFires(screen *ebiten.Image, w game.WorldView, tile float6
 // emitFireParticles sends embers and smoke up from burning campfires.
 func (r *Renderer) emitFireParticles(w game.WorldView) {
 	for _, b := range w.Buildings {
-		if !b.Burning {
+		if !b.Burning || ownsFlame(b.Kind) {
 			continue
 		}
 		seed := uint64(b.ID)*104729 + r.present

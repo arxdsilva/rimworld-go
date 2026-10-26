@@ -93,7 +93,6 @@ var canvasExempt = map[string]string{
 	"biome_art.go:drawTroughFallback":    "world: trough fallback quad",
 	"blood_draw.go:drawStains":           "world: blood batches",
 	"dirt_draw.go:drawDirt":              "world: dirt batches",
-	"features_draw.go:drawSteamPuffs":    "world: steam vent puffs",
 	"fog_draw.go:drawFogLayer":           "world: fog of war chunks over the map",
 	"grass_batch.go:bakeGrassTint":       "world: grass batches",
 	"art_memory.go:bakeTint":             "world: tinted sprite texture baked offscreen on the GPU",

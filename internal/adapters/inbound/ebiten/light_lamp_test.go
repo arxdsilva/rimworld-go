@@ -42,8 +42,10 @@ func lampRoom(v *game.WorldView, id, x0, y0, x1, y1 int) {
 	v.Rooms = append(v.Rooms, game.RoomView{ID: id, Lit: true})
 }
 
+// lampBuilding is a powered standing lamp: PLAY-021 lights only what the
+// sim says glows (BuildingView.Glow), and a powered lamp reaches 6 tiles.
 func lampBuilding(id, x, y int) game.BuildingView {
-	return game.BuildingView{ID: entity.EntityID(id), Kind: "lamp", X: x, Y: y, W: 1, H: 1}
+	return game.BuildingView{ID: entity.EntityID(id), Kind: "lamp", Glow: true, GlowRadius: 6, X: x, Y: y, W: 1, H: 1}
 }
 
 // levelAt is the lamp light level at (x, y), the packed vertex value decoded.
@@ -304,7 +306,7 @@ func TestLightGridRebuildsOnlyOnStructureOrLampChange(t *testing.T) {
 func TestLightsComeOnlyFromLightSources(t *testing.T) {
 	t.Parallel()
 	v := lampTestWorld(20, 12)
-	v.Buildings = []game.BuildingView{lampBuilding(1, 3, 3), {ID: 2, Kind: "campfire", X: 15, Y: 8, W: 1, H: 1, Burning: true},
+	v.Buildings = []game.BuildingView{lampBuilding(1, 3, 3), {ID: 2, Kind: "campfire", X: 15, Y: 8, W: 1, H: 1, Burning: true, Glow: true, GlowRadius: 5},
 		{ID: 3, Kind: "campfire", X: 15, Y: 2, W: 1, H: 1}, {ID: 4, Kind: "chair", X: 9, Y: 9, W: 1, H: 1}}
 	got := appendLightSources(nil, &v, 6)
 	want := []lightSource{{ID: 1, X: 3, Y: 3, Radius: 6, Kind: lightLamp}, {ID: 2, X: 15, Y: 8, Radius: campfireReach, Kind: lightCampfire}}

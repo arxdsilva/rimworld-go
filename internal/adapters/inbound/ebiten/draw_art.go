@@ -157,11 +157,15 @@ func (r *Renderer) drawSpriteScaled(screen *ebiten.Image, key string, tint color
 }
 
 // drawPlacementGhost previews a build tool: the real sprite per cell,
-// green when placeable, red when not. Walls autotile among the ghosts.
+// green when placeable, red when not. Walls and conduits autotile among
+// the ghosts.
 func (r *Renderer) drawPlacementGhost(screen *ebiten.Image, kind, stuff, facing string, cells []ghostCell) {
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
 	tile := r.tilePx()
-	link := buildingLink(kind)
+	link, power := buildingLink(kind), false
+	if c := powerLink(kind); c.accepts != 0 { // conduits link on the power layer (linkgrid.go)
+		link, power = c, true
+	}
 	var p map[[2]int]linkFlag
 	if r.art != nil && link.flags != 0 { // ghosts join built walls, rock, frames and each other
 		w := r.drawW
@@ -190,7 +194,10 @@ func (r *Renderer) drawPlacementGhost(screen *ebiten.Image, kind, stuff, facing 
 			continue
 		}
 		mask, corners := 0, 0
-		if p != nil {
+		switch {
+		case p != nil && power:
+			mask = r.links.powerMask(link.accepts, c.x, c.y, p)
+		case p != nil:
 			mask = r.links.plannedMask(p, link.accepts, c.x, c.y)
 			corners = r.links.plannedCorners(p, link.accepts, c.x, c.y)
 		}
@@ -282,6 +289,8 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	r.drawGroundCover(screen, w, sw, sh, tile)
 	r.drawFoundation(screen, w, sw, sh, tile) // bridge_draw.go: over the water, under floors
 	r.drawFloorLayers(screen, w, sw, sh, tile)
+	r.drawConduits(screen, w, sw, sh, tile) // power_draw.go: over floors, under zones and objects
+	r.power.prune(r.present)
 	r.layer("zones")
 	r.drawZones(screen, w, sw, sh, tile) // zones_draw.go
 	r.drawPlanOverlay(screen, w, sw, sh, tile)
@@ -380,7 +389,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 			if int(i) >= len(w.Frames) {
 				continue
 			}
-			if f := &w.Frames[i]; !f.Floor && f.Kind != "carpet" && l.near(f.X, f.Y, 3, 4) {
+			if f := &w.Frames[i]; !f.Floor && f.Kind != "carpet" && !isConduitKind(f.Kind) && l.near(f.X, f.Y, 3, 4) {
 				draws = append(draws, artDraw{row: float64(f.Y + max(f.H, 1) - 1), col: float64(f.X), kind: objFrame, i: i})
 			}
 		}
@@ -427,6 +436,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 		r.drawStackCounts(screen, w, tile)
 	}
 	r.drawBuildingDamage(screen, w, tile)
+	r.drawNoPowerBadges(screen, &w, tile) // power_draw.go
 	r.drawChatBubbles(screen, tile)
 	r.drawBreakClouds(screen, tile)
 	r.drawOrderRoute(screen, tile)
@@ -534,7 +544,8 @@ func (r *Renderer) runDraw(dst *ebiten.Image, w *game.WorldView, d *artDraw, til
 
 // drawBuildingObj draws a building in the object pass (or the map bake):
 // linked walls, doors and fences, troughs, graves, pyres and the rest,
-// with a drying rack's load and the deconstruct mark.
+// with its power parts (power_draw.go), a drying rack's load and the
+// deconstruct mark.
 func (r *Renderer) drawBuildingObj(dst *ebiten.Image, b *game.BuildingView, tile float64, sw, sh int) {
 	none := color.NRGBA{}
 	l := &r.lod
@@ -545,6 +556,8 @@ func (r *Renderer) drawBuildingObj(dst *ebiten.Image, b *game.BuildingView, tile
 		mask, corners = r.links.mask(b.X, b.Y), r.links.corners(b.X, b.Y)
 	case isFenceKind(b.Kind):
 		mask, open = r.links.mask(b.X, b.Y), l.creatures[[2]int{b.X, b.Y}]
+	case b.Kind == powerSwitchKind:
+		open = !b.PowerOn // the actual state: an open switch is off
 	}
 	switch b.Kind {
 	case "grave":
@@ -580,6 +593,7 @@ func (r *Renderer) drawBuildingObj(dst *ebiten.Image, b *game.BuildingView, tile
 		}
 		// stone walls, fences and floors take their stone's tint
 		r.drawSpriteCS(dst, key, t, float64(b.X), float64(b.Y), tile, sw, sh, tintCS(r.stuffTint(b.Stuff)))
+		r.drawPowerParts(dst, b, key, tile, sw, sh) // power_draw.go: glow, blades, flame, charge
 	}
 	r.drawRuinOverlay(dst, b, tile, sw, sh) // features_draw.go
 	if b.DryQty > 0 {
@@ -1201,10 +1215,11 @@ func cleanlinessNote(rm game.RoomView) string {
 	return ", " + rm.Cleanliness
 }
 
-// onFloor reports a building kind drawn flat in the floor-marking pass,
-// under pawns and furniture, not in the object pass.
+// onFloor reports a building kind drawn flat under pawns and furniture
+// (the floor-marking, foundation or conduit pass), not in the object pass.
 func onFloor(kind string) bool {
-	return kind == "sleeping spot" || kind == "carpet" || kind == bridgeKind // a bridge: the foundation pass
+	return kind == "sleeping spot" || kind == "carpet" || kind == bridgeKind || // a bridge: the foundation pass
+		isConduitKind(kind) // conduits: the conduit pass (power_draw.go)
 }
 
 // drawFloorLayers draws the ground under zones: built floors, then the

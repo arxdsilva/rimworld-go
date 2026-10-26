@@ -159,7 +159,7 @@ func TestLightGridBuildsOnlyReadChunks(t *testing.T) {
 		t.Fatal("a new building list without fires or lit rooms rebuilt the light")
 	}
 	v3 := v2
-	v3.Buildings = []game.BuildingView{{Kind: "campfire", X: 5, Y: 5, Burning: true}}
+	v3.Buildings = []game.BuildingView{{Kind: "campfire", X: 5, Y: 5, Burning: true, Glow: true, GlowRadius: 5}}
 	r.drawW = v3
 	if _, l := r.lightTile(5, 6); l <= 0 || r.lit.grid.gen == gen {
 		t.Fatalf("a lit campfire: lamp %v, generation kept %v", l, r.lit.grid.gen == gen)

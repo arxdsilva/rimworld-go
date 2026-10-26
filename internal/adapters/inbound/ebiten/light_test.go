@@ -212,8 +212,8 @@ func TestLampAddsWarmth(t *testing.T) {
 	// PLAY-020 §3b: a room is no longer lit flat at 1 because the sim calls
 	// it lit; its lamp lights it, full on the lamp's tile and its
 	// neighbours, falling off with distance, and stops at its walls.
-	w.Buildings = []game.BuildingView{{ID: 1, Kind: "lamp", X: 1, Y: 0, W: 1, H: 1},
-		{Kind: "campfire", X: 6, Y: 0, Burning: true}, {Kind: "campfire", X: 0, Y: 3}}
+	w.Buildings = []game.BuildingView{{ID: 1, Kind: "lamp", Glow: true, GlowRadius: 6, X: 1, Y: 0, W: 1, H: 1},
+		{Kind: "campfire", X: 6, Y: 0, Burning: true, Glow: true, GlowRadius: 5}, {Kind: "campfire", X: 0, Y: 3}}
 	r.drawW = w
 	if l := levelAt(r, 1, 0); l != 1 {
 		t.Fatalf("on the lamp %v, want 1", l)
@@ -257,7 +257,7 @@ func TestLightGridNoAllocAfterWarmup(t *testing.T) {
 	r := &Renderer{}
 	views := [2]game.WorldView{roomWorld(), roomWorld()}
 	for i := range views { // a room lamp and an outdoor one: the lamp paths too
-		views[i].Buildings = []game.BuildingView{{ID: 1, Kind: "lamp", X: 1, Y: 1, W: 1, H: 1}, {ID: 2, Kind: "lamp", X: 6, Y: 2, W: 1, H: 1}}
+		views[i].Buildings = []game.BuildingView{{ID: 1, Kind: "lamp", Glow: true, GlowRadius: 6, X: 1, Y: 1, W: 1, H: 1}, {ID: 2, Kind: "lamp", Glow: true, GlowRadius: 6, X: 6, Y: 2, W: 1, H: 1}}
 	}
 	r.drawW = views[0]
 	r.lightTile(0, 0)
@@ -350,7 +350,7 @@ func TestDrawLitFlatAndNormalPaths(t *testing.T) {
 	// PLAY-020 §3b: lamp light comes from a lamp, not from the room's Lit
 	// flag, so the lit room gets its lamp at (1, 1) (its tile: lamp 1).
 	w := roomWorld()
-	w.Buildings = []game.BuildingView{{ID: 1, Kind: "lamp", X: 1, Y: 1, W: 1, H: 1}}
+	w.Buildings = []game.BuildingView{{ID: 1, Kind: "lamp", Glow: true, GlowRadius: 6, X: 1, Y: 1, W: 1, H: 1}}
 	r.drawW = w
 	r.lit.light = lightAt(12, summerDay, "clear", 0)
 	dst := ebiten.NewImage(64, 64)
@@ -586,7 +586,7 @@ func TestLitRoomWallCornersGlow(t *testing.T) {
 	t.Parallel()
 	const w, h = 4, 4 // a wall ring around a 2x2 lit room
 	v := game.WorldView{TerrainW: w, Terrain: make([]uint8, w*h), RoomGrid: make([]int, w*h), RoofCells: make([]uint8, w*h),
-		Rooms: []game.RoomView{{ID: 0, Lit: true}}, Buildings: []game.BuildingView{{ID: 1, Kind: "lamp", X: 1, Y: 1, W: 1, H: 1}}}
+		Rooms: []game.RoomView{{ID: 0, Lit: true}}, Buildings: []game.BuildingView{{ID: 1, Kind: "lamp", Glow: true, GlowRadius: 6, X: 1, Y: 1, W: 1, H: 1}}}
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
 			if x == 0 || y == 0 || x == w-1 || y == h-1 {
