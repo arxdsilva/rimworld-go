@@ -6,6 +6,10 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 )
 
+func init() {
+	registerScreenUI(screenMainMenu, func(a *App, sw, sh int) { a.mainMenuUI(sw, sh) })
+}
+
 // Main menu metrics (NG-1 §2.1): a right rail of 300x40 buttons, 10 px
 // apart, from y = 140.
 const (
@@ -32,6 +36,77 @@ func (a *App) mainMenuButtons(sw, sh int) []button {
 		specs = append([]buttonSpec{cont}, specs...)
 	}
 	return stackButtons(cx, menuRailY, menuRailW, menuBtnH, menuBtnGap, specs)
+}
+
+// Low-RAM notice (PLAY-019): a card under the right rail, in the warning
+// colour, with a Got it button. It warns only; nothing is blocked.
+const (
+	ramDismissID  = "menu.ram.dismiss"
+	ramCardPad    = 12
+	ramCardStripe = 3
+	ramCardGap    = 12 // from the last rail button, and from the screen's bottom
+	ramBtnW       = 96
+	ramBtnH       = 28
+)
+
+// ramNoticeStyle is the notice's text: the warning token.
+func ramNoticeStyle() textStyle { return withColor(tsBody, uiWarning) }
+
+// lowRAMNotice is the notice to show now and the amount of memory it is
+// for: no text when the hardware is unknown, big enough, or the player
+// already dismissed the notice for this amount (Gameplay.RAMNoticeSeen).
+func (a *App) lowRAMNotice() (text string, total uint64) {
+	total = a.hardwareTotal()
+	if total == 0 || total >= minimumRAM() || a.settings.Gameplay.RAMNoticeSeen == total {
+		return "", 0
+	}
+	return lowRAMText(total), total
+}
+
+// dismissRAMNotice remembers the notice was seen for total bytes of RAM.
+func (a *App) dismissRAMNotice(total uint64) {
+	s := a.settings
+	s.Gameplay.RAMNoticeSeen = total
+	a.setSettings(s)
+}
+
+// ramNoticeCard is the notice's card: the rail's width, below the last
+// menu button and above the screen's bottom edge.
+func (a *App) ramNoticeCard(sw, sh int, text string) rect {
+	x, w := menuRailX(sw), float32(menuRailW)
+	lines := wrapPx(text, ramNoticeStyle(), float64(w-2*ramCardPad-ramCardStripe))
+	h := float32(2*ramCardPad+ramBtnH+8) + float32(len(lines))*float32(lineH(ramNoticeStyle()))
+	top := float32(0)
+	for _, b := range a.mainMenuButtons(sw, sh) {
+		top = max(top, b.y+b.h)
+	}
+	y := max(top+ramCardGap, float32(sh)-ramCardGap-h)
+	if y+h > float32(sh) { // a window under the minimum: stay on screen
+		y = float32(sh) - h
+	}
+	return rect{x, y, w, h}
+}
+
+// mainMenuUI declares the main menu's widgets: the low-RAM notice.
+func (a *App) mainMenuUI(sw, sh int) {
+	text, total := a.lowRAMNotice()
+	if text == "" {
+		return
+	}
+	card := a.ramNoticeCard(sw, sh, text)
+	st := ramNoticeStyle()
+	lines := wrapPx(text, st, float64(card.W-2*ramCardPad-ramCardStripe))
+	a.uiPanel(card)
+	a.uiSt().queue(func(dst *ebiten.Image) {
+		fillRect(dst, rect{card.X, card.Y, ramCardStripe, card.H}, uiWarning)
+		tx, ty := float64(card.X+ramCardPad+ramCardStripe), float64(card.Y+ramCardPad)
+		for i, l := range lines {
+			drawText(dst, l, tx, ty+float64(i)*lineH(st), st)
+		}
+	})
+	btn := rect{card.right() - ramCardPad - ramBtnW, card.bottom() - ramCardPad - ramBtnH, ramBtnW, ramBtnH}
+	a.ngButton(ramDismissID, btn, "Got it", btnOpts{Tip: "Got it\nHide this notice. It comes back only if the computer's memory changes."},
+		func() { a.dismissRAMNotice(total) })
 }
 
 func (a *App) drawMainMenu(screen *ebiten.Image, sw, sh int) {

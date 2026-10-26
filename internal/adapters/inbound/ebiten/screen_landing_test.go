@@ -243,8 +243,10 @@ func TestMapSizeOptionsGated(t *testing.T) {
 			}
 		}
 	}
-	if !strings.Contains(mapSizeLabel(game.MapSizeView{Side: 400, Large: true}), "capable computer") {
-		t.Error("large sizes say they need a capable computer")
+	// The size label is just the size; what a size needs is mapSizeNote's
+	// one rule (ram_estimate.go), shown beside it.
+	if mapSizeNote(400, 0) != "Large map: needs a capable computer" {
+		t.Error("large sizes with unknown hardware say they need a capable computer")
 	}
 }
 
@@ -263,7 +265,7 @@ func TestTileInfoFields(t *testing.T) {
 			ocean = i
 		}
 	}
-	ti := buildTileInfo(p, land, 120)
+	ti := buildTileInfo(p, land, 120, 0)
 	want := []string{"Terrain", "Coordinates", "Elevation", "Avg temperature", "Summer / winter", "Rainfall",
 		"Growing period", "Stone types", "Water", "Caves", "Roads", "Nearest settlement", "Movement difficulty", "Forage", "Wildlife"}
 	got := map[string]string{}
@@ -290,15 +292,19 @@ func TestTileInfoFields(t *testing.T) {
 	if ti.invalid != "" {
 		t.Errorf("a valid tile has no invalid reason: %q", ti.invalid)
 	}
-	if o := buildTileInfo(p, ocean, 120); o.name != "Ocean" || o.invalid != planet.ReasonWater || len(o.rows) >= len(want) {
+	if o := buildTileInfo(p, ocean, 120, 0); o.name != "Ocean" || o.invalid != planet.ReasonWater || len(o.rows) >= len(want) {
 		t.Errorf("ocean info: %+v", o)
 	}
-	if !buildTileInfo(p, -5, 120).outside {
+	if !buildTileInfo(p, -5, 120, 0).outside {
 		t.Error("a missing tile is outside the world")
 	}
-	// Warnings.
-	if w := buildTileInfo(p, land, 400).warnings; !containsStr(w, "Large map: needs a capable computer") {
+	// Warnings. With unknown hardware (total 0) a 350+ map gets the gentle
+	// note and smaller ones none; the RAM rule is in ram_estimate_test.go.
+	if w := buildTileInfo(p, land, 400, 0).warnings; !containsStr(w, "Large map: needs a capable computer") {
 		t.Errorf("warnings at 400: %v", w)
+	}
+	if w := buildTileInfo(p, land, 300, 0).warnings; containsStr(w, "Large map: needs a capable computer") {
+		t.Errorf("warnings at 300: %v", w)
 	}
 	if coordText(-342, -1217) != "34.2°S 121.7°W" || coordText(342, 1217) != "34.2°N 121.7°E" {
 		t.Errorf("coords %q", coordText(-342, -1217))

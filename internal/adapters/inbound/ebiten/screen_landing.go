@@ -98,11 +98,8 @@ func defaultMapSideEnabled() int {
 
 func mapSizeLabel(o game.MapSizeView) string {
 	l := fmt.Sprintf("%d x %d", o.Side, o.Side)
-	switch {
-	case o.Side == preReleaseSide && game.MaxEnabledSide < 200:
+	if o.Side == preReleaseSide && game.MaxEnabledSide < 200 {
 		l += " (pre-release)"
-	case o.Large:
-		l += " (needs a capable computer)"
 	}
 	return l
 }
@@ -268,8 +265,9 @@ func yesNo(b bool) string {
 }
 
 // buildTileInfo reads tile i of p for the panel; mapSide is the chosen
-// map size (for the large-map warning).
-func buildTileInfo(p *planet.Planet, i, mapSide int) tileInfo {
+// map size and total the computer's memory in bytes (0 unknown), for the
+// map-size warning.
+func buildTileInfo(p *planet.Planet, i, mapSide int, total uint64) tileInfo {
 	if i < 0 || i >= p.TileCount() {
 		return tileInfo{tile: i, outside: true}
 	}
@@ -345,8 +343,8 @@ func buildTileInfo(p *planet.Planet, i, mapSide int) tileInfo {
 	if p.Water[i] == planet.Land && grow < 15 {
 		ti.warnings = append(ti.warnings, "Very short growing season")
 	}
-	if mapSide >= 400 {
-		ti.warnings = append(ti.warnings, "Large map: needs a capable computer")
+	if n := mapSizeNote(mapSide, total); n != "" { // the size picker's rule (ram_estimate.go)
+		ti.warnings = append(ti.warnings, n)
 	}
 	return ti
 }
@@ -559,8 +557,9 @@ func (a *App) landInfoPanel(ng *newGameState, r rect, tile int, uncovered bool) 
 // tileInfoFor is the cached info of a tile.
 func (a *App) tileInfoFor(ng *newGameState, tile int) tileInfo {
 	c := &ng.info
-	if c.planet != ng.planet || c.tile != tile || c.side != ng.mapSize {
-		*c = infoCache{planet: ng.planet, tile: tile, side: ng.mapSize, info: buildTileInfo(ng.planet, tile, ng.mapSize)}
+	total := a.hardwareTotal()
+	if c.planet != ng.planet || c.tile != tile || c.side != ng.mapSize || c.total != total {
+		*c = infoCache{planet: ng.planet, tile: tile, side: ng.mapSize, total: total, info: buildTileInfo(ng.planet, tile, ng.mapSize, total)}
 	}
 	return c.info
 }
@@ -571,6 +570,7 @@ type infoCache struct {
 	planet *planet.Planet
 	tile   int
 	side   int
+	total  uint64 // the computer's memory the warning was made for
 	info   tileInfo
 }
 
@@ -748,15 +748,47 @@ func (a *App) landingAdvancedBody(ng *newGameState, body rect, opts []game.MapSi
 	labels := make([]string, len(opts))
 	dis := make([]string, len(opts))
 	tips := make([]string, len(opts))
+	notes := make([]string, len(opts))
+	total := a.hardwareTotal()
 	msel := 0
 	for i, o := range opts {
 		labels[i], dis[i] = mapSizeLabel(o), o.Reason
 		tips[i] = fmt.Sprintf("%d x %d\n%s tiles, about %d tiles across.", o.Side, o.Side, groupDigits(o.Side*o.Side), o.Side)
+		if o.Enabled { // a size that is not available yet has nothing to warn about
+			if notes[i] = mapSizeNote(o.Side, total); notes[i] != "" {
+				tips[i] += "\n" + notes[i]
+			}
+		}
 		if o.Side == ng.mapSize {
 			msel = i
 		}
 	}
-	if a.uiRadio("land.mapsize", rect{body.X, y, body.W, float32(len(opts)) * radioRowH}, labels, &msel, radioOpts{Disabled: dis, Tips: tips}) {
+	list := rect{body.X, y, body.W, float32(len(opts)) * radioRowH}
+	if a.uiRadio("land.mapsize", list, labels, &msel, radioOpts{Disabled: dis, Tips: tips}) {
 		ng.mapSize = opts[msel].Side
 	}
+	a.mapSizeWarnings(list, labels, notes)
+}
+
+// mapSizeWarnings paints each size's warning (ram_estimate.go) at the right
+// end of its row, in the warning colour, clear of the size label. The size
+// stays selectable: this only draws.
+func (a *App) mapSizeWarnings(list rect, labels, notes []string) {
+	rows := list.rowsN(len(labels), radioRowH, 0)
+	a.uiSt().queue(func(dst *ebiten.Image) {
+		st := withColor(tsBody, uiWarning)
+		st.Align = alignRight
+		for i, note := range notes {
+			if note == "" {
+				continue
+			}
+			row := rows[i]
+			labelEnd := row.X + 2*radioRadius + 1 + checkGap + textW(labels[i], tsBody) + 12
+			room := row.right() - 4 - labelEnd
+			if room <= 0 {
+				continue
+			}
+			drawText(dst, fitText(note, st, room), float64(row.right()-4), float64(row.Y)+(float64(row.H)-lineH(st))/2, st)
+		}
+	})
 }

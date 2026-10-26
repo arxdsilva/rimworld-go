@@ -106,7 +106,7 @@ func main() {
 			ebiten.SetFullscreen(fullscreen)
 			ebiten.SetVsyncEnabled(vsync)
 		},
-		Hardware: sysinfo.Read, // PLAY-019: graphics tier and the low-memory notice
+		Hardware: hardware(shot != nil), // PLAY-019: graphics tier and the low-memory notice
 		NewSim: func(ng uiadapter.NewGame) (uiadapter.Simulation, error) {
 			if *scenario == "grown" { // dev: the benchmark's grown colony at -width x -height
 				appscenario.CacheDir = os.Getenv("RIMWORLD_FIXTURE_DIR")
@@ -909,4 +909,15 @@ func fpsProbeOf(seconds int, zoom float64, speed int) *uiadapter.FPSProbe {
 		speed = 2 // 3 ticks per frame: the NG-1 budget speed
 	}
 	return &uiadapter.FPSProbe{Seconds: seconds, Zoom: zoom, Speed: speed}
+}
+
+// hardware reads the computer's memory and cores once: the menu asks every
+// frame and the total never changes while the game runs. Captures get none,
+// so media never depends on the machine that made it.
+func hardware(capture bool) func() sysinfo.Info {
+	if capture {
+		return nil
+	}
+	info := sysinfo.Read()
+	return func() sysinfo.Info { return info }
 }

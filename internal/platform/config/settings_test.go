@@ -181,3 +181,25 @@ func TestRunInBackgroundDefaultsOffAndMigrates(t *testing.T) {
 		t.Fatalf("round trip %+v, %v", back.Gameplay, err)
 	}
 }
+
+// PLAY-019: the low-RAM notice remembers the RAM amount it was dismissed
+// for (0 = never), and the value survives a round trip.
+func TestRAMNoticeSeenRoundTrip(t *testing.T) {
+	t.Parallel()
+	if Defaults().Gameplay.RAMNoticeSeen != 0 {
+		t.Fatal("the low-RAM notice must start unseen")
+	}
+	s := Defaults()
+	s.Gameplay.RAMNoticeSeen = 4 << 30
+	var buf strings.Builder
+	if err := Encode(&buf, s); err != nil {
+		t.Fatal(err)
+	}
+	got, err := Decode(strings.NewReader(buf.String()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Gameplay.RAMNoticeSeen != 4<<30 {
+		t.Fatalf("RAMNoticeSeen %d after a round trip, want %d", got.Gameplay.RAMNoticeSeen, uint64(4<<30))
+	}
+}

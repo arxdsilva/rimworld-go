@@ -104,6 +104,10 @@ type Gameplay struct {
 	LearnedLessons       []string `json:"learned_lessons,omitempty"`
 	CategorizedResources bool     `json:"categorized_resources,omitempty"`
 	ShowColonistBar      bool     `json:"show_colonist_bar"`
+	// RAMNoticeSeen is the total RAM in bytes the low-RAM notice was
+	// dismissed for (PLAY-019; 0 = never): it shows again only on a
+	// different amount.
+	RAMNoticeSeen uint64 `json:"ram_notice_seen,omitempty"`
 	// DevMode turns on the developer keys: ultrafast speed, single-tick
 	// stepping, debug actions, the debug log and the debug inspector.
 	DevMode bool `json:"dev_mode"`
