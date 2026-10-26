@@ -21,7 +21,7 @@ type RoomView struct {
 	Role  string
 	Score int
 	Label string // awful .. impressive
-	Lit   bool   // has a lamp
+	Lit   bool   // a light shines in it: a powered lamp, a burning torch lamp or campfire
 	Temp  int    // air temperature, tenths of a degree C
 	// Roofed is the roofed share of the room's cells, 0..1 (SIM-018).
 	Roofed float64
@@ -43,7 +43,6 @@ type roomStats struct {
 	contents room.Contents
 	score    int
 	role     room.Role
-	lit      bool
 }
 
 func (g *Game) markRoomsDirty() { g.roomDirty = true; g.fenceDirty() } // fences.go: a building changed
@@ -53,10 +52,17 @@ func (g *Game) isBoundary(x, y int) bool {
 		return true
 	}
 	bid := g.layerBldgAt(x, y, construction.LayerObject)
-	if b, ok := g.bldgs.Get(bid); ok && (b.Kind == construction.Wall || b.Kind == construction.Door) {
+	if b, ok := g.bldgs.Get(bid); ok && roomWall(b.Kind) {
 		return true
 	}
 	return false
+}
+
+// roomWall reports a building that bounds rooms: a wall, a door, or a
+// cooler standing in a wall gap (PLAY-021: it moves heat between the two
+// rooms it separates).
+func roomWall(k construction.Kind) bool {
+	return k == construction.Wall || k == construction.Door || k == construction.Cooler
 }
 
 // ensureRooms rebuilds the rooms after a building or terrain change:
@@ -120,7 +126,6 @@ func (g *Game) roomStatsFull(grid []int, sizes []int) []roomStats {
 	for i := range stats {
 		stats[i].score = room.Impressiveness(stats[i].contents)
 		stats[i].role = room.RoleOf(stats[i].contents)
-		stats[i].lit = stats[i].contents.Lamps > 0
 	}
 	return stats
 }
@@ -158,12 +163,18 @@ func (g *Game) roomViews() []RoomView {
 		avg := sum / max(1, r.contents.Cells)
 		score := r.score - pen
 		out[i] = RoomView{ID: i, Cells: r.contents.Cells, Role: r.role.String(), Score: score,
-			Label: room.Label(score), Lit: r.lit, Temp: int(g.roomTemps[i]),
+			Label: room.Label(score), Temp: int(g.roomTemps[i]),
 			Roofed: float64(g.roomRoofed(i)) / 1000,
 			Filth:  avg, Cleanliness: filth.Label(avg), FilthPenalty: pen}
 	}
-	for _, bid := range g.bldgIDs { // a burning fire lights its room (not one doused by rain or snow)
-		if b, ok := g.bldgs.Get(bid); ok && b.Kind == construction.Campfire && g.fuel[bid] > 0 && g.burning(bid, b) {
+	// PLAY-021: a room is lit by a light shining in it now (a powered
+	// lamp, a torch lamp or campfire burning, not doused by rain or snow)
+	for _, bid := range g.lightSources().ids {
+		b := g.bldgs.Ref(bid)
+		if b == nil {
+			continue
+		}
+		if on, _, _ := g.shining(bid, *b); on {
 			if r := g.roomAt(b.X, b.Y); r >= 0 && r < len(out) {
 				out[r].Lit = true
 			}

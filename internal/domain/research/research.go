@@ -75,13 +75,14 @@ var defs = [NumProjects]Def{
 		Desc: "Steel limbs to replace lost legs and arms.", Unlocks: []string{"recipe:make_prosthetic_leg", "recipe:make_prosthetic_arm", "recipe:make_glass_eye"}},
 	Bridges: {Project: Bridges, Name: "bridges", Label: "Bridges", Cost: 1500,
 		Desc: "Timber platforms over water, marsh and mud. They hold light things, not stone walls.", Unlocks: []string{"build:bridge"}},
-	// PLAY-021 (our costs). "build:lamp" joins Electricity's unlocks in the
-	// change that makes lamps need power and adds the torch lamp, so a
-	// colony is never left without a light it can build.
+	// PLAY-021 (our costs). Lamps need power and come with Electricity;
+	// the torch lamp is free, so a colony is never left without a light
+	// it can build.
 	Electricity: {Project: Electricity, Name: "electricity", Label: "Electricity", Cost: 3000,
 		Desc: "Conduits, switches and a wood-fired generator to run lamps, heaters, coolers and electric benches.",
 		Unlocks: []string{"build:power conduit", "build:hidden conduit", "build:power switch", "build:wood-fired generator",
-			"build:heater", "build:cooler", "build:electric stove", "build:electric tailoring bench", "build:electric research bench"}},
+			"build:lamp", "build:heater", "build:cooler", "build:electric stove", "build:electric tailoring bench",
+			"build:electric research bench"}},
 	Batteries: {Project: Batteries, Name: "batteries", Label: "Batteries", Cost: 2500, Requires: []Project{Electricity},
 		Desc: "Store spare power for the night and for lean hours.", Unlocks: []string{"build:battery"}},
 	SolarPower: {Project: SolarPower, Name: "solar_power", Label: "Solar power", Cost: 4000, Requires: []Project{Electricity},

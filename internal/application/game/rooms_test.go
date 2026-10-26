@@ -47,7 +47,7 @@ func TestRoomsDetectedAndScored(t *testing.T) {
 		t.Fatal("outside the box is outdoors")
 	}
 	placeBuilt(t, g, construction.Bed, construction.South, 3, 3)
-	placeBuilt(t, g, construction.Lamp, construction.South, 6, 3)
+	litLamp(t, g, 6, 3, 5, 5) // PLAY-021: a lamp lights its room on power
 	for y := 3; y <= 6; y++ {
 		for x := 3; x <= 6; x++ {
 			placeBuilt(t, g, construction.Floor, construction.South, x, y)

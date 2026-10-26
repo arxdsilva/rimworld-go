@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/world/chunk"
 	"rimworld-go/internal/domain/world/plant"
@@ -29,10 +30,11 @@ func near(a, b float64) bool { return math.Abs(a-b) < 1e-4 }
 
 // TestLightGridLampAndCampfire: a lamp gives 0.7 at its cell falling off
 // linearly to nothing past radius 6; a campfire 0.6 to radius 5; rock
-// shadows; overlapping lights take the brighter.
+// shadows; overlapping lights take the brighter. (PLAY-021: lamps light
+// on power, litLamp; light_power_test.go.)
 func TestLightGridLampAndCampfire(t *testing.T) {
 	g := lightFixture(t)
-	placeBuilt(t, g, construction.Lamp, construction.South, 10, 10)
+	litLamp(t, g, 10, 10, 7, 9)
 	for _, c := range []struct {
 		x, y int
 		want float64
@@ -63,8 +65,13 @@ func TestLightGridLampAndCampfire(t *testing.T) {
 	if l := g.cellLight(12, 10); !near(float64(l), 0.7*5/7) {
 		t.Fatalf("the rock face itself is lit: %.3f", l)
 	}
-	// overlapping: a second lamp beside the first, the brighter wins (no sum)
-	placeBuilt(t, g, construction.Lamp, construction.South, 9, 12)
+	// overlapping: a second lamp beside the first (on its conduit), the
+	// brighter wins (no sum)
+	second := buildNow(t, g, construction.Lamp, item.Wood, construction.South, 9, 12)
+	g.balancePower(uint64(g.clock.Now()))
+	if !g.powered(second) {
+		t.Fatal("the second lamp is not on power")
+	}
 	if l := g.cellLight(10, 10); !near(float64(l), 0.7) {
 		t.Fatalf("overlap at the first lamp: %.3f", l)
 	}
@@ -104,7 +111,7 @@ func TestLightGridRebuildsOnlyOnChange(t *testing.T) {
 	if g.light.builds != b {
 		t.Fatalf("rebuilt without a light change: %d -> %d", b, g.light.builds)
 	}
-	placeBuilt(t, g, construction.Lamp, construction.South, 20, 20)
+	litLamp(t, g, 20, 20, 17, 19) // PLAY-021: a lamp on power
 	g.cellLight(1, 1)
 	g.cellLight(2, 1)
 	if g.light.builds != b+1 {
@@ -149,7 +156,7 @@ func TestMossNeedsLight(t *testing.T) {
 	if pl.Growth <= 0 || pd.Growth != 0 {
 		t.Fatalf("moss growth: open sky %d, dark cave %d", pl.Growth, pd.Growth)
 	}
-	placeBuilt(t, g, construction.Lamp, construction.South, 26, 25)
+	litLamp(t, g, 26, 25, 27, 26) // PLAY-021: a lamp on power
 	growFor(g, 12)
 	if pd, _ = growthOf(t, g, uint64(dark)); pd.Growth <= 0 {
 		t.Fatal("moss beside a lamp does not grow")
@@ -244,7 +251,7 @@ func TestDuskmossWithersNearNewLamp(t *testing.T) {
 	g.setTerrain(11, 10, terrain.Stone)
 	gt := plant.DefOf(plant.Duskmoss).GrowTicks
 	id, _ := g.spawnPlant(plant.Duskmoss, 11, 10, gt/2)
-	placeBuilt(t, g, construction.Lamp, construction.South, 10, 10)
+	litLamp(t, g, 10, 10, 7, 9) // PLAY-021: a lamp on power
 	growFor(g, 4)
 	p, _ := growthOf(t, g, uint64(id))
 	if !p.Withering || p.Growth >= gt/2 {
@@ -390,7 +397,7 @@ func TestRoofedCropWithoutLampDoesNotGrow(t *testing.T) {
 // roofed crop in every hour of the day; four tiles away (0.3) it does not.
 func TestLampGrowsCropRoundTheClock(t *testing.T) {
 	g := mildLight(t)
-	placeBuilt(t, g, construction.Lamp, construction.South, 10, 10)
+	_, gen := litLamp(t, g, 10, 10, 7, 9) // PLAY-021: a lamp on power
 	near1, _ := g.spawnPlant(plant.Potato, 11, 10, 0)
 	far4, _ := g.spawnPlant(plant.Potato, 14, 10, 0)
 	if l := float64(g.cellLight(11, 10)); l < plant.StrongGrowLight {
@@ -403,6 +410,7 @@ func TestLampGrowsCropRoundTheClock(t *testing.T) {
 	jumpTo(g, 10, 20) // dusk: the sun is done for the day
 	prev := 0
 	for h := 0; h < 24; h += 4 { // night and day alike
+		g.setFuel(gen, g.fuelCap(gen)) // a tank lasts under a day
 		g.Step(4 * clock.TicksPerHour)
 		p, _ := growthOf(t, g, uint64(near1))
 		if p.Growth <= prev {
@@ -426,7 +434,7 @@ func TestLampBeatsNightOutdoors(t *testing.T) {
 	g := mildLight(t)
 	g.setRoof(11*40+10, 0)
 	g.setRoof(30*40+30, 0)
-	placeBuilt(t, g, construction.Lamp, construction.South, 10, 10)
+	litLamp(t, g, 10, 10, 7, 9) // PLAY-021: a lamp on power
 	lit, _ := g.spawnPlant(plant.Potato, 10, 11, 0)
 	dark, _ := g.spawnPlant(plant.Potato, 30, 30, 0)
 	jumpTo(g, 10, 21)
@@ -553,7 +561,7 @@ func TestPlantViewGrowState(t *testing.T) {
 	g.setRoof(25*40+25, 0)
 	open, _ := g.spawnPlant(plant.Potato, 25, 25, 0)
 	roofed, _ := g.spawnPlant(plant.Potato, 5, 5, 0)
-	placeBuilt(t, g, construction.Lamp, construction.South, 10, 10)
+	litLamp(t, g, 10, 10, 7, 9) // PLAY-021: a lamp on power
 	lit, _ := g.spawnPlant(plant.Potato, 11, 10, 0)
 	ripe, _ := g.spawnPlant(plant.Potato, 20, 20, plant.DefOf(plant.Potato).GrowTicks)
 	moss, _ := g.spawnPlant(plant.Moss, 30, 5, 0)
@@ -631,7 +639,7 @@ func TestPlantViewGrowStateFollowsTheClock(t *testing.T) {
 	if v := plantViewNow(g, uint64(id)); v.GrowState != "resting" {
 		t.Fatalf("by night, memoised: %q", v.GrowState)
 	}
-	placeBuilt(t, g, construction.Lamp, construction.South, 24, 25)
+	litLamp(t, g, 24, 25, 21, 24) // PLAY-021: a lamp on power
 	if v := plantViewNow(g, uint64(id)); v.GrowState != "growing" {
 		t.Fatalf("lamp lit beside it: %q", v.GrowState)
 	}

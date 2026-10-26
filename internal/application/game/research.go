@@ -13,9 +13,10 @@ import (
 )
 
 // Research. The player picks a project; colonists with Research work sit
-// at a research bench and put a point a working tick into it. Finished
-// projects unlock buildings, crops and recipes. Sandbox games (New) start
-// with everything researched; colonies (NewColony) start with nothing.
+// at a research bench (or a powered electric one, 40% faster: PLAY-021)
+// and put a point a working tick into it. Finished projects unlock
+// buildings, crops and recipes. Sandbox games (New) start with everything
+// researched; colonies (NewColony) start with nothing.
 
 // researchSession is how long one sitting at the bench lasts.
 const researchSession = 2 * clock.TicksPerHour
@@ -138,8 +139,11 @@ func (g *Game) researchTry(id entity.EntityID, tried []entity.EntityID) (entity.
 	bestD := 1 << 30
 	for _, bid := range g.bldgIDs {
 		b, ok := g.bldgs.Get(bid)
-		if !ok || b.Kind != construction.ResearchBench || b.Deconstruct {
-			continue
+		if !ok || construction.RecipeBench(b.Kind) != construction.ResearchBench || b.Deconstruct {
+			continue // PLAY-021: the electric research bench counts too
+		}
+		if electricBench(b.Kind) && !g.powered(bid) {
+			continue // production.go: an electric bench works only on power
 		}
 		if owner, taken := g.reserve.EntityOwner(bid); taken && owner != id {
 			continue
@@ -162,12 +166,18 @@ func (g *Game) researchTry(id entity.EntityID, tried []entity.EntityID) (entity.
 }
 
 func (g *Game) doResearch(id entity.EntityID, j job.Record) {
-	if _, ok := g.bldgs.Get(j.Target); !ok || !g.researchSet {
+	b, ok := g.bldgs.Get(j.Target)
+	if !ok || !g.researchSet {
 		j.State = job.Complete
 		g.jobs.Set(id, j)
 		return
 	}
-	if u := g.workProgress(id, skIntellectual, true); u > 0 && g.research.Add(g.researchCur, g.researchPoints(u)) { // skills.go
+	if electricBench(b.Kind) && !g.powered(j.Target) {
+		j.State, j.Fail = job.Fail, job.Blocked // PLAY-021: the power went (put off a while: postpone.go)
+		g.jobs.Set(id, j)
+		return
+	}
+	if u := g.workProgressPct(id, skIntellectual, true, 100+electricPct(b.Kind)); u > 0 && g.research.Add(g.researchCur, g.researchPoints(u)) { // skills.go
 		d := research.DefOf(g.researchCur)
 		pos, _ := g.positions.Get(id)
 		msg := "Research finished: " + d.Label + "."

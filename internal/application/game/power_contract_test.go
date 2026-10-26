@@ -61,14 +61,16 @@ func TestConduitLayerPlaces(t *testing.T) {
 	}
 }
 
-// TestGlowView: lamps glow, campfires only while burning; nothing else
-// does, and every power field is still zero.
+// TestGlowView: a lamp glows only on power (PLAY-021 CONSUMERS: re-expressed
+// from "lamps always glow"), a torch lamp and a campfire only while
+// burning; nothing else does, and a colony without devices has no nets.
 func TestGlowView(t *testing.T) {
 	t.Parallel()
 	g := New(Config{Seed: 1, Width: 20, Height: 10})
 	lamp := buildNow(t, g, construction.Lamp, item.Wood, construction.South, 2, 2)
 	fire := buildNow(t, g, construction.Campfire, item.Wood, construction.South, 8, 2)
 	chair := buildNow(t, g, construction.Chair, item.Wood, construction.South, 14, 2)
+	torch := buildNow(t, g, construction.TorchLamp, item.Wood, construction.South, 17, 2)
 	view := func(id entity.EntityID) BuildingView {
 		for _, bv := range g.World().Buildings {
 			if bv.ID == id {
@@ -78,8 +80,8 @@ func TestGlowView(t *testing.T) {
 		t.Fatalf("no view of %d", id)
 		return BuildingView{}
 	}
-	if v := view(lamp); !v.Glow || v.GlowRadius != lampRadius {
-		t.Fatalf("lamp: glow %v radius %d", v.Glow, v.GlowRadius)
+	if v := view(lamp); v.Glow {
+		t.Fatal("a lamp without power gives no light")
 	}
 	if v := view(fire); v.Glow || v.Burning {
 		t.Fatal("an unfuelled campfire gives no light")
@@ -88,12 +90,27 @@ func TestGlowView(t *testing.T) {
 	if v := view(fire); !v.Glow || !v.Burning || v.GlowRadius != campfireRadius {
 		t.Fatalf("burning campfire: glow %v radius %d", v.Glow, v.GlowRadius)
 	}
+	if v := view(torch); v.Glow {
+		t.Fatal("an unfuelled torch lamp gives no light")
+	}
+	g.setFuel(torch, 1000)
+	if v := view(torch); !v.Glow || v.GlowRadius != torchRadius {
+		t.Fatalf("burning torch lamp: glow %v radius %d", v.Glow, v.GlowRadius)
+	}
 	v := view(chair)
 	if v.Glow || v.PowerRole != "" || v.Powered || v.HasLink || v.PowerNet != 0 {
 		t.Fatalf("chair: %+v", v)
 	}
 	if w := g.World(); w.PowerNets != nil || w.SolarFlare || w.PowerVer != 0 {
 		t.Fatal("no power nets yet")
+	}
+	// on power the lamp glows: a conduit beside it and a fuelled generator
+	buildNow(t, g, construction.PowerConduit, item.Steel, construction.South, 3, 2)
+	gen := buildNow(t, g, construction.WoodGenerator, item.Steel, construction.South, 4, 3)
+	g.setFuel(gen, g.fuelCap(gen))
+	g.Step(powerInterval)
+	if v := view(lamp); !v.Glow || !v.Powered || v.GlowRadius != lampRadius {
+		t.Fatalf("powered lamp: glow %v powered %v radius %d", v.Glow, v.Powered, v.GlowRadius)
 	}
 }
 

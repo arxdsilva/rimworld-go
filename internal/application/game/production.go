@@ -6,6 +6,7 @@ import (
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/building/power"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/economy/recipe"
 	"rimworld-go/internal/domain/sim/command"
@@ -18,6 +19,7 @@ const (
 	BillNoInput    = "waiting for ingredients"
 	BillDrying     = "drying a batch"
 	BillNoFuel     = "fire needs wood"
+	BillNoPower    = "no power"
 	BillDone       = "done"
 	BillSuspended  = "suspended"
 	BillHaveEnough = "have enough"
@@ -90,6 +92,24 @@ func itoa(n int) string {
 	return string(b)
 }
 
+// electricSpeedPct is how much faster an electric bench works than its
+// base kind (PLAY-021, our number).
+const electricSpeedPct = 40
+
+// electricBench reports a bench that runs on power (PLAY-021): the
+// electric stove, tailoring bench and research bench. It works only while
+// powered, electricSpeedPct faster.
+func electricBench(k construction.Kind) bool { return power.SpecOf(k).Class == power.ClassBench }
+
+// electricPct is kind k's extra work speed in percent (0 but for an
+// electric bench).
+func electricPct(k construction.Kind) int {
+	if electricBench(k) {
+		return electricSpeedPct
+	}
+	return 0
+}
+
 // benchAt is the completed bench building covering (x, y).
 func (g *Game) benchAt(x, y int) (entity.EntityID, construction.Building, bool) {
 	bid := g.layerBldgAt(x, y, construction.LayerObject)
@@ -119,7 +139,7 @@ func (g *Game) applyBill(c command.Command) {
 	switch c.Kind {
 	case command.AddBill:
 		d := recipe.DefOf(recipe.ID(c.Recipe))
-		if d.Name == "" || d.Bench != b.Kind || g.recipeLocked(d.ID) {
+		if d.Name == "" || d.Bench != construction.RecipeBench(b.Kind) || g.recipeLocked(d.ID) {
 			return
 		}
 		target := c.Count
@@ -202,6 +222,9 @@ func (g *Game) assignBill(id entity.EntityID, m work.Mask) bool {
 			}
 			if b.Kind == construction.Campfire && g.fuel[bid] <= 0 {
 				continue // no fire to cook over
+			}
+			if electricBench(b.Kind) && !g.powered(bid) {
+				continue // PLAY-021: an electric bench works only on power
 			}
 			if d.ID == recipe.Cremate && g.freeWood() < d.ExtraQty {
 				continue // no wood to burn the body with
@@ -297,7 +320,12 @@ func (g *Game) doBill(id entity.EntityID, j job.Record) {
 		g.jobs.Set(id, j)
 		return
 	}
-	u := g.workProgressPct(id, d.Learn, true, 100+g.cabinetBonus(j.Dest)) // skills.go; tool cabinets
+	if electricBench(b.Kind) && !g.powered(j.Dest) {
+		j.State, j.Fail = job.Fail, job.Blocked // PLAY-021: the power went (put off a while: postpone.go)
+		g.jobs.Set(id, j)
+		return
+	}
+	u := g.workProgressPct(id, d.Learn, true, 100+g.cabinetBonus(j.Dest)+electricPct(b.Kind)) // skills.go; tool cabinets
 	if u == 0 {
 		g.jobs.Set(id, j)
 		return
@@ -334,13 +362,16 @@ func (g *Game) doBill(id entity.EntityID, j job.Record) {
 	bl.Done++
 	bills[j.BillIndex] = bl
 	g.bills[j.Dest] = bills
-	_ = b
 	j.State = job.Complete
 	g.jobs.Set(id, j)
 }
 
 func (g *Game) billViews(bid entity.EntityID) []BillView {
 	var out []BillView
+	unpowered := false // PLAY-021: an electric bench without power
+	if b := g.bldgs.Ref(bid); b != nil && electricBench(b.Kind) {
+		unpowered = !g.powered(bid)
+	}
 	for _, bl := range g.bills[bid] {
 		d := recipe.DefOf(bl.Recipe)
 		st := BillActive
@@ -358,6 +389,8 @@ func (g *Game) billViews(bid entity.EntityID) []BillView {
 		case d.Bench == construction.Campfire && g.fuel[bid] <= 0,
 			d.ID == recipe.Cremate && g.freeWood() < d.ExtraQty:
 			st = BillNoFuel
+		case unpowered:
+			st = BillNoPower
 		default:
 			if sid, _ := g.ingredientFor(0, d.Input); sid == 0 {
 				st = BillNoInput
@@ -377,6 +410,7 @@ func (g *Game) billViews(bid entity.EntityID) []BillView {
 // perishable food, forever; a campfire cooks until there are 10 meals; a
 // funeral pyre cremates every body brought to it.
 func (g *Game) defaultBills(id entity.EntityID, k construction.Kind) {
+	k = construction.RecipeBench(k) // PLAY-021: an electric bench gets its base kind's bills
 	if k == construction.Pyre {
 		g.bills[id] = append(g.bills[id], recipe.Bill{Recipe: recipe.Cremate, Mode: recipe.Forever, Target: 1})
 		return

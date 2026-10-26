@@ -61,14 +61,14 @@ func (g *Game) roomTouch(x, y int) {
 }
 
 // roomInputs is cell (x, y)'s room inputs, as rebuildRoomsFull reads them:
-// a boundary (rock, a wall or a door), a boundary that counts as stone
+// a boundary (rock, a wall, a door or a cooler), a boundary that counts as stone
 // (stone stuff or natural rock), open ground floored by itself (smooth
 // stone with no floor building).
 func (g *Game) roomInputs(x, y int) (boundary, stone, smooth bool) {
 	t := g.terr.At(x, y)
 	rock := terrain.IsRockWall(t)
 	b, ok := g.bldgs.Get(g.layerBldgAt(x, y, construction.LayerObject))
-	boundary = rock || ok && (b.Kind == construction.Wall || b.Kind == construction.Door)
+	boundary = rock || ok && roomWall(b.Kind)
 	stone = boundary && (ok && (item.IsStoneBlocks(b.Stuff) || b.Stuff == item.Stone) || rock)
 	smooth = !boundary && t == terrain.StoneSmooth && g.layerBldgAt(x, y, construction.LayerFloor) == 0
 	return boundary, stone, smooth
@@ -187,7 +187,6 @@ func (g *Game) rebuildRoomsIncremental() {
 	for i := range stats {
 		stats[i].score = room.Impressiveness(stats[i].contents)
 		stats[i].role = room.RoleOf(stats[i].contents)
-		stats[i].lit = stats[i].contents.Lamps > 0
 	}
 	if selfCheck() {
 		g.checkRoomsAgainstDetect(grid, stats)
@@ -232,8 +231,8 @@ func (g *Game) countRoomBuildings(grid []int, stats []roomStats) {
 			c.Tables++
 		case b.Kind == construction.Chair:
 			c.Chairs++
-		case b.Kind == construction.Lamp:
-			c.Lamps++
+		case b.Kind == construction.Lamp, b.Kind == construction.TorchLamp:
+			c.Lamps++ // a light fitting, lit or not (rooms' Lit: roomViews)
 		case construction.DefOf(b.Kind).Bench:
 			c.Benches++
 		}

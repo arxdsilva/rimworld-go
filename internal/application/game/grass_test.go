@@ -251,7 +251,7 @@ func TestRoofedGrassNeedsAStrongLamp(t *testing.T) {
 		regrowNow(t, g, c[0], c[1])
 	}
 	roofOver(g, 0, 0, 23, 15)
-	placeBuilt(t, g, construction.Lamp, construction.South, lx, ly)
+	_, gen := litLamp(t, g, lx, ly, lx+1, ly+1) // PLAY-021: a lamp on power
 	if l := g.artificialLight(a, b); !plant.StrongLight(l) {
 		t.Fatalf("lamp one tile away gives %.2f", l)
 	}
@@ -259,7 +259,9 @@ func TestRoofedGrassNeedsAStrongLamp(t *testing.T) {
 		t.Fatalf("test needs a tile the lamp leaves dim, got %.2f", l)
 	}
 	jumpTo(g, 10, 12)
-	g.Step(clock.TicksPerDay)
+	g.Step(clock.TicksPerDay / 2)
+	g.setFuel(gen, g.fuelCap(gen)) // a tank lasts under a day
+	g.Step(clock.TicksPerDay / 2)
 	if got := g.grassGrowthAt(ax, ay); got != plant.GrassShoots {
 		t.Fatalf("roofed unlit grass grew to %d", got)
 	}
@@ -282,7 +284,7 @@ func TestLampGrowsRoofedGrassAtNight(t *testing.T) {
 	}
 	regrowNow(t, g, x, y)
 	roofOver(g, 0, 0, 23, 15)
-	placeBuilt(t, g, construction.Lamp, construction.South, x+1, y)
+	litLamp(t, g, x+1, y, x+2, y+1) // PLAY-021: a lamp on power
 	jumpTo(g, 10, 22)
 	g.Step(4 * clock.TicksPerHour)
 	if got := g.grassGrowthAt(x, y); got <= plant.GrassShoots {
