@@ -311,3 +311,14 @@ func TestHeadlineUnderAnesthetic(t *testing.T) {
 		t.Fatalf("headline %q, want %q", got, "Under anesthetic")
 	}
 }
+
+// TestInjureCutBleeds: the dev hook deals a cut, which bleeds, where
+// Injure's bruise does not (README medical clip).
+func TestInjureCutBleeds(t *testing.T) {
+	g := New(Config{Seed: 1, Width: 20, Height: 10})
+	id, _ := g.SpawnNamedPawn(4, 4, "Pat")
+	g.InjureCut(id, 12)
+	if b := g.bodies[id]; b == nil || b.BleedPerDay() <= 0 {
+		t.Fatalf("a cut should bleed: %+v", b)
+	}
+}

@@ -23,12 +23,12 @@ A RimWorld-inspired colony simulation written in Go with Ebitengine, built in pu
     <td width="50%"><img src="docs/clips/building.webp" width="100%" alt="The first hut going up from its blueprint"><br><sub>The first hut going up from its blueprint</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/clips/melee.webp" width="100%" alt="Knife, spear, club and rifle in a close fight"><br><sub>Knife, spear, club and rifle in a close fight</sub></td>
+    <td width="50%"><img src="docs/clips/melee.webp" width="100%" alt="Knife, spear, club and rifle in a close fight: weapons held across the body and aimed from it, wounds that bleed"><br><sub>Knife, spear, club and rifle in a close fight: weapons held across the body and aimed from it, wounds that bleed</sub></td>
     <td width="50%"><img src="docs/clips/combat.webp" width="100%" alt="A firefight, followed shot by shot"><br><sub>A firefight, followed shot by shot</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/clips/raid.webp" width="100%" alt="Raiders advance on the colony"><br><sub>Raiders advance on the colony</sub></td>
-    <td width="50%"><img src="docs/clips/chores.webp" width="100%" alt="Chopping with a two-handed axe, then on to the next tree"><br><sub>Chopping with a two-handed axe, then on to the next tree</sub></td>
+    <td width="50%"><img src="docs/clips/chores.webp" width="100%" alt="Chores up close: colonists lean into the job, a progress bar under the work"><br><sub>Chores up close: colonists lean into the job, a progress bar under the work</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/clips/rain.webp" width="100%" alt="A fall storm: wind-slanted rain, puddles and swaying trees"><br><sub>A fall storm: wind-slanted rain, puddles and swaying trees</sub></td>
@@ -43,14 +43,18 @@ A RimWorld-inspired colony simulation written in Go with Ebitengine, built in pu
     <td width="50%"><img src="docs/clips/zoo.webp" width="100%" alt="All 61 animal species, penned and named"><br><sub>All 61 animal species, penned and named</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/clips/shadows.webp" width="100%" alt="A colonist's own shadow from dawn to dusk: legs, clothes and tools, sharp at the feet and soft at the tip"><br><sub>A colonist's own shadow from dawn to dusk: legs, clothes and tools, sharp at the feet and soft at the tip</sub></td>
-    <td width="50%"></td>
+    <td width="50%"><img src="docs/clips/shadows.webp" width="100%" alt="A colonist's own shadow from dawn to dusk, sharp at the feet and soft at the tip"><br><sub>A colonist's own shadow from dawn to dusk, sharp at the feet and soft at the tip</sub></td>
+    <td width="50%"><img src="docs/clips/medical.webp" width="100%" alt="A colonist bleeding from deep cuts is carried to a hospital bed and tended; the bleed rate and death clock show until the wounds are bound"><br><sub>A colonist bleeding from deep cuts is carried to a hospital bed and tended; the bleed rate and death clock show until the wounds are bound</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/clips/surgery.webp" width="100%" alt="Surgery: a doctor fits a peg leg in a hospital bed beside a powered vitals monitor"><br><sub>Surgery: a doctor fits a peg leg in a hospital bed beside a powered vitals monitor</sub></td>
+    <td width="50%"><img src="docs/clips/outbreak.webp" width="100%" alt="A flu outbreak: the letter, the disease alert, and the sick on bed rest"><br><sub>A flu outbreak: the letter, the disease alert, and the sick on bed rest</sub></td>
   </tr>
 </table>
 
 ## Progress
 
-Media updated 2026-10-23 · regenerate with `make media clips`
+Media updated 2026-10-26 · regenerate with `make media clips`
 
 ### Building
 
@@ -111,7 +115,7 @@ Media updated 2026-10-23 · regenerate with `make media clips`
 - Floors, fences and forbid: floors can go under beds and benches; wood and stone fences and gates keep animals in (tame animals use gates, colonists climb fences slowly); forbid items with the Forbid/Allow tools or F so colonists leave them alone. A door or gate can be placed straight over a wall or fence: the old piece comes down first, then the new one goes up. Doors and gates face along their walls and fences on their own, and painting a wall, floor or piece of furniture in another material changes it in place (the room stays sealed). Walls, doors, fences and gates can't be moved. The Plan tool paints layout marks that vanish once something is built on them.
 - Defences and combat: sandbags, spike traps, breaching raiders, rebuilding after breaches, ranged and melee combat with floating damage numbers.
 - Electricity, as in RimWorld (with our own numbers): research Electricity, then lay conduits (or hidden ones inside walls) to link wood-fired, solar, wind and geothermal generators (on a steam vent) to batteries and devices; each device connects to a conduit within three tiles. Lamps, heaters and coolers with thermostats, and faster electric stove, tailoring and research benches run on the grid; when it can't keep up, batteries help, then devices are switched off in turn and stay off a while. Colonists flick switches and power toggles (V), the Shift+P power grid overlay shows each grid in its own colour, and solar flares and short circuits keep you honest. Before electricity, wood torch lamps light the rooms.
-- Health: injuries, rescue and tending, infections, herbal medicine and a healroot crop, industrial medicine for severe wounds, and hospital beds that heal faster and cut infections in half. Colonists in pain, wounded or sick rest in bed until they heal (a per-colonist "Rest when hurt" setting, on by default), and any bed can be marked Medical: that bed alone is kept for patients, whatever the other beds in the room are for.
+- Health, modelled closely on RimWorld's: wounds per body part that bleed into blood loss, pain shock and capacity-based downing; tend quality from the doctor's skill, the medicine and the bed; wiki-rate healing and scars; infections and six diseases (flu, plague, malaria, sleeping sickness, gut worms, muscle parasites) racing against immunity; per-patient care levels and drafted emergency tending; kidneys, liver and spine with organ failure; prosthetics and a servo/implant tier; surgery with success chances, organ harvest and transplant, euthanasia and anesthetic; a powered vitals monitor; painkillers, a disease-prevention tablet and overdose; chronic conditions of age (bad back, cataract, dementia, artery blockage and heart attacks, carcinoma); and animals that bleed and get tended too. Colonists in pain, wounded or sick rest in bed until they heal (a per-colonist "Rest when hurt" setting, on by default), and any bed can be marked Medical.
 - Blood: hits spray blood (ichor from hive insects), wounded colonists and animals look bloodied until they heal, and the floor keeps splats, drip trails and pools that dry to brown, fade over 7 days and wash off in rain or snow.
 - Dirt and cleaning: colonists pick up dirt outdoors (more in rain and field work) and track it into rooms; entrance carpets of straw, wood, leather or cloth catch 30-70% of it; colonists sweep dirt and blood inside the Home area you paint, and dirty rooms lose impressiveness.
 - Animals: 61 species (livestock, wild grazers and predators, pets, birds, reptiles, hive insects and a rare legendary stag) that spawn by season and habitat, hunt, flee, gore and kick; hunting, butchering, taming, pens, manhunter packs and hive swarms. Any animal that is attacked fights back or runs (penned ones run within the pen), predators may charge anyone who walks too close, and unarmed colonists run from an animal coming for them. Tame animals eat the nearest food they can (grass, berry bushes, raw food from stockpiles, carcasses), and tame predators hunt wild prey.

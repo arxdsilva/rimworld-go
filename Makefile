@@ -148,7 +148,7 @@ clips:  ## README animated WebP clips in docs/clips (needs python3 + Pillow)
 	$(call clip,raid,-scenario raid -capture-ui raid -capture-ticks 500 -capture-frames 300)
 	$(call clip,animals,-scenario animals -capture-ui pen -capture-frames 240)
 	$(call clip,melee,-scenario armory -capture-ui raid -capture-zoom 1.6 -capture-ticks 560 -capture-frames 240)
-	$(call clip,chores,-scenario chores -capture-ui follow -capture-zoom 1.8 -capture-ticks 4000 -capture-frames 240)
+	$(call clip,chores,-scenario chores -capture-ui follow -capture-zoom 1.8 -capture-ticks 4000 -capture-frames 240,--quality 55)
 	$(call clip,rain,-scenario rain -capture-ui weather -capture-zoom 1.4 -capture-frames 240,--quality 50)
 	$(call clip,snow,-scenario snow -capture-ui weather -capture-zoom 1.4 -capture-ticks 12000 -capture-frames 240)
 	$(call clip,grass,-capture-ui grass -capture-zoom 2 -capture-ticks 600 -capture-frames 240)
@@ -159,6 +159,9 @@ clips:  ## README animated WebP clips in docs/clips (needs python3 + Pillow)
 	$(call clip,bigmap,-seed 1 -width 500 -height 500 -scenario grown -capture-zoom 0.1 -capture-ticks 60 -capture-speed 3 -capture-frames 240,--quality 50 --max-bytes 2400000)
 	$(call clip,bigmap_colony,-seed 1 -width 500 -height 500 -scenario grown -capture-zoom 0.35 -capture-ticks 60 -capture-speed 3 -capture-frames 240,--quality 50 --max-bytes 2400000)
 	$(call clip,shadows,-scenario sunny -hour 6 -capture-ui follow -capture-zoom 2 -capture-timelapse 125 -capture-frames 240,--fps 20 --quality 50 --max-bytes 2400000)
+	$(call clip,medical,-scenario bleeding -capture-ui follow -capture-zoom 1.6 -capture-ticks 60 -capture-frames 300 -capture-speed 2,--quality 50)
+	$(call clip,surgery,-scenario surgery -capture-ui follow -capture-zoom 1.6 -capture-ticks 60 -capture-frames 240 -capture-speed 3,--quality 45)
+	$(call clip,outbreak,-scenario outbreak -capture-zoom 1.1 -capture-ticks 120 -capture-frames 240 -capture-speed 2,--quality 50)
 
 .PHONY: clean
 clean:

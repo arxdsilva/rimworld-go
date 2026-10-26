@@ -6,6 +6,7 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
@@ -391,6 +392,13 @@ func (g *Game) doTend(id entity.EntityID, j job.Record) {
 func (g *Game) Injure(id entity.EntityID, dmg int) {
 	g.viewGen++ // view cache (indexes.go): this hook changes the state
 	g.hurt(id, dmg, 0)
+}
+
+// InjureCut deals dmg to id as a cut (dev scenarios and fixtures): unlike
+// Injure's bruise it bleeds until tended (MED-01).
+func (g *Game) InjureCut(id entity.EntityID, dmg int) {
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
+	g.hurtAs(id, dmg, 0, body.Cut, health.CauseInjury)
 }
 
 // BuildNow places a finished building (dev scenarios and fixtures).

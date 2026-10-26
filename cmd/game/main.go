@@ -23,6 +23,7 @@ import (
 	"rimworld-go/internal/application/game"
 	appscenario "rimworld-go/internal/application/scenario"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/mentalbreak"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
@@ -43,7 +44,7 @@ func main() {
 	capture := flag.String("capture", "", "dev: save one colony frame to this PNG and exit")
 	captureTicks := flag.Int("capture-ticks", 5400, "dev: simulation ticks to run before -capture")
 	captureZoom := flag.Float64("capture-zoom", 1, "dev: camera zoom for -capture")
-	scenario := flag.String("scenario", "", "dev: start scenario: pen (a pen with a feeding trough, tame animals and wild ones about) | rescue (a colonist starts badly hurt) | beds (sleeping spots in the other facings) | double (a double bed by the start) | corridor (two colonists meet head-on in a 1-wide corridor) | crowd (every colonist sent into a room with one door) | armory (armed, drafted colonists against a mixed raid) | chores (cutting, mining and tending by the start) | lategame (a grown colony in autumn rain, raid incoming) | rain (a fall storm) | snow (winter snowfall) | burial (a graveyard, a pyre and two bodies) | roofs (winter: a roofed room, an unroofed one, a roofed porch, a yard too big to roof) | sunny (a clear summer day from before dawn) | fence (a fenced field with a gate, deer outside) | forbid (loose items, some forbidden) | grown (the benchmark grown colony at -width x -height; set RIMWORLD_FIXTURE_DIR to cache it) | zoo (all 61 animal species, tamed and named, in a pen; use -width 80 -height 60) | social (a walled colony: a couple's double bed, a marriage spot, a brewing bench, a prisoner and warden, a bonded husky; needs -width/-height >= 60) | walls (linked walls and rock: every connection case, five stones, smoothed rock, ore) | power (a small powered base: generators, a battery, a switch, lamps, a heater, a hidden run, a lamp off the grid)")
+	scenario := flag.String("scenario", "", "dev: start scenario: pen (a pen with a feeding trough, tame animals and wild ones about) | rescue (a colonist starts badly hurt) | beds (sleeping spots in the other facings) | double (a double bed by the start) | corridor (two colonists meet head-on in a 1-wide corridor) | crowd (every colonist sent into a room with one door) | armory (armed, drafted colonists against a mixed raid) | chores (cutting, mining and tending by the start) | lategame (a grown colony in autumn rain, raid incoming) | rain (a fall storm) | snow (winter snowfall) | burial (a graveyard, a pyre and two bodies) | roofs (winter: a roofed room, an unroofed one, a roofed porch, a yard too big to roof) | sunny (a clear summer day from before dawn) | fence (a fenced field with a gate, deer outside) | forbid (loose items, some forbidden) | grown (the benchmark grown colony at -width x -height; set RIMWORLD_FIXTURE_DIR to cache it) | zoo (all 61 animal species, tamed and named, in a pen; use -width 80 -height 60) | social (a walled colony: a couple's double bed, a marriage spot, a brewing bench, a prisoner and warden, a bonded husky; needs -width/-height >= 60) | walls (linked walls and rock: every connection case, five stones, smoothed rock, ore) | power (a small powered base: generators, a battery, a switch, lamps, a heater, a hidden run, a lamp off the grid) | bleeding (a colonist bleeding from cuts, a hospital bed and medicine) | surgery (a peg leg install queued, a hospital bed beside a powered vitals monitor) | outbreak (flu sweeps the colony)")
 	biomeKey := flag.String("biome", "temperate_forest", "dev: biome of the map: "+biomeKeys()+" (also the landing picker's starting choice)")
 	hour := flag.Int("hour", -1, "dev: jump to this hour (0-23) of the scenario's day, or the next day's if past")
 	captureFrames := flag.Int("capture-frames", 0, "dev: record this many consecutive frames (PATH_NNN.png) instead of one still")
@@ -359,6 +360,20 @@ func main() {
 				cx, cy := *width/2, *height/2
 				g.BuildNow("sleeping spot", "wood", "south", cx-4, cy+1)
 				g.BuildNow("bed", "wood", "east", cx-4, cy+3)
+			}
+			if *scenario == "bleeding" {
+				// README clip (MED-01..03): Bo bleeding from deep cuts in
+				// the yard, medicine and a hospital bed by the house
+				bleedingScene(g, *width/2, *height/2)
+			}
+			if *scenario == "surgery" {
+				// README clip (MED-06): a peg leg to fit, a hospital bed
+				// with a powered vitals monitor, medicine at hand
+				surgeryScene(g, *width/2, *height/2)
+			}
+			if *scenario == "outbreak" {
+				// README clip (MED-04): flu sweeps the colony
+				g.FireIncident("flu")
 			}
 			if *scenario == "zoo" {
 				zoo(g)
@@ -983,4 +998,40 @@ func powerBase(g *game.Game, cx, cy int) {
 	g.BuildNow("lamp", "wood", "south", cx+12, y+2) // too far from any conduit: not connected
 	g.BuildNow("torch lamp", "wood", "south", cx-14, y+3)
 	g.FuelCampfire(cx-14, y+3)
+}
+
+// bleedingScene: a colonist bleeding from deep cuts a few tiles from a
+// hospital bed, with medicine in store, so the doctor rescues and tends
+// (the bleed rate and death clock show in the Health tab).
+func bleedingScene(g *game.Game, cx, cy int) {
+	g.ClearPlants(cx-3, cy-4, cx+6, cy+3)
+	g.BuildNow("hospital bed", "steel", "south", cx+4, cy-3)
+	_, _ = g.SpawnStack(item.HerbalMedicine, 4, cx+2, cy-3)
+	_, _ = g.SpawnStack(item.IndustrialMedicine, 2, cx+2, cy-2)
+	if snap := g.Snapshot(); len(snap) > 1 {
+		g.InjureCut(snap[1].ID, 14)
+		g.InjureCut(snap[1].ID, 12)
+	}
+}
+
+// surgeryScene: Bo has lost a leg; a peg leg and medicine lie by a
+// hospital bed beside a vitals monitor powered by a fuelled generator, and
+// the install is queued, so the doctor carries Bo in and operates.
+func surgeryScene(g *game.Game, cx, cy int) {
+	g.ClearPlants(cx-6, cy-6, cx+6, cy+2)
+	g.BuildNow("hospital bed", "steel", "south", cx+2, cy-4)
+	g.BuildNow("vitals monitor", "steel", "south", cx+3, cy-4)
+	for x := cx - 3; x <= cx+3; x++ {
+		g.BuildNow("power conduit", "steel", "south", x, cy-2)
+	}
+	g.BuildNow("wood-fired generator", "steel", "south", cx-5, cy-3)
+	g.FuelCampfire(cx-5, cy-3)
+	_, _ = g.SpawnStack(item.HerbalMedicine, 6, cx, cy-4)
+	_, _ = g.SpawnStack(item.PegLeg, 1, cx, cy-3)
+	if snap := g.Snapshot(); len(snap) > 1 {
+		bo := snap[1].ID
+		g.DevLosePart(bo, "left leg")
+		g.Enqueue(command.Command{Kind: command.AddOperation, Pawn: uint64(bo),
+			Index: int(body.InstallImplant), Build: uint8(body.LegL), Stuff: uint8(item.PegLeg)})
+	}
 }
