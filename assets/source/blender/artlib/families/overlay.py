@@ -508,14 +508,31 @@ ICONS = {
     # MAPGEN-3
     "bridge": ("structure", "bridge_10"),
     "open_casket": ("structure", "sleeper_casket_open"),
+    # PLAY-021 electricity (the wind turbine is cut from its base + rotor, below)
+    "power_conduit": ("power", "power_conduit_14"),
+    "hidden_conduit": ("power", "hidden_conduit_14"),
+    "power_switch": ("power", "power_switch_on"),
+    "wood_fired_generator": ("power", "wood_fired_generator"),
+    "solar_panel": ("power", "solar_panel"),
+    "geothermal_generator": ("power", "geothermal_generator"),
+    "battery": ("power", "battery_east"),
+    "heater": ("power", "heater"),
+    "cooler": ("power", "cooler_south"),
+    "torch_lamp": ("furniture", "torch_lamp"),
+    "electric_stove": ("furniture", "electric_stove_south"),
+    "electric_tailoring_bench": ("furniture", "electric_tailoring_bench_south"),
+    "electric_research_bench": ("furniture", "electric_research_bench_south"),
 }
 ICON_PX = 128          # @2x of a 64 px icon
 ICON_PAD = 10
 
 
 def _icon(name, family, sprite):
-    src = S.out_path(family, sprite)
-    if not os.path.exists(src):
+    return _cut_icon(name, S.out_path(family, sprite), "%s:%s/%s" % (C.NAMESPACE, family, sprite))
+
+
+def _cut_icon(name, src, source):
+    if src is None or not os.path.exists(src):
         return None
     im = bpy.data.images.load(src, check_existing=False)
     w, h = im.size
@@ -543,7 +560,7 @@ def _icon(name, family, sprite):
     path = os.path.join(UI_DIR, name + ".png")
     S.write_png(out[::-1], path)
     meta.write("ui_icon", name, {"image": "generated/ui/icons/%s.png" % name, "scale": C.SCALE,
-                                 "canvas": [ICON_PX, ICON_PX], "source": "%s:%s/%s" % (C.NAMESPACE, family, sprite)})
+                                 "canvas": [ICON_PX, ICON_PX], "source": source})
     return path
 
 
@@ -1914,6 +1931,61 @@ PLAY020_ICONS = (   # name, glyph, colour (or a base.yaml overlay token)
 )
 
 
+# PLAY-021 electricity badges ------------------------------------------------
+def _bolt(xx, yy, cx, cy, s=1.0):
+    """Signed field of a lightning bolt: two overlapping wedges."""
+    up = _poly(xx, yy, [(cx + 10 * s, cy - 28 * s), (cx - 14 * s, cy + 5 * s), (cx + 4 * s, cy + 2 * s)])
+    lo = _poly(xx, yy, [(cx - 10 * s, cy + 28 * s), (cx + 14 * s, cy - 5 * s), (cx - 4 * s, cy - 2 * s)])
+    return np.minimum(up, lo)
+
+
+def _g_overlay_power(xx, yy, c):  # a bolt over a conduit run with two nodes
+    run = np.minimum(_seg(xx, yy, c - 26, c + 24, c + 26, c + 24),
+                     np.minimum(_dot(xx, yy, c - 26, c + 24, 4), _dot(xx, yy, c + 26, c + 24, 4)))
+    return [run, _bolt(xx, yy, c, c - 6, 0.78)]
+
+
+def _g_power_toggle(xx, yy, c):  # the on/off symbol: an open ring and a bar through its gap
+    return [_arc(xx, yy, c, c + 2, 21, -50, 230), _seg(xx, yy, c, c - 26, c, c - 2)]
+
+
+def _thermometer(xx, yy, cx, cy):
+    stem = np.abs(_cap(xx, yy, cx, cy - 26, cx, cy + 8, 6))
+    bulb = np.hypot(xx - cx, yy - (cy + 16)) - 9
+    return [stem, bulb]
+
+
+def _g_thermostat_up(xx, yy, c):  # thermometer + an upward chevron
+    chev = np.minimum(_seg(xx, yy, c + 6, c + 4, c + 17, c - 9), _seg(xx, yy, c + 17, c - 9, c + 28, c + 4))
+    return _thermometer(xx, yy, c - 12, c) + [chev]
+
+
+def _g_thermostat_down(xx, yy, c):  # thermometer + a downward chevron
+    chev = np.minimum(_seg(xx, yy, c + 6, c - 6, c + 17, c + 7), _seg(xx, yy, c + 17, c + 7, c + 28, c - 6))
+    return _thermometer(xx, yy, c - 12, c) + [chev]
+
+
+def _g_no_power(xx, yy, c):  # the bolt struck through
+    slash = _seg(xx, yy, c - 24, c - 24, c + 24, c + 24)
+    return [_bolt(xx, yy, c, c, 0.9), (slash - 6, "cut"), slash]
+
+
+PLAY021_ICONS = (   # name, glyph, colour (or a base.yaml overlay token)
+    ("overlay_power", _g_overlay_power, (0.98, 0.80, 0.30)),
+    ("power_toggle", _g_power_toggle, (0.98, 0.80, 0.30)),
+    ("thermostat_up", _g_thermostat_up, (0.98, 0.58, 0.22)),
+    ("thermostat_down", _g_thermostat_down, (0.40, 0.70, 0.95)),
+    ("no_power", _g_no_power, "danger"),
+)
+
+
+def _play021_cut_icons():
+    """The wind turbine's Architect icon: base and one rotor frame together."""
+    from . import power
+    return [p for p in (_cut_icon("wind_turbine", power.turbine_composite("east", 1),
+                                  "%s:power/wind_turbine_east+wind_turbine_blades_01" % C.NAMESPACE),) if p]
+
+
 def build():
     t = _base_tokens()
     out = [_selection(t), _designation("designation_cut", t, _g_cut),
@@ -1959,6 +2031,7 @@ def build():
     out += _social_icons(t)
     out += _play018_icons(t)
     out += [_badge_icon(n, t, g, t[rgb] if isinstance(rgb, str) else rgb) for n, g, rgb in PLAY020_ICONS]
+    out += [_badge_icon(n, t, g, t[rgb] if isinstance(rgb, str) else rgb) for n, g, rgb in PLAY021_ICONS]
     out += [_shadow_blob(), _shadow_box(), _roof_tile("roof_built", "built"),
             _roof_tile("roof_natural", "natural"), _roof_tile("roof_plan", "plan"),
             _roof_tile("roof_remove", "remove")]
@@ -1971,4 +2044,5 @@ def build():
         p = _icon(name, fam, spr)
         if p:
             out.append(p)
+    out += _play021_cut_icons()
     return out

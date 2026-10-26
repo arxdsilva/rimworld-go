@@ -1,10 +1,13 @@
 """Furniture family (ART spec §12-§14): bed, table, chair, workbench, stove,
 butcher table, drying rack, campfire, lamp. (Sleeping spots are floor markings: overlay family.)
+PLAY-021 adds the torch lamp and the electric stove, tailoring and research
+benches; their emissive parts get glow layers (families/power.py).
 
 Geometry is authored facing SOUTH (the side a user approaches from /
 the sleeper's feet point to) and rotated with stage.face().
 """
 from .. import stage as S
+from . import power as P
 
 FACINGS = ("south", "east", "north", "west")
 
@@ -408,6 +411,136 @@ def _lamp():
     return (1, 1), 1.40
 
 
+# ------------------------------------------------------ electricity (PLAY-021)
+# Emissive parts are marked with P.glow(): dark in the sprite, lit in the
+# <name>_glow_<facing> layer the renderer draws while the bench has power
+# (families/power.py). Each electric bench keeps its base bench's footprint
+# and approach side but reads as steel and electronics.
+TORCH_ZMAX = 1.16
+TORCH_FIRE = (0.5, -0.5, 1.06)     # where drawFlame sits: the basket's mouth
+
+
+def _torch_lamp():
+    """1 x 1 wood-burning standing torch: field stones round a pole, an
+    iron basket of split sticks on top. The flame is drawn live by the game
+    at the `fire` attachment; unlit, the basket holds cold sticks."""
+    import math
+    S.cyl("footing", 0.5, -0.5, 0.22, 0.0, 0.035, "stone_dark", segs=18, bevel=0.01)
+    for k in range(6):
+        a = k / 6 * 2 * math.pi + 0.3
+        S.ellipsoid("stone%d" % k, 0.5 + 0.17 * math.cos(a), -0.5 + 0.15 * math.sin(a), 0.03,
+                    0.07, 0.06, 0.05, "stone" if k % 2 else "stone_dark", segs=10, rings=6)
+    S.cyl("pole", 0.5, -0.5, 0.06, 0.0, 0.90, "bark", r_top=0.05, segs=10)
+    for z in (0.28, 0.62):
+        S.cyl("binding", 0.5, -0.5, 0.066, z, z + 0.05, "metal_dark", segs=10, bevel=0.0)
+    S.cyl("basket", 0.5, -0.5, 0.09, 0.86, 1.04, "metal_dark", r_top=0.19, segs=18, bevel=0.012)
+    S.cyl("rim", 0.5, -0.5, 0.20, 1.02, 1.05, "steel_dark", segs=18, bevel=0.005)
+    S.cyl("coals", 0.5, -0.5, 0.165, 1.03, 1.052, "ash_char", segs=18, bevel=0.0)
+    for k in range(4):
+        a = k / 4 * 2 * math.pi + 0.785
+        x, y = 0.5 + 0.185 * math.cos(a), -0.5 + 0.185 * math.sin(a)
+        S.box("prong%d" % k, x - 0.014, y - 0.014, 1.0, x + 0.014, y + 0.014, 1.13, "metal_dark", bevel=0.0)
+    for k, (dx, dy) in enumerate(((-0.08, 0.0), (0.0, 0.07), (0.07, -0.04))):
+        S.box("stick%d" % k, 0.5 + dx - 0.09, -0.5 + dy - 0.022, 1.05, 0.5 + dx + 0.09, -0.5 + dy + 0.022, 1.09,
+              "bark" if k % 2 else "wood", bevel=0.012)
+    return (1, 1), TORCH_ZMAX
+
+
+def _electric_stove():
+    # 2 x 1, the cook stands on the south side. Enamel body, a black glass
+    # cooktop with three rings (glow), an oven window (glow), a back console
+    # with knobs and a display (glow). No flue: it runs on power.
+    S.box("plinth", 0.08, -0.92, 0.0, 1.92, -0.10, 0.08, "steel_dark", bevel=0.01)
+    S.box("body", 0.06, -0.92, 0.08, 1.94, -0.08, 0.62, "ceramic", bevel=0.04)
+    S.box("top", 0.04, -0.94, 0.62, 1.96, -0.06, 0.66, "steel", bevel=0.02)
+    S.box("glass", 0.12, -0.86, 0.66, 1.30, -0.30, 0.672, "backdrop", bevel=0.008)
+    for k, x in enumerate((0.38, 0.71, 1.04)):
+        P.glow(S.cyl("ring%d" % k, x, -0.58, 0.125, 0.672, 0.68, "steel_dark", segs=24, bevel=0.0), "gland_ember")
+        S.cyl("ring_in%d" % k, x, -0.58, 0.07, 0.672, 0.682, "backdrop", segs=20, bevel=0.0)
+    S.cyl("pot", 0.38, -0.58, 0.11, 0.68, 0.80, "steel", r_top=0.115, segs=18)
+    S.cyl("stew", 0.38, -0.58, 0.095, 0.795, 0.805, "crop_fruit", segs=18, bevel=0.0)
+    S.box("board", 1.42, -0.80, 0.66, 1.86, -0.36, 0.70, "wood_plank", bevel=0.015)
+    S.ellipsoid("veg", 1.60, -0.56, 0.74, 0.06, 0.06, 0.05, "vegetation", segs=10, rings=6)
+    S.box("console", 0.06, -0.26, 0.66, 1.94, -0.08, 0.92, "steel_dark", bevel=0.03)
+    for k, x in enumerate((0.30, 0.52, 0.74, 0.96)):
+        S.cyl("knob%d" % k, x, -0.27, 0.035, 0.78, 0.84, "metal_dark", segs=10, bevel=0.005)
+    P.glow(S.box("display", 1.30, -0.275, 0.74, 1.80, -0.255, 0.86, "backdrop", bevel=0.005), "indicator")
+    S.box("door", 0.16, -0.945, 0.14, 1.10, -0.91, 0.54, "steel", bevel=0.015)
+    P.glow(S.box("oven_window", 0.28, -0.955, 0.22, 0.98, -0.94, 0.42, "backdrop", bevel=0.006), "lamp_warm")
+    S.box("handle", 0.26, -0.965, 0.47, 1.00, -0.945, 0.50, "steel_dark", bevel=0.005)
+    S.box("drawer", 1.20, -0.935, 0.14, 1.84, -0.91, 0.54, "ceramic", bevel=0.015)
+    S.box("drawer_pull", 1.44, -0.95, 0.44, 1.60, -0.93, 0.47, "steel_dark", bevel=0.005)
+    S.box("cable", 1.84, -0.10, 0.0, 1.90, -0.02, 0.66, "fur_black", bevel=0.01)
+    return (2, 1), 0.94
+
+
+def _electric_tailoring_bench():
+    """2 x 1 electric tailoring bench: a steel cutting table with cloth
+    spread and a bolt, and an enamelled sewing machine with its work lamp
+    and power lamp (glow). The tailor stands on the south side."""
+    for i, x in enumerate([0.12, 1.88]):
+        for j, y in enumerate([-0.18, -0.82]):
+            S.box("leg%d%d" % (i, j), x - 0.045, y - 0.045, 0.0, x + 0.045, y + 0.045, 0.52, "steel_dark", bevel=0.012)
+    S.box("stretcher", 0.10, -0.55, 0.14, 1.90, -0.45, 0.19, "steel_dark", bevel=0.01)
+    S.box("top", 0.04, -0.94, 0.52, 1.96, -0.06, 0.58, "steel", bevel=0.03)
+    S.box("cloth", 0.14, -0.84, 0.58, 0.88, -0.32, 0.595, "cloth", bevel=0.01)
+    S.box("bolt", 0.16, -0.28, 0.58, 0.78, -0.10, 0.70, "cloth", bevel=0.05)
+    S.box("shear_a", 0.50, -0.74, 0.595, 0.74, -0.71, 0.615, "steel", bevel=0.004)
+    S.box("shear_b", 0.52, -0.66, 0.595, 0.74, -0.69, 0.615, "steel", bevel=0.004)
+    S.cyl("shear_ring", 0.76, -0.69, 0.03, 0.595, 0.62, "metal_dark", segs=10, bevel=0.0)
+    # the sewing machine: bed, pillar, arm and head; hand wheel on the east
+    S.box("bed", 1.06, -0.80, 0.58, 1.86, -0.34, 0.64, "mug_blue", bevel=0.02)
+    S.box("fabric", 1.10, -0.76, 0.64, 1.44, -0.40, 0.65, "cloth", bevel=0.005)
+    S.box("pillar", 1.64, -0.66, 0.64, 1.82, -0.44, 0.98, "mug_blue", bevel=0.03)
+    S.box("arm", 1.14, -0.64, 0.86, 1.82, -0.46, 0.99, "mug_blue", bevel=0.04)
+    S.box("head", 1.12, -0.67, 0.70, 1.28, -0.43, 0.99, "mug_blue", bevel=0.03)
+    S.box("needle", 1.19, -0.565, 0.64, 1.21, -0.545, 0.72, "steel", bevel=0.0)
+    P.glow(S.box("work_lamp", 1.13, -0.685, 0.70, 1.27, -0.66, 0.76, "backdrop", bevel=0.004), "lamp_warm")
+    P.glow(S.cyl("power_lamp", 1.74, -0.55, 0.035, 0.99, 1.015, "backdrop", segs=10, bevel=0.0), "indicator")
+    S.box("hand_wheel", 1.82, -0.64, 0.80, 1.87, -0.46, 0.98, "steel", bevel=0.03)
+    S.cyl("spool", 1.50, -0.55, 0.045, 0.99, 1.07, "food_red", segs=12, bevel=0.005)
+    S.cyl("spindle", 1.50, -0.55, 0.012, 0.99, 1.10, "steel", segs=6, bevel=0.0)
+    S.box("cable", 1.84, -0.40, 0.0, 1.90, -0.34, 0.58, "fur_black", bevel=0.01)
+    return (2, 1), 1.10
+
+
+def _electric_research_bench():
+    """2 x 1 electric research bench: a steel desk with a terminal (screen
+    glows), a keyboard, an analyzer with status lamps (glow), a microscope
+    and a rack of sample tubes. The researcher sits on the south side."""
+    for i, x in enumerate([0.12, 1.88]):
+        for j, y in enumerate([-0.18, -0.82]):
+            S.box("leg%d%d" % (i, j), x - 0.045, y - 0.045, 0.0, x + 0.045, y + 0.045, 0.52, "steel_dark", bevel=0.012)
+    S.box("top", 0.04, -0.96, 0.52, 1.96, -0.04, 0.58, "steel", bevel=0.03)
+    S.box("shelf", 0.10, -0.90, 0.16, 1.90, -0.60, 0.20, "steel_dark", bevel=0.012)
+    # terminal: stand, casing, screen on its south face
+    S.box("stand", 0.64, -0.30, 0.58, 0.80, -0.18, 0.68, "metal_dark", bevel=0.01)
+    S.box("monitor", 0.34, -0.32, 0.66, 1.10, -0.16, 1.10, "steel_dark", bevel=0.03)
+    P.glow(S.box("screen", 0.40, -0.335, 0.72, 1.04, -0.315, 1.04, "backdrop", bevel=0.005), "indicator")
+    S.box("keyboard", 0.42, -0.66, 0.58, 1.02, -0.46, 0.605, "metal_dark", bevel=0.01)
+    S.box("keys", 0.45, -0.635, 0.605, 0.99, -0.485, 0.612, "pod_hull", bevel=0.0)
+    # analyzer cabinet on the right with three lamps and a sample slot
+    S.box("analyzer", 1.30, -0.42, 0.58, 1.88, -0.10, 0.96, "ceramic", bevel=0.03)
+    S.box("slot", 1.38, -0.435, 0.68, 1.62, -0.415, 0.74, "backdrop", bevel=0.004)
+    for k, x in enumerate((1.68, 1.75, 1.82)):
+        P.glow(S.box("lamp%d" % k, x - 0.022, -0.435, 0.86, x + 0.022, -0.415, 0.90, "backdrop", bevel=0.003),
+               "indicator")
+    P.glow(S.box("top_lamp", 1.40, -0.30, 0.96, 1.62, -0.24, 0.975, "backdrop", bevel=0.004), "indicator")
+    # microscope (front right): foot, pillar, stage, head and tube
+    S.box("scope_foot", 1.42, -0.84, 0.58, 1.66, -0.62, 0.62, "metal_dark", bevel=0.012)
+    S.box("scope_pillar", 1.56, -0.70, 0.62, 1.62, -0.64, 0.86, "metal_dark", bevel=0.008)
+    S.box("scope_stage", 1.44, -0.80, 0.68, 1.60, -0.66, 0.70, "steel", bevel=0.005)
+    S.box("scope_head", 1.46, -0.74, 0.84, 1.62, -0.66, 0.90, "ceramic", bevel=0.012)
+    S.cyl("scope_tube", 1.52, -0.72, 0.03, 0.70, 0.96, "steel", segs=10, bevel=0.0)
+    # sample rack (front left)
+    S.box("rack", 0.10, -0.86, 0.58, 0.34, -0.66, 0.64, "steel_dark", bevel=0.01)
+    for k, (x, mat) in enumerate(((0.15, "med_blue"), (0.22, "circuit"), (0.29, "med_red"))):
+        S.cyl("tube%d" % k, x, -0.76, 0.024, 0.60, 0.76, "glass", segs=10, bevel=0.0)
+        S.cyl("liquid%d" % k, x, -0.76, 0.02, 0.62, 0.68, mat, segs=10, bevel=0.0)
+    S.box("cable", 1.00, -0.12, 0.0, 1.06, -0.04, 0.66, "fur_black", bevel=0.01)
+    return (2, 1), 1.12
+
+
 # ------------------------------------------------------------ burial (W6)
 def _log(name, p0, p1, r, mat, end_mat="wood", z=None):
     """A round log from p0 to p1 (x,y,z each), lying free, end grain lit."""
@@ -724,10 +857,24 @@ BUILDERS = {
     "carpet_leather": (_carpet_leather, {"carpet": "leather", "flat": True}),
     "carpet_wood": (_carpet_wood, {"carpet": "wood", "flat": True}),
     "carpet_wool": (_carpet_wool, {"carpet": "wool", "flat": True}),
+    # PLAY-021: the torch's flame is drawn at `fire` (canvas px); the electric
+    # benches keep their base bench's approach point.
+    "torch_lamp": (_torch_lamp, {"building": "torch lamp", "emissive": "lamp_warm", "light_radius": 4,
+                                 "fuel": "wood", "flame_scale": 0.55,
+                                 "attachments": {"fire": P.project(TORCH_FIRE, TORCH_ZMAX)}}),
+    "electric_stove": (_electric_stove, {"attachments": {"cook": [0.25, 1.5]}, "building": "electric stove",
+                                         "recipes": "stove"}),
+    "electric_tailoring_bench": (_electric_tailoring_bench, {"attachments": {"worker": [0.5, 1.15]},
+                                                             "building": "electric tailoring bench",
+                                                             "recipes": "tailoring bench"}),
+    "electric_research_bench": (_electric_research_bench, {"attachments": {"worker": [0.5, 1.15]},
+                                                           "building": "electric research bench",
+                                                           "recipes": "research bench"}),
 }
 FACINGS_ONLY = {"grave_dug": ("south", "east"), "grave_filled": ("south", "east")}
 ROTATABLE = {"hospital_bed", "grave_dug", "grave_filled", "bed_basic", "bed_double", "chair_basic", "workbench_basic", "stonecutter_table", "stove_basic", "butcher_table",
-             "drying_rack", "tailoring_bench", "research_bench", "brewing_bench", "drug_table", "feeding_trough_empty", "feeding_trough_full"}
+             "drying_rack", "tailoring_bench", "research_bench", "brewing_bench", "drug_table", "feeding_trough_empty", "feeding_trough_full",
+             "electric_stove", "electric_tailoring_bench", "electric_research_bench"}
 
 
 # Blanket overlays: drawn over a sleeper so they read as tucked in. The
@@ -757,11 +904,19 @@ def build(only=None):
             continue
         facings = FACINGS_ONLY.get(name) or (FACINGS if name in ROTATABLE else ("south",))
         for f in facings:
-            fp, zmax = fn()
-            fp = S.face(S.objects(), f, fp)
+            fp0, zmax = fn()
+            lits = P.glow_colours()
+            fp = S.face(S.objects(), f, fp0)
             ex = dict(extra, rotatable=name in ROTATABLE, facing=f)
             suffix = "_" + f if name in ROTATABLE else ""
+            gname = P.glow_name(name + suffix)
+            if lits:   # PLAY-021: emissive parts get a glow layer
+                ex.update(emissive=lits[0], glow="furniture/" + gname)
             # flat floor mats lie on the ground: no sun shadow
             out.append(S.render_asset("furniture", name + suffix, footprint=fp, zmax=zmax, extra=ex,
                                       shadow_kind="none" if extra.get("flat") else None))
+            if lits:
+                fn()
+                S.face(S.objects(), f, fp0)
+                out.append(P.glow_layer("furniture", gname, fp, zmax, "furniture/" + name + suffix, lits[0]))
     return out
