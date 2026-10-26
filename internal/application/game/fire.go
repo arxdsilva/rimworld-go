@@ -271,7 +271,11 @@ func (g *Game) cellFuel(x, y int, items map[int]int) fire.Fuel {
 	return f
 }
 
-var fireLayers = [...]construction.Layer{construction.LayerObject, construction.LayerFloor, construction.LayerFoundation}
+// fireLayers are the layers whose buildings feed or take fire. Conduits
+// (PLAY-021) are listed so a layer is never skipped, but they are steel
+// (MetalOnly): fire.BuildingFlammability is 0 for them, so a conduit adds
+// no fuel and never burns.
+var fireLayers = [...]construction.Layer{construction.LayerObject, construction.LayerFloor, construction.LayerFoundation, construction.LayerConduit}
 
 // fireMix is splitmix64's finaliser.
 func fireMix(x uint64) uint64 {

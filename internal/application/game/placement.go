@@ -30,6 +30,9 @@ const (
 	ReasonTree          = "tree in the way"
 	ReasonStuff         = "cannot be built from that"
 	ReasonSpot          = "work spot is blocked"
+	// Electricity (PLAY-021).
+	ReasonNeedsVent = "needs a steam vent"
+	ReasonNeedsWall = "must stand in a wall"
 	// ReasonSame: the same piece in the same material is already here
 	// (a neutral refusal: the Architect skips it silently, PLAY-011).
 	ReasonSame = "already that material"
@@ -158,6 +161,9 @@ func (g *Game) canPlaceStuffAt(k construction.Kind, stuff item.Kind, f construct
 			return false, r
 		}
 	}
+	if k == construction.GeothermalGenerator && !g.ventOrigin(x, y) {
+		return false, ReasonNeedsVent // exactly over a steam vent, nowhere else
+	}
 	if swap != 0 {
 		return true, "" // the piece already stands there, spot and all
 	}
@@ -214,7 +220,10 @@ func (g *Game) canPlaceCell(k construction.Kind, stuff item.Kind, x, y int, swap
 	if g.scenarioForbids(k) { // setup.go: the scenario disallows it (NG-1)
 		return false, ReasonScenario
 	}
-	if g.naturalAt(x, y) { // setup_mapgen.go: nothing goes on a steam vent
+	// a geothermal generator is built over a steam vent (PLAY-021), the one
+	// piece that may stand on a natural feature
+	onVent := k == construction.GeothermalGenerator && g.ventCovers(x, y)
+	if g.naturalAt(x, y) && !onVent { // setup_mapgen.go: nothing else goes on a steam vent
 		return false, ReasonNatural
 	}
 	def := construction.DefOf(k)
@@ -223,7 +232,7 @@ func (g *Game) canPlaceCell(k construction.Kind, stuff item.Kind, x, y int, swap
 	if swap {
 		rep = g.layerBldgAt(x, y, layer) // the swapped piece stands here (PLAY-011)
 	}
-	if rep == 0 && g.layerBldgAt(x, y, layer) != 0 {
+	if occ := g.layerBldgAt(x, y, layer); rep == 0 && occ != 0 && !(onVent && g.naturalBldg(occ)) {
 		return false, ReasonOccupied
 	}
 	if g.layerFrameAt(x, y, layer) != 0 {
@@ -245,6 +254,11 @@ func (g *Game) canPlaceCell(k construction.Kind, stuff item.Kind, x, y int, swap
 		if g.layerBlockerAt(x, y) != 0 { // never under a standing wall
 			return false, ReasonBlocked
 		}
+	} else if layer == construction.LayerConduit {
+		// conduits run under walls, doors and benches on a layer of their
+		// own (PLAY-021): the walkability a piece on the object layer needs
+		// does not apply. Rock, water and natural features were refused
+		// above.
 	} else if layer == construction.LayerFloor {
 		// floors go under furniture, even benches that block the way, but
 		// never into a wall, a fence post or a grave (SIM-028)
@@ -253,6 +267,9 @@ func (g *Game) canPlaceCell(k construction.Kind, stuff item.Kind, x, y int, swap
 		}
 	} else if rep == 0 && !g.grid.Walkable(x, y) {
 		return false, ReasonBlocked
+	}
+	if k == construction.Cooler && rep == 0 && !g.wallGapAt(x, y) {
+		return false, ReasonNeedsWall // a cooler fills a wall (or a gap in one), like a door
 	}
 	if pid := g.plantAt(x, y); pid != 0 {
 		if p, _ := g.plants.Get(pid); plant.DefOf(p.Species).Trunk && p.Species != plant.Cactus {
@@ -267,9 +284,10 @@ func (g *Game) canPlaceCell(k construction.Kind, stuff item.Kind, x, y int, swap
 
 // replaceTarget is the wall, fence, door or gate a door or gate of kind
 // k placed at (x, y) would replace (0: none). Same kind over same kind
-// is not a replacement.
+// is not a replacement. A cooler (PLAY-021) fills a wall the same way,
+// and replaces nothing but a wall.
 func (g *Game) replaceTarget(k construction.Kind, x, y int) entity.EntityID {
-	if k != construction.Door && k != construction.FenceGate {
+	if k != construction.Door && k != construction.FenceGate && k != construction.Cooler {
 		return 0
 	}
 	bid := g.layerBldgAt(x, y, construction.LayerObject)
@@ -277,11 +295,49 @@ func (g *Game) replaceTarget(k construction.Kind, x, y int) entity.EntityID {
 	if !ok || b.Kind == k {
 		return 0
 	}
-	switch b.Kind {
-	case construction.Wall, construction.Fence, construction.Door, construction.FenceGate:
+	switch {
+	case k == construction.Cooler:
+		if b.Kind == construction.Wall {
+			return bid
+		}
+	case b.Kind == construction.Wall, b.Kind == construction.Fence, b.Kind == construction.Door, b.Kind == construction.FenceGate:
 		return bid
 	}
 	return 0
+}
+
+// wallGapAt reports (x, y) set between two solid pieces on one axis (walls,
+// doors, fences, gates or rock, built or planned): a gap in a wall line.
+func (g *Game) wallGapAt(x, y int) bool {
+	return g.solidAt(x-1, y) && g.solidAt(x+1, y) || g.solidAt(x, y-1) && g.solidAt(x, y+1)
+}
+
+// ventCovers reports a steam vent covering (x, y).
+func (g *Game) ventCovers(x, y int) bool {
+	sz := construction.DefOf(construction.SteamVent).Size
+	for _, v := range g.ventList() { // vents.go: cached top-left cells
+		if x >= v[0] && x < v[0]+sz[0] && y >= v[1] && y < v[1]+sz[1] {
+			return true
+		}
+	}
+	return false
+}
+
+// ventOrigin reports a steam vent whose top-left cell is (x, y): a
+// geothermal generator of the vent's size placed there covers it exactly.
+func (g *Game) ventOrigin(x, y int) bool {
+	for _, v := range g.ventList() {
+		if v[0] == x && v[1] == y {
+			return true
+		}
+	}
+	return false
+}
+
+// naturalBldg reports building id is a natural feature (a steam vent).
+func (g *Game) naturalBldg(id entity.EntityID) bool {
+	b, ok := g.bldgs.Get(id)
+	return ok && isNatural(b.Kind)
 }
 
 // AutoFacingAt is the facing a piece of kind placed at (x, y) with the
@@ -295,9 +351,10 @@ func (g *Game) AutoFacingAt(kind, facing string, x, y int) string {
 	return g.autoFacing(k, x, y, parseFacingName(facing)).String()
 }
 
-// autoOriented: doors and fence gates face along their walls or fences.
+// autoOriented: doors and fence gates face along their walls or fences; a
+// cooler (PLAY-021) faces across its wall, its cold side one of the two.
 func autoOriented(k construction.Kind) bool {
-	return k == construction.Door || k == construction.FenceGate
+	return k == construction.Door || k == construction.FenceGate || k == construction.Cooler
 }
 
 // orientPiece: a piece a door or gate lines up with (wall, door, fence,
@@ -354,11 +411,34 @@ func (g *Game) autoFacing(k construction.Kind, x, y int, prefer construction.Fac
 	if g.solidAt(x-1, y) {
 		h++
 	}
+	if k == construction.Cooler {
+		return coolerFacing(h, v, prefer)
+	}
 	switch {
 	case h > v:
 		return construction.South
 	case v > h:
 		return construction.East
+	}
+	return prefer
+}
+
+// coolerFacing is the facing of a cooler (PLAY-021): the direction of its
+// cold side, which lies across the wall it stands in. Walls east and west
+// of it (h > v) give north or south, walls north and south of it (v > h)
+// east or west. A facing across the wall is kept (prefer is the current
+// or the player's choice); another turns on, in the rotation order south,
+// east, north, west, to the next one across, so rotating through all four
+// still reaches both. With no clear wall axis prefer stays.
+func coolerFacing(h, v int, prefer construction.Facing) construction.Facing {
+	if h == v {
+		return prefer
+	}
+	across := func(f construction.Facing) bool {
+		return (f == construction.North || f == construction.South) == (h > v)
+	}
+	for i := 0; i < 4 && !across(prefer); i++ {
+		prefer = (prefer + 1) % 4
 	}
 	return prefer
 }
@@ -838,9 +918,25 @@ func (g *Game) removeBuildingAs(id entity.EntityID, refund bool) {
 		return
 	}
 	if r := refundOf(b); r > 0 { // setup_mapgen.go: a ruin gives half
-		g.dropStack(refundStuff(b), r, b.X, b.Y)
+		x, y := g.refundCell(b, refundStuff(b))
+		g.dropStack(refundStuff(b), r, x, y)
 	}
 	if n := componentRefund(b.Kind); n > 0 {
-		g.dropStack(item.Components, n, b.X, b.Y) // half the components, rounded down
+		x, y := g.refundCell(b, item.Components)
+		g.dropStack(item.Components, n, x, y) // half the components, rounded down
 	}
+}
+
+// refundCell is where the refund of a removed building b lands: its own
+// cell, except for a conduit taken down from under a wall or bench (the
+// cell stays blocked, PLAY-021), whose refund spills to the nearest free
+// cell beside it instead of lying inside the wall.
+func (g *Game) refundCell(b construction.Building, k item.Kind) (int, int) {
+	if construction.DefOf(b.Kind).Layer != construction.LayerConduit || g.grid.Walkable(b.X, b.Y) {
+		return b.X, b.Y
+	}
+	if x, y, ok := g.spillTile(k, b.X, b.Y); ok { // tick.go: the nearest dry walkable cell with room
+		return x, y
+	}
+	return b.X, b.Y
 }

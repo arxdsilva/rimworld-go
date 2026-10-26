@@ -17,8 +17,9 @@ import (
 // relocateR is how far a creature on a vanished deck looks for footing.
 const relocateR = 8
 
-// supportedLayers are the layers a deck holds up.
-var supportedLayers = [...]construction.Layer{construction.LayerObject, construction.LayerFloor}
+// supportedLayers are the layers a deck holds up (a conduit laid across a
+// bridge, PLAY-021, included).
+var supportedLayers = [...]construction.Layer{construction.LayerObject, construction.LayerFloor, construction.LayerConduit}
 
 // bridgeInUse reports a foundation b with a building or a planned piece
 // on any of its cells (false for every other kind).

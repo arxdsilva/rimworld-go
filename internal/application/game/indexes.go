@@ -107,7 +107,15 @@ func coversCell(k construction.Kind, f construction.Facing, x, y, px, py int) bo
 
 func layerOf(k construction.Kind) construction.Layer { return construction.DefOf(k).Layer }
 
-const numLayers = int(construction.LayerFoundation) + 1
+// numLayers is how many layers the cell indexes keep a slot for: every
+// layer, the conduit layer (PLAY-021) included.
+const numLayers = construction.NumLayers
+
+// blockLayers is how many leading layers can hold a movement blocker: the
+// object, floor and foundation layers. A conduit never blocks movement
+// (construction.Def.BlocksMove is false for the layer, a test guards it),
+// so the blocker lookups skip its slot.
+const blockLayers = int(construction.LayerFoundation) + 1
 
 // ---- plants ----
 
@@ -216,7 +224,7 @@ func (lx layered) note(id entity.EntityID) {
 	}
 	l := layerOf(p.kind)
 	if int(l) >= numLayers {
-		return // TODO(INFRA, PLAY-021): index LayerConduit; until then its lookups scan
+		return // no slot for it: its lookups scan
 	}
 	cells, _, _ := construction.Footprint(p.kind, p.facing, p.x, p.y)
 	for _, c := range cells {
@@ -291,7 +299,7 @@ func (g *Game) layerBlockerAt(x, y int) entity.EntityID {
 func (g *Game) layerBlockerAtIndexed(x, y int) entity.EntityID {
 	lx := g.bldgIndex()
 	var found entity.EntityID
-	for l := 0; l < numLayers; l++ {
+	for l := 0; l < blockLayers; l++ {
 		id, scan := lx.at(x, y, construction.Layer(l))
 		if scan {
 			return g.layerBlockerAtScan(x, y)
@@ -396,7 +404,7 @@ func (g *Game) blockingFrameAt(x, y int) entity.EntityID {
 func (g *Game) blockingFrameAtIndexed(x, y int) entity.EntityID {
 	lx := g.frameIndex()
 	var found entity.EntityID
-	for l := 0; l < numLayers; l++ {
+	for l := 0; l < blockLayers; l++ {
 		id, scan := lx.at(x, y, construction.Layer(l))
 		if scan {
 			return g.blockingFrameAtScan(x, y)

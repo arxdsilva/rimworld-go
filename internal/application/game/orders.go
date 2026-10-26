@@ -493,7 +493,9 @@ func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 		out = append(out, opt)
 	}
 
-	for _, layer := range []construction.Layer{construction.LayerObject, construction.LayerFloor} {
+	// every layer a piece can stand on: a conduit under a wall (PLAY-021) is
+	// ordered apart from the wall on top of it
+	for _, layer := range []construction.Layer{construction.LayerObject, construction.LayerFloor, construction.LayerConduit} {
 		if fid := g.layerFrameAt(x, y, layer); fid != 0 {
 			fr, _ := g.frames.Get(fid)
 			if fr.Ready() {

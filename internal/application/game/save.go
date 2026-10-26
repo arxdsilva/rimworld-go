@@ -669,8 +669,56 @@ func (g *Game) migrateSave(v int) {
 		g.migrateMedicalBeds() // bedrest.go (PLAY-020): hospital beds become medical
 		fallthrough
 	case v < 5:
-		// TODO(INFRA, PLAY-021): lamps need power now; existing lamps
-		// become torch lamps so old colonies keep their light.
+		g.migrateLampsToTorches() // PLAY-021: lamps need power now
+	}
+}
+
+// torchFullFuel is a full tank of a torch lamp, in ticks of fuel (the
+// torch row of the fuel table, fuel.go).
+func torchFullFuel() int {
+	spec, _ := fuelSpec(construction.TorchLamp)
+	return spec.CapTicks
+}
+
+// migrateLampsToTorches (save v5, PLAY-021) turns every lamp of an older
+// save into a torch lamp in place: same id, cell, material and hit points,
+// with a full tank of logs. Lamps need power from now on, and an old
+// colony has none, so it would sit in the dark; a torch lamp burns logs
+// instead and haulers keep it fed. A lamp blueprint becomes a torch lamp
+// blueprint with the logs it has already been given (capped at what a
+// torch lamp takes) and the same share of work left. Lamp and torch lamp
+// share a layer, so the cell indexes stay valid.
+func (g *Game) migrateLampsToTorches() {
+	torch := construction.TorchLamp
+	changed := false
+	for _, id := range g.bldgIDs {
+		b, ok := g.bldgs.Get(id)
+		if !ok || b.Kind != construction.Lamp {
+			continue
+		}
+		b.Kind = torch
+		g.bldgs.Set(id, b)
+		g.setFuel(id, torchFullFuel())
+		changed = true
+	}
+	for _, id := range g.frameIDs {
+		fr, ok := g.frames.Get(id)
+		if !ok || fr.Kind != construction.Lamp {
+			continue
+		}
+		if fr.Reinstall == 0 { // a move keeps its own work and no wood
+			was := max(1, construction.WorkFor(construction.Lamp, fr.Stuff))
+			fr.WorkLeft = (fr.WorkLeft*construction.WorkFor(torch, fr.Stuff) + was/2) / was
+			fr.Need = construction.WoodCost(torch)
+			fr.Wood = min(fr.Wood, fr.Need)
+		}
+		fr.Kind = torch
+		g.frames.Set(id, fr)
+		changed = true
+	}
+	if changed {
+		g.structVer++ // SIM-029: link and tint caches, the light grid
+		g.light.ver++ // light.go: the lamps' light goes with the lamps
 	}
 }
 
