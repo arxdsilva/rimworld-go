@@ -7,24 +7,26 @@ import (
 )
 
 // PLAY-019 RAM warnings. The game warns about small machines and big maps;
-// it never blocks a size or a start. The model is two numbers measured as
-// max RSS of the real game (/usr/bin/time -l with -fpsprobe):
+// it never blocks a size or a start. The model is two numbers fitted to the
+// peak memory footprint of the real game after the PLAY-019 art diet
+// (/usr/bin/time -l with -fpsprobe on an Apple-silicon Mac). The footprint
+// counts the GPU's share of unified memory, which max RSS (about 1.1 GiB
+// on every size) leaves out, so it is the safe figure:
 //
-//	48x40 map      2715 MiB
-//	250x250 map    2453 MiB
-//	500x500 grown  2612 MiB
+//	48x40 map      2242 MiB
+//	250x250 map    2141 MiB
+//	500x500 grown  3422 MiB (a grown colony: the late game's worst case)
 //
-// The decoded art dominates and does not depend on the map, so the base is
-// the 2.6 GiB the lead set for the whole game and the per-tile cost is the
-// 250 -> 500 difference: (2612 - 2453) MiB over (500^2 - 250^2) tiles is
-// about 889 bytes per tile for the simulation's state. Were that difference
-// zero or negative, the floor would be 256 bytes per tile. The lead
-// refreshes both numbers once the art memory diet lands.
+// The line runs through the larger small-map figure at 250 (2242 MiB) and
+// the grown 500: (3422 - 2242) MiB over (500^2 - 250^2) tiles is about
+// 6600 bytes per tile (terrain, chunk bakes, things and their art), and
+// the base is what is left at no tiles, about 1850 MiB. Re-measure both
+// when the art or the map's memory changes.
 const (
-	// ramBase is the game's memory on any map, in bytes (2.6 GiB).
-	ramBase uint64 = 26 * sysinfo.GiB / 10
+	// ramBase is the game's memory without a map, in bytes (1850 MiB).
+	ramBase uint64 = 1850 << 20
 	// ramPerTile is the memory a map tile adds, in bytes.
-	ramPerTile uint64 = 889
+	ramPerTile uint64 = 6600
 )
 
 // The thresholds the warnings use.

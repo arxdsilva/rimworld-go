@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"runtime/pprof"
 	"runtime/trace"
+	"slices"
 	"strings"
 
 	"rimworld-go/internal/domain/animal"
@@ -56,6 +57,7 @@ func main() {
 	traceOut := flag.String("trace", "", "dev: write an execution trace to this file")
 	fpsProbe := flag.Int("fpsprobe", 0, "dev: run the colony for this many seconds at -capture-speed (2 = 3 ticks/frame) and -capture-zoom, log frame stats and quit")
 	hidpi := flag.Bool("hidpi", true, "dev: render at the screen's true resolution; overrides the Graphics setting for this run without saving it")
+	graphics := flag.String("graphics", "", "dev: apply this graphics tier (high, medium, low) for this run without saving it, captures and -fpsprobe included")
 	flag.Parse()
 	var hidpiOverride *bool
 	flag.Visit(func(f *flag.Flag) {
@@ -96,7 +98,7 @@ func main() {
 		Version:      version,
 		Capture:      shot,
 		Saves:        saveHooks(),
-		Settings:     settingsHooks(shot != nil, hidpiOverride),
+		Settings:     settingsHooks(shot != nil, hidpiOverride, *graphics),
 		Scenarios:    scenarioStore(shot != nil),
 		FPSProbe:     probe,
 		NewSimBuilder: func(ng uiadapter.NewGame) (uiadapter.SimBuilder, error) {
@@ -438,23 +440,39 @@ func openSound(off bool) *ebitenaudio.Engine {
 // get none, so screenshots always use the default settings.
 // A non-nil hidpi (the dev -hidpi flag) overrides Graphics.HiDPI for this
 // run; settings are then not saved, so the override never persists.
-func settingsHooks(capturing bool, hidpi *bool) uiadapter.SettingsHooks {
-	if capturing {
-		return uiadapter.SettingsHooks{}
+func settingsHooks(capturing bool, hidpi *bool, tier string) uiadapter.SettingsHooks {
+	if tier != "" && !slices.Contains([]string{config.QualityHigh, config.QualityMedium, config.QualityLow}, tier) {
+		log.Fatalf("-graphics %q: want high, medium or low", tier)
 	}
-	store, err := settingsfile.Default()
-	if err != nil {
-		log.Printf("settings not saved: %v", err)
-		return uiadapter.SettingsHooks{}
+	hooks := uiadapter.SettingsHooks{} // captures, or no settings folder: the defaults
+	if !capturing {
+		if store, err := settingsfile.Default(); err != nil {
+			log.Printf("settings not saved: %v", err)
+		} else {
+			hooks = uiadapter.SettingsHooks{Load: store.Load, Save: store.Save}
+		}
 	}
-	if hidpi != nil {
-		return uiadapter.SettingsHooks{Load: func() (config.Settings, error) {
-			s, err := store.Load()
+	if hidpi == nil && tier == "" {
+		return hooks
+	}
+	// A developer override applies for this run only: no Save, so nothing
+	// is stored and the hardware tier is not detected over it.
+	load := hooks.Load
+	return uiadapter.SettingsHooks{Load: func() (config.Settings, error) {
+		s, err := config.Defaults(), error(nil)
+		if load != nil {
+			s, err = load()
+		}
+		if tier != "" {
+			s.Graphics.Chosen = nil
+			s.Graphics.ApplyTier(tier, 1)
+			s.Graphics.Detected = tier
+		}
+		if hidpi != nil {
 			s.Graphics.HiDPI = *hidpi
-			return s, err
-		}}
-	}
-	return uiadapter.SettingsHooks{Load: store.Load, Save: store.Save}
+		}
+		return s, err
+	}}
 }
 
 // saveHooks wires the UI's save/load to the per-user saves folder.

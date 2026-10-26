@@ -68,10 +68,13 @@ func TestEstimatedRAMGrowsWithTheMap(t *testing.T) {
 	if estimatedRAM(-5) != ramBase {
 		t.Error("a negative side counts as no tiles")
 	}
-	// The measured 2.6 GiB base and a per-tile cost from the 250 -> 500
-	// difference (159 MiB over 187 500 tiles) are the model's two numbers.
-	if ramBase != 26*gib/10 {
-		t.Errorf("base = %d, want 2.6 GiB (measured max RSS)", ramBase)
+	// The measured footprint fit: 1850 MiB at no tiles, and the 250 ->
+	// grown 500 difference (1180 MiB over 187 500 tiles) per tile.
+	if ramBase != 1850<<20 || ramPerTile != 6600 {
+		t.Errorf("base %d, per tile %d; want 1850 MiB and 6600 B (measured peak footprint)", ramBase, ramPerTile)
+	}
+	if got := estimatedRAM(500) >> 20; got < 3400 || got > 3450 {
+		t.Errorf("grown 500 estimate %d MiB, want the measured 3422 MiB", got)
 	}
 	if ramPerTile < 256 {
 		t.Errorf("per-tile cost %d is below the 256-byte floor", ramPerTile)
