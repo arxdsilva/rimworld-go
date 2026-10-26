@@ -59,7 +59,10 @@ func (g *Game) applyOne(c command.Command) {
 		command.SetPrisonerMode, command.SetBedForPrisoners, command.FormCaravan, command.CaravanReturn,
 		command.PaintArea, command.RenameArea, command.AssignArea, command.ReleasePrisoner,
 		command.CreateArea, command.DeleteArea, command.InvertArea, // areas.go (PLAY-015)
-		command.SetAnimalFollow: // train_animals.go (PLAY-015)
+		command.SetAnimalFollow,                       // train_animals.go (PLAY-015)
+		command.SetBedMedical, command.SetPawnBedRest, // med_cmds.go (PLAY-020)
+		command.SetZoneSow, command.SetZoneCut, command.SetZoneHidden, command.RenameZone,
+		command.SetZoneCrop, command.ExpandZone, command.RemoveZoneCells, command.DeleteZone: // zone_cmds.go (PLAY-020)
 		g.applyHostCommand(c) // host_commands.go (ENG-003)
 	case command.SetStoryteller:
 		g.cmdSetStoryteller(c.Name) // story.go (NG-1)

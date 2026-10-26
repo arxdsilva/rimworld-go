@@ -150,6 +150,11 @@ type PawnView struct {
 	InBed     bool
 	CarriedBy entity.EntityID
 	Tended    bool
+	// PLAY-020 bed rest: BedRest while resting in bed to heal;
+	// RestWhenHurt is the colonist's setting (on unless the player turned
+	// it off).
+	BedRest      bool
+	RestWhenHurt bool
 	// Acting names the hands-on work being done right now ("cut",
 	// "mine", "construct", "work at bench", ...), "" otherwise; ActX/ActY
 	// is the tile being worked (presentation: facing, swings, particles).
@@ -307,7 +312,9 @@ type BuildingView struct {
 	SwapTo  string
 	SwapPct int
 	// Ruin: an abandoned piece from map generation (MAPGEN-2).
-	Ruin    bool
+	Ruin bool
+	// Medical: a bed kept for the sick and injured (PLAY-020).
+	Medical bool
 	W, H    int // footprint in tiles (after facing)
 	HasSpot bool
 	SpotX   int

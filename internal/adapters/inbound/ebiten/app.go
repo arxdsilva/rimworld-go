@@ -178,6 +178,8 @@ type App struct {
 	hasPlant, hasItem              bool
 	selFrame                       entity.EntityID // blueprint/frame panel (frame_inspector.go)
 	hasFrame                       bool
+	zoneSel                        uint16 // the selected zone's id (zone_select.go, PLAY-020)
+	hasZone                        bool
 	selCycle                       selCycle        // last map click, for cycling a tile's stack
 	bldgMove                       bldgMoveState   // the building panel's Move mode (move_mode.go)
 	equipCache                     equipCacheState // the pawn Gear tab's nearby weapons (inspector.go)
@@ -353,8 +355,9 @@ func (a *App) Update() error {
 			a.in.take(mbLeft)
 		}
 		moving := a.handleMoveMode() // move_mode.go: placing a moved building
+		zoning := a.handleZoneTool() // zone_select.go: a selected zone's Expand or Shrink tool
 		a.handleArchitectInput()
-		if a.archTool == "" && !moving {
+		if a.archTool == "" && !moving && !zoning {
 			a.handleMapMouse() // selection.go / multiselect.go / formation.go
 		}
 	}
@@ -404,6 +407,9 @@ func (a *App) handleColonyEscape() bool {
 		a.bldgMove.on = false // Move mode takes Esc alone (UI-016)
 		return true
 	}
+	if a.escapeZoneTool() { // zone_select.go: a zone's Expand or Shrink tool
+		return true
+	}
 	if a.archOpen && a.archTool != "" {
 		a.archTool = ""
 		a.archDrag = false
@@ -429,6 +435,10 @@ func (a *App) handleColonyEscape() bool {
 	}
 	if a.hasFrame {
 		a.clearFrame()
+		return true
+	}
+	if a.hasZone {
+		a.clearZone() // zone_select.go
 		return true
 	}
 	if a.grouped() {
@@ -617,6 +627,8 @@ func (a *App) applyClick(id string) {
 		a.applyItemClick(id) // item_inspector.go
 	case strings.HasPrefix(id, "frame."):
 		a.applyFrameClick(id) // frame_inspector.go
+	case strings.HasPrefix(id, "zone."):
+		a.applyZoneClick(id) // zone_select.go
 	case strings.HasPrefix(id, "msg."):
 		a.focusMessage(id)
 	case strings.HasPrefix(id, "alert."):

@@ -52,5 +52,25 @@ func (g *Game) applyHostCommand(c command.Command) {
 		g.cmdDeleteArea(c.Index) // areas.go
 	case command.InvertArea:
 		g.cmdInvertArea(c.Index) // areas.go
+	case command.SetBedMedical:
+		g.cmdSetBedMedical(target, c.Enabled) // med_cmds.go (PLAY-020)
+	case command.SetPawnBedRest:
+		g.cmdSetPawnBedRest(target, c.Enabled) // med_cmds.go
+	case command.SetZoneSow:
+		g.cmdSetZoneSow(uint16(c.Target), c.Enabled) // zone_cmds.go (PLAY-020)
+	case command.SetZoneCut:
+		g.cmdSetZoneCut(uint16(c.Target), c.Enabled) // zone_cmds.go
+	case command.SetZoneHidden:
+		g.cmdSetZoneHidden(uint16(c.Target), c.Enabled) // zone_cmds.go
+	case command.RenameZone:
+		g.cmdRenameZone(uint16(c.Target), c.Name) // zone_cmds.go
+	case command.SetZoneCrop:
+		g.cmdSetZoneCrop(uint16(c.Target), c.Build) // zone_cmds.go
+	case command.ExpandZone:
+		g.cmdExpandZone(uint16(c.Target), c.X, c.Y, c.X2, c.Y2) // zone_cmds.go
+	case command.RemoveZoneCells:
+		g.cmdRemoveZoneCells(uint16(c.Target), c.X, c.Y, c.X2, c.Y2) // zone_cmds.go
+	case command.DeleteZone:
+		g.cmdDeleteZone(uint16(c.Target)) // zone_cmds.go
 	}
 }

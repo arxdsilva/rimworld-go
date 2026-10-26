@@ -163,6 +163,26 @@ const (
 	SetHaulMark
 	// DismissLetter removes letter Target from the letter stack (PLAY-018).
 	DismissLetter
+	// PLAY-020 medical beds and bed rest: SetBedMedical keeps bed Target
+	// for the sick and injured (Enabled) or not, that bed only;
+	// SetPawnBedRest turns colonist Target's rest when hurt on (Enabled)
+	// or off.
+	SetBedMedical
+	SetPawnBedRest
+	// PLAY-020 zone management, on zone id Target: SetZoneSow, SetZoneCut
+	// and SetZoneHidden allow sowing, allow cutting and hide the zone
+	// (Enabled); RenameZone names it Name ("" = the default); SetZoneCrop
+	// grows species id Build there; ExpandZone adds the valid cells of
+	// X..X2, Y..Y2 to it; RemoveZoneCells removes its cells there;
+	// DeleteZone removes it.
+	SetZoneSow
+	SetZoneCut
+	SetZoneHidden
+	RenameZone
+	SetZoneCrop
+	ExpandZone
+	RemoveZoneCells
+	DeleteZone
 )
 
 // Area references for AssignArea's Index (PLAY-015): any other value is an

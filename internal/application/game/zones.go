@@ -25,6 +25,10 @@ type ZoneView struct {
 	Cells [][2]int // row-major
 	// The bounding box, for labels and panels.
 	MinX, MinY, MaxX, MaxY int
+	// PLAY-020 settings: sowing or cutting off, hidden overlay, the
+	// player's name ("" = the default).
+	NoSow, NoCut, Hidden bool
+	Name                 string
 }
 
 // Zone kinds in ZoneView.Kind and CanZoneAt.

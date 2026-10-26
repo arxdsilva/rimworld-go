@@ -20,6 +20,7 @@ const (
 	selBuilding
 	selPlant
 	selFrame
+	selZone // PLAY-020: a zone (zone_select.go; the id is a zone id)
 )
 
 // selCand is one selectable thing on a tile.

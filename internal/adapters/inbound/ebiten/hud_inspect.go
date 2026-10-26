@@ -115,6 +115,8 @@ func (a *App) selectionPane() paneSpec {
 		return a.paneFor(selBuilding, a.selBuilding)
 	case a.hasFrame:
 		return a.paneFor(selFrame, a.selFrame)
+	case a.hasZone:
+		return a.paneFor(selZone, entity.EntityID(a.zoneSel))
 	}
 	return paneSpec{}
 }
@@ -137,6 +139,8 @@ func (a *App) paneFor(k selKind, id entity.EntityID) paneSpec {
 		return a.buildingPane(id)
 	case selFrame:
 		return a.framePane(id)
+	case selZone:
+		return a.zonePane(uint16(id)) // zone_select.go
 	}
 	return paneSpec{}
 }

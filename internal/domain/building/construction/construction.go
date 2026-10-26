@@ -583,6 +583,9 @@ type Building struct {
 	Damage      int    // damage taken (raiders bashing, bullets); repaired by builders
 	// ForPrisoners marks a bed for prisoners only (ENG-003).
 	ForPrisoners bool
+	// Medical keeps this bed for the sick and injured (PLAY-020): it has no
+	// owner and healthy colonists don't sleep in it.
+	Medical bool
 	// Ruin: an abandoned piece left by map generation (MAPGEN-2): not
 	// colony wealth, not a Home anchor, salvaged for half.
 	Ruin bool

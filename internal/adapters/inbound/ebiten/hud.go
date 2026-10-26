@@ -145,11 +145,12 @@ func (a *App) chromeRects(sw, sh int) []rect {
 // drawSelectionMarks marks the selected thing on the map (each kind's
 // file); the pane and the command grid show the rest.
 func (a *App) drawSelectionMarks(screen *ebiten.Image) {
-	a.drawBuildingMark(screen) // building_inspector.go
-	a.drawAnimalMark(screen)   // animal_inspector.go
-	a.drawPlantMark(screen)    // plant_inspector.go
-	a.drawItemMark(screen)     // item_inspector.go
-	a.drawFrameMark(screen)    // frame_inspector.go
+	a.drawBuildingMark(screen)  // building_inspector.go
+	a.drawAnimalMark(screen)    // animal_inspector.go
+	a.drawPlantMark(screen)     // plant_inspector.go
+	a.drawItemMark(screen)      // item_inspector.go
+	a.drawFrameMark(screen)     // frame_inspector.go
+	a.drawZoneSelection(screen) // zone_select.go
 }
 
 // hudRightClick lets a HUD region answer a right-click (dismiss a letter,

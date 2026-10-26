@@ -32,6 +32,12 @@ type Zone struct {
 	Wood  bool
 	Stone bool
 	Cells int
+	// PLAY-020 settings (zero = today's behaviour, so old saves and state
+	// hashes are unchanged): NoSow stops sowing, NoCut stops growers
+	// cutting other plants and chopping trees, Hidden hides the zone's
+	// overlay, Name is the player's name for it ("" = the default).
+	NoSow, NoCut, Hidden bool
+	Name                 string
 }
 
 // compatible: two zones of these settings merge when they touch.

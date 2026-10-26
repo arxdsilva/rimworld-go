@@ -191,6 +191,7 @@ type Renderer struct {
 	treeFx     treeFx       // see-through tree canopies (tree_fade.go)
 	game       Simulation
 	zoneGeoms  map[uint16]*zoneGeom // zones_draw.go outline cache
+	zonePlants map[[2]int]bool      // zones_draw.go: cells holding their zone's own plant, this frame (PLAY-020)
 	wheelTaken bool                 // the mouse wheel scrolled a log this frame
 	speed      speed
 	cam        camera

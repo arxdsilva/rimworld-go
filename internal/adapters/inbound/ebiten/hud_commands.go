@@ -107,6 +107,8 @@ func (a *App) selectionCommands() []cmdButton {
 		return a.commandsFor(selBuilding, a.selBuilding)
 	case a.hasFrame:
 		return a.commandsFor(selFrame, a.selFrame)
+	case a.hasZone:
+		return a.commandsFor(selZone, entity.EntityID(a.zoneSel))
 	}
 	return nil
 }
@@ -131,6 +133,8 @@ func (a *App) commandsFor(k selKind, id entity.EntityID) []cmdButton {
 		return a.buildingCommands(id)
 	case selFrame:
 		return a.frameCommands(id)
+	case selZone:
+		return a.zoneCommands(uint16(id)) // zone_select.go
 	}
 	return nil
 }
