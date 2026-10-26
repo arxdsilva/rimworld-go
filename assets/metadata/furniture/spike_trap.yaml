@@ -3,11 +3,11 @@ version: 1
 id: "core:furniture/spike_trap"
 image: generated/world/furniture/spike_trap.png
 scale: 2
-canvas: [160, 182]
+canvas: [160, 176]
 footprint: [1, 1]
-origin_px: [16, 38]
+origin_px: [16, 32]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: box
   w: 0.84

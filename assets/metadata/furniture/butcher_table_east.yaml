@@ -3,11 +3,11 @@ version: 1
 id: "core:furniture/butcher_table_east"
 image: generated/world/furniture/butcher_table_east.png
 scale: 2
-canvas: [160, 354]
+canvas: [160, 334]
 footprint: [1, 2]
-origin_px: [16, 82]
+origin_px: [16, 62]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: box
   w: 0.9

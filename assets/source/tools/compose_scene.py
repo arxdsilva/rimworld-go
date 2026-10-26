@@ -75,11 +75,11 @@ for i, x in enumerate(range(1, 6)):
         OBJECTS.append(("plant", stage, x, y, None))
 
 PAWNS = [
-    # x, y, facing, skin, hair style, hair tint, shirt tint, vest tint|None, rifle
+    # x, y, facing, skin, hair style, hair tint, shirt tint, vest tint|None, rifle[, build]
     (8, 7, "south", "tan", "hair_short", "black", "sand", "olive", True),
-    (4, 6, "east", "pale", "hair_bun", "auburn", "slate", None, False),
+    (4, 6, "east", "pale", "hair_bun", "auburn", "slate", None, False, "f_avg"),
     (10, 4, "west", "dark", "hair_crop", "grey", "cream", "rust", False),
-    (14, 3, "south", "light", "hair_bun", "black", "rust", "slate", True),
+    (14, 3, "south", "light", "hair_bun", "black", "rust", "slate", True, "f_avg"),
     (2, 8, "north", "brown", "hair_short", "blond", "olive", None, False),
 ]
 SELECTED = (8, 7)
@@ -170,46 +170,96 @@ def attach(md, key):
     return (float(m.group(1)), float(m.group(2))) if m else None
 
 
-ROT = {"east": 0, "south": -90, "west": 180, "north": 90}  # PIL rotate() is counter-clockwise
+# Pawns (ART §10, §27.1): one standing sprite per layer for south, east and
+# north; west is east mirrored about the canvas. Layers share a canvas and
+# origin per facing. Held items put their `grip` on the body's `hold`
+# attachment, behind the body facing north, with a tinted `pawn/hand` dot on
+# the grip (hidden facing north).
+PAWN_SRC = {"south": "south", "east": "east", "north": "north", "west": "east"}
+BUILD_LAYERS = ("body", "pants_basic", "shirt_basic", "vest_utility", "parka_leather", "duster_leather")
+LEGACY_BUILD = "m_avg"
+ROT = {"east": 0, "south": -90, "west": 0, "north": 90}  # PIL rotate() is counter-clockwise
 
 
-def draw_rifle(world, x, y, facing):
-    img, o = sprite("weapon", "rifle_basic")
+def pawn_key(layer, facing, build=LEGACY_BUILD):
+    tag = layer if build == LEGACY_BUILD or layer not in BUILD_LAYERS else "%s_%s" % (layer, build)
+    return "%s_%s" % (tag, PAWN_SRC[facing])
+
+
+def mirror_x(img, o, footprint_w=1):
+    """Flip a sprite left-right about its footprint: the origin moves so the
+    footprint stays on the same tile."""
+    return img.transpose(Image.FLIP_LEFT_RIGHT), (img.width - o[0] - footprint_w * PPT, o[1])
+
+
+def pawn_sprite(name, facing, tint=None):
+    img, o = sprite("pawn", name, tint)
+    if img is not None and facing == "west":
+        img, o = mirror_x(img, o)
+    return img, o
+
+
+def put_pawn(world, name, facing, x, y, tint=None):
+    img, o = pawn_sprite(name, facing, tint)
     if img is None:
+        return False
+    world.alpha_composite(img, (OFF + x * PPT - o[0], OFF + y * PPT - o[1]))
+    return True
+
+
+def hold_point(x, y, facing, build=LEGACY_BUILD):
+    """World px of the body's `hold` attachment (mirrored facing west)."""
+    key = pawn_key("body", facing, build)
+    md = meta("pawn", key)
+    hp = attach(md, "hold")
+    img, po = sprite("pawn", key)
+    if hp is None or img is None:
+        return None
+    if facing == "west":
+        hp = (img.width - hp[0], hp[1])
+        po = (img.width - po[0] - PPT, po[1])
+    return (OFF + x * PPT - po[0] + hp[0], OFF + y * PPT - po[1] + hp[1])
+
+
+def draw_rifle(world, x, y, facing, skin, build=LEGACY_BUILD):
+    img, o = sprite("weapon", "rifle_basic")
+    hp = hold_point(x, y, facing, build)
+    if img is None or hp is None:
         return
-    md = meta("weapon", "rifle_basic")
-    gx, gy = attach(md, "grip")
-    hand = attach(meta("pawn", "body_" + facing), "hand")
-    _, po = sprite("pawn", "body_" + facing)
+    gx, gy = attach(meta("weapon", "rifle_basic"), "grip")
     # rotate about the grip so the grip stays fixed
     big = Image.new("RGBA", (img.width * 3, img.height * 3))
     big.alpha_composite(img, (img.width, img.height))
     cx, cy = gx + img.width, gy + img.height
     rot = big.rotate(ROT[facing], center=(cx, cy), resample=Image.BICUBIC)
     if facing == "west":
-        rot = big.transpose(Image.FLIP_LEFT_RIGHT)
+        rot = rot.transpose(Image.FLIP_LEFT_RIGHT)
         cx = big.width - cx
-    px = OFF + x * PPT - po[0] + hand[0]
-    py = OFF + y * PPT - po[1] + hand[1]
-    world.alpha_composite(rot, (int(px - cx), int(py - cy)))
+    world.alpha_composite(rot, (int(hp[0] - cx), int(hp[1] - cy)))
+    if facing != "north":
+        hand, _ = sprite("pawn", "hand", {"skin": skin})
+        c = attach(meta("pawn", "hand"), "center")
+        if hand is not None and c is not None:
+            world.alpha_composite(hand, (int(hp[0] - c[0]), int(hp[1] - c[1])))
 
 
 def draw_pawn(world, p):
-    x, y, f, skin, hair, hair_t, shirt_t, vest_t, rifle = p
+    x, y, f, skin, hair, hair_t, shirt_t, vest_t, rifle = p[:9]
+    build = p[9] if len(p) > 9 else LEGACY_BUILD
     layers = [("body", {"skin": skin}), ("pants_basic", {"cloth": "slate" if shirt_t != "slate" else "navy"}),
               ("shirt_basic", {"cloth": shirt_t})]
     if vest_t:
         layers.append(("vest_utility", {"cloth": vest_t}))
     layers.append((hair, {"hair": hair_t}))
     if rifle and f == "north":
-        draw_rifle(world, x, y, f)
+        draw_rifle(world, x, y, f, skin, build)
     for name, t in layers:
-        put(world, "pawn", "%s_%s" % (name, f), x, y, t)
+        put_pawn(world, pawn_key(name, f, build), f, x, y, t)
     if rifle and f != "north":
-        draw_rifle(world, x, y, f)
+        draw_rifle(world, x, y, f, skin, build)
 
 
-def pawn_sheet(path):
+def pawn_sheet(path, builds=(LEGACY_BUILD,)):
     outfits = [
         ("tan", "hair_short", "black", "sand", "olive", True),
         ("pale", "hair_bun", "auburn", "slate", None, False),
@@ -217,22 +267,24 @@ def pawn_sheet(path):
         ("brown", "hair_short", "blond", "olive", None, False),
     ]
     facings = ["south", "east", "north", "west"]
-    img = Image.new("RGBA", (len(facings) * PPT * 2, len(outfits) * PPT * 2), (134, 112, 79, 255))
-    for r, o in enumerate(outfits):
+    rows = [(o, b) for b in builds for o in outfits]
+    img = Image.new("RGBA", (len(facings) * PPT * 2, len(rows) * PPT * 2), (134, 112, 79, 255))
+    for r, (o, b) in enumerate(rows):
         for c, f in enumerate(facings):
-            draw_pawn(img, (c * 2, r * 2 + 1, f) + o)
+            draw_pawn(img, (c * 2, r * 2 + 1, f) + o + (b,))
     img.convert("RGB").save(path)
     print(path)
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("-o", "--out", default=os.path.join(ROOT, "generated", "prototype_scene.png"))
+    ap.add_argument("-o", "--out", default=os.path.join(cs.OUT_ROOT, "generated", "prototype_scene.png"))
     ap.add_argument("--zoom", type=int, default=1)
     ap.add_argument("--pawns", help="write a pawn layer sheet to this path instead")
+    ap.add_argument("--builds", default=LEGACY_BUILD, help="pawn sheet builds, comma list (e.g. m_avg,f_avg)")
     a = ap.parse_args()
     if a.pawns:
-        return pawn_sheet(a.pawns)
+        return pawn_sheet(a.pawns, [b for b in a.builds.split(",") if b])
     img = compose(a.zoom)
     img.convert("RGB").save(a.out)
     print(a.out, img.size)

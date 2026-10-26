@@ -3,11 +3,11 @@ version: 1
 id: "core:item/straw_bundle"
 image: generated/world/item/straw_bundle.png
 scale: 2
-canvas: [160, 177]
+canvas: [160, 172]
 footprint: [1, 1]
-origin_px: [16, 33]
+origin_px: [16, 28]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: blob
   w: 0.794

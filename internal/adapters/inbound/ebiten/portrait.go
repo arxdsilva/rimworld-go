@@ -12,13 +12,46 @@ import (
 )
 
 // A renderer-free pawn portrait (NG-1 §2.9): the layered colonist facing
-// south, cropped to head and torso, drawn from the art catalog alone so
-// the character screens need no Renderer. The layer rules follow the
-// colony renderer's (draw_art.go pawnLayers) for the six builds.
+// south, cropped to the figure, drawn from the art catalog alone so the
+// character screens need no Renderer. The colony figure draws from the
+// same layer list (figureLayers) for the six builds.
 
-// portraitCrop is the part of the 160x297 pawn canvas the portrait shows:
-// head and torso.
-var portraitCrop = image.Rect(20, 72, 140, 232)
+// Portrait crops, as fractions of the figure's height from its head
+// centre to its feet (H): the crop's top sits headroomK·H above the head
+// centre (room for hair and a hat); the portrait ends footK·H below the
+// feet, the bust bustK·H below the head centre (the shoulders). Widths
+// follow from the boxes' aspect (w/h).
+const (
+	headroomK      = 0.55
+	footK          = 0.10
+	bustK          = 0.45
+	portraitAspect = 0.75
+	bustAspect     = 0.88
+)
+
+// pawnCrops are the parts of the south body's canvas (px) the portrait
+// (the whole figure) and the colonist bar's bust (head and shoulders)
+// show, from its metadata: the head attachment, origin_px and the feet
+// (pawnFeetY). Without a head attachment the whole canvas is shown.
+func pawnCrops(body *artSprite) (portrait, bust image.Rectangle) {
+	if body == nil {
+		return image.Rectangle{}, image.Rectangle{}
+	}
+	m := body.meta
+	head, ok := m.Attach["head"]
+	if !ok {
+		full := image.Rect(0, 0, m.Canvas[0], m.Canvas[1])
+		return full, full
+	}
+	feet := m.Origin[1] + pawnFeetY*artTilePx
+	h := feet - head[1]
+	box := func(top, bottom, aspect float64) image.Rectangle {
+		w := (bottom - top) * aspect
+		return image.Rect(int(math.Round(head[0]-w/2)), int(math.Round(top)), int(math.Round(head[0]+w/2)), int(math.Round(bottom)))
+	}
+	top := head[1] - headroomK*h
+	return box(top, feet+footK*h, portraitAspect), box(top, head[1]+bustK*h, bustAspect)
+}
 
 // portraitLayer is one sprite of the portrait and its tint (zero: none).
 type portraitLayer struct {
@@ -63,36 +96,74 @@ func portraitLayers(art *artCatalog, l look.Look) []portraitLayer {
 // scarredLayers is portraitLayers; scarred adds the face scar over the
 // hair (a disfigured pawn).
 func scarredLayers(art *artCatalog, l look.Look, scarred bool) []portraitLayer {
+	return figureLayers(art, l, "south", figureDress{scarred: scarred})
+}
+
+// figureDress is what a figure wears beyond its look: outer apparel
+// (parka, duster, tuque), the face scar, and raider clothing.
+type figureDress struct {
+	apparel []string
+	scarred bool
+	raider  bool // hostile: maroon shirt and vest, slate trousers
+}
+
+// figureLayers lists a pawn's sprites bottom first for look l in art
+// facing fs ("south", "east" or "north"): the build's body and clothes,
+// outer apparel, beard, hair, the face scar, then a hat. The colony
+// figure, the portraits and the colonist bar all draw from it, so the
+// look built on the pawns screen is the one walking in the colony.
+func figureLayers(art *artCatalog, l look.Look, fs string, d figureDress) []portraitLayer {
 	skin := art.tint("skin", pick(art.tintNames("skin"), l.Skin))
 	cloths := art.clothTints()
 	cloth := func(i uint8) color.NRGBA { return art.tint("cloth", pick(cloths, i)) }
-	hairNames := art.tintNames("hair")
-	hairName := pick(hairNames, l.Hair)
+	shirt, pants, vest := cloth(l.Shirt), cloth(l.Pants), cloth(l.VestCloth)
+	if d.raider {
+		l.Bare, l.Vest = false, true
+		shirt, vest, pants = art.tint("cloth", raiderCloth), art.tint("cloth", raiderCloth), art.tint("cloth", "slate")
+	}
+	hairName := pick(art.tintNames("hair"), l.Hair)
 	if l.Grey {
 		hairName = "grey"
 	}
 	hair := art.tint("hair", hairName)
 	// A build whose art is missing falls back to the unsuffixed keys.
-	built := art.has(pawnKey("body", l, "south", true))
-	key := func(layer string) string { return pawnKey(layer, l, "south", built) }
+	built := art.has(pawnKey("body", l, fs, true))
+	key := func(layer string) string { return pawnKey(layer, l, fs, built) }
 
-	out := []portraitLayer{{key("body"), skin}}
+	out := make([]portraitLayer, 0, 9)
+	out = append(out, portraitLayer{key("body"), skin})
 	if !l.Bare {
-		out = append(out,
-			portraitLayer{key("pants_basic"), cloth(l.Pants)},
-			portraitLayer{key("shirt_basic"), cloth(l.Shirt)})
+		out = append(out, portraitLayer{key("pants_basic"), pants}, portraitLayer{key("shirt_basic"), shirt})
 		if l.Vest {
-			out = append(out, portraitLayer{key("vest_utility"), cloth(l.VestCloth)})
+			out = append(out, portraitLayer{key("vest_utility"), vest})
+		}
+	}
+	hat := ""
+	for _, a := range d.apparel { // outer garments go over shirt and vest
+		switch a {
+		case "parka":
+			out = append(out, portraitLayer{key("parka_leather"), color.NRGBA{}})
+		case "wool parka": // the leather parka layer, tinted cream
+			out = append(out, portraitLayer{key("parka_leather"), color.NRGBA{R: 238, G: 228, B: 200, A: 255}})
+		case "duster":
+			out = append(out, portraitLayer{key("duster_leather"), color.NRGBA{}})
+		case "tuque":
+			hat = "pawn/tuque_knit_" + fs
 		}
 	}
 	if l.Beard > 0 && int(l.Beard) <= len(look.Beards) {
-		out = append(out, portraitLayer{"pawn/beard_" + look.Beards[l.Beard-1] + "_south", hair})
+		out = append(out, portraitLayer{"pawn/beard_" + look.Beards[l.Beard-1] + "_" + fs, hair})
 	}
 	if n := len(look.HairStyles); n > 0 {
-		out = append(out, portraitLayer{"pawn/hair_" + look.HairStyles[int(l.HairStyle)%n] + "_south", hair})
+		out = append(out, portraitLayer{"pawn/hair_" + look.HairStyles[int(l.HairStyle)%n] + "_" + fs, hair})
 	}
-	if scarred {
-		out = append(out, portraitLayer{faceScarSouth, color.NRGBA{}})
+	if d.scarred {
+		if k := "pawn/face_scar_" + fs; art.has(k) {
+			out = append(out, portraitLayer{k, color.NRGBA{}})
+		}
+	}
+	if hat != "" {
+		out = append(out, portraitLayer{hat, pants})
 	}
 	return out
 }
@@ -110,6 +181,8 @@ func drawPortrait(dst *ebiten.Image, art *artCatalog, l look.Look, scarred bool,
 	if art == nil || !art.has(pawnKey("body", l, "south", false)) {
 		return false
 	}
+	body := art.sprite(pawnKey("body", l, "south", false))
+	portraitCrop, _ := pawnCrops(body)
 	cw, ch := float64(portraitCrop.Dx()), float64(portraitCrop.Dy())
 	s := min(w/cw, h/ch)
 	ox, oy := x+(w-cw*s)/2, y+(h-ch*s)/2
@@ -120,8 +193,8 @@ func drawPortrait(dst *ebiten.Image, art *artCatalog, l look.Look, scarred bool,
 			continue
 		}
 		b := img.Bounds()
-		// The art is @2x of a 160x297 canvas; the crop is in canvas px.
-		k := float64(b.Dx()) / 160
+		// The crop is in canvas px; the image may be a multiple of it.
+		k := float64(b.Dx()) / float64(body.meta.Canvas[0])
 		crop := image.Rect(int(float64(portraitCrop.Min.X)*k), int(float64(portraitCrop.Min.Y)*k),
 			int(float64(portraitCrop.Max.X)*k), int(float64(portraitCrop.Max.Y)*k)).Intersect(b)
 		if crop.Empty() {
@@ -137,48 +210,42 @@ func drawPortrait(dst *ebiten.Image, art *artCatalog, l look.Look, scarred bool,
 	return drew
 }
 
-// drawPawnPortraitArt draws the layered pawn (facing south) fitted into
-// the logical w x h box at (x, y), for HUD chrome (the colonist bar, the
-// inspector); it draws through the UI canvas, so the art scales with the
-// UI like the names beside it (PLAY-017).
+// drawPawnPortraitArt draws the layered pawn (facing south, the portrait
+// crop of pawnCrops) fitted into the logical w x h box at (x, y), for HUD
+// chrome (the inspector); it draws through the UI canvas, so the art
+// scales with the UI like the names beside it (PLAY-017).
 func (r *Renderer) drawPawnPortraitArt(screen *ebiten.Image, p game.PawnView, x, y, w, h float64) bool {
 	body := r.art.sprite("pawn/body_south")
 	if body == nil {
 		return false
 	}
-	cw, ch := float64(body.meta.Canvas[0]), float64(body.meta.Canvas[1])
-	s := math.Min(w/cw, h/ch)
-	ox := x + (w-cw*s)/2
-	oy := y + (h-ch*s)/2
-	for _, ly := range r.pawnPortraitLayers(p) {
-		img := r.art.image(ly.key, ly.tint)
-		if img == nil {
-			continue
-		}
-		op := &ebiten.DrawImageOptions{}
-		op.GeoM.Scale(s, s)
-		op.GeoM.Translate(ox, oy)
-		op.Filter = ebiten.FilterLinear
-		uiDrawImage(screen, img, op)
-	}
+	crop, _ := pawnCrops(body)
+	r.drawPawnCropped(screen, p, body, crop, x, y, w, h)
 	return true
 }
 
-// bustCrop is the part of the 160x297 pawn canvas the colonist bar shows:
-// the hair, head, shoulders and chest (the figure is a chibi, its head a
-// third of its height).
-var bustCrop = image.Rect(36, 66, 124, 166)
-
-// drawPawnBustArt draws the layered pawn's head and chest (the bustCrop of
-// the south-facing figure) fitted into the logical w x h box at (x, y), for
-// the colonist bar; it draws through the UI canvas like drawPawnPortraitArt.
+// drawPawnBustArt draws the layered pawn's head and shoulders (the bust
+// crop of the south-facing figure, pawnCrops) fitted into the logical
+// w x h box at (x, y), for the colonist bar; it draws through the UI
+// canvas like drawPawnPortraitArt.
 func (r *Renderer) drawPawnBustArt(screen *ebiten.Image, p game.PawnView, x, y, w, h float64) bool {
 	body := r.art.sprite("pawn/body_south")
 	if body == nil {
 		return false
 	}
+	_, crop := pawnCrops(body)
+	r.drawPawnCropped(screen, p, body, crop, x, y, w, h)
+	return true
+}
+
+// drawPawnCropped draws p's portrait layers cut to crop (canvas px of
+// body's canvas) fitted into the logical w x h box at (x, y).
+func (r *Renderer) drawPawnCropped(screen *ebiten.Image, p game.PawnView, body *artSprite, crop image.Rectangle, x, y, w, h float64) {
 	canvasW := float64(body.meta.Canvas[0])
-	cw, ch := float64(bustCrop.Dx()), float64(bustCrop.Dy())
+	cw, ch := float64(crop.Dx()), float64(crop.Dy())
+	if cw <= 0 || ch <= 0 {
+		return
+	}
 	s := math.Min(w/cw, h/ch)
 	ox, oy := x+(w-cw*s)/2, y+(h-ch*s)/2
 	for _, ly := range r.pawnPortraitLayers(p) {
@@ -188,15 +255,14 @@ func (r *Renderer) drawPawnBustArt(screen *ebiten.Image, p game.PawnView, x, y, 
 		}
 		b := img.Bounds()
 		k := float64(b.Dx()) / canvasW // image pixels per canvas pixel (1 unless the art is @2x)
-		x0, y0 := int(float64(bustCrop.Min.X)*k), int(float64(bustCrop.Min.Y)*k)
-		crop := image.Rect(x0, y0, int(float64(bustCrop.Max.X)*k), int(float64(bustCrop.Max.Y)*k)).Intersect(b)
-		if crop.Empty() {
+		x0, y0 := int(float64(crop.Min.X)*k), int(float64(crop.Min.Y)*k)
+		cut := image.Rect(x0, y0, int(float64(crop.Max.X)*k), int(float64(crop.Max.Y)*k)).Intersect(b)
+		if cut.Empty() {
 			continue
 		}
 		op := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear}
 		op.GeoM.Scale(s/k, s/k)
-		op.GeoM.Translate(ox+float64(crop.Min.X-x0)*s/k, oy+float64(crop.Min.Y-y0)*s/k)
-		uiDrawImage(screen, img.SubImage(crop).(*ebiten.Image), op)
+		op.GeoM.Translate(ox+float64(cut.Min.X-x0)*s/k, oy+float64(cut.Min.Y-y0)*s/k)
+		uiDrawImage(screen, img.SubImage(cut).(*ebiten.Image), op)
 	}
-	return true
 }

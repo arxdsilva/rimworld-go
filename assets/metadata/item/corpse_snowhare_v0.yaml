@@ -7,12 +7,12 @@ canvas: [156, 156]
 footprint: [1, 1]
 origin_px: [14, 14]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.401
-  h: 0.131
-  d: 0.245
+  w: 0.395
+  h: 0.14
+  d: 0.247
 item: snowhare corpse
 species: snowhare
 variant: 0

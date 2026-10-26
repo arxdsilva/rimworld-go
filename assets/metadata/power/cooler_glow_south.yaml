@@ -3,11 +3,11 @@ version: 1
 id: "core:power/cooler_glow_south"
 image: generated/world/power/cooler_glow_south.png
 scale: 2
-canvas: [160, 224]
+canvas: [160, 205]
 footprint: [1, 1]
-origin_px: [16, 80]
+origin_px: [16, 61]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: none
   w: 0.07

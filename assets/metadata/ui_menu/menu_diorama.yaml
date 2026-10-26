@@ -8,6 +8,6 @@ scale: 2
 glow_lamp: generated/ui/menu/menu_glow_lamp.png
 glow_fire: generated/ui/menu/menu_glow_fire.png
 attachments:
-  fire0: [1856.0, 1329.9]
-  lamp0: [1984.0, 487.0]
-  lamp1: [1216.0, 487.0]
+  fire0: [1856.0, 1334.1]
+  lamp0: [1984.0, 513.7]
+  lamp1: [1216.0, 513.7]

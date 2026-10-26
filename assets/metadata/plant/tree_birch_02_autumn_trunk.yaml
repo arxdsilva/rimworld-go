@@ -3,11 +3,11 @@ version: 1
 id: "core:plant/tree_birch_02_autumn_trunk"
 image: generated/world/plant/tree_birch_02_autumn_trunk.png
 scale: 2
-canvas: [220, 281]
+canvas: [220, 251]
 footprint: [1, 1]
-origin_px: [46, 121]
+origin_px: [46, 91]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: none
   w: 0.293

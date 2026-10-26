@@ -1,17 +1,18 @@
 # Carpets, cloth and cotton (ART spec 16.3, SIM-021). Original colours.
 # Merged over materials.yaml by the palette loader (materials_*.yaml).
 # Same format as materials.yaml: three toon bands per material.
+# palette_mute: applied materials (sat=0.8 contrast=0.8 light=0.96 warm=8)
 version: 1
 materials:
-  carpet_straw:        {light: "#dcc07f", base: "#c8a868", shadow: "#a0844c"}
-  carpet_straw_dark:   {light: "#c6a664", base: "#b2924f", shadow: "#88703c"}
-  carpet_straw_edge:   {light: "#a88a50", base: "#8a6e3c", shadow: "#68522a"}
-  carpet_cloth:        {light: "#b4605a", base: "#94423e", shadow: "#6c2e2e"}
-  carpet_cloth_edge:   {light: "#7c3634", base: "#602a2a", shadow: "#461e1f"}
-  carpet_cloth_stripe: {light: "#ecdcb4", base: "#d6c394", shadow: "#a89870"}
-  carpet_leather:      {light: "#94643e", base: "#7a4e2c", shadow: "#573520"}
-  carpet_leather_edge: {light: "#5e3b22", base: "#482d19", shadow: "#331f11"}
-  carpet_wood:         {light: "#a68256", base: "#8a6a44", shadow: "#644c30"}
-  carpet_wood_alt:     {light: "#b48f60", base: "#977650", shadow: "#6e5538"}
-  carpet_wood_edge:    {light: "#54402b", base: "#3f2f1f", shadow: "#2a1e12"}
-  cotton_boll:         {light: "#ffffff", base: "#f3f1ec", shadow: "#bcc1cc"}
+  carpet_straw:        {light: "#cfb987", base: "#c8ae7b", shadow: "#a88863"}
+  carpet_straw_dark:   {light: "#baa26f", base: "#b29863", shadow: "#907350"}
+  carpet_straw_edge:   {light: "#9c8559", base: "#8a744c", shadow: "#6f553b"}
+  carpet_cloth:        {light: "#a76662", base: "#94524f", shadow: "#74463f"}
+  carpet_cloth_edge:   {light: "#723e3d", base: "#603535", shadow: "#4b2d29"}
+  carpet_cloth_stripe: {light: "#ded2b2", base: "#d6c7a1", shadow: "#b19e83"}
+  carpet_leather:      {light: "#896548", base: "#7a573c", shadow: "#5e462e"}
+  carpet_leather_edge: {light: "#563c2a", base: "#483222", shadow: "#37291a"}
+  carpet_wood:         {light: "#9a7f5e", base: "#8a7052", shadow: "#6c553f"}
+  carpet_wood_alt:     {light: "#a78b69", base: "#977d5e", shadow: "#765f48"}
+  carpet_wood_edge:    {light: "#4d3e2f", base: "#3f3225", shadow: "#2e241a"}
+  cotton_boll:         {light: "#f2f2f1", base: "#f3f1ed", shadow: "#c9cbd2"}

@@ -1,39 +1,40 @@
 # Ground vegetation palette (ART spec 9.1). Flat two-band materials: the
 # token is the base band, shadow and light sit one small step either side.
 # Merged over materials.yaml by the palette loader (materials_*.yaml).
+# palette_mute: applied materials (sat=0.8 contrast=0.8 light=0.96 warm=8)
 version: 1
 materials:
-  pl_dark:      {light: "#4d5b3b", base: "#414e32", shadow: "#343f28"}
-  pl_forest:    {light: "#617250", base: "#556442", shadow: "#46543a"}
-  pl_grass:     {light: "#7e8e5f", base: "#708052", shadow: "#5f6e45"}
-  pl_sage:      {light: "#9aa57f", base: "#87936c", shadow: "#75815b"}
-  pl_dry:       {light: "#a2a26f", base: "#91915f", shadow: "#7d7d51"}
-  pl_khaki:     {light: "#b5ac85", base: "#a49b70", shadow: "#8d845e"}
-  pl_stem:      {light: "#867257", base: "#766247", shadow: "#62513a"}
-  pl_dried:     {light: "#978862", base: "#857651", shadow: "#6f6243"}
-  pl_agave:     {light: "#6f9283", base: "#5f7f72", shadow: "#4d6a5e"}
-  pl_cactus:    {light: "#7a9a68", base: "#6b8a5c", shadow: "#58744c"}
-  pl_moss:      {light: "#8a9679", base: "#78856a", shadow: "#657258"}
-  pl_moss_dark: {light: "#6d7a60", base: "#5d6a50", shadow: "#4e5a43"}
-  pl_berry:     {light: "#7a76a8", base: "#5e5a8e", shadow: "#47446f"}
-  pl_fire:      {light: "#e89448", base: "#d2742e", shadow: "#a85a22"}
-  pl_dandelion: {light: "#f2e6a0", base: "#e4d27a", shadow: "#c2b05c"}
+  pl_dark:      {light: "#4a553d", base: "#444e38", shadow: "#3b422f"}
+  pl_forest:    {light: "#5e6b51", base: "#586449", shadow: "#4f5741"}
+  pl_grass:     {light: "#798662", base: "#73805b", shadow: "#6a7250"}
+  pl_sage:      {light: "#929b7e", base: "#899374", shadow: "#7f8566"}
+  pl_dry:       {light: "#989871", base: "#919169", shadow: "#817c5d"}
+  pl_khaki:     {light: "#aaa485", base: "#a49d7a", shadow: "#92856b"}
+  pl_stem:      {light: "#7e6e59", base: "#766650", shadow: "#665545"}
+  pl_dried:     {light: "#8e8265", base: "#85795b", shadow: "#73644f"}
+  pl_agave:     {light: "#6e897d", base: "#657f75", shadow: "#576e61"}
+  pl_cactus:    {light: "#78916b", base: "#718a65", shadow: "#667857"}
+  pl_moss:      {light: "#838d77", base: "#7b856f", shadow: "#6e7661"}
+  pl_moss_dark: {light: "#68725e", base: "#606a55", shadow: "#565d4a"}
+  pl_berry:     {light: "#79769c", base: "#68648e", shadow: "#595175"}
+  pl_fire:      {light: "#da985f", base: "#d2874f", shadow: "#b07840"}
+  pl_dandelion: {light: "#e6dba3", base: "#e4d68f", shadow: "#c9af77"}
   # Crops (PLAY-016, ART spec 9.3): cultivated greens a touch yellower than
   # wild foliage; produce accents muted toward the grass palette (never
   # more saturated than pl_fire / pl_dandelion).
-  pl_crop_leaf:    {light: "#89985c", base: "#7a894f", shadow: "#677543"}
-  pl_crop_deep:    {light: "#687a4b", base: "#5b6c40", shadow: "#4b5a35"}
-  pl_crop_stem:    {light: "#8f9a64", base: "#7f8a57", shadow: "#6b7549"}
-  pl_crop_silver:  {light: "#a7ae9a", base: "#949b86", shadow: "#7e8572"}
-  pl_crop_jade:    {light: "#a9bb84", base: "#97a974", shadow: "#829363"}
-  pl_crop_corn:    {light: "#e0c879", base: "#cdb262", shadow: "#ae954f"}
-  pl_crop_straw:   {light: "#d4bf84", base: "#c1aa6d", shadow: "#a38f5a"}
-  pl_crop_bronze:  {light: "#c29a5e", base: "#ab834b", shadow: "#8d6b3d"}
-  pl_crop_pumpkin: {light: "#d98a46", base: "#c47335", shadow: "#a05c2b"}
-  pl_crop_radish:  {light: "#c87068", base: "#b05a54", shadow: "#8f4744"}
-  pl_crop_cotton:  {light: "#f1e9d6", base: "#e3d9c2", shadow: "#c8bda5"}
-  pl_crop_bloom:   {light: "#dfe4ee", base: "#c9d0e0", shadow: "#a9b1c4"}
-  pl_crop_tuber:   {light: "#c9a76f", base: "#b4925c", shadow: "#97794b"}
-  pl_crop_pod:     {light: "#a3b07c", base: "#919e6b", shadow: "#7b875a"}
-  pl_crop_berry:   {light: "#8e4e63", base: "#763f52", shadow: "#5c3141"}
-  pl_crop_wilt:    {light: "#9c8a62", base: "#8a7853", shadow: "#736444"}
+  pl_crop_leaf:    {light: "#848f61", base: "#7d895b", shadow: "#737950"}
+  pl_crop_deep:    {light: "#65724f", base: "#5e6c49", shadow: "#555e3f"}
+  pl_crop_stem:    {light: "#889168", base: "#818a61", shadow: "#767955"}
+  pl_crop_silver:  {light: "#9ea394", base: "#959b8a", shadow: "#86897a"}
+  pl_crop_jade:    {light: "#a2b086", base: "#9ba97f", shadow: "#8f9770"}
+  pl_crop_corn:    {light: "#d3c084", base: "#cdb777", shadow: "#b49566"}
+  pl_crop_straw:   {light: "#c8b78a", base: "#c1af7e", shadow: "#a9906d"}
+  pl_crop_bronze:  {light: "#b6976a", base: "#ab8b5e", shadow: "#937250"}
+  pl_crop_pumpkin: {light: "#cc8f5c", base: "#c48352", shadow: "#a77645"}
+  pl_crop_radish:  {light: "#bb7872", base: "#b06b66", shadow: "#966257"}
+  pl_crop_cotton:  {light: "#e5decf", base: "#e3dbc9", shadow: "#cdc1b2"}
+  pl_crop_bloom:   {light: "#d5d9e2", base: "#ced3e0", shadow: "#b5b8ca"}
+  pl_crop_tuber:   {light: "#bda378", base: "#b4996e", shadow: "#9d7d5e"}
+  pl_crop_pod:     {light: "#9ca67e", base: "#949e75", shadow: "#878c67"}
+  pl_crop_berry:   {light: "#845464", base: "#764a59", shadow: "#613d45"}
+  pl_crop_wilt:    {light: "#928466", base: "#8a7c5e", shadow: "#786651"}

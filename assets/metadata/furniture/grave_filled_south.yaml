@@ -3,11 +3,11 @@ version: 1
 id: "core:furniture/grave_filled_south"
 image: generated/world/furniture/grave_filled_south.png
 scale: 2
-canvas: [160, 310]
+canvas: [160, 304]
 footprint: [1, 2]
-origin_px: [16, 38]
+origin_px: [16, 32]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: box
   w: 0.985

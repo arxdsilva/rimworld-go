@@ -3,11 +3,11 @@ version: 1
 id: "core:animal/lynx_north_walk06"
 image: generated/world/animal/lynx_north_walk06.png
 scale: 2
-canvas: [156, 164]
+canvas: [156, 156]
 footprint: [1, 1]
-origin_px: [14, 22]
+origin_px: [14, 14]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: blob
   w: 0.134

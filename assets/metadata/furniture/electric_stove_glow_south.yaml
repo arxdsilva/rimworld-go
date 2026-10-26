@@ -3,11 +3,11 @@ version: 1
 id: "core:furniture/electric_stove_glow_south"
 image: generated/world/furniture/electric_stove_glow_south.png
 scale: 2
-canvas: [288, 221]
+canvas: [288, 203]
 footprint: [2, 1]
-origin_px: [16, 77]
+origin_px: [16, 59]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: none
   w: 1.545

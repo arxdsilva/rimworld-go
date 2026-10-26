@@ -27,26 +27,32 @@ func TestHumanCorpseDrawsDeceasedLying(t *testing.T) {
 	if _, ok := r.deceasedOf(game.ItemView{Of: 77}); ok {
 		t.Fatal("unknown deceased")
 	}
-	plan := corpsePlanFor(it)
-	if plan.suffix != "_fall4" {
-		t.Fatalf("the last fall frame, got %q", plan.suffix)
-	}
-	if math.Abs(math.Abs(plan.ps.rot)-math.Pi/2) > 1e-9 {
-		t.Fatalf("rotated flat: %v", plan.ps.rot)
+	plan := corpsePlanFor(r.art, it)
+	side := math.Copysign(1, plan.ps.rot)
+	want := lyingPose(r.art, side)
+	want.cs = deadCS
+	if plan.ps != want || math.Abs(math.Abs(plan.ps.rot)-math.Pi/2) > 1e-9 {
+		t.Fatalf("the standing figure laid flat on its side: %+v", plan.ps)
 	}
 	if plan.ps.cs != deadCS {
 		t.Fatalf("dead tint: %v", plan.ps.cs)
 	}
 	it.Rotten = true
-	if corpsePlanFor(it).ps.cs != rottenCS {
+	if corpsePlanFor(r.art, it).ps.cs != rottenCS {
 		t.Fatal("rotten tint")
 	}
 	// the side it fell on is stable per body
-	if corpsePlanFor(it).ps.rot != plan.ps.rot {
+	if corpsePlanFor(r.art, it).ps.rot != plan.ps.rot {
 		t.Fatal("stable lying side")
 	}
 	screen := ebiten.NewImage(512, 512)
+	var keys []string
+	r.lit.onDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
 	r.drawCorpseItem(screen, it, 64, 512, 512)
+	r.lit.onDraw = nil
+	if len(keys) == 0 || keys[0] != "pawn/body_south" {
+		t.Fatalf("the corpse is the deceased's south figure: %v", keys)
+	}
 	r.drawCorpseItem(screen, game.ItemView{ID: 2, Kind: "human corpse", Of: 99}, 64, 512, 512) // body unknown: no panic
 	r.drawCorpseItem(screen, game.ItemView{ID: 3, Kind: "bones", X: 2, Y: 2}, 64, 512, 512)
 }
@@ -245,17 +251,17 @@ func TestGraveInspectorShowsEpitaph(t *testing.T) {
 	}
 }
 
-func TestDigUsesShovelMineFrames(t *testing.T) {
+func TestDigSwingsShovel(t *testing.T) {
 	t.Parallel()
 	d, ok := workTable[game.ActionDig]
-	if !ok || d.set != "_mine" || d.frames != 6 || d.tool != "tool/shovel" || d.stance != stanceHands {
+	if !ok || d.motion != motionSwing || d.tool != "tool/shovel" || d.stance != stanceHands {
 		t.Fatalf("dig row: %+v", d)
 	}
 	if len(d.parts) == 0 || d.parts[0].kind != partSoil || d.at != atTarget {
 		t.Fatalf("soil at the grave tile: %+v", d.parts)
 	}
 	r, _ := workRenderer(0)
-	if pose := r.workPose(worker(game.ActionDig), moveState{}); !pose.ok || pose.held.key != "tool/shovel" {
+	if pose := r.workPose(worker(game.ActionDig), moveState{}); !pose.ok || pose.held.key != "tool/shovel" || pose.held.angle == 0 {
 		t.Fatalf("pose %+v", pose)
 	}
 }
@@ -263,14 +269,14 @@ func TestDigUsesShovelMineFrames(t *testing.T) {
 func TestBuryKneelsAndPats(t *testing.T) {
 	t.Parallel()
 	d, ok := workTable[game.ActionBury]
-	if !ok || (d.set != "_pick" && d.set != "_kneel") || !d.kneel || d.tool != "" || d.squash <= 0 {
+	if !ok || d.motion != motionReach || d.tool != "" || d.squash <= 0 {
 		t.Fatalf("bury row: %+v", d)
 	}
 	if len(d.parts) == 0 || d.parts[0].kind != partSoil {
 		t.Fatalf("soil: %+v", d.parts)
 	}
 	r, _ := workRenderer(0)
-	if pose := r.workPose(worker(game.ActionBury), moveState{}); !pose.ok || !pose.held.set || pose.held.key != "" {
+	if pose := r.workPose(worker(game.ActionBury), moveState{}); !pose.ok || !pose.held.set || pose.held.key != "" || pose.squash <= 0 {
 		t.Fatalf("bare hands: %+v", pose)
 	}
 }
@@ -278,7 +284,7 @@ func TestBuryKneelsAndPats(t *testing.T) {
 func TestCremateUsesBench(t *testing.T) {
 	t.Parallel()
 	d, ok := workTable[game.ActionCremate]
-	if !ok || d.set != "_bench" || d.frames != 4 || d.tool != "" {
+	if !ok || d.motion != motionBench || d.tool != "" {
 		t.Fatalf("cremate row: %+v", d)
 	}
 	hasFx := false
@@ -291,7 +297,7 @@ func TestCremateUsesBench(t *testing.T) {
 		t.Fatalf("embers or smoke: %+v", d.parts)
 	}
 	for _, a := range []string{game.ActionDig, game.ActionBury, game.ActionCremate} {
-		if d := workTable[a]; d.strike < 1 || d.strike > d.frames || d.period <= 0 {
+		if d := workTable[a]; d.motion == motionNone || d.period <= 0 {
 			t.Fatalf("%s timing: %+v", a, d)
 		}
 	}

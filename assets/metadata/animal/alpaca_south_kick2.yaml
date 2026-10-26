@@ -3,11 +3,11 @@ version: 1
 id: "core:animal/alpaca_south_kick2"
 image: generated/world/animal/alpaca_south_kick2.png
 scale: 2
-canvas: [156, 202]
+canvas: [156, 192]
 footprint: [1, 1]
-origin_px: [14, 60]
+origin_px: [14, 50]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: blob
   w: 0.236

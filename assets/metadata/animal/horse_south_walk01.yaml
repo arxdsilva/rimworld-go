@@ -3,11 +3,11 @@ version: 1
 id: "core:animal/horse_south_walk01"
 image: generated/world/animal/horse_south_walk01.png
 scale: 2
-canvas: [224, 264]
+canvas: [224, 238]
 footprint: [1, 1]
-origin_px: [48, 122]
+origin_px: [48, 96]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: blob
   w: 0.33

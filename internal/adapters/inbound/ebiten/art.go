@@ -654,14 +654,6 @@ func facingFor(dx, dy int, prev facing) facing {
 	}
 }
 
-// pawnLook is a colonist's presentation appearance, derived from its
-// EntityID (stable, not RNG; never written back to the simulation).
-type pawnLook struct {
-	Skin, Hair, HairStyle, Shirt, Pants, Vest string // tint preset names / layer name
-}
-
-var hairStyles = []string{"hair_short", "hair_crop", "hair_bun"}
-
 func mix64(x uint64) uint64 {
 	x ^= x >> 30
 	x *= 0xBF58476D1CE4E5B9
@@ -669,34 +661,6 @@ func mix64(x uint64) uint64 {
 	x *= 0x94D049BB133111EB
 	x ^= x >> 31
 	return x
-}
-
-func lookFor(id uint64, skins, hairs, cloths []string) pawnLook {
-	pick := func(salt uint64, opts []string) string {
-		if len(opts) == 0 {
-			return ""
-		}
-		return opts[mix64(id*0x9E3779B97F4A7C15+salt)%uint64(len(opts))]
-	}
-	l := pawnLook{
-		Skin:      pick(1, skins),
-		Hair:      pick(2, hairs),
-		HairStyle: pick(3, hairStyles),
-		Shirt:     pick(4, cloths),
-		Pants:     pick(5, cloths),
-	}
-	if mix64(id+6)%2 == 0 {
-		l.Vest = pick(7, cloths)
-	}
-	if l.Pants == l.Shirt && len(cloths) > 1 {
-		for _, c := range cloths {
-			if c != l.Shirt {
-				l.Pants = c
-				break
-			}
-		}
-	}
-	return l
 }
 
 // artOrigin converts a sprite's footprint anchor to a screen position:

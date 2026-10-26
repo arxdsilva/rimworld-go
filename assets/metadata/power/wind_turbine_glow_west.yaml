@@ -3,11 +3,11 @@ version: 1
 id: "core:power/wind_turbine_glow_west"
 image: generated/world/power/wind_turbine_glow_west.png
 scale: 2
-canvas: [288, 273]
+canvas: [288, 239]
 footprint: [2, 1]
-origin_px: [16, 129]
+origin_px: [16, 95]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: none
   w: 0.09

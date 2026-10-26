@@ -30,14 +30,24 @@ def box_blur(a, passes):
     return a
 
 
-def outline(img, width=None, darken=None, saturate=None):
+def outline(img, width=None, darken=None, saturate=None, inner=None, inner_width=None, fringe=None):
+    """Chromatic outer contour `width` px wide plus a soft one-pixel fringe.
+
+    inner: optional bool [H, W], where the composited figure covers the
+    canvas (a layered figure's holdout, stage._figure_cover). Contour pixels
+    that fall there are capped at inner_width (contracts.OUTLINE_INNER_PX),
+    so hair or apparel lines stay thin over the face and body while the
+    figure's outer edge keeps the full width."""
     width = C.OUTLINE_PX if width is None else width
     darken = C.OUTLINE_DARKEN if darken is None else darken
     saturate = C.OUTLINE_SATURATE if saturate is None else saturate
+    fringe = C.OUTLINE_FRINGE if fringe is None else fringe
+    inner_width = C.OUTLINE_INNER_PX if inner_width is None else inner_width
     rgb, a = img[..., :3], img[..., 3]
     solid = a > 0.5
     filled = solid.copy()
     col = np.where(solid[..., None], rgb, 0.0)
+    dist = np.full(a.shape, -1, np.int16)   # growth step that reached each pixel
     # Grow colour outward; alternate 4/8 neighbourhoods for a rounder contour.
     for step in range(width + 1):
         nbrs = _N8 if step % 2 else _N4
@@ -49,14 +59,15 @@ def outline(img, width=None, darken=None, saturate=None):
             cnt += f
         new = (~filled) & (cnt > 0)
         col[new] = acc[new] / cnt[new][:, None]
-        if step < width:
-            filled |= new
-        else:
-            fringe = new
+        dist[new] = step
+        filled |= new
+    lim = np.full(a.shape, width, np.int16)
+    if inner is not None:
+        lim[inner] = min(width, inner_width)
     lum = col.mean(axis=2, keepdims=True)
     line = np.clip((lum + (col - lum) * saturate) * darken, 0.0, 1.0)
-    # Soft outer edge: one-pixel fringe at half strength.
-    line_a = filled.astype(np.float32) + fringe.astype(np.float32) * 0.45
+    # Soft outer edge: one-pixel fringe at partial strength.
+    line_a = ((dist >= 0) & (dist < lim)).astype(np.float32) + (dist == lim).astype(np.float32) * fringe
     out = np.zeros_like(img)
     # sprite over line
     oa = a + line_a * (1.0 - a)
@@ -83,7 +94,7 @@ def drop_shadow(img, offset=None, blur=None, alpha=None, rgb=None):
 
 def process(img, do_outline=True, do_shadow=False, **kw):
     if do_outline:
-        img = outline(img, **{k: v for k, v in kw.items() if k in ("width", "darken", "saturate")})
+        img = outline(img, **{k: v for k, v in kw.items() if k in ("width", "darken", "saturate", "inner")})
     if do_shadow:
         img = drop_shadow(img)
     return img

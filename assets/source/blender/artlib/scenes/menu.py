@@ -28,7 +28,7 @@ from ..families.animals import quadruped, rig
 FRAME_PX = (3200, 1800)
 TILES_W, TILES_H = 25, 15          # ground tiles covering the frame
 X0, X1, Y0, Y1 = -2, 27, -2, 16    # built area (bleed for shear and edges)
-OUT_DIR = os.path.join(C.ASSETS_DIR, "generated", "ui", "menu")
+OUT_DIR = os.path.join(C.OUT_ROOT, "generated", "ui", "menu")   # RWG_OUT_ROOT moves it for reviews
 
 # ---- layout ----------------------------------------------------------------
 ROOM = (11, 3, 17, 8)              # walls on the border, inclusive
@@ -53,14 +53,16 @@ FURNITURE = [
 ]
 LAMPS = [(15, 4), (9, 4)]
 ITEMS = [("_wood", 18, 9), ("_food", 19, 9), ("_stone", 18, 10)]
-# x, y, facing, frame, skin, hair style, hair tint, shirt tint, vest tint
+# Standing limbless pawns (ART §10): pawn.FACINGS only (south, east, north;
+# the game mirrors east for west, a 3D scene has no mirror).
+# x, y, facing, build, skin, hair style, hair tint, shirt tint, vest tint
 COLONISTS = [
-    (13, 10, "east", "kneel", "tan", "hair_short", "black", "sand", "olive"),
-    (15, 10, "west", "bench1", "pale", "hair_bun", "auburn", "slate", None),
-    (14, 11, "north", None, "dark", "hair_crop", "grey", "cream", "rust"),
+    (13, 10, "east", "m_avg", "tan", "hair_short", "black", "sand", "olive"),
+    (15, 10, "south", "f_avg", "pale", "hair_bun", "auburn", "slate", None),
+    (14, 11, "north", "m_avg", "dark", "hair_crop", "grey", "cream", "rust"),
     # in front of the doorway, not a wall: figures lean back, so a head
     # against the wall sinks into it and loses its hair
-    (14, 9, "south", None, "light", "hair_bun", "black", "rust", "slate"),
+    (14, 9, "south", "f_avg", "light", "hair_bun", "black", "rust", "slate"),
 ]
 TREES = [("oak", 0, "autumn", 0, 4), ("birch", 1, "autumn", 3, 7), ("oak", 2, "autumn", -1, 9),
          ("birch", 0, "autumn", 6, 12), ("birch", 2, "summer", 2, 0), ("oak", 1, "summer", 8, -1),
@@ -190,28 +192,31 @@ def _tint(ob, tints):
         slot.material = S.mat_tinted(name, key)
 
 
-def _colonist(facing, frame, skin, style, hair_t, shirt_t, vest_t):
+def _colonist(facing, build_key, skin, style, hair_t, shirt_t, vest_t):
+    """One standing pawn from the pawn family's builders (body capsule, head,
+    dot eyes, pants, shirt, optional vest, hair), turned and leaned like a
+    pawn sprite."""
+    if facing not in pawn.FACINGS:
+        raise ValueError("menu colonist facing %r: pawns render %s" % (facing, pawn.FACINGS))
     tints_hex = _tint_table()
 
     def build():
-        pawn._body()
-        pawn._pants()
-        pawn._shirt()
-        if vest_t:
-            pawn._vest()
-        pawn._apply_modifiers()
-        if frame:
-            pawn._pose(frame, facing)
-        before = {o.name for o in S.objects()}
-        pawn._hair(style)
-        pawn._apply_modifiers()
-        if frame:
-            hair = [o for o in S.objects() if o.name not in before]
-            S.transform(hair, pawn._head_matrix(pawn._params(frame, facing)))
-        pawn._figure(facing)
+        pawn.use_build(build_key)
+        pawn._FACING[0] = facing      # eyes follow the facing
+        try:
+            pawn._body()
+            pawn._pants()
+            pawn._shirt()
+            if vest_t:
+                pawn._vest()
+            pawn._hair(style)
+            pawn._apply_modifiers()
+            pawn._figure(facing)
+        finally:
+            pawn.use_build(pawn.LEGACY_BUILD)
+            pawn._FACING[0] = "south"
         pants = "slate" if shirt_t != "slate" else "navy"
-        cloth = {"*": tints_hex["cloth"][shirt_t], "pleg": tints_hex["cloth"][pants],
-                 "hips": tints_hex["cloth"][pants]}
+        cloth = {"*": tints_hex["cloth"][shirt_t], "pants": tints_hex["cloth"][pants]}
         if vest_t:
             cloth["vest"] = tints_hex["cloth"][vest_t]
         for ob in S.objects():
@@ -308,8 +313,8 @@ def build_scene():
     for kind, x, y, v in _fill_spots():
         fn = plant._grass if kind == "grass" else plant._bush
         S.place(lambda fn=fn, v=v: fn(v), x, y, tag=kind)
-    for x, y, facing, frame, *look in COLONISTS:
-        S.place(_colonist(facing, frame, *look), x, y, tag="colonist")
+    for x, y, facing, build_key, *look in COLONISTS:
+        S.place(_colonist(facing, build_key, *look), x, y, tag="colonist")
     S.place(_dustbuck, DUSTBUCK[0], DUSTBUCK[1], tag="animal")
     return S.objects()
 
@@ -417,6 +422,33 @@ def _lamps_cast_no_lamp_shadow():
             o.visible_shadow = v
 
 
+PLANT_TAGS = ("crop", "tree", "grass", "bush")   # build_scene tags: plants, never outlined
+
+
+def _is_plant(ob):
+    return ob.get("rwg_piece") in PLANT_TAGS
+
+
+def _plant_mat(plant):
+    m, _, em = _new_mat("rwg__menu_plant_%d" % plant)
+    em.inputs["Color"].default_value = (1, 1, 1, 1) if plant else (0, 0, 0, 1)
+    return m
+
+
+def _outline_no_plants(im, plants, width):
+    """Outline only the visible non-plant silhouette (AGENTS.md: plants never
+    get a contour), then lay the unoutlined render over that ring: plants
+    cover any ring that reaches under them and keep a clean edge on the ground."""
+    solid = im.copy()
+    solid[..., 3] *= 1 - plants
+    o = post.outline(solid, width=width)
+    a, oa = im[..., 3:4], o[..., 3:4]
+    out = np.empty_like(im)
+    out[..., 3:4] = a + oa * (1 - a)
+    out[..., :3] = (im[..., :3] * a + o[..., :3] * oa * (1 - a)) / np.maximum(out[..., 3:4], 1e-6)
+    return out
+
+
 def _is_bulb(ob):
     return any(s.material is not None and s.material.name == "rwg_lamp_warm" for s in ob.material_slots)
 
@@ -463,14 +495,17 @@ def _gain(lam, gx, gy):
 
 def _passes(w, h, outline_px, scale):
     """Every render the grade needs, as float arrays (rows top-down):
-    sun, lamp: outlined RGBA lit by the sun or by the room's lamp; alpha: the
-    unoutlined coverage; lit: ground in sun (1) or sun shadow (0); emissive,
-    indoor: bulb and roofed-surface masks; out: the outdoor lamp's light on
+    sun, lamp: RGBA lit by the sun or by the room's lamp, outlined round
+    non-plant objects only; alpha: the unoutlined coverage; lit: ground in
+    sun (1) or sun shadow (0); emissive, indoor: bulb and roofed-surface masks; out: the outdoor lamp's light on
     objects; g_in, g_out: each lamp's Lambert x shadow on the ground; gain."""
     import bpy
     render = lambda: S.render_scene(0, 0, w, h, outline=False, scale=scale)  # noqa: E731
-    edge = (lambda im: post.outline(im, width=outline_px)) if outline_px else (lambda im: im)
     raw = render()
+    yes, no = _plant_mat(True), _plant_mat(False)
+    with S.lighting(sun=False), S.map_materials(lambda ob, m: yes if _is_plant(ob) else no):
+        plants = _lin(render()[..., 0])   # visible plant coverage (occlusion as in raw)
+    edge = (lambda im: _outline_no_plants(im, plants, outline_px)) if outline_px else (lambda im: im)
     p = {"sun": edge(raw), "alpha": raw[..., 3]}
     with _ground_only(_sun_catcher_mat()):
         p["lit"] = render()[..., 0]
@@ -646,7 +681,7 @@ def build():
     S.write_png(base, paths["diorama"])
     S.write_png(_half(lamp), paths["glow_lamp"])
     S.write_png(_half(fire), paths["glow_fire"])
-    rel = {k: os.path.relpath(p, C.ASSETS_DIR).replace(os.sep, "/") for k, p in paths.items()}
+    rel = {k: os.path.relpath(p, C.OUT_ROOT).replace(os.sep, "/") for k, p in paths.items()}
     att = {"fire0": _project(FIRE[0], FIRE[1], 0.22)}
     for i, (x, y) in enumerate(LAMPS):
         att["lamp%d" % i] = _project(x, y, 1.39)

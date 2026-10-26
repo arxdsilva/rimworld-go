@@ -3,11 +3,11 @@ version: 1
 id: "core:furniture/hospital_bed_west"
 image: generated/world/furniture/hospital_bed_west.png
 scale: 2
-canvas: [288, 223]
+canvas: [288, 204]
 footprint: [2, 1]
-origin_px: [16, 79]
+origin_px: [16, 60]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: box
   w: 1.9

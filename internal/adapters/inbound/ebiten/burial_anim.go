@@ -22,30 +22,26 @@ const corpseCarrySprite = "item/leather_hides"
 // pyreFlameScale enlarges the campfire flame for a pyre.
 const pyreFlameScale = 1.9
 
-// corpsePlan is how a human corpse lies: the fall frame, the pose and the
-// facing the body was drawn in.
+// corpsePlan is how a human corpse lies: its standing south figure laid
+// on its side (lyingPose).
 type corpsePlan struct {
-	suffix string
-	face   facing
-	ps     pose
+	ps pose
 }
 
-// corpsePlanFor lays the deceased flat on the last fall frame, on a side
-// that is stable per body, tinted dead (or sickly green once rotten).
-func corpsePlanFor(it game.ItemView) corpsePlan {
-	side, face := 1.0, faceEast
+// corpsePlanFor lays the deceased flat on a side that is stable per body,
+// tinted dead (or sickly green once rotten).
+func corpsePlanFor(c *artCatalog, it game.ItemView) corpsePlan {
+	side := 1.0
 	if tileHash(int(it.ID), it.X+it.Y)&1 == 1 {
-		side, face = -1, faceWest
+		side = -1
 	}
 	cs := deadCS
 	if it.Rotten {
 		cs = rottenCS
 	}
-	return corpsePlan{
-		suffix: "_fall4",
-		face:   face,
-		ps:     pose{px: figurePivotX, py: figurePivotY, rot: side * math.Pi / 2, dx: -side * 0.42, dy: 0.1, cs: cs},
-	}
+	ps := lyingPose(c, side)
+	ps.cs = cs
+	return corpsePlan{ps: ps}
 }
 
 // deceasedOf finds the pawn a corpse belongs to (still in the snapshot).
@@ -121,8 +117,7 @@ func (r *Renderer) drawCorpseItem(screen *ebiten.Image, it game.ItemView, tile f
 		r.drawSpriteScaled(screen, itemSprite(it.Kind), color.NRGBA{}, wx, wy, tile, sw, sh, itemCS(it), 1)
 		return
 	}
-	plan := corpsePlanFor(it)
-	r.drawFigureFacing(screen, p, plan.face, plan.suffix, wx, wy, tile, plan.ps)
+	r.drawFigure(screen, p, wx, wy, tile, corpsePlanFor(r.art, it).ps)
 	for _, f := range corpseFlies(it, r.present) {
 		fx, fy := r.worldToScreenF(f[0], f[1])
 		vector.FillCircle(screen, fx, fy, float32(math.Max(1.2, tile*0.025)), color.RGBA{24, 22, 20, 255}, true)

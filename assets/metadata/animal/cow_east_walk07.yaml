@@ -3,11 +3,11 @@ version: 1
 id: "core:animal/cow_east_walk07"
 image: generated/world/animal/cow_east_walk07.png
 scale: 2
-canvas: [232, 238]
+canvas: [232, 212]
 footprint: [1, 1]
-origin_px: [52, 96]
+origin_px: [52, 70]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: blob
   w: 1.335

@@ -175,10 +175,11 @@ def _g_hunt(xx, yy, c):  # crosshair: ring + four ticks
     return d
 
 
-# Badge discs sit on the cool charcoal HUD (PLAY-018): a dark slate disc and a
-# matching cool halo under the ring and glyph strokes.
-BADGE_DISC = (0.094, 0.114, 0.141)
-BADGE_EDGE = (0.055, 0.067, 0.086)
+# Badge discs sit on the neutral charcoal HUD (ART-024): a neutral grey disc
+# (#303236) and a near-black halo (#0F1012) under the ring and glyph strokes,
+# which also reads as the disc's darker outline.
+BADGE_DISC = (0.188, 0.196, 0.212)
+BADGE_EDGE = (0.059, 0.063, 0.071)
 
 
 def _badge_icon(name, t, glyph, rgb):
@@ -466,7 +467,7 @@ ICONS = {
     "stonecutter_table": ("furniture", "stonecutter_table_south"),
     "lamp": ("furniture", "lamp_standing"),
     "tree": ("plant", "tree_oak_00"),
-    "crop": ("plant", "potato_harvestable"),
+    "crop": ("plant", "potato_harvestable_v0"),
     "colonist": ("pawn", "body_south"),
     "butcher_table": ("furniture", "butcher_table_south"),
     "drying_rack": ("furniture", "drying_rack_south"),

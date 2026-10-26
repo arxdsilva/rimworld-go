@@ -3,11 +3,11 @@ version: 1
 id: "core:structure/frame_1x1"
 image: generated/world/structure/frame_1x1.png
 scale: 2
-canvas: [160, 209]
+canvas: [160, 195]
 footprint: [1, 1]
-origin_px: [16, 65]
+origin_px: [16, 51]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: box
   w: 0.86

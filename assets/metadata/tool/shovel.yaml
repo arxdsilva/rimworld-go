@@ -3,11 +3,11 @@ version: 1
 id: "core:tool/shovel"
 image: generated/world/tool/shovel.png
 scale: 2
-canvas: [160, 168]
+canvas: [160, 166]
 footprint: [1, 1]
-origin_px: [16, 24]
+origin_px: [16, 22]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: none
   w: 0.977
@@ -17,6 +17,6 @@ tool: shovel
 rotatable: true
 points: east
 attachments:
-  grip: [41.6, 85.4]
-  support: [80.0, 85.4]
-  head: [144.0, 86.1]
+  grip: [41.6, 84.2]
+  support: [80.0, 84.2]
+  head: [144.0, 84.7]

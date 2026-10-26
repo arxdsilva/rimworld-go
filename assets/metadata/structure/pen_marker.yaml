@@ -3,11 +3,11 @@ version: 1
 id: "core:structure/pen_marker"
 image: generated/world/structure/pen_marker.png
 scale: 2
-canvas: [160, 218]
+canvas: [160, 201]
 footprint: [1, 1]
-origin_px: [16, 74]
+origin_px: [16, 57]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: box
   w: 0.6

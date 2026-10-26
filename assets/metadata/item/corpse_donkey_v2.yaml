@@ -7,11 +7,11 @@ canvas: [156, 156]
 footprint: [1, 1]
 origin_px: [14, 14]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.882
-  h: 0.272
+  w: 0.893
+  h: 0.302
   d: 0.563
 item: donkey corpse
 species: donkey

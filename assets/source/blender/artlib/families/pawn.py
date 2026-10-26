@@ -1,12 +1,17 @@
-"""Compositional pawns (ART spec §10) and the first weapon (§15).
+"""Compositional pawns (ART spec §10): a limbless figure, one standing
+sprite per layer and facing, no animation frames.
 
-Layers share one canvas/origin per facing and are drawn in this order:
-    body (skin) -> pants -> shirt -> vest -> hair -> held equipment
+The figure is a round head on a rounded body capsule, with no visible arms,
+legs or hands, and dot eyes (two facing south, one east, none north). The
+renderer moves the whole figure (bob, sway, lean, squash, rotation), draws
+held items at the body's `hold` point (no hands, as the reference style
+draws none), and mirrors east for west (ART §27.1-27.2).
+
+Layers share one canvas and origin per facing and are drawn in this order:
+    body (skin) -> pants -> shirt -> vest / parka / duster -> beard -> hair -> tuque
 Every non-body layer is rendered with the body as a holdout, so hidden
-surfaces are already removed and any subset of layers composites
-correctly. Neutral greys + tint masks give skin/hair/cloth variety.
-
-Original proportions: compact geometric torso, short legs, large head.
+surfaces are already removed and any subset of layers composites correctly.
+Neutral greys + tint masks give skin, hair and cloth variety.
 """
 import math
 import os
@@ -16,57 +21,54 @@ import bmesh
 from .. import contracts as C
 from .. import stage as S
 
-FACINGS = ("south", "east", "north", "west")
-CX, CY = 0.5, -0.52
-ZMAX = 1.10
+FACINGS = ("south", "east", "north")      # west is east mirrored by the renderer
+CX, CY = 0.5, -0.52                       # feet, in the tile
 MARGINS = (0.125, 0.125, 0.10, 0.125)
-HEAD_Z = 0.84
-
+TOP = 0.56                                # top of the body capsule (shoulders)
+HEAD_Z = 0.75                             # head centre; the head overlaps the shoulders
+HEAD_R = (0.19, 0.175, 0.19)              # head radii at build head scale 1
+HGT = HEAD_Z + 0.30                       # tallest point of any layer (tuque bobble, curls)
+R_BOT, R_TOP = 0.10, 0.12                 # rounding of the capsule's bottom and shoulders
+SEG, SQUARE = 32, 2.4                     # ring segments; superellipse exponent of a section
+G = 0.015                                 # apparel shell offset over the body
+HOLD_Z, BACK_Z = 0.26, 0.44               # heights of the hold and back attachments
 
 # ------------------------------------------------------------- builds
-# NG-1 (plan 7.1): one rig, six builds. Every dimension the body and the
-# clothing read comes from the active build (`use_build`), and the joint
-# pivots (shoulder, hip) and the hand attachments follow it, so poses,
-# held items and hair line up on every build. `m_avg` reproduces the
-# pre-NG-1 numbers exactly: its files keep the un-suffixed names.
-#
-#   W      torso half-width (tiles) at z = KNOT_Z: hip, waist, chest, top
-#   F, B   extra half-depth (front = -Y, back = +Y) at the same knots:
-#          bust and belly in front, hips behind
-#   d      base torso half-depth
-#   shoulder  x of the shoulder joint / arm centre    leg_x  x of the hip joint
-#   limb   radius scale of arms, hands, legs and sleeves
-#   neck   neck radius       head  head scale about its centre (+-3 %)
-KNOT_Z = (0.32, 0.46, 0.55, 0.63)
+# NG-1: six builds. A build only changes the capsule's section profile and
+# the head scale; heights (and so the head attachment) are shared, so hair,
+# beards and hats rendered once on m_avg fit every build. m_avg keeps the
+# un-suffixed file names.
+#   W      half-width at z = KNOT_Z (hip, waist, chest, shoulder), x WS, its
+#          spread about the build's mean softened by SOFT (no limbs to hide it)
+#   F, B   extra half-depth in front (-Y) and behind (+Y) at the same knots
+#   d      base half-depth                head  head scale about its centre
+KNOT_Z = (0.12, 0.28, 0.40, 0.52)
+WS = 1.4
+SOFT = 0.55
 BUILDS = {
-    "m_thin": dict(W=(0.128, 0.122, 0.136, 0.142), F=(0, 0, 0, 0), B=(0, 0, 0, 0), d=0.088,
-                   shoulder=0.176, leg_x=0.068, limb=0.86, neck=0.052, head=1.03),
-    "m_avg": dict(W=(0.150, 0.150, 0.150, 0.150), F=(0, 0, 0, 0), B=(0, 0, 0, 0), d=0.100,
-                  shoulder=0.190, leg_x=0.075, limb=1.0, neck=0.060, head=1.0),
+    "m_thin": dict(W=(0.128, 0.122, 0.136, 0.142), F=(0, 0, 0, 0), B=(0, 0, 0, 0), d=0.088, head=1.03),
+    "m_avg": dict(W=(0.150, 0.150, 0.150, 0.150), F=(0, 0, 0, 0), B=(0, 0, 0, 0), d=0.100, head=1.0),
     "m_heavy": dict(W=(0.182, 0.196, 0.186, 0.170), F=(0, 0.030, 0.010, 0), B=(0, 0.004, 0, 0), d=0.118,
-                    shoulder=0.220, leg_x=0.092, limb=1.16, neck=0.072, head=0.97),
+                    head=0.97),
     "f_thin": dict(W=(0.156, 0.104, 0.108, 0.108), F=(0, 0, 0.014, 0.005), B=(0.010, 0, 0, 0), d=0.080,
-                   shoulder=0.146, leg_x=0.070, limb=0.78, neck=0.046, head=1.02),
+                   head=1.02),
     "f_avg": dict(W=(0.180, 0.122, 0.128, 0.122), F=(0, 0, 0.020, 0.008), B=(0.014, 0, 0, 0), d=0.092,
-                  shoulder=0.160, leg_x=0.080, limb=0.88, neck=0.052, head=0.985),
+                  head=0.985),
     "f_heavy": dict(W=(0.206, 0.164, 0.164, 0.146), F=(0, 0.030, 0.030, 0.010), B=(0.018, 0, 0, 0), d=0.115,
-                    shoulder=0.186, leg_x=0.092, limb=1.06, neck=0.062, head=0.97),
+                    head=0.97),
 }
 BUILD_KEYS = tuple(BUILDS)
 LEGACY_BUILD = "m_avg"        # un-suffixed file names
+BUILD_LAYERS = ("body", "pants_basic", "shirt_basic", "vest_utility", "parka_leather", "duster_leather")
 _build_key = LEGACY_BUILD
 _build = BUILDS[_build_key]
+_FACING = ["south"]
 
 
 def use_build(key):
     """Select the build every builder below reads from."""
     global _build, _build_key
     _build_key, _build = key, BUILDS[key]
-
-
-def _sx(delta=0.0):
-    """x of an arm part's centre: the shoulder joint plus its offset."""
-    return _build["shoulder"] + delta
 
 
 def _knot(vals, z):
@@ -82,260 +84,282 @@ def _knot(vals, z):
     return vals[-1]
 
 
-def _taper(ob, fx, fy_front, fy_back, cuts):
-    """Reshape a box: after cutting loops at `cuts`, a vertex at height z
-    is scaled so its x extent is fx(z) and its y extent fy_front(z) (-Y)
-    or fy_back(z) (+Y). The box must have been built at the maxima."""
-    bm = bmesh.new()
-    bm.from_mesh(ob.data)
-    _bisect(bm, cuts)
-    xs = [abs(v.co.x - CX) for v in bm.verts]
-    xmax = max(xs)
-    yf = max([CY - v.co.y for v in bm.verts] + [1e-6])
-    yb = max([v.co.y - CY for v in bm.verts] + [1e-6])
-    for v in bm.verts:
-        z = v.co.z
-        v.co.x = CX + (v.co.x - CX) * fx(z) / xmax
-        if v.co.y < CY:
-            v.co.y = CY + (v.co.y - CY) * fy_front(z) / yf
-        else:
-            v.co.y = CY + (v.co.y - CY) * fy_back(z) / yb
-    bm.to_mesh(ob.data)
-    bm.free()
-    ob.data.update()
-
-
-def _loft(name, gx, gy, z0, z1, mat, bevel=0.06, segments=2):
-    """A torso-shaped box: the build's half-width and half-depth profile
-    plus gx / gy of clothing thickness, between z0 and z1. Builds with a
-    flat profile (m_avg) get the plain box."""
+def _extent(z, g=0.0):
+    """Unrounded (half-width, front half-depth, back half-depth) at z, grown by g."""
     b = _build
-    W, F, B, d = b["W"], b["F"], b["B"], b["d"]
-    wmax, fmax, bmax = max(W) + gx, d + max(F) + gy, d + max(B) + gy
-    ob = S.box(name, CX - wmax, CY - fmax, z0, CX + wmax, CY + bmax, z1, mat, bevel=bevel, segments=segments)
-    if len(set(W)) == 1 and not any(F) and not any(B):
-        return ob
-    cuts = [z for z in (0.32, 0.39, 0.46, 0.505, 0.55, 0.60, 0.63) if z0 + 0.012 < z < z1 - 0.012]
-    _taper(ob, lambda z: _knot(W, z) + gx, lambda z: d + _knot(F, z) + gy,
-           lambda z: d + _knot(B, z) + gy, cuts)
-    return ob
+    mean = sum(b["W"]) / len(b["W"])
+    return ((mean + SOFT * (_knot(b["W"], z) - mean)) * WS + g, (b["d"] + _knot(b["F"], z)) * WS + g,
+            (b["d"] + _knot(b["B"], z)) * WS + g)
+
+
+def _shrink(z, lo, hi, g):
+    """How far (0..1 of the rounding radius) a section at z is pulled in by a
+    rounded bottom ending at lo and/or rounded shoulders ending at hi."""
+    s, r = 0.0, 0.0
+    for rad, u in ((R_BOT + g, None if lo is None else (lo + R_BOT + g - z) / (R_BOT + g)),
+                   (R_TOP + g, None if hi is None else (z - hi + R_TOP + g) / (R_TOP + g))):
+        if u is not None and u > 0:
+            k = 1.0 - math.sqrt(max(0.0, 1.0 - min(u, 1.0) ** 2))
+            if k > s:
+                s, r = k, rad
+    return s, r
+
+
+def _shell(name, z0, z1, g, mat, round_lo=False, round_hi=False, flare=None):
+    """The body capsule between z0 and z1, grown by g (0 = the body itself).
+    A rounded end closes the capsule (the bottom at -g, the shoulders at
+    TOP + g); otherwise the end is a flat cut. flare=(z, extra) widens the
+    shell linearly by up to `extra` below z (a coat's hem)."""
+    lo = -g if round_lo else None
+    hi = TOP + g if round_hi else None
+    a, b = (lo if round_lo else z0), (hi if round_hi else z1)
+    zs = {a, b}
+    n = max(2, int((b - a) / 0.015))
+    zs.update(a + (b - a) * i / n for i in range(n + 1))
+    for end, rad, sgn in ((lo, R_BOT + g, 1), (hi, R_TOP + g, -1)):
+        if end is not None:
+            zs.update(end + sgn * rad * (1 - math.cos(math.pi / 2 * i / 8)) for i in range(9))
+    zs = sorted({round(z, 5) for z in zs if a - 1e-9 <= z <= b + 1e-9})
+    bm = bmesh.new()
+    rings = []
+    for z in zs:
+        gz = g + (flare[1] * max(0.0, (flare[0] - z) / flare[0]) if flare else 0.0)
+        wx, yf, yb = _extent(z, gz)
+        s, rad = _shrink(z, lo, hi, g)
+        wx, yf, yb = (e - min(rad, 0.9 * e) * s for e in (wx, yf, yb))
+        ring = []
+        for k in range(SEG):
+            t = 2 * math.pi * k / SEG
+            c, sn = math.cos(t), math.sin(t)
+            x = math.copysign(abs(c) ** (2 / SQUARE), c) * wx
+            y = math.copysign(abs(sn) ** (2 / SQUARE), sn) * (yb if sn > 0 else yf)
+            ring.append(bm.verts.new((CX + x, CY + y, z)))
+        rings.append(ring)
+    for r0, r1 in zip(rings, rings[1:]):
+        for k in range(SEG):
+            bm.faces.new((r0[k], r0[(k + 1) % SEG], r1[(k + 1) % SEG], r1[k]))
+    for ring, z in ((rings[0], zs[0]), (rings[-1], zs[-1])):
+        c = bm.verts.new((CX, CY, z))
+        for k in range(SEG):
+            bm.faces.new((ring[k], ring[(k + 1) % SEG], c))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
+    return S._obj(name, bm, mat, smooth=True)
+
+
+# --------------------------------------------------------------- layers
+def _head_point(dx, dy, dz=0.0):
+    """A point on the head surface: dx, dy are fractions of the head radii."""
+    h = _build["head"]
+    return (CX + dx * HEAD_R[0] * h, CY + dy * HEAD_R[1] * h, HEAD_Z + dz * h)
 
 
 def _body():
-    b = _build
-    L, h, lx = b["limb"], b["head"], b["leg_x"]
-    objs = []
-    for sx in (-1, 1):
-        objs.append(S.cyl("leg", CX + sx * lx, CY, 0.062 * L, 0.0, 0.32, "skin", segs=10))
-        objs.append(S.cyl("arm", CX + sx * _sx(), CY, 0.048 * L, 0.33, 0.60, "skin", segs=10))
-        objs.append(S.ellipsoid("hand", CX + sx * _sx(0.005), CY - 0.01, 0.31, 0.055 * L, 0.055 * L, 0.05 * L,
-                                "skin", segs=10, rings=6))
-    objs.append(_loft("torso", 0.0, 0.0, 0.28, 0.63, "skin"))
-    objs.append(S.cyl("neck", CX, CY, b["neck"], 0.60, 0.70, "skin", segs=10))
-    objs.append(S.ellipsoid("head", CX, CY, HEAD_Z, 0.19 * h, 0.175 * h, 0.19 * h, "skin", segs=24, rings=14))
-    for sx in (-1, 1):
-        objs.append(S.ellipsoid("eye", CX + sx * 0.068 * h, CY - 0.158 * h, HEAD_Z - 0.01 * h,
-                                0.026 * h, 0.02 * h, 0.034 * h, "metal_dark", segs=10, rings=6))
-    objs.append(S.ellipsoid("nose", CX, CY - 0.175 * h, HEAD_Z - 0.06 * h, 0.03 * h, 0.02 * h, 0.03 * h,
-                            "skin", segs=8, rings=6))
+    """Skin capsule, head sphere and dot eyes (two south, one east, none north)."""
+    h = _build["head"]
+    objs = [_shell("torso", 0.0, TOP, 0.0, "skin", round_lo=True, round_hi=True),
+            S.ellipsoid("head", CX, CY, HEAD_Z, HEAD_R[0] * h, HEAD_R[1] * h, HEAD_R[2] * h, "skin",
+                        segs=28, rings=16)]
+    # East shows the authored -X side (the facing turns -X towards the camera).
+    eyes = {"south": ((0.37, -0.93), (-0.37, -0.93)), "east": ((-0.64, -0.77),), "north": ()}
+    for dx, dy in eyes.get(_FACING[0], eyes["south"]):
+        x, y, z = _head_point(dx, dy, -0.02)
+        objs.append(S.ellipsoid("eye", x, y, z, 0.024 * h, 0.018 * h, 0.03 * h, "eye_black", segs=10, rings=6))
     return objs
 
 
 def _pants():
-    L, lx = _build["limb"], _build["leg_x"]
-    for sx in (-1, 1):
-        S.cyl("pleg", CX + sx * lx, CY, 0.074 * L, 0.05, 0.34, "cloth", segs=12)
-    _loft("hips", 0.01, 0.01, 0.26, 0.40, "cloth", bevel=0.05)
-    _loft("belt", 0.015, 0.015, 0.38, 0.42, "leather", bevel=0.02, segments=1)
+    _shell("pants", 0.0, 0.27, G, "cloth", round_lo=True)
+    _shell("belt", 0.20, 0.25, G + 0.008, "leather")
 
 
 def _shirt():
-    L, n = _build["limb"], _build["neck"] / 0.06
-    _loft("shirt", 0.012, 0.012, 0.36, 0.645, "cloth", bevel=0.07)
-    for sx in (-1, 1):
-        S.cyl("sleeve", CX + sx * _sx(), CY, 0.06 * L, 0.45, 0.62, "cloth", segs=12)
-    S.cyl("collar", CX, CY, 0.075 * n, 0.62, 0.67, "cloth", segs=12)
+    _shell("shirt", 0.25, TOP, G + 0.004, "cloth", round_hi=True)
+    S.cyl("collar", CX, CY, 0.10, TOP - 0.02, TOP + 0.035, "cloth", segs=16, ry=0.085)
 
 
 def _vest():
-    _loft("vest", 0.022, 0.022, 0.40, 0.635, "cloth", bevel=0.06)
-    # pockets and straps sit on the chest, at the build's chest depth
-    fy = _build["d"] + _build["F"][2] + 0.035
-    by = _build["d"] + max(_build["B"]) + 0.027
-    w = min(0.085, _build["W"][2] * 0.57)
+    """Chest band with two shoulder straps and two chest pockets."""
+    _shell("vest", 0.22, 0.47, G + 0.02, "cloth")
     for sx in (-1, 1):
-        S.box("pocket", CX + sx * w - 0.05, CY - fy, 0.43, CX + sx * w + 0.05, CY - fy + 0.035, 0.52,
-              "leather", bevel=0.012)
-        S.box("strap", CX + sx * (w + 0.005) - 0.025, CY - fy + 0.008, 0.40, CX + sx * (w + 0.005) + 0.025,
-              CY + by, 0.645, "leather", bevel=0.008)
+        wx, yf, yb = _extent(0.42, G + 0.02)
+        x = CX + sx * 0.5 * wx
+        S.box("strap", x - 0.026, CY - yf - 0.004, 0.40, x + 0.026, CY + yb + 0.004, TOP + G + 0.02,
+              "leather", bevel=0.01)
+        wx, yf, _ = _extent(0.34, G + 0.02)
+        x = CX + sx * 0.52 * wx
+        S.box("pocket", x - 0.045, CY - yf - 0.022, 0.29, x + 0.045, CY - yf + 0.01, 0.38, "leather",
+              bevel=0.012)
 
 
 def _parka():
-    """Leather parka over the shirt: padded body to the hips, sleeves, and
-    a fur ruff around the neck."""
-    L, n = _build["limb"], _build["neck"] / 0.06
-    _loft("parka", 0.032, 0.032, 0.26, 0.655, "leather", bevel=0.075)
-    for sx in (-1, 1):
-        S.cyl("psleeve", CX + sx * _sx(0.005), CY, 0.068 * L, 0.33, 0.63, "leather", segs=12)
-        S.cyl("pcuff", CX + sx * _sx(0.005), CY, 0.072 * L, 0.33, 0.37, "fur_cream", segs=12)
-    S.cyl("ruff", CX, CY, 0.11 * n, 0.62, 0.70, "fur_cream", segs=14)
-    _loft("hem", 0.036, 0.036, 0.26, 0.30, "fur_cream", bevel=0.03, segments=1)
+    """Padded leather parka to the hips: fur hem, fur ruff and the hood folded on the back."""
+    _shell("parka", 0.10, TOP, G + 0.02, "leather", round_hi=True)
+    _shell("hem", 0.10, 0.15, G + 0.032, "fur_cream")
+    _, _, yb = _extent(TOP - 0.06, G + 0.02)
+    S.ellipsoid("hood", CX, CY + yb - 0.02, TOP - 0.04, 0.16, 0.07, 0.10, "leather", segs=16, rings=8)
+    S.ellipsoid("ruff", CX, CY + 0.03, TOP + 0.02, 0.2, 0.16, 0.065, "fur_cream", segs=20, rings=8)
 
 
 def _duster():
-    """Long leather duster: open coat down past the knees, wide lapels."""
-    L = _build["limb"]
-    _loft("duster", 0.026, 0.026, 0.12, 0.645, "leather", bevel=0.06)
-    fy = _build["d"] + _build["F"][2] + 0.026
+    """Long leather duster to the ground with a flared hem, an open front, lapels and a belt."""
+    _shell("duster", 0.0, TOP, G + 0.012, "leather", round_hi=True, flare=(0.32, 0.07))
+    _shell("dbelt", 0.26, 0.30, G + 0.022, "bark")
+    _, yf, _ = _extent(0.13, G + 0.012 + 0.04)
+    S.box("opening", CX - 0.012, CY - yf - 0.01, 0.0, CX + 0.012, CY - yf + 0.03, 0.26, "bark", bevel=0.004)
     for sx in (-1, 1):
-        S.cyl("dsleeve", CX + sx * _sx(0.003), CY, 0.064 * L, 0.36, 0.63, "leather", segs=12)
-        S.box("lapel", CX + sx * 0.06 - 0.04, CY - fy - 0.014, 0.44, CX + sx * 0.06 + 0.04, CY - fy + 0.006, 0.64,
-              "bark", bevel=0.01)
-    _loft("dbelt", 0.03, 0.03, 0.36, 0.40, "bark", bevel=0.015, segments=1)
+        _, yf, _ = _extent(0.42, G + 0.012)
+        x = CX + sx * 0.055
+        S.box("lapel", x - 0.04, CY - yf - 0.014, 0.33, x + 0.04, CY - yf + 0.01, TOP - 0.02, "bark", bevel=0.01)
 
 
 def _tuque():
     """Knitted tuque: a snug cap with a rolled cuff and a bobble on top."""
-    _hair_shell("tuque", 0.04, lambda x, y, z: z > HEAD_Z + 0.02, mat="cloth")
-    S.cyl("tcuff", CX, CY, 0.215, HEAD_Z + 0.01, HEAD_Z + 0.07, "fur_tan", segs=20)
-    S.ellipsoid("bobble", CX, CY, HEAD_Z + 0.25, 0.055, 0.055, 0.055, "fur_cream", segs=10, rings=6)
+    _hair_shell("tuque", 0.04, [_plane(HEAD_Z + 0.05, HEAD_Z + 0.05)], mat="cloth")
+    S.cyl("tcuff", CX, CY, 0.232, HEAD_Z + 0.02, HEAD_Z + 0.08, "fur_tan", segs=24, ry=0.218)
+    S.ellipsoid("bobble", CX, CY, HEAD_Z + 0.24, 0.05, 0.05, 0.05, "fur_cream", segs=10, rings=6)
 
 
-def _cut(ob, keep):
-    """Delete vertices of a mesh for which keep(x, y, z) is False."""
+def _plane(front, back, above=True):
+    """A cut plane through the head's profile: height `front` at the face and
+    `back` at the back of the skull (a straight, sloped hairline or jawline).
+    Keeps what lies above it (or below, above=False)."""
+    ry = HEAD_R[1] + 0.03
+    n = (0.0, -(back - front), 2 * ry)
+    return (CX, CY - ry, front), n if above else tuple(-c for c in n)
+
+
+def _vplane(y, front_side=True):
+    """A vertical cut at depth y keeping the face side (y below) or the back."""
+    return (CX, y, 0.0), (0.0, -1.0, 0.0) if front_side else (0.0, 1.0, 0.0)
+
+
+def _hair_shell(name, grow, planes, mat="hair"):
+    """A shell over the head trimmed by clean plane cuts (no stepped hairlines),
+    solidified so the outline has a body to follow."""
+    h = _build["head"]
+    ob = S.ellipsoid(name, CX, CY, HEAD_Z, HEAD_R[0] * h + grow, HEAD_R[1] * h + grow, HEAD_R[2] * h + grow,
+                     mat, segs=40, rings=24)
     bm = bmesh.new()
     bm.from_mesh(ob.data)
-    kill = [v for v in bm.verts if not keep(v.co.x, v.co.y, v.co.z)]
-    bmesh.ops.delete(bm, geom=kill, context="VERTS")
+    for co, no in planes:
+        bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], dist=1e-6,
+                               plane_co=co, plane_no=no, clear_inner=True)
     bm.to_mesh(ob.data)
     bm.free()
     ob.data.update()
-
-
-def _hair_shell(name, grow, keep, mat="hair"):
-    h = _build["head"]
-    ob = S.ellipsoid(name, CX, CY, HEAD_Z, 0.19 * h + grow, 0.175 * h + grow, 0.19 * h + grow, mat,
-                     segs=28, rings=16)
-    _cut(ob, keep)
-    # give the shell thickness so the outline has a body to follow
     sol = ob.modifiers.new("solid", "SOLIDIFY")
     sol.thickness = 0.02
     sol.offset = -1
     return ob
 
 
+def _fringe(dx, w, dz, depth=0.05):
+    """A rounded lock lying on the forehead (never a box standing proud of it)."""
+    z = HEAD_Z + dz
+    y = CY - HEAD_R[1] * math.sqrt(max(0.0, 1 - (dz / HEAD_R[2]) ** 2)) + 0.01
+    S.ellipsoid("fringe", CX + dx, y, z, w, 0.042, depth, "hair", segs=16, rings=8)
+
+
 def _hair(style):
-    front = CY - 0.06  # y below this is "face side"
+    H = HEAD_Z
     if style == "hair_short":
-        _hair_shell("hair", 0.025, lambda x, y, z: z > HEAD_Z + 0.05 or (y > front and z > HEAD_Z - 0.12))
-        S.box("fringe", CX - 0.12, CY - 0.19, HEAD_Z + 0.07, CX + 0.06, CY - 0.13, HEAD_Z + 0.15, "hair",
-              bevel=0.025)
+        _hair_shell("hair", 0.025, [_plane(H + 0.06, H - 0.18)])
+        _fringe(-0.03, 0.10, 0.10)
     elif style == "hair_crop":
-        _hair_shell("hair", 0.012, lambda x, y, z: z > HEAD_Z + 0.09 or (y > CY + 0.02 and z > HEAD_Z - 0.04))
+        _hair_shell("hair", 0.012, [_plane(H + 0.10, H - 0.10)])
     elif style == "hair_bun":
-        _hair_shell("hair", 0.022, lambda x, y, z: z > HEAD_Z + 0.03 or (y > front and z > HEAD_Z - 0.16))
-        S.ellipsoid("bun", CX, CY + 0.17, HEAD_Z + 0.12, 0.085, 0.08, 0.085, "hair", segs=14, rings=8)
-        S.cyl("tie", CX, CY + 0.13, 0.05, HEAD_Z + 0.08, HEAD_Z + 0.10, "food_red", segs=10, ry=0.04)
+        _hair_shell("hair", 0.022, [_plane(H + 0.05, H - 0.21)])
+        S.ellipsoid("bun", CX, CY + 0.17, H + 0.12, 0.085, 0.08, 0.085, "hair", segs=14, rings=8)
+        S.cyl("tie", CX, CY + 0.13, 0.05, H + 0.08, H + 0.10, "food_red", segs=10, ry=0.04)
     elif style == "hair_long":
-        _hair_shell("hair", 0.026, lambda x, y, z: z > HEAD_Z + 0.04 or (y > front and z > HEAD_Z - 0.2))
-        S.box("fringe", CX - 0.13, CY - 0.19, HEAD_Z + 0.07, CX + 0.08, CY - 0.13, HEAD_Z + 0.15, "hair",
-              bevel=0.025)
-        # a curtain behind the head and a lock down each side of the face,
-        # to the shoulders
-        S.box("hair_back", CX - 0.178, CY + 0.04, 0.50, CX + 0.178, CY + 0.205, HEAD_Z + 0.02, "hair",
-              bevel=0.06, segments=2)
+        _hair_shell("hair", 0.026, [_plane(H + 0.06, H - 0.24)])
+        _fringe(-0.02, 0.11, 0.10)
+        # a curtain behind the head and a lock down each side of the face, to the shoulders
+        S.ellipsoid("hair_back", CX, CY + 0.10, H - 0.11, 0.19, 0.11, 0.19, "hair", segs=24, rings=12)
         for sx in (-1, 1):
-            S.box("lock", CX + sx * 0.185 - 0.03, CY - 0.05, 0.56, CX + sx * 0.185 + 0.03, CY + 0.12,
-                  HEAD_Z + 0.03, "hair", bevel=0.02, segments=2)
+            S.ellipsoid("lock", CX + sx * 0.18, CY + 0.02, H - 0.10, 0.04, 0.09, 0.14, "hair", segs=14, rings=8)
     elif style == "hair_braid":
-        _hair_shell("hair", 0.024, lambda x, y, z: z > HEAD_Z + 0.04 or (y > front and z > HEAD_Z - 0.14))
-        S.box("fringe", CX - 0.10, CY - 0.19, HEAD_Z + 0.07, CX + 0.07, CY - 0.13, HEAD_Z + 0.14, "hair",
-              bevel=0.025)
-        # one braid over the right shoulder (+X), tied at the end
+        _hair_shell("hair", 0.024, [_plane(H + 0.06, H - 0.19)])
+        _fringe(0.03, 0.09, 0.10)
+        # one braid over the +X shoulder, down the chest, tied at the end
         n = 6
         for i in range(n):
             t = i / (n - 1)
             r = 0.044 - 0.014 * t
-            S.ellipsoid("braid", CX + 0.163 - 0.012 * t, CY + 0.02 - 0.15 * t, HEAD_Z - 0.09 - 0.30 * t,
+            S.ellipsoid("braid", CX + 0.17 - 0.03 * t, CY + 0.02 - 0.21 * t, H - 0.09 - 0.30 * t,
                         r, r, 0.052, "hair", segs=10, rings=6)
-        S.cyl("tie", CX + 0.151, CY - 0.13, 0.03, HEAD_Z - 0.42, HEAD_Z - 0.40, "food_red", segs=10)
+        S.cyl("tie", CX + 0.14, CY - 0.19, 0.03, H - 0.42, H - 0.40, "food_red", segs=10)
     elif style == "hair_shaved":
         # stubble: a thin skin-tight cap
-        _hair_shell("hair", 0.008, lambda x, y, z: z > HEAD_Z + 0.06 or (y > CY + 0.02 and z > HEAD_Z - 0.05))
+        _hair_shell("hair", 0.008, [_plane(H + 0.08, H - 0.09)])
     elif style == "hair_curls":
-        _hair_shell("hair", 0.035, lambda x, y, z: z > HEAD_Z - 0.01 or (y > front and z > HEAD_Z - 0.14))
-        # two rings of curls round the head and three on the crown
+        _hair_shell("hair", 0.035, [_plane(H + 0.02, H - 0.21)])
+        # a ring of curls round the head and two on the crown
         for k in range(9):
             a = 2 * math.pi * k / 9 + 0.3
             x, y = CX + 0.2 * math.cos(a), CY + 0.185 * math.sin(a)
             if y > CY - 0.09 or abs(x - CX) > 0.1:
-                S.ellipsoid("curl", x, y, HEAD_Z + 0.02, 0.05, 0.05, 0.05, "hair", segs=10, rings=6)
+                S.ellipsoid("curl", x, y, H + 0.02, 0.05, 0.05, 0.05, "hair", segs=10, rings=6)
         for k in range(8):
             a = 2 * math.pi * k / 8 + 0.1
-            S.ellipsoid("curl", CX + 0.13 * math.cos(a), CY + 0.12 * math.sin(a), HEAD_Z + 0.13,
+            S.ellipsoid("curl", CX + 0.13 * math.cos(a), CY + 0.12 * math.sin(a), H + 0.13,
                         0.055, 0.055, 0.05, "hair", segs=10, rings=6)
         for x, y in ((0.0, 0.0), (0.06, 0.04), (-0.06, 0.03)):
-            S.ellipsoid("curl", CX + x, CY + y, HEAD_Z + 0.2, 0.055, 0.055, 0.05, "hair", segs=10, rings=6)
+            S.ellipsoid("curl", CX + x, CY + y, H + 0.2, 0.055, 0.055, 0.05, "hair", segs=10, rings=6)
     elif style == "hair_tail":
-        _hair_shell("hair", 0.02, lambda x, y, z: z > HEAD_Z + 0.05 or (y > front and z > HEAD_Z - 0.06))
-        S.box("fringe", CX - 0.11, CY - 0.19, HEAD_Z + 0.07, CX + 0.07, CY - 0.13, HEAD_Z + 0.14, "hair",
-              bevel=0.025)
+        _hair_shell("hair", 0.02, [_plane(H + 0.06, H - 0.12)])
+        _fringe(-0.02, 0.09, 0.10)
         # a high ponytail hanging behind the head
-        S.cyl("tie", CX, CY + 0.17, 0.045, HEAD_Z + 0.06, HEAD_Z + 0.085, "food_red", segs=10, ry=0.04)
+        S.cyl("tie", CX, CY + 0.17, 0.045, H + 0.06, H + 0.085, "food_red", segs=10, ry=0.04)
         for i, (dy, dz, r, rz) in enumerate(((0.20, 0.03, 0.05, 0.07), (0.225, -0.07, 0.055, 0.08),
                                              (0.235, -0.18, 0.05, 0.08), (0.24, -0.28, 0.036, 0.07))):
-            S.ellipsoid("tail", CX + 0.008 * i, CY + dy, HEAD_Z + dz, r, r, rz, "hair", segs=10, rings=6)
+            S.ellipsoid("tail", CX + 0.008 * i, CY + dy, H + dz, r, r, rz, "hair", segs=10, rings=6)
     else:
         raise KeyError(style)
 
 
 def _beard(style):
     """Beards (males): shells and masses on the lower face, tinted like hair."""
+    H = HEAD_Z
     if style == "beard_short":
-        _hair_shell("beard", 0.014, lambda x, y, z: y < CY + 0.0 and HEAD_Z - 0.2 < z < HEAD_Z - 0.085)
+        _hair_shell("beard", 0.02, [_plane(H - 0.06, H + 0.0, above=False), _plane(H - 0.21, H - 0.16),
+                                    _vplane(CY - 0.02)])
     elif style == "beard_full":
-        _hair_shell("beard", 0.03, lambda x, y, z: (y < CY + 0.04 and z < HEAD_Z - 0.05) or
-                    (abs(x - CX) > 0.13 and z < HEAD_Z + 0.03 and CY - 0.05 < y < CY + 0.06))
-        S.ellipsoid("chin", CX, CY - 0.07, HEAD_Z - 0.2, 0.095, 0.075, 0.085, "hair", segs=14, rings=8)
+        _hair_shell("beard", 0.03, [_plane(H - 0.05, H + 0.04, above=False), _vplane(CY - 0.01)])
+        S.ellipsoid("chin", CX, CY - 0.07, H - 0.2, 0.095, 0.075, 0.085, "hair", segs=14, rings=8)
         for sx in (-1, 1):
-            S.ellipsoid("mous", CX + sx * 0.045, CY - 0.16, HEAD_Z - 0.105, 0.058, 0.035, 0.024, "hair",
-                        segs=10, rings=6)
+            S.ellipsoid("mous", CX + sx * 0.045, CY - 0.16, H - 0.105, 0.058, 0.035, 0.024, "hair", segs=10, rings=6)
     elif style == "beard_moustache":
+        # one smooth band over the upper lip, drooping at the ends; the ends show past
+        # the head from behind
+        _hair_shell("beard", 0.024, [_plane(H - 0.125, H - 0.125), _plane(H - 0.075, H - 0.075, above=False),
+                                     _vplane(CY - 0.10)])
         for sx in (-1, 1):
-            S.ellipsoid("mous", CX + sx * 0.05, CY - 0.158, HEAD_Z - 0.105, 0.062, 0.034, 0.024, "hair",
-                        segs=10, rings=6)
-        S.ellipsoid("mous", CX, CY - 0.163, HEAD_Z - 0.098, 0.04, 0.03, 0.022, "hair", segs=10, rings=6)
-        for sx in (-1, 1):   # tips curling round the cheeks; they also show past the head from behind
-            S.ellipsoid("mous", CX + sx * 0.135, CY - 0.108, HEAD_Z - 0.1, 0.03, 0.028, 0.026, "hair",
-                        segs=10, rings=6)
-            S.ellipsoid("mous", CX + sx * 0.17, CY - 0.062, HEAD_Z - 0.095, 0.03, 0.03, 0.03, "hair",
-                        segs=10, rings=6)
+            S.ellipsoid("mous", CX + sx * 0.13, CY - 0.11, H - 0.13, 0.035, 0.03, 0.05, "hair", segs=12, rings=8)
+            S.ellipsoid("mous", CX + sx * 0.155, CY - 0.07, H - 0.155, 0.03, 0.03, 0.04, "hair", segs=12, rings=8)
     else:
         raise KeyError(style)
 
 
-_FACING = ["south"]
-
-
 def _face_scar():
     """A thin healed scar slanting across the brow and cheek (ENG-003, ART §37):
-    a pink ridge with three dark stitch marks, sitting just proud of the face
-    so it shows over the head on portraits and at portrait LOD. No outline
-    (the layer is rendered with outline off) and no tint."""
-    import math
-    from mathutils import Matrix
+    a pink ridge with three dark stitch marks lying on the side of the head the
+    facing shows (the back of the skull facing north). No outline, no tint."""
+    from mathutils import Matrix, Vector
     h = _build["head"]
-    cx, cz = CX + 0.085 * h, HEAD_Z + 0.005 * h
-    # Seen from the north the face is hidden by the head, so that sprite carries the
-    # same scar on the back of the skull (a healed wound that went right across).
-    cy = CY + 0.158 * h if _FACING[0] == "north" else CY - 0.158 * h
-    ridge = S.ellipsoid("scar", cx, cy, cz, 0.014 * h, 0.016 * h, 0.095 * h, "food_red", segs=10, rings=6)
+    dx, dy = {"south": (0.45, -0.88), "east": (-0.58, -0.80), "north": (0.45, 0.88)}[_FACING[0]]
+    cx, cy, cz = _head_point(dx, dy, 0.005)
+    normal = Vector((dx / HEAD_R[0], dy / HEAD_R[1], 0.0)).normalized()
+    ridge = S.ellipsoid("scar", cx, cy, cz, 0.016 * h, 0.016 * h, 0.095 * h, "food_red", segs=10, rings=6)
     marks = [ridge]
+    across = math.atan2(normal.y, normal.x) + math.pi / 2     # horizontal tangent of the head
     for k, dz in enumerate((-0.05, 0.0, 0.05)):
-        marks.append(S.ellipsoid("stitch%d" % k, cx, cy - 0.003, cz + dz * h,
-                                 0.036 * h, 0.014 * h, 0.009 * h, "blood_dried", segs=8, rings=4))
+        st = S.ellipsoid("stitch%d" % k, 0, 0, 0, 0.036 * h, 0.012 * h, 0.009 * h, "blood_dried", segs=8, rings=4)
+        st.matrix_world = (Matrix.Translation((cx + normal.x * 0.004, cy + normal.y * 0.004, cz + dz * h))
+                           @ Matrix.Rotation(across, 4, "Z"))
+        marks.append(st)
     pivot = Matrix.Translation((cx, cy, cz))
-    S.transform(marks, pivot @ Matrix.Rotation(math.radians(-28), 4, "Y") @ pivot.inverted())
+    S.transform(marks, pivot @ Matrix.Rotation(math.radians(-28), 4, normal) @ pivot.inverted())
 
 
 def _apply_modifiers():
@@ -350,578 +374,19 @@ def _apply_modifiers():
             bpy.data.meshes.remove(old)
 
 
-# ------------------------------------------------------------------ rig
-# There is no armature: every vertex is moved by the chain of joints that
-# owns it, in the rest pose (south-facing authoring, forward is -Y):
-#   legs   pelvis -> hip (pitch h, spread x) -> knee (mesh bend k)
-#   trunk  pelvis -> drop -> twist -> waist (lean, bend; blended over the
-#          waist so the coat and hips bend instead of breaking)
-#   arms   trunk -> shoulder (pitch a, abduction s, twist t) -> elbow e
-#          -> wrist w (the hand rides the wrist rigidly)
-#   head   trunk -> neck (yaw hy, pitch hp)
-# Hair and hats are not posed; the renderer moves them by `head`.
-HIP_Z, SHOULDER_Z = 0.33, 0.60
-KNEE_Z = 0.18
-ELBOW_Z = 0.465
-WRIST_Z = 0.345
-WAIST_Z = 0.34
-NECK_Z = 0.68
-SHOULDER_X = 0.19    # m_avg; the active build's values are used (`_sx`, `_build["leg_x"]`)
-LEG_X = 0.075
-THIGH, SHIN = HIP_Z - KNEE_Z, KNEE_Z
-ARM_PARTS = ("arm", "hand", "sleeve", "psleeve", "pcuff", "dsleeve")
-LEG_PARTS = ("leg", "pleg")
-HEAD_PARTS = ("head", "eye", "nose")
-
-# Attachment points in the rest pose (Blender coords before the facing):
-# the front of each fist (grip) and the head centre. `hand` rides the r
-# (+X) arm, `hand_l` the l arm, through shoulder -> elbow -> wrist.
-HAND = {  # where held equipment's grip goes (kept for older callers)
-    "south": (CX + 0.195, CY - 0.06, 0.34),
-}
-HAND_R = HAND["south"]
-HAND_L = (CX - 0.195, CY - 0.06, 0.34)
-
-
-def _hand(side):
-    """Grip point of the +X (side 1) or -X fist in the rest pose, on the active build."""
-    return (CX + side * _sx(0.005), CY - 0.06, 0.34)
-
-HEAD_CENTER = (CX, CY, HEAD_Z)
-
-# Pose parameters (degrees unless noted; r = the +X arm/leg, which holds
-# the main item and owns the `hand` attachment; l = the -X side, `hand_l`):
-#   hr hl   hip pitch, + = thigh forward      kr kl  knee flex, + = shin back
-#   xr xl   hip spread, + = leg out
-#   ar al   shoulder pitch, - = arm forward/up (the walk/work convention)
-#   sr sl   shoulder abduction, + = arm out to the side
-#   tr tl   upper-arm twist, + = inward (a bent forearm crosses the body)
-#   er el   elbow flex, + = forearm forward/up
-#   wr wl   wrist flex, + = hand forward
-#   lr ll   arm stretch (fraction; set by the solver when a target is out
-#           of the short chibi reach, up to STRETCH_MAX)
-#   drop    upper body down (tiles; legs stay)   sink  pelvis down (tiles)
-#   shift   pelvis forward (tiles)               twist trunk yaw, + = r shoulder back
-#   lean    trunk pitch, + = forward             bend  trunk side bend, + = toward r
-#   hy hp   head yaw (+ = turn toward r) and pitch (+ = nod down)
-# Solver inputs, resolved per key pose:
-#   fr fl   foot target (forward, lift) tiles from the rest spot -> h, k
-#   Rw Lw   hand target (x, forward, z) tiles from the feet -> a, s, t, e
-#   Rp Lp   elbow pole (x, forward, z) in the trunk frame (default out-back-down)
-KEYS = ("hr hl kr kl xr xl ar al sr sl tr tl er el wr wl lr ll "
-        "drop sink shift twist lean bend hy hp").split()
-STRETCH_MAX = 0.3
-ZERO = {k: 0.0 for k in KEYS}
-
-# Lean is pitch toward/away from a camera that already sees the figure
-# leaned back 55 deg, so seen from behind a forward lean barely changes
-# the silhouette. North fakes it: the trunk tips toward the viewer instead,
-# which drops the head between the shoulders the way a back view of
-# someone bending over reads.
-NORTH_LEAN = -0.45
-
-
-def _smooth(t):
-    t = min(max(t, 0.0), 1.0)
-    return t * t * (3.0 - 2.0 * t)
-
-
-def _M():
-    from mathutils import Matrix
-    return Matrix
-
-
-def _R(deg, axis):
-    return _M().Rotation(math.radians(deg), 4, axis)
-
-
-def _about(pivot, m):
-    Matrix = _M()
-    return Matrix.Translation(pivot) @ m @ Matrix.Translation((-pivot[0], -pivot[1], -pivot[2]))
-
-
-def _rot_x(deg, pz):
-    return _about((0, CY, pz), _R(deg, "X"))
-
-
-def _pelvis(p):
-    return _M().Translation((0, -p["shift"], -p["sink"]))
-
-
-def _torso_matrix(p, w=1.0):
-    """Pelvis, drop and twist (everything above the legs), plus the waist
-    lean/bend blended in by w (0 below the waist, 1 above it)."""
-    Matrix = _M()
-    tw = _about((CX, CY, 0), _R(p["twist"], "Z"))
-    m = _pelvis(p) @ Matrix.Translation((0, 0, -p["drop"])) @ tw
-    if w > 0 and (p["lean"] or p["bend"]):
-        m = m @ _about((CX, CY, WAIST_Z), _R(p["bend"] * w, "Y") @ _R(p["lean"] * w, "X"))
-    return m
-
-
-def _head_matrix(p):
-    return _torso_matrix(p) @ _about((CX, CY, NECK_Z), _R(p["hy"], "Z") @ _R(p["hp"], "X"))
-
-
-def _shoulder(p, side):
-    k = "r" if side > 0 else "l"
-    return (_R(p["a" + k], "X") @ _R(-side * p["s" + k], "Y") @ _R(-side * p["t" + k], "Z"))
-
-
-def _arm_matrix(p, side, fe=1.0, fw=1.0, rigid=True):
-    """Trunk -> shoulder -> elbow (fe of the flex) -> wrist (fw of it).
-    A stretched arm scales its sleeve/arm vertices along the bone (rigid=
-    False) or slides the rigid hand down to the stretched wrist."""
-    Matrix = _M()
-    k = "r" if side > 0 else "l"
-    sx = CX + side * _sx()
-    L = 1.0 + p["l" + k]
-    ez = SHOULDER_Z + L * (ELBOW_Z - SHOULDER_Z)
-    wz = SHOULDER_Z + L * (WRIST_Z - SHOULDER_Z)
-    if rigid:
-        st = Matrix.Translation((0, 0, wz - WRIST_Z))
-    else:
-        st = _about((sx, CY, SHOULDER_Z), Matrix.Diagonal((1.0, 1.0, L, 1.0)))
-    sh = _about((sx, CY, SHOULDER_Z), _shoulder(p, side))
-    el = _about((sx, CY, ez), _R(-p["e" + k] * fe, "X"))
-    wr = _about((sx, CY, wz), _R(-p["w" + k] * fw, "X"))
-    return _torso_matrix(p) @ sh @ el @ wr @ st
-
-
-def _set_shoulder(p, side, rot):
-    """Store a shoulder rotation (quaternion or matrix) as a, s, t."""
-    k = "r" if side > 0 else "l"
-    m = rot.to_matrix() if hasattr(rot, "to_matrix") else rot.to_3x3()
-    eu = m.to_euler("ZYX")                                  # M = Rx(x) Ry(y) Rz(z)
-    p["a" + k] = math.degrees(eu.x)
-    p["s" + k] = -side * math.degrees(eu.y)
-    p["t" + k] = -side * math.degrees(eu.z)
-
-
-def _leg_matrix(p, side):
-    k = "r" if side > 0 else "l"
-    hip = (CX + side * _build["leg_x"], CY, HIP_Z)
-    return _pelvis(p) @ _about(hip, _R(-side * p["x" + k], "Y") @ _R(-p["h" + k], "X"))
-
-
-# -------------------------------------------------------------- solvers
-def _leg_ik(sink, shift, foot):
-    """Hip pitch and knee flex (deg) that put the foot (forward, lift)
-    tiles from its rest spot, the knee bending forward."""
-    f, lift = foot
-    dy, dz = f - shift, (HIP_Z - sink) - lift
-    d = min(math.hypot(dy, dz), THIGH + SHIN - 1e-6)
-    c = (d * d - THIGH ** 2 - SHIN ** 2) / (2 * THIGH * SHIN)
-    k = math.acos(min(max(c, -1.0), 1.0))
-    alpha = math.atan2(SHIN * math.sin(k), THIGH + SHIN * math.cos(k))
-    return math.degrees(math.atan2(dy, dz) + alpha), math.degrees(k)
-
-
-def _arm_ik(p, side, target, pole=None):
-    """Shoulder (a, s, t), stretch and elbow e that put the hand's grip
-    point on a target (x, forward, z tiles from the feet), elbow towards
-    the pole. The chibi arm is short: past its reach the arm stretches
-    (up to STRETCH_MAX), which reads as a smear at sprite scale."""
-    from mathutils import Quaternion, Vector
-    k = "r" if side > 0 else "l"
-    sx = CX + side * _sx()
-    S = Vector((sx, CY, SHOULDER_Z))
-    grip = Vector(_hand(side))
-    world = Vector((CX + target[0], CY - target[1], target[2]))
-    T = _torso_matrix(p).inverted() @ world - S          # trunk frame, from the shoulder
-    q0 = dict(ZERO)
-
-    def chain(e, ln):
-        q0["e" + k], q0["l" + k] = e, ln
-        return _arm_matrix(q0, side) @ grip - S
-
-    reach = chain(0.0, 0.0).length
-    ln = min(max(T.length / (0.99 * reach) - 1.0, 0.0), STRETCH_MAX)
-    lo, hi = 0.0, 150.0                                    # |chain| shrinks as e grows
-    if chain(lo, ln).length <= T.length:
-        e = lo
-    elif chain(hi, ln).length >= T.length:
-        e = hi
-    else:
-        for _ in range(40):
-            mid = (lo + hi) / 2
-            lo, hi = (mid, hi) if chain(mid, ln).length > T.length else (lo, mid)
-        e = (lo + hi) / 2
-    q = chain(e, ln).rotation_difference(T)
-    axis = T.normalized()
-    pole = Vector((side * 0.7, 0.45, -0.55)) if pole is None else Vector((pole[0] * side, -pole[1], pole[2]))
-    e1 = q @ Vector((0, 0, ELBOW_Z - SHOULDER_Z))
-    a1 = e1 - axis * e1.dot(axis)
-    a2 = pole - axis * pole.dot(axis)
-    if a1.length > 1e-6 and a2.length > 1e-6:
-        ang = a1.angle(a2)
-        if a1.cross(a2).dot(axis) < 0:
-            ang = -ang
-        q = Quaternion(axis, ang) @ q
-    out = {"e" + k: e, "l" + k: ln}
-    _set_shoulder(out, side, q)
-    return out
-
-
-def _final(pose):
-    """Fill defaults and run the foot and hand solvers."""
-    p = dict(ZERO)
-    p.update(pose)
-    for s in "rl":
-        foot = p.pop("f" + s, None)
-        if foot is not None:
-            p["h" + s], p["k" + s] = _leg_ik(p["sink"], p["shift"], foot)
-    for s, side in (("R", 1), ("L", -1)):
-        tgt = p.pop(s + "w", None)
-        pole = p.pop(s + "p", None)
-        if tgt is not None:
-            p.update(_arm_ik(p, side, tgt, pole))
-    return p
-
-
-def _tween(a, b, t):
-    """Smoothstep in-between of two key poses: feet planted in both blend
-    their targets, shoulders slerp, everything else blends solved angles."""
-    e = _smooth(t)
-    A, B = dict(a), dict(b)
-    feet = {}
-    for s in "rl":
-        if "f" + s in A and "f" + s in B:
-            fa, fb = A.pop("f" + s), B.pop("f" + s)
-            feet["f" + s] = tuple(x + (y - x) * e for x, y in zip(fa, fb))
-    A, B = _final(A), _final(B)
-    out = {k: A[k] + (B[k] - A[k]) * e for k in KEYS}
-    for side in (1, -1):                                   # shoulders slerp, never Euler-lerp
-        qa = _shoulder(A, side).to_3x3().to_quaternion()
-        qb = _shoulder(B, side).to_3x3().to_quaternion()
-        _set_shoulder(out, side, qa.slerp(qb, e))
-    for s in "rl":
-        if "f" + s in feet:
-            out["h" + s], out["k" + s] = _leg_ik(out["sink"], out["shift"], feet["f" + s])
-    return out
-
-
-def _P(*parts, **kw):
-    """Merge pose fragments left to right."""
-    out = {}
-    for d in parts:
-        out.update(d)
-    out.update(kw)
-    return out
-
-
-# ------------------------------------------------------------- the walk
-# Walk cycle (ART spec §27.1): 12 unique poses per facing, walk01..walk12.
-# Frame 01 is the right heel contact; the right leg then loads, passes
-# mid-stance, terminal stance, pre-swing and swings through; 07..12 are the
-# same poses for the left foot. Per-frame curves:
-#   hip     +-26 deg (cosine, forward at contact)
-#   knee    0-40 deg, peaking in swing
-#   pelvis  drops 2-3 px at loading (everything above the legs)
-#   arms    counter-swing at 0.8x the hip
-#   torso   twists +-4 deg against the pelvis
-WALK_DEG = 26.0
-WALK_N = 12
-WALK_FRAMES = {"walk%02d" % i: i for i in range(1, WALK_N + 1)}
-POSE_LAYERS = ("body", "pants_basic", "shirt_basic", "vest_utility", "parka_leather", "duster_leather")
-WALK_LAYERS = WORK_LAYERS = POSE_LAYERS
-# right-knee flexion per frame (deg); the left knee reads the table 6 frames on
-KNEE_R = (3, 14, 8, 5, 6, 16, 34, 40, 36, 22, 8, 3)
-# pelvis drop weight per half-cycle frame (loading is the deepest)
-DROP_W = (0.5, 1.0, 0.55, 0.1, 0.0, 0.15)
-DROP_MAX = 0.022
-
-# Work swing (ART spec §27.1): both hands grip the tool and swing it
-#   work1 wind-up start, work2 wind-up peak, work3 swing, work4 late swing,
-#   work5 strike, work6 recover.
-# Shoulder rotations in degrees (negative swings the hand forward and up);
-# smoothstep eases from the wind-up peak to the strike. Legs are braced.
-WORK_N = 6
-WORK_FRAMES = {"work%d" % i: i for i in range(1, WORK_N + 1)}
-WORK_ARM = {"w_start": -142.0, "w_peak": -162.0, "strike": -38.0, "recover": -78.0}
-
-
-def _walk(i):
-    hr = WALK_DEG * math.cos(2 * math.pi * (i - 1) / WALK_N)
-    return dict(hr=hr, hl=-hr, kr=KNEE_R[i - 1], kl=KNEE_R[(i - 1 + 6) % 12],
-                ar=0.8 * hr, al=-0.8 * hr, drop=DROP_MAX * DROP_W[(i - 1) % 6],
-                twist=4.0 * hr / WALK_DEG)
-
-
-def _work(i):
-    w = WORK_ARM
-    if i == 1:
-        r, e = w["w_start"], 0.0
-    elif i == 2:
-        r, e = w["w_peak"], 0.0
-    elif i == 6:
-        r, e = w["recover"], 1.0
-    else:  # 3, 4, 5 ease from the peak into the strike
-        e = _smooth((i - 2) / 3.0)
-        r = w["w_peak"] + (w["strike"] - w["w_peak"]) * e
-    return dict(hr=11.0, hl=-9.0, kr=14.0, kl=14.0, ar=r, al=r + 7.0 - 3.0 * e,
-                drop=0.012 + 0.012 * e, twist=-3.0 + 6.0 * e)
-
-
-# ---------------------------------------------------------- action poses
-# ART spec §27.2. Named key poses; frames are keys or smoothstep
-# in-betweens of two keys. Hand targets (Rw/Lw) are (x, forward, z) tiles
-# from the feet. Two-handed items: `hand` (r) holds the grip and `hand_l`
-# sits further along the item, towards the muzzle, blade or head.
-# Strike frames (the renderer's impact tick): fire1, stab4, thrust4,
-# swing4, punch2, punch3, chop4, mine4.
-STAND = dict(fr=(0.0, 0.0), fl=(0.0, 0.0))
-BRACE = dict(fl=(0.07, 0.0), fr=(-0.05, 0.0), sink=0.015)            # left foot leads
-FENCE = dict(fr=(0.07, 0.0), fl=(-0.05, 0.0), sink=0.015)            # right foot leads
-LUNGE_L = dict(fl=(0.17, 0.0), fr=(-0.11, 0.0), sink=0.05, shift=0.03)
-LUNGE_R = dict(fr=(0.17, 0.0), fl=(-0.11, 0.0), sink=0.05, shift=0.03)
-WIDE = dict(fl=(0.04, 0.0), fr=(-0.03, 0.0), xr=7.0, xl=7.0, sink=0.03)
-SQUAT = dict(fl=(0.07, 0.0), fr=(-0.02, 0.0), xr=10.0, xl=10.0, sink=0.11)
-KNEEL = dict(hr=-6.0, kr=94.0, fl=(0.11, 0.0), sink=0.15, shift=-0.06)  # right knee down; hips back
-# (deep leans sit the hips back so the head stays on the frozen canvas)
-KNEEL2 = dict(hr=-4.0, kr=95.0, hl=-4.0, kl=95.0, sink=0.15, shift=-0.08)  # both knees down
-
-ELBOW_OUT = (1.0, 0.0, 0.1)
-ELBOW_UP = (1.0, 0.3, 0.6)
-
-READY = _P(BRACE, twist=12.0, lean=4.0, hp=4.0, Rw=(0.15, 0.08, 0.47), Lw=(-0.04, 0.18, 0.44))
-AIM = _P(BRACE, twist=30.0, lean=8.0, hy=-24.0, hp=6.0, bend=-3.0,
-         Rw=(0.07, 0.08, 0.56), Rp=ELBOW_OUT, Lw=(0.03, 0.25, 0.57))
-KICK = _P(AIM, twist=36.0, lean=2.0, hp=0.0, Rw=(0.07, 0.03, 0.58), Lw=(0.03, 0.20, 0.62))
-RISE = _P(AIM, twist=33.0, lean=4.0, hp=-3.0, Rw=(0.07, 0.05, 0.59), Lw=(0.03, 0.22, 0.66))
-
-GUARD_K = _P(FENCE, twist=-8.0, lean=6.0, Rw=(0.12, 0.17, 0.48), Lw=(-0.06, 0.15, 0.56))
-CHAMBER_K = _P(FENCE, sink=0.03, twist=12.0, Rw=(0.21, -0.03, 0.44), Lw=(-0.04, 0.17, 0.55))
-EXTEND_K = _P(LUNGE_R, twist=-22.0, lean=14.0, Rw=(0.06, 0.42, 0.50), Lw=(-0.19, 0.0, 0.48))
-
-SPEAR = _P(BRACE, twist=20.0, lean=4.0, Rw=(0.14, 0.02, 0.44), Lw=(-0.02, 0.20, 0.50))
-DRAW_S = _P(BRACE, sink=0.03, twist=30.0, lean=-2.0, Rw=(0.17, -0.06, 0.45), Lw=(-0.04, 0.12, 0.50))
-REACH_S = _P(LUNGE_L, twist=25.0, lean=15.0, Rw=(0.05, 0.22, 0.48), Lw=(-0.03, 0.42, 0.50))
-
-CLUB = _P(BRACE, lean=4.0, Rw=(0.15, 0.14, 0.46), Lw=(-0.14, 0.10, 0.45))
-COCK = _P(BRACE, twist=22.0, bend=-6.0, lean=-4.0, Rw=(0.20, -0.08, 0.84), Rp=ELBOW_UP,
-          Lw=(-0.06, 0.22, 0.52))
-SMASH = _P(BRACE, fl=(0.12, 0.0), fr=(-0.08, 0.0), sink=0.04, shift=0.02, twist=-22.0, lean=14.0,
-           bend=4.0, Rw=(0.02, 0.36, 0.42), Lw=(-0.20, -0.02, 0.48))
-FOLLOW = _P(SMASH, twist=-30.0, lean=18.0, Rw=(-0.16, 0.18, 0.32), Lw=(-0.22, -0.06, 0.46))
-
-GUARD_P = _P(BRACE, sink=0.025, twist=10.0, lean=6.0, hp=6.0, Rw=(0.08, 0.14, 0.62), Lw=(-0.06, 0.20, 0.64))
-JAB = _P(GUARD_P, twist=22.0, lean=10.0, Lw=(0.0, 0.42, 0.64))
-CROSS = _P(GUARD_P, twist=-20.0, lean=12.0, shift=0.02, Rw=(0.0, 0.42, 0.64), Lw=(-0.08, 0.16, 0.64))
-
-LOW2 = _P(WIDE, lean=6.0, Rw=(0.06, 0.18, 0.44), Lw=(0.0, 0.26, 0.42))
-RAISE_AXE = _P(WIDE, bend=12.0, twist=10.0, lean=-6.0, hp=-4.0, Rw=(0.10, 0.10, 0.88), Rp=ELBOW_OUT,
-               Lw=(0.0, 0.04, 0.96))
-IMPACT_AXE = _P(WIDE, sink=0.05, bend=-10.0, twist=-20.0, lean=16.0, hp=10.0,
-                Rw=(-0.02, 0.24, 0.40), Lw=(-0.10, 0.34, 0.36))
-REBOUND_AXE = _tween(IMPACT_AXE, RAISE_AXE, 0.2)
-
-RAISE_PICK = _P(WIDE, lean=-8.0, hp=-10.0, Rw=(0.05, 0.06, 0.96), Rp=ELBOW_UP,
-                Lw=(-0.04, 0.02, 1.0), Lp=ELBOW_UP)
-IMPACT_PICK = _P(WIDE, sink=0.08, lean=28.0, hp=15.0, Rw=(0.03, 0.26, 0.30), Lw=(-0.03, 0.34, 0.26))
-PRY_PICK = _P(WIDE, sink=0.06, lean=14.0, hp=8.0, Rw=(0.06, 0.12, 0.40), Lw=(-0.02, 0.26, 0.34))
-
-HAMMER_L = (-0.04, 0.28, 0.34)
-HAMMER_UP = _P(WIDE, sink=0.04, lean=18.0, hp=14.0, Rw=(0.12, 0.16, 0.66), Rp=ELBOW_UP, Lw=HAMMER_L)
-HAMMER_DOWN = _P(HAMMER_UP, Rw=(0.04, 0.28, 0.38), Rp=None)
-
-KNEEL_REST = _P(KNEEL, lean=18.0, hp=10.0, Rw=(0.18, 0.06, 0.26), Lw=(-0.08, 0.10, 0.27))
-DIG = _P(KNEEL, lean=46.0, hp=14.0, Rw=(0.10, 0.24, 0.06), Lw=(-0.08, 0.10, 0.24))
-SCOOP = _P(DIG, Rw=(0.14, 0.14, 0.14))
-SEED = _P(DIG, lean=42.0, Rw=(0.04, 0.26, 0.10), wr=35.0)
-PRESS = _P(DIG, lean=48.0, Rw=(0.04, 0.24, 0.05), Lw=(-0.06, 0.24, 0.06))
-
-PICK_REACH = _P(SQUAT, lean=32.0, hp=15.0, Rw=(0.06, 0.34, 0.20), Lw=(-0.06, 0.34, 0.22))
-PICK_GRAB = _P(PICK_REACH, Rw=(0.03, 0.32, 0.18), Lw=(-0.03, 0.32, 0.19), wr=30.0, wl=30.0)
-PICK_PULL = _P(SQUAT, sink=0.07, lean=18.0, hp=8.0, Rw=(0.04, 0.20, 0.42), Lw=(-0.04, 0.22, 0.44))
-PICK_BAG = _P(SQUAT, sink=0.06, twist=20.0, lean=14.0, Rw=(0.24, -0.02, 0.36), Lw=(-0.08, 0.16, 0.40))
-
-BENCH = _P(STAND, sink=0.01, lean=10.0, hp=18.0)
-TEND = _P(KNEEL, lean=36.0, hp=20.0)
-EAT = _P(STAND, lean=4.0, hp=10.0, Lw=(-0.04, 0.20, 0.52))
-EAT_BOWL = _P(EAT, Rw=(0.02, 0.22, 0.56))
-EAT_MOUTH = _P(EAT, hp=2.0, Rw=(0.02, 0.22, 0.73), Rp=ELBOW_OUT)
-
-CARRY = _P(STAND, lean=-3.0, Rw=(0.16, 0.20, 0.46), Lw=(-0.16, 0.20, 0.46))
-CARRY_ARMS = ("ar", "sr", "tr", "er", "lr", "al", "sl", "tl", "el", "ll")
-
-SNAP = _P(STAND, sink=0.02, shift=-0.02, lean=-16.0, twist=12.0, hy=28.0, hp=-12.0,
-          Rw=(0.22, 0.14, 0.74), Rp=ELBOW_OUT, Lw=(-0.18, 0.16, 0.76), Lp=ELBOW_OUT)
-BUCKLE = _P(STAND, sink=0.08, lean=10.0, hp=10.0, Rw=(0.30, 0.10, 0.48), Lw=(-0.30, 0.10, 0.48))
-SLUMP = _P(STAND, sink=0.14, lean=24.0, hp=12.0, Rw=(0.26, 0.24, 0.36), Lw=(-0.26, 0.24, 0.36))
-FOLD = _P(KNEEL2, lean=40.0, hp=16.0, Rw=(0.18, 0.28, 0.18), Lw=(-0.18, 0.28, 0.18))
-DOWN = _P(KNEEL2, lean=55.0, hp=16.0, Rw=(0.16, 0.30, 0.06), Lw=(-0.16, 0.30, 0.06))
-
-CROUCH = dict(fl=(0.10, 0.0), fr=(-0.04, 0.0), sink=0.09)
-OFFER_IN = _P(CROUCH, lean=22.0, hp=10.0, Rw=(0.10, 0.26, 0.30), Lw=(-0.08, 0.14, 0.24))
-OFFER_OUT = _P(OFFER_IN, Rw=(0.08, 0.38, 0.24), wr=-20.0)
-
-T = _tween
-ACTION = {
-    "ready": READY,
-    "aim": AIM,
-    "fire1": KICK, "fire2": RISE, "fire3": T(RISE, AIM, 0.6),
-    "stab1": GUARD_K, "stab2": CHAMBER_K, "stab3": T(CHAMBER_K, EXTEND_K, 0.5), "stab4": EXTEND_K,
-    "stab5": T(EXTEND_K, GUARD_K, 0.5), "stab6": T(EXTEND_K, GUARD_K, 0.9),
-    "thrust1": SPEAR, "thrust2": DRAW_S, "thrust3": T(DRAW_S, REACH_S, 0.5), "thrust4": REACH_S,
-    "thrust5": T(REACH_S, SPEAR, 0.5), "thrust6": T(REACH_S, SPEAR, 0.9),
-    "swing1": T(CLUB, COCK, 0.55), "swing2": COCK, "swing3": T(COCK, SMASH, 0.45), "swing4": SMASH,
-    "swing5": FOLLOW, "swing6": T(FOLLOW, CLUB, 0.6),
-    "punch1": GUARD_P, "punch2": JAB, "punch3": CROSS, "punch4": T(CROSS, GUARD_P, 0.85),
-    "chop1": T(LOW2, RAISE_AXE, 0.5), "chop2": RAISE_AXE, "chop3": T(RAISE_AXE, IMPACT_AXE, 0.5),
-    "chop4": IMPACT_AXE, "chop5": REBOUND_AXE, "chop6": T(IMPACT_AXE, LOW2, 0.6),
-    "mine1": T(PRY_PICK, RAISE_PICK, 0.55), "mine2": RAISE_PICK, "mine3": T(RAISE_PICK, IMPACT_PICK, 0.5),
-    "mine4": IMPACT_PICK, "mine5": PRY_PICK, "mine6": T(PRY_PICK, RAISE_PICK, 0.25),
-    "hammer1": T(HAMMER_DOWN, HAMMER_UP, 0.6), "hammer2": HAMMER_UP, "hammer3": HAMMER_DOWN,
-    "hammer4": T(HAMMER_DOWN, HAMMER_UP, 0.25),
-    "kneel": KNEEL_REST, "plant1": DIG, "plant2": SCOOP, "plant3": SEED, "plant4": PRESS,
-    "pick1": PICK_REACH, "pick2": PICK_GRAB, "pick3": PICK_PULL, "pick4": PICK_BAG,
-    "bench1": _P(BENCH, Rw=(0.10, 0.24, 0.42), Lw=(-0.10, 0.24, 0.42)),
-    "bench2": _P(BENCH, Rw=(0.04, 0.30, 0.44), Lw=(-0.12, 0.20, 0.42)),
-    "bench3": _P(BENCH, Rw=(0.12, 0.22, 0.46), Lw=(-0.06, 0.28, 0.42)),
-    "bench4": _P(BENCH, Rw=(0.08, 0.26, 0.40), Lw=(-0.08, 0.26, 0.44)),
-    "tend1": _P(TEND, Rw=(0.06, 0.25, 0.14), Lw=(-0.06, 0.25, 0.14)),
-    "tend2": _P(TEND, Rw=(0.10, 0.27, 0.22), Lw=(-0.04, 0.23, 0.12)),
-    "tend3": _P(TEND, Rw=(0.0, 0.25, 0.12), Lw=(-0.10, 0.27, 0.20)),
-    "tend4": _P(TEND, Rw=(0.04, 0.29, 0.12), Lw=(-0.04, 0.21, 0.12)),
-    "eat1": EAT_BOWL, "eat2": T(EAT_BOWL, EAT_MOUTH, 0.5), "eat3": EAT_MOUTH,
-    "eat4": _P(T(EAT_MOUTH, EAT_BOWL, 0.6), hp=14.0),
-    "carry": CARRY,
-    "flinch1": T(STAND, SNAP, 0.7), "flinch2": SNAP, "flinch3": T(SNAP, STAND, 0.55),
-    "fall1": BUCKLE, "fall2": SLUMP, "fall3": FOLD, "fall4": DOWN,
-    "offer1": OFFER_IN, "offer2": OFFER_OUT,
-}
-CARRY_WALK = {"carry_walk%02d" % i: i for i in range(1, WALK_N + 1)}
-ACTION_FRAMES = list(ACTION) + list(CARRY_WALK)
-FRAMES = list(WALK_FRAMES) + list(WORK_FRAMES) + ACTION_FRAMES
-
-
-def _params(frame, facing=None):
-    """Joint angles for a frame (rest when None)."""
-    if frame in WALK_FRAMES:
-        p = _final(_walk(WALK_FRAMES[frame]))
-    elif frame in WORK_FRAMES:
-        p = _final(_work(WORK_FRAMES[frame]))
-    elif frame in CARRY_WALK:
-        c = _final(CARRY)
-        p = _final(_walk(CARRY_WALK[frame]))
-        p["twist"] *= 0.5
-        for k in CARRY_ARMS:
-            p[k] = c[k]
-        p["lean"] = c["lean"]
-    elif frame in ACTION:
-        p = _final(ACTION[frame])
-    else:
-        p = dict(ZERO)
-    if facing == "north":
-        p["lean"] *= NORTH_LEAN
-    return p
-
-
-# ------------------------------------------------------------- skinning
-def _mean_x(ob):
-    vs = ob.data.vertices
-    return sum((ob.matrix_world @ v.co).x for v in vs) / max(len(vs), 1)
-
-
-def _bake(ob):
-    from mathutils import Matrix
-    ob.data.transform(ob.matrix_world)
-    ob.matrix_world = Matrix.Identity(4)
-
-
-def _bisect(bm, zs):
-    for z in zs:
-        bmesh.ops.bisect_plane(bm, geom=list(bm.verts) + list(bm.edges) + list(bm.faces),
-                               plane_co=(0, 0, z), plane_no=(0, 0, 1), dist=1e-5)
-
-
-def _bend_knee(ob, flex):
-    """Bend a leg mesh at the knee: cut loops around KNEE_Z, then rotate the
-    shank (feet go backwards) with a smooth ramp over the cut loops."""
-    _bake(ob)
-    bm = bmesh.new()
-    bm.from_mesh(ob.data)
-    _bisect(bm, (KNEE_Z + 0.03, KNEE_Z, KNEE_Z - 0.03))
-    for v in bm.verts:
-        w = min(max((KNEE_Z + 0.03 - v.co.z) / 0.06, 0.0), 1.0)
-        if w <= 0.0:
-            continue
-        a = math.radians(flex * w)
-        dy, dz = v.co.y - CY, v.co.z - KNEE_Z
-        v.co.y = CY + dy * math.cos(a) - dz * math.sin(a)
-        v.co.z = KNEE_Z + dy * math.sin(a) + dz * math.cos(a)
-    bm.to_mesh(ob.data)
-    bm.free()
-    ob.data.update()
-
-
-def _skin(ob, cuts, weights, matrix):
-    """Move each vertex by matrix(*weights(z)), after cutting loops at the
-    given heights so joints bend smoothly."""
-    _bake(ob)
-    bm = bmesh.new()
-    bm.from_mesh(ob.data)
-    _bisect(bm, cuts)
-    cache = {}
-    for v in bm.verts:
-        w = tuple(round(x, 3) for x in weights(v.co.z))
-        m = cache.get(w)
-        if m is None:
-            m = cache[w] = matrix(*w)
-        v.co = m @ v.co
-    bm.to_mesh(ob.data)
-    bm.free()
-    ob.data.update()
-
-
-def _ramp(z, top, width):
-    return min(max((top - z) / width, 0.0), 1.0)
-
-
-ELBOW_CUTS = tuple(ELBOW_Z + d for d in (0.03, 0.015, 0.0, -0.015, -0.03))
-WRIST_CUTS = tuple(WRIST_Z + d for d in (0.015, 0.0, -0.015))
-WAIST_CUTS = tuple(WAIST_Z + d for d in (-0.04, -0.02, 0.0, 0.02, 0.04))
-
-
-def _pose(frame, facing=None):
-    """Pose a frame (forward is -Y). Applied to every object (holdout body
-    included) before the facing."""
-    p = _params(frame, facing)
-    torso = _torso_matrix(p)
-    head = _head_matrix(p)
-    bends = p["lean"] or p["bend"]
-    for ob in S.objects():
-        n = ob.name.split(".")[0]
-        side = 1 if _mean_x(ob) >= CX else -1
-        k = "r" if side > 0 else "l"
-        if n in LEG_PARTS:
-            if p["k" + k] > 0:
-                _bend_knee(ob, p["k" + k])
-            ob.matrix_world = _leg_matrix(p, side) @ ob.matrix_world
-        elif n in ARM_PARTS:
-            if n == "hand" or not (p["e" + k] or p["w" + k] or p["l" + k]):
-                ob.matrix_world = _arm_matrix(p, side) @ ob.matrix_world
-            else:
-                _skin(ob, ELBOW_CUTS + WRIST_CUTS,
-                      lambda z: (_ramp(z, ELBOW_Z + 0.03, 0.06), _ramp(z, WRIST_Z + 0.015, 0.03)),
-                      lambda fe, fw, s=side: _arm_matrix(p, s, fe, fw, rigid=False))
-        elif n in HEAD_PARTS:
-            ob.matrix_world = head @ ob.matrix_world
-        elif bends:
-            _skin(ob, WAIST_CUTS, lambda z: (1.0 - _ramp(z, WAIST_Z + 0.04, 0.08),),
-                  lambda w: _torso_matrix(p, w))
-        else:
-            ob.matrix_world = torso @ ob.matrix_world
-
-
+# --------------------------------------------------- facing, lean, canvas
 def _lean_matrix():
-    import math
     from mathutils import Matrix
     t = math.radians(C.FIGURE_LEAN_DEG)
     feet = Matrix.Translation((0.5, CY, 0))
     return (feet @ Matrix.Rotation(-t, 4, "X") @ Matrix.Scale(C.FIGURE_SCALE, 4)
             @ Matrix.Translation((-0.5, -CY, 0)))
+
+
+def _facing_matrix(facing):
+    from mathutils import Matrix
+    return (Matrix.Translation((0.5, -0.5, 0)) @ Matrix.Rotation(math.radians(S.FACINGS[facing]), 4, "Z")
+            @ Matrix.Translation((-0.5, 0.5, 0)))
 
 
 def _figure(facing):
@@ -932,69 +397,51 @@ def _figure(facing):
 
 def _zmax_screen():
     """Equivalent sheared height that covers the leaned figure."""
-    import math
     t = math.radians(C.FIGURE_LEAN_DEG)
-    hgt = 1.05 * C.FIGURE_SCALE
-    return hgt * (math.sin(t) / C.SHEAR_K + math.cos(t)) + 0.05
+    return HGT * C.FIGURE_SCALE * (math.sin(t) / C.SHEAR_K + math.cos(t)) + 0.05
+
+
+def _origin(zm, margins=MARGINS):
+    """The canvas origin render_asset derives for zmax zm and these margins."""
+    return (int(round(margins[0] * C.PPT)), int(math.ceil((C.SHEAR_K * zm + margins[2]) * C.PPT)))
 
 
 def _project(x, y, z, origin):
-    """Blender point -> image px on the pawn canvas (sheared)."""
+    """Blender point -> image px on a canvas with this origin (sheared)."""
     return [round(origin[0] + x * C.PPT, 1), round(origin[1] + (-y - C.SHEAR_K * z) * C.PPT, 1)]
 
 
+def _attachments(facing, origin):
+    """Body attachments in canvas px: `head` (head centre), `hold` (where a held
+    item's grip sits: right-front of the torso facing south, in front of the
+    chest facing east, behind the body facing north) and `back` (between the
+    shoulders, for slung items)."""
+    from mathutils import Vector
+    lean, turn = _lean_matrix(), _facing_matrix(facing)
+    wx, yf, yb = _extent(HOLD_Z)
+    hold = {"south": (CX + 0.75 * wx, CY - yf - 0.02), "east": (CX + yf + 0.03, CY - 0.04),
+            "north": (CX - 0.75 * wx, CY + yf + 0.02)}[facing]
+    pts = {"head": turn @ Vector((CX, CY, HEAD_Z)),
+           "hold": Vector((hold[0], hold[1], HOLD_Z)),
+           "back": turn @ Vector((CX, CY + _extent(BACK_Z)[2], BACK_Z))}
+    return {k: _project(*(lean @ p), origin) for k, p in pts.items()}
 
 
-def _attach(facing, frame, point):
-    """Project a rest-pose body point through its joint chain, the facing
-    and the figure lean (Blender coords; _project turns them into px)."""
-    from mathutils import Matrix, Vector
-    deg = S.FACINGS[facing]
-    m = (Matrix.Translation((0.5, -0.5, 0)) @ Matrix.Rotation(math.radians(deg), 4, "Z")
-         @ Matrix.Translation((-0.5, 0.5, 0)))
-    p = _params(frame, facing)
-    return _lean_matrix() @ m @ point_matrix(p, point) @ Vector(point[0])
-
-
-def point_matrix(p, point):
-    kind = point[1]
-    if kind in ("arm", "arm_r"):
-        return _arm_matrix(p, 1)
-    if kind == "arm_l":
-        return _arm_matrix(p, -1)
-    if kind == "head":
-        return _head_matrix(p)
-    return _torso_matrix(p)
-
-
-def _layer(name, facing, builder, body_holdout=True, frame=None, outline=True):
+def _layer(name, facing, builder, body_holdout=True, outline=True):
     _FACING[0] = facing
     if body_holdout:
-        objs = _body()
-        S.holdout(objs)
+        S.holdout(_body())
     builder()
     _apply_modifiers()
-    if frame:
-        _pose(frame, facing)
     _figure(facing)
     zm = _zmax_screen()
-    top = int(-(-((C.SHEAR_K * zm + MARGINS[2]) * C.PPT) // 1))
-    origin = (int(round(MARGINS[0] * C.PPT)), top)
-    att = {}
-    for key, point in (("hand", (_hand(1), "arm_r")), ("hand_l", (_hand(-1), "arm_l"))):
-        h = _attach(facing, frame, point)
-        att[key] = _project(h.x, h.y, h.z, origin)
+    extra = {"layer": name, "facing": facing}
     if name == "body":
-        hd = _attach(facing, frame, (HEAD_CENTER, "head"))
-        att["head"] = _project(hd.x, hd.y, hd.z, origin)
-    tag = name if _build_key == LEGACY_BUILD or name not in POSE_LAYERS else "%s_%s" % (name, _build_key)
-    sprite = "%s_%s" % (tag, facing) + ("_" + frame if frame else "")
-    extra = {"layer": name, "facing": facing, "attachments": att}
+        extra["attachments"] = _attachments(facing, _origin(zm))
+    tag = name if _build_key == LEGACY_BUILD or name not in BUILD_LAYERS else "%s_%s" % (name, _build_key)
     if tag != name:
         extra["build"] = _build_key
-    if frame:
-        extra["frame"] = frame
-    return S.render_asset("pawn", sprite, zmax=zm, margins=MARGINS, extra=extra, outline=outline)
+    return S.render_asset("pawn", "%s_%s" % (tag, facing), zmax=zm, margins=MARGINS, extra=extra, outline=outline)
 
 
 LAYERS = {
@@ -1004,17 +451,9 @@ LAYERS = {
     "parka_leather": _parka,
     "duster_leather": _duster,
     "tuque_knit": _tuque,
-    "hair_short": lambda: _hair("hair_short"),
-    "hair_crop": lambda: _hair("hair_crop"),
-    "hair_bun": lambda: _hair("hair_bun"),
-    "hair_long": lambda: _hair("hair_long"),
-    "hair_braid": lambda: _hair("hair_braid"),
-    "hair_shaved": lambda: _hair("hair_shaved"),
-    "hair_curls": lambda: _hair("hair_curls"),
-    "hair_tail": lambda: _hair("hair_tail"),
-    "beard_short": lambda: _beard("beard_short"),
-    "beard_full": lambda: _beard("beard_full"),
-    "beard_moustache": lambda: _beard("beard_moustache"),
+    **{s: (lambda s=s: _hair(s)) for s in ("hair_short", "hair_crop", "hair_bun", "hair_long", "hair_braid",
+                                           "hair_shaved", "hair_curls", "hair_tail")},
+    **{s: (lambda s=s: _beard(s)) for s in ("beard_short", "beard_full", "beard_moustache")},
     "face_scar": _face_scar,
 }
 
@@ -1024,22 +463,15 @@ def _env_list(name):
     return [x for x in v.split(",") if x] or None
 
 
-def build(walk_only=False, work_only=False, frames=None, facings=None, layers=None, builds=None):
-    """Every build x layer x facing x frame. frames/facings/layers/builds
-    narrow a review build (e.g. frames=["aim"], layers=["body", "shirt_basic"],
-    builds=["f_avg"]); RWG_PAWN_BUILDS / RWG_PAWN_LAYERS (comma lists) do the
-    same for headless runs. Only POSE_LAYERS depend on the build; hair, beards
-    and hats are shared and rendered once, with the legacy m_avg head."""
+def build(facings=None, layers=None, builds=None):
+    """Every build x layer x facing, one standing sprite each.
+    facings/layers/builds narrow a review build (e.g. layers=["body",
+    "shirt_basic"], builds=["f_avg"]); RWG_PAWN_BUILDS / RWG_PAWN_LAYERS (comma
+    lists) do the same for headless runs. Only BUILD_LAYERS depend on the build;
+    hair, beards, hats and the scar are shared and rendered once, on m_avg."""
     builds = builds or _env_list("RWG_PAWN_BUILDS") or list(BUILD_KEYS)
     layers = layers or _env_list("RWG_PAWN_LAYERS")
     out = []
-    todo = [None] + FRAMES
-    if walk_only:
-        todo = list(WALK_FRAMES)
-    if work_only:
-        todo = list(WORK_FRAMES)
-    if frames is not None:
-        todo = list(frames)
     try:
         for bk in builds:
             use_build(bk)
@@ -1047,15 +479,13 @@ def build(walk_only=False, work_only=False, frames=None, facings=None, layers=No
                 for name in ["body"] + list(LAYERS):
                     if layers is not None and name not in layers:
                         continue
-                    if name not in POSE_LAYERS and bk != LEGACY_BUILD:
+                    if name not in BUILD_LAYERS and bk != LEGACY_BUILD:
                         continue          # shared layers: one render, on m_avg
-                    for fr in todo:
-                        if fr is not None and name not in POSE_LAYERS:
-                            continue
-                        if name == "body":
-                            out.append(_layer("body", f, _body, body_holdout=False, frame=fr))
-                        else:
-                            out.append(_layer(name, f, LAYERS[name], frame=fr, outline=name != "face_scar"))
+                    if name == "body":
+                        out.append(_layer("body", f, _body, body_holdout=False))
+                    else:
+                        out.append(_layer(name, f, LAYERS[name], outline=name != "face_scar"))
     finally:
         use_build(LEGACY_BUILD)
+        _FACING[0] = "south"
     return out

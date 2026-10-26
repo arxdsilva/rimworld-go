@@ -3,11 +3,11 @@ version: 1
 id: "core:furniture/workbench_basic_east"
 image: generated/world/furniture/workbench_basic_east.png
 scale: 2
-canvas: [160, 356]
+canvas: [160, 336]
 footprint: [1, 2]
-origin_px: [16, 84]
+origin_px: [16, 64]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: box
   w: 0.88

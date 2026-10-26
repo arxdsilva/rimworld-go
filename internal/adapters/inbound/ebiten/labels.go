@@ -92,7 +92,8 @@ func (r *Renderer) drawChatBubbles(screen *ebiten.Image, tile float64) {
 			continue
 		}
 		wx, wy := r.interpWorld(p)
-		sx, sy := r.worldToScreenF(wx+0.75, wy-0.55)
+		_, hy := pawnHead(r.art)
+		sx, sy := r.worldToScreenF(wx+0.75, wy+hy-chatAboveHead)
 		bw := float32(tile * 0.42)
 		key := "ui_icon/social_chitchat" // a plain chat
 		if social {
@@ -119,7 +120,7 @@ func (r *Renderer) drawChatBubbles(screen *ebiten.Image, tile float64) {
 // drawFightMarker floats a red lightning bolt over a colonist in a social
 // fight (overlay/fight_lightning; vector bolt while the art is missing).
 func (r *Renderer) drawFightMarker(screen *ebiten.Image, wx, wy, tile float64) {
-	sx, sy := r.worldToScreenF(wx+0.5, wy-0.95)
+	sx, sy := r.worldToScreenF(wx+0.5, wy-pawnMarkerLift(r.art))
 	if img := r.art.image("overlay/fight_lightning", noTint); img != nil {
 		size := tile * 0.32 // physical, like the position; worldIcon takes it logical
 		worldIcon(screen, img, float64(sx)-size/2, float64(sy)-size/2, size/uiScale())
@@ -142,7 +143,7 @@ func (r *Renderer) drawBreakClouds(screen *ebiten.Image, tile float64) {
 		}
 		wx, wy := r.interpWorld(p)
 		bob := math.Sin(float64(r.present)/14+float64(p.ID)) * 0.04
-		sx, sy := r.worldToScreenF(wx+0.5, wy-1.0+bob)
+		sx, sy := r.worldToScreenF(wx+0.5, wy-pawnMarkerLift(r.art)-0.05+bob)
 		c := color.RGBA{70, 70, 84, 230}
 		for _, o := range [][3]float64{{-0.12, 0.02, 0.10}, {0.0, -0.03, 0.13}, {0.13, 0.02, 0.10}} {
 			vector.FillCircle(screen, sx+float32(o[0]*tile), sy+float32(o[1]*tile), float32(o[2]*tile), c, true)
@@ -153,14 +154,30 @@ func (r *Renderer) drawBreakClouds(screen *ebiten.Image, tile float64) {
 	}
 }
 
-// drawHostileMarker floats a red chevron over a raider (orange while it
-// flees).
-func (r *Renderer) drawHostileMarker(screen *ebiten.Image, p game.PawnView, wx, wy, tile float64) {
+// Marker heights over a pawn, from its head centre (pawnHead, the body
+// metadata): status markers float markerAboveHead tiles above it, clear
+// of hair and hats; a chat bubble sits chatAboveHead above it, beside the
+// head.
+const (
+	markerAboveHead = 0.5
+	chatAboveHead   = 0.2
+)
+
+// pawnMarkerLift is how far above its tile's top a pawn's status markers
+// float (hostile chevron, draft icon, fight bolt), in tiles.
+func pawnMarkerLift(c *artCatalog) float64 {
+	_, hy := pawnHead(c)
+	return markerAboveHead - hy
+}
+
+// drawHostileMarker floats a red chevron lift tiles above the top of tile
+// (wx, wy): over a raider (orange while it flees) or a hostile animal.
+func (r *Renderer) drawHostileMarker(screen *ebiten.Image, p game.PawnView, wx, wy, lift, tile float64) {
 	c := color.RGBA{220, 50, 40, 240}
 	if p.Fleeing {
 		c = color.RGBA{230, 150, 50, 220}
 	}
-	sx, sy := r.worldToScreenF(wx+0.5, wy-0.95)
+	sx, sy := r.worldToScreenF(wx+0.5, wy-lift)
 	w, h := float32(tile*0.13), float32(tile*0.1)
 	th := float32(tile * 0.06)
 	vector.StrokeLine(screen, sx-w, sy-h, sx, sy+h, th, c, true)

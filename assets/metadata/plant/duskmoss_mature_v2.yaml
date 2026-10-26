@@ -3,11 +3,11 @@ version: 1
 id: "core:plant/duskmoss_mature_v2"
 image: generated/world/plant/duskmoss_mature_v2.png
 scale: 2
-canvas: [180, 171]
+canvas: [180, 169]
 footprint: [1, 1]
-origin_px: [26, 24]
+origin_px: [26, 22]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: blob
   w: 0.702

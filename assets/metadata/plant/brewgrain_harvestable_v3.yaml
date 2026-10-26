@@ -3,11 +3,11 @@ version: 1
 id: "core:plant/brewgrain_harvestable_v3"
 image: generated/world/plant/brewgrain_harvestable_v3.png
 scale: 2
-canvas: [166, 192]
+canvas: [166, 181]
 footprint: [1, 1]
-origin_px: [19, 49]
+origin_px: [19, 38]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: blob
   w: 0.578

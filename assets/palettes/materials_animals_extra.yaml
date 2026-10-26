@@ -1,54 +1,55 @@
 # Extra animal materials (ART-011, A2): birds, reptiles and the hive insects.
 # Merged over materials.yaml by the palette loader (materials_*.yaml).
 # Same format as materials.yaml: three toon bands per material.
+# palette_mute: applied materials (sat=0.8 contrast=0.8 light=0.96 warm=8)
 version: 1
 materials:
   # birds: plumage
-  feather_black:   {light: "#4d4d58", base: "#2c2b33", shadow: "#18171c"}
-  feather_white:   {light: "#fdfdfb", base: "#ecede9", shadow: "#b4bac6"}
-  feather_grey:    {light: "#c9ccd2", base: "#a2a7b0", shadow: "#767b86"}
-  feather_emu:     {light: "#8c7b66", base: "#66594a", shadow: "#42392f"}
-  feather_emu_dark: {light: "#5c5046", base: "#40372f", shadow: "#27221d"}
-  feather_rust:    {light: "#e0803a", base: "#b9561f", shadow: "#82360f"}
-  feather_hen:     {light: "#d8b27a", base: "#b48a54", shadow: "#7d5b34"}
-  feather_cream:   {light: "#fcf1d8", base: "#e9d8b2", shadow: "#baa67e"}
-  feather_green:   {light: "#46806a", base: "#265a48", shadow: "#143428"}
-  feather_mallard: {light: "#5fc383", base: "#32995a", shadow: "#1f6a3b"}
-  feather_duck:    {light: "#b2a392", base: "#8b7d6e", shadow: "#625649"}
-  feather_bronze:  {light: "#9a7544", base: "#6b4b28", shadow: "#42301a"}
-  feather_band:    {light: "#ecd7a6", base: "#cfb47c", shadow: "#9c8553"}
+  feather_black:   {light: "#46454d", base: "#2d2d33", shadow: "#1e1c21"}
+  feather_white:   {light: "#f0f0ee", base: "#ecedea", shadow: "#c2c4cd"}
+  feather_grey:    {light: "#bbbec3", base: "#a5a9b0", shadow: "#82848e"}
+  feather_emu:     {light: "#7f7363", base: "#665c50", shadow: "#494139"}
+  feather_emu_dark: {light: "#534a43", base: "#403932", shadow: "#2c2723"}
+  feather_rust:    {light: "#d08552", base: "#b96a3e", shadow: "#8d5a2b"}
+  feather_hen:     {light: "#c8ab80", base: "#b49267", shadow: "#88694a"}
+  feather_cream:   {light: "#eee5d0", base: "#e9dbbd", shadow: "#c3ae94"}
+  feather_green:   {light: "#487463", base: "#305a4c", shadow: "#1f3c2d"}
+  feather_mallard: {light: "#66b382", base: "#479967", shadow: "#337343"}
+  feather_duck:    {light: "#a3988b", base: "#8b8074", shadow: "#6a6056"}
+  feather_bronze:  {light: "#8b6f4c", base: "#6b5135", shadow: "#4a3826"}
+  feather_band:    {light: "#ddcca5", base: "#cfb98d", shadow: "#a68b6a"}
   # birds: bare skin, bills, legs
-  skin_red:        {light: "#f06c58", base: "#cc3d30", shadow: "#8f2820"}
-  skin_blue:       {light: "#7ec0ee", base: "#438bd2", shadow: "#2c5f9f"}
-  skin_bluegrey:   {light: "#b3c3d0", base: "#8a9eb0", shadow: "#62768a"}
-  skin_pinkgrey:   {light: "#e8ccc8", base: "#cba7a3", shadow: "#9b7b7a"}
-  casque_brown:    {light: "#c89a62", base: "#9a6c3a", shadow: "#684625"}
-  beak_yellow:     {light: "#fbdc7a", base: "#e4ae3c", shadow: "#aa7b24"}
-  beak_orange:     {light: "#ffb455", base: "#f08a1f", shadow: "#b25a10"}
-  beak_dark:       {light: "#7f766c", base: "#58504a", shadow: "#37312d"}
-  scale_legs:      {light: "#b6bcbc", base: "#8e9696", shadow: "#646c6c"}
-  scale_legs_yellow: {light: "#f3d474", base: "#d3a640", shadow: "#9a7625"}
+  skin_red:        {light: "#df786a", base: "#cc5a4f", shadow: "#9b4f3b"}
+  skin_blue:       {light: "#84b8df", base: "#6099d2", shadow: "#4968a9"}
+  skin_bluegrey:   {light: "#aab7c2", base: "#92a2b0", shadow: "#728692"}
+  skin_pinkgrey:   {light: "#d9c2bf", base: "#cbaeab", shadow: "#a58e89"}
+  casque_brown:    {light: "#b7946a", base: "#9a754d", shadow: "#725538"}
+  beak_yellow:     {light: "#edd183", base: "#e4b95e", shadow: "#b68045"}
+  beak_orange:     {light: "#f2b469", base: "#f09e49", shadow: "#be7a35"}
+  beak_dark:       {light: "#726c65", base: "#58524d", shadow: "#3e3935"}
+  scale_legs:      {light: "#a8adad", base: "#909696", shadow: "#6e7474"}
+  scale_legs_yellow: {light: "#e3c97f", base: "#d3af5d", shadow: "#a57a43"}
   # reptiles
-  scale_olive:     {light: "#aea468", base: "#87804a", shadow: "#5c5732"}
-  scale_cream:     {light: "#f8efcf", base: "#e2d3a4", shadow: "#b1a176"}
-  scale_dark:      {light: "#5a5232", base: "#3a3421", shadow: "#241f13"}
-  scale_green:     {light: "#a3d96e", base: "#74b146", shadow: "#4b7c2d"}
-  scale_green_dark: {light: "#65983f", base: "#48702b", shadow: "#2f4b1c"}
-  scale_spine:     {light: "#e0eaa6", base: "#b8c96e", shadow: "#86964a"}
-  scale_pale:      {light: "#dcecb2", base: "#bcd584", shadow: "#8aa45e"}
-  shell_olive:     {light: "#b1ab60", base: "#878144", shadow: "#5b562c"}
-  shell_sand:      {light: "#ead49a", base: "#cdac6c", shadow: "#967a48"}
-  shell_seam:      {light: "#4a4130", base: "#33291c", shadow: "#201911"}
-  skin_tortoise:   {light: "#cdbf93", base: "#a89870", shadow: "#766a4e"}
+  scale_olive:     {light: "#a0986b", base: "#878156", shadow: "#655b40"}
+  scale_cream:     {light: "#eae2c7", base: "#e2d6b0", shadow: "#bba88b"}
+  scale_dark:      {light: "#504a34", base: "#3a3526", shadow: "#28221a"}
+  scale_green:     {light: "#9ec976", base: "#80b15b", shadow: "#678743"}
+  scale_green_dark: {light: "#658a49", base: "#507039", shadow: "#405229"}
+  scale_spine:     {light: "#d2daa3", base: "#bbc980", shadow: "#9ca061"}
+  scale_pale:      {light: "#d0deae", base: "#c1d594", shadow: "#a1ae74"}
+  shell_olive:     {light: "#a29d66", base: "#878251", shadow: "#645a3b"}
+  shell_sand:      {light: "#dbc89b", base: "#cdb37f", shadow: "#a18160"}
+  shell_seam:      {light: "#433c2f", base: "#332b21", shadow: "#241d17"}
+  skin_tortoise:   {light: "#beb391", base: "#a89b7b", shadow: "#80715d"}
   # hive insects
-  chitin_teal:     {light: "#3f9e9a", base: "#1f6a68", shadow: "#103f40"}
-  chitin_violet:   {light: "#9c8aea", base: "#6a58c4", shadow: "#443789"}
-  chitin_teal_dark: {light: "#3d7c7a", base: "#235251", shadow: "#133231"}
-  chitin_black:    {light: "#4a4a50", base: "#2d2d33", shadow: "#18181c"}
-  chitin_rust:     {light: "#bf6f3e", base: "#924826", shadow: "#602d16"}
-  chitin_rust_dark: {light: "#80411f", base: "#5c2c15", shadow: "#3a1b0c"}
-  chitin_bone:     {light: "#eddcb9", base: "#cbb28a", shadow: "#917c5a"}
-  chitin_ochre:    {light: "#e6b650", base: "#c4932a", shadow: "#8c6215"}
-  eye_amber:       {light: "#ffd464", base: "#f0a822", shadow: "#a8650f"}
+  chitin_teal:     {light: "#488e8b", base: "#2e6a68", shadow: "#1e4843"}
+  chitin_violet:   {light: "#9c8ed9", base: "#7c6ec4", shadow: "#644f95"}
+  chitin_teal_dark: {light: "#416f6e", base: "#2c5251", shadow: "#1d3834"}
+  chitin_black:    {light: "#434347", base: "#2e2e33", shadow: "#1e1d21"}
+  chitin_rust:     {light: "#af724f", base: "#92573c", shadow: "#6a4629"}
+  chitin_rust_dark: {light: "#74462d", base: "#5c3623", shadow: "#412b18"}
+  chitin_bone:     {light: "#ddcfb3", base: "#cbb797", shadow: "#9d866f"}
+  chitin_ochre:    {light: "#d6b162", base: "#c49d49", shadow: "#976732"}
+  eye_amber:       {light: "#f2cc73", base: "#f0b64b", shadow: "#b67534"}
 emissive:
   hive_glow: "#ffb02e"

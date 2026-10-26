@@ -3,11 +3,11 @@ version: 1
 id: "core:furniture/grave_dug_east"
 image: generated/world/furniture/grave_dug_east.png
 scale: 2
-canvas: [288, 226]
+canvas: [288, 206]
 footprint: [2, 1]
-origin_px: [16, 82]
+origin_px: [16, 62]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: box
   w: 2

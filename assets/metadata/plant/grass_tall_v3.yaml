@@ -3,11 +3,11 @@ version: 1
 id: "core:plant/grass_tall_v3"
 image: generated/world/plant/grass_tall_v3.png
 scale: 2
-canvas: [166, 203]
+canvas: [166, 189]
 footprint: [1, 1]
-origin_px: [19, 60]
+origin_px: [19, 46]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: blob
   w: 0.485

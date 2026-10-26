@@ -3,11 +3,11 @@ version: 1
 id: "core:tool/bandage"
 image: generated/world/tool/bandage.png
 scale: 2
-canvas: [160, 170]
+canvas: [160, 167]
 footprint: [1, 1]
-origin_px: [16, 26]
+origin_px: [16, 23]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: none
   w: 0.536
@@ -20,6 +20,6 @@ tool: bandage
 rotatable: true
 points: east
 attachments:
-  grip: [62.1, 83.6]
-  support: [90.2, 88.1]
-  head: [117.1, 88.1]
+  grip: [62.1, 82.5]
+  support: [90.2, 85.7]
+  head: [117.1, 85.7]

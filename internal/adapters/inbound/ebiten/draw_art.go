@@ -778,15 +778,6 @@ func twoDigits(n int) string {
 	return string(rune('0'+n/10)) + string(rune('0'+n%10))
 }
 
-// look returns the stable appearance for a pawn.
-func (r *Renderer) look(p game.PawnView) pawnLook {
-	l := lookFor(uint64(p.ID), r.art.tintNames("skin"), r.art.tintNames("hair"), r.colonyCloths())
-	if p.Hostile { // raiders wear dark maroon
-		l.Shirt, l.Vest, l.Pants = raiderCloth, raiderCloth, "slate"
-	}
-	return l
-}
-
 // colonyCloths lists the cloth tints colonists and their beds may use; the
 // raider tint is held back so hostiles stand out.
 func (r *Renderer) colonyCloths() []string {
@@ -802,67 +793,18 @@ func (r *Renderer) colonyCloths() []string {
 // raiderCloth is the tint reserved for raider clothing.
 const raiderCloth = "raider"
 
-// pawnLayers lists (sprite key, tint) in draw order for one facing.
-func (r *Renderer) pawnLayers(l pawnLook, f facing, apparel ...string) []struct {
-	key  string
-	tint color.NRGBA
-} {
-	fs := f.String()
-	out := []struct {
-		key  string
-		tint color.NRGBA
-	}{
-		{"pawn/body_" + fs, r.art.tint("skin", l.Skin)},
-		{"pawn/pants_basic_" + fs, r.art.tint("cloth", l.Pants)},
-		{"pawn/shirt_basic_" + fs, r.art.tint("cloth", l.Shirt)},
-	}
-	if l.Vest != "" {
-		out = append(out, struct {
-			key  string
-			tint color.NRGBA
-		}{"pawn/vest_utility_" + fs, r.art.tint("cloth", l.Vest)})
-	}
-	type layer = struct {
-		key  string
-		tint color.NRGBA
-	}
-	hat := ""
-	for _, a := range apparel { // outer garments go over shirt and vest
-		switch a {
-		case "parka":
-			out = append(out, layer{"pawn/parka_leather_" + fs, color.NRGBA{}})
-		case "wool parka": // the leather parka layer, tinted cream
-			out = append(out, layer{"pawn/parka_leather_" + fs, color.NRGBA{R: 238, G: 228, B: 200, A: 255}})
-		case "duster":
-			out = append(out, layer{"pawn/duster_leather_" + fs, color.NRGBA{}})
-		case "tuque":
-			hat = "pawn/tuque_knit_" + fs
-		}
-	}
-	out = append(out, layer{"pawn/" + l.HairStyle + "_" + fs, r.art.tint("hair", l.Hair)})
-	if hat != "" {
-		out = append(out, layer{hat, r.art.tint("cloth", l.Pants)})
-	}
-	return out
+// pawnFigureLayers lists p's sprites bottom first in art facing fs: its
+// own look (build, beard, hair; PawnView.Look) dressed in its apparel, a
+// raider's maroon clothes, and a disfigured pawn's face scar over the
+// hair (under a hat) when the art has one.
+func (r *Renderer) pawnFigureLayers(p game.PawnView, fs string) []portraitLayer {
+	return figureLayers(r.art, p.Look, fs, figureDress{apparel: p.Apparel, scarred: p.Disfigured, raider: p.Hostile})
 }
 
-// pawnPortraitLayers is p's south-facing portrait, bottom first: its
-// figure layers with a disfigured pawn's face scar over the hair (under a
-// hat), or on the face when it has no hair layer; no scar without the art.
+// pawnPortraitLayers is p's south-facing portrait, bottom first: the
+// colony figure's layers (pawnFigureLayers).
 func (r *Renderer) pawnPortraitLayers(p game.PawnView) []portraitLayer {
-	scar := p.Disfigured && r.art.has(faceScarSouth)
-	var out []portraitLayer
-	for _, ly := range r.pawnLayers(r.look(p), faceSouth, p.Apparel...) {
-		out = append(out, portraitLayer{ly.key, ly.tint})
-		if scar && strings.HasPrefix(ly.key, "pawn/hair_") {
-			scar = false
-			out = append(out, portraitLayer{faceScarSouth, color.NRGBA{}})
-		}
-	}
-	if scar {
-		out = append(out, portraitLayer{faceScarSouth, color.NRGBA{}})
-	}
-	return out
+	return r.pawnFigureLayers(p, "south")
 }
 
 // faceScarSouth is the south-facing face scar of a disfigured pawn.

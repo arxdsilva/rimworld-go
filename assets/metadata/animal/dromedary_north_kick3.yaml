@@ -3,11 +3,11 @@ version: 1
 id: "core:animal/dromedary_north_kick3"
 image: generated/world/animal/dromedary_north_kick3.png
 scale: 2
-canvas: [256, 270]
+canvas: [256, 240]
 footprint: [1, 1]
-origin_px: [64, 128]
+origin_px: [64, 98]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: blob
   w: 0.29

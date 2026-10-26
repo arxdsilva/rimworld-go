@@ -3,11 +3,11 @@ version: 1
 id: "core:furniture/campfire"
 image: generated/world/furniture/campfire.png
 scale: 2
-canvas: [160, 180]
+canvas: [160, 174]
 footprint: [1, 1]
-origin_px: [16, 36]
+origin_px: [16, 30]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: box
   w: 0.89

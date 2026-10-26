@@ -1,30 +1,31 @@
 # NG-1 new-game art: water and ground, salvage items, drop pod, storyteller
 # busts. Original colours. Merged over materials.yaml by the palette loader.
+# palette_mute: applied materials (sat=0.8 contrast=0.8 light=0.96 warm=8)
 version: 1
 materials:
   # terrain (ART §8): water, mud, dirt track
-  water_shallow: {light: "#9fdbd9", base: "#58aebd", shadow: "#3b869b"}
-  water_deep:    {light: "#4a86b0", base: "#2c628f", shadow: "#1d4468"}
-  water_foam:    {light: "#ffffff", base: "#f1f9fa", shadow: "#c2dde2"}
-  mud:           {light: "#7b6648", base: "#5e4a36", shadow: "#42342a"}
-  mud_wet:       {light: "#9a8366", base: "#76624a", shadow: "#54443a"}
-  track_dirt:    {light: "#c1a67d", base: "#a98d66", shadow: "#86704f"}
+  water_shallow: {light: "#98cacb", base: "#6cb1bd", shadow: "#549ca2"}
+  water_deep:    {light: "#5582a3", base: "#406b8f", shadow: "#305a70"}
+  water_foam:    {light: "#f2f4f4", base: "#f3f9fa", shadow: "#d1e6e7"}
+  mud:           {light: "#71614b", base: "#5e4e3e", shadow: "#483d32"}
+  mud_wet:       {light: "#8d7c66", base: "#766653", shadow: "#5b4f43"}
+  track_dirt:    {light: "#b5a081", base: "#a99373", shadow: "#8d765f"}
   # salvage and medicine (items, furniture)
-  circuit:       {light: "#6fc08a", base: "#3f9166", shadow: "#2a6648"}
-  copper:        {light: "#f0b183", base: "#cf8353", shadow: "#9a5a35"}
+  circuit:       {light: "#71af88", base: "#4f916f", shadow: "#3b6f4e"}
+  copper:        {light: "#e0ae8a", base: "#cf926c", shadow: "#a57a50"}
   med_blue:      {light: "#9fd0ee", base: "#5b9fd0", shadow: "#3b73a3"}
   med_white:     {light: "#ffffff", base: "#f0f1f2", shadow: "#bfc5cc"}
   med_red:       {light: "#ee7a6c", base: "#cf4a3d", shadow: "#9a2f28"}
-  sheet_teal:    {light: "#bfe6e0", base: "#8fcdc4", shadow: "#62a399"}
+  sheet_teal:    {light: "#b7d8d3", base: "#9bcdc6", shadow: "#78ab9d"}
   # drop pod hull
-  pod_hull:      {light: "#9aa4ad", base: "#6f7983", shadow: "#4b535c"}
-  pod_scorch:    {light: "#4a4540", base: "#33302d", shadow: "#211f1d"}
-  pod_paint:     {light: "#e89a4a", base: "#c97429", shadow: "#8e501c"}
+  pod_hull:      {light: "#8f979e", base: "#737b83", shadow: "#565b64"}
+  pod_scorch:    {light: "#433f3c", base: "#33312e", shadow: "#252321"}
+  pod_paint:     {light: "#d99c5f", base: "#c98549", shadow: "#9a6937"}
   pod_glow:      {light: "#ffe0a0", base: "#ffbf62", shadow: "#e0903a"}
-  dust_cloud:    {light: "#d8c9ad", base: "#bcab8d", shadow: "#9b8b70"}
+  dust_cloud:    {light: "#cabea8", base: "#bcae96", shadow: "#a2907f"}
   # fixed colours, never tinted (shared by power, furniture, item, rock, structure)
-  jacket_navy:   {light: "#4a5f8c", base: "#33456b", shadow: "#212d4a"}
-  mug_blue:      {light: "#9bb8d6", base: "#6a8cb2", shadow: "#475f82"}
-  brass:         {light: "#ffe58a", base: "#e0b441", shadow: "#a67a1f"}
-  backdrop:      {light: "#2e3340", base: "#242833", shadow: "#171a22"}
-  steel_dark:    {light: "#7d8892", base: "#59636c", shadow: "#3b434a"}
+  jacket_navy:   {light: "#4f5f80", base: "#3e4d6b", shadow: "#2d3351"}
+  mug_blue:      {light: "#97aec7", base: "#7894b2", shadow: "#5a698c"}
+  brass:         {light: "#efd88f", base: "#e0bd61", shadow: "#b27f42"}
+  backdrop:      {light: "#2e313b", base: "#272a33", shadow: "#1c1d25"}
+  steel_dark:    {light: "#757d85", base: "#5d656c", shadow: "#444d51"}

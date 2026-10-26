@@ -3,8 +3,9 @@
 Iterates the binding roster (animal_roster.py) and hands each species to
 the builder registered for its archetype (families/animals/). The
 builders share one rig (animals/rig.py): a parametric Body spec, posed at
-build time, rendered in four facings with trot, attack, graze and flinch
-frames, plus three corpse poses.
+build time, rendered in three facings (south, east, north; the renderer
+mirrors east for west) with trot, attack, graze and flinch frames, plus
+three corpse poses.
 
 Environment (for quick iteration):
     ANIMALS=deer,cow          render only these roster keys

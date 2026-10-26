@@ -1,7 +1,6 @@
 package ebiten
 
 import (
-	"fmt"
 	"math"
 
 	"rimworld-go/internal/application/game"
@@ -13,14 +12,17 @@ import (
 
 // --- work motion --------------------------------------------------------
 
-// motion is the generic arm pattern used when an action's own pose set
-// is missing from the art.
+// motion is how an action moves the figure and its tool (ART §27.2): the
+// body has no arms, so a whole-figure transform and the tool's turn about
+// its grip carry the work.
 type motion uint8
 
 const (
-	motionNone  motion = iota // no arm frames
-	motionSwing               // overhead: wind-up, strike, recover
-	motionReach               // hands working low in front
+	motionNone  motion = iota
+	motionSwing        // overhead: tool raised, driven down, recovered; the body squashes on the strike
+	motionReach        // low work in front: lean in and dip (tend, plant, pick)
+	motionBench        // hands at a bench: a small lean and bob
+	motionEat          // the spoon goes to the mouth and back, the head bobs to it
 )
 
 // partAt is where an action's particles spawn.
@@ -38,59 +40,55 @@ type partSpec struct {
 	count int
 }
 
-// actionDef is one row of the work table: the pose set, its timing, what
+// actionDef is one row of the work table: the motion, its timing, what
 // is held, how the body leans and what each strike throws up.
 type actionDef struct {
-	set      string  // body frame prefix ("_chop" -> _chop1.._chop6)
-	frames   int     // frames in the set
-	strike   int     // 1-based frame where the tool lands
-	period   int     // animT ticks per loop
-	reach    float64 // lean towards the worked tile, tiles
-	lean     float64 // body rotation towards the tile at full swing, radians
-	squash   float64 // kneel / crouch at full swing, 0..1
-	tool     string  // held sprite key; "" is bare hands
-	stance   heldStance
-	off      string // sprite key drawn at hand_l (bowl)
-	kneel    bool   // fall back to the _kneel frame before the generic ones
-	fallback motion // generic _work frames when the set is missing
-	at       partAt
-	parts    []partSpec
+	motion motion
+	period int     // animT ticks per loop; the strike lands at strikeAt
+	reach  float64 // lean towards the worked tile, tiles
+	lean   float64 // body rotation towards the tile at full swing, radians
+	squash float64 // kneel / crouch at full swing, 0..1
+	tool   string  // held sprite key; "" is bare hands
+	stance heldStance
+	off    string // sprite key held level under the tool (bowl)
+	at     partAt
+	parts  []partSpec
 }
 
 // workTable is the single source of truth for hands-on actions (ART
 // §27.2). Combat (aim, melee) and carrying (rescue, haul) are other layers.
 var workTable = map[string]actionDef{
-	game.ActionChop: {set: "_chop", frames: 6, strike: 4, period: 46, reach: 0.10, lean: 0.14, tool: "tool/axe", stance: stanceHands, fallback: motionSwing, parts: []partSpec{{partChip, 4}}},
-	game.ActionMine: {set: "_mine", frames: 6, strike: 4, period: 50, reach: 0.12, lean: 0.16, squash: 0.03, tool: "tool/pickaxe", stance: stanceHands, fallback: motionSwing, parts: []partSpec{{partSpark, 3}, {partDust, 4}}},
+	game.ActionChop: {motion: motionSwing, period: 46, reach: 0.10, lean: 0.14, tool: "tool/axe", stance: stanceHands, parts: []partSpec{{partChip, 4}}},
+	game.ActionMine: {motion: motionSwing, period: 50, reach: 0.12, lean: 0.16, squash: 0.03, tool: "tool/pickaxe", stance: stanceHands, parts: []partSpec{{partSpark, 3}, {partDust, 4}}},
 	// Smoothing (SIM-029): the mine swing, shorter and lighter, with dust.
-	game.ActionSmooth:      {set: "_mine", frames: 6, strike: 4, period: 40, reach: 0.08, lean: 0.10, squash: 0.03, tool: "tool/pickaxe", stance: stanceHands, fallback: motionSwing, parts: []partSpec{{partDust, 3}}},
-	game.ActionBreach:      {set: "_mine", frames: 6, strike: 4, period: 44, reach: 0.12, lean: 0.16, squash: 0.03, tool: "tool/pickaxe", stance: stanceHands, fallback: motionSwing, parts: []partSpec{{partSpark, 3}, {partDust, 4}}},
-	game.ActionBuild:       {set: "_hammer", frames: 4, strike: 3, period: 34, reach: 0.08, lean: 0.10, tool: "tool/hammer", stance: stanceHands, fallback: motionSwing, parts: []partSpec{{partSawdust, 3}}},
-	game.ActionDeconstruct: {set: "_hammer", frames: 4, strike: 3, period: 34, reach: 0.08, lean: 0.10, tool: "tool/hammer", stance: stanceHands, fallback: motionSwing, parts: []partSpec{{partSawdust, 3}}},
-	game.ActionRepair:      {set: "_hammer", frames: 4, strike: 3, period: 38, reach: 0.08, lean: 0.10, tool: "tool/hammer", stance: stanceHands, fallback: motionSwing, parts: []partSpec{{partSawdust, 2}}},
-	game.ActionSow:         {set: "_plant", frames: 4, strike: 3, period: 48, reach: 0.05, lean: 0.06, squash: 0.14, tool: "tool/trowel", stance: stanceUpright, kneel: true, fallback: motionReach, at: atHand, parts: []partSpec{{partSoil, 3}}},
-	game.ActionHarvest:     {set: "_pick", frames: 4, strike: 3, period: 44, reach: 0.07, lean: 0.06, squash: 0.10, tool: "tool/sickle", stance: stanceUpright, fallback: motionReach, parts: []partSpec{{partLeaf, 3}}},
-	// Sweeping (SIM-021): the low pick frames with a broom and a puff of dust.
-	game.ActionClean:    {set: "_pick", frames: 4, strike: 3, period: 40, reach: 0.06, lean: 0.05, squash: 0.06, tool: "tool/broom", stance: stanceUpright, fallback: motionReach, parts: []partSpec{{partDust, 2}}},
-	game.ActionCraft:    {set: "_bench", frames: 4, strike: 2, period: 30, reach: 0.05, lean: 0.03, fallback: motionSwing, parts: []partSpec{{partShaving, 2}}},
-	game.ActionCook:     {set: "_bench", frames: 4, strike: 2, period: 40, reach: 0.04, lean: 0.03, fallback: motionReach, at: atStove, parts: []partSpec{{partSteam, 1}}},
-	game.ActionTailor:   {set: "_bench", frames: 4, strike: 2, period: 44, reach: 0.05, lean: 0.03, fallback: motionReach, parts: []partSpec{{partShaving, 1}}},
-	game.ActionButcher:  {set: "_bench", frames: 4, strike: 3, period: 36, reach: 0.06, lean: 0.04, fallback: motionSwing, parts: []partSpec{{partBlood, 2}}},
-	game.ActionResearch: {set: "_bench", frames: 4, strike: 2, period: 60, reach: 0.03, lean: 0.02, fallback: motionReach},
-	game.ActionTend:     {set: "_tend", frames: 4, strike: 2, period: 60, reach: 0.05, lean: 0.06, squash: 0.16, tool: "tool/bandage", stance: stanceUpright, kneel: true, fallback: motionReach},
-	game.ActionTame:     {set: "_offer", frames: 2, strike: 2, period: 64, reach: 0.04, lean: 0.04, squash: 0.12, fallback: motionReach},
+	game.ActionSmooth:      {motion: motionSwing, period: 40, reach: 0.08, lean: 0.10, squash: 0.03, tool: "tool/pickaxe", stance: stanceHands, parts: []partSpec{{partDust, 3}}},
+	game.ActionBreach:      {motion: motionSwing, period: 44, reach: 0.12, lean: 0.16, squash: 0.03, tool: "tool/pickaxe", stance: stanceHands, parts: []partSpec{{partSpark, 3}, {partDust, 4}}},
+	game.ActionBuild:       {motion: motionSwing, period: 34, reach: 0.08, lean: 0.10, tool: "tool/hammer", stance: stanceHands, parts: []partSpec{{partSawdust, 3}}},
+	game.ActionDeconstruct: {motion: motionSwing, period: 34, reach: 0.08, lean: 0.10, tool: "tool/hammer", stance: stanceHands, parts: []partSpec{{partSawdust, 3}}},
+	game.ActionRepair:      {motion: motionSwing, period: 38, reach: 0.08, lean: 0.10, tool: "tool/hammer", stance: stanceHands, parts: []partSpec{{partSawdust, 2}}},
+	game.ActionSow:         {motion: motionReach, period: 48, reach: 0.05, lean: 0.06, squash: 0.14, tool: "tool/trowel", stance: stanceUpright, at: atHand, parts: []partSpec{{partSoil, 3}}},
+	game.ActionHarvest:     {motion: motionReach, period: 44, reach: 0.07, lean: 0.06, squash: 0.10, tool: "tool/sickle", stance: stanceUpright, parts: []partSpec{{partLeaf, 3}}},
+	// Sweeping (SIM-021): the low reach with a broom and a puff of dust.
+	game.ActionClean:    {motion: motionReach, period: 40, reach: 0.06, lean: 0.05, squash: 0.06, tool: "tool/broom", stance: stanceUpright, parts: []partSpec{{partDust, 2}}},
+	game.ActionCraft:    {motion: motionBench, period: 30, reach: 0.05, lean: 0.03, parts: []partSpec{{partShaving, 2}}},
+	game.ActionCook:     {motion: motionBench, period: 40, reach: 0.04, lean: 0.03, at: atStove, parts: []partSpec{{partSteam, 1}}},
+	game.ActionTailor:   {motion: motionBench, period: 44, reach: 0.05, lean: 0.03, parts: []partSpec{{partShaving, 1}}},
+	game.ActionButcher:  {motion: motionBench, period: 36, reach: 0.06, lean: 0.04, parts: []partSpec{{partBlood, 2}}},
+	game.ActionResearch: {motion: motionBench, period: 60, reach: 0.03, lean: 0.02},
+	game.ActionTend:     {motion: motionReach, period: 60, reach: 0.05, lean: 0.06, squash: 0.16, tool: "tool/bandage", stance: stanceUpright},
+	game.ActionTame:     {motion: motionReach, period: 64, reach: 0.04, lean: 0.04, squash: 0.12},
 	// Milking kneels beside the animal; shearing works at its flank (SIM-026).
-	game.ActionMilk:  {set: "_tend", frames: 4, strike: 2, period: 56, reach: 0.04, lean: 0.05, squash: 0.12, stance: stanceUpright, kneel: true, fallback: motionReach},
-	game.ActionShear: {set: "_pick", frames: 4, strike: 3, period: 40, reach: 0.06, lean: 0.05, squash: 0.08, stance: stanceUpright, fallback: motionReach},
-	// Spoon in the right hand, bowl level in the left (hand_l).
-	game.ActionEat:    {set: "_eat", frames: 4, strike: 3, period: 50, reach: 0.02, tool: "tool/spoon", stance: stanceUpright, off: "tool/bowl"},
-	game.ActionRefuel: {set: "_bench", frames: 4, strike: 2, period: 40, reach: 0.06, lean: 0.04, fallback: motionReach, parts: []partSpec{{partChip, 1}}},
-	// Burial (SIM-017): shovel on the mine frames, kneeling bare-handed
-	// to fill the grave, the bench frames at the pyre.
-	game.ActionDig:        {set: "_mine", frames: 6, strike: 4, period: 56, reach: 0.10, lean: 0.14, squash: 0.04, tool: "tool/shovel", stance: stanceHands, fallback: motionSwing, parts: []partSpec{{partSoil, 4}}},
-	game.ActionBury:       {set: "_pick", frames: 4, strike: 3, period: 48, reach: 0.06, lean: 0.05, squash: 0.12, kneel: true, fallback: motionReach, parts: []partSpec{{partSoil, 3}}},
-	game.ActionCremate:    {set: "_bench", frames: 4, strike: 2, period: 44, reach: 0.04, lean: 0.03, fallback: motionReach, parts: []partSpec{{partEmber, 2}, {partSmoke, 1}}},
-	game.ActionHorseshoes: {period: 70, reach: 0.04, lean: 0.03, fallback: motionSwing, parts: []partSpec{{partDust, 3}}},
+	game.ActionMilk:  {motion: motionReach, period: 56, reach: 0.04, lean: 0.05, squash: 0.12, stance: stanceUpright},
+	game.ActionShear: {motion: motionReach, period: 40, reach: 0.06, lean: 0.05, squash: 0.08, stance: stanceUpright},
+	// The spoon on hold, lifted to the mouth; the bowl level under it.
+	game.ActionEat:    {motion: motionEat, period: 50, reach: 0.02, tool: "tool/spoon", stance: stanceUpright, off: "tool/bowl"},
+	game.ActionRefuel: {motion: motionBench, period: 40, reach: 0.06, lean: 0.04, parts: []partSpec{{partChip, 1}}},
+	// Burial (SIM-017): the shovel swung like a pickaxe, kneeling
+	// bare-handed to fill the grave, the bench motion at the pyre.
+	game.ActionDig:        {motion: motionSwing, period: 56, reach: 0.10, lean: 0.14, squash: 0.04, tool: "tool/shovel", stance: stanceHands, parts: []partSpec{{partSoil, 4}}},
+	game.ActionBury:       {motion: motionReach, period: 48, reach: 0.06, lean: 0.05, squash: 0.12, parts: []partSpec{{partSoil, 3}}},
+	game.ActionCremate:    {motion: motionBench, period: 44, reach: 0.04, lean: 0.03, parts: []partSpec{{partEmber, 2}, {partSmoke, 1}}},
+	game.ActionHorseshoes: {motion: motionSwing, period: 70, reach: 0.04, lean: 0.03, parts: []partSpec{{partDust, 3}}},
 }
 
 // legacyActions maps the old Acting strings (a fallback when the sim sets
@@ -120,30 +118,6 @@ func actionOf(p game.PawnView) (string, actionDef, bool) {
 // strikeAt is where in a swing the tool lands (phase 0..1).
 const strikeAt = 0.48
 
-// strikeHold is how long the strike frame stays up, in phase.
-const strikeHold = 0.10
-
-// setFrame is the frame suffix of an n-frame set at swing phase ph: the
-// strike frame shows from strikeAt, earlier frames spread before it and
-// later ones after it.
-func setFrame(prefix string, n, strike int, ph float64) string {
-	idx := strike
-	switch {
-	case ph < strikeAt && strike > 1:
-		idx = 1 + int(ph/strikeAt*float64(strike-1))
-	case ph >= strikeAt+strikeHold && n > strike:
-		idx = strike + 1 + int((ph-strikeAt-strikeHold)/(1-strikeAt-strikeHold)*float64(n-strike))
-	}
-	idx = max(1, min(idx, n))
-	return fmt.Sprintf("%s%d", prefix, idx)
-}
-
-// hasFrame reports whether the body art has a frame suffix. Without a
-// catalog (unit tests) every frame is assumed present.
-func (r *Renderer) hasFrame(suffix string) bool {
-	return r.art == nil || r.art.has("pawn/body_east"+suffix)
-}
-
 // workPhase is the 0..1 position within the current swing at animT t
 // (ticks); each pawn is offset so a crew does not swing in unison.
 func workPhase(t float64, id uint64, period int) float64 {
@@ -151,25 +125,6 @@ func workPhase(t float64, id uint64, period int) float64 {
 		return 0
 	}
 	return math.Mod(t+float64(id*13), float64(period)) / float64(period)
-}
-
-// workFrame is the work frame suffix at a swing phase: 1-2 wind-up,
-// 3-4 swing, 5 strike, 6 recover.
-func workFrame(ph float64) string {
-	switch {
-	case ph < 0.15:
-		return "_work1"
-	case ph < 0.30:
-		return "_work2"
-	case ph < 0.39:
-		return "_work3"
-	case ph < strikeAt:
-		return "_work4"
-	case ph < 0.58:
-		return "_work5"
-	default:
-		return "_work6"
-	}
 }
 
 // workSwing is the body lean for a swing at animT t: back a little while
@@ -256,21 +211,43 @@ func (r *Renderer) animateWork(w game.WorldView, pawns []game.PawnView) {
 	}
 }
 
+// Swing arc (motionSwing): the tool's turn about its grip, radians,
+// positive raising its head.
+const (
+	swingRest   = 0.3   // held at rest between strikes
+	swingRaised = 1.9   // wound up over the shoulder
+	swingStrike = -0.55 // driven down into the work at the strike
+	swingSquash = 0.04  // the body's extra squash on the strike
+)
+
+// swingAngle is the tool's turn at swing phase ph: raised while winding
+// up, driven down to swingStrike by strikeAt, recovering to rest.
+func swingAngle(ph float64) float64 {
+	const windUp = 0.40
+	switch {
+	case ph < windUp:
+		return swingRest + (swingRaised-swingRest)*easeOut(ph/windUp)
+	case ph < strikeAt:
+		t := (ph - windUp) / (strikeAt - windUp)
+		return swingRaised + (swingStrike-swingRaised)*t*t
+	}
+	return swingStrike + (swingRest-swingStrike)*easeOut((ph-strikeAt)/(1-strikeAt))
+}
+
+// dipK is the reach, bench and eat motions' weight at phase ph: 0 between
+// strikes, 1 on the strike.
+func dipK(ph float64) float64 {
+	return 0.5 + 0.5*math.Cos(2*math.Pi*(ph-strikeAt))
+}
+
 // carryPose is the arms-full layer: it applies whenever the pawn holds
 // something in its arms, walking or standing. A rescued patient is drawn
-// by drawCarried; the arms pose is the same.
+// by drawCarried, over the rescuer's back.
 func (r *Renderer) carryPose(p game.PawnView, m moveState) actionPose {
 	if p.Carrying == "" {
 		return actionPose{}
 	}
 	a := actionPose{ok: true}
-	if m.Blend >= minBlend {
-		if s := fmt.Sprintf("_carry_walk%02d", walkIndex(m.Stride)+1); r.hasFrame(s) {
-			a.suffix = s
-		} // else the plain walk frame stays
-	} else if r.hasFrame("_carry") {
-		a.suffix = "_carry"
-	}
 	a.held = heldItem{set: true} // bare hands: the patient is drawn over the rescuer
 	if p.Carrying != "pawn" {
 		key, cs := r.stoneItem(itemSprite(p.Carrying), p.Carrying, noCS) // stone takes its tint
@@ -282,9 +259,9 @@ func (r *Renderer) carryPose(p game.PawnView, m moveState) actionPose {
 	return a
 }
 
-// workPose is the hands-on work layer while standing at a job. It uses the
-// action's own pose set, then _kneel for kneeling work, then the generic
-// _work frames, then the static pose.
+// workPose is the hands-on work layer while standing at a job: the
+// action's motion as a transform towards the worked tile and a turn of
+// its tool.
 func (r *Renderer) workPose(p game.PawnView, m moveState) actionPose {
 	_, d, ok := actionOf(p)
 	if !ok || m.Blend >= minBlend {
@@ -292,19 +269,28 @@ func (r *Renderer) workPose(p game.PawnView, m moveState) actionPose {
 	}
 	t := r.animT()
 	ph := workPhase(t, uint64(p.ID), d.period)
-	a := actionPose{ok: true}
-	switch {
-	case d.set != "" && r.hasFrame(d.set+"1"):
-		a.suffix = setFrame(d.set, d.frames, d.strike, ph)
-	case d.kneel && r.hasFrame("_kneel"):
-		a.suffix = "_kneel"
-	case d.fallback == motionSwing || d.fallback == motionReach:
-		a.suffix = workFrame(ph)
-	}
-	k := workSwing(t, uint64(p.ID), d.period)
 	ux, uy := unit(float64(p.ActX-p.X), float64(p.ActY-p.Y))
-	a.squash = d.squash * (0.7 + 0.3*clamp01(k)) // held low, easing deeper on the strike
-	a.dx, a.dy, a.rot = ux*d.reach*k, uy*d.reach*k, ux*d.lean*k
+	a := actionPose{ok: true}
 	a.held = heldItem{set: true, key: d.tool, stance: d.stance, off: d.off} // the tool, or bare hands
+	switch d.motion {
+	case motionSwing:
+		k := workSwing(t, uint64(p.ID), d.period)
+		a.squash = d.squash*(0.7+0.3*clamp01(k)) + swingSquash*clamp01(k)
+		a.dx, a.dy, a.rot = ux*d.reach*k, uy*d.reach*k, ux*d.lean*k
+		a.held.angle = swingAngle(ph)
+	case motionReach:
+		k := dipK(ph)
+		a.squash = d.squash * (0.7 + 0.3*k) // held low, dipping deeper on the strike
+		a.dx, a.dy, a.rot = ux*d.reach*k, uy*d.reach*k+0.02*k, ux*d.lean*k
+		a.held.angle = 0.5 * k // the tool's head reaches into the work
+	case motionBench:
+		k := dipK(ph)
+		a.squash = 0.02 * k
+		a.dx, a.dy, a.rot = ux*d.reach*k, uy*d.reach*k+0.015*k, ux*d.lean*k
+	case motionEat:
+		k := dipK(ph)
+		a.held.lift = 0.6 * k                       // the hand stops short of covering the face
+		a.dx, a.dy = ux*d.reach, uy*d.reach+0.012*k // the head bows to the spoon
+	}
 	return a
 }

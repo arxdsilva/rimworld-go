@@ -3,11 +3,11 @@ version: 1
 id: "core:plant/pumpkin_harvestable_v2"
 image: generated/world/plant/pumpkin_harvestable_v2.png
 scale: 2
-canvas: [166, 170]
+canvas: [166, 166]
 footprint: [1, 1]
-origin_px: [19, 27]
+origin_px: [19, 23]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: blob
   w: 0.469

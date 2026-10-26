@@ -3,11 +3,11 @@ version: 1
 id: "core:furniture/bed_basic_blanket_west"
 image: generated/world/furniture/bed_basic_blanket_west.png
 scale: 2
-canvas: [288, 198]
+canvas: [288, 186]
 footprint: [2, 1]
-origin_px: [16, 54]
+origin_px: [16, 42]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: box
   w: 1.32

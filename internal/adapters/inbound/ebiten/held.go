@@ -10,49 +10,20 @@ import (
 	"rimworld-go/internal/application/game"
 )
 
-// Held items (ART §27.2): weapons and tools in the hands, slung or
-// carried, drawn from the body frame's hand attachments.
-//
-// A two-handed item puts its grip on `hand` and turns so its `support`
-// lies on the line to `hand_l`. A one-handed item hangs from its hand
-// along the forearm (shoulder to hand). Gear sprites point east; facing
-// west mirrors them so they never draw upside down.
+// Held items (ART §27.2): weapons and tools held, slung or carried,
+// anchored on the body's attachments. The body has no arms: an item in
+// use puts its grip on `hold` and turns about it (per-action transforms
+// set the turn); a slung rifle hangs from `back`. No hands are drawn: the
+// item floats at the body's side, as in the reference style. Gear sprites
+// point east; everything is placed in the drawn
+// facing (south, east, north) and the pose mirrors it facing west.
 
-// Held sprite sizes and body landmarks, in tiles.
+// Held sprite sizes and limits.
 const (
-	gearScale    = 0.62 // weapon/* and tool/* relative to the figure
-	itemScale    = 0.5  // ground-item sprites used in the hands (old club, loads)
-	shoulderDrop = 0.22 // shoulder line below the head attachment
-	shoulderSide = 0.11 // shoulder offset from the head seen from front/back
-	slungDrop    = 0.36 // where a slung rifle sits, below the head
-	maxAim       = 0.8  // radians an aimed item may turn off its pose
-	minHandSpan  = 4.0  // hand to hand_l, art px, below which the line is unusable
+	gearScale = 0.62 // weapon/* and tool/* relative to the figure
+	itemScale = 0.5  // ground-item sprites used in the hands (old club, loads)
+	maxAim    = 0.8  // radians an aimed item may turn off its pose
 )
-
-var toolAngles = map[string][3]float64{
-	// east, south, north
-	"_work1": {-1.9, -1.57, -1.57}, "_work2": {-2.2, -1.75, -1.85},
-	"_work3": {-1.2, -0.9, -1.1}, "_work4": {-0.4, 0.2, -0.2},
-	"_work5": {0.55, 1.1, 0.9}, "_work6": {0.1, 0.6, 0.4},
-}
-
-// toolAngle is the held tool's screen rotation for a facing and an old
-// `work` frame (art without hand_l); west mirrors east.
-func toolAngle(f facing, frame string) float64 {
-	a, ok := toolAngles[frame]
-	if !ok {
-		return 0
-	}
-	switch f {
-	case faceWest:
-		return -a[0]
-	case faceSouth:
-		return a[1]
-	case faceNorth:
-		return a[2]
-	}
-	return a[0]
-}
 
 // heldWeaponKey maps a wielded weapon to its held sprite (fists: none).
 func heldWeaponKey(weapon string) (key string, ok bool) {
@@ -67,15 +38,6 @@ func heldWeaponKey(weapon string) (key string, ok bool) {
 		return "weapon/club", true
 	}
 	return "", false
-}
-
-// twoHanded items sit in both hands (grip and support).
-func twoHanded(key string) bool {
-	switch key {
-	case "weapon/rifle_basic", "weapon/spear", "tool/axe", "tool/pickaxe":
-		return true
-	}
-	return false
 }
 
 // heldFallback is drawn while a held sprite has not been generated yet.
@@ -105,9 +67,9 @@ func heldScale(key string) float64 {
 type heldStance uint8
 
 const (
-	stanceHands   heldStance = iota // in the hands: grip on hand, support on hand_l
+	stanceHands   heldStance = iota // in use: grip on hold, pointing along the facing
 	stanceSlung                     // on the back (rifle while off duty)
-	stanceUpright                   // in one hand: spear upright, small tools along the forearm
+	stanceUpright                   // in one hand at rest: spear upright, small tools hanging
 	stanceLoad                      // a load carried in both arms
 )
 
@@ -115,19 +77,28 @@ const (
 // choice (even "nothing held").
 type heldItem struct {
 	set    bool
-	key    string // sprite key in the right hand ("" none)
+	key    string // sprite key on hold ("" none)
 	stance heldStance
 	// angle turns the item about its grip, radians, positive raising
-	// its forward end (muzzle rise, low ready is negative).
+	// its forward end (muzzle rise, a tool's wind-up; low ready is
+	// negative).
 	angle float64
-	// off is a sprite held in the left hand (hand_l), "" none.
+	// off is a sprite held level on hold under the main item (the bowl
+	// under the spoon), "" none.
 	off string
 	// aim turns the item towards the world point (aimX, aimY), at most
 	// maxAim off its pose.
 	aim        bool
 	aimX, aimY float64
-	// cs tints the right-hand item (a carried stone chunk's stone); zero
-	// is untinted.
+	// lift moves the main item from hold towards the head (0..1): the
+	// spoon to the mouth.
+	lift float64
+	// push moves the main item along its own direction (tiles): a thrust
+	// at full reach. With no item it is a punch's reach (heldPoint's
+	// hold point, for the melee trail).
+	push float64
+	// cs tints the main item (a carried stone chunk's stone); zero is
+	// untinted.
 	cs colorScale
 }
 
@@ -136,8 +107,7 @@ func onDuty(p game.PawnView) bool {
 	return p.Drafted || p.Hostile && !p.Fleeing || p.Action == game.ActionAim || p.Action == game.ActionMelee
 }
 
-// readyHeld is the wielded weapon held ready in both hands (nothing for
-// fists).
+// readyHeld is the wielded weapon held ready (fists: nothing held).
 func readyHeld(p game.PawnView) heldItem {
 	key, ok := heldWeaponKey(p.Weapon)
 	if !ok {
@@ -173,41 +143,53 @@ func (r *Renderer) idleHeld(p game.PawnView, m moveState) heldItem {
 	return heldItem{key: "weapon/club", stance: stanceUpright}
 }
 
+// heldRig is the pawn body a held item anchors on.
+type heldRig struct {
+	body   *artSprite      // the pawn's body (its build) in the drawn facing
+	face   facing          // drawn facing: south, east or north
+	mirror bool            // facing west: the pose flips the east art
+	layers []portraitLayer // the figure's layers in the drawn facing, body first
+}
+
+// rigOf resolves p's body facing f: its layers in the drawn facing and the
+// body sprite they start with.
+func (r *Renderer) rigOf(p game.PawnView, f facing) heldRig {
+	fs, mirror := facingKey(f)
+	rig := heldRig{face: drawnFacing(f), mirror: mirror, layers: r.pawnFigureLayers(p, fs)}
+	if len(rig.layers) > 0 {
+		rig.body = r.art.sprite(rig.layers[0].key)
+	}
+	return rig
+}
+
 // heldBehind reports whether an item is drawn before the body (hidden
-// by it): anything in front of a north-facing pawn, a slung rifle unless
-// facing north, and a one-handed item on the far arm.
-func heldBehind(st heldStance, f facing, left bool) bool {
-	switch {
-	case st == stanceSlung:
+// by it), in the drawn facing: everything held facing north, a slung
+// rifle unless facing north.
+func heldBehind(st heldStance, f facing) bool {
+	if st == stanceSlung {
 		return f != faceNorth
-	case f == faceNorth:
-		return true
-	case st == stanceUpright && !left:
-		return f == faceWest
-	case left:
-		return f == faceEast
 	}
-	return false
+	return f == faceNorth
 }
 
-// drawHeld draws the held item's parts on one side of the body: behind
+// drawHeld draws the held item's parts on one side of the body, behind
 // (before the body layers) or in front (after them).
-func (r *Renderer) drawHeld(screen *ebiten.Image, p game.PawnView, f facing, suffix string, h heldItem, wx, wy, tile float64, ps pose, behind bool) {
-	if h.key != "" && heldBehind(h.stance, f, false) == behind {
-		r.drawHeldPart(screen, f, suffix, h, false, wx, wy, tile, ps)
+func (r *Renderer) drawHeld(screen *ebiten.Image, rig heldRig, h heldItem, wx, wy, tile float64, ps pose, behind bool) {
+	if h.off != "" && heldBehind(stanceUpright, rig.face) == behind {
+		r.drawHeldPart(screen, rig, h, true, wx, wy, tile, ps)
 	}
-	if h.off != "" && heldBehind(stanceUpright, f, true) == behind {
-		r.drawHeldPart(screen, f, suffix, h, true, wx, wy, tile, ps)
+	if h.key != "" && heldBehind(h.stance, rig.face) == behind {
+		r.drawHeldPart(screen, rig, h, false, wx, wy, tile, ps)
 	}
 }
 
-func (r *Renderer) drawHeldPart(screen *ebiten.Image, f facing, suffix string, h heldItem, left bool, wx, wy, tile float64, ps pose) {
-	g, key, ok := r.heldGeo(f, suffix, h, left, wx, wy, tile, ps)
+func (r *Renderer) drawHeldPart(screen *ebiten.Image, rig heldRig, h heldItem, off bool, wx, wy, tile float64, ps pose) {
+	g, key, ok := r.heldGeo(rig, h, off, wx, wy, tile, ps)
 	if !ok {
 		return
 	}
 	cs := noCS
-	if !left && h.cs != (colorScale{}) {
+	if !off && h.cs != (colorScale{}) {
 		cs = h.cs
 	}
 	if img := r.art.image(key, color.NRGBA{}); img != nil {
@@ -215,15 +197,23 @@ func (r *Renderer) drawHeldPart(screen *ebiten.Image, f facing, suffix string, h
 	}
 }
 
-// heldGeo is the screen transform of a held sprite (the right-hand item,
-// or the left-hand one when left) and the sprite key it draws.
-func (r *Renderer) heldGeo(f facing, suffix string, h heldItem, left bool, wx, wy, tile float64, ps pose) (ebiten.GeoM, string, bool) {
-	body := r.art.sprite(r.framed("pawn/body_"+f.String(), suffix))
+// loadAnchor is where a load sits in both arms: on hold seen from the
+// side, centred under the head seen from the front or back.
+func loadAnchor(at map[string][2]float64, f facing, hold [2]float64) [2]float64 {
+	if head, ok := at["head"]; ok && f != faceEast {
+		return [2]float64{head[0], hold[1]}
+	}
+	return hold
+}
+
+// heldGeo is the screen transform of a held sprite (the main item, or the
+// off item under it when off) and the sprite key it draws.
+func (r *Renderer) heldGeo(rig heldRig, h heldItem, off bool, wx, wy, tile float64, ps pose) (ebiten.GeoM, string, bool) {
 	key, stance := h.key, h.stance
-	if left {
+	if off {
 		key, stance = h.off, stanceUpright
 	}
-	if body == nil || key == "" {
+	if rig.body == nil || key == "" {
 		return ebiten.GeoM{}, "", false
 	}
 	key, sp, k := r.heldSprite(key)
@@ -234,10 +224,9 @@ func (r *Renderer) heldGeo(f facing, suffix string, h heldItem, left bool, wx, w
 	if sp == nil {
 		return ebiten.GeoM{}, "", false
 	}
-	at := body.meta.Attach
-	hand, okH := at["hand"]
-	handL, okL := at["hand_l"]
-	if left && !okL {
+	at := rig.body.meta.Attach
+	hold, okH := at["hold"]
+	if !okH {
 		return ebiten.GeoM{}, "", false
 	}
 	sa := sp.meta.Attach
@@ -245,82 +234,64 @@ func (r *Renderer) heldGeo(f facing, suffix string, h heldItem, left bool, wx, w
 	if !okG {
 		grip = [2]float64{float64(sp.meta.Canvas[0]) / 2, float64(sp.meta.Canvas[1]) / 2}
 	}
-	mirror := f == faceWest
-	anchor := hand
-	var theta float64 // screen rotation after the mirror
-	turn := func(phi float64, v [2]float64) {
-		if mirror {
-			v[0] = -v[0]
-		}
-		theta = phi - math.Atan2(v[1], v[0])
-	}
-	east := [2]float64{1, 0}
+	anchor := hold
+	var theta float64 // the item's direction in the drawn facing, before the pose
+	angle := h.angle
 	switch {
 	case stance == stanceSlung:
-		head, okHead := at["head"]
-		if !okHead {
+		back, ok := at["back"]
+		if !ok {
 			return ebiten.GeoM{}, "", false
 		}
-		anchor = [2]float64{head[0], head[1] + slungDrop*artTilePx}
-		if back, ok := sa["back"]; ok {
-			grip = back // the slung sprite is drawn as is
+		anchor, angle = back, 0
+		if b, ok := sa["back"]; ok {
+			grip = b // the slung sprite is drawn as is
 		} else {
 			if mz, ok := sa["muzzle"]; ok {
 				grip = [2]float64{(grip[0] + mz[0]) / 2, (grip[1] + mz[1]) / 2}
 			}
-			turn(slungAngle(f), east)
+			theta = slungAngle(rig.face)
 		}
-	case left:
-		anchor = handL
-		if key == "tool/bowl" {
-			theta = 0 // held level
-		} else {
-			turn(forearm(at, f, handL), east)
+	case off:
+		angle = 0
+		if key != "tool/bowl" { // the bowl is held level
+			theta = hangAngle(rig.face)
 		}
-	case !okH:
-		return ebiten.GeoM{}, "", false
 	case stance == stanceLoad:
-		if okL {
-			anchor = [2]float64{(hand[0] + handL[0]) / 2, (hand[1] + handL[1]) / 2}
-		}
+		anchor, angle = loadAnchor(at, rig.face, hold), 0
 		grip = [2]float64{sp.meta.Origin[0] + artTilePx/2, sp.meta.Origin[1] + artTilePx/2}
-		mirror = false
 	case stance == stanceUpright && key == "weapon/spear":
-		turn(-math.Pi/2, east) // shaft upright, tip up
-	case stance == stanceHands && twoHanded(key):
-		sup, okS := sa["support"]
-		d := [2]float64{handL[0] - hand[0], handL[1] - hand[1]}
-		switch {
-		case okL && okS && math.Hypot(d[0], d[1]) >= minHandSpan:
-			turn(math.Atan2(d[1], d[0]), [2]float64{sup[0] - grip[0], sup[1] - grip[1]})
-		case strings.HasPrefix(suffix, "_work"):
-			theta = toolAngle(f, suffix) // older swing frames
-		default:
-			turn(baseAngle(f), east)
-		}
+		theta = -math.Pi / 2 // shaft upright, tip up
+	case stance == stanceUpright:
+		theta = hangAngle(rig.face)
 	default:
-		turn(forearm(at, f, hand), east) // one hand, along the forearm
+		theta = baseAngle(rig.face)
+	}
+	if head, ok := at["head"]; ok && !off && h.lift != 0 {
+		anchor = [2]float64{anchor[0] + (head[0]-anchor[0])*h.lift, anchor[1] + (head[1]-anchor[1])*h.lift}
 	}
 	sx, sy := r.worldToScreenF(wx, wy)
-	bx, by, s := artOrigin(body.meta, float64(sx), float64(sy), tile)
+	bx, by, s := artOrigin(rig.body.meta, float64(sx), float64(sy), tile)
 	ax, ay := bx+anchor[0]*s, by+anchor[1]*s
 	poseG := ps.geo(float64(sx), float64(sy), tile)
-	if h.aim && !left && stance == stanceHands {
+	if h.aim && !off && stance == stanceHands {
 		px, py := poseG.Apply(ax, ay)
+		fx, fy := poseG.Apply(ax+math.Cos(theta), ay+math.Sin(theta))
 		tx, ty := r.worldToScreenF(h.aimX, h.aimY)
-		fwd := theta + ps.rot
-		if mirror {
-			fwd += math.Pi
+		delta := clampAbs(wrapAngle(math.Atan2(float64(ty)-py, float64(tx)-px)-math.Atan2(fy-py, fx-px)), maxAim)
+		if det(poseG) < 0 { // a mirrored pose turns the other way
+			delta = -delta
 		}
-		theta += clampAbs(wrapAngle(math.Atan2(float64(ty)-py, float64(tx)-px)-fwd), maxAim)
+		theta += delta
+	}
+	if !off && h.push != 0 && stance != stanceLoad {
+		dir := theta - angle
+		ax, ay = ax+math.Cos(dir)*h.push*tile, ay+math.Sin(dir)*h.push*tile
 	}
 	g := ebiten.GeoM{}
 	g.Translate(-grip[0], -grip[1])
-	if !left && h.angle != 0 && stance != stanceLoad {
-		g.Rotate(-h.angle) // raise the forward end (sprite space)
-	}
-	if mirror {
-		g.Scale(-1, 1)
+	if angle != 0 {
+		g.Rotate(-angle) // raise the forward end (sprite space)
 	}
 	g.Rotate(theta)
 	g.Scale(s*k, s*k)
@@ -329,30 +300,15 @@ func (r *Renderer) heldGeo(f facing, suffix string, h heldItem, left bool, wx, w
 	return g, key, true
 }
 
-// forearm is the screen direction from the shoulder to a hand: the line
-// a one-handed item hangs along.
-func forearm(at map[string][2]float64, f facing, hand [2]float64) float64 {
-	head, ok := at["head"]
-	if !ok {
-		return math.Pi / 2
-	}
-	sh := [2]float64{head[0], head[1] + shoulderDrop*artTilePx}
-	if f == faceSouth || f == faceNorth {
-		side := 1.0
-		if hand[0] < head[0] {
-			side = -1
-		}
-		sh[0] += side * shoulderSide * artTilePx
-	}
-	return math.Atan2(hand[1]-sh[1], hand[0]-sh[0])
+// det is a GeoM's determinant: negative when it mirrors.
+func det(g ebiten.GeoM) float64 {
+	return g.Element(0, 0)*g.Element(1, 1) - g.Element(0, 1)*g.Element(1, 0)
 }
 
-// baseAngle points a two-handed item along the facing when the frame has
-// no hand_l (art from before the two-hand rig).
+// baseAngle points an item in use along the drawn facing: east, down and
+// out in front seen from the front, up behind seen from the back.
 func baseAngle(f facing) float64 {
 	switch f {
-	case faceWest:
-		return math.Pi
 	case faceSouth:
 		return math.Pi / 2.6
 	case faceNorth:
@@ -361,12 +317,22 @@ func baseAngle(f facing) float64 {
 	return 0
 }
 
+// hangAngle is a one-handed item at rest: hanging from hold, its head
+// down and a little forward.
+func hangAngle(f facing) float64 {
+	switch f {
+	case faceSouth:
+		return math.Pi/2 - 0.25
+	case faceNorth:
+		return math.Pi/2 + 0.25
+	}
+	return math.Pi/2 - 0.45
+}
+
 // slungAngle lays the rifle diagonally across the back, muzzle up and
 // behind, when there is no slung sprite.
 func slungAngle(f facing) float64 {
 	switch f {
-	case faceWest:
-		return -0.84
 	case faceSouth:
 		return -0.9
 	case faceNorth:
@@ -384,25 +350,29 @@ func clampAbs(a, m float64) float64 {
 }
 
 // heldPoint is where a held item's attachment (muzzle, tip, grip) is in
-// world tiles; "hand" with no item is the body's hand.
-func (r *Renderer) heldPoint(f facing, suffix string, h heldItem, wx, wy float64, ps pose, attach string) (vec, bool) {
+// world tiles; with no item, the body's attachment (hold, pushed forward
+// by a punch's reach).
+func (r *Renderer) heldPoint(rig heldRig, h heldItem, wx, wy float64, ps pose, attach string) (vec, bool) {
 	tile := r.tilePx()
 	var x, y float64
 	if h.key == "" {
-		body := r.art.sprite(r.framed("pawn/body_"+f.String(), suffix))
-		if body == nil {
+		if rig.body == nil {
 			return vec{}, false
 		}
-		hand, ok := body.meta.Attach[attach]
+		a, ok := rig.body.meta.Attach[attach]
 		if !ok {
 			return vec{}, false
 		}
+		if attach == "hold" && h.push != 0 {
+			fx, fy := facingUnit(rig.face)
+			a = [2]float64{a[0] + fx*h.push*artTilePx, a[1] + fy*h.push*artTilePx}
+		}
 		sx, sy := r.worldToScreenF(wx, wy)
-		bx, by, s := artOrigin(body.meta, float64(sx), float64(sy), tile)
+		bx, by, s := artOrigin(rig.body.meta, float64(sx), float64(sy), tile)
 		g := ps.geo(float64(sx), float64(sy), tile)
-		x, y = g.Apply(bx+hand[0]*s, by+hand[1]*s)
+		x, y = g.Apply(bx+a[0]*s, by+a[1]*s)
 	} else {
-		g, key, ok := r.heldGeo(f, suffix, h, false, wx, wy, tile, ps)
+		g, key, ok := r.heldGeo(rig, h, false, wx, wy, tile, ps)
 		if !ok {
 			return vec{}, false
 		}

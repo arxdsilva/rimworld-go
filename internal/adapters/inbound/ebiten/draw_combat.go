@@ -5,7 +5,6 @@ import (
 	"image/color"
 	"math"
 	"slices"
-	"strconv"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
@@ -103,7 +102,7 @@ func (r *Renderer) drawAnimalOverlays(screen *ebiten.Image, w game.WorldView, ti
 				sx, sy := r.worldToScreenF(wx, wy)
 				animalMarkTrace("hostile-marker", sx, sy, 0, 0)
 			}
-			r.drawHostileMarker(screen, game.PawnView{}, wx, wy-(animalMarkerLift(an.Size)-animalMarkBase), tile)
+			r.drawHostileMarker(screen, game.PawnView{}, wx, wy, animalMarkerLift(an.Size), tile)
 		case an.Designated:
 			spin := pose{px: 0.5, py: 0.5, sx: 0.5, sy: 0.5, rot: float64(r.present) * 0.035}
 			r.drawSpritePose(screen, "overlay/designation_hunt", color.NRGBA{}, wx, wy-animalMarkerLift(an.Size), tile, spin)
@@ -371,9 +370,16 @@ func (r *Renderer) traceMuzzle(tr game.TraceView) (vec, bool) {
 	return r.pawnHeldPoint(p, "muzzle")
 }
 
+// meleeTrailSteps are the moments a melee trail samples: the end of the
+// wind-up (AttackCycle), then strike ages through the follow-through.
+var meleeTrailSteps = []struct {
+	cycle, age float64
+	struck     bool
+}{{0.95, 0, false}, {0, 0, true}, {0, 4, true}, {0, 6, true}, {0, 8, true}}
+
 // meleeTrail is the path of a melee attacker's weapon tip (or fist)
-// through its strike frames, in world tiles; nil when the attacker is not
-// a drawn pawn or the frames do not move the tip.
+// through its strike motion, in world tiles; nil when the attacker is
+// not a drawn pawn or the motion does not move the tip.
 func (r *Renderer) meleeTrail(tr game.TraceView) []vec {
 	p, ok := pawnByStrike(r.drawPawns, tr)
 	if !ok || p.Lying || p.CarriedBy != 0 || r.art == nil {
@@ -382,20 +388,20 @@ func (r *Renderer) meleeTrail(tr game.TraceView) []vec {
 	wx, wy := r.interpWorld(p)
 	m := r.pawnMotion(p.ID)
 	m.Facing = r.poseFacing(p, m)
-	ps, _, h := r.standingPose(p, m)
-	set, n := meleeSet(p.Weapon)
-	frames := []int{3, 4, 5}
-	if n == 4 {
-		frames = []int{1, 2, 3, 4}
+	ps, h := r.standingPose(p, m)
+	rig := r.rigOf(p, m.Facing)
+	if rig.mirror {
+		ps = mirrored(ps)
 	}
 	attach := "tip"
 	if h.key == "" {
-		attach = "hand"
+		attach = "hold"
 	}
 	var pts []vec
 	lo, hi := vec{math.Inf(1), math.Inf(1)}, vec{math.Inf(-1), math.Inf(-1)}
-	for _, i := range frames {
-		pt, ok := r.heldPoint(m.Facing, set+strconv.Itoa(i), h, wx, wy, ps, attach)
+	for _, st := range meleeTrailSteps {
+		_, h.angle, h.push = meleeMotion(p.Weapon, st.cycle, st.age, st.struck)
+		pt, ok := r.heldPoint(rig, h, wx, wy, ps, attach)
 		if !ok {
 			return nil
 		}

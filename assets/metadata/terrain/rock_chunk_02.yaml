@@ -3,11 +3,11 @@ version: 1
 id: "core:terrain/rock_chunk_02"
 image: generated/world/terrain/rock_chunk_02.png
 scale: 2
-canvas: [160, 175]
+canvas: [160, 171]
 footprint: [1, 1]
-origin_px: [16, 31]
+origin_px: [16, 27]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: none
   w: 0.63

@@ -1,17 +1,18 @@
 # MAPGEN-3 materials: duskmoss (cave moss), timber bridge, sleeper casket.
 # Merged over materials.yaml by the palette loader (materials_*.yaml).
+# palette_mute: applied materials (sat=0.8 contrast=0.8 light=0.96 warm=8)
 version: 1
 materials:
-  pl_dusk_slate:  {light: "#6f819a", base: "#5c6e87", shadow: "#4a5a72"}
-  pl_dusk_grey:   {light: "#8f9fae", base: "#7a8b9b", shadow: "#66767f"}
-  pl_dusk_teal:   {light: "#68908f", base: "#567b7b", shadow: "#466464"}
-  pl_dusk_char:   {light: "#4a5260", base: "#3b424e", shadow: "#2e343e"}
-  pl_dusk_dormant: {light: "#818a94", base: "#6e7882", shadow: "#5a626b"}
-  bridge_plank_a: {light: "#b8905c", base: "#9c7646", shadow: "#775830"}
-  bridge_plank_b: {light: "#b09a76", base: "#94805e", shadow: "#6f5f44"}
-  bridge_plank_c: {light: "#b27f45", base: "#966532", shadow: "#734a22"}
-  bridge_beam:    {light: "#8a6338", base: "#6d4a28", shadow: "#4f341b"}
-  bridge_under:   {light: "#4a3822", base: "#3a2b1a", shadow: "#2a1f12"}
-  casket_frost:   {light: "#e2edef", base: "#bfd0d5", shadow: "#8fa4ac"}
-  casket_light:   {light: "#4fa89c", base: "#2f7f78", shadow: "#1f5a56"}
-  casket_cradle:  {light: "#5c6a70", base: "#454f55", shadow: "#30383d"}
+  pl_dusk_slate:  {light: "#6f7d90", base: "#657387", shadow: "#565f76"}
+  pl_dusk_grey:   {light: "#8b98a3", base: "#818e9b", shadow: "#6f7f85"}
+  pl_dusk_teal:   {light: "#688686", base: "#5d7b7b", shadow: "#4f6965"}
+  pl_dusk_char:   {light: "#484e59", base: "#3f444e", shadow: "#343741"}
+  pl_dusk_dormant: {light: "#7c838b", base: "#727a82", shadow: "#626670"}
+  bridge_plank_a: {light: "#ab8d66", base: "#9c7e57", shadow: "#7e6143"}
+  bridge_plank_b: {light: "#a49378", base: "#948469", shadow: "#766452"}
+  bridge_plank_c: {light: "#a67f53", base: "#966f46", shadow: "#7a5836"}
+  bridge_beam:    {light: "#7f6242", base: "#6d5136", shadow: "#553f29"}
+  bridge_under:   {light: "#443726", base: "#3a2e20", shadow: "#2d2319"}
+  casket_frost:   {light: "#d5dee0", base: "#c3d1d5", shadow: "#9eb1b4"}
+  casket_light:   {light: "#569991", base: "#3f7f79", shadow: "#2f6157"}
+  casket_cradle:  {light: "#586266", base: "#485055", shadow: "#373f42"}

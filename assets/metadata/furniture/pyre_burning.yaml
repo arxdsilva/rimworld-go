@@ -3,11 +3,11 @@ version: 1
 id: "core:furniture/pyre_burning"
 image: generated/world/furniture/pyre_burning.png
 scale: 2
-canvas: [288, 199]
+canvas: [288, 187]
 footprint: [2, 1]
-origin_px: [16, 55]
+origin_px: [16, 43]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: box
   w: 1.821

@@ -3,11 +3,11 @@ version: 1
 id: "core:animal/elk_south_walk08"
 image: generated/world/animal/elk_south_walk08.png
 scale: 2
-canvas: [392, 362]
+canvas: [392, 336]
 footprint: [1, 1]
-origin_px: [132, 220]
+origin_px: [132, 194]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: blob
   w: 0.722

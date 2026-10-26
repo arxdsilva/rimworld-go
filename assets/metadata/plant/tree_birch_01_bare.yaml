@@ -3,11 +3,11 @@ version: 1
 id: "core:plant/tree_birch_01_bare"
 image: generated/world/plant/tree_birch_01_bare.png
 scale: 2
-canvas: [220, 318]
+canvas: [220, 276]
 footprint: [1, 1]
-origin_px: [46, 158]
+origin_px: [46, 116]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: blob
   w: 0.716

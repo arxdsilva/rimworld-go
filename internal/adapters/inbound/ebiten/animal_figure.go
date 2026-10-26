@@ -10,11 +10,12 @@ import (
 )
 
 // animalBaseKey is the animal's standing sprite for its current facing:
-// "animal/<species>_<facing>" (ART-011); a female of a dimorphic species
-// uses "animal/<species>_f_<facing>" when that art exists (else the male
-// set, so a species without female art still draws).
+// "animal/<species>_<facing>" (ART-011) with facing south, east or north
+// (west draws the east art mirrored: animalMirrored); a female of a
+// dimorphic species uses "animal/<species>_f_<facing>" when that art
+// exists (else the male set, so a species without female art still draws).
 func (r *Renderer) animalBaseKey(an game.AnimalView) string {
-	facing := r.last[an.ID].facing.String()
+	facing, _ := facingKey(r.last[an.ID].facing)
 	if an.Female {
 		if k := "animal/" + an.Species + "_f_" + facing; r.art.has(k) {
 			return k
@@ -35,6 +36,13 @@ func (r *Renderer) animalFrameKey(an game.AnimalView) string {
 		return r.framed(base, "_graze1") // no rest pose yet: head down
 	}
 	return r.framed(base, r.animalFrame(an))
+}
+
+// animalMirrored reports an animal facing west, drawn as its east art
+// flipped about its pivot.
+func (r *Renderer) animalMirrored(an game.AnimalView) bool {
+	_, m := facingKey(r.last[an.ID].facing)
+	return m
 }
 
 // animalResting reports a sleeping animal that is standing still: it
@@ -83,6 +91,9 @@ func (r *Renderer) drawAnimalFigure(dst *ebiten.Image, an game.AnimalView, wx, w
 	}
 	r.figureBlood = r.animalBlood(an) // the whole figure (blood_draw.go)
 	ps := youngPose(r.animalPose(an), an.Scale)
+	if r.animalMirrored(an) {
+		ps = mirrored(ps)
+	}
 	if r.animalRestFallback(an) {
 		ps.cs = restDim
 	}

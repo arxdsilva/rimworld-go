@@ -114,7 +114,8 @@ func TestPawnPortraitArtFaceScar(t *testing.T) {
 	}
 }
 
-// A pawn falling (upright frames of the fall) keeps its scar over the hair.
+// A figure drawn in any facing keeps its scar over the hair; facing west
+// it is the east scar, mirrored.
 func TestFallingFigureFaceScar(t *testing.T) {
 	t.Parallel()
 	r := New(&stubSim{w: 64, h: 64, tick: 100})
@@ -122,7 +123,7 @@ func TestFallingFigureFaceScar(t *testing.T) {
 	p := game.PawnView{ID: 1, X: 2, Y: 2, Health: 0, Status: "alive", Lying: true, Disfigured: true}
 	var keys []string
 	r.lit.onDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
-	r.drawFigureFacing(ebiten.NewImage(512, 512), p, faceEast, "", 2, 2, 64, pose{px: figurePivotX, py: figurePivotY})
+	r.drawFigureIn(ebiten.NewImage(512, 512), p, faceWest, 2, 2, 64, standPose())
 	r.lit.onDraw = nil
 	scar := slices.IndexFunc(keys, func(k string) bool { return k == "pawn/face_scar_east" })
 	hair := slices.IndexFunc(keys, func(k string) bool { return strings.HasPrefix(k, "pawn/hair_") })

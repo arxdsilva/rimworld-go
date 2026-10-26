@@ -11,17 +11,92 @@ import (
 	"rimworld-go/internal/application/game"
 )
 
-// Pawn figure animation: walk frames synced to tile progress, idle
-// breathing, work swings towards the worked tile, recoil/lunge/hit
-// reactions, falling over when downed, lying in bed under the blanket,
-// and being carried.
+// Pawn figure animation (ART §27): one standing sprite per facing moved
+// as a whole: gait bob, sway and lean, idle breathing, per-action
+// transforms towards the worked tile, recoil/lunge/hit reactions,
+// tipping over when downed, lying in bed under the blanket, and being
+// carried. Facing west draws the east sprites mirrored.
 
 const (
+	// fallFrames is how long (present frames) a figure takes to tip over.
 	fallFrames = 16
-	deadCSR    = 0.62
+	// buckleFrames is the squash before a downed or dead figure tips over.
+	buckleFrames = 16
+	deadCSR      = 0.62
 )
 
 var deadCS = colorScale{deadCSR, 0.6, 0.64, 1}
+
+// pawnFeetX, pawnFeetY is where a standing pawn's feet meet the ground,
+// in tiles from its tile's top-left: the rig's feet (families/pawn.py CX,
+// CY). The ground plane is drawn without shear or lean in every camera
+// (contracts.py §5), so camera changes never move this point; everything
+// above it is read from the body metadata.
+const pawnFeetX, pawnFeetY = 0.5, 0.52
+
+// lyingCentreK is where a lying figure's middle is, as a fraction of the
+// way from its feet to its head centre (the head's top rises above it).
+const lyingCentreK = 0.65
+
+// lyingDrop lowers a lying figure (tiles): rotated about its feet it
+// would lie on the feet's line, a little above the tile's middle.
+const lyingDrop = 0.06
+
+// drawnFacing is the facing whose sprites draw f: west draws east.
+func drawnFacing(f facing) facing {
+	if f == faceWest {
+		return faceEast
+	}
+	return f
+}
+
+// facingKey is the art facing ("south", "east", "north") that draws f and
+// whether it is mirrored: pawns are rendered south, east and north only;
+// west is the east art flipped about the figure's pivot (ART §10).
+func facingKey(f facing) (key string, mirror bool) {
+	return drawnFacing(f).String(), f == faceWest
+}
+
+// mirrored flips a pose left-right about its pivot.
+func mirrored(ps pose) pose {
+	kx, ky := ps.scale()
+	ps.sx, ps.sy = -kx, ky
+	return ps
+}
+
+// standPose is the untransformed pose of an upright pawn.
+func standPose() pose { return pose{px: pawnFeetX, py: pawnFeetY} }
+
+// bodyAttach is attachment name of a body sprite in tiles from its tile's
+// top-left (canvas px relative to origin_px, over artTilePx).
+func bodyAttach(sp *artSprite, name string) (x, y float64, ok bool) {
+	if sp == nil {
+		return 0, 0, false
+	}
+	a, ok := sp.meta.Attach[name]
+	if !ok {
+		return 0, 0, false
+	}
+	return (a[0] - sp.meta.Origin[0]) / artTilePx, (a[1] - sp.meta.Origin[1]) / artTilePx, true
+}
+
+// pawnHead is a standing figure's head centre in tiles from its tile's
+// top-left, from pawn/body_south's head attachment (a stand-in without
+// art).
+func pawnHead(c *artCatalog) (x, y float64) {
+	if x, y, ok := bodyAttach(c.sprite("pawn/body_south"), "head"); ok {
+		return x, y
+	}
+	return pawnFeetX, -0.24
+}
+
+// lyingPose is a figure lying on the ground on its side (side +1: head to
+// the east), its middle over the feet's tile.
+func lyingPose(c *artCatalog, side float64) pose {
+	_, hy := pawnHead(c)
+	shift := (pawnFeetY - hy) * lyingCentreK
+	return pose{px: pawnFeetX, py: pawnFeetY, rot: side * math.Pi / 2, dx: -side * shift, dy: lyingDrop}
+}
 
 // poseFacing is the facing to draw: the motion's smoothed facing, turned
 // to the worked tile while working in place and to the blocker while
@@ -41,12 +116,11 @@ func (r *Renderer) poseFacing(p game.PawnView, m moveState) facing {
 }
 
 // actionPose is one action layer's contribution to an upright pawn (ART
-// §27.2): the body frame suffix, what it holds and how, and an extra
-// transform added to the standing pose. Layers are tried in priority
-// order by standingPose: hit reaction, combat, carrying, work.
+// §27.2): what it holds and how, and a transform added to the standing
+// pose. Layers are tried in priority order by standingPose: hit reaction,
+// combat, carrying, work.
 type actionPose struct {
 	ok     bool
-	suffix string   // body frame suffix ("_aim", "_stab3", "_chop5"); "" keeps the base frame
 	held   heldItem // replaces the default held item when held.set
 	dx, dy float64  // added offset, tiles
 	rot    float64  // added rotation, radians
@@ -73,16 +147,11 @@ func targetFacing(p game.PawnView, pawns []game.PawnView, animals []game.AnimalV
 	return prev, false
 }
 
-// standingPose is the live transform for an upright pawn, the frame
-// suffix to use and what it holds: walking or breathing, then the first
-// action layer that applies.
-func (r *Renderer) standingPose(p game.PawnView, m moveState) (pose, string, heldItem) {
+// standingPose is the live transform for an upright pawn and what it
+// holds: walking or breathing, then the first action layer that applies.
+func (r *Renderer) standingPose(p game.PawnView, m moveState) (pose, heldItem) {
 	ps := walkPose(m.Facing, m)
-	suffix := ""
-	moving := m.Blend >= minBlend
-	if moving {
-		suffix = walkSuffix(m)
-	} else {
+	if m.Blend < minBlend {
 		b := math.Sin(2 * math.Pi * float64(r.present+uint64(p.ID)*37) / 150)
 		ps.sy = 1 + 0.012*b
 	}
@@ -91,9 +160,6 @@ func (r *Renderer) standingPose(p game.PawnView, m moveState) (pose, string, hel
 		a := layer(p, m)
 		if !a.ok {
 			continue
-		}
-		if a.suffix != "" {
-			suffix = a.suffix
 		}
 		if a.held.set {
 			held = a.held
@@ -115,11 +181,7 @@ func (r *Renderer) standingPose(p game.PawnView, m moveState) (pose, string, hel
 	if fl > ps.flash {
 		ps.flash = fl
 	}
-	return ps, suffix, held
-}
-
-func isHeadLayer(key string) bool {
-	return strings.HasPrefix(key, "pawn/hair_") || strings.HasPrefix(key, "pawn/tuque_")
+	return ps, held
 }
 
 // drawPawnArt draws a pawn in the object pass: its figure, then the
@@ -137,11 +199,11 @@ func (r *Renderer) drawPawnArt(screen *ebiten.Image, p game.PawnView, wx, wy, ti
 	}
 	ps := fp.ps
 	if p.Hostile {
-		r.drawHostileMarker(screen, p, wx+ps.dx, wy+ps.dy, tile)
+		r.drawHostileMarker(screen, p, wx+ps.dx, wy+ps.dy, pawnMarkerLift(r.art), tile)
 	}
 	if p.Drafted {
 		if img := r.art.image("ui_icon/draft", color.NRGBA{}); img != nil {
-			sx, sy := r.worldToScreenF(wx+0.62+ps.dx, wy-0.95+ps.dy)
+			sx, sy := r.worldToScreenF(wx+0.62+ps.dx, wy-pawnMarkerLift(r.art)+ps.dy)
 			worldIcon(screen, img, float64(sx), float64(sy), tile*0.3/uiScale()) // tile is physical
 		}
 	}
@@ -151,11 +213,10 @@ func (r *Renderer) drawPawnArt(screen *ebiten.Image, p game.PawnView, wx, wy, ti
 // resolved once (from read-only state) so the object pass and every
 // light of the shadow pass draw the same figure.
 type pawnFigurePose struct {
-	vis    pawnVisual // the presentation state (lying pawns read it)
-	face   facing
-	suffix string   // body frame
-	held   heldItem // what it holds
-	ps     pose
+	vis  pawnVisual // the presentation state (lying pawns read it)
+	face facing     // the facing (west draws the east art mirrored)
+	held heldItem   // what it holds
+	ps   pose       // unmirrored: drawPawnFigure flips it facing west
 }
 
 // pawnFigurePoseOf resolves p's figure pose for this frame. It reads
@@ -167,7 +228,7 @@ func (r *Renderer) pawnFigurePoseOf(p game.PawnView) pawnFigurePose {
 	}
 	m := r.pawnMotion(p.ID)
 	m.Facing = r.poseFacing(p, m)
-	fp.ps, fp.suffix, fp.held = r.standingPose(p, m)
+	fp.ps, fp.held = r.standingPose(p, m)
 	fp.face = m.Facing
 	return fp
 }
@@ -177,75 +238,77 @@ func (r *Renderer) pawnFigurePoseOf(p game.PawnView) pawnFigurePose {
 func figureLying(p game.PawnView) bool { return p.Lying && !p.InBed }
 
 // drawPawnFigure draws only the pawn's figure: body, apparel, hair, the
-// held item and what it carries (a load or a rescued patient), in pose
-// and facing. It writes no renderer state and draws no labels, bars,
-// rings or flashes of its own, so the shadow pass (r.cast set) calls it
-// to draw the pawn's silhouette.
+// held item, and what it carries (a load or a
+// rescued patient), in pose and facing. It writes no renderer state and
+// draws no labels, bars, rings or flashes of its own, so the shadow pass
+// (r.cast set) calls it to draw the pawn's silhouette.
 func (r *Renderer) drawPawnFigure(dst *ebiten.Image, p game.PawnView, wx, wy, tile float64, fp pawnFigurePose) {
 	if p.Lying {
 		r.drawLyingPawn(dst, p, fp.vis, wx, wy, tile)
 		return
 	}
-	ps, face, suffix, item := fp.ps, fp.face, fp.suffix, fp.held
+	ps, item := fp.ps, fp.held
 	if r.cast != nil {
 		ps.flash = 0 // a light effect, not part of the shape
 	}
-	r.drawHeld(dst, p, face, suffix, item, wx, wy, tile, ps, true) // first: the parts the body hides (slung rifle, items when facing north)
-	hdx, hdy := headDelta(r.art, face, suffix)
-	headPs := ps
-	headPs.dx += hdx
-	headPs.dy += hdy
-	blood := r.pawnBlood(p) // body and apparel only (blood_draw.go)
-	scar := p.Disfigured
-	for _, ly := range r.pawnLayers(r.look(p), face, p.Apparel...) {
-		lp := ps
-		if isHeadLayer(ly.key) {
-			lp = headPs // hair and hats ride the head
-		}
-		r.figureBlood = layerBlood(ly.key, blood)
-		r.drawSpritePose(dst, r.framed(ly.key, suffix), ly.tint, wx, wy, tile, lp)
-		if scar && strings.HasPrefix(ly.key, "pawn/hair_") {
-			scar = false
-			r.drawFaceScar(dst, face, suffix, wx, wy, tile, headPs)
-		}
+	rig := r.rigOf(p, fp.face)
+	if rig.mirror {
+		ps = mirrored(ps)
 	}
-	r.figureBlood = 0
-	if scar { // no hair layer: the scar still goes on the face
-		r.drawFaceScar(dst, face, suffix, wx, wy, tile, headPs)
+	// a rescued patient lies across the shoulders, behind the rescuer's
+	// head; facing north the back, and so the patient, faces the viewer
+	carriedBehind := rig.face != faceNorth
+	if carriedBehind {
+		r.drawCarriedBy(dst, p, fp, wx, wy, tile)
 	}
-	r.drawHeld(dst, p, face, suffix, item, wx, wy, tile, ps, false) // the parts in front
+	r.drawHeld(dst, rig, item, wx, wy, tile, ps, true) // first: the parts the body hides (slung rifle, items when facing north)
+	r.drawLayers(dst, p, rig.layers, wx, wy, tile, ps)
+	r.drawHeld(dst, rig, item, wx, wy, tile, ps, false) // the parts in front
+	if !carriedBehind {
+		r.drawCarriedBy(dst, p, fp, wx, wy, tile)
+	}
+}
+
+// drawCarriedBy draws the patients rescuer p carries.
+func (r *Renderer) drawCarriedBy(dst *ebiten.Image, p game.PawnView, fp pawnFigurePose, wx, wy, tile float64) {
 	for _, q := range r.drawPawns {
 		if q.CarriedBy != 0 && q.CarriedBy == p.ID {
-			r.drawCarried(dst, q, face, wx+ps.dx, wy+ps.dy, tile)
+			r.drawCarried(dst, q, fp.face, wx+fp.ps.dx, wy+fp.ps.dy, tile)
 		}
 	}
 }
 
-// drawFaceScar draws a disfigured pawn's face scar (pawn/face_scar_<facing>)
-// on its head, over the hair; nothing while the art is missing.
-func (r *Renderer) drawFaceScar(dst *ebiten.Image, f facing, suffix string, wx, wy, tile float64, headPs pose) {
-	key := "pawn/face_scar_" + f.String()
-	if !r.art.has(key) {
-		return
-	}
-	r.drawSpritePose(dst, r.framed(key, suffix), color.NRGBA{}, wx, wy, tile, headPs)
-}
-
-// layersSouth draws the figure facing south with a pose.
-func (r *Renderer) drawFigure(screen *ebiten.Image, p game.PawnView, wx, wy, tile float64, ps pose) {
+// drawLayers draws a figure's layers in one pose: body and apparel take
+// the pawn's blood, hair and beard stay clean.
+func (r *Renderer) drawLayers(dst *ebiten.Image, p game.PawnView, layers []portraitLayer, wx, wy, tile float64, ps pose) {
 	blood := r.pawnBlood(p) // body and apparel only (blood_draw.go)
-	for _, ly := range r.pawnLayers(r.look(p), faceSouth, p.Apparel...) {
+	for _, ly := range layers {
 		r.figureBlood = layerBlood(ly.key, blood)
-		r.drawSpritePose(screen, ly.key, ly.tint, wx, wy, tile, ps)
+		if strings.HasPrefix(ly.key, "pawn/beard_") {
+			r.figureBlood = 0
+		}
+		r.drawSpritePose(dst, ly.key, ly.tint, wx, wy, tile, ps)
 	}
 	r.figureBlood = 0
-	if p.Disfigured {
-		r.drawFaceScar(screen, faceSouth, "", wx, wy, tile, ps)
-	}
 }
 
-// drawLyingPawn: in a bed under the blanket, or fallen on the ground
-// (fallPose: fall1..4, then down away from the last hit).
+// drawFigureIn draws a pawn's layers facing f (west mirrored) in pose ps.
+func (r *Renderer) drawFigureIn(screen *ebiten.Image, p game.PawnView, f facing, wx, wy, tile float64, ps pose) {
+	fs, mirror := facingKey(f)
+	if mirror {
+		ps = mirrored(ps)
+	}
+	r.drawLayers(screen, p, r.pawnFigureLayers(p, fs), wx, wy, tile, ps)
+}
+
+// drawFigure draws the figure facing south with a pose (lying, in bed,
+// carried).
+func (r *Renderer) drawFigure(screen *ebiten.Image, p game.PawnView, wx, wy, tile float64, ps pose) {
+	r.drawFigureIn(screen, p, faceSouth, wx, wy, tile, ps)
+}
+
+// drawLyingPawn: in a bed under the blanket, or on the ground (fallPose:
+// tipping over away from the last hit, then lying there).
 func (r *Renderer) drawLyingPawn(screen *ebiten.Image, p game.PawnView, vis pawnVisual, wx, wy, tile float64) {
 	cs := noCS
 	if p.Status == "dead" {
@@ -260,14 +323,10 @@ func (r *Renderer) drawLyingPawn(screen *ebiten.Image, p game.PawnView, vis pawn
 			return
 		}
 	}
-	suffix, ps, upright := r.fallPose(p, vis)
+	ps := r.fallPose(p, vis)
 	ps.cs = cs
 	if r.cast != nil {
 		ps.flash = 0
-	}
-	if upright {
-		r.drawFigureFacing(screen, p, vis.facing, suffix, wx, wy, tile, ps)
-		return
 	}
 	r.drawFigure(screen, p, wx, wy, tile, ps)
 }
@@ -286,13 +345,10 @@ func bedUnder(w game.WorldView, x, y int) (game.BuildingView, bool) {
 	return game.BuildingView{}, false
 }
 
-// headPivot is a standing figure's head centre, in tiles from its tile
-// corner (measured on pawn/body_south: head rows 81..140, tile top 153).
-const headPivotX, headPivotY = 0.5, -0.34
-
 // drawInBed lays the figure along the bed (or sleeping spot) with its
 // head on the pillow, breathing slowly; a bed then draws its blanket over
-// it, while on a floor marking the figure lies flatter in the open.
+// it, while on a floor marking the figure lies flatter in the open. The
+// figure turns about its head centre (pawnHead, from the body metadata).
 func (r *Renderer) drawInBed(screen *ebiten.Image, p game.PawnView, b game.BuildingView, since uint64, tile float64, cs colorScale) {
 	bw, bh := float64(max(b.W, 1)), float64(max(b.H, 1))
 	x0, y0 := float64(b.X), float64(b.Y)
@@ -324,12 +380,13 @@ func (r *Renderer) drawInBed(screen *ebiten.Image, p game.PawnView, b game.Build
 	if spot && (b.Facing == "" || b.Facing == "south" || b.Facing == "north") {
 		sy = 0.72 // lying flat along the floor, seen from above
 	}
-	ps := pose{px: headPivotX, py: headPivotY, rot: rot, sx: 0.85, sy: sy * breath, cs: cs}
+	headX, headY := pawnHead(r.art)
+	ps := pose{px: headX, py: headY, rot: rot, sx: 0.85, sy: sy * breath, cs: cs}
 	// lie down over easeFrames: from standing on the tile to the bed pose
 	k := smoothEase(r.present, since, easeFrames)
-	ox, oy := hx-headPivotX, hy-headPivotY
+	ox, oy := hx-headX, hy-headY
 	if k < 1 {
-		stand := pose{px: headPivotX, py: headPivotY, sx: 1, sy: 1, cs: cs}
+		stand := pose{px: headX, py: headY, sx: 1, sy: 1, cs: cs}
 		ps = lerpPose(stand, ps, k)
 		ox, oy = float64(p.X)*(1-k)+ox*k, float64(p.Y)*(1-k)+oy*k
 	}
@@ -360,22 +417,39 @@ func (r *Renderer) bedTint(b game.BuildingView) color.NRGBA {
 	return r.art.tint("cloth", cloth[mix64(uint64(b.ID))%uint64(len(cloth))])
 }
 
+// slungScale is the size of a patient slung over a rescuer's shoulders;
+// slungLift raises its middle above the rescuer's back attachment (tiles),
+// onto the shoulders. It is drawn behind the rescuer (drawPawnFigure), so
+// the rescuer's head stays in front of it.
+const (
+	slungScale = 0.8
+	slungLift  = 0.14
+)
+
 // carryPoses are a patient's pose lying where it was picked up and
-// slung across the rescuer's shoulders.
-func carryPoses(f facing) (ground, slung pose) {
+// slung across the rescuer's shoulders: its middle over the rescuer's
+// back attachment (body metadata), a little above it.
+func carryPoses(c *artCatalog, f facing) (ground, slung pose) {
 	side := 1.0
 	if f == faceWest {
 		side = -1
 	}
-	ground = pose{px: figurePivotX, py: figurePivotY, rot: side * math.Pi / 2, dx: -side * 0.42, dy: 0.1}
-	slung = pose{px: figurePivotX, py: figurePivotY, rot: math.Pi / 2, sx: 0.8, sy: 0.8, dx: -0.36, dy: -0.62}
+	ground = lyingPose(c, side)
+	_, hy := pawnHead(c)
+	backY := hy + 0.5*(pawnFeetY-hy) // between the shoulders when the art has no back point
+	if _, y, ok := bodyAttach(c.sprite("pawn/body_south"), "back"); ok {
+		backY = y
+	}
+	shift := (pawnFeetY - hy) * lyingCentreK * slungScale
+	slung = pose{px: pawnFeetX, py: pawnFeetY, rot: math.Pi / 2, sx: slungScale, sy: slungScale,
+		dx: -shift, dy: backY - pawnFeetY - slungLift}
 	return ground, slung
 }
 
 // drawCarried draws a patient slung across its rescuer's shoulders,
 // lifted from the ground over easeFrames.
 func (r *Renderer) drawCarried(screen *ebiten.Image, q game.PawnView, f facing, wx, wy, tile float64) {
-	ground, slung := carryPoses(f)
+	ground, slung := carryPoses(r.art, f)
 	st := r.animState()
 	var k float64
 	if r.cast == nil {

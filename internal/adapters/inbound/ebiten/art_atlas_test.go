@@ -64,7 +64,7 @@ func syntheticAtlas(t *testing.T, n int) string {
 		fmt.Fprintf(&y, "    id: \"core:dummy/s%d\"\n    image: generated/atlas/dummy_%d.png\n    scale: 2\n", i, i)
 		fmt.Fprintf(&y, "    canvas: [24, 16]\n    footprint: [1, 1]\n    origin_px: [3, 4]\n")
 		fmt.Fprintf(&y, "    tint:\n      group: skin\n      mask: generated/atlas/dummy_%d_mask.png\n", i)
-		fmt.Fprintf(&y, "    attachments:\n      hand: [1.5, 2.5]\n")
+		fmt.Fprintf(&y, "    attachments:\n      hold: [1.5, 2.5]\n")
 	}
 	mp := filepath.Join(root, "metadata", "atlas", "dummy.yaml")
 	if err := os.MkdirAll(filepath.Dir(mp), 0o755); err != nil {
@@ -160,7 +160,7 @@ func TestLoadAtlasCutsSpritesLikeFiles(t *testing.T) {
 			if sp.pix.Bounds().Size() != (image.Point{24, 16}) {
 				t.Fatalf("%s: canvas %v, want 24x16", key, sp.pix.Bounds().Size())
 			}
-			if sp.meta.Origin != [2]float64{3, 4} || sp.meta.Attach["hand"] != [2]float64{1.5, 2.5} || sp.meta.TintGroup != "skin" {
+			if sp.meta.Origin != [2]float64{3, 4} || sp.meta.Attach["hold"] != [2]float64{1.5, 2.5} || sp.meta.TintGroup != "skin" {
 				t.Fatalf("%s: metadata changed: %+v", key, sp.meta)
 			}
 			w := 4 + i

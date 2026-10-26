@@ -3,11 +3,11 @@ version: 1
 id: "core:plant/tree_birch_02_bare_canopy"
 image: generated/world/plant/tree_birch_02_bare_canopy.png
 scale: 2
-canvas: [220, 308]
+canvas: [220, 270]
 footprint: [1, 1]
-origin_px: [46, 148]
+origin_px: [46, 110]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: blob
   w: 0.61

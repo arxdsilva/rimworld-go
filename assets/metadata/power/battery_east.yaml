@@ -3,11 +3,11 @@ version: 1
 id: "core:power/battery_east"
 image: generated/world/power/battery_east.png
 scale: 2
-canvas: [288, 212]
+canvas: [288, 196]
 footprint: [2, 1]
-origin_px: [16, 68]
+origin_px: [16, 52]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: box
   w: 1.84
@@ -17,7 +17,7 @@ rotatable: true
 facing: east
 building: battery
 attachments:
-  gauge0: [223.4, 89.6]
-  gauge1: [85.1, 89.6]
+  gauge0: [223.4, 86.3]
+  gauge1: [85.1, 86.3]
 emissive: indicator
 glow: power/battery_glow_east

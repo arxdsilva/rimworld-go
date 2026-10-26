@@ -3,11 +3,11 @@ version: 1
 id: "core:tool/pickaxe"
 image: generated/world/tool/pickaxe.png
 scale: 2
-canvas: [160, 168]
+canvas: [160, 166]
 footprint: [1, 1]
-origin_px: [16, 24]
+origin_px: [16, 22]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: none
   w: 0.68
@@ -17,6 +17,6 @@ tool: pickaxe
 rotatable: true
 points: east
 attachments:
-  grip: [44.2, 85.4]
-  support: [87.7, 85.4]
-  head: [126.1, 85.4]
+  grip: [44.2, 84.2]
+  support: [87.7, 84.2]
+  head: [126.1, 84.2]

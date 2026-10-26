@@ -5,6 +5,9 @@ Model space: the animal is authored at unit body length (nose to rump
 render_species() scales it to the species size, moves it to the tile
 centre, turns it to each facing and leans it back (LEAN_DEG) like the old
 animal family, then renders every frame through stage.render_asset.
+Only south, east and north are rendered: the renderer draws west as east
+mirrored about the tile centre, so every canvas is horizontally symmetric
+around the footprint (left margin == right margin).
 
 Posing happens at build time: a Pose (body shift/pitch, neck, head, jaw,
 tail, per-leg foot targets) drives the skeleton (Skel), and every part is
@@ -31,9 +34,9 @@ from ... import contracts as C
 from ... import stage as S
 from . import parts as P
 
-FACINGS = ("south", "east", "north", "west")
+FACINGS = ("south", "east", "north")   # west = east mirrored by the renderer (ART §11.1)
 CX, CY = 0.5, -0.5
-LEAN_DEG = 40.0           # animals lean less than people (contracts.FIGURE_LEAN_DEG is 55): the body stays long
+LEAN_DEG = C.ANIMAL_LEAN_DEG   # animals lean less than people (contracts.ANIMAL_LEAN_DEG): the body stays long
 TROT_N = 8
 WALK_FRAMES = tuple("walk%02d" % i for i in range(1, TROT_N + 1))
 ATTACK_KINDS = ("bite", "claw", "kick", "gore", "headbutt", "peck")
@@ -1040,7 +1043,9 @@ def _margins(lo, hi, pad=PAD):
 
 def _probe_margins(spec, poses):
     """One canvas per species: the union of a few extreme poses in every
-    facing (standing, trot extremes, the attack set, graze, flinch)."""
+    facing (standing, trot extremes, the attack set, graze, flinch). The
+    left and right margins are equal, so the east sprite mirrored about
+    its canvas centre is the west sprite on the same tile anchor."""
     names = [None, "walk03", "walk07", "graze2", "flinch1"] + [n for n in poses if n and n[-1].isdigit()
                                                                  and not n.startswith(("walk", "graze", "flinch"))]
     lo, hi = np.array([1e9, 1e9]), np.array([-1e9, -1e9])
@@ -1054,7 +1059,9 @@ def _probe_margins(spec, poses):
             a, b = _extents()
             lo, hi = np.minimum(lo, a), np.maximum(hi, b)
             S.clear()
-    return _margins(lo, hi)
+    l, r, t, b = _margins(lo, hi)
+    side = max(l, r)
+    return (side, side, t, b)
 
 
 def render_species(spec, static=False, suffix="", corpses=True):

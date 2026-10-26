@@ -3,8 +3,8 @@
 
 Checks every generated sprite against its sidecar metadata: presence,
 id/naming, canvas size, origin, footprint, @2x scale, tint masks, alpha,
-tileable terrain seams, wall autotile completeness, and pawn layer
-canvas agreement.
+tileable terrain seams, wall autotile completeness, and the pawn layer
+contract (one standing sprite per layer and facing, attachments, canvas).
 
     python3 assets/source/tools/validate_assets.py [--no-light]
 
@@ -152,18 +152,21 @@ def check_autotile():
             err("structure/wall_%s: missing masks %s" % (mat, missing))
 
 
-# ART §27.1: one 12-pose gait cycle, a 6-pose work swing, an 8-pose trot.
-WALK_FRAMES = tuple("walk%02d" % i for i in range(1, 13))
-WORK_FRAMES = tuple("work%d" % i for i in range(1, 7))
+# ART §27.1: an 8-pose animal trot. Pawns have no frames (ART §10, §27.1-27.2): one
+# standing sprite per layer and facing; the renderer moves, mirrors and rotates it.
 TROT_FRAMES = tuple("walk%02d" % i for i in range(1, 9))
-ANIM_LAYERS = ("body", "pants_basic", "shirt_basic", "vest_utility", "parka_leather", "duster_leather")
-# NG-1 builds (families/pawn.py BUILDS): m_avg keeps the un-suffixed keys, the rest are
-# <layer>_<build>_<facing>_<frame>. Hair and beards are shared by every build.
+ANIMAL_FACINGS = ("south", "east", "north")    # west is east mirrored by the renderer
+# Per-build layers (families/pawn.py BUILD_LAYERS): m_avg keeps the un-suffixed keys,
+# the rest are <layer>_<build>_<facing>. Hair, beards, the tuque and the scar are shared.
+BUILD_LAYERS = ("body", "pants_basic", "shirt_basic", "vest_utility", "parka_leather", "duster_leather")
 PAWN_BUILDS = ("m_thin", "m_avg", "m_heavy", "f_thin", "f_avg", "f_heavy")
 LEGACY_BUILD = "m_avg"
 HAIR_LAYERS = ("hair_short", "hair_crop", "hair_bun", "hair_long", "hair_braid", "hair_shaved", "hair_curls",
                "hair_tail", "beard_short", "beard_full", "beard_moustache")
-FACINGS = ("south", "east", "north", "west")
+SHARED_LAYERS = HAIR_LAYERS + ("tuque_knit", "face_scar")
+PAWN_FACINGS = ("south", "east", "north")      # west is east mirrored by the renderer
+BODY_ATTACH = ("head", "hold", "back")
+GONE_ATTACH = ("hand", "hand_l")
 ATLAS_META = os.path.join(META, "atlas")
 ATLAS_GEN = os.path.join(ROOT, "generated", "atlas")
 ATLAS_MAX = 4096
@@ -173,13 +176,6 @@ def _set(name, n):
     return tuple("%s%d" % (name, i) for i in range(1, n + 1))
 
 
-# ART §27.2: action pose sets on every animated layer.
-ACTION_FRAMES = (("ready", "aim", "kneel", "carry") + _set("fire", 3) + _set("stab", 6) +
-                 _set("thrust", 6) + _set("swing", 6) + _set("punch", 4) + _set("chop", 6) +
-                 _set("mine", 6) + _set("hammer", 4) + _set("plant", 4) + _set("pick", 4) +
-                 _set("bench", 4) + _set("tend", 4) + _set("eat", 4) + _set("flinch", 3) +
-                 _set("fall", 4) + _set("offer", 2) +
-                 tuple("carry_walk%02d" % i for i in range(1, 13)))
 ANIMAL_COMMON = _set("graze", 2) + _set("flinch", 2)
 # held gear: two-handed items need a support point towards the working end
 GEAR_END = {"weapon": ("muzzle", "tip"), "tool": ("head",)}
@@ -297,64 +293,72 @@ def pawn_keys(atlas):
     """Every pawn sprite key: individual files plus the atlas."""
     d = os.path.join(GEN, "pawn")
     keys = {f[:-4] for f in os.listdir(d)
-            if f.endswith(".png") and not f.endswith("_mask.png") and not f.endswith("_n.png")}
+            if f.endswith(".png") and not f.endswith("_mask.png") and not f.endswith("_n.png")} if os.path.isdir(d) else set()
     return keys | set(atlas)
 
 
-def build_key(layer, build, facing, frame=None):
-    """<layer>_<build>_<facing>[_<frame>]; m_avg keeps the pre-NG-1 un-suffixed name."""
+def build_key(layer, build, facing):
+    """<layer>_<build>_<facing>; m_avg keeps the pre-NG-1 un-suffixed name."""
     tag = layer if build == LEGACY_BUILD else "%s_%s" % (layer, build)
-    return "%s_%s" % (tag, facing) + ("_" + frame if frame else "")
+    return "%s_%s" % (tag, facing)
+
+
+def pawn_expected():
+    """{key: facing} of the whole pawn contract (no hands: the renderer draws none)."""
+    out = {}
+    for f in PAWN_FACINGS:
+        out.update({build_key(l, b, f): f for b in PAWN_BUILDS for l in BUILD_LAYERS})
+        out.update({"%s_%s" % (l, f): f for l in SHARED_LAYERS})
+    return out
+
+
+def _pawn_meta(key, atlas):
+    """(canvas, {attachment: [x, y]}) of a pawn sprite from its sidecar, else the atlas."""
+    p = os.path.join(META, "pawn", key + ".yaml")
+    if os.path.exists(p):
+        text = open(p, encoding="utf-8").read()
+        att = {m.group(1): [float(m.group(2)), float(m.group(3))] for m in
+               re.finditer(r"^\s{2}(\w+):\s*\[([-\d.]+),\s*([-\d.]+)\]", text.split("attachments:", 1)[1], re.M)} \
+            if "\nattachments:" in text else {}
+        return tuple(ints(field(text, "canvas"))), att
+    s = atlas.get(key)
+    return (tuple(s["canvas"]) if s and "canvas" in s else None), (s["attach"] if s else {})
 
 
 def check_pawn_layers(atlas=None):
+    """The pawn contract (ART §10): exactly one standing sprite per build x per-build
+    layer x facing (south, east, north) and per shared layer x facing; no frame
+    suffixes, no west, no hand sprite; every layer of a facing on one canvas; bodies
+    carry head/hold/back (not the removed hand/hand_l)."""
     atlas = (atlas or {}).get("pawn", {})
-    d = os.path.join(GEN, "pawn")
     have = pawn_keys(atlas)
-    sizes = {}
-    for f in os.listdir(d):
-        m = re.match(r"^(\w+?)_(south|east|north|west)(?:_[a-z_]+\d*)?\.png$", f)
-        if m and not f.endswith("_mask.png") and not f.endswith("_n.png"):
-            sizes.setdefault(m.group(2), set()).add(Image.open(os.path.join(d, f)).size)
-    for key, s in atlas.items():
-        m = re.match(r"^\w+?_(south|east|north|west)(?:_[a-z_]+\d*)?$", key)
-        if m and "canvas" in s:
-            sizes.setdefault(m.group(1), set()).add(tuple(s["canvas"]))
-    # every animated layer of every build has the full walk cycle, work swing and
-    # action poses (frames share a canvas)
-    for build in PAWN_BUILDS:
-        for layer in ANIM_LAYERS:
-            for facing in FACINGS:
-                for kind, frames in (("walk", WALK_FRAMES), ("work", WORK_FRAMES), ("action", ACTION_FRAMES)):
-                    for fr in frames:
-                        if build_key(layer, build, facing, fr) not in have:
-                            err("pawn/%s: missing %s frame %s" % (build_key(layer, build, facing), kind, fr))
-                if build_key(layer, build, facing) not in have:
-                    err("pawn/%s: missing standing frame" % build_key(layer, build, facing))
-    # shared hair, beards and hats: one sprite per facing, whatever the build
-    for layer in HAIR_LAYERS + ("tuque_knit",):
-        for facing in FACINGS:
-            if "%s_%s" % (layer, facing) not in have:
-                err("pawn/%s_%s: missing" % (layer, facing))
-    # hair and hats follow the body's head anchor (ART §27.1)
-    md = os.path.join(META, "pawn")
-    for f in sorted(os.listdir(md)) if os.path.isdir(md) else ():
-        if f.startswith("body_") and f.endswith(".yaml"):
-            with open(os.path.join(md, f)) as fh:
-                text = fh.read()
-                for key in ("head", "hand", "hand_l"):
-                    if not re.search(r"^\s+%s:\s*\[" % key, text, re.M):
-                        err("pawn/%s: missing %s attachment" % (f[:-5], key))
-    for key, s in sorted(atlas.items()):
-        if key.startswith("body_"):
-            for a in ("head", "hand", "hand_l"):
-                if a not in s["attach"]:
-                    err("pawn/%s: missing %s attachment" % (key, a))
-    for facing, s in sizes.items():
-        if len(s) != 1:
-            err("pawn/%s: layers disagree on canvas %s" % (facing, sorted(s)))
-    if set(sizes) != {"south", "east", "north", "west"}:
-        err("pawn: need all four facings, got %s" % sorted(sizes))
+    want = pawn_expected()
+    for key in sorted(set(want) - have):
+        err("pawn/%s: missing" % key)
+    extra = sorted(have - set(want))
+    if extra:
+        err("pawn: %d sprites outside the contract (frame suffix, west facing or stale layer), e.g. %s"
+            % (len(extra), ", ".join(extra[:5])))
+    canvases = {}
+    for key, facing in sorted(want.items()):
+        if key not in have:
+            continue
+        canvas, att = _pawn_meta(key, atlas)
+        if canvas:
+            canvases.setdefault(facing, {}).setdefault(canvas, key)
+        need = BODY_ATTACH if key.startswith("body_") else ()
+        for a in need:
+            if a not in att:
+                err("pawn/%s: missing %s attachment" % (key, a))
+            elif canvas and not (0 <= att[a][0] <= canvas[0] and 0 <= att[a][1] <= canvas[1]):
+                err("pawn/%s: %s attachment %s outside canvas %s" % (key, a, att[a], canvas))
+        for a in GONE_ATTACH:
+            if a in att:
+                err("pawn/%s: %s attachment was removed (use hold)" % (key, a))
+    for facing, seen in sorted(canvases.items()):
+        if len(seen) != 1:
+            err("pawn/%s: layers disagree on canvas %s" % (facing, ", ".join(
+                "%s (%s)" % (c, k) for c, k in sorted(seen.items()))))
 
 
 def _roster():
@@ -372,7 +376,9 @@ def check_animals():
     facing the standing frame, trot walk01..08, its attack set 1..4,
     graze1..2 and flinch1..2 on the standing frame's canvas; corpses
     v0..v2; and the same animal set under <key>_f for dimorphic species.
-    Sprites of species outside the roster are errors."""
+    Facings are south/east/north only (the renderer mirrors east for west),
+    so a west sprite is a stale error. Sprites of species outside the
+    roster are errors."""
     ad = os.path.join(GEN, "animal")
     roster = _roster()
     bases = set()
@@ -380,12 +386,17 @@ def check_animals():
         frames = TROT_FRAMES + _set(sp.attack, 4) + ANIMAL_COMMON
         for base in [sp.key] + ([sp.key + "_f"] if sp.dimorphic else []):
             bases.add(base)
-            for facing in ("south", "east", "north", "west"):
+            for facing in ANIMAL_FACINGS:
                 stand = os.path.join(ad, "%s_%s.png" % (base, facing))
                 if not os.path.exists(stand):
                     err("animal/%s_%s: missing standing frame" % (base, facing))
                     continue
                 size = Image.open(stand).size
+                mp = os.path.join(META, "animal", "%s_%s.yaml" % (base, facing))
+                if os.path.exists(mp):
+                    ox = ints(field(open(mp, encoding="utf-8").read(), "origin_px"))[0]
+                    if size[0] != 2 * ox + PPT:
+                        err("animal/%s_%s: canvas not symmetric about the tile (west mirrors east)" % (base, facing))
                 for fr in frames:
                     p = os.path.join(ad, "%s_%s_%s.png" % (base, facing, fr))
                     if not os.path.exists(p):
@@ -397,7 +408,10 @@ def check_animals():
                 err("item/corpse_%s_v%d: missing corpse" % (sp.key, v))
     keys = {sp.key for sp in roster}
     for f in sorted(os.listdir(ad)) if os.path.isdir(ad) else ():
-        m = re.match(r"^(\w+?)_(south|east|north|west)\.png$", f)
+        if re.match(r"^\w+?_west(_\w+)?\.png$", f):
+            err("animal/%s: west is east mirrored by the renderer; stale sprite" % f[:-4])
+            continue
+        m = re.match(r"^(\w+?)_(south|east|north)\.png$", f)
         if m and m.group(1) not in bases:
             err("animal/%s: species not in the roster" % f[:-4])
     for f in sorted(os.listdir(os.path.join(GEN, "item"))):

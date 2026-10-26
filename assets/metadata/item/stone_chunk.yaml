@@ -3,11 +3,11 @@ version: 1
 id: "core:item/stone_chunk"
 image: generated/world/item/stone_chunk.png
 scale: 2
-canvas: [160, 178]
+canvas: [160, 173]
 footprint: [1, 1]
-origin_px: [16, 34]
+origin_px: [16, 29]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: blob
   w: 0.642

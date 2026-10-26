@@ -3,11 +3,11 @@ version: 1
 id: "core:plant/wheat_sown_v2"
 image: generated/world/plant/wheat_sown_v2.png
 scale: 2
-canvas: [166, 164]
+canvas: [166, 162]
 footprint: [1, 1]
-origin_px: [19, 21]
+origin_px: [19, 19]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: none
   w: 0.123

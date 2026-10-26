@@ -113,17 +113,40 @@ def mat(name):
     s2r = nt.nodes.new("ShaderNodeShaderToRGB")
     ramp = nt.nodes.new("ShaderNodeValToRGB")
     cr = ramp.color_ramp
-    cr.interpolation = "CONSTANT"
-    cr.elements[0].position = 0.0
-    cr.elements[0].color = (*palette.hex_to_linear(p["shadow"]), 1)
-    cr.elements[1].position = C.SHADOW_T
-    cr.elements[1].color = (*palette.hex_to_linear(p["base"]), 1)
-    e = cr.elements.new(C.LIGHT_T)
-    e.color = (*palette.hex_to_linear(p["light"]), 1)
+    stops = ramp_stops()
+    cr.interpolation = C.RAMP_INTERP
+    cr.elements[0].position = stops[0][0]
+    cr.elements[1].position = stops[1][0]
+    for pos, _ in stops[2:]:
+        cr.elements.new(pos)
+    _color_ramp(cr, p)
     nt.links.new(dif.outputs[0], s2r.inputs[0])
     nt.links.new(s2r.outputs["Color"], ramp.inputs["Fac"])
     nt.links.new(ramp.outputs["Color"], em.inputs["Color"])
     return m
+
+
+RAMP_INTERPS = ("CONSTANT", "EASE", "LINEAR")
+
+
+def ramp_stops():
+    """(position, band) colour-ramp stops over Lambert intensity. CONSTANT:
+    three exact bands switching at SHADOW_T and LIGHT_T. EASE / LINEAR: the
+    same bands, blended over RAMP_SOFT either side of each threshold."""
+    if C.RAMP_INTERP not in RAMP_INTERPS:
+        raise ValueError("contracts.RAMP_INTERP must be one of %s, got %r" % (RAMP_INTERPS, C.RAMP_INTERP))
+    if C.RAMP_INTERP == "CONSTANT":
+        return [(0.0, "shadow"), (C.SHADOW_T, "base"), (C.LIGHT_T, "light")]
+    s = C.RAMP_SOFT
+    return [(0.0, "shadow"), (max(0.0, C.SHADOW_T - s), "shadow"), (C.SHADOW_T + s, "base"),
+            (C.LIGHT_T - s, "base"), (min(1.0, C.LIGHT_T + s), "light")]
+
+
+def _color_ramp(cr, bands):
+    """Colour a toon ramp built from ramp_stops(); bands maps band -> hex."""
+    els = sorted(cr.elements, key=lambda e: e.position)
+    for el, (_, band) in zip(els, ramp_stops()):
+        el.color = (*palette.hex_to_linear(bands[band]), 1)
 
 
 # ------------------------------------------------------------- geometry
@@ -332,7 +355,8 @@ def _tint_group(ob):
 
 
 def _render_raw(sc):
-    tmp = os.path.join(tempfile.gettempdir(), "rwg_render.png")
+    # per process: parallel headless builds must not share one file
+    tmp = os.path.join(tempfile.gettempdir(), "rwg_render_%d.png" % os.getpid())
     sc.render.filepath = tmp
     bpy.ops.render.render(write_still=True, scene=sc.name)
     return _read_png(tmp)
@@ -387,7 +411,10 @@ SHADOW_KINDS = {"pawn": "blob", "animal": "blob", "plant": "blob", "item": "blob
 FLAT_H = 0.05   # tiles: casters this low cast no shadow
 
 
-FIGURE_LEAN = {"pawn": C.FIGURE_LEAN_DEG, "animal": 40.0}   # animal.LEAN_DEG
+def figure_lean(family):
+    """Degrees an upright figure family is leaned back towards the viewer
+    (contracts), or None for families drawn with the plain shear."""
+    return {"pawn": C.FIGURE_LEAN_DEG, "animal": C.ANIMAL_LEAN_DEG}.get(family)
 
 
 def _shadow_meta(family, name, kind=None, footprint=None):
@@ -398,8 +425,8 @@ def _shadow_meta(family, name, kind=None, footprint=None):
     the ground footprint. Structures are clamped to their footprint
     (autotile posts overhang to join neighbours)."""
     unlean = None
-    if family in FIGURE_LEAN:
-        unlean = Matrix.Rotation(math.radians(FIGURE_LEAN[family]), 4, "X")
+    if figure_lean(family) is not None:
+        unlean = Matrix.Rotation(math.radians(figure_lean(family)), 4, "X")
     lo = np.full(3, 1e9)
     hi = np.full(3, -1e9)
     for ob in stage().collection.all_objects:
@@ -425,6 +452,26 @@ def _shadow_meta(family, name, kind=None, footprint=None):
     if h <= FLAT_H:
         k = "none"
     return {"kind": k, "w": round(w, 3), "h": round(h, 3), "d": round(d, 3)}
+
+
+def _figure_cover(sc, family):
+    """Layered figure sprites (contracts.OUTLINE_INNER_FAMILIES) are rendered
+    over a holdout of the figure beneath them (pawn apparel and hair over the
+    body). Returns where the composited figure covers the canvas (this layer
+    or the holdout), so post.outline caps the contour that would land on the
+    figure and keeps the full width where it meets transparency. None for
+    every other sprite (holdouts there are scenery occluders, not figure)."""
+    if family not in C.OUTLINE_INNER_FAMILIES:
+        return None
+    if not any(o.get("rwg_holdout") for o in sc.collection.all_objects if o.type == "MESH"):
+        return None
+    white = _flat("mask_on", (1, 1, 1))
+    saved = _swap(sc, lambda o: white)
+    try:
+        cover = _render_raw(sc)
+    finally:
+        _restore(saved)
+    return cover[..., 3] > 0.5
 
 
 def render_asset(family, name, footprint=(1, 1), zmax=1.0, margins=None,
@@ -457,13 +504,16 @@ def render_asset(family, name, footprint=(1, 1), zmax=1.0, margins=None,
     zc = zmax if zclip is None else zclip
     if clip:
         raw = _clip(raw, (left, top), (w, h), clip, zc)
-    img = post.process(raw, do_outline=outline, do_shadow=shadow, width=outline_width)
+    inner = _figure_cover(sc, family) if outline else None
+    if inner is not None and clip:
+        inner = _clip(inner[..., None].astype(np.float32), (left, top), (w, h), clip, zc)[..., 0] > 0.5
+    img = post.process(raw, do_outline=outline, do_shadow=shadow, width=outline_width, inner=inner)
     if clip:
         img = _clip(img, (left, top), (w, h), clip, zc)
     path = out_path(family, name)
     write_png(img, path)
     data = {
-        "image": os.path.relpath(path, C.ASSETS_DIR).replace(os.sep, "/"),
+        "image": os.path.relpath(path, C.OUT_ROOT).replace(os.sep, "/"),
         "scale": C.SCALE,
         "canvas": [W, H],
         "footprint": [w, h],
@@ -481,14 +531,14 @@ def render_asset(family, name, footprint=(1, 1), zmax=1.0, margins=None,
         if clip:
             m = _clip(m, (left, top), (w, h), clip, zc)
         if outline:
-            m = post.outline(m, darken=1.0, saturate=1.0)
+            m = post.outline(m, width=outline_width, darken=1.0, saturate=1.0, inner=inner)
         mask = np.zeros_like(m)
         mask[..., :3] = m[..., :1]
         mask[..., 3] = 1.0
         mpath = out_path(family, name + "_mask")
         write_png(mask, mpath)
         data["tint"] = {"group": groups.pop(),
-                        "mask": os.path.relpath(mpath, C.ASSETS_DIR).replace(os.sep, "/")}
+                        "mask": os.path.relpath(mpath, C.OUT_ROOT).replace(os.sep, "/")}
     if extra:
         data.update(extra)
     meta.write(family, name, data)
@@ -562,8 +612,7 @@ def mat_tinted(name, hex_):
     m = mat(name).copy()
     m.name = key
     ramp = next(n for n in m.node_tree.nodes if n.type == "VALTORGB")
-    for el, band in zip(ramp.color_ramp.elements, ("shadow", "base", "light")):
-        el.color = (*palette.hex_to_linear(p[band]), 1)
+    _color_ramp(ramp.color_ramp, p)
     return m
 
 

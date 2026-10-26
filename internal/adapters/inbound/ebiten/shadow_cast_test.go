@@ -9,6 +9,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/pawn/look"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -382,7 +383,7 @@ func TestCastModeRoutesAllFigureDraws(t *testing.T) {
 	r.art = figureArt()
 	r.drawPawns = []game.PawnView{shooter}
 	got := castAll(r, shooter)
-	hair := "pawn/" + r.look(shooter).HairStyle + "_south"
+	hair := "pawn/hair_" + look.HairStyles[shooter.Look.HairStyle] + "_south"
 	for _, k := range []string{"pawn/body_south", "pawn/pants_basic_south", "pawn/shirt_basic_south", hair, "weapon/rifle_basic"} {
 		if got[k] != 1 {
 			t.Fatalf("cast %q %d times: %v", k, got[k], got)
@@ -390,6 +391,9 @@ func TestCastModeRoutesAllFigureDraws(t *testing.T) {
 	}
 	if got["?"] != 0 {
 		t.Fatalf("a non-figure draw went through the cast: %v", got)
+	}
+	if got[staleHandKey] != 0 {
+		t.Fatalf("no hands cast: %v", got)
 	}
 	// a hauler's load is part of its silhouette
 	hauler := game.PawnView{ID: 2, X: 2, Y: 2, Carrying: "wood"}

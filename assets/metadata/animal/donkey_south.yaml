@@ -3,15 +3,15 @@ version: 1
 id: "core:animal/donkey_south"
 image: generated/world/animal/donkey_south.png
 scale: 2
-canvas: [184, 224]
+canvas: [180, 198]
 footprint: [1, 1]
-origin_px: [28, 82]
+origin_px: [26, 56]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: blob
   w: 0.239
-  h: 0.823
+  h: 0.815
   d: 0.869
 species: donkey
 facing: south

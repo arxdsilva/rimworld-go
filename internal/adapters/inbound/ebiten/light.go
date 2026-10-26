@@ -144,11 +144,16 @@ func seasonMaxEl(dayOfYear int) float64 {
 	return 50 // spring (0–7, 53–59) and fall (23–37)
 }
 
+// projShearK is the art projection's oblique shear: a point z tiles high
+// is drawn projShearK*z tiles north. It mirrors SHEAR_K in
+// assets/source/blender/artlib/contracts.py (metadata projection.shear_k).
+const projShearK = 0.35
+
 // lightDir is the unit vector toward a light at elevation el and azimuth
-// az (radians; 0 east, π/2 south, π west), y foreshortened by the 0.5
-// shear of the projection.
+// az (radians; 0 east, π/2 south, π west), y foreshortened by the
+// projection's shear.
 func lightDir(el, az float64) [3]float64 {
-	v := [3]float64{math.Cos(az) * math.Cos(el), 0.5 * math.Sin(az) * math.Cos(el), math.Sin(el)}
+	v := [3]float64{math.Cos(az) * math.Cos(el), projShearK * math.Sin(az) * math.Cos(el), math.Sin(el)}
 	n := math.Sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2])
 	return [3]float64{v[0] / n, v[1] / n, v[2] / n}
 }
@@ -577,7 +582,8 @@ func (r *Renderer) lightTile(tx, ty int) (sky, lamp float32) {
 // colour is cs premultiplied as DrawImage's ColorScale is (rgb×a), and
 // the custom attributes are sky (Custom0), lamp (Custom1) and the x
 // offset in pixels from the sprite to its normal map in the source image
-// (Custom2; 0 means none: lit flat). Custom3 (a figure's blood) is left
+// (Custom2; 0 means none: lit flat; negative: drawn mirrored, the normal's
+// x inverted). Custom3 (a figure's blood) is left
 // 0; drawLit sets it from r.figureBlood.
 func litQuad(vs *[4]ebiten.Vertex, sx, sy, w, h float32, geo ebiten.GeoM, cs colorScale, sky, lamp, normalOff float32) {
 	cr, cg, cb, ca := cs[0]*cs[3], cs[1]*cs[3], cs[2]*cs[3], cs[3]
@@ -591,6 +597,27 @@ func litQuad(vs *[4]ebiten.Vertex, sx, sy, w, h float32, geo ebiten.GeoM, cs col
 			Custom0: sky, Custom1: lamp, Custom2: normalOff,
 		}
 	}
+}
+
+// mirrorNormalOff is the normal-map offset a lit draw passes (Custom2):
+// negative when geo mirrors the sprite (a west-facing figure is its east
+// art flipped), which tells lit.kage to invert the normal's x so the
+// sprite is still lit from the light's side (decodeNormalMirrored).
+func mirrorNormalOff(off float32, geo ebiten.GeoM) float32 {
+	if off != 0 && geo.Element(0, 0)*geo.Element(1, 1)-geo.Element(0, 1)*geo.Element(1, 0) < 0 {
+		return -off
+	}
+	return off
+}
+
+// decodeNormalMirrored is decodeNormal for a sprite drawn mirrored: the
+// normal's x is inverted (lit.kage, Custom2 < 0).
+func decodeNormalMirrored(texel [4]float32, has, mirror bool) [3]float32 {
+	n := decodeNormal(texel, has)
+	if mirror {
+		n[0] = -n[0]
+	}
+	return n
 }
 
 // litSource is the image a lit draw of img samples and the x offset of
@@ -823,7 +850,7 @@ func (r *Renderer) drawLit(dst, img *ebiten.Image, geo ebiten.GeoM, cs colorScal
 	if src != img {
 		sx, sy = 0, 0
 	}
-	litQuad(&r.lit.verts, sx, sy, float32(b.Dx()), float32(b.Dy()), geo, cs, sky, lamp, off)
+	litQuad(&r.lit.verts, sx, sy, float32(b.Dx()), float32(b.Dy()), geo, cs, sky, lamp, mirrorNormalOff(off, geo))
 	for i := range r.lit.verts { // Custom3: the figure's blood (blood_draw.go), 0 for everything else
 		r.lit.verts[i].Custom3 = r.figureBlood
 	}

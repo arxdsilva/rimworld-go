@@ -56,8 +56,8 @@ func (p pose) scale() (float64, float64) {
 	return sx, sy
 }
 
-// figurePivot is where a standing figure's feet meet the ground, in
-// tiles from its tile's top-left (ART: figures stand at y = -0.52).
+// figurePivot is where a standing animal's feet meet the ground, in
+// tiles from its tile's top-left (pawns: pawnFeetX, pawnFeetY).
 const figurePivotX, figurePivotY = 0.5, 0.55
 
 // drawSpritePose draws a sprite at tile (wx, wy) transformed by ps.
@@ -135,14 +135,15 @@ func hash01(keys ...uint64) float64 {
 
 // --- walk cycle -------------------------------------------------------
 
-// Frame counts and gait length (ART §27.1): a pawn walk cycle is 12 poses
-// over strideLen tiles of stride, an animal trot 8; work swings are 6.
+// Gait (ART §27.1): one cycle (two footfalls) per strideLen tiles of
+// stride. Pawns have no walk frames: walkFrames only phases the bob so its
+// peaks fall where the old cycle's contact poses were (01 and 07). An
+// animal trot has trotFrames frames.
 const (
 	walkFrames = 12
-	workFrames = 6
 	trotFrames = 8
 	strideLen  = 1.6
-	// contactEvery is the stride between two foot contacts (frames 01 and 07).
+	// contactEvery is the stride between two foot contacts.
 	contactEvery = strideLen / 2
 
 	// gait amplitudes, in tiles / radians at normal walking speed
@@ -161,18 +162,6 @@ func cycleIndex(stride float64, n int) int {
 		i += n
 	}
 	return i
-}
-
-// walkIndex is the 0-based pawn walk frame for a stride in tiles.
-func walkIndex(stride float64) int { return cycleIndex(stride, walkFrames) }
-
-// walkSuffix is the walk frame suffix ("_walk01".."_walk12") for a mover,
-// or "" (the static pose) when it is not walking.
-func walkSuffix(m moveState) string {
-	if m.Blend < minBlend {
-		return ""
-	}
-	return fmt.Sprintf("_walk%02d", walkIndex(m.Stride)+1)
 }
 
 // trotSuffix is the animal trot frame suffix ("_walk01".."_walk08").
@@ -239,7 +228,7 @@ func gaitLean(f facing, m moveState) float64 {
 
 // walkPose is the gait's share of a figure transform.
 func walkPose(f facing, m moveState) pose {
-	ps := pose{px: figurePivotX, py: figurePivotY}
+	ps := standPose()
 	if m.Blend >= minBlend {
 		ps.dy = -bobRaise(m.Stride, m.Speed, m.Blend)
 	}
@@ -248,23 +237,6 @@ func walkPose(f facing, m moveState) pose {
 	}
 	ps.rot = gaitLean(f, m)
 	return ps
-}
-
-// headDelta is how far (tiles) the head moved from the static pose in
-// this body frame, from the "head" attachments. Hair and hats follow it.
-// Missing data (older art) means no offset.
-func headDelta(c *artCatalog, f facing, suffix string) (dx, dy float64) {
-	base := "pawn/body_" + f.String()
-	st, fr := c.sprite(base), c.sprite(base+suffix)
-	if suffix == "" || st == nil || fr == nil {
-		return 0, 0
-	}
-	h0, ok0 := st.meta.Attach["head"]
-	h1, ok1 := fr.meta.Attach["head"]
-	if !ok0 || !ok1 {
-		return 0, 0
-	}
-	return (h1[0] - h0[0]) / artTilePx, (h1[1] - h0[1]) / artTilePx
 }
 
 // blockedFacing turns a blocked creature towards whatever is in its way.

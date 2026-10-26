@@ -7,7 +7,8 @@
 // 0..1 and the direction toward the dominant lamp, PLAY-020 §3b; Go twins
 // decodeLamp and packLamp in light_lamp.go), custom.z the
 // x offset in pixels from the sprite to its normal map in the same image
-// (0: no normal map, lit flat), custom.w a blood stain on a creature
+// (0: no normal map, lit flat; negative: the sprite is drawn mirrored, so
+// the normal's x is inverted; Go twin decodeNormalMirrored), custom.w a blood stain on a creature
 // figure (SIM-020; 0 on everything else): w = 32*ichor + 2*wetStep +
 // coverage, coverage in [0,1), wetStep 0..15 (fresh, wet sheen), ichor 0
 // or 1. Where w > 0 the sprite's own pixels are mixed toward blood (or
@@ -100,13 +101,16 @@ func Fragment(dstPos vec4, srcPos vec2, color vec4, custom vec4) vec4 {
 		sheen = wetStep / 15 * m * 0.25
 	}
 	n := vec3(0, 0, 1)
-	if custom.z > 0.5 {
-		t := bilinear(srcPos + vec2(custom.z, 0))
+	if abs(custom.z) > 0.5 {
+		t := bilinear(srcPos + vec2(abs(custom.z), 0))
 		if t.a > 1.0/255 {
 			// straight-alpha PNG, stored premultiplied: un-premultiply;
-			// OpenGL green-up to screen y-down
+			// OpenGL green-up to screen y-down; a mirrored draw flips x
 			m := t.rgb/t.a*2 - 1
 			m.y = -m.y
+			if custom.z < 0 {
+				m.x = -m.x
+			}
 			if dot(m, m) > 1e-6 {
 				n = normalize(m)
 			}

@@ -1,8 +1,8 @@
 # rimworld-go base palette and global visual tokens (ART spec §6, §33).
 version: 1
 outline:
-  darken: 0.32          # outline = adjacent sprite colour * darken (chromatic, not black)
-  width_px_1x: 2
+  darken: 0.18          # outline = adjacent sprite colour * darken (chromatic, not black)
+  width_px_1x: 3
 shadow:
   rgb: "#1a1714"
   alpha: 0.30

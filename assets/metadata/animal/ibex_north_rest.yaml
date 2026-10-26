@@ -3,11 +3,11 @@ version: 1
 id: "core:animal/ibex_north_rest"
 image: generated/world/animal/ibex_north_rest.png
 scale: 2
-canvas: [168, 198]
+canvas: [168, 190]
 footprint: [1, 1]
-origin_px: [20, 56]
+origin_px: [20, 48]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: blob
   w: 0.212

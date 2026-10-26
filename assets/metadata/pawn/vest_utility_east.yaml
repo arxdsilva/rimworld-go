@@ -3,21 +3,18 @@ version: 1
 id: "core:pawn/vest_utility_east"
 image: generated/world/pawn/vest_utility_east.png
 scale: 2
-canvas: [160, 297]
+canvas: [160, 288]
 footprint: [1, 1]
-origin_px: [16, 153]
+origin_px: [16, 144]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.241
-  h: 0.225
-  d: 0.316
+  w: 0.346
+  h: 0.345
+  d: 0.451
 tint:
   group: cloth
   mask: generated/world/pawn/vest_utility_east_mask.png
 layer: vest_utility
 facing: east
-attachments:
-  hand: [89.4, 171.1]
-  hand_l: [89.4, 178.7]

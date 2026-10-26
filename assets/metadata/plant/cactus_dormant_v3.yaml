@@ -3,11 +3,11 @@ version: 1
 id: "core:plant/cactus_dormant_v3"
 image: generated/world/plant/cactus_dormant_v3.png
 scale: 2
-canvas: [180, 198]
+canvas: [180, 188]
 footprint: [1, 1]
-origin_px: [26, 51]
+origin_px: [26, 41]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: blob
   w: 0.412

@@ -3,11 +3,11 @@ version: 1
 id: "core:item/corpse_elk_v1"
 image: generated/world/item/corpse_elk_v1.png
 scale: 2
-canvas: [260, 182]
+canvas: [260, 166]
 footprint: [1, 1]
-origin_px: [66, 40]
+origin_px: [66, 24]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: blob
   w: 1.917

@@ -3,11 +3,11 @@ version: 1
 id: "core:furniture/headstone_02"
 image: generated/world/furniture/headstone_02.png
 scale: 2
-canvas: [160, 187]
+canvas: [160, 179]
 footprint: [1, 1]
-origin_px: [16, 43]
+origin_px: [16, 35]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: box
   w: 0.4

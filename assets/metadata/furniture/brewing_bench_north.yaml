@@ -3,11 +3,11 @@ version: 1
 id: "core:furniture/brewing_bench_north"
 image: generated/world/furniture/brewing_bench_north.png
 scale: 2
-canvas: [288, 232]
+canvas: [288, 211]
 footprint: [2, 1]
-origin_px: [16, 88]
+origin_px: [16, 67]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: box
   w: 1.92

@@ -3,11 +3,11 @@ version: 1
 id: "core:plant/corn_harvestable_v1"
 image: generated/world/plant/corn_harvestable_v1.png
 scale: 2
-canvas: [166, 259]
+canvas: [166, 228]
 footprint: [1, 1]
-origin_px: [19, 116]
+origin_px: [19, 85]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: blob
   w: 0.766

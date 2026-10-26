@@ -3,11 +3,11 @@ version: 1
 id: "core:plant/reeds_dormant_v1"
 image: generated/world/plant/reeds_dormant_v1.png
 scale: 2
-canvas: [180, 216]
+canvas: [180, 200]
 footprint: [1, 1]
-origin_px: [26, 69]
+origin_px: [26, 53]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: blob
   w: 0.573

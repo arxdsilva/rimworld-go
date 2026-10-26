@@ -3,11 +3,11 @@ version: 1
 id: "core:structure/sleeper_casket_open"
 image: generated/world/structure/sleeper_casket_open.png
 scale: 2
-canvas: [160, 344]
+canvas: [160, 327]
 footprint: [1, 2]
-origin_px: [16, 72]
+origin_px: [16, 55]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: box
   w: 0.88

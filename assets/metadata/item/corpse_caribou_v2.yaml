@@ -3,11 +3,11 @@ version: 1
 id: "core:item/corpse_caribou_v2"
 image: generated/world/item/corpse_caribou_v2.png
 scale: 2
-canvas: [252, 178]
+canvas: [252, 166]
 footprint: [1, 1]
-origin_px: [62, 36]
+origin_px: [62, 24]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: blob
   w: 1.853

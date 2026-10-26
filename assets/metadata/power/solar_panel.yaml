@@ -3,11 +3,11 @@ version: 1
 id: "core:power/solar_panel"
 image: generated/world/power/solar_panel.png
 scale: 2
-canvas: [416, 502]
+canvas: [416, 476]
 footprint: [3, 3]
-origin_px: [16, 102]
+origin_px: [16, 76]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: box
   w: 2.88

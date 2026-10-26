@@ -2,10 +2,6 @@ package ebiten
 
 import (
 	"math"
-	"strconv"
-	"strings"
-
-	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/entity"
@@ -15,25 +11,25 @@ import (
 // particles, aiming and firing poses, falls. Owned by the combat
 // animation work; the dispatch in pawn_anim.go calls in here.
 //
-// Timing (§27.2, C7): wind-up frames follow AttackCycle; strike frames
-// land when the attack's trace is first seen (its birth tick, Tick-Age);
-// the follow-through runs on animT from there. Every timed effect lasts
-// at least minReactionFrames present frames.
+// Timing (§27.2, C7): the wind-up follows AttackCycle; the strike (the
+// lunge's peak, a club's blow, the muzzle rise) lands when the attack's
+// trace is first seen (its birth tick, Tick-Age); the follow-through runs
+// on animT from there. Every timed effect lasts at least
+// minReactionFrames present frames.
 
 // Combat timing in sim ticks, and reaction sizes in tiles.
 const (
 	aimAt        = 0.6  // AttackCycle at which the rifle is shouldered
 	lowReady     = 0.55 // radians the muzzle drops at low ready
-	fireTicks    = 9.0  // fire1..3
+	fireTicks    = 9.0  // the shot's muzzle rise and settle
 	lowerTicks   = 12.0 // after fire3, easing back towards low ready
 	recoilTicks  = 6.0
 	recoilDist   = 0.08
 	meleeTicks   = 10.0 // strike + follow-through
 	strikeWindow = 30.0 // a strike older than this no longer shapes the pose
-	hitTicks     = 12.0 // flinch1..3 and the hit flash
+	hitTicks     = 12.0 // the flinch and the hit flash
 	staggerTicks = 10.0
 	staggerDist  = 0.12
-	fallStep     = 4.0 // present frames per fall frame
 	bloodSpeed   = 0.03
 	casingSpeed  = 0.02
 )
@@ -239,19 +235,8 @@ func facingUnit(f facing) (float64, float64) {
 
 // --- pose layers ----------------------------------------------------------
 
-// flinchFrame is the flinch frame at a hit's age.
-func flinchFrame(age float64) string {
-	switch {
-	case age < 3:
-		return "_flinch1"
-	case age < 7:
-		return "_flinch2"
-	}
-	return "_flinch3"
-}
-
-// hitReaction is the flinch layer while a hit is fresh (HitTick): flinch
-// frames and a stagger away from the attacker, with a flash.
+// hitReaction is the flinch layer while a hit is fresh (HitTick): a
+// stagger and twist away from the attacker, with a flash.
 func (r *Renderer) hitReaction(p game.PawnView, m moveState) actionPose {
 	age, ok := r.hitAge(p.ID, p.HitTick, p.X, p.Y)
 	if !ok || age >= hitTicks {
@@ -259,27 +244,13 @@ func (r *Renderer) hitReaction(p game.PawnView, m moveState) actionPose {
 	}
 	ux, uy := awayFrom(p.X, p.Y, p.HitFromX, p.HitFromY, m.Facing)
 	k := staggerK(age)
-	a := actionPose{ok: true, suffix: flinchFrame(age),
+	a := actionPose{ok: true,
 		dx: ux * staggerDist * k, dy: uy * staggerDist * k, rot: ux * 0.1 * k,
 		flash: float32(1 - age/hitTicks)}
 	if onDuty(p) {
 		a.held = readyHeld(p)
 	}
 	return a
-}
-
-// meleeSet is a melee weapon's pose set and frame count (strike at 4 of
-// 6; punches strike on 2 or 3 of 4).
-func meleeSet(weapon string) (string, int) {
-	switch weapon {
-	case "knife":
-		return "_stab", 6
-	case "spear":
-		return "_thrust", 6
-	case "club":
-		return "_swing", 6
-	}
-	return "_punch", 4
 }
 
 // meleeReach is how far (tiles) the body lunges into a strike.
@@ -293,70 +264,77 @@ func meleeReach(weapon string) float64 {
 	return 0.12
 }
 
-// meleeFrame is the melee frame and lunge weight (-1 back .. 1 full
-// reach): wind-up by AttackCycle, strike and follow-through by the age
-// of the last strike. alt picks the cross over the jab.
-func meleeFrame(weapon string, cycle, age float64, struck, alt bool) (string, float64) {
-	set, n := meleeSet(weapon)
-	fr := func(i int) string { return set + strconv.Itoa(i) }
+// Melee item motion: how far a thrust pushes the weapon along itself
+// (tiles, at full lunge), and a club's arc (the turn about its grip,
+// positive raising its head).
+const (
+	knifePush   = 0.10
+	spearPush   = 0.18
+	fistPush    = 0.14
+	clubRest    = 0.3
+	clubRaised  = 1.8
+	clubStrike  = -0.6
+	chamberBack = -0.3 // the lunge weight while chambering a thrust
+)
+
+// meleeMotion is a melee attack's shape: the body's lunge weight (-1 back
+// .. 1 full reach), the weapon's turn and its push along itself (tiles).
+// The wind-up follows AttackCycle; the strike and follow-through follow
+// the age of the last strike (age 0 on the trace). Knives and spears
+// thrust (pushed forward at the lunge), clubs swing down from over the
+// shoulder, fists punch (a lunge; push is the punch's reach, which the
+// melee trail follows).
+func meleeMotion(weapon string, cycle, age float64, struck bool) (lunge, angle, push float64) {
 	if struck && age < meleeTicks {
-		k := 1.0
+		lunge = 1
 		if age >= 3 {
-			k = 1 - (age-3)/(meleeTicks-3)
+			lunge = 1 - (age-3)/(meleeTicks-3)
 		}
-		if n == 4 {
-			switch {
-			case age < 3 && alt:
-				return fr(3), k
-			case age < 3:
-				return fr(2), k
-			}
-			return fr(4), k
-		}
+	} else if weapon != "fists" && weapon != "" {
 		switch {
-		case age < 3:
-			return fr(4), k
-		case age < 6:
-			return fr(5), k
+		case cycle < 0.5:
+		case cycle < 0.8:
+			t := (cycle - 0.5) / 0.3
+			lunge = chamberBack * t * t * (3 - 2*t)
+		default:
+			lunge = chamberBack + 0.6*clamp01((cycle-0.8)/0.2) // step in
 		}
-		return fr(6), k
 	}
-	if n == 4 {
-		return fr(1), 0
+	reach := math.Max(lunge, 0)
+	switch weapon {
+	case "knife":
+		push = knifePush * reach
+	case "spear":
+		push = spearPush * reach
+	case "club":
+		switch {
+		case struck && age < 3:
+			angle = clubStrike
+		case struck && age < meleeTicks:
+			angle = clubStrike + (clubRest-clubStrike)*easeOut((age-3)/(meleeTicks-3))
+		default:
+			t := clamp01((cycle - 0.5) / 0.5)
+			angle = clubRest + (clubRaised-clubRest)*t*t*(3-2*t)
+		}
+	default: // fists
+		push = fistPush * reach
 	}
-	switch {
-	case cycle < 0.5:
-		return fr(1), 0
-	case cycle < 0.8:
-		t := (cycle - 0.5) / 0.3
-		return fr(2), -0.3 * t * t * (3 - 2*t) // chamber back
-	}
-	return fr(3), -0.3 + 0.6*clamp01((cycle-0.8)/0.2) // step in
+	return lunge, angle, push
 }
 
-// aimFrame is the rifle frame, how far it is raised (0 low ready .. 1
-// shouldered) and the muzzle rise (radians): ready blends to aim over
-// AttackCycle 0..aimAt, fire1..3 follow the shot, then it eases down.
-func aimFrame(cycle, age float64, struck bool) (string, float64, float64) {
+// aimRaise is how far the rifle is raised (0 low ready .. 1 shouldered)
+// and the muzzle rise (radians): ready blends to aimed over AttackCycle
+// 0..aimAt, the shot kicks the muzzle up and back down over fireTicks,
+// then it eases back towards low ready.
+func aimRaise(cycle, age float64, struck bool) (raise, rise float64) {
 	if struck && age < fireTicks {
-		rise := 0.3 * math.Sin(math.Pi*age/fireTicks)
-		switch {
-		case age < 2:
-			return "_fire1", 1, rise
-		case age < 5:
-			return "_fire2", 1, rise
-		}
-		return "_fire3", 1, rise
+		return 1, 0.3 * math.Sin(math.Pi*age/fireTicks)
 	}
 	k := clamp01(cycle / aimAt)
 	if struck {
 		k = math.Max(k, clamp01(1-(age-fireTicks)/lowerTicks))
 	}
-	k = k * k * (3 - 2*k)
-	if k >= 0.5 {
-		return "_aim", k, 0
-	}
-	return "_ready", k, 0
+	return k * k * (3 - 2*k), 0
 }
 
 // creatureSpot is where creature id is drawn (its body centre), by its
@@ -418,23 +396,19 @@ func (r *Renderer) combatPose(p game.PawnView, m moveState) actionPose {
 	moving := m.Blend >= minBlend
 	a.held.aim, a.held.aimX, a.held.aimY = hasT, tgt.x, tgt.y
 	if p.Action == game.ActionAim || p.Action != game.ActionMelee && struck && !st.Melee {
-		sfx, raise, rise := aimFrame(p.AttackCycle, age, struck)
+		raise, rise := aimRaise(p.AttackCycle, age, struck)
 		a.held.angle = rise - (1-raise)*lowReady
 		if struck && age < recoilTicks {
 			k := 1 - age/recoilTicks
 			a.dx, a.dy = -ux*recoilDist*k, -uy*recoilDist*k
 		}
-		if !moving {
-			a.suffix = sfx
-		}
 		return a
 	}
-	alt := int64(st.born)%2 == 1
-	sfx, lunge := meleeFrame(p.Weapon, p.AttackCycle, age, struck, alt)
+	lunge, angle, push := meleeMotion(p.Weapon, p.AttackCycle, age, struck)
 	a.held.aim = hasT && (p.Weapon == "knife" || p.Weapon == "spear") // thrusts point at the target
+	a.held.angle, a.held.push = angle, push
 	if !moving {
 		reach := meleeReach(p.Weapon)
-		a.suffix = sfx
 		a.dx, a.dy, a.rot = ux*reach*lunge, uy*reach*lunge, ux*0.06*lunge
 	}
 	return a
@@ -452,23 +426,23 @@ func (r *Renderer) combatOffset(p game.PawnView) (dx, dy float64, flash float32)
 
 // --- falling --------------------------------------------------------------
 
-// fallPose is a pawn lying on the bare ground. Downed or dead it plays
-// fall1..4 upright (sliding away from the last hit), then tips over
-// away from that hit; asleep it just lies down. upright reports a
-// figure drawn in its facing with the frame suffix; otherwise the plain
-// south figure.
-func (r *Renderer) fallPose(p game.PawnView, vis pawnVisual) (suffix string, ps pose, upright bool) {
+// fallPose is a pawn lying on the bare ground, drawn as its standing
+// south figure turned about the feet. Downed or dead it buckles (a short
+// squash, sliding away from the last hit), then tips over away from that
+// hit over fallFrames; asleep it just lies down.
+func (r *Renderer) fallPose(p game.PawnView, vis pawnVisual) pose {
 	e := float64(r.present - vis.lyingSince)
 	side := 1.0
 	if vis.facing == faceWest {
 		side = -1
 	}
-	ps = pose{px: figurePivotX, py: figurePivotY}
+	ps := standPose()
 	breath := 1 + 0.02*math.Sin(2*math.Pi*float64(r.present+uint64(p.ID)*37)/110)
 	if p.Status == "alive" {
 		k := easeOut(e / fallFrames)
-		ps.rot, ps.dx, ps.dy, ps.sy = side*math.Pi/2*k, -side*0.42*k, 0.1*k, breath
-		return "", ps, false
+		lp := lyingPose(r.art, side)
+		ps.rot, ps.dx, ps.dy, ps.sy = lp.rot*k, lp.dx*k, lp.dy*k, breath
+		return ps
 	}
 	var ux, uy float64
 	if p.HitTick != 0 {
@@ -480,51 +454,23 @@ func (r *Renderer) fallPose(p game.PawnView, vis pawnVisual) (suffix string, ps 
 			side = -1
 		}
 	}
-	buckle := 4 * fallStep
-	total := buckle + fallFrames
+	total := float64(buckleFrames + fallFrames)
 	drift := 0.12 * easeOut(e/total)
 	ps.dx, ps.dy = ux*drift, uy*drift
 	ps.flash = float32(0.5 * (1 - clamp01(e/total)))
-	if e < buckle {
-		ps.sy = 1 - 0.06*e/buckle
-		return "_fall" + strconv.Itoa(1+int(e/fallStep)), ps, true
+	if e < buckleFrames {
+		ps.sy = 1 - 0.06*e/buckleFrames
+		return ps
 	}
-	k := easeOut((e - buckle) / fallFrames)
-	ps.rot = side * math.Pi / 2 * k
-	ps.dx += -side * 0.42 * k
-	ps.dy += 0.1 * k
+	k := easeOut((e - buckleFrames) / fallFrames)
+	lp := lyingPose(r.art, side)
+	ps.rot = lp.rot * k
+	ps.dx += lp.dx * k
+	ps.dy += lp.dy * k
 	if p.Status != "dead" {
 		ps.sy = breath
 	}
-	return "_fall4", ps, true
-}
-
-// drawFigureFacing draws a pawn's layers in a facing and body frame,
-// hair and hats riding the frame's head (turned with the pose).
-func (r *Renderer) drawFigureFacing(screen *ebiten.Image, p game.PawnView, f facing, suffix string, wx, wy, tile float64, ps pose) {
-	hdx, hdy := headDelta(r.art, f, suffix)
-	c, s := math.Cos(ps.rot), math.Sin(ps.rot)
-	headPs := ps
-	headPs.dx += hdx*c - hdy*s
-	headPs.dy += hdx*s + hdy*c
-	blood := r.pawnBlood(p) // body and apparel only (blood_draw.go)
-	scar := p.Disfigured
-	for _, ly := range r.pawnLayers(r.look(p), f, p.Apparel...) {
-		lp := ps
-		if isHeadLayer(ly.key) {
-			lp = headPs
-		}
-		r.figureBlood = layerBlood(ly.key, blood)
-		r.drawSpritePose(screen, r.framed(ly.key, suffix), ly.tint, wx, wy, tile, lp)
-		if scar && strings.HasPrefix(ly.key, "pawn/hair_") {
-			scar = false
-			r.drawFaceScar(screen, f, suffix, wx, wy, tile, headPs)
-		}
-	}
-	r.figureBlood = 0
-	if scar { // no hair layer: the scar still goes on the face
-		r.drawFaceScar(screen, f, suffix, wx, wy, tile, headPs)
-	}
+	return ps
 }
 
 // --- weapon points and particles -----------------------------------------
@@ -540,7 +486,7 @@ func pawnByStrike(pawns []game.PawnView, t game.TraceView) (game.PawnView, bool)
 }
 
 // pawnHeldPoint is where an attachment of what a standing pawn holds is
-// right now, in world tiles ("tip" with bare hands is the hand).
+// right now, in world tiles (with bare hands, the body's hold).
 func (r *Renderer) pawnHeldPoint(p game.PawnView, attach string) (vec, bool) {
 	if p.Lying || p.CarriedBy != 0 || r.art == nil {
 		return vec{}, false
@@ -548,11 +494,15 @@ func (r *Renderer) pawnHeldPoint(p game.PawnView, attach string) (vec, bool) {
 	wx, wy := r.interpWorld(p)
 	m := r.pawnMotion(p.ID)
 	m.Facing = r.poseFacing(p, m)
-	ps, suffix, h := r.standingPose(p, m)
-	if h.key == "" {
-		attach = "hand"
+	ps, h := r.standingPose(p, m)
+	rig := r.rigOf(p, m.Facing)
+	if rig.mirror {
+		ps = mirrored(ps)
 	}
-	return r.heldPoint(m.Facing, suffix, h, wx, wy, ps, attach)
+	if h.key == "" {
+		attach = "hold"
+	}
+	return r.heldPoint(rig, h, wx, wy, ps, attach)
 }
 
 // shotPoints are a shot's muzzle and ejection port in world tiles: from

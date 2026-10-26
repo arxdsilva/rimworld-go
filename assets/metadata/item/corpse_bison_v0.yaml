@@ -3,11 +3,11 @@ version: 1
 id: "core:item/corpse_bison_v0"
 image: generated/world/item/corpse_bison_v0.png
 scale: 2
-canvas: [164, 164]
+canvas: [164, 156]
 footprint: [1, 1]
-origin_px: [18, 22]
+origin_px: [18, 14]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: blob
   w: 1.151

@@ -3,11 +3,11 @@ version: 1
 id: "core:furniture/stove_basic_west"
 image: generated/world/furniture/stove_basic_west.png
 scale: 2
-canvas: [160, 359]
+canvas: [160, 338]
 footprint: [1, 2]
-origin_px: [16, 87]
+origin_px: [16, 66]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: box
   w: 0.87

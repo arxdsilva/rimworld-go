@@ -2,9 +2,13 @@ package ebiten
 
 import (
 	"math"
+	"slices"
 	"testing"
 
+	ebiten "github.com/hajimehoshi/ebiten/v2"
+
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/pawn/look"
 )
 
 func TestAttackReactions(t *testing.T) {
@@ -30,21 +34,35 @@ func TestAttackReactions(t *testing.T) {
 func TestWorkSwingAndStrike(t *testing.T) {
 	t.Parallel()
 	_, st, ok := actionOf(game.PawnView{Acting: "cut"}) // old Acting strings still map
-	if !ok || st.parts[0].kind != partChip || st.tool != "tool/axe" || st.fallback != motionSwing {
+	if !ok || st.parts[0].kind != partChip || st.tool != "tool/axe" || st.motion != motionSwing {
 		t.Fatal("cutting swings an axe and throws chips")
 	}
-	// six frames: 1-2 wind-up, 3-4 swing, 5 strike, 6 recover
-	want := map[float64]string{0.05: "_work1", 0.2: "_work2", 0.33: "_work3", 0.43: "_work4", strikeAt: "_work5", 0.8: "_work6"}
-	for ph, w := range want {
-		if got := workFrame(ph); got != w {
-			t.Fatalf("workFrame(%v) = %s, want %s", ph, got, w)
+	// the tool winds up over the shoulder, is driven down to the strike at
+	// strikeAt, then recovers to rest
+	if a := swingAngle(0); math.Abs(a-swingRest) > 1e-9 {
+		t.Fatalf("starts at rest: %v", a)
+	}
+	if a := swingAngle(0.40); math.Abs(a-swingRaised) > 1e-9 {
+		t.Fatalf("raised at the end of the wind-up: %v", a)
+	}
+	if a := swingAngle(strikeAt); math.Abs(a-swingStrike) > 1e-9 {
+		t.Fatalf("struck down at strikeAt: %v", a)
+	}
+	if a := swingAngle(0.999); math.Abs(a-swingRest) > 0.01 {
+		t.Fatalf("back at rest by the loop's end: %v", a)
+	}
+	prev := swingAngle(0)
+	for ph := 0.01; ph < 0.40; ph += 0.01 {
+		if a := swingAngle(ph); a < prev {
+			t.Fatalf("the wind-up only rises: %v at %v", a, ph)
 		}
+		prev = swingAngle(ph)
 	}
-	if toolAngle(faceWest, "_work1") != -toolAngle(faceEast, "_work1") {
-		t.Fatal("west mirrors east")
-	}
-	if toolAngle(faceEast, "_work5") <= toolAngle(faceEast, "_work1") {
-		t.Fatal("the tool comes down from wind-up to strike")
+	for ph := 0.41; ph < strikeAt; ph += 0.01 {
+		if a := swingAngle(ph); a > prev {
+			t.Fatalf("the drive only falls: %v at %v", a, ph)
+		}
+		prev = swingAngle(ph)
 	}
 	strikes, peak := 0, 0.0
 	for f := 0.0; f < float64(st.period)*3; f++ {
@@ -64,32 +82,36 @@ func TestWorkSwingAndStrike(t *testing.T) {
 // walking at one tile per 15 ticks, the usual gait
 var walkingState = moveState{Speed: 1.0 / float64(game.TicksPerCell), Blend: 1, Moving: true}
 
-func TestWalkCycleFollowsStride(t *testing.T) {
+func TestWalkBobFollowsStride(t *testing.T) {
 	t.Parallel()
-	// one cycle (12 frames) per 1.6 tiles: floor(stride/1.6*12) mod 12
-	cases := map[float64]int{0: 0, 0.14: 1, 0.8: 6, 1.59: 11, 1.6: 0, 3.2 + 0.14: 1, -0.1: 11}
-	for stride, want := range cases {
-		if got := walkIndex(stride); got != want {
-			t.Fatalf("walkIndex(%v) = %d, want %d", stride, got, want)
+	// one gait cycle (two footfalls) per strideLen tiles of stride: the bob
+	// repeats every half cycle, also walking a diagonal
+	m := walkingState
+	for _, stride := range []float64{0, 0.14, 0.5, 1.1} {
+		a := bobRaise(stride, m.Speed, 1)
+		if b := bobRaise(stride+contactEvery, m.Speed, 1); math.Abs(a-b) > 1e-9 {
+			t.Fatalf("stride %v: bob repeats every footfall: %v vs %v", stride, a, b)
+		}
+		if b := bobRaise(stride+strideLen, m.Speed, 1); math.Abs(a-b) > 1e-9 {
+			t.Fatalf("stride %v: and every cycle: %v vs %v", stride, a, b)
 		}
 	}
-	m := walkingState
-	m.Stride = 0.8
-	if walkSuffix(m) != "_walk07" {
-		t.Fatalf("suffix = %s", walkSuffix(m))
-	}
-	// a diagonal step is 1.41 tiles of stride: more frames per step than a straight one
-	if d, s := walkIndex(math.Sqrt2)-walkIndex(0), walkIndex(1)-walkIndex(0); d <= s {
-		t.Fatalf("diagonal advances %d frames, straight %d", d, s)
+	// the pose follows the stride: bob up at a footfall, down between
+	m.Stride = 0.5 / walkFrames * strideLen
+	up := walkPose(faceSouth, m)
+	m.Stride += contactEvery / 2
+	down := walkPose(faceSouth, m)
+	if up.dy >= down.dy || up.dy >= 0 {
+		t.Fatalf("raised at the footfall (%v), lower between (%v)", up.dy, down.dy)
 	}
 }
 
 func TestWalkBlendIdle(t *testing.T) {
 	t.Parallel()
 	m := walkingState
-	m.Stride, m.Blend = 0.8, 0
-	if walkSuffix(m) != "" {
-		t.Fatalf("blend 0 is the static pose, got %q", walkSuffix(m))
+	m.Stride, m.Blend = 0.1, 0
+	if ps := walkPose(faceEast, m); ps.dy != 0 {
+		t.Fatalf("blend 0 is the static pose, got %+v", ps)
 	}
 	if bobRaise(0, m.Speed, 0) != 0 {
 		t.Fatal("idle does not bob")
@@ -140,58 +162,37 @@ func TestSwayAndLeanScaleWithSpeed(t *testing.T) {
 	}
 }
 
+// Hair, beard and hat are drawn in the body's own pose: a lean, squash or
+// fall moves them exactly as it moves the head on the body.
 func TestHairFollowsHead(t *testing.T) {
 	t.Parallel()
-	mk := func(head [2]float64) *artSprite {
-		return &artSprite{meta: artMeta{Attach: map[string][2]float64{"head": head}}}
+	r := New(&stubSim{w: 16, h: 16, tick: 100})
+	r.art = figureArt()
+	var keys []string
+	p := game.PawnView{ID: 1, X: 2, Y: 2, Look: look.Look{Beard: 1}, Apparel: []string{"tuque"}}
+	for _, k := range []string{"pawn/beard_short_south", "pawn/tuque_knit_south"} {
+		r.art.sprites[k] = fakeSprite([2]int{160, 297}, pt{16, 153}, nil)
 	}
-	c := &artCatalog{sprites: map[string]*artSprite{
-		"pawn/body_east":        mk([2]float64{100, 50}),
-		"pawn/body_east_walk07": mk([2]float64{100 + artTilePx/2, 50 - artTilePx/4}),
-		"pawn/body_east_walk02": {meta: artMeta{Attach: map[string][2]float64{}}}, // no head metadata yet
-	}}
-	dx, dy := headDelta(c, faceEast, "_walk07")
-	if math.Abs(dx-0.5) > 1e-9 || math.Abs(dy+0.25) > 1e-9 {
-		t.Fatalf("hair moves by head(frame)-head(static) in tiles: %v %v", dx, dy)
-	}
-	for _, sfx := range []string{"", "_walk02", "_walk99"} {
-		if dx, dy := headDelta(c, faceEast, sfx); dx != 0 || dy != 0 {
-			t.Fatalf("missing head data falls back to no offset (%q): %v %v", sfx, dx, dy)
+	ps := standPose()
+	ps.rot, ps.sy, ps.dx = 0.3, 0.9, 0.1
+	r.lit.onDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
+	r.drawFigure(ebiten.NewImage(256, 256), p, 2, 2, 64, ps)
+	for _, k := range []string{"pawn/body_south", "pawn/beard_short_south", "pawn/hair_short_south", "pawn/tuque_knit_south"} {
+		if !slices.Contains(keys, k) {
+			t.Fatalf("%s not drawn: %v", k, keys)
 		}
 	}
-	if dx, dy := headDelta(nil, faceEast, "_walk07"); dx != 0 || dy != 0 {
-		t.Fatal("no catalog, no offset")
+	// every layer shares the figure's transform: the same canvas point
+	// lands on the same screen point
+	sx, sy := r.worldToScreenF(2, 2)
+	g := func(key string) pt {
+		sp := r.art.sprite(key)
+		x, y, s := artOrigin(sp.meta, float64(sx), float64(sy), 64)
+		pg := ps.geo(float64(sx), float64(sy), 64)
+		return apply(pg, pt{x + 80*s, y + 122*s})
 	}
-}
-
-func TestWorkSixFramesOnAnimT(t *testing.T) {
-	t.Parallel()
-	const period = 40
-	count := func(perFrame float64, frames int) int {
-		n := 0
-		for i, at := 0, 0.0; i < frames; i, at = i+1, at+perFrame {
-			if workStrikeAt(at, at+perFrame, 3, period) {
-				n++
-			}
-		}
-		return n
-	}
-	if count(0, 400) != 0 {
-		t.Fatal("paused (animT frozen): no strikes")
-	}
-	one, three := count(1, 400), count(3, 400)
-	if one != 10 || three != 30 {
-		t.Fatalf("strikes at 1x=%d (want 10), 3x=%d (want 30)", one, three)
-	}
-	seen := map[string]bool{}
-	for ph := 0.0; ph < 1; ph += 0.01 {
-		seen[workFrame(ph)] = true
-	}
-	if len(seen) != 6 {
-		t.Fatalf("six distinct work frames: %v", seen)
-	}
-	if workPhase(10, 3, period) != workPhase(10+period, 3, period) {
-		t.Fatal("the swing repeats every period of animT")
+	if a, b := g("pawn/body_south"), g("pawn/hair_short_south"); !near2(a, b, 1e-9) {
+		t.Fatalf("hair rides the head: %v vs %v", a, b)
 	}
 }
 
@@ -236,9 +237,22 @@ func TestCarryLiftEases(t *testing.T) {
 	if k := st.carryEase(7, 90); k != 0 {
 		t.Fatal("a new pickup restarts the lift")
 	}
-	ground, slung := carryPoses(faceEast)
+	c := fakeCombatArt()
+	ground, slung := carryPoses(c, faceEast)
 	if lerpPose(ground, slung, 0.5) == slung {
 		t.Fatal("poses differ")
+	}
+	// lying on the ground on its side; slung over the rescuer's back
+	// attachment, a little above it
+	if math.Abs(ground.rot-math.Pi/2) > 1e-9 || ground != lyingPose(c, 1) {
+		t.Fatalf("ground pose lies on its side: %+v", ground)
+	}
+	if wg, _ := carryPoses(c, faceWest); math.Abs(wg.rot+math.Pi/2) > 1e-9 {
+		t.Fatalf("facing west it lies the other way: %+v", wg)
+	}
+	_, backY, _ := bodyAttach(c.sprite("pawn/body_south"), "back")
+	if top := pawnFeetY + slung.dy; top >= backY || top < backY-0.2 {
+		t.Fatalf("slung across the back (%v) at %v", backY, top)
 	}
 }
 

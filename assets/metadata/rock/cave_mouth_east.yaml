@@ -3,11 +3,11 @@ version: 1
 id: "core:rock/cave_mouth_east"
 image: generated/world/rock/cave_mouth_east.png
 scale: 2
-canvas: [160, 202]
+canvas: [160, 190]
 footprint: [1, 1]
-origin_px: [16, 58]
+origin_px: [16, 46]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: box
   w: 1

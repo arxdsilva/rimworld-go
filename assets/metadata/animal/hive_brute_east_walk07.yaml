@@ -3,11 +3,11 @@ version: 1
 id: "core:animal/hive_brute_east_walk07"
 image: generated/world/animal/hive_brute_east_walk07.png
 scale: 2
-canvas: [228, 296]
+canvas: [228, 280]
 footprint: [1, 1]
-origin_px: [50, 154]
+origin_px: [50, 138]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: blob
   w: 1.406

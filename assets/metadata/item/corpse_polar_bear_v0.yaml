@@ -3,11 +3,11 @@ version: 1
 id: "core:item/corpse_polar_bear_v0"
 image: generated/world/item/corpse_polar_bear_v0.png
 scale: 2
-canvas: [196, 164]
+canvas: [196, 156]
 footprint: [1, 1]
-origin_px: [34, 22]
+origin_px: [34, 14]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: blob
   w: 1.424

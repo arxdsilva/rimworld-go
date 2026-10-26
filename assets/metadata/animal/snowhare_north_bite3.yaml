@@ -7,12 +7,12 @@ canvas: [156, 156]
 footprint: [1, 1]
 origin_px: [14, 14]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: blob
   w: 0.121
   h: 0.174
-  d: 0.424
+  d: 0.418
 species: snowhare
 facing: north
 frame: bite3

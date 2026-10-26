@@ -3,11 +3,11 @@ version: 1
 id: "core:furniture/bed_double_west"
 image: generated/world/furniture/bed_double_west.png
 scale: 2
-canvas: [288, 333]
+canvas: [288, 320]
 footprint: [2, 2]
-origin_px: [16, 61]
+origin_px: [16, 48]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: box
   w: 1.94

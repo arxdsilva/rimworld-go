@@ -3,11 +3,11 @@ version: 1
 id: "core:item/corpse_yak_v1"
 image: generated/world/item/corpse_yak_v1.png
 scale: 2
-canvas: [180, 158]
+canvas: [180, 156]
 footprint: [1, 1]
-origin_px: [26, 16]
+origin_px: [26, 14]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: blob
   w: 1.29

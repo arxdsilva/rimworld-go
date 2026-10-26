@@ -3,11 +3,11 @@ version: 1
 id: "core:power/wood_fired_generator"
 image: generated/world/power/wood_fired_generator.png
 scale: 2
-canvas: [288, 396]
+canvas: [288, 364]
 footprint: [2, 2]
-origin_px: [16, 124]
+origin_px: [16, 92]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: box
   w: 1.885
@@ -17,6 +17,6 @@ rotatable: false
 facing: south
 building: wood-fired generator
 attachments:
-  smoke: [67.2, 63.8]
+  smoke: [67.2, 63.7]
 emissive: hive_glow
 glow: power/wood_fired_generator_glow

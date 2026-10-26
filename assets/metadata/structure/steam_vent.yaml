@@ -3,11 +3,11 @@ version: 1
 id: "core:structure/steam_vent"
 image: generated/world/structure/steam_vent.png
 scale: 2
-canvas: [288, 304]
+canvas: [288, 299]
 footprint: [2, 2]
-origin_px: [16, 32]
+origin_px: [16, 27]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: box
   w: 1.84

@@ -3,11 +3,11 @@ version: 1
 id: "core:rock/rock_smooth_15_c6"
 image: generated/world/rock/rock_smooth_15_c6.png
 scale: 2
-canvas: [160, 200]
+canvas: [160, 188]
 footprint: [1, 1]
-origin_px: [16, 56]
+origin_px: [16, 44]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: box
   w: 1

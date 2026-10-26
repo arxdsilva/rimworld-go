@@ -7,7 +7,7 @@ canvas: [192, 156]
 footprint: [1, 1]
 origin_px: [32, 14]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: blob
   w: 1.386

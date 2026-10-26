@@ -55,9 +55,9 @@ func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
 
 const (
 	// shadowRho is the y-foreshortening applied on top of ShadowDir. The
-	// sun's ShadowDir is already foreshortened (lightDir's 0.5 on y), and
+	// sun's ShadowDir is already foreshortened (lightDir's projShearK on y), and
 	// box and blob shadows use it as is, so silhouettes do too (ρ = 1);
-	// a second 0.5 turned creature shadows away from the walls' beside
+	// a second foreshortening turned creature shadows away from the walls' beside
 	// them.
 	shadowRho = 1.0
 	// lyingKappa flattens a body lying on the ground (≈0.25 tiles thick).
@@ -288,12 +288,12 @@ func pointCast(px, py, h float64, L pointLight, daylight float64) (castLight, bo
 }
 
 // sunElevation is the sun's elevation (radians) in l, 0 below the
-// horizon: SunL is lightDir's unit vector, y foreshortened by 0.5.
+// horizon: SunL is lightDir's unit vector, y foreshortened by projShearK.
 func sunElevation(l lightState) float64 {
 	if l.SunL[2] <= 0 {
 		return 0
 	}
-	return math.Atan2(float64(l.SunL[2]), math.Hypot(float64(l.SunL[0]), 2*float64(l.SunL[1])))
+	return math.Atan2(float64(l.SunL[2]), math.Hypot(float64(l.SunL[0]), float64(l.SunL[1])/projShearK))
 }
 
 // daylightOf is how much the sun at elevation el (radians) washes out
@@ -347,7 +347,7 @@ func (r *Renderer) creatureCasters(w game.WorldView, pawns []game.PawnView) []cr
 	inView := func(x, y float64) bool {
 		return v.empty() || x+1 >= v.x0-mg && y+1 >= v.y0-mg && x <= v.x1+mg && y <= v.y1+mg
 	}
-	add := func(c creatureCaster, key string) {
+	add := func(c creatureCaster, key string, feetX, feetY float64) {
 		sp := r.art.sprite(key)
 		if sp == nil {
 			return // no art (the fallback marker casts nothing)
@@ -357,7 +357,7 @@ func (r *Renderer) creatureCasters(w game.WorldView, pawns []game.PawnView) []cr
 			return
 		}
 		c.w, c.h, c.opaque = s.w, s.h, sp.opaqueHeightPx()
-		c.px, c.py = c.wx+figurePivotX, c.wy+figurePivotY
+		c.px, c.py = c.wx+feetX, c.wy+feetY
 		c.tx, c.ty = int(math.Floor(c.wx+0.5)), int(math.Floor(c.wy+0.5))
 		c.sky = skyOpen(w, c.tx, c.ty)
 		out = append(out, c)
@@ -371,7 +371,7 @@ func (r *Renderer) creatureCasters(w game.WorldView, pawns []game.PawnView) []cr
 		if !inView(wx, wy) {
 			continue
 		}
-		add(creatureCaster{pawn: p, wx: wx, wy: wy, lying: figureLying(*p), fp: r.pawnFigurePoseOf(*p)}, "pawn/body_south")
+		add(creatureCaster{pawn: p, wx: wx, wy: wy, lying: figureLying(*p), fp: r.pawnFigurePoseOf(*p)}, "pawn/body_south", pawnFeetX, pawnFeetY)
 	}
 	for i := range w.Animals {
 		an := &w.Animals[i]
@@ -386,7 +386,7 @@ func (r *Renderer) creatureCasters(w game.WorldView, pawns []game.PawnView) []cr
 		if !inView(wx, wy) {
 			continue
 		}
-		add(creatureCaster{animal: an, wx: wx, wy: wy}, r.animalBaseKey(*an))
+		add(creatureCaster{animal: an, wx: wx, wy: wy}, r.animalBaseKey(*an), figurePivotX, figurePivotY)
 	}
 	st.creatures = out
 	return out

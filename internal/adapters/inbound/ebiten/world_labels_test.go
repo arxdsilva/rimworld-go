@@ -106,8 +106,10 @@ func TestChatIconSitsOnPawnAtScale(t *testing.T) {
 				if icon.Via != "worldIcon" {
 					t.Errorf("%s: chat icon drawn via %q, want worldIcon", sc.name, icon.Via)
 				}
-				// the bubble sits up and right of the pawn; the icon fills it
-				bx, by := r.worldToScreenF(6+0.75, 5-0.55)
+				// the bubble sits up and right of the pawn, beside its head
+				// (body metadata); the icon fills it
+				_, hy := pawnHead(r.art)
+				bx, by := r.worldToScreenF(6+0.75, 5+hy-chatAboveHead)
 				wlNear(t, sc.name+" icon centre x", float64(icon.X+icon.W/2), float64(bx), 1)
 				wlNear(t, sc.name+" icon centre y", float64(icon.Y+icon.H/2), float64(by), 1)
 				wlNear(t, sc.name+" icon size", float64(icon.W), tile*0.42-4, 1)
@@ -135,7 +137,7 @@ func TestFightMarkerSitsOnPawnAtScale(t *testing.T) {
 				if icon.Via != "worldIcon" {
 					t.Errorf("%s: fight marker drawn via %q, want worldIcon", sc.name, icon.Via)
 				}
-				mx, my := r.worldToScreenF(6+0.5, 5-0.95)
+				mx, my := r.worldToScreenF(6+0.5, 5-pawnMarkerLift(r.art))
 				wlNear(t, sc.name+" marker centre x", float64(icon.X+icon.W/2), float64(mx), 1)
 				wlNear(t, sc.name+" marker centre y", float64(icon.Y+icon.H/2), float64(my), 1)
 				wlNear(t, sc.name+" marker size", float64(icon.W), tile*0.32, 1)
@@ -163,9 +165,9 @@ func TestDraftedIconSitsOnPawnAtScale(t *testing.T) {
 				if icon.Via != "worldIcon" {
 					t.Errorf("%s: draft icon drawn via %q, want worldIcon", sc.name, icon.Via)
 				}
-				// above the pawn's head, right of centre (pose offsets are a
-				// few hundredths of a tile at rest)
-				ix, iy := r.worldToScreenF(6+0.62, 5-0.95)
+				// above the pawn's head (body metadata), right of centre
+				// (pose offsets are a few hundredths of a tile at rest)
+				ix, iy := r.worldToScreenF(6+0.62, 5-pawnMarkerLift(r.art))
 				wlNear(t, sc.name+" icon x", float64(icon.X), float64(ix), 0.1*tile+1)
 				wlNear(t, sc.name+" icon y", float64(icon.Y), float64(iy), 0.1*tile+1)
 				wlNear(t, sc.name+" icon size", float64(icon.W), tile*0.3, 1)

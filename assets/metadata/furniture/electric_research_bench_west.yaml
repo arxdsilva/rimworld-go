@@ -3,11 +3,11 @@ version: 1
 id: "core:furniture/electric_research_bench_west"
 image: generated/world/furniture/electric_research_bench_west.png
 scale: 2
-canvas: [160, 360]
+canvas: [160, 339]
 footprint: [1, 2]
-origin_px: [16, 88]
+origin_px: [16, 67]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: box
   w: 0.92

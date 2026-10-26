@@ -3,11 +3,11 @@ version: 1
 id: "core:power/wind_turbine_blades_07"
 image: generated/world/power/wind_turbine_blades_07.png
 scale: 2
-canvas: [218, 312]
+canvas: [218, 266]
 footprint: [1, 1]
-origin_px: [45, 168]
+origin_px: [45, 122]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: none
   w: 1.074
@@ -21,4 +21,4 @@ frame: 7
 frames: 8
 step_deg: 15
 attachments:
-  hub: [109.0, 166.7]
+  hub: [109.0, 151.8]

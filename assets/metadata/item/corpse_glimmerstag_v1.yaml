@@ -3,11 +3,11 @@ version: 1
 id: "core:item/corpse_glimmerstag_v1"
 image: generated/world/item/corpse_glimmerstag_v1.png
 scale: 2
-canvas: [356, 210]
+canvas: [356, 194]
 footprint: [1, 1]
-origin_px: [114, 68]
+origin_px: [114, 52]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: blob
   w: 2.654

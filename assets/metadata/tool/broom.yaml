@@ -3,11 +3,11 @@ version: 1
 id: "core:tool/broom"
 image: generated/world/tool/broom.png
 scale: 2
-canvas: [160, 167]
+canvas: [160, 165]
 footprint: [1, 1]
-origin_px: [16, 23]
+origin_px: [16, 21]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: none
   w: 0.949
@@ -17,6 +17,6 @@ tool: broom
 rotatable: true
 points: east
 attachments:
-  grip: [44.2, 84.4]
-  support: [82.6, 84.4]
-  head: [144.0, 85.1]
+  grip: [44.2, 83.2]
+  support: [82.6, 83.2]
+  head: [144.0, 83.7]

@@ -5,6 +5,7 @@
 
 Tintable sprites are shown with a preset tint from palettes/base.yaml so
 style drift is visible in context. Dev aid only; the game never reads it.
+RWG_OUT_ROOT / RWG_PALETTE_DIR read a review render (artlib/contracts.py).
 """
 import argparse
 import os
@@ -14,15 +15,17 @@ import sys
 from PIL import Image, ImageDraw
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-GEN = os.path.join(ROOT, "generated", "world")
-META = os.path.join(ROOT, "metadata")
+OUT_ROOT = os.environ.get("RWG_OUT_ROOT") or ROOT
+GEN = os.path.join(OUT_ROOT, "generated", "world")
+META = os.path.join(OUT_ROOT, "metadata")
+PALETTES = os.environ.get("RWG_PALETTE_DIR") or os.path.join(ROOT, "palettes")
 
 PREVIEW_TINT = {"cloth": "navy", "skin": "tan", "hair": "brown", "stone_tint": "granite"}
 
 
 def tints():
     out, group = {}, None
-    for line in open(os.path.join(ROOT, "palettes", "base.yaml"), encoding="utf-8"):
+    for line in open(os.path.join(PALETTES, "base.yaml"), encoding="utf-8"):
         m = re.match(r"^\s{2}(\w+):\s*\{(.*)\}", line)
         if m:
             out[m.group(1)] = dict(re.findall(r'(\w+):\s*"(#[0-9a-fA-F]{6})"', m.group(2)))
@@ -64,7 +67,7 @@ def tinted(path, family, name, tint_choice=None):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("families", nargs="*")
-    ap.add_argument("-o", "--out", default=os.path.join(ROOT, "generated", "contact_sheet.png"))
+    ap.add_argument("-o", "--out", default=os.path.join(OUT_ROOT, "generated", "contact_sheet.png"))
     ap.add_argument("--bg", default="#86704f")
     a = ap.parse_args()
     fams = a.families or sorted(os.listdir(GEN))

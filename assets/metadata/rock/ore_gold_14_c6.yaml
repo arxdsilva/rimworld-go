@@ -3,11 +3,11 @@ version: 1
 id: "core:rock/ore_gold_14_c6"
 image: generated/world/rock/ore_gold_14_c6.png
 scale: 2
-canvas: [160, 228]
+canvas: [160, 208]
 footprint: [1, 1]
-origin_px: [16, 84]
+origin_px: [16, 64]
 projection:
-  shear_k: 0.5
+  shear_k: 0.35
 shadow:
   kind: box
   w: 1
