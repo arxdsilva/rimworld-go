@@ -252,6 +252,23 @@ type shadowState struct {
 	specsArt   *artCatalog
 	composites int // layer composites, for tests
 	casts      int // creature silhouettes drawn, for tests
+	// off skips the whole shadow pass (Options > Graphics, PLAY-019).
+	off bool
+}
+
+// setOff turns the shadow pass off or on. Turning it off frees the two
+// screen-sized layers; they come back on the first frame with shadows on.
+func (st *shadowState) setOff(off bool) {
+	st.off = off
+	if !off {
+		return
+	}
+	for _, img := range []**ebiten.Image{&st.layer, &st.scratch} {
+		if *img != nil {
+			(*img).Deallocate()
+			*img = nil
+		}
+	}
 }
 
 // spec is the cached caster for sprite key.
@@ -596,7 +613,7 @@ func (r *Renderer) addBox(b *triBatch, c shadowCaster, l lightState, tile, a flo
 //
 // then one contact-hardening blur into scratch and one composite.
 func (r *Renderer) drawShadows(screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
-	if sw <= 0 || sh <= 0 {
+	if sw <= 0 || sh <= 0 || r.env.shadow.off {
 		return
 	}
 	l := r.lit.light

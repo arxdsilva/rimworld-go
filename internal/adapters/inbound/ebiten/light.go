@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	"container/list"
 	_ "embed"
 	"math"
 	"strings"
@@ -280,10 +281,16 @@ type litRenderer struct {
 	// sprite at x 0 and its normal map litGap pixels to its right, so a
 	// lit draw samples both from one texture and needs no per-sprite
 	// uniforms (which would break Ebiten's batching).
-	pairs    map[*ebiten.Image]*ebiten.Image
+	pairs    litPairCache
 	verts    [4]ebiten.Vertex
 	opts     ebiten.DrawTrianglesShaderOptions
 	uniforms [7][]float32
+	// off turns the normal-map lighting off (Options > Graphics, PLAY-019):
+	// sprites draw plain with the daylight as a colour scale, and no pair
+	// images are made.
+	off bool
+	// plain is the reused option block of the plain (lighting off) draws.
+	plain ebiten.DrawImageOptions
 	// onDraw, when set (tests), sees every lit draw's image and its
 	// Custom3 blood value.
 	onDraw func(img *ebiten.Image, blood float32)
@@ -532,23 +539,23 @@ func litQuad(vs *[4]ebiten.Vertex, sx, sy, w, h float32, geo ebiten.GeoM, cs col
 // generator's bevel dome on an opaque square tile showed as a quilt of
 // pyramids, harshest under the low dawn and dusk sun.
 func (r *Renderer) litSource(img *ebiten.Image) (*ebiten.Image, float32) {
+	if r.lit.off { // lighting off: nothing is paired, the sprite is lit flat
+		return img, 0
+	}
 	n := r.art.normalOf(img)
 	if n == nil {
 		return img, 0
 	}
 	b := img.Bounds()
 	off := float32(b.Dx() + litGap)
-	if p, ok := r.lit.pairs[img]; ok {
+	if p, ok := r.lit.pairs.get(img, r.present); ok {
 		if p == img {
 			return img, 0
 		}
 		return p, off
 	}
-	if r.lit.pairs == nil {
-		r.lit.pairs = map[*ebiten.Image]*ebiten.Image{}
-	}
 	if r.art.groundPlane(img) {
-		r.lit.pairs[img] = img
+		r.lit.pairs.put(img, img, r.present)
 		return img, 0
 	}
 	p := ebiten.NewImage(2*b.Dx()+litGap, b.Dy())
@@ -556,8 +563,110 @@ func (r *Renderer) litSource(img *ebiten.Image) (*ebiten.Image, float32) {
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Translate(float64(off), 0)
 	p.DrawImage(n, op)
-	r.lit.pairs[img] = p
+	r.lit.pairs.put(img, p, r.present)
 	return p, off
+}
+
+// The lit-pair cache is a bounded LRU: a pair image is two sprites wide,
+// and an unbounded map held one for every sprite ever drawn (tinted
+// variants and long sessions included). It holds about one and a half
+// times the distinct sprites the last frame drew, so the frame's working
+// set stays resident, between a floor for small scenes and a ceiling for
+// huge ones.
+const (
+	litPairsMin = 256
+	litPairsMax = 1024
+)
+
+// litPairCapFor is the cache size for a frame that drew visible distinct
+// sprites.
+func litPairCapFor(visible int) int {
+	return min(max(visible+visible/2, litPairsMin), litPairsMax)
+}
+
+// litPairCache maps a sprite image to its pair image (the sprite and its
+// normal map side by side), or to itself for a ground plane lit flat, which
+// is a note that costs no image. The front of order is the most recently
+// used entry. The zero value is ready.
+type litPairCache struct {
+	m     map[*ebiten.Image]*list.Element
+	order list.List
+	// limit, when above 0, replaces the visible-sprite capacity (tests).
+	limit int
+	// frame is the presentation frame of the last use; seen counts the
+	// distinct sprites used in it, and prevSeen in the frame before.
+	frame          uint64
+	seen, prevSeen int
+	evicted        int // pairs dropped to stay within capacity, for tests
+}
+
+type litPairEntry struct {
+	src, pair *ebiten.Image
+	frame     uint64 // the last frame this entry was used in
+}
+
+// size is how many sprites the cache holds.
+func (c *litPairCache) size() int { return len(c.m) }
+
+// capacity is how many entries the cache may hold now.
+func (c *litPairCache) capacity() int {
+	if c.limit > 0 {
+		return c.limit
+	}
+	return litPairCapFor(c.prevSeen)
+}
+
+// advance moves the working-set count on to frame.
+func (c *litPairCache) advance(frame uint64) {
+	if frame != c.frame {
+		c.prevSeen, c.seen, c.frame = c.seen, 0, frame
+	}
+}
+
+// touch marks e used in frame.
+func (c *litPairCache) touch(e *list.Element, frame uint64) {
+	c.advance(frame)
+	c.order.MoveToFront(e)
+	if en := e.Value.(*litPairEntry); en.frame != frame {
+		en.frame = frame
+		c.seen++
+	}
+}
+
+// get is src's pair (src itself: lit flat), refreshing its place.
+func (c *litPairCache) get(src *ebiten.Image, frame uint64) (*ebiten.Image, bool) {
+	e, ok := c.m[src]
+	if !ok {
+		return nil, false
+	}
+	c.touch(e, frame)
+	return e.Value.(*litPairEntry).pair, true
+}
+
+// put stores src's pair and drops the least recently used entries beyond
+// the capacity; their pair images are deallocated.
+func (c *litPairCache) put(src, pair *ebiten.Image, frame uint64) {
+	if c.m == nil {
+		c.m = map[*ebiten.Image]*list.Element{}
+	}
+	c.advance(frame)
+	if e, ok := c.m[src]; ok {
+		e.Value.(*litPairEntry).pair = pair
+		c.touch(e, frame)
+		return
+	}
+	c.m[src] = c.order.PushFront(&litPairEntry{src: src, pair: pair, frame: frame})
+	c.seen++
+	for len(c.m) > max(c.capacity(), 1) {
+		old := c.order.Back()
+		en := old.Value.(*litPairEntry)
+		c.order.Remove(old)
+		delete(c.m, en.src)
+		if en.pair != en.src {
+			en.pair.Deallocate()
+		}
+		c.evicted++
+	}
 }
 
 // isGroundKey reports a ground-plane sprite: terrain tiles and edges,
@@ -621,10 +730,23 @@ func (r *Renderer) drawLit(dst, img *ebiten.Image, geo ebiten.GeoM, cs colorScal
 	if cs == (colorScale{}) {
 		cs = noCS
 	}
-	sh := r.litShader()
-	if sh == nil { // shader failed to compile: the unlit draw
-		op := &ebiten.DrawImageOptions{GeoM: geo, Filter: ebiten.FilterLinear}
-		if cs != noCS {
+	// Lighting off (Options > Graphics): no shader and no pair image; the
+	// tile's daylight is a plain colour scale. A bloody figure keeps the
+	// shader, which paints the blood (flat: litSource pairs nothing).
+	plain := r.lit.off && r.figureBlood == 0
+	var sh *ebiten.Shader
+	if !plain {
+		sh = r.litShader()
+	}
+	if plain || sh == nil { // lighting off, or the shader failed to compile: the plain draw
+		op := &r.lit.plain
+		op.GeoM, op.Filter = geo, ebiten.FilterLinear
+		op.ColorScale.Reset()
+		if plain {
+			sky, lamp := r.lightTile(tx, ty)
+			k := flatLitScale(&r.lit.light, cs, sky, lamp)
+			op.ColorScale.Scale(k[0], k[1], k[2], k[3])
+		} else if cs != noCS {
 			op.ColorScale.Scale(cs[0]*cs[3], cs[1]*cs[3], cs[2]*cs[3], cs[3])
 		}
 		dst.DrawImage(img, op)
@@ -644,6 +766,15 @@ func (r *Renderer) drawLit(dst, img *ebiten.Image, geo ebiten.GeoM, cs colorScal
 	r.lit.syncUniforms()
 	r.lit.opts.Images[0] = src
 	dst.DrawTrianglesShader32(r.lit.verts[:], litIndices[:], sh, &r.lit.opts)
+}
+
+// flatLitScale is the colour scale a sprite draws with when lighting is
+// off: its own scale cs (premultiplied as DrawImage's ColorScale is) times
+// the light a flat normal gets on a tile with sky exposure and lamp light,
+// so the hour, the weather, roofs and lamps still tint it.
+func flatLitScale(ls *lightState, cs colorScale, sky, lamp float32) [4]float32 {
+	f := litFactor(ls, [3]float32{0, 0, 1}, sky, lamp)
+	return [4]float32{cs[0] * cs[3] * f[0], cs[1] * cs[3] * f[1], cs[2] * cs[3] * f[2], cs[3]}
 }
 
 // shadowStrength is a light's shadow alpha on flat ground: the share of

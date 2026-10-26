@@ -10,6 +10,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/platform/config"
 )
 
 // Grass as composed tufts (PLAY-010 §2.11, ART §9.1). A grassy tile is
@@ -397,6 +398,39 @@ type grassBatch struct {
 	quads, flushes, baked, tinted int
 	// onFlush, when set (tests), runs as a live batch is drawn.
 	onFlush func()
+	// level is the grass detail (Options > Graphics, PLAY-019): the empty
+	// string or config.GrassFull draws every tuft, GrassReduced and
+	// GrassSparse thin them per tile (grassKeep).
+	level string
+}
+
+// grassDensity is the share of a tile's tufts a detail level keeps.
+func grassDensity(level string) float64 {
+	switch level {
+	case config.GrassReduced:
+		return 0.6
+	case config.GrassSparse:
+		return 0.3
+	}
+	return 1
+}
+
+// grassKeep is how many of n tufts tile (x, y) keeps at detail level: n
+// times the level's density, the fraction rounded up or down by the tile's
+// own hash. It is a pure function of the tile, so a tile thins the same
+// way every frame and in every bake, and a sparser level only ever keeps
+// fewer tufts than a denser one.
+func grassKeep(level string, x, y, n int) int {
+	d := grassDensity(level)
+	if d >= 1 || n <= 0 {
+		return n
+	}
+	f := float64(n) * d
+	k := int(f)
+	if u := float64(mix64(tileHash(x, y)^0x7468696e)>>11) / (1 << 53); u < f-float64(k) {
+		k++
+	}
+	return k
 }
 
 // grassMemo is a chunk's map-tier grass signature and the inputs it was
@@ -462,6 +496,11 @@ func (r *Renderer) grassBatchOf(dst *ebiten.Image, w *game.WorldView, x0, y0, x1
 			if !ok || !gb.grassAt(w, code, x, y) {
 				continue
 			}
+			growth := grassGrowthAt(w, y*w.TerrainW+x)
+			keep := grassKeep(gb.level, x, y, min(tuftCopies(growth), max(limit, 1)))
+			if keep == 0 { // thinned away (grass detail)
+				continue
+			}
 			lean, sy, alpha := 0.0, 1.0, 1.0
 			sky, lamp := float32(1), float32(0)
 			if baking {
@@ -479,7 +518,11 @@ func (r *Renderer) grassBatchOf(dst *ebiten.Image, w *game.WorldView, x0, y0, x1
 			}
 			a32 := float32(alpha)
 			cr, cg, cb := tint[0]*tint[3]*a32, tint[1]*tint[3]*a32, tint[2]*tint[3]*a32
-			gb.copies = grassCopies(x, y, grassGrowthAt(w, y*w.TerrainW+x), limit, grassTallAt(code, x, y), gb.copies[:0])
+			if !baking && r.lit.off { // lighting off: the tile's flat light rides in the colour
+				f := litFactor(&r.lit.light, [3]float32{0, 0, 1}, sky, lamp)
+				cr, cg, cb = cr*f[0], cg*f[1], cb*f[2]
+			}
+			gb.copies = grassCopies(x, y, growth, keep, grassTallAt(code, x, y), gb.copies[:0])
 			sortCopies(gb.copies)
 			tx, ty := r.worldToScreenF(float64(x), float64(y))
 			for i := range gb.copies {
@@ -550,6 +593,10 @@ func (r *Renderer) flushGrass(dst, src *ebiten.Image) {
 		gb.onFlush()
 	}
 	r.lit.calls++
+	if r.lit.off { // lighting off: the vertex colours already carry the light
+		dst.DrawTriangles32(gb.verts, gb.idx, src, &ebiten.DrawTrianglesOptions{Filter: ebiten.FilterLinear})
+		return
+	}
 	sh := r.litShader()
 	if sh == nil { // no shader: unlit
 		dst.DrawTriangles32(gb.verts, gb.idx, src, &ebiten.DrawTrianglesOptions{Filter: ebiten.FilterLinear})
@@ -639,6 +686,9 @@ func (r *Renderer) grassLookSig(w *game.WorldView, h uint64) uint64 {
 	h = mix64(h ^ uint64(math.Float32bits(t[2])))
 	if grassDormant(w) {
 		h = mix64(h ^ 0xd0)
+	}
+	if d := grassDensity(r.lod.grass.level); d < 1 { // the detail level thins the baked tufts
+		h = mix64(h ^ uint64(d*100))
 	}
 	return mix64(h ^ uint64(grassSnowQ(r.env.snow)*20))
 }

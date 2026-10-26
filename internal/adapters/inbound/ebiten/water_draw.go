@@ -12,7 +12,8 @@ import (
 // through water.kage (UV ripple and caustic glints on the presentation
 // clock), the shallow-over-deep edge, and shore foam where water meets
 // ground. Without the shader the tile cycles through its four baked
-// frames; Reduced Motion freezes both.
+// frames; Reduced Motion freezes both. Simple water (Options > Graphics,
+// PLAY-019) is still too: one baked frame per tile, no ripple shader.
 
 //go:embed water.kage
 var waterKage []byte
@@ -31,6 +32,8 @@ type waterRenderer struct {
 	verts  [4]ebiten.Vertex
 	opts   ebiten.DrawTrianglesShaderOptions
 	time   []float32 // the Time uniform, reused
+	// simple draws still baked frames instead of the ripple shader.
+	simple bool
 	// onDraw, when set (tests), sees every water draw: shader true when it
 	// went through water.kage.
 	onDraw func(key string, shader bool)
@@ -44,10 +47,14 @@ func (r *Renderer) waterShader() *ebiten.Shader {
 	return r.water.shader
 }
 
+// waterStill reports water that does not move: Reduced Motion, or simple
+// water.
+func (r *Renderer) waterStill() bool { return r.reducedMotion || r.water.simple }
+
 // waterClock is the Time uniform in seconds: the presentation clock at 60
-// frames a second, 0 (still) with Reduced Motion.
+// frames a second, 0 (still) with Reduced Motion or simple water.
 func (r *Renderer) waterClock() float32 {
-	if r.reducedMotion {
+	if r.waterStill() {
 		return 0
 	}
 	return float32(r.present) / 60
@@ -55,10 +62,10 @@ func (r *Renderer) waterClock() float32 {
 
 // waterFrameKey is the baked water tile of terrain t (shallow_water or
 // deep_water) at tile (x, y): its own variant, advancing with the
-// presentation clock unless Reduced Motion holds it.
+// presentation clock unless the water is still.
 func (r *Renderer) waterFrameKey(t string, x, y int) string {
 	v := int(tileHash(x, y) % soilVariants)
-	if !r.reducedMotion {
+	if !r.waterStill() {
 		v = (v + int(r.present/waterFrameTicks)) % soilVariants
 	}
 	return artKey("terrain", t, v)
@@ -69,7 +76,10 @@ func (r *Renderer) waterFrameKey(t string, x, y int) string {
 // cs is the colour scale of the tile (a missing-art fallback tint).
 func (r *Renderer) drawWaterTile(screen *ebiten.Image, t string, x, y int, tile float64, sw, sh int, cs colorScale) {
 	wx, wy := float64(x), float64(y)
-	sh0 := r.waterShader()
+	var sh0 *ebiten.Shader
+	if !r.water.simple { // simple water never compiles the ripple shader
+		sh0 = r.waterShader()
+	}
 	if sh0 == nil || r.cast != nil { // the baked frame, drawn like any ground tile
 		key := r.waterFrameKey(t, x, y)
 		if r.water.onDraw != nil {
@@ -160,9 +170,9 @@ func (r *Renderer) drawWaterEdges(screen *ebiten.Image, t string, nbPri [4]int, 
 }
 
 // foamCS is the foam's colour scale: its opacity breathes with the
-// swell, each tile on its own phase; steady with Reduced Motion.
+// swell, each tile on its own phase; steady with still water.
 func (r *Renderer) foamCS(x, y int) colorScale {
-	if r.reducedMotion {
+	if r.waterStill() {
 		return colorScale{1, 1, 1, 0.85}
 	}
 	phase := float64(tileHash(x, y)%628) / 100
