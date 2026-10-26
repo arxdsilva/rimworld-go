@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/building/power"
 )
 
 // The sound director (SND-001) decides, once per frame, what the player
@@ -299,7 +301,7 @@ func (a *App) colonyAmbience(want map[string]loopWant) {
 	}
 	var fires []fire
 	for _, b := range w.Buildings {
-		if !b.Burning {
+		if !b.Burning || b.Kind == sndWoodGenerator { // a generator has its own chug
 			continue
 		}
 		vol, pan, ok := spatial(r, float64(b.X)+0.5, float64(b.Y)+0.5, v)
@@ -315,10 +317,85 @@ func (a *App) colonyAmbience(want map[string]loopWant) {
 		want[f.key] = loopWant{id: "amb.campfire", vol: f.vol, pan: f.pan}
 	}
 	r.blazeAmbience(want, w, v)
+	r.machineAmbience(want, w, v)
 	for key, l := range want { // drop silent beds instead of keeping them at 0
 		if l.vol <= 0.001 {
 			delete(want, key)
 		}
+	}
+}
+
+// --- electric machines (PLAY-021) --------------------------------------------
+
+// maxMachineLoops is how many machines of one kind are heard at once (the
+// nearest ones; a row of generators is one hum, not five).
+const maxMachineLoops = 2
+
+var (
+	sndWoodGenerator = construction.WoodGenerator.String()
+	sndGeothermal    = construction.GeothermalGenerator.String()
+	sndWindTurbine   = construction.WindTurbine.String()
+	sndHeater        = construction.Heater.String()
+	sndCooler        = construction.Cooler.String()
+)
+
+// machineLoop is the loop a kind of machine makes while it runs.
+type machineLoop struct {
+	id   string
+	runs func(b game.BuildingView) bool
+}
+
+// thermostatWorking is a heater or cooler of kind k heating or cooling:
+// powered and drawing more than it does idling at its target.
+func thermostatWorking(k construction.Kind) func(b game.BuildingView) bool {
+	idle := power.SpecOf(k).Idle
+	return func(b game.BuildingView) bool { return b.Powered && b.PowerUse > idle }
+}
+
+// makingPower is a generator making power now.
+func makingPower(b game.BuildingView) bool { return b.PowerOut > 0 }
+
+// machineLoops are the machines that hum, by building kind. The wood
+// generator also has to be burning (a switched-off one keeps its fire).
+var machineLoops = map[string]machineLoop{
+	sndWoodGenerator: {"amb.generator_wood", func(b game.BuildingView) bool { return b.Burning && makingPower(b) }},
+	sndGeothermal:    {"amb.generator_geo", makingPower},
+	sndWindTurbine:   {"amb.wind_turbine", makingPower},
+	sndHeater:        {"amb.heater", thermostatWorking(construction.Heater)},
+	sndCooler:        {"amb.cooler", thermostatWorking(construction.Cooler)},
+}
+
+// machineAmbience adds a positioned loop for each running machine (a
+// generator making power, a heater or cooler working), the nearest
+// maxMachineLoops of each sound. A machine stopping drops out of the list
+// and fades away.
+func (r *Renderer) machineAmbience(want map[string]loopWant, w game.WorldView, v viewport) {
+	type heardMachine struct {
+		key, id  string
+		vol, pan float64
+	}
+	var heard []heardMachine
+	for _, b := range w.Buildings {
+		if b.PowerOut <= 0 && !b.Powered { // cheap filter: nothing electric runs without one
+			continue
+		}
+		m, ok := machineLoops[b.Kind]
+		if !ok || !m.runs(b) {
+			continue
+		}
+		x, y := float64(b.X)+float64(max(b.W, 1))/2, float64(b.Y)+float64(max(b.H, 1))/2
+		if vol, pan, ok := spatial(r, x, y, v); ok {
+			heard = append(heard, heardMachine{"power:" + strconv.FormatUint(uint64(b.ID), 10), m.id, vol, pan})
+		}
+	}
+	sort.SliceStable(heard, func(i, j int) bool { return heard[i].vol > heard[j].vol })
+	count := map[string]int{}
+	for _, h := range heard {
+		if count[h.id] == maxMachineLoops {
+			continue
+		}
+		count[h.id]++
+		want[h.key] = loopWant{id: h.id, vol: h.vol, pan: h.pan}
 	}
 }
 

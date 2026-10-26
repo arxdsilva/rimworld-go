@@ -15,6 +15,19 @@
       "license": "original, made in code (CC0, this repo)"
     },
     {
+      "id": "amb.cooler",
+      "bus": "ambience",
+      "loop": true,
+      "volume": 0.25,
+      "files": [
+        "ambience/cooler.wav"
+      ],
+      "source": "procedural",
+      "recipe": "amb.cooler",
+      "seed": 805,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
       "id": "amb.day",
       "bus": "ambience",
       "loop": true,
@@ -42,6 +55,45 @@
       "source": "procedural",
       "recipe": "amb.fire",
       "seed": 703,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "amb.generator_geo",
+      "bus": "ambience",
+      "loop": true,
+      "volume": 0.17,
+      "files": [
+        "ambience/generator_geo.wav"
+      ],
+      "source": "procedural",
+      "recipe": "amb.generator_geo",
+      "seed": 802,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "amb.generator_wood",
+      "bus": "ambience",
+      "loop": true,
+      "volume": 0.7,
+      "files": [
+        "ambience/generator_wood.wav"
+      ],
+      "source": "procedural",
+      "recipe": "amb.generator_wood",
+      "seed": 801,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "amb.heater",
+      "bus": "ambience",
+      "loop": true,
+      "volume": 0.3,
+      "files": [
+        "ambience/heater.wav"
+      ],
+      "source": "procedural",
+      "recipe": "amb.heater",
+      "seed": 804,
       "license": "original, made in code (CC0, this repo)"
     },
     {
@@ -102,6 +154,19 @@
       "source": "procedural",
       "recipe": "amb.water_shore",
       "seed": 602,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "amb.wind_turbine",
+      "bus": "ambience",
+      "loop": true,
+      "volume": 0.4,
+      "files": [
+        "ambience/wind_turbine.wav"
+      ],
+      "source": "procedural",
+      "recipe": "amb.wind_turbine",
+      "seed": 803,
       "license": "original, made in code (CC0, this repo)"
     },
     {
@@ -5128,6 +5193,18 @@
       "license": "original, made in code (CC0, this repo)"
     },
     {
+      "id": "sfx.short_circuit",
+      "bus": "effects",
+      "volume": 0.9,
+      "files": [
+        "sfx/short_circuit_0.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.short_circuit",
+      "seed": 807,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
       "id": "sfx.soil",
       "bus": "effects",
       "volume": 0.65,
@@ -5166,6 +5243,18 @@
       "source": "procedural",
       "recipe": "sfx.sweep",
       "seed": 212,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "sfx.switch_click",
+      "bus": "effects",
+      "volume": 0.6,
+      "files": [
+        "sfx/switch_click_0.wav"
+      ],
+      "source": "procedural",
+      "recipe": "sfx.switch_click",
+      "seed": 806,
       "license": "original, made in code (CC0, this repo)"
     },
     {
@@ -5308,6 +5397,18 @@
       "source": "procedural",
       "recipe": "ui.slider_tick",
       "seed": 109,
+      "license": "original, made in code (CC0, this repo)"
+    },
+    {
+      "id": "ui.solar_flare",
+      "bus": "ui",
+      "volume": 0.42,
+      "files": [
+        "ui/solar_flare_0.wav"
+      ],
+      "source": "procedural",
+      "recipe": "ui.solar_flare",
+      "seed": 808,
       "license": "original, made in code (CC0, this repo)"
     },
     {

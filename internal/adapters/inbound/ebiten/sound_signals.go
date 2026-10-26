@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
@@ -66,6 +67,7 @@ type soundMemo struct {
 	notice    uint64                  // newest non-danger message heard
 	plantBuf  []int32                 // plantOn's PlantsIn buffer
 	pods      map[[3]uint64]podSounds // arrival pods heard so far (listenArrivals)
+	power     powerHeard              // the electric grid last frame (listenPower)
 }
 
 // listenWorld cues builds finishing, trees falling, rock mined out or
@@ -75,6 +77,7 @@ type soundMemo struct {
 func (r *Renderer) listenWorld(w game.WorldView, pawns []game.PawnView) {
 	m := &r.memo
 	r.listenCaskets(w) // vault_draw.go: a casket turning open
+	r.listenPower(w)   // switches thrown, short circuits, solar flares
 	frames := make(map[entity.EntityID][2]int, len(w.Frames))
 	for _, f := range w.Frames {
 		frames[f.ID] = [2]int{f.X, f.Y}
@@ -154,7 +157,7 @@ func (r *Renderer) listenWorld(w game.WorldView, pawns []game.PawnView) {
 		}
 	}
 	*m = soundMemo{init: true, frames: frames, cutPlants: cut, mines: mines, smooths: smooths, doorsOpen: doors,
-		notice: notice, plantBuf: m.plantBuf, pods: m.pods}
+		notice: notice, plantBuf: m.plantBuf, pods: m.pods, power: m.power}
 	r.listenArrivals(w)
 }
 
@@ -247,4 +250,67 @@ func (r *Renderer) listenArrivals(w game.WorldView) {
 		seen[key] = st
 	}
 	m.pods = seen
+}
+
+// --- electricity (PLAY-021) ---------------------------------------------------
+
+// letterShortCircuit is the title of the letter a short circuit sends
+// (power_events.go); it is the one thing that makes one, so it is the
+// signal: deconstructing a conduit sends no letter.
+const letterShortCircuit = "Short circuit"
+
+// letterFreshTicks is how recent a letter must be to be heard; a letter
+// older than this turned up in the stack some other way (a loaded save).
+const letterFreshTicks = 600
+
+var sndSwitchKind = construction.PowerSwitch.String()
+
+// powerHeard is last frame's electrical state, to hear what changed.
+type powerHeard struct {
+	seen     bool                     // a first frame has been recorded; before it nothing is heard
+	switches map[entity.EntityID]bool // each power switch's PowerOn last frame
+	scratch  map[entity.EntityID]bool // this frame's, swapped in at the end (no allocation per frame)
+	letter   uint64                   // newest letter id heard
+	flare    bool                     // a solar flare was on
+}
+
+// listenPower cues a switch clicking where it stands when PowerOn flips
+// (the switch moving, not the player's order for it, which a colonist
+// carries out later), a short circuit zapping where its letter says, and
+// one global buzz as a solar flare begins. Whatever is already there the
+// first time it looks (a loaded game) is silent.
+func (r *Renderer) listenPower(w game.WorldView) {
+	p := &r.memo.power
+	cur := p.scratch
+	if cur == nil {
+		cur = map[entity.EntityID]bool{}
+	}
+	clear(cur)
+	for _, b := range w.Buildings {
+		if b.Kind != sndSwitchKind {
+			continue
+		}
+		cur[b.ID] = b.PowerOn
+		if was, known := p.switches[b.ID]; p.seen && known && was != b.PowerOn {
+			r.cue("sfx.switch_click", float64(b.X)+0.5, float64(b.Y)+0.5, 1)
+		}
+	}
+	p.switches, p.scratch = cur, p.switches
+	now := uint64(r.game.Tick())
+	newest := p.letter
+	for _, l := range w.Letters {
+		if l.ID <= p.letter {
+			continue
+		}
+		newest = max(newest, l.ID)
+		fresh := now < l.Tick || now-l.Tick <= letterFreshTicks
+		if p.seen && l.Title == letterShortCircuit && l.X >= 0 && l.Y >= 0 && fresh {
+			r.cue("sfx.short_circuit", float64(l.X)+0.5, float64(l.Y)+0.5, 1)
+		}
+	}
+	p.letter = newest
+	if p.seen && w.SolarFlare && !p.flare {
+		r.globalCue("ui.solar_flare")
+	}
+	p.flare, p.seen = w.SolarFlare, true
 }

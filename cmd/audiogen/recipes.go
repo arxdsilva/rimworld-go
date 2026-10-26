@@ -1,6 +1,10 @@
 package main
 
-import s "rimworld-go/pkg/sfxsynth"
+import (
+	"math"
+
+	s "rimworld-go/pkg/sfxsynth"
+)
 
 // sound is a recipe plus its place in the mix.
 type sound struct {
@@ -13,6 +17,47 @@ func knock(at, f, gain float64) []s.Layer {
 	return []s.Layer{
 		{Wave: s.Sine, Freq: f, FreqEnd: f * 0.75, Start: at, Dur: 0.12, Decay: 0.05, Gain: gain},
 		{Wave: s.White, Start: at, Dur: 0.03, BandPass: f * 4.5, Q: 1, Decay: 0.015, Gain: gain * 0.5},
+	}
+}
+
+// chug is one beat of the wood-fired generator's engine at time at: the
+// piston's low thump (thump scales it; the beats on the loop's seam use
+// 0.8, as their thump is the same at both ends of the crossfade and adds),
+// a puff of exhaust and a tick of the valve.
+func chug(at, gain, thump float64) []s.Layer {
+	return []s.Layer{
+		{Wave: s.Sine, Freq: 78, FreqEnd: 46, Start: at, Dur: 0.13, Attack: 0.004, Decay: 0.05, Gain: gain * thump},
+		{Wave: s.Brown, Start: at, Dur: 0.12, BandPass: 300, Q: 0.8, Attack: 0.003, Decay: 0.05, Gain: gain * 2.5},
+		{Wave: s.Pink, Start: at, Dur: 0.08, BandPass: 700, Q: 0.7, Attack: 0.002, Decay: 0.03, Gain: gain * 1.5},
+		{Wave: s.White, Start: at + 0.004, Dur: 0.02, BandPass: 1900, Q: 2, Decay: 0.008, Gain: gain * 0.4},
+	}
+}
+
+// span is how long a layer of loop (length loop) runs: the loop and its
+// crossfade tail (sfxsynth.Render folds the tail back into the head).
+func span(loop float64) float64 { return loop + math.Min(1, loop/4) }
+
+// steady is layers of tone that never change over a loop, spanning the loop
+// and its crossfade tail. The loop's equal-power crossfade is exact for
+// noise but swells a tone that is the same at both ends by up to 3 dB at
+// mid-fade, once per loop; fading such a tone in and out over three
+// quarters of the crossfade keeps its level within half a dB.
+func steady(loop float64, layers ...s.Layer) []s.Layer {
+	fade := math.Min(1, loop/4)
+	for i := range layers {
+		layers[i].Dur = span(loop)
+		layers[i].Attack, layers[i].Release = 0.75*fade, 0.75*fade
+	}
+	return layers
+}
+
+// whoosh is one blade of the wind turbine passing the tower at time at: a
+// soft swell of air that sweeps up in pitch and fades, over a low thump.
+func whoosh(at float64) []s.Layer {
+	return []s.Layer{
+		{Wave: s.Pink, Start: at, Dur: 0.75, BandPass: 380, BandEnd: 820, Q: 0.9, Attack: 0.25, Decay: 0.4, Release: 0.1, Gain: 0.9},
+		{Wave: s.White, Start: at, Dur: 0.7, BandPass: 2200, BandEnd: 1400, Q: 1.2, Attack: 0.25, Decay: 0.4, Release: 0.1, Gain: 0.2},
+		{Wave: s.Sine, Freq: 62, FreqEnd: 50, Start: at + 0.1, Dur: 0.3, Attack: 0.1, Decay: 0.15, Gain: 0.3},
 	}
 }
 
@@ -231,4 +276,84 @@ var sounds = []sound{
 		{Wave: s.Pink, Dur: 10, BandPass: 900, BandEnd: 1500, Q: 0.6, Tremolo: 0.25, TremoloDepth: 0.9, Gain: 0.6},
 		{Wave: s.White, Dur: 10, HighPass: 3500, Tremolo: 0.25, TremoloDepth: 0.95, Grains: 120, GrainLen: 0.01, Gain: 0.25},
 	}}, 0.6},
+
+	// --- electricity (PLAY-021). The audio budget is nearly spent, so these
+	// eight sounds weigh under 280 KB together: the loops are a few tenths
+	// of a second, which suits a machine (an engine, a fan and a hum repeat
+	// anyway). Tones sit on whole numbers of cycles per loop so the seam is
+	// clean. With more budget, only the Loop lengths and the beats in them
+	// need to grow.
+	// The wood-fired generator: a small engine chugging five beats a second
+	// (a strong one, a weak one), over a low drone and a loose rattle.
+	{s.Recipe{ID: "amb.generator_wood", Seed: 801, Loop: 0.4, Layers: cat(
+		chug(0, 1, 0.8), chug(0.2, 0.7, 1), chug(0.4, 1, 0.8),
+		steady(0.4,
+			s.Layer{Wave: s.Saw, Freq: 50, LowPass: 240, Tremolo: 5, TremoloDepth: 0.7, Gain: 0.3},
+			s.Layer{Wave: s.Square, Freq: 100, LowPass: 700, Tremolo: 5, TremoloDepth: 0.9, Gain: 0.15}))}, 0.7},
+	// The geothermal generator: a steady hiss of steam breathing slowly,
+	// over a deep hum.
+	{s.Recipe{ID: "amb.generator_geo", Seed: 802, Loop: 0.4, Layers: cat([]s.Layer{
+		{Wave: s.White, Dur: span(0.4), HighPass: 2000, LowPass: 9000, Gain: 0.7},
+		{Wave: s.Pink, Dur: span(0.4), BandPass: 1500, Q: 0.5, Tremolo: 2.5, TremoloDepth: 0.3, Gain: 1.2},
+		{Wave: s.Brown, Dur: span(0.4), LowPass: 200, Gain: 0.12},
+	}, steady(0.4,
+		s.Layer{Wave: s.Sine, Freq: 60, Gain: 0.3},
+		s.Layer{Wave: s.Sine, Freq: 120, Gain: 0.18},
+		s.Layer{Wave: s.Sine, Freq: 180, Gain: 0.06}))}, 0.17},
+	// The wind turbine: a blade sweeps past the tower twice a second, over
+	// soft wind and the tower's hum.
+	{s.Recipe{ID: "amb.wind_turbine", Seed: 803, Loop: 0.5, Layers: cat(
+		whoosh(0), whoosh(0.5),
+		[]s.Layer{{Wave: s.Pink, Dur: span(0.5), LowPass: 420, Gain: 0.35}},
+		steady(0.5, s.Layer{Wave: s.Sine, Freq: 80, Gain: 0.12}))}, 0.4},
+	// The heater: the mains hum of a glowing element, wavering a little,
+	// with the tick of the metal expanding.
+	{s.Recipe{ID: "amb.heater", Seed: 804, Loop: 0.35, Layers: cat(steady(0.35,
+		s.Layer{Wave: s.Sine, Freq: 100, Gain: 0.5},
+		s.Layer{Wave: s.Sine, Freq: 100 + 1/0.35, Gain: 0.08},
+		s.Layer{Wave: s.Sine, Freq: 200, Gain: 0.3},
+		s.Layer{Wave: s.Triangle, Freq: 300, Gain: 0.1}),
+		[]s.Layer{
+			{Wave: s.White, Dur: span(0.35), BandPass: 4000, Q: 0.8, Gain: 0.06},
+			{Wave: s.White, Start: 0.2, Dur: 0.012, BandPass: 2800, Q: 4, Decay: 0.004, Gain: 1.2},
+			{Wave: s.Sine, Freq: 2200, Start: 0.2, Dur: 0.02, Decay: 0.006, Gain: 0.3},
+		})}, 0.3},
+	// The cooler: a fan turning, its blades beating ten times a second over
+	// the motor and a wash of air.
+	{s.Recipe{ID: "amb.cooler", Seed: 805, Loop: 0.3, Layers: cat(steady(0.3,
+		s.Layer{Wave: s.Saw, Freq: 120, LowPass: 420, Tremolo: 10, TremoloDepth: 0.35, Gain: 0.5},
+		s.Layer{Wave: s.Sine, Freq: 240, Tremolo: 10, TremoloDepth: 0.35, Gain: 0.25},
+		s.Layer{Wave: s.Sine, Freq: 60, Gain: 0.3}),
+		[]s.Layer{
+			{Wave: s.Pink, Dur: span(0.3), BandPass: 700, Q: 0.5, Gain: 0.6},
+			{Wave: s.White, Dur: span(0.3), HighPass: 3000, Gain: 0.1},
+		})}, 0.25},
+	// A power switch thrown: the lever slams over, then the contact seats.
+	{s.Recipe{ID: "sfx.switch_click", Seed: 806, Layers: []s.Layer{
+		{Wave: s.Sine, Freq: 1250, FreqEnd: 700, Dur: 0.025, Attack: 0.0005, Decay: 0.01, Gain: 0.8},
+		{Wave: s.White, Dur: 0.012, BandPass: 3200, Q: 1.5, Decay: 0.005, Gain: 0.7},
+		{Wave: s.Sine, Freq: 520, FreqEnd: 330, Start: 0.035, Dur: 0.04, Decay: 0.016, Gain: 0.7},
+		{Wave: s.White, Start: 0.035, Dur: 0.018, BandPass: 1400, Q: 1.2, Decay: 0.007, Gain: 0.5},
+		{Wave: s.Sine, Freq: 140, FreqEnd: 90, Start: 0.035, Dur: 0.045, Decay: 0.02, Gain: 0.6},
+	}}, 0.6},
+	// A short circuit: a hard snap and a zap sweeping down, an arc buzzing
+	// and spitting, and the overloaded wire popping.
+	{s.Recipe{ID: "sfx.short_circuit", Seed: 807, Layers: []s.Layer{
+		{Wave: s.White, Dur: 0.04, HighPass: 1500, Attack: 0.0005, Decay: 0.015, Gain: 0.6},
+		{Wave: s.Saw, Freq: 3200, FreqEnd: 240, Dur: 0.15, Attack: 0.001, Decay: 0.07, LowPass: 6000, Gain: 0.8},
+		{Wave: s.Square, Freq: 2400, FreqEnd: 180, Dur: 0.1, Attack: 0.001, Decay: 0.05, Gain: 0.35},
+		{Wave: s.Saw, Freq: 120, Start: 0.02, Dur: 0.25, BandPass: 1800, Q: 2, Decay: 0.12, Gain: 0.7},
+		{Wave: s.White, Start: 0.02, Dur: 0.33, HighPass: 2500, Grains: 140, GrainLen: 0.003, Decay: 0.2, Gain: 1},
+		{Wave: s.White, Start: 0.04, Dur: 0.3, BandPass: 900, Q: 1, Grains: 40, GrainLen: 0.01, Decay: 0.15, Gain: 0.6},
+		{Wave: s.Sine, Freq: 110, FreqEnd: 45, Dur: 0.15, Decay: 0.06, Gain: 0.6},
+	}}, 0.9},
+	// The solar-flare letter: an alarm buzz climbing a fifth-stacked saw
+	// pair with a pulse, crackling at the top (interface bus, like ui.threat).
+	{s.Recipe{ID: "ui.solar_flare", Seed: 808, Layers: []s.Layer{
+		{Wave: s.Saw, Freq: 180, FreqEnd: 520, Dur: 0.45, Attack: 0.03, Release: 0.12, LowPass: 2200, Tremolo: 11, TremoloDepth: 0.45, Gain: 0.8},
+		{Wave: s.Saw, Freq: 270, FreqEnd: 780, Dur: 0.45, Attack: 0.04, Release: 0.12, LowPass: 2200, Tremolo: 11, TremoloDepth: 0.45, Gain: 0.5},
+		{Wave: s.Sine, Freq: 90, FreqEnd: 260, Dur: 0.45, Attack: 0.03, Release: 0.12, Gain: 0.5},
+		{Wave: s.Sine, Freq: 880, FreqEnd: 1760, Start: 0.05, Dur: 0.4, Attack: 0.15, Release: 0.1, Gain: 0.12},
+		{Wave: s.White, Start: 0.1, Dur: 0.35, HighPass: 4000, Grains: 30, Attack: 0.05, Release: 0.1, Gain: 0.18},
+	}}, 0.42},
 }
