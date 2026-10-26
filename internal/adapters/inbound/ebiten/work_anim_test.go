@@ -2,7 +2,11 @@ package ebiten
 
 import (
 	"math"
+	"slices"
+	"strings"
 	"testing"
+
+	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/clock"
@@ -46,8 +50,8 @@ func TestWorkPoseTable(t *testing.T) {
 			t.Fatalf("%s: throws no particles", a)
 		}
 		r, _ := workRenderer(0)
-		if pose := r.workPose(worker(a), moveState{}); !pose.ok || !pose.held.set {
-			t.Fatalf("%s: work pose must apply and set the held item", a)
+		if pose := r.workPose(worker(a), moveState{}); !pose.ok || pose.held.key != "" {
+			t.Fatalf("%s: work pose must apply, holding nothing", a)
 		}
 	}
 	// combat and carrying belong to other layers
@@ -73,9 +77,9 @@ func TestWorkPoseTable(t *testing.T) {
 	}
 }
 
-// Each motion shapes the figure differently: swings turn the tool through
-// its arc and squash on the strike, reaches lean in and dip, the bench
-// bobs bare-handed, eating lifts the spoon to the mouth.
+// Each motion shapes the figure differently: swings wind back and drive
+// in with a squash on the strike, reaches lean in and dip, the bench
+// bobs, eating bows the head. None holds a tool.
 func TestMotionTransforms(t *testing.T) {
 	t.Parallel()
 	at := func(action string, ph float64) actionPose {
@@ -84,8 +88,8 @@ func TestMotionTransforms(t *testing.T) {
 		return r.workPose(worker(action), moveState{})
 	}
 	wind, strike := at(game.ActionChop, 0.35), at(game.ActionChop, strikeAt+0.01)
-	if wind.held.angle <= 1 || strike.held.angle >= 0 || strike.squash <= wind.squash || strike.dx <= wind.dx {
-		t.Fatalf("swing: raised %+v, then driven down, squashed and leaning in %+v", wind, strike)
+	if wind.dx >= 0 || strike.squash <= wind.squash || strike.dx <= wind.dx || strike.rot <= 0 {
+		t.Fatalf("swing: wound back %+v, then driven in, squashed and leaning in %+v", wind, strike)
 	}
 	for _, a := range []string{game.ActionTend, game.ActionSow, game.ActionHarvest} {
 		lo, hi := at(a, strikeAt+0.5), at(a, strikeAt+0.01)
@@ -93,11 +97,68 @@ func TestMotionTransforms(t *testing.T) {
 			t.Fatalf("%s: lean in and dip on the strike: %+v vs %+v", a, hi, lo)
 		}
 	}
-	if lo, hi := at(game.ActionCraft, strikeAt+0.5), at(game.ActionCraft, strikeAt+0.01); hi.dy <= lo.dy || hi.held.key != "" {
-		t.Fatalf("bench: a bare-handed bob: %+v vs %+v", hi, lo)
+	if lo, hi := at(game.ActionCraft, strikeAt+0.5), at(game.ActionCraft, strikeAt+0.01); hi.dy <= lo.dy {
+		t.Fatalf("bench: a bob: %+v vs %+v", hi, lo)
 	}
-	if lo, hi := at(game.ActionEat, strikeAt+0.5), at(game.ActionEat, strikeAt+0.01); hi.held.lift <= lo.held.lift || hi.dy <= lo.dy {
-		t.Fatalf("eat: the spoon to the mouth, the head bobbing: %+v vs %+v", hi, lo)
+	if lo, hi := at(game.ActionEat, strikeAt+0.5), at(game.ActionEat, strikeAt+0.01); hi.dy <= lo.dy {
+		t.Fatalf("eat: the head bows to the meal: %+v vs %+v", hi, lo)
+	}
+}
+
+// No tool is ever drawn (ART-027): for every work action an off-duty
+// pawn's figure draws only its own layers.
+func TestWorkDrawsNoTool(t *testing.T) {
+	t.Parallel()
+	r := New(&stubSim{w: 16, h: 16, tick: 100})
+	r.art = figureArt()
+	for act := range workTable {
+		p := game.PawnView{ID: 3, X: 2, Y: 2, ActX: 3, ActY: 2, Action: act, Weapon: "rifle"}
+		ps, h := r.standingPose(p, moveState{Facing: faceEast})
+		if h.key != "" {
+			t.Fatalf("%s: holds %q", act, h.key)
+		}
+		var keys []string
+		r.lit.onDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
+		r.drawPawnFigure(ebiten.NewImage(512, 512), p, 2, 2, 64, pawnFigurePose{face: faceEast, ps: ps, held: h})
+		r.lit.onDraw = nil
+		for _, k := range keys {
+			if !strings.HasPrefix(k, "pawn/") || k == staleHandKey {
+				t.Fatalf("%s draws %s", act, k)
+			}
+		}
+	}
+}
+
+// A strike's particles spawn at the work spot: the worked tile's face
+// towards the pawn, whichever side the pawn works it from.
+func TestWorkParticlesAtWorkSpot(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct {
+		px, py int
+		x, y   float64
+	}{
+		{5, 5, 6.5 - workFace, 5.45}, // from the west
+		{7, 5, 6.5 + workFace, 5.45}, // from the east
+		{6, 4, 6.5, 5.45 - workFace}, // from the north
+		{6, 6, 6.5, 5.45 + workFace}, // from the south
+		{6, 5, 6.5, 5.45},            // standing on it
+	} {
+		for _, act := range []string{game.ActionChop, game.ActionSow, game.ActionHarvest, game.ActionClean, game.ActionBuild} {
+			d := workTable[act]
+			r, sim := workRenderer(tickAt(3, d.period, 0.1))
+			p := game.PawnView{ID: 3, X: c.px, Y: c.py, ActX: 6, ActY: 5, Action: act}
+			r.animateWork(game.WorldView{}, []game.PawnView{p})
+			sim.tick = clock.Tick(tickAt(3, d.period, strikeAt) + d.period)
+			r.animateWork(game.WorldView{}, []game.PawnView{p})
+			if len(r.parts) == 0 {
+				t.Fatalf("%s from (%d,%d): no particles", act, c.px, c.py)
+			}
+			for _, q := range r.parts {
+				if math.Abs(q.x-c.x) > 1e-9 || math.Abs(q.y-c.y) > 1e-9 {
+					t.Fatalf("%s from (%d,%d): particle at %v,%v, want %v,%v", act, c.px, c.py, q.x, q.y, c.x, c.y)
+				}
+			}
+		}
 	}
 }
 
@@ -115,14 +176,14 @@ func TestChopStrikeParticlesAtTrunk(t *testing.T) {
 		t.Fatalf("one swing throws 4 chips, got %d", len(r.parts))
 	}
 	for _, q := range r.parts {
-		if q.kind != partChip || q.x != 6.5 || q.y != 5.45 {
-			t.Fatalf("chips fly from the trunk tile: %+v", q)
+		if q.kind != partChip || q.x != 6.5-workFace || q.y != 5.45 {
+			t.Fatalf("chips fly from the trunk's face: %+v", q)
 		}
 	}
-	// the strike: axe driven down in both hands
+	// the strike: leaning in, no axe drawn
 	r.mo.alpha = 0
 	a := r.workPose(p, moveState{})
-	if math.Abs(a.held.angle-swingAngle(workPhase(r.animT(), 3, 46))) > 1e-9 || a.held.angle >= 0 || a.held.key != "tool/axe" || a.held.stance != stanceHands {
+	if a.held.key != "" {
 		t.Fatalf("chop pose: %+v", a)
 	}
 	if a.dx <= 0 {
@@ -152,8 +213,7 @@ func TestMineSparks(t *testing.T) {
 	if sparks == 0 || dust == 0 {
 		t.Fatalf("sparks %d and dust %d", sparks, dust)
 	}
-	a := r.workPose(p, moveState{})
-	if a.held.angle >= 0 || a.held.key != "tool/pickaxe" || a.held.stance != stanceHands {
+	if a := r.workPose(p, moveState{}); !a.ok || a.held.key != "" {
 		t.Fatalf("mine pose: %+v", a)
 	}
 }
@@ -163,28 +223,27 @@ func TestSowKneels(t *testing.T) {
 	r, sim := workRenderer(tickAt(3, 48, 0.1))
 	p := worker(game.ActionSow)
 	a := r.workPose(p, moveState{})
-	if a.held.key != "tool/trowel" || a.held.stance != stanceUpright || a.squash < 0.08 {
-		t.Fatalf("sow kneels and plants with a trowel: %+v", a)
+	if a.held.key != "" || a.squash < 0.08 {
+		t.Fatalf("sow kneels and plants, nothing in hand: %+v", a)
 	}
 	r.animateWork(game.WorldView{}, []game.PawnView{p})
 	sim.tick = clock.Tick(tickAt(3, 48, strikeAt) + 48)
 	r.animateWork(game.WorldView{}, []game.PawnView{p})
-	if len(r.parts) == 0 || r.parts[0].kind != partSoil || r.parts[0].x != 5.5 || r.parts[0].y != 5.6 {
-		t.Fatalf("soil flies at the hand: %+v", r.parts)
+	if len(r.parts) == 0 || r.parts[0].kind != partSoil || r.parts[0].x != 6.5-workFace || r.parts[0].y != 5.45 {
+		t.Fatalf("soil flies at the sown spot: %+v", r.parts)
 	}
 }
 
-// TestCleanSweeps: cleaning (SIM-021) is the low reach with a broom,
-// upright, throwing dust.
+// TestCleanSweeps: cleaning (SIM-021) is the low reach, throwing dust.
 func TestCleanSweeps(t *testing.T) {
 	t.Parallel()
 	r, _ := workRenderer(0)
 	d := workTable[game.ActionClean]
-	if d.motion != motionReach || d.tool != "tool/broom" || d.stance != stanceUpright || len(d.parts) == 0 || d.parts[0].kind != partDust {
+	if d.motion != motionReach || len(d.parts) == 0 || d.parts[0].kind != partDust {
 		t.Fatalf("clean row: %+v", d)
 	}
 	a := r.workPose(worker(game.ActionClean), moveState{})
-	if !a.ok || a.held.key != "tool/broom" || a.squash <= 0 {
+	if !a.ok || a.held.key != "" || a.squash <= 0 {
 		t.Fatalf("clean pose %+v", a)
 	}
 	if actionSounds[game.ActionClean] != "sfx.sweep" {
@@ -197,8 +256,8 @@ func TestHarvestPicks(t *testing.T) {
 	r, sim := workRenderer(tickAt(3, 44, strikeAt))
 	p := worker(game.ActionHarvest)
 	a := r.workPose(p, moveState{})
-	if a.held.key != "tool/sickle" || a.squash <= 0 || a.held.angle <= 0.4 {
-		t.Fatalf("harvest crouches and picks with a sickle: %+v", a)
+	if a.held.key != "" || a.squash <= 0 || a.dx <= 0 {
+		t.Fatalf("harvest crouches and picks: %+v", a)
 	}
 	sim.tick = clock.Tick(tickAt(3, 44, 0.1))
 	r.animateWork(game.WorldView{}, []game.PawnView{p})
@@ -222,8 +281,8 @@ func TestBenchActions(t *testing.T) {
 		d := workTable[c.action]
 		r, sim := workRenderer(tickAt(3, d.period, 0.1))
 		p := worker(c.action)
-		if a := r.workPose(p, moveState{}); workTable[c.action].motion != motionBench || a.held.key != "" || !a.held.set {
-			t.Fatalf("%s: bench motion with bare hands: %+v", c.action, a)
+		if a := r.workPose(p, moveState{}); workTable[c.action].motion != motionBench || !a.ok || a.held.key != "" {
+			t.Fatalf("%s: bench motion, nothing in hand: %+v", c.action, a)
 		}
 		r.animateWork(game.WorldView{}, []game.PawnView{p})
 		sim.tick = clock.Tick(tickAt(3, d.period, strikeAt) + d.period)
@@ -250,11 +309,11 @@ func TestBenchActions(t *testing.T) {
 	}
 }
 
-func TestTendKneelsWithBandage(t *testing.T) {
+func TestTendKneels(t *testing.T) {
 	t.Parallel()
 	r, _ := workRenderer(tickAt(3, 60, 0.6))
 	a := r.workPose(worker(game.ActionTend), moveState{})
-	if a.held.key != "tool/bandage" || a.squash < 0.1 || a.dx <= 0 {
+	if a.held.key != "" || a.squash < 0.1 || a.dx <= 0 {
 		t.Fatalf("tend: %+v", a)
 	}
 }
@@ -263,24 +322,26 @@ func TestTameOffersHand(t *testing.T) {
 	t.Parallel()
 	r, _ := workRenderer(tickAt(3, 64, 0.2))
 	a := r.workPose(worker(game.ActionTame), moveState{})
-	if a.held.key != "" || !a.held.set || a.squash <= 0 {
+	if !a.ok || a.held.key != "" || a.squash <= 0 {
 		t.Fatalf("tame crouches, bare hand out: %+v", a)
 	}
 }
 
-func TestEatBowlSpoon(t *testing.T) {
+// Eating shows nothing in hand (no bowl or spoon): the head bobs.
+func TestEatShowsNothingInHand(t *testing.T) {
 	t.Parallel()
 	r, _ := workRenderer(tickAt(3, 50, 0.2))
-	// The spoon on hold, lifted towards the mouth; the bowl level under it.
 	a := r.workPose(worker(game.ActionEat), moveState{})
-	if a.held.key != "tool/spoon" || a.held.off != "tool/bowl" || a.held.lift <= 0 {
+	if !a.ok || a.held.key != "" || a.dx <= 0 {
 		t.Fatalf("eat: %+v", a)
 	}
 }
 
-func TestCarryPoseWhileWalking(t *testing.T) {
+// A hauled item is the item's own sprite, centred on the body and raised
+// a little, drawn in front of it; it rides the walking figure.
+func TestLoadInFrontOfBody(t *testing.T) {
 	t.Parallel()
-	r, _ := workRenderer(0)
+	r := artRenderer()
 	p := game.PawnView{ID: 1, Carrying: "wood"}
 	for _, stride := range []float64{0, 0.14, 0.8, 1.59} {
 		m := walkingState
@@ -290,8 +351,14 @@ func TestCarryPoseWhileWalking(t *testing.T) {
 			t.Fatalf("stride %v: the load rides the walking figure (gait from walkPose): %+v", stride, a)
 		}
 		if a.held.key != itemSprite("wood") || a.held.stance != stanceLoad {
-			t.Fatalf("the load is the item sprite in both arms: %+v", a.held)
+			t.Fatalf("the load is the item sprite: %+v", a.held)
 		}
+	}
+	if a := r.carryPose(game.PawnView{ID: 1, Carrying: "stone"}, moveState{}); !a.ok || a.held.stance != stanceLoad || !a.held.set {
+		t.Fatalf("standing carry: %+v", a)
+	}
+	if r.carryPose(game.PawnView{ID: 1}, moveState{}).ok {
+		t.Fatal("nothing carried, no carry pose")
 	}
 	// the walking carrier still bobs: the pose stacks on the gait
 	m := walkingState
@@ -301,17 +368,42 @@ func TestCarryPoseWhileWalking(t *testing.T) {
 	if ps.dy >= 0 || h.stance != stanceLoad {
 		t.Fatalf("a walking carrier bobs with its load: %+v %+v", ps, h)
 	}
+	// placement: centred on the body, at the chest (just under the body
+	// centre, clear of the face), in front
+	h = heldItem{key: "item/wood_pile", stance: stanceLoad}
+	for _, f := range []facing{faceSouth, faceEast, faceWest} {
+		rig, ps := rigFor(r, f)
+		pl, ok := r.heldPlace(rig, h, 1, 1, 64, ps)
+		if !ok || pl.behind {
+			t.Fatalf("%v: the load in front of the body: %+v", f, pl)
+		}
+		mid := heldPivotOn(r, pl, h)
+		c := aimCentre(r, rig, ps, 1, 1, 64)
+		if math.Abs(mid[0]-c[0]) > 1e-6 || mid[1] < c[1] || mid[1]-c[1] > 0.15*64 {
+			t.Fatalf("%v: load centre %v, body centre %v", f, mid, c)
+		}
+		if w := pl.g.Element(0, 0); math.Abs(math.Abs(w)*artTilePx-0.5*64) > 1e-6 {
+			t.Fatalf("%v: the load is about half a tile: %v px", f, math.Abs(w)*artTilePx)
+		}
+	}
 }
 
-func TestCarryPoseStanding(t *testing.T) {
+func TestLoadBehindFacingNorth(t *testing.T) {
 	t.Parallel()
-	r, _ := workRenderer(0)
-	a := r.carryPose(game.PawnView{ID: 1, Carrying: "stone"}, moveState{})
-	if !a.ok || a.held.stance != stanceLoad || !a.held.set {
-		t.Fatalf("standing carry: %+v", a)
-	}
-	if r.carryPose(game.PawnView{ID: 1}, moveState{}).ok {
-		t.Fatal("nothing carried, no carry pose")
+	r := New(&stubSim{w: 16, h: 16, tick: 100})
+	r.art = figureArt()
+	p := game.PawnView{ID: 1, X: 2, Y: 2, Carrying: "wood"}
+	for _, f := range []facing{faceNorth, faceSouth, faceEast, faceWest} {
+		ps, h := r.standingPose(p, moveState{Facing: f})
+		var keys []string
+		r.lit.onDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
+		r.drawPawnFigure(ebiten.NewImage(512, 512), p, 2, 2, 64, pawnFigurePose{face: f, ps: ps, held: h})
+		r.lit.onDraw = nil
+		body := slices.IndexFunc(keys, func(k string) bool { return strings.HasPrefix(k, "pawn/body_") })
+		load := slices.Index(keys, "item/wood_pile")
+		if body < 0 || load < 0 || (load < body) != (f == faceNorth) {
+			t.Fatalf("%v: body %d load %d (%v)", f, body, load, keys)
+		}
 	}
 }
 

@@ -33,36 +33,47 @@ func shot(age int, melee bool) game.TraceView {
 		Attacker: 1, Target: 2, Damage: 9}
 }
 
+// aimCentre is the posed body centre of an east-facing figure at (wx, wy)
+// on screen: where an aimed item is placed from.
+func aimCentre(r *Renderer, rig heldRig, ps pose, wx, wy, tile float64) pt {
+	c, _ := bodyCentre(rig.body.meta)
+	sx, sy := r.worldToScreenF(wx, wy)
+	bx, by, s := artOrigin(rig.body.meta, float64(sx), float64(sy), tile)
+	return apply(ps.geo(float64(sx), float64(sy), tile), pt{bx + c[0]*s, by + c[1]*s})
+}
+
+// The rifle is aimed at the target for the whole attack cycle (no low
+// ready to blend from: the carried pose already reads low); only the
+// shot's muzzle kick moves it.
 func TestAimBlendFollowsAttackCycle(t *testing.T) {
 	t.Parallel()
-	if k, rise := aimRaise(0, 0, false); k != 0 || rise != 0 {
-		t.Fatalf("cycle 0: low ready (%v %v)", k, rise)
+	if k := aimKick(0, false); k != 0 {
+		t.Fatalf("no shot: no kick (%v)", k)
 	}
-	if k, _ := aimRaise(aimAt, 0, false); k != 1 {
-		t.Fatalf("cycle 0.6: shouldered (%v)", k)
+	if k := aimKick(fireTicks/2, true); math.Abs(k-muzzleKick) > 1e-9 {
+		t.Fatalf("the kick peaks mid-shot: %v", k)
 	}
-	prev := -1.0
-	for c := 0.0; c <= 1; c += 0.02 {
-		k, _ := aimRaise(c, 0, false)
-		if k < prev {
-			t.Fatalf("raise falls at cycle %.2f", c)
-		}
-		prev = k
+	if k := aimKick(fireTicks, true); k != 0 {
+		t.Fatalf("settled by fireTicks: %v", k)
 	}
 	p := shooter()
-	p.AttackCycle = 0
 	r := combatRenderer(100, []game.PawnView{p, targetAt(9, 5)}, game.WorldView{})
-	a := r.combatPose(p, eastIdle)
-	if !a.ok || a.held.key != "weapon/rifle_basic" || math.Abs(a.held.angle+lowReady) > 1e-9 {
-		t.Fatalf("aiming starts at low ready: %+v", a)
+	var first actionPose
+	for i, c := range []float64{0, 0.3, 0.6, 0.99} {
+		p.AttackCycle = c
+		a := r.combatPose(p, eastIdle)
+		if !a.ok || a.held.key != "weapon/rifle_basic" || a.held.stance != stanceAimed || a.held.angle != 0 || a.held.push != 0 {
+			t.Fatalf("cycle %.2f: aimed, steady: %+v", c, a)
+		}
+		if i == 0 {
+			first = a
+		} else if a != first {
+			t.Fatalf("cycle %.2f: the aim does not follow the cycle: %+v vs %+v", c, a, first)
+		}
 	}
-	p.AttackCycle = 0.7
-	if a := r.combatPose(p, eastIdle); a.held.angle != 0 || !a.held.aim {
-		t.Fatalf("shouldered and aimed past 60%%: %+v", a)
-	}
-	// walking to the target: the rifle stays up in both hands
-	if a := r.combatPose(p, moveState{Facing: faceEast, Blend: 1, Moving: true}); a.held.stance != stanceHands || a.held.angle != 0 {
-		t.Fatalf("walking while aiming keeps the rifle up: %+v", a)
+	// walking to the target: still aimed
+	if a := r.combatPose(p, moveState{Facing: faceEast, Blend: 1, Moving: true}); a.held.stance != stanceAimed || a.held.angle != 0 {
+		t.Fatalf("walking while aiming keeps the aim: %+v", a)
 	}
 	if a := r.combatPose(game.PawnView{ID: 3, Weapon: "rifle"}, eastIdle); a.ok {
 		t.Fatal("not attacking: no combat layer")
@@ -78,20 +89,30 @@ func TestFireAnchoredToTrace(t *testing.T) {
 		return r.combatPose(p, eastIdle)
 	}
 	// the shot kicks the muzzle up from the trace's first sighting and
-	// settles by fireTicks; recoil pushes back from the target at once
-	if a := angle(0); a.held.angle != 0 || a.dx >= 0 {
+	// settles by fireTicks; recoil pushes the body back from the target
+	// and pulls the rifle back along the aim at once
+	if a := angle(0); a.held.angle != 0 || a.dx >= 0 || a.held.push >= 0 {
 		t.Fatalf("age 0: on the target, recoiling: %+v", a)
 	}
 	mid := angle(4)
 	if mid.held.angle < 0.25 {
-		t.Fatalf("mid-shot muzzle rise: %v", mid.held.angle)
+		t.Fatalf("mid-shot muzzle kick: %v", mid.held.angle)
 	}
-	if a := angle(15); a.held.angle != 0 || a.dx != 0 {
+	if a := angle(15); a.held.angle != 0 || a.dx != 0 || a.held.push != 0 {
 		t.Fatalf("settled after the shot: %+v", a)
+	}
+	// the pull moves the rifle back towards the shooter
+	r := combatRenderer(100, []game.PawnView{p, targetAt(9, 5)}, game.WorldView{})
+	rig, ps := rigFor(r, faceEast)
+	h := heldItem{key: "weapon/rifle_basic", stance: stanceAimed, aimX: 9.5, aimY: 5.4}
+	rest, _ := r.heldPoint(rig, h, 5, 5, ps, "muzzle")
+	h.push = angle(0).held.push
+	pulled, _ := r.heldPoint(rig, h, 5, 5, ps, "muzzle")
+	if pulled.x >= rest.x {
+		t.Fatalf("recoil pulls the rifle back: %v -> %v", rest, pulled)
 	}
 	// a fast sim cannot skip the shot: 2 frames after the first sighting
 	// it is still kicking even though 30 ticks went by
-	r := combatRenderer(100, []game.PawnView{p, targetAt(9, 5)}, game.WorldView{})
 	st := r.animState()
 	st.trackReactions([]game.TraceView{shot(1, false)}, 100, 50)
 	r.game.(*stubSim).tick = 131
@@ -104,59 +125,58 @@ func TestFireAnchoredToTrace(t *testing.T) {
 	other.Attacker, other.FromX = 7, 6
 	r = combatRenderer(100, []game.PawnView{p}, game.WorldView{Traces: []game.TraceView{other}})
 	p.AttackCycle = 0.1
-	if a := r.combatPose(p, eastIdle); a.held.angle >= 0 || a.dx != 0 {
+	if a := r.combatPose(p, eastIdle); a.held.angle != 0 || a.dx != 0 || a.held.push != 0 {
 		t.Fatalf("someone else's trace: %+v", a)
 	}
 }
 
+// The aimed rifle points from the body centre at the target all the way
+// round, flipped when aiming left so it stays upright, behind the body
+// only when aiming into the north half.
 func TestRifleAimsAtTarget(t *testing.T) {
 	t.Parallel()
 	p := shooter()
 	p.AttackCycle = 0.8
 	r := combatRenderer(100, []game.PawnView{p, targetAt(9, 3)}, game.WorldView{})
 	a := r.combatPose(p, eastIdle)
-	if !a.held.aim || a.held.aimX != 9.5 || a.held.aimY != 3.4 {
+	if a.held.stance != stanceAimed || a.held.aimX != 9.5 || a.held.aimY != 3.4 {
 		t.Fatalf("aims at the target's body: %+v", a.held)
 	}
 	sp := r.art.sprite("weapon/rifle_basic").meta.Attach
 	h := a.held
-	rig, ps := rigFor(r, faceEast)
-	prev := math.NaN()
-	for i := 0; i <= 40; i++ {
-		// the target walks along an arc in front of the shooter
-		ang := -0.6 + 1.2*float64(i)/40
-		h.aimX, h.aimY = 5.5+4*math.Cos(ang), 5.0+4*math.Sin(ang)
-		g, _, ok := r.heldGeo(rig, h, false, 5, 5, 64, ps)
-		if !ok {
-			t.Fatal("placement")
+	for _, f := range []facing{faceEast, faceWest, faceSouth, faceNorth} {
+		rig, ps := rigFor(r, f)
+		c := aimCentre(r, rig, ps, 5, 5, 64)
+		for i := 0; i < 72; i++ {
+			// the target walks round the shooter
+			ang := 2*math.Pi*float64(i)/72 + 0.01
+			h.aimX, h.aimY = 5.5+4*math.Cos(ang), 5.0+4*math.Sin(ang)
+			pl, ok := r.heldPlace(rig, h, 5, 5, 64, ps)
+			if !ok {
+				t.Fatal("placement")
+			}
+			gr, mz := apply(pl.g, sp["grip"]), apply(pl.g, sp["muzzle"])
+			tx, ty := r.worldToScreenF(h.aimX, h.aimY)
+			want := math.Atan2(float64(ty)-c[1], float64(tx)-c[0])
+			if got := math.Atan2(mz[1]-c[1], mz[0]-c[0]); math.Abs(wrapAngle(got-want)) > 0.03 {
+				t.Fatalf("%v step %d: muzzle %.3f rad from the body centre, target %.3f", f, i, got, want)
+			}
+			if got := math.Atan2(mz[1]-gr[1], mz[0]-gr[0]); math.Abs(wrapAngle(got-want)) > 0.03 {
+				t.Fatalf("%v step %d: the rifle lies along the aim: %.3f vs %.3f", f, i, got, want)
+			}
+			if d := math.Hypot(mz[0]-c[0], mz[1]-c[1]); d < aimReach*64 {
+				t.Fatalf("%v step %d: the muzzle is out past %.2f tile: %.1f px", f, i, aimReach, d)
+			}
+			// upright: the sprite's top (towards smaller image y) stays up
+			pv := heldPivot(r.art.sprite(h.key), h.stance)
+			top, mid := apply(pl.g, pt{pv[0], pv[1] - 10}), apply(pl.g, pt{pv[0], pv[1]})
+			if math.Abs(math.Cos(want)) > 0.2 && top[1] > mid[1] {
+				t.Fatalf("%v step %d (%.2f rad): upside down", f, i, want)
+			}
+			if north := math.Sin(want) < 0; pl.behind != north {
+				t.Fatalf("%v step %d: behind=%v, aiming north=%v", f, i, pl.behind, north)
+			}
 		}
-		gr, mz := apply(g, sp["grip"]), apply(g, sp["muzzle"])
-		got := math.Atan2(mz[1]-gr[1], mz[0]-gr[0])
-		tx, ty := r.worldToScreenF(h.aimX, h.aimY)
-		want := math.Atan2(float64(ty)-gr[1], float64(tx)-gr[0])
-		if math.Abs(wrapAngle(got-want)) > 0.03 {
-			t.Fatalf("step %d: muzzle %.3f rad, target %.3f", i, got, want)
-		}
-		if !math.IsNaN(prev) && math.Abs(got-prev) > 0.06 {
-			t.Fatalf("aim jumps %.3f rad between steps", got-prev)
-		}
-		prev = got
-	}
-	// out of reach behind: clamped, never flipped around
-	h.aimX, h.aimY = 0, 5.2
-	g, _, _ := r.heldGeo(rig, h, false, 5, 5, 64, ps)
-	gr, mz := apply(g, sp["grip"]), apply(g, sp["muzzle"])
-	if mz[0] <= gr[0] {
-		t.Fatal("an east-facing pawn keeps its muzzle east")
-	}
-	// facing west (the east art mirrored) it aims just as well
-	rig, ps = rigFor(r, faceWest)
-	h.aimX, h.aimY = 1.5, 3
-	g, _, _ = r.heldGeo(rig, h, false, 5, 5, 64, ps)
-	gr, mz = apply(g, sp["grip"]), apply(g, sp["muzzle"])
-	tx, ty := r.worldToScreenF(h.aimX, h.aimY)
-	if got, want := math.Atan2(mz[1]-gr[1], mz[0]-gr[0]), math.Atan2(float64(ty)-gr[1], float64(tx)-gr[0]); math.Abs(wrapAngle(got-want)) > 0.03 {
-		t.Fatalf("west: muzzle %.3f rad, target %.3f", got, want)
 	}
 }
 
@@ -176,6 +196,9 @@ func TestMuzzleFlashAtMuzzle(t *testing.T) {
 	hand, _ := r.pawnHeldPoint(game.PawnView{ID: 9, X: 5, Y: 5}, "hold")
 	if math.Hypot(mz.x-hand.x, mz.y-hand.y) < 0.2 {
 		t.Fatalf("the muzzle is out at the barrel's end: %v vs hand %v", mz, hand)
+	}
+	if mz.x < 5.5+aimReach {
+		t.Fatalf("the muzzle is out towards the target: %v", mz)
 	}
 	smoke := 0
 	for _, pt := range r.parts {
@@ -254,7 +277,7 @@ func TestStabAnchoredToTrace(t *testing.T) {
 		a := r.combatPose(p, eastIdle)
 		pushes = append(pushes, a.held.push)
 		if age == 1 {
-			if !a.held.aim || a.held.key != "weapon/knife" || a.dx <= 0 {
+			if a.held.stance != stanceAimed || a.held.key != "weapon/knife" || a.dx <= 0 {
 				t.Fatalf("the knife points at the target and the stab lunges: %+v", a)
 			}
 		}
@@ -278,7 +301,7 @@ func TestSpearThrustReach(t *testing.T) {
 		t.Fatalf("the spear thrusts further: %.3f/%.3f vs knife %.3f/%.3f", spear.dx, spear.held.push, knife.dx, knife.held.push)
 	}
 	rig, ps := rigFor(r, faceEast)
-	h := heldItem{key: "weapon/spear", stance: stanceHands}
+	h := heldItem{key: "weapon/spear", stance: stanceAimed, aimX: 6.5, aimY: 5.4}
 	tip1, ok1 := r.heldPoint(rig, h, 5, 5, ps, "tip")
 	h.push = spear.held.push
 	ps.dx = spear.dx
@@ -303,17 +326,29 @@ func TestClubSwing(t *testing.T) {
 	if lunge, _, _ := meleeMotion("club", 0, 0, true); lunge != 1 {
 		t.Fatalf("the strike lands on the trace: lunge %v", lunge)
 	}
-	// one hand on hold: cocked up, then driven down and forward
+	if raised-struck > 1.4 {
+		t.Fatalf("a short arc about the aim: %v .. %v", struck, raised)
+	}
+	// aimed east: cocked up, then driven down and forward
 	r := artRenderer()
 	rig, ps := rigFor(r, faceEast)
 	sp := r.art.sprite("weapon/club").meta.Attach
-	g1, _, _ := r.heldGeo(rig, heldItem{key: "weapon/club", stance: stanceHands, angle: raised}, false, 2, 2, 64, ps)
-	g4, _, _ := r.heldGeo(rig, heldItem{key: "weapon/club", stance: stanceHands, angle: struck}, false, 2, 2, 64, ps)
-	if tip, grip := apply(g1, sp["tip"]), apply(g1, sp["grip"]); tip[1] >= grip[1] {
+	h := heldItem{key: "weapon/club", stance: stanceAimed, aimX: 6.5, aimY: 2.4}
+	at := func(angle float64) (tip, grip pt) {
+		h.angle = angle
+		pl, _ := r.heldPlace(rig, h, 2, 2, 64, ps)
+		return apply(pl.g, sp["tip"]), apply(pl.g, sp["grip"])
+	}
+	if tip, grip := at(raised); tip[1] >= grip[1] {
 		t.Fatal("wound up: the club is raised")
 	}
-	if tip, grip := apply(g4, sp["tip"]), apply(g4, sp["grip"]); tip[0] <= grip[0] || tip[1] <= grip[1] {
+	if tip, grip := at(struck); tip[0] <= grip[0] || tip[1] <= grip[1] {
 		t.Fatal("struck: the club comes down forward")
+	}
+	// aimed west (flipped upright): raised is still up
+	h.aimX = -2.5
+	if tip, grip := at(raised); tip[1] >= grip[1] || tip[0] >= grip[0] {
+		t.Fatal("aimed west: the club is raised, pointing west")
 	}
 }
 
@@ -331,6 +366,10 @@ func TestPunch(t *testing.T) {
 	a := r.combatPose(p, eastIdle)
 	if a.held.key != "" || !a.held.set || a.held.push <= 0 || a.dx <= 0 {
 		t.Fatalf("a bare-handed punch: %+v", a)
+	}
+	rig, ps := rigFor(r, faceEast)
+	if _, ok := r.heldPlace(rig, a.held, 5, 5, 64, ps); ok {
+		t.Fatal("fists: no sprite drawn")
 	}
 	// the melee trail follows the punch's reach
 	if pts := r.meleeTrail(tr); len(pts) < 2 || pts[1].x <= pts[0].x {
@@ -529,5 +568,32 @@ func TestAnimalFlinch(t *testing.T) {
 	r.animState().trackReactions([]game.TraceView{{FromX: 5, FromY: 5, ToX: 6, ToY: 5, Age: 1, Hit: true}}, 100, r.present)
 	if ps := r.animalPose(old); ps.dx <= 0 || ps.flash <= 0 {
 		t.Fatalf("fallback knockback: %+v", ps)
+	}
+}
+
+// A flinch keeps what the pawn holds: a hauled load stays in its arms,
+// an aimed rifle stays aimed.
+func TestLoadKeptDuringFlinch(t *testing.T) {
+	t.Parallel()
+	p := game.PawnView{ID: 1, X: 5, Y: 5, Carrying: "wood", HitTick: 99, HitFromX: 3, HitFromY: 5}
+	r := combatRenderer(100, []game.PawnView{p}, game.WorldView{})
+	a := r.hitReaction(p, eastIdle)
+	if !a.ok || a.dx <= 0 || a.held.key != itemSprite("wood") || a.held.stance != stanceLoad {
+		t.Fatalf("the load is kept through the flinch: %+v", a)
+	}
+	if _, h := r.standingPose(p, eastIdle); h.key != itemSprite("wood") {
+		t.Fatalf("the drawn figure keeps its load: %+v", h)
+	}
+	q := shooter()
+	q.HitTick, q.HitFromX, q.HitFromY = 99, 3, 5
+	r = combatRenderer(100, []game.PawnView{q, targetAt(9, 5)}, game.WorldView{})
+	if a := r.hitReaction(q, eastIdle); a.held.stance != stanceAimed || a.held.key != "weapon/rifle_basic" {
+		t.Fatalf("an aiming pawn stays aimed through the flinch: %+v", a.held)
+	}
+	// off duty and empty-handed: nothing
+	idle := game.PawnView{ID: 1, X: 5, Y: 5, Weapon: "rifle", HitTick: 99, HitFromX: 3, HitFromY: 5}
+	r = combatRenderer(100, []game.PawnView{idle}, game.WorldView{})
+	if a := r.hitReaction(idle, eastIdle); a.held.key != "" {
+		t.Fatalf("off duty: nothing held while flinching: %+v", a.held)
 	}
 }

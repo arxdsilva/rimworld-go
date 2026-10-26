@@ -436,7 +436,8 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 		r.drawStackCounts(screen, w, tile)
 	}
 	r.drawBuildingDamage(screen, w, tile)
-	r.drawNoPowerBadges(screen, &w, tile) // power_draw.go
+	r.drawWorkProgress(screen, r.drawPawns, tile) // work_progress.go: bars over the work spots
+	r.drawNoPowerBadges(screen, &w, tile)         // power_draw.go
 	r.drawChatBubbles(screen, tile)
 	r.drawBreakClouds(screen, tile)
 	r.drawOrderRoute(screen, tile)

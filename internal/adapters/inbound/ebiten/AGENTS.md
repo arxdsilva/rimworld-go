@@ -279,12 +279,21 @@ open a window. Existing renderer unit tests stay headless.
   and combat reactions. `present` drives breathing, wind, fire, particles and
   UI pulses. Captures use no sub-frame interpolation, so they stay deterministic.
 - Pawns have no frames (ART-025): walk bob, sway and lean follow stride (one
-  cycle per 1.6 tiles); per-action tool arcs, lunges, recoil, lean and dip run
-  on `animT`; a fall is a buckle then a rotation. Strikes land at trace age 0.
+  cycle per 1.6 tiles); per-action lunges, recoil, lean and dip run on
+  `animT`; a fall is a buckle then a rotation. Strikes land at trace age 0.
   Animal trot `walk01..walk08` advances with stride. Hair and hats follow the
-  body's `head` attachment; held items grip on `hold`, slung ones hang on
-  `back`. West is east mirrored (`facingKey`, also held items, face scar,
-  shadows, animals); the lit shader inverts the normal X for mirrored draws.
+  body's `head` attachment. Held items (`held.go`, ART-027, user decision:
+  RimWorld-faithful) are placed by their centre from the body centre (head
+  x, halfway head to feet): a weapon only on duty (`onDuty`), carried low
+  across the body at rest, aimed out towards the target when aiming or
+  striking (flipped upright when aiming left, behind the body only aiming
+  north); a hauled item on the chest (behind facing north). No tool is
+  ever drawn: work is the lean/dip toward the job, particles at the work
+  spot (`workSpot`) and the in-world progress bar (`work_progress.go`,
+  overlay pass, tile >= 24 px, one per work tile). `hold` remains only as
+  the punch trail's point; `back` carries rescued patients. West is east
+  mirrored (`facingKey`, also carried items, face scar, shadows, animals);
+  the lit shader inverts the normal X for mirrored draws.
   `figureLayers` serves the colony, portraits and the colonist bar.
   `projShearK` (`light.go`) must match the metadata shear (0.35).
 - `camera_smooth.go`: eased pan and cursor-anchored zoom; capture writes the

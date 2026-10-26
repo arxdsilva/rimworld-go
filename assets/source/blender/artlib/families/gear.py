@@ -1,9 +1,11 @@
-"""Held gear: weapons and hand tools (ART §15, §27.2).
+"""Held gear: weapons (ART §15, §27.2).
 
 Each item lies flat pointing east (+X); the renderer rotates it. Attachments
 are image px: `grip` (main hand), `support` (off hand), `muzzle` (firearms),
-`tip` (knife, spear, club striking end), `head` (tools' working end) and
-`stock` (rifle butt) / `back` (slung rifle).
+`tip` (knife, spear, club striking end) and `stock` (rifle butt). The
+renderer places a weapon by its centre (ART-027): carried low across the
+body on duty, aimed out from the body centre; nothing is drawn off duty and
+no tools are drawn at all.
 Extracted from pawn.py so pawn poses and gear can be built separately:
     make art FAMILIES=gear
 """
@@ -85,21 +87,6 @@ def _rifle():
                     "muzzle": (0.94, Y, 0.034), "stock": (0.10, Y, 0.04)})
 
 
-def _rifle_slung():
-    """The rifle hanging diagonally across the back: muzzle up over the
-    shoulder, butt low; drawn behind the body, never rotated."""
-    _rifle_geo()
-    deg = 58.0
-    S.rotate_z(S.objects(), deg)
-    a = math.radians(deg)
-    cx, cy = 0.5, -0.5
-    px, py = 0.45, Y  # spine: across the receiver
-    bx = cx + (px - cx) * math.cos(a) - (py - cy) * math.sin(a)
-    by = cy + (px - cx) * math.sin(a) + (py - cy) * math.cos(a)
-    return _render("weapon", "rifle_slung", 0.11, ("weapon", "rifle"), {"back": (bx, by, 0.05)},
-                   rotatable=False)
-
-
 # ----------------------------------------------------------- melee weapons
 def _knife_geo():
     y = Y
@@ -154,117 +141,5 @@ def _club():
                    {"grip": (0.28, Y, 0.04), "support": (0.42, Y, 0.04), "tip": (0.94, Y, 0.06)})
 
 
-# ------------------------------------------------------------------ tools
-def _tools():
-    """Hand tools. Lying flat, pointing east, like the rifle."""
-    y = Y
-    out = []
-
-    # hammer: one-handed, the left hand steadies the work near the head
-    _rod(0.18, 0.74, 0.024, "wood", r_top=0.02)
-    S.box("head", 0.70, y - 0.10, 0.0, 0.80, y + 0.07, 0.07, "steel", bevel=0.012)
-    S.box("claw", 0.72, y + 0.07, 0.01, 0.78, y + 0.13, 0.05, "metal_dark", bevel=0.008)
-    out.append(_render("tool", "hammer", 0.12, ("tool", "hammer"),
-                       {"grip": (0.26, y, 0.04), "support": (0.50, y, 0.04), "head": (0.82, y, 0.04)}))
-
-    # axe: two-handed, lower (main) hand at the butt, upper hand slides up
-    _rod(0.14, 0.82, 0.024, "wood", r_top=0.02)
-    S.prism("blade", [(0.70, y - 0.03), (0.86, y - 0.03), (0.90, y - 0.17), (0.66, y - 0.15)], 0.0, 0.05,
-            "steel", bevel=0.01)
-    S.box("poll", 0.74, y - 0.03, 0.0, 0.84, y + 0.05, 0.06, "metal_dark", bevel=0.01)
-    out.append(_render("tool", "axe", 0.12, ("tool", "axe"),
-                       {"grip": (0.20, y, 0.04), "support": (0.55, y, 0.04), "head": (0.86, y, 0.04)}))
-
-    # pickaxe: two-handed, lower (main) hand at the butt, upper hand slides up
-    _rod(0.16, 0.80, 0.024, "wood", r_top=0.02)
-    S.prism("pick", [(0.78, y + 0.20), (0.84, y + 0.02), (0.84, y - 0.02), (0.78, y - 0.20),
-                     (0.74, y - 0.04), (0.74, y + 0.04)], 0.0, 0.05, "steel", bevel=0.008)
-    out.append(_render("tool", "pickaxe", 0.12, ("tool", "pickaxe"),
-                       {"grip": (0.22, y, 0.04), "support": (0.56, y, 0.04), "head": (0.86, y, 0.04)}))
-
-    # shovel: long wooden shaft, D-grip at the butt, ferrule, flat spade blade
-    _rod(0.14, 0.76, 0.024, "wood", r_top=0.021)
-    S.box("d_grip", 0.10, y - 0.07, 0.0, 0.17, y + 0.07, 0.05, "wood", bevel=0.012)
-    S.box("d_post_a", 0.10, y - 0.07, 0.0, 0.17, y - 0.045, 0.07, "bark", bevel=0.006)
-    S.box("d_post_b", 0.10, y + 0.045, 0.0, 0.17, y + 0.07, 0.07, "bark", bevel=0.006)
-    S.box("socket", 0.74, y - 0.034, 0.0, 0.84, y + 0.034, 0.07, "metal_dark", bevel=0.01)
-    S.prism("blade", [(0.82, y - 0.05), (0.90, y - 0.115), (0.99, y - 0.105), (1.06, y - 0.05),
-                      (1.08, y), (1.06, y + 0.05), (0.99, y + 0.105), (0.90, y + 0.115), (0.82, y + 0.05)],
-            0.0, 0.03, "steel", bevel=0.008)
-    S.box("rib", 0.84, y - 0.012, 0.03, 1.0, y + 0.012, 0.045, "metal_dark", bevel=0.004)
-    out.append(_render("tool", "shovel", 0.12, ("tool", "shovel"),
-                       {"grip": (0.20, y, 0.04), "support": (0.50, y, 0.04), "head": (1.0, y, 0.03)}))
-
-    # trowel: wooden handle, ferrule, flat pointed blade
-    _rod(0.20, 0.44, 0.03, "wood", r_top=0.026)
-    S.cyl("ferrule", 0, 0, 0.034, 0.0, 0.05, "metal_dark", segs=8, bevel=0.0)
-    from mathutils import Matrix
-    S.objects()[-1].matrix_world = Matrix.Translation((0.43, y, 0.03)) @ Matrix.Rotation(math.radians(90), 4, "Y")
-    S.box("neck", 0.47, y - 0.012, 0.02, 0.56, y + 0.012, 0.045, "steel", bevel=0.004)
-    S.prism("blade", [(0.54, y - 0.03), (0.66, y - 0.085), (0.80, y - 0.04), (0.88, y), (0.80, y + 0.04),
-                      (0.66, y + 0.085), (0.54, y + 0.03)], 0.0, 0.022, "steel", bevel=0.005)
-    out.append(_render("tool", "trowel", 0.1, ("tool", "trowel"),
-                       {"grip": (0.30, y, 0.04), "support": (0.54, y, 0.04), "head": (0.88, y, 0.03)}))
-
-    # sickle: short handle, hooked blade curving up (north)
-    _rod(0.16, 0.42, 0.028, "wood", r_top=0.024)
-    S.ellipsoid("pommel", 0.16, y, 0.03, 0.03, 0.034, 0.03, "wood", segs=8, rings=5)
-    cx, cy, R = 0.42, y + 0.30, 0.30
-    outer, inner = [], []
-    n = 9
-    for i in range(n + 1):
-        t = i / n
-        a = math.radians(-90 + 128 * t)
-        w = 0.07 * (1 - t) + 0.012
-        outer.append((cx + R * math.cos(a), cy + R * math.sin(a)))
-        inner.append((cx + (R - w) * math.cos(a), cy + (R - w) * math.sin(a)))
-    S.prism("blade", outer + inner[::-1], 0.0, 0.026, "steel", bevel=0.004)
-    S.box("ferrule", 0.40, y - 0.04, 0.0, 0.46, y + 0.04, 0.065, "metal_dark", bevel=0.008)
-    tip = outer[-1]
-    out.append(_render("tool", "sickle", 0.1, ("tool", "sickle"),
-                       {"grip": (0.28, y, 0.04), "support": (0.46, y + 0.06, 0.03),
-                        "head": (tip[0], tip[1], 0.03)}))
-
-    # bandage: a roll with a tail of cloth trailing east
-    S.cyl("roll", 0.36, y, 0.1, 0.0, 0.13, "cloth", segs=18, bevel=0.01)
-    S.cyl("roll_core", 0.36, y, 0.035, 0.125, 0.14, "ceramic", segs=12, bevel=0.0)
-    S.cyl("roll_band", 0.36, y, 0.103, 0.05, 0.075, "ceramic", segs=18, bevel=0.0)
-    S.prism("tail", [(0.36, y - 0.08), (0.62, y - 0.075), (0.78, y - 0.06), (0.78, y + 0.06), (0.62, y + 0.075),
-                     (0.36, y + 0.08)], 0.0, 0.03, "cloth", bevel=0.006)
-    S.box("tail_edge", 0.76, y - 0.062, 0.0, 0.795, y + 0.062, 0.034, "ceramic", bevel=0.004)
-    out.append(_render("tool", "bandage", 0.15, ("tool", "bandage"),
-                       {"grip": (0.36, y, 0.1), "support": (0.58, y, 0.03), "head": (0.79, y, 0.03)}))
-
-    # bowl of food
-    S.cyl("bowl", 0.5, y, 0.17, 0.0, 0.12, "ceramic", r_top=0.23, segs=22)
-    S.cyl("stew", 0.5, y, 0.205, 0.11, 0.125, "crop_fruit", segs=22, bevel=0.0)
-    for k, (dx, dy) in enumerate([(-0.07, 0.03), (0.06, -0.04), (0.02, 0.09), (-0.03, -0.09)]):
-        S.ellipsoid("chunk%d" % k, 0.5 + dx, y + dy, 0.13, 0.04, 0.04, 0.028,
-                    "food_red" if k % 2 else "vegetation", segs=8, rings=4)
-    out.append(_render("tool", "bowl", 0.16, ("tool", "bowl"),
-                       {"grip": (0.30, y, 0.06), "support": (0.70, y, 0.06), "head": (0.5, y, 0.13)}))
-
-    # spoon: wooden, long handle, shallow bowl
-    _rod(0.22, 0.64, 0.02, "wood", r_top=0.026)
-    S.ellipsoid("scoop", 0.74, y, 0.04, 0.115, 0.075, 0.035, "wood", segs=14, rings=8)
-    S.ellipsoid("dish", 0.745, y, 0.062, 0.085, 0.052, 0.012, "bark", segs=12, rings=6)
-    out.append(_render("tool", "spoon", 0.1, ("tool", "spoon"),
-                       {"grip": (0.32, y, 0.04), "support": (0.46, y, 0.04), "head": (0.78, y, 0.06)}))
-    # broom: long stick, a flared head of bound straw at the working end
-    _rod(0.14, 0.78, 0.022, "wood", r_top=0.02)
-    S.prism("bristles", [(0.74, y - 0.045), (0.90, y - 0.10), (1.04, y - 0.125), (1.06, y), (1.04, y + 0.125),
-                         (0.90, y + 0.10), (0.74, y + 0.045)], 0.0, 0.05, "straw", bevel=0.01)
-    S.prism("bristle_tips", [(0.98, y - 0.12), (1.07, y - 0.115), (1.09, y), (1.07, y + 0.115), (0.98, y + 0.12)],
-            0.0, 0.04, "corn_yellow", bevel=0.006)
-    for k, dy in enumerate((-0.07, -0.025, 0.025, 0.07)):
-        S.box("strand%d" % k, 0.84, y + dy - 0.004, 0.05, 1.04, y + dy + 0.004, 0.056, "burlap", bevel=0.002)
-    S.box("binding", 0.72, y - 0.05, 0.0, 0.80, y + 0.05, 0.062, "leather", bevel=0.01)
-    S.box("binding2", 0.82, y - 0.075, 0.0, 0.86, y + 0.075, 0.056, "bark", bevel=0.006)
-    out.append(_render("tool", "broom", 0.1, ("tool", "broom"),
-                       {"grip": (0.22, y, 0.04), "support": (0.52, y, 0.04), "head": (1.0, y, 0.03)}))
-
-    return out
-
-
 def build():
-    return [_rifle(), _rifle_slung(), _knife(), _spear(), _club()] + _tools()
+    return [_rifle(), _knife(), _spear(), _club()]

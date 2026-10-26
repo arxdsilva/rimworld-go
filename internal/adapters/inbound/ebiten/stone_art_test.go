@@ -262,7 +262,7 @@ func TestStonecutterCard(t *testing.T) {
 func TestSmoothActionAnimates(t *testing.T) {
 	t.Parallel()
 	act, d, ok := actionOf(game.PawnView{Action: game.ActionSmooth})
-	if !ok || act != game.ActionSmooth || d.tool == "" || actionSounds[game.ActionSmooth] == "" {
+	if !ok || act != game.ActionSmooth || d.motion != motionSwing || len(d.parts) == 0 || actionSounds[game.ActionSmooth] == "" {
 		t.Fatalf("smooth action = %q %+v %v", act, d, ok)
 	}
 }

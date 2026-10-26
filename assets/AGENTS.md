@@ -51,9 +51,13 @@ Rules:
 - Pawns (ART-025): limbless figures with no walk/work frames. Draw `body`,
   `pants_*`, `shirt_*`, `vest_*`, `hair_*` for the same facing at the same
   anchor; S/E/N are rendered and west is east mirrored by the renderer.
-  Attachments are `head` (hair/hats), `hold` (held items attach their `grip`
-  here, behind the body when facing north) and `back` (slung items). Motion
-  is renderer transforms (ART §27.1). Animals keep frames: trot
+  Attachments are `head` (hair/hats; with the feet it gives the body
+  centre held items are placed from), `hold` (the punch trail's point) and
+  `back` (a rescued patient). Motion is renderer transforms (ART §27.1).
+- Gear (`families/gear.py`): `weapon/rifle_basic`, `knife`, `spear`, `club`
+  only, flat and pointing east with `grip`/`support`/`muzzle`|`tip`
+  (+ `stock`). ART-027 (2026-10-26, user decision): no tool sprites and no
+  slung rifle; the renderer draws a weapon only on duty and never a tool. Animals keep frames: trot
   `walk01..walk08` and a `rest` pose (all animal sets), S/E/N only.
 - Renders are reproducible to ±1/255 per channel (GPU float noise).
 

@@ -12,19 +12,19 @@ import (
 // animation work; the dispatch in pawn_anim.go calls in here.
 //
 // Timing (§27.2, C7): the wind-up follows AttackCycle; the strike (the
-// lunge's peak, a club's blow, the muzzle rise) lands when the attack's
+// lunge's peak, a club's blow, the muzzle kick) lands when the attack's
 // trace is first seen (its birth tick, Tick-Age); the follow-through runs
 // on animT from there. Every timed effect lasts at least
 // minReactionFrames present frames.
 
 // Combat timing in sim ticks, and reaction sizes in tiles.
 const (
-	aimAt        = 0.6  // AttackCycle at which the rifle is shouldered
-	lowReady     = 0.55 // radians the muzzle drops at low ready
-	fireTicks    = 9.0  // the shot's muzzle rise and settle
-	lowerTicks   = 12.0 // after fire3, easing back towards low ready
+	aimAt        = 0.6 // AttackCycle at which an animal's wind-up turns to frame 2
+	fireTicks    = 9.0 // the shot's muzzle kick and settle
+	muzzleKick   = 0.3 // radians the muzzle rises at the kick's peak
 	recoilTicks  = 6.0
-	recoilDist   = 0.08
+	recoilDist   = 0.08 // the body's recoil, tiles
+	recoilPull   = 0.06 // the rifle pulled back along the aim, tiles
 	meleeTicks   = 10.0 // strike + follow-through
 	strikeWindow = 30.0 // a strike older than this no longer shapes the pose
 	hitTicks     = 12.0 // the flinch and the hit flash
@@ -247,6 +247,14 @@ func (r *Renderer) hitReaction(p game.PawnView, m moveState) actionPose {
 	a := actionPose{ok: true,
 		dx: ux * staggerDist * k, dy: uy * staggerDist * k, rot: ux * 0.1 * k,
 		flash: float32(1 - age/hitTicks)}
+	// what the pawn holds is kept through the flinch: the aimed weapon,
+	// a hauled load, or the carried weapon on duty
+	for _, layer := range []func(game.PawnView, moveState) actionPose{r.combatPose, r.carryPose} {
+		if b := layer(p, m); b.ok && b.held.set {
+			a.held = b.held
+			return a
+		}
+	}
 	if onDuty(p) {
 		a.held = readyHeld(p)
 	}
@@ -264,26 +272,26 @@ func meleeReach(weapon string) float64 {
 	return 0.12
 }
 
-// Melee item motion: how far a thrust pushes the weapon along itself
-// (tiles, at full lunge), and a club's arc (the turn about its grip,
-// positive raising its head).
+// Melee item motion: how far a thrust pushes the weapon along the aim
+// (tiles, at full lunge), and a club's short arc about the aimed angle
+// (radians, positive raising its head).
 const (
 	knifePush   = 0.10
 	spearPush   = 0.18
 	fistPush    = 0.14
-	clubRest    = 0.3
-	clubRaised  = 1.8
-	clubStrike  = -0.6
+	clubRest    = 0.0
+	clubRaised  = 0.8
+	clubStrike  = -0.45
 	chamberBack = -0.3 // the lunge weight while chambering a thrust
 )
 
 // meleeMotion is a melee attack's shape: the body's lunge weight (-1 back
-// .. 1 full reach), the weapon's turn and its push along itself (tiles).
+// .. 1 full reach), the weapon's turn and its push along the aim (tiles).
 // The wind-up follows AttackCycle; the strike and follow-through follow
 // the age of the last strike (age 0 on the trace). Knives and spears
-// thrust (pushed forward at the lunge), clubs swing down from over the
-// shoulder, fists punch (a lunge; push is the punch's reach, which the
-// melee trail follows).
+// jab (pushed forward at the lunge), clubs swing down through a short
+// arc, fists punch (a lunge; push is the punch's reach, which the melee
+// trail follows).
 func meleeMotion(weapon string, cycle, age float64, struck bool) (lunge, angle, push float64) {
 	if struck && age < meleeTicks {
 		lunge = 1
@@ -322,19 +330,14 @@ func meleeMotion(weapon string, cycle, age float64, struck bool) (lunge, angle, 
 	return lunge, angle, push
 }
 
-// aimRaise is how far the rifle is raised (0 low ready .. 1 shouldered)
-// and the muzzle rise (radians): ready blends to aimed over AttackCycle
-// 0..aimAt, the shot kicks the muzzle up and back down over fireTicks,
-// then it eases back towards low ready.
-func aimRaise(cycle, age float64, struck bool) (raise, rise float64) {
+// aimKick is the muzzle kick (radians) of a shot age display ticks old:
+// up and back down over fireTicks from the trace's first sighting. The
+// rifle is aimed for the whole attack cycle, so nothing else moves it.
+func aimKick(age float64, struck bool) float64 {
 	if struck && age < fireTicks {
-		return 1, 0.3 * math.Sin(math.Pi*age/fireTicks)
+		return muzzleKick * math.Sin(math.Pi*age/fireTicks)
 	}
-	k := clamp01(cycle / aimAt)
-	if struck {
-		k = math.Max(k, clamp01(1-(age-fireTicks)/lowerTicks))
-	}
-	return k * k * (3 - 2*k), 0
+	return 0
 }
 
 // creatureSpot is where creature id is drawn (its body centre), by its
@@ -374,7 +377,9 @@ func (r *Renderer) attackTarget(p game.PawnView, st reactTrace, struck bool) (ve
 	return vec{float64(st.ToX) + 0.5, float64(st.ToY) + 0.4}, true
 }
 
-// combatPose is the aim/fire/melee layer while attacking.
+// combatPose is the aim/fire/melee layer while attacking: the weapon is
+// aimed at the target (carried when there is none), kicks and pulls back
+// on a shot, jabs or swings on a blow.
 func (r *Renderer) combatPose(p game.PawnView, m moveState) actionPose {
 	dur := meleeTicks
 	if p.Weapon == "rifle" {
@@ -392,20 +397,19 @@ func (r *Renderer) combatPose(p game.PawnView, m moveState) actionPose {
 		if vx, vy := unit(tgt.x-wx-0.5, tgt.y-wy-0.4); vx != 0 || vy != 0 {
 			ux, uy = vx, vy
 		}
+		a.held.stance, a.held.aimX, a.held.aimY = stanceAimed, tgt.x, tgt.y
 	}
 	moving := m.Blend >= minBlend
-	a.held.aim, a.held.aimX, a.held.aimY = hasT, tgt.x, tgt.y
 	if p.Action == game.ActionAim || p.Action != game.ActionMelee && struck && !st.Melee {
-		raise, rise := aimRaise(p.AttackCycle, age, struck)
-		a.held.angle = rise - (1-raise)*lowReady
+		a.held.angle = aimKick(age, struck)
 		if struck && age < recoilTicks {
 			k := 1 - age/recoilTicks
 			a.dx, a.dy = -ux*recoilDist*k, -uy*recoilDist*k
+			a.held.push = -recoilPull * k
 		}
 		return a
 	}
 	lunge, angle, push := meleeMotion(p.Weapon, p.AttackCycle, age, struck)
-	a.held.aim = hasT && (p.Weapon == "knife" || p.Weapon == "spear") // thrusts point at the target
 	a.held.angle, a.held.push = angle, push
 	if !moving {
 		reach := meleeReach(p.Weapon)

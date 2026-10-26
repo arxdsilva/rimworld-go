@@ -34,35 +34,16 @@ func TestAttackReactions(t *testing.T) {
 func TestWorkSwingAndStrike(t *testing.T) {
 	t.Parallel()
 	_, st, ok := actionOf(game.PawnView{Acting: "cut"}) // old Acting strings still map
-	if !ok || st.parts[0].kind != partChip || st.tool != "tool/axe" || st.motion != motionSwing {
-		t.Fatal("cutting swings an axe and throws chips")
+	if !ok || st.parts[0].kind != partChip || st.motion != motionSwing {
+		t.Fatal("cutting swings and throws chips")
 	}
-	// the tool winds up over the shoulder, is driven down to the strike at
-	// strikeAt, then recovers to rest
-	if a := swingAngle(0); math.Abs(a-swingRest) > 1e-9 {
-		t.Fatalf("starts at rest: %v", a)
+	// the body winds back, drives in hard on the strike at strikeAt, then
+	// eases out
+	if k := workSwing(float64(tickAt(7, st.period, 0.30)), 7, st.period); k >= 0 {
+		t.Fatalf("wound back before the strike: %v", k)
 	}
-	if a := swingAngle(0.40); math.Abs(a-swingRaised) > 1e-9 {
-		t.Fatalf("raised at the end of the wind-up: %v", a)
-	}
-	if a := swingAngle(strikeAt); math.Abs(a-swingStrike) > 1e-9 {
-		t.Fatalf("struck down at strikeAt: %v", a)
-	}
-	if a := swingAngle(0.999); math.Abs(a-swingRest) > 0.01 {
-		t.Fatalf("back at rest by the loop's end: %v", a)
-	}
-	prev := swingAngle(0)
-	for ph := 0.01; ph < 0.40; ph += 0.01 {
-		if a := swingAngle(ph); a < prev {
-			t.Fatalf("the wind-up only rises: %v at %v", a, ph)
-		}
-		prev = swingAngle(ph)
-	}
-	for ph := 0.41; ph < strikeAt; ph += 0.01 {
-		if a := swingAngle(ph); a > prev {
-			t.Fatalf("the drive only falls: %v at %v", a, ph)
-		}
-		prev = swingAngle(ph)
+	if k := workSwing(float64(tickAt(7, st.period, strikeAt+0.01)), 7, st.period); k < 0.8 {
+		t.Fatalf("driven in on the strike: %v", k)
 	}
 	strikes, peak := 0, 0.0
 	for f := 0.0; f < float64(st.period)*3; f++ {

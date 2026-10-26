@@ -241,8 +241,7 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 		"structure/frame_1x1", "item/wood_pile", "item/food_crate", "overlay/stockpile",
 		"overlay/blueprint", "overlay/selection", "overlay/designation_harvest",
 		"overlay/designation_deconstruct", "ui_icon/draft", "overlay/designation_hunt",
-		"weapon/rifle_basic",
-		"tool/hammer", "tool/axe", "tool/pickaxe",
+		"weapon/rifle_basic", "weapon/knife", "weapon/spear", "weapon/club",
 		"overlay/sleeping_spot_south", "overlay/sleeping_spot_east", "overlay/sleeping_spot_north",
 		"overlay/sleeping_spot_west", "ui_icon/sleeping_spot")
 	for v := 0; v < 4; v++ { // PLAY-016: the furrow decals under crop cells

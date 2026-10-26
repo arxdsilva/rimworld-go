@@ -251,32 +251,32 @@ func TestGraveInspectorShowsEpitaph(t *testing.T) {
 	}
 }
 
-func TestDigSwingsShovel(t *testing.T) {
+func TestDigSwings(t *testing.T) {
 	t.Parallel()
 	d, ok := workTable[game.ActionDig]
-	if !ok || d.motion != motionSwing || d.tool != "tool/shovel" || d.stance != stanceHands {
+	if !ok || d.motion != motionSwing {
 		t.Fatalf("dig row: %+v", d)
 	}
 	if len(d.parts) == 0 || d.parts[0].kind != partSoil || d.at != atTarget {
 		t.Fatalf("soil at the grave tile: %+v", d.parts)
 	}
-	r, _ := workRenderer(0)
-	if pose := r.workPose(worker(game.ActionDig), moveState{}); !pose.ok || pose.held.key != "tool/shovel" || pose.held.angle == 0 {
-		t.Fatalf("pose %+v", pose)
+	r, _ := workRenderer(tickAt(3, d.period, strikeAt+0.01))
+	if pose := r.workPose(worker(game.ActionDig), moveState{}); !pose.ok || pose.held.key != "" || pose.dx <= 0 || pose.squash <= 0 {
+		t.Fatalf("digging leans into the grave, no shovel drawn: %+v", pose)
 	}
 }
 
 func TestBuryKneelsAndPats(t *testing.T) {
 	t.Parallel()
 	d, ok := workTable[game.ActionBury]
-	if !ok || d.motion != motionReach || d.tool != "" || d.squash <= 0 {
+	if !ok || d.motion != motionReach || d.squash <= 0 {
 		t.Fatalf("bury row: %+v", d)
 	}
 	if len(d.parts) == 0 || d.parts[0].kind != partSoil {
 		t.Fatalf("soil: %+v", d.parts)
 	}
 	r, _ := workRenderer(0)
-	if pose := r.workPose(worker(game.ActionBury), moveState{}); !pose.ok || !pose.held.set || pose.held.key != "" || pose.squash <= 0 {
+	if pose := r.workPose(worker(game.ActionBury), moveState{}); !pose.ok || pose.held.key != "" || pose.squash <= 0 {
 		t.Fatalf("bare hands: %+v", pose)
 	}
 }
@@ -284,7 +284,7 @@ func TestBuryKneelsAndPats(t *testing.T) {
 func TestCremateUsesBench(t *testing.T) {
 	t.Parallel()
 	d, ok := workTable[game.ActionCremate]
-	if !ok || d.motion != motionBench || d.tool != "" {
+	if !ok || d.motion != motionBench {
 		t.Fatalf("cremate row: %+v", d)
 	}
 	hasFx := false

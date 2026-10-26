@@ -446,7 +446,7 @@ capsule, dot eyes (two facing south, one east, none north), and **no
 arms, legs or hands**. Identity comes from build, hair, beard and apparel.
 - Six builds are capsule widths and head scales; apparel layers are thin shells over the body.
 - Rendered facings are south, east and north; west is east mirrored by the renderer. There are no walk or work frames (§27).
-- Body attachments: `head` (hair and hats), `hold` (held items grip here) and `back` (slung items).
+- Body attachments: `head` (hair and hats; with the feet it sets the body centre held items are placed from, §15), `hold` (the punch trail's point) and `back` (a rescued patient).
 
 Support reusable body types, multiple head shapes, tintable skin/hair,
 separate facial hair, layered apparel, headgear, and separate rotatable
@@ -564,14 +564,30 @@ grip: [0.31, 0.55]
 muzzle: [0.94, 0.48]
 ```
 
-Held gear (family `gear`: `weapon/*`, `tool/*`) is one east-pointing
-sprite per item, rotated by the renderer, with image-px attachments:
-`grip` (main hand), `support` (off hand, so two-handed items sit in both
-hands), `muzzle` (firearms), `tip` (blades: knife, spear) and `head`
-(tools). Melee set: `weapon/knife`, `weapon/spear`, `weapon/club`;
-firearms: `weapon/rifle_basic` (+ `stock`) and `weapon/rifle_slung` (worn
-on the back). Tools: axe, pickaxe, hammer, trowel, sickle, bandage, bowl,
-spoon.
+Held gear (family `gear`: `weapon/*`) is one east-pointing sprite per
+item, rotated by the renderer, with image-px attachments: `grip`,
+`support` (towards the working end), `muzzle` (firearms) and `tip`
+(knife, spear, club). Melee set: `weapon/knife`, `weapon/spear`,
+`weapon/club`; firearms: `weapon/rifle_basic` (+ `stock`).
+
+Held items follow RimWorld's observable behaviour with our own values
+(ART-027, 2026-10-26, user decision):
+
+- A weapon is drawn only on duty: drafted, a raider on the attack, or
+  aiming or fighting (a hunt aims). Off duty nothing is held: no slung
+  rifle, no weapon in hand, no tool, no utensils.
+- The placement is centre-based: the sprite's centre (canvas centre on
+  its `grip` line) from the body centre (the `head` x, halfway from the
+  head to the feet). Carried at rest: 0.18 tile below the body centre,
+  forward end 0.72 rad down; facing east 0.14 tile forward, west mirrored;
+  behind the body facing north. Aimed: 0.35 tile out from the body centre
+  towards the target, turned to it, flipped when aiming left so it stays
+  upright, behind the body only when aiming into the north half.
+- A hauled item is its own sprite at 0.5 tile, centred on the body at the
+  chest (0.07 tile below the body centre), in front (behind facing north).
+- No tool sprites exist: work reads as the pawn facing the job (lean, dip,
+  squash), the job's particles at the work spot and an in-world progress
+  bar (§27.2).
 
 Apparel uses shared body templates, body layers, tint regions, covered
 regions, and offsets.
@@ -672,7 +688,7 @@ bodies become `item/bones_00..01`. Graves (`furniture/grave_dug_*`,
   - Rolled item sprites: `item/carpet_<material>_rolled`.
 - **Cloth and straw items:** `item/cloth_bolt` (an off-white bolt) and `item/straw_bundle`.
 - **Cotton crop:** `plant/cotton_{sprout,young,mature,harvestable}` with `_v0.._v2`, like the other crops. Bushy green stems; when harvestable, white bolls.
-- **Broom:** the held tool `tool/broom`, a stick with a straw head. The cleaning pose reuses the low `_pick` work frames, with dust particles.
+- **Cleaning:** the low reach pose with dust particles; no broom is drawn (ART-027).
 - **Home overlay:** a translucent blue tint (#4a7fd4, alpha 0.18) with a 1 px edge on its outline.
   - Shown while a Home tool is held, or when toggled from the overlay row next to Roof.
 - **Icons** (`ui_icon/`, underscores): `cloth`, `straw`, `straw_carpet`, `cloth_carpet`, `leather_carpet`, `wood_carpet`, `carpet` (the Architect tool), `home`, `home_clear`.
@@ -1000,9 +1016,10 @@ are kept.
 | Animal trot | `walk01`..`walk08` | per species; diagonal leg pairs, body bob, head nod |
 | Animal rest | `rest` | lying pose, all animal sets |
 
-Pawn attachments are `head` (hair, hats), `hold` (held items grip here;
-no hands are drawn) and `back` (slung items), in canvas px per facing.
-Items are drawn behind the body when facing north.
+Pawn attachments are `head` (hair, hats; the body centre for held items,
+§15), `hold` (the punch trail's point; no hands are drawn) and `back` (a
+rescued patient), in canvas px per facing.
+Weapons and loads are drawn behind the body when facing north (aimed weapons when aiming north).
 
 Clocks:
 
@@ -1043,11 +1060,11 @@ pose sets (ART-025):
 
 | Action | Motion |
 |---|---|
-| aim / fire | held item raised on `hold`; lean in while aiming, recoil kick on the shot |
-| melee (stab, thrust, swing, punch) | tool arc or lunge toward the target, then recover |
-| chop, mine, hammer | overhead tool arc with a lean and dip on the strike |
-| plant, pick, tend, bench, eat | lean and dip, with the job's tool or item at `hold` |
-| carry | load slung on `back` or held at `hold` while walking |
+| aim / fire | weapon aimed at the target from the body centre (§15); muzzle kick and a pull back along the aim on the shot, body recoil |
+| melee (stab, thrust, swing, punch) | weapon aimed at the target; knife/spear jab along the aim, club a short arc about it; fists draw nothing; body lunge, then recover |
+| chop, mine, hammer | wind back and drive in with a lean and squash on the strike; no tool |
+| plant, pick, tend, bench, eat | lean and dip toward the job; nothing in hand |
+| carry | the hauled item on the chest (§15); a rescued patient over the `back` |
 | hit | flinch: short recoil away from the attacker |
 | fall | knees-buckle dip, then rotation to lying, falling away from the last hit |
 
@@ -1055,27 +1072,31 @@ Animals (ART-011) keep frames: every species has its natural weapon's set
 (`bite`, `claw`, `kick`, `gore`, `headbutt` or `peck`, `1..4`), and all
 have `graze1..2` and `flinch1..2`.
 
-Holding: items grip on the body's `hold` attachment (the item's `grip`
-sits on `hold`; two-handed items turn so their `support` points along the
-aim). Off duty (not drafted, not attacking) the rifle is slung on the back
-(`back`), the knife rides on the belt (not drawn), the spear is carried
-upright and the club stays held. Working swaps the weapon for the job's
-tool. West uses the mirrored east sprites, and the lit shader inverts the
+Holding (ART-027): see §15. Only weapons are held, only on duty; no tool
+is ever drawn. A flinch keeps what the pawn holds (the aimed weapon, the
+load). West uses the mirrored east sprites, and the lit shader inverts the
 normal X for mirrored draws.
+
+Work progress: a pawn at a work job whose `PawnView.ActionProgress` is in
+(0, 1) gets a bar 0.6 × 0.06 tile along the bottom edge of the work tile
+(under the worker's feet, clear of its head), `uiAccent` on
+`uiSliderTrack` with a dark edge, drawn in the overlay pass only at tile
+≥ 24 px, one bar per work tile (the furthest progress). Eating, recreation
+and research sessions show none.
 
 Timing (with §27.1 clocks):
 
-- Aiming blends from the low-ready to the raised hold over the first 60% of the attack cycle
-  (`PawnView.AttackCycle`); the strike (pawn tool arc or lunge peak, animal
-  bite and kick frames) lands on the tick the attack's trace appears
-  (`TraceView.Attacker`, age 0).
+- The weapon is aimed for the whole attack cycle; the strike (muzzle
+  kick, club arc or lunge peak, animal bite and kick frames) lands on the
+  tick the attack's trace appears (`TraceView.Attacker`, age 0).
 - A hit (`PawnView.HitTick`, `HitFromX/Y`) plays the pawn flinch and
   staggers 0.12 tile away from the attacker over 10 sim ticks; blood
   sprays away from the attacker. A pawn going down buckles, then rotates
   to lying, falling away from the last hit.
 - Work loops run on `animT` with a per-action period; each strike throws
   that action's particles: chop wood chips, mine sparks and rock dust,
-  build sawdust, sow soil, harvest leaves, cook steam, butcher blood.
+  build sawdust, sow soil, harvest leaves, cook steam, butcher blood, at
+  the work spot (the worked tile's face towards the pawn).
   Each shot throws muzzle flash and smoke at `muzzle` and a shell casing.
 - Every transform motion lasts at least 8 visible frames.
 
@@ -1233,7 +1254,7 @@ resolve metadata conflicts, and update the catalog.
 ### ART Wave 5 --- Combat
 
 -   [x] melee family (knife, spear, club; stab, thrust, swing and punch pose sets)
--   [-] pistol/rifle/shotgun/long-range weapon (rifle with ready/aim/fire poses and a slung variant; no pistol, shotgun or long rifle)
+-   [-] pistol/rifle/shotgun/long-range weapon (rifle carried, aimed and firing, ART-027; no pistol, shotgun or long rifle)
 -   [ ] armor/helmets
 -   [-] projectiles/muzzle flash/impact/explosion (tracer, muzzle flash, smoke, casing, impact puff and blood; no explosions)
 -   [ ] fire/smoke

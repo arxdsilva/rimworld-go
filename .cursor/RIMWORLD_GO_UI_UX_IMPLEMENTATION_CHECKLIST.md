@@ -167,7 +167,7 @@ use these primitives.
     -   Used by storage, food, apparel, ingredient and plugin definition
         filters.
 -   [ ] **Tabs**
--   [ ] **Progress bar**
+-   [-] **Progress bar** (ART-027: in-world work progress bar under the worked tile for bills, construction, mining, sowing, harvest, tending and cleaning; no shared UI progress widget)
 -   [ ] **Stat bar**
 -   [ ] **Context menu**
 -   [ ] **Confirmation dialog**

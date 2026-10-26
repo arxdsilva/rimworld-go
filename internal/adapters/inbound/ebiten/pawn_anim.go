@@ -261,7 +261,7 @@ func (r *Renderer) drawPawnFigure(dst *ebiten.Image, p game.PawnView, wx, wy, ti
 	if carriedBehind {
 		r.drawCarriedBy(dst, p, fp, wx, wy, tile)
 	}
-	r.drawHeld(dst, rig, item, wx, wy, tile, ps, true) // first: the parts the body hides (slung rifle, items when facing north)
+	r.drawHeld(dst, rig, item, wx, wy, tile, ps, true) // first: what the body hides (facing north, or aiming north)
 	r.drawLayers(dst, p, rig.layers, wx, wy, tile, ps)
 	r.drawHeld(dst, rig, item, wx, wy, tile, ps, false) // the parts in front
 	if !carriedBehind {

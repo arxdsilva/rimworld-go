@@ -178,9 +178,7 @@ def _set(name, n):
 
 ANIMAL_COMMON = _set("graze", 2) + _set("flinch", 2)
 # held gear: two-handed items need a support point towards the working end
-GEAR_END = {"weapon": ("muzzle", "tip"), "tool": ("head",)}
-# held level in the off hand, not pointed along an axis
-GEAR_LEVEL = {"tool/bowl"}
+GEAR_END = {"weapon": ("muzzle", "tip")}
 
 
 def parse_atlas(path):
@@ -435,8 +433,6 @@ def check_gear():
             if not re.search(r"^rotatable:\s*true", text, re.M):
                 continue
             name = "%s/%s" % (family, f[:-5])
-            if name in GEAR_LEVEL:
-                continue
             grip, sup = _attach(text, "grip"), _attach(text, "support")
             end = next((_attach(text, k) for k in ends if _attach(text, k)), None)
             if not grip or not sup or not end:
