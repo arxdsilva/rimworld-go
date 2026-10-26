@@ -594,7 +594,8 @@ func (g *Game) startJob(id entity.EntityID, rec job.Record) bool {
 		g.jobs.Set(id, rec)
 		return false
 	}
-	if rec.Kind == job.Move && !g.reserve.TryTile(id, rec.TX, rec.TY) {
+	// a move or a sow holds its tile: one pawn per sowing cell (PLAY-020)
+	if (rec.Kind == job.Move || rec.Kind == job.Sow) && !g.reserve.TryTile(id, rec.TX, rec.TY) {
 		g.reserve.ReleaseOwner(id)
 		rec.State = job.Fail
 		rec.Fail = job.Reserved

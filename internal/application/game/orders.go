@@ -198,6 +198,9 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		if !g.sowable(x, y) {
 			return job.Record{}, ReasonNotSowable
 		}
+		if owner, taken := g.reserve.TileOwner(x, y); taken && owner != id {
+			return job.Record{}, ReasonBusyTarget + g.name(owner) // another grower holds the cell (PLAY-020)
+		}
 		return job.Record{Kind: job.Sow, TX: x, TY: y, WorkLeft: sowWorkOf(z)}, "" // food.go: the species' own work
 	case command.OrderCut:
 		pid := g.plantAt(x, y)
