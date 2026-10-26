@@ -18,7 +18,8 @@ Split work across **parallel subagents** whenever a task touches two or more of 
 
 **RAM first (user decision, 2026-10-25).** Before launching any agent, and again before each later phase, run `make agent-budget` (`cmd/rambudget`). It reads the machine's total and free memory and prints the most agents of each kind that fit, from measured peaks:
 - heavy: a full `go test -race` of the ebiten package, 4.7 GiB because its tests decode the art; only the lead runs it, alone;
-- art: a Blender render, or game runs for captures and fps probes, about 3 GiB;
+- art: a Blender render, a game run on a 250+ map, or an fps probe, about 3 GiB;
+- capture: a game run on a small map for screenshots, about 2.2 GiB (one at a time);
 - light: an agent's targeted `go test -race -run …` of its own tests, about 1 GiB with the compile.
 
 Agents never run a full package that loads the art. Never run more agents than it allows. The 15-agent cap in §5 is a ceiling, not a target. Start heavy agents a few minutes apart rather than all at once, and tell every agent to run tests with `GOFLAGS=-p=2`. If an agent reports slow tests or the machine swaps, re-check before launching more.
