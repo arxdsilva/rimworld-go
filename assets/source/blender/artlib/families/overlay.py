@@ -175,14 +175,29 @@ def _g_hunt(xx, yy, c):  # crosshair: ring + four ticks
     return d
 
 
+# Badge discs sit on the cool charcoal HUD (PLAY-018): a dark slate disc and a
+# matching cool halo under the ring and glyph strokes.
+BADGE_DISC = (0.094, 0.114, 0.141)
+BADGE_EDGE = (0.055, 0.067, 0.086)
+
+
 def _badge_icon(name, t, glyph, rgb):
-    """Order/action icon: dark disc + coloured glyph, @2x of a 64 px icon."""
+    """Order/action icon: dark disc + coloured glyph, @2x of a 64 px icon.
+
+    `glyph` returns one distance field, or a list of layers painted in order:
+    a field is stroked (halo, then colour), so a later layer's halo parts it
+    from the one below; `(field, "cut")` knocks a mark out in the disc colour."""
     xx, yy = _grid()
     img = np.zeros((N, N, 4), np.float32)
     c = N / 2
-    _paint(img, _cov(np.hypot(xx - c, yy - c) - 52), (0.12, 0.10, 0.09), 0.92)
-    _stroke(img, np.abs(np.hypot(xx - c, yy - c) - 50), 4.0, rgb)
-    _stroke(img, glyph(xx, yy, c), 7.0, rgb)
+    _paint(img, _cov(np.hypot(xx - c, yy - c) - 52), BADGE_DISC, 0.92)
+    _stroke(img, np.abs(np.hypot(xx - c, yy - c) - 50), 4.0, rgb, BADGE_EDGE)
+    layers = glyph(xx, yy, c)
+    for layer in layers if isinstance(layers, list) else [layers]:
+        if isinstance(layer, tuple):
+            _paint(img, _cov(layer[0]), BADGE_DISC)
+        else:
+            _stroke(img, layer, 7.0, rgb, BADGE_EDGE)
     path = os.path.join(UI_DIR, name + ".png")
     S.write_png(img, path)
     meta.write("ui_icon", name, {"image": "generated/ui/icons/%s.png" % name, "scale": C.SCALE,
@@ -684,7 +699,7 @@ def _biome_icon(key):
     c = N / 2
     sky, ground, rim = BIOMES[key]
     disc = _cov(np.hypot(xx - c, yy - c) - 52)
-    _paint(img, disc, (0.12, 0.10, 0.09), 0.92)
+    _paint(img, disc, BADGE_DISC, 0.92)
     inner = _cov(np.hypot(xx - c, yy - c) - 46)
     # sky, then ground below the horizon
     g = np.where(yy > 76, 1.0, 0.0).astype(np.float32)
@@ -697,7 +712,7 @@ def _biome_icon(key):
     a = scene[..., 3:4] * mask
     img[..., :3] = scene[..., :3] * a + img[..., :3] * (1 - a)
     img[..., 3:4] = np.maximum(img[..., 3:4], a)
-    _stroke(img, np.abs(np.hypot(xx - c, yy - c) - 50), 4.0, rim)
+    _stroke(img, np.abs(np.hypot(xx - c, yy - c) - 50), 4.0, rim, BADGE_EDGE)
     name = "biome_" + key
     path = os.path.join(UI_DIR, name + ".png")
     S.write_png(img, path)
@@ -757,7 +772,7 @@ def _disc_icon(name, sky, ground, rim, scene, horizon=76, extra=None):
     xx, yy = _grid()
     img = np.zeros((N, N, 4), np.float32)
     c = N / 2
-    _paint(img, _cov(np.hypot(xx - c, yy - c) - 52), (0.12, 0.10, 0.09), 0.92)
+    _paint(img, _cov(np.hypot(xx - c, yy - c) - 52), BADGE_DISC, 0.92)
     inner = _cov(np.hypot(xx - c, yy - c) - 46)
     _paint(img, inner, sky)
     _paint(img, inner * (yy > horizon), ground)
@@ -766,7 +781,7 @@ def _disc_icon(name, sky, ground, rim, scene, horizon=76, extra=None):
     a = layer[..., 3:4] * inner[..., None]
     img[..., :3] = layer[..., :3] * a + img[..., :3] * (1 - a)
     img[..., 3:4] = np.maximum(img[..., 3:4], a)
-    _stroke(img, np.abs(np.hypot(xx - c, yy - c) - 50), 4.0, rim)
+    _stroke(img, np.abs(np.hypot(xx - c, yy - c) - 50), 4.0, rim, BADGE_EDGE)
     return _save_icon(name, img, extra)
 
 
@@ -1597,6 +1612,225 @@ def _g_haul(xx, yy, c):  # crate with a plank band, up arrow lifting it away
     return np.minimum(d, _seg(xx, yy, c + 9, c - 15, c, c - 24))
 
 
+# ------------------------------------------------ PLAY-018 HUD icons
+# Speed buttons, letter kinds, colonist status chips, pawn/thing commands and
+# the Learning Helper. Original glyphs. Status chips are filled silhouettes,
+# one distinct shape and hue each, so they still read at 16-20 px.
+def _spiral(xx, yy, cx, cy, r0, r1, turns, a0=0.0):
+    """Distance to an Archimedean spiral from radius r0 out to r1 (a0 = start angle, degrees)."""
+    r = np.hypot(xx - cx, yy - cy)
+    th = (np.arctan2(yy - cy, xx - cx) - np.radians(a0)) % (2 * np.pi)
+    tot = turns * 2 * np.pi
+    b = (r1 - r0) / tot
+    d = np.full(xx.shape, 1e9, np.float32)
+    for k in range(int(np.ceil(turns)) + 1):
+        phi = th + 2 * np.pi * k
+        d = np.where(phi <= tot, np.minimum(d, np.abs(r - (r0 + b * phi))), d)
+    for phi in (0.0, tot):
+        a = phi + np.radians(a0)
+        d = np.minimum(d, np.hypot(xx - cx - (r0 + b * phi) * np.cos(a), yy - cy - (r0 + b * phi) * np.sin(a)))
+    return d
+
+
+def _polyline(xx, yy, pts):
+    d = np.full(xx.shape, 1e9, np.float32)
+    for (ax, ay), (bx, by) in zip(pts, pts[1:]):
+        d = np.minimum(d, _seg(xx, yy, ax, ay, bx, by))
+    return d
+
+
+def _g_speed(n):
+    """0: two pause bars; n >= 1: n play wedges, each one's halo parting it from the one behind."""
+    def g(xx, yy, c):
+        if n == 0:
+            return np.minimum(_rbox(xx, yy, c - 14, c, 5, 20, 2), _rbox(xx, yy, c + 14, c, 5, 20, 2))
+        tw, th, step, x0 = {1: (36, 23, 0, c - 16), 2: (24, 18, 21, c - 23), 3: (18, 15, 16, c - 27)}[n]
+        return [_poly(xx, yy, [(x, c - th), (x + tw, c), (x, c + th)]) for x in (x0 + step * k for k in range(n))]
+    return g
+
+
+def _envelope(xx, yy, c):
+    body = np.abs(_rbox(xx, yy, c - 7, c - 7, 24, 16, 3))
+    return np.minimum(body, _polyline(xx, yy, [(c - 31, c - 23), (c - 7, c - 5), (c + 17, c - 23)]))
+
+
+def _g_letter(kind):
+    """An envelope sealed at its lower-right corner; the seal's shape and mark name the kind."""
+    def g(xx, yy, c):
+        sx, sy = c + 15, c + 14
+        if kind == "threat":        # warning triangle, "!"
+            seal = _poly(xx, yy, [(sx, sy - 17), (sx + 15, sy + 10), (sx - 15, sy + 10)])
+            mark = np.minimum(_cap(xx, yy, sx, sy - 6, sx, sy + 0, 2.3), _dot(xx, yy, sx, sy + 6, 2.6))
+        elif kind == "caution":     # diamond, "!"
+            seal = _poly(xx, yy, [(sx, sy - 14), (sx + 14, sy), (sx, sy + 14), (sx - 14, sy)])
+            mark = np.minimum(_cap(xx, yy, sx, sy - 7, sx, sy + 1, 2.3), _dot(xx, yy, sx, sy + 7, 2.6))
+        elif kind == "info":        # round, "i"
+            seal = np.hypot(xx - sx, yy - sy) - 11
+            mark = np.minimum(_dot(xx, yy, sx, sy - 7, 2.6), _cap(xx, yy, sx, sy - 1, sx, sy + 7, 2.3))
+        else:                       # good: a star, no mark
+            return [_envelope(xx, yy, c), _star(xx, yy, sx, sy + 1, 15, 7)]
+        return [_envelope(xx, yy, c), seal, (mark, "cut")]
+    return g
+
+
+def _g_st_sleeping(xx, yy, c):  # a crescent moon and a small z
+    moon = np.maximum(np.hypot(xx - (c - 5), yy - (c + 5)) - 23, -(np.hypot(xx - (c + 10), yy - (c - 9)) - 19))
+    z = _polyline(xx, yy, [(c + 14, c - 29), (c + 26, c - 29), (c + 14, c - 17), (c + 26, c - 17)]) + 1.5
+    return [moon, z]
+
+
+def _g_st_mental(xx, yy, c):  # a loose spiral: the mind going round
+    return _spiral(xx, yy, c, c + 1, 2, 29, 1.5, 200)
+
+
+def _g_st_downed(xx, yy, c):  # a figure lying flat on the ground
+    head = np.hypot(xx - (c - 23), yy - (c - 1)) - 7
+    body = _cap(xx, yy, c + 1, c + 1, c + 25, c + 1, 5.5)
+    ground = _seg(xx, yy, c - 31, c + 19, c + 31, c + 19) + 1.0
+    return [np.minimum(head, body), ground]
+
+
+def _g_st_idle(xx, yy, c):  # an hourglass
+    glass = np.minimum(_poly(xx, yy, [(c - 13, c - 17), (c + 13, c - 17), (c, c)]),
+                       _poly(xx, yy, [(c, c), (c + 13, c + 17), (c - 13, c + 17)]))
+    caps = np.minimum(_seg(xx, yy, c - 19, c - 26, c + 19, c - 26), _seg(xx, yy, c - 19, c + 26, c + 19, c + 26))
+    return [glass, caps]
+
+
+def _blade(xx, yy, tip, guard, grip, gl):
+    """A sword: blade from tip to the guard point, a crossguard of half-length gl, the grip."""
+    (tx, ty), (gx, gy), (hx, hy) = tip, guard, grip
+    ux, uy = gx - tx, gy - ty
+    n = np.hypot(ux, uy)
+    px, py = -uy / n * gl, ux / n * gl
+    d = np.minimum(_seg(xx, yy, tx, ty, gx, gy), _seg(xx, yy, gx - px, gy - py, gx + px, gy + py))
+    return np.minimum(d, _seg(xx, yy, gx, gy, hx, hy))
+
+
+def _g_st_fighting(xx, yy, c):  # two crossed blades
+    return [_blade(xx, yy, (c + 22, c - 22), (c - 13, c + 13), (c - 23, c + 23), 8),
+            _blade(xx, yy, (c - 22, c - 22), (c + 13, c + 13), (c + 23, c + 23), 8)]
+
+
+def _g_st_fleeing(xx, yy, c):  # an arrow dashing right, speed lines behind it
+    arrow = np.minimum(_cap(xx, yy, c - 10, c, c + 6, c, 2.0),
+                       _poly(xx, yy, [(c + 4, c - 16), (c + 25, c), (c + 4, c + 16)]))
+    lines = np.minimum(_seg(xx, yy, c - 26, c - 13, c - 8, c - 13), _seg(xx, yy, c - 26, c + 13, c - 8, c + 13))
+    lines = np.minimum(lines, _seg(xx, yy, c - 31, c, c - 21, c))
+    return [arrow, lines + 1.0]
+
+
+def _g_st_burning(xx, yy, c):  # a flame with a dark inner tongue
+    outer = np.minimum(np.hypot(xx - c, yy - (c + 9)) - 14,
+                       _poly(xx, yy, [(c - 14, c + 7), (c + 4, c - 26), (c + 14, c + 7)]))
+    outer = np.minimum(outer, _poly(xx, yy, [(c - 15, c + 9), (c - 15, c - 10), (c - 4, c + 2)]))
+    tongue = np.minimum(np.hypot(xx - c, yy - (c + 14)) - 5, _poly(xx, yy, [(c - 5, c + 13), (c + 1, c - 1), (c + 5, c + 13)]))
+    return [outer, (tongue, "cut")]
+
+
+def _g_slaughter(xx, yy, c):  # a cleaver: broad blade with a hanging hole, slim handle off the spine
+    rx, ry = _rot(xx, yy, c, c, -32)
+    blade = _rbox(rx, ry, c + 7, c + 1, 16, 12, 2)
+    handle = _cap(rx, ry, c - 29, c - 6, c - 11, c - 6, 2.5)
+    return [handle, blade, (np.hypot(rx - (c + 15), ry - (c - 5)) - 3.2, "cut")]
+
+
+def _g_release(xx, yy, c):  # a chain link snapped in two, the halves pulled apart
+    rx, ry = _rot(xx, yy, c, c, 35)
+    left = np.minimum(_arc(rx, ry, c - 26, c, 8, 90, 270),
+                      np.minimum(_seg(rx, ry, c - 26, c - 8, c - 11, c - 8), _seg(rx, ry, c - 26, c + 8, c - 11, c + 8)))
+    right = np.minimum(_arc(rx, ry, c + 26, c, 8, 270, 90),
+                       np.minimum(_seg(rx, ry, c + 11, c - 8, c + 26, c - 8), _seg(rx, ry, c + 11, c + 8, c + 26, c + 8)))
+    snap = np.minimum(_seg(rx, ry, c, c - 7, c, c - 15), _seg(rx, ry, c, c + 7, c, c + 15)) + 1.0
+    return [np.minimum(left, right), snap]
+
+
+def _g_move(xx, yy, c):  # a map pin at the end of a dotted path
+    px, py = c + 11, c - 15
+    pin = np.minimum(np.hypot(xx - px, yy - py) - 10, _poly(xx, yy, [(px - 9, py + 4), (px + 9, py + 4), (px, py + 22)]))
+    path = np.minimum(np.minimum(_dot(xx, yy, c - 24, c + 24, 1.5), _dot(xx, yy, c - 12, c + 18, 1.5)),
+                      _dot(xx, yy, c, c + 12, 1.5))
+    return [path, pin, (np.hypot(xx - px, yy - py) - 4.5, "cut")]
+
+
+def _g_copy(xx, yy, c):  # two sheets, the front one written on
+    front = _rbox(xx, yy, c + 8, c + 7, 14, 18, 3)
+    lines = np.minimum(_seg(xx, yy, c + 1, c + 1, c + 15, c + 1), _seg(xx, yy, c + 1, c + 9, c + 15, c + 9))
+    lines = np.minimum(lines, _seg(xx, yy, c + 1, c + 17, c + 10, c + 17)) + 1.5
+    return [np.abs(_rbox(xx, yy, c - 8, c - 9, 14, 18, 3)), (front, "cut"), np.abs(front), lines]
+
+
+def _g_bill(xx, yy, c):  # a clipboard: board, clip, three order lines
+    board = np.abs(_rbox(xx, yy, c, c + 4, 19, 23, 3))
+    clip = _rbox(xx, yy, c, c - 19, 8, 4, 2)
+    lines = np.minimum(_seg(xx, yy, c - 10, c - 6, c + 10, c - 6), _seg(xx, yy, c - 10, c + 4, c + 10, c + 4))
+    lines = np.minimum(lines, _seg(xx, yy, c - 10, c + 14, c + 3, c + 14)) + 1.5
+    return [board, clip, lines]
+
+
+def _g_equip(xx, yy, c):  # a sword taken up: blade, guard and grip, with a plus beside it
+    sword = _blade(xx, yy, (c + 22, c - 22), (c - 9, c + 9), (c - 20, c + 20), 9)
+    plus = np.minimum(_seg(xx, yy, c - 18, c - 26, c - 18, c - 8), _seg(xx, yy, c - 27, c - 17, c - 9, c - 17))
+    return [sword, plus]
+
+
+def _g_wear(xx, yy, c):  # a tunic: shoulders, short sleeves, a V collar
+    pts = [(c - 9, c - 22), (c - 22, c - 17), (c - 30, c - 3), (c - 21, c + 2), (c - 17, c - 4), (c - 17, c + 23),
+           (c + 17, c + 23), (c + 17, c - 4), (c + 21, c + 2), (c + 30, c - 3), (c + 22, c - 17), (c + 9, c - 22),
+           (c, c - 11), (c - 9, c - 22)]
+    return _polyline(xx, yy, pts)
+
+
+def _g_eat(xx, yy, c):  # a plate seen from above, a fork left of it, a knife right
+    plate = np.minimum(np.abs(np.hypot(xx - c, yy - c) - 14), np.hypot(xx - c, yy - c) - 4)
+    fork = np.minimum(_seg(xx, yy, c - 27, c - 6, c - 27, c + 24), _seg(xx, yy, c - 32, c - 10, c - 22, c - 10))
+    for x in (c - 32, c - 27, c - 22):
+        fork = np.minimum(fork, _seg(xx, yy, x, c - 22, x, c - 10) + 1.8)
+    knife = np.minimum(_seg(xx, yy, c + 27, c + 2, c + 27, c + 24),
+                       _poly(xx, yy, [(c + 24, c + 2), (c + 24, c - 18), (c + 27, c - 23), (c + 30, c - 14), (c + 30, c + 2)]) + 0.5)
+    return [plate, np.minimum(fork, knife)]
+
+
+def _g_clear_orders(xx, yy, c):  # a list of queued orders, struck out by a cross
+    lst = np.full(xx.shape, 1e9, np.float32)
+    for y in (c - 16, c - 4, c + 8):
+        lst = np.minimum(lst, np.minimum(_dot(xx, yy, c - 23, y, 1.0), _seg(xx, yy, c - 13, y, c + 13, y)))
+    cross = np.minimum(_seg(xx, yy, c + 6, c + 6, c + 22, c + 22), _seg(xx, yy, c + 22, c + 6, c + 6, c + 22))
+    return [lst + 1.0, cross]
+
+
+def _g_learn(xx, yy, c):  # an open book with a spark of insight above it
+    y = c + 7
+    left = _polyline(xx, yy, [(c, y - 6), (c - 12, y - 12), (c - 28, y - 10), (c - 28, y + 15), (c - 12, y + 13), (c, y + 19)])
+    right = _polyline(xx, yy, [(c, y - 6), (c + 12, y - 12), (c + 28, y - 10), (c + 28, y + 15), (c + 12, y + 13), (c, y + 19)])
+    book = np.minimum(np.minimum(left, right), _seg(xx, yy, c, y - 6, c, y + 19))
+    sx, sy = c, c - 23
+    spark = np.minimum(_poly(xx, yy, [(sx, sy - 12), (sx + 3.5, sy), (sx, sy + 12), (sx - 3.5, sy)]),
+                       _poly(xx, yy, [(sx - 11, sy), (sx, sy - 3.5), (sx + 11, sy), (sx, sy + 3.5)]))
+    return [book, spark + 2.0]
+
+
+def _play018_icons(t):
+    out = [_badge_icon("speed_pause", t, _g_speed(0), t["designation"])]
+    out += [_badge_icon("speed_" + k, t, _g_speed(n), t["selection"])
+            for n, k in ((1, "normal"), (2, "fast"), (3, "superfast"))]
+    out += [_badge_icon("letter_" + k, t, _g_letter(k), rgb)
+            for k, rgb in (("threat", t["danger"]), ("caution", (0.96, 0.70, 0.26)),
+                           ("info", t["blueprint"]), ("good", (0.46, 0.80, 0.42)))]
+    out += [_badge_icon("status_" + k, t, g, rgb) for k, g, rgb in (
+        ("sleeping", _g_st_sleeping, (0.58, 0.68, 1.00)), ("mental", _g_st_mental, (0.88, 0.44, 0.92)),
+        ("downed", _g_st_downed, (0.94, 0.30, 0.30)), ("idle", _g_st_idle, (0.80, 0.82, 0.86)),
+        ("fighting", _g_st_fighting, (0.98, 0.58, 0.24)), ("fleeing", _g_st_fleeing, (0.36, 0.84, 0.74)),
+        ("burning", _g_st_burning, (1.00, 0.80, 0.26)))]
+    out += [_badge_icon(k, t, g, rgb) for k, g, rgb in (
+        ("slaughter", _g_slaughter, t["danger"]), ("release", _g_release, (0.50, 0.84, 0.50)),
+        ("move", _g_move, (0.55, 0.82, 0.96)), ("copy", _g_copy, (0.78, 0.84, 0.92)),
+        ("bill", _g_bill, (0.92, 0.84, 0.62)), ("equip", _g_equip, (0.84, 0.86, 0.92)),
+        ("wear", _g_wear, (0.78, 0.66, 0.94)), ("eat", _g_eat, (0.98, 0.72, 0.38)),
+        ("clear_orders", _g_clear_orders, t["danger"]), ("learn", _g_learn, (0.99, 0.78, 0.34)))]
+    return out
+
+
 def build():
     t = _base_tokens()
     out = [_selection(t), _designation("designation_cut", t, _g_cut),
@@ -1640,6 +1874,7 @@ def build():
     out += _ng1_icons()
     out += [_marriage_spot(f) for f in MARRIAGE_FACINGS] + [_party_spot(), _fight_lightning()]
     out += _social_icons(t)
+    out += _play018_icons(t)
     out += [_shadow_blob(), _shadow_box(), _roof_tile("roof_built", "built"),
             _roof_tile("roof_natural", "natural"), _roof_tile("roof_plan", "plan"),
             _roof_tile("roof_remove", "remove")]

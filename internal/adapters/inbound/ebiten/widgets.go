@@ -6,57 +6,60 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 )
 
-// UI chrome tokens. Hex values must match assets/palettes/ui.yaml.
+// UI chrome tokens (PLAY-018 cool charcoal: slate panels, blue-grey rules,
+// a sea-glass accent). Hex values must match assets/palettes/ui.yaml;
+// widgets_test.go holds them to WCAG contrast and keeps them clear of the
+// reference hexes.
 var (
-	uiSpace       = color.RGBA{R: 0x0A, G: 0x10, B: 0x18, A: 0xFF}
-	uiDust        = color.RGBA{R: 0x8C, G: 0x4A, B: 0x2E, A: 0xFF}
-	uiHorizon     = color.RGBA{R: 0xA8, G: 0x5C, B: 0x32, A: 0xFF}
-	uiPanel       = color.RGBA{R: 0x2A, G: 0x1E, B: 0x16, A: 0xE6}
-	uiPanelBorder = color.RGBA{R: 0x6B, G: 0x53, B: 0x40, A: 0xFF}
-	uiBtn         = color.RGBA{R: 0x5C, G: 0x40, B: 0x30, A: 0xFF}
-	uiBtnHover    = color.RGBA{R: 0x6E, G: 0x4E, B: 0x3A, A: 0xFF}
-	uiBtnSelected = color.RGBA{R: 0x8B, G: 0x5A, B: 0x2B, A: 0xFF}
-	uiBtnDisabled = color.RGBA{R: 0x3A, G: 0x2E, B: 0x28, A: 0xFF}
-	uiBtnBorder   = color.RGBA{R: 0x8A, G: 0x6A, B: 0x48, A: 0xFF}
-	uiAccent      = color.RGBA{R: 0xE8, G: 0xC0, B: 0x70, A: 0xFF}
-	uiDim         = color.RGBA{R: 0x00, G: 0x00, B: 0x00, A: 0xA0}
+	uiSpace       = color.RGBA{R: 0x05, G: 0x0D, B: 0x26, A: 0xFF}
+	uiDust        = color.RGBA{R: 0x2C, G: 0x7A, B: 0x84, A: 0xFF}
+	uiHorizon     = color.RGBA{R: 0x12, G: 0x3E, B: 0x58, A: 0xFF}
+	uiPanel       = color.RGBA{R: 0x1E, G: 0x26, B: 0x38, A: 0xEB}
+	uiPanelBorder = color.RGBA{R: 0x3D, G: 0x54, B: 0x70, A: 0xFF}
+	uiBtn         = color.RGBA{R: 0x26, G: 0x30, B: 0x43, A: 0xFF}
+	uiBtnHover    = color.RGBA{R: 0x36, G: 0x46, B: 0x5F, A: 0xFF}
+	uiBtnSelected = color.RGBA{R: 0x1F, G: 0x58, B: 0x62, A: 0xFF}
+	uiBtnDisabled = color.RGBA{R: 0x1C, G: 0x24, B: 0x37, A: 0xFF}
+	uiBtnBorder   = color.RGBA{R: 0x4C, G: 0x62, B: 0x88, A: 0xFF}
+	uiAccent      = color.RGBA{R: 0x72, G: 0xD4, B: 0xC0, A: 0xFF}
+	uiDim         = color.RGBA{R: 0x02, G: 0x06, B: 0x0C, A: 0xA0}
 	// NG-1 §1.2: text, states, fields, sliders, scrollbars, tooltips, modals.
-	uiText         = color.RGBA{R: 0xE8, G: 0xE2, B: 0xD6, A: 0xFF}
-	uiTextDim      = color.RGBA{R: 0xA8, G: 0x9F, B: 0x92, A: 0xFF}
-	uiTextDisabled = color.RGBA{R: 0x6E, G: 0x66, B: 0x5C, A: 0xFF}
-	uiHeading      = color.RGBA{R: 0xF2, G: 0xD9, B: 0xA6, A: 0xFF}
-	uiWarning      = color.RGBA{R: 0xE0, G: 0xA0, B: 0x40, A: 0xFF}
-	uiDanger       = color.RGBA{R: 0xD2, G: 0x56, B: 0x4A, A: 0xFF}
-	uiGood         = color.RGBA{R: 0x7F, G: 0xB8, B: 0x6A, A: 0xFF}
-	uiField        = color.RGBA{R: 0x1A, G: 0x13, B: 0x0E, A: 0xFF}
-	uiFieldBorder  = color.RGBA{R: 0x6B, G: 0x53, B: 0x40, A: 0xFF}
-	uiFieldFocus   = color.RGBA{R: 0xE8, G: 0xC0, B: 0x70, A: 0xFF}
-	uiSliderTrack  = color.RGBA{R: 0x3A, G: 0x2E, B: 0x28, A: 0xFF}
-	uiSliderFill   = color.RGBA{R: 0x8B, G: 0x5A, B: 0x2B, A: 0xFF}
-	uiSliderKnob   = color.RGBA{R: 0xE8, G: 0xC0, B: 0x70, A: 0xFF}
-	uiScrollTrack  = color.RGBA{R: 0x1A, G: 0x13, B: 0x0E, A: 0xFF}
-	uiScrollThumb  = color.RGBA{R: 0x6B, G: 0x53, B: 0x40, A: 0xFF}
-	uiTooltip      = color.RGBA{R: 0x12, G: 0x0D, B: 0x0A, A: 0xF2}
-	uiTooltipEdge  = color.RGBA{R: 0x8A, G: 0x6A, B: 0x48, A: 0xFF}
-	uiModalDim     = color.RGBA{R: 0x00, G: 0x00, B: 0x00, A: 0xB0}
+	uiText         = color.RGBA{R: 0xE4, G: 0xEB, B: 0xF2, A: 0xFF}
+	uiTextDim      = color.RGBA{R: 0x9D, G: 0xAE, B: 0xC2, A: 0xFF}
+	uiTextDisabled = color.RGBA{R: 0x52, G: 0x61, B: 0x8A, A: 0xFF}
+	uiHeading      = color.RGBA{R: 0xBF, G: 0xED, B: 0xE2, A: 0xFF}
+	uiWarning      = color.RGBA{R: 0xED, G: 0xA9, B: 0x4A, A: 0xFF}
+	uiDanger       = color.RGBA{R: 0xFA, G: 0x88, B: 0x7C, A: 0xFF}
+	uiGood         = color.RGBA{R: 0x8A, G: 0xCF, B: 0x6A, A: 0xFF}
+	uiField        = color.RGBA{R: 0x0C, G: 0x16, B: 0x2E, A: 0xFF}
+	uiFieldBorder  = color.RGBA{R: 0x3D, G: 0x54, B: 0x70, A: 0xFF}
+	uiFieldFocus   = color.RGBA{R: 0x72, G: 0xD4, B: 0xC0, A: 0xFF}
+	uiSliderTrack  = color.RGBA{R: 0x22, G: 0x2A, B: 0x3C, A: 0xFF}
+	uiSliderFill   = color.RGBA{R: 0x2F, G: 0x8F, B: 0x8A, A: 0xFF}
+	uiSliderKnob   = color.RGBA{R: 0x72, G: 0xD4, B: 0xC0, A: 0xFF}
+	uiScrollTrack  = color.RGBA{R: 0x0C, G: 0x16, B: 0x2E, A: 0xFF}
+	uiScrollThumb  = color.RGBA{R: 0x4C, G: 0x62, B: 0x88, A: 0xFF}
+	uiTooltip      = color.RGBA{R: 0x0D, G: 0x16, B: 0x30, A: 0xF5}
+	uiTooltipEdge  = color.RGBA{R: 0x58, G: 0x7A, B: 0xA8, A: 0xFF}
+	uiModalDim     = color.RGBA{R: 0x02, G: 0x06, B: 0x0C, A: 0xB8}
 	// PLAY-012 plan marks: a soft fill and a brighter edge.
-	uiPlanFill = color.RGBA{R: 0xB8, G: 0xD4, B: 0xF0, A: 0x30}
-	uiPlanEdge = color.RGBA{R: 0xD8, G: 0xE8, B: 0xFF, A: 0x90}
+	uiPlanFill = color.RGBA{R: 0xB9, G: 0xA8, B: 0xF0, A: 0x30}
+	uiPlanEdge = color.RGBA{R: 0xE6, G: 0xD2, B: 0xFF, A: 0x90}
 	// PLAY-018: letter kinds, alert backings, the learning helper's warm
-	// set and the mood bar (placeholders until the charcoal palette).
-	uiLetterThreat  = color.RGBA{R: 0xD2, G: 0x56, B: 0x4A, A: 0xFF}
-	uiLetterCaution = color.RGBA{R: 0xE0, G: 0xA0, B: 0x40, A: 0xFF}
-	uiLetterInfo    = color.RGBA{R: 0x8F, G: 0xA8, B: 0xC0, A: 0xFF}
-	uiLetterGood    = color.RGBA{R: 0x7F, G: 0xB8, B: 0x6A, A: 0xFF}
-	uiAlertDangerBg = color.RGBA{R: 0x5A, G: 0x1E, B: 0x1A, A: 0xE6}
-	uiAlertWarnBg   = color.RGBA{R: 0x5A, G: 0x3E, B: 0x14, A: 0xE6}
-	uiTutorPanel    = color.RGBA{R: 0x5E, G: 0x3F, B: 0x26, A: 0xF0}
-	uiTutorBorder   = color.RGBA{R: 0xA0, G: 0x7A, B: 0x44, A: 0xFF}
-	uiTutorHeading  = color.RGBA{R: 0xF2, G: 0xD9, B: 0xA6, A: 0xFF}
-	uiTutorText     = color.RGBA{R: 0xF0, G: 0xE6, B: 0xD2, A: 0xFF}
-	uiMoodGood      = color.RGBA{R: 0x7F, G: 0xB8, B: 0x6A, A: 0xFF}
-	uiMoodMid       = color.RGBA{R: 0xD8, G: 0xB0, B: 0x4A, A: 0xFF}
-	uiMoodBad       = color.RGBA{R: 0xD2, G: 0x56, B: 0x4A, A: 0xFF}
+	// brown and gold (set apart from the cool chrome) and the mood bar.
+	uiLetterThreat  = color.RGBA{R: 0xFA, G: 0x88, B: 0x7C, A: 0xFF}
+	uiLetterCaution = color.RGBA{R: 0xED, G: 0xA9, B: 0x4A, A: 0xFF}
+	uiLetterInfo    = color.RGBA{R: 0x7F, G: 0xA8, B: 0xDC, A: 0xFF}
+	uiLetterGood    = color.RGBA{R: 0x8A, G: 0xCF, B: 0x6A, A: 0xFF}
+	uiAlertDangerBg = color.RGBA{R: 0x5A, G: 0x1C, B: 0x24, A: 0xE8}
+	uiAlertWarnBg   = color.RGBA{R: 0x4F, G: 0x38, B: 0x10, A: 0xE8}
+	uiTutorPanel    = color.RGBA{R: 0x3E, G: 0x27, B: 0x16, A: 0xF2}
+	uiTutorBorder   = color.RGBA{R: 0xE2, G: 0xAC, B: 0x48, A: 0xFF}
+	uiTutorHeading  = color.RGBA{R: 0xF7, G: 0xD6, B: 0x8A, A: 0xFF}
+	uiTutorText     = color.RGBA{R: 0xF5, G: 0xEA, B: 0xD7, A: 0xFF}
+	uiMoodGood      = color.RGBA{R: 0x8A, G: 0xCF, B: 0x6A, A: 0xFF}
+	uiMoodMid       = color.RGBA{R: 0xE6, G: 0xC2, B: 0x4E, A: 0xFF}
+	uiMoodBad       = color.RGBA{R: 0xFA, G: 0x88, B: 0x7C, A: 0xFF}
 )
 
 var uiTokens = map[string]color.RGBA{
@@ -199,21 +202,23 @@ func drawPanel(dst *ebiten.Image, x, y, w, h float32) {
 	uiStrokeRect(dst, x, y, w, h, 1, uiPanelBorder, false)
 }
 
-func drawButton(dst *ebiten.Image, b button, hover bool) {
-	fill := uiBtn
+// buttonColors is a drawButton's fill, border and label colour. Disabled
+// wins over selected (dim label, no accent edge), selected over hover.
+func buttonColors(b button, hover bool) (fill, border, label color.RGBA) {
 	switch {
 	case b.disabled:
-		fill = uiBtnDisabled
+		return uiBtnDisabled, uiBtnBorder, uiTextDisabled
 	case b.selected:
-		fill = uiBtnSelected
+		return uiBtnSelected, uiAccent, uiText
 	case hover:
-		fill = uiBtnHover
+		return uiBtnHover, uiBtnBorder, uiText
 	}
+	return uiBtn, uiBtnBorder, uiText
+}
+
+func drawButton(dst *ebiten.Image, b button, hover bool) {
+	fill, border, _ := buttonColors(b, hover)
 	uiFillRect(dst, b.x, b.y, b.w, b.h, fill, false)
-	border := uiBtnBorder
-	if b.selected {
-		border = uiAccent
-	}
 	uiStrokeRect(dst, b.x, b.y, b.w, b.h, 1, border, false)
 	label := b.label
 	if b.disabled && label != "" && !b.quiet {
@@ -239,7 +244,10 @@ func drawButtonLabel(dst *ebiten.Image, label string, b button) {
 		label = ellipsize(label, tsBody, bw-8)
 		x = float64(b.x) + 4
 	}
-	drawText(dst, label, x, float64(b.y)+(float64(b.h)-lineH(tsBody))/2+1, tsBody)
+	st := tsBody
+	_, _, c := buttonColors(b, false)
+	st.Color = c
+	drawText(dst, label, x, float64(b.y)+(float64(b.h)-lineH(tsBody))/2+1, st)
 }
 
 // drawCentered prints s in st centred on (cx, cy).
@@ -288,4 +296,18 @@ func hitButton(buttons []button, mx, my int) (button, bool) {
 // (kept for its many call sites; drawText is already goroutine-safe).
 func debugPrintAt(dst *ebiten.Image, s string, x, y int) {
 	drawLabel(dst, x, y, s)
+}
+
+// uiFade is token c (an opaque colour) at alpha a, premultiplied as
+// color.RGBA expects: backings, scrims and separators drawn over the map
+// or a panel.
+func uiFade(c color.RGBA, a uint8) color.RGBA {
+	m := uint32(a)
+	return color.RGBA{R: uint8(uint32(c.R) * m / 255), G: uint8(uint32(c.G) * m / 255), B: uint8(uint32(c.B) * m / 255), A: a}
+}
+
+// uiShade is the dark backing behind small labels over the map (stack
+// counts, damage numbers, zone names, health bars) at alpha a.
+func uiShade(a uint8) color.RGBA {
+	return uiFade(color.RGBA{R: uiTooltip.R, G: uiTooltip.G, B: uiTooltip.B, A: 0xFF}, a)
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"image/color"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -49,6 +50,190 @@ func TestLerpRGBAClamps(t *testing.T) {
 	if mid.R != 60 || mid.G != 70 || mid.B != 80 || mid.A != 90 {
 		t.Fatalf("t=0.5: %v", mid)
 	}
+}
+
+// TestUIContrast holds the chrome tokens to WCAG 2.x contrast: text 4.5:1
+// on every surface it is drawn on, dim text 3:1, disabled text clearly
+// dimmer than dim text yet still legible, and non-text marks (accent,
+// letter and mood colours) 3:1. A translucent floating panel is judged
+// over both a white and a black map, the worst cases behind it.
+func TestUIContrast(t *testing.T) {
+	t.Parallel()
+	white := color.RGBA{0xFF, 0xFF, 0xFF, 0xFF}
+	black := color.RGBA{0, 0, 0, 0xFF}
+	panelW, panelK := overOpaque(uiPanel, white), overOpaque(uiPanel, black)
+	tipW, tutorW := overOpaque(uiTooltip, white), overOpaque(uiTutorPanel, white)
+	kitHover, _, kitHoverText := btnNormal.colors(true, false, false)
+	kitSel, _, kitSelText := btnNormal.colors(false, false, true)
+	primary, _, primaryText := btnPrimary.colors(false, false, false)
+	primaryHover, _, _ := btnPrimary.colors(true, false, false)
+	type pair struct {
+		name   string
+		fg, bg color.RGBA
+		min    float64
+	}
+	pairs := []pair{
+		{"text on panel (white map)", uiText, panelW, 4.5},
+		{"text on panel (black map)", uiText, panelK, 4.5},
+		{"text on button", uiText, uiBtn, 4.5},
+		{"text on button hover", uiText, uiBtnHover, 4.5},
+		{"text on button selected", uiText, uiBtnSelected, 4.5},
+		{"text on kit hover", kitHoverText, kitHover, 4.5},
+		{"text on kit selected", kitSelText, kitSel, 4.5},
+		{"text on kit primary", primaryText, primary, 4.5},
+		{"text on kit primary hover", primaryText, primaryHover, 4.5},
+		{"text on field", uiText, uiField, 4.5},
+		{"text on tooltip (white map)", uiText, tipW, 4.5},
+		{"heading on panel (white map)", uiHeading, panelW, 4.5},
+		{"warning on panel (white map)", uiWarning, panelW, 4.5},
+		{"danger on panel (white map)", uiDanger, panelW, 4.5},
+		{"good on panel (white map)", uiGood, panelW, 4.5},
+		{"text on danger alert (white map)", uiText, overOpaque(uiAlertDangerBg, white), 4.5},
+		{"text on warning alert (white map)", uiText, overOpaque(uiAlertWarnBg, white), 4.5},
+		{"tutor text on tutor panel (white map)", uiTutorText, tutorW, 4.5},
+		{"tutor heading on tutor panel (white map)", uiTutorHeading, tutorW, 4.5},
+		{"dim text on panel (white map)", uiTextDim, panelW, 3},
+		{"dim text on panel (black map)", uiTextDim, panelK, 3},
+		{"dim text on button", uiTextDim, uiBtn, 3},
+		{"dim text on tooltip (white map)", uiTextDim, tipW, 3},
+		{"disabled text on disabled button", uiTextDisabled, uiBtnDisabled, 1.8},
+		{"disabled text on panel (black map)", uiTextDisabled, panelK, 1.8},
+		{"accent on panel (black map)", uiAccent, panelK, 3},
+		{"tutor border on tutor panel (white map)", uiTutorBorder, tutorW, 3},
+	}
+	for _, k := range []struct {
+		name string
+		c    color.RGBA
+	}{{"letter threat", uiLetterThreat}, {"letter caution", uiLetterCaution}, {"letter info", uiLetterInfo},
+		{"letter good", uiLetterGood}, {"mood good", uiMoodGood}, {"mood mid", uiMoodMid}, {"mood bad", uiMoodBad}} {
+		pairs = append(pairs, pair{k.name + " on panel (white map)", k.c, panelW, 3})
+	}
+	for _, p := range pairs {
+		if got := contrastRatio(p.fg, p.bg); got < p.min {
+			t.Errorf("%s: %.2f:1, want >= %.1f:1", p.name, got, p.min)
+		}
+	}
+	// Disabled reads clearly dimmer than dim, which reads dimmer than text.
+	if !(relLum(uiText) > relLum(uiTextDim) && relLum(uiTextDim) > relLum(uiTextDisabled)) {
+		t.Errorf("text %.3f, dim %.3f, disabled %.3f: want strictly falling luminance",
+			relLum(uiText), relLum(uiTextDim), relLum(uiTextDisabled))
+	}
+	for _, bg := range []color.RGBA{panelK, uiBtnDisabled} {
+		dim, off := contrastRatio(uiTextDim, bg), contrastRatio(uiTextDisabled, bg)
+		if off > 0.6*dim {
+			t.Errorf("disabled %.2f:1 vs dim %.2f:1 on %v: want disabled <= 60%% of dim", off, dim, bg)
+		}
+	}
+}
+
+// uiReferenceHexes are another game's UI colours. The palette is original
+// (ART §17/§33, user decision PLAY-018): no token may sit near them.
+var uiReferenceHexes = []string{"15191D", "616C7A", "2A2B2C", "878787", "85552C", "B08B3D",
+	"CCD9FF", "4DB3E6", "363636", "524736", "13161B"}
+
+// TestUITokensStayClearOfReferencePalette keeps every token at least
+// CIE76 dE 10 (a plainly different colour side by side) from each
+// reference hex. The two black veils are scrims, not hues, so they are
+// left out.
+func TestUITokensStayClearOfReferencePalette(t *testing.T) {
+	t.Parallel()
+	const minDE = 10
+	for name, c := range uiTokens {
+		if name == "ui.dim" || name == "ui.modal_dim" {
+			continue
+		}
+		for _, h := range uiReferenceHexes {
+			ref, err := parseHexRGBA(h + "FF")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if d := deltaE76(c, ref); d < minDE {
+				t.Errorf("%s %02X%02X%02X is dE %.1f from #%s, want >= %d", name, c.R, c.G, c.B, d, h, minDE)
+			}
+		}
+	}
+}
+
+// TestButtonColorsStates: drawButton's states read apart, and disabled
+// wins over selected and hover (dim label, no accent edge).
+func TestButtonColorsStates(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name                string
+		b                   button
+		hover               bool
+		fill, border, label color.RGBA
+	}{
+		{"normal", button{}, false, uiBtn, uiBtnBorder, uiText},
+		{"hover", button{}, true, uiBtnHover, uiBtnBorder, uiText},
+		{"selected", button{selected: true}, false, uiBtnSelected, uiAccent, uiText},
+		{"selected hover", button{selected: true}, true, uiBtnSelected, uiAccent, uiText},
+		{"disabled", button{disabled: true}, true, uiBtnDisabled, uiBtnBorder, uiTextDisabled},
+		{"disabled selected", button{disabled: true, selected: true}, false, uiBtnDisabled, uiBtnBorder, uiTextDisabled},
+	}
+	for _, c := range cases {
+		fill, border, label := buttonColors(c.b, c.hover)
+		if fill != c.fill || border != c.border || label != c.label {
+			t.Errorf("%s: got %v %v %v, want %v %v %v", c.name, fill, border, label, c.fill, c.border, c.label)
+		}
+	}
+	if !(relLum(uiBtnHover) > relLum(uiBtn) && relLum(uiBtn) > relLum(uiBtnDisabled)) {
+		t.Errorf("want hover lighter than a button and disabled darker")
+	}
+	if uiBtnSelected == uiBtn || uiBtnSelected == uiBtnHover {
+		t.Errorf("selected fill must differ from the plain and hover fills")
+	}
+}
+
+// overOpaque draws token c over an opaque backdrop the way ebiten blends a
+// color.RGBA (premultiplied source-over).
+func overOpaque(c, bg color.RGBA) color.RGBA {
+	k := 255 - int(c.A)
+	ch := func(s, d uint8) uint8 { return uint8(min(255, int(s)+(int(d)*k+127)/255)) }
+	return color.RGBA{ch(c.R, bg.R), ch(c.G, bg.G), ch(c.B, bg.B), 0xFF}
+}
+
+func srgbToLinear(v uint8) float64 {
+	c := float64(v) / 255
+	if c <= 0.04045 {
+		return c / 12.92
+	}
+	return math.Pow((c+0.055)/1.055, 2.4)
+}
+
+// relLum is the WCAG relative luminance of an opaque colour.
+func relLum(c color.RGBA) float64 {
+	return 0.2126*srgbToLinear(c.R) + 0.7152*srgbToLinear(c.G) + 0.0722*srgbToLinear(c.B)
+}
+
+func contrastRatio(a, b color.RGBA) float64 {
+	la, lb := relLum(a), relLum(b)
+	if la < lb {
+		la, lb = lb, la
+	}
+	return (la + 0.05) / (lb + 0.05)
+}
+
+// deltaE76 is the CIE76 distance between two colours in CIELAB (D65).
+func deltaE76(a, b color.RGBA) float64 {
+	l1, a1, b1 := cieLab(a)
+	l2, a2, b2 := cieLab(b)
+	return math.Sqrt((l1-l2)*(l1-l2) + (a1-a2)*(a1-a2) + (b1-b2)*(b1-b2))
+}
+
+func cieLab(c color.RGBA) (l, a, b float64) {
+	r, g, bl := srgbToLinear(c.R), srgbToLinear(c.G), srgbToLinear(c.B)
+	x := (0.4124*r + 0.3576*g + 0.1805*bl) / 0.95047
+	y := 0.2126*r + 0.7152*g + 0.0722*bl
+	z := (0.0193*r + 0.1192*g + 0.9505*bl) / 1.08883
+	f := func(t float64) float64 {
+		if t > 216.0/24389 {
+			return math.Cbrt(t)
+		}
+		return (24389.0/27*t + 16) / 116
+	}
+	fx, fy, fz := f(x), f(y), f(z)
+	return 116*fy - 16, 500 * (fx - fy), 200 * (fy - fz)
 }
 
 func locateUIPaletteYAML() (string, error) {
