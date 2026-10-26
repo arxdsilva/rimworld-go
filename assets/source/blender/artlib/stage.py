@@ -615,3 +615,168 @@ def save_template():
     bpy.data.libraries.write(TEMPLATE, blocks, fake_user=True, compress=True)
     clear()
     return TEMPLATE
+
+
+# ------------------------------------------------------- point lights
+# Additive (PLAY-020): scenes may light a roofed room with lamps. Sprites
+# never do: render_asset and _rig only ever see the sun, and a point light
+# is created hidden, so it shows only inside lighting(points=...).
+# Positions are game tiles (x east, y south, z up); a light sits where the
+# sheared render draws that point. The shear keeps the ground plane, so
+# shadows on the ground land where the unsheared lamp would cast them.
+#
+# POINT_POWER makes Shader-to-RGB of a white diffuse read cos / d^2 (d in
+# sheared tiles), as the sun (energy pi) reads cos: point_nodes multiplies
+# d^2 back out, so a toon band follows only the direction to the lamp and
+# the falloff is ours, (1 - (d/reach)^2)^2 over the real distance.
+POINT_POWER = 4 * math.pi ** 2
+
+
+def sheared(x, y, z):
+    """Blender position of game point (x, y, z) once the stage is sheared."""
+    return (x, -y + C.SHEAR_K * z, z)
+
+
+def point_light(name, x, y, z, rgb=(1.0, 1.0, 1.0), radius=0.2, cutoff=12.0):
+    """A hidden point light at game point (x, y, z); radius softens its
+    shadows. Turn it on with lighting(points=...)."""
+    data = bpy.data.lights.new("rwg_pt_" + name, "POINT")
+    data.energy = POINT_POWER
+    data.color = rgb
+    data.shadow_soft_size = radius
+    data.use_shadow = True
+    for k, v in (("use_soft_falloff", False), ("use_custom_distance", True), ("cutoff_distance", cutoff)):
+        if hasattr(data, k):
+            setattr(data, k, v)
+    ob = _link(bpy.data.objects.new("rwg_pt_" + name, data))
+    ob.location = sheared(x, y, z)
+    ob.hide_render = True
+    return ob
+
+
+@contextmanager
+def lighting(sun=True, points=()):
+    """Render with the canonical sun on or off and, of the stage's point
+    lights, only `points` on."""
+    sc = stage()
+    if sc.camera is None or not sc.camera.name.startswith("rwg_cam"):
+        _rig(sc, 0.0, 0.0, C.PPT, C.PPT)   # make the sun now; render_scene re-frames
+    keep = {p.name for p in points}
+    saved = [(ob, ob.hide_render) for ob in sc.collection.all_objects if ob.type == "LIGHT"]
+    for ob, _ in saved:
+        ob.hide_render = (not sun) if ob.data.type == "SUN" else ob.name not in keep
+    try:
+        yield
+    finally:
+        for ob, hidden in saved:
+            ob.hide_render = hidden
+
+
+@contextmanager
+def map_materials(fn):
+    """Temporarily give every mesh slot the material fn(object, material)."""
+    saved = []
+    for ob in stage().collection.all_objects:
+        if ob.type != "MESH":
+            continue
+        saved.append((ob, [s.material for s in ob.material_slots]))
+        for s in ob.material_slots:
+            s.material = fn(ob, s.material)
+    try:
+        yield
+    finally:
+        _restore(saved)
+
+
+def math_node(nt, op, a, b=None, c=None, clamp=False):
+    """A Math node; inputs are sockets or numbers. Returns its output."""
+    n = nt.nodes.new("ShaderNodeMath")
+    n.operation = op
+    n.use_clamp = clamp
+    for i, v in enumerate((a, b, c)):
+        if v is None:
+            continue
+        if isinstance(v, (int, float)):
+            n.inputs[i].default_value = v
+        else:
+            nt.links.new(v, n.inputs[i])
+    return n.outputs[0]
+
+
+def vector_node(nt, op, a, b=None, c=None, out="Vector"):
+    """A Vector Math node; inputs are sockets or 3-tuples. Returns output `out`."""
+    n = nt.nodes.new("ShaderNodeVectorMath")
+    n.operation = op
+    for i, v in enumerate((a, b, c)):
+        if v is None:
+            continue
+        if isinstance(v, (tuple, list)):
+            n.inputs[i].default_value = v
+        else:
+            nt.links.new(v, n.inputs[i])
+    return n.outputs[out]
+
+
+def point_nodes(nt, light, reach, gain=1.0, channel=None):
+    """Shader nodes in tree nt for one point light. Returns sockets
+    (lambert, falloff): lambert is cos x shadow toward the light with the
+    distance taken out (Shader-to-RGB x d'^2 / gain; channel 0-2 reads one
+    colour channel when lights are coloured apart); falloff is
+    (1 - (d/reach)^2)^2 over the unsheared distance d in tiles."""
+    geo = nt.nodes.new("ShaderNodeNewGeometry")
+    dif = nt.nodes.new("ShaderNodeBsdfDiffuse")
+    dif.inputs["Color"].default_value = (1, 1, 1, 1)
+    s2r = nt.nodes.new("ShaderNodeShaderToRGB")
+    nt.links.new(dif.outputs[0], s2r.inputs[0])
+    if channel is None:
+        bw = nt.nodes.new("ShaderNodeRGBToBW")
+        nt.links.new(s2r.outputs["Color"], bw.inputs[0])
+        e = bw.outputs[0]
+    else:
+        sep = nt.nodes.new("ShaderNodeSeparateColor")
+        nt.links.new(s2r.outputs["Color"], sep.inputs[0])
+        e = sep.outputs[channel]
+    lx, ly, lz = light.location
+    rel = vector_node(nt, "SUBTRACT", geo.outputs["Position"], (lx, ly, lz))
+    d2 = vector_node(nt, "DOT_PRODUCT", rel, rel, out="Value")
+    lam = math_node(nt, "MULTIPLY", math_node(nt, "MULTIPLY", e, d2), 1.0 / gain)
+    p = nt.nodes.new("ShaderNodeSeparateXYZ")
+    nt.links.new(geo.outputs["Position"], p.inputs[0])
+    un = nt.nodes.new("ShaderNodeCombineXYZ")
+    nt.links.new(p.outputs["X"], un.inputs["X"])
+    nt.links.new(math_node(nt, "MULTIPLY_ADD", p.outputs["Z"], -C.SHEAR_K, p.outputs["Y"]), un.inputs["Y"])
+    nt.links.new(p.outputs["Z"], un.inputs["Z"])
+    d = vector_node(nt, "DISTANCE", un.outputs[0], (lx, ly - C.SHEAR_K * lz, lz), out="Value")
+    q = math_node(nt, "POWER", math_node(nt, "DIVIDE", d, reach), 2.0)
+    f = math_node(nt, "POWER", math_node(nt, "SUBTRACT", 1.0, q, clamp=True), 2.0)
+    return lam, f
+
+
+def point_toon(m, light, reach, ambient, gain=1.0, wrap=(0.0, 1.0)):
+    """A copy of toon material m lit by one point light instead of the sun:
+    the band follows wrap[0] + wrap[1] * lambert toward the light, and the
+    band colour is scaled by ambient + (1 - ambient) * falloff. Materials
+    that are not toon (emission) come back unchanged."""
+    if m is None or m.node_tree is None:
+        return m
+    kinds = {n.type for n in m.node_tree.nodes}
+    if not {"SHADER_TO_RGB", "VALTORGB", "EMISSION"} <= kinds:
+        return m
+    key = "%s@%s" % (m.name, light.name)
+    c = bpy.data.materials.get(key)
+    if c is not None:
+        return c
+    c = m.copy()
+    c.name = key
+    nt = c.node_tree
+    ramp = next(n for n in nt.nodes if n.type == "VALTORGB")
+    em = next(n for n in nt.nodes if n.type == "EMISSION")
+    lam, f = point_nodes(nt, light, reach, gain)
+    nt.links.new(math_node(nt, "MULTIPLY_ADD", lam, wrap[1], wrap[0]), ramp.inputs["Fac"])
+    b = math_node(nt, "MULTIPLY_ADD", f, 1.0 - ambient, ambient)
+    sc = nt.nodes.new("ShaderNodeVectorMath")
+    sc.operation = "SCALE"
+    nt.links.new(ramp.outputs["Color"], sc.inputs[0])
+    nt.links.new(b, sc.inputs["Scale"])
+    nt.links.new(sc.outputs["Vector"], em.inputs["Color"])
+    return c

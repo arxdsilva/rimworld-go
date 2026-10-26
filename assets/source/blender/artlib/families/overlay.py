@@ -1831,6 +1831,89 @@ def _play018_icons(t):
     return out
 
 
+# ------------------------------------------------ PLAY-020 zone tools and bed rest
+# One family: a zone is a square with two hatch stripes (its fill); the tools
+# put their sign (plus, minus, cross) on its upper-right corner, parted from
+# the square by the sign's halo. Original glyphs.
+def _zone_square(xx, yy, c):
+    x0, y0, h = c - 6, c + 6, 17
+    sq = np.abs(_rbox(xx, yy, x0, y0, h, h, 3))
+    hatch = np.minimum(_seg(xx, yy, x0 - 10, y0, x0, y0 - 10), _seg(xx, yy, x0, y0 + 10, x0 + 10, y0))
+    return np.minimum(sq, hatch + 1.5)
+
+
+def _corner_sign(xx, yy, c, kind):
+    sx, sy, r = c + 18, c - 18, 9
+    if kind == "plus":
+        return np.minimum(_seg(xx, yy, sx - r, sy, sx + r, sy), _seg(xx, yy, sx, sy - r, sx, sy + r))
+    if kind == "minus":
+        return _seg(xx, yy, sx - r, sy, sx + r, sy)
+    r = 7.5
+    return np.minimum(_seg(xx, yy, sx - r, sy - r, sx + r, sy + r), _seg(xx, yy, sx + r, sy - r, sx - r, sy + r))
+
+
+def _g_zone_sign(kind):
+    def g(xx, yy, c):
+        return [_zone_square(xx, yy, c), _corner_sign(xx, yy, c, kind)]
+    return g
+
+
+def _g_zone_sow(xx, yy, c):  # a seedling up from a furrow, seeds dropping beside it
+    soil = _seg(xx, yy, c - 26, c + 22, c + 26, c + 22)
+    stem = _seg(xx, yy, c, c + 21, c, c - 1)
+    lx, ly = _rot(xx, yy, c - 10, c - 9, -55)
+    rx, ry = _rot(xx, yy, c + 10, c - 13, 50)
+    leaves = np.minimum(_ell(lx, ly, c - 10, c - 9, 4.5, 11), _ell(rx, ry, c + 10, c - 13, 4.5, 12))
+    seeds = np.minimum(_dot(xx, yy, c - 22, c + 6, 2.5), _dot(xx, yy, c + 22, c + 4, 2.5))
+    return [np.minimum(soil, stem), leaves, seeds]
+
+
+def _g_zone_cut(xx, yy, c):  # a sickle: a hooked blade narrowing to its tip, on a short handle
+    ox, oy, r, sweep = c + 3, c - 3, 22.0, 265.0
+    rho = np.hypot(xx - ox, yy - oy)
+    th = (np.degrees(np.arctan2(yy - oy, xx - ox)) - 135.0) % 360.0   # 0 at the handle, along the blade
+    w = 10.0 * (1 - np.clip(th / sweep, 0, 1))
+    gap = np.where(th > sweep, np.minimum(th - sweep, 360.0 - th) * np.radians(1.0) * rho, -1e9)
+    blade = np.maximum(np.abs(rho - (r - w / 2)) - w / 2, gap)
+    handle = _cap(xx, yy, c - 12, c + 13, c - 25, c + 27, 2.5)
+    return [handle, blade]
+
+
+def _g_zone_hide(xx, yy, c):  # an eye struck through
+    lens = np.maximum(np.hypot(xx - c, yy - (c + 16)) - 28, np.hypot(xx - c, yy - (c - 16)) - 28)
+    pupil = np.hypot(xx - c, yy - c) - 6
+    return [np.abs(lens), pupil, _seg(xx, yy, c - 24, c - 22, c + 24, c + 22)]
+
+
+def _g_zone_rename(xx, yy, c):  # a pencil writing on a name line
+    rx, ry = _rot(xx, yy, c + 4, c - 6, 45)
+    body = _rbox(rx, ry, c + 4, c - 12, 6, 15, 2)
+    tip = _poly(rx, ry, [(c - 2, c + 6), (c + 10, c + 6), (c + 4, c + 18)])
+    band = _seg(rx, ry, c - 3, c - 19, c + 11, c - 19) - 0.5
+    line = _seg(xx, yy, c - 4, c + 26, c + 26, c + 26)
+    return [line + 1.0, np.minimum(body, tip), (band, "cut")]
+
+
+def _g_bed_rest(xx, yy, c):  # a bed seen from the side, a medical cross over it
+    posts = np.minimum(_seg(xx, yy, c - 27, c - 4, c - 27, c + 24), _seg(xx, yy, c + 27, c + 8, c + 27, c + 24))
+    mattress = _rbox(xx, yy, c, c + 12, 24, 2.5, 1.5)
+    pillow = _rbox(xx, yy, c - 14, c + 1, 7, 2.5, 2)
+    cross = np.minimum(_seg(xx, yy, c + 3, c - 17, c + 21, c - 17), _seg(xx, yy, c + 12, c - 26, c + 12, c - 8))
+    return [np.minimum(posts, mattress), pillow, cross]
+
+
+PLAY020_ICONS = (   # name, glyph, colour (or a base.yaml overlay token)
+    ("zone_expand", _g_zone_sign("plus"), (0.55, 0.82, 0.96)),
+    ("zone_shrink", _g_zone_sign("minus"), (0.96, 0.70, 0.26)),
+    ("zone_delete", _g_zone_sign("cross"), "danger"),
+    ("zone_sow", _g_zone_sow, (0.45, 0.78, 0.36)),
+    ("zone_cut", _g_zone_cut, "designation"),
+    ("zone_hide", _g_zone_hide, (0.78, 0.84, 0.92)),
+    ("zone_rename", _g_zone_rename, (0.92, 0.84, 0.62)),
+    ("bed_rest", _g_bed_rest, (0.46, 0.86, 0.66)),   # skill_medicine's mint
+)
+
+
 def build():
     t = _base_tokens()
     out = [_selection(t), _designation("designation_cut", t, _g_cut),
@@ -1875,6 +1958,7 @@ def build():
     out += [_marriage_spot(f) for f in MARRIAGE_FACINGS] + [_party_spot(), _fight_lightning()]
     out += _social_icons(t)
     out += _play018_icons(t)
+    out += [_badge_icon(n, t, g, t[rgb] if isinstance(rgb, str) else rgb) for n, g, rgb in PLAY020_ICONS]
     out += [_shadow_blob(), _shadow_box(), _roof_tile("roof_built", "built"),
             _roof_tile("roof_natural", "natural"), _roof_tile("roof_plan", "plan"),
             _roof_tile("roof_remove", "remove")]

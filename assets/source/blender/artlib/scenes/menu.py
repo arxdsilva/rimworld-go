@@ -15,6 +15,7 @@ and the campfire sit centre-top; a rock ridge keeps the rail calm.
 """
 import os
 import tempfile
+from contextlib import contextmanager
 
 import numpy as np
 
@@ -75,6 +76,25 @@ DESATURATE = 0.20
 SHADOW_MUL = (0.62, 0.64, 0.72)   # ground under cast shadow
 LAMP_RGB = palette.hex_to_srgb("#ffd98a")
 FIRE_RGB = palette.hex_to_srgb("#ff9a4a")
+
+# ---- lamps (PLAY-020): the room is roofed, so no sun reaches inside it -------
+# Indoors a point light at the bulb shades the furniture toward it and casts
+# soft shadows away from it; outdoors the sun stays and the workbench lamp
+# adds its own light, which walls block. stage.point_light / point_toon.
+INSIDE = (ROOM[0] + 1, ROOM[1] + 1, ROOM[2], ROOM[3])   # roofed interior [x0, x1) x [y0, y1), tiles
+LAMP_IN = next(p for p in LAMPS if p in FLOOR)
+LAMP_OUT = next(p for p in LAMPS if p not in FLOOR)
+LAMP_Z = 1.5            # light height, just over the bulb disc (furniture._lamp, 1.38-1.40)
+LAMP_SIZE = 0.2         # light radius: soft shadows
+LAMP_REACH = 6.0        # tiles: falloff (1 - (d/reach)^2)^2, as the game's lamps
+OUT_REACH = 3.5         # the workbench lamp: a small pool, so the yard stays at dusk
+LAMP_WRAP = (0.30, 0.75)  # toon band input = a + b * lambert: unlit faces sit in the shadow band
+ROOM_AMBIENT = 0.24     # share of an indoor colour that no lamp light reaches
+INDOOR_WARM = 0.40      # indoor colours pulled this far toward LAMP_RGB
+OUTDOOR_LAMP = 0.55     # outdoor lamp light: surface colour x LAMP_RGB x this x falloff
+SHADOW_SOFT = 4         # px at full size: extra blur on lamp shadows on the ground
+GLOW_POOL = 0.16        # glow layer: share of the lamp light the game breathes
+INDOOR_NUDGE = 0.08     # tiles: a surface is indoors when a step along its normal lands in INSIDE
 
 
 def _ui_space():
@@ -295,17 +315,24 @@ def build_scene():
 
 
 # ---- render passes -----------------------------------------------------------
-def _catcher():
+def _new_mat(name):
     import bpy
-    me = bpy.data.meshes.new("rwg_catcher")
-    me.from_pydata([(X0, -Y0 + 1, 0), (X1 + 1, -Y0 + 1, 0), (X1 + 1, -(Y1 + 1), 0), (X0, -(Y1 + 1), 0)],
-                   [], [(0, 1, 2, 3)])
-    m = bpy.data.materials.get("rwg__catcher") or bpy.data.materials.new("rwg__catcher")
+    m = bpy.data.materials.get(name)
+    if m is not None:
+        bpy.data.materials.remove(m)
+    m = bpy.data.materials.new(name)
     m.use_nodes = True
     nt = m.node_tree
     nt.nodes.clear()
     out = nt.nodes.new("ShaderNodeOutputMaterial")
     em = nt.nodes.new("ShaderNodeEmission")
+    nt.links.new(em.outputs[0], out.inputs["Surface"])
+    return m, nt, em
+
+
+def _sun_catcher_mat():
+    """Ground: white in sunlight, black in sun shadow."""
+    m, nt, em = _new_mat("rwg__catcher")
     dif = nt.nodes.new("ShaderNodeBsdfDiffuse")
     s2r = nt.nodes.new("ShaderNodeShaderToRGB")
     ramp = nt.nodes.new("ShaderNodeValToRGB")
@@ -316,34 +343,158 @@ def _catcher():
     nt.links.new(dif.outputs[0], s2r.inputs[0])
     nt.links.new(s2r.outputs["Color"], ramp.inputs["Fac"])
     nt.links.new(ramp.outputs["Color"], em.inputs["Color"])
-    nt.links.new(em.outputs[0], out.inputs["Surface"])
-    me.materials.append(m)
-    ob = bpy.data.objects.new("rwg_catcher", me)
-    S.stage().collection.objects.link(ob)
-    return ob
+    return m
 
 
-def _passes(w, h, outline_px, scale):
-    """objects RGBA, lit-ground mask (1 lit, 0 shadow), emissive mask."""
-    raw = S.render_scene(0, 0, w, h, outline=False, scale=scale)
-    objs = post.outline(raw, width=outline_px) if outline_px else raw
+def _lamp_catcher_mat(lin, lout):
+    """Ground under the two lamps, coloured apart (in red, out green):
+    half of each lamp's Lambert x shadow term (headroom for the gain check)."""
+    m, nt, em = _new_mat("rwg__lampcatch")
+    rgb = nt.nodes.new("ShaderNodeCombineColor")
+    for i, light in enumerate((lin, lout)):
+        lam, _ = S.point_nodes(nt, light, LAMP_REACH, channel=i)
+        nt.links.new(S.math_node(nt, "MULTIPLY", lam, 0.5), rgb.inputs[i])
+    nt.links.new(rgb.outputs[0], em.inputs["Color"])
+    return m
+
+
+def _data_mat(bulb, lout, gain):
+    """Per-object data: R bulb, G roofed (a step along the normal lands
+    inside the room), B the outdoor lamp's light (Lambert x shadow x falloff)."""
+    m, nt, em = _new_mat("rwg__menu_data_%d" % bulb)
+    rgb = nt.nodes.new("ShaderNodeCombineColor")
+    rgb.inputs[0].default_value = 1.0 if bulb else 0.0
+    geo = nt.nodes.new("ShaderNodeNewGeometry")
+    q = S.vector_node(nt, "MULTIPLY_ADD", geo.outputs["Normal"], (INDOOR_NUDGE,) * 3, geo.outputs["Position"])
+    p = nt.nodes.new("ShaderNodeSeparateXYZ")
+    nt.links.new(q, p.inputs[0])
+    yb = S.math_node(nt, "MULTIPLY_ADD", p.outputs["Z"], -C.SHEAR_K, p.outputs["Y"])   # unsheared, Blender +y north
+    x0, y0, x1, y1 = INSIDE
+    inside = S.math_node(nt, "MULTIPLY", S.math_node(nt, "GREATER_THAN", p.outputs["X"], x0),
+                         S.math_node(nt, "LESS_THAN", p.outputs["X"], x1))
+    inside = S.math_node(nt, "MULTIPLY", inside, S.math_node(nt, "GREATER_THAN", yb, -y1))
+    inside = S.math_node(nt, "MULTIPLY", inside, S.math_node(nt, "LESS_THAN", yb, -y0))
+    nt.links.new(inside, rgb.inputs[1])
+    lam, f = S.point_nodes(nt, lout, OUT_REACH, gain)
+    nt.links.new(S.math_node(nt, "MULTIPLY", lam, f, clamp=True), rgb.inputs[2])
+    nt.links.new(rgb.outputs[0], em.inputs["Color"])
+    return m
+
+
+@contextmanager
+def _ground_only(material):
+    """Render the ground plane alone: every mesh hidden from the camera but
+    still casting shadows on it."""
+    import bpy
     meshes = [o for o in S.stage().collection.all_objects if o.type == "MESH"]
-    catcher = _catcher()
+    me = bpy.data.meshes.new("rwg_catcher")
+    me.from_pydata([(X0, -Y0 + 1, 0), (X1 + 1, -Y0 + 1, 0), (X1 + 1, -(Y1 + 1), 0), (X0, -(Y1 + 1), 0)],
+                   [], [(0, 1, 2, 3)])
+    me.materials.append(material)
+    plane = bpy.data.objects.new("rwg_catcher", me)
+    S.stage().collection.objects.link(plane)
     for ob in meshes:
         ob.visible_camera = False
     try:
-        lit = S.render_scene(0, 0, w, h, outline=False, scale=scale)[..., 0]
+        yield
     finally:
         for ob in meshes:
             ob.visible_camera = True
-        import bpy
-        bpy.data.objects.remove(catcher, do_unlink=True)
-    black = S.flat("black", (0, 0, 0))
-    lamp = S.mat("lamp_warm")
-    with S.swap_materials(lambda o: lamp if any(s.material == lamp for s in o.material_slots) else black):
-        em = S.render_scene(0, 0, w, h, outline=False, scale=scale)
-    emissive = (em[..., :3].max(axis=2) > 0.2) & (em[..., 3] > 0.5)
-    return objs, lit, emissive
+        bpy.data.objects.remove(plane, do_unlink=True)
+
+
+@contextmanager
+def _lamps_cast_no_lamp_shadow():
+    """A lamp's own shade and pole never shadow its light."""
+    lamps = [o for o in S.objects() if o.get("rwg_piece") == "lamp"]
+    saved = [(o, o.visible_shadow) for o in lamps]
+    for o in lamps:
+        o.visible_shadow = False
+    try:
+        yield
+    finally:
+        for o, v in saved:
+            o.visible_shadow = v
+
+
+def _is_bulb(ob):
+    return any(s.material is not None and s.material.name == "rwg_lamp_warm" for s in ob.material_slots)
+
+
+def _lin(v):
+    """sRGB-encoded render values back to linear (data passes)."""
+    return np.where(v <= 0.04045, v / 12.92, ((v + 0.055) / 1.055) ** 2.4)
+
+
+def _ground_xy(h, w, scale):
+    """Game tile coordinates of each ground pixel's centre."""
+    P = C.PPT * scale
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    return (xx + 0.5) / P, (yy + 0.5) / P
+
+
+def _falloff(gx, gy, lamp, reach=LAMP_REACH):
+    d2 = (gx - lamp[0] - 0.5) ** 2 + (gy - lamp[1] - 0.5) ** 2 + LAMP_Z ** 2
+    return np.clip(1 - d2 / reach ** 2, 0, 1) ** 2
+
+
+def _ground_cos(gx, gy, lamp):
+    """cos of the lamp's light on flat ground, in the sheared space it is lit in."""
+    dy = gy - (lamp[1] + 0.5 - C.SHEAR_K * LAMP_Z)
+    return LAMP_Z / np.sqrt((gx - lamp[0] - 0.5) ** 2 + dy ** 2 + LAMP_Z ** 2)
+
+
+def _inside(gx, gy, margin=0.06):
+    """1 on the roofed room's ground (with the strip under its inner wall faces)."""
+    x0, y0, x1, y1 = INSIDE
+    return ((gx >= x0 - margin) & (gx < x1 + margin) & (gy >= y0 - margin) & (gy < y1 + margin)).astype(np.float32)
+
+
+def _gain(lam, gx, gy):
+    """Measured Shader-to-RGB scale of a point light: lit ground near the
+    indoor lamp reads lambert = cos there (1.0 when Blender's units are as
+    stage.POINT_POWER assumes)."""
+    cos = _ground_cos(gx, gy, LAMP_IN)
+    near = (_inside(gx, gy, 0) > 0) & (cos > 0.5)
+    if not near.any():
+        return 1.0
+    return float(np.percentile(lam[near] / cos[near], 99))
+
+
+def _passes(w, h, outline_px, scale):
+    """Every render the grade needs, as float arrays (rows top-down):
+    sun, lamp: outlined RGBA lit by the sun or by the room's lamp; alpha: the
+    unoutlined coverage; lit: ground in sun (1) or sun shadow (0); emissive,
+    indoor: bulb and roofed-surface masks; out: the outdoor lamp's light on
+    objects; g_in, g_out: each lamp's Lambert x shadow on the ground; gain."""
+    import bpy
+    render = lambda: S.render_scene(0, 0, w, h, outline=False, scale=scale)  # noqa: E731
+    edge = (lambda im: post.outline(im, width=outline_px)) if outline_px else (lambda im: im)
+    raw = render()
+    p = {"sun": edge(raw), "alpha": raw[..., 3]}
+    with _ground_only(_sun_catcher_mat()):
+        p["lit"] = render()[..., 0]
+    lin = S.point_light("lamp_in", LAMP_IN[0] + 0.5, LAMP_IN[1] + 0.5, LAMP_Z, (1, 0, 0), LAMP_SIZE)
+    lout = S.point_light("lamp_out", LAMP_OUT[0] + 0.5, LAMP_OUT[1] + 0.5, LAMP_Z, (0, 1, 0), LAMP_SIZE)
+    with _lamps_cast_no_lamp_shadow():
+        with S.lighting(sun=False, points=(lin, lout)), _ground_only(_lamp_catcher_mat(lin, lout)):
+            g = render()
+        p["g_in"], p["g_out"] = 2 * _lin(g[..., 0]), 2 * _lin(g[..., 1])
+        gain = p["gain"] = _gain(p["g_in"], *_ground_xy(*g.shape[:2], scale))
+        print("menu: point light gain %.3f (1.0 = stage.POINT_POWER as assumed)" % gain)
+        lin.data.color = lout.data.color = (1, 1, 1)
+        toon = lambda ob, m: S.point_toon(m, lin, LAMP_REACH, ROOM_AMBIENT, gain, LAMP_WRAP)  # noqa: E731
+        with S.lighting(sun=False, points=(lin,)), S.map_materials(toon):
+            p["lamp"] = edge(render())
+        for m in [m for m in bpy.data.materials if m.name.endswith("@" + lin.name)]:
+            bpy.data.materials.remove(m)   # gain-specific variants
+        bulb, other = _data_mat(True, lout, gain), _data_mat(False, lout, gain)
+        with S.lighting(sun=False, points=(lout,)), S.map_materials(lambda ob, m: bulb if _is_bulb(ob) else other):
+            d = render()
+    p["emissive"] = (_lin(d[..., 0]) > 0.5) & (d[..., 3] > 0.5)
+    p["indoor"] = _lin(d[..., 1])
+    p["out"] = _lin(d[..., 2])
+    return p
 
 
 def _blur(a, k):
@@ -356,27 +507,20 @@ def _blur(a, k):
     return a
 
 
-def _pool(h, w, cx, cy, r, clip=None):
+def _pool(h, w, cx, cy, r):
     yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
     d = np.hypot(xx - cx, yy - cy) / r
-    p = np.clip(1 - d, 0, 1) ** 2
-    if clip:
-        x0, y0, x1, y1 = clip
-        p *= ((xx >= x0) & (xx < x1) & (yy >= y0) & (yy < y1)).astype(np.float32)
-        p = _blur(p, 6)
-    return p
+    return np.clip(1 - d, 0, 1) ** 2
 
 
-def _glow(h, w, emissive, scale):
-    """Additive glow layers: rgb = light colour, alpha = intensity."""
+def _glow(h, w, emissive, scale, pool):
+    """Additive glow layers: rgb = light colour, alpha = intensity. The lamp
+    layer is the bulbs' halo over a share of the baked lamp light (pool), so
+    the game's breathing follows the room's falloff and shadows."""
     P = C.PPT * scale
     halo = _blur(emissive.astype(np.float32), max(2, int(10 * scale)))
     lamp = np.clip(halo * 2.5, 0, 0.9)
-    room = tuple(v * P for v in (ROOM[0] + 1, ROOM[1] + 1, ROOM[2], ROOM[3]))
-    for (x, y) in LAMPS:
-        inside = (x, y) in FLOOR
-        lamp = np.maximum(lamp, 0.32 * _pool(h, w, (x + 0.5) * P, (y + 0.5) * P, (2.2 if inside else 2.6) * P,
-                                             room if inside else None))
+    lamp = np.maximum(lamp, GLOW_POOL * _blur(pool.astype(np.float32), max(1, int(8 * scale))))
     fire = 0.42 * _pool(h, w, (FIRE[0] + 0.5) * P, (FIRE[1] + 0.5) * P, 3.4 * P)
 
     def layer(a, rgb):
@@ -398,13 +542,28 @@ def _blob_shadows(img, scale):
         img[..., :3] *= (1 - a)[..., None]
 
 
-def _dusk(img, keep):
-    rgb = img[..., :3]
+def _dusk(rgb):
+    """Outdoor grade: the sky is going dark."""
     lum = rgb.mean(axis=2, keepdims=True)
     g = (lum + (rgb - lum) * (1 - DESATURATE)) * EXPOSURE
-    g = g * (1 - COOL) + np.array(_ui_space(), np.float32) * COOL
-    img[..., :3] = np.where(keep[..., None], rgb, g)
-    return img
+    return g * (1 - COOL) + np.array(_ui_space(), np.float32) * COOL
+
+
+def _lamplit(rgb):
+    """Indoor grade: the roofed room under its lamp keeps its exposure and warms."""
+    return rgb * (1 + INDOOR_WARM * (np.array(LAMP_RGB, np.float32) - 1))
+
+
+def _grow(m, k):
+    """Max-filter m k times over 8 neighbours (masks into the outline ring)."""
+    for _ in range(k):
+        g = m.copy()
+        for dy in (-1, 0, 1):
+            for dx in (-1, 0, 1):
+                if dy or dx:
+                    g = np.maximum(g, post.shift(m, dy, dx))
+        m = g
+    return m
 
 
 def _half(a):
@@ -428,20 +587,42 @@ def compose(scale=1.0):
         k = int(round(1 / scale))
         base = base[::k, ::k].copy()
     build_scene()
-    objs, lit, emissive = _passes(w, h, max(1, int(round(C.OUTLINE_PX * scale))), scale)
-    hh, ww = objs.shape[:2]
-    base = base[:hh, :ww]
-    shade = np.where(lit[..., None] > 0.5, 1.0, np.array(SHADOW_MUL, np.float32))
-    base[..., :3] *= shade
-    _blob_shadows(base, scale)
-    a = objs[..., 3:4]
-    base[..., :3] = objs[..., :3] * a + base[..., :3] * (1 - a)
-    base[..., 3] = 1.0
-    base = _dusk(base, emissive)
-    lamp, fire = _glow(hh, ww, emissive, scale)
+    ring = max(1, int(round(C.OUTLINE_PX * scale)))
+    p = _passes(w, h, ring, scale)
+    hh, ww = p["sun"].shape[:2]
+    albedo = base[:hh, :ww, :3]
+    gx, gy = _ground_xy(hh, ww, scale)
+    warm = np.array(LAMP_RGB, np.float32)
+    soft = max(1, int(round(SHADOW_SOFT * scale)))
+    # ground: outdoors the sun and its shadows, indoors only the lamp
+    v_in = _blur(np.clip(p["g_in"] / _ground_cos(gx, gy, LAMP_IN) / p["gain"], 0, 1), soft)
+    v_out = _blur(np.clip(p["g_out"] / _ground_cos(gx, gy, LAMP_OUT) / p["gain"], 0, 1), soft)
+    e_in = _falloff(gx, gy, LAMP_IN) * v_in
+    e_out = _falloff(gx, gy, LAMP_OUT, OUT_REACH) * v_out
+    sun_g = albedo * np.where(p["lit"][..., None] > 0.5, 1.0, np.array(SHADOW_MUL, np.float32))
+    _blob_shadows(sun_g, scale)
+    out_g = _dusk(sun_g) + albedo * (OUTDOOR_LAMP * e_out)[..., None] * warm
+    in_g = _lamplit(albedo * (ROOM_AMBIENT + (1 - ROOM_AMBIENT) * e_in)[..., None])
+    fi = _blur(_inside(gx, gy), soft)[..., None]
+    ground_rgb = fi * in_g + (1 - fi) * out_g
+    # objects: roofed surfaces from the lamp pass, the rest from the sun pass
+    a = p["sun"][..., 3:4]
+    mi = np.where(p["alpha"] < 0.5, _grow(p["indoor"], ring + 1), p["indoor"])[..., None]
+    sun_o = p["sun"][..., :3]
+    out_o = _dusk(sun_o) + sun_o * (OUTDOOR_LAMP * p["out"])[..., None] * warm
+    obj_rgb = mi * _lamplit(p["lamp"][..., :3]) + (1 - mi) * out_o
+    img = np.ones((hh, ww, 4), np.float32)
+    img[..., :3] = obj_rgb * a + ground_rgb * (1 - a)
+    img[p["emissive"], :3] = sun_o[p["emissive"]]   # bulbs: emission, no light, no grade
+    # glow pool: the lamp light the room and the yard receive
+    a2, m2, f2 = a[..., 0], mi[..., 0], fi[..., 0]
+    w_in = m2 * a2 + f2 * (1 - a2)
+    pool = (w_in * _falloff(gx, gy, LAMP_IN) * ((1 - a2) * v_in + a2)
+            + (1 - w_in) * ((1 - a2) * e_out + a2 * p["out"]))
+    lamp, fire = _glow(hh, ww, p["emissive"], scale, pool)
     S.clear()
     bpy.context.view_layer.update()
-    return base, lamp, fire
+    return img, lamp, fire
 
 
 def preview():
