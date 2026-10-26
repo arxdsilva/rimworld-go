@@ -110,7 +110,9 @@ func TestGrownGolden(t *testing.T) {
 	// five new power projects (Electricity, Batteries, Solar, Wind and
 	// Geothermal power); with them left unfinished the hash is the
 	// previous pin (7aab2f77), so behaviour is unchanged.
-	const want uint64 = 0x617719848416b0e9
+	// Re-pinned (PLAY-021): the set piece's lamps are power devices now, so
+	// the colony saves a power state (unpowered lamps, no grid).
+	const want uint64 = 0xc2fcc55198584c5f
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

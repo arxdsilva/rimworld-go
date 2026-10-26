@@ -131,7 +131,7 @@ func (g *Game) fuelPct(bid entity.EntityID, b construction.Building) (int, bool)
 // producing, so it burns its fuel. A generator burns nothing while it is
 // switched off or the grid is down in a solar flare.
 func (g *Game) generatorRunning(id entity.EntityID) bool {
-	return g.fuel[id] > 0 // TODO(POWERSIM): and switched on, and not down in a solar flare
+	return g.fuel[id] > 0 && g.powerOn(id) && !g.solarFlare()
 }
 
 // burning reports a fuel burner that is actually burning now: it has

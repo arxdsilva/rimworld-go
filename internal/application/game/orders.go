@@ -513,6 +513,9 @@ func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 			if b.Kind.Sleeps() {
 				add("Sleep in "+b.Kind.String(), command.OrderSleep, layer)
 			}
+			if g.flickAt(x, y) == bid { // power_flick.go: a pending power switch or toggle (PLAY-021)
+				add("Flick "+b.Kind.String(), command.OrderFlick, layer)
+			}
 		}
 	}
 	if terrain.IsRockWall(g.terr.At(x, y)) {

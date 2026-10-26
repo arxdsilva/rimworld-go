@@ -19,7 +19,8 @@ import (
 // taking a liking to the colony, or timbergnaws come to gnaw the trees.
 // Nothing is rolled while a threat is on the map; the roll waits an hour
 // and tries again. The "mad animal" is a threat and is rolled by the
-// threat storyteller (raids.go). All randomness is g.rng; the schedule and
+// threat storyteller (raids.go). All randomness is g.rng (the power events
+// use their own stream, power_events.go); the schedule and
 // the cooldowns are saved (Incidents) and the event animals' state with
 // the wildlife (wildlifeState).
 
@@ -73,10 +74,11 @@ type gnawEvent struct {
 // phaseIncidents runs once a tick after the animals: it follows departing
 // herds and timbergnaws and, at the scheduled tick, rolls a nature event.
 func (g *Game) phaseIncidents() {
+	now := uint64(g.clock.Now())
+	g.trackFlare(now) // power_events.go: the solar flare's end (PLAY-021); a nil check without power
 	if !g.wild {
 		return
 	}
-	now := uint64(g.clock.Now())
 	g.trackDepartures() // population.go
 	g.trackGnaw(now)
 	st := &g.incidents
@@ -159,9 +161,7 @@ func (g *Game) incidentFits(id incident.ID, now uint64) bool {
 	case incident.WandererJoins:
 		return g.wandererFits(now) // visitors.go (M9)
 	case incident.SolarFlare, incident.ShortCircuit:
-		// TODO(EVENTS, PLAY-021): power_events.go; until then they never
-		// fit, so the pool, its total and the RNG draws are unchanged.
-		return false
+		return g.powerEventFits(id) // power_events.go (PLAY-021): false with no power devices
 	}
 	return false
 }
@@ -188,6 +188,10 @@ func (g *Game) fireIncident(id incident.ID, now uint64) bool {
 		return g.timbergnaws(now)
 	case incident.MadAnimal:
 		return g.madAnimal(now, true)
+	case incident.SolarFlare:
+		return g.startSolarFlare(now) // power_events.go (PLAY-021)
+	case incident.ShortCircuit:
+		return g.shortCircuit(now) // power_events.go (PLAY-021)
 	}
 	return false
 }

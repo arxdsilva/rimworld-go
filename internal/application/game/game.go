@@ -368,6 +368,7 @@ type BuildingView struct {
 	StoredWh, CapWh      int
 	NoPowerReason        string
 	LinkX, LinkY         int
+	LinkFromX, LinkFromY int // the device's cell the link line starts from
 	HasLink              bool
 	// Glow: the building gives off light now (a lamp, a burning campfire;
 	// light.go glowOf), reaching GlowRadius tiles in the simulation's
@@ -749,6 +750,8 @@ type Game struct {
 	// pw is the colony's electricity (power.go, PLAY-021); nil until the
 	// colony has a power device.
 	pw *powerState
+	// pwc: power nets and device lists per structVer (power.go), never saved.
+	pwc powerCache
 }
 
 // New builds a Game from cfg. Width/Height must be positive.

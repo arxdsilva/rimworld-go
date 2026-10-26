@@ -18,6 +18,7 @@ const (
 	worldSalt  = 0x30E1D
 	prisonSalt = 0x9215
 	bondSalt   = 0xB04D
+	powerSalt  = 0x90E12
 )
 
 // Stream names, the RNGStreams save keys.
@@ -28,6 +29,7 @@ const (
 	streamWorld  = "world"
 	streamPrison = "prison"
 	streamBond   = "bond"
+	streamPower  = "power"
 )
 
 // streamSeedKey holds the base seed in the RNGStreams save map (8 bytes,
@@ -38,6 +40,7 @@ const streamSeedKey = "seed"
 var streamSalts = map[string]uint64{
 	streamSocial: socialSalt, streamBody: bodySalt, streamDrug: drugSalt,
 	streamWorld: worldSalt, streamPrison: prisonSalt, streamBond: bondSalt,
+	streamPower: powerSalt,
 }
 
 // rngStreams is the base seed and the streams created so far.
