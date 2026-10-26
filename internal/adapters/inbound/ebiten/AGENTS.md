@@ -73,8 +73,9 @@ commands via `Enqueue`. Domain code does not import this package.
   Architect tool, Architect, Work, building/frame/group/pawn selection, then pause.
 - Disabled buttons do not navigate; they expose a reason string.
 - `Layout` follows the window size; camera/zoom stay presentation-only.
-- Architect (`architect.go`, `archtools.go`): categories Orders/Zones/
-  Structure/Furniture; cards read costs from `game.Buildables()`; build
+- Architect (`architect.go`, `archtools.go`): categories Orders, Zones,
+  Structure, Furniture, Production, Power (PLAY-021), Security and Misc
+  (nine would overflow the panel: heater and cooler sit in Misc); cards read costs from `game.Buildables()`; build
   tools emit `DesignateBuild` (kind id + facing) only for cells where
   `Simulation.CanPlace` is ok; area tools emit one rectangle command
   (`DesignateStockpile/Harvest/Deconstruct/Cancel`). Q/E rotate single
@@ -235,6 +236,15 @@ open a window. Existing renderer unit tests stay headless.
   once wood arrives.
 - Pawn look (skin/hair/style/clothes) is a pure function of EntityID;
   facing comes from the last tile step. Both are presentation-only.
+- Power (PLAY-021): the sim owns every number; the UI reads
+  `BuildingView` power fields and `WorldView.PowerNets` and sends
+  `SetPowerWanted`/`SetThermostat`. `power_draw.go` draws the buildings
+  (conduit autotile on its own pass, glow layers only while running,
+  turbine phases on `Renderer.power`), `power_overlay.go` the Shift+P grid
+  overlay (`Renderer.pov`, forced while a power tool is in hand),
+  `cmds_power.go` the pane lines and Power toggle (V), `alerts_power.go`
+  brownout and not-connected alerts. Light sources gate on `Glow` only.
+  A hidden conduit is selectable only while the overlay shows.
 - Light sources (PLAY-020, `light_sources.go`): every lamp and burning
   campfire the renderer lights or shadows with comes from one helper; never
   test `Kind == "lamp"` for lighting elsewhere. A lamp's light falls off

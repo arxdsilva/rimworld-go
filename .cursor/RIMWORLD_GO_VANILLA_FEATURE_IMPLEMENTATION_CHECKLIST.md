@@ -1099,7 +1099,7 @@ treatment, and surgery are major colony-management systems.
         openings/structures.
     -   Use efficient region/room approximation rather than per-cell
         fluid simulation.
--   [-] **Heat sources/sinks** (wood campfire heats its room, banks at 20C and relights below 16C; haulers refuel it; no powered heater/cooler)
+-   [x] **Heat sources/sinks** (wood campfire heats its room, banks at 20C and relights below 16C; haulers refuel it; PLAY-021: powered heater and in-wall cooler with a thermostat (21 C by default, hysteresis))
     -   Campfire/heater-like source.
     -   cooler/air-conditioner-like device.
     -   passive cooler equivalent.
@@ -1162,7 +1162,7 @@ treatment, and surgery are major colony-management systems.
 -   [-] **Cold snap** (NG-1: same, -14 C in winter)
 -   [ ] **Eclipse**
     -   Reduces sunlight and solar generation; affects crops.
--   [ ] **Solar flare**
+-   [x] **Solar flare** (PLAY-021: every net goes down for 3-8 h, generators idle; letters at start and end, a status chip)
     -   Temporarily disables relevant electrical devices.
 -   [ ] **Toxic fallout**
     -   Outdoor exposure builds toxic condition; damages/kills plants
@@ -1202,7 +1202,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 14.1 Generic workbench system
 
--   [-] **Workstation** (workbench and stove: 2x1 rotatable footprints with interaction cell, block movement; no power/facilities)
+-   [-] **Workstation** (workbench and stove: 2x1 rotatable footprints with interaction cell, block movement; PLAY-021: electric stove, tailoring and research benches work 40% faster and stop without power; no facilities)
     -   Supported recipes.
     -   interaction cell.
     -   power requirement where applicable.
@@ -1270,40 +1270,40 @@ treatment, and surgery are major colony-management systems.
 
 ## 15.1 Power network
 
--   [ ] **Power producers**
+-   [x] **Power producers** (PLAY-021: wood-fired generator 800 W while fuelled and on; solar up to 900 W by daylight and its unroofed share; wind up to 1100 W by wind speed and a clear band; geothermal 1800 W on a steam vent; our numbers)
     -   Fuel-based generator.
     -   solar.
     -   wind.
     -   geothermal-like late generator.
--   [ ] **Power consumers**
+-   [-] **Power consumers** (PLAY-021: lamps 50 W, heater 180 W / cooler 220 W with a thermostat, electric stove, tailoring and research benches; no communications or defensive equipment yet)
     -   Workstations.
     -   lights.
     -   coolers/heaters.
     -   communications.
     -   defensive/utility equipment where applicable.
--   [ ] **Power conduits/network**
+-   [x] **Power conduits/network** (PLAY-021: conduits and hidden conduits on their own layer link 4-neighbour nets, devices join a transmitter within 3 tiles, an open switch cuts; nets rebuilt only on structure or switch change)
     -   Connected graph.
     -   Topology recalculated only when changed.
--   [ ] **Power availability**
+-   [x] **Power availability** (PLAY-021: every 50 ticks each net balances; batteries cover a deficit, then consumers are shed by class with a minimum off time and headroom (no-flap tested))
     -   Producers feed network.
     -   consumers activate only with sufficient supply.
 
 ## 15.2 Batteries
 
--   [ ] **Energy storage**
+-   [x] **Energy storage** (PLAY-021: battery 1200 Wh, 75% charge efficiency, slow self-discharge)
     -   Charge/discharge.
     -   capacity.
--   [ ] **Battery discharge event**
+-   [x] **Battery discharge event** (PLAY-021: a short circuit drains a charged net, blows one visible conduit and starts a fire sized by the energy)
     -   Short-circuit/Zzztt-like event can release stored energy and
         start fire.
     -   Implement independently without copying exact balance.
 
 ## 15.3 Variable generation
 
--   [ ] **Solar day/weather output**
--   [ ] **Wind turbine output**
+-   [-] **Solar day/weather output** (PLAY-021: follows daylight and roofs; weather and eclipses do not change it yet)
+-   [x] **Wind turbine output** (PLAY-021: wind speed times the clear share of a band beside it; walls, rock, roofs and trees block)
     -   Wind state and obstruction rules.
--   [ ] **Fuel consumption**
+-   [x] **Fuel consumption** (PLAY-021: one fuel table for campfires, torch lamps and wood-fired generators, refuelled by haulers; a generator burns only while running)
     -   Refuel jobs for generators/devices.
 
 ------------------------------------------------------------------------
@@ -1699,8 +1699,8 @@ have prerequisites, and technologies unlock buildings/gear.
 Implement original content equivalents covering the vanilla functional
 progression:
 
--   [ ] **Electricity**
--   [ ] **Battery/storage**
+-   [x] **Electricity** (PLAY-021: unlocks conduits, switch, wood-fired generator, lamp, heater, cooler and the electric benches)
+-   [x] **Battery/storage** (PLAY-021: the Batteries project; plus Solar, Wind and Geothermal power)
 -   [ ] **Cooling/temperature control**
 -   [ ] **Stoneworking**
 -   [ ] **Complex furniture**
@@ -1709,7 +1709,7 @@ progression:
 -   [ ] **Advanced fabrication**
 -   [ ] **Weapon technologies**
 -   [ ] **Armor/apparel technologies**
--   [-] **Geothermal/advanced power** (MAPGEN-2: steam vents exist on the map and warm the air; no generator, there is no power system yet)
+-   [x] **Geothermal/advanced power** (MAPGEN-2: steam vents warm the air; PLAY-021: a geothermal generator stands exactly on a vent, 1800 W)
 -   [ ] **Hospital/medical technology**
 -   [ ] **Transport pods**
 -   [ ] **Ship/endgame technologies**
@@ -2003,14 +2003,14 @@ and other colony incidents. citeturn2search2turn2search7
 -   [-] **Heat wave** (NG-1: see 12.6; fired by the day rollover, not the storyteller schedule)
 -   [-] **Cold snap** (NG-1: see 12.6)
 -   [ ] **Eclipse**
--   [ ] **Solar flare**
+-   [x] **Solar flare** (PLAY-021: every net goes down for 3-8 h, generators idle; letters at start and end, a status chip)
 -   [ ] **Flashstorm**
 -   [ ] **Dry thunderstorm**
 -   [ ] **Psychic drone-like mood event**
 -   [ ] **Volcanic-winter-like long climate event if part of target base
     version**
 -   [ ] **Crashed hostile ship part**
--   [ ] **Short circuit/battery discharge**
+-   [x] **Short circuit/battery discharge** (PLAY-021: see 15.2)
 -   [x] **Animal predator hunts colonist**
     -   May be AI-driven rather than storyteller incident.
 
@@ -2439,7 +2439,7 @@ the player-facing system.
 -   [ ] **Structure**
 -   [ ] **Production**
 -   [ ] **Furniture**
--   [ ] **Power**
+-   [x] **Power** (PLAY-021: conduit, hidden conduit, switch, four generators, battery)
 -   [ ] **Security**
 -   [ ] **Misc/ship**
     -   Categories may use original naming.
@@ -2447,7 +2447,7 @@ the player-facing system.
 ## 34.2 Overlays
 
 -   [-] **Roof overlay** (SIM-018; no thin or mountain roof distinction)
--   [ ] **Power grid**
+-   [x] **Power grid** (PLAY-021: the power grid overlay)
 -   [ ] **Beauty**
 -   [ ] **Room stats**
 -   [x] **Fertility**
@@ -2811,7 +2811,7 @@ agent-developed. citeturn0search4
 -   [ ] **Inspect room/region/chunk IDs**
 -   [ ] **Navigation overlay**
 -   [ ] **Temperature overlay**
--   [ ] **Power network overlay**
+-   [x] **Power network overlay** (PLAY-021: Shift+P; auto-shown while placing power buildings)
 -   [ ] **Incident/storyteller debug panel**
 -   [ ] **RNG stream diagnostics**
 -   [ ] **State hash inspector**
@@ -2855,7 +2855,7 @@ substantially larger colonies and maps with lower resource usage.
 
 -   [x] **Navigation dirty regions** (NG-1: a walkability change marks its 16x16 chunk dirty; walk regions and labels rebuild for dirty chunks only)
 -   [x] **Room dirty regions** (NG-1: incremental rooms from room regions per chunk, checked against full detection in tests)
--   [ ] **Power topology dirty**
+-   [x] **Power topology dirty** (PLAY-021: the net cache keys on structVer, a switch topology version and the store)
 -   [ ] **Temperature topology dirty**
 -   [ ] **Beauty dirty**
 -   [ ] **Storage dirty**

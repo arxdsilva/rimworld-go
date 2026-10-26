@@ -122,7 +122,7 @@ use these primitives.
     -   alert.
     -   disabled/help text.
     -   Numeric columns should align predictably.
--   [-] **Semantic colors** (menu/pause chrome: space, dust, leather button, selected gold, disabled, dim; health/mood/power/hostile not yet)
+-   [-] **Semantic colors** (menu/pause chrome: space, dust, leather button, selected gold, disabled, dim; PLAY-018 mood tokens; PLAY-021 power grid tokens `ui.power_net1..6`, `ui.power_none`; health/hostile not yet)
     -   Positive.
     -   warning.
     -   danger.
@@ -827,7 +827,7 @@ understandable.
 
 ## 14.1 Workbench inspector
 
--   [ ] **Power/operational state**
+-   [x] **Power/operational state** (PLAY-021: the building pane says Uses/Produces N W, the grid balance and stored energy, a switch Closed/Open, a thermostat target and whether it works now, flick pending; the Power toggle (V))
 -   [-] **Interaction status** (work spot outlined on selection)
 -   [ ] **Current worker/progress**
 -   [x] **Bills list** (select a bench: bills with count/mode/status)
@@ -864,7 +864,7 @@ understandable.
 
 -   [ ] **Missing ingredient reason**
 -   [ ] **No valid worker reason**
--   [ ] **No power reason**
+-   [x] **No power reason** (PLAY-021: not connected, brownout, switched off, solar flare, no fuel; in the warning colour, and a no-power badge on the map)
 -   [x] **Research locked reason** (architect tools, crops and bills greyed with "Needs research: X" on hover)
 -   [ ] **Output-count explanation**
 
@@ -922,12 +922,12 @@ understandable.
 
 ## 16.2 Power overlay
 
--   [ ] **Power conduits/networks**
--   [ ] **Powered/unpowered buildings**
--   [ ] **Producer/consumer state**
--   [ ] **Battery charge**
--   [ ] **Network production vs consumption**
--   [ ] **Disconnected network visualization**
+-   [x] **Power conduits/networks** (PLAY-021: Shift+P "Power grid" overlay, auto-shown while placing power buildings; each net in its own colour, hidden conduits included)
+-   [x] **Powered/unpowered buildings** (PLAY-021: the no-power sign on unpowered consumers; glow layers only while running)
+-   [x] **Producer/consumer state** (PLAY-021: a disc on producers, a ring on consumers, link lines to their conduit)
+-   [x] **Battery charge** (PLAY-021: a charge bar on the battery sprite and in the overlay)
+-   [-] **Network production vs consumption** (PLAY-021: in each device's pane, "Grid: +X W (G made, L used), stored S of C Wh"; not drawn in the overlay)
+-   [x] **Disconnected network visualization** (PLAY-021: grey for conduits on no grid, a red frame on devices with no link, a "Not connected" alert)
 
 ## 16.3 Temperature overlay
 
@@ -2096,7 +2096,7 @@ Complete:
 
 -   [ ] Bills.
 -   [ ] Research.
--   [ ] Power overlay.
+-   [x] Power overlay. (PLAY-021)
 -   [-] Temperature/roof overlays. (SIM-018: roof overlay done; temperature overlay missing)
 -   [ ] Drafted combat.
 -   [ ] Hit/cover feedback.

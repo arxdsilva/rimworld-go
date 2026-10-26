@@ -779,9 +779,9 @@ Primary interface for changing the colony's physical environment.
 -   Structure;
 -   Furniture;
 -   Production;
--   Power;
+-   Power (PLAY-021, implemented: conduit and hidden conduit as line tools, switch, wood-fired, solar, wind and geothermal generators, battery; each card names its draw or output and its research lock; while a powered building is in hand the ghost links to the nearest conduit within 3 tiles or says "Not connected");
 -   Security;
--   Miscellaneous;
+-   Miscellaneous (PLAY-021: heater, cooler);
 -   endgame categories when unlocked.
 
 ## Build cards
@@ -2250,6 +2250,10 @@ caravan formation; - health operations.
 
 Use **overlays** for spatial information: - power; - temperature; -
 roof; - fertility; - beauty; - room; - path/debug data.
+
+**Power grid overlay (PLAY-021, implemented):**
+- **Toggle:** Shift+P or the HUD "Power grid" button (icon `overlay_power`, the second row of the global toggles). It is forced on while a power tool or a powered building is in hand.
+- **What it shows:** each net's conduits and switches in its own colour (`ui.power_net1..6`, grey `ui.power_none` for none), hidden conduits included; a link line from each device to its conduit; a disc on producers, a ring on consumers, a square and charge bar on batteries; the no-power sign on unpowered consumers; a red frame on devices with no grid; a legend in the global stack.
 
 **Roof overlay (UI-010, implemented):**
 - **Toggle:** R or the HUD "Roof" button (icon `overlay_roof`). It is forced on while the Architect's Build roof or Remove roof tool is held.

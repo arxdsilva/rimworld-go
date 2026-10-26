@@ -1189,6 +1189,14 @@ capacity
 
 Never perform global network discovery every tick.
 
+Implemented (PLAY-021): the pure graph and balance live in
+`internal/domain/building/power` (union-find nets, device links within
+`ConnectRange`, battery charge with a loss and self-discharge, class-ordered
+shedding with a minimum off time and headroom). The colony runs it in
+`phasePower` every 50 ticks over a net cache keyed on the structure
+version, a switch-topology version and the store; colonies without power
+devices keep no power state at all.
+
 
 # 40. Incident / Story Director
 

@@ -1210,7 +1210,7 @@ resolve metadata conflicts, and update the catalog.
 -   [ ] furniture families
 -   [ ] production/research benches
 -   [ ] storage
--   [ ] generators/batteries/conduits/lamps
+-   [x] generators/batteries/conduits/lamps (PLAY-021: `artlib/families/power.py`: a linked 16-mask conduit and a hidden-conduit overlay marking, power switch on/off, wood-fired, solar, wind (eight rotor frames) and geothermal generators, battery, heater, in-wall cooler; torch lamp and electric benches in furniture; lit parts as `<name>_glow` layers drawn only while powered; review sheet `generated/power_buildings.png`)
 
 ### ART Wave 5 --- Combat
 
