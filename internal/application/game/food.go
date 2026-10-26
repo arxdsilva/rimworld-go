@@ -45,24 +45,21 @@ func (g *Game) addGrowZone(x1, y1, x2, y2 int, crop uint8) {
 	// their harvest mark (a plant already in a zone keeps the mark, or the
 	// cancel, it has)
 	minX, minY, maxX, maxY := zone.Normalize(x1, y1, x2, y2)
-	var fresh []entity.EntityID
-	for _, id := range g.plantIDs {
-		p := g.plants.Ref(id) // read only
-		if p == nil || p.X < minX || p.X > maxX || p.Y < minY || p.Y > maxY {
-			continue
-		}
-		if _, zoned := g.zones.At(p.X, p.Y); !zoned {
-			fresh = append(fresh, id)
-		}
-	}
+	fresh := g.unzonedPlantsIn(minX, minY, maxX, maxY) // zone_cmds.go
 	g.paintZone(zone.KindGrow, zone.Zone{Crop: uint8(s)}, x1, y1, x2, y2)
 	for _, id := range fresh {
 		g.markRipeHarvest(id)
 	}
 }
 
-// sowable reports whether a zone cell can be sown now.
+// sowable reports whether a zone cell can be sown now: empty, fit for
+// sowing and not in a zone whose sowing the player turned off (PLAY-020).
+// The work giver, forced orders, the order menu and an under-way sow all
+// ask it.
 func (g *Game) sowable(x, y int) bool {
+	if z, in := g.zoneAt(x, y); in && z.NoSow {
+		return false
+	}
 	return g.sowableIgnoringPlant(x, y) && g.plantAt(x, y) == 0
 }
 
@@ -92,7 +89,9 @@ func wrongForZone(p plant.Plant, z zone.Zone) bool {
 // cell that could otherwise be sown now. A ripe one is left to the harvest
 // (its mark, see markRipeHarvest); one another pawn has reserved, or this
 // pawn has put off, is passed over. It is the ordinary cut job, so doCut is
-// unchanged and the next assignSow sows the emptied cell.
+// unchanged and the next assignSow sows the emptied cell. A zone whose
+// cutting the player turned off (NoCut) keeps its wrong plants, and their
+// cells stay unsown.
 func (g *Game) assignZoneClear(id entity.EntityID) bool {
 	pos, _ := g.positions.Get(id)
 	var tried []entity.EntityID
@@ -100,7 +99,7 @@ func (g *Game) assignZoneClear(id entity.EntityID) bool {
 		var best entity.EntityID
 		bestD := 1 << 30
 		g.zones.Each(func(z zone.Zone) bool {
-			if z.Kind != zone.KindGrow {
+			if z.Kind != zone.KindGrow || z.NoCut {
 				return true
 			}
 			g.zones.EachCell(z.ID, func(x, y int) bool {
@@ -164,7 +163,7 @@ func (g *Game) assignSow(id entity.EntityID) bool {
 		var bx, by int
 		found := false
 		g.zones.Each(func(z zone.Zone) bool {
-			if z.Kind != zone.KindGrow {
+			if z.Kind != zone.KindGrow || z.NoSow { // PLAY-020: sowing turned off
 				return true
 			}
 			g.zones.EachCell(z.ID, func(x, y int) bool {

@@ -1,6 +1,9 @@
 package zone
 
-import "sort"
+import (
+	"slices"
+	"sort"
+)
 
 // Map is the per-tile zone layer (ZONE-001): every tile belongs to at most
 // one zone, and a zone is one 4-connected region of tiles of one kind.
@@ -40,7 +43,11 @@ type Zone struct {
 	Name                 string
 }
 
-// compatible: two zones of these settings merge when they touch.
+// compatible: two zones of these settings merge when they touch. Only the
+// kind and, for grow zones, the crop decide it: the PLAY-020 settings
+// (NoSow, NoCut, Hidden, Name) never do. Zones that merge keep the
+// settings of the surviving zone (Paint and Set: the lowest id; AddCells:
+// the zone being expanded).
 func compatible(a, b Zone) bool {
 	return a.Kind == b.Kind && (a.Kind != KindGrow || a.Crop == b.Crop)
 }
@@ -409,33 +416,60 @@ func (m *Map) Clear(r Rect) {
 	}
 }
 
-// split breaks zone id into its 4-connected pieces.
-func (m *Map) split(id ID) {
+// split breaks zone id into its 4-connected pieces: the piece holding its
+// first tile (row-major) keeps the id.
+func (m *Map) split(id ID) { m.splitKeeping(id, false) }
+
+// splitKeeping breaks zone id into its 4-connected pieces. The piece that
+// keeps the id is the one holding the zone's first tile (row-major) or,
+// with biggest, the one with the most tiles (ties: the first). The other
+// pieces become new zones with the same settings, numbered in the
+// row-major order of their first tile.
+func (m *Map) splitKeeping(id ID, biggest bool) {
 	z := m.rec(id)
-	piece := m.flood(id, z.idx[0])
-	if len(piece) == len(z.idx) {
+	pieces := m.pieces(id)
+	if len(pieces) < 2 {
 		return
 	}
-	in := make(map[int]bool, len(piece))
-	for _, c := range piece {
-		in[c] = true
-	}
-	var rest []int
-	for _, c := range z.idx {
-		if !in[c] {
-			rest = append(rest, c)
+	keep := 0
+	if biggest {
+		for i, p := range pieces {
+			if len(p) > len(pieces[keep]) {
+				keep = i
+			}
 		}
 	}
-	sort.Ints(piece)
-	z.idx, z.z.Cells, z.dirt = piece, len(piece), true
-	// the rest moves to a new zone (row-major first tile first), then
-	// splits again if it is itself in pieces
-	nz := m.newZone(z.z)
-	for _, c := range rest {
-		m.cell[c] = nz.z.ID
+	z.idx, z.z.Cells, z.dirt = pieces[keep], len(pieces[keep]), true
+	for i, p := range pieces {
+		if i == keep {
+			continue
+		}
+		nz := m.newZone(z.z)
+		for _, c := range p {
+			m.cell[c] = nz.z.ID
+		}
+		nz.idx, nz.z.Cells = p, len(p)
 	}
-	nz.idx, nz.z.Cells = rest, len(rest)
-	m.split(nz.z.ID)
+}
+
+// pieces lists zone id's 4-connected pieces, each sorted row-major, in the
+// row-major order of their first tile.
+func (m *Map) pieces(id ID) [][]int {
+	z := m.rec(id)
+	seen := make(map[int]bool, len(z.idx))
+	var out [][]int
+	for _, c := range z.idx {
+		if seen[c] {
+			continue
+		}
+		p := m.flood(id, c)
+		for _, t := range p {
+			seen[t] = true
+		}
+		sort.Ints(p)
+		out = append(out, p)
+	}
+	return out
 }
 
 // flood lists the tiles of zone id 4-connected to tile start.
@@ -490,6 +524,146 @@ func (m *Map) Set(id ID, z Zone) {
 	for _, o := range ids[1:] {
 		m.absorb(ids[0], o)
 	}
+}
+
+// Update changes zone id's settings in place with fn (flags, name,
+// stockpile filters). The id, kind, tile count and crop stay whatever fn
+// does, and nothing merges: a crop change goes through Set.
+func (m *Map) Update(id ID, fn func(*Zone)) {
+	r := m.rec(id)
+	if r == nil {
+		return
+	}
+	z := r.z
+	fn(&z)
+	z.ID, z.Kind, z.Cells, z.Crop = r.z.ID, r.z.Kind, r.z.Cells, r.z.Crop
+	r.z = z
+}
+
+// Remove deletes zone id and unzones its tiles (its id is never reused).
+func (m *Map) Remove(id ID) {
+	r := m.rec(id)
+	if r == nil {
+		return
+	}
+	for _, c := range r.idx {
+		m.cell[c] = 0
+	}
+	m.drop(id)
+}
+
+// AddCells zones the free tiles among cells into zone id (tiles off the
+// map or already in a zone are skipped; the caller checks the terrain).
+// The free tiles split into 4-connected blocks, taken in the row-major
+// order of their first tile. A block joins every compatible zone it
+// touches, merging them into zone id when it is one of them (so the zone
+// being expanded keeps its id and settings, and zones touching the new
+// tiles merge into it), else into the lowest id among them; a block that
+// touches none (zones stay contiguous) starts a new zone with zone id's
+// settings.
+func (m *Map) AddCells(id ID, cells [][2]int) {
+	base := m.rec(id)
+	if base == nil {
+		return
+	}
+	var free []int
+	for _, c := range cells {
+		if m.in(c[0], c[1]) && m.cell[c[1]*m.w+c[0]] == 0 {
+			free = append(free, c[1]*m.w+c[0])
+		}
+	}
+	sort.Ints(free)
+	free = slices.Compact(free)
+	left := make(map[int]bool, len(free)) // the tiles not yet in a block
+	for _, c := range free {
+		left[c] = true
+	}
+	for _, start := range free {
+		if !left[start] {
+			continue
+		}
+		var block []int
+		delete(left, start)
+		stack := []int{start}
+		for len(stack) > 0 {
+			c := stack[len(stack)-1]
+			stack = stack[:len(stack)-1]
+			block = append(block, c)
+			x, y := c%m.w, c/m.w
+			for _, d := range [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {
+				if n := (y+d[1])*m.w + x + d[0]; m.in(x+d[0], y+d[1]) && left[n] {
+					delete(left, n)
+					stack = append(stack, n)
+				}
+			}
+		}
+		m.placeBlock(base, block)
+	}
+}
+
+// placeBlock zones one block of free tiles for AddCells.
+func (m *Map) placeBlock(base *rec, block []int) {
+	var touched []ID
+	for _, c := range block {
+		x, y := c%m.w, c/m.w
+		for _, d := range [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {
+			if nid, ok := m.At(x+d[0], y+d[1]); ok && compatible(m.rec(nid).z, base.z) {
+				touched = appendID(touched, nid)
+			}
+		}
+	}
+	var target *rec
+	switch {
+	case len(touched) == 0:
+		target = m.newZone(base.z)
+	case slices.Contains(touched, base.z.ID):
+		target = base
+	default:
+		target = m.rec(slices.Min(touched))
+	}
+	for _, o := range touched {
+		if o != target.z.ID {
+			m.absorb(target.z.ID, o)
+		}
+	}
+	for _, c := range block {
+		m.cell[c] = target.z.ID
+	}
+	target.idx = append(target.idx, block...)
+	sort.Ints(target.idx)
+	target.z.Cells, target.dirt = len(target.idx), true
+}
+
+// RemoveCells unzones zone id's tiles inside r; other zones' tiles there
+// stay. A zone cut into pieces splits: the piece with the most tiles keeps
+// the id (ties: the one with the first tile, row-major), the others become
+// new zones with the same settings; an emptied zone is deleted.
+func (m *Map) RemoveCells(id ID, r Rect) {
+	z := m.rec(id)
+	if z == nil {
+		return
+	}
+	r, inside := m.clip(r)
+	if !inside {
+		return
+	}
+	kept := z.idx[:0]
+	for _, c := range z.idx {
+		if x, y := c%m.w, c/m.w; x >= r.MinX && x <= r.MaxX && y >= r.MinY && y <= r.MaxY {
+			m.cell[c] = 0
+			continue
+		}
+		kept = append(kept, c)
+	}
+	if len(kept) == len(z.idx) {
+		return
+	}
+	z.idx, z.z.Cells, z.dirt = kept, len(kept), true
+	if len(kept) == 0 {
+		m.drop(id)
+		return
+	}
+	m.splitKeeping(id, true)
 }
 
 // Saved is a Map as plain data.

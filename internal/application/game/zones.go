@@ -55,7 +55,10 @@ func zoneKindOf(name string) (zone.Kind, bool) {
 // pen is a legacy animal pen rectangle (inclusive), read from older saves.
 type pen struct{ X1, Y1, X2, Y2 int }
 
-// zoneSave is the saved zone map (absent in older saves).
+// zoneSave is the saved zone map (absent in older saves). Zones carry the
+// PLAY-020 settings (NoSow, NoCut, Hidden, Name) as gob fields of
+// zone.Zone: an older save lacks them and loads with the defaults, and
+// zero values are skipped by the state hash.
 type zoneSave struct {
 	W, H  int
 	Cells []zone.ID
@@ -137,6 +140,7 @@ func (g *Game) zoneViews() []ZoneView {
 		v := ZoneView{
 			ID: uint16(z.ID), Kind: zoneKindNames[z.Kind], Food: z.Food, Wood: z.Wood, Stone: z.Stone,
 			Cells: g.zones.Cells(z.ID), MinX: b.MinX, MinY: b.MinY, MaxX: b.MaxX, MaxY: b.MaxY,
+			NoSow: z.NoSow, NoCut: z.NoCut, Hidden: z.Hidden, Name: z.Name,
 		}
 		if z.Kind == zone.KindGrow {
 			v.Crop = plant.Species(z.Crop).String()
