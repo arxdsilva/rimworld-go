@@ -108,7 +108,7 @@ use these primitives.
 
 ## 1.2 Visual design tokens
 
--   [-] **UI scale and density system** (PLAY-012 UI-024: the UI lays out in logical pixels and draws through a scaling canvas, text at the real font size; Auto plus 75–200 % presets; map coordinates unaffected; PLAY-017: portraits and world labels fixed at every scale, guarded by a per-function draw check and frame-invariance tests, `-capture-ui-scale` for scaled captures; spacing/row heights are still per-file constants, not a central token set)
+-   [-] **UI scale and density system** (PLAY-012 UI-024: the UI lays out in logical pixels and draws through a scaling canvas, text at the real font size; Auto plus 75–200 % presets; map coordinates unaffected; PLAY-017: portraits and world labels fixed at every scale, guarded by a per-function draw check and frame-invariance tests, `-capture-ui-scale` for scaled captures; spacing/row heights are still per-file constants, not a central token set; PLAY-018: one layout function places every colony HUD region on a shared grid, with no-overlap tests at three window sizes and three UI scales)
     -   Support multiple UI scales.
     -   Define spacing, row heights, icon sizes, text sizes, border
         widths, modal sizes, and minimum click targets centrally.
@@ -172,7 +172,7 @@ use these primitives.
 -   [ ] **Context menu**
 -   [ ] **Confirmation dialog**
 -   [ ] **Modal window**
--   [ ] **Toast/message**
+-   [-] **Toast/message** (PLAY-018: messages fade under the colonist bar; toasts stack just above the command buttons or the pane; no shared toast widget)
 -   [x] **Persistent alert card**
 -   [ ] **Tooltip**
 -   [ ] **Rich tooltip/stat breakdown**
@@ -251,7 +251,7 @@ This is the minimum UI required to interact with a running simulation.
 
 ## 2.3 Time controls
 
--   [x] **Pause button** (`Space` toggles pause)
+-   [x] **Pause button** (`Space` toggles pause; PLAY-018: four clickable speed buttons in the lower-right stack, active one highlighted)
 -   [x] **Normal speed** (key `1`; 1x = 60 ticks / real second)
 -   [x] **Fast speed** (key `2`; 3x)
 -   [x] **Very-fast speed** (key `3`; superfast 6x)
@@ -267,13 +267,13 @@ This is the minimum UI required to interact with a running simulation.
 
 ## 2.4 Minimal top-level HUD
 
--   [-] **Current game state indicator** (top chrome: Food/Wood/Stone counts, season and temperature, weather and wind, date, schedule activity, speed; no dev-mode)
+-   [-] **Current game state indicator** (PLAY-018: resource list top-left (stored goods, icons, categorised and collapsible); lower-right stack: hour, date and season, weather and wind, temperature where the cursor points, speed with the paused reason, active conditions; no dev-mode indicator)
     -   Paused/speed.
     -   map/world context.
     -   developer mode indicator if enabled.
--   [ ] **Message feed anchor**
+-   [x] **Message feed anchor** (PLAY-018: right-aligned under the colonist bar, beside the right column)
     -   Short transient messages appear without obscuring play.
--   [x] **Alert anchor**
+-   [x] **Alert anchor** (PLAY-018: right column under the learning helper, above the letter stack)
     -   Reserve a consistent edge of the HUD for persistent colony
         alerts.
 
@@ -286,7 +286,7 @@ building, item, plant, animal, corpse or tile.
 
 ## 3.1 Generic selection panel
 
--   [-] **Selected entity header** (pawn, animal, building, plant and item panels with name, icon, category and condition (UI-011); UI-014 animal inspector adds state, food/rest bars, sex/stage/age, pregnancy %, product bar, diet and tame chance; PLAY-017: plant panel shows why a plant is or isn't growing and when it ripens; no faction/ownership line)
+-   [-] **Selected entity header** (pawn, animal, building, plant and item panels with name, icon, category and condition (UI-011); UI-014 animal inspector adds state, food/rest bars, sex/stage/age, pregnancy %, product bar, diet and tame chance; PLAY-017: plant panel shows why a plant is or isn't growing and when it ripens; no faction/ownership line; PLAY-018: one lower-left inspect pane for every kind (header, compact status bars, chips, scrolling lines) with its tabs opening a panel upward)
     -   Display label/name.
     -   entity category.
     -   faction/ownership where relevant.
@@ -298,7 +298,7 @@ building, item, plant, animal, corpse or tile.
 -   [ ] **Description**
     -   Data-driven description.
     -   Plugins can provide localization.
--   [-] **Location and environment** (tile coordinates from `PawnView`; no room/temperature/terrain/roof) (SIM-018: roof line in hover panel)
+-   [-] **Location and environment** (tile coordinates from `PawnView`; no room/temperature/terrain/roof) (SIM-018: roof line in hover panel; PLAY-018: with nothing selected the hovered cell's terrain, fertility, roof, temperature and room show as text at the lower-left)
     -   Cell.
     -   room/outdoors.
     -   temperature.
@@ -307,7 +307,7 @@ building, item, plant, animal, corpse or tile.
 
 ## 3.2 Context command bar
 
--   [-] **Context-sensitive actions** (UI-011 panels: draft, clear orders, equip nearby; plant harvest/cut and per-colonist now-orders; item equip/wear/eat/haul per colonist; animal hunt/tame/release and (UI-014) milk/shear products; building move (reinstall)/copy/deconstruct; no forbid/arrest/set owner)
+-   [-] **Context-sensitive actions** (UI-011 panels: draft, clear orders, equip nearby; plant harvest/cut and per-colonist now-orders; item equip/wear/eat/haul per colonist; animal hunt/tame/release and (UI-014) milk/shear products; building move (reinstall)/copy/deconstruct; no forbid/arrest/set owner; PLAY-018: every action is a square command button right of the pane (icon, label, hotkey, disabled reason, per-colonist options on right-click); capture/arrest, trough filter and bed owner are commands too)
     -   Draft.
     -   forbid.
     -   hunt.
@@ -327,7 +327,7 @@ building, item, plant, animal, corpse or tile.
     -   Disabled command must explain *why*: incapable, unreachable,
         reserved, missing material, wrong faction, research missing,
         unsafe, etc.
--   [-] **Multi-selection actions** (UI-016: group panel with Draft all/Undraft all, Forbid all/Allow all and the member list; R, F and right-click act on every member; formation moves; no assign area yet)
+-   [-] **Multi-selection actions** (UI-016: group panel with Draft all/Undraft all, Forbid all/Allow all and the member list; R, F and right-click act on every member; formation moves; no assign area yet; PLAY-018: a group's commands merge (mixed toggles, disabled only when disabled for all))
     -   Draft/undraft.
     -   assign area.
     -   group commands.
@@ -354,7 +354,7 @@ building, item, plant, animal, corpse or tile.
     -   Compact representation of each colonist.
     -   Click selects; double-click centers.
     -   Preserve identity at a glance.
--   [-] **Status indicators** (drafted badge on bar and over the pawn; others missing)
+-   [-] **Status indicators** (PLAY-018: drafted, sleeping, mental break, downed, idle, fighting, fleeing and burning marks on the bar card; no inspired or caravan marks)
     -   Downed.
     -   drafted.
     -   mental state.
@@ -366,7 +366,7 @@ building, item, plant, animal, corpse or tile.
 -   [-] **Ordering** (snapshot insertion order; no groups or custom sort)
     -   Stable default ordering.
     -   Later allow groups/custom ordering.
--   [ ] **Large-colony scaling**
+-   [x] **Large-colony scaling** (PLAY-018: the bar scales to 0.75 and 0.5 and wraps to 2-3 rows, then a "+N" slot; it never reaches the resource list or the right column)
     -   Collapse, scroll, wrap, group or virtualize rather than
         rendering 1,000 full portraits.
     -   Zoom/density modes.
@@ -394,7 +394,7 @@ the player's primary world-editing command surface.
 -   [x] **Architect button/tab** (opens on last category)
     -   Opens build/designation categories.
     -   Remembers last category optionally.
--   [x] **Category navigation** (Orders, Zones, Structure, Furniture — only categories with content)
+-   [x] **Category navigation** (Orders, Zones, Structure, Furniture — only categories with content; PLAY-018: two category columns at the lower-left, a description box above them)
     -   Orders.
     -   Zone/Area.
     -   Structure.
@@ -404,7 +404,7 @@ the player's primary world-editing command surface.
     -   Security.
     -   Miscellaneous/endgame.
     -   Categories appear only when content exists/unlocked.
--   [-] **Build option cards/buttons** (icon, name, wood cost, hover tooltip with work and shortage; no research lock/material; MAPGEN-3: Bridge tool in Structure, locked until the Bridges research)
+-   [-] **Build option cards/buttons** (icon, name, wood cost, hover tooltip with work and shortage; no research lock/material; MAPGEN-3: Bridge tool in Structure, locked until the Bridges research; PLAY-018: tools are command buttons right of the categories; the description box shows name, cost, stock, material and crop choice)
     -   Icon.
     -   name.
     -   material requirement.
@@ -916,7 +916,7 @@ understandable.
 
 ## 16.1 Overlay framework
 
--   [-] **Overlay toggle registry** (UI-016: Roof (Shift+R), Home and Room stats (G) toggles in the HUD; no shared registry or plugin API yet)
+-   [-] **Overlay toggle registry** (UI-016: Roof (Shift+R), Home and Room stats (G) toggles; PLAY-018: eight icon toggles in the lower-right stack (roof, home, auto home, plans, rooms, learning helper, colonist bar, categorised resources); no shared registry or plugin API yet)
     -   Only one or compatible multiple overlays active.
     -   Plugins can register overlays through safe API.
 
@@ -1224,7 +1224,7 @@ the player what just happened and what requires attention.
 
 ## 23.1 Messages
 
--   [ ] **Transient message stack**
+-   [x] **Transient message stack** (PLAY-018: up to five, right-aligned under the colonist bar, fading out; danger in red; click focuses the camera)
     -   Brief.
     -   non-blocking.
     -   severity.
@@ -1234,26 +1234,26 @@ the player what just happened and what requires attention.
 
 ## 23.2 Letters
 
--   [ ] **Letter stack**
+-   [x] **Letter stack** (PLAY-018: right column above the time controls; kind colour and icon (threat, caution, info, good); kept and saved until right-click dismissal; "+N older"; major threats are letters too)
     -   Persistent until opened/dismissed.
     -   Categories such as positive, neutral, negative and major threat.
--   [-] **Letter window** (NG-1: a message with a letter flag opens a window once, with title, text and Continue; used for the scenario intro, heat waves, cold snaps; no entity/faction links, jump-to-location or choices)
+-   [-] **Letter window** (NG-1: title, text and Continue; PLAY-018: opened from the stack (only the intro opens by itself), with Jump to for a place or creature; no faction links or choices)
     -   Title.
     -   generated original narrative.
     -   relevant entities/faction.
     -   jump-to-location.
     -   action choices if event requires decision.
--   [ ] **Auto-pause option**
+-   [x] **Auto-pause option** (Options › Gameplay "Pause on threat": threat letters and an animal chasing a colonist pause the game)
 -   [ ] **Letter history**
 
 ## 23.3 Alerts
 
 -   [x] **Persistent alert list**
     -   Critical issues remain until resolved.
--   [ ] **Severity ordering**
--   [ ] **Expandable details**
+-   [x] **Severity ordering** (PLAY-018: danger alerts first, with a pulsing backing)
+-   [-] **Expandable details** (PLAY-018: a hover card left of the alert explains what is wrong and what to do; affected targets come by click cycling, not listed)
     -   Which pawns/items/rooms are affected.
--   [ ] **Click cycles affected targets**
+-   [x] **Click cycles affected targets** (click forward, right-click back)
 -   [-] **Examples** (UI-014: animals hungry, wild animals eating crops, timbergnaws eating trees (N felled), pen full alerts)
     -   low food.
     -   colonist needs rescue.
@@ -1671,7 +1671,7 @@ the player what just happened and what requires attention.
 -   [ ] **Default speed behavior**
 -   [ ] **Edge scrolling**
 -   [ ] **Confirmation preferences**
--   [ ] **Tutorial/learning helper**
+-   [x] **Tutorial/learning helper** (PLAY-018: Options › Gameplay "Learning helper" with Reset lessons)
 
 ## 34.4 Controls
 
@@ -1697,13 +1697,13 @@ the player what just happened and what requires attention.
 
 ## 35.1 Learning helper
 
--   [ ] **Contextual lesson cards**
+-   [-] **Contextual lesson cards** (PLAY-018: ten original lessons in a top-right learning helper; the next three show, each with a detail card; not triggered by first contact with a mechanic)
     -   Trigger when player first encounters a mechanic.
--   [ ] **Lesson queue/history**
+-   [-] **Lesson queue/history** (PLAY-018: lessons queue in order and finished ones drop out; no history view)
 -   [ ] **Dismiss**
--   [ ] **Mark learned**
+-   [x] **Mark learned** (PLAY-018: done by doing it, or "Got it"; saved in the settings)
 -   [ ] **Reopen help**
--   [ ] **Do not repeatedly interrupt experienced players**
+-   [x] **Do not repeatedly interrupt experienced players** (PLAY-018: the helper never pops up; it collapses, hides when everything is learned, and can be switched off)
 
 ## 35.2 Tutorial highlights
 

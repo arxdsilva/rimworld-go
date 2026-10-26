@@ -1272,6 +1272,24 @@ Use semantic names (`steel.base`, `wood.shadow`) rather than `gray1`.
 Exact colors must come from original visual prototyping rather than
 copying another game's palette.
 
+PLAY-018 (2026-10-25): the UI chrome palette (`assets/palettes/ui.yaml`,
+mirrored in `widgets.go`) moved from warm dust to an original slate
+charcoal with a sea-glass accent:
+- panels `#1E2638EB`;
+- blue-grey borders;
+- text `#E4EBF2`;
+- accent `#72D4C0`;
+- semantic good/warning/danger;
+- letter-kind colours;
+- a warm instructional set for the learning helper.
+
+It was chosen from five prototypes captured on real screens. Tests pin:
+- text contrast (≥ 4.5:1 on panels and buttons);
+- a minimum colour distance from a reference set of another game's UI
+  colours (`TestUITokensStayClearOfReferencePalette`).
+
+UI badge icons sit on a cool slate disc.
+
 -   [-] `assets/palettes/ui.yaml` (menu/pause chrome tokens; Go adapter
     mirrors the hexes), `base.yaml` (outline/shadow/overlay tokens +
     runtime tint presets) and `materials.yaml` (3 toon bands per material)

@@ -139,6 +139,7 @@ Media updated 2026-10-23 · regenerate with `make media clips`
 - Factions: settlers, clans, drifters, freebooters and the hive swarm settle the globe; raids come from a named hostile faction, goodwill moves with raids and drifts back, and a Factions window shows goodwill history. Storyteller threat points follow wealth, colonists, time and an adaptation that eases after losses; heat waves and cold snaps come with the Extreme weather setting.
 - Water and landing-site maps: the chosen tile shapes the map with hills, caves, coasts, rivers with fords, lakes, mud, wet ground and dirt tracks, always leaving the start able to walk out. Water is rendered with a ripple shader and sounds; wading soaks colonists and washes their boots, and nothing can be built on water.
 - Components and industrial medicine: fabricate components from steel or mine buried machinery, refine herbal medicine, and build tool cabinets that speed benches and hospital beds.
+- A familiar colony screen: the map fills the screen, with the stored resources top-left, the colonist bar top-centre (it shrinks and wraps for big colonies), alerts and a letter stack on the right, and time, speed buttons, weather and the temperature under the cursor at the lower-right. Select something and its details sit at the lower-left, with its tabs opening upward and every action as a square button beside it (hotkeys in order; right-click a button for per-colonist choices). The Architect's categories, tool buttons and description box sit in the same place, and the main windows open above the tab strip. Letters stay until you dismiss them (right-click); alerts explain themselves on hover and cycle through what they are about. A learning helper in the top-right teaches the basics as you play, and the whole interface uses an original slate-and-teal palette.
 - Real font and minimap: Noto Sans throughout the menus, HUD and inspectors, and a minimap (Shift+M, click to move) on big maps. Map sizes from 200x200 to 500x500, holding about 60 fps or better at 3x speed on a grown 500x500 colony.
 
 The full backlogs are in the [vanilla feature checklist](.cursor/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md) and the [UI/UX checklist](.cursor/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md).
@@ -177,11 +178,11 @@ swapping; Reset to defaults puts them back).
 | What | Keys |
 |---|---|
 | Camera | WASD or arrows pan (Shift: faster), PgDn / PgUp or the wheel zoom, middle-drag pans, edge scrolling in Options |
-| Time | Space pause, 1 / 2 / 3 speeds, Home / End one speed up / down |
+| Time | Space pause, 1 / 2 / 3 speeds, Home / End one speed up / down, or the speed buttons at the lower-right |
 | Tabs | Tab Architect, F1 Work, F2 Schedule, F4 Animals, F5 Wildlife, F6 Research (F3, F7-F9 not yet) |
 | View | F10 screenshot (saved under `screenshots` next to the settings), F11 hide the interface |
 | Selection | click, Shift+click add/remove, drag a box, double-click for all of a kind on screen (in the colonist bar: centre on that colonist), `,` / `.` previous / next colonist, Numpad * next thing in the cell, Z search |
-| Selected | R draft / undraft (all selected), F forbid / allow, B H Y N J U M K I L O P the panel's buttons in order |
+| Selected | R draft / undraft (all selected), F forbid / allow, B H Y N J U M K I L O P the command buttons in order (right-click one for its options) |
 | Orders | right-click (drafted: the group spreads around the tile; right-drag lines them up), Shift queues |
 | Architect | Q / E rotate, or change the shape of drag tools (line, rectangle, oval, filled or empty); Ctrl squares the shape; C Cancel tool, X Deconstruct tool |
 | Overlays | Shift+R roofs, G room stats, Shift+M minimap on maps over 150 tiles, hold Alt for cell details |

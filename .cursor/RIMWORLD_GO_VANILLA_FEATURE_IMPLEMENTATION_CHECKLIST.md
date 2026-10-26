@@ -2015,15 +2015,15 @@ and other colony incidents. citeturn2search2turn2search7
 
 ## 25.4 Letters/messages
 
--   [ ] **Event letter system**
+-   [-] **Event letter system** (PLAY-018: letters kept and saved in a right-side stack with threat/caution/info/good kinds, camera jump to their place or creature, dismissed by the player; no choices yet)
     -   Positive/neutral/negative/threat categories.
     -   Camera jump target.
     -   relevant entities.
     -   optional choices.
--   [ ] **Message system**
+-   [-] **Message system** (short notices under the colonist bar that fade; no rate limiting yet)
     -   Short transient notices.
     -   Rate-limit repeated low-value messages.
--   [ ] **Alert system**
+-   [-] **Alert system** (persistent alerts for low food, rescue, starving, collapsed, break risk, hypothermia/heatstroke, fuel, spoiling, waiting blueprints, unhappy, raids, fire, animals; PLAY-018: severity order, hover explanation, click/right-click cycling; no research/idle/unburied/beds alerts yet)
     -   Persistent colony problems:
         -   low food;
         -   colonist needs rescue;
@@ -2482,11 +2482,11 @@ the player-facing system.
 
 ## 34.5 Notifications
 
--   [ ] **Top-priority alerts**
--   [ ] **Event letters**
--   [ ] **Messages**
--   [ ] **Jump-to-location**
--   [ ] **Pause-on-major-threat option**
+-   [x] **Top-priority alerts** (PLAY-018: danger alerts first, pulsing)
+-   [x] **Event letters** (PLAY-018: right-side letter stack)
+-   [x] **Messages** (PLAY-018)
+-   [x] **Jump-to-location** (messages, alerts and letters jump the camera)
+-   [x] **Pause-on-major-threat option** (Options › Gameplay)
 
 ## 34.6 Input
 

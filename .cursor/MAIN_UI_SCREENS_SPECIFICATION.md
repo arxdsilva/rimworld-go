@@ -368,23 +368,45 @@ The central gameplay screen. Nearly all colony play begins here.
 
 ## Major layout regions
 
+User decision (PLAY-018, 2026-10-25): the colony screen uses the
+familiar colony-sim ARRANGEMENT so a returning player knows where to
+look, sized on this project's own grid with original fonts, icons and
+palette. No measurements or colours are taken from another game's code.
+The map fills the whole screen; the HUD floats over it.
+
 ``` text
-┌──────────────────────────────────────────────────────────┐
-│ resources / date-weather / alerts                        │
-├──────────────────────────────────────────────────────────┤
-│                                                          │
-│                    WORLD VIEWPORT                        │
-│                                                          │
-│                                            alerts/letters │
-│                                                          │
-├──────────────────────────────────────────────────────────┤
-│ colonist bar                                             │
-├──────────────────────────────────────────────────────────┤
-│ global tabs       contextual inspector/actions    speeds │
-└──────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│ resources        [ colonist bar, top-centre ]     learning helper│
+│ (icon list,                                        alerts         │
+│  stored goods)          messages (right-aligned) ─┤ (severity     │
+│                                                    │  ordered)    │
+│                     WORLD VIEWPORT (full screen)   │               │
+│                                                    │ letters      │
+│ inspector tab panel                                │ minimap      │
+│ (opens upward)                                     │ toggles      │
+│ [tabs] ────────────┐ [command buttons, wrap upward]│ speed ▮▶▶▶  │
+│ inspect pane        │ [■][■][■][■][■][■][■][■][■]  │ date/weather │
+│ (name, bars, lines) │                              │ temperature  │
+├────────────────────────────────────────────────────────────────┤
+│ Architect│Work│Schedule│Assign│Animals│Wildlife│Research│World│…  │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
-Exact visual arrangement should be original and responsive.
+- **Grid.** One pure function places every region
+  (`hud_layout.go` `computeHUDLayout`, logical px, multiples of 4,
+  margin 8), so regions never overlap at any window size or UI scale.
+- **Inspect pane.** It sits at the lower-left. Its tabs open a larger
+  panel upward. Every action on the selection is a square command
+  button to the pane's right, wrapping upward. A group merges its
+  members' commands.
+- **Architect.** Two category columns at the lower-left, a description
+  box above them, and the tools as command buttons.
+- **Main-tab windows.** They open bottom-left above the tab strip and
+  never cover the colonist bar, alerts or time controls.
+- **Nothing selected.** The hovered cell's info shows as text at the
+  lower-left.
+- **Palette.** An original slate charcoal with a sea-glass accent
+  (`ui.yaml`). The learning helper uses a warm instructional set.
 
 ## Core responsibilities
 
@@ -425,8 +447,31 @@ Exact visual arrangement should be original and responsive.
 -   pause;
 -   normal;
 -   fast;
--   very fast;
--   current game time/date/season.
+-   very fast (four clickable speed buttons, lower-right, with key hints);
+-   current game time/date/season, weather, and the temperature where
+    the cursor points (indoors/outdoors).
+
+## Letters, alerts and messages (PLAY-018)
+
+-   **Letters** stack on the right above the time controls, coloured
+    by kind (threat, caution, info, good):
+    -   click opens one;
+    -   right-click dismisses it (saved);
+    -   only the opening letter pops up by itself;
+    -   major threats are letters too.
+-   **Alerts** list ongoing problems under the learning helper:
+    -   danger first;
+    -   a hover card explains each one;
+    -   click and right-click cycle through what it is about.
+-   **Messages** are short notices under the colonist bar that fade.
+
+## Learning helper (PLAY-018)
+
+A collapsible top-right panel of short original lessons (camera,
+selecting, building, zones, work, schedule, drafting, forbid and haul
+marks, research, time speed). A lesson completes when the player does
+it, or with "Got it". It can be switched off (Options › Gameplay or the
+lower-right toggle) and its progress is saved.
 
 This screen is implemented incrementally throughout the project rather
 than in one task.
@@ -476,6 +521,22 @@ Disabled commands show reason.
   - **Copy:** the Architect, preset to that building.
 - **Action availability:** actions come from the same options as the right-click menu, and disabled ones show the simulation's reason.
 - **Paused play:** every action applies at once while paused.
+
+**Implemented (PLAY-018):**
+- **Inspect pane** (lower-left, see §9):
+  - a header (name, subtitle);
+  - compact status bars;
+  - chips (a colonist's allowed area, which opens the picker; the schedule activity);
+  - a scrolling body.
+- **Tabs:** they sit in a strip above the pane and open a larger panel upward; clicking the open tab collapses it, and Escape closes it first.
+  - colonist: Needs, Health, Bio, Social, Gear, Log (Prisoner for prisoners);
+  - animal: Log, Training;
+  - building: Bills, Pen.
+- **Command buttons:** the action bar became square command buttons right of the pane (icon, label, hotkey, disabled reason in the tooltip), wrapping upward.
+  - Hotkeys follow declaration order; dedicated keys stay (R draft, F forbid).
+  - Per-colonist choices are options: right-click or the corner arrow. These cover Equip/Wear/Eat/Haul on items, "Now by…" on plants, the trough filter and an animal's master.
+  - A group selection merges its members' commands: a toggle shows mixed, and a command is disabled only when it is for every member.
+- **Nothing selected:** the hovered cell's details show as text at the lower-left.
 
 ------------------------------------------------------------------------
 
