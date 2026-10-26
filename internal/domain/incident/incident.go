@@ -28,6 +28,12 @@ const (
 	VisitorGroup
 	WandererJoins
 	Party
+	// PLAY-021 (our weights, Nature pool): a solar flare stops every power
+	// net for a few hours; a short circuit blows a conduit, drains its
+	// net's batteries and starts a fire. Both need power devices on the
+	// map (the game's situational check).
+	SolarFlare
+	ShortCircuit
 	NumIDs
 )
 
@@ -57,6 +63,8 @@ var defs = [NumIDs]Def{
 	VisitorGroup:  {Key: "visitor_group", Name: "Visitors", Category: Nature, Weight: 12, Cooldown: 8, MinDay: 4},
 	WandererJoins: {Key: "wanderer_joins", Name: "Wanderer joins", Category: Nature, Weight: 6, Cooldown: 20, MinDay: 8},
 	Party:         {Key: "party", Name: "Party", Category: Nature, Weight: 8, Cooldown: 10, MinDay: 6},
+	SolarFlare:    {Key: "solar_flare", Name: "Solar flare", Category: Nature, Weight: 6, Cooldown: 12, MinDay: 12},
+	ShortCircuit:  {Key: "short_circuit", Name: "Short circuit", Category: Nature, Weight: 5, Cooldown: 8, MinDay: 10},
 }
 
 func init() {

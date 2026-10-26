@@ -158,6 +158,10 @@ func (g *Game) incidentFits(id incident.ID, now uint64) bool {
 		return g.visitorsFit(now) // visitors.go (M9)
 	case incident.WandererJoins:
 		return g.wandererFits(now) // visitors.go (M9)
+	case incident.SolarFlare, incident.ShortCircuit:
+		// TODO(EVENTS, PLAY-021): power_events.go; until then they never
+		// fit, so the pool, its total and the RNG draws are unchanged.
+		return false
 	}
 	return false
 }

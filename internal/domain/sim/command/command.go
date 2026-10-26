@@ -183,6 +183,12 @@ const (
 	ExpandZone
 	RemoveZoneCells
 	DeleteZone
+	// PLAY-021 electricity: SetPowerWanted asks for building Target's power
+	// (a device's toggle or a switch) on (Enabled) or off; a colonist then
+	// flicks it. SetThermostat sets heater or cooler Target's target
+	// temperature to Count tenths of a degree C.
+	SetPowerWanted
+	SetThermostat
 )
 
 // Area references for AssignArea's Index (PLAY-015): any other value is an
@@ -236,6 +242,8 @@ const (
 	// OrderExtinguish (PLAY-015): beat out the fire at X, Y (anywhere: a
 	// forced order ignores Home and the allowed area).
 	OrderExtinguish
+	// OrderFlick (PLAY-021): flick the switch or power toggle at X, Y now.
+	OrderFlick
 )
 
 // Command is applied on a simulation tick, never by the UI directly.

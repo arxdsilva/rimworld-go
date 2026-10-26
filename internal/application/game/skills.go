@@ -737,6 +737,7 @@ var orderWork = map[command.Order]work.Type{
 	command.OrderBuild:       work.Construct,
 	command.OrderDeconstruct: work.Construct,
 	command.OrderSmooth:      work.Construct,
+	command.OrderFlick:       work.Construct, // PLAY-021: flicking is construction work
 	command.OrderSupply:      work.Haul,
 	command.OrderHaul:        work.Haul,
 	command.OrderHarvest:     work.Grow,

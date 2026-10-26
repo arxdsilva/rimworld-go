@@ -63,11 +63,13 @@ import (
 // v3 (PLAY-017) adds unclaimed map items and harvest marks on ripe zone
 // crops; a v1/v2 save is migrated on load (migrateClaims,
 // migrateHarvestMarks). v4 (PLAY-020) adds medical beds: an older save's
-// hospital beds become medical (migrateMedicalBeds). migrateSave runs the
-// steps a save's version is missing.
+// hospital beds become medical (migrateMedicalBeds). v5 (PLAY-021) adds
+// electricity (Power): lamps need power, so an older save's lamps are to
+// become torch lamps (the v < 5 step). migrateSave runs the steps a save's
+// version is missing.
 
 // SaveVersion is the version new saves are written with.
-const SaveVersion = 4
+const SaveVersion = 5
 
 // minSaveVersion is the oldest version Load still reads.
 const minSaveVersion = 1
@@ -338,6 +340,35 @@ type saveState struct {
 	// when, who found no bed, and the medical beds held for a stay; nil
 	// when there is none (absent in older saves).
 	BedRest *bedRestSave
+	// Power (PLAY-021): the colony's electricity (power.go); nil without
+	// power devices, so saves without power hash as before (absent in
+	// older saves).
+	Power *powerSave
+}
+
+// powerSave is the saved electricity, in id order (PLAY021_PLAN.md
+// Appendix): battery charge (W·ticks), the devices and switches the
+// player wants off and those actually off (a flick is pending where they
+// differ), the consumers the last balance left unpowered, shed consumers
+// with the tick they stay off until, thermostats, the solar flare's end
+// tick (0: none) and the tick of the last balance. Nets, outputs and the
+// flick index are derived, not saved.
+type powerSave struct {
+	Charge     []entry[int64]
+	WantOff    []entity.EntityID
+	IsOff      []entity.EntityID
+	Unpowered  []entity.EntityID
+	Shed       []entry[uint64]
+	Thermo     []entry[thermoSave]
+	FlareUntil uint64
+	Last       uint64
+}
+
+// thermoSave is a heater's or cooler's thermostat: its target (tenths of a
+// degree C) and whether it is working (the hysteresis state).
+type thermoSave struct {
+	Target int
+	Active bool
 }
 
 // Info describes the game for a save header.
@@ -430,6 +461,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 	s.Bodies, s.Drugs, s.Prisoners = g.exportBodies(), g.exportDrugs(), g.exportPrisoners()
 	s.Surgery = g.exportSurgery()
 	s.BedRest = g.exportBedRest() // bedrest.go (PLAY-020)
+	s.Power = g.exportPower()     // power.go (PLAY-021): nil without power
 	s.Areas, s.History = g.areas.Export(), slices.Clone(g.history)
 	if s.RNGStreams, err = g.exportStreams(); err != nil {
 		return fmt.Errorf("save rng streams: %w", err)
@@ -604,6 +636,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.importBodies(s.Bodies)
 	g.importSurgery(s.Surgery)
 	g.importBedRest(s.BedRest)
+	g.importPower(s.Power) // power.go (PLAY-021)
 	g.importDrugs(s.Drugs)
 	g.importPrisoners(s.Prisoners)
 	g.areas, g.history = area.Import(s.Areas), s.History
@@ -634,6 +667,10 @@ func (g *Game) migrateSave(v int) {
 		fallthrough
 	case v < 4:
 		g.migrateMedicalBeds() // bedrest.go (PLAY-020): hospital beds become medical
+		fallthrough
+	case v < 5:
+		// TODO(INFRA, PLAY-021): lamps need power now; existing lamps
+		// become torch lamps so old colonies keep their light.
 	}
 }
 

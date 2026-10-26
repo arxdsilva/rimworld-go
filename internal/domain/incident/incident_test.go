@@ -23,8 +23,11 @@ func TestPickDeterministic(t *testing.T) {
 		}
 		seen[a] = true
 	}
-	if len(seen) != 8 { // ENG-003 added visitors, wanderer joins and party
-		t.Fatalf("picked %v, want all 8 nature events", seen)
+	// ENG-003 added visitors, wanderer joins and party; PLAY-021 the solar
+	// flare and the short circuit (the game vetoes those two without power
+	// devices; this pure pick has no veto).
+	if len(seen) != 10 {
+		t.Fatalf("picked %v, want all 10 nature events", seen)
 	}
 }
 

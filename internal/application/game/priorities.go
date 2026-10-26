@@ -110,7 +110,8 @@ func (g *Game) assignWorkType(id entity.EntityID, t work.Type) bool {
 	case work.Haul:
 		return g.assignRefuel(id) || g.fillTroughs(id) || g.assignBury(id) || g.assignHaul(id) // fillTroughs: trough_feed.go
 	case work.Construct:
-		return g.assignConstruct(id) || g.assignRepair(id) || g.assignRoof(id) || g.assignSmooth(id) // smooth.go
+		return g.assignFlick(id) || // power_flick.go (PLAY-021): flicks first
+			g.assignConstruct(id) || g.assignRepair(id) || g.assignRoof(id) || g.assignSmooth(id) // smooth.go
 	case work.Cook, work.Craft:
 		return g.assignBill(id, work.Mask(0).Set(t, true))
 	case work.Hunt:

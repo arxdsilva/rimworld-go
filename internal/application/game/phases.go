@@ -6,6 +6,7 @@ import "time"
 const (
 	PhaseCommands  = "commands"
 	PhasePlants    = "plants"
+	PhasePower     = "power" // PLAY-021: before climate
 	PhaseClimate   = "climate"
 	PhaseInfection = "infection"
 	PhaseNeeds     = "needs"
@@ -22,7 +23,7 @@ const (
 
 // Phases lists the phase names in Step order.
 func Phases() []string {
-	return []string{PhaseCommands, PhasePlants, PhaseClimate, PhaseInfection, PhaseNeeds, PhaseAI,
+	return []string{PhaseCommands, PhasePlants, PhasePower, PhaseClimate, PhaseInfection, PhaseNeeds, PhaseAI,
 		PhaseJobs, PhaseSocial, PhaseAnimals, PhaseThreats, PhaseIncidents, PhaseWorld, PhaseWeather, PhaseMovement}
 }
 
@@ -41,7 +42,8 @@ func (g *Game) stepObserved(n int) {
 		name string
 		run  func()
 	}{
-		{PhaseCommands, g.phaseCommands}, {PhasePlants, g.phasePlants}, {PhaseClimate, g.phaseClimate},
+		{PhaseCommands, g.phaseCommands}, {PhasePlants, g.phasePlants}, {PhasePower, g.phasePower},
+		{PhaseClimate, g.phaseClimate},
 		{PhaseInfection, g.phaseInfection}, {PhaseNeeds, g.phaseNeeds}, {PhaseAI, g.phaseAI},
 		{PhaseJobs, g.phaseJobs}, {PhaseSocial, g.phaseSocial}, {PhaseAnimals, g.phaseAnimals},
 		{PhaseThreats, g.phaseThreats}, {PhaseIncidents, g.phaseIncidents}, {PhaseWorld, g.phaseWorld},

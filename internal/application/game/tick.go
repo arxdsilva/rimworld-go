@@ -62,7 +62,8 @@ func (g *Game) applyOne(c command.Command) {
 		command.SetAnimalFollow,                       // train_animals.go (PLAY-015)
 		command.SetBedMedical, command.SetPawnBedRest, // med_cmds.go (PLAY-020)
 		command.SetZoneSow, command.SetZoneCut, command.SetZoneHidden, command.RenameZone,
-		command.SetZoneCrop, command.ExpandZone, command.RemoveZoneCells, command.DeleteZone: // zone_cmds.go (PLAY-020)
+		command.SetZoneCrop, command.ExpandZone, command.RemoveZoneCells, command.DeleteZone, // zone_cmds.go (PLAY-020)
+		command.SetPowerWanted, command.SetThermostat: // power_flick.go, power_heat.go (PLAY-021)
 		g.applyHostCommand(c) // host_commands.go (ENG-003)
 	case command.SetStoryteller:
 		g.cmdSetStoryteller(c.Name) // story.go (NG-1)
@@ -1038,6 +1039,8 @@ func (g *Game) phaseJobs() {
 			g.doClean(id, j) // clean.go
 		case job.FightFire:
 			g.doFightFire(id, j) // firefight.go
+		case job.Flick:
+			g.doFlick(id, j) // power_flick.go (PLAY-021)
 		case job.Wander, job.Chat, job.Relax, job.FireSide, job.Horseshoes, job.Hide:
 			g.doIdle(id, j)
 		// ENG-003: social and host-system jobs, each in its owner's file.

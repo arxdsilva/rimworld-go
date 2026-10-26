@@ -308,6 +308,8 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		return job.Record{Kind: job.Attack, Target: aid, TX: x, TY: y, WorkLeft: aimTicks(weaponDefOf(g, id))}, ""
 	case command.OrderExtinguish:
 		return g.extinguishJob(id, x, y) // firefight.go
+	case command.OrderFlick:
+		return g.flickJob(id, x, y) // power_flick.go (PLAY-021)
 	case command.OrderEquip:
 		iid := g.itemAt(x, y)
 		st, ok := g.stacks.Get(iid)

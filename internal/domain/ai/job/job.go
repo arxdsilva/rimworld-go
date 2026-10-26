@@ -112,6 +112,9 @@ const (
 	Rope
 	FightFire
 	ClearSnow
+	// Flick (PLAY-021): turn a power switch or a device's power toggle
+	// the way the player asked.
+	Flick
 )
 
 // IsIdle reports a free-time behaviour that any real work may replace.
@@ -227,6 +230,8 @@ func (k Kind) String() string {
 		return "fight fire"
 	case ClearSnow:
 		return "clear snow"
+	case Flick:
+		return "flick switch"
 	default:
 		return "idle"
 	}

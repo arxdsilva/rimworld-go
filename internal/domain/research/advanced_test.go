@@ -46,3 +46,32 @@ func TestProgressSliceAndV1RoundTrip(t *testing.T) {
 		t.Fatalf("from v1 %v", back)
 	}
 }
+
+// PLAY-021: Electricity first, the four follow-ups each needing it, and
+// every power building gated (the lamp joins with the torch lamp).
+func TestElectricityTree(t *testing.T) {
+	t.Parallel()
+	if d := DefOf(Electricity); d.Cost != 3000 || len(d.Requires) != 0 || d.Name != "electricity" {
+		t.Fatalf("electricity %+v", d)
+	}
+	for p, c := range map[Project]int{Batteries: 2500, SolarPower: 4000, WindPower: 3500, GeothermalPower: 5000} {
+		d := DefOf(p)
+		if d.Cost != c || len(d.Requires) != 1 || d.Requires[0] != Electricity || len(d.Unlocks) != 1 || d.Label == "" || d.Desc == "" {
+			t.Errorf("%s = %+v", d.Name, d)
+		}
+	}
+	var pr Progress
+	for key, by := range map[string]Project{"build:power conduit": Electricity, "build:wood-fired generator": Electricity,
+		"build:battery": Batteries, "build:solar panel": SolarPower, "build:wind turbine": WindPower,
+		"build:geothermal generator": GeothermalPower} {
+		if p, ok := pr.Locks(key); !ok || p != by {
+			t.Errorf("%s locked by %v %v, want %v", key, p, ok, by)
+		}
+	}
+	if pr.Available(Batteries) || !pr.Available(Electricity) {
+		t.Fatal("batteries need electricity first")
+	}
+	if _, ok := pr.Locks("build:torch lamp"); ok {
+		t.Fatal("the torch lamp is free from the start")
+	}
+}

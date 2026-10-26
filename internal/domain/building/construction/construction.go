@@ -88,6 +88,29 @@ const (
 	// PenMarker (PLAY-015) is a small signpost: the enclosed region around
 	// it (fences, gates, walls, rock) is an animal pen with its settings.
 	PenMarker
+	// Electricity (PLAY-021, append only, saved). PowerConduit and
+	// HiddenConduit carry power between buildings (LayerConduit, under
+	// walls and benches; a hidden one is buried and only shows in the power
+	// overlay). PowerSwitch conducts while closed. WoodGenerator,
+	// SolarPanel, WindTurbine and GeothermalGenerator (over a steam vent)
+	// make power; a Battery stores it. TorchLamp is the wood-burning light
+	// before electricity; Heater and Cooler (set in a wall gap, facing its
+	// cold side) hold a room at a thermostat target. The electric benches
+	// work their base kind's recipes (RecipeBench) faster, with power.
+	PowerConduit
+	HiddenConduit
+	PowerSwitch
+	WoodGenerator
+	SolarPanel
+	WindTurbine
+	GeothermalGenerator
+	Battery
+	TorchLamp
+	Heater
+	Cooler
+	ElectricStove
+	ElectricTailoringBench
+	ElectricResearchBench
 	kindCount
 )
 
@@ -103,7 +126,13 @@ const (
 	// LayerFoundation (MAPGEN-3) is under everything: a bridge over water,
 	// marsh or mud. Append only: saved.
 	LayerFoundation
+	// LayerConduit (PLAY-021) holds power conduits, so they can run under
+	// walls, doors and benches. Append only: saved.
+	LayerConduit
 )
+
+// NumLayers is how many layers there are (every Layer is below it).
+const NumLayers = int(LayerConduit) + 1
 
 // Def is the static definition of a buildable kind.
 type Def struct {
@@ -230,6 +259,55 @@ var defs = [kindCount]Def{
 	SleeperCasket: {Kind: SleeperCasket, Name: "sleeper casket", Layer: LayerObject, BlocksMove: true, Rotatable: true,
 		Size: [2]int{1, 2}, MetalOK: true, MetalOnly: true, Placed: true, Salvage: 20},
 	PenMarker: {Kind: PenMarker, Name: "pen marker", Wood: 10, Work: 40, Layer: LayerObject},
+	// Electricity (PLAY-021, our costs). Every electric piece is steel
+	// (MetalOnly: Wood is the steel) and most need components; the torch
+	// lamp is wood.
+	PowerConduit: {Kind: PowerConduit, Name: "power conduit", Wood: 1, Work: 20, Layer: LayerConduit,
+		MetalOK: true, MetalOnly: true},
+	HiddenConduit: {Kind: HiddenConduit, Name: "hidden conduit", Wood: 3, Work: 60, Layer: LayerConduit,
+		MetalOK: true, MetalOnly: true},
+	PowerSwitch: {Kind: PowerSwitch, Name: "power switch", Wood: 15, Work: 60, Layer: LayerObject,
+		MetalOK: true, MetalOnly: true, Components: 1},
+	WoodGenerator: {Kind: WoodGenerator, Name: "wood-fired generator", Wood: 90, Work: 320, Layer: LayerObject, BlocksMove: true,
+		Size: [2]int{2, 2}, MetalOK: true, MetalOnly: true, Components: 2},
+	SolarPanel: {Kind: SolarPanel, Name: "solar panel", Wood: 110, Work: 420, Layer: LayerObject, BlocksMove: true,
+		Size: [2]int{3, 3}, MetalOK: true, MetalOnly: true, Components: 3},
+	WindTurbine: {Kind: WindTurbine, Name: "wind turbine", Wood: 95, Work: 380, Layer: LayerObject, BlocksMove: true,
+		Rotatable: true, Size: [2]int{1, 2}, MetalOK: true, MetalOnly: true, Components: 2},
+	GeothermalGenerator: {Kind: GeothermalGenerator, Name: "geothermal generator", Wood: 170, Work: 640, Layer: LayerObject,
+		BlocksMove: true, Size: [2]int{2, 2}, MetalOK: true, MetalOnly: true, Components: 4},
+	Battery: {Kind: Battery, Name: "battery", Wood: 55, Work: 220, Layer: LayerObject, BlocksMove: true,
+		Rotatable: true, Size: [2]int{1, 2}, MetalOK: true, MetalOnly: true, Components: 2},
+	TorchLamp: {Kind: TorchLamp, Name: "torch lamp", Wood: 3, Work: 30, Layer: LayerObject},
+	Heater: {Kind: Heater, Name: "heater", Wood: 35, Work: 110, Layer: LayerObject, BlocksMove: true,
+		MetalOK: true, MetalOnly: true, Components: 1},
+	// A cooler stands in a wall gap like a door; it faces its cold side.
+	Cooler: {Kind: Cooler, Name: "cooler", Wood: 45, Work: 130, Layer: LayerObject, BlocksMove: true, Rotatable: true,
+		MetalOK: true, MetalOnly: true, Components: 2},
+	ElectricStove: {Kind: ElectricStove, Name: "electric stove", Wood: 45, Work: 190, Layer: LayerObject, BlocksMove: true,
+		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true,
+		MetalOK: true, MetalOnly: true, Components: 2},
+	ElectricTailoringBench: {Kind: ElectricTailoringBench, Name: "electric tailoring bench", Wood: 55, Work: 210, Layer: LayerObject,
+		BlocksMove: true, Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true, Bench: true,
+		MetalOK: true, MetalOnly: true, Components: 2},
+	ElectricResearchBench: {Kind: ElectricResearchBench, Name: "electric research bench", Wood: 65, Work: 250, Layer: LayerObject,
+		BlocksMove: true, Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true,
+		MetalOK: true, MetalOnly: true, Components: 3},
+}
+
+// RecipeBench is the kind whose recipes and work k runs (PLAY-021): an
+// electric bench works its base kind's bills (or research); any other
+// kind is its own.
+func RecipeBench(k Kind) Kind {
+	switch k {
+	case ElectricStove:
+		return Stove
+	case ElectricTailoringBench:
+		return TailoringBench
+	case ElectricResearchBench:
+		return ResearchBench
+	}
+	return k
 }
 
 // Requires is the support kind k built from stuff needs under it
@@ -386,10 +464,14 @@ func Covers(k Kind, f Facing, x, y, px, py int) bool {
 // DefOf returns the definition for k.
 // Movable reports a building that can be moved (reinstalled) elsewhere:
 // everything but walls, doors, fences, fence gates, floors and graves
-// (PLAY-011: fixed pieces change material in place instead).
+// (PLAY-011: fixed pieces change material in place instead). Conduits are
+// fixed too (PLAY-021: cheap, laid in lines, rebuilt rather than moved),
+// as are a cooler (it fills a wall gap, like a door) and a geothermal
+// generator (it only stands over a steam vent).
 func Movable(k Kind) bool {
 	switch k {
-	case Wall, Door, Fence, FenceGate, Grave, Bridge, SleeperCasket:
+	case Wall, Door, Fence, FenceGate, Grave, Bridge, SleeperCasket,
+		PowerConduit, HiddenConduit, Cooler, GeothermalGenerator:
 		return false
 	}
 	return DefOf(k).Layer != LayerFloor

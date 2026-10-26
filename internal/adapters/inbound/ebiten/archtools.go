@@ -34,6 +34,14 @@ type archTool struct {
 	enable   bool         // area command paints (Enabled) rather than clears
 }
 
+// PLAY-021 categories: Power (conduits, switch, generators, battery) and
+// Temperature (heater, cooler, campfire). Every entry of archCategories
+// gets a button, so each joins the list with its first tools (POWERUI).
+const (
+	archCatPower       = "power"
+	archCatTemperature = "temperature"
+)
+
 var archCategories = []struct{ id, label string }{
 	{"orders", "Orders"},
 	{"zones", "Zones"},

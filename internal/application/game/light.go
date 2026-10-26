@@ -79,6 +79,20 @@ func (g *Game) setFuel(bid entity.EntityID, v int) {
 	g.fuel[bid] = v
 }
 
+// glowOf is the light building b (id) gives off for the renderer
+// (BuildingView.Glow) and its reach in tiles, the radius this grid lights
+// with: every lamp, and a campfire while it burns (not banked or doused).
+// PLAY-021 (CONSUMERS) gates lamps on power and adds burning torch lamps.
+func (g *Game) glowOf(id entity.EntityID, b construction.Building) (bool, int) {
+	switch b.Kind {
+	case construction.Lamp:
+		return true, lampRadius
+	case construction.Campfire:
+		return g.burning(id, b), campfireRadius
+	}
+	return false, 0
+}
+
 // lightCells returns the artificial light grid, rebuilt if stale.
 func (g *Game) lightCells() []float32 {
 	c := &g.light

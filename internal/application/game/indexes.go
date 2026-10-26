@@ -215,6 +215,9 @@ func (lx layered) note(id entity.EntityID) {
 		return
 	}
 	l := layerOf(p.kind)
+	if int(l) >= numLayers {
+		return // TODO(INFRA, PLAY-021): index LayerConduit; until then its lookups scan
+	}
 	cells, _, _ := construction.Footprint(p.kind, p.facing, p.x, p.y)
 	for _, c := range cells {
 		lx.ix.put(int(l), c[0], c[1], id, func(o entity.EntityID) bool { return lx.live(o, l, c[0], c[1]) })

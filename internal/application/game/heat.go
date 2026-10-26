@@ -139,7 +139,8 @@ func (g *Game) heatRooms() {
 			heat[r] += campfireHeat
 		}
 	}
-	g.fireRoomHeat(heat) // fire.go (PLAY-015): a burning room heats like campfires
+	g.fireRoomHeat(heat)   // fire.go (PLAY-015): a burning room heats like campfires
+	g.thermoRoomHeat(heat) // power_heat.go (PLAY-021): heaters and coolers
 	// breached rooms' air mixes with the outside over a few hours
 	raw := g.climate.Outdoor(now)
 	for i, t := range g.residual {

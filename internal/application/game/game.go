@@ -351,6 +351,32 @@ type BuildingView struct {
 	// Deconstruct is ordered opened.
 	Sealed     bool
 	OpenReason string
+	// Electricity (PLAY-021, power_view.go): PowerRole is power.Role's
+	// name ("producer", "consumer", "storage", "transmitter", "switch";
+	// "" when not electrical) and PowerNet its net (PowerNetView.ID, 0:
+	// none). Powered: a consumer running on power now. PowerOn is the
+	// actual on/off state, PowerWantOn the player's (a flick is pending
+	// while they differ). PowerUse and PowerOut are the W drawn and made
+	// now; StoredWh of CapWh a battery's charge. NoPowerReason says why a
+	// consumer is unpowered (NoPower*; "" when powered). LinkX, LinkY is
+	// the transmitter cell a device's link line goes to (HasLink).
+	PowerRole            string
+	PowerNet             int
+	Powered              bool
+	PowerOn, PowerWantOn bool
+	PowerUse, PowerOut   int
+	StoredWh, CapWh      int
+	NoPowerReason        string
+	LinkX, LinkY         int
+	HasLink              bool
+	// Glow: the building gives off light now (a lamp, a burning campfire;
+	// light.go glowOf), reaching GlowRadius tiles in the simulation's
+	// light. Presentation lights only from Glow; it may draw its own reach.
+	Glow       bool
+	GlowRadius int
+	// ThermoTarget is a heater's or cooler's target temperature (tenths of
+	// a degree C).
+	ThermoTarget int
 }
 
 // PlantView is a wild plant.
@@ -515,6 +541,12 @@ type WorldView struct {
 	Arrivals   []ArrivalView
 	Conditions []string
 	Extreme    string
+	// Electricity (PLAY-021, power_view.go): every power net by id, the
+	// solar flare in progress, and PowerVer, which changes whenever the
+	// nets or any device's power state do (presentation caches key on it).
+	PowerNets  []PowerNetView
+	SolarFlare bool
+	PowerVer   uint64
 }
 
 // Game holds all authoritative simulation state.
@@ -714,6 +746,9 @@ type Game struct {
 	areas     *area.Set                           // areas.go
 	history   []historyEntry                      // history.go
 	streams   rngStreams                          // rng_streams.go: never g.rng
+	// pw is the colony's electricity (power.go, PLAY-021); nil until the
+	// colony has a power device.
+	pw *powerState
 }
 
 // New builds a Game from cfg. Width/Height must be positive.
@@ -937,6 +972,7 @@ func (g *Game) Step(n int) {
 	for i := 0; i < n; i++ {
 		g.phaseCommands()
 		g.phasePlants()
+		g.phasePower() // power.go: nets balance before the climate (PLAY-021)
 		g.phaseClimate()
 		g.phaseInfection()
 		g.phaseNeeds()
@@ -1193,6 +1229,10 @@ func (g *Game) world() WorldView {
 		bv.Ruin = b.Ruin             // MAPGEN-2: an abandoned piece
 		bv.Medical = b.Medical       // PLAY-020: kept for the sick and injured
 		g.fillCasketView(bv, id, b)  // casket.go (MAPGEN-3)
+		// PLAY-021: the light the renderer draws (light.go), then power
+		// (power_view.go)
+		bv.Glow, bv.GlowRadius = g.glowOf(id, b)
+		g.fillPowerBuilding(bv, id, b)
 	}
 	w.Plants = g.plantViews(w.Plants) // plant_view.go
 	w.Landing[0], w.Landing[1] = g.landingSpot()
@@ -1220,6 +1260,7 @@ func (g *Game) world() WorldView {
 	g.fillSetupView(&w)    // setup_view.go (NG-1)
 	g.fillFogView(&w)      // fog_view.go (MAPGEN-2)
 	g.fillFireView(&w)     // fire.go (PLAY-015)
+	g.fillPowerView(&w)    // power_view.go (PLAY-021)
 	now := uint64(g.clock.Now())
 	w.Hour = float64(now%clock.TicksPerDay) / clock.TicksPerHour
 	w.DayOfYear = int(now/clock.TicksPerDay) % clock.DaysPerYear

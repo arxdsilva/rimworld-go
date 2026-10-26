@@ -106,7 +106,11 @@ func TestGrownGolden(t *testing.T) {
 	// Re-pinned (PLAY-020): injured colonists now rest in the set piece's
 	// beds until healed (bed rest by default); the same value with and
 	// without the zone settings work.
-	const want uint64 = 0x7aab2f772d82f7b3
+	// Re-pinned (PLAY-021 contract): CompleteResearch also completes the
+	// five new power projects (Electricity, Batteries, Solar, Wind and
+	// Geothermal power); with them left unfinished the hash is the
+	// previous pin (7aab2f77), so behaviour is unchanged.
+	const want uint64 = 0x617719848416b0e9
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

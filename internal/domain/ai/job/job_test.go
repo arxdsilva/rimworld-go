@@ -29,3 +29,9 @@ func TestBuryIsAJob(t *testing.T) {
 		t.Fatal("bury is real work named bury")
 	}
 }
+
+func TestFlickIsAJob(t *testing.T) {
+	if Flick.String() != "flick switch" || Flick.IsIdle() || (Record{Kind: Flick, State: Do}).Line() != "flick switch do" {
+		t.Fatalf("flick: %q", (Record{Kind: Flick, State: Do}).Line())
+	}
+}

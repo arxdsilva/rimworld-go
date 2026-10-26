@@ -1,6 +1,10 @@
 package construction
 
-import "testing"
+import (
+	"testing"
+
+	"rimworld-go/internal/domain/economy/item"
+)
 
 func TestDefsAreConsistent(t *testing.T) {
 	t.Parallel()
@@ -134,6 +138,50 @@ func TestMovableExcludesFixedPieces(t *testing.T) {
 	for _, k := range []Kind{Bed, Table, Chair} {
 		if !Movable(k) {
 			t.Errorf("%s should be movable", DefOf(k).Name)
+		}
+	}
+}
+
+// PLAY-021: the electricity kinds' footprints, layers and materials, and
+// the electric benches working their base kinds' recipes.
+func TestElectricityKinds(t *testing.T) {
+	t.Parallel()
+	if NumLayers != 4 || LayerConduit != 3 {
+		t.Fatalf("layers: %d, conduit %d", NumLayers, LayerConduit)
+	}
+	for _, k := range []Kind{PowerConduit, HiddenConduit} {
+		if d := DefOf(k); d.Layer != LayerConduit || d.BlocksMove || d.Size != [2]int{} || !d.MetalOnly || Movable(k) {
+			t.Errorf("%s: %+v", d.Name, d)
+		}
+	}
+	if WoodCost(HiddenConduit) <= WoodCost(PowerConduit) {
+		t.Error("a hidden conduit costs more than a plain one")
+	}
+	sizes := map[Kind][2]int{PowerSwitch: {}, WoodGenerator: {2, 2}, SolarPanel: {3, 3}, WindTurbine: {1, 2},
+		GeothermalGenerator: {2, 2}, Battery: {1, 2}, Heater: {}, Cooler: {}}
+	for k, sz := range sizes {
+		d := DefOf(k)
+		if d.Size != sz || d.Layer != LayerObject || !d.MetalOnly || !d.MetalOK || d.Components < 1 ||
+			DefaultStuff(k) != item.Steel || StuffOK(k, item.Wood) {
+			t.Errorf("%s: %+v", d.Name, d)
+		}
+	}
+	if !DefOf(Cooler).Rotatable || Movable(Cooler) || Movable(GeothermalGenerator) || !Movable(Battery) {
+		t.Error("a cooler faces its cold side and stays in its wall gap; geothermal stays on its vent")
+	}
+	if d := DefOf(TorchLamp); d.Size != [2]int{} || d.MetalOnly || DefaultStuff(TorchLamp) != item.Wood || d.Wood <= 0 {
+		t.Errorf("torch lamp: %+v", d)
+	}
+	for k, base := range map[Kind]Kind{ElectricStove: Stove, ElectricTailoringBench: TailoringBench, ElectricResearchBench: ResearchBench} {
+		d, b := DefOf(k), DefOf(base)
+		if RecipeBench(k) != base || d.Size != b.Size || d.Spot != b.Spot || d.HasSpot != b.HasSpot || d.Bench != b.Bench ||
+			d.Rotatable != b.Rotatable || !d.MetalOnly || d.Components < 1 {
+			t.Errorf("%s vs %s: %+v", d.Name, b.Name, d)
+		}
+	}
+	for _, k := range []Kind{Stove, Lamp, Campfire, Wall} {
+		if RecipeBench(k) != k {
+			t.Errorf("RecipeBench(%s) = %s", k, RecipeBench(k))
 		}
 	}
 }

@@ -519,6 +519,7 @@ func (a *App) syncRoofForce() {
 	a.syncHomeForce()
 	a.syncPlanForce()
 	a.syncSnowClearForce() // snow_clear_draw.go (PLAY-015)
+	a.syncPowerForce()     // power_overlay.go (PLAY-021)
 	if a.renderer != nil {
 		a.renderer.roofOverlayForced = roofForced(a.archOpen, a.archTool)
 	}
