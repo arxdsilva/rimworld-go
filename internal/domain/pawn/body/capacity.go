@@ -98,11 +98,14 @@ func (b *Body) capacity(c Capacity, look condLookup) int32 {
 	return b.condCap(c, v, look)
 }
 
+// consciousness is brain function less half the pain, less the blood
+// loss stage (capped at the extreme stage), then the conditions.
 func (b *Body) consciousness(look condLookup) int32 {
 	v := b.eff(Brain) - b.pain(look)/2
 	if v < 0 {
 		v = 0
 	}
+	v = b.bloodConsciousness(v) // bleed.go (MED-01)
 	return b.condCap(Consciousness, v, look)
 }
 
@@ -113,23 +116,39 @@ func min32(a, b int32) int32 {
 	return b
 }
 
-// Pain is the body's pain in permille: open wounds hurt, tended ones less,
-// scars barely; conditions add their current stage's pain.
+// Pain per point of wound damage, in tenths of a permille: 12.5 ‰ per HP
+// whether the wound is open or tended (tending stops bleeding, not pain).
+// wiki: Injury. A fresh stump hurts as a wound of the part's MaxHP until
+// tended (original tuning on the wiki's fresh missing part); a scar keeps
+// 1 ‰ per HP (original tuning).
+const (
+	painPerHPx10  = 125
+	scarPainPerHP = 1
+)
+
+// Pain is the body's pain in permille: 12.5 per point of open or tended
+// wound damage, 1 per point of scar; conditions add their current stage's
+// pain.
 func (b *Body) Pain() int32 { return b.pain(DefOfCond) }
 
 // pain is Pain with condition definitions from look.
 func (b *Body) pain(look condLookup) int32 {
-	var n int32
+	var hurt, scars int32
 	for _, w := range b.Wounds {
-		switch {
-		case w.Permanent:
-			n += int32(w.Dmg)
-		case w.Tended:
-			n += int32(w.Dmg) * 4
-		default:
-			n += int32(w.Dmg) * 8
+		if w.Permanent {
+			scars += int32(w.Dmg)
+			continue
+		}
+		hurt += int32(w.Dmg)
+	}
+	if b.Fresh != 0 {
+		for p := Part(0); p < NumParts; p++ {
+			if b.Fresh&bit(p) != 0 {
+				hurt += int32(defs[p].MaxHP)
+			}
 		}
 	}
+	n := hurt*painPerHPx10/10 + scars*scarPainPerHP
 	n += b.condPain(look)
 	if n > 1000 {
 		return 1000

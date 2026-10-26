@@ -247,9 +247,7 @@ func (g *Game) hurtAs(target entity.EntityID, dmg int, by entity.EntityID, kind 
 	switch {
 	case v.Injury >= health.MaxHP || b != nil && b.VitalLost():
 		g.dieBy(target, cause, by)
-	case v.Injury >= g.downedAt(target) && v.Status == health.Alive: // skills.go: pain tolerance
-		g.down(target, health.CauseInjury)
-	case v.Status == health.Alive && unconscious(b): // body.go: knocked out by pain or a head wound
+	case v.Status == health.Alive && g.downsNow(target, v, b): // bleed.go: consciousness, moving or pain shock
 		g.down(target, health.CauseInjury)
 	}
 	g.fightOnDown(target) // social_fight.go: a downed brawler ends the fight
@@ -301,7 +299,7 @@ func (g *Game) heal(id entity.EntityID, v *health.Record, now uint64) {
 	if !g.healBody(id, v, 1, false) { // body.go: smallest open wound first; may scar
 		v.Injury--
 	}
-	if v.Status == health.Downed && v.Cause == health.CauseInjury && v.Injury <= health.RecoverInjury && g.consciousEnough(id) {
+	if v.Status == health.Downed && v.Cause == health.CauseInjury && g.standsUp(id, *v) { // bleed.go: past the band
 		v.Status, v.Cause = health.Alive, health.CauseNone
 	}
 	g.vital.Set(id, *v)

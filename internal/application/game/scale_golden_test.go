@@ -81,12 +81,22 @@ import (
 // SleptAt, Logs, Need, Joy, Skills, Social, then the RNG); 48x40/seed42's
 // colonist that ended downed at 69 injury is tended and healed. The three
 // runs where no one is hurt keep their pins. Stable over -count=2.
+// Re-pinned (MED-01 bleeding): open cuts, bites and scratches bleed until
+// tended, blood loss lowers consciousness and drains back after, pain is
+// 12.5 per HP whether tended or not, downing follows consciousness,
+// moving and pain shock, doctors tend the fastest bleeder first, and the
+// hourly medical phase runs blood loss before the infections. The three
+// runs with a hurt colonist move (48x40/seed1 and seed42, 120x120/seed7:
+// each ends with a colonist alive at 25, 51 and 105 permille blood loss);
+// the three with no one hurt keep their pins. Same-seed runs identical
+// (TestStepIsDeterministicForSameSeed, TestBodiesAreDeterministic, and
+// TestScaleGolden -count=2 printed the same values).
 var scaleGolden = map[string]uint64{
-	"48x40/seed1":    0xbdffb6d11dde9e6f,
+	"48x40/seed1":    0xd35284b973bbfa13,
 	"48x40/seed7":    0xee46a1f4ce740cae,
-	"48x40/seed42":   0x3813609e849f6e9b,
+	"48x40/seed42":   0x2e19907738249db9,
 	"120x120/seed1":  0x24d9b4a5e97f473a,
-	"120x120/seed7":  0x7a003675fdf36a80,
+	"120x120/seed7":  0x9b0c8eb684a7186a,
 	"120x120/seed42": 0x4b3e98040be7af43,
 }
 

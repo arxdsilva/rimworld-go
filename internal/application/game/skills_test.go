@@ -109,7 +109,7 @@ func TestNeutralPawnTimingsUnchanged(t *testing.T) {
 	if g.researchPoints(1) != 1 || g.tendHealBy(happy, 0) != tendHeal(0) || g.doctorInfectionPct(happy) != 100 {
 		t.Error("research or medicine moved for a neutral pawn")
 	}
-	if g.breakOffset(happy) != 0 || g.downedAt(happy) != health.DownedInjury {
+	if g.breakOffset(happy) != 0 || g.painShockAt(happy) != health.PainShock {
 		t.Error("break or downed threshold moved")
 	}
 	if g.temperamentOf(happy).String() != legacyTemperament("Ada").String() {

@@ -113,8 +113,11 @@ type PawnView struct {
 	Wounded   bool
 	// MED-00 (filled by MED-01/MED-03): Bleeding, the body is losing
 	// blood; CareLevel, the pawn's medical care policy (medcare.Policy).
-	Bleeding  bool
-	CareLevel uint8
+	// BleedDeathHours is the hours left before bleeding out (MED-01;
+	// meaningful only while Bleeding).
+	Bleeding        bool
+	CareLevel       uint8
+	BleedDeathHours int
 	// Exposure: Hypothermia and Heatstroke severity in permille, and the
 	// air temperature where the colonist is (tenths of a degree C).
 	Hypothermia, Heatstroke int
@@ -984,7 +987,7 @@ func (g *Game) Step(n int) {
 		g.phasePlants()
 		g.phasePower() // power.go: nets balance before the climate (PLAY-021)
 		g.phaseClimate()
-		g.phaseInfection()
+		g.phaseMedical() // bleed.go: bleeding, blood loss, infection (MED-01)
 		g.phaseNeeds()
 		g.phaseAI()
 		g.phaseJobs()
@@ -1063,6 +1066,7 @@ func (g *Game) snapshot() []PawnView {
 		g.fillSocialPawn(pv, pv.Mood) // social_view.go: smoothed mood, target, bubble (ENG-003)
 		pv.Health = v.HP() * 100 / health.MaxHP
 		pv.Infection, pv.Wounded = g.wounds[id].Infection, g.wounds[id].At != 0 && v.Injury > 0
+		pv.Bleeding, pv.BleedDeathHours = g.bleedingNow(id), g.bleedDeathHours(id) // bleed.go (MED-01)
 		pv.Weapon = weaponDefOf(g, id).Name
 		pv.Lying = v.Status != health.Alive || (j.Kind == job.Sleep && (j.State == job.Do || j.State == job.Complete))
 		pv.InBed = g.inBed(id)

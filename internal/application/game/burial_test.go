@@ -650,7 +650,7 @@ func TestBuryFailsCleanlyWhenTheGraveGoes(t *testing.T) {
 func TestEpitaphNamesTheCause(t *testing.T) {
 	cases := map[health.Cause]string{
 		health.CauseInjury: " of wounds", health.CauseHypothermia: " of the cold", health.CauseHeatstroke: " of heatstroke",
-		health.CauseInfection: " of infection", health.CauseNoFood: " of hunger", health.CauseNone: "",
+		health.CauseInfection: " of infection", health.CauseNoFood: " of hunger", health.CauseBloodLoss: " of blood loss", health.CauseNone: "",
 	}
 	for c, want := range cases {
 		if got := causePhrase(c.String()); got != want {

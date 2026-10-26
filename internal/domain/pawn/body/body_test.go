@@ -172,10 +172,10 @@ func TestScarRate(t *testing.T) {
 
 func TestTendAndPain(t *testing.T) {
 	b := Body{Wounds: []Wound{{Part: Torso, Dmg: 10, Kind: Cut}, {Part: Torso, Dmg: 5, Kind: Cut, Permanent: true}}}
-	if b.Pain() != 85 {
+	if b.Pain() != 130 { // 12.5 per open HP, 1 per scar HP (MED-01)
 		t.Fatalf("pain %d", b.Pain())
 	}
-	if b.Tend() != 1 || b.Tend() != 0 || b.Pain() != 45 {
+	if b.Tend() != 1 || b.Tend() != 0 || b.Pain() != 130 { // tending stops bleeding, not pain
 		t.Fatalf("tended pain %d", b.Pain())
 	}
 	b.Wounds = []Wound{{Part: Torso, Dmg: 500, Kind: Cut}}
@@ -250,8 +250,8 @@ func TestJawAndDenture(t *testing.T) {
 }
 
 func TestConsciousnessPain(t *testing.T) {
-	b := Body{Wounds: []Wound{{Part: Torso, Dmg: 25, Kind: Cut}}} // pain 200
-	if b.Capacity(Consciousness) != 900 || b.Capacity(Moving) != 900 || b.Capacity(Manipulation) != 900 {
+	b := Body{Wounds: []Wound{{Part: Torso, Dmg: 25, Kind: Cut}}} // pain 312 (12.5 per HP)
+	if b.Capacity(Consciousness) != 844 || b.Capacity(Moving) != 844 || b.Capacity(Manipulation) != 844 {
 		t.Fatalf("%d", b.Capacity(Consciousness))
 	}
 }

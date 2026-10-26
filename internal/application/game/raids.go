@@ -71,8 +71,6 @@ const (
 	firstRaidDay  = 5
 	raidGapMin    = 5 // days
 	raidGapSpread = 5 // days, added at random
-	// bleedOut is how long a downed raider lasts.
-	bleedOut = 4 * clock.TicksPerHour
 	// raiderLeaveIdle: raiders with no one left to fight for this long go home.
 	raiderLeaveIdle = clock.TicksPerHour
 	// sightRange: colonists this close pull arriving raiders into the fight.
@@ -391,10 +389,17 @@ func (g *Game) thinkRaider(id entity.EntityID, now uint64) {
 			pos, _ := g.positions.Get(id)
 			g.message(pos.X, pos.Y, "Raider %s is down.", g.name(id))
 		}
-		if now-r.Downed >= bleedOut && !g.beingCaptured(id) { // a captive in the arms does not bleed out
-			g.die(id, health.CauseInjury)
+		// MED-01: no timer; it bleeds out unless captured and tended, and
+		// its wounds close slowly, so one that stops bleeding gets up again
+		if !g.beingCaptured(id) {
+			g.heal(id, &v, now) // combat.go: stands it up past the band (bleed.go)
 		}
 		return
+	}
+	if r.Downed != 0 { // back on its feet after going down: it has had enough
+		r.Downed, r.Mode = 0, raidFlee
+		g.raiders[id] = r
+		g.interrupt(id, job.Cancelled)
 	}
 	j, _ := g.jobs.Get(id)
 	if j.Kind == job.Kidnap {
@@ -562,6 +567,7 @@ func (g *Game) removeRaider(id entity.EntityID) {
 	g.jobs.Delete(id)
 	g.need.Delete(id)
 	g.vital.Delete(id)
+	delete(g.wounds, id) // infection.go: no one is left to tend
 	delete(g.equip, id)
 	delete(g.raiders, id)
 	delete(g.logs, id)

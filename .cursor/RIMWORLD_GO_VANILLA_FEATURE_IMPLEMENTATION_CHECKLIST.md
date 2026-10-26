@@ -960,21 +960,21 @@ treatment, and surgery are major colony-management systems.
     -   burn.
     -   explosion-derived damage.
     -   bite/scratch may map to sharp/blunt variants.
--   [-] **Wounds** (SIM-039: per-part wounds with severity, pain and tended flag; no bleeding rate)
+-   [x] **Wounds** (SIM-039: per-part wounds with severity, pain and tended flag; MED-01: per-wound bleed rate, fresh stumps bleed until tended)
     -   Injury assigned to body part.
     -   severity.
     -   bleeding rate.
     -   pain.
     -   tendability.
--   [ ] **Bleeding**
+-   [x] **Bleeding** (MED-01: wiki bleed rates per wound kind, heart ×5, blood loss stages 15/30/45/60 % with consciousness penalties and exit hysteresis, regen 33 %/day while not bleeding, death at 100 %; raiders bleed for real, the old bleed-out timer is gone)
     -   Blood loss accumulation.
     -   severe blood loss -\> downing/death.
     -   tending reduces/stops bleeding.
--   [x] **Pain** (SIM-039: derived from wounds, feeds consciousness)
+-   [x] **Pain** (SIM-039: derived from wounds, feeds consciousness; MED-01: 1.25 % per HP open or tended, pain shock at 80 % scaled by pain tolerance)
     -   Derived from injuries/conditions.
     -   affects consciousness/mood/performance.
     -   extreme pain can down pawn.
--   [-] **Downed state** (hunger at 0; no rescue/capture; rest 0 forces sleep instead of downing)
+-   [x] **Downed state** (MED-01: downed by consciousness < 30 %, moving < 15 % or pain shock, back up at 35 %/20 %/shock − 5 % (hysteresis); rescue and capture work (PLAY-010, SIM-045); rest 0 forces sleep instead of downing)
     -   Pawn cannot normally act.
     -   can be rescued/captured.
     -   not equivalent to death.

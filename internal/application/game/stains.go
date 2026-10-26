@@ -22,8 +22,6 @@ const (
 	dripEvery      = 3 // tiles walked per drip
 	downedPoolStep = 60
 	downedPoolMax  = 600
-	colonistBleed  = 15 // injury at which an untended wound drips
-	raiderBleed    = 30
 )
 
 // Blood and ichor on the ground (SIM-020): hits, deaths and bleeding
@@ -183,20 +181,13 @@ func (g *Game) stainAnimalDeath(s animal.Species, pos Position) {
 }
 
 // bleeding reports a creature that is losing blood: an animal under half
-// its hit points, a hurt raider, or a colonist with an open wound nobody
-// has tended.
+// its hit points, or a humanlike (colonist, prisoner or raider) whose body
+// bleeds (MED-01: an untended cut, bite, scratch or fresh stump).
 func (g *Game) bleeding(id entity.EntityID) bool {
 	if a, ok := g.animals.Get(id); ok {
 		return a.HP()*2 < animal.DefOf(a.Species).MaxHP
 	}
-	v, ok := g.vital.Get(id)
-	if !ok || v.Status == health.Dead {
-		return false
-	}
-	if g.isRaider(id) {
-		return v.Injury >= raiderBleed
-	}
-	return g.wounds[id].At != 0 && v.Injury >= colonistBleed && !g.tended(id)
+	return g.bleedingNow(id) // bleed.go
 }
 
 // stainStep drips blood behind a bleeding creature every 3rd tile it walks
@@ -220,10 +211,10 @@ func (g *Game) stainStep(id entity.EntityID, from Position) {
 	g.stamp(from.X, from.Y, g.stainKindOf(id), dripStain)
 }
 
-// stainDowned grows a pool under a downed, untended colonist once an hour
+// stainDowned grows a pool under a downed, bleeding colonist once an hour
 // (called each tick from phaseNeeds for downed pawns).
 func (g *Game) stainDowned(id entity.EntityID, now uint64) {
-	if now%clock.TicksPerHour != 0 || g.isRaider(id) || g.tended(id) {
+	if now%clock.TicksPerHour != 0 || !g.bleeding(id) {
 		return
 	}
 	pos, ok := g.positions.Get(id)

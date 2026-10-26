@@ -14,7 +14,7 @@ import (
 //
 // bodyChanged (body.go) marks or clears a pawn after each change to its
 // body, which covers hits (woundBody), healing, tending and surgery; the
-// hourly sweep (phaseInfection) clears pawns who got well or died since.
+// hourly sweep (phaseMedical, bleed.go) clears pawns who got well or died since.
 // Right after a sweep the index is exactly what a scan of g.bodies would
 // give (TestPatientsIndexMatchesScan). It is derived state: never saved,
 // rebuilt on load from the bodies.
@@ -65,7 +65,7 @@ func (g *Game) syncPatient(id entity.EntityID, b *body.Body) {
 }
 
 // sweepPatients clears every indexed pawn that no longer needs care or
-// has died (hourly, from phaseInfection).
+// has died (hourly, from phaseMedical).
 func (g *Game) sweepPatients() {
 	kept := g.med.patients[:0]
 	for _, id := range g.med.patients {

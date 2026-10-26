@@ -8,6 +8,7 @@ import (
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
+	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/needs"
 	"rimworld-go/internal/domain/sim/command"
@@ -94,7 +95,9 @@ func TestHungryWolfAttacksAndDraftedRiflemanKillsIt(t *testing.T) {
 func TestInjuryDownsThenHeals(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 10, Height: 10})
 	p, _ := g.SpawnNamedPawn(5, 5, "Ada")
-	g.hurt(p, health.DownedInjury+5, 0)
+	// one torso bruise (MED-01): a hit that tore a part off would leave a
+	// fresh stump bleeding, and no one is here to tend it
+	addWound(t, g, p, body.Torso, health.DownedInjury+5, body.Bruise)
 	v := g.VitalOf(p)
 	if v.Status != health.Downed || v.Cause != health.CauseInjury {
 		t.Fatalf("should be downed by injury: %+v", v)
@@ -107,7 +110,8 @@ func TestInjuryDownsThenHeals(t *testing.T) {
 		g.Step(500)
 		g.SetNeeds(p, 1<<20, 1<<20)
 	}
-	if v := g.VitalOf(p); v.Status != health.Alive || v.Injury > health.RecoverInjury {
+	// it stands once pain is under the shock band (750: 60 HP of wounds)
+	if v := g.VitalOf(p); v.Status != health.Alive || v.Injury > 60 {
 		t.Fatalf("should stand up after healing: %+v", v)
 	}
 	g.hurt(p, health.MaxHP, 0)

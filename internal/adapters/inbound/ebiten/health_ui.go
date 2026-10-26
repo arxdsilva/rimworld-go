@@ -26,6 +26,9 @@ const (
 	healthRowH      = 20
 	healthOpRowH    = 24
 	healthPartsID   = "health.parts"
+	healthStateID   = "health.state" // MED-01: the headline line
+	healthBloodID   = "health.blood" // MED-01: the blood loss row
+	healthBloodBarH = 3
 	healthAddID     = "health.op.add"
 	healthPickID    = "health.addop"
 	healthPickList  = "health.addop.list"
@@ -79,10 +82,71 @@ func (a *App) healthTab(p game.PawnView, in rect) {
 	a.healthOps(p, ops, h)
 }
 
-// healthCaps is the capacities column: pain, each capacity, then drugs.
+// healthStateColor tints the Health tab's headline: red while bleeding,
+// amber while downed or injured.
+func healthStateColor(h game.HealthView) color.RGBA {
+	switch {
+	case h.BleedPerDay > 0:
+		return uiDanger
+	case h.State == "Downed" || h.State == "Injured":
+		return uiWarning
+	}
+	return uiText
+}
+
+// healthStateTip is the hover card of the headline.
+func healthStateTip(h game.HealthView) string {
+	if h.BleedPerDay > 0 {
+		return fmt.Sprintf("%s\nOpen wounds lose %d%% of the blood a day. Untended, the blood runs out in about %d hours. A tend stops the bleeding.",
+			h.State, h.BleedPerDay, h.DeathInHours)
+	}
+	return h.State + "\nNothing is bleeding."
+}
+
+// healthBloodTip is the hover card of the blood loss row.
+func healthBloodTip(h game.HealthView) string {
+	t := fmt.Sprintf("Blood loss %d%%\nAt 15%% it starts to cloud the mind; at 60%% the pawn collapses; at 100%% it dies.", h.BloodLossPct)
+	if h.BleedPerDay == 0 {
+		t += " The body makes about a third of its blood back a day while nothing bleeds."
+	}
+	return t
+}
+
+// healthCaps is the capacities column: the state headline and blood loss
+// (MED-01), pain, each capacity, then drugs.
 func (a *App) healthCaps(r rect, h game.HealthView) {
 	y := r.Y
 	step := float32(lineStep(tsBody))
+	u := a.uiSt()
+	if h.State != "" && y+step <= r.bottom() {
+		st := tsBody
+		st.Color = healthStateColor(h)
+		a.uiLabel(r.X, y, fitText(h.State, st, r.W-4), st)
+		u.add(uiWidget{id: healthStateID, r: rect{r.X, y, r.W, step}, label: h.State, tip: healthStateTip(h)})
+		y += step + 2
+	}
+	if (h.BloodLossPct > 0 || h.BleedPerDay > 0) && y+step+healthBloodBarH+2 <= r.bottom() {
+		c := uiWarning
+		if h.BleedPerDay > 0 || h.BloodLossPct >= 60 {
+			c = uiDanger
+		}
+		label := fmt.Sprintf("Blood loss: %d%%", h.BloodLossPct)
+		a.uiLabel(r.X, y, fitText("Blood loss", tsBody, r.W-48), tsBody)
+		st := tsBody
+		st.Color, st.Align = c, alignRight
+		a.uiLabel(r.right()-4, y, fmt.Sprintf("%d%%", h.BloodLossPct), st)
+		bar := rect{r.X, y + step, r.W - 4, healthBloodBarH}
+		fill := bar
+		fill.W = bar.W * float32(min(max(h.BloodLossPct, 0), 100)) / 100
+		u.queue(func(dst *ebiten.Image) {
+			fillRect(dst, bar, uiSliderTrack)
+			if fill.W > 0 {
+				fillRect(dst, fill, c)
+			}
+		})
+		u.add(uiWidget{id: healthBloodID, r: rect{r.X, y, r.W, step + healthBloodBarH}, label: label, tip: healthBloodTip(h)})
+		y += step + healthBloodBarH + 4
+	}
 	line := func(label string, pct int, c color.RGBA) {
 		if y+step > r.bottom() {
 			return
@@ -153,12 +217,15 @@ func (a *App) healthParts(r rect, parts []game.PartView) {
 		if !strings.HasPrefix(pt.Status, game.PartMissing) && !strings.HasPrefix(pt.Status, game.PartReplaced) {
 			tip += fmt.Sprintf("\nHealth left: %d", pt.HP)
 		}
+		if pt.Bleed > 0 { // MED-01
+			tip += fmt.Sprintf("\nBleeding: %d%%/day", pt.Bleed)
+		}
 		u.add(uiWidget{id: fmt.Sprintf("health.part.%d", rows[v.i]), r: hit, label: healthPartLine(pt), tip: tip})
 	}
 }
 
 // paintPartRow draws one body part row: the part, then its state (red for
-// a missing part, amber for wounds, dim for scars and artificial parts).
+// a missing or bleeding part, amber for wounds, dim for scars and artificial parts).
 func paintPartRow(dst *ebiten.Image, row rect, p game.PartView, stripe bool) {
 	if stripe {
 		fillRect(dst, row, uiStripe)
@@ -168,7 +235,7 @@ func paintPartRow(dst *ebiten.Image, row rect, p game.PartView, stripe bool) {
 	drawText(dst, fitText(p.Label, tsBody, labelW-6), float64(row.X+4), ty, tsBody)
 	st := tsSmall
 	switch {
-	case strings.HasPrefix(p.Status, game.PartMissing):
+	case p.Bleed > 0, strings.HasPrefix(p.Status, game.PartMissing):
 		st.Color = uiDanger
 	case strings.HasPrefix(p.Status, game.PartWounded):
 		st.Color = uiWarning

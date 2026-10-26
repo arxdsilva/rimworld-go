@@ -115,7 +115,7 @@ func (g *Game) DevLosePart(pawn entity.EntityID, part string) bool {
 	b := g.ensureBody(pawn, &v)
 	b.Apply(op, body.Success, func(int) int { return 0 }, uint64(g.clock.Now())) // a success rolls nothing
 	g.bodyChanged(pawn, b, &v)                                                   // body.go
-	if v.Status == health.Alive && unconscious(b) {
+	if v.Status == health.Alive && g.downsNow(pawn, v, b) {
 		g.down(pawn, health.CauseInjury)
 	}
 	g.ensurePerson(pawn)

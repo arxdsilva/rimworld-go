@@ -17,15 +17,16 @@ import (
 // Bodies (ENG-003, M1): g.bodies holds each humanlike's body (colonists
 // and raiders), made on the first wound, heal or tend. Animals keep the
 // plain Injury model. health.Record.Injury stays the derived cache
-// body.Damage(), so the downed and death thresholds, and everything else
-// that reads Injury, keep working unchanged. Hit locations and scar rolls
-// come from the body stream (rng_streams.go), never g.rng. Saved as Bodies.
+// body.Damage(): death at health.MaxHP and everything else that reads
+// Injury keep working; downing follows the capacities (MED-01, bleed.go).
+// Hit locations and scar rolls come from the body stream (rng_streams.go),
+// never g.rng. Saved as Bodies.
 
 const (
 	// maxSpill bounds how many parts one hit may spread over.
 	maxSpill = 8
-	// consciousRecover is the consciousness (permille) a pawn downed by
-	// losing it needs to stand again: it goes down at 0 (hysteresis).
+	// consciousRecover is the consciousness (permille) a pawn needs to be
+	// awake enough to talk to (a warden's visit).
 	consciousRecover = 300
 	// sightAccPoints is the shooting accuracy (points) total blindness
 	// costs; one eye costs half.
@@ -204,11 +205,9 @@ func (g *Game) bodyChanged(id entity.EntityID, b *body.Body, v *health.Record) {
 	g.syncPatient(id, b) // patients.go (MED-00)
 }
 
-// unconscious reports b out cold (it downs the pawn).
-func unconscious(b *body.Body) bool { return b != nil && b.Capacity(body.Consciousness) == 0 }
-
-// consciousEnough: id may stand up (no body, or consciousness back over
-// consciousRecover).
+// consciousEnough: id is awake enough to be spoken to (no body, or
+// consciousness at consciousRecover or more). Downing and standing up
+// follow the capacity rule instead (downsNow / standsUp, bleed.go).
 func (g *Game) consciousEnough(id entity.EntityID) bool {
 	b := g.bodies[id]
 	return b == nil || b.Capacity(body.Consciousness) >= consciousRecover
@@ -259,8 +258,12 @@ func (g *Game) openInjury(id entity.EntityID, v health.Record) bool {
 	return b == nil || hasOpenWound(b) || v.Injury > b.Damage()
 }
 
-// hasOpenWound reports a wound on b that can still heal.
+// hasOpenWound reports a wound on b that can still heal, or a fresh
+// stump a tend must close (MED-01).
 func hasOpenWound(b *body.Body) bool {
+	if b.Fresh != 0 {
+		return true
+	}
 	for _, w := range b.Wounds {
 		if !w.Permanent {
 			return true
@@ -284,6 +287,10 @@ type savedBody struct {
 	Fitted    []item.Kind
 	BloodLoss int32
 	Conds     []body.Condition
+	// BloodStage is the blood loss stage's hysteresis memory and Fresh
+	// the untended stumps (MED-01).
+	BloodStage uint8
+	Fresh      uint32
 }
 
 // exportBodies is the Bodies save field in id order (nil: none).
@@ -295,7 +302,8 @@ func (g *Game) exportBodies() []entry[savedBody] {
 	out := make([]entry[savedBody], len(es))
 	for i, e := range es {
 		b := e.V
-		out[i] = entry[savedBody]{e.ID, savedBody{Wounds: b.Wounds, Missing: b.Missing, Fitted: b.Fitted, BloodLoss: b.BloodLoss, Conds: b.Conds}}
+		out[i] = entry[savedBody]{e.ID, savedBody{Wounds: b.Wounds, Missing: b.Missing, Fitted: b.Fitted, BloodLoss: b.BloodLoss, Conds: b.Conds,
+			BloodStage: b.BloodStage, Fresh: b.Fresh}}
 	}
 	return out
 }
@@ -312,7 +320,8 @@ func (g *Game) importBodies(es []entry[savedBody]) {
 		if fitted == nil {
 			fitted = body.FittedFrom(sb.Implants[:])
 		}
-		bs[i] = entry[body.Body]{e.ID, body.Body{Wounds: sb.Wounds, Missing: sb.Missing, Fitted: fitted, BloodLoss: sb.BloodLoss, Conds: sb.Conds}}
+		bs[i] = entry[body.Body]{e.ID, body.Body{Wounds: sb.Wounds, Missing: sb.Missing, Fitted: fitted, BloodLoss: sb.BloodLoss, Conds: sb.Conds,
+			BloodStage: sb.BloodStage, Fresh: sb.Fresh}}
 	}
 	g.bodies = importMap(bs)
 	for _, e := range es {
@@ -485,7 +494,13 @@ func (g *Game) healthView(id entity.EntityID) (HealthView, bool) {
 		return HealthView{}, false
 	}
 	b := g.viewBody(id)
-	hv := HealthView{Pain: int(b.Pain()) / 10, Drugs: g.drugLines(id), DeathInHours: -1} // drugs.go; MED-01 fills death
+	v, _ := g.vital.Get(id)
+	hv := HealthView{Pain: int(b.Pain()) / 10, Drugs: g.drugLines(id), // drugs.go
+		State: healthState(v, b), BloodLossPct: int(b.BloodLoss) / 10, BleedPerDay: int(b.BleedPerDay()) / 10,
+		DeathInHours: b.BleedDeathHours()} // bleed.go (MED-01)
+	if v.Status == health.Dead {
+		hv.DeathInHours = -1
+	}
 	hv.Capacities = make([]CapacityView, 0, body.NumCaps)
 	for c := body.Capacity(0); c < body.NumCaps; c++ {
 		hv.Capacities = append(hv.Capacities, CapacityView{Label: capacityLabels[c], Pct: int(b.Capacity(c)) / 10})
@@ -493,7 +508,8 @@ func (g *Game) healthView(id entity.EntityID) (HealthView, bool) {
 	ps := b.Parts()
 	hv.Parts = make([]PartView, 0, len(ps))
 	for _, s := range ps {
-		pv := PartView{Label: s.Label, Status: partStatus(b, s), HP: s.HP, Part: int(s.Part)}
+		pv := PartView{Label: s.Label, Status: partStatus(b, s), HP: s.HP, Part: int(s.Part),
+			Bleed: int(b.PartBleedPerDay(s.Part)) / 10}
 		if s.Fitted {
 			pv.Implant = s.Implant.String()
 		}

@@ -1,6 +1,8 @@
 package ebiten
 
 import (
+	"slices"
+	"strings"
 	"testing"
 
 	"rimworld-go/internal/application/game"
@@ -145,5 +147,63 @@ func TestHealthTabStates(t *testing.T) {
 	}
 	if hasWidget(a, healthRemoveID(0)) || hasWidget(a, "health.part.16") {
 		t.Fatal("nothing queued, nothing hurt: no rows")
+	}
+}
+
+// TestHealthTabBleeding (MED-01): the headline line is red while bleeding,
+// the blood loss row shows with its bar, a bleeding part's tooltip gives
+// its rate, and the pane's status lines say so.
+func TestHealthTabBleeding(t *testing.T) {
+	t.Parallel()
+	a, f, s := healthApp(t)
+	h := healthSimView()
+	h.State, h.BleedPerDay, h.BloodLossPct, h.DeathInHours = "Bleeding 140%/day · death in 9h", 140, 37, 9
+	h.Parts[body.ArmR].Bleed = 140
+	s.health = map[entity.EntityID]game.HealthView{1: h}
+	drawFrame(t, a, f)
+	w, ok := a.uiSt().find(healthStateID)
+	if !ok || w.label != h.State || !strings.Contains(w.tip, "9 hours") {
+		t.Fatalf("state line %+v", w)
+	}
+	if healthStateColor(h) != uiDanger {
+		t.Fatal("bleeding is red")
+	}
+	if w, ok := a.uiSt().find(healthBloodID); !ok || w.label != "Blood loss: 37%" {
+		t.Fatalf("blood row %+v", w)
+	}
+	if w, ok := a.uiSt().find("health.part.13"); !ok || !strings.Contains(w.tip, "Bleeding: 140%/day") {
+		t.Fatalf("arm tooltip %+v", w)
+	}
+	// tended and healthy: no blood row, a calm headline
+	h.State, h.BleedPerDay, h.BloodLossPct, h.DeathInHours = "Healthy", 0, 0, -1
+	h.Parts[body.ArmR].Bleed = 0
+	s.health = map[entity.EntityID]game.HealthView{1: h}
+	drawFrame(t, a, f)
+	if hasWidget(a, healthBloodID) || healthStateColor(h) != uiText {
+		t.Fatal("no blood loss: no row")
+	}
+	if w, _ := a.uiSt().find(healthStateID); strings.Contains(w.tip, "hours") {
+		t.Fatalf("healthy tip %q", w.tip)
+	}
+	if healthStateColor(game.HealthView{State: "Downed"}) != uiWarning {
+		t.Fatal("downed is amber")
+	}
+	h.BloodLossPct = 20 // recovering: the row stays until the blood is back
+	s.health = map[entity.EntityID]game.HealthView{1: h}
+	drawFrame(t, a, f)
+	if w, ok := a.uiSt().find(healthBloodID); !ok || !strings.Contains(w.tip, "third") {
+		t.Fatalf("recovering row %+v", w)
+	}
+}
+
+func TestPawnStatusSaysBleeding(t *testing.T) {
+	t.Parallel()
+	name := func(entity.EntityID) string { return "" }
+	got := pawnStatusLines(game.PawnView{Status: "alive", Bleeding: true, BleedDeathHours: 7}, name)
+	if !slices.Contains(got, "Bleeding (death in 7h)") {
+		t.Fatalf("lines %v", got)
+	}
+	if got := pawnStatusLines(game.PawnView{Status: "dead", Bleeding: true}, name); slices.ContainsFunc(got, func(s string) bool { return strings.HasPrefix(s, "Bleeding") }) {
+		t.Fatalf("the dead do not bleed: %v", got)
 	}
 }

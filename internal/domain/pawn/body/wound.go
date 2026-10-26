@@ -48,13 +48,18 @@ type Wound struct {
 // Fitted holds the implant on each part, indexed by Part and grown lazily
 // (nil: no implants), so appending parts never resizes a saved array; read
 // and write it through Implant and SetImplant. BloodLoss is permille of
-// blood lost; Conds are the body's conditions (condition.go).
+// blood lost and BloodStage its last stage (the hysteresis memory of
+// BloodStage, bleed.go); Conds are the body's conditions (condition.go).
+// Fresh marks parts torn off by a hit and not yet tended (a bit per Part,
+// MED-01): the stump hurts and bleeds until a tend closes it.
 type Body struct {
-	Wounds    []Wound
-	Missing   uint32
-	Fitted    []item.Kind
-	BloodLoss int32
-	Conds     []Condition
+	Wounds     []Wound
+	Missing    uint32
+	Fitted     []item.Kind
+	BloodLoss  int32
+	Conds      []Condition
+	BloodStage uint8
+	Fresh      uint32
 }
 
 // Implant is the implant fitted on p (0: none).
@@ -71,6 +76,9 @@ func (b *Body) Implant(p Part) item.Kind {
 func (b *Body) SetImplant(p Part, k item.Kind) {
 	if p >= NumParts {
 		return
+	}
+	if k != 0 {
+		b.Fresh &^= bit(p) // the operation closed the stump
 	}
 	if int(p) >= len(b.Fitted) {
 		if k == 0 {
@@ -134,6 +142,9 @@ func (b *Body) hurtPart(p Part, dmg int, kind WoundKind, now uint64) {
 	}
 	if b.partDmg(p)+dmg >= defs[p].MaxHP {
 		b.destroy(p)
+		if kind != Burn { // a burn sears its stump shut
+			b.Fresh |= bit(p)
+		}
 		return
 	}
 	b.Wounds = append(b.Wounds, Wound{Part: p, Dmg: dmg, Kind: kind, At: now})
@@ -144,6 +155,7 @@ func (b *Body) destroy(p Part) {
 	for q := Part(0); q < NumParts; q++ {
 		if under(q, p) {
 			b.Missing |= bit(q)
+			b.Fresh &^= bit(q) // a stump below is part of this loss
 			b.SetImplant(q, 0)
 		}
 	}
@@ -202,7 +214,8 @@ func (b *Body) Heal(roll func(int) int, amount int) (scarred bool) {
 	return scarred
 }
 
-// Tend marks every open wound tended and returns how many it changed.
+// Tend marks every open wound tended and closes every fresh stump; it
+// returns how many it changed.
 func (b *Body) Tend() int {
 	n := 0
 	for i := range b.Wounds {
@@ -211,6 +224,12 @@ func (b *Body) Tend() int {
 			n++
 		}
 	}
+	for p := Part(0); p < NumParts; p++ {
+		if b.Fresh&bit(p) != 0 {
+			n++
+		}
+	}
+	b.Fresh = 0
 	return n
 }
 

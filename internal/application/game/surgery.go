@@ -606,7 +606,7 @@ func (g *Game) operate(surgeon, patient entity.EntityID, slot int, j *job.Record
 		g.message(pp.X, pp.Y, "%s died on the operating table.", g.name(patient))
 		g.dieBy(patient, health.CauseSurgery, 0)
 		return
-	case v.Status == health.Alive && (v.Injury >= g.downedAt(patient) || unconscious(b)):
+	case v.Status == health.Alive && g.downsNow(patient, v, b): // bleed.go (MED-01)
 		g.down(patient, health.CauseInjury)
 		return
 	}
@@ -658,7 +658,7 @@ func (g *Game) wakeFromAnaesthetic(id entity.EntityID, v *health.Record, now uin
 	if v.Status != health.Downed || v.Cause != health.CauseSurgery {
 		return
 	}
-	if v.Injury > health.RecoverInjury || !g.consciousEnough(id) {
+	if !g.standsUp(id, *v) { // bleed.go (MED-01)
 		v.Cause = health.CauseInjury // its wounds keep it down; heal stands it up
 	} else {
 		v.Status, v.Cause = health.Alive, health.CauseNone

@@ -98,6 +98,7 @@ type PartView struct {
 	HP      int
 	Part    int    // body.Part (SIM-049)
 	Implant string // fitted implant's name, "" if none
+	Bleed   int    // the part's bleeding, percent of blood per day (MED-01)
 }
 
 // OperationView is one queued operation.

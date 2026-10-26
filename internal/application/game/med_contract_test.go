@@ -165,7 +165,7 @@ func TestPatientsIndexMatchesScan(t *testing.T) {
 			}
 			return
 		}
-		if p != PhaseInfection || uint64(g.clock.Now())%clock.TicksPerHour != 0 {
+		if p != PhaseMedical || uint64(g.clock.Now())%clock.TicksPerHour != 0 {
 			return
 		}
 		checks++

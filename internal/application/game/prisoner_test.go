@@ -18,6 +18,7 @@ import (
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/pawn/social"
 	"rimworld-go/internal/domain/pawn/stat"
+	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -134,7 +135,7 @@ func TestCaptureCarriesDownedRaiderToPrisonBed(t *testing.T) {
 		t.Fatalf("a prisoner thinks it is imprisoned: %+v", pv.Thoughts)
 	}
 	// it no longer bleeds out
-	for i := 0; i < int(bleedOut)/500+4; i++ {
+	for i := 0; i < int(6*clock.TicksPerHour)/500; i++ {
 		g.Step(500)
 		fed(g, ada, bo)
 		g.SetNeeds(rid, needs.Full, needs.Full)

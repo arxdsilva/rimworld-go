@@ -71,23 +71,8 @@ func TestRaiderFleesWhenBadlyHurt(t *testing.T) {
 	}
 }
 
-func TestDownedRaiderBleedsOutAndDropsWeapon(t *testing.T) {
-	g, _ := raidGame(t)
-	g.Raid(1)
-	rid := g.raiderIDs[0]
-	weapon := g.equip[rid]
-	g.hurt(rid, health.DownedInjury, 0)
-	g.Step(bleedOut + clock.TicksPerHour)
-	if v, _ := g.vital.Get(rid); v.Status != health.Dead {
-		t.Fatal("a downed raider should bleed out")
-	}
-	if st, ok := stackOf(g, item.CorpseHuman); !ok || st.Of != rid {
-		t.Fatal("its body stays as a corpse until buried (SIM-017)")
-	}
-	if _, ok := stackOf(g, weapon); !ok {
-		t.Fatalf("its %s should be left behind", weapon)
-	}
-}
+// TestDownedRaiderBleedsOutAndDropsWeapon became TestRaiderBleedsOutLikeColonist
+// (bleed_test.go, MED-01): a downed raider bleeds out by its wounds, not a timer.
 
 func TestStorytellerSendsTheFirstRaid(t *testing.T) {
 	g := NewColony(Config{Seed: 5, Width: 48, Height: 40})

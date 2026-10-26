@@ -44,6 +44,9 @@ const (
 	lowFoodPerColonist = 4
 	// exposureAlert: hypothermia/heatstroke (permille) worth an alert.
 	exposureAlert = 200
+	// bleedAlertHours: a colonist this close to bleeding out raises the
+	// "bleeding" alert (MED-01).
+	bleedAlertHours = 12
 )
 
 // buildAlerts derives the current alerts from pawns and the world, most
@@ -111,9 +114,12 @@ func raiseAlerts(pawns []game.PawnView, w game.WorldView) []alert {
 	}
 	out = append(out, animalAlerts(w)...)
 
-	var rescue, starving, collapsed, unhappy []game.PawnView
+	var rescue, starving, collapsed, unhappy, bleeding []game.PawnView
 	alive := 0
 	for _, p := range pawns {
+		if p.Status != "dead" && p.Bleeding && p.BleedDeathHours <= bleedAlertHours {
+			bleeding = append(bleeding, p)
+		}
 		switch {
 		case p.Status == "dead":
 			continue
@@ -129,6 +135,7 @@ func raiseAlerts(pawns []game.PawnView, w game.WorldView) []alert {
 			unhappy = append(unhappy, p)
 		}
 	}
+	group("bleeding", true, bleeding, func(n string) string { return n + " is bleeding out" }, "colonists are bleeding out")
 	group("rescue", true, rescue, func(n string) string { return n + " needs rescue" }, "colonists need rescue")
 	group("starving", true, starving, func(n string) string { return n + " is starving" }, "colonists are starving")
 	group("collapsed", false, collapsed, func(n string) string { return n + " collapsed from exhaustion" }, "colonists collapsed")
@@ -577,6 +584,7 @@ func waitingFramesAlert(w game.WorldView) (alert, bool) {
 // (the card shown while the alert is hovered). Keys with a numeric suffix
 // ("penopen.3") share the text of their prefix.
 var alertExplanations = map[string]string{
+	"bleeding":      "A colonist will bleed to death within hours. Get a doctor to tend the wounds now: a tend stops the bleeding at once, with or without medicine.",
 	"hostile":       "Wild animals are attacking colonists. Draft your fighters and keep everyone else indoors until the threat is dead or gone.",
 	"fire":          "Something inside the colony is burning, and fire spreads along wood and dry grass. Send colonists to put it out and clear what it can reach.",
 	"animalhungry":  "Tame animals are running low on food. Put something they eat within reach, or build a feeding trough in their pen.",

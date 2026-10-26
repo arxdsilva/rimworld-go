@@ -8,7 +8,7 @@ const (
 	PhasePlants    = "plants"
 	PhasePower     = "power" // PLAY-021: before climate
 	PhaseClimate   = "climate"
-	PhaseInfection = "infection"
+	PhaseMedical   = "medical" // MED-01: bleeding, blood loss, infection (hourly)
 	PhaseNeeds     = "needs"
 	PhaseAI        = "ai"
 	PhaseJobs      = "jobs"
@@ -23,7 +23,7 @@ const (
 
 // Phases lists the phase names in Step order.
 func Phases() []string {
-	return []string{PhaseCommands, PhasePlants, PhasePower, PhaseClimate, PhaseInfection, PhaseNeeds, PhaseAI,
+	return []string{PhaseCommands, PhasePlants, PhasePower, PhaseClimate, PhaseMedical, PhaseNeeds, PhaseAI,
 		PhaseJobs, PhaseSocial, PhaseAnimals, PhaseThreats, PhaseIncidents, PhaseWorld, PhaseWeather, PhaseMovement}
 }
 
@@ -44,7 +44,7 @@ func (g *Game) stepObserved(n int) {
 	}{
 		{PhaseCommands, g.phaseCommands}, {PhasePlants, g.phasePlants}, {PhasePower, g.phasePower},
 		{PhaseClimate, g.phaseClimate},
-		{PhaseInfection, g.phaseInfection}, {PhaseNeeds, g.phaseNeeds}, {PhaseAI, g.phaseAI},
+		{PhaseMedical, g.phaseMedical}, {PhaseNeeds, g.phaseNeeds}, {PhaseAI, g.phaseAI},
 		{PhaseJobs, g.phaseJobs}, {PhaseSocial, g.phaseSocial}, {PhaseAnimals, g.phaseAnimals},
 		{PhaseThreats, g.phaseThreats}, {PhaseIncidents, g.phaseIncidents}, {PhaseWorld, g.phaseWorld},
 		{PhaseWeather, g.phaseWeather}, {PhaseMovement, g.phaseMovement},

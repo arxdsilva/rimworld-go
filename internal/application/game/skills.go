@@ -6,7 +6,6 @@ import (
 	"rimworld-go/internal/domain/ai/job"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/pawn/backstory"
-	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/infection"
 	"rimworld-go/internal/domain/pawn/look"
 	"rimworld-go/internal/domain/pawn/mood"
@@ -556,14 +555,6 @@ func (g *Game) paceStep(id entity.EntityID, ticks int) int {
 		return max(1, (ticks*1000+int(r)-1)/int(r))
 	}
 	return ticks
-}
-
-// downedAt is the injury that downs id: pain tolerance raises it.
-func (g *Game) downedAt(id entity.EntityID) int {
-	if pt := g.statOf(id, stat.PainTolerance); pt != 0 {
-		return min(health.DownedInjury*(100+int(pt))/100, health.MaxHP-1)
-	}
-	return health.DownedInjury
 }
 
 // lovesWork is the passion of the skill id is working with right now

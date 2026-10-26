@@ -57,7 +57,7 @@ func (g *Game) phaseInfectionAt() {
 	if r := now % clock.TicksPerHour; r != 0 {
 		g.clock.Advance(int(clock.TicksPerHour - r))
 	}
-	g.phaseInfection()
+	g.phaseMedical()
 }
 
 func TestDoctorTendsInfectionWithMedicine(t *testing.T) {

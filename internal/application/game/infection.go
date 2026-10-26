@@ -35,9 +35,10 @@ const (
 	painInjury = 40
 )
 
-// woundOpened records a fresh wound on a colonist.
+// woundOpened records a fresh wound on a humanlike: a colonist, a
+// prisoner or a raider (MED-01: anyone may need tending to stop bleeding).
 func (g *Game) woundOpened(id entity.EntityID) {
-	if g.isRaider(id) || !g.isPawn(id) {
+	if !g.isPawn(id) {
 		return
 	}
 	w := g.wounds[id]
@@ -213,7 +214,9 @@ func tendHeal(c infection.Care) int {
 // closeWound: a tend closes an open wound (it may still fester).
 func (g *Game) closeWound(id entity.EntityID, c infection.Care, doctor entity.EntityID) {
 	w := g.wounds[id]
-	if w.At != 0 && w.Infection == 0 && g.rng.IntN(100) < g.infectionPct(g.infectionChance(id, c)*g.doctorInfectionPct(doctor)/100) { // story.go: difficulty (NG-1)
+	// raiders and prisoners do not fester yet (their infections come with
+	// MED-02); the hourly pass only steps colonists
+	if w.At != 0 && w.Infection == 0 && !g.isRaider(id) && g.rng.IntN(100) < g.infectionPct(g.infectionChance(id, c)*g.doctorInfectionPct(doctor)/100) { // story.go: difficulty (NG-1)
 		w.Infection = infection.Onset
 		pos, _ := g.positions.Get(id)
 		g.logEvent(id, logEntry{Kind: logInfected})
@@ -231,14 +234,9 @@ func (g *Game) setWound(id entity.EntityID, w wound) {
 	g.wounds[id] = w
 }
 
-// phaseInfection runs once an hour: open wounds may fester, infections
-// grow or recede.
-func (g *Game) phaseInfection() {
-	now := uint64(g.clock.Now())
-	if now%clock.TicksPerHour != 0 {
-		return
-	}
-	g.sweepPatients() // patients.go (MED-00): the well and the dead leave the index
+// stepInfections runs once an hour (phaseMedical, bleed.go): colonists'
+// open wounds may fester, infections grow or recede.
+func (g *Game) stepInfections(now uint64) {
 	if len(g.wounds) == 0 {
 		return
 	}

@@ -89,16 +89,30 @@ func (g *Game) freeBedFor(patient entity.EntityID, from Position) (entity.Entity
 	return best, best != 0
 }
 
-// assignDoctor picks the nearest patient that needs a rescue or a tend:
-// downed colonists first get carried to bed; anyone lying down (downed,
-// in bed or asleep) with an open wound or an infection gets tended, with
-// herbal medicine when there is some. With no other doctor around, a
-// colonist tends its own wounds.
+// assignDoctor picks the most urgent patient that needs a rescue or a
+// tend: the fastest bleeding first (MED-01), then the worst hurt, then
+// the nearest. Downed colonists get carried to bed; anyone lying down
+// (downed, in bed or asleep) with an open wound or an infection gets
+// tended, with herbal medicine when there is some. With no other doctor
+// around, a colonist tends its own wounds.
 func (g *Game) assignDoctor(id entity.EntityID) bool {
 	pos, _ := g.positions.Get(id)
 	type cand struct {
-		rec job.Record
-		d   int
+		rec       job.Record
+		bleed     int32
+		injury, d int
+	}
+	// before: c outranks best (bleeding, then injury, then distance)
+	before := func(c, best *cand) bool {
+		switch {
+		case best == nil:
+			return true
+		case c.bleed != best.bleed:
+			return c.bleed > best.bleed
+		case c.injury != best.injury:
+			return c.injury > best.injury
+		}
+		return c.d < best.d
 	}
 	var best *cand
 	consider := func(pid entity.EntityID) {
@@ -136,8 +150,13 @@ func (g *Game) assignDoctor(id entity.EntityID) bool {
 			return
 		}
 		rec.TX, rec.TY = sx, sy
-		if d := manhattan(pos.X, pos.Y, pp.X, pp.Y); best == nil || d < best.d {
-			best = &cand{rec, d}
+		pv, _ := g.vital.Get(pid)
+		c := &cand{rec: rec, injury: pv.Injury, d: manhattan(pos.X, pos.Y, pp.X, pp.Y)}
+		if b := g.bodies[pid]; b != nil {
+			c.bleed = b.BleedPerDay() // body/bleed.go
+		}
+		if before(c, best) {
+			best = c
 		}
 	}
 	for _, pid := range g.pawnIDs {
@@ -289,7 +308,7 @@ func (g *Game) doTend(id entity.EntityID, j job.Record) {
 	if !g.healBody(j.Target, &v, heal, true) { // body.go: tends every open wound, then heals
 		v.Injury = max(0, v.Injury-heal)
 	}
-	if v.Status == health.Downed && v.Cause == health.CauseInjury && v.Injury <= health.RecoverInjury && g.consciousEnough(j.Target) {
+	if v.Status == health.Downed && v.Cause == health.CauseInjury && g.standsUp(j.Target, v) { // bleed.go
 		v.Status, v.Cause = health.Alive, health.CauseNone
 	}
 	g.vital.Set(j.Target, v)

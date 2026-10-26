@@ -7,6 +7,7 @@ import (
 
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/combat/weapon"
+	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
@@ -28,12 +29,16 @@ func stainAt(g *Game, x, y int) (stain.Stain, bool) {
 	return s, ok
 }
 
-func hurtWound(t *testing.T, g *Game, id entity.EntityID, injury int) {
+// hurtWound gives id one open cut of dmg on the torso in place of its
+// wounds (MED-01: an open cut bleeds; a bruise would not).
+func hurtWound(t *testing.T, g *Game, id entity.EntityID, dmg int) *body.Body {
 	t.Helper()
 	v, _ := g.vital.Get(id)
-	v.Injury = injury
-	g.vital.Set(id, v)
+	b := g.ensureBody(id, &v)
+	b.Wounds = []body.Wound{{Part: body.Torso, Dmg: dmg, Kind: body.Cut}}
+	g.bodyChanged(id, b, &v)
 	g.woundOpened(id)
+	return b
 }
 
 // dripSteps walks id over three distinct tiles and returns the stains.
@@ -164,7 +169,7 @@ func TestBleedingColonistDripsEvery3Tiles(t *testing.T) {
 	if len(g.stains.tiles) != 0 || len(g.stains.dripN) != 0 {
 		t.Fatal("a healthy colonist dripped")
 	}
-	hurtWound(t, g, id, 20)
+	b := hurtWound(t, g, id, 20)
 	g.stainStep(id, Position{10, 3})
 	g.stainStep(id, Position{11, 3})
 	if len(g.stains.tiles) != 0 {
@@ -174,9 +179,9 @@ func TestBleedingColonistDripsEvery3Tiles(t *testing.T) {
 	if s, ok := stainAt(g, 12, 3); !ok || s.Amount != dripStain || len(g.stains.tiles) != 1 {
 		t.Fatalf("3rd tile = %+v %v", s, ok)
 	}
-	// a light wound (injury 14) does not bleed, and resets the count
+	// a tended wound (MED-01) no longer bleeds, and resets the count
 	g.stainStep(id, Position{13, 3})
-	hurtWound(t, g, id, 14)
+	b.Tend()
 	g.stainStep(id, Position{14, 3})
 	if g.stains.dripN[id] != 0 {
 		t.Fatalf("count not reset: %v", g.stains.dripN)
@@ -204,17 +209,19 @@ func TestBleedingColonistDripsEvery3Tiles(t *testing.T) {
 func TestTendedColonistStopsDripping(t *testing.T) {
 	g := stainGame(t)
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
-	hurtWound(t, g, id, 25)
+	b := hurtWound(t, g, id, 25)
 	g.stainStep(id, Position{9, 3})
 	g.stainStep(id, Position{10, 3})
-	g.tendedUntil[id] = uint64(g.clock.Now()) + clock.TicksPerDay
+	b.Tend() // a tend stops the bleeding (MED-01)
 	g.stainStep(id, Position{11, 3})
 	if len(g.stains.tiles) != 0 || g.stains.dripN[id] != 0 {
 		t.Fatalf("tended colonist dripped: %v %v", g.stains.tiles, g.stains.dripN)
 	}
 }
 
-func TestRaiderBleedsAtThirty(t *testing.T) {
+// TestRaiderBleedsFromAnOpenCut (MED-01; was TestRaiderBleedsAtThirty): a
+// raider drips by its body, like a colonist, not past an injury threshold.
+func TestRaiderBleedsFromAnOpenCut(t *testing.T) {
 	g := New(Config{Seed: 6, Width: 30, Height: 12})
 	g.SpawnNamedPawn(5, 5, "Ada")
 	g.Raid(1)
@@ -223,15 +230,14 @@ func TestRaiderBleedsAtThirty(t *testing.T) {
 	}
 	r := g.raiderIDs[0]
 	v, _ := g.vital.Get(r)
-	v.Injury = 29
+	v.Injury = 40
 	g.vital.Set(r, v)
 	if g.bleeding(r) {
-		t.Fatal("29 does not bleed")
+		t.Fatal("injury with no body (a bruise at most) does not bleed")
 	}
-	v.Injury = 30
-	g.vital.Set(r, v)
+	hurtWound(t, g, r, 5)
 	if !g.bleeding(r) {
-		t.Fatal("30 bleeds")
+		t.Fatal("an open cut bleeds")
 	}
 	g.stainStep(r, Position{1, 1})
 	g.stainStep(r, Position{2, 1})
@@ -263,6 +269,7 @@ func TestHurtAnimalDrips(t *testing.T) {
 func TestDownedPools(t *testing.T) {
 	g := stainGame(t)
 	id, _ := g.SpawnNamedPawn(5, 5, "Ada")
+	hurtWound(t, g, id, 10) // bleeding (MED-01: only a bleeding body pools)
 	v, _ := g.vital.Get(id)
 	v.Status = health.Downed
 	g.vital.Set(id, v)
@@ -278,15 +285,16 @@ func TestDownedPools(t *testing.T) {
 	if s, _ := stainAt(g, 5, 5); s.Amount != downedPoolMax {
 		t.Fatalf("pool = %d, want %d", s.Amount, downedPoolMax)
 	}
-	// a tended or a raider body does not pool
+	// a tended body does not pool
 	g2 := stainGame(t)
 	id2, _ := g2.SpawnNamedPawn(5, 5, "Ada")
-	g2.tendedUntil[id2] = hour + clock.TicksPerDay
+	b2 := hurtWound(t, g2, id2, 10)
+	b2.Tend()
 	g2.stainDowned(id2, hour)
 	if len(g2.stains.tiles) != 0 {
 		t.Fatal("tended body pooled")
 	}
-	g2.tendedUntil[id2] = 0
+	hurtWound(t, g2, id2, 10)
 	g2.stainDowned(entity.EntityID(9999), hour)
 	if len(g2.stains.tiles) != 0 {
 		t.Fatal("unknown id pooled")

@@ -403,7 +403,7 @@ func TestFightEndsWhenOneIsDowned(t *testing.T) {
 	g, a, b := fightPair(t, 1)
 	g.startSocialFight(b, a)
 	g.Step(5)
-	g.hurt(a, g.downedAt(a), b)
+	g.hurt(a, downDamage(g, a), b)
 	if g.inSocialFight(a) || g.inSocialFight(b) {
 		t.Fatal("the fight went on with a fighter down")
 	}

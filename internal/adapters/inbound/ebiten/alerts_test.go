@@ -188,7 +188,8 @@ func TestEveryAlertCarriesAnExplanation(t *testing.T) {
 	pawns = append(pawns,
 		game.PawnView{ID: 4, Name: "Dee", Status: "downed", Reason: "no food", X: 1, Y: 1},
 		game.PawnView{ID: 5, Name: "Eli", Status: "alive", Mood: 80, MentalBreak: "wander", X: 2, Y: 2},
-		game.PawnView{ID: 6, Name: "Fay", Status: "alive", Mood: 80, Hypothermia: 500, Heatstroke: 500, X: 3, Y: 3})
+		game.PawnView{ID: 6, Name: "Fay", Status: "alive", Mood: 80, Hypothermia: 500, Heatstroke: 500, X: 3, Y: 3},
+		game.PawnView{ID: 7, Name: "Gil", Status: "alive", Mood: 80, Bleeding: true, BleedDeathHours: 5, X: 4, Y: 4})
 	got := buildAlerts(pawns, w)
 	seen := map[string]bool{}
 	for _, al := range got {
@@ -200,7 +201,7 @@ func TestEveryAlertCarriesAnExplanation(t *testing.T) {
 			t.Errorf("alert %q fell back to the generic explanation", al.key)
 		}
 	}
-	for _, k := range []string{"hostile", "raid", "rescue", "starving", "collapsed", "food", "break", "hypothermia",
+	for _, k := range []string{"bleeding", "hostile", "raid", "rescue", "starving", "collapsed", "food", "break", "hypothermia",
 		"heatstroke", "nofuel", "waitingframes", "unhappy", "fire", "penopen", "unpenned", "timbergnaw"} {
 		if !seen[k] {
 			t.Errorf("fixture does not raise %q (got %v)", k, alertKeys(got))
@@ -417,5 +418,41 @@ func TestAlertPulse(t *testing.T) {
 	}
 	if hi-lo < 0.2 {
 		t.Fatalf("pulse barely moves: %v..%v", lo, hi)
+	}
+}
+
+// TestBleedingAlert (MED-01): a colonist bleeding out within 12 hours
+// raises a danger alert on it; a slower bleed, a dead colonist, a
+// prisoner and a raider do not.
+func TestBleedingAlert(t *testing.T) {
+	t.Parallel()
+	pawns := []game.PawnView{
+		{ID: 1, Name: "Ada", Status: "downed", Reason: "injured", InBed: true, Bleeding: true, BleedDeathHours: 9, X: 3, Y: 4},
+		{ID: 2, Name: "Bo", Status: "alive", Mood: 80, Bleeding: true, BleedDeathHours: 13},
+		{ID: 3, Name: "Cy", Status: "dead", Bleeding: true, BleedDeathHours: 2},
+		{ID: 4, Name: "Dorn", Status: "downed", Prisoner: true, Bleeding: true, BleedDeathHours: 2},
+		{ID: 5, Name: "Krell", Status: "downed", Hostile: true, Lying: true, Bleeding: true, BleedDeathHours: 2},
+		{ID: 6, Name: "Eve", Status: "alive", Mood: 80, BleedDeathHours: 0}, // not bleeding: the zero hours mean nothing
+	}
+	got := buildAlerts(pawns, game.WorldView{Food: 100})
+	var bleed []alert
+	for _, a := range got {
+		if a.key == "bleeding" {
+			bleed = append(bleed, a)
+		}
+	}
+	if len(bleed) != 1 || bleed[0].label != "Ada is bleeding out" || !bleed[0].danger ||
+		len(bleed[0].targets) != 1 || bleed[0].targets[0] != [2]int{3, 4} {
+		t.Fatalf("bleeding alerts %+v (all %v)", bleed, alertKeys(got))
+	}
+	if got[0].key != "bleeding" {
+		t.Fatalf("a danger sorts first: %v", alertKeys(got))
+	}
+	pawns[1].BleedDeathHours = 12
+	got = buildAlerts(pawns, game.WorldView{Food: 100})
+	for _, a := range got {
+		if a.key == "bleeding" && a.label != "2 colonists are bleeding out" {
+			t.Fatalf("two bleeding: %q", a.label)
+		}
 	}
 }

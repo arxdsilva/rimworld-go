@@ -649,15 +649,15 @@ understandable.
 
 ## 10.1 Health overview
 
--   [ ] **Overall state**
+-   [-] **Overall state** (MED-01: Health-tab state line, e.g. "Bleeding 140%/day · death in 9h"; no summary of diseases or conditions yet)
     -   Healthy/injured/sick/downed/dead.
 -   [x] **Pain** (UI-022: Health tab)
--   [ ] **Blood loss**
+-   [x] **Blood loss** (MED-01: blood-loss row with a bar in the Health tab)
 -   [x] **Consciousness** (Health tab capacity row)
 -   [x] **Moving** (Health tab capacity row)
 -   [x] **Manipulation** (Health tab capacity row)
 -   [x] **Sight/hearing/talking and other capacities** (Health tab capacity rows)
--   [ ] **Bleeding rate / time-to-danger where useful**
+-   [x] **Bleeding rate / time-to-danger where useful** (MED-01: bleed per day and death-in hours in the state line, per-part bleed in tooltips, "Bleeding (death in Nh)" pawn status, danger alert at ≤ 12 h)
 
 ## 10.2 Body-part tree
 

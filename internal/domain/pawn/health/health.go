@@ -38,6 +38,8 @@ const (
 	CauseSurgery
 	// CauseBurns (PLAY-015): burned to death in a fire.
 	CauseBurns
+	// CauseBloodLoss (MED-01): bled to death.
+	CauseBloodLoss
 )
 
 func (c Cause) String() string {
@@ -60,6 +62,8 @@ func (c Cause) String() string {
 		return "botched surgery"
 	case CauseBurns:
 		return "burns"
+	case CauseBloodLoss:
+		return "blood loss"
 	default:
 		return ""
 	}
@@ -79,7 +83,10 @@ const (
 	StarvationTicks = 2500
 )
 
-// Injury thresholds for pawns (hit points out of MaxHP).
+// Injury thresholds (hit points out of MaxHP). Humanlikes with a body
+// go down by their capacities (BodyDowns, MED-01); DownedInjury and
+// RecoverInjury remain the legacy rule for a pawn with no body (until the
+// animal medical phase, MED-09, moves animals onto bodies too).
 const (
 	MaxHP = 100
 	// DownedInjury downs a pawn; RecoverInjury lets it stand again.
@@ -97,4 +104,31 @@ func (r Record) HP() int {
 		return 0
 	}
 	return hp
+}
+
+// Capacity downing (MED-01), in permille. A body goes down when
+// consciousness falls below DownConsciousness, moving below DownMoving or
+// pain reaches its pain shock threshold (PainShock for a plain pawn). It
+// stands again only when every one is back past its recover value: the
+// gap between the two is the hysteresis band, so a body hovering at a
+// threshold does not flap between lying and standing.
+const (
+	DownConsciousness    = 300 // wiki: Consciousness (incapacitated below 30 %)
+	RecoverConsciousness = 350 // original tuning (hysteresis band)
+	DownMoving           = 150 // wiki: Moving (incapacitated below 15 %)
+	RecoverMoving        = 200 // original tuning (hysteresis band)
+	PainShock            = 800 // wiki: Pain (pain shock at 80 %)
+	PainShockBand        = 50  // pain must fall this far below the shock threshold; original tuning
+)
+
+// BodyDowns reports a body with consciousness cons, moving and pain (all
+// permille) incapacitated, with pain shock at shock.
+func BodyDowns(cons, moving, pain, shock int32) bool {
+	return cons < DownConsciousness || moving < DownMoving || pain >= shock
+}
+
+// BodyRecovered reports a downed body able to stand again: every capacity
+// past its recover value and pain under the shock threshold by the band.
+func BodyRecovered(cons, moving, pain, shock int32) bool {
+	return cons >= RecoverConsciousness && moving >= RecoverMoving && pain <= shock-PainShockBand
 }
