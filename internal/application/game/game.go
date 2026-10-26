@@ -378,6 +378,8 @@ type BuildingView struct {
 	// ThermoTarget is a heater's or cooler's target temperature (tenths of
 	// a degree C).
 	ThermoTarget int
+	ThermoActive bool // a heater or cooler working now (not idling)
+	PowerMax     int  // a producer's peak output, W
 }
 
 // PlantView is a wild plant.
@@ -1215,8 +1217,8 @@ func (g *Game) world() WorldView {
 		if b.Kind == construction.Carpet {
 			bv.Catch = filth.Catch(b.Stuff) / 10
 		}
-		if b.Kind == construction.Campfire {
-			bv.Fuel, bv.FuelPct, bv.Burning = true, g.fuel[id]*100/(CampfireCapacity*TicksPerWood), g.burning(id, b)
+		if pct, ok := g.fuelPct(id, b); ok { // campfire, torch lamp, wood-fired generator (fuel.go)
+			bv.Fuel, bv.FuelPct, bv.Burning = true, pct, g.burning(id, b)
 		}
 		if b.Kind == construction.FeedingTrough {
 			bv.TroughFill, bv.TroughCap = g.troughFill(id), construction.TroughCapacity

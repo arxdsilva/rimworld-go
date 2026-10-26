@@ -55,9 +55,10 @@ func (g *Game) fillPowerBuilding(bv *BuildingView, id entity.EntityID, b constru
 			bv.NoPowerReason = g.noPowerWhy(id, net, false)
 		}
 		if isThermostat(s) {
-			bv.ThermoTarget = g.thermoTarget(id)
+			bv.ThermoTarget, bv.ThermoActive = g.thermoTarget(id), g.thermoActive(id)
 		}
 	case power.Producer:
+		bv.PowerMax = s.Peak
 		if bv.PowerOut = g.liveOutput(id); bv.PowerOut == 0 {
 			bv.NoPowerReason = g.noPowerWhy(id, net, b.Kind == construction.WoodGenerator && g.fuel[id] <= 0)
 		} else if net == 0 {

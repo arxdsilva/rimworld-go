@@ -67,3 +67,26 @@ func TestDeviceViewNamesBothLinkEnds(t *testing.T) {
 		t.Fatalf("lamp link from %d,%d to %d,%d (has %v), want 17,5 to 16,4", v.LinkFromX, v.LinkFromY, v.LinkX, v.LinkY, v.HasLink)
 	}
 }
+
+// TestBurnerAndPowerViewFields: every fuel burner (campfire, torch lamp,
+// wood-fired generator) reports its fuel in the view, a producer its peak
+// output, and a heater whether its thermostat is working now.
+func TestBurnerAndPowerViewFields(t *testing.T) {
+	g := New(Config{Seed: 1, Width: 30, Height: 20})
+	gen := psFuelled(t, g, 5, 5)
+	torch := buildNow(t, g, construction.TorchLamp, item.Wood, construction.South, 12, 5)
+	g.setFuel(torch, g.fuelCap(torch)/2)
+	heater := buildNow(t, g, construction.Heater, item.Steel, construction.South, 15, 5)
+	g.setThermoActive(heater, true)
+	g.Step(powerInterval)
+	// the running generator has burned a little of its full tank
+	if v := psView(t, g, gen); !v.Fuel || v.FuelPct < 95 || v.FuelPct > 100 || v.PowerMax != 800 {
+		t.Fatalf("generator view fuel %v %d%%, max %d W", v.Fuel, v.FuelPct, v.PowerMax)
+	}
+	if v := psView(t, g, torch); !v.Fuel || v.FuelPct < 45 || v.FuelPct > 50 { // burning too
+		t.Fatalf("torch view fuel %v %d%%", v.Fuel, v.FuelPct)
+	}
+	if v := psView(t, g, heater); !v.ThermoActive {
+		t.Fatal("an active heater's view says it is not working")
+	}
+}
