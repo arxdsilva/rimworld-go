@@ -8,6 +8,7 @@ import (
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
+	"rimworld-go/internal/domain/pawn/medcare"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -256,5 +257,98 @@ func TestHealthTabConditions(t *testing.T) {
 	}
 	if got := pawnStatusLines(game.PawnView{Status: "alive", Infection: 42}, name); !slices.Contains(got, "Infection: winning (42%)") {
 		t.Fatalf("winning lines %v", got)
+	}
+}
+
+// lastOf is the newest command of kind k the stub got (nil: none).
+func lastOf(s *stubSim, k command.Kind) *command.Command {
+	for i := len(s.cmds) - 1; i >= 0; i-- {
+		if s.cmds[i].Kind == k {
+			return &s.cmds[i]
+		}
+	}
+	return nil
+}
+
+// MED-03: the care row heads the Health tab and sends SetMedicalCare.
+func TestHealthCareRow(t *testing.T) {
+	t.Parallel()
+	a, f, s := healthApp(t)
+	h := s.health[1]
+	h.Care = uint8(medcare.Best)
+	s.health[1] = h
+	f.frame(t, a)
+	for c := medcare.Policy(0); c < medcare.NumPolicies; c++ {
+		w, ok := a.uiSt().find(healthCareID(c))
+		if !ok || w.label != careShort(c) || !strings.HasPrefix(w.tip, c.Label()) {
+			t.Fatalf("care button %d: %+v", c, w)
+		}
+	}
+	press(t, a, f, healthCareID(medcare.Best)) // already the level: nothing to send
+	if c := lastOf(s, command.SetMedicalCare); c != nil {
+		t.Fatalf("the current level sends nothing: %+v", c)
+	}
+	press(t, a, f, healthCareID(medcare.NoMeds))
+	if c := lastOf(s, command.SetMedicalCare); c == nil || c.Pawn != 1 || medcare.Policy(c.Mode) != medcare.NoMeds {
+		t.Fatalf("SetMedicalCare = %+v", c)
+	}
+	drawFrame(t, a, f)
+}
+
+// MED-03: the Self-tend checkbox sends SetSelfTend; prisoners have none.
+func TestHealthSelfTendCheckbox(t *testing.T) {
+	t.Parallel()
+	a, f, s := healthApp(t)
+	press(t, a, f, healthSelfID)
+	if c := lastOf(s, command.SetSelfTend); c == nil || c.Pawn != 1 || !c.Enabled {
+		t.Fatalf("SetSelfTend = %+v", c)
+	}
+	h := s.health[1]
+	h.SelfTend = true
+	s.health[1] = h
+	press(t, a, f, healthSelfID)
+	if c := lastOf(s, command.SetSelfTend); c == nil || c.Enabled {
+		t.Fatalf("unchecking sends off: %+v", c)
+	}
+	s.pawns[0].Prisoner = true
+	f.frame(t, a)
+	if hasWidget(a, healthSelfID) || !hasWidget(a, healthCareID(medcare.NoCare)) {
+		t.Fatal("a prisoner has care levels but no self-tend")
+	}
+	s.pawns[0].Prisoner, s.pawns[0].Status = false, "dead"
+	f.frame(t, a)
+	if w, _ := a.uiSt().find(healthCareID(medcare.NoMeds)); !w.disabled || w.reason == "" {
+		t.Fatalf("the dead: care disabled with a reason: %+v", w)
+	}
+}
+
+// MED-03: queued operations move up and down through ReorderOperation.
+func TestHealthReorderButtons(t *testing.T) {
+	t.Parallel()
+	a, f, s := healthApp(t)
+	h := s.health[1]
+	h.Operations = append(h.Operations, game.OperationView{Label: "Amputate right arm", Slot: 1})
+	s.health[1] = h
+	f.frame(t, a)
+	if w, _ := a.uiSt().find(healthUpID(0)); !w.disabled || w.reason == "" {
+		t.Fatalf("the first can't move up: %+v", w)
+	}
+	if w, _ := a.uiSt().find(healthDownID(1)); !w.disabled {
+		t.Fatalf("the last can't move down: %+v", w)
+	}
+	press(t, a, f, healthDownID(0))
+	if c := lastOf(s, command.ReorderOperation); c == nil || c.Pawn != 1 || c.Index != 0 || c.Count != 1 {
+		t.Fatalf("down = %+v", c)
+	}
+	press(t, a, f, healthUpID(1))
+	if c := lastOf(s, command.ReorderOperation); c == nil || c.Index != 1 || c.Count != -1 {
+		t.Fatalf("up = %+v", c)
+	}
+	drawFrame(t, a, f)
+	h.Operations = h.Operations[:1]
+	s.health[1] = h
+	f.frame(t, a)
+	if w, _ := a.uiSt().find(healthDownID(0)); !w.disabled {
+		t.Fatal("a single operation has nowhere to go")
 	}
 }

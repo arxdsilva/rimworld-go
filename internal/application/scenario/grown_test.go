@@ -119,7 +119,11 @@ func TestGrownGolden(t *testing.T) {
 	// Re-pinned (MED-02), behaviour changed by design: tend quality, wiki
 	// healing rates and per-wound infection racing immunity; stable over
 	// -count=2.
-	const want uint64 = 0x15aa8af06fa3437b
+	// Re-pinned (MED-03 care policy, MED-05 organs): new organs shift where
+	// hits land, three new capacities, the doctor's work runs as ordered
+	// steps under care levels; MED-05 alone gives this value on a clean
+	// copy; stable over -count=2.
+	const want uint64 = 0xde4879ac9bcfeb75
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

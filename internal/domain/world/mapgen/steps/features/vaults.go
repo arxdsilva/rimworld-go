@@ -223,16 +223,27 @@ var (
 	vaultSpecials = []item.Kind{item.ProstheticLeg, item.ProstheticArm, item.GlassEye, item.SparkTablet}
 )
 
-// vaultLoot draws 3-6 stacks: a rifle (35%), one rare find (15%), and the
-// rest from the base table.
+// vaultNanomed is the rarest find: a few nanomed kits (MED-05), drawn
+// instead of the rare find on the lowest vaultNanomedPct rolls, so it
+// takes no draw of its own and other vaults generate as before.
+var vaultNanomed = lootEntry{item.NanomedKit, 1, 3}
+
+const vaultNanomedPct = 4
+
+// vaultLoot draws 3-6 stacks: a rifle (35%), one rare find (15%; nanomed
+// kits on 4%), and the rest from the base table.
 func vaultLoot(rn *randx.Rand) []lootEntry {
 	n := 3 + rn.IntN(4)
 	var out []lootEntry
 	if rn.IntN(100) < 35 {
 		out = append(out, vaultRifle)
 	}
-	if rn.IntN(100) < 15 {
-		out = append(out, lootEntry{vaultSpecials[rn.IntN(len(vaultSpecials))], 1, 1})
+	if r := rn.IntN(100); r < 15 {
+		find := lootEntry{vaultSpecials[rn.IntN(len(vaultSpecials))], 1, 1}
+		if r < vaultNanomedPct {
+			find = vaultNanomed
+		}
+		out = append(out, find)
 	}
 	base := append([]lootEntry(nil), vaultLootBase...)
 	shuffle(rn, base)

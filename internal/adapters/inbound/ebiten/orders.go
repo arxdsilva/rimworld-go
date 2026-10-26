@@ -161,7 +161,8 @@ func (a *App) openOrders(tx, ty int, sx, sy float32) {
 
 // rightClickTile is the right-click on tile (tx, ty) with a pawn selected.
 // A drafted colonist walks to open ground at once; on a raider or animal it
-// gets the order menu instead, so Shoot / Melee are reachable.
+// gets the order menu instead, so Shoot / Melee are reachable, and on a
+// wounded colonist or prisoner too, so "Tend <name>" is (MED-03).
 func (a *App) rightClickTile(tx, ty int, sx, sy float32) {
 	p, ok := a.selectedPawn()
 	if !ok {
@@ -172,11 +173,27 @@ func (a *App) rightClickTile(tx, ty int, sx, sy float32) {
 		return
 	}
 	if p.Drafted && !a.creatureAt(tx, ty, p.ID) {
+		if opts := a.renderer.game.OrdersAt(p.ID, tx, ty); hasTendOrder(opts) {
+			// MED-03: a wounded pawn here: the menu offers "Tend <name>"
+			a.float = floatMenu{open: true, x: sx + 6, y: sy + 4, opts: opts, tx: tx, ty: ty}
+			return
+		}
 		a.closeFloat()
 		a.renderer.enqueue(command.Command{Kind: command.MovePawn, Pawn: uint64(p.ID), X: tx, Y: ty, Queue: a.queueing()})
 		return
 	}
 	a.openOrders(tx, ty, sx, sy)
+}
+
+// hasTendOrder reports an emergency tend among opts (a wounded colonist
+// or prisoner on the tile, MED-03).
+func hasTendOrder(opts []game.OrderOption) bool {
+	for _, o := range opts {
+		if o.Cmd.Kind == command.EmergencyTend {
+			return true
+		}
+	}
+	return false
 }
 
 // creatureAt reports whether a raider or animal stands on the tile, so a

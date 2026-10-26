@@ -10,6 +10,7 @@ import (
 	"rimworld-go/internal/domain/pawn/body"
 	"rimworld-go/internal/domain/pawn/health"
 	"rimworld-go/internal/domain/pawn/infection"
+	"rimworld-go/internal/domain/pawn/medcare"
 	"rimworld-go/internal/domain/pawn/skill"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/entity"
@@ -152,10 +153,16 @@ func (g *Game) lyingForCare(id entity.EntityID) bool {
 // withMedicine adds a fetch of medicine to a tend job (rec.Target is the
 // patient), if there is some to be had. The tier is chosen here, once, from
 // the patient's state: industrial for a severe injury or an infection,
-// herbal otherwise, each falling back to the other. The job carries the
-// chosen dose, so the tier cannot flap while the doctor works (NG-1 §4.8).
+// herbal otherwise, each falling back to the other, and only what the
+// patient's care level allows (care.go, MED-03: none for "No care" and
+// "Care, no medicine"). The job carries the chosen dose, so the tier
+// cannot flap while the doctor works (NG-1 §4.8).
 func (g *Game) withMedicine(id entity.EntityID, rec job.Record) job.Record {
+	pol := g.careOf(rec.Target)
 	for _, k := range g.medicineTiers(rec.Target) {
+		if !medcare.Allows(pol, k) {
+			continue
+		}
 		sid, st := g.ingredientFor(id, recipe.Input{Kind: k, Qty: 1, Max: 1})
 		if sid == 0 {
 			continue
@@ -334,7 +341,7 @@ func (g *Game) rollInfections(id entity.EntityID, b *body.Body, now uint64) {
 
 // immunityGain is id's immunity gain (permille; vitals monitors and
 // organs change it from MED-05/06).
-func (g *Game) immunityGain(entity.EntityID) int32 { return 1000 }
+func (g *Game) immunityGain(id entity.EntityID) int32 { return g.organImmunityGain(id) } // organs.go (MED-05)
 
 // stepConds advances an hour of every condition race on id; it reports
 // id died of one. A beaten condition is removed.

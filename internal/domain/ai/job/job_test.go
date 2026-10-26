@@ -35,3 +35,9 @@ func TestFlickIsAJob(t *testing.T) {
 		t.Fatalf("flick: %q", (Record{Kind: Flick, State: Do}).Line())
 	}
 }
+
+func TestEmergencyTendIsAJob(t *testing.T) {
+	if EmergencyTend.String() != "emergency tend" || EmergencyTend.IsIdle() || (Record{Kind: EmergencyTend, State: Goto}).Line() != "emergency tend goto" {
+		t.Fatalf("emergency tend: %q", (Record{Kind: EmergencyTend, State: Goto}).Line())
+	}
+}

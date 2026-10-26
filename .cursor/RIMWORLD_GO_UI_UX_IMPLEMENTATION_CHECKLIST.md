@@ -682,8 +682,8 @@ understandable.
 
 ## 10.4 Medical settings
 
--   [ ] **Maximum medical care selector**
--   [ ] **Self-tend toggle**
+-   [x] **Maximum medical care selector** (MED-03: five care buttons in the Health-tab header; Assign screen Medical column)
+-   [x] **Self-tend toggle** (MED-03: Health-tab checkbox for colonists)
 -   [ ] **Bed-rest/medical-bed state**
 -   [ ] **Doctor/treatment status**
 
@@ -695,7 +695,7 @@ understandable.
     -   Required medicine/body part/item.
     -   Risk information.
 -   [x] **Queued operations** (Health tab)
--   [-] **Cancel/reorder operation** (remove works; no reorder)
+-   [x] **Cancel/reorder operation** (remove works; MED-03: up/down arrows on each queued operation)
 
 ## 10.6 Rich explanation
 
@@ -798,7 +798,7 @@ understandable.
 -   [x] **Ranged attack**
 -   [ ] **Fire-at-will toggle**
 -   [ ] **Hold position behavior if implemented**
--   [ ] **Emergency tend**
+-   [x] **Emergency tend** (MED-03: drafted right-click "Tend <name>" on a wounded colonist or prisoner)
 -   [ ] **Rescue/capture contextual commands**
 
 ## 13.3 Targeting feedback
@@ -1015,8 +1015,8 @@ This screen centralizes per-pawn behavioral policies.
 
 ## 17.6 Medical policy
 
--   [ ] **Care tier selector**
--   [ ] **Clear icon/tooltip for medicine level**
+-   [x] **Care tier selector** (MED-03: per pawn in the Health tab and Assign screen; "Default medical care" row per group on the Assign screen)
+-   [-] **Clear icon/tooltip for medicine level** (MED-03: text buttons with tooltips; icons still to come)
 
 ------------------------------------------------------------------------
 

@@ -33,6 +33,10 @@ const (
 	SolarPower
 	WindPower
 	GeothermalPower
+	// ServoReplacements (MED-05, append only, saved): the servo tier of
+	// implants. It needs Prosthetics and Fabrication (the components they
+	// are built from; there is no microelectronics project).
+	ServoReplacements
 	NumProjects
 )
 
@@ -72,7 +76,8 @@ var defs = [NumProjects]Def{
 		Desc:     "Grow ashleaf and steep or press it into stimulants.",
 		Unlocks:  []string{"crop:ashleaf", "build:drug table", "recipe:press_tablet"}},
 	Prosthetics: {Project: Prosthetics, Name: "prosthetics", Label: "Prosthetics", Cost: 4000, Requires: []Project{Herbalism},
-		Desc: "Steel limbs to replace lost legs and arms.", Unlocks: []string{"recipe:make_prosthetic_leg", "recipe:make_prosthetic_arm", "recipe:make_glass_eye"}},
+		Desc: "Steel limbs to replace lost legs and arms.", Unlocks: []string{"recipe:make_prosthetic_leg", "recipe:make_prosthetic_arm", "recipe:make_glass_eye",
+			"recipe:make_valve_heart"}},
 	Bridges: {Project: Bridges, Name: "bridges", Label: "Bridges", Cost: 1500,
 		Desc: "Timber platforms over water, marsh and mud. They hold light things, not stone walls.", Unlocks: []string{"build:bridge"}},
 	// PLAY-021 (our costs). Lamps need power and come with Electricity;
@@ -92,6 +97,12 @@ var defs = [NumProjects]Def{
 	GeothermalPower: {Project: GeothermalPower, Name: "geothermal_power", Label: "Geothermal power", Cost: 5000,
 		Requires: []Project{Electricity},
 		Desc:     "A generator built over a steam vent: steady power day and night.", Unlocks: []string{"build:geothermal generator"}},
+	// MED-05 (our cost).
+	ServoReplacements: {Project: ServoReplacements, Name: "servo_replacements", Label: "Servo replacements", Cost: 6000,
+		Requires: []Project{Prosthetics, Fabrication},
+		Desc:     "Powered limbs, eyes, ears, spines, hearts and stomachs that work better than the ones they replace.",
+		Unlocks: []string{"recipe:make_servo_arm", "recipe:make_servo_leg", "recipe:make_optic_implant", "recipe:make_cochlear_implant",
+			"recipe:make_spinal_brace", "recipe:make_pump_heart", "recipe:make_synth_stomach"}},
 }
 
 // DefOf returns the definition of p.

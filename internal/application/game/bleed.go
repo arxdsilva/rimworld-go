@@ -29,6 +29,7 @@ func (g *Game) phaseMedical() {
 	if now%clock.TicksPerHour != 0 {
 		return
 	}
+	g.stepOrganFailure() // organs.go (MED-05)
 	g.stepBloodLoss()
 	g.stepCare(now)   // infection.go (MED-02): infections, races, healing
 	g.sweepPatients() // patients.go (MED-00): the well and the dead leave the index

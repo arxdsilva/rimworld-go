@@ -40,6 +40,9 @@ const (
 	CauseBurns
 	// CauseBloodLoss (MED-01): bled to death.
 	CauseBloodLoss
+	// CauseOrganFailure (MED-05): a capacity the body cannot live without
+	// (blood pumping, filtration, breathing, digestion) fell to 0.
+	CauseOrganFailure
 )
 
 func (c Cause) String() string {
@@ -64,6 +67,8 @@ func (c Cause) String() string {
 		return "burns"
 	case CauseBloodLoss:
 		return "blood loss"
+	case CauseOrganFailure:
+		return "organ failure"
 	default:
 		return ""
 	}

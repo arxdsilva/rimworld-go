@@ -345,6 +345,10 @@ type saveState struct {
 	// power devices, so saves without power hash as before (absent in
 	// older saves).
 	Power *powerSave
+	// Care (MED-03): medical care levels and self-tend settings
+	// (care.go); nil while all are at their defaults, so older saves
+	// hash as before.
+	Care *careSave
 }
 
 // powerSave is the saved electricity, in id order (PLAY021_PLAN.md
@@ -463,6 +467,7 @@ func (g *Game) Save(w io.Writer, name string) error {
 	s.Surgery = g.exportSurgery()
 	s.BedRest = g.exportBedRest() // bedrest.go (PLAY-020)
 	s.Power = g.exportPower()     // power.go (PLAY-021): nil without power
+	s.Care = g.exportCare()       // care.go (MED-03): nil at the defaults
 	s.Areas, s.History = g.areas.Export(), slices.Clone(g.history)
 	if s.RNGStreams, err = g.exportStreams(); err != nil {
 		return fmt.Errorf("save rng streams: %w", err)
@@ -637,6 +642,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.importBodies(s.Bodies)
 	g.importSurgery(s.Surgery)
 	g.importBedRest(s.BedRest)
+	g.importCare(s.Care)   // care.go (MED-03)
 	g.importPower(s.Power) // power.go (PLAY-021)
 	g.importDrugs(s.Drugs)
 	g.importPrisoners(s.Prisoners)

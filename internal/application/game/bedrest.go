@@ -235,7 +235,8 @@ func (g *Game) bedRestSlot(id entity.EntityID, j job.Record) bool {
 // selfTendDue: a patient lying down a while with a wound or an infection
 // to tend, and no one else to doctor it, tends itself.
 func (g *Game) selfTendDue(id entity.EntityID, j job.Record) bool {
-	if j.WorkLeft > needs.SleepWorkMin-selfTendSettle || !g.needsTending(id) || g.prioOf(id)[work.Doctor] == 0 {
+	if j.WorkLeft > needs.SleepWorkMin-selfTendSettle || !g.needsTending(id) || g.prioOf(id)[work.Doctor] == 0 ||
+		!g.selfTendAllowed(id) { // care.go (MED-03): self-tend off, or no care at all
 		return false
 	}
 	if _, taken := g.reserve.EntityOwner(id); taken {

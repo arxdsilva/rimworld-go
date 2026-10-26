@@ -33,10 +33,10 @@ func TestBodyDownedHysteresis(t *testing.T) {
 }
 
 func TestCauseStrings(t *testing.T) {
-	if CauseBloodLoss.String() != "blood loss" || CauseBurns.String() != "burns" || CauseNone.String() != "" {
+	if CauseBloodLoss.String() != "blood loss" || CauseOrganFailure.String() != "organ failure" || CauseBurns.String() != "burns" || CauseNone.String() != "" {
 		t.Error("cause strings")
 	}
-	for c := CauseNoFood; c <= CauseBloodLoss; c++ {
+	for c := CauseNoFood; c <= CauseOrganFailure; c++ {
 		if c.String() == "" {
 			t.Errorf("cause %d has no text", c)
 		}

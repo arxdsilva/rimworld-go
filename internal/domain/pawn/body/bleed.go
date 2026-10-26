@@ -77,8 +77,7 @@ func BleedRate(w Wound) int32 {
 func stumpBleed(p Part) int32 { return int32(defs[p].MaxHP) * StumpBleedMul * BleedPerHP }
 
 // BleedPerDay is the body's total bleeding, permille of blood per day:
-// its open wounds and fresh stumps (blood pumping scales it from MED-05;
-// full until then).
+// its open wounds and fresh stumps, scaled by blood pumping (MED-05).
 func (b *Body) BleedPerDay() int32 {
 	var n int32
 	for _, w := range b.Wounds {
@@ -91,7 +90,22 @@ func (b *Body) BleedPerDay() int32 {
 			}
 		}
 	}
-	return n
+	return b.pumped(n)
+}
+
+// pumped scales bleeding n by blood pumping (MED-05): a weak heart
+// bleeds slower; a pump heart no faster than a healthy one (original
+// tuning: the plan's "pumping scales bleed"). A positive rate never
+// rounds down to 0.
+func (b *Body) pumped(n int32) int32 {
+	if n <= 0 {
+		return n
+	}
+	pump := b.pumping(DefOfCond)
+	if pump >= 1000 {
+		return n
+	}
+	return max(n*pump/1000, 1)
 }
 
 // PartBleedPerDay is the bleeding of p: its wounds, or its stump while
@@ -109,7 +123,7 @@ func (b *Body) PartBleedPerDay(p Part) int32 {
 	if b.Fresh&bit(p) != 0 {
 		n += stumpBleed(p)
 	}
-	return n
+	return b.pumped(n)
 }
 
 // FreshStump reports p torn off and not yet tended.

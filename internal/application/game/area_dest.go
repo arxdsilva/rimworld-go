@@ -26,7 +26,8 @@ const huntOutTicks = 600
 func areaExempt(k job.Kind) bool {
 	switch k {
 	case job.Move, job.Warm, job.Rescue, job.Tend, job.Surgery, job.Hide, job.Attack, job.Brawl,
-		job.Kidnap, job.ExitMap, job.Visit, job.Gather, job.Lovin, job.None:
+		job.Kidnap, job.ExitMap, job.Visit, job.Gather, job.Lovin, job.None,
+		job.EmergencyTend: // care.go (MED-03)
 		return true
 	}
 	return false

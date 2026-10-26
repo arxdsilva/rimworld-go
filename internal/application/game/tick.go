@@ -1078,6 +1078,8 @@ func (g *Game) phaseJobs() {
 			g.doVisit(id, j) // world_state.go
 		case job.Rope:
 			g.doRope(id, j) // rope.go
+		case job.EmergencyTend:
+			g.doEmergencyTend(id, j) // care.go (MED-03)
 		default:
 			j.State = job.Complete
 			g.jobs.Set(id, j)

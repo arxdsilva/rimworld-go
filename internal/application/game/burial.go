@@ -498,6 +498,8 @@ func causePhrase(cause string) string {
 		return " of hunger"
 	case health.CauseBloodLoss.String():
 		return " of blood loss"
+	case health.CauseOrganFailure.String():
+		return " of organ failure"
 	}
 	return ""
 }

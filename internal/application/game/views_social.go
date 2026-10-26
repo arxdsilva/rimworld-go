@@ -181,7 +181,11 @@ func (g *Game) Social(id entity.EntityID) (SocialView, bool) {
 
 // Health is colonist id's Health tab (ok false: nothing to show yet).
 func (g *Game) Health(id entity.EntityID) (HealthView, bool) {
-	return g.healthView(id)
+	hv, ok := g.healthView(id)
+	if ok { // care.go (MED-03): the care level and the self-tend toggle
+		hv.Care, hv.SelfTend = uint8(g.careOf(id)), !g.care.noSelfTend[id]
+	}
+	return hv, ok
 }
 
 // Prisoner is prisoner id's tab (ok false: not a prisoner).

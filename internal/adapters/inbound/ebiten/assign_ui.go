@@ -5,14 +5,18 @@ import (
 	"strings"
 
 	"rimworld-go/internal/domain/pawn/drug"
+	"rimworld-go/internal/domain/pawn/medcare"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
 
 // The Assign tab (MAIN_UI_SCREENS §21, ENG-003 M2): one row per living
-// colonist with its drug policy. A click cycles the policy (no drugs,
-// social drinking, unrestricted) and emits SetDrugPolicy; the window only
-// reads the policy back. Food, apparel and medical columns come with their systems.
+// colonist with its drug policy and its medical care level (MED-03). A
+// click cycles the policy (no drugs, social drinking, unrestricted) and
+// emits SetDrugPolicy, or the care level (SetMedicalCare); the window only
+// reads them back. Under the rows, the default care level of each group
+// (colonists, prisoners, guests, animals) cycles the same way and emits
+// SetDefaultCare. Food and apparel columns come with their systems.
 
 const (
 	assignModalID = "colony.assign"
@@ -22,7 +26,30 @@ const (
 	assignNameW   = 220
 	assignHeadH   = 24
 	assignDrugW   = 200
+	assignCareW   = 170 // MED-03: the medical care column
 )
+
+const assignCareTip = "Medical care\n" +
+	"How much care this colonist gets: no care, care without medicine, herbal or less, industrial or less, or the best medicine there is. A click picks the next level."
+
+// defaultCareReader is the read model of the default care row
+// (consumer-owned; the game implements it): each group's default care
+// level, in medcare.Group order. A simulation without it shows the row
+// disabled.
+type defaultCareReader interface {
+	DefaultCare() [medcare.NumGroups]uint8
+}
+
+// nextCare is the care level after p, wrapping from the best to none.
+func nextCare(p medcare.Policy) medcare.Policy { return (p + 1) % medcare.NumPolicies }
+
+// assignCareID is a colonist's care button id; assignDefCareID group g's
+// default care button id.
+func assignCareID(id entity.EntityID) string {
+	return "assign.care." + strconv.FormatUint(uint64(id), 10)
+}
+
+func assignDefCareID(g medcare.Group) string { return "assign.defcare." + strconv.Itoa(int(g)) }
 
 // assignPresets is the cycle order of the drug policy button.
 var assignPresets = []drug.Preset{drug.NoDrugs, drug.SocialDrinking, drug.Unrestricted}
@@ -72,6 +99,7 @@ type assignRow struct {
 	name   string
 	policy drug.Preset
 	known  bool // the simulation reports policies
+	care   medcare.Policy
 }
 
 // assignRows lists the living colonists and their drug policies.
@@ -82,7 +110,7 @@ func (a *App) assignRows() []assignRow {
 		if p.Status == "dead" {
 			continue
 		}
-		r := assignRow{id: p.ID, name: pawnLabel(p), known: known}
+		r := assignRow{id: p.ID, name: pawnLabel(p), known: known, care: medcare.Policy(p.CareLevel)}
 		if known {
 			r.policy = drug.Preset(rd.DrugPolicy(p.ID))
 		}
@@ -121,6 +149,11 @@ func (a *App) assignBody(body rect) {
 	a.uiLabel(head.X, head.Y, "Colonist", hs)
 	a.uiLabel(head.X+assignNameW, head.Y, "Drugs", hs)
 	a.uiTip("assign.head.drugs", rect{head.X + assignNameW, head.Y, 120, head.H}, assignDrugTip)
+	careX := head.X + assignNameW + assignDrugW + 10
+	a.uiLabel(careX, head.Y, "Medical", hs)
+	a.uiTip("assign.head.care", rect{careX, head.Y, 120, head.H}, assignCareTip)
+	rest, foot := rest.splitV(rest.H - 2*assignRowH) // MED-03: the default care row
+	a.assignDefaultCare(foot)
 	if a.uiButton("assign.areas", rect{head.right() - 120, head.Y - 2, 120, head.H}, "Manage areas",
 		btnOpts{Tip: "Allowed areas\nMake, rename, invert and delete areas. Pick a colonist's area in the Schedule tab, an animal's in the Animals tab."}) {
 		a.openAreaManager() // areas_ui.go
@@ -139,6 +172,7 @@ func (a *App) assignBody(body rect) {
 			continue // outside the view: no widgets
 		}
 		a.uiLabel(rr.X, rr.Y+(rr.H-float32(lineH(tsBody)))/2, ellipsize(r.name, tsBody, assignNameW-12), tsBody)
+		a.assignCareButton(r, rr) // MED-03
 		br := rect{rr.X + assignNameW, rr.Y, min(assignDrugW, rr.W-assignNameW), rr.H}
 		id := assignDrugID(r.id)
 		if !r.known {
@@ -147,6 +181,39 @@ func (a *App) assignBody(body rect) {
 		}
 		if a.uiButton(id, br, presetLabel(r.policy), btnOpts{Tip: assignDrugTip}) {
 			a.renderer.enqueue(command.Command{Kind: command.SetDrugPolicy, Pawn: uint64(r.id), Mode: uint8(nextPreset(r.policy))})
+		}
+	}
+}
+
+// assignCareButton is a colonist's medical care button (MED-03).
+func (a *App) assignCareButton(r assignRow, rr rect) {
+	cr := rect{rr.X + assignNameW + assignDrugW + 10, rr.Y, min(assignCareW, rr.W-assignNameW-assignDrugW-10), rr.H}
+	if a.uiButton(assignCareID(r.id), cr, r.care.Label(), btnOpts{Tip: assignCareTip}) {
+		a.renderer.enqueue(command.Command{Kind: command.SetMedicalCare, Pawn: uint64(r.id), Mode: uint8(nextCare(r.care))})
+	}
+}
+
+// assignDefaultCare is the default care row: "Default care" and a button
+// per group showing its level; a click picks the next level.
+func (a *App) assignDefaultCare(r rect) {
+	a.uiLabel(r.X, r.Y+6, "Default medical care", withColor(tsLabel, uiHeading))
+	rd, known := a.renderer.game.(defaultCareReader)
+	var def [medcare.NumGroups]uint8
+	if known {
+		def = rd.DefaultCare()
+	}
+	y := r.Y + assignRowH
+	bw := (r.W - 8) / float32(medcare.NumGroups)
+	for g := medcare.Group(0); g < medcare.NumGroups; g++ {
+		br := rect{r.X + float32(g)*bw, y, bw - 6, assignRowH - 4}
+		cur := medcare.Policy(def[g])
+		tip := "Default care: " + g.Label() + "\nNow " + cur.Label() + ". Anyone in this group without a level of its own gets it. A click picks the next level."
+		if !known {
+			a.uiButton(assignDefCareID(g), br, g.Label(), btnOpts{Disabled: true, Reason: "Default care is not available in this game."})
+			continue
+		}
+		if a.uiButton(assignDefCareID(g), br, g.Label()+": "+careShort(cur), btnOpts{Tip: tip}) {
+			a.renderer.enqueue(command.Command{Kind: command.SetDefaultCare, Index: int(g), Mode: uint8(nextCare(cur))})
 		}
 	}
 }

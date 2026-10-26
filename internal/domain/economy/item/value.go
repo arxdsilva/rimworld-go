@@ -15,6 +15,13 @@ var value = [numKinds]int{
 	PegLeg: 15, ProstheticLeg: 120, ProstheticArm: 120, WoodenHand: 12, Denture: 10, HearingTrumpet: 20,
 	// MED-00: original tuning for these original items.
 	ProstheticFoot: 90, GlassEye: 40, WoodenNose: 5,
+	// MED-05. wiki: Glitterworld medicine (50), Bionic arm/leg/eye/spine/
+	// heart (1030), Bionic ear/stomach (785), Prosthetic heart (230),
+	// Kidney (900), Lung (1000), Heart (1200), Liver (1200).
+	NanomedKit: 50,
+	ServoArm:   1030, ServoLeg: 1030, OpticImplant: 1030, SpinalBrace: 1030, PumpHeart: 1030,
+	CochlearImplant: 785, SynthStomach: 785, ValveHeart: 230,
+	Kidney: 900, Lung: 1000, Heart: 1200, Liver: 1200,
 }
 
 // Value is the market value of one unit of k.

@@ -11,6 +11,7 @@ import (
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/pawn/body"
+	"rimworld-go/internal/domain/pawn/medcare"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -21,6 +22,10 @@ import (
 // "Add operation" picker. It reads only Simulation.Health and sends
 // command.AddOperation / command.RemoveOperation; the simulation checks
 // every operation again before it queues or performs it.
+//
+// MED-03: a care row heads the tab: five care levels (command
+// SetMedicalCare) and a "Self-tend" checkbox (SetSelfTend, colonists
+// only); each queued operation has up and down arrows (ReorderOperation).
 
 const (
 	healthRowH      = 20
@@ -40,7 +45,52 @@ const (
 	healthPickH     = 380
 	healthOpsShare  = 0.32 // of the tab's height, for the operations block
 	healthCapsShare = 0.44 // of the tab's width, for the capacities column
+	healthCareH     = 24   // MED-03: the care row
+	healthSelfID    = "health.selftend"
+	healthSelfW     = 96
+	healthArrowW    = 22
 )
+
+// healthCareID is the care button of level p (MED-03).
+func healthCareID(p medcare.Policy) string { return fmt.Sprintf("health.care.%d", p) }
+
+// healthUpID and healthDownID are queued operation slot i's reorder
+// arrows (MED-03).
+func healthUpID(i int) string   { return fmt.Sprintf("health.op.up.%d", i) }
+func healthDownID(i int) string { return fmt.Sprintf("health.op.down.%d", i) }
+
+// careShort is a care level's button label (the full label is its tip).
+func careShort(p medcare.Policy) string {
+	switch p {
+	case medcare.NoCare:
+		return "None"
+	case medcare.NoMeds:
+		return "No meds"
+	case medcare.HerbalMax:
+		return "Herbal"
+	case medcare.IndustrialMax:
+		return "Industrial"
+	}
+	return "Best"
+}
+
+// careTip is a care level's hover card.
+func careTip(p medcare.Policy) string {
+	var body string
+	switch p {
+	case medcare.NoCare:
+		body = "No doctor tends this patient. A downed patient is still carried to bed."
+	case medcare.NoMeds:
+		body = "Tended, but never with medicine."
+	case medcare.HerbalMax:
+		body = "Tended with herbal medicine at most."
+	case medcare.IndustrialMax:
+		body = "Tended with industrial or herbal medicine."
+	default:
+		body = "Tended with the best medicine there is."
+	}
+	return p.Label() + "\n" + body
+}
 
 // healthRemoveID is the cancel button of queued operation slot i.
 func healthRemoveID(i int) string { return fmt.Sprintf("health.op.rm.%d", i) }
@@ -79,6 +129,8 @@ func (a *App) healthTab(p game.PawnView, in rect) {
 		a.uiLabel(in.X, top, noDataYet, dimText())
 		return
 	}
+	a.healthCare(p, rect{in.X, top, in.W, healthCareH}, h) // MED-03
+	top += healthCareH + 6
 	body := rect{in.X, top, in.W, in.bottom() - top}
 	upper, ops := body.splitV(body.H * (1 - healthOpsShare))
 	left, right := upper.splitH(upper.W * healthCapsShare)
@@ -91,6 +143,62 @@ func (a *App) healthTab(p game.PawnView, in rect) {
 	}
 	a.healthParts(partsR, h.Parts)
 	a.healthOps(p, ops, h)
+}
+
+// healthCare is the care row (MED-03): "Care", a button per care level
+// (the current one selected) and, for a colonist, the Self-tend
+// checkbox. The dead get it disabled with the reason.
+func (a *App) healthCare(p game.PawnView, r rect, h game.HealthView) {
+	dead := p.Status == "dead"
+	reason := ""
+	if dead {
+		reason = "The dead need no care."
+	}
+	st := tsLabel
+	st.Color = uiTextDim
+	a.uiLabel(r.X, r.Y+(r.H-float32(lineH(st)))/2, "Care", st)
+	x := r.X + 40
+	w := r.right() - x
+	if !p.Prisoner && !p.Visitor {
+		w -= healthSelfW + 6
+	}
+	bw := max(w/float32(medcare.NumPolicies), 24)
+	for c := medcare.Policy(0); c < medcare.NumPolicies; c++ {
+		cur := medcare.Policy(h.Care) == c
+		if a.uiButton(healthCareID(c), rect{x, r.Y, bw - 2, r.H}, careShort(c),
+			btnOpts{Selected: cur, Tip: careTip(c), Disabled: dead, Reason: reason}) && !cur {
+			a.renderer.enqueue(command.Command{Kind: command.SetMedicalCare, Pawn: uint64(p.ID), Mode: uint8(c)})
+		}
+		x += bw
+	}
+	if p.Prisoner || p.Visitor {
+		return // self-tend is for colonists
+	}
+	on := h.SelfTend
+	if a.uiCheck(healthSelfID, rect{r.right() - healthSelfW, r.Y, healthSelfW, r.H}, "Self-tend", &on,
+		checkOpts{Disabled: dead, Reason: reason,
+			Tip: "Self-tend\nWith no one else to help, this colonist tends its own wounds (at lower quality)."}) {
+		a.renderer.enqueue(command.Command{Kind: command.SetSelfTend, Pawn: uint64(p.ID), Enabled: on})
+	}
+}
+
+// healthArrow is a reorder arrow button: the button, then a triangle
+// pointing up or down drawn over it.
+func (a *App) healthArrow(id string, r rect, up bool, o btnOpts) bool {
+	clicked := a.uiButton(id, r, "", o)
+	c := uiHeading
+	if o.Disabled {
+		c = uiTextDisabled
+	}
+	cx, cy := r.center()
+	a.uiSt().queue(func(dst *ebiten.Image) {
+		if up {
+			uiFillPoly(dst, [][2]float32{{cx - 5, cy + 3}, {cx + 5, cy + 3}, {cx, cy - 4}}, c, true)
+			return
+		}
+		uiFillPoly(dst, [][2]float32{{cx - 5, cy - 3}, {cx + 5, cy - 3}, {cx, cy + 4}}, c, true)
+	})
+	return clicked
 }
 
 // healthStateColor tints the Health tab's headline: red while bleeding
@@ -353,13 +461,36 @@ func (a *App) healthOps(p game.PawnView, r rect, h game.HealthView) {
 		if y+healthOpRowH > r.bottom() {
 			break
 		}
+		textW := r.W - 96 - 2*healthArrowW
 		if op.Status != "" {
-			a.uiLabel(r.X, y, fitText(op.Label, tsBody, r.W-96), tsBody)
+			a.uiLabel(r.X, y, fitText(op.Label, tsBody, textW), tsBody)
 			st := tsSmall
 			st.Color = opStatusColor(op)
-			a.uiLabel(r.X, y+float32(lineStep(tsBody))-2, fitText(op.Status, st, r.W-96), st)
+			a.uiLabel(r.X, y+float32(lineStep(tsBody))-2, fitText(op.Status, st, textW), st)
 		} else {
-			a.uiLabel(r.X, y+4, fitText(op.Label, tsBody, r.W-96), tsBody)
+			a.uiLabel(r.X, y+4, fitText(op.Label, tsBody, textW), tsBody)
+		}
+		// MED-03: move it one place up or down the queue
+		upR := rect{r.right() - 84 - 2*healthArrowW, y, healthArrowW, healthOpRowH - 2}
+		downR := rect{upR.right() + 2, y, healthArrowW, healthOpRowH - 2}
+		upWhy, downWhy := "", ""
+		switch {
+		case dead:
+			upWhy, downWhy = reason, reason
+		case len(h.Operations) == 1:
+			upWhy, downWhy = "The only operation queued.", "The only operation queued."
+		case op.Slot == 0:
+			upWhy = "Already first."
+		case op.Slot == len(h.Operations)-1:
+			downWhy = "Already last."
+		}
+		if a.healthArrow(healthUpID(op.Slot), upR, true, btnOpts{Disabled: upWhy != "", Reason: upWhy,
+			Tip: "Move up\nDo " + op.Label + " sooner."}) {
+			a.renderer.enqueue(command.Command{Kind: command.ReorderOperation, Pawn: uint64(p.ID), Index: op.Slot, Count: -1})
+		}
+		if a.healthArrow(healthDownID(op.Slot), downR, false, btnOpts{Disabled: downWhy != "", Reason: downWhy,
+			Tip: "Move down\nDo " + op.Label + " later."}) {
+			a.renderer.enqueue(command.Command{Kind: command.ReorderOperation, Pawn: uint64(p.ID), Index: op.Slot, Count: 1})
 		}
 		if a.uiButton(healthRemoveID(op.Slot), rect{r.right() - 80, y, 80, healthOpRowH - 2}, "Cancel",
 			btnOpts{Style: btnDanger, Tip: "Cancel\nTake " + op.Label + " off the queue."}) {
@@ -440,7 +571,7 @@ func healthOptions(h game.HealthView) []healthOption {
 		case strings.HasPrefix(pv.Status, game.PartArtificial):
 			add(healthOption{label: fmt.Sprintf("Remove implant (%s)", pv.Label), op: body.RemoveImplant, part: part})
 		case pv.Status == game.PartReplaced:
-		case !body.DefOf(part).Vital:
+		case !body.DefOf(part).Vital && !body.Inner(part):
 			add(healthOption{label: "Amputate " + pv.Label, op: body.Amputate, part: part})
 		}
 	}

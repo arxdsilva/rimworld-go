@@ -927,7 +927,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 11.1 Anatomy
 
--   [-] **Species anatomy tree** (SIM-039: humanlike tree only; no per-species anatomy)
+-   [-] **Species anatomy tree** (SIM-039: humanlike tree only; MED-05 adds kidneys, liver and spine (24 parts); no per-species anatomy)
     -   Body -\> torso/head -\> limbs -\> hands/feet -\> digits, organs,
         etc.
     -   Species can define different anatomy.
@@ -937,7 +937,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 11.2 Capacities
 
--   [x] **Pawn capacities** (SIM-039: consciousness, moving, manipulation, sight, hearing, talking, breathing)
+-   [x] **Pawn capacities** (SIM-039: consciousness, moving, manipulation, sight, hearing, talking, breathing; MED-05: blood pumping, blood filtration, digestion)
     -   Consciousness.
     -   Moving.
     -   Manipulation.
@@ -946,7 +946,7 @@ treatment, and surgery are major colony-management systems.
     -   Talking.
     -   Breathing.
     -   blood filtration/circulation/metabolism equivalents as needed.
--   [x] **Capacity derivation** (SIM-039: feeds MoveSpeed/WorkSpeed/ShootAcc; consciousness 0 downs)
+-   [x] **Capacity derivation** (SIM-039: feeds MoveSpeed/WorkSpeed/ShootAcc; MED-05: pumping weighs 0.2 on consciousness and moving and scales bleeding, filtration weighs on consciousness and immunity gain, spine multiplies moving; pumping, filtration, breathing or digestion at 0 is organ failure)
     -   Relevant body parts and health effects combine into functional
         capacity.
     -   Capacity influences work/combat/movement/social/medical
@@ -993,7 +993,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 11.5 Medical care
 
--   [-] **Medical care policy** (NG-1 SIM-034: care tiers untreated, tended, herbal and industrial medicine; the doctor picks by severity, no per-patient policy setting)
+-   [x] **Medical care policy** (MED-03: per-patient level No care / Care, no medicine / Herbal or less / Industrial or less / Best available, caps the medicine used for tending and surgery; group defaults colonists Best, prisoners, guests and animals Herbal or less; self-tend toggle)
     -   No care.
     -   no medicine.
     -   herbal-equivalent.
@@ -1067,7 +1067,7 @@ treatment, and surgery are major colony-management systems.
     -   harvested organ becomes item.
     -   missing vital organs can kill.
     -   transplant restores/replaces functionality.
--   [-] **Prosthetics/bionics** (SIM-039/SIM-049: peg leg, prosthetic leg/arm/foot, wooden hand, denture, hearing trumpet, glass eye, wooden nose; fitted to missing or healthy parts (replaced); no bionics)
+-   [x] **Prosthetics/bionics** (SIM-039/SIM-049: peg leg, prosthetic leg/arm/foot, wooden hand, denture, hearing trumpet, glass eye, wooden nose; MED-05: servo arm/leg, optic and cochlear implants, pump heart and synth stomach at 125 %, spinal brace, valve heart 80 %, wiki efficiencies for the prosthetic arm (50 %) and wooden hand (60 %), Servo replacements research; archotech tier deferred)
     -   Replace missing/damaged body parts with artificial parts of
         varying efficiency.
 
@@ -1375,7 +1375,7 @@ treatment, and surgery are major colony-management systems.
 -   [x] **Drafted movement order**
 -   [x] **Attack target order**
 -   [ ] **Hold/fire-at-will behavior**
--   [ ] **Drafted field tending**
+-   [x] **Drafted field tending** (MED-03: drafted "Tend <name>" order; the doctor brings the best allowed medicine within 15 tiles, or none)
     -   Allow emergency tending under appropriate conditions.
 
 ## 17.2 Line of sight
@@ -2109,7 +2109,7 @@ and other colony incidents. citeturn2search2turn2search7
         editor.
 -   [-] **Drug policy** (SIM-040: preset selector on the Assign tab (F3); no policy editor)
     -   Already implemented functionally; expose editor.
--   [ ] **Medical care policy**
+-   [x] **Medical care policy** (MED-03, see Health above)
     -   Per pawn maximum medicine/care level.
 
 ## 27.2 Animal management

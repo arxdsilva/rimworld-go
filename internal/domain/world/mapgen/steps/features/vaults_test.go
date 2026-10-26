@@ -315,6 +315,7 @@ func TestVaultLootAndDefenders(t *testing.T) {
 	allowed := map[item.Kind][2]int{
 		item.Components: {4, 12}, item.IndustrialMedicine: {3, 8}, item.Silver: {150, 450}, item.Gold: {20, 70},
 		item.Rifle: {1, 1}, item.ProstheticLeg: {1, 1}, item.ProstheticArm: {1, 1}, item.GlassEye: {1, 1}, item.SparkTablet: {1, 1},
+		item.NanomedKit: {1, 3}, // MED-05
 	}
 	rifles, vaults := 0, 0
 	for _, c := range manyVaults(t, 100) {

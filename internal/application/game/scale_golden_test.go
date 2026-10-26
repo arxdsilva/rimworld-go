@@ -100,12 +100,18 @@ import (
 // with no one hurt keep their pins. Same-seed runs identical
 // (TestStepIsDeterministicForSameSeed, TestBodiesAreDeterministic, and
 // TestScaleGolden -count=2 printed the same values).
+// Re-pinned (MED-03 care policy, MED-05 organs): the body has kidneys,
+// liver and spine (torso coverage 380 -> 296 shifts where hits land) and
+// three new capacities, and the doctor's work is split into ordered steps
+// with care levels capping medicine. 48x40/seed42 and 120x120/seed7 move;
+// MED-05 alone gives the same values on a clean copy. Same-seed runs
+// identical (TestStepIsDeterministicForSameSeed, TestScaleGolden -count=2).
 var scaleGolden = map[string]uint64{
 	"48x40/seed1":    0xe0741d9f0ddd90e8,
 	"48x40/seed7":    0xee46a1f4ce740cae,
-	"48x40/seed42":   0xb1380f278ba0cb52,
+	"48x40/seed42":   0x7ae892588e0e1327,
 	"120x120/seed1":  0x24d9b4a5e97f473a,
-	"120x120/seed7":  0x4118850af9407833,
+	"120x120/seed7":  0xade18d4a6ba193e9,
 	"120x120/seed42": 0x4b3e98040be7af43,
 }
 

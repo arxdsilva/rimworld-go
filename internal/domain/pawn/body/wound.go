@@ -170,14 +170,17 @@ func (b *Body) destroy(p Part) {
 	b.Wounds = kept
 }
 
-// VitalLost reports a vital part (brain, heart, torso) destroyed.
+// VitalLost reports a vital part (brain, heart, torso) destroyed with no
+// implant standing in (a pump or valve heart keeps the patient alive), or
+// an organ failure (MED-05, OrganFailure: a capacity the body cannot live
+// without at 0).
 func (b *Body) VitalLost() bool {
 	for p := Part(0); p < NumParts; p++ {
-		if defs[p].Vital && b.isMissing(p) {
+		if defs[p].Vital && b.isMissing(p) && !b.fitted(p) {
 			return true
 		}
 	}
-	return false
+	return b.OrganFailure()
 }
 
 // replaced reports p covered by an implant on itself or an ancestor.

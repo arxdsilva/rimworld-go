@@ -71,7 +71,7 @@ func (g *Game) actionOf(id entity.EntityID, j job.Record) string {
 		if working && j.Carry != 0 {
 			return g.billAction(j)
 		}
-	case job.Tend:
+	case job.Tend, job.EmergencyTend: // EmergencyTend: care.go (MED-03)
 		if working && !(j.Dest != 0 && j.Carry == 0) {
 			return ActionTend
 		}
@@ -173,7 +173,7 @@ func (g *Game) workTotal(id entity.EntityID, j job.Record) int {
 		return SowWork
 	case job.Research:
 		return researchSession
-	case job.Tend:
+	case job.Tend, job.EmergencyTend:
 		if j.Target == id {
 			return TendWork * 3 / 2
 		}
@@ -285,7 +285,7 @@ func (g *Game) fillPawnAction(pv *PawnView, id entity.EntityID, j job.Record) {
 	if pv.Action != "" {
 		pv.ActionProgress = g.progressOf(id, j)
 		switch j.Kind {
-		case job.Attack, job.Hunt, job.Tend, job.Tame, job.Rescue, job.Milk, job.Shear:
+		case job.Attack, job.Hunt, job.Tend, job.EmergencyTend, job.Tame, job.Rescue, job.Milk, job.Shear:
 			pv.ActTarget = j.Target
 		}
 	}

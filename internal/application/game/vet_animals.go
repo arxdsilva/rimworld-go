@@ -24,7 +24,8 @@ const animalHealEvery = 10 * animal.DecideEvery
 // needsVet reports whether tame animal id (state a) wants tending now.
 func (g *Game) needsVet(id entity.EntityID, a *animal.State, now uint64) bool {
 	return a.Tame && a.Injury > 0 && !a.Dead() && !a.Enraged(now) && !g.tended(id) &&
-		a.Mode != animal.Flee && a.Mode != animal.Attack && !a.Leaving
+		a.Mode != animal.Flee && a.Mode != animal.Attack && !a.Leaving &&
+		g.careOf(id).Tends() // care.go (MED-03): no care keeps the vet away
 }
 
 // assignTendAnimal sends doctor id to tend the nearest hurt tame animal.

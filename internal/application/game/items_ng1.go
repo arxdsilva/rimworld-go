@@ -68,17 +68,18 @@ const (
 )
 
 // isMedicine reports a medicine item, either tier.
-func isMedicine(k item.Kind) bool { return k == item.HerbalMedicine || k == item.IndustrialMedicine }
+func isMedicine(k item.Kind) bool { return k.IsMedicine() } // herbal, industrial, nanomed kit (MED-05)
 
-// medicineTiers is the medicine kinds a tend for patient may use, best
-// first: industrial for a severe injury or an infection, herbal otherwise,
-// each falling back to the other.
-func (g *Game) medicineTiers(patient entity.EntityID) [2]item.Kind {
+// medicineTiers is the medicine kinds a tend for patient may use, in the
+// order tried: the best first (nanomed kit, then industrial) for a severe
+// injury or an infection, the cheapest first otherwise; the care level
+// filters them (withMedicine).
+func (g *Game) medicineTiers(patient entity.EntityID) [3]item.Kind {
 	v, _ := g.vital.Get(patient)
 	if _, infected := g.worstInfection(patient); v.Injury >= severeInjury || infected {
-		return [2]item.Kind{item.IndustrialMedicine, item.HerbalMedicine}
+		return [3]item.Kind{item.NanomedKit, item.IndustrialMedicine, item.HerbalMedicine}
 	}
-	return [2]item.Kind{item.HerbalMedicine, item.IndustrialMedicine}
+	return [3]item.Kind{item.HerbalMedicine, item.IndustrialMedicine, item.NanomedKit}
 }
 
 // inHospitalBed reports the patient lying in a hospital bed.

@@ -100,70 +100,69 @@ func (g *Game) freeBedFor(patient entity.EntityID, from Position) (entity.Entity
 	return best, best != 0
 }
 
-// assignDoctor picks the most urgent patient that needs a rescue or a
-// tend: the fastest bleeding first (MED-01), then the worst hurt, then
-// the nearest. Downed colonists get carried to bed; anyone lying down
-// (downed, in bed or asleep) with an open wound or an infection gets
-// tended, with herbal medicine when there is some. With no other doctor
-// around, a colonist tends its own wounds.
+// assignDoctor is the humanlike half of Doctor work (MED-03), each step
+// its own giver: rescue a downed patient to bed, then tend the bleeding,
+// then everyone else (or itself, with no one else to help). Surgery and
+// animals follow in assignWorkType.
 func (g *Game) assignDoctor(id entity.EntityID) bool {
-	pos, _ := g.positions.Get(id)
-	type cand struct {
-		rec       job.Record
-		bleed     int32
-		injury, d int
-	}
-	// before: c outranks best (bleeding, then injury, then distance)
-	before := func(c, best *cand) bool {
-		switch {
-		case best == nil:
-			return true
-		case c.bleed != best.bleed:
-			return c.bleed > best.bleed
-		case c.injury != best.injury:
-			return c.injury > best.injury
-		}
+	return g.assignRescue(id) || g.assignTendBleeding(id) || g.assignTendOther(id)
+}
+
+// patientRank is a doctor's candidate: the job it would start, how fast
+// the patient bleeds, how hurt it is and how far away.
+type patientRank struct {
+	rec       job.Record
+	pid       entity.EntityID
+	bleed     int32
+	injury, d int
+}
+
+// outranks: c comes before best: bleeding fastest, then worst hurt,
+// then nearest, then lowest id (a deterministic tie-break).
+func (c *patientRank) outranks(best *patientRank) bool {
+	switch {
+	case best == nil:
+		return true
+	case c.bleed != best.bleed:
+		return c.bleed > best.bleed
+	case c.injury != best.injury:
+		return c.injury > best.injury
+	case c.d != best.d:
 		return c.d < best.d
 	}
-	var best *cand
+	return c.pid < best.pid
+}
+
+// bestPatient ranks every humanlike patient doctor id could look after
+// (colonists, then prisoners; never one being carried or held by someone
+// else) for which want gives a job, and returns the first by outranks,
+// with the job's spot beside the patient filled in.
+func (g *Game) bestPatient(id entity.EntityID, want func(pid entity.EntityID) (job.Record, bool)) *patientRank {
+	pos, _ := g.positions.Get(id)
+	var best *patientRank
 	consider := func(pid entity.EntityID) {
 		if pid == id || g.carriedBy(pid) != 0 {
-			return
-		}
-		// prisoners are tended where they lie, never rescued to a colonist bed
-		downed := g.injuredDowned(pid) && !g.isPrisoner(pid)
-		if !downed && !(g.lyingForCare(pid) && g.needsTending(pid)) {
 			return
 		}
 		if _, taken := g.reserve.EntityOwner(pid); taken {
 			return
 		}
-		pp, _ := g.positions.Get(pid)
-		var rec job.Record
-		switch {
-		case downed && !g.inBed(pid):
-			if _, ok := g.freeBedFor(pid, pp); ok {
-				rec = job.Record{Kind: job.Rescue, Target: pid}
-			} else if g.needsTending(pid) {
-				rec = job.Record{Kind: job.Tend, Target: pid, WorkLeft: TendWork}
-			}
-		case g.needsTending(pid): // infection.go: one tend per wound, one per condition window (MED-02)
-			rec = job.Record{Kind: job.Tend, Target: pid, WorkLeft: TendWork}
-		}
-		if rec.Kind == job.None {
+		rec, ok := want(pid)
+		if !ok {
 			return
 		}
+		pp, _ := g.positions.Get(pid)
 		sx, sy, ok := g.besideSpot(id, pp.X, pp.Y)
 		if !ok {
 			return
 		}
 		rec.TX, rec.TY = sx, sy
 		pv, _ := g.vital.Get(pid)
-		c := &cand{rec: rec, injury: pv.Injury, d: manhattan(pos.X, pos.Y, pp.X, pp.Y)}
+		c := &patientRank{rec: rec, pid: pid, injury: pv.Injury, d: manhattan(pos.X, pos.Y, pp.X, pp.Y)}
 		if b := g.bodies[pid]; b != nil {
 			c.bleed = b.BleedPerDay() // body/bleed.go
 		}
-		if before(c, best) {
+		if c.outranks(best) {
 			best = c
 		}
 	}
@@ -175,22 +174,78 @@ func (g *Game) assignDoctor(id entity.EntityID) bool {
 			consider(pid)
 		}
 	}
-	var rec job.Record
-	switch {
-	case best != nil:
-		rec = best.rec
-	case g.needsTending(id) && !g.otherDoctor(id):
-		rec = job.Record{Kind: job.Tend, Target: id, TX: pos.X, TY: pos.Y, WorkLeft: TendWork * 3 / 2}
-	default:
+	return best
+}
+
+// rescuable: pid is a downed colonist (prisoners are tended where they
+// lie) out of bed with a free bed to be carried to. Its care level does
+// not matter: even "No care" is rescued.
+func (g *Game) rescuable(pid entity.EntityID) bool {
+	if !g.injuredDowned(pid) || g.isPrisoner(pid) || g.inBed(pid) {
 		return false
 	}
-	if rec.Kind == job.Tend {
-		rec = g.withMedicine(id, rec)
+	pp, _ := g.positions.Get(pid)
+	_, ok := g.freeBedFor(pid, pp)
+	return ok
+}
+
+// tendable: a doctor would tend pid where it lies (down, in bed or
+// asleep) with something to tend, its care level allowing care, and not
+// waiting to be rescued to a bed first. bleeding picks the patients
+// losing blood (true) or the rest (false).
+func (g *Game) tendable(pid entity.EntityID, bleeding bool) bool {
+	if !g.lyingForCare(pid) || !g.needsTending(pid) || !g.careOf(pid).Tends() || g.rescuable(pid) {
+		return false
 	}
+	b := g.bodies[pid]
+	return (b != nil && b.BleedPerDay() > 0) == bleeding
+}
+
+// assignRescue carries the most urgent downed colonist to a bed.
+func (g *Game) assignRescue(id entity.EntityID) bool {
+	best := g.bestPatient(id, func(pid entity.EntityID) (job.Record, bool) {
+		return job.Record{Kind: job.Rescue, Target: pid}, g.rescuable(pid)
+	})
+	return best != nil && g.startJob(id, best.rec)
+}
+
+// assignTendBleeding tends the patient bleeding fastest (MED-01).
+func (g *Game) assignTendBleeding(id entity.EntityID) bool {
+	return g.assignTendWhere(id, true)
+}
+
+// assignTendOther tends the worst hurt patient that is not bleeding;
+// with no one else to tend and no other doctor around, a colonist tends
+// its own wounds (unless its self-tend is off).
+func (g *Game) assignTendOther(id entity.EntityID) bool {
+	if g.assignTendWhere(id, false) {
+		return true
+	}
+	if !g.needsTending(id) || g.otherDoctor(id) || !g.selfTendAllowed(id) {
+		return false
+	}
+	pos, _ := g.positions.Get(id)
+	return g.startTend(id, job.Record{Kind: job.Tend, Target: id, TX: pos.X, TY: pos.Y, WorkLeft: TendWork * 3 / 2})
+}
+
+// assignTendWhere tends the best ranked tendable patient (bleeding or
+// not). The patient stays reserved until the tend ends, so a doctor never
+// leaves one for another halfway (no flapping).
+func (g *Game) assignTendWhere(id entity.EntityID, bleeding bool) bool {
+	best := g.bestPatient(id, func(pid entity.EntityID) (job.Record, bool) {
+		return job.Record{Kind: job.Tend, Target: pid, WorkLeft: TendWork}, g.tendable(pid, bleeding)
+	})
+	return best != nil && g.startTend(id, best.rec)
+}
+
+// startTend starts tend rec with a fetch of the medicine the patient's
+// care level allows (withMedicine), holding the dose for the trip.
+func (g *Game) startTend(id entity.EntityID, rec job.Record) bool {
+	rec = g.withMedicine(id, rec)
 	if !g.startJob(id, rec) {
 		return false
 	}
-	if rec.Kind == job.Tend && rec.Dest != 0 {
+	if rec.Dest != 0 {
 		g.reserve.TryEntity(id, rec.Dest)
 	}
 	return true

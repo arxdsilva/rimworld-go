@@ -338,19 +338,20 @@ func TestMedicineChoiceNoFlap(t *testing.T) {
 	buildNow(t, g, construction.Bed, item.Wood, construction.South, 15, 2)
 	g.SpawnStack(item.HerbalMedicine, 3, 6, 9)
 	g.SpawnStack(item.IndustrialMedicine, 2, 7, 9)
-	// the tiers: infected or severely hurt -> industrial first, a scratch -> herbal first
+	// the tiers: infected or severely hurt -> best first (nanomed kit, then
+	// industrial, MED-05), a scratch -> herbal first
 	if tiers := g.medicineTiers(patient); tiers[0] != item.HerbalMedicine {
 		t.Fatalf("an unhurt patient: %v", tiers)
 	}
 	g.Infect(patient, 40)
-	if tiers := g.medicineTiers(patient); tiers[0] != item.IndustrialMedicine || tiers[1] != item.HerbalMedicine {
+	if tiers := g.medicineTiers(patient); tiers != [3]item.Kind{item.NanomedKit, item.IndustrialMedicine, item.HerbalMedicine} {
 		t.Fatalf("an infected patient: %v", tiers)
 	}
 	g.bodies[patient].RemoveCond(body.CondInfection) // MED-02: infections are conditions
 	// a severe injury: the dose is picked at the start and carried, so it
 	// never changes mid-job even when the patient stops being a severe case
 	g.Injure(patient, 75)
-	if tiers := g.medicineTiers(patient); tiers[0] != item.IndustrialMedicine {
+	if tiers := g.medicineTiers(patient); tiers[0] != item.NanomedKit || tiers[1] != item.IndustrialMedicine {
 		t.Fatalf("a severely hurt patient: %v", tiers)
 	}
 	var carried item.Kind

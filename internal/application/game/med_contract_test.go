@@ -277,26 +277,6 @@ func TestReorderOperation(t *testing.T) {
 	(&Game{}).cmdReorderOperation(patient, 0, 1)
 }
 
-// TestCareStubsChangeNothing: the MED-03 commands are routed but change
-// nothing yet.
-func TestCareStubsChangeNothing(t *testing.T) {
-	a, id := pegLegged(t)
-	b, _ := pegLegged(t)
-	for _, c := range []command.Command{
-		{Kind: command.SetMedicalCare, Pawn: uint64(id), Mode: 2},
-		{Kind: command.SetDefaultCare, Index: 1, Mode: 3},
-		{Kind: command.SetSelfTend, Pawn: uint64(id), Enabled: true},
-		{Kind: command.EmergencyTend, Pawn: uint64(id), Target: uint64(id)},
-	} {
-		a.Enqueue(c)
-	}
-	a.Step(5)
-	b.Step(5)
-	if a.StateHash() != b.StateHash() {
-		t.Fatal("a stub command changed the game")
-	}
-}
-
 // TestAddOperationRefusesUnimplementedKinds: the surgery v2 operations
 // are in the enum but cannot be queued yet.
 func TestAddOperationRefusesUnimplementedKinds(t *testing.T) {

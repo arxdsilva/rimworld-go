@@ -115,6 +115,9 @@ const (
 	// Flick (PLAY-021): turn a power switch or a device's power toggle
 	// the way the player asked.
 	Flick
+	// EmergencyTend (MED-03): a drafted colonist tends a patient now, with
+	// the best medicine it is allowed and can reach nearby, or none.
+	EmergencyTend
 )
 
 // IsIdle reports a free-time behaviour that any real work may replace.
@@ -232,6 +235,8 @@ func (k Kind) String() string {
 		return "clear snow"
 	case Flick:
 		return "flick switch"
+	case EmergencyTend:
+		return "emergency tend"
 	default:
 		return "idle"
 	}

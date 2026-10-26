@@ -69,6 +69,16 @@ const (
 	MakeProstheticFoot
 	MakeGlassEye
 	MakeWoodenNose
+	// MED-05: the servo tier (behind ServoReplacements) and the valve
+	// heart (behind Prosthetics).
+	MakeServoArm
+	MakeServoLeg
+	MakeOpticImplant
+	MakeCochlearImplant
+	MakeSpinalBrace
+	MakePumpHeart
+	MakeSynthStomach
+	MakeValveHeart
 	numRecipes
 )
 
@@ -213,6 +223,33 @@ var defs = [numRecipes]Def{
 		MinSkill: 4},
 	MakeWoodenNose: {ID: MakeWoodenNose, Name: "make_wooden_nose", Label: "Carve wooden nose", Bench: construction.Workbench,
 		Input: Input{Kind: item.Wood, Qty: 3}, Output: item.WoodenNose, OutQty: 1, Work: 300, Skill: work.Craft, Learn: skill.Crafting},
+	// MED-05 (original tuning: a recipe takes one input, so components,
+	// our top-tier material, stand in for plasteel and advanced
+	// components). Crafting 8 for the servo tier, 5 for the valve heart.
+	MakeServoArm:        servo(MakeServoArm, "make_servo_arm", "Make servo arm", item.ServoArm, 8),
+	MakeServoLeg:        servo(MakeServoLeg, "make_servo_leg", "Make servo leg", item.ServoLeg, 8),
+	MakeOpticImplant:    servo(MakeOpticImplant, "make_optic_implant", "Make optic implant", item.OpticImplant, 8),
+	MakeCochlearImplant: servo(MakeCochlearImplant, "make_cochlear_implant", "Make cochlear implant", item.CochlearImplant, 6),
+	MakeSpinalBrace:     servo(MakeSpinalBrace, "make_spinal_brace", "Make spinal brace", item.SpinalBrace, 8),
+	MakePumpHeart:       servo(MakePumpHeart, "make_pump_heart", "Make pump heart", item.PumpHeart, 8),
+	MakeSynthStomach:    servo(MakeSynthStomach, "make_synth_stomach", "Make synth stomach", item.SynthStomach, 6),
+	MakeValveHeart: {ID: MakeValveHeart, Name: "make_valve_heart", Label: "Make valve heart", Bench: construction.Workbench,
+		Input: Input{Kind: item.Steel, Qty: 25}, Output: item.ValveHeart, OutQty: 1, Work: 1400, Skill: work.Craft,
+		Learn: skill.Crafting, MinSkill: 5},
+}
+
+// servoSkill and servoWork are the servo tier's crafting level and work
+// (original tuning).
+const (
+	servoSkill = 8
+	servoWork  = 2600
+)
+
+// servo is a servo-tier recipe at the workbench: comps components make
+// one out.
+func servo(id ID, name, label string, out item.Kind, comps int) Def {
+	return Def{ID: id, Name: name, Label: label, Bench: construction.Workbench, Input: Input{Kind: item.Components, Qty: comps},
+		Output: out, OutQty: 1, Work: servoWork, Skill: work.Craft, Learn: skill.Crafting, MinSkill: servoSkill}
 }
 
 // CutYield is how many blocks one chunk makes at the stonecutter table.

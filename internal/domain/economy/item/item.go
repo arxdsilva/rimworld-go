@@ -106,6 +106,22 @@ const (
 	ProstheticFoot
 	GlassEye
 	WoodenNose
+	// MED-05 (append only, saved): the nanomed kit (the best medicine;
+	// never crafted, only found or traded), the servo tier of implants,
+	// the valve heart, and natural organs (harvested in MED-06).
+	NanomedKit
+	ServoArm
+	ServoLeg
+	OpticImplant
+	CochlearImplant
+	SpinalBrace
+	PumpHeart
+	SynthStomach
+	ValveHeart
+	Kidney
+	Lung
+	Heart
+	Liver
 	numKinds
 )
 
@@ -120,7 +136,9 @@ var kindNames = [numKinds]string{"food", "wood", "stone", "berries", "potatoes",
 	"components", "industrial medicine",
 	"beer", "ashleaf tea", "spark tablet", "brewgrain", "ashleaf",
 	"peg leg", "prosthetic leg", "prosthetic arm", "wooden hand", "denture", "hearing trumpet",
-	"prosthetic foot", "glass eye", "wooden nose"}
+	"prosthetic foot", "glass eye", "wooden nose",
+	"nanomed kit", "servo arm", "servo leg", "optic implant", "cochlear implant", "spinal brace", "pump heart",
+	"synth stomach", "valve heart", "kidney", "lung", "heart", "liver"}
 
 // IsWeapon reports whether k can be equipped.
 func (k Kind) IsWeapon() bool { return k == Club || k == Rifle || k == Knife || k == Spear }
@@ -169,9 +187,21 @@ func Foods() []Kind {
 // IsDrug reports a drug: taken for its effect, not its nutrition (ENG-003).
 func (k Kind) IsDrug() bool { return k == Beer || k == AshleafTea || k == SparkTablet }
 
-// IsImplant reports a prosthetic installed by surgery (ENG-003).
+// IsImplant reports a prosthetic installed by surgery (ENG-003; the
+// servo tier and the valve heart from MED-05). Natural organs are not
+// implants: see IsOrgan.
 func (k Kind) IsImplant() bool {
-	return k >= PegLeg && k <= HearingTrumpet || k >= ProstheticFoot && k <= WoodenNose
+	return k >= PegLeg && k <= HearingTrumpet || k >= ProstheticFoot && k <= WoodenNose || k >= ServoArm && k <= ValveHeart
+}
+
+// IsOrgan reports a natural organ, harvested from one body and installed
+// in another (MED-05; the operations come with MED-06).
+func (k Kind) IsOrgan() bool { return k >= Kidney && k <= Liver }
+
+// IsMedicine reports a medicine doctors tend with: herbal, industrial
+// or the nanomed kit (MED-05).
+func (k Kind) IsMedicine() bool {
+	return k == HerbalMedicine || k == IndustrialMedicine || k == NanomedKit
 }
 
 func (k Kind) String() string {

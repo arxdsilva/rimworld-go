@@ -68,14 +68,17 @@ func tendBase(lvl int) int32 {
 }
 
 // Potency is medicine k's potency and the best tend quality it allows
-// (permille): none 300/700, herbal 600/700, industrial 1000/1000.
-// wiki: Medicine. The nanomed kit (1600/1300) joins here in MED-05.
+// (permille): none 300/700, herbal 600/700, industrial 1000/1000, nanomed
+// kit 1600/1300. wiki: Medicine (glitterworld medicine for the nanomed
+// kit, MED-05).
 func Potency(k item.Kind) (pot, maxQ int32) {
 	switch k {
 	case item.HerbalMedicine:
 		return 600, 700
 	case item.IndustrialMedicine:
 		return 1000, 1000
+	case item.NanomedKit:
+		return 1600, 1300
 	}
 	return 300, 700
 }

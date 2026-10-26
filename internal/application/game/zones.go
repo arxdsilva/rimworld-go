@@ -212,7 +212,7 @@ func stockCatOf(k item.Kind) stockCat {
 		return stockFood
 	case k == item.Leather, k == item.HerbalMedicine, k == item.Cloth, k == item.Straw, k.IsCarpet(), k.IsApparel(), k.IsWeapon(),
 		k == item.Wool, k == item.EmberOil, item.IsMetal(k),
-		k == item.Components, k == item.IndustrialMedicine,
+		k == item.Components, k == item.IndustrialMedicine, k == item.NanomedKit, k.IsOrgan(),
 		k.IsDrug(), k.IsImplant(), k == item.AshleafLeaf: // ENG-003
 		return stockGoods
 	}

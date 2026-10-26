@@ -1,5 +1,7 @@
 package body
 
+import "rimworld-go/internal/domain/economy/item"
+
 // Part is a body part (append only, saved).
 type Part uint8
 
@@ -24,6 +26,13 @@ const (
 	LegR
 	FootL
 	FootR
+	// MED-05 appends the inner organs (Missing is a uint32: at most 32
+	// parts). An older save has no wounds and no Missing bit on them, so
+	// they load whole.
+	KidneyL
+	KidneyR
+	Liver
+	Spine
 	NumParts
 )
 
@@ -43,6 +52,8 @@ type Def struct {
 	HasCap   bool
 }
 
+// defs: the torso gave up 84 of its coverage to the MED-05 organs, so
+// the total stays 1000.
 var defs = [NumParts]Def{
 	Brain:   {"brain", Torso, 25, 40, true, false, Consciousness, true},
 	EyeL:    {"left eye", Brain, 12, 15, false, true, Sight, true},
@@ -51,11 +62,11 @@ var defs = [NumParts]Def{
 	EarR:    {"right ear", Brain, 10, 10, false, true, Hearing, true},
 	Nose:    {"nose", Brain, 10, 10, false, true, 0, false},
 	Jaw:     {"jaw", Brain, 20, 20, false, true, Talking, true},
-	Torso:   {"torso", Torso, 60, 380, true, false, 0, false},
-	Heart:   {"heart", Torso, 25, 20, true, false, 0, false},
+	Torso:   {"torso", Torso, 60, 296, true, false, 0, false},
+	Heart:   {"heart", Torso, 25, 20, true, false, BloodPumping, true},
 	LungL:   {"left lung", Torso, 25, 30, false, false, Breathing, true},
 	LungR:   {"right lung", Torso, 25, 30, false, false, Breathing, true},
-	Stomach: {"stomach", Torso, 25, 30, false, false, 0, false},
+	Stomach: {"stomach", Torso, 25, 30, false, false, Digestion, true},
 	ArmL:    {"left arm", Torso, 35, 60, false, false, Manipulation, true},
 	ArmR:    {"right arm", Torso, 35, 60, false, false, Manipulation, true},
 	HandL:   {"left hand", ArmL, 20, 25, false, false, Manipulation, true},
@@ -64,6 +75,13 @@ var defs = [NumParts]Def{
 	LegR:    {"right leg", Torso, 40, 80, false, false, Moving, true},
 	FootL:   {"left foot", LegL, 20, 30, false, false, Moving, true},
 	FootR:   {"right foot", LegR, 20, 30, false, false, Moving, true},
+	// MED-05 organs: not vital by themselves; losing their capacity is
+	// (OrganFailure, capacity.go). wiki: Kidney (50 HP), Liver (50 HP),
+	// Spine (40 HP). Coverage is original tuning.
+	KidneyL: {"left kidney", Torso, 50, 17, false, false, BloodFiltration, true},
+	KidneyR: {"right kidney", Torso, 50, 17, false, false, BloodFiltration, true},
+	Liver:   {"liver", Torso, 50, 25, false, false, BloodFiltration, true},
+	Spine:   {"spine", Torso, 40, 25, false, false, Moving, true},
 }
 
 // DefOf returns the definition of p (the zero Def for an unknown part).
@@ -72,6 +90,28 @@ func DefOf(p Part) Def {
 		return Def{}
 	}
 	return defs[p]
+}
+
+// LossKills reports that losing p now would kill: p is vital, or it is
+// the last of a capacity the body cannot live without (OrganFailure: the
+// liver, the stomach, the last kidney or lung). A hit never destroys such
+// a part (the game spills the damage on), so death from wounds still
+// comes at KillDamage.
+func (b *Body) LossKills(p Part) bool {
+	if p >= NumParts || defs[p].Vital {
+		return p < NumParts
+	}
+	c := Body{Wounds: b.Wounds, Missing: b.Missing, Conds: b.Conds}
+	if len(b.Fitted) > 0 {
+		c.Fitted = append([]item.Kind(nil), b.Fitted...)
+	}
+	for q := Part(0); q < NumParts; q++ {
+		if under(q, p) {
+			c.Missing |= bit(q)
+			c.SetImplant(q, 0)
+		}
+	}
+	return !b.OrganFailure() && c.OrganFailure()
 }
 
 // Label is the plain-English name of p.
@@ -122,4 +162,14 @@ func (b *Body) PickPart(roll func(int) int) (Part, bool) {
 		r -= defs[p].Coverage
 	}
 	return Torso, false
+}
+
+// Inner reports an internal organ: harvested or transplanted (MED-06),
+// never amputated.
+func Inner(p Part) bool {
+	switch p {
+	case Heart, LungL, LungR, Stomach, KidneyL, KidneyR, Liver, Spine:
+		return true
+	}
+	return false
 }

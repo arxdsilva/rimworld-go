@@ -752,6 +752,7 @@ type Game struct {
 	people    *peopleRegistry                     // people.go
 	bodies    map[entity.EntityID]*body.Body      // body.go
 	med       medState                            // patients.go (MED-00)
+	care      careState                           // care.go (MED-03)
 	surg      *surgeryState                       // surgery.go
 	rest      bedRestState                        // bedrest.go (PLAY-020)
 	drugs     map[entity.EntityID]*drug.State     // drugs.go
@@ -1070,6 +1071,7 @@ func (g *Game) snapshot() []PawnView {
 		pv.Infection, pv.Wounded = g.woundView(id) // infection.go (MED-02)
 		pv.InfectionLosing, pv.UntendedHours = g.infectionLosing(id), g.untendedHours(id)
 		pv.Bleeding, pv.BleedDeathHours = g.bleedingNow(id), g.bleedDeathHours(id) // bleed.go (MED-01)
+		pv.CareLevel = uint8(g.careOf(id))                                         // care.go (MED-03)
 		pv.Weapon = weaponDefOf(g, id).Name
 		pv.Lying = v.Status != health.Alive || (j.Kind == job.Sleep && (j.State == job.Do || j.State == job.Complete))
 		pv.InBed = g.inBed(id)

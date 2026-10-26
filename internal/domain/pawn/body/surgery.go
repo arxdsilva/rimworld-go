@@ -102,10 +102,10 @@ func (b *Body) CanOperate(op Operation) bool {
 	switch op.Kind {
 	case InstallImplant:
 		return Fits(op.Item, op.Part) && b.CanReplace(op.Part)
-	case RemoveImplant:
-		return b.fitted(op.Part)
-	case Amputate:
-		return !b.isMissing(op.Part) && !defs[op.Part].Vital
+	case RemoveImplant: // taking out an artificial heart kills
+		return b.fitted(op.Part) && !defs[op.Part].Vital
+	case Amputate: // organs are harvested (MED-06), not amputated
+		return !b.isMissing(op.Part) && !defs[op.Part].Vital && !Inner(op.Part)
 	}
 	return false // HarvestOrgan..ExciseCarcinoma: not yet (MED-06)
 }

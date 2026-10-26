@@ -578,5 +578,6 @@ func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 	if g.drafted(pawn) && g.fireAt(x, y) > 0 { // firefight.go: any fire, forced
 		add("Extinguish fire", command.OrderExtinguish, construction.LayerObject)
 	}
+	out = append(out, g.tendOrders(pawn, x, y)...) // care.go (MED-03): drafted "Tend <name>"
 	return out
 }

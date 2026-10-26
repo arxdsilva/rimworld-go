@@ -36,7 +36,7 @@ func TestHitDistribution(t *testing.T) {
 	if hits[Torso] < hits[LegL] || hits[LegL] < hits[EarL] || hits[EarL] == 0 {
 		t.Fatalf("distribution %v", hits)
 	}
-	if hits[Torso] < 36000 || hits[Torso] > 42000 {
+	if hits[Torso] < 27000 || hits[Torso] > 32500 { // coverage 296 (MED-05)
 		t.Fatalf("torso %d", hits[Torso])
 	}
 	b.Missing = ^uint32(0)
@@ -190,7 +190,7 @@ func TestWoodenHandOnlyHand(t *testing.T) {
 	var b Body
 	b.destroy(HandL)
 	b.SetImplant(HandL, item.WoodenHand)
-	if b.Capacity(Manipulation) != (500+1000)/2 {
+	if b.Capacity(Manipulation) != (WoodenHandEff+1000)/2 {
 		t.Fatalf("%d", b.Capacity(Manipulation))
 	}
 }
@@ -261,7 +261,7 @@ func TestImplants(t *testing.T) {
 	if _, ok := b.Remove(NumParts); ok {
 		t.Fatal("bad part")
 	}
-	if ImplantEfficiency(item.Food) != 0 || ImplantEfficiency(item.ProstheticArm) != 850 {
+	if ImplantEfficiency(item.Food) != 0 || ImplantEfficiency(item.ProstheticArm) != 500 {
 		t.Fatal("eff")
 	}
 }
@@ -434,7 +434,7 @@ func TestInstallBlockedByMissingAncestor(t *testing.T) {
 	if !b.CanOperate(Operation{InstallImplant, ArmL, item.ProstheticArm}) {
 		t.Fatal("arm ok")
 	}
-	if b.CanOperate(Operation{InstallImplant, HandR, item.ProstheticArm}) || b.CanReplace(NumParts) || b.CanReplace(Heart) {
+	if b.CanOperate(Operation{InstallImplant, HandR, item.ProstheticArm}) || b.CanReplace(NumParts) || b.CanReplace(Brain) || b.CanReplace(Torso) {
 		t.Fatal("bad targets")
 	}
 	if got := b.InstallOptions(item.WoodenHand); len(got) != 1 || got[0] != HandR {

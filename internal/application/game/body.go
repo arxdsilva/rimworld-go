@@ -101,10 +101,12 @@ func partDmg(b *body.Body, p body.Part) int {
 	return n
 }
 
-// woundBody deals dmg of kind to b on parts picked by coverage. A vital
-// part is never destroyed by a hit: what it cannot take spills to the next
-// pick, so the body's Damage rises by exactly dmg and death still comes
-// at health.MaxHP. Other parts may be destroyed (lost).
+// woundBody deals dmg of kind to b on parts picked by coverage. A part
+// whose loss would kill (a vital part, or since MED-05 the last organ of a
+// life capacity: body.LossKills) is never destroyed by a hit: what it
+// cannot take spills to the next pick, so the body's Damage rises by
+// exactly dmg and death still comes at health.MaxHP. Other parts may be
+// destroyed (lost).
 func (g *Game) woundBody(b *body.Body, dmg int, kind body.WoundKind, now uint64) {
 	rng := g.stream(streamBody)
 	left := dmg
@@ -121,12 +123,11 @@ func (g *Game) woundBody(b *body.Body, dmg int, kind body.WoundKind, now uint64)
 			break
 		}
 		hit := left
-		if body.DefOf(p).Vital {
-			room := body.DefOf(p).MaxHP - partDmg(b, p) - 1
+		if room := body.DefOf(p).MaxHP - partDmg(b, p) - 1; hit > room && b.LossKills(p) {
 			if room <= 0 {
 				continue
 			}
-			hit = min(hit, room)
+			hit = room
 		}
 		before := b.Damage()
 		b.Hurt(roll, hit, kind, now)
@@ -329,6 +330,7 @@ func importMap[T any](es []entry[T]) map[entity.EntityID]*T {
 var capacityLabels = [body.NumCaps]string{
 	body.Consciousness: "Consciousness", body.Moving: "Moving", body.Manipulation: "Manipulation",
 	body.Sight: "Sight", body.Hearing: "Hearing", body.Talking: "Talking", body.Breathing: "Breathing",
+	body.BloodPumping: "Blood pumping", body.BloodFiltration: "Blood filtration", body.Digestion: "Digestion", // MED-05
 }
 
 // Part status words of the Health tab (PartView.Status starts with one).
@@ -513,10 +515,14 @@ func (g *Game) operationOptions(id entity.EntityID, b *body.Body) []OperationOpt
 		}
 	}
 	for p := body.Part(0); p < body.NumParts; p++ {
-		add(body.Operation{Kind: body.RemoveImplant, Part: p})
+		if !body.DefOf(p).Vital { // taking out an artificial heart kills (organs.go)
+			add(body.Operation{Kind: body.RemoveImplant, Part: p})
+		}
 	}
 	for p := body.Part(0); p < body.NumParts; p++ {
-		add(body.Operation{Kind: body.Amputate, Part: p})
+		if !body.Inner(p) { // organs are harvested (MED-06), not amputated
+			add(body.Operation{Kind: body.Amputate, Part: p})
+		}
 	}
 	return out
 }
