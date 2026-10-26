@@ -112,7 +112,11 @@ func TestGrownGolden(t *testing.T) {
 	// previous pin (7aab2f77), so behaviour is unchanged.
 	// Re-pinned (PLAY-021): the set piece's lamps are power devices now, so
 	// the colony saves a power state (unpowered lamps, no grid).
-	const want uint64 = 0xc2fcc55198584c5f
+	// Re-pinned (MED-01), behaviour changed by design: wounds bleed and
+	// blood loss downs and kills, pain shock and capacities decide downed,
+	// raiders bleed for real instead of a timer. The previous pin still
+	// holds at MED-00 (acd15b55); the new value is stable over -count=2.
+	const want uint64 = 0x9017cd3229fe6e21
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)
