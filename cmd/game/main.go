@@ -960,7 +960,7 @@ const powerBaseRow = 9
 // stove draw on it; a lamp east of a gap is off the grid, and a torch lamp
 // burns west of it all.
 func powerBase(g *game.Game, cx, cy int) {
-	y := cy - powerBaseRow // north of the start's house and fields
+	y := cy - powerBaseRow                // north of the start's house and fields
 	g.ClearPlants(cx-15, y-4, cx+13, y+4) // trees would block the pieces
 	for x := cx - 9; x <= cx+8; x++ {
 		kind := "power conduit"
