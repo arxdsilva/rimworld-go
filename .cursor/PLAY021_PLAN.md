@@ -221,3 +221,62 @@ UI agents develop against the contract and stand-ins while the sim lands.
 - **Lead:** `internal/domain/building/construction/construction.go`, `internal/domain/building/power/`, `internal/domain/ai/job/job.go`, `internal/domain/sim/command/command.go`, `internal/domain/incident/incident.go`, `internal/domain/research/research.go`, `internal/application/game/{game.go,phases.go,host_commands.go,tick.go,priorities.go}`, `internal/adapters/inbound/ebiten/{archtools.go,hud_global.go}`
 - **Agents:** as in the table.
 - **Reuse:** the campfire fuel and refuel code (`heat.go:182-338`, `setFuel` at `light.go:75`); `heatRooms` (`heat.go:118`); `lighting.Outdoor`; `underSky` (`roof.go:102`); `weather.State.WindSpeed`; the timed-event template (`weather_ng1.go`); `strikeTick` (`lightning.go`); `g.stream` (`rng_streams.go`); `startFire`; door-in-wall placement for the cooler; the fence linked-art recipe; `syncRoofForce` (`hud_global.go:518`); `toolLock` (`arch_locks.go:46`); the `buildingPane`/`buildingBars` patterns; `colonyAmbience`.
+
+## Appendix: sim-core design notes (design review, 2026-10-25)
+- **Units:** integer W. Stored energy is int64 W·ticks (2500 W·ticks = 1 Wh, shown as Wh).
+- **`phasePower`** runs before `phaseClimate` (`game.go:939`, `phases.go:25`) when `now%50==0` or `pw.dirty`, integrating `dt = now − pw.last`. With no power devices it returns without writing state.
+- **Domain `power`** (imports `construction` only):
+  - `Role` (None, Producer, Consumer, Storage, Transmitter, Switch);
+  - `Class` (shed order: Lamp, Bench, Cooler, Heater);
+  - `Spec{Role, Class, Draw, Idle, Peak, CapWh int; Toggle, Hidden bool}` and `SpecOf(construction.Kind)`;
+  - `Node{ID uint64; Role; Cells [][2]int; Closed bool}`;
+  - `Builder.Build(w, h, nodes) Graph` (Net and Link per ID);
+  - `Balance(devs, dt, now) NetOut`.
+  - Transmitters are conduits and closed switches; an open switch cuts.
+  - Nets are 4-neighbour union-find. NetID is the smallest transmitter ID.
+  - Devices join the nearest transmitter within `ConnectRange = 3` (Chebyshev from the footprint; ties by distance, then y, then x); NetID 0 when none.
+- **`LayerConduit`** is appended after `LayerFoundation`; `NumLayers` is exported.
+  - Places that enumerate layers: `indexes.go:110`, `fire.go:274`, `bridge_remove.go:21`, `orders.go:482`, `placement.go:248` (new branch: under walls and benches, not on rock, water or natural features), the view `Conduit` flag at `game.go:1151` and `:1168`, `placement.go:70`, `Movable` (`construction.go:390`).
+  - Checked and unchanged: `food.go:76`, `grass.go:379`, `smooth.go:36`, `home.go:82`, `plan.go:57`, `filth.go:289`.
+  - `SteamVent` moves to `LayerFoundation`; `naturalAt` (`setup_mapgen.go:222`) reads that layer; geothermal is placed exactly over a vent (`placement.go:217`).
+- **Numbers (ours):**
+  - wood-fired 800 W;
+  - solar `900 × (Outdoor−0.12)/0.88 ×` unroofed share;
+  - wind `250 W` per unit of wind speed, capped at 1100, `×` clear share. The band is 5 cells along both long sides; it is blocked by walls, rock, roofs and trees, and cached per (structVer, roofVer, game hour). `roofVer` is a new counter bumped at `roof.go:87`.
+  - geothermal 1800 W;
+  - battery 1200 Wh, 75% charge efficiency, 8 W self-discharge, equal split (remainder to the lowest ids);
+  - lamp 50 W;
+  - heater 180 W and cooler 220 W, each 20 W idle;
+  - electric stove 250 W, tailoring 150 W, research 200 W at full while reserved, 10% otherwise.
+  - Floats are turned into permille once per balance.
+- **Brownout:** if load > gen + stored/dt, shed by class, newest id first within a class. `ShedUntil = now+2500`; back only with 10% headroom.
+  - No-flap test, domain: ±5% ripple, empty batteries, two days; every off span ≥ the minimum.
+  - No-flap test, game: a `TestNoMicroNaps`-style check on `BuildingView.Powered`.
+- **Switches:**
+  - `WantOff` and `IsOff` maps; a pending flick is any building where they differ.
+  - Commands: `SetPowerWanted{Target, Enabled}`, `SetThermostat{Target, Count}` (tenths of a degree); `OrderFlick` for Prioritize.
+  - The index `pw.flicks` is a sorted `[]EntityID`, rebuilt on load.
+  - `job.Flick` (30 work) runs under Construct, before `assignConstruct` (`priorities.go:113`).
+  - A flick bumps `pw.topoVer`; the net cache key is (structVer, topoVer, store identity).
+- **Events** (Nature pool; `incidentFits` is false with no power devices; their own `streamPower` stream):
+  - **Solar flare:** 3–8 h, cooldown 12 d, not before day 12. Every net is down: generators idle with no fuel burn, batteries frozen. `FlareUntil` is saved; letters at the start and end.
+  - **Short circuit:** cooldown 8 d, not before day 10. Needs ≥ 100 Wh stored and a visible conduit, `sortedCandidates[stream.IntN]`. Drains that net, removes the conduit, then `startFire(x, y, 1 + Wh/500)`; a threat letter.
+- **Consumers:**
+  - `light.go:101` stamps a lamp only if `g.powered(id)`; `setPowered` bumps `light.ver`.
+  - `roomStats.lit` is deleted; `roomViews` sets Lit from one cached light-source list (powered lamps, burning torches and campfires).
+  - Thermostat: `thermoRoomHeat` next to `heat.go:142`, ±220 per interval. Target 21 °C; active below target −1, idle above +0.5; the active flag is saved.
+  - Electric benches: `construction.RecipeBench(k)` maps to the base kind (`production.go:122`, `:391`, `frame_view.go:170`). Unpowered benches are skipped (`production.go:203`); `doBill` fails Blocked with `BillNoPower`; speed `+40`.
+  - Research bench: `research.go:141` accepts both; `doResearch` uses `workProgressPct(…, 140)`.
+- **Fuel table** (`fuel.go`): `fuelSpec(k){CapTicks, Below, BurnPermil}`. Campfire is unchanged; torch 8 logs at 600‰; wood-fired 15 logs at 1600‰. `heat.go:182-338` moves there, iterating a structVer-cached fuel-user list in the same order (goldens hold). Torches burn in `phaseClimate`, and rain puts them out like campfires.
+- **Saves:**
+  - `Power *powerSave` (nil when empty) holds Charge, WantOff, IsOff, Unpowered, Shed, Thermo, FlareUntil and Last.
+  - Derived and not saved: nets, outputs, the flick index.
+  - Migration `v < 5` in `migrateSave(v)`: existing lamps become torch lamps.
+- **Views:**
+  - `BuildingView`: PowerRole, PowerNet, Powered, PowerOn, PowerWantOn, PowerUse, PowerOut, StoredWh, CapWh, NoPowerReason, LinkX/LinkY/HasLink, Glow, GlowRadius, ThermoTarget.
+  - `WorldView`: PowerNets{ID, Gen, Load, StoredWh, CapWh, Brownout}, SolarFlare, PowerVer.
+- **Research costs:** Electricity 3000; Batteries 2500, Solar 4000, Wind 3500, Geothermal 5000, each requiring Electricity. The torch lamp is free.
+- **Risks:**
+  - The grown golden (`grown.go:219` builds lamps) needs a re-pin with a note.
+  - Conduits add buildings to full-list scans (`assignBill`, `researchTry`, the WorldView loop, `removeBuildingAs` O(n)): use per-kind lists cached per structVer.
+  - Delivering materials to conduit frames under walls (`workSpot`, `orders.go:359`) needs a test.
