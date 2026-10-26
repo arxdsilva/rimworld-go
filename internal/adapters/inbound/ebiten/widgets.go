@@ -6,48 +6,49 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 )
 
-// UI chrome tokens (PLAY-018 cool charcoal: slate panels, blue-grey rules,
-// a sea-glass accent). Hex values must match assets/palettes/ui.yaml;
-// widgets_test.go holds them to WCAG contrast and keeps them clear of the
-// reference hexes.
+// UI chrome tokens (ART-E neutral charcoal: translucent dark-grey panels,
+// restrained grey rules, warm off-white text and one warm gold accent).
+// Hex values must match assets/palettes/ui.yaml; widgets_test.go holds the
+// chrome neutral and translucent, the text to WCAG contrast, and every
+// token clear of the reference hexes.
 var (
-	uiSpace       = color.RGBA{R: 0x05, G: 0x0D, B: 0x26, A: 0xFF}
-	uiDust        = color.RGBA{R: 0x2C, G: 0x7A, B: 0x84, A: 0xFF}
-	uiHorizon     = color.RGBA{R: 0x12, G: 0x3E, B: 0x58, A: 0xFF}
-	uiPanel       = color.RGBA{R: 0x1E, G: 0x26, B: 0x38, A: 0xEB}
-	uiPanelBorder = color.RGBA{R: 0x3D, G: 0x54, B: 0x70, A: 0xFF}
-	uiBtn         = color.RGBA{R: 0x26, G: 0x30, B: 0x43, A: 0xFF}
-	uiBtnHover    = color.RGBA{R: 0x36, G: 0x46, B: 0x5F, A: 0xFF}
-	uiBtnSelected = color.RGBA{R: 0x1F, G: 0x58, B: 0x62, A: 0xFF}
-	uiBtnDisabled = color.RGBA{R: 0x1C, G: 0x24, B: 0x37, A: 0xFF}
-	uiBtnBorder   = color.RGBA{R: 0x4C, G: 0x62, B: 0x88, A: 0xFF}
-	uiAccent      = color.RGBA{R: 0x72, G: 0xD4, B: 0xC0, A: 0xFF}
-	uiDim         = color.RGBA{R: 0x02, G: 0x06, B: 0x0C, A: 0xA0}
+	uiSpace       = color.RGBA{R: 0x0E, G: 0x0F, B: 0x12, A: 0xFF}
+	uiDust        = color.RGBA{R: 0x8C, G: 0x85, B: 0x76, A: 0xFF}
+	uiHorizon     = color.RGBA{R: 0x24, G: 0x26, B: 0x2A, A: 0xFF}
+	uiPanel       = color.RGBA{R: 0x26, G: 0x29, B: 0x2E, A: 0xE0}
+	uiPanelBorder = color.RGBA{R: 0x5A, G: 0x5D, B: 0x61, A: 0xFF}
+	uiBtn         = color.RGBA{R: 0x3C, G: 0x3F, B: 0x43, A: 0xFF}
+	uiBtnHover    = color.RGBA{R: 0x4B, G: 0x4E, B: 0x52, A: 0xFF}
+	uiBtnSelected = color.RGBA{R: 0x5E, G: 0x54, B: 0x40, A: 0xFF}
+	uiBtnDisabled = color.RGBA{R: 0x24, G: 0x26, B: 0x2B, A: 0xFF}
+	uiBtnBorder   = color.RGBA{R: 0x66, G: 0x69, B: 0x6E, A: 0xFF}
+	uiAccent      = color.RGBA{R: 0xD9, G: 0xB4, B: 0x5B, A: 0xFF}
+	uiDim         = color.RGBA{R: 0x05, G: 0x05, B: 0x06, A: 0xA0}
 	// NG-1 §1.2: text, states, fields, sliders, scrollbars, tooltips, modals.
-	uiText         = color.RGBA{R: 0xE4, G: 0xEB, B: 0xF2, A: 0xFF}
-	uiTextDim      = color.RGBA{R: 0x9D, G: 0xAE, B: 0xC2, A: 0xFF}
-	uiTextDisabled = color.RGBA{R: 0x52, G: 0x61, B: 0x8A, A: 0xFF}
-	uiHeading      = color.RGBA{R: 0xBF, G: 0xED, B: 0xE2, A: 0xFF}
+	uiText         = color.RGBA{R: 0xE8, G: 0xE4, B: 0xDA, A: 0xFF}
+	uiTextDim      = color.RGBA{R: 0xB8, G: 0xB4, B: 0xAA, A: 0xFF}
+	uiTextDisabled = color.RGBA{R: 0x6D, G: 0x6A, B: 0x64, A: 0xFF}
+	uiHeading      = color.RGBA{R: 0xF0, G: 0xD9, B: 0xA0, A: 0xFF}
 	uiWarning      = color.RGBA{R: 0xED, G: 0xA9, B: 0x4A, A: 0xFF}
-	uiDanger       = color.RGBA{R: 0xFA, G: 0x88, B: 0x7C, A: 0xFF}
+	uiDanger       = color.RGBA{R: 0xFF, G: 0xA0, B: 0x94, A: 0xFF}
 	uiGood         = color.RGBA{R: 0x8A, G: 0xCF, B: 0x6A, A: 0xFF}
-	uiField        = color.RGBA{R: 0x0C, G: 0x16, B: 0x2E, A: 0xFF}
-	uiFieldBorder  = color.RGBA{R: 0x3D, G: 0x54, B: 0x70, A: 0xFF}
-	uiFieldFocus   = color.RGBA{R: 0x72, G: 0xD4, B: 0xC0, A: 0xFF}
-	uiSliderTrack  = color.RGBA{R: 0x22, G: 0x2A, B: 0x3C, A: 0xFF}
-	uiSliderFill   = color.RGBA{R: 0x2F, G: 0x8F, B: 0x8A, A: 0xFF}
-	uiSliderKnob   = color.RGBA{R: 0x72, G: 0xD4, B: 0xC0, A: 0xFF}
-	uiScrollTrack  = color.RGBA{R: 0x0C, G: 0x16, B: 0x2E, A: 0xFF}
-	uiScrollThumb  = color.RGBA{R: 0x4C, G: 0x62, B: 0x88, A: 0xFF}
-	uiTooltip      = color.RGBA{R: 0x0D, G: 0x16, B: 0x30, A: 0xF5}
-	uiTooltipEdge  = color.RGBA{R: 0x58, G: 0x7A, B: 0xA8, A: 0xFF}
-	uiModalDim     = color.RGBA{R: 0x02, G: 0x06, B: 0x0C, A: 0xB8}
+	uiField        = color.RGBA{R: 0x1F, G: 0x20, B: 0x22, A: 0xFF}
+	uiFieldBorder  = color.RGBA{R: 0x5A, G: 0x5D, B: 0x61, A: 0xFF}
+	uiFieldFocus   = color.RGBA{R: 0xD9, G: 0xB4, B: 0x5B, A: 0xFF}
+	uiSliderTrack  = color.RGBA{R: 0x21, G: 0x23, B: 0x26, A: 0xFF}
+	uiSliderFill   = color.RGBA{R: 0x9C, G: 0x82, B: 0x40, A: 0xFF}
+	uiSliderKnob   = color.RGBA{R: 0xD9, G: 0xB4, B: 0x5B, A: 0xFF}
+	uiScrollTrack  = color.RGBA{R: 0x1F, G: 0x20, B: 0x22, A: 0xFF}
+	uiScrollThumb  = color.RGBA{R: 0x5F, G: 0x62, B: 0x67, A: 0xFF}
+	uiTooltip      = color.RGBA{R: 0x22, G: 0x24, B: 0x28, A: 0xF5}
+	uiTooltipEdge  = color.RGBA{R: 0x6E, G: 0x71, B: 0x75, A: 0xFF}
+	uiModalDim     = color.RGBA{R: 0x05, G: 0x05, B: 0x06, A: 0xB8}
 	// PLAY-012 plan marks: a soft fill and a brighter edge.
 	uiPlanFill = color.RGBA{R: 0xB9, G: 0xA8, B: 0xF0, A: 0x30}
 	uiPlanEdge = color.RGBA{R: 0xE6, G: 0xD2, B: 0xFF, A: 0x90}
 	// PLAY-018: letter kinds, alert backings, the learning helper's warm
-	// brown and gold (set apart from the cool chrome) and the mood bar.
-	uiLetterThreat  = color.RGBA{R: 0xFA, G: 0x88, B: 0x7C, A: 0xFF}
+	// brown and gold (set apart from the grey chrome) and the mood bar.
+	uiLetterThreat  = color.RGBA{R: 0xFF, G: 0xA0, B: 0x94, A: 0xFF}
 	uiLetterCaution = color.RGBA{R: 0xED, G: 0xA9, B: 0x4A, A: 0xFF}
 	uiLetterInfo    = color.RGBA{R: 0x7F, G: 0xA8, B: 0xDC, A: 0xFF}
 	uiLetterGood    = color.RGBA{R: 0x8A, G: 0xCF, B: 0x6A, A: 0xFF}
@@ -59,7 +60,7 @@ var (
 	uiTutorText     = color.RGBA{R: 0xF5, G: 0xEA, B: 0xD7, A: 0xFF}
 	uiMoodGood      = color.RGBA{R: 0x8A, G: 0xCF, B: 0x6A, A: 0xFF}
 	uiMoodMid       = color.RGBA{R: 0xE6, G: 0xC2, B: 0x4E, A: 0xFF}
-	uiMoodBad       = color.RGBA{R: 0xFA, G: 0x88, B: 0x7C, A: 0xFF}
+	uiMoodBad       = color.RGBA{R: 0xFF, G: 0xA0, B: 0x94, A: 0xFF}
 	// PLAY-021 power overlay: a colour per grid, handed out in turn
 	// (power_overlay.go), and grey for pieces on no grid.
 	uiPowerNet1 = color.RGBA{R: 0xF5, G: 0xD5, B: 0x47, A: 0xFF}

@@ -1284,23 +1284,29 @@ Use semantic names (`steel.base`, `wood.shadow`) rather than `gray1`.
 Exact colors must come from original visual prototyping rather than
 copying another game's palette.
 
-PLAY-018 (2026-10-25): the UI chrome palette (`assets/palettes/ui.yaml`,
-mirrored in `widgets.go`) moved from warm dust to an original slate
-charcoal with a sea-glass accent:
-- panels `#1E2638EB`;
-- blue-grey borders;
-- text `#E4EBF2`;
-- accent `#72D4C0`;
-- semantic good/warning/danger;
-- letter-kind colours;
-- a warm instructional set for the learning helper.
+ART-024 (2026-10-26, user decision: the look moves close to RimWorld's
+readable chrome, values stay original): the UI chrome palette
+(`assets/palettes/ui.yaml`, mirrored in `widgets.go`) is neutral
+translucent charcoal with a warm gold accent. It replaces PLAY-018's
+slate charcoal with a sea-glass accent.
+- panels `#26292EE0`, neutral grey borders `#5A5D61`;
+- buttons `#3C3F43`, hover `#4B4E52`, selected a warm `#5E5440`;
+- text `#E8E4DA`, dim `#B8B4AA`, headings `#F0D9A0`;
+- accent `#D9B45B`;
+- semantic good/warning/danger, letter-kind and mood colours, power-net
+  colours, and the warm learning-helper set are kept.
 
-It was chosen from five prototypes captured on real screens. Tests pin:
-- text contrast (≥ 4.5:1 on panels and buttons);
-- a minimum colour distance from a reference set of another game's UI
-  colours (`TestUITokensStayClearOfReferencePalette`).
+The colours come from CIELAB lightness steps and WCAG contrast, not from
+sampling another game. Tests pin:
+- neutral, translucent surfaces (chroma C* ≤ 6, panel alpha 0xB0–0xE6;
+  `TestUIPanelsAreNeutralTranslucent`);
+- text contrast ≥ 4.5:1 on panels over dark and light maps, on buttons
+  and on tooltips (`TestUITextContrast`);
+- no near-copies: dE ≥ 3 from a reference set of another game's UI
+  colours (`TestUITokensAreNotCopies`).
 
-UI badge icons sit on a cool slate disc.
+UI badge icons sit on a neutral grey disc (`#303236`, edge `#0F1012`)
+from the ART-0xx re-render on.
 
 -   [-] `assets/palettes/ui.yaml` (menu/pause chrome tokens; Go adapter
     mirrors the hexes), `base.yaml` (outline/shadow/overlay tokens +

@@ -410,8 +410,9 @@ The map fills the whole screen; the HUD floats over it.
   never cover the colonist bar, alerts or time controls.
 - **Nothing selected.** The hovered cell's info shows as text at the
   lower-left.
-- **Palette.** An original slate charcoal with a sea-glass accent
-  (`ui.yaml`). The learning helper uses a warm instructional set.
+- **Palette.** Neutral translucent charcoal panels with a warm gold accent
+  (`ui.yaml`, ART-024), close to RimWorld's readable chrome but with
+  original values. The learning helper uses a warm instructional set.
 
 ## Core responsibilities
 

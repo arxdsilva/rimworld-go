@@ -1,49 +1,52 @@
-# Original rimworld-go UI chrome palette (PLAY-018 cool charcoal).
-# Slate panels with blue-grey rules, light text and one restrained
-# sea-glass accent; the learning helper keeps a warm brown and gold set.
-# Semantic names per ART_DIRECTION §33. These hexes were prototyped for
-# this project on captures of the real screens; they are not sampled from
-# another game (widgets_test.go keeps every token clear of the reference
-# hexes and checks WCAG contrast). Alpha is the last two digits (00–FF).
+# Original rimworld-go UI chrome palette (ART-E neutral charcoal).
+# Translucent dark-grey panels, restrained grey rules, warm off-white text
+# and one warm gold accent; the learning helper keeps its warm brown and
+# gold set. Semantic names per ART_DIRECTION §33. These hexes were picked
+# for this project from first principles (CIELAB lightness steps, WCAG
+# contrast) and checked on captures of the real screens; they are not
+# sampled from another game. widgets_test.go keeps the chrome neutral
+# (C* <= 6) and translucent, the text at WCAG 4.5:1, and every token at
+# least CIE76 dE 3 from the reference hexes. Alpha is the last two digits
+# (00–FF).
 #
 # Consumed by internal/adapters/inbound/ebiten (hardcoded to match).
 
-ui.space: "#050D26FF"
-ui.dust: "#2C7A84FF"
-ui.horizon: "#123E58FF"
-ui.panel: "#1E2638EB"
-ui.panel_border: "#3D5470FF"
-ui.button: "#263043FF"
-ui.button_hover: "#36465FFF"
-ui.button_selected: "#1F5862FF"
-ui.button_disabled: "#1C2437FF"
-ui.button_border: "#4C6288FF"
-ui.accent: "#72D4C0FF"
-ui.dim: "#02060CA0"
+ui.space: "#0E0F12FF"
+ui.dust: "#8C8576FF"
+ui.horizon: "#24262AFF"
+ui.panel: "#26292EE0"
+ui.panel_border: "#5A5D61FF"
+ui.button: "#3C3F43FF"
+ui.button_hover: "#4B4E52FF"
+ui.button_selected: "#5E5440FF"
+ui.button_disabled: "#24262BFF"
+ui.button_border: "#66696EFF"
+ui.accent: "#D9B45BFF"
+ui.dim: "#050506A0"
 # NG-1: text, states, fields, sliders, scrollbars, tooltips, modals.
-ui.text: "#E4EBF2FF"
-ui.text_dim: "#9DAEC2FF"
-ui.text_disabled: "#52618AFF"
-ui.heading: "#BFEDE2FF"
+ui.text: "#E8E4DAFF"
+ui.text_dim: "#B8B4AAFF"
+ui.text_disabled: "#6D6A64FF"
+ui.heading: "#F0D9A0FF"
 ui.warning: "#EDA94AFF"
-ui.danger: "#FA887CFF"
+ui.danger: "#FFA094FF"
 ui.good: "#8ACF6AFF"
-ui.field: "#0C162EFF"
-ui.field_border: "#3D5470FF"
-ui.field_focus: "#72D4C0FF"
-ui.slider_track: "#222A3CFF"
-ui.slider_fill: "#2F8F8AFF"
-ui.slider_knob: "#72D4C0FF"
-ui.scroll_track: "#0C162EFF"
-ui.scroll_thumb: "#4C6288FF"
-ui.tooltip: "#0D1630F5"
-ui.tooltip_border: "#587AA8FF"
-ui.modal_dim: "#02060CB8"
+ui.field: "#1F2022FF"
+ui.field_border: "#5A5D61FF"
+ui.field_focus: "#D9B45BFF"
+ui.slider_track: "#212326FF"
+ui.slider_fill: "#9C8240FF"
+ui.slider_knob: "#D9B45BFF"
+ui.scroll_track: "#1F2022FF"
+ui.scroll_thumb: "#5F6267FF"
+ui.tooltip: "#222428F5"
+ui.tooltip_border: "#6E7175FF"
+ui.modal_dim: "#050506B8"
 ui.plan_fill: "#B9A8F030"
 ui.plan_edge: "#E6D2FF90"
 # PLAY-018: letter kinds, alert backings, the learning helper's warm
-# brown and gold (set apart from the cool chrome) and the mood bar.
-ui.letter_threat: "#FA887CFF"
+# brown and gold (set apart from the grey chrome) and the mood bar.
+ui.letter_threat: "#FFA094FF"
 ui.letter_caution: "#EDA94AFF"
 ui.letter_info: "#7FA8DCFF"
 ui.letter_good: "#8ACF6AFF"
@@ -55,7 +58,7 @@ ui.tutor_heading: "#F7D68AFF"
 ui.tutor_text: "#F5EAD7FF"
 ui.mood_good: "#8ACF6AFF"
 ui.mood_mid: "#E6C24EFF"
-ui.mood_bad: "#FA887CFF"
+ui.mood_bad: "#FFA094FF"
 # PLAY-021 power overlay: a colour per grid (assigned in turn), and grey for conduits on no grid.
 ui.power_net1: "#F5D547FF"
 ui.power_net2: "#4FE0D0FF"

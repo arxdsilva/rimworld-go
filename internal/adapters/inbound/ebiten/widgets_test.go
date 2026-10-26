@@ -127,21 +127,81 @@ func TestUIContrast(t *testing.T) {
 }
 
 // uiReferenceHexes are another game's UI colours. The palette is original
-// (ART §17/§33, user decision PLAY-018): no token may sit near them.
+// (ART §17/§33): the chrome may share that game's general look (neutral
+// grey panels, a warm accent) but no token may copy one of these.
 var uiReferenceHexes = []string{"15191D", "616C7A", "2A2B2C", "878787", "85552C", "B08B3D",
 	"CCD9FF", "4DB3E6", "363636", "524736", "13161B"}
 
-// TestUITokensStayClearOfReferencePalette keeps every token at least
-// CIE76 dE 10 (a plainly different colour side by side) from each
-// reference hex. The two black veils are scrims, not hues, so they are
-// left out.
-func TestUITokensStayClearOfReferencePalette(t *testing.T) {
+// uiNeutralTokens are the chrome surfaces, rules and backdrops that must
+// read as plain grey: colour comes only from the accent and the semantic
+// tokens drawn on them.
+var uiNeutralTokens = []string{"ui.panel", "ui.panel_border", "ui.button", "ui.button_hover",
+	"ui.button_disabled", "ui.button_border", "ui.tooltip", "ui.tooltip_border", "ui.field",
+	"ui.field_border", "ui.scroll_track", "ui.scroll_thumb", "ui.slider_track", "ui.space",
+	"ui.horizon", "ui.dim", "ui.modal_dim"}
+
+// TestUIPanelsAreNeutralTranslucent: every chrome surface is a near-neutral
+// grey (CIELAB chroma C* <= 6, below a plainly tinted colour), and the
+// floating panel lets the map show through without washing out
+// (alpha 0xB0-0xE6).
+func TestUIPanelsAreNeutralTranslucent(t *testing.T) {
 	t.Parallel()
-	const minDE = 10
-	for name, c := range uiTokens {
-		if name == "ui.dim" || name == "ui.modal_dim" {
-			continue
+	const maxChroma = 6
+	for _, name := range uiNeutralTokens {
+		c, ok := uiTokens[name]
+		if !ok {
+			t.Fatalf("no token %s", name)
 		}
+		if ch := labChroma(c); ch > maxChroma {
+			t.Errorf("%s %02X%02X%02X has chroma %.1f, want <= %d", name, c.R, c.G, c.B, ch, maxChroma)
+		}
+	}
+	if uiPanel.A < 0xB0 || uiPanel.A > 0xE6 {
+		t.Errorf("panel alpha %#02x, want 0xB0-0xE6", uiPanel.A)
+	}
+	if relLum(uiBtnSelected) <= relLum(uiBtn) || labChroma(uiBtnSelected) <= maxChroma {
+		t.Errorf("selected button %v: want a lighter, warm (tinted) fill that reads apart from the grey ones", uiBtnSelected)
+	}
+}
+
+// TestUITextContrast holds body text, dim text and headings to WCAG 2.x
+// AA (4.5:1) on the surfaces they sit on: the translucent panel over a
+// dark map and over a mid-grey (bright ground) map, the plain button and
+// the tooltip. TestUIContrast covers the white-map worst case and the
+// semantic colours.
+func TestUITextContrast(t *testing.T) {
+	t.Parallel()
+	black := color.RGBA{0, 0, 0, 0xFF}
+	grey := color.RGBA{0x80, 0x80, 0x80, 0xFF}
+	surfaces := []struct {
+		name string
+		bg   color.RGBA
+	}{
+		{"panel (dark map)", overOpaque(uiPanel, black)},
+		{"panel (grey map)", overOpaque(uiPanel, grey)},
+		{"button", uiBtn},
+		{"tooltip (grey map)", overOpaque(uiTooltip, grey)},
+	}
+	inks := []struct {
+		name string
+		c    color.RGBA
+	}{{"text", uiText}, {"dim text", uiTextDim}, {"heading", uiHeading}}
+	for _, s := range surfaces {
+		for _, ink := range inks {
+			if got := contrastRatio(ink.c, s.bg); got < 4.5 {
+				t.Errorf("%s on %s: %.2f:1, want >= 4.5:1", ink.name, s.name, got)
+			}
+		}
+	}
+}
+
+// TestUITokensAreNotCopies keeps every token at least CIE76 dE 3 (a
+// just-noticeable difference side by side) from each reference hex, so no
+// colour is lifted from another game, even near-identically.
+func TestUITokensAreNotCopies(t *testing.T) {
+	t.Parallel()
+	const minDE = 3
+	for name, c := range uiTokens {
 		for _, h := range uiReferenceHexes {
 			ref, err := parseHexRGBA(h + "FF")
 			if err != nil {
@@ -219,6 +279,12 @@ func deltaE76(a, b color.RGBA) float64 {
 	l1, a1, b1 := cieLab(a)
 	l2, a2, b2 := cieLab(b)
 	return math.Sqrt((l1-l2)*(l1-l2) + (a1-a2)*(a1-a2) + (b1-b2)*(b1-b2))
+}
+
+// labChroma is the CIELAB chroma C* (distance from the grey axis).
+func labChroma(c color.RGBA) float64 {
+	_, a, b := cieLab(c)
+	return math.Hypot(a, b)
 }
 
 func cieLab(c color.RGBA) (l, a, b float64) {

@@ -266,7 +266,7 @@ type btnOpts struct {
 func (s btnStyle) colors(hover, down, selected bool) (fill, border, text color.RGBA) {
 	switch s {
 	case btnPrimary:
-		fill, border, text = lerpRGBA(uiBtnSelected, uiAccent, 0.45), uiAccent, uiField
+		fill, border, text = lerpRGBA(uiBtnSelected, uiAccent, 0.6), uiAccent, uiField
 	case btnDanger:
 		fill, border, text = lerpRGBA(uiBtn, uiDanger, 0.35), uiDanger, uiText
 	default:
