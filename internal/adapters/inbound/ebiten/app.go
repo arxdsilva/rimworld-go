@@ -18,6 +18,7 @@ import (
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/platform/config"
 	"rimworld-go/internal/platform/input"
+	"rimworld-go/internal/platform/sysinfo"
 )
 
 const (
@@ -94,6 +95,10 @@ type AppConfig struct {
 	Window func(fullscreen, vsync bool)
 	// Sound plays the client's audio (nil: silent).
 	Sound Sound
+	// Hardware reads the machine's memory and cores (PLAY-019): the first
+	// start picks a graphics tier from it and small machines get a notice
+	// (nil: unknown, nothing detected).
+	Hardware func() sysinfo.Info
 }
 
 // App is the ebiten.Game shell: screen routing, widgets, and (once

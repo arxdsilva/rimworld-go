@@ -19,7 +19,7 @@ stage=dist/$name
 rm -rf "$stage" "dist/$name.zip" "dist/$name.tar.gz"
 mkdir -p "$stage/assets/generated" "$stage/assets/source/raster/ui"
 cp "$bin" "$stage/"
-cp -R assets/generated/world assets/generated/ui assets/generated/audio "$stage/assets/generated/"
+cp -R assets/generated/world assets/generated/ui assets/generated/audio assets/generated/atlas "$stage/assets/generated/" # atlas: the packed pawn sprites
 cp -R assets/metadata assets/palettes "$stage/assets/"
 cp assets/source/raster/ui/main_menu_colonist.png "$stage/assets/source/raster/ui/"
 cp README.md THIRD_PARTY_NOTICES.md "$stage/"

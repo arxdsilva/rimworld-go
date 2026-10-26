@@ -5,6 +5,7 @@ description: Split a multi-area rimworld-go task across parallel subagents per .
 
 # Parallel work (lead checklist)
 
+0. **Check RAM.** Run `make agent-budget`; size the batch to what it prints (heavy and light agents), stagger the heavy ones, and give every agent `GOFLAGS=-p=2` for its tests. Re-check before each later phase (PARALLEL_WORK §1).
 1. **Map areas → agents.** List the areas the task touches (rule intro table); one agent per area/layer (hexagon). ≤ 15 running at once.
    1b. **Pick each agent's model** (rule §6): `haiku` for mechanical work, `sonnet` for implementation against a written contract, `opus` for determinism/pathing/jobs/saves/timing math. Escalate one tier after two failed gates.
 2. **Contract first (you, alone):**

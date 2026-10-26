@@ -29,6 +29,10 @@ vet:
 lint:
 	staticcheck ./...
 
+.PHONY: agent-budget
+agent-budget:  ## how many parallel agents this machine's free RAM holds (PARALLEL_WORK §1)
+	@go run ./cmd/rambudget
+
 .PHONY: test
 test: test-unit
 

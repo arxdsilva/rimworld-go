@@ -16,8 +16,16 @@ Split work across **parallel subagents** whenever a task touches two or more of 
 
 ## 1. The lead goes first, alone
 
+**RAM first (user decision, 2026-10-25).** Before launching any agent, and again before each later phase, run `make agent-budget` (`cmd/rambudget`). It reads the machine's total and free memory and prints the most agents of each kind that fit, from measured peaks:
+- heavy: a full `go test -race` of the ebiten package, 4.7 GiB because its tests decode the art; only the lead runs it, alone;
+- art: a Blender render, or game runs for captures and fps probes, about 3 GiB;
+- light: an agent's targeted `go test -race -run …` of its own tests, about 1 GiB with the compile.
+
+Agents never run a full package that loads the art. Never run more agents than it allows. The 15-agent cap in §5 is a ceiling, not a target. Start heavy agents a few minutes apart rather than all at once, and tell every agent to run tests with `GOFLAGS=-p=2`. If an agent reports slow tests or the machine swaps, re-check before launching more.
+
 | Do (lead, before launching agents) | Don't |
 | --- | --- |
+| Run **`make agent-budget`** and size the batch to it | Launch a batch without checking free RAM |
 | Write the **shared contract**: `.cursor/*.md` spec sections (e.g. ART §, UI screen §), application read models (`internal/application/game/*View`), consumer-owned interfaces in the consuming package (`HEXAGONAL_ARCHITECTURE.md` §6), ports in `internal/ports/**`, typed commands (`internal/domain/sim/command`), asset names, metadata and attachment schema, save format | Let agents invent interfaces each other depend on |
 | **Stub every new hook** so every agent compiles from the first minute | Let a consumer wait for a producer to compile |
 | **Add every dependency** (`go get`, `go mod tidy`) | Let two agents touch `go.mod` / `go.sum` |
@@ -37,7 +45,7 @@ Split work across **parallel subagents** whenever a task touches two or more of 
 | Agents do | Agents never |
 | --- | --- |
 | TDD (red, then green). Never lower a touched package's coverage; aim for ≥70% (`go test -cover`). The `AGENTS.md` non-negotiables still apply: dependency direction, headless deterministic domain, no global RNG or wall clock in the sim, typed commands only | `go get` / `go mod tidy`, edit shared config, `git add/commit/push`, edit checklists or handoffs (the lead writes them from reports) |
-| Run **targeted** checks only: `go test -race -count=1 -cover ./<owned pkgs>/...`, `go vet ./<owned pkgs>/...`; for art, `make art FAMILIES=<family>` and `make art-check` | Run `make all`, `make test`, `go test ./...`, `make art` without `FAMILIES`, `make screenshots`/`make clips`, or `go build -o bin/...` (others are mid-change; build to the scratchpad if needed) |
+| Run **targeted** checks only, with `GOFLAGS=-p=2`: `go test -race -count=1 -cover ./<owned pkgs>/...`, `go vet ./<owned pkgs>/...`; for art, `make art FAMILIES=<family>` and `make art-check` | Run `make all`, `make test`, `go test ./...`, `make art` without `FAMILIES`, `make screenshots`/`make clips`, or `go build -o bin/...` (others are mid-change; build to the scratchpad if needed) |
 | Report failures in other agents' files | "Fix" another agent's files or tests, or weaken a test to pass |
 | Develop against the contract and stubs when a producer isn't done yet | Block idle waiting; finish with stand-ins and report |
 
@@ -53,7 +61,8 @@ contract (spec §, read models, stubs) → **producers in parallel** (domain/sim
 | Make contract changes as the lead, additive only, and broadcast them to every affected agent | Let one agent change a shared contract |
 | After each phase, run the gates below, then apply the merge checklist in `skills/rimworld-go-review-integration/SKILL.md` | Declare done from agent reports alone |
 | Route fixes back to the owning agent | Patch an active agent's files behind its back |
-| Keep ≤ 15 agents running at once | Spawn more than the work has disjoint areas for |
+| Keep ≤ 15 agents running at once, and never more than `make agent-budget` allows | Spawn more than the work has disjoint areas for, or more than free RAM holds |
+| Re-run `make agent-budget` before each phase and when an agent reports slow tests | Start every heavy agent in the same minute |
 
 **Gates after each phase:**
 

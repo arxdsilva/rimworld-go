@@ -28,6 +28,7 @@ import (
 	"rimworld-go/internal/domain/world/biome"
 	"rimworld-go/internal/domain/world/weather"
 	"rimworld-go/internal/platform/config"
+	"rimworld-go/internal/platform/sysinfo"
 )
 
 // version is the build's version, shown on the main menu. Release builds
@@ -105,6 +106,7 @@ func main() {
 			ebiten.SetFullscreen(fullscreen)
 			ebiten.SetVsyncEnabled(vsync)
 		},
+		Hardware: sysinfo.Read, // PLAY-019: graphics tier and the low-memory notice
 		NewSim: func(ng uiadapter.NewGame) (uiadapter.Simulation, error) {
 			if *scenario == "grown" { // dev: the benchmark's grown colony at -width x -height
 				appscenario.CacheDir = os.Getenv("RIMWORLD_FIXTURE_DIR")

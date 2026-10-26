@@ -3,6 +3,7 @@ package ebiten
 import (
 	"fmt"
 	"log"
+	"runtime"
 	"slices"
 	"time"
 )
@@ -148,6 +149,15 @@ func fpsReport(st *fpsProbeState, sc uiScaleState) string {
 	if p := pct(st.frames, 0.99); p > 0 {
 		low = float64(time.Second) / float64(p)
 	}
-	return fmt.Sprintf("fps probe: %d frames, avg %.1f fps, 1%% low %.1f fps (frame p99 %v); update avg %v p99 %v; draw avg %v p99 %v; scale s %g dev %g",
-		len(st.frames), fps, low, pct(st.frames, 0.99), avg(st.update), pct(st.update, 0.99), avg(st.draw), pct(st.draw, 0.99), sc.s, sc.dev)
+	return fmt.Sprintf("fps probe: %d frames, avg %.1f fps, 1%% low %.1f fps (frame p99 %v); update avg %v p99 %v; draw avg %v p99 %v; scale s %g dev %g; %s",
+		len(st.frames), fps, low, pct(st.frames, 0.99), avg(st.update), pct(st.update, 0.99), avg(st.draw), pct(st.draw, 0.99), sc.s, sc.dev, memLine())
+}
+
+// memLine is the Go runtime's memory at the end of a probe (PLAY-019): the
+// heap in use and what the runtime holds from the OS. Process RSS, which
+// also counts GPU-shared buffers, comes from /usr/bin/time -l.
+func memLine() string {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	return fmt.Sprintf("go heap %d MiB, go sys %d MiB", m.HeapInuse>>20, m.Sys>>20)
 }

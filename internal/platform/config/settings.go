@@ -17,7 +17,11 @@ import (
 // LearnCollapsed, LearnedLessons), CategorizedResources and
 // ShowColonistBar; Normalize turns the helper and the bar on for anything
 // older.
-const SettingsVersion = 4
+// Version 5 (PLAY-019) added the graphics quality preset and its knobs
+// (Quality, Shadows, Lighting, Water, Grass) plus Detected and Chosen
+// (graphics.go); an older file keeps today's look, with Detected empty so
+// the next start detects the hardware tier.
+const SettingsVersion = 5
 
 // MaxLearnedLessons caps the learning helper's done list.
 const MaxLearnedLessons = 64
@@ -68,6 +72,16 @@ type Graphics struct {
 	// HiDPI renders at the screen's true resolution (device scale factor)
 	// instead of upscaling; it is presentation-only.
 	HiDPI bool `json:"hidpi"`
+	// PLAY-019 (graphics.go): the quality preset, the detail knobs it sets,
+	// the tier detected from the hardware ("" = not detected yet: detect at
+	// the next start) and the rows the player changed by hand.
+	Quality  string   `json:"quality"`
+	Shadows  bool     `json:"shadows"`
+	Lighting bool     `json:"lighting"`
+	Water    string   `json:"water"`
+	Grass    string   `json:"grass"`
+	Detected string   `json:"detected,omitempty"`
+	Chosen   []string `json:"chosen,omitempty"`
 }
 
 // AutosaveChoices are the autosave intervals in in-game days (0 = off).
@@ -151,9 +165,10 @@ func abs(v int) int {
 // Defaults are the settings of a fresh install.
 func Defaults() Settings {
 	return Settings{
-		Version:       SettingsVersion,
-		Audio:         Audio{Master: 80, Music: 60, Effects: 80, Ambience: 70, UI: 70, MuteUnfocused: true},
-		Graphics:      Graphics{VSync: true, Effects: EffectsFull, HiDPI: true},
+		Version: SettingsVersion,
+		Audio:   Audio{Master: 80, Music: 60, Effects: 80, Ambience: 70, UI: 70, MuteUnfocused: true},
+		Graphics: Graphics{VSync: true, Effects: EffectsFull, HiDPI: true, Quality: QualityHigh,
+			Shadows: true, Lighting: true, Water: WaterAnimated, Grass: GrassFull},
 		Gameplay:      Gameplay{PauseOnThreat: true, AutosaveDays: 1, PanSpeed: 100, ShowLearningHelper: true, ShowColonistBar: true},
 		Accessibility: Accessibility{UIScale: 100, UIScaleAuto: true},
 	}
@@ -176,6 +191,9 @@ func (s Settings) Normalize() Settings {
 		s.Gameplay.ShowLearningHelper = true
 		s.Gameplay.ShowColonistBar = true
 	}
+	if s.Version < 5 { // before PLAY-019: today's look; Detected stays "" so the next start detects
+		s.Graphics.Shadows, s.Graphics.Lighting = true, true
+	}
 	s.Version = SettingsVersion
 	s.Gameplay.LearnedLessons = dedupeLessons(s.Gameplay.LearnedLessons)
 	for _, v := range []*int{&s.Audio.Master, &s.Audio.Music, &s.Audio.Effects, &s.Audio.Ambience, &s.Audio.UI} {
@@ -184,6 +202,7 @@ func (s Settings) Normalize() Settings {
 	if !contains(EffectLevels, s.Graphics.Effects) {
 		s.Graphics.Effects = d.Graphics.Effects
 	}
+	s.Graphics = s.Graphics.normalizeGraphics(d.Graphics)
 	if !contains(AutosaveChoices, s.Gameplay.AutosaveDays) {
 		s.Gameplay.AutosaveDays = d.Gameplay.AutosaveDays
 	}
