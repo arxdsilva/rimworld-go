@@ -369,8 +369,12 @@ func (g *Game) doBill(id entity.EntityID, j job.Record) {
 	g.jobs.Set(id, j)
 }
 
-func (g *Game) billViews(bid entity.EntityID) []BillView {
-	var out []BillView
+// billViews is bench bid's bills as the read model shows them (nil: none).
+func (g *Game) billViews(bid entity.EntityID) []BillView { return g.appendBillViews(nil, bid) }
+
+// appendBillViews appends bench bid's bill views to out (buildingViews
+// builds every bench's into one reused buffer).
+func (g *Game) appendBillViews(out []BillView, bid entity.EntityID) []BillView {
 	unpowered := false // PLAY-021: an electric bench without power
 	if b := g.bldgs.Ref(bid); b != nil && electricBench(b.Kind) {
 		unpowered = !g.powered(bid)

@@ -98,7 +98,7 @@ func (g *Game) growPlant(id entity.EntityID, p plant.Plant, now uint64, gp int, 
 	}
 	if n := g.growSpan(p, g.growRate(p, t, gp), now-min(now, climateInterval), now); n > 0 {
 		q := p.AddGrowth(n)
-		g.plants.Set(id, q)
+		g.setPlant(id, q)
 		if q.Ripe() {
 			g.markRipeHarvest(id) // food.go: zone crops are harvested through the mark
 		}
@@ -133,11 +133,11 @@ func (g *Game) frostKills(id entity.EntityID, p *plant.Plant, t int, now uint64,
 	}
 	*p = q
 	if !q.Dead() {
-		g.plants.Set(id, q)
+		g.setPlant(id, q)
 		return false
 	}
-	g.plants.Delete(id) // removePlant, with the list compacted by endFrostPass
-	g.plantsChanged()   // jobindex.go
+	g.dropPlant(id)   // removePlant, with the list compacted by endFrostPass
+	g.plantsChanged() // jobindex.go
 
 	g.plantLightChanged(q.Species) // light.go: a glowing plant gone
 	if fp.gone == nil {

@@ -7,6 +7,7 @@ import (
 	"rimworld-go/internal/domain/building/construction"
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/clock"
+	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/chunk"
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/temperature"
@@ -550,13 +551,17 @@ func TestBurningCampfireGrowsNearbyCrop(t *testing.T) {
 	}
 }
 
-// ---- PlantView growth state (PLAY-017) ----
+// ---- plant growth state (PLAY-017) ----
 
-func plantViewNow(g *Game, id uint64) PlantView { return plantViewOf(g.plantViews(nil), id) }
+// growthNow is plant id's growth state (Game.PlantGrowth).
+func growthNow(g *Game, id uint64) PlantGrowthView {
+	v, _ := g.PlantGrowth(entity.EntityID(id))
+	return v
+}
 
-// TestPlantViewGrowState: why a plant is or isn't growing now, and the
+// TestPlantGrowthState: why a plant is or isn't growing now, and the
 // time left to ripe at the current conditions.
-func TestPlantViewGrowState(t *testing.T) {
+func TestPlantGrowthState(t *testing.T) {
 	g := mildLight(t)
 	g.setRoof(25*40+25, 0)
 	open, _ := g.spawnPlant(plant.Potato, 25, 25, 0)
@@ -588,60 +593,69 @@ func TestPlantViewGrowState(t *testing.T) {
 		{"freezing air", uint64(cold), "cold"},
 		{"scorching air", uint64(hot), "hot"},
 	} {
-		if got := plantViewNow(g, c.id).GrowState; got != c.state {
-			t.Errorf("%s: GrowState %q, want %q", c.name, got, c.state)
+		if got := growthNow(g, c.id).State; got != c.state {
+			t.Errorf("%s: State %q, want %q", c.name, got, c.state)
 		}
 	}
 	// the sun grows a crop 14 h of every 24: the estimate stretches by 24/14
-	if got, want := plantViewNow(g, uint64(open)).RipeIn, gt*100/rate*24/14; got < want-24 || got > want+24 {
+	if got, want := growthNow(g, uint64(open)).RipeIn, gt*100/rate*24/14; got < want-24 || got > want+24 {
 		t.Errorf("open sky RipeIn %d, want about %d", got, want)
 	}
 	// a strong lamp grows it round the clock
-	if got, want := plantViewNow(g, uint64(lit)).RipeIn, gt*100/rate; got < want-2 || got > want+2 {
+	if got, want := growthNow(g, uint64(lit)).RipeIn, gt*100/rate; got < want-2 || got > want+2 {
 		t.Errorf("lamp-lit RipeIn %d, want about %d", got, want)
 	}
 	for _, id := range []uint64{uint64(roofed), uint64(ripe), uint64(moss), uint64(cold), uint64(hot)} {
-		if got := plantViewNow(g, id).RipeIn; got != -1 {
+		if got := growthNow(g, id).RipeIn; got != -1 {
 			t.Errorf("plant %d RipeIn %d, want -1 (not growing)", id, got)
 		}
 	}
 	// half grown: half the time left
 	g.plants.Set(open, plant.Plant{Species: plant.Potato, X: 25, Y: 25, Growth: gt / 2})
-	if got, want := plantViewNow(g, uint64(open)).RipeIn, gt/2*100/rate*24/14; got < want-24 || got > want+24 {
+	if got, want := growthNow(g, uint64(open)).RipeIn, gt/2*100/rate*24/14; got < want-24 || got > want+24 {
 		t.Errorf("half-grown RipeIn %d, want about %d", got, want)
 	}
 	// night under the open sky: resting, still counting down; the lamp-lit
 	// crop never rests
 	jumpTo(g, 10, 23)
-	if v := plantViewNow(g, uint64(open)); v.GrowState != "resting" || v.RipeIn <= 0 {
-		t.Errorf("open sky by night: %q, RipeIn %d", v.GrowState, v.RipeIn)
+	if v := growthNow(g, uint64(open)); v.State != "resting" || v.RipeIn <= 0 {
+		t.Errorf("open sky by night: %q, RipeIn %d", v.State, v.RipeIn)
 	}
-	if v := plantViewNow(g, uint64(lit)); v.GrowState != "growing" {
-		t.Errorf("lamp by night: %q", v.GrowState)
+	if v := growthNow(g, uint64(lit)); v.State != "growing" {
+		t.Errorf("lamp by night: %q", v.State)
 	}
-	if v := plantViewNow(g, uint64(roofed)); v.GrowState != "dark" {
-		t.Errorf("roofed by night: %q", v.GrowState)
+	if v := growthNow(g, uint64(roofed)); v.State != "dark" {
+		t.Errorf("roofed by night: %q", v.State)
 	}
 }
 
-// TestPlantViewGrowStateFollowsTheClock: the memoised view reuses an
-// unchanged plant's entry, but the state follows the hour and the lamps.
-func TestPlantViewGrowStateFollowsTheClock(t *testing.T) {
+// TestPlantGrowthFollowsTheClock: the growth state follows the hour and
+// the lamps while the plant itself is unchanged, and the plant list the
+// read model hands out keeps its identity across the hour change (the
+// state is no longer on PlantView).
+func TestPlantGrowthFollowsTheClock(t *testing.T) {
 	g := mildLight(t)
-	g.views.on = true
+	g.SetViewCache(true)
 	g.setRoof(25*40+25, 0)
 	id, _ := g.spawnPlant(plant.Potato, 25, 25, 0)
 	jumpTo(g, 10, 10)
-	if v := plantViewNow(g, uint64(id)); v.GrowState != "growing" {
-		t.Fatalf("by day: %q", v.GrowState)
+	if v := growthNow(g, uint64(id)); v.State != "growing" {
+		t.Fatalf("by day: %q", v.State)
 	}
+	before := g.plantViews()
 	jumpTo(g, 10, 23) // the plant itself is unchanged
-	if v := plantViewNow(g, uint64(id)); v.GrowState != "resting" {
-		t.Fatalf("by night, memoised: %q", v.GrowState)
+	if v := growthNow(g, uint64(id)); v.State != "resting" {
+		t.Fatalf("by night: %q", v.State)
+	}
+	if after := g.plantViews(); len(after) == 0 || &after[0] != &before[0] {
+		t.Fatal("the plant list changed identity with the hour")
 	}
 	litLamp(t, g, 24, 25, 21, 24) // PLAY-021: a lamp on power
-	if v := plantViewNow(g, uint64(id)); v.GrowState != "growing" {
-		t.Fatalf("lamp lit beside it: %q", v.GrowState)
+	if v := growthNow(g, uint64(id)); v.State != "growing" {
+		t.Fatalf("lamp lit beside it: %q", v.State)
+	}
+	if _, ok := g.PlantGrowth(entity.EntityID(1 << 40)); ok {
+		t.Fatal("growth state of a plant that does not exist")
 	}
 }
 
@@ -652,8 +666,8 @@ func TestDuskmossViewNeverRests(t *testing.T) {
 	id, _ := g.spawnPlant(plant.Duskmoss, 10, 10, 0)
 	for _, h := range []int{3, 12} {
 		jumpTo(g, 10, h)
-		if v := plantViewNow(g, uint64(id)); v.GrowState != "growing" || v.RipeIn <= 0 {
-			t.Errorf("duskmoss at %d:00: %q, RipeIn %d", h, v.GrowState, v.RipeIn)
+		if v := growthNow(g, uint64(id)); v.State != "growing" || v.RipeIn <= 0 {
+			t.Errorf("duskmoss at %d:00: %q, RipeIn %d", h, v.State, v.RipeIn)
 		}
 	}
 }

@@ -83,6 +83,7 @@ type hudState struct {
 	Messages             int
 	ArchDescH            float32 // the Architect description box (0: none)
 	WindowW, WindowH     float32 // an open main-tab window's wanted size (0: none)
+	PerfW, PerfH         float32 // the performance box's size (0: off)
 }
 
 // hudLayout is every region of the colony HUD this frame, in logical
@@ -271,6 +272,8 @@ func computeHUDLayout(sw, sh int, st hudState) hudLayout {
 			l.Resources = rect{hudMargin, hudMargin, resourcesW, h}
 		}
 	}
+
+	l.Perf = perfRect(l, st.PerfW, st.PerfH)
 
 	// hints and toasts: just above the command buttons or the pane
 	l.HintX = max(gridX0, hudMargin)

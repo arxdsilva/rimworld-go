@@ -74,6 +74,10 @@ type Simulation interface {
 	ChunkLayer(cx, cy int) game.ChunkView
 	PlantsIn(x0, y0, x1, y1 int, buf []int32) []int32
 	MinimapLayer(ver uint64) (game.MinimapView, bool)
+	// PlantGrowth is why a plant is or isn't growing now and when it
+	// ripens (PLAY-017): the plant inspector asks for the one it shows
+	// (it follows the clock, so it is not on every PlantView).
+	PlantGrowth(id entity.EntityID) (game.PlantGrowthView, bool)
 	// ENG-003 social and host-system read models: a colonist's Social and
 	// Health tabs, a prisoner's tab (ok false: nothing to show), the World
 	// tab, the allowed areas and the colony History.
@@ -191,6 +195,7 @@ type Renderer struct {
 	treeFx     treeFx       // see-through tree canopies (tree_fade.go)
 	game       Simulation
 	zoneGeoms  map[uint16]*zoneGeom // zones_draw.go outline cache
+	zoneBatch  triBatch             // zones_draw.go: every zone outline of a frame, one draw
 	zonePlants map[[2]int]bool      // zones_draw.go: cells holding their zone's own plant, this frame (PLAY-020)
 	pov        powerOverlay         // power_overlay.go: the power overlay toggle, forced flag and net colours (PLAY-021)
 	wheelTaken bool                 // the mouse wheel scrolled a log this frame
@@ -446,8 +451,25 @@ func (r *Renderer) applyCamera(v viewport, in camInput) {
 		r.cam.offsetY -= in.dragY
 		r.smooth.vx, r.smooth.vy = 0, 0
 	}
-	r.clampCamera(v) // first-call centring and min-zoom guard
-	r.smooth.step(1/float64(ebiten.TPS()), &r.cam, r.camLimits(v))
+	r.clampCamera(v)      // first-call centring and min-zoom guard
+	if r.smooth.instant { // captures: deterministic, stepped here; live play steps per Draw (stepCamera)
+		r.smooth.step(1/float64(ebiten.TPS()), &r.cam, r.camLimits(v))
+	}
+	r.smooth.dirX, r.smooth.dirY = 0, 0 // consumed by this Update's frames; the next Update pushes anew
+}
+
+// camMaxDt caps one camera step so a stall never jumps the view.
+const camMaxDt = 0.1
+
+// stepCamera advances the smoothed camera by dt wall seconds, once per Draw,
+// so panning and zoom run at the display rate rather than at 60 TPS. Input
+// mapping in Update sees the previous Draw's camera: one frame of lag.
+func (r *Renderer) stepCamera(dt float64, v viewport) {
+	if r.smooth.instant || r.smooth.idle() {
+		return
+	}
+	dt = math.Max(0, math.Min(dt, camMaxDt))
+	r.smooth.step(dt, &r.cam, r.camLimits(v))
 }
 
 // edgeBand is how close (points) the cursor must be to a viewport edge to

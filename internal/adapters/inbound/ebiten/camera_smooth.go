@@ -42,6 +42,15 @@ func (s *camSmooth) halt() {
 	s.zooming, s.pendingScale = false, 0
 }
 
+// idle reports nothing is in motion: no pan velocity or input and no zoom
+// ease in flight. A Draw-time step (stepCamera) skips an idle smoother, so
+// a camera that code placed directly stays exactly there until input moves
+// it; Update's applyCamera still clamps every frame.
+func (s *camSmooth) idle() bool {
+	return s.vx == 0 && s.vy == 0 && s.dirX == 0 && s.dirY == 0 && !s.zooming &&
+		(s.pendingScale == 0 || s.pendingScale == 1)
+}
+
 // pushPan records held-pan input for the next step; dx, dy are directions
 // (-1, 0, 1), summed and clamped to unit range per axis.
 func (s *camSmooth) pushPan(dx, dy float64) {
@@ -120,7 +129,7 @@ func (s *camSmooth) stepPan(dt float64, c *camera) {
 	top *= boost
 	s.vx += (s.dirX*top - s.vx) * k
 	s.vy += (s.dirY*top - s.vy) * k
-	s.dirX, s.dirY = 0, 0
+	// dirX/dirY stay set: several Draws step one Update's intent (applyCamera clears them).
 	if math.Abs(s.vx) < 0.5 {
 		s.vx = 0
 	}

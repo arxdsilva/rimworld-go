@@ -53,6 +53,7 @@ func (a *App) hud() hudLayout {
 	}
 	st.ExpandedW, st.ExpandedH = a.expandedWant()
 	st.WindowW, st.WindowH = a.windowWant()
+	st.PerfW, st.PerfH = a.perfBox()
 	return computeHUDLayout(sw, sh, st)
 }
 

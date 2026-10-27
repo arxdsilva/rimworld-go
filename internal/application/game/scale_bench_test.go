@@ -139,6 +139,42 @@ func BenchmarkReadModel(b *testing.B) {
 	})
 }
 
+// BenchmarkWorldView times World() alone after one tick, the view cache
+// on (the renderer's read each frame; PERF-002): "500/night" with the
+// plants resting (the plant list's fast path), "500/day" with a few
+// chunks of plants growing every tick (rebuilt and compared). The ticks
+// are untimed; the fixture starts at 20:00 or 07:00 so a run of tens of
+// thousands of ticks stays in its half of the day.
+func BenchmarkWorldView(b *testing.B) {
+	for _, c := range []struct {
+		name      string
+		day, hour int
+	}{{"500/night", 2, 20}, {"500/day", 3, 7}} {
+		b.Run(c.name, func(b *testing.B) {
+			g := loadFixture(b, 500, false)
+			g.SkipTo(c.day, c.hour)
+			g.SetViewCache(true)
+			g.Step(10)
+			_ = g.World()
+			var world time.Duration
+			b.ReportAllocs()
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				b.StopTimer()
+				g.Step(1)
+				b.StartTimer()
+				t0 := time.Now()
+				w := g.World()
+				world += time.Since(t0)
+				if len(w.Terrain) == 0 {
+					b.Fatal("empty read model")
+				}
+			}
+			b.ReportMetric(float64(world.Microseconds())/float64(b.N), "world-µs/op")
+		})
+	}
+}
+
 func benchViews(b *testing.B, g *game.Game, step bool) {
 	g.Step(1)
 	_, _ = g.World(), g.Snapshot()

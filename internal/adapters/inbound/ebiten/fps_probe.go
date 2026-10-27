@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"runtime"
-	"slices"
 	"time"
 )
 
@@ -135,38 +134,14 @@ func (a *App) fpsProbeDraw(start time.Time) {
 // fpsReport summarises the measured frames at UI scale sc (s and dev,
 // PLAY-012: HiDPI renders the map at dev x the pixels).
 func fpsReport(st *fpsProbeState, sc uiScaleState) string {
-	pct := func(d []time.Duration, q float64) time.Duration {
-		if len(d) == 0 {
-			return 0
-		}
-		s := slices.Clone(d)
-		slices.Sort(s)
-		return s[min(len(s)-1, int(float64(len(s))*q))]
-	}
-	avg := func(d []time.Duration) time.Duration {
-		if len(d) == 0 {
-			return 0
-		}
-		var t time.Duration
-		for _, x := range d {
-			t += x
-		}
-		return t / time.Duration(len(d))
-	}
-	fps := 0.0
-	if a := avg(st.frames); a > 0 {
-		fps = float64(time.Second) / float64(a)
-	}
-	low := 0.0
-	if p := pct(st.frames, 0.99); p > 0 {
-		low = float64(time.Second) / float64(p)
-	}
+	f := frameStats(st.frames, st.update, st.draw)
+	fps, low := f.FPS, f.Low1
 	// work is the CPU time a frame costs (one Update plus one Draw): the
 	// display-independent number (PERF-002), since a 30 Hz or occluded
 	// display caps the frame rate whatever the renderer does.
-	upAvg, upP99, drAvg, drP99 := avg(st.update), pct(st.update, 0.99), avg(st.draw), pct(st.draw, 0.99)
+	upAvg, upP99, drAvg, drP99 := f.UpdateAvg, f.UpdateP99, f.DrawAvg, f.DrawP99
 	return fmt.Sprintf("fps probe: %d frames, avg %.1f fps, 1%% low %.1f fps (frame p99 %v); update avg %v p99 %v; draw avg %v p99 %v; work avg %v p99 %v; scale s %g dev %g; %s",
-		len(st.frames), fps, low, pct(st.frames, 0.99), upAvg, upP99, drAvg, drP99, upAvg+drAvg, upP99+drP99, sc.s, sc.dev, memLine())
+		len(st.frames), fps, low, f.FrameP99, upAvg, upP99, drAvg, drP99, upAvg+drAvg, upP99+drP99, sc.s, sc.dev, memLine())
 }
 
 // memLine is the Go runtime's memory at the end of a probe (PLAY-019): the

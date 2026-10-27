@@ -37,7 +37,7 @@ func (g *Game) lightGrows(id entity.EntityID, p *plant.Plant, fp *frostPass) boo
 		p.Withering = true
 		p.Growth -= plant.WitherLoss(p.Species, climateInterval)
 		if p.Growth > 0 {
-			g.plants.Set(id, *p)
+			g.setPlant(id, *p)
 			return false
 		}
 		g.witherAway(id, *p, fp)
@@ -45,7 +45,7 @@ func (g *Game) lightGrows(id entity.EntityID, p *plant.Plant, fp *frostPass) boo
 	}
 	if p.Withering {
 		p.Withering = false
-		g.plants.Set(id, *p)
+		g.setPlant(id, *p)
 	}
 	return plant.LitEnough(p.Species, light)
 }
@@ -53,7 +53,7 @@ func (g *Game) lightGrows(id entity.EntityID, p *plant.Plant, fp *frostPass) boo
 // witherAway removes a plant withered to nothing (the list is compacted
 // by endFrostPass) and posts one notice per patch.
 func (g *Game) witherAway(id entity.EntityID, p plant.Plant, fp *frostPass) {
-	g.plants.Delete(id)
+	g.dropPlant(id)
 	g.plantsChanged()
 	g.plantLightChanged(p.Species)
 	if fp.gone == nil {
@@ -134,11 +134,26 @@ func (g *Game) growNowOf() growNow {
 	return growNow{gp: g.growthPct(), sun: plant.GrowingHour(int(clock.HourOfDay(g.clock.Now())))}
 }
 
-// fillPlantGrowth sets the view's GrowState and RipeIn from the weather,
-// the hour and the lamps now. They change with time rather than with the
-// plant, so the view memo never carries them over.
-func (g *Game) fillPlantGrowth(pv *PlantView, p plant.Plant, now growNow) {
-	pv.GrowState, pv.RipeIn = g.growState(p, now)
+// PlantGrowthView is why a plant is or isn't growing now (PLAY-017), for
+// the plant inspector. State is "growing", "resting" (night), "dark"
+// (needs sun or a strong lamp), "cold", "hot" or "ripe"; RipeIn the
+// estimated ticks until ripe at the current conditions (-1 unknown or not
+// growing). It follows the hour, the weather and the lamps rather than the
+// plant, so it is asked for one plant on demand instead of riding on every
+// PlantView (which would change for every plant at dawn and dusk).
+type PlantGrowthView struct {
+	State  string
+	RipeIn int
+}
+
+// PlantGrowth is plant id's growth state now (ok false: no such plant).
+func (g *Game) PlantGrowth(id entity.EntityID) (PlantGrowthView, bool) {
+	p, ok := g.plants.Get(id)
+	if !ok {
+		return PlantGrowthView{}, false
+	}
+	st, in := g.growState(p, g.growNowOf())
+	return PlantGrowthView{State: st, RipeIn: in}, true
 }
 
 // growState says why plant p is or isn't growing now, and how many ticks

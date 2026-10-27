@@ -125,7 +125,16 @@ type Map struct {
 	zones []*rec // by ID (nil: none); ids are small and never reused
 	ids   []ID   // live zone ids, sorted
 	next  ID     // last id handed out; ids are never reused
+	// ver moves on every call to an exported mutator (read-model caches
+	// key on it); it is not part of the map's state: Export leaves it out.
+	ver uint64
 }
+
+// Ver changes whenever the map may have changed: every exported mutator
+// (Paint, Clear, Set, Update, Remove, AddCells, RemoveCells, RemoveTiles,
+// Split) moves it, even when the edit turns out to change nothing. Read
+// models cache on it; it is never saved.
+func (m *Map) Ver() uint64 { return m.ver }
 
 // NewMap is an empty zone layer.
 func NewMap(w, h int) *Map {
@@ -291,6 +300,7 @@ func (m *Map) absorb(into, from ID) {
 // are skipped. Paint returns the zone holding the first painted tile, 0
 // when nothing was painted.
 func (m *Map) Paint(kind Kind, proto Zone, r Rect, ok func(x, y int) bool) ID {
+	m.ver++
 	if kind == 0 {
 		return 0
 	}
@@ -434,6 +444,7 @@ func appendID(ids []ID, id ID) []ID {
 // holding its first tile (row-major) keeps the id, the others become new
 // zones with the same settings; emptied zones are deleted.
 func (m *Map) Clear(r Rect) {
+	m.ver++
 	r, inside := m.clip(r)
 	if !inside {
 		return
@@ -551,6 +562,7 @@ func (m *Map) flood(id ID, start int) []int {
 // stay. A grow zone switched to the crop of a touching zone merges with it
 // (the lower id survives).
 func (m *Map) Set(id ID, z Zone) {
+	m.ver++
 	r := m.rec(id)
 	if r == nil {
 		return
@@ -580,6 +592,7 @@ func (m *Map) Set(id ID, z Zone) {
 // stockpile filters). The id, kind, tile count and crop stay whatever fn
 // does, and nothing merges: a crop change goes through Set.
 func (m *Map) Update(id ID, fn func(*Zone)) {
+	m.ver++
 	r := m.rec(id)
 	if r == nil {
 		return
@@ -592,6 +605,7 @@ func (m *Map) Update(id ID, fn func(*Zone)) {
 
 // Remove deletes zone id and unzones its tiles (its id is never reused).
 func (m *Map) Remove(id ID) {
+	m.ver++
 	r := m.rec(id)
 	if r == nil {
 		return
@@ -612,6 +626,7 @@ func (m *Map) Remove(id ID) {
 // touches none (zones stay contiguous) starts a new zone with zone id's
 // settings.
 func (m *Map) AddCells(id ID, cells [][2]int) {
+	m.ver++
 	base := m.rec(id)
 	if base == nil {
 		return
@@ -689,6 +704,7 @@ func (m *Map) placeBlock(base *rec, block []int) {
 // the id (ties: the one with the first tile, row-major), the others become
 // new zones with the same settings; an emptied zone is deleted.
 func (m *Map) RemoveCells(id ID, r Rect) {
+	m.ver++
 	z := m.rec(id)
 	if z == nil {
 		return
@@ -723,6 +739,7 @@ func (m *Map) RemoveCells(id ID, r Rect) {
 // same settings, numbered in the row-major order of their first tile; an
 // emptied zone is deleted. It returns the zones that lost tiles, by id.
 func (m *Map) RemoveTiles(cells [][2]int) []ID {
+	m.ver++
 	var hit []ID
 	for _, c := range cells {
 		if !m.in(c[0], c[1]) {
@@ -758,6 +775,7 @@ func (m *Map) RemoveTiles(cells [][2]int) []ID {
 // zones with the same settings. It returns the new zones' ids (none when
 // the zone is whole or unknown).
 func (m *Map) Split(id ID) []ID {
+	m.ver++
 	if m.rec(id) == nil {
 		return nil
 	}

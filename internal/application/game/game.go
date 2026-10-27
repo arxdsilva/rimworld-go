@@ -33,7 +33,6 @@ import (
 	"rimworld-go/internal/domain/sim/component"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/area"
-	"rimworld-go/internal/domain/world/filth"
 	"rimworld-go/internal/domain/world/geology"
 	"rimworld-go/internal/domain/world/grid"
 	"rimworld-go/internal/domain/world/plant"
@@ -434,12 +433,8 @@ type PlantView struct {
 	// DamageKind "cold", "heat" or "".
 	Damage     int
 	DamageKind string
-	// GrowState (PLAY-017) says why the plant is or isn't growing now:
-	// "growing", "resting" (night), "dark" (needs sun or a strong lamp),
-	// "cold", "hot" or "ripe"; RipeIn is the estimated ticks until ripe at
-	// the current conditions (-1 unknown or not growing).
-	GrowState string
-	RipeIn    int
+	// Why it is or isn't growing now (PLAY-017) is Game.PlantGrowth: it
+	// follows the clock, so it stays off this per-plant view.
 }
 
 // WorldView is the non-pawn read model for HUD and the map.
@@ -737,6 +732,9 @@ type Game struct {
 	views    viewCache
 	viewGen  uint64
 	viewTerr layerCache
+	// plantVer moves on every plant store write (setPlant, dropPlant in
+	// world.go): the plant view memo keys on it. Never saved or hashed.
+	plantVer uint64
 	// viewGrass, viewHome, viewRoof: copy-on-write read-model layers
 	// (indexes.go shareLayer).
 	viewGrass, viewHome, viewRoof layerCache
@@ -1152,7 +1150,10 @@ func (g *Game) snapshot() []PawnView {
 // World returns the non-pawn read model. Per-tile layers (Terrain,
 // RoomGrid, StoneType, Ore) are shared read-only slices replaced, never
 // rewritten, when they change. With the view cache on (SetViewCache)
-// repeated calls between ticks share one result: treat it as read only.
+// repeated calls between ticks share one result, and across ticks the
+// entity lists (Items, Frames, Buildings, Plants), Zones and the small
+// lists keep their slice while they read the same, so presentation caches
+// keyed on a slice's identity hold (PERF-002): treat it all as read only.
 func (g *Game) World() WorldView {
 	if g.views.on {
 		if g.views.worldOK && g.views.worldKey == g.viewKey() {
@@ -1168,118 +1169,25 @@ func (g *Game) world() WorldView {
 	bd := biome.DefOf(g.biome)
 	w := WorldView{
 		Biome: bd.Name, BiomeKey: bd.Key,
-		Items:       make([]ItemView, 0, len(g.itemIDs)),
-		Frames:      make([]FrameView, 0, len(g.frameIDs)),
-		Buildings:   make([]BuildingView, 0, len(g.bldgIDs)),
-		Plants:      make([]PlantView, 0, len(g.plantIDs)),
 		OutdoorTemp: int(g.climate.Outdoor(g.clock.Now())),
 		IndoorTemp:  int(g.climate.Indoor(g.clock.Now())),
 		Season:      temperature.Season(g.clock.Now()),
-		Messages:    append([]MessageView(nil), g.messages...),
-		Letters:     g.letterViews(), // letters.go (PLAY-018)
-		Research:    g.researchViews(),
+		Messages:    g.messageViews(),
+		Letters:     g.sharedLetters(), // letters.go (PLAY-018)
 		Zones:       g.zoneViews(),
-		Locked:      g.lockedKeys(),
-		Schedule:    append([]schedule.Activity(nil), g.sched[:]...),
+		Schedule:    g.scheduleView(),
 	}
+	w.Research, w.Locked = g.researchLists()
 	if n, felled := g.Timbergnaws(); n > 0 {
 		w.TreesFelled = felled
 	}
-
-	var stored [256]int // stockpiled quantity per item kind (stored.go)
-	for _, id := range g.itemIDs {
-		st, ok := g.stacks.Get(id)
-		if !ok || g.fogged(st.X, st.Y) { // fog.go: hidden items neither show nor count
-			continue
-		}
-		g.countStored(&stored, st)
-		w.Items = append(w.Items, ItemView{
-			ID: id, Kind: st.Kind.String(), Qty: st.Qty, X: st.X, Y: st.Y, Carried: st.Carrier != 0,
-			FreshDays: freshDays(st), Rotten: st.Rotten(), Dried: st.Dried,
-			RotRate: item.RotRate(int(g.temperatureAt(st.X, st.Y))),
-			Catch:   filth.Catch(st.Kind) / 10, Forbidden: st.Forbidden,
-			Unclaimed: st.Unclaimed, HaulMarked: st.HaulMarked, PoisonPermille: int(st.Poison),
-		})
-		g.fillCorpseView(&w.Items[len(w.Items)-1], st) // burial.go
-		if st.Carrier == 0 {
-			switch {
-			case st.Kind.IsFood():
-				w.Food += st.Qty
-				if w.FoodByKind == nil {
-					w.FoodByKind = map[string]int{}
-				}
-				w.FoodByKind[st.Kind.String()] += st.Qty
-			case st.Kind == item.Wood:
-				w.Wood += st.Qty
-			case item.IsStoneBlocks(st.Kind) || st.Kind == item.Stone:
-				w.Stone += st.Qty
-			case st.Kind == item.Steel:
-				w.Steel += st.Qty
-			case st.Kind == item.Silver:
-				w.Silver += st.Qty
-			case st.Kind == item.Gold:
-				w.Gold += st.Qty
-			}
-		}
-	}
-	w.Stored = storedRows(&stored)
-	for _, id := range g.frameIDs {
-		fr, ok := g.frames.Get(id)
-		if !ok {
-			continue
-		}
-		w.Frames = append(w.Frames, FrameView{
-			ID: id, Kind: fr.Kind.String(), X: fr.X, Y: fr.Y, Wood: fr.Wood, Need: fr.Need, WorkLeft: fr.WorkLeft,
-			Facing: fr.Facing.String(), Floor: construction.DefOf(fr.Kind).Layer == construction.LayerFloor,
-			Stuff: fr.Stuff.String(),
-		})
-		fv := &w.Frames[len(w.Frames)-1]
-		fv.W, fv.H, _, _, _ = footprintView(fr.Kind, fr.Facing, fr.X, fr.Y)
-		if fr.Reinstall != 0 {
-			fv.Moving, fv.MovingFrom = true, entity.EntityID(fr.Reinstall)
-		}
-	}
-	g.fillFrameViews(w.Frames) // frame_view.go: inspector fields
-	for _, id := range g.bldgIDs {
-		b, ok := g.bldgs.Get(id)
-		if !ok {
-			continue
-		}
-		w.Buildings = append(w.Buildings, BuildingView{
-			ID: id, Kind: b.Kind.String(), X: b.X, Y: b.Y, Claimant: entity.EntityID(b.Claimant), Claimant2: entity.EntityID(b.Claimant2),
-			Facing: b.Facing.String(), Floor: construction.DefOf(b.Kind).Layer == construction.LayerFloor,
-			Deconstruct: b.Deconstruct, Stuff: b.Stuff.String(),
-			Bench: construction.DefOf(b.Kind).Bench, Bills: g.billViews(id),
-		})
-		bv := &w.Buildings[len(w.Buildings)-1]
-		bv.HPPct = b.HP() * 100 / max(1, construction.MaxHP(b.Kind, b.Stuff))
-		if b.Kind == construction.Carpet {
-			bv.Catch = filth.Catch(b.Stuff) / 10
-		}
-		if pct, ok := g.fuelPct(id, b); ok { // campfire, torch lamp, wood-fired generator (fuel.go)
-			bv.Fuel, bv.FuelPct, bv.Burning = true, pct, g.burning(id, b)
-		}
-		if b.Kind == construction.FeedingTrough {
-			bv.TroughFill, bv.TroughCap = g.troughFill(id), construction.TroughCapacity
-			bv.TroughFilter = troughFilterNames[min(int(g.troughs[id].Filter), len(troughFilterNames)-1)]
-		}
-		if rb := g.racks[id]; rb.Qty > 0 {
-			bv.DryKind, bv.DryQty, bv.DryPct = rb.Kind.String(), rb.Qty, rb.percent()
-		}
-		bv.W, bv.H, bv.SpotX, bv.SpotY, bv.HasSpot = footprintView(b.Kind, b.Facing, b.X, b.Y)
-		g.fillGraveView(bv, id, b)   // burial.go
-		bv.MovingTo = g.movingTo(id) // move.go
-		g.fillSwapView(bv, id)       // placement.go: pending material change (PLAY-011)
-		bv.Ruin = b.Ruin             // MAPGEN-2: an abandoned piece
-		bv.Medical = b.Medical       // PLAY-020: kept for the sick and injured
-		g.fillCasketView(bv, id, b)  // casket.go (MAPGEN-3)
-		// PLAY-021: the light the renderer draws (light.go), then power
-		// (power_view.go)
-		bv.Glow, bv.GlowRadius = g.glowOf(id, b)
-		g.fillPowerBuilding(bv, id, b)
-		g.fillTurretView(bv, id, b, uint64(g.clock.Now())) // turret.go (PLAY-024)
-	}
-	w.Plants = g.plantViews(w.Plants) // plant_view.go
+	// The entity lists (item_view.go, frame_view.go, building_view.go,
+	// plant_view.go): with the view cache on, each keeps its last slice
+	// while it reads the same (PERF-002).
+	g.fillItemViews(&w)
+	w.Frames = g.frameViews()
+	w.Buildings = g.buildingViews()
+	w.Plants = g.plantViews()
 	w.Landing[0], w.Landing[1] = g.landingSpot()
 	w.TerrainW = g.terr.W
 	w.Terrain = g.terrainView() // indexes.go: shared, rebuilt per structVer

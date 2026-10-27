@@ -136,8 +136,8 @@ func (r *Renderer) zoneGeomOf(z game.ZoneView) *zoneGeom {
 }
 
 var (
-	stockEdgeClr = color.NRGBA{0xdc, 0xc8, 0x50, 255}
-	growEdgeClr  = color.NRGBA{R: 115, G: 199, B: 92, A: 255}
+	stockEdgeClr = color.RGBA{0xdc, 0xc8, 0x50, 255}
+	growEdgeClr  = color.RGBA{R: 115, G: 199, B: 92, A: 255}
 	stockFillClr = color.RGBA{R: 220, G: 200, B: 80, A: 70}
 	growFillClr  = color.RGBA{R: 70, G: 150, B: 70, A: 70}
 	penFillClr   = color.RGBA{R: 150, G: 104, B: 62, A: 60}
@@ -218,9 +218,11 @@ func (r *Renderer) drawZones(screen *ebiten.Image, w game.WorldView, sw, sh int,
 		}
 		g := r.zoneGeomOf(z)
 		for _, run := range g.runs {
-			r.drawZoneRun(screen, z.Kind, run, sw, sh, tile)
+			r.drawZoneRun(&r.zoneBatch, z.Kind, run, sw, sh, tile)
 		}
 	}
+	// every outline of every zone in one draw, over all the fills
+	r.zoneBatch.flush(screen, r.env.whiteImg(), ebiten.Blend{})
 }
 
 // zoneFill draws the zone sprite key on every visible cell not in skip as
@@ -315,12 +317,13 @@ func (r *Renderer) runVisible(run edgeRun, sw, sh int, pad float32) bool {
 	return bx+pad >= 0 && by+pad >= 0 && ax-pad < float32(sw) && ay-pad < float32(sh)
 }
 
-func (r *Renderer) drawZoneRun(screen *ebiten.Image, kind string, run edgeRun, sw, sh int, tile float64) {
+// drawZoneRun appends one outline run to b (flushed once by drawZones).
+func (r *Renderer) drawZoneRun(b *triBatch, kind string, run edgeRun, sw, sh int, tile float64) {
 	if !r.runVisible(run, sw, sh, 8) {
 		return
 	}
 	if kind == game.ZonePen {
-		r.drawFenceRun(screen, run, tile)
+		r.drawFenceRun(b, run, tile)
 		return
 	}
 	th := zoneStroke(r.cam.zoom)
@@ -331,18 +334,19 @@ func (r *Renderer) drawZoneRun(screen *ebiten.Image, kind string, run edgeRun, s
 	bx, by = bx+float32(run.nx)*off, by+float32(run.ny)*off
 	if kind == game.ZoneStockpile || kind == game.ZoneDump {
 		dash := float32(max(4*screenDev(), tile*0.16))
-		dashedRun(screen, ax, ay, bx, by, th, dash, dash*0.8, stockEdgeClr)
+		dashedRun(b, ax, ay, bx, by, th, dash, dash*0.8, stockEdgeClr, sw, sh)
 		return
 	}
 	// solid runs overshoot their ends by half a stroke so corners close
 	if ax == bx {
 		ay -= off
 		by += off
+		b.rect(float64(ax-th/2), float64(ay), float64(th), float64(by-ay), growEdgeClr, 1, 1, 1, 1)
 	} else {
 		ax -= off
 		bx += off
+		b.rect(float64(ax), float64(ay-th/2), float64(bx-ax), float64(th), growEdgeClr, 1, 1, 1, 1)
 	}
-	vector.StrokeLine(screen, ax, ay, bx, by, th, growEdgeClr, false)
 }
 
 var (
@@ -388,19 +392,32 @@ func (r *Renderer) drawZoneHighlight(screen *ebiten.Image, w game.WorldView, z g
 	}
 }
 
-// dashedRun draws an axis-aligned dashed line with filled rectangles.
-func dashedRun(screen *ebiten.Image, ax, ay, bx, by, th, dash, gap float32, c color.Color) {
+// dashedRun appends an axis-aligned dashed line to b as quads. Only the
+// dashes on screen are emitted: the walk starts at the first on-screen
+// dash, so a run far longer than the view costs its visible part.
+func dashedRun(b *triBatch, ax, ay, bx, by, th, dash, gap float32, c color.RGBA, sw, sh int) {
 	horizontal := ay == by
-	length := bx - ax
+	length, a0, lo, hi := bx-ax, ax, float32(0), float32(sw)
 	if !horizontal {
-		length = by - ay
+		length, a0, hi = by-ay, ay, float32(sh)
 	}
-	for d := float32(0); d < length; d += dash + gap {
+	period := dash + gap
+	var d float32
+	if start := lo - a0 - dash; start > 0 {
+		d = float32(math.Floor(float64(start/period))) * period
+	}
+	for ; d < length && a0+d < hi; d += period {
 		l := min(dash, length-d)
 		if horizontal {
-			vector.FillRect(screen, ax+d, ay-th/2, l, th, c, false)
+			if !visible(ax+d, ay-th/2, l, th, sw, sh) {
+				continue
+			}
+			b.rect(float64(ax+d), float64(ay-th/2), float64(l), float64(th), c, 1, 1, 1, 1)
 		} else {
-			vector.FillRect(screen, ax-th/2, ay+d, th, l, c, false)
+			if !visible(ax-th/2, ay+d, th, l, sw, sh) {
+				continue
+			}
+			b.rect(float64(ax-th/2), float64(ay+d), float64(th), float64(l), c, 1, 1, 1, 1)
 		}
 	}
 }
@@ -410,7 +427,7 @@ const fenceInset = 0.08
 
 // drawFenceRun draws one pen fence run: a rail with a post at every tile
 // boundary along it and at its ends (where it turns a corner).
-func (r *Renderer) drawFenceRun(screen *ebiten.Image, run edgeRun, tile float64) {
+func (r *Renderer) drawFenceRun(b *triBatch, run edgeRun, tile float64) {
 	ex0, ex1 := fenceInset, -fenceInset // convex ends pull in, concave ends push out
 	if !run.startConvex {
 		ex0 = -fenceInset
@@ -429,11 +446,13 @@ func (r *Renderer) drawFenceRun(screen *ebiten.Image, run edgeRun, tile float64)
 	ax, ay, bx, by = ax+ox, ay+oy, bx+ox, by+oy
 	sax, say := r.worldToScreenF(ax, ay)
 	sbx, sby := r.worldToScreenF(bx, by)
-	rail := color.RGBA{150, 104, 62, 220}
-	vector.StrokeLine(screen, sax, say, sbx, sby, float32(max(2*screenDev(), tile*0.05)), rail, true)
-	post := color.RGBA{110, 74, 44, 240}
+	rail := color.RGBA{150, 104, 62, 255}
+	b.line(float64(sax), float64(say), float64(sbx), float64(sby), max(2*screenDev(), tile*0.05), rail, 220.0/255)
+	post := color.RGBA{110, 74, 44, 255}
 	ps := float32(max(3*screenDev(), tile*0.09))
-	dot := func(x, y float32) { vector.FillRect(screen, x-ps/2, y-ps/2, ps, ps, post, false) }
+	dot := func(x, y float32) {
+		b.rect(float64(x-ps/2), float64(y-ps/2), float64(ps), float64(ps), post, 240.0/255, 240.0/255, 240.0/255, 240.0/255)
+	}
 	dot(sax, say)
 	dot(sbx, sby)
 	n := run.x1 - run.x0

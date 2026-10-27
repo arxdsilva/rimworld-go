@@ -3,9 +3,13 @@ package game
 import (
 	"bytes"
 	"fmt"
+	"slices"
 	"sync/atomic"
+	"unsafe"
 
 	"rimworld-go/internal/domain/building/construction"
+	"rimworld-go/internal/domain/pawn/schedule"
+	"rimworld-go/internal/domain/research"
 	"rimworld-go/internal/domain/sim/component"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
@@ -454,6 +458,111 @@ type viewCache struct {
 	stains stainMemo
 	// plants memoises the plant views (plant_view.go).
 	plants plantMemo
+	// PERF-002: the other World() lists keep their last slice while they
+	// read the same (zones.go, building_view.go, item_view.go,
+	// frame_view.go, and the small lists below).
+	zones    zoneMemo
+	bldgs    bldgMemo
+	items    itemMemo
+	frames   frameMemo
+	messages listMemo[MessageView]
+	sched    listMemo[schedule.Activity]
+	letters  letterMemo
+	research researchMemo
+	// feet memoises footprint shapes per kind and facing (building_view.go).
+	feet map[[2]int]footShape
+}
+
+// listMemo is a small World() list handed out again while it reads the
+// same (shared, read only: never written once handed out).
+type listMemo[T comparable] struct {
+	views []T
+	ok    bool
+}
+
+// share is the list of n elements at(i): the last one while every element
+// is equal (view cache on), else a fresh copy; nil when n is 0.
+func (m *listMemo[T]) share(on bool, n int, at func(int) T) []T {
+	if n == 0 {
+		return nil
+	}
+	if on && m.ok && len(m.views) == n {
+		same := true
+		for i := range n {
+			if m.views[i] != at(i) {
+				same = false
+				break
+			}
+		}
+		if same {
+			return m.views
+		}
+	}
+	out := make([]T, n)
+	for i := range n {
+		out[i] = at(i)
+	}
+	if on {
+		m.views, m.ok = out, true
+	}
+	return out
+}
+
+// messageViews is World().Messages (a copy of the recent notices).
+func (g *Game) messageViews() []MessageView {
+	return g.views.messages.share(g.views.on, len(g.messages), func(i int) MessageView { return g.messages[i] })
+}
+
+// scheduleView is World().Schedule (a copy of the colony default).
+func (g *Game) scheduleView() []schedule.Activity {
+	return g.views.sched.share(g.views.on, len(g.sched), func(i int) schedule.Activity { return g.sched[i] })
+}
+
+// letterMemo is the last letter stack view and the letters it was made
+// from.
+type letterMemo struct {
+	src   []savedLetter
+	views []LetterView
+	ok    bool
+}
+
+// sharedLetters is World().Letters (letters.go letterViews), the last
+// slice while the stack is unchanged.
+func (g *Game) sharedLetters() []LetterView {
+	if !g.views.on {
+		return g.letterViews()
+	}
+	m := &g.views.letters
+	if m.ok && slices.Equal(m.src, g.letters.list) {
+		return m.views
+	}
+	m.src, m.views, m.ok = slices.Clone(g.letters.list), g.letterViews(), true
+	return m.views
+}
+
+// researchMemo is the last Research and Locked lists, per research
+// progress and current project (all they read).
+type researchMemo struct {
+	prog   research.Progress
+	cur    research.Project
+	set    bool
+	views  []ResearchView
+	locked map[string]string
+	ok     bool
+}
+
+// researchLists are World().Research and World().Locked, the last ones
+// while the progress and the current project are unchanged.
+func (g *Game) researchLists() ([]ResearchView, map[string]string) {
+	if !g.views.on {
+		return g.researchViews(), g.lockedKeys()
+	}
+	m := &g.views.research
+	if !m.ok || m.prog != g.research || m.cur != g.researchCur || m.set != g.researchSet {
+		m.views, m.locked = g.researchViews(), g.lockedKeys()
+		m.prog, m.cur, m.set, m.ok = g.research, g.researchCur, g.researchSet, true
+	}
+	return m.views, m.locked
 }
 
 // SetViewCache turns the read-model cache on or off (see viewCache). The
@@ -481,31 +590,14 @@ func shareLayer[T ~uint8](c *layerCache, src []T) []uint8 {
 	if len(src) == 0 {
 		return nil
 	}
-	if raw, ok := any(src).([]uint8); ok { // plain bytes: memcmp and memmove
-		if c.ok && bytes.Equal(c.cells, raw) {
-			return c.cells
-		}
-		out := make([]uint8, len(raw))
-		copy(out, raw)
-		c.cells, c.ok = out, true
-		return out
+	// T's underlying type is uint8: the same bytes, so memcmp and memmove
+	// serve every layer type (roof cells, grass, ...), not only []uint8.
+	raw := unsafe.Slice((*uint8)(unsafe.Pointer(unsafe.SliceData(src))), len(src))
+	if c.ok && bytes.Equal(c.cells, raw) {
+		return c.cells
 	}
-	if c.ok && len(c.cells) == len(src) {
-		same := true
-		for i, v := range src {
-			if c.cells[i] != uint8(v) {
-				same = false
-				break
-			}
-		}
-		if same {
-			return c.cells
-		}
-	}
-	out := make([]uint8, len(src))
-	for i, v := range src {
-		out[i] = uint8(v)
-	}
+	out := make([]uint8, len(raw))
+	copy(out, raw)
 	c.cells, c.ok = out, true
 	return out
 }

@@ -210,19 +210,20 @@ func TestPlantGrowCaption(t *testing.T) {
 	for _, c := range []struct {
 		name string
 		p    game.PlantView
+		gv   game.PlantGrowthView
 		want string
 	}{
-		{"older view, no state", game.PlantView{Species: "corn", Growth: 42}, ""},
-		{"growing", game.PlantView{Species: "corn", Growth: 42, GrowState: "growing"}, "42% · growing"},
-		{"resting at night", game.PlantView{Species: "corn", Growth: 42, GrowState: "resting"}, "42% · resting (night)"},
-		{"dark", game.PlantView{Species: "corn", Growth: 42, GrowState: "dark"}, "too dark: needs sun or a lamp nearby"},
-		{"cold", game.PlantView{Species: "corn", Growth: 7, GrowState: "cold"}, "7% · too cold"},
-		{"hot", game.PlantView{Species: "corn", Growth: 7, GrowState: "hot"}, "7% · too hot"},
-		{"ripe crop", game.PlantView{Species: "corn", Growth: 100, GrowState: "ripe", Harvestable: true}, "ripe"},
-		{"full-grown tree", game.PlantView{Species: "tree", Growth: 100, GrowState: "ripe"}, "fully grown"},
-		{"unknown state", game.PlantView{Species: "corn", GrowState: "weird"}, ""},
+		{"no state", game.PlantView{Species: "corn", Growth: 42}, game.PlantGrowthView{}, ""},
+		{"growing", game.PlantView{Species: "corn", Growth: 42}, game.PlantGrowthView{State: "growing"}, "42% · growing"},
+		{"resting at night", game.PlantView{Species: "corn", Growth: 42}, game.PlantGrowthView{State: "resting"}, "42% · resting (night)"},
+		{"dark", game.PlantView{Species: "corn", Growth: 42}, game.PlantGrowthView{State: "dark"}, "too dark: needs sun or a lamp nearby"},
+		{"cold", game.PlantView{Species: "corn", Growth: 7}, game.PlantGrowthView{State: "cold"}, "7% · too cold"},
+		{"hot", game.PlantView{Species: "corn", Growth: 7}, game.PlantGrowthView{State: "hot"}, "7% · too hot"},
+		{"ripe crop", game.PlantView{Species: "corn", Growth: 100, Harvestable: true}, game.PlantGrowthView{State: "ripe"}, "ripe"},
+		{"full-grown tree", game.PlantView{Species: "tree", Growth: 100}, game.PlantGrowthView{State: "ripe"}, "fully grown"},
+		{"unknown state", game.PlantView{Species: "corn"}, game.PlantGrowthView{State: "weird"}, ""},
 	} {
-		if got := plantGrowCaption(c.p); got != c.want {
+		if got := plantGrowCaption(c.p, c.gv); got != c.want {
 			t.Errorf("%s: caption %q, want %q", c.name, got, c.want)
 		}
 	}
@@ -232,24 +233,25 @@ func TestPlantRipeLine(t *testing.T) {
 	t.Parallel()
 	d := clock.TicksPerDay
 	for _, c := range []struct {
-		name string
-		p    game.PlantView
-		want string
+		name   string
+		p      game.PlantView
+		ripeIn int
+		want   string
 	}{
-		{"unknown", game.PlantView{Species: "corn", RipeIn: -1}, ""},
-		{"unset", game.PlantView{Species: "corn"}, ""},
-		{"under two days: one decimal", game.PlantView{Species: "corn", RipeIn: d * 14 / 10}, "Ripe in about 1.4 days"},
-		{"just under two reads as two", game.PlantView{Species: "corn", RipeIn: d*2 - 1}, "Ripe in about 2 days"},
-		{"1.9 stays decimal", game.PlantView{Species: "corn", RipeIn: d * 19 / 10}, "Ripe in about 1.9 days"},
-		{"two days and more: whole", game.PlantView{Species: "corn", RipeIn: d*3 + d/3}, "Ripe in about 3 days"},
-		{"rounds", game.PlantView{Species: "corn", RipeIn: d*7 + d*6/10}, "Ripe in about 8 days"},
-		{"an hour left", game.PlantView{Species: "corn", RipeIn: clock.TicksPerHour}, "Ripe in about 0.1 days"},
-		{"a tree is fully grown, not ripe", game.PlantView{Species: "tree", RipeIn: d * 30}, "Fully grown in about 30 days"},
-		{"moss is fully grown", game.PlantView{Species: "moss", RipeIn: d * 2}, "Fully grown in about 2 days"},
-		{"a berry bush ripens", game.PlantView{Species: "berry_bush", RipeIn: d}, "Ripe in about 1.0 days"},
-		{"nothing once harvestable", game.PlantView{Species: "corn", RipeIn: d, Harvestable: true}, ""},
+		{"unknown", game.PlantView{Species: "corn"}, -1, ""},
+		{"unset", game.PlantView{Species: "corn"}, 0, ""},
+		{"under two days: one decimal", game.PlantView{Species: "corn"}, d * 14 / 10, "Ripe in about 1.4 days"},
+		{"just under two reads as two", game.PlantView{Species: "corn"}, d*2 - 1, "Ripe in about 2 days"},
+		{"1.9 stays decimal", game.PlantView{Species: "corn"}, d * 19 / 10, "Ripe in about 1.9 days"},
+		{"two days and more: whole", game.PlantView{Species: "corn"}, d*3 + d/3, "Ripe in about 3 days"},
+		{"rounds", game.PlantView{Species: "corn"}, d*7 + d*6/10, "Ripe in about 8 days"},
+		{"an hour left", game.PlantView{Species: "corn"}, clock.TicksPerHour, "Ripe in about 0.1 days"},
+		{"a tree is fully grown, not ripe", game.PlantView{Species: "tree"}, d * 30, "Fully grown in about 30 days"},
+		{"moss is fully grown", game.PlantView{Species: "moss"}, d * 2, "Fully grown in about 2 days"},
+		{"a berry bush ripens", game.PlantView{Species: "berry_bush"}, d, "Ripe in about 1.0 days"},
+		{"nothing once harvestable", game.PlantView{Species: "corn", Harvestable: true}, d, ""},
 	} {
-		if got := plantRipeLine(c.p); got != c.want {
+		if got := plantRipeLine(c.p, game.PlantGrowthView{RipeIn: c.ripeIn}); got != c.want {
 			t.Errorf("%s: %q, want %q", c.name, got, c.want)
 		}
 	}
@@ -259,30 +261,40 @@ func TestPlantRipeLine(t *testing.T) {
 // progress line, and the old lines stay as they were.
 func TestPlantLinesCarryRipeIn(t *testing.T) {
 	t.Parallel()
-	got := plantLines(game.PlantView{Species: "potato", Growth: 42, Zone: "potato", GrowState: "growing", RipeIn: clock.TicksPerDay * 3})
+	got := plantBodyLines(game.PlantView{Species: "potato", Growth: 42, Zone: "potato"},
+		game.PlantGrowthView{State: "growing", RipeIn: clock.TicksPerDay * 3})
 	want := []string{"Not ready (42%)", "Ripe in about 3 days", "In a growing zone (Potato)"}
 	if strings.Join(got, "|") != strings.Join(want, "|") {
 		t.Fatalf("lines = %v, want %v", got, want)
 	}
+	if strings.Join(plantLines(game.PlantView{Species: "potato", Growth: 42, Zone: "potato"}), "|") != "Not ready (42%)|In a growing zone (Potato)" {
+		t.Fatal("the view-only lines carry an estimate")
+	}
 }
 
 // TestPlantPanelShowsLiveGrowthState: a crop sown in the colony shows the
-// state the game gives it and a ripening estimate when it is growing.
+// state the game gives it (Simulation.PlantGrowth) and a ripening
+// estimate when it is growing, in the pane.
 func TestPlantPanelShowsLiveGrowthState(t *testing.T) {
 	t.Parallel()
 	a, g, _ := liveColony(t, 0)
 	id, _ := g.SpawnCrop("potato", 8, 8, 30)
 	selectPlantTile(t, a, id, 8, 8)
 	p := plantByID(a, id)
-	if p.GrowState == "" {
-		t.Fatalf("the game gave the view no growth state: %+v", p)
+	gv, ok := g.PlantGrowth(id)
+	if !ok || gv.State == "" {
+		t.Fatalf("the game gave the plant no growth state: %+v (%v)", gv, ok)
 	}
-	if plantGrowCaption(p) == "" {
-		t.Fatalf("no caption for state %q", p.GrowState)
+	c := plantGrowCaption(p, gv)
+	if c == "" {
+		t.Fatalf("no caption for state %q", gv.State)
 	}
-	line := plantRipeLine(p)
-	if growing := p.RipeIn > 0; growing != (line != "") {
-		t.Fatalf("state %q, RipeIn %d, line %q", p.GrowState, p.RipeIn, line)
+	line := plantRipeLine(p, gv)
+	if growing := gv.RipeIn > 0; growing != (line != "") {
+		t.Fatalf("state %q, RipeIn %d, line %q", gv.State, gv.RipeIn, line)
+	}
+	if sp := a.plantPane(id); len(sp.Lines) == 0 || sp.Lines[0] != c {
+		t.Fatalf("the pane does not lead with the live caption %q: %q", c, sp.Lines)
 	}
 }
 
@@ -292,26 +304,30 @@ func TestPlantPanelShowsLiveGrowthState(t *testing.T) {
 func TestPlantPanelTextFitsAtScale1_5(t *testing.T) {
 	withUIScale(t, 1.5)
 	width := float64(paneW - 2*paneInset - scrollBarW - 4) // the pane body's wrap width
-	for _, p := range []game.PlantView{
-		{Species: "potato", Growth: 42, Zone: "potato", GrowState: "resting", RipeIn: clock.TicksPerDay * 3},
-		{Species: "potato", Growth: 42, Zone: "potato", GrowState: "dark", RipeIn: -1, Designated: true},
-		{Species: "potato", Growth: 42, Zone: "potato", GrowState: "cold", RipeIn: -1, Wilted: true, Cut: true},
-		{Species: "moss", Growth: 42, GrowState: "dark", RipeIn: -1, NeedsLight: true},
-		{Species: "tree", Growth: 90, GrowState: "growing", RipeIn: clock.TicksPerDay * 12},
+	for _, c := range []struct {
+		p  game.PlantView
+		gv game.PlantGrowthView
+	}{
+		{game.PlantView{Species: "potato", Growth: 42, Zone: "potato"}, game.PlantGrowthView{State: "resting", RipeIn: clock.TicksPerDay * 3}},
+		{game.PlantView{Species: "potato", Growth: 42, Zone: "potato", Designated: true}, game.PlantGrowthView{State: "dark", RipeIn: -1}},
+		{game.PlantView{Species: "potato", Growth: 42, Zone: "potato", Wilted: true, Cut: true}, game.PlantGrowthView{State: "cold", RipeIn: -1}},
+		{game.PlantView{Species: "moss", Growth: 42, NeedsLight: true}, game.PlantGrowthView{State: "dark", RipeIn: -1}},
+		{game.PlantView{Species: "tree", Growth: 90}, game.PlantGrowthView{State: "growing", RipeIn: clock.TicksPerDay * 12}},
 	} {
-		lines := plantPaneLines(p)
+		p, gv := c.p, c.gv
+		lines := plantPaneLines(p, gv)
 		var texts []string
 		for _, l := range lines {
 			texts = append(texts, wrapPx(l, tsBody, width)...)
 		}
 		if w := maxTextW(texts, tsBody); float64(w) > width {
-			t.Errorf("%s/%s: widest line %.0f px, pane text width %.0f", p.Species, p.GrowState, w, width)
+			t.Errorf("%s/%s: widest line %.0f px, pane text width %.0f", p.Species, gv.State, w, width)
 		}
-		if c := plantGrowCaption(p); c != "" && (len(lines) == 0 || lines[0] != c) {
-			t.Errorf("%s/%s: caption %q is not the first line (%v)", p.Species, p.GrowState, c, lines)
+		if c := plantGrowCaption(p, gv); c != "" && (len(lines) == 0 || lines[0] != c) {
+			t.Errorf("%s/%s: caption %q is not the first line (%v)", p.Species, gv.State, c, lines)
 		}
-		if !strings.HasSuffix(strings.Join(lines, "|"), strings.Join(plantLines(p), "|")) {
-			t.Errorf("%s/%s: the body lines follow the caption: %v", p.Species, p.GrowState, lines)
+		if !strings.HasSuffix(strings.Join(lines, "|"), strings.Join(plantBodyLines(p, gv), "|")) {
+			t.Errorf("%s/%s: the body lines follow the caption: %v", p.Species, gv.State, lines)
 		}
 	}
 }

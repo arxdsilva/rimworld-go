@@ -181,6 +181,8 @@ func graphicsRows() []optionRow {
 			func(s *config.Settings) *bool { return &s.Graphics.VSync }),
 		flag("hidpi", "Sharp on high-density screens", "Render at the screen's true resolution. Costs GPU time on very large maps.",
 			func(s *config.Settings) *bool { return &s.Graphics.HiDPI }),
+		withTip(toggleRow("perfoverlay", "Performance overlay", func(s *config.Settings) *bool { return &s.Graphics.PerfOverlay }),
+			"Shows fps, 1 % low, frame, update and draw time, sim rate and memory in a small box by the resources. Costs nothing measurable."),
 		detail(choiceRow("effects", "Effects", "How many weather, smoke and spark particles draw. Reduced and Minimal cost less CPU and GPU time.",
 			func(s *config.Settings) *string { return &s.Graphics.Effects }, config.EffectLevels)),
 		detail(flag("shadows", "Shadows", "Soft cast shadows under everything; costs GPU time.",

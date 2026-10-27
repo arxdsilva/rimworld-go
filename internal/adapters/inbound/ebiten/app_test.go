@@ -37,6 +37,13 @@ type stubSim struct {
 	worldMap  game.WorldMapView
 	areas     []game.AreaView
 	history   []game.HistoryEntryView
+	// growth is each plant's growth state (PlantGrowth; absent: none).
+	growth map[entity.EntityID]game.PlantGrowthView
+}
+
+func (s *stubSim) PlantGrowth(id entity.EntityID) (game.PlantGrowthView, bool) {
+	v, ok := s.growth[id]
+	return v, ok
 }
 
 func (s *stubSim) Social(id entity.EntityID) (game.SocialView, bool) {

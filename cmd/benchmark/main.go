@@ -128,17 +128,20 @@ func run(args []string, out io.Writer) error {
 	return nil
 }
 
-// result is one run's samples.
+// result is one run's samples: views is the read model (World) the
+// renderer takes once a frame, after the frame's ticks.
 type result struct {
-	ticks, frames []time.Duration
-	phases        map[string][]time.Duration
+	ticks, frames, views []time.Duration
+	phases               map[string][]time.Duration
 }
 
 // measure steps g for ticks ticks in frames of speed ticks, timing every
-// tick, frame and phase.
+// tick, frame and phase, and one World() per frame with the view cache on
+// (the renderer's setting; views never change the simulation).
 func measure(g *game.Game, ticks, speed int) result {
 	r := result{phases: map[string][]time.Duration{}}
 	tickPhase := map[string]time.Duration{}
+	g.SetViewCache(true)
 	g.SetPhaseObserver(func(p string, d time.Duration) { tickPhase[p] += d })
 	for done := 0; done < ticks; {
 		f0 := time.Now()
@@ -153,6 +156,9 @@ func measure(g *game.Game, ticks, speed int) result {
 			done++
 		}
 		r.frames = append(r.frames, time.Since(f0))
+		v0 := time.Now()
+		_ = g.World()
+		r.views = append(r.views, time.Since(v0))
 	}
 	g.SetPhaseObserver(nil)
 	return r
@@ -188,6 +194,7 @@ func report(out io.Writer, name string, r result) {
 	}
 	line("tick", r.ticks)
 	line("frame", r.frames)
+	line("views", r.views)
 	for _, p := range game.Phases() {
 		line(p, r.phases[p])
 	}

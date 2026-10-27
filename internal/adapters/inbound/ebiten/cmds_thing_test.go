@@ -789,10 +789,13 @@ func TestPlantPaneContents(t *testing.T) {
 	t.Parallel()
 	d := clock.TicksPerDay
 	s := thingPlantSim(
-		game.PlantView{ID: 41, X: 3, Y: 3, Species: "potato", Growth: 42, Stage: 2, Zone: "potato", GrowState: "growing", RipeIn: d * 3},
-		game.PlantView{ID: 42, X: 4, Y: 3, Species: "potato", Growth: 42, Stage: 2, GrowState: "dark", RipeIn: -1, Damage: 30, DamageKind: "cold"},
-		game.PlantView{ID: 43, X: 5, Y: 3, Species: "tree", Growth: 90, Stage: 3, GrowState: "growing", RipeIn: d * 12},
-		game.PlantView{ID: 44, X: 6, Y: 3, Species: "corn", Growth: 100, Stage: 3, Harvestable: true, GrowState: "ripe", Designated: true})
+		game.PlantView{ID: 41, X: 3, Y: 3, Species: "potato", Growth: 42, Stage: 2, Zone: "potato"},
+		game.PlantView{ID: 42, X: 4, Y: 3, Species: "potato", Growth: 42, Stage: 2, Damage: 30, DamageKind: "cold"},
+		game.PlantView{ID: 43, X: 5, Y: 3, Species: "tree", Growth: 90, Stage: 3},
+		game.PlantView{ID: 44, X: 6, Y: 3, Species: "corn", Growth: 100, Stage: 3, Harvestable: true, Designated: true})
+	s.growth = map[entity.EntityID]game.PlantGrowthView{ // PLAY-017: asked per plant (Simulation.PlantGrowth)
+		41: {State: "growing", RipeIn: d * 3}, 42: {State: "dark", RipeIn: -1},
+		43: {State: "growing", RipeIn: d * 12}, 44: {State: "ripe", RipeIn: -1}}
 	a, _ := colonyApp(t, s)
 
 	a.selectCand(selCand{selPlant, 41})

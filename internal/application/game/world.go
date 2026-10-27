@@ -155,7 +155,7 @@ func (g *Game) spawnPlant(s plant.Species, x, y, growth int) (entity.EntityID, e
 	id := g.entities.Next()
 	g.plantIDs = append(g.plantIDs, id)
 	p := plant.Plant{Species: s, X: x, Y: y, Growth: growth}
-	g.plants.Set(id, p)
+	g.setPlant(id, p)
 	g.notePlant(id, p) // indexes.go
 	g.plantsChanged()  // jobindex.go
 
@@ -173,11 +173,24 @@ func (g *Game) SpawnPlantSpecies(species string, x, y, growth int) (entity.Entit
 	return g.spawnPlant(s, x, y, growth)
 }
 
+// setPlant writes plant id to the store; every plant write goes through
+// it (or dropPlant) so the plant view memo (plant_view.go) sees it.
+func (g *Game) setPlant(id entity.EntityID, p plant.Plant) {
+	g.plants.Set(id, p)
+	g.plantVer++
+}
+
+// dropPlant deletes plant id from the store (the caller keeps plantIDs).
+func (g *Game) dropPlant(id entity.EntityID) {
+	g.plants.Delete(id)
+	g.plantVer++
+}
+
 func (g *Game) removePlant(id entity.EntityID) {
 	if p, ok := g.plants.Get(id); ok {
 		g.plantLightChanged(p.Species) // light.go
 	}
-	g.plants.Delete(id)
+	g.dropPlant(id)
 	g.plantIDs = dropIDs(g.plantIDs, func(pid entity.EntityID) bool { return pid == id })
 	g.plantsChanged() // jobindex.go
 }
@@ -202,7 +215,7 @@ func (g *Game) markCut(x1, y1, x2, y2 int, on bool) {
 			p.Designated = false
 			g.notePlantMark(id) // jobindex.go
 		}
-		g.plants.Set(id, p)
+		g.setPlant(id, p)
 	}
 	g.markGrass(minX, minY, maxX, maxY, on) // grass.go
 }

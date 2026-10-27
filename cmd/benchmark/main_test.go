@@ -29,8 +29,8 @@ func TestParse(t *testing.T) {
 func TestMeasureAndReport(t *testing.T) {
 	g := game.NewColony(game.Config{Seed: 1, Width: 48, Height: 40})
 	r := measure(g, 7, 3)
-	if len(r.ticks) != 7 || len(r.frames) != 3 {
-		t.Fatalf("ticks %d frames %d", len(r.ticks), len(r.frames))
+	if len(r.ticks) != 7 || len(r.frames) != 3 || len(r.views) != 3 {
+		t.Fatalf("ticks %d frames %d views %d", len(r.ticks), len(r.frames), len(r.views))
 	}
 	for _, p := range game.Phases() {
 		if len(r.phases[p]) != 7 {
@@ -39,7 +39,7 @@ func TestMeasureAndReport(t *testing.T) {
 	}
 	var buf bytes.Buffer
 	report(&buf, "x", r)
-	if !strings.Contains(buf.String(), "movement") || !strings.Contains(buf.String(), "frame") {
+	if !strings.Contains(buf.String(), "movement") || !strings.Contains(buf.String(), "frame") || !strings.Contains(buf.String(), "views") {
 		t.Fatalf("report:\n%s", buf.String())
 	}
 }

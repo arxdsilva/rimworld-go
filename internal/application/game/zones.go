@@ -1,6 +1,7 @@
 package game
 
 import (
+	"reflect"
 	"strings"
 
 	"rimworld-go/internal/domain/ai/pathing"
@@ -241,8 +242,33 @@ func (g *Game) zoneOf(kind zone.Kind, x, y int) (zone.Zone, bool) {
 	return z, z.Kind == kind
 }
 
-// zoneViews lists every zone in id order.
+// zoneMemo is the view cache's last zone list, per zone map and its Ver.
+type zoneMemo struct {
+	views []ZoneView // handed out, never written
+	src   *zone.Map
+	ver   uint64
+	ok    bool
+}
+
+// zoneViews lists every zone in id order. With the view cache on the list
+// is shared and read only, rebuilt only when the zone map's Ver moves.
 func (g *Game) zoneViews() []ZoneView {
+	if !g.views.on {
+		return g.buildZoneViews()
+	}
+	m := &g.views.zones
+	if m.ok && m.src == g.zones && m.ver == g.zones.Ver() {
+		if selfCheck() && !reflect.DeepEqual(m.views, g.buildZoneViews()) {
+			panic("zoneViews: zones changed without a Ver bump")
+		}
+		return m.views
+	}
+	m.views, m.src, m.ver, m.ok = g.buildZoneViews(), g.zones, g.zones.Ver(), true
+	return m.views
+}
+
+// buildZoneViews is a fresh zoneViews list.
+func (g *Game) buildZoneViews() []ZoneView {
 	zs := g.zones.Zones()
 	out := make([]ZoneView, 0, len(zs))
 	for _, z := range zs {

@@ -488,7 +488,7 @@ func (g *Game) penAutoCut(ms []entity.EntityID) {
 				}
 				p.Cut, p.Designated = true, false
 				g.notePlantMark(pid) // jobindex.go
-				g.plants.Set(pid, p)
+				g.setPlant(pid, p)
 			}
 		}
 	}

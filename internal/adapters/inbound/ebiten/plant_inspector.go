@@ -64,11 +64,11 @@ func plantStageWord(p game.PlantView) string {
 }
 
 // plantGrowCaption is the growth bar's caption (PLAY-017): the progress and
-// why the plant is or isn't growing now, from the game's GrowState. "" for
-// a view without one.
-func plantGrowCaption(p game.PlantView) string {
+// why the plant is or isn't growing now, from the game's growth state
+// (Simulation.PlantGrowth). "" without one.
+func plantGrowCaption(p game.PlantView, gv game.PlantGrowthView) string {
 	var word string
-	switch p.GrowState {
+	switch gv.State {
 	case "growing":
 		word = "growing"
 	case "resting":
@@ -92,8 +92,8 @@ func plantGrowCaption(p game.PlantView) string {
 
 // plantCaptionWarns reports a state that needs the player's attention (a
 // roof, a lamp or a fire), drawn in the warning colour.
-func plantCaptionWarns(p game.PlantView) bool {
-	switch p.GrowState {
+func plantCaptionWarns(gv game.PlantGrowthView) bool {
+	switch gv.State {
 	case "dark", "cold", "hot":
 		return true
 	}
@@ -110,11 +110,11 @@ func plantYields(p game.PlantView) bool {
 // plantRipeLine is "Ripe in about N days" from the game's RipeIn estimate
 // (one decimal under two days, whole days after); "" when the plant is not
 // growing or is ready.
-func plantRipeLine(p game.PlantView) string {
-	if p.RipeIn <= 0 || p.Harvestable {
+func plantRipeLine(p game.PlantView, gv game.PlantGrowthView) string {
+	if gv.RipeIn <= 0 || p.Harvestable {
 		return ""
 	}
-	days := math.Round(math.Max(float64(p.RipeIn)/clock.TicksPerDay, 0.1)*10) / 10
+	days := math.Round(math.Max(float64(gv.RipeIn)/clock.TicksPerDay, 0.1)*10) / 10
 	n := strconv.Itoa(int(math.Round(days)))
 	if days < 2 {
 		n = strconv.FormatFloat(days, 'f', 1, 64)
@@ -125,8 +125,13 @@ func plantRipeLine(p game.PlantView) string {
 	return "Fully grown in about " + n + " days"
 }
 
-// plantLines are the body lines under the growth bar.
-func plantLines(p game.PlantView) []string {
+// plantLines are the body lines under the growth bar that the plant's
+// view alone gives (no ripening estimate: plantBodyLines).
+func plantLines(p game.PlantView) []string { return plantBodyLines(p, game.PlantGrowthView{}) }
+
+// plantBodyLines are the body lines under the growth bar, the ripening
+// estimate from the growth state gv among them.
+func plantBodyLines(p game.PlantView, gv game.PlantGrowthView) []string {
 	var out []string
 	switch {
 	case isTree(p):
@@ -135,7 +140,7 @@ func plantLines(p game.PlantView) []string {
 	default:
 		out = append(out, fmt.Sprintf("Not ready (%d%%)", p.Growth))
 	}
-	if l := plantRipeLine(p); l != "" {
+	if l := plantRipeLine(p, gv); l != "" {
 		out = append(out, l)
 	}
 	if l := plantDamageLine(p); l != "" { // crop_batch.go: cold or heat damage
@@ -162,12 +167,12 @@ func plantLines(p game.PlantView) []string {
 
 // plantPaneLines are the pane's body lines: the growth caption, then the
 // body lines under it.
-func plantPaneLines(p game.PlantView) []string {
+func plantPaneLines(p game.PlantView, gv game.PlantGrowthView) []string {
 	var out []string
-	if c := plantGrowCaption(p); c != "" {
+	if c := plantGrowCaption(p, gv); c != "" {
 		out = append(out, c)
 	}
-	return append(out, plantLines(p)...)
+	return append(out, plantBodyLines(p, gv)...)
 }
 
 // slowsWalking reports a plant whose cell costs extra step time (bramble,

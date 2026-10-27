@@ -937,7 +937,7 @@ func (g *Game) browse(id entity.EntityID, a *animal.State, t animal.FeedTarget, 
 		if p.Growth < 0 || p.Percent() < animal.CropDies {
 			g.removePlant(t.ID)
 		} else {
-			g.plants.Set(t.ID, p)
+			g.setPlant(t.ID, p)
 		}
 		if !a.Tame {
 			g.wl.CropRaids = append(g.wl.CropRaids, cropRaid{X: t.X, Y: t.Y, Tick: now, Species: a.Species})
@@ -946,7 +946,7 @@ func (g *Game) browse(id entity.EntityID, a *animal.State, t animal.FeedTarget, 
 	}
 	if d.Regrows {
 		p.Growth = d.GrowTicks * d.RegrowTo / 100
-		g.plants.Set(t.ID, p)
+		g.setPlant(t.ID, p)
 	} else {
 		g.removePlant(t.ID)
 	}

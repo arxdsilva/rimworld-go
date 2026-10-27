@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"rimworld-go/internal/domain/ai/job"
@@ -32,6 +33,81 @@ const (
 // stack that is not forbidden (inStock), and the part of it someone has
 // reserved.
 type frameStock struct{ inStock, reserved int }
+
+// frameMemo is the view cache's last frame list (PERF-002): rebuilt into
+// scratch each read model and handed out as the old slice while it reads
+// the same. views (and the Haulers it points at) is never written once
+// handed out.
+type frameMemo struct {
+	views, scratch []FrameView
+	ok             bool
+}
+
+// frameViews is World().Frames, in frameIDs order. With the view cache on
+// it is shared and read only (frameMemo).
+func (g *Game) frameViews() []FrameView {
+	if !g.views.on {
+		out := g.appendFrameViews(make([]FrameView, 0, len(g.frameIDs)))
+		g.fillFrameViews(out)
+		return out
+	}
+	m := &g.views.frames
+	m.scratch = g.appendFrameViews(m.scratch[:0])
+	g.fillFrameViews(m.scratch)
+	same := m.ok && len(m.scratch) == len(m.views)
+	for i := range m.scratch {
+		if i >= len(m.views) {
+			break
+		}
+		old, fv := &m.views[i], &m.scratch[i]
+		if slices.Equal(old.Haulers, fv.Haulers) && (old.Haulers == nil) == (fv.Haulers == nil) {
+			fv.Haulers = old.Haulers // the old slice: nothing writes either
+		}
+		if same && !equalFrameView(fv, old) {
+			same = false
+		}
+	}
+	if same {
+		return m.views
+	}
+	m.views = make([]FrameView, len(m.scratch))
+	copy(m.views, m.scratch)
+	m.ok = true
+	return m.views
+}
+
+// appendFrameViews appends every frame's base view (the inspector fields
+// follow in fillFrameViews) to out.
+func (g *Game) appendFrameViews(out []FrameView) []FrameView {
+	for _, id := range g.frameIDs {
+		fr, ok := g.frames.Get(id)
+		if !ok {
+			continue
+		}
+		out = append(out, FrameView{
+			ID: id, Kind: fr.Kind.String(), X: fr.X, Y: fr.Y, Wood: fr.Wood, Need: fr.Need, WorkLeft: fr.WorkLeft,
+			Facing: fr.Facing.String(), Floor: construction.DefOf(fr.Kind).Layer == construction.LayerFloor,
+			Stuff: fr.Stuff.String(),
+		})
+		fv := &out[len(out)-1]
+		fv.W, fv.H, _, _, _ = g.footprintOf(fr.Kind, fr.Facing, fr.X, fr.Y)
+		if fr.Reinstall != 0 {
+			fv.Moving, fv.MovingFrom = true, entity.EntityID(fr.Reinstall)
+		}
+	}
+	return out
+}
+
+// equalFrameView reports two frame views that read the same (Haulers
+// element by element). TestFrameViewEqual proves every field is compared.
+func equalFrameView(a, b *FrameView) bool {
+	return a.ID == b.ID && a.Kind == b.Kind && a.X == b.X && a.Y == b.Y && a.Wood == b.Wood &&
+		a.Need == b.Need && a.WorkLeft == b.WorkLeft && a.Facing == b.Facing && a.Floor == b.Floor &&
+		a.Stuff == b.Stuff && a.W == b.W && a.H == b.H && a.Moving == b.Moving && a.MovingFrom == b.MovingFrom &&
+		a.WorkTotal == b.WorkTotal && a.Incoming == b.Incoming && a.InStock == b.InStock &&
+		a.Reserved == b.Reserved && a.Builder == b.Builder && slices.Equal(a.Haulers, b.Haulers) &&
+		a.Status == b.Status && a.Comp == b.Comp && a.CompNeed == b.CompNeed && a.CompIncoming == b.CompIncoming
+}
 
 // fillFrameViews completes the inspector fields of the frames World()
 // just listed. It makes one pass over the items (only the frames'

@@ -30,7 +30,8 @@ func TestPanAcceleratesAndCoasts(t *testing.T) {
 	if got := c.offsetX - before; got < 0.95*maxPerFrame || got > maxPerFrame+0.01 {
 		t.Fatalf("steady pan %v px/frame, want ~%v", got, maxPerFrame)
 	}
-	// release: coasts, then stops within ~200 ms
+	// release: coasts, then stops within ~200 ms (applyCamera clears the held direction per Update)
+	s.dirX, s.dirY = 0, 0
 	var last float64
 	for i := 0; i < 12; i++ {
 		last = c.offsetX

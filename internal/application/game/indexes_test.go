@@ -10,6 +10,7 @@ import (
 	"rimworld-go/internal/domain/economy/item"
 	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
+	"rimworld-go/internal/domain/world/plant"
 )
 
 // The index self-check (indexSelfCheck, on for every test here) proves
@@ -86,6 +87,32 @@ func TestIndexFollowsMovesAndLoad(t *testing.T) {
 	}
 }
 
+// sameSlice reports two views sharing one backing array (both empty
+// counts as shared: there is nothing to tell apart).
+func sameSlice[T any](a, b []T) bool {
+	if len(a) == 0 || len(b) == 0 {
+		return len(a) == len(b)
+	}
+	return &a[0] == &b[0]
+}
+
+// identityIffEqual fails unless each World() list of b keeps a's slice
+// exactly when it reads the same (PERF-002: the renderer's identity memos).
+func identityIffEqual(t *testing.T, when string, a, b WorldView) {
+	t.Helper()
+	check := func(name string, same, equal bool) {
+		t.Helper()
+		if same != equal {
+			t.Errorf("%s: %s shared %v but equal %v", when, name, same, equal)
+		}
+	}
+	check("Items", sameSlice(a.Items, b.Items), reflect.DeepEqual(a.Items, b.Items))
+	check("Plants", sameSlice(a.Plants, b.Plants), reflect.DeepEqual(a.Plants, b.Plants))
+	check("Buildings", sameSlice(a.Buildings, b.Buildings), reflect.DeepEqual(a.Buildings, b.Buildings))
+	check("Frames", sameSlice(a.Frames, b.Frames), reflect.DeepEqual(a.Frames, b.Frames))
+	check("Zones", sameSlice(a.Zones, b.Zones), reflect.DeepEqual(a.Zones, b.Zones))
+}
+
 func TestViewCache(t *testing.T) {
 	g := NewColony(Config{Seed: 2, Width: 48, Height: 40})
 	g.Step(5)
@@ -105,17 +132,77 @@ func TestViewCache(t *testing.T) {
 	}
 	g.Enqueue(command.Command{Kind: command.DesignateStockpile, X: 1, Y: 1, X2: 2, Y2: 2})
 	g.ApplyPending()
-	if c := g.World(); len(c.Zones) == len(a.Zones) {
+	c := g.World()
+	if len(c.Zones) == len(a.Zones) {
 		t.Fatal("ApplyPending did not refresh the cached World")
 	}
-	g.Step(1)
-	if c, p := g.World(), g.Snapshot(); &c.Items[0] == &a.Items[0] || &p[0] == &pa[0] {
-		t.Fatal("Step did not refresh the cache")
+	// a tick refreshes the read model; a list keeps its slice exactly
+	// when it reads the same
+	for i := 0; i < 20; i++ {
+		g.Step(1)
+		d := g.World()
+		if p := g.Snapshot(); &p[0] == &pa[0] {
+			t.Fatal("Step did not refresh the Snapshot")
+		}
+		identityIffEqual(t, "after a tick", c, d)
+		c = d
 	}
+
+	// forced changes move the list they touch
+	if _, err := g.SpawnStack(item.Wood, 5, 20, 20); err != nil {
+		t.Fatal(err)
+	}
+	d := g.World()
+	if sameSlice(c.Items, d.Items) || len(d.Items) != len(c.Items)+1 {
+		t.Fatal("a new stack kept the item list")
+	}
+	identityIffEqual(t, "after SpawnStack", c, d)
+	c = d
+
+	var wild PlantView
+	for _, p := range c.Plants {
+		if !p.Cut && p.Zone == "" && g.CanZoneAt("grow", p.X, p.Y) {
+			wild = p
+			break
+		}
+	}
+	if wild.ID == 0 {
+		t.Fatal("no zoneable wild plant on the map")
+	}
+	g.Enqueue(command.Command{Kind: command.DesignateCut, X: wild.X, Y: wild.Y, X2: wild.X, Y2: wild.Y})
+	g.ApplyPending()
+	d = g.World()
+	if sameSlice(c.Plants, d.Plants) || !plantOf(d.Plants, wild.ID).Cut {
+		t.Fatal("a cut mark kept the plant list")
+	}
+	identityIffEqual(t, "after DesignateCut", c, d)
+	c = d
+
+	g.Enqueue(command.Command{Kind: command.DesignateGrowZone, X: wild.X, Y: wild.Y, X2: wild.X, Y2: wild.Y, Build: uint8(plant.Potato)})
+	g.ApplyPending()
+	d = g.World()
+	if sameSlice(c.Zones, d.Zones) || len(d.Zones) != len(c.Zones)+1 {
+		t.Fatal("a new grow zone kept the zone list")
+	}
+	if sameSlice(c.Plants, d.Plants) || plantOf(d.Plants, wild.ID).Zone != "potato" {
+		t.Fatalf("the plant under a new grow zone: %+v", plantOf(d.Plants, wild.ID))
+	}
+	identityIffEqual(t, "after DesignateGrowZone", c, d)
+
 	g.SetViewCache(false)
 	if c, d := g.World(), g.World(); &c.Items[0] == &d.Items[0] {
 		t.Fatal("cache off but World shared")
 	}
+}
+
+// plantOf is plant id's view in ps (zero when absent).
+func plantOf(ps []PlantView, id entity.EntityID) PlantView {
+	for _, p := range ps {
+		if p.ID == id {
+			return p
+		}
+	}
+	return PlantView{}
 }
 
 func TestSharedLayersCopyOnWrite(t *testing.T) {

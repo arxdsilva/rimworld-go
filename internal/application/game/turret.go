@@ -335,8 +335,14 @@ func (g *Game) turretFiring(id entity.EntityID) bool {
 	return g.turrets.aims[id].target != 0
 }
 
+// turretShotAgeMax caps BuildingView.ShotAge: past it the renderer's
+// recoil, flash and "engaged" read (turret_draw.go, 90 ticks) are long
+// over, and a capped age lets a quiet turret's view stop changing every
+// tick (the read model keeps its identity, PERF-002).
+const turretShotAgeMax = 120
+
 // fillTurretView fills a turret's aim frame and the ticks since its last
-// shot (-1: none yet) for the renderer.
+// shot (-1: none yet; at most turretShotAgeMax) for the renderer.
 func (g *Game) fillTurretView(bv *BuildingView, id entity.EntityID, b construction.Building, now uint64) {
 	if b.Kind != construction.SentryTurret {
 		return
@@ -344,7 +350,7 @@ func (g *Game) fillTurretView(bv *BuildingView, id entity.EntityID, b constructi
 	a := g.turrets.aims[id]
 	bv.AimDir, bv.ShotAge = a.dir, -1
 	if a.shotAt != 0 && now >= a.shotAt {
-		bv.ShotAge = int(now - a.shotAt)
+		bv.ShotAge = int(min(now-a.shotAt, turretShotAgeMax))
 	}
 }
 

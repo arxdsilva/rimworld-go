@@ -452,13 +452,14 @@ func (a *App) plantPane(id entity.EntityID) paneSpec {
 	if !ok {
 		return paneSpec{}
 	}
+	gv, _ := a.renderer.game.PlantGrowth(id) // PLAY-017: why it is or isn't growing now
 	col := uiGood
-	if plantCaptionWarns(p) {
+	if plantCaptionWarns(gv) {
 		col = uiWarning // a roof, a lamp or a fire is needed
 	}
 	return paneSpec{Title: plantTitle(p), Subtitle: plantSubtitle(p), Close: "plant.close",
 		Bars:  []paneBar{{Label: "Growth", Pct: p.Growth, Color: col}},
-		Lines: plantPaneLines(p)}
+		Lines: plantPaneLines(p, gv)}
 }
 
 // plantCommands are the plant's command buttons: Harvest (crops), Cut or

@@ -217,7 +217,7 @@ func (g *Game) doSow(id entity.EntityID, j job.Record) {
 	if pid, err := g.spawnPlant(plant.Species(z.Crop), j.TX, j.TY, 0); err == nil {
 		p, _ := g.plants.Get(pid)
 		p.Zone = true
-		g.plants.Set(pid, p)
+		g.setPlant(pid, p)
 		g.notePlantMark(pid) // jobindex.go
 	}
 	j.State = job.Complete
@@ -237,7 +237,7 @@ func (g *Game) markRipeHarvest(id entity.EntityID) {
 		return
 	}
 	p.Designated = true
-	g.plants.Set(id, p)
+	g.setPlant(id, p)
 	g.notePlantMark(id) // jobindex.go
 }
 

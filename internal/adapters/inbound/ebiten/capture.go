@@ -316,6 +316,9 @@ func (a *App) captureUI(ui string) {
 		return int(sx), int(sy)
 	}
 	switch ui {
+	case "perf":
+		a.settings.Graphics.PerfOverlay = true
+		a.seedPerfCapture() // perf_overlay.go: fixed samples, frozen clock
 	case "bills":
 		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
 		a.renderer.enqueue(command.Command{Kind: command.AddBill, X: cx + 1, Y: cy + 6, Recipe: 0, Mode: billModeForever, Count: 1})

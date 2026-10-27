@@ -95,7 +95,7 @@ func (g *Game) applyOne(c command.Command) {
 			}
 			if p.X >= minX && p.X <= maxX && p.Y >= minY && p.Y <= maxY {
 				p.Designated = true
-				g.plants.Set(id, p)
+				g.setPlant(id, p)
 				g.notePlantMark(id) // jobindex.go
 			}
 		}
@@ -234,7 +234,7 @@ func (g *Game) unmarkHarvest(minX, minY, maxX, maxY int) {
 		}
 		if p.X >= minX && p.X <= maxX && p.Y >= minY && p.Y <= maxY {
 			p.Designated = false
-			g.plants.Set(id, p)
+			g.setPlant(id, p)
 		}
 	}
 }
@@ -1475,7 +1475,7 @@ func (g *Game) doHarvest(id entity.EntityID, j job.Record) {
 	if d.Regrows {
 		p.Growth = d.GrowTicks * d.RegrowTo / 100
 		p.Designated = false
-		g.plants.Set(j.Target, p)
+		g.setPlant(j.Target, p)
 	} else {
 		g.removePlant(j.Target)
 	}

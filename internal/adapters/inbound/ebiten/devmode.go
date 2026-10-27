@@ -231,7 +231,7 @@ func (a *App) drawDevPanels(screen *ebiten.Image, sw, sh int) {
 func devColumn(l hudLayout) rect {
 	x := max(l.Resources.right(), hudMargin+resourcesW) + hudMargin
 	y := float32(hudMargin)
-	for _, r := range []rect{l.Bar, l.Messages} {
+	for _, r := range []rect{l.Bar, l.Messages, l.Perf} {
 		if !r.empty() {
 			y = max(y, r.bottom()+hudMargin)
 		}

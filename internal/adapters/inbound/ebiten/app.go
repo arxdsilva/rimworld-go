@@ -206,6 +206,7 @@ type App struct {
 	lastPainted                    string            // schedule cell last painted by a drag
 	now                            func() time.Time  // wall clock for alpha (injectable for tests)
 	lastTick                       time.Time         // when the renderer last advanced
+	lastDraw                       time.Time         // previous colony Draw: the per-Draw camera step
 
 	// Input (UI-016): the device source (a fake in tests), this Update's
 	// resolved frame, the live bindings and an Update counter.
@@ -802,8 +803,10 @@ func (a *App) Draw(screen *ebiten.Image) {
 
 	switch a.nav.screen() {
 	case screenBoot:
+		a.lastDraw = time.Time{}
 		a.drawBoot(screen, sw, sh)
 	case screenMainMenu:
+		a.lastDraw = time.Time{}
 		a.drawMainMenu(screen, sw, sh)
 	case screenScenario:
 		a.drawScenario(screen, sw, sh)
@@ -819,6 +822,11 @@ func (a *App) Draw(screen *ebiten.Image) {
 		a.drawPawns(screen, sw, sh)
 	case screenColony:
 		if a.renderer != nil {
+			now := a.now()
+			if a.cfg.Capture == nil && !a.lastDraw.IsZero() && a.nav.overlay() != overlayPause {
+				a.renderer.stepCamera(now.Sub(a.lastDraw).Seconds(), a.mapViewport())
+			}
+			a.lastDraw = now
 			a.renderer.setAlpha(a.frameAlpha())
 			a.syncTreeFocus() // tree_focus.go: hover, selection and ghost see through canopies
 			setTracePass("world")
@@ -837,12 +845,14 @@ func (a *App) Draw(screen *ebiten.Image) {
 			a.drawPause(screen, sw, sh)
 		}
 	case screenOptions:
+		a.lastDraw = time.Time{}
 		a.drawOptions(screen, sw, sh)
 	case screenLoad:
 		a.drawLoad(screen, sw, sh)
 	case screenCredits:
 		a.drawCredits(screen, sw, sh)
 	default:
+		a.lastDraw = time.Time{}
 		screen.Fill(uiSpace)
 	}
 
