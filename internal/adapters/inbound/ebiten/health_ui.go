@@ -556,7 +556,7 @@ func (a *App) healthOps(p game.PawnView, r rect, h game.HealthView) {
 		}
 		if a.uiButton(healthRemoveID(op.Slot), rect{r.right() - 80, y, 80, healthOpRowH - 2}, "Cancel",
 			btnOpts{Style: btnDanger, Tip: "Cancel\nTake " + op.Label + " off the queue."}) {
-			a.renderer.game.Enqueue(command.Command{Kind: command.RemoveOperation, Pawn: uint64(p.ID), Index: op.Slot})
+			a.renderer.enqueue(command.Command{Kind: command.RemoveOperation, Pawn: uint64(p.ID), Index: op.Slot})
 		}
 		y += healthOpRowH
 	}
@@ -710,7 +710,7 @@ func (a *App) openHealthPicker(id entity.EntityID) {
 						return
 					}
 					o := opts[sel]
-					a.renderer.game.Enqueue(command.Command{Kind: command.AddOperation, Pawn: uint64(id),
+					a.renderer.enqueue(command.Command{Kind: command.AddOperation, Pawn: uint64(id),
 						Index: int(o.op), Build: uint8(o.part), Stuff: uint8(o.item)})
 				}},
 			{id: "health.addop.cancel", label: "Cancel", closes: true},

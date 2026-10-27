@@ -26,6 +26,14 @@ type formationDrag struct {
 const formationRadius = 8
 
 // draftedOf keeps the drafted colonists.
+// tendOrderAt reports the tile holds someone p can tend (MED-03): that
+// right-click opens the order menu (orders.go rightClickTile) instead of
+// starting a formation drag, which used to claim every drafted
+// right-click on a tile without a raider or animal (QA-001 finding).
+func (a *App) tendOrderAt(p game.PawnView, tx, ty int) bool {
+	return hasTendOrder(a.renderer.game.OrdersAt(p.ID, tx, ty))
+}
+
 func draftedOf(ps []game.PawnView) []game.PawnView {
 	var out []game.PawnView
 	for _, p := range ps {
@@ -252,7 +260,7 @@ func (a *App) handleOrders() {
 		return
 	}
 	f.take(mbRight)
-	if len(draftedOf(pawns)) > 0 && !a.creatureAt(tx, ty, 0) {
+	if drafted := draftedOf(pawns); len(drafted) > 0 && !a.creatureAt(tx, ty, 0) && !a.tendOrderAt(drafted[0], tx, ty) {
 		a.closeFloat()
 		a.form = formationDrag{on: true, x0: tx, y0: ty, x1: tx, y1: ty}
 		return

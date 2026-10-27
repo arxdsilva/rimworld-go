@@ -1,0 +1,28 @@
+# QA-001: player-journey tests, CI on every push, real-path clicks
+
+## Why
+Keyboard pan died (PERF-002 moved the camera's smoothing into Draw while `applyCamera` cleared the held direction in the same Update that pushed it) and 1,600 tests stayed green: the camera tests stepped the pieces, and most "real game" HUD tests clicked through `click(t, a, id)`, which on the colony screen called `applyClick` directly and never exercised `App.Update`'s mouse or key routing. Nothing ran tests on a push either; the only workflow ran on release tags.
+
+## What exists now
+- **Journeys** (`internal/adapters/inbound/ebiten/journey_*_test.go`): a journey drives a real colony the way a player does — keys and mouse through `fakeInput` into `App.Update`, frames through `App.Draw` on a pinned clock — and asserts the command that left the client (`onEnqueue`, chained after the learn hook) or the read model after it. `newJourney` (`journey_test.go`) builds the paused 24×24 colony with the `inputColony` camera (tile (x, y) at screen (64x, 64y+32)); `clickID` and `pick` click HUD buttons, kit widgets and float menus through the real mouse; `tick` runs exact tick counts through the speed keys; `until` waits on a condition.
+- **Guards:** `TestJourneysUseTheRealInputPath` rejects handler, dispatcher and renderer calls in journey files (`applyClick`, `click(t,a,id)`, `pressEscape`, `openArchitect`, `renderer.Select`, `renderer.enqueue`, `setSpeed`, `LayoutF`, `setSettings`, …). `TestEveryInputActionHasAJourney` fails on an input action no journey presses (any string literal in a journey file that equals a bound key, or a `input.Mod*` selector for a modifier) and on a command kind the client emits that no journey asserts (`command.<Kind>` selectors in non-test files vs. journey files), unless the journey file that owes it registers the debt with `owe(file, kinds, actions)` at its top; a covered debt fails too, so the lists only shrink.
+- **Proof:** re-introducing the dead-WASD clear makes `TestJourneyCameraHeldPanKey` fail at once.
+- **CI:** `.github/workflows/test.yml` runs gofmt, vet and `xvfb-run -a go test -race -timeout 10m ./...` on every push to `main` and every pull request (cancel-in-progress). `make test-journeys` runs the suite locally.
+- **Rule:** ebiten `AGENTS.md` "Tests": a player-facing change ships a `TestJourney…`; `applyClick`, `click(t, a, id)` and direct calls do not count.
+
+## Coverage (wave 2)
+89 journeys, `make test-journeys` ≈ 12 s under `-race` (twice over, parallel-safe): camera 9, select 9, orders 13, architect 11, zones 8, tabs 9, time 5, flow 5, hud 13, dialogs 7. Every bound input action is pressed or held somewhere (the reserved F7/T are pressed and must only toast). Every command kind the client emits is asserted, except two debts that stay with their reason in the file's `owe` call:
+- `DesignatePen` (journey_zones): nothing in the client emits it any more — pens come from the pen-marker building; the command is legacy.
+- `OpenCasket` (journey_dialogs): a sealed casket only comes from vault map generation; the only staging helper is private to the game package.
+Not reachable headless: the F10 screenshot file (the key arming is covered; the write needs `ReadPixels`). Not covered: a disabled (incapable) Work cell, since no hook makes a colonist incapable; a dialog auto-pause journey beyond trade/comms (those cover it).
+
+Slowest journeys: CaravanFormAndReturn 2.3 s, WizardToColony 2.2 s, TradeCaravanAccept 1.7 s; the rest are under 0.5 s.
+
+## Part C: the old `click(t, a, id)` shortcut
+_filled after wave 3._
+
+## Findings while driving the game (fixed in this change unless noted)
+- **"Tend" was unreachable.** A drafted colonist's right-click on a wounded colonist started a formation drag (`formation.go`) before `rightClickTile` could offer "Tend <name>", so the doctor just walked onto the patient and nothing in the client ever sent `EmergencyTend`. Fixed: the formation branch yields when the tile offers a tend order (`tendOrderAt`); `TestJourneyOrdersEmergencyTend` pins it.
+- **Three commands bypassed the renderer's queue.** The health tab's Add and Cancel operation (`health_ui.go`) and the Story tab's storyteller/difficulty (`story_tab.go`) called `renderer.game.Enqueue` directly, so they did not apply while paused (the operation list only updated after a tick) and the lessons and any observer never saw them. Fixed: they go through `renderer.enqueue`.
+- **Not fixed, recorded:** `qty.x1000` is bound to Ctrl in `input/defs.go`, the same key as `qty.x10`, while the tooltip and `qtyStep` give Ctrl+Shift ×1000 (the binding list is cosmetic; the code reads the modifiers). Enter in the zone/area rename fields sends its command on the following Update, not the Enter frame. Enter does nothing on the pause overlay. Ctrl-constrained drags take the larger side (a 5×5 from an 8,2→12,4 drag). The HUD's right column covers map column 16 at 1280 wide, so the documented "open map" range is columns 6..15. `speed.0` toggles pause like Space (intended).
+- **Harness note:** `fakeInput.clickAt` clicks with no modifiers; two journey files carry a local `clickIDWith`/`clickWith` for Shift/Ctrl clicks. The settling frame now runs paused, so a spawned pawn stays on its tile.
