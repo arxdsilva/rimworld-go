@@ -921,6 +921,8 @@ region index
 
 Maintain indexed free destinations.
 
+Zone placement (PLAY-023, as RimWorld): no zone goes on the map's outermost ring, on fogged cells, on a cell another zone holds, on rock, or on a wall, an impassable building or the blueprint of one. A growing zone needs bare soil (soil, rich soil, gravel, marsh; not sand, mud, ice, stone, water, tracks, a floor or a bridge deck). Stockpiles and dumping stockpiles take any other ground, shallow water included, but not deep water. A finished wall, impassable building, floor or bridge, or new ground, takes the cells it spoils out of their zone; a cut zone splits, and the biggest piece keeps its id. A plain message says so. A dumping stockpile takes animal corpses and stone chunks by default. Storage zones have a priority: Critical, Important, Preferred, Normal (the default) or Low. Haulers fill the highest-priority zone that takes a thing and has room. They carry things up from a lower zone only to a strictly higher one, and only after a minimum stay of one in-game hour, so stacks never flap between zones. Growers sow only while the growing temperature is above 0 °C and below 50 °C.
+
 Hauling candidate selection uses cheap distance before exact path.
 
 Multiple haulers can reserve quantities from one stack without over-reserving.

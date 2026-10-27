@@ -65,7 +65,8 @@ func (g *Game) applyOne(c command.Command) {
 		command.SetZoneCrop, command.ExpandZone, command.RemoveZoneCells, command.DeleteZone, // zone_cmds.go (PLAY-020)
 		command.SetPowerWanted, command.SetThermostat, // power_flick.go, power_heat.go (PLAY-021)
 		command.SetMedicalCare, command.SetDefaultCare, command.SetSelfTend, // care.go (MED-00)
-		command.EmergencyTend, command.ReorderOperation: // care.go, surgery.go
+		command.EmergencyTend, command.ReorderOperation, // care.go, surgery.go
+		command.SetZonePriority: // haul_priority.go (PLAY-023)
 		g.applyHostCommand(c) // host_commands.go (ENG-003)
 	case command.SetStoryteller:
 		g.cmdSetStoryteller(c.Name) // story.go (NG-1)
@@ -76,7 +77,8 @@ func (g *Game) applyOne(c command.Command) {
 	case command.MovePawn:
 		g.cmdMove(entity.EntityID(c.Pawn), c.X, c.Y)
 	case command.DesignateStockpile:
-		g.paintZone(zone.KindStockpile, zone.Zone{Food: true, Wood: true, Stone: true}, c.X, c.Y, c.X2, c.Y2)
+		kind, proto := stockpileProto(c.Build) // zones.go: Build 1 is a dumping stockpile (PLAY-023)
+		g.paintZone(kind, proto, c.X, c.Y, c.X2, c.Y2)
 		g.autoHomeRect(c.X, c.Y, c.X2, c.Y2) // home.go
 	case command.DesignateWall:
 		g.placeFrame(construction.Wall, c.X, c.Y)
@@ -829,6 +831,8 @@ func (g *Game) haulToStockpile(id entity.EntityID, pos Position) bool {
 	var full []item.Kind
 	var takes [256]int8 // filterMatches per kind (0 unknown, 1 yes, -1 no): zones don't change here
 	var postBuf [8]entity.EntityID
+	var prio haulPrio // haul_priority.go: storage priorities (PLAY-023)
+	g.pruneStored()
 	for range workTries {
 		var best item.Stack
 		var bestID entity.EntityID
@@ -845,7 +849,7 @@ func (g *Game) haulToStockpile(id entity.EntityID, pos Position) bool {
 				continue // leftFound (haul_claim.go): found on the map, unmarked
 			}
 			off := len(post) > 0 && slices.Contains(post, iid)
-			if !off && g.inMatchingStockpileAt(st.Kind, st.X, st.Y) {
+			if !off && g.staysStored(iid, st, &prio) {
 				continue
 			}
 			if _, taken := g.reserve.EntityOwner(iid); taken {
@@ -854,7 +858,7 @@ func (g *Game) haulToStockpile(id entity.EntityID, pos Position) bool {
 			if slices.Contains(tried, iid) || slices.Contains(full, st.Kind) || off && g.postponedFor(id, job.Haul, iid, 0, 0) {
 				continue
 			}
-			if off && g.inMatchingStockpileAt(st.Kind, st.X, st.Y) {
+			if off && g.staysStored(iid, st, &prio) {
 				continue
 			}
 			if takes[st.Kind] == 0 {
@@ -874,9 +878,13 @@ func (g *Game) haulToStockpile(id entity.EntityID, pos Position) bool {
 		if !found {
 			return false
 		}
-		dx, dy, ok := g.areaStockpileCell(id, best.Kind, best.X, best.Y) // area_dest.go
+		dx, dy, ok := g.haulDest(id, best) // haul_priority.go: up a priority for a stored stack
 		if !ok {
-			full = append(full, best.Kind)
+			if g.inMatchingStockpileAt(best.Kind, best.X, best.Y) {
+				tried = append(tried, bestID) // a re-haul with no room above (its area): this stack only
+			} else {
+				full = append(full, best.Kind)
+			}
 			continue
 		}
 		if g.startJob(id, job.Record{
@@ -1305,6 +1313,7 @@ func (g *Game) finishHaulDrop(id entity.EntityID, j job.Record) {
 		}
 	} else {
 		g.mergeOrSet(j.Carry, st)
+		g.noteStored(st.X, st.Y) // haul_priority.go: a stay below the best zone starts
 	}
 	j.Carry = 0
 	j.State = job.Complete
@@ -1342,6 +1351,8 @@ func (g *Game) completeFrame(id entity.EntityID, fr construction.Frame) {
 	}
 	if fr.Reinstall != 0 {
 		g.completeMove(id, fr) // move.go: the same building moves here
+		cells, _, _ := construction.Footprint(fr.Kind, fr.Facing, fr.X, fr.Y)
+		g.zoneBuilt(fr.Kind, cells) // zones.go (PLAY-023)
 		return
 	}
 	if b, ok := g.bldgs.Get(fr.Swaps); ok && fr.Swaps != 0 && b.Kind == fr.Kind && b.X == fr.X && b.Y == fr.Y {
@@ -1368,6 +1379,7 @@ func (g *Game) completeFrame(id entity.EntityID, fr construction.Frame) {
 	// bushes and crops under the footprint are cleared below
 	cells, _, _ := construction.Footprint(fr.Kind, fr.Facing, fr.X, fr.Y)
 	g.clearPlanFootprint(fr.Kind, cells) // plan.go
+	defer g.zoneBuilt(fr.Kind, cells)    // zones.go: zone cells it spoils go (PLAY-023)
 	for _, c := range cells {
 		if pid := g.plantAt(c[0], c[1]); pid != 0 {
 			g.removePlant(pid)
@@ -1642,8 +1654,9 @@ func (g *Game) mergeOrSetFrom(id entity.EntityID, st item.Stack, seen []spillSte
 	if (st.Unclaimed || st.HaulMarked) && st.Carrier == 0 && g.inMatchingStockpileAt(st.Kind, st.X, st.Y) {
 		claim(&st) // haul_claim.go: set down in a stockpile that takes it, stored
 	}
-	if g.isWaterAt(st.X, st.Y) && st.Carrier == 0 {
-		// a load set down in water floats to the nearest dry ground
+	if g.isWaterAt(st.X, st.Y) && st.Carrier == 0 && !g.inMatchingStockpileAt(st.Kind, st.X, st.Y) {
+		// a load set down in water floats to the nearest dry ground; a
+		// stockpile on shallow water keeps what it takes (PLAY-023)
 		if x, y, ok := g.spillTile(st.Kind, st.X, st.Y); ok {
 			st.X, st.Y = x, y
 			g.mergeOrSetFrom(id, st, seen)

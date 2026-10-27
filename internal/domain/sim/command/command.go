@@ -201,6 +201,11 @@ const (
 	SetSelfTend
 	EmergencyTend
 	ReorderOperation
+	// SetZonePriority (PLAY-023) sets storage zone Target's priority to
+	// the one at Index of the priority list, highest first (Critical,
+	// Important, Preferred, Normal, Low). A DesignateStockpile with Build
+	// 1 paints a dumping stockpile instead of a stockpile.
+	SetZonePriority
 )
 
 // Area references for AssignArea's Index (PLAY-015): any other value is an

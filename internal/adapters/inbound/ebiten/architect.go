@@ -486,10 +486,10 @@ func (a *App) submitArchitect() {
 			}
 			runs = rowRuns(cs)
 		}
-		if kind := zoneKindOf(t); kind != "" && !anyZoneCell(x0, y0, x1, y1, func(x, y int) bool {
-			return a.renderer.game.CanZoneAt(kind, x, y)
-		}) {
-			a.hint = "No free tiles there" // the command still goes out; the sim ignores it
+		if kind := zoneKindOf(t); kind != "" {
+			if why, free := zoneDragRefusal(x0, y0, x1, y1, func(x, y int) string { return a.zoneRefusalAt(kind, x, y) }); !free {
+				a.hint = zoneDragHint(why) // the command still goes out; the sim ignores it
+			}
 		}
 		for _, run := range runs {
 			c := command.Command{Kind: t.cmd, X: x0, Y: y0, X2: x1, Y2: y1, Enabled: t.enable}
@@ -501,6 +501,9 @@ func (a *App) submitArchitect() {
 			}
 			if t.crop != "" {
 				c.Build, _ = game.ZoneSpeciesID(a.selectedCrop().Name)
+			}
+			if t.variant != 0 {
+				c.Build = t.variant // a dumping stockpile (PLAY-023)
 			}
 			a.renderer.enqueue(c)
 		}
@@ -537,11 +540,15 @@ func (a *App) drawArchitectGhost(screen *ebiten.Image) {
 				a.renderer.drawGhostRect(screen, c.x, c.y, c.x, c.y)
 			}
 		}
+		if kind != "" {
+			a.drawZoneRefusalTip(screen, kind, mx, my)
+		}
 		return
 	}
 	if t.mode == placeArea {
 		if kind := zoneKindOf(t); kind != "" {
 			a.drawZoneGhost(screen, kind, cells[0].x, cells[0].y, cells[1].x, cells[1].y)
+			a.drawZoneRefusalTip(screen, kind, mx, my)
 			return
 		}
 		a.renderer.drawGhostRect(screen, cells[0].x, cells[0].y, cells[1].x, cells[1].y)
@@ -620,6 +627,9 @@ func (a *App) presetArchTool(kind, stuff, facing string) bool {
 func zoneKindOf(t archTool) string {
 	switch t.cmd {
 	case command.DesignateStockpile:
+		if t.variant == game.StockpileVariantDump {
+			return game.ZoneDump
+		}
 		return game.ZoneStockpile
 	case command.DesignateGrowZone:
 		return game.ZoneGrow
@@ -677,6 +687,87 @@ func (a *App) drawZoneGhost(screen *ebiten.Image, kind string, x0, y0, x1, y1 in
 		}
 		vector.FillRect(screen, sx, sy, float32(tile), float32(tile), clr, false)
 	}
+}
+
+// zoneRefuser is the one simulation behaviour the zone ghost needs beyond
+// CanZoneAt (consumer-owned, PLAY-023): why a zone of kind can't claim a
+// cell, "" when it can.
+type zoneRefuser interface {
+	ZoneRefusal(kind string, x, y int) string
+}
+
+// zoneNoReason stands for a refusal the simulation gives no reason for
+// (a Simulation without ZoneRefusal).
+const zoneNoReason = "?"
+
+// zoneRefusalAt is why a zone of kind can't claim tile (x, y): "" when it
+// can, the simulation's reason, else zoneNoReason.
+func (a *App) zoneRefusalAt(kind string, x, y int) string {
+	g := a.renderer.game
+	if zr, ok := g.(zoneRefuser); ok {
+		return zr.ZoneRefusal(kind, x, y)
+	}
+	if g.CanZoneAt(kind, x, y) {
+		return ""
+	}
+	return zoneNoReason
+}
+
+// zoneDragRefusal judges a dragged rectangle: free is true when some cell
+// can be zoned; otherwise why is the most common refusal over its cells
+// (ties: the reason met first, row-major).
+func zoneDragRefusal(x0, y0, x1, y1 int, refusal func(x, y int) string) (why string, free bool) {
+	x0, y0, x1, y1 = normRect(x0, y0, x1, y1)
+	count := map[string]int{}
+	best := 0
+	for y := y0; y <= y1; y++ {
+		for x := x0; x <= x1; x++ {
+			r := refusal(x, y)
+			if r == "" {
+				return "", true
+			}
+			count[r]++
+			if count[r] > best {
+				why, best = r, count[r]
+			}
+		}
+	}
+	return why, false
+}
+
+// zoneDragHint is the hint for a drag nothing in which can be zoned.
+func zoneDragHint(why string) string {
+	if why == "" || why == zoneNoReason {
+		return "No free tiles there"
+	}
+	return "Can't zone here: " + why
+}
+
+// zoneTipText is the cursor tip naming why the hovered cell is refused
+// ("" when it is fine).
+func zoneTipText(why string) string {
+	switch why {
+	case "":
+		return ""
+	case zoneNoReason:
+		return "Can't zone here"
+	}
+	return "Can't zone: " + why
+}
+
+// drawZoneRefusalTip names, beside the cursor, why the hovered cell can't
+// take the zone.
+func (a *App) drawZoneRefusalTip(screen *ebiten.Image, kind string, mx, my int) {
+	tx, ty := a.renderer.TileAt(a.mapCursor())
+	msg := zoneTipText(a.zoneRefusalAt(kind, tx, ty))
+	if msg == "" {
+		return
+	}
+	sw, _ := a.size()
+	mw := int(textW(msg, tsBody))
+	lx := min(mx+16, sw-mw-18) // keep the label on screen
+	uiFillRect(screen, float32(lx), float32(my+18), float32(mw+12), lineStep(tsBody)+4, uiPanel, false)
+	drawLabel(screen, lx+6, my+20, msg)
 }
 
 // drawIconFallback is a plain tile with the tool's initial, for a button

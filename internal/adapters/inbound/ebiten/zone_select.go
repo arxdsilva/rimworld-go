@@ -178,6 +178,8 @@ func zoneKindName(z game.ZoneView) string {
 		return "Growing zone"
 	case game.ZonePen:
 		return "Pen"
+	case game.ZoneDump:
+		return "Dumping stockpile"
 	}
 	return "Stockpile"
 }
@@ -226,10 +228,19 @@ func (a *App) zoneLines(z game.ZoneView) []string {
 		if z.NoCut {
 			out = append(out, "Cutting off")
 		}
-	case game.ZoneStockpile:
-		out = append(out, zoneFilterLine(z))
+	case game.ZoneStockpile, game.ZoneDump:
+		out = append(out, "Priority: "+zonePriorityName(z), zoneFilterLine(z))
 	}
 	return out
+}
+
+// zonePriorityName is a storage zone's priority ("Normal" when the view
+// carries none).
+func zonePriorityName(z game.ZoneView) string {
+	if z.Priority == "" {
+		return "Normal"
+	}
+	return z.Priority
 }
 
 // zoneCropName is the crop's name for the pane and the button.
@@ -240,8 +251,24 @@ func zoneCropName(crop string) string {
 	return cropLabel(crop)
 }
 
-// zoneFilterLine is what a stockpile takes: its filters, then anything else.
+// zoneFilterLine is what a stockpile takes: its filters, then anything
+// else; a dumping stockpile names its corpses and chunks filters instead.
 func zoneFilterLine(z game.ZoneView) string {
+	if z.Kind == game.ZoneDump {
+		var parts []string
+		for _, f := range []struct {
+			on   bool
+			name string
+		}{{z.Corpses, "Animal corpses"}, {z.Chunks, "Stone chunks"}, {z.Food, "Food"}, {z.Wood, "Wood"}, {z.Stone, "Stone"}} {
+			if f.on {
+				parts = append(parts, f.name)
+			}
+		}
+		if len(parts) == 0 {
+			return "Accepts: nothing"
+		}
+		return "Accepts: " + strings.Join(parts, ", ")
+	}
 	var parts []string
 	for _, f := range []struct {
 		on   bool

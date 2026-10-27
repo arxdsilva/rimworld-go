@@ -9,7 +9,6 @@ import (
 	"rimworld-go/internal/domain/ai/pathing"
 	"rimworld-go/internal/domain/animal"
 	"rimworld-go/internal/domain/building/construction"
-	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/domain/world/plant"
 )
@@ -224,7 +223,7 @@ func (g *Game) looseOnStockpiles() []entity.EntityID {
 		if st == nil || st.Carrier != 0 {
 			continue
 		}
-		if _, zoned := g.zoneOf(zone.KindStockpile, st.X, st.Y); !zoned {
+		if _, zoned := g.storageAt(st.X, st.Y); !zoned { // stockpiles and dumps (PLAY-023)
 			continue
 		}
 		c := st.Y*w + st.X

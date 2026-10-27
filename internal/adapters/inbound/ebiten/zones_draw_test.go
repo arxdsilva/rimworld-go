@@ -118,7 +118,7 @@ func TestZoneGhostCellsColourPerCell(t *testing.T) {
 
 func TestZoneToolsMapToKinds(t *testing.T) {
 	t.Parallel()
-	want := map[string]string{"stockpile": game.ZoneStockpile, "grow": game.ZoneGrow, "mine": ""}
+	want := map[string]string{"stockpile": game.ZoneStockpile, "dump": game.ZoneDump, "grow": game.ZoneGrow, "mine": ""}
 	for id, kind := range want {
 		tool, ok := toolByID(id)
 		if !ok || zoneKindOf(tool) != kind {
@@ -140,7 +140,7 @@ func TestSecondZoneOverClaimedTilesHints(t *testing.T) {
 	a.hint = ""
 	a.archX0, a.archY0, a.archX1, a.archY1 = 6, 6, 8, 7
 	a.submitArchitect()
-	if a.hint != "No free tiles there" {
+	if a.hint != "Can't zone here: "+game.ZoneRefuseTaken { // PLAY-023: the most common refusal
 		t.Fatalf("hint = %q", a.hint)
 	}
 }

@@ -42,6 +42,9 @@ func (a *App) zoneCommands(id uint16) []cmdButton {
 	if z.Kind == game.ZoneGrow {
 		out = append(out, a.zoneCropCmd(z), a.zoneSowCmd(z), a.zoneCutCmd(z))
 	}
+	if z.Kind == game.ZoneStockpile || z.Kind == game.ZoneDump {
+		out = append(out, a.zonePriorityCmd(z))
+	}
 	return append(out, a.zoneExpandCmd(), a.zoneShrinkCmd(), a.zoneDeleteCmd(z), a.zoneHideCmd(z), a.zoneRenameCmd(z))
 }
 
@@ -55,6 +58,36 @@ func (a *App) zoneCropCmd(z game.ZoneView) cmdButton {
 			entries, names := a.zoneCropEntries(cur)
 			a.openPick(x, y, true, entries, func(i int) { a.pickZoneCrop(zid, cur, names[i]) })
 		}}
+}
+
+// zonePriorityCmd is "Priority: <level>" on a stockpile or dumping
+// stockpile (PLAY-023): a click lists the five priorities above the
+// button and the pick sends SetZonePriority.
+func (a *App) zonePriorityCmd(z game.ZoneView) cmdButton {
+	zid, cur := z.ID, zonePriorityName(z)
+	return cmdButton{ID: "cmd.zone.priority", Label: "Priority: " + cur, Icon: a.zoneIcon("zone_priority", "zone_stockpile"),
+		Desc: "Haulers fill higher-priority storage first and carry things up from lower-priority storage when there is room.",
+		Run: func(a *App) {
+			x, y := a.zoneCmdAnchor("cmd.zone.priority")
+			names := game.StoragePriorities()
+			entries := make([]game.OrderOption, len(names))
+			for i, n := range names {
+				entries[i] = game.OrderOption{Label: n}
+				if n == cur {
+					entries[i].Label += " (current)"
+				}
+			}
+			a.openPick(x, y, true, entries, func(i int) { a.pickZonePriority(zid, cur, names, i) })
+		}}
+}
+
+// pickZonePriority sends SetZonePriority for the picked level (nothing
+// when it is the zone's own).
+func (a *App) pickZonePriority(zid uint16, cur string, names []string, i int) {
+	if i < 0 || i >= len(names) || names[i] == cur {
+		return
+	}
+	a.renderer.enqueue(command.Command{Kind: command.SetZonePriority, Target: uint64(zid), Index: i})
 }
 
 // zoneCropIcon is the crop's produce icon, else the growing-zone icon.

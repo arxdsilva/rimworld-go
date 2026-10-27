@@ -65,3 +65,18 @@ func TestTerrainNamesRoundTrip(t *testing.T) {
 		t.Fatal("out-of-range type name")
 	}
 }
+
+// TestGrowSoilTag (PLAY-023): only soil-like ground takes a growing zone;
+// every grow-soil terrain is fertile.
+func TestGrowSoilTag(t *testing.T) {
+	t.Parallel()
+	want := map[Type]bool{Soil: true, RichSoil: true, Gravel: true, Marsh: true}
+	for ty := Type(0); ty < numTypes; ty++ {
+		if got := ty.GrowSoil(); got != want[ty] {
+			t.Errorf("%v.GrowSoil() = %v, want %v", ty, got, want[ty])
+		}
+		if ty.GrowSoil() && ty.Fertility() <= 0 {
+			t.Errorf("%v is grow soil but barren", ty)
+		}
+	}
+}

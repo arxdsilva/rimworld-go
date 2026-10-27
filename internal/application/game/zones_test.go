@@ -56,14 +56,15 @@ func TestZonesNeverOverlap(t *testing.T) {
 	if v := zoneOwner(t, g, 8, 8); v.Kind != ZoneGrow || len(v.Cells) != 36-9 || v.Crop != "potato" {
 		t.Fatalf("grow zone %+v", v)
 	}
-	if v := zoneOwner(t, g, 0, 0); v.Kind != ZonePen || len(v.Cells) != 169-25-27 {
+	// PLAY-023: the map's edge ring (row 0, column 0: 25 cells) takes no zone
+	if v := zoneOwner(t, g, 1, 1); v.Kind != ZonePen || len(v.Cells) != 169-25-27-25 {
 		t.Fatalf("pen %+v", v)
 	}
 	if g.CanZoneAt(ZonePen, 5, 5) || !g.CanZoneAt(ZoneStockpile, 15, 15) || g.CanZoneAt("moat", 15, 15) || g.CanZoneAt(ZoneGrow, -1, 0) {
 		t.Fatal("CanZoneAt: taken, free, unknown kind, off the map")
 	}
 	if p := zonesOf(w, ZonePen); len(zonesOf(w, ZoneStockpile)) != 1 || len(zonesOf(w, ZoneGrow)) != 1 ||
-		len(p) != 1 || p[0].MinX != 0 || p[0].MinY != 0 || p[0].MaxX != 12 || p[0].MaxY != 12 {
+		len(p) != 1 || p[0].MinX != 1 || p[0].MinY != 1 || p[0].MaxX != 12 || p[0].MaxY != 12 {
 		t.Fatalf("zone views %+v", w.Zones)
 	}
 }
@@ -120,7 +121,7 @@ func TestGrowZoneSkipsInfertileGround(t *testing.T) {
 	if g.CanZoneAt(ZoneGrow, 2, 1) || !g.CanZoneAt(ZoneStockpile, 2, 1) || g.CanZoneAt(ZoneStockpile, 3, 1) {
 		t.Fatal("CanZoneAt by kind and ground")
 	}
-	zoneCmd(g, command.DesignateStockpile, 2, 2, 2, 0, 0)
+	zoneCmd(g, command.DesignateStockpile, 2, 3, 2, 1, 0)
 	if v := zoneOwner(t, g, 2, 1); v.Kind != ZoneStockpile || len(v.Cells) != 3 {
 		t.Fatalf("stockpile on rough stone %+v", v)
 	}
@@ -130,21 +131,21 @@ func TestGrowZoneSkipsInfertileGround(t *testing.T) {
 // with room still comes first.
 func TestStockpileCellPicksNearest(t *testing.T) {
 	g := New(Config{Seed: 1, Width: 30, Height: 10})
-	zoneCmd(g, command.DesignateStockpile, 0, 0, 3, 3, 0)
+	zoneCmd(g, command.DesignateStockpile, 1, 1, 3, 3, 0) // off the edge ring (PLAY-023)
 	zoneCmd(g, command.DesignateStockpile, 20, 4, 23, 7, 0)
 	if x, y, ok := g.stockpileCell(item.Wood, 24, 8); !ok || x != 23 || y != 7 {
 		t.Fatalf("nearest from the east: %d,%d %v", x, y, ok)
 	}
-	if x, y, ok := g.stockpileCell(item.Wood, 10, 5); !ok || x != 3 || y != 0 {
+	if x, y, ok := g.stockpileCell(item.Wood, 10, 5); !ok || x != 3 || y != 1 {
 		t.Fatalf("nearest from the middle (tie: lower y): %d,%d %v", x, y, ok)
 	}
-	if _, err := g.SpawnStack(item.Wood, 5, 0, 0); err != nil {
+	if _, err := g.SpawnStack(item.Wood, 5, 1, 1); err != nil {
 		t.Fatal(err)
 	}
-	if x, y, ok := g.stockpileCell(item.Wood, 24, 8); !ok || x != 0 || y != 0 {
+	if x, y, ok := g.stockpileCell(item.Wood, 24, 8); !ok || x != 1 || y != 1 {
 		t.Fatalf("top up the stack first: %d,%d %v", x, y, ok)
 	}
-	if x, y, ok := g.stockpileCell(item.GraniteBlocks, 1, 1); !ok || x != 1 || y != 1 {
+	if x, y, ok := g.stockpileCell(item.GraniteBlocks, 2, 2); !ok || x != 2 || y != 2 {
 		t.Fatalf("another kind skips the stack's tile: %d,%d %v", x, y, ok)
 	}
 }

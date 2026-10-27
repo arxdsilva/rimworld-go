@@ -329,7 +329,7 @@ func (r *Renderer) drawZoneRun(screen *ebiten.Image, kind string, run edgeRun, s
 	off := th / 2
 	ax, ay = ax+float32(run.nx)*off, ay+float32(run.ny)*off
 	bx, by = bx+float32(run.nx)*off, by+float32(run.ny)*off
-	if kind == game.ZoneStockpile {
+	if kind == game.ZoneStockpile || kind == game.ZoneDump {
 		dash := float32(max(4*screenDev(), tile*0.16))
 		dashedRun(screen, ax, ay, bx, by, th, dash, dash*0.8, stockEdgeClr)
 		return
@@ -465,6 +465,8 @@ func zoneLabelText(z game.ZoneView) string {
 		return "Growing"
 	case game.ZonePen:
 		return "Pen"
+	case game.ZoneDump:
+		return "Dumping"
 	}
 	return "Stockpile"
 }

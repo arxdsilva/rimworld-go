@@ -798,6 +798,8 @@ requirement.
 
 Support point, line, rectangle and paint placement depending on tool.
 
+Zone tools (PLAY-023): the drag ghost tints each cell green where the zone can claim it and red where it can't. A tip by the cursor names the hovered cell's reason ("Can't zone: Not soil"; also Unexplored, Too close to the map edge, Another zone, Rock, Water, Floor, Bridge, Building, Planned building). A drag with no free cell hints its most common reason.
+
 ------------------------------------------------------------------------
 
 # 18. Zone / Area Manager
@@ -810,6 +812,7 @@ maintenance.
 ## Zone modes
 
 -   stockpile;
+-   dumping stockpile (PLAY-023: animal corpses and stone chunks by default);
 -   growing;
 -   home;
 -   allowed areas.
@@ -825,7 +828,7 @@ maintenance.
 
 ## Stockpile settings
 
--   priority;
+-   priority (PLAY-023: "Priority: <level>" on a selected stockpile or dumping stockpile picks Critical, Important, Preferred, Normal or Low; the pane shows it);
 -   hierarchical item filters;
 -   quality;
 -   condition;

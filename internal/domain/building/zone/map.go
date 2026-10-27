@@ -20,7 +20,51 @@ const (
 	KindStockpile Kind = iota + 1
 	KindGrow
 	KindPen
+	// KindDump is a dumping stockpile (PLAY-023): storage for corpses and
+	// stone chunks by default. Append only: kinds are saved.
+	KindDump
 )
+
+// Storage reports a kind haulers store things in: stockpiles and
+// dumping stockpiles.
+func (k Kind) Storage() bool { return k == KindStockpile || k == KindDump }
+
+// Priority is a storage zone's priority (PLAY-023): haulers fill the
+// highest-priority zone that takes a thing and has room, and move things
+// up from a lower one. The zero value is Normal, so older saves and zones
+// that never had one keep today's behaviour.
+type Priority int8
+
+// Storage priorities, lowest first.
+const (
+	PriorityLow Priority = iota - 1
+	PriorityNormal
+	PriorityPreferred
+	PriorityImportant
+	PriorityCritical
+)
+
+// Priorities lists every priority, highest first (the picker's order).
+var Priorities = [...]Priority{PriorityCritical, PriorityImportant, PriorityPreferred, PriorityNormal, PriorityLow}
+
+// Valid reports one of the five priorities.
+func (p Priority) Valid() bool { return p >= PriorityLow && p <= PriorityCritical }
+
+func (p Priority) String() string {
+	switch p {
+	case PriorityLow:
+		return "Low"
+	case PriorityNormal:
+		return "Normal"
+	case PriorityPreferred:
+		return "Preferred"
+	case PriorityImportant:
+		return "Important"
+	case PriorityCritical:
+		return "Critical"
+	}
+	return "Unknown"
+}
 
 // ID names a zone; 0 is no zone.
 type ID uint16
@@ -41,6 +85,12 @@ type Zone struct {
 	// overlay, Name is the player's name for it ("" = the default).
 	NoSow, NoCut, Hidden bool
 	Name                 string
+	// PLAY-023 storage settings, zero-safe like the above: Priority on
+	// stockpiles and dumping stockpiles (zero = Normal); Corpses and
+	// Chunks are a dumping stockpile's filters (animal corpses, stone
+	// chunks).
+	Priority        Priority
+	Corpses, Chunks bool
 }
 
 // compatible: two zones of these settings merge when they touch. Only the
@@ -664,6 +714,60 @@ func (m *Map) RemoveCells(id ID, r Rect) {
 		return
 	}
 	m.splitKeeping(id, true)
+}
+
+// RemoveTiles unzones the given tiles, whatever zone holds them (tiles
+// off the map or in no zone are skipped). Every zone cut into pieces
+// splits as RemoveCells does: the piece with the most tiles keeps the id
+// (ties: the first tile, row-major), the others become new zones with the
+// same settings, numbered in the row-major order of their first tile; an
+// emptied zone is deleted. It returns the zones that lost tiles, by id.
+func (m *Map) RemoveTiles(cells [][2]int) []ID {
+	var hit []ID
+	for _, c := range cells {
+		if !m.in(c[0], c[1]) {
+			continue
+		}
+		i := c[1]*m.w + c[0]
+		if id := m.cell[i]; id != 0 {
+			hit = appendID(hit, id)
+			m.cell[i] = 0
+		}
+	}
+	slices.Sort(hit)
+	for _, id := range hit {
+		z := m.rec(id)
+		kept := z.idx[:0]
+		for _, c := range z.idx {
+			if m.cell[c] == id {
+				kept = append(kept, c)
+			}
+		}
+		z.idx, z.z.Cells, z.dirt = kept, len(kept), true
+		if len(kept) == 0 {
+			m.drop(id)
+			continue
+		}
+		m.splitKeeping(id, true)
+	}
+	return hit
+}
+
+// Split breaks zone id into its 4-connected pieces, as RemoveTiles does
+// after a cut: the biggest piece keeps the id, the others become new
+// zones with the same settings. It returns the new zones' ids (none when
+// the zone is whole or unknown).
+func (m *Map) Split(id ID) []ID {
+	if m.rec(id) == nil {
+		return nil
+	}
+	before := m.next
+	m.splitKeeping(id, true)
+	var out []ID
+	for n := before + 1; n <= m.next && n > before; n++ {
+		out = append(out, n)
+	}
+	return out
 }
 
 // Saved is a Map as plain data.

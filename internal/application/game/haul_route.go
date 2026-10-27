@@ -37,6 +37,9 @@ type haulShare struct {
 type haulState struct {
 	incoming   map[entity.EntityID]int
 	deliveries map[entity.EntityID][]haulShare
+	// storedAt (PLAY-023, haul_priority.go): the tick each stack was set
+	// down in a storage zone below the best one taking it.
+	storedAt map[entity.EntityID]uint64
 }
 
 func (g *Game) exportIncoming() map[entity.EntityID]int { return g.haul.incoming }
@@ -460,6 +463,7 @@ func (g *Game) storeLeftover(id entity.EntityID, j job.Record, st item.Stack) {
 	st.Carrier = 0
 	st.X, st.Y = x, y
 	g.mergeOrSet(j.Carry, st)
+	g.noteStored(x, y) // haul_priority.go
 	g.endDelivery(id, j)
 }
 

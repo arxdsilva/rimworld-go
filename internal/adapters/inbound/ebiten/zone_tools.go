@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"image/color"
+	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
@@ -227,8 +228,11 @@ func (a *App) submitZoneTool(z game.ZoneView) {
 	r := a.renderer
 	switch st.tool {
 	case zoneToolExpand:
-		if !anyZoneCell(x0, y0, x1, y1, func(x, y int) bool { return r.game.CanZoneAt(z.Kind, x, y) }) {
+		if why, free := zoneDragRefusal(x0, y0, x1, y1, func(x, y int) string { return a.zoneRefusalAt(z.Kind, x, y) }); !free {
 			a.hint = "nothing to add there"
+			if why != zoneNoReason && why != game.ZoneRefuseTaken {
+				a.hint += ": " + strings.ToLower(why) // PLAY-023: the most common refusal
+			}
 			return
 		}
 		r.enqueue(command.Command{Kind: command.ExpandZone, Target: uint64(z.ID), X: x0, Y: y0, X2: x1, Y2: y1})

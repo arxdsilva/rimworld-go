@@ -353,14 +353,17 @@ func TestZonePaneLinesForStockpilesAndPens(t *testing.T) {
 	food.Food, food.Stone = true, true
 	plain := rectZone(3, game.ZoneStockpile, 5, 0, 5, 0)
 	pen := rectZone(4, game.ZonePen, 8, 0, 9, 1)
-	a, _, _ := zoneApp(t, food, plain, pen)
+	dump := rectZone(5, game.ZoneDump, 11, 0, 13, 1) // PLAY-023
+	dump.Corpses, dump.Chunks, dump.Priority = true, true, "Low"
+	a, _, _ := zoneApp(t, food, plain, pen, dump)
 	for _, c := range []struct {
 		z    game.ZoneView
 		want []string
 	}{
-		{food, []string{"3 tiles", "Accepts: Food, Stone, other goods"}},
-		{plain, []string{"1 tile", "Accepts: other goods"}},
+		{food, []string{"3 tiles", "Priority: Normal", "Accepts: Food, Stone, other goods"}},
+		{plain, []string{"1 tile", "Priority: Normal", "Accepts: other goods"}},
 		{pen, []string{"4 tiles"}},
+		{dump, []string{"6 tiles", "Priority: Low", "Accepts: Animal corpses, Stone chunks"}},
 	} {
 		if got := a.zoneLines(c.z); strings.Join(got, "|") != strings.Join(c.want, "|") {
 			t.Errorf("%s lines = %q, want %q", zoneKindName(c.z), got, c.want)

@@ -103,6 +103,18 @@ func (t Type) Fertility() int {
 	}
 }
 
+// GrowSoil reports ground a growing zone may be painted on (PLAY-023):
+// soil, rich soil, gravel (stony soil) and marsh (marshy soil). Sand,
+// mud, ice, stone, smoothed stone, water and tracks are not soil, even
+// where wild plants grow on them.
+func (t Type) GrowSoil() bool {
+	switch t {
+	case Soil, RichSoil, Gravel, Marsh:
+		return true
+	}
+	return false
+}
+
 // WalkCost is the time to cross t in percent of plain ground.
 func (t Type) WalkCost() int {
 	switch t {

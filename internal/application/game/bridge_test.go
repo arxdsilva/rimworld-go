@@ -410,7 +410,7 @@ func TestBridgeZones(t *testing.T) {
 	if g.CanZoneAt("stockpile", 7, 4) {
 		t.Fatal("stockpile on open water")
 	}
-	if g.CanZoneAt("growing", 11, 3) || g.zoneable(zone.KindGrow, 7, 3) {
+	if g.ZoneRefusal(ZoneGrow, 11, 3) != ZoneRefuseBridge || g.zoneable(zone.KindGrow, 7, 3) {
 		t.Fatal("a growing zone on a bridge")
 	}
 	if !g.zoneable(zone.KindGrow, 11, 4) {

@@ -4,7 +4,6 @@ import (
 	"slices"
 	"strings"
 
-	"rimworld-go/internal/domain/building/zone"
 	"rimworld-go/internal/domain/economy/item"
 )
 
@@ -39,7 +38,7 @@ func (g *Game) countStored(qty *[256]int, st item.Stack) {
 	if st.Carrier != 0 {
 		return
 	}
-	if _, ok := g.zoneOf(zone.KindStockpile, st.X, st.Y); ok {
+	if _, ok := g.storageAt(st.X, st.Y); ok { // stockpiles and dumps (PLAY-023)
 		qty[st.Kind] += st.Qty
 	}
 }

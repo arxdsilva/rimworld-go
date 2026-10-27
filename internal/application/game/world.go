@@ -97,7 +97,8 @@ func (g *Game) setTerrain(x, y int, t terrain.Type) {
 	g.markRoomsDirty()
 	g.roomTouch(x, y) // rooms_index.go: re-read this cell at the rebuild
 	g.grid.SetWalkable(x, y, g.cellWalkable(x, y))
-	g.fogOpen(x, y) // fog.go: mining may open into a hidden cave
+	g.fogOpen(x, y)           // fog.go: mining may open into a hidden cave
+	g.zoneGroundChanged(x, y) // zones.go: a zone the new ground refuses lets the cell go (PLAY-023)
 }
 
 // naturalStone reports ground that has a stone type: rock walls and

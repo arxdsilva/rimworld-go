@@ -155,8 +155,8 @@ func TestIceNotSowable(t *testing.T) {
 	if g.CanZoneAt(ZoneGrow, 4, 4) {
 		t.Fatal("ice cannot be farmed")
 	}
-	if !g.CanZoneAt(ZoneGrow, 6, 4) {
-		t.Fatal("sand can be farmed, slowly")
+	if g.ZoneRefusal(ZoneGrow, 6, 4) != ZoneRefuseNotSoil {
+		t.Fatal("sand is not soil: no growing zone (PLAY-023)")
 	}
 	if g.CanZoneAt(ZoneStockpile, 4, 4) != true {
 		t.Fatal("ice still takes a stockpile")

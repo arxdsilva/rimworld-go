@@ -35,6 +35,7 @@ type archTool struct {
 	cmd      command.Kind // area command for zones/orders
 	crop     string       // crop for growing zones
 	enable   bool         // area command paints (Enabled) rather than clears
+	variant  uint8        // area command's Build (DesignateStockpile: 1 = dumping stockpile)
 }
 
 // PLAY-021 categories: Power (conduits, switch, generators, battery). The
@@ -86,9 +87,11 @@ var archTools = []archTool{
 	{id: "tame", label: "Tame", category: "orders", icon: "order_tame", mode: placeArea, cmd: command.DesignateTame,
 		desc: "Mark animals for taming. Hunters coax them; a failed try can enrage the animal. Tame wolves guard the colony."},
 	{id: "stockpile", label: "Stockpile", category: "zones", icon: "zone_stockpile", mode: placeArea, cmd: command.DesignateStockpile,
-		desc: "Storage area. Haulers bring food and wood here."},
+		desc: "Storage area. Haulers bring food, wood, stone and goods here, filling higher-priority stockpiles first. Not on deep water, walls or the map edge."},
+	{id: "dump", label: "Dumping stockpile", category: "zones", icon: "zone_stockpile", mode: placeArea, cmd: command.DesignateStockpile,
+		variant: game.StockpileVariantDump, desc: "A place to dump animal corpses and stone chunks, out of the way. Same ground rules as a stockpile."},
 	{id: "grow", label: "Growing zone", category: "zones", icon: "zone_grow", mode: placeArea, cmd: command.DesignateGrowZone,
-		crop: "potato", desc: "Pick a crop or trees below. Colonists sow it and harvest when ripe; crops grow in daylight, faster on rich soil."},
+		crop: "potato", desc: "Pick a crop or trees below. Colonists sow it and harvest when ripe; crops grow in daylight, faster on rich soil. Soil only: not sand, mud, stone, floors or bridges."},
 	{id: "home", label: "Expand home area", category: "zones", icon: "home", mode: placeArea, cmd: command.DesignateHome, enable: true,
 		desc: "Paint the Home area: colonists sweep dirt off these tiles. It grows around new buildings."},
 	{id: "unhome", label: "Clear home area", category: "zones", icon: "home_clear", mode: placeArea, cmd: command.DesignateHome,

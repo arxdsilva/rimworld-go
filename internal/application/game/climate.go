@@ -47,19 +47,23 @@ func (g *Game) temperatureAt(x, y int) temperature.Temp {
 	return g.climate.Outdoor(g.clock.Now()) + g.weatherTempDelta(x, y) + g.ventWarmth(x, y) + g.fireWarmth(x, y) // vents.go, fire.go
 }
 
-// sowMinMean is the lowest daily mean temperature (tenths of a degree C)
-// at which growers still sow: below it seedlings would only freeze.
-const sowMinMean = 30
+// Sowing temperatures (PLAY-023, original values), tenths of a degree C:
+// growers sow only while the growing temperature is above sowMinTemp and
+// below sowMaxTemp. Seedlings would freeze below and scorch above.
+const (
+	sowMinTemp = 0
+	sowMaxTemp = 500
+)
 
-// growingSeason reports whether it is warm enough to sow on (x, y): the
-// day's mean there (outdoors, or the room's temperature) is above
-// sowMinMean.
+// growingSeason reports whether the growing temperature on (x, y) lets
+// growers sow there: the day's mean outdoors, or the room's temperature,
+// between sowMinTemp and sowMaxTemp.
 func (g *Game) growingSeason(x, y int) bool {
 	mean := g.climate.DailyMean(g.clock.Now())
 	if r := g.roomAt(x, y); r >= 0 && r < len(g.roomTemps) {
 		mean = g.roomTemps[r]
 	}
-	return mean > sowMinMean
+	return mean > sowMinTemp && mean < sowMaxTemp
 }
 
 // TemperatureAt is the air temperature on (x, y), tenths of a degree C.

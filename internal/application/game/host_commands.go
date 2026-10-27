@@ -72,6 +72,8 @@ func (g *Game) applyHostCommand(c command.Command) {
 		g.cmdRemoveZoneCells(uint16(c.Target), c.X, c.Y, c.X2, c.Y2) // zone_cmds.go
 	case command.DeleteZone:
 		g.cmdDeleteZone(uint16(c.Target)) // zone_cmds.go
+	case command.SetZonePriority:
+		g.cmdSetZonePriority(uint16(c.Target), c.Index) // haul_priority.go (PLAY-023)
 	case command.SetPowerWanted:
 		g.cmdSetPowerWanted(target, c.Enabled) // power_flick.go (PLAY-021)
 	case command.SetThermostat:
