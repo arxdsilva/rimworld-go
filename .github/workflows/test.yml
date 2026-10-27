@@ -1,0 +1,47 @@
+name: test
+
+# Every push to main and every pull request runs the whole suite under the
+# race detector (QA-001): the player-journey tests in it drive the game
+# through the real input path, so a dead key or a button that stops
+# responding fails here instead of at the next release tag.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  LINUX_DEPS: >-
+    libc6-dev libgl1-mesa-dev libxcursor-dev libxi-dev libxinerama-dev
+    libxrandr-dev libxxf86vm-dev libasound2-dev pkg-config
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: |
+          # shellcheck disable=SC2086 # LINUX_DEPS is a word list
+          sudo apt-get update && sudo apt-get install -y $LINUX_DEPS xvfb
+      - name: gofmt
+        run: |
+          out=$(gofmt -l cmd internal pkg)
+          if [ -n "$out" ]; then echo "gofmt needed:"; echo "$out"; exit 1; fi
+      - run: go vet ./...
+      - run: xvfb-run -a go test -race -timeout 10m ./...

@@ -173,6 +173,7 @@ To build from source you need Go 1.26.5 or later (the version in [`go.mod`](go.m
 go run ./cmd/game   # start the game
 make build          # build every command into bin/
 make test           # unit tests with the race detector and coverage
+make test-journeys  # the player-journey suite: fake input through the real game loop (also runs in CI on every push)
 make simulate       # headless simulation run for quick checks
 ```
 

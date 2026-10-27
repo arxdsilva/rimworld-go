@@ -83,7 +83,7 @@ commands via `Enqueue`. Domain code does not import this package.
   line, filled/empty rectangle, filled/empty oval; Ctrl squares; oval
   area tools send one rectangle per row run); right-click or Escape leaves
   the tool and the right-click is consumed.
-- Work Grow/Bld/Haul cells emit `SetWorkEnabled`.
+- Work cells emit `SetWorkPriority` (off, 1..4, cycling per click; `SetWorkEnabled` is the legacy toggle).
 - Pawn orders (`orders.go`): Draft button / R emits `DraftPawn`. Right-click
   with a pawn selected: drafted -> `MovePawn`; undrafted -> menu built from
   `Simulation.OrdersAt` (each entry carries its command or a disabled
@@ -213,6 +213,18 @@ toggles, inspector names, and HUD hit-testing. `splash_test.go`
 covers the right-rail menu and PNG decode. `widgets_test.go`
 checks UI palette hexes against `assets/palettes/ui.yaml`. They must not
 open a window. Existing renderer unit tests stay headless.
+
+Player journeys (QA-001, `journey_*_test.go`): every player-facing change
+ships a `TestJourney<Area><Name>` that drives the real loop through
+`newJourney` (fake keys and mouse into `App.Update`, frames through
+`App.Draw`, a pinned clock) and asserts the command that left the client or
+the read model after it. `applyClick`, `click(t, a, id)` and direct handler
+or renderer calls do not count (`TestJourneysUseTheRealInputPath` rejects
+them in journey files). `TestEveryInputActionHasAJourney` fails on an input
+action no journey presses or a command kind no journey asserts, unless it is
+owed in `journeyActionTODO` / `journeyKindTODO` with the file that will
+cover it; those lists only shrink. `make test-journeys` runs the suite;
+CI (`.github/workflows/test.yml`) runs everything on every push.
 
 ## Benchmarks
 

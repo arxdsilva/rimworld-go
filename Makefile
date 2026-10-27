@@ -41,6 +41,10 @@ fps:  ## uncapped frame-rate probe of the grown 500x500 colony at 3x, zoom 0.1 a
 .PHONY: test
 test: test-unit
 
+.PHONY: test-journeys
+test-journeys:  ## the player-journey suite (QA-001): fake input through the real Update/Draw loop
+	go test -race -timeout 10m -run 'TestJourney' ./internal/adapters/inbound/ebiten/
+
 .PHONY: test-unit
 test-unit:
 	go test -race -timeout 10m -cover ./...  # always -race, same budget as CI
