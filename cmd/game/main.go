@@ -104,7 +104,7 @@ func main() {
 		Version:      version,
 		Capture:      shot,
 		Saves:        saveHooks(),
-		Settings:     settingsHooks(shot != nil, devGraphics{hidpi: hidpiOverride, vsync: vsyncOverride, renderScale: *renderScale, tier: *graphics}),
+		Settings:     settingsHooks(shot != nil, devGraphics{hidpi: hidpiOverride, vsync: vsyncOverride, renderScale: *renderScale, tier: *graphics, windowed: probe != nil}),
 		Scenarios:    scenarioStore(shot != nil),
 		FPSProbe:     probe,
 		NewSimBuilder: func(ng uiadapter.NewGame) (uiadapter.SimBuilder, error) {
@@ -429,6 +429,14 @@ func main() {
 	ebiten.SetWindowSize(uiadapter.DefaultWindowWidth, uiadapter.DefaultWindowHeight)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 	ebiten.SetWindowTitle("rimworld-go")
+	if probe != nil {
+		// PERF-002: a probe draws into a window the size of the display that
+		// stays on top (the Fullscreen setting is overridden off below), so
+		// it renders every pixel a fullscreen game would while macOS never
+		// throttles it as a hidden window (ENG-004: about 9 fps).
+		ebiten.SetWindowSize(ebiten.Monitor().Size())
+		ebiten.SetWindowFloating(true)
+	}
 	if err := ebiten.RunGame(app); err != nil {
 		log.Fatal(err)
 	}
@@ -480,10 +488,11 @@ type devGraphics struct {
 	hidpi, vsync *bool
 	renderScale  float64
 	tier         string
+	windowed     bool // an fps probe: never fullscreen (see main)
 }
 
 func (d devGraphics) any() bool {
-	return d.hidpi != nil || d.vsync != nil || d.renderScale != 0 || d.tier != ""
+	return d.hidpi != nil || d.vsync != nil || d.renderScale != 0 || d.tier != "" || d.windowed
 }
 
 // settingsHooks wires the Options to the per-user settings file. Captures
@@ -530,6 +539,9 @@ func settingsHooks(capturing bool, dev devGraphics) uiadapter.SettingsHooks {
 		}
 		if dev.renderScale != 0 {
 			s.Graphics.RenderScale = dev.renderScale
+		}
+		if dev.windowed {
+			s.Graphics.Fullscreen = false
 		}
 		return s, err
 	}}

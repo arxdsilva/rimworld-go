@@ -161,8 +161,12 @@ func fpsReport(st *fpsProbeState, sc uiScaleState) string {
 	if p := pct(st.frames, 0.99); p > 0 {
 		low = float64(time.Second) / float64(p)
 	}
-	return fmt.Sprintf("fps probe: %d frames, avg %.1f fps, 1%% low %.1f fps (frame p99 %v); update avg %v p99 %v; draw avg %v p99 %v; scale s %g dev %g; %s",
-		len(st.frames), fps, low, pct(st.frames, 0.99), avg(st.update), pct(st.update, 0.99), avg(st.draw), pct(st.draw, 0.99), sc.s, sc.dev, memLine())
+	// work is the CPU time a frame costs (one Update plus one Draw): the
+	// display-independent number (PERF-002), since a 30 Hz or occluded
+	// display caps the frame rate whatever the renderer does.
+	upAvg, upP99, drAvg, drP99 := avg(st.update), pct(st.update, 0.99), avg(st.draw), pct(st.draw, 0.99)
+	return fmt.Sprintf("fps probe: %d frames, avg %.1f fps, 1%% low %.1f fps (frame p99 %v); update avg %v p99 %v; draw avg %v p99 %v; work avg %v p99 %v; scale s %g dev %g; %s",
+		len(st.frames), fps, low, pct(st.frames, 0.99), upAvg, upP99, drAvg, drP99, upAvg+drAvg, upP99+drP99, sc.s, sc.dev, memLine())
 }
 
 // memLine is the Go runtime's memory at the end of a probe (PLAY-019): the
