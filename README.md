@@ -50,6 +50,10 @@ A RimWorld-inspired colony simulation written in Go with Ebitengine, built in pu
     <td width="50%"><img src="docs/clips/surgery.webp" width="100%" alt="Surgery: a doctor fits a peg leg in a hospital bed beside a powered vitals monitor"><br><sub>Surgery: a doctor fits a peg leg in a hospital bed beside a powered vitals monitor</sub></td>
     <td width="50%"><img src="docs/clips/outbreak.webp" width="100%" alt="A flu outbreak: the letter, the disease alert, and the sick on bed rest"><br><sub>A flu outbreak: the letter, the disease alert, and the sick on bed rest</sub></td>
   </tr>
+  <tr>
+    <td width="50%"><img src="docs/clips/turret.webp" width="100%" alt="Two powered sentry turrets open fire as a raid reaches the house"><br><sub>Two powered sentry turrets open fire as a raid reaches the house</sub></td>
+    <td width="50%"><img src="docs/clips/trade.webp" width="100%" alt="A trader caravan arrives; a colonist walks over and the trade dialog opens with prices set by Social and goodwill"><br><sub>A trader caravan arrives; a colonist walks over and the trade dialog opens with prices set by Social and goodwill</sub></td>
+  </tr>
 </table>
 
 ## Progress

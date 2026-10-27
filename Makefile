@@ -162,6 +162,8 @@ clips:  ## README animated WebP clips in docs/clips (needs python3 + Pillow)
 	$(call clip,medical,-scenario bleeding -capture-ui follow -capture-zoom 1.6 -capture-ticks 60 -capture-frames 300 -capture-speed 2,--quality 50)
 	$(call clip,surgery,-scenario surgery -capture-ui follow -capture-zoom 1.6 -capture-ticks 60 -capture-frames 240 -capture-speed 3,--quality 45)
 	$(call clip,outbreak,-scenario outbreak -capture-zoom 1.1 -capture-ticks 120 -capture-frames 240 -capture-speed 2,--quality 50)
+	$(call clip,turret,-scenario turret -capture-ui turret -capture-ticks 60 -capture-frames 240,--quality 50)
+	$(call clip,trade,-scenario trade -capture-ui trade -capture-frames 130 -capture-speed 3,--quality 50)
 
 .PHONY: clean
 clean:

@@ -504,6 +504,15 @@ func (a *App) captureUI(ui string) {
 		cx, cy := float64(a.renderer.game.Width())/2, float64(a.renderer.game.Height())/2
 		sw, sh := a.size()
 		a.renderer.centerOn(cx+1, cy, sw, sh)
+	case "turret":
+		// -scenario turret: the house and both turrets east of it
+		cx, cy := float64(a.renderer.game.Width())/2, float64(a.renderer.game.Height())/2
+		sw, sh := a.size()
+		a.renderer.centerOn(cx+2, cy+1, sw, sh)
+	case "trade":
+		// -scenario trade: a colonist goes to the caravan's trader; the
+		// trade dialog opens once they talk
+		a.captureTrade()
 	case "raid":
 		// centre on the leading raider
 		cx, cy := float64(a.renderer.game.Width())/2, float64(a.renderer.game.Height())/2
@@ -957,6 +966,35 @@ func (a *App) captureBiomeInspect(ui string) {
 			a.selectCand(selCand{selAnimal, an.ID})
 			a.renderer.centerOn(float64(an.X)+0.5, float64(an.Y)+0.5, sw, sh)
 			return
+		}
+	}
+}
+
+// captureTrade orders the first colonist to trade with a visitor that
+// offers "Trade with" and centres the camera on that trader; the clip
+// shows the walk over and the dialog opening (syncDealings).
+func (a *App) captureTrade() {
+	var colonist entity.EntityID
+	var visitors []game.PawnView
+	for _, p := range a.renderer.snapshot() {
+		switch {
+		case p.Visitor:
+			visitors = append(visitors, p)
+		case colonist == 0 && !p.Hostile && !p.Prisoner && p.Status == "alive":
+			colonist = p.ID
+		}
+	}
+	if colonist == 0 {
+		return
+	}
+	for _, v := range visitors {
+		for _, o := range a.renderer.game.OrdersAt(colonist, v.X, v.Y) {
+			if strings.HasPrefix(o.Label, "Trade with") && !o.Disabled {
+				a.renderer.enqueue(o.Cmd)
+				sw, sh := a.size()
+				a.renderer.centerOn(float64(v.X), float64(v.Y), sw, sh)
+				return
+			}
 		}
 	}
 }
