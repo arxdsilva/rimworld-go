@@ -37,16 +37,17 @@ func tradeAlerts(orbital game.OrbitalView, caravan bool) []alert {
 }
 
 // tradeAlertsFrom gathers the status from the game: the status source
-// when it has one, else the open comms session's orbital view.
+// when it has one, else the open comms session's orbital view; then the
+// allies on the map (alerts_allies.go, Phase 4).
 func tradeAlertsFrom(src any) []alert {
+	var out []alert
 	if s, ok := src.(tradeStatusSource); ok {
 		st, _ := s.TradeStatus()
-		return tradeAlerts(st, st.CaravanVisiting)
-	}
-	if c, ok := src.(commsSource); ok {
+		out = tradeAlerts(st, st.CaravanVisiting)
+	} else if c, ok := src.(commsSource); ok {
 		if v, open := c.CommsView(); open {
-			return tradeAlerts(v.Orbital, false)
+			out = tradeAlerts(v.Orbital, false)
 		}
 	}
-	return nil
+	return append(out, allyAlertsFrom(src)...)
 }

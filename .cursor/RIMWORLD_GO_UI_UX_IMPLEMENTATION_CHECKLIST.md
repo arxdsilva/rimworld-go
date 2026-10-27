@@ -1209,11 +1209,11 @@ This screen centralizes per-pawn behavioral policies.
 
 ## 22.3 Communication
 
--   [ ] **Call faction**
--   [ ] **Request trader**
--   [ ] **Request military aid**
--   [ ] **Offer gift**
--   [ ] **Unavailable action reason/cost**
+-   [x] **Call faction** (PLAY-024 comms dialog)
+-   [x] **Request trader** (PLAY-024)
+-   [x] **Request military aid** (PLAY-024 phase 4: allies arrive, fight, leave; "Allies on the map" alert; inspector says "Ally")
+-   [x] **Offer gift** (PLAY-024)
+-   [x] **Unavailable action reason/cost** (PLAY-024: every disabled comms action shows its cost and reason)
 
 ------------------------------------------------------------------------
 

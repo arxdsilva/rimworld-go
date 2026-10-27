@@ -117,7 +117,7 @@ func (g *Game) tickNeeds(id entity.EntityID, a *animal.State, now uint64) bool {
 		a.Food, a.Rest = animal.Full, animal.Full
 		return true
 	}
-	if sleeping(*a) {
+	if lyingDown(*a) { // animal_health.go: asleep or downed
 		a.Food -= rateStep(now, animal.FoodPerDay/2, clock.TicksPerDay)
 		a.Rest = min(animal.Full, a.Rest+rateStep(now, animal.SleepPerHour, clock.TicksPerHour))
 	} else {
@@ -296,9 +296,16 @@ func (g *Game) endFight(a *animal.State) {
 // attacker it always fights or runs: a fighter (canFightBack) goes for its
 // attacker, keeping a foe it already has; anyone who can't fight back
 // runs on every hit (fleeHit). A manhunter fights on. Traps and bursts
-// (no attacker) only wake it, and a wild flee-class animal runs.
+// (no attacker) only wake it, and a wild flee-class animal runs. A hit
+// that downs it (or one on a downed animal) gets no reaction.
 func (g *Game) animalHurt(id entity.EntityID, a *animal.State, by entity.EntityID, now uint64) {
 	a.NextDecide = now
+	if a.DownsNow() {
+		g.downAnimal(id, a, now) // animal_health.go: too hurt to stand
+	}
+	if a.Downed {
+		return // lying where it fell: it neither fights back nor runs
+	}
 	if by == 0 || by == id {
 		g.hurtBlind(a, now)
 		return
@@ -961,6 +968,8 @@ func (g *Game) fillAnimalNeeds(av *AnimalView, a animal.State) {
 	now := uint64(g.clock.Now())
 	av.State = a.Mode.String()
 	switch {
+	case a.Downed:
+		av.State = "downed" // animal_health.go
 	case a.Mode == animal.Attack && a.HuntSince != 0:
 		av.State = "hunting"
 		if p := g.animals.Ref(a.Target); p != nil {

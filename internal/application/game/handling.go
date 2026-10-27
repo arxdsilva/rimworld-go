@@ -116,7 +116,7 @@ func (g *Game) doTame(id entity.EntityID, j job.Record) {
 	}
 	def := animal.DefOf(a.Species)
 	now := uint64(g.clock.Now())
-	tamed := g.rng.IntN(100) < g.tameChance(id, def.TameChance) // skills.go
+	tamed := g.rng.IntN(100) < tameChanceOf(g.tameChance(id, def.TameChance), a) // skills.go
 	if tamed {
 		a.Tame, a.TameMark, a.Designated = true, false, false
 		a.Name = petNames[g.rng.IntN(len(petNames))]
@@ -142,6 +142,19 @@ func (g *Game) doTame(id entity.EntityID, j job.Record) {
 	g.jobs.Set(id, j)
 }
 
+// downedTameMul multiplies the chance of taming a downed animal: too weak
+// to resist the handler (original tuning).
+const downedTameMul = 2
+
+// tameChanceOf is the percent chance a taming of animal a succeeds, from
+// the handler's chance: doubled for a downed animal (at most 100).
+func tameChanceOf(chance int, a animal.State) int {
+	if a.Downed {
+		return min(chance*downedTameMul, 100)
+	}
+	return chance
+}
+
 // enrage turns a wild animal manhunter for a day, going for who; a
 // legendary's rage calls every legendary nearby (wildlife.go).
 func (g *Game) enrage(id entity.EntityID, a *animal.State, who entity.EntityID, now uint64) {
@@ -151,6 +164,9 @@ func (g *Game) enrage(id entity.EntityID, a *animal.State, who entity.EntityID, 
 	a.Manhunter = now + animal.ManhunterTicks
 	a.Mode, a.Target, a.TameMark, a.FleeUntil = animal.Attack, who, false, 0
 	a.Path, a.PathI = nil, 0
+	if a.Downed { // animal_health.go: enraged, but it cannot hunt until it stands
+		a.Mode, a.Target = animal.Wander, 0
+	}
 	g.logEvent(id, logEntry{Kind: logManhunter, Other: who})
 	p, _ := g.positions.Get(id)
 	g.post(MessageView{Tick: now, Text: fmt.Sprintf("A %s has gone manhunter!", a.Species.Label()),

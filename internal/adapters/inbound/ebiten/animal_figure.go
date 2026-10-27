@@ -60,6 +60,23 @@ func (r *Renderer) animalRestFallback(an game.AnimalView) bool {
 // restDim is the colour scale of the stand-in rest frame (10% darker).
 var restDim = colorScale{0.9, 0.9, 0.9, 1}
 
+// downedTint greys a downed animal's rest pose slightly (cool and a touch
+// darker), so it reads apart from a sleeper.
+var downedTint = colorScale{0.78, 0.8, 0.86, 1}
+
+// animalFigureScale is the colour scale of an animal's figure: the
+// downed tint, times the stand-in rest frame's dimming.
+func (r *Renderer) animalFigureScale(an game.AnimalView) (colorScale, bool) {
+	cs, ok := noCS, false
+	if an.Downed {
+		cs, ok = downedTint, true
+	}
+	if r.animalRestFallback(an) {
+		cs, ok = mulCS(cs, restDim), true
+	}
+	return cs, ok
+}
+
 // youngPose scales a juvenile's figure about its feet (Scale 0.55..1; 0
 // or 1 is full size).
 func youngPose(ps pose, scale float64) pose {
@@ -94,8 +111,8 @@ func (r *Renderer) drawAnimalFigure(dst *ebiten.Image, an game.AnimalView, wx, w
 	if r.animalMirrored(an) {
 		ps = mirrored(ps)
 	}
-	if r.animalRestFallback(an) {
-		ps.cs = restDim
+	if cs, ok := r.animalFigureScale(an); ok {
+		ps.cs = cs
 	}
 	r.drawSpritePose(dst, r.animalFrameKey(an), color.NRGBA{}, wx, wy, tile, ps)
 	r.figureBlood = 0

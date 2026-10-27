@@ -221,7 +221,7 @@ func (a *App) barCount() int {
 	}
 	n := 0
 	for _, p := range a.renderer.snapshot() {
-		if !p.Prisoner {
+		if !p.Prisoner && !p.Visitor { // as barPawns: visitors and allies stay off the bar
 			n++
 		}
 	}

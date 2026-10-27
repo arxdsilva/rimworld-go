@@ -974,7 +974,7 @@ treatment, and surgery are major colony-management systems.
     -   Derived from injuries/conditions.
     -   affects consciousness/mood/performance.
     -   extreme pain can down pawn.
--   [x] **Downed state** (MED-01: downed by consciousness < 30 %, moving < 15 % or pain shock, back up at 35 %/20 %/shock − 5 % (hysteresis); rescue and capture work (PLAY-010, SIM-045); rest 0 forces sleep instead of downing)
+-   [x] **Downed state** (MED-01: downed by consciousness < 30 %, moving < 15 % or pain shock, back up at 35 %/20 %/shock − 5 % (hysteresis); rescue and capture work (PLAY-010, SIM-045); rest 0 forces sleep instead of downing; MED-12: animals go down at 80 % injury or severe blood loss and stand at 50 % / moderate (hysteresis), lie where they fell, are tended in place, can be finished by predators and hunters, and tame at double chance)
     -   Pawn cannot normally act.
     -   can be rescued/captured.
     -   not equivalent to death.
@@ -1615,7 +1615,7 @@ change relationships, and settlements exist on the world map.
 
 -   [x] **Relationship score** (NG-1: goodwill -100..100 with hysteresis: hostile at -50 or less, calm again at -10; friendly at +50, neutral again below +30)
     -   Hostile / neutral / ally states derived from goodwill/rules.
--   [-] **Goodwill changes** (NG-1: a repelled raid costs 5 and goodwill drifts toward a baseline daily; PLAY-024: gifts by radio (1 per 40 silver, at most 15), caravan requests cost 12, killing or capturing a trader costs 40; no quests; aid in PLAY-024 phase 4)
+-   [-] **Goodwill changes** (NG-1: a repelled raid costs 5 and goodwill drifts toward a baseline daily; PLAY-024: gifts by radio (1 per 40 silver, at most 15), caravan requests cost 12, killing or capturing a trader costs 40, military aid costs 20 (friendly only, 3-day cooldown); no quests)
     -   Gifts.
     -   attacks.
     -   harming visitors.
@@ -1653,11 +1653,11 @@ change relationships, and settlements exist on the world map.
 
 ## 20.5 Orbital trade
 
--   [x] **Communications console** (PLAY-024: powered radio console behind Radio relay research: faction list, gifts, caravan requests, call trade ship; military aid in phase 4)
+-   [x] **Communications console** (PLAY-024: powered radio console behind Radio relay research: faction list, gifts, caravan requests, call trade ship, military aid)
 -   [x] **Orbital trade beacon** (PLAY-024: goods within 6 tiles are tradable with ships; purchases land by drop pod)
     -   Defines tradeable nearby storage.
 -   [x] **Orbital trader event** (PLAY-024: a ship in radio range for 1.5 days when a powered console exists; letter and alert)
--   [-] **Remote faction communication** (PLAY-024: gifts and caravan requests by radio; military aid in phase 4)
+-   [x] **Remote faction communication** (PLAY-024: gifts, caravan requests and military aid by radio (ENG-007))
     -   Request caravans/help where relationship allows.
 
 ------------------------------------------------------------------------

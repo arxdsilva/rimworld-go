@@ -233,6 +233,8 @@ type PawnView struct {
 	Prisoner     bool
 	Visitor      bool
 	SocialFight  bool
+	// Ally: a visitor sent as military aid (PLAY-024), fighting raiders.
+	Ally bool
 	// Disfigured: a scar on the face (body.Disfigured); the renderer draws it.
 	Disfigured bool
 }

@@ -427,8 +427,13 @@ func (g *Game) hostile(a animal.State) bool {
 	return !a.Tame && a.Mode == animal.Attack && a.Target != 0 && g.isPawn(a.Target) && !g.isRaider(a.Target)
 }
 
-// assignHunt sends a hunter after the nearest designated animal, first
-// fetching a free ranged weapon if it has none.
+// huntDownedFirst is added to a standing animal's distance in assignHunt,
+// so any downed one is nearer.
+const huntDownedFirst = 1 << 20
+
+// assignHunt sends a hunter after the nearest designated animal (a downed
+// one first: the hunter finishes it), first fetching a free ranged weapon
+// if it has none.
 // The next nearest animal is tried when one can't be started (out of
 // reach, postponed: SIM-027), at most workTries animals.
 func (g *Game) assignHunt(id entity.EntityID) bool {
@@ -452,7 +457,11 @@ func (g *Game) assignHunt(id entity.EntityID) bool {
 				continue
 			}
 			ap, _ := g.positions.Get(aid)
-			if d := manhattan(pos.X, pos.Y, ap.X, ap.Y); d < bestD {
+			d := manhattan(pos.X, pos.Y, ap.X, ap.Y)
+			if !a.Downed {
+				d += huntDownedFirst // a downed animal is finished first (animal_health.go)
+			}
+			if d < bestD {
 				best, bestD, bp = aid, d, ap
 			}
 		}

@@ -616,7 +616,7 @@ func TestCommsGiftRaisesGoodwill(t *testing.T) {
 			row = &cv.Factions[i]
 		}
 	}
-	if row == nil || !row.Gift.Allowed || row.Gift.Cost != faction.GiftSilverPerGoodwill || row.Aid.Allowed || row.Aid.Reason != ReasonNotYet {
+	if row == nil || !row.Gift.Allowed || row.Gift.Cost != faction.GiftSilverPerGoodwill || row.Aid.Allowed || row.Aid.Reason != faction.ReasonNotFriend {
 		t.Fatalf("faction row %+v", row)
 	}
 	g.Enqueue(command.Command{Kind: command.CommsGift, Index: f.ID, Count: 400}) // more than in reach

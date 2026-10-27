@@ -60,6 +60,9 @@ type visitorRec struct {
 	LeaveAt uint64
 	Leaving bool
 	RetryAt uint64
+	// Ally: a fighter sent as military aid (allies.go, PLAY-024); false
+	// for every ordinary visitor and in older saves.
+	Ally bool
 }
 
 // visitingFactions are the factions (1 + index) that may send visitors:
@@ -202,6 +205,9 @@ func (g *Game) visitorsTick(now uint64) {
 			kept = append(kept, v)
 		} else {
 			g.traderVisitorGone(v.ID) // trade_caravan.go (PLAY-024): the trader's goods
+			if v.Ally {
+				g.allyGone(v) // allies.go: a letter for one who fell
+			}
 		}
 	}
 	clear(w.visitors[len(kept):])
@@ -240,6 +246,9 @@ func (g *Game) visitorStep(v *visitorRec, now uint64) bool {
 	if v.Leaving && (g.nearBorder(pos) || j.Kind == job.Move && j.State == job.Complete || now >= v.LeaveAt+visitorGiveUp) {
 		g.departVisitor(v.ID)
 		return false
+	}
+	if v.Ally && !v.Leaving {
+		return g.allyStep(v, pos, j, now) // allies.go: fight, else stroll
 	}
 	if j.State == job.Complete || j.State == job.Fail || j.State == job.Do && j.Kind != job.Visit {
 		// a finished walk, or another system's job left standing (a step

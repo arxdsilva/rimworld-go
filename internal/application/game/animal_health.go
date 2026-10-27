@@ -32,8 +32,9 @@ import (
 // it and never add up to more (reconcileAnimalBody): a wound adds to
 // both, healing a wound takes it off Injury, and Injury healed another way
 // (a tame animal's natural heal) trims the smallest open wounds. A vet's
-// tend works on the wounds (tendAnimalBody). Animals have no downed state, so blood loss and infections
-// kill but do not down.
+// tend works on the wounds (tendAnimalBody). Blood loss and infections
+// kill; a bad enough injury or blood loss downs the animal first
+// (animal.State.DownsNow, below).
 //
 // Once an hour the medical phase (phaseMedical, bleed.go) walks the
 // animal patients (sorted ids of animals with a body; derived, rebuilt
@@ -206,14 +207,98 @@ func (g *Game) stepAnimalBody(id entity.EntityID, a *animal.State, now uint64) b
 		return true
 	}
 	lying := int32(0)
-	if sleeping(*a) { // animal_needs.go
+	if lyingDown(*a) {
 		lying = body.LieGround
 	}
 	before := b.Damage()
 	b.HealHour(noScarRoll, lying)
 	a.Injury = max(0, a.Injury-(before-b.Damage()))
 	reconcileAnimalBody(a)
+	g.checkAnimalDowned(id, a, now)
 	return false
+}
+
+// ---- downed animals ----
+//
+// An animal goes down at animal.DownInjuryPct of its hit points lost or
+// with severe blood loss, and stands again only at animal.UpInjuryPct with
+// blood loss below moderate (the hysteresis lives in the domain:
+// animal.State.DownsNow and StandsUp). It is checked when the animal is
+// hurt (animalHurt), on the hourly medical step of an animal patient
+// (stepAnimalBody) and on the animal's own decision cycle (downedThink:
+// starvation, a tend without a body) — never by a scan of every animal.
+//
+// A downed animal lies where it fell (the rest pose, tinted): thinkAnimal
+// returns at once, so it neither wanders, flees, fights, hunts nor feeds,
+// and it takes no path step (moveAnimal). It still bleeds, heals, starves
+// and can die. Predators take it as easy prey (huntable, findPrey),
+// hunters finish a marked one first (assignHunt), a vet tends a tame one
+// where it lies, and a downed wild animal is easier to tame (doTame).
+
+// lyingDown reports an animal lying on the ground: asleep, or downed. It
+// heals as a sleeper and its rest refills.
+func lyingDown(a animal.State) bool { return a.Downed || sleeping(a) } // animal_needs.go
+
+// checkAnimalDowned downs animal id (state a) when it is now too hurt or
+// bled to stand, or stands a downed one well enough again. It reports a
+// change.
+func (g *Game) checkAnimalDowned(id entity.EntityID, a *animal.State, now uint64) bool {
+	switch {
+	case a.DownsNow():
+		g.downAnimal(id, a, now)
+		return true
+	case a.StandsUp():
+		a.Downed, a.DownedTick = false, 0
+		a.Mode, a.Path, a.PathI = animal.Wander, nil, 0
+		a.NextDecide = now // it thinks again at once
+		return true
+	}
+	return false
+}
+
+// downAnimal puts animal id (state a) down at tick now: it drops whatever
+// it was doing (a hunt, a flight, a meal, a charge, a manhunter's chase)
+// and lies where it is.
+func (g *Game) downAnimal(id entity.EntityID, a *animal.State, now uint64) {
+	a.Downed, a.DownedTick = true, now
+	a.Mode, a.Path, a.PathI = animal.Wander, nil, 0
+	a.Target, a.HuntSince, a.FleeUntil, a.ChargeSince = 0, 0, 0, 0
+	a.Feed, a.FeedLeft = animal.FeedTarget{}, 0
+	g.logEvent(id, logEntry{Kind: logDowned})
+	if a.Tame && a.Name != "" {
+		pos, _ := g.positions.Get(id)
+		g.message(pos.X, pos.Y, "%s the %s is down.", a.Name, a.Species.Label())
+	}
+}
+
+// downedThink is a downed animal's tick in thinkAnimal: it lies still,
+// and on its decision cycle a tame one heals naturally and it is checked
+// for standing up. A standing animal is checked for going down on its
+// decision cycle too (starvation hurts outside combat). It reports the
+// animal is (still) down: thinkAnimal does nothing else.
+func (g *Game) downedThink(id entity.EntityID, a *animal.State, now uint64) bool {
+	if now >= a.NextDecide {
+		if !a.Downed {
+			if !a.DownsNow() {
+				return false
+			}
+			g.downAnimal(id, a, now)
+		}
+		a.NextDecide = nextDecide(id, now) // animal_needs.go
+		if a.Tame && (now+uint64(id))%animal.DecideEvery == 0 {
+			g.naturalHeal(id, a, now) // vet_animals.go
+		}
+		if g.checkAnimalDowned(id, a, now) && !a.Downed {
+			return false // up again: it decides at once
+		}
+	}
+	if !a.Downed {
+		return false
+	}
+	// whatever was set on it from outside (a pack's call, a rally), it
+	// lies still
+	a.Mode, a.Target, a.Path, a.PathI = animal.Wander, 0, nil, 0
+	return true
 }
 
 // noScarRoll is the scar roll animal healing passes: never a scar (an

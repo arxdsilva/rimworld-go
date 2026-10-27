@@ -70,7 +70,8 @@ func (g *Game) commsFaction(f faction.Faction, beacons bool, silver int, now uin
 	}
 	row.Caravan = CommsActionView{Cost: faction.CaravanCost}
 	row.Caravan.Allowed, row.Caravan.Reason = g.caravanRequestOK(f, now)
-	row.Aid = CommsActionView{Cost: faction.AidCost, Reason: ReasonNotYet} // Phase 4: military aid
+	row.Aid = CommsActionView{Cost: faction.AidCost}
+	row.Aid.Allowed, row.Aid.Reason = g.aidRequestOK(f, now) // allies.go (Phase 4)
 	return row
 }
 
@@ -142,9 +143,20 @@ func (g *Game) cmdCommsRequestCaravan(id int) {
 	g.worldNote("%s will send a trade caravan; it should arrive in about %d hours.", f.Name, hours)
 }
 
-// cmdCommsRequestAid asks faction for military aid (PLAY-024 Phase 4:
-// not yet; CommsView shows it disabled).
-func (g *Game) cmdCommsRequestAid(id int) {}
+// cmdCommsRequestAid asks faction id for military aid (allies.go): it
+// costs goodwill, starts the cooldown and the fighters come in 2-4 hours.
+func (g *Game) cmdCommsRequestAid(id int) {
+	f := g.factionByID(id)
+	now := uint64(g.clock.Now())
+	if g.trade.comms == nil || f == nil {
+		return
+	}
+	if ok, _ := g.aidRequestOK(*f, now); !ok {
+		return
+	}
+	hours := g.requestAid(f, now)
+	g.worldNote("%s will send fighters to help; they should arrive in about %d hours.", f.Name, hours)
+}
 
 // cmdCloseComms ends the comms session.
 func (g *Game) cmdCloseComms() { g.trade.comms = nil }

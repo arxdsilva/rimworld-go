@@ -70,8 +70,11 @@ type AnimalView struct {
 	Product     string
 	ProductPct  int
 	Sleeping    bool
-	Leaving     bool
-	Herd        uint32
+	// Downed: too hurt or bled to stand (animal_health.go); Sleeping is
+	// set with it, so the renderer draws the rest pose (tinted).
+	Downed  bool
+	Leaving bool
+	Herd    uint32
 	// Dormant (MAPGEN-3): a sealed vault's sleeping defender (vault.go).
 	Dormant bool
 	// PLAY-015: Penned livestock show Pen (the pen's name, "Roaming" or
@@ -221,11 +224,15 @@ func (g *Game) phaseAnimals() {
 	}
 }
 
-// thinkAnimal is one animal's tick: rage, being tamed, fleeing and
-// fighting come first; then a leaving animal walks off; then needs pick
-// between wandering, feeding and resting (decide, paced).
+// thinkAnimal is one animal's tick: a downed animal only lies there;
+// otherwise rage, being tamed, fleeing and fighting come first; then a
+// leaving animal walks off; then needs pick between wandering, feeding and
+// resting (decide, paced).
 func (g *Game) thinkAnimal(id entity.EntityID, a *animal.State, now uint64) {
-	a.Normalise(uint64(id)) // an older save's (or a fixture's) hunger counter
+	a.Normalise(uint64(id))        // an older save's (or a fixture's) hunger counter
+	if g.downedThink(id, a, now) { // animal_health.go: a downed animal lies still
+		return
+	}
 	def := animal.DefOf(a.Species)
 	pos, _ := g.positions.Get(id)
 	if g.thinkManhunter(id, a, now) {
@@ -482,13 +489,19 @@ func (g *Game) validPrey(self, t entity.EntityID) bool {
 	return g.standingPawn(t)
 }
 
-// findPrey: the nearest animal the predator can take within its hunt
-// radius (huntable), else a standing colonist within AggroRadius. A pack
+// findPrey: the nearest downed animal the predator can take within its
+// hunt radius (huntable), else the nearest it can take at all, else a standing colonist within AggroRadius. A pack
 // predator's mates nearby join the hunt.
 func (g *Game) findPrey(id entity.EntityID, pos Position, def animal.Def) entity.EntityID {
 	best, _, ok := g.nearestWhere(pos.X, pos.Y, huntRadius(def), ckAnimal, func(o entity.EntityID, _ Position) bool {
-		return g.huntable(id, o)
+		a := g.animals.Ref(o)
+		return a != nil && a.Downed && g.huntable(id, o) // easy prey first (animal_health.go)
 	})
+	if !ok {
+		best, _, ok = g.nearestWhere(pos.X, pos.Y, huntRadius(def), ckAnimal, func(o entity.EntityID, _ Position) bool {
+			return g.huntable(id, o)
+		})
+	}
 	if ok {
 		if def.Pack {
 			g.callPack(id, pos, best)
@@ -515,7 +528,9 @@ func huntRadius(def animal.Def) int {
 
 // huntable: prey a predator can take: a living non-predator no bigger
 // than itself (XS or S only for a small-prey hunter, or a meat eater that
-// is no predator), never a hive insect or a legendary.
+// is no predator), never a hive insect or a legendary. A downed animal
+// (animal_health.go) is easy prey: a predator takes it whatever its size,
+// a downed predator too.
 func (g *Game) huntable(self, t entity.EntityID) bool {
 	if !g.validPrey(self, t) {
 		return false
@@ -526,14 +541,14 @@ func (g *Game) huntable(self, t entity.EntityID) bool {
 	}
 	me, _ := g.animals.Get(self)
 	od, md := animal.DefOf(o.Species), animal.DefOf(me.Species)
-	if od.Predator || od.Hive || od.Legendary {
+	if od.Hive || od.Legendary || od.Predator && !o.Downed {
 		return false
 	}
 	size := animal.RosterOf(o.Species).Size
 	if md.SmallPrey || !md.Predator {
 		return size <= animal.SizeS
 	}
-	return size <= animal.RosterOf(me.Species).Size
+	return o.Downed || size <= animal.RosterOf(me.Species).Size // a downed animal of any size is easy prey
 }
 
 // callPack sets idle wild pack mates of id's species within packRadius on
@@ -616,6 +631,12 @@ func (g *Game) moveAnimal(id entity.EntityID, m motionRec, now uint64) {
 	ar := g.animals.Ref(id)
 	if ar == nil {
 		return // removed earlier this tick
+	}
+	if ar.Downed && ar.PathI < len(ar.Path) { // animal_health.go: a downed animal takes no step
+		a := *ar
+		a.Path, a.PathI = nil, 0
+		g.animals.Set(id, a)
+		return
 	}
 	if ar.PathI >= len(ar.Path) {
 		if m.BlockedTicks != 0 || m.BlockedBy != 0 {
@@ -831,7 +852,8 @@ func (g *Game) animalViews() []AnimalView {
 			av.BlockedBy = m.BlockedBy
 		}
 		g.fillAnimalAction(av, id, actionState(a))
-		if av.Sleeping = sleeping(a); av.Sleeping {
+		av.Downed = a.Downed
+		if av.Sleeping = lyingDown(a); av.Sleeping { // animal_health.go: asleep or downed
 			av.Action = "" // the renderer draws the rest pose
 		}
 		g.fillAnimalNeeds(av, a) // animal_needs.go

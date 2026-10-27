@@ -65,9 +65,6 @@ const (
 	ReasonNotSowable = "cannot sow here"
 	ReasonSowingOff  = "sowing is off in this zone" // PLAY-020: the zone's Allow sowing
 	ReasonGone       = "no longer there"
-	// ReasonNotYet: a PLAY-024 action not hosted yet (the comms dialog's
-	// military aid until Phase 4).
-	ReasonNotYet = "not yet"
 )
 
 func (g *Game) drafted(id entity.EntityID) bool { return g.draft[id] }

@@ -297,13 +297,16 @@ func TestHurtPredatorBreaksOff(t *testing.T) {
 			t.Fatalf("tick %d: back in the fight while badly hurt: %+v", i, a)
 		}
 	}
-	// an enraged one fights to the death
+	// an enraged one fights on, badly hurt, until it goes down
 	h := New(Config{Seed: 1, Width: 40, Height: 20})
 	bo := draftedPawn(t, h, 10, 10)
 	mad, _ := h.SpawnAnimal("timber_wolf", 11, 10)
 	a := animalOf(h, mad)
 	h.enrage(mad, &a, bo, uint64(h.clock.Now()))
-	a.Injury = maxHP - 2
+	a.Injury = (maxHP*animal.DownInjuryPct - 1) / 100 // badly hurt, still standing
+	if !badlyHurt(a) || a.DownsNow() {
+		t.Fatalf("injury %d of %d: badly hurt and standing", a.Injury, maxHP)
+	}
 	h.animals.Set(mad, a)
 	h.Step(1)
 	if a := animalOf(h, mad); a.Mode != animal.Attack {

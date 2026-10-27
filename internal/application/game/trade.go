@@ -49,6 +49,7 @@ type tradeState struct {
 	pods      []tradePod        // by landing tick, then position
 	cooldowns []factionCooldown // ascending faction id
 	requests  []caravanRequest  // by arrival tick, then faction
+	aid       []aidCall         // military aid, by request (allies.go)
 	session   *tradeSession
 	comms     *commsSession
 }
@@ -120,16 +121,17 @@ type tradeSave struct {
 	Pods      []tradePod
 	Cooldowns []factionCooldown
 	Requests  []caravanRequest
+	Aid       []aidCall // allies.go (Phase 4): nil without aid
 }
 
 // exportTrade is the Trade save field (nil: nothing to keep).
 func (g *Game) exportTrade() *tradeSave {
 	t := &g.trade
-	if t.caravan == nil && t.orbital == nil && len(t.pods) == 0 && len(t.cooldowns) == 0 && len(t.requests) == 0 {
+	if t.caravan == nil && t.orbital == nil && len(t.pods) == 0 && len(t.cooldowns) == 0 && len(t.requests) == 0 && len(t.aid) == 0 {
 		return nil
 	}
 	return &tradeSave{Version: tradeSaveVersion, Caravan: cloneCaravan(t.caravan), Orbital: cloneShip(t.orbital),
-		Pods: clonePodsT(t.pods), Cooldowns: slices.Clone(t.cooldowns), Requests: slices.Clone(t.requests)}
+		Pods: clonePodsT(t.pods), Cooldowns: slices.Clone(t.cooldowns), Requests: slices.Clone(t.requests), Aid: slices.Clone(t.aid)}
 }
 
 // importTrade restores exportTrade's state (nil: none); open sessions
@@ -140,7 +142,7 @@ func (g *Game) importTrade(s *tradeSave) {
 		return
 	}
 	g.trade = tradeState{caravan: cloneCaravan(s.Caravan), orbital: cloneShip(s.Orbital), pods: clonePodsT(s.Pods),
-		cooldowns: slices.Clone(s.Cooldowns), requests: slices.Clone(s.Requests)}
+		cooldowns: slices.Clone(s.Cooldowns), requests: slices.Clone(s.Requests), aid: slices.Clone(s.Aid)}
 }
 
 func cloneStock(s trade.Stock) trade.Stock {
@@ -180,8 +182,11 @@ func clonePodsT(ps []tradePod) []tradePod {
 // trader are gone close.
 func (g *Game) tradeTick(now uint64) {
 	t := &g.trade
-	if t.caravan == nil && t.orbital == nil && len(t.pods) == 0 && len(t.requests) == 0 && t.session == nil && t.comms == nil {
+	if t.caravan == nil && t.orbital == nil && len(t.pods) == 0 && len(t.requests) == 0 && len(t.aid) == 0 && t.session == nil && t.comms == nil {
 		return
+	}
+	if len(t.aid) > 0 {
+		g.aidTick(now) // allies.go (Phase 4): military aid
 	}
 	if len(t.requests) > 0 && now >= t.requests[0].At {
 		g.requestedCaravanDue(now) // trade_caravan.go

@@ -500,6 +500,8 @@ func animalTrainingCell(an game.AnimalView) string {
 // animalDoing is what the Colony list's last column says.
 func animalDoing(an game.AnimalView) string {
 	switch {
+	case an.Downed: // too hurt to stand (it may also be marked)
+		return "Downed"
 	case an.Designated:
 		return "marked for slaughter"
 	case an.State != "":

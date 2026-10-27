@@ -140,12 +140,18 @@ func (a *App) pawnPane(id entity.EntityID) paneSpec {
 	}
 }
 
-// pawnSubtitle is "Age 31, Convoy mechanic" (a prisoner says so first; a
-// legacy colonist with neither age nor title is just a colonist).
+// pawnSubtitle is "Age 31, Convoy mechanic" (a prisoner, ally or visitor
+// says so first; a legacy colonist with neither age nor title is just a
+// colonist).
 func pawnSubtitle(p game.PawnView) string {
 	var parts []string
-	if p.Prisoner {
+	switch {
+	case p.Prisoner:
 		parts = append(parts, "Prisoner")
+	case p.Ally:
+		parts = append(parts, "Ally")
+	case p.Visitor:
+		parts = append(parts, "Visitor")
 	}
 	if p.AgeYears > 0 {
 		parts = append(parts, fmt.Sprintf("Age %d", p.AgeYears))

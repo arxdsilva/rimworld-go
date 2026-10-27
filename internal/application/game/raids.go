@@ -443,9 +443,9 @@ func (g *Game) thinkRaider(id entity.EntityID, now uint64) {
 			return
 		}
 		if j.Kind == job.Breach && j.Active() {
-			// keep bashing unless a colonist comes into reach (re-planning
-			// now and then in case a way in opened up)
-			_, tp, ok := g.nearestColonist(pos)
+			// keep bashing unless a colonist (or ally) comes into reach
+			// (re-planning now and then in case a way in opened up)
+			_, tp, ok := g.raidTarget(pos) // allies.go
 			if (now+uint64(id))%300 != 0 && (!ok || !g.canHit(pos, weaponDefOf(g, id), tp)) {
 				g.doBreach(id, j)
 				return
@@ -454,7 +454,7 @@ func (g *Game) thinkRaider(id entity.EntityID, now uint64) {
 		if now < r.RetryAt && !j.Active() {
 			return // no way in last time: wait before planning again
 		}
-		target, tp, ok := g.nearestColonist(pos)
+		target, tp, ok := g.raidTarget(pos) // allies.go: colonists and allies (PLAY-024)
 		if !ok {
 			if r.Idle == 0 {
 				r.Idle = now

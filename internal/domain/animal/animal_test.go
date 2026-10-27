@@ -1,6 +1,10 @@
 package animal
 
-import "testing"
+import (
+	"testing"
+
+	"rimworld-go/internal/domain/pawn/body"
+)
 
 func TestSpeciesRules(t *testing.T) {
 	t.Parallel()
@@ -74,5 +78,40 @@ func TestFighterAndCharger(t *testing.T) {
 		if Fighter(c.s) != c.fighter || Charger(c.s) != c.charger {
 			t.Errorf("%s: fighter %v charger %v, want %v %v", c.s, Fighter(c.s), Charger(c.s), c.fighter, c.charger)
 		}
+	}
+}
+
+// Downed thresholds: down at 70% injury or severe blood loss, up only at
+// 50% injury with blood loss below moderate (the gap is the hysteresis).
+func TestDownedThresholds(t *testing.T) {
+	t.Parallel()
+	hp := DefOf(Dustbuck).MaxHP // 55
+	s := State{Species: Dustbuck, Injury: hp*DownInjuryPct/100 - 1}
+	if s.DownsNow() {
+		t.Fatal("below 70% injury it stands")
+	}
+	s.Injury = (hp*DownInjuryPct + 99) / 100
+	if !s.DownsNow() {
+		t.Fatal("at 70% injury it goes down")
+	}
+	s.Downed = true
+	if s.DownsNow() || s.StandsUp() {
+		t.Fatal("down already; too hurt to stand")
+	}
+	s.Injury = hp * UpInjuryPct / 100
+	if !s.StandsUp() {
+		t.Fatal("at 50% injury it stands")
+	}
+	s.Body = &body.Body{BloodLoss: UpBloodLoss}
+	if s.StandsUp() {
+		t.Fatal("moderate blood loss keeps it down")
+	}
+	s = State{Species: Dustbuck, Body: &body.Body{BloodLoss: DownBloodLoss}}
+	if !s.DownsNow() {
+		t.Fatal("severe blood loss downs an unhurt animal")
+	}
+	s.Injury = hp
+	if s.DownsNow() {
+		t.Fatal("the dead do not go down")
 	}
 }

@@ -183,6 +183,12 @@ func TestTerritorialReactionDoesNotFlap(t *testing.T) {
 		if !ok {
 			t.Fatalf("tick %d: the boar died", i)
 		}
+		if a.Downed { // beaten down after it ran: it lies there, neither fighting nor fleeing
+			if !broke {
+				t.Fatalf("tick %d: downed before it broke off: %+v", i, a)
+			}
+			continue
+		}
 		if a.Mode == prev {
 			continue
 		}

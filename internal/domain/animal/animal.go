@@ -659,6 +659,12 @@ type State struct {
 	// while present and older saves load with none. Injury stays the hit
 	// point scalar; the wounds never add up to more than it.
 	Body *body.Body
+	// Downed (MED-09 follow-up): too hurt or too bled to stand. A downed
+	// animal lies where it fell and does nothing but bleed, heal and be
+	// tended; DownedTick is the tick it went down. Zero in older saves
+	// (standing).
+	Downed     bool
+	DownedTick uint64
 }
 
 // Enraged reports a manhunter at tick now.
@@ -675,6 +681,44 @@ func (s State) HP() int {
 
 // Dead reports whether the animal has no hit points left.
 func (s State) Dead() bool { return s.HP() <= 0 }
+
+// Downed thresholds (original tuning). An animal goes down at
+// DownInjuryPct of its hit points lost, or with blood loss at the severe
+// stage (DownBloodLoss, permille); it stands again only once its injury is
+// down to UpInjuryPct and its blood loss below the moderate stage
+// (UpBloodLoss). The gap between the two lines is the hysteresis: an
+// animal hovering at one threshold does not flap between lying and
+// standing. The down line sits past BadlyHurt (a fighter breaks off with
+// less than 30% of its hit points left), so a hurt animal first runs, and
+// only goes down if the hits keep coming.
+const (
+	DownInjuryPct = 80
+	UpInjuryPct   = 50
+	DownBloodLoss = 450
+	UpBloodLoss   = 300
+)
+
+// bloodLoss is the animal's blood loss, permille (0 without a body).
+func (s State) bloodLoss() int32 {
+	if s.Body == nil {
+		return 0
+	}
+	return s.Body.BloodLoss
+}
+
+// DownsNow reports a standing, living animal that is hurt or bled enough
+// to go down.
+func (s State) DownsNow() bool {
+	if s.Downed || s.Dead() {
+		return false
+	}
+	return s.Injury*100 >= DefOf(s.Species).MaxHP*DownInjuryPct || s.bloodLoss() >= DownBloodLoss
+}
+
+// StandsUp reports a downed animal well enough to stand again.
+func (s State) StandsUp() bool {
+	return s.Downed && s.Injury*100 <= DefOf(s.Species).MaxHP*UpInjuryPct && s.bloodLoss() < UpBloodLoss
+}
 
 // Hungry reports whether a predator wants to hunt: its food is below
 // FeedStart (or, in a save from before needs, it went HungerTicks without
