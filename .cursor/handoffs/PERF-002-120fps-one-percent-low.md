@@ -26,6 +26,17 @@ The fps and 1 % low columns below are therefore meaningful only from runs on a 1
 | wave 2 `b74e56459` (2, 3, 7), 30 s A/B | 0.1 | 29.9 | 13.5 | 74 ms | 2.53 / 3.90 ms | 5.54 / 9.2 ms | 8.07 / 13.1 ms | — |
 | wave 1 `be4b924fd`, same 30 s A/B | 0.1 | 30.0 | 13.7 | 73 ms | 2.52 / 3.70 ms | 5.55 / 10.0 ms | 8.07 / 13.7 ms | — |
 
+| final `6f8c0a478`, world 1 | 0.1 | 30.0 | 23.6 | 42.5 ms | 2.55 / 3.83 ms | 5.52 / 9.98 ms | 8.06 / 13.8 ms | — |
+| final `6f8c0a478`, world 1 | 0.8 | 30.0 | 27.2 | 36.7 ms | 2.33 / 3.64 ms | 6.15 / 7.56 ms | 8.48 / 11.2 ms | — |
+| final `6f8c0a478`, world 0.75 | 0.1 | 30.0 | 26.6 | 37.6 ms | 2.56 / 3.87 ms | 5.49 / 8.56 ms | 8.05 / 12.4 ms | — |
+| final `6f8c0a478`, world 0.75 | 0.8 | 30.0 | 27.2 | 36.7 ms | 2.34 / 3.63 ms | 6.23 / 7.74 ms | 8.57 / 11.4 ms | — |
+| final `6f8c0a478`, world 0.5 | 0.1 | 30.0 | 26.8 | 37.4 ms | 2.55 / 3.87 ms | 5.38 / 9.07 ms | 7.92 / 12.9 ms | — |
+| final `6f8c0a478`, world 0.5 | 0.8 | 30.0 | 27.8 | 35.9 ms | 2.33 / 3.56 ms | 6.17 / 7.78 ms | 8.50 / 11.3 ms | — |
+
+Reading the table on this 30 Hz display: update fell from 3.4 to 2.5 ms per frame (hot spot 1) and the display-bound 1 % low at zoom 0.1 rose from 15.6 to 23.6 (fewer GC-long frames); the render scale leaves the CPU work alone (it is GPU fill) and lifts the 1 % low to 26.6–26.8. The budget held 0 Updates on the grown colony (no raid). Final benchmarks: `BenchmarkDrawArt500` z1 0.95 ms / 439 draw calls / 780 KB / 3749 allocs, z0.25 3.09 ms / 6436 allocs, zmin 1.20 ms / 2251 allocs (baseline 847 KB / 4164, 7117, 2538), snow 0 bakes and 0 draws (the fixture has no snow); `BenchmarkShadowsHiDPI` 256,000 layer px; `BenchmarkGroundCover` 0 bakes/op, 55–310 µs; `cmd/benchmark` grown/500/x3 frame p99 1.17 ms max 1.41, raid p99 1.92 max 4.06, `frames > 5ms: 0` for both, `views` row 0.36 ms mean.
+
+**Still to measure:** the true avg fps and 1 % low need one `make fps` run on a 120 Hz display with the game window focused (the README's 117 / 68 came from such a run on the M3 Pro's own panel); the `work` line predicts a frame of ≈8 ms average, ≈13 ms p99 at zoom 0.1 before GPU time.
+
 The first 60 s wave-2 probe read 9 fps with update 5.5 ms and draw 10 ms; a back-to-back A/B of the wave-2 and wave-1 binaries (above, two wave-2 runs bracketing the wave-1 one) showed them identical, so that run was the machine busy (a freshly extracted repo copy being indexed), not the code. A 30 s run has a lower 1 % low than a 60 s one because the first-use tint bakes are a larger share of it. The grown fixture has no snow and little wetness at the probe's weather, so hot spot 2 does not show in its draw time; `BenchmarkGroundCover` carries that number. Hot spot 3 is GPU fill, invisible to the CPU-side work line. `cmd/benchmark raid/500/x3` after wave 2: frame p99 2.02 ms, max 4.64 ms, `frames > 5ms: 0`.
 
 Benchmarks (baseline `c8e5709ae`, 12 cores):
@@ -66,6 +77,19 @@ Benchmarks (baseline `c8e5709ae`, 12 cores):
 ### 7. Update time budget at 3× and faster
 - `update_budget.go`: `updateBudget = 5 ms`. `advanceColony` runs the tier's ticks plus any owed, one `Step(1)` at a time, and stops once the Update has spent the budget; the remainder (capped at one Update's nominal) carries to the next Update, `held` counts the stops. A speed change, pause or background pause clears the debt. `r.mo.stepped` is the count actually run, so interpolation stays continuous. Captures and 1× never split. Reported by the probe (`budget held N updates, max M ticks owed`), the overlay (`held`) and the dev inspector; `cmd/benchmark` prints `frames > 5ms`.
 - Follow-up: Ebiten can run two Updates before one Draw after a slow frame, so the budget bounds an Update, not a frame; a per-Draw share is the next step if the probe shows it.
+
+## Left open (next perf pass)
+- `animalViews`/`trainViews` rebuild ≈175 KB and 70 allocs per tick (≈27 % of `World()`); `cropWiltFlipped` re-reads the air over every crop each tick (≈13 %); stains, dirt and pen labels allocate a little per tick; `chunkKey` still includes `viewKey`, so the chunk index re-hashes per tick.
+- The Update budget bounds an Update, not a frame: after a slow frame Ebiten can run two Updates before one Draw. A per-Draw share is the next step if a probe on a raid shows it.
+- A snow-cache LRU (≈33 MB once a 500² map has been seen); the quarter-tile mask feather at live zoom.
+- `drawZoneHighlight`, `drawPaths` and `drawWeather`'s two full-screen `FillRect`s still go through the vector path.
+- Render scale: labels draw above the weather at reduced scale; old Medium settings files keep Full until a preset is picked again; a hotkey for the overlay; the sparkline draws through the vector path (≈5k allocs per frame under `-race` are Ebiten's, not ours).
+- The probe cannot exceed the display's refresh here (30 Hz) and the "vsync off" override shows no effect on Metal; a run on a 120 Hz display is the only way to the headline number.
+
+## Verify
+- `go test -race -count=1 ./...` passes after every wave; `TestScaleGolden` (no race) and `TestGrownGolden` are at their pins throughout (views only, no sim change).
+- `make fps`, `go run ./cmd/benchmark -sizes 500 -speeds 3 -ticks 1500`, `go test -run '^$' -bench 'ReadModel|WorldView|DrawArt500|GroundCover|Shadows' -benchmem ./internal/...` reproduce the tables above.
+- Captures reviewed: the overlay at UI scale 1 and 2 (`-capture-ui perf`), snow by day and night against the previous build (day identical but for the weather dimming now applied to the veil; night lit instead of flat grey), shadows at dev 2, the map at world 0.5 (soft map, crisp HUD and labels), the Graphics tab with the two new rows.
 
 ### 8. Performance overlay (`be4b924fd`)
 - Options › Graphics "Performance overlay" (`Graphics.PerfOverlay`, off by default). A panel right of the resource list: `117 fps · 1% low 71` / `frame 8.6 ms · p99 14.1` (amber over 16.7 ms, red over 33) / `update 2.3 ms · draw 4.2 ms` / `sim 3× · 0.8 ms/tick · held 0` / `heap 412 MiB · gc 12/min` and a 120-frame sparkline. Always-on ring timing (600 samples), stats and strings refreshed twice a second, heap from `runtime/metrics` once a second; the fps probe's `fpsReport` computes through the same `frameStats`. Drawn with the UI hidden too. `-capture-ui perf` seeds a fixed series. A hotkey is a follow-up.
