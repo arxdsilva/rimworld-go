@@ -77,7 +77,7 @@ assets/
 │   │   ├── template.blend
 │   │   └── artlib/      # contracts, stage, post-pass, metadata, families/, scenes/
 │   ├── tools/           # validate_assets.py, contact_sheet.py, compose_scene.py, portrait_cut.py
-│   └── raster/ui/       # main_menu_colonist.png, portraits/<key>.png + briefs.md
+│   └── raster/ui/       # main_menu_colonist.png (cut), menu/hero.png + briefs.md, portraits/<key>.png + briefs.md
 ├── generated/
 │   ├── world/<family>/<name>.png (+ _mask.png)   # @2x sprites
 │   ├── ui/icons/*.png
@@ -89,9 +89,11 @@ assets/
 └── .gitkeep
 ```
 
-`source/raster/ui/main_menu_colonist.png` is original title art (cel-shaded
-colonist bust with raven, RGBA cutout). It is not a reconstruction of proprietary RimWorld screenshots. The brief that
-produced it lives at repo-root `ai-bg-rimworld`.
+`source/raster/ui/main_menu_colonist.png` is the main-menu hero (ART-028):
+a scout with a sled dog, a cel-shaded RGBA cutout. It is cut by `make portraits`
+(`tools/portrait_cut.py` `cut_menu`) from `source/raster/ui/menu/hero.png`;
+`menu/briefs.md` holds its original prompt. The earlier raven colonist was
+replaced because its brief reconstructed an existing illustration.
 
 `source/raster/ui/portraits/{steady,hearth,gambler}.png` are the storyteller
 busts (ART-023), painted on a flat magenta field from the prompts in

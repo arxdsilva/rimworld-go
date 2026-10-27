@@ -462,8 +462,8 @@ the player's primary world-editing command surface.
 
 ## 6.1 Zone tool
 
--   [x] **Create stockpile** (Architect paint, tile by tile: skips tiles another zone owns; the drag ghost marks each tile green or red (ZONE-001))
--   [x] **Create growing zone** (crop picker incl. tree zones; skips taken tiles and infertile rough stone/rock (ZONE-001))
+-   [x] **Create stockpile** (Architect paint, tile by tile: skips tiles another zone owns; the drag ghost marks each tile green or red (ZONE-001); PLAY-023: the cursor names a refused cell's reason, a refused drag hints the most common one; Dumping stockpile tool)
+-   [x] **Create growing zone** (crop picker incl. tree zones (ZONE-001); PLAY-023: soil-only placement with per-cell reasons)
 -   [x] **Expand zone** (painting next to a zone of the same kind, and for grow zones the same crop, extends it; a drag bridging two merges them; PLAY-020: a selected zone's Expand tool adds a dragged rectangle to that zone)
 -   [x] **Shrink/delete zone** (the Cancel tool clears just its tiles; a zone cut in two becomes two zones; PLAY-020: a selected zone's Shrink tool removes only its own tiles, and Delete removes it)
 -   [x] **Select existing zone** (PLAY-020: a click on an empty zone tile or its label selects it, repeat clicks on a crop cycle to it; the pane shows size, crop, growing now or too cold/hot, sown and ripe counts, average growth; commands Plant, Allow sowing, Allow cutting, Expand, Shrink, Delete, Hide, Rename)
@@ -474,7 +474,7 @@ the player's primary world-editing command surface.
 ## 6.2 Stockpile configuration panel
 
 -   [ ] **Stockpile name**
--   [ ] **Storage priority selector**
+-   [x] **Storage priority selector** (PLAY-023: Priority picker and pane line on stockpiles and dumps)
 -   [ ] **Allowed-items filter tree**
     -   Hierarchical categories.
     -   Allow all/disallow all.
@@ -699,7 +699,7 @@ understandable.
 
 ## 10.6 Rich explanation
 
--   [ ] **Capacity breakdown tooltip**
+-   [x] **Capacity breakdown tooltip** (MED-10: each capacity row explains its value: affected parts and implants, consciousness cap, blood pumping/filtration, pain, blood loss, condition modifiers)
     -   Show which injuries/body parts/effects cause final capacity.
 -   [x] **Treatment tooltip** (MED-02: each wound's tend quality and the tend window in part-row tooltips; condition tooltips show the last tend quality)
     -   Tend quality, remaining duration, medicine used.

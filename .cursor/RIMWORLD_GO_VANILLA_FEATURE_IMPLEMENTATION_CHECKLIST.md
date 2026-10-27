@@ -508,7 +508,7 @@ This is the heart of autonomous colony behavior.
 
 ## 6.3 Stockpile zones
 
--   [-] **Stockpile creation** (paint tiles; one zone per tile; adjacent stockpiles merge; food/wood/stone filter set per zone, no filter UI yet (ZONE-001))
+-   [x] **Stockpile creation** (paint tiles; one zone per tile; adjacent stockpiles merge; PLAY-023: RimWorld placement rules (no walls, impassable buildings or their blueprints, deep water, rock, fog or the outermost map ring; shallow water allowed; refused cells name their reason), cells removed and zones split when something is built over them, dumping stockpiles (animal corpses and chunks), priority Critical..Low with re-hauling to higher priority (1 h minimum stay))
     -   Paint storage cells.
 -   [-] **Storage filters** (food and wood allowed; no category tree/quality)
     -   Category tree.
@@ -631,7 +631,7 @@ This is the heart of autonomous colony behavior.
 
 ## 7.5 Specialized zones
 
--   [x] **Growing zones** (painted tiles sowing the chosen crop; never on taken tiles or infertile rough stone/rock; same-crop neighbours merge; cancel clears tiles; resow after harvest (ZONE-001))
+-   [x] **Growing zones** (painted tiles sowing the chosen crop; same-crop neighbours merge; cancel clears tiles; resow after harvest (ZONE-001); PLAY-023: only on soil, rich soil, gravel or marsh, never on floors, bridges, water, sand, mud or ice, fog or the map edge; a floor or building over a cell removes it; sowing only while the growing temperature is between 0 and 50 °C)
 -   [x] **Home area** (SIM-021; PLAY-015: auto-expansion toggle, grows around buildings, new zones and pen markers; bounds cleaning, repairs and firefighting together with the pawn's area)
     -   Influences firefighting/cleaning/repair behavior.
 -   [x] **Roof build/remove areas** (SIM-018)
@@ -1300,7 +1300,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 15.3 Variable generation
 
--   [-] **Solar day/weather output** (PLAY-021: follows daylight and roofs; weather and eclipses do not change it yet)
+-   [-] **Solar day/weather output** (PLAY-021: follows daylight and roofs; PLAY-022: weather dims it (shared sun factor with the renderer: cloudy 70 %, rain 45 %, storm 35 %, snow 40 %, blizzard 25 %); eclipses not yet)
 -   [x] **Wind turbine output** (PLAY-021: wind speed times the clear share of a band beside it; walls, rock, roofs and trees block)
     -   Wind state and obstruction rules.
 -   [x] **Fuel consumption** (PLAY-021: one fuel table for campfires, torch lamps and wood-fired generators, refuelled by haulers; a generator burns only while running)

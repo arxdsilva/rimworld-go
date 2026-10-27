@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Storyteller portraits (ART §17.1): raster source -> UI sprites.
+"""Storyteller portraits (ART §17.1) and the main-menu hero: raster source -> UI art.
 
 The busts are painted (AI-assisted, see source/raster/ui/portraits/briefs.md)
 on a flat magenta field. This keys the field to alpha, turns the magenta
@@ -28,6 +28,10 @@ KEY = np.array([255, 0, 255], dtype=np.float32)
 KEY_LO, KEY_HI = 110.0, 190.0  # RGB distance to magenta: fully keyed .. fully kept
 SPILL_BAND = 6  # px from the keyed edge in which magenta spill is removed
 CONTOUR, THUMB_CONTOUR = 4, 2
+
+MENU_SRC = os.path.join(ROOT, "source", "raster", "ui", "menu", "hero.png")
+MENU_OUT = os.path.join(ROOT, "source", "raster", "ui", "main_menu_colonist.png")  # read by splash.go
+MENU_CANVAS = (904, 1104)
 
 PORTRAITS = {  # storyteller key -> character (internal/domain/storyteller)
     "steady": "Orla Vane",
@@ -153,12 +157,22 @@ def cut(key, character):
     ])
 
 
+def cut_menu():
+    """The main-menu hero (ART-028): keyed and inked like the busts, fitted
+    bottom-flush into MENU_CANVAS with a contour; no thumbnail or metadata
+    (splash.go loads the PNG directly)."""
+    keyed = key_out(Image.open(MENU_SRC))
+    contour(_fit_exact(keyed, MENU_CANVAS, CONTOUR), CONTOUR).save(MENU_OUT, optimize=True)
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     os.makedirs(META, exist_ok=True)
     for key, character in PORTRAITS.items():
         cut(key, character)
         print("portrait", key)
+    cut_menu()
+    print("menu hero")
 
 
 if __name__ == "__main__":
