@@ -196,13 +196,14 @@ func TestOptionsGraphicsRowsRecordTheChoice(t *testing.T) {
 		changed  func(g config.Graphics) bool
 	}{
 		{"effects", "effects", func(g config.Graphics) bool { return g.Effects == config.EffectsReduced }},
-		{"vsync", "vsync", func(g config.Graphics) bool { return !g.VSync }},
+		{"vsync", "vsync", func(g config.Graphics) bool { return g.VSync }}, // off by default since PERF-002
 		{"hidpi", "hidpi", func(g config.Graphics) bool { return !g.HiDPI }},
 		{"shadows", "shadows", func(g config.Graphics) bool { return !g.Shadows }},
 		{"lighting", "lighting", func(g config.Graphics) bool { return !g.Lighting }},
 		{"water", "water", func(g config.Graphics) bool { return g.Water == config.WaterSimple }},
 		{"grass", "grass", func(g config.Graphics) bool { return g.Grass == config.GrassReduced }},
 		{"renderscale", "renderscale", func(g config.Graphics) bool { return g.RenderScale == 0.75 }},
+		{"framecap", "framecap", func(g config.Graphics) bool { return g.FrameCap == 144 }},
 	} {
 		store := graphicsStore()
 		a := optionsApp(store)
@@ -293,7 +294,7 @@ func TestOptionsDetectAgain(t *testing.T) {
 	saves := store.saves
 	a.applyOption("options.quality.detect")
 	g := store.s.Graphics
-	if g.Detected != config.QualityLow || g.Quality != config.QualityLow || len(g.Chosen) != 0 || !g.VSync {
+	if g.Detected != config.QualityLow || g.Quality != config.QualityLow || len(g.Chosen) != 0 || g.VSync || g.FrameCap != config.FrameCapDefault {
 		t.Fatalf("graphics = %+v, want the low tier applied and nothing chosen", g)
 	}
 	if g.Lighting || g.Shadows || g.Grass != config.GrassSparse {

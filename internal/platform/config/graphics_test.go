@@ -32,7 +32,7 @@ func TestApplyTierSetsEveryKnobAndKeepsChoices(t *testing.T) {
 	g := Defaults().Graphics
 	g.ApplyTier(QualityLow, 2)
 	if g.Quality != QualityLow || g.Effects != EffectsMinimal || g.Shadows || g.Lighting ||
-		g.Water != WaterSimple || g.Grass != GrassSparse || g.HiDPI || !g.VSync {
+		g.Water != WaterSimple || g.Grass != GrassSparse || g.HiDPI || g.VSync || g.FrameCap != FrameCapDefault {
 		t.Fatalf("low tier = %+v", g)
 	}
 	g = Defaults().Graphics
@@ -136,5 +136,37 @@ func TestNormalizeRenderScale(t *testing.T) {
 	s.Graphics.Chosen = []string{"renderscale"}
 	if n := s.Normalize(); !slices.Equal(n.Graphics.Chosen, []string{"renderscale"}) {
 		t.Fatalf("chosen %v lost renderscale", n.Graphics.Chosen)
+	}
+}
+
+// TestFrameCapDefaults (PERF-002): every preset caps at 120 with VSync off;
+// an older file keeps VSync only when the player chose it; unknown caps
+// fall back.
+func TestFrameCapDefaults(t *testing.T) {
+	t.Parallel()
+	for _, tier := range QualityLevels {
+		g := Defaults().Graphics
+		g.ApplyTier(tier, 2)
+		if g.VSync || g.FrameCap != FrameCapDefault || g.Quality != tier {
+			t.Fatalf("%s: vsync %v cap %d quality %s", tier, g.VSync, g.FrameCap, g.Quality)
+		}
+	}
+	old := Settings{Version: 5, Graphics: Graphics{VSync: true, Effects: EffectsFull, Quality: QualityHigh,
+		Shadows: true, Lighting: true, Water: WaterAnimated, Grass: GrassFull, HiDPI: true}}
+	if n := old.Normalize(); n.Graphics.VSync || n.Graphics.FrameCap != FrameCapDefault {
+		t.Fatalf("a version-5 file: vsync %v cap %d, want off and %d", n.Graphics.VSync, n.Graphics.FrameCap, FrameCapDefault)
+	}
+	old.Graphics.Chosen = []string{"vsync"}
+	if n := old.Normalize(); !n.Graphics.VSync {
+		t.Fatal("a version-5 file with VSync chosen by hand must keep it")
+	}
+	s := Defaults()
+	s.Graphics.FrameCap = 75
+	if n := s.Normalize(); n.Graphics.FrameCap != FrameCapDefault {
+		t.Fatalf("an unknown cap normalised to %d", n.Graphics.FrameCap)
+	}
+	s.Graphics.FrameCap = 0
+	if n := s.Normalize(); n.Graphics.FrameCap != 0 {
+		t.Fatalf("Off (0) must survive: %d", n.Graphics.FrameCap)
 	}
 }

@@ -1649,7 +1649,7 @@ the player what just happened and what requires attention.
 ## 34.1 Graphics
 
 -   [ ] **Resolution/window mode**
--   [-] **VSync/frame cap** (VSync toggle in Options › Graphics; Ebitengine has no frame cap)
+-   [x] **VSync/frame cap** (VSync toggle, off by default; PERF-002: Frame cap 60 / 120 / 144 / Off in Options › Graphics, 120 on every display by default, paced in the client)
 -   [x] **UI scale** (UI-024: Options › Accessibility, Auto (follows the window, 1280×720 = 100 %) or 75–200 %, applies live)
 -   [x] **Rendering quality toggles** (PLAY-019: Quality High/Medium/Low/Custom picked from the hardware at the first start, Detect again; Shadows, Lighting, Water, Grass rows applied live; the player's own changes always kept)
 -   [x] **Animation/effects density** (Effects Full/Reduced/Minimal scales particles and weather; PLAY-019: Grass full/reduced/sparse thins tufts per tile)

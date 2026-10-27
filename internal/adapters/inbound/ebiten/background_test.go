@@ -153,6 +153,7 @@ func TestBackgroundOnKeepsTicking(t *testing.T) {
 func TestBackgroundOnSwitchesVsync(t *testing.T) {
 	t.Parallel()
 	a, _, f, w := bgColony(t)
+	a.settings.Graphics.VSync = true // the player's choice; off by default since PERF-002
 	runInBackground(t, a, true)
 	f.frame(t, a)
 	if !slices.Equal(w.calls, []string{"runnable:true"}) {
@@ -227,6 +228,7 @@ func TestBackgroundDrawCap(t *testing.T) {
 	a.now = func() time.Time { return clock }
 	var slept []time.Duration
 	a.bg.sleep = func(d time.Duration) { slept = append(slept, d); clock = clock.Add(d) }
+	a.settings.Graphics.FrameCap = 0 // the frame cap has its own test (frame_cap_test.go)
 
 	a.capBackgroundDraw() // focused: no cap
 	clock = clock.Add(time.Millisecond)

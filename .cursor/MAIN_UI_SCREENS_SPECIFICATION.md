@@ -1740,7 +1740,7 @@ presentation only, never the simulation; captures ignore them.
 
 -   [x] window: fullscreen toggle (the window resizes freely; no
     resolution presets);
--   [-] VSync/frame cap (VSync toggle; Ebitengine has no frame cap);
+-   [x] VSync (off by default) and Frame cap (60 / 120 / 144 / Off; 120 on every display by default, paced by the client — PERF-002);
 -   [x] UI scale (UI-024: Accessibility row Auto / 75–200 %; "Sharp on
     high-density screens" (HiDPI) on the Graphics tab);
 -   [x] effects/detail (Full/Reduced/Minimal: particles, weather drops,

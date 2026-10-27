@@ -33,6 +33,13 @@ The fps and 1 % low columns below are therefore meaningful only from runs on a 1
 | final `6f8c0a478`, world 0.5 | 0.1 | 30.0 | 26.8 | 37.4 ms | 2.55 / 3.87 ms | 5.38 / 9.07 ms | 7.92 / 12.9 ms | — |
 | final `6f8c0a478`, world 0.5 | 0.8 | 30.0 | 27.8 | 35.9 ms | 2.33 / 3.56 ms | 6.17 / 7.78 ms | 8.50 / 11.3 ms | — |
 
+| final, display at **60 Hz**, world 1 | 0.1 | 59.9 | 42.9 | 23.3 ms | 2.29 / 3.47 ms | 4.68 / 7.13 ms | 6.97 / 10.6 ms | — |
+| final, display at 60 Hz, world 1 | 0.8 | 60.0 | 55.2 | 18.1 ms | 2.05 / 3.17 ms | 5.43 / 6.49 ms | 7.48 / 9.65 ms | — |
+| final, display at 60 Hz, world 0.5 | 0.1 | 60.0 | 53.5 | 18.7 ms | 2.32 / 3.52 ms | 4.68 / 6.54 ms | 7.00 / 10.1 ms | — |
+| final, display at 60 Hz, world 0.5 | 0.8 | 59.9 | 55.1 | 18.2 ms | 2.06 / 3.19 ms | 5.50 / 6.63 ms | 7.56 / 9.81 ms | — |
+
+With the display switched to 60 Hz (same machine, same build): the average pins at 60 and the 1 % low at zoom 0.1 goes from 42.9 at Full to 53.5 at Half — the render scale's GPU saving is visible once the display stops hiding it.
+
 Reading the table on this 30 Hz display: update fell from 3.4 to 2.5 ms per frame (hot spot 1) and the display-bound 1 % low at zoom 0.1 rose from 15.6 to 23.6 (fewer GC-long frames); the render scale leaves the CPU work alone (it is GPU fill) and lifts the 1 % low to 26.6–26.8. The budget held 0 Updates on the grown colony (no raid). Final benchmarks: `BenchmarkDrawArt500` z1 0.95 ms / 439 draw calls / 780 KB / 3749 allocs, z0.25 3.09 ms / 6436 allocs, zmin 1.20 ms / 2251 allocs (baseline 847 KB / 4164, 7117, 2538), snow 0 bakes and 0 draws (the fixture has no snow); `BenchmarkShadowsHiDPI` 256,000 layer px; `BenchmarkGroundCover` 0 bakes/op, 55–310 µs; `cmd/benchmark` grown/500/x3 frame p99 1.17 ms max 1.41, raid p99 1.92 max 4.06, `frames > 5ms: 0` for both, `views` row 0.36 ms mean.
 
 **Still to measure:** the true avg fps and 1 % low need one `make fps` run on a 120 Hz display with the game window focused (the README's 117 / 68 came from such a run on the M3 Pro's own panel); the `work` line predicts a frame of ≈8 ms average, ≈13 ms p99 at zoom 0.1 before GPU time.
@@ -77,6 +84,11 @@ Benchmarks (baseline `c8e5709ae`, 12 cores):
 ### 7. Update time budget at 3× and faster
 - `update_budget.go`: `updateBudget = 5 ms`. `advanceColony` runs the tier's ticks plus any owed, one `Step(1)` at a time, and stops once the Update has spent the budget; the remainder (capped at one Update's nominal) carries to the next Update, `held` counts the stops. A speed change, pause or background pause clears the debt. `r.mo.stepped` is the count actually run, so interpolation stays continuous. Captures and 1× never split. Reported by the probe (`budget held N updates, max M ticks owed`), the overlay (`held`) and the dev inspector; `cmd/benchmark` prints `frames > 5ms`.
 - Follow-up: Ebiten can run two Updates before one Draw after a slow frame, so the budget bounds an Update, not a frame; a per-Draw share is the next step if the probe shows it.
+
+### 9. Frame cap: 120 fps on every display, VSync off (user decision)
+- `Graphics.FrameCap` (60 / 120 / 144 / Off; `FrameCapDefault` 120) and `VSync` off in every preset and in `Defaults()`; settings version 6 migrates older files to the new defaults unless VSync was the player's own choice (`Chosen`). Options › Graphics gains a "Frame cap" row next to VSync.
+- The pacing lives in `capBackgroundDraw` (background.go): with VSync off and a cap set, a Draw waits out the rest of `1/cap` since the **previous deadline** (not since the previous draw), so a sleep that overshoots shortens the next wait and the average holds the cap exactly; the first paced draw only sets the pace and a stall of a whole gap restarts it. The background throttle (`bgDrawGap`) takes precedence while the window is away; VSync on, the cap Off, captures and the fps probe draw unpaced. Tests: `TestFrameCapPacesDraws`, `TestFrameCapOff`, `TestFrameCapRow`, config `TestFrameCapDefaults`.
+- On macOS/Metal the screen's refresh still bounds the loop whatever the cap (Ebiten's `nextDrawable` waits for a drawable), so a 30 Hz display shows 30 and a 60 Hz one 60; on Windows and OpenGL the cap is what paces the game. The tooltip says so.
 
 ## Left open (next perf pass)
 - `animalViews`/`trainViews` rebuild ≈175 KB and 70 allocs per tick (≈27 % of `World()`); `cropWiltFlipped` re-reads the air over every crop each tick (≈13 %); stains, dirt and pen labels allocate a little per tick; `chunkKey` still includes `viewKey`, so the chunk index re-hashes per tick.

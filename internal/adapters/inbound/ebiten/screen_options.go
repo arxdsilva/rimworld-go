@@ -177,8 +177,9 @@ func graphicsRows() []optionRow {
 	return []optionRow{
 		qualityRow(),
 		toggleRow("fullscreen", "Fullscreen", func(s *config.Settings) *bool { return &s.Graphics.Fullscreen }),
-		flag("vsync", "VSync", "Wait for the monitor's refresh before showing a frame. Stops tearing; off can raise the frame rate.",
+		flag("vsync", "VSync", "Wait for the monitor's refresh before showing a frame. Stops tearing; off (the default) lets the frame cap pace the game instead of the screen.",
 			func(s *config.Settings) *bool { return &s.Graphics.VSync }),
+		frameCapRow(),
 		flag("hidpi", "Sharp on high-density screens", "Render at the screen's true resolution. Costs GPU time on very large maps.",
 			func(s *config.Settings) *bool { return &s.Graphics.HiDPI }),
 		withTip(toggleRow("perfoverlay", "Performance overlay", func(s *config.Settings) *bool { return &s.Graphics.PerfOverlay }),
@@ -195,6 +196,27 @@ func graphicsRows() []optionRow {
 			func(s *config.Settings) *string { return &s.Graphics.Grass }, config.GrassLevels)),
 		detail(renderScaleRow()),
 	}
+}
+
+// frameCapRow is Frame cap (PERF-002): the most frames a second the game
+// draws with VSync off (background.go frameCapGap), cycling config.FrameCaps;
+// 120 on every display by default.
+func frameCapRow() optionRow {
+	return chosenRow(optionRow{key: "framecap", label: "Frame cap", kind: rowChoice,
+		tip: "The most frames a second the game draws with VSync off: 120 on every display by default. " +
+			"Off draws as fast as the computer can; on macOS the screen's own refresh still bounds it.",
+		value: func(s config.Settings) string { return frameCapLabel(s.Graphics.FrameCap) },
+		apply: func(s *config.Settings, _ int) {
+			s.Graphics.FrameCap = cycle(config.FrameCaps, s.Graphics.FrameCap)
+		}})
+}
+
+// frameCapLabel names a frame cap: "120" or "Off".
+func frameCapLabel(v int) string {
+	if v <= 0 {
+		return "Off"
+	}
+	return fmt.Sprintf("%d", v)
 }
 
 // renderScaleRow is World detail (PERF-002): the share of the physical

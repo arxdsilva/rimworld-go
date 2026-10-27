@@ -54,7 +54,11 @@ type bgState struct {
 	throttled bool
 	// runnable: the window was told to keep running unfocused.
 	runnable bool
-	lastDraw time.Time // when the previous capped draw finished
+	// next is the deadline the previous paced draw was held to (zero: no
+	// pace yet). The next deadline is next + gap, not now + gap, so a sleep
+	// that overshoots shortens the following wait and the average frame
+	// rate holds the cap exactly.
+	next time.Time
 }
 
 func (a *App) bgWin() bgWindow {
@@ -76,29 +80,55 @@ func (a *App) syncBackground() {
 	}
 	if throttle := blurred && run; throttle != a.bg.throttled {
 		a.bg.throttled = throttle
-		a.bg.lastDraw = time.Time{}
+		a.bg.next = time.Time{}
 		a.bgWin().SetVsyncEnabled(!throttle && a.settings.Graphics.VSync)
 	}
 }
 
-// capBackgroundDraw ends a Draw: while throttled it waits out the rest of
-// bgDrawGap since the previous draw.
+// frameCapGap is the shortest time between two draws under the frame cap
+// (Graphics.FrameCap, PERF-002: 120 fps on every display by default, with
+// VSync off, so the screen's refresh never paces the game). It is 0, no
+// cap, while VSync is on (the display paces), with the cap Off, and for a
+// capture or the fps probe (both uncapped by design).
+func (a *App) frameCapGap() time.Duration {
+	g := a.settings.Graphics
+	if g.FrameCap <= 0 || g.VSync || a.cfg.Capture != nil || a.cfg.FPSProbe != nil {
+		return 0
+	}
+	return time.Second / time.Duration(g.FrameCap)
+}
+
+// capBackgroundDraw ends a Draw: it waits out the rest of the frame's gap,
+// bgDrawGap while throttled in the background, else the frame cap's. The
+// first paced draw only sets the pace; a draw that runs a whole gap late
+// (a stall) restarts it instead of racing to catch up.
 func (a *App) capBackgroundDraw() {
-	if !a.bg.throttled {
+	gap := a.frameCapGap()
+	if a.bg.throttled {
+		gap = bgDrawGap
+	}
+	if gap == 0 {
+		a.bg.next = time.Time{}
 		return
 	}
 	now := a.now()
-	if !a.bg.lastDraw.IsZero() {
-		if wait := bgDrawGap - now.Sub(a.bg.lastDraw); wait > 0 {
-			sleep := a.bg.sleep
-			if sleep == nil {
-				sleep = time.Sleep
-			}
-			sleep(wait)
-			now = a.now()
-		}
+	if a.bg.next.IsZero() {
+		a.bg.next = now
+		return
 	}
-	a.bg.lastDraw = now
+	target := a.bg.next.Add(gap)
+	if now.Sub(target) >= gap {
+		a.bg.next = now
+		return
+	}
+	if wait := target.Sub(now); wait > 0 {
+		sleep := a.bg.sleep
+		if sleep == nil {
+			sleep = time.Sleep
+		}
+		sleep(wait)
+	}
+	a.bg.next = target
 }
 
 // speedLabel is the top strip's speed text: the background pause when the

@@ -21,7 +21,7 @@ import (
 // (Quality, Shadows, Lighting, Water, Grass) plus Detected and Chosen
 // (graphics.go); an older file keeps today's look, with Detected empty so
 // the next start detects the hardware tier.
-const SettingsVersion = 5
+const SettingsVersion = 6 // 6: PERF-002, VSync off and a frame cap by default
 
 // MaxLearnedLessons caps the learning helper's done list.
 const MaxLearnedLessons = 64
@@ -87,6 +87,10 @@ type Graphics struct {
 	// text stay native), and PerfOverlay shows the in-game frame-rate box.
 	RenderScale float64 `json:"render_scale,omitempty"`
 	PerfOverlay bool    `json:"perf_overlay,omitempty"`
+	// FrameCap is the most frames a second the client draws while VSync is
+	// off (one of FrameCaps; 0 = no cap): FrameCapDefault on every display,
+	// so the screen's refresh never paces the game (PERF-002, user decision).
+	FrameCap int `json:"frame_cap"`
 }
 
 // AutosaveChoices are the autosave intervals in in-game days (0 = off).
@@ -176,7 +180,7 @@ func Defaults() Settings {
 	return Settings{
 		Version: SettingsVersion,
 		Audio:   Audio{Master: 80, Music: 60, Effects: 80, Ambience: 70, UI: 70, MuteUnfocused: true},
-		Graphics: Graphics{VSync: true, Effects: EffectsFull, HiDPI: true, Quality: QualityHigh,
+		Graphics: Graphics{VSync: false, FrameCap: FrameCapDefault, Effects: EffectsFull, HiDPI: true, Quality: QualityHigh,
 			Shadows: true, Lighting: true, Water: WaterAnimated, Grass: GrassFull, RenderScale: 1},
 		Gameplay:      Gameplay{PauseOnThreat: true, AutosaveDays: 1, PanSpeed: 100, ShowLearningHelper: true, ShowColonistBar: true},
 		Accessibility: Accessibility{UIScale: 100, UIScaleAuto: true},
@@ -202,6 +206,12 @@ func (s Settings) Normalize() Settings {
 	}
 	if s.Version < 5 { // before PLAY-019: today's look; Detected stays "" so the next start detects
 		s.Graphics.Shadows, s.Graphics.Lighting = true, true
+	}
+	if s.Version < 6 { // before PERF-002: VSync paced the game; now the frame cap does, unless VSync was the player's own choice
+		if !contains(s.Graphics.Chosen, "vsync") {
+			s.Graphics.VSync = false
+		}
+		s.Graphics.FrameCap = FrameCapDefault
 	}
 	s.Version = SettingsVersion
 	s.Gameplay.LearnedLessons = dedupeLessons(s.Gameplay.LearnedLessons)
