@@ -264,6 +264,9 @@ type ItemView struct {
 	// (PLAY-017, haul_claim.go).
 	Unclaimed  bool
 	HaulMarked bool
+	// PoisonPermille: a cooked meal's food-poisoning chance per meal
+	// eaten (WS-M, food_poison.go); 0 for anything else.
+	PoisonPermille int
 }
 
 // LetterView is one letter in the right-side stack (PLAY-018).
@@ -399,6 +402,12 @@ type BuildingView struct {
 	ThermoTarget int
 	ThermoActive bool // a heater or cooler working now (not idling)
 	PowerMax     int  // a producer's peak output, W
+	// Sentry turret (PLAY-024, turret.go): AimDir is the gun's baked aim
+	// frame 0..15 (sentry_turret_gun_00..15, like the turbine blades:
+	// frame 0 points south, counting clockwise on screen); ShotAge the
+	// ticks since its last shot, -1 before the first (the muzzle flash).
+	AimDir  int8
+	ShotAge int
 }
 
 // PlantView is a wild plant.
@@ -773,6 +782,11 @@ type Game struct {
 	pw *powerState
 	// pwc: power nets and device lists per structVer (power.go), never saved.
 	pwc powerCache
+	// PLAY-024: traders, request cooldowns and the open trade or comms
+	// session (trade.go), and the sentry turrets' aims (turret.go); saved
+	// as the additive Trade and Turrets fields.
+	trade   tradeState
+	turrets turretState
 }
 
 // New builds a Game from cfg. Width/Height must be positive.
@@ -1182,7 +1196,7 @@ func (g *Game) world() WorldView {
 			FreshDays: freshDays(st), Rotten: st.Rotten(), Dried: st.Dried,
 			RotRate: item.RotRate(int(g.temperatureAt(st.X, st.Y))),
 			Catch:   filth.Catch(st.Kind) / 10, Forbidden: st.Forbidden,
-			Unclaimed: st.Unclaimed, HaulMarked: st.HaulMarked,
+			Unclaimed: st.Unclaimed, HaulMarked: st.HaulMarked, PoisonPermille: int(st.Poison),
 		})
 		g.fillCorpseView(&w.Items[len(w.Items)-1], st) // burial.go
 		if st.Carrier == 0 {
@@ -1261,6 +1275,7 @@ func (g *Game) world() WorldView {
 		// (power_view.go)
 		bv.Glow, bv.GlowRadius = g.glowOf(id, b)
 		g.fillPowerBuilding(bv, id, b)
+		g.fillTurretView(bv, id, b, uint64(g.clock.Now())) // turret.go (PLAY-024)
 	}
 	w.Plants = g.plantViews(w.Plants) // plant_view.go
 	w.Landing[0], w.Landing[1] = g.landingSpot()

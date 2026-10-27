@@ -312,6 +312,9 @@ func (a *App) drawBuildingSelection(screen *ebiten.Image, b game.BuildingView) {
 	sx, sy := a.renderer.worldToScreen(b.X, b.Y)
 	w, h := float32(float64(max(b.W, 1))*tile), float32(float64(max(b.H, 1))*tile)
 	vector.StrokeRect(screen, sx+1, sy+1, w-2, h-2, 2, uiAccent, false)
+	if b.Kind == sentryTurretKind { // turret_draw.go: its reach
+		a.renderer.drawRangeRing(screen, b.X, b.Y, turretRangeTiles, tokenNRGBA(uiAccent))
+	}
 	if b.HasSpot {
 		px, py := a.renderer.worldToScreen(b.SpotX, b.SpotY)
 		vector.StrokeRect(screen, px+tile32(tile)*0.3, py+tile32(tile)*0.3, tile32(tile)*0.4, tile32(tile)*0.4, 1, uiAccent, false)

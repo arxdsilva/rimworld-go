@@ -57,7 +57,7 @@ func (g *Game) stepBloodLoss() {
 		if b.BloodLoss >= body.BloodLossDeath {
 			pos, _ := g.positions.Get(id)
 			g.message(pos.X, pos.Y, "%s bled to death.", g.name(id))
-			g.die(id, health.CauseBloodLoss)
+			g.dieMedical(id, health.CauseBloodLoss) // caravan_medical.go
 			g.clearPatient(id)
 			continue
 		}

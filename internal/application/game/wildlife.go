@@ -55,6 +55,7 @@ type burstStamp struct {
 	X, Y    int
 	Tick    uint64
 	Species animal.Species
+	Turret  bool // a destroyed sentry turret's blast (turret.go, PLAY-024)
 }
 
 // BurstView is a recent explosive death, for the renderer's flash and
@@ -63,6 +64,8 @@ type BurstView struct {
 	X, Y    int
 	Tick    uint64
 	Species string
+	// Turret: a destroyed sentry turret's blast (PLAY-024); Species is "".
+	Turret bool
 }
 
 const (
@@ -447,7 +450,10 @@ func (g *Game) fillWildlifeView(w *WorldView) {
 	}
 	w.Bursts = make([]BurstView, len(g.wl.Bursts))
 	for i, b := range g.wl.Bursts {
-		w.Bursts[i] = BurstView{X: b.X, Y: b.Y, Tick: b.Tick, Species: b.Species.String()}
+		w.Bursts[i] = BurstView{X: b.X, Y: b.Y, Tick: b.Tick, Species: b.Species.String(), Turret: b.Turret}
+		if b.Turret {
+			w.Bursts[i].Species = ""
+		}
 	}
 }
 

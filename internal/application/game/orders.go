@@ -65,6 +65,9 @@ const (
 	ReasonNotSowable = "cannot sow here"
 	ReasonSowingOff  = "sowing is off in this zone" // PLAY-020: the zone's Allow sowing
 	ReasonGone       = "no longer there"
+	// ReasonNotYet: a PLAY-024 action not hosted yet (the comms dialog's
+	// military aid until Phase 4).
+	ReasonNotYet = "not yet"
 )
 
 func (g *Game) drafted(id entity.EntityID) bool { return g.draft[id] }
@@ -310,6 +313,10 @@ func (g *Game) forcedJob(id entity.EntityID, o command.Order, x, y int, layer co
 		return g.extinguishJob(id, x, y) // firefight.go
 	case command.OrderFlick:
 		return g.flickJob(id, x, y) // power_flick.go (PLAY-021)
+	case command.OrderTrade:
+		return g.tradeJob(id, x, y) // trade_session.go (PLAY-024)
+	case command.OrderUseComms:
+		return g.commsJob(id, x, y) // comms.go (PLAY-024)
 	case command.OrderEquip:
 		iid := g.itemAt(x, y)
 		st, ok := g.stacks.Get(iid)
@@ -480,8 +487,8 @@ func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 			switch o {
 			case command.OrderDeconstruct:
 				tx, ty = g.workSpot(pawn, x, y)
-			case command.OrderMine, command.OrderSmooth:
-				tx, ty = -1, -1 // forcedJob already checked a reachable spot
+			case command.OrderMine, command.OrderSmooth, command.OrderTrade, command.OrderUseComms:
+				tx, ty = -1, -1 // forcedJob already checked a reachable spot (PLAY-024: beside the trader, the console's spot)
 			}
 			if tx >= 0 && !g.reachable(pawn, tx, ty) {
 				reason = ReasonUnreachable
@@ -579,5 +586,7 @@ func (g *Game) OrdersAt(pawn entity.EntityID, x, y int) []OrderOption {
 		add("Extinguish fire", command.OrderExtinguish, construction.LayerObject)
 	}
 	out = append(out, g.tendOrders(pawn, x, y)...) // care.go (MED-03): drafted "Tend <name>"
+	g.tradeOrders(add, x, y)                       // trade_session.go (PLAY-024): "Trade with <name>"
+	g.commsOrders(add, x, y)                       // comms.go (PLAY-024): "Use radio console"
 	return out
 }

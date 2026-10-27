@@ -123,6 +123,7 @@ var canvasExempt = map[string]string{
 	"labels.go:drawBreakClouds":                   "world: storm clouds over colonists (stack counts and icons use the canvas)",
 	"labels.go:drawBuildingDamage":                "world: damage bars under buildings",
 	"work_progress.go:drawWorkProgress":           "world: work progress bars over the work spots",
+	"turret_draw.go:drawRangeRing":                "world: a selected turret's range ring on the map",
 	"labels.go:drawFightMarker":                   "world: fight marker over colonists",
 	"labels.go:drawHostileMarker":                 "world: hostile chevron over raiders",
 	"building_inspector.go:drawBuildingSelection": "world: the selected building's outline on the map (the pane uses the canvas)",

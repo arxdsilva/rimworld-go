@@ -351,7 +351,10 @@ func (g *Game) doBill(id entity.EntityID, j job.Record) {
 			}
 		}
 		g.deleteItem(j.Carry)
-		if out > 0 {
+		switch {
+		case out > 0 && d.Output == item.Meal: // food_poison.go (WS-M): the cook's poison chance
+			g.dropMeal(d.Output, out, j.DestX, j.DestY, g.mealPoison(id, b.Kind, j.DestX, j.DestY))
+		case out > 0:
 			g.dropStack(d.Output, out, j.DestX, j.DestY)
 		}
 		if extra > 0 {

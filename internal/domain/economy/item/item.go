@@ -336,6 +336,10 @@ type Stack struct {
 	// claims it (PLAY-017).
 	Unclaimed  bool
 	HaulMarked bool
+	// Poison is a cooked meal's chance to give food poisoning, permille
+	// per meal eaten (set by the cook from skill and kitchen, WS-M); 0
+	// for everything else and for stacks from older saves.
+	Poison int16
 }
 
 // Shelf is how many full-speed rot ticks the stack keeps (0 = forever).
@@ -414,6 +418,16 @@ func MergeRot(qa, ra, qb, rb int) int {
 		return 0
 	}
 	return (qa*ra + qb*rb) / (qa + qb)
+}
+
+// MergePoison is the food-poisoning chance of qa items with chance pa
+// combined with qb items with chance pb: the quantity-weighted average,
+// rounded to the nearest permille.
+func MergePoison(qa int, pa int16, qb int, pb int16) int16 {
+	if qa+qb <= 0 {
+		return 0
+	}
+	return int16((qa*int(pa) + qb*int(pb) + (qa+qb)/2) / (qa + qb))
 }
 
 // shelfDays is how long food keeps at room temperature (10 C or warmer)

@@ -78,6 +78,7 @@ type gnawEvent struct {
 func (g *Game) phaseIncidents() {
 	now := uint64(g.clock.Now())
 	g.trackFlare(now) // power_events.go: the solar flare's end (PLAY-021); a nil check without power
+	g.tradeTick(now)  // trade.go (PLAY-024): requested caravans, the ship, pods, sessions; returns at once without trade
 	if !g.wild {
 		return
 	}
@@ -171,6 +172,10 @@ func (g *Game) incidentFits(id incident.ID, now uint64) bool {
 		return g.powerEventFits(id) // power_events.go (PLAY-021): false with no power devices
 	case incident.Flu, incident.Plague, incident.Malaria, incident.SleepingSickness, incident.GutWorms, incident.MuscleParasites:
 		return g.diseaseFits(id) // disease.go (MED-04)
+	case incident.TraderCaravan:
+		return g.caravanFits(now) // trade_caravan.go (PLAY-024)
+	case incident.OrbitalTrader:
+		return g.orbitalFits(now) // trade_orbital.go (PLAY-024)
 	}
 	return false
 }
@@ -203,6 +208,10 @@ func (g *Game) fireIncident(id incident.ID, now uint64) bool {
 		return g.shortCircuit(now) // power_events.go (PLAY-021)
 	case incident.Flu, incident.Plague, incident.Malaria, incident.SleepingSickness, incident.GutWorms, incident.MuscleParasites:
 		return g.diseaseOutbreak(id, now) // disease.go (MED-04)
+	case incident.TraderCaravan:
+		return g.caravanArrive(now) // trade_caravan.go (PLAY-024)
+	case incident.OrbitalTrader:
+		return g.orbitalArrive(now) // trade_orbital.go (PLAY-024)
 	}
 	return false
 }

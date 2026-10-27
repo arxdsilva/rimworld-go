@@ -270,7 +270,7 @@ func (g *Game) relativeBio(id entity.EntityID, male bool, age int, tag backstory
 	}
 	seed := g.streams.seed
 	if g.hasSetup() {
-		seed = g.ng.setup.Seed
+		seed = g.worldSeed()
 	}
 	var p pawngen.Pawn
 	for roll := 0; roll < 32; roll++ {

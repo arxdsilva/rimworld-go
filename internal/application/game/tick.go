@@ -66,7 +66,9 @@ func (g *Game) applyOne(c command.Command) {
 		command.SetPowerWanted, command.SetThermostat, // power_flick.go, power_heat.go (PLAY-021)
 		command.SetMedicalCare, command.SetDefaultCare, command.SetSelfTend, // care.go (MED-00)
 		command.EmergencyTend, command.ReorderOperation, // care.go, surgery.go
-		command.SetZonePriority: // haul_priority.go (PLAY-023)
+		command.SetZonePriority, // haul_priority.go (PLAY-023)
+		command.ProposeTrade, command.CloseTrade, command.CommsCallTrader, command.CommsGift,
+		command.CommsRequestCaravan, command.CommsRequestAid, command.CloseComms: // trade_session.go, comms.go (PLAY-024)
 		g.applyHostCommand(c) // host_commands.go (ENG-003)
 	case command.SetStoryteller:
 		g.cmdSetStoryteller(c.Name) // story.go (NG-1)
@@ -1091,6 +1093,10 @@ func (g *Game) phaseJobs() {
 			g.doRope(id, j) // rope.go
 		case job.EmergencyTend:
 			g.doEmergencyTend(id, j) // care.go (MED-03)
+		case job.Trade:
+			g.doTrade(id, j) // trade_session.go (PLAY-024)
+		case job.UseComms:
+			g.doUseComms(id, j) // comms.go (PLAY-024)
 		default:
 			j.State = job.Complete
 			g.jobs.Set(id, j)
@@ -1138,7 +1144,7 @@ func (g *Game) doEat(id entity.EntityID, j job.Record) {
 		g.stacks.Set(j.Target, st) // leftovers: dropped where it ate
 	}
 	g.lastMeal[id] = st.Kind
-	g.afterEat(id, st.Kind)
+	g.afterEat(id, st) // rooms.go: thoughts, and the meal's food poisoning roll
 	if n.Hunger > needs.Full {
 		n.Hunger = needs.Full
 	}
@@ -1678,12 +1684,14 @@ func (g *Game) mergeOrSetFrom(id entity.EntityID, st item.Stack, seen []spillSte
 		}
 		if st.Qty <= room {
 			other.Rot = item.MergeRot(other.Qty, other.Rot, st.Qty, st.Rot)
+			other.Poison = item.MergePoison(other.Qty, other.Poison, st.Qty, st.Poison) // food_poison.go
 			other.Qty += st.Qty
 			g.stacks.Set(oid, other)
 			g.deleteItem(id)
 			return
 		}
 		other.Rot = item.MergeRot(other.Qty, other.Rot, room, st.Rot)
+		other.Poison = item.MergePoison(other.Qty, other.Poison, room, st.Poison)
 		other.Qty = item.StackLimit
 		g.stacks.Set(oid, other)
 		st.Qty -= room
@@ -1762,5 +1770,5 @@ func (g *Game) VitalOf(id entity.EntityID) health.Record {
 // keeps st's flags.
 func splitLoad(st item.Stack, take int) item.Stack {
 	return item.Stack{Kind: st.Kind, Qty: take, X: st.X, Y: st.Y, Rot: st.Rot, Dried: st.Dried,
-		Animal: st.Animal, Of: st.Of, DiedAt: st.DiedAt, Hatch: st.Hatch, Tame: st.Tame}
+		Animal: st.Animal, Of: st.Of, DiedAt: st.DiedAt, Hatch: st.Hatch, Tame: st.Tame, Poison: st.Poison}
 }

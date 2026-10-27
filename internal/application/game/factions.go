@@ -7,6 +7,7 @@ import (
 	"rimworld-go/internal/domain/difficulty"
 	"rimworld-go/internal/domain/faction"
 	"rimworld-go/internal/domain/storyteller"
+	"rimworld-go/pkg/randx"
 )
 
 // Factions in play (NG-1 §5.5). Owned by SETUP. A legacy colony has none:
@@ -117,4 +118,16 @@ func (g *Game) checkRaidsOver(now uint64) {
 			faction.Adjust(f, raidRepelled, fmt.Sprintf("Day %d: raid repelled (%d goodwill)", g.relDay(now)+1, raidRepelled))
 		}
 	}
+}
+
+// DevAddFactions gives a colony with no factions the default slots
+// (dev scenarios: a legacy capture colony has none, so traders and
+// visitors never come). The draw uses its own fixed-seed generator so no
+// simulation stream moves.
+func (g *Game) DevAddFactions() {
+	if len(g.ng.factions) > 0 {
+		return
+	}
+	g.viewGen++ // view cache (indexes.go): this hook changes the state
+	g.ng.factions = faction.Generate(faction.DefaultSlots(), randx.New(g.streams.seed^0xfac7))
 }

@@ -92,6 +92,9 @@ func itemLines(it game.ItemView, stored bool) []string {
 	case it.FreshDays >= 0:
 		out = append(out, fmt.Sprintf("Fresh for %.0f days", it.FreshDays))
 	}
+	if it.PoisonPermille > 0 {
+		out = append(out, "Poison chance "+poisonPct(it.PoisonPermille))
+	}
 	if isCarpetItem(it) {
 		out = append(out, fmt.Sprintf("Catches %d%% of tracked dirt", it.Catch),
 			"Install from Architect > Furniture > Carpet")
@@ -109,6 +112,15 @@ func itemLines(it game.ItemView, stored bool) []string {
 		return append(out, "In a stockpile")
 	}
 	return append(out, "Not stored")
+}
+
+// poisonPct is a food-poisoning chance in permille as a percent ("2%",
+// "0.5%").
+func poisonPct(permille int) string {
+	if permille%10 == 0 {
+		return fmt.Sprintf("%d%%", permille/10)
+	}
+	return fmt.Sprintf("%.1f%%", float64(permille)/10)
 }
 
 // itemVerb is one colonist action on a stack: a command whose options are

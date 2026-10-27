@@ -541,6 +541,9 @@ ICONS = {
     # MED-07 medical drugs
     "numbroot_tincture": ("item", "numbroot_tincture"),
     "prophyl_tablet": ("item", "prophyl_tablet"),
+    # PLAY-024 (the sentry turret is cut from its base + a gun frame, below)
+    "radio_console": ("power", "radio_console_south"),
+    "trade_beacon": ("power", "trade_beacon"),
 }
 ICON_PX = 128          # @2x of a 64 px icon
 ICON_PAD = 10
@@ -2050,6 +2053,36 @@ CARE_ICONS = (   # name, glyph, colour
 )
 
 
+# ------------------------------------------------ PLAY-024 trade and comms
+def _g_trade(xx, yy, c):  # two arrows passing each other: goods out, goods in
+    top = np.minimum(_seg(xx, yy, c - 22, c - 10, c + 20, c - 10),
+                     np.minimum(_seg(xx, yy, c + 20, c - 10, c + 9, c - 21), _seg(xx, yy, c + 20, c - 10, c + 9, c + 1)))
+    low = np.minimum(_seg(xx, yy, c + 22, c + 12, c - 20, c + 12),
+                     np.minimum(_seg(xx, yy, c - 20, c + 12, c - 9, c + 1), _seg(xx, yy, c - 20, c + 12, c - 9, c + 23)))
+    return [top, low]
+
+
+def _g_comms(xx, yy, c):  # a mast on a tripod foot sending waves both ways
+    mast = np.minimum(_seg(xx, yy, c, c - 14, c, c + 24),
+                      np.minimum(_seg(xx, yy, c, c + 4, c - 11, c + 24), _seg(xx, yy, c, c + 4, c + 11, c + 24)))
+    waves = np.minimum(_arc(xx, yy, c, c - 14, 12, 135, 225), _arc(xx, yy, c, c - 14, 12, -45, 45))
+    waves = np.minimum(waves, np.minimum(_arc(xx, yy, c, c - 14, 23, 140, 220), _arc(xx, yy, c, c - 14, 23, -40, 40)))
+    return [mast, waves, _dot(xx, yy, c, c - 14, 3.5)]
+
+
+PLAY024_ICONS = (   # name, glyph, colour
+    ("trade", _g_trade, (0.92, 0.78, 0.42)),
+    ("comms", _g_comms, (0.56, 0.88, 0.66)),
+)
+
+
+def _play024_cut_icons():
+    """The sentry turret's Architect icon: base and one gun frame together."""
+    from . import defense
+    return [p for p in (_cut_icon("sentry_turret", defense.turret_composite(14),
+                                  "%s:defense/sentry_turret_base+sentry_turret_gun_14" % C.NAMESPACE),) if p]
+
+
 def build():
     t = _base_tokens()
     out = [_selection(t), _designation("designation_cut", t, _g_cut),
@@ -2097,6 +2130,7 @@ def build():
     out += [_badge_icon(n, t, g, t[rgb] if isinstance(rgb, str) else rgb) for n, g, rgb in PLAY020_ICONS]
     out += [_badge_icon(n, t, g, t[rgb] if isinstance(rgb, str) else rgb) for n, g, rgb in PLAY021_ICONS]
     out += [_badge_icon(n, t, g, rgb) for n, g, rgb in CARE_ICONS]
+    out += [_badge_icon(n, t, g, rgb) for n, g, rgb in PLAY024_ICONS]
     out += [_shadow_blob(), _shadow_box(), _roof_tile("roof_built", "built"),
             _roof_tile("roof_natural", "natural"), _roof_tile("roof_plan", "plan"),
             _roof_tile("roof_remove", "remove")]
@@ -2110,4 +2144,5 @@ def build():
         if p:
             out.append(p)
     out += _play021_cut_icons()
+    out += _play024_cut_icons()
     return out

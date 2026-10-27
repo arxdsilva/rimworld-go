@@ -363,6 +363,12 @@ func (r *Renderer) drawTraces(screen *ebiten.Image, w game.WorldView, tile float
 // traceMuzzle is the shooter's muzzle for a shot, in world tiles, when the
 // shooter is a drawn pawn holding a rifle.
 func (r *Renderer) traceMuzzle(tr game.TraceView) (vec, bool) {
+	if tr.FromBuilding { // a sentry turret: its gun's muzzle (turret_draw.go)
+		if b, ok := r.buildingByID(tr.Attacker); ok && r.art != nil {
+			return turretMuzzle(r.art, b)
+		}
+		return vec{}, false
+	}
 	p, ok := pawnByStrike(r.drawPawns, tr)
 	if !ok {
 		return vec{}, false

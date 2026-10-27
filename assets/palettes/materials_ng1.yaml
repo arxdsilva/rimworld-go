@@ -40,5 +40,12 @@ materials:
   med_amber:      {light: "#c98d4f", base: "#a86b34", shadow: "#7a4b26"}
   numbroot_label: {light: "#ece2c8", base: "#d9cba8", shadow: "#ae9f80"}
   prophyl_blue:   {light: "#d3e4ee", base: "#b5cfe0", shadow: "#8aa8bd"}
+  # PLAY-024: the sentry turret's armour plates and the radio set's enamel
+  armour_olive:   {light: "#8f9677", base: "#72795b", shadow: "#535a44"}
+  radio_enamel:   {light: "#a99f86", base: "#8c826b", shadow: "#695f4f"}
 emissive:
   med_teal_glow: "#74e6cb"
+  # PLAY-024: turret status lamp, radio screen trace, trade beacon light
+  sentry_lamp_glow:  "#ff6e52"
+  radio_screen_glow: "#9cf0a4"
+  beacon_glow:       "#ffc95c"

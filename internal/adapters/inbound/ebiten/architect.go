@@ -558,7 +558,14 @@ func (a *App) drawArchitectGhost(screen *ebiten.Image) {
 		return
 	}
 	a.renderer.drawPlacementGhost(screen, t.build, a.toolStuff(t), facingNames[a.archFacing], cells)
-	a.drawPowerGhostLinks(screen, t, cells) // power_overlay.go: the link a powered building would make
+	a.drawPowerGhostLinks(screen, t, cells)    // power_overlay.go: the link a powered building would make
+	if rad, ok := placementRing(t.build); ok { // turret_draw.go: the beacon's pickup radius
+		for _, c := range cells {
+			if c.ok && !c.same {
+				a.renderer.drawRangeRing(screen, c.x, c.y, rad, tokenNRGBA(uiAccent))
+			}
+		}
+	}
 	valid, firstBad, replaces := 0, "", ""
 	for _, c := range cells {
 		if c.same {

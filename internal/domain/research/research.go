@@ -38,6 +38,11 @@ const (
 	// implants. It needs Prosthetics and Fabrication (the components they
 	// are built from; there is no microelectronics project).
 	ServoReplacements
+	// Defence and trade (PLAY-024, append only, saved): Sentries opens the
+	// sentry turret (needs Gunsmithing and Electricity); Radio opens the
+	// radio console and the trade beacon (needs Electricity).
+	Sentries
+	Radio
 	NumProjects
 )
 
@@ -105,6 +110,13 @@ var defs = [NumProjects]Def{
 		Desc:     "Powered limbs, eyes, ears, spines, hearts and stomachs that work better than the ones they replace.",
 		Unlocks: []string{"recipe:make_servo_arm", "recipe:make_servo_leg", "recipe:make_optic_implant", "recipe:make_cochlear_implant",
 			"recipe:make_spinal_brace", "recipe:make_pump_heart", "recipe:make_synth_stomach"}},
+	// PLAY-024 (our costs).
+	Sentries: {Project: Sentries, Name: "sentries", Label: "Sentry guns", Cost: 4500,
+		Requires: []Project{Gunsmithing, Electricity},
+		Desc:     "Powered gun posts that shoot raiders and hostile animals on sight.", Unlocks: []string{"build:sentry turret"}},
+	Radio: {Project: Radio, Name: "radio", Label: "Radio relay", Cost: 3000, Requires: []Project{Electricity},
+		Desc:    "A console to talk with other factions and passing ships, and a beacon to mark goods for orbital trade.",
+		Unlocks: []string{"build:radio console", "build:trade beacon"}},
 }
 
 // DefOf returns the definition of p.

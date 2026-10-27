@@ -127,7 +127,7 @@ func (g *Game) stepDrugBody(id entity.EntityID, now uint64) {
 		pos, _ := g.positions.Get(id)
 		if stage >= body.OverdoseStageExtreme && g.stream(streamMedical).IntN(body.OverdoseDeathMTBHours) == 0 {
 			g.message(pos.X, pos.Y, "%s died of an overdose.", g.name(id))
-			g.die(id, health.CauseOverdose)
+			g.dieMedical(id, health.CauseOverdose) // caravan_medical.go
 			g.clearPatient(id)
 			return
 		}
@@ -169,7 +169,7 @@ func (g *Game) drugBody(id entity.EntityID, d drug.Def, now uint64) bool {
 		if b.AddOverdose(sev, now) >= body.OverdoseDeath {
 			pos, _ := g.positions.Get(id)
 			g.message(pos.X, pos.Y, "%s died of an overdose.", g.name(id))
-			g.die(id, health.CauseOverdose)
+			g.dieMedical(id, health.CauseOverdose) // caravan_medical.go
 			g.clearPatient(id)
 			return true
 		}

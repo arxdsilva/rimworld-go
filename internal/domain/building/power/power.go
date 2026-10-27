@@ -54,7 +54,8 @@ func (r Role) String() string {
 }
 
 // Class is a consumer's place in the shed order of a brownout: the lowest
-// class is switched off first (lamps, then benches, coolers, heaters).
+// class is switched off first (lamps, then benches, coolers, heaters, and
+// defences last).
 type Class uint8
 
 const (
@@ -63,6 +64,8 @@ const (
 	ClassBench
 	ClassCooler
 	ClassHeater
+	// ClassDefense (PLAY-024): sentry turrets, shed last in a brownout.
+	ClassDefense
 )
 
 // Spec is a building kind's electrical definition (our numbers). Draw is
@@ -113,6 +116,10 @@ func SpecOf(k construction.Kind) Spec {
 		return bench(200)
 	case construction.VitalsMonitor: // wiki: Vitals monitor (80 W)
 		return consumer(ClassBench, 80, 80)
+	case construction.SentryTurret: // PLAY-024 (our numbers): 120 W firing, 40 W idle
+		return consumer(ClassDefense, 120, 40)
+	case construction.RadioConsole: // PLAY-024: 150 W while worked, 15 W idle
+		return bench(150)
 	}
 	return Spec{}
 }

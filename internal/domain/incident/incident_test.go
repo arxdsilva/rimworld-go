@@ -27,9 +27,10 @@ func TestPickDeterministic(t *testing.T) {
 	// flare and the short circuit (the game vetoes those two without power
 	// devices; this pure pick has no veto). MED-04 added flu, plague, gut
 	// worms and muscle parasites (malaria and sleeping sickness keep to
-	// warm and tropical lands).
-	if len(seen) != 14 {
-		t.Fatalf("picked %v, want all 14 temperate nature events", seen)
+	// warm and tropical lands). PLAY-024 added the trader caravan and the
+	// orbital trader (the game vetoes both until it can host them).
+	if len(seen) != 16 {
+		t.Fatalf("picked %v, want all 16 temperate nature events", seen)
 	}
 }
 

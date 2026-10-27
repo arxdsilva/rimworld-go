@@ -17,6 +17,9 @@ const (
 	Gore
 	Headbutt
 	Peck
+	// SentryGun (PLAY-024) is a sentry turret's mounted gun: never carried,
+	// fired by the building itself.
+	SentryGun
 	numKinds
 )
 
@@ -47,6 +50,9 @@ var defs = [numKinds]Def{
 	Gore:     {Name: "horns", Range: 1, Damage: 9, Cooldown: 130, Accuracy: 70},
 	Headbutt: {Name: "head", Range: 1, Damage: 6, Cooldown: 130, Accuracy: 75},
 	Peck:     {Name: "beak", Range: 1, Damage: 2, Cooldown: 100, Accuracy: 80},
+	// PLAY-024 (our tuning, PLAY024_PLAN.md): quick, light bursts at
+	// medium range.
+	SentryGun: {Name: "sentry gun", Ranged: true, Range: 10, Damage: 9, Cooldown: 60, Accuracy: 75, Falloff: 3},
 }
 
 // DefOf returns the profile for k (fists for unknown kinds).

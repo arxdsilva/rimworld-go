@@ -190,7 +190,7 @@ func (g *Game) raiderName(id entity.EntityID, f *faction.Faction) string {
 	if faction.DefOf(f.Type).Tech == faction.Neolithic {
 		tag = backstory.TagNeolithic
 	}
-	p := pawngen.Generate(g.ng.setup.Seed^raiderNameSalt, int(id), 0, pawngen.Rules{Tech: tag})
+	p := pawngen.Generate(g.worldSeed()^raiderNameSalt, int(id), 0, pawngen.Rules{Tech: tag})
 	if p.Nick != "" {
 		return p.Nick
 	}

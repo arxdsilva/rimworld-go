@@ -12,6 +12,9 @@ type Trace struct {
 	// Damage dealt when it hit; Building marks a blow on a structure.
 	Damage   int
 	Building bool
+	// FromBuilding: a sentry turret fired it (PLAY-024); Attacker is then
+	// the turret's building id.
+	FromBuilding bool
 	// Attacker and Target are the creatures involved (Target 0 for a
 	// building or a trap); Weapon is the attacker's weapon name.
 	Attacker, Target entity.EntityID

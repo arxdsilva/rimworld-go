@@ -204,3 +204,26 @@ func TestInspectorsDrawWithoutArt(t *testing.T) {
 		t.Fatalf("capitalize empty = %q", got)
 	}
 }
+
+// TestItemShowsPoisonChance: a cooked meal's pane names its food-poisoning
+// chance (WS-M); raw food and older stacks show none.
+func TestItemShowsPoisonChance(t *testing.T) {
+	t.Parallel()
+	has := func(lines []string) string {
+		for _, l := range lines {
+			if strings.HasPrefix(l, "Poison chance") {
+				return l
+			}
+		}
+		return ""
+	}
+	if l := has(itemLines(game.ItemView{Kind: "meal", Qty: 2, FreshDays: 3, PoisonPermille: 20}, true)); l != "Poison chance 2%" {
+		t.Fatalf("meal line %q", l)
+	}
+	if l := has(itemLines(game.ItemView{Kind: "meal", Qty: 1, FreshDays: 3, PoisonPermille: 15}, true)); l != "Poison chance 1.5%" {
+		t.Fatalf("meal line %q", l)
+	}
+	if l := has(itemLines(game.ItemView{Kind: "berries", Qty: 5, FreshDays: 3}, true)); l != "" {
+		t.Fatalf("raw food shows %q", l)
+	}
+}

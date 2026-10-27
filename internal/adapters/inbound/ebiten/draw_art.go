@@ -598,7 +598,8 @@ func (r *Renderer) drawBuildingObj(dst *ebiten.Image, b *game.BuildingView, tile
 		}
 		// stone walls, fences and floors take their stone's tint
 		r.drawSpriteCS(dst, key, t, float64(b.X), float64(b.Y), tile, sw, sh, tintCS(r.stuffTint(b.Stuff)))
-		r.drawPowerParts(dst, b, key, tile, sw, sh) // power_draw.go: glow, blades, flame, charge
+		r.drawPowerParts(dst, b, key, tile, sw, sh)   // power_draw.go: glow, blades, flame, charge
+		r.drawDefenseParts(dst, b, key, tile, sw, sh) // turret_draw.go: gun, beacon light
 	}
 	r.drawRuinOverlay(dst, b, tile, sw, sh) // features_draw.go
 	if b.DryQty > 0 {

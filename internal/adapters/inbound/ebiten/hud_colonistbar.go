@@ -335,14 +335,14 @@ func (a *App) cycleHiddenColonist() {
 }
 
 // barPawns are the colonists the colonist bar shows: everyone but
-// prisoners (who stay selectable on the map).
+// prisoners and visitors (traders, guests), who stay selectable on the map.
 func (a *App) barPawns() []game.PawnView {
 	pawns := a.renderer.snapshot()
 	for i, p := range pawns {
-		if p.Prisoner {
+		if p.Prisoner || p.Visitor {
 			out := append(make([]game.PawnView, 0, len(pawns)), pawns[:i]...)
 			for _, q := range pawns[i+1:] {
-				if !q.Prisoner {
+				if !q.Prisoner && !q.Visitor {
 					out = append(out, q)
 				}
 			}

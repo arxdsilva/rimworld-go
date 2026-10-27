@@ -143,7 +143,8 @@ func Balance(devs []Dev, dt int, now uint64) NetOut {
 }
 
 // consumers lists the consumers keep accepts in shed order: lamps,
-// benches, coolers, heaters; the newest (largest id) first in a class.
+// benches, coolers, heaters, defences (PLAY-024); the newest (largest id)
+// first in a class.
 func consumers(devs []Dev, buf []int, keep func(*Dev) bool) []int {
 	for i := range devs {
 		if devs[i].Role == Consumer && keep(&devs[i]) {

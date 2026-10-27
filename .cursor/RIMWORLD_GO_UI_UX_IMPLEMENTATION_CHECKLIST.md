@@ -1143,41 +1143,41 @@ This screen centralizes per-pawn behavioral policies.
 
 ## 21.1 Trade initiation
 
--   [ ] **Context action on trader/communications console**
+-   [x] **Context action on trader/communications console** (PLAY-024: "Trade with X" and "Use radio console" orders, greyed with reasons)
 -   [ ] **Select negotiator**
     -   Show relevant social/trade stat.
 
 ## 21.2 Trade dialog
 
--   [ ] **Two-sided inventory table**
+-   [x] **Two-sided inventory table** (PLAY-024: colony and trader quantities per row, grouped by category)
     -   Colony goods.
     -   trader goods.
     -   quantity.
     -   buy price.
     -   sell price.
     -   quality/condition.
--   [ ] **Trade quantity control**
+-   [x] **Trade quantity control** (PLAY-024: ±1 / ±10 / all steppers clamped to stock)
     -   Keyboard/mouse efficient.
     -   buy/sell direction visually obvious.
 -   [ ] **Category filters**
 -   [ ] **Search**
 -   [ ] **Sort**
     -   name/value/category/quantity/quality.
--   [ ] **Currency balance**
+-   [x] **Currency balance** (PLAY-024: colony and trader silver after the deal, red when short)
     -   Current silver.
     -   net transaction.
     -   post-trade balance.
--   [ ] **Negotiator modifier**
--   [ ] **Accept/reset/cancel**
--   [ ] **Validation**
+-   [x] **Negotiator modifier** (PLAY-024: negotiator, Social and price modifier in the header)
+-   [x] **Accept/reset/cancel** (PLAY-024)
+-   [x] **Validation** (PLAY-024: Accept disabled with a reason; a refused deal shows why)
     -   Trader cannot afford.
     -   colony cannot afford.
     -   unavailable/changed stock.
 
 ## 21.3 Gift mode
 
--   [ ] **Switch trade/gift**
--   [ ] **Projected goodwill**
+-   [x] **Switch trade/gift** (PLAY-024: gift toggle)
+-   [x] **Projected goodwill** (PLAY-024: "Goodwill x -> y" in gift mode)
 -   [ ] **Confirm gift**
 
 ------------------------------------------------------------------------

@@ -473,6 +473,9 @@ func (g *Game) stepCaravans(now uint64) {
 			i--
 			continue
 		}
+		if hour && c.C.State != caravan.Forming {
+			g.caravanCare(c, now) // caravan_medical.go (WS-M): the medic on the road
+		}
 		if now >= c.NextTalk {
 			c.NextTalk = now + caravanTalkPeriod
 			g.caravanTalk(c, now)
@@ -764,6 +767,7 @@ func (g *Game) worldMapView() WorldMapView {
 		}
 		for _, m := range c.C.Members {
 			cv.Members = append(cv.Members, g.personName(entity.EntityID(m)))
+			cv.Health = append(cv.Health, g.caravanMemberStatus(entity.EntityID(m))) // caravan_medical.go
 		}
 		v.Caravans = append(v.Caravans, cv)
 	}

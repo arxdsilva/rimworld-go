@@ -349,6 +349,11 @@ type saveState struct {
 	// (care.go); nil while all are at their defaults, so older saves
 	// hash as before.
 	Care *careSave
+	// PLAY-024: the trade state (trade.go) and the sentry turrets' aims
+	// (turret.go); nil when there is nothing to keep, so older saves and
+	// colonies without traders or turrets hash as before.
+	Trade   *tradeSave
+	Turrets *turretSave
 }
 
 // powerSave is the saved electricity, in id order (PLAY021_PLAN.md
@@ -468,6 +473,8 @@ func (g *Game) Save(w io.Writer, name string) error {
 	s.BedRest = g.exportBedRest() // bedrest.go (PLAY-020)
 	s.Power = g.exportPower()     // power.go (PLAY-021): nil without power
 	s.Care = g.exportCare()       // care.go (MED-03): nil at the defaults
+	s.Trade = g.exportTrade()     // trade.go (PLAY-024): nil while there is nothing to keep
+	s.Turrets = g.exportTurrets() // turret.go (PLAY-024): nil while no turret aims
 	s.Areas, s.History = g.areas.Export(), slices.Clone(g.history)
 	if s.RNGStreams, err = g.exportStreams(); err != nil {
 		return fmt.Errorf("save rng streams: %w", err)
@@ -642,8 +649,10 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.importBodies(s.Bodies)
 	g.importSurgery(s.Surgery)
 	g.importBedRest(s.BedRest)
-	g.importCare(s.Care)   // care.go (MED-03)
-	g.importPower(s.Power) // power.go (PLAY-021)
+	g.importCare(s.Care)       // care.go (MED-03)
+	g.importPower(s.Power)     // power.go (PLAY-021)
+	g.importTrade(s.Trade)     // trade.go (PLAY-024): sessions close on load
+	g.importTurrets(s.Turrets) // turret.go (PLAY-024)
 	g.importDrugs(s.Drugs)
 	g.importPrisoners(s.Prisoners)
 	g.areas, g.history = area.Import(s.Areas), s.History

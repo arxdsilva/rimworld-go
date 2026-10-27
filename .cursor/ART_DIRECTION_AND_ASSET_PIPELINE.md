@@ -1483,3 +1483,50 @@ cover it. Every family follows §12-§17 (pivots, palette, outline rules) and
   (`overlay/fight_lightning`), and a face-scar portrait overlay for
   disfigured colonists (`pawn/face_scar_<facing>`, drawn over the head on
   portraits and in the world at portrait LOD).
+
+## 38. Sentry turret, trade beacon and radio console (PLAY-024)
+
+Normative key list (contract in `.cursor/PLAY024_PLAN.md`). None exist yet:
+until each is generated the renderer draws the plain building fallback and
+the Architect keeps the tool out of `archTools` (so
+`TestGeneratedArtCoversRenderer` does not ask for it). Every sprite follows
+§12-§17 (pivots, palette, outline rules) and §24 metadata; all designs
+original, never traced from RimWorld.
+
+- **`defense` family** (new `artlib/families/defense.py`):
+  - `defense/sentry_turret_base` (1x1, footprint `[1, 1]`, not rotatable):
+    a squat steel tripod or plinth with an ammo box; attachment `mount`
+    (image px, where the gun's pivot sits). Lit layer
+    `defense/sentry_turret_base_glow` (`layer: glow`, `of:
+    defense/sentry_turret_base`): a small status light, drawn only while
+    powered.
+  - `defense/sentry_turret_gun_00` .. `_15` (`layer: gun`, `of:
+    defense/sentry_turret_base`, `frame: 0..15`, `frames: 16`,
+    `step_deg: 22.5`): the gun baked in 16 aim directions like the wind
+    turbine's rotor frames; frame 0 points south (toward the viewer) and
+    frames count clockwise on screen. The renderer picks
+    `BuildingView.AimDir`. Attachments: `mount` (the pivot, matched to
+    the base's `mount`) and `muzzle` (where the muzzle flash and tracer
+    start; `BuildingView.ShotAge` drives the flash, reusing the rifle's
+    flash effect).
+  - The blast on destruction reuses the burst effect (`BurstView.Turret`);
+    no new effect sprite.
+- **`power` family** (`artlib/families/power.py`):
+  - `power/radio_console_<south|east|north|west>` (2x1 when facing south,
+    `rotatable: true`): a steel desk with a set, dials and a handset; the
+    operator stands at the interaction spot in front of it. Lit layer
+    `power/radio_console_glow_<facing>` (screen and dial lights) drawn only
+    while powered.
+  - `power/trade_beacon` (1x1, walkable post with a dish or mast) and
+    `power/trade_beacon_glow`: a beacon light; the blink is display-only
+    (a renderer phase, never sim state). The beacon is unpowered: its
+    glow always shows.
+- **Icons:** `ui_icon/trade` (order, alert and trade dialog), `ui_icon/comms`
+  (console order and comms dialog), and Architect icons
+  `ui_icon/sentry_turret`, `ui_icon/radio_console`, `ui_icon/trade_beacon`
+  (sourced from the south sprite like `ui_icon/vitals_monitor`), plus
+  research icons if the research screen gains them.
+- **Reused, not new:** drop-pod fall and dust (`effect/pod_fall`) for
+  orbital deliveries, the rifle muzzle flash, bursts, the rifle shot
+  sound. New sounds only with the user's spend approval.
+

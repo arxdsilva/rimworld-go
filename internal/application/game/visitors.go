@@ -17,7 +17,8 @@ import (
 // Visitors and wanderers (ENG-003, M9). A friendly or neutral faction
 // sends two to four of its people: they walk in from an edge, stroll near
 // the colony for half a day (job.Visit: walk to a spot, linger) and walk
-// out again. They are registered people (Where Visitor, their faction)
+// out again (a trader caravan, trade_caravan.go, stays longer and
+// closer). They are registered people (Where Visitor, their faction)
 // on raiderIDs as non-hostile pawns (raiderState.Leaving, as the colony's
 // released prisoners are), so colonists can chat with them and capture or
 // arrest them (M8); the visit itself is driven from phaseWorld, out of
@@ -158,7 +159,7 @@ func (g *Game) inset(x, y int) bool {
 // spawnVisitor puts one new visitor of faction fac on (x, y).
 func (g *Game) spawnVisitor(fac int, f *faction.Faction, x, y int, now uint64) entity.EntityID {
 	id := g.entities.Next()
-	p := pawngen.Generate(g.ng.setup.Seed^visitorSalt, int(id), 0, pawngen.Rules{Tech: techTag(f)})
+	p := pawngen.Generate(g.worldSeed()^visitorSalt, int(id), 0, pawngen.Rules{Tech: techTag(f)})
 	g.peopleReg().add(&person{ID: id, Bio: p, HasBio: true, Faction: fac, Where: whereVisitor})
 	g.socState().sig[id] = personSig{}
 	g.placeVisitor(id, fac, x, y, now)
@@ -180,6 +181,17 @@ func (g *Game) placeVisitor(id entity.EntityID, fac, x, y int, now uint64) {
 	g.invalidateCreatures()
 }
 
+// setVisitorStay makes visitor id leave at leaveAt (a trader caravan's
+// longer stay).
+func (g *Game) setVisitorStay(id entity.EntityID, leaveAt uint64) {
+	w := g.worldS()
+	for i := range w.visitors {
+		if w.visitors[i].ID == id {
+			w.visitors[i].LeaveAt = leaveAt
+		}
+	}
+}
+
 // visitorsTick drives every visitor: keep it out of the released-prisoner
 // walk-out, stroll near the colony, and leave when the stay is over.
 func (g *Game) visitorsTick(now uint64) {
@@ -188,6 +200,8 @@ func (g *Game) visitorsTick(now uint64) {
 	for _, v := range w.visitors {
 		if g.visitorStep(&v, now) {
 			kept = append(kept, v)
+		} else {
+			g.traderVisitorGone(v.ID) // trade_caravan.go (PLAY-024): the trader's goods
 		}
 	}
 	clear(w.visitors[len(kept):])
@@ -241,6 +255,7 @@ func (g *Game) visitorStep(v *visitorRec, now uint64) bool {
 	case j.Kind == job.Visit && j.State == job.Do:
 		g.lingerVisit(v.ID, j)
 	case j.Active():
+	case g.traderHeld(v.ID): // trade_caravan.go: a trader stays put while traded with
 	case now >= v.RetryAt:
 		if !g.startStroll(v.ID) {
 			v.RetryAt = now + visitorRetry
@@ -284,8 +299,9 @@ func (g *Game) departVisitor(id entity.EntityID) {
 func (g *Game) startStroll(id entity.EntityID) bool {
 	hx, hy := g.home()
 	r := g.stream(streamWorld)
-	x := hx + r.IntN(2*visitorRange+1) - visitorRange
-	y := hy + r.IntN(2*visitorRange+1) - visitorRange
+	rg := g.caravanStrollRange(id) // trade_caravan.go: a trader caravan camps closer
+	x := hx + r.IntN(2*rg+1) - rg
+	y := hy + r.IntN(2*rg+1) - rg
 	tx, ty, ok := g.walkableNear(x, y, 3)
 	if !ok || !g.inset(tx, ty) {
 		return false
@@ -339,7 +355,7 @@ func (g *Game) wandererJoins(now uint64) bool {
 	if !ok {
 		return false
 	}
-	p := pawngen.Generate(g.ng.setup.Seed^wandererSalt, int(g.entities.Peek()), 0, pawngen.Rules{})
+	p := pawngen.Generate(g.worldSeed()^wandererSalt, int(g.entities.Peek()), 0, pawngen.Rules{})
 	id, err := g.spawnGenerated(p, x, y) // skills.go
 	if err != nil {
 		return false

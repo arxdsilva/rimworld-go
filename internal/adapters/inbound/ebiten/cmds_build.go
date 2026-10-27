@@ -150,6 +150,7 @@ func (a *App) buildingLines(b game.BuildingView) []string {
 	w := a.renderer.world()
 	add(roomLabelAt(w, b.X, b.Y))
 	add(fuelLine(b))
+	add(turretLine(b))
 	add(powerLines(b, w)...)
 	if b.DryQty > 0 {
 		add(fmt.Sprintf("Drying %d %s, %d%%", b.DryQty, b.DryKind, b.DryPct))

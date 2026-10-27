@@ -22,6 +22,10 @@ const (
 	// medSalt (MED-00): tend quality, infection, disease and surgery
 	// rolls of the medical system.
 	medSalt = 0x3ED1CA
+	// PLAY-024: trader stock, prices' rolls and drop pods (tradeSalt);
+	// sentry turret shots and blasts (defenseSalt).
+	tradeSalt   = 0x7EAD3
+	defenseSalt = 0xDEF3A5
 )
 
 // Stream names, the RNGStreams save keys.
@@ -34,6 +38,8 @@ const (
 	streamBond    = "bond"
 	streamPower   = "power"
 	streamMedical = "medical"
+	streamTrade   = "trade"
+	streamDefense = "defense"
 )
 
 // streamSeedKey holds the base seed in the RNGStreams save map (8 bytes,
@@ -45,6 +51,7 @@ var streamSalts = map[string]uint64{
 	streamSocial: socialSalt, streamBody: bodySalt, streamDrug: drugSalt,
 	streamWorld: worldSalt, streamPrison: prisonSalt, streamBond: bondSalt,
 	streamPower: powerSalt, streamMedical: medSalt,
+	streamTrade: tradeSalt, streamDefense: defenseSalt,
 }
 
 // rngStreams is the base seed and the streams created so far.

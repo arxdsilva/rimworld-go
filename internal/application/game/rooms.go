@@ -291,8 +291,10 @@ func (g *Game) afterSleep(id entity.EntityID) {
 	}
 }
 
-// afterEat records what and where pawn id ate.
-func (g *Game) afterEat(id entity.EntityID, k item.Kind) {
+// afterEat records what and where pawn id ate from stack st, and rolls
+// the meal's food poisoning (food_poison.go).
+func (g *Game) afterEat(id entity.EntityID, st item.Stack) {
+	k := st.Kind
 	switch {
 	case k == item.Meal:
 		g.remember(id, mood.AteMeal)
@@ -305,6 +307,7 @@ func (g *Game) afterEat(id entity.EntityID, k item.Kind) {
 	} else {
 		g.remember(id, mood.AteWithoutTable)
 	}
+	g.rollFoodPoison(id, st)
 }
 
 // workTick reports whether a work job progresses this tick: unhappy

@@ -297,6 +297,11 @@ func (g *Game) damageBuilding(id entity.EntityID, dmg int) {
 		g.collapseBridge(b) // bridge_remove.go: what it held up goes with it
 	}
 	g.removeBuilding(id)
+	if b.Kind == construction.SentryTurret {
+		// turret.go (PLAY-024): it blows up once it is gone and its
+		// blueprint laid, so the blast never finds it standing
+		defer g.turretBlast(id, b)
+	}
 	if b.Ancient {
 		return // vault.go: an ancient piece leaves no blueprint to rebuild
 	}

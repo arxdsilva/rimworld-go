@@ -115,6 +115,14 @@ const (
 	// raises tend quality, surgery success and immunity gain for the
 	// patient in that bed.
 	VitalsMonitor
+	// Defence and trade (PLAY-024, append only, saved). SentryTurret is a
+	// powered 1x1 gun post that shoots hostiles in range; TradeBeacon is
+	// an unpowered post that marks the goods an orbital trader can reach;
+	// RadioConsole is a powered 2x1 desk a colonist works to call
+	// factions and ships.
+	SentryTurret
+	TradeBeacon
+	RadioConsole
 	kindCount
 )
 
@@ -301,6 +309,15 @@ var defs = [kindCount]Def{
 	// 1.5 times our hospital bed's work. The steel is original tuning.
 	VitalsMonitor: {Kind: VitalsMonitor, Name: "vitals monitor", Wood: 40, Work: 300, Layer: LayerObject, BlocksMove: true,
 		Rotatable: true, MetalOK: true, MetalOnly: true, Components: 1},
+	// PLAY-024 (our costs, PLAY024_PLAN.md): steel pieces (Wood is the
+	// steel). The console's operator stands at its spot, south of the desk.
+	SentryTurret: {Kind: SentryTurret, Name: "sentry turret", Wood: 90, Work: 400, Layer: LayerObject, BlocksMove: true,
+		MetalOK: true, MetalOnly: true, Components: 3},
+	TradeBeacon: {Kind: TradeBeacon, Name: "trade beacon", Wood: 40, Work: 120, Layer: LayerObject,
+		MetalOK: true, MetalOnly: true},
+	RadioConsole: {Kind: RadioConsole, Name: "radio console", Wood: 80, Work: 300, Layer: LayerObject, BlocksMove: true,
+		Rotatable: true, Size: [2]int{2, 1}, Spot: [2]int{0, 1}, HasSpot: true,
+		MetalOK: true, MetalOnly: true, Components: 3},
 }
 
 // RecipeBench is the kind whose recipes and work k runs (PLAY-021): an
@@ -356,6 +373,8 @@ func MaxHP(k Kind, s item.Kind) int {
 		hp = 140
 	case SpikeTrap:
 		hp = 40
+	case SentryTurret:
+		hp = 100 // 140 in steel, its only material (PLAY-024)
 	}
 	pct, _ := StuffStats(s)
 	return hp * pct / 100
@@ -369,6 +388,8 @@ func CoverPct(k Kind) int {
 		return 55
 	case Wall, Door:
 		return 40 // a corner peeked around
+	case SentryTurret:
+		return 30 // PLAY-024: a raider crouched behind a turret
 	}
 	return 0
 }

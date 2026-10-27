@@ -28,6 +28,8 @@ func TestSpecOf(t *testing.T) {
 		construction.ElectricTailoringBench: {Role: Consumer, Class: ClassBench, Draw: 150, Idle: 15, Toggle: true},
 		construction.ElectricResearchBench:  {Role: Consumer, Class: ClassBench, Draw: 200, Idle: 20, Toggle: true},
 		construction.VitalsMonitor:          {Role: Consumer, Class: ClassBench, Draw: 80, Idle: 80, Toggle: true},
+		construction.SentryTurret:           {Role: Consumer, Class: ClassDefense, Draw: 120, Idle: 40, Toggle: true},
+		construction.RadioConsole:           {Role: Consumer, Class: ClassBench, Draw: 150, Idle: 15, Toggle: true},
 	}
 	seen := 0
 	for _, d := range construction.All() {

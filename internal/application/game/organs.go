@@ -44,7 +44,7 @@ func (g *Game) stepOrganFailure() {
 		}
 		pos, _ := g.positions.Get(id)
 		g.message(pos.X, pos.Y, "%s died of organ failure.", g.name(id))
-		g.die(id, health.CauseOrganFailure)
+		g.dieMedical(id, health.CauseOrganFailure) // caravan_medical.go
 		g.clearPatient(id)
 	}
 }

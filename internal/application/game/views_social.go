@@ -148,8 +148,11 @@ type WorldMapView struct {
 
 // CaravanView is one caravan; Progress is the percent to its next tile.
 type CaravanView struct {
-	ID         uint64
-	Members    []string
+	ID      uint64
+	Members []string
+	// Health is each member's short health note, parallel to Members
+	// ("bleeding", "flu", "food poisoning"; "" when well; WS-M).
+	Health     []string
 	Tile, Dest int
 	Progress   int
 	State      string

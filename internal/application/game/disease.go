@@ -77,12 +77,13 @@ func (g *Game) diseasePct() int {
 	return max(g.ng.setup.Difficulty.DiseaseFreq, 0)
 }
 
-// diseaseCandidates are the colonists at home disease k may strike, in id
-// order: alive, not prisoners, raiders or visitors, without k already,
-// not kept from it by prophyl, and for gut worms without a synth stomach.
+// diseaseCandidates are the colonists disease k may strike, in id order:
+// at home or away on a caravan (WS-M), alive, not prisoners, raiders or
+// visitors, without k already, not kept from it by prophyl, and for gut
+// worms without a synth stomach.
 func (g *Game) diseaseCandidates(k body.CondKind) []entity.EntityID {
 	var out []entity.EntityID
-	for _, id := range g.homeColonists() { // relative_world.go: alive, on the map
+	for _, id := range g.colonistsHomeAndAway() { // caravan_medical.go
 		if g.isPrisoner(id) || g.isRaider(id) || g.visitor(id) || g.prophylaxed(id, k) { // drugs.go (MED-07): prophyl
 			continue
 		}
@@ -171,9 +172,15 @@ func (g *Game) diseaseLetter(k body.CondKind, victims []entity.EntityID) {
 		text = fmt.Sprintf("%s %s caught %s. It races their immunity and can kill: keep them in bed and tended every %d hours, with the best medicine and doctor you have.",
 			who, verb, d.Label, d.TendEvery)
 	}
+	text += g.awayNote(victims) // caravan_medical.go (WS-M): who is off on a caravan
 	title := strings.ToUpper(d.Label[:1]) + d.Label[1:]
-	pos, _ := g.positions.Get(victims[0])
-	g.post(MessageView{Tick: uint64(g.clock.Now()), Text: text, X: pos.X, Y: pos.Y, Focus: victims[0],
+	pos, on := g.positions.Get(victims[0])
+	focus := victims[0]
+	if !on { // away on a caravan: the letter points home
+		pos.X, pos.Y = g.home()
+		focus = 0
+	}
+	g.post(MessageView{Tick: uint64(g.clock.Now()), Text: text, X: pos.X, Y: pos.Y, Focus: focus,
 		Letter: true, Title: title, Kind: letterCaution})
 }
 
@@ -198,14 +205,23 @@ func (g *Game) stepDiseases(now uint64) {
 	}
 	for _, id := range slices.Clone(g.med.patients) { // a death touches the index
 		b := g.bodies[id]
-		if !hasDisease(b) {
+		poisoned := g.poisoned(id) // food_poison.go (WS-M)
+		if !poisoned && !hasDisease(b) {
 			continue
 		}
 		v, ok := g.vital.Get(id)
 		if !ok || v.Status == health.Dead {
 			continue
 		}
-		g.stepDisease(id, b, &v, now)
+		if hasDisease(b) {
+			g.stepDisease(id, b, &v, now)
+			if v, ok = g.vital.Get(id); !ok || v.Status == health.Dead {
+				continue
+			}
+		}
+		if poisoned {
+			g.stepFoodPoison(id, b, &v, now)
+		}
 	}
 }
 
@@ -230,7 +246,7 @@ func (g *Game) stepDisease(id entity.EntityID, b *body.Body, v *health.Record, n
 			}
 		} else if dead, cured := infection.StepRace(c, d, now < c.TendUntil, g.immunityGain(id), 1); dead {
 			g.message(pos.X, pos.Y, "%s died of %s.", g.name(id), d.Label)
-			g.die(id, health.CauseDisease)
+			g.dieMedical(id, health.CauseDisease) // caravan_medical.go: away on a caravan, no corpse
 			g.clearPatient(id)
 			return
 		} else if cured {
@@ -258,7 +274,7 @@ func (g *Game) stepDisease(id entity.EntityID, b *body.Body, v *health.Record, n
 		g.bodyChanged(id, b, v) // body.go: stats follow the capacities
 		g.updateDowned(id, b, v)
 	}
-	if vomit {
+	if vomit && g.onMap(id) { // away on a caravan: no splash on the map
 		g.addDirt(pos.Y*g.grid.Width()+pos.X, vomitDirt) // filth.go
 	}
 }
@@ -331,9 +347,9 @@ func (g *Game) diseaseSick(id entity.EntityID) bool {
 }
 
 // feelsSick reports id under the "sick" thought (rooms.go): fighting a
-// condition (sick, infection.go) or host to parasites.
+// condition (sick, infection.go), host to parasites, or food poisoned.
 func (g *Game) feelsSick(id entity.EntityID) bool {
-	if g.sick(id) {
+	if g.sick(id) || g.poisoned(id) { // food_poison.go (WS-M)
 		return true
 	}
 	b := g.bodies[id]

@@ -1219,6 +1219,51 @@ quantity; - buy/sell price; - quality; - condition.
 
 Validation handles affordability and stock changes.
 
+## PLAY-024 contract (trade dialog)
+
+-   **Entry:** a centred window (`trade_ui.go`) that opens while
+    `Simulation.TradeView()` reports a session: a colonist ran the Trade
+    job to a caravan trader ("Trade with <name>" on right-click), or
+    called the orbital ship from the comms dialog. It closes when the
+    session ends (Cancel, the trader leaves, the negotiator goes down).
+    The display auto-pauses while it is open; the simulation itself keeps
+    its own pause state.
+-   **Regions:** header (trader name and kind, faction with goodwill, hours
+    left, "Orbital" tag); negotiator line (name, Social level, "Price
+    modifier" from `PriceModPct`); two-column table, colony on the left,
+    trader on the right; footer with the running total, colony silver
+    after the deal, trader silver after the deal, the gift toggle with
+    projected goodwill, and Reset / Accept / Cancel.
+-   **Rows:** one per `game.TradeRowView`, grouped by `Category`, sorted by
+    `Label`: colony quantity, a stepper (−all, −10, −1, amount, +1, +10,
+    +all), trader quantity, unit price (`SellC` on the colony side, `BuyC`
+    on the trader side, shown in silver with two decimals). A positive
+    amount buys from the trader (clamped to `TraderQty`, only when
+    `WillBuy`); a negative amount sells (clamped to `ColonyQty`, only when
+    `WillSell`). A disabled direction greys its half of the stepper with a
+    tooltip ("They don't buy that").
+-   **Information:** `Simulation.TradeView()` → `game.TradeView`
+    (`Trader`, `TraderKind`, `Faction`, `FactionID`, `Orbital`,
+    `HoursLeft`, `Negotiator`, `NegotiatorName`, `Social`, `PriceModPct`,
+    `Goodwill`, `ColonySilver`, `TraderSilver`, `Rows`, `Reason`).
+    Read through the UI-owned `tradeSource` interface. The dialog's own
+    amounts are presentation state; totals are computed from the row
+    prices for display only — the game settles authoritatively.
+-   **Actions / Commands:** Accept sends `command.ProposeTrade` with
+    `Name = game.EncodeTradeOffer([]trade.Delta)` (positive Qty: buy;
+    negative: sell; zero lines left out) and `Enabled` = gift mode; Cancel
+    sends `command.CloseTrade`; Reset clears the amounts locally. In gift
+    mode only selling is allowed and the footer shows the projected
+    goodwill (`faction.GiftGoodwill` of the offered value) instead of
+    silver.
+-   **States:** a refused deal shows `TradeView.Reason` in red under the
+    footer and keeps the amounts; an accepted one clears them (the rows
+    update from the next view). Accept is disabled with a reason when the
+    offer is empty, the colony can't afford it, or the trader can't pay.
+    `ok == false` closes the window.
+-   [ ] Not built yet (PLAY-024 Phase 2, agent U1; the read model and
+    commands exist since Phase 0).
+
 ------------------------------------------------------------------------
 
 # 29. Factions Screen
@@ -1248,6 +1293,40 @@ Understand geopolitical relationships.
 Where available: - call; - request trader; - request aid; - offer gift.
 
 Costs and unavailable reasons must be explicit.
+
+## PLAY-024 contract (radio console comms dialog)
+
+-   **Entry:** a centred window (`comms_ui.go`) that opens while
+    `Simulation.CommsView()` reports a session: a colonist ran the
+    UseComms job at a powered radio console ("Use radio console" on
+    right-click; refused with a reason when unpowered or the colonist
+    can't talk). Close sends `command.CloseComms`.
+-   **Regions:** header (operator name, console); one row per faction
+    (emblem, name, relation word, goodwill bar −100..100 with the value);
+    per row the actions Gift (silver stepper, default 40, with the
+    goodwill it earns), Request caravan, Request aid; an orbital ship row
+    at the bottom (ship name, trader kind, hours left, Call); the silver
+    within beacon reach (`BeaconSilver`) beside the gift stepper.
+-   **Information:** `Simulation.CommsView()` → `game.CommsView`
+    (`Operator`, `OperatorName`, `Console`, `Factions []CommsFactionView`
+    with `ID`, `Name`, `Type`, `Goodwill`, `Relation`, and `Gift`,
+    `Caravan`, `Aid` as `CommsActionView{Allowed, Cost, Reason}`;
+    `Orbital OrbitalView{Present, Ship, Kind, HoursLeft, CallOK,
+    CallReason}`; `BeaconSilver`). Read through the UI-owned
+    `commsSource` interface.
+-   **Actions / Commands:** Gift → `command.CommsGift` (`Index` faction
+    id, `Count` silver); Request caravan → `command.CommsRequestCaravan`
+    (`Index`); Request aid → `command.CommsRequestAid` (`Index`); Call →
+    `command.CommsCallTrader` (opens the trade dialog); Close →
+    `command.CloseComms`.
+-   **States:** every action shows its cost ("12 goodwill"); a disabled one
+    is greyed with its `Reason` as the label tail and tooltip ("cooling
+    down: 2 days", "needs goodwill 0", "friendly factions only", "needs a
+    trade beacon", "not enough silver in beacon reach"). Hostile factions
+    show only their row and goodwill. With no ship in range the orbital
+    row reads "No ship in range". `ok == false` closes the window.
+-   [ ] Not built yet (PLAY-024 Phase 2, agent U1; the read model and
+    commands exist since Phase 0).
 
 ------------------------------------------------------------------------
 

@@ -442,3 +442,13 @@ func (g *Game) landingSpot() (int, int) {
 	}
 	return g.grid.Width() / 2, g.grid.Height() / 2
 }
+
+// worldSeed is the seed people and factions are drawn from: the setup's,
+// or the game seed in a legacy colony (which has a faction only from
+// DevAddFactions).
+func (g *Game) worldSeed() uint64 {
+	if g.ng.setup != nil {
+		return g.ng.setup.Seed
+	}
+	return g.streams.seed
+}

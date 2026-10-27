@@ -127,7 +127,11 @@ func TestGrownGolden(t *testing.T) {
 	// bleeds, heals at the wiki rates and can be infected; with that combat
 	// hook off the hash is the previous pin, so MED-07 and MED-08 do not move
 	// it (the run never reaches midnight or an overdose); stable over -count=2.
-	const want uint64 = 0x925a9872fa91e0db
+	// Re-pinned (PLAY-024 contract): CompleteResearch also completes the
+	// two new projects (Sentry guns, Radio relay); with them left
+	// unfinished the hash is the previous pin (925a9872), so behaviour is
+	// unchanged; stable over -count=2.
+	const want uint64 = 0x960cb818b7a41587
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

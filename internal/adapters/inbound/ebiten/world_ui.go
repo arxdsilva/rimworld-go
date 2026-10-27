@@ -266,14 +266,15 @@ func (a *App) worldList(st *worldUI, r rect, view game.WorldMapView) {
 		}
 		id := fmt.Sprintf("world.caravan.%d", c.ID)
 		pick := rect{row.X, row.Y, row.W - 116, row.H} // the Return button sits beside it
-		if a.uiButton(id, pick, "", btnOpts{Selected: st.sel == c.ID, Tip: caravanTitle(c)}) {
+		// the hover card lists every member's health (caravan_ui.go)
+		if a.uiButton(id, pick, "", btnOpts{Selected: st.sel == c.ID, Tip: caravanTip(c)}) {
 			st.sel = c.ID
 			if st.globe != nil {
 				st.globe.Center(c.Tile)
 			}
 		}
 		a.uiLabel(row.X+8, row.Y+4, ellipsize(caravanTitle(c), tsBody, float64(row.W-16)), tsBody)
-		where := fmt.Sprintf("%s · tile %d → %d", c.State, c.Tile, c.Dest)
+		where := fmt.Sprintf("%s%s · tile %d → %d", c.State, caravanHealthNote(c), c.Tile, c.Dest) // caravan_ui.go (WS-M): sick and hurt members first
 		if c.State == "Travelling" || c.State == "Returning home" {
 			where += fmt.Sprintf(" · %d%% to the next tile", c.Progress)
 		}

@@ -180,3 +180,30 @@ func (a *App) formCaravanBody(f *formCaravan, body rect) {
 		}
 	}
 }
+
+// caravanHealthNote is the caravan row's note on its sick and hurt
+// members (" · Ada: flu · Bo: bleeding"; "" when all are well; WS-M).
+func caravanHealthNote(c game.CaravanView) string {
+	var b strings.Builder
+	for i, h := range c.Health {
+		if h == "" || i >= len(c.Members) {
+			continue
+		}
+		b.WriteString(" · " + c.Members[i] + ": " + h)
+	}
+	return b.String()
+}
+
+// caravanTip is the caravan row's hover card: its members, one a line,
+// each with its health note.
+func caravanTip(c game.CaravanView) string {
+	lines := []string{caravanTitle(c)}
+	for i, m := range c.Members {
+		h := "well"
+		if i < len(c.Health) && c.Health[i] != "" {
+			h = c.Health[i]
+		}
+		lines = append(lines, m+": "+h)
+	}
+	return strings.Join(lines, "\n")
+}

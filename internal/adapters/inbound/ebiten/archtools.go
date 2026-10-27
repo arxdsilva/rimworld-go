@@ -176,6 +176,13 @@ var archTools = []archTool{
 		desc: "Waist-high cover. Colonists right behind them are much harder to shoot. Drag to draw a line."},
 	{id: "spike_trap", label: "Spike trap", category: "security", icon: "spike_trap", mode: placeSingle, build: "spike trap",
 		desc: "Springs on raiders and predators that walk over it, then is re-laid as a blueprint. Colonists step around it safely."},
+	// PLAY-024: defence and trade.
+	{id: "sentry_turret", label: "Sentry turret", category: "security", icon: "sentry_turret", mode: placeSingle, build: sentryTurretKind,
+		desc: "A powered gun post: shoots raiders and hostile animals within 10 tiles in line of sight. Shoots only while powered; select it to see its reach."},
+	{id: "radio_console", label: "Radio console", category: "misc", icon: "radio_console", mode: placeSingle, build: radioConsoleKind,
+		desc: "A powered desk (2x1): a colonist works it to call traders, gift silver and ask factions for help. Q/E rotates."},
+	{id: "trade_beacon", label: "Trade beacon", category: "misc", icon: "trade_beacon", mode: placeSingle, build: tradeBeaconKind,
+		desc: "Marks the goods an orbital trader can buy: stacks within 6 tiles of it. Unpowered; the ghost shows its radius."},
 	{id: "brewing_bench", label: "Brewing bench", category: "production", icon: "brewing_bench", mode: placeSingle, build: "brewing bench",
 		desc: "Brews brewgrain into beer (2x1). Select it to add bills. Q/E rotates."},
 	{id: "drug_table", label: "Drug table", category: "production", icon: "drug_table", mode: placeSingle, build: "drug table",
@@ -470,6 +477,12 @@ func powerSprite(kind, facing string, mask int, open bool) string {
 		return "power/heater"
 	case coolerKind:
 		return "power/cooler_" + facingOr(facing)
+	case sentryTurretKind:
+		return turretBaseKey
+	case tradeBeaconKind:
+		return "power/trade_beacon"
+	case radioConsoleKind:
+		return "power/radio_console_" + facingOr(facing)
 	case "electric stove":
 		return "furniture/electric_stove_" + facingOr(facing)
 	case "electric tailoring bench":

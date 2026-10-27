@@ -282,6 +282,12 @@ func (a *App) currentAlerts() []alert {
 		return m.out
 	}
 	out := buildAlerts(append(r.snapshot(), r.hostiles()...), w)
+	if extra := tradeAlertsFrom(r.game); len(extra) > 0 { // alerts_trade.go (PLAY-024)
+		for i := range extra {
+			extra[i].sev, extra[i].explain = sevWarning, alertExplain(extra[i].key)
+		}
+		out = append(out, extra...)
+	}
 	a.alerts = alertsMemo{key: k, out: out, ok: true}
 	return out
 }
@@ -615,6 +621,8 @@ func waitingFramesAlert(w game.WorldView) (alert, bool) {
 // (the card shown while the alert is hovered). Keys with a numeric suffix
 // ("penopen.3") share the text of their prefix.
 var alertExplanations = map[string]string{
+	"tradeorbit":    "A trade ship is in radio range for a few more hours. Work the radio console to trade with it: goods within 6 tiles of a trade beacon are on offer, and purchases arrive by drop pod.",
+	"tradecaravan":  "A trader caravan is camped near the colony and leaves soon. Right-click the trader to send a colonist to trade; the caravan buys and sells goods from your stockpiles.",
 	"bleeding":      "A colonist will bleed to death within hours. Get a doctor to tend the wounds now: a tend stops the bleeding at once, with or without medicine.",
 	"infection":     "An infection is set to kill a colonist before their immunity builds. Keep it tended every 12 hours with the best medicine you have, by your most skilled doctor, ideally in a hospital bed.",
 	"disease":       "A colonist has caught a disease. Flu, plague, malaria and sleeping sickness race the body's immunity and can kill: keep the sick in bed and tended on time, with good medicine and your best doctor. Gut worms and muscle parasites never kill but stay until tended away.",

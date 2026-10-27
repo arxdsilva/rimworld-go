@@ -82,7 +82,7 @@ func (g *Game) stepAgingConds(now uint64) {
 			default:
 				g.message(pos.X, pos.Y, "%s died of a heart attack.", g.name(id))
 			}
-			g.die(id, cause)
+			g.dieMedical(id, cause) // caravan_medical.go
 			g.clearPatient(id)
 			continue
 		}

@@ -36,6 +36,9 @@ type TraceView struct {
 	Melee        bool
 	Damage       int  // dealt on a hit
 	Building     bool // a blow on a door or wall
+	// FromBuilding: a sentry turret fired it (PLAY-024); Attacker is then
+	// the turret's building id.
+	FromBuilding bool
 	// Attacker and Target are the creatures involved (0 for a building
 	// target); Weapon is the attacker's weapon name.
 	Attacker, Target entity.EntityID
@@ -83,7 +86,8 @@ func (g *Game) standingPawn(id entity.EntityID) bool {
 }
 
 // combatTarget returns the position of a target that can still be
-// attacked: a living animal or a standing colonist.
+// attacked: a living animal, a standing colonist or a sentry turret
+// (raiders turn on turrets: raids.go raiderTurret).
 func (g *Game) combatTarget(id entity.EntityID) (Position, bool) {
 	if a, ok := g.animals.Get(id); ok {
 		if a.Dead() {
@@ -93,6 +97,9 @@ func (g *Game) combatTarget(id entity.EntityID) (Position, bool) {
 	}
 	if g.standingPawn(id) {
 		return g.positions.Get(id)
+	}
+	if b, ok := g.turretAt(id); ok { // turret.go (PLAY-024)
+		return Position{X: b.X, Y: b.Y}, true
 	}
 	return Position{}, false
 }
@@ -165,6 +172,10 @@ func (g *Game) strikeRoll(attacker, target entity.EntityID, wk weapon.Kind, roll
 		d.Damage, d.Accuracy = ad.Damage, ad.Accuracy
 	}
 	ap, _ := g.positions.Get(attacker)
+	if b, ok := g.turretAt(target); ok { // PLAY-024: a raider shooting a sentry turret
+		g.strikeBuilding(attacker, target, Position{X: b.X, Y: b.Y}, ap, d, roll)
+		return
+	}
 	tp, ok := g.positions.Get(target)
 	if !ok {
 		return
@@ -194,6 +205,32 @@ func (g *Game) strikeRoll(attacker, target entity.EntityID, wk weapon.Kind, roll
 		g.lastHit[target] = hitRec{Tick: tr.Tick, FromX: ap.X, FromY: ap.Y, Damage: d.Damage}
 		g.stainHit(target, ap, tp, d.Damage) // stains.go: before hurt, while the target exists
 		g.hurt(target, d.Damage, attacker)
+	}
+}
+
+// strikeBuilding is strikeRoll on building target at tp (a sentry
+// turret): the attacker's hit chance (no cover: the turret is the cover),
+// a trace marked Building, and damageBuilding on a hit (turret.go blows a
+// destroyed turret up).
+func (g *Game) strikeBuilding(attacker, target entity.EntityID, tp, ap Position, d weapon.Def, roll func(int) int) {
+	chance := weapon.HitChance(d, weapon.Distance(ap.X, ap.Y, tp.X, tp.Y))
+	if _, beast := g.animals.Get(attacker); !beast {
+		chance = g.hitChanceFor(attacker, d.Ranged, chance) // skills.go
+		g.combatLearn(attacker, d.Ranged)
+	}
+	hit := roll(100) < chance
+	tr := projectile.Trace{
+		FromX: ap.X, FromY: ap.Y, ToX: tp.X, ToY: tp.Y,
+		Tick: uint64(g.clock.Now()), Hit: hit, Melee: !d.Ranged, Building: true,
+		Attacker: attacker, Weapon: d.Name,
+	}
+	if hit {
+		tr.Damage = d.Damage
+	}
+	g.traces = append(g.traces, tr)
+	g.lastStrike[attacker] = strikeRec{Target: target, Tick: tr.Tick}
+	if hit {
+		g.damageBuilding(target, d.Damage)
 	}
 }
 
@@ -489,7 +526,7 @@ func (g *Game) traceViews() []TraceView {
 		}
 		out = append(out, TraceView{FromX: t.FromX, FromY: t.FromY, ToX: t.ToX, ToY: t.ToY,
 			Age: int(now - t.Tick), Hit: t.Hit, Melee: t.Melee, Damage: t.Damage, Building: t.Building,
-			Attacker: t.Attacker, Target: t.Target, Weapon: t.Weapon})
+			FromBuilding: t.FromBuilding, Attacker: t.Attacker, Target: t.Target, Weapon: t.Weapon})
 	}
 	return out
 }

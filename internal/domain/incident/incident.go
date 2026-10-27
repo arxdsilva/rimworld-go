@@ -44,6 +44,11 @@ const (
 	SleepingSickness
 	GutWorms
 	MuscleParasites
+	// PLAY-024 (our weights and cooldowns, Nature pool): a trader caravan
+	// walks in and camps near the colony; an orbital trader passes within
+	// radio range (it needs a powered radio console).
+	TraderCaravan
+	OrbitalTrader
 	NumIDs
 )
 
@@ -95,6 +100,9 @@ var defs = [NumIDs]Def{
 	SleepingSickness: {Key: "sleeping_sickness", Name: "Sleeping sickness", Category: Nature, Weight: 3, Cooldown: 40, MinDay: 15, Biomes: tropical, Disease: true},
 	GutWorms:         {Key: "gut_worms", Name: "Gut worms", Category: Nature, Weight: 4, Cooldown: 25, MinDay: 15, Not: ice, Disease: true},
 	MuscleParasites:  {Key: "muscle_parasites", Name: "Muscle parasites", Category: Nature, Weight: 4, Cooldown: 25, MinDay: 15, Not: ice, Disease: true},
+	// PLAY-024: original tuning (PLAY024_PLAN.md).
+	TraderCaravan: {Key: "trader_caravan", Name: "Trader caravan", Category: Nature, Weight: 14, Cooldown: 9, MinDay: 4},
+	OrbitalTrader: {Key: "orbital_trader", Name: "Orbital trader", Category: Nature, Weight: 12, Cooldown: 7, MinDay: 6},
 }
 
 func init() {

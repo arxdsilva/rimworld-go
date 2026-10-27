@@ -104,6 +104,7 @@ type AppConfig struct {
 // App is the ebiten.Game shell: screen routing, widgets, and (once
 // started) the colony renderer. Menus do not own or step a simulation.
 type App struct {
+	dealings dealingsUI // trade_ui.go, comms_ui.go: the open trade/comms dialogs
 	// hst is the colony HUD regions' own state (PLAY-018, hud.go): each
 	// region's owner keeps its fields in its own struct type.
 	hst hudStates

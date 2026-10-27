@@ -626,6 +626,125 @@ def _cooler():
     return (1, 1), 1.0
 
 
+# ------------------------------------------------- PLAY-024 radio and beacon
+RADIO_MAST = (1.80, -0.26, 1.62)   # antenna tip (lamp)
+RADIO_PANEL = (-0.56, 0.64)        # the sloped panel's front-bottom edge (y, z)
+RADIO_SLOPE = 52                   # degrees the panel leans back from upright
+
+
+def _radio_console():
+    """2 x 1 radio console, authored facing south (the operator stands on
+    the tile south of it): a steel desk on two drawer pedestals, an enamel
+    radio set on its back half with a screen tracing a green waveform
+    (glow), a lit frequency strip and dials, a speaker, a handset on its
+    cradle, and an antenna mast at the north-east corner whose tip lamp
+    (glow) shows in every facing."""
+    for x0, x1 in ((0.10, 0.52), (1.48, 1.90)):                     # drawer pedestals
+        S.box("pedestal", x0, -0.86, 0.0, x1, -0.16, 0.46, "steel_dark", bevel=0.025)
+        for z in (0.12, 0.30):
+            S.box("drawer", x0 + 0.05, -0.875, z, x1 - 0.05, -0.855, z + 0.12, "steel", bevel=0.008)
+            S.box("pull", (x0 + x1) / 2 - 0.05, -0.89, z + 0.05, (x0 + x1) / 2 + 0.05, -0.87, z + 0.07,
+                  "metal_dark", bevel=0.0)
+    S.box("modesty", 0.52, -0.30, 0.10, 1.48, -0.18, 0.46, "metal_dark", bevel=0.01)
+    S.box("desk", 0.06, -0.92, 0.46, 1.94, -0.10, 0.52, "steel", bevel=0.02)
+    # the set: an enamel cabinet whose front panel slopes back, so the
+    # screen, frequency strip and dials face the operator and the sky
+    S.box("set_lip", 0.24, -0.58, 0.52, 1.34, -0.30, RADIO_PANEL[1], "radio_enamel", bevel=0.02)
+    S.box("set_back", 0.24, -0.34, 0.52, 1.34, -0.14, 0.98, "radio_enamel", bevel=0.03)
+    S.box("set_lid", 0.22, -0.36, 0.98, 1.36, -0.12, 1.02, "steel_dark", bevel=0.015)
+    for x in (0.40, 0.52, 0.64, 0.76):
+        S.box("vent", x, -0.32, 1.02, x + 0.06, -0.16, 1.03, "metal_dark", bevel=0.0)
+    yp, zp = RADIO_PANEL
+    n0 = len(S.objects())
+    S.box("panel", 0.24, yp, zp, 1.34, yp + 0.26, zp + 0.30, "radio_enamel", bevel=0.02)
+    S.box("bezel", 0.30, yp - 0.012, zp + 0.03, 0.86, yp + 0.01, zp + 0.27, "metal_dark", bevel=0.01)
+    S.box("screen", 0.34, yp - 0.02, zp + 0.05, 0.82, yp, zp + 0.25, "backdrop", bevel=0.004)
+    wave = [(0.36, 0.15), (0.42, 0.15), (0.46, 0.22), (0.51, 0.08), (0.56, 0.23), (0.61, 0.09), (0.66, 0.20),
+            (0.70, 0.15), (0.80, 0.15)]
+    for k in range(len(wave) - 1):
+        (x0, z0), (x1, z1) = wave[k], wave[k + 1]
+        glow(_rod("wave%d" % k, (x0, yp - 0.026, zp + z0), (x1, yp - 0.026, zp + z1), 0.02, "circuit", segs=6,
+                  bevel=0.0), "radio_screen_glow")
+    glow(S.box("freq", 0.92, yp - 0.018, zp + 0.19, 1.28, yp, zp + 0.26, "backdrop", bevel=0.004), "lamp_warm")
+    for k, x in enumerate((0.98, 1.10, 1.22)):
+        _rod("dial%d" % k, (x, yp - 0.04, zp + 0.11), (x, yp, zp + 0.11), 0.045, "ceramic", segs=14, bevel=0.006)
+        S.box("dial_mark%d" % k, x - 0.006, yp - 0.045, zp + 0.11, x + 0.006, yp - 0.04, zp + 0.155, "fur_black",
+              bevel=0.0)
+    for k, x in enumerate((0.98, 1.10)):
+        glow(_rod("led%d" % k, (x, yp - 0.03, zp + 0.035), (x, yp, zp + 0.035), 0.02, "backdrop", segs=8,
+                  bevel=0.0), "indicator")
+    _spin(_since(n0), (0.0, yp, zp), "X", -RADIO_SLOPE)
+    # speaker on the desk, east of the set
+    S.box("speaker", 1.42, -0.50, 0.52, 1.72, -0.20, 0.80, "steel_dark", bevel=0.025)
+    for z in (0.58, 0.63, 0.68, 0.73):
+        S.box("grille", 1.47, -0.51, z, 1.67, -0.495, z + 0.025, "metal_dark", bevel=0.0)
+    # handset on its cradle at the front west of the desk, cord to the set
+    S.box("cradle", 0.12, -0.84, 0.52, 0.42, -0.62, 0.56, "metal_dark", bevel=0.01)
+    S.box("handset", 0.14, -0.78, 0.56, 0.40, -0.70, 0.60, "fur_black", bevel=0.025)
+    for x in (0.15, 0.39):
+        S.ellipsoid("cup", x, -0.74, 0.60, 0.045, 0.055, 0.03, "fur_black", segs=12, rings=6)
+    _rod("cord", (0.27, -0.70, 0.56), (0.30, -0.52, 0.60), 0.012, "fur_black", segs=6, bevel=0.0)
+    # a notepad by the operator
+    S.box("pad", 0.64, -0.84, 0.52, 0.82, -0.68, 0.53, "numbroot_label", bevel=0.004)
+    # antenna mast at the north-east corner: guy collar, two crossbars, lamp
+    mx, my, top = RADIO_MAST
+    S.box("mast_foot", mx - 0.07, my - 0.07, 0.52, mx + 0.07, my + 0.07, 0.58, "metal_dark", bevel=0.01)
+    S.cyl("mast", mx, my, 0.025, 0.58, top - 0.04, "steel", r_top=0.016, segs=10, bevel=0.0)
+    for z, half in ((1.20, 0.16), (1.40, 0.11)):
+        _rod("crossbar", (mx - half, my, z), (mx + half, my, z), 0.012, "steel", segs=6, bevel=0.0)
+    _rod("feedline", (mx, my - 0.02, 0.60), (1.30, -0.30, 0.90), 0.010, "fur_black", segs=6, bevel=0.0)
+    glow(S.ellipsoid("tip", mx, my, top, 0.04, 0.04, 0.04, "med_red", segs=12, rings=8), "sentry_lamp_glow")
+    return (2, 1), top + 0.06
+
+
+BEACON_TOP = 1.24
+
+
+def _trade_beacon():
+    """1 x 1 trade beacon: a low concrete pad, a slim steel mast with a
+    small dish tilted at the sky, a junction box, and a caged lamp on top
+    (glow; the renderer blinks it). Slim so the tile stays walkable."""
+    cx, cy = 0.5, -0.5
+    S.box("pad", 0.30, -0.70, 0.0, 0.70, -0.30, 0.06, "stone", bevel=0.02)
+    _bolts(cx, cy, 0.15, 0.06, 0.08, 4, phase=math.pi / 4)
+    S.cyl("collar", cx, cy, 0.06, 0.06, 0.14, "metal_dark", segs=12, bevel=0.01)
+    S.cyl("mast", cx, cy, 0.042, 0.14, BEACON_TOP - 0.10, "steel", r_top=0.032, segs=12, bevel=0.0)
+    for z in (0.40, 0.70):                                            # hazard bands
+        S.cyl("band", cx, cy, 0.038, z, z + 0.06, "corn_yellow", segs=12, bevel=0.0)
+    # junction box on the mast's south side
+    S.box("junction", cx - 0.08, cy - 0.10, 0.20, cx + 0.08, cy - 0.03, 0.36, "steel_dark", bevel=0.015)
+    S.box("junction_lid", cx - 0.06, cy - 0.105, 0.30, cx + 0.06, cy - 0.10, 0.33, "metal_dark", bevel=0.0)
+    # dish on an arm to the west, facing up and south-west
+    n0 = len(S.objects())
+    S.cyl("dish", 0.0, 0.0, 0.15, -0.02, 0.02, "med_white", segs=24, r_top=0.13, bevel=0.01)
+    S.cyl("dish_well", 0.0, 0.0, 0.11, 0.015, 0.03, "steel", segs=24, bevel=0.0)
+    S.cyl("feed_horn", 0.0, 0.0, 0.016, 0.02, 0.12, "metal_dark", segs=8, bevel=0.0)
+    S.cyl("horn_tip", 0.0, 0.0, 0.03, 0.12, 0.15, "steel_dark", segs=10, bevel=0.0)
+    tilt = (Matrix.Translation((0.28, -0.50, 0.86)) @ Matrix.Rotation(math.radians(-35), 4, "Z")
+            @ Matrix.Rotation(math.radians(-30), 4, "X"))
+    S.transform(_since(n0), tilt)
+    _rod("dish_arm", (cx, cy, 0.84), (0.30, -0.50, 0.84), 0.016, "steel_dark", segs=8, bevel=0.0)
+    # the lamp: a dome lens open to the sky inside a cage of four bars
+    S.cyl("lamp_base", cx, cy, 0.085, BEACON_TOP - 0.12, BEACON_TOP - 0.08, "metal_dark", segs=14, bevel=0.01)
+    glow(S.ellipsoid("lens", cx, cy, BEACON_TOP - 0.08, 0.075, 0.075, 0.10, "pod_paint", segs=16, rings=10),
+         "beacon_glow")
+    for k in range(4):
+        a = math.pi / 4 + k * math.pi / 2
+        S.cyl("cage", cx + 0.08 * math.cos(a), cy + 0.08 * math.sin(a), 0.009, BEACON_TOP - 0.08,
+              BEACON_TOP + 0.03, "metal_dark", segs=6, bevel=0.0)
+    S.cyl("lamp_knob", cx, cy, 0.018, BEACON_TOP + 0.015, BEACON_TOP + 0.04, "metal_dark", segs=8, bevel=0.0)
+    return (1, 1), BEACON_TOP + 0.08
+
+
+def build_play024():
+    """The radio console (four facings) and the trade beacon."""
+    out = []
+    for f in FACINGS:
+        out += render("radio_console_" + f, _radio_console, facing=f, extra={"building": "radio console"})
+    out += render("trade_beacon", _trade_beacon, extra={"building": "trade beacon"})
+    return out
+
+
 # ---------------------------------------------------------------- build
 def _clip_for(facing):
     return ("W", "E") if facing in ("south", "north") else ("N", "S")
@@ -663,6 +782,7 @@ def build():
                       extra={"layer": "rotor", "of": "power/wind_turbine", "frame": i + 1,
                              "frames": ROTOR_FRAMES, "step_deg": ROTOR_STEP})
     out += render("heater", _heater, extra={"building": "heater"})
+    out += build_play024()
     return out
 
 

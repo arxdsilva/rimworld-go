@@ -206,6 +206,21 @@ const (
 	// Important, Preferred, Normal, Low). A DesignateStockpile with Build
 	// 1 paints a dumping stockpile instead of a stockpile.
 	SetZonePriority
+	// PLAY-024 trade and comms, acting on the open session (one at a
+	// time; PLAY024_PLAN.md): ProposeTrade offers the deal in Name
+	// (game.EncodeTradeOffer of []trade.Delta: positive Qty the colony
+	// buys, negative it sells), as a gift when Enabled; CloseTrade ends
+	// the trade session. CommsCallTrader opens trade with the orbital ship
+	// in range; CommsGift gives faction Index Count silver;
+	// CommsRequestCaravan and CommsRequestAid ask faction Index for a
+	// trade caravan or military aid; CloseComms ends the comms session.
+	ProposeTrade
+	CloseTrade
+	CommsCallTrader
+	CommsGift
+	CommsRequestCaravan
+	CommsRequestAid
+	CloseComms
 )
 
 // Area references for AssignArea's Index (PLAY-015): any other value is an
@@ -261,6 +276,10 @@ const (
 	OrderExtinguish
 	// OrderFlick (PLAY-021): flick the switch or power toggle at X, Y now.
 	OrderFlick
+	// OrderTrade (PLAY-024): walk to the trader at X, Y and open trade;
+	// OrderUseComms: work the radio console at X, Y and open comms.
+	OrderTrade
+	OrderUseComms
 )
 
 // Command is applied on a simulation tick, never by the UI directly.

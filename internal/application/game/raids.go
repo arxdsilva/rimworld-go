@@ -111,7 +111,8 @@ func (g *Game) phaseThreats() {
 		g.thinkRaider(id, now)
 	}
 	g.raiderBuf = ids[:0]
-	g.vaultTick(now) // vault.go (MAPGEN-3): approach warnings, clearing
+	g.phaseTurrets(now) // turret.go (PLAY-024): after the raiders move
+	g.vaultTick(now)    // vault.go (MAPGEN-3): approach warnings, clearing
 }
 
 // scheduleThreats starts the storyteller (colonies, not bare test maps).
@@ -463,6 +464,11 @@ func (g *Game) thinkRaider(id entity.EntityID, now uint64) {
 			return
 		}
 		r.Idle = 0
+		// turret.go (PLAY-024): a powered turret in sight and well closer
+		// than the nearest colonist draws the raider's fire instead
+		if tid, bp, ok := g.raiderTurret(pos, weapon.Distance(pos.X, pos.Y, tp.X, tp.Y)); ok {
+			target, tp = tid, bp
+		}
 		if r.Mode == raidArrive && weapon.Distance(pos.X, pos.Y, tp.X, tp.Y) > sightRange {
 			// walk in towards the colony
 			if !j.Active() || (now+uint64(id))%180 == 0 {

@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/domain/pawn/mood"
 	"rimworld-go/internal/domain/scenario"
 	"rimworld-go/internal/domain/sim/clock"
+	"rimworld-go/pkg/randx"
 )
 
 // Arrival (NG-1 §2.11). Drop pods: one per colonist plus one per podValue
@@ -144,8 +145,14 @@ func (g *Game) planPods(cx, cy int) {
 // podSpot is a free landing tile within podRadius of (cx, cy): dry
 // ground a pod shell fits on, not next to another pod.
 func (g *Game) podSpot(cx, cy int, taken [][2]int) (int, int, bool) {
+	return g.podSpotFrom(g.rng, cx, cy, taken)
+}
+
+// podSpotFrom is podSpot drawing from r (a trade drop pod uses
+// streamTrade, PLAY-024).
+func (g *Game) podSpotFrom(r *randx.Rand, cx, cy int, taken [][2]int) (int, int, bool) {
 	for try := 0; try < 300; try++ {
-		dx, dy := g.rng.IntN(2*podRadius+1)-podRadius, g.rng.IntN(2*podRadius+1)-podRadius
+		dx, dy := r.IntN(2*podRadius+1)-podRadius, r.IntN(2*podRadius+1)-podRadius
 		if dx*dx+dy*dy <= podRadius*podRadius && g.podFree(cx+dx, cy+dy, taken) {
 			return cx + dx, cy + dy, true
 		}
@@ -402,5 +409,5 @@ func (g *Game) arrivalViews(now uint64) []ArrivalView {
 			out = append(out, ArrivalView{X: p.X, Y: p.Y, Tick: p.Tick, Landed: p.Landed})
 		}
 	}
-	return out
+	return append(out, g.tradePodViews(now)...) // trade_orbital.go: orbital purchases (PLAY-024)
 }

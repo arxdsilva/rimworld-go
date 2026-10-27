@@ -680,7 +680,7 @@ This is the heart of autonomous colony behavior.
     -   Ingredient filters.
     -   nutrition conversion.
     -   work amount.
--   [ ] **Food poisoning**
+-   [x] **Food poisoning** (MED-11: cooked meals carry a poison chance from the cook's Cooking skill and kitchen cleanliness (campfire meals at least 1.5 %); eating rolls it into a 24 h food-poisoning condition with vomiting and bed rest at its major stage; never lethal)
     -   Chance influenced by cook skill and cleanliness/conditions.
     -   Health effect and mood consequences.
 -   [x] **Butchering**
@@ -1275,7 +1275,7 @@ treatment, and surgery are major colony-management systems.
     -   solar.
     -   wind.
     -   geothermal-like late generator.
--   [-] **Power consumers** (PLAY-021: lamps 50 W, heater 180 W / cooler 220 W with a thermostat, electric stove, tailoring and research benches; no communications or defensive equipment yet)
+-   [x] **Power consumers** (PLAY-021: lamps 50 W, heater 180 W / cooler 220 W with a thermostat, electric stove, tailoring and research benches; PLAY-024: sentry turret 120 W firing / 40 W idle (defense class, shed last), radio console 150 W)
     -   Workstations.
     -   lights.
     -   coolers/heaters.
@@ -1615,7 +1615,7 @@ change relationships, and settlements exist on the world map.
 
 -   [x] **Relationship score** (NG-1: goodwill -100..100 with hysteresis: hostile at -50 or less, calm again at -10; friendly at +50, neutral again below +30)
     -   Hostile / neutral / ally states derived from goodwill/rules.
--   [-] **Goodwill changes** (NG-1: a repelled raid costs the raiding faction 5 goodwill and goodwill drifts toward a baseline daily; no gifts, quests, visitors or aid)
+-   [-] **Goodwill changes** (NG-1: a repelled raid costs 5 and goodwill drifts toward a baseline daily; PLAY-024: gifts by radio (1 per 40 silver, at most 15), caravan requests cost 12, killing or capturing a trader costs 40; no quests; aid in PLAY-024 phase 4)
     -   Gifts.
     -   attacks.
     -   harming visitors.
@@ -1635,29 +1635,29 @@ change relationships, and settlements exist on the world map.
 
 ## 20.4 Trade caravans
 
--   [ ] **Trader arrival**
+-   [x] **Trader arrival** (PLAY-024: trader caravan incident from friendly or neutral human factions, a trader with 1–3 guards staying 0.75 day; requestable by radio)
     -   Group with trader pawn and pack animals/inventory.
--   [ ] **Trade interaction**
+-   [x] **Trade interaction** (PLAY-024: "Trade with X" order or the radio console opens a session held by the negotiator's job)
     -   Select social-capable colonist.
     -   Open trade screen.
--   [ ] **Buy/sell**
+-   [x] **Buy/sell** (PLAY-024: settled against live counts; caravan goods dropped beside the negotiator, orbital goods by drop pod near the beacon)
     -   Colony stored eligible items available.
     -   Trader inventory and silver/currency.
     -   Purchased goods delivered/dropped.
--   [ ] **Trade price**
+-   [x] **Trade price** (PLAY-024: market value with a buy markup and sell cut falling with Social skill and goodwill; sell never above 90 % of buy; traders pay more for their specialty)
     -   Social skill and faction/trader factors influence price.
--   [ ] **Trader types**
+-   [x] **Trader types** (PLAY-024: bulk hauler, quartermaster (caravans), curio merchant (orbital); neolithic traders carry no rifles or components)
     -   Different inventories such as bulk goods, combat/exotic, slave
         trader if included for historical vanilla parity, etc.
     -   Use original names/content.
 
 ## 20.5 Orbital trade
 
--   [ ] **Communications console**
--   [ ] **Orbital trade beacon**
+-   [x] **Communications console** (PLAY-024: powered radio console behind Radio relay research: faction list, gifts, caravan requests, call trade ship; military aid in phase 4)
+-   [x] **Orbital trade beacon** (PLAY-024: goods within 6 tiles are tradable with ships; purchases land by drop pod)
     -   Defines tradeable nearby storage.
--   [ ] **Orbital trader event**
--   [ ] **Remote faction communication**
+-   [x] **Orbital trader event** (PLAY-024: a ship in radio range for 1.5 days when a powered console exists; letter and alert)
+-   [-] **Remote faction communication** (PLAY-024: gifts and caravan requests by radio; military aid in phase 4)
     -   Request caravans/help where relationship allows.
 
 ------------------------------------------------------------------------
@@ -2195,7 +2195,7 @@ relocation. citeturn2search12
 ## 28.3 Caravan needs
 
 -   [-] **Food consumption** (SIM-046: food days)
--   [-] **Health/disease progression** (MED-04: hourly in the medical phase; progression while on a caravan not checked)
+-   [x] **Health/disease progression** (MED-04: hourly in the medical phase; MED-11: caravan members keep progressing, outbreaks can strike a caravan, the caravan's best medic tends each hour, and deaths away from home go through dieAway)
 -   [ ] **Mood effects**
 -   [x] **Animal feeding** (SIM-024: animals graze, eat carcasses and crops, and are fed from troughs)
 -   [ ] **Prisoner handling**

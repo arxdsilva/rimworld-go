@@ -364,7 +364,7 @@ func (g *Game) stepConds(id entity.EntityID, b *body.Body, now uint64) bool {
 		switch {
 		case dead:
 			g.message(pos.X, pos.Y, "%s died of %s.", g.name(id), d.Label)
-			g.die(id, health.CauseInfection)
+			g.dieMedical(id, health.CauseInfection) // caravan_medical.go
 			g.clearPatient(id)
 			return true
 		case cured:

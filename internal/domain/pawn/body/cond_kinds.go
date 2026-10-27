@@ -49,6 +49,9 @@ const (
 	CondArteryBlockage
 	CondCarcinoma
 	CondHeartAttack
+	// CondFoodPoisoning is food poisoning from a badly cooked meal (WS-M,
+	// cond_food.go): it runs its course by time.
+	CondFoodPoisoning
 	// NumCondKinds counts the kinds (keep last).
 	NumCondKinds
 )
@@ -60,7 +63,7 @@ type CondEntry struct {
 }
 
 // condTables lists every phase's definition table (one line per phase).
-var condTables = [][]CondEntry{condsInfection, condsDisease, condsAnesthetic, condsDrug, condsAging}
+var condTables = [][]CondEntry{condsInfection, condsDisease, condsAnesthetic, condsDrug, condsAging, condsFood}
 
 // condDefs is every kind's definition, indexed by kind.
 var condDefs = buildCondDefs(condTables)

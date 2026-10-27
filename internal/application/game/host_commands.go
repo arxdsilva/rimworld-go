@@ -88,5 +88,19 @@ func (g *Game) applyHostCommand(c command.Command) {
 		g.cmdEmergencyTend(pawn, target) // care.go
 	case command.ReorderOperation:
 		g.cmdReorderOperation(pawn, c.Index, c.Count) // surgery.go
+	case command.ProposeTrade:
+		g.cmdProposeTrade(c.Name, c.Enabled) // trade_session.go (PLAY-024)
+	case command.CloseTrade:
+		g.cmdCloseTrade() // trade_session.go
+	case command.CommsCallTrader:
+		g.cmdCommsCallTrader() // comms.go
+	case command.CommsGift:
+		g.cmdCommsGift(c.Index, c.Count) // comms.go
+	case command.CommsRequestCaravan:
+		g.cmdCommsRequestCaravan(c.Index) // comms.go
+	case command.CommsRequestAid:
+		g.cmdCommsRequestAid(c.Index) // comms.go
+	case command.CloseComms:
+		g.cmdCloseComms() // comms.go
 	}
 }

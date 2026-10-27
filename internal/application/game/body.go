@@ -706,6 +706,7 @@ func conditionTip(c body.Condition, d body.CondDef, cv ConditionView, tended boo
 	switch {
 	case d.CureTendSum > 0: // MED-04: parasites
 		t += fmt.Sprintf("\nNo immunity: cured by tending once the tends add up to %d%% quality (%d%% so far).", d.CureTendSum/10, int(c.TendSum)/10)
+	case d.ImmPerDay == 0: // no race to win: food poisoning, anesthetic, overdose, chronic conditions
 	case c.Immunity >= infection.Full:
 		t += "\nImmune: it is receding."
 	case cv.Losing:

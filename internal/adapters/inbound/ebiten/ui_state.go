@@ -138,6 +138,7 @@ func (a *App) uiBegin() {
 	u.hot, u.layer, u.suppress = "", 0, false
 	u.mx, u.my = mx, my
 
+	a.syncDealings() // trade_ui.go: open/close the trade and comms dialogs
 	a.uiRunModals()
 	u.layer = 0 // screen widgets sit under every modal (modals declare their own layers above)
 	if a.nav.overlay() != overlayNone || a.nav.screen() == screenBoot {

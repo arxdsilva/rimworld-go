@@ -118,6 +118,11 @@ const (
 	// EmergencyTend (MED-03): a drafted colonist tends a patient now, with
 	// the best medicine it is allowed and can reach nearby, or none.
 	EmergencyTend
+	// Trade (PLAY-024): a colonist walks up to a trader and negotiates
+	// while the trade session is open. UseComms: a colonist works a radio
+	// console while the comms session is open.
+	Trade
+	UseComms
 )
 
 // IsIdle reports a free-time behaviour that any real work may replace.
@@ -237,6 +242,10 @@ func (k Kind) String() string {
 		return "flick switch"
 	case EmergencyTend:
 		return "emergency tend"
+	case Trade:
+		return "trade"
+	case UseComms:
+		return "use radio console"
 	default:
 		return "idle"
 	}
