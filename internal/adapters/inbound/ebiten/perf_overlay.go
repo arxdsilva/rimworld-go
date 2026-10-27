@@ -56,8 +56,8 @@ func (a *App) perfBox() (w, h float32) {
 		return 0, 0
 	}
 	p := &a.perf
-	if p.boxW == 0 || p.boxScale != uiScale() {
-		p.boxScale = uiScale()
+	if p.boxW == 0 || p.boxScale != hudScale() { // text is measured at the HUD scale, world pass or not
+		p.boxScale = hudScale()
 		p.boxW = maxTextW(perfWidest, tsSmall) + 2*perfPad
 		p.boxH = float32(len(perfWidest))*lineStep(tsSmall) + perfSparkH + 3*perfPad
 	}

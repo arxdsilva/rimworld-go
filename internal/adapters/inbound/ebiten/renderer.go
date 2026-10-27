@@ -455,6 +455,11 @@ const fastPanBoost = 2.5
 
 // applyCamera pans and zooms by one frame of intent, then clamps.
 func (r *Renderer) applyCamera(v viewport, in camInput) {
+	// The held direction is this Update's: clear the last one first, then
+	// push what is held now. It stays set through every Draw until the next
+	// Update (stepCamera steps with it), so a released key stops the push
+	// at the next Update and the pan coasts to a halt.
+	r.smooth.dirX, r.smooth.dirY = 0, 0
 	r.smooth.boost = 1
 	if in.fast {
 		r.smooth.boost = fastPanBoost
@@ -476,10 +481,9 @@ func (r *Renderer) applyCamera(v viewport, in camInput) {
 		r.smooth.vx, r.smooth.vy = 0, 0
 	}
 	r.clampCamera(v)      // first-call centring and min-zoom guard
-	if r.smooth.instant { // captures: deterministic, stepped here; live play steps per Draw (stepCamera)
+	if r.smooth.instant { // Reduced Motion: no easing, the whole step lands here; live play steps per Draw (stepCamera)
 		r.smooth.step(1/float64(ebiten.TPS()), &r.cam, r.camLimits(v))
 	}
-	r.smooth.dirX, r.smooth.dirY = 0, 0 // consumed by this Update's frames; the next Update pushes anew
 }
 
 // camMaxDt caps one camera step so a stall never jumps the view.

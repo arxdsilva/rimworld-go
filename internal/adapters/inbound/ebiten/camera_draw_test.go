@@ -19,14 +19,16 @@ func colonyForCameraDraw(t *testing.T) (*App, *time.Time, *ebiten.Image) {
 	return a, &clock, img
 }
 
+// TestCameraStepsPerDraw: one Update's held direction moves the camera on
+// every Draw until the next Update; a released key clears it there and the
+// pan coasts to a stop without reversing.
 func TestCameraStepsPerDraw(t *testing.T) {
 	a, clock, img := colonyForCameraDraw(t)
 	r := a.renderer
 	r.applyCamera(a.mapViewport(), camInput{dx: 1}) // one Update of a held key
-	if r.smooth.dirX != 0 {
-		t.Fatal("applyCamera must clear the direction after pushing it")
+	if r.smooth.dirX != 1 {
+		t.Fatalf("dirX = %v after the push, want it held for the Draws", r.smooth.dirX)
 	}
-	r.smooth.pushPan(1, 0) // the direction as a held key leaves it until the next Update
 	last := r.cam.offsetX
 	for i := 0; i < 2; i++ {
 		*clock = clock.Add(8 * time.Millisecond)
@@ -38,6 +40,21 @@ func TestCameraStepsPerDraw(t *testing.T) {
 			t.Fatalf("draw %d: dirX = %v, want it held until the next Update", i, r.smooth.dirX)
 		}
 		last = r.cam.offsetX
+	}
+	r.applyCamera(a.mapViewport(), camInput{}) // the key is up at the next Update
+	if r.smooth.dirX != 0 {
+		t.Fatalf("dirX = %v after a release, want 0", r.smooth.dirX)
+	}
+	for i := 0; i < 200 && r.smooth.vx != 0; i++ { // coasts: forward only, then still
+		*clock = clock.Add(8 * time.Millisecond)
+		a.Draw(img)
+		if r.cam.offsetX < last {
+			t.Fatalf("coast reversed: %v < %v", r.cam.offsetX, last)
+		}
+		last = r.cam.offsetX
+	}
+	if r.smooth.vx != 0 || !r.smooth.idle() {
+		t.Fatalf("the pan never stopped: vx %v", r.smooth.vx)
 	}
 }
 

@@ -268,8 +268,8 @@ func (a *App) resourceIcon(kind string) (*ebiten.Image, colorScale) {
 // strings are drawn every frame).
 func (a *App) resWidth(s string) float32 {
 	st := &a.hst.res
-	if sc := uiScale(); sc != st.widthScale || st.widths == nil || len(st.widths) > 512 {
-		st.widths, st.widthScale = map[string]float32{}, sc // text metrics follow the UI scale
+	if sc := hudScale(); sc != st.widthScale || st.widths == nil || len(st.widths) > 512 {
+		st.widths, st.widthScale = map[string]float32{}, sc // text metrics follow the HUD scale (world pass or not)
 	}
 	if w, ok := st.widths[s]; ok {
 		return w
