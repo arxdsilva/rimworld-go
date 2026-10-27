@@ -89,7 +89,8 @@ func newJourney(t *testing.T, opts ...jOpt) *journey {
 	j.f = fakeOn(a)
 	j.f.cur.focused = true
 	j.f.cur.mx, j.f.cur.my = -50, -50
-	j.f.frame(t, a) // settles the session: the camera is placed, the learn hook installed
+	a.renderer.speed = speedPaused // before the settling frame, so no tick moves a pawn off its spawn tile
+	j.f.frame(t, a)                // settles the session: the camera is placed, the learn hook installed
 	r := a.renderer
 	prev := r.onEnqueue
 	r.onEnqueue = func(cmd command.Command) {

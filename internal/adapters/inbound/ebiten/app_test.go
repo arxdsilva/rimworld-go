@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	"strings"
 	"testing"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
@@ -154,7 +155,102 @@ func settleUI(t *testing.T, a *App) {
 	}
 }
 
+// click presses the HUD button or kit widget id with the mouse, the path a
+// player's click takes (QA-001): one Update lays the screen out, then a
+// press and a release at the element's centre (two more Updates), then
+// the cursor parks off the window. A disabled element only sets its
+// reason as the hint, as the dispatcher would. Tests that must not run
+// those Updates (a colony that may not step) pause first; a test that
+// deliberately asserts on the dispatch alone uses clickDirect.
 func click(t *testing.T, a *App, id string) {
+	t.Helper()
+	f := fakeFor(a)
+	defer holdColony(a, f, id)()
+	// A test that placed the pointer on a tile by hand (clickTile) leaves
+	// the override behind; the press must land on the element.
+	a.cursor = nil
+	f.frame(t, a)
+	x, y, disabled, reason, ok := elementAt(a, id)
+	if !ok {
+		t.Fatalf("no button or widget %q on %s", id, a.nav.screen())
+	}
+	if disabled {
+		a.hint = reason
+		return
+	}
+	s := float32(a.scale.s)
+	f.cur.mx, f.cur.my = int(x*s), int(y*s)
+	f.cur.press[mbLeft], f.cur.down[mbLeft] = true, true
+	quitFrame(t, a)
+	f.cur.down[mbLeft], f.cur.release[mbLeft] = false, true
+	quitFrame(t, a)
+	f.cur.mx, f.cur.my = -50, -50
+}
+
+// holdColony keeps a colony from stepping during click's three Updates, so
+// a test that reads a tick count or a pawn's tile around a click keeps its
+// meaning; the returned func lifts the hold.
+//
+// On the colony screen the hold is the pause itself, with the learn
+// helper's baseline moved along so it never reads the hold as the player's
+// own "Control time" (learnWatch) and saves a lesson. The speed comes back
+// unless the click changed it; a dialog that opened under the hold keeps
+// the game paused and resumes the held speed when it closes, as
+// dealingsPause would have done. A speed control is not held at all: its
+// click acts on the speed the player sees (pause toggles).
+//
+// Elsewhere (the wizard's Start, Continue) the colony is born inside the
+// press Update, so the window counts as blurred for the click instead:
+// background.go then skips the tick (a test with Run in background on
+// steps as it would). That hold is not used on the colony screen because
+// the "paused (in background)" reason widens the global bar and folds the
+// learn helper on small logical screens.
+func holdColony(a *App, f *fakeInput, id string) func() {
+	r := a.renderer
+	if r == nil || a.nav.screen() != screenColony {
+		blurred := f.cur.blurred
+		f.cur.blurred = true
+		return func() {
+			f.cur.blurred, a.in.raw.blurred = blurred, blurred
+			a.syncBackground() // a.tick() right after the click sees the focus back
+		}
+	}
+	if r.speed == speedPaused || strings.HasPrefix(id, "speed.") {
+		return func() {}
+	}
+	was := r.speed
+	st := &a.hst.learn
+	r.speed = speedPaused
+	if st.based {
+		st.lastSpeed = speedPaused
+	}
+	return func() {
+		if a.renderer != r || r.speed != speedPaused {
+			return
+		}
+		if d := &a.dealings; d.trade != nil || d.comms != nil {
+			d.resume, d.paused = was, true
+			return
+		}
+		r.speed = was
+		if st.based {
+			st.lastSpeed = was
+		}
+	}
+}
+
+// quitFrame is one Update that may end the game (a Quit button clicked):
+// ebiten.Termination is the expected result then, not a failure.
+func quitFrame(t *testing.T, a *App) {
+	t.Helper()
+	if err := a.Update(); err != nil && err != ebiten.Termination {
+		t.Fatal(err)
+	}
+}
+
+// clickDirect dispatches id without the mouse (click's old shortcut): only
+// for tests of the dispatcher itself, never to reach a feature.
+func clickDirect(t *testing.T, a *App, id string) {
 	t.Helper()
 	settleUI(t, a)
 	for _, b := range a.layoutHits(a.sw, a.sh) {
@@ -169,6 +265,30 @@ func click(t *testing.T, a *App, id string) {
 		return
 	}
 	t.Fatalf("no button %q on %s", id, a.nav.screen())
+}
+
+// fakeFor is the App's fake input, attached if the test has none.
+func fakeFor(a *App) *fakeInput {
+	if f, ok := a.src.(*fakeInput); ok {
+		return f
+	}
+	return fakeOn(a)
+}
+
+// elementAt is the logical centre of the HUD button or kit widget id this
+// frame, with a button's disabled state.
+func elementAt(a *App, id string) (x, y float32, disabled bool, reason string, ok bool) {
+	sw, sh := a.size() // the size Update hit-tests with (a test may never Layout)
+	for _, b := range a.layoutHits(sw, sh) {
+		if b.id == id {
+			return b.x + b.w/2, b.y + b.h/2, b.disabled, b.reason, true
+		}
+	}
+	if w, found := a.uiSt().find(id); found {
+		x, y = w.r.center()
+		return x, y, false, "", true
+	}
+	return 0, 0, false, "", false
 }
 
 func TestBootTicksToMainMenuWithoutSim(t *testing.T) {

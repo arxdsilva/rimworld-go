@@ -218,9 +218,13 @@ Player journeys (QA-001, `journey_*_test.go`): every player-facing change
 ships a `TestJourney<Area><Name>` that drives the real loop through
 `newJourney` (fake keys and mouse into `App.Update`, frames through
 `App.Draw`, a pinned clock) and asserts the command that left the client or
-the read model after it. `applyClick`, `click(t, a, id)` and direct handler
-or renderer calls do not count (`TestJourneysUseTheRealInputPath` rejects
-them in journey files). `TestEveryInputActionHasAJourney` fails on an input
+the read model after it. `applyClick` and direct handler or renderer calls
+do not count (`TestJourneysUseTheRealInputPath` rejects them in journey
+files). `click(t, a, id)` (app_test.go) presses the element with the real
+mouse through three Updates — it is the right helper for any other test
+that clicks a HUD button or widget — but it is not a journey either;
+`clickDirect` runs the dispatcher alone and is reserved for a test that
+must not run an Update (say why at the call). `TestEveryInputActionHasAJourney` fails on an input
 action no journey presses or a command kind no journey asserts, unless it is
 owed in `journeyActionTODO` / `journeyKindTODO` with the file that will
 cover it; those lists only shrink. `make test-journeys` runs the suite;

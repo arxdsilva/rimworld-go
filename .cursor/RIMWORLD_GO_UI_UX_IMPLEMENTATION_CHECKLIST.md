@@ -2036,7 +2036,7 @@ manageable beyond vanilla-scale colonies.
 -   [ ] Pointer hover never changes simulation.
 -   [ ] Selection never changes AI.
 -   [ ] Sorting a UI list never changes authoritative order.
--   [ ] Renderer frame rate never changes command semantics.
+-   [-] Renderer frame rate never changes command semantics. (QA-001: `TestJourneyTimeSpaceAndSpeeds` pins the tick count per Update at each speed and the camera journeys step Draws on a pinned clock; the Update budget's tick debt (`update_budget.go`) is covered in its own tests, not by a journey at a slow frame rate)
 -   [ ] Commands have explicit target/sequence assigned by application
     boundary.
 
@@ -2266,16 +2266,16 @@ A UI checkbox is complete only when all applicable items below pass.
 -   [ ] Mutations are typed commands.
 -   [ ] Loading/stale/missing entity states are handled.
 -   [ ] Disabled actions explain why.
--   [ ] Mouse behavior works.
--   [ ] Keyboard behavior works where appropriate.
+-   [-] Mouse behavior works. (QA-001: 89 player journeys click, drag, box-select, wheel and middle-drag through `App.Update`, and every `click(t, a, id)` test presses its button with the real mouse; per-screen sign-off still manual)
+-   [-] Keyboard behavior works where appropriate. (QA-001: `TestEveryInputActionHasAJourney` fails on a bound action no journey presses; per-screen sign-off still manual)
 -   [ ] Tooltip/help text exists for non-obvious mechanics.
 -   [ ] Scrolling works at realistic data size.
 -   [ ] Lists/tables are virtualized when scale requires it.
 -   [x] Layout works at supported UI scales/resolutions. (UI-024: setup screens, HUD, panels, tools and Options tested at 100/150/200 %; HiDPI renders at the screen's true resolution)
 -   [ ] Important states are not communicated by color alone.
 -   [ ] No expensive world scan occurs every frame.
--   [ ] Automated tests cover controller/view-model logic where
-    practical.
+-   [-] Automated tests cover controller/view-model logic where
+    practical. (QA-001: journeys assert the command that left the client or the read model after it for every command kind the client emits, bar two owed debts; CI runs the suite on every push)
 -   [ ] Screenshot/manual acceptance scenario is documented for visual
     components.
 -   [ ] Plugin-provided content does not require hardcoded UI edits

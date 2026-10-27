@@ -368,7 +368,7 @@ func TestDrawPaneStaysInItsRegions(t *testing.T) {
 		if scale != 1 {
 			withUIScale(t, scale)
 		}
-		click(t, a, "inspector.needs")
+		clickDirect(t, a, "inspector.needs") // a mouse click's Update would reset the forced scale; this test is about the drawing
 		l := a.hud()
 		regions := []rect{l.Pane, l.PaneTabs, l.Expanded}
 		var rects []rect

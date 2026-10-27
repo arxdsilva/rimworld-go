@@ -75,8 +75,8 @@ func globalColony(t *testing.T, sim Simulation, ui int, ww, wh float64) (*App, *
 	}
 	f := fakeOn(a)
 	f.cur.mx, f.cur.my = -50, -50
+	a.renderer.speed = speedPaused // before the frame: the learn helper bases on it (a later change is the player's)
 	f.frame(t, a)
-	a.renderer.speed = speedPaused
 	return a, f
 }
 
@@ -215,8 +215,8 @@ func globalColonyP(t *testing.T, sim Simulation) (*App, *fakeInput) {
 	}
 	f := fakeOn(a)
 	f.cur.mx, f.cur.my = -50, -50
+	a.renderer.speed = speedPaused // before the frame: the learn helper bases on it (a later change is the player's)
 	f.frame(t, a)
-	a.renderer.speed = speedPaused
 	return a, f
 }
 
