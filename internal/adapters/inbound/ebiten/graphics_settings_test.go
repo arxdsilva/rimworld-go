@@ -104,25 +104,27 @@ func TestUnknownHardwareLeavesDetectionForLater(t *testing.T) {
 }
 
 // TestPreV5FileKeepsHandChangedValues: a settings file from before PLAY-019
-// that changed Effects and turned VSync off keeps both as the player's
+// that changed Effects and turned HiDPI off keeps both as the player's
 // choice; the rest takes the detected tier. config.Decode has already
 // stamped such a file with the current version, so both are covered.
+// (VSync off is the default since PERF-002, so it no longer reads as a
+// choice on an old file.)
 func TestPreV5FileKeepsHandChangedValues(t *testing.T) {
 	t.Parallel()
 	for _, version := range []int{4, config.SettingsVersion} {
 		old := config.Defaults()
 		old.Version = version
 		old.Graphics.Effects = config.EffectsMinimal // the player turned effects down by hand
-		old.Graphics.VSync = false
+		old.Graphics.HiDPI = false
 		store := &fakeSettings{s: old}
 		a := hwApp(store, 16*sysinfo.GiB, 8, 1)
 		a.loadSettings()
 		g := a.settings.Graphics
-		if g.Effects != config.EffectsMinimal || g.VSync {
-			t.Fatalf("v%d: hand-changed rows overwritten: effects %q vsync %v", version, g.Effects, g.VSync)
+		if g.Effects != config.EffectsMinimal || g.HiDPI || g.VSync {
+			t.Fatalf("v%d: hand-changed rows overwritten: effects %q hidpi %v vsync %v", version, g.Effects, g.HiDPI, g.VSync)
 		}
-		if !slices.Contains(g.Chosen, "effects") || !slices.Contains(g.Chosen, "vsync") || slices.Contains(g.Chosen, "hidpi") {
-			t.Fatalf("v%d: chosen = %v, want effects and vsync only", version, g.Chosen)
+		if !slices.Contains(g.Chosen, "effects") || !slices.Contains(g.Chosen, "hidpi") || slices.Contains(g.Chosen, "vsync") {
+			t.Fatalf("v%d: chosen = %v, want effects and hidpi only", version, g.Chosen)
 		}
 		if g.Detected != config.QualityHigh || g.Quality != config.QualityCustom || !g.Shadows || g.Grass != config.GrassFull {
 			t.Fatalf("v%d: graphics = %+v, want the high tier with the chosen rows kept (custom)", version, g)

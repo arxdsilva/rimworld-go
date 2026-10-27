@@ -108,14 +108,13 @@ func (g *Graphics) Choose(key string) {
 }
 
 // MarkChosenFromOldDefaults treats every row a settings file from before
-// PLAY-019 had changed from that version's defaults (full effects, vsync
-// on, HiDPI on) as the player's choice.
+// PLAY-019 had changed from that version's defaults (full effects, HiDPI
+// on) as the player's choice. VSync is not read: it is off by default
+// since PERF-002 and Normalize already turned it off for such a file, so
+// off no longer tells a choice from the migration.
 func (g *Graphics) MarkChosenFromOldDefaults() {
 	if g.Effects != EffectsFull {
 		g.Chosen = appendNew(g.Chosen, "effects")
-	}
-	if !g.VSync {
-		g.Chosen = appendNew(g.Chosen, "vsync")
 	}
 	if !g.HiDPI {
 		g.Chosen = appendNew(g.Chosen, "hidpi")
