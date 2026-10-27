@@ -111,6 +111,10 @@ func face(st textStyle, s float64) (*text.GoTextFace, float64) {
 // It draws at physical (x, y) x the UI scale with a face of that size, a
 // logical line height apart.
 func drawText(dst *ebiten.Image, s string, x, y float64, st textStyle) {
+	if deferring(dst) { // world_scale.go: drawn at native size after the map
+		deferText(s, x, y, st)
+		return
+	}
 	sc := uiScale()
 	fontMu.Lock()
 	defer fontMu.Unlock()
@@ -151,7 +155,7 @@ func traceText(dst *ebiten.Image, s string, f *text.GoTextFace, op *text.DrawOpt
 // measure is the logical size of s drawn in st: measured on the scaled
 // face, divided by its glyph scale.
 func measure(s string, st textStyle) (w, h float64) {
-	sc := uiScale()
+	sc := hudScale() // text is drawn at the HUD scale, also from a world pass
 	fontMu.Lock()
 	defer fontMu.Unlock()
 	f, k := face(st, sc)
@@ -164,7 +168,7 @@ func measure(s string, st textStyle) (w, h float64) {
 
 // lineH is the logical line height of st: ascent + descent + 2 px leading.
 func lineH(st textStyle) float64 {
-	sc := uiScale()
+	sc := hudScale()
 	fontMu.Lock()
 	defer fontMu.Unlock()
 	return logicalLineH(face(st, sc))

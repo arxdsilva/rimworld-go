@@ -78,25 +78,36 @@ func (a *App) colonyButtons(sw, sh int) []button {
 	return out
 }
 
-func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
+// drawMapOverlays draws what the player's tools and selection mark on the
+// map: room tints, selection and group marks, ghosts, the drag box, move
+// markers. It draws into the map's target (the screen, or the
+// render-scaled offscreen, world_scale.go), in map pixels, before the HUD
+// chrome, which floats over it; its labels go through the canvas and stay
+// native.
+func (a *App) drawMapOverlays(dst *ebiten.Image) {
 	if a.renderer == nil {
 		return
 	}
 	a.syncRoofForce()
-	a.drawRoomOverlay(screen) // room_stats.go
-	a.drawGroupMarks(screen)  // multiselect.go
-	a.drawFormation(screen)   // formation.go
-	a.drawBoxSelect(screen)
-	a.drawArchitectGhost(screen)
-	a.drawPenOutline(screen)  // pen_draw.go: selected pen, or all while the Pen marker tool is held
-	a.drawMoveMarkers(screen) // move_mode.go: pending moves
-	a.drawMoveMode(screen)
+	a.drawRoomOverlay(dst) // room_stats.go
+	a.drawGroupMarks(dst)  // multiselect.go
+	a.drawFormation(dst)   // formation.go
+	a.drawBoxSelect(dst)
+	a.drawArchitectGhost(dst)
+	a.drawPenOutline(dst)  // pen_draw.go: selected pen, or all while the Pen marker tool is held
+	a.drawMoveMarkers(dst) // move_mode.go: pending moves
+	a.drawMoveMode(dst)
+	a.drawSelectionMarks(dst) // each kind's file: the map marker
+}
 
+func (a *App) drawColonyHUD(screen *ebiten.Image, sw, sh int) {
+	if a.renderer == nil {
+		return
+	}
 	a.drawGlobalControls(screen, sw, sh) // hud_global.go
 	a.drawResources(screen, sw, sh)      // hud_resources.go
 	a.drawColonistBar(screen, sw, sh)    // hud_colonistbar.go
 	a.drawTabs(screen, sw, sh)           // hud_tabs.go
-	a.drawSelectionMarks(screen)         // each kind's file: the map marker
 	a.drawPane(screen)                   // hud_inspect.go
 	a.drawCommandGrid(screen)            // hud_commands.go
 	a.drawArchitect(screen)

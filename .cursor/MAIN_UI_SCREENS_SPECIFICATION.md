@@ -1753,6 +1753,11 @@ presentation only, never the simulation; captures ignore them.
     keeps the hour, weather and lamp tint), Water (animated / simple),
     Grass (full / reduced / sparse tufts), each with a cost tooltip and
     applied live);
+-   [x] World detail (PERF-002: Full / 3/4 / Half of the physical pixels
+    the map draws at on a high-density screen, composited with linear
+    filtering; the HUD, labels and text stay native; never below one
+    pixel per point; preset High Full, Medium 3/4 on 2× displays, Low
+    Full; cost tooltip, applied live);
 -   [ ] far-zoom detail.
 
 ### Audio

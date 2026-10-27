@@ -55,8 +55,7 @@ func (a *App) drawRoomOverlay(screen *ebiten.Image) {
 	sw, sh := a.size()
 	tile := r.tilePx()
 	x0, y0 := r.TileAt(0, 0)
-	ps := uiScale()
-	x1, y1 := r.TileAt(int(float64(sw)*ps), int(float64(sh)*ps))
+	x1, y1 := r.TileAt(int(float64(sw)*a.mapScale()), int(float64(sh)*a.mapScale()))
 	for y := max(y0-1, 0); y <= y1+1; y++ {
 		for x := max(x0-1, 0); x <= x1+1; x++ {
 			id := roomIDAt(w, x, y)

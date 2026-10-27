@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"slices"
 	"testing"
 )
@@ -77,5 +78,63 @@ func TestNormalizeGraphicsChoices(t *testing.T) {
 	}
 	if !slices.Equal(n.Graphics.Chosen, []string{"shadows", "water"}) {
 		t.Fatalf("chosen %v", n.Graphics.Chosen)
+	}
+}
+
+// PERF-002: the map's render scale by preset. High and Low draw every
+// pixel; Medium draws 3/4 on a 2x or denser screen, all of them below.
+func TestApplyTierRenderScale(t *testing.T) {
+	for _, c := range []struct {
+		tier string
+		dev  float64
+		want float64
+	}{
+		{QualityHigh, 1, 1}, {QualityHigh, 2, 1},
+		{QualityMedium, 1, 1}, {QualityMedium, 1.5, 1}, {QualityMedium, 2, 0.75},
+		{QualityLow, 1, 1}, {QualityLow, 2, 1},
+	} {
+		g := Defaults().Graphics
+		g.ApplyTier(c.tier, c.dev)
+		if g.RenderScale != c.want || g.Quality != c.tier {
+			t.Errorf("%s at device scale %g: render scale %g quality %s, want %g %s", c.tier, c.dev, g.RenderScale, g.Quality, c.want, c.tier)
+		}
+	}
+	// chosen by hand: kept, and the preset reads Custom
+	g := Defaults().Graphics
+	g.RenderScale = 0.5
+	g.Choose("renderscale")
+	g.ApplyTier(QualityHigh, 2)
+	if g.RenderScale != 0.5 || g.Quality != QualityCustom {
+		t.Fatalf("a chosen render scale was overwritten: %g %s", g.RenderScale, g.Quality)
+	}
+}
+
+func TestNormalizeRenderScale(t *testing.T) {
+	for _, v := range []float64{0, 0.6, 2, -1} {
+		s := Defaults()
+		s.Graphics.RenderScale = v
+		if got := s.Normalize().Graphics.RenderScale; got != 1 {
+			t.Errorf("render scale %g normalized to %g, want 1", v, got)
+		}
+	}
+	for _, v := range RenderScales {
+		s := Defaults()
+		s.Graphics.RenderScale = v
+		if got := s.Normalize().Graphics.RenderScale; got != v {
+			t.Errorf("render scale %g normalized to %g", v, got)
+		}
+	}
+	// a file from before PERF-002 has no render_scale: every pixel
+	var old Settings
+	if err := json.Unmarshal([]byte(`{"graphics":{"quality":"medium","hidpi":true}}`), &old); err != nil {
+		t.Fatal(err)
+	}
+	if got := old.Normalize().Graphics.RenderScale; got != 1 {
+		t.Fatalf("an old file's render scale = %g, want 1", got)
+	}
+	s := Defaults()
+	s.Graphics.Chosen = []string{"renderscale"}
+	if n := s.Normalize(); !slices.Equal(n.Graphics.Chosen, []string{"renderscale"}) {
+		t.Fatalf("chosen %v lost renderscale", n.Graphics.Chosen)
 	}
 }

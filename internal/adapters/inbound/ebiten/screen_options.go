@@ -193,7 +193,32 @@ func graphicsRows() []optionRow {
 			func(s *config.Settings) *string { return &s.Graphics.Water }, []string{config.WaterAnimated, config.WaterSimple})),
 		detail(choiceRow("grass", "Grass", "How many tufts grow on each grassy tile. Fewer tufts cost less GPU time.",
 			func(s *config.Settings) *string { return &s.Graphics.Grass }, config.GrassLevels)),
+		detail(renderScaleRow()),
 	}
+}
+
+// renderScaleRow is World detail (PERF-002): the share of the physical
+// pixels the map draws at (world_scale.go), cycling config.RenderScales.
+// Applied live, like HiDPI (applySettings -> updateScale).
+func renderScaleRow() optionRow {
+	return chosenRow(optionRow{key: "renderscale", label: "World detail", kind: rowChoice,
+		tip: "How many pixels the map draws at on a high-density screen: Full, 3/4 or Half. " +
+			"Half costs a quarter of the GPU fill; the interface stays sharp.",
+		value: func(s config.Settings) string { return renderScaleLabel(s.Graphics.RenderScale) },
+		apply: func(s *config.Settings, _ int) {
+			s.Graphics.RenderScale = cycle(config.RenderScales, s.Graphics.RenderScale)
+		}})
+}
+
+// renderScaleLabel names a render scale: Full, 3/4 or Half.
+func renderScaleLabel(v float64) string {
+	switch v {
+	case 0.75:
+		return "3/4"
+	case 0.5:
+		return "Half"
+	}
+	return "Full"
 }
 
 // uiScaleLabel names a UI scale choice; Auto is shown with its live value.

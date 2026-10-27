@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"fmt"
+	"math"
 	"strings"
 	"sync"
 
@@ -157,11 +158,8 @@ func (a *App) drawZoneSelection(screen *ebiten.Image) {
 	}
 	r := a.renderer
 	tile := r.tilePx()
-	pw, ph := a.pw, a.ph // physical, like the map
-	if pw <= 0 || ph <= 0 {
-		sw, sh := a.size()
-		pw, ph = int(float64(sw)*uiScale()), int(float64(sh)*uiScale())
-	}
+	sw, sh := a.size()
+	pw, ph := int(math.Ceil(float64(sw)*a.mapScale())), int(math.Ceil(float64(sh)*a.mapScale())) // map pixels, like the camera
 	r.drawZoneHighlight(screen, r.world(), z, pw, ph, tile)
 	if z.Hidden {
 		r.drawZoneLabel(screen, z, r.zoneGeomOf(z), pw, ph, tile)

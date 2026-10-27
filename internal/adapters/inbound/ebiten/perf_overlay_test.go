@@ -47,7 +47,7 @@ func TestFrameStatsMatchProbeReport(t *testing.T) {
 	}
 	f := frameStats(st.frames, st.update, st.draw)
 	got := fpsReport(st, uiScaleState{s: 1, dev: 1})
-	want := fmt.Sprintf("fps probe: %d frames, avg %.1f fps, 1%% low %.1f fps (frame p99 %v); update avg %v p99 %v; draw avg %v p99 %v; work avg %v p99 %v; scale s 1 dev 1; ",
+	want := fmt.Sprintf("fps probe: %d frames, avg %.1f fps, 1%% low %.1f fps (frame p99 %v); update avg %v p99 %v; draw avg %v p99 %v; work avg %v p99 %v; scale s 1 dev 1 world 1; ",
 		200, f.FPS, f.Low1, f.FrameP99, f.UpdateAvg, f.UpdateP99, f.DrawAvg, f.DrawP99, f.UpdateAvg+f.DrawAvg, f.UpdateP99+f.DrawP99)
 	if len(got) < len(want) || got[:len(want)] != want {
 		t.Fatalf("report\n%q\nwant prefix\n%q", got, want)

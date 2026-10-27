@@ -210,7 +210,8 @@ func TestMinimapClickAtUIScale(t *testing.T) {
 
 func TestFPSReportNamesScale(t *testing.T) {
 	st := &fpsProbeState{}
-	if got := fpsReport(st, uiScaleState{dev: 2, ui: 1.5, s: 3}); !strings.Contains(got, "s 3") || !strings.Contains(got, "dev 2") {
+	if got := fpsReport(st, uiScaleState{dev: 2, ui: 1.5, s: 3, world: 0.5}); !strings.Contains(got, "s 3") || !strings.Contains(got, "dev 2") ||
+		!strings.Contains(got, "world 0.5") {
 		t.Fatalf("report %q does not name the scale", got)
 	}
 }

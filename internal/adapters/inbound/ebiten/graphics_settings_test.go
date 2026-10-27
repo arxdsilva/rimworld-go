@@ -202,6 +202,7 @@ func TestOptionsGraphicsRowsRecordTheChoice(t *testing.T) {
 		{"lighting", "lighting", func(g config.Graphics) bool { return !g.Lighting }},
 		{"water", "water", func(g config.Graphics) bool { return g.Water == config.WaterSimple }},
 		{"grass", "grass", func(g config.Graphics) bool { return g.Grass == config.GrassReduced }},
+		{"renderscale", "renderscale", func(g config.Graphics) bool { return g.RenderScale == 0.75 }},
 	} {
 		store := graphicsStore()
 		a := optionsApp(store)
@@ -320,7 +321,7 @@ func TestOptionsGraphicsRowsHaveCostTips(t *testing.T) {
 	t.Parallel()
 	a := optionsApp(graphicsStore())
 	a.optionsTab = "graphics"
-	for _, id := range []string{"quality", "effects", "shadows", "lighting", "water", "grass", "hidpi", "vsync"} {
+	for _, id := range []string{"quality", "effects", "shadows", "lighting", "water", "grass", "hidpi", "vsync", "renderscale"} {
 		if b := optionBtn(t, a, "options."+id); len(b.tip) < 20 {
 			t.Fatalf("%s tip = %q, want a sentence", id, b.tip)
 		}
@@ -333,6 +334,9 @@ func TestOptionsGraphicsLabelsFitTheirColumn(t *testing.T) {
 	t.Parallel()
 	a := testApp(&stubSim{w: 4, h: 4})
 	rows := optionRows("graphics")
+	if !slices.ContainsFunc(rows, func(r optionRow) bool { return r.key == "renderscale" && r.col == 1 }) {
+		t.Fatal("no World detail row in the detail column")
+	}
 	for i, r := range rows {
 		lx, cx, y := optPos(rows, i)
 		if w, _ := measure(r.label, tsBody); lx+float32(w) > cx-8 {

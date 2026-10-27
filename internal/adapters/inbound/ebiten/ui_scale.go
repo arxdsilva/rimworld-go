@@ -2,6 +2,7 @@ package ebiten
 
 import (
 	"math"
+	"slices"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
@@ -19,11 +20,26 @@ import (
 // (physical / s), exactly as at s = 1, and draws through the scaling
 // canvas (ui_canvas.go, font.go). The map renders at physical resolution
 // and scales its tiles by dev only. Captures force s = 1.
+//
+// A third factor, world (PERF-002, Graphics.RenderScale), draws the map
+// into an offscreen at world x the physical pixels (world_scale.go): the
+// camera then works in "map pixels" (physical x world, screenDev() =
+// dev x world) and the HUD and every label stay native.
 
-// uiScaleState is one App's scale.
-type uiScaleState struct{ dev, ui, s float64 }
+// uiScaleState is one App's scale. world is the map's render scale (0 or
+// 1: the map draws at every physical pixel; see worldK).
+type uiScaleState struct{ dev, ui, s, world float64 }
 
-var unitUIScale = uiScaleState{dev: 1, ui: 1, s: 1}
+var unitUIScale = uiScaleState{dev: 1, ui: 1, s: 1, world: 1}
+
+// worldK is the map's render scale: world when it is a reduced one
+// (0 < world < 1), else 1.
+func (u uiScaleState) worldK() float64 {
+	if u.world > 0 && u.world < 1 {
+		return u.world
+	}
+	return 1
+}
 
 // curUIScale is the scale the draw helpers and the font read. The App
 // writes it on the main goroutine at the start of Update and Draw, and
@@ -55,13 +71,19 @@ func autoUIScale(w, h float64) float64 {
 }
 
 // computeUIScale is the scale for the settings, a w x h window in points
-// and the screen's device scale factor. Captures are always 1.
+// and the screen's device scale factor. Captures are always 1. The map's
+// render scale never takes the map below one pixel per point (1/dev): at
+// dev 1 (HiDPI off, or a 1x screen) a smaller map would only blur.
 func computeUIScale(st config.Settings, w, h, dev float64, capture bool) uiScaleState {
 	if capture {
 		return unitUIScale
 	}
 	if !st.Graphics.HiDPI || dev <= 0 || math.IsNaN(dev) {
 		dev = 1
+	}
+	world := 1.0
+	if dev > 1 {
+		world = math.Max(renderScaleOf(st.Graphics), 1/dev)
 	}
 	ui := float64(st.Accessibility.UIScale) / 100
 	if st.Accessibility.UIScaleAuto {
@@ -70,7 +92,16 @@ func computeUIScale(st config.Settings, w, h, dev float64, capture bool) uiScale
 	if ui <= 0 {
 		ui = 1
 	}
-	return uiScaleState{dev: dev, ui: ui, s: dev * ui}
+	return uiScaleState{dev: dev, ui: ui, s: dev * ui, world: world}
+}
+
+// renderScaleOf is the settings' map render scale: one of
+// config.RenderScales, else 1.
+func renderScaleOf(g config.Graphics) float64 {
+	if slices.Contains(config.RenderScales, g.RenderScale) {
+		return g.RenderScale
+	}
+	return 1
 }
 
 // monitorScale is the current monitor's device scale factor (1 when
@@ -123,7 +154,13 @@ func (a *App) Layout(outsideWidth, outsideHeight int) (int, int) {
 func (a *App) updateScale() {
 	a.scale = computeUIScale(a.settings, a.outW, a.outH, a.devRaw, a.cfg.Capture != nil)
 	if s := a.captureScale(); s > 0 {
-		a.scale = uiScaleState{dev: 1, ui: s, s: s}
+		a.scale = uiScaleState{dev: 1, ui: s, s: s, world: 1}
+	}
+	if a.cfg.Capture != nil {
+		// dev escape hatch: captures load the defaults (render scale 1), so
+		// only an explicit -render-scale reaches here; it shows the scaled
+		// map path in a screenshot
+		a.scale.world = renderScaleOf(a.settings.Graphics)
 	}
 	if a.pw > 0 && a.ph > 0 {
 		a.setPhysical(a.pw, a.ph)
@@ -156,12 +193,43 @@ func (a *App) syncUIScale() {
 	}
 }
 
-// uiScale is the total UI scale the canvas draws with.
-func uiScale() float64 { return curUIScale.s }
+// uiScale is the total UI scale the canvas draws with. During a world
+// pass into the render-scaled map image (world_scale.go) it is s x world,
+// so a world pass's hand conversion (map pixels / uiScale()) still gives
+// logical pixels.
+func uiScale() float64 {
+	if worldPassK != 0 {
+		return curUIScale.s * worldPassK
+	}
+	return curUIScale.s
+}
+
+// hudScale is the UI scale the HUD and every label draw at, also during a
+// world pass: text is measured at the scale it is drawn at.
+func hudScale() float64 { return curUIScale.s }
+
+// mapUIScale is map pixels per logical UI pixel (s x the render scale),
+// in and out of a world pass: for map <-> logical conversions that also run
+// in Update (hit tests).
+func mapUIScale() float64 { return curUIScale.s * curUIScale.worldK() }
+
+// mapScale is logical UI pixels -> map pixels (s x the render scale): the
+// one conversion from a logical point or size to the camera's pixels.
+func (a *App) mapScale() float64 { return a.scale.s * a.scale.worldK() }
 
 // toLogical maps a physical (raw cursor) point to logical UI pixels.
 func (a *App) toLogical(px, py int) (int, int) {
 	s := a.scale.s
+	if s == 1 || s <= 0 {
+		return px, py
+	}
+	return int(math.Floor(float64(px) / s)), int(math.Floor(float64(py) / s))
+}
+
+// mapToLogical maps a map-pixel point (mapCursor, the map press) to
+// logical UI pixels.
+func (a *App) mapToLogical(px, py int) (int, int) {
+	s := a.mapScale()
 	if s == 1 || s <= 0 {
 		return px, py
 	}

@@ -1653,6 +1653,8 @@ the player what just happened and what requires attention.
 -   [x] **UI scale** (UI-024: Options › Accessibility, Auto (follows the window, 1280×720 = 100 %) or 75–200 %, applies live)
 -   [x] **Rendering quality toggles** (PLAY-019: Quality High/Medium/Low/Custom picked from the hardware at the first start, Detect again; Shadows, Lighting, Water, Grass rows applied live; the player's own changes always kept)
 -   [x] **Animation/effects density** (Effects Full/Reduced/Minimal scales particles and weather; PLAY-019: Grass full/reduced/sparse thins tufts per tile)
+-   [x] **World render scale** (PERF-002: Full / 3/4 / Half of the physical pixels; HUD and text native; preset High Full, Medium 3/4 on 2× displays)
+-   [x] **Performance overlay** (PERF-002: Options › Graphics toggle; fps, 1 % low, frame, update and draw time, sim rate and held ticks, heap and GC rate, a frame-time sparkline, by the resource list; also with the UI hidden)
 -   [x] **Hardware check** (PLAY-019: RAM and cores read once at startup; a low-memory notice on the main menu and per-size memory warnings in the new-game wizard; warns only)
 -   [ ] **Far-zoom detail**
 
@@ -1897,8 +1899,8 @@ source and intended for AI-assisted development.
 
 ## 39.1 Simulation profiler
 
--   [ ] **Ticks per second**
--   [ ] **Average tick time**
+-   [x] **Ticks per second** (PERF-002: the performance overlay shows the sim rate and the ticks actually stepped)
+-   [x] **Average tick time** (PERF-002: the overlay shows update ms per tick; `cmd/benchmark` the per-tick percentiles)
 -   [ ] **p50/p95/p99 tick time**
 -   [ ] **Per-phase time**
 -   [ ] **Active entities**
@@ -1907,8 +1909,8 @@ source and intended for AI-assisted development.
 -   [ ] **Path requests**
 -   [ ] **Nodes expanded**
 -   [ ] **Cache hit rates**
--   [ ] **Allocations**
--   [ ] **Heap**
+-   [-] **Allocations** (PERF-002: the overlay shows the GC rate only; `BenchmarkWorldView` and `TestWorldViewQuietTickAllocs` pin the read model's allocations)
+-   [x] **Heap** (PERF-002: the overlay shows the live heap from `runtime/metrics`)
 -   [ ] **Goroutine count**
 
 ## 39.2 Hot-system drill-down
@@ -1918,7 +1920,7 @@ source and intended for AI-assisted development.
 -   [ ] **Rooms**
 -   [ ] **Temperature**
 -   [ ] **Power**
--   [ ] **Rendering**
+-   [-] **Rendering** (PERF-002: the overlay shows draw time; no per-pass breakdown)
 -   [x] **Alerts**
 -   [ ] **Plugins**
 

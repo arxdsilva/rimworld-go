@@ -39,7 +39,7 @@ var GrassLevels = []string{GrassFull, GrassReduced, GrassSparse}
 var RenderScales = []float64{1, 0.75, 0.5}
 
 // GraphicsRows are the rows a preset sets, by their Chosen key.
-var GraphicsRows = []string{"effects", "shadows", "lighting", "water", "grass", "hidpi", "vsync"}
+var GraphicsRows = []string{"effects", "shadows", "lighting", "water", "grass", "hidpi", "vsync", "renderscale"}
 
 // Hardware tier thresholds, from measured use (PLAY-019): a grown 500x500
 // colony and the editor and OS together need about 8 GiB; High also needs
@@ -66,7 +66,7 @@ func DetectTier(total uint64, cores int) string {
 
 // ApplyTier sets every row of preset tier that the player has not chosen
 // by hand; devScale is the screen's device scale (HiDPI is dropped on
-// Medium above 2x). Quality reads tier, or Custom when a chosen row kept
+// Medium above 2x, and Medium draws the map at 3/4 from 2x up). Quality reads tier, or Custom when a chosen row kept
 // another value.
 func (g *Graphics) ApplyTier(tier string, devScale float64) {
 	p := presetFor(tier, devScale)
@@ -82,6 +82,7 @@ func (g *Graphics) ApplyTier(tier string, devScale float64) {
 	set("grass", func() { g.Grass = p.Grass })
 	set("hidpi", func() { g.HiDPI = p.HiDPI })
 	set("vsync", func() { g.VSync = p.VSync })
+	set("renderscale", func() { g.RenderScale = p.RenderScale })
 	g.Quality = tier
 	if !g.matches(p) {
 		g.Quality = QualityCustom
@@ -116,19 +117,27 @@ func (g Graphics) chosen(key string) bool { return slices.Contains(g.Chosen, key
 
 func (g Graphics) matches(p Graphics) bool {
 	return g.Effects == p.Effects && g.Shadows == p.Shadows && g.Lighting == p.Lighting &&
-		g.Water == p.Water && g.Grass == p.Grass && g.HiDPI == p.HiDPI && g.VSync == p.VSync
+		g.Water == p.Water && g.Grass == p.Grass && g.HiDPI == p.HiDPI && g.VSync == p.VSync &&
+		g.RenderScale == p.RenderScale
 }
 
-// presetFor is tier's settings.
+// presetFor is tier's settings. The map's render scale (PERF-002) is
+// full on High and Low (Low already draws one pixel per point, so a
+// smaller map would only blur) and 3/4 on Medium on a 2x or denser screen.
 func presetFor(tier string, devScale float64) Graphics {
 	switch tier {
 	case QualityLow:
-		return Graphics{Effects: EffectsMinimal, Water: WaterSimple, Grass: GrassSparse, VSync: true}
+		return Graphics{Effects: EffectsMinimal, Water: WaterSimple, Grass: GrassSparse, VSync: true, RenderScale: 1}
 	case QualityMedium:
+		rs := 1.0
+		if devScale >= 2 {
+			rs = 0.75
+		}
 		return Graphics{Effects: EffectsReduced, Shadows: true, Lighting: true, Water: WaterSimple, Grass: GrassReduced,
-			HiDPI: devScale <= 2, VSync: true}
+			HiDPI: devScale <= 2, VSync: true, RenderScale: rs}
 	}
-	return Graphics{Effects: EffectsFull, Shadows: true, Lighting: true, Water: WaterAnimated, Grass: GrassFull, HiDPI: true, VSync: true}
+	return Graphics{Effects: EffectsFull, Shadows: true, Lighting: true, Water: WaterAnimated, Grass: GrassFull, HiDPI: true, VSync: true,
+		RenderScale: 1}
 }
 
 func appendNew(xs []string, x string) []string {

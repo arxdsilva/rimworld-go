@@ -100,6 +100,7 @@ var canvasExempt = map[string]string{
 	"shadow.go:flush":                    "world: shadow triangle batch",
 	"shadow_cast.go:castSilhouette":      "world: cast shadows",
 	"water_draw.go:drawWaterTile":        "world: water",
+	"world_scale.go:compositeWorld":      "world: the render-scaled map composited to the screen",
 	"paths_draw.go:drawPaths":            "world: path lines",
 	"pen_draw.go:penSide":                "world: pen region outline on tiles",
 	"zones_draw.go:zoneFill":             "world: zone fill batch",

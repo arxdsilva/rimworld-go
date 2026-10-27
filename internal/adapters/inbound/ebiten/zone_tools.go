@@ -204,7 +204,7 @@ func (a *App) zoneToolCells(z game.ZoneView) []ghostCell {
 	r := a.renderer
 	sw, sh := a.size()
 	cx0, cy0 := r.TileAt(0, 0)
-	cx1, cy1 := r.TileAt(int(float64(sw)*uiScale()), int(float64(sh)*uiScale()))
+	cx1, cy1 := r.TileAt(int(float64(sw)*a.mapScale()), int(float64(sh)*a.mapScale()))
 	clip := [4]int{cx0 - 1, cy0 - 1, cx1 + 1, cy1 + 1}
 	if st.tool == zoneToolExpand {
 		return zoneGhostCells(x0, y0, x1, y1, clip, func(x, y int) bool { return r.game.CanZoneAt(z.Kind, x, y) })

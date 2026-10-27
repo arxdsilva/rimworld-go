@@ -138,7 +138,7 @@ type archPlanKey struct {
 }
 
 func (a *App) archKey() archPlanKey {
-	k := archPlanKey{tool: a.archTool, facing: a.archFacing, scale: uiScale(), rot: a.rotateKeys()}
+	k := archPlanKey{tool: a.archTool, facing: a.archFacing, scale: hudScale(), rot: a.rotateKeys()}
 	var w game.WorldView
 	if a.renderer != nil {
 		w = a.renderer.world()

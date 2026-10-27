@@ -528,7 +528,7 @@ func settingsHooks(capturing bool, dev devGraphics) uiadapter.SettingsHooks {
 		}
 		if tier != "" {
 			s.Graphics.Chosen = nil
-			s.Graphics.ApplyTier(tier, 1)
+			s.Graphics.ApplyTier(tier, ebiten.Monitor().DeviceScaleFactor()) // Medium's HiDPI and render-scale rows read the screen
 			s.Graphics.Detected = tier
 		}
 		if dev.hidpi != nil {

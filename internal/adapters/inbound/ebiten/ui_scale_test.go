@@ -52,18 +52,18 @@ func TestComputeUIScale(t *testing.T) {
 	s := config.Defaults()
 	s.Accessibility.UIScaleAuto = false
 	s.Accessibility.UIScale = 150
-	if got := computeUIScale(s, 1280, 720, 1, false); got != (uiScaleState{dev: 1, ui: 1.5, s: 1.5}) {
+	if got := computeUIScale(s, 1280, 720, 1, false); got != (uiScaleState{dev: 1, ui: 1.5, s: 1.5, world: 1}) {
 		t.Fatalf("preset 150 = %+v", got)
 	}
-	if got := computeUIScale(s, 1280, 720, 2, false); got != (uiScaleState{dev: 2, ui: 1.5, s: 3}) {
+	if got := computeUIScale(s, 1280, 720, 2, false); got != (uiScaleState{dev: 2, ui: 1.5, s: 3, world: 1}) {
 		t.Fatalf("preset 150 on a Retina screen = %+v", got)
 	}
 	s.Graphics.HiDPI = false
-	if got := computeUIScale(s, 1280, 720, 2, false); got != (uiScaleState{dev: 1, ui: 1.5, s: 1.5}) {
+	if got := computeUIScale(s, 1280, 720, 2, false); got != (uiScaleState{dev: 1, ui: 1.5, s: 1.5, world: 1}) {
 		t.Fatalf("HiDPI off = %+v", got)
 	}
 	s = config.Defaults() // Auto
-	if got := computeUIScale(s, 1920, 1080, 1, false); got != (uiScaleState{dev: 1, ui: 1.5, s: 1.5}) {
+	if got := computeUIScale(s, 1920, 1080, 1, false); got != (uiScaleState{dev: 1, ui: 1.5, s: 1.5, world: 1}) {
 		t.Fatalf("auto at 1080p = %+v", got)
 	}
 	if got := computeUIScale(s, 1920, 1080, 2, true); got != unitUIScale {
@@ -129,6 +129,16 @@ func TestCaptureForcesUnitScale(t *testing.T) {
 	a.setSettings(s)
 	if pw, ph := a.LayoutF(1920, 1080); pw != 1920 || ph != 1080 || a.scale != unitUIScale || a.sw != 1920 {
 		t.Fatalf("capture LayoutF %vx%v scale %+v logical %d", pw, ph, a.scale, a.sw)
+	}
+	if a.scale.world != 1 {
+		t.Fatalf("capture world %v, want 1", a.scale.world)
+	}
+	// dev escape hatch: an explicit -render-scale (captures otherwise load
+	// the defaults) shows the render-scaled map in a screenshot
+	s.Graphics.RenderScale = 0.5
+	a.setSettings(s)
+	if a.scale.worldK() != 0.5 || a.scale.s != 1 || a.pw != 1920 {
+		t.Fatalf("capture with render scale 0.5: scale %+v physical %d", a.scale, a.pw)
 	}
 }
 

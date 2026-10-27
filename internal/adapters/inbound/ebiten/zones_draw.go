@@ -608,7 +608,7 @@ func (r *Renderer) zoneLabelPlanFor(z game.ZoneView, g *zoneGeom, tile float64) 
 	ox, oy = r.worldToScreenF(float64(g.minX), float64(g.minY))
 	bw, bh = float64(g.maxX-g.minX+1)*tile, float64(g.maxY-g.minY+1)*tile
 	ax, ay := r.worldToScreenF(g.ax, g.ay)
-	k := 1 / uiScale()
+	k := 1 / mapUIScale() // also from Update (zoneLabelAt), outside the world pass
 	return zoneLabelLayout(zoneLabelText(z), bw*k, bh*k, float64(ax)*k, float64(ay)*k, zoneLabelCap(tile*k)), ox, oy, bw, bh
 }
 
@@ -636,7 +636,7 @@ func (r *Renderer) drawZoneLabel(screen *ebiten.Image, z game.ZoneView, g *zoneG
 // (mx, my), the topmost. A hidden zone has no plate, unless it is shown
 // (the selected one, whose name drawZoneSelection draws).
 func (r *Renderer) zoneLabelAt(w game.WorldView, mx, my int, tile float64, shown uint16) (game.ZoneView, bool) {
-	k := 1 / uiScale()
+	k := 1 / mapUIScale() // a hit test (Update): map pixels -> logical
 	px, py := float32(float64(mx)*k), float32(float64(my)*k)
 	for i := len(w.Zones) - 1; i >= 0; i-- {
 		z := w.Zones[i]

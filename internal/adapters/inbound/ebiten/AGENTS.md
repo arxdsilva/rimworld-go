@@ -119,6 +119,12 @@ commands via `Enqueue`. Domain code does not import this package.
   for a UI element with `toLogical`.
 - `TestUIDrawsThroughCanvas` rejects raw drawing outside its exemption list
   (each entry has a reason).
+- World detail (PERF-002, `world_scale.go`): the camera's pixels are map
+  pixels (physical × render scale). Get them from `mapCursor()`,
+  `a.mapViewport()`, `a.mapScale()` (logical → map) or `mapUIScale()` (map →
+  logical, also in Update), never `a.pw`/`uiScale()` outside the world pass.
+  Map overlays drawn by tools and selection go in `drawMapOverlays`; their
+  canvas draws are queued and drawn native (`TestMapPixelsComeFromMapCursor`).
 
 ## Widget kit and text (NG-1)
 

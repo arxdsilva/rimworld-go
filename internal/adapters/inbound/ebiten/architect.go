@@ -684,7 +684,7 @@ func (a *App) drawZoneGhost(screen *ebiten.Image, kind string, x0, y0, x1, y1 in
 	sw, sh := a.size()
 	tile := r.tilePx()
 	cx0, cy0 := r.TileAt(0, 0)
-	cx1, cy1 := r.TileAt(int(float64(sw)*uiScale()), int(float64(sh)*uiScale()))
+	cx1, cy1 := r.TileAt(int(float64(sw)*a.mapScale()), int(float64(sh)*a.mapScale()))
 	clip := [4]int{cx0 - 1, cy0 - 1, cx1 + 1, cy1 + 1}
 	for _, c := range zoneGhostCells(x0, y0, x1, y1, clip, func(x, y int) bool { return r.game.CanZoneAt(kind, x, y) }) {
 		sx, sy := r.worldToScreen(c.x, c.y)

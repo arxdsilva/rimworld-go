@@ -98,8 +98,9 @@ func (a *App) selectionSet() (selKind, []entity.EntityID) {
 // double click) and then the right button (orders, formation.go).
 func (a *App) handleMapMouse() {
 	f := &a.in
-	mx, my := a.mapCursor() // physical: the press, the box and the double click live in map pixels
-	sc := max(1, a.scale.s)
+	mx, my := a.mapCursor() // the press, the box and the double click live in map pixels
+	// the thresholds scale like the screen, then into map pixels
+	sc := max(1, a.scale.s) * a.scale.worldK()
 	boxMin, dblPx := int(boxMinPx*sc), int(doubleClickPx*sc)
 	switch {
 	case f.clicked(mbLeft):
@@ -641,8 +642,8 @@ func (a *App) drawBoxSelect(screen *ebiten.Image) {
 	// The press and cursor are physical (map pixels); the box is UI-canvas
 	// drawing, so its corners go to logical.
 	pmx, pmy := a.mapCursor()
-	lx0, ly0 := a.toLogical(a.press.x, a.press.y)
-	lx1, ly1 := a.toLogical(pmx, pmy)
+	lx0, ly0 := a.mapToLogical(a.press.x, a.press.y)
+	lx1, ly1 := a.mapToLogical(pmx, pmy)
 	x0, y0, x1, y1 := screenRect(lx0, ly0, lx1, ly1)
 	fill := uiAccent
 	fill.A = 40

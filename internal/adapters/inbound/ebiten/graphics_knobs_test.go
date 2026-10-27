@@ -435,6 +435,19 @@ func TestGraphicsPresetsDriveEveryKnob(t *testing.T) {
 			if tier == config.QualityLow && (!got.shadowsOff || !got.lightingOff || !got.simpleWater || got.grass != config.GrassSparse) {
 				t.Fatalf("low should switch every knob down: %+v (%s)", got, fmt.Sprint(g))
 			}
+			// PERF-002: the map's render scale, the App's knob (world_scale.go):
+			// High full, Medium 3/4 on a 2x screen, Low full (HiDPI off)
+			for _, dev := range []float64{1, 2} {
+				st := config.Defaults()
+				st.Graphics.ApplyTier(tier, dev)
+				want := 1.0
+				if tier == config.QualityMedium && dev == 2 {
+					want = 0.75
+				}
+				if got := computeUIScale(st, 1280, 720, dev, false).worldK(); got != want {
+					t.Fatalf("%s at device scale %g: world %g, want %g", tier, dev, got, want)
+				}
+			}
 		})
 	}
 }

@@ -25,25 +25,27 @@ func colonyViewportPhysical(sw, sh int, s float64) viewport {
 	return viewport{v.x0 * s, v.y0 * s, v.x1 * s, v.y1 * s}
 }
 
-// mapViewport is the colony map's viewport in physical pixels: what the
-// camera, edge scrolling, culling and the sound director use. The
-// logical size is rounded up, so the right and bottom edges are capped at
-// the physical screen.
+// mapViewport is the colony map's viewport in map pixels (physical x the
+// render scale, world_scale.go): what the camera, edge scrolling, culling
+// and the sound director use. The logical size is rounded up, so the
+// right and bottom edges are capped at the screen.
 func (a *App) mapViewport() viewport {
-	v := colonyViewportPhysical(a.sw, a.sh, a.scale.s)
+	k := a.scale.worldK()
+	v := colonyViewportPhysical(a.sw, a.sh, a.mapScale())
 	if a.pw > 0 {
-		v.x1 = math.Min(v.x1, float64(a.pw))
+		v.x1 = math.Min(v.x1, float64(a.pw)*k)
 	}
 	if a.ph > 0 {
-		v.y1 = math.Min(v.y1, float64(a.ph))
+		v.y1 = math.Min(v.y1, float64(a.ph)*k)
 	}
 	return v
 }
 
-// screenDev is the screen's device pixel density the map renders at (1
-// when unset): the map's tile size is TileSize x zoom x screenDev.
+// screenDev is the density the map renders at (1 when unset): the
+// screen's device pixel density x the map's render scale. The map's tile
+// size is TileSize x zoom x screenDev.
 func screenDev() float64 {
-	if d := curUIScale.dev; d > 0 && !math.IsNaN(d) && !math.IsInf(d, 0) {
+	if d := curUIScale.dev * curUIScale.worldK(); d > 0 && !math.IsNaN(d) && !math.IsInf(d, 0) {
 		return d
 	}
 	return 1

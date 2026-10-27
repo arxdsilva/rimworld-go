@@ -128,6 +128,7 @@ type App struct {
 	sw, sh     int
 	pw, ph     int
 	scale      uiScaleState
+	wr         worldRender // world_scale.go: the render-scaled map (PERF-002)
 	outW, outH float64
 	devRaw     float64
 	devFn      func() float64
@@ -825,15 +826,31 @@ func (a *App) Draw(screen *ebiten.Image) {
 		if a.renderer != nil {
 			now := a.now()
 			if a.cfg.Capture == nil && !a.lastDraw.IsZero() && a.nav.overlay() != overlayPause {
+				a.renderer.syncDev() // the viewport is in this frame's map pixels
 				a.renderer.stepCamera(now.Sub(a.lastDraw).Seconds(), a.mapViewport())
 			}
 			a.lastDraw = now
 			a.renderer.setAlpha(a.frameAlpha())
 			a.syncTreeFocus() // tree_focus.go: hover, selection and ghost see through canopies
+			// world_scale.go: the map, and what the tools mark on it, draw
+			// into the render-scaled offscreen when there is one; its canvas
+			// labels are queued and drawn on the screen after it
+			dst, scaled := a.worldTarget(screen)
+			if scaled {
+				a.beginWorldPass(dst)
+			}
 			setTracePass("world")
-			a.renderer.Draw(screen)
-			a.drawMapFields(screen) // mapfields_overlay.go: dev only
+			a.renderer.Draw(dst)
+			a.drawMapFields(dst) // mapfields_overlay.go: dev only
 			setTracePass("hud")
+			if !a.hideUI {
+				a.drawMapOverlays(dst) // hud.go: selection marks, ghosts, the drag box
+			}
+			if scaled {
+				a.endWorldPass()
+				compositeWorld(screen, dst, a.scale.worldK())
+				a.flushWorldOverlay(screen)
+			}
 		} else {
 			screen.Fill(uiSpace)
 		}
@@ -1015,12 +1032,17 @@ func (a *App) currentCursor() (int, int) {
 	return a.in.ui.mx, a.in.ui.my
 }
 
-// mapCursor is the pointer in physical pixels, for the map (screenToWorld,
-// selection, globe picking): the raw device position, or a.cursor x s.
+// mapCursor is the pointer in map pixels, for the map (screenToWorld,
+// selection): the raw device position x the render scale, or a.cursor x
+// mapScale. Every TileAt / screenToWorld argument comes from here
+// (TestMapPixelsComeFromMapCursor).
 func (a *App) mapCursor() (int, int) {
 	if a.cursor != nil {
-		s := a.scale.s
+		s := a.mapScale()
 		return int(float64(a.cursor[0]) * s), int(float64(a.cursor[1]) * s)
+	}
+	if k := a.scale.worldK(); k != 1 {
+		return int(float64(a.in.raw.mx) * k), int(float64(a.in.raw.my) * k)
 	}
 	return a.in.raw.mx, a.in.raw.my
 }

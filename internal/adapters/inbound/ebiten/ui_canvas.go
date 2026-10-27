@@ -19,6 +19,9 @@ import (
 // World-space drawing (anything the camera positions) stays raw, in
 // physical pixels; see TestUIDrawsThroughCanvas for the functions allowed to,
 // and for the rule that world-anchored labels use worldText / worldIcon.
+// With a reduced map render scale (world_scale.go) a canvas draw aimed at
+// the map's offscreen is queued and drawn on the screen after the map is
+// composited, so labels and icons stay at native resolution.
 
 // canvasTrace, when set (tests only, never in parallel), sees each
 // rectangle the canvas fills, strokes or draws an image into, in
@@ -83,6 +86,10 @@ func emitBox(dst *ebiten.Image, kind string, x0, y0, x1, y1, pad float32) {
 
 // uiFillRect is vector.FillRect in logical pixels.
 func uiFillRect(dst *ebiten.Image, x, y, w, h float32, clr color.Color, aa bool) {
+	if deferring(dst) { // world_scale.go: drawn at native size after the map
+		deferFillRect(x, y, w, h, clr, aa)
+		return
+	}
 	s := float32(uiScale())
 	if canvasTrace != nil {
 		canvasTrace("fill", x*s, y*s, w*s, h*s)
@@ -95,6 +102,10 @@ func uiFillRect(dst *ebiten.Image, x, y, w, h float32, clr color.Color, aa bool)
 
 // uiStrokeRect is vector.StrokeRect in logical pixels.
 func uiStrokeRect(dst *ebiten.Image, x, y, w, h, width float32, clr color.Color, aa bool) {
+	if deferring(dst) {
+		deferStrokeRect(x, y, w, h, width, clr, aa)
+		return
+	}
 	s := float32(uiScale())
 	if canvasTrace != nil {
 		canvasTrace("stroke", x*s, y*s, w*s, h*s)
@@ -107,6 +118,10 @@ func uiStrokeRect(dst *ebiten.Image, x, y, w, h, width float32, clr color.Color,
 
 // uiLine is vector.StrokeLine in logical pixels.
 func uiLine(dst *ebiten.Image, x0, y0, x1, y1, width float32, clr color.Color, aa bool) {
+	if deferring(dst) {
+		deferLine(x0, y0, x1, y1, width, clr, aa)
+		return
+	}
 	s := float32(uiScale())
 	if drawTrace != nil {
 		emitBox(dst, "line", x0*s, y0*s, x1*s, y1*s, 0)
@@ -116,6 +131,10 @@ func uiLine(dst *ebiten.Image, x0, y0, x1, y1, width float32, clr color.Color, a
 
 // uiFillCircle is vector.FillCircle in logical pixels.
 func uiFillCircle(dst *ebiten.Image, cx, cy, r float32, clr color.Color, aa bool) {
+	if deferring(dst) {
+		deferCircle(cx, cy, r, 0, clr, aa)
+		return
+	}
 	s := float32(uiScale())
 	if drawTrace != nil {
 		emitBox(dst, "circle", cx*s, cy*s, cx*s, cy*s, r*s)
@@ -125,6 +144,10 @@ func uiFillCircle(dst *ebiten.Image, cx, cy, r float32, clr color.Color, aa bool
 
 // uiStrokeCircle is vector.StrokeCircle in logical pixels.
 func uiStrokeCircle(dst *ebiten.Image, cx, cy, r, width float32, clr color.Color, aa bool) {
+	if deferring(dst) {
+		deferCircle(cx, cy, r, width, clr, aa)
+		return
+	}
 	s := float32(uiScale())
 	if drawTrace != nil {
 		emitBox(dst, "circle", cx*s, cy*s, cx*s, cy*s, r*s)
@@ -135,6 +158,10 @@ func uiStrokeCircle(dst *ebiten.Image, cx, cy, r, width float32, clr color.Color
 // uiFillPoly fills the closed polygon through pts (logical pixels).
 func uiFillPoly(dst *ebiten.Image, pts [][2]float32, clr color.Color, aa bool) {
 	if len(pts) < 3 {
+		return
+	}
+	if deferring(dst) {
+		deferPoly(pts, clr, aa)
 		return
 	}
 	s := float32(uiScale())
@@ -171,6 +198,10 @@ func uiImageOp(op *ebiten.DrawImageOptions) {
 func uiDrawImage(dst, img *ebiten.Image, op *ebiten.DrawImageOptions) {
 	if op == nil {
 		op = &ebiten.DrawImageOptions{}
+	}
+	if deferring(dst) {
+		deferDrawImage(img, *op)
+		return
 	}
 	o := *op
 	uiImageOp(&o)
@@ -241,6 +272,10 @@ func uiImage(dst, img *ebiten.Image, x, y, w, h float64, opts *ebiten.DrawImageO
 	if opts != nil {
 		o = *opts
 	}
+	if deferring(dst) {
+		deferImage(img, x, y, w, h, o)
+		return
+	}
 	o.GeoM.Reset()
 	o.GeoM.Scale(w/float64(b.Dx()), h/float64(b.Dy()))
 	o.GeoM.Translate(x, y)
@@ -255,6 +290,10 @@ func uiImage(dst, img *ebiten.Image, x, y, w, h float64, opts *ebiten.DrawImageO
 // uiTriangles is dst.DrawTriangles for vertices in logical pixels (the
 // caller's slice is not changed).
 func uiTriangles(dst *ebiten.Image, vs []ebiten.Vertex, is []uint16, img *ebiten.Image, opts *ebiten.DrawTrianglesOptions) {
+	if deferring(dst) {
+		deferTriangles(vs, is, nil, img, opts)
+		return
+	}
 	sv := scaledVerts(vs)
 	if drawTrace != nil {
 		traceVerts(dst, sv)
@@ -264,6 +303,10 @@ func uiTriangles(dst *ebiten.Image, vs []ebiten.Vertex, is []uint16, img *ebiten
 
 // uiTriangles32 is uiTriangles with 32-bit indices.
 func uiTriangles32(dst *ebiten.Image, vs []ebiten.Vertex, is []uint32, img *ebiten.Image, opts *ebiten.DrawTrianglesOptions) {
+	if deferring(dst) {
+		deferTriangles(vs, nil, is, img, opts)
+		return
+	}
 	sv := scaledVerts(vs)
 	if drawTrace != nil {
 		traceVerts(dst, sv)

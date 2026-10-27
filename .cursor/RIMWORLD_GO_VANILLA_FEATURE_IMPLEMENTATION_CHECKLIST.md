@@ -135,7 +135,7 @@ vanilla system depends on them.
     -   Create/start a colony without renderer/audio.
     -   Advance a requested number of ticks.
     -   Emit metrics and final state hash.
--   [-] **Deterministic benchmark runner** (NG-1 ENG-001: `cmd/benchmark` and the grown-colony fixture time ticks, phases and allocations at 120, 250 and 500 tiles a side with 20 colonists; the colonist-count scales of 100 to 1,000 are not covered)
+-   [-] **Deterministic benchmark runner** (NG-1 ENG-001: `cmd/benchmark` and the grown-colony fixture time ticks, phases and allocations at 120, 250 and 500 tiles a side with 20 colonists; PERF-002: a `views` row times the read model and `frames > 5ms` counts what the Update budget would hold, and `make fps` is the repeatable uncapped frame probe; the colonist-count scales of 100 to 1,000 are not covered)
     -   Fixed scenarios for 3, 20, 100, 500, and 1,000 colonist-scale
         testing.
     -   Record tick cost and allocations.
@@ -2951,7 +2951,7 @@ Do not call the vanilla milestone complete until this audit passes.
 ## 41.3 Simulation integrity audit
 
 -   [ ] Same seed + same commands = same authoritative result.
--   [ ] Renderer FPS does not change result.
+-   [-] Renderer FPS does not change result. (PERF-002: the client steps the sim one tick at a time in fixed order and the Update time budget only moves ticks between Updates; the goldens pin the state. No test yet runs the client at two frame rates and compares hashes.)
 -   [ ] Worker count does not change result.
 -   [ ] Save/load preserves canonical hash.
 -   [ ] Replay preserves canonical hash.
@@ -3017,7 +3017,7 @@ Can be called **Vanilla 1.0** when:
 -   [ ] Phase 41 parity audit passes.
 -   [ ] Plugin behavior API is stable/versioned.
 -   [ ] Save migrations are tested.
--   [ ] Large-colony performance targets have reproducible benchmarks.
+-   [-] Large-colony performance targets have reproducible benchmarks. (PERF-002: `make fps`, `cmd/benchmark` with a `views` row, `BenchmarkWorldView`, `BenchmarkGroundCover`, `BenchmarkShadowsHiDPI` and recorded baselines in the handoff; the colonist-count scales are still uncovered.)
 -   [ ] Tutorial/onboarding exists.
 -   [ ] Crash/replay diagnostics are production-ready.
 -   [ ] Original or properly licensed art/audio/content is sufficient
