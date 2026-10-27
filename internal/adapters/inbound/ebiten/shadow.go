@@ -233,12 +233,15 @@ type shadowState struct {
 	// scratch is screen-sized too: the blur's target, and before that the
 	// discard target of figure draws in cast mode (anything a figure
 	// draws directly, such as a hit flash, lands there and is overwritten).
-	scratch    *ebiten.Image
-	blobImg    *ebiten.Image // procedural fallback for overlay/shadow_blob
-	boxes      triBatch
-	blobs      triBatch
-	clear      triBatch
-	contacts   triBatch
+	scratch  *ebiten.Image
+	blobImg  *ebiten.Image // procedural fallback for overlay/shadow_blob
+	boxes    triBatch
+	blobs    triBatch
+	clear    triBatch
+	contacts triBatch
+	// scale is the layer's size relative to the screen this frame (0.5 on
+	// a high-DPI display, else 1); the draws and the blur radii follow it.
+	scale      float64
 	casters    []shadowCaster
 	creatures  []creatureCaster
 	plans      []creaturePlan
@@ -460,6 +463,8 @@ func roofRuns(w game.WorldView, x0, y0, x1, y1 int, out [][3]int) [][3]int {
 type triBatch struct {
 	verts []ebiten.Vertex
 	idx   []uint32
+	// k scales every vertex position (DstX/DstY, not texels); zero is 1.
+	k float32
 }
 
 func (b *triBatch) reset() { b.verts, b.idx = b.verts[:0], b.idx[:0] }
@@ -467,7 +472,11 @@ func (b *triBatch) reset() { b.verts, b.idx = b.verts[:0], b.idx[:0] }
 // vert adds a vertex at screen (x, y), texel (sx, sy), straight-alpha
 // colour c at alpha a; it returns its index.
 func (b *triBatch) vert(x, y, sx, sy float64, c color.RGBA, a float64) uint32 {
-	b.verts = append(b.verts, ebiten.Vertex{DstX: float32(x), DstY: float32(y), SrcX: float32(sx), SrcY: float32(sy),
+	dx, dy := float32(x), float32(y)
+	if b.k != 0 {
+		dx, dy = dx*b.k, dy*b.k
+	}
+	b.verts = append(b.verts, ebiten.Vertex{DstX: dx, DstY: dy, SrcX: float32(sx), SrcY: float32(sy),
 		ColorR: float32(c.R) / 255, ColorG: float32(c.G) / 255, ColorB: float32(c.B) / 255, ColorA: float32(clamp01(a))})
 	return uint32(len(b.verts) - 1)
 }
@@ -635,9 +644,14 @@ func (r *Renderer) drawShadows(screen *ebiten.Image, w game.WorldView, sw, sh in
 	if len(casters) == 0 && len(creatures) == 0 {
 		return
 	}
-	st.layer = fitLayer(st.layer, sw, sh)
+	k := shadowLayerScale(r.cam.dev)
+	st.scale = k
+	lw, lh := int(math.Ceil(float64(sw)*k)), int(math.Ceil(float64(sh)*k))
+	st.layer = fitLayer(st.layer, lw, lh)
 	st.layer.Clear()
-	st.scratch = fitLayer(st.scratch, sw, sh)
+	st.scratch = fitLayer(st.scratch, lw, lh)
+	k32 := float32(k)
+	st.boxes.k, st.blobs.k, st.clear.k, st.contacts.k = k32, k32, k32, k32
 	tex := r.blobTexture()
 	white := r.env.whiteImg()
 	st.boxes.reset()
@@ -701,18 +715,32 @@ func (r *Renderer) drawShadows(screen *ebiten.Image, w game.WorldView, sw, sh in
 	ratio := clamp01(sunEl / maxEl)
 	out := st.layer
 	if bs := r.shadowBlurShader(); bs != nil {
-		r0, r1 := blurRadii(tile/TileSize, ratio)
+		r0, r1 := blurRadii(tile*k/TileSize, ratio)
 		st.blurOpts.Uniforms["R0"], st.blurOpts.Uniforms["R1"] = float32(r0), float32(r1)
 		st.blurOpts.Images[0] = st.layer
 		st.blurOpts.Blend = ebiten.BlendCopy
-		st.scratch.DrawRectShader(sw, sh, bs, &st.blurOpts)
+		st.scratch.DrawRectShader(lw, lh, bs, &st.blurOpts)
 		out = st.scratch
 	}
 	tint := shadowTint(ratio)
 	op := &ebiten.DrawImageOptions{}
 	op.ColorScale.Scale(tint[0]/255, tint[1]/255, tint[2]/255, 1)
+	if lw != sw || lh != sh {
+		op.GeoM.Scale(float64(sw)/float64(lw), float64(sh)/float64(lh))
+		op.Filter = ebiten.FilterLinear
+	}
 	screen.DrawImage(out, op)
 	st.composites++
+}
+
+// shadowLayerScale is the shadow layer's size relative to the screen: half
+// on a display whose device scale is 2 or more (the blur hides the lost
+// detail), full otherwise.
+func shadowLayerScale(dev float64) float64 {
+	if dev >= 2 {
+		return 0.5
+	}
+	return 1
 }
 
 // fitLayer is img when it is sw x sh, else a new image of that size (the

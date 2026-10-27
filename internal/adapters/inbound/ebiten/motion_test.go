@@ -723,3 +723,27 @@ func TestRealSimStraightWalkConstantSpeed(t *testing.T) {
 		}
 	}
 }
+
+// TestAnimTUsesSteppedTicks: when the Update budget stops an advance short
+// (update_budget.go), animT trails by the ticks actually stepped, so the
+// clock continues from the previous frame without a jump.
+func TestAnimTUsesSteppedTicks(t *testing.T) {
+	t.Parallel()
+	r := New(&stubSim{w: 8, h: 8})
+	r.speed = speedFast
+	r.advance()
+	r.setAlpha(alphaMax)
+	prev, prevTick := r.animT(), float64(r.game.Tick())
+	if got := r.advanceTicks(3, func(done int) bool { return done < 2 }); got != 2 || r.mo.stepped != 2 {
+		t.Fatalf("advanceTicks done %d stepped %d, want 2", got, r.mo.stepped)
+	}
+	r.setAlpha(0)
+	if got, want := r.animT(), float64(r.game.Tick())-2; got != want {
+		t.Fatalf("animT %v, want Tick-2 = %v", got, want)
+	}
+	// alpha 0 resumes exactly where alpha 1 would have left the last frame;
+	// alphaMax (< 1) leaves at most (1-alphaMax)*3 ticks between them.
+	if math.Abs(r.animT()-prevTick) > 1e-6 || r.animT()-prev > (1-alphaMax)*3+1e-9 || r.animT() < prev {
+		t.Fatalf("animT jumped across a held advance: prev %v (tick %v) now %v", prev, prevTick, r.animT())
+	}
+}

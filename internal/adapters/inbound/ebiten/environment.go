@@ -86,7 +86,6 @@ type envState struct {
 	h1, d1, h2, d2       float64 // spring gain and phase lag at each gust frequency
 	snow, wet            float64
 	snowCells            []uint8 // PLAY-015: per-tile snow depth 0..255 (WorldView.Snow), may be empty
-	veilQuads            int     // snow veil quads of the last ground cover pass (tests)
 	season               uint8
 	outdoorTemp          int
 	roomGrid             []int
@@ -936,42 +935,15 @@ func (r *Renderer) drawGroundCover(screen *ebiten.Image, w game.WorldView, sw, s
 	}
 	e.setWeather(w)
 	x0, y0, x1, y1 := r.visibleTiles()
-	open := func(x, y int) bool { return r.groundOpen(w, x, y) }
 	veil := 0.85 // snow veil strength: all of it without decals, a base under them
 	if r.art.has(snowCoverKeys[0]) && tile >= decalMinTile {
 		veil = 0.5
 	}
-	e.beginBatch()
-	e.veilQuads = 0
-	for y := y0; y <= y1; y++ {
-		for x := x0; x <= x1; x++ {
-			if !open(x, y) {
-				continue
-			}
-			sx, sy := r.worldToScreen(x, y)
-			if wet > 0 { // wet ground darkens
-				e.quad(float64(sx), float64(sy), tile, tile, color.RGBA{20, 24, 30, 255}, 0.16*wet)
-			}
-			d := e.snowDepthAt(x, y)
-			if k, a := puddle(x, y, wet); a > 0 && d < 0.5 && !r.art.has(k) {
-				r.puddleShape(x, y, tile, a)
-			}
-			if anySnow {
-				fx, fy := float64(x), float64(y)
-				c00, c10, c01, c11 := e.snowCorner(x, y), e.snowCorner(x+1, y), e.snowCorner(x, y+1), e.snowCorner(x+1, y+1)
-				if c00+c10+c01+c11 > 0 {
-					e.veilQuads++
-					e.quad4(float64(sx), float64(sy), tile, tile, color.RGBA{236, 240, 246, 255},
-						veil*snowField(fx, fy, c00), veil*snowField(fx+1, fy, c10),
-						veil*snowField(fx, fy+1, c01), veil*snowField(fx+1, fy+1, c11))
-				}
-			}
-		}
-	}
-	e.flush(screen, e.whiteImg())
+	r.drawSnowLayer(screen, w, sw, sh, tile, wet, veil)
 	if tile < decalMinTile { // zoomed out: the veil alone (lod.go)
 		return
 	}
+	open := func(x, y int) bool { return r.groundOpen(w, x, y) }
 	none := color.NRGBA{}
 	decal := func(k string, x, y int, a float64) {
 		if a > 0 && r.art.has(k) {
@@ -987,6 +959,9 @@ func (r *Renderer) drawGroundCover(screen *ebiten.Image, w game.WorldView, sw, s
 			if d < 0.5 {
 				k, a := puddle(x, y, wet)
 				decal(k, x, y, a)
+				if a > 0 && !r.art.has(k) {
+					r.puddleShape(x, y, tile, a)
+				}
 			}
 			if d > 0 {
 				k, a := snowCover(x, y, d)

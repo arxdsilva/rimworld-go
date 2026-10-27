@@ -32,12 +32,15 @@ type fpsProbeState struct {
 	report   string
 	measured bool
 	drawn    bool // the first colony frame is done (warm-up runs from it)
-	// speed is the probe's speed, held every frame (a threat or the
+	// speed is the probe's speed, put back every frame (a threat or the
 	// window losing focus would pause it and make the numbers meaningless);
-	// tick0 the game tick at the start, held how often it was put back.
-	speed speed
-	tick0 uint64
-	held  int
+	// tick0 the game tick at the start, held how often it was put back
+	// (speed resets, not the Update budget: budgetHeld0 is a.debt.held as
+	// the measured span starts, so the report counts that span's holds).
+	speed       speed
+	tick0       uint64
+	held        int
+	budgetHeld0 int
 }
 
 // probeWarmup is the unmeasured time after the first colony frame
@@ -84,7 +87,7 @@ func (a *App) fpsProbeUpdate() bool {
 	}
 	if st.drawn && now.Sub(st.begin) > time.Duration(p.Seconds)*time.Second+probeWarmup {
 		st.report = fpsReport(st, a.scale) + fmt.Sprintf(", %dx%d physical; %d ticks, speed held %d times; %v",
-			a.pw, a.ph, uint64(a.renderer.game.Tick())-st.tick0, st.held, a.art.memStats())
+			a.pw, a.ph, uint64(a.renderer.game.Tick())-st.tick0, st.held, a.art.memStats()) + budgetLine(st, a.debt)
 		log.Print(st.report)
 		return true
 	}
@@ -94,12 +97,19 @@ func (a *App) fpsProbeUpdate() bool {
 	}
 	if !st.measured && st.drawn && now.After(st.warmupTo) {
 		st.measured = true
+		st.budgetHeld0, a.debt.maxOwed = a.debt.held, 0 // the budget line covers the measured span
 		if p.Measuring != nil {
 			p.Measuring()
 		}
 	}
 	st.upStart = now
 	return false
+}
+
+// budgetLine is the Update budget's part of the report (PERF-002 HS7):
+// Updates in the measured span that stopped short, and the largest debt.
+func budgetLine(st *fpsProbeState, d tickDebt) string {
+	return fmt.Sprintf("; budget held %d updates, max %d ticks owed", d.held-st.budgetHeld0, d.maxOwed)
 }
 
 // fpsProbeAfterUpdate records the Update's CPU time.

@@ -367,3 +367,83 @@ func TestBoxSkirtPointsOutward(t *testing.T) {
 		}
 	}
 }
+
+func TestShadowLayerHalfResolution(t *testing.T) {
+	t.Parallel()
+	w := shadowWorld(nil)
+	w.Buildings = []game.BuildingView{{Kind: "wall", X: 4, Y: 4, W: 1, H: 1}}
+	run := func(dev float64) (*Renderer, float32) {
+		r := shadowRenderer(t, w)
+		r.cam.dev = dev
+		r.lit.light = testLight(0.3, 0.3, 0.32)
+		r.drawShadows(ebiten.NewImage(641, 401), w, 641, 401, r.tilePx())
+		if r.env.shadow.composites != 1 {
+			t.Fatalf("dev %v: composites %d, want 1", dev, r.env.shadow.composites)
+		}
+		return r, r.env.shadow.blurOpts.Uniforms["R1"].(float32)
+	}
+	r1, r1dev1 := run(1)
+	if b := r1.env.shadow.layer.Bounds(); b.Dx() != 641 || b.Dy() != 401 {
+		t.Fatalf("dev 1 layer %v, want 641x401", b)
+	}
+	r2, r1dev2 := run(2)
+	for _, img := range []*ebiten.Image{r2.env.shadow.layer, r2.env.shadow.scratch} {
+		if b := img.Bounds(); b.Dx() != 321 || b.Dy() != 201 {
+			t.Fatalf("dev 2 layer %v, want 321x201", b)
+		}
+	}
+	if r1dev1 <= 0 {
+		t.Skip("blur shader unavailable")
+	}
+	// at dev 2 the same zoom is twice the tile px, then halved by the layer
+	if math.Abs(float64(r1dev2-r1dev1)) > 1e-4 {
+		t.Fatalf("R1 dev2 %v vs dev1 %v: radii are px at the layer's zoom", r1dev2, r1dev1)
+	}
+}
+
+func TestShadowHalfResolutionKeepsWorldPlacement(t *testing.T) {
+	t.Parallel()
+	w := shadowWorld(nil)
+	w.Buildings = []game.BuildingView{{Kind: "wall", X: 2, Y: 2, W: 1, H: 1}}
+	r := shadowRenderer(t, w)
+	r.cam.dev = 2
+	r.lit.light = testLight(1.2, 0.9, 0.5) // high sun: a short shadow hugging the wall
+	screen := ebiten.NewImage(640, 400)
+	tile := r.tilePx()
+	r.drawShadows(screen, w, 640, 400, tile)
+	cx, cy := r.worldToScreenF(2.5, 2.5)
+	// pixels cannot be read without a running game, so check the geometry
+	// the layer is drawn from: the wall's box at layer scale is the screen
+	// box halved, and still covers the half-scaled wall centre
+	st := &r.env.shadow
+	box := func(k float32) (lo, hi [2]float32) {
+		var b triBatch
+		b.k = k
+		for _, c := range r.shadowCasters(w, nil) {
+			r.addBox(&b, c, r.lit.light, tile, 0.5)
+		}
+		if len(b.verts) == 0 {
+			t.Fatal("no box vertices")
+		}
+		lo, hi = [2]float32{1e9, 1e9}, [2]float32{-1e9, -1e9}
+		for _, v := range b.verts {
+			lo[0], lo[1] = min(lo[0], v.DstX), min(lo[1], v.DstY)
+			hi[0], hi[1] = max(hi[0], v.DstX), max(hi[1], v.DstY)
+		}
+		return
+	}
+	flo, fhi := box(0)
+	hlo, hhi := box(0.5)
+	for i := 0; i < 2; i++ {
+		if math.Abs(float64(hlo[i]-flo[i]/2)) > 1e-3 || math.Abs(float64(hhi[i]-fhi[i]/2)) > 1e-3 {
+			t.Fatalf("half-scale box %v..%v is not half of %v..%v", hlo, hhi, flo, fhi)
+		}
+	}
+	if lx, ly := float32(cx)/2, float32(cy)/2; lx < hlo[0] || lx > hhi[0] || ly < hlo[1] || ly > hhi[1] {
+		t.Fatalf("wall centre (%.1f,%.1f) outside the layer box %v..%v", lx, ly, hlo, hhi)
+	}
+	if b := st.layer.Bounds(); b.Dx() != 320 || b.Dy() != 200 {
+		t.Fatalf("layer %v, want 320x200", b)
+	}
+	_ = screen
+}

@@ -479,9 +479,10 @@ func (a *App) tick() {
 	case screenColony:
 		if a.nav.overlay() == overlayNone && a.renderer != nil && !a.bg.paused { // background.go
 			a.renderer.voice.view = a.mapViewport() // animal calls only on screen (physical, like worldToScreen)
-			a.renderer.advance()
-			a.markUpdate()
+			a.advanceColony()                       // update_budget.go: steps under the Update budget, stamps the Update
 			a.tickAutosave()
+		} else {
+			a.clearTickDebt() // a paused colony owes nothing on resume
 		}
 	}
 }

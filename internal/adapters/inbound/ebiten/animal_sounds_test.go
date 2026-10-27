@@ -33,6 +33,7 @@ type heardCue struct {
 func listen(r *Renderer, w game.WorldView, frames int) []heardCue {
 	var out []heardCue
 	for f := 0; f < frames; f++ {
+		r.mo.stepped = r.speed.ticksPerFrame() // what advance stepped this frame
 		r.listenAnimals(w)
 		for _, c := range r.takeCues() {
 			out = append(out, heardCue{f, c})

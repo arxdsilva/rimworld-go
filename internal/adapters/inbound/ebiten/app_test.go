@@ -39,6 +39,8 @@ type stubSim struct {
 	history   []game.HistoryEntryView
 	// growth is each plant's growth state (PlantGrowth; absent: none).
 	growth map[entity.EntityID]game.PlantGrowthView
+	// onStep, when set, runs after each tick (budget tests advance a fake clock).
+	onStep func()
 }
 
 func (s *stubSim) PlantGrowth(id entity.EntityID) (game.PlantGrowthView, bool) {
@@ -63,8 +65,13 @@ func (s *stubSim) Areas() []game.AreaView           { return s.areas }
 func (s *stubSim) History() []game.HistoryEntryView { return s.history }
 
 func (s *stubSim) Step(n int) {
-	s.steps += n
-	s.tick += clock.Tick(n)
+	for range n {
+		s.steps++
+		s.tick++
+		if s.onStep != nil {
+			s.onStep()
+		}
+	}
 }
 
 func (s *stubSim) Snapshot() []game.PawnView  { return s.pawns }

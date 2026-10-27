@@ -72,7 +72,6 @@ var canvasExempt = map[string]string{
 	"draw_art.go:drawPlacementGhost":     "world: the building ghost on tiles",
 	"draw_art.go:drawSpriteScaled":       "world: sprite blit at a tile position",
 	"sprites.go:drawImage":               "world sprite blit (UI callers use uiImage)",
-	"lod.go:drawBaked":                   "world: chunk LOD bakes",
 	"lod.go:drawPlantMark":               "world: plant marks on tiles",
 	"lod.go:drawUnlit":                   "world: unlit sprite blit",
 	"lod.go:solidRect":                   "world: a tile-space rectangle as a sprite",

@@ -44,6 +44,18 @@ func TestMeasureAndReport(t *testing.T) {
 	}
 }
 
+func TestOverBudget(t *testing.T) {
+	fs := []time.Duration{frameBudget, frameBudget + 1, 8 * time.Millisecond, time.Millisecond}
+	if got := overBudget(fs); got != 2 {
+		t.Fatalf("overBudget = %d, want 2", got)
+	}
+	var buf bytes.Buffer
+	report(&buf, "x", result{frames: fs})
+	if !strings.Contains(buf.String(), "frames > 5ms: 2 (50.0%)") {
+		t.Fatalf("report:\n%s", buf.String())
+	}
+}
+
 func TestPct(t *testing.T) {
 	ds := []time.Duration{5, 1, 3, 2, 4}
 	if pct(ds, 50) != 3 || pct(ds, 100) != 5 || pct(nil, 50) != 0 || mean(ds) != 3 || mean(nil) != 0 {

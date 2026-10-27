@@ -363,6 +363,13 @@ func (r *Renderer) drawPlantMark(dst *ebiten.Image, p *game.PlantView, tile floa
 // direction a packed value carries would add nothing; corners only ever
 // hold plain levels, which interpolate exactly.
 func (r *Renderer) drawBaked(screen, src *ebiten.Image, bx, by int, sx0, sy0, bpx float64, tx0, ty0, tx1, ty1 int) {
+	r.drawBakedColor(screen, src, bx, by, sx0, sy0, bpx, tx0, ty0, tx1, ty1, [4]float32{1, 1, 1, 1})
+}
+
+// drawBakedColor is drawBaked with a colour scale (premultiplied) on every
+// vertex: the snow and wet masks (snow_cache.go) are white images tinted
+// and faded here.
+func (r *Renderer) drawBakedColor(screen, src *ebiten.Image, bx, by int, sx0, sy0, bpx float64, tx0, ty0, tx1, ty1 int, col [4]float32) {
 	if tx1 < tx0 || ty1 < ty0 {
 		return
 	}
@@ -414,22 +421,38 @@ func (r *Renderer) drawBaked(screen, src *ebiten.Image, bx, by int, sx0, sy0, bp
 					dy, uy = sy1, vy+float32(bpx)
 				}
 				l.verts = append(l.verts, ebiten.Vertex{DstX: dx, DstY: dy, SrcX: ux, SrcY: uy,
-					ColorR: 1, ColorG: 1, ColorB: 1, ColorA: 1, Custom0: sky, Custom1: lv[k]})
+					ColorR: col[0], ColorG: col[1], ColorB: col[2], ColorA: col[3], Custom0: sky, Custom1: lv[k]})
 			}
 			l.idx = append(l.idx, n, n+1, n+2, n+1, n+3, n+2)
 		}
 		top, bot = bot, top
 	}
 	l.cornerTop, l.cornerBot = top, bot
-	r.lit.calls++
-	sh := r.litShader()
-	if sh == nil { // no shader: unlit
-		screen.DrawTriangles32(l.verts, l.idx, src, &ebiten.DrawTrianglesOptions{Filter: ebiten.FilterLinear})
-		return
+	r.drawLitBatch(screen, l.verts, l.idx, src)
+}
+
+// drawChunkFlat draws the span × span source rectangle at (srcX, srcY) of
+// src to the screen rectangle at (dstX, dstY), span × span too, as one
+// lit quad: open sky (sky 1) and no lamp light, tinted by col. The map
+// tier's cheap path for masks that are zero under roofs (snow_cache.go);
+// lamp falloff is invisible at 4 px a tile.
+func (r *Renderer) drawChunkFlat(screen, src *ebiten.Image, srcX, srcY, dstX, dstY, span, srcSpan float64, col [4]float32) {
+	l := &r.lod
+	l.verts, l.idx = l.verts[:0], l.idx[:0]
+	for k := 0; k < 4; k++ {
+		dx, dy := float32(dstX), float32(dstY)
+		ux, uy := float32(srcX), float32(srcY)
+		if k&1 != 0 {
+			dx, ux = float32(dstX+span), float32(srcX+srcSpan)
+		}
+		if k&2 != 0 {
+			dy, uy = float32(dstY+span), float32(srcY+srcSpan)
+		}
+		l.verts = append(l.verts, ebiten.Vertex{DstX: dx, DstY: dy, SrcX: ux, SrcY: uy,
+			ColorR: col[0], ColorG: col[1], ColorB: col[2], ColorA: col[3], Custom0: 1})
 	}
-	r.lit.syncUniforms()
-	r.lit.opts.Images[0] = src
-	screen.DrawTrianglesShader32(l.verts, l.idx, sh, &r.lit.opts)
+	l.idx = append(l.idx, 0, 1, 2, 1, 3, 2)
+	r.drawLitBatch(screen, l.verts, l.idx, src)
 }
 
 // drawGroundLOD draws the visible ground from the bakes (chunk or map

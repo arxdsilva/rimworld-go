@@ -198,4 +198,22 @@ func report(out io.Writer, name string, r result) {
 	for _, p := range game.Phases() {
 		line(p, r.phases[p])
 	}
+	over := overBudget(r.frames)
+	fmt.Fprintf(out, "  frames > %v: %d (%.1f%%)\n", frameBudget, over, 100*float64(over)/float64(max(len(r.frames), 1)))
+}
+
+// frameBudget mirrors the ebiten adapter's Update budget (update_budget.go):
+// at 3x and faster a frame whose ticks run longer carries the rest over.
+const frameBudget = 5 * time.Millisecond
+
+// overBudget counts the frames whose ticks took longer than frameBudget:
+// the Updates the budget would hold.
+func overBudget(frames []time.Duration) int {
+	n := 0
+	for _, f := range frames {
+		if f > frameBudget {
+			n++
+		}
+	}
+	return n
 }

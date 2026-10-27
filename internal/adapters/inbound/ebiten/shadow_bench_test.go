@@ -49,6 +49,49 @@ func BenchmarkShadows(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		r.drawShadows(screen, w, 1280, 800, tile)
 	}
+	lay := r.env.shadow.layer.Bounds()
+	b.ReportMetric(float64(lay.Dx()*lay.Dy()), "layer-px/op")
+}
+
+func BenchmarkShadowsHiDPI(b *testing.B) {
+	const mw, mh = 40, 25
+	w := game.WorldView{TerrainW: mw, Terrain: make([]uint8, mw*mh), RoomGrid: make([]int, mw*mh), RoofCells: make([]uint8, mw*mh)}
+	for i := range w.RoomGrid {
+		w.RoomGrid[i] = -1
+	}
+	for i := 0; i < 300; i++ { // a roofed block
+		w.RoofCells[(2+i/20)*mw+10+i%20] = roofBuilt
+	}
+	for i := 0; i < 200; i++ { // wall runs
+		w.Buildings = append(w.Buildings, game.BuildingView{Kind: "wall", X: i % 40, Y: 18 + i/40, W: 1, H: 1})
+	}
+	var pawns []game.PawnView
+	for i := 0; i < 1000; i++ {
+		x, y := (i*7)%mw, (i*3)%mh
+		switch {
+		case i%25 == 0:
+			pawns = append(pawns, game.PawnView{ID: entity.EntityID(i + 1), X: x, Y: y})
+		case i%2 == 0:
+			w.Plants = append(w.Plants, game.PlantView{Species: "tree", X: x, Y: y, Growth: 80})
+		default:
+			w.Items = append(w.Items, game.ItemView{Kind: "wood", X: x, Y: y})
+		}
+	}
+	r := benchShadowRenderer(mw, mh)
+	r.cam.zoom = 0.5
+	r.cam.dev = 2
+	r.drawPawns = pawns
+	r.lit.light = testLight(0.5, 0.45, 0.3)
+	screen := ebiten.NewImage(1280, 800)
+	tile := r.tilePx()
+	r.drawShadows(screen, w, 1280, 800, tile)
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		r.drawShadows(screen, w, 1280, 800, tile)
+	}
+	lay := r.env.shadow.layer.Bounds()
+	b.ReportMetric(float64(lay.Dx()*lay.Dy()), "layer-px/op")
 }
 
 // benchShadowRenderer is a renderer with the generated art (or none).
@@ -117,4 +160,6 @@ func BenchmarkCreatureShadows(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		r.drawShadows(screen, w, 1280, 800, tile)
 	}
+	lay := r.env.shadow.layer.Bounds()
+	b.ReportMetric(float64(lay.Dx()*lay.Dy()), "layer-px/op")
 }

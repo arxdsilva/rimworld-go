@@ -182,7 +182,7 @@ func (r *Renderer) listenAnimals(w game.WorldView) {
 	v := &r.voice
 	v.init()
 	v.frame++
-	v.clock += uint64(r.speed.ticksPerFrame())
+	v.clock += uint64(r.mo.stepped) // ticks this advance ran (the Update budget may run fewer)
 	clear(v.byID)
 	for i := range w.Animals {
 		v.byID[w.Animals[i].ID] = w.Animals[i].Species

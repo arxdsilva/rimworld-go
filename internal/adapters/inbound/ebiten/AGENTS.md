@@ -194,7 +194,9 @@ fills plus real-font text; the globe is 0.3-0.5 ms per frame.
 
 This adapter is not in the authoritative tick. `Step(n)` still runs on
 the simulation the factory created; speed tiers only change how often
-`App` calls `advance`.
+`App` calls `advance`. At 3x and faster the Update time budget
+(`update_budget.go`) may carry ticks to the next Update: it moves ticks
+between Updates, never changes their order, and captures are exempt.
 
 ## Tests
 

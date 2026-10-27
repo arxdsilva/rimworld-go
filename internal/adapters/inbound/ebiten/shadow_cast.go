@@ -409,6 +409,9 @@ func (r *Renderer) castCreature(w game.WorldView, c creatureCaster, cl castLight
 	}
 	cs.layer = st.layer
 	cs.proj = castProjection(float64(sx), float64(sy), k, cl.dirX, cl.dirY, cl.m, shadowRho)
+	if k := st.scale; k != 0 && k != 1 {
+		cs.proj.Scale(k, k) // the layer is smaller than the screen
+	}
 	cs.alpha = float32(cl.alpha)
 	cs.pivotY = float64(sy)
 	cs.heightPx = c.opaque * tile / artTilePx

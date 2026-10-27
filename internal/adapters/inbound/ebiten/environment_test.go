@@ -960,6 +960,22 @@ func TestNoGroundCoverUnderRoof(t *testing.T) {
 	r.art = envArt()
 	screen := ebiten.NewImage(640, 400)
 	r.drawGroundCover(screen, w, 640, 400, r.tilePx())
+	// the snow and wet masks are empty under the roof, set on open ground
+	var c snowChunk
+	r.bakeSnowChunk(&c, w, 64, 64, 0, 0)
+	sc := &r.snowc
+	for row := 0; row < 2; row++ {
+		if snowTexel(sc, row, 3, 3, 2, 2) != 0 || snowTexel(sc, row, 31, 9, 2, 2) != 0 {
+			t.Errorf("mask %d covers roofed ground", row)
+		}
+	}
+	r.bakeSnowChunk(&c, w, 64, 64, 1, 0) // tile (40, 6) is chunk 1's (8, 6)
+	if snowTexel(sc, 0, 8, 6, 2, 2) == 0 || snowTexel(sc, 1, 8, 6, 2, 2) == 0 {
+		t.Error("masks miss open ground")
+	}
+	if snowTexel(sc, 0, 8, 5, 2, 2) != 0 || snowTexel(sc, 1, 8, 5, 2, 2) != 0 {
+		t.Error("masks cover the roofed tile (40, 5)")
+	}
 }
 
 func TestRainSkipsRoofedTiles(t *testing.T) {

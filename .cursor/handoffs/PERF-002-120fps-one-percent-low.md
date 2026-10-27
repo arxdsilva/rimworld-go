@@ -21,6 +21,8 @@ The fps and 1 % low columns below are therefore meaningful only from runs on a 1
 |---|---|---|---|---|---|---|---|---|
 | baseline `c8e5709ae` (30 Hz display) | 0.1 | 30.0 | 15.6 | 64.2 ms | 3.42 / 4.56 ms | 5.21 / 8.65 ms | 8.6 / 13.2 ms | 555 |
 | baseline `c8e5709ae` (30 Hz display) | 0.8 | 30.0 | 27.5 | 36.3 ms | 3.17 / 4.28 ms | 5.89 / 7.39 ms | 9.1 / 11.7 ms | 215 |
+| wave 1 `be4b924fd` (1, 4, 5, 8) | 0.1 | 30.0 | 24.5 | 40.8 ms | 2.57 / 3.88 ms | 5.54 / 9.86 ms | 8.1 / 13.7 ms | — |
+| wave 1 `be4b924fd` (1, 4, 5, 8) | 0.8 | 30.0 | 27.8 | 36.0 ms | 2.33 / 3.59 ms | 6.14 / 7.59 ms | 8.5 / 11.2 ms | — |
 
 Benchmarks (baseline `c8e5709ae`, 12 cores):
 - `BenchmarkReadModel/500/tick` 1.25 ms/op, 2.30 MB/op, 1156 allocs/op (`World()`+`Snapshot()` after one Step); `/500/cached` 60 ns.
@@ -28,4 +30,32 @@ Benchmarks (baseline `c8e5709ae`, 12 cores):
 - `cmd/benchmark` grown/500/x3: tick mean 0.21 ms p99 0.50 max 6.99; frame mean 0.65 p99 1.23 max 7.80 (ai max 6.87). raid/500/x3: tick p99 0.70 max 2.46; frame p99 1.91 max 4.06 (movement max 2.23, threats max 1.96).
 
 ## Items
-_filled per wave_
+
+### 1. `World()` keeps identity on quiet ticks (`be4b924fd`)
+- `GrowState`/`RipeIn` left `PlantView` for `Game.PlantGrowth(id)` (`PlantGrowthView`), read by the plant inspector only; the per-plant `growState` over 12k plants was most of the CPU.
+- Plants: `plantVer` (bumped by `setPlant`/`dropPlant`, the only writers) + `zone.Map.Ver()` + a crop-only `Wilted` re-check give the fast path; the slow path builds into a private scratch list and keeps the old slice when `slices.Equal`. A `selfCheck` panics in tests on a raw `g.plants.Set`.
+- Buildings, Items, Frames: scratch-build and field-by-field compare (a reflection test guards every field); `Bills`, `MovingTo`, `Haulers`, the item totals and `FoodByKind` are reused when equal. `ShotAge` saturates at 120 ticks. Messages, Schedule, Letters, Research and Locked are memoised. `construction.Footprint` is cached per kind and facing (it allocated per building per tick); `shareLayer` compares `~uint8` layers as bytes.
+- `World()`+`Snapshot()` after a step: **1.25 ms / 2.30 MB / 1156 allocs → 0.50 ms / 304 KB / 480 allocs**. `World()` alone (`BenchmarkWorldView/500`): night 323 µs / 256 KB / 184 allocs, day 329 µs / 262 KB / 185 allocs. Lists kept identity on 597/600 daytime ticks (Plants), 600 (Buildings), 596 (Items). `cmd/benchmark` gained a `views` row (0.37 ms mean, 1.07 p99 at 500²).
+- `TestWorldViewQuietTickAllocs` pins ≤ 250 allocs and ≤ 256 KB per quiet tick on a 200² colony (measured 157 / 192 KB); the remainder is `animalViews` (≈175 KB, 70 allocs), the next read-model target. `TestViewCache` now asserts identity iff equal plus forced refreshes.
+- Goldens unchanged (views only).
+
+### 5. Camera stepped per Draw (`be4b924fd`)
+- `applyCamera` (Update) only collects input and clamps; `stepCamera(dt)` runs from `Draw` with the real elapsed time, clamped to 0.1 s, and skips an idle smoother so a camera placed by code stays exactly put (`TestStepCameraLeavesStillCameraAlone`; the Draw-time clamp had moved `TestFrameInvariance`'s scene). Captures keep the instant path. Input mapping sees the previous Draw's camera: one frame of lag.
+
+### 4. Zone outlines in one batch (`be4b924fd`)
+- Dashes, grow strokes and fence rails/posts append to `r.zoneBatch` (a `triBatch`), culled per dash and clipped to the first on-screen dash; one `DrawTriangles32` per frame after the fills. `BenchmarkDrawArt500/z0.25`: 3.29 → 3.23 ms, 7117 → 6436 allocs/op (the fixture's zones are small; the saving grows with zone count). The fence rail is no longer anti-aliased. Follow-ups: `drawZoneHighlight`, `drawPaths`, `drawWeather`'s full-screen `FillRect`s.
+
+### 2. Snow and wet cover as a lit per-chunk cache
+- `snow_cache.go`: 32-tile chunks at 4 px/tile with a 1-texel pad (130×260 images: the snow mask on top, the open-ground mask for wetness below). Texels are the old veil's corner alphas (`snowField` over `snowCorner`) interpolated across the tile and zeroed where the ground is not open; the pad samples the neighbours, so chunks show no seams. A chunk rebakes only when its own snow bytes (plus a 1-tile ring) differ, the ground changed (`StructVer`, and the `RoomGrid`/`RoofCells` layer identity, since roofs don't bump `StructVer`) or the legacy uniform depth moved. `drawSnowLayer` draws a wet pass and a snow pass per visible chunk through the lit shader (`drawBakedColor` at live/chunk zoom with sky and lamp per corner, one flat quad per chunk at map zoom), so the veil is now dimmed at night (it was drawn unlit before). `drawGroundCover`'s per-tile pass 1 is gone; the decal pass stays.
+- `BenchmarkGroundCover` (500², a snowy quarter, wetness 0.5): 0 bakes/op in steady state; 89 µs at 64 px, 320 µs at 32 px (the decal pass), 99 µs at 16 px, 57 µs at 4 px for the whole visible map, against a 250k-tile loop before. The grown fixture has no snow, so `BenchmarkDrawArt500` is unchanged.
+- Risks: a quarter-tile feather at open-to-closed edges at live zoom; ≈135 KB of GPU memory per chunk, ≈33 MB for a fully seen 500² map, no LRU yet.
+
+### 3. Shadow layer at half resolution on 2× displays
+- `shadowLayerScale(dev)`: 0.5 at `dev >= 2`, else 1. The layer and scratch are allocated at that size, `triBatch` carries a `k` scale on destination coordinates (zero = none, so the zone batch is untouched), `castCreature` scales its projection, the blur radii follow the layer's zoom, and the composite scales up with `FilterLinear`. `BenchmarkShadowsHiDPI`: 1,024,000 → 256,000 layer px per frame at 1280×800 logical (a quarter of the fill for the three shadow passes).
+
+### 7. Update time budget at 3× and faster
+- `update_budget.go`: `updateBudget = 5 ms`. `advanceColony` runs the tier's ticks plus any owed, one `Step(1)` at a time, and stops once the Update has spent the budget; the remainder (capped at one Update's nominal) carries to the next Update, `held` counts the stops. A speed change, pause or background pause clears the debt. `r.mo.stepped` is the count actually run, so interpolation stays continuous. Captures and 1× never split. Reported by the probe (`budget held N updates, max M ticks owed`), the overlay (`held`) and the dev inspector; `cmd/benchmark` prints `frames > 5ms`.
+- Follow-up: Ebiten can run two Updates before one Draw after a slow frame, so the budget bounds an Update, not a frame; a per-Draw share is the next step if the probe shows it.
+
+### 8. Performance overlay (`be4b924fd`)
+- Options › Graphics "Performance overlay" (`Graphics.PerfOverlay`, off by default). A panel right of the resource list: `117 fps · 1% low 71` / `frame 8.6 ms · p99 14.1` (amber over 16.7 ms, red over 33) / `update 2.3 ms · draw 4.2 ms` / `sim 3× · 0.8 ms/tick · held 0` / `heap 412 MiB · gc 12/min` and a 120-frame sparkline. Always-on ring timing (600 samples), stats and strings refreshed twice a second, heap from `runtime/metrics` once a second; the fps probe's `fpsReport` computes through the same `frameStats`. Drawn with the UI hidden too. `-capture-ui perf` seeds a fixed series. A hotkey is a follow-up.

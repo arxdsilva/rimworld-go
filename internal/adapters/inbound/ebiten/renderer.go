@@ -297,9 +297,10 @@ type Renderer struct {
 	// ENG-D fields
 	// lod is the zoom tier, the chunk and whole-map bakes and the frame's
 	// chunk lists (lod.go, chunk_cache.go); mini the minimap (minimap.go).
-	lod  lodState
-	mini minimapState
-	fogc fogCache // fog_draw.go
+	lod   lodState
+	mini  minimapState
+	fogc  fogCache  // fog_draw.go
+	snowc snowCache // snow_cache.go: snow veil and wet masks per chunk
 }
 
 // viewCacher is a simulation that can cache its read models between
@@ -330,29 +331,52 @@ func New(sim Simulation) *Renderer {
 	}
 }
 
-func (r *Renderer) advance() {
+// ticksWanted is this Update's nominal tick count: the speed tier's ticks
+// per frame, or one while paused when a developer single step is pending.
+// It does not consume the pending step; advanceTicks does once it steps.
+func (r *Renderer) ticksWanted() int {
+	if n := r.speed.ticksPerFrame(); n > 0 {
+		return n
+	}
+	if r.stepTicks > 0 { // developer single-tick step while paused
+		return 1
+	}
+	return 0
+}
+
+// advance steps the speed tier's full tick count (captures, tests).
+func (r *Renderer) advance() { r.advanceTicks(r.ticksWanted(), nil) }
+
+// advanceTicks steps one tick at a time up to want; after each tick but
+// the last it asks more(done) whether to continue (nil: always), so the
+// App's Update budget (update_budget.go) can stop early. The ticks run in
+// the same order whichever Update runs them. mo.stepped is the count done.
+func (r *Renderer) advanceTicks(want int, more func(done int) bool) (done int) {
 	r.present++
-	n := r.speed.ticksPerFrame()
-	if n == 0 && r.stepTicks > 0 { // developer single-tick step while paused
-		n = 1
+	if want > 0 && r.speed.ticksPerFrame() == 0 && r.stepTicks > 0 {
 		r.stepTicks--
 	}
-	r.mo.stepped = n
-	if n > 0 {
-		r.game.Step(n)
+	for done < want {
+		r.game.Step(1)
+		done++
+		if more != nil && done < want && !more(done) {
+			break
+		}
 	}
+	r.mo.stepped = done
 	r.syncPawns()
 	w := r.game.World()
-	r.animate(w, r.game.Snapshot(), n > 0)
+	r.animate(w, r.game.Snapshot(), done > 0)
 	r.stepEnvironment(w, r.game.Snapshot())
 	r.emitWorldBursts(w) // animal_burst.go: explosive animal deaths
 	r.listenAnimals(w)   // animal_sounds.go: calls, flee cries, deaths
 	r.watchThreats(w)
 	r.heard = w
-	if n > 0 {
+	if done > 0 {
 		r.listenWorld(w, r.game.Snapshot())
 	}
 	r.listenThunder()
+	return done
 }
 
 func (r *Renderer) syncPawns() {

@@ -376,7 +376,8 @@ func (a *App) debugInspectLines() []string {
 
 // debugInspectorLines are the inspector panel's lines, title first.
 func (a *App) debugInspectorLines() []string {
-	return append([]string{fmt.Sprintf("Debug inspector  tick %d", a.renderer.game.Tick())}, a.debugInspectLines()...)
+	return append([]string{fmt.Sprintf("Debug inspector  tick %d", a.renderer.game.Tick()),
+		fmt.Sprintf("update budget: owed %d held %d", a.debt.owed, a.debt.held)}, a.debugInspectLines()...)
 }
 
 // debugInspectorSize is the inspector panel's size.
