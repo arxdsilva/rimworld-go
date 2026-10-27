@@ -27,3 +27,22 @@ the magenta field and writes `../main_menu_colonist.png` (904×1104), which
 > palette with olive, rust and brass accents. Background: solid flat pure
 > magenta (#FF00FF), no gradient, no shadow on the background. No text, no
 > logo, no frame. Original design.
+
+## Extension (ART-029, 2026-10-27)
+
+The first take was framed with the scout's right arm and the rifle's muzzle
+running off the right edge, which the menu shows as a straight cut (the
+splash sits bottom-left, so only its right and top edges are visible).
+`hero.png` was extended with Canva's image generator using that take as
+the only reference (our own art), at 3:4, exported at 1200×1600. The user
+picked it from two takes. `cut_menu` now refuses a source whose figure
+touches the right or top edge, and inks no contour along a side where the
+painting is cut.
+
+> The same picture as the reference, but the camera has stepped back about
+> twenty percent: a wider shot of the same scout and her sled dog in the
+> same pose, so her right arm and sleeve and the whole hunting rifle across
+> her chest sit well inside the frame with magenta margin around them.
+> Identical character, face, expression, goggles, braid, coat, colours and
+> cel-shaded comic ink style; the same flat bright magenta background with
+> nothing else added; no text.

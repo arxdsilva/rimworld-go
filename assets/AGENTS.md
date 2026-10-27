@@ -90,7 +90,7 @@ assets/
 ```
 
 `source/raster/ui/main_menu_colonist.png` is the main-menu hero (ART-028):
-a scout with a sled dog, a cel-shaded RGBA cutout. It is cut by `make portraits`
+a scout with a sled dog, a cel-shaded RGBA cutout. The figure keeps magenta margin on the right and top of its source (ART-029: the splash is anchored bottom-left, so those edges show; `cut_menu` refuses a source cut there and `TestMenuSplashKeepsItsRightEdgeFree` guards the output). It is cut by `make portraits`
 (`tools/portrait_cut.py` `cut_menu`) from `source/raster/ui/menu/hero.png`;
 `menu/briefs.md` holds its original prompt. The earlier raven colonist was
 replaced because its brief reconstructed an existing illustration.

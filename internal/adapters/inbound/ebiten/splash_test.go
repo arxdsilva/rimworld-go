@@ -87,3 +87,32 @@ func TestMenuSplashPNGDecodes(t *testing.T) {
 		t.Fatal("splash PNG last row should meet the bust, not empty transparency")
 	}
 }
+
+// TestMenuSplashKeepsItsRightEdgeFree (ART-029): the splash is anchored
+// bottom-left, so a figure may run off the left and bottom edges but not
+// the right: a cut there shows as a straight edge against the backdrop.
+// The last columns of the PNG must be fully transparent.
+func TestMenuSplashKeepsItsRightEdgeFree(t *testing.T) {
+	t.Parallel()
+	path, err := LocateMenuSplash()
+	if err != nil {
+		t.Fatal(err)
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	img, err := png.Decode(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := img.Bounds()
+	for x := b.Max.X - 2; x < b.Max.X; x++ {
+		for y := b.Min.Y; y < b.Max.Y; y++ {
+			if _, _, _, a := img.At(x, y).RGBA(); a > 8<<8 {
+				t.Fatalf("splash column %d (of %d) is opaque at y=%d: the figure is cut on the right; extend the source with margin", x, b.Max.X, y)
+			}
+		}
+	}
+}

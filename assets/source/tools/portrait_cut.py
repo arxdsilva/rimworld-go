@@ -74,10 +74,49 @@ def fit(img, size):
     return canvas
 
 
-def contour(img, width):
-    """A dark outer contour `width` px wide around the opaque shape."""
+SIDES = ("left", "top", "right", "bottom")
+
+
+def clipped_sides(img):
+    """The sides of img that opaque content runs off: the painting was cut
+    there, so no contour belongs on that edge (it would draw a straight
+    dark line along the cut)."""
+    a = np.asarray(img.getchannel("A")) > 8
+    if not a.any():
+        return set()
+    out = set()
+    if a[:, 0].any():
+        out.add("left")
+    if a[0, :].any():
+        out.add("top")
+    if a[:, -1].any():
+        out.add("right")
+    if a[-1, :].any():
+        out.add("bottom")
+    return out
+
+
+def contour(img, width, clipped=()):
+    """A dark outer contour `width` px wide around the opaque shape, except
+    past the shape's edge on a side listed in `clipped` (see clipped_sides):
+    a bust is cut flush at the bottom by design, and a source cut on a side
+    keeps a clean edge there instead of an inked band."""
     a = img.getchannel("A")
     grown = a.filter(ImageFilter.MaxFilter(2 * width + 1))
+    if clipped:
+        box = a.point(lambda v: 255 if v > 8 else 0).getbbox()
+        if box is not None:
+            g, raw = np.asarray(grown).copy(), np.asarray(a)
+            x0, y0, x1, y1 = box
+            if "left" in clipped:
+                g[:, :x0] = raw[:, :x0]
+            if "top" in clipped:
+                g[:y0, :] = raw[:y0, :]
+            if "right" in clipped:
+                g[:, x1:] = raw[:, x1:]
+            if "bottom" in clipped:
+                g[y1:, :] = raw[y1:, :]
+            grown = Image.fromarray(g, "L")
     ring = Image.new("RGBA", img.size, tuple(int(v) for v in INK) + (0,))
     ring.putalpha(grown)
     ring.alpha_composite(img)
@@ -123,7 +162,7 @@ def write_meta(name, lines):
 def cut(key, character):
     src = Image.open(os.path.join(SRC, key + ".png"))
     keyed = key_out(src)
-    full = contour(_fit_exact(keyed, CANVAS, CONTOUR), CONTOUR)
+    full = contour(_fit_exact(keyed, CANVAS, CONTOUR), CONTOUR, clipped_sides(keyed) | {"bottom"})
     thumb = thumbnail(full)
     full.save(os.path.join(OUT, key + ".png"), optimize=True)
     thumb.save(os.path.join(OUT, key + "_thumb.png"), optimize=True)
@@ -160,9 +199,20 @@ def cut(key, character):
 def cut_menu():
     """The main-menu hero (ART-028): keyed and inked like the busts, fitted
     bottom-flush into MENU_CANVAS with a contour; no thumbnail or metadata
-    (splash.go loads the PNG directly)."""
+    (splash.go loads the PNG directly).
+
+    The splash sits bottom-left of the window, so the figure may run off the
+    left and bottom edges but never the right or top (ART-029): a figure cut
+    there shows as a straight edge against the backdrop. A source like that
+    is refused; paint or extend it with magenta margin instead.
+    """
     keyed = key_out(Image.open(MENU_SRC))
-    contour(_fit_exact(keyed, MENU_CANVAS, CONTOUR), CONTOUR).save(MENU_OUT, optimize=True)
+    sides = clipped_sides(keyed)
+    if bad := sides & {"right", "top"}:
+        raise SystemExit("%s: the figure runs off the %s edge; the menu shows that edge, so "
+                         "regenerate the source with magenta margin there (ART-029)"
+                         % (os.path.relpath(MENU_SRC, ROOT), " and ".join(sorted(bad))))
+    contour(_fit_exact(keyed, MENU_CANVAS, CONTOUR), CONTOUR, sides | {"bottom"}).save(MENU_OUT, optimize=True)
 
 
 def main():
