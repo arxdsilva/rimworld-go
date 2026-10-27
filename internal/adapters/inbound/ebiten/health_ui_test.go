@@ -469,3 +469,17 @@ func TestArchVitalsMonitor(t *testing.T) {
 		}
 	}
 }
+
+// TestCapacityRowTooltip: each capacity row carries its breakdown.
+func TestCapacityRowTooltip(t *testing.T) {
+	t.Parallel()
+	a, f, s := healthApp(t)
+	h := healthSimView()
+	h.Capacities[1].Tip = "Moving\nLeft leg: missing 0%\n= 50%"
+	s.health = map[entity.EntityID]game.HealthView{1: h}
+	drawFrame(t, a, f)
+	w, ok := a.uiSt().find(healthCapID(1))
+	if !ok || !strings.Contains(w.tip, "Left leg: missing 0%") || !strings.HasPrefix(w.label, "Moving") {
+		t.Fatalf("capacity row %+v", w)
+	}
+}

@@ -326,6 +326,21 @@ func importMap[T any](es []entry[T]) map[entity.EntityID]*T {
 	return m
 }
 
+// capacityTip is the capacity's hover card: its name, then one line a
+// factor (body.CapacityFactors) and the result.
+func capacityTip(b *body.Body, c body.Capacity) string {
+	var sb strings.Builder
+	sb.WriteString(capacityLabels[c])
+	for _, f := range b.CapacityFactors(c) {
+		if f.Label == "=" {
+			fmt.Fprintf(&sb, "\n= %d%%", f.Pct)
+			continue
+		}
+		fmt.Fprintf(&sb, "\n%s %d%%", f.Label, f.Pct)
+	}
+	return sb.String()
+}
+
 // capacityLabels name body.Capacity values for the Health tab.
 var capacityLabels = [body.NumCaps]string{
 	body.Consciousness: "Consciousness", body.Moving: "Moving", body.Manipulation: "Manipulation",
@@ -464,7 +479,7 @@ func (g *Game) healthView(id entity.EntityID) (HealthView, bool) {
 	}
 	hv.Capacities = make([]CapacityView, 0, body.NumCaps)
 	for c := body.Capacity(0); c < body.NumCaps; c++ {
-		hv.Capacities = append(hv.Capacities, CapacityView{Label: capacityLabels[c], Pct: int(b.Capacity(c)) / 10})
+		hv.Capacities = append(hv.Capacities, CapacityView{Label: capacityLabels[c], Pct: int(b.Capacity(c)) / 10, Tip: capacityTip(b, c)})
 	}
 	ps := b.Parts()
 	hv.Parts = make([]PartView, 0, len(ps))

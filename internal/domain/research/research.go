@@ -67,7 +67,7 @@ var defs = [NumProjects]Def{
 		Desc: "Crude rifles made at the workbench.", Unlocks: []string{"recipe:make_rifle"}},
 	Fabrication: {Project: Fabrication, Name: "fabrication", Label: "Fabrication", Cost: 5000, Requires: []Project{Gunsmithing},
 		Desc:    "Machine steel into components for advanced furniture.",
-		Unlocks: []string{"recipe:fabricate_component", "build:tool cabinet", "build:hospital bed"}},
+		Unlocks: []string{"recipe:fabricate_component", "build:tool cabinet", "build:hospital bed", "build:vitals monitor"}},
 	Pharmacology: {Project: Pharmacology, Name: "pharmacology", Label: "Pharmacology", Cost: 4000, Requires: []Project{Herbalism},
 		Desc:    "Refine herbal medicine into stronger industrial medicine, numbroot painkiller and prophyl tablets.",
 		Unlocks: []string{"recipe:refine_medicine", "recipe:make_numbroot", "recipe:press_prophyl"}}, // MED-07: the medical drugs

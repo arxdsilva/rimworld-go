@@ -135,6 +135,9 @@ func healthChanceColor(pct int) color.RGBA {
 	return uiText
 }
 
+// healthCapID is capacity row i (the breakdown tooltip).
+func healthCapID(i int) string { return fmt.Sprintf("health.cap.%d", i) }
+
 // healthCondID is condition row i (MED-02).
 func healthCondID(i int) string { return fmt.Sprintf("health.cond.%d", i) }
 
@@ -395,8 +398,12 @@ func (a *App) healthCaps(r rect, h game.HealthView) {
 		painC = uiWarning
 	}
 	line("Pain", h.Pain, painC)
-	for _, c := range h.Capacities {
+	for i, c := range h.Capacities {
+		y0 := y
 		line(c.Label, c.Pct, healthCapColor(c.Pct))
+		if y > y0 && c.Tip != "" {
+			u.add(uiWidget{id: healthCapID(i), r: rect{r.X, y0, r.W, step}, label: fmt.Sprintf("%s: %d%%", c.Label, c.Pct), tip: c.Tip})
+		}
 	}
 	if len(h.Drugs) > 0 && y+2*step <= r.bottom() {
 		y += 4

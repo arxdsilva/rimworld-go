@@ -94,6 +94,9 @@ type OperationOptionView struct {
 type CapacityView struct {
 	Label string
 	Pct   int
+	// Tip explains the value: each contributing part, weight and condition
+	// on its own line under the capacity's name, ending in "= NN%".
+	Tip string
 }
 
 // PartView is one hurt, missing, scarred or artificial body part.
