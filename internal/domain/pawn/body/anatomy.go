@@ -40,7 +40,8 @@ const (
 // health.MaxHP (100) so the caller's existing death check fires.
 const KillDamage = 100
 
-// Def describes one part of the humanlike body.
+// Def describes one part of a body plan (the humanlike table below, the
+// animal plans in anatomy_plan.go).
 type Def struct {
 	Label    string
 	Parent   Part // Torso is the root and is its own parent
@@ -84,7 +85,8 @@ var defs = [NumParts]Def{
 	Spine:   {"spine", Torso, 40, 25, false, false, Moving, true},
 }
 
-// DefOf returns the definition of p (the zero Def for an unknown part).
+// DefOf returns the humanlike definition of p (the zero Def for an
+// unknown part); Body.PartDef reads a body's own plan.
 func DefOf(p Part) Def {
 	if p >= NumParts {
 		return Def{}
@@ -97,16 +99,27 @@ func DefOf(p Part) Def {
 // liver, the stomach, the last kidney or lung). A hit never destroys such
 // a part (the game spills the damage on), so death from wounds still
 // comes at KillDamage.
+//
+// MED-13: on an animal plan, a part with a vital part under it (a head
+// over the brain) counts as vital too.
 func (b *Body) LossKills(p Part) bool {
-	if p >= NumParts || defs[p].Vital {
-		return p < NumParts
+	n, t := b.numParts(), b.table()
+	if p >= n || t[p].Vital {
+		return p < n
 	}
-	c := Body{Wounds: b.Wounds, Missing: b.Missing, Conds: b.Conds}
+	if b.Anatomy != Humanlike {
+		for q := Part(0); q < n; q++ {
+			if t[q].Vital && b.under(q, p) {
+				return true
+			}
+		}
+	}
+	c := Body{Wounds: b.Wounds, Missing: b.Missing, Conds: b.Conds, Anatomy: b.Anatomy, Scale: b.Scale}
 	if len(b.Fitted) > 0 {
 		c.Fitted = append([]item.Kind(nil), b.Fitted...)
 	}
-	for q := Part(0); q < NumParts; q++ {
-		if under(q, p) {
+	for q := Part(0); q < n; q++ {
+		if b.under(q, p) {
 			c.Missing |= bit(q)
 			c.SetImplant(q, 0)
 		}
@@ -114,7 +127,8 @@ func (b *Body) LossKills(p Part) bool {
 	return !b.OrganFailure() && c.OrganFailure()
 }
 
-// Label is the plain-English name of p.
+// Label is the plain-English name of humanlike part p (Body.PartLabel
+// names a part of any plan).
 func (p Part) Label() string { return DefOf(p).Label }
 
 func bit(p Part) uint32 { return 1 << p }
@@ -122,16 +136,20 @@ func bit(p Part) uint32 { return 1 << p }
 // isMissing reports p gone (destroyed, amputated or replaced).
 func (b *Body) isMissing(p Part) bool { return b.Missing&bit(p) != 0 }
 
-// under reports p equal to or below ancestor in the part tree.
-func under(p, ancestor Part) bool {
-	for i := 0; i < int(NumParts); i++ {
+// under reports p equal to or below ancestor in the body's part tree.
+func (b *Body) under(p, ancestor Part) bool {
+	t := b.table()
+	if p >= Part(len(t)) {
+		return false
+	}
+	for range t {
 		if p == ancestor {
 			return true
 		}
-		if defs[p].Parent == p {
+		if t[p].Parent == p {
 			return false
 		}
-		p = defs[p].Parent
+		p = t[p].Parent
 	}
 	return false
 }
@@ -139,29 +157,30 @@ func under(p, ancestor Part) bool {
 // PickPart chooses a non-missing part by coverage with roll, which
 // returns a value in [0, n). It returns false when nothing is left.
 func (b *Body) PickPart(roll func(int) int) (Part, bool) {
+	t := b.table()
 	total := 0
-	for p := Part(0); p < NumParts; p++ {
-		if !b.isMissing(p) {
-			total += defs[p].Coverage
+	for p := range t {
+		if !b.isMissing(Part(p)) {
+			total += t[p].Coverage
 		}
 	}
 	if total == 0 {
-		return Torso, false
+		return b.Root(), false
 	}
 	r := roll(total)
 	if r < 0 {
 		r = 0
 	}
-	for p := Part(0); p < NumParts; p++ {
-		if b.isMissing(p) {
+	for p := range t {
+		if b.isMissing(Part(p)) {
 			continue
 		}
-		if r < defs[p].Coverage {
-			return p, true
+		if r < t[p].Coverage {
+			return Part(p), true
 		}
-		r -= defs[p].Coverage
+		r -= t[p].Coverage
 	}
-	return Torso, false
+	return b.Root(), false
 }
 
 // Inner reports an internal organ: harvested or transplanted (MED-06),

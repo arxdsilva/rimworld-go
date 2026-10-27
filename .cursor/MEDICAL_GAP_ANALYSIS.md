@@ -1,4 +1,4 @@
-# Medical system gap analysis (MED-00..MED-09)
+# Medical system gap analysis (MED-00..MED-13)
 
 Scope: bring the medical system (wounds, bleeding, tending, infection, diseases, anatomy, bionics, surgery, drug health effects, aging, animals) to RimWorld-wiki parity of behaviour and numbers. Load only for MED-* tasks. Phase handoffs go in `.cursor/handoffs/MED-0N-*.md`.
 
@@ -14,14 +14,17 @@ with these deviations:
 - The surgery medicine factor and cleanliness curve are original tuning.
 - The ridiculous-failure share is original tuning.
 
-Section 7 lists what is still deferred, plus these follow-ups:
-- the UI capacity-breakdown tooltip (UI checklist 702);
-- food poisoning and toxic buildup;
-- disease while on a caravan;
-- a downed state for animals;
-- per-species anatomy;
-- a vitals-monitor research gate;
-- carcinoma part efficiency.
+Follow-ups MED-10 to MED-13 (2026-10-27) closed the earlier leftovers:
+- the capacity-breakdown tooltip and the vitals-monitor research gate (MED-10);
+- food poisoning and disease on caravans (MED-11);
+- downed animals (MED-12);
+- per-archetype animal anatomy (MED-13).
+
+Their numbers are original tuning. Section 7 lists what is still deferred, plus:
+- toxic buildup;
+- carcinoma part efficiency;
+- animal scars and lost parts in butchering yield;
+- feeding or euthanizing animals that stay down.
 
 ## 1. Purpose and decision record
 

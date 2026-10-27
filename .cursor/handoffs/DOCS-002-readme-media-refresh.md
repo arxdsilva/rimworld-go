@@ -25,3 +25,6 @@ the old look. The user asked to regain the section.
 
 ## Note
 `make media clips` needs a `python3` with Pillow. On this machine that is `/usr/local/bin/python3`, so run `PATH=/usr/local/bin:$PATH make media clips`.
+
+## Follow-up (PLAY-024)
+- Two new clips: `turret` (`-scenario turret -capture-ui turret`) and `trade` (`-scenario trade -capture-ui trade`). The trade capture mode orders the first colonist to "Trade with" the caravan trader, so the dialog opens about 55 frames in.

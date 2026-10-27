@@ -43,7 +43,7 @@ type Wound struct {
 	Size      int32
 }
 
-// Body is one humanlike's wounds, missing parts (a bit per Part),
+// Body is one body's wounds, missing parts (a bit per Part),
 // installed implants, blood loss and conditions (saved). A part replaced by
 // an implant stays Missing; the implant stands in for it.
 //
@@ -54,6 +54,13 @@ type Wound struct {
 // BloodStage, bleed.go); Conds are the body's conditions (condition.go).
 // Fresh marks parts torn off by a hit and not yet tended (a bit per Part,
 // MED-01): the stump hurts and bleeds until a tend closes it.
+//
+// MED-13 appends the body plan: Anatomy picks the part table (zero: the
+// humanlike body, so a human's body and save are unchanged) and Scale
+// the part hit points in permille of the plan's human-scale numbers (0:
+// 1000). Pain reads damage against Scale, so a wound hurts a small animal
+// as much as the same share of a man's hit points. Both are zero-safe:
+// an older save and a human body read them as zero.
 type Body struct {
 	Wounds     []Wound
 	Missing    uint32
@@ -62,6 +69,8 @@ type Body struct {
 	Conds      []Condition
 	BloodStage uint8
 	Fresh      uint32
+	Anatomy    Anatomy
+	Scale      int32
 }
 
 // Implant is the implant fitted on p (0: none).
@@ -76,7 +85,7 @@ func (b *Body) Implant(p Part) item.Kind {
 // Install and Remove are the checked ways. Fitted grows to reach p and
 // shrinks back to nil once no part carries anything.
 func (b *Body) SetImplant(p Part, k item.Kind) {
-	if p >= NumParts {
+	if p >= b.numParts() {
 		return
 	}
 	if k != 0 {
@@ -142,7 +151,7 @@ func (b *Body) hurtPart(p Part, dmg int, kind WoundKind, now uint64) {
 	if b.isMissing(p) || dmg <= 0 {
 		return
 	}
-	if b.partDmg(p)+dmg >= defs[p].MaxHP {
+	if b.partDmg(p)+dmg >= b.maxHP(p) {
 		b.destroy(p)
 		if kind != Burn { // a burn sears its stump shut
 			b.Fresh |= bit(p)
@@ -154,8 +163,8 @@ func (b *Body) hurtPart(p Part, dmg int, kind WoundKind, now uint64) {
 
 // destroy removes p and everything under it, with their wounds and implants.
 func (b *Body) destroy(p Part) {
-	for q := Part(0); q < NumParts; q++ {
-		if under(q, p) {
+	for q := Part(0); q < b.numParts(); q++ {
+		if b.under(q, p) {
 			b.Missing |= bit(q)
 			b.Fresh &^= bit(q) // a stump below is part of this loss
 			b.SetImplant(q, 0)
@@ -163,7 +172,7 @@ func (b *Body) destroy(p Part) {
 	}
 	kept := b.Wounds[:0]
 	for _, w := range b.Wounds {
-		if !under(w.Part, p) {
+		if !b.under(w.Part, p) {
 			kept = append(kept, w)
 		}
 	}
@@ -175,8 +184,9 @@ func (b *Body) destroy(p Part) {
 // an organ failure (MED-05, OrganFailure: a capacity the body cannot live
 // without at 0).
 func (b *Body) VitalLost() bool {
-	for p := Part(0); p < NumParts; p++ {
-		if defs[p].Vital && b.isMissing(p) && !b.fitted(p) {
+	t := b.table()
+	for p := range t {
+		if t[p].Vital && b.isMissing(Part(p)) && !b.fitted(Part(p)) {
 			return true
 		}
 	}
@@ -185,8 +195,11 @@ func (b *Body) VitalLost() bool {
 
 // replaced reports p covered by an implant on itself or an ancestor.
 func (b *Body) replaced(p Part) bool {
-	for q := Part(0); q < NumParts; q++ {
-		if b.fitted(q) && under(p, q) {
+	if b.Fitted == nil {
+		return false
+	}
+	for q := Part(0); q < b.numParts(); q++ {
+		if b.fitted(q) && b.under(p, q) {
 			return true
 		}
 	}
@@ -201,14 +214,15 @@ func (b *Body) Damage() int {
 	for _, w := range b.Wounds {
 		n += w.Dmg
 	}
-	for p := Part(0); p < NumParts; p++ {
+	t := b.table()
+	for p := Part(0); p < Part(len(t)); p++ {
 		if !b.isMissing(p) || b.replaced(p) {
 			continue
 		}
-		if q := defs[p].Parent; q != p && b.isMissing(q) {
+		if q := t[p].Parent; q != p && b.isMissing(q) {
 			continue // counted with its parent
 		}
-		n += defs[p].MaxHP
+		n += b.maxHP(p)
 	}
 	if b.VitalLost() && n < KillDamage {
 		return KillDamage

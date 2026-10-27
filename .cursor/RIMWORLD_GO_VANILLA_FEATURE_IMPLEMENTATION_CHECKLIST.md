@@ -927,7 +927,7 @@ treatment, and surgery are major colony-management systems.
 
 ## 11.1 Anatomy
 
--   [-] **Species anatomy tree** (SIM-039: humanlike tree only; MED-05 adds kidneys, liver and spine (24 parts); MED-09: animals use a one-part body adapter scaled by size; per-species anatomy deferred)
+-   [x] **Species anatomy tree** (SIM-039 humanlike tree, MED-05: 24 parts; MED-13: per-archetype animal plans (quadruped, bird, snake, lizard, insect) with their own parts, coverage and capacities, scaled by species)
     -   Body -\> torso/head -\> limbs -\> hands/feet -\> digits, organs,
         etc.
     -   Species can define different anatomy.

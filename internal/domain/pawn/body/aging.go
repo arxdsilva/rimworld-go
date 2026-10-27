@@ -158,6 +158,9 @@ func (b *Body) CanDevelop(k CondKind, p Part) bool {
 	if b == nil {
 		return true
 	}
+	if b.Anatomy != Humanlike { // MED-13: aging is the humanlike body's
+		return false
+	}
 	if b.isMissing(p) || b.condOn(k, p) {
 		return false
 	}

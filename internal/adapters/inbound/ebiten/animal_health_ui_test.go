@@ -63,3 +63,41 @@ func TestAnimalInspectorHealthBlock(t *testing.T) {
 		}
 	}
 }
+
+// MED-13: the pane lists the animal's hurt and lost parts and its moving
+// while it is down, from the view; a long list folds into "+N more".
+func TestAnimalInspectorPartLines(t *testing.T) {
+	t.Parallel()
+	s := bondSim()
+	dog := &s.world.Animals[0]
+	dog.Health, dog.HealthState = 70, "Injured"
+	dog.MovingPct = 75
+	dog.Parts = []game.AnimalPartView{
+		{Label: "torso", HP: 12, MaxHP: 28, Bleeding: true},
+		{Label: "front left leg", MaxHP: 17, Missing: true},
+	}
+	a, _ := colonyApp(t, s)
+	if !a.selectAnimalAt(6, 6) {
+		t.Fatal("select the dog")
+	}
+	an, _ := a.selectedAnimal()
+	lines := thingLines(a.animalPane(an.ID))
+	for _, want := range []string{"Moving 75%", "Torso: 12/28 HP, bleeding", "Front left leg: missing"} {
+		if !strings.Contains(lines, want) {
+			t.Fatalf("pane lines %q lack %q", lines, want)
+		}
+	}
+	// a body with every part whole moving at full shows no part lines; a
+	// long list is capped
+	if rows := animalPartRows(game.AnimalView{MovingPct: 100}); rows != nil {
+		t.Fatalf("whole: %q", rows)
+	}
+	many := game.AnimalView{MovingPct: 100}
+	for i := 0; i < animalPartRowsMax+3; i++ {
+		many.Parts = append(many.Parts, game.AnimalPartView{Label: "tail", HP: 1, MaxHP: 5})
+	}
+	rows := animalPartRows(many)
+	if len(rows) != animalPartRowsMax+1 || rows[len(rows)-1] != "+3 more" || rows[0] != "Tail: 1/5 HP" {
+		t.Fatalf("capped rows %q", rows)
+	}
+}

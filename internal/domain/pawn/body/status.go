@@ -16,11 +16,12 @@ type PartStatus struct {
 	Fitted  bool // Implant is valid
 }
 
-// Parts lists every part in order with its state.
+// Parts lists every part of the body's plan in order with its state.
 func (b *Body) Parts() []PartStatus {
-	out := make([]PartStatus, 0, NumParts)
-	for p := Part(0); p < NumParts; p++ {
-		s := PartStatus{Part: p, Label: defs[p].Label, MaxHP: defs[p].MaxHP, Missing: b.isMissing(p), Tended: true}
+	t := b.table()
+	out := make([]PartStatus, 0, len(t))
+	for p := Part(0); p < Part(len(t)); p++ {
+		s := PartStatus{Part: p, Label: t[p].Label, MaxHP: b.maxHP(p), Missing: b.isMissing(p), Tended: true}
 		if s.Missing {
 			if b.fitted(p) {
 				s.Implant, s.Fitted = b.Implant(p), true

@@ -61,12 +61,18 @@ func bleeds(k WoundKind) bool {
 
 // BleedRate is how fast w bleeds, permille of blood per day: 0 once
 // tended, for a scar, and for bruises and burns.
-func BleedRate(w Wound) int32 {
+func BleedRate(w Wound) int32 { return bleedRateAt(w, Heart) }
+
+// bleedRate is BleedRate on this body: its plan's heart bleeds faster.
+func (b *Body) bleedRate(w Wound) int32 { return bleedRateAt(w, planOf(b.Anatomy).heart) }
+
+// bleedRateAt is BleedRate with heart the part that bleeds faster.
+func bleedRateAt(w Wound, heart Part) int32 {
 	if w.Tended || w.Permanent || w.Dmg <= 0 || !bleeds(w.Kind) {
 		return 0
 	}
 	r := int32(w.Dmg) * BleedPerHP
-	if w.Part == Heart {
+	if w.Part == heart {
 		r *= HeartBleedMul
 	}
 	return r
@@ -74,19 +80,19 @@ func BleedRate(w Wound) int32 {
 
 // stumpBleed is how fast a part torn off bleeds until tended (permille
 // per day).
-func stumpBleed(p Part) int32 { return int32(defs[p].MaxHP) * StumpBleedMul * BleedPerHP }
+func (b *Body) stumpBleed(p Part) int32 { return int32(b.maxHP(p)) * StumpBleedMul * BleedPerHP }
 
 // BleedPerDay is the body's total bleeding, permille of blood per day:
 // its open wounds and fresh stumps, scaled by blood pumping (MED-05).
 func (b *Body) BleedPerDay() int32 {
 	var n int32
 	for _, w := range b.Wounds {
-		n += BleedRate(w)
+		n += b.bleedRate(w)
 	}
 	if b.Fresh != 0 {
-		for p := Part(0); p < NumParts; p++ {
+		for p := Part(0); p < b.numParts(); p++ {
 			if b.Fresh&bit(p) != 0 {
-				n += stumpBleed(p)
+				n += b.stumpBleed(p)
 			}
 		}
 	}
@@ -111,23 +117,23 @@ func (b *Body) pumped(n int32) int32 {
 // PartBleedPerDay is the bleeding of p: its wounds, or its stump while
 // fresh (permille per day).
 func (b *Body) PartBleedPerDay(p Part) int32 {
-	if p >= NumParts {
+	if p >= b.numParts() {
 		return 0
 	}
 	var n int32
 	for _, w := range b.Wounds {
 		if w.Part == p {
-			n += BleedRate(w)
+			n += b.bleedRate(w)
 		}
 	}
 	if b.Fresh&bit(p) != 0 {
-		n += stumpBleed(p)
+		n += b.stumpBleed(p)
 	}
 	return b.pumped(n)
 }
 
 // FreshStump reports p torn off and not yet tended.
-func (b *Body) FreshStump(p Part) bool { return p < NumParts && b.Fresh&bit(p) != 0 }
+func (b *Body) FreshStump(p Part) bool { return p < b.numParts() && b.Fresh&bit(p) != 0 }
 
 // perHour is a daily permille rate over one hour, rounded to nearest and
 // never below 1 for a positive rate (so the slowest bleed still counts).

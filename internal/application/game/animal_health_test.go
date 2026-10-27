@@ -66,17 +66,18 @@ func TestAnimalBleedsAndIsTended(t *testing.T) {
 		t.Fatal("an unhurt animal has no body")
 	}
 	g.setPriority(ada, work.Doctor, 0) // an hour's bleeding before the vet comes
-	cutAnimal(g, dog, 12)
+	const cut = 12                     // MED-13: on seed 40 it lands on a part it does not take off
+	cutAnimal(g, dog, cut)
 	b := animalBody(g, dog)
-	if b == nil || len(b.Wounds) != 1 || b.Wounds[0].Kind != body.Cut || b.Wounds[0].Part != animalPart || b.Wounds[0].InfectAt == 0 {
-		t.Fatalf("the cut is a wound on the body: %+v", b)
+	if b == nil || len(b.Wounds) != 1 || b.Wounds[0].Kind != body.Cut || b.Anatomy != body.Quadruped || b.Wounds[0].InfectAt == 0 {
+		t.Fatalf("the cut is a wound on a part of the dog's body: %+v", b)
 	}
 	a, _ := g.animals.Get(dog)
-	if a.Injury != 12 || b.Damage() != 12 {
+	if a.Injury != cut || b.Damage() != cut {
 		t.Fatalf("Injury %d and the wounds %d agree", a.Injury, b.Damage())
 	}
 	scale := animalHealthScale(a.Species)
-	if got, want := animalBleedPerDay(b, a.Species), 12*body.BleedPerHP*1000/scale; got != want || got <= 12*body.BleedPerHP {
+	if got, want := animalBleedPerDay(b, a.Species), int32(cut)*body.BleedPerHP*1000/scale; got != want || got <= int32(cut)*body.BleedPerHP {
 		t.Fatalf("a dog smaller than a man bleeds faster: %d/day, want %d", got, want)
 	}
 	if !slices.Contains(g.animalPatientIDs(), dog) {
@@ -190,10 +191,10 @@ func TestAnimalWoundCanInfect(t *testing.T) {
 	id := cows[0]
 	a, _ := g.animals.Get(id)
 	if a.Body == nil {
-		a.Body = &body.Body{}
+		a.Body = newAnimalBody(a.Species)
 	}
 	a.Body.Conds = nil
-	a.Body.AddCond(body.Condition{Kind: body.CondInfection, Part: animalPart, Sev: infection.Full - 5})
+	a.Body.AddCond(body.Condition{Kind: body.CondInfection, Part: a.Body.Root(), Sev: infection.Full - 5})
 	g.animals.Set(id, a)
 	g.markAnimalPatient(id)
 	if av := animalViewOf(t, g, id); av.InfectionPct != 99 || !av.InfectionLosing {
@@ -256,7 +257,7 @@ func TestAnimalHealthSurvivesSave(t *testing.T) {
 	cow, _ := g.SpawnAnimal("cow", 10, 6)
 	g.hurtAs(cow, 20, 0, body.Bite, health.CauseInjury)
 	a, _ := g.animals.Get(cow)
-	a.Body.AddCond(body.Condition{Kind: body.CondInfection, Part: animalPart, Sev: 200, Immunity: 100})
+	a.Body.AddCond(body.Condition{Kind: body.CondInfection, Part: a.Body.Root(), Sev: 200, Immunity: 100})
 	g.animals.Set(cow, a)
 	toNextHour(g)
 	toNextHour(g)
@@ -336,7 +337,7 @@ func TestAnimalTendDoesNotFlap(t *testing.T) {
 	scheduleAll(g, schedule.Work) // on call around the clock
 	cutAnimal(g, dog, 14)
 	a, _ := g.animals.Get(dog)
-	a.Body.AddCond(body.Condition{Kind: body.CondInfection, Part: animalPart, Sev: infection.Onset})
+	a.Body.AddCond(body.Condition{Kind: body.CondInfection, Part: a.Body.Root(), Sev: infection.Onset})
 	g.animals.Set(dog, a)
 	starts := 0
 	last := job.None

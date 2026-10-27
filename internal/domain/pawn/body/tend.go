@@ -132,7 +132,7 @@ func (b *Body) TendAll(q int32, now uint64) int {
 		w.Tended, w.TendQ, w.TendAt = true, int16(q), now
 		n++
 	}
-	for p := Part(0); p < NumParts; p++ {
+	for p := Part(0); p < b.numParts(); p++ {
 		if b.Fresh&bit(p) != 0 {
 			n++
 		}

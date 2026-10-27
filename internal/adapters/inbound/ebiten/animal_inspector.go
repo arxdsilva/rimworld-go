@@ -366,7 +366,8 @@ func (a *App) drawAnimalTrainingTab(screen *ebiten.Image, an game.AnimalView, in
 // infected animal the same way.
 
 // animalHealthRows are the pane's health lines: the headline when it is
-// not plain health, blood loss, the worst infection and a due tend.
+// not plain health, blood loss, the worst infection, a due tend, then the
+// hurt and lost parts (animalPartRows).
 func animalHealthRows(an game.AnimalView) []string {
 	var rows []string
 	if an.HealthState != "" && an.HealthState != "Healthy" && an.HealthState != "Injured" {
@@ -388,6 +389,42 @@ func animalHealthRows(an game.AnimalView) []string {
 	}
 	if an.NeedsTend {
 		rows = append(rows, "Needs tending")
+	}
+	return append(rows, animalPartRows(an)...)
+}
+
+// animalPartRowsMax caps the part lines; the rest fold into "+N more".
+const animalPartRowsMax = 6
+
+// animalPartRows are the pane's anatomy lines (MED-13): the moving
+// capacity while it is down, then each hurt or lost part ("Front left
+// leg: missing", "Torso: 12/28 HP, bleeding"), at most animalPartRowsMax.
+func animalPartRows(an game.AnimalView) []string {
+	if len(an.Parts) == 0 {
+		return nil
+	}
+	var rows []string
+	if an.MovingPct < 100 {
+		rows = append(rows, fmt.Sprintf("Moving %d%%", an.MovingPct))
+	}
+	for i, p := range an.Parts {
+		if i == animalPartRowsMax {
+			rows = append(rows, fmt.Sprintf("+%d more", len(an.Parts)-i))
+			break
+		}
+		s := p.Label + ": "
+		if s != ": " {
+			s = strings.ToUpper(s[:1]) + s[1:]
+		}
+		if p.Missing {
+			s += "missing"
+		} else {
+			s += fmt.Sprintf("%d/%d HP", p.HP, p.MaxHP)
+		}
+		if p.Bleeding {
+			s += ", bleeding"
+		}
+		rows = append(rows, s)
 	}
 	return rows
 }

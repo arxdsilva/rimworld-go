@@ -5,7 +5,20 @@ import (
 	"strings"
 )
 
-// partsOf are the body parts whose efficiency feeds capacity c directly.
+// partsOf are the body parts whose efficiency feeds capacity c directly
+// (an animal plan's from its capacity rule, MED-13).
+func (b *Body) partsOf(c Capacity) []Part {
+	if b.Anatomy != Humanlike {
+		if c == Consciousness {
+			return []Part{planOf(b.Anatomy).brain}
+		}
+		return planOf(b.Anatomy).caps[c].parts()
+	}
+	return partsOf(c)
+}
+
+// partsOf are the humanlike parts whose efficiency feeds capacity c
+// directly.
 func partsOf(c Capacity) []Part {
 	switch c {
 	case Moving:
@@ -47,7 +60,7 @@ func (b *Body) partFactor(p Part) (Factor, bool) {
 	case b.isMissing(p):
 		state = "missing"
 	}
-	return Factor{Label: upperFirst(p.Label()) + ": " + state, Pct: e / 10}, true
+	return Factor{Label: upperFirst(b.PartLabel(p)) + ": " + state, Pct: e / 10}, true
 }
 
 func upperFirst(s string) string {
@@ -63,12 +76,13 @@ func upperFirst(s string) string {
 // last line is the capacity itself.
 func (b *Body) CapacityFactors(c Capacity) []Factor {
 	var out []Factor
-	for _, p := range partsOf(c) {
+	parts := b.partsOf(c)
+	for _, p := range parts {
 		if f, ok := b.partFactor(p); ok {
 			out = append(out, f)
 		}
 	}
-	if len(out) == 0 && len(partsOf(c)) > 0 {
+	if len(out) == 0 && len(parts) > 0 {
 		out = append(out, Factor{Label: "Parts healthy", Pct: 100})
 	}
 	if c == Moving || c == Manipulation || c == Talking {

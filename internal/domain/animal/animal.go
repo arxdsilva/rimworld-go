@@ -100,6 +100,30 @@ const (
 	ArchCrawler
 )
 
+// Anatomy is the medical body plan of archetype a (MED-13): quadrupeds,
+// primates and hive brutes walk on four limbs (a primate is a quadruped
+// rather than a humanlike body: no hands to fit, nothing to talk with,
+// and every animal stays off the humanlike plan, so surgery and the
+// legacy body migration can tell an animal by its anatomy alone); birds
+// have wings and two legs; snakes no limbs; lizards and tortoises four
+// legs and a long tail; beetles and crawlers six legs and a carapace.
+func (a Archetype) Anatomy() body.Anatomy {
+	switch a {
+	case ArchBird:
+		return body.Bird
+	case ArchSnake:
+		return body.Snake
+	case ArchLizard, ArchTortoise:
+		return body.Lizard
+	case ArchBeetle, ArchCrawler:
+		return body.Insect
+	}
+	return body.Quadruped // ArchQuadruped, ArchPrimate, ArchBrute
+}
+
+// AnatomyOf is species s's body plan.
+func AnatomyOf(s Species) body.Anatomy { return RosterOf(s).Archetype.Anatomy() }
+
 // Size is a species' body class (SIM-019 formulas key off it).
 type Size uint8
 
@@ -652,12 +676,14 @@ type State struct {
 	// FeedClaim (PLAY-017) is the stack a tame animal holds a reservation
 	// on while it walks to it and eats (0: none).
 	FeedClaim entity.EntityID
-	// Body (MED-09) is a wounded animal's lightweight medical body: its
-	// wounds on one virtual part, blood loss and infections (the humanlike
-	// body model, no species anatomy). Made on the first wound, dropped
-	// once nothing is left to treat; nil otherwise, so it is saved only
-	// while present and older saves load with none. Injury stays the hit
-	// point scalar; the wounds never add up to more than it.
+	// Body (MED-09) is a wounded animal's medical body: its wounds, lost
+	// parts, blood loss and infections. Since MED-13 it has its species'
+	// anatomy (AnatomyOf, parts scaled to its hit points); a body saved
+	// before then (one virtual part) migrates on load. Made on the first
+	// wound, dropped once nothing is left to treat and no part is lost;
+	// nil otherwise, so it is saved only while present and older saves
+	// load with none. Injury stays the hit point scalar; the open wounds
+	// never add up to more than it.
 	Body *body.Body
 	// Downed (MED-09 follow-up): too hurt or too bled to stand. A downed
 	// animal lies where it fell and does nothing but bleed, heal and be
@@ -691,11 +717,18 @@ func (s State) Dead() bool { return s.HP() <= 0 }
 // standing. The down line sits past BadlyHurt (a fighter breaks off with
 // less than 30% of its hit points left), so a hurt animal first runs, and
 // only goes down if the hits keep coming.
+//
+// MED-13 adds moving (permille, the body's Moving capacity): an animal
+// that has lost or crippled too many legs goes down below DownMoving and
+// stands only at UpMoving or more. Lost parts never come back, so an
+// animal with no legs left stays down.
 const (
 	DownInjuryPct = 80
 	UpInjuryPct   = 50
 	DownBloodLoss = 450
 	UpBloodLoss   = 300
+	DownMoving    = 150
+	UpMoving      = 300
 )
 
 // bloodLoss is the animal's blood loss, permille (0 without a body).
@@ -706,18 +739,27 @@ func (s State) bloodLoss() int32 {
 	return s.Body.BloodLoss
 }
 
-// DownsNow reports a standing, living animal that is hurt or bled enough
-// to go down.
+// Moving is the animal's moving capacity, permille (1000 without a body):
+// its legs, spine, pain and blood (body.Capacity).
+func (s State) Moving() int32 {
+	if s.Body == nil {
+		return 1000
+	}
+	return s.Body.Capacity(body.Moving)
+}
+
+// DownsNow reports a standing, living animal that is hurt, bled or
+// crippled enough to go down.
 func (s State) DownsNow() bool {
 	if s.Downed || s.Dead() {
 		return false
 	}
-	return s.Injury*100 >= DefOf(s.Species).MaxHP*DownInjuryPct || s.bloodLoss() >= DownBloodLoss
+	return s.Injury*100 >= DefOf(s.Species).MaxHP*DownInjuryPct || s.bloodLoss() >= DownBloodLoss || s.Moving() < DownMoving
 }
 
 // StandsUp reports a downed animal well enough to stand again.
 func (s State) StandsUp() bool {
-	return s.Downed && s.Injury*100 <= DefOf(s.Species).MaxHP*UpInjuryPct && s.bloodLoss() < UpBloodLoss
+	return s.Downed && s.Injury*100 <= DefOf(s.Species).MaxHP*UpInjuryPct && s.bloodLoss() < UpBloodLoss && s.Moving() >= UpMoving
 }
 
 // Hungry reports whether a predator wants to hunt: its food is below
@@ -728,13 +770,21 @@ func (s State) Hungry() bool {
 	return d.Predator && (s.Hunger >= d.HungerTicks || s.HasSex && s.Food < FeedStart)
 }
 
-// Step is the ticks per tile for the current mode.
+// Step is the ticks per tile for the current mode, slowed by a hurt body
+// (MED-13: at its Moving capacity, never below DownMoving, where it goes
+// down): a quadruped on three legs takes a third longer.
 func (s State) Step() int {
 	d := DefOf(s.Species)
+	st := d.StepTicks
 	if s.Mode == Flee && d.FleeStep > 0 {
-		return d.FleeStep
+		st = d.FleeStep
 	}
-	return d.StepTicks
+	if s.Body != nil {
+		if m := s.Moving(); m < 1000 {
+			st = (st*1000 + int(max(m, DownMoving)) - 1) / int(max(m, DownMoving))
+		}
+	}
+	return st
 }
 
 // StepCost is the ticks for one step in the current mode: Step()

@@ -98,12 +98,18 @@ func limbs(v, cons int32) int32 {
 
 // pumping is the heart's work with the conditions folded in.
 func (b *Body) pumping(look condLookup) int32 {
+	if b.Anatomy != Humanlike {
+		return b.condCap(BloodPumping, b.planRaw(BloodPumping), look)
+	}
 	return b.condCap(BloodPumping, b.eff(Heart), look)
 }
 
 // filtration is the kidneys' (500 each) and the liver's work with the
 // conditions folded in. wiki: Blood filtration.
 func (b *Body) filtration(look condLookup) int32 {
+	if b.Anatomy != Humanlike {
+		return b.condCap(BloodFiltration, b.planRaw(BloodFiltration), look)
+	}
 	return b.condCap(BloodFiltration, avg(b.eff(KidneyL), b.eff(KidneyR))*b.eff(Liver)/1000, look)
 }
 
@@ -118,7 +124,7 @@ func (b *Body) eff(p Part) int32 {
 		}
 		return 0
 	}
-	max := defs[p].MaxHP
+	max := b.maxHP(p)
 	d := b.partDmg(p)
 	if d > max {
 		d = max
@@ -134,6 +140,9 @@ func (b *Body) Capacity(c Capacity) int32 { return b.capacity(c, DefOfCond) }
 
 // capacity is Capacity with condition definitions from look.
 func (b *Body) capacity(c Capacity, look condLookup) int32 {
+	if b.Anatomy != Humanlike {
+		return b.planCapacity(c, look) // anatomy_plan.go (MED-13)
+	}
 	var v int32
 	switch c {
 	case Consciousness:
@@ -167,7 +176,11 @@ func (b *Body) capacity(c Capacity, look condLookup) int32 {
 // pumping and filtration (MED-05), less the blood loss stage (capped at
 // the extreme stage), then the conditions.
 func (b *Body) consciousness(look condLookup) int32 {
-	v := b.eff(Brain) - b.pain(look)/2
+	brain := Brain
+	if b.Anatomy != Humanlike {
+		brain = planOf(b.Anatomy).brain
+	}
+	v := b.eff(brain) - b.pain(look)/2
 	if v < 0 {
 		v = 0
 	}
@@ -233,11 +246,14 @@ func (b *Body) pain(look condLookup) int32 {
 		hurt += int32(w.Dmg)
 	}
 	if b.Fresh != 0 {
-		for p := Part(0); p < NumParts; p++ {
+		for p := Part(0); p < b.numParts(); p++ {
 			if b.Fresh&bit(p) != 0 {
-				hurt += int32(defs[p].MaxHP)
+				hurt += int32(b.maxHP(p))
 			}
 		}
+	}
+	if s := b.Scale; s > 0 && s != 1000 { // MED-13: damage against the body's size
+		hurt, scars = hurt*1000/s, scars*1000/s
 	}
 	n := hurt*painPerHPx10/10 + scars*scarPainPerHP
 	n += b.condPain(look)

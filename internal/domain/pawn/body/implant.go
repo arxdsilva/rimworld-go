@@ -89,7 +89,7 @@ func (b *Body) SpineBraced() bool { return b.fitted(Spine) && b.Implant(Spine) =
 
 // Install puts implant k on missing part p; it reports success.
 func (b *Body) Install(p Part, k item.Kind) bool {
-	if p >= NumParts || !Fits(k, p) || !b.isMissing(p) || b.fitted(p) || b.replaced(p) {
+	if b.Anatomy != Humanlike || p >= NumParts || !Fits(k, p) || !b.isMissing(p) || b.fitted(p) || b.replaced(p) {
 		return false
 	}
 	b.SetImplant(p, k)
@@ -121,9 +121,10 @@ func (b *Body) blockedAbove(p Part) bool {
 // CanReplace reports p can take an implant at all: it has no implant and no
 // ancestor is missing or replaced (the part itself may be present or
 // missing). Of the vital parts only the heart can, with an artificial
-// heart (MED-05).
+// heart (MED-05). Implants are made for the humanlike body: nothing fits
+// an animal plan (MED-13).
 func (b *Body) CanReplace(p Part) bool {
-	return p < NumParts && (!defs[p].Vital || p == Heart) && !b.fitted(p) && !b.blockedAbove(p)
+	return b.Anatomy == Humanlike && p < NumParts && (!defs[p].Vital || p == Heart) && !b.fitted(p) && !b.blockedAbove(p)
 }
 
 // InstallOptions lists the parts implant kind k could be fitted on now,
@@ -142,7 +143,7 @@ func (b *Body) InstallOptions(k item.Kind) []Part {
 // that should still weigh on the pawn's mood.
 func (b *Body) MissingUncovered() int {
 	n := 0
-	for p := Part(0); p < NumParts; p++ {
+	for p := Part(0); p < b.numParts(); p++ {
 		if b.isMissing(p) && !b.fitted(p) && !b.replaced(p) {
 			n++
 		}

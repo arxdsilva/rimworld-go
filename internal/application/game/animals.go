@@ -117,6 +117,12 @@ type AnimalView struct {
 	InfectionLosing bool
 	NeedsTend       bool
 	CareLevel       uint8
+	// MED-13 (animal_health.go): Parts are the hurt and lost parts of its
+	// anatomy, in part order (a lost part's children are not listed
+	// apart); MovingPct its moving capacity in percent (100 without a
+	// body).
+	Parts     []AnimalPartView
+	MovingPct int
 }
 
 // AnimalTrainingView is one training skill of a tame animal: Allowed if

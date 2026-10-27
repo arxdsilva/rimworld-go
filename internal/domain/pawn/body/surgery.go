@@ -265,8 +265,10 @@ func (b *Body) condOn(k CondKind, p Part) bool {
 }
 
 // CanOperate reports the operation is valid on the current body.
+// Surgery is for the humanlike body: no operation is valid on an animal
+// plan (MED-13; animal surgery is out of scope).
 func (b *Body) CanOperate(op Operation) bool {
-	if op.Part >= NumParts {
+	if b.Anatomy != Humanlike || op.Part >= NumParts {
 		return false
 	}
 	switch op.Kind {
@@ -372,7 +374,7 @@ func (b *Body) succeed(op Operation) bool {
 // minorWound cuts part p for 5-15 damage, never destroying it.
 func (b *Body) minorWound(p Part, roll func(int) int, now uint64) {
 	dmg := 5 + roll(11)
-	if room := defs[p].MaxHP - 1 - b.partDmg(p); dmg > room {
+	if room := b.maxHP(p) - 1 - b.partDmg(p); dmg > room {
 		dmg = room
 	}
 	if dmg > 0 && !b.isMissing(p) {

@@ -12,11 +12,17 @@ import (
 	"rimworld-go/internal/domain/sim/entity"
 )
 
-// Animal medicine (MED-09). A wounded animal gets a lightweight body
-// (animal.State.Body): the humanlike body model with every wound on one
-// virtual part (animalPart), no species anatomy. It is made on the first
-// wound and dropped once nothing is left to treat, so an unhurt animal
-// carries none and saves stay as they were.
+// Animal medicine (MED-09). A wounded animal gets a body
+// (animal.State.Body). Since MED-13 it has its species' anatomy
+// (animal.AnatomyOf: quadruped, bird, snake, lizard or insect parts,
+// their hit points scaled by the species' size, animalHealthScale): a hit
+// lands on a part picked by coverage, may take off a leg, a wing or an
+// eye, and a lost leg slows the animal (body.Capacity(Moving),
+// animal.State.Step). It is made on the first wound and dropped once
+// nothing is left to treat and no part is lost, so an unhurt animal
+// carries none and saves stay as they were. A body saved before MED-13
+// (every wound on one virtual part) migrates on load
+// (migrateAnimalBodies).
 //
 // The body reuses the humanlike rules: open cuts, bites and scratches
 // bleed (body.BleedRate) until tended, blood loss kills at 1000; each
@@ -39,11 +45,8 @@ import (
 // Once an hour the medical phase (phaseMedical, bleed.go) walks the
 // animal patients (sorted ids of animals with a body; derived, rebuilt
 // on first use after a load), never every animal. Rolls use the medical
-// stream. Scars are left out (no anatomy to scar), so healing draws no
-// random numbers.
-
-// animalPart is the virtual part every animal wound sits on.
-const animalPart = body.Torso
+// stream (the part a hit lands on, the infection delay). Scars are left
+// out, so healing draws no random numbers.
 
 // Animal health scale bounds (permille of a human's hit points): the
 // smallest species bleeds at most 10x a human's rate, the largest at
@@ -105,10 +108,17 @@ func animalBleedDeathHours(b *body.Body, s animal.Species) int {
 	return int((left + h - 1) / h)
 }
 
-// woundAnimal gives animal id (state a, Injury already raised by dmg) a
-// wound of dmg: of kind, or the attacker by's weapon's kind. It makes the
-// body on the first wound, schedules the wound's infection roll and adds
-// the animal to the patients. A killing blow leaves no wound.
+// newAnimalBody is a whole body of species s: its anatomy, its parts
+// scaled to its hit points (MED-13).
+func newAnimalBody(s animal.Species) *body.Body {
+	return &body.Body{Anatomy: animal.AnatomyOf(s), Scale: animalHealthScale(s)}
+}
+
+// woundAnimal gives animal id (state a, Injury already raised by dmg)
+// dmg of kind, or the attacker by's weapon's kind, on parts picked by
+// coverage (woundAnimalBody). It makes the body on the first wound,
+// schedules the new wounds' infection roll and adds the animal to the
+// patients. A killing blow leaves no wound.
 func (g *Game) woundAnimal(id entity.EntityID, a *animal.State, dmg int, kind body.WoundKind, by entity.EntityID, now uint64) {
 	if dmg <= 0 || a.Dead() {
 		return
@@ -117,34 +127,122 @@ func (g *Game) woundAnimal(id entity.EntityID, a *animal.State, dmg int, kind bo
 		kind = g.woundKindBy(by) // body.go
 	}
 	if a.Body == nil {
-		a.Body = &body.Body{}
+		a.Body = newAnimalBody(a.Species)
 	}
-	w := body.Wound{Part: animalPart, Dmg: dmg, Kind: kind, At: now, Size: int32(dmg)}
+	b := a.Body
+	g.woundAnimalBody(b, dmg, kind, now)
 	if infection.WoundChance(kind, -1, infection.RoomOther) > 0 {
 		h := infection.DelayMin + g.stream(streamMedical).IntN(infection.DelaySpan+1)
-		w.InfectAt = now + uint64(h)*clock.TicksPerHour
+		for i := range b.Wounds { // the wounds this hit opened
+			if w := &b.Wounds[i]; w.At == now && w.InfectAt == 0 && !w.Permanent && !w.Tended {
+				w.InfectAt = now + uint64(h)*clock.TicksPerHour
+			}
+		}
 	}
-	a.Body.Wounds = append(a.Body.Wounds, w)
 	reconcileAnimalBody(a)
 	if a.Body != nil {
 		g.markAnimalPatient(id)
 	}
 }
 
-// reconcileAnimalBody keeps a's wounds within its Injury (trimming the
-// smallest open wounds when Injury healed another way) and drops the body
-// once nothing on it needs care.
+// woundAnimalBody deals dmg of kind to animal body b on parts picked by
+// coverage with the medical stream, as woundBody does a colonist's: a part
+// whose loss would kill (the head, brain, heart, torso, the last lung:
+// body.LossKills) is never taken off by a hit, the rest spills to the
+// next pick; other parts (a leg, a wing, an eye) may be lost. What no
+// part takes lands on the root (the torso, a snake's body).
+func (g *Game) woundAnimalBody(b *body.Body, dmg int, kind body.WoundKind, now uint64) {
+	rng := g.stream(streamMedical)
+	left := dmg
+	for try := 0; left > 0 && try < maxSpill; try++ {
+		drawn := -1
+		roll := func(n int) int { // one draw, replayed so Hurt picks the same part
+			if drawn < 0 {
+				drawn = rng.IntN(n)
+			}
+			return drawn
+		}
+		p, ok := b.PickPart(roll)
+		if !ok {
+			break
+		}
+		hit := left
+		if room := b.PartDef(p).MaxHP - partDmg(b, p) - 1; hit > room && b.LossKills(p) {
+			if room <= 0 {
+				continue
+			}
+			hit = room
+		}
+		before := b.Damage()
+		b.Hurt(roll, hit, kind, now)
+		left -= b.Damage() - before
+	}
+	if left > 0 {
+		b.Wounds = append(b.Wounds, body.Wound{Part: b.Root(), Dmg: left, Kind: kind, At: now, Size: int32(left)})
+	}
+}
+
+// woundDmg is the damage of b's open wounds (scars excluded).
+func woundDmg(b *body.Body) int {
+	n := 0
+	for _, w := range b.Wounds {
+		if !w.Permanent {
+			n += w.Dmg
+		}
+	}
+	return n
+}
+
+// reconcileAnimalBody keeps a's open wounds within its Injury (trimming
+// the smallest when Injury healed another way) and drops the body once
+// nothing on it needs care and no part is lost (a lost leg stays lost:
+// MED-13). Lost parts are not wounds: they do not count against Injury.
 func reconcileAnimalBody(a *animal.State) {
 	b := a.Body
 	if b == nil {
 		return
 	}
-	if d := b.Damage(); d > a.Injury {
+	if d := woundDmg(b); d > a.Injury {
 		trimOpen(b, d-max(a.Injury, 0)) // body.go
 	}
-	if !needsCare(b) { // patients.go
+	if !needsCare(b) && b.Missing == 0 { // patients.go
 		a.Body = nil
 	}
+}
+
+// animalPatient reports an animal the hourly medical step must walk: it
+// has a body that needs care (patients.go). A body kept only for its
+// lost parts needs none.
+func animalPatient(a *animal.State) bool { return a.Body != nil && needsCare(a.Body) }
+
+// migrateAnimalBodies gives every animal body saved before MED-13 (the
+// humanlike model with no Scale: every wound on one virtual part) its
+// species' anatomy, moving its wounds and conditions to the root part
+// (the torso, a snake's body, an insect's thorax). Run once on load.
+func (g *Game) migrateAnimalBodies() {
+	for _, id := range g.animalIDs {
+		a := g.animals.Ref(id)
+		if a == nil || a.Body == nil || a.Body.Scale != 0 || a.Body.Anatomy != body.Humanlike {
+			continue
+		}
+		migrateAnimalBody(a)
+	}
+}
+
+// migrateAnimalBody is migrateAnimalBodies on one animal.
+func migrateAnimalBody(a *animal.State) {
+	old := a.Body
+	nb := newAnimalBody(a.Species)
+	root := nb.Root()
+	nb.Wounds, nb.Conds = old.Wounds, old.Conds
+	nb.BloodLoss, nb.BloodStage = old.BloodLoss, old.BloodStage
+	for i := range nb.Wounds {
+		nb.Wounds[i].Part = root
+	}
+	for i := range nb.Conds {
+		nb.Conds[i].Part = root
+	}
+	a.Body = nb
 }
 
 // animalTendDue reports animal id (state a) with something a tend would
@@ -210,9 +308,9 @@ func (g *Game) stepAnimalBody(id entity.EntityID, a *animal.State, now uint64) b
 	if lyingDown(*a) {
 		lying = body.LieGround
 	}
-	before := b.Damage()
+	before := woundDmg(b)
 	b.HealHour(noScarRoll, lying)
-	a.Injury = max(0, a.Injury-(before-b.Damage()))
+	a.Injury = max(0, a.Injury-(before-woundDmg(b)))
 	reconcileAnimalBody(a)
 	g.checkAnimalDowned(id, a, now)
 	return false
@@ -301,8 +399,8 @@ func (g *Game) downedThink(id entity.EntityID, a *animal.State, now uint64) bool
 	return true
 }
 
-// noScarRoll is the scar roll animal healing passes: never a scar (an
-// animal's one virtual part has nothing to scar).
+// noScarRoll is the scar roll animal healing passes: never a scar
+// (animals heal clean; it keeps healing free of random draws).
 func noScarRoll(int) int { return 1 << 20 }
 
 // animalMedicalDeath kills animal id (state a) of its wounds, blood loss
@@ -333,7 +431,7 @@ func (g *Game) rollAnimalInfections(id entity.EntityID, a *animal.State, b *body
 		if p <= 0 || int32(g.stream(streamMedical).IntN(1000)) >= p {
 			continue
 		}
-		if b.AddCond(body.Condition{Kind: body.CondInfection, Part: animalPart, Sev: infection.Onset, Since: now}) {
+		if b.AddCond(body.Condition{Kind: body.CondInfection, Part: w.Part, Sev: infection.Onset, Since: now}) {
 			g.logEvent(id, logEntry{Kind: logInfected})
 			if a.Tame {
 				pos, _ := g.positions.Get(id)
@@ -378,15 +476,15 @@ func (g *Game) stepAnimalConds(id entity.EntityID, a *animal.State, b *body.Body
 
 // ---- the animal patients index ----
 
-// animalPatientIDs is the sorted ids of animals with a body, built from
-// the animals on first use (a new game, or after a load reset the care
-// state).
+// animalPatientIDs is the sorted ids of animals with a body that needs
+// care (animalPatient), built from the animals on first use (a new game,
+// or after a load reset the care state).
 func (g *Game) animalPatientIDs() []entity.EntityID {
 	c := &g.care
 	if !c.animalIdxOK {
 		c.animalPatients = c.animalPatients[:0]
 		for _, id := range g.animalIDs {
-			if a := g.animals.Ref(id); a != nil && a.Body != nil {
+			if a := g.animals.Ref(id); a != nil && animalPatient(a) {
 				c.animalPatients = append(c.animalPatients, id)
 			}
 		}
@@ -405,12 +503,12 @@ func (g *Game) markAnimalPatient(id entity.EntityID) {
 }
 
 // sweepAnimalPatients drops every indexed animal that is gone or has no
-// body left.
+// body needing care left.
 func (g *Game) sweepAnimalPatients() {
 	ids := g.animalPatientIDs()
 	kept := ids[:0]
 	for _, id := range ids {
-		if a := g.animals.Ref(id); a != nil && a.Body != nil {
+		if a := g.animals.Ref(id); a != nil && animalPatient(a) {
 			kept = append(kept, id)
 		}
 	}
@@ -420,6 +518,34 @@ func (g *Game) sweepAnimalPatients() {
 
 // ---- the read model ----
 
+// AnimalPartView is one hurt or lost part of an animal (MED-13): its
+// label ("front left leg"), hit points left of MaxHP, lost, and bleeding
+// (an open wound, or a fresh stump).
+type AnimalPartView struct {
+	Label     string
+	HP, MaxHP int
+	Missing   bool
+	Bleeding  bool
+}
+
+// animalParts lists body b's hurt and lost parts in part order; a lost
+// part's children go with it.
+func animalParts(b *body.Body) []AnimalPartView {
+	var out []AnimalPartView
+	for _, ps := range b.Parts() {
+		if ps.Missing {
+			if par := b.PartDef(ps.Part).Parent; par != ps.Part && b.PartMissing(par) {
+				continue
+			}
+		} else if ps.HP >= ps.MaxHP {
+			continue
+		}
+		out = append(out, AnimalPartView{Label: ps.Label, HP: ps.HP, MaxHP: ps.MaxHP, Missing: ps.Missing,
+			Bleeding: b.PartBleedPerDay(ps.Part) > 0})
+	}
+	return out
+}
+
 // fillAnimalHealth fills an animal view's health block (MED-09): the
 // headline, bleeding, blood loss, the worst infection, whether a tend is
 // due, and the care level.
@@ -427,6 +553,7 @@ func (g *Game) fillAnimalHealth(av *AnimalView, id entity.EntityID, a animal.Sta
 	av.CareLevel = uint8(g.careOf(id)) // care.go
 	av.BleedDeathHours = -1
 	av.HealthState = "Healthy"
+	av.MovingPct = 100
 	if a.Injury > 0 {
 		av.HealthState = "Injured"
 	}
@@ -435,6 +562,8 @@ func (g *Game) fillAnimalHealth(av *AnimalView, id entity.EntityID, a animal.Sta
 		av.NeedsTend = a.Tame && a.Injury > 0 && !g.tended(id)
 		return
 	}
+	av.Parts = animalParts(b)
+	av.MovingPct = int(b.Capacity(body.Moving)) / 10
 	av.NeedsTend = a.Tame && b.TendDue(now)
 	av.BleedPerDay = int(animalBleedPerDay(b, a.Species))
 	av.BleedDeathHours = animalBleedDeathHours(b, a.Species)

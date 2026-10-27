@@ -549,6 +549,7 @@ func Load(r io.Reader) (*Game, SaveInfo, error) {
 	g.reserve = reservation.Import(s.Claims)
 	g.pending = s.Pending
 	g.animalIDs, g.animals = s.AnimalIDs, importStore(s.Animals)
+	g.migrateAnimalBodies() // animal_health.go (MED-13): one-part bodies get their anatomy
 	g.traces, g.wild = s.Traces, s.Wild
 	g.wl = s.Wildlife
 	setMap(&g.mines, s.Mines)

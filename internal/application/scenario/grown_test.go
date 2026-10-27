@@ -131,7 +131,13 @@ func TestGrownGolden(t *testing.T) {
 	// two new projects (Sentry guns, Radio relay); with them left
 	// unfinished the hash is the previous pin (925a9872), so behaviour is
 	// unchanged; stable over -count=2.
-	const want uint64 = 0x960cb818b7a41587
+	// Re-pinned (MED-13 animal anatomy): a hurt animal's hits land on its
+	// species' parts (an extra medical-stream draw per hit), pain and lost
+	// legs slow it. A dump of pawns, animals and messages every 100 ticks
+	// matches the previous pin's run (960cb818) through tick 1000, the
+	// first wolf wound included; from there the fight around the wounded
+	// wolves differs. Stable over -count=2.
+	const want uint64 = 0xf2889f4a11cbdce0
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)
