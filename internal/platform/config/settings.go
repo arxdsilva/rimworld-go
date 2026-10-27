@@ -82,6 +82,11 @@ type Graphics struct {
 	Grass    string   `json:"grass"`
 	Detected string   `json:"detected,omitempty"`
 	Chosen   []string `json:"chosen,omitempty"`
+	// PERF-002: RenderScale is the share of the physical pixels the map
+	// draws at on a high-density screen (one of RenderScales; the HUD and
+	// text stay native), and PerfOverlay shows the in-game frame-rate box.
+	RenderScale float64 `json:"render_scale,omitempty"`
+	PerfOverlay bool    `json:"perf_overlay,omitempty"`
 }
 
 // AutosaveChoices are the autosave intervals in in-game days (0 = off).
@@ -172,7 +177,7 @@ func Defaults() Settings {
 		Version: SettingsVersion,
 		Audio:   Audio{Master: 80, Music: 60, Effects: 80, Ambience: 70, UI: 70, MuteUnfocused: true},
 		Graphics: Graphics{VSync: true, Effects: EffectsFull, HiDPI: true, Quality: QualityHigh,
-			Shadows: true, Lighting: true, Water: WaterAnimated, Grass: GrassFull},
+			Shadows: true, Lighting: true, Water: WaterAnimated, Grass: GrassFull, RenderScale: 1},
 		Gameplay:      Gameplay{PauseOnThreat: true, AutosaveDays: 1, PanSpeed: 100, ShowLearningHelper: true, ShowColonistBar: true},
 		Accessibility: Accessibility{UIScale: 100, UIScaleAuto: true},
 	}

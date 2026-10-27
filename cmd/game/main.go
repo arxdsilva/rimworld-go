@@ -59,11 +59,16 @@ func main() {
 	fpsProbe := flag.Int("fpsprobe", 0, "dev: run the colony for this many seconds at -capture-speed (2 = 3 ticks/frame) and -capture-zoom, log frame stats and quit")
 	hidpi := flag.Bool("hidpi", true, "dev: render at the screen's true resolution; overrides the Graphics setting for this run without saving it")
 	graphics := flag.String("graphics", "", "dev: apply this graphics tier (high, medium, low) for this run without saving it, captures and -fpsprobe included")
+	vsync := flag.Bool("vsync", true, "dev: wait for the display's refresh; -vsync=false uncaps the frame rate for -fpsprobe (overrides the Graphics setting for this run without saving it)")
+	renderScale := flag.Float64("render-scale", 0, "dev: draw the map at this share of the physical pixels (1, 0.75 or 0.5; PERF-002) for this run without saving it; 0 = the Graphics setting")
 	flag.Parse()
-	var hidpiOverride *bool
+	var hidpiOverride, vsyncOverride *bool
 	flag.Visit(func(f *flag.Flag) {
-		if f.Name == "hidpi" {
+		switch f.Name {
+		case "hidpi":
 			hidpiOverride = hidpi
+		case "vsync":
+			vsyncOverride = vsync
 		}
 	})
 	probe := fpsProbeOf(*fpsProbe, *captureZoom, *captureSpeed)
@@ -99,7 +104,7 @@ func main() {
 		Version:      version,
 		Capture:      shot,
 		Saves:        saveHooks(),
-		Settings:     settingsHooks(shot != nil, hidpiOverride, *graphics),
+		Settings:     settingsHooks(shot != nil, devGraphics{hidpi: hidpiOverride, vsync: vsyncOverride, renderScale: *renderScale, tier: *graphics}),
 		Scenarios:    scenarioStore(shot != nil),
 		FPSProbe:     probe,
 		NewSimBuilder: func(ng uiadapter.NewGame) (uiadapter.SimBuilder, error) {
@@ -468,13 +473,30 @@ func openSound(off bool) *ebitenaudio.Engine {
 	return snd
 }
 
+// devGraphics are the dev flags that override the Graphics settings for
+// one run: -hidpi and -vsync when given, -render-scale when not 0, and
+// the -graphics tier when not "".
+type devGraphics struct {
+	hidpi, vsync *bool
+	renderScale  float64
+	tier         string
+}
+
+func (d devGraphics) any() bool {
+	return d.hidpi != nil || d.vsync != nil || d.renderScale != 0 || d.tier != ""
+}
+
 // settingsHooks wires the Options to the per-user settings file. Captures
 // get none, so screenshots always use the default settings.
-// A non-nil hidpi (the dev -hidpi flag) overrides Graphics.HiDPI for this
-// run; settings are then not saved, so the override never persists.
-func settingsHooks(capturing bool, hidpi *bool, tier string) uiadapter.SettingsHooks {
+// A dev override (devGraphics) applies to Graphics for this run; settings
+// are then not saved, so the override never persists.
+func settingsHooks(capturing bool, dev devGraphics) uiadapter.SettingsHooks {
+	tier := dev.tier
 	if tier != "" && !slices.Contains([]string{config.QualityHigh, config.QualityMedium, config.QualityLow}, tier) {
 		log.Fatalf("-graphics %q: want high, medium or low", tier)
+	}
+	if dev.renderScale != 0 && !slices.Contains(config.RenderScales, dev.renderScale) {
+		log.Fatalf("-render-scale %g: want one of %v", dev.renderScale, config.RenderScales)
 	}
 	hooks := uiadapter.SettingsHooks{} // captures, or no settings folder: the defaults
 	if !capturing {
@@ -484,7 +506,7 @@ func settingsHooks(capturing bool, hidpi *bool, tier string) uiadapter.SettingsH
 			hooks = uiadapter.SettingsHooks{Load: store.Load, Save: store.Save}
 		}
 	}
-	if hidpi == nil && tier == "" {
+	if !dev.any() {
 		return hooks
 	}
 	// A developer override applies for this run only: no Save, so nothing
@@ -500,8 +522,14 @@ func settingsHooks(capturing bool, hidpi *bool, tier string) uiadapter.SettingsH
 			s.Graphics.ApplyTier(tier, 1)
 			s.Graphics.Detected = tier
 		}
-		if hidpi != nil {
-			s.Graphics.HiDPI = *hidpi
+		if dev.hidpi != nil {
+			s.Graphics.HiDPI = *dev.hidpi
+		}
+		if dev.vsync != nil {
+			s.Graphics.VSync = *dev.vsync
+		}
+		if dev.renderScale != 0 {
+			s.Graphics.RenderScale = dev.renderScale
 		}
 		return s, err
 	}}

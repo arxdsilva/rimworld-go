@@ -34,6 +34,10 @@ const (
 // GrassLevels is the Grass row's cycle.
 var GrassLevels = []string{GrassFull, GrassReduced, GrassSparse}
 
+// RenderScales are the World detail row's cycle (PERF-002): the share of
+// the physical pixels the map draws at. 1 is every pixel.
+var RenderScales = []float64{1, 0.75, 0.5}
+
 // GraphicsRows are the rows a preset sets, by their Chosen key.
 var GraphicsRows = []string{"effects", "shadows", "lighting", "water", "grass", "hidpi", "vsync"}
 
@@ -145,6 +149,9 @@ func (g Graphics) normalizeGraphics(d Graphics) Graphics {
 	}
 	if !slices.Contains(GrassLevels, g.Grass) {
 		g.Grass = d.Grass
+	}
+	if !slices.Contains(RenderScales, g.RenderScale) { // 0: a file from before PERF-002
+		g.RenderScale = d.RenderScale
 	}
 	var chosen []string
 	for _, k := range g.Chosen {

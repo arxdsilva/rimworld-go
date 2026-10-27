@@ -110,6 +110,10 @@ type App struct {
 	hst hudStates
 	// fps is the dev frame-rate probe (fps_probe.go).
 	fps fpsProbeState
+	// perf is the always-on frame timing behind the performance overlay
+	// and debt the Update time budget's carried ticks (PERF-002).
+	perf perfClock
+	debt tickDebt
 	// alerts memoises currentAlerts per update (alerts.go).
 	alerts alertsMemo
 	// ui is the widget kit's state (NG-1 §1.4, ui_state.go).
@@ -294,6 +298,8 @@ func (a *App) Update() error {
 		return ebiten.Termination
 	}
 	defer a.fpsProbeAfterUpdate()
+	a.perfBeginUpdate() // perf_stats.go: the overlay's timing (PERF-002)
+	defer a.perfEndUpdate()
 	if a.handleWindowClose() { // commitment: save before the window closes (saves.go)
 		return ebiten.Termination
 	}
@@ -788,8 +794,9 @@ func (a *App) dropSession() {
 // Draw paints the current full screen and any overlay.
 func (a *App) Draw(screen *ebiten.Image) {
 	defer a.fpsProbeDraw(time.Now())
-	defer a.capBackgroundDraw() // background.go: ~20 fps while running in the background
-	a.syncUIScale()             // ui_scale.go: the canvas and the font draw at this scale
+	defer a.capBackgroundDraw()  // background.go: ~20 fps while running in the background
+	defer a.perfEndDraw(a.now()) // perf_stats.go: runs before the throttle sleeps (PERF-002)
+	a.syncUIScale()              // ui_scale.go: the canvas and the font draw at this scale
 	a.setPhysical(screen.Bounds().Dx(), screen.Bounds().Dy())
 	sw, sh := a.sw, a.sh // logical
 
@@ -825,6 +832,7 @@ func (a *App) Draw(screen *ebiten.Image) {
 			a.renderer.drawMinimap(screen, colonyViewport(sw, sh), a.mapViewport()) // minimap.go: big maps only
 			a.drawColonyHUD(screen, sw, sh)
 		}
+		a.drawPerfOverlay(screen, sw, sh) // perf_overlay.go: also with the UI hidden (PERF-002)
 		if a.nav.overlay() == overlayPause {
 			a.drawPause(screen, sw, sh)
 		}

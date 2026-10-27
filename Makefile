@@ -33,6 +33,11 @@ lint:
 agent-budget:  ## how many parallel agents this machine's free RAM holds (PARALLEL_WORK §1)
 	@go run ./cmd/rambudget
 
+# $(TAG) names the log (bin/fps-$(TAG).log); RENDER_SCALE=0.75 overrides the map's render scale.
+.PHONY: fps
+fps:  ## uncapped frame-rate probe of the grown 500x500 colony at 3x, zoom 0.1 and 0.8 (PERF-002); run it alone
+	@scripts/fpsprobe.sh $(or $(TAG),$(shell git rev-parse --short HEAD)) $(or $(SECONDS),60)
+
 .PHONY: test
 test: test-unit
 

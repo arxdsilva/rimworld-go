@@ -107,6 +107,7 @@ type hudLayout struct {
 
 	Resources rect
 	Messages  rect
+	Perf      rect // the performance overlay (perf_overlay.go, PERF-002); empty when off
 
 	HintX, HintBottom float32 // disabled-reason hints and toasts sit above this
 }
@@ -332,7 +333,7 @@ func boundsOf(rs []rect) rect {
 func (l hudLayout) chrome() []rect {
 	out := make([]rect, 0, 16+len(l.GridCells))
 	for _, r := range []rect{l.Tabs, l.Pane, l.PaneTabs, l.Expanded, l.ArchCats, l.ArchDesc, l.Window,
-		l.Global, l.Letters, l.Learn, l.Alerts, l.Bar, l.Resources, l.Messages} {
+		l.Global, l.Letters, l.Learn, l.Alerts, l.Bar, l.Resources, l.Messages, l.Perf} {
 		if !r.empty() {
 			out = append(out, r)
 		}
