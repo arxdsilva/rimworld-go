@@ -251,6 +251,16 @@ open a window. Existing renderer unit tests stay headless.
   over its metadata `light_radius`, stays in its room or, outdoors, in its
   line of sight, and its direction is packed per tile into the lamp vertex
   value (`light_lamp.go`), so batch builders pass it through unchanged.
+  Never interpolate packed values between vertices: the ground bake
+  (`drawBaked`) writes plain levels per corner (`cornerRow`, the mean
+  of the open tiles around it) and merges a run only when all its corners
+  match; live ground planes (terrain tiles and edges, floors) draw through
+  `drawLitGround`, which writes the same field per vertex
+  (`lightGrid.groundLevel`); a sprite passes its foot's world position to
+  `drawLit`, which lights it by continuous distance to the dominant lamp
+  (`lightGrid.atF`).
+- Weather dims daylight by `weather.SunFactor` (`weatherSun`), the factor
+  solar output uses; don't keep a renderer-only table.
 - Zones (PLAY-020): a zone is the last selection candidate on its cell, and
   its label selects it (`zone_select.go`); its pane and commands are in
   `cmds_zone.go`, the Expand and Shrink tools in `zone_tools.go` (state on

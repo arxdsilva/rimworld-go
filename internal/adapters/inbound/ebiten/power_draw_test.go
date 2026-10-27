@@ -318,7 +318,7 @@ func pdArt() *artCatalog {
 	}
 	for _, k := range []string{"power/heater", "power/heater_glow", "power/wood_fired_generator", "power/wood_fired_generator_glow",
 		"power/geothermal_generator", "power/geothermal_generator_glow", "power/power_switch_on", "power/power_switch_off",
-		"furniture/lamp_standing", "effect/steam_puff_0", "effect/steam_puff_1", "effect/steam_puff_2", "effect/steam_puff_3",
+		"furniture/lamp_standing", "furniture/lamp_standing_glow", "effect/steam_puff_0", "effect/steam_puff_1", "effect/steam_puff_2", "effect/steam_puff_3",
 		noPowerIcon, "structure/steam_vent"} {
 		tile(k, [2]int{160, 216}, pt{16, 72}, nil)
 	}
@@ -467,6 +467,30 @@ func TestGlowOnlyWhilePowered(t *testing.T) {
 	r.lod.baking = false
 	if len(*got) != 0 {
 		t.Fatalf("a bake drew power parts: %v", *got)
+	}
+}
+
+// TestUnpoweredLampDrawsNoGlow: the standing lamp's bulb is plain glass in
+// its sprite; the lit bulb is the glow layer, drawn only while the lamp
+// has power.
+func TestUnpoweredLampDrawsNoGlow(t *testing.T) {
+	for _, c := range []struct {
+		name string
+		b    game.BuildingView
+		glow bool
+	}{
+		{"unpowered lamp", game.BuildingView{Kind: "lamp", PowerRole: "consumer", NoPowerReason: game.NoPowerNotConnected}, false},
+		{"switched-off lamp", game.BuildingView{Kind: "lamp", PowerRole: "consumer", NoPowerReason: game.NoPowerSwitchedOff}, false},
+		{"powered lamp", game.BuildingView{Kind: "lamp", PowerRole: "consumer", Powered: true}, true},
+	} {
+		c.b.X, c.b.Y, c.b.W, c.b.H, c.b.ID = 4, 4, 1, 1, 7
+		w := game.WorldView{Buildings: []game.BuildingView{c.b}}
+		r, got := pdRenderer(t, w)
+		r.drawBuildingObj(ebiten.NewImage(640, 400), &w.Buildings[0], r.tilePx(), 640, 400)
+		lit := pdHas(*got, "glow furniture/lamp_standing_glow")
+		if lit != c.glow || pdCount(*got, "glow ") != map[bool]int{false: 0, true: 1}[c.glow] {
+			t.Errorf("%s: drew %v, want lit bulb %v", c.name, *got, c.glow)
+		}
 	}
 }
 

@@ -147,7 +147,11 @@ func (r *Renderer) drawSpriteScaled(screen *ebiten.Image, key string, tint color
 	op.GeoM.Translate(x, y)
 	op.Filter = ebiten.FilterLinear
 	if !strings.HasPrefix(key, "overlay/") { // zones and markers stay unlit
-		r.drawLit(screen, img, op.GeoM, cs, int(math.Floor(wx)), int(math.Floor(wy)))
+		if isGroundKey(key) { // terrain edges: the lamp light ramps like the tile under them
+			r.drawLitGround(screen, img, op.GeoM, cs, wx, wy)
+			return
+		}
+		r.drawLit(screen, img, op.GeoM, cs, wx, wy)
 		return
 	}
 	if cs != noCS {
@@ -813,6 +817,7 @@ const faceScarSouth = "pawn/face_scar_south"
 
 // drawTile draws an opaque, tileable 1x1 sprite snapped to whole pixels
 // with a 1 px overlap, so fractional zoom never shows seams between tiles.
+// It is ground (terrain, floors, water): lit by drawLitGround.
 func (r *Renderer) drawTile(screen *ebiten.Image, key string, wx, wy, tile float64, sw, sh int, cs colorScale) {
 	sx, sy := r.worldToScreenF(wx, wy)
 	x0, y0 := math.Floor(float64(sx)), math.Floor(float64(sy))
@@ -828,7 +833,7 @@ func (r *Renderer) drawTile(screen *ebiten.Image, key string, wx, wy, tile float
 	geo := ebiten.GeoM{}
 	geo.Scale(k, k)
 	geo.Translate(x0, y0)
-	r.drawLit(screen, img, geo, cs, int(math.Floor(wx)), int(math.Floor(wy)))
+	r.drawLitGround(screen, img, geo, cs, wx, wy)
 }
 
 // terrainPriority: a higher index draws its soft edge over lower ones

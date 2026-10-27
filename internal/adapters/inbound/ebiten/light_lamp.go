@@ -180,11 +180,17 @@ func (g *lightGrid) sees(rg []int, x0, y0, x1, y1 int) bool {
 // toward source k (the dominant lamp, lampLvl of the light) scaled by the
 // lamp's share of the level, so a campfire outshining it flattens it.
 func (g *lightGrid) pack(x, y int, level, lampLvl float32, k int) float32 {
+	return g.packAt(float64(x), float64(y), level, lampLvl, k)
+}
+
+// packAt is pack at a continuous point (fx, fy) in tile coordinates (a
+// sprite's foot, lightGrid.atF).
+func (g *lightGrid) packAt(fx, fy float64, level, lampLvl float32, k int) float32 {
 	if k < 0 || lampLvl <= 0 || level <= 0 {
 		return level
 	}
 	s := &g.srcs[k]
-	hx, hy := float64(s.X-x), 0.5*float64(s.Y-y) // y foreshortened like lightDir
+	hx, hy := float64(s.X)-fx, 0.5*(float64(s.Y)-fy) // y foreshortened like lightDir
 	h := math.Hypot(hx, hy)
 	if h == 0 {
 		return level

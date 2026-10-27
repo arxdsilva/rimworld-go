@@ -91,7 +91,7 @@ func (r *Renderer) drawSpritePose(screen *ebiten.Image, key string, tint color.N
 		}
 		screen.DrawImage(img, op)
 	} else {
-		r.drawLit(screen, img, geo, cs, int(math.Floor(wx)), int(math.Floor(wy)))
+		r.drawLit(screen, img, geo, cs, wx, wy)
 	}
 	if ps.flash > 0 {
 		f := ps.flash

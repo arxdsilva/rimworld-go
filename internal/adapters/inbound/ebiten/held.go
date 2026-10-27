@@ -242,7 +242,7 @@ func (r *Renderer) drawHeld(screen *ebiten.Image, rig heldRig, h heldItem, wx, w
 		cs = h.cs
 	}
 	if img := r.art.image(pl.key, color.NRGBA{}); img != nil {
-		r.drawLit(screen, img, pl.g, cs, int(math.Floor(wx)), int(math.Floor(wy)))
+		r.drawLit(screen, img, pl.g, cs, wx, wy)
 	}
 }
 

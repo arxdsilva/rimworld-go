@@ -12,6 +12,7 @@ import (
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/world/roof"
 	"rimworld-go/internal/domain/world/room"
+	"rimworld-go/internal/domain/world/weather"
 )
 
 // Dynamic light (ART §6.1): a sun that rises in the east, crosses the
@@ -116,20 +117,11 @@ var lightKeys = [...]lightKey{
 	{24, [3]float32{}, [3]float32{0.19, 0.21, 0.29}, [3]float32{0.12, 0.12, 0.14}},
 }
 
-// weatherSun is how much of the sun each sky lets through at full
-// intensity.
-func weatherSun(weather string) float64 {
-	switch weather {
-	case "cloudy":
-		return 0.75
-	case "rain":
-		return 0.55
-	case "storm", "snow":
-		return 0.5
-	case "blizzard":
-		return 0.4
-	}
-	return 1
+// weatherSun is the share of the sun (0..1) the sky named sky lets
+// through at intensity: weather.SunFactor, the factor solar panels make
+// power by (game/power_gen.go), so a dim day and a weak panel agree.
+func weatherSun(sky string, intensity float64) float64 {
+	return float64(weather.SunFactor(weather.KindOf(sky), intensity)) / 1000
 }
 
 // seasonMaxEl is the sun's noon elevation (degrees) on dayOfYear.
@@ -203,8 +195,8 @@ func lightAt(hour float64, dayOfYear int, weather string, intensity float64) lig
 	ls.LampSky = min(max((lum3(ls.SkyAmbient)-lampSkyLo)/(lampSkyHi-lampSkyLo), 0), 1)
 
 	clear := float32(1) // how much of the light reaches the ground through weather
-	if f := weatherSun(weather); f < 1 {
-		d := float32((1 - f) * (0.5 + 0.5*min(max(intensity, 0), 1)))
+	if f := weatherSun(weather, intensity); f < 1 {
+		d := float32(1 - f)
 		clear = 1 - d
 		ls.SunColor = scale3(ls.SunColor, 1-d)
 		ls.MoonColor = scale3(ls.MoonColor, 1-d)
@@ -316,6 +308,8 @@ type litRenderer struct {
 	// onDraw, when set (tests), sees every lit draw's image and its
 	// Custom3 blood value.
 	onDraw func(img *ebiten.Image, blood float32)
+	// ground marks the next drawLit as a ground plane (drawLitGround).
+	ground bool
 	// calls counts world draw calls (lit sprites, water tiles, baked
 	// chunk and map pages) for the draw benchmarks; it only ever grows.
 	calls int
@@ -340,6 +334,11 @@ type lightGrid struct {
 	// lamp is the packed lamp value per tile (light_lamp.go): the light
 	// level, and the direction toward the dominant lamp.
 	lamp []float32
+	// dom is the dominant lamp's source index per tile (-1: none) and
+	// other the tile's light from campfires and burning cells, so a
+	// sprite's lamp light can follow its foot between tile centres (atF).
+	dom   []int32
+	other []float32
 	// srcs are the light sources (light_sources.go) and srcRoom the room
 	// id at each source's tile (-1 outdoors).
 	srcs    []lightSource
@@ -435,6 +434,8 @@ func (g *lightGrid) sync(w *game.WorldView) {
 		g.gen++
 		g.sky = litGrow(g.sky, n)
 		g.lamp = litGrow(g.lamp, n)
+		g.dom = litGrow(g.dom, n)
+		g.other = litGrow(g.other, n)
 		if cap(g.built) < nc {
 			g.built = make([]uint64, nc)
 		}
@@ -460,9 +461,10 @@ func (g *lightGrid) selectNear(x0, y0, x1, y1 int) {
 }
 
 // base is tile (x, y)'s own light: sky 0 under a built or natural roof,
-// else 1; level the brightest of its lamps (lampAt), burning campfires (up
-// to 1 − dist/3.5) and burning cells; lampLvl and k the dominant lamp's
-// light and source index (-1: none). It reads only g.near.
+// else 1; other the brightest of burning campfires (up to 1 − dist/3.5)
+// and burning cells; lampLvl and k the brightest lamp's light (lampAt) and
+// source index (-1: none). The tile's level is max(other, lampLvl). It
+// reads only g.near.
 func (g *lightGrid) base(w *game.WorldView, x, y int) (sky, level, lampLvl float32, k int) {
 	const roofed = uint8(roof.Built | roof.Natural)
 	i := y*g.w + x
@@ -490,7 +492,7 @@ func (g *lightGrid) base(w *game.WorldView, x, y int) (sky, level, lampLvl float
 			}
 		}
 	}
-	return sky, max(level, lampLvl), lampLvl, k
+	return sky, level, lampLvl, k
 }
 
 // buildChunk fills chunk c. Boundary tiles (walls, doors and rock,
@@ -510,7 +512,8 @@ func (g *lightGrid) buildChunk(c int) {
 	for y := y0; y < y1; y++ {
 		for x := x0; x < x1; x++ {
 			i := y*g.w + x
-			sky, level, lampLvl, k := g.base(w, x, y)
+			sky, other, lampLvl, k := g.base(w, x, y)
+			level := max(other, lampLvl)
 			if walls && w.RoomGrid[i] == room.Wall {
 				// sky from the four sides; lamp also from the diagonals, so a
 				// lit room's wall corners glow with the rest of its walls
@@ -526,21 +529,22 @@ func (g *lightGrid) buildChunk(c int) {
 					if n < 4 {
 						sky = max(sky, ns)
 					}
-					level = max(level, nl)
+					level = max(level, nl, nll)
 					if nll > lampLvl {
 						lampLvl, k = nll, nk
 					}
 				}
 			}
 			g.sky[i], g.lamp[i] = sky, g.pack(x, y, level, lampLvl, k)
+			g.dom[i], g.other[i] = int32(k), other
 		}
 	}
 	g.built[c] = g.gen
 }
 
-func litGrow(s []float32, n int) []float32 {
+func litGrow[T float32 | int32](s []T, n int) []T {
 	if cap(s) < n {
-		return make([]float32, n)
+		return make([]T, n)
 	}
 	return s[:n]
 }
@@ -555,6 +559,160 @@ func (g *lightGrid) at(tx, ty int) (sky, lamp float32) {
 	}
 	i := ty*g.w + tx
 	return g.sky[i], g.lamp[i]
+}
+
+// atF is the light of a sprite whose foot is at (fx, fy) in tile
+// coordinates (tile x spans x..x+1 and the grid measures from tile to
+// tile, so a sprite anchored on its tile's corner, as buildings and
+// standing colonists are, gets the grid's value): sky and the room test
+// come from the tile under the foot, but the dominant lamp's light and
+// direction follow the continuous distance, so a colonist walking past a
+// lamp brightens and darkens smoothly instead of stepping at each tile.
+// One packed value per sprite: its direction code is never interpolated.
+// Boundary tiles (lit from their neighbours) and tiles no lamp leads keep
+// the grid's value, as does a foot exactly on a tile's corner.
+func (g *lightGrid) atF(fx, fy float64) (sky, lamp float32) {
+	tx, ty := int(math.Floor(fx)), int(math.Floor(fy))
+	sky, lamp = g.at(tx, ty)
+	if fx == float64(tx) && fy == float64(ty) || tx < 0 || ty < 0 || tx >= g.w || ty >= g.h {
+		return sky, lamp
+	}
+	i := ty*g.w + tx
+	k := int(g.dom[i])
+	if k < 0 || g.srcs[k].Kind != lightLamp || g.lampAt(k, tx, ty) <= 0 {
+		return sky, lamp
+	}
+	s := &g.srcs[k]
+	lc := lampFalloff(math.Hypot(fx-float64(s.X), fy-float64(s.Y)), s.Radius)
+	return sky, g.packAt(fx, fy, max(g.other[i], lc), lc, k)
+}
+
+// groundTile is a tile's plain lamp level as the ground's corners read it
+// (lightGrid.levelRow): kind 0 open, 1 boundary (walls, doors, rock), 2
+// off the map.
+type groundTile struct {
+	l    float32
+	kind uint8
+}
+
+// levelRow is dst refilled with tiles x0-1..x1 of row y (x1-x0+2 values),
+// each looked up once, for cornerRow.
+func (g *lightGrid) levelRow(dst []groundTile, x0, x1, y int) []groundTile {
+	dst = dst[:0]
+	if y < 0 || y >= g.h {
+		for x := x0 - 1; x <= x1; x++ {
+			dst = append(dst, groundTile{kind: 2})
+		}
+		return dst
+	}
+	rg := g.view.RoomGrid
+	walls := len(rg) >= g.w*g.h
+	for x := x0 - 1; x <= x1; x++ {
+		if x < 0 || x >= g.w {
+			dst = append(dst, groundTile{kind: 2})
+			continue
+		}
+		_, lamp := g.at(x, y)
+		t := groundTile{l: lamp}
+		if lamp >= 4 { // a packed direction: keep the level
+			t.l = lampLevel(lamp)
+		}
+		if walls && rg[y*g.w+x] == room.Wall {
+			t.kind = 1
+		}
+		dst = append(dst, t)
+	}
+	return dst
+}
+
+// cornerRow is dst refilled with the plain lamp levels at the top-left
+// corners of tiles x0..x1+1 on the line between rows above (y-1) and below
+// (y), both from levelRow over x0..x1+1. A corner is the mean of those of
+// its four tiles that are on the map and open, so the ground's light ramps
+// smoothly between tile centres but never bleeds past the far side of a
+// wall; a corner inside solid boundary takes its brightest tile.
+func cornerRow(dst []float32, above, below []groundTile) []float32 {
+	dst = dst[:0]
+	for i := 1; i < len(above); i++ {
+		var sum, peak float32
+		n := 0
+		for _, t := range [4]groundTile{above[i-1], above[i], below[i-1], below[i]} {
+			switch t.kind {
+			case 0:
+				sum += t.l
+				n++
+			case 1:
+				peak = max(peak, t.l)
+			}
+		}
+		if n > 0 {
+			peak = sum / float32(n)
+		}
+		dst = append(dst, peak)
+	}
+	return dst
+}
+
+// groundLevel is the plain lamp level of the ground at world point (px,
+// py) in tile coordinates (tile x spans x..x+1): bilinear between the
+// centres of the four tiles around it, dropping boundary (walls, doors,
+// rock) and off-map tiles and renormalising, so it never bleeds past the
+// far side of a wall; among boundary tiles only, the brightest. At a tile
+// corner it is cornerRow's value, so live ground and the bakes agree.
+func (g *lightGrid) groundLevel(px, py float64) float32 {
+	u, v := px-0.5, py-0.5
+	x0, y0 := int(math.Floor(u)), int(math.Floor(v))
+	fx, fy := float32(u-float64(x0)), float32(v-float64(y0))
+	rg := g.view.RoomGrid
+	walls := len(rg) >= g.w*g.h
+	var sum, wsum, peak float32
+	for k := 0; k < 4; k++ {
+		x, y := x0+k&1, y0+k>>1
+		wt := (1 - fx) * (1 - fy)
+		switch k {
+		case 1:
+			wt = fx * (1 - fy)
+		case 2:
+			wt = (1 - fx) * fy
+		case 3:
+			wt = fx * fy
+		}
+		if wt <= 0 || x < 0 || y < 0 || x >= g.w || y >= g.h {
+			continue
+		}
+		_, lamp := g.at(x, y)
+		l := lampLevel(lamp)
+		if walls && rg[y*g.w+x] == room.Wall {
+			peak = max(peak, l)
+			continue
+		}
+		sum += wt * l
+		wsum += wt
+	}
+	if wsum > 0 {
+		return sum / wsum
+	}
+	return peak
+}
+
+// groundLamp sets each vertex's lamp light (Custom1) to the ground's plain
+// level under it (groundLevel): a ground plane is flat, so the direction
+// adds nothing, and plain levels interpolate exactly across the quad.
+func (r *Renderer) groundLamp(vs *[4]ebiten.Vertex) {
+	g := r.syncLight()
+	tile := r.tilePx()
+	if tile <= 0 {
+		return
+	}
+	for i := range vs {
+		vs[i].Custom1 = g.groundLevel((float64(vs[i].DstX)+r.cam.offsetX)/tile, (float64(vs[i].DstY)+r.cam.offsetY)/tile)
+	}
+}
+
+// lightFoot is the light of a sprite whose foot is at world (wx, wy)
+// (lightGrid.atF).
+func (r *Renderer) lightFoot(wx, wy float64) (sky, lamp float32) {
+	return r.syncLight().atF(wx, wy)
 }
 
 // syncLight points the light grid at this frame's view (r.drawW), with
@@ -624,26 +782,27 @@ func decodeNormalMirrored(texel [4]float32, has, mirror bool) [3]float32 {
 // its normal map in it (0: none, img itself is drawn). Ground planes
 // (terrain and floors) are lit flat: they lie on the ground, and the
 // generator's bevel dome on an opaque square tile showed as a quilt of
-// pyramids, harshest under the low dawn and dusk sun.
-func (r *Renderer) litSource(img *ebiten.Image) (*ebiten.Image, float32) {
+// pyramids, harshest under the low dawn and dusk sun. ground reports one,
+// so drawLit ramps its lamp light per vertex.
+func (r *Renderer) litSource(img *ebiten.Image) (src *ebiten.Image, off float32, ground bool) {
 	if r.lit.off { // lighting off: nothing is paired, the sprite is lit flat
-		return img, 0
+		return img, 0, false
 	}
 	n := r.art.normalOf(img)
 	if n == nil {
-		return img, 0
+		return img, 0, false
 	}
 	b := img.Bounds()
-	off := float32(b.Dx() + litGap)
+	off = float32(b.Dx() + litGap)
 	if p, ok := r.lit.pairs.get(img, r.present); ok {
 		if p == img {
-			return img, 0
+			return img, 0, true
 		}
-		return p, off
+		return p, off, false
 	}
 	if r.art.groundPlane(img) {
 		r.lit.pairs.put(img, img, r.present)
-		return img, 0
+		return img, 0, true
 	}
 	p := ebiten.NewImage(2*b.Dx()+litGap, b.Dy())
 	p.DrawImage(img, nil)
@@ -651,7 +810,7 @@ func (r *Renderer) litSource(img *ebiten.Image) (*ebiten.Image, float32) {
 	op.GeoM.Translate(float64(off), 0)
 	p.DrawImage(n, op)
 	r.lit.pairs.put(img, p, r.present)
-	return p, off
+	return p, off, false
 }
 
 // The lit-pair cache is a bounded LRU: a pair image is two sprites wide,
@@ -800,12 +959,23 @@ func (l *litRenderer) syncUniforms() {
 	l.uniforms[7][0] = ls.LampSky
 }
 
+// drawLitGround is drawLit for a ground plane (terrain tiles and edges,
+// floors): flat on the ground, its lamp light ramps per vertex
+// (groundLamp) like the bakes', instead of one level per tile.
+func (r *Renderer) drawLitGround(dst, img *ebiten.Image, geo ebiten.GeoM, cs colorScale, wx, wy float64) {
+	r.lit.ground = true
+	r.drawLit(dst, img, geo, cs, wx, wy)
+}
+
 // drawLit draws a world sprite img with geo and colour scale cs, lit as
-// the ground tile (tx, ty) is (its normal map comes from the catalog; a
-// sprite without one is lit flat). Every draw uses the same shader and
+// the ground under its foot at world (wx, wy) is (lightFoot: the tile's
+// sky, lamp light by continuous distance; its normal map comes from the
+// catalog; a sprite without one is lit flat). Every draw uses the same shader and
 // uniforms; per-sprite light rides in vertex attributes, so Ebiten merges
 // consecutive draws from one atlas page into one batch.
-func (r *Renderer) drawLit(dst, img *ebiten.Image, geo ebiten.GeoM, cs colorScale, tx, ty int) {
+func (r *Renderer) drawLit(dst, img *ebiten.Image, geo ebiten.GeoM, cs colorScale, wx, wy float64) {
+	ground := r.lit.ground
+	r.lit.ground = false
 	if r.lod.baking { // a bake (lod.go): unlit albedo, lit when it is drawn
 		r.drawUnlit(dst, img, geo, cs)
 		return
@@ -834,7 +1004,7 @@ func (r *Renderer) drawLit(dst, img *ebiten.Image, geo ebiten.GeoM, cs colorScal
 		op.GeoM, op.Filter = geo, ebiten.FilterLinear
 		op.ColorScale.Reset()
 		if plain {
-			sky, lamp := r.lightTile(tx, ty)
+			sky, lamp := r.lightFoot(wx, wy)
 			k := flatLitScale(&r.lit.light, cs, sky, lamp)
 			op.ColorScale.Scale(k[0], k[1], k[2], k[3])
 		} else if cs != noCS {
@@ -843,8 +1013,9 @@ func (r *Renderer) drawLit(dst, img *ebiten.Image, geo ebiten.GeoM, cs colorScal
 		dst.DrawImage(img, op)
 		return
 	}
-	src, off := r.litSource(img)
-	sky, lamp := r.lightTile(tx, ty)
+	src, off, flat := r.litSource(img)
+	ground = ground || flat
+	sky, lamp := r.lightFoot(wx, wy)
 	b := img.Bounds()
 	sx, sy := float32(b.Min.X), float32(b.Min.Y)
 	if src != img {
@@ -853,6 +1024,9 @@ func (r *Renderer) drawLit(dst, img *ebiten.Image, geo ebiten.GeoM, cs colorScal
 	litQuad(&r.lit.verts, sx, sy, float32(b.Dx()), float32(b.Dy()), geo, cs, sky, lamp, mirrorNormalOff(off, geo))
 	for i := range r.lit.verts { // Custom3: the figure's blood (blood_draw.go), 0 for everything else
 		r.lit.verts[i].Custom3 = r.figureBlood
+	}
+	if ground { // flat on the ground: the lamp light ramps across it, as on the bakes
+		r.groundLamp(&r.lit.verts)
 	}
 	r.lit.syncUniforms()
 	r.lit.opts.Images[0] = src

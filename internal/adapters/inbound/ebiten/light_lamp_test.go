@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	ebiten "github.com/hajimehoshi/ebiten/v2"
+
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/entity"
 )
@@ -385,4 +387,138 @@ func BenchmarkLightGridLamps(b *testing.B) {
 			read()
 		}
 	})
+}
+
+// TestGroundLampLightInterpolatesAcrossTiles: the baked ground carries the
+// lamp light per vertex, each corner the plain level averaged from the
+// open tiles around it, so it ramps across a tile and agrees on every seam
+// (no step at tile edges); walls stop it at their near side; unlit runs
+// still merge into one quad.
+func TestGroundLampLightInterpolatesAcrossTiles(t *testing.T) {
+	const w, h = 30, 12
+	v := lampTestWorld(w, h)
+	for y := 2; y <= 8; y++ {
+		v.RoomGrid[y*w+9] = -2 // a free-standing wall east of the lamp
+	}
+	v.Buildings = []game.BuildingView{lampBuilding(1, 5, 5)}
+	r := New(&stubSim{w: w, h: h, world: v})
+	r.drawW = v
+	r.cam.offsetX, r.cam.offsetY = 0, 0
+	tile := r.tilePx()
+	r.drawBaked(ebiten.NewImage(64, 64), ebiten.NewImage(64, 64), 0, 0, 0, 0, 2, 0, 0, w-1, h-1)
+
+	type pos struct{ x, y int32 }
+	key := func(vx ebiten.Vertex) pos {
+		return pos{int32(math.Round(float64(vx.DstX) / tile * 8)), int32(math.Round(float64(vx.DstY) / tile * 8))}
+	}
+	at := map[pos]float32{}
+	for _, vx := range r.lod.verts {
+		if vx.Custom1 < 0 || vx.Custom1 > 1 {
+			t.Fatalf("ground vertex carries a packed lamp value %v; want a plain level", vx.Custom1)
+		}
+		k := key(vx)
+		if old, ok := at[k]; ok && old != vx.Custom1 {
+			t.Fatalf("seam at corner (%v, %v): %v and %v; the ground steps", float64(k.x)/8, float64(k.y)/8, old, vx.Custom1)
+		}
+		at[k] = vx.Custom1
+	}
+	corner := func(x, y int) float32 {
+		l, ok := at[pos{int32(x * 8), int32(y * 8)}]
+		if !ok {
+			t.Fatalf("no vertex at corner (%d, %d)", x, y)
+		}
+		return l
+	}
+	// corner (8, 5) is shared by tiles 7..8 × 4..5, all open and lit
+	want := (levelAt(r, 7, 4) + levelAt(r, 8, 4) + levelAt(r, 7, 5) + levelAt(r, 8, 5)) / 4
+	if got := corner(8, 5); math.Abs(float64(got-want)) > 1e-6 {
+		t.Fatalf("corner (8, 5) = %v, want the mean of its four tiles %v", got, want)
+	}
+	// across tile (7, 5) the light falls away from the lamp
+	if l, r := corner(7, 5), corner(8, 5); !(l > r && r > 0) {
+		t.Fatalf("tile (7, 5): west corner %v, east corner %v; want a ramp down eastward", l, r)
+	}
+	// the wall's far side (corner (10, 5): wall tiles x 9, dark tiles x 10) is dark
+	if got := corner(10, 5); got != 0 {
+		t.Fatalf("behind the wall the ground is lit %v", got)
+	}
+	if got := corner(9, 5); got <= 0 {
+		t.Fatalf("the wall's lit side is dark: %v", got)
+	}
+	// the live ground (drawLit of a ground plane) reads the same field: the
+	// bakes' corners, and each tile's own level at its centre
+	g := r.syncLight()
+	for k, l := range at {
+		if k.x%8 != 0 || k.y%8 != 0 {
+			continue
+		}
+		if got := g.groundLevel(float64(k.x/8), float64(k.y/8)); math.Abs(float64(got-l)) > 1e-6 {
+			t.Fatalf("corner (%d, %d): live ground %v, bake %v", k.x/8, k.y/8, got, l)
+		}
+	}
+	if got, want := g.groundLevel(7.5, 5.5), levelAt(r, 7, 5); math.Abs(float64(got-want)) > 1e-6 {
+		t.Fatalf("tile (7, 5)'s centre: %v, want its level %v", got, want)
+	}
+	var vs [4]ebiten.Vertex
+	var geo ebiten.GeoM
+	geo.Scale(tile/16, tile/16)
+	geo.Translate(7*tile, 5*tile)
+	litQuad(&vs, 0, 0, 16, 16, geo, noCS, 1, 0.5, 0)
+	r.groundLamp(&vs)
+	for i, c := range [4][2]int{{7, 5}, {8, 5}, {7, 6}, {8, 6}} {
+		if want := corner(c[0], c[1]); math.Abs(float64(vs[i].Custom1-want)) > 1e-6 {
+			t.Fatalf("live ground tile (7, 5) vertex %d: %v, want corner %v", i, vs[i].Custom1, want)
+		}
+	}
+	// the dark east (x ≥ 12) merges: fewer quads than tiles
+	if quads, tiles := len(r.lod.verts)/4, w*h; quads >= tiles/2 {
+		t.Fatalf("%d quads for %d tiles: unlit runs did not merge", quads, tiles)
+	}
+}
+
+// TestLampLevelContinuousAtSpriteFoot: a sprite's lamp light comes from
+// the continuous distance at its foot, so a colonist walking away from a
+// lamp dims smoothly; a sprite on its tile's corner (a building, a
+// standing colonist) gets the grid's value; the direction stays one packed
+// code per sprite, toward the lamp; a wall still stops the light.
+func TestLampLevelContinuousAtSpriteFoot(t *testing.T) {
+	t.Parallel()
+	const w, h = 20, 12
+	v := lampTestWorld(w, h)
+	for y := 2; y <= 8; y++ {
+		v.RoomGrid[y*w+12] = -2
+	}
+	v.Buildings = []game.BuildingView{lampBuilding(1, 5, 5)}
+	r := &Renderer{}
+	r.drawW = v
+	for _, c := range [][2]int{{5, 5}, {7, 5}, {8, 3}, {10, 6}} {
+		s0, l0 := r.lightTile(c[0], c[1])
+		if s1, l1 := r.lightFoot(float64(c[0]), float64(c[1])); s1 != s0 || l1 != l0 {
+			t.Fatalf("on tile %v's corner: (%v, %v), want the grid's (%v, %v)", c, s1, l1, s0, l0)
+		}
+	}
+	prev := float32(1)
+	for i := 0; i <= 50; i++ {
+		fx := 6.0 + float64(i)*0.1
+		_, lamp := r.lightFoot(fx, 5)
+		lvl, vx, vy := decodeLamp(lamp)
+		if lvl > prev || prev-lvl > 0.06 {
+			t.Fatalf("at x %.1f the level %v after %v: want a smooth fall", fx, lvl, prev)
+		}
+		if lvl > 0 && (vx >= 0 || vy != 0) {
+			t.Fatalf("at x %.1f the direction (%v, %v) does not point west to the lamp", fx, vx, vy)
+		}
+		prev = lvl
+	}
+	if a, b := levelAtF(r, 7.99, 5), levelAtF(r, 8, 5); math.Abs(float64(a-b)) > 0.01 {
+		t.Fatalf("across a tile edge %v then %v: a step", a, b)
+	}
+	if l := levelAtF(r, 13.4, 5); l != 0 {
+		t.Fatalf("behind the wall a sprite is lit %v", l)
+	}
+}
+
+func levelAtF(r *Renderer, x, y float64) float32 {
+	_, l := r.lightFoot(x, y)
+	return lampLevel(l)
 }

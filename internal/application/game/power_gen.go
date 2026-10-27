@@ -9,6 +9,7 @@ import (
 	"rimworld-go/internal/domain/world/lighting"
 	"rimworld-go/internal/domain/world/plant"
 	"rimworld-go/internal/domain/world/terrain"
+	"rimworld-go/internal/domain/world/weather"
 )
 
 // PLAY-021 generator outputs (FUELGEN owns this file): what each producer
@@ -18,7 +19,9 @@ import (
 //
 //   - wood-fired: 800 W while it holds fuel;
 //   - solar: up to 900 W following daylight (lighting.Outdoor, zero at the
-//     night floor), times the share of its footprint not roofed;
+//     night floor), times the sky's share of the sun (weather.SunFactor,
+//     the factor the renderer dims daylight by) and the share of its
+//     footprint not roofed;
 //   - wind: 250 W per unit of wind speed, at most 1100 W, times the clear
 //     share of a band beside the turbine;
 //   - geothermal: 1800 W, always.
@@ -64,13 +67,15 @@ func (g *Game) genOutput(id entity.EntityID) int {
 func permil(f float64) int { return int(math.Round(f * 1000)) }
 
 // solarOutput is the panel's output: the sun above the night floor, scaled
-// by the share of its footprint open to the sky (walls and roofs cover).
+// by the weather's share of the sun and the share of its footprint open
+// to the sky (walls and roofs cover).
 func (g *Game) solarOutput(b construction.Building) int {
 	sun := max(0, permil(float64(lighting.Outdoor(g.clock.Now())))-solarNightPermil)
 	if sun == 0 {
 		return 0
 	}
 	w := solarMaxW * sun / (1000 - solarNightPermil)
+	w = w * int(weather.SunFactor(g.weather.Kind, g.weather.Intensity)) / 1000
 	cells, _, _ := construction.Footprint(b.Kind, b.Facing, b.X, b.Y)
 	if len(cells) == 0 {
 		return 0

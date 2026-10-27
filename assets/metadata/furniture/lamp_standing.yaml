@@ -17,3 +17,4 @@ emissive: lamp_warm
 light_radius: 6
 rotatable: false
 facing: south
+glow: furniture/lamp_standing_glow

@@ -407,7 +407,9 @@ def _lamp():
     S.cyl("base", 0.5, -0.5, 0.22, 0.0, 0.06, "metal_dark", segs=20)
     S.cyl("pole", 0.5, -0.5, 0.035, 0.06, 1.25, "steel", segs=10)
     S.cyl("shade", 0.5, -0.5, 0.26, 1.18, 1.38, "metal_dark", r_top=0.16, segs=20)
-    S.cyl("bulb", 0.5, -0.5, 0.15, 1.38, 1.40, "lamp_warm", segs=20, bevel=0.0)
+    # the bulb is plain glass in the sprite; furniture/lamp_standing_glow lights
+    # it only while the lamp has power (power_draw.go drawPowerParts)
+    P.glow(S.cyl("bulb", 0.5, -0.5, 0.15, 1.38, 1.40, "glass", segs=20, bevel=0.0), "lamp_warm")
     return (1, 1), 1.40
 
 

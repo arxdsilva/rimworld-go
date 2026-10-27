@@ -8,6 +8,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
+	"rimworld-go/internal/domain/world/weather"
 )
 
 const (
@@ -148,6 +149,25 @@ func TestStormDimsSun(t *testing.T) {
 	light, hard := lightAt(12, summerDay, "storm", 0.2), lightAt(12, summerDay, "storm", 1)
 	if hard.SunColor[0] >= light.SunColor[0] {
 		t.Fatalf("a harder storm should dim more: %v vs %v", hard.SunColor, light.SunColor)
+	}
+}
+
+// TestRendererSunUsesDomainFactor: the renderer dims the sun by exactly
+// weather.SunFactor, the factor solar panels make power by.
+func TestRendererSunUsesDomainFactor(t *testing.T) {
+	t.Parallel()
+	clear := lightAt(12, summerDay, "clear", 0)
+	for k := weather.Clear; k <= weather.Blizzard; k++ {
+		for _, in := range []float64{0, 0.2, 0.6, 1} {
+			want := float64(weather.SunFactor(k, in)) / 1000
+			if got := weatherSun(k.String(), in); got != want {
+				t.Fatalf("%s at %.1f: renderer sun %.4f, domain %.4f", k, in, got, want)
+			}
+			ls := lightAt(12, summerDay, k.String(), in)
+			if d := float64(ls.SunColor[0]) - float64(clear.SunColor[0])*want; math.Abs(d) > 1e-5 {
+				t.Fatalf("%s at %.1f: sun red %.5f, want clear %.5f x %.3f", k, in, ls.SunColor[0], clear.SunColor[0], want)
+			}
+		}
 	}
 }
 
@@ -384,7 +404,7 @@ func TestDrawLitFlatAndNormalPaths(t *testing.T) {
 
 	// drawLit adds no allocation of its own over Ebiten's draw call
 	sh := r.litShader()
-	pair2, _ := r.litSource(sprite)
+	pair2, _, _ := r.litSource(sprite)
 	ebitenOnly := testing.AllocsPerRun(500, func() {
 		r.lit.opts.Images[0] = pair2
 		dst.DrawTrianglesShader32(r.lit.verts[:], litIndices[:], sh, &r.lit.opts)
@@ -416,7 +436,7 @@ func TestGroundPlanesLitFlat(t *testing.T) {
 		what string
 	}{{soil, true, "terrain"}, {floor, true, "tinted floor"}, {chair, false, "furniture"}, {tinted, false, "tinted furniture"}} {
 		for i := 0; i < 2; i++ { // built, then cached
-			src, off := r.litSource(c.img)
+			src, off, _ := r.litSource(c.img)
 			if (off == 0) != c.flat || (src == c.img) != c.flat {
 				t.Fatalf("%s (pass %d): offset %v, own image %v; want flat %v", c.what, i, off, src == c.img, c.flat)
 			}

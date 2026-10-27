@@ -77,18 +77,20 @@ type lodState struct {
 	chunks             chunkCache
 	pages              mapBake
 	// reused per-frame buffers (draw_art.go)
-	occupied, creatures map[[2]int]bool
-	planned             map[[2]int]linkFlag
-	cloth               []string // colonyCloths, once a frame
-	bakeDraws           []artDraw
-	verts               []ebiten.Vertex
-	idx                 []uint32
-	white               *ebiten.Image
-	rectOp              ebiten.DrawImageOptions // solidRect's, reused
-	baking              bool                    // drawLit draws unlit albedo (a bake)
-	bakeCast            shadowCast
-	grass               grassBatch // grass_batch.go: tuft atlas, mask, batch buffers
-	crops               cropBatch  // crop_batch.go: crop unit atlas, batches, furrows
+	occupied, creatures  map[[2]int]bool
+	planned              map[[2]int]linkFlag
+	cloth                []string // colonyCloths, once a frame
+	bakeDraws            []artDraw
+	verts                []ebiten.Vertex
+	idx                  []uint32
+	cornerTop, cornerBot []float32       // drawBaked's lamp levels at a row's tile corners
+	groundRows           [3][]groundTile // drawBaked's tile levels: the rows above and below a corner row
+	white                *ebiten.Image
+	rectOp               ebiten.DrawImageOptions // solidRect's, reused
+	baking               bool                    // drawLit draws unlit albedo (a bake)
+	bakeCast             shadowCast
+	grass                grassBatch // grass_batch.go: tuft atlas, mask, batch buffers
+	crops                cropBatch  // crop_batch.go: crop unit atlas, batches, furrows
 	// budget is how many chunk bakes this frame may still do.
 	budget int
 }
@@ -354,7 +356,12 @@ func (r *Renderer) drawPlantMark(dst *ebiten.Image, p *game.PlantView, tile floa
 // drawBaked draws tiles tx0..tx1 × ty0..ty1 (inclusive) of src, a bake at
 // bpx pixels per tile whose tile (bx, by) starts at source pixel (sx0,
 // sy0), onto screen as one lit triangle batch: a quad per tile carrying
-// that tile's sky and lamp light, lit flat like the live ground.
+// that tile's sky, lit flat like the live ground. The lamp light rides
+// per vertex: each corner gets the plain level averaged from the tiles
+// around it (cornerRow), so lamp light falls off smoothly across
+// the ground instead of stepping tile by tile. The ground is flat, so the
+// direction a packed value carries would add nothing; corners only ever
+// hold plain levels, which interpolate exactly.
 func (r *Renderer) drawBaked(screen, src *ebiten.Image, bx, by int, sx0, sy0, bpx float64, tx0, ty0, tx1, ty1 int) {
 	if tx1 < tx0 || ty1 < ty0 {
 		return
@@ -362,20 +369,34 @@ func (r *Renderer) drawBaked(screen, src *ebiten.Image, bx, by int, sx0, sy0, bp
 	l := &r.lod
 	l.verts, l.idx = l.verts[:0], l.idx[:0]
 	tile := r.tilePx()
+	g := r.syncLight()
+	rows := &l.groundRows
+	rows[0] = g.levelRow(rows[0], tx0, tx1+1, ty0-1)
+	rows[1] = g.levelRow(rows[1], tx0, tx1+1, ty0)
+	top, bot := cornerRow(l.cornerTop, rows[0], rows[1]), l.cornerBot
 	for y := ty0; y <= ty1; y++ {
+		rows[2] = g.levelRow(rows[2], tx0, tx1+1, y+1)
+		bot = cornerRow(bot, rows[1], rows[2])
+		rows[0], rows[1], rows[2] = rows[1], rows[2], rows[0]
 		sy := float32(float64(y)*tile - r.cam.offsetY)
 		sy1 := float32(float64(y+1)*tile - r.cam.offsetY)
 		vy := float32(sy0 + float64(y-by)*bpx)
 		for x := tx0; x <= tx1; x++ {
-			// a run of tiles lit alike is one quad (open ground under the
-			// sky mostly is): the same pixels, far fewer vertices
-			sky, lamp := r.lightTile(x, y)
+			// a run of tiles lit alike, all its corners at one lamp level,
+			// is one quad (open ground under the sky mostly is): the same
+			// pixels, far fewer vertices
+			sky, _ := g.at(x, y)
+			c := x - tx0
+			lv := [4]float32{top[c], top[c+1], bot[c], bot[c+1]}
 			xe := x
-			for xe < tx1 {
-				if s, lm := r.lightTile(xe+1, y); s != sky || lm != lamp {
-					break
+			if lv[0] == lv[1] && lv[0] == lv[2] && lv[0] == lv[3] {
+				for xe < tx1 {
+					e := xe + 2 - tx0
+					if s, _ := g.at(xe+1, y); s != sky || top[e] != lv[0] || bot[e] != lv[0] {
+						break
+					}
+					xe++
 				}
-				xe++
 			}
 			sx := float32(float64(x)*tile - r.cam.offsetX)
 			sx1 := float32(float64(xe+1)*tile - r.cam.offsetX)
@@ -393,11 +414,13 @@ func (r *Renderer) drawBaked(screen, src *ebiten.Image, bx, by int, sx0, sy0, bp
 					dy, uy = sy1, vy+float32(bpx)
 				}
 				l.verts = append(l.verts, ebiten.Vertex{DstX: dx, DstY: dy, SrcX: ux, SrcY: uy,
-					ColorR: 1, ColorG: 1, ColorB: 1, ColorA: 1, Custom0: sky, Custom1: lamp})
+					ColorR: 1, ColorG: 1, ColorB: 1, ColorA: 1, Custom0: sky, Custom1: lv[k]})
 			}
 			l.idx = append(l.idx, n, n+1, n+2, n+1, n+3, n+2)
 		}
+		top, bot = bot, top
 	}
+	l.cornerTop, l.cornerBot = top, bot
 	r.lit.calls++
 	sh := r.litShader()
 	if sh == nil { // no shader: unlit

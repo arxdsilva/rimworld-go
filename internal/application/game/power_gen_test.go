@@ -329,3 +329,44 @@ func TestRoofVerMovesOnlyWhenRoofednessChanges(t *testing.T) {
 		t.Fatalf("roofVer %d after the grid was reset, was %d", g.roofVer(), v)
 	}
 }
+
+// TestSolarFollowsWeather: the panel's output is scaled by the sky's share
+// of the sun (weather.SunFactor), the same factor the renderer dims by.
+func TestSolarFollowsWeather(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		kind      weather.Kind
+		intensity float64
+		want      int
+	}{
+		{weather.Clear, 0, 900},
+		{weather.Cloudy, 0.2, 900 * 820 / 1000}, // 700 at full, 20% hard: 1000 - 300 x 0.6
+		{weather.Rain, 1, 900 * 450 / 1000},
+		{weather.Storm, 1, 900 * 350 / 1000},
+		{weather.Snow, 1, 900 * 400 / 1000},
+		{weather.Blizzard, 1, 900 * 250 / 1000},
+	}
+	prev := 901
+	for _, c := range cases {
+		g := genGame(t, 10, 12, 0, 0, 49, 49)
+		id := placeFuel(t, g, construction.SolarPanel, 20, 20)
+		g.SetWeather(c.kind, c.intensity)
+		got := g.genOutput(id)
+		if got != c.want {
+			t.Errorf("%s at %.2f: %d W, want %d", c.kind, c.intensity, got, c.want)
+		}
+		if c.intensity == 1 && c.kind != weather.Snow { // rain > storm > blizzard
+			if got >= prev {
+				t.Errorf("%s gave %d W, not less than the lighter sky's %d", c.kind, got, prev)
+			}
+			prev = got
+		}
+	}
+	// night stays zero whatever the sky
+	g := genGame(t, 10, 2, 0, 0, 49, 49)
+	id := placeFuel(t, g, construction.SolarPanel, 20, 20)
+	g.SetWeather(weather.Rain, 1)
+	if got := g.genOutput(id); got != 0 {
+		t.Fatalf("rainy night: %d W", got)
+	}
+}
