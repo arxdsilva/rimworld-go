@@ -137,7 +137,14 @@ func TestGrownGolden(t *testing.T) {
 	// matches the previous pin's run (960cb818) through tick 1000, the
 	// first wolf wound included; from there the fight around the wounded
 	// wolves differs. Stable over -count=2.
-	const want uint64 = 0xf2889f4a11cbdce0
+	// Re-pinned (PLAY-022: animals amble at half speed when idle): a
+	// wandering animal's steps take twice the ticks (errands walk at the
+	// old step, fleeing at the flee step, hunting and charging keep the
+	// old step), the slow speed class is wider (+12 ticks, was +6), and
+	// every animal saves two new fields (Errand, StepGait). With the
+	// amble and the slow class set back to the old numbers only those
+	// two fields move the hash. Stable over -count=2.
+	const want uint64 = 0xde6fc9c905022773
 	g, _, err := Build(7, 120, 120)
 	if err != nil {
 		t.Fatal(err)

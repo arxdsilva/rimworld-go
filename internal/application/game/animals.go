@@ -247,6 +247,7 @@ func (g *Game) phaseAnimals() {
 // resting (decide, paced).
 func (g *Game) thinkAnimal(id entity.EntityID, a *animal.State, now uint64) {
 	a.Normalise(uint64(id))        // an older save's (or a fixture's) hunger counter
+	a.Errand = false               // set again below by the errands that are no mode (PLAY-022)
 	if g.downedThink(id, a, now) { // animal_health.go: a downed animal lies still
 		return
 	}
@@ -256,6 +257,7 @@ func (g *Game) thinkAnimal(id entity.EntityID, a *animal.State, now uint64) {
 		return
 	}
 	if g.ropedStep(id, a, pos, now) { // rope.go: roped, or led to its pen
+		a.Errand = true // a led animal walks
 		return
 	}
 	if g.beingTamed(id) { // holds still for the handler
@@ -306,9 +308,11 @@ func (g *Game) thinkAnimal(id entity.EntityID, a *animal.State, now uint64) {
 		a.Mode, a.Path, a.PathI = animal.Wander, nil, 0
 	}
 	if a.Tame && g.followMaster(id, a, pos, now) { // train_animals.go: obedient, master drafted
+		a.Errand = true // keeping up with its master, it walks
 		return
 	}
 	if g.lifeMove(id, a, pos, now) { // animal_life.go: mating, following its mother
+		a.Errand = a.Mate != 0 // the male walks to his mate; a young one trailing its mother ambles
 		return
 	}
 	if a.Tame {
@@ -714,7 +718,10 @@ func (g *Game) moveAnimal(id entity.EntityID, m motionRec, now uint64) {
 func (g *Game) stepAnimal(id entity.EntityID, a *animal.State, m *motionRec, from, to Position, now uint64) {
 	g.positions.Set(id, to)
 	g.stainStep(id, from) // stains.go: a bleeding animal drips
-	m.stepped(now, g.weatherSlow(to.X, to.Y, a.StepCost(isDiagonal(from, to))))
+	// the gait is chosen as the step starts and stays with it (PLAY-022:
+	// a mode change mid-step never changes this step's ticks or label)
+	a.StepGait = a.GaitAt(now)
+	m.stepped(now, g.weatherSlow(to.X, to.Y, a.StepCostAt(a.StepGait, isDiagonal(from, to))))
 	g.motion.Set(id, *m)
 	g.animals.Set(id, *a)
 	if g.trapVictim(*a) && g.hasTraps() && g.trapAt(to.X, to.Y) != 0 {
@@ -868,7 +875,8 @@ func (g *Game) animalViews() []AnimalView {
 			av.NextX, av.NextY, av.HasNext = a.Path[a.PathI].X, a.Path[a.PathI].Y, true
 			av.BlockedBy = m.BlockedBy
 		}
-		g.fillAnimalAction(av, id, actionState(a))
+		g.fillAnimalAction(av, id, a)
+		av.Gait = viewGait(a, m, now, av.HasNext) // animals_gait.go
 		av.Downed = a.Downed
 		if av.Sleeping = lyingDown(a); av.Sleeping { // animal_health.go: asleep or downed
 			av.Action = "" // the renderer draws the rest pose

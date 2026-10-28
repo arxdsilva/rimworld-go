@@ -106,13 +106,20 @@ import (
 // with care levels capping medicine. 48x40/seed42 and 120x120/seed7 move;
 // MED-05 alone gives the same values on a clean copy. Same-seed runs
 // identical (TestStepIsDeterministicForSameSeed, TestScaleGolden -count=2).
+// Re-pinned (PLAY-022: animals amble at half speed when idle): a wandering
+// animal's steps take twice the ticks (errands walk at the old step,
+// fleeing at the flee step, hunting and charging keep the old step), the
+// slow speed class is wider (+12 ticks, was +6), and every animal saves
+// two new fields (Errand, StepGait). With the amble and the slow class
+// set back to the old numbers only the two new fields move the hash, so
+// the rest is behaviour by design. Same-seed runs identical (-count=2).
 var scaleGolden = map[string]uint64{
-	"48x40/seed1":    0xe0741d9f0ddd90e8,
-	"48x40/seed7":    0xee46a1f4ce740cae,
-	"48x40/seed42":   0x7ae892588e0e1327,
-	"120x120/seed1":  0x24d9b4a5e97f473a,
-	"120x120/seed7":  0xade18d4a6ba193e9,
-	"120x120/seed42": 0x4b3e98040be7af43,
+	"48x40/seed1":    0x0aeb22c609b89cb6,
+	"48x40/seed7":    0xdd7b17b06d2bc9f5,
+	"48x40/seed42":   0x49ff6f61fb5dfbce,
+	"120x120/seed1":  0x701dd3cad45a6421,
+	"120x120/seed7":  0x5bc90ff648dfd1b7,
+	"120x120/seed42": 0x41903c2d3e70d98a,
 }
 
 const scaleGoldenTicks = 20000

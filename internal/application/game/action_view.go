@@ -310,10 +310,14 @@ func (g *Game) chargeLine(a animal.State) string {
 	return "charging " + g.creatureName(a.Target)
 }
 
-// fillAnimalAction fills the C1 action fields of an animal view.
-func (g *Game) fillAnimalAction(av *AnimalView, id entity.EntityID, a animal.State) {
+// fillAnimalAction fills the C1 action fields of an animal view from real,
+// the animal as it is. The action switch reads a feeding, leaving or
+// resting animal as a wandering one (actionState); the graze rule reads
+// the real state (what it is eating, where).
+func (g *Game) fillAnimalAction(av *AnimalView, id entity.EntityID, real animal.State) {
 	now := uint64(g.clock.Now())
-	def := animal.DefOf(a.Species)
+	def := animal.DefOf(real.Species)
+	a := actionState(real)
 	struck := false
 	if rec, ok := g.lastStrike[id]; ok && justStruck(rec, now) {
 		struck = true
@@ -328,7 +332,7 @@ func (g *Game) fillAnimalAction(av *AnimalView, id entity.EntityID, a animal.Sta
 			av.AttackCycle = cycle(a.Cooldown, def.Cooldown)
 		}
 	default:
-		if !def.Predator && a.PathI >= len(a.Path) {
+		if g.grazing(id, real) {
 			av.Action = ActionGraze
 		}
 	}
@@ -338,4 +342,49 @@ func (g *Game) fillAnimalAction(av *AnimalView, id entity.EntityID, a animal.Sta
 	if h, ok := g.lastHit[id]; ok {
 		av.HitTick, av.HitFromX, av.HitFromY, av.HitDamage = h.Tick, h.FromX, h.FromY, h.Damage
 	}
+}
+
+// grazing reports an animal with its head down to eat (PLAY-022 C5): an
+// idle non-predator that stands on something it eats (grass, or a plant
+// it browses: Diet.Plants), or that is eating its feed target within
+// reach (the bush or bowl beside it). Anywhere else, bare ground
+// included, it does not graze. Reads two cell lookups, never a scan.
+func (g *Game) grazing(id entity.EntityID, a animal.State) bool {
+	if animal.DefOf(a.Species).Predator || a.PathI < len(a.Path) {
+		return false
+	}
+	pos, ok := g.positions.Get(id)
+	if !ok {
+		return false
+	}
+	if t := a.Feed; a.Mode == animal.Feed && t.Kind != animal.FeedNone &&
+		weapon.Distance(pos.X, pos.Y, t.X, t.Y) <= feedReach(t) && g.feedThere(&a, t) { // animal_needs.go
+		return true
+	}
+	if !animal.EcologyOf(a.Species).Diet.Plants() {
+		return false
+	}
+	return g.hasGrass(pos.X, pos.Y) || g.browsedPlantAt(&a, pos)
+}
+
+// browsedPlantAt reports a plant on pos that animal a eats from: a wild
+// plant that is browse food (30% grown, as findFeed reads it), or a crop
+// a wild animal raids.
+func (g *Game) browsedPlantAt(a *animal.State, pos Position) bool {
+	pid := g.plantAt(pos.X, pos.Y)
+	if pid == 0 {
+		return false
+	}
+	p, ok := g.plants.Get(pid)
+	if !ok {
+		return false
+	}
+	pd := plant.DefOf(p.Species)
+	switch {
+	case p.Zone && pd.Crop:
+		return !a.Tame && p.Percent() >= animal.CropDies+5
+	case pd.Browse:
+		return p.Percent() >= 30
+	}
+	return false
 }

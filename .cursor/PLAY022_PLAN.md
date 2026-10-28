@@ -189,6 +189,7 @@ Three requests from play (2026-10-27):
 
 - The species trims (±15%) stay. An XS+ (1.50) may now be longer than an S- (1.28): the AREA classes still order, and a rat is long and thin while a hare is tall.
 - ART edits Python `SIZE_LENGTH`; SIM edits Go `sizeLength`. A Go test (SIM) reads `animal_roster.py` and checks the two tables match.
+- **Revised 2026-10-27 after ART's full static render:** XS 1.45, S 1.65, M 1.8, L 2.2, XL 3.0. The outline doesn't grow with the body, and bird, reptile and insect sprites had inflated old boxes (their thin-outline wrapper never applied), so XS and S landed 17–20% under target at 1.3 and 1.5. M moves to 1.8 to keep a gap above S.
 
 **C2. Canvas and density (ART).**
 - **One canvas per species, sex and FACING:** the union of that facing's poses plus PAD. Today it is the union over every facing plus the whole tile, mostly empty. Measured: tight per-facing canvases at 128 px per tile everywhere would be 1.20× today's pixels.

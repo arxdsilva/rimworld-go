@@ -115,8 +115,10 @@ func TestAnimalDiagonalStepScaled(t *testing.T) {
 	diag := []pathing.Point{{X: 2, Y: 2}, {X: 3, Y: 3}, {X: 4, Y: 4}, {X: 5, Y: 5}}
 	id := walkAnimal(t, g, "dustbuck", 1, 1, diag)
 	at, _ := stepTicks(g, id, 300)
-	d := animal.DefOf(animal.Dustbuck).StepTicks
-	assertIntervals(t, at, 4, (d*1414+500)/1000) // round(18 * 1.414) = 25
+	// PLAY-022: a wandering animal ambles, at twice the walking step
+	// (walkAnimal's animals wander); a diagonal costs 1.414 of that
+	d := animal.State{Species: animal.Dustbuck}.StepAt(animal.GaitAmble)
+	assertIntervals(t, at, 4, (d*1414+500)/1000)
 
 	h := New(Config{Seed: 1, Width: 10, Height: 10})
 	straight := []pathing.Point{{X: 2, Y: 1}, {X: 3, Y: 1}, {X: 4, Y: 1}}
@@ -169,7 +171,8 @@ func TestSnapshotExposesStepTiming(t *testing.T) {
 	start := uint64(h.Tick())
 	h.Step(1)
 	av := animalView(t, h, aid)
-	if diag := (animal.DefOf(animal.TimberWolf).StepTicks*1414 + 500) / 1000; av.X != 2 || av.Y != 2 || av.StepTick != start || av.StepTicks != diag {
+	// PLAY-022: it wanders, so it ambles: twice the walking step, 1.414 of that diagonally
+	if diag := (animal.State{Species: animal.TimberWolf}.StepAt(animal.GaitAmble)*1414 + 500) / 1000; av.X != 2 || av.Y != 2 || av.StepTick != start || av.StepTicks != diag {
 		t.Fatalf("animal view %+v, want a %d-tick diagonal step at tick %d", av, diag, start)
 	}
 	if !av.HasNext || av.NextX != 3 || av.NextY != 2 {

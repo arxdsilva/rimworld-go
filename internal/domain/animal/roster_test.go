@@ -98,14 +98,15 @@ func TestStatsFromClasses(t *testing.T) {
 		{Deer, 55, 16, 10, 14, 5, 7, weapon.Kick},
 		// S+ (+15%), fast: round(28*1.15)=32, round(14*1.15)-4=12, flee round(7.2)
 		{Gazelle, 32, 12, 7, 7, 2, 5, weapon.Kick},
-		// S, slow, with its shell: 28*1.5 = 42 hp, 14+6 = 20 step
-		{Tortoise, 42, 20, 12, 6, 2, 4, weapon.Bite},
+		// S, slow, with its shell: 28*1.5 = 42 hp, 14+12 = 26 step, flee round(15.6)
+		// (PLAY-022: the slow class widened from +6 to +12 so a tortoise is clearly slow)
+		{Tortoise, 42, 26, 16, 6, 2, 4, weapon.Bite},
 		// XS: no leather
 		{Chicken, 12, 16, 10, 2, 0, 2, weapon.Peck},
 		// XL legendary: hp x2.5
 		{Glimmerstag, 425, 22, 13, 55, 16, 16, weapon.Gore},
-		// L slow
-		{Cow, 100, 24, 14, 30, 10, 11, weapon.Headbutt},
+		// L slow: 18+12 = 30 step, flee 18 (PLAY-022: the slow class widened from +6 to +12)
+		{Cow, 100, 30, 18, 30, 10, 11, weapon.Headbutt},
 		// L- (-15%): round(100*0.85) = 85
 		{DireWolf, 85, 15, 9, 26, 9, 9, weapon.Bite},
 		{GrizzlyBear, 100, 18, 11, 30, 10, 11, weapon.Claw},
@@ -179,7 +180,9 @@ func TestAttackModeAndBodyNames(t *testing.T) {
 	if s := (State{Manhunter: 100}); !s.Enraged(99) || s.Enraged(100) || (State{}).Enraged(5) {
 		t.Error("enraged until the Manhunter tick")
 	}
-	if BodyLength(Deer) != 0.95 || BodyLength(Gazelle) != 0.6*1.15 || BodyLength(Elephant) != 2.0 {
+	// PLAY-022 (sizes are areas now): M 1.8, S+ 1.65*1.15, XL 3.0 tiles
+	// (they were 0.95, 0.6*1.15 and 2.0 when sizes were lengths)
+	if BodyLength(Deer) != 1.8 || BodyLength(Gazelle) != 1.65*1.15 || BodyLength(Elephant) != 3.0 {
 		t.Errorf("body lengths %v %v %v", BodyLength(Deer), BodyLength(Gazelle), BodyLength(Elephant))
 	}
 	if x, y := FleeGoal(5, 5, 5, 5, 4); x != 9 || y != 5 {
@@ -187,25 +190,47 @@ func TestAttackModeAndBodyNames(t *testing.T) {
 	}
 }
 
-// TestXSBetweenOldAndS: XS animals read bigger than the old 0.35-tile
-// class, yet the biggest XS (with its trim) stays below the smallest S
-// (with its trim), so the size classes never overlap (PLAY-010).
-func TestXSBetweenOldAndS(t *testing.T) {
+// TestSizeClassBasesIncrease: the class base lengths strictly increase
+// (PLAY-022: they are length targets that reach the AREA targets XS 1,
+// S 1.5, M 2, L 4, XL 6 tiles^2; was the old 0.44/0.6/0.95/1.4/2.0), and
+// every species' trim stays within +/-15% of its class.
+func TestSizeClassBasesIncrease(t *testing.T) {
 	t.Parallel()
+	for c := SizeS; c <= SizeXL; c++ {
+		if sizeLength[c] <= sizeLength[c-1] {
+			t.Errorf("class %d base %.2f must exceed class %d base %.2f", c, sizeLength[c], c-1, sizeLength[c-1])
+		}
+	}
+	if sizeLength[SizeXS] <= 0.35 {
+		t.Errorf("XS base %.2f: a rat is drawn about a tile long, far above the old 0.35", sizeLength[SizeXS])
+	}
+	for _, s := range All() {
+		if tr := RosterOf(s).SizeTrim; tr < -15 || tr > 15 {
+			t.Errorf("%s: size trim %d%% outside +/-15%%", s, tr)
+		}
+	}
+}
+
+// TestAreasNotLengthsOrderClasses: the classes are ordered by drawn AREA
+// (a rat is long and thin, a hare tall), so the longest XS (XS+, a hive
+// beetle) may be longer than the shortest S (S-, a hare). It was the
+// reverse while sizes were lengths (TestXSBetweenOldAndS, PLAY-010).
+func TestAreasNotLengthsOrderClasses(t *testing.T) {
+	t.Parallel()
+	xsPlus, sMinus := sizeLength[SizeXS]*1.15, sizeLength[SizeS]*0.85
+	if xsPlus <= sMinus {
+		t.Fatalf("XS+ %.3f should exceed S- %.3f: the class areas, not lengths, order them", xsPlus, sMinus)
+	}
 	maxXS, minS := 0.0, 99.0
 	for _, s := range All() {
-		l := BodyLength(s)
-		switch RosterOf(s).Size {
+		switch l := BodyLength(s); RosterOf(s).Size {
 		case SizeXS:
-			if l <= 0.35 {
-				t.Errorf("%s: XS body length %.3f, want above the old 0.35", s, l)
-			}
 			maxXS = max(maxXS, l)
 		case SizeS:
 			minS = min(minS, l)
 		}
 	}
-	if maxXS >= minS {
-		t.Fatalf("largest XS %.3f must stay below smallest S %.3f", maxXS, minS)
+	if maxXS <= minS {
+		t.Errorf("the roster has an XS+ (%.3f) longer than an S- (%.3f), as the table allows", maxXS, minS)
 	}
 }

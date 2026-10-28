@@ -2,8 +2,14 @@
 
 Mirrors internal/domain/animal (same keys and order); the Go test
 TestEverySpeciesHasArt and validate_assets.py check the two agree.
-Size classes are body lengths in tiles: XS 0.44, S 0.6, M 0.95, L 1.4,
-XL 2.0 (+/- 15%). Rows marked ORIGINAL replace RimWorld's invented
+Size classes are AREA targets (PLAY-022, SIZE_AREA): the class median
+of the east standing frame's alpha box covers about XS 1, S 1.5, M 2,
+L 4, XL 6 tiles^2 (outline included). SIZE_LENGTH holds the body
+lengths in tiles that reach them, measured on the rendered sprites
+(XS 1.45, S 1.65, M 1.8, L 2.2, XL 3.0; species trims +/- 15%). Go's
+sizeLength mirrors it, and validate_assets.py checks each class median
+within 15% of its area. The sim footprint stays one tile; animals are
+only drawn bigger. Rows marked ORIGINAL replace RimWorld's invented
 creatures with our own designs (AGENTS.md: never copy proprietary art).
 Each species' features are the binding visual brief for its builder.
 """
@@ -11,7 +17,8 @@ from collections import namedtuple
 
 Species = namedtuple("Species", "key archetype size dimorphic features attack", defaults=(None,))
 
-SIZE_LENGTH = {"XS": 0.44, "S": 0.6, "M": 0.95, "L": 1.4, "XL": 2.0}
+SIZE_LENGTH = {"XS": 1.45, "S": 1.65, "M": 1.8, "L": 2.2, "XL": 3.0}
+SIZE_AREA = {"XS": 1.0, "S": 1.5, "M": 2.0, "L": 4.0, "XL": 6.0}   # tiles^2, class median target
 
 
 def body_length(size):

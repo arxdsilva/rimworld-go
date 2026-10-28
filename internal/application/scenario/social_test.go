@@ -21,6 +21,15 @@ func TestSocialScenario(t *testing.T) {
 	if c.DoubleBed == 0 || c.PrisBed == 0 {
 		t.Fatalf("beds not placed: %+v", c)
 	}
+	// The cast's relations are under test, not the wildlife: a wild wolf
+	// that wanders in can kill the dog's master (PLAY-022's slower idle
+	// wandering moved one such encounter onto Maren), so the map's wild
+	// animals go before the two days run.
+	for _, a := range g.World().Animals {
+		if !a.Tame {
+			g.KillAnimal(a.ID)
+		}
+	}
 	g.Step(2 * clock.TicksPerDay)
 
 	if v, ok := g.Prisoner(c.Prisoner); !ok || !v.ForPrisonersBed {

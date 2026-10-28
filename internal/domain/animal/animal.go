@@ -461,9 +461,12 @@ var byBehaviour = [...]behaviourStats{
 }
 
 // Speed class step adjustments; fleeing runs at 60% of the step.
+// PLAY-022: slowStep went from 6 to 12 ticks so a slow species (a
+// tortoise: 26 ticks a tile against a deer's 16) is clearly slow at
+// every gait; the fast class is as it was.
 const (
 	fastStep    = -4
-	slowStep    = 6
+	slowStep    = 12
 	fleePermill = 600
 	// explosiveTame: a volatile animal is harder to coax.
 	explosiveTame = 30
@@ -685,6 +688,14 @@ type State struct {
 	// load with none. Injury stays the hit point scalar; the open wounds
 	// never add up to more than it.
 	Body *body.Body
+	// Errand (PLAY-022) is set by the animal's think each tick it is on
+	// an errand that is not a mode of its own (led on a rope, following
+	// its drafted master, going to a mate): its steps are walked, not
+	// ambled. StepGait is the gait of the step it last took; the step's
+	// ticks and the view's label stay fixed to it until the next step.
+	// Both zero in older saves.
+	Errand   bool
+	StepGait Gait
 	// Downed (MED-09 follow-up): too hurt or too bled to stand. A downed
 	// animal lies where it fell and does nothing but bleed, heal and be
 	// tended; DownedTick is the tick it went down. Zero in older saves
@@ -779,6 +790,11 @@ func (s State) Step() int {
 	if s.Mode == Flee && d.FleeStep > 0 {
 		st = d.FleeStep
 	}
+	return s.slowedByBody(st)
+}
+
+// slowedByBody is st ticks a tile, slowed by a hurt body (MED-13).
+func (s State) slowedByBody(st int) int {
 	if s.Body != nil {
 		if m := s.Moving(); m < 1000 {
 			st = (st*1000 + int(max(m, DownMoving)) - 1) / int(max(m, DownMoving))
@@ -820,9 +836,16 @@ func FleeGoal(x, y, tx, ty, dist int) (int, int) {
 	return x + dx*dist/m, y + dy*dist/m
 }
 
-// sizeLength is the body length in tiles per size class (ART-011; XS
-// raised from 0.35 in PLAY-010, still below the smallest S-).
-var sizeLength = [...]float64{SizeXS: 0.44, SizeS: 0.6, SizeM: 0.95, SizeL: 1.4, SizeXL: 2.0}
+// sizeLength is the body length in tiles per size class (ART-011). The
+// values are AREA targets (PLAY-022): the lengths that make the class
+// median of the east standing frame's alpha box cover about XS 1, S 1.5,
+// M 2, L 4 and XL 6 tiles^2 on screen, as measured on a real render (they
+// were 0.44, 0.6, 0.95, 1.4 and 2.0 when sizes were lengths). It mirrors
+// SIZE_LENGTH in animal_roster.py (TestSizeLengthMatchesArtRoster). The
+// sim still never reads the length for gameplay; the size classes drive
+// the numbers. An XS+ (1.67) may be longer than an S- (1.40): areas, not
+// lengths, order the classes.
+var sizeLength = [...]float64{SizeXS: 1.45, SizeS: 1.65, SizeM: 1.8, SizeL: 2.2, SizeXL: 3.0}
 
 // BodyLength is s's body length in tiles, with its size trim.
 func BodyLength(s Species) float64 {

@@ -194,7 +194,8 @@ func TestCorridorBlockerHeadOnBothArrive(t *testing.T) {
 	}
 	send()
 	an, _ := g.animals.Get(d)
-	budget := 17*max(TicksPerCell, an.Step()) + 400
+	// PLAY-022: the wanderer ambles, so its crossing takes twice the walking step a tile
+	budget := 17*max(TicksPerCell, an.StepAt(an.GaitAt(uint64(g.clock.Now())))) + 400
 	tick := 1
 	for ; tick <= budget && (pos(g, col) != goalC || pos(g, d) != goalD); tick++ {
 		g.phaseMovement()
