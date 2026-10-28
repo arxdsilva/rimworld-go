@@ -113,7 +113,7 @@ func TestColonyBuilderStepsToDone(t *testing.T) {
 	a, f, _ := ngTest(t, nil)
 	toPawns(t, a)
 	sb := &stepBuilder{need: 6, sim: &stubSim{w: 4, h: 4}}
-	a.ng.BuildHook = func(NewGame) (SimBuilder, error) { return sb, nil }
+	a.cfg.NewSimBuilder = func(NewGame) (SimBuilder, error) { return sb, nil }
 	f.Frame(t, a)
 	click(t, a, "wizard.start")
 	if a.nav.screen() != screenPawns || a.ng == nil || a.ng.Load == nil {
@@ -140,7 +140,7 @@ func TestColonyBuilderStepsToDone(t *testing.T) {
 	// Esc or Back does nothing while the colony is built.
 	a2, f2, _ := ngTest(t, nil)
 	toPawns(t, a2)
-	a2.ng.BuildHook = func(NewGame) (SimBuilder, error) { return &stepBuilder{need: 50, sim: &stubSim{w: 4, h: 4}}, nil }
+	a2.cfg.NewSimBuilder = func(NewGame) (SimBuilder, error) { return &stepBuilder{need: 50, sim: &stubSim{w: 4, h: 4}}, nil }
 	click(t, a2, "wizard.start")
 	f2.Key(t, a2, "Escape", 0)
 	if a2.nav.screen() != screenPawns || a2.ng.Load == nil {
@@ -152,7 +152,7 @@ func TestStartFailureReturnsToCharacters(t *testing.T) {
 	t.Parallel()
 	a, f, _ := ngTest(t, nil)
 	toPawns(t, a)
-	a.ng.BuildHook = func(NewGame) (SimBuilder, error) { return &stepBuilder{need: 1, err: errors.New("disk full")}, nil }
+	a.cfg.NewSimBuilder = func(NewGame) (SimBuilder, error) { return &stepBuilder{need: 1, err: errors.New("disk full")}, nil }
 	click(t, a, "wizard.start")
 	f.Frame(t, a)
 	if a.nav.screen() != screenPawns || a.ng == nil || a.ng.Load != nil || a.sessionErr != "disk full" {

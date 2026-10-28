@@ -95,26 +95,26 @@ func TestRoofToolForcesOverlay(t *testing.T) {
 	click(t, a, "tab.architect")
 	click(t, a, "arch.cat.zones")
 	click(t, a, "arch.tool.roof")
-	if !a.renderer.roofOverlayForced || !a.renderer.roofOverlayOn() {
+	if !a.renderer.overlays().Roof.Forced || !a.renderer.roofOverlayOn() {
 		t.Fatal("roof tool should force the overlay")
 	}
 	click(t, a, "arch.tool.noroof")
-	if !a.renderer.roofOverlayForced {
+	if !a.renderer.overlays().Roof.Forced {
 		t.Fatal("remove-roof tool should force the overlay")
 	}
 	click(t, a, "arch.tool.noroof") // deselect
-	if a.renderer.roofOverlayForced || a.renderer.roofOverlayOn() {
+	if a.renderer.overlays().Roof.Forced || a.renderer.roofOverlayOn() {
 		t.Fatal("deselect should clear the forced overlay")
 	}
 	click(t, a, "arch.tool.roof")
 	click(t, a, "arch.tool.stockpile") // another zone tool
-	if a.renderer.roofOverlayForced {
+	if a.renderer.overlays().Roof.Forced {
 		t.Fatal("another tool should not force the overlay")
 	}
 	click(t, a, "arch.tool.roof")
 	click(t, a, "tab.architect") // close Architect
 	a.syncRoofForce()
-	if a.renderer.roofOverlayForced {
+	if a.renderer.overlays().Roof.Forced {
 		t.Fatal("closing the Architect should clear the forced overlay")
 	}
 }
@@ -136,11 +136,11 @@ func TestHUDRoofButtonToggles(t *testing.T) {
 		t.Fatal("button active while overlay off")
 	}
 	click(t, a, roofButtonID)
-	if !a.renderer.roofOverlay || !find().Selected {
+	if !a.renderer.overlays().Roof.On || !find().Selected {
 		t.Fatal("click should turn the overlay on and show active")
 	}
 	click(t, a, roofButtonID)
-	if a.renderer.roofOverlay || find().Selected {
+	if a.renderer.overlays().Roof.On || find().Selected {
 		t.Fatal("second click should turn it off")
 	}
 	b := find()
@@ -158,11 +158,11 @@ func TestRKeyToggles(t *testing.T) {
 	t.Parallel()
 	a, _ := roofStubApp(t)
 	a.renderer.toggleRoofOverlay() // what Shift+R calls
-	if !a.renderer.roofOverlay {
+	if !a.renderer.overlays().Roof.On {
 		t.Fatal("toggle should turn the overlay on")
 	}
 	a.renderer.toggleRoofOverlay()
-	if a.renderer.roofOverlay {
+	if a.renderer.overlays().Roof.On {
 		t.Fatal("toggle should turn the overlay off")
 	}
 }
@@ -173,13 +173,13 @@ func TestLegendShownWithOverlay(t *testing.T) {
 	if got := a.roofLegend(); got != "" {
 		t.Fatalf("legend = %q with overlay off", got)
 	}
-	a.renderer.roofOverlay = true
+	a.renderer.overlays().Roof.On = true
 	want := "Roof: blue built · slate natural · dashed planned · hatched removal"
 	if got := a.roofLegend(); got != want {
 		t.Fatalf("legend = %q", got)
 	}
-	a.renderer.roofOverlay = false
-	a.renderer.roofOverlayForced = true
+	a.renderer.overlays().Roof.On = false
+	a.renderer.overlays().Roof.Forced = true
 	if !strings.HasPrefix(a.roofLegend(), "Roof:") {
 		t.Fatal("legend should show when forced")
 	}

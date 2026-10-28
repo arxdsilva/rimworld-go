@@ -5,7 +5,6 @@ import (
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/command"
-	"rimworld-go/internal/domain/sim/entity"
 )
 
 func TestCasketSpriteAndTitleByState(t *testing.T) {
@@ -87,30 +86,6 @@ func TestCasketCommandsAskTheGame(t *testing.T) {
 	}
 }
 
-func TestCasketOpenedCuesOnce(t *testing.T) {
-	t.Parallel()
-	var m casketMemo
-	sealed := game.BuildingView{ID: 3, Kind: casketKind, X: 4, Y: 5}
-	sealed.Sealed = true
-	open := sealed
-	open.Sealed = false
-	world := func(b game.BuildingView) game.WorldView { return game.WorldView{Buildings: []game.BuildingView{b}} }
-	if got := m.CasketOpened(world(open)); len(got) != 0 { // first frame only records
-		t.Errorf("first frame cued %v", got)
-	}
-	m = casketMemo{}
-	m.CasketOpened(world(sealed))
-	if got := m.CasketOpened(world(sealed)); len(got) != 0 {
-		t.Errorf("still sealed cued %v", got)
-	}
-	if got := m.CasketOpened(world(open)); len(got) != 1 || got[0].ID != 3 {
-		t.Errorf("opening cued %v", got)
-	}
-	if got := m.CasketOpened(world(open)); len(got) != 0 {
-		t.Errorf("an open casket cues once, got %v", got)
-	}
-}
-
 func TestListenCasketsEmitsSound(t *testing.T) {
 	r := New(&stubSim{w: 8, h: 8})
 	sealed := game.BuildingView{ID: 3, Kind: casketKind, X: 4, Y: 5}
@@ -119,8 +94,8 @@ func TestListenCasketsEmitsSound(t *testing.T) {
 	open.Sealed = false
 	r.listenCaskets(game.WorldView{Buildings: []game.BuildingView{sealed}})
 	r.listenCaskets(game.WorldView{Buildings: []game.BuildingView{open}})
-	if len(r.cues) != 1 || r.cues[0].ID != "sfx.casket_open" || r.cues[0].X != 4.5 {
-		t.Errorf("cues = %+v", r.cues)
+	if len(r.cueBus().Cues) != 1 || r.cueBus().Cues[0].ID != "sfx.casket_open" || r.cueBus().Cues[0].X != 4.5 {
+		t.Errorf("cues = %+v", r.cueBus().Cues)
 	}
 }
 
@@ -140,16 +115,6 @@ func TestDormantAnimalLabel(t *testing.T) {
 // Behaviour with the sealed state injected, independent of the game
 // side's BuildingView.Sealed field.
 
-func TestCasketStateHelpers(t *testing.T) {
-	t.Parallel()
-	if casketSpriteFor(true) != "structure/sleeper_casket_closed" || casketSpriteFor(false) != "structure/sleeper_casket_open" {
-		t.Error("sprite by state")
-	}
-	if casketTitleFor(true) != "Sleeper casket (sealed)" || casketTitleFor(false) != "Sleeper casket (open)" {
-		t.Error("title by state")
-	}
-}
-
 func TestOpenCasketClickInjected(t *testing.T) {
 	a, g, _ := liveColony(t, 0)
 	rs := &recSim{Simulation: g}
@@ -163,26 +128,5 @@ func TestOpenCasketClickInjected(t *testing.T) {
 	a.applyCasketClickFor(casketBtnID, b, false)
 	if a.applyCasketClickFor("bldg.close", b, true) || len(rs.cmds) != 0 {
 		t.Errorf("open casket or other id sent %+v", rs.cmds)
-	}
-}
-
-func TestCasketOpenedInjected(t *testing.T) {
-	t.Parallel()
-	sealed := map[entity.EntityID]bool{3: true, 4: true}
-	of := func(b game.BuildingView) bool { return sealed[b.ID] }
-	w := game.WorldView{Buildings: []game.BuildingView{{ID: 3, Kind: casketKind}, {ID: 4, Kind: casketKind}, {ID: 9, Kind: "wall"}}}
-	var m casketMemo
-	if got := m.Opened(w, of); len(got) != 0 {
-		t.Errorf("first frame cued %v", got)
-	}
-	if got := m.Opened(w, of); len(got) != 0 {
-		t.Errorf("unchanged cued %v", got)
-	}
-	sealed[3] = false
-	if got := m.Opened(w, of); len(got) != 1 || got[0].ID != 3 {
-		t.Errorf("opening cued %v", got)
-	}
-	if got := m.Opened(w, of); len(got) != 0 {
-		t.Errorf("cues once, got %v", got)
 	}
 }

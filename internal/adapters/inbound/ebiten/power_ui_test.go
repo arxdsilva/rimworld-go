@@ -260,7 +260,7 @@ func TestPowerToggleWrapsAndToggles(t *testing.T) {
 			before := a.overlayFlags()
 			f.onRect(a, pr)
 			f.Click(t, a, mbLeft, 0)
-			if !a.renderer.pov.On || !a.renderer.powerShown() {
+			if !a.renderer.overlays().Power.On || !a.renderer.powerShown() {
 				t.Fatal("the click did not show the power overlay")
 			}
 			if a.overlayFlags() != before {
@@ -282,11 +282,11 @@ func TestPowerOverlayHotkey(t *testing.T) {
 	t.Parallel()
 	a, f := colonyApp(t, &stubSim{})
 	f.Key(t, a, "P", input.ModShift)
-	if !a.renderer.pov.On {
+	if !a.renderer.overlays().Power.On {
 		t.Fatal("Shift+P did not show the power overlay")
 	}
 	f.Key(t, a, "P", input.ModShift)
-	if a.renderer.pov.On {
+	if a.renderer.overlays().Power.On {
 		t.Fatal("Shift+P again did not hide it")
 	}
 	if tip := a.powerToggleTip(); !strings.Contains(tip, "Shift") || !strings.Contains(tip, "P") {
@@ -314,15 +314,15 @@ func TestPowerOverlayAutoShows(t *testing.T) {
 		if a.archTool != c.tool {
 			t.Fatalf("%s did not arm", c.tool)
 		}
-		if r.pov.Forced != c.forced || r.powerShown() != c.forced {
-			t.Errorf("%s: forced %v shown %v, want %v", c.tool, r.pov.Forced, r.powerShown(), c.forced)
+		if r.overlays().Power.Forced != c.forced || r.powerShown() != c.forced {
+			t.Errorf("%s: forced %v shown %v, want %v", c.tool, r.overlays().Power.Forced, r.powerShown(), c.forced)
 		}
 	}
 	archPick(t, a, "party_spot") // drop it
 	a.archCat = archCatPower
 	archPick(t, a, "conduit")
 	a.closeArchitect()
-	if r.pov.Forced || r.powerShown() {
+	if r.overlays().Power.Forced || r.powerShown() {
 		t.Error("closing the Architect left the overlay forced on")
 	}
 	r.togglePowerOverlay()
@@ -389,7 +389,7 @@ func povRenderer(t *testing.T, w game.WorldView) (*Renderer, *[]povTrace, *[]str
 	t.Helper()
 	r, markings := pdRenderer(t, w)
 	got := &[]povTrace{}
-	r.pov.Trace = func(part string, x, y int, c color.NRGBA) { *got = append(*got, povTrace{part, x, y, c}) }
+	r.overlays().Wiring.Nets.Trace = func(part string, x, y int, c color.NRGBA) { *got = append(*got, povTrace{part, x, y, c}) }
 	return r, got, markings
 }
 
@@ -458,7 +458,7 @@ func TestPowerOverlayDrawsPerNet(t *testing.T) {
 	r.togglePowerOverlay()
 	r.drawPowerOverlay(dst, &w, 640, 400, r.tilePx())
 
-	n1, n2 := r.pov.NetColour(1), r.pov.NetColour(2)
+	n1, n2 := r.overlays().Wiring.Nets.NetColour(1), r.overlays().Wiring.Nets.NetColour(2)
 	if n1 == n2 {
 		t.Fatalf("both nets are %v", n1)
 	}
@@ -526,7 +526,7 @@ func TestPowerLegend(t *testing.T) {
 	if !strings.HasPrefix(a.powerLegend(), "Power:") {
 		t.Fatalf("legend %q", a.powerLegend())
 	}
-	a.renderer.roofOverlay = true
+	a.renderer.overlays().Roof.On = true
 	all := strings.Join(a.globalPlan().legend, " ")
 	if !strings.HasPrefix(all, "Roof:") || !strings.Contains(all, "Power:") {
 		t.Errorf("legend %q, want the roof key then the power key", all)
@@ -620,7 +620,7 @@ func ghostApp(t *testing.T, tool string, tx, ty int) (*App, *[]povTrace) {
 	f.MoveTo(a, tx, ty)
 	f.Frame(t, a)
 	got := &[]povTrace{}
-	a.renderer.pov.Trace = func(part string, x, y int, c color.NRGBA) { *got = append(*got, povTrace{part, x, y, c}) }
+	a.renderer.overlays().Wiring.Nets.Trace = func(part string, x, y int, c color.NRGBA) { *got = append(*got, povTrace{part, x, y, c}) }
 	return a, got
 }
 
@@ -631,7 +631,7 @@ func TestPlacementGhostLink(t *testing.T) {
 	screen := ebiten.NewImage(640, 400)
 	a, got := ghostApp(t, "heater", 6, 6)
 	a.drawArchitectGhost(screen)
-	if l := povParts(*got, "ghost link"); len(l) != 1 || l[0].x != 6 || l[0].y != 6 || l[0].c != a.renderer.pov.NetColour(1) {
+	if l := povParts(*got, "ghost link"); len(l) != 1 || l[0].x != 6 || l[0].y != 6 || l[0].c != a.renderer.overlays().Wiring.Nets.NetColour(1) {
 		t.Errorf("ghost links %v, want one from 6,6 in net 1's colour", *got)
 	}
 	if n := len(povParts(*got, "not connected")); n != 0 {
@@ -723,7 +723,7 @@ func TestPowerLayoutAtScales(t *testing.T) {
 			s := newGlobalSim()
 			a, _ := globalColony(t, s, sc.ui, sc.ww, sc.wh)
 			a.renderer.togglePowerOverlay()
-			a.renderer.roofOverlay = true
+			a.renderer.overlays().Roof.On = true
 			a.openArchitect()
 			a.archCat = archCatPower
 			archPick(t, a, "battery")

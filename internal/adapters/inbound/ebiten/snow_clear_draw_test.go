@@ -28,29 +28,29 @@ func TestSnowClearOverlayOnlyWithToolHeld(t *testing.T) {
 	screen := ebiten.NewImage(320, 320)
 	w := snowClearWorld(1)
 	r.drawSnowClearOverlay(screen, w, 320, 320, tile)
-	if r.env.SnowClear.Verts != 0 || r.env.SnowClear.Builds != 0 {
+	if r.overlays().SnowDraw.Verts != 0 || r.overlays().SnowDraw.Builds != 0 {
 		t.Fatal("no tool held: nothing drawn")
 	}
-	r.env.SnowClear.Forced = true
+	r.overlays().SnowClear.Forced = true
 	r.drawSnowClearOverlay(screen, w, 320, 320, tile)
 	// one fill rect per row run (2) plus the 1 px outline: 10 edge strips
-	if got := r.env.SnowClear.Verts; got != 4*(2+10) {
+	if got := r.overlays().SnowDraw.Verts; got != 4*(2+10) {
 		t.Fatalf("held: %d verts, want %d", got, 4*(2+10))
 	}
 	for i := 0; i < 3; i++ {
 		r.drawSnowClearOverlay(screen, w, 320, 320, tile)
 	}
-	if r.env.SnowClear.Builds != 1 {
-		t.Fatalf("same version rebuilt %d times", r.env.SnowClear.Builds)
+	if r.overlays().SnowDraw.Builds != 1 {
+		t.Fatalf("same version rebuilt %d times", r.overlays().SnowDraw.Builds)
 	}
 	w2 := snowClearWorld(2)
 	w2.SnowClear[8*10+8] = 1
 	r.drawSnowClearOverlay(screen, w2, 320, 320, tile)
-	if r.env.SnowClear.Builds != 2 || r.env.SnowClear.Verts != 4*(2+10+1+4) {
-		t.Fatalf("new version: %d builds, %d verts", r.env.SnowClear.Builds, r.env.SnowClear.Verts)
+	if r.overlays().SnowDraw.Builds != 2 || r.overlays().SnowDraw.Verts != 4*(2+10+1+4) {
+		t.Fatalf("new version: %d builds, %d verts", r.overlays().SnowDraw.Builds, r.overlays().SnowDraw.Verts)
 	}
 	r.drawSnowClearOverlay(screen, game.WorldView{}, 320, 320, tile)
-	if r.env.SnowClear.Verts != 0 {
+	if r.overlays().SnowDraw.Verts != 0 {
 		t.Fatal("no area: nothing drawn")
 	}
 }
@@ -80,12 +80,12 @@ func TestSnowClearOverlayForcedByTool(t *testing.T) {
 	a := &App{renderer: stainRenderer()}
 	a.archOpen, a.archTool = true, "snow_clear"
 	a.syncSnowClearForce()
-	if !a.renderer.env.SnowClear.Forced {
+	if !a.renderer.overlays().SnowClear.Forced {
 		t.Fatal("the tool in hand shows the area")
 	}
 	a.archTool = "home"
 	a.syncSnowClearForce()
-	if a.renderer.env.SnowClear.Forced {
+	if a.renderer.overlays().SnowClear.Forced {
 		t.Fatal("another tool hides it")
 	}
 	(&App{}).syncSnowClearForce() // menus: no renderer

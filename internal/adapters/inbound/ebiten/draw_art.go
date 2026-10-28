@@ -206,7 +206,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	r.drawFoundation(screen, w, sw, sh, tile) // bridge_draw.go: over the water, under floors
 	r.drawFloorLayers(screen, w, sw, sh, tile)
 	r.drawConduits(screen, w, sw, sh, tile) // power_draw.go: over floors, under zones and objects
-	r.power.Prune(r.present)
+	r.overlays().Wiring.Parts.Prune(r.present)
 	r.layer("zones")
 	r.drawZones(screen, w, sw, sh, tile) // zones_draw.go
 	r.drawPlanOverlay(screen, w, sw, sh, tile)

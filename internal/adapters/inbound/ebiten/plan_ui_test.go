@@ -47,26 +47,26 @@ func TestPlanToolCatalog(t *testing.T) {
 func TestPlanOverlayForcedWhileToolHeld(t *testing.T) {
 	t.Parallel()
 	a, _ := stubColony(t)
-	a.renderer.planHidden = true
+	a.renderer.overlays().Plan.On = false
 	click(t, a, "tab.architect")
 	click(t, a, "arch.cat.orders")
 	click(t, a, "arch.tool.plan")
-	if !a.renderer.planForced || !a.renderer.planOverlayOn() {
+	if !a.renderer.overlays().Plan.Forced || !a.renderer.planOverlayOn() {
 		t.Fatal("Plan tool should force the overlay on")
 	}
 	click(t, a, "arch.tool.unplan")
-	if !a.renderer.planForced {
+	if !a.renderer.overlays().Plan.Forced {
 		t.Fatal("Remove plan should force the overlay")
 	}
 	click(t, a, "arch.tool.unplan") // deselect
-	if a.renderer.planForced || a.renderer.planOverlayOn() {
+	if a.renderer.overlays().Plan.Forced || a.renderer.planOverlayOn() {
 		t.Fatal("deselecting releases the forced overlay")
 	}
 	click(t, a, "arch.tool.mine")
-	if a.renderer.planForced {
+	if a.renderer.overlays().Plan.Forced {
 		t.Fatal("another tool must not force the Plan overlay")
 	}
-	if a.renderer.homeOverlayForced {
+	if a.renderer.overlays().Home.Forced {
 		t.Fatal("Plan tool must not force Home")
 	}
 }
@@ -97,11 +97,11 @@ func TestPlanButtonToggle(t *testing.T) {
 		t.Fatalf("Plans button %+v is outside Global %+v", b, g)
 	}
 	click(t, a, planButtonID)
-	if !a.renderer.planHidden || find().Selected {
+	if a.renderer.overlays().Plan.On || find().Selected {
 		t.Fatal("click hides the overlay")
 	}
 	click(t, a, planButtonID)
-	if a.renderer.planHidden || !find().Selected {
+	if !a.renderer.overlays().Plan.On || !find().Selected {
 		t.Fatal("second click shows it again")
 	}
 	var nilR *Renderer

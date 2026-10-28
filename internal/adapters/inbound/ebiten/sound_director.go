@@ -5,10 +5,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-
-	"rimworld-go/internal/application/game"
-	"rimworld-go/internal/domain/building/construction"
-	"rimworld-go/internal/domain/building/power"
 )
 
 // The sound director (SND-001) decides, once per frame, what the player
@@ -18,9 +14,7 @@ import (
 
 const (
 	cueGap        = 4       // frames between plays of one sound
-	cueMaxPerID   = 3       // copies of one sound per frame
 	cueFastNear   = 4       // at the fastest speed, only the cues nearest the centre
-	panWidth      = 0.8     // how far left/right a cue can sit
 	tensionHold   = 45 * 60 // frames the tension music holds after a threat
 	pausedMusic   = 0.6     // music level under the pause menu
 	menuNightVol  = 0.35
@@ -35,61 +29,6 @@ type soundDirector struct {
 	Frame uint64
 	last  map[string]uint64 // frame each id last played
 	loops map[string]string // live loop emitter -> sound id
-}
-
-type loopWant struct {
-	ID       string
-	Vol, Pan float64
-}
-
-// zoomNear is the zoom at or closer than which effects play at full
-// volume and full stereo width.
-const zoomNear = 1.5
-
-// zoomEar is how the camera's distance shapes the effects: from zoomNear
-// out to the map's zoom-out limit (zoomOut) they get quieter, narrower in
-// stereo and fewer per frame, reaching silence fully zoomed out. Each
-// halving of the zoom is an equal step.
-func zoomEar(zoom, zoomOut float64) (gain, panScale float64, perID int) {
-	span := math.Log2(zoomNear / zoomOut)
-	if zoom <= 0 || span <= 0 { // the map fits at zoomNear: no room to fade
-		return 1, 1, cueMaxPerID
-	}
-	far := math.Max(0, math.Min(1, math.Log2(zoomNear/zoom)/span))
-	gain = 1 - far
-	panScale = 1 - 0.5*far
-	switch {
-	case far > 0.6:
-		perID = 1
-	case far > 0.3:
-		perID = 2
-	default:
-		perID = cueMaxPerID
-	}
-	return gain, panScale, perID
-}
-
-// spatial places a world point (tiles) for the ear: pan from where it is
-// across the view, volume falling off to silence half a view beyond the
-// edge, and fading with camera distance (zoomEar) to silence fully zoomed
-// out. ok is false when it is out of earshot.
-func spatial(r *Renderer, x, y float64, v viewport) (vol, pan float64, ok bool) {
-	sx, sy := r.worldToScreenF(x, y)
-	fx, fy := float64(sx), float64(sy)
-	cx := (v.X0 + v.X1) / 2
-	half := v.W() / 2
-	if half <= 0 || v.H() <= 0 {
-		return 0, 0, false
-	}
-	gain, panScale, _ := zoomEar(r.cam.Zoom, r.MinZoomFor(v))
-	pan = math.Max(-1, math.Min(1, (fx-cx)/half)) * panWidth * panScale
-	dx := math.Max(0, math.Max(v.X0-fx, fx-v.X1)) / half
-	dy := math.Max(0, math.Max(v.Y0-fy, fy-v.Y1)) / (v.H() / 2)
-	vol = (1 - math.Max(dx, dy)) * gain
-	if vol <= 0.01 {
-		return 0, 0, false
-	}
-	return vol, pan, true
 }
 
 // play rate-limits one sound id.
@@ -323,132 +262,6 @@ func (a *App) colonyAmbience(want map[string]loopWant) {
 			delete(want, key)
 		}
 	}
-}
-
-// --- electric machines (PLAY-021) --------------------------------------------
-
-// maxMachineLoops is how many machines of one kind are heard at once (the
-// nearest ones; a row of generators is one hum, not five).
-const maxMachineLoops = 2
-
-var (
-	sndWoodGenerator = construction.WoodGenerator.String()
-	sndGeothermal    = construction.GeothermalGenerator.String()
-	sndWindTurbine   = construction.WindTurbine.String()
-	sndHeater        = construction.Heater.String()
-	sndCooler        = construction.Cooler.String()
-)
-
-// machineLoop is the loop a kind of machine makes while it runs.
-type machineLoop struct {
-	id   string
-	runs func(b game.BuildingView) bool
-}
-
-// thermostatWorking is a heater or cooler of kind k heating or cooling:
-// powered and drawing more than it does idling at its target.
-func thermostatWorking(k construction.Kind) func(b game.BuildingView) bool {
-	idle := power.SpecOf(k).Idle
-	return func(b game.BuildingView) bool { return b.Powered && b.PowerUse > idle }
-}
-
-// makingPower is a generator making power now.
-func makingPower(b game.BuildingView) bool { return b.PowerOut > 0 }
-
-// machineLoops are the machines that hum, by building kind. The wood
-// generator also has to be burning (a switched-off one keeps its fire).
-var machineLoops = map[string]machineLoop{
-	sndWoodGenerator: {"amb.generator_wood", func(b game.BuildingView) bool { return b.Burning && makingPower(b) }},
-	sndGeothermal:    {"amb.generator_geo", makingPower},
-	sndWindTurbine:   {"amb.wind_turbine", makingPower},
-	sndHeater:        {"amb.heater", thermostatWorking(construction.Heater)},
-	sndCooler:        {"amb.cooler", thermostatWorking(construction.Cooler)},
-}
-
-// machineAmbience adds a positioned loop for each running machine (a
-// generator making power, a heater or cooler working), the nearest
-// maxMachineLoops of each sound. A machine stopping drops out of the list
-// and fades away.
-func (r *Renderer) machineAmbience(want map[string]loopWant, w game.WorldView, v viewport) {
-	type heardMachine struct {
-		key, id  string
-		vol, pan float64
-	}
-	var heard []heardMachine
-	for _, b := range w.Buildings {
-		if b.PowerOut <= 0 && !b.Powered { // cheap filter: nothing electric runs without one
-			continue
-		}
-		m, ok := machineLoops[b.Kind]
-		if !ok || !m.runs(b) {
-			continue
-		}
-		x, y := float64(b.X)+float64(max(b.W, 1))/2, float64(b.Y)+float64(max(b.H, 1))/2
-		if vol, pan, ok := spatial(r, x, y, v); ok {
-			heard = append(heard, heardMachine{"power:" + strconv.FormatUint(uint64(b.ID), 10), m.id, vol, pan})
-		}
-	}
-	sort.SliceStable(heard, func(i, j int) bool { return heard[i].vol > heard[j].vol })
-	count := map[string]int{}
-	for _, h := range heard {
-		if count[h.id] == maxMachineLoops {
-			continue
-		}
-		count[h.id]++
-		want[h.key] = loopWant{ID: h.id, Vol: h.vol, Pan: h.pan}
-	}
-}
-
-const (
-	// waterSamples is the most tiles sampled across the view each way
-	// (strided on big views, so the cost never grows with the map).
-	waterSamples = 40
-	// waterRiverGain and waterShoreGain turn an on-screen fraction into a
-	// volume: a sixth of the view in water, or a tenth of it shoreline,
-	// is the full bed.
-	waterRiverGain = 6.0
-	waterShoreGain = 10.0
-)
-
-// waterOnScreen is the share of the visible tiles that are water (shallow
-// or deep) and the share that are shore: water with land beside it. It
-// samples a strided grid of at most waterSamples x waterSamples tiles.
-func (r *Renderer) waterOnScreen(w game.WorldView, v viewport) (water, shore float64) {
-	if w.TerrainW <= 0 || len(w.Terrain) == 0 {
-		return 0, 0
-	}
-	h := len(w.Terrain) / w.TerrainW
-	x0f, y0f := r.screenToWorld(int(v.X0), int(v.Y0))
-	x1f, y1f := r.screenToWorld(int(v.X1), int(v.Y1))
-	x0, y0 := max(0, int(math.Floor(x0f))), max(0, int(math.Floor(y0f)))
-	x1, y1 := min(w.TerrainW-1, int(math.Ceil(x1f))), min(h-1, int(math.Ceil(y1f)))
-	if x1 < x0 || y1 < y0 {
-		return 0, 0
-	}
-	stride := max(1, (max(x1-x0, y1-y0)+waterSamples)/waterSamples)
-	isWater := func(x, y int) (wet, ok bool) {
-		if x < 0 || y < 0 || x >= w.TerrainW || y >= h {
-			return false, false
-		}
-		return isWaterCode[w.Terrain[y*w.TerrainW+x]], true
-	}
-	n, wet, edge := 0, 0, 0
-	for y := y0; y <= y1; y += stride {
-		for x := x0; x <= x1; x += stride {
-			n++
-			if here, _ := isWater(x, y); !here {
-				continue
-			}
-			wet++
-			for _, d := range [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {
-				if nw, in := isWater(x+d[0], y+d[1]); in && !nw {
-					edge++
-					break
-				}
-			}
-		}
-	}
-	return float64(wet) / float64(n), float64(edge) / float64(n)
 }
 
 // underThreat is a raid in progress or a threat that arrived recently.

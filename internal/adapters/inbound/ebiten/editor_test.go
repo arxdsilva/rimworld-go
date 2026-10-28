@@ -293,8 +293,8 @@ func TestEditorDoneBlockedByErrorsNotWarnings(t *testing.T) {
 	if a.nav.screen() != screenScenario || a.ng.Ed != nil {
 		t.Fatalf("Done = %s, editor %v", a.nav.screen(), a.ng.Ed)
 	}
-	if len(a.ngUnsaved) != 1 || a.ngUnsaved[0].Name != "Fresh start" {
-		t.Fatalf("unsaved = %+v", a.ngUnsaved)
+	if len(a.wiz.Unsaved) != 1 || a.wiz.Unsaved[0].Name != "Fresh start" {
+		t.Fatalf("unsaved = %+v", a.wiz.Unsaved)
 	}
 	sel := a.ng.Selected()
 	if sel == nil || !sel.Unsaved || sel.Name != "Fresh start (unsaved)" {
@@ -307,8 +307,8 @@ func TestEditorDoneBlockedByErrorsNotWarnings(t *testing.T) {
 	a.ng.Ed.Def.Summary = "changed"
 	f.Frame(t, a)
 	click(t, a, "sced.done")
-	if len(a.ngUnsaved) != 1 || a.ngUnsaved[0].Summary != "changed" {
-		t.Fatalf("unsaved = %+v", a.ngUnsaved)
+	if len(a.wiz.Unsaved) != 1 || a.wiz.Unsaved[0].Summary != "changed" {
+		t.Fatalf("unsaved = %+v", a.wiz.Unsaved)
 	}
 	// And it goes forward from Choose Scenario.
 	f.Frame(t, a)
@@ -395,8 +395,8 @@ func TestEditorSaveLoadRoundTrip(t *testing.T) {
 	if sel := a.ng.Selected(); a.nav.screen() != screenScenario || sel == nil || sel.Key != "file.my-test-camp" || sel.Unsaved {
 		t.Fatalf("screen=%s selected=%+v", a.nav.screen(), sel)
 	}
-	if len(a.ngUnsaved) != 0 {
-		t.Fatalf("a saved scenario is not an unsaved one: %v", a.ngUnsaved)
+	if len(a.wiz.Unsaved) != 0 {
+		t.Fatalf("a saved scenario is not an unsaved one: %v", a.wiz.Unsaved)
 	}
 }
 
@@ -505,8 +505,8 @@ func TestEditorBackAsksOnlyWhenDirty(t *testing.T) {
 	}
 	press(t, a, f, "modal.sced.discard.ok")
 	f.Frame(t, a)
-	if a.nav.screen() != screenScenario || a.ng.Ed != nil || len(a.ngUnsaved) != 0 {
-		t.Fatalf("Discard: screen=%s ed=%v unsaved=%d", a.nav.screen(), a.ng.Ed, len(a.ngUnsaved))
+	if a.nav.screen() != screenScenario || a.ng.Ed != nil || len(a.wiz.Unsaved) != 0 {
+		t.Fatalf("Discard: screen=%s ed=%v unsaved=%d", a.nav.screen(), a.ng.Ed, len(a.wiz.Unsaved))
 	}
 }
 

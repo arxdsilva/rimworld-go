@@ -44,7 +44,7 @@ Canonical sources (read by section, never paste whole files):
 
 ### 3. Sounds (generated, mandatory)
 - [ ] `assets/source/audio/animal_prompts.json`: four rows `animal.<key>.call|attack|hurt|die` — our own words describing this creature (size shapes the voice; call = its characteristic vocalisation, attack = aggressive, hurt = short pained, die = long fading), lengths per the SND rules (call 1.0–2.5 s, attack 0.8, hurt 0.6, die 1.0–2.5), suffix from `defaults`.
-- [ ] `animal_sounds.go` `voiceGroups`: map the key to its fallback group (`small_mammal`, `large_mammal`, `canid`, `felid`, `bovid`, `bird_small`, `bird_large`, `reptile`, `insect`).
+- [ ] `render/cue/animal_sounds.go` `VoiceGroups`: map the key to its fallback group (`small_mammal`, `large_mammal`, `canid`, `felid`, `bovid`, `bird_small`, `bird_large`, `reptile`, `insect`).
 - [ ] Generate with `cmd/sfxgen`: `-dry-run -only <key>` (show the credits) → **user approves** → generate → `make animal-audio` (ffmpeg + oggenc: trim, loudness, OGG, pitch variant) → `sfxgen -review` page → **user listens and approves** → `sfxgen -approve <ids>` (writes the ledger, `audio.json` with license and `reviewed_by`).
 - [ ] `make audio-check` passes (decodes, 48 kHz, budget, roster coverage).
 - [ ] License line on every ElevenLabs entry (free tier: non-commercial, credit ElevenLabs) — or the paid licence if the account changed; `THIRD_PARTY_NOTICES.md` kept true.

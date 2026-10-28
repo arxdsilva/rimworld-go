@@ -50,17 +50,17 @@ func TestZoneOutlinesOneFlush(t *testing.T) {
 	}
 	screen := ebiten.NewImage(640, 400)
 	r.drawZones(screen, w, 640, 400, tile)
-	if len(r.zoneBatch.Idx) != 0 || len(r.zoneBatch.Verts) != 0 {
-		t.Fatalf("batch not flushed: %d indices left", len(r.zoneBatch.Idx))
+	if len(r.overlays().Zones.Batch.Idx) != 0 || len(r.overlays().Zones.Batch.Verts) != 0 {
+		t.Fatalf("batch not flushed: %d indices left", len(r.overlays().Zones.Batch.Idx))
 	}
 	// the outlines did go through the batch
 	for _, z := range w.Zones {
 		for _, run := range r.zoneGeomOf(z).Runs {
-			r.drawZoneRun(&r.zoneBatch, z.Kind, run, 640, 400, tile)
+			r.drawZoneRun(&r.overlays().Zones.Batch, z.Kind, run, 640, 400, tile)
 		}
 	}
-	if quadsOf(&r.zoneBatch) < 50*4 {
-		t.Fatalf("only %d outline quads for 50 stockpiles", quadsOf(&r.zoneBatch))
+	if quadsOf(&r.overlays().Zones.Batch) < 50*4 {
+		t.Fatalf("only %d outline quads for 50 stockpiles", quadsOf(&r.overlays().Zones.Batch))
 	}
 }
 

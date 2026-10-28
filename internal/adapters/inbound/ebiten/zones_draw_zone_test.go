@@ -3,7 +3,7 @@ package ebiten
 import (
 	"testing"
 
-	ebiten "github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/entity"
@@ -62,18 +62,6 @@ func TestHiddenZoneDrawsNoLabelAndARenamedOneShowsItsName(t *testing.T) {
 	}
 	if len(texts) != 2 || texts[0] != "North field" || texts[1] != "Pen" {
 		t.Fatalf("labels %q, want the custom name and the pen's, no hidden stockpile", texts)
-	}
-}
-
-func TestZoneLabelTextPrefersTheName(t *testing.T) {
-	t.Parallel()
-	z := game.ZoneView{Kind: game.ZoneGrow, Crop: "wheat"}
-	if got := zoneLabelText(z); got != "Wheat" {
-		t.Fatalf("unnamed label %q", got)
-	}
-	z.Name = "Back forty"
-	if got := zoneLabelText(z); got != "Back forty" {
-		t.Fatalf("named label %q", got)
 	}
 }
 

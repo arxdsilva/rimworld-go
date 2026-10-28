@@ -15,19 +15,19 @@ import (
 
 // voiceSource is the renderer file that owns the species -> voice group
 // table, relative to the repo root (the parent of the assets directory).
-const voiceSource = "internal/adapters/inbound/ebiten/animal_sounds.go"
+const voiceSource = "internal/adapters/inbound/ebiten/render/cue/animal_sounds.go"
 
 // voiceEvents are the four sounds every species has (SND-003).
 var voiceEvents = []string{"call", "attack", "hurt", "die"}
 
 var voicePair = regexp.MustCompile(`"([a-z_]+)":\s*"([a-z_]+)"`)
 
-// parseVoiceGroups reads the voiceGroups map literal out of the renderer
+// parseVoiceGroups reads the VoiceGroups map literal out of the renderer
 // source, so the check cannot drift from the table the game uses.
 func parseVoiceGroups(src string) (map[string]string, error) {
-	i := strings.Index(src, "voiceGroups = map[string]string{")
+	i := strings.Index(src, "VoiceGroups = map[string]string{")
 	if i < 0 {
-		return nil, errors.New("voiceGroups table not found")
+		return nil, errors.New("VoiceGroups table not found")
 	}
 	body := src[i:]
 	if j := strings.Index(body, "\n}"); j >= 0 {
@@ -38,7 +38,7 @@ func parseVoiceGroups(src string) (map[string]string, error) {
 		out[m[1]] = m[2]
 	}
 	if len(out) == 0 {
-		return nil, errors.New("voiceGroups table is empty")
+		return nil, errors.New("VoiceGroups table is empty")
 	}
 	return out, nil
 }

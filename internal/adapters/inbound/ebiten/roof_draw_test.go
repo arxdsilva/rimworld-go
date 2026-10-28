@@ -1,32 +1,13 @@
 package ebiten
 
 import (
-	"image/color"
 	"strings"
 	"testing"
 
-	ebiten "github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
-	"rimworld-go/internal/domain/world/roof"
 )
-
-func TestRoofFlagsMirrorDomain(t *testing.T) {
-	t.Parallel()
-	pairs := [][2]uint8{
-		{roofBuilt, uint8(roof.Built)}, {roofNatural, uint8(roof.Natural)},
-		{roofPlanBuild, uint8(roof.PlanBuild)}, {roofPlanRemove, uint8(roof.PlanRemove)},
-		{roofSupported, uint8(roof.Supported)}, {roofNoAuto, uint8(roof.NoAuto)}, {roofThick, uint8(roof.NaturalThick)},
-	}
-	for _, p := range pairs {
-		if p[0] != p[1] {
-			t.Fatalf("renderer flag %d != domain flag %d", p[0], p[1])
-		}
-	}
-	if roofAutoMax != roof.AutoMaxCells {
-		t.Fatalf("roofAutoMax %d != roof.AutoMaxCells %d", roofAutoMax, roof.AutoMaxCells)
-	}
-}
 
 // roofLabelWorld is a 10x6 map: tiles x<5 are room 0 (small), x>=5 room
 // 1 (large); column 4 of row 0 is a wall.
@@ -46,40 +27,6 @@ func roofLabelWorld() game.WorldView {
 	w.RoofCells[13] = roofBuilt
 	w.RoofCells[20] = roofNatural | roofThick
 	return w
-}
-
-func TestRoofLabels(t *testing.T) {
-	t.Parallel()
-	w := roofLabelWorld()
-	cases := []struct {
-		x, y int
-		want string
-	}{
-		{0, 1, "Roof removal planned"},
-		{1, 1, "Roof planned"},
-		{2, 1, "Natural roof (rock)"},
-		{3, 1, "Roofed"},
-		{0, 2, "Thick rock overhead (permanent)"},
-		{6, 2, "Unroofed (room too large to auto-roof)"},
-		{0, 3, "Unroofed"},
-		{4, 0, ""},  // a wall
-		{-1, 0, ""}, // out of bounds
-		{10, 0, ""},
-		{0, 6, ""},
-	}
-	for _, c := range cases {
-		if got := roofLabelAt(w, c.x, c.y); got != c.want {
-			t.Errorf("roofLabelAt(%d,%d) = %q, want %q", c.x, c.y, got, c.want)
-		}
-	}
-	// outdoors next to a large room is plain unroofed
-	w.RoomGrid[2*10+9] = -1
-	if got := roofLabelAt(w, 9, 2); got != "Unroofed" {
-		t.Errorf("outdoors: %q", got)
-	}
-	if got := roofLabelAt(game.WorldView{TerrainW: 10, RoomGrid: make([]int, 60)}, 1, 1); got != "" {
-		t.Errorf("no roof data: %q", got)
-	}
 }
 
 func TestRoomLabelRoofedPercent(t *testing.T) {
@@ -127,7 +74,7 @@ func TestEavesOnRoofedInteriorEdges(t *testing.T) {
 	for _, e := range edges {
 		has[e] = true
 	}
-	for _, want := range []eaveEdge{{1, 1, sideN}, {1, 1, sideW}, {5, 4, sideE}, {5, 4, sideS}, {3, 1, sideN}, {1, 3, sideW}} {
+	for _, want := range []eaveEdge{{X: 1, Y: 1, Side: sideN}, {X: 1, Y: 1, Side: sideW}, {X: 5, Y: 4, Side: sideE}, {X: 5, Y: 4, Side: sideS}, {X: 3, Y: 1, Side: sideN}, {X: 1, Y: 3, Side: sideW}} {
 		if !has[want] {
 			t.Errorf("missing eave %+v", want)
 		}
@@ -156,32 +103,8 @@ func TestEavesOnRoofedInteriorEdges(t *testing.T) {
 	}
 	r := New(&stubSim{w: 9, h: 6})
 	r.drawEaves(ebiten.NewImage(640, 400), w, 640, 400, r.tilePx())
-	if len(r.env.Roof.Edges) != 18 {
-		t.Errorf("drawEaves found %d edges", len(r.env.Roof.Edges))
-	}
-}
-
-func TestRoofOverlayColorsPerFlag(t *testing.T) {
-	t.Parallel()
-	cases := []struct {
-		c    uint8
-		want roofStyle
-	}{
-		{roofBuilt, roofStyle{Fill: color.RGBA{90, 140, 210, 70}, Border: color.RGBA{120, 170, 235, 150}}},
-		{roofBuilt | roofSupported, roofStyle{Fill: color.RGBA{90, 140, 210, 70}, Border: color.RGBA{120, 170, 235, 150}}},
-		{roofNatural, roofStyle{Fill: color.RGBA{110, 110, 125, 85}, Stipple: roofNaturalDots}},
-		{roofPlanBuild, roofStyle{Fill: color.RGBA{235, 175, 60, 30}, Dash: color.RGBA{235, 175, 60, 200}}},
-		{roofBuilt | roofPlanRemove, roofStyle{Fill: color.RGBA{90, 140, 210, 70}, Border: color.RGBA{120, 170, 235, 150},
-			Hatch: color.RGBA{220, 70, 60, 120}}},
-		{roofSupported | roofNoAuto, roofStyle{}},
-	}
-	for _, c := range cases {
-		if got := roofStyleFor(c.c); got != c.want {
-			t.Errorf("flags %06b: got %+v, want %+v", c.c, got, c.want)
-		}
-	}
-	if roofNaturalDots.A == 0 {
-		t.Error("natural roofs have no stipple")
+	if len(r.overlays().RoofDraw.Edges) != 18 {
+		t.Errorf("drawEaves found %d edges", len(r.overlays().RoofDraw.Edges))
 	}
 }
 
@@ -193,17 +116,17 @@ func TestOverlayOnlyWhenToggledOrForced(t *testing.T) {
 		{false, false, false}, {true, false, true}, {false, true, true}, {true, true, true},
 	} {
 		r := New(&stubSim{w: 9, h: 6})
-		r.roofOverlay, r.roofOverlayForced = c.toggled, c.forced
+		r.overlays().Roof.On, r.overlays().Roof.Forced = c.toggled, c.forced
 		if r.roofOverlayOn() != c.want {
 			t.Fatalf("%+v: roofOverlayOn %v", c, r.roofOverlayOn())
 		}
 		r.drawRoofOverlay(screen, w, 640, 400, r.tilePx())
-		if drew := r.env.Roof.OverlayVerts > 0; drew != c.want {
-			t.Fatalf("%+v: overlay drew %d vertices", c, r.env.Roof.OverlayVerts)
+		if drew := r.overlays().RoofDraw.OverlayVerts > 0; drew != c.want {
+			t.Fatalf("%+v: overlay drew %d vertices", c, r.overlays().RoofDraw.OverlayVerts)
 		}
 		// no roof data: nothing, even when on
 		r.drawRoofOverlay(screen, game.WorldView{TerrainW: 9}, 640, 400, r.tilePx())
-		if r.env.Roof.OverlayVerts != 0 {
+		if r.overlays().RoofDraw.OverlayVerts != 0 {
 			t.Fatalf("%+v: overlay drew without roof data", c)
 		}
 	}
@@ -212,10 +135,10 @@ func TestOverlayOnlyWhenToggledOrForced(t *testing.T) {
 	w.RoofCells[3*9+3] = roofPlanBuild
 	w.RoofCells[4*9+1] = roofNatural
 	r := New(&stubSim{w: 9, h: 6})
-	r.roofOverlay = true
+	r.overlays().Roof.On = true
 	r.drawRoofOverlay(screen, w, 640, 400, r.tilePx())
 	r.drawRoofUnsupported(screen, 2, 2, r.tilePx())
-	if r.env.Roof.OverlayVerts == 0 {
+	if r.overlays().RoofDraw.OverlayVerts == 0 {
 		t.Fatal("overlay drew nothing")
 	}
 }

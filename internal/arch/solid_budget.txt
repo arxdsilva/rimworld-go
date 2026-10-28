@@ -4,28 +4,26 @@
 
 # --- size rules ---
 fields rimworld-go/internal/adapters/inbound/ebiten.App 95
-fields rimworld-go/internal/adapters/inbound/ebiten.Renderer 72
-fields rimworld-go/internal/adapters/inbound/ebiten.envState 40
+fields rimworld-go/internal/adapters/inbound/ebiten.Renderer 48
 fields rimworld-go/internal/adapters/inbound/ebiten/globe.View 51  # the same debt, moved with the type (ARCH-003)
-fields rimworld-go/internal/adapters/inbound/ebiten.newGameState 43
+fields rimworld-go/internal/adapters/inbound/ebiten/wizard.Draft 42  # the same debt, moved with the type (ARCH-005 wave 5.2; was newGameState 43)
 fields rimworld-go/internal/adapters/inbound/ebiten/uikit.Kit 30  # the same debt, moved with the type (ARCH-003 wave 3.2; was uiState 32)
 methods rimworld-go/internal/adapters/inbound/ebiten/uikit.Kit 73  # moved from App with the kit (ARCH-003 wave 3.2); seams to split: text editing 14, modals 9, table 4, tooltip 3
 fields rimworld-go/internal/application/game.Game 152
 fields rimworld-go/internal/domain/animal.State 60
 fields rimworld-go/internal/domain/world/planet.Planet 33
-files rimworld-go/internal/adapters/inbound/ebiten 198  # ARCH-002 raised 212 -> 213 for the seam itself, the only raise; ARCH-003 lowers
+files rimworld-go/internal/adapters/inbound/ebiten 155  # ARCH-002 raised 212 -> 213 for the seam itself, the only raise; ARCH-003/004/005 lower
 files rimworld-go/internal/application/game 185
 iface rimworld-go/internal/adapters/inbound/ebiten.Simulation 32
-lines rimworld-go/internal/adapters/inbound/ebiten 54511  # ARCH-002 raised 64178 -> 64602 for the seam itself, the only raise; ARCH-003/004 lower
+lines rimworld-go/internal/adapters/inbound/ebiten 36516  # ARCH-002 raised 64178 -> 64602 for the seam itself, the only raise; ARCH-003/004/005 lower
 lines rimworld-go/internal/application/game 57019
-methods rimworld-go/internal/adapters/inbound/ebiten.App 950
-methods rimworld-go/internal/adapters/inbound/ebiten.Renderer 398
+methods rimworld-go/internal/adapters/inbound/ebiten.App 870
+methods rimworld-go/internal/adapters/inbound/ebiten.Renderer 358
 methods rimworld-go/internal/application/game.Game 2105
 methods rimworld-go/internal/domain/pawn/body.Body 99
 
 # --- init(): registration from the composition root instead (SOLID_GO.md §4) ---
 init rimworld-go/internal/adapters/inbound/ebiten/alerts_allies.go
-init rimworld-go/internal/adapters/inbound/ebiten/environment.go
 init rimworld-go/internal/domain/difficulty/difficulty.go
 init rimworld-go/internal/domain/faction/faction.go
 init rimworld-go/internal/domain/incident/incident.go
@@ -34,11 +32,6 @@ init rimworld-go/internal/domain/world/biome/biome.go
 
 # --- runtime-assigned package state: becomes a field of its owner (SOLID_GO.md §9) ---
 global rimworld-go/internal/adapters/inbound/ebiten.alertExplanations
-global rimworld-go/internal/adapters/inbound/ebiten.flakeKeys
-global rimworld-go/internal/adapters/inbound/ebiten.frostKeys
-global rimworld-go/internal/adapters/inbound/ebiten.snowBankKeys
-global rimworld-go/internal/adapters/inbound/ebiten.snowDriftKeys
-global rimworld-go/internal/adapters/inbound/ebiten.splashKeys
 global rimworld-go/internal/application/game.indexSelfCheck
 global rimworld-go/internal/application/game.regionsOffAll
 global rimworld-go/internal/application/game.selfCheckEvery
@@ -49,3 +42,4 @@ global rimworld-go/internal/domain/pawn/social.memDefs
 global rimworld-go/internal/domain/pawn/trait.defs
 global rimworld-go/internal/domain/world/biome.defs
 global rimworld-go/internal/adapters/inbound/ebiten/gfx.cur  # SOLID_GO.md §9: the one documented process-wide canvas state (UI scale, world pass, test traces; main goroutine only), never a second
+methods rimworld-go/internal/adapters/inbound/ebiten/render/creature.Set 93  # moved from Renderer with the creature layer (ARCH-004 wave 4.3); seams to split: pawn figure 20+, animal body, combat and work animation, bursts/particles, traces and floaters

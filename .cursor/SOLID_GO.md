@@ -139,6 +139,8 @@ The mandatory rule is `HEXAGONAL_ARCHITECTURE.md` §6, with `GO_BEST_PRACTICES.m
 
 This document adds one point. The `ebiten` sub-packages are consumers. They define what they need from the root, the root constructs them, and a sub-package never imports the root. The guard's `imports` rule enforces that edge.
 
+In a draw or tick path the host interface's methods take values, not pointers to the caller's locals: an interface call hides the callee from escape analysis, so a `*game.WorldView` passed through one moves the whole frame's world to the heap (ARCH-004 wave 4.3: two allocations per frame until `render/env.Lists` passed the slices instead). Pass the slice or the field the method reads; benchmark `-benchmem` and `-gcflags=-m=2` after adding a host method.
+
 ---
 
 # 8. Measurable Limits

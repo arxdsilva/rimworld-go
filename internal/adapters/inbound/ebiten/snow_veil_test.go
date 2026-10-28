@@ -2,10 +2,9 @@ package ebiten
 
 import (
 	"fmt"
-	"math"
 	"testing"
 
-	ebiten "github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
 )
@@ -24,33 +23,6 @@ func snowyWorld() game.WorldView {
 		}
 	}
 	return w
-}
-
-func TestSnowDepthPerTile(t *testing.T) {
-	t.Parallel()
-	e := &envState{TerrW: 4, SnowCells: []uint8{0, 255, 0, 0, 51, 0, 0, 0}, Snow: 0.7}
-	if d := e.SnowDepthAt(1, 0); d != 1 {
-		t.Fatalf("tile depth %v", d)
-	}
-	if d := e.SnowDepthAt(2, 1); d != 0 || e.SnowDepthAt(-1, 0) != 0 || e.SnowDepthAt(0, 5) != 0 {
-		t.Fatal("bare or off-map tiles read 0")
-	}
-	// the corner between (0,0), (1,0), (0,1), (1,1) is their mean
-	if c := e.SnowCorner(1, 1); math.Abs(c-(255+51)/4.0/255) > 1e-9 {
-		t.Fatalf("corner %v", c)
-	}
-	// a map corner averages the one tile it touches
-	if c := e.SnowCorner(0, 0); c != 0 {
-		t.Fatalf("map corner %v", c)
-	}
-	if c := e.SnowCorner(-5, -5); c != 0 {
-		t.Fatalf("far corner %v", c)
-	}
-	// without the layer every tile reads the map figure
-	u := &envState{TerrW: 4, Snow: 0.7}
-	if u.SnowDepthAt(3, 1) != 0.7 || u.SnowCorner(2, 2) != 0.7 {
-		t.Fatal("no layer: the map figure")
-	}
 }
 
 // snowTexel is the snow (row 0) or wet veil (row 1, PLAY-022) alpha at

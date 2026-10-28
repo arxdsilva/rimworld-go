@@ -114,28 +114,28 @@ func TestHomeOverlayForcedWhileToolHeld(t *testing.T) {
 	click(t, a, "tab.architect")
 	click(t, a, "arch.cat.zones")
 	click(t, a, "arch.tool.home")
-	if !a.renderer.homeOverlayForced {
+	if !a.renderer.overlays().Home.Forced {
 		t.Fatal("Home tool should force the overlay")
 	}
 	click(t, a, "arch.tool.unhome")
-	if !a.renderer.homeOverlayForced {
+	if !a.renderer.overlays().Home.Forced {
 		t.Fatal("Clear home tool should force the overlay")
 	}
 	click(t, a, "arch.tool.unhome") // deselect
-	if a.renderer.homeOverlayForced || a.renderer.homeShown() {
+	if a.renderer.overlays().Home.Forced || a.renderer.homeShown() {
 		t.Fatal("deselecting should clear the forced overlay")
 	}
 	click(t, a, "arch.tool.stockpile")
-	if a.renderer.homeOverlayForced {
+	if a.renderer.overlays().Home.Forced {
 		t.Fatal("another tool must not force the Home overlay")
 	}
 	click(t, a, "arch.tool.home")
 	click(t, a, "tab.architect") // close
 	a.syncRoofForce()
-	if a.renderer.homeOverlayForced {
+	if a.renderer.overlays().Home.Forced {
 		t.Fatal("closing the Architect should clear the forced overlay")
 	}
-	if a.renderer.roofOverlayForced {
+	if a.renderer.overlays().Roof.Forced {
 		t.Fatal("Home tool must not force the Roof overlay")
 	}
 }
@@ -165,11 +165,11 @@ func TestHomeButtonToggle(t *testing.T) {
 		t.Fatal("button should consume the pointer")
 	}
 	a.renderer.toggleHomeOverlayIfAny()
-	if !a.renderer.homeOverlay || !find().Selected {
+	if !a.renderer.overlays().Home.On || !find().Selected {
 		t.Fatal("toggle should turn the overlay on and show active")
 	}
 	a.renderer.toggleHomeOverlayIfAny()
-	if a.renderer.homeOverlay {
+	if a.renderer.overlays().Home.On {
 		t.Fatal("second toggle should turn it off")
 	}
 	var nilR *Renderer

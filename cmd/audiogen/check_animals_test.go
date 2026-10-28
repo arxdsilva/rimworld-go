@@ -54,10 +54,10 @@ func TestParseVoiceGroupsAndRealTable(t *testing.T) {
 	if _, err := parseVoiceGroups("package x"); err == nil {
 		t.Fatal("missing table accepted")
 	}
-	if _, err := parseVoiceGroups("var voiceGroups = map[string]string{\n}\n"); err == nil {
+	if _, err := parseVoiceGroups("var VoiceGroups = map[string]string{\n}\n"); err == nil {
 		t.Fatal("empty table accepted")
 	}
-	got, err := parseVoiceGroups("var voiceGroups = map[string]string{\n\t\"cow\": \"bovid\", \"cat\": \"felid\",\n}\n")
+	got, err := parseVoiceGroups("var VoiceGroups = map[string]string{\n\t\"cow\": \"bovid\", \"cat\": \"felid\",\n}\n")
 	if err != nil || got["cow"] != "bovid" || got["cat"] != "felid" || len(got) != 2 {
 		t.Fatalf("got %v, %v", got, err)
 	}

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	ebiten "github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/entity"
@@ -119,25 +119,6 @@ func TestBeaconGhostShowsRadius(t *testing.T) {
 	}
 	if on == 0 || off == 0 || !beaconLit(1000, 1, true) {
 		t.Errorf("beacon blink on %d off %d", on, off)
-	}
-}
-
-func TestTurretInspectorStatus(t *testing.T) {
-	t.Parallel()
-	cases := []struct {
-		b    game.BuildingView
-		want string
-	}{
-		{game.BuildingView{Kind: sentryTurretKind, Powered: false, ShotAge: 10}, "No power"},
-		{game.BuildingView{Kind: sentryTurretKind, Powered: true, ShotAge: -1}, "Idle"},
-		{game.BuildingView{Kind: sentryTurretKind, Powered: true, ShotAge: 30}, "Target locked"},
-		{game.BuildingView{Kind: sentryTurretKind, Powered: true, ShotAge: 500}, "Idle"},
-		{game.BuildingView{Kind: "wall"}, ""},
-	}
-	for _, c := range cases {
-		if got := turretLine(c.b); got != c.want {
-			t.Errorf("%+v: %q, want %q", c.b, got, c.want)
-		}
 	}
 }
 

@@ -3,7 +3,7 @@ package ebiten
 import (
 	"testing"
 
-	ebiten "github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
 )
@@ -27,45 +27,21 @@ func TestFogCacheRebuildsOnlyOnFogVerChange(t *testing.T) {
 	screen := ebiten.NewImage(256, 256)
 	tile := r.cam.Tile()
 	r.drawFogLayer(screen, w.Fog, 1, 40, 40, tile, 256, 256)
-	first := r.fogc.Bakes
+	first := r.overlays().Fog.Bakes
 	if first == 0 {
 		t.Fatal("first draw baked nothing")
 	}
 	r.drawFogLayer(screen, w.Fog, 1, 40, 40, tile, 256, 256)
-	if r.fogc.Bakes != first {
-		t.Fatalf("same FogVer rebaked: %d -> %d", first, r.fogc.Bakes)
+	if r.overlays().Fog.Bakes != first {
+		t.Fatalf("same FogVer rebaked: %d -> %d", first, r.overlays().Fog.Bakes)
 	}
 	r.drawFogLayer(screen, w.Fog, 2, 40, 40, tile, 256, 256)
-	if r.fogc.Bakes != 2*first {
-		t.Fatalf("FogVer change rebaked %d chunks, want %d", r.fogc.Bakes-first, first)
+	if r.overlays().Fog.Bakes != 2*first {
+		t.Fatalf("FogVer change rebaked %d chunks, want %d", r.overlays().Fog.Bakes-first, first)
 	}
 	r.drawFogLayer(screen, nil, 0, 40, 40, tile, 256, 256)
-	if r.fogc.Chunks != nil {
+	if r.overlays().Fog.Chunks != nil {
 		t.Fatal("empty fog kept its bakes")
-	}
-}
-
-func TestFogDrawsHiddenTilesNearBlack(t *testing.T) {
-	t.Parallel()
-	// The baked chunk (kept in fc.pix; offscreen images cannot be read
-	// back before the game starts): hidden tiles are the fog colour, far
-	// revealed tiles clear, the tile beside the fog a gradient.
-	w := fogWorld(16, 16, 8)
-	var fc fogCache
-	var c fogChunk
-	fc.Bake(&c, w.Fog, 16, 16, 0, 0)
-	at := func(tx, ty int) [4]uint8 {
-		o := 4 * ((ty*fogPx+fogPx/2)*fogChunkPx + tx*fogPx + fogPx/2)
-		return [4]uint8{fc.Pix[o], fc.Pix[o+1], fc.Pix[o+2], fc.Pix[o+3]}
-	}
-	if got := at(12, 5); got != [4]uint8{0x0B, 0x0B, 0x0E, 255} {
-		t.Fatalf("hidden tile pixel = %v, want fog colour", got)
-	}
-	if got := at(2, 5); got[3] != 0 {
-		t.Fatalf("revealed tile far from the edge is fogged: %v", got)
-	}
-	if got := at(7, 5); got[3] == 0 || got[3] == 255 {
-		t.Fatalf("tile beside the fog is not a gradient: %v", got)
 	}
 }
 
@@ -74,7 +50,7 @@ func TestFogNoFogDoesNothing(t *testing.T) {
 	r := New(&stubSim{w: 16, h: 16, world: game.WorldView{TerrainW: 16}})
 	screen := ebiten.NewImage(64, 64)
 	r.drawFog(screen, game.WorldView{TerrainW: 16}, 64, 64, 32)
-	if r.fogc.Bakes != 0 || r.fogc.Chunks != nil {
+	if r.overlays().Fog.Bakes != 0 || r.overlays().Fog.Chunks != nil {
 		t.Fatal("empty fog did work")
 	}
 }
@@ -92,17 +68,6 @@ func TestSelectionIgnoresHiddenTiles(t *testing.T) {
 	}
 	if got := selectablesAt(w, pawns, 1, 2); len(got) != 1 {
 		t.Fatalf("revealed item not picked: %v", got)
-	}
-}
-
-func TestHoverSaysUnexplored(t *testing.T) {
-	t.Parallel()
-	w := fogWorld(10, 10, 5)
-	if got := unexploredLines(w, 6, 3); len(got) != 1 || got[0] != "Unexplored" {
-		t.Fatalf("hidden hover = %v", got)
-	}
-	if unexploredLines(w, 2, 3) != nil || unexploredLines(game.WorldView{}, 2, 3) != nil {
-		t.Fatal("revealed or fogless tile reads Unexplored")
 	}
 }
 

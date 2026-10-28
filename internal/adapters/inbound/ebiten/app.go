@@ -12,6 +12,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/mainmenu"
 	"rimworld-go/internal/adapters/inbound/ebiten/selection"
+	"rimworld-go/internal/adapters/inbound/ebiten/wizard"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/clock"
@@ -154,15 +155,14 @@ type App struct {
 	treeFocus, treeSel [][2]int
 	menuTick           uint64           // drives menu motion; counts while no colony is shown
 	menuScreen         *mainmenu.Screen // mainmenu.Screen owns the main menu (ARCH-005)
+	wiz                *wizard.Flow     // wizard.Flow owns the New Colony flow (ARCH-005)
 	sessionErr         string
 	hint               string
 	shouldQuit         bool
 
-	// ng is the New Colony wizard's draft (newgame_state.go); nil outside
-	// the wizard. ngUnsaved are the custom scenarios made this session and
-	// not saved to a file.
+	// ng is the New Colony wizard's draft as wizard.Flow hands it over
+	// (KeepDraft, wizard_compat.go); nil outside the wizard.
 	ng          *newGameState
-	ngUnsaved   unsavedDefs
 	animalsWild bool               // the Animals tab shows the Wild list
 	wildRows    []game.WildlifeRow // g.Wildlife(), read once per tick
 	wildTick    clock.Tick
@@ -287,6 +287,7 @@ func NewApp(cfg AppConfig) *App {
 	a.shell = newShell(a)
 	a.sel = selection.New(a.shell, selHost{a})
 	a.menuScreen = mainmenu.New(menuHost{a})
+	a.wiz = wizard.New(wizHost{a})
 	a.loadSettings()
 	a.applySettings()
 	return a
@@ -482,8 +483,8 @@ func (a *App) tick() {
 		a.tickBoot()
 	case screenColony:
 		if a.nav.overlay() == overlayNone && a.renderer != nil && !a.bg.paused { // background.go
-			a.renderer.voice.View = a.mapViewport() // animal calls only on screen (physical, like worldToScreen)
-			a.advanceColony()                       // update_budget.go: steps under the Update budget, stamps the Update
+			a.renderer.cueBus().Voice.View = a.mapViewport() // animal calls only on screen (physical, like worldToScreen)
+			a.advanceColony()                                // update_budget.go: steps under the Update budget, stamps the Update
 			a.tickAutosave()
 		} else {
 			a.clearTickDebt() // a paused colony owes nothing on resume
@@ -653,7 +654,7 @@ func (a *App) startSession(sim Simulation) {
 	a.closeFloat()
 	a.inspectTab = "character"
 	a.renderer = New(sim)
-	a.renderer.soundHas = a.cfg.Sound.Has // animal voices fall back by what exists
+	a.renderer.cueBus().SoundHas = a.cfg.Sound.Has // animal voices fall back by what exists
 	a.renderer.art = a.art
 	a.syncRenderer()
 	a.nav.reset(frame{screen: screenColony})

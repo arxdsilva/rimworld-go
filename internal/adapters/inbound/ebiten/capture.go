@@ -425,7 +425,7 @@ func (a *App) captureUI(ui string) {
 		// and the power grid overlay on for power-overlay
 		sw, sh := a.size()
 		a.renderer.centerOn(float64(a.renderer.game.Width())/2, float64(a.renderer.game.Height())/2-9, sw, sh)
-		a.renderer.pov.On = ui == "power-overlay"
+		a.renderer.overlays().Power.On = ui == "power-overlay"
 	case "zone", "zone-shrink":
 		a.captureZone(ui == "zone-shrink", at)
 	case "paths":
@@ -466,7 +466,7 @@ func (a *App) captureUI(ui string) {
 		cx, cy := float64(a.renderer.game.Width())/2, float64(a.renderer.game.Height())/2
 		sw, sh := a.size()
 		a.renderer.centerOn(cx+6, cy-3, sw, sh)
-		a.renderer.roofOverlay = ui == "roofs-overlay"
+		a.renderer.overlays().Roof.On = ui == "roofs-overlay"
 	case "burial":
 		// the -scenario burial graveyard
 		sw, sh := a.size()
@@ -591,7 +591,7 @@ func (a *App) captureUI(ui string) {
 		a.openArchitect()
 		a.selectArchCategory("zones")
 		a.selectArchTool("home")
-		a.renderer.homeOverlay = true
+		a.renderer.overlays().Home.On = true
 		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
 		a.archDrag = true
 		a.archX0, a.archY0, a.archX1, a.archY1 = cx-3, cy-2, cx+3, cy+2

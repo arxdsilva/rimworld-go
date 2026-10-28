@@ -130,18 +130,18 @@ func (r *Renderer) syncFrameChunks() {
 	}
 }
 
-// plantsOn appends the indexes into w.Plants of the plants on tiles
-// x0..x1 × y0..y1: from the simulation's chunk read model when w is its
-// current world (the same shared list), else by scanning w (a world
-// handed in directly, as tests do).
-func (r *Renderer) plantsOn(w *game.WorldView, x0, y0, x1, y1 int, buf []int32) []int32 {
+// plantsOn appends the indexes into plants of the plants on tiles
+// x0..x1 × y0..y1: from the simulation's chunk read model when plants is
+// its current list (the same shared backing array), else by scanning it (a
+// world handed in directly, as tests do).
+func (r *Renderer) plantsOn(plants []game.PlantView, x0, y0, x1, y1 int, buf []int32) []int32 {
 	if r.game != nil {
-		if cur := r.game.World(); litFirst(cur.Plants) == litFirst(w.Plants) && len(cur.Plants) == len(w.Plants) {
+		if cur := r.game.World(); litFirst(cur.Plants) == litFirst(plants) && len(cur.Plants) == len(plants) {
 			return r.game.PlantsIn(x0, y0, x1, y1, buf)
 		}
 	}
-	for i := range w.Plants {
-		if p := &w.Plants[i]; p.X >= x0 && p.X <= x1 && p.Y >= y0 && p.Y <= y1 {
+	for i := range plants {
+		if p := &plants[i]; p.X >= x0 && p.X <= x1 && p.Y >= y0 && p.Y <= y1 {
 			buf = append(buf, int32(i))
 		}
 	}
@@ -227,7 +227,7 @@ func (r *Renderer) bakeGround(dst *ebiten.Image, w *game.WorldView, x0, y0, x1, 
 					case b.Floor:
 						r.drawTile(dst, r.buildKey("floor", b.Stuff, "", 0, false, false), float64(b.X), float64(b.Y), tile, sw, sh, tintCS(r.stuffTint(b.Stuff)))
 					case b.Kind == bridgeKind:
-						r.drawBridgeCell(dst, *w, r.bridges.Sync(*w), b, tile, sw, sh)
+						r.drawBridgeCell(dst, *w, r.overlays().Bridges.Sync(*w), b, tile, sw, sh)
 					case b.Kind == "sleeping spot":
 						r.drawSprite(dst, buildSprite(b.Kind, b.Facing, 0, false, false), none, float64(b.X), float64(b.Y), tile, sw, sh)
 					case b.Kind == "carpet":

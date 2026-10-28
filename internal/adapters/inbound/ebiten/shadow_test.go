@@ -68,7 +68,7 @@ func shadowRenderer(t *testing.T, w game.WorldView) *Renderer {
 	t.Helper()
 	r := New(&stubSim{w: 20, h: 12})
 	r.art = envArt()
-	r.env.View = envRect{0, 0, 20, 12}
+	r.env.View = envRect{X0: 0, Y0: 0, X1: 20, Y1: 12}
 	return r
 }
 
@@ -108,7 +108,7 @@ func TestNoShadowsUnderRoof(t *testing.T) {
 		t.Fatalf("creature casters (id: open sky) %v", sky)
 	}
 	// off-screen casters (beyond the longest shadow) are skipped
-	r.env.View = envRect{0, 0, 2, 2}
+	r.env.View = envRect{X0: 0, Y0: 0, X1: 2, Y1: 2}
 	far := game.WorldView{TerrainW: w.TerrainW, Items: []game.ItemView{{Kind: "wood", X: 1, Y: 1}, {Kind: "wood", X: 19, Y: 11}}}
 	if n := len(r.shadowCasters(far, nil)); n != 1 {
 		t.Fatalf("got %d casters, want only the one in view", n)

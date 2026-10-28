@@ -329,7 +329,7 @@ func (a *App) zonePlantsLine(z game.ZoneView) string {
 	g := r.zoneGeomOf(z)
 	w := a.shell.World()
 	st := a.zoneSt()
-	st.plants = r.plantsOn(&w, g.MinX, g.MinY, g.MaxX, g.MaxY, st.plants[:0])
+	st.plants = r.plantsOn(w.Plants, g.MinX, g.MinY, g.MaxX, g.MaxY, st.plants[:0])
 	sown, ripe, growth := 0, 0, 0
 	for _, i := range st.plants {
 		p := &w.Plants[i]

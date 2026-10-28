@@ -6,6 +6,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
 	"rimworld-go/internal/application/game"
 )
@@ -22,8 +23,8 @@ type (
 	linkCell    = sprite.LinkCell
 	plannedCell = sprite.PlannedCell
 	// linkGrid classifies building kinds with the renderer's names
-	// (linkKinds, linkgrid.go).
-	linkGrid = sprite.LinkGrid[linkKinds]
+	// (overlay.LinkKinds, render/overlay/power_draw.go).
+	linkGrid = sprite.LinkGrid[overlay.LinkKinds]
 )
 
 const (

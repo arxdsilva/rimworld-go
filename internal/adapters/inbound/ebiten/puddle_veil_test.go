@@ -2,10 +2,9 @@ package ebiten
 
 import (
 	"fmt"
-	"math"
 	"testing"
 
-	ebiten "github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
 )
@@ -429,17 +428,6 @@ func TestPuddleVeilDrawsFlatLitAtEveryTier(t *testing.T) {
 	}
 }
 
-func TestPuddleSkyFollowsDaylight(t *testing.T) {
-	t.Parallel()
-	noon, night := puddleSky(lightAt(12, 40, "rain", 1)), puddleSky(lightAt(1, 40, "rain", 1))
-	if noon[3] != 1 || night[3] != 1 {
-		t.Fatalf("alpha scale %v %v: the darkening is baked", noon[3], night[3])
-	}
-	if !(noon[0]+noon[1]+noon[2] > 1.5*(night[0]+night[1]+night[2])) || noon[2] < noon[0] {
-		t.Fatalf("reflection noon %v night %v: want a cool sky, dimmer at night", noon, night)
-	}
-}
-
 func TestPuddleVeilRebakesOnWetBucketWithinBudget(t *testing.T) {
 	t.Parallel()
 	const side = 256
@@ -554,21 +542,6 @@ func BenchmarkPuddleBake(b *testing.B) {
 				r.bakeSnowChunk(&c, w, 128, 128, i%4, (i/4)%4)
 			}
 		})
-	}
-}
-
-// TestPuddleBakeReliefIsTheField: the bake's cached lattices give
-// puddleField's relief.
-func TestPuddleBakeReliefIsTheField(t *testing.T) {
-	t.Parallel()
-	salt := puddleSalt(96, 64)
-	var wb wetBake
-	wb.FillLattices(0, 0, 39, 39, salt)
-	for i := 0; i < 400; i++ {
-		fx, fy := hash01(uint64(i), 1)*39, hash01(uint64(i), 2)*39
-		if f, want := wb.Relief(fx, fy), puddleField(fx, fy, salt); math.Abs(f-want) > 1e-12 {
-			t.Fatalf("relief at (%.2f, %.2f) = %v, field %v", fx, fy, f, want)
-		}
 	}
 }
 

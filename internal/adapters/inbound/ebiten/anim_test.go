@@ -11,55 +11,6 @@ import (
 	"rimworld-go/internal/domain/pawn/look"
 )
 
-func TestAttackReactions(t *testing.T) {
-	t.Parallel()
-	traces := []game.TraceView{
-		{FromX: 2, FromY: 5, ToX: 6, ToY: 5, Age: 1},              // rifle shot east
-		{FromX: 6, FromY: 5, ToX: 7, ToY: 5, Age: 5, Melee: true}, // bite east
-		{FromX: 2, FromY: 5, ToX: 6, ToY: 5, Age: 2, Hit: true},
-	}
-	dx, _, fl := attackReaction(traces, 2, 5)
-	if dx >= 0 || fl != 0 {
-		t.Fatalf("shooter recoils west: dx=%v flash=%v", dx, fl)
-	}
-	dx, _, fl = attackReaction(traces, 6, 5)
-	if dx <= 0 || fl <= 0 {
-		t.Fatalf("bitten-at target lunges/knocked east and flashes: dx=%v flash=%v", dx, fl)
-	}
-	if dx, dy, fl := attackReaction(traces, 0, 0); dx != 0 || dy != 0 || fl != 0 {
-		t.Fatal("bystanders don't move")
-	}
-}
-
-func TestWorkSwingAndStrike(t *testing.T) {
-	t.Parallel()
-	_, st, ok := actionOf(game.PawnView{Acting: "cut"}) // old Acting strings still map
-	if !ok || st.Parts[0].Kind != partChip || st.Motion != motionSwing {
-		t.Fatal("cutting swings and throws chips")
-	}
-	// the body winds back, drives in hard on the strike at strikeAt, then
-	// eases out
-	if k := workSwing(float64(tickAt(7, st.Period, 0.30)), 7, st.Period); k >= 0 {
-		t.Fatalf("wound back before the strike: %v", k)
-	}
-	if k := workSwing(float64(tickAt(7, st.Period, strikeAt+0.01)), 7, st.Period); k < 0.8 {
-		t.Fatalf("driven in on the strike: %v", k)
-	}
-	strikes, peak := 0, 0.0
-	for f := 0.0; f < float64(st.Period)*3; f++ {
-		if workStrikeAt(f, f+1, 7, st.Period) {
-			strikes++
-		}
-		peak = math.Max(peak, workSwing(f, 7, st.Period))
-	}
-	if strikes != 3 || peak < 0.99 {
-		t.Fatalf("one strike per swing (%d), swing reaches 1 (%v)", strikes, peak)
-	}
-	if _, _, ok := actionOf(game.PawnView{}); ok {
-		t.Fatal("no style when idle")
-	}
-}
-
 // walking at one tile per 15 ticks, the usual gait
 var walkingState = moveState{Speed: 1.0 / float64(game.TicksPerCell), Blend: 1, Moving: true}
 

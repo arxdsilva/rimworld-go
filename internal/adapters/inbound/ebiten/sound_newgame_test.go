@@ -132,20 +132,20 @@ func TestPodCuesFollowArrivals(t *testing.T) {
 	}
 
 	// A pod first seen after it landed (a loaded game) stays silent.
-	r.memo.Pods = nil
+	r.cueBus().Memo.Pods = nil
 	if got := at(land+200, true); len(got) != 0 {
 		t.Fatalf("an old landing is silent: %v", got)
 	}
 
 	// The cues reach the speakers where the pod is, and only when on screen.
-	r.memo.Pods = nil
+	r.cueBus().Memo.Pods = nil
 	sim.tick = clock.Tick(land - 30)
 	r.listenArrivals(world(false))
 	a.colonyCues()
 	if n := len(rec.played("sfx.pod_fall")); n != 1 {
 		t.Fatalf("the on-screen pod's fall is played: %+v", rec.plays)
 	}
-	r.memo.Pods = nil
+	r.cueBus().Memo.Pods = nil
 	far := game.WorldView{Arrivals: []game.ArrivalView{{X: px + 900, Y: py, Tick: land}}}
 	r.listenArrivals(far)
 	rec.plays = nil

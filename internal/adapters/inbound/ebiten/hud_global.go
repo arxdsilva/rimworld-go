@@ -505,7 +505,7 @@ func (a *App) roofLegend() string {
 }
 
 // toggleRoofOverlay is the Shift+R key and HUD button action.
-func (r *Renderer) toggleRoofOverlay() { r.roofOverlay = !r.roofOverlay }
+func (r *Renderer) toggleRoofOverlay() { r.overlays().Roof.Toggle() }
 
 // toggleRoofOverlayIfAny tolerates a nil renderer (menus).
 func (r *Renderer) toggleRoofOverlayIfAny() {
@@ -521,7 +521,7 @@ func roofToolID(id string) bool { return id == "roof" || id == "noroof" }
 // selected tool of an open Architect.
 func roofForced(archOpen bool, toolID string) bool { return archOpen && roofToolID(toolID) }
 
-// syncRoofForce keeps renderer.roofOverlayForced (and the Home overlay's
+// syncRoofForce keeps renderer.overlays().Roof.Forced (and the Home overlay's
 // forced flag) in step with the Architect.
 func (a *App) syncRoofForce() {
 	a.syncHomeForce()
@@ -529,7 +529,7 @@ func (a *App) syncRoofForce() {
 	a.syncSnowClearForce() // snow_clear_draw.go (PLAY-015)
 	a.syncPowerForce()     // power_overlay.go (PLAY-021)
 	if a.renderer != nil {
-		a.renderer.roofOverlayForced = roofForced(a.archOpen, a.archTool)
+		a.renderer.overlays().Roof.Forced = roofForced(a.archOpen, a.archTool)
 	}
 }
 
@@ -574,21 +574,21 @@ func homeToolID(id string) bool { return id == "home" || id == "unhome" }
 // in hand.
 func homeForced(archOpen bool, toolID string) bool { return archOpen && homeToolID(toolID) }
 
-// syncHomeForce keeps renderer.homeOverlayForced in step with the Architect.
+// syncHomeForce keeps renderer.overlays().Home.Forced in step with the Architect.
 func (a *App) syncHomeForce() {
 	if a.renderer != nil {
-		a.renderer.homeOverlayForced = homeForced(a.archOpen, a.archTool)
+		a.renderer.overlays().Home.Forced = homeForced(a.archOpen, a.archTool)
 	}
 }
 
 // homeShown reports the Home overlay is showing (toggle or tool held).
-func (r *Renderer) homeShown() bool { return r.homeOverlay || r.homeOverlayForced }
+func (r *Renderer) homeShown() bool { return r.overlays().Home.On || r.overlays().Home.Forced }
 
 // toggleHomeOverlayIfAny is the HUD Home button action; it tolerates a nil
 // renderer (menus).
 func (r *Renderer) toggleHomeOverlayIfAny() {
 	if r != nil {
-		r.homeOverlay = !r.homeOverlay
+		r.overlays().Home.Toggle()
 	}
 }
 
@@ -614,10 +614,10 @@ func planToolID(id string) bool { return id == "plan" || id == "unplan" }
 // in hand.
 func planForced(archOpen bool, toolID string) bool { return archOpen && planToolID(toolID) }
 
-// syncPlanForce keeps renderer.planForced in step with the Architect.
+// syncPlanForce keeps renderer.overlays().Plan.Forced in step with the Architect.
 func (a *App) syncPlanForce() {
 	if a.renderer != nil {
-		a.renderer.planForced = planForced(a.archOpen, a.archTool)
+		a.renderer.overlays().Plan.Forced = planForced(a.archOpen, a.archTool)
 	}
 }
 
@@ -628,7 +628,7 @@ func (r *Renderer) planShown() bool { return r.planOverlayOn() }
 // renderer (menus).
 func (r *Renderer) togglePlanOverlayIfAny() {
 	if r != nil {
-		r.planHidden = !r.planHidden
+		r.overlays().Plan.Toggle()
 	}
 }
 

@@ -1,0 +1,51 @@
+// --- electric machines (PLAY-021) --------------------------------------------
+
+// maxMachineLoops is how many machines of one kind are heard at once (the
+// nearest ones; a row of generators is one hum, not five).
+const maxMachineLoops = 2
+
+var (
+	sndWoodGenerator = construction.WoodGenerator.String()
+	sndGeothermal    = construction.GeothermalGenerator.String()
+	sndWindTurbine   = construction.WindTurbine.String()
+	sndHeater        = construction.Heater.String()
+	sndCooler        = construction.Cooler.String()
+)
+
+// machineLoop is the loop a kind of machine makes while it runs.
+type machineLoop struct {
+	id   string
+	runs func(b game.BuildingView) bool
+}
+
+// thermostatWorking is a heater or cooler of kind k heating or cooling:
+// powered and drawing more than it does idling at its target.
+func thermostatWorking(k construction.Kind) func(b game.BuildingView) bool {
+	idle := power.SpecOf(k).Idle
+	return func(b game.BuildingView) bool { return b.Powered && b.PowerUse > idle }
+}
+
+// makingPower is a generator making power now.
+func makingPower(b game.BuildingView) bool { return b.PowerOut > 0 }
+
+// machineLoops are the machines that hum, by building kind. The wood
+// generator also has to be burning (a switched-off one keeps its fire).
+var machineLoops = map[string]machineLoop{
+	sndWoodGenerator: {"amb.generator_wood", func(b game.BuildingView) bool { return b.Burning && makingPower(b) }},
+	sndGeothermal:    {"amb.generator_geo", makingPower},
+	sndWindTurbine:   {"amb.wind_turbine", makingPower},
+	sndHeater:        {"amb.heater", thermostatWorking(construction.Heater)},
+	sndCooler:        {"amb.cooler", thermostatWorking(construction.Cooler)},
+}
+
+const (
+	// waterSamples is the most tiles sampled across the view each way
+	// (strided on big views, so the cost never grows with the map).
+	waterSamples = 40
+	// waterRiverGain and waterShoreGain turn an on-screen fraction into a
+	// volume: a sixth of the view in water, or a tenth of it shoreline,
+	// is the full bed.
+	waterRiverGain = 6.0
+	waterShoreGain = 10.0
+)
+

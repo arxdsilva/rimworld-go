@@ -7,31 +7,6 @@ import (
 	"rimworld-go/internal/application/game"
 )
 
-func TestDuskGlowStrength(t *testing.T) {
-	t.Parallel()
-	cases := []struct {
-		name string
-		p    game.PlantView
-		want float64
-	}{
-		{"other species", game.PlantView{Species: "moss", Growth: 100}, 0},
-		{"seedling", game.PlantView{Species: "duskmoss", Growth: 0}, 0},
-		{"half grown", game.PlantView{Species: "duskmoss", Growth: 50}, 0.5},
-		{"mature", game.PlantView{Species: "duskmoss", Growth: 100}, 1},
-		{"over range", game.PlantView{Species: "duskmoss", Growth: 400}, 1},
-		{"wilted", game.PlantView{Species: "duskmoss", Growth: 100, Wilted: true}, 0},
-	}
-	for _, c := range cases {
-		if got := duskGlowStrength(c.p); got != c.want {
-			t.Errorf("%s: %v, want %v", c.name, got, c.want)
-		}
-	}
-	// the glow is faint: it may tint a cave but never light it
-	if duskGlowMax > 0.12 {
-		t.Errorf("duskGlowMax = %v is too bright", duskGlowMax)
-	}
-}
-
 func TestPlantLightLines(t *testing.T) {
 	t.Parallel()
 	p := game.PlantView{Species: "moss"}

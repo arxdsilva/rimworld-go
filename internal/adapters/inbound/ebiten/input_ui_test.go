@@ -125,11 +125,11 @@ func TestRDraftsAndShiftRTogglesRoof(t *testing.T) {
 	if d := cmdsOf(s, command.DraftPawn); len(d) != 1 || !d[0].Enabled || d[0].Pawn != 1 {
 		t.Fatalf("R should draft the selected colonist, got %+v", s.cmds)
 	}
-	if a.renderer.roofOverlay {
+	if a.renderer.overlays().Roof.On {
 		t.Fatal("R must no longer toggle the roof overlay")
 	}
 	f.Key(t, a, "R", input.ModShift)
-	if !a.renderer.roofOverlay || len(cmdsOf(s, command.DraftPawn)) != 1 {
+	if !a.renderer.overlays().Roof.On || len(cmdsOf(s, command.DraftPawn)) != 1 {
 		t.Fatal("Shift+R toggles the roof overlay and drafts nobody")
 	}
 	if b, _ := findButton(a, "pawn.draft"); b.Label != "Draft [R]" {

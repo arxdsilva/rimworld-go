@@ -14,6 +14,8 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/cue"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/overlay"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/ai/work"
@@ -173,11 +175,7 @@ type Renderer struct {
 	view       render.View // this frame's context for the draw layers (render/view.go)
 	treeFx     treeFx      // see-through tree canopies (tree_fade.go)
 	game       Simulation
-	zoneGeoms  map[uint16]*zoneGeom // zones_draw.go outline cache
-	zoneBatch  triBatch             // zones_draw.go: every zone outline of a frame, one draw
-	zonePlants map[[2]int]bool      // zones_draw.go: cells holding their zone's own plant, this frame (PLAY-020)
-	pov        powerOverlay         // power_overlay.go: the power overlay toggle, forced flag and net colours (PLAY-021)
-	wheelTaken bool                 // the mouse wheel scrolled a log this frame
+	wheelTaken bool // the mouse wheel scrolled a log this frame
 	speed      speed
 	cam        camera
 	art        *artCatalog
@@ -190,16 +188,13 @@ type Renderer struct {
 	last      map[entity.EntityID]pawnVisual
 
 	// animation state (presentation only)
-	parts     []particle
-	seenTrace map[[3]uint64]bool
-	itemBorn  map[entity.EntityID]uint64
-	itemLive  map[entity.EntityID]bool // syncItems' reused live set
+	parts    []particle
+	itemBorn map[entity.EntityID]uint64
 	// viewCached: the simulation caches its read models (viewCacher), so a
 	// read model handed out again is the same, unchanged one and memos
 	// keyed on its identity hold (split, App.alerts).
 	viewCached bool
 	split      pawnSplit
-	itemsInit  bool
 	mo         motionState // per-creature motion and the animT clock (motion.go)
 	anims      *animState  // body-animation bookkeeping (anim.go)
 	smooth     camSmooth   // eased pan and zoom (camera_smooth.go)
@@ -209,27 +204,17 @@ type Renderer struct {
 	// (shadow_cast.go).
 	cast *shadowCast
 	// bursts remembers which explosive deaths already burst (animal_burst.go).
-	bursts burstTracker
 	// voice is the animals' sound memory (animal_sounds.go); soundHas
 	// reports a sound id exists (the App wires Sound.Has; nil: all do).
-	voice    animalVoice
-	soundHas func(id string) bool
+	// sound is the world's sound-cue bus (render/cue); cueBus() builds it on
+	// first use.
+	sound *cue.Bus
 	// figureBlood, while non-zero, is the blood stain drawLit puts on the
 	// figure layer being drawn (lit.kage Custom3, blood_draw.go).
 	figureBlood float32
-	// roofOverlay is the Roof overlay toggle (Shift+R); roofOverlayForced holds
-	// it on while a roof tool is selected (roof_draw.go).
-	roofOverlay, roofOverlayForced bool
 	// stepTicks are single ticks the developer asked for while paused.
 	stepTicks int
-	// homeOverlay is the Home area overlay toggle; homeOverlayForced holds
-	// it on while a Home tool is in hand (SIM-021, home_draw.go, hud.go).
-	homeOverlay, homeOverlayForced bool
-	// planHidden hides the Plan overlay (visible by default); planForced
-	// holds it on while a Plan tool is in hand (PLAY-012, plan_draw.go).
-	planHidden, planForced bool
-	planDraw               planDrawState // the Plan overlay's cached geometry
-	areaOv                 areaOverlay   // the allowed-area overlay (area_overlay.go)
+	ov        *overlay.Set // the map overlays (render/overlay, overlay_compat.go)
 
 	gridClr   color.RGBA
 	pawnClr   color.RGBA
@@ -250,14 +235,8 @@ type Renderer struct {
 
 	// sound (sound_signals.go): cues for the App's director, last frame's
 	// world to hear changes, the pending thunder and the world this frame.
-	cues []soundCue
 	// steamHeard is each vent's last burst already cued (features_draw.go).
 	steamHeard map[[2]int]uint64
-	caskets    casketMemo  // vault_draw.go: sealed state seen last frame
-	bridges    bridgeCache // bridge_draw.go: the foundation layer's cell set
-	memo       soundMemo
-	thunderAt  uint64
-	fireFx     fireFx // fire_world_draw.go: clusters and shown strikes
 	threatAt   uint64 // present frame of the newest threat
 	heard      game.WorldView
 	dangerInit bool
@@ -268,7 +247,6 @@ type Renderer struct {
 	// stoneArt memoises stone tints and resolved linked keys, and draws
 	// is the reused per-frame object queue (stone_art.go, draw_art.go).
 	links    linkGrid
-	power    powerDraw // power_draw.go: turbine blade phases, glow keys, vent covers
 	stoneArt stoneArtCache
 	draws    []artDraw
 	// ENG-D fields
@@ -276,7 +254,6 @@ type Renderer struct {
 	// chunk lists (lod.go, chunk_cache.go); mini the minimap (minimap.go).
 	lod   lodState
 	mini  minimapState
-	fogc  fogCache  // fog_draw.go
 	snowc snowCache // snow_cache.go: snow veil and wet masks per chunk
 }
 
@@ -301,7 +278,6 @@ func New(sim Simulation) *Renderer {
 		pauseOnThreat: true,
 		fx:            1,
 		last:          map[entity.EntityID]pawnVisual{},
-		seenTrace:     map[[3]uint64]bool{},
 		gridClr:       color.RGBA{R: 40, G: 40, B: 40, A: 180},
 		pawnClr:       color.RGBA{R: 220, G: 60, B: 60, A: 255},
 		selectClr:     color.RGBA{R: 250, G: 220, B: 60, A: 255},

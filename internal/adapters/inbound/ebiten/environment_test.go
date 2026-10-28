@@ -6,11 +6,30 @@ import (
 	"strings"
 	"testing"
 
-	ebiten "github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/render/env"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/clock"
 )
+
+// TestEnvTiersMatchLOD pins render/env's copy of the zoom tiers to the
+// world pipeline's (lod.go) until the two share one table.
+func TestEnvTiersMatchLOD(t *testing.T) {
+	t.Parallel()
+	if env.LiveMin != lodLiveMin || env.ChunkMin != lodChunkMin || env.DecalMinTile != decalMinTile || env.VisPad != visPad {
+		t.Fatalf("env tiers %v/%v/%v/%v, lod.go %v/%v/%v/%v", env.LiveMin, env.ChunkMin, env.DecalMinTile, env.VisPad,
+			lodLiveMin, lodChunkMin, decalMinTile, visPad)
+	}
+	if env.SoilVariants != soilVariants || env.GrassEvery != grassEvery {
+		t.Fatal("env's terrain variants or grass spacing differ from draw_art.go's")
+	}
+	for _, tile := range []float64{4, 16, 24, 32, 48, 96} {
+		if got, want := wetPxFor(tile), map[lodTier]int{lodLive: 8, lodChunk: 4, lodMap: 2}[lodFor(tile)]; got != want {
+			t.Fatalf("tile %v: wet texels %d, lod tier wants %d", tile, got, want)
+		}
+	}
+}
 
 // --- fixtures ---------------------------------------------------------------
 
@@ -528,7 +547,7 @@ func TestWiltedKey(t *testing.T) {
 // of weather w.
 func weatherRun(w game.WorldView, n int) *Renderer {
 	r := New(&stubSim{w: 64, h: 64})
-	r.env.View = envRect{0, 0, 24, 14}
+	r.env.View = envRect{X0: 0, Y0: 0, X1: 24, Y1: 14}
 	stepFrames(r, w, n)
 	return r
 }
@@ -655,7 +674,7 @@ func TestWeatherParticlePoolCapped(t *testing.T) {
 		cap  int
 	}{{"storm", 1400}, {"blizzard", 1100}, {"rain", 1400}, {"snow", 1100}} {
 		r := New(&stubSim{w: 400, h: 400})
-		r.env.View = envRect{0, 0, 300, 200} // zoomed far out
+		r.env.View = envRect{X0: 0, Y0: 0, X1: 300, Y1: 200} // zoomed far out
 		w := game.WorldView{Weather: c.kind, WeatherIntensity: 1, WindX: 3}
 		peak := 0
 		for f := 0; f < 500; f++ {
@@ -743,101 +762,6 @@ func TestSnowCoverFollowsDepthWithVariants(t *testing.T) {
 	}
 	if g0, g1, g2 := visible(0), visible(0.4), visible(0.9); !(g0 > 0.95 && g1 < g0 && g2 < g1 && g2 < 0.15) {
 		t.Fatalf("grass under snow: 0->%.2f 0.4->%.2f 0.9->%.2f", g0, g1, g2)
-	}
-}
-
-func TestFrostOnFreezingMornings(t *testing.T) {
-	t.Parallel()
-	at := func(h int) clock.Date { return clock.Date{Hour: h} }
-	if frostStrength(-40, 0, at(6)) <= frostStrength(-10, 0, at(6)) || frostStrength(-40, 0, at(6)) <= 0 {
-		t.Fatal("colder mornings should frost more")
-	}
-	if frostStrength(-40, 0, at(9)) >= frostStrength(-40, 0, at(6)) {
-		t.Fatal("frost should fade through the morning")
-	}
-	for _, c := range []struct {
-		temp int
-		snow float64
-		hour int
-	}{{10, 0, 6}, {-40, 0, 14}, {-40, 0, 1}, {-40, 0.5, 6}} {
-		if f := frostStrength(c.temp, c.snow, at(c.hour)); f != 0 {
-			t.Fatalf("frost %.2f at %+v", f, c)
-		}
-	}
-}
-
-func TestPuddlesFollowWetness(t *testing.T) {
-	t.Parallel()
-	// PLAY-022: puddles are one field, not per-tile stickers: water lies
-	// where the ground's relief (puddleField) is under the level the
-	// wetness raises. The six sprite variants are retired; patch shape and
-	// size variety is TestPuddlesAreCoherentPatches.
-	salt := puddleSalt(30, 30)
-	count := func(wet float64) int {
-		n := 0
-		for i := 0; i < 900; i++ {
-			if puddleField(float64(i%30)+0.5, float64(i/30)+0.5, salt) < puddleLevel(wet) {
-				n++
-			}
-		}
-		return n
-	}
-	dry, damp, soaked := count(0), count(0.3), count(1)
-	if dry != 0 || !(damp > 0 && damp < soaked) || soaked > 450 {
-		t.Fatalf("puddles by wetness: 0->%d 0.3->%d 1->%d of 900", dry, damp, soaked)
-	}
-	// a puddle never shrinks as it gets wetter: the level only rises
-	for wet := 0.0; wet < 1; wet += 0.05 {
-		if puddleLevel(wet+0.05) < puddleLevel(wet) {
-			t.Fatalf("the water level falls from wetness %.2f", wet)
-		}
-	}
-	// the field is the map's own: another map size lays them elsewhere
-	other, same := puddleSalt(31, 30), 0
-	for i := 0; i < 900; i++ {
-		fx, fy := float64(i%30)+0.5, float64(i/30)+0.5
-		if (puddleField(fx, fy, salt) < puddleLevel(1)) == (puddleField(fx, fy, other) < puddleLevel(1)) {
-			same++
-		}
-	}
-	if same == 900 {
-		t.Fatal("two maps share one puddle layout")
-	}
-}
-
-func TestStormDarkensSky(t *testing.T) {
-	t.Parallel()
-	veil := func(kind string, i float64) float64 {
-		c, _ := weatherVeil(game.WorldView{Weather: kind, WeatherIntensity: i})
-		lum := (float64(c.R) + float64(c.G) + float64(c.B)) / (3 * 255)
-		return float64(c.A) / 255 * (1 - lum) // how much it darkens
-	}
-	clear, cloudy, rain, storm := veil("clear", 0), veil("cloudy", 0.15), veil("rain", 0.6), veil("storm", 1)
-	if clear != 0 || !(cloudy > 0 && rain > cloudy && storm > rain) {
-		t.Fatalf("darkening: clear %.3f cloudy %.3f rain %.3f storm %.3f", clear, cloudy, rain, storm)
-	}
-	if _, fog := weatherVeil(game.WorldView{Weather: "blizzard", WeatherIntensity: 1}); fog.A < 40 {
-		t.Fatalf("a blizzard barely cuts visibility: fog alpha %d", fog.A)
-	}
-	if _, fog := weatherVeil(game.WorldView{Weather: "rain", WeatherIntensity: 1}); fog.A != 0 {
-		t.Fatal("rain fogs the screen like a blizzard")
-	}
-	// lightning: rare, deterministic, storms only
-	flashes := 0
-	for b := uint64(0); b < 4000; b++ {
-		f := lightningAt("storm", 1, b)
-		if f != lightningAt("storm", 1, b) {
-			t.Fatal("lightning is not deterministic")
-		}
-		if f {
-			flashes++
-		}
-		if lightningAt("rain", 1, b) || lightningAt("clear", 0, b) {
-			t.Fatal("lightning outside a storm")
-		}
-	}
-	if flashes == 0 || flashes > 200 {
-		t.Fatalf("%d flashes in 4000 buckets", flashes)
 	}
 }
 
@@ -992,7 +916,7 @@ func TestRainSkipsRoofedTiles(t *testing.T) {
 	for _, kind := range []string{"rain", "snow"} {
 		w := roofedWorld(kind)
 		r := New(&stubSim{w: 64, h: 64})
-		r.env.View = envRect{20, 0, 44, 14}
+		r.env.View = envRect{X0: 20, Y0: 0, X1: 44, Y1: 14}
 		stepFrames(r, w, 240)
 		if len(r.env.Drops) == 0 {
 			t.Fatalf("%s: no drops at all", kind)
@@ -1009,7 +933,7 @@ func TestRainSkipsRoofedTiles(t *testing.T) {
 		w.RoofCells[i] = 0
 	}
 	r := New(&stubSim{w: 64, h: 64})
-	r.env.View = envRect{0, 0, 24, 14}
+	r.env.View = envRect{X0: 0, Y0: 0, X1: 24, Y1: 14}
 	stepFrames(r, w, 60)
 	for i := range w.RoofCells {
 		w.RoofCells[i] = roofBuilt

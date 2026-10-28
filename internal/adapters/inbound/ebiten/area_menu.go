@@ -96,7 +96,7 @@ func (a *App) openAreaPicker(title string, cur int, base bool, pick func(ref int
 	if a.renderer == nil {
 		return
 	}
-	reset := func() { a.renderer.areaOv.Hover = 0 }
+	reset := func() { a.renderer.overlays().Area.Hover = 0 }
 	a.uiPushModal(modal{
 		ID: areaPickID, Title: title, W: areaPickW, H: 460,
 		Draw: func(a *App, body rect) { a.areaPickBody(body, cur, base, pick) },
@@ -129,7 +129,7 @@ func (a *App) areaPickBody(body rect, cur int, base bool, pick func(ref int)) {
 		id := "areapick.row." + strconv.Itoa(o.ref)
 		if a.uiButton(id, rr, o.label, btnOpts{Selected: o.ref == cur}) {
 			a.uiCloseModal(areaPickID)
-			a.renderer.areaOv.Hover = 0
+			a.renderer.overlays().Area.Hover = 0
 			pick(o.ref)
 			return
 		}
@@ -144,10 +144,10 @@ func (a *App) areaPickBody(body rect, cur int, base bool, pick func(ref int)) {
 			}
 		}
 	}
-	a.renderer.areaOv.Hover = hover
+	a.renderer.overlays().Area.Hover = hover
 	if a.uiButton("areapick.manage", foot.Inset(0), areaManage, btnOpts{}) {
 		a.uiCloseModal(areaPickID)
-		a.renderer.areaOv.Hover = 0
+		a.renderer.overlays().Area.Hover = 0
 		a.openAreaManager()
 	}
 }

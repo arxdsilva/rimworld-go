@@ -5,6 +5,7 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/render/env"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/light"
 	"rimworld-go/internal/application/game"
 )
@@ -119,7 +120,7 @@ func (r *Renderer) shadowCasters(w game.WorldView, pawns []game.PawnView) []shad
 		key := itemSpriteSpecies(it.Kind, it.Animal, it.X, it.Y)
 		addBox(key, float64(it.X), float64(it.Y), 1, 1, 1)
 	}
-	if r.frameLists(&w) { // only the chunks in view (lod.go)
+	if r.frameLists(env.ListsOf(&w)) { // only the chunks in view (lod.go)
 		for _, cv := range r.lod.views {
 			for _, i := range cv.Buildings {
 				if int(i) < len(w.Buildings) {

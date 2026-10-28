@@ -221,7 +221,7 @@ Do not encode essential state by hue alone.
 
 ## 8. Terrain
 
-**NG-1 water (normative):** terrain `shallow_water` (walk 300, unbuildable), `deep_water` (impassable), `mud` (walk 140, fertility 70), `track` (dirt road, walk 90, not farmable); 4 variants each (`terrain/<type>_v0..3`), 16-mask edges for mud-over-soil and shallow-over-deep, shore-foam masks; `ebiten/water.kage` ripple + caustic glints on the presentation clock (4-frame fallback; Reduced Motion freezes it). See `NG1_NEW_GAME_PLAN.md` §4.3, §7.3.
+**NG-1 water (normative):** terrain `shallow_water` (walk 300, unbuildable), `deep_water` (impassable), `mud` (walk 140, fertility 70), `track` (dirt road, walk 90, not farmable); 4 variants each (`terrain/<type>_v0..3`), 16-mask edges for mud-over-soil and shallow-over-deep, shore-foam masks; `ebiten/render/env/water.kage` ripple + caustic glints on the presentation clock (4-frame fallback; Reduced Motion freezes it). See `NG1_NEW_GAME_PLAN.md` §4.3, §7.3.
 
 
 Initial terrain families: soil, rich soil, stony soil, sand, gravel,

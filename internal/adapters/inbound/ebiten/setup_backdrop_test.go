@@ -2,51 +2,11 @@ package ebiten
 
 import (
 	"testing"
-	"time"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 )
 
-func TestBackdropShowcaseBuildsAcrossFrames(t *testing.T) {
-	resetSetupBackdrop()
-	t.Cleanup(resetSetupBackdrop)
-	b := &setupBackdrop
-	calls := 0
-	var worst time.Duration
-	for b.DiscPlanet(nil) == nil {
-		start := time.Now()
-		calls++
-		if calls > 20000 {
-			t.Fatal("showcase never finished")
-		}
-		if d := time.Since(start); d > worst {
-			worst = d
-		}
-	}
-	if calls < 5 {
-		t.Fatalf("showcase built in %d calls: not spread over frames", calls)
-	}
-	p := b.DiscPlanet(nil)
-	if p.TileCount() == 0 || p.Params.SeedText != backdropShowcase.SeedText {
-		t.Fatalf("showcase planet %+v", p.Params)
-	}
-	if b.DiscPlanet(nil) != p {
-		t.Fatal("showcase rebuilt")
-	}
-	t.Logf("showcase generated in %d frames", calls)
-}
-
-func TestBackdropPrefersTheGivenPlanet(t *testing.T) {
-	resetSetupBackdrop()
-	t.Cleanup(resetSetupBackdrop)
-	p := globeTestPlanet(t, 30)
-	if got := setupBackdrop.DiscPlanet(p); got != p {
-		t.Fatal("ignored the wizard's planet")
-	}
-	if setupBackdrop.ShowBuilder != nil {
-		t.Fatal("started the showcase although a planet exists")
-	}
-}
+// The backdrop's own tests (the showcase, the disc) are in wizard.
 
 func TestBackdropDrawsWithAndWithoutPlanet(t *testing.T) {
 	resetSetupBackdrop()
@@ -91,13 +51,5 @@ func TestBackdropDrawsWithAndWithoutPlanet(t *testing.T) {
 	a.drawSetupBackdrop(ebiten.NewImage(1600, 900), 1600, 900, q)
 	if setupBackdrop.StarW != 1600 {
 		t.Fatal("stars not rebaked for the new size")
-	}
-}
-
-func TestBackdropDiscFitsItsRender(t *testing.T) {
-	t.Parallel()
-	// The halo (1.28 radii) must fit in the offscreen render.
-	if r := discSilhouette(); 1.28*r > backdropDiscArea/2 {
-		t.Fatalf("silhouette %.1f px: halo clipped in a %d px render", r, backdropDiscArea)
 	}
 }

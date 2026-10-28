@@ -6,7 +6,7 @@ import (
 	"slices"
 	"testing"
 
-	ebiten "github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/application/game"
 )
@@ -16,41 +16,6 @@ import (
 // unit whose top would cross the tile's north edge moves south (its root
 // no further than cropRootMax), then shrinks until it fits, and its foot
 // never crosses the south edge.
-
-// TestCropFitKeepsUnitInTile: cropFit keeps a unit inside its tile, leaves
-// one that fits where it is, moves one that does not before shrinking it,
-// and shrinks it only until its top meets the north edge.
-func TestCropFitKeepsUnitInTile(t *testing.T) {
-	t.Parallel()
-	const eps = 1e-9
-	for _, dy := range []float64{-0.1, 0, 0.22, 0.3, 0.5, 0.76, 0.83} {
-		for _, above := range []float64{0, 0.05, 0.2, 0.45, 0.7, 0.9, 0.95, 1.2, 1.6} {
-			for _, below := range []float64{0, 0.02, 0.1, 0.3, 0.6} {
-				root, f := cropFit(dy, above, below)
-				top, bot := root-above*f, root+below*f
-				where := fmt.Sprintf("dy %.2f above %.2f below %.2f: root %.3f size %.3f", dy, above, below, root, f)
-				if top < -eps || bot > 1+eps {
-					t.Errorf("%s: spans %.3f..%.3f, off its tile", where, top, bot)
-				}
-				if f <= 0 || f > 1+eps {
-					t.Errorf("%s: size factor out of (0, 1]", where)
-				}
-				if dy-above >= 0 && dy+below <= 1 && dy <= cropRootMax && (root != dy || f != 1) {
-					t.Errorf("%s: a unit that fits was moved or shrunk", where)
-				}
-				if above <= cropRootMax && above+below <= 1 && f != 1 {
-					t.Errorf("%s: shrunk although moving it was enough", where)
-				}
-				if root > dy+eps && root > cropRootMax+eps {
-					t.Errorf("%s: moved south past %.2f", where, cropRootMax)
-				}
-				if f < 1-eps && math.Abs(top) > 1e-9 {
-					t.Errorf("%s: shrunk more than needed (top at %.3f)", where, top)
-				}
-			}
-		}
-	}
-}
 
 // cropState is a crop's growth state: a growth percent, the sim's stage
 // and the cold damage.

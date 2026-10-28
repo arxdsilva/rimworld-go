@@ -2,11 +2,11 @@ package ebiten
 
 import (
 	"math"
-	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"testing"
 
-	ebiten "github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/render"
 	"rimworld-go/internal/application/game"
 )
 
@@ -39,30 +39,6 @@ func cellSet(cells ...[2]int) map[[2]int]bool {
 	return m
 }
 
-func TestZoneEdgeMask(t *testing.T) {
-	t.Parallel()
-	z := rectZone(1, game.ZoneStockpile, 0, 0, 2, 2)
-	set := cellSet(z.Cells...)
-	cases := []struct {
-		x, y, want int
-	}{
-		{1, 1, 0},
-		{0, 0, zoneN | zoneW},
-		{2, 0, zoneN | zoneE},
-		{0, 2, zoneS | zoneW},
-		{2, 2, zoneS | zoneE},
-		{1, 0, zoneN},
-	}
-	for _, c := range cases {
-		if got := zoneEdgeMask(set, c.x, c.y); got != c.want {
-			t.Errorf("(%d,%d) mask = %d, want %d", c.x, c.y, got, c.want)
-		}
-	}
-	if got := zoneEdgeMask(cellSet([2]int{5, 5}), 5, 5); got != 15 {
-		t.Fatalf("single tile mask = %d, want 15", got)
-	}
-}
-
 func TestZoneEdgeRunsMergeConsecutiveCells(t *testing.T) {
 	t.Parallel()
 	z := rectZone(1, game.ZoneGrow, 2, 3, 4, 3) // a 3x1 strip
@@ -85,15 +61,6 @@ func TestZoneEdgeRunsMergeConsecutiveCells(t *testing.T) {
 	union := append(append([][2]int{}, a.Cells...), b.Cells...)
 	if got := len(zoneEdgeRuns(cellSet(union...), union)); got != 4 {
 		t.Fatalf("merged 4x2 block must outline as 4 runs, got %d", got)
-	}
-}
-
-func TestZoneEdgeRunsLShape(t *testing.T) {
-	t.Parallel()
-	cells := [][2]int{{0, 0}, {1, 0}, {0, 1}}
-	runs := zoneEdgeRuns(cellSet(cells...), cells)
-	if len(runs) != 6 {
-		t.Fatalf("an L outlines as 6 runs, got %d: %+v", len(runs), runs)
 	}
 }
 
@@ -190,36 +157,6 @@ func TestZoneDrawsOverFloor(t *testing.T) {
 //
 // The layout tests run at several UI scales and change curUIScale, so none
 // of them runs in parallel.
-
-func TestZoneLabelAnchor(t *testing.T) {
-	t.Parallel()
-	lShape := [][2]int{{0, 0}, {1, 0}, {2, 0}, {3, 0}, {4, 0}, {0, 1}, {0, 2}, {0, 3}, {0, 4}}
-	for _, c := range []struct {
-		name           string
-		cells          [][2]int
-		ax, ay         float64
-		minX, maxX, my int
-	}{
-		{"odd rectangle: its centre cell's centre", rectZone(1, game.ZoneGrow, 4, 4, 6, 6).Cells, 5.5, 5.5, 4, 6, 6},
-		{"even rectangle: its exact centre", rectZone(1, game.ZoneGrow, 4, 4, 7, 5).Cells, 6, 5, 4, 7, 5},
-		{"a single cell", [][2]int{{9, 3}}, 9.5, 3.5, 9, 9, 3},
-		// the bounding box centre (2.5, 2.5) is outside the L; the label
-		// goes on the nearest cell, the first of the tied ones
-		{"L shape: the cell nearest the bounding box centre", lShape, 2.5, 0.5, 0, 4, 4},
-	} {
-		minX, _, maxX, maxY, ax, ay := zoneLabelAnchor(c.cells)
-		if ax != c.ax || ay != c.ay || minX != c.minX || maxX != c.maxX || maxY != c.my {
-			t.Errorf("%s: anchor (%g,%g) box x %d..%d maxY %d, want (%g,%g) x %d..%d maxY %d",
-				c.name, ax, ay, minX, maxX, maxY, c.ax, c.ay, c.minX, c.maxX, c.my)
-		}
-	}
-	// the anchor of a non-rectangular zone is always inside the zone
-	set := cellSet(lShape...)
-	_, _, _, _, ax, ay := zoneLabelAnchor(lShape)
-	if !set[[2]int{int(math.Floor(ax)), int(math.Floor(ay))}] {
-		t.Errorf("L shape anchor (%g,%g) is outside the zone", ax, ay)
-	}
-}
 
 func TestZoneLabelSizeGrowsWithZone(t *testing.T) {
 	for _, ui := range []float64{1, 1.5, 2} {
@@ -547,7 +484,7 @@ func fillQuads(t *testing.T, art *artCatalog, w game.WorldView, zoom float64) in
 	tile := r.tilePx()
 	r.setView(640, 400, tile)
 	r.drawZones(ebiten.NewImage(640, 400), w, 640, 400, tile)
-	return len(r.lod.idx) / 6
+	return r.overlays().Zones.FillQuads()
 }
 
 // lineZone is a one-row zone of kind and crop over x0..x1 at y.

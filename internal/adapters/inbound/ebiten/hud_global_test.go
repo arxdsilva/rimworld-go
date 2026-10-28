@@ -145,7 +145,7 @@ type overlayFlags struct{ roof, home, plan, rooms, learn, bar, rescat bool }
 
 func (a *App) overlayFlags() overlayFlags {
 	r, g := a.renderer, a.settings.Gameplay
-	return overlayFlags{r.roofOverlay, r.homeOverlay, !r.planHidden, a.rooms, g.ShowLearningHelper, g.ShowColonistBar, g.CategorizedResources}
+	return overlayFlags{r.overlays().Roof.On, r.overlays().Home.On, r.overlays().Plan.On, a.rooms, g.ShowLearningHelper, g.ShowColonistBar, g.CategorizedResources}
 }
 
 // Each toggle's own rect toggles its own overlay and nothing else; the
@@ -426,7 +426,7 @@ func TestGlobalStackIsMeasured(t *testing.T) {
 			s := newGlobalSim()
 			s.world.Extreme, s.world.Conditions = "cold_snap", []string{"ashfall_sky"}
 			a, _ := globalColony(t, s, sc.ui, sc.ww, sc.wh)
-			a.renderer.roofOverlay = true // the legend joins the stack
+			a.renderer.overlays().Roof.On = true // the legend joins the stack
 			a.updateOnce(t)
 			l := a.hud()
 			if l.Global.H != a.globalHeight() || l.Global.H <= 0 {
@@ -512,7 +512,7 @@ func TestGlobalDrawsAtScales(t *testing.T) {
 			s.world.Extreme, s.world.Conditions = "heat_wave", []string{"ashfall_sky"}
 			s.world.Weather, s.world.WindX, s.world.WindY = "rain", 2, 1
 			a, _ := globalColony(t, s, sc.ui, sc.ww, sc.wh)
-			a.renderer.roofOverlay, a.rooms = true, true
+			a.renderer.overlays().Roof.On, a.rooms = true, true
 			a.bg.paused = true
 			screen := ebiten.NewImage(a.pw, a.ph)
 			a.drawGlobalControls(screen, a.sw, a.sh)

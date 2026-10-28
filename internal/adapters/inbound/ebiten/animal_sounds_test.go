@@ -1,8 +1,6 @@
 package ebiten
 
 import (
-	"math"
-	"strings"
 	"testing"
 
 	"rimworld-go/internal/application/game"
@@ -14,7 +12,7 @@ import (
 func voiceRenderer(zoom float64) *Renderer {
 	r := New(&stubSim{w: 64, h: 64})
 	r.cam.Zoom = zoom
-	r.voice.View = colonyViewport(1280, 720)
+	r.cueBus().Voice.View = colonyViewport(1280, 720)
 	return r
 }
 
@@ -122,7 +120,7 @@ func TestNoCallsOffscreen(t *testing.T) {
 	if cues := listen(r, near, 5); len(cues) != 0 {
 		t.Fatalf("catch-up call as the deer came on screen: %v", idsOf(cues))
 	}
-	if r.voice.NextCall[7] <= r.voice.Clock {
+	if r.cueBus().Voice.NextCall[7] <= r.cueBus().Voice.Clock {
 		t.Fatal("the skipped call was not rescheduled")
 	}
 }
@@ -137,7 +135,7 @@ func TestFleeCriesOnce(t *testing.T) {
 	if len(cues) != 1 || cues[0].ID != "animal.deer.call" || cues[0].frame != 0 {
 		t.Fatalf("a fleeing deer should cry once, right away; got %v", cues)
 	}
-	if r.voice.NextCall[7] <= r.voice.Clock {
+	if r.cueBus().Voice.NextCall[7] <= r.cueBus().Voice.Clock {
 		t.Fatal("the cry did not reset the call timer")
 	}
 	// a new episode cries again
@@ -283,168 +281,5 @@ func TestBurstCue(t *testing.T) {
 	r.emitWorldBursts(w)
 	if cues := r.takeCues(); len(cues) != 1 || int(cues[0].X) != 8 {
 		t.Fatalf("a new stamp should add exactly one bang, got %+v", cues)
-	}
-}
-
-func TestFallbackChain(t *testing.T) {
-	t.Parallel()
-	have := map[string]bool{}
-	r := voiceRenderer(1)
-	r.soundHas = func(id string) bool { return have[id] }
-	if got := r.animalSoundID("tapir", voiceCall); got != "" {
-		t.Fatalf("nothing exists, got %q", got)
-	}
-	have["animal.generic.call"] = true
-	have["animal.canid.hurt"] = true
-	have["animal.red_fox.die"] = true
-	for _, tc := range []struct{ key, event, want string }{
-		{"red_fox", "call", "animal.generic.call"}, // only the generic voice
-		{"red_fox", "hurt", "animal.canid.hurt"},   // the group voice
-		{"red_fox", "die", "animal.red_fox.die"},   // its own voice
-		{"mystery_beast", "call", "animal.generic.call"},
-		{"red_fox", "attack", ""},
-	} {
-		if got := r.animalSoundID(tc.key, tc.event); got != tc.want {
-			t.Errorf("%s %s = %q, want %q", tc.key, tc.event, got, tc.want)
-		}
-	}
-	// resolved once and cached
-	have["animal.red_fox.call"] = true
-	if got := r.animalSoundID("red_fox", "call"); got != "animal.generic.call" {
-		t.Fatalf("the answer should be cached, got %q", got)
-	}
-	// no soundHas: every sound exists, the species' own is chosen
-	r2 := voiceRenderer(1)
-	if got := r2.animalSoundID("red_fox", "call"); got != "animal.red_fox.call" {
-		t.Fatalf("nil soundHas = %q", got)
-	}
-	// a missing sound is silent: no cue, no panic
-	r.cueAnimal("red_fox", "attack", 1, 1, 1)
-	if len(r.takeCues()) != 0 {
-		t.Fatal("a missing sound still cued")
-	}
-}
-
-func TestEveryRosterVoiceHasAGroup(t *testing.T) {
-	t.Parallel()
-	groups := map[string]bool{"small_mammal": true, "large_mammal": true, "canid": true, "felid": true,
-		"bovid": true, "bird_small": true, "bird_large": true, "reptile": true, "insect": true}
-	if len(voiceGroups) != 61 {
-		t.Fatalf("%d voice groups listed, want 61 species", len(voiceGroups))
-	}
-	for k, g := range voiceGroups {
-		if !groups[g] {
-			t.Errorf("%s: unknown group %q", k, g)
-		}
-	}
-	if voiceGroup("nobody") != "generic" {
-		t.Fatal("an unlisted species should fall to generic")
-	}
-}
-
-func TestCallIntervalScales(t *testing.T) {
-	t.Parallel()
-	base := callInterval(game.AnimalView{ID: 5, Species: "deer"}, 2, false)
-	if base < callEveryMin || base >= callEveryMin+callEverySpan {
-		t.Fatalf("interval %d outside %d..%d", base, callEveryMin, callEveryMin+callEverySpan)
-	}
-	approx := func(got uint64, scale float64) bool {
-		return math.Abs(float64(got)-float64(base)*scale) <= 2
-	}
-	for _, tc := range []struct {
-		an    game.AnimalView
-		scale float64
-	}{
-		{game.AnimalView{ID: 5, Species: "cat"}, 0.7},
-		{game.AnimalView{ID: 5, Species: "chicken"}, 0.7},
-		{game.AnimalView{ID: 5, Species: "ostrich"}, 0.7},
-		{game.AnimalView{ID: 5, Species: "deer", Size: largeSize}, 1.3},
-		{game.AnimalView{ID: 5, Species: "hive_beetle"}, 0.5},
-	} {
-		if got := callInterval(tc.an, 2, false); !approx(got, tc.scale) {
-			t.Errorf("%s size %v: %d, want about %d x %v", tc.an.Species, tc.an.Size, got, base, tc.scale)
-		}
-	}
-	first := callInterval(game.AnimalView{ID: 5, Species: "deer"}, 0, true)
-	if first < firstCallMin || first >= firstCallMin+firstCallSpan {
-		t.Fatalf("first call %d outside %d..%d", first, firstCallMin, firstCallMin+firstCallSpan)
-	}
-	if callInterval(game.AnimalView{ID: 6, Species: "deer"}, 0, true) == first {
-		t.Fatal("two animals share a first-call time")
-	}
-}
-
-func TestCallRateCaps(t *testing.T) {
-	t.Parallel()
-	r := voiceRenderer(0.5)
-	species := []string{"deer", "cow", "horse", "goat", "sheep", "cat", "husky", "chicken", "duck", "pig", "elk", "lynx"}
-	var herd []game.AnimalView
-	for i := 0; i < 40; i++ {
-		an := wanderer(uint64(100+i), species[i%len(species)], 2+i%8, 3+i/8)
-		herd = append(herd, an)
-		if !r.audible(float64(an.X)+0.5, float64(an.Y)+0.5) {
-			t.Fatalf("test setup: animal %d must be within earshot", i)
-		}
-	}
-	const frames = 3600
-	cues := listen(r, game.WorldView{Animals: herd}, frames)
-	if len(cues) < 3 {
-		t.Fatalf("a 40-animal herd made only %d calls in %d frames", len(cues), frames)
-	}
-	for _, c := range cues {
-		if !strings.HasSuffix(c.ID, ".call") {
-			t.Fatalf("unexpected cue %q", c.ID)
-		}
-	}
-	for start := 0; start < frames; start++ {
-		calls, seen := 0, map[string]bool{}
-		for _, c := range cues {
-			if c.frame >= start && c.frame < start+capCallsWindow {
-				calls++
-			}
-			if c.frame >= start && c.frame < start+capSpeciesSpan {
-				seen[c.ID] = true
-			}
-		}
-		if calls > capCalls {
-			t.Fatalf("%d calls in the %d frames from %d", calls, capCallsWindow, start)
-		}
-		if len(seen) > capSpecies {
-			t.Fatalf("%d species called in the %d frames from %d: %v", len(seen), capSpeciesSpan, start, seen)
-		}
-	}
-}
-
-func TestVoicePrunedWithAnimals(t *testing.T) {
-	t.Parallel()
-	r := voiceRenderer(1)
-	fleer := wanderer(3, "deer", 7, 7)
-	fleer.Mode = "fleeing"
-	three := game.WorldView{Animals: []game.AnimalView{wanderer(1, "deer", 5, 5), wanderer(2, "cow", 6, 6), fleer}}
-	listen(r, three, 3)
-	v := &r.voice
-	if len(v.NextCall) != 2 || len(v.Last) != 3 || len(v.ByID) != 3 {
-		t.Fatalf("tracking %d timers (the fleeing deer has none yet), %d seen, %d indexed; want 2/3/3", len(v.NextCall), len(v.Last), len(v.ByID))
-	}
-	listen(r, game.WorldView{Animals: []game.AnimalView{wanderer(1, "deer", 5, 5)}}, 2)
-	if len(v.NextCall) != 1 || len(v.Last) != 1 || len(v.ByID) != 1 || len(v.Fleeing) != 1 || len(v.Calls) > 1 {
-		t.Fatalf("after two left: nextCall %d last %d byID %d fleeing %d calls %d, want 1 each (calls at most 1)",
-			len(v.NextCall), len(v.Last), len(v.ByID), len(v.Fleeing), len(v.Calls))
-	}
-	if _, ok := v.NextCall[1]; !ok {
-		t.Fatal("the animal that stayed lost its timer")
-	}
-	listen(r, game.WorldView{}, 1)
-	if len(v.NextCall)+len(v.Last)+len(v.ByID)+len(v.Fleeing)+len(v.Calls) != 0 {
-		t.Fatal("an empty world left voice state behind")
-	}
-}
-
-func TestListenAnimalsWithoutViewportCallsAnywhere(t *testing.T) {
-	t.Parallel()
-	r := New(&stubSim{w: 64, h: 64}) // no viewport set: the director culls
-	w := game.WorldView{Animals: []game.AnimalView{wanderer(7, "deer", 60, 60)}}
-	if len(listen(r, w, firstCallMin+firstCallSpan+1)) == 0 {
-		t.Fatal("with no viewport the deer should still call (the director culls)")
 	}
 }

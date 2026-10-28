@@ -70,18 +70,18 @@ func TestStrikeCueIsCentredAndOncePerSwing(t *testing.T) {
 	r, sim := workRenderer(tickAt(3, 46, 0.1))
 	p := worker(game.ActionChop)
 	r.animateWork(game.WorldView{}, []game.PawnView{p})
-	if len(r.cues) != 0 {
+	if len(r.cueBus().Cues) != 0 {
 		t.Fatal("no sound before the strike")
 	}
 	sim.tick = clock.Tick(tickAt(3, 46, strikeAt) + 46)
 	r.animateWork(game.WorldView{}, []game.PawnView{p})
-	if len(r.cues) != 1 || r.cues[0].ID != "sfx.chop" || r.cues[0].X != 6.5 {
-		t.Fatalf("one chop at the trunk, got %+v", r.cues)
+	if len(r.cueBus().Cues) != 1 || r.cueBus().Cues[0].ID != "sfx.chop" || r.cueBus().Cues[0].X != 6.5 {
+		t.Fatalf("one chop at the trunk, got %+v", r.cueBus().Cues)
 	}
 	r.takeCues()
 	r.animateWork(game.WorldView{}, []game.PawnView{p}) // clock stopped: paused
-	if len(r.cues) != 0 {
-		t.Fatalf("a paused clock makes no sound: %+v", r.cues)
+	if len(r.cueBus().Cues) != 0 {
+		t.Fatalf("a paused clock makes no sound: %+v", r.cueBus().Cues)
 	}
 }
 
@@ -92,8 +92,8 @@ func TestSilentActionsMakeNoSound(t *testing.T) {
 	r.animateWork(game.WorldView{}, []game.PawnView{p})
 	sim.tick = clock.Tick(tickAt(3, 60, strikeAt) + 60)
 	r.animateWork(game.WorldView{}, []game.PawnView{p})
-	if len(r.cues) != 0 {
-		t.Fatalf("research is quiet: %+v", r.cues)
+	if len(r.cueBus().Cues) != 0 {
+		t.Fatalf("research is quiet: %+v", r.cueBus().Cues)
 	}
 }
 
@@ -243,35 +243,6 @@ func TestDayWeight(t *testing.T) {
 		if got := dayWeight(h); math.Abs(got-want) > 1e-9 {
 			t.Fatalf("dayWeight(%v) = %v, want %v", h, got, want)
 		}
-	}
-}
-
-func TestZoomEar(t *testing.T) {
-	t.Parallel()
-	const out = 0.3
-	cases := []struct {
-		zoom, gain, pan float64
-		perID           int
-	}{
-		{3.0, 1, 1, 3}, {1.5, 1, 1, 3}, {1.0, 0.748, 0.874, 3},
-		{0.5, 0.317, 0.658, 1}, {0.3, 0, 0.5, 1}, {0.2, 0, 0.5, 1},
-	}
-	for _, c := range cases {
-		g, p, n := zoomEar(c.zoom, out)
-		if math.Abs(g-c.gain) > 0.01 || math.Abs(p-c.pan) > 0.01 || n != c.perID {
-			t.Fatalf("zoomEar(%v) = %.3f %.3f %d, want %.3f %.3f %d", c.zoom, g, p, n, c.gain, c.pan, c.perID)
-		}
-	}
-	prev := 2.0
-	for z := 3.0; z >= out; z *= 0.95 {
-		g, _, _ := zoomEar(z, out)
-		if g > prev {
-			t.Fatalf("gain rises zooming out at %v", z)
-		}
-		prev = g
-	}
-	if g, p, n := zoomEar(0.5, 1.5); g != 1 || p != 1 || n != cueMaxPerID {
-		t.Fatal("a map that fits at zoomNear never fades")
 	}
 }
 

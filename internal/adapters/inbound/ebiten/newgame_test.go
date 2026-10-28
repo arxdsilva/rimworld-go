@@ -268,7 +268,7 @@ func TestScenarioListShowsBuiltinsThenCustom(t *testing.T) {
 	st.putDef(t, "alpha", d)
 	extra := cloneDef(d)
 	extra.Name = "Mid unsaved"
-	a.ngUnsaved = append(a.ngUnsaved, extra)
+	a.wiz.Unsaved = append(a.wiz.Unsaved, extra)
 	click(t, a, "menu.newgame")
 	sizeTo(t, a, f, 1920, 1080) // every row fits, so every delete button is declared
 
@@ -544,14 +544,14 @@ func TestDeleteCustomConfirms(t *testing.T) {
 		}
 	}
 	// An unsaved scenario is deleted without touching the store.
-	a.ngUnsaved = append(a.ngUnsaved, d)
-	a.ng.RefreshScenarios(a)
+	a.wiz.Unsaved = append(a.wiz.Unsaved, d)
+	a.ng.RefreshScenarios(a.cfg.Scenarios, a.wiz.Unsaved)
 	f.Frame(t, a)
 	press(t, a, f, "scen.del.unsaved.0")
 	press(t, a, f, "modal.scen.delete.ok")
 	f.Frame(t, a)
-	if len(a.ngUnsaved) != 0 || len(st.deleted) != 1 {
-		t.Fatalf("unsaved=%d deleted=%v", len(a.ngUnsaved), st.deleted)
+	if len(a.wiz.Unsaved) != 0 || len(st.deleted) != 1 {
+		t.Fatalf("unsaved=%d deleted=%v", len(a.wiz.Unsaved), st.deleted)
 	}
 }
 

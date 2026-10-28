@@ -7,6 +7,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
+	"rimworld-go/internal/adapters/inbound/ebiten/wizard"
 )
 
 // The widget kit lives in uikit (ARCH-003). These aliases and one-line
@@ -36,6 +37,7 @@ type (
 	textFieldSpec = uikit.TextFieldSpec
 	tipCard       = uikit.TipCard
 	textSpan      = uikit.TextSpan
+	formCtx       = uikit.Form
 )
 
 const (
@@ -196,6 +198,49 @@ func tooSmall(sw, sh int) bool                            { return uikit.TooSmal
 func uiFade(c color.RGBA, a uint8) color.RGBA             { return uikit.Fade(c, a) }
 func uiNum(n int) string                                  { return uikit.Num(n) }
 func uiShade(a uint8) color.RGBA                          { return uikit.Shade(a) }
+
+// ---- the setup-screen composites (uikit/form.go)
+
+func newForm(area scrollArea) *formCtx { return uikit.NewForm(area) }
+func dimText() textStyle               { return uikit.DimText() }
+
+// Kit is the App's widget kit (uikit.Owner: form rows take it).
+func (a *App) Kit() *uikit.Kit { return a.uiSt() }
+
+func (a *App) ngButton(id string, r rect, label string, o btnOpts, fn func()) {
+	uikit.StyledButton(a.uiSt(), id, r, label, o, fn)
+}
+func (a *App) ngChoice(id string, r rect, title string, opts []string, cur int, disabled string, pick func(i int)) {
+	uikit.Choice(a.uiSt(), id, r, title, opts, cur, disabled, pick)
+}
+func (a *App) pushPicker(id, title string, opts []string, cur int, pick func(i int)) {
+	uikit.Picker(a.uiSt(), id, title, opts, cur, pick)
+}
+func (a *App) ngStepper(id string, r rect, v *int, lo, hi int) {
+	uikit.Stepper(a.uiSt(), id, r, v, lo, hi)
+}
+func (a *App) rowLabel(r rect, label string, labelW float32) rect {
+	return uikit.RowLabel(a.uiSt(), r, label, labelW)
+}
+func (a *App) segmented(id string, r rect, labels []string, sel *int, tips []string) {
+	uikit.Segmented(a.uiSt(), id, r, labels, sel, tips)
+}
+func (a *App) textLines(x, y, w float32, s string, st textStyle) float32 {
+	return uikit.TextLines(a.uiSt(), x, y, w, s, st)
+}
+func (a *App) declareOnScreenLayer() { uikit.OnScreenLayer(a.uiSt()) }
+
+// diffSlider is a labelled slider row over *v with the range of the
+// difficulty field key; a reason disables it.
+func (a *App) diffSlider(f *formCtx, id, label string, v *int, key string, format func(int) string, disabled, tip string) {
+	f.Slider(a, id, label, v, a.withTick(wizard.DiffSpec(key)), format, disabled, tip)
+}
+func (a *App) diffCheck(f *formCtx, id, label string, v *bool, disabled, tip string) {
+	f.Check(a, id, label, v, disabled, tip)
+}
+func (a *App) diffStepper(f *formCtx, id, label string, v *int, lo, hi int, tip string) {
+	f.Stepper(a, id, label, v, lo, hi, tip)
+}
 
 // ---- the kit's methods, on the App
 

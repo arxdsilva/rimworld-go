@@ -1,6 +1,7 @@
 package ebiten
 
 import (
+	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
 	motionpkg "rimworld-go/internal/adapters/inbound/ebiten/render/motion"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/entity"
@@ -15,8 +16,8 @@ import (
 
 type (
 	moveState   = motionpkg.MoveState
-	motionState = motionpkg.State[animalBody] // each track carries its animal's body player
-	moTrack     = motionpkg.Track[animalBody]
+	motionState = motionpkg.State[creature.Body] // each track carries its animal's body player
+	moTrack     = motionpkg.Track[creature.Body]
 	pose        = motionpkg.Pose
 )
 

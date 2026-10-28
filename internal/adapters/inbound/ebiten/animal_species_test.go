@@ -227,7 +227,7 @@ func TestBurstEmitsOnce(t *testing.T) {
 	r := combatRenderer(100, nil, game.WorldView{})
 	var tr burstTracker
 	ev := []burstEvent{{ID: 4, X: 6, Y: 7, Tick: 90}}
-	tr.Emit(r, ev)
+	r.emitBursts(&tr, ev)
 	n := len(r.parts)
 	if n < 10 {
 		t.Fatalf("a burst throws many particles, got %d", n)
@@ -241,18 +241,18 @@ func TestBurstEmitsOnce(t *testing.T) {
 			t.Errorf("missing particle kind %d", k)
 		}
 	}
-	tr.Emit(r, ev)
+	r.emitBursts(&tr, ev)
 	if len(r.parts) != n {
 		t.Fatalf("the same stamp does not burst twice: %d -> %d", n, len(r.parts))
 	}
-	tr.Emit(r, append(ev, burstEvent{ID: 5, X: 1, Y: 1, Tick: 95}))
+	r.emitBursts(&tr, append(ev, burstEvent{ID: 5, X: 1, Y: 1, Tick: 95}))
 	if len(r.parts) <= n {
 		t.Fatal("a new stamp bursts")
 	}
 	// determinism: the same stamp makes the same particles
 	r2 := combatRenderer(100, nil, game.WorldView{})
 	var tr2 burstTracker
-	tr2.Emit(r2, ev)
+	r2.emitBursts(&tr2, ev)
 	if fmt.Sprint(r2.parts) != fmt.Sprint(r.parts[:n]) {
 		t.Fatal("bursts are deterministic")
 	}

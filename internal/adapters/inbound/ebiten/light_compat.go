@@ -6,6 +6,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/creature"
 	"rimworld-go/internal/adapters/inbound/ebiten/render/light"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/clock"
@@ -24,11 +25,11 @@ type (
 	pointLight     = light.PointLight
 	litPairCache   = light.PairCache
 	groundTile     = light.GroundTile
-	shadowState    = light.Shadows[pawnFigurePose]
+	shadowState    = light.Shadows[creature.FigurePose]
 	shadowCast     = light.Cast
 	shadowSpec     = light.ShadowSpec
 	shadowCaster   = light.Caster
-	creatureCaster = light.Creature[pawnFigurePose]
+	creatureCaster = light.Creature[creature.FigurePose]
 )
 
 const (
