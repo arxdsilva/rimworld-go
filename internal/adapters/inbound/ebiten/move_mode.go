@@ -152,10 +152,10 @@ func (a *App) handleMoveMode() (consumed bool) {
 	}
 	f := &a.in
 	rot := 0
-	if f.fired(input.RotateLeft) {
+	if f.Fired(input.RotateLeft) {
 		rot--
 	}
-	if f.fired(input.RotateRight) {
+	if f.Fired(input.RotateRight) {
 		rot++
 	}
 	mx, my := a.currentCursor()
@@ -163,10 +163,10 @@ func (a *App) handleMoveMode() (consumed bool) {
 	pmx, pmy := a.mapCursor()
 	tx, ty := a.shell.TileAt(pmx, pmy)
 	onMap := !a.colonyChromeHit(mx, my, sw, sh)
-	cancel := f.clicked(mbRight)
-	left := f.clicked(mbLeft)
-	f.take(mbLeft)
-	f.take(mbRight)
+	cancel := f.Clicked(mbRight)
+	left := f.Clicked(mbLeft)
+	f.Take(mbLeft)
+	f.Take(mbRight)
 	return a.moveStep(tx, ty, onMap, rot, left, cancel)
 }
 

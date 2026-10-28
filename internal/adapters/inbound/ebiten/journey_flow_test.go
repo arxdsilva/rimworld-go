@@ -36,8 +36,8 @@ func newMenuJourney(t *testing.T, cfg ...func(*AppConfig)) *journey {
 	j := &journey{t: t, a: a, clock: time.Unix(1000, 0)}
 	a.now = func() time.Time { return j.clock }
 	j.f = fakeOn(a)
-	j.f.cur.focused = true
-	j.f.cur.mx, j.f.cur.my = -50, -50
+	j.f.Cur.Focused = true
+	j.f.Cur.Mx, j.f.Cur.My = -50, -50
 	j.update(1) // the menu's kit widgets are declared
 	return j
 }
@@ -242,7 +242,7 @@ func TestJourneyFlowReturnToMenuDropsRenderer(t *testing.T) {
 func TestJourneyFlowOptionsRowApplies(t *testing.T) {
 	t.Parallel()
 	j := newJourney(t)
-	if j.a.renderer.smooth.instant {
+	if j.a.renderer.smooth.Instant {
 		t.Fatal("the camera snaps before Reduced Motion is on")
 	}
 	j.key("Escape", 0)
@@ -255,7 +255,7 @@ func TestJourneyFlowOptionsRowApplies(t *testing.T) {
 	if !j.a.settings.Accessibility.ReducedMotion {
 		t.Fatal("the Reduced Motion row did not turn the setting on")
 	}
-	if !j.a.renderer.smooth.instant {
+	if !j.a.renderer.smooth.Instant {
 		t.Fatal("Reduced Motion did not reach the colony's camera live")
 	}
 }

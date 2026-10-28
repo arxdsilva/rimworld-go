@@ -254,7 +254,7 @@ func NewApp(cfg AppConfig) *App {
 			}
 			c, err := loadArtCatalog(root)
 			if err == nil {
-				c.prewarmAsync() // art_atlas.go: pages cut in the background, not mid-frame
+				c.PrewarmAsync() // art_atlas.go: pages cut in the background, not mid-frame
 			}
 			return c, err
 		}
@@ -323,26 +323,26 @@ func (a *App) Update() error {
 	a.pollInput()
 	a.syncBackground() // background.go: Run in background, from this frame's focus
 	a.handleTextInput()
-	if a.in.fired(input.Cancel) {
+	if a.in.Fired(input.Cancel) {
 		a.pressEscape()
 		if a.shouldQuit {
 			return ebiten.Termination
 		}
 	}
-	if a.in.fired(input.Accept) {
+	if a.in.Fired(input.Accept) {
 		a.pressAccept()
 	}
 	a.handleViewKeys() // F10 screenshot, F11 hide UI (hotkeys.go)
 
 	sw, sh := a.size()
-	if a.in.clicked(mbLeft) {
+	if a.in.Clicked(mbLeft) {
 		if a.nav.screen() == screenBoot {
 			a.finishBoot()
-			a.in.take(mbLeft)
+			a.in.Take(mbLeft)
 		} else {
 			mx, my := a.currentCursor()
 			if b, ok := hitButton(a.layoutHits(sw, sh), mx, my); ok {
-				a.in.take(mbLeft)
+				a.in.Take(mbLeft)
 				a.uiSound(b)
 				if b.disabled {
 					a.hint = b.reason
@@ -351,16 +351,16 @@ func (a *App) Update() error {
 					a.applyClick(b.id)
 				}
 			} else if a.colonyLive() && a.colonyChromeHit(mx, my, sw, sh) {
-				a.in.take(mbLeft)
+				a.in.Take(mbLeft)
 			} else if a.colonyLive() && !a.hideUI && a.renderer.minimapClick(mx, my, colonyViewport(sw, sh), a.mapViewport()) {
-				a.in.take(mbLeft) // minimap (minimap.go): the camera moved
+				a.in.Take(mbLeft) // minimap (minimap.go): the camera moved
 			}
 		}
 	}
 
-	if a.colonyLive() && !a.hideUI && a.in.clicked(mbRight) {
+	if a.colonyLive() && !a.hideUI && a.in.Clicked(mbRight) {
 		if mx, my := a.currentCursor(); a.hudRightClick(mx, my) { // hud.go: letters, alerts, command options
-			a.in.take(mbRight)
+			a.in.Take(mbRight)
 		}
 	}
 
@@ -372,10 +372,10 @@ func (a *App) Update() error {
 			a.renderer.applyCamera(a.mapViewport(), a.cameraInput(a.mapViewport())) // physical (camera.go)
 		}
 		a.handleScheduleDrag()
-		if (a.float.open || a.dev.menu) && a.in.clicked(mbLeft) {
+		if (a.float.open || a.dev.menu) && a.in.Clicked(mbLeft) {
 			a.closeFloat() // click outside a menu just closes it
 			a.dev.menu = false
-			a.in.take(mbLeft)
+			a.in.Take(mbLeft)
 		}
 		moving := a.handleMoveMode() // move_mode.go: placing a moved building
 		zoning := a.handleZoneTool() // zone_select.go: a selected zone's Expand or Shrink tool
@@ -710,7 +710,7 @@ func (a *App) Draw(screen *ebiten.Image) {
 		if a.renderer != nil {
 			now := a.now()
 			if a.cfg.Capture == nil && !a.lastDraw.IsZero() && a.nav.overlay() != overlayPause {
-				a.renderer.syncDev() // the viewport is in this frame's map pixels
+				a.renderer.SyncDev() // the viewport is in this frame's map pixels
 				a.renderer.stepCamera(now.Sub(a.lastDraw).Seconds(), a.mapViewport())
 			}
 			a.lastDraw = now
@@ -913,7 +913,7 @@ func (a *App) currentCursor() (int, int) {
 	if a.cursor != nil {
 		return a.cursor[0], a.cursor[1]
 	}
-	return a.in.ui.mx, a.in.ui.my
+	return a.in.Ui.Mx, a.in.Ui.My
 }
 
 // mapCursor is the pointer in map pixels, for the map (screenToWorld,
@@ -926,9 +926,9 @@ func (a *App) mapCursor() (int, int) {
 		return int(float64(a.cursor[0]) * s), int(float64(a.cursor[1]) * s)
 	}
 	if k := a.scale.WorldK(); k != 1 {
-		return int(float64(a.in.raw.mx) * k), int(float64(a.in.raw.my) * k)
+		return int(float64(a.in.Raw.Mx) * k), int(float64(a.in.Raw.My) * k)
 	}
-	return a.in.raw.mx, a.in.raw.my
+	return a.in.Raw.Mx, a.in.Raw.My
 }
 
 func (a *App) paintMenu(screen *ebiten.Image, sw, sh int, title string, body []string, buttons []button) {

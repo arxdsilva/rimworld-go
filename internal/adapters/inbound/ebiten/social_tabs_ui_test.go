@@ -17,14 +17,14 @@ func TestHealthSocialTabs(t *testing.T) {
 	s := bioSim()
 	a, f := colonyApp(t, s)
 	a.renderer.Select(1)
-	f.frame(t, a)
+	f.Frame(t, a)
 	for _, tab := range []string{"health", "social"} {
 		id := "inspector." + tab
 		if b, ok := findButton(a, id); !ok || b.disabled {
 			t.Fatalf("%s is missing or disabled: %+v", id, b)
 		}
 		openPawnTab(t, a, tab) // the pane's tab click
-		f.frame(t, a)
+		f.Frame(t, a)
 		if !a.kitTabOn() || a.bioTabOn() {
 			t.Fatalf("tab = %q after opening %s", a.inspectTab, id)
 		}

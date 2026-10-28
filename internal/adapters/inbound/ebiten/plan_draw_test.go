@@ -70,7 +70,7 @@ func TestPlanOverlayCachedByVer(t *testing.T) {
 	if r.planDraw.builds != 2 || len(r.planDraw.runs) != 3 {
 		t.Fatalf("new PlanVer must rebuild: %d builds, runs %v", r.planDraw.builds, r.planDraw.runs)
 	}
-	r.cam.offsetX += 500 // panning only changes culling
+	r.cam.OffsetX += 500 // panning only changes culling
 	r.drawPlanOverlay(screen, w2, 320, 320, tile)
 	if r.planDraw.builds != 2 || r.planDraw.verts != 0 {
 		t.Fatalf("panned away: %d builds, %d verts", r.planDraw.builds, r.planDraw.verts)

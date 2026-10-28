@@ -33,8 +33,8 @@ func hasLine(lines []string, sub string) bool {
 func TestCellInfoDescribesHoveredCell(t *testing.T) {
 	t.Parallel()
 	a, f := globalColonyP(t, cellInfoSim())
-	f.moveTo(a, 4, 3)
-	f.frame(t, a)
+	f.MoveTo(a, 4, 3)
+	f.Frame(t, a)
 	lines := a.cellInfoLines()
 	if len(lines) < 3 {
 		t.Fatalf("cell info = %q, want the ground's lines", lines)
@@ -45,8 +45,8 @@ func TestCellInfoDescribesHoveredCell(t *testing.T) {
 	if !hasLine(lines, "Temperature 14C") { // TemperatureAt(4,3) = 140, outdoors
 		t.Errorf("cell info = %q, want the sim's temperature for this cell", lines)
 	}
-	f.moveTo(a, 9, 9) // inside the room
-	f.frame(t, a)
+	f.MoveTo(a, 9, 9) // inside the room
+	f.Frame(t, a)
 	if lines = a.cellInfoLines(); !hasLine(lines, "(indoors)") || !hasLine(lines, "Temperature 19C") {
 		t.Errorf("room cell info = %q, want the indoor temperature of (9,9)", lines)
 	}
@@ -57,8 +57,8 @@ func TestCellInfoDescribesHoveredCell(t *testing.T) {
 func TestCellInfoOnlyWithNothingSelected(t *testing.T) {
 	t.Parallel()
 	a, f := globalColonyP(t, cellInfoSim())
-	f.moveTo(a, 4, 3)
-	f.frame(t, a)
+	f.MoveTo(a, 4, 3)
+	f.Frame(t, a)
 	if len(a.cellInfoLines()) == 0 {
 		t.Fatal("nothing selected: expected cell info")
 	}
@@ -95,7 +95,7 @@ func TestCellInfoOnlyWithNothingSelected(t *testing.T) {
 	a.workOpen = false
 
 	f.onRect(a, a.hud().Global) // the cursor over the HUD
-	f.frame(t, a)
+	f.Frame(t, a)
 	if got := a.cellInfoLines(); len(got) != 0 {
 		t.Errorf("cursor over the HUD, cell info = %q", got)
 	}
@@ -106,8 +106,8 @@ func TestCellInfoOnlyWithNothingSelected(t *testing.T) {
 func TestCellInfoIsNotChrome(t *testing.T) {
 	t.Parallel()
 	a, f := globalColonyP(t, cellInfoSim())
-	f.moveTo(a, 4, 3)
-	f.frame(t, a)
+	f.MoveTo(a, 4, 3)
+	f.Frame(t, a)
 	r := a.cellInfoRect()
 	if r.Empty() {
 		t.Fatal("no cell info rect while hovering a cell")
@@ -133,13 +133,13 @@ func TestCellInfoIsNotChrome(t *testing.T) {
 func TestCellInfoAltAddsDetail(t *testing.T) {
 	t.Parallel()
 	a, f := globalColonyP(t, cellInfoSim())
-	f.moveTo(a, 4, 3)
-	f.frame(t, a)
+	f.MoveTo(a, 4, 3)
+	f.Frame(t, a)
 	if hasLine(a.cellInfoLines(), "Cell (4, 3)") {
 		t.Fatal("detail lines without Alt")
 	}
-	f.cur.mods = input.ModAlt
-	f.frame(t, a)
+	f.Cur.Mods = input.ModAlt
+	f.Frame(t, a)
 	if !hasLine(a.cellInfoLines(), "Cell (4, 3)") {
 		t.Fatalf("Alt held: cell info = %q, want the detail lines", a.cellInfoLines())
 	}
@@ -152,8 +152,8 @@ func TestCellInfoUnexplored(t *testing.T) {
 	s.world.Fog = make([]uint8, 16*16)
 	s.world.Fog[3*16+4] = 1
 	a, f := globalColonyP(t, s)
-	f.moveTo(a, 4, 3)
-	f.frame(t, a)
+	f.MoveTo(a, 4, 3)
+	f.Frame(t, a)
 	if got := a.cellInfoLines(); len(got) != 1 || got[0] != "Unexplored" {
 		t.Fatalf("fogged cell info = %q", got)
 	}
@@ -169,7 +169,7 @@ func TestCellInfoHidesOverTheMinimap(t *testing.T) {
 		t.Fatal("a 200x200 map has no minimap rect")
 	}
 	f.onRect(a, m)
-	f.frame(t, a)
+	f.Frame(t, a)
 	if got := a.cellInfoLines(); len(got) != 0 {
 		t.Errorf("cursor over the minimap, cell info = %q", got)
 	}
@@ -184,8 +184,8 @@ func TestCellInfoHidesOverTheMinimap(t *testing.T) {
 func TestHintSitsAboveCellInfo(t *testing.T) {
 	t.Parallel()
 	a, f := globalColonyP(t, cellInfoSim())
-	f.moveTo(a, 4, 3)
-	f.frame(t, a)
+	f.MoveTo(a, 4, 3)
+	f.Frame(t, a)
 	lines := a.cellInfoLines()
 	if len(lines) == 0 {
 		t.Fatal("no cell info to test against")

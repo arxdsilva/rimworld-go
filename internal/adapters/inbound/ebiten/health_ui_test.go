@@ -37,9 +37,9 @@ func healthApp(t *testing.T) (*App, *fakeInput, *stubSim) {
 	s.health = map[entity.EntityID]game.HealthView{1: healthSimView()}
 	a, f := colonyApp(t, s)
 	a.renderer.Select(1)
-	f.frame(t, a)
+	f.Frame(t, a)
 	openPawnTab(t, a, "health") // the pane's Health tab
-	f.frame(t, a)
+	f.Frame(t, a)
 	return a, f, s
 }
 
@@ -97,7 +97,7 @@ func TestHealthPickerSendsAddOperation(t *testing.T) {
 	t.Parallel()
 	a, f, s := healthApp(t)
 	press(t, a, f, healthAddID)
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalTop() != healthPickID {
 		t.Fatalf("picker not open (top %q)", a.uiModalTop())
 	}
@@ -277,7 +277,7 @@ func TestHealthCareRow(t *testing.T) {
 	h := s.health[1]
 	h.Care = uint8(medcare.Best)
 	s.health[1] = h
-	f.frame(t, a)
+	f.Frame(t, a)
 	for c := medcare.Policy(0); c < medcare.NumPolicies; c++ {
 		w, ok := a.uiSt().find(healthCareID(c))
 		if !ok || w.label != careShort(c) || !strings.HasPrefix(w.tip, c.Label()) {
@@ -311,12 +311,12 @@ func TestHealthSelfTendCheckbox(t *testing.T) {
 		t.Fatalf("unchecking sends off: %+v", c)
 	}
 	s.pawns[0].Prisoner = true
-	f.frame(t, a)
+	f.Frame(t, a)
 	if hasWidget(a, healthSelfID) || !hasWidget(a, healthCareID(medcare.NoCare)) {
 		t.Fatal("a prisoner has care levels but no self-tend")
 	}
 	s.pawns[0].Prisoner, s.pawns[0].Status = false, "dead"
-	f.frame(t, a)
+	f.Frame(t, a)
 	if w, _ := a.uiSt().find(healthCareID(medcare.NoMeds)); !w.disabled || w.reason == "" {
 		t.Fatalf("the dead: care disabled with a reason: %+v", w)
 	}
@@ -329,7 +329,7 @@ func TestHealthReorderButtons(t *testing.T) {
 	h := s.health[1]
 	h.Operations = append(h.Operations, game.OperationView{Label: "Amputate right arm", Slot: 1})
 	s.health[1] = h
-	f.frame(t, a)
+	f.Frame(t, a)
 	if w, _ := a.uiSt().find(healthUpID(0)); !w.disabled || w.reason == "" {
 		t.Fatalf("the first can't move up: %+v", w)
 	}
@@ -347,7 +347,7 @@ func TestHealthReorderButtons(t *testing.T) {
 	drawFrame(t, a, f)
 	h.Operations = h.Operations[:1]
 	s.health[1] = h
-	f.frame(t, a)
+	f.Frame(t, a)
 	if w, _ := a.uiSt().find(healthDownID(0)); !w.disabled {
 		t.Fatal("a single operation has nowhere to go")
 	}
@@ -395,9 +395,9 @@ func TestHealthPickerSurgeryOptions(t *testing.T) {
 		{Label: "Anesthetize", Kind: uint8(body.Anesthetize), Part: uint8(body.Torso), Disabled: true, Reason: "needs 1 herbal medicine or better"},
 	}
 	s.health[1] = h
-	f.frame(t, a)
+	f.Frame(t, a)
 	press(t, a, f, healthAddID)
-	f.frame(t, a)
+	f.Frame(t, a)
 	opts := pickerOptions(s.health[1])
 	if len(opts) != 4 || opts[1].reason != "no kidney in stock" || opts[3].reason == "" {
 		t.Fatalf("options %+v", opts)
@@ -433,12 +433,12 @@ func TestHealthPrisonerQueuesOperations(t *testing.T) {
 		} else {
 			s.pawns[0].Visitor = true
 		}
-		f.frame(t, a)
+		f.Frame(t, a)
 		if w, ok := a.uiSt().find(healthAddID); !ok || w.disabled {
 			t.Fatalf("%s: Add operation is open: %+v", who, w)
 		}
 		press(t, a, f, healthAddID)
-		f.frame(t, a)
+		f.Frame(t, a)
 		if a.uiModalTop() != healthPickID {
 			t.Fatalf("%s: the picker opens", who)
 		}

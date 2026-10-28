@@ -160,10 +160,10 @@ func (a *App) drawItemIcon(dst *ebiten.Image, it game.ItemView, x, y, size float
 	}
 	key := "ui_icon/" + strings.ReplaceAll(it.Kind, " ", "_") // "cloth carpet" -> cloth_carpet
 	cs := noCS
-	if !a.renderer.art.has(key) {
+	if !a.renderer.art.Has(key) {
 		key, cs = a.renderer.stoneItem(itemSpriteSpecies(it.Kind, it.Animal, it.X, it.Y), it.Kind, noCS)
 	}
-	if img := a.renderer.art.image(key, color.NRGBA{}); img != nil {
+	if img := a.renderer.art.Image(key, color.NRGBA{}); img != nil {
 		drawIconCS(dst, img, x, y, size, cs)
 	}
 }

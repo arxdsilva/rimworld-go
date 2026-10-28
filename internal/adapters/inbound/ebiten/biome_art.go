@@ -69,7 +69,7 @@ func (r *Renderer) terrainTileKey(t string, v int) (string, colorScale) {
 		base = "soil" // a terrain this client has never heard of
 	}
 	k := artKey("terrain", base, v)
-	if r.art.has(k) || r.art == nil {
+	if r.art.Has(k) || r.art == nil {
 		return k, noCS
 	}
 	if fb, ok := terrainFallbacks[t]; ok {

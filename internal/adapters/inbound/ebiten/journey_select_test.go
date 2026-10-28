@@ -81,7 +81,7 @@ func TestJourneySelectSameTileCycle(t *testing.T) {
 	if !j.a.hasItem || j.a.selItem != sid || j.a.renderer.HasSelect() {
 		t.Fatalf("the second click: item %v/%v pawn %v, want the stack %v", j.a.hasItem, j.a.selItem, j.a.renderer.HasSelect(), sid)
 	}
-	j.f.moveTo(j.a, 15, 7) // Numpad * acts on the selection, wherever the mouse is
+	j.f.MoveTo(j.a, 15, 7) // Numpad * acts on the selection, wherever the mouse is
 	j.key("NumpadMultiply", 0)
 	if !j.a.renderer.HasSelect() || j.a.renderer.Selected() != pid || j.a.hasItem {
 		t.Fatalf("Numpad * did not cycle back to the colonist (pawn %v item %v)", j.a.renderer.HasSelect(), j.a.hasItem)

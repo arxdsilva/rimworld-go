@@ -75,7 +75,7 @@ var cropStates = []cropState{
 // cropDrawEach draws every plant of r's stub world like cropDraw and hands
 // each plant's queued unit quads to fn.
 func cropDrawEach(r *Renderer, mw, mh int, tile float64, fn func(p *game.PlantView, quads []ebiten.Vertex)) {
-	r.cam.zoom, r.cam.offsetX, r.cam.offsetY = tile/TileSize, -tile, -tile
+	r.cam.Zoom, r.cam.OffsetX, r.cam.OffsetY = tile/TileSize, -tile, -tile
 	sw, sh := int(float64(mw+2)*tile), int(float64(mh+2)*tile)
 	r.setView(sw, sh, tile)
 	w := r.game.World()
@@ -274,7 +274,7 @@ func TestCropSwayPivotsAtRoot(t *testing.T) {
 		r := cropRenderer(w, 6, 6)
 		for _, name := range cropStageNames {
 			for v := 0; v < cropVariants; v++ {
-				r.art.sprites[fmt.Sprintf("plant/wheat_%s_v%d", name, v)] = cropBlockSprite(up, down)
+				r.art.Sprites[fmt.Sprintf("plant/wheat_%s_v%d", name, v)] = cropBlockSprite(up, down)
 			}
 		}
 		r.present = present

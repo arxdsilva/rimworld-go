@@ -70,9 +70,9 @@ func TestZoneIconsFallBackToExistingOnesUntilTheNewOnesLand(t *testing.T) {
 		}
 	}
 	// With an art catalog that has only the old icons, each falls back.
-	art := &artCatalog{sprites: map[string]*artSprite{}}
+	art := &artCatalog{Sprites: map[string]*artSprite{}}
 	for _, k := range []string{"zone_grow", "order_cancel", "plan_clear", "order_cut", "order_forbid"} {
-		art.sprites["ui_icon/"+k] = fakeSprite([2]int{64, 64}, pt{}, nil)
+		art.Sprites["ui_icon/"+k] = fakeSprite([2]int{64, 64}, pt{}, nil)
 	}
 	a.art = art
 	cs = a.zoneCommands(1)
@@ -83,7 +83,7 @@ func TestZoneIconsFallBackToExistingOnesUntilTheNewOnesLand(t *testing.T) {
 		}
 	}
 	// Once the new icon exists it wins.
-	art.sprites["ui_icon/zone_sow"] = fakeSprite([2]int{64, 64}, pt{}, nil)
+	art.Sprites["ui_icon/zone_sow"] = fakeSprite([2]int{64, 64}, pt{}, nil)
 	if got := thingCmd(t, a.zoneCommands(1), "cmd.zone.sow").Icon; got != "zone_sow" {
 		t.Errorf("sow icon %q once ART's lands", got)
 	}
@@ -236,13 +236,13 @@ func TestZoneRenameDialogSendsTheTrimmedName(t *testing.T) {
 	t.Parallel()
 	a, s, f := zoneApp(t, growZone(4, "potato", 0, 0, 1, 1))
 	thingPress(a, thingCmd(t, zoneCmdsOf(a, 4), "cmd.zone.rename"))
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalTop() != zoneRenameModalID {
 		t.Fatalf("top modal %q, want the rename dialog", a.uiModalTop())
 	}
-	f.typeText(t, a, "  North field  ")
-	f.key(t, a, "Enter", 0)
-	f.frame(t, a)
+	f.TypeText(t, a, "  North field  ")
+	f.Key(t, a, "Enter", 0)
+	f.Frame(t, a)
 	got := cmdsOf(&stubSim{cmds: s.cmds}, command.RenameZone)
 	if len(got) != 1 || got[0].Target != 4 || got[0].Name != "North field" {
 		t.Fatalf("rename enqueued %+v, want one RenameZone \"North field\" on zone 4", got)
@@ -256,10 +256,10 @@ func TestZoneRenameDialogOkButtonAndCap(t *testing.T) {
 	t.Parallel()
 	a, s, f := zoneApp(t, growZone(4, "potato", 0, 0, 1, 1))
 	thingPress(a, thingCmd(t, zoneCmdsOf(a, 4), "cmd.zone.rename"))
-	f.frame(t, a)
-	f.typeText(t, a, "abcdefghijklmnopqrstuvwxyz0123") // 30 characters
+	f.Frame(t, a)
+	f.TypeText(t, a, "abcdefghijklmnopqrstuvwxyz0123") // 30 characters
 	press(t, a, f, "modal."+zoneRenameModalID+".ok")
-	f.frame(t, a)
+	f.Frame(t, a)
 	got := cmdsOf(&stubSim{cmds: s.cmds}, command.RenameZone)
 	if len(got) != 1 || got[0].Name != "abcdefghijklmnopqrstuvwx" || len([]rune(got[0].Name)) != game.ZoneNameMax {
 		t.Fatalf("rename enqueued %+v, want one name cut to %d characters", got, game.ZoneNameMax)
@@ -272,21 +272,21 @@ func TestZoneRenameDialogCancelAndEmptyName(t *testing.T) {
 	named.Name = "Old"
 	a, s, f := zoneApp(t, named)
 	thingPress(a, thingCmd(t, zoneCmdsOf(a, 4), "cmd.zone.rename"))
-	f.frame(t, a)
-	f.typeText(t, a, "xyz")
+	f.Frame(t, a)
+	f.TypeText(t, a, "xyz")
 	press(t, a, f, "modal."+zoneRenameModalID+".cancel")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if len(s.cmds) != 0 || a.uiModalTop() == zoneRenameModalID {
 		t.Fatalf("Cancel sends nothing and closes: cmds %+v modal %q", s.cmds, a.uiModalTop())
 	}
 	// Emptying the field restores the default name ("" is the default).
 	thingPress(a, thingCmd(t, a.zoneCommands(4), "cmd.zone.rename"))
-	f.frame(t, a)
+	f.Frame(t, a)
 	for range 3 { // "Old"
-		f.key(t, a, "Backspace", 0)
+		f.Key(t, a, "Backspace", 0)
 	}
-	f.key(t, a, "Enter", 0)
-	f.frame(t, a)
+	f.Key(t, a, "Enter", 0)
+	f.Frame(t, a)
 	got := cmdsOf(&stubSim{cmds: s.cmds}, command.RenameZone)
 	if len(got) != 1 || got[0].Name != "" || got[0].Target != 4 {
 		t.Fatalf("empty name enqueued %+v, want RenameZone with Name \"\"", got)
@@ -331,7 +331,7 @@ func TestZonePaneAndGridAtUIScales(t *testing.T) {
 			for _, z := range zones {
 				name := zoneKindName(z) + " ui" + strconv.FormatFloat(ui, 'g', -1, 64) + " " + strconv.Itoa(sw) + "x" + strconv.Itoa(sh)
 				a.selectCand(selCand{selZone, entityOf(z.ID)})
-				f.frame(t, a)
+				f.Frame(t, a)
 				l := a.hud()
 				if l.Pane.Empty() || !a.paneShown() {
 					t.Fatalf("%s: no pane", name)

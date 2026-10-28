@@ -166,7 +166,7 @@ func (l *lodState) inView(x, y, pad, padS int) bool {
 // frame. sw and sh are dst's extent for culling.
 func (r *Renderer) withBake(dst *ebiten.Image, px float64, x0, y0 int, ox, oy float64, fn func(sw, sh int, tile float64)) {
 	cam, view, cast := r.cam, r.env.view, r.cast
-	r.cam = camera{zoom: px / TileSize, offsetX: float64(x0)*px - ox, offsetY: float64(y0)*px - oy, placed: true}
+	r.cam = camera{Zoom: px / TileSize, OffsetX: float64(x0)*px - ox, OffsetY: float64(y0)*px - oy, Placed: true}
 	b := dst.Bounds()
 	r.setView(b.Max.X, b.Max.Y, px)
 	r.lod.baking = true
@@ -389,8 +389,8 @@ func (r *Renderer) drawBakedColor(screen, src *ebiten.Image, bx, by int, sx0, sy
 		rows[2] = g.levelRow(rows[2], tx0, tx1+1, y+1)
 		bot = cornerRow(bot, rows[1], rows[2])
 		rows[0], rows[1], rows[2] = rows[1], rows[2], rows[0]
-		sy := float32(float64(y)*tile - r.cam.offsetY)
-		sy1 := float32(float64(y+1)*tile - r.cam.offsetY)
+		sy := float32(float64(y)*tile - r.cam.OffsetY)
+		sy1 := float32(float64(y+1)*tile - r.cam.OffsetY)
 		vy := float32(sy0 + float64(y-by)*bpx)
 		for x := tx0; x <= tx1; x++ {
 			// a run of tiles lit alike, all its corners at one lamp level,
@@ -409,8 +409,8 @@ func (r *Renderer) drawBakedColor(screen, src *ebiten.Image, bx, by int, sx0, sy
 					xe++
 				}
 			}
-			sx := float32(float64(x)*tile - r.cam.offsetX)
-			sx1 := float32(float64(xe+1)*tile - r.cam.offsetX)
+			sx := float32(float64(x)*tile - r.cam.OffsetX)
+			sx1 := float32(float64(xe+1)*tile - r.cam.OffsetX)
 			vx := float32(sx0 + float64(x-bx)*bpx)
 			vx1 := float32(sx0 + float64(xe+1-bx)*bpx)
 			x = xe
@@ -607,10 +607,10 @@ const animalDrift = 2.0
 // (where a body's lower part reaches down into the view), padS south
 // (where its height reaches up into it).
 func (r *Renderer) animalPads(tile float64) (pad, padS int) {
-	e := r.art.animalExtent()
+	e := r.art.AnimalExtent()
 	k := 1.0
 	if tile > 0 {
 		k = lodTile(tile) / tile
 	}
-	return int(math.Ceil(k*(max(e.side, e.down)+1) - 1 + animalDrift)), int(math.Ceil(k*(e.up+1) - 1 + animalDrift))
+	return int(math.Ceil(k*(max(e.Side, e.Down)+1) - 1 + animalDrift)), int(math.Ceil(k*(e.Up+1) - 1 + animalDrift))
 }

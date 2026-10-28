@@ -92,22 +92,22 @@ func TestLoadArtCatalogDecodesOnFirstUse(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !c.freeCPU {
+	if !c.FreeCPU {
 		t.Fatal("the game's catalog must release CPU copies after upload")
 	}
-	for k, sp := range c.sprites {
-		if sp.pix != nil || sp.mask != nil {
+	for k, sp := range c.Sprites {
+		if sp.Pix != nil || sp.Mask != nil {
 			t.Fatalf("%s decoded at load", k)
 		}
 	}
-	sp := c.sprite("rock/ore_a")
-	if sp.pix == nil || sp.mask == nil {
+	sp := c.Sprite("rock/ore_a")
+	if sp.Pix == nil || sp.Mask == nil {
 		t.Fatal("first use did not decode")
 	}
-	if s := c.memStats(); s.ColdFills != 1 || s.WarmFills != 0 {
+	if s := c.MemStats(); s.ColdFills != 1 || s.WarmFills != 0 {
 		t.Fatalf("fills: %+v", s)
 	}
-	if idx, err := indexArtCatalog(root, true); err != nil || idx.freeCPU {
+	if idx, err := indexArtCatalog(root, true); err != nil || idx.FreeCPU {
 		t.Fatalf("the tests' index keeps CPU copies (err %v)", err)
 	}
 }
@@ -125,38 +125,38 @@ func TestPrewarmFilesHoldsDeflatedCopies(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	<-c.prewarmAsync()
-	if c.memStats().WarmHeld <= 0 {
+	<-c.PrewarmAsync()
+	if c.MemStats().WarmHeld <= 0 {
 		t.Fatal("prewarm held nothing")
 	}
-	if c.sprites["animal/deer_east"].file.warm[layerPix].z != nil {
+	if c.Sprites["animal/deer_east"].File.Warm[layerPix].Z != nil {
 		t.Fatal("animals are left to first use")
 	}
-	for k := range c.sprites {
+	for k := range c.Sprites {
 		if strings.HasPrefix(k, "animal/") {
 			continue
 		}
-		if c.sprites[k].file.warm[layerPix].z == nil {
+		if c.Sprites[k].File.Warm[layerPix].Z == nil {
 			t.Fatalf("%s not prewarmed", k)
 		}
-		got, want := c.sprite(k), plain.sprite(k)
-		if !bytes.Equal(got.pix.Pix, want.pix.Pix) || got.pix.Rect != want.pix.Rect {
+		got, want := c.Sprite(k), plain.Sprite(k)
+		if !bytes.Equal(got.Pix.Pix, want.Pix.Pix) || got.Pix.Rect != want.Pix.Rect {
 			t.Fatalf("%s: prewarmed pixels differ from the file", k)
 		}
-		if (got.mask == nil) != (want.mask == nil) || got.mask != nil && !bytes.Equal(got.mask.Pix, want.mask.Pix) {
+		if (got.Mask == nil) != (want.Mask == nil) || got.Mask != nil && !bytes.Equal(got.Mask.Pix, want.Mask.Pix) {
 			t.Fatalf("%s: prewarmed mask differs from the file", k)
 		}
-		if got.normalPath != "" {
-			n := got.file.normalNRGBA(got)
-			wn, err := decodeNRGBA(got.normalPath)
+		if got.NormalPath != "" {
+			n := got.File.NormalNRGBA(got)
+			wn, err := decodeNRGBA(got.NormalPath)
 			if err != nil || n == nil || !bytes.Equal(n.Pix, wn.Pix) {
 				t.Fatalf("%s: prewarmed normal differs from the file", k)
 			}
 		}
 	}
-	s := c.memStats()
-	if s.WarmFills != int64(len(c.sprites)-1) || s.ColdFills != 0 {
-		t.Fatalf("fills %+v, want %d warm, 0 cold", s, len(c.sprites)-1)
+	s := c.MemStats()
+	if s.WarmFills != int64(len(c.Sprites)-1) || s.ColdFills != 0 {
+		t.Fatalf("fills %+v, want %d warm, 0 cold", s, len(c.Sprites)-1)
 	}
 	if s.WarmHeld != 0 {
 		t.Fatalf("%d deflated bytes left after every layer was taken", s.WarmHeld)
@@ -176,23 +176,23 @@ func TestPrewarmFilesRacingDraws(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	done := c.prewarmAsync()
+	done := c.PrewarmAsync()
 	keys := []string{"terrain/soil_0", "rock/ore_a", "plant/bush_mature_v0"}
 	for _, k := range keys {
-		if img := c.image(k, c.tint("skin", "red")); img == nil {
+		if img := c.Image(k, c.Tint("skin", "red")); img == nil {
 			t.Fatalf("%s: no image", k)
 		}
 	}
 	<-done
 	for _, k := range keys {
-		for layer, w := range c.sprites[k].file.warm {
-			if w.z != nil {
+		for layer, w := range c.Sprites[k].File.Warm {
+			if w.Z != nil {
 				t.Fatalf("%s: a copy of layer %d was published after it was taken", k, layer)
 			}
 		}
 	}
-	for k := range c.sprites {
-		if got, want := c.sprite(k), plain.sprite(k); got.pix != nil && !bytes.Equal(got.pix.Pix, want.pix.Pix) {
+	for k := range c.Sprites {
+		if got, want := c.Sprite(k), plain.Sprite(k); got.Pix != nil && !bytes.Equal(got.Pix.Pix, want.Pix.Pix) {
 			t.Fatalf("%s: pixels differ while prewarming", k)
 		}
 	}
@@ -209,27 +209,27 @@ func TestImageReleasesCPUPixels(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, k := range []string{"plant/bush_mature_v0", "terrain/soil_0", "animal/deer_east"} {
-		sp := c.sprite(k)
-		if c.image(k, color.NRGBA{}) == nil {
+		sp := c.Sprite(k)
+		if c.Image(k, color.NRGBA{}) == nil {
 			t.Fatalf("%s: no image", k)
 		}
-		if sp.pix != nil {
+		if sp.Pix != nil {
 			t.Fatalf("%s: CPU pixels kept after upload", k)
 		}
-		if h := sp.opaqueHeightPx(); h != 6 {
+		if h := sp.OpaqueHeightPx(); h != 6 {
 			t.Fatalf("%s: opaque height %v after release, want 6", k, h)
 		}
-		if sp.normalPath != "" && c.normalOf(sp.img) == nil {
+		if sp.NormalPath != "" && c.NormalOf(sp.Img) == nil {
 			t.Fatalf("%s: normal map not linked before release", k)
 		}
 	}
 	for _, k := range []string{"plant/grass_short_v0", "overlay/tilled_1"} {
-		c.image(k, color.NRGBA{})
-		if c.sprites[k].pix == nil {
+		c.Image(k, color.NRGBA{})
+		if c.Sprites[k].Pix == nil {
 			t.Fatalf("%s: a CPU bake reads it back, its pixels must stay", k)
 		}
 	}
-	s := c.memStats()
+	s := c.MemStats()
 	const px = 24 * 16 * 4
 	if s.Freed != 3 || s.FreedBytes != 3*px || s.Kept != 2 || s.KeptBytes != 2*px {
 		t.Fatalf("stats %+v", s)
@@ -242,8 +242,8 @@ func TestImageReleasesCPUPixels(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	idx.image("plant/bush_mature_v0", color.NRGBA{})
-	if idx.sprites["plant/bush_mature_v0"].pix == nil {
+	idx.Image("plant/bush_mature_v0", color.NRGBA{})
+	if idx.Sprites["plant/bush_mature_v0"].Pix == nil {
 		t.Fatal("the tests' index must keep CPU pixels")
 	}
 }
@@ -257,32 +257,32 @@ func TestReleasedMaskedSpriteStillTints(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sp := c.sprite("rock/ore_a")
-	pix := image.NewNRGBA(sp.pix.Rect)
-	copy(pix.Pix, sp.pix.Pix)
-	full := sp.mask
-	red := c.tint("skin", "red")
-	img := c.image("rock/ore_a", red)
-	if img == nil || img == sp.img || img.Bounds() != sp.img.Bounds() {
-		t.Fatalf("tinted image %v (base %v)", img, sp.img)
+	sp := c.Sprite("rock/ore_a")
+	pix := image.NewNRGBA(sp.Pix.Rect)
+	copy(pix.Pix, sp.Pix.Pix)
+	full := sp.Mask
+	red := c.Tint("skin", "red")
+	img := c.Image("rock/ore_a", red)
+	if img == nil || img == sp.Img || img.Bounds() != sp.Img.Bounds() {
+		t.Fatalf("tinted image %v (base %v)", img, sp.Img)
 	}
-	if sp.pix != nil || sp.mask == nil {
-		t.Fatalf("pix kept %v, mask %v", sp.pix != nil, sp.mask != nil)
+	if sp.Pix != nil || sp.Mask == nil {
+		t.Fatalf("pix kept %v, mask %v", sp.Pix != nil, sp.Mask != nil)
 	}
-	if sp.mask.Rect != image.Rect(4, 7, 12, 9) {
-		t.Fatalf("mask kept as %v, want its coverage box", sp.mask.Rect)
+	if sp.Mask.Rect != image.Rect(4, 7, 12, 9) {
+		t.Fatalf("mask kept as %v, want its coverage box", sp.Mask.Rect)
 	}
-	if !bytes.Equal(tintNRGBA(pix, sp.mask, red).Pix, tintNRGBA(pix, full, red).Pix) {
+	if !bytes.Equal(tintNRGBA(pix, sp.Mask, red).Pix, tintNRGBA(pix, full, red).Pix) {
 		t.Fatal("the cropped mask tints differently")
 	}
-	if c.image("rock/ore_a", red) != img {
+	if c.Image("rock/ore_a", red) != img {
 		t.Fatal("a tint bake is cached")
 	}
-	dark := c.image("rock/ore_a", c.tint("skin", "dark"))
-	if dark == nil || dark == img || dark.Bounds() != sp.img.Bounds() {
+	dark := c.Image("rock/ore_a", c.Tint("skin", "dark"))
+	if dark == nil || dark == img || dark.Bounds() != sp.Img.Bounds() {
 		t.Fatal("a new tint after release must bake on the GPU")
 	}
-	if c.normalOf(dark) == nil {
+	if c.NormalOf(dark) == nil {
 		t.Fatal("a tint bake shares its sprite's normal map")
 	}
 }
@@ -298,31 +298,31 @@ func TestTintBakesEvictLeastRecentlyUsed(t *testing.T) {
 		t.Fatal(err)
 	}
 	const bake = 24 * 16 * 4
-	c.tintBudget = 2 * bake
+	c.TintBudget = 2 * bake
 	tint := func(i int) color.NRGBA { return color.NRGBA{uint8(10 * i), 50, 90, 255} }
-	a := c.image("rock/ore_a", tint(1))
-	b := c.image("rock/ore_a", tint(2))
-	if c.image("rock/ore_a", tint(1)) != a { // a is now the most recent
+	a := c.Image("rock/ore_a", tint(1))
+	b := c.Image("rock/ore_a", tint(2))
+	if c.Image("rock/ore_a", tint(1)) != a { // a is now the most recent
 		t.Fatal("cache miss on a fresh bake")
 	}
-	c.image("rock/ore_a", tint(3)) // evicts b
-	if _, ok := c.tinted[tintKey{"rock/ore_a", tint(2)}]; ok {
+	c.Image("rock/ore_a", tint(3)) // evicts b
+	if _, ok := c.Tinted[tintKey{"rock/ore_a", tint(2)}]; ok {
 		t.Fatal("least recently used bake kept")
 	}
-	if c.normalOf(b) != nil {
+	if c.NormalOf(b) != nil {
 		t.Fatal("an evicted bake's normal link kept")
 	}
-	if c.tinted[tintKey{"rock/ore_a", tint(1)}] != a {
+	if c.Tinted[tintKey{"rock/ore_a", tint(1)}] != a {
 		t.Fatal("recently used bake evicted")
 	}
-	s := c.memStats()
+	s := c.MemStats()
 	if s.Tints != 2 || s.TintBytes != 2*bake || s.TintEvicted != 1 {
 		t.Fatalf("tint stats %+v", s)
 	}
 	// a literal catalog (tests) bakes with no budget set and no maps made
-	lit := &artCatalog{sprites: map[string]*artSprite{"x/y": {
-		pix: image.NewNRGBA(image.Rect(0, 0, 4, 4)), mask: image.NewNRGBA(image.Rect(0, 0, 4, 4))}}}
-	if lit.image("x/y", tint(1)) == nil || len(lit.tinted) != 1 {
+	lit := &artCatalog{Sprites: map[string]*artSprite{"x/y": {
+		Pix: image.NewNRGBA(image.Rect(0, 0, 4, 4)), Mask: image.NewNRGBA(image.Rect(0, 0, 4, 4))}}}
+	if lit.Image("x/y", tint(1)) == nil || len(lit.Tinted) != 1 {
 		t.Fatal("literal catalog bake")
 	}
 }
@@ -387,14 +387,14 @@ func TestMemStatsCountsAtlasCopies(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	held := c.prewarmAtlases()
-	if s := c.memStats(); held == 0 || s.AtlasHeld != int64(held) {
+	held := c.PrewarmAtlases()
+	if s := c.MemStats(); held == 0 || s.AtlasHeld != int64(held) {
 		t.Fatalf("atlas held %d, prewarm reported %d", s.AtlasHeld, held)
 	}
-	for k := range c.sprites {
-		c.image(k, c.tint("skin", "pale"))
+	for k := range c.Sprites {
+		c.Image(k, c.Tint("skin", "pale"))
 	}
-	if s := c.memStats(); s.AtlasHeld != 0 || s.Freed != 3 || s.Tints != 3 {
+	if s := c.MemStats(); s.AtlasHeld != 0 || s.Freed != 3 || s.Tints != 3 {
 		t.Fatalf("after drawing every sprite: %+v", s)
 	}
 }

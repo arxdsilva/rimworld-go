@@ -113,7 +113,7 @@ func shadowFallback(key string, m *artMeta) shadowSpec {
 			fd = float64(m.Footprint[1])
 		}
 		if m.Canvas[1] > 0 {
-			canvasH = float64(m.Canvas[1]) / m.pxPerTile()
+			canvasH = float64(m.Canvas[1]) / m.PxPerTile()
 		}
 	}
 	switch fam {
@@ -285,8 +285,8 @@ func (r *Renderer) shadowSpecOf(key string) shadowSpec {
 		return s
 	}
 	var m *artMeta
-	if sp := r.art.sprite(key); sp != nil {
-		m = &sp.meta
+	if sp := r.art.Sprite(key); sp != nil {
+		m = &sp.Meta
 	}
 	s := shadowSpecFor(key, m)
 	st.specs[key] = s
@@ -295,8 +295,8 @@ func (r *Renderer) shadowSpecOf(key string) shadowSpec {
 
 // footprintOf is a sprite's footprint in tiles (1x1 when unknown).
 func (r *Renderer) footprintOf(key string) (float64, float64) {
-	if sp := r.art.sprite(key); sp != nil && sp.meta.Footprint[0] > 0 && sp.meta.Footprint[1] > 0 {
-		return float64(sp.meta.Footprint[0]), float64(sp.meta.Footprint[1])
+	if sp := r.art.Sprite(key); sp != nil && sp.Meta.Footprint[0] > 0 && sp.Meta.Footprint[1] > 0 {
+		return float64(sp.Meta.Footprint[0]), float64(sp.Meta.Footprint[1])
 	}
 	return 1, 1
 }
@@ -464,8 +464,8 @@ func roofRuns(w game.WorldView, x0, y0, x1, y1 int, out [][3]int) [][3]int {
 // blobTexture is overlay/shadow_blob, or a soft procedural ellipse until
 // the art has one.
 func (r *Renderer) blobTexture() *ebiten.Image {
-	if r.art.has("overlay/shadow_blob") {
-		if img := r.art.image("overlay/shadow_blob", color.NRGBA{}); img != nil {
+	if r.art.Has("overlay/shadow_blob") {
+		if img := r.art.Image("overlay/shadow_blob", color.NRGBA{}); img != nil {
 			return img
 		}
 	}
@@ -583,7 +583,7 @@ func (r *Renderer) drawShadows(screen *ebiten.Image, w game.WorldView, sw, sh in
 	if len(casters) == 0 && len(creatures) == 0 {
 		return
 	}
-	k := shadowLayerScale(r.cam.dev)
+	k := shadowLayerScale(r.cam.Dev)
 	st.scale = k
 	lw, lh := int(math.Ceil(float64(sw)*k)), int(math.Ceil(float64(sh)*k))
 	st.layer = fitLayer(st.layer, lw, lh)

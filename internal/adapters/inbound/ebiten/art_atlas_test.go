@@ -112,18 +112,18 @@ sprites:
 		t.Fatalf("got %q %d %d", fam, pages, len(es))
 	}
 	a := es[0]
-	if a.key != "a" || a.page != 1 || a.rect != image.Rect(5, 6, 12, 14) || a.trim != image.Pt(1, 2) || !a.normal {
+	if a.Key != "a" || a.Page != 1 || a.Rect != image.Rect(5, 6, 12, 14) || a.Trim != image.Pt(1, 2) || !a.Normal {
 		t.Fatalf("entry a = %+v", a)
 	}
-	m, err := parseArtMeta(a.meta)
+	m, err := parseArtMeta(a.Meta)
 	if err != nil {
-		t.Fatalf("embedded metadata does not parse: %v\n%s", err, a.meta)
+		t.Fatalf("embedded metadata does not parse: %v\n%s", err, a.Meta)
 	}
 	if m.ID != "core:pawn/a" || m.Image != "generated/atlas/pawn_1.png" || m.Canvas != [2]int{20, 30} ||
 		m.TintGroup != "skin" || m.TintMask != "generated/atlas/pawn_1_mask.png" {
 		t.Fatalf("meta = %+v", m)
 	}
-	if es[1].normal || es[1].page != 0 {
+	if es[1].Normal || es[1].Page != 0 {
 		t.Fatalf("entry b = %+v", es[1])
 	}
 	for _, bad := range []string{
@@ -147,21 +147,21 @@ func TestLoadAtlasCutsSpritesLikeFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(c.sprites) != 7 {
-		t.Fatalf("%d sprites, want 7", len(c.sprites))
+	if len(c.Sprites) != 7 {
+		t.Fatalf("%d sprites, want 7", len(c.Sprites))
 	}
 	for pass := 0; pass < 2; pass++ { // the second pass re-reads evicted pages
 		for i := 0; i < 7; i++ {
 			key := fmt.Sprintf("dummy/s%d", i)
-			if !c.has(key) {
+			if !c.Has(key) {
 				t.Fatalf("%s missing", key)
 			}
-			sp := c.sprite(key)
-			if sp.pix.Bounds().Size() != (image.Point{24, 16}) {
-				t.Fatalf("%s: canvas %v, want 24x16", key, sp.pix.Bounds().Size())
+			sp := c.Sprite(key)
+			if sp.Pix.Bounds().Size() != (image.Point{24, 16}) {
+				t.Fatalf("%s: canvas %v, want 24x16", key, sp.Pix.Bounds().Size())
 			}
-			if sp.meta.Origin != [2]float64{3, 4} || sp.meta.Attach["hold"] != [2]float64{1.5, 2.5} || sp.meta.TintGroup != "skin" {
-				t.Fatalf("%s: metadata changed: %+v", key, sp.meta)
+			if sp.Meta.Origin != [2]float64{3, 4} || sp.Meta.Attach["hold"] != [2]float64{1.5, 2.5} || sp.Meta.TintGroup != "skin" {
+				t.Fatalf("%s: metadata changed: %+v", key, sp.Meta)
 			}
 			w := 4 + i
 			for y := 0; y < 16; y++ {
@@ -174,29 +174,29 @@ func TestLoadAtlasCutsSpritesLikeFiles(t *testing.T) {
 						g := uint8(100 + px)
 						wantMask = color.NRGBA{g, g, g, 255}
 					}
-					if got := sp.pix.NRGBAAt(x, y); got != wantPix {
+					if got := sp.Pix.NRGBAAt(x, y); got != wantPix {
 						t.Fatalf("%s pix (%d,%d) = %v, want %v", key, x, y, got, wantPix)
 					}
-					if got := sp.mask.NRGBAAt(x, y); got != wantMask {
+					if got := sp.Mask.NRGBAAt(x, y); got != wantMask {
 						t.Fatalf("%s mask (%d,%d) = %v, want %v", key, x, y, got, wantMask)
 					}
 				}
 			}
-			n := sp.src.normalImage(sp)
+			n := sp.Src.NormalImage(sp)
 			if (i%2 == 0) != (n != nil) {
 				t.Fatalf("%s: normal map present = %v", key, n != nil)
 			}
 			if n != nil {
 				// RGB from the page, alpha from the sprite; transparent flat blue elsewhere
-				if n.Bounds().Size() != sp.pix.Bounds().Size() || n.NRGBAAt(i, 2) != (color.NRGBA{128, uint8(i), 255, 255}) ||
+				if n.Bounds().Size() != sp.Pix.Bounds().Size() || n.NRGBAAt(i, 2) != (color.NRGBA{128, uint8(i), 255, 255}) ||
 					n.NRGBAAt(0, 0) != (color.NRGBA{128, 128, 255, 0}) {
 					t.Fatalf("%s: normal map wrong: %v %v", key, n.NRGBAAt(i, 2), n.NRGBAAt(0, 0))
 				}
 			}
 		}
 	}
-	if len(c.sprites["dummy/s0"].src.atlas.cache) > atlasPageCache {
-		t.Fatalf("page cache holds %d pages, want at most %d", len(c.sprites["dummy/s0"].src.atlas.cache), atlasPageCache)
+	if len(c.Sprites["dummy/s0"].Src.Atlas.Cache) > atlasPageCache {
+		t.Fatalf("page cache holds %d pages, want at most %d", len(c.Sprites["dummy/s0"].Src.Atlas.Cache), atlasPageCache)
 	}
 }
 
@@ -215,7 +215,7 @@ func TestLoadAtlasPrefersPagesOverIndividualFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c.has("dummy/stray") || !c.has("dummy/s0") {
+	if c.Has("dummy/stray") || !c.Has("dummy/s0") {
 		t.Fatal("a packed family must be served from its atlas only")
 	}
 }
@@ -264,11 +264,11 @@ func TestAtlasSpriteSurvivesUnreadablePage(t *testing.T) {
 	for _, f := range []string{"dummy_0.png", "dummy_0_mask.png", "dummy_0_n.png"} {
 		os.WriteFile(filepath.Join(root, "generated", "atlas", f), []byte("garbage"), 0o644)
 	}
-	sp := c.sprite("dummy/s0")
-	if sp == nil || sp.pix == nil || sp.mask == nil || sp.pix.Bounds().Size() != (image.Point{24, 16}) {
+	sp := c.Sprite("dummy/s0")
+	if sp == nil || sp.Pix == nil || sp.Mask == nil || sp.Pix.Bounds().Size() != (image.Point{24, 16}) {
 		t.Fatalf("sprite = %+v", sp)
 	}
-	if n := sp.src.normalImage(sp); n != nil {
+	if n := sp.Src.NormalImage(sp); n != nil {
 		t.Fatal("an unreadable normal page must give no normal map")
 	}
 }
@@ -301,14 +301,14 @@ func TestAtlasCoversKeys(t *testing.T) {
 			t.Fatalf("%s: empty atlas", family)
 		}
 		for _, e := range entries {
-			if !c.has(family + "/" + e.key) {
-				t.Errorf("atlas key %s/%s does not resolve", family, e.key)
+			if !c.Has(family + "/" + e.Key) {
+				t.Errorf("atlas key %s/%s does not resolve", family, e.Key)
 			}
 		}
 		// every sprite that still has its own metadata is in the atlas
 		if files, err := os.ReadDir(filepath.Join(root, artMetadataRel, family)); err == nil {
 			for _, f := range files {
-				if k, ok := strings.CutSuffix(f.Name(), ".yaml"); ok && !c.has(family+"/"+k) {
+				if k, ok := strings.CutSuffix(f.Name(), ".yaml"); ok && !c.Has(family+"/"+k) {
 					t.Errorf("%s/%s has metadata but is not served by the catalog", family, k)
 				}
 			}
@@ -318,8 +318,8 @@ func TestAtlasCoversKeys(t *testing.T) {
 		compared := 0
 		for i := 0; i < len(entries); i += step {
 			e := entries[i]
-			sp := c.sprite(family + "/" + e.key)
-			file := filepath.Join(root, "generated", "world", family, e.key+".png")
+			sp := c.Sprite(family + "/" + e.Key)
+			file := filepath.Join(root, "generated", "world", family, e.Key+".png")
 			if _, err := os.Stat(file); err != nil {
 				continue // individual files pruned: nothing to compare with
 			}
@@ -327,28 +327,28 @@ func TestAtlasCoversKeys(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if sp.pix.Bounds() != want.Bounds() || !bytes.Equal(sp.pix.Pix, want.Pix) {
-				t.Errorf("%s/%s: atlas pixels differ from %s", family, e.key, file)
+			if sp.Pix.Bounds() != want.Bounds() || !bytes.Equal(sp.Pix.Pix, want.Pix) {
+				t.Errorf("%s/%s: atlas pixels differ from %s", family, e.Key, file)
 			}
-			if sp.mask != nil {
+			if sp.Mask != nil {
 				wm, err := decodeNRGBA(strings.TrimSuffix(file, ".png") + "_mask.png")
 				if err != nil {
 					t.Fatal(err)
 				}
-				if !bytes.Equal(sp.mask.Pix, wm.Pix) {
-					t.Errorf("%s/%s: atlas mask differs from its file", family, e.key)
+				if !bytes.Equal(sp.Mask.Pix, wm.Pix) {
+					t.Errorf("%s/%s: atlas mask differs from its file", family, e.Key)
 				}
 			}
 			nf := strings.TrimSuffix(file, ".png") + "_n.png"
 			if wn, err := decodeNRGBA(nf); err == nil {
-				n := sp.src.normalImage(sp)
+				n := sp.Src.NormalImage(sp)
 				if n == nil || n.Bounds() != wn.Bounds() {
-					t.Errorf("%s/%s: atlas normal map missing or the wrong size", family, e.key)
+					t.Errorf("%s/%s: atlas normal map missing or the wrong size", family, e.Key)
 				} else if !sameVisible(n, wn) {
-					t.Errorf("%s/%s: atlas normal map differs from its file", family, e.key)
+					t.Errorf("%s/%s: atlas normal map differs from its file", family, e.Key)
 				}
-			} else if sp.src.entry.normal {
-				t.Errorf("%s/%s: atlas has a normal map the file lacks", family, e.key)
+			} else if sp.Src.Entry.Normal {
+				t.Errorf("%s/%s: atlas has a normal map the file lacks", family, e.Key)
 			}
 			compared++
 		}
@@ -381,31 +381,31 @@ func TestPrewarmAsyncMatchesPrewarm(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want.prewarmAtlases()
+	want.PrewarmAtlases()
 	got, err := loadArtCatalog(root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	<-got.prewarmAsync()
-	for key, sp := range want.sprites {
-		g := got.sprites[key]
-		if sp.src == nil || g == nil || g.src == nil {
+	<-got.PrewarmAsync()
+	for key, sp := range want.Sprites {
+		g := got.Sprites[key]
+		if sp.Src == nil || g == nil || g.Src == nil {
 			t.Fatalf("%s: not atlas-backed", key)
 		}
-		if !sameLayers(g.src.z, sp.src.z) {
+		if !sameLayers(g.Src.Z, sp.Src.Z) {
 			t.Fatalf("%s: compressed copies differ from the synchronous prewarm", key)
 		}
 	}
-	a := got.sprites["dummy/s0"].src.atlas
-	for pg := range a.cut {
-		for layer, done := range a.cut[pg] {
+	a := got.Sprites["dummy/s0"].Src.Atlas
+	for pg := range a.Cut {
+		for layer, done := range a.Cut[pg] {
 			if !done {
 				t.Fatalf("page %d layer %d not cut", pg, layer)
 			}
 		}
 	}
-	if a.decodes != want.sprites["dummy/s0"].src.atlas.decodes || len(a.cache) != 0 {
-		t.Fatalf("decodes %d (sync %d), cache %d", a.decodes, want.sprites["dummy/s0"].src.atlas.decodes, len(a.cache))
+	if a.Decodes != want.Sprites["dummy/s0"].Src.Atlas.Decodes || len(a.Cache) != 0 {
+		t.Fatalf("decodes %d (sync %d), cache %d", a.Decodes, want.Sprites["dummy/s0"].Src.Atlas.Decodes, len(a.Cache))
 	}
 
 	// draws racing the prewarm (run with -race): same pixels as a plain load
@@ -417,14 +417,14 @@ func TestPrewarmAsyncMatchesPrewarm(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	done := racing.prewarmAsync()
+	done := racing.PrewarmAsync()
 	for i := 4; i >= 0; i-- {
 		key := fmt.Sprintf("dummy/s%d", i)
-		p, r := plain.sprite(key), racing.sprite(key)
-		if !bytes.Equal(p.pix.Pix, r.pix.Pix) || !bytes.Equal(p.mask.Pix, r.mask.Pix) {
+		p, r := plain.Sprite(key), racing.Sprite(key)
+		if !bytes.Equal(p.Pix.Pix, r.Pix.Pix) || !bytes.Equal(p.Mask.Pix, r.Mask.Pix) {
 			t.Fatalf("%s: pixels differ while prewarming", key)
 		}
-		pn, rn := p.src.normalImage(p), r.src.normalImage(r)
+		pn, rn := p.Src.NormalImage(p), r.Src.NormalImage(r)
 		if (pn == nil) != (rn == nil) || pn != nil && !bytes.Equal(pn.Pix, rn.Pix) {
 			t.Fatalf("%s: normal map differs while prewarming", key)
 		}

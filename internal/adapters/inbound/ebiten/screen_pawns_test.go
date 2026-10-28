@@ -20,7 +20,7 @@ func pawnsApp(t *testing.T) (*App, *fakeInput) {
 	t.Helper()
 	a, f, _ := ngTest(t, nil)
 	toPawns(t, a)
-	f.frame(t, a)
+	f.Frame(t, a)
 	return a, f
 }
 
@@ -66,7 +66,7 @@ func TestRosterSelectedCountMatchesScenario(t *testing.T) {
 	runUntil(t, a2, func() bool { return a2.nav.screen() == screenLanding })
 	click(t, a2, "land.random")
 	click(t, a2, "wizard.next")
-	f2.frame(t, a2)
+	f2.Frame(t, a2)
 	if n := len(a2.ng.pool.Selected()); n != d.People {
 		t.Fatalf("ember clan selects %d, want %d", n, d.People)
 	}
@@ -86,16 +86,16 @@ func TestRerollDeterministicAndKeepsEditedName(t *testing.T) {
 	// The same draft rolled the same way gives the same colonist.
 	b, fb := pawnsApp(t)
 	click(t, b, "pawns.reroll")
-	fb.frame(t, b)
+	fb.Frame(t, b)
 	if b.ng.pool.Views()[0].BioView.Nick != after.Nick || b.ng.pool.Views()[0].AgeYears != after.AgeYears {
 		t.Fatal("rerolls are deterministic from the seed")
 	}
 	// An edited name survives a plain reroll, but not a Shift reroll.
 	press(t, a, f, "pawns.nick")
-	f.key(t, a, "A", input.ModCtrl)
-	f.typeText(t, a, "Brisk")
-	f.key(t, a, "Enter", 0)
-	f.frame(t, a)
+	f.Key(t, a, "A", input.ModCtrl)
+	f.TypeText(t, a, "Brisk")
+	f.Key(t, a, "Enter", 0)
+	f.Frame(t, a)
 	if got := ng.pool.Views()[0].Nick; got != "Brisk" {
 		t.Fatalf("nick = %q after editing", got)
 	}
@@ -103,11 +103,11 @@ func TestRerollDeterministicAndKeepsEditedName(t *testing.T) {
 	if got := ng.pool.Views()[0].Nick; got != "Brisk" {
 		t.Fatalf("a plain reroll keeps the edited name, got %q", got)
 	}
-	f.frame(t, a)
+	f.Frame(t, a)
 	x, y := widgetAt(t, a, "pawns.reroll")
-	f.cur.mx, f.cur.my = x, y
-	f.click(t, a, mbLeft, input.ModShift)
-	f.cur.mx, f.cur.my = -50, -50
+	f.Cur.Mx, f.Cur.My = x, y
+	f.Click(t, a, mbLeft, input.ModShift)
+	f.Cur.Mx, f.Cur.My = -50, -50
 	if got := ng.pool.Views()[0].Nick; got == "Brisk" {
 		t.Fatal("Shift+Randomize rolls a new name too")
 	}
@@ -117,14 +117,14 @@ func TestRerollDeterministicAndKeepsEditedName(t *testing.T) {
 	if a.uiModalTop() != "pawns.rerollAll.confirm" || ng.pool.Views()[1].Nick != before2 {
 		t.Fatalf("modal %q: nothing changes before the player confirms", a.uiModalTop())
 	}
-	f.frame(t, a)
+	f.Frame(t, a)
 	press(t, a, f, "modal.pawns.rerollAll.confirm.ok")
-	f.frame(t, a)
+	f.Frame(t, a)
 	// Undo changes restores the pool from entry.
 	click(t, a, "pawns.reset")
-	f.frame(t, a)
+	f.Frame(t, a)
 	c, fc := pawnsApp(t)
-	fc.frame(t, c)
+	fc.Frame(t, c)
 	for i, v := range ng.pool.Views() {
 		if v.Nick != c.ng.pool.Views()[i].Nick {
 			t.Fatalf("undo: candidate %d is %q, entry was %q", i, v.Nick, c.ng.pool.Views()[i].Nick)
@@ -193,7 +193,7 @@ func fakePawnsApp(t *testing.T, n, nSel int) (*App, *fakeInput, *fakePool) {
 	fp := newFakePool(n, nSel)
 	a.ng.pool, a.ng.poolKey = fp, a.poolKeyFor(a.ng)
 	a.ng.pawnSel, a.ng.namesOf = 0, -1
-	f.frame(t, a)
+	f.Frame(t, a)
 	return a, f, fp
 }
 
@@ -202,9 +202,9 @@ func TestReorderAndSwap(t *testing.T) {
 	a, f, fp := fakePawnsApp(t, 6, 3)
 	// Up and down move the highlighted candidate.
 	press(t, a, f, "pawns.row.1")
-	f.frame(t, a)
+	f.Frame(t, a)
 	click(t, a, "pawns.up")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if len(fp.moves) != 1 || fp.moves[0] != [2]int{1, 0} || a.ng.pawnSel != 0 {
 		t.Fatalf("up: moves %v sel %d", fp.moves, a.ng.pawnSel)
 	}
@@ -220,14 +220,14 @@ func TestReorderAndSwap(t *testing.T) {
 	if !a.uiModalOpen() {
 		t.Fatal("Swap opens a list")
 	}
-	f.frame(t, a)
+	f.Frame(t, a)
 	press(t, a, f, "modal.pick.pawns.swap.list.0")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if len(fp.swaps) != 1 || fp.swaps[0] != [2]int{1, 3} {
 		t.Fatalf("swaps = %v, want [1 3]", fp.swaps)
 	}
 	// Drag the first row below the Selected group: it moves to that row.
-	f.frame(t, a)
+	f.Frame(t, a)
 	r0, ok := a.uiSt().find("pawns.row.0")
 	r4, ok2 := a.uiSt().find("pawns.row.4")
 	if !ok || !ok2 {
@@ -235,22 +235,22 @@ func TestReorderAndSwap(t *testing.T) {
 	}
 	x0, y0 := r0.r.Center()
 	_, y4 := r4.r.Center()
-	f.cur.mx, f.cur.my = int(x0), int(y0)
-	f.cur.press[mbLeft], f.cur.down[mbLeft] = true, true
-	f.frame(t, a)
-	f.cur.my = int(y4)
-	f.frame(t, a)
-	f.cur.down[mbLeft], f.cur.release[mbLeft] = false, true
-	f.frame(t, a)
+	f.Cur.Mx, f.Cur.My = int(x0), int(y0)
+	f.Cur.Press[mbLeft], f.Cur.Down[mbLeft] = true, true
+	f.Frame(t, a)
+	f.Cur.My = int(y4)
+	f.Frame(t, a)
+	f.Cur.Down[mbLeft], f.Cur.Release[mbLeft] = false, true
+	f.Frame(t, a)
 	last := fp.moves[len(fp.moves)-1]
 	if last != [2]int{0, 4} || a.ng.pawnSel != 4 {
 		t.Fatalf("drag moved %v, want 0 -> 4 and the highlight to follow (sel %d)", last, a.ng.pawnSel)
 	}
 	// A plain click without movement only selects.
 	n := len(fp.moves)
-	f.cur.mx, f.cur.my = -50, -50
+	f.Cur.Mx, f.Cur.My = -50, -50
 	press(t, a, f, "pawns.row.2")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if len(fp.moves) != n || a.ng.pawnSel != 2 {
 		t.Fatalf("a click moved %v / sel %d", fp.moves[n:], a.ng.pawnSel)
 	}
@@ -268,9 +268,9 @@ func TestNameValidationBlocksStart(t *testing.T) {
 	}
 	nick := ng.pool.Views()[0].Nick
 	press(t, a, f, "pawns.nick")
-	f.key(t, a, "A", input.ModCtrl)
-	f.key(t, a, "Backspace", 0)
-	f.frame(t, a)
+	f.Key(t, a, "A", input.ModCtrl)
+	f.Key(t, a, "Backspace", 0)
+	f.Frame(t, a)
 	if ng.nameErr != game.ErrNickRequired.Error() {
 		t.Fatalf("nameErr = %q", ng.nameErr)
 	}
@@ -287,16 +287,16 @@ func TestNameValidationBlocksStart(t *testing.T) {
 		t.Fatal("a disabled Start does nothing")
 	}
 	// Characters outside letters, space, ' and - never get typed.
-	f.typeText(t, a, "Ab1$c")
-	f.frame(t, a)
+	f.TypeText(t, a, "Ab1$c")
+	f.Frame(t, a)
 	if got := ng.names[1]; got != "Abc" {
 		t.Fatalf("nick draft = %q", got)
 	}
 	if ng.nameErr != "" {
 		t.Fatalf("a valid name clears the error, got %q", ng.nameErr)
 	}
-	f.key(t, a, "Enter", 0)
-	f.frame(t, a)
+	f.Key(t, a, "Enter", 0)
+	f.Frame(t, a)
 	if ng.pool.Views()[0].Nick != "Abc" {
 		t.Fatalf("nick = %q", ng.pool.Views()[0].Nick)
 	}
@@ -304,8 +304,8 @@ func TestNameValidationBlocksStart(t *testing.T) {
 	a2, f2, fp := fakePawnsApp(t, 4, 2)
 	fp.err = game.ErrNickTaken
 	press(t, a2, f2, "pawns.nick")
-	f2.typeText(t, a2, "x")
-	f2.frame(t, a2)
+	f2.TypeText(t, a2, "x")
+	f2.Frame(t, a2)
 	if a2.ng.startReason() != game.ErrNickTaken.Error() {
 		t.Fatalf("reason %q, want the pool's error", a2.ng.startReason())
 	}
@@ -317,7 +317,7 @@ func TestTeamWarnings(t *testing.T) {
 	t.Parallel()
 	a, f, fp := fakePawnsApp(t, 5, 3)
 	fp.warn = []string{game.WarnNoFighter, game.WarnNoDoctor, game.WarnNoCook}
-	f.frame(t, a)
+	f.Frame(t, a)
 	a.Draw(ebiten.NewImage(a.sw, a.sh))
 	// The real pool reports the warnings in the spec's order and the screen
 	// lays out one row per skill for the team grid.
@@ -382,7 +382,7 @@ func TestIncapableSkillsShownDash(t *testing.T) {
 	}
 	_ = found
 	a.Draw(ebiten.NewImage(a.sw, a.sh))
-	f.frame(t, a)
+	f.Frame(t, a)
 }
 
 func TestForcedTraitAndAgeHonoured(t *testing.T) {
@@ -399,7 +399,7 @@ func TestForcedTraitAndAgeHonoured(t *testing.T) {
 	a.ng.scenario = d
 	click(t, a, "land.random")
 	click(t, a, "wizard.next")
-	f.frame(t, a)
+	f.Frame(t, a)
 	views := a.ng.pool.Views()
 	for _, v := range views {
 		if v.AgeYears < 40 || v.AgeYears > 45 {
@@ -423,7 +423,7 @@ func TestPawnsScreenDrawsAtBothSizesWithoutArt(t *testing.T) {
 		sizeTo(t, a, f, size[0], size[1])
 		a.Draw(ebiten.NewImage(size[0], size[1]))
 		click(t, a, "pawns.swap")
-		f.frame(t, a)
+		f.Frame(t, a)
 		a.Draw(ebiten.NewImage(size[0], size[1]))
 	}
 }
@@ -439,10 +439,10 @@ func TestSetupSeedAndPoolFollowTheTile(t *testing.T) {
 	}
 	// Going back and choosing another site makes another pool.
 	click(t, a, "wizard.back")
-	f.frame(t, a)
+	f.Frame(t, a)
 	click(t, a, "land.random")
 	click(t, a, "wizard.next")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if setupSeedOf(ng) == seed {
 		t.Fatal("another tile, another setup seed")
 	}

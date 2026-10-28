@@ -156,7 +156,7 @@ func (a *App) pawnsFooter(ng *newGameState, footer rect) {
 		}
 	}
 	a.ngButton(ids.WizardStart, footerNext(footer), "Start", btnOpts{Style: btnPrimary, Disabled: reason != "", Reason: reason}, start)
-	if a.in.fired(input.Accept) && reason == "" && !a.uiModalOpen() && !a.uiTextEditing() {
+	if a.in.Fired(input.Accept) && reason == "" && !a.uiModalOpen() && !a.uiTextEditing() {
 		start()
 	}
 	if reason != "" {
@@ -173,7 +173,7 @@ func (a *App) pawnsFooter(ng *newGameState, footer rect) {
 
 // rerollSelected rolls the highlighted candidate again (Shift: new name too).
 func (a *App) rerollSelected(ng *newGameState) {
-	ng.pool.Reroll(ng.pawnSel, !a.in.shift())
+	ng.pool.Reroll(ng.pawnSel, !a.in.Shift())
 	ng.namesOf = -1
 }
 
@@ -250,7 +250,7 @@ func (a *App) pawnsRoster(ng *newGameState, r rect, views []game.CandidateView, 
 		if absInt(my-d.y0) > pawnDragSlop {
 			d.moved = true
 		}
-		if !a.in.down(mbLeft) {
+		if !a.in.Down(mbLeft) {
 			if d.moved {
 				to := rosterTarget(float32(my)-listR.Y+area.Off, n, nSel)
 				if to != d.from {
@@ -634,7 +634,7 @@ func (a *App) skillsTable(r rect, v game.CandidateView, rowH float32) {
 				if s.Passion == 2 {
 					key = "ui_icon/passion_major"
 				}
-				if img := a.art.image(key, noTint); img != nil {
+				if img := a.art.Image(key, noTint); img != nil {
 					drawIcon(dst, img, float64(row.X+166), float64(row.Y)+(float64(row.H)-14)/2, 14)
 				} else {
 					drawText(dst, strings.Repeat("*", s.Passion), float64(row.X+166), ty, st)

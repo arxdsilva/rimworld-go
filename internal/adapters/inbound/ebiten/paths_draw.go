@@ -94,11 +94,11 @@ func (r *Renderer) drawPaths(screen *ebiten.Image, sw, sh int, tile float64) {
 	if r.hasSelect {
 		sel = uint64(r.selected)
 	}
-	plans := planPaths(r.view.Pawns, sel, r.hasSelect, r.cam.zoom, sw, sh, r.worldToScreenF, r.interpWorld)
+	plans := planPaths(r.view.Pawns, sel, r.hasSelect, r.cam.Zoom, sw, sh, r.worldToScreenF, r.interpWorld)
 	if len(plans) == 0 {
 		return
 	}
-	th := pathStroke(r.cam.zoom)
+	th := pathStroke(r.cam.Zoom)
 	style := func(match func(pawnPathPlan) bool, w float32, c color.NRGBA) {
 		var path vector.Path
 		any := false

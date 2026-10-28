@@ -95,7 +95,7 @@ func (r *Renderer) drawWaterTile(screen *ebiten.Image, t string, x, y int, tile 
 	if !visible(float32(x0), float32(y0), float32(size), float32(size), sw, sh) {
 		return
 	}
-	img := r.art.image(key, color.NRGBA{})
+	img := r.art.Image(key, color.NRGBA{})
 	if img == nil {
 		r.drawTile(screen, key, wx, wy, tile, sw, sh, cs) // missing art: the tinted fallback
 		return

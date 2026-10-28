@@ -344,7 +344,7 @@ func (a *App) textReveal() {
 }
 
 func (a *App) metaHeld() bool {
-	for _, k := range a.in.raw.held {
+	for _, k := range a.in.Raw.Held {
 		if k == "Meta" {
 			return true
 		}
@@ -365,38 +365,38 @@ func (a *App) uiTextInput() {
 		return
 	}
 	mx, my := a.currentCursor()
-	if a.in.raw.press[mbLeft] && !e.r.Hit(mx, my) { // click elsewhere commits
+	if a.in.Raw.Press[mbLeft] && !e.r.Hit(mx, my) { // click elsewhere commits
 		a.textEnd(true)
 		return
 	}
-	shift := a.in.shift()
-	cmd := a.in.ctrl() || a.metaHeld()
+	shift := a.in.Shift()
+	cmd := a.in.Ctrl() || a.metaHeld()
 	b := u.buf()
 	changed := false
 	if !cmd {
-		for _, r := range a.in.raw.chars {
+		for _, r := range a.in.Raw.Chars {
 			if printable(r) && (e.spec.Valid == nil || e.spec.Valid(r)) {
 				changed = b.insert([]rune{r}, e.spec.MaxLen) || changed
 			}
 		}
 	}
 	switch {
-	case a.in.key("Escape"):
+	case a.in.Key("Escape"):
 		a.textEnd(false)
 		return
-	case a.in.key("Enter") || a.in.key("NumpadEnter"):
+	case a.in.Key("Enter") || a.in.Key("NumpadEnter"):
 		if !e.spec.Multiline {
 			a.textStore(b, changed)
 			a.textEnd(true)
 			return
 		}
 		changed = b.insert([]rune{'\n'}, e.spec.MaxLen) || changed
-	case a.in.key("Tab"):
+	case a.in.Key("Tab"):
 		a.textStore(b, changed)
 		a.textEnd(true)
 		u.cycleFocus(map[bool]int{false: 1, true: -1}[shift])
 		return
-	case cmd && a.in.key("A"):
+	case cmd && a.in.Key("A"):
 		b.anchor, b.caret = 0, len(b.rs)
 	case a.keyRepeat("Backspace"):
 		changed = b.backspace() || changed
@@ -410,9 +410,9 @@ func (a *App) uiTextInput() {
 		a.textVertical(&b, -1, shift)
 	case e.spec.Multiline && a.keyRepeat("ArrowDown"):
 		a.textVertical(&b, 1, shift)
-	case a.in.key("Home"):
+	case a.in.Key("Home"):
 		b.move(a.textLineEdge(b, false), shift)
-	case a.in.key("End"):
+	case a.in.Key("End"):
 		b.move(a.textLineEdge(b, true), shift)
 	}
 	a.textStore(b, changed)
@@ -498,7 +498,7 @@ func (a *App) uiTextField(id string, r rect, val *string, sp textFieldSpec) (cha
 				a.textStart(id, val, sp, r, pos, false)
 			} else {
 				b := u.buf()
-				b.move(pos, a.in.shift())
+				b.move(pos, a.in.Shift())
 				a.textStore(b, false)
 			}
 			u.active = selID
@@ -510,7 +510,7 @@ func (a *App) uiTextField(id string, r rect, val *string, sp textFieldSpec) (cha
 			b := u.buf()
 			b.move(a.textCaretAt(id, b.rs, r, sp, mx, my), true)
 			a.textStore(b, false)
-			if !a.in.down(mbLeft) {
+			if !a.in.Down(mbLeft) {
 				u.active = ""
 				a.uiRelease()
 			}

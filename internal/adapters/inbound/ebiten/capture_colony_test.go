@@ -46,7 +46,7 @@ func captureColony(t *testing.T, ui string, ticks int) (*App, *fakeInput) {
 	a.renderer.syncPawns()
 	a.captureColonyUI(ui)
 	f := fakeOn(a)
-	f.cur.mx, f.cur.my = -50, -50
+	f.Cur.Mx, f.Cur.My = -50, -50
 	return a, f
 }
 
@@ -150,9 +150,9 @@ func TestCaptureColonyStates(t *testing.T) {
 		t.Run(c.ui, func(t *testing.T) {
 			t.Parallel()
 			a, f := captureColony(t, c.ui, c.ticks)
-			f.frame(t, a)
+			f.Frame(t, a)
 			if c.ui == "factions-colony" || c.ui == "letter-intro" {
-				f.frame(t, a)
+				f.Frame(t, a)
 			}
 			c.check(t, a)
 			if c.ui != "factions-colony" && c.ui != "letter-intro" && c.ui != "options-story" && a.uiModalOpen() {

@@ -127,26 +127,26 @@ func (a *App) handleDevKeys() {
 	f := &a.in
 	r := a.renderer
 	switch {
-	case f.fired(input.DevUltrafast):
+	case f.Fired(input.DevUltrafast):
 		if r.speed == speedUltra {
 			r.setSpeed(speedNormal)
 		} else {
 			r.setSpeed(speedUltra)
 		}
-	case f.fired(input.DevStep):
+	case f.Fired(input.DevStep):
 		if r.speed == speedPaused {
 			r.stepTicks++
 		} else {
 			a.toast("Pause first to step one tick")
 		}
-	case f.fired(input.DevActions):
+	case f.Fired(input.DevActions):
 		mx, my := a.currentCursor()       // logical: where the menu panel is drawn
 		tx, ty := r.TileAt(a.mapCursor()) // physical: the map tile under the cursor
 		a.dev.menu = !a.dev.menu
 		a.dev.mx, a.dev.my, a.dev.tx, a.dev.ty = mx, my, tx, ty
-	case f.fired(input.DevLog):
+	case f.Fired(input.DevLog):
 		a.dev.log = !a.dev.log
-	case f.fired(input.DevInspector):
+	case f.Fired(input.DevInspector):
 		a.dev.insp = !a.dev.insp
 	}
 }

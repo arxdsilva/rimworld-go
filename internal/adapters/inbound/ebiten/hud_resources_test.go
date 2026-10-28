@@ -200,9 +200,9 @@ func TestResourcesScrollWithTheWheel(t *testing.T) {
 		}
 	}
 	zoom := a.renderer.smooth
-	f.cur.mx, f.cur.my = int(r.X+20), int(r.Y+20)
-	f.cur.wheelY = -1
-	f.frame(t, a)
+	f.Cur.Mx, f.Cur.My = int(r.X+20), int(r.Y+20)
+	f.Cur.WheelY = -1
+	f.Frame(t, a)
 	off := a.uiSt().scroll[resScrollID]
 	if off <= 0 {
 		t.Fatalf("the wheel over the list left the offset at %v", off)
@@ -210,13 +210,13 @@ func TestResourcesScrollWithTheWheel(t *testing.T) {
 	if got := first(); got == "res.row.kind00" {
 		t.Fatalf("the first visible row did not change after scrolling %v px", off)
 	}
-	if a.renderer.smooth.pendingScale != zoom.pendingScale || a.renderer.smooth.zooming != zoom.zooming {
+	if a.renderer.smooth.PendingScale != zoom.PendingScale || a.renderer.smooth.Zooming != zoom.Zooming {
 		t.Fatalf("the camera zoomed on a wheel the list took: %+v -> %+v", zoom, a.renderer.smooth)
 	}
 	// scrolling stops at the end of the content
 	for i := 0; i < 40; i++ {
-		f.cur.wheelY = -1
-		f.frame(t, a)
+		f.Cur.WheelY = -1
+		f.Frame(t, a)
 	}
 	if off = a.uiSt().scroll[resScrollID]; off != maxOff {
 		t.Fatalf("offset = %v after scrolling to the end, want %v", off, maxOff)
@@ -227,17 +227,17 @@ func TestResourcesScrollWithTheWheel(t *testing.T) {
 	}
 	// and back to the top
 	for i := 0; i < 40; i++ {
-		f.cur.wheelY = 1
-		f.frame(t, a)
+		f.Cur.WheelY = 1
+		f.Frame(t, a)
 	}
 	if off = a.uiSt().scroll[resScrollID]; off != 0 {
 		t.Fatalf("offset = %v after scrolling back, want 0", off)
 	}
 	// a wheel away from the list belongs to the camera
 	before := a.renderer.smooth
-	f.cur.mx, f.cur.my = 640, 400
-	f.cur.wheelY = -1
-	f.frame(t, a)
+	f.Cur.Mx, f.Cur.My = 640, 400
+	f.Cur.WheelY = -1
+	f.Frame(t, a)
 	if off = a.uiSt().scroll[resScrollID]; off != 0 {
 		t.Fatalf("a wheel over the map scrolled the list to %v", off)
 	}
@@ -249,8 +249,8 @@ func TestResourcesScrollWithTheWheel(t *testing.T) {
 func TestResourcesWheelIsNotTakenWhenTheListFits(t *testing.T) {
 	a, f := htResApp(t, game.WorldView{Stored: htManyStored(3)})
 	r := a.hud().Resources
-	f.cur.mx, f.cur.my = int(r.X+20), int(r.Y+10)
-	if a.uiWheelOver(f.cur.mx, f.cur.my) {
+	f.Cur.Mx, f.Cur.My = int(r.X+20), int(r.Y+10)
+	if a.uiWheelOver(f.Cur.Mx, f.Cur.My) {
 		t.Fatal("a list that fits takes the wheel")
 	}
 }

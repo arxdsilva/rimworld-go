@@ -38,7 +38,7 @@ func BenchmarkShadows(b *testing.B) {
 		}
 	}
 	r := benchShadowRenderer(mw, mh)
-	r.cam.zoom = 0.5
+	r.cam.Zoom = 0.5
 	r.view.Pawns = pawns
 	r.lit.light = testLight(0.5, 0.45, 0.3)
 	screen := ebiten.NewImage(1280, 800)
@@ -78,8 +78,8 @@ func BenchmarkShadowsHiDPI(b *testing.B) {
 		}
 	}
 	r := benchShadowRenderer(mw, mh)
-	r.cam.zoom = 0.5
-	r.cam.dev = 2
+	r.cam.Zoom = 0.5
+	r.cam.Dev = 2
 	r.view.Pawns = pawns
 	r.lit.light = testLight(0.5, 0.45, 0.3)
 	screen := ebiten.NewImage(1280, 800)
@@ -112,7 +112,7 @@ func benchShadowRenderer(mw, mh int) *Renderer {
 // re-rendered, so whichever is present).
 func benchSpecies(c *artCatalog) string {
 	for _, sp := range []string{"deer", "timber_wolf", "dustbuck", "ridgewolf"} {
-		if c.has("animal/" + sp + "_south") {
+		if c.Has("animal/" + sp + "_south") {
 			return sp
 		}
 	}
@@ -145,14 +145,14 @@ func BenchmarkCreatureShadows(b *testing.B) {
 		x, y := at(10 + i)
 		w.Animals = append(w.Animals, game.AnimalView{ID: entity.EntityID(200 + i), Species: species, X: x, Y: y, Health: 100})
 	}
-	r.cam.zoom = 0.5
+	r.cam.Zoom = 0.5
 	r.view.Pawns = pawns
 	r.view.W = w
 	r.lit.light = testLight(0.5, 0.2, 0.3) // a low sun: point lights still cast
 	screen := ebiten.NewImage(1280, 800)
 	tile := r.tilePx()
 	r.drawShadows(screen, w, 1280, 800, tile)
-	if want := 40 * 3; r.env.shadow.casts < want && r.art.has("pawn/body_south") && r.art.has("animal/"+species+"_south") {
+	if want := 40 * 3; r.env.shadow.casts < want && r.art.Has("pawn/body_south") && r.art.Has("animal/"+species+"_south") {
 		b.Fatalf("drew %d silhouettes, want %d (sun and 2 campfires each)", r.env.shadow.casts, want)
 	}
 	b.ReportAllocs()

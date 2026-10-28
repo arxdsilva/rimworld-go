@@ -215,7 +215,7 @@ func (a *App) socialLog(r rect, log []game.SocialLogLineView) {
 			}
 			x := float64(area.View.X)
 			if l.Icon != "" {
-				if img := art.image("ui_icon/"+l.Icon, noTint); img != nil {
+				if img := art.Image("ui_icon/"+l.Icon, noTint); img != nil {
 					drawIcon(sub, img, x, float64(y)+1, 14)
 				}
 			}

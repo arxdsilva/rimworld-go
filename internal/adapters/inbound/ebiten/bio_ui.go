@@ -270,7 +270,7 @@ func (a *App) bioSkills(r rect, b game.BioView, week [skill.NumSkills]int, rowH 
 				st.Color = uiTextDisabled
 			}
 			ty := float64(row.Y) + (float64(row.H)-lineH(st))/2
-			if img := a.art.image("ui_icon/skill_"+s.Key, noTint); img != nil {
+			if img := a.art.Image("ui_icon/skill_"+s.Key, noTint); img != nil {
 				drawIcon(body, img, float64(row.X+6), float64(row.Y)+(float64(row.H)-12)/2, 12)
 			}
 			drawText(body, s.Label, float64(row.X+22), ty, st)
@@ -307,7 +307,7 @@ func (a *App) drawPassion(dst *ebiten.Image, p int, x, y, size float64, st textS
 	if p >= 2 {
 		key = "ui_icon/passion_major"
 	}
-	if img := a.art.image(key, noTint); img != nil {
+	if img := a.art.Image(key, noTint); img != nil {
 		drawIcon(dst, img, x, y, size)
 		return
 	}

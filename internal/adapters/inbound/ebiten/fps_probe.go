@@ -75,19 +75,19 @@ func (a *App) fpsProbeUpdate() bool {
 		}
 		st.speed, st.tick0 = a.renderer.speed, uint64(a.renderer.game.Tick())
 		if p.Zoom > 0 {
-			a.renderer.cam.zoom = clampZoom(p.Zoom)
+			a.renderer.cam.Zoom = clampZoom(p.Zoom)
 		}
-		a.renderer.syncDev() // the probe frames the screen, in map pixels
+		a.renderer.SyncDev() // the probe frames the screen, in map pixels
 		tile, k := a.renderer.tilePx(), a.scale.WorldK()
-		a.renderer.cam.offsetX = (float64(a.renderer.game.Width())/2+0.5)*tile - float64(a.pw)*k/2
-		a.renderer.cam.offsetY = (float64(a.renderer.game.Height())/2)*tile - float64(a.ph)*k/2
+		a.renderer.cam.OffsetX = (float64(a.renderer.game.Width())/2+0.5)*tile - float64(a.pw)*k/2
+		a.renderer.cam.OffsetY = (float64(a.renderer.game.Height())/2)*tile - float64(a.ph)*k/2
 		st.started, st.begin = true, now
 		st.warmupTo = now.Add(probeWarmup) // atlas pages, first bakes
 		return false
 	}
 	if st.drawn && now.Sub(st.begin) > time.Duration(p.Seconds)*time.Second+probeWarmup {
 		st.report = fpsReport(st, a.scale) + fmt.Sprintf(", %dx%d physical; %d ticks, speed held %d times; %v",
-			a.pw, a.ph, uint64(a.renderer.game.Tick())-st.tick0, st.held, a.art.memStats()) + budgetLine(st, a.debt)
+			a.pw, a.ph, uint64(a.renderer.game.Tick())-st.tick0, st.held, a.art.MemStats()) + budgetLine(st, a.debt)
 		log.Print(st.report)
 		return true
 	}

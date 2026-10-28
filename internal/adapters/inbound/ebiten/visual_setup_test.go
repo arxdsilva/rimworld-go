@@ -182,13 +182,13 @@ func (s *visualScene) configure(t testing.TB, dev, ui, zoom float64) *ebiten.Ima
 	pw, ph := int(math.Round(visLogicalW*sc)), int(math.Round(visLogicalH*sc))
 	a.setPhysical(pw, ph)
 	r := a.renderer
-	r.syncDev()
+	r.SyncDev()
 	s.update(t) // may clamp the camera: place it after
-	r.cam.zoom = zoom
+	r.cam.Zoom = zoom
 	v := a.mapViewport()
 	r.centerOnView(visFocus[0], visFocus[1], v, v)
-	if r.cam.zoom != zoom {
-		t.Fatalf("zoom %v is below the map's zoom-out limit %v at dev %v ui %v", zoom, r.cam.zoom, dev, ui)
+	if r.cam.Zoom != zoom {
+		t.Fatalf("zoom %v is below the map's zoom-out limit %v at dev %v ui %v", zoom, r.cam.Zoom, dev, ui)
 	}
 	key := [2]int{pw, ph}
 	img := s.shots[key]
@@ -206,7 +206,7 @@ func (s *visualScene) update(t testing.TB) {
 	t.Helper()
 	if s.in == nil {
 		s.in = fakeOn(s.a)
-		s.in.cur.mx, s.in.cur.my = -50, -50
+		s.in.Cur.Mx, s.in.Cur.My = -50, -50
 	}
 	if err := s.a.Update(); err != nil {
 		t.Fatal(err)
@@ -243,8 +243,8 @@ func (s *visualScene) closeAll(t testing.TB) {
 func (s *visualScene) pan(dx, dy int) {
 	r := s.a.renderer
 	t := r.tilePx()
-	r.cam.offsetX += float64(dx) * t
-	r.cam.offsetY += float64(dy) * t
+	r.cam.OffsetX += float64(dx) * t
+	r.cam.OffsetY += float64(dy) * t
 }
 
 // frame draws one full App frame and returns everything the canvas drew.

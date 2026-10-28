@@ -126,7 +126,7 @@ func TestArtCatalogSkipsMenuFamily(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for k := range c.sprites {
+	for k := range c.Sprites {
 		if filepath.Dir(k) == menuMetaFamily {
 			t.Fatalf("menu art %q loaded as a sprite", k)
 		}

@@ -74,10 +74,10 @@ func TestSocialTabRowsAndEmpty(t *testing.T) {
 	s.social = map[entity.EntityID]game.SocialView{1: socialFixture()}
 	a, f := colonyApp(t, s)
 	a.renderer.Select(1)
-	f.frame(t, a)
+	f.Frame(t, a)
 	openPawnTab(t, a, "social") // the pane's Social tab
-	f.frame(t, a)
-	f.frame(t, a)
+	f.Frame(t, a)
+	f.Frame(t, a)
 	if !a.kitTabOn() {
 		t.Fatal("social tab not open")
 	}
@@ -102,7 +102,7 @@ func TestSocialTabRowsAndEmpty(t *testing.T) {
 
 	// Empty read model: the empty state, no row widgets.
 	s.social = map[entity.EntityID]game.SocialView{1: {}}
-	f.frame(t, a)
+	f.Frame(t, a)
 	if hasWidget(a, "social.row.0") {
 		t.Error("empty state has rows")
 	}
@@ -122,10 +122,10 @@ func TestSocialRowsScroll(t *testing.T) {
 	s.social = map[entity.EntityID]game.SocialView{1: v}
 	a, f := colonyApp(t, s)
 	a.renderer.Select(1)
-	f.frame(t, a)
+	f.Frame(t, a)
 	openPawnTab(t, a, "social") // the pane's Social tab
-	f.frame(t, a)
-	f.frame(t, a)
+	f.Frame(t, a)
+	f.Frame(t, a)
 	if hasWidget(a, "social.row.39") {
 		t.Error("an off-screen row should not be declared")
 	}
@@ -193,9 +193,9 @@ func TestBioTabShowsRelations(t *testing.T) {
 	s.social = map[entity.EntityID]game.SocialView{1: socialFixture()}
 	a, f := colonyApp(t, s)
 	a.renderer.Select(1)
-	f.frame(t, a)
+	f.Frame(t, a)
 	openPawnTab(t, a, "bio") // the pane's Bio tab
-	f.frame(t, a)
+	f.Frame(t, a)
 	if !hasWidget(a, "bio.relations") {
 		t.Fatal("Bio tab has no relations block")
 	}
@@ -219,11 +219,11 @@ func TestHistoryTab(t *testing.T) {
 		}
 	}
 	press(t, a, f, "tab.history")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalTop() != historyModalID {
 		t.Fatalf("modal = %q", a.uiModalTop())
 	}
-	f.frame(t, a)
+	f.Frame(t, a)
 	if !hasWidget(a, "history.row.0") || !hasWidget(a, "history.row.1") {
 		t.Fatal("history rows missing")
 	}

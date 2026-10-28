@@ -354,7 +354,7 @@ func TestPowerCommandsComeBeforeMoveAndKeepTheirHotkeyLabel(t *testing.T) {
 func TestVHotkeyFlicksTheSelectedDevice(t *testing.T) {
 	t.Parallel()
 	a, s, f := pwrApp(t, 0, pwrHeater())
-	f.key(t, a, "V", 0)
+	f.Key(t, a, "V", 0)
 	got := cmdsOf(s, command.SetPowerWanted)
 	if len(got) != 1 || got[0].Target != 10 || got[0].Enabled {
 		t.Fatalf("V sent %+v, want off for 10", got)
@@ -364,20 +364,20 @@ func TestVHotkeyFlicksTheSelectedDevice(t *testing.T) {
 	}
 	// wished off: V asks for on
 	s.world.Buildings[0].PowerWantOn = false
-	f.key(t, a, "V", 0)
+	f.Key(t, a, "V", 0)
 	if got = cmdsOf(s, command.SetPowerWanted); len(got) != 2 || !got[1].Enabled {
 		t.Fatalf("second V sent %+v", got)
 	}
 	// V on a building with no toggle does nothing
 	b, _, g := pwrApp(t, 0, pwrBattery())
-	g.key(t, b, "V", 0)
+	g.Key(t, b, "V", 0)
 	if n := len(cmdsOf(b.renderer.game.(*stubSim), command.SetPowerWanted)); n != 0 {
 		t.Fatalf("V on a battery sent %d commands", n)
 	}
 	// and on a colonist
 	c, cs, h := inputColony(t, [2]int{5, 5})
 	c.renderer.Select(1)
-	h.key(t, c, "V", 0)
+	h.Key(t, c, "V", 0)
 	if n := len(cmdsOf(cs, command.SetPowerWanted)); n != 0 {
 		t.Fatalf("V on a colonist sent %d commands", n)
 	}
@@ -443,7 +443,7 @@ func TestPowerPaneAndGridAtUIScales(t *testing.T) {
 			for _, b := range bs {
 				name := b.Kind + " ui" + strconv.FormatFloat(ui, 'g', -1, 64) + " " + strconv.Itoa(sw) + "x" + strconv.Itoa(sh)
 				a.selectCand(selCand{selBuilding, b.ID})
-				f.frame(t, a)
+				f.Frame(t, a)
 				l := a.hud()
 				if l.Pane.Empty() || !a.paneShown() {
 					t.Fatalf("%s: no pane", name)
@@ -498,7 +498,7 @@ func TestSolarFlareChipIsInTheGlobalControls(t *testing.T) {
 	s := bldStub()
 	s.world.SolarFlare = true
 	a, f := colonyApp(t, s)
-	f.frame(t, a)
+	f.Frame(t, a)
 	rs := a.chipRects(statusChips(a.renderer.world()), a.sw)
 	if len(rs) != 1 || rs[0].Empty() {
 		t.Fatalf("chip rects = %+v", rs)
@@ -615,7 +615,7 @@ func TestPaneDrawsThePowerWarning(t *testing.T) {
 		s.world.PowerNets = pwrNets
 		a, f := bldApp(t, s, b.ID)
 		img := winScreen(t, a, 1280, 720, ui)
-		f.frame(t, a)
+		f.Frame(t, a)
 		found := false
 		for _, e := range winTrace(a, img) {
 			if e.Kind == "text" && e.Text == "No power: not connected" {

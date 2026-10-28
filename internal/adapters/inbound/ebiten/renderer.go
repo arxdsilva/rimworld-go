@@ -9,7 +9,7 @@ import (
 	"image/color"
 	"math"
 
-	ebiten "github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
@@ -153,26 +153,6 @@ func (s speed) rate() string {
 		return fmt.Sprintf("%s %dx", s.label(), n)
 	}
 	return "paused"
-}
-
-// camera is presentation-only state: it never affects authoritative
-// simulation, only where/how the world is drawn.
-type camera struct {
-	offsetX, offsetY float64
-	zoom             float64
-	placed           bool // clampCamera has centred it on the map once
-	// dev is the screen's device pixel density the tile size is
-	// multiplied by (PLAY-012: the map renders at physical resolution);
-	// 0 means 1, as in a bake's camera (lod.go withBake). syncDev sets it.
-	dev float64
-}
-
-// tile is the on-screen size of one tile in physical pixels.
-func (c *camera) tile() float64 {
-	if c.dev > 0 {
-		return float64(TileSize) * c.zoom * c.dev
-	}
-	return float64(TileSize) * c.zoom
 }
 
 type pawnVisual struct {
@@ -319,7 +299,7 @@ func New(sim Simulation) *Renderer {
 		game:          sim,
 		viewCached:    cached,
 		speed:         speedNormal,
-		cam:           camera{zoom: 1},
+		cam:           camera{Zoom: 1},
 		pauseOnThreat: true,
 		fx:            1,
 		last:          map[entity.EntityID]pawnVisual{},
@@ -458,30 +438,30 @@ func (r *Renderer) applyCamera(v viewport, in camInput) {
 	// push what is held now. It stays set through every Draw until the next
 	// Update (stepCamera steps with it), so a released key stops the push
 	// at the next Update and the pan coasts to a halt.
-	r.smooth.dirX, r.smooth.dirY = 0, 0
-	r.smooth.boost = 1
+	r.smooth.DirX, r.smooth.DirY = 0, 0
+	r.smooth.Boost = 1
 	if in.fast {
-		r.smooth.boost = fastPanBoost
+		r.smooth.Boost = fastPanBoost
 	}
-	r.smooth.pushPan(in.dx, in.dy)
-	cx, cy := (v.x0+v.x1)/2, (v.y0+v.y1)/2
+	r.smooth.PushPan(in.dx, in.dy)
+	cx, cy := (v.X0+v.X1)/2, (v.Y0+v.Y1)/2
 	for ; in.zoom > 0; in.zoom-- {
-		r.smooth.zoomAt(1+zoomStep, cx, cy)
+		r.smooth.ZoomAt(1+zoomStep, cx, cy)
 	}
 	for ; in.zoom < 0; in.zoom++ {
-		r.smooth.zoomAt(1/(1+zoomStep), cx, cy)
+		r.smooth.ZoomAt(1/(1+zoomStep), cx, cy)
 	}
 	if in.wheel != 0 {
-		r.smooth.zoomAt(math.Pow(1+zoomStep, in.wheel), in.wx, in.wy)
+		r.smooth.ZoomAt(math.Pow(1+zoomStep, in.wheel), in.wx, in.wy)
 	}
 	if in.dragX != 0 || in.dragY != 0 { // the map follows the hand
-		r.cam.offsetX -= in.dragX
-		r.cam.offsetY -= in.dragY
-		r.smooth.vx, r.smooth.vy = 0, 0
+		r.cam.OffsetX -= in.dragX
+		r.cam.OffsetY -= in.dragY
+		r.smooth.Vx, r.smooth.Vy = 0, 0
 	}
-	r.clampCamera(v)      // first-call centring and min-zoom guard
-	if r.smooth.instant { // Reduced Motion: no easing, the whole step lands here; live play steps per Draw (stepCamera)
-		r.smooth.step(1/float64(ebiten.TPS()), &r.cam, r.camLimits(v))
+	r.ClampCamera(v)      // first-call centring and min-zoom guard
+	if r.smooth.Instant { // Reduced Motion: no easing, the whole step lands here; live play steps per Draw (stepCamera)
+		r.smooth.Step(1/float64(ebiten.TPS()), &r.cam, r.CamLimits(v))
 	}
 }
 
@@ -492,11 +472,11 @@ const camMaxDt = 0.1
 // so panning and zoom run at the display rate rather than at 60 TPS. Input
 // mapping in Update sees the previous Draw's camera: one frame of lag.
 func (r *Renderer) stepCamera(dt float64, v viewport) {
-	if r.smooth.instant || r.smooth.idle() {
+	if r.smooth.Instant || r.smooth.Idle() {
 		return
 	}
 	dt = math.Max(0, math.Min(dt, camMaxDt))
-	r.smooth.step(dt, &r.cam, r.camLimits(v))
+	r.smooth.Step(dt, &r.cam, r.CamLimits(v))
 }
 
 // edgeBand is how close (points) the cursor must be to a viewport edge to
@@ -508,20 +488,20 @@ const edgeBand = 6
 // when the cursor is outside it.
 func edgePan(mx, my int, v viewport) (dx, dy float64) {
 	x, y := float64(mx), float64(my)
-	if x < v.x0 || x >= v.x1 || y < v.y0 || y >= v.y1 {
+	if x < v.X0 || x >= v.X1 || y < v.Y0 || y >= v.Y1 {
 		return 0, 0
 	}
 	band := edgeBand * screenDev()
 	switch {
-	case x < v.x0+band:
+	case x < v.X0+band:
 		dx = -1
-	case x >= v.x1-band:
+	case x >= v.X1-band:
 		dx = 1
 	}
 	switch {
-	case y < v.y0+band:
+	case y < v.Y0+band:
 		dy = -1
-	case y >= v.y1-band:
+	case y >= v.Y1-band:
 		dy = 1
 	}
 	return dx, dy
@@ -540,8 +520,8 @@ func clampZoom(z float64) float64 {
 // screenToWorld maps a physical screen pixel (App.mapCursor) to world
 // tile coordinates.
 func (r *Renderer) screenToWorld(sx, sy int) (float64, float64) {
-	tile := r.cam.tile()
-	return (float64(sx) + r.cam.offsetX) / tile, (float64(sy) + r.cam.offsetY) / tile
+	tile := r.cam.Tile()
+	return (float64(sx) + r.cam.OffsetX) / tile, (float64(sy) + r.cam.OffsetY) / tile
 }
 
 // interpWorld is where a pawn is drawn: its motion at animT (ART §27.1),
@@ -559,16 +539,16 @@ func (r *Renderer) worldToScreen(wx, wy int) (float32, float32) {
 }
 
 func (r *Renderer) worldToScreenF(wx, wy float64) (float32, float32) {
-	tile := r.cam.tile()
-	sx := wx*tile - r.cam.offsetX
-	sy := wy*tile - r.cam.offsetY
+	tile := r.cam.Tile()
+	sx := wx*tile - r.cam.OffsetX
+	sy := wy*tile - r.cam.OffsetY
 	return float32(sx), float32(sy)
 }
 
 // tilePx is one tile in physical pixels: TileSize x zoom x dev (the UI
 // scale never zooms the map).
 func (r *Renderer) tilePx() float64 {
-	return r.cam.tile()
+	return r.cam.Tile()
 }
 
 func visible(x, y, w, h float32, sw, sh int) bool {
@@ -578,7 +558,7 @@ func visible(x, y, w, h float32, sw, sh int) bool {
 // Draw renders terrain, pawns, and selection. HUD chrome is App-owned.
 func (r *Renderer) Draw(screen *ebiten.Image) {
 	screen.Fill(color.RGBA{R: 28, G: 42, B: 32, A: 255})
-	r.syncDev() // camera.go: the screen is physical
+	r.SyncDev() // camera.go: the screen is physical
 
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
 	tile := r.tilePx()
@@ -586,7 +566,7 @@ func (r *Renderer) Draw(screen *ebiten.Image) {
 	// the world and pawns it reads
 	v := &r.view
 	v.SW, v.SH, v.Tile = sw, sh, tile
-	v.Zoom, v.Dev = r.cam.zoom, r.cam.dev
+	v.Zoom, v.Dev = r.cam.Zoom, r.cam.Dev
 	v.MapW, v.MapH = r.game.Width(), r.game.Height()
 	v.Tick = r.game.Tick()
 	v.Present, v.AnimT, v.Alpha = r.present, r.animT(), r.mo.alpha

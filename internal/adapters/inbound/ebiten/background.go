@@ -67,7 +67,7 @@ func (a *App) bgWin() bgWindow {
 // the fps probe runs unfocused by design and is never held back.
 func (a *App) syncBackground() {
 	run := a.settings.Gameplay.RunInBackground
-	blurred := a.in.raw.blurred && a.cfg.Capture == nil && a.cfg.FPSProbe == nil
+	blurred := a.in.Raw.Blurred && a.cfg.Capture == nil && a.cfg.FPSProbe == nil
 	a.bg.paused = blurred && !run
 	if run && !a.bg.runnable {
 		a.bgWin().SetRunnableOnUnfocused(true)

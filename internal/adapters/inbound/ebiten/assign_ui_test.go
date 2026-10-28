@@ -42,7 +42,7 @@ func TestAssignTabOpensPolicyTable(t *testing.T) {
 		t.Fatalf("Assign tab = %+v, want enabled", tab)
 	}
 	press(t, a, f, "tab.assign")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalTop() != assignModalID {
 		t.Fatalf("top modal = %q, want %q", a.uiModalTop(), assignModalID)
 	}
@@ -70,7 +70,7 @@ func TestAssignTabOpensPolicyTable(t *testing.T) {
 
 	// Its key (F3) closes the window again.
 	a.toggleAssign()
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalTop() == assignModalID {
 		t.Fatal("the Assign key toggles the window")
 	}
@@ -82,7 +82,7 @@ func TestAssignTabWithoutPolicies(t *testing.T) {
 	s := assignStub()
 	a, f := colonyApp(t, s.stubSim)
 	a.openAssign()
-	f.frame(t, a)
+	f.Frame(t, a)
 	w, ok := a.uiSt().find(assignDrugID(1))
 	if !ok || !w.disabled || w.reason == "" {
 		t.Fatalf("button %+v: disabled with a reason", w)

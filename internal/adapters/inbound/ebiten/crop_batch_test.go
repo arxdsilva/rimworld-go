@@ -40,7 +40,7 @@ func cropBlockSprite(up, down int) *artSprite {
 			pix.SetNRGBA(x, y, color.NRGBA{120, 150, 80, 255})
 		}
 	}
-	return &artSprite{meta: artMeta{Canvas: [2]int{128, 192}, Origin: [2]float64{0, 72}, Footprint: [2]int{1, 1}}, pix: pix}
+	return &artSprite{Meta: artMeta{Canvas: [2]int{128, 192}, Origin: [2]float64{0, 72}, Footprint: [2]int{1, 1}}, Pix: pix}
 }
 
 // cropTestArt is a soil catalog with unit sprites (four variants of each
@@ -50,7 +50,7 @@ func cropTestArt(species ...string) *artCatalog {
 	for _, sp := range species {
 		for st, name := range cropStageNames {
 			for v := 0; v < cropVariants; v++ {
-				c.sprites[fmt.Sprintf("plant/%s_%s_v%d", sp, name, v)] = cropUnitSprite(cropTestHeights[st])
+				c.Sprites[fmt.Sprintf("plant/%s_%s_v%d", sp, name, v)] = cropUnitSprite(cropTestHeights[st])
 			}
 		}
 	}
@@ -59,7 +59,7 @@ func cropTestArt(species ...string) *artCatalog {
 		for i := range pix.Pix {
 			pix.Pix[i] = 200
 		}
-		c.sprites[fmt.Sprintf("overlay/tilled_%d", v)] = &artSprite{meta: artMeta{Canvas: [2]int{128, 128}, Footprint: [2]int{1, 1}}, pix: pix}
+		c.Sprites[fmt.Sprintf("overlay/tilled_%d", v)] = &artSprite{Meta: artMeta{Canvas: [2]int{128, 128}, Footprint: [2]int{1, 1}}, Pix: pix}
 	}
 	return c
 }
@@ -96,7 +96,7 @@ func cropRenderer(w game.WorldView, mw, mh int, species ...string) *Renderer {
 // tile px on a screen showing the whole map, and returns the unit quads
 // queued (still pending in the batch, bar those a new species flushed).
 func cropDraw(r *Renderer, mw, mh int, tile float64) int {
-	r.cam.zoom, r.cam.offsetX, r.cam.offsetY = tile/TileSize, -tile, -tile
+	r.cam.Zoom, r.cam.OffsetX, r.cam.OffsetY = tile/TileSize, -tile, -tile
 	sw, sh := int(float64(mw+2)*tile), int(float64(mh+2)*tile)
 	r.setView(sw, sh, tile)
 	w := r.game.World()
@@ -631,7 +631,7 @@ func TestCropFurrowsUnderCropsOnly(t *testing.T) {
 	// without the decal art nothing is drawn and nothing breaks
 	r = cropRenderer(cropWorld(12, 12, ps), 12, 12, "corn", "potato")
 	for v := 0; v < 4; v++ {
-		delete(r.art.sprites, fmt.Sprintf("overlay/tilled_%d", v))
+		delete(r.art.Sprites, fmt.Sprintf("overlay/tilled_%d", v))
 	}
 	lodFrame(r, 64)
 	if r.lod.crops.furrows != 0 || r.lod.crops.quads == 0 {
@@ -785,15 +785,15 @@ func TestCropFallbackArt(t *testing.T) {
 	w := cropWorld(6, 6, cropPlants("corn", 1, 1, 2, 2, nil))
 	// only the stage's first variant exists: every unit draws it
 	r := cropRenderer(w, 6, 6)
-	r.art.sprites["plant/corn_harvestable_v0"] = cropUnitSprite(0.9)
+	r.art.Sprites["plant/corn_harvestable_v0"] = cropUnitSprite(0.9)
 	if got := cropDraw(r, 6, 6, 64); got != 4*2 {
 		t.Fatalf("v0 fallback: %d quads, want 8", got)
 	}
 	// the old art's three variants: the fourth is simply not there
 	r = cropRenderer(w, 6, 6, "corn")
-	for k := range r.art.sprites {
+	for k := range r.art.Sprites {
 		if strings.HasPrefix(k, "plant/corn_") && strings.HasSuffix(k, "_v3") {
-			delete(r.art.sprites, k)
+			delete(r.art.Sprites, k)
 		}
 	}
 	if got := cropDraw(r, 6, 6, 64); got != 4*2 {
@@ -919,11 +919,11 @@ func BenchmarkCropField500(b *testing.B) {
 			r := New(sim)
 			r.art = cropTestArt(species...)
 			if root, err := LocateArt(); err == nil {
-				if cat, err := loadArtCatalog(root); err == nil && cat.has("plant/corn_mature_v0") {
+				if cat, err := loadArtCatalog(root); err == nil && cat.Has("plant/corn_mature_v0") {
 					r.art = cat
 				}
 			}
-			r.cam.zoom = c.tile / TileSize
+			r.cam.Zoom = c.tile / TileSize
 			screen := ebiten.NewImage(c.sw, c.sh)
 			frame := func() {
 				r.present++

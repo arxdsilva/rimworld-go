@@ -243,7 +243,7 @@ func TestNoShadowsUnderRoof(t *testing.T) {
 	}
 	// pawns cast silhouettes instead (with art), roofed or not; the
 	// embodied one is a corpse item now
-	r.art.sprites["pawn/body_south"] = fakeSprite([2]int{160, 297}, pt{16, 153}, nil)
+	r.art.Sprites["pawn/body_south"] = fakeSprite([2]int{160, 297}, pt{16, 153}, nil)
 	sky := map[int]bool{}
 	for _, c := range r.creatureCasters(w, pawns) {
 		sky[int(c.pawn.ID)] = c.sky
@@ -374,7 +374,7 @@ func TestShadowLayerHalfResolution(t *testing.T) {
 	w.Buildings = []game.BuildingView{{Kind: "wall", X: 4, Y: 4, W: 1, H: 1}}
 	run := func(dev float64) (*Renderer, float32) {
 		r := shadowRenderer(t, w)
-		r.cam.dev = dev
+		r.cam.Dev = dev
 		r.lit.light = testLight(0.3, 0.3, 0.32)
 		r.drawShadows(ebiten.NewImage(641, 401), w, 641, 401, r.tilePx())
 		if r.env.shadow.composites != 1 {
@@ -406,7 +406,7 @@ func TestShadowHalfResolutionKeepsWorldPlacement(t *testing.T) {
 	w := shadowWorld(nil)
 	w.Buildings = []game.BuildingView{{Kind: "wall", X: 2, Y: 2, W: 1, H: 1}}
 	r := shadowRenderer(t, w)
-	r.cam.dev = 2
+	r.cam.Dev = 2
 	r.lit.light = testLight(1.2, 0.9, 0.5) // high sun: a short shadow hugging the wall
 	screen := ebiten.NewImage(640, 400)
 	tile := r.tilePx()

@@ -101,7 +101,7 @@ func (r *Renderer) drawChatBubbles(screen *ebiten.Image, tile float64) {
 		}
 		var icon *ebiten.Image
 		if key != "" {
-			icon = r.art.image(key, noTint)
+			icon = r.art.Image(key, noTint)
 		}
 		if icon != nil {
 			// physical anchor and size (the bubble is world-sized): the
@@ -121,7 +121,7 @@ func (r *Renderer) drawChatBubbles(screen *ebiten.Image, tile float64) {
 // fight (overlay/fight_lightning; vector bolt while the art is missing).
 func (r *Renderer) drawFightMarker(screen *ebiten.Image, wx, wy, tile float64) {
 	sx, sy := r.worldToScreenF(wx+0.5, wy-pawnMarkerLift(r.art))
-	if img := r.art.image("overlay/fight_lightning", noTint); img != nil {
+	if img := r.art.Image("overlay/fight_lightning", noTint); img != nil {
 		size := tile * 0.32 // physical, like the position; worldIcon takes it logical
 		worldIcon(screen, img, float64(sx)-size/2, float64(sy)-size/2, size/uiScale())
 		return

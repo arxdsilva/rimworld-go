@@ -146,7 +146,7 @@ func TestJourneyTimeDevStepUltrafastAndActions(t *testing.T) {
 		t.Fatal("Quote did not open the debug inspector")
 	}
 
-	j.f.moveTo(j.a, 13, 5)
+	j.f.MoveTo(j.a, 13, 5)
 	j.key("Slash", 0)
 	if !j.a.dev.menu {
 		t.Fatal("Slash opened no debug menu")

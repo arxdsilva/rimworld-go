@@ -84,7 +84,7 @@ func (a *App) handleLogWheel() bool {
 	if a.renderer == nil {
 		return false
 	}
-	wy := a.in.raw.wheelY
+	wy := a.in.Raw.WheelY
 	if wy == 0 {
 		return false
 	}

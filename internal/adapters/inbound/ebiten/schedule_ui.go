@@ -160,7 +160,7 @@ func (a *App) paintSchedule(id string) {
 
 // handleScheduleDrag keeps painting while the mouse is held over cells.
 func (a *App) handleScheduleDrag() {
-	if !a.workOpen || a.panelMode != "schedule" || a.renderer == nil || !a.in.down(mbLeft) {
+	if !a.workOpen || a.panelMode != "schedule" || a.renderer == nil || !a.in.Down(mbLeft) {
 		return
 	}
 	mx, my := a.currentCursor()

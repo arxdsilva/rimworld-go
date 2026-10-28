@@ -24,7 +24,7 @@ func rightAtScale(t *testing.T, a *App, f *fakeInput, s float64) (int, int) {
 	if a.sw != 1280 || a.sh != 720 {
 		t.Fatalf("scale %v: logical %dx%d, want 1280x720", s, a.sw, a.sh)
 	}
-	f.frame(t, a)
+	f.Frame(t, a)
 	return int(pw), int(ph)
 }
 
@@ -86,11 +86,11 @@ func TestRightClickOverTheColumnIsConsumed(t *testing.T) {
 // real path (two frames), then moves the cursor away.
 func pressButton(t *testing.T, a *App, f *fakeInput, id string) {
 	t.Helper()
-	f.frame(t, a)
+	f.Frame(t, a)
 	for _, b := range a.layoutHits(a.sw, a.sh) {
 		if b.id == id {
 			f.clickAt(t, a, int(b.x+b.w/2), int(b.y+b.h/2))
-			f.cur.mx, f.cur.my = -50, -50
+			f.Cur.Mx, f.Cur.My = -50, -50
 			return
 		}
 	}

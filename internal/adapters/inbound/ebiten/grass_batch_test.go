@@ -24,16 +24,16 @@ func grassTestArt() *artCatalog {
 				pix.SetNRGBA(x, y, color.NRGBA{112, 128, 82, 255})
 			}
 		}
-		return &artSprite{meta: artMeta{Canvas: [2]int{160, 184}, Origin: [2]float64{16, 40}}, pix: pix}
+		return &artSprite{Meta: artMeta{Canvas: [2]int{160, 184}, Origin: [2]float64{16, 40}}, Pix: pix}
 	}
 	for v := 0; v < 6; v++ {
-		c.sprites[fmt.Sprintf("plant/grass_short_v%d", v)] = tuft(10)
+		c.Sprites[fmt.Sprintf("plant/grass_short_v%d", v)] = tuft(10)
 	}
 	for v := 0; v < 4; v++ {
-		c.sprites[fmt.Sprintf("plant/grass_tall_v%d", v)] = tuft(16)
+		c.Sprites[fmt.Sprintf("plant/grass_tall_v%d", v)] = tuft(16)
 	}
 	for v := 0; v < 3; v++ {
-		c.sprites[fmt.Sprintf("plant/grass_short_dormant_v%d", v)] = tuft(9)
+		c.Sprites[fmt.Sprintf("plant/grass_short_dormant_v%d", v)] = tuft(9)
 	}
 	return c
 }
@@ -66,7 +66,7 @@ func grassRenderer(w game.WorldView, mw, mh int) (*Renderer, *stubSim) {
 // per tile on a screen showing the whole map with a one-tile margin (so
 // no copy is culled), and returns its quads.
 func batchAt(r *Renderer, mw, mh int, tile float64, limit int) int {
-	r.cam.zoom, r.cam.offsetX, r.cam.offsetY = tile/TileSize, -tile, -tile
+	r.cam.Zoom, r.cam.OffsetX, r.cam.OffsetY = tile/TileSize, -tile, -tile
 	sw, sh := int(float64(mw+2)*tile), int(float64(mh+2)*tile)
 	r.setView(sw, sh, tile)
 	w := r.game.World()
@@ -221,11 +221,11 @@ func TestGrassBatchIsOneDraw(t *testing.T) {
 	w := grassWorld(24, 16, 100)
 	w.Plants = []game.PlantView{{ID: 9, Species: "bush", X: 20, Y: 12, Growth: 100}}
 	r, _ := grassRenderer(w, 24, 16)
-	r.art.sprites["plant/bush_mature_v0"] = fakeSprite([2]int{128, 128}, pt{0, 0}, nil)
+	r.art.Sprites["plant/bush_mature_v0"] = fakeSprite([2]int{128, 128}, pt{0, 0}, nil)
 	var order []string
 	ground := map[*ebiten.Image]bool{}
 	for v := 0; v < 4; v++ {
-		ground[r.art.image(artKey("terrain", "soil", v), color.NRGBA{})] = true
+		ground[r.art.Image(artKey("terrain", "soil", v), color.NRGBA{})] = true
 	}
 	r.lit.onDraw = func(img *ebiten.Image, _ float32) {
 		if ground[img] {
@@ -392,7 +392,7 @@ func BenchmarkGrassBatch(b *testing.B) {
 	sim := &stubSim{w: mw, h: mh, world: w}
 	r := New(sim)
 	r.art = art
-	r.cam.zoom = 1
+	r.cam.Zoom = 1
 	screen := ebiten.NewImage(sw, sh)
 	frame := func() {
 		r.present++

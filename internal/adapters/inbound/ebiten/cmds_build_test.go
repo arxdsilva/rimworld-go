@@ -491,7 +491,7 @@ func billsTabApp(t *testing.T, bills []game.BillView) (*App, *stubSim, *fakeInpu
 	a, f := bldApp(t, s, 77)
 	panel := rect{X: 0, Y: 180, W: 520, H: 300}
 	setHook(a.uiSt(), func(a *App) { a.billsTabUI(77, panel) })
-	f.frame(t, a)
+	f.Frame(t, a)
 	return a, s, f, panel
 }
 
@@ -577,7 +577,7 @@ func TestBillsTabAddBillOpensPickerAndAdds(t *testing.T) {
 	t.Parallel()
 	a, s, f, _ := billsTabApp(t, nil)
 	press(t, a, f, billPickBtn)
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalTop() != billPickID {
 		t.Fatalf("top modal %q, want the recipe picker", a.uiModalTop())
 	}
@@ -611,7 +611,7 @@ func TestBillsTabScrollsLongLists(t *testing.T) {
 		}
 	}
 	a.uiSt().scroll["bill.rows"] = 1e6 // the wheel to the end
-	f.frame(t, a)
+	f.Frame(t, a)
 	if !hasWidget(a, "bill.plus.29") || hasWidget(a, "bill.plus.0") {
 		t.Fatal("scrolled to the end shows the last rows")
 	}
@@ -658,10 +658,10 @@ func TestBillsTabQuantityModifiers(t *testing.T) {
 	}{{0, "bill.plus.0", 6}, {input.ModCtrl, "bill.plus.0", 15}, {input.ModShift, "bill.plus.0", 105},
 		{input.ModCtrl | input.ModShift, "bill.plus.0", 1005}, {input.ModShift, "bill.minus.0", 1}} {
 		s.cmds = nil
-		f.frame(t, a)
+		f.Frame(t, a)
 		x, y := widgetAt(t, a, c.id)
-		f.cur.mx, f.cur.my = x, y
-		f.click(t, a, mbLeft, c.mods)
+		f.Cur.Mx, f.Cur.My = x, y
+		f.Click(t, a, mbLeft, c.mods)
 		if set := cmdsOf(s, command.SetBill); len(set) != 1 || set[0].Count != c.want {
 			t.Fatalf("%s with mods %v: %+v, want %d", c.id, c.mods, set, c.want)
 		}
@@ -700,7 +700,7 @@ func TestBillsTabFitsItsWantedPanel(t *testing.T) {
 		tab, _ := bldTab(a.buildingPane(77), "inspector.bills")
 		inner := rect{X: 0, Y: 120, W: tab.WantW, H: tab.WantH}.Inset(paneInset)
 		setHook(a.uiSt(), func(a *App) { tab.Declare(inner) })
-		f.frame(t, a)
+		f.Frame(t, a)
 		for i := 0; i < n; i++ {
 			if !hasWidget(a, "bill.del."+strconv.Itoa(i)) {
 				t.Errorf("%d bills: row %d is not live in its wanted panel", n, i)
@@ -734,7 +734,7 @@ func TestBenchSelectionThroughTheHUD(t *testing.T) {
 	s := bldStub(game.BuildingView{ID: 77, Kind: kind, X: 8, Y: 8, W: 2, H: 1, Bench: true, HPPct: 90,
 		Bills: []game.BillView{{Label: "Cook meal", Target: 5}, {Label: "Make bandage", Target: 2}}})
 	a, f := bldApp(t, s, 77)
-	f.frame(t, a)
+	f.Frame(t, a)
 	l := a.hud()
 	if l.Pane.Empty() || l.PaneTabs.Empty() {
 		t.Fatalf("no pane for a selected bench: %+v", l)
@@ -748,7 +748,7 @@ func TestBenchSelectionThroughTheHUD(t *testing.T) {
 	}
 
 	a.applyClick("inspector.bills")
-	f.frame(t, a)
+	f.Frame(t, a)
 	l = a.hud()
 	if l.Expanded.Empty() {
 		t.Fatal("clicking the Bills tab opens its panel")
@@ -781,7 +781,7 @@ func TestTroughFilterCommandRunsFromTheGrid(t *testing.T) {
 	b := game.BuildingView{ID: 77, Kind: troughKind, X: 4, Y: 4, W: 1, H: 2, TroughFill: 12, TroughCap: 60, TroughFilter: "plants"}
 	s := bldStub(b)
 	a, f := bldApp(t, s, 77)
-	f.frame(t, a)
+	f.Frame(t, a)
 	a.applyCommandClick("cmd.bldg.trough")
 	if c := lastCmd(t, s); c.Kind != command.SetTroughFilter || c.Target != 77 || c.Mode != 1 {
 		t.Fatalf("a click on the filter: %+v, want meat (1)", c)
@@ -796,7 +796,7 @@ func TestBlueprintSelectionThroughTheHUD(t *testing.T) {
 	s.world.Frames = []game.FrameView{wallFrame()}
 	a, f := colonyApp(t, s)
 	a.selectCand(selCand{selFrame, 7})
-	f.frame(t, a)
+	f.Frame(t, a)
 	l := a.hud()
 	if l.Pane.Empty() || len(l.GridCells) != 1 {
 		t.Fatalf("blueprint layout: pane %+v cells %d", l.Pane, len(l.GridCells))

@@ -66,15 +66,15 @@ func (r *Renderer) drawArrivals(screen *ebiten.Image, w game.WorldView, tile flo
 		return
 	}
 	for _, fx := range arrivalEffects(w.Arrivals, uint64(r.game.Tick()), r.reducedMotion) {
-		sp := r.art.sprite(fx.key)
-		img := r.art.image(fx.key, color.NRGBA{})
+		sp := r.art.Sprite(fx.key)
+		img := r.art.Image(fx.key, color.NRGBA{})
 		if sp == nil || img == nil {
 			continue
 		}
 		sx, sy := r.worldToScreenF(fx.x, fx.y)
 		s := tile / artTilePx
 		geo := ebiten.GeoM{}
-		geo.Translate(-float64(sp.meta.Origin[0]), -float64(sp.meta.Origin[1]))
+		geo.Translate(-float64(sp.Meta.Origin[0]), -float64(sp.Meta.Origin[1]))
 		geo.Scale(s*fx.scale, s*fx.scale)
 		geo.Translate(float64(sx), float64(sy))
 		op := &ebiten.DrawImageOptions{GeoM: geo, Filter: ebiten.FilterLinear}

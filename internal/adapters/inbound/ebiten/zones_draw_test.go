@@ -320,13 +320,13 @@ func zlFrame(t *testing.T, z game.ZoneView, sc wlScale, zoom float64, pan [2]flo
 	wlSetScale(t, sc)
 	got := wlTrace(t)
 	r := New(&stubSim{w: 64, h: 64})
-	r.cam.zoom, r.cam.dev = zoom, sc.dev
+	r.cam.Zoom, r.cam.Dev = zoom, sc.dev
 	tile := r.tilePx()
 	sw, sh := int(1280*sc.dev), int(720*sc.dev)
 	cx := float64(z.MinX+z.MaxX+1) / 2
 	cy := float64(z.MinY+z.MaxY+1) / 2
-	r.cam.offsetX = cx*tile - float64(sw)/2 + pan[0]
-	r.cam.offsetY = cy*tile - float64(sh)/2 + pan[1]
+	r.cam.OffsetX = cx*tile - float64(sw)/2 + pan[0]
+	r.cam.OffsetY = cy*tile - float64(sh)/2 + pan[1]
 	r.drawZoneLabel(ebiten.NewImage(64, 64), z, r.zoneGeomOf(z), sw, sh, tile)
 	return r, *got
 }
@@ -448,8 +448,8 @@ func TestZoneLabelOfAnLShapeIsInsideIt(t *testing.T) {
 			p := fills[0]
 			// the plate centre, back in tiles, is on a zone cell
 			tile := r.tilePx()
-			tx := (float64(p.X+p.W/2) + r.cam.offsetX) / tile
-			ty := (float64(p.Y+p.H/2) + r.cam.offsetY) / tile
+			tx := (float64(p.X+p.W/2) + r.cam.OffsetX) / tile
+			ty := (float64(p.Y+p.H/2) + r.cam.OffsetY) / tile
 			if !set[[2]int{int(math.Floor(tx)), int(math.Floor(ty))}] {
 				t.Errorf("%s zoom %g: label centre (%.2f,%.2f) tiles is outside the L", sc.name, zoom, tx, ty)
 			}
@@ -463,7 +463,7 @@ func TestZoneLabelDrawnOncePerZone(t *testing.T) {
 	wlSetScale(t, wlScale{"ui1.5", 1, 1.5})
 	got := wlTrace(t)
 	r := New(&stubSim{w: 64, h: 64})
-	r.cam.zoom = 1
+	r.cam.Zoom = 1
 	w := game.WorldView{Zones: []game.ZoneView{
 		rectZone(1, game.ZoneStockpile, 2, 2, 6, 5),
 		rectZone(2, game.ZoneGrow, 9, 2, 13, 6),
@@ -543,7 +543,7 @@ func fillQuads(t *testing.T, art *artCatalog, w game.WorldView, zoom float64) in
 	t.Helper()
 	r := New(&stubSim{w: 32, h: 32})
 	r.art = art
-	r.cam.zoom = zoom
+	r.cam.Zoom = zoom
 	tile := r.tilePx()
 	r.setView(640, 400, tile)
 	r.drawZones(ebiten.NewImage(640, 400), w, 640, 400, tile)

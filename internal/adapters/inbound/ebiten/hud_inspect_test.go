@@ -38,7 +38,7 @@ func paneColony(t *testing.T, spec paneSpec) (*App, *stubSim, *fakeInput) {
 	a, s, f := inputColony(t, [2]int{3, 3})
 	a.renderer.Select(1)
 	a.setTestPane(spec)
-	f.frame(t, a)
+	f.Frame(t, a)
 	return a, s, f
 }
 
@@ -188,12 +188,12 @@ func TestOpenTabIsDroppedWhenItVanishes(t *testing.T) {
 	a, _, f := paneColony(t, fullPane(tabSpec("needs", "Needs", 480, 220, nil)))
 	click(t, a, "inspector.needs")
 	a.setTestPane(fullPane(tabSpec("log", "Log", 400, 100, nil))) // another kind: no Needs tab
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.paneOpenTab() != "" || !a.hud().Expanded.Empty() {
 		t.Fatal("a tab the new selection does not have must not stay open")
 	}
 	a.setTestPane(paneSpec{})
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.hud().PaneTabs.W != 0 {
 		t.Fatal("no pane, no tabs")
 	}
@@ -227,7 +227,7 @@ func TestExpandedTabDeclaresItsKitWidgets(t *testing.T) {
 	spec := fullPane(paneTab{ID: "inspector.kit", Label: "Kit", WantW: 500, WantH: 200, Declare: func(r rect) { got = r }})
 	a, _, f := paneColony(t, spec)
 	click(t, a, "inspector.kit")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if want := a.hud().Expanded.Inset(paneInset); got != want {
 		t.Fatalf("Declare got %+v, want %+v", got, want)
 	}
@@ -294,22 +294,22 @@ func TestPaneBodyScrollsAndOwnsTheWheel(t *testing.T) {
 	if g.contentH <= g.body.H {
 		t.Fatalf("40 lines must overflow the %v px body, content %v", g.body.H, g.contentH)
 	}
-	z := a.renderer.cam.zoom
-	a.renderer.smooth.instant = true
-	f.cur.mx, f.cur.my = int(g.body.X+20), int(g.body.Y+20)
-	f.cur.wheelY = -1
-	f.frame(t, a)
+	z := a.renderer.cam.Zoom
+	a.renderer.smooth.Instant = true
+	f.Cur.Mx, f.Cur.My = int(g.body.X+20), int(g.body.Y+20)
+	f.Cur.WheelY = -1
+	f.Frame(t, a)
 	if off := a.uiSt().scroll[paneBodyID]; off <= 0 {
 		t.Fatalf("the wheel over the body scrolls it, offset %v", off)
 	}
-	if a.renderer.cam.zoom != z {
+	if a.renderer.cam.Zoom != z {
 		t.Fatal("the camera must not zoom while the pane has the wheel")
 	}
 	// anywhere on the pane keeps the wheel from the camera
-	f.cur.mx, f.cur.my = int(l.Pane.X+20), int(l.Pane.Y+10)
-	f.cur.wheelY = 1
-	f.frame(t, a)
-	if a.renderer.cam.zoom != z {
+	f.Cur.Mx, f.Cur.My = int(l.Pane.X+20), int(l.Pane.Y+10)
+	f.Cur.WheelY = 1
+	f.Frame(t, a)
+	if a.renderer.cam.Zoom != z {
 		t.Fatal("the wheel over the pane header must not zoom the map")
 	}
 }

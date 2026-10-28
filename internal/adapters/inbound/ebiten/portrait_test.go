@@ -68,18 +68,18 @@ func atlasArt(t *testing.T) *artCatalog {
 				defer wg.Done()
 				var z deflater
 				for j := range jobs {
-					j.a.cutPageAside(j.pg, j.layer, &z)
+					j.a.CutPageAside(j.pg, j.layer, &z)
 				}
 			}()
 		}
 		seen := map[*spriteAtlas]bool{}
-		for _, sp := range atlasArtCat.sprites {
-			if sp.src == nil || seen[sp.src.atlas] {
+		for _, sp := range atlasArtCat.Sprites {
+			if sp.Src == nil || seen[sp.Src.Atlas] {
 				continue
 			}
-			a := sp.src.atlas
+			a := sp.Src.Atlas
 			seen[a] = true
-			for pg := range a.byPage {
+			for pg := range a.ByPage {
 				for layer := 0; layer < atlasLayers; layer++ {
 					jobs <- job{a, pg, layer}
 				}
@@ -122,7 +122,7 @@ func TestPortraitWithoutRenderer(t *testing.T) {
 				t.Fatalf("%v: %d layers", l.BuildKey(), len(layers))
 			}
 			for _, ly := range layers {
-				if !art.has(ly.key) && !(ly.key[:11] == "pawn/beard_" && sex == look.Female) {
+				if !art.Has(ly.key) && !(ly.key[:11] == "pawn/beard_" && sex == look.Female) {
 					t.Errorf("%s: no art for %q", l.BuildKey(), ly.key)
 				}
 			}
@@ -162,7 +162,7 @@ func TestPortraitKeysFollowTheBuild(t *testing.T) {
 	}
 	// Tints come from the catalog's groups; a grey look uses the grey hair.
 	grey := portraitLayers(art, look.Look{Grey: true, HairStyle: 0})
-	if last := grey[len(grey)-1]; last.tint != art.tint("hair", "grey") {
+	if last := grey[len(grey)-1]; last.tint != art.Tint("hair", "grey") {
 		t.Errorf("grey hair tint %v", last.tint)
 	}
 	if pick(nil, 3) != "" || pick([]string{"a", "b"}, 3) != "b" {

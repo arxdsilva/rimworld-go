@@ -250,9 +250,9 @@ func clickIDWith(j *journey, id string, mods input.Mod) {
 		x, y = w.r.Center()
 	}
 	s := float32(j.a.scale.S)
-	j.f.cur.mx, j.f.cur.my = int(x*s), int(y*s)
-	j.f.click(j.t, j.a, mbLeft, mods)
-	j.f.cur.mx, j.f.cur.my = -50, -50
+	j.f.Cur.Mx, j.f.Cur.My = int(x*s), int(y*s)
+	j.f.Click(j.t, j.a, mbLeft, mods)
+	j.f.Cur.Mx, j.f.Cur.My = -50, -50
 }
 
 // TestJourneyTabsQuantityModifiers: Ctrl multiplies a bill stepper by 10,

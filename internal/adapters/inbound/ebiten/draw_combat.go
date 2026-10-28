@@ -567,9 +567,9 @@ const snoreDrop = 0.25
 // top edge: its rest frame's opaque top (that sprite is drawn, so it is
 // decoded or measured), else half the size estimate.
 func (r *Renderer) animalRestTop(an game.AnimalView) float64 {
-	if sp := r.art.sprite(r.animalBaseKey(an) + "_rest"); sp != nil {
-		_, y0, _, _ := sp.opaqueBox()
-		return (sp.meta.Origin[1] - y0) / sp.meta.pxPerTile()
+	if sp := r.art.Sprite(r.animalBaseKey(an) + "_rest"); sp != nil {
+		_, y0, _, _ := sp.OpaqueBox()
+		return (sp.Meta.Origin[1] - y0) / sp.Meta.PxPerTile()
 	}
 	return 0.5 * animalHeight(an.Size)
 }
@@ -593,8 +593,8 @@ func animalBarLift(size float64) float64 { return barLift(animalHeight(size)) }
 // grown by the minimum creature size (creatureAt) about the tile's foot.
 func (r *Renderer) animalTop(an game.AnimalView, tile float64) float64 {
 	h := animalHeight(an.Size)
-	if m := r.art.metaOf(r.animalBaseKey(an)); m != nil {
-		h = m.Origin[1] / m.pxPerTile()
+	if m := r.art.MetaOf(r.animalBaseKey(an)); m != nil {
+		h = m.Origin[1] / m.PxPerTile()
 	}
 	if s := an.Scale; s > 0 && s < 1 {
 		h = (h+figurePivotY)*s - figurePivotY

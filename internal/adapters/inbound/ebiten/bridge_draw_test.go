@@ -124,7 +124,7 @@ func TestBridgeShadowSides(t *testing.T) {
 func TestDrawFoundationPaintsDeckAndShadow(t *testing.T) {
 	t.Parallel()
 	r := New(&stubSim{w: 64, h: 64, tick: 100})
-	r.cam.zoom = 32.0 / float64(TileSize)
+	r.cam.Zoom = 32.0 / float64(TileSize)
 	r.art = &artCatalog{} // no bridge sprites landed: the plain deck stands in
 	r.lod.tier = lodLive
 	w := bridgeWorld(8, 8, terrain.DeepWater, [2]int{3, 3})

@@ -20,7 +20,7 @@ func landingApp(t *testing.T) (*App, *fakeInput) {
 	t.Helper()
 	a, f, _ := ngTest(t, nil)
 	toLanding(t, a)
-	f.frame(t, a)
+	f.Frame(t, a)
 	return a, f
 }
 
@@ -41,7 +41,7 @@ func nextState(t *testing.T, a *App) string {
 func selectTile(t *testing.T, a *App, f *fakeInput, i int) {
 	t.Helper()
 	a.ng.globe.Select(i)
-	f.frame(t, a)
+	f.Frame(t, a)
 }
 
 func TestLandingInvalidTilesBlockNext(t *testing.T) {
@@ -170,7 +170,7 @@ func TestAdvancedSeasonAuto(t *testing.T) {
 		t.Fatalf("a fresh draft is Auto, got %d", ng.season)
 	}
 	click(t, a, "land.advanced")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalTop() != "land.advanced" {
 		t.Fatalf("modal = %q", a.uiModalTop())
 	}
@@ -221,7 +221,7 @@ func TestMapSizeOptionsGated(t *testing.T) {
 
 	a, f := landingApp(t)
 	click(t, a, "land.advanced")
-	f.frame(t, a)
+	f.Frame(t, a)
 	before := ng(a).mapSize
 	for i, o := range opts {
 		if !o.Enabled {
@@ -338,32 +338,32 @@ func TestLandingGlobeClickSelectsTile(t *testing.T) {
 	tile := a.ng.planet.RandomLanding(3)
 	a.ng.globe.Center(tile)
 	for i := 0; i < 60; i++ {
-		f.frame(t, a)
+		f.Frame(t, a)
 	}
 	geo := landRects(a.sw, a.sh)
 	cx, cy := geo.globe.Center()
-	f.cur.mx, f.cur.my = int(cx), int(cy)
-	f.frame(t, a)
-	want := a.ng.globe.pickTile(int(cx), int(cy))
-	f.click(t, a, mbLeft, 0)
+	f.Cur.Mx, f.Cur.My = int(cx), int(cy)
+	f.Frame(t, a)
+	want := a.ng.globe.PickTile(int(cx), int(cy))
+	f.Click(t, a, mbLeft, 0)
 	if want < 0 || a.ng.tile != want {
 		t.Fatalf("clicked tile %d, the globe picked %d", a.ng.tile, want)
 	}
 	// A drag turns the globe and does not select.
 	a.ng.globe.Select(-1)
-	f.frame(t, a)
-	f.cur.press[mbLeft], f.cur.down[mbLeft] = true, true
-	f.frame(t, a)
-	f.cur.mx += 80
-	f.frame(t, a)
-	f.cur.down[mbLeft], f.cur.release[mbLeft] = false, true
-	f.frame(t, a)
+	f.Frame(t, a)
+	f.Cur.Press[mbLeft], f.Cur.Down[mbLeft] = true, true
+	f.Frame(t, a)
+	f.Cur.Mx += 80
+	f.Frame(t, a)
+	f.Cur.Down[mbLeft], f.Cur.Release[mbLeft] = false, true
+	f.Frame(t, a)
 	if a.ng.tile != -1 {
 		t.Fatalf("a drag selected tile %d", a.ng.tile)
 	}
 	// The panel and the bar take the pointer, not the globe.
-	f.cur.mx, f.cur.my = int(geo.panel.X)+20, int(geo.panel.Y)+200
-	f.click(t, a, mbLeft, 0)
+	f.Cur.Mx, f.Cur.My = int(geo.panel.X)+20, int(geo.panel.Y)+200
+	f.Click(t, a, mbLeft, 0)
 	if a.ng.tile != -1 {
 		t.Fatal("a click on the info panel must not select a tile")
 	}
@@ -375,13 +375,13 @@ func TestLandingBackKeepsPlanetAndTile(t *testing.T) {
 	click(t, a, "land.random")
 	tile, p := a.ng.tile, a.ng.planet
 	click(t, a, "wizard.back")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.nav.screen() != screenWorldGen {
 		t.Fatalf("screen = %s", a.nav.screen())
 	}
 	click(t, a, "world.generate") // Next: the planet is unchanged
-	f.frame(t, a)
-	f.frame(t, a)
+	f.Frame(t, a)
+	f.Frame(t, a)
 	if a.nav.screen() != screenLanding || a.ng.planet != p || a.ng.tile != tile || a.ng.globe.Selected() != tile {
 		t.Fatalf("screen=%s tile=%d want %d", a.nav.screen(), a.ng.tile, tile)
 	}
@@ -395,7 +395,7 @@ func TestLandingLegendModesAndDrawing(t *testing.T) {
 	seen := map[globeMode]bool{}
 	for i := 0; i < int(numGlobeModes)+1; i++ {
 		seen[a.ng.globe.Mode()] = true
-		f.frame(t, a)
+		f.Frame(t, a)
 		a.Draw(img)
 		click(t, a, "land.mode")
 	}
@@ -408,7 +408,7 @@ func TestLandingLegendModesAndDrawing(t *testing.T) {
 	}
 	for m := globeMode(0); m < numGlobeModes; m++ {
 		a.ng.globe.SetMode(m)
-		f.frame(t, a)
+		f.Frame(t, a)
 		a.Draw(img)
 	}
 	// Both window sizes draw.
@@ -417,7 +417,7 @@ func TestLandingLegendModesAndDrawing(t *testing.T) {
 		a.Draw(ebiten.NewImage(size[0], size[1]))
 	}
 	// Enter presses Next when it is enabled.
-	f.key(t, a, "Enter", 0)
+	f.Key(t, a, "Enter", 0)
 	if a.nav.screen() != screenPawns {
 		t.Fatalf("Enter on a valid site goes on, screen=%s", a.nav.screen())
 	}
@@ -429,7 +429,7 @@ func TestFactionsTableSortAndCentre(t *testing.T) {
 	t.Parallel()
 	a, f := landingApp(t)
 	press(t, a, f, "land.factions")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalTop() != facModalID {
 		t.Fatalf("modal = %q", a.uiModalTop())
 	}
@@ -446,7 +446,7 @@ func TestFactionsTableSortAndCentre(t *testing.T) {
 	}
 	// Sorting by Name: the first row of the display is the alphabetical first.
 	press(t, a, f, facTableID+".col.name")
-	f.frame(t, a)
+	f.Frame(t, a)
 	col, desc := a.uiTableSort(facTableID)
 	if col != 1 || desc {
 		t.Fatalf("sort = %d/%v, want the Name column ascending", col, desc)
@@ -458,7 +458,7 @@ func TestFactionsTableSortAndCentre(t *testing.T) {
 		}
 	}
 	press(t, a, f, facTableID+".col.name")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if _, desc := a.uiTableSort(facTableID); !desc {
 		t.Fatal("a second click reverses")
 	}
@@ -467,7 +467,7 @@ func TestFactionsTableSortAndCentre(t *testing.T) {
 	_ = target
 	d := a.tableOrder(facTableID, a.factionColumns(rows), len(rows))
 	press(t, a, f, optID(facTableID+".body", 0))
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalOpen() {
 		t.Fatal("picking a faction closes the dialog")
 	}
@@ -476,11 +476,11 @@ func TestFactionsTableSortAndCentre(t *testing.T) {
 		t.Skip("the Swarm row sorted first; it has no capital")
 	}
 	g := a.ng.globe
-	if len(g.hl) != len(picked.Tiles) || g.hlLeft <= 0 || g.hlLeft > facHighlight {
-		t.Fatalf("highlight %v for %d settlements, left %d", g.hl, len(picked.Tiles), g.hlLeft)
+	if len(g.Hl) != len(picked.Tiles) || g.HlLeft <= 0 || g.HlLeft > facHighlight {
+		t.Fatalf("highlight %v for %d settlements, left %d", g.Hl, len(picked.Tiles), g.HlLeft)
 	}
-	if picked.Capital < 0 || g.hl[0] != picked.Capital {
-		t.Fatalf("capital %d, highlight %v", picked.Capital, g.hl)
+	if picked.Capital < 0 || g.Hl[0] != picked.Capital {
+		t.Fatalf("capital %d, highlight %v", picked.Capital, g.Hl)
 	}
 }
 

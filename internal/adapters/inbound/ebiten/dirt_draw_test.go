@@ -290,7 +290,7 @@ func benchDirt(n, w, h int) []game.DirtView {
 func BenchmarkDrawDirt(b *testing.B) {
 	g := game.NewColony(game.Config{Seed: 7, Width: 80, Height: 50})
 	r := New(&dirtSim{Game: g, dirt: benchDirt(1000, 80, 50)})
-	r.cam.zoom = 0.6
+	r.cam.Zoom = 0.6
 	screen := ebiten.NewImage(1280, 800)
 	tile := r.tilePx()
 	r.setView(1280, 800, tile)

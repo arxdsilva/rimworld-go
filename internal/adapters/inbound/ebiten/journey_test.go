@@ -87,10 +87,10 @@ func newJourney(t *testing.T, opts ...jOpt) *journey {
 	j := &journey{t: t, a: a, g: g, clock: time.Unix(1000, 0)}
 	a.now = func() time.Time { return j.clock }
 	j.f = fakeOn(a)
-	j.f.cur.focused = true
-	j.f.cur.mx, j.f.cur.my = -50, -50
+	j.f.Cur.Focused = true
+	j.f.Cur.Mx, j.f.Cur.My = -50, -50
 	a.renderer.speed = speedPaused // before the settling frame, so no tick moves a pawn off its spawn tile
-	j.f.frame(t, a)                // settles the session: the camera is placed, the learn hook installed
+	j.f.Frame(t, a)                // settles the session: the camera is placed, the learn hook installed
 	r := a.renderer
 	prev := r.onEnqueue
 	r.onEnqueue = func(cmd command.Command) {
@@ -99,37 +99,37 @@ func newJourney(t *testing.T, opts ...jOpt) *journey {
 		}
 		j.cmds = append(j.cmds, cmd)
 	}
-	r.smooth.instant = false
+	r.smooth.Instant = false
 	r.speed = speedPaused
 	if c.game == nil {
-		r.cam.zoom, r.cam.offsetX, r.cam.offsetY, r.cam.placed = 1, 0, -32, true
+		r.cam.Zoom, r.cam.OffsetX, r.cam.OffsetY, r.cam.Placed = 1, 0, -32, true
 	}
 	return j
 }
 
 // hold keeps keys down until release; the next Update reads them.
-func (j *journey) hold(keys ...string) { j.f.cur.held = append([]string(nil), keys...) }
+func (j *journey) hold(keys ...string) { j.f.Cur.Held = append([]string(nil), keys...) }
 
 // release lets every held key and modifier go.
-func (j *journey) release() { j.f.cur.held, j.f.cur.mods = nil, 0 }
+func (j *journey) release() { j.f.Cur.Held, j.f.Cur.Mods = nil, 0 }
 
 // key presses a key for one Update.
 func (j *journey) key(name string, mods input.Mod) {
 	j.t.Helper()
-	j.f.key(j.t, j.a, name, mods)
+	j.f.Key(j.t, j.a, name, mods)
 }
 
 // typeText types s one character per Update.
 func (j *journey) typeText(s string) {
 	j.t.Helper()
-	j.f.typeText(j.t, j.a, s)
+	j.f.TypeText(j.t, j.a, s)
 }
 
 // update runs n Updates.
 func (j *journey) update(n int) {
 	j.t.Helper()
 	for i := 0; i < n; i++ {
-		j.f.frame(j.t, j.a)
+		j.f.Frame(j.t, j.a)
 	}
 }
 
@@ -171,17 +171,17 @@ func (j *journey) lookAt(tx, ty int) {
 // the HUD.
 func (j *journey) clickTile(x, y int, btn mouseBtn, mods input.Mod) {
 	j.t.Helper()
-	j.f.moveTo(j.a, x, y)
-	if j.a.colonyChromeHit(j.f.cur.mx, j.f.cur.my, j.a.sw, j.a.sh) {
-		j.t.Fatalf("tile (%d, %d) is under the HUD at (%d, %d)", x, y, j.f.cur.mx, j.f.cur.my)
+	j.f.MoveTo(j.a, x, y)
+	if j.a.colonyChromeHit(j.f.Cur.Mx, j.f.Cur.My, j.a.sw, j.a.sh) {
+		j.t.Fatalf("tile (%d, %d) is under the HUD at (%d, %d)", x, y, j.f.Cur.Mx, j.f.Cur.My)
 	}
-	j.f.click(j.t, j.a, btn, mods)
+	j.f.Click(j.t, j.a, btn, mods)
 }
 
 // dragTiles drags btn from one tile centre to another (three Updates).
 func (j *journey) dragTiles(btn mouseBtn, x0, y0, x1, y1 int, mods input.Mod) {
 	j.t.Helper()
-	j.f.drag(j.t, j.a, btn, x0, y0, x1, y1, mods)
+	j.f.Drag(j.t, j.a, btn, x0, y0, x1, y1, mods)
 }
 
 // settle puts enough Updates between two clicks that they are never a
@@ -215,7 +215,7 @@ func (j *journey) clickID(id string) bool {
 	}
 	s := float32(j.a.scale.S)
 	j.f.clickAt(j.t, j.a, int(x*s), int(y*s))
-	j.f.cur.mx, j.f.cur.my = -50, -50
+	j.f.Cur.Mx, j.f.Cur.My = -50, -50
 	return true
 }
 
@@ -228,7 +228,7 @@ func (j *journey) pick(label string) {
 		if strings.HasPrefix(b.label, label) {
 			s := float32(j.a.scale.S)
 			j.f.clickAt(j.t, j.a, int((b.x+b.w/2)*s), int((b.y+b.h/2)*s))
-			j.f.cur.mx, j.f.cur.my = -50, -50
+			j.f.Cur.Mx, j.f.Cur.My = -50, -50
 			return
 		}
 	}

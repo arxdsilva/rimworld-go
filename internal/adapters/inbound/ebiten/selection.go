@@ -145,13 +145,13 @@ const pickCover = 0.15
 // object pass draws it (drawn position, minimum creature size, juvenile
 // scale, west mirrored), without the passing pose of a lunge or a breath.
 func (r *Renderer) animalBodyRect(an game.AnimalView) (x0, y0, x1, y1 float64, ok bool) {
-	sp := r.art.sprite(r.animalBaseKey(an)) // decoded at most once, for its box
+	sp := r.art.Sprite(r.animalBaseKey(an)) // decoded at most once, for its box
 	if sp == nil {
 		return 0, 0, 0, 0, false
 	}
-	bx0, by0, bx1, by1 := sp.opaqueBox()
-	m := &sp.meta
-	p := m.pxPerTile()
+	bx0, by0, bx1, by1 := sp.OpaqueBox()
+	m := &sp.Meta
+	p := m.PxPerTile()
 	// tiles from the drawn tile's top-left
 	x0, y0, x1, y1 = (bx0-m.Origin[0])/p, (by0-m.Origin[1])/p, (bx1-m.Origin[0])/p, (by1-m.Origin[1])/p
 	if r.animalMirrored(an) {

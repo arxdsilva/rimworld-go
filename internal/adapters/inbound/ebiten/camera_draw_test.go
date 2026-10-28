@@ -11,7 +11,7 @@ import (
 func colonyForCameraDraw(t *testing.T) (*App, *time.Time, *ebiten.Image) {
 	t.Helper()
 	a, _, _ := liveColony(t, 0)
-	fakeOn(a).frame(t, a)
+	fakeOn(a).Frame(t, a)
 	clock := time.Unix(1000, 0)
 	a.now = func() time.Time { return clock }
 	img := ebiten.NewImage(a.sw, a.sh)
@@ -26,47 +26,47 @@ func TestCameraStepsPerDraw(t *testing.T) {
 	a, clock, img := colonyForCameraDraw(t)
 	r := a.renderer
 	r.applyCamera(a.mapViewport(), camInput{dx: 1}) // one Update of a held key
-	if r.smooth.dirX != 1 {
-		t.Fatalf("dirX = %v after the push, want it held for the Draws", r.smooth.dirX)
+	if r.smooth.DirX != 1 {
+		t.Fatalf("dirX = %v after the push, want it held for the Draws", r.smooth.DirX)
 	}
-	last := r.cam.offsetX
+	last := r.cam.OffsetX
 	for i := 0; i < 2; i++ {
 		*clock = clock.Add(8 * time.Millisecond)
 		a.Draw(img)
-		if r.cam.offsetX <= last {
-			t.Fatalf("draw %d: offset %v did not advance past %v", i, r.cam.offsetX, last)
+		if r.cam.OffsetX <= last {
+			t.Fatalf("draw %d: offset %v did not advance past %v", i, r.cam.OffsetX, last)
 		}
-		if r.smooth.dirX != 1 {
-			t.Fatalf("draw %d: dirX = %v, want it held until the next Update", i, r.smooth.dirX)
+		if r.smooth.DirX != 1 {
+			t.Fatalf("draw %d: dirX = %v, want it held until the next Update", i, r.smooth.DirX)
 		}
-		last = r.cam.offsetX
+		last = r.cam.OffsetX
 	}
 	r.applyCamera(a.mapViewport(), camInput{}) // the key is up at the next Update
-	if r.smooth.dirX != 0 {
-		t.Fatalf("dirX = %v after a release, want 0", r.smooth.dirX)
+	if r.smooth.DirX != 0 {
+		t.Fatalf("dirX = %v after a release, want 0", r.smooth.DirX)
 	}
-	for i := 0; i < 200 && r.smooth.vx != 0; i++ { // coasts: forward only, then still
+	for i := 0; i < 200 && r.smooth.Vx != 0; i++ { // coasts: forward only, then still
 		*clock = clock.Add(8 * time.Millisecond)
 		a.Draw(img)
-		if r.cam.offsetX < last {
-			t.Fatalf("coast reversed: %v < %v", r.cam.offsetX, last)
+		if r.cam.OffsetX < last {
+			t.Fatalf("coast reversed: %v < %v", r.cam.OffsetX, last)
 		}
-		last = r.cam.offsetX
+		last = r.cam.OffsetX
 	}
-	if r.smooth.vx != 0 || !r.smooth.idle() {
-		t.Fatalf("the pan never stopped: vx %v", r.smooth.vx)
+	if r.smooth.Vx != 0 || !r.smooth.Idle() {
+		t.Fatalf("the pan never stopped: vx %v", r.smooth.Vx)
 	}
 }
 
 func TestCameraStepClampsStall(t *testing.T) {
 	a, clock, img := colonyForCameraDraw(t)
 	r := a.renderer
-	r.smooth.pushPan(1, 0)
-	before := r.cam.offsetX
+	r.smooth.PushPan(1, 0)
+	before := r.cam.OffsetX
 	*clock = clock.Add(2 * time.Second)
 	a.Draw(img)
-	moved := r.cam.offsetX - before
-	if max := panMaxSpeed * camMaxDt * r.cam.dev; r.cam.dev > 0 && moved > max+0.01 || moved < 0 {
+	moved := r.cam.OffsetX - before
+	if max := panMaxSpeed * camMaxDt * r.cam.Dev; r.cam.Dev > 0 && moved > max+0.01 || moved < 0 {
 		t.Fatalf("a 2 s stall moved %v, want at most %v", moved, max)
 	}
 }
@@ -78,21 +78,21 @@ func TestCameraStepClampsStall(t *testing.T) {
 func TestStepCameraLeavesStillCameraAlone(t *testing.T) {
 	a, clock, img := colonyForCameraDraw(t)
 	r := a.renderer
-	r.smooth.halt()
-	if !r.smooth.idle() {
+	r.smooth.Halt()
+	if !r.smooth.Idle() {
 		t.Fatal("a halted smoother must be idle")
 	}
-	r.cam.offsetX, r.cam.offsetY = -1e5, 1e5 // far outside the map's limits
-	zoom := r.cam.zoom
+	r.cam.OffsetX, r.cam.OffsetY = -1e5, 1e5 // far outside the map's limits
+	zoom := r.cam.Zoom
 	for i := 0; i < 3; i++ {
 		*clock = clock.Add(8 * time.Millisecond)
 		a.Draw(img)
-		if r.cam.offsetX != -1e5 || r.cam.offsetY != 1e5 || r.cam.zoom != zoom {
-			t.Fatalf("draw %d moved a still camera to (%v, %v) zoom %v", i, r.cam.offsetX, r.cam.offsetY, r.cam.zoom)
+		if r.cam.OffsetX != -1e5 || r.cam.OffsetY != 1e5 || r.cam.Zoom != zoom {
+			t.Fatalf("draw %d moved a still camera to (%v, %v) zoom %v", i, r.cam.OffsetX, r.cam.OffsetY, r.cam.Zoom)
 		}
 	}
-	r.smooth.pushPan(1, 0)
-	if r.smooth.idle() {
+	r.smooth.PushPan(1, 0)
+	if r.smooth.Idle() {
 		t.Fatal("a pushed pan is not idle")
 	}
 }

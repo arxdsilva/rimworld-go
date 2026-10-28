@@ -67,7 +67,7 @@ func penTabApp(t *testing.T, s *stubSim) (*App, *fakeInput, rect) {
 	}
 	panel := rect{X: 0, Y: 180, W: tab.WantW, H: tab.WantH}.Inset(paneInset) // what the pane hands Declare
 	setHook(a.uiSt(), func(a *App) { tab.Declare(panel) })
-	f.frame(t, a)
+	f.Frame(t, a)
 	return a, f, panel
 }
 

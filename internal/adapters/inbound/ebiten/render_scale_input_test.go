@@ -12,13 +12,13 @@ func TestBoxSelectAtHalfRenderScale(t *testing.T) {
 		x0, y0 := a.renderer.worldToScreenF(20.2, 18.2) // map pixels around the pawn at (21, 19)
 		x1, y1 := a.renderer.worldToScreenF(22.8, 20.8)
 		raw := func(x, y float32) (int, int) { return int(float64(x) / k), int(float64(y) / k) }
-		f.cur.mx, f.cur.my = raw(x0, y0)
-		f.cur.press[mbLeft], f.cur.down[mbLeft] = true, true
-		f.frame(t, a)
-		f.cur.mx, f.cur.my = raw(x1, y1)
-		f.frame(t, a)
-		f.cur.down[mbLeft], f.cur.release[mbLeft] = false, true
-		f.frame(t, a)
+		f.Cur.Mx, f.Cur.My = raw(x0, y0)
+		f.Cur.Press[mbLeft], f.Cur.Down[mbLeft] = true, true
+		f.Frame(t, a)
+		f.Cur.Mx, f.Cur.My = raw(x1, y1)
+		f.Frame(t, a)
+		f.Cur.Down[mbLeft], f.Cur.Release[mbLeft] = false, true
+		f.Frame(t, a)
 		if !a.renderer.HasSelect() || a.renderer.Selected() != 7 {
 			t.Fatalf("world %v: the drag around the pawn selected %v %v, want pawn 7", k, a.renderer.HasSelect(), a.renderer.Selected())
 		}

@@ -479,10 +479,10 @@ func (r *Renderer) centerOn(wx, wy float64, sw, sh int) {
 // physical screen `screen`, clamped to the physical map viewport v.
 func (r *Renderer) centerOnView(wx, wy float64, screen, v viewport) {
 	tile := r.tilePx()
-	r.cam.offsetX = wx*tile - (screen.x0+screen.x1)/2
-	r.cam.offsetY = wy*tile - (screen.y0+screen.y1)/2
-	r.cam.placed = true // an explicit jump; don't recentre on the map
-	r.clampCamera(v)
+	r.cam.OffsetX = wx*tile - (screen.X0+screen.X1)/2
+	r.cam.OffsetY = wy*tile - (screen.Y0+screen.Y1)/2
+	r.cam.Placed = true // an explicit jump; don't recentre on the map
+	r.ClampCamera(v)
 }
 
 // centerOnMap is the UI's "jump to": the target goes to the middle of the

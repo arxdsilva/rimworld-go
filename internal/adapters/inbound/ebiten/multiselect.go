@@ -104,22 +104,22 @@ func (a *App) handleMapMouse() {
 	sc := max(1, a.scale.S) * a.scale.WorldK()
 	boxMin, dblPx := int(boxMinPx*sc), int(doubleClickPx*sc)
 	switch {
-	case f.clicked(mbLeft):
-		f.take(mbLeft)
+	case f.Clicked(mbLeft):
+		f.Take(mbLeft)
 		p := a.press
 		double := p.lastAt > 0 && a.updates-p.lastAt <= doubleClickFrames &&
 			abs(mx-p.lastX) <= dblPx && abs(my-p.lastY) <= dblPx
-		a.press = pressState{on: true, x: mx, y: my, shift: f.shift(), lastAt: a.updates, lastX: mx, lastY: my}
+		a.press = pressState{on: true, x: mx, y: my, shift: f.Shift(), lastAt: a.updates, lastX: mx, lastY: my}
 		switch {
 		case double:
 			a.press.lastAt = 0 // a third click starts over
 			a.selectSameOnScreen()
-		case f.shift():
+		case f.Shift():
 			a.shiftClick()
 		default:
 			a.clickSelect()
 		}
-	case a.press.on && f.down(mbLeft):
+	case a.press.on && f.Down(mbLeft):
 		if !a.press.box && (abs(mx-a.press.x) > boxMin || abs(my-a.press.y) > boxMin) {
 			a.press.box = true
 		}
@@ -199,10 +199,10 @@ func (r *Renderer) bodyInRect(an game.AnimalView, x0, y0, x1, y1 float32) bool {
 	tile := r.tilePx()
 	pad, padS := r.animalPads(tile)
 	// the tile centres inside the box
-	tx0 := int(math.Ceil((float64(x0)+r.cam.offsetX)/tile - 0.5))
-	ty0 := int(math.Ceil((float64(y0)+r.cam.offsetY)/tile - 0.5))
-	tx1 := int(math.Floor((float64(x1)+r.cam.offsetX)/tile - 0.5))
-	ty1 := int(math.Floor((float64(y1)+r.cam.offsetY)/tile - 0.5))
+	tx0 := int(math.Ceil((float64(x0)+r.cam.OffsetX)/tile - 0.5))
+	ty0 := int(math.Ceil((float64(y0)+r.cam.OffsetY)/tile - 0.5))
+	tx1 := int(math.Floor((float64(x1)+r.cam.OffsetX)/tile - 0.5))
+	ty1 := int(math.Floor((float64(y1)+r.cam.OffsetY)/tile - 0.5))
 	if tx1 < tx0 || ty1 < ty0 || an.X < tx0-pad || an.X > tx1+pad || an.Y < ty0-pad || an.Y > ty1+padS {
 		return false
 	}
@@ -287,7 +287,7 @@ func (a *App) selectSameOnScreen() {
 		return
 	}
 	v := a.mapViewport() // physical, like worldToScreenF
-	x0, y0, x1, y1 := float32(v.x0), float32(v.y0), float32(v.x1), float32(v.y1)
+	x0, y0, x1, y1 := float32(v.X0), float32(v.Y0), float32(v.X1), float32(v.Y1)
 	r := a.renderer
 	w := r.world()
 	var ids []entity.EntityID

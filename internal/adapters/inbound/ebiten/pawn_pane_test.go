@@ -58,7 +58,7 @@ func paneApp(t *testing.T, s *stubSim) (*App, *fakeInput) {
 	t.Helper()
 	a, f := colonyApp(t, s)
 	a.renderer.Select(1)
-	f.frame(t, a)
+	f.Frame(t, a)
 	return a, f
 }
 
@@ -262,12 +262,12 @@ func TestAreaChipOpensPicker(t *testing.T) {
 	a, f := colonyApp(t, s.stubSim)
 	a.renderer.game = s
 	a.renderer.Select(1)
-	f.frame(t, a)
+	f.Frame(t, a)
 	if !hasWidget(a, "inspector.area") {
 		t.Fatal("the pane's area chip answers its click through a widget")
 	}
 	click(t, a, "inspector.area")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalTop() != areaPickID {
 		t.Fatalf("top modal %q, want the area picker", a.uiModalTop())
 	}
@@ -277,7 +277,7 @@ func TestAreaChipOpensPicker(t *testing.T) {
 	}
 	// the chip is on the pane whatever tab is open
 	a.inspectTab = "needs"
-	f.frame(t, a)
+	f.Frame(t, a)
 	if !hasWidget(a, "inspector.area") {
 		t.Fatal("the area chip shows on every tab")
 	}
@@ -292,7 +292,7 @@ func TestAreaChipIsAButtonOnThePane(t *testing.T) {
 	a, f := colonyApp(t, s.stubSim)
 	a.renderer.game = s
 	a.renderer.Select(1)
-	f.frame(t, a)
+	f.Frame(t, a)
 	var chip button
 	for _, b := range a.paneButtons() {
 		if b.id == paneAreaChipID {
@@ -310,7 +310,7 @@ func TestAreaChipIsAButtonOnThePane(t *testing.T) {
 		t.Fatalf("the click widget %+v does not sit on the chip %+v", w.r, chip)
 	}
 	press(t, a, f, paneAreaChipID)
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalTop() != areaPickID {
 		t.Fatalf("top modal %q, want the area picker", a.uiModalTop())
 	}
@@ -321,7 +321,7 @@ func TestPawnPanePrisonerSwapsGearForPrisoner(t *testing.T) {
 	s := prisonerSim()
 	a, f := colonyApp(t, s)
 	a.renderer.Select(2)
-	f.frame(t, a)
+	f.Frame(t, a)
 	spec := a.pawnPane(2)
 	var ids []string
 	for _, tb := range spec.Tabs {
@@ -444,7 +444,7 @@ func TestPawnCaptureAndArrestCommands(t *testing.T) {
 	s := prisonerSim()
 	a, f := colonyApp(t, s)
 	a.renderer.Select(1)
-	f.frame(t, a)
+	f.Frame(t, a)
 	cap := mustCmd(t, a.pawnCommands(1), prisonerCapture)
 	if cap.Disabled || cap.Icon != "capture" || !strings.Contains(cap.Desc, "Vasha") {
 		t.Fatalf("Ada can capture the downed raider: %+v", cap)
@@ -558,7 +558,7 @@ func TestPawnBioTabOpensThroughThePane(t *testing.T) {
 	t.Parallel()
 	a, f := paneApp(t, paneSim())
 	click(t, a, "inspector.bio")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if !a.bioTabOn() || !hasWidget(a, "bio.skill.0") {
 		t.Fatalf("tab %q: the Bio body is not declared", a.inspectTab)
 	}
@@ -566,7 +566,7 @@ func TestPawnBioTabOpensThroughThePane(t *testing.T) {
 		t.Fatalf("expanded %+v does not open upward from the tab strip %+v", exp, a.hud().PaneTabs)
 	}
 	click(t, a, "inspector.bio")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.bioTabOn() || hasWidget(a, "bio.skill.0") {
 		t.Fatal("clicking the open tab collapses it")
 	}
@@ -737,7 +737,7 @@ func TestPawnLogWheelThroughThePane(t *testing.T) {
 		t.Fatalf("wheel over the open Log must scroll it (scroll %d)", a.logScroll)
 	}
 	click(t, a, "inspector.needs")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.scrollLogAt(x+5, y+5, -1) {
 		t.Fatal("the Needs tab is open: the wheel is not the log's")
 	}
@@ -759,7 +759,7 @@ func TestPrisonerTabDrawsInsideExpandedPanel(t *testing.T) {
 	for _, scale := range []float64{1, 1.5} {
 		a, f := colonyApp(t, prisonerSim())
 		a.renderer.Select(2)
-		f.frame(t, a)
+		f.Frame(t, a)
 		withUIScale(t, scale) // after the frames: Update resets the scale from the settings
 		tb, ok := paneTabByID(a.pawnPane(2), prisonerTabID)
 		if !ok {

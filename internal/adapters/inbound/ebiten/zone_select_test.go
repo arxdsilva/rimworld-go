@@ -34,8 +34,8 @@ func zoneApp(t *testing.T, zones ...game.ZoneView) (*App, *zoneSim, *fakeInput) 
 	s := &zoneSim{stubSim: st, temp: 150}
 	a, f := colonyApp(t, st)
 	a.renderer.game = s
-	a.renderer.cam.offsetX, a.renderer.cam.offsetY = 0, -32
-	f.frame(t, a)
+	a.renderer.cam.OffsetX, a.renderer.cam.OffsetY = 0, -32
+	f.Frame(t, a)
 	return a, s, f
 }
 
@@ -234,13 +234,13 @@ func TestZoneCloseButtonAndEscape(t *testing.T) {
 	t.Parallel()
 	a, _, f := zoneApp(t, growZone(3, "potato", 4, 4, 7, 7))
 	a.selectCand(selCand{selZone, 3})
-	f.frame(t, a)
+	f.Frame(t, a)
 	click(t, a, "zone.close")
 	if a.hasZone {
 		t.Fatal("the pane's close button clears the zone")
 	}
 	a.selectCand(selCand{selZone, 3})
-	f.key(t, a, "Escape", 0)
+	f.Key(t, a, "Escape", 0)
 	if a.hasZone {
 		t.Fatal("Escape clears the zone")
 	}

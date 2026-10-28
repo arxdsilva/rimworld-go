@@ -29,7 +29,7 @@ func TestAssignMedicalCareColumn(t *testing.T) {
 	a, f := colonyApp(t, ps.stubSim)
 	a.renderer.game = s
 	a.openAssign()
-	f.frame(t, a)
+	f.Frame(t, a)
 	if w, ok := a.uiSt().find(assignCareID(1)); !ok || w.label != medcare.Best.Label() {
 		t.Fatalf("Ada's care button %+v", w)
 	}
@@ -56,7 +56,7 @@ func TestAssignDefaultCareWithoutReadModel(t *testing.T) {
 	ps := assignStub()
 	a, f := colonyApp(t, ps.stubSim)
 	a.openAssign()
-	f.frame(t, a)
+	f.Frame(t, a)
 	w, ok := a.uiSt().find(assignDefCareID(medcare.Colonists))
 	if !ok || !w.disabled || w.reason == "" {
 		t.Fatalf("default care %+v: disabled with a reason", w)

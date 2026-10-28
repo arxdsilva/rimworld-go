@@ -38,12 +38,12 @@ const atlasPageCache = 1
 
 // atlasEntry is one parsed atlas sprite.
 type atlasEntry struct {
-	key    string
-	page   int
-	rect   image.Rectangle // trimmed pixels in the page
-	trim   image.Point     // where rect sits in the sprite canvas
-	normal bool
-	meta   string // the sprite's own metadata, as in its individual yaml
+	Key    string
+	Page   int
+	Rect   image.Rectangle // trimmed pixels in the page
+	Trim   image.Point     // where rect sits in the sprite canvas
+	Normal bool
+	Meta   string // the sprite's own metadata, as in its individual yaml
 }
 
 // parseSpriteAtlas reads metadata/atlas/<family>.yaml: the family name,
@@ -53,7 +53,7 @@ func parseSpriteAtlas(src string) (family string, pages int, out []atlasEntry, e
 	var meta strings.Builder
 	flush := func() {
 		if cur != nil {
-			cur.meta = meta.String()
+			cur.Meta = meta.String()
 			out = append(out, *cur)
 		}
 		meta.Reset()
@@ -83,31 +83,31 @@ func parseSpriteAtlas(src string) (family string, pages int, out []atlasEntry, e
 			}
 		case inSprites && indent == 2:
 			flush()
-			cur = &atlasEntry{key: k}
+			cur = &atlasEntry{Key: k}
 		case inSprites && cur != nil && indent >= 4:
 			if indent == 4 {
 				switch k {
 				case "page":
-					if cur.page, err = strconv.Atoi(v); err != nil {
-						return "", 0, nil, fmt.Errorf("atlas %s: page: %w", cur.key, err)
+					if cur.Page, err = strconv.Atoi(v); err != nil {
+						return "", 0, nil, fmt.Errorf("atlas %s: page: %w", cur.Key, err)
 					}
 					continue
 				case "rect":
 					var r [4]int
 					if r, err = atlasInts(v, 4); err != nil {
-						return "", 0, nil, fmt.Errorf("atlas %s: rect: %w", cur.key, err)
+						return "", 0, nil, fmt.Errorf("atlas %s: rect: %w", cur.Key, err)
 					}
-					cur.rect = image.Rect(r[0], r[1], r[0]+r[2], r[1]+r[3])
+					cur.Rect = image.Rect(r[0], r[1], r[0]+r[2], r[1]+r[3])
 					continue
 				case "trim":
 					var r [4]int
 					if r, err = atlasInts(v, 2); err != nil {
-						return "", 0, nil, fmt.Errorf("atlas %s: trim: %w", cur.key, err)
+						return "", 0, nil, fmt.Errorf("atlas %s: trim: %w", cur.Key, err)
 					}
-					cur.trim = image.Pt(r[0], r[1])
+					cur.Trim = image.Pt(r[0], r[1])
 					continue
 				case "normal":
-					cur.normal = v == "true"
+					cur.Normal = v == "true"
 					continue
 				}
 			}
@@ -166,14 +166,14 @@ type pageData struct {
 type spriteAtlas struct {
 	root string
 	mu   sync.Mutex
-	// cache holds decoded pages while they are cut; empty between calls.
-	cache map[int]*pageData
-	// byPage lists every sprite of each page; cut marks the page layers
+	// Cache holds decoded pages while they are cut; empty between calls.
+	Cache map[int]*pageData
+	// ByPage lists every sprite of each page; cut marks the page layers
 	// already cut into the sprites' compressed copies.
-	byPage [][]*atlasSrc
-	cut    [][atlasLayers]bool
-	// decodes counts page-layer decodes (tests, the memory benchmark).
-	decodes int
+	ByPage [][]*atlasSrc
+	Cut    [][atlasLayers]bool
+	// Decodes counts page-layer Decodes (tests, the memory benchmark).
+	Decodes int
 	def     deflater
 	zr      io.ReadCloser
 	zsrc    bytes.Reader
@@ -181,14 +181,14 @@ type spriteAtlas struct {
 
 // atlasSrc ties a sprite to its place in an atlas.
 type atlasSrc struct {
-	atlas *spriteAtlas
-	entry atlasEntry
+	Atlas *spriteAtlas
+	Entry atlasEntry
 	// page file paths (from the sprite metadata)
 	pagePath, maskPath string
-	// z holds the trimmed pixels of each layer, deflated, from when the
+	// Z holds the trimmed pixels of each layer, deflated, from when the
 	// page layer is cut until the catalog takes them; nil after (or when
 	// the page was unreadable).
-	z [atlasLayers][]byte
+	Z [atlasLayers][]byte
 }
 
 // layerPath is the page file of a layer of s's page.
@@ -222,26 +222,26 @@ func trimBytes(layer int) int {
 func (a *spriteAtlas) take(s *atlasSrc, layer int) []byte {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	pg := s.entry.page
+	pg := s.Entry.Page
 	a.cutPage(pg, layer)
-	if z := s.z[layer]; z != nil {
-		s.z[layer] = nil
-		return a.inflateAll(z, s.entry.rect.Dx()*s.entry.rect.Dy()*trimBytes(layer))
+	if z := s.Z[layer]; z != nil {
+		s.Z[layer] = nil
+		return a.inflateAll(z, s.Entry.Rect.Dx()*s.Entry.Rect.Dy()*trimBytes(layer))
 	}
 	pd := a.decodePage(pg, layer, s.layerPath(layer))
-	defer delete(a.cache, pg)
-	return trimmedOf(pd, layer, s.entry.rect)
+	defer delete(a.Cache, pg)
+	return trimmedOf(pd, layer, s.Entry.Rect)
 }
 
 // cutPage decodes one layer of page pg, once, keeps every sprite's
 // trimmed rect of it compressed and drops the page. a.mu must be held.
 func (a *spriteAtlas) cutPage(pg, layer int) {
-	if a.cut[pg][layer] {
+	if a.Cut[pg][layer] {
 		return
 	}
-	a.cut[pg][layer] = true
+	a.Cut[pg][layer] = true
 	path := ""
-	for _, o := range a.byPage[pg] { // sprites without a tint mask name none
+	for _, o := range a.ByPage[pg] { // sprites without a tint mask name none
 		if path = o.layerPath(layer); path != "" {
 			break
 		}
@@ -250,13 +250,13 @@ func (a *spriteAtlas) cutPage(pg, layer int) {
 		return
 	}
 	pd := a.decodePage(pg, layer, path)
-	defer delete(a.cache, pg)
-	for _, o := range a.byPage[pg] {
-		if (layer == layerMask && o.maskPath == "") || (layer == layerNorm && !o.entry.normal) {
+	defer delete(a.Cache, pg)
+	for _, o := range a.ByPage[pg] {
+		if (layer == layerMask && o.maskPath == "") || (layer == layerNorm && !o.Entry.Normal) {
 			continue // never asked for
 		}
-		if raw := trimmedOf(pd, layer, o.entry.rect); raw != nil {
-			o.z[layer] = a.deflateAll(raw)
+		if raw := trimmedOf(pd, layer, o.Entry.Rect); raw != nil {
+			o.Z[layer] = a.deflateAll(raw)
 		}
 	}
 }
@@ -267,12 +267,12 @@ func (a *spriteAtlas) cutPage(pg, layer int) {
 func (a *spriteAtlas) prewarm() (held int) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	for pg := range a.byPage {
+	for pg := range a.ByPage {
 		for layer := 0; layer < atlasLayers; layer++ {
 			a.cutPage(pg, layer)
 		}
-		for _, o := range a.byPage[pg] {
-			for _, z := range o.z {
+		for _, o := range a.ByPage[pg] {
+			for _, z := range o.Z {
 				held += len(z)
 			}
 		}
@@ -280,23 +280,23 @@ func (a *spriteAtlas) prewarm() (held int) {
 	return held
 }
 
-// prewarmAtlases cuts every packed family's pages (see spriteAtlas.
+// PrewarmAtlases cuts every packed family's pages (see spriteAtlas.
 // prewarm) and returns the compressed bytes held.
-func (c *artCatalog) prewarmAtlases() (held int) {
+func (c *artCatalog) PrewarmAtlases() (held int) {
 	if c == nil {
 		return 0
 	}
 	seen := map[*spriteAtlas]bool{}
-	for _, sp := range c.sprites {
-		if sp.src != nil && !seen[sp.src.atlas] {
-			seen[sp.src.atlas] = true
-			held += sp.src.atlas.prewarm()
+	for _, sp := range c.Sprites {
+		if sp.Src != nil && !seen[sp.Src.Atlas] {
+			seen[sp.Src.Atlas] = true
+			held += sp.Src.Atlas.prewarm()
 		}
 	}
 	return held
 }
 
-// prewarmAsync cuts every packed family's page layers on a background
+// PrewarmAsync cuts every packed family's page layers on a background
 // goroutine, so play seldom meets an uncut page: cutting one on first use
 // decodes a ~67 MB page layer mid-frame (~0.4 s, a visible hitch; NG-1
 // §6.1 draw budget). Decoding and compressing run outside the atlas lock
@@ -306,7 +306,7 @@ func (c *artCatalog) prewarmAtlases() (held int) {
 // A second goroutine decodes the file families every colony shows ahead
 // (prewarmFiles, art_memory.go). The returned channel is closed when both
 // are done (tests); both end on their own.
-func (c *artCatalog) prewarmAsync() <-chan struct{} {
+func (c *artCatalog) PrewarmAsync() <-chan struct{} {
 	done := make(chan struct{})
 	if c == nil {
 		close(done)
@@ -314,10 +314,10 @@ func (c *artCatalog) prewarmAsync() <-chan struct{} {
 	}
 	var atlases []*spriteAtlas
 	seen := map[*spriteAtlas]bool{}
-	for _, sp := range c.sprites {
-		if sp.src != nil && !seen[sp.src.atlas] {
-			seen[sp.src.atlas] = true
-			atlases = append(atlases, sp.src.atlas)
+	for _, sp := range c.Sprites {
+		if sp.Src != nil && !seen[sp.Src.Atlas] {
+			seen[sp.Src.Atlas] = true
+			atlases = append(atlases, sp.Src.Atlas)
 		}
 	}
 	files := c.prewarmFileKeys()
@@ -327,9 +327,9 @@ func (c *artCatalog) prewarmAsync() <-chan struct{} {
 		defer wg.Done()
 		var z deflater
 		for _, a := range atlases {
-			for pg := range a.byPage {
+			for pg := range a.ByPage {
 				for layer := 0; layer < atlasLayers; layer++ {
-					a.cutPageAside(pg, layer, &z)
+					a.CutPageAside(pg, layer, &z)
 				}
 			}
 		}
@@ -345,17 +345,17 @@ func (c *artCatalog) prewarmAsync() <-chan struct{} {
 	return done
 }
 
-// cutPageAside is cutPage for the background prewarm: a.mu is taken only
+// CutPageAside is cutPage for the background prewarm: a.mu is taken only
 // to check and to publish.
-func (a *spriteAtlas) cutPageAside(pg, layer int, z *deflater) {
+func (a *spriteAtlas) CutPageAside(pg, layer int, z *deflater) {
 	a.mu.Lock()
-	done := a.cut[pg][layer]
+	done := a.Cut[pg][layer]
 	a.mu.Unlock()
 	if done {
 		return
 	}
 	path := ""
-	for _, o := range a.byPage[pg] { // byPage and the sprites' paths never change after load
+	for _, o := range a.ByPage[pg] { // byPage and the sprites' paths never change after load
 		if path = o.layerPath(layer); path != "" {
 			break
 		}
@@ -363,29 +363,29 @@ func (a *spriteAtlas) cutPageAside(pg, layer int, z *deflater) {
 	var copies [][]byte
 	if path != "" {
 		pd := decodeLayer(a.root, layer, path)
-		copies = make([][]byte, len(a.byPage[pg]))
-		for i, o := range a.byPage[pg] {
-			if (layer == layerMask && o.maskPath == "") || (layer == layerNorm && !o.entry.normal) {
+		copies = make([][]byte, len(a.ByPage[pg]))
+		for i, o := range a.ByPage[pg] {
+			if (layer == layerMask && o.maskPath == "") || (layer == layerNorm && !o.Entry.Normal) {
 				continue
 			}
-			if raw := trimmedOf(pd, layer, o.entry.rect); raw != nil {
+			if raw := trimmedOf(pd, layer, o.Entry.Rect); raw != nil {
 				copies[i] = z.deflate(raw)
 			}
 		}
 	}
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if a.cut[pg][layer] {
+	if a.Cut[pg][layer] {
 		return // a draw cut it first
 	}
-	a.cut[pg][layer] = true
+	a.Cut[pg][layer] = true
 	if path == "" {
 		return
 	}
-	a.decodes++
-	for i, o := range a.byPage[pg] {
+	a.Decodes++
+	for i, o := range a.ByPage[pg] {
 		if copies[i] != nil {
-			o.z[layer] = copies[i]
+			o.Z[layer] = copies[i]
 		}
 	}
 }
@@ -413,8 +413,8 @@ func (d *deflater) deflate(b []byte) []byte {
 // decodePage decodes one layer of page n into the transient cache.
 func (a *spriteAtlas) decodePage(n, layer int, path string) *pageData {
 	pd := decodeLayer(a.root, layer, path)
-	a.cache[n] = pd
-	a.decodes++
+	a.Cache[n] = pd
+	a.Decodes++
 	return pd
 }
 
@@ -515,9 +515,9 @@ func cutNRGBA(trim []byte, e atlasEntry, canvas image.Point) *image.NRGBA {
 	if trim == nil {
 		return out
 	}
-	w, h := e.rect.Dx(), e.rect.Dy()
+	w, h := e.Rect.Dx(), e.Rect.Dy()
 	for y := 0; y < h; y++ {
-		copy(out.Pix[out.PixOffset(e.trim.X, e.trim.Y+y):], trim[4*w*y:][:4*w])
+		copy(out.Pix[out.PixOffset(e.Trim.X, e.Trim.Y+y):], trim[4*w*y:][:4*w])
 	}
 	return out
 }
@@ -532,9 +532,9 @@ func cutMask(trim []byte, e atlasEntry, canvas image.Point) *image.NRGBA {
 	if trim == nil {
 		return out
 	}
-	w, h := e.rect.Dx(), e.rect.Dy()
+	w, h := e.Rect.Dx(), e.Rect.Dy()
 	for y := 0; y < h; y++ {
-		dst := out.Pix[out.PixOffset(e.trim.X, e.trim.Y+y):]
+		dst := out.Pix[out.PixOffset(e.Trim.X, e.Trim.Y+y):]
 		for x, g := range trim[w*y:][:w] {
 			dst[4*x], dst[4*x+1], dst[4*x+2] = g, g, g
 		}
@@ -546,42 +546,42 @@ func cutMask(trim []byte, e atlasEntry, canvas image.Point) *image.NRGBA {
 // were checked when the catalog loaded; a page that has since become
 // unreadable leaves the sprite blank rather than crashing a draw.
 func (s *atlasSrc) fill(sp *artSprite) {
-	canvas := image.Pt(sp.meta.Canvas[0], sp.meta.Canvas[1])
-	sp.pix = cutNRGBA(s.atlas.take(s, layerPix), s.entry, canvas)
-	if sp.meta.TintMask != "" {
-		sp.mask = cutMask(s.atlas.take(s, layerMask), s.entry, canvas)
+	canvas := image.Pt(sp.Meta.Canvas[0], sp.Meta.Canvas[1])
+	sp.Pix = cutNRGBA(s.Atlas.take(s, layerPix), s.Entry, canvas)
+	if sp.Meta.TintMask != "" {
+		sp.Mask = cutMask(s.Atlas.take(s, layerMask), s.Entry, canvas)
 	}
 }
 
-// normalImage is the sprite's normal map cut out of the normal page, nil
+// NormalImage is the sprite's normal map cut out of the normal page, nil
 // when it has none. The page holds RGB only; a normal map has its sprite's
 // alpha, and is transparent flat-normal blue outside the trimmed rect.
-func (s *atlasSrc) normalImage(sp *artSprite) *image.NRGBA {
-	if !s.entry.normal {
+func (s *atlasSrc) NormalImage(sp *artSprite) *image.NRGBA {
+	if !s.Entry.Normal {
 		return nil
 	}
-	if sp.pix == nil {
+	if sp.Pix == nil {
 		s.fill(sp)
 	}
-	trim := s.atlas.take(s, layerNorm)
+	trim := s.Atlas.take(s, layerNorm)
 	if trim == nil {
 		return nil
 	}
-	canvas := image.Pt(sp.meta.Canvas[0], sp.meta.Canvas[1])
+	canvas := image.Pt(sp.Meta.Canvas[0], sp.Meta.Canvas[1])
 	out := image.NewNRGBA(image.Rectangle{Max: canvas})
 	for i := 0; i < len(out.Pix); i += 4 {
 		out.Pix[i], out.Pix[i+1], out.Pix[i+2] = 128, 128, 255
 	}
-	w, h := s.entry.rect.Dx(), s.entry.rect.Dy()
+	w, h := s.Entry.Rect.Dx(), s.Entry.Rect.Dy()
 	for y := 0; y < h; y++ {
-		dst := out.Pix[out.PixOffset(s.entry.trim.X, s.entry.trim.Y+y):]
+		dst := out.Pix[out.PixOffset(s.Entry.Trim.X, s.Entry.Trim.Y+y):]
 		src := trim[3*w*y:][:3*w]
 		for x := 0; x < w; x++ {
 			dst[4*x], dst[4*x+1], dst[4*x+2] = src[3*x], src[3*x+1], src[3*x+2]
 		}
 	}
 	for i := 3; i < len(out.Pix); i += 4 {
-		out.Pix[i] = sp.pix.Pix[i]
+		out.Pix[i] = sp.Pix.Pix[i]
 	}
 	return out
 }
@@ -615,21 +615,21 @@ func (c *artCatalog) loadAtlas(root, family string) error {
 		}
 		sizes[p] = image.Pt(cfg.Width, cfg.Height)
 	}
-	a := &spriteAtlas{root: root, cache: map[int]*pageData{}, byPage: make([][]*atlasSrc, pages), cut: make([][atlasLayers]bool, pages)}
+	a := &spriteAtlas{root: root, Cache: map[int]*pageData{}, ByPage: make([][]*atlasSrc, pages), Cut: make([][atlasLayers]bool, pages)}
 	for _, e := range entries {
-		m, err := parseArtMeta(e.meta)
+		m, err := parseArtMeta(e.Meta)
 		if err != nil {
-			return fmt.Errorf("atlas %s/%s: %w", family, e.key, err)
+			return fmt.Errorf("atlas %s/%s: %w", family, e.Key, err)
 		}
-		if e.page < 0 || e.page >= pages || e.rect.Empty() || !e.rect.In(image.Rectangle{Max: sizes[e.page]}) {
-			return fmt.Errorf("atlas %s/%s: rect %v outside page %d", family, e.key, e.rect, e.page)
+		if e.Page < 0 || e.Page >= pages || e.Rect.Empty() || !e.Rect.In(image.Rectangle{Max: sizes[e.Page]}) {
+			return fmt.Errorf("atlas %s/%s: rect %v outside page %d", family, e.Key, e.Rect, e.Page)
 		}
-		if e.trim.X+e.rect.Dx() > m.Canvas[0] || e.trim.Y+e.rect.Dy() > m.Canvas[1] {
-			return fmt.Errorf("atlas %s/%s: rect %v at %v exceeds canvas %v", family, e.key, e.rect, e.trim, m.Canvas)
+		if e.Trim.X+e.Rect.Dx() > m.Canvas[0] || e.Trim.Y+e.Rect.Dy() > m.Canvas[1] {
+			return fmt.Errorf("atlas %s/%s: rect %v at %v exceeds canvas %v", family, e.Key, e.Rect, e.Trim, m.Canvas)
 		}
-		src := &atlasSrc{atlas: a, entry: e, pagePath: m.Image, maskPath: m.TintMask}
-		a.byPage[e.page] = append(a.byPage[e.page], src)
-		c.sprites[family+"/"+e.key] = &artSprite{meta: m, src: src}
+		src := &atlasSrc{Atlas: a, Entry: e, pagePath: m.Image, maskPath: m.TintMask}
+		a.ByPage[e.Page] = append(a.ByPage[e.Page], src)
+		c.Sprites[family+"/"+e.Key] = &artSprite{Meta: m, Src: src}
 	}
 	return nil
 }

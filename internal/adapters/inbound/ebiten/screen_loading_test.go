@@ -18,7 +18,7 @@ func TestStartBuildsSetupFromDraft(t *testing.T) {
 	a := appWith(&stubSim{w: 4, h: 4}, func(c *AppConfig) { c.Scenarios = newMemStore() }, &got)
 	a.finishBoot()
 	f := fakeOn(a)
-	f.cur.mx, f.cur.my = -50, -50
+	f.Cur.Mx, f.Cur.My = -50, -50
 	click(t, a, "menu.newgame")
 	click(t, a, "scen.row.ember_clan")
 	click(t, a, "wizard.next")
@@ -30,15 +30,15 @@ func TestStartBuildsSetupFromDraft(t *testing.T) {
 	runUntil(t, a, func() bool { return a.nav.screen() == screenLanding })
 	click(t, a, "land.random")
 	click(t, a, "land.advanced")
-	f.frame(t, a)
+	f.Frame(t, a)
 	press(t, a, f, "land.season.4") // Winter
-	f.frame(t, a)
+	f.Frame(t, a)
 	press(t, a, f, "modal.land.advanced.close")
-	f.frame(t, a)
+	f.Frame(t, a)
 	ng := a.ng
 	tile, plt := ng.tile, ng.planet
 	click(t, a, "wizard.next")
-	f.frame(t, a)
+	f.Frame(t, a)
 	chosen := ng.pool.Selected()
 	click(t, a, "wizard.start")
 	if len(got) != 1 || got[0].Setup == nil {
@@ -114,7 +114,7 @@ func TestColonyBuilderStepsToDone(t *testing.T) {
 	toPawns(t, a)
 	sb := &stepBuilder{need: 6, sim: &stubSim{w: 4, h: 4}}
 	a.ng.buildHook = func(NewGame) (SimBuilder, error) { return sb, nil }
-	f.frame(t, a)
+	f.Frame(t, a)
 	click(t, a, "wizard.start")
 	if a.nav.screen() != screenPawns || a.ng == nil || a.ng.load == nil {
 		t.Fatalf("a builder that is not done keeps the loading screen: screen=%s", a.nav.screen())
@@ -122,7 +122,7 @@ func TestColonyBuilderStepsToDone(t *testing.T) {
 	img := ebiten.NewImage(a.sw, a.sh)
 	var phases []string
 	for i := 0; i < 20 && a.nav.screen() != screenColony; i++ {
-		f.frame(t, a)
+		f.Frame(t, a)
 		a.Draw(img)
 		if a.ng != nil && a.ng.load != nil {
 			phases = append(phases, a.ng.load.phase)
@@ -142,7 +142,7 @@ func TestColonyBuilderStepsToDone(t *testing.T) {
 	toPawns(t, a2)
 	a2.ng.buildHook = func(NewGame) (SimBuilder, error) { return &stepBuilder{need: 50, sim: &stubSim{w: 4, h: 4}}, nil }
 	click(t, a2, "wizard.start")
-	f2.key(t, a2, "Escape", 0)
+	f2.Key(t, a2, "Escape", 0)
 	if a2.nav.screen() != screenPawns || a2.ng.load == nil {
 		t.Fatalf("Esc while loading: screen=%s", a2.nav.screen())
 	}
@@ -154,7 +154,7 @@ func TestStartFailureReturnsToCharacters(t *testing.T) {
 	toPawns(t, a)
 	a.ng.buildHook = func(NewGame) (SimBuilder, error) { return &stepBuilder{need: 1, err: errors.New("disk full")}, nil }
 	click(t, a, "wizard.start")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.nav.screen() != screenPawns || a.ng == nil || a.ng.load != nil || a.sessionErr != "disk full" {
 		t.Fatalf("screen=%s err=%q", a.nav.screen(), a.sessionErr)
 	}

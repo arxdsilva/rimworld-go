@@ -399,7 +399,7 @@ func TestPuddleVeilDrawsFlatLitAtEveryTier(t *testing.T) {
 	for _, px := range []float64{64, 40, 24, 8} {
 		w := puddleWorld(64, 1)
 		r := New(puddleSim(w))
-		r.cam.zoom = px / 64
+		r.cam.Zoom = px / 64
 		screen := ebiten.NewImage(640, 400)
 		before := r.lit.calls
 		r.drawPuddleVeil(screen, w, 640, 400, r.tilePx())
@@ -446,7 +446,7 @@ func TestPuddleVeilRebakesOnWetBucketWithinBudget(t *testing.T) {
 	w := puddleWorld(side, 38.0/wetBuckets)
 	sim := puddleSim(w)
 	r := New(sim)
-	r.cam.zoom = 8.0 / 64 // map tier: many chunks in view
+	r.cam.Zoom = 8.0 / 64 // map tier: many chunks in view
 	screen := ebiten.NewImage(1280, 800)
 	draw := func() int {
 		n := r.snowc.bakes
@@ -522,10 +522,10 @@ func BenchmarkPuddleVeil(b *testing.B) {
 	for _, px := range []float64{64, 32, 16, 4} {
 		b.Run(fmt.Sprintf("tile%v", px), func(b *testing.B) {
 			r := New(newFrozenSim(w))
-			r.cam.zoom = px / 64
+			r.cam.Zoom = px / 64
 			screen := ebiten.NewImage(1280, 800)
 			tile := r.tilePx()
-			r.cam.offsetX, r.cam.offsetY = 100*tile, 100*tile
+			r.cam.OffsetX, r.cam.OffsetY = 100*tile, 100*tile
 			r.drawPuddleVeil(screen, w, 1280, 800, tile)
 			b0, d0 := r.snowc.bakes, 0
 			b.ResetTimer()
@@ -579,13 +579,13 @@ func TestSnowCacheEvictsUnseenChunks(t *testing.T) {
 	w := puddleWorld(128, 0.8)
 	r := New(puddleSim(w))
 	screen := ebiten.NewImage(640, 400)
-	r.cam.offsetX, r.cam.offsetY = 0, 0
+	r.cam.OffsetX, r.cam.OffsetY = 0, 0
 	r.drawPuddleVeil(screen, w, 640, 400, r.tilePx())
 	if _, ok := r.snowc.chunks[0]; !ok {
 		t.Fatal("chunk (0, 0) not baked")
 	}
 	tile := r.tilePx()
-	r.cam.offsetX, r.cam.offsetY = 96*tile, 96*tile // the far corner: chunk (3, 3)
+	r.cam.OffsetX, r.cam.OffsetY = 96*tile, 96*tile // the far corner: chunk (3, 3)
 	for i := 0; i <= snowEvictPasses+256; i++ {
 		r.drawPuddleVeil(screen, w, 640, 400, tile)
 	}

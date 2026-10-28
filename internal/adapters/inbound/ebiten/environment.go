@@ -498,7 +498,7 @@ func (r *Renderer) seasonKey(key string, w game.WorldView) string {
 	cands = append(cands, plantKeys.fallback[key]...)
 	out := cands[0]
 	for _, c := range cands {
-		if r.art.has(c) {
+		if r.art.Has(c) {
 			out = c
 			break
 		}
@@ -892,8 +892,8 @@ func (r *Renderer) setView(sw, sh int, tile float64) {
 	if tile <= 0 {
 		return
 	}
-	r.env.view = envRect{r.cam.offsetX / tile, r.cam.offsetY / tile,
-		(r.cam.offsetX + float64(sw)) / tile, (r.cam.offsetY + float64(sh)) / tile}
+	r.env.view = envRect{r.cam.OffsetX / tile, r.cam.OffsetY / tile,
+		(r.cam.OffsetX + float64(sw)) / tile, (r.cam.OffsetY + float64(sh)) / tile}
 }
 
 // visibleTiles is the on-map tile range in view.
@@ -920,7 +920,7 @@ func (r *Renderer) drawGroundCover(screen *ebiten.Image, w game.WorldView, sw, s
 	e.setWeather(w)
 	x0, y0, x1, y1 := r.visibleTiles()
 	veil := 0.85 // snow veil strength: all of it without decals, a base under them
-	if r.art.has(snowCoverKeys[0]) && tile >= decalMinTile {
+	if r.art.Has(snowCoverKeys[0]) && tile >= decalMinTile {
 		veil = 0.5
 	}
 	if anySnow {
@@ -932,7 +932,7 @@ func (r *Renderer) drawGroundCover(screen *ebiten.Image, w game.WorldView, sw, s
 	open := func(x, y int) bool { return r.groundOpen(w, x, y) }
 	none := color.NRGBA{}
 	decal := func(k string, x, y int, a float64) {
-		if a > 0 && r.art.has(k) {
+		if a > 0 && r.art.Has(k) {
 			r.drawSpritePose(screen, k, none, float64(x), float64(y), tile, pose{cs: colorScale{1, 1, 1, float32(a)}})
 		}
 	}
@@ -1057,7 +1057,7 @@ func (r *Renderer) drawDrops(screen *ebiten.Image, sw, sh int, tile float64) {
 			rad := (0.05 + 0.2*k) * tile
 			e.ring(float64(sx), float64(sy), rad, rad*0.45, math.Max(1, 0.015*tile), color.RGBA{214, 226, 240, 255}, 0.5*(1-k))
 		case dropSplash:
-			if r.art.has(splashKeys[0]) {
+			if r.art.Has(splashKeys[0]) {
 				splashes = append(splashes, i)
 				continue
 			}
@@ -1082,7 +1082,7 @@ func (r *Renderer) drawDrops(screen *ebiten.Image, sw, sh int, tile float64) {
 	if len(flakes) == 0 {
 		return
 	}
-	useArt := r.art.has(flakeKeys[0])
+	useArt := r.art.Has(flakeKeys[0])
 	e.beginBatch()
 	for _, i := range flakes {
 		d := &e.drops[i]
@@ -1112,7 +1112,7 @@ func (r *Renderer) drawDrops(screen *ebiten.Image, sw, sh int, tile float64) {
 
 // drawCentered draws a weather sprite centred on (sx, sy), size px wide.
 func (r *Renderer) drawCentered(screen *ebiten.Image, key string, sx, sy, size, alpha float64) {
-	img := r.art.image(key, color.NRGBA{})
+	img := r.art.Image(key, color.NRGBA{})
 	if img == nil || alpha <= 0 {
 		return
 	}

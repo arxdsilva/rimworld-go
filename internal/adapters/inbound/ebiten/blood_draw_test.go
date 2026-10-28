@@ -171,7 +171,7 @@ func TestStainTexturesDeterministic(t *testing.T) {
 // origin: 32 px tiles on a 320×320 screen show tiles 0..9.
 func stainRenderer() *Renderer {
 	r := New(&stubSim{w: 64, h: 64, tick: 100})
-	r.cam.zoom = 32.0 / float64(TileSize)
+	r.cam.Zoom = 32.0 / float64(TileSize)
 	return r
 }
 
@@ -321,7 +321,7 @@ func TestFreshHitWetFades(t *testing.T) {
 func bloodArt() *artCatalog {
 	c := figureArt()
 	for f := faceSouth; f <= faceWest; f++ {
-		c.sprites["animal/muffalo_"+f.String()] = fakeSprite([2]int{160, 160}, pt{16, 16}, nil)
+		c.Sprites["animal/muffalo_"+f.String()] = fakeSprite([2]int{160, 160}, pt{16, 16}, nil)
 	}
 	return c
 }

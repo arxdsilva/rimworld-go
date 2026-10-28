@@ -25,7 +25,7 @@ func (a *App) zoneIcon(want string, fallbacks ...string) string {
 		return want
 	}
 	for _, n := range append([]string{want}, fallbacks...) {
-		if a.art.has("ui_icon/" + n) {
+		if a.art.Has("ui_icon/" + n) {
 			return n
 		}
 	}

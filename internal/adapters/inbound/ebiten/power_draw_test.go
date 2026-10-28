@@ -311,7 +311,7 @@ func TestConduitFramesAndGhostsLink(t *testing.T) {
 func pdArt() *artCatalog {
 	c := envArt()
 	tile := func(k string, canvas [2]int, origin pt, attach map[string]pt) {
-		c.sprites[k] = fakeSprite(canvas, origin, attach)
+		c.Sprites[k] = fakeSprite(canvas, origin, attach)
 	}
 	for m := 0; m < 16; m++ {
 		tile("power/power_conduit_"+twoDigits(m), [2]int{160, 171}, pt{16, 27}, nil)
@@ -323,8 +323,8 @@ func pdArt() *artCatalog {
 		noPowerIcon, "structure/steam_vent"} {
 		tile(k, [2]int{160, 216}, pt{16, 72}, nil)
 	}
-	c.sprites["power/wood_fired_generator"].meta.Attach = map[string]pt{"smoke": {67.2, 63.8}}
-	c.sprites["power/geothermal_generator"].meta.Attach = map[string]pt{"steam": {215.7, 71.4}}
+	c.Sprites["power/wood_fired_generator"].Meta.Attach = map[string]pt{"smoke": {67.2, 63.8}}
+	c.Sprites["power/geothermal_generator"].Meta.Attach = map[string]pt{"steam": {215.7, 71.4}}
 	tile("furniture/torch_lamp", [2]int{160, 235}, pt{16, 91}, map[string]pt{"fire": {80, 87.2}})
 	for _, f := range facingNames {
 		tile("power/battery_"+f, [2]int{160, 340}, pt{16, 68}, map[string]pt{"gauge0": {80, 233}, "gauge1": {80, 94.8}})

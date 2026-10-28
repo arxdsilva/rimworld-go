@@ -23,9 +23,9 @@ func TestFogCacheRebuildsOnlyOnFogVerChange(t *testing.T) {
 	t.Parallel()
 	w := fogWorld(40, 40, 20)
 	r := New(&stubSim{w: 40, h: 40, world: w})
-	r.cam.zoom, r.cam.dev = 1, 1
+	r.cam.Zoom, r.cam.Dev = 1, 1
 	screen := ebiten.NewImage(256, 256)
-	tile := r.cam.tile()
+	tile := r.cam.Tile()
 	r.drawFogLayer(screen, w.Fog, 1, 40, 40, tile, 256, 256)
 	first := r.fogc.bakes
 	if first == 0 {
@@ -128,11 +128,11 @@ func TestCameraStartsOnLanding(t *testing.T) {
 	v := colonyViewportPhysical(1280, 800, 1)
 	w := game.WorldView{TerrainW: 200, Terrain: make([]uint8, 200*200), Landing: [2]int{40, 60}}
 	r := New(&stubSim{w: 200, h: 200, world: w})
-	r.cam.zoom = 1
-	r.clampCamera(v)
+	r.cam.Zoom = 1
+	r.ClampCamera(v)
 	t0 := r.tilePx()
-	cx := (r.cam.offsetX + (v.x0+v.x1)/2) / t0
-	cy := (r.cam.offsetY + (v.y0+v.y1)/2) / t0
+	cx := (r.cam.OffsetX + (v.X0+v.X1)/2) / t0
+	cy := (r.cam.OffsetY + (v.Y0+v.Y1)/2) / t0
 	if cx < 39 || cx > 42 || cy < 59 || cy > 62 {
 		t.Fatalf("camera centred on (%.1f, %.1f), want the landing (40, 60)", cx, cy)
 	}

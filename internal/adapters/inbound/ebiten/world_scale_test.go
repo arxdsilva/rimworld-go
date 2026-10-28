@@ -36,8 +36,8 @@ func renderScaleColony(t *testing.T, dev, k float64) (*App, *fakeInput) {
 		t.Fatalf("screen = %s, want colony", a.nav.screen())
 	}
 	f := fakeOn(a)
-	f.cur.mx, f.cur.my = -50, -50
-	f.frame(t, a)
+	f.Cur.Mx, f.Cur.My = -50, -50
+	f.Frame(t, a)
 	a.renderer.speed = speedPaused
 	return a, f
 }
@@ -89,8 +89,8 @@ func TestRenderScaleOffscreenSize(t *testing.T) {
 	if a.wr.img == nil || a.wr.img.Bounds().Dx() != 1280 || a.wr.img.Bounds().Dy() != 720 {
 		t.Fatalf("offscreen %v, want 1280x720", a.wr.img)
 	}
-	if a.renderer.cam.dev != 1 {
-		t.Fatalf("camera density %v, want dev x world = 1", a.renderer.cam.dev)
+	if a.renderer.cam.Dev != 1 {
+		t.Fatalf("camera density %v, want dev x world = 1", a.renderer.cam.Dev)
 	}
 	if gfx.CurrentPass() != nil || gfx.WorldPassK() != 0 {
 		t.Fatal("the world pass did not end")
@@ -99,8 +99,8 @@ func TestRenderScaleOffscreenSize(t *testing.T) {
 	st.Graphics.RenderScale = 1
 	a.setSettings(st)
 	drawOnce(t, a)
-	if a.wr.img != nil || a.renderer.cam.dev != 2 {
-		t.Fatalf("at Full: offscreen %v camera density %v, want none and 2", a.wr.img, a.renderer.cam.dev)
+	if a.wr.img != nil || a.renderer.cam.Dev != 2 {
+		t.Fatalf("at Full: offscreen %v camera density %v, want none and 2", a.wr.img, a.renderer.cam.Dev)
 	}
 	// odd sizes round the offscreen up
 	a.LayoutF(641, 361)
@@ -122,8 +122,8 @@ func TestRenderScaleKeepsCursorMapping(t *testing.T) {
 	ftx, fty := full.renderer.TileAt(full.mapCursor())
 
 	half, f := renderScaleColony(t, 2, 0.5)
-	if half.renderer.cam.dev != 1 {
-		t.Fatalf("camera density %v, want 1", half.renderer.cam.dev)
+	if half.renderer.cam.Dev != 1 {
+		t.Fatalf("camera density %v, want 1", half.renderer.cam.Dev)
 	}
 	mx, my := half.renderer.worldToScreenF(21.5, 19.5) // map pixels
 	if math.Abs(float64(mx/0.5-sx1)) > 1 || math.Abs(float64(my/0.5-sy1)) > 1 {
@@ -143,13 +143,13 @@ func TestRenderScaleKeepsCursorMapping(t *testing.T) {
 	}
 	// a raw (physical) click on the pawn selects it
 	half.cursor = nil
-	f.cur.mx, f.cur.my = int(sx1), int(sy1)
-	f.click(t, half, mbLeft, 0)
+	f.Cur.Mx, f.Cur.My = int(sx1), int(sy1)
+	f.Click(t, half, mbLeft, 0)
 	if !half.renderer.HasSelect() || half.renderer.Selected() != 7 {
 		t.Fatalf("a physical click on the pawn at Half did not select it (select %v %v)", half.renderer.HasSelect(), half.renderer.Selected())
 	}
 	// the map's viewport is the screen in map pixels
-	if v := half.mapViewport(); v.x1 != 1280 || v.y1 != 720 {
+	if v := half.mapViewport(); v.X1 != 1280 || v.Y1 != 720 {
 		t.Fatalf("map viewport %+v, want 1280x720 map pixels", v)
 	}
 }
@@ -158,16 +158,16 @@ func TestRenderScaleKeepsCursorMapping(t *testing.T) {
 // under every screen point (syncDev rescales the camera, like HiDPI).
 func TestRenderScaleToggleKeepsTheView(t *testing.T) {
 	r := New(&stubSim{w: 40, h: 40})
-	r.cam = camera{zoom: 1.3, offsetX: 410, offsetY: 195, placed: true}
+	r.cam = camera{Zoom: 1.3, OffsetX: 410, OffsetY: 195, Placed: true}
 	old := gfx.CurrentScale()
 	t.Cleanup(func() { gfx.SetScale(old) })
 	gfx.SetScale(uiScaleState{Dev: 2, UI: 1, S: 2, World: 1})
-	r.syncDev()
+	r.SyncDev()
 	wx, wy := r.screenToWorld(600, 400)
 	sc := gfx.CurrentScale()
 	sc.World = 0.5
 	gfx.SetScale(sc)
-	r.syncDev()
+	r.SyncDev()
 	if gx, gy := r.screenToWorld(300, 200); math.Abs(gx-wx) > 1e-9 || math.Abs(gy-wy) > 1e-9 {
 		t.Fatalf("after Full -> Half: (%v,%v), want (%v,%v)", gx, gy, wx, wy)
 	}
@@ -176,7 +176,7 @@ func TestRenderScaleToggleKeepsTheView(t *testing.T) {
 	drawOnce(t, a)
 	centre := func() (int, int) {
 		v := a.mapViewport()
-		return a.renderer.TileAt(int((v.x0+v.x1)/2), int((v.y0+v.y1)/2))
+		return a.renderer.TileAt(int((v.X0+v.X1)/2), int((v.Y0+v.Y1)/2))
 	}
 	tx, ty := centre()
 	st := a.settings
@@ -197,9 +197,9 @@ func rsConfigure(t *testing.T, s *visualScene, k float64) *ebiten.Image {
 	a.syncUIScale()
 	a.setPhysical(2*visLogicalW, 2*visLogicalH)
 	r := a.renderer
-	r.syncDev()
+	r.SyncDev()
 	s.update(t)
-	r.cam.zoom = 1
+	r.cam.Zoom = 1
 	v := a.mapViewport()
 	r.centerOnView(visFocus[0], visFocus[1], v, v)
 	key := [2]int{a.pw, a.ph}

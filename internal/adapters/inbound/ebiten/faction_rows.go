@@ -126,7 +126,7 @@ func addableTypes(slots []faction.Slot) []faction.Type {
 // drawEmblem draws a faction glyph (white art) tinted with the faction
 // accent, or a plain dot while the art is missing.
 func (a *App) drawEmblem(dst *ebiten.Image, key string, tint color.NRGBA, x, y float32, size float64) {
-	img := a.art.image(key, color.NRGBA{})
+	img := a.art.Image(key, color.NRGBA{})
 	if img == nil {
 		uiFillCircle(dst, x+float32(size)/2, y+float32(size)/2, float32(size)*0.32, tint, true)
 		return

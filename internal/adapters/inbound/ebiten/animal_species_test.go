@@ -58,13 +58,13 @@ func TestFrameKeyByAttackKind(t *testing.T) {
 func TestFemaleVariantByID(t *testing.T) {
 	t.Parallel()
 	r := combatRenderer(100, nil, game.WorldView{})
-	r.art.sprites["animal/deer_south"] = fakeSprite([2]int{160, 160}, pt{16, 16}, nil)
+	r.art.Sprites["animal/deer_south"] = fakeSprite([2]int{160, 160}, pt{16, 16}, nil)
 	doe := game.AnimalView{ID: 3, Species: "deer", Female: true, X: 2, Y: 2}
 	if got := r.animalBaseKey(doe); got != "animal/deer_south" {
 		t.Fatalf("no female art: falls back to the male set, got %s", got)
 	}
-	r.art.sprites["animal/deer_f_south"] = fakeSprite([2]int{160, 160}, pt{16, 16}, nil)
-	r.art.sprites["animal/deer_f_south_graze1"] = fakeSprite([2]int{160, 160}, pt{16, 16}, nil)
+	r.art.Sprites["animal/deer_f_south"] = fakeSprite([2]int{160, 160}, pt{16, 16}, nil)
+	r.art.Sprites["animal/deer_f_south_graze1"] = fakeSprite([2]int{160, 160}, pt{16, 16}, nil)
 	if got := r.animalBaseKey(doe); got != "animal/deer_f_south" {
 		t.Fatalf("female art: got %s", got)
 	}
@@ -276,7 +276,7 @@ func TestWorldItemsHaveSprites(t *testing.T) {
 		t.Fatalf("%d items, want the 5 carcasses", len(w.Items))
 	}
 	for _, it := range w.Items {
-		if key := itemSpriteSpecies(it.Kind, it.Animal, it.X, it.Y); !c.has(key) {
+		if key := itemSpriteSpecies(it.Kind, it.Animal, it.X, it.Y); !c.Has(key) {
 			t.Errorf("%q (animal %q) draws %q, which has no sprite", it.Kind, it.Animal, key)
 		}
 	}
@@ -287,7 +287,7 @@ func TestWorldItemsHaveSprites(t *testing.T) {
 func TestCarriedCarcassShowsItsSpecies(t *testing.T) {
 	c := testArt(t)
 	key := "item/corpse_" + "capybara" + "_v0"
-	if !c.has(key) {
+	if !c.Has(key) {
 		t.Fatalf("no %s", key)
 	}
 	p := game.PawnView{Carrying: "animal corpse", CarryingAnimal: "capybara"}
@@ -304,7 +304,7 @@ func TestCarriedCarcassShowsItsSpecies(t *testing.T) {
 func bodySprite(canvas [2]int, origin pt, ppt float64, body image.Rectangle) *artSprite {
 	pix := image.NewNRGBA(image.Rect(0, 0, canvas[0], canvas[1]))
 	draw.Draw(pix, body, image.NewUniform(color.NRGBA{120, 90, 60, 255}), image.Point{}, draw.Src)
-	return &artSprite{meta: artMeta{Canvas: canvas, Origin: origin, PPT: ppt, Gait: 1.136}, pix: pix}
+	return &artSprite{Meta: artMeta{Canvas: canvas, Origin: origin, PPT: ppt, Gait: 1.136}, Pix: pix}
 }
 
 // xlArt is a catalog whose "elephant" (every facing, female none) is an XL
@@ -312,9 +312,9 @@ func bodySprite(canvas [2]int, origin pt, ppt float64, body image.Rectangle) *ar
 // 2 tiles west of its cell to 3 east, and from 1 tile above its cell's top
 // to 0.75 into it.
 func xlArt() *artCatalog {
-	c := &artCatalog{sprites: map[string]*artSprite{}, tinted: map[tintKey]*ebiten.Image{}}
+	c := &artCatalog{Sprites: map[string]*artSprite{}, Tinted: map[tintKey]*ebiten.Image{}}
 	for _, f := range []string{"south", "east", "north"} {
-		c.sprites["animal/elephant_"+f] = bodySprite([2]int{384, 192}, pt{160, 128}, 64, image.Rect(32, 64, 352, 176))
+		c.Sprites["animal/elephant_"+f] = bodySprite([2]int{384, 192}, pt{160, 128}, 64, image.Rect(32, 64, 352, 176))
 	}
 	return c
 }
@@ -349,15 +349,15 @@ func TestAnimalDensityKeepsTileSize(t *testing.T) {
 		t.Fatalf("fallback caster %+v at 128 ppt, %+v at 64", a, b)
 	}
 	r := artRenderer()
-	r.art.sprites["item/corpse_hi"] = &artSprite{meta: artMeta{Canvas: [2]int{384, 160}, Origin: pt{128, 16}, PPT: 128}}
-	r.art.sprites["item/corpse_lo"] = &artSprite{meta: artMeta{Canvas: [2]int{192, 80}, Origin: pt{64, 8}, PPT: 64}}
+	r.art.Sprites["item/corpse_hi"] = &artSprite{Meta: artMeta{Canvas: [2]int{384, 160}, Origin: pt{128, 16}, PPT: 128}}
+	r.art.Sprites["item/corpse_lo"] = &artSprite{Meta: artMeta{Canvas: [2]int{192, 80}, Origin: pt{64, 8}, PPT: 64}}
 	rig, ps := rigFor(r, faceSouth)
 	place := func(key string) [2]pt {
 		pl, ok := r.heldPlace(rig, heldItem{key: key, stance: stanceLoad}, 5, 5, 64, ps)
 		if !ok {
 			t.Fatalf("%s not placed", key)
 		}
-		m := r.art.sprites[key].meta
+		m := r.art.Sprites[key].Meta
 		return [2]pt{apply(pl.g, pt{0, 0}), apply(pl.g, pt{float64(m.Canvas[0]), float64(m.Canvas[1])})}
 	}
 	if a, b := place("item/corpse_hi"), place("item/corpse_lo"); !near2(a[0], b[0], 1e-6) || !near2(a[1], b[1], 1e-6) {
@@ -370,7 +370,7 @@ func TestAnimalDensityKeepsTileSize(t *testing.T) {
 func pickRenderer(w game.WorldView) *Renderer {
 	r := New(&stubSim{w: 40, h: 40, world: w})
 	r.art = xlArt()
-	r.cam = camera{zoom: 1, placed: true}
+	r.cam = camera{Zoom: 1, Placed: true}
 	r.advance()
 	return r
 }
@@ -494,22 +494,22 @@ func TestRealAnimalBodies(t *testing.T) {
 		ro := animal.RosterOf(s)
 		for _, f := range []string{"east", "south", "north"} {
 			key := "animal/" + ro.Key + "_" + f
-			sp := c.sprite(key)
+			sp := c.Sprite(key)
 			if sp == nil {
 				t.Fatalf("no %s", key)
 			}
-			m := sp.meta
+			m := sp.Meta
 			if m.Gait <= 0 {
 				t.Errorf("%s: no gait", key)
 			}
 			if f != "east" {
 				continue
 			}
-			p := m.pxPerTile()
+			p := m.PxPerTile()
 			if cx := (float64(m.Canvas[0])/2 - m.Origin[0]) / p; math.Abs(cx-0.5) > 1/p {
 				t.Errorf("%s: canvas centre %.3f tiles, want the footprint's 0.5 (west mirrors east)", key, cx)
 			}
-			x0, y0, x1, y1 := sp.opaqueBox()
+			x0, y0, x1, y1 := sp.OpaqueBox()
 			areas[ro.Size] = append(areas[ro.Size], (x1-x0)*(y1-y0)/(p*p))
 		}
 	}
@@ -528,18 +528,18 @@ func TestRealAnimalBodies(t *testing.T) {
 			t.Errorf("class %d: median drawn area %.2f tiles², want %.1f ± 15%%", size, med, want)
 		}
 	}
-	e := c.animalExtent()
-	t.Logf("animal reach past the cell: side %.2f, up %.2f, down %.2f tiles", e.side, e.up, e.down)
-	if e.side <= 0 || e.side > animalSpanFallback || e.up > animalSpanFallback || e.down > animalSpanFallback {
+	e := c.AnimalExtent()
+	t.Logf("animal reach past the cell: side %.2f, up %.2f, down %.2f tiles", e.Side, e.Up, e.Down)
+	if e.Side <= 0 || e.Side > animalSpanFallback || e.Up > animalSpanFallback || e.Down > animalSpanFallback {
 		t.Errorf("animal extent %+v outside the fallback's %v", e, animalSpanFallback)
 	}
 	var corpse float64
-	for k, sp := range c.sprites {
+	for k, sp := range c.Sprites {
 		if !strings.HasPrefix(k, "item/corpse_") {
 			continue
 		}
-		m := sp.meta
-		p := m.pxPerTile()
+		m := sp.Meta
+		p := m.PxPerTile()
 		corpse = max(corpse, m.Origin[0]/p, (float64(m.Canvas[0])-m.Origin[0])/p-1, m.Origin[1]/p, (float64(m.Canvas[1])-m.Origin[1])/p-1)
 	}
 	t.Logf("corpse reach past the cell: %.2f tiles", corpse)
@@ -560,7 +560,7 @@ func TestRealElephantFlankPicks(t *testing.T) {
 	}}
 	r := New(&stubSim{w: 40, h: 40, world: w})
 	r.art = c
-	r.cam = camera{zoom: 1, placed: true}
+	r.cam = camera{Zoom: 1, Placed: true}
 	r.advance()
 	for _, id := range []entity.EntityID{5, 6} {
 		v := r.last[id]

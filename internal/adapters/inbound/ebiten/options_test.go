@@ -126,7 +126,7 @@ func TestSettingsSurviveRestart(t *testing.T) {
 
 func TestEdgePan(t *testing.T) {
 	t.Parallel()
-	v := viewport{x0: 0, y0: 40, x1: 1280, y1: 680}
+	v := viewport{X0: 0, Y0: 40, X1: 1280, Y1: 680}
 	cases := []struct {
 		mx, my int
 		dx, dy float64

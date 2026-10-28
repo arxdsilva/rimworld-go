@@ -35,12 +35,12 @@ func TestGlobeCapture(t *testing.T) {
 	}
 	const W, H = 1280, 720
 	shot := func(name string, g *globeView) {
-		g.sw, g.sh = W, H
+		g.Sw, g.Sh = W, H
 		img := image.NewRGBA(image.Rect(0, 0, W, H))
 		draw.Draw(img, img.Bounds(), image.NewUniform(uiSpace), image.Point{}, draw.Src)
-		drawOver(img, bakeStarfield(g.p.Seed, W, H, 1, 0), 0, 0, 1)
-		vp := g.viewport()
-		r := globemath.SilhouetteRadius(vp, g.cam.Dist)
+		drawOver(img, bakeStarfield(g.P.Seed, W, H, 1, 0), 0, 0, 1)
+		vp := g.Viewport()
+		r := globemath.SilhouetteRadius(vp, g.Cam.Dist)
 		sph := bakeSphere(globeSphereBakeSize, globeSphereBakeR, palRGB("uncovered"), palRGB("atmosphere_rim"))
 		sc := r / globeSphereBakeR
 		for y := int(vp.CY - 1.3*r); y <= int(vp.CY+1.3*r); y++ {
@@ -56,30 +56,30 @@ func TestGlobeCapture(t *testing.T) {
 				blend(img, x, y, sph.NRGBAAt(sx, sy), 1)
 			}
 		}
-		g.build()
-		raster(img, g.verts, g.idx[:g.nI])
-		raster(img, g.ov, g.oi)
-		size := globeClamp(g.tilePx()*2, 12, 46)
-		for k := range g.marks {
-			m := &g.marks[k]
-			sx, sy, vz := g.worldPt(&g.p.Center[m.tile])
-			if vz < g.zh+0.04 {
+		g.Build()
+		raster(img, g.Verts, g.Idx[:g.NI])
+		raster(img, g.Ov, g.Oi)
+		size := globeClamp(g.TilePx()*2, 12, 46)
+		for k := range g.Marks {
+			m := &g.Marks[k]
+			sx, sy, vz := g.WorldPt(&g.P.Center[m.Tile])
+			if vz < g.Zh+0.04 {
 				continue
 			}
 			disc(img, float64(sx), float64(sy), size*0.56, color.NRGBA{10, 14, 20, 150})
-			if sp := art.sprite(m.key); sp != nil {
-				pix := sp.pix
+			if sp := art.Sprite(m.Key); sp != nil {
+				pix := sp.Pix
 				scale := size / float64(pix.Bounds().Dx())
 				for y := 0; y < int(size); y++ {
 					for x := 0; x < int(size); x++ {
 						c := pix.NRGBAAt(int(float64(x)/scale), int(float64(y)/scale))
-						c = color.NRGBA{uint8(int(c.R) * int(m.tint.R) / 255), uint8(int(c.G) * int(m.tint.G) / 255),
-							uint8(int(c.B) * int(m.tint.B) / 255), c.A}
+						c = color.NRGBA{uint8(int(c.R) * int(m.Tint.R) / 255), uint8(int(c.G) * int(m.Tint.G) / 255),
+							uint8(int(c.B) * int(m.Tint.B) / 255), c.A}
 						blend(img, int(float64(sx)-size/2)+x, int(float64(sy)-size/2)+y, c, 1)
 					}
 				}
 			} else {
-				disc(img, float64(sx), float64(sy), size*0.32, m.tint)
+				disc(img, float64(sx), float64(sy), size*0.32, m.Tint)
 			}
 		}
 		f, err := os.Create(filepath.Join(dir, name))
@@ -95,9 +95,9 @@ func TestGlobeCapture(t *testing.T) {
 		p := planet.Build(planet.Params{SeedText: "amber-hollow", Coverage: cov, Rain: 2, Temp: 2, Pop: 1,
 			Factions: faction.DefaultSlots()})
 		g := newGlobeView(p, art)
-		g.reduced = true
+		g.Reduced = true
 		tag := map[int]string{30: "30", 100: "100"}[cov]
-		g.cam.Lat, g.cam.Lon = 0.3, 0.5
+		g.Cam.Lat, g.Cam.Lon = 0.3, 0.5
 		if cov == 30 {
 			c := p.Pole
 			centreOn(g, [3]float32{c[0], c[1], c[2]})
@@ -106,12 +106,12 @@ func TestGlobeCapture(t *testing.T) {
 		g.hovered = int(p.Neighbours(g.selected)[0])
 		shot("globe_"+tag+"_biome.png", g)
 		g.hovered = -1
-		g.cam.SetDist(1.45)
-		if len(g.marks) > 0 {
-			g.Center(int(g.marks[0].tile))
+		g.Cam.SetDist(1.45)
+		if len(g.Marks) > 0 {
+			g.Center(int(g.Marks[0].Tile))
 		}
 		shot("globe_"+tag+"_zoom.png", g)
-		g.cam.SetDist(2.9)
+		g.Cam.SetDist(2.9)
 		for _, m := range []globeMode{globeTemperature, globeRainfall, globeElevation} {
 			g.SetMode(m)
 			shot("globe_"+tag+"_"+m.String()+".png", g)
@@ -122,15 +122,15 @@ func TestGlobeCapture(t *testing.T) {
 	{
 		p := planet.Build(backdropShowcase)
 		g := newGlobeView(p, nil)
-		g.rivers, g.roads, g.marks = nil, nil, nil
+		g.Rivers, g.Roads, g.Marks = nil, nil, nil
 		g.SetAreaPx(0, 0, backdropDiscArea, backdropDiscArea)
-		g.cam.SetDist(backdropDiscDist)
-		g.cam.Lat, g.cam.Lon = 0.35, float64(p.Seed%628)/100
-		g.sw, g.sh = backdropDiscArea, backdropDiscArea
+		g.Cam.SetDist(backdropDiscDist)
+		g.Cam.Lat, g.Cam.Lon = 0.35, float64(p.Seed%628)/100
+		g.Sw, g.Sh = backdropDiscArea, backdropDiscArea
 		disc := image.NewRGBA(image.Rect(0, 0, backdropDiscArea, backdropDiscArea))
 		sph := bakeSphere(globeSphereBakeSize, globeSphereBakeR, palRGB("uncovered"), palRGB("atmosphere_rim"))
-		vp := g.viewport()
-		r := globemath.SilhouetteRadius(vp, g.cam.Dist)
+		vp := g.Viewport()
+		r := globemath.SilhouetteRadius(vp, g.Cam.Dist)
 		sc := r / globeSphereBakeR
 		for y := 0; y < backdropDiscArea; y++ {
 			for x := 0; x < backdropDiscArea; x++ {
@@ -142,8 +142,8 @@ func TestGlobeCapture(t *testing.T) {
 				}
 			}
 		}
-		g.build()
-		raster(disc, g.verts, g.idx[:g.nI])
+		g.Build()
+		raster(disc, g.Verts, g.Idx[:g.NI])
 		bg := image.NewRGBA(image.Rect(0, 0, W, H))
 		draw.Draw(bg, bg.Bounds(), image.NewUniform(uiSpace), image.Point{}, draw.Src)
 		drawOver(bg, bakeStarfield(p.Seed, W, H, 0.9, 0.6), 0, 0, 1)
@@ -170,7 +170,7 @@ func TestGlobeCapture(t *testing.T) {
 }
 
 func centreOn(g *globeView, c [3]float32) {
-	g.cam.CentreOn(globemath.Vec3{float64(c[0]), float64(c[1]), float64(c[2])}, 0)
+	g.Cam.CentreOn(globemath.Vec3{float64(c[0]), float64(c[1]), float64(c[2])}, 0)
 }
 
 func blend(img *image.RGBA, x, y int, c color.NRGBA, k float64) {

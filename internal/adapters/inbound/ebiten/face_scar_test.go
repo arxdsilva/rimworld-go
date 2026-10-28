@@ -15,7 +15,7 @@ import (
 func scarArt() *artCatalog {
 	c := figureArt()
 	for f := faceSouth; f <= faceWest; f++ {
-		c.sprites["pawn/face_scar_"+f.String()] = fakeSprite([2]int{160, 297}, pt{16, 153}, nil)
+		c.Sprites["pawn/face_scar_"+f.String()] = fakeSprite([2]int{160, 297}, pt{16, 153}, nil)
 	}
 	return c
 }
@@ -72,7 +72,7 @@ func TestPortraitFaceScar(t *testing.T) {
 	if i < 0 || i < hair {
 		t.Fatalf("scar at %d, hair at %d", i, hair)
 	}
-	if !art.has("pawn/face_scar_south") {
+	if !art.Has("pawn/face_scar_south") {
 		t.Fatal("no generated face scar art")
 	}
 	dst := ebiten.NewImage(200, 240)

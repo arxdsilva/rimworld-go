@@ -9,59 +9,59 @@ import (
 // Ebitengine, and take() a mouse button they used so no later handler
 // acts on the same click.
 type inputFrame struct {
-	// raw is the devices as polled: raw.mx/my are physical pixels (the
+	// Raw is the devices as polled: Raw.mx/my are physical pixels (the
 	// map reads them through App.mapCursor). ui is the same pointer in
-	// logical UI pixels (raw / s), read through App.currentCursor.
-	raw   rawInput
-	ui    uiPoint
+	// logical UI pixels (Raw / s), read through App.currentCursor.
+	Raw   rawInput
+	Ui    uiPoint
 	keys  map[string]bool // keys pressed this frame
-	res   input.Result
-	stack []input.Context
+	Res   input.Result
+	Stack []input.Context
 	taken [numMouse]bool
 }
 
 // uiPoint is a pointer position in logical UI pixels.
-type uiPoint struct{ mx, my int }
+type uiPoint struct{ Mx, My int }
 
 func newFrame(raw rawInput) inputFrame {
-	f := inputFrame{raw: raw, keys: make(map[string]bool, len(raw.pressed))}
-	for _, k := range raw.pressed {
+	f := inputFrame{Raw: raw, keys: make(map[string]bool, len(raw.Pressed))}
+	for _, k := range raw.Pressed {
 		f.keys[k] = true
 	}
 	return f
 }
 
-// fired reports a Press/Toggle action fired this frame.
-func (f *inputFrame) fired(a input.Action) bool { return f.res.Fired(a) }
+// Fired reports a Press/Toggle action Fired this frame.
+func (f *inputFrame) Fired(a input.Action) bool { return f.Res.Fired(a) }
 
-// held reports a Hold action is active.
-func (f *inputFrame) held(a input.Action) bool { return f.res.Held(a) }
+// Held reports a Hold action is active.
+func (f *inputFrame) Held(a input.Action) bool { return f.Res.Held(a) }
 
-// key reports a raw key went down (text fields and key capture read it).
-func (f *inputFrame) key(name string) bool { return f.keys[name] }
+// Key reports a raw Key went down (text fields and Key capture read it).
+func (f *inputFrame) Key(name string) bool { return f.keys[name] }
 
-// clicked reports button b went down this frame and nobody took it yet.
-func (f *inputFrame) clicked(b mouseBtn) bool { return f.raw.press[b] && !f.taken[b] }
+// Clicked reports button b went down this frame and nobody took it yet.
+func (f *inputFrame) Clicked(b mouseBtn) bool { return f.Raw.Press[b] && !f.taken[b] }
 
-// take marks b's press as used.
-func (f *inputFrame) take(b mouseBtn) { f.taken[b] = true }
+// Take marks b's press as used.
+func (f *inputFrame) Take(b mouseBtn) { f.taken[b] = true }
 
-// down reports b is held.
-func (f *inputFrame) down(b mouseBtn) bool { return f.raw.down[b] }
+// Down reports b is held.
+func (f *inputFrame) Down(b mouseBtn) bool { return f.Raw.Down[b] }
 
-// released reports b came up this frame.
-func (f *inputFrame) released(b mouseBtn) bool { return f.raw.release[b] }
+// Released reports b came up this frame.
+func (f *inputFrame) Released(b mouseBtn) bool { return f.Raw.Release[b] }
 
-func (f *inputFrame) shift() bool { return f.raw.mods&input.ModShift != 0 }
-func (f *inputFrame) ctrl() bool  { return f.raw.mods&input.ModCtrl != 0 }
-func (f *inputFrame) alt() bool   { return f.raw.mods&input.ModAlt != 0 }
+func (f *inputFrame) Shift() bool { return f.Raw.Mods&input.ModShift != 0 }
+func (f *inputFrame) Ctrl() bool  { return f.Raw.Mods&input.ModCtrl != 0 }
+func (f *inputFrame) Alt() bool   { return f.Raw.Mods&input.ModAlt != 0 }
 
-// top is the topmost active context.
-func (f *inputFrame) top() input.Context {
-	if len(f.stack) == 0 {
+// Top is the topmost active context.
+func (f *inputFrame) Top() input.Context {
+	if len(f.Stack) == 0 {
 		return input.CtxGlobal
 	}
-	return f.stack[0]
+	return f.Stack[0]
 }
 
 // pollInput reads the devices once and resolves this frame's actions.
@@ -72,9 +72,9 @@ func (a *App) pollInput() {
 	raw := a.src.poll()
 	a.uiPreInput(&raw) // widget kit: held keys, Esc for a modal, Tab focus (ui_state.go)
 	a.in = newFrame(raw)
-	a.in.ui.mx, a.in.ui.my = a.toLogical(raw.mx, raw.my)
-	a.in.stack = a.contextStack()
-	a.in.res = input.Resolve(input.Frame{Pressed: raw.pressed, Held: raw.held, Mods: raw.mods}, a.bindings(), a.in.stack)
+	a.in.Ui.Mx, a.in.Ui.My = a.toLogical(raw.Mx, raw.My)
+	a.in.Stack = a.contextStack()
+	a.in.Res = input.Resolve(input.Frame{Pressed: raw.Pressed, Held: raw.Held, Mods: raw.Mods}, a.bindings(), a.in.Stack)
 	a.uiBegin() // widget kit: tooltips, modals, the screen's widgets (ui_state.go)
 }
 
@@ -85,7 +85,7 @@ func repeatFire(n int) bool { return n == 1 || (n >= 25 && (n-25)%3 == 0) }
 // keyRepeat reports the key went down this frame or is repeating while
 // held (first repeat after 24 frames, then every 3). Text fields and list
 // navigation read it.
-func (a *App) keyRepeat(name string) bool { return a.in.key(name) || repeatFire(a.uiSt().heldN[name]) }
+func (a *App) keyRepeat(name string) bool { return a.in.Key(name) || repeatFire(a.uiSt().heldN[name]) }
 
 // bindings are the live key bindings (the settings' overrides over the
 // defaults).
@@ -165,11 +165,11 @@ func (a *App) keyHint(act input.Action) string {
 }
 
 // queueing reports the queue modifier (Shift) held.
-func (a *App) queueing() bool { return a.in.shift() }
+func (a *App) queueing() bool { return a.in.Shift() }
 
 // handleTextInput feeds the focused text field or key capture.
 func (a *App) handleTextInput() {
-	if a.in.top() != input.CtxText {
+	if a.in.Top() != input.CtxText {
 		return
 	}
 	switch {

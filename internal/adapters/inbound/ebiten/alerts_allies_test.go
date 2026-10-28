@@ -63,7 +63,7 @@ func TestCommsAidEmitsRequest(t *testing.T) {
 	v.Factions[0].Aid = game.CommsActionView{Allowed: true, Cost: 20}
 	s := &dealSim{cv: v, cok: true}
 	a, f := dealApp(t, s)
-	f.frame(t, a)
+	f.Frame(t, a)
 	if w, ok := a.uiSt().find("comms.3.aid"); !ok || w.disabled || w.label != "Request aid · 20 goodwill" {
 		t.Fatalf("aid = %+v ok=%v", w, ok)
 	}

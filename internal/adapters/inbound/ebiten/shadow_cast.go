@@ -351,7 +351,7 @@ func (r *Renderer) creatureCasters(w game.WorldView, pawns []game.PawnView) []cr
 		return v.empty() || x+1 >= v.x0-mg && y+1 >= v.y0-mg && x <= v.x1+mg && y <= v.y1+mg
 	}
 	add := func(c creatureCaster, key string, feetX, feetY float64) {
-		sp := r.art.sprite(key)
+		sp := r.art.Sprite(key)
 		if sp == nil {
 			return // no art (the fallback marker casts nothing)
 		}
@@ -359,7 +359,7 @@ func (r *Renderer) creatureCasters(w game.WorldView, pawns []game.PawnView) []cr
 		if s.h <= 0 {
 			return
 		}
-		c.w, c.h, c.opaque, c.ppt = s.w, s.h, sp.opaqueHeightPx(), sp.meta.pxPerTile()
+		c.w, c.h, c.opaque, c.ppt = s.w, s.h, sp.OpaqueHeightPx(), sp.Meta.PxPerTile()
 		c.px, c.py = c.wx+feetX, c.wy+feetY
 		c.tx, c.ty = int(math.Floor(c.wx+0.5)), int(math.Floor(c.wy+0.5))
 		c.sky = skyOpen(w, c.tx, c.ty)
@@ -379,8 +379,8 @@ func (r *Renderer) creatureCasters(w game.WorldView, pawns []game.PawnView) []cr
 	// an animal's silhouette reaches past its cell by its body (PLAY-022:
 	// up to about 2.5 tiles for the longest canvases) before the shadow
 	// itself
-	e := r.art.animalExtent()
-	ma := mg + max(e.side, e.up, e.down)
+	e := r.art.AnimalExtent()
+	ma := mg + max(e.Side, e.Up, e.Down)
 	for i := range w.Animals {
 		an := &w.Animals[i]
 		// cull on the cell first: the drawn position stays within a few

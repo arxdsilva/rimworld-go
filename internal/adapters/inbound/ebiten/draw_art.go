@@ -124,22 +124,22 @@ func (r *Renderer) drawSpriteCS(screen *ebiten.Image, key string, tint color.NRG
 // drawSpriteScaled draws a sprite scaled by k about its footprint's
 // bottom-centre (ground origin), e.g. young trees.
 func (r *Renderer) drawSpriteScaled(screen *ebiten.Image, key string, tint color.NRGBA, wx, wy, tile float64, sw, sh int, cs colorScale, k float64) {
-	sp := r.art.sprite(key)
+	sp := r.art.Sprite(key)
 	if sp == nil {
 		return
 	}
 	sx, sy := r.worldToScreenF(wx, wy)
-	x, y, s := artOrigin(sp.meta, float64(sx), float64(sy), tile)
+	x, y, s := artOrigin(sp.Meta, float64(sx), float64(sy), tile)
 	if k != 1 {
-		px := float64(sx) + float64(sp.meta.Footprint[0])*tile/2
-		py := float64(sy) + float64(sp.meta.Footprint[1])*tile
+		px := float64(sx) + float64(sp.Meta.Footprint[0])*tile/2
+		py := float64(sy) + float64(sp.Meta.Footprint[1])*tile
 		x, y, s = px+(x-px)*k, py+(y-py)*k, s*k
 	}
-	w, h := float64(sp.meta.Canvas[0])*s, float64(sp.meta.Canvas[1])*s
+	w, h := float64(sp.Meta.Canvas[0])*s, float64(sp.Meta.Canvas[1])*s
 	if !visible(float32(x), float32(y), float32(w), float32(h), sw, sh) {
 		return
 	}
-	img := r.art.image(key, tint)
+	img := r.art.Image(key, tint)
 	if img == nil {
 		return
 	}
@@ -211,7 +211,7 @@ func (r *Renderer) drawPlacementGhost(screen *ebiten.Image, kind, stuff, facing 
 		}
 		cf := ghostFacing(c, facing)
 		key := r.buildKey(kind, stuff, cf, mask, doorAxisEW(cf), false)
-		if !r.art.has(key) {
+		if !r.art.Has(key) {
 			sx, sy := r.worldToScreen(c.x, c.y)
 			if isFenceKind(kind) {
 				drawFenceVector(screen, sx, sy, float32(tile), kind, mask, false, isStoneStuff(stuff), 170)
@@ -253,8 +253,8 @@ func doorAxisEW(facing string) bool { return facing != "east" && facing != "west
 // material's art (steel doors, stone fences) is missing.
 func (r *Renderer) buildKey(kind, stuff, facing string, mask int, ew, open bool) string {
 	key := buildSpriteStuff(kind, stuff, facing, mask, ew, open)
-	if r.art != nil && stuffMaterial(stuff) != "wood" && !r.art.has(key) {
-		if alt := buildSprite(kind, facing, mask, ew, open); alt != "" && r.art.has(alt) {
+	if r.art != nil && stuffMaterial(stuff) != "wood" && !r.art.Has(key) {
+		if alt := buildSprite(kind, facing, mask, ew, open); alt != "" && r.art.Has(alt) {
 			return alt
 		}
 	}
@@ -476,7 +476,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 		}
 	}
 	smoothKey, smoothCS := smoothMarkKey, noCS
-	if !r.art.has(smoothKey) { // older art: the mine mark, cooled blue
+	if !r.art.Has(smoothKey) { // older art: the mine mark, cooled blue
 		smoothKey, smoothCS = "overlay/designation_mine", smoothFallbackCS
 	}
 	for _, m := range w.Smooths {
@@ -584,19 +584,19 @@ func (r *Renderer) drawBuildingObj(dst *ebiten.Image, b *game.BuildingView, tile
 		}
 		if b.Kind == troughKind {
 			key = troughKey(*b)
-			if !r.art.has(key) {
+			if !r.art.Has(key) {
 				r.drawTroughFallback(dst, *b, tile)
 				break
 			}
 		}
-		if isFenceKind(b.Kind) && !r.art.has(key) {
+		if isFenceKind(b.Kind) && !r.art.Has(key) {
 			sx, sy := r.worldToScreen(b.X, b.Y)
 			drawFenceVector(dst, sx, sy, float32(tile), b.Kind, mask, open, isStoneStuff(b.Stuff), 255)
 			break
 		}
 		t := none
 		if (b.Kind == "bed" || b.Kind == "double bed") && len(l.cloth) > 0 {
-			t = r.art.tint("cloth", l.cloth[mix64(uint64(b.ID))%uint64(len(l.cloth))])
+			t = r.art.Tint("cloth", l.cloth[mix64(uint64(b.ID))%uint64(len(l.cloth))])
 		}
 		// stone walls, fences and floors take their stone's tint
 		r.drawSpriteCS(dst, key, t, float64(b.X), float64(b.Y), tile, sw, sh, tintCS(r.stuffTint(b.Stuff)))
@@ -634,7 +634,7 @@ func (r *Renderer) drawFrameObj(dst *ebiten.Image, f *game.FrameView, tile float
 		}
 	}
 	key := r.buildKey(f.Kind, f.Stuff, f.Facing, pm, doorAxisEW(f.Facing), false)
-	if isFenceKind(f.Kind) && !r.art.has(key) {
+	if isFenceKind(f.Kind) && !r.art.Has(key) {
 		sx, sy := r.worldToScreen(f.X, f.Y)
 		drawFenceVector(dst, sx, sy, float32(tile), f.Kind, pm, false, isStoneStuff(f.Stuff), 140)
 		return
@@ -687,7 +687,7 @@ func (r *Renderer) drawItemObj(dst *ebiten.Image, it *game.ItemView, tile float6
 	}
 	key := sizedItemKey(itemSpriteSpecies(it.Kind, it.Animal, it.X, it.Y), it.Qty)
 	cs := itemCS(*it)
-	if key, cs = r.stoneItem(key, it.Kind, cs); !r.art.has(key) {
+	if key, cs = r.stoneItem(key, it.Kind, cs); !r.art.Has(key) {
 		pad := float32(tile) * 0.3
 		sx, sy := r.worldToScreen(it.X, it.Y)
 		vector.FillRect(dst, sx+pad, sy+pad, float32(tile)-2*pad, float32(tile)-2*pad, color.RGBA{200, 90, 40, 255}, false)
@@ -790,7 +790,7 @@ func twoDigits(n int) string {
 // raider tint is held back so hostiles stand out.
 func (r *Renderer) colonyCloths() []string {
 	var cloths []string
-	for _, c := range r.art.tintNames("cloth") {
+	for _, c := range r.art.TintNames("cloth") {
 		if c != raiderCloth {
 			cloths = append(cloths, c)
 		}
@@ -828,7 +828,7 @@ func (r *Renderer) drawTile(screen *ebiten.Image, key string, wx, wy, tile float
 	if !visible(float32(x0), float32(y0), float32(size), float32(size), sw, sh) {
 		return
 	}
-	img := r.art.image(key, color.NRGBA{})
+	img := r.art.Image(key, color.NRGBA{})
 	if img == nil {
 		return
 	}
@@ -1012,7 +1012,7 @@ func (r *Renderer) drawGroundTile(screen *ebiten.Image, w *game.WorldView, x, y 
 			continue
 		}
 		ek, ecs := terrainEdgeKeys[p][mask], noCS
-		if !r.art.has(ek) && terrainByPri[p] == "stone_smooth" { // older art: the rough edge
+		if !r.art.Has(ek) && terrainByPri[p] == "stone_smooth" { // older art: the rough edge
 			ek = terrainEdgeKeys[terrainPriority["stone"]][mask]
 		}
 		if n := terrainByPri[p]; n == "stone" || n == "stone_smooth" { // stone edges take the neighbouring stone's tint
@@ -1094,7 +1094,7 @@ var smoothFallbackCS = colorScale{0.65, 0.9, 1.35, 1}
 // blocks take their stone's tint; a chunk without art draws as blocks and
 // precious metals without art as steel bars.
 func (r *Renderer) stoneItem(key, kind string, cs colorScale) (string, colorScale) {
-	if fb, ok := itemFallback[key]; ok && !r.art.has(key) {
+	if fb, ok := itemFallback[key]; ok && !r.art.Has(key) {
 		key = fb
 	}
 	stone := ""

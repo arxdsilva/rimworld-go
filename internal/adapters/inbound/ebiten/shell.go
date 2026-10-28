@@ -496,7 +496,7 @@ func clickBarPawn(a *App, id string) {
 		return
 	}
 	pid := entity.EntityID(n)
-	if a.in.shift() {
+	if a.in.Shift() {
 		a.toggleInSet(selCand{selPawn, pid})
 		return
 	}

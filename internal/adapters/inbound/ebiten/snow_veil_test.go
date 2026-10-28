@@ -76,7 +76,7 @@ func TestGroundCoverVeilFollowsTileSnow(t *testing.T) {
 	w := snowyWorld()
 	r := New(newEnvSim(w))
 	r.art = envArt()
-	r.cam.offsetX, r.cam.offsetY = 0, 0 // the map's top-left corner
+	r.cam.OffsetX, r.cam.OffsetY = 0, 0 // the map's top-left corner
 	screen := ebiten.NewImage(640, 400)
 	r.drawGroundCover(screen, w, 640, 400, r.tilePx())
 	if x0, y0, x1, y1 := r.visibleTiles(); x0 > 1 || y0 > 0 || x1 < 7 || y1 < 6 {
@@ -129,7 +129,7 @@ func TestSnowCacheRebakesOnlyChangedChunks(t *testing.T) {
 	w := snowyWorld()
 	r := New(newEnvSim(w))
 	r.art = envArt()
-	r.cam.offsetX, r.cam.offsetY = 0, 0
+	r.cam.OffsetX, r.cam.OffsetY = 0, 0
 	screen := ebiten.NewImage(640, 400)
 	tile := r.tilePx()
 	draw := func() int {
@@ -165,7 +165,7 @@ func TestSnowLayerDrawsLit(t *testing.T) {
 	w.Wetness = 0.5
 	r := New(newEnvSim(w))
 	r.art = envArt()
-	r.cam.offsetX, r.cam.offsetY = 0, 0
+	r.cam.OffsetX, r.cam.OffsetY = 0, 0
 	screen := ebiten.NewImage(640, 400)
 	before := r.lit.calls
 	r.drawGroundCover(screen, w, 640, 400, r.tilePx())
@@ -193,10 +193,10 @@ func BenchmarkGroundCover(b *testing.B) {
 			sim := &stubSim{w: side, h: side, world: w}
 			r := New(sim)
 			r.art = envArt()
-			r.cam.zoom = px / 64
+			r.cam.Zoom = px / 64
 			screen := ebiten.NewImage(1280, 800)
 			tile := r.tilePx()
-			r.cam.offsetX, r.cam.offsetY = 100*tile, 100*tile
+			r.cam.OffsetX, r.cam.OffsetY = 100*tile, 100*tile
 			r.drawGroundCover(screen, w, 1280, 800, tile)
 			b0, d0 := r.snowc.bakes, 0
 			b.ResetTimer()

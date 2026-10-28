@@ -126,7 +126,7 @@ func (a *App) prisonerTabBody(id entity.EntityID, r rect) {
 
 // queueIcon paints ui icon key at (x, y), prisonerIcon square.
 func (a *App) queueIcon(key string, x, y float32) {
-	img := a.art.image(key, noTint)
+	img := a.art.Image(key, noTint)
 	if img == nil {
 		return
 	}

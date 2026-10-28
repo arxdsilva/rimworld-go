@@ -214,7 +214,7 @@ func (a *App) healthCare(p game.PawnView, r rect, h game.HealthView) {
 			a.shell.Enqueue(command.Command{Kind: command.SetMedicalCare, Pawn: uint64(p.ID), Mode: uint8(c)})
 		}
 		if a.renderer != nil && a.renderer.art != nil && bw >= 2*r.H {
-			if img := a.renderer.art.image(careIcon(c), color.NRGBA{}); img != nil {
+			if img := a.renderer.art.Image(careIcon(c), color.NRGBA{}); img != nil {
 				ix, iy, is := float64(x+3), float64(r.Y+3), float64(r.H-6)
 				u.queue(func(dst *ebiten.Image) { drawIconCS(dst, img, ix, iy, is, noCS) })
 			}
@@ -726,8 +726,8 @@ func (a *App) paintOptionRow(dst *ebiten.Image, row rect, o healthOption, hover,
 	}
 	textX := row.X + 6
 	if o.item != 0 && a.art != nil {
-		if key := itemSprite(o.item.String()); key != "" && a.art.has(key) {
-			drawIcon(dst, a.art.image(key, color.NRGBA{}), float64(row.X+4), float64(row.Y+2), float64(row.H-4))
+		if key := itemSprite(o.item.String()); key != "" && a.art.Has(key) {
+			drawIcon(dst, a.art.Image(key, color.NRGBA{}), float64(row.X+4), float64(row.Y+2), float64(row.H-4))
 			textX = row.X + row.H + 4
 		}
 	}

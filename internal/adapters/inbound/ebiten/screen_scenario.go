@@ -119,7 +119,7 @@ func (a *App) scenarioUI(sw, sh int) {
 	L := scenarioRects(content)
 	u := a.uiSt()
 
-	if a.in.ctrl() && a.in.key("F") {
+	if a.in.Ctrl() && a.in.Key("F") {
 		u.tabTo = "scen.search"
 	}
 	a.uiTextField("scen.search", L.search, &ng.search, textFieldSpec{MaxLen: 40, Placeholder: "Search scenarios (Ctrl+F)"})
@@ -317,7 +317,7 @@ func (a *App) paintScenarioRow(dst *ebiten.Image, view rect, row scenRow, y floa
 		if e.builtin {
 			iconKey = "ui_icon/scenario_" + e.def.Key
 		}
-		if img := a.art.image(iconKey, noTint); img != nil {
+		if img := a.art.Image(iconKey, noTint); img != nil {
 			drawIcon(dst, img, float64(ix), float64(iy), scenIconSize)
 		} else {
 			fillRect(dst, rect{X: ix, Y: iy, W: scenIconSize, H: scenIconSize}, uiField)

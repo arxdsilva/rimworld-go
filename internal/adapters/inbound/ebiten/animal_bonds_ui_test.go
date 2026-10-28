@@ -202,27 +202,27 @@ func TestAnimalLogTabScrollsWithWheel(t *testing.T) {
 	s.world.Animals[0].Log = thingLog(80)
 	a, f := colonyApp(t, s)
 	a.selectCand(selCand{selAnimal, 50})
-	f.frame(t, a)
+	f.Frame(t, a)
 	a.selectPaneTab("inspector.log")
-	f.frame(t, a)
+	f.Frame(t, a)
 	exp := a.expandedRect()
 	if exp.Empty() {
 		t.Fatal("the Log tab opens an expanded panel")
 	}
 	cx, cy := exp.Center()
-	zoom := a.renderer.cam.zoom
-	f.cur.mx, f.cur.my, f.cur.wheelY = int(cx), int(cy), -1
-	f.frame(t, a)
+	zoom := a.renderer.cam.Zoom
+	f.Cur.Mx, f.Cur.My, f.Cur.WheelY = int(cx), int(cy), -1
+	f.Frame(t, a)
 	if off := a.uiSt().scroll[animalLogID]; off <= 0 {
 		t.Fatalf("the wheel scrolled the log by %v", off)
 	}
-	if a.renderer.cam.zoom != zoom {
+	if a.renderer.cam.Zoom != zoom {
 		t.Fatal("the wheel over the panel must not zoom the map")
 	}
 	// another animal starts at the top
 	s.world.Animals = append(s.world.Animals, game.AnimalView{ID: 51, Species: "labrador", Label: "labrador", X: 7, Y: 7, Tame: true, Name: "Ash", Log: thingLog(80)})
 	a.selectCand(selCand{selAnimal, 51})
-	f.frame(t, a)
+	f.Frame(t, a)
 	if off := a.uiSt().scroll[animalLogID]; off != 0 {
 		t.Fatalf("a new animal's log scrolls from the top, got %v", off)
 	}

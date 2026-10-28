@@ -59,8 +59,8 @@ type artMeta struct {
 	Gait float64
 }
 
-// pxPerTile is the sprite's baked density: its "ppt", else artTilePx.
-func (m artMeta) pxPerTile() float64 {
+// PxPerTile is the sprite's baked density: its "ppt", else artTilePx.
+func (m artMeta) PxPerTile() float64 {
 	if m.PPT > 0 {
 		return m.PPT
 	}
@@ -255,22 +255,22 @@ func tintNRGBA(src, mask *image.NRGBA, tint color.NRGBA) *image.NRGBA {
 }
 
 type artSprite struct {
-	meta artMeta
-	pix  *image.NRGBA
-	mask *image.NRGBA
-	img  *ebiten.Image
-	// normalPath is the sprite's normal map (<image>_n.png, ART §6.1), ""
+	Meta artMeta
+	Pix  *image.NRGBA
+	Mask *image.NRGBA
+	Img  *ebiten.Image
+	// NormalPath is the sprite's normal map (<image>_n.png, ART §6.1), ""
 	// when it has none; normal is its GPU image, loaded on first draw.
-	normalPath string
+	NormalPath string
 	normal     *ebiten.Image
 	normalDone bool
-	// src is where an atlas-packed sprite's pixels come from (art_atlas.go);
+	// Src is where an atlas-packed sprite's pixels come from (art_atlas.go);
 	// nil for a sprite loaded from its own files. pix and mask are cut out
 	// of the atlas the first time the catalog hands the sprite out.
-	src *atlasSrc
-	// file is where a sprite indexed but not yet decoded reads its own
+	Src *atlasSrc
+	// File is where a sprite indexed but not yet decoded reads its own
 	// PNGs from (indexArtCatalog); nil once loaded eagerly.
-	file *fileSrc
+	File *fileSrc
 	// filled guards the one lazy fill from src or file, so catalogs shared
 	// across goroutines (tests) stay race-free.
 	filled sync.Once
@@ -292,20 +292,20 @@ type artSprite struct {
 // a sprite's body when measuring it (faint glow and anti-aliasing don't).
 const opaqueAlphaMin = 32
 
-// opaqueHeightPx is the height of the sprite's opaque part, from its
+// OpaqueHeightPx is the height of the sprite's opaque part, from its
 // alpha bounds, in canvas (source) pixels: measured once and cached. A
 // sprite without opaque pixels reports its canvas height. It calibrates
 // a creature's shadow (ART-012: κ = shadow.h / opaque height).
-func (sp *artSprite) opaqueHeightPx() float64 {
+func (sp *artSprite) OpaqueHeightPx() float64 {
 	sp.measured.Do(sp.measureOpaque)
 	return sp.opaqueH
 }
 
-// opaqueBox is the box of the sprite's opaque pixels (alpha bounds, as
+// OpaqueBox is the box of the sprite's opaque pixels (alpha bounds, as
 // opaqueHeightPx) in canvas px: x0, y0 inclusive, x1, y1 exclusive. A
 // sprite without pixels or opaque ones reports its whole canvas. Measured
 // with the height, so a released sprite (art_memory.go) keeps it.
-func (sp *artSprite) opaqueBox() (x0, y0, x1, y1 float64) {
+func (sp *artSprite) OpaqueBox() (x0, y0, x1, y1 float64) {
 	sp.measured.Do(sp.measureOpaque)
 	return sp.opaqueBx[0], sp.opaqueBx[1], sp.opaqueBx[2], sp.opaqueBx[3]
 }
@@ -314,13 +314,13 @@ func (sp *artSprite) opaqueBox() (x0, y0, x1, y1 float64) {
 // ends up to its first opaque pixel, so an opaque row costs only its
 // margins. A pixel image smaller than the canvas (a test's) is scaled up.
 func (sp *artSprite) measureOpaque() {
-	cw, ch := float64(sp.meta.Canvas[0]), float64(sp.meta.Canvas[1])
+	cw, ch := float64(sp.Meta.Canvas[0]), float64(sp.Meta.Canvas[1])
 	box := [4]float64{0, 0, cw, ch}
-	if sp.pix != nil {
-		b := sp.pix.Bounds()
+	if sp.Pix != nil {
+		b := sp.Pix.Bounds()
 		top, bot, left, right := -1, -1, b.Dx(), -1
 		for y := b.Min.Y; y < b.Max.Y; y++ {
-			row := sp.pix.Pix[sp.pix.PixOffset(b.Min.X, y):]
+			row := sp.Pix.Pix[sp.Pix.PixOffset(b.Min.X, y):]
 			l := -1
 			for x := 0; x < b.Dx(); x++ {
 				if row[4*x+3] >= opaqueAlphaMin {
@@ -359,7 +359,7 @@ func (sp *artSprite) measureOpaque() {
 }
 
 type tintKey struct {
-	key  string
+	Key  string
 	tint color.NRGBA
 }
 
@@ -367,18 +367,18 @@ type tintKey struct {
 // first use and GPU images created on first draw; the game's catalog then
 // frees the CPU pixels (art_memory.go).
 type artCatalog struct {
-	sprites map[string]*artSprite // "family/name"
-	tints   map[string]map[string]color.NRGBA
-	// tinted holds the tint bakes by (sprite, tint); tints orders them for
+	Sprites map[string]*artSprite // "family/name"
+	Tints   map[string]map[string]color.NRGBA
+	// Tinted holds the tint bakes by (sprite, tint); tints orders them for
 	// eviction past tintBudget bytes (0: defaultTintBudget).
-	tinted     map[tintKey]*ebiten.Image
-	tintBudget int
-	// normals maps every drawn sprite image (tinted or not) to its normal
+	Tinted     map[tintKey]*ebiten.Image
+	TintBudget int
+	// Normals maps every drawn sprite image (tinted or not) to its normal
 	// map, for the lit draw (light.go).
-	normals map[*ebiten.Image]*ebiten.Image
-	// freeCPU releases a sprite's CPU pixels once its GPU image exists
+	Normals map[*ebiten.Image]*ebiten.Image
+	// FreeCPU releases a sprite's CPU pixels once its GPU image exists
 	// (the game's catalog; the tests' index keeps them to compare pixels).
-	freeCPU bool
+	FreeCPU bool
 	mem     *artMem
 	tintLRU tintLRU
 	// ext is how far any animal canvas reaches past its cell
@@ -392,31 +392,31 @@ type artCatalog struct {
 // draws east mirrored), up (north) and down (south). The largest canvas of
 // any animal facing sets it, so a cell-based cull padded by it never drops
 // a body whose cell is off screen.
-type animalExt struct{ side, up, down float64 }
+type animalExt struct{ Side, Up, Down float64 }
 
 // animalSpanFallback is the reach (tiles, every way) assumed when a
 // catalog has no animal sprites: about the longest XL canvas.
 const animalSpanFallback = 4.5
 
-// animalExtent is the catalog's animalExt, from every "animal/" sprite's
+// AnimalExtent is the catalog's animalExt, from every "animal/" sprite's
 // canvas, origin and ppt (metadata only, nothing decoded), once.
-func (c *artCatalog) animalExtent() animalExt {
+func (c *artCatalog) AnimalExtent() animalExt {
 	if c == nil {
 		return animalExt{animalSpanFallback, animalSpanFallback, animalSpanFallback}
 	}
 	c.extOnce.Do(func() {
 		var e animalExt
 		n := 0
-		for k, sp := range c.sprites {
-			if !strings.HasPrefix(k, "animal/") || sp == nil || sp.meta.Canvas[0] <= 0 {
+		for k, sp := range c.Sprites {
+			if !strings.HasPrefix(k, "animal/") || sp == nil || sp.Meta.Canvas[0] <= 0 {
 				continue
 			}
-			m := &sp.meta
-			p := m.pxPerTile()
+			m := &sp.Meta
+			p := m.PxPerTile()
 			l, r := m.Origin[0]/p, (float64(m.Canvas[0])-m.Origin[0])/p-1
 			u, d := m.Origin[1]/p, (float64(m.Canvas[1])-m.Origin[1])/p-1
-			e.side = max(e.side, l, r)
-			e.up, e.down = max(e.up, u), max(e.down, d)
+			e.Side = max(e.Side, l, r)
+			e.Up, e.Down = max(e.Up, u), max(e.Down, d)
 			n++
 		}
 		if n == 0 {
@@ -443,20 +443,20 @@ func LocateArt() (string, error) {
 // the layers a fill took (no copy is published after). Both are guarded
 // by mem.mu; mem is nil for a catalog built by hand (no prewarm).
 type fileSrc struct {
-	image, mask string
-	err         error
+	Image, mask string
+	Err         error
 	mem         *artMem
-	warm        [atlasLayers]warmCopy
+	Warm        [atlasLayers]warmCopy
 	taken       [atlasLayers]bool
 }
 
 func (f *fileSrc) fill(sp *artSprite) {
 	pix, mask := f.takeWarm(layerPix), f.takeWarm(layerMask)
 	if pix != nil {
-		sp.pix = pix
+		sp.Pix = pix
 		f.mem.warmFills.Add(1)
 	} else {
-		if sp.pix, f.err = decodeNRGBA(f.image); f.err != nil {
+		if sp.Pix, f.Err = decodeNRGBA(f.Image); f.Err != nil {
 			return
 		}
 		if f.mem != nil {
@@ -467,9 +467,9 @@ func (f *fileSrc) fill(sp *artSprite) {
 		return
 	}
 	if mask != nil {
-		sp.mask = mask
+		sp.Mask = mask
 	} else {
-		sp.mask, f.err = decodeNRGBA(f.mask)
+		sp.Mask, f.Err = decodeNRGBA(f.mask)
 	}
 }
 
@@ -484,20 +484,20 @@ func loadArtCatalog(root string) (*artCatalog, error) {
 	if err != nil {
 		return nil, err
 	}
-	c.freeCPU = true
+	c.FreeCPU = true
 	return c, nil
 }
 
-// decodeFiles decodes every indexed sprite that reads its own files (an
+// DecodeFiles decodes every indexed sprite that reads its own files (an
 // eager check that every file decodes; the game decodes on first use).
-func (c *artCatalog) decodeFiles() error {
-	for _, sp := range c.sprites {
-		if sp.file == nil {
+func (c *artCatalog) DecodeFiles() error {
+	for _, sp := range c.Sprites {
+		if sp.File == nil {
 			continue
 		}
-		sp.filled.Do(func() { sp.file.fill(sp) })
-		if sp.file.err != nil {
-			return sp.file.err
+		sp.filled.Do(func() { sp.File.fill(sp) })
+		if sp.File.Err != nil {
+			return sp.File.Err
 		}
 	}
 	return nil
@@ -510,13 +510,13 @@ func (c *artCatalog) decodeFiles() error {
 // they still exist (cheap to decode one by one) instead of cutting whole
 // atlas pages; the key set is the same either way.
 func indexArtCatalog(root string, preferFiles bool) (*artCatalog, error) {
-	c := &artCatalog{sprites: map[string]*artSprite{}, tinted: map[tintKey]*ebiten.Image{},
-		normals: map[*ebiten.Image]*ebiten.Image{}, mem: &artMem{}}
+	c := &artCatalog{Sprites: map[string]*artSprite{}, Tinted: map[tintKey]*ebiten.Image{},
+		Normals: map[*ebiten.Image]*ebiten.Image{}, mem: &artMem{}}
 	base, err := os.ReadFile(filepath.Join(root, "palettes", "base.yaml"))
 	if err != nil {
 		return nil, err
 	}
-	if c.tints, err = parseTints(string(base)); err != nil {
+	if c.Tints, err = parseTints(string(base)); err != nil {
 		return nil, err
 	}
 	metaRoot := filepath.Join(root, artMetadataRel)
@@ -563,18 +563,18 @@ func indexArtCatalog(root string, preferFiles bool) (*artCatalog, error) {
 					continue // pruned: the atlas page serves it
 				}
 			}
-			sp := &artSprite{meta: m, file: &fileSrc{image: img, mem: c.mem}}
+			sp := &artSprite{Meta: m, File: &fileSrc{Image: img, mem: c.mem}}
 			if m.TintMask != "" {
-				sp.file.mask = filepath.Join(root, filepath.FromSlash(m.TintMask))
+				sp.File.mask = filepath.Join(root, filepath.FromSlash(m.TintMask))
 			}
 			np := filepath.Join(root, filepath.FromSlash(strings.TrimSuffix(m.Image, ".png")+"_n.png"))
 			if _, err := os.Stat(np); err == nil {
-				sp.normalPath = np
+				sp.NormalPath = np
 			}
-			c.sprites[fam.Name()+"/"+strings.TrimSuffix(f.Name(), ".yaml")] = sp
+			c.Sprites[fam.Name()+"/"+strings.TrimSuffix(f.Name(), ".yaml")] = sp
 		}
 	}
-	if len(c.sprites) == 0 {
+	if len(c.Sprites) == 0 {
 		return nil, fmt.Errorf("no sprites under %s", metaRoot)
 	}
 	return c, nil
@@ -598,63 +598,63 @@ func decodeNRGBA(path string) (*image.NRGBA, error) {
 	return dst, nil
 }
 
-func (c *artCatalog) has(key string) bool {
+func (c *artCatalog) Has(key string) bool {
 	if c == nil {
 		return false
 	}
-	_, ok := c.sprites[key]
+	_, ok := c.Sprites[key]
 	return ok
 }
 
-// metaOf is key's metadata without decoding its pixels (nil: no sprite).
-func (c *artCatalog) metaOf(key string) *artMeta {
+// MetaOf is key's metadata without decoding its pixels (nil: no sprite).
+func (c *artCatalog) MetaOf(key string) *artMeta {
 	if c == nil {
 		return nil
 	}
-	if sp := c.sprites[key]; sp != nil {
-		return &sp.meta
+	if sp := c.Sprites[key]; sp != nil {
+		return &sp.Meta
 	}
 	return nil
 }
 
-func (c *artCatalog) sprite(key string) *artSprite {
+func (c *artCatalog) Sprite(key string) *artSprite {
 	if c == nil {
 		return nil
 	}
-	sp := c.sprites[key]
-	if sp != nil && (sp.src != nil || sp.file != nil) {
+	sp := c.Sprites[key]
+	if sp != nil && (sp.Src != nil || sp.File != nil) {
 		sp.filled.Do(func() {
-			if sp.src != nil {
-				sp.src.fill(sp)
+			if sp.Src != nil {
+				sp.Src.fill(sp)
 			} else {
-				sp.file.fill(sp)
+				sp.File.fill(sp)
 			}
 		})
 	}
 	return sp
 }
 
-// image returns the GPU texture for key, tinted when the sprite has a
-// mask and tint is non-zero. The sprite's own image is made first (its
+// Image returns the GPU texture for key, tinted when the sprite has a
+// mask and tint is non-zero. The sprite's own Image is made first (its
 // normal map linked, then its CPU pixels released in the game); a tint is
 // baked from it on the GPU and cached (bounded, art_memory.go).
-func (c *artCatalog) image(key string, tint color.NRGBA) *ebiten.Image {
-	sp := c.sprite(key)
+func (c *artCatalog) Image(key string, tint color.NRGBA) *ebiten.Image {
+	sp := c.Sprite(key)
 	if sp == nil {
 		return nil
 	}
-	if sp.img == nil {
-		if sp.pix == nil {
+	if sp.Img == nil {
+		if sp.Pix == nil {
 			return nil // its files failed to decode: draw nothing rather than panic
 		}
-		sp.img = ebiten.NewImageFromImage(sp.pix)
-		c.linkNormal(sp.img, sp)
+		sp.Img = ebiten.NewImageFromImage(sp.Pix)
+		c.linkNormal(sp.Img, sp)
 		c.release(key, sp)
 	}
-	if sp.mask == nil || tint.A == 0 {
-		return sp.img
+	if sp.Mask == nil || tint.A == 0 {
+		return sp.Img
 	}
-	k := tintKey{key: key, tint: tint}
+	k := tintKey{Key: key, tint: tint}
 	if img := c.cachedTint(k); img != nil {
 		return img
 	}
@@ -669,44 +669,44 @@ func (c *artCatalog) linkNormal(img *ebiten.Image, sp *artSprite) {
 	if !sp.normalDone {
 		sp.normalDone = true
 		var n *image.NRGBA
-		if sp.src != nil {
-			n = sp.src.normalImage(sp)
-		} else if sp.file != nil {
-			n = sp.file.normalNRGBA(sp)
-		} else if sp.normalPath != "" {
-			n, _ = decodeNRGBA(sp.normalPath)
+		if sp.Src != nil {
+			n = sp.Src.NormalImage(sp)
+		} else if sp.File != nil {
+			n = sp.File.NormalNRGBA(sp)
+		} else if sp.NormalPath != "" {
+			n, _ = decodeNRGBA(sp.NormalPath)
 		}
-		if n != nil && n.Bounds().Size() == sp.pix.Bounds().Size() {
+		if n != nil && n.Bounds().Size() == sp.Pix.Bounds().Size() {
 			sp.normal = ebiten.NewImageFromImage(n)
 		}
 	}
-	if sp.normal != nil && c.normals != nil {
-		c.normals[img] = sp.normal
+	if sp.normal != nil && c.Normals != nil {
+		c.Normals[img] = sp.normal
 	}
 }
 
-// normalOf is img's normal map, nil when it has none (flat).
-func (c *artCatalog) normalOf(img *ebiten.Image) *ebiten.Image {
+// NormalOf is img's normal map, nil when it has none (flat).
+func (c *artCatalog) NormalOf(img *ebiten.Image) *ebiten.Image {
 	if c == nil {
 		return nil
 	}
-	return c.normals[img]
+	return c.Normals[img]
 }
 
-// tint returns preset name from group (e.g. "hair", "black").
-func (c *artCatalog) tint(group, name string) color.NRGBA {
+// Tint returns preset name from group (e.g. "hair", "black").
+func (c *artCatalog) Tint(group, name string) color.NRGBA {
 	if c == nil {
 		return color.NRGBA{}
 	}
-	return c.tints[group][name]
+	return c.Tints[group][name]
 }
 
-func (c *artCatalog) tintNames(group string) []string {
+func (c *artCatalog) TintNames(group string) []string {
 	if c == nil {
 		return nil
 	}
-	names := make([]string, 0, len(c.tints[group]))
-	for n := range c.tints[group] {
+	names := make([]string, 0, len(c.Tints[group]))
+	for n := range c.Tints[group] {
 		names = append(names, n)
 	}
 	sort.Strings(names)
@@ -774,6 +774,6 @@ func mix64(x uint64) uint64 {
 // the footprint's top-left lands at (sx, sy); scale is tile over the
 // sprite's density (pxPerTile).
 func artOrigin(m artMeta, sx, sy, tile float64) (x, y, scale float64) {
-	scale = tile / m.pxPerTile()
+	scale = tile / m.PxPerTile()
 	return sx - m.Origin[0]*scale, sy - m.Origin[1]*scale, scale
 }

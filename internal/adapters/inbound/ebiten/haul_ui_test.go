@@ -283,9 +283,9 @@ func haulOverlay(t *testing.T, tile float64, items ...game.ItemView) bool {
 	w.Items = items
 	r, _ := lodRenderer(w, 64, 64)
 	sp := fakeSprite([2]int{128, 128}, pt{0, 0}, nil)
-	r.art.sprites[haulMarkKey] = sp
+	r.art.Sprites[haulMarkKey] = sp
 	lodFrame(r, tile)
-	return sp.img != nil
+	return sp.Img != nil
 }
 
 func TestHaulOverlayDrawnForMarkedStackOnly(t *testing.T) {

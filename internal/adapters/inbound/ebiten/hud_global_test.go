@@ -75,16 +75,16 @@ func globalColony(t *testing.T, sim Simulation, ui int, ww, wh float64) (*App, *
 		t.Fatalf("screen = %s, want colony", a.nav.screen())
 	}
 	f := fakeOn(a)
-	f.cur.mx, f.cur.my = -50, -50
+	f.Cur.Mx, f.Cur.My = -50, -50
 	a.renderer.speed = speedPaused // before the frame: the learn helper bases on it (a later change is the player's)
-	f.frame(t, a)
+	f.Frame(t, a)
 	return a, f
 }
 
 // onRect puts the fake cursor on the centre of r (logical pixels).
 func (f *fakeInput) onRect(a *App, r rect) {
 	cx, cy := r.Center()
-	f.cur.mx, f.cur.my = int(float64(cx)*a.scale.S), int(float64(cy)*a.scale.S)
+	f.Cur.Mx, f.Cur.My = int(float64(cx)*a.scale.S), int(float64(cy)*a.scale.S)
 }
 
 var globalToggleIDs = []string{"hud.roof", "hud.home", "hud.homeauto", "hud.plan", "hud.rooms", "hud.learn", "hud.bar", "hud.rescat"}
@@ -170,7 +170,7 @@ func TestGlobalTogglesClickTheirOwnOverlay(t *testing.T) {
 				want := a.overlayFlags()
 				flip[id](&want)
 				f.onRect(a, rc)
-				f.click(t, a, mbLeft, 0)
+				f.Click(t, a, mbLeft, 0)
 				if got := a.overlayFlags(); got != want {
 					t.Errorf("%s: click at %+v left %+v, want only its own flag flipped: %+v", id, rc, got, want)
 				}
@@ -215,9 +215,9 @@ func globalColonyP(t *testing.T, sim Simulation) (*App, *fakeInput) {
 		t.Fatalf("screen = %s, want colony", a.nav.screen())
 	}
 	f := fakeOn(a)
-	f.cur.mx, f.cur.my = -50, -50
+	f.Cur.Mx, f.Cur.My = -50, -50
 	a.renderer.speed = speedPaused // before the frame: the learn helper bases on it (a later change is the player's)
-	f.frame(t, a)
+	f.Frame(t, a)
 	return a, f
 }
 
@@ -334,8 +334,8 @@ func TestGlobalTemperatureFollowsHoveredCell(t *testing.T) {
 	t.Parallel()
 	a, f := globalColonyP(t, newGlobalSim())
 	hover := func(tx, ty int) string {
-		f.moveTo(a, tx, ty)
-		f.frame(t, a)
+		f.MoveTo(a, tx, ty)
+		f.Frame(t, a)
 		return a.temperatureLine()
 	}
 	if got, want := hover(3, 3), "Outdoors 13 °C"; got != want { // TemperatureAt(3,3) = 130
@@ -348,12 +348,12 @@ func TestGlobalTemperatureFollowsHoveredCell(t *testing.T) {
 		t.Errorf("another outdoor cell: %q, want %q", got, want)
 	}
 	f.onRect(a, a.hud().Global)
-	f.frame(t, a)
+	f.Frame(t, a)
 	if got, want := a.temperatureLine(), "Outdoors 9 °C"; got != want { // over the HUD: WorldView.OutdoorTemp
 		t.Errorf("over the HUD: %q, want %q", got, want)
 	}
-	f.cur.mx, f.cur.my = -50, -50
-	f.frame(t, a)
+	f.Cur.Mx, f.Cur.My = -50, -50
+	f.Frame(t, a)
 	if got, want := a.temperatureLine(), "Outdoors 9 °C"; got != want {
 		t.Errorf("off the window: %q, want %q", got, want)
 	}

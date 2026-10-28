@@ -27,7 +27,7 @@ func TestPrisonerTabReplacesGearAndFits(t *testing.T) {
 	s := prisonerSim()
 	a, f := colonyApp(t, s)
 	a.renderer.Select(2)
-	f.frame(t, a)
+	f.Frame(t, a)
 	if _, ok := findButton(a, "inspector.gear"); ok {
 		t.Fatal("a prisoner's Gear tab gives way to its Prisoner tab")
 	}
@@ -66,7 +66,7 @@ func TestPrisonerTabModesAndRelease(t *testing.T) {
 	a, f := colonyApp(t, s)
 	a.renderer.Select(2)
 	a.inspectTab = "prisoner"
-	f.frame(t, a)
+	f.Frame(t, a)
 	declarePrisonerTab(t, a)
 	for _, m := range prisonerModes {
 		if !hasWidget(a, prisonerModeID(m.mode)) {
@@ -122,7 +122,7 @@ func TestCaptureAndArrestActions(t *testing.T) {
 	s := prisonerSim()
 	a, f := colonyApp(t, s)
 	a.renderer.Select(1)
-	f.frame(t, a)
+	f.Frame(t, a)
 	b, ok := findButton(a, prisonerCapture)
 	if !ok || b.disabled {
 		t.Fatalf("Ada can capture the downed raider: %+v", b)
@@ -151,7 +151,7 @@ func TestCaptureNeedsADownedEnemy(t *testing.T) {
 	s.pawns = s.pawns[:2] // no raiders
 	a, f := colonyApp(t, s)
 	a.renderer.Select(1)
-	f.frame(t, a)
+	f.Frame(t, a)
 	if b, _ := findButton(a, prisonerCapture); !b.disabled || b.reason != "no downed enemy to capture" {
 		t.Fatalf("no one to capture: %+v", b)
 	}

@@ -154,7 +154,7 @@ func (r *Renderer) drawBridgeCell(dst *ebiten.Image, w game.WorldView, set map[[
 		vector.FillRect(dst, q[0], q[1], q[2], q[3], bridgeShadowClr, false)
 	}
 	key := bridgeKey(m)
-	if r.art.has(key) {
+	if r.art.Has(key) {
 		r.drawSprite(dst, key, color.NRGBA{}, float64(b.X), float64(b.Y), tile, sw, sh)
 		return
 	}

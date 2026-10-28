@@ -261,7 +261,7 @@ func TestBenchBillsPanel(t *testing.T) {
 	}
 	panel := rect{X: 0, Y: 100, W: tab.WantW, H: 400}
 	setHook(a.uiSt(), func(a *App) { tab.Declare(panel) })
-	f.frame(t, a)
+	f.Frame(t, a)
 	if !hasWidget(a, billPickBtn) {
 		t.Fatal("stove should offer the recipe picker")
 	}

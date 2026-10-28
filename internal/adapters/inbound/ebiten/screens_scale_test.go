@@ -26,7 +26,7 @@ func atLogical1280(t *testing.T, a *App, f *fakeInput, s float64) (int, int) {
 	if a.sw != 1280 || a.sh != 720 {
 		t.Fatalf("scale %v: logical %dx%d, want 1280x720", s, a.sw, a.sh)
 	}
-	f.frame(t, a)
+	f.Frame(t, a)
 	return int(pw), int(ph)
 }
 
@@ -61,9 +61,9 @@ func checkScaledScreen(t *testing.T, a *App, f *fakeInput, s float64, forward st
 		t.Fatalf("%s at x%v: no hit %q", a.nav.screen(), s, forward)
 	}
 	cx, cy := fb.x+fb.w/2, fb.y+fb.h/2
-	f.cur.mx, f.cur.my = int(cx*float32(s)), int(cy*float32(s)) // raw cursor is physical
-	f.frame(t, a)
-	f.frame(t, a)
+	f.Cur.Mx, f.Cur.My = int(cx*float32(s)), int(cy*float32(s)) // raw cursor is physical
+	f.Frame(t, a)
+	f.Frame(t, a)
 	mx, my := a.currentCursor()
 	if math.Abs(float64(float32(mx)-cx)) > 1 || math.Abs(float64(float32(my)-cy)) > 1 {
 		t.Errorf("%s at x%v: raw cursor maps to logical (%d,%d), want (%v,%v)", a.nav.screen(), s, mx, my, cx, cy)
@@ -76,7 +76,7 @@ func checkScaledScreen(t *testing.T, a *App, f *fakeInput, s float64, forward st
 			break
 		}
 	}
-	f.cur.mx, f.cur.my = -50, -50
+	f.Cur.Mx, f.Cur.My = -50, -50
 }
 
 func TestSetupScreensDrawAndHitAtUIScales(t *testing.T) {
@@ -103,7 +103,7 @@ func TestSetupScreensDrawAndHitAtUIScales(t *testing.T) {
 			t.Run(fmt.Sprintf("%s/x%v", sc.name, s), func(t *testing.T) {
 				a, f, _ := ngTest(t, nil)
 				sc.go_(t, a, f)
-				f.frame(t, a)
+				f.Frame(t, a)
 				checkScaledScreen(t, a, f, s, sc.forward)
 			})
 		}

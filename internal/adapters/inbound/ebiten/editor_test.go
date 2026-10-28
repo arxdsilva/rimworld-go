@@ -25,7 +25,7 @@ func editorApp(t *testing.T, fromNew bool) (*App, *fakeInput, *memStore) {
 	} else {
 		click(t, a, "scen.edit")
 	}
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.nav.screen() != screenScenarioEditor || a.ng.ed == nil {
 		t.Fatalf("screen = %s, editor = %v", a.nav.screen(), a.ng.ed)
 	}
@@ -52,7 +52,7 @@ func TestEditorOpensOnACopy(t *testing.T) {
 	if orig.Parts[0].Qty == 99 || a.ng.entries[0].def.Parts[0].Qty == 99 {
 		t.Fatal("editing the copy changed the original")
 	}
-	f.frame(t, a)
+	f.Frame(t, a)
 
 	a2, _, _ := editorApp(t, true)
 	if d := a2.ng.ed.def; d.Name != "New scenario" || len(d.Parts) != 1 || d.Parts[0].Kind != scenario.PartStartItem || d.Builtin {
@@ -72,10 +72,10 @@ func TestEditorAddMoveRemoveParts(t *testing.T) {
 	if a.uiModalTop() != "sced.addpart" {
 		t.Fatalf("modal = %q", a.uiModalTop())
 	}
-	f.frame(t, a)
+	f.Frame(t, a)
 	for _, k := range []string{"forced_trait", "age_range"} {
 		press(t, a, f, "sced.addkind."+k)
-		f.frame(t, a)
+		f.Frame(t, a)
 		if a.uiModalOpen() {
 			t.Fatalf("choosing %s should close the dialog", k)
 		}
@@ -93,9 +93,9 @@ func TestEditorAddMoveRemoveParts(t *testing.T) {
 
 	// Move the last part to the top, one step at a time.
 	press(t, a, f, "sced.up.2")
-	f.frame(t, a)
+	f.Frame(t, a)
 	press(t, a, f, "sced.up.1")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if got := kinds(ed.def); got[0] != scenario.PartAgeRange || got[1] != scenario.PartStartItem || got[2] != scenario.PartForcedTrait {
 		t.Fatalf("after moving up twice: %v", got)
 	}
@@ -103,7 +103,7 @@ func TestEditorAddMoveRemoveParts(t *testing.T) {
 		t.Fatalf("the open flags follow their parts: %v", ed.open)
 	}
 	press(t, a, f, "sced.down.0")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if got := kinds(ed.def); got[0] != scenario.PartStartItem || got[1] != scenario.PartAgeRange {
 		t.Fatalf("after moving down: %v", got)
 	}
@@ -116,7 +116,7 @@ func TestEditorAddMoveRemoveParts(t *testing.T) {
 	}
 	// Remove the middle one.
 	press(t, a, f, "sced.del.1")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if got := kinds(ed.def); len(got) != 2 || got[0] != scenario.PartStartItem || got[1] != scenario.PartForcedTrait {
 		t.Fatalf("after removing: %v", got)
 	}
@@ -130,31 +130,31 @@ func TestEditorCardsToggleAndEditValues(t *testing.T) {
 	a, f, _ := editorApp(t, true)
 	ed := a.ng.ed
 	press(t, a, f, "sced.card.0") // expand the starting item
-	f.frame(t, a)
+	f.Frame(t, a)
 	if !ed.open[0] || !hasWidget(a, "sced.p.0.item") {
 		t.Fatalf("expanded card shows its controls: open=%v", ed.open)
 	}
 	// Quantity: type digits into the field; committing clamps.
 	press(t, a, f, "sced.p.0.qty")
-	f.key(t, a, "A", input.ModCtrl) // select all
-	f.typeText(t, a, "7")
-	f.frame(t, a)
+	f.Key(t, a, "A", input.ModCtrl) // select all
+	f.TypeText(t, a, "7")
+	f.Frame(t, a)
 	if ed.def.Parts[0].Qty != 7 {
 		t.Fatalf("typed quantity = %d, want 7", ed.def.Parts[0].Qty)
 	}
-	f.key(t, a, "Enter", 0)
-	f.frame(t, a)
+	f.Key(t, a, "Enter", 0)
+	f.Frame(t, a)
 	press(t, a, f, "sced.p.0.qty")
-	f.key(t, a, "A", input.ModCtrl)
-	f.typeText(t, a, "99999")
-	f.frame(t, a)
-	f.key(t, a, "Enter", 0)
-	f.frame(t, a)
+	f.Key(t, a, "A", input.ModCtrl)
+	f.TypeText(t, a, "99999")
+	f.Frame(t, a)
+	f.Key(t, a, "Enter", 0)
+	f.Frame(t, a)
 	if got := ed.def.Parts[0].Qty; got != scenario.MaxQty {
 		t.Fatalf("an oversized quantity is clamped on commit: %d, want %d", got, scenario.MaxQty)
 	}
 	ed.def.Parts[0].Qty = 0
-	f.frame(t, a)
+	f.Frame(t, a)
 	if got := scenario.HasErrors(ed.def.Validate()); !got {
 		t.Fatal("a zero quantity is an error")
 	}
@@ -164,22 +164,22 @@ func TestEditorCardsToggleAndEditValues(t *testing.T) {
 	if a.uiModalTop() != "pick.sced.p.0.item" {
 		t.Fatalf("modal = %q", a.uiModalTop())
 	}
-	f.frame(t, a)
+	f.Frame(t, a)
 	idx := indexWhere(len(edItems), func(i int) bool { return edItems[i] == item.Steel })
 	// Scroll the list so the row is declared, then click it.
 	a.uiSt().scroll["modal.pick.sced.p.0.item.list.scroll"] = 0
 	id := "modal.pick.sced.p.0.item.list." + uiNum(idx)
 	for i := 0; i < 60 && !hasWidget(a, id); i++ {
 		a.uiSt().scroll["modal.pick.sced.p.0.item.list"] += 3 * listRowH
-		f.frame(t, a)
+		f.Frame(t, a)
 	}
 	press(t, a, f, id)
-	f.frame(t, a)
+	f.Frame(t, a)
 	if ed.def.Parts[0].Item != item.Steel || a.uiModalOpen() {
 		t.Fatalf("item = %v modal=%v", ed.def.Parts[0].Item, a.uiModalOpen())
 	}
 	press(t, a, f, "sced.card.0") // collapse again
-	f.frame(t, a)
+	f.Frame(t, a)
 	if ed.open[0] || hasWidget(a, "sced.p.0.item") {
 		t.Fatal("collapsed card hides its controls")
 	}
@@ -197,7 +197,7 @@ func TestEditorMandatoryFields(t *testing.T) {
 	}
 	// People and the pool size move together and stay within +8.
 	d.People, d.ChooseFrom = 3, 8
-	f.frame(t, a)
+	f.Frame(t, a)
 	press(t, a, f, "sced.people.inc")
 	press(t, a, f, "sced.people.inc")
 	if d.People != 5 || d.ChooseFrom != 10 {
@@ -229,8 +229,8 @@ func TestEditorValidationLinksToPart(t *testing.T) {
 	bad.Chance = 0 // below the 5% minimum
 	ed.def.Parts = append(ed.def.Parts, bad)
 	last := len(ed.def.Parts) - 1
-	f.frame(t, a)
-	f.frame(t, a)
+	f.Frame(t, a)
+	f.Frame(t, a)
 
 	probs := ed.def.Validate()
 	if len(probs) != 1 || probs[0].Part != last || probs[0].Severity != scenario.Error {
@@ -248,8 +248,8 @@ func TestEditorValidationLinksToPart(t *testing.T) {
 		t.Fatalf("Done: disabled=%v reason=%q", w.disabled, w.reason)
 	}
 	press(t, a, f, "sced.prob.0")
-	f.frame(t, a)
-	f.frame(t, a)
+	f.Frame(t, a)
+	f.Frame(t, a)
 	if !ed.open[last] {
 		t.Fatal("clicking a problem expands its part")
 	}
@@ -267,7 +267,7 @@ func TestEditorDoneBlockedByErrorsNotWarnings(t *testing.T) {
 	ed := a.ng.ed
 	// Remove the only food item: a warning (the kit has no food), not an error.
 	press(t, a, f, "sced.del.0")
-	f.frame(t, a)
+	f.Frame(t, a)
 	probs := ed.def.Validate()
 	if len(probs) != 1 || probs[0].Severity != scenario.Warning {
 		t.Fatalf("problems = %+v, want one warning", probs)
@@ -278,7 +278,7 @@ func TestEditorDoneBlockedByErrorsNotWarnings(t *testing.T) {
 	}
 	// An error blocks it.
 	ed.def.Name = ""
-	f.frame(t, a)
+	f.Frame(t, a)
 	w, _ = a.uiSt().find("sced.done")
 	if !w.disabled || !strings.HasPrefix(w.reason, "Fix ") {
 		t.Fatalf("an error must block Done: disabled=%v %q", w.disabled, w.reason)
@@ -288,7 +288,7 @@ func TestEditorDoneBlockedByErrorsNotWarnings(t *testing.T) {
 		t.Fatalf("Done with errors left the editor: %s", a.nav.screen())
 	}
 	ed.def.Name = "Fresh start"
-	f.frame(t, a)
+	f.Frame(t, a)
 	click(t, a, "sced.done")
 	if a.nav.screen() != screenScenario || a.ng.ed != nil {
 		t.Fatalf("Done = %s, editor %v", a.nav.screen(), a.ng.ed)
@@ -301,17 +301,17 @@ func TestEditorDoneBlockedByErrorsNotWarnings(t *testing.T) {
 		t.Fatalf("selected = %+v, want the edited scenario, marked unsaved", sel)
 	}
 	// Editing the unsaved entry replaces it instead of adding another.
-	f.frame(t, a)
+	f.Frame(t, a)
 	click(t, a, "scen.edit")
-	f.frame(t, a)
+	f.Frame(t, a)
 	a.ng.ed.def.Summary = "changed"
-	f.frame(t, a)
+	f.Frame(t, a)
 	click(t, a, "sced.done")
 	if len(a.ngUnsaved) != 1 || a.ngUnsaved[0].Summary != "changed" {
 		t.Fatalf("unsaved = %+v", a.ngUnsaved)
 	}
 	// And it goes forward from Choose Scenario.
-	f.frame(t, a)
+	f.Frame(t, a)
 	click(t, a, "wizard.next")
 	if a.nav.screen() != screenStoryteller || a.ng.scenario.Name != "Fresh start" {
 		t.Fatalf("screen=%s scenario=%q", a.nav.screen(), a.ng.scenario.Name)
@@ -326,10 +326,10 @@ func TestEditorSaveLoadRoundTrip(t *testing.T) {
 	ed.def.Summary = "round trip"
 	ed.def.Parts = append(ed.def.Parts, scenario.NewPart(scenario.PartForcedTrait), scenario.NewPart(scenario.PartScheduledIncident))
 	ed.def.Desc = "line one\nline two"
-	f.frame(t, a)
+	f.Frame(t, a)
 
 	press(t, a, f, "sced.save")
-	f.frame(t, a)
+	f.Frame(t, a)
 	data, ok := st.files["my-test-camp"]
 	if !ok || ed.savedAs != "my-test-camp" || !bytes.Equal(ed.saved, data) {
 		t.Fatalf("saved files = %v, savedAs = %q", fileNames(st.files), ed.savedAs)
@@ -347,46 +347,46 @@ func TestEditorSaveLoadRoundTrip(t *testing.T) {
 
 	// Edit, then Load brings the saved one back.
 	ed.def.Summary = "scribbled"
-	f.frame(t, a)
+	f.Frame(t, a)
 	press(t, a, f, "sced.load")
 	if a.uiModalTop() != "sced.loadfile" {
 		t.Fatalf("modal = %q", a.uiModalTop())
 	}
-	f.frame(t, a)
+	f.Frame(t, a)
 	press(t, a, f, "modal.sced.load.table.body.0")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalOpen() || ed.def.Summary != "round trip" || ed.def.Desc != "line one\nline two" {
 		t.Fatalf("modal=%v summary=%q", a.uiModalOpen(), ed.def.Summary)
 	}
 	// Saving the same name again from this editor needs no question.
 	press(t, a, f, "sced.save")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalOpen() {
 		t.Fatal("re-saving a file this editor wrote asks nothing")
 	}
 
 	// A different editor with the same name asks before it overwrites.
-	f.frame(t, a)
+	f.Frame(t, a)
 	click(t, a, "wizard.back")
-	f.frame(t, a)
+	f.Frame(t, a)
 	click(t, a, "scen.new")
-	f.frame(t, a)
+	f.Frame(t, a)
 	b := a.ng.ed
 	b.def.Name = "my test camp"
-	f.frame(t, a)
+	f.Frame(t, a)
 	press(t, a, f, "sced.save")
 	if a.uiModalTop() != "sced.overwrite" {
 		t.Fatalf("modal = %q, want the overwrite question", a.uiModalTop())
 	}
 	before := append([]byte(nil), st.files["my-test-camp"]...)
 	press(t, a, f, "modal.sced.overwrite.cancel")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if !bytes.Equal(st.files["my-test-camp"], before) {
 		t.Fatal("Cancel must leave the file alone")
 	}
 	press(t, a, f, "sced.save")
 	press(t, a, f, "modal.sced.overwrite.ok")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if bytes.Equal(st.files["my-test-camp"], before) {
 		t.Fatal("OK must overwrite")
 	}
@@ -413,20 +413,20 @@ func TestEditorSaveNeedsAStoreAndAValidScenario(t *testing.T) {
 	a, f, st := editorApp(t, true)
 	ed := a.ng.ed
 	ed.def.Name = ""
-	f.frame(t, a)
+	f.Frame(t, a)
 	w, _ := a.uiSt().find("sced.save")
 	if !w.disabled || !strings.Contains(w.reason, "Fix 1 problem") {
 		t.Fatalf("save with errors: %v %q", w.disabled, w.reason)
 	}
 	ed.def.Name = "Disk test"
 	st.saveErr = errTest
-	f.frame(t, a)
+	f.Frame(t, a)
 	click(t, a, "sced.save")
 	if !strings.Contains(a.hint, "save failed") || ed.saved != nil {
 		t.Fatalf("hint = %q saved=%v", a.hint, ed.saved != nil)
 	}
 	a.cfg.Scenarios = nil
-	f.frame(t, a)
+	f.Frame(t, a)
 	for _, id := range []string{"sced.save", "sced.load"} {
 		if w, _ := a.uiSt().find(id); !w.disabled {
 			t.Errorf("%s needs a scenario store", id)
@@ -445,9 +445,9 @@ func TestEditorLoadShowsErrorsOfBrokenFiles(t *testing.T) {
 	a, f, st := editorApp(t, true)
 	st.files["broken"] = []byte(`{"version":9}`)
 	press(t, a, f, "sced.load")
-	f.frame(t, a)
+	f.Frame(t, a)
 	press(t, a, f, "modal.sced.load.table.body.0")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if !a.uiModalOpen() || !strings.Contains(a.ng.ed.loadErr, "broken") {
 		t.Fatalf("a file that can't be read keeps the dialog open with the reason: modal=%v err=%q", a.uiModalOpen(), a.ng.ed.loadErr)
 	}
@@ -470,7 +470,7 @@ func TestEditorResetAndSeed(t *testing.T) {
 	}
 	ed.def.Name = "Scribble"
 	ed.def.Parts = nil
-	f.frame(t, a)
+	f.Frame(t, a)
 	press(t, a, f, "sced.reset")
 	if ed.def.Name != "Broken Hull copy" || len(ed.def.Parts) == 0 || ed.def.Seed != seed {
 		t.Fatalf("reset = %q, %d parts, seed %d", ed.def.Name, len(ed.def.Parts), ed.def.Seed)
@@ -484,27 +484,27 @@ func TestEditorBackAsksOnlyWhenDirty(t *testing.T) {
 	if a.nav.screen() != screenScenario || a.uiModalOpen() {
 		t.Fatalf("an untouched editor leaves at once: %s", a.nav.screen())
 	}
-	f.frame(t, a)
+	f.Frame(t, a)
 	click(t, a, "scen.edit")
-	f.frame(t, a)
+	f.Frame(t, a)
 	a.ng.ed.def.Name = "Edited"
-	f.frame(t, a)
+	f.Frame(t, a)
 	click(t, a, "wizard.back")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.nav.screen() != screenScenarioEditor || a.uiModalTop() != "sced.discard" {
 		t.Fatalf("screen=%s modal=%q, want Discard changes?", a.nav.screen(), a.uiModalTop())
 	}
 	press(t, a, f, "modal.sced.discard.cancel")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.nav.screen() != screenScenarioEditor {
 		t.Fatal("Cancel stays in the editor")
 	}
-	f.key(t, a, "Escape", 0) // Esc asks too
+	f.Key(t, a, "Escape", 0) // Esc asks too
 	if a.uiModalTop() != "sced.discard" {
 		t.Fatalf("Esc: modal=%q", a.uiModalTop())
 	}
 	press(t, a, f, "modal.sced.discard.ok")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.nav.screen() != screenScenario || a.ng.ed != nil || len(a.ngUnsaved) != 0 {
 		t.Fatalf("Discard: screen=%s ed=%v unsaved=%d", a.nav.screen(), a.ng.ed, len(a.ngUnsaved))
 	}
@@ -527,20 +527,20 @@ func TestEditorEveryPartKindDraws(t *testing.T) {
 		sizeTo(t, a, f, size[0], size[1])
 		for off := float32(0); off < 3000; off += 400 {
 			a.uiSt().scroll["sced.form"] = off
-			f.frame(t, a)
+			f.Frame(t, a)
 			a.Draw(ebiten.NewImage(size[0], size[1]))
 		}
 	}
 	// At 1080p, with the form scrolled to the top, the first controls exist.
 	sizeTo(t, a, f, 1920, 1080)
 	a.uiSt().scroll["sced.form"] = 0
-	f.frame(t, a)
+	f.Frame(t, a)
 	if !hasWidget(a, "sced.p.0.trait") || !hasWidget(a, "sced.p.0.chance") {
 		t.Fatal("the forced trait controls are declared")
 	}
 	// A condition part with a missing kind is reported, not drawn as garbage.
 	ed.def.Parts = append(ed.def.Parts, scenario.Part{Kind: scenario.PartNone})
-	f.frame(t, a)
+	f.Frame(t, a)
 	if len(ed.def.Validate()) == 0 {
 		t.Fatal("an unknown part kind is a validation problem")
 	}

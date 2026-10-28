@@ -96,7 +96,7 @@ func ngTest(t *testing.T, mod func(*AppConfig)) (*App, *fakeInput, *memStore) {
 	}, nil)
 	a.finishBoot()
 	f := fakeOn(a)
-	f.cur.mx, f.cur.my = -50, -50
+	f.Cur.Mx, f.Cur.My = -50, -50
 	return a, f, st
 }
 
@@ -104,7 +104,7 @@ func ngTest(t *testing.T, mod func(*AppConfig)) (*App, *fakeInput, *memStore) {
 func sizeTo(t *testing.T, a *App, f *fakeInput, w, h int) {
 	t.Helper()
 	a.sw, a.sh = w, h
-	f.frame(t, a)
+	f.Frame(t, a)
 }
 
 // widgetAt is the centre of the widget id declared this frame.
@@ -121,10 +121,10 @@ func widgetAt(t *testing.T, a *App, id string) (int, int) {
 // press clicks the widget id with the mouse (two frames), the real path.
 func press(t *testing.T, a *App, f *fakeInput, id string) {
 	t.Helper()
-	f.frame(t, a)
+	f.Frame(t, a)
 	x, y := widgetAt(t, a, id)
 	f.clickAt(t, a, x, y)
-	f.cur.mx, f.cur.my = -50, -50
+	f.Cur.Mx, f.Cur.My = -50, -50
 }
 
 // hasWidget reports id is declared this frame.
@@ -287,7 +287,7 @@ func TestScenarioListShowsBuiltinsThenCustom(t *testing.T) {
 	}
 	// Every custom row has a delete button; built-ins do not.
 	a.uiSt().scroll["scen.list"] = 1000 // down to the last rows
-	f.frame(t, a)
+	f.Frame(t, a)
 	for _, k := range []string{"file.alpha", "unsaved.0", "file.zeta"} {
 		if !hasWidget(a, "scen.del."+k) {
 			t.Errorf("no delete button for %s", k)
@@ -302,7 +302,7 @@ func TestScenarioListEmptyStates(t *testing.T) {
 	t.Parallel()
 	a, f, _ := ngTest(t, nil)
 	click(t, a, "menu.newgame")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if got := rowKeys(a, a.ng); got[len(got)-1] != "!No saved scenarios yet — use New scenario" {
 		t.Fatalf("empty custom group note = %q", got[len(got)-1])
 	}
@@ -312,7 +312,7 @@ func TestScenarioListEmptyStates(t *testing.T) {
 		t.Fatalf("without a store the note says so: %q", rows[len(rows)-1])
 	}
 	if hasWidget(a, "scen.import") {
-		f.frame(t, a)
+		f.Frame(t, a)
 	}
 	w, _ := a.uiSt().find("scen.import")
 	if !w.disabled {
@@ -327,7 +327,7 @@ func TestScenarioSearchFilters(t *testing.T) {
 	d.Builtin, d.Key, d.Name = false, "", "Ember Clan II"
 	st.putDef(t, "quiet", d)
 	click(t, a, "menu.newgame")
-	f.frame(t, a)
+	f.Frame(t, a)
 
 	a.ng.search = "ember clan"
 	if got := strings.Join(rowKeys(a, a.ng), ","); got != "#Built-in,ember_clan,#Your scenarios,file.ember clan ii" && got != "#Built-in,ember_clan,#Your scenarios,file.quiet" {
@@ -346,12 +346,12 @@ func TestScenarioSearchFilters(t *testing.T) {
 
 	// Through the real field: Ctrl+F focuses it, typing filters.
 	a.ng.search = ""
-	f.key(t, a, "F", input.ModCtrl)
-	f.frame(t, a)
+	f.Key(t, a, "F", input.ModCtrl)
+	f.Frame(t, a)
 	if a.uiSt().edit.id != "scen.search" {
 		t.Fatalf("Ctrl+F should focus the search field, editing %q", a.uiSt().edit.id)
 	}
-	f.typeText(t, a, "bare")
+	f.TypeText(t, a, "bare")
 	if a.ng.search != "bare" {
 		t.Fatalf("search = %q, want bare", a.ng.search)
 	}
@@ -427,10 +427,10 @@ func TestInvalidScenarioBlocksNext(t *testing.T) {
 	st.putDef(t, "bad", d)
 	st.files["junk"] = []byte("{not json")
 	click(t, a, "menu.newgame")
-	f.frame(t, a)
+	f.Frame(t, a)
 
 	press(t, a, f, "scen.row.file.bad")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if sel := a.ng.selected(); sel == nil || sel.key != "file.bad" {
 		t.Fatalf("the invalid scenario should still be selectable: %+v", sel)
 	}
@@ -442,7 +442,7 @@ func TestInvalidScenarioBlocksNext(t *testing.T) {
 	if a.nav.screen() != screenScenario {
 		t.Fatalf("Next on an invalid scenario moved to %s", a.nav.screen())
 	}
-	f.key(t, a, "Enter", 0)
+	f.Key(t, a, "Enter", 0)
 	if a.nav.screen() != screenScenario {
 		t.Fatalf("Enter on an invalid scenario moved to %s", a.nav.screen())
 	}
@@ -468,7 +468,7 @@ func TestInvalidScenarioBlocksNext(t *testing.T) {
 
 	// A valid selection enables Next, which stamps a copy into the draft.
 	press(t, a, f, "scen.row.ember_clan")
-	f.frame(t, a)
+	f.Frame(t, a)
 	w, _ = a.uiSt().find("wizard.next")
 	if w.disabled {
 		t.Fatalf("Next disabled for a valid scenario: %q", w.reason)
@@ -488,8 +488,8 @@ func TestEnterAdvancesFromScenario(t *testing.T) {
 	t.Parallel()
 	a, f, _ := ngTest(t, nil)
 	click(t, a, "menu.newgame")
-	f.frame(t, a)
-	f.key(t, a, "Enter", 0)
+	f.Frame(t, a)
+	f.Key(t, a, "Enter", 0)
 	if a.nav.screen() != screenStoryteller {
 		t.Fatalf("Enter = %s, want storyteller", a.nav.screen())
 	}
@@ -499,14 +499,14 @@ func TestScenarioListKeyboardSelection(t *testing.T) {
 	t.Parallel()
 	a, f, _ := ngTest(t, nil)
 	click(t, a, "menu.newgame")
-	f.frame(t, a)
+	f.Frame(t, a)
 	press(t, a, f, "scen.row.broken_hull") // focuses the list
-	f.key(t, a, "ArrowDown", 0)
-	f.key(t, a, "ArrowDown", 0)
+	f.Key(t, a, "ArrowDown", 0)
+	f.Key(t, a, "ArrowDown", 0)
 	if a.ng.selected().key != "gilded_expedition" {
 		t.Fatalf("two Downs = %s", a.ng.selected().key)
 	}
-	f.key(t, a, "ArrowUp", 0)
+	f.Key(t, a, "ArrowUp", 0)
 	if a.ng.selected().key != "ember_clan" {
 		t.Fatalf("Up = %s", a.ng.selected().key)
 	}
@@ -519,7 +519,7 @@ func TestDeleteCustomConfirms(t *testing.T) {
 	d.Builtin, d.Key, d.Name = false, "", "Doomed"
 	st.putDef(t, "doomed", d)
 	click(t, a, "menu.newgame")
-	f.frame(t, a)
+	f.Frame(t, a)
 
 	press(t, a, f, "scen.del.file.doomed")
 	if a.uiModalTop() != "scen.delete" || len(st.deleted) != 0 {
@@ -527,14 +527,14 @@ func TestDeleteCustomConfirms(t *testing.T) {
 	}
 	// Cancel keeps it.
 	press(t, a, f, "modal.scen.delete.cancel")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalOpen() || len(st.deleted) != 0 {
 		t.Fatalf("cancel: modal=%v deleted=%v", a.uiModalOpen(), st.deleted)
 	}
 	// OK removes it and the list follows.
 	press(t, a, f, "scen.del.file.doomed")
 	press(t, a, f, "modal.scen.delete.ok")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if len(st.deleted) != 1 || st.deleted[0] != "doomed" {
 		t.Fatalf("deleted = %v", st.deleted)
 	}
@@ -546,10 +546,10 @@ func TestDeleteCustomConfirms(t *testing.T) {
 	// An unsaved scenario is deleted without touching the store.
 	a.ngUnsaved = append(a.ngUnsaved, d)
 	a.ng.refreshScenarios(a)
-	f.frame(t, a)
+	f.Frame(t, a)
 	press(t, a, f, "scen.del.unsaved.0")
 	press(t, a, f, "modal.scen.delete.ok")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if len(a.ngUnsaved) != 0 || len(st.deleted) != 1 {
 		t.Fatalf("unsaved=%d deleted=%v", len(a.ngUnsaved), st.deleted)
 	}
@@ -562,14 +562,14 @@ func TestLoadFileModalSelectsTheFile(t *testing.T) {
 	d.Builtin, d.Key, d.Name = false, "", "From disk"
 	st.putDef(t, "fromdisk", d)
 	click(t, a, "menu.newgame")
-	f.frame(t, a)
+	f.Frame(t, a)
 	press(t, a, f, "scen.import")
 	if a.uiModalTop() != "scen.load" {
 		t.Fatalf("modal = %q", a.uiModalTop())
 	}
-	f.frame(t, a)
+	f.Frame(t, a)
 	press(t, a, f, "modal.scen.load.table.body.0")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalOpen() || a.ng.selected().key != "file.fromdisk" {
 		t.Fatalf("modal=%v selected=%s", a.uiModalOpen(), a.ng.selected().key)
 	}
@@ -579,7 +579,7 @@ func TestBackDiscardConfirmOnlyWhenChanged(t *testing.T) {
 	t.Parallel()
 	a, f, _ := ngTest(t, nil)
 	click(t, a, "menu.newgame")
-	f.frame(t, a)
+	f.Frame(t, a)
 	// Nothing changed: Back leaves at once.
 	click(t, a, "wizard.back")
 	if a.nav.screen() != screenMainMenu || a.uiModalOpen() {
@@ -590,24 +590,24 @@ func TestBackDiscardConfirmOnlyWhenChanged(t *testing.T) {
 	click(t, a, "wizard.next")
 	click(t, a, "story.pick.gambler")
 	click(t, a, "wizard.back")
-	f.frame(t, a)
+	f.Frame(t, a)
 	click(t, a, "wizard.back")
 	if a.nav.screen() != screenScenario || a.uiModalTop() != "scen.discard" {
 		t.Fatalf("screen=%s modal=%q, want the discard confirmation", a.nav.screen(), a.uiModalTop())
 	}
 	// Cancel stays, the draft survives.
 	press(t, a, f, "modal.scen.discard.cancel")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.nav.screen() != screenScenario || a.ng == nil || a.ng.storyteller != "gambler" {
 		t.Fatalf("cancel left screen=%s draft=%v", a.nav.screen(), a.ng)
 	}
 	// Esc asks again; Discard leaves and drops the draft.
-	f.key(t, a, "Escape", 0)
+	f.Key(t, a, "Escape", 0)
 	if a.uiModalTop() != "scen.discard" {
 		t.Fatalf("Escape on a changed draft: modal=%q", a.uiModalTop())
 	}
 	press(t, a, f, "modal.scen.discard.ok")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.nav.screen() != screenMainMenu || a.ng != nil {
 		t.Fatalf("discard: screen=%s draft=%v", a.nav.screen(), a.ng)
 	}
@@ -620,7 +620,7 @@ func TestStorytellerPickIndependentOfDifficulty(t *testing.T) {
 	a, f, _ := ngTest(t, nil)
 	click(t, a, "menu.newgame")
 	click(t, a, "wizard.next")
-	f.frame(t, a)
+	f.Frame(t, a)
 	ng := a.ng
 	click(t, a, "story.pick.hearth")
 	if ng.storyteller != "hearth" || ng.preset != difficulty.Settled {
@@ -655,11 +655,11 @@ func TestCustomOpensEditorOnce(t *testing.T) {
 	a, f, _ := ngTest(t, nil)
 	click(t, a, "menu.newgame")
 	click(t, a, "wizard.next")
-	f.frame(t, a)
+	f.Frame(t, a)
 	ng := a.ng
 
 	click(t, a, "diff.custom")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalTop() != "diff.custom" {
 		t.Fatalf("the first Custom opens the dialog, modal=%q", a.uiModalTop())
 	}
@@ -671,19 +671,19 @@ func TestCustomOpensEditorOnce(t *testing.T) {
 	}
 	ng.cd.s.ThreatScale = 250
 	press(t, a, f, "modal.diff.custom.accept")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalOpen() || ng.preset != difficulty.Custom || ng.custom.ThreatScale != 250 || !ng.customOpen {
 		t.Fatalf("accept: modal=%v preset=%v custom=%+v", a.uiModalOpen(), ng.preset, ng.custom)
 	}
 	// Later, Custom selects directly; Customize reopens.
 	click(t, a, "diff.seasoned")
 	click(t, a, "diff.custom")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalOpen() || ng.preset != difficulty.Custom {
 		t.Fatalf("Custom opens the dialog only once: modal=%v preset=%v", a.uiModalOpen(), ng.preset)
 	}
 	click(t, a, "diff.customize")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalTop() != "diff.custom" || ng.cd.s.ThreatScale != 250 {
 		t.Fatalf("Customize: modal=%q cd=%+v", a.uiModalTop(), ng.cd.s)
 	}
@@ -694,11 +694,11 @@ func TestCustomDifficultyCancelRestores(t *testing.T) {
 	a, f, _ := ngTest(t, nil)
 	click(t, a, "menu.newgame")
 	click(t, a, "wizard.next")
-	f.frame(t, a)
+	f.Frame(t, a)
 	ng := a.ng
 	before := ng.custom
 	click(t, a, "diff.custom")
-	f.frame(t, a)
+	f.Frame(t, a)
 
 	// Drag the Threat scale slider to its end.
 	w, _ := a.uiSt().find("diff.f.ts")
@@ -709,15 +709,15 @@ func TestCustomDifficultyCancelRestores(t *testing.T) {
 		t.Fatalf("dragged threat scale = %d, want 400", ng.cd.s.ThreatScale)
 	}
 	press(t, a, f, "modal.diff.custom.cancel")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalOpen() || ng.custom != before || ng.preset != difficulty.Settled || ng.customOpen {
 		t.Fatalf("cancel must restore: modal=%v custom=%+v preset=%v", a.uiModalOpen(), ng.custom, ng.preset)
 	}
 	// Esc is a cancel too.
 	click(t, a, "diff.custom")
-	f.frame(t, a)
+	f.Frame(t, a)
 	ng.cd.s.CropYield = 300
-	f.key(t, a, "Escape", 0)
+	f.Key(t, a, "Escape", 0)
 	if a.uiModalOpen() || ng.custom != before {
 		t.Fatalf("Esc: modal=%v custom=%+v", a.uiModalOpen(), ng.custom)
 	}
@@ -728,10 +728,10 @@ func TestCopyPresetFillsAllFields(t *testing.T) {
 	a, f, _ := ngTest(t, nil)
 	click(t, a, "menu.newgame")
 	click(t, a, "wizard.next")
-	f.frame(t, a)
+	f.Frame(t, a)
 	ng := a.ng
 	click(t, a, "diff.custom")
-	f.frame(t, a)
+	f.Frame(t, a)
 
 	// Pick Merciless in the Start from dropdown, then Copy.
 	press(t, a, f, "diff.from")
@@ -739,7 +739,7 @@ func TestCopyPresetFillsAllFields(t *testing.T) {
 		t.Fatalf("modal = %q", a.uiModalTop())
 	}
 	press(t, a, f, "modal.pick.diff.from.list.5")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if ng.cd.from != difficulty.Merciless || a.uiModalTop() != "diff.custom" {
 		t.Fatalf("from=%v modal=%q", ng.cd.from, a.uiModalTop())
 	}
@@ -750,7 +750,7 @@ func TestCopyPresetFillsAllFields(t *testing.T) {
 	// Reset goes back to the Start from preset after edits.
 	ng.cd.s.MoodOffset = 20
 	press(t, a, f, "modal.diff.custom.reset")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if ng.cd.s != difficulty.Of(difficulty.Merciless) {
 		t.Fatalf("reset = %+v", ng.cd.s)
 	}
@@ -761,13 +761,13 @@ func TestDependentFieldsDisabled(t *testing.T) {
 	a, f, _ := ngTest(t, nil)
 	click(t, a, "menu.newgame")
 	click(t, a, "wizard.next")
-	f.frame(t, a)
+	f.Frame(t, a)
 	ng := a.ng
 	click(t, a, "diff.custom")
-	f.frame(t, a)
+	f.Frame(t, a)
 
 	ng.cd.s.Adaptation, ng.cd.s.TimeEscalation, ng.cd.s.IgnoreWealth = false, false, true
-	f.frame(t, a)
+	f.Frame(t, a)
 	off := func(id string) (bool, string) {
 		w, ok := a.uiSt().find(id)
 		if !ok {
@@ -791,7 +791,7 @@ func TestDependentFieldsDisabled(t *testing.T) {
 	// Switch both on through the checkboxes.
 	click(t, a, "diff.f.ad")
 	click(t, a, "diff.f.te")
-	f.frame(t, a)
+	f.Frame(t, a)
 	for _, id := range []string{"diff.f.as", "diff.f.ep", "diff.f.iw"} {
 		if dis, why := off(id); dis {
 			t.Errorf("%s still disabled: %q", id, why)
@@ -813,7 +813,7 @@ func TestSaveModeDefaultsAndPersistsInDraft(t *testing.T) {
 	})
 	click(t, a, "menu.newgame")
 	click(t, a, "wizard.next")
-	f.frame(t, a)
+	f.Frame(t, a)
 	ng := a.ng
 	if ng.saveMode != difficulty.ReloadAnytime {
 		t.Fatalf("default save mode = %v", ng.saveMode)
@@ -833,7 +833,7 @@ func TestSaveModeDefaultsAndPersistsInDraft(t *testing.T) {
 	}
 	// Back keeps the draft's choices.
 	click(t, a, "wizard.back")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.nav.screen() != screenStoryteller || ng.saveMode != difficulty.Commitment || ng.storyteller != "gambler" || ng.preset != difficulty.Merciless {
 		t.Fatalf("after Back: %s %v %s %v", a.nav.screen(), ng.saveMode, ng.storyteller, ng.preset)
 	}
@@ -884,15 +884,15 @@ func TestSetupScreensDrawAtBothSizesWithoutArt(t *testing.T) {
 		sizeTo(t, a, f, size[0], size[1])
 		a.Draw(img)
 		click(t, a, "scen.edit")
-		f.frame(t, a)
+		f.Frame(t, a)
 		a.Draw(img)
 		click(t, a, "wizard.back")
-		f.frame(t, a)
+		f.Frame(t, a)
 		click(t, a, "wizard.next")
-		f.frame(t, a)
+		f.Frame(t, a)
 		a.Draw(img)
 		click(t, a, "diff.custom")
-		f.frame(t, a)
+		f.Frame(t, a)
 		a.Draw(img)
 		if a.nav.screen() != screenStoryteller || a.uiModalTop() != "diff.custom" {
 			t.Fatalf("%v: screen=%s modal=%q", size, a.nav.screen(), a.uiModalTop())
@@ -932,7 +932,7 @@ func TestCapturesOpenTheirScreens(t *testing.T) {
 		a, f, _ := ngTest(t, nil)
 		a.cfg.Capture = &Capture{Path: t.TempDir() + "/x.png", UI: c.ui}
 		for i := 0; i < captureFrames+10; i++ {
-			f.frame(t, a)
+			f.Frame(t, a)
 		}
 		if a.nav.screen() != c.screen || a.uiModalTop() != c.modal || a.renderer != nil {
 			t.Errorf("%s: screen=%s modal=%q renderer=%v", c.ui, a.nav.screen(), a.uiModalTop(), a.renderer != nil)

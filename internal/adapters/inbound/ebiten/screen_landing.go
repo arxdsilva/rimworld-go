@@ -484,7 +484,7 @@ func (a *App) landBar(ng *newGameState, g *globeView, bar rect) {
 		}
 	}
 	btn(ids.WizardNext, "Next", 130, btnOpts{Style: btnPrimary, Disabled: reason != "", Reason: reason}, next)
-	if a.in.fired(input.Accept) && reason == "" && !a.uiModalOpen() && !a.uiTextEditing() {
+	if a.in.Fired(input.Accept) && reason == "" && !a.uiModalOpen() && !a.uiTextEditing() {
 		next()
 	}
 	if reason != "" {
@@ -580,7 +580,7 @@ func (a *App) infoBlocks(ti tileInfo, w float32) []infoBlock {
 	blurbLines := wrapPx(ti.blurb, tsBody, float64(w))
 	hh := float32(56)
 	out = append(out, infoBlock{h: hh, tip: ti.biomeTip, draw: func(dst *ebiten.Image, r rect) {
-		if img := a.art.image(biome.DefOf(ti.biome).Icon(), noTint); img != nil && ti.name != "Ocean" && ti.name != "Lake" {
+		if img := a.art.Image(biome.DefOf(ti.biome).Icon(), noTint); img != nil && ti.name != "Ocean" && ti.name != "Lake" {
 			drawIcon(dst, img, float64(r.X), float64(r.Y+4), 48)
 		}
 		drawText(dst, ti.name, float64(r.X+58), float64(r.Y+8), nameSt)
@@ -666,7 +666,7 @@ func (a *App) landLegend(g *globeView, r rect) {
 			stops, unit = elevRamp, " m"
 		}
 		bar := rect{X: r.X + 12, Y: r.Y + 14, W: r.W - 24, H: 16}
-		lo, hi := stops[0].at, stops[len(stops)-1].at
+		lo, hi := stops[0].At, stops[len(stops)-1].At
 		for x := 0; x < int(bar.W); x++ {
 			c := ramp(stops, lo+(hi-lo)*float32(x)/bar.W)
 			fillRect(dst, rect{X: bar.X + float32(x), Y: bar.Y, W: 1, H: bar.H}, color.RGBA{uint8(c[0] * 255), uint8(c[1] * 255), uint8(c[2] * 255), 255})

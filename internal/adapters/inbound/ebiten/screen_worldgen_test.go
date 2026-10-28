@@ -16,7 +16,7 @@ func worldApp(t *testing.T) (*App, *fakeInput) {
 	t.Helper()
 	a, f, _ := ngTest(t, nil)
 	toWorld(t, a)
-	f.frame(t, a)
+	f.Frame(t, a)
 	return a, f
 }
 
@@ -25,20 +25,20 @@ func TestSeedFieldFreeTextAndDice(t *testing.T) {
 	a, f := worldApp(t)
 	ng := a.ng
 	press(t, a, f, "world.seed")
-	f.key(t, a, "A", input.ModCtrl)
-	f.typeText(t, a, "My World-7_x!?")
+	f.Key(t, a, "A", input.ModCtrl)
+	f.TypeText(t, a, "My World-7_x!?")
 	if got := ng.world.SeedText; got != "My World-7_x" {
 		t.Fatalf("seed = %q, want letters, digits, space, - and _ only", got)
 	}
-	f.key(t, a, "A", input.ModCtrl)
-	f.typeText(t, a, strings.Repeat("a", 40))
+	f.Key(t, a, "A", input.ModCtrl)
+	f.TypeText(t, a, strings.Repeat("a", 40))
 	if n := len([]rune(ng.world.SeedText)); n != maxSeedText {
 		t.Fatalf("seed is %d characters, want at most %d", n, maxSeedText)
 	}
 	// Clearing the field and leaving it never leaves an empty seed.
-	f.key(t, a, "A", input.ModCtrl)
-	f.key(t, a, "Backspace", 0)
-	f.key(t, a, "Enter", 0)
+	f.Key(t, a, "A", input.ModCtrl)
+	f.Key(t, a, "Backspace", 0)
+	f.Key(t, a, "Enter", 0)
 	if strings.TrimSpace(ng.world.SeedText) == "" {
 		t.Fatal("an empty seed must be replaced by a phrase")
 	}
@@ -83,7 +83,7 @@ func TestGenerateRunsBuilderToDone(t *testing.T) {
 	}
 	for i := 0; i < 4000 && a.nav.screen() == screenWorldGen; i++ {
 		ng.genStep = 100 // small steps, so the phases show one by one
-		f.frame(t, a)
+		f.Frame(t, a)
 		if ng.builder != nil {
 			phases[worldPhaseName(ng.genPhase)] = true
 			if ng.genFrac < last {
@@ -111,7 +111,7 @@ func TestGenerateSameParamsSkips(t *testing.T) {
 	runUntil(t, a, func() bool { return a.nav.screen() == screenLanding })
 	p := ng.planet
 	click(t, a, "wizard.back")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.nav.screen() != screenWorldGen || ng.planet != p {
 		t.Fatalf("Back keeps the planet: screen=%s", a.nav.screen())
 	}
@@ -136,9 +136,9 @@ func TestParamsChangeMarksPlanetStale(t *testing.T) {
 		t.Fatal("no tile chosen")
 	}
 	click(t, a, "wizard.back")
-	f.frame(t, a)
+	f.Frame(t, a)
 	ng.world.Rain = 4
-	f.frame(t, a)
+	f.Frame(t, a)
 	if ng.worldReady() || ng.tile != -1 || ng.planet == nil {
 		t.Fatalf("ready=%v tile=%d planet=%v: a changed setting makes the world stale and clears the tile", ng.worldReady(), ng.tile, ng.planet != nil)
 	}
@@ -146,14 +146,14 @@ func TestParamsChangeMarksPlanetStale(t *testing.T) {
 		t.Fatalf("label = %q, want Generate", w.label)
 	}
 	ng.world.Rain = 2 // back to what the planet was made from
-	f.frame(t, a)
+	f.Frame(t, a)
 	if !ng.worldReady() {
 		t.Fatal("the original settings match the planet again")
 	}
 	// A slider drag changes a setting through the real widget too.
 	ng.world.Rain = 2
 	a.draft().world.Temp = 1
-	f.frame(t, a)
+	f.Frame(t, a)
 	if ng.worldReady() {
 		t.Fatal("temperature is part of the world's key")
 	}
@@ -197,9 +197,9 @@ func TestFactionTableAddRemoveReset(t *testing.T) {
 	if len(choices) == 0 || slotIndex(ng.world.Factions, faction.Drifters) >= 0 && count(faction.Drifters) >= faction.DefOf(faction.Drifters).MaxCount {
 		t.Fatalf("addable = %v", choices)
 	}
-	f.frame(t, a)
+	f.Frame(t, a)
 	press(t, a, f, "modal.pick.world.facAdd.pick.list.0")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalOpen() {
 		t.Fatal("picking closes the list")
 	}
@@ -245,7 +245,7 @@ func TestNoHostileWarning(t *testing.T) {
 	// The screen draws the warning without a problem in both states.
 	a, f := worldApp(t)
 	a.ng.world.Factions = peaceful
-	f.frame(t, a)
+	f.Frame(t, a)
 	a.Draw(ebiten.NewImage(a.sw, a.sh))
 	if !strings.Contains(noHostileWarning, "No faction can raid you") {
 		t.Fatal("warning text")
@@ -259,20 +259,20 @@ func TestCancelDiscards(t *testing.T) {
 	ng.genStep = 50 // slow, so it is still running
 	click(t, a, "world.generate")
 	ng.genStep = 50
-	f.frame(t, a)
+	f.Frame(t, a)
 	if ng.builder == nil {
 		t.Fatal("generation should be running")
 	}
 	press(t, a, f, "modal.world.progress.cancel")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if ng.builder != nil || ng.planet != nil || a.uiModalOpen() || a.nav.screen() != screenWorldGen {
 		t.Fatalf("builder=%v planet=%v modal=%v screen=%s", ng.builder != nil, ng.planet != nil, a.uiModalOpen(), a.nav.screen())
 	}
 	// Esc cancels as well.
 	click(t, a, "world.generate")
 	ng.genStep = 50
-	f.frame(t, a)
-	f.key(t, a, "Escape", 0)
+	f.Frame(t, a)
+	f.Key(t, a, "Escape", 0)
 	if ng.builder != nil || a.uiModalOpen() || a.nav.screen() != screenWorldGen {
 		t.Fatal("Esc on the progress modal cancels the generation")
 	}
@@ -305,9 +305,9 @@ func TestResetAllConfirmsThenRestoresDefaults(t *testing.T) {
 	if ng.world.Rain != 0 {
 		t.Fatal("nothing changes before the player confirms")
 	}
-	f.frame(t, a)
+	f.Frame(t, a)
 	press(t, a, f, "modal.world.resetAll.confirm.ok")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if ng.world.Rain != 2 || ng.world.Coverage != defaultCoverage || ng.world.SeedText == tinySeed || ng.world.SeedText == "" {
 		t.Fatalf("world = %+v", ng.world)
 	}
@@ -324,7 +324,7 @@ func TestCoverageSliderOffersFiveOnlyInDevMode(t *testing.T) {
 	if got := a.coverageOptions(); len(got) != 4 || got[0] != 5 {
 		t.Fatalf("dev options = %v", got)
 	}
-	f.frame(t, a)
+	f.Frame(t, a)
 	if !hasWidget(a, "world.coverage") {
 		t.Fatal("coverage slider")
 	}
@@ -338,7 +338,7 @@ func TestWorldScreenDrawsAtBothSizes(t *testing.T) {
 		img := ebiten.NewImage(size[0], size[1])
 		a.Draw(img)
 		click(t, a, "world.generate")
-		f.frame(t, a)
+		f.Frame(t, a)
 		a.Draw(img) // the progress modal
 	}
 }

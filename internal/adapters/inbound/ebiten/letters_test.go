@@ -144,7 +144,7 @@ func TestLetterClickOpensTheLetterWindow(t *testing.T) {
 	if m := a.uiSt().modals[0]; m.title != "Quiet day" {
 		t.Fatalf("modal title %q", m.title)
 	}
-	f.frame(t, a)
+	f.Frame(t, a)
 	if !hasWidget(a, "modal."+top+".continue") {
 		t.Fatal("no Continue button")
 	}
@@ -160,7 +160,7 @@ func TestLetterClickOpensTheLetterWindow(t *testing.T) {
 	if a.renderer.cam == before {
 		t.Error("Jump to did not move the camera")
 	}
-	x, y := a.renderer.TileAt(int((a.mapViewport().x0+a.mapViewport().x1)/2), int((a.mapViewport().y0+a.mapViewport().y1)/2))
+	x, y := a.renderer.TileAt(int((a.mapViewport().X0+a.mapViewport().X1)/2), int((a.mapViewport().Y0+a.mapViewport().Y1)/2))
 	if abs(x-30) > 1 || abs(y-31) > 1 {
 		t.Errorf("camera centred on %d,%d, want 30,31", x, y)
 	}
@@ -179,14 +179,14 @@ func TestLetterWithoutAPlaceHasNoJumpAndFocusSelects(t *testing.T) {
 	s.world.Letters[1].Focus = 1
 	a, f := colonyApp(t, s)
 	pressButton(t, a, f, "letter.31")
-	f.frame(t, a)
+	f.Frame(t, a)
 	top := a.uiModalTop()
 	if hasWidget(a, "modal."+top+".jump") {
 		t.Error("\"Jump to\" on a letter with no place")
 	}
 	a.uiCloseTop()
 	pressButton(t, a, f, "letter.32")
-	f.frame(t, a)
+	f.Frame(t, a)
 	top = a.uiModalTop()
 	if !hasWidget(a, "modal."+top+".jump") {
 		t.Fatal("a letter about a creature has \"Jump to\"")
@@ -205,8 +205,8 @@ func TestLetterRightClickEnqueuesDismissLetter(t *testing.T) {
 	if len(rows) != 2 {
 		t.Fatalf("rows %d", len(rows))
 	}
-	f.cur.mx, f.cur.my = int(rows[0].r.X+rows[0].r.W/2), int(rows[0].r.Y+rows[0].r.H/2)
-	f.click(t, a, mbRight, 0)
+	f.Cur.Mx, f.Cur.My = int(rows[0].r.X+rows[0].r.W/2), int(rows[0].r.Y+rows[0].r.H/2)
+	f.Click(t, a, mbRight, 0)
 	got := cmdsOf(s, command.DismissLetter)
 	if len(got) != 1 || got[0].Target != 41 {
 		t.Fatalf("DismissLetter commands = %+v, want one for letter 41", got)
@@ -217,8 +217,8 @@ func TestLetterRightClickEnqueuesDismissLetter(t *testing.T) {
 	// the +N older row is not a letter
 	a2, f2 := colonyApp(t, letterStub(nLetters(10)...))
 	r2 := a2.letterRows(a2.hud())
-	f2.cur.mx, f2.cur.my = int(r2[0].r.X+r2[0].r.W/2), int(r2[0].r.Y+r2[0].r.H/2)
-	f2.click(t, a2, mbRight, 0)
+	f2.Cur.Mx, f2.Cur.My = int(r2[0].r.X+r2[0].r.W/2), int(r2[0].r.Y+r2[0].r.H/2)
+	f2.Click(t, a2, mbRight, 0)
 	if got := cmdsOf(a2.renderer.game.(*stubSim), command.DismissLetter); len(got) != 0 {
 		t.Errorf("right-click on +N older dismissed %+v", got)
 	}
@@ -247,7 +247,7 @@ func TestIntroLetterOpensOnceFromTheStack(t *testing.T) {
 		t.Fatal("Continue should close the letter")
 	}
 	for i := 0; i < 5; i++ {
-		f.frame(t, a)
+		f.Frame(t, a)
 	}
 	if a.uiModalOpen() {
 		t.Fatal("the intro must not open again")
@@ -259,7 +259,7 @@ func TestIntroLetterOpensOnceFromTheStack(t *testing.T) {
 	// no other letter pops up by itself, however fresh
 	s.world.Letters = append(s.world.Letters, letter(2, "caution", "Heat wave"), letter(3, "threat", "Raid"))
 	s.world.Letters[1].Tick, s.world.Letters[2].Tick = 9, 10
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalOpen() {
 		t.Fatalf("a new letter opened by itself: %+v", a.uiSt().modals)
 	}
@@ -268,7 +268,7 @@ func TestIntroLetterOpensOnceFromTheStack(t *testing.T) {
 	a.uiCloseTop()
 	a.dropSession()
 	a.startSession(s)
-	f.frame(t, a)
+	f.Frame(t, a)
 	if !a.uiModalOpen() {
 		t.Fatal("a new colony should show its own intro letter")
 	}
@@ -279,7 +279,7 @@ func TestOldIntroLetterStaysInTheStack(t *testing.T) {
 	s := introStub()
 	s.tick = 5 + letterFresh + 1 // a loaded save's saved letter
 	a, f := colonyApp(t, s)
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalOpen() {
 		t.Fatalf("a stale intro opened: %+v", a.uiSt().modals)
 	}
@@ -298,7 +298,7 @@ func TestNewLetterRowFlashesBriefly(t *testing.T) {
 		t.Fatal("a letter that was there from the start flashes")
 	}
 	s.world.Letters = append(s.world.Letters, letter(52, "threat", "Fresh"))
-	f.frame(t, a)
+	f.Frame(t, a)
 	_ = a.letterRows(a.hud()) // the stack notices it
 	if k := a.letterFlash(52); k <= 0.9 {
 		t.Fatalf("a new letter's flash = %v, want it near 1", k)

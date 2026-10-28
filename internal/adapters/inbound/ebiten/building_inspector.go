@@ -88,7 +88,7 @@ func qtyStep(ctrl, shift bool) int {
 	return 1
 }
 
-func (a *App) qtyStep() int { return qtyStep(a.in.ctrl(), a.in.shift()) }
+func (a *App) qtyStep() int { return qtyStep(a.in.Ctrl(), a.in.Shift()) }
 
 // recipe.Mode values (mirrored; the adapter only sends the numbers).
 const (

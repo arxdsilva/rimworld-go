@@ -231,11 +231,11 @@ func (r *Renderer) drawZones(screen *ebiten.Image, w game.WorldView, sw, sh int,
 // out colony's zones cost one call, not thousands. False when the
 // sprite is missing (the caller falls back).
 func (r *Renderer) zoneFill(screen *ebiten.Image, key string, cells [][2]int, skip map[[2]int]bool, tile float64, sw, sh int) bool {
-	sp := r.art.sprite(key)
+	sp := r.art.Sprite(key)
 	if sp == nil {
 		return false
 	}
-	img := r.art.image(key, color.NRGBA{})
+	img := r.art.Image(key, color.NRGBA{})
 	if img == nil {
 		return false
 	}
@@ -248,8 +248,8 @@ func (r *Renderer) zoneFill(screen *ebiten.Image, key string, cells [][2]int, sk
 			continue
 		}
 		px, py := r.worldToScreenF(float64(c[0]), float64(c[1]))
-		x, y, s := artOrigin(sp.meta, float64(px), float64(py), tile)
-		w, h := float64(sp.meta.Canvas[0])*s, float64(sp.meta.Canvas[1])*s
+		x, y, s := artOrigin(sp.Meta, float64(px), float64(py), tile)
+		w, h := float64(sp.Meta.Canvas[0])*s, float64(sp.Meta.Canvas[1])*s
 		if !visible(float32(x), float32(y), float32(w), float32(h), sw, sh) {
 			continue
 		}
@@ -326,7 +326,7 @@ func (r *Renderer) drawZoneRun(b *triBatch, kind string, run edgeRun, sw, sh int
 		r.drawFenceRun(b, run, tile)
 		return
 	}
-	th := zoneStroke(r.cam.zoom)
+	th := zoneStroke(r.cam.Zoom)
 	ax, ay := r.worldToScreenF(float64(run.x0), float64(run.y0))
 	bx, by := r.worldToScreenF(float64(run.x1), float64(run.y1))
 	off := th / 2
@@ -371,7 +371,7 @@ func (r *Renderer) drawZoneHighlight(screen *ebiten.Image, w game.WorldView, z g
 			vector.FillRect(screen, sx, sy, float32(tile), float32(tile), zoneSelFillClr, false)
 		}
 	}
-	th := zoneStroke(r.cam.zoom) * 1.5
+	th := zoneStroke(r.cam.Zoom) * 1.5
 	off := th / 2
 	for _, run := range r.zoneGeomOf(z).runs {
 		if !r.runVisible(run, sw, sh, 8) {

@@ -17,7 +17,7 @@ func TestRendererWithoutArtDrawsFallback(t *testing.T) {
 	if r.art != nil {
 		t.Fatal("a fresh renderer has no art")
 	}
-	r.cam.zoom = 1
+	r.cam.Zoom = 1
 	r.hasSelect, r.selected = true, 1
 	r.Draw(ebiten.NewImage(320, 240))
 }

@@ -245,8 +245,8 @@ func TestTameNameSitsUnderItsAnimalAtScale(t *testing.T) {
 			}
 
 			// pan: every world mark moves by exactly -delta physical
-			r.cam.offsetX += 40
-			r.cam.offsetY -= 24
+			r.cam.OffsetX += 40
+			r.cam.OffsetY -= 24
 			p2s, t2s := draw()
 			if len(p2s) != 1 || len(t2s) != 1 {
 				t.Fatal("name not drawn after the pan")
@@ -287,7 +287,7 @@ func TestTameNameHiddenWhenZoomedOutOrUnnamed(t *testing.T) {
 // at (cx, cy) chased by animal 10 at (ax, ay).
 func chaseCamera(cx, cy, ax, ay int) (*Renderer, game.WorldView) {
 	r := New(&stubSim{w: 64, h: 64, pawns: []game.PawnView{{ID: 1, Name: "Ada", X: cx, Y: cy}}})
-	r.cam = camera{zoom: 1, placed: true}
+	r.cam = camera{Zoom: 1, Placed: true}
 	r.voice.view = viewport{0, 40, 800, 560}
 	w := game.WorldView{
 		Animals: []game.AnimalView{{ID: 10, Species: "timber_wolf", Label: "timber wolf", Hostile: true, TargetID: 1, X: ax, Y: ay}},

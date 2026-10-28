@@ -32,9 +32,9 @@ func (j *journey) clickWith(id string, mods input.Mod) {
 			continue
 		}
 		s := float32(j.a.scale.S)
-		j.f.cur.mx, j.f.cur.my = int((b.x+b.w/2)*s), int((b.y+b.h/2)*s)
-		j.f.click(j.t, j.a, mbLeft, mods)
-		j.f.cur.mx, j.f.cur.my = -50, -50
+		j.f.Cur.Mx, j.f.Cur.My = int((b.x+b.w/2)*s), int((b.y+b.h/2)*s)
+		j.f.Click(j.t, j.a, mbLeft, mods)
+		j.f.Cur.Mx, j.f.Cur.My = -50, -50
 		return
 	}
 	j.t.Fatalf("no button %q", id)
@@ -141,13 +141,13 @@ func TestJourneyHudOverlayKeys(t *testing.T) {
 		t.Fatal("G again did not hide them")
 	}
 
-	j.f.moveTo(j.a, 15, 7)
+	j.f.MoveTo(j.a, 15, 7)
 	j.update(1)
 	plain := len(j.a.cellInfoLines())
 	if plain == 0 {
 		t.Fatal("hovering a tile shows no cell info")
 	}
-	j.f.cur.mods = input.ModAlt
+	j.f.Cur.Mods = input.ModAlt
 	j.update(1)
 	if alt := len(j.a.cellInfoLines()); alt <= plain {
 		t.Fatalf("Alt added no detail lines (%d plain, %d with Alt)", plain, alt)
@@ -305,8 +305,8 @@ func TestJourneyHudLetterClickAndDismiss(t *testing.T) {
 	}
 	s := float32(j.a.scale.S)
 	cx, cy := rows[len(rows)-1].r.Center()
-	j.f.cur.mx, j.f.cur.my = int(cx*s), int(cy*s)
-	j.f.click(t, j.a, mbRight, 0)
+	j.f.Cur.Mx, j.f.Cur.My = int(cx*s), int(cy*s)
+	j.f.Click(t, j.a, mbRight, 0)
 	c, ok := j.lastCmd(command.DismissLetter)
 	if !ok || c.Target != l.ID {
 		t.Fatalf("right click sent %+v (%v), want a dismissal of %d", c, ok, l.ID)
@@ -332,12 +332,12 @@ func TestJourneyHudAlertJump(t *testing.T) {
 	}
 	j.lookAt(0, 0)
 	r := j.a.renderer
-	x0, y0 := r.cam.offsetX, r.cam.offsetY
+	x0, y0 := r.cam.OffsetX, r.cam.OffsetY
 	if !j.clickID(id) {
 		t.Fatalf("%s disabled", id)
 	}
 	j.draw(3)
-	if r.cam.offsetX == x0 && r.cam.offsetY == y0 {
+	if r.cam.OffsetX == x0 && r.cam.OffsetY == y0 {
 		t.Fatalf("clicking %s did not move the camera", id)
 	}
 }

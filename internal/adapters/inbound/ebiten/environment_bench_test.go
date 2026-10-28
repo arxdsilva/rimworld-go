@@ -31,7 +31,7 @@ func BenchmarkDrawPlants(b *testing.B) {
 	}
 	r := New(newEnvSim(w, movers...))
 	r.art = envArt(keys...)
-	r.cam.zoom = 0.5 // the whole 40x25 field on screen
+	r.cam.Zoom = 0.5 // the whole 40x25 field on screen
 	screen := ebiten.NewImage(1280, 800)
 	tile := r.tilePx()
 	none := color.NRGBA{}

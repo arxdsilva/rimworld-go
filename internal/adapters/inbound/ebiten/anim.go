@@ -63,7 +63,7 @@ const figurePivotX, figurePivotY = 0.5, 0.55
 
 // drawSpritePose draws a sprite at tile (wx, wy) transformed by ps.
 func (r *Renderer) drawSpritePose(screen *ebiten.Image, key string, tint color.NRGBA, wx, wy, tile float64, ps pose) {
-	m := r.art.metaOf(key) // no decode before the cull
+	m := r.art.MetaOf(key) // no decode before the cull
 	if m == nil {
 		return
 	}
@@ -75,7 +75,7 @@ func (r *Renderer) drawSpritePose(screen *ebiten.Image, key string, tint color.N
 	if r.cast == nil && !geoVisible(geo, float64(m.Canvas[0]), float64(m.Canvas[1]), screen.Bounds()) {
 		return
 	}
-	img := r.art.image(key, tint)
+	img := r.art.Image(key, tint)
 	if img == nil {
 		return
 	}
@@ -372,7 +372,7 @@ func (r *Renderer) framed(key, suffix string) string {
 	if suffix == "" {
 		return key
 	}
-	if k := key + suffix; r.art.has(k) {
+	if k := key + suffix; r.art.Has(k) {
 		return k
 	}
 	return key

@@ -45,28 +45,28 @@ func globeTestPlanet(tb testing.TB, coverage int) *planet.Planet {
 func testGlobe(t testing.TB) *globeView {
 	t.Helper()
 	g := newGlobeView(globeTestPlanet(t, 30), nil)
-	g.sw, g.sh = 1280, 720
-	g.reduced = true
+	g.Sw, g.Sh = 1280, 720
+	g.Reduced = true
 	return g
 }
 
 // screenOf is where tile i's centre is on screen and whether it faces the eye.
 func screenOf(g *globeView, i int) (x, y float64, front bool) {
-	c := g.p.Center[i]
-	sx, sy, z := g.cam.Project(g.viewport(), globemath.Vec3{float64(c[0]), float64(c[1]), float64(c[2])})
-	return sx, sy, z > globemath.HorizonZ(g.cam.Dist)+0.05
+	c := g.P.Center[i]
+	sx, sy, z := g.Cam.Project(g.Viewport(), globemath.Vec3{float64(c[0]), float64(c[1]), float64(c[2])})
+	return sx, sy, z > globemath.HorizonZ(g.Cam.Dist)+0.05
 }
 
 func centreNow(g *globeView, i int) {
-	c := g.p.Center[i]
-	g.cam.PanX, g.cam.PanY = 0, 0
-	g.cam.CentreOn(globemath.Vec3{float64(c[0]), float64(c[1]), float64(c[2])}, 0)
+	c := g.P.Center[i]
+	g.Cam.PanX, g.Cam.PanY = 0, 0
+	g.Cam.CentreOn(globemath.Vec3{float64(c[0]), float64(c[1]), float64(c[2])}, 0)
 }
 
 func landTile(t testing.TB, g *globeView) int {
 	t.Helper()
-	for i := 0; i < g.p.TileCount(); i++ {
-		if ok, _ := g.p.ValidLanding(i); ok {
+	for i := 0; i < g.P.TileCount(); i++ {
+		if ok, _ := g.P.ValidLanding(i); ok {
 			return i
 		}
 	}
@@ -153,7 +153,7 @@ func TestGlobeCornersAreSharedAcrossTiles(t *testing.T) {
 func TestGlobeColoursByWaterThenBiome(t *testing.T) {
 	t.Parallel()
 	g := testGlobe(t)
-	p := g.p
+	p := g.P
 	var ocean, lake, landMtn, seaIce = -1, -1, -1, -1
 	for i := 0; i < p.TileCount(); i++ {
 		switch {
@@ -174,14 +174,14 @@ func TestGlobeColoursByWaterThenBiome(t *testing.T) {
 	if p.Biome[ocean] != biome.TemperateForest {
 		t.Fatalf("ocean tile biome is %v, expected the placeholder 0", p.Biome[ocean])
 	}
-	if got, want := g.base[ocean], oceanColour(p.Elev[ocean]); got != want {
+	if got, want := g.Base[ocean], oceanColour(p.Elev[ocean]); got != want {
 		t.Fatalf("ocean colour %v, want depth shading %v", got, want)
 	}
-	if g.base[ocean] == palRGB("temperate_forest") {
+	if g.Base[ocean] == palRGB("temperate_forest") {
 		t.Fatal("ocean drawn as temperate forest")
 	}
-	if lake >= 0 && g.base[lake] != palRGB("lake") {
-		t.Fatalf("lake colour %v", g.base[lake])
+	if lake >= 0 && g.Base[lake] != palRGB("lake") {
+		t.Fatalf("lake colour %v", g.Base[lake])
 	}
 	// Ocean depth: deeper is darker.
 	if d, s := oceanColour(-4000), oceanColour(-50); d[2] >= s[2] {
@@ -191,7 +191,7 @@ func TestGlobeColoursByWaterThenBiome(t *testing.T) {
 	if landMtn >= 0 {
 		want := mixRGB(palRGB(biome.DefOf(p.Biome[landMtn]).Key), palRGB("mountain_tint"), 0.40)
 		for c := 0; c < 3; c++ {
-			if r := g.base[landMtn][c] / want[c]; r < 0.969 || r > 1.031 {
+			if r := g.Base[landMtn][c] / want[c]; r < 0.969 || r > 1.031 {
 				t.Fatalf("mountain tile channel %d ratio %v", c, r)
 			}
 		}
@@ -199,7 +199,7 @@ func TestGlobeColoursByWaterThenBiome(t *testing.T) {
 	if seaIce >= 0 {
 		want := palRGB("sea_ice")
 		for c := 0; c < 3; c++ {
-			if r := g.base[seaIce][c] / want[c]; r < 0.969 || r > 1.031 {
+			if r := g.Base[seaIce][c] / want[c]; r < 0.969 || r > 1.031 {
 				t.Fatalf("sea ice drawn as water: ratio %v", r)
 			}
 		}
@@ -219,25 +219,25 @@ func TestGlobeModesRecolourOnly(t *testing.T) {
 	t.Parallel()
 	g := testGlobe(t)
 	var land, ocean = -1, -1
-	for i := 0; i < g.p.TileCount(); i++ {
-		if g.p.Water[i] == planet.Land && land < 0 && g.p.Biome[i] != biome.SeaIce {
+	for i := 0; i < g.P.TileCount(); i++ {
+		if g.P.Water[i] == planet.Land && land < 0 && g.P.Biome[i] != biome.SeaIce {
 			land = i
 		}
-		if g.p.Water[i] == planet.Ocean && ocean < 0 {
+		if g.P.Water[i] == planet.Ocean && ocean < 0 {
 			ocean = i
 		}
 	}
-	biomeLand, biomeOcean := g.base[land], g.base[ocean]
-	nv := g.verts
+	biomeLand, biomeOcean := g.Base[land], g.Base[ocean]
+	nv := g.Verts
 	for _, m := range []globeMode{globeTemperature, globeRainfall, globeElevation} {
 		g.SetMode(m)
 		if g.Mode() != m {
 			t.Fatalf("mode %v not set", m)
 		}
-		if g.base[land] == biomeLand {
+		if g.Base[land] == biomeLand {
 			t.Fatalf("%v: land colour unchanged", m)
 		}
-		if g.base[ocean][2] >= biomeOcean[2] && m != globeElevation {
+		if g.Base[ocean][2] >= biomeOcean[2] && m != globeElevation {
 			// data views dim the water so the land reads
 			t.Fatalf("%v: ocean not dimmed", m)
 		}
@@ -246,14 +246,14 @@ func TestGlobeModesRecolourOnly(t *testing.T) {
 		}
 	}
 	g.SetMode(globeBiome)
-	if g.base[land] != biomeLand || g.base[ocean] != biomeOcean {
+	if g.Base[land] != biomeLand || g.Base[ocean] != biomeOcean {
 		t.Fatal("switching back does not restore the biome colours")
 	}
 	g.SetMode(numGlobeModes) // ignored
 	if g.Mode() != globeBiome {
 		t.Fatal("invalid mode accepted")
 	}
-	if &nv[0] != &g.verts[0] {
+	if &nv[0] != &g.Verts[0] {
 		t.Fatal("recolour reallocated the vertex buffer")
 	}
 	for _, c := range []float32{-40, 0, 40} {
@@ -267,27 +267,27 @@ func TestGlobePickTileRoundTrip(t *testing.T) {
 	t.Parallel()
 	g := testGlobe(t)
 	rng := rand.New(rand.NewSource(3))
-	n := g.p.TileCount()
+	n := g.P.TileCount()
 	checked := 0
 	for trial := 0; trial < 60; trial++ {
-		g.cam.Lat = (rng.Float64()*2 - 1) * 1.3
-		g.cam.Lon = (rng.Float64()*2 - 1) * math.Pi
-		g.cam.SetDist(globemath.MinDist + rng.Float64()*(globemath.MaxDist-globemath.MinDist))
-		g.cam.PanX, g.cam.PanY = (rng.Float64()-0.5)*200, (rng.Float64()-0.5)*100
+		g.Cam.Lat = (rng.Float64()*2 - 1) * 1.3
+		g.Cam.Lon = (rng.Float64()*2 - 1) * math.Pi
+		g.Cam.SetDist(globemath.MinDist + rng.Float64()*(globemath.MaxDist-globemath.MinDist))
+		g.Cam.PanX, g.Cam.PanY = (rng.Float64()-0.5)*200, (rng.Float64()-0.5)*100
 		for k := 0; k < 40; k++ {
 			i := rng.Intn(n)
 			x, y, front := screenOf(g, i)
 			if !front {
 				continue
 			}
-			if got := g.pickTile(int(math.Round(x)), int(math.Round(y))); got != i {
+			if got := g.PickTile(int(math.Round(x)), int(math.Round(y))); got != i {
 				// A rounded pixel can land in a neighbour when tiles are tiny; the
 				// exact point must always pick the tile.
-				w, ok := g.cam.Pick(g.viewport(), x, y)
+				w, ok := g.Cam.Pick(g.Viewport(), x, y)
 				if !ok {
 					t.Fatalf("tile %d centre not pickable", i)
 				}
-				if got := g.p.TileAt([3]float32{float32(w[0]), float32(w[1]), float32(w[2])}); got != i {
+				if got := g.P.TileAt([3]float32{float32(w[0]), float32(w[1]), float32(w[2])}); got != i {
 					t.Fatalf("tile %d picked as %d", i, got)
 				}
 			}
@@ -303,7 +303,7 @@ func TestGlobeDragDoesNotSelect(t *testing.T) {
 	t.Parallel()
 	g := testGlobe(t)
 	centreNow(g, landTile(t, g))
-	lon0 := g.cam.Lon
+	lon0 := g.Cam.Lon
 	in := globeInput{W: 1280, H: 720, MX: 640, MY: 360}
 	in.Press[mbLeft], in.Down[mbLeft] = true, true
 	g.Update(in, true)
@@ -318,8 +318,8 @@ func TestGlobeDragDoesNotSelect(t *testing.T) {
 	if c, _ := g.Update(in, true); c != globeNone || g.Selected() != -1 {
 		t.Fatalf("drag release selected %d / %d", c, g.Selected())
 	}
-	if g.cam.Lon >= lon0 { // dragging right turns the surface right: lon decreases
-		t.Fatalf("drag did not rotate: lon %v -> %v", lon0, g.cam.Lon)
+	if g.Cam.Lon >= lon0 { // dragging right turns the surface right: lon decreases
+		t.Fatalf("drag did not rotate: lon %v -> %v", lon0, g.Cam.Lon)
 	}
 	// A 3 px wobble is still a click.
 	g2 := testGlobe(t)
@@ -352,7 +352,7 @@ func TestGlobeClickSelectsTileUnderCursor(t *testing.T) {
 		t.Fatalf("selected %d, want %d", g.Selected(), i)
 	}
 	// A neighbour is a different tile.
-	nb := int(g.p.Neighbours(i)[0])
+	nb := int(g.P.Neighbours(i)[0])
 	nx, ny, _ := screenOf(g, nb)
 	if got := globeClick(g, int(math.Round(nx)), int(math.Round(ny)), false); got != nb || g.Selected() != nb {
 		t.Fatalf("neighbour click gave %d (selected %d), want %d", got, g.Selected(), nb)
@@ -379,8 +379,8 @@ func TestGlobeClickSelectsTileUnderCursor(t *testing.T) {
 func TestGlobeClickOnUncoveredSphere(t *testing.T) {
 	t.Parallel()
 	g := testGlobe(t)
-	pole := g.p.Pole
-	g.cam.CentreOn(globemath.Vec3{-float64(pole[0]), -float64(pole[1]), -float64(pole[2])}, 0)
+	pole := g.P.Pole
+	g.Cam.CentreOn(globemath.Vec3{-float64(pole[0]), -float64(pole[1]), -float64(pole[2])}, 0)
 	g.Select(5)
 	if got := globeClick(g, 640, 360, false); got != globeUncovered {
 		t.Fatalf("click on the far side of a 30%% world gave %d", got)
@@ -415,11 +415,11 @@ func TestGlobeDoubleClickCentres(t *testing.T) {
 	g := testGlobe(t)
 	i := landTile(t, g)
 	centreNow(g, i)
-	nb := int(g.p.Neighbours(i)[1])
+	nb := int(g.P.Neighbours(i)[1])
 	// Look at a tile slightly off-centre by clicking its neighbour twice.
 	x, y, _ := screenOf(g, nb)
 	globeClick(g, int(x), int(y), false)
-	if g.cam.Flying() {
+	if g.Cam.Flying() {
 		t.Fatal("a single click flew")
 	}
 	globeClick(g, int(x), int(y), false)
@@ -435,7 +435,7 @@ func TestGlobeDoubleClickCentres(t *testing.T) {
 	g2 := testGlobe(t)
 	j := landTile(t, g2)
 	centreNow(g2, j)
-	nb2 := int(g2.p.Neighbours(j)[1])
+	nb2 := int(g2.P.Neighbours(j)[1])
 	x2, y2, _ := screenOf(g2, nb2)
 	globeClick(g2, int(x2), int(y2), false)
 	for k := 0; k < globeDoubleFrames+2; k++ {
@@ -451,9 +451,9 @@ func TestGlobeCentreFliesUnlessReducedMotion(t *testing.T) {
 	t.Parallel()
 	g := testGlobe(t)
 	i := landTile(t, g)
-	g.reduced = false
+	g.Reduced = false
 	g.Center(i)
-	if !g.cam.Flying() {
+	if !g.Cam.Flying() {
 		t.Fatal("no flight")
 	}
 	for k := 0; k < globeFlyFrames+1; k++ {
@@ -462,14 +462,14 @@ func TestGlobeCentreFliesUnlessReducedMotion(t *testing.T) {
 	if x, y, _ := screenOf(g, i); math.Abs(x-640) > 1 || math.Abs(y-360) > 1 {
 		t.Fatalf("flight ended at (%v, %v)", x, y)
 	}
-	g.reduced = true
-	g.cam.Lon += 1
+	g.Reduced = true
+	g.Cam.Lon += 1
 	g.Center(i)
-	if g.cam.Flying() {
+	if g.Cam.Flying() {
 		t.Fatal("reduced motion still flies")
 	}
 	g.Center(-1) // ignored
-	g.Center(g.p.TileCount())
+	g.Center(g.P.TileCount())
 }
 
 func TestGlobeKeysWheelAndHome(t *testing.T) {
@@ -477,49 +477,49 @@ func TestGlobeKeysWheelAndHome(t *testing.T) {
 	g := testGlobe(t)
 	i := landTile(t, g)
 	centreNow(g, i)
-	lon, lat := g.cam.Lon, g.cam.Lat
+	lon, lat := g.Cam.Lon, g.Cam.Lat
 	g.Update(globeInput{W: 1280, H: 720, MX: 5, MY: 5, Held: []string{"D"}}, true)
-	d1 := g.cam.Lon - lon
+	d1 := g.Cam.Lon - lon
 	if d1 <= 0 {
 		t.Fatalf("D turned lon by %v", d1)
 	}
-	lon = g.cam.Lon
+	lon = g.Cam.Lon
 	g.Update(globeInput{W: 1280, H: 720, MX: 5, MY: 5, Held: []string{"ArrowRight"}, Shift: true}, true)
-	if d3 := g.cam.Lon - lon; d3 < 2.9*d1 || d3 > 3.1*d1 {
+	if d3 := g.Cam.Lon - lon; d3 < 2.9*d1 || d3 > 3.1*d1 {
 		t.Fatalf("shift step %v, plain %v", d3, d1)
 	}
 	g.Update(globeInput{W: 1280, H: 720, MX: 5, MY: 5, Held: []string{"W"}}, true)
-	if g.cam.Lat <= lat {
+	if g.Cam.Lat <= lat {
 		t.Fatal("W did not look north")
 	}
 	g.Update(globeInput{W: 1280, H: 720, MX: 5, MY: 5, Held: []string{"S", "A"}}, true)
 	// Zoom: wheel, keys, clamps.
-	d0 := g.cam.Dist
+	d0 := g.Cam.Dist
 	g.Update(globeInput{W: 1280, H: 720, MX: 5, MY: 5, Wheel: 1}, true)
-	if g.cam.Dist >= d0 {
+	if g.Cam.Dist >= d0 {
 		t.Fatal("wheel up did not zoom in")
 	}
 	g.Update(globeInput{W: 1280, H: 720, MX: 5, MY: 5, Wheel: 1, Blocked: true}, true)
-	d1z := g.cam.Dist
+	d1z := g.Cam.Dist
 	g.Update(globeInput{W: 1280, H: 720, MX: 5, MY: 5, Held: []string{"PageDown"}}, true)
-	if g.cam.Dist <= d1z {
+	if g.Cam.Dist <= d1z {
 		t.Fatal("PageDown did not zoom out")
 	}
 	for k := 0; k < 300; k++ {
 		g.Update(globeInput{W: 1280, H: 720, MX: 5, MY: 5, Held: []string{"PageUp", "Equal"}}, true)
 	}
-	if g.cam.Dist != globemath.MinDist {
-		t.Fatalf("zoom in stopped at %v", g.cam.Dist)
+	if g.Cam.Dist != globemath.MinDist {
+		t.Fatalf("zoom in stopped at %v", g.Cam.Dist)
 	}
 	for k := 0; k < 300; k++ {
 		g.Update(globeInput{W: 1280, H: 720, MX: 5, MY: 5, Held: []string{"Minus"}, Wheel: -3}, true)
 	}
-	if g.cam.Dist != globemath.MaxDist {
-		t.Fatalf("zoom out stopped at %v", g.cam.Dist)
+	if g.Cam.Dist != globemath.MaxDist {
+		t.Fatalf("zoom out stopped at %v", g.Cam.Dist)
 	}
 	// Home centres the selection and resets the pan.
 	g.Select(i)
-	g.cam.PanX = 100
+	g.Cam.PanX = 100
 	g.Update(globeInput{W: 1280, H: 720, MX: 5, MY: 5, Keys: []string{"Home"}}, true)
 	if x, y, _ := screenOf(g, i); math.Abs(x-640) > 1 || math.Abs(y-360) > 1 {
 		t.Fatalf("Home left the tile at (%v, %v)", x, y)
@@ -534,12 +534,12 @@ func TestGlobeMiddleDragPans(t *testing.T) {
 	g.Update(in, true)
 	in.Press[mbMiddle], in.MX, in.MY = false, 460, 280
 	g.Update(in, true)
-	if g.cam.PanX != 60 || g.cam.PanY != -20 {
-		t.Fatalf("pan %v,%v", g.cam.PanX, g.cam.PanY)
+	if g.Cam.PanX != 60 || g.Cam.PanY != -20 {
+		t.Fatalf("pan %v,%v", g.Cam.PanX, g.Cam.PanY)
 	}
 	in.Down[mbMiddle], in.MX = false, 9000
 	g.Update(in, true)
-	if g.cam.PanX != 60 {
+	if g.Cam.PanX != 60 {
 		t.Fatal("pan continued after release")
 	}
 	// Clamped.
@@ -547,8 +547,8 @@ func TestGlobeMiddleDragPans(t *testing.T) {
 	g.Update(in, true)
 	in.Press[mbMiddle], in.MX = false, 9000
 	g.Update(in, true)
-	if g.cam.PanX > 0.4*1280+1 {
-		t.Fatalf("pan %v not clamped", g.cam.PanX)
+	if g.Cam.PanX > 0.4*1280+1 {
+		t.Fatalf("pan %v not clamped", g.Cam.PanX)
 	}
 }
 
@@ -567,12 +567,12 @@ func TestGlobeInertiaAfterDrag(t *testing.T) {
 		in.Down[mbLeft], in.Release[mbLeft] = false, true
 		g.Update(in, reduced)
 		in.Release[mbLeft] = false
-		lon := g.cam.Lon
+		lon := g.Cam.Lon
 		g.Update(in, reduced)
-		first := math.Abs(g.cam.Lon - lon)
-		lon = g.cam.Lon
+		first := math.Abs(g.Cam.Lon - lon)
+		lon = g.Cam.Lon
 		g.Update(in, reduced)
-		second := math.Abs(g.cam.Lon - lon)
+		second := math.Abs(g.Cam.Lon - lon)
 		if reduced {
 			return first != 0
 		}
@@ -595,17 +595,17 @@ func TestGlobeHighlightExpires(t *testing.T) {
 	i := landTile(t, g)
 	centreNow(g, i)
 	g.Highlight([]int{i, -3, 1 << 20}, 3)
-	g.build()
-	withHL := len(g.ov)
+	g.Build()
+	withHL := len(g.Ov)
 	if withHL == 0 {
 		t.Fatal("highlight drew nothing")
 	}
 	for k := 0; k < 3; k++ {
 		g.Update(globeInput{W: 1280, H: 720, MX: 2, MY: 2}, true)
 	}
-	g.build()
-	if len(g.ov) >= withHL {
-		t.Fatalf("highlight still drawn: %d >= %d", len(g.ov), withHL)
+	g.Build()
+	if len(g.Ov) >= withHL {
+		t.Fatalf("highlight still drawn: %d >= %d", len(g.Ov), withHL)
 	}
 }
 
@@ -616,7 +616,7 @@ func TestGlobeSelectBounds(t *testing.T) {
 	if g.Selected() != 3 {
 		t.Fatal("select")
 	}
-	g.Select(g.p.TileCount())
+	g.Select(g.P.TileCount())
 	if g.Selected() != -1 {
 		t.Fatal("out of range select kept")
 	}
@@ -627,25 +627,25 @@ func TestGlobeSelectBounds(t *testing.T) {
 func TestGlobeBuildStaysInsideTheSilhouette(t *testing.T) {
 	t.Parallel()
 	g := newGlobeView(globeTestPlanet(t, 100), nil)
-	g.sw, g.sh = 1280, 720
+	g.Sw, g.Sh = 1280, 720
 	rng := rand.New(rand.NewSource(11))
 	for trial := 0; trial < 12; trial++ {
-		g.cam.Lat = (rng.Float64()*2 - 1) * 1.4
-		g.cam.Lon = (rng.Float64()*2 - 1) * math.Pi
-		g.cam.SetDist(globemath.MinDist + rng.Float64()*(globemath.MaxDist-globemath.MinDist))
-		g.build()
-		if g.nV == 0 || g.nI == 0 || g.nI%3 != 0 {
-			t.Fatalf("empty or ragged mesh: %d verts %d indices", g.nV, g.nI)
+		g.Cam.Lat = (rng.Float64()*2 - 1) * 1.4
+		g.Cam.Lon = (rng.Float64()*2 - 1) * math.Pi
+		g.Cam.SetDist(globemath.MinDist + rng.Float64()*(globemath.MaxDist-globemath.MinDist))
+		g.Build()
+		if g.NV == 0 || g.NI == 0 || g.NI%3 != 0 {
+			t.Fatalf("empty or ragged mesh: %d verts %d indices", g.NV, g.NI)
 		}
-		vp := g.viewport()
-		r := globemath.SilhouetteRadius(vp, g.cam.Dist)
-		for k := 0; k < g.nV; k++ {
-			v := g.verts[k]
+		vp := g.Viewport()
+		r := globemath.SilhouetteRadius(vp, g.Cam.Dist)
+		for k := 0; k < g.NV; k++ {
+			v := g.Verts[k]
 			if math.IsNaN(float64(v.DstX)) || math.IsNaN(float64(v.DstY)) {
 				t.Fatal("NaN vertex")
 			}
 			if d := math.Hypot(float64(v.DstX)-vp.CX, float64(v.DstY)-vp.CY); d > r+1.5 {
-				t.Fatalf("vertex %d at %.1f px from the centre, silhouette %.1f (dist %.2f)", k, d, r, g.cam.Dist)
+				t.Fatalf("vertex %d at %.1f px from the centre, silhouette %.1f (dist %.2f)", k, d, r, g.Cam.Dist)
 			}
 		}
 	}
@@ -658,7 +658,7 @@ func TestGlobeHasNoHoles(t *testing.T) {
 	t.Parallel()
 	p := globeTestPlanet(t, 100)
 	g := newGlobeView(p, nil)
-	g.sw, g.sh = 1280, 720
+	g.Sw, g.Sh = 1280, 720
 	var pent []int
 	for i := 0; i < p.TileCount() && len(pent) < 3; i++ {
 		if p.CornerOff[i+1]-p.CornerOff[i] == 5 {
@@ -673,11 +673,11 @@ func TestGlobeHasNoHoles(t *testing.T) {
 	rng := rand.New(rand.NewSource(5))
 	for vi, v := range views {
 		for _, dist := range []float64{1.4, 2.9, 4.0} {
-			g.cam.SetDist(dist)
-			g.cam.CentreOn(v, 0)
-			g.build()
-			vp := g.viewport()
-			r := globemath.SilhouetteRadius(vp, g.cam.Dist)
+			g.Cam.SetDist(dist)
+			g.Cam.CentreOn(v, 0)
+			g.Build()
+			vp := g.Viewport()
+			r := globemath.SilhouetteRadius(vp, g.Cam.Dist)
 			misses := 0
 			for s := 0; s < 400; s++ {
 				a, d := rng.Float64()*2*math.Pi, math.Sqrt(rng.Float64())*r*0.985
@@ -694,8 +694,8 @@ func TestGlobeHasNoHoles(t *testing.T) {
 }
 
 func coveredByMesh(g *globeView, x, y float32) bool {
-	for k := 0; k+2 < g.nI; k += 3 {
-		a, b, c := g.verts[g.idx[k]], g.verts[g.idx[k+1]], g.verts[g.idx[k+2]]
+	for k := 0; k+2 < g.NI; k += 3 {
+		a, b, c := g.Verts[g.Idx[k]], g.Verts[g.Idx[k+1]], g.Verts[g.Idx[k+2]]
 		d1 := (x-b.DstX)*(a.DstY-b.DstY) - (a.DstX-b.DstX)*(y-b.DstY)
 		d2 := (x-c.DstX)*(b.DstY-c.DstY) - (b.DstX-c.DstX)*(y-c.DstY)
 		d3 := (x-a.DstX)*(c.DstY-a.DstY) - (c.DstX-a.DstX)*(y-a.DstY)
@@ -711,22 +711,22 @@ func coveredByMesh(g *globeView, x, y float32) bool {
 func TestGlobeCullsTheFarSide(t *testing.T) {
 	t.Parallel()
 	g := newGlobeView(globeTestPlanet(t, 100), nil)
-	g.sw, g.sh = 1280, 720
-	g.build()
-	tiles := g.nV / 7 // roughly: one centre + 5 or 6 corners per tile
-	if n := g.p.TileCount(); tiles > n*6/10 || tiles < n/10 {
+	g.Sw, g.Sh = 1280, 720
+	g.Build()
+	tiles := g.NV / 7 // roughly: one centre + 5 or 6 corners per tile
+	if n := g.P.TileCount(); tiles > n*6/10 || tiles < n/10 {
 		t.Fatalf("%d of %d tiles drawn", tiles, n)
 	}
 }
 
 func TestGlobeNoAllocSteadyState(t *testing.T) {
 	g := newGlobeView(globeTestPlanet(t, 100), nil)
-	g.sw, g.sh = 1280, 720
+	g.Sw, g.Sh = 1280, 720
 	g.Select(50)
-	g.build() // warm: the first build sizes nothing, but be safe
+	g.Build() // warm: the first build sizes nothing, but be safe
 	allocs := testing.AllocsPerRun(20, func() {
-		g.cam.Lon += 0.01
-		g.build()
+		g.Cam.Lon += 0.01
+		g.Build()
 	})
 	if allocs > 1 {
 		t.Fatalf("%v allocations per frame build", allocs)
@@ -736,25 +736,25 @@ func TestGlobeNoAllocSteadyState(t *testing.T) {
 func TestGlobeOverlayDrawsRiversAndRoads(t *testing.T) {
 	t.Parallel()
 	g := newGlobeView(globeTestPlanet(t, 100), nil)
-	g.sw, g.sh = 1280, 720
-	if len(g.rivers) == 0 {
+	g.Sw, g.Sh = 1280, 720
+	if len(g.Rivers) == 0 {
 		t.Skip("test world has no rivers")
 	}
 	// Look at a river tile.
-	for i, s := range g.p.River {
-		if s != site.NoRiver && g.p.RiverTo[i] >= 0 {
+	for i, s := range g.P.River {
+		if s != site.NoRiver && g.P.RiverTo[i] >= 0 {
 			centreNow(g, i)
 			break
 		}
 	}
-	g.cam.SetDist(1.6)
-	g.build()
-	if len(g.ov) < 8 || len(g.oi)%3 != 0 {
-		t.Fatalf("overlay has %d vertices, %d indices", len(g.ov), len(g.oi))
+	g.Cam.SetDist(1.6)
+	g.Build()
+	if len(g.Ov) < 8 || len(g.Oi)%3 != 0 {
+		t.Fatalf("overlay has %d vertices, %d indices", len(g.Ov), len(g.Oi))
 	}
-	for _, i := range g.oi {
-		if int(i) >= len(g.ov) {
-			t.Fatalf("overlay index %d beyond %d vertices", i, len(g.ov))
+	for _, i := range g.Oi {
+		if int(i) >= len(g.Ov) {
+			t.Fatalf("overlay index %d beyond %d vertices", i, len(g.Ov))
 		}
 	}
 }
@@ -848,11 +848,11 @@ func TestGlobeAccentsAreDistinct(t *testing.T) {
 func TestGlobeMarksMatchSettlements(t *testing.T) {
 	t.Parallel()
 	g := newGlobeView(globeTestPlanet(t, 100), nil)
-	if want := len(g.p.SettlementTiles()); len(g.marks) != want {
-		t.Fatalf("%d marks for %d settlements", len(g.marks), want)
+	if want := len(g.P.SettlementTiles()); len(g.Marks) != want {
+		t.Fatalf("%d marks for %d settlements", len(g.Marks), want)
 	}
-	for _, m := range g.marks {
-		if !strings.HasPrefix(m.key, "ui_icon/settlement_") || m.label == "" {
+	for _, m := range g.Marks {
+		if !strings.HasPrefix(m.Key, "ui_icon/settlement_") || m.Label == "" {
 			t.Fatalf("bad mark %+v", m)
 		}
 	}
@@ -866,7 +866,7 @@ func TestGlobeDrawsHeadless(t *testing.T) {
 	g.SetMode(globeRainfall)
 	g.Draw(screen, 1280, 720)
 	g.SetArea(0, 0, 900, 720)
-	g.cam.SetDist(1.5)
+	g.Cam.SetDist(1.5)
 	g.Draw(screen, 1280, 720)
 }
 
@@ -874,14 +874,14 @@ func BenchmarkGlobeFrame(b *testing.B) {
 	for _, dist := range []float64{1.5, 2.9, 4.0} {
 		b.Run(fmt.Sprintf("dist%.1f", dist), func(b *testing.B) {
 			g := newGlobeView(globeTestPlanet(b, 100), nil)
-			g.sw, g.sh = 1280, 720
-			g.cam.SetDist(dist)
+			g.Sw, g.Sh = 1280, 720
+			g.Cam.SetDist(dist)
 			g.Select(100)
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				g.cam.Lon += 0.003
-				g.build()
+				g.Cam.Lon += 0.003
+				g.Build()
 			}
 		})
 	}
@@ -893,26 +893,26 @@ func TestGlobeDrawsEveryFacingTile(t *testing.T) {
 	t.Parallel()
 	for _, cov := range []int{30, 100} {
 		g := newGlobeView(globeTestPlanet(t, cov), nil)
-		g.sw, g.sh = 1280, 720
+		g.Sw, g.Sh = 1280, 720
 		for _, dist := range []float64{globemath.MinDist, globemath.MaxDist} {
-			g.cam.SetDist(dist)
+			g.Cam.SetDist(dist)
 			if cov == 30 {
-				c := g.p.Pole
-				g.cam.CentreOn(globemath.Vec3{float64(c[0]), float64(c[1]), float64(c[2])}, 0)
+				c := g.P.Pole
+				g.Cam.CentreOn(globemath.Vec3{float64(c[0]), float64(c[1]), float64(c[2])}, 0)
 			}
-			g.build()
+			g.Build()
 			want, tiles := 0, 0
-			cd := g.camDir
-			thresh := g.zh - globeCullSlack
-			for i := range g.p.Center {
-				c := g.p.Center[i]
+			cd := g.CamDir
+			thresh := g.Zh - globeCullSlack
+			for i := range g.P.Center {
+				c := g.P.Center[i]
 				if c[0]*cd[0]+c[1]*cd[1]+c[2]*cd[2] >= thresh {
-					want += int(g.p.CornerOff[i+1] - g.p.CornerOff[i])
+					want += int(g.P.CornerOff[i+1] - g.P.CornerOff[i])
 					tiles++
 				}
 			}
-			if g.nI/3 != want {
-				t.Fatalf("coverage %d dist %.2f: %d triangles for %d facing tiles (want %d)", cov, dist, g.nI/3, tiles, want)
+			if g.NI/3 != want {
+				t.Fatalf("coverage %d dist %.2f: %d triangles for %d facing tiles (want %d)", cov, dist, g.NI/3, tiles, want)
 			}
 		}
 	}
@@ -920,8 +920,8 @@ func TestGlobeDrawsEveryFacingTile(t *testing.T) {
 
 func TestGlobeInputFromFrame(t *testing.T) {
 	t.Parallel()
-	raw := rawInput{mx: 30, my: 40, wheelY: 2, held: []string{"W"}, pressed: []string{"Home"}}
-	raw.press[mbLeft], raw.down[mbLeft], raw.release[mbRight] = true, true, true
+	raw := rawInput{Mx: 30, My: 40, WheelY: 2, Held: []string{"W"}, Pressed: []string{"Home"}}
+	raw.Press[mbLeft], raw.Down[mbLeft], raw.Release[mbRight] = true, true, true
 	f := newFrame(raw)
 	in := globeInputFrom(&f, 1280, 720, true)
 	if in.MX != 30 || in.MY != 40 || in.Wheel != 2 || !in.Press[mbLeft] || !in.Down[mbLeft] || !in.Release[mbRight] ||

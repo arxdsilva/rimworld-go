@@ -15,9 +15,9 @@ import (
 // zoneFillArt is a catalog with just the zone fill sprites, so the fill
 // batch has something to count.
 func zoneFillArt() *artCatalog {
-	c := &artCatalog{sprites: map[string]*artSprite{}, tinted: map[tintKey]*ebiten.Image{}}
+	c := &artCatalog{Sprites: map[string]*artSprite{}, Tinted: map[tintKey]*ebiten.Image{}}
 	for _, k := range []string{"overlay/grow_zone", "overlay/stockpile", "overlay/pen_zone"} {
-		c.sprites[k] = fakeSprite([2]int{128, 128}, pt{}, nil)
+		c.Sprites[k] = fakeSprite([2]int{128, 128}, pt{}, nil)
 	}
 	return c
 }
@@ -49,7 +49,7 @@ func TestHiddenZoneDrawsNoLabelAndARenamedOneShowsItsName(t *testing.T) {
 	wlSetScale(t, wlScale{"ui1", 1, 1})
 	got := wlTrace(t)
 	r := New(&stubSim{w: 64, h: 64})
-	r.cam.zoom = 1
+	r.cam.Zoom = 1
 	named := rectZone(1, game.ZoneGrow, 2, 2, 8, 6)
 	named.Crop, named.Name = "potato", "North field"
 	hidden := rectZone(2, game.ZoneStockpile, 12, 2, 18, 6)
@@ -86,7 +86,7 @@ func TestSelectedHiddenZoneShowsItsNameAndAShownOneDoesNot(t *testing.T) {
 	z.Hidden = true
 	a, _, f := zoneApp(t, z)
 	a.selectCand(selCand{selZone, entity.EntityID(1)})
-	f.frame(t, a)
+	f.Frame(t, a)
 	got := wlTrace(t)
 	a.drawZoneSelection(ebiten.NewImage(64, 64))
 	if texts := wlOfKind(*got, "text"); len(texts) != 1 || texts[0].Text != "Hidden plot" {

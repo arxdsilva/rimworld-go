@@ -59,7 +59,7 @@ func TestMachineLoopsPlayWhileTheMachineRuns(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			a.renderer.cam.zoom = 1.5
+			a.renderer.cam.Zoom = 1.5
 			a.renderer.heard = game.WorldView{Hour: 12, Buildings: []game.BuildingView{tc.b}}
 			want := map[string]loopWant{}
 			a.colonyAmbience(want)
@@ -89,7 +89,7 @@ func TestMachineLoopsStartAndStopWithTheState(t *testing.T) {
 	cx, cy := centreTile(a)
 	b := sndMachineAt(7, sndKindHeater, int(cx), int(cy))
 	b.Powered, b.PowerUse = true, 180
-	r.cam.zoom = 1.5
+	r.cam.Zoom = 1.5
 	r.heard = game.WorldView{Hour: 12, Buildings: []game.BuildingView{b}}
 	want := map[string]loopWant{}
 	a.colonyAmbience(want)
@@ -123,7 +123,7 @@ func TestMachineLoopsAreSpatialAndCapped(t *testing.T) {
 	far := sndMachineAt(99, sndKindGeoGen, x+500, y) // out of earshot
 	far.PowerOut = 1800
 	bs = append(bs, far)
-	r.cam.zoom = 1.5
+	r.cam.Zoom = 1.5
 	r.heard = game.WorldView{Hour: 12, Buildings: bs}
 	want := map[string]loopWant{}
 	a.colonyAmbience(want)
@@ -148,7 +148,7 @@ func TestMachineLoopsAreSpatialAndCapped(t *testing.T) {
 	if right := want["power:11"]; right.pan <= want["power:10"].pan {
 		t.Fatalf("a generator to the right pans right of the centre one: %+v vs %+v", right, want["power:10"])
 	}
-	r.cam.zoom = r.minZoomFor(a.mapViewport())
+	r.cam.Zoom = r.MinZoomFor(a.mapViewport())
 	want = map[string]loopWant{}
 	a.colonyAmbience(want)
 	for key := range want {
@@ -343,7 +343,7 @@ func TestPowerCuesReachTheSoundBus(t *testing.T) {
 	a, rec := soundApp(&stubSim{w: 200, h: 200, tick: clock.Tick(500)})
 	r := a.renderer
 	cx, cy := centreTile(a)
-	r.cam.zoom = 1.5
+	r.cam.Zoom = 1.5
 	r.cue("sfx.switch_click", cx+6, cy, 1)
 	r.globalCue("ui.solar_flare")
 	a.colonyCues()

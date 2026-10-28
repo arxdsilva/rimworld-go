@@ -13,7 +13,7 @@ import (
 // given zoom, on a 1280x720 screen, with the animal voice's viewport set.
 func voiceRenderer(zoom float64) *Renderer {
 	r := New(&stubSim{w: 64, h: 64})
-	r.cam.zoom = zoom
+	r.cam.Zoom = zoom
 	r.voice.view = colonyViewport(1280, 720)
 	return r
 }

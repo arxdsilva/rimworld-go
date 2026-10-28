@@ -107,10 +107,10 @@ func (a *App) syncRenderer() {
 	r.fx = s.Graphics.FX()
 	applyGraphicsKnobs(r, s.Graphics)
 	r.edgeScroll = s.Gameplay.EdgeScroll && a.cfg.Capture == nil
-	r.smooth.speed = float64(s.Gameplay.PanSpeed) / 100
+	r.smooth.Speed = float64(s.Gameplay.PanSpeed) / 100
 	r.reducedFlashing = s.Accessibility.ReducedFlashing
 	r.reducedMotion = s.Accessibility.ReducedMotion
-	r.smooth.instant = s.Accessibility.ReducedMotion // no eased pan or zoom
+	r.smooth.Instant = s.Accessibility.ReducedMotion // no eased pan or zoom
 	if !s.Gameplay.DevMode && r.speed == speedUltra {
 		r.speed = speedVeryFast // ultrafast is a developer tier
 	}

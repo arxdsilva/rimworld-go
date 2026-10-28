@@ -292,7 +292,7 @@ func (a *App) icon(name string) *ebiten.Image {
 	if a.art == nil {
 		return nil
 	}
-	return a.art.image("ui_icon/"+name, color.NRGBA{})
+	return a.art.Image("ui_icon/"+name, color.NRGBA{})
 }
 
 // drawIconCS is drawIcon multiplied by cs (a stone item's tint).
@@ -352,15 +352,15 @@ func (a *App) handleArchitectInput() {
 		return
 	}
 	f := &a.in
-	if f.fired(input.RotateLeft) {
+	if f.Fired(input.RotateLeft) {
 		a.rotateOrStyle(-1)
 	}
-	if f.fired(input.RotateRight) {
+	if f.Fired(input.RotateRight) {
 		a.rotateOrStyle(1)
 	}
-	a.archCtrl = f.ctrl()
-	if f.clicked(mbRight) {
-		f.take(mbRight)
+	a.archCtrl = f.Ctrl()
+	if f.Clicked(mbRight) {
+		f.Take(mbRight)
 		if a.archDrag {
 			a.archDrag = false
 		} else {
@@ -373,16 +373,16 @@ func (a *App) handleArchitectInput() {
 	onMap := !a.colonyChromeHit(mx, my, sw, sh)
 	pmx, pmy := a.mapCursor()
 	tx, ty := a.shell.TileAt(pmx, pmy)
-	if onMap && f.clicked(mbLeft) {
-		f.take(mbLeft)
+	if onMap && f.Clicked(mbLeft) {
+		f.Take(mbLeft)
 		a.archDrag = true
 		a.archX0, a.archY0 = tx, ty
 		a.archX1, a.archY1 = tx, ty
 	}
-	if a.archDrag && f.down(mbLeft) && onMap {
+	if a.archDrag && f.Down(mbLeft) && onMap {
 		a.archX1, a.archY1 = tx, ty
 	}
-	if a.archDrag && f.released(mbLeft) {
+	if a.archDrag && f.Released(mbLeft) {
 		if onMap {
 			a.archX1, a.archY1 = tx, ty
 		}

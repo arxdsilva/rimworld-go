@@ -206,7 +206,7 @@ func TestLowRAMNoticeShowsOn4GiBAndHidesOn16GiBAndUnknown(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			a, f, _ := ngTest(t, c.mod)
-			f.frame(t, a)
+			f.Frame(t, a)
 			if got := hasWidget(a, ramDismissID); got != c.shown {
 				t.Fatalf("Got it button present = %v, want %v", got, c.shown)
 			}
@@ -223,12 +223,12 @@ func TestLowRAMNoticeShowsOn4GiBAndHidesOn16GiBAndUnknown(t *testing.T) {
 
 func TestLowRAMNoticeIsOnlyOnTheMainMenu(t *testing.T) {
 	a, f, _ := ngTest(t, withHardware(4*gib))
-	f.frame(t, a)
+	f.Frame(t, a)
 	if !hasWidget(a, ramDismissID) {
 		t.Fatal("the main menu shows the notice")
 	}
 	click(t, a, "menu.options")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if hasWidget(a, ramDismissID) {
 		t.Error("the Options screen must not carry the main-menu notice")
 	}
@@ -236,7 +236,7 @@ func TestLowRAMNoticeIsOnlyOnTheMainMenu(t *testing.T) {
 
 func TestLowRAMNoticeDrawsItsTextInTheCard(t *testing.T) {
 	a, f, _ := ngTest(t, withHardware(4*gib))
-	f.frame(t, a)
+	f.Frame(t, a)
 	text := lowRAMText(4 * gib)
 	card := a.ramNoticeCard(a.sw, a.sh, text)
 	if card.W <= 0 || card.H <= 0 {
@@ -262,7 +262,7 @@ func TestLowRAMNoticeStyledWithTheWarningToken(t *testing.T) {
 
 func TestLowRAMNoticeDoesNotCoverTheMenuButtons(t *testing.T) {
 	a, f, _ := ngTest(t, withHardware(4*gib))
-	f.frame(t, a)
+	f.Frame(t, a)
 	card := a.ramNoticeCard(a.sw, a.sh, lowRAMText(4*gib))
 	btns := a.mainMenuButtons(a.sw, a.sh)
 	if len(btns) < 7 {
@@ -301,12 +301,12 @@ func TestLowRAMNoticeDismissalIsRememberedPerAmountOfRAM(t *testing.T) {
 		}
 	}
 	a, f, _ := ngTest(t, hooks(config.Defaults()))
-	f.frame(t, a)
+	f.Frame(t, a)
 	if !hasWidget(a, ramDismissID) {
 		t.Fatal("a fresh settings file shows the notice")
 	}
 	press(t, a, f, ramDismissID)
-	f.frame(t, a)
+	f.Frame(t, a)
 	if hasWidget(a, ramDismissID) {
 		t.Fatal("Got it hides the notice")
 	}
@@ -325,7 +325,7 @@ func TestLowRAMNoticeDismissalIsRememberedPerAmountOfRAM(t *testing.T) {
 	// A later start with the same amount of RAM: still dismissed.
 	seen := saved[len(saved)-1]
 	b, g, _ := ngTest(t, hooks(seen))
-	g.frame(t, b)
+	g.Frame(t, b)
 	if hasWidget(b, ramDismissID) {
 		t.Error("the same amount of RAM must stay dismissed on the next start")
 	}
@@ -334,7 +334,7 @@ func TestLowRAMNoticeDismissalIsRememberedPerAmountOfRAM(t *testing.T) {
 		hooks(seen)(cfg)
 		cfg.Hardware = hwOf(3 * gib)
 	})
-	h.frame(t, c)
+	h.Frame(t, c)
 	if !hasWidget(c, ramDismissID) {
 		t.Error("a different amount of RAM brings the notice back")
 	}
@@ -344,7 +344,7 @@ func TestLowRAMNoticeAtUIScales(t *testing.T) {
 	for _, s := range []float64{1, 1.5, 2} {
 		t.Run(fmt.Sprintf("x%v", s), func(t *testing.T) {
 			a, f, _ := ngTest(t, withHardware(4*gib))
-			f.frame(t, a)
+			f.Frame(t, a)
 			pw, ph := atLogical1280(t, a, f, s)
 			text := lowRAMText(4 * gib)
 			card := a.ramNoticeCard(a.sw, a.sh, text)
@@ -376,9 +376,9 @@ func TestLowRAMNoticeAtUIScales(t *testing.T) {
 					btn = h
 				}
 			}
-			f.cur.mx, f.cur.my = int((btn.x+btn.w/2)*float32(s)), int((btn.y+btn.h/2)*float32(s))
-			f.frame(t, a)
-			f.frame(t, a)
+			f.Cur.Mx, f.Cur.My = int((btn.x+btn.w/2)*float32(s)), int((btn.y+btn.h/2)*float32(s))
+			f.Frame(t, a)
+			f.Frame(t, a)
 			if a.uiSt().hot != ramDismissID {
 				t.Errorf("the cursor over Got it hits %q", a.uiSt().hot)
 			}
@@ -417,15 +417,15 @@ func sizeRows(t *testing.T, a *App) (opts []game.MapSizeView, rows []rect, drawn
 func openAdvanced(t *testing.T, a *App, f *fakeInput) {
 	t.Helper()
 	click(t, a, "land.advanced")
-	f.frame(t, a)
-	f.frame(t, a)
+	f.Frame(t, a)
+	f.Frame(t, a)
 }
 
 func TestSizePickerWarnsOnlyForSizesOverSeventyPercent(t *testing.T) {
 	total := sizeNoteTotal()
 	a, f, _ := ngTest(t, withHardware(total))
 	toLanding(t, a)
-	f.frame(t, a)
+	f.Frame(t, a)
 	openAdvanced(t, a, f)
 	opts, _, drawn := sizeRows(t, a)
 	warned := 0
@@ -453,7 +453,7 @@ func TestSizeWarningsNameTheRightNumbers(t *testing.T) {
 	total := sizeNoteTotal()
 	a, f, _ := ngTest(t, withHardware(total))
 	toLanding(t, a)
-	f.frame(t, a)
+	f.Frame(t, a)
 	openAdvanced(t, a, f)
 	opts, _, drawn := sizeRows(t, a)
 	for i, o := range opts {
@@ -475,7 +475,7 @@ func TestWarnedSizesStaySelectable(t *testing.T) {
 	total := sizeNoteTotal()
 	a, f, _ := ngTest(t, withHardware(total))
 	toLanding(t, a)
-	f.frame(t, a)
+	f.Frame(t, a)
 	openAdvanced(t, a, f)
 	for i, o := range mapSizeOptions() {
 		if mapSizeNote(o.Side, total) == "" || !o.Enabled {
@@ -495,7 +495,7 @@ func TestWarnedSizesStaySelectable(t *testing.T) {
 func TestSizePickerNeverWarnsOn16GiB(t *testing.T) {
 	a, f, _ := ngTest(t, withHardware(16*gib))
 	toLanding(t, a)
-	f.frame(t, a)
+	f.Frame(t, a)
 	openAdvanced(t, a, f)
 	for _, e := range drawnText(t, a, a.sw, a.sh) {
 		if strings.HasPrefix(e.Text, "Needs about") || strings.HasPrefix(e.Text, "Large map") {
@@ -507,7 +507,7 @@ func TestSizePickerNeverWarnsOn16GiB(t *testing.T) {
 func TestSizePickerUnknownHardwareNotesLargeMapsOnly(t *testing.T) {
 	a, f, _ := ngTest(t, nil)
 	toLanding(t, a)
-	f.frame(t, a)
+	f.Frame(t, a)
 	openAdvanced(t, a, f)
 	opts, _, drawn := sizeRows(t, a)
 	for i, o := range opts {
@@ -532,10 +532,10 @@ func TestSizeWarningsAtUIScales(t *testing.T) {
 		t.Run(fmt.Sprintf("x%v", s), func(t *testing.T) {
 			a, f, _ := ngTest(t, withHardware(total))
 			toLanding(t, a)
-			f.frame(t, a)
+			f.Frame(t, a)
 			openAdvanced(t, a, f)
 			pw, ph := atLogical1280(t, a, f, s)
-			f.frame(t, a)
+			f.Frame(t, a)
 			ev := drawnText(t, a, pw, ph)
 			found := 0
 			for _, e := range ev {
@@ -617,8 +617,8 @@ func TestSitePanelShowsTheRAMWarning(t *testing.T) {
 	toLanding(t, a)
 	click(t, a, "land.random")
 	a.ng.mapSize = 500
-	f.frame(t, a)
-	f.frame(t, a)
+	f.Frame(t, a)
+	f.Frame(t, a)
 	want := mapSizeNote(500, total)
 	found := false
 	for _, e := range drawnText(t, a, a.sw, a.sh) {
@@ -628,8 +628,8 @@ func TestSitePanelShowsTheRAMWarning(t *testing.T) {
 		t.Errorf("the site panel does not show %q", want)
 	}
 	a.ng.mapSize = 300
-	f.frame(t, a)
-	f.frame(t, a)
+	f.Frame(t, a)
+	f.Frame(t, a)
 	for _, e := range drawnText(t, a, a.sw, a.sh) {
 		if strings.HasPrefix(e.Text, "Needs about") {
 			t.Errorf("a 300 map on this machine fits but the panel says %q", e.Text)

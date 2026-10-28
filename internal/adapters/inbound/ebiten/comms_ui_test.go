@@ -25,7 +25,7 @@ func TestCommsDisabledReasons(t *testing.T) {
 	t.Parallel()
 	s := &dealSim{cv: testCommsView(), cok: true}
 	a, f := dealApp(t, s)
-	f.frame(t, a)
+	f.Frame(t, a)
 	w, ok := a.uiSt().find("comms.3.aid")
 	if !ok || !w.disabled || w.reason != "cooling down: 2 days" {
 		t.Fatalf("aid = %+v ok=%v", w, ok)
@@ -37,12 +37,12 @@ func TestCommsDisabledReasons(t *testing.T) {
 		t.Fatal("a hostile faction shows no actions")
 	}
 	s.cv.Orbital = game.OrbitalView{}
-	f.frame(t, a)
+	f.Frame(t, a)
 	if _, ok := a.uiSt().find("comms.call"); ok {
 		t.Fatal("no ship, no call button")
 	}
 	s.cv.Orbital = game.OrbitalView{Present: true, CallReason: "needs a trade beacon"}
-	f.frame(t, a)
+	f.Frame(t, a)
 	if w, _ := a.uiSt().find("comms.call"); !w.disabled || w.reason != "needs a trade beacon" {
 		t.Fatalf("call = %+v", w)
 	}
@@ -52,7 +52,7 @@ func TestCommsGiftEmitsCommand(t *testing.T) {
 	t.Parallel()
 	s := &dealSim{cv: testCommsView(), cok: true}
 	a, f := dealApp(t, s)
-	f.frame(t, a)
+	f.Frame(t, a)
 	clickID(t, a, f, "comms.3.giftmore")
 	clickID(t, a, f, "comms.3.gift")
 	var got *command.Command
@@ -76,7 +76,7 @@ func TestCommsCallShipOpensTrade(t *testing.T) {
 	t.Parallel()
 	s := &dealSim{cv: testCommsView(), cok: true}
 	a, f := dealApp(t, s)
-	f.frame(t, a)
+	f.Frame(t, a)
 	clickID(t, a, f, "comms.call")
 	found := false
 	for _, c := range s.cmds {

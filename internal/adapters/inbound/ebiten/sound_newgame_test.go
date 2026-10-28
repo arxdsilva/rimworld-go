@@ -36,7 +36,7 @@ func TestSliderPlaysTick(t *testing.T) {
 		t.Fatalf("no move, no tick: %+v", rec.plays)
 	}
 	gap()
-	f.key(t, a, "ArrowRight", 0)
+	f.Key(t, a, "ArrowRight", 0)
 	if stop != 2 || len(rec.played("ui.slider_tick")) != 2 {
 		t.Fatalf("a key step ticks: stop=%v plays=%+v", stop, rec.plays)
 	}
@@ -72,9 +72,9 @@ func TestWizardPagesPlay(t *testing.T) {
 	rec := &soundRecorder{}
 	a.cfg.Sound = rec
 	click(t, a, "menu.newgame")
-	f.frame(t, a)
+	f.Frame(t, a)
 	press(t, a, f, "scen.row.ember_clan")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if n := len(rec.played("ui.page")); n != 0 {
 		t.Fatalf("choosing a scenario is not a page turn: %d", n)
 	}
@@ -175,9 +175,9 @@ func TestWaterAmbienceFollowsScreen(t *testing.T) {
 	r.heard = game.WorldView{Hour: 12, Season: "summer", OutdoorTemp: 200, Terrain: terr, TerrainW: side}
 	look := func(tileX float64) {
 		v := colonyViewport(a.sw, a.sh)
-		r.cam.zoom = 1
-		r.cam.offsetX = tileX*float64(TileSize) - (v.x0+v.x1)/2
-		r.cam.offsetY = 100*float64(TileSize) - (v.y0+v.y1)/2
+		r.cam.Zoom = 1
+		r.cam.OffsetX = tileX*float64(TileSize) - (v.X0+v.X1)/2
+		r.cam.OffsetY = 100*float64(TileSize) - (v.Y0+v.Y1)/2
 		a.snd.frame += cueGap
 		a.soundFrame()
 	}

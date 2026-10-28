@@ -154,12 +154,12 @@ func (a *App) tickCapture() {
 		}
 		a.renderer.speed = speedPaused
 		if c.Zoom > 0 {
-			a.renderer.cam.zoom = clampZoom(c.Zoom)
+			a.renderer.cam.Zoom = clampZoom(c.Zoom)
 		}
 		// centre the camera on the colony
 		tile := a.renderer.tilePx()
-		a.renderer.cam.offsetX = (float64(a.renderer.game.Width())/2+0.5)*tile - float64(a.sw)/2
-		a.renderer.cam.offsetY = (float64(a.renderer.game.Height())/2)*tile - float64(a.sh)/2
+		a.renderer.cam.OffsetX = (float64(a.renderer.game.Width())/2+0.5)*tile - float64(a.sw)/2
+		a.renderer.cam.OffsetY = (float64(a.renderer.game.Height())/2)*tile - float64(a.sh)/2
 		cx, cy := a.renderer.game.Width()/2, a.renderer.game.Height()/2
 		if !c.Bare {
 			for _, cmd := range captureOrders(cx, cy) {
@@ -329,21 +329,21 @@ func (a *App) captureUI(ui string) {
 		a.selectBuildingAt(cx+1, cy+6)
 		a.openPaneTab("bills") // hud_inspect.go: the Bills tab open above the pane
 		tile := a.renderer.tilePx()
-		a.renderer.cam.offsetX = float64(cx+1)*tile - float64(a.sw)/2 + 180
-		a.renderer.cam.offsetY = float64(cy+5)*tile - float64(a.sh)/2
+		a.renderer.cam.OffsetX = float64(cx+1)*tile - float64(a.sw)/2 + 180
+		a.renderer.cam.OffsetY = float64(cy+5)*tile - float64(a.sh)/2
 		x, y := at(cx+1, cy+6)
 		a.cursor = &[2]int{x, y}
 	case "zoomout", "zoomedge":
 		// furthest zoom-out, centred, or pushed to the top-left limit
 		v := colonyViewport(a.sw, a.sh)
-		a.renderer.cam.zoom = a.renderer.minZoomFor(v)
-		a.renderer.cam.placed = false
+		a.renderer.cam.Zoom = a.renderer.MinZoomFor(v)
+		a.renderer.cam.Placed = false
 		if ui == "zoomedge" {
-			a.renderer.cam.zoom *= 1.6
-			a.renderer.clampCamera(v)
-			a.renderer.cam.offsetX, a.renderer.cam.offsetY = -1e6, -1e6
+			a.renderer.cam.Zoom *= 1.6
+			a.renderer.ClampCamera(v)
+			a.renderer.cam.OffsetX, a.renderer.cam.OffsetY = -1e6, -1e6
 		}
-		a.renderer.clampCamera(v)
+		a.renderer.ClampCamera(v)
 	case "wild":
 		// the Animals tab's Wild list
 		a.workOpen, a.panelMode, a.animalsWild = true, "animals", true
@@ -666,8 +666,8 @@ func (a *App) captureUI(ui string) {
 			return
 		}
 		tile := a.renderer.tilePx()
-		a.renderer.cam.offsetX = float64(shot.FromX+shot.ToX+1)/2*tile - float64(a.sw)/2
-		a.renderer.cam.offsetY = float64(shot.FromY+shot.ToY+1)/2*tile - float64(a.sh)/2
+		a.renderer.cam.OffsetX = float64(shot.FromX+shot.ToX+1)/2*tile - float64(a.sw)/2
+		a.renderer.cam.OffsetY = float64(shot.FromY+shot.ToY+1)/2*tile - float64(a.sh)/2
 		for _, p := range a.renderer.snapshot() {
 			if p.X == shot.FromX && p.Y == shot.FromY {
 				if a.cfg.Capture.Frames > 0 {

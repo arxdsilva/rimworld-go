@@ -398,11 +398,11 @@ type cropAtlas struct {
 // cropArtKey resolves a crop sprite key to art that exists: the key, then
 // its fallbacks (variant 0, the pre-variant sprite); "" when none does.
 func cropArtKey(c *artCatalog, key string) string {
-	if c.has(key) {
+	if c.Has(key) {
 		return key
 	}
 	for _, k := range plantKeys.fallback[key] {
-		if c.has(k) {
+		if c.Has(k) {
 			return k
 		}
 	}
@@ -426,12 +426,12 @@ func buildCropAtlas(c *artCatalog, species []string) *cropAtlas {
 	byKey := map[string]int32{} // resolved key -> index into a.sprites
 	var itemOf []int            // a.sprites index -> items index
 	measure := func(sp *artSprite) (kpx float64, ok bool) {
-		if sp == nil || sp.pix == nil {
+		if sp == nil || sp.Pix == nil {
 			return 0, false
 		}
 		kpx = 1
-		if b := sp.pix.Bounds(); b.Dx() > 0 && sp.meta.Canvas[0] > 0 {
-			kpx = float64(sp.meta.Canvas[0]) / float64(b.Dx())
+		if b := sp.Pix.Bounds(); b.Dx() > 0 && sp.Meta.Canvas[0] > 0 {
+			kpx = float64(sp.Meta.Canvas[0]) / float64(b.Dx())
 		}
 		return kpx, true
 	}
@@ -461,23 +461,23 @@ func buildCropAtlas(c *artCatalog, species []string) *cropAtlas {
 				}
 				idx, seen := byKey[key]
 				if !seen {
-					sp := c.sprite(key)
+					sp := c.Sprite(key)
 					kpx, ok := measure(sp)
 					if !ok {
 						continue
 					}
-					box, ok := alphaBox(sp.pix)
+					box, ok := alphaBox(sp.Pix)
 					if !ok {
 						continue
 					}
-					fw, fh := footprint(sp.meta)
-					fx := (sp.meta.Origin[0]+fw*artTilePx/2)/kpx - float64(box.Min.X)
-					fy := (sp.meta.Origin[1]+fh*artTilePx/2)/kpx - float64(box.Min.Y)
+					fw, fh := footprint(sp.Meta)
+					fx := (sp.Meta.Origin[0]+fw*artTilePx/2)/kpx - float64(box.Min.X)
+					fy := (sp.Meta.Origin[1]+fh*artTilePx/2)/kpx - float64(box.Min.Y)
 					idx = int32(len(a.sprites))
 					byKey[key] = idx
 					itemOf = append(itemOf, len(items))
 					a.sprites = append(a.sprites, cropSprite{})
-					items = append(items, item{pix: sp.pix, box: box,
+					items = append(items, item{pix: sp.Pix, box: box,
 						spr: cropSprite{w: float32(box.Dx()), h: float32(box.Dy()), fx: float32(fx), fy: float32(fy), k: float32(kpx / artTilePx)}})
 				}
 				if slices.Contains(set.stages[st], idx) {
@@ -494,16 +494,16 @@ func buildCropAtlas(c *artCatalog, species []string) *cropAtlas {
 	}
 	for v := 0; v < 4; v++ {
 		key := "overlay/tilled_" + strconv.Itoa(v)
-		sp := c.sprite(key)
+		sp := c.Sprite(key)
 		kpx, ok := measure(sp)
 		if !ok {
 			continue
 		}
-		b := sp.pix.Bounds()
-		fw, fh := footprint(sp.meta)
-		items = append(items, item{pix: sp.pix, box: b, isFurrow: true,
+		b := sp.Pix.Bounds()
+		fw, fh := footprint(sp.Meta)
+		items = append(items, item{pix: sp.Pix, box: b, isFurrow: true,
 			fur: furrowSprite{w: float32(b.Dx()), h: float32(b.Dy()),
-				cx: float32((sp.meta.Origin[0] + fw*artTilePx/2) / kpx), cy: float32((sp.meta.Origin[1] + fh*artTilePx/2) / kpx),
+				cx: float32((sp.Meta.Origin[0] + fw*artTilePx/2) / kpx), cy: float32((sp.Meta.Origin[1] + fh*artTilePx/2) / kpx),
 				k: float32(kpx / artTilePx)}})
 	}
 	if len(items) == 0 {

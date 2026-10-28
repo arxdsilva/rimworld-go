@@ -158,7 +158,7 @@ func TestPerfOverlayAvoidsHUDRegions(t *testing.T) {
 			if l.Perf.Empty() {
 				continue
 			}
-			for _, r := range append(l.chrome(), l.Minimap) {
+			for _, r := range append(l.Chrome(), l.Minimap) {
 				if r == l.Perf {
 					continue
 				}

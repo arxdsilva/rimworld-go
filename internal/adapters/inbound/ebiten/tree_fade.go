@@ -114,7 +114,7 @@ func (r *Renderer) sweepTreeFades() {
 // ok=false when either part is missing (the full sprite is drawn).
 func (r *Renderer) treePartKeys(key string) (trunk, canopy string, ok bool) {
 	trunk, canopy = key+treeTrunkSuffix, key+treeCanopySuffix
-	return trunk, canopy, r.art.has(trunk) && r.art.has(canopy)
+	return trunk, canopy, r.art.Has(trunk) && r.art.Has(canopy)
 }
 
 // treePartCoverageKeys lists the whole-tree keys that must have parts.

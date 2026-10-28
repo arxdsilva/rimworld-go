@@ -38,7 +38,7 @@ func TestDevColumnAvoidsEveryRegion(t *testing.T) {
 		if col.Empty() {
 			continue // no room: nothing is drawn
 		}
-		regions := append(l.chrome(), l.Minimap)
+		regions := append(l.Chrome(), l.Minimap)
 		for _, r := range regions {
 			if i := col.Intersect(r); i.W > 0 && i.H > 0 {
 				t.Errorf("%s: dev column %+v collides with %+v", name, col, r)

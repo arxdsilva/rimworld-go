@@ -115,7 +115,7 @@ func (a *App) uiSlider(id string, r rect, val *float64, sp sliderSpec) bool {
 		}
 		if u.active == id {
 			set(sp.valueAt(float32(mx), track))
-			if !a.in.down(mbLeft) {
+			if !a.in.Down(mbLeft) {
 				u.active = ""
 				a.uiRelease() // the release must not click what is under the cursor
 			}
@@ -126,7 +126,7 @@ func (a *App) uiSlider(id string, r rect, val *float64, sp sliderSpec) bool {
 			} else if step <= 0 {
 				step = (hi - lo) / 20
 			}
-			if a.in.shift() {
+			if a.in.Shift() {
 				step *= 5
 			}
 			switch {
@@ -134,9 +134,9 @@ func (a *App) uiSlider(id string, r rect, val *float64, sp sliderSpec) bool {
 				set(*val - step)
 			case a.keyRepeat("ArrowRight"):
 				set(*val + step)
-			case a.in.key("Home"):
+			case a.in.Key("Home"):
 				set(lo)
-			case a.in.key("End"):
+			case a.in.Key("End"):
 				set(hi)
 			}
 		}

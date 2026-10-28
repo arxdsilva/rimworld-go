@@ -259,7 +259,7 @@ func TestPowerToggleWrapsAndToggles(t *testing.T) {
 			}
 			before := a.overlayFlags()
 			f.onRect(a, pr)
-			f.click(t, a, mbLeft, 0)
+			f.Click(t, a, mbLeft, 0)
 			if !a.renderer.pov.on || !a.renderer.powerShown() {
 				t.Fatal("the click did not show the power overlay")
 			}
@@ -269,7 +269,7 @@ func TestPowerToggleWrapsAndToggles(t *testing.T) {
 			if a.globalPlan().legend == nil {
 				t.Error("no legend while the power overlay is on")
 			}
-			f.click(t, a, mbLeft, 0)
+			f.Click(t, a, mbLeft, 0)
 			if a.renderer.powerShown() {
 				t.Error("a second click did not hide it")
 			}
@@ -281,11 +281,11 @@ func TestPowerToggleWrapsAndToggles(t *testing.T) {
 func TestPowerOverlayHotkey(t *testing.T) {
 	t.Parallel()
 	a, f := colonyApp(t, &stubSim{})
-	f.key(t, a, "P", input.ModShift)
+	f.Key(t, a, "P", input.ModShift)
 	if !a.renderer.pov.on {
 		t.Fatal("Shift+P did not show the power overlay")
 	}
-	f.key(t, a, "P", input.ModShift)
+	f.Key(t, a, "P", input.ModShift)
 	if a.renderer.pov.on {
 		t.Fatal("Shift+P again did not hide it")
 	}
@@ -617,8 +617,8 @@ func ghostApp(t *testing.T, tool string, tx, ty int) (*App, *[]povTrace) {
 	tl, _ := toolByID(tool)
 	a.archCat = tl.category
 	archPick(t, a, tool)
-	f.moveTo(a, tx, ty)
-	f.frame(t, a)
+	f.MoveTo(a, tx, ty)
+	f.Frame(t, a)
 	got := &[]povTrace{}
 	a.renderer.pov.trace = func(part string, x, y int, c color.NRGBA) { *got = append(*got, povTrace{part, x, y, c}) }
 	return a, got
@@ -669,14 +669,14 @@ func TestCoolerGhostUsesCanPlace(t *testing.T) {
 	a.openArchitect()
 	a.archCat = "misc"
 	archPick(t, a, "cooler")
-	f.moveTo(a, 5, 5)
-	f.frame(t, a)
+	f.MoveTo(a, 5, 5)
+	f.Frame(t, a)
 	_, cells := a.previewCells()
 	if len(cells) != 1 || cells[0].ok || cells[0].reason != game.ReasonNeedsWall {
 		t.Fatalf("cells %+v, want one red cell with %q", cells, game.ReasonNeedsWall)
 	}
-	f.moveTo(a, 7, 5)
-	f.frame(t, a)
+	f.MoveTo(a, 7, 5)
+	f.Frame(t, a)
 	if _, cells = a.previewCells(); len(cells) != 1 || !cells[0].ok {
 		t.Fatalf("cells %+v, want the wall gap green", cells)
 	}

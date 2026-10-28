@@ -180,10 +180,10 @@ func TestArtOriginHonoursSpriteDensity(t *testing.T) {
 	if s != 1 || x != 632 || y != 280 {
 		t.Fatalf("origin = %v,%v scale %v (a 64 px tile shows a 64 ppt sprite 1:1)", x, y, s)
 	}
-	if got := m.pxPerTile(); got != 64 {
+	if got := m.PxPerTile(); got != 64 {
 		t.Fatalf("pxPerTile = %v", got)
 	}
-	if got := (artMeta{}).pxPerTile(); got != artTilePx {
+	if got := (artMeta{}).PxPerTile(); got != artTilePx {
 		t.Fatalf("absent ppt = %v, want the %v default", got, artTilePx)
 	}
 }
@@ -235,7 +235,7 @@ func TestEverySpeciesHasArt(t *testing.T) {
 		keys = append(keys, "ui_icon/"+ro.Key)
 		var missing []string
 		for _, k := range keys {
-			if !c.has(k) {
+			if !c.Has(k) {
 				missing = append(missing, k)
 			}
 		}
@@ -335,30 +335,30 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 		keys = append(keys, k, k+treeTrunkSuffix, k+treeCanopySuffix)
 	}
 	for _, k := range keys {
-		if !c.has(k) {
+		if !c.Has(k) {
 			t.Errorf("missing generated sprite %s", k)
 		}
 	}
-	if n := len(c.tintNames("stone_tint")); n != len(stoneNames)-1 {
+	if n := len(c.TintNames("stone_tint")); n != len(stoneNames)-1 {
 		t.Errorf("stone_tint has %d presets, want one per stone (%d)", n, len(stoneNames)-1)
 	}
 	for _, o := range []string{"steel", "silver", "gold"} { // the ore body takes the stone tint through a mask
-		if sp := c.sprite("rock/ore_" + o + "_15_cf"); sp != nil && (sp.mask == nil || sp.meta.TintGroup == "") {
+		if sp := c.Sprite("rock/ore_" + o + "_15_cf"); sp != nil && (sp.Mask == nil || sp.Meta.TintGroup == "") {
 			t.Errorf("rock/ore_%s should be tintable", o)
 		}
 	}
 	for _, g := range []string{"skin", "hair", "cloth"} {
-		if len(c.tintNames(g)) == 0 {
+		if len(c.TintNames(g)) == 0 {
 			t.Errorf("no %s tint presets in palettes/base.yaml", g)
 		}
 	}
 	for _, k := range []string{"pawn/body_south", "pawn/hair_bun_east", "furniture/bed_basic_west"} {
-		sp := c.sprite(k)
-		if sp.mask == nil || sp.meta.TintGroup == "" {
+		sp := c.Sprite(k)
+		if sp.Mask == nil || sp.Meta.TintGroup == "" {
 			t.Errorf("%s should be tintable", k)
 		}
-		if sp.pix.Bounds().Dx() != sp.meta.Canvas[0] || sp.pix.Bounds().Dy() != sp.meta.Canvas[1] {
-			t.Errorf("%s: png %v != canvas %v", k, sp.pix.Bounds().Size(), sp.meta.Canvas)
+		if sp.Pix.Bounds().Dx() != sp.Meta.Canvas[0] || sp.Pix.Bounds().Dy() != sp.Meta.Canvas[1] {
+			t.Errorf("%s: png %v != canvas %v", k, sp.Pix.Bounds().Size(), sp.Meta.Canvas)
 		}
 	}
 }
@@ -385,7 +385,7 @@ func TestArtFrameNames(t *testing.T) {
 		t.Fatal("no head in old metadata")
 	}
 	// animal frames resolve, missing ones fall back to the standing sprite
-	c := &artCatalog{sprites: map[string]*artSprite{"animal/deer_south": {}, "animal/deer_south_walk03": {}}}
+	c := &artCatalog{Sprites: map[string]*artSprite{"animal/deer_south": {}, "animal/deer_south_walk03": {}}}
 	r := &Renderer{art: c}
 	if r.framed("animal/deer_south", "_walk03") != "animal/deer_south_walk03" {
 		t.Fatal("frame names resolve")
@@ -407,32 +407,32 @@ func TestIndexCatalogMatchesLoad(t *testing.T) {
 		t.Fatal(err)
 	}
 	files := realArt(t) // the tests' index: packed sprites from their own files
-	if len(idx.sprites) != len(files.sprites) {
-		t.Fatalf("game index %d sprites, file-preferring index %d", len(idx.sprites), len(files.sprites))
+	if len(idx.Sprites) != len(files.Sprites) {
+		t.Fatalf("game index %d sprites, file-preferring index %d", len(idx.Sprites), len(files.Sprites))
 	}
-	for k := range idx.sprites {
-		if !files.has(k) {
+	for k := range idx.Sprites {
+		if !files.Has(k) {
 			t.Fatalf("file-preferring index lacks %s", k)
 		}
 	}
 	for _, key := range []string{"rock/rock_wall_15_cf", "structure/wall_stone_06", "rock/ore_steel_03"} {
-		if !idx.has(key) {
+		if !idx.Has(key) {
 			t.Fatalf("index lacks %s", key)
 		}
-		sp := idx.sprites[key]
-		if sp.pix != nil {
+		sp := idx.Sprites[key]
+		if sp.Pix != nil {
 			t.Fatalf("%s decoded before use", key)
 		}
-		want, err := decodeNRGBA(sp.file.image)
+		want, err := decodeNRGBA(sp.File.Image)
 		if err != nil {
 			t.Fatal(err)
 		}
-		got := idx.sprite(key)
-		if got.pix == nil || !bytes.Equal(got.pix.Pix, want.Pix) {
+		got := idx.Sprite(key)
+		if got.Pix == nil || !bytes.Equal(got.Pix.Pix, want.Pix) {
 			t.Fatalf("%s: lazy pixels differ from the file", key)
 		}
-		if (got.meta.TintMask != "") != (got.mask != nil) {
-			t.Fatalf("%s: mask %v for tint mask %q", key, got.mask != nil, got.meta.TintMask)
+		if (got.Meta.TintMask != "") != (got.Mask != nil) {
+			t.Fatalf("%s: mask %v for tint mask %q", key, got.Mask != nil, got.Meta.TintMask)
 		}
 	}
 }
@@ -440,16 +440,16 @@ func TestIndexCatalogMatchesLoad(t *testing.T) {
 // A sprite whose file can't be decoded is handed out without pixels and
 // draws nothing, rather than panicking mid-frame.
 func TestLazySpriteWithBadFileDrawsNothing(t *testing.T) {
-	c := &artCatalog{sprites: map[string]*artSprite{
-		"rock/x": {file: &fileSrc{image: filepath.Join(t.TempDir(), "missing.png")}},
-	}, tinted: map[tintKey]*ebiten.Image{}, normals: map[*ebiten.Image]*ebiten.Image{}}
-	if img := c.image("rock/x", color.NRGBA{}); img != nil {
+	c := &artCatalog{Sprites: map[string]*artSprite{
+		"rock/x": {File: &fileSrc{Image: filepath.Join(t.TempDir(), "missing.png")}},
+	}, Tinted: map[tintKey]*ebiten.Image{}, Normals: map[*ebiten.Image]*ebiten.Image{}}
+	if img := c.Image("rock/x", color.NRGBA{}); img != nil {
 		t.Fatal("a sprite with no pixels drew")
 	}
-	if c.sprites["rock/x"].file.err == nil {
+	if c.Sprites["rock/x"].File.Err == nil {
 		t.Fatal("decode error not kept")
 	}
-	if err := c.decodeFiles(); err == nil {
+	if err := c.DecodeFiles(); err == nil {
 		t.Fatal("the eager load must report the bad file")
 	}
 }

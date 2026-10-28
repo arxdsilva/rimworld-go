@@ -692,10 +692,10 @@ func TestArchitectDraws(t *testing.T) {
 			archPick(t, a, tool)
 		}
 		for _, id := range []string{"arch.cat.zones", "arch.stuff.steel", "arch.crop.potato"} {
-			f.cur.mx, f.cur.my = -50, -50
+			f.Cur.Mx, f.Cur.My = -50, -50
 			for _, b := range a.architectButtons() {
 				if b.id == id {
-					f.cur.mx, f.cur.my = int(b.x+b.w/2), int(b.y+b.h/2)
+					f.Cur.Mx, f.Cur.My = int(b.x+b.w/2), int(b.y+b.h/2)
 				}
 			}
 			drawFrame(t, a, f)

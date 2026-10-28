@@ -241,14 +241,14 @@ func (a *App) handleOrders() {
 	mx, my := a.currentCursor()
 	tx, ty := a.shell.TileAt(a.mapCursor()) // the map is physical
 	if a.form.on {
-		if f.down(mbRight) {
+		if f.Down(mbRight) {
 			a.form.x1, a.form.y1 = tx, ty
 			return
 		}
 		a.finishFormation()
 		return
 	}
-	if !f.clicked(mbRight) {
+	if !f.Clicked(mbRight) {
 		return
 	}
 	pawns := a.selectedPawns()
@@ -259,7 +259,7 @@ func (a *App) handleOrders() {
 	if a.colonyChromeHit(mx, my, sw, sh) && !a.floatRect().contains(mx, my) {
 		return
 	}
-	f.take(mbRight)
+	f.Take(mbRight)
 	if drafted := draftedOf(pawns); len(drafted) > 0 && !a.creatureAt(tx, ty, 0) && !a.tendOrderAt(drafted[0], tx, ty) {
 		a.closeFloat()
 		a.form = formationDrag{on: true, x0: tx, y0: ty, x1: tx, y1: ty}

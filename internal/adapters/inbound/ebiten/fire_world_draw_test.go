@@ -164,7 +164,7 @@ func TestBlazeAmbiencePerCluster(t *testing.T) {
 	t.Parallel()
 	a, _ := soundApp(&stubSim{w: 48, h: 40})
 	r := a.renderer
-	r.cam.zoom = 1.5
+	r.cam.Zoom = 1.5
 	cx, cy := centreTile(a)
 	x, y := int(cx), int(cy)
 	r.heard = game.WorldView{Hour: 12, FireVer: 1, Fires: []game.FireView{

@@ -76,9 +76,9 @@ func (a *App) uiScrollArea(id string, r rect, contentH float32, o scrollOpts) sc
 	if u.add(uiWidget{id: id, r: r, wheel: true, focusable: o.Focusable}) {
 		mx, my := a.currentCursor()
 		hover := r.Hit(mx, my)
-		if hover && a.in.raw.wheelY != 0 {
-			off -= float32(a.in.raw.wheelY) * step
-			a.in.raw.wheelY = 0
+		if hover && a.in.Raw.WheelY != 0 {
+			off -= float32(a.in.Raw.WheelY) * step
+			a.in.Raw.WheelY = 0
 		}
 		if maxOff > 0 {
 			thumb := scrollThumb(bar, off, maxOff, contentH)
@@ -93,7 +93,7 @@ func (a *App) uiScrollArea(id string, r rect, contentH float32, o scrollOpts) sc
 			}
 			if u.active == thumbID {
 				off = scrollOffFromThumb(bar, thumb.H, float32(my)-u.dragY, maxOff)
-				if !a.in.down(mbLeft) {
+				if !a.in.Down(mbLeft) {
 					u.active = ""
 					a.uiRelease()
 				}
@@ -199,9 +199,9 @@ func (a *App) uiList(id string, r rect, n int, sel *int, sp listSpec) bool {
 			next = max(0, *sel-1)
 		case a.keyRepeat("ArrowDown"):
 			next = min(n-1, *sel+1)
-		case a.in.key("Home"):
+		case a.in.Key("Home"):
 			next = 0
-		case a.in.key("End"):
+		case a.in.Key("End"):
 			next = n - 1
 		}
 		if next != *sel && disabled(next) == "" {

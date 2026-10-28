@@ -17,14 +17,14 @@ import (
 // fakeInput is a scripted keyboard and mouse: each poll returns the
 // current state, then clears what only lasts one frame (presses,
 // releases, typed characters, the wheel).
-type fakeInput struct{ cur rawInput }
+type fakeInput struct{ Cur rawInput }
 
 func (f *fakeInput) poll() rawInput {
-	r := f.cur
-	f.cur.pressed, f.cur.chars = nil, nil
-	f.cur.press, f.cur.release = [numMouse]bool{}, [numMouse]bool{}
-	f.cur.wheelX, f.cur.wheelY = 0, 0
-	r.held = append(append([]string(nil), r.held...), r.pressed...)
+	r := f.Cur
+	f.Cur.Pressed, f.Cur.Chars = nil, nil
+	f.Cur.Press, f.Cur.Release = [numMouse]bool{}, [numMouse]bool{}
+	f.Cur.wheelX, f.Cur.WheelY = 0, 0
+	r.Held = append(append([]string(nil), r.Held...), r.Pressed...)
 	return r
 }
 
@@ -34,65 +34,65 @@ func fakeOn(a *App) *fakeInput {
 	return f
 }
 
-// key presses one key (with mods held) for one Update.
-func (f *fakeInput) key(t *testing.T, a *App, name string, mods input.Mod) {
+// Key presses one Key (with mods held) for one Update.
+func (f *fakeInput) Key(t *testing.T, a *App, name string, mods input.Mod) {
 	t.Helper()
-	f.cur.pressed, f.cur.mods = []string{name}, mods
+	f.Cur.Pressed, f.Cur.Mods = []string{name}, mods
 	if err := a.Update(); err != nil {
 		t.Fatal(err)
 	}
-	f.cur.mods = 0
+	f.Cur.Mods = 0
 }
 
-// typeText types characters into whatever has focus (one Update).
-func (f *fakeInput) typeText(t *testing.T, a *App, s string) {
+// TypeText types characters into whatever has focus (one Update).
+func (f *fakeInput) TypeText(t *testing.T, a *App, s string) {
 	t.Helper()
 	var keys []string
 	for _, r := range s {
 		keys = append(keys, strings.ToUpper(string(r)))
 	}
-	f.cur.chars, f.cur.pressed = []rune(s), keys
+	f.Cur.Chars, f.Cur.Pressed = []rune(s), keys
 	if err := a.Update(); err != nil {
 		t.Fatal(err)
 	}
 }
 
-// moveTo puts the cursor on the centre of tile (tx, ty).
-func (f *fakeInput) moveTo(a *App, tx, ty int) {
+// MoveTo puts the cursor on the centre of tile (tx, ty).
+func (f *fakeInput) MoveTo(a *App, tx, ty int) {
 	sx, sy := a.renderer.worldToScreenF(float64(tx)+0.5, float64(ty)+0.5)
-	f.cur.mx, f.cur.my = int(sx), int(sy)
+	f.Cur.Mx, f.Cur.My = int(sx), int(sy)
 }
 
-func (f *fakeInput) frame(t *testing.T, a *App) {
+func (f *fakeInput) Frame(t *testing.T, a *App) {
 	t.Helper()
 	if err := a.Update(); err != nil {
 		t.Fatal(err)
 	}
 }
 
-// click presses and releases button b at the cursor (two Updates).
-func (f *fakeInput) click(t *testing.T, a *App, b mouseBtn, mods input.Mod) {
+// Click presses and releases button b at the cursor (two Updates).
+func (f *fakeInput) Click(t *testing.T, a *App, b mouseBtn, mods input.Mod) {
 	t.Helper()
-	f.cur.mods = mods
-	f.cur.press[b], f.cur.down[b] = true, true
-	f.frame(t, a)
-	f.cur.down[b], f.cur.release[b] = false, true
-	f.frame(t, a)
-	f.cur.mods = 0
+	f.Cur.Mods = mods
+	f.Cur.Press[b], f.Cur.Down[b] = true, true
+	f.Frame(t, a)
+	f.Cur.Down[b], f.Cur.Release[b] = false, true
+	f.Frame(t, a)
+	f.Cur.Mods = 0
 }
 
-// drag holds b from tile a0 to tile a1 and lets go.
-func (f *fakeInput) drag(t *testing.T, a *App, b mouseBtn, x0, y0, x1, y1 int, mods input.Mod) {
+// Drag holds b from tile a0 to tile a1 and lets go.
+func (f *fakeInput) Drag(t *testing.T, a *App, b mouseBtn, x0, y0, x1, y1 int, mods input.Mod) {
 	t.Helper()
-	f.cur.mods = mods
-	f.moveTo(a, x0, y0)
-	f.cur.press[b], f.cur.down[b] = true, true
-	f.frame(t, a)
-	f.moveTo(a, x1, y1)
-	f.frame(t, a)
-	f.cur.down[b], f.cur.release[b] = false, true
-	f.frame(t, a)
-	f.cur.mods = 0
+	f.Cur.Mods = mods
+	f.MoveTo(a, x0, y0)
+	f.Cur.Press[b], f.Cur.Down[b] = true, true
+	f.Frame(t, a)
+	f.MoveTo(a, x1, y1)
+	f.Frame(t, a)
+	f.Cur.Down[b], f.Cur.Release[b] = false, true
+	f.Frame(t, a)
+	f.Cur.Mods = 0
 }
 
 // inputColony is a paused stub colony with colonists at the given tiles.
@@ -106,11 +106,11 @@ func inputColony(t *testing.T, at ...[2]int) (*App, *stubSim, *fakeInput) {
 	a.finishBoot()
 	a.startGame()
 	f := fakeOn(a)
-	f.frame(t, a) // place the camera
+	f.Frame(t, a) // place the camera
 	a.renderer.speed = speedPaused
 	// Tile (x, y) at screen (64x, 64y+32): rows 0..8 and, right of the
 	// inspector panels, columns 6..19 are open map.
-	a.renderer.cam.offsetX, a.renderer.cam.offsetY = 0, -32
+	a.renderer.cam.OffsetX, a.renderer.cam.OffsetY = 0, -32
 	return a, s, f
 }
 
@@ -129,14 +129,14 @@ func TestRDraftsAndShiftRTogglesRoof(t *testing.T) {
 	t.Parallel()
 	a, s, f := inputColony(t, [2]int{5, 5})
 	a.renderer.Select(1)
-	f.key(t, a, "R", 0)
+	f.Key(t, a, "R", 0)
 	if d := cmdsOf(s, command.DraftPawn); len(d) != 1 || !d[0].Enabled || d[0].Pawn != 1 {
 		t.Fatalf("R should draft the selected colonist, got %+v", s.cmds)
 	}
 	if a.renderer.roofOverlay {
 		t.Fatal("R must no longer toggle the roof overlay")
 	}
-	f.key(t, a, "R", input.ModShift)
+	f.Key(t, a, "R", input.ModShift)
 	if !a.renderer.roofOverlay || len(cmdsOf(s, command.DraftPawn)) != 1 {
 		t.Fatal("Shift+R toggles the roof overlay and drafts nobody")
 	}
@@ -153,43 +153,43 @@ func TestFunctionKeysOpenTabs(t *testing.T) {
 		wild      bool
 	}{{"F1", "work", false}, {"F2", "schedule", false}, {"F4", "animals", false}, {"F5", "animals", true}, {"F6", "research", false}}
 	for _, c := range cases {
-		f.key(t, a, c.key, 0)
+		f.Key(t, a, c.key, 0)
 		if !a.workOpen || a.panelMode != c.mode || (c.mode == "animals" && a.animalsWild != c.wild) {
 			t.Fatalf("%s: open=%v mode=%q wild=%v", c.key, a.workOpen, a.panelMode, a.animalsWild)
 		}
 	}
-	f.key(t, a, "F5", 0)
-	f.key(t, a, "F5", 0)
+	f.Key(t, a, "F5", 0)
+	f.Key(t, a, "F5", 0)
 	if a.workOpen {
 		t.Fatal("F5 again closes the Wild list")
 	}
-	f.key(t, a, "Tab", 0)
+	f.Key(t, a, "Tab", 0)
 	if !a.archOpen {
 		t.Fatal("Tab opens the Architect")
 	}
-	f.key(t, a, "F3", 0)
+	f.Key(t, a, "F3", 0)
 	if a.uiModalTop() != assignModalID {
 		t.Fatalf("F3 should open Assign, top modal %q", a.uiModalTop())
 	}
-	f.key(t, a, "F3", 0)
-	f.key(t, a, "F9", 0)
+	f.Key(t, a, "F3", 0)
+	f.Key(t, a, "F9", 0)
 	if a.uiModalTop() != historyModalID {
 		t.Fatalf("F9 should open History, top modal %q", a.uiModalTop())
 	}
-	f.key(t, a, "F9", 0)
+	f.Key(t, a, "F9", 0)
 	if a.uiModalTop() == historyModalID {
 		t.Fatal("F9 again closes History")
 	}
-	f.key(t, a, "F8", 0)
+	f.Key(t, a, "F8", 0)
 	if a.uiModalTop() != worldModalID {
 		t.Fatalf("F8 should open World, top modal %q", a.uiModalTop())
 	}
-	f.key(t, a, "F8", 0)
+	f.Key(t, a, "F8", 0)
 	if a.uiModalTop() == worldModalID {
 		t.Fatal("F8 again closes World")
 	}
 	for _, k := range []string{"F7", "T"} { // V is live since PLAY-021 (TestVHotkeyFlicksTheSelectedDevice)
-		f.key(t, a, k, 0)
+		f.Key(t, a, k, 0)
 		ts := a.liveToasts()
 		if len(ts) == 0 || !strings.Contains(ts[len(ts)-1].text, input.NotYet) {
 			t.Fatalf("%s should toast %q, got %+v", k, input.NotYet, ts)
@@ -201,19 +201,19 @@ func TestSearchTypingDraftsNobody(t *testing.T) {
 	t.Parallel()
 	a, s, f := inputColony(t, [2]int{5, 5}, [2]int{9, 9})
 	a.renderer.Select(1)
-	f.key(t, a, "Z", 0)
+	f.Key(t, a, "Z", 0)
 	if !a.search.open {
 		t.Fatal("Z opens search")
 	}
-	f.typeText(t, a, "r")
+	f.TypeText(t, a, "r")
 	if len(cmdsOf(s, command.DraftPawn)) != 0 || a.search.text != "r" {
 		t.Fatalf("typing r drafted someone or was lost: text=%q cmds=%+v", a.search.text, s.cmds)
 	}
-	f.key(t, a, "Backspace", 0)
+	f.Key(t, a, "Backspace", 0)
 	if a.search.text != "" {
 		t.Fatal("Backspace deletes")
 	}
-	f.key(t, a, "Escape", 0)
+	f.Key(t, a, "Escape", 0)
 	if a.search.open || !a.renderer.HasSelect() {
 		t.Fatal("Esc closes search and keeps the selection")
 	}
@@ -222,14 +222,14 @@ func TestSearchTypingDraftsNobody(t *testing.T) {
 func TestSearchFindsNamedColonist(t *testing.T) {
 	t.Parallel()
 	a, _, f := inputColony(t, [2]int{3, 3}, [2]int{18, 18})
-	f.key(t, a, "Z", 0)
-	f.typeText(t, a, "bo")
+	f.Key(t, a, "Z", 0)
+	f.TypeText(t, a, "bo")
 	hits := a.searchHits()
 	if len(hits) == 0 || hits[0].label != "Bo" || hits[0].c != (selCand{selPawn, 2}) {
 		t.Fatalf("hits = %+v", hits)
 	}
 	before := a.renderer.cam
-	f.key(t, a, "Enter", 0)
+	f.Key(t, a, "Enter", 0)
 	if a.search.open || !a.renderer.HasSelect() || a.renderer.Selected() != 2 {
 		t.Fatal("Enter selects the result and closes search")
 	}
@@ -241,20 +241,20 @@ func TestSearchFindsNamedColonist(t *testing.T) {
 func TestCommaPeriodCycleColonists(t *testing.T) {
 	t.Parallel()
 	a, _, f := inputColony(t, [2]int{2, 2}, [2]int{12, 12}, [2]int{20, 20})
-	f.key(t, a, "Period", 0)
+	f.Key(t, a, "Period", 0)
 	if a.renderer.Selected() != 1 {
 		t.Fatalf(". first selects bar colonist 1, got %d", a.renderer.Selected())
 	}
-	f.key(t, a, "Period", 0)
-	f.key(t, a, "Period", 0)
+	f.Key(t, a, "Period", 0)
+	f.Key(t, a, "Period", 0)
 	if a.renderer.Selected() != 3 {
 		t.Fatalf("got %d, want 3", a.renderer.Selected())
 	}
-	f.key(t, a, "Period", 0)
+	f.Key(t, a, "Period", 0)
 	if a.renderer.Selected() != 1 {
 		t.Fatal(". wraps to the first colonist")
 	}
-	f.key(t, a, "Comma", 0)
+	f.Key(t, a, "Comma", 0)
 	if a.renderer.Selected() != 3 {
 		t.Fatal(", goes back (wrapping)")
 	}
@@ -263,30 +263,30 @@ func TestCommaPeriodCycleColonists(t *testing.T) {
 func TestShiftClickBoxAndDoubleClickSelect(t *testing.T) {
 	t.Parallel()
 	a, _, f := inputColony(t, [2]int{8, 4}, [2]int{10, 4}, [2]int{12, 4})
-	f.moveTo(a, 8, 4)
-	f.click(t, a, mbLeft, 0)
-	f.moveTo(a, 10, 4)
+	f.MoveTo(a, 8, 4)
+	f.Click(t, a, mbLeft, 0)
+	f.MoveTo(a, 10, 4)
 	a.updates += doubleClickFrames // not a double click
-	f.click(t, a, mbLeft, input.ModShift)
+	f.Click(t, a, mbLeft, input.ModShift)
 	if !a.grouped() || len(a.group.ids) != 2 {
 		t.Fatalf("Shift+click adds: group = %+v", a.group)
 	}
 	a.updates += doubleClickFrames
-	f.click(t, a, mbLeft, input.ModShift)
+	f.Click(t, a, mbLeft, input.ModShift)
 	if a.grouped() || !a.renderer.HasSelect() || a.renderer.Selected() != 1 {
 		t.Fatal("Shift+click again takes it out (one left: the single selection)")
 	}
-	f.drag(t, a, mbLeft, 7, 3, 13, 5, 0)
+	f.Drag(t, a, mbLeft, 7, 3, 13, 5, 0)
 	if !a.grouped() || a.group.kind != selPawn || len(a.group.ids) != 3 {
 		t.Fatalf("box select = %+v", a.group)
 	}
 	a.updates += doubleClickFrames
-	f.moveTo(a, 8, 4)
-	f.click(t, a, mbLeft, 0)
+	f.MoveTo(a, 8, 4)
+	f.Click(t, a, mbLeft, 0)
 	if a.grouped() {
 		t.Fatal("a plain click goes back to one")
 	}
-	f.click(t, a, mbLeft, 0) // a double click
+	f.Click(t, a, mbLeft, 0) // a double click
 	if !a.grouped() || len(a.group.ids) != 3 {
 		t.Fatalf("double click takes every colonist on screen: %+v", a.group)
 	}
@@ -300,9 +300,9 @@ func TestDoubleClickSameSpecies(t *testing.T) {
 	a, s, f := inputColony(t)
 	s.world.Animals = []game.AnimalView{{ID: 50, Species: "deer", Label: "deer", X: 8, Y: 4}, {ID: 51, Species: "deer", Label: "deer", X: 11, Y: 4},
 		{ID: 52, Species: "hare", Label: "hare", X: 13, Y: 4}}
-	f.moveTo(a, 8, 4)
-	f.click(t, a, mbLeft, 0)
-	f.click(t, a, mbLeft, 0)
+	f.MoveTo(a, 8, 4)
+	f.Click(t, a, mbLeft, 0)
+	f.Click(t, a, mbLeft, 0)
 	if !a.grouped() || a.group.kind != selAnimal || len(a.group.ids) != 2 {
 		t.Fatalf("double click on a deer takes the deer: %+v", a.group)
 	}
@@ -311,8 +311,8 @@ func TestDoubleClickSameSpecies(t *testing.T) {
 func TestGroupDraftAndFormation(t *testing.T) {
 	t.Parallel()
 	a, s, f := inputColony(t, [2]int{8, 2}, [2]int{9, 2}, [2]int{10, 2})
-	f.drag(t, a, mbLeft, 7, 1, 11, 3, 0)
-	f.key(t, a, "R", 0)
+	f.Drag(t, a, mbLeft, 7, 1, 11, 3, 0)
+	f.Key(t, a, "R", 0)
 	if d := cmdsOf(s, command.DraftPawn); len(d) != 3 {
 		t.Fatalf("R drafts the whole group, got %+v", d)
 	}
@@ -324,8 +324,8 @@ func TestGroupDraftAndFormation(t *testing.T) {
 		t.Fatalf("Undraft all = %+v", d)
 	}
 	s.cmds = nil
-	f.moveTo(a, 14, 5)
-	f.click(t, a, mbRight, 0)
+	f.MoveTo(a, 14, 5)
+	f.Click(t, a, mbRight, 0)
 	moves := cmdsOf(s, command.MovePawn)
 	if len(moves) != 3 {
 		t.Fatalf("one move per drafted colonist, got %+v", moves)
@@ -339,7 +339,7 @@ func TestGroupDraftAndFormation(t *testing.T) {
 		seen[c] = true
 	}
 	s.cmds = nil
-	f.drag(t, a, mbRight, 8, 7, 14, 7, input.ModShift)
+	f.Drag(t, a, mbRight, 8, 7, 14, 7, input.ModShift)
 	moves = cmdsOf(s, command.MovePawn)
 	if len(moves) != 3 || !moves[0].Queue {
 		t.Fatalf("a right drag lines them up (Shift queues): %+v", moves)
@@ -384,15 +384,15 @@ func TestForbidKeyTogglesSelectedItems(t *testing.T) {
 	t.Parallel()
 	a, s, f := inputColony(t)
 	s.world.Items = []game.ItemView{{ID: 70, Kind: "wood", Qty: 20, X: 8, Y: 4}, {ID: 71, Kind: "wood", Qty: 5, X: 10, Y: 4, Forbidden: true}}
-	f.moveTo(a, 8, 4)
-	f.click(t, a, mbLeft, 0)
-	f.key(t, a, "F", 0)
+	f.MoveTo(a, 8, 4)
+	f.Click(t, a, mbLeft, 0)
+	f.Key(t, a, "F", 0)
 	if c := cmdsOf(s, command.SetForbidden); len(c) != 1 || c[0].Target != 70 || !c[0].Enabled {
 		t.Fatalf("F forbids the stack: %+v", c)
 	}
 	s.cmds = nil
-	f.drag(t, a, mbLeft, 7, 3, 11, 5, 0)
-	f.key(t, a, "F", 0)
+	f.Drag(t, a, mbLeft, 7, 3, 11, 5, 0)
+	f.Key(t, a, "F", 0)
 	if c := cmdsOf(s, command.SetForbidden); len(c) != 1 || c[0].Target != 70 {
 		t.Fatalf("with one forbidden, F forbids the rest: %+v", c)
 	}
@@ -403,7 +403,7 @@ func TestF10WritesScreenshotF11HidesUI(t *testing.T) {
 	a, _, f := inputColony(t, [2]int{5, 5})
 	dir := t.TempDir()
 	a.shot.dir = func() (string, error) { return dir, nil }
-	f.key(t, a, "F10", 0)
+	f.Key(t, a, "F10", 0)
 	if !a.shot.pending {
 		t.Fatal("F10 asks for a screenshot of the next frame")
 	}
@@ -418,11 +418,11 @@ func TestF10WritesScreenshotF11HidesUI(t *testing.T) {
 	if ts := a.liveToasts(); len(ts) == 0 || ts[len(ts)-1].text != "Screenshot saved" {
 		t.Fatalf("toasts = %+v", ts)
 	}
-	f.key(t, a, "F11", 0)
+	f.Key(t, a, "F11", 0)
 	if !a.hideUI || len(a.colonyButtons(a.size())) != 0 || a.colonyChromeHit(10, 5, 1280, 720) {
 		t.Fatal("F11 hides every button and panel")
 	}
-	f.key(t, a, "Escape", 0)
+	f.Key(t, a, "Escape", 0)
 	if a.hideUI || a.nav.overlay() != overlayNone {
 		t.Fatal("Esc brings the interface back first")
 	}
@@ -438,7 +438,7 @@ func TestRoomStatsOverlayAndCard(t *testing.T) {
 	}
 	s.world.RoomGrid[5*24+5] = 0
 	s.world.Rooms = []game.RoomView{{ID: 0, Role: "bedroom", Score: 14, Label: "nice", Lit: true, Temp: 215, Roofed: 1, Cleanliness: "clean", Cells: 12}}
-	f.key(t, a, "G", 0)
+	f.Key(t, a, "G", 0)
 	if !a.rooms {
 		t.Fatal("G turns the room overlay on")
 	}
@@ -519,27 +519,27 @@ func TestQECyclesDrawStyleAndOvalZonesSendRows(t *testing.T) {
 	a, s, f := inputColony(t)
 	a.openArchitect()
 	a.selectArchTool("wall")
-	f.key(t, a, "E", 0)
-	f.key(t, a, "E", 0)
-	f.key(t, a, "E", 0)
-	f.key(t, a, "E", 0)
+	f.Key(t, a, "E", 0)
+	f.Key(t, a, "E", 0)
+	f.Key(t, a, "E", 0)
+	f.Key(t, a, "E", 0)
 	if wall, _ := toolByID("wall"); a.curStyle(wall) != styleOvalEdge {
 		t.Fatalf("four E presses on a wall: %v", a.curStyle(wall))
 	}
 	a.selectArchTool("stockpile")
-	f.key(t, a, "Q", 0)
+	f.Key(t, a, "Q", 0)
 	if sp, _ := toolByID("stockpile"); a.curStyle(sp) != styleOval {
 		t.Fatalf("zones offer rectangle and oval: %v", a.curStyle(sp))
 	}
 	s.cmds = nil
-	f.drag(t, a, mbLeft, 8, 2, 12, 6, 0)
+	f.Drag(t, a, mbLeft, 8, 2, 12, 6, 0)
 	zs := cmdsOf(s, command.DesignateStockpile)
 	if len(zs) != 5 || zs[0].Y != zs[0].Y2 || zs[2].X != 8 || zs[2].X2 != 12 {
 		t.Fatalf("an oval zone is one rectangle per row: %+v", zs)
 	}
 	a.selectArchTool("bed")
 	before := a.archFacing
-	f.key(t, a, "E", 0)
+	f.Key(t, a, "E", 0)
 	if a.archFacing == before {
 		t.Fatal("single placements keep Q/E rotation")
 	}
@@ -563,54 +563,54 @@ func TestBillQuantityModifiers(t *testing.T) {
 	}{{0, "bill.plus.0", 6}, {input.ModCtrl, "bill.plus.0", 15}, {input.ModShift, "bill.plus.0", 105},
 		{input.ModCtrl | input.ModShift, "bill.plus.0", 1005}, {input.ModShift, "bill.minus.0", 1}} {
 		s.cmds = nil
-		f.frame(t, a)
+		f.Frame(t, a)
 		x, y := widgetAt(t, a, c.id)
-		f.cur.mx, f.cur.my = x, y
-		f.click(t, a, mbLeft, c.mods)
+		f.Cur.Mx, f.Cur.My = x, y
+		f.Click(t, a, mbLeft, c.mods)
 		if set := cmdsOf(s, command.SetBill); len(set) != 1 || set[0].Count != c.want {
 			t.Fatalf("%s with mods %v: %+v, want %d", c.id, c.mods, set, c.want)
 		}
 	}
-	f.cur.mods = 0
+	f.Cur.Mods = 0
 }
 
 func TestDevModeTickStepAndUltrafast(t *testing.T) {
 	t.Parallel()
 	a, s, f := inputColony(t, [2]int{5, 5})
 	steps := s.steps
-	f.key(t, a, "NumpadAdd", 0)
+	f.Key(t, a, "NumpadAdd", 0)
 	if s.steps != steps {
 		t.Fatal("dev keys need developer mode")
 	}
 	set := a.settings
 	set.Gameplay.DevMode = true
 	a.setSettings(set)
-	f.key(t, a, "NumpadAdd", 0)
+	f.Key(t, a, "NumpadAdd", 0)
 	if s.steps != steps+1 {
 		t.Fatalf("one tick while paused: %d -> %d", steps, s.steps)
 	}
-	f.frame(t, a)
+	f.Frame(t, a)
 	if s.steps != steps+1 {
 		t.Fatal("and only one")
 	}
-	f.key(t, a, "Digit4", 0)
+	f.Key(t, a, "Digit4", 0)
 	if a.renderer.speed != speedUltra || a.renderer.speed.ticksPerFrame() != ultraTicks {
 		t.Fatalf("4 = ultrafast, got %v", a.renderer.speed)
 	}
-	f.key(t, a, "Slash", 0)
+	f.Key(t, a, "Slash", 0)
 	if !a.dev.menu || len(a.devButtons()) == 0 {
 		t.Fatal("/ opens the debug actions")
 	}
-	f.key(t, a, "R", 0)
+	f.Key(t, a, "R", 0)
 	if len(cmdsOf(s, command.DraftPawn)) != 0 {
 		t.Fatal("map keys are off under the debug menu")
 	}
-	f.key(t, a, "Escape", 0)
+	f.Key(t, a, "Escape", 0)
 	if a.dev.menu {
 		t.Fatal("Esc closes the debug menu")
 	}
-	f.key(t, a, "Backquote", 0)
-	f.key(t, a, "Quote", 0)
+	f.Key(t, a, "Backquote", 0)
+	f.Key(t, a, "Quote", 0)
 	if !a.dev.log || !a.dev.insp {
 		t.Fatal("` and ' toggle the debug log and inspector")
 	}
@@ -648,17 +648,17 @@ found:
 	if !a.rebind.on {
 		t.Fatal("clicking a slot waits for a key")
 	}
-	f.key(t, a, "Escape", 0)
+	f.Key(t, a, "Escape", 0)
 	if a.rebind.on || a.nav.screen() != screenOptions || a.bindings().Label(input.Draft) != "R" {
 		t.Fatal("Esc cancels the capture (and does not leave Options)")
 	}
 	click(t, a, slot)
-	f.key(t, a, "Y", input.ModCtrl)
+	f.Key(t, a, "Y", input.ModCtrl)
 	if a.bindings().Label(input.Draft) != "Ctrl+Y" || store.s.Controls.Bindings["thing.draft"][0] != "Ctrl+Y" {
 		t.Fatalf("rebound to %q, stored %v", a.bindings().Label(input.Draft), store.s.Controls.Bindings)
 	}
 	click(t, a, slot)
-	f.key(t, a, "F", 0) // Forbid's key
+	f.Key(t, a, "F", 0) // Forbid's key
 	if a.rebind.pending == nil {
 		t.Fatal("a used key asks before swapping")
 	}
@@ -671,7 +671,7 @@ found:
 		t.Fatal("bindings survive a restart")
 	}
 	click(t, a, slot)
-	f.key(t, a, "Backspace", 0)
+	f.Key(t, a, "Backspace", 0)
 	if len(a.bindings().Of(input.Draft)) != 0 {
 		t.Fatal("Backspace clears the slot")
 	}
@@ -690,15 +690,15 @@ func TestRightClickLeavingToolDoesNotOrder(t *testing.T) {
 	a.renderer.Select(1)
 	a.openArchitect()
 	a.selectArchTool("wall")
-	f.moveTo(a, 12, 6)
-	f.click(t, a, mbRight, 0)
+	f.MoveTo(a, 12, 6)
+	f.Click(t, a, mbRight, 0)
 	if a.archTool != "" {
 		t.Fatal("right-click drops the tool")
 	}
 	if a.float.open || len(s.cmds) != 0 {
 		t.Fatalf("and nothing else: menu=%v cmds=%+v", a.float.open, s.cmds)
 	}
-	f.click(t, a, mbRight, 0)
+	f.Click(t, a, mbRight, 0)
 	if !a.float.open {
 		t.Fatal("the next right-click opens the order menu")
 	}
@@ -711,8 +711,8 @@ func TestEscInMoveModeHandledOnce(t *testing.T) {
 	s.world.Buildings = []game.BuildingView{{ID: 40, Kind: "table", X: 6, Y: 6, W: 1, H: 1}}
 	a.selectCand(selCand{selBuilding, 40})
 	a.startMove(s.world.Buildings[0])
-	f.frame(t, a) // the opening frame
-	f.key(t, a, "Escape", 0)
+	f.Frame(t, a) // the opening frame
+	f.Key(t, a, "Escape", 0)
 	if a.bldgMove.on {
 		t.Fatal("Esc leaves Move mode")
 	}
@@ -727,7 +727,7 @@ func TestCycleCellKey(t *testing.T) {
 	s.world.Items = []game.ItemView{{ID: 80, Kind: "wood", Qty: 1, X: 7, Y: 7}}
 	s.world.Plants = []game.PlantView{{ID: 81, Species: "oak", X: 7, Y: 7}}
 	a.selectCand(selCand{selItem, 80})
-	f.key(t, a, "NumpadMultiply", 0)
+	f.Key(t, a, "NumpadMultiply", 0)
 	if !a.hasPlant || a.selPlant != 81 {
 		t.Fatal("Numpad * goes to the next thing in the cell")
 	}
@@ -748,7 +748,7 @@ func TestGizmoKeysPressInspectorButtons(t *testing.T) {
 	if i < 0 || i >= len(input.Gizmos) {
 		t.Fatalf("the Forbid button is a command with a key: %+v", cs)
 	}
-	f.key(t, a, a.bindings().Of(input.Gizmos[i])[0].Key, 0)
+	f.Key(t, a, a.bindings().Of(input.Gizmos[i])[0].Key, 0)
 	if c := cmdsOf(s, command.SetForbidden); len(c) != 1 || c[0].Target != 90 {
 		t.Fatalf("gizmo key %d presses Forbid: %+v", i, s.cmds)
 	}
@@ -757,26 +757,26 @@ func TestGizmoKeysPressInspectorButtons(t *testing.T) {
 func TestWheelZoomsUnlessALogTookIt(t *testing.T) {
 	t.Parallel()
 	a, _, f := inputColony(t)
-	a.renderer.smooth.instant = true
-	z := a.renderer.cam.zoom
-	f.cur.wheelY = 1
-	f.frame(t, a)
-	if a.renderer.cam.zoom <= z {
+	a.renderer.smooth.Instant = true
+	z := a.renderer.cam.Zoom
+	f.Cur.WheelY = 1
+	f.Frame(t, a)
+	if a.renderer.cam.Zoom <= z {
 		t.Fatal("the wheel zooms the map")
 	}
-	z = a.renderer.cam.zoom
-	f.key(t, a, "PageUp", 0)
-	if a.renderer.cam.zoom >= z {
+	z = a.renderer.cam.Zoom
+	f.Key(t, a, "PageUp", 0)
+	if a.renderer.cam.Zoom >= z {
 		t.Fatal("PgUp zooms out")
 	}
-	ox := a.renderer.cam.offsetX
-	f.cur.mx, f.cur.my = 400, 300
-	f.cur.press[mbMiddle], f.cur.down[mbMiddle] = true, true
-	f.frame(t, a)
-	f.cur.mx = 340
-	f.frame(t, a)
-	f.cur.down[mbMiddle] = false
-	if a.renderer.cam.offsetX == ox {
+	ox := a.renderer.cam.OffsetX
+	f.Cur.Mx, f.Cur.My = 400, 300
+	f.Cur.Press[mbMiddle], f.Cur.Down[mbMiddle] = true, true
+	f.Frame(t, a)
+	f.Cur.Mx = 340
+	f.Frame(t, a)
+	f.Cur.Down[mbMiddle] = false
+	if a.renderer.cam.OffsetX == ox {
 		t.Fatal("a middle drag pans the map")
 	}
 }
@@ -784,21 +784,21 @@ func TestWheelZoomsUnlessALogTookIt(t *testing.T) {
 func TestSpeedHomeEnd(t *testing.T) {
 	t.Parallel()
 	a, _, f := inputColony(t)
-	f.key(t, a, "Home", 0)
+	f.Key(t, a, "Home", 0)
 	if a.renderer.speed != speedNormal {
 		t.Fatalf("Home from paused = %v", a.renderer.speed)
 	}
-	f.key(t, a, "Home", 0)
-	f.key(t, a, "Home", 0)
-	f.key(t, a, "Home", 0)
+	f.Key(t, a, "Home", 0)
+	f.Key(t, a, "Home", 0)
+	f.Key(t, a, "Home", 0)
 	if a.renderer.speed != speedVeryFast {
 		t.Fatal("Home stops at superfast")
 	}
-	f.key(t, a, "End", 0)
+	f.Key(t, a, "End", 0)
 	if a.renderer.speed != speedFast {
 		t.Fatal("End slows down")
 	}
-	f.key(t, a, "Space", 0)
+	f.Key(t, a, "Space", 0)
 	if a.renderer.speed != speedPaused {
 		t.Fatal("Space pauses")
 	}

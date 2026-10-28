@@ -81,7 +81,7 @@ func (a *App) cellInfoLines() []string {
 			lines = append(lines, lbl)
 		}
 	}
-	if a.in.alt() { // Alt held: the detailed cell lines (room_stats.go)
+	if a.in.Alt() { // Alt held: the detailed cell lines (room_stats.go)
 		lines = append(lines, detailLines(w, tx, ty)...)
 	}
 	return lines

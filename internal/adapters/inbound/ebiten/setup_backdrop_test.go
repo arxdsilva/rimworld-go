@@ -65,20 +65,20 @@ func TestBackdropDrawsWithAndWithoutPlanet(t *testing.T) {
 	if setupBackdrop.view == nil || setupBackdrop.viewOf != p || setupBackdrop.disc == nil {
 		t.Fatal("planet disc not built from the world")
 	}
-	lon := setupBackdrop.view.cam.Lon
+	lon := setupBackdrop.view.Cam.Lon
 	for i := 0; i < 3*backdropRenderGap; i++ {
 		a.drawSetupBackdrop(screen, 1280, 720, p)
 	}
-	if setupBackdrop.view.cam.Lon == lon {
+	if setupBackdrop.view.Cam.Lon == lon {
 		t.Fatal("the planet does not drift")
 	}
 	// Reduced Motion freezes it.
 	a.settings.Accessibility.ReducedMotion = true
-	lon = setupBackdrop.view.cam.Lon
+	lon = setupBackdrop.view.Cam.Lon
 	for i := 0; i < 3*backdropRenderGap; i++ {
 		a.drawSetupBackdrop(screen, 1280, 720, p)
 	}
-	if setupBackdrop.view.cam.Lon != lon {
+	if setupBackdrop.view.Cam.Lon != lon {
 		t.Fatal("planet drifts with Reduced Motion")
 	}
 	// A new world replaces the disc.

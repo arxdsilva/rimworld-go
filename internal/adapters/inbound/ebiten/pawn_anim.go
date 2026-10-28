@@ -73,18 +73,18 @@ func bodyAttach(sp *artSprite, name string) (x, y float64, ok bool) {
 	if sp == nil {
 		return 0, 0, false
 	}
-	a, ok := sp.meta.Attach[name]
+	a, ok := sp.Meta.Attach[name]
 	if !ok {
 		return 0, 0, false
 	}
-	return (a[0] - sp.meta.Origin[0]) / artTilePx, (a[1] - sp.meta.Origin[1]) / artTilePx, true
+	return (a[0] - sp.Meta.Origin[0]) / artTilePx, (a[1] - sp.Meta.Origin[1]) / artTilePx, true
 }
 
 // pawnHead is a standing figure's head centre in tiles from its tile's
 // top-left, from pawn/body_south's head attachment (a stand-in without
 // art).
 func pawnHead(c *artCatalog) (x, y float64) {
-	if x, y, ok := bodyAttach(c.sprite("pawn/body_south"), "head"); ok {
+	if x, y, ok := bodyAttach(c.Sprite("pawn/body_south"), "head"); ok {
 		return x, y
 	}
 	return pawnFeetX, -0.24
@@ -202,7 +202,7 @@ func (r *Renderer) drawPawnArt(screen *ebiten.Image, p game.PawnView, wx, wy, ti
 		r.drawHostileMarker(screen, p, wx+ps.dx, wy+ps.dy, pawnMarkerLift(r.art), tile)
 	}
 	if p.Drafted {
-		if img := r.art.image("ui_icon/draft", color.NRGBA{}); img != nil {
+		if img := r.art.Image("ui_icon/draft", color.NRGBA{}); img != nil {
 			sx, sy := r.worldToScreenF(wx+0.62+ps.dx, wy-pawnMarkerLift(r.art)+ps.dy)
 			worldIcon(screen, img, float64(sx), float64(sy), tile*0.3/uiScale()) // tile is physical
 		}
@@ -414,7 +414,7 @@ func (r *Renderer) bedTint(b game.BuildingView) color.NRGBA {
 	if len(cloth) == 0 {
 		return color.NRGBA{}
 	}
-	return r.art.tint("cloth", cloth[mix64(uint64(b.ID))%uint64(len(cloth))])
+	return r.art.Tint("cloth", cloth[mix64(uint64(b.ID))%uint64(len(cloth))])
 }
 
 // slungScale is the size of a patient slung over a rescuer's shoulders;
@@ -437,7 +437,7 @@ func carryPoses(c *artCatalog, f facing) (ground, slung pose) {
 	ground = lyingPose(c, side)
 	_, hy := pawnHead(c)
 	backY := hy + 0.5*(pawnFeetY-hy) // between the shoulders when the art has no back point
-	if _, y, ok := bodyAttach(c.sprite("pawn/body_south"), "back"); ok {
+	if _, y, ok := bodyAttach(c.Sprite("pawn/body_south"), "back"); ok {
 		backY = y
 	}
 	shift := (pawnFeetY - hy) * lyingCentreK * slungScale

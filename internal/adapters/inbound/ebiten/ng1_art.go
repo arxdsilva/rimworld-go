@@ -71,7 +71,7 @@ func (r *Renderer) addCaveMouths(w game.WorldView, draws []artDraw, screen *ebit
 				continue
 			}
 			key, x, y := "rock/cave_mouth_"+face, x, y
-			if !r.art.has(key) {
+			if !r.art.Has(key) {
 				continue
 			}
 			cs := tintCS(r.stoneTintAt(w, x, y))

@@ -141,10 +141,10 @@ func (b *setupBackdropState) drawPlanet(screen *ebiten.Image, sw, sh int, p *pla
 	}
 	if b.view == nil || b.viewOf != src {
 		g := newGlobeView(src, nil)
-		g.rivers, g.roads, g.marks = nil, nil, nil // far away: the bare tiles
+		g.Rivers, g.Roads, g.Marks = nil, nil, nil // far away: the bare tiles
 		g.SetAreaPx(0, 0, backdropDiscArea, backdropDiscArea)
-		g.cam.SetDist(backdropDiscDist)
-		g.cam.Lat, g.cam.Lon = 0.35, float64(src.Seed%628)/100
+		g.Cam.SetDist(backdropDiscDist)
+		g.Cam.Lat, g.Cam.Lon = 0.35, float64(src.Seed%628)/100
 		b.view, b.viewOf = g, src
 		b.disc = ebiten.NewImage(backdropDiscArea, backdropDiscArea)
 		b.discTok = -backdropRenderGap
@@ -152,12 +152,12 @@ func (b *setupBackdropState) drawPlanet(screen *ebiten.Image, sw, sh int, p *pla
 	if b.frame-b.discTok >= backdropRenderGap && (!reduced || b.discTok < 0) {
 		g := b.view
 		if !reduced {
-			g.cam.Lon += 0.0016
-			g.cam.Lat = 0.35 + 0.12*math.Sin(t/1500)
+			g.Cam.Lon += 0.0016
+			g.Cam.Lat = 0.35 + 0.12*math.Sin(t/1500)
 		}
-		g.ensureGPU(backdropDiscArea, backdropDiscArea)
+		g.EnsureGPU(backdropDiscArea, backdropDiscArea)
 		b.disc.Clear()
-		g.drawBody(b.disc)
+		g.DrawBody(b.disc)
 		b.discTok = b.frame
 	}
 	op := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear}

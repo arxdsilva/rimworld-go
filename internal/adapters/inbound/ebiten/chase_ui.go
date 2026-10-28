@@ -54,7 +54,7 @@ func (r *Renderer) onThreatPause(w game.WorldView, tick uint64) {
 	// The App sets the colony viewport (physical) each frame; unset (no
 	// App yet) there is nothing to centre in.
 	v := r.voice.view
-	if v.w() <= 0 || v.h() <= 0 {
+	if v.W() <= 0 || v.H() <= 0 {
 		return
 	}
 	if r.onScreen(float64(an.X)+0.5, float64(an.Y)+0.5, v) && r.onScreen(float64(p.X)+0.5, float64(p.Y)+0.5, v) {
@@ -67,5 +67,5 @@ func (r *Renderer) onThreatPause(w game.WorldView, tick uint64) {
 // physical viewport v.
 func (r *Renderer) onScreen(wx, wy float64, v viewport) bool {
 	sx, sy := r.worldToScreenF(wx, wy)
-	return float64(sx) >= v.x0 && float64(sx) <= v.x1 && float64(sy) >= v.y0 && float64(sy) <= v.y1
+	return float64(sx) >= v.X0 && float64(sx) <= v.X1 && float64(sy) >= v.Y0 && float64(sy) <= v.Y1
 }

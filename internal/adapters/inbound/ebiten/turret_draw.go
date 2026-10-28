@@ -62,15 +62,15 @@ func turretGunAt(c *artCatalog, b *game.BuildingView) (key string, wx, wy float6
 		return "", 0, 0, false
 	}
 	key = turretGunKey(aimFrame(b.AimDir))
-	g := c.sprites[key]
+	g := c.Sprites[key]
 	if g == nil {
 		return "", 0, 0, false
 	}
-	gm, ok := g.meta.Attach["mount"]
+	gm, ok := g.Meta.Attach["mount"]
 	if !ok {
 		return "", 0, 0, false
 	}
-	return key, mx - (gm[0]-g.meta.Origin[0])/artTilePx, my - (gm[1]-g.meta.Origin[1])/artTilePx, true
+	return key, mx - (gm[0]-g.Meta.Origin[0])/artTilePx, my - (gm[1]-g.Meta.Origin[1])/artTilePx, true
 }
 
 // turretMuzzle is the muzzle of turret b's gun in world tiles (ok false
@@ -135,7 +135,7 @@ func (r *Renderer) drawDefenseParts(dst *ebiten.Image, b *game.BuildingView, key
 		r.drawSpriteCS(dst, gk, color.NRGBA{}, wx, wy, tile, sw, sh, noCS)
 	case tradeBeaconKind:
 		g := r.power.glowOf(key)
-		if r.art.has(g) && beaconLit(r.present, b.ID, r.reducedMotion) &&
+		if r.art.Has(g) && beaconLit(r.present, b.ID, r.reducedMotion) &&
 			r.drawUnlitSprite(dst, g, float64(b.X), float64(b.Y), tile, sw, sh, noCS) {
 			r.powerTrace("glow", g)
 		}

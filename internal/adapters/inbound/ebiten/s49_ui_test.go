@@ -26,7 +26,7 @@ func TestHealthPickerUsesViewOptionsAndShowsReasons(t *testing.T) {
 	}
 	drawFrame(t, a, f) // status line under the queued row paints
 	press(t, a, f, healthAddID)
-	f.frame(t, a)
+	f.Frame(t, a)
 	if !hasWidget(a, optID(healthPickList, 1)) {
 		t.Fatal("both view options are listed")
 	}
@@ -82,7 +82,7 @@ func TestWorkbenchBillPickerReachesEveryRecipe(t *testing.T) {
 	}
 	r := rect{X: 0, Y: 180, W: tab.WantW, H: tab.WantH}.Inset(paneInset) // what the pane hands Declare
 	setHook(a.uiSt(), func(a *App) { tab.Declare(r) })
-	f.frame(t, a)
+	f.Frame(t, a)
 	for _, w := range a.uiSt().cur {
 		if strings.HasPrefix(w.id, "bill.add.") {
 			t.Errorf("per-recipe button %s would overflow the panel", w.id)
@@ -106,7 +106,7 @@ func TestWorkbenchBillPickerReachesEveryRecipe(t *testing.T) {
 		t.Fatal("no Add bill button")
 	}
 	press(t, a, f, billPickBtn)
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalTop() != billPickID {
 		t.Fatal("picker not open")
 	}
@@ -152,7 +152,7 @@ func TestDevMenuLosePartAndSpawnImplants(t *testing.T) {
 	set.Gameplay.DevMode = true
 	a.setSettings(set)
 	a.renderer.Select(1)
-	f.frame(t, a)
+	f.Frame(t, a)
 	acts := a.devActions(3, 3)
 	byLabel := map[string]devAction{}
 	for _, x := range acts {
@@ -171,7 +171,7 @@ func TestDevMenuLosePartAndSpawnImplants(t *testing.T) {
 		t.Fatalf("Lose a part action: %+v", lose)
 	}
 	lose.run(d)
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalTop() != devLosePickID {
 		t.Fatal("part picker not open")
 	}

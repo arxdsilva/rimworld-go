@@ -205,14 +205,14 @@ func (u *uiState) cycleFocus(dir int) {
 // uiPress reports a fresh left press inside r and takes it, so nothing
 // else acts on it. Only live widgets call it.
 func (a *App) uiPress(r rect) bool {
-	if !a.in.clicked(mbLeft) {
+	if !a.in.Clicked(mbLeft) {
 		return false
 	}
 	mx, my := a.currentCursor()
 	if !r.Hit(mx, my) {
 		return false
 	}
-	a.in.take(mbLeft)
+	a.in.Take(mbLeft)
 	a.uiSt().kbd = false
 	return true
 }
@@ -224,11 +224,11 @@ func (a *App) uiHot(id string) bool { return a.uiSt().hot == id }
 func (a *App) uiFocused(id string) bool { return a.uiSt().focus == id }
 
 // uiRelease consumes this frame's left release so nothing else sees it.
-func (a *App) uiRelease() { a.in.raw.release[mbLeft] = false }
+func (a *App) uiRelease() { a.in.Raw.Release[mbLeft] = false }
 
 // uiKeyAct reports Space went down on the focused widget.
 func (a *App) uiKeyAct(id string) bool {
-	return a.uiSt().focus == id && a.in.key("Space")
+	return a.uiSt().focus == id && a.in.Key("Space")
 }
 
 // uiDeny is a click on a disabled widget: the reason is shown and a deny
@@ -317,7 +317,7 @@ func (a *App) uiButton(id string, r rect, label string, o btnOpts) bool {
 	}
 	u.queue(func(dst *ebiten.Image) {
 		hover := u.hot == id && !o.Disabled
-		down := hover && a.in.down(mbLeft) && u.active == ""
+		down := hover && a.in.Down(mbLeft) && u.active == ""
 		fill, border, text := o.Style.colors(hover, down, o.Selected)
 		if o.Disabled {
 			fill, border, text = uiBtnDisabled, uiBtnBorder, uiTextDisabled

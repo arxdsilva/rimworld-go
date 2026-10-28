@@ -369,7 +369,7 @@ func TestAlertClickAndRightClickCycleTargets(t *testing.T) {
 	}
 	centre := func() [2]int { // the tile in the middle of the map viewport
 		v := a.mapViewport()
-		x, y := a.renderer.TileAt(int((v.x0+v.x1)/2), int((v.y0+v.y1)/2))
+		x, y := a.renderer.TileAt(int((v.X0+v.X1)/2), int((v.Y0+v.Y1)/2))
 		return [2]int{x, y}
 	}
 	at := func(i int) [2]int { return al.targets[i] }
@@ -383,12 +383,12 @@ func TestAlertClickAndRightClickCycleTargets(t *testing.T) {
 	if c := centre(); !near(c, at(1)) {
 		t.Fatalf("second click centres %v, want %v", c, at(1))
 	}
-	f.cur.mx, f.cur.my = int(row.X+row.W/2), int(row.Y+row.H/2)
-	f.click(t, a, mbRight, 0) // right: back to the first
+	f.Cur.Mx, f.Cur.My = int(row.X+row.W/2), int(row.Y+row.H/2)
+	f.Click(t, a, mbRight, 0) // right: back to the first
 	if c := centre(); !near(c, at(0)) {
 		t.Fatalf("right-click centres %v, want back at %v", c, at(0))
 	}
-	f.click(t, a, mbRight, 0) // right again: wraps to the last
+	f.Click(t, a, mbRight, 0) // right again: wraps to the last
 	if c := centre(); !near(c, at(1)) {
 		t.Fatalf("second right-click centres %v, want %v (wrapped)", c, at(1))
 	}

@@ -25,10 +25,10 @@ func (a *App) uiPreInput(raw *rawInput) {
 		u.heldN = map[string]int{}
 	}
 	now := map[string]bool{}
-	for _, k := range raw.held {
+	for _, k := range raw.Held {
 		now[k] = true
 	}
-	for _, k := range raw.pressed {
+	for _, k := range raw.Pressed {
 		now[k] = true
 	}
 	for k := range u.heldN {
@@ -43,7 +43,7 @@ func (a *App) uiPreInput(raw *rawInput) {
 	if a.textActive() {
 		return
 	}
-	mx, my := a.toLogical(raw.mx, raw.my)
+	mx, my := a.toLogical(raw.Mx, raw.My)
 	if a.cursor != nil {
 		mx, my = a.cursor[0], a.cursor[1]
 	}
@@ -64,7 +64,7 @@ func (a *App) uiPreInput(raw *rawInput) {
 	}
 	if rawPressed(raw, "Tab") && len(u.focusables()) > 0 {
 		dir := 1
-		if raw.mods&input.ModShift != 0 {
+		if raw.Mods&input.ModShift != 0 {
 			dir = -1
 		}
 		u.cycleFocus(dir)
@@ -84,7 +84,7 @@ func (u *uiState) pageOwner(mx, my int) bool {
 }
 
 func rawPressed(raw *rawInput, k string) bool {
-	for _, p := range raw.pressed {
+	for _, p := range raw.Pressed {
 		if p == k {
 			return true
 		}
@@ -95,13 +95,13 @@ func rawPressed(raw *rawInput, k string) bool {
 // dropPressed removes k from the frame's pressed keys (copying, since the
 // source may reuse the slice).
 func dropPressed(raw *rawInput, k string) {
-	out := make([]string, 0, len(raw.pressed))
-	for _, p := range raw.pressed {
+	out := make([]string, 0, len(raw.Pressed))
+	for _, p := range raw.Pressed {
 		if p != k {
 			out = append(out, p)
 		}
 	}
-	raw.pressed = out
+	raw.Pressed = out
 }
 
 // uiBegin starts the kit's frame: tooltip timing, a new hit list, then
@@ -115,9 +115,9 @@ func (a *App) uiBegin() {
 		u.reset()
 		u.cur = nil
 	}
-	pressing := a.in.down(mbLeft) || a.in.down(mbRight)
+	pressing := a.in.Down(mbLeft) || a.in.Down(mbRight)
 	u.tipTick(mx, my, pressing)
-	if u.active != "" && !a.in.down(mbLeft) && !a.in.released(mbLeft) {
+	if u.active != "" && !a.in.Down(mbLeft) && !a.in.Released(mbLeft) {
 		u.active = "" // a drag whose release was missed
 	}
 	if pressing {

@@ -11,9 +11,9 @@ const (
 
 // camLimits are the bounds step applies, taken from the clamp helpers.
 type camLimits struct {
-	v          viewport
-	mapW, mapH float64 // map size in tiles
-	minZoom    float64
+	V          viewport
+	MapW, MapH float64 // map size in tiles
+	MinZoom    float64
 }
 
 // camSmooth is presentation-only camera motion: pan velocity with
@@ -21,58 +21,58 @@ type camLimits struct {
 // screen point. It never touches domain state. With instant set (capture
 // mode) pan and zoom apply at once and deterministically.
 type camSmooth struct {
-	vx, vy       float64 // pan velocity, physical px/s
-	dirX, dirY   float64 // pan input pushed this frame, consumed by step
-	targetZoom   float64
-	zooming      bool
-	pendingScale float64 // product of zoomAt factors not yet folded into targetZoom
-	anchorX      float64 // screen point kept fixed while zooming
-	anchorY      float64
-	instant      bool
-	speed        float64 // pan speed multiplier (Options); 0 means 1
-	boost        float64 // fast-pan multiplier this frame (Shift); 0 means 1
+	Vx, Vy       float64 // pan velocity, physical px/s
+	DirX, DirY   float64 // pan input pushed this frame, consumed by step
+	TargetZoom   float64
+	Zooming      bool
+	PendingScale float64 // product of zoomAt factors not yet folded into targetZoom
+	AnchorX      float64 // screen point kept fixed while zooming
+	AnchorY      float64
+	Instant      bool
+	Speed        float64 // pan speed multiplier (Options); 0 means 1
+	Boost        float64 // fast-pan multiplier this frame (Shift); 0 means 1
 }
 
-// halt stops all camera motion: pan velocity and input, and a zoom ease in
+// Halt stops all camera motion: pan velocity and input, and a zoom ease in
 // flight (the zoom stays where it is). A jump to a point calls it so the
 // camera does not drift off the target afterwards. The pan-speed setting
 // is kept.
-func (s *camSmooth) halt() {
-	s.vx, s.vy, s.dirX, s.dirY = 0, 0, 0, 0
-	s.zooming, s.pendingScale = false, 0
+func (s *camSmooth) Halt() {
+	s.Vx, s.Vy, s.DirX, s.DirY = 0, 0, 0, 0
+	s.Zooming, s.PendingScale = false, 0
 }
 
-// idle reports nothing is in motion: no pan velocity or input and no zoom
-// ease in flight. A Draw-time step (stepCamera) skips an idle smoother, so
+// Idle reports nothing is in motion: no pan velocity or input and no zoom
+// ease in flight. A Draw-time step (stepCamera) skips an Idle smoother, so
 // a camera that code placed directly stays exactly there until input moves
 // it; Update's applyCamera still clamps every frame.
-func (s *camSmooth) idle() bool {
-	return s.vx == 0 && s.vy == 0 && s.dirX == 0 && s.dirY == 0 && !s.zooming &&
-		(s.pendingScale == 0 || s.pendingScale == 1)
+func (s *camSmooth) Idle() bool {
+	return s.Vx == 0 && s.Vy == 0 && s.DirX == 0 && s.DirY == 0 && !s.Zooming &&
+		(s.PendingScale == 0 || s.PendingScale == 1)
 }
 
-// pushPan records held-pan input for the next step; dx, dy are directions
+// PushPan records held-pan input for the next step; dx, dy are directions
 // (-1, 0, 1), summed and clamped to unit range per axis.
-func (s *camSmooth) pushPan(dx, dy float64) {
-	s.dirX = math.Max(-1, math.Min(1, s.dirX+dx))
-	s.dirY = math.Max(-1, math.Min(1, s.dirY+dy))
+func (s *camSmooth) PushPan(dx, dy float64) {
+	s.DirX = math.Max(-1, math.Min(1, s.DirX+dx))
+	s.DirY = math.Max(-1, math.Min(1, s.DirY+dy))
 }
 
-// zoomAt requests a zoom change by factor, anchored at physical screen
+// ZoomAt requests a zoom change by factor, anchored at physical screen
 // point (sx, sy).
-func (s *camSmooth) zoomAt(factor, sx, sy float64) {
+func (s *camSmooth) ZoomAt(factor, sx, sy float64) {
 	if factor <= 0 {
 		return
 	}
-	if s.pendingScale == 0 {
-		s.pendingScale = 1
+	if s.PendingScale == 0 {
+		s.PendingScale = 1
 	}
-	s.pendingScale *= factor
-	s.anchorX, s.anchorY = sx, sy
+	s.PendingScale *= factor
+	s.AnchorX, s.AnchorY = sx, sy
 }
 
-// step advances the camera by dt seconds and applies the bounds.
-func (s *camSmooth) step(dt float64, c *camera, lim camLimits) {
+// Step advances the camera by dt seconds and applies the bounds.
+func (s *camSmooth) Step(dt float64, c *camera, lim camLimits) {
 	if dt < 0 {
 		dt = 0
 	}
@@ -82,75 +82,75 @@ func (s *camSmooth) step(dt float64, c *camera, lim camLimits) {
 }
 
 func (s *camSmooth) stepZoom(dt float64, c *camera, lim camLimits) {
-	if s.pendingScale != 0 && s.pendingScale != 1 {
-		base := c.zoom
-		if s.zooming {
-			base = s.targetZoom
+	if s.PendingScale != 0 && s.PendingScale != 1 {
+		base := c.Zoom
+		if s.Zooming {
+			base = s.TargetZoom
 		}
-		s.targetZoom = math.Max(lim.minZoom, math.Min(maxZoom, base*s.pendingScale))
-		s.zooming = true
+		s.TargetZoom = math.Max(lim.MinZoom, math.Min(maxZoom, base*s.PendingScale))
+		s.Zooming = true
 	}
-	s.pendingScale = 0
-	if !s.zooming {
+	s.PendingScale = 0
+	if !s.Zooming {
 		return
 	}
-	next := s.targetZoom
-	if !s.instant && math.Abs(s.targetZoom-c.zoom) > zoomSnapEps*s.targetZoom {
-		next = c.zoom + (s.targetZoom-c.zoom)*(1-math.Exp(-dt/zoomTau))
+	next := s.TargetZoom
+	if !s.Instant && math.Abs(s.TargetZoom-c.Zoom) > zoomSnapEps*s.TargetZoom {
+		next = c.Zoom + (s.TargetZoom-c.Zoom)*(1-math.Exp(-dt/zoomTau))
 	} else {
-		s.zooming = false
+		s.Zooming = false
 	}
-	old := c.tile()
-	wx, wy := (s.anchorX+c.offsetX)/old, (s.anchorY+c.offsetY)/old
-	c.zoom = next
-	t := c.tile()
-	c.offsetX, c.offsetY = wx*t-s.anchorX, wy*t-s.anchorY
+	old := c.Tile()
+	wx, wy := (s.AnchorX+c.OffsetX)/old, (s.AnchorY+c.OffsetY)/old
+	c.Zoom = next
+	t := c.Tile()
+	c.OffsetX, c.OffsetY = wx*t-s.AnchorX, wy*t-s.AnchorY
 }
 
 func (s *camSmooth) stepPan(dt float64, c *camera) {
 	boost := 1.0
-	if s.boost > 0 {
-		boost = s.boost
+	if s.Boost > 0 {
+		boost = s.Boost
 	}
-	if c.dev > 0 { // pan speeds are in points: the same apparent speed on a dense screen
-		boost *= c.dev
+	if c.Dev > 0 { // pan speeds are in points: the same apparent speed on a dense screen
+		boost *= c.Dev
 	}
-	if s.instant {
-		c.offsetX += s.dirX * panPixels * boost
-		c.offsetY += s.dirY * panPixels * boost
-		s.vx, s.vy, s.dirX, s.dirY = 0, 0, 0, 0
+	if s.Instant {
+		c.OffsetX += s.DirX * panPixels * boost
+		c.OffsetY += s.DirY * panPixels * boost
+		s.Vx, s.Vy, s.DirX, s.DirY = 0, 0, 0, 0
 		return
 	}
 	k := 1 - math.Exp(-dt/panTau)
 	top := panMaxSpeed
-	if s.speed > 0 {
-		top *= s.speed
+	if s.Speed > 0 {
+		top *= s.Speed
 	}
 	top *= boost
-	s.vx += (s.dirX*top - s.vx) * k
-	s.vy += (s.dirY*top - s.vy) * k
+	s.Vx += (s.DirX*top - s.Vx) * k
+	s.Vy += (s.DirY*top - s.Vy) * k
 	// dirX/dirY stay set: several Draws step one Update's intent (applyCamera clears them).
-	if math.Abs(s.vx) < 0.5 {
-		s.vx = 0
+	if math.Abs(s.Vx) < 0.5 {
+		s.Vx = 0
 	}
-	if math.Abs(s.vy) < 0.5 {
-		s.vy = 0
+	if math.Abs(s.Vy) < 0.5 {
+		s.Vy = 0
 	}
-	c.offsetX += s.vx * dt
-	c.offsetY += s.vy * dt
+	c.OffsetX += s.Vx * dt
+	c.OffsetY += s.Vy * dt
 }
 
 // clamp bounds the offsets with clampAxis and kills velocity on an axis that
 // hit its limit, so the camera never overshoots and then rebounds.
 func (s *camSmooth) clamp(c *camera, lim camLimits) {
-	t := c.tile()
-	cx := clampAxis(c.offsetX, lim.mapW*t, lim.v.x0, lim.v.x1, edgeSlack*lim.v.w())
-	cy := clampAxis(c.offsetY, lim.mapH*t, lim.v.y0, lim.v.y1, edgeSlack*lim.v.h())
-	if cx != c.offsetX {
-		s.vx = 0
+	t := c.Tile()
+	cx := clampAxis(c.OffsetX, lim.MapW*t, lim.V.X0, lim.V.X1, edgeSlack*lim.V.W())
+	cy := clampAxis(c.OffsetY, lim.MapH*t, lim.V.Y0, lim.V.Y1, edgeSlack*lim.V.H())
+	if cx != c.OffsetX {
+		s.Vx = 0
 	}
-	if cy != c.offsetY {
-		s.vy = 0
+	if cy != c.OffsetY {
+		s.Vy = 0
 	}
-	c.offsetX, c.offsetY = cx, cy
+	c.OffsetX, c.OffsetY = cx, cy
 }

@@ -149,7 +149,7 @@ func callInterval(an game.AnimalView, n uint64, first bool) uint64 {
 // audible reports whether a world point (tiles) is within earshot.
 func (r *Renderer) audible(x, y float64) bool {
 	v := r.voice.view
-	if v.w() <= 0 || v.h() <= 0 {
+	if v.W() <= 0 || v.H() <= 0 {
 		return true
 	}
 	_, _, ok := spatial(r, x, y, v)

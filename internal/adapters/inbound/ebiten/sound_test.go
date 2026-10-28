@@ -62,7 +62,7 @@ func soundApp(sim *stubSim) (*App, *soundRecorder) {
 // centreTile is the world tile under the middle of the colony view.
 func centreTile(a *App) (float64, float64) {
 	v := colonyViewport(a.sw, a.sh)
-	return a.renderer.screenToWorld(int((v.x0+v.x1)/2), int((v.y0+v.y1)/2))
+	return a.renderer.screenToWorld(int((v.X0+v.X1)/2), int((v.Y0+v.Y1)/2))
 }
 
 func TestStrikeCueIsCentredAndOncePerSwing(t *testing.T) {
@@ -281,7 +281,7 @@ func TestDirectorFadesWithZoom(t *testing.T) {
 	r := a.renderer
 	v := colonyViewport(a.sw, a.sh)
 	hear := func(zoom, dx float64) []soundCall {
-		r.cam.zoom = zoom
+		r.cam.Zoom = zoom
 		rec.plays = nil
 		a.snd.frame += cueGap
 		cx, cy := centreTile(a)
@@ -297,10 +297,10 @@ func TestDirectorFadesWithZoom(t *testing.T) {
 	if len(nearR) != 1 || len(midR) != 1 || midR[0].pan >= nearR[0].pan {
 		t.Fatalf("zoomed out should pan narrower: near %+v mid %+v", nearR, midR)
 	}
-	if got := hear(r.minZoomFor(v), 0); len(got) != 0 {
+	if got := hear(r.MinZoomFor(v), 0); len(got) != 0 {
 		t.Fatalf("fully zoomed out effects are silent, got %+v", got)
 	}
-	r.cam.zoom = 1.5
+	r.cam.Zoom = 1.5
 	cx, cy := centreTile(a)
 	r.heard = game.WorldView{Hour: 12, Buildings: []game.BuildingView{{ID: 5, Kind: "campfire", X: int(cx), Y: int(cy), Burning: true}}}
 	want := map[string]loopWant{}
@@ -308,7 +308,7 @@ func TestDirectorFadesWithZoom(t *testing.T) {
 	if _, ok := want["fire:5"]; !ok {
 		t.Fatal("the campfire crackles zoomed in")
 	}
-	r.cam.zoom = r.minZoomFor(v)
+	r.cam.Zoom = r.MinZoomFor(v)
 	want = map[string]loopWant{}
 	a.colonyAmbience(want)
 	if _, ok := want["fire:5"]; ok {

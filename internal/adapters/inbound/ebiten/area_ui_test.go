@@ -43,7 +43,7 @@ func TestAreaToolSubmenuListsAreasAndArms(t *testing.T) {
 	a, f := areaApp(t, s)
 	a.openArchitect()
 	a.selectArchTool("allowed_area")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalTop() != areaPickID {
 		t.Fatalf("top modal %q, want the area submenu", a.uiModalTop())
 	}
@@ -56,7 +56,7 @@ func TestAreaToolSubmenuListsAreasAndArms(t *testing.T) {
 		t.Error("the Architect submenu lists Unrestricted/Home")
 	}
 	press(t, a, f, "areapick.row.5")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.archTool != "allowed_area" || a.areaPaintIndex() != 5 || a.uiModalTop() != "" {
 		t.Fatalf("armed tool %q area %d modal %q", a.archTool, a.areaPaintIndex(), a.uiModalTop())
 	}
@@ -80,7 +80,7 @@ func TestAreaClearToolEmitsClear(t *testing.T) {
 	a.openArchitect()
 	a.selectArchTool("allowed_area_clear")
 	press(t, a, f, "areapick.row.3")
-	f.frame(t, a)
+	f.Frame(t, a)
 	a.archX0, a.archY0, a.archX1, a.archY1 = 1, 1, 2, 2
 	a.submitArchitect()
 	if c := lastAreaCmd(s); c.Kind != command.PaintArea || c.Index != 3 || c.Enabled {
@@ -95,7 +95,7 @@ func TestAreaSubmenuWithoutAreasOnlyManages(t *testing.T) {
 	a.renderer.game = s
 	a.openArchitect()
 	a.selectArchTool("allowed_area")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if !hasWidget(a, "areapick.manage") {
 		t.Fatal("no Manage row")
 	}
@@ -105,7 +105,7 @@ func TestAreaSubmenuWithoutAreasOnlyManages(t *testing.T) {
 		}
 	}
 	press(t, a, f, "areapick.manage")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalTop() != areasModalID {
 		t.Fatalf("Manage opened %q", a.uiModalTop())
 	}
@@ -116,7 +116,7 @@ func TestAreaManagerActions(t *testing.T) {
 	s := areaStub()
 	a, f := areaApp(t, s)
 	a.openAreaManager()
-	f.frame(t, a)
+	f.Frame(t, a)
 	press(t, a, f, "areas.invert.5")
 	if c := lastAreaCmd(s); c.Kind != command.InvertArea || c.Index != 5 {
 		t.Fatalf("invert %+v", c)
@@ -137,11 +137,11 @@ func TestAreaManagerRenames(t *testing.T) {
 	s := areaStub()
 	a, f := areaApp(t, s)
 	a.openAreaManager()
-	f.frame(t, a)
+	f.Frame(t, a)
 	press(t, a, f, "areas.name.5") // focus the field
-	f.typeText(t, a, "s")          // "Yard" -> "Yards"
-	f.key(t, a, "Enter", 0)
-	f.frame(t, a)
+	f.TypeText(t, a, "s")          // "Yard" -> "Yards"
+	f.Key(t, a, "Enter", 0)
+	f.Frame(t, a)
 	if c := lastAreaCmd(s); c.Kind != command.RenameArea || c.Index != 5 || c.Name != "Yards" {
 		t.Fatalf("rename %+v", c)
 	}
@@ -153,12 +153,12 @@ func TestAreaDeleteConfirmsWhenUsed(t *testing.T) {
 	s.world.Animals = []game.AnimalView{{Tame: true, AreaRef: 3}}
 	a, f := areaApp(t, s)
 	a.openAreaManager()
-	f.frame(t, a)
+	f.Frame(t, a)
 	if n := a.areaUsers(3); n != 2 { // Ada and one animal
 		t.Fatalf("users of area 3 = %d, want 2", n)
 	}
 	press(t, a, f, "areas.delete.3")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalTop() != areasConfirm {
 		t.Fatalf("top modal %q, want the delete confirm", a.uiModalTop())
 	}
@@ -181,7 +181,7 @@ func TestAreaNewDisabledAtCap(t *testing.T) {
 	}
 	a, f := areaApp(t, s)
 	a.openAreaManager()
-	f.frame(t, a)
+	f.Frame(t, a)
 	w, ok := a.uiSt().find("modal." + areasModalID + ".areas.new")
 	if !ok || !w.disabled {
 		t.Fatalf("New area at the cap: found=%v disabled=%v", ok, w.disabled)
@@ -199,7 +199,7 @@ func TestScheduleAllowedAreaDropdown(t *testing.T) {
 	s := areaStub()
 	a, f := areaApp(t, s)
 	a.workOpen, a.panelMode = true, "schedule"
-	f.frame(t, a)
+	f.Frame(t, a)
 	w, ok := a.uiSt().find("sched.area.1")
 	if !ok || !strings.HasPrefix(w.label, "Indoors") {
 		t.Fatalf("Ada's dropdown: found=%v label %q", ok, w.label)
@@ -211,7 +211,7 @@ func TestScheduleAllowedAreaDropdown(t *testing.T) {
 		t.Fatal("the Everyone row has an area")
 	}
 	press(t, a, f, "sched.area.1")
-	f.frame(t, a)
+	f.Frame(t, a)
 	for _, id := range []string{"areapick.row.-1", "areapick.row.-2", "areapick.row.3", "areapick.row.5", "areapick.manage"} {
 		if !hasWidget(a, id) {
 			t.Errorf("dropdown lacks %s", id)
@@ -225,10 +225,10 @@ func TestScheduleAllowedAreaDropdown(t *testing.T) {
 	} {
 		if !hasWidget(a, tc.row) {
 			press(t, a, f, "sched.area.1")
-			f.frame(t, a)
+			f.Frame(t, a)
 		}
 		press(t, a, f, tc.row)
-		f.frame(t, a)
+		f.Frame(t, a)
 		if c := lastAreaCmd(s); c.Kind != command.AssignArea || c.Pawn != 1 || c.Index != tc.want {
 			t.Fatalf("%s: command %+v, want AssignArea Pawn 1 Index %d", tc.row, c, tc.want)
 		}
@@ -240,20 +240,20 @@ func TestInspectorAreaLine(t *testing.T) {
 	s := areaStub()
 	a, f := areaApp(t, s)
 	a.renderer.Select(1)
-	f.frame(t, a)
+	f.Frame(t, a)
 	w, ok := a.uiSt().find("inspector.area")
 	if !ok || w.label != "Area: Indoors" {
 		t.Fatalf("inspector area line: found=%v label %q", ok, w.label)
 	}
 	click(t, a, "inspector.area") // the pane's chip answers through its widget
-	f.frame(t, a)
+	f.Frame(t, a)
 	press(t, a, f, "areapick.row.-2")
 	if c := lastAreaCmd(s); c.Kind != command.AssignArea || c.Pawn != 1 || c.Index != command.AreaHome {
 		t.Fatalf("inspector pick %+v", c)
 	}
 	// PLAY-018: the chip is on the pane itself, so it shows whatever tab is open
 	a.inspectTab = "needs"
-	f.frame(t, a)
+	f.Frame(t, a)
 	if !hasWidget(a, "inspector.area") {
 		t.Fatal("the Area chip shows on every tab")
 	}
@@ -337,12 +337,12 @@ func TestAreaOverlayFollowsArmedTool(t *testing.T) {
 	a.openArchitect()
 	a.selectArchTool("allowed_area")
 	press(t, a, f, "areapick.row.5")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.renderer.areaOv.armed != 5 {
 		t.Fatalf("overlay armed on %d, want 5", a.renderer.areaOv.armed)
 	}
 	a.archTool = ""
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.renderer.areaOv.armed != 0 {
 		t.Fatal("overlay stays armed after the tool is dropped")
 	}

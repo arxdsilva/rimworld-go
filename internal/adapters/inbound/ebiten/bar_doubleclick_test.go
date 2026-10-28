@@ -20,9 +20,9 @@ func clickBarSlot(t *testing.T, a *App, f *fakeInput, id entity.EntityID) {
 	t.Helper()
 	for _, b := range a.colonistBarButtons(a.sw, a.sh) {
 		if b.id == barSlotID(id) {
-			f.cur.mx = int(float64(b.x+b.w/2) * a.scale.S)
-			f.cur.my = int(float64(b.y+b.h/2) * a.scale.S)
-			f.click(t, a, mbLeft, 0)
+			f.Cur.Mx = int(float64(b.x+b.w/2) * a.scale.S)
+			f.Cur.My = int(float64(b.y+b.h/2) * a.scale.S)
+			f.Click(t, a, mbLeft, 0)
 			return
 		}
 	}
@@ -37,17 +37,17 @@ func barColony(t *testing.T) (*App, *fakeInput) {
 	if a.scale.S != 1.5 {
 		t.Fatalf("scale = %v, want 1.5", a.scale.S)
 	}
-	a.renderer.cam.zoom = 1
-	a.renderer.cam.offsetX, a.renderer.cam.offsetY = 0, 0
-	a.renderer.cam.placed = true
-	f.frame(t, a)
+	a.renderer.cam.Zoom = 1
+	a.renderer.cam.OffsetX, a.renderer.cam.OffsetY = 0, 0
+	a.renderer.cam.Placed = true
+	f.Frame(t, a)
 	return a, f
 }
 
 func pawnCentred(a *App) bool {
 	v := a.mapViewport()
 	sx, sy := a.renderer.worldToScreenF(21.5, 19.5)
-	return math.Abs(float64(sx)-(v.x0+v.x1)/2) <= 1.5 && math.Abs(float64(sy)-(v.y0+v.y1)/2) <= 1.5
+	return math.Abs(float64(sx)-(v.X0+v.X1)/2) <= 1.5 && math.Abs(float64(sy)-(v.Y0+v.Y1)/2) <= 1.5
 }
 
 func TestBarDoubleClickCentresCamera(t *testing.T) {
@@ -60,7 +60,7 @@ func TestBarDoubleClickCentresCamera(t *testing.T) {
 	if !a.renderer.HasSelect() || a.renderer.Selected() != barPawnID {
 		t.Fatal("a single bar click should select the colonist")
 	}
-	if a.renderer.cam.offsetX != cam.offsetX || a.renderer.cam.offsetY != cam.offsetY {
+	if a.renderer.cam.OffsetX != cam.OffsetX || a.renderer.cam.OffsetY != cam.OffsetY {
 		t.Fatalf("a single bar click moved the camera: %+v -> %+v", cam, a.renderer.cam)
 	}
 	clickBarSlot(t, a, f, barPawnID)
@@ -77,11 +77,11 @@ func TestBarClicksFurtherApartDoNotCentre(t *testing.T) {
 	a, f := barColony(t)
 	clickBarSlot(t, a, f, barPawnID)
 	for i := 0; i <= doubleClickFrames; i++ {
-		f.frame(t, a)
+		f.Frame(t, a)
 	}
 	cam := a.renderer.cam
 	clickBarSlot(t, a, f, barPawnID)
-	if a.renderer.cam.offsetX != cam.offsetX || a.renderer.cam.offsetY != cam.offsetY || pawnCentred(a) {
+	if a.renderer.cam.OffsetX != cam.OffsetX || a.renderer.cam.OffsetY != cam.OffsetY || pawnCentred(a) {
 		t.Fatalf("two clicks more than %d frames apart moved the camera: %+v -> %+v", doubleClickFrames, cam, a.renderer.cam)
 	}
 	// ...but the second click is the first of a new pair.
@@ -99,10 +99,10 @@ func TestBarDoubleClickDoesNotChain(t *testing.T) {
 	if !pawnCentred(a) {
 		t.Fatal("the double click should have centred the camera")
 	}
-	a.renderer.cam.offsetX += 200 // the player pans away
+	a.renderer.cam.OffsetX += 200 // the player pans away
 	cam := a.renderer.cam
 	clickBarSlot(t, a, f, barPawnID)
-	if a.renderer.cam.offsetX != cam.offsetX {
+	if a.renderer.cam.OffsetX != cam.OffsetX {
 		t.Fatalf("the third click centred again: %+v -> %+v", cam, a.renderer.cam)
 	}
 }
@@ -132,30 +132,30 @@ func TestBarDoubleClickStopsCameraSmoothing(t *testing.T) {
 	a, f := barColony(t)
 	clickBarSlot(t, a, f, barPawnID)
 	sm := &a.renderer.smooth
-	sm.vx, sm.vy = 900, -700
-	sm.zooming, sm.targetZoom, sm.anchorX, sm.anchorY = true, 2, 100, 100
-	sm.pendingScale = 1.2
-	zoom := a.renderer.cam.zoom
+	sm.Vx, sm.Vy = 900, -700
+	sm.Zooming, sm.TargetZoom, sm.AnchorX, sm.AnchorY = true, 2, 100, 100
+	sm.PendingScale = 1.2
+	zoom := a.renderer.cam.Zoom
 	clickBarSlot(t, a, f, barPawnID)
-	if sm.vx != 0 || sm.vy != 0 || sm.zooming || sm.pendingScale != 0 {
+	if sm.Vx != 0 || sm.Vy != 0 || sm.Zooming || sm.PendingScale != 0 {
 		t.Fatalf("smoothing not stopped: %+v", *sm)
 	}
 	for i := 0; i < 20; i++ {
-		f.frame(t, a)
+		f.Frame(t, a)
 	}
-	if !pawnCentred(a) || a.renderer.cam.zoom > zoom*1.0001 {
-		t.Fatalf("camera drifted after the jump: zoom %v -> %v, centred %v", zoom, a.renderer.cam.zoom, pawnCentred(a))
+	if !pawnCentred(a) || a.renderer.cam.Zoom > zoom*1.0001 {
+		t.Fatalf("camera drifted after the jump: zoom %v -> %v, centred %v", zoom, a.renderer.cam.Zoom, pawnCentred(a))
 	}
 }
 
 func TestCamSmoothHaltStopsMotion(t *testing.T) {
 	t.Parallel()
-	s := camSmooth{vx: 5, vy: 6, dirX: 1, dirY: -1, zooming: true, targetZoom: 2, pendingScale: 1.3, speed: 1.5}
-	s.halt()
-	if s.vx != 0 || s.vy != 0 || s.dirX != 0 || s.dirY != 0 || s.zooming || s.pendingScale != 0 {
+	s := camSmooth{Vx: 5, Vy: 6, DirX: 1, DirY: -1, Zooming: true, TargetZoom: 2, PendingScale: 1.3, Speed: 1.5}
+	s.Halt()
+	if s.Vx != 0 || s.Vy != 0 || s.DirX != 0 || s.DirY != 0 || s.Zooming || s.PendingScale != 0 {
 		t.Fatalf("halt left motion: %+v", s)
 	}
-	if s.speed != 1.5 {
-		t.Fatalf("halt must keep the pan-speed setting, got %v", s.speed)
+	if s.Speed != 1.5 {
+		t.Fatalf("halt must keep the pan-speed setting, got %v", s.Speed)
 	}
 }

@@ -99,12 +99,12 @@ func (r *Renderer) drawSteamPuffs(screen *ebiten.Image, w game.WorldView, tile f
 // sy), scaled by k and multiplied by cs (alpha in cs[3]), unlit.
 func (r *Renderer) drawPuff(screen *ebiten.Image, f int, sx, sy float32, tile, k float64, cs colorScale) bool {
 	key := "effect/steam_puff_" + string(rune('0'+f))
-	sp, img := r.art.sprite(key), r.art.image(key, color.NRGBA{})
+	sp, img := r.art.Sprite(key), r.art.Image(key, color.NRGBA{})
 	if sp == nil || img == nil {
 		return false
 	}
 	geo := ebiten.GeoM{}
-	geo.Translate(-float64(sp.meta.Origin[0]), -float64(sp.meta.Origin[1]))
+	geo.Translate(-float64(sp.Meta.Origin[0]), -float64(sp.Meta.Origin[1]))
 	geo.Scale(tile/artTilePx*k, tile/artTilePx*k)
 	geo.Translate(float64(sx), float64(sy))
 	r.drawUnlit(screen, img, geo, cs)

@@ -185,9 +185,9 @@ func (a *App) worldGlobe(st *worldUI, r rect, view game.WorldMapView) {
 	a.uiSt().queue(func(dst *ebiten.Image) {
 		sub := clipTo(dst, r)
 		fillRect(sub, r, uiSpace)
-		g.sw, g.sh = sw, sh
-		g.ensureGPU(sw, sh)
-		g.drawBody(sub)
+		g.Sw, g.Sh = sw, sh
+		g.EnsureGPU(sw, sh)
+		g.DrawBody(sub)
 		drawCaravanMarks(sub, g, art, caravans)
 	})
 	line := "Colony tile marked. Click a tile to pick it as a caravan destination."
@@ -203,19 +203,19 @@ func (a *App) worldGlobe(st *worldUI, r rect, view game.WorldMapView) {
 
 // drawCaravanMarks draws each caravan's marker on the globe's facing side.
 func drawCaravanMarks(dst *ebiten.Image, g *globeView, art *artCatalog, cs []game.CaravanView) {
-	size := globeClamp(g.tilePx()*2, 14, 40)
+	size := globeClamp(g.TilePx()*2, 14, 40)
 	for _, c := range cs {
-		if c.Tile < 0 || c.Tile >= g.p.TileCount() {
+		if c.Tile < 0 || c.Tile >= g.P.TileCount() {
 			continue
 		}
-		sx, sy, vz := g.worldPt(&g.p.Center[c.Tile])
-		if vz < g.zh+0.04 {
+		sx, sy, vz := g.WorldPt(&g.P.Center[c.Tile])
+		if vz < g.Zh+0.04 {
 			continue
 		}
 		vector.FillCircle(dst, sx, sy, float32(size*0.56), color.RGBA{R: uiSpace.R, G: uiSpace.G, B: uiSpace.B, A: 170}, true)
 		var img *ebiten.Image
 		if art != nil {
-			img = art.image(worldCaravanIcon, color.NRGBA{})
+			img = art.Image(worldCaravanIcon, color.NRGBA{})
 		}
 		if img == nil {
 			vector.FillCircle(dst, sx, sy, float32(size*0.3), uiHeading, true)

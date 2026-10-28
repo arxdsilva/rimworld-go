@@ -191,7 +191,7 @@ func (r *Renderer) drawWorldFires(screen *ebiten.Image, w game.WorldView, tile f
 			continue
 		}
 		key := fireSpriteKey(f.Size, r.present, f.X, f.Y)
-		sp, img := r.art.sprite(key), r.art.image(key, color.NRGBA{})
+		sp, img := r.art.Sprite(key), r.art.Image(key, color.NRGBA{})
 		sx, sy := r.worldToScreenF(float64(f.X)+0.5, float64(f.Y)+0.9)
 		if sp == nil || img == nil {
 			t := float64(r.present) + float64(f.X*31+f.Y*17)
@@ -199,7 +199,7 @@ func (r *Renderer) drawWorldFires(screen *ebiten.Image, w game.WorldView, tile f
 			continue
 		}
 		geo := ebiten.GeoM{}
-		geo.Translate(-float64(sp.meta.Origin[0]), -float64(sp.meta.Origin[1]))
+		geo.Translate(-float64(sp.Meta.Origin[0]), -float64(sp.Meta.Origin[1]))
 		geo.Scale(tile/artTilePx, tile/artTilePx)
 		geo.Translate(float64(sx), float64(sy))
 		screen.DrawImage(img, &ebiten.DrawImageOptions{GeoM: geo, Filter: ebiten.FilterLinear})

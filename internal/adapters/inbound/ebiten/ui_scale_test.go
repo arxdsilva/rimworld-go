@@ -218,8 +218,8 @@ func TestButtonDrawnAndHitAtScale(t *testing.T) {
 		}
 	}
 	cx, cy := b.x+b.w/2, b.y+b.h/2
-	f.cur.mx, f.cur.my = int(cx*1.5), int(cy*1.5)
-	f.cur.press[mbLeft], f.cur.down[mbLeft] = true, true
+	f.Cur.Mx, f.Cur.My = int(cx*1.5), int(cy*1.5)
+	f.Cur.Press[mbLeft], f.Cur.Down[mbLeft] = true, true
 	if err := a.Update(); err != nil {
 		t.Fatal(err)
 	}
@@ -243,7 +243,7 @@ func TestColonyViewportPhysical(t *testing.T) {
 	for _, s := range []float64{1, 1.5, 2} {
 		l := colonyViewport(1280, 720)
 		p := colonyViewportPhysical(1280, 720, s)
-		if p.x0 != l.x0*s || p.y0 != l.y0*s || p.x1 != l.x1*s || p.y1 != l.y1*s {
+		if p.X0 != l.X0*s || p.Y0 != l.Y0*s || p.X1 != l.X1*s || p.Y1 != l.Y1*s {
 			t.Fatalf("s=%v: physical %+v, logical %+v", s, p, l)
 		}
 	}

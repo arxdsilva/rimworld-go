@@ -252,7 +252,7 @@ func TestLampRadiusFromMetadata(t *testing.T) {
 	if got := lampRadiusOf(nil); got != lampDefaultRadius || lampDefaultRadius != 6 {
 		t.Fatalf("default radius %v", got)
 	}
-	art := &artCatalog{sprites: map[string]*artSprite{buildSprite("lamp", "", 0, false, false): {meta: m}}}
+	art := &artCatalog{Sprites: map[string]*artSprite{buildSprite("lamp", "", 0, false, false): {Meta: m}}}
 	if got := lampRadiusOf(art); got != 3 {
 		t.Fatalf("metadata radius %v, want 3", got)
 	}
@@ -402,7 +402,7 @@ func TestGroundLampLightInterpolatesAcrossTiles(t *testing.T) {
 	v.Buildings = []game.BuildingView{lampBuilding(1, 5, 5)}
 	r := New(&stubSim{w: w, h: h, world: v})
 	r.view.W = v
-	r.cam.offsetX, r.cam.offsetY = 0, 0
+	r.cam.OffsetX, r.cam.OffsetY = 0, 0
 	tile := r.tilePx()
 	r.drawBaked(ebiten.NewImage(64, 64), ebiten.NewImage(64, 64), 0, 0, 0, 0, 2, 0, 0, w-1, h-1)
 

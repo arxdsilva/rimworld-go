@@ -271,7 +271,7 @@ func buildGrassAtlas(c *artCatalog) *grassAtlas {
 		var out []string
 		for _, set := range [][]string{keys, fallback} {
 			for _, k := range set {
-				if c.has(k) {
+				if c.Has(k) {
 					out = append(out, k)
 				}
 			}
@@ -290,19 +290,19 @@ func buildGrassAtlas(c *artCatalog) *grassAtlas {
 	measure := func(keys []string) []crop {
 		var out []crop
 		for _, key := range keys {
-			sp := c.sprite(key)
-			if sp == nil || sp.pix == nil {
+			sp := c.Sprite(key)
+			if sp == nil || sp.Pix == nil {
 				continue
 			}
-			r, ok := alphaBox(sp.pix)
+			r, ok := alphaBox(sp.Pix)
 			if !ok {
 				continue
 			}
 			k := 1.0
-			if b := sp.pix.Bounds(); b.Dx() > 0 && sp.meta.Canvas[0] > 0 {
-				k = float64(sp.meta.Canvas[0]) / float64(b.Dx())
+			if b := sp.Pix.Bounds(); b.Dx() > 0 && sp.Meta.Canvas[0] > 0 {
+				k = float64(sp.Meta.Canvas[0]) / float64(b.Dx())
 			}
-			out = append(out, crop{pix: sp.pix, r: r, k: k})
+			out = append(out, crop{pix: sp.Pix, r: r, k: k})
 		}
 		return out
 	}

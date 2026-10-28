@@ -167,7 +167,7 @@ func (a *App) colonyChromeHit(mx, my, sw, sh int) bool {
 // chromeRects are the HUD's areas: the layout's regions, plus the
 // learning helper's lesson card, which opens beside its region.
 func (a *App) chromeRects(sw, sh int) []rect {
-	return append(a.hud().chrome(), a.learnChrome()...) // learn_ui.go
+	return append(a.hud().Chrome(), a.learnChrome()...) // learn_ui.go
 }
 
 // drawSelectionMarks marks the selected thing on the map (each kind's

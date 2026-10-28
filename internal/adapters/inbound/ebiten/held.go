@@ -55,7 +55,7 @@ func heldWeaponKey(weapon string) (key string, ok bool) {
 
 // heldSprite resolves a held key to a sprite and its scale.
 func (r *Renderer) heldSprite(key string) (*artSprite, float64) {
-	sp := r.art.sprite(key)
+	sp := r.art.Sprite(key)
 	if sp == nil {
 		return nil, 0
 	}
@@ -133,7 +133,7 @@ func (r *Renderer) rigOf(p game.PawnView, f facing) heldRig {
 	fs, mirror := facingKey(f)
 	rig := heldRig{face: drawnFacing(f), mirror: mirror, layers: r.pawnFigureLayers(p, fs)}
 	if len(rig.layers) > 0 {
-		rig.body = r.art.sprite(rig.layers[0].key)
+		rig.body = r.art.Sprite(rig.layers[0].key)
 	}
 	return rig
 }
@@ -145,7 +145,7 @@ func bodyCentre(m artMeta) ([2]float64, bool) {
 	if !ok {
 		return [2]float64{}, false
 	}
-	feet := m.Origin[1] + pawnFeetY*m.pxPerTile()
+	feet := m.Origin[1] + pawnFeetY*m.PxPerTile()
 	return [2]float64{head[0], (head[1] + feet) / 2}, true
 }
 
@@ -155,11 +155,11 @@ func bodyCentre(m artMeta) ([2]float64, bool) {
 // grip's height).
 func heldPivot(sp *artSprite, st heldStance) [2]float64 {
 	if st == stanceLoad {
-		p := sp.meta.pxPerTile()
-		return [2]float64{sp.meta.Origin[0] + p/2, sp.meta.Origin[1] + p/2}
+		p := sp.Meta.PxPerTile()
+		return [2]float64{sp.Meta.Origin[0] + p/2, sp.Meta.Origin[1] + p/2}
 	}
-	c := [2]float64{float64(sp.meta.Canvas[0]) / 2, float64(sp.meta.Canvas[1]) / 2}
-	if g, ok := sp.meta.Attach["grip"]; ok {
+	c := [2]float64{float64(sp.Meta.Canvas[0]) / 2, float64(sp.Meta.Canvas[1]) / 2}
+	if g, ok := sp.Meta.Attach["grip"]; ok {
 		c[1] = g[1]
 	}
 	return c
@@ -184,14 +184,14 @@ func (r *Renderer) heldPlace(rig heldRig, h heldItem, wx, wy, tile float64, ps p
 	if sp == nil {
 		return heldPlacement{}, false
 	}
-	c, ok := bodyCentre(rig.body.meta)
+	c, ok := bodyCentre(rig.body.Meta)
 	if !ok {
 		return heldPlacement{}, false
 	}
 	sx, sy := r.worldToScreenF(wx, wy)
-	bx, by, s := artOrigin(rig.body.meta, float64(sx), float64(sy), tile)
-	bp := rig.body.meta.pxPerTile()
-	k *= bp / sp.meta.pxPerTile() // the held sprite at its own density (s is the body's)
+	bx, by, s := artOrigin(rig.body.Meta, float64(sx), float64(sy), tile)
+	bp := rig.body.Meta.PxPerTile()
+	k *= bp / sp.Meta.PxPerTile() // the held sprite at its own density (s is the body's)
 	poseG := ps.geo(float64(sx), float64(sy), tile)
 	pv := heldPivot(sp, h.stance)
 	g := ebiten.GeoM{}
@@ -245,7 +245,7 @@ func (r *Renderer) drawHeld(screen *ebiten.Image, rig heldRig, h heldItem, wx, w
 	if h.cs != (colorScale{}) {
 		cs = h.cs
 	}
-	if img := r.art.image(pl.key, color.NRGBA{}); img != nil {
+	if img := r.art.Image(pl.key, color.NRGBA{}); img != nil {
 		r.drawLit(screen, img, pl.g, cs, wx, wy)
 	}
 }
@@ -269,17 +269,17 @@ func (r *Renderer) heldPoint(rig heldRig, h heldItem, wx, wy float64, ps pose, a
 		if rig.body == nil {
 			return vec{}, false
 		}
-		a, ok := rig.body.meta.Attach[attach]
+		a, ok := rig.body.Meta.Attach[attach]
 		if !ok {
 			return vec{}, false
 		}
 		if attach == "hold" && h.push != 0 {
 			fx, fy := facingUnit(rig.face)
-			p := rig.body.meta.pxPerTile()
+			p := rig.body.Meta.PxPerTile()
 			a = [2]float64{a[0] + fx*h.push*p, a[1] + fy*h.push*p}
 		}
 		sx, sy := r.worldToScreenF(wx, wy)
-		bx, by, s := artOrigin(rig.body.meta, float64(sx), float64(sy), tile)
+		bx, by, s := artOrigin(rig.body.Meta, float64(sx), float64(sy), tile)
 		g := ps.geo(float64(sx), float64(sy), tile)
 		x, y = g.Apply(bx+a[0]*s, by+a[1]*s)
 	} else {
@@ -287,11 +287,11 @@ func (r *Renderer) heldPoint(rig heldRig, h heldItem, wx, wy float64, ps pose, a
 		if !ok {
 			return vec{}, false
 		}
-		pt, ok := r.art.sprite(pl.key).meta.Attach[attach]
+		pt, ok := r.art.Sprite(pl.key).Meta.Attach[attach]
 		if !ok {
 			return vec{}, false
 		}
 		x, y = pl.g.Apply(pt[0], pt[1])
 	}
-	return vec{(x + r.cam.offsetX) / tile, (y + r.cam.offsetY) / tile}, true
+	return vec{(x + r.cam.OffsetX) / tile, (y + r.cam.OffsetY) / tile}, true
 }

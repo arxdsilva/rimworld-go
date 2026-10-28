@@ -170,8 +170,8 @@ func (a *App) uiRunModals() {
 	}
 	if len(u.modals) > 0 { // nothing outside the modal gets a click
 		for _, b := range []mouseBtn{mbLeft, mbRight, mbMiddle} {
-			if a.in.clicked(b) {
-				a.in.take(b)
+			if a.in.Clicked(b) {
+				a.in.Take(b)
 			}
 		}
 	}

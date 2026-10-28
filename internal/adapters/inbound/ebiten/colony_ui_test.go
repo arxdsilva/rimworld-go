@@ -28,8 +28,8 @@ func colonyApp(t *testing.T, s *stubSim) (*App, *fakeInput) {
 		t.Fatalf("screen = %s, want colony", a.nav.screen())
 	}
 	f := fakeOn(a)
-	f.cur.mx, f.cur.my = -50, -50
-	f.frame(t, a)
+	f.Cur.Mx, f.Cur.My = -50, -50
+	f.Frame(t, a)
 	a.renderer.speed = speedPaused
 	return a, f
 }
@@ -72,7 +72,7 @@ func TestColonyFactionsWindowReadsReadModel(t *testing.T) {
 		t.Fatalf("Factions tab = %+v, want enabled", tab)
 	}
 	press(t, a, f, "tab.factions")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalTop() != colFacModalID {
 		t.Fatalf("top modal = %q, want %q", a.uiModalTop(), colFacModalID)
 	}
@@ -103,7 +103,7 @@ func TestColonyFactionsWindowReadsReadModel(t *testing.T) {
 	if got := colonyFactionRows(a.renderer.game.Factions())[0].Goodwill; got != -10 {
 		t.Fatalf("goodwill = %d, want the live -10", got)
 	}
-	f.frame(t, a)
+	f.Frame(t, a)
 
 	// Close ends it.
 	press(t, a, f, "modal."+colFacModalID+".close")
@@ -175,13 +175,13 @@ func TestBioTabFields(t *testing.T) {
 	s := bioSim()
 	a, f := colonyApp(t, s)
 	a.renderer.Select(1)
-	f.frame(t, a)
+	f.Frame(t, a)
 
 	if tab, ok := paneTabByID(a.pawnPane(1), "inspector.bio"); !ok || tab.Disabled {
 		t.Fatalf("the inspector has no live Bio tab: %+v %v", tab, ok)
 	}
 	pressButton(t, a, f, "inspector.bio") // the pane's tab strip, the real mouse path
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.inspectTab != "bio" || a.paneOpenTab() != "inspector.bio" || !a.bioTabOn() {
 		t.Fatalf("tab = %q (pane %q), want bio", a.inspectTab, a.paneOpenTab())
 	}
@@ -264,7 +264,7 @@ func TestWorkTabIncapableCells(t *testing.T) {
 	s.incapable = map[entity.EntityID]map[work.Type]string{1: {work.Haul: why}}
 	a, f := colonyApp(t, s)
 	click(t, a, "tab.work")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if !a.workOpen {
 		t.Fatal("the Work tab should open")
 	}
@@ -295,7 +295,7 @@ func TestWorkTabIncapableCells(t *testing.T) {
 	}
 
 	// Tooltips: the reason, the skill and passion of a live cell, the header.
-	f.frame(t, a)
+	f.Frame(t, a)
 	if got := tipOf(t, a, "work.tip.1.6"); got != why {
 		t.Errorf("incapable tip = %q", got)
 	}
@@ -325,7 +325,7 @@ func openStory(t *testing.T, s *stubSim) (*App, *fakeInput) {
 	a, f := colonyApp(t, s)
 	a.optionsTab = "story"
 	a.apply(intent{kind: intentPush, screen: screenOptions})
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.currentOptionsTab() != "story" {
 		t.Fatalf("tab = %q, want story", a.currentOptionsTab())
 	}
@@ -350,7 +350,7 @@ func TestOptionsStoryTabSendsCommands(t *testing.T) {
 
 	// Custom opens the dialog on the current values; Accept sends them.
 	press(t, a, f, stCustomID)
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalTop() != stCustomMod {
 		t.Fatalf("top modal = %q, want the custom dialog", a.uiModalTop())
 	}
@@ -373,7 +373,7 @@ func TestOptionsStoryTabSaveModeReadOnly(t *testing.T) {
 	s := storySim()
 	s.story.Commitment = true
 	a, f := openStory(t, s)
-	f.frame(t, a)
+	f.Frame(t, a)
 	for _, id := range []string{"save.reload", "save.commit"} {
 		if hasWidget(a, id) {
 			t.Errorf("save mode %q must not be a control in play", id)
@@ -406,7 +406,7 @@ func TestOptionsStoryTabOnlyInColony(t *testing.T) {
 func TestOptionsStoryTabLegacyColonyReadOnly(t *testing.T) {
 	t.Parallel()
 	a, f := openStory(t, &stubSim{pawns: []game.PawnView{{ID: 1, Name: "Ada", Status: "alive"}}})
-	f.frame(t, a)
+	f.Frame(t, a)
 	if hasWidget(a, "opt.story.pick.steady") || hasWidget(a, "opt.diff.grim") {
 		t.Fatal("a classic-start colony has no storyteller to change")
 	}
@@ -438,7 +438,7 @@ func TestIntroLetterShownOnce(t *testing.T) {
 		t.Fatal("Continue should close the letter")
 	}
 	for i := 0; i < 5; i++ {
-		f.frame(t, a)
+		f.Frame(t, a)
 	}
 	if a.uiModalOpen() {
 		t.Fatal("the letter must not open again")
@@ -448,7 +448,7 @@ func TestIntroLetterShownOnce(t *testing.T) {
 	// itself, PLAY-018); a colony started later shows its own intro.
 	s.world.Messages = append(s.world.Messages, game.MessageView{Tick: 8, Text: "A heat wave has settled.", Letter: true, Title: "Heat wave"})
 	s.world.Letters = append(s.world.Letters, game.LetterView{ID: 2, Tick: 8, Kind: "caution", Title: "Heat wave", Text: "A heat wave has settled.", X: -1, Y: -1})
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalOpen() {
 		t.Fatalf("modals = %+v: a new letter must wait in the stack", a.uiSt().modals)
 	}
@@ -458,7 +458,7 @@ func TestIntroLetterShownOnce(t *testing.T) {
 	a.uiCloseTop()
 	a.dropSession()
 	a.startSession(s)
-	f.frame(t, a)
+	f.Frame(t, a)
 	if !a.uiModalOpen() {
 		t.Fatal("a new colony should show its own intro letter")
 	}
@@ -469,7 +469,7 @@ func TestOldLettersAreNotReopened(t *testing.T) {
 	s := letterSim()
 	s.tick = 5 + letterFresh + 1 // a loaded save's saved letter
 	a, f := colonyApp(t, s)
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalOpen() {
 		t.Fatalf("stale letter opened: %+v", a.uiSt().modals)
 	}
@@ -591,7 +591,7 @@ func TestNewBuildingCards(t *testing.T) {
 func TestNewBuildingArtExists(t *testing.T) {
 	c := realArt(t)
 	for _, key := range []string{"ui_icon/tool_cabinet", "ui_icon/hospital_bed", "furniture/tool_cabinet", "furniture/hospital_bed_south"} {
-		if !c.has(key) {
+		if !c.Has(key) {
 			t.Errorf("art %q missing", key)
 		}
 	}
@@ -618,7 +618,7 @@ func TestStatusChipsFromWorld(t *testing.T) {
 
 	s := &stubSim{pawns: []game.PawnView{{ID: 1, Name: "Ada", Status: "alive"}}, world: w}
 	a, f := colonyApp(t, s)
-	f.frame(t, a)
+	f.Frame(t, a)
 	rs := a.chipRects(chips, a.sw)
 	if g := a.hud().Global; len(rs) != 2 || rs[0].Right() != g.Right() || rs[1].Y <= rs[0].Y || rs[0].Y < g.Y || rs[1].Bottom() > g.Bottom() {
 		t.Fatalf("chip rects = %+v, want a right-aligned stack inside Global %+v", rs, g)

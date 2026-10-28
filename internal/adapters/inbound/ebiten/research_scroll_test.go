@@ -40,10 +40,10 @@ func pickIDs(a *App) map[string]button {
 // point (lx, ly) for one frame.
 func wheelOver(t *testing.T, a *App, f *fakeInput, lx, ly float32, notches float64) {
 	t.Helper()
-	f.cur.mx, f.cur.my = int(float64(lx)*a.scale.S), int(float64(ly)*a.scale.S)
-	f.cur.wheelY = notches
-	f.frame(t, a)
-	f.cur.wheelY = 0
+	f.Cur.Mx, f.Cur.My = int(float64(lx)*a.scale.S), int(float64(ly)*a.scale.S)
+	f.Cur.WheelY = notches
+	f.Frame(t, a)
+	f.Cur.WheelY = 0
 }
 
 func TestResearchWindowScrollsToTheLastProject(t *testing.T) { // sets the UI scale: not parallel
@@ -55,7 +55,7 @@ func TestResearchWindowScrollsToTheLastProject(t *testing.T) { // sets the UI sc
 			a, f := winApp(t, researchStub(16, -1))
 			winScreen(t, a, sc.w, sc.h, sc.ui)
 			a.applyClick("tab.research")
-			f.frame(t, a)
+			f.Frame(t, a)
 			w := a.hud().Window
 			if w.Empty() {
 				t.Fatal("no Window rect")
@@ -82,8 +82,8 @@ func TestResearchWindowScrollsToTheLastProject(t *testing.T) { // sets the UI sc
 			}
 			// a real click on it picks it
 			bx, by := last.x+last.w/2, last.y+last.h/2
-			f.cur.mx, f.cur.my = int(float64(bx)*a.scale.S), int(float64(by)*a.scale.S)
-			f.click(t, a, mbLeft, 0)
+			f.Cur.Mx, f.Cur.My = int(float64(bx)*a.scale.S), int(float64(by)*a.scale.S)
+			f.Click(t, a, mbLeft, 0)
 			s := a.renderer.game.(*stubSim)
 			got := cmdsOf(s, command.SetResearch)
 			if len(got) != 1 || got[0].Build != 15 {
@@ -107,7 +107,7 @@ func TestResearchScrollBarAppearsOnlyWhenNeeded(t *testing.T) {
 	a, f := winApp(t, researchStub(16, -1))
 	winScreen(t, a, 1280, 720, 1)
 	a.applyClick("tab.research")
-	f.frame(t, a)
+	f.Frame(t, a)
 	w := a.hud().Window
 	bar, ok := a.uiSt().find("research.scroll")
 	if !ok {
@@ -124,7 +124,7 @@ func TestResearchScrollBarAppearsOnlyWhenNeeded(t *testing.T) {
 	b, g := winApp(t, researchStub(3, -1))
 	winScreen(t, b, 1280, 720, 1)
 	b.applyClick("tab.research")
-	g.frame(t, b)
+	g.Frame(t, b)
 	if got := len(pickIDs(b)); got != 3 {
 		t.Fatalf("3 projects show %d buttons", got)
 	}
@@ -139,7 +139,7 @@ func TestResearchWindowOpensOnTheCurrentProject(t *testing.T) {
 	a, f := winApp(t, researchStub(16, 14))
 	winScreen(t, a, 1280, 720, 1)
 	a.applyClick("tab.research")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if _, ok := pickIDs(a)["research.pick.14"]; !ok {
 		t.Fatalf("the project being researched is out of view: %v", pickIDs(a))
 	}
@@ -158,9 +158,9 @@ func TestResearchWindowOpensOnTheCurrentProject(t *testing.T) {
 	}
 	// close and reopen: it reveals again
 	a.applyClick("tab.research")
-	f.frame(t, a)
+	f.Frame(t, a)
 	a.applyClick("tab.research")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if _, ok := pickIDs(a)["research.pick.14"]; !ok {
 		t.Fatalf("reopening does not reveal the current project: %v", pickIDs(a))
 	}
@@ -169,7 +169,7 @@ func TestResearchWindowOpensOnTheCurrentProject(t *testing.T) {
 	for i := range s.world.Research {
 		s.world.Research[i].Current = i == 1
 	}
-	f.frame(t, a)
+	f.Frame(t, a)
 	if _, ok := pickIDs(a)["research.pick.1"]; !ok {
 		t.Fatalf("a new current project is out of view: %v", pickIDs(a))
 	}
@@ -179,7 +179,7 @@ func TestResearchScrollBarClickPages(t *testing.T) {
 	a, f := winApp(t, researchStub(16, -1))
 	winScreen(t, a, 1280, 720, 1)
 	a.applyClick("tab.research")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if len(pickIDs(a)) >= 16 {
 		t.Skip("everything fits; nothing to scroll")
 	}
@@ -189,8 +189,8 @@ func TestResearchScrollBarClickPages(t *testing.T) {
 	}
 	before := len(pickIDs(a))
 	// a click on the track near the bottom pages down
-	f.cur.mx, f.cur.my = int(bar.r.Right()-3), int(bar.r.Bottom()-3)
-	f.click(t, a, mbLeft, 0)
+	f.Cur.Mx, f.Cur.My = int(bar.r.Right()-3), int(bar.r.Bottom()-3)
+	f.Click(t, a, mbLeft, 0)
 	if _, ok := pickIDs(a)["research.pick.0"]; ok {
 		t.Fatalf("a click below the thumb did not page down: %v", pickIDs(a))
 	}
@@ -206,10 +206,10 @@ func TestResearchWindowDrawsInsideAtEveryOffset(t *testing.T) {
 		t.Run("ui"+strconv.FormatFloat(ui, 'g', -1, 64), func(t *testing.T) {
 			a, f := winApp(t, researchStub(16, -1))
 			img := winScreen(t, a, 1280, 720, ui)
-			f.frame(t, a)
+			f.Frame(t, a)
 			base := winTrace(a, img)
 			a.applyClick("tab.research")
-			f.frame(t, a)
+			f.Frame(t, a)
 			w := a.hud().Window
 			cx, cy := w.Center()
 			for step := 0; step < 20; step++ {

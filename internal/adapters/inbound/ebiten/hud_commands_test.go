@@ -30,7 +30,7 @@ func cmdColony(t *testing.T, n int, cmds ...cmdButton) (*App, *stubSim, *fakeInp
 	a.renderer.Select(1)
 	a.setTestPane(paneSpec{Title: "Ada", Close: "inspector.close"})
 	a.setTestCommands(func(*App, selKind, entity.EntityID) []cmdButton { return cmds })
-	f.frame(t, a)
+	f.Frame(t, a)
 	return a, s, f
 }
 
@@ -136,17 +136,17 @@ func TestCommandHotkeysFollowDeclarationOrder(t *testing.T) {
 	}
 	a, _, f := cmdColony(t, 1, mk("a"), mk("b"), mk("c"))
 	key := func(i int) string { return a.bindings().Of(input.Gizmos[i])[0].Key }
-	f.key(t, a, key(1), 0)
-	f.key(t, a, key(0), 0)
-	f.key(t, a, key(2), 0)
+	f.Key(t, a, key(1), 0)
+	f.Key(t, a, key(0), 0)
+	f.Key(t, a, key(2), 0)
 	if got := strings.Join(ran, ","); got != "b,a,c" {
 		t.Fatalf("keys 2,1,3 ran %q, want b,a,c", got)
 	}
 	// reorder: the same key presses another command
 	ran = nil
 	a.setTestCommands(func(*App, selKind, entity.EntityID) []cmdButton { return []cmdButton{mk("c"), mk("a"), mk("b")} })
-	f.frame(t, a)
-	f.key(t, a, key(1), 0)
+	f.Frame(t, a)
+	f.Key(t, a, key(1), 0)
 	if got := strings.Join(ran, ","); got != "a" {
 		t.Fatalf("after reordering key 2 ran %q, want a", got)
 	}
@@ -160,7 +160,7 @@ func TestCommandHotkeyOnADisabledCommandShowsTheReason(t *testing.T) {
 	t.Parallel()
 	ran := false
 	a, _, f := cmdColony(t, 1, cmdButton{ID: "cmd.test.x", Label: "X", Disabled: true, Reason: "nobody can reach it", Run: func(*App) { ran = true }})
-	f.key(t, a, a.bindings().Of(input.Gizmos[0])[0].Key, 0)
+	f.Key(t, a, a.bindings().Of(input.Gizmos[0])[0].Key, 0)
 	if ran || a.hint != "nobody can reach it" {
 		t.Fatalf("ran=%v hint=%q", ran, a.hint)
 	}
@@ -287,7 +287,7 @@ func TestChromeBlocksOccupiedCellsOnly(t *testing.T) {
 	a, _, _ := cmdColony(t, 1, nCmds(3)...)
 	l := a.hud()
 	blocks := func(x, y float32) bool {
-		for _, r := range l.chrome() {
+		for _, r := range l.Chrome() {
 			if r.Contains(x, y) {
 				return true
 			}
@@ -333,7 +333,7 @@ func TestCommandTooltipsAreDeclared(t *testing.T) {
 		cmdButton{ID: "cmd.test.ok", Label: "Haul", Desc: "Carry it to a stockpile.", Hotkey: input.Draft},
 		cmdButton{ID: "cmd.test.off", Label: "Equip", Desc: "Pick up the weapon.", Disabled: true, Reason: "already armed"},
 	)
-	f.frame(t, a)
+	f.Frame(t, a)
 	tip := map[string]string{}
 	for _, w := range a.uiSt().cur {
 		if id, ok := strings.CutPrefix(w.id, "cmd.tip."); ok {

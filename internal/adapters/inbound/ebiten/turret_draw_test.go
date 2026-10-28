@@ -16,13 +16,13 @@ import (
 // turretArt adds the turret, console and beacon sprites to pdArt.
 func turretArt() *artCatalog {
 	c := pdArt()
-	c.sprites[turretBaseKey] = fakeSprite([2]int{160, 200}, pt{16, 80}, map[string]pt{"mount": {80, 100}})
-	c.sprites[turretBaseKey+"_glow"] = fakeSprite([2]int{160, 200}, pt{16, 80}, nil)
+	c.Sprites[turretBaseKey] = fakeSprite([2]int{160, 200}, pt{16, 80}, map[string]pt{"mount": {80, 100}})
+	c.Sprites[turretBaseKey+"_glow"] = fakeSprite([2]int{160, 200}, pt{16, 80}, nil)
 	for i := 0; i < turretAimFrames; i++ {
-		c.sprites[turretGunKey(i)] = fakeSprite([2]int{120, 120}, pt{20, 60}, map[string]pt{"mount": {60, 60}, "muzzle": {60 + float64(i), 110}})
+		c.Sprites[turretGunKey(i)] = fakeSprite([2]int{120, 120}, pt{20, 60}, map[string]pt{"mount": {60, 60}, "muzzle": {60 + float64(i), 110}})
 	}
-	c.sprites["power/trade_beacon"] = fakeSprite([2]int{160, 200}, pt{16, 80}, nil)
-	c.sprites["power/trade_beacon_glow"] = fakeSprite([2]int{160, 200}, pt{16, 80}, nil)
+	c.Sprites["power/trade_beacon"] = fakeSprite([2]int{160, 200}, pt{16, 80}, nil)
+	c.Sprites["power/trade_beacon_glow"] = fakeSprite([2]int{160, 200}, pt{16, 80}, nil)
 	return c
 }
 

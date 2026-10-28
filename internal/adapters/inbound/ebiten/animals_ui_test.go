@@ -47,7 +47,7 @@ func TestAnimalsTabAreaAndPenColumns(t *testing.T) {
 	s := penTabSim()
 	a, f := colonyApp(t, s)
 	click(t, a, "tab.animals")
-	f.frame(t, a)
+	f.Frame(t, a)
 	hits := map[string]bool{}
 	for _, b := range a.layoutHits(a.sw, a.sh) {
 		hits[b.id] = true
@@ -94,12 +94,12 @@ func TestAnimalsTabAreaDropdownAssigns(t *testing.T) {
 	s := penTabSim()
 	a, f := colonyApp(t, s)
 	click(t, a, "tab.animals")
-	f.frame(t, a)
+	f.Frame(t, a)
 	click(t, a, "animals.area.52")
-	f.frame(t, a) // the picker opens
-	f.frame(t, a) // and declares its rows
+	f.Frame(t, a) // the picker opens
+	f.Frame(t, a) // and declares its rows
 	click(t, a, "areapick.row.9")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if c := s.cmds[len(s.cmds)-1]; c.Kind != command.AssignArea || c.Pawn != 52 || c.Index != 9 {
 		t.Fatalf("pick Yard for the labrador: %+v", s.cmds)
 	}
@@ -126,7 +126,7 @@ func TestAnimalsTabFollowToggle(t *testing.T) {
 	s := penTabSim()
 	a, f := colonyApp(t, s)
 	click(t, a, "tab.animals")
-	f.frame(t, a)
+	f.Frame(t, a)
 	id := "animals.follow." + strconv.FormatUint(uint64(s.world.Animals[0].ID), 10)
 	found := false
 	for _, b := range a.layoutHits(a.sw, a.sh) {

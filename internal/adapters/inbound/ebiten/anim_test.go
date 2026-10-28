@@ -152,7 +152,7 @@ func TestHairFollowsHead(t *testing.T) {
 	var keys []string
 	p := game.PawnView{ID: 1, X: 2, Y: 2, Look: look.Look{Beard: 1}, Apparel: []string{"tuque"}}
 	for _, k := range []string{"pawn/beard_short_south", "pawn/tuque_knit_south"} {
-		r.art.sprites[k] = fakeSprite([2]int{160, 297}, pt{16, 153}, nil)
+		r.art.Sprites[k] = fakeSprite([2]int{160, 297}, pt{16, 153}, nil)
 	}
 	ps := standPose()
 	ps.rot, ps.sy, ps.dx = 0.3, 0.9, 0.1
@@ -167,8 +167,8 @@ func TestHairFollowsHead(t *testing.T) {
 	// lands on the same screen point
 	sx, sy := r.worldToScreenF(2, 2)
 	g := func(key string) pt {
-		sp := r.art.sprite(key)
-		x, y, s := artOrigin(sp.meta, float64(sx), float64(sy), 64)
+		sp := r.art.Sprite(key)
+		x, y, s := artOrigin(sp.Meta, float64(sx), float64(sy), 64)
 		pg := ps.geo(float64(sx), float64(sy), 64)
 		return apply(pg, pt{x + 80*s, y + 122*s})
 	}
@@ -231,7 +231,7 @@ func TestCarryLiftEases(t *testing.T) {
 	if wg, _ := carryPoses(c, faceWest); math.Abs(wg.rot+math.Pi/2) > 1e-9 {
 		t.Fatalf("facing west it lies the other way: %+v", wg)
 	}
-	_, backY, _ := bodyAttach(c.sprite("pawn/body_south"), "back")
+	_, backY, _ := bodyAttach(c.Sprite("pawn/body_south"), "back")
 	if top := pawnFeetY + slung.dy; top >= backY || top < backY-0.2 {
 		t.Fatalf("slung across the back (%v) at %v", backY, top)
 	}

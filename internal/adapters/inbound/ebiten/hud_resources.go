@@ -258,10 +258,10 @@ func (a *App) resourceIcon(kind string) (*ebiten.Image, colorScale) {
 		return nil, noCS
 	}
 	key, cs := resourceIconKey(kind), noCS
-	if !art.has(key) {
+	if !art.Has(key) {
 		key, cs = a.renderer.stoneItem(itemSpriteSpecies(kind, "", 0, 0), kind, noCS)
 	}
-	return art.image(key, color.NRGBA{}), cs
+	return art.Image(key, color.NRGBA{}), cs
 }
 
 // resWidth is the logical width of count text s (cached: the same few

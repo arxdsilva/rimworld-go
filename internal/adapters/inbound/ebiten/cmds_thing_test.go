@@ -604,12 +604,12 @@ func TestForbidKeyTogglesSelectedItem(t *testing.T) {
 	a, s, f := inputColony(t)
 	s.world.Items = []game.ItemView{{ID: 90, Kind: "wood", Qty: 3, X: 3, Y: 3, FreshDays: -1}}
 	a.selectCand(selCand{selItem, 90})
-	f.key(t, a, a.bindings().Of(input.Forbid)[0].Key, 0)
+	f.Key(t, a, a.bindings().Of(input.Forbid)[0].Key, 0)
 	if c := cmdsOf(s, command.SetForbidden); len(c) != 1 || c[0].Target != 90 || !c[0].Enabled {
 		t.Fatalf("F forbids the selected stack: %+v", s.cmds)
 	}
 	s.world.Items[0].Forbidden = true
-	f.key(t, a, a.bindings().Of(input.Forbid)[0].Key, 0)
+	f.Key(t, a, a.bindings().Of(input.Forbid)[0].Key, 0)
 	if c := cmdsOf(s, command.SetForbidden); len(c) != 2 || c[1].Enabled {
 		t.Fatalf("F again allows it: %+v", s.cmds)
 	}
@@ -1052,7 +1052,7 @@ func TestThingPanesAndGridThroughTheLayout(t *testing.T) {
 		close string
 	}{{selCand{selAnimal, 50}, "animal.close"}, {selCand{selItem, 90}, "item.close"}, {selCand{selPlant, 41}, "plant.close"}} {
 		a.selectCand(c.sel)
-		f.frame(t, a)
+		f.Frame(t, a)
 		l := a.hud()
 		if l.Pane.Empty() || !a.paneShown() {
 			t.Fatalf("%v: no pane", c.sel)
@@ -1093,12 +1093,12 @@ func TestAnimalAreaChipOnThePane(t *testing.T) {
 	s.areas = []game.AreaView{{Index: 0, ID: 3, Name: "Yard", Cells: 20}}
 	a, f := colonyApp(t, s)
 	a.selectCand(selCand{selAnimal, 50})
-	f.frame(t, a)
+	f.Frame(t, a)
 	click(t, a, "animal.area")
 	if a.uiModalTop() != areaPickID {
 		t.Fatalf("the chip opens the area picker, top modal %q", a.uiModalTop())
 	}
-	f.frame(t, a)
+	f.Frame(t, a)
 	if sp := a.animalPane(50); sp.Chips[0].Label != "Area: Unrestricted" {
 		t.Fatalf("chip %+v", sp.Chips)
 	}

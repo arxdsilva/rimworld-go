@@ -402,7 +402,7 @@ func (r *Renderer) drawPowerUnpowered(dst *ebiten.Image, b *game.BuildingView, t
 	sx, sy := r.worldToScreenF(float64(b.X)+float64(max(b.W, 1))/2, float64(b.Y)+float64(max(b.H, 1))/2-badgeLift)
 	size := tile * badgeTiles
 	if r.art != nil {
-		if img := r.art.image(noPowerIcon, color.NRGBA{}); img != nil {
+		if img := r.art.Image(noPowerIcon, color.NRGBA{}); img != nil {
 			worldIconCS(dst, img, float64(sx)-size/2, float64(sy)-size/2, size/uiScale(), noCS)
 			return
 		}

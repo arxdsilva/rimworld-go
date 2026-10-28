@@ -24,7 +24,7 @@ func budgetColony(t *testing.T, s speed) (*App, *stubSim, *fakeInput, *time.Dura
 func stepFrame(t *testing.T, a *App, sim *stubSim, f *fakeInput) int {
 	t.Helper()
 	before := sim.steps
-	f.frame(t, a)
+	f.Frame(t, a)
 	return sim.steps - before
 }
 

@@ -37,12 +37,12 @@ func scaledColony(t *testing.T) (*App, *recSim, *fakeInput) {
 // (physical) position for one Update.
 func clickAtLogical(t *testing.T, a *App, f *fakeInput, x, y float32) {
 	t.Helper()
-	f.cur.mx, f.cur.my = int(float64(x)*a.scale.S), int(float64(y)*a.scale.S)
-	f.cur.press[mbLeft], f.cur.down[mbLeft] = true, true
+	f.Cur.Mx, f.Cur.My = int(float64(x)*a.scale.S), int(float64(y)*a.scale.S)
+	f.Cur.Press[mbLeft], f.Cur.Down[mbLeft] = true, true
 	if err := a.Update(); err != nil {
 		t.Fatal(err)
 	}
-	f.cur.press[mbLeft], f.cur.down[mbLeft] = false, false
+	f.Cur.Press[mbLeft], f.Cur.Down[mbLeft] = false, false
 }
 
 func TestArchitectCardClickAtScale(t *testing.T) {

@@ -19,7 +19,7 @@ import (
 func (r *Renderer) animalBaseKey(an game.AnimalView) string {
 	facing, _ := facingKey(r.last[an.ID].facing)
 	if an.Female {
-		if k := "animal/" + an.Species + "_f_" + facing; r.art.has(k) {
+		if k := "animal/" + an.Species + "_f_" + facing; r.art.Has(k) {
 			return k
 		}
 	}
@@ -32,7 +32,7 @@ func (r *Renderer) animalBaseKey(an game.AnimalView) string {
 func (r *Renderer) animalFrameKey(an game.AnimalView) string {
 	base := r.animalBaseKey(an)
 	if r.animalResting(an) {
-		if k := base + "_rest"; r.art.has(k) {
+		if k := base + "_rest"; r.art.Has(k) {
 			return k
 		}
 		return r.framed(base, "_graze1") // no rest pose yet: head down
@@ -56,7 +56,7 @@ func (r *Renderer) animalResting(an game.AnimalView) bool {
 // animalRestFallback is true when a resting animal has no rest sprite and
 // shows its grazing frame dimmed instead.
 func (r *Renderer) animalRestFallback(an game.AnimalView) bool {
-	return r.animalResting(an) && !r.art.has(r.animalBaseKey(an)+"_rest")
+	return r.animalResting(an) && !r.art.Has(r.animalBaseKey(an)+"_rest")
 }
 
 // restDim is the colour scale of the stand-in rest frame (10% darker).
@@ -100,7 +100,7 @@ func youngPose(ps pose, scale float64) pose {
 // call in the object pass and in the shadow pass (r.cast set). It has no
 // side effects beyond drawing.
 func (r *Renderer) drawAnimalFigure(dst *ebiten.Image, an game.AnimalView, wx, wy, tile float64) {
-	if !r.art.has(r.animalBaseKey(an)) {
+	if !r.art.Has(r.animalBaseKey(an)) {
 		if r.cast != nil {
 			return // no art, no silhouette
 		}
@@ -225,7 +225,7 @@ func bodyWant(an game.AnimalView, m moveState) bodyCls {
 // Scale (youngPose draws it smaller about its feet).
 func (r *Renderer) animalGait(an game.AnimalView) float64 {
 	g := gaitFallback
-	if m := r.art.metaOf(r.animalBaseKey(an)); m != nil && m.Gait > 0 {
+	if m := r.art.MetaOf(r.animalBaseKey(an)); m != nil && m.Gait > 0 {
 		g = m.Gait
 	}
 	if an.Scale > 0 && an.Scale < 1 {

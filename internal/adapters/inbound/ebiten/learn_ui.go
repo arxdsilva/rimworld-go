@@ -239,23 +239,23 @@ func (a *App) learnUI(sw, sh int) {
 // jump to an alert never counts as a pan.
 func (a *App) learnCameraInput() (pan, zoom float64) {
 	f := &a.in
-	if f.top() == input.CtxText {
+	if f.Top() == input.CtxText {
 		return 0, 0
 	}
-	if f.held(input.CamLeft) || f.held(input.CamRight) || f.held(input.CamUp) || f.held(input.CamDown) || f.down(mbMiddle) {
+	if f.Held(input.CamLeft) || f.Held(input.CamRight) || f.Held(input.CamUp) || f.Held(input.CamDown) || f.Down(mbMiddle) {
 		pan = 1
 	}
-	if a.renderer.edgeScroll && f.raw.focused {
+	if a.renderer.edgeScroll && f.Raw.Focused {
 		mx, my := a.mapCursor()
 		if ex, ey := edgePan(mx, my, a.mapViewport()); ex != 0 || ey != 0 {
 			pan = 1
 		}
 	}
-	if f.fired(input.ZoomIn) || f.fired(input.ZoomOut) {
+	if f.Fired(input.ZoomIn) || f.Fired(input.ZoomOut) {
 		zoom++
 	}
-	if lx, ly := a.currentCursor(); f.raw.wheelY != 0 && !a.uiWheelOver(lx, ly) { // a scroll view under the cursor owns the wheel
-		zoom += math.Abs(f.raw.wheelY)
+	if lx, ly := a.currentCursor(); f.Raw.WheelY != 0 && !a.uiWheelOver(lx, ly) { // a scroll view under the cursor owns the wheel
+		zoom += math.Abs(f.Raw.WheelY)
 	}
 	return pan, zoom
 }

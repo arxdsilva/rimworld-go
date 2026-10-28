@@ -85,7 +85,7 @@ func animalInitial(label string) string {
 // drawAnimalIcon draws the species' ui_icon at (x, y), size px square; a
 // species without one gets its initial on a disc.
 func drawAnimalIcon(dst *ebiten.Image, art *artCatalog, an game.AnimalView, x, y, size float64) {
-	if img := art.image("ui_icon/"+an.Species, color.NRGBA{}); img != nil {
+	if img := art.Image("ui_icon/"+an.Species, color.NRGBA{}); img != nil {
 		drawIcon(dst, img, x, y, size)
 		return
 	}

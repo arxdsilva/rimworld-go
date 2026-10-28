@@ -86,7 +86,7 @@ func TestHomeOverlayCachedByVer(t *testing.T) {
 		t.Fatalf("runs after growth: %v", r.env.home.runs)
 	}
 	// panning does not rebuild; it only changes what is culled
-	r.cam.offsetX += 500
+	r.cam.OffsetX += 500
 	r.drawHomeOverlay(screen, w2, 320, 320, tile)
 	if r.env.home.builds != 2 || r.env.home.verts != 0 {
 		t.Fatalf("panned away: %d builds, %d verts", r.env.home.builds, r.env.home.verts)

@@ -35,8 +35,8 @@ func htApp(t *testing.T, s *stubSim, sw, sh int) (*App, *fakeInput) {
 	a.sw, a.sh = sw, sh
 	a.renderer.speed = speedPaused
 	f := fakeOn(a)
-	f.cur.mx, f.cur.my = -50, -50
-	f.frame(t, a)
+	f.Cur.Mx, f.Cur.My = -50, -50
+	f.Frame(t, a)
 	return a, f
 }
 
@@ -145,7 +145,7 @@ func TestBarRowsAtTheDefaultSize(t *testing.T) {
 func TestBarHiddenWhenTheSettingIsOff(t *testing.T) {
 	a, f := htApp(t, &stubSim{pawns: htPawns(6)}, 1280, 720)
 	a.settings.Gameplay.ShowColonistBar = false
-	f.frame(t, a)
+	f.Frame(t, a)
 	if n := a.barCount(); n != 0 {
 		t.Fatalf("barCount = %d with the bar off, want 0", n)
 	}
@@ -377,43 +377,43 @@ func TestBarIdleIconWaitsOutShortGaps(t *testing.T) {
 		t.Fatal("idle shows the moment the colonist runs out of work")
 	}
 	s.tick += barIdleHold - 1
-	f.frame(t, a)
+	f.Frame(t, a)
 	if idle() {
 		t.Fatalf("idle shows after %d ticks, before the %d tick hold", barIdleHold-1, barIdleHold)
 	}
 	s.tick++
-	f.frame(t, a)
+	f.Frame(t, a)
 	if !idle() {
 		t.Fatal("idle does not show after the hold")
 	}
 	// it goes at once when work starts, and the hold starts over after
 	s.pawns[0].Job = "haul do"
-	f.frame(t, a)
+	f.Frame(t, a)
 	if idle() {
 		t.Fatal("idle stays while the colonist works")
 	}
 	s.pawns[0].Job = "idle"
 	s.tick += 5
-	f.frame(t, a)
+	f.Frame(t, a)
 	if idle() {
 		t.Fatal("idle shows at once on the second gap: the hold did not restart")
 	}
 	// an idle spell from before a new game (the clock is earlier now) does not carry over
 	s.pawns[0].Activity = schedule.Work
 	s.tick += barIdleHold
-	f.frame(t, a)
+	f.Frame(t, a)
 	if !idle() {
 		t.Fatal("setup: idle should show after the hold")
 	}
 	s.tick = 5
-	f.frame(t, a)
+	f.Frame(t, a)
 	if idle() {
 		t.Fatal("idle shows from a spell that began before the clock restarted")
 	}
 	// free time with nothing to do is not worth a flag
 	s.pawns[0].Activity = schedule.Recreation
 	s.tick += barIdleHold * 2
-	f.frame(t, a)
+	f.Frame(t, a)
 	if idle() {
 		t.Fatal("idle shows during recreation hours")
 	}
@@ -441,7 +441,7 @@ func TestBarMoreSlotCyclesTheHiddenColonists(t *testing.T) {
 	if !a.renderer.HasSelect() || a.renderer.Selected() != entity.EntityID(shown+1) {
 		t.Fatalf("first +N click selected %d (has %v), want the first hidden colonist %d", a.renderer.Selected(), a.renderer.HasSelect(), shown+1)
 	}
-	f.frame(t, a)
+	f.Frame(t, a)
 	click(t, a, barMoreID)
 	if a.renderer.Selected() != entity.EntityID(shown+2) {
 		t.Fatalf("second +N click selected %d, want the next hidden colonist %d", a.renderer.Selected(), shown+2)

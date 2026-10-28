@@ -18,10 +18,10 @@ type midDragState struct {
 
 // handleViewKeys runs on every screen: screenshot and hide UI.
 func (a *App) handleViewKeys() {
-	if a.in.fired(input.Screenshot) {
+	if a.in.Fired(input.Screenshot) {
 		a.shot.pending = true // taken after the next Draw (screenshot.go)
 	}
-	if a.in.fired(input.HideUI) && a.nav.screen() == screenColony {
+	if a.in.Fired(input.HideUI) && a.nav.screen() == screenColony {
 		a.hideUI = !a.hideUI
 	}
 }
@@ -29,7 +29,7 @@ func (a *App) handleViewKeys() {
 // reservedFired toasts the first reserved action that fired and reports
 // whether any did (they do nothing else).
 func (a *App) reservedFired() bool {
-	for _, act := range a.in.res.FiredList() {
+	for _, act := range a.in.Res.FiredList() {
 		if d, ok := input.Lookup(act); ok && d.Reserved != "" {
 			a.toast(d.Label + ": " + d.Reserved)
 			return true
@@ -46,19 +46,19 @@ func (a *App) handleColonyKeys() {
 		return
 	}
 	switch {
-	case f.fired(input.Minimap):
+	case f.Fired(input.Minimap):
 		r.toggleMinimap()
-	case f.fired(input.Pause):
+	case f.Fired(input.Pause):
 		r.togglePause()
-	case f.fired(input.Speed1):
+	case f.Fired(input.Speed1):
 		r.setSpeed(speedNormal)
-	case f.fired(input.Speed2):
+	case f.Fired(input.Speed2):
 		r.setSpeed(speedFast)
-	case f.fired(input.Speed3):
+	case f.Fired(input.Speed3):
 		r.setSpeed(speedVeryFast)
-	case f.fired(input.SpeedUp):
+	case f.Fired(input.SpeedUp):
 		r.stepSpeed(1)
-	case f.fired(input.SpeedDown):
+	case f.Fired(input.SpeedDown):
 		r.stepSpeed(-1)
 	}
 	a.handleTabKeys()
@@ -70,27 +70,27 @@ func (a *App) handleColonyKeys() {
 func (a *App) handleTabKeys() {
 	f := &a.in
 	switch {
-	case f.fired(input.TabArchitect):
+	case f.Fired(input.TabArchitect):
 		a.applyClick("tab.architect")
-	case f.fired(input.TabWork):
+	case f.Fired(input.TabWork):
 		a.applyClick("tab.work")
-	case f.fired(input.TabSchedule):
+	case f.Fired(input.TabSchedule):
 		a.applyClick("tab.schedule")
-	case f.fired(input.TabResearch):
+	case f.Fired(input.TabResearch):
 		a.applyClick("tab.research")
-	case f.fired(input.TabAssign):
+	case f.Fired(input.TabAssign):
 		a.toggleAssign()
-	case f.fired(input.TabWorld):
+	case f.Fired(input.TabWorld):
 		a.toggleWorld() // world_ui.go
-	case f.fired(input.TabHistory):
+	case f.Fired(input.TabHistory):
 		if a.uiModalTop() == historyModalID {
 			a.uiCloseTop()
 		} else {
 			a.openHistory()
 		}
-	case f.fired(input.TabAnimals):
+	case f.Fired(input.TabAnimals):
 		a.openAnimals(false)
-	case f.fired(input.TabWildlife):
+	case f.Fired(input.TabWildlife):
 		a.openAnimals(true)
 	}
 }
@@ -112,33 +112,33 @@ func (a *App) openAnimals(wild bool) {
 func (a *App) handleMapKeys() {
 	f := &a.in
 	switch {
-	case f.fired(input.Draft):
+	case f.Fired(input.Draft):
 		a.draftSelection()
-	case f.fired(input.Forbid):
+	case f.Fired(input.Forbid):
 		a.forbidSelection()
-	case f.fired(input.Power):
+	case f.Fired(input.Power):
 		a.powerSelection() // cmds_power.go (PLAY-021)
-	case f.fired(input.RoofOverlay):
+	case f.Fired(input.RoofOverlay):
 		a.renderer.toggleRoofOverlay()
-	case f.fired(input.RoomStats):
+	case f.Fired(input.RoomStats):
 		a.rooms = !a.rooms
-	case f.fired(input.PowerOverlay):
+	case f.Fired(input.PowerOverlay):
 		a.renderer.togglePowerOverlay() // power_overlay.go (PLAY-021)
-	case f.fired(input.Search):
+	case f.Fired(input.Search):
 		a.openSearch() // search_ui.go
-	case f.fired(input.PrevColonist):
+	case f.Fired(input.PrevColonist):
 		a.cycleColonist(-1)
-	case f.fired(input.NextColonist):
+	case f.Fired(input.NextColonist):
 		a.cycleColonist(1)
-	case f.fired(input.CycleCell):
+	case f.Fired(input.CycleCell):
 		a.cycleCell()
-	case f.fired(input.ToolCancel):
+	case f.Fired(input.ToolCancel):
 		a.presetTool("cancel")
-	case f.fired(input.ToolDeconstruct):
+	case f.Fired(input.ToolDeconstruct):
 		a.presetTool("deconstruct")
 	}
 	for i, g := range input.Gizmos {
-		if f.fired(g) {
+		if f.Fired(g) {
 			a.pressCommandKey(i) // hud_commands.go
 		}
 	}
@@ -228,7 +228,7 @@ func (a *App) cycleColonist(d int) {
 func (a *App) centreOnPawn(id entity.EntityID) {
 	for _, p := range a.renderer.snapshot() {
 		if p.ID == id {
-			a.renderer.smooth.halt()
+			a.renderer.smooth.Halt()
 			wx, wy := a.renderer.interpWorld(p)
 			a.centerOnMap(wx+0.5, wy+0.5)
 			return
@@ -305,40 +305,40 @@ func (a *App) cycleCell() {
 func (a *App) cameraInput(v viewport) camInput {
 	f := &a.in
 	var c camInput
-	if f.held(input.CamLeft) {
+	if f.Held(input.CamLeft) {
 		c.dx--
 	}
-	if f.held(input.CamRight) {
+	if f.Held(input.CamRight) {
 		c.dx++
 	}
-	if f.held(input.CamUp) {
+	if f.Held(input.CamUp) {
 		c.dy--
 	}
-	if f.held(input.CamDown) {
+	if f.Held(input.CamDown) {
 		c.dy++
 	}
-	c.fast = f.shift() && f.top() != input.CtxText
+	c.fast = f.Shift() && f.Top() != input.CtxText
 	// v and the camera are physical: edge scroll, the wheel's anchor and
 	// the middle drag read the physical cursor; UI hit tests the logical one.
 	mx, my := a.mapCursor()
-	if a.renderer.edgeScroll && f.raw.focused {
+	if a.renderer.edgeScroll && f.Raw.Focused {
 		ex, ey := edgePan(mx, my, v)
 		c.dx, c.dy = c.dx+ex, c.dy+ey
 	}
-	if f.fired(input.ZoomIn) {
+	if f.Fired(input.ZoomIn) {
 		c.zoom++
 	}
-	if f.fired(input.ZoomOut) {
+	if f.Fired(input.ZoomOut) {
 		c.zoom--
 	}
-	if lx, ly := a.currentCursor(); f.raw.wheelY != 0 && !a.renderer.wheelTaken && !a.uiWheelOver(lx, ly) { // a scroll view under the cursor owns the wheel
-		c.wheel, c.wx, c.wy = f.raw.wheelY, float64(mx), float64(my)
+	if lx, ly := a.currentCursor(); f.Raw.WheelY != 0 && !a.renderer.wheelTaken && !a.uiWheelOver(lx, ly) { // a scroll view under the cursor owns the wheel
+		c.wheel, c.wx, c.wy = f.Raw.WheelY, float64(mx), float64(my)
 	}
 	switch {
-	case f.clicked(mbMiddle):
-		f.take(mbMiddle)
+	case f.Clicked(mbMiddle):
+		f.Take(mbMiddle)
 		a.midDrag = midDragState{on: true, x: mx, y: my}
-	case a.midDrag.on && f.down(mbMiddle):
+	case a.midDrag.on && f.Down(mbMiddle):
 		c.dragX, c.dragY = float64(mx-a.midDrag.x), float64(my-a.midDrag.y)
 		a.midDrag.x, a.midDrag.y = mx, my
 	default:

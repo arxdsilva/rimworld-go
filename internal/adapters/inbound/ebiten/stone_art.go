@@ -146,7 +146,7 @@ func (r *Renderer) stoneCache() *stoneArtCache {
 			if n == "" {
 				n = defaultStone
 			}
-			c.stones[i] = r.art.tint("stone_tint", n)
+			c.stones[i] = r.art.Tint("stone_tint", n)
 		}
 	}
 	return c
@@ -181,7 +181,7 @@ func (r *Renderer) stuffTint(stuff string) color.NRGBA {
 	}
 	var t color.NRGBA
 	if s := stuffStone(stuff); s != "" {
-		t = r.art.tint("stone_tint", s)
+		t = r.art.Tint("stone_tint", s)
 	}
 	c.stuff[stuff] = t
 	return t
@@ -216,9 +216,9 @@ func (r *Renderer) linkKey(prefix string, mask, corners int) string {
 	}
 	key := ""
 	for p := prefix; p != "" && key == ""; p = linkFallback[p] {
-		if k := linkedKey(p, mask, corners); r.art.has(k) {
+		if k := linkedKey(p, mask, corners); r.art.Has(k) {
 			key = k
-		} else if k := p + "_" + twoDigits(mask&15); r.art.has(k) {
+		} else if k := p + "_" + twoDigits(mask&15); r.art.Has(k) {
 			key = k
 		}
 	}
@@ -244,7 +244,7 @@ func (r *Renderer) linkedSprite(prefix string, x, y, mask, corners int, tint col
 		return linkedDraw{}, false
 	}
 	if tint.A != 0 {
-		if sp := r.art.sprite(key); sp == nil || sp.mask == nil {
+		if sp := r.art.Sprite(key); sp == nil || sp.Mask == nil {
 			cs, tint = mulCS(tintCS(tint), cs), color.NRGBA{}
 		}
 	}

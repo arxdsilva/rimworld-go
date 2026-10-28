@@ -60,7 +60,7 @@ func TestBedInspectorOwnersAndPrisonerToggle(t *testing.T) {
 	}
 
 	a.applyBuildingClick(bedOwnerID(1))
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalTop() != bedOwnerModalID {
 		t.Fatalf("top modal %q, want the owner picker", a.uiModalTop())
 	}
@@ -138,7 +138,7 @@ func TestGatheringBanner(t *testing.T) {
 	if _, _, ok := a.gatheringBanner(a.sw); ok {
 		t.Fatal("banner without the read model")
 	}
-	f.frame(t, a)
+	f.Frame(t, a)
 }
 
 // With notices up the banner sits below them, never over them (PLAY-018).

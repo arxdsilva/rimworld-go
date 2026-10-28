@@ -76,15 +76,15 @@ func zoomEar(zoom, zoomOut float64) (gain, panScale float64, perID int) {
 func spatial(r *Renderer, x, y float64, v viewport) (vol, pan float64, ok bool) {
 	sx, sy := r.worldToScreenF(x, y)
 	fx, fy := float64(sx), float64(sy)
-	cx := (v.x0 + v.x1) / 2
-	half := v.w() / 2
-	if half <= 0 || v.h() <= 0 {
+	cx := (v.X0 + v.X1) / 2
+	half := v.W() / 2
+	if half <= 0 || v.H() <= 0 {
 		return 0, 0, false
 	}
-	gain, panScale, _ := zoomEar(r.cam.zoom, r.minZoomFor(v))
+	gain, panScale, _ := zoomEar(r.cam.Zoom, r.MinZoomFor(v))
 	pan = math.Max(-1, math.Min(1, (fx-cx)/half)) * panWidth * panScale
-	dx := math.Max(0, math.Max(v.x0-fx, fx-v.x1)) / half
-	dy := math.Max(0, math.Max(v.y0-fy, fy-v.y1)) / (v.h() / 2)
+	dx := math.Max(0, math.Max(v.X0-fx, fx-v.X1)) / half
+	dy := math.Max(0, math.Max(v.Y0-fy, fy-v.Y1)) / (v.H() / 2)
 	vol = (1 - math.Max(dx, dy)) * gain
 	if vol <= 0.01 {
 		return 0, 0, false
@@ -209,7 +209,7 @@ func (a *App) setLoops(want map[string]loopWant) {
 func (a *App) colonyCues() {
 	r := a.renderer
 	v := a.mapViewport() // physical, like worldToScreen
-	_, _, perID := zoomEar(r.cam.zoom, r.minZoomFor(v))
+	_, _, perID := zoomEar(r.cam.Zoom, r.MinZoomFor(v))
 	type placed struct {
 		id       string
 		vol, pan float64
@@ -226,7 +226,7 @@ func (a *App) colonyCues() {
 			continue
 		}
 		sx, sy := r.worldToScreenF(c.x, c.y)
-		dist := math.Hypot(float64(sx)-(v.x0+v.x1)/2, float64(sy)-(v.y0+v.y1)/2)
+		dist := math.Hypot(float64(sx)-(v.X0+v.X1)/2, float64(sy)-(v.Y0+v.Y1)/2)
 		near = append(near, placed{c.id, vol * c.vol, pan, dist})
 	}
 	sort.SliceStable(near, func(i, j int) bool { return near[i].dist < near[j].dist })
@@ -273,7 +273,7 @@ func (a *App) colonyAmbience(want map[string]loopWant) {
 		rain = math.Min(1, 0.3+w.WeatherIntensity)
 	}
 	inside := 1.0
-	if wx, wy := r.screenToWorld(int((v.x0+v.x1)/2), int((v.y0+v.y1)/2)); w.TerrainW > 0 {
+	if wx, wy := r.screenToWorld(int((v.X0+v.X1)/2), int((v.Y0+v.Y1)/2)); w.TerrainW > 0 {
 		x, y := int(wx), int(wy)
 		if i := y*w.TerrainW + x; x >= 0 && y >= 0 && x < w.TerrainW && i < len(w.RoomGrid) && w.RoomGrid[i] >= 0 {
 			inside = indoorDamping
@@ -418,8 +418,8 @@ func (r *Renderer) waterOnScreen(w game.WorldView, v viewport) (water, shore flo
 		return 0, 0
 	}
 	h := len(w.Terrain) / w.TerrainW
-	x0f, y0f := r.screenToWorld(int(v.x0), int(v.y0))
-	x1f, y1f := r.screenToWorld(int(v.x1), int(v.y1))
+	x0f, y0f := r.screenToWorld(int(v.X0), int(v.Y0))
+	x1f, y1f := r.screenToWorld(int(v.X1), int(v.Y1))
 	x0, y0 := max(0, int(math.Floor(x0f))), max(0, int(math.Floor(y0f)))
 	x1, y1 := min(w.TerrainW-1, int(math.Ceil(x1f))), min(h-1, int(math.Ceil(y1f)))
 	if x1 < x0 || y1 < y0 {

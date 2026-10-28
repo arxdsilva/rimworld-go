@@ -63,8 +63,8 @@ func appendLightSources(dst []lightSource, w *game.WorldView, lampRadius float64
 // without decoding the sprite), lampDefaultRadius without one.
 func lampRadiusOf(c *artCatalog) float64 {
 	if c != nil {
-		if sp := c.sprites[buildSprite("lamp", "", 0, false, false)]; sp != nil && sp.meta.LightRadius > 0 {
-			return sp.meta.LightRadius
+		if sp := c.Sprites[buildSprite("lamp", "", 0, false, false)]; sp != nil && sp.Meta.LightRadius > 0 {
+			return sp.Meta.LightRadius
 		}
 	}
 	return lampDefaultRadius

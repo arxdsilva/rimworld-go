@@ -111,8 +111,8 @@ func (a *App) handleZoneTool() bool {
 	f := &a.in
 	if st.fresh { // the click that started the tool is not a drag
 		st.fresh = false
-		f.take(mbLeft)
-		f.take(mbRight)
+		f.Take(mbLeft)
+		f.Take(mbRight)
 		return true
 	}
 	mx, my := a.currentCursor()
@@ -120,15 +120,15 @@ func (a *App) handleZoneTool() bool {
 	pmx, pmy := a.mapCursor()
 	tx, ty := a.shell.TileAt(pmx, pmy)
 	onMap := !a.colonyChromeHit(mx, my, sw, sh)
-	cancel := f.clicked(mbRight)
-	press := onMap && f.clicked(mbLeft)
+	cancel := f.Clicked(mbRight)
+	press := onMap && f.Clicked(mbLeft)
 	if cancel {
-		f.take(mbRight)
+		f.Take(mbRight)
 	}
 	if press {
-		f.take(mbLeft)
+		f.Take(mbLeft)
 	}
-	a.zoneToolStep(z, tx, ty, onMap, press, f.down(mbLeft), f.released(mbLeft), cancel)
+	a.zoneToolStep(z, tx, ty, onMap, press, f.Down(mbLeft), f.Released(mbLeft), cancel)
 	return true
 }
 

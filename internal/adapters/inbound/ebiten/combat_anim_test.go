@@ -36,9 +36,9 @@ func shot(age int, melee bool) game.TraceView {
 // aimCentre is the posed body centre of an east-facing figure at (wx, wy)
 // on screen: where an aimed item is placed from.
 func aimCentre(r *Renderer, rig heldRig, ps pose, wx, wy, tile float64) pt {
-	c, _ := bodyCentre(rig.body.meta)
+	c, _ := bodyCentre(rig.body.Meta)
 	sx, sy := r.worldToScreenF(wx, wy)
-	bx, by, s := artOrigin(rig.body.meta, float64(sx), float64(sy), tile)
+	bx, by, s := artOrigin(rig.body.Meta, float64(sx), float64(sy), tile)
 	return apply(ps.geo(float64(sx), float64(sy), tile), pt{bx + c[0]*s, by + c[1]*s})
 }
 
@@ -142,7 +142,7 @@ func TestRifleAimsAtTarget(t *testing.T) {
 	if a.held.stance != stanceAimed || a.held.aimX != 9.5 || a.held.aimY != 3.4 {
 		t.Fatalf("aims at the target's body: %+v", a.held)
 	}
-	sp := r.art.sprite("weapon/rifle_basic").meta.Attach
+	sp := r.art.Sprite("weapon/rifle_basic").Meta.Attach
 	h := a.held
 	for _, f := range []facing{faceEast, faceWest, faceSouth, faceNorth} {
 		rig, ps := rigFor(r, f)
@@ -168,7 +168,7 @@ func TestRifleAimsAtTarget(t *testing.T) {
 				t.Fatalf("%v step %d: the muzzle is out past %.2f tile: %.1f px", f, i, aimReach, d)
 			}
 			// upright: the sprite's top (towards smaller image y) stays up
-			pv := heldPivot(r.art.sprite(h.key), h.stance)
+			pv := heldPivot(r.art.Sprite(h.key), h.stance)
 			top, mid := apply(pl.g, pt{pv[0], pv[1] - 10}), apply(pl.g, pt{pv[0], pv[1]})
 			if math.Abs(math.Cos(want)) > 0.2 && top[1] > mid[1] {
 				t.Fatalf("%v step %d (%.2f rad): upside down", f, i, want)
@@ -332,7 +332,7 @@ func TestClubSwing(t *testing.T) {
 	// aimed east: cocked up, then driven down and forward
 	r := artRenderer()
 	rig, ps := rigFor(r, faceEast)
-	sp := r.art.sprite("weapon/club").meta.Attach
+	sp := r.art.Sprite("weapon/club").Meta.Attach
 	h := heldItem{key: "weapon/club", stance: stanceAimed, aimX: 6.5, aimY: 2.4}
 	at := func(angle float64) (tip, grip pt) {
 		h.angle = angle

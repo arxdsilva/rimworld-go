@@ -38,7 +38,7 @@ func TestJourneyCameraHeldPanKey(t *testing.T) {
 		{"S and D pan diagonally", func(j *journey) { j.hold("S", "D") }, 1, 1},
 		{"the right edge band scrolls", func(j *journey) {
 			j.a.renderer.edgeScroll = true
-			j.f.cur.mx, j.f.cur.my = j.a.sw-1, j.a.sh/2
+			j.f.Cur.Mx, j.f.Cur.My = j.a.sw-1, j.a.sh/2
 		}, 1, 0},
 	} {
 		t.Run(c.name, func(t *testing.T) {
@@ -46,30 +46,30 @@ func TestJourneyCameraHeldPanKey(t *testing.T) {
 			j := newJourney(t)
 			r := j.a.renderer
 			j.draw(1) // primes the per-Draw step
-			x0, y0 := r.cam.offsetX, r.cam.offsetY
+			x0, y0 := r.cam.OffsetX, r.cam.OffsetY
 			c.hold(j)
 			j.update(1) // the key is read here
 			j.draw(3)
-			dx, dy := r.cam.offsetX-x0, r.cam.offsetY-y0
+			dx, dy := r.cam.OffsetX-x0, r.cam.OffsetY-y0
 			if panSign(dx) != c.dx || panSign(dy) != c.dy {
 				t.Fatalf("after a held Update and 3 Draws the camera moved (%v, %v), want the signs (%v, %v)", dx, dy, c.dx, c.dy)
 			}
 			j.release()
-			j.f.cur.mx, j.f.cur.my = j.a.sw/2, j.a.sh/2
+			j.f.Cur.Mx, j.f.Cur.My = j.a.sw/2, j.a.sh/2
 			j.update(1)
-			if r.smooth.dirX != 0 || r.smooth.dirY != 0 {
-				t.Fatalf("direction (%v, %v) after the release, want none", r.smooth.dirX, r.smooth.dirY)
+			if r.smooth.DirX != 0 || r.smooth.DirY != 0 {
+				t.Fatalf("direction (%v, %v) after the release, want none", r.smooth.DirX, r.smooth.DirY)
 			}
-			lx, ly := r.cam.offsetX, r.cam.offsetY
-			for i := 0; i < 400 && !r.smooth.idle(); i++ {
+			lx, ly := r.cam.OffsetX, r.cam.OffsetY
+			for i := 0; i < 400 && !r.smooth.Idle(); i++ {
 				j.draw(1)
-				if (r.cam.offsetX-lx)*c.dx < 0 || (r.cam.offsetY-ly)*c.dy < 0 {
+				if (r.cam.OffsetX-lx)*c.dx < 0 || (r.cam.OffsetY-ly)*c.dy < 0 {
 					t.Fatalf("the coast reversed at draw %d", i)
 				}
-				lx, ly = r.cam.offsetX, r.cam.offsetY
+				lx, ly = r.cam.OffsetX, r.cam.OffsetY
 			}
-			if !r.smooth.idle() {
-				t.Fatalf("the pan never stopped: v (%v, %v)", r.smooth.vx, r.smooth.vy)
+			if !r.smooth.Idle() {
+				t.Fatalf("the pan never stopped: v (%v, %v)", r.smooth.Vx, r.smooth.Vy)
 			}
 		})
 	}
@@ -88,11 +88,11 @@ func TestJourneyCameraPanLeftAndUp(t *testing.T) {
 			j.lookAt(12, 12)
 			r := j.a.renderer
 			j.draw(1)
-			x0, y0 := r.cam.offsetX, r.cam.offsetY
+			x0, y0 := r.cam.OffsetX, r.cam.OffsetY
 			j.hold(c.key)
 			j.update(1)
 			j.draw(3)
-			if dx, dy := r.cam.offsetX-x0, r.cam.offsetY-y0; panSign(dx) != c.dx || panSign(dy) != c.dy {
+			if dx, dy := r.cam.OffsetX-x0, r.cam.OffsetY-y0; panSign(dx) != c.dx || panSign(dy) != c.dy {
 				t.Fatalf("%s moved the camera (%v, %v), want the signs (%v, %v)", c.key, dx, dy, c.dx, c.dy)
 			}
 		})
@@ -106,12 +106,12 @@ func TestJourneyCameraShiftPansFaster(t *testing.T) {
 	run := func(mods input.Mod) float64 {
 		j := newJourney(t)
 		j.draw(1)
-		x0 := j.a.renderer.cam.offsetX
+		x0 := j.a.renderer.cam.OffsetX
 		j.hold("D")
-		j.f.cur.mods = mods
+		j.f.Cur.Mods = mods
 		j.update(1)
 		j.draw(4)
-		return j.a.renderer.cam.offsetX - x0
+		return j.a.renderer.cam.OffsetX - x0
 	}
 	plain, fast := run(0), run(input.ModShift)
 	if plain <= 0 || fast <= plain*1.2 {
@@ -130,10 +130,10 @@ func TestJourneyCameraZoomKeys(t *testing.T) {
 			t.Parallel()
 			j := newJourney(t)
 			j.draw(1)
-			z0 := j.a.renderer.cam.zoom
+			z0 := j.a.renderer.cam.Zoom
 			j.key(c.key, 0)
 			j.draw(3)
-			if z := j.a.renderer.cam.zoom; (z > z0) != c.in || z == z0 {
+			if z := j.a.renderer.cam.Zoom; (z > z0) != c.in || z == z0 {
 				t.Fatalf("%s: zoom %v from %v, want %s", c.key, z, z0, map[bool]string{true: "in", false: "out"}[c.in])
 			}
 		})
@@ -147,15 +147,15 @@ func TestJourneyCameraWheelZoomsAtCursor(t *testing.T) {
 	j := newJourney(t)
 	j.draw(1)
 	r := j.a.renderer
-	j.f.moveTo(j.a, 12, 5)
-	mx, my := j.f.cur.mx, j.f.cur.my
+	j.f.MoveTo(j.a, 12, 5)
+	mx, my := j.f.Cur.Mx, j.f.Cur.My
 	wx0, wy0 := r.screenToWorld(mx, my)
-	z0 := r.cam.zoom
-	j.f.cur.wheelY = 1
+	z0 := r.cam.Zoom
+	j.f.Cur.WheelY = 1
 	j.update(1)
 	j.draw(6)
-	if r.cam.zoom <= z0 {
-		t.Fatalf("zoom %v after a wheel step, want more than %v", r.cam.zoom, z0)
+	if r.cam.Zoom <= z0 {
+		t.Fatalf("zoom %v after a wheel step, want more than %v", r.cam.Zoom, z0)
 	}
 	if wx, wy := r.screenToWorld(mx, my); math.Abs(wx-wx0) > 0.5 || math.Abs(wy-wy0) > 0.5 {
 		t.Fatalf("the tile under the cursor moved from (%.2f, %.2f) to (%.2f, %.2f)", wx0, wy0, wx, wy)
@@ -168,15 +168,15 @@ func TestJourneyCameraMiddleDrag(t *testing.T) {
 	t.Parallel()
 	j := newJourney(t)
 	r := j.a.renderer
-	x0 := r.cam.offsetX
-	j.f.cur.mx, j.f.cur.my = j.a.sw/2, j.a.sh/2
-	j.f.cur.press[mbMiddle], j.f.cur.down[mbMiddle] = true, true
+	x0 := r.cam.OffsetX
+	j.f.Cur.Mx, j.f.Cur.My = j.a.sw/2, j.a.sh/2
+	j.f.Cur.Press[mbMiddle], j.f.Cur.Down[mbMiddle] = true, true
 	j.update(1)
-	j.f.cur.mx += 40
+	j.f.Cur.Mx += 40
 	j.update(1)
-	j.f.cur.down[mbMiddle], j.f.cur.release[mbMiddle] = false, true
+	j.f.Cur.Down[mbMiddle], j.f.Cur.Release[mbMiddle] = false, true
 	j.update(1)
-	if moved := r.cam.offsetX - x0; math.Abs(moved+40) > 0.5 {
+	if moved := r.cam.OffsetX - x0; math.Abs(moved+40) > 0.5 {
 		t.Fatalf("a 40 px drag right moved the camera by %v, want -40", moved)
 	}
 }
@@ -192,12 +192,12 @@ func TestJourneyCameraMinimap(t *testing.T) {
 	}
 	v := colonyViewport(j.a.sw, j.a.sh)
 	_, _, mx, my, mw, mh := r.minimapBox(v)
-	j.f.cur.mx, j.f.cur.my = int(mx+mw*0.25), int(my+mh*0.75)
-	j.f.click(j.t, j.a, mbLeft, 0)
+	j.f.Cur.Mx, j.f.Cur.My = int(mx+mw*0.25), int(my+mh*0.75)
+	j.f.Click(j.t, j.a, mbLeft, 0)
 	mv := j.a.mapViewport()
 	tile := r.tilePx()
-	cx := (r.cam.offsetX + (mv.x0+mv.x1)/2) / tile
-	cy := (r.cam.offsetY + (mv.y0+mv.y1)/2) / tile
+	cx := (r.cam.OffsetX + (mv.X0+mv.X1)/2) / tile
+	cy := (r.cam.OffsetY + (mv.Y0+mv.Y1)/2) / tile
 	if math.Abs(cx-40) > 1.5 || math.Abs(cy-120) > 1.5 {
 		t.Fatalf("camera centred on (%.1f, %.1f) after the click, want (40, 120)", cx, cy)
 	}
@@ -222,12 +222,12 @@ func TestJourneyCameraCycleColonists(t *testing.T) {
 		t.Fatal("Period selected nothing")
 	}
 	first := r.Selected()
-	x1 := r.cam.offsetX
+	x1 := r.cam.OffsetX
 	j.key("Period", 0)
 	if r.Selected() == first {
 		t.Fatal("a second Period did not move to the next colonist")
 	}
-	if r.cam.offsetX == x1 {
+	if r.cam.OffsetX == x1 {
 		t.Fatal("the camera did not follow the next colonist")
 	}
 	j.key("Comma", 0)
@@ -253,7 +253,7 @@ func TestJourneyCameraBarDoubleClickCentres(t *testing.T) {
 	p := j.pawn(uint64(id))
 	mv := j.a.mapViewport()
 	sx, sy := r.worldToScreenF(float64(p.X)+0.5, float64(p.Y)+0.5)
-	if math.Abs(float64(sx)-(mv.x0+mv.x1)/2) > r.tilePx() || math.Abs(float64(sy)-(mv.y0+mv.y1)/2) > r.tilePx() {
-		t.Fatalf("after the double click the colonist is at (%v, %v), not the viewport centre (%v, %v)", sx, sy, (mv.x0+mv.x1)/2, (mv.y0+mv.y1)/2)
+	if math.Abs(float64(sx)-(mv.X0+mv.X1)/2) > r.tilePx() || math.Abs(float64(sy)-(mv.Y0+mv.Y1)/2) > r.tilePx() {
+		t.Fatalf("after the double click the colonist is at (%v, %v), not the viewport centre (%v, %v)", sx, sy, (mv.X0+mv.X1)/2, (mv.Y0+mv.Y1)/2)
 	}
 }

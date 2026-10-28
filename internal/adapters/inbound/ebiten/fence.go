@@ -95,7 +95,7 @@ const forbiddenKey = "overlay/forbidden"
 // drawForbiddenMark draws the forbidden marker on tile (wx, wy): the
 // sprite when present, else a red ring with a slash.
 func (r *Renderer) drawForbiddenMark(screen *ebiten.Image, wx, wy int, tile float64, sw, sh int) {
-	if r.art.has(forbiddenKey) {
+	if r.art.Has(forbiddenKey) {
 		r.drawSprite(screen, forbiddenKey, color.NRGBA{}, float64(wx), float64(wy), tile, sw, sh)
 		return
 	}

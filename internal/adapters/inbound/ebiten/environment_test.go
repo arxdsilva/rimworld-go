@@ -45,9 +45,9 @@ func leanEast(ps pose) float64 { return -ps.skew }
 
 // envArt is a catalog holding just these sprite keys.
 func envArt(keys ...string) *artCatalog {
-	c := &artCatalog{sprites: map[string]*artSprite{}, tinted: map[tintKey]*ebiten.Image{}}
+	c := &artCatalog{Sprites: map[string]*artSprite{}, Tinted: map[tintKey]*ebiten.Image{}}
 	for _, k := range keys {
-		c.sprites[k] = fakeSprite([2]int{128, 128}, pt{0, 0}, nil)
+		c.Sprites[k] = fakeSprite([2]int{128, 128}, pt{0, 0}, nil)
 	}
 	return c
 }
@@ -476,7 +476,7 @@ func TestBushVariantKey(t *testing.T) {
 		}
 		berry[strings.Replace(k, "_harvestable", "_x", 1)] = true
 		got := r.seasonKey(k, game.WorldView{Season: "Fall"})
-		if !r.art.has(got) || strings.Contains(got, "_harvestable_v") != p.Harvestable {
+		if !r.art.Has(got) || strings.Contains(got, "_harvestable_v") != p.Harvestable {
 			t.Fatalf("berry bush %s falls back to %s", k, got)
 		}
 	}
@@ -487,7 +487,7 @@ func TestBushVariantKey(t *testing.T) {
 	for x := 0; x < 40; x++ {
 		k, _ := plantSprite(game.PlantView{X: x, Y: 2, Species: "bramble", Growth: 50})
 		wild[k] = true
-		if got := r.seasonKey(k, game.WorldView{}); !r.art.has(got) {
+		if got := r.seasonKey(k, game.WorldView{}); !r.art.Has(got) {
 			t.Fatalf("bush %s falls back to missing %s", k, got)
 		}
 	}

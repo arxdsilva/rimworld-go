@@ -122,11 +122,11 @@ func TestDefaultStoneStuff(t *testing.T) {
 }
 
 func testStoneArt(keys ...string) *Renderer {
-	c := &artCatalog{sprites: map[string]*artSprite{}, tints: map[string]map[string]color.NRGBA{
+	c := &artCatalog{Sprites: map[string]*artSprite{}, Tints: map[string]map[string]color.NRGBA{
 		"stone_tint": {"granite": {0x69, 0x5f, 0x61, 255}, "marble": {0x84, 0x87, 0x84, 255}},
 	}}
 	for _, k := range keys {
-		c.sprites[k] = &artSprite{}
+		c.Sprites[k] = &artSprite{}
 	}
 	return &Renderer{art: c}
 }

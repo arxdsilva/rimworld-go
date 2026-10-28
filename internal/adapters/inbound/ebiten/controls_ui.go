@@ -146,7 +146,7 @@ func (a *App) applyControlsClick(key string) {
 // context: nothing else sees the key).
 func (a *App) captureBinding() {
 	f := &a.in
-	for _, k := range f.raw.pressed {
+	for _, k := range f.Raw.Pressed {
 		switch k {
 		case "Escape":
 			a.rebind.on = false
@@ -159,7 +159,7 @@ func (a *App) captureBinding() {
 		if input.IsModifier(k) || k == "Meta" {
 			continue // wait for the key the modifiers go with
 		}
-		key := input.Binding{Key: k, Mods: f.raw.mods}
+		key := input.Binding{Key: k, Mods: f.Raw.Mods}
 		a.rebind.on = false
 		if others := a.bindings().ConflictsWith(a.rebind.act, key); len(others) > 0 {
 			a.rebind.pending = &pendingBind{act: a.rebind.act, slot: a.rebind.slot, key: key, others: others}

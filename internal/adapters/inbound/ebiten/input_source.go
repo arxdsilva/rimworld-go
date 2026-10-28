@@ -24,22 +24,22 @@ const (
 
 // rawInput is one frame of device state.
 type rawInput struct {
-	pressed []string // keys that went down this frame (input key names)
-	held    []string // keys down now
-	mods    input.Mod
-	mx, my  int
+	Pressed []string // keys that went down this frame (input key names)
+	Held    []string // keys down now
+	Mods    input.Mod
+	Mx, My  int
 	wheelX  float64
-	wheelY  float64
-	down    [numMouse]bool // held
-	press   [numMouse]bool // went down this frame
-	release [numMouse]bool // came up this frame
-	chars   []rune         // typed characters
-	focused bool
-	// blurred: the window had focus and lost it (backgrounded or
+	WheelY  float64
+	Down    [numMouse]bool // held
+	Press   [numMouse]bool // went down this frame
+	Release [numMouse]bool // came up this frame
+	Chars   []rune         // typed characters
+	Focused bool
+	// Blurred: the window had focus and lost it (backgrounded or
 	// minimised). The zero value is "in the foreground", so a source that
 	// never reports focus (a fake, a headless run) never counts as
 	// backgrounded.
-	blurred bool
+	Blurred bool
 }
 
 // inputSource is what the App needs from the input devices.
@@ -59,37 +59,37 @@ var ebitenButtons = [numMouse]ebiten.MouseButton{ebiten.MouseButtonLeft, ebiten.
 func (e *ebitenInput) poll() rawInput {
 	var in rawInput
 	e.buf = inpututil.AppendJustPressedKeys(e.buf[:0])
-	in.pressed = keyNames(e.buf)
+	in.Pressed = keyNames(e.buf)
 	e.buf = inpututil.AppendPressedKeys(e.buf[:0])
-	in.held = keyNames(e.buf)
+	in.Held = keyNames(e.buf)
 	if ebiten.IsKeyPressed(ebiten.KeyShift) {
-		in.mods |= input.ModShift
+		in.Mods |= input.ModShift
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyControl) {
-		in.mods |= input.ModCtrl
+		in.Mods |= input.ModCtrl
 	}
 	if ebiten.IsKeyPressed(ebiten.KeyAlt) {
-		in.mods |= input.ModAlt
+		in.Mods |= input.ModAlt
 	}
-	in.mx, in.my = ebiten.CursorPosition()
-	in.wheelX, in.wheelY = ebiten.Wheel()
+	in.Mx, in.My = ebiten.CursorPosition()
+	in.wheelX, in.WheelY = ebiten.Wheel()
 	for i, b := range ebitenButtons {
-		in.down[i] = ebiten.IsMouseButtonPressed(b)
-		in.press[i] = inpututil.IsMouseButtonJustPressed(b)
-		in.release[i] = inpututil.IsMouseButtonJustReleased(b)
+		in.Down[i] = ebiten.IsMouseButtonPressed(b)
+		in.Press[i] = inpututil.IsMouseButtonJustPressed(b)
+		in.Release[i] = inpututil.IsMouseButtonJustReleased(b)
 	}
-	in.chars = ebiten.AppendInputChars(nil)
-	in.focused = ebiten.IsFocused()
-	in.blurred = e.blurredFor(in.focused)
+	in.Chars = ebiten.AppendInputChars(nil)
+	in.Focused = ebiten.IsFocused()
+	in.Blurred = e.BlurredFor(in.Focused)
 	return in
 }
 
-// blurredFor reports the window is in the background: it had focus before
+// BlurredFor reports the window is in the background: it had focus before
 // and has none now. A window that was never focused (Ebitengine reports
 // false before the game runs, and a capture or a launch behind the
 // terminal may never get focus) is not "in the background", so the colony
 // never pauses itself without the player having left the window.
-func (e *ebitenInput) blurredFor(focused bool) bool {
+func (e *ebitenInput) BlurredFor(focused bool) bool {
 	e.seenFocus = e.seenFocus || focused
 	return e.seenFocus && !focused
 }

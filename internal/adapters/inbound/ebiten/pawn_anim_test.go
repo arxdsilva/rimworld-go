@@ -79,7 +79,7 @@ func TestWestMirrorsEast(t *testing.T) {
 		t.Fatalf("the muzzle points west: east %v west %v", em, wm)
 	}
 	// animals too: a west-facing animal draws its east art, mirrored
-	r.art.sprites["animal/deer_east"] = fakeSprite([2]int{160, 160}, pt{16, 16}, nil)
+	r.art.Sprites["animal/deer_east"] = fakeSprite([2]int{160, 160}, pt{16, 16}, nil)
 	r.last[7] = pawnVisual{facing: faceWest}
 	an := game.AnimalView{ID: 7, Species: "deer", X: 2, Y: 2}
 	if k := r.animalBaseKey(an); k != "animal/deer_east" || !r.animalMirrored(an) {
@@ -113,10 +113,10 @@ func TestColonyUsesLookBuildAndBeard(t *testing.T) {
 	r.art = figureArt()
 	for _, fs := range []string{"south", "east", "north"} {
 		for _, k := range []string{"body_f_heavy_", "pants_basic_f_heavy_", "shirt_basic_f_heavy_", "beard_full_", "hair_long_"} {
-			r.art.sprites["pawn/"+k+fs] = fakeSprite([2]int{160, 297}, pt{16, 153}, map[string]pt{"head": {80, 122}, "hold": {104, 190}})
+			r.art.Sprites["pawn/"+k+fs] = fakeSprite([2]int{160, 297}, pt{16, 153}, map[string]pt{"head": {80, 122}, "hold": {104, 190}})
 		}
 	}
-	r.art.tints = map[string]map[string]color.NRGBA{
+	r.art.Tints = map[string]map[string]color.NRGBA{
 		"cloth": {"blue": {0, 0, 200, 255}, "raider": {120, 20, 30, 255}, "slate": {60, 60, 70, 255}},
 	}
 	l := look.Look{Sex: look.Female, Build: look.Heavy, Beard: 2, HairStyle: 3}
@@ -132,7 +132,7 @@ func TestColonyUsesLookBuildAndBeard(t *testing.T) {
 	}
 	// the held item anchors on the build's own hold point
 	rig := r.rigOf(p, faceEast)
-	if rig.body != r.art.sprite("pawn/body_f_heavy_east") {
+	if rig.body != r.art.Sprite("pawn/body_f_heavy_east") {
 		t.Fatal("the rig is the build's body")
 	}
 	// raiders keep their look's build and hair in maroon and slate
@@ -196,7 +196,7 @@ func TestMirroredDrawInvertsNormalX(t *testing.T) {
 		t.Fatal("unmirrored: unchanged")
 	}
 	sprite, normal := ebiten.NewImage(8, 8), ebiten.NewImage(8, 8)
-	r := &Renderer{art: &artCatalog{normals: map[*ebiten.Image]*ebiten.Image{sprite: normal}}}
+	r := &Renderer{art: &artCatalog{Normals: map[*ebiten.Image]*ebiten.Image{sprite: normal}}}
 	r.view.W = roomWorld()
 	r.lit.light = lightAt(8, summerDay, "clear", 0)
 	dst := ebiten.NewImage(32, 32)
@@ -226,14 +226,14 @@ func TestMirroredDrawInvertsNormalX(t *testing.T) {
 // re-rendered, shorter figure brings them down with it.
 func TestMarkersFloatAboveHead(t *testing.T) {
 	t.Parallel()
-	c := &artCatalog{sprites: map[string]*artSprite{
+	c := &artCatalog{Sprites: map[string]*artSprite{
 		"pawn/body_south": fakeSprite([2]int{160, 288}, pt{16, 144}, map[string]pt{"head": {80, 118.8}}),
 	}}
 	_, hy := pawnHead(c)
 	if lift := pawnMarkerLift(c); math.Abs(lift-(markerAboveHead-hy)) > 1e-9 || lift <= -hy {
 		t.Fatalf("marker lift %v over a head at %v", lift, hy)
 	}
-	taller := &artCatalog{sprites: map[string]*artSprite{
+	taller := &artCatalog{Sprites: map[string]*artSprite{
 		"pawn/body_south": fakeSprite([2]int{160, 297}, pt{16, 153}, map[string]pt{"head": {80, 90}}),
 	}}
 	if pawnMarkerLift(taller) <= pawnMarkerLift(c) {
@@ -244,7 +244,7 @@ func TestMarkersFloatAboveHead(t *testing.T) {
 	r.art = figureArt()
 	res := game.PawnView{ID: 1, X: 2, Y: 2}
 	pat := game.PawnView{ID: 2, X: 2, Y: 2, CarriedBy: 1, Look: look.Look{HairStyle: 3}}
-	r.art.sprites["pawn/hair_long_south"] = fakeSprite([2]int{160, 297}, pt{16, 153}, nil)
+	r.art.Sprites["pawn/hair_long_south"] = fakeSprite([2]int{160, 297}, pt{16, 153}, nil)
 	r.view.Pawns = []game.PawnView{res, pat}
 	for _, c := range []struct {
 		f      facing

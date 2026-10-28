@@ -169,7 +169,7 @@ func click(t *testing.T, a *App, id string) {
 	// A test that placed the pointer on a tile by hand (clickTile) leaves
 	// the override behind; the press must land on the element.
 	a.cursor = nil
-	f.frame(t, a)
+	f.Frame(t, a)
 	x, y, disabled, reason, ok := elementAt(a, id)
 	if !ok {
 		t.Fatalf("no button or widget %q on %s", id, a.nav.screen())
@@ -179,12 +179,12 @@ func click(t *testing.T, a *App, id string) {
 		return
 	}
 	s := float32(a.scale.S)
-	f.cur.mx, f.cur.my = int(x*s), int(y*s)
-	f.cur.press[mbLeft], f.cur.down[mbLeft] = true, true
+	f.Cur.Mx, f.Cur.My = int(x*s), int(y*s)
+	f.Cur.Press[mbLeft], f.Cur.Down[mbLeft] = true, true
 	quitFrame(t, a)
-	f.cur.down[mbLeft], f.cur.release[mbLeft] = false, true
+	f.Cur.Down[mbLeft], f.Cur.Release[mbLeft] = false, true
 	quitFrame(t, a)
-	f.cur.mx, f.cur.my = -50, -50
+	f.Cur.Mx, f.Cur.My = -50, -50
 }
 
 // holdColony keeps a colony from stepping during click's three Updates, so
@@ -208,10 +208,10 @@ func click(t *testing.T, a *App, id string) {
 func holdColony(a *App, f *fakeInput, id string) func() {
 	r := a.renderer
 	if r == nil || a.nav.screen() != screenColony {
-		blurred := f.cur.blurred
-		f.cur.blurred = true
+		blurred := f.Cur.Blurred
+		f.Cur.Blurred = true
 		return func() {
-			f.cur.blurred, a.in.raw.blurred = blurred, blurred
+			f.Cur.Blurred, a.in.Raw.Blurred = blurred, blurred
 			a.syncBackground() // a.tick() right after the click sees the focus back
 		}
 	}

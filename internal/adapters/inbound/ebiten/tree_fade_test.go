@@ -13,7 +13,7 @@ import (
 
 func fadeRenderer() *Renderer {
 	r := New(&stubSim{w: 64, h: 64, tick: 100})
-	r.cam.zoom = 32.0 / float64(TileSize)
+	r.cam.Zoom = 32.0 / float64(TileSize)
 	r.lod.creatures = map[[2]int]bool{}
 	return r
 }

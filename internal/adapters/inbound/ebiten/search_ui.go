@@ -153,26 +153,26 @@ func (a *App) searchHits() []searchHit {
 func (a *App) searchTyping() {
 	f := &a.in
 	s := &a.search
-	for _, r := range f.raw.chars {
+	for _, r := range f.Raw.Chars {
 		if unicode.IsPrint(r) && utf8.RuneCountInString(s.text) < searchMaxLen {
 			s.text += string(r)
 			s.idx = 0
 		}
 	}
-	if f.key("Backspace") && s.text != "" {
+	if f.Key("Backspace") && s.text != "" {
 		_, n := utf8.DecodeLastRuneInString(s.text)
 		s.text = s.text[:len(s.text)-n]
 		s.idx = 0
 	}
 	hits := a.searchHits()
 	switch {
-	case f.key("Escape"):
+	case f.Key("Escape"):
 		a.closeSearch()
-	case f.key("ArrowDown") && len(hits) > 0:
+	case f.Key("ArrowDown") && len(hits) > 0:
 		s.idx = (s.idx + 1) % len(hits)
-	case f.key("ArrowUp") && len(hits) > 0:
+	case f.Key("ArrowUp") && len(hits) > 0:
 		s.idx = (s.idx - 1 + len(hits)) % len(hits)
-	case f.key("Enter") || f.key("NumpadEnter"):
+	case f.Key("Enter") || f.Key("NumpadEnter"):
 		if s.idx < len(hits) {
 			a.pickSearch(hits[s.idx])
 		}

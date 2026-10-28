@@ -330,10 +330,10 @@ func boundsOf(rs []rect) rect {
 	return rect{X: x0, Y: y0, W: x1 - x0, H: y1 - y0}
 }
 
-// chrome is every region the HUD draws, for blocking map clicks. The
+// Chrome is every region the HUD draws, for blocking map clicks. The
 // minimap keeps its own click path and is not in it; empty command cells
 // are not either (only occupied cells exist).
-func (l hudLayout) chrome() []rect {
+func (l hudLayout) Chrome() []rect {
 	out := make([]rect, 0, 16+len(l.GridCells))
 	for _, r := range []rect{l.Tabs, l.Pane, l.PaneTabs, l.Expanded, l.ArchCats, l.ArchDesc, l.Window,
 		l.Global, l.Letters, l.Learn, l.Alerts, l.Bar, l.Resources, l.Messages, l.Perf} {

@@ -19,7 +19,7 @@ import (
 // drawFrame runs a frame and paints the whole app into an off-screen image.
 func drawFrame(t *testing.T, a *App, f *fakeInput) *ebiten.Image {
 	t.Helper()
-	f.frame(t, a)
+	f.Frame(t, a)
 	img := ebiten.NewImage(a.sw, a.sh)
 	a.Draw(img)
 	return img
@@ -69,21 +69,21 @@ func TestColonyHUDDrawsEveryState(t *testing.T) {
 	r := a.windowRect()
 	for _, c := range []rect{workCellRect(r, 0, 6), workCellRect(r, 0, 2), {X: workCellRect(r, 0, 4).X, Y: r.y + 24, W: 30, H: 16}} {
 		x, y := c.Center()
-		f.cur.mx, f.cur.my = int(x), int(y)
+		f.Cur.Mx, f.Cur.My = int(x), int(y)
 		for i := 0; i < tipDelay+2; i++ {
-			f.frame(t, a)
+			f.Frame(t, a)
 		}
 		drawFrame(t, a, f)
 	}
 	a.workOpen = false
 
 	// The Architect in every category with a card hovered.
-	f.cur.mx, f.cur.my = -50, -50
+	f.Cur.Mx, f.Cur.My = -50, -50
 	a.openArchitect()
 	for _, c := range archCategories {
 		a.selectArchCategory(c.id)
 		if cells := a.hud().GridCells; len(cells) > 0 { // hover the category's first tool
-			f.cur.mx, f.cur.my = int(cells[0].X+cells[0].W/2), int(cells[0].Y+cells[0].H/2)
+			f.Cur.Mx, f.Cur.My = int(cells[0].X+cells[0].W/2), int(cells[0].Y+cells[0].H/2)
 		}
 		drawFrame(t, a, f)
 	}
@@ -98,7 +98,7 @@ func TestColonyWindowsDraw(t *testing.T) {
 	s := drawSim()
 	s.world.Messages = nil
 	a, f := colonyApp(t, s)
-	f.cur.mx, f.cur.my = -50, -50
+	f.Cur.Mx, f.Cur.My = -50, -50
 
 	// The Factions window on each faction row, and with no factions at all.
 	a.openColonyFactions()
@@ -131,7 +131,7 @@ func TestColonyWindowsDraw(t *testing.T) {
 	drawFrame(t, a, f)
 	a.openStoryCustom(s.story)
 	drawFrame(t, a, f)
-	f.cur.mx, f.cur.my = 640, 300
+	f.Cur.Mx, f.Cur.My = 640, 300
 	drawFrame(t, a, f)
 }
 
@@ -189,7 +189,7 @@ func TestColonyToolGhostsAndHoverDraw(t *testing.T) {
 		t.Fatal(err)
 	}
 	f := fakeOn(a)
-	f.frame(t, a)
+	f.Frame(t, a)
 	a.renderer.speed = speedPaused
 	sx, sy := a.renderer.worldToScreenF(8.5, 8.5)
 	a.cursor = &[2]int{int(sx), int(sy)}

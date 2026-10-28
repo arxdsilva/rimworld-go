@@ -73,7 +73,7 @@ func TestWaterTerrainSprites(t *testing.T) {
 	// the art exists for every key the water draw asks for
 	c := realArt(t)
 	for _, k := range ng1ArtKeys() {
-		if !c.has(k) {
+		if !c.Has(k) {
 			t.Errorf("missing art %s", k)
 		}
 	}
@@ -102,7 +102,7 @@ func TestMachineryOreSprites(t *testing.T) {
 	}
 	c := realArt(t)
 	for _, k := range linkedKeys("rock/ore_machinery") {
-		if !c.has(k) {
+		if !c.Has(k) {
 			t.Errorf("missing machinery ore art %s", k)
 		}
 	}
@@ -173,8 +173,8 @@ func TestWaterShaderCompiles(t *testing.T) {
 	r.present = 90
 	img := ebiten.NewImage(16, 16)
 	img.Fill(color.NRGBA{40, 90, 160, 255})
-	r.art = &artCatalog{sprites: map[string]*artSprite{"terrain/shallow_water_00": {meta: artMeta{Canvas: [2]int{16, 16}}}}}
-	r.art.sprites["terrain/shallow_water_00"].img = img
+	r.art = &artCatalog{Sprites: map[string]*artSprite{"terrain/shallow_water_00": {Meta: artMeta{Canvas: [2]int{16, 16}}}}}
+	r.art.Sprites["terrain/shallow_water_00"].Img = img
 	dst := ebiten.NewImage(64, 64)
 	shaderDraws := 0
 	r.water.onDraw = func(_ string, shader bool) {

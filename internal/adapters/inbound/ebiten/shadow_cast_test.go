@@ -303,16 +303,16 @@ func TestCalibrationFromAlphaBounds(t *testing.T) {
 		pix.SetNRGBA(7, y, color.NRGBA{200, 100, 50, 255})
 	}
 	pix.SetNRGBA(3, 4, color.NRGBA{0, 0, 0, 8})
-	sp := &artSprite{meta: artMeta{Canvas: [2]int{20, 80}}, pix: pix}
-	if h := sp.opaqueHeightPx(); h != 50 {
+	sp := &artSprite{Meta: artMeta{Canvas: [2]int{20, 80}}, Pix: pix}
+	if h := sp.OpaqueHeightPx(); h != 50 {
 		t.Fatalf("opaque height %v, want 50", h)
 	}
 	if k := spriteKappa(0.948, 50, artTilePx); !near(k, 0.948*artTilePx/50, 1e-12) {
 		t.Fatalf("kappa %v", k)
 	}
 	// a sprite without opaque pixels falls back to its canvas
-	empty := &artSprite{meta: artMeta{Canvas: [2]int{20, 80}}, pix: image.NewNRGBA(image.Rect(0, 0, 5, 10))}
-	if h := empty.opaqueHeightPx(); h != 80 {
+	empty := &artSprite{Meta: artMeta{Canvas: [2]int{20, 80}}, Pix: image.NewNRGBA(image.Rect(0, 0, 5, 10))}
+	if h := empty.OpaqueHeightPx(); h != 80 {
 		t.Fatalf("empty sprite height %v", h)
 	}
 	// pixels smaller than the canvas (test art) scale to canvas units
@@ -320,7 +320,7 @@ func TestCalibrationFromAlphaBounds(t *testing.T) {
 	for y := 5; y < 30; y++ {
 		half.SetNRGBA(2, y, color.NRGBA{1, 1, 1, 255})
 	}
-	if h := (&artSprite{meta: artMeta{Canvas: [2]int{20, 80}}, pix: half}).opaqueHeightPx(); h != 50 {
+	if h := (&artSprite{Meta: artMeta{Canvas: [2]int{20, 80}}, Pix: half}).OpaqueHeightPx(); h != 50 {
 		t.Fatalf("scaled opaque height %v", h)
 	}
 }
@@ -350,7 +350,7 @@ func figureArt() *artCatalog {
 	c := fakeCombatArt()
 	for f := faceSouth; f <= faceWest; f++ {
 		for _, k := range []string{"pants_basic_", "shirt_basic_", "vest_utility_", "hair_short_", "hair_crop_", "hair_bun_"} {
-			c.sprites["pawn/"+k+f.String()] = fakeSprite([2]int{160, 297}, pt{16, 153}, nil)
+			c.Sprites["pawn/"+k+f.String()] = fakeSprite([2]int{160, 297}, pt{16, 153}, nil)
 		}
 	}
 	return c
@@ -358,8 +358,8 @@ func figureArt() *artCatalog {
 
 // keyOf maps a drawn image back to its sprite key.
 func keyOf(c *artCatalog, img *ebiten.Image) string {
-	for k, sp := range c.sprites {
-		if sp.img == img {
+	for k, sp := range c.Sprites {
+		if sp.Img == img {
 			return k
 		}
 	}

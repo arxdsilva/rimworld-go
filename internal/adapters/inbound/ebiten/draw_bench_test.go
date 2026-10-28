@@ -49,7 +49,7 @@ func benchDraw(b *testing.B, setup func(*game.Game)) {
 	g.Step(600)
 	r := New(g)
 	r.art = art
-	r.cam.zoom = 0.6
+	r.cam.Zoom = 0.6
 	screen := ebiten.NewImage(1280, 800)
 	tile := r.tilePx()
 	frame := func() {
@@ -95,7 +95,7 @@ func benchDrawGrown(b *testing.B, side int) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	art.prewarmAtlases() // page cuts are a one-time cost, not the frame's
+	art.PrewarmAtlases() // page cuts are a one-time cost, not the frame's
 	if d := os.Getenv("RIMWORLD_FIXTURE_DIR"); d != "" {
 		appscenario.CacheDir = d
 	}
@@ -119,11 +119,11 @@ func benchDrawGrown(b *testing.B, side int) {
 			}
 			const sw, sh = 1280, 800
 			v := colonyViewport(sw, sh)
-			r.cam.zoom = z.zoom
+			r.cam.Zoom = z.zoom
 			if z.zoom == 0 {
-				r.cam.zoom = r.minZoomFor(v)
+				r.cam.Zoom = r.MinZoomFor(v)
 			}
-			r.clampCamera(v) // centred on the colony
+			r.ClampCamera(v) // centred on the colony
 			screen := ebiten.NewImage(sw, sh)
 			tile := r.tilePx()
 			frame := func() {

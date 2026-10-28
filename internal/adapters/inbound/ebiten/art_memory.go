@@ -73,8 +73,8 @@ type artMemStats struct {
 	TintEvicted          int64
 }
 
-// memStats reads the catalog's memory bookkeeping (frame goroutine).
-func (c *artCatalog) memStats() artMemStats {
+// MemStats reads the catalog's memory bookkeeping (frame goroutine).
+func (c *artCatalog) MemStats() artMemStats {
 	var s artMemStats
 	if c == nil {
 		return s
@@ -90,16 +90,16 @@ func (c *artCatalog) memStats() artMemStats {
 	}
 	s.Tints, s.TintBytes = c.tintLRU.order.Len(), c.tintLRU.bytes
 	seen := map[*spriteAtlas]bool{}
-	for _, sp := range c.sprites {
-		if sp.src == nil || seen[sp.src.atlas] {
+	for _, sp := range c.Sprites {
+		if sp.Src == nil || seen[sp.Src.Atlas] {
 			continue
 		}
-		a := sp.src.atlas
+		a := sp.Src.Atlas
 		seen[a] = true
 		a.mu.Lock()
-		for _, pg := range a.byPage {
+		for _, pg := range a.ByPage {
 			for _, o := range pg {
-				for _, z := range o.z {
+				for _, z := range o.Z {
 					s.AtlasHeld += int64(len(z))
 				}
 			}
@@ -122,7 +122,7 @@ func (s artMemStats) String() string {
 // warmCopy is one layer of a file sprite decoded ahead by the prewarm,
 // deflated; r is the decoded image's rectangle.
 type warmCopy struct {
-	z []byte
+	Z []byte
 	r image.Rectangle
 }
 
@@ -134,14 +134,14 @@ func (f *fileSrc) takeWarm(layer int) *image.NRGBA {
 	}
 	f.mem.mu.Lock()
 	f.taken[layer] = true
-	w := f.warm[layer]
-	f.warm[layer] = warmCopy{}
-	f.mem.warmHeld -= int64(len(w.z))
+	w := f.Warm[layer]
+	f.Warm[layer] = warmCopy{}
+	f.mem.warmHeld -= int64(len(w.Z))
 	f.mem.mu.Unlock()
-	if w.z == nil {
+	if w.Z == nil {
 		return nil
 	}
-	return inflateNRGBA(w.z, w.r)
+	return inflateNRGBA(w.Z, w.r)
 }
 
 // isTaken reports whether a fill already took layer of f.
@@ -159,21 +159,21 @@ func (f *fileSrc) publish(layer int, z []byte, r image.Rectangle) {
 	if f.taken[layer] {
 		return
 	}
-	f.warm[layer] = warmCopy{z: z, r: r}
+	f.Warm[layer] = warmCopy{Z: z, r: r}
 	f.mem.warmHeld += int64(len(z))
 	f.mem.warmPublished.Add(1)
 }
 
-// normalNRGBA is sp's normal map from its prewarmed copy or its file, nil
+// NormalNRGBA is sp's normal map from its prewarmed copy or its file, nil
 // when it has none.
-func (f *fileSrc) normalNRGBA(sp *artSprite) *image.NRGBA {
-	if sp.normalPath == "" {
+func (f *fileSrc) NormalNRGBA(sp *artSprite) *image.NRGBA {
+	if sp.NormalPath == "" {
 		return nil
 	}
 	if n := f.takeWarm(layerNorm); n != nil {
 		return n
 	}
-	n, _ := decodeNRGBA(sp.normalPath)
+	n, _ := decodeNRGBA(sp.NormalPath)
 	return n
 }
 
@@ -184,9 +184,9 @@ func (c *artCatalog) prewarmFileKeys() []string {
 		rank[f] = i + 1
 	}
 	var keys []string
-	for k, sp := range c.sprites {
+	for k, sp := range c.Sprites {
 		fam, _, _ := strings.Cut(k, "/")
-		if sp.file != nil && sp.file.mem != nil && !prewarmSkipFamilies[fam] {
+		if sp.File != nil && sp.File.mem != nil && !prewarmSkipFamilies[fam] {
 			keys = append(keys, k)
 		}
 	}
@@ -224,9 +224,9 @@ func (c *artCatalog) prewarmFiles(keys []string) {
 			defer wg.Done()
 			var z deflater
 			for i := next.Add(1) - 1; i < int64(len(keys)); i = next.Add(1) - 1 {
-				sp := c.sprites[keys[i]]
-				f := sp.file
-				for layer, path := range [atlasLayers]string{layerPix: f.image, layerMask: f.mask, layerNorm: sp.normalPath} {
+				sp := c.Sprites[keys[i]]
+				f := sp.File
+				for layer, path := range [atlasLayers]string{layerPix: f.Image, layerMask: f.mask, layerNorm: sp.NormalPath} {
 					if path == "" || f.isTaken(layer) {
 						continue
 					}
@@ -296,22 +296,22 @@ var cpuReadKeys = sync.OnceValue(func() map[string]bool {
 // tint mask shrinks to its coverage box (tintNRGBA and the GPU bake read
 // nothing outside it).
 func (c *artCatalog) release(key string, sp *artSprite) {
-	if !c.freeCPU || sp.pix == nil || c.mem == nil {
+	if !c.FreeCPU || sp.Pix == nil || c.mem == nil {
 		return
 	}
-	n := int64(len(sp.pix.Pix))
+	n := int64(len(sp.Pix.Pix))
 	if keepsCPUPixels(key) {
 		c.mem.kept.Add(1)
 		c.mem.keptBytes.Add(n)
 		return
 	}
-	sp.opaqueHeightPx()
-	if sp.mask != nil {
-		m := maskCoverage(sp.mask)
-		n += int64(len(sp.mask.Pix) - len(m.Pix))
-		sp.mask = m
+	sp.OpaqueHeightPx()
+	if sp.Mask != nil {
+		m := maskCoverage(sp.Mask)
+		n += int64(len(sp.Mask.Pix) - len(m.Pix))
+		sp.Mask = m
 	}
-	sp.pix = nil
+	sp.Pix = nil
 	c.mem.freed.Add(1)
 	c.mem.freedBytes.Add(n)
 }
@@ -377,12 +377,12 @@ func tintTexel(v, k, t uint8) uint8 {
 // bakeTint draws sp's image tinted through its mask into a new image of
 // the same size: a copy, then tint.kage over the mask's coverage box.
 func (c *artCatalog) bakeTint(sp *artSprite, tint color.NRGBA) *ebiten.Image {
-	b := sp.img.Bounds()
+	b := sp.Img.Bounds()
 	dst := ebiten.NewImage(b.Dx(), b.Dy())
-	dst.DrawImage(sp.img, &ebiten.DrawImageOptions{Blend: ebiten.BlendCopy})
+	dst.DrawImage(sp.Img, &ebiten.DrawImageOptions{Blend: ebiten.BlendCopy})
 	if sp.maskImg == nil && !sp.maskDone {
 		sp.maskDone = true
-		sp.maskImg, sp.maskBox = maskImage(sp.mask, b)
+		sp.maskImg, sp.maskBox = maskImage(sp.Mask, b)
 	}
 	sh, err := tintShader()
 	if sp.maskImg == nil || err != nil {
@@ -391,7 +391,7 @@ func (c *artCatalog) bakeTint(sp *artSprite, tint color.NRGBA) *ebiten.Image {
 	box := sp.maskBox
 	op := &ebiten.DrawRectShaderOptions{Blend: ebiten.BlendCopy}
 	op.GeoM.Translate(float64(box.Min.X-b.Min.X), float64(box.Min.Y-b.Min.Y))
-	op.Images[0] = sp.img.SubImage(box).(*ebiten.Image)
+	op.Images[0] = sp.Img.SubImage(box).(*ebiten.Image)
 	op.Images[1] = sp.maskImg
 	op.Uniforms = map[string]any{"Tint": []float32{float32(tint.R) / 255, float32(tint.G) / 255, float32(tint.B) / 255}}
 	dst.DrawRectShader(box.Dx(), box.Dy(), sh, op)
@@ -415,7 +415,7 @@ type tintEntry struct {
 
 // cachedTint returns the bake for k, marking it used; nil when none.
 func (c *artCatalog) cachedTint(k tintKey) *ebiten.Image {
-	img, ok := c.tinted[k]
+	img, ok := c.Tinted[k]
 	if !ok {
 		return nil
 	}
@@ -429,29 +429,29 @@ func (c *artCatalog) cachedTint(k tintKey) *ebiten.Image {
 // while the bakes exceed the budget (never the new one): each leaves
 // c.tinted and c.normals and is deallocated.
 func (c *artCatalog) addTint(k tintKey, img *ebiten.Image) {
-	if c.tinted == nil {
-		c.tinted = map[tintKey]*ebiten.Image{}
+	if c.Tinted == nil {
+		c.Tinted = map[tintKey]*ebiten.Image{}
 	}
 	if c.tintLRU.at == nil {
 		c.tintLRU.at = map[tintKey]*list.Element{}
 	}
 	sz := img.Bounds().Size()
 	e := &tintEntry{k: k, img: img, bytes: int64(sz.X * sz.Y * 4)}
-	c.tinted[k] = img
+	c.Tinted[k] = img
 	c.tintLRU.at[k] = c.tintLRU.order.PushFront(e)
 	c.tintLRU.bytes += e.bytes
 	if c.mem != nil {
 		c.mem.tintBake.Add(1)
 	}
-	budget := int64(c.tintBudget)
+	budget := int64(c.TintBudget)
 	if budget <= 0 {
 		budget = defaultTintBudget
 	}
 	for c.tintLRU.bytes > budget && c.tintLRU.order.Len() > 1 {
 		old := c.tintLRU.order.Remove(c.tintLRU.order.Back()).(*tintEntry)
 		delete(c.tintLRU.at, old.k)
-		delete(c.tinted, old.k)
-		delete(c.normals, old.img)
+		delete(c.Tinted, old.k)
+		delete(c.Normals, old.img)
 		c.tintLRU.bytes -= old.bytes
 		old.img.Deallocate()
 		if c.mem != nil {

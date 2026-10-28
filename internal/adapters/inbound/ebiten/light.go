@@ -705,7 +705,7 @@ func (r *Renderer) groundLamp(vs *[4]ebiten.Vertex) {
 		return
 	}
 	for i := range vs {
-		vs[i].Custom1 = g.groundLevel((float64(vs[i].DstX)+r.cam.offsetX)/tile, (float64(vs[i].DstY)+r.cam.offsetY)/tile)
+		vs[i].Custom1 = g.groundLevel((float64(vs[i].DstX)+r.cam.OffsetX)/tile, (float64(vs[i].DstY)+r.cam.OffsetY)/tile)
 	}
 }
 
@@ -788,7 +788,7 @@ func (r *Renderer) litSource(img *ebiten.Image) (src *ebiten.Image, off float32,
 	if r.lit.off { // lighting off: nothing is paired, the sprite is lit flat
 		return img, 0, false
 	}
-	n := r.art.normalOf(img)
+	n := r.art.NormalOf(img)
 	if n == nil {
 		return img, 0, false
 	}
@@ -929,14 +929,14 @@ func (c *artCatalog) groundPlane(img *ebiten.Image) bool {
 	if c == nil {
 		return false
 	}
-	for key, sp := range c.sprites {
-		if sp.img == img {
+	for key, sp := range c.Sprites {
+		if sp.Img == img {
 			return isGroundKey(key)
 		}
 	}
-	for k, t := range c.tinted {
+	for k, t := range c.Tinted {
 		if t == img {
-			return isGroundKey(k.key)
+			return isGroundKey(k.Key)
 		}
 	}
 	return false

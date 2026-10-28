@@ -52,7 +52,7 @@ func TestWorldTabListsCaravansAndReturns(t *testing.T) {
 		}
 	}
 	a.toggleWorld()
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalTop() != worldModalID {
 		t.Fatalf("top modal %q", a.uiModalTop())
 	}
@@ -74,7 +74,7 @@ func TestFormCaravanDialog(t *testing.T) {
 	a, f := colonyApp(t, s.stubSim)
 	a.renderer.game = s
 	a.openFormCaravan(&worldUI{picked: -1})
-	f.frame(t, a)
+	f.Frame(t, a)
 	send := "modal." + formCaravanID + ".form.send"
 	if w, _ := a.uiSt().find(send); !w.disabled || w.reason != formNoMembers {
 		t.Fatalf("Send with nothing picked: %+v", w)
@@ -86,7 +86,7 @@ func TestFormCaravanDialog(t *testing.T) {
 		t.Fatal("a hostile settlement can be picked")
 	}
 	press(t, a, f, "form.member.1")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if w, _ := a.uiSt().find(send); !w.disabled || w.reason != formNoDest {
 		t.Fatalf("Send without a destination: %+v", w)
 	}
@@ -107,7 +107,7 @@ func TestAssignTabHasNoAreaColumnAndOpensManager(t *testing.T) {
 	a, f := colonyApp(t, s.stubSim)
 	a.renderer.game = s
 	a.openAssign()
-	f.frame(t, a)
+	f.Frame(t, a)
 	if hasWidget(a, "assign.area.1") {
 		t.Fatal("the Assign tab still has an Area button")
 	}
@@ -115,7 +115,7 @@ func TestAssignTabHasNoAreaColumnAndOpensManager(t *testing.T) {
 		t.Fatal("the drug policy column is gone")
 	}
 	press(t, a, f, "assign.areas")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.uiModalTop() != areasModalID || !hasWidget(a, "areas.name.2") {
 		t.Fatalf("area manager not open: %q", a.uiModalTop())
 	}
@@ -154,7 +154,7 @@ func TestWorldTabChartsTheGlobe(t *testing.T) {
 	}
 	a.toggleWorld()
 	for i := 0; i < 3; i++ {
-		f.frame(t, a)
+		f.Frame(t, a)
 	}
 	if a.uiModalTop() != worldModalID || hasWidget(a, "modal."+worldModalID+".world.form") == false {
 		t.Fatal("World tab not open")

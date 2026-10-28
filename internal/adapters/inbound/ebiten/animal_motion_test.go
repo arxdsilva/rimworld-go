@@ -42,9 +42,9 @@ func (s *gaitSim) World() game.WorldView {
 // gaitArt is a catalog with one species' standing facings carrying a gait
 // (metadata only: nothing here draws).
 func gaitArt(species string, gait float64) *artCatalog {
-	c := &artCatalog{sprites: map[string]*artSprite{}, tinted: map[tintKey]*ebiten.Image{}}
+	c := &artCatalog{Sprites: map[string]*artSprite{}, Tinted: map[tintKey]*ebiten.Image{}}
 	for _, f := range []string{"south", "east", "north"} {
-		c.sprites["animal/"+species+"_"+f] = &artSprite{meta: artMeta{Canvas: [2]int{256, 192}, Origin: [2]float64{64, 128}, Gait: gait}}
+		c.Sprites["animal/"+species+"_"+f] = &artSprite{Meta: artMeta{Canvas: [2]int{256, 192}, Origin: [2]float64{64, 128}, Gait: gait}}
 	}
 	return c
 }

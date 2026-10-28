@@ -366,7 +366,7 @@ func TestDrawLitFlatAndNormalPaths(t *testing.T) {
 	sprite := ebiten.NewImage(8, 6)
 	normal := ebiten.NewImage(8, 6)
 	plain := ebiten.NewImage(4, 4)
-	r := &Renderer{art: &artCatalog{normals: map[*ebiten.Image]*ebiten.Image{sprite: normal}}}
+	r := &Renderer{art: &artCatalog{Normals: map[*ebiten.Image]*ebiten.Image{sprite: normal}}}
 	// PLAY-020 §3b: lamp light comes from a lamp, not from the room's Lit
 	// flag, so the lit room gets its lamp at (1, 1) (its tile: lamp 1).
 	w := roomWorld()
@@ -425,9 +425,9 @@ func TestGroundPlanesLitFlat(t *testing.T) {
 	soil, floor, chair, tinted := ebiten.NewImage(8, 8), ebiten.NewImage(8, 8), ebiten.NewImage(8, 8), ebiten.NewImage(8, 8)
 	n := ebiten.NewImage(8, 8)
 	art := &artCatalog{
-		sprites: map[string]*artSprite{"terrain/soil_00": {img: soil}, "structure/floor_wood": {}, "furniture/chair": {img: chair}},
-		tinted:  map[tintKey]*ebiten.Image{{key: "structure/floor_wood"}: floor, {key: "furniture/bed"}: tinted},
-		normals: map[*ebiten.Image]*ebiten.Image{soil: n, floor: n, chair: n, tinted: n},
+		Sprites: map[string]*artSprite{"terrain/soil_00": {Img: soil}, "structure/floor_wood": {}, "furniture/chair": {Img: chair}},
+		Tinted:  map[tintKey]*ebiten.Image{{Key: "structure/floor_wood"}: floor, {Key: "furniture/bed"}: tinted},
+		Normals: map[*ebiten.Image]*ebiten.Image{soil: n, floor: n, chair: n, tinted: n},
 	}
 	r := &Renderer{art: art}
 	for _, c := range []struct {
@@ -574,7 +574,7 @@ func BenchmarkDrawArtLitAB(b *testing.B) {
 		b.Run(mode, func(b *testing.B) {
 			r := New(g)
 			r.art = art
-			r.cam.zoom = 0.6
+			r.cam.Zoom = 0.6
 			if mode == "unlit" {
 				r.lit.err = errors.New("benchmark: unlit")
 			}

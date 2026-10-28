@@ -78,14 +78,14 @@ func TestBackgroundOffPausesAndKeepsSpeed(t *testing.T) {
 	t.Parallel()
 	a, s, f, _ := bgColony(t)
 	a.renderer.speed = speedFast
-	f.frame(t, a)
+	f.Frame(t, a)
 	before := s.steps
 	if before == 0 {
 		t.Fatal("a focused colony at speed Fast must tick")
 	}
-	f.cur.blurred = true
+	f.Cur.Blurred = true
 	for i := 0; i < 5; i++ {
-		f.frame(t, a)
+		f.Frame(t, a)
 	}
 	if s.steps != before {
 		t.Fatalf("ticks advanced while the window was in the background: %d -> %d", before, s.steps)
@@ -96,8 +96,8 @@ func TestBackgroundOffPausesAndKeepsSpeed(t *testing.T) {
 	if a.renderer.speed != speedFast {
 		t.Fatalf("the auto-pause changed the player's speed to %v", a.renderer.speed)
 	}
-	f.cur.blurred = false
-	f.frame(t, a)
+	f.Cur.Blurred = false
+	f.Frame(t, a)
 	if s.steps != before+speedFast.ticksPerFrame() {
 		t.Fatalf("refocus should resume at Fast: steps %d -> %d", before, s.steps)
 	}
@@ -111,12 +111,12 @@ func TestBackgroundKeepsManualPause(t *testing.T) {
 	t.Parallel()
 	a, s, f, _ := bgColony(t)
 	a.renderer.togglePause()
-	f.frame(t, a)
-	f.cur.blurred = true
-	f.frame(t, a)
-	f.cur.blurred = false
+	f.Frame(t, a)
+	f.Cur.Blurred = true
+	f.Frame(t, a)
+	f.Cur.Blurred = false
 	for i := 0; i < 3; i++ {
-		f.frame(t, a)
+		f.Frame(t, a)
 	}
 	if a.renderer.speed != speedPaused || s.steps != 0 {
 		t.Fatalf("manual pause lost across a background trip: speed %v, steps %d", a.renderer.speed, s.steps)
@@ -125,7 +125,7 @@ func TestBackgroundKeepsManualPause(t *testing.T) {
 		t.Fatalf("a manually paused colony shows %q after refocus", got)
 	}
 	a.renderer.togglePause() // the player resumes: ticks flow again
-	f.frame(t, a)
+	f.Frame(t, a)
 	if s.steps == 0 {
 		t.Fatal("resume after refocus should tick")
 	}
@@ -136,9 +136,9 @@ func TestBackgroundOnKeepsTicking(t *testing.T) {
 	t.Parallel()
 	a, s, f, _ := bgColony(t)
 	runInBackground(t, a, true)
-	f.cur.blurred = true
+	f.Cur.Blurred = true
 	for i := 0; i < 4; i++ {
-		f.frame(t, a)
+		f.Frame(t, a)
 	}
 	if s.steps != 4 {
 		t.Fatalf("steps = %d after 4 background frames at Normal, want 4", s.steps)
@@ -155,16 +155,16 @@ func TestBackgroundOnSwitchesVsync(t *testing.T) {
 	a, _, f, w := bgColony(t)
 	a.settings.Graphics.VSync = true // the player's choice; off by default since PERF-002
 	runInBackground(t, a, true)
-	f.frame(t, a)
+	f.Frame(t, a)
 	if !slices.Equal(w.calls, []string{"runnable:true"}) {
 		t.Fatalf("on, focused: calls %v, want the window made runnable once", w.calls)
 	}
-	f.cur.blurred = true
-	f.frame(t, a)
-	f.frame(t, a)
-	f.cur.blurred = false
-	f.frame(t, a)
-	f.frame(t, a)
+	f.Cur.Blurred = true
+	f.Frame(t, a)
+	f.Frame(t, a)
+	f.Cur.Blurred = false
+	f.Frame(t, a)
+	f.Frame(t, a)
 	want := []string{"runnable:true", "vsync:false", "vsync:true"}
 	if !slices.Equal(w.calls, want) {
 		t.Fatalf("calls = %v, want %v (one switch each way, not one per frame)", w.calls, want)
@@ -178,10 +178,10 @@ func TestBackgroundRestoresPlayersVsyncChoice(t *testing.T) {
 	s := a.settings
 	s.Gameplay.RunInBackground, s.Graphics.VSync = true, false
 	a.setSettings(s)
-	f.cur.blurred = true
-	f.frame(t, a)
-	f.cur.blurred = false
-	f.frame(t, a)
+	f.Cur.Blurred = true
+	f.Frame(t, a)
+	f.Cur.Blurred = false
+	f.Frame(t, a)
 	if last := w.calls[len(w.calls)-1]; last != "vsync:false" {
 		t.Fatalf("calls = %v, want the refocus to keep vsync off as chosen", w.calls)
 	}
@@ -191,10 +191,10 @@ func TestBackgroundRestoresPlayersVsyncChoice(t *testing.T) {
 func TestBackgroundOffLeavesWindowAlone(t *testing.T) {
 	t.Parallel()
 	a, _, f, w := bgColony(t)
-	f.cur.blurred = true
-	f.frame(t, a)
-	f.cur.blurred = false
-	f.frame(t, a)
+	f.Cur.Blurred = true
+	f.Frame(t, a)
+	f.Cur.Blurred = false
+	f.Frame(t, a)
 	if len(w.calls) != 0 {
 		t.Fatalf("window calls with the option off: %v", w.calls)
 	}
@@ -210,7 +210,7 @@ func TestBackgroundNeverPausesCapturesOrProbe(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			a, _, _, _ := bgColony(t)
 			set(a)
-			a.in.raw.blurred = true
+			a.in.Raw.Blurred = true
 			a.syncBackground()
 			if a.bg.paused {
 				t.Fatalf("%s: a background window must not pause", name)
@@ -238,8 +238,8 @@ func TestBackgroundDrawCap(t *testing.T) {
 	}
 
 	runInBackground(t, a, true)
-	f.cur.blurred = true
-	f.frame(t, a)
+	f.Cur.Blurred = true
+	f.Frame(t, a)
 	a.capBackgroundDraw() // first throttled frame sets the pace
 	clock = clock.Add(10 * time.Millisecond)
 	a.capBackgroundDraw()
@@ -270,7 +270,7 @@ func TestEbitenInputBlurredNeedsFocusFirst(t *testing.T) {
 		{true, false}, // back
 	}
 	for i, s := range steps {
-		if got := e.blurredFor(s.focused); got != s.blurred {
+		if got := e.BlurredFor(s.focused); got != s.blurred {
 			t.Fatalf("step %d (focused=%v): blurred = %v, want %v", i, s.focused, got, s.blurred)
 		}
 	}
@@ -284,7 +284,7 @@ func TestBackgroundUsesTheAppWindowByDefault(t *testing.T) {
 	a, _, f := inputColony(t, [2]int{5, 5})
 	a.cfg.Background, a.bg.win = w, nil
 	runInBackground(t, a, true)
-	f.frame(t, a)
+	f.Frame(t, a)
 	if !slices.Equal(w.calls, []string{"runnable:true"}) {
 		t.Fatalf("calls = %v, want the default window made runnable", w.calls)
 	}

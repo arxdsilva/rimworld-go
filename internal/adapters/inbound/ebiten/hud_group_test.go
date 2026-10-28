@@ -125,7 +125,7 @@ func TestGroupCommandRunsLegacyMembersOneByOne(t *testing.T) {
 	a.setTestCommands(func(*App, selKind, entity.EntityID) []cmdButton {
 		return []cmdButton{{ID: "pawn.clearorders", Key: "clear", Label: "Clear orders"}}
 	})
-	f.frame(t, a)
+	f.Frame(t, a)
 	var merged *cmdButton
 	for _, c := range a.selectionCommands() {
 		if c.Key == "clear" {
@@ -150,7 +150,7 @@ func TestPawnGroupDraftAndUndraft(t *testing.T) {
 	a, s, f := inputColony(t, [2]int{3, 3}, [2]int{4, 3}, [2]int{5, 3})
 	a.setGroup(selPawn, []entity.EntityID{1, 2, 3})
 	a.setTestCommands(noCommands) // only the group's own commands
-	f.frame(t, a)
+	f.Frame(t, a)
 	draft := func() cmdButton { return a.selectionCommands()[0] }
 	var ids []string
 	for _, c := range a.selectionCommands() {
@@ -220,7 +220,7 @@ func TestGroupPaneListsTheMembers(t *testing.T) {
 	t.Parallel()
 	a, _, f := inputColony(t, [2]int{3, 3}, [2]int{4, 3}, [2]int{5, 3})
 	a.setGroup(selPawn, []entity.EntityID{1, 2, 3})
-	f.frame(t, a)
+	f.Frame(t, a)
 	spec := a.selectionPane()
 	if spec.Title != "3 colonists" || spec.Close != "group.close" {
 		t.Fatalf("pane = %+v", spec)
@@ -252,7 +252,7 @@ func TestGroupHasNoLegacyPanel(t *testing.T) {
 	t.Parallel()
 	a, _, f := inputColony(t, [2]int{3, 3}, [2]int{4, 3})
 	a.setGroup(selPawn, []entity.EntityID{1, 2})
-	f.frame(t, a)
+	f.Frame(t, a)
 	pane := a.hud().Pane
 	for _, r := range a.chromeRects(a.sw, a.sh) {
 		if r.X == 8 && r.Y == 40 { // the legacy group panel sat at 8,40

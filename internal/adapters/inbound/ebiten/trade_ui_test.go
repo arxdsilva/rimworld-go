@@ -29,8 +29,8 @@ func dealApp(t *testing.T, s *dealSim) (*App, *fakeInput) {
 	a.finishBoot()
 	a.startGame()
 	f := fakeOn(a)
-	f.cur.mx, f.cur.my = -50, -50
-	f.frame(t, a)
+	f.Cur.Mx, f.Cur.My = -50, -50
+	f.Frame(t, a)
 	return a, f
 }
 
@@ -99,7 +99,7 @@ func TestTradeDialogEmitsProposeTrade(t *testing.T) {
 	t.Parallel()
 	s := &dealSim{tv: testTradeView(), tok: true}
 	a, f := dealApp(t, s)
-	f.frame(t, a)
+	f.Frame(t, a)
 	if !a.uiModalOpen() || a.renderer.speed != speedPaused {
 		t.Fatalf("open=%v speed=%v", a.uiModalOpen(), a.renderer.speed)
 	}
@@ -146,9 +146,9 @@ func TestTradeDialogCancelEmitsClose(t *testing.T) {
 	t.Parallel()
 	s := &dealSim{tv: testTradeView(), tok: true}
 	a, f := dealApp(t, s)
-	f.frame(t, a)
+	f.Frame(t, a)
 	clickID(t, a, f, "modal."+tradeModalID+".cancel")
-	f.frame(t, a)
+	f.Frame(t, a)
 	n := 0
 	for _, c := range s.cmds {
 		if c.Kind == command.CloseTrade {
@@ -159,7 +159,7 @@ func TestTradeDialogCancelEmitsClose(t *testing.T) {
 		t.Fatalf("CloseTrade x%d, modal open=%v (the live session must not reopen it)", n, a.uiModalOpen())
 	}
 	s.tok = false
-	f.frame(t, a)
+	f.Frame(t, a)
 	if a.renderer.speed == speedPaused && a.dealings.paused {
 		t.Fatal("pause not released")
 	}

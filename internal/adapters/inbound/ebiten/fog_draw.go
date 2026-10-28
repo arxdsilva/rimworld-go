@@ -135,10 +135,10 @@ func (r *Renderer) drawFogLayer(screen *ebiten.Image, fog []uint8, ver uint64, m
 	}
 	ncx := (mw + fogChunkTiles - 1) / fogChunkTiles
 	span := tile * fogChunkTiles
-	cx0 := max(int(math.Floor(r.cam.offsetX/span)), 0)
-	cy0 := max(int(math.Floor(r.cam.offsetY/span)), 0)
-	cx1 := min(int(math.Floor((r.cam.offsetX+float64(sw))/span)), ncx-1)
-	cy1 := min(int(math.Floor((r.cam.offsetY+float64(sh))/span)), (mh+fogChunkTiles-1)/fogChunkTiles-1)
+	cx0 := max(int(math.Floor(r.cam.OffsetX/span)), 0)
+	cy0 := max(int(math.Floor(r.cam.OffsetY/span)), 0)
+	cx1 := min(int(math.Floor((r.cam.OffsetX+float64(sw))/span)), ncx-1)
+	cy1 := min(int(math.Floor((r.cam.OffsetY+float64(sh))/span)), (mh+fogChunkTiles-1)/fogChunkTiles-1)
 	k := tile / fogPx
 	for cy := cy0; cy <= cy1; cy++ {
 		for cx := cx0; cx <= cx1; cx++ {

@@ -37,7 +37,7 @@ func pawnCrops(body *artSprite) (portrait, bust image.Rectangle) {
 	if body == nil {
 		return image.Rectangle{}, image.Rectangle{}
 	}
-	m := body.meta
+	m := body.Meta
 	head, ok := m.Attach["head"]
 	if !ok {
 		full := image.Rect(0, 0, m.Canvas[0], m.Canvas[1])
@@ -72,7 +72,7 @@ func pawnKey(layer string, l look.Look, facing string, built bool) string {
 // reserved for hostile clothing).
 func (c *artCatalog) clothTints() []string {
 	var out []string
-	for _, n := range c.tintNames("cloth") {
+	for _, n := range c.TintNames("cloth") {
 		if n != raiderCloth {
 			out = append(out, n)
 		}
@@ -113,21 +113,21 @@ type figureDress struct {
 // figure, the portraits and the colonist bar all draw from it, so the
 // look built on the pawns screen is the one walking in the colony.
 func figureLayers(art *artCatalog, l look.Look, fs string, d figureDress) []portraitLayer {
-	skin := art.tint("skin", pick(art.tintNames("skin"), l.Skin))
+	skin := art.Tint("skin", pick(art.TintNames("skin"), l.Skin))
 	cloths := art.clothTints()
-	cloth := func(i uint8) color.NRGBA { return art.tint("cloth", pick(cloths, i)) }
+	cloth := func(i uint8) color.NRGBA { return art.Tint("cloth", pick(cloths, i)) }
 	shirt, pants, vest := cloth(l.Shirt), cloth(l.Pants), cloth(l.VestCloth)
 	if d.raider {
 		l.Bare, l.Vest = false, true
-		shirt, vest, pants = art.tint("cloth", raiderCloth), art.tint("cloth", raiderCloth), art.tint("cloth", "slate")
+		shirt, vest, pants = art.Tint("cloth", raiderCloth), art.Tint("cloth", raiderCloth), art.Tint("cloth", "slate")
 	}
-	hairName := pick(art.tintNames("hair"), l.Hair)
+	hairName := pick(art.TintNames("hair"), l.Hair)
 	if l.Grey {
 		hairName = "grey"
 	}
-	hair := art.tint("hair", hairName)
+	hair := art.Tint("hair", hairName)
 	// A build whose art is missing falls back to the unsuffixed keys.
-	built := art.has(pawnKey("body", l, fs, true))
+	built := art.Has(pawnKey("body", l, fs, true))
 	key := func(layer string) string { return pawnKey(layer, l, fs, built) }
 
 	out := make([]portraitLayer, 0, 9)
@@ -158,7 +158,7 @@ func figureLayers(art *artCatalog, l look.Look, fs string, d figureDress) []port
 		out = append(out, portraitLayer{"pawn/hair_" + look.HairStyles[int(l.HairStyle)%n] + "_" + fs, hair})
 	}
 	if d.scarred {
-		if k := "pawn/face_scar_" + fs; art.has(k) {
+		if k := "pawn/face_scar_" + fs; art.Has(k) {
 			out = append(out, portraitLayer{k, color.NRGBA{}})
 		}
 	}
@@ -178,23 +178,23 @@ func drawLookPortrait(dst *ebiten.Image, art *artCatalog, l look.Look, x, y, w, 
 // drawPortrait is drawLookPortrait with the face scar of a disfigured
 // pawn (scarred).
 func drawPortrait(dst *ebiten.Image, art *artCatalog, l look.Look, scarred bool, x, y, w, h float64) bool {
-	if art == nil || !art.has(pawnKey("body", l, "south", false)) {
+	if art == nil || !art.Has(pawnKey("body", l, "south", false)) {
 		return false
 	}
-	body := art.sprite(pawnKey("body", l, "south", false))
+	body := art.Sprite(pawnKey("body", l, "south", false))
 	portraitCrop, _ := pawnCrops(body)
 	cw, ch := float64(portraitCrop.Dx()), float64(portraitCrop.Dy())
 	s := min(w/cw, h/ch)
 	ox, oy := x+(w-cw*s)/2, y+(h-ch*s)/2
 	drew := false
 	for _, ly := range scarredLayers(art, l, scarred) {
-		img := art.image(ly.key, ly.tint)
+		img := art.Image(ly.key, ly.tint)
 		if img == nil {
 			continue
 		}
 		b := img.Bounds()
 		// The crop is in canvas px; the image may be a multiple of it.
-		k := float64(b.Dx()) / float64(body.meta.Canvas[0])
+		k := float64(b.Dx()) / float64(body.Meta.Canvas[0])
 		crop := image.Rect(int(float64(portraitCrop.Min.X)*k), int(float64(portraitCrop.Min.Y)*k),
 			int(float64(portraitCrop.Max.X)*k), int(float64(portraitCrop.Max.Y)*k)).Intersect(b)
 		if crop.Empty() {
@@ -215,7 +215,7 @@ func drawPortrait(dst *ebiten.Image, art *artCatalog, l look.Look, scarred bool,
 // chrome (the inspector); it draws through the UI canvas, so the art
 // scales with the UI like the names beside it (PLAY-017).
 func (r *Renderer) drawPawnPortraitArt(screen *ebiten.Image, p game.PawnView, x, y, w, h float64) bool {
-	body := r.art.sprite("pawn/body_south")
+	body := r.art.Sprite("pawn/body_south")
 	if body == nil {
 		return false
 	}
@@ -229,7 +229,7 @@ func (r *Renderer) drawPawnPortraitArt(screen *ebiten.Image, p game.PawnView, x,
 // w x h box at (x, y), for the colonist bar; it draws through the UI
 // canvas like drawPawnPortraitArt.
 func (r *Renderer) drawPawnBustArt(screen *ebiten.Image, p game.PawnView, x, y, w, h float64) bool {
-	body := r.art.sprite("pawn/body_south")
+	body := r.art.Sprite("pawn/body_south")
 	if body == nil {
 		return false
 	}
@@ -241,7 +241,7 @@ func (r *Renderer) drawPawnBustArt(screen *ebiten.Image, p game.PawnView, x, y, 
 // drawPawnCropped draws p's portrait layers cut to crop (canvas px of
 // body's canvas) fitted into the logical w x h box at (x, y).
 func (r *Renderer) drawPawnCropped(screen *ebiten.Image, p game.PawnView, body *artSprite, crop image.Rectangle, x, y, w, h float64) {
-	canvasW := float64(body.meta.Canvas[0])
+	canvasW := float64(body.Meta.Canvas[0])
 	cw, ch := float64(crop.Dx()), float64(crop.Dy())
 	if cw <= 0 || ch <= 0 {
 		return
@@ -249,7 +249,7 @@ func (r *Renderer) drawPawnCropped(screen *ebiten.Image, p game.PawnView, body *
 	s := math.Min(w/cw, h/ch)
 	ox, oy := x+(w-cw*s)/2, y+(h-ch*s)/2
 	for _, ly := range r.pawnPortraitLayers(p) {
-		img := r.art.image(ly.key, ly.tint)
+		img := r.art.Image(ly.key, ly.tint)
 		if img == nil {
 			continue
 		}

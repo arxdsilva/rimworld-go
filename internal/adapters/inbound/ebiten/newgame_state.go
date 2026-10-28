@@ -360,7 +360,7 @@ func (a *App) ngFooter(footer rect, label, nextID string, o btnOpts, onNext func
 		onNext = func() { a.pageSound(); inner() }
 	}
 	a.ngButton(nextID, footerNext(footer), label, o, onNext)
-	if a.in.fired(input.Accept) && !o.Disabled && !a.uiModalOpen() && !a.uiTextEditing() {
+	if a.in.Fired(input.Accept) && !o.Disabled && !a.uiModalOpen() && !a.uiTextEditing() {
 		onNext()
 	}
 	if o.Disabled && o.Reason != "" {

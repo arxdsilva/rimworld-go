@@ -36,8 +36,8 @@ func learnColony(t *testing.T, store *fakeSettings, pre func(*App)) (*App, *stub
 		pre(a)
 	}
 	f := fakeOn(a)
-	f.frame(t, a) // the first frame places the camera
-	f.frame(t, a) // the helper takes its baselines
+	f.Frame(t, a) // the first frame places the camera
+	f.Frame(t, a) // the helper takes its baselines
 	return a, s, f
 }
 
@@ -206,18 +206,18 @@ func TestCameraLessonNeedsRealPanOrZoomInput(t *testing.T) {
 	t.Parallel()
 	hold := func(key string, n int) func(*testing.T, *App, *fakeInput) {
 		return func(t *testing.T, a *App, f *fakeInput) {
-			f.cur.held = []string{key}
+			f.Cur.Held = []string{key}
 			for range n {
-				f.frame(t, a)
+				f.Frame(t, a)
 			}
-			f.cur.held = nil
+			f.Cur.Held = nil
 		}
 	}
 	wheel := func(n int) func(*testing.T, *App, *fakeInput) {
 		return func(t *testing.T, a *App, f *fakeInput) {
 			for range n {
-				f.cur.wheelY = 1
-				f.frame(t, a)
+				f.Cur.WheelY = 1
+				f.Frame(t, a)
 			}
 		}
 	}
@@ -232,24 +232,24 @@ func TestCameraLessonNeedsRealPanOrZoomInput(t *testing.T) {
 		{"one wheel notch", wheel(1), false},
 		{"two wheel notches", wheel(2), true},
 		{"zoom keys", func(t *testing.T, a *App, f *fakeInput) {
-			f.key(t, a, "Equal", 0)
-			f.key(t, a, "Minus", 0)
+			f.Key(t, a, "Equal", 0)
+			f.Key(t, a, "Minus", 0)
 		}, true},
 		{"dragging with the middle button", func(t *testing.T, a *App, f *fakeInput) {
-			f.cur.down[mbMiddle] = true
+			f.Cur.Down[mbMiddle] = true
 			for range learnPanFrames {
-				f.frame(t, a)
+				f.Frame(t, a)
 			}
-			f.cur.down[mbMiddle] = false
+			f.Cur.Down[mbMiddle] = false
 		}, true},
 		{"the camera moved by other means", func(t *testing.T, a *App, f *fakeInput) {
 			// a resize, a scale change or a jump to an alert is not the player panning
-			a.renderer.cam.offsetX += 20 * a.renderer.tilePx()
-			a.renderer.cam.zoom *= 2
+			a.renderer.cam.OffsetX += 20 * a.renderer.tilePx()
+			a.renderer.cam.Zoom *= 2
 			a.centerOnMap(10, 10)
 			a.setPhysical(a.pw*3/2, a.ph*3/2)
 			for range 40 {
-				f.frame(t, a)
+				f.Frame(t, a)
 			}
 		}, false},
 	}
@@ -274,7 +274,7 @@ func TestSelectLesson(t *testing.T) {
 		t.Parallel()
 		a, _, f := learnColony(t, learnStore(), nil)
 		a.renderer.Select(1)
-		f.frame(t, a)
+		f.Frame(t, a)
 		if !learnDone(a, "select") {
 			t.Fatal("selecting a colonist should finish the lesson")
 		}
@@ -284,7 +284,7 @@ func TestSelectLesson(t *testing.T) {
 		a, s, f := learnColony(t, learnStore(), nil)
 		s.world.Buildings = []game.BuildingView{{ID: 7}} // the panels drop a selection that is not in the world
 		a.selBuilding, a.hasBuilding = 7, true
-		f.frame(t, a)
+		f.Frame(t, a)
 		if !learnDone(a, "select") {
 			t.Fatal("selecting a building should finish the lesson")
 		}
@@ -292,14 +292,14 @@ func TestSelectLesson(t *testing.T) {
 	t.Run("already selected at the start", func(t *testing.T) {
 		t.Parallel()
 		a, _, f := learnColony(t, learnStore(), func(a *App) { a.renderer.Select(1) })
-		f.frame(t, a)
+		f.Frame(t, a)
 		if learnDone(a, "select") {
 			t.Fatal("a selection that was there before the helper looked taught selecting")
 		}
 		a.renderer.ClearSelect()
-		f.frame(t, a)
+		f.Frame(t, a)
 		a.renderer.Select(1)
-		f.frame(t, a)
+		f.Frame(t, a)
 		if !learnDone(a, "select") {
 			t.Fatal("clearing then picking again should finish the lesson")
 		}
@@ -312,7 +312,7 @@ func TestSpeedLesson(t *testing.T) {
 		t.Parallel()
 		a, _, f := learnColony(t, learnStore(), nil)
 		a.renderer.setSpeed(speedFast)
-		f.frame(t, a)
+		f.Frame(t, a)
 		if !learnDone(a, "speed") {
 			t.Fatal("changing the speed should finish the lesson")
 		}
@@ -321,7 +321,7 @@ func TestSpeedLesson(t *testing.T) {
 		t.Parallel()
 		a, _, f := learnColony(t, learnStore(), nil)
 		a.renderer.togglePause()
-		f.frame(t, a)
+		f.Frame(t, a)
 		if !learnDone(a, "speed") {
 			t.Fatal("pausing is time control too")
 		}
@@ -330,13 +330,13 @@ func TestSpeedLesson(t *testing.T) {
 		t.Parallel()
 		a, _, f := learnColony(t, learnStore(), nil)
 		a.renderer.speed, a.renderer.threatPaused = speedPaused, true
-		f.frame(t, a)
+		f.Frame(t, a)
 		if learnDone(a, "speed") {
 			t.Fatal("the game pausing itself on a threat is not the player changing the speed")
 		}
 		a.renderer.threatPaused = false
 		a.renderer.setSpeed(speedNormal) // the player resumes
-		f.frame(t, a)
+		f.Frame(t, a)
 		if !learnDone(a, "speed") {
 			t.Fatal("resuming after a threat is the player's own choice")
 		}
@@ -489,8 +489,8 @@ func TestHelperFollowsANewColony(t *testing.T) {
 	if a.renderer == first {
 		t.Fatal("expected a new renderer")
 	}
-	f.frame(t, a)
-	f.frame(t, a)
+	f.Frame(t, a)
+	f.Frame(t, a)
 	a.renderer.enqueue(command.Command{Kind: command.SetResearch, Build: 1})
 	if !learnDone(a, "research") {
 		t.Fatal("the helper did not hook the new colony's renderer")
@@ -504,7 +504,7 @@ func TestHookKeepsAnExistingObserverAndWrapsOnce(t *testing.T) {
 		a.renderer.onEnqueue = func(command.Command) { seen++ }
 	})
 	for range 5 {
-		f.frame(t, a)
+		f.Frame(t, a)
 	}
 	a.renderer.enqueue(command.Command{Kind: command.DesignateBuild, Build: 1})
 	if seen != 1 {
@@ -533,11 +533,11 @@ func TestResetStartsTheLessonsAgain(t *testing.T) {
 	store := learnStore()
 	a, _, f := learnColony(t, store, nil)
 	pan := func() {
-		f.cur.held = []string{"D"}
+		f.Cur.Held = []string{"D"}
 		for range learnPanFrames + 1 {
-			f.frame(t, a)
+			f.Frame(t, a)
 		}
-		f.cur.held = nil
+		f.Cur.Held = nil
 	}
 	pan()
 	if !learnDone(a, "camera") {
@@ -549,7 +549,7 @@ func TestResetStartsTheLessonsAgain(t *testing.T) {
 		t.Fatalf("reset left %v", learnedNow(a))
 	}
 	for range 3 {
-		f.frame(t, a)
+		f.Frame(t, a)
 	}
 	if learnDone(a, "camera") {
 		t.Fatal("the panning done before the reset must not finish the lesson again")
@@ -632,8 +632,8 @@ func learnColonyAtScale(t *testing.T, pct int, winW, winH float64) (*App, *fakeI
 	a.startGame()
 	a.syncUIScale()
 	f := fakeOn(a)
-	f.frame(t, a)
-	f.frame(t, a)
+	f.Frame(t, a)
+	f.Frame(t, a)
 	return a, f
 }
 
@@ -764,7 +764,7 @@ func TestSelectLessonSeesEveryKindOfSelection(t *testing.T) {
 			s.world.Items = []game.ItemView{{ID: 5}}
 			s.world.Frames = []game.FrameView{{ID: 6}}
 			sel(a)
-			f.frame(t, a)
+			f.Frame(t, a)
 			if !learnDone(a, "select") {
 				t.Fatalf("selecting a %s did not finish the lesson", name)
 			}
@@ -855,7 +855,7 @@ func TestHighlightEnds(t *testing.T) {
 		t.Fatalf("flash = %q %v, want the build lesson", title, ok)
 	}
 	for range learnFlashFrames + 1 {
-		f.frame(t, a)
+		f.Frame(t, a)
 	}
 	if _, ok := a.learnFlash(); ok {
 		t.Fatal("the highlight should end")

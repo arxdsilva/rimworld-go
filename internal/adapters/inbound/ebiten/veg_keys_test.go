@@ -50,7 +50,7 @@ func TestGroundPlantWinterDormantAndFallbacks(t *testing.T) {
 		for _, season := range []string{"", "Fall", "Winter"} {
 			for x := 0; x < 12; x++ {
 				k, _ := plantSprite(game.PlantView{X: x, Y: 2, Species: sp, Growth: 30 + x*6})
-				if got := r.seasonKey(k, game.WorldView{Season: season}); !r.art.has(got) {
+				if got := r.seasonKey(k, game.WorldView{Season: season}); !r.art.Has(got) {
 					t.Fatalf("%s %q %s resolves to missing %s", sp, season, k, got)
 				}
 			}

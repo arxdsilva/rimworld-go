@@ -26,7 +26,7 @@ import (
 func assertChromeIsTheLayout(t *testing.T, a *App) {
 	t.Helper()
 	sw, sh := a.size()
-	regions := append(a.hud().chrome(), a.learnChrome()...)
+	regions := append(a.hud().Chrome(), a.learnChrome()...)
 	const step = 20
 	for y := step / 2; y < sh; y += step {
 		for x := step / 2; x < sw; x += step {
@@ -50,7 +50,7 @@ func assertChromeIsTheLayout(t *testing.T, a *App) {
 func assertButtonsInRegions(t *testing.T, a *App) {
 	t.Helper()
 	sw, sh := a.size()
-	regions := append(a.hud().chrome(), a.learnChrome()...)
+	regions := append(a.hud().Chrome(), a.learnChrome()...)
 	for _, b := range a.colonyButtons(sw, sh) {
 		br := rect{X: b.x, Y: b.y, W: b.w, H: b.h}
 		if br.Empty() {
@@ -261,7 +261,7 @@ func TestLiveLayoutRegionsNeverOverlap(t *testing.T) { // not parallel: it sets 
 						for _, c := range layoutCases() {
 							name := fmt.Sprintf("%dcol %dx%d ui%g minimap=%v learn=%v %s", n, sw, sh, ui, minimap, learn, c.name)
 							c.open(t, a)
-							f.frame(t, a)
+							f.Frame(t, a)
 							l := a.hud()
 							if !minimap != l.Minimap.Empty() || learn == l.Learn.Empty() {
 								t.Fatalf("%s: minimap %+v, learn %+v", name, l.Minimap, l.Learn)
@@ -416,7 +416,7 @@ func TestChromeBlocksDrawnRegionsOnly(t *testing.T) {
 	center := func(r rect) (int, int) { x, y := r.Center(); return int(x), int(y) }
 	for _, c := range layoutCases() {
 		c.open(t, a)
-		f.frame(t, a)
+		f.Frame(t, a)
 		l := a.hud()
 		for name, r := range layoutRegions(l) {
 			if name == "Minimap" { // its own click path: it recentres the camera
@@ -447,8 +447,8 @@ func TestChromeBlocksDrawnRegionsOnly(t *testing.T) {
 	}
 	// cell info: with nothing selected the hovered cell's lines float at the
 	// lower-left, and a click on them still reaches the map
-	f.cur.mx, f.cur.my = sw/2, sh/2
-	f.frame(t, a)
+	f.Cur.Mx, f.Cur.My = sw/2, sh/2
+	f.Frame(t, a)
 	r := a.cellInfoRect()
 	if r.Empty() {
 		t.Fatal("no cell info over the map")
@@ -468,14 +468,14 @@ func TestHUDRightClickNeverStealsADraftedMove(t *testing.T) {
 	s.world.Letters = s.world.Letters[:3]                 // room for the alerts too
 	a, f := colonyApp(t, s)
 	a.renderer.Select(3)
-	f.frame(t, a)
+	f.Frame(t, a)
 	sw, sh := a.size()
 	l := a.hud()
 	if len(l.GridCells) == 0 || l.Letters.Empty() || l.Alerts.Empty() {
 		t.Fatalf("the HUD is not busy: cells %d letters %+v alerts %+v", len(l.GridCells), l.Letters, l.Alerts)
 	}
 	// nowhere off the regions does the HUD take a right-click
-	regions := append(l.chrome(), a.learnChrome()...)
+	regions := append(l.Chrome(), a.learnChrome()...)
 	for y := 4; y < sh; y += 12 {
 		for x := 4; x < sw; x += 12 {
 			in := false
@@ -492,8 +492,8 @@ func TestHUDRightClickNeverStealsADraftedMove(t *testing.T) {
 	beside.X += cmdStride
 	bx, by := beside.Center()
 	s.cmds = nil
-	f.cur.mx, f.cur.my = int(bx), int(by)
-	f.click(t, a, mbRight, 0)
+	f.Cur.Mx, f.Cur.My = int(bx), int(by)
+	f.Click(t, a, mbRight, 0)
 	if m := cmdsOf(s, command.MovePawn); len(m) != 1 || m[0].Pawn != 3 {
 		t.Fatalf("a right-click on the map beside the grid: moves %+v", m)
 	}
@@ -502,8 +502,8 @@ func TestHUDRightClickNeverStealsADraftedMove(t *testing.T) {
 		s.cmds = nil
 		a.closeFloat()
 		cx, cy := r.Center()
-		f.cur.mx, f.cur.my = int(cx), int(cy)
-		f.click(t, a, mbRight, 0)
+		f.Cur.Mx, f.Cur.My = int(cx), int(cy)
+		f.Click(t, a, mbRight, 0)
 		if m := cmdsOf(s, command.MovePawn); len(m) != 0 {
 			t.Errorf("a right-click on the %s moved the colonist: %+v", name, m)
 		}
@@ -518,7 +518,7 @@ func TestKitWindowHasNoHiddenWorkCells(t *testing.T) {
 	s := busyStub(6)
 	a, f := colonyApp(t, s)
 	a.applyClick("tab.history")
-	f.frame(t, a)
+	f.Frame(t, a)
 	if !a.windowKitOpen() {
 		t.Fatal("the History window is not open")
 	}
@@ -530,8 +530,8 @@ func TestKitWindowHasNoHiddenWorkCells(t *testing.T) {
 	w := a.hud().Window
 	for _, p := range [][2]float32{{0.3, 0.4}, {0.5, 0.5}, {0.7, 0.6}} {
 		s.cmds = nil
-		f.cur.mx, f.cur.my = int(w.X+w.W*p[0]), int(w.Y+w.H*p[1])
-		f.click(t, a, mbLeft, 0)
+		f.Cur.Mx, f.Cur.My = int(w.X+w.W*p[0]), int(w.Y+w.H*p[1])
+		f.Click(t, a, mbLeft, 0)
 		if c := cmdsOf(s, command.SetWorkPriority); len(c) != 0 {
 			t.Fatalf("a click in the History window set a work priority: %+v", c)
 		}

@@ -131,31 +131,31 @@ func attachWorld(c *artCatalog, key, name string, x, y float64) (float64, float6
 	if c == nil {
 		return 0, 0, false
 	}
-	sp := c.sprites[key]
+	sp := c.Sprites[key]
 	if sp == nil {
 		return 0, 0, false
 	}
-	a, ok := sp.meta.Attach[name]
+	a, ok := sp.Meta.Attach[name]
 	if !ok {
 		return 0, 0, false
 	}
-	return x + (a[0]-sp.meta.Origin[0])/artTilePx, y + (a[1]-sp.meta.Origin[1])/artTilePx, true
+	return x + (a[0]-sp.Meta.Origin[0])/artTilePx, y + (a[1]-sp.Meta.Origin[1])/artTilePx, true
 }
 
 // drawUnlitSprite draws key unlit at world (wx, wy), multiplied by cs:
 // glow layers and overlay markings, which give their own light. false
 // when nothing was drawn (no art, off screen).
 func (r *Renderer) drawUnlitSprite(dst *ebiten.Image, key string, wx, wy, tile float64, sw, sh int, cs colorScale) bool {
-	sp := r.art.sprite(key)
+	sp := r.art.Sprite(key)
 	if sp == nil {
 		return false
 	}
 	sx, sy := r.worldToScreenF(wx, wy)
-	x, y, s := artOrigin(sp.meta, float64(sx), float64(sy), tile)
-	if !visible(float32(x), float32(y), float32(float64(sp.meta.Canvas[0])*s), float32(float64(sp.meta.Canvas[1])*s), sw, sh) {
+	x, y, s := artOrigin(sp.Meta, float64(sx), float64(sy), tile)
+	if !visible(float32(x), float32(y), float32(float64(sp.Meta.Canvas[0])*s), float32(float64(sp.Meta.Canvas[1])*s), sw, sh) {
 		return false
 	}
-	img := r.art.image(key, color.NRGBA{})
+	img := r.art.Image(key, color.NRGBA{})
 	if img == nil {
 		return false
 	}
@@ -174,7 +174,7 @@ func (r *Renderer) drawPowerParts(dst *ebiten.Image, b *game.BuildingView, key s
 		return
 	}
 	if poweredLook(b) {
-		if g := r.power.glowOf(key); r.art.has(g) && r.drawUnlitSprite(dst, g, float64(b.X), float64(b.Y), tile, sw, sh, noCS) {
+		if g := r.power.glowOf(key); r.art.Has(g) && r.drawUnlitSprite(dst, g, float64(b.X), float64(b.Y), tile, sw, sh, noCS) {
 			r.powerTrace("glow", g)
 		}
 	}
@@ -220,7 +220,7 @@ func (r *Renderer) drawConduits(screen *ebiten.Image, w game.WorldView, sw, sh i
 				r.layer("conduits")
 			}
 			if b.Kind == conduitKind {
-				if key := buildSprite(b.Kind, "", r.links.conduitMask(b.X, b.Y), false, false); r.art.has(key) {
+				if key := buildSprite(b.Kind, "", r.links.conduitMask(b.X, b.Y), false, false); r.art.Has(key) {
 					r.powerTrace("conduit", key)
 					r.drawSpriteCS(screen, key, none, float64(b.X), float64(b.Y), tile, sw, sh, noCS)
 				}
@@ -242,7 +242,7 @@ func (r *Renderer) drawConduits(screen *ebiten.Image, w game.WorldView, sw, sh i
 				p = r.links.plan(w.Frames, nil)
 			}
 			key := buildSprite(f.Kind, "", r.links.powerMask(conduitLink.accepts, f.X, f.Y, p), false, false)
-			if r.art.has(key) {
+			if r.art.Has(key) {
 				r.powerTrace("conduit frame", key)
 				r.drawSpriteCS(screen, key, none, float64(f.X), float64(f.Y), tile, sw, sh, blueprintCS)
 			}
@@ -359,15 +359,15 @@ func (r *Renderer) bladeAt(b *game.BuildingView, baseKey, bladeK string) (float6
 	if !ok {
 		return 0, 0, false
 	}
-	bl := r.art.sprites[bladeK]
+	bl := r.art.Sprites[bladeK]
 	if bl == nil {
 		return 0, 0, false
 	}
-	hub, ok := bl.meta.Attach["hub"]
+	hub, ok := bl.Meta.Attach["hub"]
 	if !ok {
 		return 0, 0, false
 	}
-	return rx - (hub[0]-bl.meta.Origin[0])/artTilePx, ry - (hub[1]-bl.meta.Origin[1])/artTilePx, true
+	return rx - (hub[0]-bl.Meta.Origin[0])/artTilePx, ry - (hub[1]-bl.Meta.Origin[1])/artTilePx, true
 }
 
 // drawTurbineBlades draws turbine b's blades over its base (key), on the
@@ -517,7 +517,7 @@ func (r *Renderer) drawNoPowerBadges(screen *ebiten.Image, w *game.WorldView, ti
 				continue
 			}
 			if img == nil {
-				if img = r.art.image(noPowerIcon, color.NRGBA{}); img == nil {
+				if img = r.art.Image(noPowerIcon, color.NRGBA{}); img == nil {
 					return
 				}
 			}

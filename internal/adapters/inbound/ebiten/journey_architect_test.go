@@ -184,8 +184,8 @@ func TestJourneyArchitectEscapeAndRightClickLeaveTool(t *testing.T) {
 		t.Fatal("second Escape left the Architect open")
 	}
 	j.openArch("structure", "wall")
-	j.f.moveTo(j.a, 9, 3)
-	j.f.click(j.t, j.a, mbRight, 0)
+	j.f.MoveTo(j.a, 9, 3)
+	j.f.Click(j.t, j.a, mbRight, 0)
 	if j.a.archTool != "" {
 		t.Fatalf("right-click left tool %q", j.a.archTool)
 	}

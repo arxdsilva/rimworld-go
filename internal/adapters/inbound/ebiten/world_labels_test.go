@@ -63,7 +63,7 @@ func wlOfKind(evs []traceEvent, kind string) []traceEvent {
 func wlArt() *artCatalog {
 	c := figureArt()
 	for _, k := range []string{"ui_icon/draft", "overlay/fight_lightning", "ui_icon/social_chitchat"} {
-		c.sprites[k] = fakeSprite([2]int{128, 128}, pt{0, 0}, nil)
+		c.Sprites[k] = fakeSprite([2]int{128, 128}, pt{0, 0}, nil)
 	}
 	return c
 }
@@ -73,7 +73,7 @@ func wlArt() *artCatalog {
 func wlRenderer(sc wlScale, zoom, offX, offY float64, pawns ...game.PawnView) *Renderer {
 	r := New(&stubSim{w: 32, h: 32, tick: 100})
 	r.art = wlArt()
-	r.cam.zoom, r.cam.offsetX, r.cam.offsetY, r.cam.dev = zoom, offX, offY, sc.dev
+	r.cam.Zoom, r.cam.OffsetX, r.cam.OffsetY, r.cam.Dev = zoom, offX, offY, sc.dev
 	r.view.Pawns = pawns
 	return r
 }

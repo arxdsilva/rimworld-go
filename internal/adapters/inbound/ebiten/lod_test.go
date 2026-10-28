@@ -37,8 +37,8 @@ func lodRenderer(w game.WorldView, mw, mh int) (*Renderer, *stubSim) {
 }
 
 func lodFrame(r *Renderer, tile float64) {
-	r.cam.zoom = tile / TileSize
-	r.cam.offsetX, r.cam.offsetY = 0, 0
+	r.cam.Zoom = tile / TileSize
+	r.cam.OffsetX, r.cam.OffsetY = 0, 0
 	screen := ebiten.NewImage(640, 400)
 	r.setView(640, 400, r.tilePx())
 	r.drawArt(screen, 640, 400, r.tilePx())
@@ -173,7 +173,7 @@ func TestLightGridBuildsOnlyReadChunks(t *testing.T) {
 func TestAnimalPadsFromLargestCanvas(t *testing.T) {
 	t.Parallel()
 	r := &Renderer{art: xlArt()} // canvas 6 x 3 tiles at 64 ppt: 2.5 west, 2.5 east, 2 up, 0 down
-	if e := r.art.animalExtent(); e.side != 2.5 || e.up != 2 || e.down != 0 {
+	if e := r.art.AnimalExtent(); e.Side != 2.5 || e.Up != 2 || e.Down != 0 {
 		t.Fatalf("extent %+v", e)
 	}
 	if pad, padS := r.animalPads(64); pad != 5 || padS != 4 {
@@ -183,7 +183,7 @@ func TestAnimalPadsFromLargestCanvas(t *testing.T) {
 		t.Fatalf("pads %d, %d at 8 px tiles (drawn at 16), want 8, 7", pad, padS)
 	}
 	bare := &Renderer{art: envArt("terrain/soil_00")}
-	if e := bare.art.animalExtent(); e.side != animalSpanFallback || e.up != animalSpanFallback {
+	if e := bare.art.AnimalExtent(); e.Side != animalSpanFallback || e.Up != animalSpanFallback {
 		t.Fatalf("no animal art: %+v", e)
 	}
 }
@@ -196,18 +196,18 @@ func TestBigAnimalOffScreenStillDraws(t *testing.T) {
 	w := lodWorld(64, 64)
 	w.Animals = []game.AnimalView{{ID: 1, Species: "elephant", X: 6, Y: 12}, {ID: 2, Species: "elephant", X: 4, Y: 12}}
 	r, _ := lodRenderer(w, 64, 64)
-	for k, sp := range xlArt().sprites {
-		sp.meta.Origin, sp.meta.Canvas = pt{288, 128}, [2]int{576, 192} // reaches 4.5 tiles east of its cell's west edge
-		r.art.sprites[k] = sp
+	for k, sp := range xlArt().Sprites {
+		sp.Meta.Origin, sp.Meta.Canvas = pt{288, 128}, [2]int{576, 192} // reaches 4.5 tiles east of its cell's west edge
+		r.art.Sprites[k] = sp
 	}
 	drawn := map[*ebiten.Image]int{}
 	r.lit.onDraw = func(img *ebiten.Image, _ float32) { drawn[img]++ }
-	r.cam.zoom, r.cam.offsetX, r.cam.offsetY = 1, 10*TileSize, 10*TileSize // the view starts at tile (10, 10)
+	r.cam.Zoom, r.cam.OffsetX, r.cam.OffsetY = 1, 10*TileSize, 10*TileSize // the view starts at tile (10, 10)
 	screen := ebiten.NewImage(640, 400)
 	r.advance()
 	r.setView(640, 400, r.tilePx())
 	r.drawArt(screen, 640, 400, r.tilePx())
-	img := r.art.sprites["animal/elephant_south"].img
+	img := r.art.Sprites["animal/elephant_south"].Img
 	if img == nil || drawn[img] != 1 {
 		t.Fatalf("the elephant reaching into the view drew %d times, want once (the other is off screen)", drawn[img])
 	}

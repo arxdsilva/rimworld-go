@@ -51,7 +51,7 @@ func stainBench(b *testing.B) (*Renderer, *ebiten.Image) {
 	g.Step(600)
 	r := New(&stainSim{Game: g, stains: benchStains(500, 80, 50)})
 	r.art = art
-	r.cam.zoom = 0.6
+	r.cam.Zoom = 0.6
 	return r, ebiten.NewImage(1280, 800)
 }
 

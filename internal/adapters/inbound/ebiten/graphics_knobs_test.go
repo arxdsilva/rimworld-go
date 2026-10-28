@@ -50,10 +50,10 @@ func TestShadowsOffSkipsTheLayer(t *testing.T) {
 // normalSprite is a sprite image with a normal map in art.
 func normalSprite(art *artCatalog) *ebiten.Image {
 	img, n := ebiten.NewImage(8, 6), ebiten.NewImage(8, 6)
-	if art.normals == nil {
-		art.normals = map[*ebiten.Image]*ebiten.Image{}
+	if art.Normals == nil {
+		art.Normals = map[*ebiten.Image]*ebiten.Image{}
 	}
-	art.normals[img] = n
+	art.Normals[img] = n
 	return img
 }
 
@@ -249,11 +249,11 @@ func waterRendererFixture() *Renderer {
 	r := &Renderer{}
 	r.view.W = roomWorld()
 	r.lit.light = lightAt(12, summerDay, "clear", 0)
-	r.art = &artCatalog{sprites: map[string]*artSprite{}}
+	r.art = &artCatalog{Sprites: map[string]*artSprite{}}
 	for v := 0; v < soilVariants; v++ {
 		img := ebiten.NewImage(16, 16)
 		img.Fill(color.NRGBA{40, 90, 160, 255})
-		r.art.sprites[artKey("terrain", "shallow_water", v)] = &artSprite{meta: artMeta{Canvas: [2]int{16, 16}}, img: img}
+		r.art.Sprites[artKey("terrain", "shallow_water", v)] = &artSprite{Meta: artMeta{Canvas: [2]int{16, 16}}, Img: img}
 	}
 	r.setView(64, 64, 32)
 	return r

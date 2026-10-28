@@ -221,7 +221,7 @@ func (a *App) drawPlantIcon(dst *ebiten.Image, p game.PlantView, x, y, size floa
 	if a.renderer == nil || a.renderer.art == nil {
 		return
 	}
-	if img := a.renderer.art.image(a.plantIconKey(p), color.NRGBA{}); img != nil {
+	if img := a.renderer.art.Image(a.plantIconKey(p), color.NRGBA{}); img != nil {
 		drawIcon(dst, img, x, y, size)
 	}
 }

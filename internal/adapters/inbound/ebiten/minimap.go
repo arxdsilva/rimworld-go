@@ -61,7 +61,7 @@ func (r *Renderer) toggleMinimap() {
 // minimapRect is the minimap's box for the logical screen ui: the
 // layout's Minimap rect.
 func (r *Renderer) minimapRect(ui viewport) rect {
-	return computeHUDLayout(int(ui.x1), int(ui.y1), hudState{MinimapOn: true, GlobalH: r.mini.globalH}).Minimap
+	return computeHUDLayout(int(ui.X1), int(ui.Y1), hudState{MinimapOn: true, GlobalH: r.mini.globalH}).Minimap
 }
 
 // minimapBox is the minimap's box and the map's rectangle inside it (the
@@ -92,10 +92,10 @@ func (r *Renderer) minimapClick(sx, sy int, ui, v viewport) bool {
 	tx := min(max((x-mx)/mw, 0), 1) * float64(r.game.Width())
 	ty := min(max((y-my)/mh, 0), 1) * float64(r.game.Height())
 	t := r.tilePx()
-	r.cam.offsetX = tx*t - (v.x0+v.x1)/2
-	r.cam.offsetY = ty*t - (v.y0+v.y1)/2
-	r.smooth.vx, r.smooth.vy = 0, 0
-	r.clampCamera(v)
+	r.cam.OffsetX = tx*t - (v.X0+v.X1)/2
+	r.cam.OffsetY = ty*t - (v.Y0+v.Y1)/2
+	r.smooth.Vx, r.smooth.Vy = 0, 0
+	r.ClampCamera(v)
 	return true
 }
 
@@ -190,8 +190,8 @@ func (r *Renderer) minimapView(v viewport, mx, my, mw, mh float64) (fx0, fy0, fx
 		return mx, my, mx, my
 	}
 	gw, gh := float64(r.game.Width()), float64(r.game.Height())
-	vx0, vy0 := (v.x0+r.cam.offsetX)/t, (v.y0+r.cam.offsetY)/t
-	vx1, vy1 := (v.x1+r.cam.offsetX)/t, (v.y1+r.cam.offsetY)/t
+	vx0, vy0 := (v.X0+r.cam.OffsetX)/t, (v.Y0+r.cam.OffsetY)/t
+	vx1, vy1 := (v.X1+r.cam.OffsetX)/t, (v.Y1+r.cam.OffsetY)/t
 	return mx + min(max(vx0/gw, 0), 1)*mw, my + min(max(vy0/gh, 0), 1)*mh,
 		mx + min(max(vx1/gw, 0), 1)*mw, my + min(max(vy1/gh, 0), 1)*mh
 }
