@@ -218,7 +218,7 @@ func pdWorld(rows ...string) (game.WorldView, int, int) {
 func pdGrid(rows ...string) *linkGrid {
 	w, wd, h := pdWorld(rows...)
 	g := &linkGrid{}
-	g.sync(w, wd, h)
+	g.Sync(w, wd, h)
 	return g
 }
 
@@ -233,7 +233,7 @@ func TestConduitMaskAll16(t *testing.T) {
 			}
 		}
 		g := pdGrid(string(cells[0:3]), string(cells[3:6]), string(cells[6:9]))
-		if got := g.conduitMask(1, 1); got != m {
+		if got := g.ConduitMask(1, 1); got != m {
 			t.Fatalf("mask %d: got %d", m, got)
 		}
 	}
@@ -250,17 +250,17 @@ func TestConduitLinksToTransmittersAndDevices(t *testing.T) {
 		"XCL",
 		".W.",
 	)
-	if got := g.conduitMask(1, 1); got != wallN|wallE|wallW {
+	if got := g.ConduitMask(1, 1); got != wallN|wallE|wallW {
 		t.Fatalf("conduit mask %d, want hidden N, lamp E, switch W (not the wall S)", got)
 	}
-	if got := g.conduitMask(1, 0); got != wallS {
+	if got := g.ConduitMask(1, 0); got != wallS {
 		t.Fatalf("hidden conduit mask %d, want the conduit S", got)
 	}
 	walls := pdGrid(
 		"WCW",
 		".C.",
 	)
-	if got := walls.mask(0, 0); got != 0 {
+	if got := walls.Mask(0, 0); got != 0 {
 		t.Fatalf("a wall beside a conduit links %d", got)
 	}
 	// a conduit under a wall: the wall keeps its wall mask, the conduit its own
@@ -268,11 +268,11 @@ func TestConduitLinksToTransmittersAndDevices(t *testing.T) {
 	w.Buildings = append(w.Buildings, game.BuildingView{ID: 99, Kind: conduitKind, X: 1, Y: 0, W: 1, H: 1})
 	w.Buildings = append(w.Buildings, game.BuildingView{ID: 98, Kind: conduitKind, X: 1, Y: 1, W: 1, H: 1})
 	under := &linkGrid{}
-	under.sync(w, wd, h)
-	if got := under.mask(1, 0); got != wallW {
+	under.Sync(w, wd, h)
+	if got := under.Mask(1, 0); got != wallW {
 		t.Fatalf("wall over a conduit: mask %d, want the wall W only", got)
 	}
-	if got := under.conduitMask(1, 0); got != wallS {
+	if got := under.ConduitMask(1, 0); got != wallS {
 		t.Fatalf("conduit under a wall: mask %d, want the conduit S only", got)
 	}
 	// a 2x2 generator's whole footprint is a device; a battery and a lamp too
@@ -282,7 +282,7 @@ func TestConduitLinksToTransmittersAndDevices(t *testing.T) {
 		".C.",
 		".B.",
 	)
-	if got := gen.conduitMask(1, 2); got != wallN|wallS {
+	if got := gen.ConduitMask(1, 2); got != wallN|wallS {
 		t.Fatalf("conduit under a generator's second row: mask %d, want N (generator) and S (battery)", got)
 	}
 }
@@ -291,17 +291,17 @@ func TestConduitFramesAndGhostsLink(t *testing.T) {
 	t.Parallel()
 	w, wd, h := pdWorld("C..", "...")
 	g := &linkGrid{}
-	g.sync(w, wd, h)
-	p := g.plan([]game.FrameView{{Kind: conduitKind, X: 1, Y: 0, W: 1, H: 1}}, []plannedCell{{x: 2, y: 0, flags: conduitLink.flags}})
-	if got := g.powerMask(conduitLink.accepts, 1, 0, p); got != wallE|wallW {
+	g.Sync(w, wd, h)
+	p := g.Plan([]game.FrameView{{Kind: conduitKind, X: 1, Y: 0, W: 1, H: 1}}, []plannedCell{{X: 2, Y: 0, Flags: conduitLink.Flags}})
+	if got := g.PowerMask(conduitLink.Accepts, 1, 0, p); got != wallE|wallW {
 		t.Fatalf("planned conduit mask %d, want the built conduit W and the ghost E", got)
 	}
 	// a planned device draws a stub too; walls planned beside do not
-	p = g.plan([]game.FrameView{{Kind: heaterKind, X: 0, Y: 1, W: 1, H: 1}, {Kind: "wall", X: 1, Y: 0, W: 1, H: 1}}, nil)
-	if got := g.powerMask(conduitLink.accepts, 0, 0, p); got != wallS {
+	p = g.Plan([]game.FrameView{{Kind: heaterKind, X: 0, Y: 1, W: 1, H: 1}, {Kind: "wall", X: 1, Y: 0, W: 1, H: 1}}, nil)
+	if got := g.PowerMask(conduitLink.Accepts, 0, 0, p); got != wallS {
 		t.Fatalf("conduit beside a planned heater and wall: mask %d, want S", got)
 	}
-	if got := g.plannedMask(p, wallLink.accepts, 1, 0); got != 0 {
+	if got := g.PlannedMask(p, wallLink.Accepts, 1, 0); got != 0 {
 		t.Fatalf("a planned wall joined a conduit: %d", got)
 	}
 }
@@ -345,7 +345,7 @@ func pdRenderer(t *testing.T, w game.WorldView) (*Renderer, *[]string) {
 	r := New(&stubSim{w: 20, h: 12, world: w})
 	r.art = pdArt()
 	r.view.W = w
-	r.links.sync(w, 20, 12)
+	r.links.Sync(w, 20, 12)
 	cv := game.ChunkView{}
 	for i := range w.Buildings {
 		cv.Buildings = append(cv.Buildings, int32(i))
@@ -829,12 +829,12 @@ func TestWallsJoinCoolers(t *testing.T) {
 	w, wd, h := pdWorld("W.W", "...")
 	w.Buildings = append(w.Buildings, game.BuildingView{ID: 40, Kind: coolerKind, Facing: "east", X: 1, Y: 0, W: 1, H: 1, PowerRole: "consumer"})
 	g := &linkGrid{}
-	g.sync(w, wd, h)
-	if g.mask(0, 0) != wallE || g.mask(2, 0) != wallW {
-		t.Fatalf("walls beside a cooler: %d, %d", g.mask(0, 0), g.mask(2, 0))
+	g.Sync(w, wd, h)
+	if g.Mask(0, 0) != wallE || g.Mask(2, 0) != wallW {
+		t.Fatalf("walls beside a cooler: %d, %d", g.Mask(0, 0), g.Mask(2, 0))
 	}
-	p := g.plan([]game.FrameView{{Kind: coolerKind, X: 1, Y: 1, W: 1, H: 1}}, nil)
-	if got := g.plannedMask(p, wallLink.accepts, 1, 0); got&wallS == 0 {
+	p := g.Plan([]game.FrameView{{Kind: coolerKind, X: 1, Y: 1, W: 1, H: 1}}, nil)
+	if got := g.PlannedMask(p, wallLink.Accepts, 1, 0); got&wallS == 0 {
 		t.Fatalf("a planned cooler under a gap: wall mask %d", got)
 	}
 }

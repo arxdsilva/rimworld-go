@@ -25,19 +25,19 @@ const (
 )
 
 type optionRow struct {
-	key, label string
+	Key, Label string
 	kind       rowKind
 	value      func(config.Settings) string
 	frac       func(config.Settings) float64   // stepper bar fill, 0..1
 	apply      func(s *config.Settings, d int) // d: -1/+1 for steppers, 0 to toggle/cycle
 	live       func(a *App) string             // value that needs the running app (Auto UI scale); overrides value
-	tip        string                          // hover line
+	Tip        string                          // hover line
 	extra      *optionAction                   // a second button beside the control
 	// applyApp, when set, replaces apply for a change that needs the running
 	// app (the screen's device scale, the hardware).
 	applyApp func(a *App, s *config.Settings, d int)
-	// col is 0 for the first column and 1 for the second (Graphics only).
-	col int
+	// Col is 0 for the first column and 1 for the second (Graphics only).
+	Col int
 }
 
 // optionAction is a one-shot button on a row (e.g. Reset lessons): it
@@ -88,14 +88,14 @@ func onOff(b bool) string {
 }
 
 func volumeRow(key, label string, get func(*config.Audio) *int) optionRow {
-	return optionRow{key: key, label: label, kind: rowStep,
+	return optionRow{Key: key, Label: label, kind: rowStep,
 		value: func(s config.Settings) string { return fmt.Sprintf("%d%%", *get(&s.Audio)) },
 		frac:  func(s config.Settings) float64 { return float64(*get(&s.Audio)) / 100 },
 		apply: func(s *config.Settings, d int) { *get(&s.Audio) += d * config.VolumeStep }}
 }
 
 func toggleRow(key, label string, get func(*config.Settings) *bool) optionRow {
-	return optionRow{key: key, label: label, kind: rowToggle,
+	return optionRow{Key: key, Label: label, kind: rowToggle,
 		value: func(s config.Settings) string { return onOff(*get(&s)) },
 		apply: func(s *config.Settings, _ int) { p := get(s); *p = !*p }}
 }
@@ -121,12 +121,12 @@ func autosaveLabel(days int) string {
 	return fmt.Sprintf("Every %d days", days)
 }
 
-func withTip(r optionRow, tip string) optionRow { r.tip = tip; return r }
+func withTip(r optionRow, tip string) optionRow { r.Tip = tip; return r }
 
 // chosenRow makes a graphics row record the player's hand-made change
 // (config.Graphics.Choose), so a quality preset never overwrites it.
 func chosenRow(r optionRow) optionRow {
-	inner, key := r.apply, r.key
+	inner, key := r.apply, r.Key
 	r.apply = func(s *config.Settings, d int) {
 		inner(s, d)
 		s.Graphics.Choose(key)
@@ -136,7 +136,7 @@ func chosenRow(r optionRow) optionRow {
 
 // choiceRow is a graphics row that cycles through values (one button).
 func choiceRow(key, label, tip string, get func(*config.Settings) *string, values []string) optionRow {
-	return chosenRow(optionRow{key: key, label: label, kind: rowChoice, tip: tip,
+	return chosenRow(optionRow{Key: key, Label: label, kind: rowChoice, Tip: tip,
 		value: func(s config.Settings) string { return titleCase(*get(&s)) },
 		apply: func(s *config.Settings, _ int) { p := get(s); *p = cycle(values, *p) }})
 }
@@ -145,8 +145,8 @@ func choiceRow(key, label, tip string, get func(*config.Settings) *string, value
 // detail row at once (the hand-picked marks are dropped), and Custom once a
 // single row is changed by hand. "Detect again" reads the hardware again.
 func qualityRow() optionRow {
-	r := optionRow{key: "quality", label: "Quality", kind: rowChoice,
-		tip:   "A preset for every detail row. Changing a single row by hand makes it Custom.",
+	r := optionRow{Key: "quality", Label: "Quality", kind: rowChoice,
+		Tip:   "A preset for every detail row. Changing a single row by hand makes it Custom.",
 		value: func(s config.Settings) string { return titleCase(s.Graphics.Quality) },
 		applyApp: func(a *App, s *config.Settings, _ int) {
 			s.Graphics.Chosen = nil // a preset replaces every row, including the hand-picked ones
@@ -174,7 +174,7 @@ func graphicsRows() []optionRow {
 	flag := func(key, label, tip string, get func(*config.Settings) *bool) optionRow {
 		return chosenRow(withTip(toggleRow(key, label, get), tip))
 	}
-	detail := func(r optionRow) optionRow { r.col = 1; return r }
+	detail := func(r optionRow) optionRow { r.Col = 1; return r }
 	return []optionRow{
 		qualityRow(),
 		toggleRow("fullscreen", "Fullscreen", func(s *config.Settings) *bool { return &s.Graphics.Fullscreen }),
@@ -203,8 +203,8 @@ func graphicsRows() []optionRow {
 // draws with VSync off (background.go frameCapGap), cycling config.FrameCaps;
 // 120 on every display by default.
 func frameCapRow() optionRow {
-	return chosenRow(optionRow{key: "framecap", label: "Frame cap", kind: rowChoice,
-		tip: "The most frames a second the game draws with VSync off: 120 on every display by default. " +
+	return chosenRow(optionRow{Key: "framecap", Label: "Frame cap", kind: rowChoice,
+		Tip: "The most frames a second the game draws with VSync off: 120 on every display by default. " +
 			"Off draws as fast as the computer can; on macOS the screen's own refresh still bounds it.",
 		value: func(s config.Settings) string { return frameCapLabel(s.Graphics.FrameCap) },
 		apply: func(s *config.Settings, _ int) {
@@ -224,8 +224,8 @@ func frameCapLabel(v int) string {
 // pixels the map draws at (world_scale.go), cycling config.RenderScales.
 // Applied live, like HiDPI (applySettings -> updateScale).
 func renderScaleRow() optionRow {
-	return chosenRow(optionRow{key: "renderscale", label: "World detail", kind: rowChoice,
-		tip: "How many pixels the map draws at on a high-density screen: Full, 3/4 or Half. " +
+	return chosenRow(optionRow{Key: "renderscale", Label: "World detail", kind: rowChoice,
+		Tip: "How many pixels the map draws at on a high-density screen: Full, 3/4 or Half. " +
 			"Half costs a quarter of the GPU fill; the interface stays sharp.",
 		value: func(s config.Settings) string { return renderScaleLabel(s.Graphics.RenderScale) },
 		apply: func(s *config.Settings, _ int) {
@@ -255,8 +255,8 @@ func uiScaleLabel(s config.Settings) string {
 // uiScaleRow cycles Auto, then every preset, then Auto again. The text
 // size follows it; there is no separate slider.
 func uiScaleRow() optionRow {
-	return optionRow{key: "uiscale", label: "UI scale", kind: rowChoice,
-		tip:   "Scales text and every panel. Auto fits the window.",
+	return optionRow{Key: "uiscale", Label: "UI scale", kind: rowChoice,
+		Tip:   "Scales text and every panel. Auto fits the window.",
 		value: uiScaleLabel,
 		live: func(a *App) string {
 			if a.settings.Accessibility.UIScaleAuto {
@@ -308,14 +308,14 @@ func optionRows(tab string) []optionRow {
 			toggleRow("pausethreat", "Pause on threat", func(s *config.Settings) *bool { return &s.Gameplay.PauseOnThreat }),
 			withTip(toggleRow("runinbackground", "Run in background", func(s *config.Settings) *bool { return &s.Gameplay.RunInBackground }),
 				"Keep the colony running while the window is in the background or minimised. Off: the game pauses until you come back."),
-			{key: "autosave", label: "Autosave", kind: rowChoice,
+			{Key: "autosave", Label: "Autosave", kind: rowChoice,
 				value: func(s config.Settings) string { return autosaveLabel(s.Gameplay.AutosaveDays) },
 				apply: func(s *config.Settings, _ int) {
 					s.Gameplay.AutosaveDays = cycle(config.AutosaveChoices, s.Gameplay.AutosaveDays)
 				}},
 			toggleRow("edgescroll", "Edge scrolling", func(s *config.Settings) *bool { return &s.Gameplay.EdgeScroll }),
 			learningHelperRow(),
-			{key: "panspeed", label: "Camera pan speed", kind: rowStep,
+			{Key: "panspeed", Label: "Camera pan speed", kind: rowStep,
 				value: func(s config.Settings) string { return fmt.Sprintf("%d%%", s.Gameplay.PanSpeed) },
 				frac: func(s config.Settings) float64 {
 					return float64(s.Gameplay.PanSpeed-config.PanSpeedMin) / (config.PanSpeedMax - config.PanSpeedMin)
@@ -362,11 +362,11 @@ func rowY(i int) float32 { return float32(optRowY + i*optRowStep) }
 func optPos(rows []optionRow, i int) (labelX, ctrlX, y float32) {
 	n := 0
 	for _, r := range rows[:i] {
-		if r.col == rows[i].col {
+		if r.Col == rows[i].Col {
 			n++
 		}
 	}
-	if rows[i].col == 1 {
+	if rows[i].Col == 1 {
 		return optCol2LabelX, optCol2CtrlX, rowY(n)
 	}
 	return 56, optCtrlX, rowY(n)
@@ -387,19 +387,19 @@ func (a *App) optionsButtons(sw, sh int) []button {
 		_, cx, y := optPos(rows, i)
 		if r.kind == rowStep {
 			out = append(out,
-				button{ID: ids.PrefixOptions + r.key + ".dec", Label: "-", X: cx, Y: y, W: optBtnH, H: optBtnH},
-				button{ID: ids.PrefixOptions + r.key + ".inc", Label: "+", X: cx + optBtnH + 8 + optBarW + 8, Y: y, W: optBtnH, H: optBtnH})
+				button{ID: ids.PrefixOptions + r.Key + ".dec", Label: "-", X: cx, Y: y, W: optBtnH, H: optBtnH},
+				button{ID: ids.PrefixOptions + r.Key + ".inc", Label: "+", X: cx + optBtnH + 8 + optBarW + 8, Y: y, W: optBtnH, H: optBtnH})
 			continue
 		}
-		lock := a.optionLock(r.key) // saves.go: developer mode is locked in commitment mode
-		out = append(out, button{ID: ids.PrefixOptions + r.key, Label: a.rowValue(r), X: cx, Y: y, W: 160, H: optBtnH,
-			Disabled: lock != "", Reason: lock, Tip: r.tip})
+		lock := a.optionLock(r.Key) // saves.go: developer mode is locked in commitment mode
+		out = append(out, button{ID: ids.PrefixOptions + r.Key, Label: a.rowValue(r), X: cx, Y: y, W: 160, H: optBtnH,
+			Disabled: lock != "", Reason: lock, Tip: r.Tip})
 		if x := r.extra; x != nil {
 			off := ""
 			if x.off != nil {
 				off = x.off(a)
 			}
-			out = append(out, button{ID: ids.PrefixOptions + r.key + "." + x.key, Label: x.label, X: cx + 160 + 8, Y: y, W: 150, H: optBtnH,
+			out = append(out, button{ID: ids.PrefixOptions + r.Key + "." + x.key, Label: x.label, X: cx + 160 + 8, Y: y, W: 150, H: optBtnH,
 				Tip: x.tip, Disabled: off != "", Reason: off})
 		}
 	}
@@ -421,7 +421,7 @@ func (a *App) applyOption(id string) {
 		return
 	}
 	for _, r := range optionRows(a.currentOptionsTab()) {
-		if x := r.extra; x != nil && key == r.key+"."+x.key {
+		if x := r.extra; x != nil && key == r.Key+"."+x.key {
 			if x.off != nil && x.off(a) != "" {
 				return
 			}
@@ -443,7 +443,7 @@ func (a *App) applyOption(id string) {
 		key, d = k, 1
 	}
 	for _, r := range optionRows(a.currentOptionsTab()) {
-		if r.key == key {
+		if r.Key == key {
 			s := a.settings
 			if r.applyApp != nil {
 				r.applyApp(a, &s, d)
@@ -477,7 +477,7 @@ func (a *App) drawOptions(screen *ebiten.Image, sw, sh int) {
 	for i, r := range rows {
 		lx, cx, y := optPos(rows, i)
 		ty := float64(y) + (optBtnH-lineH(tsBody))/2
-		drawText(screen, r.label, float64(lx), ty, tsBody)
+		drawText(screen, r.Label, float64(lx), ty, tsBody)
 		if r.kind != rowStep {
 			continue
 		}

@@ -24,7 +24,7 @@ func (a *App) drawWorldGen(screen *ebiten.Image, sw, sh int) {
 }
 
 func (a *App) drawPawns(screen *ebiten.Image, sw, sh int) {
-	if a.ng != nil && a.ng.load != nil {
+	if a.ng != nil && a.ng.Load != nil {
 		a.drawLoading(screen, sw, sh)
 		return
 	}

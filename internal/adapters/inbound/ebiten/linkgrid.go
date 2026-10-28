@@ -33,14 +33,14 @@ const (
 )
 
 // linkCell is what a cell is (flags) and what it joins (accepts).
-type linkCell struct{ flags, accepts linkFlag }
+type linkCell struct{ Flags, Accepts linkFlag }
 
 var (
-	rockLink  = linkCell{flags: linkRock | linkMapEdge, accepts: linkRock}
-	wallLink  = linkCell{flags: linkWall | linkRock, accepts: linkWall | linkRock}
-	fenceLink = linkCell{flags: linkFence, accepts: linkFence | linkWall}
+	rockLink  = linkCell{Flags: linkRock | linkMapEdge, Accepts: linkRock}
+	wallLink  = linkCell{Flags: linkWall | linkRock, Accepts: linkWall | linkRock}
+	fenceLink = linkCell{Flags: linkFence, Accepts: linkFence | linkWall}
 	// conduitLink is a conduit on the power layer.
-	conduitLink = linkCell{flags: linkConduit, accepts: linkConduit | linkDevice}
+	conduitLink = linkCell{Flags: linkConduit, Accepts: linkConduit | linkDevice}
 )
 
 // Corner bits: clockwise from north-east, like the cardinal mask bits.
@@ -67,7 +67,7 @@ var terrainLinkOf = func() [256]linkCell {
 func isRockWallName(n string) bool { return n == "rock" || n == "rock_smooth" }
 
 // isRockWallCode is isRockWallName for a WorldView.Terrain code.
-func isRockWallCode(c uint8) bool { return terrainLinkOf[c].flags&linkRock != 0 }
+func isRockWallCode(c uint8) bool { return terrainLinkOf[c].Flags&linkRock != 0 }
 
 // buildingLink is the link cell of a building or frame kind.
 func buildingLink(kind string) linkCell {
@@ -87,9 +87,9 @@ func powerLink(kind string) linkCell {
 	case isConduitKind(kind):
 		return conduitLink
 	case kind == powerSwitchKind:
-		return linkCell{flags: linkConduit}
+		return linkCell{Flags: linkConduit}
 	case powerDeviceKinds[kind]:
-		return linkCell{flags: linkDevice}
+		return linkCell{Flags: linkDevice}
 	}
 	return linkCell{}
 }
@@ -97,8 +97,8 @@ func powerLink(kind string) linkCell {
 // buildingPowerFlags are a built building's power-layer flags: by kind,
 // or a device by its view's PowerRole (the simulation's word).
 func buildingPowerFlags(b *game.BuildingView) linkFlag {
-	if c := powerLink(b.Kind); c.flags != 0 {
-		return c.flags
+	if c := powerLink(b.Kind); c.Flags != 0 {
+		return c.Flags
 	}
 	switch b.PowerRole {
 	case "producer", "consumer", "storage":
@@ -124,10 +124,10 @@ type linkGrid struct {
 	planned map[[2]int]linkFlag
 }
 
-// sync rebuilds the grid when it was never built, the map size changed or
+// Sync rebuilds the grid when it was never built, the map size changed or
 // w.StructVer moved. A zero StructVer (a sim that publishes no version)
 // rebuilds every call: correct, just not cached.
-func (g *linkGrid) sync(w game.WorldView, width, height int) {
+func (g *linkGrid) Sync(w game.WorldView, width, height int) {
 	if g.built && w.StructVer != 0 && w.StructVer == g.ver && g.w == width && g.h == height {
 		return
 	}
@@ -153,7 +153,7 @@ func (g *linkGrid) sync(w game.WorldView, width, height int) {
 	}
 	for i := range w.Buildings {
 		b := &w.Buildings[i]
-		if c := buildingLink(b.Kind); c.flags != 0 && g.in(b.X, b.Y) {
+		if c := buildingLink(b.Kind); c.Flags != 0 && g.in(b.X, b.Y) {
 			g.cells[b.Y*width+b.X] = c
 		}
 		if f := buildingPowerFlags(b); f != 0 {
@@ -181,14 +181,14 @@ func (g *linkGrid) stampPower(cells []linkFlag, p map[[2]int]linkFlag, f linkFla
 	}
 }
 
-// conduitMask is the power-layer mask of a built conduit at (x, y):
+// ConduitMask is the power-layer mask of a built conduit at (x, y):
 // N=1 E=2 S=4 W=8 for each neighbour it joins.
-func (g *linkGrid) conduitMask(x, y int) int { return g.powerMask(conduitLink.accepts, x, y, nil) }
+func (g *linkGrid) ConduitMask(x, y int) int { return g.PowerMask(conduitLink.Accepts, x, y, nil) }
 
-// powerMask is the power-layer mask at (x, y) of a cell accepting
+// PowerMask is the power-layer mask at (x, y) of a cell accepting
 // accepts, against the built layer plus the planned set p (nil: built
 // only). Nothing links off the map.
-func (g *linkGrid) powerMask(accepts linkFlag, x, y int, p map[[2]int]linkFlag) int {
+func (g *linkGrid) PowerMask(accepts linkFlag, x, y int, p map[[2]int]linkFlag) int {
 	m := 0
 	for _, d := range [4][3]int{{0, -1, wallN}, {1, 0, wallE}, {0, 1, wallS}, {-1, 0, wallW}} {
 		nx, ny := x+d[0], y+d[1]
@@ -215,32 +215,32 @@ func (g *linkGrid) at(x, y int) linkCell {
 	return g.cells[y*g.w+x]
 }
 
-// linked reports whether the cell at (x, y) joins its neighbour (nx, ny).
-func (g *linkGrid) linked(x, y, nx, ny int) bool { return g.linkOf(g.at(x, y), nx, ny, nil) }
+// Linked reports whether the cell at (x, y) joins its neighbour (nx, ny).
+func (g *linkGrid) Linked(x, y, nx, ny int) bool { return g.linkOf(g.at(x, y), nx, ny, nil) }
 
 // linkOf is linked for a cell c (built or planned) against the grid plus
 // the planned set p (nil: built only). Off the map only map-edge cells
 // link.
 func (g *linkGrid) linkOf(c linkCell, nx, ny int, p map[[2]int]linkFlag) bool {
-	if c.accepts == 0 {
+	if c.Accepts == 0 {
 		return false
 	}
 	if !g.in(nx, ny) {
-		return c.flags&linkMapEdge != 0
+		return c.Flags&linkMapEdge != 0
 	}
-	f := g.cells[ny*g.w+nx].flags
+	f := g.cells[ny*g.w+nx].Flags
 	if p != nil {
 		f |= p[[2]int{nx, ny}]
 	}
-	return f&c.accepts != 0
+	return f&c.Accepts != 0
 }
 
-// mask is the cardinal link mask of (x, y): N=1 E=2 S=4 W=8.
-func (g *linkGrid) mask(x, y int) int { return g.maskOf(g.at(x, y), x, y, nil) }
+// Mask is the cardinal link Mask of (x, y): N=1 E=2 S=4 W=8.
+func (g *linkGrid) Mask(x, y int) int { return g.maskOf(g.at(x, y), x, y, nil) }
 
-// corners is the filled-corner set of (x, y): NE=1 SE=2 SW=4 NW=8, each
+// Corners is the filled-corner set of (x, y): NE=1 SE=2 SW=4 NW=8, each
 // set when both its cardinals and its diagonal link.
-func (g *linkGrid) corners(x, y int) int { return g.cornersOf(g.at(x, y), x, y, nil) }
+func (g *linkGrid) Corners(x, y int) int { return g.cornersOf(g.at(x, y), x, y, nil) }
 
 func (g *linkGrid) maskOf(c linkCell, x, y int, p map[[2]int]linkFlag) int {
 	m := 0
@@ -279,42 +279,42 @@ func (g *linkGrid) cornersOf(c linkCell, x, y int, p map[[2]int]linkFlag) int {
 
 // plannedCell is a ghost (placement preview) cell for the planned set.
 type plannedCell struct {
-	x, y  int
-	flags linkFlag
+	X, Y  int
+	Flags linkFlag
 }
 
-// plan fills the reusable planned set with the frames' and ghosts' link
+// Plan fills the reusable planned set with the frames' and ghosts' link
 // flags (a device frame's power flags over its whole footprint): O(frames
 // + ghosts), never O(map).
-func (g *linkGrid) plan(frames []game.FrameView, ghosts []plannedCell) map[[2]int]linkFlag {
+func (g *linkGrid) Plan(frames []game.FrameView, ghosts []plannedCell) map[[2]int]linkFlag {
 	if g.planned == nil {
 		g.planned = map[[2]int]linkFlag{}
 	}
 	clear(g.planned)
 	for i := range frames {
 		f := &frames[i]
-		if c := buildingLink(f.Kind); c.flags != 0 {
-			g.planned[[2]int{f.X, f.Y}] |= c.flags
+		if c := buildingLink(f.Kind); c.Flags != 0 {
+			g.planned[[2]int{f.X, f.Y}] |= c.Flags
 		}
-		if c := powerLink(f.Kind); c.flags != 0 {
-			g.stampPower(nil, g.planned, c.flags, f.X, f.Y, f.W, f.H)
+		if c := powerLink(f.Kind); c.Flags != 0 {
+			g.stampPower(nil, g.planned, c.Flags, f.X, f.Y, f.W, f.H)
 		}
 	}
 	for _, c := range ghosts {
-		g.planned[[2]int{c.x, c.y}] |= c.flags
+		g.planned[[2]int{c.X, c.Y}] |= c.Flags
 	}
 	return g.planned
 }
 
-// plannedMask is the mask of a planned cell that accepts accepts, against
+// PlannedMask is the mask of a planned cell that accepts accepts, against
 // built cells and the planned set p.
-func (g *linkGrid) plannedMask(p map[[2]int]linkFlag, accepts linkFlag, x, y int) int {
-	return g.maskOf(linkCell{accepts: accepts}, x, y, p)
+func (g *linkGrid) PlannedMask(p map[[2]int]linkFlag, accepts linkFlag, x, y int) int {
+	return g.maskOf(linkCell{Accepts: accepts}, x, y, p)
 }
 
-// plannedCorners is cornersOf for a planned cell.
-func (g *linkGrid) plannedCorners(p map[[2]int]linkFlag, accepts linkFlag, x, y int) int {
-	return g.cornersOf(linkCell{accepts: accepts}, x, y, p)
+// PlannedCorners is cornersOf for a planned cell.
+func (g *linkGrid) PlannedCorners(p map[[2]int]linkFlag, accepts linkFlag, x, y int) int {
+	return g.cornersOf(linkCell{Accepts: accepts}, x, y, p)
 }
 
 // relevantCorners are the corners a mask can fill: NE with N and E, SE

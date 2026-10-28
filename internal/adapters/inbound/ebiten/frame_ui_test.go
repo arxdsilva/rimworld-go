@@ -38,7 +38,7 @@ func TestFrameSelectionCycle(t *testing.T) {
 	}
 	// footprint: a 2x1 frame covers its second tile
 	w = game.WorldView{Frames: []game.FrameView{{ID: 9, Kind: "workbench", X: 2, Y: 2, W: 2, H: 1}}}
-	if c := selectablesAt(w, nil, 3, 2); len(c) != 1 || c[0].kind != selFrame {
+	if c := selectablesAt(w, nil, 3, 2); len(c) != 1 || c[0].Kind != selFrame {
 		t.Fatalf("2x1 frame second tile = %v", c)
 	}
 }
@@ -275,8 +275,8 @@ func TestFenceSpriteKeys(t *testing.T) {
 		Buildings: []game.BuildingView{{Kind: "fence", X: 1, Y: 1}, {Kind: "fence gate", X: 2, Y: 1}, {Kind: "wall", X: 1, Y: 0}, {Kind: "bed", X: 0, Y: 1}},
 	}
 	var g linkGrid
-	g.sync(w, 3, 3)
-	if m := g.mask(1, 1); m != wallN|wallE {
+	g.Sync(w, 3, 3)
+	if m := g.Mask(1, 1); m != wallN|wallE {
 		t.Fatalf("mask = %d, want N|E (wall above, gate right, bed ignored)", m)
 	}
 	if lbl := fenceLabelAt(w, 1, 1); !strings.HasPrefix(lbl, "Fence") {

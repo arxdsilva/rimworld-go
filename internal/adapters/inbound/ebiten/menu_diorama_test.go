@@ -92,9 +92,9 @@ func TestMenuScrimDarkensRailAndTop(t *testing.T) {
 func testDiorama() *menuDiorama {
 	base := ebiten.NewImage(320, 180)
 	base.Fill(uiDust)
-	return &menuDiorama{levels: []*ebiten.Image{base, ebiten.NewImage(160, 90)},
-		lamp: ebiten.NewImage(160, 90), fire: ebiten.NewImage(160, 90), w: 320, h: 180, tilePx: 12.8,
-		fires: [][2]float64{{160, 100}}, lamps: [][2]float64{{150, 60}}}
+	return &menuDiorama{Levels: []*ebiten.Image{base, ebiten.NewImage(160, 90)},
+		Lamp: ebiten.NewImage(160, 90), Fire: ebiten.NewImage(160, 90), W: 320, H: 180, TilePx: 12.8,
+		Fires: [][2]float64{{160, 100}}, Lamps: [][2]float64{{150, 60}}}
 }
 
 func TestMainMenuDrawsDioramaOrFallsBack(t *testing.T) {
@@ -183,8 +183,8 @@ func TestMenuDioramaAssetsDecode(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(d.fires) == 0 || len(d.lamps) == 0 {
-		t.Fatalf("fires %v lamps %v: want at least one of each", d.fires, d.lamps)
+	if len(d.Fires) == 0 || len(d.Lamps) == 0 {
+		t.Fatalf("fires %v lamps %v: want at least one of each", d.Fires, d.Lamps)
 	}
 }
 

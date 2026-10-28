@@ -93,7 +93,7 @@ const youngBelow = 55
 
 // groundKeys is one ground plant's sprite keys per variant.
 type groundKeys struct {
-	young, mature, dormant, harvest [groundVariants]string
+	Young, Mature, Dormant, harvest [groundVariants]string
 }
 
 // groundPlants lists the ground plant species.
@@ -108,13 +108,13 @@ func groundPick(g *groundKeys, p game.PlantView, h uint64) string {
 	v := h % groundVariants
 	switch {
 	case p.Wilted:
-		return g.dormant[v]
+		return g.Dormant[v]
 	case p.Harvestable && g.harvest[v] != "":
 		return g.harvest[v]
 	case p.Growth < youngBelow:
-		return g.young[v]
+		return g.Young[v]
 	}
-	return g.mature[v]
+	return g.Mature[v]
 }
 
 // newPlantKey is the sprite of a biome or ground plant species (pine,
@@ -154,16 +154,16 @@ func addGroundPlantKeys(t *plantKeyTable) {
 				}
 				return []string{fmt.Sprintf("plant/%s_%s_v0", name, stage)}
 			}
-			g.young[v], g.mature[v], g.dormant[v] = key("young"), key("mature"), key("dormant")
-			t.fallback[g.young[v]] = append(v0("young"), g.mature[v])
-			t.fallback[g.mature[v]] = v0("mature")
-			t.fallback[g.dormant[v]] = append(v0("dormant"), g.mature[v])
-			winter := g.dormant[v]
-			t.seasonal[g.young[v]] = [2]string{g.young[v], winter}
-			t.seasonal[g.mature[v]] = [2]string{g.mature[v], winter}
+			g.Young[v], g.Mature[v], g.Dormant[v] = key("young"), key("mature"), key("dormant")
+			t.fallback[g.Young[v]] = append(v0("young"), g.Mature[v])
+			t.fallback[g.Mature[v]] = v0("mature")
+			t.fallback[g.Dormant[v]] = append(v0("dormant"), g.Mature[v])
+			winter := g.Dormant[v]
+			t.seasonal[g.Young[v]] = [2]string{g.Young[v], winter}
+			t.seasonal[g.Mature[v]] = [2]string{g.Mature[v], winter}
 			if berry {
 				g.harvest[v] = key("harvestable")
-				t.fallback[g.harvest[v]] = append(v0("harvestable"), g.mature[v])
+				t.fallback[g.harvest[v]] = append(v0("harvestable"), g.Mature[v])
 				t.seasonal[g.harvest[v]] = [2]string{g.harvest[v], winter}
 			}
 		}

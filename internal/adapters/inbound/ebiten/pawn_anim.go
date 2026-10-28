@@ -283,11 +283,11 @@ func (r *Renderer) drawCarriedBy(dst *ebiten.Image, p game.PawnView, fp pawnFigu
 func (r *Renderer) drawLayers(dst *ebiten.Image, p game.PawnView, layers []portraitLayer, wx, wy, tile float64, ps pose) {
 	blood := r.pawnBlood(p) // body and apparel only (blood_draw.go)
 	for _, ly := range layers {
-		r.figureBlood = layerBlood(ly.key, blood)
-		if strings.HasPrefix(ly.key, "pawn/beard_") {
+		r.figureBlood = layerBlood(ly.Key, blood)
+		if strings.HasPrefix(ly.Key, "pawn/beard_") {
 			r.figureBlood = 0
 		}
-		r.drawSpritePose(dst, ly.key, ly.tint, wx, wy, tile, ps)
+		r.drawSpritePose(dst, ly.Key, ly.Tint, wx, wy, tile, ps)
 	}
 	r.figureBlood = 0
 }

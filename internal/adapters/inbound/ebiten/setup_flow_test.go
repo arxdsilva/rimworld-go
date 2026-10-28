@@ -39,7 +39,7 @@ func toWorld(t *testing.T, a *App) {
 		t.Fatalf("screen = %s, want world_gen", a.nav.screen())
 	}
 	ng := a.draft()
-	ng.world.SeedText, ng.world.Coverage = tinySeed, 5
+	ng.World.SeedText, ng.World.Coverage = tinySeed, 5
 }
 
 // toLanding generates the tiny world and arrives at Select Landing Site.
@@ -57,7 +57,7 @@ func toPawns(t *testing.T, a *App) {
 	click(t, a, "land.random")
 	click(t, a, "wizard.next")
 	if a.nav.screen() != screenPawns {
-		t.Fatalf("screen = %s, want pawns (tile %d)", a.nav.screen(), a.draft().tile)
+		t.Fatalf("screen = %s, want pawns (tile %d)", a.nav.screen(), a.draft().Tile)
 	}
 	settleUI(t, a)
 }

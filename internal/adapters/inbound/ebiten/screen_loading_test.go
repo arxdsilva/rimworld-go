@@ -25,7 +25,7 @@ func TestStartBuildsSetupFromDraft(t *testing.T) {
 	click(t, a, "diff.seasoned")
 	click(t, a, "save.commit")
 	click(t, a, "wizard.next")
-	a.draft().world.SeedText, a.draft().world.Coverage = tinySeed, 5
+	a.draft().World.SeedText, a.draft().World.Coverage = tinySeed, 5
 	click(t, a, "world.generate")
 	runUntil(t, a, func() bool { return a.nav.screen() == screenLanding })
 	click(t, a, "land.random")
@@ -36,10 +36,10 @@ func TestStartBuildsSetupFromDraft(t *testing.T) {
 	press(t, a, f, "modal.land.advanced.close")
 	f.Frame(t, a)
 	ng := a.ng
-	tile, plt := ng.tile, ng.planet
+	tile, plt := ng.Tile, ng.Planet
 	click(t, a, "wizard.next")
 	f.Frame(t, a)
-	chosen := ng.pool.Selected()
+	chosen := ng.Pool.Selected()
 	click(t, a, "wizard.start")
 	if len(got) != 1 || got[0].Setup == nil {
 		t.Fatalf("NewSim calls: %+v", got)
@@ -86,11 +86,11 @@ func TestStartBuildsSetupFromDraft(t *testing.T) {
 
 func TestStartNeedsATileAndAPool(t *testing.T) {
 	t.Parallel()
-	ng := &newGameState{tile: -1}
-	if _, ok := ng.buildSetup(); ok {
+	ng := &newGameState{Tile: -1}
+	if _, ok := ng.BuildSetup(); ok {
 		t.Fatal("no planet, no setup")
 	}
-	if r := ng.startReason(); r == "" {
+	if r := ng.StartReason(); r == "" {
 		t.Fatal("no pool: Start is disabled")
 	}
 }
@@ -113,10 +113,10 @@ func TestColonyBuilderStepsToDone(t *testing.T) {
 	a, f, _ := ngTest(t, nil)
 	toPawns(t, a)
 	sb := &stepBuilder{need: 6, sim: &stubSim{w: 4, h: 4}}
-	a.ng.buildHook = func(NewGame) (SimBuilder, error) { return sb, nil }
+	a.ng.BuildHook = func(NewGame) (SimBuilder, error) { return sb, nil }
 	f.Frame(t, a)
 	click(t, a, "wizard.start")
-	if a.nav.screen() != screenPawns || a.ng == nil || a.ng.load == nil {
+	if a.nav.screen() != screenPawns || a.ng == nil || a.ng.Load == nil {
 		t.Fatalf("a builder that is not done keeps the loading screen: screen=%s", a.nav.screen())
 	}
 	img := ebiten.NewImage(a.sw, a.sh)
@@ -124,8 +124,8 @@ func TestColonyBuilderStepsToDone(t *testing.T) {
 	for i := 0; i < 20 && a.nav.screen() != screenColony; i++ {
 		f.Frame(t, a)
 		a.Draw(img)
-		if a.ng != nil && a.ng.load != nil {
-			phases = append(phases, a.ng.load.phase)
+		if a.ng != nil && a.ng.Load != nil {
+			phases = append(phases, a.ng.Load.Phase)
 		}
 	}
 	if a.nav.screen() != screenColony || a.renderer == nil || a.ng != nil {
@@ -140,10 +140,10 @@ func TestColonyBuilderStepsToDone(t *testing.T) {
 	// Esc or Back does nothing while the colony is built.
 	a2, f2, _ := ngTest(t, nil)
 	toPawns(t, a2)
-	a2.ng.buildHook = func(NewGame) (SimBuilder, error) { return &stepBuilder{need: 50, sim: &stubSim{w: 4, h: 4}}, nil }
+	a2.ng.BuildHook = func(NewGame) (SimBuilder, error) { return &stepBuilder{need: 50, sim: &stubSim{w: 4, h: 4}}, nil }
 	click(t, a2, "wizard.start")
 	f2.Key(t, a2, "Escape", 0)
-	if a2.nav.screen() != screenPawns || a2.ng.load == nil {
+	if a2.nav.screen() != screenPawns || a2.ng.Load == nil {
 		t.Fatalf("Esc while loading: screen=%s", a2.nav.screen())
 	}
 }
@@ -152,10 +152,10 @@ func TestStartFailureReturnsToCharacters(t *testing.T) {
 	t.Parallel()
 	a, f, _ := ngTest(t, nil)
 	toPawns(t, a)
-	a.ng.buildHook = func(NewGame) (SimBuilder, error) { return &stepBuilder{need: 1, err: errors.New("disk full")}, nil }
+	a.ng.BuildHook = func(NewGame) (SimBuilder, error) { return &stepBuilder{need: 1, err: errors.New("disk full")}, nil }
 	click(t, a, "wizard.start")
 	f.Frame(t, a)
-	if a.nav.screen() != screenPawns || a.ng == nil || a.ng.load != nil || a.sessionErr != "disk full" {
+	if a.nav.screen() != screenPawns || a.ng == nil || a.ng.Load != nil || a.sessionErr != "disk full" {
 		t.Fatalf("screen=%s err=%q", a.nav.screen(), a.sessionErr)
 	}
 	a.Draw(ebiten.NewImage(a.sw, a.sh)) // shows the failure

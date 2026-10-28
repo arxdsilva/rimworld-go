@@ -120,13 +120,13 @@ func searchResults(w game.WorldView, pawns []game.PawnView, q string) []searchHi
 		if hi.rank != hj.rank {
 			return hi.rank < hj.rank
 		}
-		if ki, kj := searchKindOrder[hi.c.kind], searchKindOrder[hj.c.kind]; ki != kj {
+		if ki, kj := searchKindOrder[hi.c.Kind], searchKindOrder[hj.c.Kind]; ki != kj {
 			return ki < kj
 		}
 		if hi.label != hj.label {
 			return hi.label < hj.label
 		}
-		return hi.c.id < hj.c.id
+		return hi.c.ID < hj.c.ID
 	})
 	if len(out) > searchMaxHits {
 		out = out[:searchMaxHits]

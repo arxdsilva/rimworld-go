@@ -97,7 +97,7 @@ func (a *App) factionsTable(r rect, rows []facRow, sel *int, pick func(facRow)) 
 // pushFactions opens the setup Factions dialog; a row click closes it and
 // shows the faction's settlements on the globe.
 func (a *App) pushFactions(ng *newGameState, g *globeView) {
-	rows := factionRows(ng.planet.Factions)
+	rows := factionRows(ng.Planet.Factions)
 	ng.facSel = -1
 	a.uiPushModal(modal{
 		ID: facModalID, Title: "Factions", W: facModalMaxW, H: facModalH,

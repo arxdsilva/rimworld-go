@@ -49,7 +49,7 @@ func syncedGrid(t *testing.T, rows ...string) *linkGrid {
 	t.Helper()
 	w, wd, h := linkWorld(t, 1, rows...)
 	g := &linkGrid{}
-	g.sync(w, wd, h)
+	g.Sync(w, wd, h)
 	return g
 }
 
@@ -73,11 +73,11 @@ func TestMaskAll16(t *testing.T) {
 			rows[3] = 'W'
 		}
 		g := syncedGrid(t, string(rows[0:3]), string(rows[3:6]), string(rows[6:9]))
-		if got := g.mask(1, 1); got != m {
+		if got := g.Mask(1, 1); got != m {
 			t.Fatalf("mask %d: got %d", m, got)
 		}
-		if g.corners(1, 1) != 0 {
-			t.Fatalf("mask %d: no diagonals, no corners, got %d", m, g.corners(1, 1))
+		if g.Corners(1, 1) != 0 {
+			t.Fatalf("mask %d: no diagonals, no corners, got %d", m, g.Corners(1, 1))
 		}
 	}
 }
@@ -88,10 +88,10 @@ func TestWallLinksRock(t *testing.T) {
 		".....",
 		".RWS.",
 		".....")
-	if got := g.mask(2, 1); got != wallE|wallW {
+	if got := g.Mask(2, 1); got != wallE|wallW {
 		t.Fatalf("wall between rough and smooth rock: mask %d", got)
 	}
-	if !g.linked(2, 1, 1, 1) || !g.linked(2, 1, 3, 1) {
+	if !g.Linked(2, 1, 1, 1) || !g.Linked(2, 1, 3, 1) {
 		t.Fatal("a wall links to natural rock both ways")
 	}
 }
@@ -102,14 +102,14 @@ func TestRockLinksWall(t *testing.T) {
 		".....",
 		".RW..",
 		".....")
-	if got := g.mask(1, 1); got != wallE {
+	if got := g.Mask(1, 1); got != wallE {
 		t.Fatalf("rock beside a wall: mask %d, want E", got)
 	}
 	g = syncedGrid(t,
 		".....",
 		".RD..",
 		".....")
-	if got := g.mask(1, 1); got != wallE {
+	if got := g.Mask(1, 1); got != wallE {
 		t.Fatalf("rock beside a door: mask %d, want E", got)
 	}
 }
@@ -120,20 +120,20 @@ func TestFenceOneWay(t *testing.T) {
 		".....",
 		".FWG.",
 		".....")
-	if got := g.mask(1, 1); got != wallE {
+	if got := g.Mask(1, 1); got != wallE {
 		t.Fatalf("fence joins the wall: mask %d", got)
 	}
-	if got := g.mask(2, 1); got != 0 {
+	if got := g.Mask(2, 1); got != 0 {
 		t.Fatalf("a wall never joins fences: mask %d", got)
 	}
-	if got := g.mask(3, 1); got != wallW {
+	if got := g.Mask(3, 1); got != wallW {
 		t.Fatalf("gate joins the wall: mask %d", got)
 	}
 	g = syncedGrid(t,
 		".....",
 		".FRF.",
 		".....")
-	if g.mask(1, 1) != 0 || g.mask(2, 1) != 0 {
+	if g.Mask(1, 1) != 0 || g.Mask(2, 1) != 0 {
 		t.Fatal("fences and rock do not link")
 	}
 }
@@ -145,10 +145,10 @@ func TestDiagonalOnlyNoLink(t *testing.T) {
 		".W..",
 		"..W.",
 		"....")
-	if g.mask(1, 1) != 0 || g.mask(2, 2) != 0 {
+	if g.Mask(1, 1) != 0 || g.Mask(2, 2) != 0 {
 		t.Fatal("diagonal walls do not link")
 	}
-	if g.corners(1, 1) != 0 || g.corners(2, 2) != 0 {
+	if g.Corners(1, 1) != 0 || g.Corners(2, 2) != 0 {
 		t.Fatal("diagonal walls fill no corner")
 	}
 }
@@ -167,11 +167,11 @@ func TestCorners2x2(t *testing.T) {
 		{2, 2}: {wallN | wallW, cornerNW},
 	}
 	for c, mc := range want {
-		if m, k := g.mask(c[0], c[1]), g.corners(c[0], c[1]); m != mc[0] || k != mc[1] {
+		if m, k := g.Mask(c[0], c[1]), g.Corners(c[0], c[1]); m != mc[0] || k != mc[1] {
 			t.Fatalf("%v: mask %d corners %d, want %d %d", c, m, k, mc[0], mc[1])
 		}
 	}
-	if got := linkedKey("structure/wall_stone", g.mask(1, 1), g.corners(1, 1)); got != "structure/wall_stone_06_c2" {
+	if got := linkedKey("structure/wall_stone", g.Mask(1, 1), g.Corners(1, 1)); got != "structure/wall_stone_06_c2" {
 		t.Fatalf("top-left of a 2x2 = %s", got)
 	}
 }
@@ -183,7 +183,7 @@ func TestCornerNoDiagonal(t *testing.T) {
 		".W..",
 		".WW.",
 		"....")
-	if m, k := g.mask(1, 1), g.corners(1, 1); m != wallN|wallE || k != 0 {
+	if m, k := g.Mask(1, 1), g.Corners(1, 1); m != wallN|wallE || k != 0 {
 		t.Fatalf("L corner: mask %d corners %d", m, k)
 	}
 	if got := linkedKey("structure/wall_stone", 3, 0); got != "structure/wall_stone_03" {
@@ -198,16 +198,16 @@ func TestCornerDiagonalOnly(t *testing.T) {
 		"..W.",
 		".W..",
 		"....")
-	if g.mask(1, 1) != 0 || g.corners(1, 1) != 0 {
-		t.Fatalf("diagonal only: mask %d corners %d", g.mask(1, 1), g.corners(1, 1))
+	if g.Mask(1, 1) != 0 || g.Corners(1, 1) != 0 {
+		t.Fatalf("diagonal only: mask %d corners %d", g.Mask(1, 1), g.Corners(1, 1))
 	}
 	// N linked and the diagonal set, but E open: still no NE corner
 	g = syncedGrid(t,
 		".WW.",
 		".W..",
 		"....")
-	if g.corners(1, 1) != 0 {
-		t.Fatalf("one cardinal + diagonal: corners %d", g.corners(1, 1))
+	if g.Corners(1, 1) != 0 {
+		t.Fatalf("one cardinal + diagonal: corners %d", g.Corners(1, 1))
 	}
 }
 
@@ -217,13 +217,13 @@ func TestMapEdgeRockLinksWallDoesNot(t *testing.T) {
 		"R..W",
 		"....",
 		"W..R")
-	if got := g.mask(0, 0); got != wallN|wallW {
+	if got := g.Mask(0, 0); got != wallN|wallW {
 		t.Fatalf("corner rock: mask %d, want N|W", got)
 	}
-	if got := g.mask(3, 2); got != wallS|wallE {
+	if got := g.Mask(3, 2); got != wallS|wallE {
 		t.Fatalf("corner rock: mask %d, want S|E", got)
 	}
-	if g.mask(3, 0) != 0 || g.mask(0, 2) != 0 {
+	if g.Mask(3, 0) != 0 || g.Mask(0, 2) != 0 {
 		t.Fatal("walls never link off the map")
 	}
 }
@@ -236,14 +236,14 @@ func TestMapEdgeCorners(t *testing.T) {
 		"...")
 	// top-left rock: N, W off the map, E and S rock, so every corner
 	// with linked cardinals and a linked diagonal fills
-	if m, k := g.mask(0, 0), g.corners(0, 0); m != 15 || k != cornerNE|cornerSW|cornerNW|cornerSE {
+	if m, k := g.Mask(0, 0), g.Corners(0, 0); m != 15 || k != cornerNE|cornerSW|cornerNW|cornerSE {
 		t.Fatalf("map-corner rock: mask %d corners %d", m, k)
 	}
 	if got := linkedKey("rock/rock_wall", 15, 15); got != "rock/rock_wall_15_cf" {
 		t.Fatalf("solid key = %s", got)
 	}
 	// (1, 0): N off map, W rock, S rock, E open: NW (off map) and SW fill
-	if m, k := g.mask(1, 0), g.corners(1, 0); m != wallN|wallS|wallW || k != cornerNW|cornerSW {
+	if m, k := g.Mask(1, 0), g.Corners(1, 0); m != wallN|wallS|wallW || k != cornerNW|cornerSW {
 		t.Fatalf("top edge rock: mask %d corners %d", m, k)
 	}
 }
@@ -257,11 +257,11 @@ func TestMineCentreOf3x3(t *testing.T) {
 		".RRR.",
 		".....")
 	g := &linkGrid{}
-	g.sync(w, wd, h)
+	g.Sync(w, wd, h)
 	before := map[[2]int][2]int{}
 	for y := 1; y <= 3; y++ {
 		for x := 1; x <= 3; x++ {
-			before[[2]int{x, y}] = [2]int{g.mask(x, y), g.corners(x, y)}
+			before[[2]int{x, y}] = [2]int{g.Mask(x, y), g.Corners(x, y)}
 		}
 	}
 	// mine the centre: the sim changes the terrain and bumps StructVer
@@ -269,10 +269,10 @@ func TestMineCentreOf3x3(t *testing.T) {
 	terr := append([]uint8(nil), w.Terrain...)
 	terr[2*wd+2] = soil
 	w.Terrain, w.StructVer = terr, 2
-	g.sync(w, wd, h)
+	g.Sync(w, wd, h)
 	card := map[[2]int]int{{2, 1}: wallS, {3, 2}: wallW, {2, 3}: wallN, {1, 2}: wallE}
 	for c, bit := range card {
-		if got := g.mask(c[0], c[1]); got != before[c][0]&^bit {
+		if got := g.Mask(c[0], c[1]); got != before[c][0]&^bit {
 			t.Fatalf("%v lost bit %d: mask %d -> %d", c, bit, before[c][0], got)
 		}
 	}
@@ -281,10 +281,10 @@ func TestMineCentreOf3x3(t *testing.T) {
 		if before[c][1]&bit == 0 {
 			t.Fatalf("%v should have had corner %d before", c, bit)
 		}
-		if got := g.corners(c[0], c[1]); got != before[c][1]&^bit {
+		if got := g.Corners(c[0], c[1]); got != before[c][1]&^bit {
 			t.Fatalf("%v lost corner %d: %d -> %d", c, bit, before[c][1], got)
 		}
-		if got := g.mask(c[0], c[1]); got != before[c][0] {
+		if got := g.Mask(c[0], c[1]); got != before[c][0] {
 			t.Fatalf("%v diagonal mine kept the mask: %d -> %d", c, before[c][0], got)
 		}
 	}
@@ -296,8 +296,8 @@ func TestChunksNeverLink(t *testing.T) {
 		".....",
 		".RcW.",
 		".....")
-	if g.mask(1, 1) != 0 || g.mask(3, 1) != 0 || g.mask(2, 1) != 0 {
-		t.Fatalf("a chunk joins nothing: %d %d %d", g.mask(1, 1), g.mask(2, 1), g.mask(3, 1))
+	if g.Mask(1, 1) != 0 || g.Mask(3, 1) != 0 || g.Mask(2, 1) != 0 {
+		t.Fatalf("a chunk joins nothing: %d %d %d", g.Mask(1, 1), g.Mask(2, 1), g.Mask(3, 1))
 	}
 }
 
@@ -337,11 +337,11 @@ func TestLinkGridRebuildOnlyOnVersion(t *testing.T) {
 		".WW..",
 		".....")
 	g := &linkGrid{}
-	g.sync(w, wd, h)
-	if g.mask(1, 1) != wallE {
+	g.Sync(w, wd, h)
+	if g.Mask(1, 1) != wallE {
 		t.Fatal("first sync builds")
 	}
-	if n := testing.AllocsPerRun(100, func() { g.sync(w, wd, h) }); n != 0 {
+	if n := testing.AllocsPerRun(100, func() { g.Sync(w, wd, h) }); n != 0 {
 		t.Fatalf("unchanged version allocates %v per sync", n)
 	}
 	// a changed world with the same version is not re-read
@@ -349,18 +349,18 @@ func TestLinkGridRebuildOnlyOnVersion(t *testing.T) {
 		".....",
 		".W...",
 		".....")
-	g.sync(w2, wd, h)
-	if g.mask(1, 1) != wallE {
+	g.Sync(w2, wd, h)
+	if g.Mask(1, 1) != wallE {
 		t.Fatal("same version must not rebuild")
 	}
 	w2.StructVer = 6
-	g.sync(w2, wd, h)
-	if g.mask(1, 1) != 0 {
+	g.Sync(w2, wd, h)
+	if g.Mask(1, 1) != 0 {
 		t.Fatal("a new version rebuilds")
 	}
 	// rebuilding at the same size reuses the cells
 	w.StructVer = 7
-	if n := testing.AllocsPerRun(20, func() { w.StructVer++; g.sync(w, wd, h) }); n != 0 {
+	if n := testing.AllocsPerRun(20, func() { w.StructVer++; g.Sync(w, wd, h) }); n != 0 {
 		t.Fatalf("rebuild allocates %v", n)
 	}
 }
@@ -373,12 +373,12 @@ func TestLinkedPlannedFramesJoinWalls(t *testing.T) {
 		".....")
 	w.Frames = []game.FrameView{{Kind: "wall", Stuff: "wood", X: 3, Y: 1, W: 1, H: 1}, {Kind: "wall", X: 3, Y: 2, W: 1, H: 1}}
 	g := &linkGrid{}
-	g.sync(w, wd, h)
-	p := g.plan(w.Frames, nil)
-	if got := g.plannedMask(p, linkWall|linkRock, 3, 1); got != wallW|wallS {
+	g.Sync(w, wd, h)
+	p := g.Plan(w.Frames, nil)
+	if got := g.PlannedMask(p, linkWall|linkRock, 3, 1); got != wallW|wallS {
 		t.Fatalf("frame joins the built wall and the frame below: %d", got)
 	}
-	if g.mask(2, 1) != wallW {
+	if g.Mask(2, 1) != wallW {
 		t.Fatal("built walls ignore frames")
 	}
 }
@@ -393,17 +393,17 @@ func TestPlannedCornersFillAcrossFramesAndWalls(t *testing.T) {
 		"....")
 	w.Frames = []game.FrameView{{Kind: "wall", X: 2, Y: 1}, {Kind: "wall", X: 2, Y: 2}}
 	g := &linkGrid{}
-	g.sync(w, wd, h)
-	p := g.plan(w.Frames, []plannedCell{{x: 1, y: 2, flags: wallLink.flags}})
-	if m, k := g.plannedMask(p, wallLink.accepts, 1, 2), g.plannedCorners(p, wallLink.accepts, 1, 2); m != wallN|wallE || k != cornerNE {
+	g.Sync(w, wd, h)
+	p := g.Plan(w.Frames, []plannedCell{{X: 1, Y: 2, Flags: wallLink.Flags}})
+	if m, k := g.PlannedMask(p, wallLink.Accepts, 1, 2), g.PlannedCorners(p, wallLink.Accepts, 1, 2); m != wallN|wallE || k != cornerNE {
 		t.Fatalf("ghost in a 2x2 of wall, frames and ghost: mask %d corners %d", m, k)
 	}
-	if k := g.plannedCorners(p, wallLink.accepts, 2, 1); k != cornerSW {
+	if k := g.PlannedCorners(p, wallLink.Accepts, 2, 1); k != cornerSW {
 		t.Fatalf("frame corner = %d", k)
 	}
 	// the plan is rebuilt each call: without the ghost the corner opens
-	p = g.plan(w.Frames, nil)
-	if k := g.plannedCorners(p, wallLink.accepts, 2, 1); k != 0 {
+	p = g.Plan(w.Frames, nil)
+	if k := g.PlannedCorners(p, wallLink.Accepts, 2, 1); k != 0 {
 		t.Fatalf("stale planned set: corner %d", k)
 	}
 }

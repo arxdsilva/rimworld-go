@@ -579,14 +579,14 @@ func TestOptionsRowTogglesTheHelper(t *testing.T) {
 	}
 	var row optionRow
 	for _, r := range optionRows("gameplay") {
-		if r.key == "learnhelper" {
+		if r.Key == "learnhelper" {
 			row = r
 		}
 	}
-	if row.label != "Learning helper" || row.tip == "" {
+	if row.Label != "Learning helper" || row.Tip == "" {
 		t.Fatalf("row = %+v, want the labelled, explained Learning helper row", row)
 	}
-	if w, _ := measure(row.label, tsBody); 56+w > optCtrlX-8 {
+	if w, _ := measure(row.Label, tsBody); 56+w > optCtrlX-8 {
 		t.Fatal("the label runs into its control")
 	}
 }
@@ -752,7 +752,7 @@ func TestSelectLessonSeesEveryKindOfSelection(t *testing.T) {
 		"plant":  func(a *App) { a.selPlant, a.hasPlant = 4, true },
 		"item":   func(a *App) { a.selItem, a.hasItem = 5, true },
 		"frame":  func(a *App) { a.selFrame, a.hasFrame = 6, true },
-		"group":  func(a *App) { a.group = selGroup{kind: selPawn, ids: []entity.EntityID{1, 2}} },
+		"group":  func(a *App) { a.group = selGroup{Kind: selPawn, Ids: []entity.EntityID{1, 2}} },
 	}
 	for name, sel := range kinds {
 		t.Run(name, func(t *testing.T) {

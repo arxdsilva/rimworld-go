@@ -139,7 +139,7 @@ func TestColonyUsesLookBuildAndBeard(t *testing.T) {
 	raider := r.pawnFigureLayers(game.PawnView{Look: l, Hostile: true}, "south")
 	byKey := map[string]color.NRGBA{}
 	for _, ly := range raider {
-		byKey[ly.key] = ly.tint
+		byKey[ly.Key] = ly.Tint
 	}
 	if byKey["pawn/shirt_basic_f_heavy_south"] != (color.NRGBA{120, 20, 30, 255}) || byKey["pawn/pants_basic_f_heavy_south"] != (color.NRGBA{60, 60, 70, 255}) {
 		t.Fatalf("raider clothes: %v", byKey)

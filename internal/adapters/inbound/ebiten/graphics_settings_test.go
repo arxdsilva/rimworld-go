@@ -337,16 +337,16 @@ func TestOptionsGraphicsLabelsFitTheirColumn(t *testing.T) {
 	t.Parallel()
 	a := testApp(&stubSim{w: 4, h: 4})
 	rows := optionRows("graphics")
-	if !slices.ContainsFunc(rows, func(r optionRow) bool { return r.key == "renderscale" && r.col == 1 }) {
+	if !slices.ContainsFunc(rows, func(r optionRow) bool { return r.Key == "renderscale" && r.Col == 1 }) {
 		t.Fatal("no World detail row in the detail column")
 	}
 	for i, r := range rows {
 		lx, cx, y := optPos(rows, i)
-		if w, _ := measure(r.label, tsBody); lx+float32(w) > cx-8 {
-			t.Fatalf("label %q (%v px at x=%v) runs into its control at x=%v", r.label, w, lx, cx)
+		if w, _ := measure(r.Label, tsBody); lx+float32(w) > cx-8 {
+			t.Fatalf("label %q (%v px at x=%v) runs into its control at x=%v", r.Label, w, lx, cx)
 		}
 		if y+optBtnH > float32(540-footerYOff) {
-			t.Fatalf("row %q at y=%v reaches the footer of a 540 px window", r.key, y)
+			t.Fatalf("row %q at y=%v reaches the footer of a 540 px window", r.Key, y)
 		}
 	}
 	a.optionsTab = "graphics"

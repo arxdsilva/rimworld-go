@@ -430,13 +430,13 @@ func TestBodyPickComesAfterTheTilesOwnThings(t *testing.T) {
 		Plants:  []game.PlantView{{ID: 7, Species: "grass", X: 12, Y: 10}, {ID: 8, Species: "grass", X: 11, Y: 9}},
 	}
 	out, solid := selectablesSplit(w, nil, 12, 10)
-	if solid != 1 || len(out) != 2 || out[0].kind != selItem || out[1].kind != selPlant {
+	if solid != 1 || len(out) != 2 || out[0].Kind != selItem || out[1].Kind != selPlant {
 		t.Fatalf("tile (12, 10): %+v, solid %d", out, solid)
 	}
 	a := testApp(&stubSim{w: 40, h: 40, world: w})
 	a.renderer = pickRenderer(w)
 	got := a.selectables(w, 12, 10)
-	if len(got) != 3 || got[0].kind != selItem || got[1] != (selCand{selAnimal, 5}) || got[2].kind != selPlant {
+	if len(got) != 3 || got[0].Kind != selItem || got[1] != (selCand{selAnimal, 5}) || got[2].Kind != selPlant {
 		t.Fatalf("item, then the body, then the grass: %+v", got)
 	}
 	if got := a.selectables(w, 11, 9); len(got) != 2 || got[0] != (selCand{selAnimal, 5}) {
@@ -568,7 +568,7 @@ func TestRealElephantFlankPicks(t *testing.T) {
 		r.last[id] = v
 	}
 	for _, tile := range [][2]int{{9, 10}, {11, 10}} {
-		if got := r.animalsCovering(w, tile[0], tile[1]); len(got) != 1 || got[0].id != 5 {
+		if got := r.animalsCovering(w, tile[0], tile[1]); len(got) != 1 || got[0].ID != 5 {
 			t.Errorf("tile %v beside the elephant: %+v", tile, got)
 		}
 	}

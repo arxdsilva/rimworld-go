@@ -55,8 +55,8 @@ func TestJourneyHudBarSelectAndShift(t *testing.T) {
 	}
 	j.settle()
 	j.clickWith(bar(1), input.ModShift)
-	if !j.a.grouped() || len(j.a.group.ids) != 2 {
-		t.Fatalf("Shift on the bar gave group %v, want both", j.a.group.ids)
+	if !j.a.grouped() || len(j.a.group.Ids) != 2 {
+		t.Fatalf("Shift on the bar gave group %v, want both", j.a.group.Ids)
 	}
 }
 

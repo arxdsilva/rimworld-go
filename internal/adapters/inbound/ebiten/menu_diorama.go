@@ -37,11 +37,11 @@ const (
 )
 
 type menuDiorama struct {
-	levels       []*ebiten.Image // full, 1/2, 1/4: no shimmer when the pan minifies
-	lamp, fire   *ebiten.Image   // additive glow, half resolution
-	w, h         int
-	tilePx       float64
-	fires, lamps [][2]float64 // base-image pixels
+	Levels       []*ebiten.Image // full, 1/2, 1/4: no shimmer when the pan minifies
+	Lamp, Fire   *ebiten.Image   // additive glow, half resolution
+	W, H         int
+	TilePx       float64
+	Fires, Lamps [][2]float64 // base-image pixels
 	scrim        *ebiten.Image
 	scrimW       int
 	scrimH       int
@@ -68,11 +68,11 @@ func loadMenuDiorama(root string) (*menuDiorama, error) {
 	if err != nil {
 		return nil, err
 	}
-	d := &menuDiorama{levels: []*ebiten.Image{base}, w: m.Canvas[0], h: m.Canvas[1], tilePx: artTilePx}
-	if d.lamp, err = img(metaScalar(string(raw), "glow_lamp")); err != nil {
+	d := &menuDiorama{Levels: []*ebiten.Image{base}, W: m.Canvas[0], H: m.Canvas[1], TilePx: artTilePx}
+	if d.Lamp, err = img(metaScalar(string(raw), "glow_lamp")); err != nil {
 		return nil, err
 	}
-	if d.fire, err = img(metaScalar(string(raw), "glow_fire")); err != nil {
+	if d.Fire, err = img(metaScalar(string(raw), "glow_fire")); err != nil {
 		return nil, err
 	}
 	keys := make([]string, 0, len(m.Attach))
@@ -83,13 +83,13 @@ func loadMenuDiorama(root string) (*menuDiorama, error) {
 	for _, k := range keys {
 		switch {
 		case strings.HasPrefix(k, "fire"):
-			d.fires = append(d.fires, m.Attach[k])
+			d.Fires = append(d.Fires, m.Attach[k])
 		case strings.HasPrefix(k, "lamp"):
-			d.lamps = append(d.lamps, m.Attach[k])
+			d.Lamps = append(d.Lamps, m.Attach[k])
 		}
 	}
 	for i := 1; i < 3; i++ {
-		prev := d.levels[i-1]
+		prev := d.Levels[i-1]
 		w, h := prev.Bounds().Dx()/2, prev.Bounds().Dy()/2
 		if w < 1 || h < 1 {
 			break
@@ -98,7 +98,7 @@ func loadMenuDiorama(root string) (*menuDiorama, error) {
 		op := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear}
 		op.GeoM.Scale(0.5, 0.5)
 		lv.DrawImage(prev, op)
-		d.levels = append(d.levels, lv)
+		d.Levels = append(d.Levels, lv)
 	}
 	return d, nil
 }
@@ -232,7 +232,7 @@ func (a *App) drawMenuDiorama(screen *ebiten.Image, sw, sh int, dim float64) boo
 		sw, sh = b.Dx(), b.Dy()
 	}
 	d := a.menu
-	if d == nil || len(d.levels) == 0 || sw < 1 || sh < 1 {
+	if d == nil || len(d.Levels) == 0 || sw < 1 || sh < 1 {
 		return false
 	}
 	t := float64(a.menuTick)
@@ -241,30 +241,30 @@ func (a *App) drawMenuDiorama(screen *ebiten.Image, sw, sh int, dim float64) boo
 	if a.settings.Accessibility.ReducedMotion { // still frame; the fire still burns
 		view = 0
 	}
-	s, ox, oy := menuView(d.w, d.h, sw, sh, view)
+	s, ox, oy := menuView(d.W, d.H, sw, sh, view)
 	lv := 0
-	for lv+1 < len(d.levels) && s*float64(int(1)<<(lv+1)) <= 1 {
+	for lv+1 < len(d.Levels) && s*float64(int(1)<<(lv+1)) <= 1 {
 		lv++
 	}
 	op := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear}
 	op.GeoM.Scale(s*float64(int(1)<<lv), s*float64(int(1)<<lv))
 	op.GeoM.Translate(ox, oy)
-	screen.DrawImage(d.levels[lv], op)
+	screen.DrawImage(d.Levels[lv], op)
 	glow := func(img *ebiten.Image, k float64) {
 		if img == nil {
 			return
 		}
 		op := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear, Blend: ebiten.BlendLighter}
-		f := float64(d.w) / float64(img.Bounds().Dx())
+		f := float64(d.W) / float64(img.Bounds().Dx())
 		op.GeoM.Scale(s*f, s*f)
 		op.GeoM.Translate(ox, oy)
 		op.ColorScale.ScaleAlpha(float32(k))
 		screen.DrawImage(img, op)
 	}
-	glow(d.lamp, menuLampBreath(t))
-	glow(d.fire, menuFlicker(t, 0))
-	tile := d.tilePx * s
-	for i, p := range d.fires {
+	glow(d.Lamp, menuLampBreath(t))
+	glow(d.Fire, menuFlicker(t, 0))
+	tile := d.TilePx * s
+	for i, p := range d.Fires {
 		sx, sy := float32(ox+p[0]*s), float32(oy+p[1]*s)
 		drawFlameScreen(screen, sx, sy, t+float64(i)*17, tile, 1)
 		for e := 0; e < embers; e++ {

@@ -29,16 +29,16 @@ const (
 
 // selCand is one selectable thing on a tile.
 type selCand struct {
-	kind selKind
-	id   entity.EntityID
+	Kind selKind
+	ID   entity.EntityID
 }
 
 // selCycle remembers the last click, for cycling through a tile's stack.
 type selCycle struct {
-	tile [2]int
-	idx  int
-	n    int
-	ok   bool
+	Tile [2]int
+	Idx  int
+	N    int
+	Ok   bool
 }
 
 // selectablesAt lists what a click on (tx, ty) can select, in precedence.
@@ -59,11 +59,11 @@ func (a *App) selectables(w game.WorldView, tx, ty int) []selCand {
 		return cands
 	}
 	return slices.DeleteFunc(cands, func(c selCand) bool {
-		if c.kind != selBuilding {
+		if c.Kind != selBuilding {
 			return false
 		}
 		for i := range w.Buildings {
-			if w.Buildings[i].ID == c.id {
+			if w.Buildings[i].ID == c.ID {
 				return w.Buildings[i].Kind == hiddenConduitKind
 			}
 		}
@@ -244,18 +244,18 @@ func (a *App) clickSelect() {
 	cands := a.selectables(w, tx, ty)
 	tile := [2]int{tx, ty}
 	a.zoneSt().noteCell(tile)
-	if c := a.selCycle; c.ok && c.tile == tile && c.n == len(cands) && len(cands) > 1 {
-		i := (c.idx + 1) % len(cands)
+	if c := a.selCycle; c.Ok && c.Tile == tile && c.N == len(cands) && len(cands) > 1 {
+		i := (c.Idx + 1) % len(cands)
 		a.selectCand(cands[i])
-		a.selCycle.idx = i
+		a.selCycle.Idx = i
 		return
 	}
 	if id, ok := a.renderer.pawnUnderCursor(mx, my); ok {
 		a.selectCand(selCand{selPawn, id})
-		a.selCycle = selCycle{tile: tile, n: len(cands), ok: true}
+		a.selCycle = selCycle{Tile: tile, N: len(cands), Ok: true}
 		for i, c := range cands {
-			if c.kind == selPawn && c.id == id {
-				a.selCycle.idx = i
+			if c.Kind == selPawn && c.ID == id {
+				a.selCycle.Idx = i
 			}
 		}
 		return
@@ -266,27 +266,27 @@ func (a *App) clickSelect() {
 		return
 	}
 	a.selectCand(cands[0])
-	a.selCycle = selCycle{tile: tile, n: len(cands), ok: true}
+	a.selCycle = selCycle{Tile: tile, N: len(cands), Ok: true}
 }
 
 // selectCand selects c and clears every other kind of selection.
 func (a *App) selectCand(c selCand) {
-	a.clearSelections(c.kind)
-	switch c.kind {
+	a.clearSelections(c.Kind)
+	switch c.Kind {
 	case selPawn:
-		a.shell.Select(c.id)
+		a.shell.Select(c.ID)
 	case selAnimal:
-		a.selAnimal, a.hasAnimal = c.id, true
+		a.selAnimal, a.hasAnimal = c.ID, true
 	case selItem:
-		a.selItem, a.hasItem = c.id, true
+		a.selItem, a.hasItem = c.ID, true
 	case selBuilding:
-		a.selBuilding, a.hasBuilding = c.id, true
+		a.selBuilding, a.hasBuilding = c.ID, true
 	case selPlant:
-		a.selPlant, a.hasPlant = c.id, true
+		a.selPlant, a.hasPlant = c.ID, true
 	case selFrame:
-		a.selFrame, a.hasFrame = c.id, true
+		a.selFrame, a.hasFrame = c.ID, true
 	case selZone:
-		a.selectZone(uint16(c.id)) // zone_select.go
+		a.selectZone(uint16(c.ID)) // zone_select.go
 	}
 }
 

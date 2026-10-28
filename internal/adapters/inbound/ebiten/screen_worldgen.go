@@ -44,7 +44,7 @@ var (
 
 // coverageOptions are the coverage values the slider offers now.
 func (a *App) coverageOptions() []int {
-	if a.devMode() || a.draft().world.Coverage == 5 {
+	if a.devMode() || a.draft().World.Coverage == 5 {
 		return append([]int{5}, coverageStops...)
 	}
 	return coverageStops
@@ -82,9 +82,9 @@ func worldPhaseName(p planet.Phase) string {
 // worldTiles estimates the tile count of a coverage.
 func worldTiles(cov int) int { return (10*planet.Frequency*planet.Frequency + 2) * cov / 100 }
 
-// worldReady reports a generated planet matches the draft's settings.
-func (ng *newGameState) worldReady() bool {
-	return ng.planet != nil && ng.planetKey == ng.world.Key()
+// WorldReady reports a generated planet matches the draft's settings.
+func (ng *newGameState) WorldReady() bool {
+	return ng.Planet != nil && ng.PlanetKey == ng.World.Key()
 }
 
 func (a *App) worldGenUI(sw, sh int) {
@@ -96,8 +96,8 @@ func (a *App) worldGenUI(sw, sh int) {
 	_, _, content, footer := dialogFrame(sw, sh)
 
 	// A planet made from other settings is stale: its landing tile goes.
-	if ng.planet != nil && ng.planetKey != ng.world.Key() {
-		ng.tile = -1
+	if ng.Planet != nil && ng.PlanetKey != ng.World.Key() {
+		ng.Tile = -1
 	}
 	a.worldStep()
 
@@ -106,9 +106,9 @@ func (a *App) worldGenUI(sw, sh int) {
 	a.worldRight(ng, cols[1])
 
 	label, tip := "Generate", ""
-	if ng.worldReady() {
+	if ng.WorldReady() {
 		label = "Next"
-	} else if ng.planet != nil {
+	} else if ng.Planet != nil {
 		tip = "These settings differ from the world you made. Generate it again."
 	}
 	a.ngButton("world.resetAll", rect{X: footerBack(footer).Right() + 12, Y: footerBack(footer).Y, W: 120, H: footerBtnH}, "Reset all",
@@ -121,7 +121,7 @@ func (a *App) worldGenUI(sw, sh int) {
 // resetWorldAll restores the world settings of a fresh draft with a new seed.
 func (a *App) resetWorldAll() {
 	ng := a.draft()
-	ng.world = planet.Params{SeedText: randomWorldPhrase(), Coverage: defaultCoverage, Rain: 2, Temp: 2, Pop: 1,
+	ng.World = planet.Params{SeedText: randomWorldPhrase(), Coverage: defaultCoverage, Rain: 2, Temp: 2, Pop: 1,
 		Factions: faction.DefaultSlots()}
 }
 
@@ -140,20 +140,20 @@ func (a *App) worldLeft(ng *newGameState, col rect) {
 		"Seed\nThe same seed and settings always make the same world. Any text of 1 to 32 characters.")
 	y += worldLabelH
 	diceW := float32(80)
-	a.uiTextField("world.seed", rect{X: in.X, Y: y, W: in.W - diceW - 8, H: worldFieldH}, &ng.world.SeedText, textFieldSpec{
+	a.uiTextField("world.seed", rect{X: in.X, Y: y, W: in.W - diceW - 8, H: worldFieldH}, &ng.World.SeedText, textFieldSpec{
 		MaxLen: maxSeedText, Valid: seedTextRune, Normalize: normalizeSeedText, Placeholder: "seed",
 		Tip: "Seed\nLetters, digits, space, - and _ (1 to 32 characters).",
 	})
 	a.ngButton("world.dice", rect{X: in.Right() - diceW, Y: y, W: diceW, H: worldFieldH}, "Dice",
 		btnOpts{Tip: "Randomize seed\nReplace the seed with a random phrase. It does not generate."},
-		func() { ng.world.SeedText = randomWorldPhrase() })
+		func() { ng.World.SeedText = randomWorldPhrase() })
 	y += worldFieldH + worldRowGap + 6
 
 	// Coverage.
 	opts := a.coverageOptions()
 	idx := 0
 	for i, v := range opts {
-		if v == ng.world.Coverage {
+		if v == ng.World.Coverage {
 			idx = i
 		}
 	}
@@ -161,7 +161,7 @@ func (a *App) worldLeft(ng *newGameState, col rect) {
 		"Globe coverage\nHow much of the planet is generated. Bigger worlds take longer. This is not your colony's map size.")
 	y += worldLabelH
 	if a.uiSliderInt("world.coverage", rect{X: in.X, Y: y, W: in.W, H: worldSliderH}, &idx, sliderSpec{Stops: pctLabels(opts), Title: "Globe coverage"}) {
-		ng.world.Coverage = opts[idx]
+		ng.World.Coverage = opts[idx]
 	}
 	y += worldSliderH + worldRowGap + 6
 
@@ -171,9 +171,9 @@ func (a *App) worldLeft(ng *newGameState, col rect) {
 		stops          []string
 		v              *int
 	}{
-		{"world.rain", "Rainfall", "Rainfall\nHow wet the planet is. Dry worlds have more deserts, wet ones more swamps and jungle.", rainStops, &ng.world.Rain},
-		{"world.temp", "Temperature", "Temperature\nHow warm the planet is overall. Cold worlds have larger ice caps.", tempStops, &ng.world.Temp},
-		{"world.pop", "Population", "Population\nHow many other settlements exist. Doesn't change your colonists or raid sizes.", popStops, &ng.world.Pop},
+		{"world.rain", "Rainfall", "Rainfall\nHow wet the planet is. Dry worlds have more deserts, wet ones more swamps and jungle.", rainStops, &ng.World.Rain},
+		{"world.temp", "Temperature", "Temperature\nHow warm the planet is overall. Cold worlds have larger ice caps.", tempStops, &ng.World.Temp},
+		{"world.pop", "Population", "Population\nHow many other settlements exist. Doesn't change your colonists or raid sizes.", popStops, &ng.World.Pop},
 	} {
 		a.worldLabel(s.id+".lbl", rect{X: in.X, Y: y, W: in.W, H: worldLabelH}, s.label, s.tip)
 		y += worldLabelH
@@ -183,14 +183,14 @@ func (a *App) worldLeft(ng *newGameState, col rect) {
 
 	// Status.
 	st := dimText()
-	a.uiLabel(in.X, y, fmt.Sprintf("About %s tiles at this coverage.", groupDigits(worldTiles(ng.world.Coverage))), st)
+	a.uiLabel(in.X, y, fmt.Sprintf("About %s tiles at this coverage.", groupDigits(worldTiles(ng.World.Coverage))), st)
 	y += float32(lineH(st)) + 4
 	switch {
-	case ng.worldReady():
+	case ng.WorldReady():
 		ok := tsBody
 		ok.Color = uiGood
 		a.uiLabel(in.X, y, "A world with these settings is ready. Next keeps it.", ok)
-	case ng.planet != nil:
+	case ng.Planet != nil:
 		w := tsBody
 		w.Color = uiWarning
 		a.uiLabel(in.X, y, "Settings changed since the last world. Generate it again.", w)
@@ -231,14 +231,14 @@ func (a *App) worldRight(ng *newGameState, col rect) {
 	a.uiLabel(in.X, y, "Who else lives on the planet. Each faction owns settlements; hostile ones send raids.", sub)
 	y += float32(lineH(sub)) + 10
 
-	slots := ng.world.Factions
+	slots := ng.World.Factions
 	for i := range slots {
 		s := &slots[i]
 		d := faction.DefOf(s.Type)
 		row := rect{X: in.X, Y: y, W: in.W, H: worldFacRowH}
 		a.worldFacRow(row, d, s, i)
 		y += worldFacRowH + 4
-		if len(ng.world.Factions) != len(slots) {
+		if len(ng.World.Factions) != len(slots) {
 			break // a row was removed: the list is redeclared next frame
 		}
 	}
@@ -264,17 +264,17 @@ func (a *App) worldRight(ng *newGameState, col rect) {
 	y += worldFacRowH + 12
 
 	// Add, reset.
-	addable := addableTypes(ng.world.Factions)
+	addable := addableTypes(ng.World.Factions)
 	reason := ""
 	if len(addable) == 0 {
 		reason = "Every faction type is at its maximum."
 	}
 	a.ngButton("world.facAdd", rect{X: in.X, Y: y, W: 150, H: 32}, "Add faction...", btnOpts{Disabled: reason != "", Reason: reason}, a.pushAddFaction)
 	a.ngButton("world.facReset", rect{X: in.X + 158, Y: y, W: 150, H: 32}, "Reset factions", btnOpts{Tip: "Reset factions\nBack to the default factions."},
-		func() { ng.world.Factions = faction.DefaultSlots() })
+		func() { ng.World.Factions = faction.DefaultSlots() })
 	y += 32 + 12
 
-	if !hostileCapable(ng.world.Factions) {
+	if !hostileCapable(ng.World.Factions) {
 		w := tsBody
 		w.Color = uiWarning
 		for _, l := range wrapPx(noHostileWarning, w, float64(in.W)) {
@@ -301,8 +301,8 @@ func (a *App) worldFacRow(row rect, d faction.Def, s *faction.Slot, i int) {
 	a.uiTip("world.fac."+d.Key+".tip", rect{X: row.X, Y: row.Y, W: row.W - 190, H: row.H}, factionTypeTip(d))
 	rm := rect{X: row.Right() - 36, Y: row.Y + 8, W: 28, H: 28}
 	a.ngButton("world.fac."+d.Key+".rm", rm, "x", btnOpts{Tip: "Remove\nTake this faction type off the planet."}, func() {
-		fs := a.draft().world.Factions
-		a.draft().world.Factions = append(append([]faction.Slot(nil), fs[:i]...), fs[i+1:]...)
+		fs := a.draft().World.Factions
+		a.draft().World.Factions = append(append([]faction.Slot(nil), fs[:i]...), fs[i+1:]...)
 	})
 	a.ngStepper("world.fac."+d.Key, rect{X: rm.X - 118, Y: row.Y + 8, W: 112, H: 28}, &s.Count, 0, d.MaxCount)
 }
@@ -322,18 +322,18 @@ func factionTypeTip(d faction.Def) string {
 // pushAddFaction opens the "Add faction" list.
 func (a *App) pushAddFaction() {
 	ng := a.draft()
-	types := addableTypes(ng.world.Factions)
+	types := addableTypes(ng.World.Factions)
 	labels := make([]string, len(types))
 	for i, t := range types {
 		labels[i] = faction.DefOf(t).Label
 	}
 	a.pushPicker("world.facAdd.pick", "Add faction", labels, -1, func(i int) {
 		t := types[i]
-		if k := slotIndex(ng.world.Factions, t); k >= 0 {
-			ng.world.Factions[k].Count++
+		if k := slotIndex(ng.World.Factions, t); k >= 0 {
+			ng.World.Factions[k].Count++
 			return
 		}
-		ng.world.Factions = append(ng.world.Factions, faction.Slot{Type: t, Count: 1})
+		ng.World.Factions = append(ng.World.Factions, faction.Slot{Type: t, Count: 1})
 	})
 }
 
@@ -346,15 +346,15 @@ func (a *App) worldGenerate() {
 	if a.uiTextEditing() {
 		a.textEnd(true)
 	}
-	ng.world.SeedText = normalizeSeedText(ng.world.SeedText)
-	if ng.worldReady() {
+	ng.World.SeedText = normalizeSeedText(ng.World.SeedText)
+	if ng.WorldReady() {
 		a.forward()
 		return
 	}
-	p := ng.world
-	p.Factions = append([]faction.Slot(nil), ng.world.Factions...)
-	ng.builder = game.NewPlanetBuilder(p)
-	ng.genStep, ng.genPhase, ng.genFrac, ng.genErr = worldStepStart, planet.PhaseShape, 0, ""
+	p := ng.World
+	p.Factions = append([]faction.Slot(nil), ng.World.Factions...)
+	ng.Builder = game.NewPlanetBuilder(p)
+	ng.GenStep, ng.GenPhase, ng.GenFrac, ng.genErr = worldStepStart, planet.PhaseShape, 0, ""
 	a.uiPushModal(modal{
 		ID: worldProgress, Title: "Generating world", W: 520, H: 190,
 		Draw: func(a *App, body rect) { a.worldProgressBody(body) },
@@ -368,7 +368,7 @@ func (a *App) worldGenerate() {
 // cancelWorld discards the builder in flight.
 func (a *App) cancelWorld() {
 	if ng := a.ng; ng != nil {
-		ng.builder, ng.genErr = nil, ""
+		ng.Builder, ng.genErr = nil, ""
 	}
 }
 
@@ -384,7 +384,7 @@ func (a *App) worldProgressBody(body rect) {
 		}
 		return
 	}
-	phase, frac := worldPhaseName(ng.genPhase), float64(ng.genFrac)
+	phase, frac := worldPhaseName(ng.GenPhase), float64(ng.GenFrac)
 	r := rect{X: body.X, Y: body.Y + 8, W: body.W, H: 44}
 	a.uiSt().Queue(func(dst *ebiten.Image) { drawProgress(dst, r, phase, frac, "") })
 }
@@ -394,38 +394,38 @@ func (a *App) worldProgressBody(body rect) {
 // them (it is identical for every step size).
 func (a *App) worldStep() {
 	ng := a.ng
-	if ng == nil || ng.builder == nil {
+	if ng == nil || ng.Builder == nil {
 		return
 	}
-	if ng.genHold > 0 && ng.genFrac >= ng.genHold {
+	if ng.GenHold > 0 && ng.GenFrac >= ng.GenHold {
 		return // a capture shows the generation part-way
 	}
 	t0 := a.now()
-	phase, frac, done := ng.builder.Step(ng.genStep)
-	ng.genPhase, ng.genFrac = phase, frac
+	phase, frac, done := ng.Builder.Step(ng.GenStep)
+	ng.GenPhase, ng.GenFrac = phase, frac
 	if a.cfg.Capture == nil && !t0.IsZero() {
 		el := a.now().Sub(t0)
 		switch {
 		case el < worldFrameBud/2:
-			ng.genStep = min(worldStepMax, ng.genStep*3/2)
+			ng.GenStep = min(worldStepMax, ng.GenStep*3/2)
 		case el > worldFrameBud*3/2:
-			ng.genStep = max(worldStepMin, ng.genStep*2/3)
+			ng.GenStep = max(worldStepMin, ng.GenStep*2/3)
 		}
 	}
 	if !done {
 		return
 	}
-	p := ng.builder.Planet()
-	ng.builder = nil
+	p := ng.Builder.Planet()
+	ng.Builder = nil
 	if p == nil || p.RandomLanding(0) < 0 {
 		ng.genErr = "Couldn't make a habitable world with these settings. Try another seed."
-		ng.genFrac = 1
+		ng.GenFrac = 1
 		return
 	}
-	ng.planet, ng.planetKey = p, p.Params.Key()
-	ng.tile, ng.landRolls = -1, 0
-	ng.globe, ng.globeOf = nil, nil
-	ng.pool, ng.poolKey = nil, ""
+	ng.Planet, ng.PlanetKey = p, p.Params.Key()
+	ng.Tile, ng.LandRolls = -1, 0
+	ng.Globe, ng.globeOf = nil, nil
+	ng.Pool, ng.PoolKey = nil, ""
 	a.uiCloseModal(worldProgress)
 	a.forward()
 }

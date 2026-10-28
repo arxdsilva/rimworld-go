@@ -260,7 +260,7 @@ func TestShiftClickBoxAndDoubleClickSelect(t *testing.T) {
 	f.MoveTo(a, 10, 4)
 	a.updates += doubleClickFrames // not a double click
 	f.Click(t, a, mbLeft, input.ModShift)
-	if !a.grouped() || len(a.group.ids) != 2 {
+	if !a.grouped() || len(a.group.Ids) != 2 {
 		t.Fatalf("Shift+click adds: group = %+v", a.group)
 	}
 	a.updates += doubleClickFrames
@@ -269,7 +269,7 @@ func TestShiftClickBoxAndDoubleClickSelect(t *testing.T) {
 		t.Fatal("Shift+click again takes it out (one left: the single selection)")
 	}
 	f.Drag(t, a, mbLeft, 7, 3, 13, 5, 0)
-	if !a.grouped() || a.group.kind != selPawn || len(a.group.ids) != 3 {
+	if !a.grouped() || a.group.Kind != selPawn || len(a.group.Ids) != 3 {
 		t.Fatalf("box select = %+v", a.group)
 	}
 	a.updates += doubleClickFrames
@@ -279,7 +279,7 @@ func TestShiftClickBoxAndDoubleClickSelect(t *testing.T) {
 		t.Fatal("a plain click goes back to one")
 	}
 	f.Click(t, a, mbLeft, 0) // a double click
-	if !a.grouped() || len(a.group.ids) != 3 {
+	if !a.grouped() || len(a.group.Ids) != 3 {
 		t.Fatalf("double click takes every colonist on screen: %+v", a.group)
 	}
 	if bs := a.groupButtons(); len(bs) == 0 {
@@ -295,7 +295,7 @@ func TestDoubleClickSameSpecies(t *testing.T) {
 	f.MoveTo(a, 8, 4)
 	f.Click(t, a, mbLeft, 0)
 	f.Click(t, a, mbLeft, 0)
-	if !a.grouped() || a.group.kind != selAnimal || len(a.group.ids) != 2 {
+	if !a.grouped() || a.group.Kind != selAnimal || len(a.group.Ids) != 2 {
 		t.Fatalf("double click on a deer takes the deer: %+v", a.group)
 	}
 }
@@ -626,7 +626,7 @@ func TestControlsTabRebindsAndPersists(t *testing.T) {
 			goto found
 		}
 	}
-	for a.rebind.page < ctlPages(720)-1 {
+	for a.rebind.Page < ctlPages(720)-1 {
 		click(t, a, "options.ctl.next")
 		for _, b := range a.layoutButtons(1280, 720) {
 			if b.ID == slot {
@@ -637,11 +637,11 @@ func TestControlsTabRebindsAndPersists(t *testing.T) {
 	t.Fatal("no Draft row on any page")
 found:
 	click(t, a, slot)
-	if !a.rebind.on {
+	if !a.rebind.On {
 		t.Fatal("clicking a slot waits for a key")
 	}
 	f.Key(t, a, "Escape", 0)
-	if a.rebind.on || a.nav.screen() != screenOptions || a.bindings().Label(input.Draft) != "R" {
+	if a.rebind.On || a.nav.screen() != screenOptions || a.bindings().Label(input.Draft) != "R" {
 		t.Fatal("Esc cancels the capture (and does not leave Options)")
 	}
 	click(t, a, slot)
@@ -651,7 +651,7 @@ found:
 	}
 	click(t, a, slot)
 	f.Key(t, a, "F", 0) // Forbid's key
-	if a.rebind.pending == nil {
+	if a.rebind.Pending == nil {
 		t.Fatal("a used key asks before swapping")
 	}
 	click(t, a, "options.ctl.swap")

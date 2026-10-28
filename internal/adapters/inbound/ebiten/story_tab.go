@@ -194,9 +194,9 @@ func (a *App) saveModeColumn(r rect, v game.StoryView) {
 		mode = saveModes[1]
 	}
 	y := r.Y + stHeadH
-	a.uiLabel(r.X, y, mode.label, tsLabel)
+	a.uiLabel(r.X, y, mode.Label, tsLabel)
 	y += float32(lineH(tsLabel)) + 2
-	y += a.textLines(r.X, y, r.W, mode.text, dimText()) + 8
+	y += a.textLines(r.X, y, r.W, mode.Text, dimText()) + 8
 	ns := tsSmall
 	ns.Color = uiWarning
 	y += a.textLines(r.X, y, r.W, "Fixed when the colony started. It can't be changed.", ns) + 24
@@ -226,14 +226,14 @@ func (a *App) openStoryCustom(v game.StoryView) {
 	if !ok || from == difficulty.Custom {
 		from = difficulty.Seasoned
 	}
-	cd := customDiff{s: v.Difficulty, from: from}
+	cd := customDiff{S: v.Difficulty, From: from}
 	formH := new(float32)
 	a.uiPushModal(modal{
 		ID: stCustomMod, Title: "Custom difficulty", W: diffModalW, H: diffModalH,
 		Draw: func(a *App, body rect) { a.storyCustomBody(body, &cd, formH) },
 		Buttons: []modalButton{
-			{ID: "accept", Label: "Accept", Style: btnPrimary, Closes: true, OnClick: func() { a.setDifficulty(customName(cd.s)) }},
-			{ID: "reset", Label: "Reset", OnClick: func() { cd.s = difficulty.Of(cd.from) }},
+			{ID: "accept", Label: "Accept", Style: btnPrimary, Closes: true, OnClick: func() { a.setDifficulty(customName(cd.S)) }},
+			{ID: "reset", Label: "Reset", OnClick: func() { cd.S = difficulty.Of(cd.From) }},
 			{ID: "cancel", Label: "Cancel", Closes: true},
 		},
 	})
@@ -249,25 +249,25 @@ func (a *App) storyCustomBody(body rect, cd *customDiff, formH *float32) {
 	for _, n := range difficulty.Presets() {
 		names = append(names, n.Label)
 	}
-	a.ngChoice("diff.from", rect{X: top.X + 90, Y: top.Y + 2, W: 170, H: top.H - 4}, "Start from", names, int(cd.from), "", func(i int) { cd.from = difficulty.Preset(i) })
+	a.ngChoice("diff.from", rect{X: top.X + 90, Y: top.Y + 2, W: 170, H: top.H - 4}, "Start from", names, int(cd.From), "", func(i int) { cd.From = difficulty.Preset(i) })
 	a.ngButton("diff.copy", rect{X: top.X + 272, Y: top.Y + 2, W: 150, H: top.H - 4}, "Copy", btnOpts{Tip: "Copy\nCopy every value of the preset into Custom."},
-		func() { cd.s = difficulty.Of(cd.from) })
+		func() { cd.S = difficulty.Of(cd.From) })
 
 	area := a.uiScrollArea(stFormID, rest, *formH, scrollOpts{Step: 40})
 	colW := (area.View.W - 8 - diffColGap) / 2
-	left := &formCtx{view: area.View, x: area.View.X + 4, w: colW, off: area.Off}
-	right := &formCtx{view: area.View, x: area.View.X + 4 + colW + diffColGap, w: colW, off: area.Off}
-	s := &cd.s
+	left := &formCtx{View: area.View, X: area.View.X + 4, W: colW, Off: area.Off}
+	right := &formCtx{View: area.View, X: area.View.X + 4 + colW + diffColGap, W: colW, Off: area.Off}
+	s := &cd.S
 
-	left.sectionTitle(a, "Threats")
+	left.SectionTitle(a, "Threats")
 	a.diffSlider(left, "ts", "Threat scale", &s.ThreatScale, "ts", pctText, "", "Threat scale\nHow big raids and packs are, as a share of the normal size.")
 	a.diffCheck(left, "bt", "Big threats", &s.BigThreats, "", "Big threats\nRaids and packs. Off leaves only small events.")
 	a.diffStepper(left, "pd", "Peaceful start (days)", &s.PeacefulDays, 0, 30, "Peaceful start\nDays at the start with no big threat.")
 	a.diffCheck(left, "ph", "Predators hunt colonists", &s.PredatorsHuntColonists, "", "Predators\nWild predators may attack colonists, not only prey.")
 	a.diffSlider(left, "ar", "Hostile wildlife revenge", &s.AnimalRevenge, "ar", pctText, "", "Revenge\nHow fiercely wild animals fight back when hurt.")
-	left.gap(8)
+	left.Gap(8)
 
-	left.sectionTitle(a, "Escalation")
+	left.SectionTitle(a, "Escalation")
 	a.diffCheck(left, "ad", "Adaptation", &s.Adaptation, "", "Adaptation\nThreats grow while the colony loses nobody, and ease after a death.")
 	adaptOff := ""
 	if !s.Adaptation {
@@ -285,27 +285,27 @@ func (a *App) storyCustomBody(body rect, cd *customDiff, formH *float32) {
 	a.diffSlider(left, "ep", "Escalation per year", &s.EscPerYear, "ep", pctText, timeOff, "Escalation per year\nHow much the threat size grows each year.")
 	a.diffCheck(left, "iw", "Ignore wealth", &s.IgnoreWealth, timeOff, "Ignore wealth\nThreat size follows time and people only, not what you own.")
 
-	right.sectionTitle(a, "Economy")
+	right.SectionTitle(a, "Economy")
 	a.diffSlider(right, "cy", "Crop yield", &s.CropYield, "cy", pctText, "", "")
 	a.diffSlider(right, "my", "Mining yield", &s.MineYield, "my", pctText, "", "")
 	a.diffSlider(right, "by", "Butchering yield", &s.ButcherYield, "by", pctText, "", "")
 	a.diffSlider(right, "rs", "Research speed", &s.ResearchSpeed, "rs", pctText, "", "")
-	right.gap(8)
+	right.Gap(8)
 
-	right.sectionTitle(a, "Health and mind")
+	right.SectionTitle(a, "Health and mind")
 	a.diffSlider(right, "mo", "Mood offset", &s.MoodOffset, "mo", signedText, "", "Mood offset\nAdded to every colonist's mood.")
 	a.diffSlider(right, "if", "Infection chance", &s.Infection, "if", pctText, "", "")
 	a.diffSlider(right, "df", "Disease frequency", &s.DiseaseFreq, "df", pctText, "", diseaseFreqTip)
-	if row, ok := right.row(18); ok {
+	if row, ok := right.Row(18); ok {
 		ns := tsSmall
 		ns.Color = uiTextDim
 		a.uiLabel(row.X, row.Y, diseaseFreqNote, ns)
 	}
 	a.diffSlider(right, "pt", "Pain tolerance offset", &s.PainTolerance, "pt", signedText, "", "")
-	right.gap(8)
+	right.Gap(8)
 
-	right.sectionTitle(a, "Nature")
+	right.SectionTitle(a, "Nature")
 	a.diffCheck(right, "ew", "Extreme weather", &s.ExtremeWeather, "", "Extreme weather\nHeat waves and cold snaps.")
 
-	*formH = max(left.content(), right.content())
+	*formH = max(left.Content(), right.Content())
 }

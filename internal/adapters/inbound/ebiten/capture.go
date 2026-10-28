@@ -253,23 +253,23 @@ func (a *App) captureStep(step string) {
 	ng := a.draft()
 	switch step {
 	case "@seed":
-		ng.world.SeedText = "amber-hollow"
+		ng.World.SeedText = "amber-hollow"
 	case "@landing":
 		a.worldGenerate()
-		for ng.builder != nil { // run the generation to the end at once
+		for ng.Builder != nil { // run the generation to the end at once
 			a.worldStep()
 		}
 		a.uiSt().Modals = nil
-		if ng.planet != nil {
-			ng.tile = ng.planet.RandomLanding(0)
-			if ng.tile >= 0 {
-				ng.landRolls = 1
+		if ng.Planet != nil {
+			ng.Tile = ng.Planet.RandomLanding(0)
+			if ng.Tile >= 0 {
+				ng.LandRolls = 1
 			}
 		}
 	case "@worldgen-progress":
-		ng.genHold = 0.4
+		ng.GenHold = 0.4
 		a.worldGenerate()
-		ng.genStep = 1500
+		ng.GenStep = 1500
 	}
 }
 
@@ -874,7 +874,7 @@ func (a *App) captureZone(shrink bool, at func(tx, ty int) (int, int)) {
 		if z.Kind != game.ZoneGrow {
 			continue
 		}
-		a.selectCand(selCand{kind: selZone, id: entity.EntityID(z.ID)})
+		a.selectCand(selCand{Kind: selZone, ID: entity.EntityID(z.ID)})
 		sw, sh := a.size()
 		a.renderer.centerOn(float64(z.MinX+z.MaxX)/2, float64(z.MinY+z.MaxY)/2, sw, sh)
 		if shrink {

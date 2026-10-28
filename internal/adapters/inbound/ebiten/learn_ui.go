@@ -193,7 +193,7 @@ func (a *App) learnSelection() string {
 	r := a.renderer
 	switch {
 	case a.grouped():
-		return fmt.Sprintf("g%d:%v", a.group.kind, a.group.ids)
+		return fmt.Sprintf("g%d:%v", a.group.Kind, a.group.Ids)
 	case r.HasSelect():
 		return fmt.Sprintf("p%d", r.Selected())
 	case a.hasBuilding:

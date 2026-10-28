@@ -29,7 +29,7 @@ const (
 
 // saveModeInfo is a save-mode choice.
 type saveModeInfo struct {
-	id, label, text string
+	id, Label, Text string
 	mode            difficulty.SaveMode
 }
 
@@ -56,7 +56,7 @@ func modeCaption(m storyteller.Mode) string {
 func pacingOf(p storyteller.Profile) []int { return storyteller.Spark(p, sparkDays, sparkSeed) }
 
 // storyLayout is the three columns of the screen.
-type storyLayout struct{ left, centre, right rect }
+type storyLayout struct{ Left, Centre, Right rect }
 
 func storyRects(content rect) storyLayout {
 	left := rect{X: content.X, Y: content.Y, W: storyLeftW, H: content.H}
@@ -81,12 +81,12 @@ func (a *App) storytellerUI(sw, sh int) {
 	_, _, content, footer := dialogFrame(sw, sh)
 	L := storyRects(content)
 	profiles := storyteller.Profiles()
-	cur, _ := storyteller.ByKey(ng.storyteller)
+	cur, _ := storyteller.ByKey(ng.Storyteller)
 
 	for i, p := range profiles {
 		p := p
-		r := rect{X: L.left.X, Y: L.left.Y + float32(i)*(storyCardH+storyCardGap), W: storyLeftW, H: storyCardH}
-		pick := func() { ng.storyteller = p.Key }
+		r := rect{X: L.Left.X, Y: L.Left.Y + float32(i)*(storyCardH+storyCardGap), W: storyLeftW, H: storyCardH}
+		pick := func() { ng.Storyteller = p.Key }
 		w := uiWidget{ID: "story.pick." + p.Key, R: r, Label: p.Name, Focusable: true, Click: func() { a.uiOK(); pick() },
 			Tip: p.Name + ", " + p.Title + "\n" + modeCaption(p.Mode)}
 		u := a.uiSt()
@@ -94,18 +94,18 @@ func (a *App) storytellerUI(sw, sh int) {
 			a.uiOK()
 			pick()
 		}
-		selected := ng.storyteller == p.Key
+		selected := ng.Storyteller == p.Key
 		u.Queue(func(dst *ebiten.Image) { a.paintStoryCard(dst, r, p, selected, u.Hot == w.ID) })
 	}
 
-	a.storyCentre(L.centre, cur)
-	a.storyRight(ng, L.right)
+	a.storyCentre(L.Centre, cur)
+	a.storyRight(ng, L.Right)
 
 	a.ngFooter(footer, "Next", ids.WizardNext, btnOpts{}, func() {
 		s := a.settings
-		s.Gameplay.LastStoryteller = ng.storyteller
-		s.Gameplay.LastDifficulty = ng.preset.Key()
-		s.Gameplay.LastSaveMode = ng.saveMode.String()
+		s.Gameplay.LastStoryteller = ng.Storyteller
+		s.Gameplay.LastDifficulty = ng.Preset.Key()
+		s.Gameplay.LastSaveMode = ng.SaveMode.String()
 		a.setSettings(s)
 		a.forward()
 	})
@@ -320,20 +320,20 @@ func (a *App) storyRight(ng *newGameState, r rect) {
 	for _, n := range presets {
 		n := n
 		rows = append(rows, srow{id: "diff." + n.Key, label: n.Label, desc: n.Desc, tip: presetTip(n), y: y, h: diffRowH,
-			selected: ng.preset == n.Preset, click: func() { a.pickPreset(n.Preset) }})
+			selected: ng.Preset == n.Preset, click: func() { a.pickPreset(n.Preset) }})
 		y += diffRowH
 	}
 	customTip := "Custom\nSet every value yourself in the Custom Difficulty dialog."
 	rows = append(rows, srow{id: "diff.custom", label: "Custom", desc: "Set every value yourself.", tip: customTip, y: y, h: diffRowH,
-		selected: ng.preset == difficulty.Custom, click: func() { a.pickPreset(difficulty.Custom) }})
+		selected: ng.Preset == difficulty.Custom, click: func() { a.pickPreset(difficulty.Custom) }})
 	y += diffRowH + 10
 	saveHeadY := y
 	y += headH
 	for _, m := range saveModes {
 		m := m
-		h := float32(lineH(tsLabel)) + wrapHeight(m.text, sd, noteW-26) + 8
-		rows = append(rows, srow{id: m.id, label: m.label, desc: m.text, y: y, h: h, selected: ng.saveMode == m.mode,
-			click: func() { ng.saveMode = m.mode }})
+		h := float32(lineH(tsLabel)) + wrapHeight(m.Text, sd, noteW-26) + 8
+		rows = append(rows, srow{id: m.id, label: m.Label, desc: m.Text, y: y, h: h, selected: ng.SaveMode == m.mode,
+			click: func() { ng.SaveMode = m.mode }})
 		y += h + saveRowGap
 	}
 	noteY := y
@@ -346,7 +346,7 @@ func (a *App) storyRight(ng *newGameState, r rect) {
 
 	// The Customize button comes first so it takes its click before the row.
 	for _, sr := range rows {
-		if sr.id != "diff.custom" || ng.preset != difficulty.Custom {
+		if sr.id != "diff.custom" || ng.Preset != difficulty.Custom {
 			continue
 		}
 		rr := shown(sr)
@@ -413,9 +413,9 @@ func (a *App) storyRight(ng *newGameState, r rect) {
 // pickPreset selects a difficulty; Custom opens its dialog the first time.
 func (a *App) pickPreset(p difficulty.Preset) {
 	ng := a.draft()
-	if p == difficulty.Custom && !ng.customOpen {
+	if p == difficulty.Custom && !ng.CustomOpen {
 		a.openCustomDifficulty()
 		return
 	}
-	ng.preset = p
+	ng.Preset = p
 }

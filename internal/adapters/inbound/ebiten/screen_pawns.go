@@ -61,34 +61,34 @@ func nameRune(r rune) bool { return unicode.IsLetter(r) || r == ' ' || r == '\''
 // poolKeyFor is what the candidate pool is made from: the setup seed and
 // the scenario's people rules. A new key makes a new pool.
 func (a *App) poolKeyFor(ng *newGameState) string {
-	fx := ng.scenario.Apply()
+	fx := ng.Scenario.Apply()
 	return fmt.Sprintf("%d|%d|%d|%v", setupSeedOf(ng), fx.People, fx.ChooseFrom, fx.Rules)
 }
 
 // ensurePool makes the candidate pool when it is missing or stale.
 func (a *App) ensurePool(ng *newGameState) {
 	key := a.poolKeyFor(ng)
-	if ng.pool != nil && ng.poolKey == key {
+	if ng.Pool != nil && ng.PoolKey == key {
 		return
 	}
-	ng.pool, ng.poolKey = game.NewCandidatePool(setupSeedOf(ng), ng.scenario.Apply()), key
-	ng.pawnSel, ng.namesOf, ng.nameErr = 0, -1, ""
+	ng.Pool, ng.PoolKey = game.NewCandidatePool(setupSeedOf(ng), ng.Scenario.Apply()), key
+	ng.PawnSel, ng.NamesOf, ng.NameErr = 0, -1, ""
 	ng.drag = rosterDrag{}
 }
 
 // undoCharacters restores the pool as it was on entry (the pool is
 // deterministic from its seed).
 func (a *App) undoCharacters(ng *newGameState) {
-	ng.pool = game.NewCandidatePool(setupSeedOf(ng), ng.scenario.Apply())
-	ng.namesOf, ng.nameErr = -1, ""
+	ng.Pool = game.NewCandidatePool(setupSeedOf(ng), ng.Scenario.Apply())
+	ng.NamesOf, ng.NameErr = -1, ""
 }
 
-// startReason is why Start is disabled ("" it is enabled).
-func (ng *newGameState) startReason() string {
-	if ng.nameErr != "" {
-		return ng.nameErr
+// StartReason is why Start is disabled ("" it is enabled).
+func (ng *newGameState) StartReason() string {
+	if ng.NameErr != "" {
+		return ng.NameErr
 	}
-	if ng.pool == nil || len(ng.pool.Selected()) == 0 {
+	if ng.Pool == nil || len(ng.Pool.Selected()) == 0 {
 		return "There is nobody to send. The scenario needs at least one colonist."
 	}
 	return ""
@@ -100,21 +100,21 @@ func (a *App) pawnsUI(sw, sh int) {
 		return
 	}
 	ng := a.draft()
-	if ng.load != nil {
+	if ng.Load != nil {
 		a.loadingStep()
 		a.uiSt().Suppress = true
 		return
 	}
 	a.ensurePool(ng)
-	views := ng.pool.Views()
+	views := ng.Pool.Views()
 	nSel := 0
 	for _, v := range views {
 		if v.Selected {
 			nSel++
 		}
 	}
-	if ng.pawnSel >= len(views) {
-		ng.pawnSel = max(0, len(views)-1)
+	if ng.PawnSel >= len(views) {
+		ng.PawnSel = max(0, len(views)-1)
 	}
 	_, _, content, footer := dialogFrame(sw, sh)
 	roster, rest := content.SplitH(pawnRosterW)
@@ -141,17 +141,17 @@ func (a *App) pawnsFooter(ng *newGameState, footer rect) {
 	a.ngButton("pawns.rerollAll", rect{X: x, Y: back.Y, W: 130, H: footerBtnH}, "Randomize all", btnOpts{Tip: "Randomize all\nRoll every candidate again."},
 		func() {
 			a.uiConfirm("pawns.rerollAll.confirm", "Randomize everyone?", "Every candidate is rolled again. Names you edited are kept.", "Randomize", false, func() {
-				ng.pool.RandomizeAll()
-				ng.namesOf = -1
+				ng.Pool.RandomizeAll()
+				ng.NamesOf = -1
 			})
 		})
 	x += 138
 	a.ngButton("pawns.reset", rect{X: x, Y: back.Y, W: 130, H: footerBtnH}, "Undo changes", btnOpts{Tip: "Undo changes\nPut the candidates back as they were when you came here."},
 		func() { a.undoCharacters(ng) })
 
-	reason := ng.startReason()
+	reason := ng.StartReason()
 	start := func() {
-		if ng.startReason() == "" {
+		if ng.StartReason() == "" {
 			a.beginLoading()
 		}
 	}
@@ -173,8 +173,8 @@ func (a *App) pawnsFooter(ng *newGameState, footer rect) {
 
 // rerollSelected rolls the highlighted candidate again (Shift: new name too).
 func (a *App) rerollSelected(ng *newGameState) {
-	ng.pool.Reroll(ng.pawnSel, !a.in.Shift())
-	ng.namesOf = -1
+	ng.Pool.Reroll(ng.PawnSel, !a.in.Shift())
+	ng.NamesOf = -1
 }
 
 // ---- the roster --------------------------------------------------------------
@@ -237,7 +237,7 @@ func (a *App) pawnsRoster(ng *newGameState, r rect, views []game.CandidateView, 
 		if hit.Empty() {
 			continue
 		}
-		sel := func() { ng.pawnSel = pos; u.Focus = pawnRosterID }
+		sel := func() { ng.PawnSel = pos; u.Focus = pawnRosterID }
 		w := uiWidget{ID: optID("pawns.row", pos), Label: views[pos].Nick, R: hit, Click: func() { a.uiOK(); sel() },
 			Tip: views[pos].Nick + "\n" + candidateLine(views[pos])}
 		if u.Add(w) && a.uiPress(hit) {
@@ -254,16 +254,16 @@ func (a *App) pawnsRoster(ng *newGameState, r rect, views []game.CandidateView, 
 			if d.moved {
 				to := rosterTarget(float32(my)-listR.Y+area.Off, n, nSel)
 				if to != d.from {
-					ng.pool.Move(d.from, to)
-					ng.pawnSel = to
-					ng.namesOf = -1
+					ng.Pool.Move(d.from, to)
+					ng.PawnSel = to
+					ng.NamesOf = -1
 				}
 			}
 			*d = rosterDrag{}
 		}
 	}
 	drag := ng.drag
-	selPos := ng.pawnSel
+	selPos := ng.PawnSel
 	u.Queue(func(dst *ebiten.Image) {
 		sub := clipTo(dst, area.View)
 		hs := tsLabel
@@ -293,7 +293,7 @@ func (a *App) pawnsRoster(ng *newGameState, r rect, views []game.CandidateView, 
 	// Up, down and swap under the list.
 	by := r.Bottom() - btns + 4
 	half := (r.W - 8 - 6) / 2
-	i := ng.pawnSel
+	i := ng.PawnSel
 	upR, dnR := "", ""
 	if i <= 0 {
 		upR = "Already first."
@@ -302,9 +302,9 @@ func (a *App) pawnsRoster(ng *newGameState, r rect, views []game.CandidateView, 
 		dnR = "Already last."
 	}
 	a.ngButton("pawns.up", rect{X: r.X + 4, Y: by, W: half, H: 28}, "Up", btnOpts{Disabled: upR != "", Reason: upR, Tip: "Move up\nMove this candidate up the roster."},
-		func() { ng.pool.Move(i, i-1); ng.pawnSel = i - 1; ng.namesOf = -1 })
+		func() { ng.Pool.Move(i, i-1); ng.PawnSel = i - 1; ng.NamesOf = -1 })
 	a.ngButton("pawns.down", rect{X: r.X + 4 + half + 6, Y: by, W: half, H: 28}, "Down", btnOpts{Disabled: dnR != "", Reason: dnR, Tip: "Move down\nMove this candidate down the roster."},
-		func() { ng.pool.Move(i, i+1); ng.pawnSel = i + 1; ng.namesOf = -1 })
+		func() { ng.Pool.Move(i, i+1); ng.PawnSel = i + 1; ng.NamesOf = -1 })
 	swapLabel, swapReason := "Swap with left-behind...", ""
 	if i >= nSel {
 		swapLabel = "Swap with selected..."
@@ -360,7 +360,7 @@ func (a *App) paintRosterRow(dst *ebiten.Image, rr rect, v game.CandidateView, s
 
 // pushSwap lists the candidates of the other group; picking one swaps.
 func (a *App) pushSwap(ng *newGameState, views []game.CandidateView, nSel int) {
-	i := ng.pawnSel
+	i := ng.PawnSel
 	var idx []int
 	var labels []string
 	for p, v := range views {
@@ -370,8 +370,8 @@ func (a *App) pushSwap(ng *newGameState, views []game.CandidateView, nSel int) {
 		}
 	}
 	a.pushPicker("pawns.swap", "Swap with", labels, -1, func(k int) {
-		ng.pool.Swap(i, idx[k])
-		ng.namesOf = -1
+		ng.Pool.Swap(i, idx[k])
+		ng.NamesOf = -1
 	})
 }
 
@@ -385,7 +385,7 @@ func (a *App) pawnsDetail(ng *newGameState, r rect, views []game.CandidateView) 
 		a.uiLabel(in.X, in.Y, "No candidates.", dimText())
 		return
 	}
-	v := views[ng.pawnSel]
+	v := views[ng.PawnSel]
 	a.syncNames(ng, v)
 
 	left := rect{X: in.X, Y: in.Y, W: in.W - pawnBigW - 16, H: in.H}
@@ -416,21 +416,21 @@ func (a *App) pawnsDetail(ng *newGameState, r rect, views []game.CandidateView) 
 		if l.tip != "" {
 			a.uiTip(l.id+".tip", rect{X: fx, Y: y, W: fw, H: 16}, l.tip)
 		}
-		ch, _ := a.uiTextField(l.id, rect{X: fx, Y: y + 18, W: fw, H: 28}, &ng.names[k], textFieldSpec{MaxLen: game.MaxNameRunes, Valid: nameRune})
+		ch, _ := a.uiTextField(l.id, rect{X: fx, Y: y + 18, W: fw, H: 28}, &ng.Names[k], textFieldSpec{MaxLen: game.MaxNameRunes, Valid: nameRune})
 		changed = changed || ch
 	}
 	if changed {
-		if err := ng.pool.Rename(ng.pawnSel, ng.names[0], ng.names[1], ng.names[2]); err != nil {
-			ng.nameErr = err.Error()
+		if err := ng.Pool.Rename(ng.PawnSel, ng.Names[0], ng.Names[1], ng.Names[2]); err != nil {
+			ng.NameErr = err.Error()
 		} else {
-			ng.nameErr = ""
+			ng.NameErr = ""
 		}
 	}
 	y += 50
-	if ng.nameErr != "" {
+	if ng.NameErr != "" {
 		st := tsSmall
 		st.Color = uiWarning
-		a.uiLabel(left.X, y-2, ng.nameErr, st)
+		a.uiLabel(left.X, y-2, ng.NameErr, st)
 	}
 	y += 16
 
@@ -438,8 +438,8 @@ func (a *App) pawnsDetail(ng *newGameState, r rect, views []game.CandidateView) 
 	info := fmt.Sprintf("%s, age %d (biological)", v.Sex, v.AgeYears)
 	a.uiLabel(left.X, y, info, tsBody)
 	y += 20
-	badge := faction.DefOf(ng.scenario.Faction)
-	if ng.scenario.Faction == faction.Player || badge.Label == "" {
+	badge := faction.DefOf(ng.Scenario.Faction)
+	if ng.Scenario.Faction == faction.Player || badge.Label == "" {
 		badge = faction.DefOf(faction.Settlers)
 	}
 	by := y
@@ -514,8 +514,8 @@ func (a *App) syncNames(ng *newGameState, v game.CandidateView) {
 		return
 	}
 	want := [3]string{v.First, v.Nick, v.Last}
-	if ng.namesOf != ng.pawnSel || ng.names != want {
-		ng.names, ng.namesOf, ng.nameErr = want, ng.pawnSel, ""
+	if ng.NamesOf != ng.PawnSel || ng.Names != want {
+		ng.Names, ng.NamesOf, ng.NameErr = want, ng.PawnSel, ""
 	}
 }
 
@@ -662,7 +662,7 @@ func (a *App) pawnsTeam(ng *newGameState, r rect) {
 	hs := tsLarge
 	hs.Color = uiHeading
 	a.uiLabel(in.X, in.Y, "Team", hs)
-	rep := ng.pool.Team()
+	rep := ng.Pool.Team()
 	y := in.Y + float32(lineH(hs)) + 8
 	a.uiLabel(in.X, y, "Best skill among the selected", dimText())
 	y += 22

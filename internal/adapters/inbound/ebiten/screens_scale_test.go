@@ -119,7 +119,7 @@ func TestSetupBackdropFillsPhysicalScreen(t *testing.T) {
 	a.drawSetupBackdrop(ebiten.NewImage(pw, ph), a.sw, a.sh, nil)
 	setupBackdropMu.Lock()
 	defer setupBackdropMu.Unlock()
-	if setupBackdrop.starW != pw || setupBackdrop.starH != ph {
-		t.Fatalf("starfield %dx%d, want the physical %dx%d", setupBackdrop.starW, setupBackdrop.starH, pw, ph)
+	if setupBackdrop.StarW != pw || setupBackdrop.StarH != ph {
+		t.Fatalf("starfield %dx%d, want the physical %dx%d", setupBackdrop.StarW, setupBackdrop.StarH, pw, ph)
 	}
 }

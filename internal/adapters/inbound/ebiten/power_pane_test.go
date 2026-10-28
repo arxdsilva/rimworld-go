@@ -392,7 +392,7 @@ func TestPowerToggleOverAGroup(t *testing.T) {
 	off.PowerOn, off.PowerWantOn, off.PowerOut = false, false, 0
 	a, s, _ := pwrApp(t, 0, on, off)
 	a.clearSelections(selNone)
-	a.group = selGroup{kind: selBuilding, ids: []entity.EntityID{on.ID, off.ID}}
+	a.group = selGroup{Kind: selBuilding, Ids: []entity.EntityID{on.ID, off.ID}}
 	merged := func() cmdButton {
 		c, ok := bldCmd(a.groupCommands(), "cmd.group.power.toggle")
 		if !ok {

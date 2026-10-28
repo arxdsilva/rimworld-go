@@ -93,28 +93,28 @@ func wizardToColony(t *testing.T, j *journey) {
 	}
 	j.clickID("story.pick.hearth")
 	j.clickID("diff.seasoned")
-	if ng := a.draft(); ng.storyteller != "hearth" || ng.preset.Key() != "seasoned" {
-		t.Fatalf("draft storyteller %q preset %q, want hearth on seasoned", ng.storyteller, ng.preset.Key())
+	if ng := a.draft(); ng.Storyteller != "hearth" || ng.Preset.Key() != "seasoned" {
+		t.Fatalf("draft storyteller %q preset %q, want hearth on seasoned", ng.Storyteller, ng.Preset.Key())
 	}
 	j.clickID("wizard.next")
 	if a.nav.screen() != screenWorldGen {
 		t.Fatalf("Next opened %s, want Create World", a.nav.screen())
 	}
 	ng := a.draft()
-	ng.world.SeedText, ng.world.Coverage = tinySeed, 5 // a tiny world keeps the journey fast
+	ng.World.SeedText, ng.World.Coverage = tinySeed, 5 // a tiny world keeps the journey fast
 	j.clickID("world.generate")
 	flowUntil(j, "the landing screen", func() bool { return a.nav.screen() == screenLanding }, 4000)
 	j.clickID("land.random")
 	j.clickID("land.advanced")
 	j.update(1)
 	j.clickID("land.mapsize.0")
-	if side := a.draft().mapSize; side != game.MapSizes()[0].Side {
+	if side := a.draft().MapSize; side != game.MapSizes()[0].Side {
 		t.Fatalf("map size %d after picking the first row, want %d", side, game.MapSizes()[0].Side)
 	}
 	j.clickID("modal.land.advanced.close")
 	j.clickID("wizard.next")
 	if a.nav.screen() != screenPawns {
-		t.Fatalf("Next opened %s, want Create Characters (tile %d)", a.nav.screen(), a.draft().tile)
+		t.Fatalf("Next opened %s, want Create Characters (tile %d)", a.nav.screen(), a.draft().Tile)
 	}
 	j.clickID("wizard.start")
 	flowUntil(j, "the colony", func() bool { return a.nav.screen() == screenColony && a.renderer != nil }, 4000)

@@ -486,8 +486,8 @@ func TestWarnedSizesStaySelectable(t *testing.T) {
 			t.Fatalf("%d: warned size row present=%v disabled=%v", o.Side, ok, w.Disabled)
 		}
 		press(t, a, f, optID("land.mapsize", i))
-		if a.ng.mapSize != o.Side {
-			t.Errorf("clicking %d x %d left the map at %d", o.Side, o.Side, a.ng.mapSize)
+		if a.ng.MapSize != o.Side {
+			t.Errorf("clicking %d x %d left the map at %d", o.Side, o.Side, a.ng.MapSize)
 		}
 	}
 }
@@ -576,7 +576,7 @@ func TestSizeWarningsAtUIScales(t *testing.T) {
 
 func TestTileInfoUsesTheSameRule(t *testing.T) {
 	a, _ := landingApp(t)
-	p := a.ng.planet
+	p := a.ng.Planet
 	land := -1
 	for i := 0; i < p.TileCount() && land < 0; i++ {
 		if ok, _ := p.ValidLanding(i); ok {
@@ -589,7 +589,7 @@ func TestTileInfoUsesTheSameRule(t *testing.T) {
 		total uint64
 	}{{300, total}, {400, total}, {500, total}, {300, 0}, {349, 0}, {350, 0}, {500, 0}, {500, 16 * gib}} {
 		want := mapSizeNote(c.side, c.total)
-		warns := buildTileInfo(p, land, c.side, c.total).warnings
+		warns := buildTileInfo(p, land, c.side, c.total).Warnings
 		for _, w := range warns {
 			if strings.HasPrefix(w, "Needs about") || strings.HasPrefix(w, "Large map") {
 				if w != want {
@@ -602,11 +602,11 @@ func TestTileInfoUsesTheSameRule(t *testing.T) {
 		}
 	}
 	// The old fixed 400 line is gone: a 400 map on a big machine is quiet.
-	if w := buildTileInfo(p, land, 400, 16*gib).warnings; containsStr(w, "Large map: needs a capable computer") {
+	if w := buildTileInfo(p, land, 400, 16*gib).Warnings; containsStr(w, "Large map: needs a capable computer") {
 		t.Errorf("400 on 16 GiB still warns: %v", w)
 	}
 	// Unknown hardware: the gentle note at 350 and up, same as the picker.
-	if w := buildTileInfo(p, land, 350, 0).warnings; !containsStr(w, "Large map: needs a capable computer") {
+	if w := buildTileInfo(p, land, 350, 0).Warnings; !containsStr(w, "Large map: needs a capable computer") {
 		t.Errorf("350 with unknown hardware: %v", w)
 	}
 }
@@ -616,7 +616,7 @@ func TestSitePanelShowsTheRAMWarning(t *testing.T) {
 	a, f, _ := ngTest(t, withHardware(total))
 	toLanding(t, a)
 	click(t, a, "land.random")
-	a.ng.mapSize = 500
+	a.ng.MapSize = 500
 	f.Frame(t, a)
 	f.Frame(t, a)
 	want := mapSizeNote(500, total)
@@ -627,7 +627,7 @@ func TestSitePanelShowsTheRAMWarning(t *testing.T) {
 	if !found {
 		t.Errorf("the site panel does not show %q", want)
 	}
-	a.ng.mapSize = 300
+	a.ng.MapSize = 300
 	f.Frame(t, a)
 	f.Frame(t, a)
 	for _, e := range drawnText(t, a, a.sw, a.sh) {

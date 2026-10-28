@@ -54,7 +54,7 @@ func TestZoneIsTheLastSelectionCandidate(t *testing.T) {
 		Items:  []game.ItemView{{ID: 90, X: 5, Y: 5, Kind: "rifle", Qty: 1, FreshDays: -1}},
 	}
 	cands := selectablesAt(w, nil, 5, 5)
-	if len(cands) != 3 || cands[0].kind != selItem || cands[1].kind != selPlant || cands[2] != (selCand{selZone, 3}) {
+	if len(cands) != 3 || cands[0].Kind != selItem || cands[1].Kind != selPlant || cands[2] != (selCand{selZone, 3}) {
 		t.Fatalf("candidates at a zone cell with an item and a crop = %+v, want item, plant, zone 3", cands)
 	}
 	if cands := selectablesAt(w, nil, 6, 6); len(cands) != 1 || cands[0] != (selCand{selZone, 3}) {

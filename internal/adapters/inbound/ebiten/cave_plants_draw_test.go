@@ -64,7 +64,7 @@ func TestDuskmossIsAGroundPlant(t *testing.T) {
 	if !ok {
 		t.Fatal("duskmoss needs ground plant keys")
 	}
-	if g.young[0] != "plant/duskmoss_young_v0" || g.mature[3] != "plant/duskmoss_mature_v3" || g.dormant[1] != "plant/duskmoss_dormant_v1" {
-		t.Errorf("keys = %v %v %v", g.young[0], g.mature[3], g.dormant[1])
+	if g.Young[0] != "plant/duskmoss_young_v0" || g.Mature[3] != "plant/duskmoss_mature_v3" || g.Dormant[1] != "plant/duskmoss_dormant_v1" {
+		t.Errorf("keys = %v %v %v", g.Young[0], g.Mature[3], g.Dormant[1])
 	}
 }

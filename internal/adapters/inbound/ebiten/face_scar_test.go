@@ -61,14 +61,14 @@ func TestPortraitFaceScar(t *testing.T) {
 	art := testArt(t)
 	l := look.Look{Sex: look.Male, Skin: 1, Hair: 1, HairStyle: 2}
 	has := func(ls []portraitLayer) int {
-		return slices.IndexFunc(ls, func(ly portraitLayer) bool { return ly.key == "pawn/face_scar_south" })
+		return slices.IndexFunc(ls, func(ly portraitLayer) bool { return ly.Key == "pawn/face_scar_south" })
 	}
 	if has(portraitLayers(art, l)) >= 0 {
 		t.Fatal("an unscarred portrait has the scar")
 	}
 	ls := scarredLayers(art, l, true)
 	i := has(ls)
-	hair := slices.IndexFunc(ls, func(ly portraitLayer) bool { return strings.HasPrefix(ly.key, "pawn/hair_") })
+	hair := slices.IndexFunc(ls, func(ly portraitLayer) bool { return strings.HasPrefix(ly.Key, "pawn/hair_") })
 	if i < 0 || i < hair {
 		t.Fatalf("scar at %d, hair at %d", i, hair)
 	}
@@ -90,7 +90,7 @@ func TestPawnPortraitArtFaceScar(t *testing.T) {
 	keys := func(p game.PawnView) []string {
 		var out []string
 		for _, ly := range r.pawnPortraitLayers(p) {
-			out = append(out, ly.key)
+			out = append(out, ly.Key)
 		}
 		return out
 	}

@@ -35,18 +35,18 @@ const (
 
 // landGeo is the screen's rectangles.
 type landGeo struct {
-	globe, panel, bar, title rect
+	Globe, Panel, bar, title rect
 	mode, legend             rect
 }
 
 func landRects(sw, sh int) landGeo {
 	w, h := float32(sw), float32(sh)
 	g := landGeo{}
-	g.panel = rect{X: w - landPanelW - landPanelPad, Y: landPanelPad, W: landPanelW, H: h - landPanelPad - landBarH - 2*landPanelPad}
+	g.Panel = rect{X: w - landPanelW - landPanelPad, Y: landPanelPad, W: landPanelW, H: h - landPanelPad - landBarH - 2*landPanelPad}
 	g.bar = rect{X: (w - 740) / 2, Y: h - landBarH - landPanelPad, W: 740, H: landBarH}
-	g.globe = rect{X: 0, Y: landTitleH, W: g.panel.X, H: g.bar.Y - landTitleH}
-	g.title = rect{X: 0, Y: 12, W: g.panel.X, H: 32}
-	g.mode = rect{X: g.panel.X - 12 - 170, Y: 14, W: 170, H: 30}
+	g.Globe = rect{X: 0, Y: landTitleH, W: g.Panel.X, H: g.bar.Y - landTitleH}
+	g.title = rect{X: 0, Y: 12, W: g.Panel.X, H: 32}
+	g.mode = rect{X: g.Panel.X - 12 - 170, Y: 14, W: 170, H: 30}
 	g.legend = rect{X: g.mode.X - 8 - 90, Y: 14, W: 90, H: 30}
 	return g
 }
@@ -135,13 +135,13 @@ func autoSeason(c temperature.Climate) game.Season {
 	return best
 }
 
-// resolvedSeason is the draft's starting season at its tile.
-func (ng *newGameState) resolvedSeason() game.Season {
-	if ng.season >= 0 && ng.season < len(seasonNames) {
-		return game.Season(ng.season)
+// ResolvedSeason is the draft's starting season at its tile.
+func (ng *newGameState) ResolvedSeason() game.Season {
+	if ng.Season >= 0 && ng.Season < len(seasonNames) {
+		return game.Season(ng.Season)
 	}
-	if ng.planet != nil && ng.tile >= 0 {
-		return autoSeason(ng.planet.Site(ng.tile).Climate)
+	if ng.Planet != nil && ng.Tile >= 0 {
+		return autoSeason(ng.Planet.Site(ng.Tile).Climate)
 	}
 	return game.SeasonSpring
 }
@@ -150,7 +150,7 @@ func (ng *newGameState) resolvedSeason() game.Season {
 
 // infoRow is a label/value line of the tile panel.
 type infoRow struct {
-	label, value, tip string
+	Label, Value, tip string
 	col               color.RGBA
 }
 
@@ -158,14 +158,14 @@ type infoRow struct {
 type tileInfo struct {
 	tile      int
 	biome     biome.ID
-	name      string
-	blurb     string
+	Name      string
+	Blurb     string
 	difficult string
-	biomeTip  string
-	rows      []infoRow
-	warnings  []string
-	invalid   string // why the tile can't be landed on ("" valid)
-	outside   bool
+	BiomeTip  string
+	Rows      []infoRow
+	Warnings  []string
+	Invalid   string // why the tile can't be landed on ("" valid)
+	Outside   bool
 }
 
 func coordText(lat, lon int16) string {
@@ -266,19 +266,19 @@ func yesNo(b bool) string {
 // map-size warning.
 func buildTileInfo(p *planet.Planet, i, mapSide int, total uint64) tileInfo {
 	if i < 0 || i >= p.TileCount() {
-		return tileInfo{tile: i, outside: true}
+		return tileInfo{tile: i, Outside: true}
 	}
 	s := p.Site(i)
 	d := biome.DefOf(p.Biome[i])
-	ti := tileInfo{tile: i, biome: p.Biome[i], name: d.Name, blurb: d.Blurb, difficult: d.Difficulty}
+	ti := tileInfo{tile: i, biome: p.Biome[i], Name: d.Name, Blurb: d.Blurb, difficult: d.Difficulty}
 	if p.Water[i] == planet.Ocean {
-		ti.name, ti.blurb, ti.difficult = "Ocean", "Open sea. Nobody can land here.", ""
+		ti.Name, ti.Blurb, ti.difficult = "Ocean", "Open sea. Nobody can land here.", ""
 	} else if p.Water[i] == planet.Lake {
-		ti.name, ti.blurb, ti.difficult = "Lake", "Fresh water. Nobody can land here.", ""
+		ti.Name, ti.Blurb, ti.difficult = "Lake", "Fresh water. Nobody can land here.", ""
 	}
-	ti.biomeTip = d.Name + "\n" + strings.Join(landingDetail(game.BiomeInfoOf(p.Biome[i]), 60)[2:], "\n")
+	ti.BiomeTip = d.Name + "\n" + strings.Join(landingDetail(game.BiomeInfoOf(p.Biome[i]), 60)[2:], "\n")
 	if ok, reason := p.ValidLanding(i); !ok {
-		ti.invalid = reason
+		ti.Invalid = reason
 	}
 	lo, hi := s.Climate.Range()
 	grow := p.GrowingDays(i)
@@ -313,7 +313,7 @@ func buildTileInfo(p *planet.Planet, i, mapSide int, total uint64) tileInfo {
 		near = fmt.Sprintf("%s (%s), %d tiles", p.SettlementName(t), fname, dist)
 	}
 	mv := movementDifficulty(s.Hills, p.Biome[i])
-	ti.rows = []infoRow{
+	ti.Rows = []infoRow{
 		{"Terrain", s.Hills.Label(), hillsTip(s.Hills), uiText},
 		{"Coordinates", coordText(p.Lat[i], p.Lon[i]), "", uiText},
 		{"Elevation", fmt.Sprintf("%d m", p.Elev[i]), "", uiText},
@@ -331,17 +331,17 @@ func buildTileInfo(p *planet.Planet, i, mapSide int, total uint64) tileInfo {
 		{"Wildlife", wildlifeLevel(p.Biome[i]), "Wildlife\nHow many wild animals live here.", uiText},
 	}
 	if p.Water[i] != planet.Land {
-		ti.rows = ti.rows[:2]
+		ti.Rows = ti.Rows[:2]
 	}
 	switch p.Biome[i] {
 	case biome.IceSheet, biome.SeaIce, biome.ExtremeDesert:
-		ti.warnings = append(ti.warnings, "Extreme climate")
+		ti.Warnings = append(ti.Warnings, "Extreme climate")
 	}
 	if p.Water[i] == planet.Land && grow < 15 {
-		ti.warnings = append(ti.warnings, "Very short growing season")
+		ti.Warnings = append(ti.Warnings, "Very short growing season")
 	}
 	if n := mapSizeNote(mapSide, total); n != "" { // the size picker's rule (ram_estimate.go)
-		ti.warnings = append(ti.warnings, n)
+		ti.Warnings = append(ti.Warnings, n)
 	}
 	return ti
 }
@@ -387,31 +387,31 @@ func wrapLabeled(label string, items []string, cols int) []string {
 
 // landingGlobe is the draft's globe, made when the planet changes.
 func (a *App) landingGlobe(ng *newGameState) *globeView {
-	if ng.planet == nil {
+	if ng.Planet == nil {
 		return nil
 	}
-	if ng.globe == nil || ng.globeOf != ng.planet {
-		ng.globe, ng.globeOf = newGlobeView(ng.planet, a.art), ng.planet
-		ng.globe.Select(ng.tile)
-		if ng.tile >= 0 {
-			ng.globe.Center(ng.tile)
+	if ng.Globe == nil || ng.globeOf != ng.Planet {
+		ng.Globe, ng.globeOf = newGlobeView(ng.Planet, a.art), ng.Planet
+		ng.Globe.Select(ng.Tile)
+		if ng.Tile >= 0 {
+			ng.Globe.Center(ng.Tile)
 		}
 	}
-	return ng.globe
+	return ng.Globe
 }
 
 // tileReason is why Next is disabled for the draft's tile ("" it isn't).
 func (ng *newGameState) tileReason() string {
-	if ng.planet == nil {
+	if ng.Planet == nil {
 		return "Generate a world first."
 	}
-	if ng.tile < 0 {
-		if ng.outside {
+	if ng.Tile < 0 {
+		if ng.Outside {
 			return planet.ReasonOutside
 		}
 		return "Choose a landing site first."
 	}
-	if ok, reason := ng.planet.ValidLanding(ng.tile); !ok {
+	if ok, reason := ng.Planet.ValidLanding(ng.Tile); !ok {
 		return reason
 	}
 	return ""
@@ -427,40 +427,40 @@ func (a *App) landingUI(sw, sh int) {
 	if g == nil {
 		return
 	}
-	ng.tile = g.Selected() // a selection made since the last frame (Select random site, tests)
+	ng.Tile = g.Selected() // a selection made since the last frame (Select random site, tests)
 	geo := landRects(sw, sh)
-	g.SetArea(float64(geo.globe.X), float64(geo.globe.Y), float64(geo.globe.W), float64(geo.globe.H))
+	g.SetArea(float64(geo.Globe.X), float64(geo.Globe.Y), float64(geo.Globe.W), float64(geo.Globe.H))
 
 	// The top-right controls.
 	a.ngButton("land.mode", geo.mode, "View: "+g.Mode().String(), btnOpts{Tip: "View mode\nColour the globe by biome, temperature, rainfall or elevation."},
 		func() { g.SetMode((g.Mode() + 1) % numGlobeModes) })
-	a.ngButton("land.legend", geo.legend, "Legend", btnOpts{Selected: ng.legend}, func() { ng.legend = !ng.legend })
+	a.ngButton("land.legend", geo.legend, "Legend", btnOpts{Selected: ng.Legend}, func() { ng.Legend = !ng.Legend })
 
 	// Bottom bar.
 	a.uiPanel(geo.bar)
 	a.landBar(ng, g, geo.bar)
 
 	// The info panel.
-	a.uiPanel(geo.panel)
-	shown := ng.tile
+	a.uiPanel(geo.Panel)
+	shown := ng.Tile
 	if shown < 0 && g.Hovered() >= 0 {
 		shown = g.Hovered()
 	}
-	a.landInfoPanel(ng, geo.panel.Inset(landPanelPad), shown, g.Hovered() == globeUncovered && ng.tile < 0)
+	a.landInfoPanel(ng, geo.Panel.Inset(landPanelPad), shown, g.Hovered() == globeUncovered && ng.Tile < 0)
 
 	// The globe takes the pointer anywhere outside the chrome and modals.
 	mx, my := a.currentCursor()
-	blocked := a.uiModalOpen() || geo.panel.Hit(mx, my) || geo.bar.Hit(mx, my) || geo.mode.Hit(mx, my) || geo.legend.Hit(mx, my) ||
-		(ng.legend && a.legendRect(geo).Hit(mx, my))
+	blocked := a.uiModalOpen() || geo.Panel.Hit(mx, my) || geo.bar.Hit(mx, my) || geo.mode.Hit(mx, my) || geo.legend.Hit(mx, my) ||
+		(ng.Legend && a.legendRect(geo).Hit(mx, my))
 	clicked, _ := g.Update(globeInputFrom(&a.in, sw, sh, blocked), a.settings.Accessibility.ReducedMotion)
 	switch {
 	case clicked >= 0:
-		ng.outside = false
+		ng.Outside = false
 	case clicked == globeUncovered:
-		ng.outside = true
+		ng.Outside = true
 	}
-	ng.tile = g.Selected()
-	if ng.legend {
+	ng.Tile = g.Selected()
+	if ng.Legend {
 		a.landLegend(g, a.legendRect(geo))
 	}
 }
@@ -495,13 +495,13 @@ func (a *App) landBar(ng *newGameState, g *globeView, bar rect) {
 
 // randomLanding selects the next random valid site and flies there.
 func (a *App) randomLanding(ng *newGameState, g *globeView) {
-	t := ng.planet.RandomLanding(ng.landRolls)
-	ng.landRolls++
+	t := ng.Planet.RandomLanding(ng.LandRolls)
+	ng.LandRolls++
 	if t < 0 {
 		a.uiDeny("No tile on this world can be landed on.")
 		return
 	}
-	ng.tile, ng.outside = t, false
+	ng.Tile, ng.Outside = t, false
 	g.Select(t)
 	g.Center(t)
 }
@@ -553,10 +553,10 @@ func (a *App) landInfoPanel(ng *newGameState, r rect, tile int, uncovered bool) 
 
 // tileInfoFor is the cached info of a tile.
 func (a *App) tileInfoFor(ng *newGameState, tile int) tileInfo {
-	c := &ng.info
+	c := &ng.Info
 	total := a.hardwareTotal()
-	if c.planet != ng.planet || c.tile != tile || c.side != ng.mapSize || c.total != total {
-		*c = infoCache{planet: ng.planet, tile: tile, side: ng.mapSize, total: total, info: buildTileInfo(ng.planet, tile, ng.mapSize, total)}
+	if c.Planet != ng.Planet || c.Tile != tile || c.side != ng.MapSize || c.total != total {
+		*c = infoCache{Planet: ng.Planet, Tile: tile, side: ng.MapSize, total: total, info: buildTileInfo(ng.Planet, tile, ng.MapSize, total)}
 	}
 	return c.info
 }
@@ -564,8 +564,8 @@ func (a *App) tileInfoFor(ng *newGameState, tile int) tileInfo {
 // infoCache remembers the last tile info (the nearest-settlement search
 // is not free, and the hover changes every frame).
 type infoCache struct {
-	planet *planet.Planet
-	tile   int
+	Planet *planet.Planet
+	Tile   int
 	side   int
 	total  uint64 // the computer's memory the warning was made for
 	info   tileInfo
@@ -577,13 +577,13 @@ func (a *App) infoBlocks(ti tileInfo, w float32) []infoBlock {
 	// Header: icon, name, difficulty tag, blurb.
 	nameSt := tsLarge
 	nameSt.Color = uiHeading
-	blurbLines := wrapPx(ti.blurb, tsBody, float64(w))
+	blurbLines := wrapPx(ti.Blurb, tsBody, float64(w))
 	hh := float32(56)
-	out = append(out, infoBlock{h: hh, tip: ti.biomeTip, draw: func(dst *ebiten.Image, r rect) {
-		if img := a.art.Image(biome.DefOf(ti.biome).Icon(), noTint); img != nil && ti.name != "Ocean" && ti.name != "Lake" {
+	out = append(out, infoBlock{h: hh, tip: ti.BiomeTip, draw: func(dst *ebiten.Image, r rect) {
+		if img := a.art.Image(biome.DefOf(ti.biome).Icon(), noTint); img != nil && ti.Name != "Ocean" && ti.Name != "Lake" {
 			drawIcon(dst, img, float64(r.X), float64(r.Y+4), 48)
 		}
-		drawText(dst, ti.name, float64(r.X+58), float64(r.Y+8), nameSt)
+		drawText(dst, ti.Name, float64(r.X+58), float64(r.Y+8), nameSt)
 		if ti.difficult != "" {
 			t := tsSmall
 			t.Color = uiWarning
@@ -596,8 +596,8 @@ func (a *App) infoBlocks(ti tileInfo, w float32) []infoBlock {
 			drawText(dst, l, float64(r.X), float64(r.Y)+float64(i)*lineH(st), st)
 		}
 	}})
-	if ti.invalid != "" {
-		reason := ti.invalid
+	if ti.Invalid != "" {
+		reason := ti.Invalid
 		out = append(out, infoBlock{h: wrapHeight(reason, tsLabel, w) + 8, draw: func(dst *ebiten.Image, r rect) {
 			st := tsLabel
 			st.Color = uiDanger
@@ -606,7 +606,7 @@ func (a *App) infoBlocks(ti tileInfo, w float32) []infoBlock {
 			}
 		}})
 	}
-	for _, wn := range ti.warnings {
+	for _, wn := range ti.Warnings {
 		wn := wn
 		out = append(out, infoBlock{h: wrapHeight(wn, tsLabel, w) + 4, draw: func(dst *ebiten.Image, r rect) {
 			st := tsLabel
@@ -617,13 +617,13 @@ func (a *App) infoBlocks(ti tileInfo, w float32) []infoBlock {
 		}})
 	}
 	vw := w - landLabelW
-	for _, row := range ti.rows {
+	for _, row := range ti.Rows {
 		row := row
-		lines := wrapPx(row.value, tsBody, float64(vw))
+		lines := wrapPx(row.Value, tsBody, float64(vw))
 		h := max(float32(len(lines)), 1)*float32(lineH(tsBody)) + 6
 		out = append(out, infoBlock{h: h, tip: row.tip, draw: func(dst *ebiten.Image, r rect) {
 			ls := dimText()
-			drawText(dst, fitText(row.label, ls, landLabelW-8), float64(r.X), float64(r.Y+2), ls)
+			drawText(dst, fitText(row.Label, ls, landLabelW-8), float64(r.X), float64(r.Y+2), ls)
 			vs := tsBody
 			vs.Color = row.col
 			for i, l := range lines {
@@ -686,7 +686,7 @@ func (a *App) drawLanding(screen *ebiten.Image, sw, sh int) {
 	ng := a.draft()
 	g := a.landingGlobe(ng)
 	if g == nil || tooSmall(sw, sh) {
-		a.drawSetupBackdrop(screen, sw, sh, ng.planet)
+		a.drawSetupBackdrop(screen, sw, sh, ng.Planet)
 		if tooSmall(sw, sh) {
 			drawTooSmall(screen, sw, sh)
 		}
@@ -714,7 +714,7 @@ func (a *App) pushLandingAdvanced() {
 		Draw: func(a *App, body rect) { a.landingAdvancedBody(ng, body, opts) },
 		Buttons: []modalButton{
 			{ID: "close", Label: "Close", Style: btnPrimary, Closes: true},
-			{ID: "reset", Label: "Reset", OnClick: func() { ng.season, ng.mapSize = -1, defaultMapSideEnabled() }},
+			{ID: "reset", Label: "Reset", OnClick: func() { ng.Season, ng.MapSize = -1, defaultMapSideEnabled() }},
 		},
 	})
 }
@@ -726,16 +726,16 @@ func (a *App) landingAdvancedBody(ng *newGameState, body rect, opts []game.MapSi
 	a.uiLabel(body.X, y, "Starting season", hs)
 	a.uiTip("land.season.tip", rect{X: body.X, Y: y, W: body.W, H: 22}, "Starting season\nSeason the colony starts in, at this site.")
 	y += 26
-	sel := ng.season + 1
+	sel := ng.Season + 1
 	if a.uiRadio("land.season", rect{X: body.X, Y: y, W: body.W, H: 5 * radioRowH}, append([]string{"Auto"}, seasonNames...), &sel, radioOpts{
 		Tips: []string{"Auto\nThe first season that is already warm (8°C or more) and getting warmer; otherwise the warmest one."},
 	}) {
-		ng.season = sel - 1
+		ng.Season = sel - 1
 	}
 	y += 5*radioRowH + 6
 	note := "Pick a landing site to see what Auto means there."
-	if ng.planet != nil && ng.tile >= 0 {
-		note = "Auto starts this site in " + seasonNames[autoSeason(ng.planet.Site(ng.tile).Climate)] + "."
+	if ng.Planet != nil && ng.Tile >= 0 {
+		note = "Auto starts this site in " + seasonNames[autoSeason(ng.Planet.Site(ng.Tile).Climate)] + "."
 	}
 	a.uiLabel(body.X, y, note, dimText())
 	y += 34
@@ -756,13 +756,13 @@ func (a *App) landingAdvancedBody(ng *newGameState, body rect, opts []game.MapSi
 				tips[i] += "\n" + notes[i]
 			}
 		}
-		if o.Side == ng.mapSize {
+		if o.Side == ng.MapSize {
 			msel = i
 		}
 	}
 	list := rect{X: body.X, Y: y, W: body.W, H: float32(len(opts)) * radioRowH}
 	if a.uiRadio("land.mapsize", list, labels, &msel, radioOpts{Disabled: dis, Tips: tips}) {
-		ng.mapSize = opts[msel].Side
+		ng.MapSize = opts[msel].Side
 	}
 	a.mapSizeWarnings(list, labels, notes)
 }

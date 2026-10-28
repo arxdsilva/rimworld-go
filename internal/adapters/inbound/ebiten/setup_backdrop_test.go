@@ -13,7 +13,7 @@ func TestBackdropShowcaseBuildsAcrossFrames(t *testing.T) {
 	b := &setupBackdrop
 	calls := 0
 	var worst time.Duration
-	for b.discPlanet(nil) == nil {
+	for b.DiscPlanet(nil) == nil {
 		start := time.Now()
 		calls++
 		if calls > 20000 {
@@ -26,11 +26,11 @@ func TestBackdropShowcaseBuildsAcrossFrames(t *testing.T) {
 	if calls < 5 {
 		t.Fatalf("showcase built in %d calls: not spread over frames", calls)
 	}
-	p := b.discPlanet(nil)
+	p := b.DiscPlanet(nil)
 	if p.TileCount() == 0 || p.Params.SeedText != backdropShowcase.SeedText {
 		t.Fatalf("showcase planet %+v", p.Params)
 	}
-	if b.discPlanet(nil) != p {
+	if b.DiscPlanet(nil) != p {
 		t.Fatal("showcase rebuilt")
 	}
 	t.Logf("showcase generated in %d frames", calls)
@@ -40,10 +40,10 @@ func TestBackdropPrefersTheGivenPlanet(t *testing.T) {
 	resetSetupBackdrop()
 	t.Cleanup(resetSetupBackdrop)
 	p := globeTestPlanet(t, 30)
-	if got := setupBackdrop.discPlanet(p); got != p {
+	if got := setupBackdrop.DiscPlanet(p); got != p {
 		t.Fatal("ignored the wizard's planet")
 	}
-	if setupBackdrop.showBuilder != nil {
+	if setupBackdrop.ShowBuilder != nil {
 		t.Fatal("started the showcase although a planet exists")
 	}
 }
@@ -56,40 +56,40 @@ func TestBackdropDrawsWithAndWithoutPlanet(t *testing.T) {
 	screen := ebiten.NewImage(1280, 720)
 	// No diorama and no planet yet: gradient, stars and a plain sphere.
 	a.drawSetupBackdrop(screen, 1280, 720, nil)
-	if setupBackdrop.stars == nil || setupBackdrop.plain == nil {
+	if setupBackdrop.Stars == nil || setupBackdrop.Plain == nil {
 		t.Fatal("stars or placeholder sphere not drawn")
 	}
 	// With the wizard's world: a disc rendered from it.
 	p := globeTestPlanet(t, 30)
 	a.drawSetupBackdrop(screen, 1280, 720, p)
-	if setupBackdrop.view == nil || setupBackdrop.viewOf != p || setupBackdrop.disc == nil {
+	if setupBackdrop.View == nil || setupBackdrop.ViewOf != p || setupBackdrop.Disc == nil {
 		t.Fatal("planet disc not built from the world")
 	}
-	lon := setupBackdrop.view.Cam.Lon
+	lon := setupBackdrop.View.Cam.Lon
 	for i := 0; i < 3*backdropRenderGap; i++ {
 		a.drawSetupBackdrop(screen, 1280, 720, p)
 	}
-	if setupBackdrop.view.Cam.Lon == lon {
+	if setupBackdrop.View.Cam.Lon == lon {
 		t.Fatal("the planet does not drift")
 	}
 	// Reduced Motion freezes it.
 	a.settings.Accessibility.ReducedMotion = true
-	lon = setupBackdrop.view.Cam.Lon
+	lon = setupBackdrop.View.Cam.Lon
 	for i := 0; i < 3*backdropRenderGap; i++ {
 		a.drawSetupBackdrop(screen, 1280, 720, p)
 	}
-	if setupBackdrop.view.Cam.Lon != lon {
+	if setupBackdrop.View.Cam.Lon != lon {
 		t.Fatal("planet drifts with Reduced Motion")
 	}
 	// A new world replaces the disc.
 	q := globeTestPlanet(t, 50)
 	a.drawSetupBackdrop(screen, 1280, 720, q)
-	if setupBackdrop.viewOf != q {
+	if setupBackdrop.ViewOf != q {
 		t.Fatal("disc not rebuilt for the new world")
 	}
 	// A resize rebakes the stars.
 	a.drawSetupBackdrop(ebiten.NewImage(1600, 900), 1600, 900, q)
-	if setupBackdrop.starW != 1600 {
+	if setupBackdrop.StarW != 1600 {
 		t.Fatal("stars not rebaked for the new size")
 	}
 }

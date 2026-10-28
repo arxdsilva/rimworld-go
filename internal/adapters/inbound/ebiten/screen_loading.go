@@ -51,7 +51,7 @@ const loadUnits = 4000
 // loadState is a colony being built.
 type loadState struct {
 	b     SimBuilder
-	phase string
+	Phase string
 	frac  float32
 }
 
@@ -65,11 +65,11 @@ func fnv64a(s string) uint64 {
 // setupSeedOf is the setup seed (NG-1 §4.7):
 // fnv64a(world seed text) ^ tile * 0x9E3779B97F4A7C15 ^ scenario seed.
 func setupSeedOf(ng *newGameState) uint64 {
-	text := ng.world.SeedText
-	if ng.planet != nil {
-		text = ng.planet.Params.SeedText
+	text := ng.World.SeedText
+	if ng.Planet != nil {
+		text = ng.Planet.Params.SeedText
 	}
-	return fnv64a(text) ^ uint64(int64(ng.tile))*0x9E3779B97F4A7C15 ^ ng.scenario.Seed
+	return fnv64a(text) ^ uint64(int64(ng.Tile))*0x9E3779B97F4A7C15 ^ ng.Scenario.Seed
 }
 
 // cloneFactions copies the generated factions so the colony owns them.
@@ -85,32 +85,32 @@ func cloneFactions(fs []faction.Faction) []faction.Faction {
 	return out
 }
 
-// buildSetup turns the draft into a game.Setup. It needs a generated
+// BuildSetup turns the draft into a game.Setup. It needs a generated
 // planet, a landing tile and the candidate pool.
-func (ng *newGameState) buildSetup() (game.Setup, bool) {
-	if ng.planet == nil || ng.tile < 0 || ng.pool == nil {
+func (ng *newGameState) BuildSetup() (game.Setup, bool) {
+	if ng.Planet == nil || ng.Tile < 0 || ng.Pool == nil {
 		return game.Setup{}, false
 	}
-	diff := difficulty.Of(ng.preset)
-	if ng.preset == difficulty.Custom {
-		diff = ng.custom
+	diff := difficulty.Of(ng.Preset)
+	if ng.Preset == difficulty.Custom {
+		diff = ng.Custom
 	}
-	params := ng.planet.Params
+	params := ng.Planet.Params
 	params.Factions = append([]faction.Slot(nil), params.Factions...)
-	st := ng.planet.Site(ng.tile)
+	st := ng.Planet.Site(ng.Tile)
 	return game.Setup{
-		Scenario:    ng.scenario,
-		Storyteller: ng.storyteller,
-		Preset:      ng.preset,
+		Scenario:    ng.Scenario,
+		Storyteller: ng.Storyteller,
+		Preset:      ng.Preset,
 		Difficulty:  diff,
-		SaveMode:    ng.saveMode,
+		SaveMode:    ng.SaveMode,
 		World:       params,
-		Tile:        ng.tile,
+		Tile:        ng.Tile,
 		Site:        st,
-		Factions:    cloneFactions(ng.planet.Factions),
-		MapSize:     ng.mapSize,
-		Season:      ng.resolvedSeason(),
-		Colonists:   ng.pool.Selected(),
+		Factions:    cloneFactions(ng.Planet.Factions),
+		MapSize:     ng.MapSize,
+		Season:      ng.ResolvedSeason(),
+		Colonists:   ng.Pool.Selected(),
 		Seed:        setupSeedOf(ng),
 	}, true
 }
@@ -124,8 +124,8 @@ func newGameOf(s *game.Setup) NewGame {
 // simBuilder makes the stepper for ng. The composition root's factory
 // builds in one step; a stepping builder hooks in here.
 func (a *App) simBuilder(ng NewGame) (SimBuilder, error) {
-	if a.ng != nil && a.ng.buildHook != nil && ng.Setup != nil {
-		return a.ng.buildHook(ng) // tests, and later the stepping factory
+	if a.ng != nil && a.ng.BuildHook != nil && ng.Setup != nil {
+		return a.ng.BuildHook(ng) // tests, and later the stepping factory
 	}
 	if a.cfg.NewSimBuilder != nil && ng.Setup != nil {
 		return a.cfg.NewSimBuilder(ng)
@@ -146,7 +146,7 @@ const errNoFactory = loadErr("no simulation factory")
 // run its first step (a one-step builder is done at once).
 func (a *App) beginLoading() {
 	ng := a.draft()
-	setup, ok := ng.buildSetup()
+	setup, ok := ng.BuildSetup()
 	if !ok {
 		a.sessionErr = "the setup is incomplete"
 		return
@@ -157,27 +157,27 @@ func (a *App) beginLoading() {
 		return
 	}
 	a.sessionErr = ""
-	ng.load = &loadState{b: b, phase: loadPhases[0]}
+	ng.Load = &loadState{b: b, Phase: loadPhases[0]}
 	a.loadingStep()
 }
 
 // loadingStep advances the colony builder one frame.
 func (a *App) loadingStep() {
 	ng := a.ng
-	if ng == nil || ng.load == nil {
+	if ng == nil || ng.Load == nil {
 		return
 	}
-	ld := ng.load
+	ld := ng.Load
 	phase, frac, done := ld.b.Step(loadUnits)
 	if phase == "" {
 		phase = loadPhases[min(int(frac*float32(len(loadPhases))), len(loadPhases)-1)]
 	}
-	ld.phase, ld.frac = phase, frac
+	ld.Phase, ld.frac = phase, frac
 	if !done {
 		return
 	}
 	sim, err := ld.b.Sim()
-	ng.load = nil
+	ng.Load = nil
 	if err != nil || sim == nil {
 		if err == nil {
 			err = loadErr("the colony could not be built")
@@ -198,12 +198,12 @@ func (a *App) finishStart(sim Simulation) {
 
 // drawLoading paints the loading screen over the setup backdrop.
 func (a *App) drawLoading(screen *ebiten.Image, sw, sh int) {
-	a.drawSetupBackdrop(screen, sw, sh, a.ng.planet)
-	ld := a.ng.load
+	a.drawSetupBackdrop(screen, sw, sh, a.ng.Planet)
+	ld := a.ng.Load
 	box := winRect(sw, sh).Centered(560, 150)
 	drawPanel(screen, box.X, box.Y, box.W, box.H)
 	st := tsLarge
 	st.Color = uiHeading
 	drawText(screen, "Preparing your colony", float64(box.X+20), float64(box.Y+16), st)
-	drawProgress(screen, rect{X: box.X + 20, Y: box.Y + 56, W: box.W - 40, H: 60}, ld.phase, float64(ld.frac), "")
+	drawProgress(screen, rect{X: box.X + 20, Y: box.Y + 56, W: box.W - 40, H: 60}, ld.Phase, float64(ld.frac), "")
 }

@@ -220,7 +220,7 @@ func (r *Renderer) drawConduits(screen *ebiten.Image, w game.WorldView, sw, sh i
 				r.layer("conduits")
 			}
 			if b.Kind == conduitKind {
-				if key := buildSprite(b.Kind, "", r.links.conduitMask(b.X, b.Y), false, false); r.art.Has(key) {
+				if key := buildSprite(b.Kind, "", r.links.ConduitMask(b.X, b.Y), false, false); r.art.Has(key) {
 					r.powerTrace("conduit", key)
 					r.drawSpriteCS(screen, key, none, float64(b.X), float64(b.Y), tile, sw, sh, noCS)
 				}
@@ -239,9 +239,9 @@ func (r *Renderer) drawConduits(screen *ebiten.Image, w game.WorldView, sw, sh i
 			}
 			if !planned { // the frames' planned set, once (O(frames))
 				planned = true
-				p = r.links.plan(w.Frames, nil)
+				p = r.links.Plan(w.Frames, nil)
 			}
-			key := buildSprite(f.Kind, "", r.links.powerMask(conduitLink.accepts, f.X, f.Y, p), false, false)
+			key := buildSprite(f.Kind, "", r.links.PowerMask(conduitLink.Accepts, f.X, f.Y, p), false, false)
 			if r.art.Has(key) {
 				r.powerTrace("conduit frame", key)
 				r.drawSpriteCS(screen, key, none, float64(f.X), float64(f.Y), tile, sw, sh, blueprintCS)
@@ -259,7 +259,7 @@ func (r *Renderer) drawPowerMarkings(dst *ebiten.Image, w *game.WorldView, tile 
 	if r.art == nil || colour == nil {
 		return
 	}
-	r.links.sync(*w, r.game.Width(), r.game.Height()) // a no-op on the frame's StructVer
+	r.links.Sync(*w, r.game.Width(), r.game.Height()) // a no-op on the frame's StructVer
 	for _, cv := range r.lod.views {
 		for _, i := range cv.Buildings {
 			if int(i) >= len(w.Buildings) {
@@ -269,7 +269,7 @@ func (r *Renderer) drawPowerMarkings(dst *ebiten.Image, w *game.WorldView, tile 
 			if !isConduitKind(b.Kind) || (hiddenOnly && b.Kind != hiddenConduitKind) || !r.lod.inView(b.X, b.Y, 1, 1) {
 				continue
 			}
-			key := buildSprite(hiddenConduitKind, "", r.links.conduitMask(b.X, b.Y), false, false)
+			key := buildSprite(hiddenConduitKind, "", r.links.ConduitMask(b.X, b.Y), false, false)
 			c := colour(b.PowerNet)
 			cs := colorScale{float32(c.R) / 255, float32(c.G) / 255, float32(c.B) / 255, float32(c.A) / 255}
 			if r.drawUnlitSprite(dst, key, float64(b.X), float64(b.Y), tile, sw, sh, cs) {

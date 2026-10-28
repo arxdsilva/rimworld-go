@@ -335,7 +335,7 @@ func TestNewGameWizardAndStart(t *testing.T) {
 	// Create World generates (a tiny world) and arrives at the landing
 	// site screen; Next then needs a chosen site.
 	ng := a.draft()
-	ng.world.SeedText, ng.world.Coverage = tinySeed, 5
+	ng.World.SeedText, ng.World.Coverage = tinySeed, 5
 	click(t, a, "world.generate")
 	runUntil(t, a, func() bool { return a.nav.screen() == screenLanding })
 	click(t, a, "land.random")
@@ -498,8 +498,8 @@ func TestScenarioSelectionStaysOnScreen(t *testing.T) {
 	a.finishBoot()
 	click(t, a, "menu.newgame")
 	click(t, a, "scen.row.gilded_expedition") // the third built-in
-	if sel := a.draft().selected(); sel == nil || sel.key != "gilded_expedition" || a.nav.screen() != screenScenario {
-		t.Fatalf("select the third scenario: sel=%+v screen=%s", a.draft().selected(), a.nav.screen())
+	if sel := a.draft().Selected(); sel == nil || sel.Key != "gilded_expedition" || a.nav.screen() != screenScenario {
+		t.Fatalf("select the third scenario: sel=%+v screen=%s", a.draft().Selected(), a.nav.screen())
 	}
 }
 
@@ -516,17 +516,17 @@ func TestBodyOriginClearsLeftRail(t *testing.T) {
 	for _, size := range [][2]int{{1280, 720}, {1920, 1080}} {
 		_, _, content, _ := dialogFrame(size[0], size[1])
 		L := scenarioRects(content)
-		if L.right.X < L.left.Right() || L.list.Right() > L.left.Right()+0.5 {
-			t.Fatalf("%v scenario details start at %v, list ends at %v", size, L.right.X, L.left.Right())
+		if L.Right.X < L.Left.Right() || L.List.Right() > L.Left.Right()+0.5 {
+			t.Fatalf("%v scenario details start at %v, list ends at %v", size, L.Right.X, L.Left.Right())
 		}
-		if L.right.X < content.X+content.W*0.38 {
-			t.Fatalf("%v scenario details x=%v, want right of the 38%% list column", size, L.right.X)
+		if L.Right.X < content.X+content.W*0.38 {
+			t.Fatalf("%v scenario details x=%v, want right of the 38%% list column", size, L.Right.X)
 		}
-		if L.right.Right() > content.Right()+0.5 || L.buttons.Bottom() > content.Bottom()+0.5 {
+		if L.Right.Right() > content.Right()+0.5 || L.Buttons.Bottom() > content.Bottom()+0.5 {
 			t.Fatalf("%v scenario columns leave the content area", size)
 		}
 		S := storyRects(content)
-		if S.centre.X < S.left.Right() || S.right.X < S.centre.Right() || S.right.Right() > content.Right()+0.5 {
+		if S.Centre.X < S.Left.Right() || S.Right.X < S.Centre.Right() || S.Right.Right() > content.Right()+0.5 {
 			t.Fatalf("%v storyteller columns overlap: %+v", size, S)
 		}
 	}

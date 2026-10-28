@@ -117,8 +117,8 @@ func TestOptionsDrawAtScales(t *testing.T) {
 				}
 			}
 			for i, r := range optionRows(tab) {
-				if w, _ := measure(r.label, tsBody); 56+w > optCtrlX-8 {
-					t.Fatalf("%s: label %q (%v px) runs into row %d control", tab, r.label, w, i)
+				if w, _ := measure(r.Label, tsBody); 56+w > optCtrlX-8 {
+					t.Fatalf("%s: label %q (%v px) runs into row %d control", tab, r.Label, w, i)
 				}
 			}
 			a.Draw(ebiten.NewImage(a.pw, a.ph))

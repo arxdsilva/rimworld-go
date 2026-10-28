@@ -75,7 +75,7 @@ func (r *Renderer) addCaveMouths(w game.WorldView, draws []artDraw, screen *ebit
 				continue
 			}
 			cs := tintCS(r.stoneTintAt(w, x, y))
-			draws = append(draws, artDraw{row: float64(y), col: float64(x), fn: func() {
+			draws = append(draws, artDraw{Row: float64(y), Col: float64(x), Fn: func() {
 				r.drawSpriteCS(screen, key, color.NRGBA{}, float64(x), float64(y), tile, sw, sh, cs)
 			}})
 		}

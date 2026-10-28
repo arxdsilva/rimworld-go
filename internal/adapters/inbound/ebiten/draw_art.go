@@ -27,11 +27,11 @@ const (
 // a plain record — a linked sprite (rock) or an index into the frame's
 // lists — so a frame queues thousands without allocating (NG-1 §6.7).
 type artDraw struct {
-	row, col float64
-	fn       func()
-	ld       linkedDraw
-	kind     objKind
-	i        int32   // index into the list kind names
+	Row, Col float64
+	Fn       func()
+	Ld       linkedDraw
+	Kind     objKind
+	I        int32   // index into the list kind names
 	wx, wy   float64 // creatures: where they are drawn
 }
 
@@ -54,10 +54,10 @@ const (
 // queue order of ties.
 func sortDraws(draws []artDraw) {
 	slices.SortStableFunc(draws, func(a, b artDraw) int {
-		if c := cmp.Compare(a.row, b.row); c != 0 {
+		if c := cmp.Compare(a.Row, b.Row); c != 0 {
 			return c
 		}
-		return cmp.Compare(a.col, b.col)
+		return cmp.Compare(a.Col, b.Col)
 	})
 }
 
@@ -167,21 +167,21 @@ func (r *Renderer) drawPlacementGhost(screen *ebiten.Image, kind, stuff, facing 
 	sw, sh := screen.Bounds().Dx(), screen.Bounds().Dy()
 	tile := r.tilePx()
 	link, power := buildingLink(kind), false
-	if c := powerLink(kind); c.accepts != 0 { // conduits link on the power layer (linkgrid.go)
+	if c := powerLink(kind); c.Accepts != 0 { // conduits link on the power layer (linkgrid.go)
 		link, power = c, true
 	}
 	var p map[[2]int]linkFlag
-	if r.art != nil && link.flags != 0 { // ghosts join built walls, rock, frames and each other
+	if r.art != nil && link.Flags != 0 { // ghosts join built walls, rock, frames and each other
 		w := r.view.W
 		if w.TerrainW == 0 {
 			w = r.world()
 		}
-		r.links.sync(w, r.game.Width(), r.game.Height())
+		r.links.Sync(w, r.game.Width(), r.game.Height())
 		ghosts := make([]plannedCell, len(cells))
 		for i, c := range cells {
-			ghosts[i] = plannedCell{x: c.x, y: c.y, flags: link.flags}
+			ghosts[i] = plannedCell{X: c.x, Y: c.y, Flags: link.Flags}
 		}
-		p = r.links.plan(w.Frames, ghosts)
+		p = r.links.Plan(w.Frames, ghosts)
 	}
 	tint := r.stuffTint(stuff)
 	for _, c := range cells {
@@ -200,10 +200,10 @@ func (r *Renderer) drawPlacementGhost(screen *ebiten.Image, kind, stuff, facing 
 		mask, corners := 0, 0
 		switch {
 		case p != nil && power:
-			mask = r.links.powerMask(link.accepts, c.x, c.y, p)
+			mask = r.links.PowerMask(link.Accepts, c.x, c.y, p)
 		case p != nil:
-			mask = r.links.plannedMask(p, link.accepts, c.x, c.y)
-			corners = r.links.plannedCorners(p, link.accepts, c.x, c.y)
+			mask = r.links.PlannedMask(p, link.Accepts, c.x, c.y)
+			corners = r.links.PlannedCorners(p, link.Accepts, c.x, c.y)
 		}
 		if kind == "wall" && r.drawLinked(screen, wallPrefix(stuff), c.x, c.y, mask, corners, tint, cs, tile, sw, sh) {
 			continue
@@ -271,7 +271,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	r.view.W, r.view.Pawns = w, r.game.Snapshot() // this frame's world and pawns, for every layer
 	r.lit.Light = lightAt(w.Hour, w.DayOfYear, w.Weather, w.WeatherIntensity)
 	r.setView(sw, sh, tile)
-	r.links.sync(w, r.game.Width(), r.game.Height()) // linkgrid.go: rebuilt only on StructVer
+	r.links.Sync(w, r.game.Width(), r.game.Height()) // linkgrid.go: rebuilt only on StructVer
 	r.lod.tier = lodFor(tile)
 	r.lod.crops.begin()
 	r.syncFrameChunks() // lod.go: the chunk lists in view
@@ -353,7 +353,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	l.cloth = r.colonyCloths()
 	// planned walls and fences autotile with each other, built walls and
 	// rock (an O(frames) planned set, linkgrid.go)
-	l.planned = r.links.plan(w.Frames, nil)
+	l.planned = r.links.Plan(w.Frames, nil)
 	// objects of the chunks in view, culled by position before queueing:
 	// sprites reach up to three tiles north and a tile or two sideways
 	for _, cv := range views {
@@ -363,7 +363,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 					continue
 				}
 				if b := &w.Buildings[i]; !b.Floor && !onFloor(b.Kind) && l.near(b.X, b.Y, 3, 4) {
-					draws = append(draws, artDraw{row: float64(b.Y + max(b.H, 1) - 1), col: float64(b.X), kind: objBuilding, i: i})
+					draws = append(draws, artDraw{Row: float64(b.Y + max(b.H, 1) - 1), Col: float64(b.X), Kind: objBuilding, I: i})
 				}
 			}
 			for _, i := range cv.Plants {
@@ -371,7 +371,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 					continue
 				}
 				if p := &w.Plants[i]; l.near(p.X, p.Y, 2, 4) {
-					draws = append(draws, artDraw{row: float64(p.Y), col: float64(p.X), kind: objPlant, i: i})
+					draws = append(draws, artDraw{Row: float64(p.Y), Col: float64(p.X), Kind: objPlant, I: i})
 				}
 			}
 			for _, i := range cv.Items {
@@ -383,9 +383,9 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 					continue
 				}
 				if it.Forbidden {
-					draws = append(draws, artDraw{row: float64(it.Y) + 0.001, col: float64(it.X), kind: objForbidden, i: i})
+					draws = append(draws, artDraw{Row: float64(it.Y) + 0.001, Col: float64(it.X), Kind: objForbidden, I: i})
 				}
-				draws = append(draws, artDraw{row: float64(it.Y), col: float64(it.X), kind: objItem, i: i})
+				draws = append(draws, artDraw{Row: float64(it.Y), Col: float64(it.X), Kind: objItem, I: i})
 			}
 		}
 		for _, i := range cv.Frames {
@@ -393,7 +393,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 				continue
 			}
 			if f := &w.Frames[i]; !f.Floor && f.Kind != "carpet" && !isConduitKind(f.Kind) && l.near(f.X, f.Y, 3, 4) {
-				draws = append(draws, artDraw{row: float64(f.Y + max(f.H, 1) - 1), col: float64(f.X), kind: objFrame, i: i})
+				draws = append(draws, artDraw{Row: float64(f.Y + max(f.H, 1) - 1), Col: float64(f.X), Kind: objFrame, I: i})
 			}
 		}
 	}
@@ -406,7 +406,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 		}
 		wx, wy := r.interpAnimal(*an)
 		wx, wy = creatureAt(wx, wy, tile, ct)
-		draws = append(draws, artDraw{row: wy + 0.01, col: wx, kind: objAnimal, i: int32(i), wx: wx, wy: wy})
+		draws = append(draws, artDraw{Row: wy + 0.01, Col: wx, Kind: objAnimal, I: int32(i), wx: wx, wy: wy})
 	}
 	for i := range r.view.Pawns {
 		p := &r.view.Pawns[i]
@@ -421,7 +421,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 			}
 		}
 		wx, wy = creatureAt(wx, wy, tile, ct)
-		draws = append(draws, artDraw{row: row, col: wx, kind: objPawn, i: int32(i), wx: wx, wy: wy})
+		draws = append(draws, artDraw{Row: row, Col: wx, Kind: objPawn, I: int32(i), wx: wx, wy: wy})
 	}
 	sortDraws(draws)
 	for i := range draws {
@@ -518,33 +518,33 @@ func creatureAt(wx, wy, tile, ct float64) (float64, float64) {
 
 // runDraw draws one queued object.
 func (r *Renderer) runDraw(dst *ebiten.Image, w *game.WorldView, d *artDraw, tile float64, sw, sh int) {
-	if d.fn != nil || d.kind != objPlant {
+	if d.Fn != nil || d.Kind != objPlant {
 		r.flushCrops(dst) // queued crop units draw before whatever comes next
 	}
-	if d.fn != nil {
-		d.fn()
+	if d.Fn != nil {
+		d.Fn()
 		return
 	}
-	switch d.kind {
+	switch d.Kind {
 	case objLinked:
-		r.drawLinkedSprite(dst, d.ld, tile, sw, sh)
+		r.drawLinkedSprite(dst, d.Ld, tile, sw, sh)
 	case objBuilding:
-		r.drawBuildingObj(dst, &w.Buildings[d.i], tile, sw, sh)
+		r.drawBuildingObj(dst, &w.Buildings[d.I], tile, sw, sh)
 	case objFrame:
-		r.drawFrameObj(dst, &w.Frames[d.i], tile, sw, sh)
+		r.drawFrameObj(dst, &w.Frames[d.I], tile, sw, sh)
 	case objPlant:
-		r.drawPlantObj(dst, w, &w.Plants[d.i], tile)
+		r.drawPlantObj(dst, w, &w.Plants[d.I], tile)
 	case objPlantMark:
-		r.drawPlantMark(dst, &w.Plants[d.i], tile)
+		r.drawPlantMark(dst, &w.Plants[d.I], tile)
 	case objItem:
-		r.drawItemObj(dst, &w.Items[d.i], tile, sw, sh)
+		r.drawItemObj(dst, &w.Items[d.I], tile, sw, sh)
 	case objForbidden:
-		it := &w.Items[d.i]
+		it := &w.Items[d.I]
 		r.drawForbiddenMark(dst, it.X, it.Y, tile, sw, sh)
 	case objAnimal:
-		r.drawAnimalFigure(dst, w.Animals[d.i], d.wx, d.wy, lodTile(tile))
+		r.drawAnimalFigure(dst, w.Animals[d.I], d.wx, d.wy, lodTile(tile))
 	case objPawn:
-		r.drawPawnArt(dst, r.view.Pawns[d.i], d.wx, d.wy, lodTile(tile), sw, sh)
+		r.drawPawnArt(dst, r.view.Pawns[d.I], d.wx, d.wy, lodTile(tile), sw, sh)
 	}
 }
 
@@ -559,9 +559,9 @@ func (r *Renderer) drawBuildingObj(dst *ebiten.Image, b *game.BuildingView, tile
 	open := l.occupied[[2]int{b.X, b.Y}]
 	switch {
 	case b.Kind == "wall":
-		mask, corners = r.links.mask(b.X, b.Y), r.links.corners(b.X, b.Y)
+		mask, corners = r.links.Mask(b.X, b.Y), r.links.Corners(b.X, b.Y)
 	case isFenceKind(b.Kind):
-		mask, open = r.links.mask(b.X, b.Y), l.creatures[[2]int{b.X, b.Y}]
+		mask, open = r.links.Mask(b.X, b.Y), l.creatures[[2]int{b.X, b.Y}]
 	case b.Kind == powerSwitchKind:
 		open = !b.PowerOn // the actual state: an open switch is off
 	}
@@ -616,10 +616,10 @@ func (r *Renderer) drawBuildingObj(dst *ebiten.Image, b *game.BuildingView, tile
 func (r *Renderer) drawFrameObj(dst *ebiten.Image, f *game.FrameView, tile float64, sw, sh int) {
 	none := color.NRGBA{}
 	pm, pc := 0, 0
-	if c := buildingLink(f.Kind); c.flags != 0 {
-		pm = r.links.plannedMask(r.lod.planned, c.accepts, f.X, f.Y)
+	if c := buildingLink(f.Kind); c.Flags != 0 {
+		pm = r.links.PlannedMask(r.lod.planned, c.Accepts, f.X, f.Y)
 		if f.Kind == "wall" {
-			pc = r.links.plannedCorners(r.lod.planned, c.accepts, f.X, f.Y)
+			pc = r.links.PlannedCorners(r.lod.planned, c.Accepts, f.X, f.Y)
 		}
 	}
 	tint := r.stuffTint(f.Stuff)
@@ -805,7 +805,7 @@ const raiderCloth = "raider"
 // raider's maroon clothes, and a disfigured pawn's face scar over the
 // hair (under a hat) when the art has one.
 func (r *Renderer) pawnFigureLayers(p game.PawnView, fs string) []portraitLayer {
-	return figureLayers(r.art, p.Look, fs, figureDress{apparel: p.Apparel, scarred: p.Disfigured, raider: p.Hostile})
+	return figureLayers(r.art, p.Look, fs, figureDress{Apparel: p.Apparel, Scarred: p.Disfigured, Raider: p.Hostile})
 }
 
 // pawnPortraitLayers is p's south-facing portrait, bottom first: the
@@ -1042,7 +1042,7 @@ func (r *Renderer) addRockDraws(w game.WorldView, draws []artDraw) []artDraw {
 				continue
 			}
 			if ld, ok := r.rockDraw(&w, x, y); ok {
-				draws = append(draws, artDraw{row: float64(y), col: float64(x), ld: ld})
+				draws = append(draws, artDraw{Row: float64(y), Col: float64(x), Ld: ld})
 			}
 		}
 	}
@@ -1062,7 +1062,7 @@ func (r *Renderer) rockDraw(w *game.WorldView, x, y int) (linkedDraw, bool) {
 		stone = w.StoneType[i]
 	}
 	prefix := rockPrefix(terrainNames[w.Terrain[i]], ore)
-	return r.linkedSprite(prefix, x, y, r.links.mask(x, y), r.links.corners(x, y), r.stoneTint(stone), noCS)
+	return r.linkedSprite(prefix, x, y, r.links.Mask(x, y), r.links.Corners(x, y), r.stoneTint(stone), noCS)
 }
 
 // smoothMarkKey is the smoothing designation; older art falls back to the

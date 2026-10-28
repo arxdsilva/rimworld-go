@@ -247,7 +247,7 @@ func (r *Renderer) bakeGround(dst *ebiten.Image, w *game.WorldView, x0, y0, x1, 
 					continue
 				}
 				if ld, ok := r.rockDraw(w, x, y); ok {
-					draws = append(draws, artDraw{row: float64(y), col: float64(x), ld: ld})
+					draws = append(draws, artDraw{Row: float64(y), Col: float64(x), Ld: ld})
 				}
 			}
 		}
@@ -263,14 +263,14 @@ func (r *Renderer) bakeGround(dst *ebiten.Image, w *game.WorldView, x0, y0, x1, 
 						if b.Floor || onFloor(b.Kind) || !in(b.X, b.Y, b.W, b.H+2) {
 							continue
 						}
-						draws = append(draws, artDraw{row: float64(b.Y + max(b.H, 1) - 1), col: float64(b.X), kind: objBuilding, i: i})
+						draws = append(draws, artDraw{Row: float64(b.Y + max(b.H, 1) - 1), Col: float64(b.X), Kind: objBuilding, I: i})
 					}
 					for _, i := range cv.Plants {
 						if int(i) >= len(w.Plants) {
 							continue
 						}
 						if p := &w.Plants[i]; in(p.X, p.Y, 1, 1) {
-							draws = append(draws, artDraw{row: float64(p.Y), col: float64(p.X), kind: objPlantMark, i: i})
+							draws = append(draws, artDraw{Row: float64(p.Y), Col: float64(p.X), Kind: objPlantMark, I: i})
 						}
 					}
 				}

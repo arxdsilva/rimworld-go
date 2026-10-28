@@ -37,14 +37,14 @@ func TestWallMask(t *testing.T) {
 		w.Buildings = append(w.Buildings, game.BuildingView{Kind: "wall", X: c[0], Y: c[1]})
 	}
 	var g linkGrid
-	g.sync(w, 8, 8)
-	if got := g.mask(1, 1); got != wallN|wallE|wallS|wallW {
+	g.Sync(w, 8, 8)
+	if got := g.Mask(1, 1); got != wallN|wallE|wallS|wallW {
 		t.Fatalf("cross = %d", got)
 	}
-	if got := g.mask(1, 0); got != wallS {
+	if got := g.Mask(1, 0); got != wallS {
 		t.Fatalf("north arm = %d", got)
 	}
-	if got := g.mask(5, 5); got != 0 {
+	if got := g.Mask(5, 5); got != 0 {
 		t.Fatalf("isolated = %d", got)
 	}
 }

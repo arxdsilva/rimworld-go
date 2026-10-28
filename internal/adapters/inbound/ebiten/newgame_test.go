@@ -134,16 +134,16 @@ func hasWidget(a *App, id string) bool {
 }
 
 func rowKeys(a *App, ng *newGameState) []string {
-	rows, _ := ng.rows(a.cfg.Scenarios != nil)
+	rows, _ := ng.Rows(a.cfg.Scenarios != nil)
 	var out []string
 	for _, r := range rows {
-		switch r.kind {
+		switch r.Kind {
 		case rowHeader:
-			out = append(out, "#"+r.text)
+			out = append(out, "#"+r.Text)
 		case rowEntry:
-			out = append(out, ng.entries[r.entry].key)
+			out = append(out, ng.Entries[r.Entry].Key)
 		case rowNote:
-			out = append(out, "!"+r.text)
+			out = append(out, "!"+r.Text)
 		}
 	}
 	return out
@@ -180,23 +180,23 @@ func TestNewColonyCreatesFreshDraft(t *testing.T) {
 	if ng == nil || a.nav.screen() != screenScenario {
 		t.Fatalf("draft=%v screen=%s", ng, a.nav.screen())
 	}
-	if ng.storyteller != "steady" || ng.preset != difficulty.Settled || ng.saveMode != difficulty.ReloadAnytime {
-		t.Fatalf("defaults = %s %v %v, want Orla Vane, Settled, Reload anytime", ng.storyteller, ng.preset, ng.saveMode)
+	if ng.Storyteller != "steady" || ng.Preset != difficulty.Settled || ng.SaveMode != difficulty.ReloadAnytime {
+		t.Fatalf("defaults = %s %v %v, want Orla Vane, Settled, Reload anytime", ng.Storyteller, ng.Preset, ng.SaveMode)
 	}
-	if sel := ng.selected(); sel == nil || sel.key != "broken_hull" {
+	if sel := ng.Selected(); sel == nil || sel.Key != "broken_hull" {
 		t.Fatalf("default scenario = %+v, want Broken Hull", sel)
 	}
-	if ng.tile != -1 || ng.mapSize <= 0 || ng.mapSize > game.MaxEnabledSide {
-		t.Fatalf("tile=%d mapSize=%d", ng.tile, ng.mapSize)
+	if ng.Tile != -1 || ng.MapSize <= 0 || ng.MapSize > game.MaxEnabledSide {
+		t.Fatalf("tile=%d mapSize=%d", ng.Tile, ng.MapSize)
 	}
 	// Edit it, leave through the main menu, come back: a fresh draft.
-	ng.storyteller, ng.preset = "gambler", difficulty.Grim
+	ng.Storyteller, ng.Preset = "gambler", difficulty.Grim
 	a.popScreen()
 	if a.nav.screen() != screenMainMenu || a.ng != nil {
 		t.Fatalf("the main menu discards the draft: screen=%s ng=%v", a.nav.screen(), a.ng)
 	}
 	click(t, a, "menu.newgame")
-	if a.ng == ng || a.ng.storyteller != "steady" || a.ng.preset != difficulty.Settled {
+	if a.ng == ng || a.ng.Storyteller != "steady" || a.ng.Preset != difficulty.Settled {
 		t.Fatalf("New Colony must start a fresh draft: %+v", a.ng)
 	}
 }
@@ -208,16 +208,16 @@ func TestNewDraftUsesTheLastChoicesFromSettings(t *testing.T) {
 	a.settings.Gameplay.LastDifficulty = "grim"
 	a.settings.Gameplay.LastSaveMode = difficulty.Commitment.String()
 	click(t, a, "menu.newgame")
-	if ng := a.ng; ng.storyteller != "gambler" || ng.preset != difficulty.Grim || ng.saveMode != difficulty.Commitment {
-		t.Fatalf("draft = %s %v %v, want the remembered choices", ng.storyteller, ng.preset, ng.saveMode)
+	if ng := a.ng; ng.Storyteller != "gambler" || ng.Preset != difficulty.Grim || ng.SaveMode != difficulty.Commitment {
+		t.Fatalf("draft = %s %v %v, want the remembered choices", ng.Storyteller, ng.Preset, ng.SaveMode)
 	}
 	// Garbage in the settings falls back to the defaults.
 	a2, _, _ := ngTest(t, nil)
 	a2.settings.Gameplay.LastStoryteller = "legacy" // hidden
 	a2.settings.Gameplay.LastDifficulty = "custom"
 	click(t, a2, "menu.newgame")
-	if ng := a2.ng; ng.storyteller != "steady" || ng.preset != difficulty.Settled {
-		t.Fatalf("draft = %s %v, want the defaults", ng.storyteller, ng.preset)
+	if ng := a2.ng; ng.Storyteller != "steady" || ng.Preset != difficulty.Settled {
+		t.Fatalf("draft = %s %v, want the defaults", ng.Storyteller, ng.Preset)
 	}
 }
 
@@ -280,9 +280,9 @@ func TestScenarioListShowsBuiltinsThenCustom(t *testing.T) {
 	if strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Fatalf("rows = %v\nwant   %v", got, want)
 	}
-	for _, e := range a.ng.entries {
-		if e.unsaved && !strings.HasSuffix(e.name, "(unsaved)") {
-			t.Errorf("unsaved scenario is named %q", e.name)
+	for _, e := range a.ng.Entries {
+		if e.Unsaved && !strings.HasSuffix(e.Name, "(unsaved)") {
+			t.Errorf("unsaved scenario is named %q", e.Name)
 		}
 	}
 	// Every custom row has a delete button; built-ins do not.
@@ -329,15 +329,15 @@ func TestScenarioSearchFilters(t *testing.T) {
 	click(t, a, "menu.newgame")
 	f.Frame(t, a)
 
-	a.ng.search = "ember clan"
+	a.ng.Search = "ember clan"
 	if got := strings.Join(rowKeys(a, a.ng), ","); got != "#Built-in,ember_clan,#Your scenarios,file.ember clan ii" && got != "#Built-in,ember_clan,#Your scenarios,file.quiet" {
 		t.Fatalf("search 'ember clan' = %s", got)
 	}
-	a.ng.search = "HULL BREACH" // summary text, case-insensitive
+	a.ng.Search = "HULL BREACH" // summary text, case-insensitive
 	if got := strings.Join(rowKeys(a, a.ng), ","); !strings.HasPrefix(got, "#Built-in,broken_hull,#Your scenarios,!No scenario matches") {
 		t.Fatalf("search by summary = %s", got)
 	}
-	a.ng.search = "zzz"
+	a.ng.Search = "zzz"
 	for _, k := range rowKeys(a, a.ng) {
 		if !strings.HasPrefix(k, "#") && !strings.HasPrefix(k, "!") {
 			t.Fatalf("nothing matches 'zzz' yet row %q is listed", k)
@@ -345,15 +345,15 @@ func TestScenarioSearchFilters(t *testing.T) {
 	}
 
 	// Through the real field: Ctrl+F focuses it, typing filters.
-	a.ng.search = ""
+	a.ng.Search = ""
 	f.Key(t, a, "F", input.ModCtrl)
 	f.Frame(t, a)
 	if a.uiSt().Edit.ID != "scen.search" {
 		t.Fatalf("Ctrl+F should focus the search field, editing %q", a.uiSt().Edit.ID)
 	}
 	f.TypeText(t, a, "bare")
-	if a.ng.search != "bare" {
-		t.Fatalf("search = %q, want bare", a.ng.search)
+	if a.ng.Search != "bare" {
+		t.Fatalf("search = %q, want bare", a.ng.Search)
 	}
 	if got := strings.Join(rowKeys(a, a.ng), ","); !strings.Contains(got, "bare_hands") || strings.Contains(got, "ember_clan") {
 		t.Fatalf("typed filter = %s", got)
@@ -410,12 +410,12 @@ func TestScenarioDetailsFromParts(t *testing.T) {
 
 	// The layout wraps and totals the rows.
 	L := buildDetail(hull, scenarioLines(hull), 400)
-	if len(L.rows) < 20 || L.total <= 0 {
-		t.Fatalf("layout has %d rows, height %v", len(L.rows), L.total)
+	if len(L.Rows) < 20 || L.Total <= 0 {
+		t.Fatalf("layout has %d rows, height %v", len(L.Rows), L.Total)
 	}
 	narrow := buildDetail(hull, scenarioLines(hull), 200)
-	if narrow.total <= L.total {
-		t.Fatalf("a narrower panel must be taller: %v vs %v", narrow.total, L.total)
+	if narrow.Total <= L.Total {
+		t.Fatalf("a narrower panel must be taller: %v vs %v", narrow.Total, L.Total)
 	}
 }
 
@@ -431,7 +431,7 @@ func TestInvalidScenarioBlocksNext(t *testing.T) {
 
 	press(t, a, f, "scen.row.file.bad")
 	f.Frame(t, a)
-	if sel := a.ng.selected(); sel == nil || sel.key != "file.bad" {
+	if sel := a.ng.Selected(); sel == nil || sel.Key != "file.bad" {
 		t.Fatalf("the invalid scenario should still be selectable: %+v", sel)
 	}
 	w, _ := a.uiSt().Find("wizard.next")
@@ -449,16 +449,16 @@ func TestInvalidScenarioBlocksNext(t *testing.T) {
 
 	// An unreadable file greys out, explains and can't be selected.
 	press(t, a, f, "scen.row.file.junk")
-	if sel := a.ng.selected(); sel.key != "file.bad" {
-		t.Fatalf("an unreadable file was selected: %s", sel.key)
+	if sel := a.ng.Selected(); sel.Key != "file.bad" {
+		t.Fatalf("an unreadable file was selected: %s", sel.Key)
 	}
 	var junk scenEntry
-	for _, e := range a.ng.entries {
-		if e.key == "file.junk" {
+	for _, e := range a.ng.Entries {
+		if e.Key == "file.junk" {
 			junk = e
 		}
 	}
-	if junk.err == "" || !strings.Contains(junk.summary, "Can't read") {
+	if junk.Err == "" || !strings.Contains(junk.Summary, "Can't read") {
 		t.Fatalf("junk entry = %+v", junk)
 	}
 	jw, _ := a.uiSt().Find("scen.row.file.junk")
@@ -474,12 +474,12 @@ func TestInvalidScenarioBlocksNext(t *testing.T) {
 		t.Fatalf("Next disabled for a valid scenario: %q", w.Reason)
 	}
 	click(t, a, "wizard.next")
-	if a.nav.screen() != screenStoryteller || a.ng.scenario.Key != "ember_clan" || a.ng.scenario.People != 5 {
-		t.Fatalf("screen=%s draft scenario=%+v", a.nav.screen(), a.ng.scenario)
+	if a.nav.screen() != screenStoryteller || a.ng.Scenario.Key != "ember_clan" || a.ng.Scenario.People != 5 {
+		t.Fatalf("screen=%s draft scenario=%+v", a.nav.screen(), a.ng.Scenario)
 	}
 	// The draft holds a copy, not the list entry's slice.
-	a.ng.scenario.Parts[0].Qty = 1
-	if a.ng.entries[a.ng.sel].def.Parts[0].Qty == 1 {
+	a.ng.Scenario.Parts[0].Qty = 1
+	if a.ng.Entries[a.ng.Sel].Def.Parts[0].Qty == 1 {
 		t.Fatal("the draft aliases the list entry")
 	}
 }
@@ -503,12 +503,12 @@ func TestScenarioListKeyboardSelection(t *testing.T) {
 	press(t, a, f, "scen.row.broken_hull") // focuses the list
 	f.Key(t, a, "ArrowDown", 0)
 	f.Key(t, a, "ArrowDown", 0)
-	if a.ng.selected().key != "gilded_expedition" {
-		t.Fatalf("two Downs = %s", a.ng.selected().key)
+	if a.ng.Selected().Key != "gilded_expedition" {
+		t.Fatalf("two Downs = %s", a.ng.Selected().Key)
 	}
 	f.Key(t, a, "ArrowUp", 0)
-	if a.ng.selected().key != "ember_clan" {
-		t.Fatalf("Up = %s", a.ng.selected().key)
+	if a.ng.Selected().Key != "ember_clan" {
+		t.Fatalf("Up = %s", a.ng.Selected().Key)
 	}
 }
 
@@ -538,14 +538,14 @@ func TestDeleteCustomConfirms(t *testing.T) {
 	if len(st.deleted) != 1 || st.deleted[0] != "doomed" {
 		t.Fatalf("deleted = %v", st.deleted)
 	}
-	for _, e := range a.ng.entries {
-		if e.file == "doomed" {
+	for _, e := range a.ng.Entries {
+		if e.File == "doomed" {
 			t.Fatal("the deleted scenario is still listed")
 		}
 	}
 	// An unsaved scenario is deleted without touching the store.
 	a.ngUnsaved = append(a.ngUnsaved, d)
-	a.ng.refreshScenarios(a)
+	a.ng.RefreshScenarios(a)
 	f.Frame(t, a)
 	press(t, a, f, "scen.del.unsaved.0")
 	press(t, a, f, "modal.scen.delete.ok")
@@ -570,8 +570,8 @@ func TestLoadFileModalSelectsTheFile(t *testing.T) {
 	f.Frame(t, a)
 	press(t, a, f, "modal.scen.load.table.body.0")
 	f.Frame(t, a)
-	if a.uiModalOpen() || a.ng.selected().key != "file.fromdisk" {
-		t.Fatalf("modal=%v selected=%s", a.uiModalOpen(), a.ng.selected().key)
+	if a.uiModalOpen() || a.ng.Selected().Key != "file.fromdisk" {
+		t.Fatalf("modal=%v selected=%s", a.uiModalOpen(), a.ng.Selected().Key)
 	}
 }
 
@@ -598,7 +598,7 @@ func TestBackDiscardConfirmOnlyWhenChanged(t *testing.T) {
 	// Cancel stays, the draft survives.
 	press(t, a, f, "modal.scen.discard.cancel")
 	f.Frame(t, a)
-	if a.nav.screen() != screenScenario || a.ng == nil || a.ng.storyteller != "gambler" {
+	if a.nav.screen() != screenScenario || a.ng == nil || a.ng.Storyteller != "gambler" {
 		t.Fatalf("cancel left screen=%s draft=%v", a.nav.screen(), a.ng)
 	}
 	// Esc asks again; Discard leaves and drops the draft.
@@ -623,16 +623,16 @@ func TestStorytellerPickIndependentOfDifficulty(t *testing.T) {
 	f.Frame(t, a)
 	ng := a.ng
 	click(t, a, "story.pick.hearth")
-	if ng.storyteller != "hearth" || ng.preset != difficulty.Settled {
-		t.Fatalf("picking a storyteller changed more: %s %v", ng.storyteller, ng.preset)
+	if ng.Storyteller != "hearth" || ng.Preset != difficulty.Settled {
+		t.Fatalf("picking a storyteller changed more: %s %v", ng.Storyteller, ng.Preset)
 	}
 	click(t, a, "diff.grim")
-	if ng.preset != difficulty.Grim || ng.storyteller != "hearth" {
-		t.Fatalf("picking a difficulty changed more: %s %v", ng.storyteller, ng.preset)
+	if ng.Preset != difficulty.Grim || ng.Storyteller != "hearth" {
+		t.Fatalf("picking a difficulty changed more: %s %v", ng.Storyteller, ng.Preset)
 	}
 	click(t, a, "save.commit")
-	if ng.storyteller != "hearth" || ng.preset != difficulty.Grim || ng.saveMode != difficulty.Commitment {
-		t.Fatalf("draft = %s %v %v", ng.storyteller, ng.preset, ng.saveMode)
+	if ng.Storyteller != "hearth" || ng.Preset != difficulty.Grim || ng.SaveMode != difficulty.Commitment {
+		t.Fatalf("draft = %s %v %v", ng.Storyteller, ng.Preset, ng.SaveMode)
 	}
 	// All three storytellers and all presets are on the screen.
 	for _, p := range storyteller.Profiles() {
@@ -663,29 +663,29 @@ func TestCustomOpensEditorOnce(t *testing.T) {
 	if a.uiModalTop() != "diff.custom" {
 		t.Fatalf("the first Custom opens the dialog, modal=%q", a.uiModalTop())
 	}
-	if ng.preset != difficulty.Settled {
+	if ng.Preset != difficulty.Settled {
 		t.Fatal("the preset only changes on Accept")
 	}
-	if ng.cd.s != difficulty.Of(difficulty.Settled) {
+	if ng.Cd.S != difficulty.Of(difficulty.Settled) {
 		t.Fatal("the dialog starts from the selected preset")
 	}
-	ng.cd.s.ThreatScale = 250
+	ng.Cd.S.ThreatScale = 250
 	press(t, a, f, "modal.diff.custom.accept")
 	f.Frame(t, a)
-	if a.uiModalOpen() || ng.preset != difficulty.Custom || ng.custom.ThreatScale != 250 || !ng.customOpen {
-		t.Fatalf("accept: modal=%v preset=%v custom=%+v", a.uiModalOpen(), ng.preset, ng.custom)
+	if a.uiModalOpen() || ng.Preset != difficulty.Custom || ng.Custom.ThreatScale != 250 || !ng.CustomOpen {
+		t.Fatalf("accept: modal=%v preset=%v custom=%+v", a.uiModalOpen(), ng.Preset, ng.Custom)
 	}
 	// Later, Custom selects directly; Customize reopens.
 	click(t, a, "diff.seasoned")
 	click(t, a, "diff.custom")
 	f.Frame(t, a)
-	if a.uiModalOpen() || ng.preset != difficulty.Custom {
-		t.Fatalf("Custom opens the dialog only once: modal=%v preset=%v", a.uiModalOpen(), ng.preset)
+	if a.uiModalOpen() || ng.Preset != difficulty.Custom {
+		t.Fatalf("Custom opens the dialog only once: modal=%v preset=%v", a.uiModalOpen(), ng.Preset)
 	}
 	click(t, a, "diff.customize")
 	f.Frame(t, a)
-	if a.uiModalTop() != "diff.custom" || ng.cd.s.ThreatScale != 250 {
-		t.Fatalf("Customize: modal=%q cd=%+v", a.uiModalTop(), ng.cd.s)
+	if a.uiModalTop() != "diff.custom" || ng.Cd.S.ThreatScale != 250 {
+		t.Fatalf("Customize: modal=%q cd=%+v", a.uiModalTop(), ng.Cd.S)
 	}
 }
 
@@ -696,7 +696,7 @@ func TestCustomDifficultyCancelRestores(t *testing.T) {
 	click(t, a, "wizard.next")
 	f.Frame(t, a)
 	ng := a.ng
-	before := ng.custom
+	before := ng.Custom
 	click(t, a, "diff.custom")
 	f.Frame(t, a)
 
@@ -705,21 +705,21 @@ func TestCustomDifficultyCancelRestores(t *testing.T) {
 	track := sliderTrack(w.R)
 	f.press(t, a, int(track.Right()), int(w.R.Y+9))
 	f.letGo(t, a, int(track.Right()), int(w.R.Y+9))
-	if ng.cd.s.ThreatScale != 400 {
-		t.Fatalf("dragged threat scale = %d, want 400", ng.cd.s.ThreatScale)
+	if ng.Cd.S.ThreatScale != 400 {
+		t.Fatalf("dragged threat scale = %d, want 400", ng.Cd.S.ThreatScale)
 	}
 	press(t, a, f, "modal.diff.custom.cancel")
 	f.Frame(t, a)
-	if a.uiModalOpen() || ng.custom != before || ng.preset != difficulty.Settled || ng.customOpen {
-		t.Fatalf("cancel must restore: modal=%v custom=%+v preset=%v", a.uiModalOpen(), ng.custom, ng.preset)
+	if a.uiModalOpen() || ng.Custom != before || ng.Preset != difficulty.Settled || ng.CustomOpen {
+		t.Fatalf("cancel must restore: modal=%v custom=%+v preset=%v", a.uiModalOpen(), ng.Custom, ng.Preset)
 	}
 	// Esc is a cancel too.
 	click(t, a, "diff.custom")
 	f.Frame(t, a)
-	ng.cd.s.CropYield = 300
+	ng.Cd.S.CropYield = 300
 	f.Key(t, a, "Escape", 0)
-	if a.uiModalOpen() || ng.custom != before {
-		t.Fatalf("Esc: modal=%v custom=%+v", a.uiModalOpen(), ng.custom)
+	if a.uiModalOpen() || ng.Custom != before {
+		t.Fatalf("Esc: modal=%v custom=%+v", a.uiModalOpen(), ng.Custom)
 	}
 }
 
@@ -740,19 +740,19 @@ func TestCopyPresetFillsAllFields(t *testing.T) {
 	}
 	press(t, a, f, "modal.pick.diff.from.list.5")
 	f.Frame(t, a)
-	if ng.cd.from != difficulty.Merciless || a.uiModalTop() != "diff.custom" {
-		t.Fatalf("from=%v modal=%q", ng.cd.from, a.uiModalTop())
+	if ng.Cd.From != difficulty.Merciless || a.uiModalTop() != "diff.custom" {
+		t.Fatalf("from=%v modal=%q", ng.Cd.From, a.uiModalTop())
 	}
 	press(t, a, f, "diff.copy")
-	if ng.cd.s != difficulty.Of(difficulty.Merciless) {
-		t.Fatalf("copy = %+v\nwant %+v", ng.cd.s, difficulty.Of(difficulty.Merciless))
+	if ng.Cd.S != difficulty.Of(difficulty.Merciless) {
+		t.Fatalf("copy = %+v\nwant %+v", ng.Cd.S, difficulty.Of(difficulty.Merciless))
 	}
 	// Reset goes back to the Start from preset after edits.
-	ng.cd.s.MoodOffset = 20
+	ng.Cd.S.MoodOffset = 20
 	press(t, a, f, "modal.diff.custom.reset")
 	f.Frame(t, a)
-	if ng.cd.s != difficulty.Of(difficulty.Merciless) {
-		t.Fatalf("reset = %+v", ng.cd.s)
+	if ng.Cd.S != difficulty.Of(difficulty.Merciless) {
+		t.Fatalf("reset = %+v", ng.Cd.S)
 	}
 }
 
@@ -766,7 +766,7 @@ func TestDependentFieldsDisabled(t *testing.T) {
 	click(t, a, "diff.custom")
 	f.Frame(t, a)
 
-	ng.cd.s.Adaptation, ng.cd.s.TimeEscalation, ng.cd.s.IgnoreWealth = false, false, true
+	ng.Cd.S.Adaptation, ng.Cd.S.TimeEscalation, ng.Cd.S.IgnoreWealth = false, false, true
 	f.Frame(t, a)
 	off := func(id string) (bool, string) {
 		w, ok := a.uiSt().Find(id)
@@ -784,7 +784,7 @@ func TestDependentFieldsDisabled(t *testing.T) {
 	if dis, _ := off("diff.f.iw"); !dis {
 		t.Error("ignore wealth needs time-based escalation")
 	}
-	if ng.cd.s.IgnoreWealth {
+	if ng.Cd.S.IgnoreWealth {
 		t.Error("turning time escalation off clears ignore wealth")
 	}
 
@@ -797,8 +797,8 @@ func TestDependentFieldsDisabled(t *testing.T) {
 			t.Errorf("%s still disabled: %q", id, why)
 		}
 	}
-	if !ng.cd.s.Adaptation || !ng.cd.s.TimeEscalation {
-		t.Fatalf("toggles did not apply: %+v", ng.cd.s)
+	if !ng.Cd.S.Adaptation || !ng.Cd.S.TimeEscalation {
+		t.Fatalf("toggles did not apply: %+v", ng.Cd.S)
 	}
 }
 
@@ -815,8 +815,8 @@ func TestSaveModeDefaultsAndPersistsInDraft(t *testing.T) {
 	click(t, a, "wizard.next")
 	f.Frame(t, a)
 	ng := a.ng
-	if ng.saveMode != difficulty.ReloadAnytime {
-		t.Fatalf("default save mode = %v", ng.saveMode)
+	if ng.SaveMode != difficulty.ReloadAnytime {
+		t.Fatalf("default save mode = %v", ng.SaveMode)
 	}
 	click(t, a, "save.commit")
 	click(t, a, "story.pick.gambler")
@@ -834,15 +834,15 @@ func TestSaveModeDefaultsAndPersistsInDraft(t *testing.T) {
 	// Back keeps the draft's choices.
 	click(t, a, "wizard.back")
 	f.Frame(t, a)
-	if a.nav.screen() != screenStoryteller || ng.saveMode != difficulty.Commitment || ng.storyteller != "gambler" || ng.preset != difficulty.Merciless {
-		t.Fatalf("after Back: %s %v %s %v", a.nav.screen(), ng.saveMode, ng.storyteller, ng.preset)
+	if a.nav.screen() != screenStoryteller || ng.SaveMode != difficulty.Commitment || ng.Storyteller != "gambler" || ng.Preset != difficulty.Merciless {
+		t.Fatalf("after Back: %s %v %s %v", a.nav.screen(), ng.SaveMode, ng.Storyteller, ng.Preset)
 	}
 	// The next New Colony remembers them.
 	a.popScreen()
 	a.popScreen()
 	click(t, a, "menu.newgame")
-	if a.ng.storyteller != "gambler" || a.ng.preset != difficulty.Merciless || a.ng.saveMode != difficulty.Commitment {
-		t.Fatalf("fresh draft = %s %v %v", a.ng.storyteller, a.ng.preset, a.ng.saveMode)
+	if a.ng.Storyteller != "gambler" || a.ng.Preset != difficulty.Merciless || a.ng.SaveMode != difficulty.Commitment {
+		t.Fatalf("fresh draft = %s %v %v", a.ng.Storyteller, a.ng.Preset, a.ng.SaveMode)
 	}
 }
 

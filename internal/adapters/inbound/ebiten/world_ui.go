@@ -110,8 +110,8 @@ func (a *App) worldPlanetFor(st *worldUI) *planet.Planet {
 	worldPlanets.Lock()
 	p := worldPlanets.m[key]
 	worldPlanets.Unlock()
-	if p == nil && a.ng != nil && a.ng.planet != nil && a.ng.planet.Params.Key() == key {
-		p = a.ng.planet // the planet the colony was founded on
+	if p == nil && a.ng != nil && a.ng.Planet != nil && a.ng.Planet.Params.Key() == key {
+		p = a.ng.Planet // the planet the colony was founded on
 	}
 	if p == nil {
 		if st.builder == nil {

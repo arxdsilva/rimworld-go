@@ -32,18 +32,18 @@ var backdropShowcase = planet.Params{SeedText: "amber-hollow", Coverage: 100, Ra
 // setupBackdropState is the backdrop's cached drawing state. Drawing is
 // single-threaded, so one package-level instance serves every App.
 type setupBackdropState struct {
-	stars        *ebiten.Image
-	starW, starH int
+	Stars        *ebiten.Image
+	StarW, StarH int
 	starSeed     uint64
 
-	view    *globeView
-	viewOf  *planet.Planet
-	disc    *ebiten.Image
+	View    *globeView
+	ViewOf  *planet.Planet
+	Disc    *ebiten.Image
 	discTok int // frame of the last render
 
-	showBuilder *planet.Builder
+	ShowBuilder *planet.Builder
 	showPlanet  *planet.Planet
-	plain       *ebiten.Image // shaded sphere while the showcase is generating
+	Plain       *ebiten.Image // shaded sphere while the showcase is generating
 	frame       int
 }
 
@@ -87,28 +87,28 @@ func (b *setupBackdropState) drawStars(screen *ebiten.Image, sw, sh int, p *plan
 	if p != nil {
 		seed = p.Seed
 	}
-	if b.stars == nil || b.starW != sw || b.starH != sh || b.starSeed != seed {
-		b.stars = ebiten.NewImageFromImage(bakeStarfield(seed, sw, sh, 0.9, 0.6))
-		b.starW, b.starH, b.starSeed = sw, sh, seed
+	if b.Stars == nil || b.StarW != sw || b.StarH != sh || b.starSeed != seed {
+		b.Stars = ebiten.NewImageFromImage(bakeStarfield(seed, sw, sh, 0.9, 0.6))
+		b.StarW, b.StarH, b.starSeed = sw, sh, seed
 	}
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Translate(6*math.Sin(t/700), 3*math.Sin(t/1100+1))
-	screen.DrawImage(b.stars, op)
+	screen.DrawImage(b.Stars, op)
 }
 
-// discPlanet is the planet to render: p, or the showcase once generated
+// DiscPlanet is the planet to render: p, or the showcase once generated
 // (stepping its generation a little each call).
-func (b *setupBackdropState) discPlanet(p *planet.Planet) *planet.Planet {
+func (b *setupBackdropState) DiscPlanet(p *planet.Planet) *planet.Planet {
 	if p != nil {
 		return p
 	}
 	if b.showPlanet == nil {
-		if b.showBuilder == nil {
-			b.showBuilder = planet.NewBuilder(backdropShowcase)
+		if b.ShowBuilder == nil {
+			b.ShowBuilder = planet.NewBuilder(backdropShowcase)
 		}
-		if _, _, done := b.showBuilder.Step(backdropBuildStep); done {
-			b.showPlanet = b.showBuilder.Planet()
-			b.showBuilder = nil
+		if _, _, done := b.ShowBuilder.Step(backdropBuildStep); done {
+			b.showPlanet = b.ShowBuilder.Planet()
+			b.ShowBuilder = nil
 		}
 	}
 	return b.showPlanet
@@ -125,10 +125,10 @@ func (b *setupBackdropState) drawPlanet(screen *ebiten.Image, sw, sh int, p *pla
 	}
 	scale := r / discSilhouette()
 
-	src := b.discPlanet(p)
+	src := b.DiscPlanet(p)
 	if src == nil {
-		if b.plain == nil {
-			b.plain = ebiten.NewImageFromImage(bakeSphere(globeSphereBakeSize, globeSphereBakeR,
+		if b.Plain == nil {
+			b.Plain = ebiten.NewImageFromImage(bakeSphere(globeSphereBakeSize, globeSphereBakeR,
 				palRGB("ocean_deep"), palRGB("atmosphere_rim")))
 		}
 		op := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear}
@@ -136,35 +136,35 @@ func (b *setupBackdropState) drawPlanet(screen *ebiten.Image, sw, sh int, p *pla
 		op.GeoM.Translate(-globeSphereBakeSize/2, -globeSphereBakeSize/2)
 		op.GeoM.Scale(k, k)
 		op.GeoM.Translate(cx, cy)
-		screen.DrawImage(b.plain, op)
+		screen.DrawImage(b.Plain, op)
 		return
 	}
-	if b.view == nil || b.viewOf != src {
+	if b.View == nil || b.ViewOf != src {
 		g := newGlobeView(src, nil)
 		g.Rivers, g.Roads, g.Marks = nil, nil, nil // far away: the bare tiles
 		g.SetAreaPx(0, 0, backdropDiscArea, backdropDiscArea)
 		g.Cam.SetDist(backdropDiscDist)
 		g.Cam.Lat, g.Cam.Lon = 0.35, float64(src.Seed%628)/100
-		b.view, b.viewOf = g, src
-		b.disc = ebiten.NewImage(backdropDiscArea, backdropDiscArea)
+		b.View, b.ViewOf = g, src
+		b.Disc = ebiten.NewImage(backdropDiscArea, backdropDiscArea)
 		b.discTok = -backdropRenderGap
 	}
 	if b.frame-b.discTok >= backdropRenderGap && (!reduced || b.discTok < 0) {
-		g := b.view
+		g := b.View
 		if !reduced {
 			g.Cam.Lon += 0.0016
 			g.Cam.Lat = 0.35 + 0.12*math.Sin(t/1500)
 		}
 		g.EnsureGPU(backdropDiscArea, backdropDiscArea)
-		b.disc.Clear()
-		g.DrawBody(b.disc)
+		b.Disc.Clear()
+		g.DrawBody(b.Disc)
 		b.discTok = b.frame
 	}
 	op := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear}
 	op.GeoM.Translate(-backdropDiscArea/2, -backdropDiscArea/2)
 	op.GeoM.Scale(scale, scale)
 	op.GeoM.Translate(cx, cy)
-	screen.DrawImage(b.disc, op)
+	screen.DrawImage(b.Disc, op)
 }
 
 // discSilhouette is the disc render's silhouette radius in px.

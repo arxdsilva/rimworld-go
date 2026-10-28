@@ -180,8 +180,8 @@ type detailRow struct {
 
 // detailLayout is a scenario's details panel laid out for a width.
 type detailLayout struct {
-	rows  []detailRow
-	total float32
+	Rows  []detailRow
+	Total float32
 }
 
 // buildDetail lays out the title, summary, narrative and lines of a
@@ -189,8 +189,8 @@ type detailLayout struct {
 func buildDetail(d scenario.Def, lines []game.DetailLine, w float32) detailLayout {
 	var L detailLayout
 	add := func(h float32, tip string, draw func(dst *ebiten.Image, x, y, w float32)) {
-		L.rows = append(L.rows, detailRow{y: L.total, h: h, draw: draw, tip: tip})
-		L.total += h
+		L.Rows = append(L.Rows, detailRow{y: L.Total, h: h, draw: draw, tip: tip})
+		L.Total += h
 	}
 	text := func(s string, st textStyle) {
 		for _, l := range wrapPx(s, st, float64(w)) {
@@ -206,20 +206,20 @@ func buildDetail(d scenario.Def, lines []game.DetailLine, w float32) detailLayou
 	}
 	text(name, title)
 	if d.Summary != "" {
-		L.total += 2
+		L.Total += 2
 		text(d.Summary, dimText())
 	}
 	if d.Desc != "" {
-		L.total += detailGap
+		L.Total += detailGap
 		text(d.Desc, tsBody)
 	}
-	L.total += detailGap
+	L.Total += detailGap
 	lh := float32(lineH(tsBody))
 	for _, ln := range lines {
 		ln := ln
 		switch {
 		case ln.Heading:
-			L.total += 6
+			L.Total += 6
 			hs := tsLabel
 			hs.Color = uiHeading
 			add(float32(lineH(hs))+2, "", func(dst *ebiten.Image, x, y, w float32) {
@@ -256,9 +256,9 @@ func buildDetail(d scenario.Def, lines []game.DetailLine, w float32) detailLayou
 func (a *App) detailView(id string, r rect, d scenario.Def, lines []game.DetailLine) {
 	pane := r.Inset(10)
 	L := buildDetail(d, lines, max(40, pane.W-scrollBarW-8))
-	area := a.uiScrollArea(id, pane, L.total, scrollOpts{Step: 48})
+	area := a.uiScrollArea(id, pane, L.Total, scrollOpts{Step: 48})
 	u := a.uiSt()
-	for i, row := range L.rows {
+	for i, row := range L.Rows {
 		if row.tip == "" {
 			continue
 		}
@@ -269,7 +269,7 @@ func (a *App) detailView(id string, r rect, d scenario.Def, lines []game.DetailL
 	}
 	u.Queue(func(dst *ebiten.Image) {
 		sub := clipTo(dst, area.View)
-		for _, row := range L.rows {
+		for _, row := range L.Rows {
 			y := area.View.Y + row.y - area.Off
 			if y+row.h < area.View.Y || y > area.View.Bottom() {
 				continue

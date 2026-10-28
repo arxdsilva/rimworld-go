@@ -298,7 +298,7 @@ func (a *App) cycleCell() {
 	}
 	i = (i + 1) % len(cands)
 	a.selectCand(cands[i])
-	a.selCycle = selCycle{tile: [2]int{tx, ty}, idx: i, n: len(cands), ok: true}
+	a.selCycle = selCycle{Tile: [2]int{tx, ty}, Idx: i, N: len(cands), Ok: true}
 }
 
 // cameraInput gathers this frame's camera intent.

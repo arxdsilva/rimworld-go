@@ -51,11 +51,11 @@ func TestPickerListsEveryBiomeAndStartPassesTheChoice(t *testing.T) {
 		t.Fatal("the landing screen no longer lists biomes")
 	}
 	click(t, a, "land.random")
-	tile := a.ng.tile
+	tile := a.ng.Tile
 	if tile < 0 {
 		t.Fatal("Select random site must choose a tile")
 	}
-	want := a.ng.planet.Biome[tile]
+	want := a.ng.Planet.Biome[tile]
 	click(t, a, "wizard.next")
 	click(t, a, "wizard.start")
 	if len(got) != 1 || got[0].Biome != want || got[0].Setup == nil || got[0].Setup.Tile != tile || got[0].Seed != got[0].Setup.Seed {
@@ -87,18 +87,18 @@ func TestWorldStepSeedFieldAndDice(t *testing.T) {
 	click(t, a, "wizard.next")
 	click(t, a, "wizard.next")
 	ng := a.draft()
-	if ng.world.SeedText != "99" {
-		t.Fatalf("seed = %q, want the configured 99", ng.world.SeedText)
+	if ng.World.SeedText != "99" {
+		t.Fatalf("seed = %q, want the configured 99", ng.World.SeedText)
 	}
 	click(t, a, "world.dice")
-	if ng.world.SeedText == "99" || ng.world.SeedText == "" {
-		t.Fatalf("dice kept the seed: %q", ng.world.SeedText)
+	if ng.World.SeedText == "99" || ng.World.SeedText == "" {
+		t.Fatalf("dice kept the seed: %q", ng.World.SeedText)
 	}
-	ng.world.SeedText, ng.world.Coverage = tinySeed, 5
+	ng.World.SeedText, ng.World.Coverage = tinySeed, 5
 	click(t, a, "world.generate")
 	runUntil(t, a, func() bool { return a.nav.screen() == screenLanding })
-	if ng.world.SeedText != tinySeed || ng.planet == nil {
-		t.Fatalf("generate: seed=%q planet=%v", ng.world.SeedText, ng.planet != nil)
+	if ng.World.SeedText != tinySeed || ng.Planet == nil {
+		t.Fatalf("generate: seed=%q planet=%v", ng.World.SeedText, ng.Planet != nil)
 	}
 }
 

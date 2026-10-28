@@ -122,8 +122,8 @@ func TestPortraitWithoutRenderer(t *testing.T) {
 				t.Fatalf("%v: %d layers", l.BuildKey(), len(layers))
 			}
 			for _, ly := range layers {
-				if !art.Has(ly.key) && !(ly.key[:11] == "pawn/beard_" && sex == look.Female) {
-					t.Errorf("%s: no art for %q", l.BuildKey(), ly.key)
+				if !art.Has(ly.Key) && !(ly.Key[:11] == "pawn/beard_" && sex == look.Female) {
+					t.Errorf("%s: no art for %q", l.BuildKey(), ly.Key)
 				}
 			}
 			if !drawLookPortrait(dst, art, l, 20, 20, 160, 200) {
@@ -142,7 +142,7 @@ func TestPortraitKeysFollowTheBuild(t *testing.T) {
 	keys := func(l look.Look) map[string]bool {
 		m := map[string]bool{}
 		for _, ly := range portraitLayers(art, l) {
-			m[ly.key] = true
+			m[ly.Key] = true
 		}
 		return m
 	}
@@ -162,8 +162,8 @@ func TestPortraitKeysFollowTheBuild(t *testing.T) {
 	}
 	// Tints come from the catalog's groups; a grey look uses the grey hair.
 	grey := portraitLayers(art, look.Look{Grey: true, HairStyle: 0})
-	if last := grey[len(grey)-1]; last.tint != art.Tint("hair", "grey") {
-		t.Errorf("grey hair tint %v", last.tint)
+	if last := grey[len(grey)-1]; last.Tint != art.Tint("hair", "grey") {
+		t.Errorf("grey hair tint %v", last.Tint)
 	}
 	if pick(nil, 3) != "" || pick([]string{"a", "b"}, 3) != "b" {
 		t.Error("palette indices wrap")

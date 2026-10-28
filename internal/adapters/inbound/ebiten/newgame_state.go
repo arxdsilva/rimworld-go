@@ -41,11 +41,11 @@ const defaultCoverage = 30
 // scenEntry is one row source of the Choose Scenario list: a built-in, a
 // custom file or an unsaved scenario from this session.
 type scenEntry struct {
-	key, name, summary string
-	def                scenario.Def
-	builtin, unsaved   bool
-	file               string // the store file name of a saved custom scenario
-	err                string // why a file can't be read
+	Key, Name, Summary string
+	Def                scenario.Def
+	builtin, Unsaved   bool
+	File               string // the store file name of a saved custom scenario
+	Err                string // why a file can't be read
 	modified           string
 	problems           []scenario.Problem
 	hardness           int
@@ -68,59 +68,59 @@ func (e scenEntry) errCount() int {
 
 // newGameState is the wizard draft: everything chosen so far.
 type newGameState struct {
-	entries     []scenEntry
-	sel         int          // index into entries
-	scenario    scenario.Def // working copy, stamped when Next is pressed on Choose Scenario
-	search      string
-	storyteller string // profile key
-	preset      difficulty.Preset
-	custom      difficulty.Settings // the Custom preset's settings
-	customOpen  bool                // the Custom Difficulty dialog has been shown once
-	saveMode    difficulty.SaveMode
+	Entries     []scenEntry
+	Sel         int          // index into entries
+	Scenario    scenario.Def // working copy, stamped when Next is pressed on Choose Scenario
+	Search      string
+	Storyteller string // profile key
+	Preset      difficulty.Preset
+	Custom      difficulty.Settings // the Custom preset's settings
+	CustomOpen  bool                // the Custom Difficulty dialog has been shown once
+	SaveMode    difficulty.SaveMode
 
 	// Create World, Landing and Characters (screen_worldgen.go,
 	// screen_landing.go, screen_pawns.go).
-	world   planet.Params
-	tile    int // selected landing tile, -1 none
-	season  int // -1 Auto, else a season index (0 Spring .. 3 Winter)
-	mapSize int
+	World   planet.Params
+	Tile    int // selected landing tile, -1 none
+	Season  int // -1 Auto, else a season index (0 Spring .. 3 Winter)
+	MapSize int
 	err     string
 
-	planet    *planet.Planet  // the generated world, kept across Back
-	planetKey string          // Params.Key() the planet was built from
-	builder   *planet.Builder // in-flight generation
-	genStep   int             // work units stepped per frame
-	genPhase  planet.Phase
-	genFrac   float32
+	Planet    *planet.Planet  // the generated world, kept across Back
+	PlanetKey string          // Params.Key() the planet was built from
+	Builder   *planet.Builder // in-flight generation
+	GenStep   int             // work units stepped per frame
+	GenPhase  planet.Phase
+	GenFrac   float32
 	genErr    string  // why the last generation failed
-	genHold   float32 // captures: stop stepping at this progress
-	globe     *globeView
+	GenHold   float32 // captures: stop stepping at this progress
+	Globe     *globeView
 	globeOf   *planet.Planet
-	landRolls int  // presses of "Select random site"
-	outside   bool // the last click was on the uncovered part of the globe
-	legend    bool // the biome legend is open
+	LandRolls int  // presses of "Select random site"
+	Outside   bool // the last click was on the uncovered part of the globe
+	Legend    bool // the biome legend is open
 	facSel    int  // highlighted row of the Factions table
-	info      infoCache
+	Info      infoCache
 
-	pool    candidatePool // the character candidates
-	poolKey string        // what the pool was made from
-	pawnSel int           // highlighted roster position
-	names   [3]string     // first, nick, last drafts of the highlighted candidate
-	namesOf int           // the roster position the drafts belong to (-1 none)
-	nameErr string
+	Pool    candidatePool // the character candidates
+	PoolKey string        // what the pool was made from
+	PawnSel int           // highlighted roster position
+	Names   [3]string     // first, nick, last drafts of the highlighted candidate
+	NamesOf int           // the roster position the drafts belong to (-1 none)
+	NameErr string
 	drag    rosterDrag
-	load    *loadState // the colony is being built
-	// buildHook replaces the one-step builder (tests).
-	buildHook func(NewGame) (SimBuilder, error)
+	Load    *loadState // the colony is being built
+	// BuildHook replaces the one-step builder (tests).
+	BuildHook func(NewGame) (SimBuilder, error)
 
 	// initial is the signature of the defaults, to tell whether a later step
 	// was changed.
 	initial string
 
-	// ed is the open Scenario Editor.
-	ed *editorState
-	// cd is the Custom Difficulty dialog's working copy.
-	cd customDiff
+	// Ed is the open Scenario Editor.
+	Ed *editorState
+	// Cd is the Custom Difficulty dialog's working copy.
+	Cd customDiff
 	// bufs holds the text of numeric fields; the text field edits it in
 	// place between frames, so it lives here and not on the stack.
 	bufs map[string]*string
@@ -130,34 +130,34 @@ type newGameState struct {
 
 // signature is a comparable summary of the steps after Choose Scenario.
 func (ng *newGameState) signature() string {
-	return fmt.Sprint(ng.storyteller, ng.preset, ng.custom, ng.saveMode, ng.world, ng.tile, ng.season, ng.mapSize)
+	return fmt.Sprint(ng.Storyteller, ng.Preset, ng.Custom, ng.SaveMode, ng.World, ng.Tile, ng.Season, ng.MapSize)
 }
 
 // changedLater reports a step after Choose Scenario differs from its default.
 func (ng *newGameState) changedLater() bool { return ng.signature() != ng.initial }
 
-// selected is the highlighted scenario entry.
-func (ng *newGameState) selected() *scenEntry {
-	if ng.sel < 0 || ng.sel >= len(ng.entries) {
+// Selected is the highlighted scenario entry.
+func (ng *newGameState) Selected() *scenEntry {
+	if ng.Sel < 0 || ng.Sel >= len(ng.Entries) {
 		return nil
 	}
-	return &ng.entries[ng.sel]
+	return &ng.Entries[ng.Sel]
 }
 
 // selectKey highlights the entry with key (the first one when it is gone).
 func (ng *newGameState) selectKey(key string) {
-	for i, e := range ng.entries {
-		if e.key == key {
-			ng.sel = i
+	for i, e := range ng.Entries {
+		if e.Key == key {
+			ng.Sel = i
 			return
 		}
 	}
-	ng.sel = 0
+	ng.Sel = 0
 }
 
 func (ng *newGameState) selectedKey() string {
-	if e := ng.selected(); e != nil {
-		return e.key
+	if e := ng.Selected(); e != nil {
+		return e.Key
 	}
 	return defaultScenarioKey
 }
@@ -179,27 +179,27 @@ func (a *App) newDraft() *newGameState {
 		seedText = strconv.FormatUint(a.cfg.DefaultSeed, 10)
 	}
 	ng := &newGameState{
-		storyteller: defaultStoryteller,
-		preset:      defaultPreset,
-		saveMode:    difficulty.ReloadAnytime,
-		tile:        -1,
-		season:      -1,
-		mapSize:     defaultMapSideEnabled(),
-		namesOf:     -1,
-		world: planet.Params{SeedText: seedText, Coverage: defaultCoverage, Rain: 2, Temp: 2, Pop: 1,
+		Storyteller: defaultStoryteller,
+		Preset:      defaultPreset,
+		SaveMode:    difficulty.ReloadAnytime,
+		Tile:        -1,
+		Season:      -1,
+		MapSize:     defaultMapSideEnabled(),
+		NamesOf:     -1,
+		World: planet.Params{SeedText: seedText, Coverage: defaultCoverage, Rain: 2, Temp: 2, Pop: 1,
 			Factions: faction.DefaultSlots()},
 	}
 	if p, ok := storyteller.ByKey(g.LastStoryteller); ok && !p.Hidden {
-		ng.storyteller = p.Key
+		ng.Storyteller = p.Key
 	}
 	if p, ok := difficulty.Parse(g.LastDifficulty); ok && p != difficulty.Custom {
-		ng.preset = p
+		ng.Preset = p
 	}
 	if g.LastSaveMode == difficulty.Commitment.String() {
-		ng.saveMode = difficulty.Commitment
+		ng.SaveMode = difficulty.Commitment
 	}
-	ng.custom = difficulty.Of(ng.preset)
-	ng.refreshScenarios(a)
+	ng.Custom = difficulty.Of(ng.Preset)
+	ng.RefreshScenarios(a)
 	ng.selectKey(defaultScenarioKey)
 	ng.initial = ng.signature()
 	return ng
@@ -208,14 +208,14 @@ func (a *App) newDraft() *newGameState {
 // newEntry is a list entry for a readable definition.
 func newEntry(d scenario.Def) scenEntry {
 	return scenEntry{
-		key: d.Key, name: d.Name, summary: d.Summary, def: d, builtin: d.Builtin,
+		Key: d.Key, Name: d.Name, Summary: d.Summary, Def: d, builtin: d.Builtin,
 		problems: d.Validate(), hardness: d.HardnessPips(), lines: scenarioLines(d),
 	}
 }
 
-// refreshScenarios rebuilds the list: the built-ins, the files of the
+// RefreshScenarios rebuilds the list: the built-ins, the files of the
 // store and this session's unsaved scenarios. It keeps the selection.
-func (ng *newGameState) refreshScenarios(a *App) {
+func (ng *newGameState) RefreshScenarios(a *App) {
 	prev := ng.selectedKey()
 	entries := make([]scenEntry, 0, 8)
 	for _, d := range scenario.Builtins() {
@@ -228,23 +228,23 @@ func (ng *newGameState) refreshScenarios(a *App) {
 			ng.err = "scenarios: " + err.Error()
 		}
 		for _, f := range files {
-			e := scenEntry{key: "file." + f.Name, name: f.Name, file: f.Name, modified: f.Modified}
+			e := scenEntry{Key: "file." + f.Name, Name: f.Name, File: f.Name, modified: f.Modified}
 			data, err := st.Load(f.Name)
 			var d scenario.Def
 			if err == nil {
 				d, err = scenario.Decode(data)
 			}
 			if err != nil {
-				e.err = err.Error()
-				e.summary = "Can't read this file"
+				e.Err = err.Error()
+				e.Summary = "Can't read this file"
 				custom = append(custom, e)
 				continue
 			}
 			d.Builtin = false
 			ne := newEntry(d)
-			ne.key, ne.file, ne.modified = e.key, f.Name, f.Modified
-			if strings.TrimSpace(ne.name) == "" {
-				ne.name = f.Name
+			ne.Key, ne.File, ne.modified = e.Key, f.Name, f.Modified
+			if strings.TrimSpace(ne.Name) == "" {
+				ne.Name = f.Name
 			}
 			custom = append(custom, ne)
 		}
@@ -252,15 +252,15 @@ func (ng *newGameState) refreshScenarios(a *App) {
 	for i, d := range a.ngUnsaved {
 		d.Builtin = false
 		e := newEntry(d)
-		e.key = "unsaved." + strconv.Itoa(i)
-		e.unsaved = true
-		e.name = d.Name + " (unsaved)"
+		e.Key = "unsaved." + strconv.Itoa(i)
+		e.Unsaved = true
+		e.Name = d.Name + " (unsaved)"
 		custom = append(custom, e)
 	}
 	sort.SliceStable(custom, func(i, j int) bool {
-		return strings.ToLower(custom[i].name) < strings.ToLower(custom[j].name)
+		return strings.ToLower(custom[i].Name) < strings.ToLower(custom[j].Name)
 	})
-	ng.entries = append(entries, custom...)
+	ng.Entries = append(entries, custom...)
 	ng.selectKey(prev)
 }
 
@@ -269,12 +269,12 @@ func (ng *newGameState) refreshScenarios(a *App) {
 // goBack is the Back button and Escape on a setup screen: it pops one
 // screen, asking first when that would throw work away (NG-1 §1.5).
 func (a *App) goBack() {
-	if ng := a.ng; ng != nil && ng.load != nil {
+	if ng := a.ng; ng != nil && ng.Load != nil {
 		return // the colony is being built: nothing to go back to
 	}
 	switch a.nav.screen() {
 	case screenScenarioEditor:
-		if ng := a.ng; ng != nil && ng.ed != nil && ng.ed.dirty() {
+		if ng := a.ng; ng != nil && ng.Ed != nil && ng.Ed.Dirty() {
 			a.uiConfirm("sced.discard", "Discard changes?", "The scenario has changes that were not saved or kept. Leave the editor and lose them?", "Discard", true, a.popScreen)
 			return
 		}
@@ -295,7 +295,7 @@ func (a *App) popScreen() {
 	a.nav.pop()
 	switch {
 	case was == screenScenarioEditor && a.ng != nil:
-		a.ng.ed = nil
+		a.ng.Ed = nil
 	case a.nav.screen() == screenMainMenu:
 		a.ng = nil
 	}
@@ -381,7 +381,7 @@ func dimText() textStyle {
 func (a *App) drawNGFrame(screen *ebiten.Image, sw, sh int, title string) {
 	var p *planet.Planet
 	if a.ng != nil {
-		p = a.ng.planet
+		p = a.ng.Planet
 	}
 	a.drawSetupBackdrop(screen, sw, sh, p)
 	if tooSmall(sw, sh) {
@@ -403,29 +403,29 @@ func (a *App) drawNGFrame(screen *ebiten.Image, sw, sh int, title string) {
 // not fully inside the view reports false and the caller declares no
 // widget for it.
 type formCtx struct {
-	view rect
-	x, w float32
+	View rect
+	X, W float32
 	y    float32 // content height so far
-	off  float32
+	Off  float32
 }
 
 // newForm starts a form in the view of a scroll area (padding 4 px).
 func newForm(area scrollArea) *formCtx {
-	return &formCtx{view: area.View, x: area.View.X + 4, w: max(0, area.View.W-8), off: area.Off}
+	return &formCtx{View: area.View, X: area.View.X + 4, W: max(0, area.View.W-8), Off: area.Off}
 }
 
-// row is the next row of height h.
-func (f *formCtx) row(h float32) (rect, bool) {
-	r := rect{X: f.x, Y: f.view.Y + f.y - f.off, W: f.w, H: h}
+// Row is the next Row of height h.
+func (f *formCtx) Row(h float32) (rect, bool) {
+	r := rect{X: f.X, Y: f.View.Y + f.y - f.Off, W: f.W, H: h}
 	f.y += h
-	return r, r.Y >= f.view.Y-0.5 && r.Bottom() <= f.view.Bottom()+0.5
+	return r, r.Y >= f.View.Y-0.5 && r.Bottom() <= f.View.Bottom()+0.5
 }
 
-// gap leaves h px empty.
-func (f *formCtx) gap(h float32) { f.y += h }
+// Gap leaves h px empty.
+func (f *formCtx) Gap(h float32) { f.y += h }
 
-// content is the content height so far (for the scroll area next frame).
-func (f *formCtx) content() float32 { return f.y + 4 }
+// Content is the Content height so far (for the scroll area next frame).
+func (f *formCtx) Content() float32 { return f.y + 4 }
 
 // formHeight is the content height remembered for the form id.
 func (ng *newGameState) formHeight(id string) float32 { return ng.formH[id] }

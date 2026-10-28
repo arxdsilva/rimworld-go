@@ -35,7 +35,7 @@ func (a *App) bindings() input.Bindings {
 // textActive reports a text field or key capture has the keyboard.
 func (a *App) textActive() bool {
 	switch {
-	case a.rebind.on && a.nav.screen() == screenOptions:
+	case a.rebind.On && a.nav.screen() == screenOptions:
 		return true
 	case a.search.open && a.colonyLive():
 		return true
@@ -111,7 +111,7 @@ func (a *App) handleTextInput() {
 	switch {
 	case a.uiTextEditing():
 		a.uiTextInput() // ui_textfield.go
-	case a.rebind.on && a.nav.screen() == screenOptions:
+	case a.rebind.On && a.nav.screen() == screenOptions:
 		a.captureBinding() // controls_ui.go
 	case a.search.open:
 		a.searchTyping() // search_ui.go

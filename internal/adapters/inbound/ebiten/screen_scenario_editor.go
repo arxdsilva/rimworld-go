@@ -24,19 +24,19 @@ import (
 
 // editorState is the open editor.
 type editorState struct {
-	def, orig scenario.Def
+	Def, orig scenario.Def
 	source    string // key of the list entry the copy came from ("" for a new scenario)
-	saved     []byte // the file content of the last Save
-	savedAs   string // its file name
-	open      map[int]bool
+	Saved     []byte // the file content of the last Save
+	SavedAs   string // its file name
+	Open      map[int]bool
 	reveal    int             // a part to scroll to and show next frame (-1 none)
 	cardY     map[int]float32 // content y of each part card, measured last layout
 	cardEnd   map[int]float32 // and where each card ends
-	loadErr   string
+	LoadErr   string
 }
 
 func newEditor(def scenario.Def, source string) *editorState {
-	return &editorState{def: def, orig: cloneDef(def), source: source, open: map[int]bool{}, reveal: -1, cardY: map[int]float32{}, cardEnd: map[int]float32{}}
+	return &editorState{Def: def, orig: cloneDef(def), source: source, Open: map[int]bool{}, reveal: -1, cardY: map[int]float32{}, cardEnd: map[int]float32{}}
 }
 
 func encDef(d scenario.Def) []byte {
@@ -47,14 +47,14 @@ func encDef(d scenario.Def) []byte {
 	return b
 }
 
-// dirty reports changes that are neither the state the editor opened with
+// Dirty reports changes that are neither the state the editor opened with
 // nor the last saved file.
-func (ed *editorState) dirty() bool {
-	cur := encDef(ed.def)
+func (ed *editorState) Dirty() bool {
+	cur := encDef(ed.Def)
 	if bytes.Equal(cur, encDef(ed.orig)) {
 		return false
 	}
-	return ed.saved == nil || !bytes.Equal(cur, ed.saved)
+	return ed.Saved == nil || !bytes.Equal(cur, ed.Saved)
 }
 
 // newScenarioDef is the blank scenario of New scenario: Broken Hull's
@@ -84,7 +84,7 @@ func copyForEditing(d scenario.Def) scenario.Def {
 // openEditor opens the editor on def.
 func (a *App) openEditor(def scenario.Def, source string) {
 	ng := a.draft()
-	ng.ed = newEditor(def, source)
+	ng.Ed = newEditor(def, source)
 	a.apply(intent{kind: intentPush, screen: screenScenarioEditor})
 }
 
@@ -185,13 +185,13 @@ func (a *App) editorUI(sw, sh int) {
 		return
 	}
 	ng := a.draft()
-	if ng.ed == nil { // reached without Choose Scenario: edit a fresh scenario
-		ng.ed = newEditor(newScenarioDef(), "")
+	if ng.Ed == nil { // reached without Choose Scenario: edit a fresh scenario
+		ng.Ed = newEditor(newScenarioDef(), "")
 	}
-	ed := ng.ed
+	ed := ng.Ed
 	_, _, content, footer := dialogFrame(sw, sh)
 	L := editorRects(content)
-	probs := ed.def.Validate()
+	probs := ed.Def.Validate()
 	errs := 0
 	for _, p := range probs {
 		if p.Severity == scenario.Error {
@@ -209,7 +209,7 @@ func (a *App) editorUI(sw, sh int) {
 		x -= 8
 	}
 	nameR := rect{X: L.header.X, Y: L.header.Y, W: max(160, min(360, x-L.header.X)), H: L.header.H}
-	a.uiTextField("sced.name", nameR, &ed.def.Name, textFieldSpec{MaxLen: scenario.MaxName, Placeholder: "Scenario name",
+	a.uiTextField("sced.name", nameR, &ed.Def.Name, textFieldSpec{MaxLen: scenario.MaxName, Placeholder: "Scenario name",
 		Normalize: strings.TrimSpace, Tip: "Name\nUp to 40 characters."})
 	saveOpts := btnOpts{Tip: "Save\nWrite the scenario to the scenarios folder."}
 	switch {
@@ -221,19 +221,19 @@ func (a *App) editorUI(sw, sh int) {
 	a.ngButton("sced.save", rects[0], "Save", saveOpts, a.editorSave)
 	a.ngButton("sced.load", rects[1], "Load", btnOpts{Disabled: a.cfg.Scenarios == nil, Reason: "Scenario files are unavailable in this build.", Tip: "Load\nReplace this scenario with one from the scenarios folder."}, a.editorLoad)
 	a.ngButton("sced.reset", rects[2], "Reset", btnOpts{Tip: "Reset\nBack to how the scenario was when the editor opened."}, func() {
-		ed.def = cloneDef(ed.orig)
-		ed.open = map[int]bool{}
+		ed.Def = cloneDef(ed.orig)
+		ed.Open = map[int]bool{}
 		ed.reveal = -1
 	})
-	a.ngButton("sced.seed", rects[3], "Randomize seed", btnOpts{Tip: fmt.Sprintf("Randomize seed\nThe scenario's own seed (now %d) only drives its random parts, such as a random pet. It is not the planet seed.", ed.def.Seed)}, func() {
-		ed.def.Seed = rand.Uint64N(1<<32) + 1
+	a.ngButton("sced.seed", rects[3], "Randomize seed", btnOpts{Tip: fmt.Sprintf("Randomize seed\nThe scenario's own seed (now %d) only drives its random parts, such as a random pet. It is not the planet seed.", ed.Def.Seed)}, func() {
+		ed.Def.Seed = rand.Uint64N(1<<32) + 1
 	})
 
 	a.editorForm(ng, ed, L.form, probs)
 
 	// Right column: live preview and validation.
 	a.uiPanel(L.preview)
-	a.detailView("sced.preview", L.preview, ed.def, scenarioLines(ed.def))
+	a.detailView("sced.preview", L.preview, ed.Def, scenarioLines(ed.Def))
 	a.validationPanel(ed, L.problems, probs)
 
 	done := btnOpts{}
@@ -305,8 +305,8 @@ func (a *App) validationPanel(ed *editorState, r rect, probs []scenario.Problem)
 			continue
 		}
 		show := func() {
-			if p := probs[i].Part; p >= 0 && p < len(ed.def.Parts) {
-				ed.open[p] = true
+			if p := probs[i].Part; p >= 0 && p < len(ed.Def.Parts) {
+				ed.Open[p] = true
 				ed.reveal = p
 			}
 			a.uiOK()
@@ -332,24 +332,24 @@ func (a *App) editorForm(ng *newGameState, ed *editorState, r rect, probs []scen
 	view := body.Inset(6)
 	area := a.uiScrollArea("sced.form", view, ng.formHeight("sced.form"), scrollOpts{Step: 48})
 	f := newForm(area)
-	d := &ed.def
+	d := &ed.Def
 
 	// Summary and description.
-	if row, ok := f.row(edRowH); ok {
+	if row, ok := f.Row(edRowH); ok {
 		c := a.rowLabel(row, "Summary", 92)
 		a.uiTextField("sced.summary", c.Inset(2), &d.Summary, textFieldSpec{MaxLen: scenario.MaxSummary, Placeholder: "One line shown in the list"})
 	}
-	if row, ok := f.row(22); ok {
+	if row, ok := f.Row(22); ok {
 		a.rowLabel(row, "Description", 120)
 	}
-	if row, ok := f.row(68); ok {
+	if row, ok := f.Row(68); ok {
 		a.uiTextField("sced.desc", row.Inset(2), &d.Desc, textFieldSpec{Multiline: true, MaxLen: scenario.MaxDesc, Placeholder: "The story of the start"})
 	}
-	f.gap(6)
+	f.Gap(6)
 
 	// Mandatory block.
-	f.sectionTitle(a, "Starting setup")
-	if row, ok := f.row(edRowH); ok {
+	f.SectionTitle(a, "Starting setup")
+	if row, ok := f.Row(edRowH); ok {
 		c := a.rowLabel(row, "Player faction", 120)
 		sel := 0
 		if d.Faction == faction.Clans {
@@ -363,7 +363,7 @@ func (a *App) editorForm(ng *newGameState, ed *editorState, r rect, probs []scen
 			d.Faction = faction.Settlers
 		}
 	}
-	if row, ok := f.row(edRowH); ok {
+	if row, ok := f.Row(edRowH); ok {
 		c := a.rowLabel(row, "Starting people", 120)
 		old := d.People
 		a.ngStepper("sced.people", rect{X: c.X, Y: c.Y + 3, W: 112, H: c.H - 6}, &d.People, scenario.MinPeople, scenario.MaxPeople)
@@ -372,26 +372,26 @@ func (a *App) editorForm(ng *newGameState, ed *editorState, r rect, probs []scen
 		}
 		d.ChooseFrom = max(d.People, min(d.People+scenario.MaxExtraPool, d.ChooseFrom))
 	}
-	if row, ok := f.row(edRowH); ok {
+	if row, ok := f.Row(edRowH); ok {
 		c := a.rowLabel(row, "Choose from", 120)
 		a.ngStepper("sced.choose", rect{X: c.X, Y: c.Y + 3, W: 112, H: c.H - 6}, &d.ChooseFrom, d.People, d.People+scenario.MaxExtraPool)
 	}
-	if row, ok := f.row(edRowH); ok {
+	if row, ok := f.Row(edRowH); ok {
 		c := a.rowLabel(row, "Arrival", 120)
 		sel := int(d.Arrival)
 		a.segmented("sced.arrival", rect{X: c.X, Y: c.Y + 3, W: min(c.W, 330), H: c.H - 6}, []string{"Drop pods", "Standing", "Walk in"}, &sel, nil)
 		d.Arrival = scenario.Arrival(sel)
 	}
-	if row, ok := f.row(edRowH); ok {
+	if row, ok := f.Row(edRowH); ok {
 		c := a.rowLabel(row, "Tech level", 120)
 		sel := int(d.Tech)
 		a.segmented("sced.tech", rect{X: c.X, Y: c.Y + 3, W: min(c.W, 330), H: c.H - 6}, []string{"Neolithic", "Industrial", "Spacer"}, &sel, nil)
 		d.Tech = faction.Tech(sel)
 	}
-	f.gap(8)
+	f.Gap(8)
 
 	// Optional parts.
-	f.sectionTitle(a, "Optional parts")
+	f.SectionTitle(a, "Optional parts")
 	partProbs := map[int]bool{}
 	for _, p := range probs {
 		if p.Part >= 0 && p.Severity == scenario.Error {
@@ -403,7 +403,7 @@ func (a *App) editorForm(ng *newGameState, ed *editorState, r rect, probs []scen
 			break // the list changed: lay out again next frame
 		}
 	}
-	ng.setFormHeight("sced.form", f.content())
+	ng.setFormHeight("sced.form", f.Content())
 
 	if ed.reveal >= 0 {
 		if y, ok := ed.cardY[ed.reveal]; ok {
@@ -414,9 +414,9 @@ func (a *App) editorForm(ng *newGameState, ed *editorState, r rect, probs []scen
 	}
 }
 
-// sectionTitle is a heading row of the form.
-func (f *formCtx) sectionTitle(a *App, s string) {
-	if row, ok := f.row(26); ok {
+// SectionTitle is a heading row of the form.
+func (f *formCtx) SectionTitle(a *App, s string) {
+	if row, ok := f.Row(26); ok {
 		hs := tsLabel
 		hs.Color = uiHeading
 		a.uiLabel(row.X, row.Y+4, s, hs)
@@ -430,15 +430,15 @@ func (f *formCtx) sectionTitle(a *App, s string) {
 // delete), so the caller stops this frame's layout.
 func (a *App) partCard(f *formCtx, ng *newGameState, ed *editorState, i int, bad bool) (changed bool) {
 	u := a.uiSt()
-	p := &ed.def.Parts[i]
+	p := &ed.Def.Parts[i]
 	top := f.y
 	ed.cardY[i] = top
-	row, ok := f.row(edCardH)
-	expanded := ed.open[i]
+	row, ok := f.Row(edCardH)
+	expanded := ed.Open[i]
 	if ok {
 		btn := float32(28)
 		hdr := rect{X: row.X, Y: row.Y + 2, W: row.W - 3*(btn+4), H: edCardH - 4}
-		toggle := func() { ed.open[i] = !ed.open[i]; a.uiOK() }
+		toggle := func() { ed.Open[i] = !ed.Open[i]; a.uiOK() }
 		w := uiWidget{ID: "sced.card." + uiNum(i), R: hdr, Label: p.Kind.Label(), Click: toggle, Focusable: true, Tip: p.Kind.Label() + "\n" + p.Kind.Desc()}
 		if u.Add(w) && (a.uiPress(hdr) || a.uiKeyAct(w.ID)) {
 			toggle()
@@ -476,22 +476,22 @@ func (a *App) partCard(f *formCtx, ng *newGameState, ed *editorState, i int, bad
 		})
 		bx := hdr.Right() + 4
 		a.ngButton("sced.up."+uiNum(i), rect{X: bx, Y: hdr.Y, W: btn, H: hdr.H}, "^", btnOpts{Disabled: i == 0, Reason: "Already first.", Tip: "Move up"}, func() {
-			ed.def.Parts[i], ed.def.Parts[i-1] = ed.def.Parts[i-1], ed.def.Parts[i]
-			ed.open[i], ed.open[i-1] = ed.open[i-1], ed.open[i]
+			ed.Def.Parts[i], ed.Def.Parts[i-1] = ed.Def.Parts[i-1], ed.Def.Parts[i]
+			ed.Open[i], ed.Open[i-1] = ed.Open[i-1], ed.Open[i]
 			changed = true
 		})
-		a.ngButton("sced.down."+uiNum(i), rect{X: bx + btn + 4, Y: hdr.Y, W: btn, H: hdr.H}, "v", btnOpts{Disabled: i == len(ed.def.Parts)-1, Reason: "Already last.", Tip: "Move down"}, func() {
-			ed.def.Parts[i], ed.def.Parts[i+1] = ed.def.Parts[i+1], ed.def.Parts[i]
-			ed.open[i], ed.open[i+1] = ed.open[i+1], ed.open[i]
+		a.ngButton("sced.down."+uiNum(i), rect{X: bx + btn + 4, Y: hdr.Y, W: btn, H: hdr.H}, "v", btnOpts{Disabled: i == len(ed.Def.Parts)-1, Reason: "Already last.", Tip: "Move down"}, func() {
+			ed.Def.Parts[i], ed.Def.Parts[i+1] = ed.Def.Parts[i+1], ed.Def.Parts[i]
+			ed.Open[i], ed.Open[i+1] = ed.Open[i+1], ed.Open[i]
 			changed = true
 		})
 		// The button ids are the spec's: sced.up.<i>, sced.down.<i>, sced.del.<i>.
 		a.ngButton("sced.del."+uiNum(i), rect{X: bx + 2*(btn+4), Y: hdr.Y, W: btn, H: hdr.H}, "x", btnOpts{Style: btnDanger, Tip: "Remove this part"}, func() {
-			ed.def.Parts = append(ed.def.Parts[:i], ed.def.Parts[i+1:]...)
-			for k := i; k < len(ed.def.Parts)+1; k++ {
-				ed.open[k] = ed.open[k+1]
+			ed.Def.Parts = append(ed.Def.Parts[:i], ed.Def.Parts[i+1:]...)
+			for k := i; k < len(ed.Def.Parts)+1; k++ {
+				ed.Open[k] = ed.Open[k+1]
 			}
-			delete(ed.open, len(ed.def.Parts))
+			delete(ed.Open, len(ed.Def.Parts))
 			changed = true
 		})
 	}
@@ -499,12 +499,12 @@ func (a *App) partCard(f *formCtx, ng *newGameState, ed *editorState, i int, bad
 		a.partControls(f, ng, ed, i, p)
 	}
 	if expanded {
-		f.gap(4)
+		f.Gap(4)
 	}
-	f.gap(4)
+	f.Gap(4)
 	ed.cardEnd[i] = f.y
 	if ok {
-		barY, barH, barX := f.view.Y+top-f.off, f.y-top-4, f.x-3
+		barY, barH, barX := f.View.Y+top-f.Off, f.y-top-4, f.X-3
 		u.Queue(func(dst *ebiten.Image) { fillRect(dst, rect{X: barX, Y: barY, W: 2, H: barH}, uiPanelBorder) })
 	}
 	return changed
@@ -512,7 +512,7 @@ func (a *App) partCard(f *formCtx, ng *newGameState, ed *editorState, i int, bad
 
 // ctl is a labelled control row: it returns the control's rectangle.
 func (a *App) ctl(f *formCtx, label string) (rect, bool) {
-	row, ok := f.row(edRowH)
+	row, ok := f.Row(edRowH)
 	if !ok {
 		return rect{}, false
 	}
@@ -534,7 +534,7 @@ func (a *App) pctSlider(id string, c rect, v *int, lo, hi int, title string) {
 // partControls declares the controls of an expanded part.
 func (a *App) partControls(f *formCtx, ng *newGameState, ed *editorState, i int, p *scenario.Part) {
 	id := func(s string) string { return "sced.p." + uiNum(i) + "." + s }
-	d := &ed.def
+	d := &ed.Def
 	chance := func(label string) {
 		if c, ok := a.ctl(f, label); ok {
 			v := int(p.Chance)
@@ -598,7 +598,7 @@ func (a *App) partControls(f *formCtx, ng *newGameState, ed *editorState, i int,
 		}
 		chance("Chance")
 	case scenario.PartNoClothes:
-		if row, ok := f.row(edRowH); ok {
+		if row, ok := f.Row(edRowH); ok {
 			a.uiLabel(row.X+14, row.Y+6, "Colonists arrive with nothing to wear. No options.", dimText())
 		}
 	case scenario.PartStartItem:
@@ -671,7 +671,7 @@ func (a *App) partControls(f *formCtx, ng *newGameState, ed *editorState, i int,
 			p.Percent = uint16(v)
 		}
 	case scenario.PartIntro:
-		if row, ok := f.row(120); ok {
+		if row, ok := f.Row(120); ok {
 			row.X += 14
 			row.W -= 14
 			a.uiTextField(id("text"), row.Inset(2), &p.Text, textFieldSpec{Multiline: true, MaxLen: scenario.MaxIntro, Placeholder: "Shown once after landing"})
@@ -758,13 +758,13 @@ func (a *App) openAddPart() {
 // addPart appends a part of kind k, opened and in view.
 func (a *App) addPart(k scenario.PartKind) {
 	ng := a.draft()
-	if ng.ed == nil {
+	if ng.Ed == nil {
 		return
 	}
-	ed := ng.ed
-	ed.def.Parts = append(ed.def.Parts, scenario.NewPart(k))
-	n := len(ed.def.Parts) - 1
-	ed.open[n] = true
+	ed := ng.Ed
+	ed.Def.Parts = append(ed.Def.Parts, scenario.NewPart(k))
+	n := len(ed.Def.Parts) - 1
+	ed.Open[n] = true
 	ed.reveal = n
 	a.uiCloseModal("sced.addpart")
 }
@@ -773,12 +773,12 @@ func (a *App) addPart(k scenario.PartKind) {
 // before it replaces a file it did not write itself.
 func (a *App) editorSave() {
 	ng := a.draft()
-	ed := ng.ed
+	ed := ng.Ed
 	st := a.cfg.Scenarios
 	if ed == nil || st == nil {
 		return
 	}
-	def := cloneDef(ed.def)
+	def := cloneDef(ed.Def)
 	def.Builtin, def.Key = false, ""
 	data, err := scenario.Encode(def)
 	if err != nil {
@@ -791,9 +791,9 @@ func (a *App) editorSave() {
 			a.hint = "save failed: " + err.Error()
 			return
 		}
-		ed.saved, ed.savedAs = data, name
+		ed.Saved, ed.SavedAs = data, name
 		a.hint = "saved " + name
-		ng.refreshScenarios(a)
+		ng.RefreshScenarios(a)
 	}
 	files, _ := st.List()
 	exists := false
@@ -802,7 +802,7 @@ func (a *App) editorSave() {
 			exists = true
 		}
 	}
-	if exists && ed.savedAs != name {
+	if exists && ed.SavedAs != name {
 		a.uiConfirm("sced.overwrite", "Overwrite scenario?", fmt.Sprintf("A scenario file named \"%s\" already exists. Replace it?", name), "Overwrite", true, write)
 		return
 	}
@@ -817,10 +817,10 @@ func (a *App) editorLoad() {
 	}
 	files, err := st.List()
 	ng := a.draft()
-	if ng.ed != nil {
-		ng.ed.loadErr = ""
+	if ng.Ed != nil {
+		ng.Ed.LoadErr = ""
 		if err != nil {
-			ng.ed.loadErr = "Can't read the scenarios folder: " + err.Error()
+			ng.Ed.LoadErr = "Can't read the scenarios folder: " + err.Error()
 		}
 	}
 	cols := []tableCol{
@@ -832,15 +832,15 @@ func (a *App) editorLoad() {
 	a.uiPushModal(modal{
 		ID: "sced.loadfile", Title: "Load scenario", W: 560, H: 440,
 		Draw: func(a *App, body rect) {
-			ed := a.draft().ed
+			ed := a.draft().Ed
 			if ed == nil {
 				return
 			}
 			tb := body
-			if ed.loadErr != "" {
+			if ed.LoadErr != "" {
 				ls := tsBody
 				ls.Color = uiDanger
-				h := a.textLines(body.X, body.Y, body.W, ed.loadErr, ls)
+				h := a.textLines(body.X, body.Y, body.W, ed.LoadErr, ls)
 				_, tb = body.SplitV(h + 8)
 			}
 			if len(files) == 0 {
@@ -859,7 +859,7 @@ func (a *App) editorLoad() {
 // loadScenarioFile replaces the edited scenario with a file's.
 func (a *App) loadScenarioFile(name string) {
 	ng := a.draft()
-	ed := ng.ed
+	ed := ng.Ed
 	st := a.cfg.Scenarios
 	if ed == nil || st == nil {
 		return
@@ -870,15 +870,15 @@ func (a *App) loadScenarioFile(name string) {
 		d, err = scenario.Decode(data)
 	}
 	if err != nil {
-		ed.loadErr = fmt.Sprintf("%s: %v", name, err)
+		ed.LoadErr = fmt.Sprintf("%s: %v", name, err)
 		return
 	}
 	d.Builtin, d.Key = false, ""
-	ed.def = d
-	ed.saved, ed.savedAs = encDef(d), name
-	ed.open = map[int]bool{}
+	ed.Def = d
+	ed.Saved, ed.SavedAs = encDef(d), name
+	ed.Open = map[int]bool{}
 	ed.reveal = -1
-	ed.loadErr = ""
+	ed.LoadErr = ""
 	a.uiCloseModal("sced.loadfile")
 }
 
@@ -887,15 +887,15 @@ func (a *App) loadScenarioFile(name string) {
 // that lasts until the game quits.
 func (a *App) editorDone() {
 	ng := a.draft()
-	ed := ng.ed
-	if ed == nil || scenario.HasErrors(ed.def.Validate()) {
+	ed := ng.Ed
+	if ed == nil || scenario.HasErrors(ed.Def.Validate()) {
 		return
 	}
-	def := cloneDef(ed.def)
+	def := cloneDef(ed.Def)
 	def.Builtin, def.Key = false, ""
 	key := ""
-	if ed.saved != nil && bytes.Equal(encDef(def), ed.saved) {
-		key = "file." + ed.savedAs
+	if ed.Saved != nil && bytes.Equal(encDef(def), ed.Saved) {
+		key = "file." + ed.SavedAs
 	} else {
 		idx := -1
 		if strings.HasPrefix(ed.source, "unsaved.") {
@@ -912,7 +912,7 @@ func (a *App) editorDone() {
 		key = fmt.Sprintf("unsaved.%d", idx)
 	}
 	a.popScreen()
-	ng.search = ""
-	ng.refreshScenarios(a)
+	ng.Search = ""
+	ng.RefreshScenarios(a)
 	ng.selectKey(key)
 }

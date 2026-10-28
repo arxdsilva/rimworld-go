@@ -23,8 +23,8 @@ import (
 
 // selGroup is a multi-selection of one kind (colonists, animals or items).
 type selGroup struct {
-	kind selKind
-	ids  []entity.EntityID
+	Kind selKind
+	Ids  []entity.EntityID
 }
 
 // pressState is the map's left press: where it went down (for the drag
@@ -43,14 +43,14 @@ const (
 )
 
 // grouped reports a multi-selection is active.
-func (a *App) grouped() bool { return len(a.group.ids) >= 2 }
+func (a *App) grouped() bool { return len(a.group.Ids) >= 2 }
 
 // inGroup reports id is a member of a group of kind k.
 func (a *App) inGroup(k selKind, id entity.EntityID) bool {
-	if !a.grouped() || a.group.kind != k {
+	if !a.grouped() || a.group.Kind != k {
 		return false
 	}
-	for _, g := range a.group.ids {
+	for _, g := range a.group.Ids {
 		if g == id {
 			return true
 		}
@@ -79,7 +79,7 @@ func (a *App) setGroup(kind selKind, ids []entity.EntityID) {
 		a.selectCand(selCand{kind, clean[0]})
 	default:
 		a.clearSelections(selNone)
-		a.group = selGroup{kind: kind, ids: clean}
+		a.group = selGroup{Kind: kind, Ids: clean}
 	}
 }
 
@@ -87,10 +87,10 @@ func (a *App) setGroup(kind selKind, ids []entity.EntityID) {
 // single selection of a groupable kind).
 func (a *App) selectionSet() (selKind, []entity.EntityID) {
 	if a.grouped() {
-		return a.group.kind, append([]entity.EntityID(nil), a.group.ids...)
+		return a.group.Kind, append([]entity.EntityID(nil), a.group.Ids...)
 	}
-	if c, ok := a.selectedCand(); ok && groupable(c.kind) {
-		return c.kind, []entity.EntityID{c.id}
+	if c, ok := a.selectedCand(); ok && groupable(c.Kind) {
+		return c.Kind, []entity.EntityID{c.ID}
 	}
 	return selNone, nil
 }
@@ -149,7 +149,7 @@ func (a *App) candUnderCursor() (selCand, bool) {
 // it out when it is already in. Other kinds start a new selection.
 func (a *App) shiftClick() {
 	c, ok := a.candUnderCursor()
-	if !ok || !groupable(c.kind) {
+	if !ok || !groupable(c.Kind) {
 		a.clickSelect()
 		return
 	}
@@ -160,21 +160,21 @@ func (a *App) shiftClick() {
 // starts over with c).
 func (a *App) toggleInSet(c selCand) {
 	kind, ids := a.selectionSet()
-	if kind != c.kind {
-		a.setGroup(c.kind, []entity.EntityID{c.id})
+	if kind != c.Kind {
+		a.setGroup(c.Kind, []entity.EntityID{c.ID})
 		return
 	}
 	out := ids[:0]
 	found := false
 	for _, id := range ids {
-		if id == c.id {
+		if id == c.ID {
 			found = true
 			continue
 		}
 		out = append(out, id)
 	}
 	if !found {
-		out = append(out, c.id)
+		out = append(out, c.ID)
 	}
 	a.setGroup(kind, out)
 }
@@ -282,7 +282,7 @@ func (a *App) boxSelect(sx0, sy0, sx1, sy1 int, add bool) {
 // of the same species, or stack of the same item.
 func (a *App) selectSameOnScreen() {
 	c, ok := a.selectedCand()
-	if !ok || !groupable(c.kind) {
+	if !ok || !groupable(c.Kind) {
 		a.clickSelect()
 		return
 	}
@@ -291,7 +291,7 @@ func (a *App) selectSameOnScreen() {
 	r := a.renderer
 	w := r.world()
 	var ids []entity.EntityID
-	switch c.kind {
+	switch c.Kind {
 	case selPawn:
 		for _, p := range r.snapshot() {
 			if wx, wy := r.interpWorld(p); !p.Embodied && r.inRect(wx, wy, x0, y0, x1, y1) {
@@ -313,7 +313,7 @@ func (a *App) selectSameOnScreen() {
 			}
 		}
 	}
-	a.setGroup(c.kind, append([]entity.EntityID{c.id}, ids...))
+	a.setGroup(c.Kind, append([]entity.EntityID{c.ID}, ids...))
 }
 
 // selectedPawns is the selected colonists: the group's living members in
@@ -328,7 +328,7 @@ func (a *App) selectedPawns() []game.PawnView {
 		}
 		return nil
 	}
-	if a.group.kind != selPawn {
+	if a.group.Kind != selPawn {
 		return nil
 	}
 	byID := map[entity.EntityID]game.PawnView{}
@@ -336,7 +336,7 @@ func (a *App) selectedPawns() []game.PawnView {
 		byID[p.ID] = p
 	}
 	var out []game.PawnView
-	for _, id := range a.group.ids {
+	for _, id := range a.group.Ids {
 		if p, ok := byID[id]; ok {
 			out = append(out, p)
 		}
@@ -355,7 +355,7 @@ func (a *App) selectedItems() []game.ItemView {
 		}
 		return nil
 	}
-	if a.group.kind != selItem {
+	if a.group.Kind != selItem {
 		return nil
 	}
 	byID := map[entity.EntityID]game.ItemView{}
@@ -365,7 +365,7 @@ func (a *App) selectedItems() []game.ItemView {
 		}
 	}
 	var out []game.ItemView
-	for _, id := range a.group.ids {
+	for _, id := range a.group.Ids {
 		if it, ok := byID[id]; ok {
 			out = append(out, it)
 		}
@@ -375,7 +375,7 @@ func (a *App) selectedItems() []game.ItemView {
 
 // selectedAnimals is the group's animals.
 func (a *App) selectedAnimals() []game.AnimalView {
-	if a.renderer == nil || !a.grouped() || a.group.kind != selAnimal {
+	if a.renderer == nil || !a.grouped() || a.group.Kind != selAnimal {
 		return nil
 	}
 	byID := map[entity.EntityID]game.AnimalView{}
@@ -383,7 +383,7 @@ func (a *App) selectedAnimals() []game.AnimalView {
 		byID[an.ID] = an
 	}
 	var out []game.AnimalView
-	for _, id := range a.group.ids {
+	for _, id := range a.group.Ids {
 		if an, ok := byID[id]; ok {
 			out = append(out, an)
 		}
@@ -400,7 +400,7 @@ type groupRow struct {
 // groupRows lists the group's members (dropping ones that are gone).
 func (a *App) groupRows() []groupRow {
 	var out []groupRow
-	switch a.group.kind {
+	switch a.group.Kind {
 	case selPawn:
 		for _, p := range a.selectedPawns() {
 			s := pawnLabel(p)
@@ -461,7 +461,7 @@ func (a *App) groupPane() paneSpec {
 		return paneSpec{} // pruneGroup falls back to one
 	}
 	spec := paneSpec{
-		Title:    groupNoun(a.group.kind, len(rows)),
+		Title:    groupNoun(a.group.Kind, len(rows)),
 		Subtitle: "Shift+click adds or removes",
 		Close:    "group.close",
 	}
@@ -485,7 +485,7 @@ var groupOwnKeys = map[string]bool{
 // for colonists; Forbid, Allow and Mark for hauling for items. Draft and
 // Forbid show how many members already are (On: all, Mixed: some).
 func (a *App) groupOwnCommands() []cmdButton {
-	switch a.group.kind {
+	switch a.group.Kind {
 	case selPawn:
 		pawns := a.selectedPawns()
 		on := 0
@@ -535,11 +535,11 @@ func (a *App) groupCommands() []cmdButton {
 // selection): the layout asks many times a frame.
 func (a *App) groupMerged() []cmdButton {
 	m := &a.hst.cmds.memo
-	if m.ok && m.updates == a.updates && m.kind == a.group.kind && slicesEqualIDs(m.ids, a.group.ids) {
+	if m.ok && m.updates == a.updates && m.kind == a.group.Kind && slicesEqualIDs(m.ids, a.group.Ids) {
 		return m.out
 	}
-	kind := a.group.kind
-	ids := append([]entity.EntityID(nil), a.group.ids...)
+	kind := a.group.Kind
+	ids := append([]entity.EntityID(nil), a.group.Ids...)
 	sets := make([][]cmdButton, len(ids))
 	for i, id := range ids {
 		for _, c := range a.commandsFor(kind, id) {
@@ -596,7 +596,7 @@ func haulMarkable(items []game.ItemView) bool {
 func (a *App) pruneGroup() {
 	if a.grouped() {
 		if rows := a.groupRows(); len(rows) < 2 {
-			a.setGroup(a.group.kind, groupIDs(rows))
+			a.setGroup(a.group.Kind, groupIDs(rows))
 		}
 	}
 }
@@ -639,7 +639,7 @@ func (a *App) applyGroupClick(id string) {
 		}
 	default:
 		if n, err := strconv.ParseUint(strings.TrimPrefix(id, "group.pick."), 10, 64); err == nil {
-			a.selectCand(selCand{a.group.kind, entity.EntityID(n)})
+			a.selectCand(selCand{a.group.Kind, entity.EntityID(n)})
 		}
 	}
 }
@@ -655,7 +655,7 @@ func (a *App) drawGroupMarks(screen *ebiten.Image) {
 		sx, sy := r.worldToScreenF(wx, wy)
 		vector.StrokeRect(screen, sx+1, sy+1, tile-2, tile-2, 2, r.selectClr, false)
 	}
-	switch a.group.kind {
+	switch a.group.Kind {
 	case selPawn:
 		for _, p := range a.selectedPawns() {
 			mark(r.interpWorld(p))

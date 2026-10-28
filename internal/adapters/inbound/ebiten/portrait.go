@@ -55,8 +55,8 @@ func pawnCrops(body *artSprite) (portrait, bust image.Rectangle) {
 
 // portraitLayer is one sprite of the portrait and its tint (zero: none).
 type portraitLayer struct {
-	key  string
-	tint color.NRGBA
+	Key  string
+	Tint color.NRGBA
 }
 
 // pawnKey is the art key of a pawn layer for a build and facing. The male
@@ -96,15 +96,15 @@ func portraitLayers(art *artCatalog, l look.Look) []portraitLayer {
 // scarredLayers is portraitLayers; scarred adds the face scar over the
 // hair (a disfigured pawn).
 func scarredLayers(art *artCatalog, l look.Look, scarred bool) []portraitLayer {
-	return figureLayers(art, l, "south", figureDress{scarred: scarred})
+	return figureLayers(art, l, "south", figureDress{Scarred: scarred})
 }
 
 // figureDress is what a figure wears beyond its look: outer apparel
 // (parka, duster, tuque), the face scar, and raider clothing.
 type figureDress struct {
-	apparel []string
-	scarred bool
-	raider  bool // hostile: maroon shirt and vest, slate trousers
+	Apparel []string
+	Scarred bool
+	Raider  bool // hostile: maroon shirt and vest, slate trousers
 }
 
 // figureLayers lists a pawn's sprites bottom first for look l in art
@@ -117,7 +117,7 @@ func figureLayers(art *artCatalog, l look.Look, fs string, d figureDress) []port
 	cloths := clothTints(art)
 	cloth := func(i uint8) color.NRGBA { return art.Tint("cloth", pick(cloths, i)) }
 	shirt, pants, vest := cloth(l.Shirt), cloth(l.Pants), cloth(l.VestCloth)
-	if d.raider {
+	if d.Raider {
 		l.Bare, l.Vest = false, true
 		shirt, vest, pants = art.Tint("cloth", raiderCloth), art.Tint("cloth", raiderCloth), art.Tint("cloth", "slate")
 	}
@@ -139,7 +139,7 @@ func figureLayers(art *artCatalog, l look.Look, fs string, d figureDress) []port
 		}
 	}
 	hat := ""
-	for _, a := range d.apparel { // outer garments go over shirt and vest
+	for _, a := range d.Apparel { // outer garments go over shirt and vest
 		switch a {
 		case "parka":
 			out = append(out, portraitLayer{key("parka_leather"), color.NRGBA{}})
@@ -157,7 +157,7 @@ func figureLayers(art *artCatalog, l look.Look, fs string, d figureDress) []port
 	if n := len(look.HairStyles); n > 0 {
 		out = append(out, portraitLayer{"pawn/hair_" + look.HairStyles[int(l.HairStyle)%n] + "_" + fs, hair})
 	}
-	if d.scarred {
+	if d.Scarred {
 		if k := "pawn/face_scar_" + fs; art.Has(k) {
 			out = append(out, portraitLayer{k, color.NRGBA{}})
 		}
@@ -188,7 +188,7 @@ func drawPortrait(dst *ebiten.Image, art *artCatalog, l look.Look, scarred bool,
 	ox, oy := x+(w-cw*s)/2, y+(h-ch*s)/2
 	drew := false
 	for _, ly := range scarredLayers(art, l, scarred) {
-		img := art.Image(ly.key, ly.tint)
+		img := art.Image(ly.Key, ly.Tint)
 		if img == nil {
 			continue
 		}
@@ -249,7 +249,7 @@ func (r *Renderer) drawPawnCropped(screen *ebiten.Image, p game.PawnView, body *
 	s := math.Min(w/cw, h/ch)
 	ox, oy := x+(w-cw*s)/2, y+(h-ch*s)/2
 	for _, ly := range r.pawnPortraitLayers(p) {
-		img := r.art.Image(ly.key, ly.tint)
+		img := r.art.Image(ly.Key, ly.Tint)
 		if img == nil {
 			continue
 		}

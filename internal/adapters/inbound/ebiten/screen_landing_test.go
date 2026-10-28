@@ -40,14 +40,14 @@ func nextState(t *testing.T, a *App) string {
 // selectTile selects tile i on the globe as a click would.
 func selectTile(t *testing.T, a *App, f *fakeInput, i int) {
 	t.Helper()
-	a.ng.globe.Select(i)
+	a.ng.Globe.Select(i)
 	f.Frame(t, a)
 }
 
 func TestLandingInvalidTilesBlockNext(t *testing.T) {
 	t.Parallel()
 	a, f := landingApp(t)
-	p := a.ng.planet
+	p := a.ng.Planet
 	if r := nextState(t, a); r != "Choose a landing site first." {
 		t.Fatalf("no tile: reason %q", r)
 	}
@@ -88,7 +88,7 @@ func TestLandingInvalidTilesBlockNext(t *testing.T) {
 		}
 	}
 	// Outside the coverage: a click on the uncovered sphere selects nothing.
-	a.ng.outside = true
+	a.ng.Outside = true
 	selectTile(t, a, f, -1)
 	if r := nextState(t, a); r != planet.ReasonOutside {
 		t.Errorf("uncovered: reason %q, want %q", r, planet.ReasonOutside)
@@ -110,12 +110,12 @@ func TestRandomSiteValidAndDeterministic(t *testing.T) {
 		var seq []int
 		for i := 0; i < 6; i++ {
 			click(t, a, "land.random")
-			tile := a.ng.tile
-			if ok, why := a.ng.planet.ValidLanding(tile); !ok {
+			tile := a.ng.Tile
+			if ok, why := a.ng.Planet.ValidLanding(tile); !ok {
 				t.Fatalf("press %d chose tile %d: %s", i, tile, why)
 			}
-			if a.ng.globe.Selected() != tile {
-				t.Fatalf("the globe must select the tile: %d vs %d", a.ng.globe.Selected(), tile)
+			if a.ng.Globe.Selected() != tile {
+				t.Fatalf("the globe must select the tile: %d vs %d", a.ng.Globe.Selected(), tile)
 			}
 			seq = append(seq, tile)
 		}
@@ -166,27 +166,27 @@ func TestAdvancedSeasonAuto(t *testing.T) {
 	a, f := landingApp(t)
 	click(t, a, "land.random")
 	ng := a.ng
-	if ng.season != -1 {
-		t.Fatalf("a fresh draft is Auto, got %d", ng.season)
+	if ng.Season != -1 {
+		t.Fatalf("a fresh draft is Auto, got %d", ng.Season)
 	}
 	click(t, a, "land.advanced")
 	f.Frame(t, a)
 	if a.uiModalTop() != "land.advanced" {
 		t.Fatalf("modal = %q", a.uiModalTop())
 	}
-	if ng.resolvedSeason() != autoSeason(ng.planet.Site(ng.tile).Climate) {
+	if ng.ResolvedSeason() != autoSeason(ng.Planet.Site(ng.Tile).Climate) {
 		t.Fatal("Auto resolves from the tile's climate")
 	}
 	press(t, a, f, "land.season.4") // Winter
-	if ng.season != 3 || ng.resolvedSeason() != game.SeasonWinter {
-		t.Fatalf("season = %d resolved %v, want Winter", ng.season, ng.resolvedSeason())
+	if ng.Season != 3 || ng.ResolvedSeason() != game.SeasonWinter {
+		t.Fatalf("season = %d resolved %v, want Winter", ng.Season, ng.ResolvedSeason())
 	}
 	press(t, a, f, "land.season.0") // Auto again
-	if ng.season != -1 {
-		t.Fatalf("season = %d, want Auto", ng.season)
+	if ng.Season != -1 {
+		t.Fatalf("season = %d, want Auto", ng.Season)
 	}
 	click(t, a, "modal.land.advanced.reset")
-	if ng.season != -1 || ng.mapSize != defaultMapSideEnabled() {
+	if ng.Season != -1 || ng.MapSize != defaultMapSideEnabled() {
 		t.Fatal("Reset puts the advanced options back")
 	}
 }
@@ -222,11 +222,11 @@ func TestMapSizeOptionsGated(t *testing.T) {
 	a, f := landingApp(t)
 	click(t, a, "land.advanced")
 	f.Frame(t, a)
-	before := ng(a).mapSize
+	before := ng(a).MapSize
 	for i, o := range opts {
 		if !o.Enabled {
 			click(t, a, optID("land.mapsize", i))
-			if ng(a).mapSize != before {
+			if ng(a).MapSize != before {
 				t.Fatalf("a disabled size (%d) must not be selectable", o.Side)
 			}
 			if !strings.Contains(a.hint, "Not available yet") {
@@ -238,8 +238,8 @@ func TestMapSizeOptionsGated(t *testing.T) {
 	for i, o := range opts {
 		if o.Enabled && o.Side != before {
 			press(t, a, f, optID("land.mapsize", i))
-			if ng(a).mapSize != o.Side {
-				t.Fatalf("map size = %d, want %d", ng(a).mapSize, o.Side)
+			if ng(a).MapSize != o.Side {
+				t.Fatalf("map size = %d, want %d", ng(a).MapSize, o.Side)
 			}
 		}
 	}
@@ -255,7 +255,7 @@ func ng(a *App) *newGameState { return a.draft() }
 func TestTileInfoFields(t *testing.T) {
 	t.Parallel()
 	a, _ := landingApp(t)
-	p := a.ng.planet
+	p := a.ng.Planet
 	land, ocean := -1, -1
 	for i := 0; i < p.TileCount(); i++ {
 		if ok, _ := p.ValidLanding(i); ok && land < 0 {
@@ -269,10 +269,10 @@ func TestTileInfoFields(t *testing.T) {
 	want := []string{"Terrain", "Coordinates", "Elevation", "Avg temperature", "Summer / winter", "Rainfall",
 		"Growing period", "Stone types", "Water", "Caves", "Roads", "Nearest settlement", "Movement difficulty", "Forage", "Wildlife"}
 	got := map[string]string{}
-	for _, r := range ti.rows {
-		got[r.label] = r.value
-		if r.value == "" {
-			t.Errorf("%s has no value", r.label)
+	for _, r := range ti.Rows {
+		got[r.Label] = r.Value
+		if r.Value == "" {
+			t.Errorf("%s has no value", r.Label)
 		}
 	}
 	for _, w := range want {
@@ -280,8 +280,8 @@ func TestTileInfoFields(t *testing.T) {
 			t.Errorf("the panel lacks %q", w)
 		}
 	}
-	if ti.name != biome.DefOf(p.Biome[land]).Name || ti.blurb == "" || ti.biomeTip == "" {
-		t.Errorf("header: %q %q", ti.name, ti.blurb)
+	if ti.Name != biome.DefOf(p.Biome[land]).Name || ti.Blurb == "" || ti.BiomeTip == "" {
+		t.Errorf("header: %q %q", ti.Name, ti.Blurb)
 	}
 	if !strings.Contains(got["Coordinates"], "°") || !strings.HasSuffix(got["Rainfall"], "mm/year") || !strings.HasPrefix(got["Movement difficulty"], "x") {
 		t.Errorf("formats: %v", got)
@@ -289,21 +289,21 @@ func TestTileInfoFields(t *testing.T) {
 	if !strings.Contains(got["Growing period"], "of 60 days") && got["Growing period"] != "Year-round" {
 		t.Errorf("growing period %q", got["Growing period"])
 	}
-	if ti.invalid != "" {
-		t.Errorf("a valid tile has no invalid reason: %q", ti.invalid)
+	if ti.Invalid != "" {
+		t.Errorf("a valid tile has no invalid reason: %q", ti.Invalid)
 	}
-	if o := buildTileInfo(p, ocean, 120, 0); o.name != "Ocean" || o.invalid != planet.ReasonWater || len(o.rows) >= len(want) {
+	if o := buildTileInfo(p, ocean, 120, 0); o.Name != "Ocean" || o.Invalid != planet.ReasonWater || len(o.Rows) >= len(want) {
 		t.Errorf("ocean info: %+v", o)
 	}
-	if !buildTileInfo(p, -5, 120, 0).outside {
+	if !buildTileInfo(p, -5, 120, 0).Outside {
 		t.Error("a missing tile is outside the world")
 	}
 	// Warnings. With unknown hardware (total 0) a 350+ map gets the gentle
 	// note and smaller ones none; the RAM rule is in ram_estimate_test.go.
-	if w := buildTileInfo(p, land, 400, 0).warnings; !containsStr(w, "Large map: needs a capable computer") {
+	if w := buildTileInfo(p, land, 400, 0).Warnings; !containsStr(w, "Large map: needs a capable computer") {
 		t.Errorf("warnings at 400: %v", w)
 	}
-	if w := buildTileInfo(p, land, 300, 0).warnings; containsStr(w, "Large map: needs a capable computer") {
+	if w := buildTileInfo(p, land, 300, 0).Warnings; containsStr(w, "Large map: needs a capable computer") {
 		t.Errorf("warnings at 300: %v", w)
 	}
 	if coordText(-342, -1217) != "34.2°S 121.7°W" || coordText(342, 1217) != "34.2°N 121.7°E" {
@@ -318,8 +318,8 @@ func TestTileInfoFields(t *testing.T) {
 	// The panel tracks the selection and the hover.
 	f := fakeOn(a)
 	selectTile(t, a, f, land)
-	if c := a.ng.info; c.tile != land || c.planet != p {
-		t.Errorf("info cache %+v, want tile %d", c.tile, land)
+	if c := a.ng.Info; c.Tile != land || c.Planet != p {
+		t.Errorf("info cache %+v, want tile %d", c.Tile, land)
 	}
 }
 
@@ -335,22 +335,22 @@ func containsStr(l []string, s string) bool {
 func TestLandingGlobeClickSelectsTile(t *testing.T) {
 	t.Parallel()
 	a, f := landingApp(t)
-	tile := a.ng.planet.RandomLanding(3)
-	a.ng.globe.Center(tile)
+	tile := a.ng.Planet.RandomLanding(3)
+	a.ng.Globe.Center(tile)
 	for i := 0; i < 60; i++ {
 		f.Frame(t, a)
 	}
 	geo := landRects(a.sw, a.sh)
-	cx, cy := geo.globe.Center()
+	cx, cy := geo.Globe.Center()
 	f.Cur.Mx, f.Cur.My = int(cx), int(cy)
 	f.Frame(t, a)
-	want := a.ng.globe.PickTile(int(cx), int(cy))
+	want := a.ng.Globe.PickTile(int(cx), int(cy))
 	f.Click(t, a, mbLeft, 0)
-	if want < 0 || a.ng.tile != want {
-		t.Fatalf("clicked tile %d, the globe picked %d", a.ng.tile, want)
+	if want < 0 || a.ng.Tile != want {
+		t.Fatalf("clicked tile %d, the globe picked %d", a.ng.Tile, want)
 	}
 	// A drag turns the globe and does not select.
-	a.ng.globe.Select(-1)
+	a.ng.Globe.Select(-1)
 	f.Frame(t, a)
 	f.Cur.Press[mbLeft], f.Cur.Down[mbLeft] = true, true
 	f.Frame(t, a)
@@ -358,13 +358,13 @@ func TestLandingGlobeClickSelectsTile(t *testing.T) {
 	f.Frame(t, a)
 	f.Cur.Down[mbLeft], f.Cur.Release[mbLeft] = false, true
 	f.Frame(t, a)
-	if a.ng.tile != -1 {
-		t.Fatalf("a drag selected tile %d", a.ng.tile)
+	if a.ng.Tile != -1 {
+		t.Fatalf("a drag selected tile %d", a.ng.Tile)
 	}
 	// The panel and the bar take the pointer, not the globe.
-	f.Cur.Mx, f.Cur.My = int(geo.panel.X)+20, int(geo.panel.Y)+200
+	f.Cur.Mx, f.Cur.My = int(geo.Panel.X)+20, int(geo.Panel.Y)+200
 	f.Click(t, a, mbLeft, 0)
-	if a.ng.tile != -1 {
+	if a.ng.Tile != -1 {
 		t.Fatal("a click on the info panel must not select a tile")
 	}
 }
@@ -373,7 +373,7 @@ func TestLandingBackKeepsPlanetAndTile(t *testing.T) {
 	t.Parallel()
 	a, f := landingApp(t)
 	click(t, a, "land.random")
-	tile, p := a.ng.tile, a.ng.planet
+	tile, p := a.ng.Tile, a.ng.Planet
 	click(t, a, "wizard.back")
 	f.Frame(t, a)
 	if a.nav.screen() != screenWorldGen {
@@ -382,8 +382,8 @@ func TestLandingBackKeepsPlanetAndTile(t *testing.T) {
 	click(t, a, "world.generate") // Next: the planet is unchanged
 	f.Frame(t, a)
 	f.Frame(t, a)
-	if a.nav.screen() != screenLanding || a.ng.planet != p || a.ng.tile != tile || a.ng.globe.Selected() != tile {
-		t.Fatalf("screen=%s tile=%d want %d", a.nav.screen(), a.ng.tile, tile)
+	if a.nav.screen() != screenLanding || a.ng.Planet != p || a.ng.Tile != tile || a.ng.Globe.Selected() != tile {
+		t.Fatalf("screen=%s tile=%d want %d", a.nav.screen(), a.ng.Tile, tile)
 	}
 }
 
@@ -394,20 +394,20 @@ func TestLandingLegendModesAndDrawing(t *testing.T) {
 	img := ebiten.NewImage(a.sw, a.sh)
 	seen := map[globeMode]bool{}
 	for i := 0; i < int(numGlobeModes)+1; i++ {
-		seen[a.ng.globe.Mode()] = true
+		seen[a.ng.Globe.Mode()] = true
 		f.Frame(t, a)
 		a.Draw(img)
 		click(t, a, "land.mode")
 	}
-	if len(seen) != int(numGlobeModes) || a.ng.globe.Mode() != globeTemperature {
-		t.Fatalf("modes seen %v, now %v", seen, a.ng.globe.Mode())
+	if len(seen) != int(numGlobeModes) || a.ng.Globe.Mode() != globeTemperature {
+		t.Fatalf("modes seen %v, now %v", seen, a.ng.Globe.Mode())
 	}
 	click(t, a, "land.legend")
-	if !a.ng.legend {
+	if !a.ng.Legend {
 		t.Fatal("the legend opens")
 	}
 	for m := globeMode(0); m < numGlobeModes; m++ {
-		a.ng.globe.SetMode(m)
+		a.ng.Globe.SetMode(m)
 		f.Frame(t, a)
 		a.Draw(img)
 	}
@@ -433,8 +433,8 @@ func TestFactionsTableSortAndCentre(t *testing.T) {
 	if a.uiModalTop() != facModalID {
 		t.Fatalf("modal = %q", a.uiModalTop())
 	}
-	rows := factionRows(a.ng.planet.Factions)
-	if len(rows) != len(a.ng.planet.Factions)+1 || !rows[len(rows)-1].Swarm {
+	rows := factionRows(a.ng.Planet.Factions)
+	if len(rows) != len(a.ng.Planet.Factions)+1 || !rows[len(rows)-1].Swarm {
 		t.Fatalf("rows = %d, want the factions and the Swarm", len(rows))
 	}
 	if rows[len(rows)-1].Leader != "Hive swarms: always hostile, no settlements" {
@@ -475,7 +475,7 @@ func TestFactionsTableSortAndCentre(t *testing.T) {
 	if picked.Swarm {
 		t.Skip("the Swarm row sorted first; it has no capital")
 	}
-	g := a.ng.globe
+	g := a.ng.Globe
 	if len(g.Hl) != len(picked.Tiles) || g.HlLeft <= 0 || g.HlLeft > facHighlight {
 		t.Fatalf("highlight %v for %d settlements, left %d", g.Hl, len(picked.Tiles), g.HlLeft)
 	}

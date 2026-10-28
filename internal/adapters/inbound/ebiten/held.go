@@ -133,7 +133,7 @@ func (r *Renderer) rigOf(p game.PawnView, f facing) heldRig {
 	fs, mirror := facingKey(f)
 	rig := heldRig{face: drawnFacing(f), mirror: mirror, layers: r.pawnFigureLayers(p, fs)}
 	if len(rig.layers) > 0 {
-		rig.body = r.art.Sprite(rig.layers[0].key)
+		rig.body = r.art.Sprite(rig.layers[0].Key)
 	}
 	return rig
 }

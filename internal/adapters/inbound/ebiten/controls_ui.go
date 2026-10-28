@@ -18,11 +18,11 @@ import (
 
 // rebindState is the Controls tab's capture and paging.
 type rebindState struct {
-	on      bool // waiting for a key
+	On      bool // waiting for a key
 	act     input.Action
 	slot    int
-	page    int
-	pending *pendingBind // a captured key that collides
+	Page    int
+	Pending *pendingBind // a captured key that collides
 }
 
 // pendingBind is a captured key waiting for "swap?".
@@ -60,8 +60,8 @@ func ctlPages(sh int) int {
 func (a *App) ctlPageDefs(sh int) []input.Def {
 	defs := input.Defs()
 	per := ctlRowsPerPage(sh)
-	a.rebind.page = max(0, min(a.rebind.page, ctlPages(sh)-1))
-	lo := a.rebind.page * per
+	a.rebind.Page = max(0, min(a.rebind.Page, ctlPages(sh)-1))
+	lo := a.rebind.Page * per
 	return defs[lo:min(lo+per, len(defs))]
 }
 
@@ -83,7 +83,7 @@ func (a *App) controlsButtons(sw, sh int) []button {
 			}
 			bt := button{ID: ctlSlotID(d.ID, slot), Label: label, X: float32(ctlSlotX + slot*(ctlSlotW+8)), Y: y, W: ctlSlotW, H: ctlBtnH}
 			switch {
-			case a.rebind.on && a.rebind.act == d.ID && a.rebind.slot == slot:
+			case a.rebind.On && a.rebind.act == d.ID && a.rebind.slot == slot:
 				bt.Label, bt.Selected = "press a key...", true
 			case d.Fixed && slot > 0:
 				continue
@@ -93,7 +93,7 @@ func (a *App) controlsButtons(sw, sh int) []button {
 			out = append(out, bt)
 		}
 	}
-	if p := a.rebind.pending; p != nil {
+	if p := a.rebind.Pending; p != nil {
 		y := float32(ctlTop + ctlRowsPerPage(sh)*ctlRowH + 2)
 		out = append(out,
 			button{ID: "options.ctl.swap", Label: "Swap", X: float32(sw) - 260, Y: y, W: 90, H: ctlBtnH},
@@ -101,8 +101,8 @@ func (a *App) controlsButtons(sw, sh int) []button {
 	}
 	fy := footerY(sh)
 	out = append(out,
-		button{ID: "options.ctl.prev", Label: "< Prev", X: 196, Y: fy, W: 90, H: 36, Disabled: a.rebind.page == 0, Quiet: true, Reason: "first page"},
-		button{ID: "options.ctl.next", Label: "Next >", X: 294, Y: fy, W: 90, H: 36, Disabled: a.rebind.page >= ctlPages(sh)-1, Quiet: true, Reason: "last page"},
+		button{ID: "options.ctl.prev", Label: "< Prev", X: 196, Y: fy, W: 90, H: 36, Disabled: a.rebind.Page == 0, Quiet: true, Reason: "first page"},
+		button{ID: "options.ctl.next", Label: "Next >", X: 294, Y: fy, W: 90, H: 36, Disabled: a.rebind.Page >= ctlPages(sh)-1, Quiet: true, Reason: "last page"},
 		button{ID: "options.ctl.reset", Label: "Reset to defaults", X: float32(sw) - 220, Y: fy, W: 180, H: 36})
 	return out
 }
@@ -113,20 +113,20 @@ func (a *App) applyControlsClick(key string) {
 	_, sh := a.size()
 	switch key {
 	case "ctl.prev":
-		a.rebind.page = max(0, a.rebind.page-1)
+		a.rebind.Page = max(0, a.rebind.Page-1)
 	case "ctl.next":
-		a.rebind.page = min(ctlPages(sh)-1, a.rebind.page+1)
+		a.rebind.Page = min(ctlPages(sh)-1, a.rebind.Page+1)
 	case "ctl.reset":
-		a.rebind = rebindState{page: a.rebind.page}
+		a.rebind = rebindState{Page: a.rebind.Page}
 		a.saveBindings(input.Defaults())
 		a.toast("Controls reset to defaults")
 	case "ctl.swap":
-		if p := a.rebind.pending; p != nil {
+		if p := a.rebind.Pending; p != nil {
 			a.saveBindings(a.bindings().Swap(p.act, p.slot, p.key))
 		}
-		a.rebind.pending = nil
+		a.rebind.Pending = nil
 	case "ctl.keep":
-		a.rebind.pending = nil
+		a.rebind.Pending = nil
 	default:
 		rest, ok := strings.CutPrefix(key, "ctl.bind.")
 		i := strings.LastIndex(rest, ".")
@@ -138,7 +138,7 @@ func (a *App) applyControlsClick(key string) {
 		if err != nil || !found || d.Fixed {
 			return
 		}
-		a.rebind.on, a.rebind.act, a.rebind.slot, a.rebind.pending = true, d.ID, slot, nil
+		a.rebind.On, a.rebind.act, a.rebind.slot, a.rebind.Pending = true, d.ID, slot, nil
 	}
 }
 
@@ -149,10 +149,10 @@ func (a *App) captureBinding() {
 	for _, k := range f.Raw.Pressed {
 		switch k {
 		case "Escape":
-			a.rebind.on = false
+			a.rebind.On = false
 			return
 		case "Backspace", "Delete":
-			a.rebind.on = false
+			a.rebind.On = false
 			a.saveBindings(a.bindings().Set(a.rebind.act, a.rebind.slot, input.Binding{}))
 			return
 		}
@@ -160,9 +160,9 @@ func (a *App) captureBinding() {
 			continue // wait for the key the modifiers go with
 		}
 		key := input.Binding{Key: k, Mods: f.Raw.Mods}
-		a.rebind.on = false
+		a.rebind.On = false
 		if others := a.bindings().ConflictsWith(a.rebind.act, key); len(others) > 0 {
-			a.rebind.pending = &pendingBind{act: a.rebind.act, slot: a.rebind.slot, key: key, others: others}
+			a.rebind.Pending = &pendingBind{act: a.rebind.act, slot: a.rebind.slot, key: key, others: others}
 			return
 		}
 		a.saveBindings(a.bindings().Set(a.rebind.act, a.rebind.slot, key))
@@ -180,9 +180,9 @@ func (a *App) saveBindings(b input.Bindings) {
 func (a *App) drawControls(screen *ebiten.Image, sw, sh int) {
 	defs := a.ctlPageDefs(sh)
 	prev := ""
-	if a.rebind.page > 0 {
+	if a.rebind.Page > 0 {
 		all := input.Defs()
-		prev = all[a.rebind.page*ctlRowsPerPage(sh)-1].Category
+		prev = all[a.rebind.Page*ctlRowsPerPage(sh)-1].Category
 	}
 	drawText(screen, "Category", ctlCatX, ctlTop-20, tsLabel)
 	drawText(screen, "Action", ctlLabelX, ctlTop-20, tsLabel)
@@ -199,10 +199,10 @@ func (a *App) drawControls(screen *ebiten.Image, sw, sh int) {
 		}
 		drawLabelClip(screen, ctlLabelX, y, ctlSlotX-ctlLabelX-8, label)
 	}
-	status := fmt.Sprintf("Page %d of %d", a.rebind.page+1, ctlPages(sh))
+	status := fmt.Sprintf("Page %d of %d", a.rebind.Page+1, ctlPages(sh))
 	switch {
-	case a.rebind.pending != nil:
-		p := a.rebind.pending
+	case a.rebind.Pending != nil:
+		p := a.rebind.Pending
 		var names []string
 		for _, o := range p.others {
 			if d, ok := input.Lookup(o); ok {
@@ -210,7 +210,7 @@ func (a *App) drawControls(screen *ebiten.Image, sw, sh int) {
 			}
 		}
 		status = fmt.Sprintf("%s is used by %s. Swap?", p.key.Label(), strings.Join(names, ", "))
-	case a.rebind.on:
+	case a.rebind.On:
 		status = "Press a key (with Shift/Ctrl/Alt if you like). Esc cancels, Backspace clears."
 	case len(input.Conflicts(a.bindings())) > 0:
 		c := input.Conflicts(a.bindings())[0]
