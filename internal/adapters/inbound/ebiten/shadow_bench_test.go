@@ -49,7 +49,7 @@ func BenchmarkShadows(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		r.drawShadows(screen, w, 1280, 800, tile)
 	}
-	lay := r.env.shadow.Layer.Bounds()
+	lay := r.env.Shadow.Layer.Bounds()
 	b.ReportMetric(float64(lay.Dx()*lay.Dy()), "layer-px/op")
 }
 
@@ -90,7 +90,7 @@ func BenchmarkShadowsHiDPI(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		r.drawShadows(screen, w, 1280, 800, tile)
 	}
-	lay := r.env.shadow.Layer.Bounds()
+	lay := r.env.Shadow.Layer.Bounds()
 	b.ReportMetric(float64(lay.Dx()*lay.Dy()), "layer-px/op")
 }
 
@@ -152,14 +152,14 @@ func BenchmarkCreatureShadows(b *testing.B) {
 	screen := ebiten.NewImage(1280, 800)
 	tile := r.tilePx()
 	r.drawShadows(screen, w, 1280, 800, tile)
-	if want := 40 * 3; r.env.shadow.Casts < want && r.art.Has("pawn/body_south") && r.art.Has("animal/"+species+"_south") {
-		b.Fatalf("drew %d silhouettes, want %d (sun and 2 campfires each)", r.env.shadow.Casts, want)
+	if want := 40 * 3; r.env.Shadow.Casts < want && r.art.Has("pawn/body_south") && r.art.Has("animal/"+species+"_south") {
+		b.Fatalf("drew %d silhouettes, want %d (sun and 2 campfires each)", r.env.Shadow.Casts, want)
 	}
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		r.drawShadows(screen, w, 1280, 800, tile)
 	}
-	lay := r.env.shadow.Layer.Bounds()
+	lay := r.env.Shadow.Layer.Bounds()
 	b.ReportMetric(float64(lay.Dx()*lay.Dy()), "layer-px/op")
 }

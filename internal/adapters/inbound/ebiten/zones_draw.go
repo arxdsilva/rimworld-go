@@ -46,9 +46,9 @@ func zoneEdgeMask(cells map[[2]int]bool, x, y int) int {
 // y0 < y1). nx, ny point into the zone. A convex end turns the outline
 // inwards; a concave end continues it outwards.
 type edgeRun struct {
-	x0, y0, x1, y1         int
-	nx, ny                 int
-	startConvex, endConvex bool
+	X0, Y0, X1, Y1         int
+	nx, Ny                 int
+	StartConvex, EndConvex bool
 }
 
 // zoneEdgeRuns joins the consecutive outer edges of cells into runs.
@@ -74,8 +74,8 @@ func zoneEdgeRuns(cells map[[2]int]bool, order [][2]int) []edgeRun {
 			if side == zoneS {
 				ey, ny = y+1, -1
 			}
-			out = append(out, edgeRun{x0: x, y0: ey, x1: e + 1, y1: ey, nx: 0, ny: ny,
-				startConvex: !cells[[2]int{x - 1, y}], endConvex: !cells[[2]int{e + 1, y}]})
+			out = append(out, edgeRun{X0: x, Y0: ey, X1: e + 1, Y1: ey, nx: 0, Ny: ny,
+				StartConvex: !cells[[2]int{x - 1, y}], EndConvex: !cells[[2]int{e + 1, y}]})
 		}
 		// vertical runs (west and east edges), started at their north end
 		for _, side := range [2]int{zoneW, zoneE} {
@@ -90,8 +90,8 @@ func zoneEdgeRuns(cells map[[2]int]bool, order [][2]int) []edgeRun {
 			if side == zoneE {
 				ex, nx = x+1, -1
 			}
-			out = append(out, edgeRun{x0: ex, y0: y, x1: ex, y1: e + 1, nx: nx, ny: 0,
-				startConvex: !cells[[2]int{x, y - 1}], endConvex: !cells[[2]int{x, e + 1}]})
+			out = append(out, edgeRun{X0: ex, Y0: y, X1: ex, Y1: e + 1, nx: nx, Ny: 0,
+				StartConvex: !cells[[2]int{x, y - 1}], EndConvex: !cells[[2]int{x, e + 1}]})
 		}
 	}
 	return out
@@ -100,12 +100,12 @@ func zoneEdgeRuns(cells map[[2]int]bool, order [][2]int) []edgeRun {
 // zoneGeom is a zone's cached outline, rebuilt when its tiles change.
 type zoneGeom struct {
 	hash  uint64
-	cells map[[2]int]bool
-	runs  []edgeRun
+	Cells map[[2]int]bool
+	Runs  []edgeRun
 	// The bounding box and the label anchor in tile coordinates
 	// (zoneLabelAnchor).
-	minX, minY, maxX, maxY int
-	ax, ay                 float64
+	MinX, MinY, MaxX, MaxY int
+	Ax, Ay                 float64
 }
 
 func zoneHash(z game.ZoneView) uint64 {
@@ -122,12 +122,12 @@ func (r *Renderer) zoneGeomOf(z game.ZoneView) *zoneGeom {
 	if g, ok := r.zoneGeoms[z.ID]; ok && g.hash == h {
 		return g
 	}
-	g := &zoneGeom{hash: h, cells: make(map[[2]int]bool, len(z.Cells))}
+	g := &zoneGeom{hash: h, Cells: make(map[[2]int]bool, len(z.Cells))}
 	for _, c := range z.Cells {
-		g.cells[c] = true
+		g.Cells[c] = true
 	}
-	g.runs = zoneEdgeRuns(g.cells, z.Cells)
-	g.minX, g.minY, g.maxX, g.maxY, g.ax, g.ay = zoneLabelAnchor(z.Cells)
+	g.Runs = zoneEdgeRuns(g.Cells, z.Cells)
+	g.MinX, g.MinY, g.MaxX, g.MaxY, g.Ax, g.Ay = zoneLabelAnchor(z.Cells)
 	if r.zoneGeoms == nil || len(r.zoneGeoms) > 256 {
 		r.zoneGeoms = map[uint16]*zoneGeom{}
 	}
@@ -217,12 +217,12 @@ func (r *Renderer) drawZones(screen *ebiten.Image, w game.WorldView, sw, sh int,
 			}
 		}
 		g := r.zoneGeomOf(z)
-		for _, run := range g.runs {
+		for _, run := range g.Runs {
 			r.drawZoneRun(&r.zoneBatch, z.Kind, run, sw, sh, tile)
 		}
 	}
 	// every outline of every zone in one draw, over all the fills
-	r.zoneBatch.Flush(screen, r.env.whiteImg(), ebiten.Blend{})
+	r.zoneBatch.Flush(screen, r.env.WhiteImg(), ebiten.Blend{})
 }
 
 // zoneFill draws the zone sprite key on every visible cell not in skip as
@@ -312,8 +312,8 @@ func (r *Renderer) zonePlantCells(w *game.WorldView) map[[2]int]bool {
 }
 
 func (r *Renderer) runVisible(run edgeRun, sw, sh int, pad float32) bool {
-	ax, ay := r.worldToScreenF(float64(run.x0), float64(run.y0))
-	bx, by := r.worldToScreenF(float64(run.x1), float64(run.y1))
+	ax, ay := r.worldToScreenF(float64(run.X0), float64(run.Y0))
+	bx, by := r.worldToScreenF(float64(run.X1), float64(run.Y1))
 	return bx+pad >= 0 && by+pad >= 0 && ax-pad < float32(sw) && ay-pad < float32(sh)
 }
 
@@ -327,11 +327,11 @@ func (r *Renderer) drawZoneRun(b *triBatch, kind string, run edgeRun, sw, sh int
 		return
 	}
 	th := zoneStroke(r.cam.Zoom)
-	ax, ay := r.worldToScreenF(float64(run.x0), float64(run.y0))
-	bx, by := r.worldToScreenF(float64(run.x1), float64(run.y1))
+	ax, ay := r.worldToScreenF(float64(run.X0), float64(run.Y0))
+	bx, by := r.worldToScreenF(float64(run.X1), float64(run.Y1))
 	off := th / 2
-	ax, ay = ax+float32(run.nx)*off, ay+float32(run.ny)*off
-	bx, by = bx+float32(run.nx)*off, by+float32(run.ny)*off
+	ax, ay = ax+float32(run.nx)*off, ay+float32(run.Ny)*off
+	bx, by = bx+float32(run.nx)*off, by+float32(run.Ny)*off
 	if kind == game.ZoneStockpile || kind == game.ZoneDump {
 		dash := float32(max(4*screenDev(), tile*0.16))
 		dashedRun(b, ax, ay, bx, by, th, dash, dash*0.8, stockEdgeClr, sw, sh)
@@ -373,14 +373,14 @@ func (r *Renderer) drawZoneHighlight(screen *ebiten.Image, w game.WorldView, z g
 	}
 	th := zoneStroke(r.cam.Zoom) * 1.5
 	off := th / 2
-	for _, run := range r.zoneGeomOf(z).runs {
+	for _, run := range r.zoneGeomOf(z).Runs {
 		if !r.runVisible(run, sw, sh, 8) {
 			continue
 		}
-		ax, ay := r.worldToScreenF(float64(run.x0), float64(run.y0))
-		bx, by := r.worldToScreenF(float64(run.x1), float64(run.y1))
-		ax, ay = ax+float32(run.nx)*off, ay+float32(run.ny)*off
-		bx, by = bx+float32(run.nx)*off, by+float32(run.ny)*off
+		ax, ay := r.worldToScreenF(float64(run.X0), float64(run.Y0))
+		bx, by := r.worldToScreenF(float64(run.X1), float64(run.Y1))
+		ax, ay = ax+float32(run.nx)*off, ay+float32(run.Ny)*off
+		bx, by = bx+float32(run.nx)*off, by+float32(run.Ny)*off
 		if ax == bx { // solid runs overshoot their ends by half a stroke so corners close
 			ay -= off
 			by += off
@@ -429,16 +429,16 @@ const fenceInset = 0.08
 // boundary along it and at its ends (where it turns a corner).
 func (r *Renderer) drawFenceRun(b *triBatch, run edgeRun, tile float64) {
 	ex0, ex1 := fenceInset, -fenceInset // convex ends pull in, concave ends push out
-	if !run.startConvex {
+	if !run.StartConvex {
 		ex0 = -fenceInset
 	}
-	if !run.endConvex {
+	if !run.EndConvex {
 		ex1 = fenceInset
 	}
-	ax, ay := float64(run.x0), float64(run.y0)
-	bx, by := float64(run.x1), float64(run.y1)
-	ox, oy := float64(run.nx)*fenceInset, float64(run.ny)*fenceInset
-	if run.y0 == run.y1 {
+	ax, ay := float64(run.X0), float64(run.Y0)
+	bx, by := float64(run.X1), float64(run.Y1)
+	ox, oy := float64(run.nx)*fenceInset, float64(run.Ny)*fenceInset
+	if run.Y0 == run.Y1 {
 		ax, bx = ax+ex0, bx+ex1
 	} else {
 		ay, by = ay+ex0, by+ex1
@@ -455,16 +455,16 @@ func (r *Renderer) drawFenceRun(b *triBatch, run edgeRun, tile float64) {
 	}
 	dot(sax, say)
 	dot(sbx, sby)
-	n := run.x1 - run.x0
-	if run.x0 == run.x1 {
-		n = run.y1 - run.y0
+	n := run.X1 - run.X0
+	if run.X0 == run.X1 {
+		n = run.Y1 - run.Y0
 	}
 	for i := 1; i < n; i++ {
-		if run.y0 == run.y1 {
-			x, y := r.worldToScreenF(float64(run.x0+i), ay)
+		if run.Y0 == run.Y1 {
+			x, y := r.worldToScreenF(float64(run.X0+i), ay)
 			dot(x, y)
 		} else {
-			x, y := r.worldToScreenF(ax, float64(run.y0+i))
+			x, y := r.worldToScreenF(ax, float64(run.Y0+i))
 			dot(x, y)
 		}
 	}
@@ -540,10 +540,10 @@ func zoneLabelPad(size float64) (px, py float64) {
 
 // zoneLabelPlan is a laid-out zone label, in logical pixels.
 type zoneLabelPlan struct {
-	ok     bool      // false: hidden
-	text   string    // the label, ellipsized when it had to be
-	style  textStyle // centre-aligned about tx
-	plate  rect      // the dark plate behind the text
+	Ok     bool      // false: hidden
+	Text   string    // the label, ellipsized when it had to be
+	Style  textStyle // centre-aligned about tx
+	Plate  rect      // the dark plate behind the text
 	tx, ty float64   // the text's top-centre
 }
 
@@ -596,8 +596,8 @@ func zoneLabelLayout(text string, boxW, boxH, cx, cy, capSize float64) zoneLabel
 	if h > boxH {
 		return zoneLabelPlan{}
 	}
-	return zoneLabelPlan{ok: true, text: label, style: st,
-		plate: rect{X: float32(cx - w/2), Y: float32(cy - h/2), W: float32(w), H: float32(h)},
+	return zoneLabelPlan{Ok: true, Text: label, Style: st,
+		Plate: rect{X: float32(cx - w/2), Y: float32(cy - h/2), W: float32(w), H: float32(h)},
 		tx:    cx, ty: cy - h/2 + py}
 }
 
@@ -605,9 +605,9 @@ func zoneLabelLayout(text string, boxW, boxH, cx, cy, capSize float64) zoneLabel
 // wide: the plan (logical pixels) and the zone's bounding box on screen
 // (physical origin and size).
 func (r *Renderer) zoneLabelPlanFor(z game.ZoneView, g *zoneGeom, tile float64) (plan zoneLabelPlan, ox, oy float32, bw, bh float64) {
-	ox, oy = r.worldToScreenF(float64(g.minX), float64(g.minY))
-	bw, bh = float64(g.maxX-g.minX+1)*tile, float64(g.maxY-g.minY+1)*tile
-	ax, ay := r.worldToScreenF(g.ax, g.ay)
+	ox, oy = r.worldToScreenF(float64(g.MinX), float64(g.MinY))
+	bw, bh = float64(g.MaxX-g.MinX+1)*tile, float64(g.MaxY-g.MinY+1)*tile
+	ax, ay := r.worldToScreenF(g.Ax, g.Ay)
 	k := 1 / mapUIScale() // also from Update (zoneLabelAt), outside the world pass
 	return zoneLabelLayout(zoneLabelText(z), bw*k, bh*k, float64(ax)*k, float64(ay)*k, zoneLabelCap(tile*k)), ox, oy, bw, bh
 }
@@ -621,15 +621,15 @@ func (r *Renderer) drawZoneLabel(screen *ebiten.Image, z game.ZoneView, g *zoneG
 		return
 	}
 	plan, ox, oy, bw, bh := r.zoneLabelPlanFor(z, g, tile)
-	if !visible(ox, oy, float32(bw), float32(bh), sw, sh) || !plan.ok {
+	if !visible(ox, oy, float32(bw), float32(bh), sw, sh) || !plan.Ok {
 		return
 	}
 	s := uiScale()
-	if pr := plan.plate; !visible(pr.X*float32(s), pr.Y*float32(s), pr.W*float32(s), pr.H*float32(s), sw, sh) {
+	if pr := plan.Plate; !visible(pr.X*float32(s), pr.Y*float32(s), pr.W*float32(s), pr.H*float32(s), sw, sh) {
 		return
 	}
-	paintZoneLabelPlate(screen, plan.plate)
-	worldText(screen, plan.text, plan.tx*s, plan.ty*s, plan.style) // physical anchor in, logical out
+	paintZoneLabelPlate(screen, plan.Plate)
+	worldText(screen, plan.Text, plan.tx*s, plan.ty*s, plan.Style) // physical anchor in, logical out
 }
 
 // zoneLabelAt is the zone whose name plate is under physical pixel
@@ -644,7 +644,7 @@ func (r *Renderer) zoneLabelAt(w game.WorldView, mx, my int, tile float64, shown
 			continue
 		}
 		plan, _, _, _, _ := r.zoneLabelPlanFor(z, r.zoneGeomOf(z), tile)
-		if plan.ok && plan.plate.Contains(px, py) {
+		if plan.Ok && plan.Plate.Contains(px, py) {
 			return z, true
 		}
 	}

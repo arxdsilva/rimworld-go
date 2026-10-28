@@ -103,11 +103,11 @@ func cropDraw(r *Renderer, mw, mh int, tile float64) int {
 	r.view.W = w
 	r.stepEnvironment(w, nil)
 	dst := ebiten.NewImage(sw, sh)
-	r.lod.crops.begin()
+	r.lod.crops.Begin()
 	for i := range w.Plants {
 		r.drawCropObj(dst, &w, &w.Plants[i], tile)
 	}
-	return r.lod.crops.quads
+	return r.lod.crops.Quads
 }
 
 func TestCropUnitCounts(t *testing.T) {
@@ -171,9 +171,9 @@ func TestCropUnitsRowAlignment(t *testing.T) {
 			for x := 0; x < 30; x++ {
 				buf = cropUnits(x, y, n, vertical, buf[:0])
 				for _, u := range buf {
-					across, along := u.dy, u.dx
+					across, along := u.Dy, u.Dx
 					if vertical {
-						across, along = u.dx, u.dy
+						across, along = u.Dx, u.Dy
 					}
 					found := false
 					for i, r := range rows {
@@ -209,7 +209,7 @@ func TestCropUnitsRowAlignment(t *testing.T) {
 			us := cropUnits(x, y, 4, false, nil)
 			for i := range us {
 				for j := i + 1; j < len(us); j++ {
-					if math.Hypot(us[i].dx-us[j].dx, us[i].dy-us[j].dy) < 0.12 {
+					if math.Hypot(us[i].Dx-us[j].Dx, us[i].Dy-us[j].Dy) < 0.12 {
 						t.Fatalf("tile (%d,%d): units %d and %d overlap", x, y, i, j)
 					}
 				}
@@ -228,18 +228,18 @@ func TestCropUnitsMirrorVariantTrim(t *testing.T) {
 	for y := 0; y < 20; y++ {
 		for x := 0; x < 20; x++ {
 			for _, u := range cropUnits(x, y, 4, false, nil) {
-				if u.mirror {
+				if u.Mirror {
 					mirrored++
 				} else {
 					plain++
 				}
-				variants[u.variant%cropVariants] = true
-				phases[u.phase] = true
-				if u.trim < 0.9-1e-9 || u.trim > 1.1+1e-9 {
-					t.Fatalf("trim %.3f outside 0.9–1.1", u.trim)
+				variants[u.Variant%cropVariants] = true
+				phases[u.Phase] = true
+				if u.Trim < 0.9-1e-9 || u.Trim > 1.1+1e-9 {
+					t.Fatalf("trim %.3f outside 0.9–1.1", u.Trim)
 				}
-				if u.sway < 0.8-1e-9 || u.sway > 1.2+1e-9 {
-					t.Fatalf("sway share %.3f outside 0.8–1.2", u.sway)
+				if u.Sway < 0.8-1e-9 || u.Sway > 1.2+1e-9 {
+					t.Fatalf("sway share %.3f outside 0.8–1.2", u.Sway)
 				}
 			}
 		}
@@ -264,14 +264,14 @@ func TestCropUnitRanks(t *testing.T) {
 			for n := 1; n <= 4; n++ {
 				seen := make([]bool, n)
 				for _, u := range cropUnits(x, y, n, false, nil) {
-					if u.rank < 0 || u.rank >= n || seen[u.rank] {
-						t.Fatalf("tile (%d,%d) n=%d: bad rank %d", x, y, n, u.rank)
+					if u.Rank < 0 || u.Rank >= n || seen[u.Rank] {
+						t.Fatalf("tile (%d,%d) n=%d: bad rank %d", x, y, n, u.Rank)
 					}
-					seen[u.rank] = true
+					seen[u.Rank] = true
 				}
 			}
 			for i, u := range cropUnits(x, y, 4, false, nil) {
-				if u.rank == 0 {
+				if u.Rank == 0 {
 					first[i]++
 				}
 			}
@@ -288,13 +288,13 @@ func TestCropUnitRanks(t *testing.T) {
 func TestCropGrowthScaleContinuous(t *testing.T) {
 	t.Parallel()
 	a := buildCropAtlas(cropTestArt("corn"), []string{"corn"})
-	set := a.sets["corn"]
+	set := a.Sets["corn"]
 	if set == nil {
 		t.Fatal("no corn set in the atlas")
 	}
 	drawn := func(g int) float64 {
 		st := cropGrowthStage(game.PlantView{Species: "corn", Growth: g, Stage: stageOfGrowth(g)})
-		return cropTestHeights[st] * set.scale(st, g)
+		return cropTestHeights[st] * set.Scale(st, g)
 	}
 	prev := drawn(8)
 	for g := 9; g <= 100; g++ {
@@ -310,7 +310,7 @@ func TestCropGrowthScaleContinuous(t *testing.T) {
 	if h := drawn(100); math.Abs(h-cropTestHeights[stHarvestable]) > 1e-6 {
 		t.Errorf("ripe plant draws %.3f tall, want its sprite's %.3f", h, cropTestHeights[stHarvestable])
 	}
-	if s := set.scale(stSown, 3); s != 1 {
+	if s := set.Scale(stSown, 3); s != 1 {
 		t.Errorf("sown scale %v, want 1", s)
 	}
 }
@@ -485,18 +485,18 @@ func TestCropDrawsUnitsPerTile(t *testing.T) {
 	if got, want := cropDraw(r, 10, 10, 64), 6*2+4*4+2*1; got != want {
 		t.Fatalf("%d unit quads, want %d", got, want)
 	}
-	for _, v := range r.lod.crops.verts {
+	for _, v := range r.lod.crops.Verts {
 		if v.ColorA != 1 {
 			t.Fatalf("healthy crop vertex alpha %v", v.ColorA)
 		}
 	}
 	// each species joining the atlas flushed the units before it (2), the last run now
 	r.flushCrops(ebiten.NewImage(10, 10))
-	if r.lod.crops.flushes != 3 || len(r.lod.crops.idx) != 0 {
-		t.Fatalf("flush: %d draws, %d indices left", r.lod.crops.flushes, len(r.lod.crops.idx))
+	if r.lod.crops.Flushes != 3 || len(r.lod.crops.Idx) != 0 {
+		t.Fatalf("flush: %d draws, %d indices left", r.lod.crops.Flushes, len(r.lod.crops.Idx))
 	}
 	r.flushCrops(ebiten.NewImage(10, 10))
-	if r.lod.crops.flushes != 3 {
+	if r.lod.crops.Flushes != 3 {
 		t.Fatal("an empty batch drew")
 	}
 }
@@ -512,7 +512,7 @@ func TestCropStageSprites(t *testing.T) {
 		if cropDraw(r, 3, 3, 64) != 1 {
 			t.Fatal("pumpkin is one unit")
 		}
-		vs := r.lod.crops.verts
+		vs := r.lod.crops.Verts
 		return float64(vs[2].DstY-vs[0].DstY) / 64 // screen height in tiles at scale 1 (no scale: trim and growth)
 	}
 	sown := height(func(p *game.PlantView) { p.Growth, p.Stage, p.Harvestable = 2, 0, false })
@@ -546,12 +546,12 @@ func TestCropLODTiers(t *testing.T) {
 	widths := func(edit func(*game.PlantView)) (maxW, repW float64) {
 		r := cropRenderer(cropWorld(8, 8, cropPlants("wheat", 1, 1, 1, 1, edit)), 8, 8, "wheat")
 		cropDraw(r, 8, 8, 64)
-		for i := 0; i+3 < len(r.lod.crops.verts); i += 4 {
-			maxW = max(maxW, float64(r.lod.crops.verts[i+1].DstX-r.lod.crops.verts[i].DstX))
+		for i := 0; i+3 < len(r.lod.crops.Verts); i += 4 {
+			maxW = max(maxW, float64(r.lod.crops.Verts[i+1].DstX-r.lod.crops.Verts[i].DstX))
 		}
 		r = cropRenderer(cropWorld(8, 8, cropPlants("wheat", 1, 1, 1, 1, edit)), 8, 8, "wheat")
 		cropDraw(r, 8, 8, 32)
-		return maxW, float64(r.lod.crops.verts[1].DstX-r.lod.crops.verts[0].DstX) * 2 // at 64 px
+		return maxW, float64(r.lod.crops.Verts[1].DstX-r.lod.crops.Verts[0].DstX) * 2 // at 64 px
 	}
 	if maxW, repW := widths(func(p *game.PlantView) { p.Growth, p.Stage, p.Harvestable = 37, 1, false }); repW <= maxW*1.05 {
 		t.Fatalf("young: representative unit %.1f px wide at 64 px vs %.1f for a unit", repW, maxW)
@@ -568,16 +568,16 @@ func TestCropFrameTiers(t *testing.T) {
 	ps := cropPlants("wheat", 1, 1, 4, 3, nil)
 	r := cropRenderer(cropWorld(64, 64, ps), 64, 64, "wheat")
 	lodFrame(r, 64)
-	if q := r.lod.crops.quads; q != 12*4 {
+	if q := r.lod.crops.Quads; q != 12*4 {
 		t.Fatalf("64 px: %d unit quads, want 48", q)
 	}
 	lodFrame(r, 32)
-	if q := r.lod.crops.quads; q != 12 {
+	if q := r.lod.crops.Quads; q != 12 {
 		t.Fatalf("32 px: %d unit quads, want 12", q)
 	}
 	lodFrame(r, 8)
-	if r.lod.tier != lodMap || r.lod.crops.quads != 0 {
-		t.Fatalf("8 px: tier %d, %d unit quads, want the map marks only", r.lod.tier, r.lod.crops.quads)
+	if r.lod.tier != lodMap || r.lod.crops.Quads != 0 {
+		t.Fatalf("8 px: tier %d, %d unit quads, want the map marks only", r.lod.tier, r.lod.crops.Quads)
 	}
 }
 
@@ -591,16 +591,16 @@ func TestCropBatchFlushOrder(t *testing.T) {
 	w.Buildings = []game.BuildingView{{ID: 5, Kind: "wall", X: 4, Y: 1, W: 1, H: 1, Stuff: "wood"}}
 	r := cropRenderer(w, 12, 12, "wheat")
 	lodFrame(r, 64)
-	if r.lod.crops.quads != 6*4 {
-		t.Fatalf("%d unit quads, want 24", r.lod.crops.quads)
+	if r.lod.crops.Quads != 6*4 {
+		t.Fatalf("%d unit quads, want 24", r.lod.crops.Quads)
 	}
-	if got := r.lod.crops.flushes; got != 2 {
+	if got := r.lod.crops.Flushes; got != 2 {
 		t.Fatalf("a wall splits the row into %d crop batches, want 2", got)
 	}
 	field := cropWorld(12, 12, cropPlants("wheat", 1, 1, 8, 6, nil))
 	r2 := cropRenderer(field, 12, 12, "wheat")
 	lodFrame(r2, 64)
-	if got := r2.lod.crops.flushes; got != 1 {
+	if got := r2.lod.crops.Flushes; got != 1 {
 		t.Fatalf("an open field drew in %d batches, want 1", got)
 	}
 }
@@ -620,13 +620,13 @@ func TestCropFurrowsUnderCropsOnly(t *testing.T) {
 	)
 	r := cropRenderer(cropWorld(12, 12, ps), 12, 12, "corn", "potato")
 	lodFrame(r, 64)
-	if got, want := r.lod.crops.furrows, 3*2+2; got != want {
+	if got, want := r.lod.crops.Furrows, 3*2+2; got != want {
 		t.Fatalf("%d furrow quads, want %d (one per crop cell)", got, want)
 	}
 	// none in the map tier
 	lodFrame(r, 8)
-	if r.lod.crops.furrows != 0 {
-		t.Fatalf("map tier drew %d furrows", r.lod.crops.furrows)
+	if r.lod.crops.Furrows != 0 {
+		t.Fatalf("map tier drew %d furrows", r.lod.crops.Furrows)
 	}
 	// without the decal art nothing is drawn and nothing breaks
 	r = cropRenderer(cropWorld(12, 12, ps), 12, 12, "corn", "potato")
@@ -634,8 +634,8 @@ func TestCropFurrowsUnderCropsOnly(t *testing.T) {
 		delete(r.art.Sprites, fmt.Sprintf("overlay/tilled_%d", v))
 	}
 	lodFrame(r, 64)
-	if r.lod.crops.furrows != 0 || r.lod.crops.quads == 0 {
-		t.Fatalf("no furrow art: %d furrows, %d units", r.lod.crops.furrows, r.lod.crops.quads)
+	if r.lod.crops.Furrows != 0 || r.lod.crops.Quads == 0 {
+		t.Fatalf("no furrow art: %d furrows, %d units", r.lod.crops.Furrows, r.lod.crops.Quads)
 	}
 }
 
@@ -658,16 +658,16 @@ func TestCropFurrowVariantAndTurn(t *testing.T) {
 		lodFrame(r, 64)
 		cb := &r.lod.crops
 		out := map[[2]int][4]float32{}
-		for q := 0; q+3 < len(cb.fverts); q += 4 {
-			cx := (cb.fverts[q].DstX + cb.fverts[q+3].DstX) / 2
-			cy := (cb.fverts[q].DstY + cb.fverts[q+3].DstY) / 2
+		for q := 0; q+3 < len(cb.Fverts); q += 4 {
+			cx := (cb.Fverts[q].DstX + cb.Fverts[q+3].DstX) / 2
+			cy := (cb.Fverts[q].DstY + cb.Fverts[q+3].DstY) / 2
 			sign := func(v float32) float32 {
 				if v < 0 {
 					return -1
 				}
 				return 1
 			}
-			out[[2]int{int(cx / 64), int(cy / 64)}] = [4]float32{sign(cb.fverts[q].DstX - cx), sign(cb.fverts[q].DstY - cy), cb.fverts[q].SrcX, cb.fverts[q].SrcY}
+			out[[2]int{int(cx / 64), int(cy / 64)}] = [4]float32{sign(cb.Fverts[q].DstX - cx), sign(cb.Fverts[q].DstY - cy), cb.Fverts[q].SrcX, cb.Fverts[q].SrcY}
 		}
 		return out
 	}
@@ -763,7 +763,7 @@ func TestCropSway(t *testing.T) {
 	r := cropRenderer(w, 4, 4, "wheat")
 	r.present = 40
 	cropDraw(r, 4, 4, 64)
-	vs := r.lod.crops.verts
+	vs := r.lod.crops.Verts
 	if len(vs) != 16 {
 		t.Fatalf("%d vertices, want four units", len(vs))
 	}
@@ -799,7 +799,7 @@ func TestCropFallbackArt(t *testing.T) {
 	if got := cropDraw(r, 6, 6, 64); got != 4*2 {
 		t.Fatalf("three variants: %d quads, want 8", got)
 	}
-	if n := len(r.lod.crops.atlas.sets["corn"].stages[stHarvestable]); n != 3 {
+	if n := len(r.lod.crops.Atlas.Sets["corn"].Stages[stHarvestable]); n != 3 {
 		t.Fatalf("%d ripe variants packed, want 3", n)
 	}
 	// no crop art at all
@@ -819,14 +819,14 @@ func TestCropSpeciesJoinAtlasLazily(t *testing.T) {
 	ps := append(cropPlants("corn", 1, 1, 2, 1, nil), cropPlants("wheat", 1, 3, 2, 1, nil)...)
 	r := cropRenderer(cropWorld(8, 8, ps), 8, 8, "corn", "wheat")
 	lodFrame(r, 64)
-	if r.lod.crops.quads != 2*2+2*4 {
-		t.Fatalf("%d unit quads, want 12", r.lod.crops.quads)
+	if r.lod.crops.Quads != 2*2+2*4 {
+		t.Fatalf("%d unit quads, want 12", r.lod.crops.Quads)
 	}
-	a := r.lod.crops.atlas
-	if a == nil || a.sets["corn"] == nil || a.sets["wheat"] == nil {
+	a := r.lod.crops.Atlas
+	if a == nil || a.Sets["corn"] == nil || a.Sets["wheat"] == nil {
 		t.Fatal("atlas lacks a species that drew")
 	}
-	if a.sets["pumpkin"] != nil {
+	if a.Sets["pumpkin"] != nil {
 		t.Fatal("atlas built a species nothing draws")
 	}
 }
@@ -930,7 +930,7 @@ func BenchmarkCropField500(b *testing.B) {
 				r.setView(c.sw, c.sh, c.tile)
 				r.view.W = w
 				r.stepEnvironment(w, nil)
-				r.lod.crops.begin()
+				r.lod.crops.Begin()
 				r.drawFurrows(screen, w, c.tile)
 				for i := range w.Plants {
 					if p := &w.Plants[i]; r.lod.inView(p.X, p.Y, 0, 0) {
@@ -942,16 +942,16 @@ func BenchmarkCropField500(b *testing.B) {
 			for i := 0; i < 3; i++ {
 				frame()
 			}
-			if r.lod.crops.furrows < c.wantInView {
-				b.Fatalf("%d crops in view, want at least %d", r.lod.crops.furrows, c.wantInView)
+			if r.lod.crops.Furrows < c.wantInView {
+				b.Fatalf("%d crops in view, want at least %d", r.lod.crops.Furrows, c.wantInView)
 			}
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				frame()
 			}
-			b.ReportMetric(float64(r.lod.crops.quads), "unit-quads/op")
-			b.ReportMetric(float64(r.lod.crops.furrows), "furrows/op")
+			b.ReportMetric(float64(r.lod.crops.Quads), "unit-quads/op")
+			b.ReportMetric(float64(r.lod.crops.Furrows), "furrows/op")
 		})
 	}
 }

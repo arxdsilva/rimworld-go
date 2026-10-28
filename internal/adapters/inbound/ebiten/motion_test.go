@@ -619,14 +619,14 @@ func TestTracerMinVisibleFrames(t *testing.T) {
 	t.Parallel()
 	shot := game.TraceView{FromX: 2, FromY: 5, ToX: 6, ToY: 5, Hit: true}
 	// dropped by a fast sim 3 frames ago: still flying
-	if a := traceAge(reactTrace{TraceView: shot, sim: math.Inf(1), frames: 3}, tracerTicks); a >= tracerTicks {
+	if a := traceAge(reactTrace{TraceView: shot, Sim: math.Inf(1), Frames: 3}, tracerTicks); a >= tracerTicks {
 		t.Fatalf("tracer gone after 3 frames: age %.2f", a)
 	}
-	if a := traceAge(reactTrace{TraceView: shot, sim: math.Inf(1), frames: 8}, tracerTicks); a < tracerTicks {
+	if a := traceAge(reactTrace{TraceView: shot, Sim: math.Inf(1), Frames: 8}, tracerTicks); a < tracerTicks {
 		t.Fatalf("tracer still shown after 8 frames: age %.2f", a)
 	}
 	// a slow sim keeps its own, longer timing
-	if a := traceAge(reactTrace{TraceView: shot, sim: 4, frames: 40}, tracerTicks); a != 4 {
+	if a := traceAge(reactTrace{TraceView: shot, Sim: 4, Frames: 40}, tracerTicks); a != 4 {
 		t.Fatalf("sim age governs when slower: %.2f", a)
 	}
 	// untracked traces (captures) are drawn by sim age, oldest first, in a
@@ -634,7 +634,7 @@ func TestTracerMinVisibleFrames(t *testing.T) {
 	r := New(newMotionSim())
 	w := game.WorldView{Traces: []game.TraceView{{FromX: 9, Age: 2}, {FromX: 1, Age: 2}, {FromX: 1, Age: 1}}}
 	got := r.traceList(w)
-	if len(got) != 3 || !math.IsInf(got[0].frames, 1) || got[0].sim != 2 || got[0].FromX != 1 || got[1].FromX != 9 || got[2].sim != 1 {
+	if len(got) != 3 || !math.IsInf(got[0].Frames, 1) || got[0].Sim != 2 || got[0].FromX != 1 || got[1].FromX != 9 || got[2].Sim != 1 {
 		t.Fatalf("trace list %+v", got)
 	}
 }

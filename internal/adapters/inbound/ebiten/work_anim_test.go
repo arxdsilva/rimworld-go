@@ -40,24 +40,24 @@ func TestWorkPoseTable(t *testing.T) {
 	}
 	for _, a := range actions {
 		d, ok := workTable[a]
-		if !ok || d.period <= 0 {
+		if !ok || d.Period <= 0 {
 			t.Fatalf("%s: no table row or period", a)
 		}
-		if d.motion == motionNone {
+		if d.Motion == motionNone {
 			t.Fatalf("%s: no motion", a)
 		}
-		if a != game.ActionEat && a != game.ActionTend && a != game.ActionTame && a != game.ActionResearch && len(d.parts) == 0 {
+		if a != game.ActionEat && a != game.ActionTend && a != game.ActionTame && a != game.ActionResearch && len(d.Parts) == 0 {
 			t.Fatalf("%s: throws no particles", a)
 		}
 		r, _ := workRenderer(0)
-		if pose := r.workPose(worker(a), moveState{}); !pose.ok || pose.held.key != "" {
+		if pose := r.workPose(worker(a), moveState{}); !pose.Ok || pose.Held.Key != "" {
 			t.Fatalf("%s: work pose must apply, holding nothing", a)
 		}
 	}
 	// combat and carrying belong to other layers
 	for _, a := range []string{game.ActionAim, game.ActionMelee, game.ActionRescue, game.ActionHaul, ""} {
 		r, _ := workRenderer(0)
-		if r.workPose(worker(a), moveState{}).ok {
+		if r.workPose(worker(a), moveState{}).Ok {
 			t.Fatalf("%q is not hands-on work", a)
 		}
 	}
@@ -72,7 +72,7 @@ func TestWorkPoseTable(t *testing.T) {
 		t.Fatal("Action beats Acting")
 	}
 	r, _ := workRenderer(0)
-	if r.workPose(worker(game.ActionChop), moveState{Blend: 1}).ok {
+	if r.workPose(worker(game.ActionChop), moveState{Blend: 1}).Ok {
 		t.Fatal("no work pose while walking")
 	}
 }
@@ -84,23 +84,23 @@ func TestMotionTransforms(t *testing.T) {
 	t.Parallel()
 	at := func(action string, ph float64) actionPose {
 		d := workTable[action]
-		r, _ := workRenderer(tickAt(3, d.period, ph))
+		r, _ := workRenderer(tickAt(3, d.Period, ph))
 		return r.workPose(worker(action), moveState{})
 	}
 	wind, strike := at(game.ActionChop, 0.35), at(game.ActionChop, strikeAt+0.01)
-	if wind.dx >= 0 || strike.squash <= wind.squash || strike.dx <= wind.dx || strike.rot <= 0 {
+	if wind.Dx >= 0 || strike.Squash <= wind.Squash || strike.Dx <= wind.Dx || strike.Rot <= 0 {
 		t.Fatalf("swing: wound back %+v, then driven in, squashed and leaning in %+v", wind, strike)
 	}
 	for _, a := range []string{game.ActionTend, game.ActionSow, game.ActionHarvest} {
 		lo, hi := at(a, strikeAt+0.5), at(a, strikeAt+0.01)
-		if hi.squash <= lo.squash || hi.dx <= lo.dx || hi.dy <= lo.dy || hi.rot <= lo.rot {
+		if hi.Squash <= lo.Squash || hi.Dx <= lo.Dx || hi.Dy <= lo.Dy || hi.Rot <= lo.Rot {
 			t.Fatalf("%s: lean in and dip on the strike: %+v vs %+v", a, hi, lo)
 		}
 	}
-	if lo, hi := at(game.ActionCraft, strikeAt+0.5), at(game.ActionCraft, strikeAt+0.01); hi.dy <= lo.dy {
+	if lo, hi := at(game.ActionCraft, strikeAt+0.5), at(game.ActionCraft, strikeAt+0.01); hi.Dy <= lo.Dy {
 		t.Fatalf("bench: a bob: %+v vs %+v", hi, lo)
 	}
-	if lo, hi := at(game.ActionEat, strikeAt+0.5), at(game.ActionEat, strikeAt+0.01); hi.dy <= lo.dy {
+	if lo, hi := at(game.ActionEat, strikeAt+0.5), at(game.ActionEat, strikeAt+0.01); hi.Dy <= lo.Dy {
 		t.Fatalf("eat: the head bows to the meal: %+v vs %+v", hi, lo)
 	}
 }
@@ -114,12 +114,12 @@ func TestWorkDrawsNoTool(t *testing.T) {
 	for act := range workTable {
 		p := game.PawnView{ID: 3, X: 2, Y: 2, ActX: 3, ActY: 2, Action: act, Weapon: "rifle"}
 		ps, h := r.standingPose(p, moveState{Facing: faceEast})
-		if h.key != "" {
-			t.Fatalf("%s: holds %q", act, h.key)
+		if h.Key != "" {
+			t.Fatalf("%s: holds %q", act, h.Key)
 		}
 		var keys []string
 		r.lit.OnDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
-		r.drawPawnFigure(ebiten.NewImage(512, 512), p, 2, 2, 64, pawnFigurePose{face: faceEast, ps: ps, held: h})
+		r.drawPawnFigure(ebiten.NewImage(512, 512), p, 2, 2, 64, pawnFigurePose{Face: faceEast, Ps: ps, Held: h})
 		r.lit.OnDraw = nil
 		for _, k := range keys {
 			if !strings.HasPrefix(k, "pawn/") || k == staleHandKey {
@@ -145,10 +145,10 @@ func TestWorkParticlesAtWorkSpot(t *testing.T) {
 	} {
 		for _, act := range []string{game.ActionChop, game.ActionSow, game.ActionHarvest, game.ActionClean, game.ActionBuild} {
 			d := workTable[act]
-			r, sim := workRenderer(tickAt(3, d.period, 0.1))
+			r, sim := workRenderer(tickAt(3, d.Period, 0.1))
 			p := game.PawnView{ID: 3, X: c.px, Y: c.py, ActX: 6, ActY: 5, Action: act}
 			r.animateWork(game.WorldView{}, []game.PawnView{p})
-			sim.tick = clock.Tick(tickAt(3, d.period, strikeAt) + d.period)
+			sim.tick = clock.Tick(tickAt(3, d.Period, strikeAt) + d.Period)
 			r.animateWork(game.WorldView{}, []game.PawnView{p})
 			if len(r.parts) == 0 {
 				t.Fatalf("%s from (%d,%d): no particles", act, c.px, c.py)
@@ -183,11 +183,11 @@ func TestChopStrikeParticlesAtTrunk(t *testing.T) {
 	// the strike: leaning in, no axe drawn
 	r.mo.Alpha = 0
 	a := r.workPose(p, moveState{})
-	if a.held.key != "" {
+	if a.Held.Key != "" {
 		t.Fatalf("chop pose: %+v", a)
 	}
-	if a.dx <= 0 {
-		t.Fatalf("leans towards the trunk: dx=%v", a.dx)
+	if a.Dx <= 0 {
+		t.Fatalf("leans towards the trunk: dx=%v", a.Dx)
 	}
 }
 
@@ -213,7 +213,7 @@ func TestMineSparks(t *testing.T) {
 	if sparks == 0 || dust == 0 {
 		t.Fatalf("sparks %d and dust %d", sparks, dust)
 	}
-	if a := r.workPose(p, moveState{}); !a.ok || a.held.key != "" {
+	if a := r.workPose(p, moveState{}); !a.Ok || a.Held.Key != "" {
 		t.Fatalf("mine pose: %+v", a)
 	}
 }
@@ -223,7 +223,7 @@ func TestSowKneels(t *testing.T) {
 	r, sim := workRenderer(tickAt(3, 48, 0.1))
 	p := worker(game.ActionSow)
 	a := r.workPose(p, moveState{})
-	if a.held.key != "" || a.squash < 0.08 {
+	if a.Held.Key != "" || a.Squash < 0.08 {
 		t.Fatalf("sow kneels and plants, nothing in hand: %+v", a)
 	}
 	r.animateWork(game.WorldView{}, []game.PawnView{p})
@@ -239,11 +239,11 @@ func TestCleanSweeps(t *testing.T) {
 	t.Parallel()
 	r, _ := workRenderer(0)
 	d := workTable[game.ActionClean]
-	if d.motion != motionReach || len(d.parts) == 0 || d.parts[0].kind != partDust {
+	if d.Motion != motionReach || len(d.Parts) == 0 || d.Parts[0].Kind != partDust {
 		t.Fatalf("clean row: %+v", d)
 	}
 	a := r.workPose(worker(game.ActionClean), moveState{})
-	if !a.ok || a.held.key != "" || a.squash <= 0 {
+	if !a.Ok || a.Held.Key != "" || a.Squash <= 0 {
 		t.Fatalf("clean pose %+v", a)
 	}
 	if actionSounds[game.ActionClean] != "sfx.sweep" {
@@ -256,7 +256,7 @@ func TestHarvestPicks(t *testing.T) {
 	r, sim := workRenderer(tickAt(3, 44, strikeAt))
 	p := worker(game.ActionHarvest)
 	a := r.workPose(p, moveState{})
-	if a.held.key != "" || a.squash <= 0 || a.dx <= 0 {
+	if a.Held.Key != "" || a.Squash <= 0 || a.Dx <= 0 {
 		t.Fatalf("harvest crouches and picks: %+v", a)
 	}
 	sim.tick = clock.Tick(tickAt(3, 44, 0.1))
@@ -279,13 +279,13 @@ func TestBenchActions(t *testing.T) {
 	}
 	for _, c := range cases {
 		d := workTable[c.action]
-		r, sim := workRenderer(tickAt(3, d.period, 0.1))
+		r, sim := workRenderer(tickAt(3, d.Period, 0.1))
 		p := worker(c.action)
-		if a := r.workPose(p, moveState{}); workTable[c.action].motion != motionBench || !a.ok || a.held.key != "" {
+		if a := r.workPose(p, moveState{}); workTable[c.action].Motion != motionBench || !a.Ok || a.Held.Key != "" {
 			t.Fatalf("%s: bench motion, nothing in hand: %+v", c.action, a)
 		}
 		r.animateWork(game.WorldView{}, []game.PawnView{p})
-		sim.tick = clock.Tick(tickAt(3, d.period, strikeAt) + d.period)
+		sim.tick = clock.Tick(tickAt(3, d.Period, strikeAt) + d.Period)
 		r.animateWork(game.WorldView{}, []game.PawnView{p})
 		if c.part == partNone {
 			if len(r.parts) != 0 {
@@ -313,7 +313,7 @@ func TestTendKneels(t *testing.T) {
 	t.Parallel()
 	r, _ := workRenderer(tickAt(3, 60, 0.6))
 	a := r.workPose(worker(game.ActionTend), moveState{})
-	if a.held.key != "" || a.squash < 0.1 || a.dx <= 0 {
+	if a.Held.Key != "" || a.Squash < 0.1 || a.Dx <= 0 {
 		t.Fatalf("tend: %+v", a)
 	}
 }
@@ -322,7 +322,7 @@ func TestTameOffersHand(t *testing.T) {
 	t.Parallel()
 	r, _ := workRenderer(tickAt(3, 64, 0.2))
 	a := r.workPose(worker(game.ActionTame), moveState{})
-	if !a.ok || a.held.key != "" || a.squash <= 0 {
+	if !a.Ok || a.Held.Key != "" || a.Squash <= 0 {
 		t.Fatalf("tame crouches, bare hand out: %+v", a)
 	}
 }
@@ -332,7 +332,7 @@ func TestEatShowsNothingInHand(t *testing.T) {
 	t.Parallel()
 	r, _ := workRenderer(tickAt(3, 50, 0.2))
 	a := r.workPose(worker(game.ActionEat), moveState{})
-	if !a.ok || a.held.key != "" || a.dx <= 0 {
+	if !a.Ok || a.Held.Key != "" || a.Dx <= 0 {
 		t.Fatalf("eat: %+v", a)
 	}
 }
@@ -347,17 +347,17 @@ func TestLoadInFrontOfBody(t *testing.T) {
 		m := walkingState
 		m.Stride = stride
 		a := r.carryPose(p, m)
-		if !a.ok || a.dx != 0 || a.dy != 0 || a.rot != 0 {
+		if !a.Ok || a.Dx != 0 || a.Dy != 0 || a.Rot != 0 {
 			t.Fatalf("stride %v: the load rides the walking figure (gait from walkPose): %+v", stride, a)
 		}
-		if a.held.key != itemSprite("wood") || a.held.stance != stanceLoad {
-			t.Fatalf("the load is the item sprite: %+v", a.held)
+		if a.Held.Key != itemSprite("wood") || a.Held.Stance != stanceLoad {
+			t.Fatalf("the load is the item sprite: %+v", a.Held)
 		}
 	}
-	if a := r.carryPose(game.PawnView{ID: 1, Carrying: "stone"}, moveState{}); !a.ok || a.held.stance != stanceLoad || !a.held.set {
+	if a := r.carryPose(game.PawnView{ID: 1, Carrying: "stone"}, moveState{}); !a.Ok || a.Held.Stance != stanceLoad || !a.Held.Set {
 		t.Fatalf("standing carry: %+v", a)
 	}
-	if r.carryPose(game.PawnView{ID: 1}, moveState{}).ok {
+	if r.carryPose(game.PawnView{ID: 1}, moveState{}).Ok {
 		t.Fatal("nothing carried, no carry pose")
 	}
 	// the walking carrier still bobs: the pose stacks on the gait
@@ -365,16 +365,16 @@ func TestLoadInFrontOfBody(t *testing.T) {
 	m.Stride = 0.5 / walkFrames * strideLen
 	r.mo.Alpha = 0
 	ps, h := r.standingPose(p, m)
-	if ps.Dy >= 0 || h.stance != stanceLoad {
+	if ps.Dy >= 0 || h.Stance != stanceLoad {
 		t.Fatalf("a walking carrier bobs with its load: %+v %+v", ps, h)
 	}
 	// placement: centred on the body, at the chest (just under the body
 	// centre, clear of the face), in front
-	h = heldItem{key: "item/wood_pile", stance: stanceLoad}
+	h = heldItem{Key: "item/wood_pile", Stance: stanceLoad}
 	for _, f := range []facing{faceSouth, faceEast, faceWest} {
 		rig, ps := rigFor(r, f)
 		pl, ok := r.heldPlace(rig, h, 1, 1, 64, ps)
-		if !ok || pl.behind {
+		if !ok || pl.Behind {
 			t.Fatalf("%v: the load in front of the body: %+v", f, pl)
 		}
 		mid := heldPivotOn(r, pl, h)
@@ -382,7 +382,7 @@ func TestLoadInFrontOfBody(t *testing.T) {
 		if math.Abs(mid[0]-c[0]) > 1e-6 || mid[1] < c[1] || mid[1]-c[1] > 0.15*64 {
 			t.Fatalf("%v: load centre %v, body centre %v", f, mid, c)
 		}
-		if w := pl.g.Element(0, 0); math.Abs(math.Abs(w)*artTilePx-0.5*64) > 1e-6 {
+		if w := pl.G.Element(0, 0); math.Abs(math.Abs(w)*artTilePx-0.5*64) > 1e-6 {
 			t.Fatalf("%v: the load is about half a tile: %v px", f, math.Abs(w)*artTilePx)
 		}
 	}
@@ -397,7 +397,7 @@ func TestLoadBehindFacingNorth(t *testing.T) {
 		ps, h := r.standingPose(p, moveState{Facing: f})
 		var keys []string
 		r.lit.OnDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
-		r.drawPawnFigure(ebiten.NewImage(512, 512), p, 2, 2, 64, pawnFigurePose{face: f, ps: ps, held: h})
+		r.drawPawnFigure(ebiten.NewImage(512, 512), p, 2, 2, 64, pawnFigurePose{Face: f, Ps: ps, Held: h})
 		r.lit.OnDraw = nil
 		body := slices.IndexFunc(keys, func(k string) bool { return strings.HasPrefix(k, "pawn/body_") })
 		load := slices.Index(keys, "item/wood_pile")
@@ -411,13 +411,13 @@ func TestRescueKeepsPatientDrawn(t *testing.T) {
 	t.Parallel()
 	r, _ := workRenderer(0)
 	a := r.carryPose(game.PawnView{ID: 1, Carrying: "pawn", Action: game.ActionRescue}, walkingState)
-	if !a.ok {
+	if !a.Ok {
 		t.Fatalf("rescuer carries: %+v", a)
 	}
-	if !a.held.set || a.held.key != "" {
-		t.Fatalf("bare hands; drawCarried draws the patient: %+v", a.held)
+	if !a.Held.Set || a.Held.Key != "" {
+		t.Fatalf("bare hands; drawCarried draws the patient: %+v", a.Held)
 	}
-	if r.workPose(game.PawnView{ID: 1, Carrying: "pawn", Action: game.ActionRescue}, moveState{}).ok {
+	if r.workPose(game.PawnView{ID: 1, Carrying: "pawn", Action: game.ActionRescue}, moveState{}).Ok {
 		t.Fatal("rescue is not a work pose")
 	}
 }

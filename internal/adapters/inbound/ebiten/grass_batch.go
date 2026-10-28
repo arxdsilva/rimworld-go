@@ -122,9 +122,9 @@ var tuftOrder = [10][]uint8{
 // the tile's top-left, its scale, its share of the tile's sway, the
 // variant it draws, mirrored or not, from the tall set or not.
 type tuftCopy struct {
-	dx, dy, scale, sway float64
-	variant             uint32
-	mirror, tall        bool
+	Dx, Dy, Scale, sway float64
+	Variant             uint32
+	Mirror, Tall        bool
 }
 
 // grassCopies appends tile (x, y)'s tuft copies at this growth, at most
@@ -154,18 +154,18 @@ func grassCopies(x, y int, growth uint8, limit int, tallTile bool, out []tuftCop
 		h := mix64(th ^ uint64(k+1)*0x9E3779B97F4A7C15 ^ 0x7475667473)
 		u := func(shift uint) float64 { return float64(h>>shift&0xffff) / 65535 }
 		c := tuftCopy{
-			dx:      tuftAxis(cx, u(0)),
-			dy:      tuftAxis(cy, u(16)),
+			Dx:      tuftAxis(cx, u(0)),
+			Dy:      tuftAxis(cy, u(16)),
 			sway:    0.8 + 0.4*u(32),
-			variant: uint32(h >> 49),
-			mirror:  h>>48&1 != 0,
-			tall:    tallTile && (h>>60)%3 != 0,
+			Variant: uint32(h >> 49),
+			Mirror:  h>>48&1 != 0,
+			Tall:    tallTile && (h>>60)%3 != 0,
 		}
 		s := u(40)
-		if c.tall {
-			c.scale = (0.7 + 0.2*s) * size
+		if c.Tall {
+			c.Scale = (0.7 + 0.2*s) * size
 		} else {
-			c.scale = (0.45 + 0.2*s) * size
+			c.Scale = (0.45 + 0.2*s) * size
 		}
 		out = append(out, c)
 	}
@@ -387,21 +387,21 @@ func alphaBox(pix *image.NRGBA) (image.Rectangle, bool) {
 type grassBatch struct {
 	atlas  *grassAtlas
 	mask   []uint8 // grassMask bits per tile (grass_draw.go)
-	verts  []ebiten.Vertex
+	Verts  []ebiten.Vertex
 	idx    []uint32
 	copies []tuftCopy
 	sigs   map[int]grassMemo
 	budget int // map-tier signature recomputes left this frame
 	frame  uint64
-	// counters (tests): quads in the last batch, live batches drawn,
+	// counters (tests): Quads in the last batch, live batches drawn,
 	// tuft bakes into chunk images and grass-tint bakes into the map.
-	quads, flushes, baked, tinted int
-	// onFlush, when set (tests), runs as a live batch is drawn.
-	onFlush func()
-	// level is the grass detail (Options > Graphics, PLAY-019): the empty
+	Quads, Flushes, Baked, Tinted int
+	// OnFlush, when set (tests), runs as a live batch is drawn.
+	OnFlush func()
+	// Level is the grass detail (Options > Graphics, PLAY-019): the empty
 	// string or config.GrassFull draws every tuft, GrassReduced and
 	// GrassSparse thin them per tile (grassKeep).
-	level string
+	Level string
 }
 
 // grassDensity is the share of a tile's tufts a detail level keeps.
@@ -475,8 +475,8 @@ func (r *Renderer) grassReach(x0, y0, x1, y1 int) (int, int, int, int) {
 // mask in place.
 func (r *Renderer) grassBatchOf(dst *ebiten.Image, w *game.WorldView, x0, y0, x1, y1 int, tile float64, sw, sh, limit int) {
 	gb := &r.lod.grass
-	gb.quads = 0
-	gb.verts, gb.idx = gb.verts[:0], gb.idx[:0]
+	gb.Quads = 0
+	gb.Verts, gb.idx = gb.Verts[:0], gb.idx[:0]
 	a := r.grassAtlas()
 	if a == nil || w.TerrainW <= 0 || x1 < x0 || y1 < y0 {
 		return
@@ -487,7 +487,7 @@ func (r *Renderer) grassBatchOf(dst *ebiten.Image, w *game.WorldView, x0, y0, x1
 	if dormant && a.dry {
 		tint = mulCS(tint, grassDryCS)
 	}
-	snowQ := grassSnowQ(r.env.snow)
+	snowQ := grassSnowQ(r.env.Snow)
 	tl := float32(tile)
 	fsw, fsh := float32(sw), float32(sh)
 	for y := y0; y <= y1; y++ {
@@ -497,7 +497,7 @@ func (r *Renderer) grassBatchOf(dst *ebiten.Image, w *game.WorldView, x0, y0, x1
 				continue
 			}
 			growth := grassGrowthAt(w, y*w.TerrainW+x)
-			keep := grassKeep(gb.level, x, y, min(tuftCopies(growth), max(limit, 1)))
+			keep := grassKeep(gb.Level, x, y, min(tuftCopies(growth), max(limit, 1)))
 			if keep == 0 { // thinned away (grass detail)
 				continue
 			}
@@ -531,15 +531,15 @@ func (r *Renderer) grassBatchOf(dst *ebiten.Image, w *game.WorldView, x0, y0, x1
 				switch {
 				case dormant:
 					set = a.dormant
-				case c.tall:
+				case c.Tall:
 					set = a.tall
 				}
-				sp := &set[c.variant%uint32(len(set))]
-				k := float32(c.scale) * tl * sp.k // screen px per atlas px
-				fx, fy := tx+float32(c.dx)*tl, ty+float32(c.dy)*tl
+				sp := &set[c.Variant%uint32(len(set))]
+				k := float32(c.Scale) * tl * sp.k // screen px per atlas px
+				fx, fy := tx+float32(c.Dx)*tl, ty+float32(c.Dy)*tl
 				wq, hq := sp.w*k, sp.h*k*float32(sy)
 				left := fx - sp.bx*k
-				if c.mirror {
+				if c.Mirror {
 					left = fx - (sp.w-sp.bx)*k
 				}
 				top := fy - hq
@@ -549,11 +549,11 @@ func (r *Renderer) grassBatchOf(dst *ebiten.Image, w *game.WorldView, x0, y0, x1
 					continue
 				}
 				u0, u1 := sp.sx, sp.sx+sp.w
-				if c.mirror {
+				if c.Mirror {
 					u0, u1 = u1, u0
 				}
-				n := uint32(len(gb.verts))
-				gb.verts = append(gb.verts,
+				n := uint32(len(gb.Verts))
+				gb.Verts = append(gb.Verts,
 					ebiten.Vertex{DstX: left + shift, DstY: top, SrcX: u0, SrcY: sp.sy, ColorR: cr, ColorG: cg, ColorB: cb, ColorA: a32, Custom0: sky, Custom1: lamp},
 					ebiten.Vertex{DstX: left + shift + wq, DstY: top, SrcX: u1, SrcY: sp.sy, ColorR: cr, ColorG: cg, ColorB: cb, ColorA: a32, Custom0: sky, Custom1: lamp},
 					ebiten.Vertex{DstX: left, DstY: fy, SrcX: u0, SrcY: sp.sy + sp.h, ColorR: cr, ColorG: cg, ColorB: cb, ColorA: a32, Custom0: sky, Custom1: lamp},
@@ -562,7 +562,7 @@ func (r *Renderer) grassBatchOf(dst *ebiten.Image, w *game.WorldView, x0, y0, x1
 			}
 		}
 	}
-	gb.quads = len(gb.verts) / 4
+	gb.Quads = len(gb.Verts) / 4
 	r.flushGrass(dst, a.img)
 }
 
@@ -570,7 +570,7 @@ func (r *Renderer) grassBatchOf(dst *ebiten.Image, w *game.WorldView, x0, y0, x1
 // most nine), so a nearer tuft overlaps the one behind it.
 func sortCopies(cs []tuftCopy) {
 	for i := 1; i < len(cs); i++ {
-		for j := i; j > 0 && cs[j].dy < cs[j-1].dy; j-- {
+		for j := i; j > 0 && cs[j].Dy < cs[j-1].Dy; j-- {
 			cs[j], cs[j-1] = cs[j-1], cs[j]
 		}
 	}
@@ -584,27 +584,27 @@ func (r *Renderer) flushGrass(dst, src *ebiten.Image) {
 		return
 	}
 	if r.lod.baking {
-		gb.baked++
-		dst.DrawTriangles32(gb.verts, gb.idx, src, &ebiten.DrawTrianglesOptions{Filter: ebiten.FilterLinear})
+		gb.Baked++
+		dst.DrawTriangles32(gb.Verts, gb.idx, src, &ebiten.DrawTrianglesOptions{Filter: ebiten.FilterLinear})
 		return
 	}
-	gb.flushes++
-	if gb.onFlush != nil {
-		gb.onFlush()
+	gb.Flushes++
+	if gb.OnFlush != nil {
+		gb.OnFlush()
 	}
 	r.lit.Calls++
 	if r.lit.Off { // lighting off: the vertex colours already carry the light
-		dst.DrawTriangles32(gb.verts, gb.idx, src, &ebiten.DrawTrianglesOptions{Filter: ebiten.FilterLinear})
+		dst.DrawTriangles32(gb.Verts, gb.idx, src, &ebiten.DrawTrianglesOptions{Filter: ebiten.FilterLinear})
 		return
 	}
 	sh := r.litShader()
 	if sh == nil { // no shader: unlit
-		dst.DrawTriangles32(gb.verts, gb.idx, src, &ebiten.DrawTrianglesOptions{Filter: ebiten.FilterLinear})
+		dst.DrawTriangles32(gb.Verts, gb.idx, src, &ebiten.DrawTrianglesOptions{Filter: ebiten.FilterLinear})
 		return
 	}
 	r.lit.SyncUniforms()
 	r.lit.Opts.Images[0] = src
-	dst.DrawTrianglesShader32(gb.verts, gb.idx, sh, &r.lit.Opts)
+	dst.DrawTrianglesShader32(gb.Verts, gb.idx, sh, &r.lit.Opts)
 }
 
 // grassSnowQ is the snow depth bakes use: quantised, so a slow snowfall
@@ -687,10 +687,10 @@ func (r *Renderer) grassLookSig(w *game.WorldView, h uint64) uint64 {
 	if grassDormant(w) {
 		h = mix64(h ^ 0xd0)
 	}
-	if d := grassDensity(r.lod.grass.level); d < 1 { // the detail level thins the baked tufts
+	if d := grassDensity(r.lod.grass.Level); d < 1 { // the detail level thins the baked tufts
 		h = mix64(h ^ uint64(d*100))
 	}
-	return mix64(h ^ uint64(grassSnowQ(r.env.snow)*20))
+	return mix64(h ^ uint64(grassSnowQ(r.env.Snow)*20))
 }
 
 // grassBakeKey is chunk version ver with sig folded in (sig 0: no grass,
@@ -786,7 +786,7 @@ var grassTintRGB = [3]float32{0.40, 0.47, 0.29}
 // tint fades across tile edges.
 func (r *Renderer) bakeGrassTint(dst *ebiten.Image, w *game.WorldView, x0, y0, x1, y1 int, tile float64) {
 	gb := &r.lod.grass
-	gb.verts, gb.idx = gb.verts[:0], gb.idx[:0]
+	gb.Verts, gb.idx = gb.Verts[:0], gb.idx[:0]
 	dens := func(x, y int) float32 {
 		if n := grassTintBucket(w, x, y); n > 0 {
 			return 0.15 + 0.035*float32(n)
@@ -808,7 +808,7 @@ func (r *Renderer) bakeGrassTint(dst *ebiten.Image, w *game.WorldView, x0, y0, x
 				continue
 			}
 			sx, sy := r.worldToScreenF(float64(x), float64(y))
-			n := uint32(len(gb.verts))
+			n := uint32(len(gb.Verts))
 			for k := 0; k < 4; k++ {
 				dx, dy := sx, sy
 				if k&1 != 0 {
@@ -817,7 +817,7 @@ func (r *Renderer) bakeGrassTint(dst *ebiten.Image, w *game.WorldView, x0, y0, x
 				if k&2 != 0 {
 					dy += float32(tile)
 				}
-				gb.verts = append(gb.verts, ebiten.Vertex{DstX: dx, DstY: dy, SrcX: 0.5, SrcY: 0.5,
+				gb.Verts = append(gb.Verts, ebiten.Vertex{DstX: dx, DstY: dy, SrcX: 0.5, SrcY: 0.5,
 					ColorR: cr * a[k], ColorG: cg * a[k], ColorB: cb * a[k], ColorA: a[k]})
 			}
 			gb.idx = append(gb.idx, n, n+1, n+2, n+1, n+3, n+2)
@@ -826,6 +826,6 @@ func (r *Renderer) bakeGrassTint(dst *ebiten.Image, w *game.WorldView, x0, y0, x
 	if len(gb.idx) == 0 {
 		return
 	}
-	gb.tinted++
-	dst.DrawTriangles32(gb.verts, gb.idx, r.lod.whiteImg(), &ebiten.DrawTrianglesOptions{})
+	gb.Tinted++
+	dst.DrawTriangles32(gb.Verts, gb.idx, r.lod.whiteImg(), &ebiten.DrawTrianglesOptions{})
 }

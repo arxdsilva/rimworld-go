@@ -155,7 +155,7 @@ func TestPlantLeanBoundedPerKind(t *testing.T) {
 			}
 		}
 		// a creature shoving hard still cannot break the limit
-		r.env.springs[envTileKey(4, 3)] = &envSpring{cx: 50, cy: -50, vx: 90}
+		r.env.Springs[envTileKey(4, 3)] = &envSpring{Cx: 50, Cy: -50, Vx: 90}
 		for k, lim := range leanLimit {
 			if ps := r.plantPose(4, 3, k, amounts[k], 1); math.Abs(ps.Skew) > lim+1e-9 || ps.Sy <= 0 {
 				t.Fatalf("kind %d shoved: skew %.3f sy %.3f", k, ps.Skew, ps.Sy)
@@ -280,7 +280,7 @@ func TestContactSpringsBack(t *testing.T) {
 	if secs := float64(settled-last) / 60; secs >= 1.2 {
 		t.Fatalf("plant took %.2fs to spring back (peak %.3f)", secs, peak)
 	}
-	if n := len(with.env.springs); n != 0 {
+	if n := len(with.env.Springs); n != 0 {
 		t.Fatalf("%d contact springs kept after everything settled", n)
 	}
 }
@@ -295,7 +295,7 @@ func TestContactIgnoresFarAndStillCreatures(t *testing.T) {
 	for f := 0; f < 240; f++ {
 		with.advance()
 		ref.advance()
-		for k := range with.env.springs {
+		for k := range with.env.Springs {
 			if y := int(k >> 16); y != 9 {
 				t.Fatalf("frame %d: contact spring on row %d, away from the only walker", f, y)
 			}
@@ -528,15 +528,15 @@ func TestWiltedKey(t *testing.T) {
 // of weather w.
 func weatherRun(w game.WorldView, n int) *Renderer {
 	r := New(&stubSim{w: 64, h: 64})
-	r.env.view = envRect{0, 0, 24, 14}
+	r.env.View = envRect{0, 0, 24, 14}
 	stepFrames(r, w, n)
 	return r
 }
 
 func countDrops(r *Renderer, kind dropKind) int {
 	n := 0
-	for _, d := range r.env.drops {
-		if d.kind == kind {
+	for _, d := range r.env.Drops {
+		if d.Kind == kind {
 			n++
 		}
 	}
@@ -556,7 +556,7 @@ func TestRainDensityFollowsIntensity(t *testing.T) {
 	if ratio := float64(heavy) / float64(mid); ratio < 1.5 || ratio > 2.5 {
 		t.Fatalf("density not proportional to intensity: 0.5->%d 1->%d", mid, heavy)
 	}
-	if n := len(weatherRun(game.WorldView{Weather: "clear", WindX: 1}, 120).env.drops); n != 0 {
+	if n := len(weatherRun(game.WorldView{Weather: "clear", WindX: 1}, 120).env.Drops); n != 0 {
 		t.Fatalf("clear sky has %d drops", n)
 	}
 	if n := countDrops(weatherRun(game.WorldView{Weather: "rain", WeatherIntensity: 0.8}, 240), dropSplash); n == 0 {
@@ -569,9 +569,9 @@ func TestRainAngleFollowsWind(t *testing.T) {
 	angle := func(wx float64) float64 {
 		r := weatherRun(game.WorldView{Weather: "rain", WeatherIntensity: 0.7, WindX: wx}, 120)
 		sum, n := 0.0, 0
-		for _, d := range r.env.drops {
-			if d.kind == dropRain {
-				sx, sy := d.screenVel()
+		for _, d := range r.env.Drops {
+			if d.Kind == dropRain {
+				sx, sy := d.ScreenVel()
 				if sy <= 0 {
 					t.Fatalf("rain falls upward on screen: %v,%v", sx, sy)
 				}
@@ -598,12 +598,12 @@ func TestSnowFlakesDriftAndFlutter(t *testing.T) {
 	sizes := map[float32]bool{}
 	var drift float64
 	n := 0
-	for _, d := range r.env.drops {
-		if d.kind != dropSnow {
+	for _, d := range r.env.Drops {
+		if d.Kind != dropSnow {
 			continue
 		}
-		sizes[d.size] = true
-		drift += d.vx
+		sizes[d.Size] = true
+		drift += d.Vx
 		n++
 	}
 	if n < 50 || len(sizes) < 3 {
@@ -614,9 +614,9 @@ func TestSnowFlakesDriftAndFlutter(t *testing.T) {
 	}
 	// one flake's path wanders around its drift line
 	var d *weatherDrop
-	for i := range r.env.drops {
-		if r.env.drops[i].kind == dropSnow && r.env.drops[i].t > 2 {
-			d = &r.env.drops[i]
+	for i := range r.env.Drops {
+		if r.env.Drops[i].Kind == dropSnow && r.env.Drops[i].T > 2 {
+			d = &r.env.Drops[i]
 			break
 		}
 	}
@@ -625,12 +625,12 @@ func TestSnowFlakesDriftAndFlutter(t *testing.T) {
 	}
 	flips, prev := 0, 0.0
 	for k := 0; k < 120; k++ {
-		tt := d.t - float64(k)/60
+		tt := d.T - float64(k)/60
 		if tt < 0 {
 			break
 		}
-		x, _ := d.posAt(tt)
-		off := x - (d.gx - d.vx*tt)
+		x, _ := d.PosAt(tt)
+		off := x - (d.Gx - d.Vx*tt)
 		if k > 0 && (off > 0) != (prev > 0) {
 			flips++
 		}
@@ -641,9 +641,9 @@ func TestSnowFlakesDriftAndFlutter(t *testing.T) {
 	}
 	// snow drifts more slowly than rain falls
 	rain := weatherRun(game.WorldView{Weather: "rain", WeatherIntensity: 0.6}, 60)
-	for _, rd := range rain.env.drops {
-		if rd.kind == dropRain && rd.vz < 3*d.vz {
-			t.Fatalf("snow falls at %.2f, rain at %.2f", d.vz, rd.vz)
+	for _, rd := range rain.env.Drops {
+		if rd.Kind == dropRain && rd.Vz < 3*d.Vz {
+			t.Fatalf("snow falls at %.2f, rain at %.2f", d.Vz, rd.Vz)
 		}
 	}
 }
@@ -655,13 +655,13 @@ func TestWeatherParticlePoolCapped(t *testing.T) {
 		cap  int
 	}{{"storm", 1400}, {"blizzard", 1100}, {"rain", 1400}, {"snow", 1100}} {
 		r := New(&stubSim{w: 400, h: 400})
-		r.env.view = envRect{0, 0, 300, 200} // zoomed far out
+		r.env.View = envRect{0, 0, 300, 200} // zoomed far out
 		w := game.WorldView{Weather: c.kind, WeatherIntensity: 1, WindX: 3}
 		peak := 0
 		for f := 0; f < 500; f++ {
 			r.present++
 			r.stepEnvironment(w, nil)
-			peak = max(peak, len(r.env.drops))
+			peak = max(peak, len(r.env.Drops))
 			if len(r.parts) != 0 {
 				t.Fatalf("%s spilled into the effect particles", c.kind)
 			}
@@ -893,7 +893,7 @@ func TestEnvironmentDrawsWithAndWithoutArt(t *testing.T) {
 				r.drawGroundCover(screen, w, 640, 400, r.tilePx())
 				r.drawWeather(screen, w, 640, 400, r.tilePx())
 			}
-			if kind != "cloudy" && len(r.env.drops) == 0 {
+			if kind != "cloudy" && len(r.env.Drops) == 0 {
 				t.Fatalf("%s drew no particles", kind)
 			}
 		}
@@ -913,7 +913,7 @@ func TestEnvironmentDrawsWithAndWithoutArt(t *testing.T) {
 		r.drawGroundCover(screen, w, 640, 400, r.tilePx())
 		r.drawWeather(screen, w, 640, 400, r.tilePx())
 	}
-	if !r.env.flashSeen || r.env.flashBucket != uint64(sim.tick)/lightningBucket {
+	if !r.env.FlashSeen || r.env.FlashBucket != uint64(sim.tick)/lightningBucket {
 		t.Fatal("the storm's lightning never flashed")
 	}
 	if countDrops(r, dropRipple) == 0 {
@@ -992,14 +992,14 @@ func TestRainSkipsRoofedTiles(t *testing.T) {
 	for _, kind := range []string{"rain", "snow"} {
 		w := roofedWorld(kind)
 		r := New(&stubSim{w: 64, h: 64})
-		r.env.view = envRect{20, 0, 44, 14}
+		r.env.View = envRect{20, 0, 44, 14}
 		stepFrames(r, w, 240)
-		if len(r.env.drops) == 0 {
+		if len(r.env.Drops) == 0 {
 			t.Fatalf("%s: no drops at all", kind)
 		}
-		for _, d := range r.env.drops {
-			if x := int(math.Floor(d.gx)); x >= 0 && x < 32 && d.gy >= 0 { // off the map's top edge is open sky
-				t.Fatalf("%s: drop kind %d lands under the roof at x=%.2f", kind, d.kind, d.gx)
+		for _, d := range r.env.Drops {
+			if x := int(math.Floor(d.Gx)); x >= 0 && x < 32 && d.Gy >= 0 { // off the map's top edge is open sky
+				t.Fatalf("%s: drop kind %d lands under the roof at x=%.2f", kind, d.Kind, d.Gx)
 			}
 		}
 	}
@@ -1009,15 +1009,15 @@ func TestRainSkipsRoofedTiles(t *testing.T) {
 		w.RoofCells[i] = 0
 	}
 	r := New(&stubSim{w: 64, h: 64})
-	r.env.view = envRect{0, 0, 24, 14}
+	r.env.View = envRect{0, 0, 24, 14}
 	stepFrames(r, w, 60)
 	for i := range w.RoofCells {
 		w.RoofCells[i] = roofBuilt
 	}
 	stepFrames(r, w, 60)
-	for _, d := range r.env.drops {
-		if d.kind != dropRain && d.gx >= 0 && d.gy >= 0 { // beyond the map edge is open sky
-			t.Fatalf("drop kind %d landed under a new roof", d.kind)
+	for _, d := range r.env.Drops {
+		if d.Kind != dropRain && d.Gx >= 0 && d.Gy >= 0 { // beyond the map edge is open sky
+			t.Fatalf("drop kind %d landed under a new roof", d.Kind)
 		}
 	}
 }

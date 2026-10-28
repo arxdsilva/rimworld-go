@@ -121,8 +121,8 @@ func (a *App) syncRenderer() {
 // water ripple and the grass tufts per tile. Each is read live, so an
 // Options change shows on the next frame.
 func applyGraphicsKnobs(r *Renderer, g config.Graphics) {
-	r.env.shadow.SetOff(!g.Shadows)
+	r.env.Shadow.SetOff(!g.Shadows)
 	r.lit.Off = !g.Lighting
-	r.water.simple = g.Water == config.WaterSimple
-	r.lod.grass.level = g.Grass
+	r.water.Simple = g.Water == config.WaterSimple
+	r.lod.grass.Level = g.Grass
 }

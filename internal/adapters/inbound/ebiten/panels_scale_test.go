@@ -40,7 +40,7 @@ func TestTroughAndFloatersAtScale(t *testing.T) {
 	got := traceCanvas(t)
 	img := ebiten.NewImage(800, 600)
 	r := New(&stubSim{w: 4, h: 4})
-	r.floaters = []floater{{x: 1, y: 1, text: "-12", clr: color.RGBA{R: 200, A: 255}, born: 0}}
+	r.floaters = []floater{{X: 1, Y: 1, Text: "-12", Clr: color.RGBA{R: 200, A: 255}, Born: 0}}
 	r.present = 1
 	r.drawFloaters(img, 48)
 	if len(*got) != 1 || !strings.HasPrefix((*got)[0], "fill ") {

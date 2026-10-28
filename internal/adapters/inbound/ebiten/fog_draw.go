@@ -40,10 +40,10 @@ type fogChunk struct {
 
 // fogCache holds the baked chunks of the current map.
 type fogCache struct {
-	chunks map[int]*fogChunk
+	Chunks map[int]*fogChunk
 	n      int // len(Fog) the chunks were baked for
-	pix    []byte
-	bakes  int // chunk bakes (tests)
+	Pix    []byte
+	Bakes  int // chunk bakes (tests)
 }
 
 // fogHidden reports tile (x, y) is unexplored in a read model's Fog.
@@ -85,15 +85,15 @@ func fogAlpha(fog []uint8, mw, mh int, px, py float64) float64 {
 	return best
 }
 
-// bake renders chunk (cx, cy) into c as premultiplied fog-coloured pixels.
-func (fc *fogCache) bake(c *fogChunk, fog []uint8, mw, mh, cx, cy int) {
+// Bake renders chunk (cx, cy) into c as premultiplied fog-coloured pixels.
+func (fc *fogCache) Bake(c *fogChunk, fog []uint8, mw, mh, cx, cy int) {
 	if c.img == nil {
 		c.img = ebiten.NewImage(fogChunkPx, fogChunkPx)
 	}
-	if cap(fc.pix) < 4*fogChunkPx*fogChunkPx {
-		fc.pix = make([]byte, 4*fogChunkPx*fogChunkPx)
+	if cap(fc.Pix) < 4*fogChunkPx*fogChunkPx {
+		fc.Pix = make([]byte, 4*fogChunkPx*fogChunkPx)
 	}
-	pix := fc.pix[:4*fogChunkPx*fogChunkPx]
+	pix := fc.Pix[:4*fogChunkPx*fogChunkPx]
 	for y := 0; y < fogChunkPx; y++ {
 		py := float64(cy*fogChunkTiles) + (float64(y)+0.5)/fogPx
 		for x := 0; x < fogChunkPx; x++ {
@@ -107,7 +107,7 @@ func (fc *fogCache) bake(c *fogChunk, fog []uint8, mw, mh, cx, cy int) {
 		}
 	}
 	c.img.WritePixels(pix)
-	fc.bakes++
+	fc.Bakes++
 }
 
 // drawFogLayer stamps the fog over the map for a fog slice mw x mh tiles
@@ -115,23 +115,23 @@ func (fc *fogCache) bake(c *fogChunk, fog []uint8, mw, mh, cx, cy int) {
 func (r *Renderer) drawFogLayer(screen *ebiten.Image, fog []uint8, ver uint64, mw, mh int, tile float64, sw, sh int) {
 	fc := &r.fogc
 	if len(fog) == 0 || mw <= 0 {
-		if fc.chunks != nil { // fog gone (another map): drop the bakes
-			for _, c := range fc.chunks {
+		if fc.Chunks != nil { // fog gone (another map): drop the bakes
+			for _, c := range fc.Chunks {
 				if c.img != nil {
 					c.img.Deallocate()
 				}
 			}
-			fc.chunks, fc.n = nil, 0
+			fc.Chunks, fc.n = nil, 0
 		}
 		return
 	}
-	if fc.chunks == nil || fc.n != len(fog) {
-		for _, c := range fc.chunks {
+	if fc.Chunks == nil || fc.n != len(fog) {
+		for _, c := range fc.Chunks {
 			if c.img != nil {
 				c.img.Deallocate()
 			}
 		}
-		fc.chunks, fc.n = map[int]*fogChunk{}, len(fog)
+		fc.Chunks, fc.n = map[int]*fogChunk{}, len(fog)
 	}
 	ncx := (mw + fogChunkTiles - 1) / fogChunkTiles
 	span := tile * fogChunkTiles
@@ -143,13 +143,13 @@ func (r *Renderer) drawFogLayer(screen *ebiten.Image, fog []uint8, ver uint64, m
 	for cy := cy0; cy <= cy1; cy++ {
 		for cx := cx0; cx <= cx1; cx++ {
 			id := cy*ncx + cx
-			c := fc.chunks[id]
+			c := fc.Chunks[id]
 			if c == nil {
 				c = &fogChunk{}
-				fc.chunks[id] = c
+				fc.Chunks[id] = c
 			}
 			if !c.built || c.ver != ver {
-				fc.bake(c, fog, mw, mh, cx, cy)
+				fc.Bake(c, fog, mw, mh, cx, cy)
 				c.built, c.ver = true, ver
 			}
 			var op ebiten.DrawImageOptions
@@ -164,7 +164,7 @@ func (r *Renderer) drawFogLayer(screen *ebiten.Image, fog []uint8, ver uint64, m
 
 // drawFog is the map pass's fog layer (physical pixels, r.cam).
 func (r *Renderer) drawFog(screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
-	if len(w.Fog) == 0 && r.fogc.chunks == nil {
+	if len(w.Fog) == 0 && r.fogc.Chunks == nil {
 		return
 	}
 	r.drawFogLayer(screen, w.Fog, w.FogVer, w.TerrainW, r.game.Height(), tile, sw, sh)

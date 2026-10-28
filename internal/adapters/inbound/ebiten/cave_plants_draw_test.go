@@ -60,7 +60,7 @@ func TestPlantLightLines(t *testing.T) {
 
 func TestDuskmossIsAGroundPlant(t *testing.T) {
 	t.Parallel()
-	g, ok := plantKeys.ground["duskmoss"]
+	g, ok := plantKeys.Ground["duskmoss"]
 	if !ok {
 		t.Fatal("duskmoss needs ground plant keys")
 	}

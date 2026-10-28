@@ -69,8 +69,8 @@ func workBars(pawns []game.PawnView, dst []workBar) []workBar {
 // workBarRect is a bar's fill area on screen, physical px, and its
 // progress.
 type workBarRect struct {
-	x, y, w, h float32
-	k          float64
+	X, Y, W, H float32
+	K          float64
 }
 
 // workBarRects places the bars for these pawns on screen; none when zoomed
@@ -85,7 +85,7 @@ func (r *Renderer) workBarRects(pawns []game.PawnView, tile float64, dst []workB
 			continue
 		}
 		sx, sy := r.worldToScreenF(float64(b.x)+0.5-workBarW/2, float64(b.y)+workBarTop)
-		dst = append(dst, workBarRect{x: sx, y: sy, w: float32(workBarW * tile), h: max(float32(workBarH*tile), 3), k: b.k})
+		dst = append(dst, workBarRect{X: sx, Y: sy, W: float32(workBarW * tile), H: max(float32(workBarH*tile), 3), K: b.k})
 	}
 	return dst
 }
@@ -95,8 +95,8 @@ func (r *Renderer) workBarRects(pawns []game.PawnView, tile float64, dst []workB
 func (r *Renderer) drawWorkProgress(screen *ebiten.Image, pawns []game.PawnView, tile float64) {
 	var buf [16]workBarRect
 	for _, b := range r.workBarRects(pawns, tile, buf[:0]) {
-		vector.FillRect(screen, b.x-1, b.y-1, b.w+2, b.h+2, workBarOutline, false)
-		vector.FillRect(screen, b.x, b.y, b.w, b.h, uiSliderTrack, false)
-		vector.FillRect(screen, b.x, b.y, b.w*float32(b.k), b.h, uiAccent, false)
+		vector.FillRect(screen, b.X-1, b.Y-1, b.W+2, b.H+2, workBarOutline, false)
+		vector.FillRect(screen, b.X, b.Y, b.W, b.H, uiSliderTrack, false)
+		vector.FillRect(screen, b.X, b.Y, b.W*float32(b.K), b.H, uiAccent, false)
 	}
 }

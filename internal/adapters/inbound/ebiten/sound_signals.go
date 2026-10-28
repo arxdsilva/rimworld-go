@@ -14,10 +14,10 @@ import (
 // soundCue is one thing to hear: a sound id at a world point (tiles), or
 // global (interface sounds, thunder) with no position.
 type soundCue struct {
-	id     string
-	x, y   float64
-	vol    float64
-	global bool
+	ID     string
+	X, Y   float64
+	Vol    float64
+	Global bool
 }
 
 // actionSounds is the sound of each work action's strike; actions not
@@ -42,11 +42,11 @@ var actionSounds = map[string]string{
 }
 
 func (r *Renderer) cue(id string, x, y, vol float64) {
-	r.cues = append(r.cues, soundCue{id: id, x: x, y: y, vol: vol})
+	r.cues = append(r.cues, soundCue{ID: id, X: x, Y: y, Vol: vol})
 }
 
 func (r *Renderer) globalCue(id string) {
-	r.cues = append(r.cues, soundCue{id: id, vol: 1, global: true})
+	r.cues = append(r.cues, soundCue{ID: id, Vol: 1, Global: true})
 }
 
 // takeCues hands this frame's cues to the director.
@@ -66,7 +66,7 @@ type soundMemo struct {
 	doorsOpen map[[2]int]bool
 	notice    uint64                  // newest non-danger message heard
 	plantBuf  []int32                 // plantOn's PlantsIn buffer
-	pods      map[[3]uint64]podSounds // arrival pods heard so far (listenArrivals)
+	Pods      map[[3]uint64]podSounds // arrival pods heard so far (listenArrivals)
 	power     powerHeard              // the electric grid last frame (listenPower)
 }
 
@@ -157,7 +157,7 @@ func (r *Renderer) listenWorld(w game.WorldView, pawns []game.PawnView) {
 		}
 	}
 	*m = soundMemo{init: true, frames: frames, cutPlants: cut, mines: mines, smooths: smooths, doorsOpen: doors,
-		notice: notice, plantBuf: m.plantBuf, pods: m.pods, power: m.power}
+		notice: notice, plantBuf: m.plantBuf, Pods: m.Pods, power: m.power}
 	r.listenArrivals(w)
 }
 
@@ -178,11 +178,11 @@ func (r *Renderer) plantOn(w *game.WorldView, t [2]int) (entity.EntityID, bool) 
 // (shots where they are fired).
 func (r *Renderer) traceSound(t game.TraceView) {
 	voiced := false
-	if sp, ok := r.voice.byID[t.Attacker]; ok && t.Attacker != 0 {
+	if sp, ok := r.voice.ByID[t.Attacker]; ok && t.Attacker != 0 {
 		ax, ay := float64(t.FromX)+0.5, float64(t.FromY)+0.5
 		voiced = r.cueAnimal(sp, voiceAttack, ax, ay, volAttack)
 	}
-	if sp, ok := r.voice.byID[t.Target]; ok && t.Target != 0 && t.Hit && !t.Building {
+	if sp, ok := r.voice.ByID[t.Target]; ok && t.Target != 0 && t.Hit && !t.Building {
 		tx, ty := float64(t.ToX)+0.5, float64(t.ToY)+0.5
 		voiced = r.cueAnimal(sp, voiceHurt, tx, ty, volHurt) || voiced
 	}
@@ -230,7 +230,7 @@ func (r *Renderer) listenArrivals(w game.WorldView) {
 	seen := make(map[[3]uint64]podSounds, len(w.Arrivals))
 	for _, p := range w.Arrivals {
 		key := [3]uint64{uint64(p.X), uint64(p.Y), p.Tick}
-		st, known := m.pods[key]
+		st, known := m.Pods[key]
 		if !known { // first seen past a stage: silent for it
 			st = podSounds{fell: now >= p.Tick, landed: now >= p.Tick, opened: p.Landed}
 		}
@@ -249,7 +249,7 @@ func (r *Renderer) listenArrivals(w game.WorldView) {
 		}
 		seen[key] = st
 	}
-	m.pods = seen
+	m.Pods = seen
 }
 
 // --- electricity (PLAY-021) ---------------------------------------------------

@@ -34,23 +34,23 @@ func TestAttackReactions(t *testing.T) {
 func TestWorkSwingAndStrike(t *testing.T) {
 	t.Parallel()
 	_, st, ok := actionOf(game.PawnView{Acting: "cut"}) // old Acting strings still map
-	if !ok || st.parts[0].kind != partChip || st.motion != motionSwing {
+	if !ok || st.Parts[0].Kind != partChip || st.Motion != motionSwing {
 		t.Fatal("cutting swings and throws chips")
 	}
 	// the body winds back, drives in hard on the strike at strikeAt, then
 	// eases out
-	if k := workSwing(float64(tickAt(7, st.period, 0.30)), 7, st.period); k >= 0 {
+	if k := workSwing(float64(tickAt(7, st.Period, 0.30)), 7, st.Period); k >= 0 {
 		t.Fatalf("wound back before the strike: %v", k)
 	}
-	if k := workSwing(float64(tickAt(7, st.period, strikeAt+0.01)), 7, st.period); k < 0.8 {
+	if k := workSwing(float64(tickAt(7, st.Period, strikeAt+0.01)), 7, st.Period); k < 0.8 {
 		t.Fatalf("driven in on the strike: %v", k)
 	}
 	strikes, peak := 0, 0.0
-	for f := 0.0; f < float64(st.period)*3; f++ {
-		if workStrikeAt(f, f+1, 7, st.period) {
+	for f := 0.0; f < float64(st.Period)*3; f++ {
+		if workStrikeAt(f, f+1, 7, st.Period) {
 			strikes++
 		}
-		peak = math.Max(peak, workSwing(f, 7, st.period))
+		peak = math.Max(peak, workSwing(f, 7, st.Period))
 	}
 	if strikes != 3 || peak < 0.99 {
 		t.Fatalf("one strike per swing (%d), swing reaches 1 (%v)", strikes, peak)
@@ -172,22 +172,22 @@ func TestCombatMinVisibleFrames(t *testing.T) {
 	t.Parallel()
 	bite := game.TraceView{FromX: 6, FromY: 5, ToX: 7, ToY: 5, Melee: true}
 	// expired from the sim, but only 3 present frames ago: still lunging
-	rec := []reactTrace{{TraceView: bite, sim: math.Inf(1), frames: 3}}
+	rec := []reactTrace{{TraceView: bite, Sim: math.Inf(1), Frames: 3}}
 	if dx, _, _ := attackReactionF(rec, 6, 5); dx <= 0 {
 		t.Fatal("lunge stays for at least 8 present frames")
 	}
-	rec[0].frames = 9
+	rec[0].Frames = 9
 	if dx, _, _ := attackReactionF(rec, 6, 5); dx != 0 {
 		t.Fatal("lunge ends after its stretched duration")
 	}
 	// a fast sim (age 20 ticks already) cannot swallow the flash either
 	hit := game.TraceView{FromX: 2, FromY: 5, ToX: 6, ToY: 5, Hit: true}
-	rec = []reactTrace{{TraceView: hit, sim: 20, frames: 2}}
+	rec = []reactTrace{{TraceView: hit, Sim: 20, Frames: 2}}
 	if _, _, fl := attackReactionF(rec, 6, 5); fl <= 0 {
 		t.Fatal("hit flash survives a fast sim")
 	}
 	// at 1x the sim duration governs: unchanged
-	rec = []reactTrace{{TraceView: bite, sim: 5, frames: 5}}
+	rec = []reactTrace{{TraceView: bite, Sim: 5, Frames: 5}}
 	a, _, _ := attackReactionF(rec, 6, 5)
 	b, _, _ := attackReaction([]game.TraceView{{FromX: 6, FromY: 5, ToX: 7, ToY: 5, Melee: true, Age: 5}}, 6, 5)
 	if math.Abs(a-b) > 1e-9 {
@@ -196,17 +196,17 @@ func TestCombatMinVisibleFrames(t *testing.T) {
 	// bookkeeping retains a trace after the sim drops it
 	r := &Renderer{present: 100}
 	st := r.animState()
-	st.trackReactions([]game.TraceView{bite}, 1000, 100)
-	if got := st.reactions(100, nil); len(got) != 1 {
+	st.TrackReactions([]game.TraceView{bite}, 1000, 100)
+	if got := st.Reactions(100, nil); len(got) != 1 {
 		t.Fatalf("tracked = %d", len(got))
 	}
-	st.trackReactions(nil, 1001, 103)
-	got := st.reactions(103, nil)
-	if len(got) != 1 || got[0].frames != 3 || !math.IsInf(got[0].sim, 1) {
+	st.TrackReactions(nil, 1001, 103)
+	got := st.Reactions(103, nil)
+	if len(got) != 1 || got[0].Frames != 3 || !math.IsInf(got[0].Sim, 1) {
 		t.Fatalf("expired trace kept 3 frames: %+v", got)
 	}
-	st.trackReactions(nil, 1100, 200)
-	if len(st.reactions(200, nil)) != 0 {
+	st.TrackReactions(nil, 1100, 200)
+	if len(st.Reactions(200, nil)) != 0 {
 		t.Fatal("old reactions are pruned")
 	}
 }
@@ -231,14 +231,14 @@ func TestTrotEightFrames(t *testing.T) {
 	}
 	const gait = 0.816 // the deer's
 	walk := moveState{Stride: 0, Blend: 1}
-	if s := staticShow(game.AnimalView{ID: 1}, walk, 0, gait); s.suffix != "_walk03" {
-		t.Fatalf("a walk starts on walk03, got %q", s.suffix)
+	if s := staticShow(game.AnimalView{ID: 1}, walk, 0, gait); s.Suffix != "_walk03" {
+		t.Fatalf("a walk starts on walk03, got %q", s.Suffix)
 	}
 	walk.Stride = gait
-	if s := staticShow(game.AnimalView{ID: 1}, walk, 0, gait); s.suffix != "_walk03" {
-		t.Fatalf("the trot repeats every gait (%.3f tiles), got %q", gait, s.suffix)
+	if s := staticShow(game.AnimalView{ID: 1}, walk, 0, gait); s.Suffix != "_walk03" {
+		t.Fatalf("the trot repeats every gait (%.3f tiles), got %q", gait, s.Suffix)
 	}
-	if s := staticShow(game.AnimalView{ID: 1}, moveState{Stride: 0.5}, 0, gait); s.walk || s.suffix != "" {
+	if s := staticShow(game.AnimalView{ID: 1}, moveState{Stride: 0.5}, 0, gait); s.Walk || s.Suffix != "" {
 		t.Fatal("idle animals use the static pose")
 	}
 	r := combatRenderer(100, nil, game.WorldView{})

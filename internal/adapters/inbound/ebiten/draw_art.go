@@ -186,7 +186,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	r.setView(sw, sh, tile)
 	r.links.Sync(w, r.game.Width(), r.game.Height()) // linkgrid.go: rebuilt only on StructVer
 	r.lod.tier = lodFor(tile)
-	r.lod.crops.begin()
+	r.lod.crops.Begin()
 	r.syncFrameChunks() // lod.go: the chunk lists in view
 	r.lod.chunks.frame++
 	views := r.lod.views
@@ -206,7 +206,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	r.drawFoundation(screen, w, sw, sh, tile) // bridge_draw.go: over the water, under floors
 	r.drawFloorLayers(screen, w, sw, sh, tile)
 	r.drawConduits(screen, w, sw, sh, tile) // power_draw.go: over floors, under zones and objects
-	r.power.prune(r.present)
+	r.power.Prune(r.present)
 	r.layer("zones")
 	r.drawZones(screen, w, sw, sh, tile) // zones_draw.go
 	r.drawPlanOverlay(screen, w, sw, sh, tile)
@@ -869,7 +869,7 @@ func (r *Renderer) drawTufts(screen *ebiten.Image, w game.WorldView, sw, sh int,
 	vx0, vy0, vx1, vy1 := r.visibleTiles()
 	x0, y0, x1, y1 := r.grassReach(vx0, vy0, vx1, vy1)
 	r.grassFrameMask(&w, x0, y0, x1, y1) // grass_draw.go
-	r.lod.grass.quads = 0
+	r.lod.grass.Quads = 0
 	if tile >= grassLiveMin {
 		limit := 9
 		if tile < lodLiveMin {
@@ -1038,7 +1038,7 @@ func plantSprite(p game.PlantView) (string, float64) {
 		k, sc, _ := newPlantKey(p, h)
 		return k, sc
 	}
-	if ks, ok := plantKeys.crops[p.Species]; ok {
+	if ks, ok := plantKeys.Crops[p.Species]; ok {
 		return ks[cropStage(p)][h%cropVariants], 1 // the inspector's icon and the shadow; drawCropObj composes the units
 	}
 	if k, sc, ok := newPlantKey(p, h); ok {
@@ -1047,9 +1047,9 @@ func plantSprite(p game.PlantView) (string, float64) {
 	switch p.Species {
 	case "tree":
 		k := 0.45 + 0.55*float64(p.Growth)/100
-		return plantKeys.trees[treeSpeciesAt(h)][h%3], k
+		return plantKeys.Trees[treeSpeciesAt(h)][h%3], k
 	default:
-		return groundPick(plantKeys.ground["bush"], p, h), bushScale(p)
+		return groundPick(plantKeys.Ground["bush"], p, h), bushScale(p)
 	}
 }
 

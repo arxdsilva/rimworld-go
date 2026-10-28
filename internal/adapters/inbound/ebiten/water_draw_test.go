@@ -177,15 +177,15 @@ func TestWaterShaderCompiles(t *testing.T) {
 	r.art.Sprites["terrain/shallow_water_00"].Img = img
 	dst := ebiten.NewImage(64, 64)
 	shaderDraws := 0
-	r.water.onDraw = func(_ string, shader bool) {
+	r.water.OnDraw = func(_ string, shader bool) {
 		if shader {
 			shaderDraws++
 		}
 	}
 	r.setView(64, 64, 32)
 	r.drawWaterTile(dst, "shallow_water", 0, 0, 32, 64, 64, noCS)
-	if r.water.err != nil || shaderDraws != 1 {
-		t.Fatalf("water draw: err %v shader draws %d", r.water.err, shaderDraws)
+	if r.water.Err != nil || shaderDraws != 1 {
+		t.Fatalf("water draw: err %v shader draws %d", r.water.Err, shaderDraws)
 	}
 	if got := r.waterClock(); got != float32(90)/60 {
 		t.Fatalf("clock %v", got)
@@ -199,7 +199,7 @@ func TestWaterShaderCompiles(t *testing.T) {
 func TestWaterFallbackFramesAnimate(t *testing.T) {
 	t.Parallel()
 	r := &Renderer{}
-	r.water.err = errors.New("no shader") // as when water.kage fails to compile
+	r.water.Err = errors.New("no shader") // as when water.kage fails to compile
 	frames := map[string]bool{}
 	for p := uint64(0); p < 4*waterFrameTicks; p += waterFrameTicks {
 		r.present = p
@@ -232,19 +232,19 @@ func TestArrivalEffectDraw(t *testing.T) {
 	// falling: the streak is above its landing tile and drops as the tick nears
 	early := arrivalEffects(pods, 1000-arrivalFallTicks+4, false)
 	late := arrivalEffects(pods, 1000-4, false)
-	if len(early) != 1 || len(late) != 1 || early[0].key != "effect/pod_fall" {
+	if len(early) != 1 || len(late) != 1 || early[0].Key != "effect/pod_fall" {
 		t.Fatalf("fall effects: %+v %+v", early, late)
 	}
-	if !(early[0].y < late[0].y) || late[0].y >= 6.5 || late[0].x != 5.5 || late[0].alpha <= early[0].alpha {
+	if !(early[0].Y < late[0].Y) || late[0].Y >= 6.5 || late[0].X != 5.5 || late[0].Alpha <= early[0].Alpha {
 		t.Fatalf("the streak should drop onto tile (5,6): early %+v late %+v", early[0], late[0])
 	}
 	// landed: dust on the tile, swelling and fading
 	d0 := arrivalEffects(pods[1:], 1100, false)
 	d1 := arrivalEffects(pods[1:], 1100+arrivalDustTicks/2, false)
-	if len(d0) != 1 || len(d1) != 1 || d0[0].key != "effect/pod_dust" || d0[0].x != 9.5 || d0[0].y != 2.5 {
+	if len(d0) != 1 || len(d1) != 1 || d0[0].Key != "effect/pod_dust" || d0[0].X != 9.5 || d0[0].Y != 2.5 {
 		t.Fatalf("dust: %+v %+v", d0, d1)
 	}
-	if !(d1[0].scale > d0[0].scale) || !(d1[0].alpha < d0[0].alpha) {
+	if !(d1[0].Scale > d0[0].Scale) || !(d1[0].Alpha < d0[0].Alpha) {
 		t.Fatalf("dust swells and fades: %+v -> %+v", d0[0], d1[0])
 	}
 	// the first pod: dust after its landing, gone once it has settled
@@ -256,7 +256,7 @@ func TestArrivalEffectDraw(t *testing.T) {
 		t.Fatalf("a streak under Reduced Motion: %+v", fx)
 	}
 	a, b := arrivalEffects(pods[:1], 1000, true), arrivalEffects(pods[:1], 1050, true)
-	if a[0].scale != 1 || b[0].scale != 1 || !(b[0].alpha < a[0].alpha) {
+	if a[0].Scale != 1 || b[0].Scale != 1 || !(b[0].Alpha < a[0].Alpha) {
 		t.Fatalf("reduced dust %+v %+v", a, b)
 	}
 }

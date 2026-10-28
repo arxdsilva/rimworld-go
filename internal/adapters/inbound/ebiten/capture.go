@@ -425,7 +425,7 @@ func (a *App) captureUI(ui string) {
 		// and the power grid overlay on for power-overlay
 		sw, sh := a.size()
 		a.renderer.centerOn(float64(a.renderer.game.Width())/2, float64(a.renderer.game.Height())/2-9, sw, sh)
-		a.renderer.pov.on = ui == "power-overlay"
+		a.renderer.pov.On = ui == "power-overlay"
 	case "zone", "zone-shrink":
 		a.captureZone(ui == "zone-shrink", at)
 	case "paths":

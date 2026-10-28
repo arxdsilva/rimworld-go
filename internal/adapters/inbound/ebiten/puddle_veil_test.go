@@ -32,7 +32,7 @@ func puddleSim(w game.WorldView) *envSim {
 
 // bakeChunk bakes chunk (cx, cy) of w on r and returns it.
 func bakeChunk(r *Renderer, w game.WorldView, cx, cy int) *snowChunk {
-	r.env.setWeather(w) // the room grid, roofs and snow the bake reads
+	r.env.SetWeather(w) // the room grid, roofs and snow the bake reads
 	c := &snowChunk{}
 	side := w.TerrainW
 	r.bakeSnowChunk(c, w, side, len(w.Terrain)/side, cx, cy)
@@ -42,10 +42,10 @@ func bakeChunk(r *Renderer, w game.WorldView, cx, cy int) *snowChunk {
 // pudAt is chunk c's puddle cover (0..255) at texel (sx, sy) of its tile
 // (x, y), chunk-local, at the chunk's wet texels a tile.
 func pudAt(c *snowChunk, x, y, sx, sy int) uint8 {
-	if c.pud == nil {
+	if c.Pud == nil {
 		return 0
 	}
-	return c.pud[(snowPad+y*c.wetPx+sy)*wetImgW(c.wetPx)+snowPad+x*c.wetPx+sx]
+	return c.Pud[(snowPad+y*c.WetPx+sy)*wetImgW(c.WetPx)+snowPad+x*c.WetPx+sx]
 }
 
 // wetTexel is the wet veil's alpha at texel (sx, sy) of chunk-local tile
@@ -80,11 +80,11 @@ func TestPuddleCoverGrowsWithWetness(t *testing.T) {
 		}
 		// puddles grow from the same hollows: water stays where it lay
 		for k, v := range prev {
-			if v > 0 && (c.pud == nil || c.pud[k] < v) {
-				t.Fatalf("wetness %.1f: texel %d drops from %d to %v", w.Wetness, k, v, c.pud)
+			if v > 0 && (c.Pud == nil || c.Pud[k] < v) {
+				t.Fatalf("wetness %.1f: texel %d drops from %d to %v", w.Wetness, k, v, c.Pud)
 			}
 		}
-		prev = append(prev[:0], c.pud...)
+		prev = append(prev[:0], c.Pud...)
 		shares = append(shares, s)
 	}
 	if shares[0] != 0 || shares[1] != 0 {
@@ -263,12 +263,12 @@ func TestPuddleEdgesAreSoft(t *testing.T) {
 	t.Parallel()
 	w := puddleWorld(64, 0.8)
 	r := New(puddleSim(w))
-	r.snowc.wantPx = wetPxFor(lodLiveMin) // up close, where shores are crisp
+	r.snowc.WantPx = wetPxFor(lodLiveMin) // up close, where shores are crisp
 	c := bakeChunk(r, w, 0, 0)
-	if c.wetPx != 8 {
-		t.Fatalf("live detail %d texels a tile, want 8", c.wetPx)
+	if c.WetPx != 8 {
+		t.Fatalf("live detail %d texels a tile, want 8", c.WetPx)
 	}
-	n := snowChunkTiles * c.wetPx
+	n := snowChunkTiles * c.WetPx
 	at := func(tx, ty int) int { return int(pudAt(c, 0, 0, tx, ty)) }
 	wet, partial, hard := 0, 0, 0
 	for ty := 0; ty < n; ty++ {
@@ -326,10 +326,10 @@ func TestPuddlesFadeUnderSnow(t *testing.T) {
 			w.Snow[i] = depth
 		}
 		w.SnowVer++
-		r.env.setWeather(w)
+		r.env.SetWeather(w)
 		c := bakeChunk(r, w, 0, 0)
 		s := 0
-		for _, v := range c.pud {
+		for _, v := range c.Pud {
 			s += int(v)
 		}
 		return s
@@ -363,17 +363,17 @@ func TestRipplesOnlyInPuddles(t *testing.T) {
 		r.present++
 		r.stepEnvironment(w, nil)
 		r.drawPuddleVeil(screen, w, 640, 400, r.tilePx())
-		for _, d := range r.env.drops {
+		for _, d := range r.env.Drops {
 			switch {
-			case d.kind == dropRipple && d.age == 0:
+			case d.Kind == dropRipple && d.Age == 0:
 				ripples++
-				if p := r.puddleAt(d.gx, d.gy); p < puddleRippleMin {
-					t.Fatalf("a ripple at (%.2f, %.2f) outside the water: cover %.2f", d.gx, d.gy, p)
+				if p := r.puddleAt(d.Gx, d.Gy); p < puddleRippleMin {
+					t.Fatalf("a ripple at (%.2f, %.2f) outside the water: cover %.2f", d.Gx, d.Gy, p)
 				}
-			case d.kind == dropSplash && d.age == 0:
+			case d.Kind == dropSplash && d.Age == 0:
 				splashes++
-				if p := r.puddleAt(d.gx, d.gy); p >= puddleRippleMin {
-					t.Fatalf("a splash at (%.2f, %.2f) inside a puddle: cover %.2f", d.gx, d.gy, p)
+				if p := r.puddleAt(d.Gx, d.Gy); p >= puddleRippleMin {
+					t.Fatalf("a splash at (%.2f, %.2f) inside a puddle: cover %.2f", d.Gx, d.Gy, p)
 				}
 			}
 		}
@@ -403,8 +403,8 @@ func TestPuddleVeilDrawsFlatLitAtEveryTier(t *testing.T) {
 		screen := ebiten.NewImage(640, 400)
 		before := r.lit.Calls
 		r.drawPuddleVeil(screen, w, 640, 400, r.tilePx())
-		if r.snowc.wetDraws == 0 || r.lit.Calls-before < r.snowc.wetDraws {
-			t.Fatalf("tile %v px: %d veil draws, %d lit calls", px, r.snowc.wetDraws, r.lit.Calls-before)
+		if r.snowc.WetDraws == 0 || r.lit.Calls-before < r.snowc.WetDraws {
+			t.Fatalf("tile %v px: %d veil draws, %d lit calls", px, r.snowc.WetDraws, r.lit.Calls-before)
 		}
 		// lit flat like the ground: no normal map, a sky value per vertex
 		for _, v := range r.lod.verts {
@@ -414,8 +414,8 @@ func TestPuddleVeilDrawsFlatLitAtEveryTier(t *testing.T) {
 		}
 		w.Wetness = 0
 		r.drawPuddleVeil(screen, w, 640, 400, r.tilePx())
-		if r.snowc.wetDraws != 0 {
-			t.Fatalf("tile %v px: dry ground draws %d veil passes", px, r.snowc.wetDraws)
+		if r.snowc.WetDraws != 0 {
+			t.Fatalf("tile %v px: dry ground draws %d veil passes", px, r.snowc.WetDraws)
 		}
 	}
 	// the flat ground decals that remain are lit as ground, without normals
@@ -449,9 +449,9 @@ func TestPuddleVeilRebakesOnWetBucketWithinBudget(t *testing.T) {
 	r.cam.Zoom = 8.0 / 64 // map tier: many chunks in view
 	screen := ebiten.NewImage(1280, 800)
 	draw := func() int {
-		n := r.snowc.bakes
+		n := r.snowc.Bakes
 		r.drawPuddleVeil(screen, w, 1280, 800, r.tilePx())
-		return r.snowc.bakes - n
+		return r.snowc.Bakes - n
 	}
 	first := draw()
 	if first <= puddleBakeBudget {
@@ -482,12 +482,12 @@ func TestPuddleVeilRebakesOnWetBucketWithinBudget(t *testing.T) {
 	// a crop sown at (40, 40) rebakes its chunk (1, 1); the key is kept per
 	// 16-tile read-model chunk, so the chunks whose ring reaches that one
 	// may follow, and nothing else
-	c11 := r.snowc.chunks[1*((side+snowChunkTiles-1)/snowChunkTiles)+1]
-	before := c11.plants
+	c11 := r.snowc.Chunks[1*((side+snowChunkTiles-1)/snowChunkTiles)+1]
+	before := c11.Plants
 	w.Plants = append(w.Plants, game.PlantView{X: 40, Y: 40, Species: game.Crops()[0].Name, Zone: game.Crops()[0].Name})
 	sim.world = w
-	if n := draw(); n < 1 || n > 4 || c11.plants == before {
-		t.Fatalf("a crop rebaked %d chunks (its own: %v), want 1..4 with its own", n, c11.plants != before)
+	if n := draw(); n < 1 || n > 4 || c11.Plants == before {
+		t.Fatalf("a crop rebaked %d chunks (its own: %v), want 1..4 with its own", n, c11.Plants != before)
 	}
 	if n := draw(); n != 0 {
 		t.Fatalf("then %d more", n)
@@ -527,13 +527,13 @@ func BenchmarkPuddleVeil(b *testing.B) {
 			tile := r.tilePx()
 			r.cam.OffsetX, r.cam.OffsetY = 100*tile, 100*tile
 			r.drawPuddleVeil(screen, w, 1280, 800, tile)
-			b0, d0 := r.snowc.bakes, 0
+			b0, d0 := r.snowc.Bakes, 0
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				r.drawPuddleVeil(screen, w, 1280, 800, tile)
-				d0 += r.snowc.wetDraws
+				d0 += r.snowc.WetDraws
 			}
-			b.ReportMetric(float64(r.snowc.bakes-b0)/float64(b.N), "bakes/op")
+			b.ReportMetric(float64(r.snowc.Bakes-b0)/float64(b.N), "bakes/op")
 			b.ReportMetric(float64(d0)/float64(b.N), "draws/op")
 		})
 	}
@@ -546,8 +546,8 @@ func BenchmarkPuddleBake(b *testing.B) {
 	for _, px := range []int{2, 4, 8} {
 		b.Run(fmt.Sprintf("px%d", px), func(b *testing.B) {
 			r := New(newFrozenSim(w))
-			r.env.setWeather(w)
-			r.snowc.wantPx = px
+			r.env.SetWeather(w)
+			r.snowc.WantPx = px
 			var c snowChunk
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
@@ -563,10 +563,10 @@ func TestPuddleBakeReliefIsTheField(t *testing.T) {
 	t.Parallel()
 	salt := puddleSalt(96, 64)
 	var wb wetBake
-	wb.fillLattices(0, 0, 39, 39, salt)
+	wb.FillLattices(0, 0, 39, 39, salt)
 	for i := 0; i < 400; i++ {
 		fx, fy := hash01(uint64(i), 1)*39, hash01(uint64(i), 2)*39
-		if f, want := wb.relief(fx, fy), puddleField(fx, fy, salt); math.Abs(f-want) > 1e-12 {
+		if f, want := wb.Relief(fx, fy), puddleField(fx, fy, salt); math.Abs(f-want) > 1e-12 {
 			t.Fatalf("relief at (%.2f, %.2f) = %v, field %v", fx, fy, f, want)
 		}
 	}
@@ -581,7 +581,7 @@ func TestSnowCacheEvictsUnseenChunks(t *testing.T) {
 	screen := ebiten.NewImage(640, 400)
 	r.cam.OffsetX, r.cam.OffsetY = 0, 0
 	r.drawPuddleVeil(screen, w, 640, 400, r.tilePx())
-	if _, ok := r.snowc.chunks[0]; !ok {
+	if _, ok := r.snowc.Chunks[0]; !ok {
 		t.Fatal("chunk (0, 0) not baked")
 	}
 	tile := r.tilePx()
@@ -589,10 +589,10 @@ func TestSnowCacheEvictsUnseenChunks(t *testing.T) {
 	for i := 0; i <= snowEvictPasses+256; i++ {
 		r.drawPuddleVeil(screen, w, 640, 400, tile)
 	}
-	if _, ok := r.snowc.chunks[0]; ok {
+	if _, ok := r.snowc.Chunks[0]; ok {
 		t.Fatal("chunk (0, 0) kept long after the view left it")
 	}
-	if _, ok := r.snowc.chunks[3*4+3]; !ok {
+	if _, ok := r.snowc.Chunks[3*4+3]; !ok {
 		t.Fatal("the chunk in view was dropped")
 	}
 }

@@ -56,7 +56,7 @@ func TestFloatTraceNumbers(t *testing.T) {
 	r.floatTrace(game.TraceView{ToX: 1, ToY: 1, Hit: true, Damage: 12}, 1)
 	r.floatTrace(game.TraceView{ToX: 1, ToY: 1}, 2) // a missed shot
 	r.floatTrace(game.TraceView{ToX: 1, ToY: 1, Melee: true}, 3)
-	if len(r.floaters) != 2 || r.floaters[0].text != "-12" || r.floaters[1].text != "miss" {
+	if len(r.floaters) != 2 || r.floaters[0].Text != "-12" || r.floaters[1].Text != "miss" {
 		t.Fatalf("floaters %+v", r.floaters)
 	}
 }

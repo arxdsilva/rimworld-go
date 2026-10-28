@@ -16,7 +16,7 @@ func TestSliderPlaysTick(t *testing.T) {
 	a, f, u := newKit(t)
 	rec := &soundRecorder{}
 	a.cfg.Sound = rec
-	gap := func() { a.snd.frame += cueGap } // past the one-sound rate limit
+	gap := func() { a.snd.Frame += cueGap } // past the one-sound rate limit
 
 	// A discrete slider ticks on every step it moves.
 	stop := 0.0
@@ -102,7 +102,7 @@ func TestPodCuesFollowArrivals(t *testing.T) {
 	ids := func() []string {
 		var out []string
 		for _, c := range r.takeCues() {
-			out = append(out, c.id)
+			out = append(out, c.ID)
 		}
 		return out
 	}
@@ -132,20 +132,20 @@ func TestPodCuesFollowArrivals(t *testing.T) {
 	}
 
 	// A pod first seen after it landed (a loaded game) stays silent.
-	r.memo.pods = nil
+	r.memo.Pods = nil
 	if got := at(land+200, true); len(got) != 0 {
 		t.Fatalf("an old landing is silent: %v", got)
 	}
 
 	// The cues reach the speakers where the pod is, and only when on screen.
-	r.memo.pods = nil
+	r.memo.Pods = nil
 	sim.tick = clock.Tick(land - 30)
 	r.listenArrivals(world(false))
 	a.colonyCues()
 	if n := len(rec.played("sfx.pod_fall")); n != 1 {
 		t.Fatalf("the on-screen pod's fall is played: %+v", rec.plays)
 	}
-	r.memo.pods = nil
+	r.memo.Pods = nil
 	far := game.WorldView{Arrivals: []game.ArrivalView{{X: px + 900, Y: py, Tick: land}}}
 	r.listenArrivals(far)
 	rec.plays = nil
@@ -178,7 +178,7 @@ func TestWaterAmbienceFollowsScreen(t *testing.T) {
 		r.cam.Zoom = 1
 		r.cam.OffsetX = tileX*float64(TileSize) - (v.X0+v.X1)/2
 		r.cam.OffsetY = 100*float64(TileSize) - (v.Y0+v.Y1)/2
-		a.snd.frame += cueGap
+		a.snd.Frame += cueGap
 		a.soundFrame()
 	}
 	vol := func(key string) float64 { return rec.loops[key].vol }

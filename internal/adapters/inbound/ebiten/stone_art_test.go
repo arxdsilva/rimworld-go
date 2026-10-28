@@ -187,7 +187,7 @@ func TestStonecutterCard(t *testing.T) {
 func TestSmoothActionAnimates(t *testing.T) {
 	t.Parallel()
 	act, d, ok := actionOf(game.PawnView{Action: game.ActionSmooth})
-	if !ok || act != game.ActionSmooth || d.motion != motionSwing || len(d.parts) == 0 || actionSounds[game.ActionSmooth] == "" {
+	if !ok || act != game.ActionSmooth || d.Motion != motionSwing || len(d.Parts) == 0 || actionSounds[game.ActionSmooth] == "" {
 		t.Fatalf("smooth action = %q %+v %v", act, d, ok)
 	}
 }
@@ -223,7 +223,7 @@ func TestStoneItemTintAndFallback(t *testing.T) {
 		t.Fatalf("wood: %s %v", key, cs)
 	}
 	a := r.carryPose(game.PawnView{ID: 1, Carrying: "granite chunk"}, moveState{})
-	if a.held.key != "item/stone_blocks" || a.held.cs != tintCS(r.stuffTint("granite blocks")) {
-		t.Fatalf("carried chunk = %+v", a.held)
+	if a.Held.Key != "item/stone_blocks" || a.Held.Cs != tintCS(r.stuffTint("granite blocks")) {
+		t.Fatalf("carried chunk = %+v", a.Held)
 	}
 }

@@ -55,7 +55,7 @@ func TestZoneOutlinesOneFlush(t *testing.T) {
 	}
 	// the outlines did go through the batch
 	for _, z := range w.Zones {
-		for _, run := range r.zoneGeomOf(z).runs {
+		for _, run := range r.zoneGeomOf(z).Runs {
 			r.drawZoneRun(&r.zoneBatch, z.Kind, run, 640, 400, tile)
 		}
 	}
@@ -68,7 +68,7 @@ func TestZoneOutlinesOneFlush(t *testing.T) {
 func TestFenceRunPosts(t *testing.T) {
 	r, tile := zoneBatchRenderer(t)
 	var b triBatch
-	r.drawFenceRun(&b, edgeRun{x0: 2, y0: 3, x1: 9, y1: 3, ny: -1, startConvex: true, endConvex: true}, tile)
+	r.drawFenceRun(&b, edgeRun{X0: 2, Y0: 3, X1: 9, Y1: 3, Ny: -1, StartConvex: true, EndConvex: true}, tile)
 	if got := quadsOf(&b); got != 1+8 {
 		t.Fatalf("quads = %d, want 1 rail + 8 posts", got)
 	}

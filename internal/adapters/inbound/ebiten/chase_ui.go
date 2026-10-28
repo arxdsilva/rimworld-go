@@ -53,7 +53,7 @@ func (r *Renderer) onThreatPause(w game.WorldView, tick uint64) {
 	}
 	// The App sets the colony viewport (physical) each frame; unset (no
 	// App yet) there is nothing to centre in.
-	v := r.voice.view
+	v := r.voice.View
 	if v.W() <= 0 || v.H() <= 0 {
 		return
 	}

@@ -133,10 +133,10 @@ func TestClickOnAZoneLabelSelectsItDirectly(t *testing.T) {
 	}
 	r := a.renderer
 	plan, _, _, _, _ := r.zoneLabelPlanFor(z, r.zoneGeomOf(z), r.tilePx())
-	if !plan.ok {
+	if !plan.Ok {
 		t.Fatal("the zone's label should show")
 	}
-	cx, cy := plan.plate.Center()
+	cx, cy := plan.Plate.Center()
 	a.cursor = &[2]int{int(cx), int(cy)}
 	a.clickSelect()
 	if !a.sel.HasZone || a.sel.ZoneSel != 3 || a.sel.HasPlant {
@@ -144,7 +144,7 @@ func TestClickOnAZoneLabelSelectsItDirectly(t *testing.T) {
 	}
 	// Just left of the plate it is an ordinary click: the plant under it.
 	a.clearSelections(selNone)
-	a.cursor = &[2]int{int(plan.plate.X) - 2, int(cy)}
+	a.cursor = &[2]int{int(plan.Plate.X) - 2, int(cy)}
 	a.clickSelect()
 	if !a.sel.HasPlant || a.sel.HasZone {
 		t.Fatalf("a click beside the plate selected plant=%v zone=%v, want the plant", a.sel.HasPlant, a.sel.HasZone)

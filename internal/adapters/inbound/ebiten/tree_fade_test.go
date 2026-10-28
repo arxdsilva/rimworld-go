@@ -49,8 +49,8 @@ func TestCanopyFadesWithCreatureBehind(t *testing.T) {
 func TestCanopyOpaqueWithNobodyNear(t *testing.T) {
 	t.Parallel()
 	r := fadeRenderer()
-	if a := runFade(r, 5, 5, 10); a != 1 || len(r.treeFx.fades) != 0 {
-		t.Fatalf("alpha %.2f, fades %d; want opaque and no state", a, len(r.treeFx.fades))
+	if a := runFade(r, 5, 5, 10); a != 1 || len(r.treeFx.Fades) != 0 {
+		t.Fatalf("alpha %.2f, fades %d; want opaque and no state", a, len(r.treeFx.Fades))
 	}
 }
 
@@ -64,8 +64,8 @@ func TestCanopyEasesAndRecovers(t *testing.T) {
 	}
 	runFade(r, 5, 5, 30)
 	delete(r.lod.creatures, [2]int{5, 4})
-	if a := runFade(r, 5, 5, 60); a != 1 || len(r.treeFx.fades) != 0 {
-		t.Fatalf("after leaving: alpha %.3f, fades %d", a, len(r.treeFx.fades))
+	if a := runFade(r, 5, 5, 60); a != 1 || len(r.treeFx.Fades) != 0 {
+		t.Fatalf("after leaving: alpha %.3f, fades %d", a, len(r.treeFx.Fades))
 	}
 }
 
@@ -103,13 +103,13 @@ func TestTreeFadeDroppedOutOfView(t *testing.T) {
 	r := fadeRenderer()
 	r.lod.creatures[[2]int{5, 5}] = true
 	runFade(r, 5, 5, 5)
-	if len(r.treeFx.fades) != 1 {
-		t.Fatalf("fades = %d, want 1", len(r.treeFx.fades))
+	if len(r.treeFx.Fades) != 1 {
+		t.Fatalf("fades = %d, want 1", len(r.treeFx.Fades))
 	}
 	r.present += 10 // the tree is no longer drawn
 	r.sweepTreeFades()
-	if len(r.treeFx.fades) != 0 {
-		t.Fatalf("fade state kept for a tree out of view: %d", len(r.treeFx.fades))
+	if len(r.treeFx.Fades) != 0 {
+		t.Fatalf("fade state kept for a tree out of view: %d", len(r.treeFx.Fades))
 	}
 }
 
@@ -141,7 +141,7 @@ func TestTreeDrawsTrunkThenCanopy(t *testing.T) {
 	if got := strings.Join(order[2:], ","); got != strings.Repeat("tree_trunk,tree_canopy,", 4)+"tree_trunk,tree_canopy" {
 		t.Fatalf("faded tree order = %q", got)
 	}
-	if st := r.treeFx.fades[envTileKey(5, 5)]; st == nil || st.alpha >= 1 {
+	if st := r.treeFx.Fades[envTileKey(5, 5)]; st == nil || st.Alpha >= 1 {
 		t.Fatalf("canopy not fading: %+v", st)
 	}
 }

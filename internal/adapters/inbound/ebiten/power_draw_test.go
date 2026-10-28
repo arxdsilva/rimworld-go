@@ -355,7 +355,7 @@ func pdRenderer(t *testing.T, w game.WorldView) (*Renderer, *[]string) {
 	}
 	r.lod.views = []game.ChunkView{cv}
 	got := &[]string{}
-	r.power.trace = func(part, key string) { *got = append(*got, part+" "+key) }
+	r.power.Trace = func(part, key string) { *got = append(*got, part+" "+key) }
 	return r, got
 }
 
@@ -530,20 +530,20 @@ func TestTurbineBladesFollowWind(t *testing.T) {
 	}
 
 	var p powerDraw
-	f0 := p.bladeFrame(5, 0, 100)
+	f0 := p.BladeFrame(5, 0, 100)
 	for now := uint64(101); now < 400; now++ {
-		if f := p.bladeFrame(5, 0, now); f != f0 {
+		if f := p.BladeFrame(5, 0, now); f != f0 {
 			t.Fatalf("no wind: frame moved %d → %d", f0, f)
 		}
 	}
 	frames := map[int]bool{}
-	prev := p.bladeFrame(5, slow, 400)
+	prev := p.BladeFrame(5, slow, 400)
 	for now := uint64(401); now < 1400; now++ {
 		fps := slow
 		if now%37 < 18 { // gusts: the wind changes all the time
 			fps = fast
 		}
-		f := p.bladeFrame(5, fps, now)
+		f := p.BladeFrame(5, fps, now)
 		if step := (f - prev + turbineFrames) % turbineFrames; step > 1 {
 			t.Fatalf("frame jumped %d → %d at %d", prev, f, now)
 		}
@@ -553,14 +553,14 @@ func TestTurbineBladesFollowWind(t *testing.T) {
 	if len(frames) != turbineFrames {
 		t.Fatalf("frames seen %v, want all %d", frames, turbineFrames)
 	}
-	for _, f := range []int{p.bladeFrame(6, 0, 0), p.bladeFrame(7, 0, 0)} {
+	for _, f := range []int{p.BladeFrame(6, 0, 0), p.BladeFrame(7, 0, 0)} {
 		if f < 1 || f > turbineFrames {
 			t.Fatalf("frame %d out of 1..%d", f, turbineFrames)
 		}
 	}
-	p.prune(100000)
-	if len(p.spins) != 0 {
-		t.Fatalf("stale turbines kept: %d", len(p.spins))
+	p.Prune(100000)
+	if len(p.Spins) != 0 {
+		t.Fatalf("stale turbines kept: %d", len(p.Spins))
 	}
 }
 

@@ -71,16 +71,16 @@ func TestBridgeKeys(t *testing.T) {
 func TestBridgeCellsCachedOnStructVer(t *testing.T) {
 	var c bridgeCache
 	w := bridgeWorld(3, 3, terrain.DeepWater, [2]int{1, 1})
-	a := c.sync(w)
+	a := c.Sync(w)
 	if !a[[2]int{1, 1}] || len(a) != 1 {
 		t.Fatalf("cells = %v", a)
 	}
 	w.Buildings = append(w.Buildings, game.BuildingView{ID: 9, Kind: "bridge", X: 0, Y: 0})
-	if b := c.sync(w); len(b) != 1 {
+	if b := c.Sync(w); len(b) != 1 {
 		t.Errorf("same StructVer must reuse the cache, got %d cells", len(b))
 	}
 	w.StructVer = 2
-	if b := c.sync(w); len(b) != 2 {
+	if b := c.Sync(w); len(b) != 2 {
 		t.Errorf("new StructVer must rebuild, got %d cells", len(b))
 	}
 }

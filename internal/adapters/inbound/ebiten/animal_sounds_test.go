@@ -14,7 +14,7 @@ import (
 func voiceRenderer(zoom float64) *Renderer {
 	r := New(&stubSim{w: 64, h: 64})
 	r.cam.Zoom = zoom
-	r.voice.view = colonyViewport(1280, 720)
+	r.voice.View = colonyViewport(1280, 720)
 	return r
 }
 
@@ -45,7 +45,7 @@ func listen(r *Renderer, w game.WorldView, frames int) []heardCue {
 func idsOf(cs []heardCue) []string {
 	var ids []string
 	for _, c := range cs {
-		ids = append(ids, c.id)
+		ids = append(ids, c.ID)
 	}
 	return ids
 }
@@ -62,7 +62,7 @@ func TestCallsWhileWanderingOnScreen(t *testing.T) {
 		t.Fatal("a wandering deer on screen never called within its first-call window")
 	}
 	c := cues[0]
-	if c.id != "animal.deer.call" || c.vol != volCall || c.x != 5.5 || c.y != 5.5 || c.global {
+	if c.ID != "animal.deer.call" || c.Vol != volCall || c.X != 5.5 || c.Y != 5.5 || c.Global {
 		t.Fatalf("first call = %+v, want animal.deer.call at 5.5,5.5 volume %v", c.soundCue, volCall)
 	}
 	if c.frame < firstCallMin {
@@ -122,7 +122,7 @@ func TestNoCallsOffscreen(t *testing.T) {
 	if cues := listen(r, near, 5); len(cues) != 0 {
 		t.Fatalf("catch-up call as the deer came on screen: %v", idsOf(cues))
 	}
-	if r.voice.nextCall[7] <= r.voice.clock {
+	if r.voice.NextCall[7] <= r.voice.Clock {
 		t.Fatal("the skipped call was not rescheduled")
 	}
 }
@@ -134,10 +134,10 @@ func TestFleeCriesOnce(t *testing.T) {
 	listen(r, game.WorldView{Animals: []game.AnimalView{an}}, 3)
 	an.Mode = "fleeing"
 	cues := listen(r, game.WorldView{Animals: []game.AnimalView{an}}, 120)
-	if len(cues) != 1 || cues[0].id != "animal.deer.call" || cues[0].frame != 0 {
+	if len(cues) != 1 || cues[0].ID != "animal.deer.call" || cues[0].frame != 0 {
 		t.Fatalf("a fleeing deer should cry once, right away; got %v", cues)
 	}
-	if r.voice.nextCall[7] <= r.voice.clock {
+	if r.voice.NextCall[7] <= r.voice.Clock {
 		t.Fatal("the cry did not reset the call timer")
 	}
 	// a new episode cries again
@@ -176,16 +176,16 @@ func TestAttackCueAtAttacker(t *testing.T) {
 	if len(cues) != 2 {
 		t.Fatalf("a wolf bite should cue the snarl and the impact, got %+v", cues)
 	}
-	if a := cues[0]; a.id != "animal.timber_wolf.attack" || a.vol != volAttack || a.x != 10.5 || a.y != 10.5 {
+	if a := cues[0]; a.ID != "animal.timber_wolf.attack" || a.Vol != volAttack || a.X != 10.5 || a.Y != 10.5 {
 		t.Fatalf("attack cue = %+v, want animal.timber_wolf.attack at the wolf, volume %v", a, volAttack)
 	}
-	if m := cues[1]; m.id != "sfx.melee_hit" || m.vol != volMeleeUnder || m.x != 11.5 {
+	if m := cues[1]; m.ID != "sfx.melee_hit" || m.Vol != volMeleeUnder || m.X != 11.5 {
 		t.Fatalf("impact = %+v, want sfx.melee_hit at the target, volume %v under the voice", m, volMeleeUnder)
 	}
 	// a pawn's blow keeps the full-volume impact and no voice
 	r.traceSound(game.TraceView{Attacker: 3, Target: 4, FromX: 1, FromY: 1, ToX: 2, ToY: 1, Hit: true, Melee: true})
 	cues = r.takeCues()
-	if len(cues) != 1 || cues[0].id != "sfx.melee_hit" || cues[0].vol != 1 {
+	if len(cues) != 1 || cues[0].ID != "sfx.melee_hit" || cues[0].Vol != 1 {
 		t.Fatalf("pawn blow = %+v, want one full-volume sfx.melee_hit", cues)
 	}
 }
@@ -195,10 +195,10 @@ func TestHurtCueOnHit(t *testing.T) {
 	r := primed(wanderer(9, "deer", 10, 10))
 	r.traceSound(game.TraceView{Attacker: 3, Target: 9, FromX: 9, FromY: 10, ToX: 10, ToY: 10, Hit: true, Melee: true})
 	cues := r.takeCues()
-	if len(cues) != 2 || cues[0].id != "animal.deer.hurt" || cues[0].vol != volHurt || cues[0].x != 10.5 {
+	if len(cues) != 2 || cues[0].ID != "animal.deer.hurt" || cues[0].Vol != volHurt || cues[0].X != 10.5 {
 		t.Fatalf("a hit deer should yelp at the deer; got %+v", cues)
 	}
-	if cues[1].id != "sfx.melee_hit" || cues[1].vol != volMeleeUnder {
+	if cues[1].ID != "sfx.melee_hit" || cues[1].Vol != volMeleeUnder {
 		t.Fatalf("impact = %+v, want sfx.melee_hit at volume %v", cues[1], volMeleeUnder)
 	}
 	// a shot is heard from the muzzle and the deer still yelps
@@ -241,7 +241,7 @@ func TestDeathCueWithCorpse(t *testing.T) {
 	}
 	r.listenAnimals(w)
 	cues := r.takeCues()
-	if len(cues) != 1 || cues[0].id != "animal.deer.die" || cues[0].vol != volDie || cues[0].x != 10.5 || cues[0].y != 10.5 {
+	if len(cues) != 1 || cues[0].ID != "animal.deer.die" || cues[0].Vol != volDie || cues[0].X != 10.5 || cues[0].Y != 10.5 {
 		t.Fatalf("death cue = %+v, want animal.deer.die at 10.5,10.5 volume %v", cues, volDie)
 	}
 	// once only
@@ -275,13 +275,13 @@ func TestBurstCue(t *testing.T) {
 	r.emitWorldBursts(w)
 	r.emitWorldBursts(w) // the same stamp again: still one bang
 	cues := r.takeCues()
-	if len(cues) != 1 || cues[0].id != voiceBurst || cues[0].vol != volBurst ||
-		int(cues[0].x) != 4 || int(cues[0].y) != 5 {
+	if len(cues) != 1 || cues[0].ID != voiceBurst || cues[0].Vol != volBurst ||
+		int(cues[0].X) != 4 || int(cues[0].Y) != 5 {
 		t.Fatalf("burst cues = %+v, want one animal.burst in tile 4,5", cues)
 	}
 	w.Bursts = append(w.Bursts, game.BurstView{X: 8, Y: 2, Tick: 9})
 	r.emitWorldBursts(w)
-	if cues := r.takeCues(); len(cues) != 1 || int(cues[0].x) != 8 {
+	if cues := r.takeCues(); len(cues) != 1 || int(cues[0].X) != 8 {
 		t.Fatalf("a new stamp should add exactly one bang, got %+v", cues)
 	}
 }
@@ -392,8 +392,8 @@ func TestCallRateCaps(t *testing.T) {
 		t.Fatalf("a 40-animal herd made only %d calls in %d frames", len(cues), frames)
 	}
 	for _, c := range cues {
-		if !strings.HasSuffix(c.id, ".call") {
-			t.Fatalf("unexpected cue %q", c.id)
+		if !strings.HasSuffix(c.ID, ".call") {
+			t.Fatalf("unexpected cue %q", c.ID)
 		}
 	}
 	for start := 0; start < frames; start++ {
@@ -403,7 +403,7 @@ func TestCallRateCaps(t *testing.T) {
 				calls++
 			}
 			if c.frame >= start && c.frame < start+capSpeciesSpan {
-				seen[c.id] = true
+				seen[c.ID] = true
 			}
 		}
 		if calls > capCalls {
@@ -423,19 +423,19 @@ func TestVoicePrunedWithAnimals(t *testing.T) {
 	three := game.WorldView{Animals: []game.AnimalView{wanderer(1, "deer", 5, 5), wanderer(2, "cow", 6, 6), fleer}}
 	listen(r, three, 3)
 	v := &r.voice
-	if len(v.nextCall) != 2 || len(v.last) != 3 || len(v.byID) != 3 {
-		t.Fatalf("tracking %d timers (the fleeing deer has none yet), %d seen, %d indexed; want 2/3/3", len(v.nextCall), len(v.last), len(v.byID))
+	if len(v.NextCall) != 2 || len(v.Last) != 3 || len(v.ByID) != 3 {
+		t.Fatalf("tracking %d timers (the fleeing deer has none yet), %d seen, %d indexed; want 2/3/3", len(v.NextCall), len(v.Last), len(v.ByID))
 	}
 	listen(r, game.WorldView{Animals: []game.AnimalView{wanderer(1, "deer", 5, 5)}}, 2)
-	if len(v.nextCall) != 1 || len(v.last) != 1 || len(v.byID) != 1 || len(v.fleeing) != 1 || len(v.calls) > 1 {
+	if len(v.NextCall) != 1 || len(v.Last) != 1 || len(v.ByID) != 1 || len(v.Fleeing) != 1 || len(v.Calls) > 1 {
 		t.Fatalf("after two left: nextCall %d last %d byID %d fleeing %d calls %d, want 1 each (calls at most 1)",
-			len(v.nextCall), len(v.last), len(v.byID), len(v.fleeing), len(v.calls))
+			len(v.NextCall), len(v.Last), len(v.ByID), len(v.Fleeing), len(v.Calls))
 	}
-	if _, ok := v.nextCall[1]; !ok {
+	if _, ok := v.NextCall[1]; !ok {
 		t.Fatal("the animal that stayed lost its timer")
 	}
 	listen(r, game.WorldView{}, 1)
-	if len(v.nextCall)+len(v.last)+len(v.byID)+len(v.fleeing)+len(v.calls) != 0 {
+	if len(v.NextCall)+len(v.Last)+len(v.ByID)+len(v.Fleeing)+len(v.Calls) != 0 {
 		t.Fatal("an empty world left voice state behind")
 	}
 }

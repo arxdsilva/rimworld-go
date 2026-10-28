@@ -16,14 +16,14 @@ func TestDirtAlphaByAmount(t *testing.T) {
 	t.Parallel()
 	for _, a := range []float64{0, 0.1, 0.5, 1} {
 		l := dirtLookOf(game.DirtView{X: 3, Y: 4, Amount: a})
-		if want := 0.15 + 0.6*a; math.Abs(float64(l.cs[3])-want) > 1e-6 {
-			t.Fatalf("amount %v: alpha %v, want %v", a, l.cs[3], want)
+		if want := 0.15 + 0.6*a; math.Abs(float64(l.Cs[3])-want) > 1e-6 {
+			t.Fatalf("amount %v: alpha %v, want %v", a, l.Cs[3], want)
 		}
 	}
-	if l := dirtLookOf(game.DirtView{Amount: 4}); l.cs[3] > 0.75+1e-6 {
-		t.Fatalf("alpha capped at 0.75: %v", l.cs[3])
+	if l := dirtLookOf(game.DirtView{Amount: 4}); l.Cs[3] > 0.75+1e-6 {
+		t.Fatalf("alpha capped at 0.75: %v", l.Cs[3])
 	}
-	if l := dirtLookOf(game.DirtView{Amount: 0.2}); dirtLookOf(game.DirtView{Amount: 0.9}).cs[3] <= l.cs[3] {
+	if l := dirtLookOf(game.DirtView{Amount: 0.2}); dirtLookOf(game.DirtView{Amount: 0.9}).Cs[3] <= l.Cs[3] {
 		t.Fatal("dirtier is more opaque")
 	}
 }
@@ -52,14 +52,14 @@ func TestDirtPrintsThenSmudge(t *testing.T) {
 		}
 	}
 	// prints draw one tile wide; the smudge grows from 0.55 to a full tile
-	if l := dirtLookOf(game.DirtView{X: 1, Y: 1, Amount: 0.1}); l.size != 1 || l.tex >= dirtPrintN {
+	if l := dirtLookOf(game.DirtView{X: 1, Y: 1, Amount: 0.1}); l.Size != 1 || l.Tex >= dirtPrintN {
 		t.Fatalf("a print group: %+v", l)
 	}
 	a := dirtLookOf(game.DirtView{X: 1, Y: 1, Amount: 0.25})
 	b := dirtLookOf(game.DirtView{X: 1, Y: 1, Amount: 0.6})
 	c := dirtLookOf(game.DirtView{X: 1, Y: 1, Amount: 1})
-	if a.tex < dirtPrintN || math.Abs(a.size-0.55) > 1e-9 || !(a.size < b.size && b.size < c.size) || math.Abs(c.size-1) > 1e-9 {
-		t.Fatalf("smudges grow: %v %v %v", a.size, b.size, c.size)
+	if a.Tex < dirtPrintN || math.Abs(a.Size-0.55) > 1e-9 || !(a.Size < b.Size && b.Size < c.Size) || math.Abs(c.Size-1) > 1e-9 {
+		t.Fatalf("smudges grow: %v %v %v", a.Size, b.Size, c.Size)
 	}
 }
 
@@ -72,11 +72,11 @@ func TestDirtOrientedByTileHash(t *testing.T) {
 	rots := map[float64]bool{}
 	for x := 0; x < 20; x++ {
 		l := dirtLookOf(game.DirtView{X: x, Y: 2, Amount: 0.1})
-		rots[l.rot] = true
-		if l.rot < 0 || l.rot >= 2*math.Pi {
-			t.Fatalf("rotation %v", l.rot)
+		rots[l.Rot] = true
+		if l.Rot < 0 || l.Rot >= 2*math.Pi {
+			t.Fatalf("rotation %v", l.Rot)
 		}
-		if math.Abs(l.cx-float64(x)-0.5) > 0.08+1e-9 || math.Abs(l.cy-2.5) > 0.08+1e-9 {
+		if math.Abs(l.Cx-float64(x)-0.5) > 0.08+1e-9 || math.Abs(l.Cy-2.5) > 0.08+1e-9 {
 			t.Fatalf("offset leaves the tile centre: %+v", l)
 		}
 	}
@@ -145,10 +145,10 @@ func TestOffscreenDirtSkipped(t *testing.T) {
 	}}
 	r.view.W = w
 	var b stainBatch
-	if n := r.buildDirt(&b, w, 320, 320, tile); n != 2 || len(b.verts) != 8 || len(b.idx) != 12 {
-		t.Fatalf("on screen: %d quads, %d verts, %d indices", n, len(b.verts), len(b.idx))
+	if n := r.buildDirt(&b, w, 320, 320, tile); n != 2 || len(b.Verts) != 8 || len(b.Idx) != 12 {
+		t.Fatalf("on screen: %d quads, %d verts, %d indices", n, len(b.Verts), len(b.Idx))
 	}
-	for _, v := range b.verts {
+	for _, v := range b.Verts {
 		if v.Custom3 != 0 || v.Custom2 != 0 {
 			t.Fatalf("dirt is lit flat and carries no figure blood: %+v", v)
 		}
@@ -167,8 +167,8 @@ func TestDirtLitByTheirTile(t *testing.T) {
 	var b stainBatch
 	r.buildDirt(&b, w, 320, 320, r.tilePx())
 	sky, lamp := r.lightTile(0, 0)
-	if len(b.verts) != 4 || b.verts[0].Custom0 != sky || b.verts[0].Custom1 != lamp {
-		t.Fatalf("dirt lit as its tile (%v, %v): %+v", sky, lamp, b.verts)
+	if len(b.Verts) != 4 || b.Verts[0].Custom0 != sky || b.Verts[0].Custom1 != lamp {
+		t.Fatalf("dirt lit as its tile (%v, %v): %+v", sky, lamp, b.Verts)
 	}
 }
 

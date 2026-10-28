@@ -75,7 +75,7 @@ func TestStrikeCueIsCentredAndOncePerSwing(t *testing.T) {
 	}
 	sim.tick = clock.Tick(tickAt(3, 46, strikeAt) + 46)
 	r.animateWork(game.WorldView{}, []game.PawnView{p})
-	if len(r.cues) != 1 || r.cues[0].id != "sfx.chop" || r.cues[0].x != 6.5 {
+	if len(r.cues) != 1 || r.cues[0].ID != "sfx.chop" || r.cues[0].X != 6.5 {
 		t.Fatalf("one chop at the trunk, got %+v", r.cues)
 	}
 	r.takeCues()
@@ -129,7 +129,7 @@ func TestDirectorLimitsRepeats(t *testing.T) {
 	if n := len(rec.played("sfx.chop")); n != cueMaxPerID {
 		t.Fatalf("%d chops in one frame, want %d", n, cueMaxPerID)
 	}
-	a.snd.frame++
+	a.snd.Frame++
 	a.renderer.cue("sfx.chop", cx, cy, 1)
 	a.colonyCues()
 	if n := len(rec.played("sfx.chop")); n != cueMaxPerID {
@@ -149,13 +149,13 @@ func TestDoorAndTreeCues(t *testing.T) {
 	r.listenWorld(game.WorldView{Buildings: []game.BuildingView{door}}, []game.PawnView{walker})
 	ids := map[string]bool{}
 	for _, c := range r.takeCues() {
-		ids[c.id] = true
+		ids[c.ID] = true
 	}
 	if !ids["sfx.door_open"] || !ids["sfx.tree_fall"] {
 		t.Fatalf("want a door opening and a tree falling, got %v", ids)
 	}
 	r.listenWorld(game.WorldView{Buildings: []game.BuildingView{door}}, nil)
-	if c := r.takeCues(); len(c) != 1 || c[0].id != "sfx.door_close" {
+	if c := r.takeCues(); len(c) != 1 || c[0].ID != "sfx.door_close" {
 		t.Fatalf("want the door closing, got %+v", c)
 	}
 }
@@ -283,7 +283,7 @@ func TestDirectorFadesWithZoom(t *testing.T) {
 	hear := func(zoom, dx float64) []soundCall {
 		r.cam.Zoom = zoom
 		rec.plays = nil
-		a.snd.frame += cueGap
+		a.snd.Frame += cueGap
 		cx, cy := centreTile(a)
 		r.cue("sfx.chop", cx+dx, cy, 1)
 		a.colonyCues()
@@ -340,7 +340,7 @@ func TestMineAndSmoothCuesOnlyOnTerrainChange(t *testing.T) {
 	// mined out: the rock is gone
 	r.listenWorld(terrainWorld("rock", mark, nil), nil)
 	r.listenWorld(terrainWorld("stone", nil, nil), nil)
-	if c := r.takeCues(); len(c) != 1 || c[0].id != "sfx.rock_break" || c[0].x != 1.5 {
+	if c := r.takeCues(); len(c) != 1 || c[0].ID != "sfx.rock_break" || c[0].X != 1.5 {
 		t.Fatalf("mined rock cues %+v", c)
 	}
 	// smoothing: silent when cancelled, a chisel strike when done
@@ -351,7 +351,7 @@ func TestMineAndSmoothCuesOnlyOnTerrainChange(t *testing.T) {
 	}
 	r.listenWorld(terrainWorld("rock", nil, mark), nil)
 	r.listenWorld(terrainWorld("rock_smooth", nil, nil), nil)
-	if c := r.takeCues(); len(c) != 1 || c[0].id != "sfx.pick" {
+	if c := r.takeCues(); len(c) != 1 || c[0].ID != "sfx.pick" {
 		t.Fatalf("smoothed rock cues %+v", c)
 	}
 }

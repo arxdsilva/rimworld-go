@@ -120,12 +120,12 @@ func (r *Renderer) poseFacing(p game.PawnView, m moveState) facing {
 // pose. Layers are tried in priority order by standingPose: hit reaction,
 // combat, carrying, work.
 type actionPose struct {
-	ok     bool
-	held   heldItem // replaces the default held item when held.set
-	dx, dy float64  // added offset, tiles
-	rot    float64  // added rotation, radians
-	squash float64  // vertical squash 0..1 (bending, crouching)
-	flash  float32  // hit flash 0..1
+	Ok     bool
+	Held   heldItem // replaces the default held item when held.set
+	Dx, Dy float64  // added offset, tiles
+	Rot    float64  // added rotation, radians
+	Squash float64  // vertical squash 0..1 (bending, crouching)
+	Flash  float32  // hit flash 0..1
 }
 
 // targetFacing turns a pawn that is aiming or fighting towards its
@@ -158,21 +158,21 @@ func (r *Renderer) standingPose(p game.PawnView, m moveState) (pose, heldItem) {
 	held := r.idleHeld(p, m)
 	for _, layer := range []func(game.PawnView, moveState) actionPose{r.hitReaction, r.combatPose, r.carryPose, r.workPose} {
 		a := layer(p, m)
-		if !a.ok {
+		if !a.Ok {
 			continue
 		}
-		if a.held.set {
-			held = a.held
+		if a.Held.Set {
+			held = a.Held
 		}
-		ps.Dx += a.dx
-		ps.Dy += a.dy
-		ps.Rot += a.rot
-		if a.squash != 0 {
+		ps.Dx += a.Dx
+		ps.Dy += a.Dy
+		ps.Rot += a.Rot
+		if a.Squash != 0 {
 			_, sy := ps.Scale()
-			ps.Sy = sy * (1 - a.squash)
+			ps.Sy = sy * (1 - a.Squash)
 		}
-		if a.flash > ps.Flash {
-			ps.Flash = a.flash
+		if a.Flash > ps.Flash {
+			ps.Flash = a.Flash
 		}
 		break
 	}
@@ -197,7 +197,7 @@ func (r *Renderer) drawPawnArt(screen *ebiten.Image, p game.PawnView, wx, wy, ti
 	if p.Lying {
 		return
 	}
-	ps := fp.ps
+	ps := fp.Ps
 	if p.Hostile {
 		r.drawHostileMarker(screen, p, wx+ps.Dx, wy+ps.Dy, pawnMarkerLift(r.art), tile)
 	}
@@ -214,9 +214,9 @@ func (r *Renderer) drawPawnArt(screen *ebiten.Image, p game.PawnView, wx, wy, ti
 // light of the shadow pass draw the same figure.
 type pawnFigurePose struct {
 	vis  pawnVisual // the presentation state (lying pawns read it)
-	face facing     // the facing (west draws the east art mirrored)
-	held heldItem   // what it holds
-	ps   pose       // unmirrored: drawPawnFigure flips it facing west
+	Face facing     // the facing (west draws the east art mirrored)
+	Held heldItem   // what it holds
+	Ps   pose       // unmirrored: drawPawnFigure flips it facing west
 }
 
 // pawnFigurePoseOf resolves p's figure pose for this frame. It reads
@@ -228,8 +228,8 @@ func (r *Renderer) pawnFigurePoseOf(p game.PawnView) pawnFigurePose {
 	}
 	m := r.pawnMotion(p.ID)
 	m.Facing = r.poseFacing(p, m)
-	fp.ps, fp.held = r.standingPose(p, m)
-	fp.face = m.Facing
+	fp.Ps, fp.Held = r.standingPose(p, m)
+	fp.Face = m.Facing
 	return fp
 }
 
@@ -247,12 +247,12 @@ func (r *Renderer) drawPawnFigure(dst *ebiten.Image, p game.PawnView, wx, wy, ti
 		r.drawLyingPawn(dst, p, fp.vis, wx, wy, tile)
 		return
 	}
-	ps, item := fp.ps, fp.held
+	ps, item := fp.Ps, fp.Held
 	if r.cast != nil {
 		ps.Flash = 0 // a light effect, not part of the shape
 	}
-	rig := r.rigOf(p, fp.face)
-	if rig.mirror {
+	rig := r.rigOf(p, fp.Face)
+	if rig.Mirror {
 		ps = mirrored(ps)
 	}
 	// a rescued patient lies across the shoulders, behind the rescuer's
@@ -273,7 +273,7 @@ func (r *Renderer) drawPawnFigure(dst *ebiten.Image, p game.PawnView, wx, wy, ti
 func (r *Renderer) drawCarriedBy(dst *ebiten.Image, p game.PawnView, fp pawnFigurePose, wx, wy, tile float64) {
 	for _, q := range r.view.Pawns {
 		if q.CarriedBy != 0 && q.CarriedBy == p.ID {
-			r.drawCarried(dst, q, fp.face, wx+fp.ps.Dx, wy+fp.ps.Dy, tile)
+			r.drawCarried(dst, q, fp.Face, wx+fp.Ps.Dx, wy+fp.Ps.Dy, tile)
 		}
 	}
 }

@@ -28,27 +28,27 @@ func snowyWorld() game.WorldView {
 
 func TestSnowDepthPerTile(t *testing.T) {
 	t.Parallel()
-	e := &envState{terrW: 4, snowCells: []uint8{0, 255, 0, 0, 51, 0, 0, 0}, snow: 0.7}
-	if d := e.snowDepthAt(1, 0); d != 1 {
+	e := &envState{TerrW: 4, SnowCells: []uint8{0, 255, 0, 0, 51, 0, 0, 0}, Snow: 0.7}
+	if d := e.SnowDepthAt(1, 0); d != 1 {
 		t.Fatalf("tile depth %v", d)
 	}
-	if d := e.snowDepthAt(2, 1); d != 0 || e.snowDepthAt(-1, 0) != 0 || e.snowDepthAt(0, 5) != 0 {
+	if d := e.SnowDepthAt(2, 1); d != 0 || e.SnowDepthAt(-1, 0) != 0 || e.SnowDepthAt(0, 5) != 0 {
 		t.Fatal("bare or off-map tiles read 0")
 	}
 	// the corner between (0,0), (1,0), (0,1), (1,1) is their mean
-	if c := e.snowCorner(1, 1); math.Abs(c-(255+51)/4.0/255) > 1e-9 {
+	if c := e.SnowCorner(1, 1); math.Abs(c-(255+51)/4.0/255) > 1e-9 {
 		t.Fatalf("corner %v", c)
 	}
 	// a map corner averages the one tile it touches
-	if c := e.snowCorner(0, 0); c != 0 {
+	if c := e.SnowCorner(0, 0); c != 0 {
 		t.Fatalf("map corner %v", c)
 	}
-	if c := e.snowCorner(-5, -5); c != 0 {
+	if c := e.SnowCorner(-5, -5); c != 0 {
 		t.Fatalf("far corner %v", c)
 	}
 	// without the layer every tile reads the map figure
-	u := &envState{terrW: 4, snow: 0.7}
-	if u.snowDepthAt(3, 1) != 0.7 || u.snowCorner(2, 2) != 0.7 {
+	u := &envState{TerrW: 4, Snow: 0.7}
+	if u.SnowDepthAt(3, 1) != 0.7 || u.SnowCorner(2, 2) != 0.7 {
 		t.Fatal("no layer: the map figure")
 	}
 }
@@ -60,15 +60,15 @@ func TestSnowDepthPerTile(t *testing.T) {
 func snowTexel(sc *snowCache, row, x, y, sx, sy int) uint8 {
 	if row == 0 {
 		tx, ty := snowPad+x*snowPx+sx, snowPad+y*snowPx+sy
-		return sc.pix[4*(ty*snowImgW+tx)+3]
+		return sc.Pix[4*(ty*snowImgW+tx)+3]
 	}
-	px := max(sc.wantPx, snowPx)
+	px := max(sc.WantPx, snowPx)
 	iw := wetImgW(px)
 	tx, ty := snowPad+x*px+sx*px/snowPx, snowPad+y*px+sy*px/snowPx
-	if len(sc.wpix) < 4*iw*iw {
+	if len(sc.Wpix) < 4*iw*iw {
 		return 0
 	}
-	return sc.wpix[4*(ty*iw+tx)+3]
+	return sc.Wpix[4*(ty*iw+tx)+3]
 }
 
 func TestGroundCoverVeilFollowsTileSnow(t *testing.T) {
@@ -83,12 +83,12 @@ func TestGroundCoverVeilFollowsTileSnow(t *testing.T) {
 		t.Fatalf("view %d,%d..%d,%d misses the block", x0, y0, x1, y1)
 	}
 	sc := &r.snowc
-	if sc.bakes == 0 || sc.draws == 0 {
-		t.Fatalf("snowy block: %d bakes, %d draws", sc.bakes, sc.draws)
+	if sc.Bakes == 0 || sc.Draws == 0 {
+		t.Fatalf("snowy block: %d bakes, %d draws", sc.Bakes, sc.Draws)
 	}
 	var c snowChunk
 	r.bakeSnowChunk(&c, w, 64, 64, 0, 0)
-	if !c.any {
+	if !c.Any {
 		t.Fatal("chunk (0,0) holds snow but reads bare")
 	}
 	if snowTexel(sc, 0, 3, 2, 2, 2) == 0 {
@@ -104,18 +104,18 @@ func TestGroundCoverVeilFollowsTileSnow(t *testing.T) {
 	// a bare layer draws nothing
 	w.Snow, w.SnowVer = make([]uint8, 64*64), 2
 	r.drawGroundCover(screen, w, 640, 400, r.tilePx())
-	for id, ch := range sc.chunks {
-		if ch.any {
+	for id, ch := range sc.Chunks {
+		if ch.Any {
 			t.Fatalf("bare layer: chunk %d still holds snow", id)
 		}
 	}
-	if sc.draws != 0 {
-		t.Fatalf("a bare layer draws %d snow passes", sc.draws)
+	if sc.Draws != 0 {
+		t.Fatalf("a bare layer draws %d snow passes", sc.Draws)
 	}
 	// an older sim with only the map figure veils every open tile
 	w.Snow, w.SnowDepth = nil, 0.8
 	r.drawGroundCover(screen, w, 640, 400, r.tilePx())
-	if sc.draws == 0 {
+	if sc.Draws == 0 {
 		t.Fatal("uniform snow draws nothing")
 	}
 	r.bakeSnowChunk(&c, w, 64, 64, 0, 0)
@@ -133,9 +133,9 @@ func TestSnowCacheRebakesOnlyChangedChunks(t *testing.T) {
 	screen := ebiten.NewImage(640, 400)
 	tile := r.tilePx()
 	draw := func() int {
-		n := r.snowc.bakes
+		n := r.snowc.Bakes
 		r.drawGroundCover(screen, w, 640, 400, tile)
-		return r.snowc.bakes - n
+		return r.snowc.Bakes - n
 	}
 	if draw() == 0 {
 		t.Fatal("first draw baked nothing")
@@ -154,8 +154,8 @@ func TestSnowCacheRebakesOnlyChangedChunks(t *testing.T) {
 		t.Fatalf("one tile changed rebaked %d chunks, want 1", n)
 	}
 	w.StructVer++
-	if n := draw(); n != len(r.snowc.chunks) || n == 0 {
-		t.Fatalf("StructVer rebaked %d of %d chunks", n, len(r.snowc.chunks))
+	if n := draw(); n != len(r.snowc.Chunks) || n == 0 {
+		t.Fatalf("StructVer rebaked %d of %d chunks", n, len(r.snowc.Chunks))
 	}
 }
 
@@ -169,8 +169,8 @@ func TestSnowLayerDrawsLit(t *testing.T) {
 	screen := ebiten.NewImage(640, 400)
 	before := r.lit.Calls
 	r.drawGroundCover(screen, w, 640, 400, r.tilePx())
-	if r.snowc.draws == 0 || r.lit.Calls-before < r.snowc.draws {
-		t.Fatalf("lit calls %d for %d snow draws", r.lit.Calls-before, r.snowc.draws)
+	if r.snowc.Draws == 0 || r.lit.Calls-before < r.snowc.Draws {
+		t.Fatalf("lit calls %d for %d snow draws", r.lit.Calls-before, r.snowc.Draws)
 	}
 }
 
@@ -198,13 +198,13 @@ func BenchmarkGroundCover(b *testing.B) {
 			tile := r.tilePx()
 			r.cam.OffsetX, r.cam.OffsetY = 100*tile, 100*tile
 			r.drawGroundCover(screen, w, 1280, 800, tile)
-			b0, d0 := r.snowc.bakes, 0
+			b0, d0 := r.snowc.Bakes, 0
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				r.drawGroundCover(screen, w, 1280, 800, tile)
-				d0 += r.snowc.draws
+				d0 += r.snowc.Draws
 			}
-			b.ReportMetric(float64(r.snowc.bakes-b0)/float64(b.N), "bakes/op")
+			b.ReportMetric(float64(r.snowc.Bakes-b0)/float64(b.N), "bakes/op")
 			b.ReportMetric(float64(d0)/float64(b.N), "draws/op")
 		})
 	}

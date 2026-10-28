@@ -49,7 +49,7 @@ func plantCategory(p game.PlantView) string {
 	if isTree(p) {
 		return "Tree"
 	}
-	if _, ok := plantKeys.crops[p.Species]; ok || p.Zone != "" {
+	if _, ok := plantKeys.Crops[p.Species]; ok || p.Zone != "" {
 		return "Crop"
 	}
 	return "Wild plant"

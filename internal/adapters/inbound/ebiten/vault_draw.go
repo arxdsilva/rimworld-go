@@ -103,14 +103,14 @@ type casketMemo struct {
 	sealed map[entity.EntityID]bool
 }
 
-// casketOpened returns the caskets of w that were sealed last frame and
+// CasketOpened returns the caskets of w that were sealed last frame and
 // are open now, and remembers w's state. The first frame only records.
-func (m *casketMemo) casketOpened(w game.WorldView) []game.BuildingView {
-	return m.opened(w, casketSealed)
+func (m *casketMemo) CasketOpened(w game.WorldView) []game.BuildingView {
+	return m.Opened(w, casketSealed)
 }
 
-// opened is casketOpened with the sealed test injected.
-func (m *casketMemo) opened(w game.WorldView, sealedOf func(game.BuildingView) bool) []game.BuildingView {
+// Opened is casketOpened with the sealed test injected.
+func (m *casketMemo) Opened(w game.WorldView, sealedOf func(game.BuildingView) bool) []game.BuildingView {
 	next := map[entity.EntityID]bool{}
 	var out []game.BuildingView
 	for _, b := range w.Buildings {
@@ -129,7 +129,7 @@ func (m *casketMemo) opened(w game.WorldView, sealedOf func(game.BuildingView) b
 
 // listenCaskets cues a casket's opening (hook of listenWorld).
 func (r *Renderer) listenCaskets(w game.WorldView) {
-	for _, b := range r.caskets.casketOpened(w) {
+	for _, b := range r.caskets.CasketOpened(w) {
 		r.cue(casketCueSFX, float64(b.X)+0.5, float64(b.Y)+1, 1)
 	}
 }

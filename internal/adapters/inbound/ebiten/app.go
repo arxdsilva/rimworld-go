@@ -482,7 +482,7 @@ func (a *App) tick() {
 		a.tickBoot()
 	case screenColony:
 		if a.nav.overlay() == overlayNone && a.renderer != nil && !a.bg.paused { // background.go
-			a.renderer.voice.view = a.mapViewport() // animal calls only on screen (physical, like worldToScreen)
+			a.renderer.voice.View = a.mapViewport() // animal calls only on screen (physical, like worldToScreen)
 			a.advanceColony()                       // update_budget.go: steps under the Update budget, stamps the Update
 			a.tickAutosave()
 		} else {

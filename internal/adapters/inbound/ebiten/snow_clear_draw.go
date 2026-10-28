@@ -27,21 +27,21 @@ func snowClearToolID(id string) bool { return id == snowClearTools[0] || id == s
 // syncSnowClearForce shows the overlay while a snow clearing tool is held.
 func (a *App) syncSnowClearForce() {
 	if a.renderer != nil {
-		a.renderer.env.snowClear.forced = a.archOpen && snowClearToolID(a.archTool)
+		a.renderer.env.SnowClear.Forced = a.archOpen && snowClearToolID(a.archTool)
 	}
 }
 
 // snowClearDrawState caches the overlay's tile-space geometry, rebuilt
 // only when WorldView.SnowClearVer (or the grid's shape) changes.
 type snowClearDrawState struct {
-	forced bool // a snow clearing tool is held
+	Forced bool // a snow clearing tool is held
 	valid  bool
 	ver    uint64
 	w, n   int
 	runs   []homeRun
 	edges  []homeEdge
-	builds int // rebuild count (tests)
-	verts  int // vertices in the last drawn batch (tests)
+	Builds int // rebuild count (tests)
+	Verts  int // vertices in the last drawn batch (tests)
 	batch  triBatch
 }
 
@@ -49,7 +49,7 @@ type snowClearDrawState struct {
 func (s *snowClearDrawState) rebuild(w game.WorldView) {
 	s.valid, s.ver, s.w, s.n = true, w.SnowClearVer, w.TerrainW, len(w.SnowClear)
 	s.runs, s.edges = s.runs[:0], s.edges[:0]
-	s.builds++
+	s.Builds++
 	if w.TerrainW <= 0 {
 		return
 	}
@@ -82,9 +82,9 @@ func (s *snowClearDrawState) rebuild(w game.WorldView) {
 // drawSnowClearOverlay draws the snow clearing area when a tool is held,
 // in one batch.
 func (r *Renderer) drawSnowClearOverlay(screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
-	st := &r.env.snowClear
-	st.verts = 0
-	if !st.forced || len(w.SnowClear) == 0 || w.TerrainW <= 0 {
+	st := &r.env.SnowClear
+	st.Verts = 0
+	if !st.Forced || len(w.SnowClear) == 0 || w.TerrainW <= 0 {
 		return
 	}
 	if !st.valid || st.ver != w.SnowClearVer || st.w != w.TerrainW || st.n != len(w.SnowClear) {
@@ -111,6 +111,6 @@ func (r *Renderer) drawSnowClearOverlay(screen *ebiten.Image, w game.WorldView, 
 		}
 		r.edgeStrip(b, float64(sx), float64(sy), tile, e.side, snowClearEdgePx, ec, 0, 1)
 	}
-	st.verts = len(b.Verts)
-	b.Flush(screen, r.env.whiteImg(), ebiten.BlendSourceOver)
+	st.Verts = len(b.Verts)
+	b.Flush(screen, r.env.WhiteImg(), ebiten.BlendSourceOver)
 }

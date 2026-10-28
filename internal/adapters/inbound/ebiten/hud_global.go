@@ -240,7 +240,7 @@ func (a *App) globalHeight() float32 {
 		return 0
 	}
 	h := globalStackHeight(a.globalPlan(), len(globalToggleList))
-	a.renderer.mini.globalH = h
+	a.renderer.mini.GlobalH = h
 	return h
 }
 

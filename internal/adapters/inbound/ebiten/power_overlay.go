@@ -54,11 +54,11 @@ func tokenNRGBA(c color.RGBA) color.NRGBA { return color.NRGBA(c) }
 // palette slot of every live net, and the transmitter cells the
 // placement ghost links to. trace, when set (tests), sees every part.
 type powerOverlay struct {
-	on, forced bool
+	On, Forced bool
 	slots      map[int]int // live net id -> powerPalette index
 	ids        []int       // the net ids slots was last synced to
 	tr         powerTransCache
-	trace      func(part string, x, y int, c color.NRGBA)
+	Trace      func(part string, x, y int, c color.NRGBA)
 }
 
 // powerTransCache is the transmitter cells by net, rebuilt only when the
@@ -70,19 +70,19 @@ type powerTransCache struct {
 	cells               map[[2]int]int // transmitter cell -> its net (0: none)
 }
 
-func (o *powerOverlay) shown() bool { return o.on || o.forced }
+func (o *powerOverlay) shown() bool { return o.On || o.Forced }
 
 func (o *powerOverlay) emit(part string, x, y int, c color.NRGBA) {
-	if o.trace != nil {
-		o.trace(part, x, y, c)
+	if o.Trace != nil {
+		o.Trace(part, x, y, c)
 	}
 }
 
-// syncNets keeps every live net's palette slot and gives each new net the
+// SyncNets keeps every live net's palette slot and gives each new net the
 // least used slot (the lowest on a tie), in ascending id order, so a new
 // net never repaints an old one and live nets share a colour only once
 // the palette runs out. A no-op while the net ids stay the same.
-func (o *powerOverlay) syncNets(nets []game.PowerNetView) {
+func (o *powerOverlay) SyncNets(nets []game.PowerNetView) {
 	if len(nets) == len(o.ids) {
 		same := true
 		for i := range nets {
@@ -128,8 +128,8 @@ func (o *powerOverlay) syncNets(nets []game.PowerNetView) {
 	}
 }
 
-// netColour is net's colour: its palette slot, grey for no net.
-func (o *powerOverlay) netColour(net int) color.NRGBA {
+// NetColour is net's colour: its palette slot, grey for no net.
+func (o *powerOverlay) NetColour(net int) color.NRGBA {
 	if net == 0 {
 		return tokenNRGBA(uiPowerNone)
 	}
@@ -139,10 +139,10 @@ func (o *powerOverlay) netColour(net int) color.NRGBA {
 	return tokenNRGBA(powerPalette[uint(net)%uint(len(powerPalette))]) // not synced yet
 }
 
-// transmitters reports the cells a device can link to: built conduits
+// Transmitters reports the cells a device can link to: built conduits
 // and switches that are on, less every cell under a switch that is off
 // (nothing conducts there; power.Builder.Build).
-func (o *powerOverlay) transmitters(w *game.WorldView) func(x, y int) bool {
+func (o *powerOverlay) Transmitters(w *game.WorldView) func(x, y int) bool {
 	c := &o.tr
 	if !c.ok || c.structVer != w.StructVer || c.powerVer != w.PowerVer || c.n != len(w.Buildings) {
 		c.ok, c.structVer, c.powerVer, c.n = true, w.StructVer, w.PowerVer, len(w.Buildings)
@@ -242,7 +242,7 @@ func chebDist(dx, dy int) int { return max(abs(dx), abs(dy)) }
 func (r *Renderer) powerShown() bool { return r.pov.shown() }
 
 // togglePowerOverlay is the Shift+P key and HUD button action.
-func (r *Renderer) togglePowerOverlay() { r.pov.on = !r.pov.on }
+func (r *Renderer) togglePowerOverlay() { r.pov.On = !r.pov.On }
 
 // togglePowerOverlayIfAny tolerates a nil renderer (menus).
 func (r *Renderer) togglePowerOverlayIfAny() {
@@ -268,7 +268,7 @@ func powerForced(archOpen bool, toolID string) bool {
 // the selected tool of an open Architect (beside syncRoofForce).
 func (a *App) syncPowerForce() {
 	if a.renderer != nil {
-		a.renderer.pov.forced = powerForced(a.archOpen, a.archTool)
+		a.renderer.pov.Forced = powerForced(a.archOpen, a.archTool)
 	}
 }
 
@@ -297,7 +297,7 @@ func (r *Renderer) drawPowerOverlay(screen *ebiten.Image, w *game.WorldView, sw,
 	if !o.shown() || w == nil {
 		return
 	}
-	o.syncNets(w.PowerNets)
+	o.SyncNets(w.PowerNets)
 	r.layer("power overlay")
 	for _, cv := range r.lod.views {
 		for _, i := range cv.Buildings {
@@ -308,7 +308,7 @@ func (r *Renderer) drawPowerOverlay(screen *ebiten.Image, w *game.WorldView, sw,
 			if (b.PowerRole != "transmitter" && b.PowerRole != "switch") || !r.lod.inView(b.X, b.Y, 1, 1) {
 				continue
 			}
-			c := o.netColour(b.PowerNet)
+			c := o.NetColour(b.PowerNet)
 			if b.PowerRole == "switch" && !b.PowerOn {
 				c = tokenNRGBA(uiPowerNone) // open: it carries nothing
 			}
@@ -320,7 +320,7 @@ func (r *Renderer) drawPowerOverlay(screen *ebiten.Image, w *game.WorldView, sw,
 		}
 	}
 	if r.art != nil {
-		r.drawPowerMarkings(screen, w, tile, sw, sh, o.netColour, false) // power_draw.go
+		r.drawPowerMarkings(screen, w, tile, sw, sh, o.NetColour, false) // power_draw.go
 	}
 	detail := tile >= powerDetailPx
 	for _, cv := range r.lod.views {
@@ -346,7 +346,7 @@ func (r *Renderer) drawPowerOverlay(screen *ebiten.Image, w *game.WorldView, sw,
 // battery's charge.
 func (r *Renderer) drawPowerDevice(dst *ebiten.Image, b *game.BuildingView, tile float64, detail bool) {
 	o := &r.pov
-	c := o.netColour(b.PowerNet)
+	c := o.NetColour(b.PowerNet)
 	if b.HasLink {
 		r.drawPowerLink(dst, [2]int{b.LinkFromX, b.LinkFromY}, [2]int{b.LinkX, b.LinkY}, c, tile)
 		o.emit("link", b.LinkFromX, b.LinkFromY, c)
@@ -457,8 +457,8 @@ func (a *App) drawPowerGhostLinks(screen *ebiten.Image, t archTool, cells []ghos
 		return
 	}
 	w := a.shell.World()
-	is := r.pov.transmitters(&w)
-	r.pov.syncNets(w.PowerNets)
+	is := r.pov.Transmitters(&w)
+	r.pov.SyncNets(w.PowerNets)
 	mw, mh := a.shell.MapSize()
 	tile := a.shell.TilePx()
 	for _, c := range cells {
@@ -471,7 +471,7 @@ func (a *App) drawPowerGhostLinks(screen *ebiten.Image, t archTool, cells []ghos
 		}
 		foot, _, _ := construction.Footprint(construction.Kind(bv.ID), construction.Facing(f), c.x, c.y)
 		if from, to, linked := ghostLink(foot, mw, mh, is); linked {
-			col := r.pov.netColour(r.pov.tr.cells[to])
+			col := r.pov.NetColour(r.pov.tr.cells[to])
 			r.drawPowerLink(screen, from, to, col, tile)
 			r.pov.emit("ghost link", c.x, c.y, col)
 			continue

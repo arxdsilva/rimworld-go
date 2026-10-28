@@ -260,7 +260,7 @@ func TestPowerToggleWrapsAndToggles(t *testing.T) {
 			before := a.overlayFlags()
 			f.onRect(a, pr)
 			f.Click(t, a, mbLeft, 0)
-			if !a.renderer.pov.on || !a.renderer.powerShown() {
+			if !a.renderer.pov.On || !a.renderer.powerShown() {
 				t.Fatal("the click did not show the power overlay")
 			}
 			if a.overlayFlags() != before {
@@ -282,11 +282,11 @@ func TestPowerOverlayHotkey(t *testing.T) {
 	t.Parallel()
 	a, f := colonyApp(t, &stubSim{})
 	f.Key(t, a, "P", input.ModShift)
-	if !a.renderer.pov.on {
+	if !a.renderer.pov.On {
 		t.Fatal("Shift+P did not show the power overlay")
 	}
 	f.Key(t, a, "P", input.ModShift)
-	if a.renderer.pov.on {
+	if a.renderer.pov.On {
 		t.Fatal("Shift+P again did not hide it")
 	}
 	if tip := a.powerToggleTip(); !strings.Contains(tip, "Shift") || !strings.Contains(tip, "P") {
@@ -314,15 +314,15 @@ func TestPowerOverlayAutoShows(t *testing.T) {
 		if a.archTool != c.tool {
 			t.Fatalf("%s did not arm", c.tool)
 		}
-		if r.pov.forced != c.forced || r.powerShown() != c.forced {
-			t.Errorf("%s: forced %v shown %v, want %v", c.tool, r.pov.forced, r.powerShown(), c.forced)
+		if r.pov.Forced != c.forced || r.powerShown() != c.forced {
+			t.Errorf("%s: forced %v shown %v, want %v", c.tool, r.pov.Forced, r.powerShown(), c.forced)
 		}
 	}
 	archPick(t, a, "party_spot") // drop it
 	a.archCat = archCatPower
 	archPick(t, a, "conduit")
 	a.closeArchitect()
-	if r.pov.forced || r.powerShown() {
+	if r.pov.Forced || r.powerShown() {
 		t.Error("closing the Architect left the overlay forced on")
 	}
 	r.togglePowerOverlay()
@@ -340,36 +340,36 @@ func TestPowerOverlayAutoShows(t *testing.T) {
 func TestPowerNetColours(t *testing.T) {
 	t.Parallel()
 	var o powerOverlay
-	o.syncNets([]game.PowerNetView{{ID: 5}, {ID: 9}})
-	c5, c9 := o.netColour(5), o.netColour(9)
+	o.SyncNets([]game.PowerNetView{{ID: 5}, {ID: 9}})
+	c5, c9 := o.NetColour(5), o.NetColour(9)
 	if c5 == c9 {
 		t.Fatalf("nets 5 and 9 share %v", c5)
 	}
-	if o.netColour(0) != tokenNRGBA(uiPowerNone) {
-		t.Errorf("net 0 is %v, want the no-grid grey", o.netColour(0))
+	if o.NetColour(0) != tokenNRGBA(uiPowerNone) {
+		t.Errorf("net 0 is %v, want the no-grid grey", o.NetColour(0))
 	}
-	o.syncNets([]game.PowerNetView{{ID: 2}, {ID: 5}, {ID: 9}}) // a smaller id appears
-	if o.netColour(5) != c5 || o.netColour(9) != c9 {
+	o.SyncNets([]game.PowerNetView{{ID: 2}, {ID: 5}, {ID: 9}}) // a smaller id appears
+	if o.NetColour(5) != c5 || o.NetColour(9) != c9 {
 		t.Error("a new net repainted the old ones")
 	}
 	seen := map[color.NRGBA]bool{c5: true, c9: true}
-	if seen[o.netColour(2)] {
-		t.Errorf("net 2 took a colour in use: %v", o.netColour(2))
+	if seen[o.NetColour(2)] {
+		t.Errorf("net 2 took a colour in use: %v", o.NetColour(2))
 	}
-	o.syncNets([]game.PowerNetView{{ID: 2}, {ID: 9}}) // net 5 is gone: its colour frees up
-	o.syncNets([]game.PowerNetView{{ID: 2}, {ID: 9}, {ID: 40}})
-	if o.netColour(40) != c5 {
-		t.Errorf("net 40 got %v, want the freed colour %v", o.netColour(40), c5)
+	o.SyncNets([]game.PowerNetView{{ID: 2}, {ID: 9}}) // net 5 is gone: its colour frees up
+	o.SyncNets([]game.PowerNetView{{ID: 2}, {ID: 9}, {ID: 40}})
+	if o.NetColour(40) != c5 {
+		t.Errorf("net 40 got %v, want the freed colour %v", o.NetColour(40), c5)
 	}
 	var many []game.PowerNetView
 	for i := 1; i <= 7; i++ {
 		many = append(many, game.PowerNetView{ID: i * 10})
 	}
 	var p powerOverlay
-	p.syncNets(many)
+	p.SyncNets(many)
 	used := map[color.NRGBA]int{}
 	for _, n := range many {
-		used[p.netColour(n.ID)]++
+		used[p.NetColour(n.ID)]++
 	}
 	if len(used) != len(powerPalette) {
 		t.Errorf("seven nets use %d colours, want all %d", len(used), len(powerPalette))
@@ -389,7 +389,7 @@ func povRenderer(t *testing.T, w game.WorldView) (*Renderer, *[]povTrace, *[]str
 	t.Helper()
 	r, markings := pdRenderer(t, w)
 	got := &[]povTrace{}
-	r.pov.trace = func(part string, x, y int, c color.NRGBA) { *got = append(*got, povTrace{part, x, y, c}) }
+	r.pov.Trace = func(part string, x, y int, c color.NRGBA) { *got = append(*got, povTrace{part, x, y, c}) }
 	return r, got, markings
 }
 
@@ -458,7 +458,7 @@ func TestPowerOverlayDrawsPerNet(t *testing.T) {
 	r.togglePowerOverlay()
 	r.drawPowerOverlay(dst, &w, 640, 400, r.tilePx())
 
-	n1, n2 := r.pov.netColour(1), r.pov.netColour(2)
+	n1, n2 := r.pov.NetColour(1), r.pov.NetColour(2)
 	if n1 == n2 {
 		t.Fatalf("both nets are %v", n1)
 	}
@@ -593,7 +593,7 @@ func TestGhostTransmitters(t *testing.T) {
 		{ID: 6, Kind: heaterKind, X: 5, Y: 1, W: 1, H: 1, PowerRole: "consumer"},
 	}}
 	var o powerOverlay
-	is := o.transmitters(&w)
+	is := o.Transmitters(&w)
 	for x, want := range map[int]bool{1: true, 2: true, 3: true, 4: false, 5: false} {
 		if is(x, 1) != want {
 			t.Errorf("cell %d,1 transmits %v, want %v", x, !want, want)
@@ -601,7 +601,7 @@ func TestGhostTransmitters(t *testing.T) {
 	}
 	w.Buildings[3].PowerOn = true // the switch is flicked on: a new power state
 	w.PowerVer++
-	if !o.transmitters(&w)(4, 1) {
+	if !o.Transmitters(&w)(4, 1) {
 		t.Error("the transmitter cache missed the switch turning on")
 	}
 }
@@ -620,7 +620,7 @@ func ghostApp(t *testing.T, tool string, tx, ty int) (*App, *[]povTrace) {
 	f.MoveTo(a, tx, ty)
 	f.Frame(t, a)
 	got := &[]povTrace{}
-	a.renderer.pov.trace = func(part string, x, y int, c color.NRGBA) { *got = append(*got, povTrace{part, x, y, c}) }
+	a.renderer.pov.Trace = func(part string, x, y int, c color.NRGBA) { *got = append(*got, povTrace{part, x, y, c}) }
 	return a, got
 }
 
@@ -631,7 +631,7 @@ func TestPlacementGhostLink(t *testing.T) {
 	screen := ebiten.NewImage(640, 400)
 	a, got := ghostApp(t, "heater", 6, 6)
 	a.drawArchitectGhost(screen)
-	if l := povParts(*got, "ghost link"); len(l) != 1 || l[0].x != 6 || l[0].y != 6 || l[0].c != a.renderer.pov.netColour(1) {
+	if l := povParts(*got, "ghost link"); len(l) != 1 || l[0].x != 6 || l[0].y != 6 || l[0].c != a.renderer.pov.NetColour(1) {
 		t.Errorf("ghost links %v, want one from 6,6 in net 1's colour", *got)
 	}
 	if n := len(povParts(*got, "not connected")); n != 0 {

@@ -28,21 +28,21 @@ func TestHumanCorpseDrawsDeceasedLying(t *testing.T) {
 		t.Fatal("unknown deceased")
 	}
 	plan := corpsePlanFor(r.art, it)
-	side := math.Copysign(1, plan.ps.Rot)
+	side := math.Copysign(1, plan.Ps.Rot)
 	want := lyingPose(r.art, side)
 	want.Cs = deadCS
-	if plan.ps != want || math.Abs(math.Abs(plan.ps.Rot)-math.Pi/2) > 1e-9 {
-		t.Fatalf("the standing figure laid flat on its side: %+v", plan.ps)
+	if plan.Ps != want || math.Abs(math.Abs(plan.Ps.Rot)-math.Pi/2) > 1e-9 {
+		t.Fatalf("the standing figure laid flat on its side: %+v", plan.Ps)
 	}
-	if plan.ps.Cs != deadCS {
-		t.Fatalf("dead tint: %v", plan.ps.Cs)
+	if plan.Ps.Cs != deadCS {
+		t.Fatalf("dead tint: %v", plan.Ps.Cs)
 	}
 	it.Rotten = true
-	if corpsePlanFor(r.art, it).ps.Cs != rottenCS {
+	if corpsePlanFor(r.art, it).Ps.Cs != rottenCS {
 		t.Fatal("rotten tint")
 	}
 	// the side it fell on is stable per body
-	if corpsePlanFor(r.art, it).ps.Rot != plan.ps.Rot {
+	if corpsePlanFor(r.art, it).Ps.Rot != plan.Ps.Rot {
 		t.Fatal("stable lying side")
 	}
 	screen := ebiten.NewImage(512, 512)
@@ -254,14 +254,14 @@ func TestGraveInspectorShowsEpitaph(t *testing.T) {
 func TestDigSwings(t *testing.T) {
 	t.Parallel()
 	d, ok := workTable[game.ActionDig]
-	if !ok || d.motion != motionSwing {
+	if !ok || d.Motion != motionSwing {
 		t.Fatalf("dig row: %+v", d)
 	}
-	if len(d.parts) == 0 || d.parts[0].kind != partSoil || d.at != atTarget {
-		t.Fatalf("soil at the grave tile: %+v", d.parts)
+	if len(d.Parts) == 0 || d.Parts[0].Kind != partSoil || d.At != atTarget {
+		t.Fatalf("soil at the grave tile: %+v", d.Parts)
 	}
-	r, _ := workRenderer(tickAt(3, d.period, strikeAt+0.01))
-	if pose := r.workPose(worker(game.ActionDig), moveState{}); !pose.ok || pose.held.key != "" || pose.dx <= 0 || pose.squash <= 0 {
+	r, _ := workRenderer(tickAt(3, d.Period, strikeAt+0.01))
+	if pose := r.workPose(worker(game.ActionDig), moveState{}); !pose.Ok || pose.Held.Key != "" || pose.Dx <= 0 || pose.Squash <= 0 {
 		t.Fatalf("digging leans into the grave, no shovel drawn: %+v", pose)
 	}
 }
@@ -269,14 +269,14 @@ func TestDigSwings(t *testing.T) {
 func TestBuryKneelsAndPats(t *testing.T) {
 	t.Parallel()
 	d, ok := workTable[game.ActionBury]
-	if !ok || d.motion != motionReach || d.squash <= 0 {
+	if !ok || d.Motion != motionReach || d.Squash <= 0 {
 		t.Fatalf("bury row: %+v", d)
 	}
-	if len(d.parts) == 0 || d.parts[0].kind != partSoil {
-		t.Fatalf("soil: %+v", d.parts)
+	if len(d.Parts) == 0 || d.Parts[0].Kind != partSoil {
+		t.Fatalf("soil: %+v", d.Parts)
 	}
 	r, _ := workRenderer(0)
-	if pose := r.workPose(worker(game.ActionBury), moveState{}); !pose.ok || pose.held.key != "" || pose.squash <= 0 {
+	if pose := r.workPose(worker(game.ActionBury), moveState{}); !pose.Ok || pose.Held.Key != "" || pose.Squash <= 0 {
 		t.Fatalf("bare hands: %+v", pose)
 	}
 }
@@ -284,20 +284,20 @@ func TestBuryKneelsAndPats(t *testing.T) {
 func TestCremateUsesBench(t *testing.T) {
 	t.Parallel()
 	d, ok := workTable[game.ActionCremate]
-	if !ok || d.motion != motionBench {
+	if !ok || d.Motion != motionBench {
 		t.Fatalf("cremate row: %+v", d)
 	}
 	hasFx := false
-	for _, p := range d.parts {
-		if p.kind == partEmber || p.kind == partSmoke {
+	for _, p := range d.Parts {
+		if p.Kind == partEmber || p.Kind == partSmoke {
 			hasFx = true
 		}
 	}
 	if !hasFx {
-		t.Fatalf("embers or smoke: %+v", d.parts)
+		t.Fatalf("embers or smoke: %+v", d.Parts)
 	}
 	for _, a := range []string{game.ActionDig, game.ActionBury, game.ActionCremate} {
-		if d := workTable[a]; d.motion == motionNone || d.period <= 0 {
+		if d := workTable[a]; d.Motion == motionNone || d.Period <= 0 {
 			t.Fatalf("%s timing: %+v", a, d)
 		}
 	}
@@ -308,8 +308,8 @@ func TestCarryingCorpseShowsBody(t *testing.T) {
 	r, _ := workRenderer(0)
 	p := game.PawnView{ID: 2, Carrying: "human corpse"}
 	a := r.carryPose(p, moveState{})
-	if !a.ok || !a.held.set || a.held.stance != stanceLoad || a.held.key != itemSprite("human corpse") || a.held.key == "" {
-		t.Fatalf("body in both arms: %+v", a.held)
+	if !a.Ok || !a.Held.Set || a.Held.Stance != stanceLoad || a.Held.Key != itemSprite("human corpse") || a.Held.Key == "" {
+		t.Fatalf("body in both arms: %+v", a.Held)
 	}
 	if itemSprite("human corpse") != corpseCarrySprite {
 		t.Fatal("the carried body sprite")

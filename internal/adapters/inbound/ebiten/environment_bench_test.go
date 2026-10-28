@@ -23,7 +23,7 @@ func BenchmarkDrawPlants(b *testing.B) {
 			Growth: 20 + i%80, Stage: i % 4, Harvestable: i%3 == 0}
 		w.Plants = append(w.Plants, p)
 		k, _ := plantSprite(p)
-		keys = append(keys, k, plantKeys.fallback[k][len(plantKeys.fallback[k])-1])
+		keys = append(keys, k, plantKeys.Fallback[k][len(plantKeys.Fallback[k])-1])
 	}
 	var movers []*scriptMover
 	for i := 0; i < 6; i++ {
@@ -69,7 +69,7 @@ func BenchmarkDrawPlants(b *testing.B) {
 		frame()
 	}
 	b.StopTimer()
-	if len(r.env.springs) == 0 {
+	if len(r.env.Springs) == 0 {
 		b.Fatal("walkers pushed no plants")
 	}
 }

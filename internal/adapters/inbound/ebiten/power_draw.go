@@ -64,17 +64,17 @@ var powerDeviceKinds = map[string]bool{
 // each turbine's blade phase, the glow key memo and the reused vent
 // cover list. trace, when set (tests), sees every part drawn.
 type powerDraw struct {
-	spins  map[entity.EntityID]turbineSpin
+	Spins  map[entity.EntityID]turbineSpin
 	pruned uint64
 	glow   map[string]string
-	covers [][4]int
-	trace  func(part, key string)
+	Covers [][4]int
+	Trace  func(part, key string)
 }
 
 // powerTrace reports a part to the test hook.
 func (r *Renderer) powerTrace(part, key string) {
-	if r.power.trace != nil {
-		r.power.trace(part, key)
+	if r.power.Trace != nil {
+		r.power.Trace(part, key)
 	}
 }
 
@@ -315,15 +315,15 @@ func turbineFPS(windX, windY float64, b *game.BuildingView) float64 {
 	return math.Min(s*turbineFPSPerWind, turbineMaxFPS)
 }
 
-// bladeFrame advances turbine id's phase to present frame now at fps
+// BladeFrame advances turbine id's phase to present frame now at fps
 // frames per second and returns its blade frame (1..turbineFrames). The
 // phase accumulates, so a change of wind changes the speed, never the
 // angle; a new turbine starts at a phase of its own.
-func (p *powerDraw) bladeFrame(id entity.EntityID, fps float64, now uint64) int {
-	if p.spins == nil {
-		p.spins = map[entity.EntityID]turbineSpin{}
+func (p *powerDraw) BladeFrame(id entity.EntityID, fps float64, now uint64) int {
+	if p.Spins == nil {
+		p.Spins = map[entity.EntityID]turbineSpin{}
 	}
-	s, ok := p.spins[id]
+	s, ok := p.Spins[id]
 	switch {
 	case !ok:
 		s = turbineSpin{phase: float64(mix64(uint64(id)) % turbineFrames), last: now}
@@ -331,20 +331,20 @@ func (p *powerDraw) bladeFrame(id entity.EntityID, fps float64, now uint64) int 
 		s.phase = math.Mod(s.phase+float64(now-s.last)*fps/60, turbineFrames)
 		s.last = now
 	}
-	p.spins[id] = s
+	p.Spins[id] = s
 	return int(s.phase)%turbineFrames + 1
 }
 
-// prune forgets the turbines not drawn for turbineForget frames (gone or
+// Prune forgets the turbines not drawn for turbineForget frames (gone or
 // long off screen), at most once per turbineForget frames.
-func (p *powerDraw) prune(now uint64) {
+func (p *powerDraw) Prune(now uint64) {
 	if now-p.pruned < turbineForget {
 		return
 	}
 	p.pruned = now
-	for id, s := range p.spins {
+	for id, s := range p.Spins {
 		if now-s.last > turbineForget {
-			delete(p.spins, id)
+			delete(p.Spins, id)
 		}
 	}
 }
@@ -377,7 +377,7 @@ func (r *Renderer) drawTurbineBlades(dst *ebiten.Image, b *game.BuildingView, ke
 	if r.reducedMotion {
 		fps = 0
 	}
-	k := bladeKey(r.power.bladeFrame(b.ID, fps, r.present))
+	k := bladeKey(r.power.BladeFrame(b.ID, fps, r.present))
 	wx, wy, ok := r.bladeAt(b, key, k)
 	if !ok {
 		return

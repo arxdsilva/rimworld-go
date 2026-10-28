@@ -37,56 +37,56 @@ const (
 )
 
 type partSpec struct {
-	kind  partKind
+	Kind  partKind
 	count int
 }
 
 // actionDef is one row of the work table: the motion, its timing, how
 // the body leans and what each strike throws up.
 type actionDef struct {
-	motion motion
-	period int     // animT ticks per loop; the strike lands at strikeAt
+	Motion motion
+	Period int     // animT ticks per loop; the strike lands at strikeAt
 	reach  float64 // lean towards the worked tile, tiles
 	lean   float64 // body rotation towards the tile at full swing, radians
-	squash float64 // kneel / crouch at full swing, 0..1
-	at     partAt
-	parts  []partSpec
+	Squash float64 // kneel / crouch at full swing, 0..1
+	At     partAt
+	Parts  []partSpec
 }
 
 // workTable is the single source of truth for hands-on actions (ART
 // §27.2). Combat (aim, melee) and carrying (rescue, haul) are other layers.
 var workTable = map[string]actionDef{
-	game.ActionChop: {motion: motionSwing, period: 46, reach: 0.10, lean: 0.14, parts: []partSpec{{partChip, 4}}},
-	game.ActionMine: {motion: motionSwing, period: 50, reach: 0.12, lean: 0.16, squash: 0.03, parts: []partSpec{{partSpark, 3}, {partDust, 4}}},
+	game.ActionChop: {Motion: motionSwing, Period: 46, reach: 0.10, lean: 0.14, Parts: []partSpec{{partChip, 4}}},
+	game.ActionMine: {Motion: motionSwing, Period: 50, reach: 0.12, lean: 0.16, Squash: 0.03, Parts: []partSpec{{partSpark, 3}, {partDust, 4}}},
 	// Smoothing (SIM-029): the mine swing, shorter and lighter, with dust.
-	game.ActionSmooth:      {motion: motionSwing, period: 40, reach: 0.08, lean: 0.10, squash: 0.03, parts: []partSpec{{partDust, 3}}},
-	game.ActionBreach:      {motion: motionSwing, period: 44, reach: 0.12, lean: 0.16, squash: 0.03, parts: []partSpec{{partSpark, 3}, {partDust, 4}}},
-	game.ActionBuild:       {motion: motionSwing, period: 34, reach: 0.08, lean: 0.10, parts: []partSpec{{partSawdust, 3}}},
-	game.ActionDeconstruct: {motion: motionSwing, period: 34, reach: 0.08, lean: 0.10, parts: []partSpec{{partSawdust, 3}}},
-	game.ActionRepair:      {motion: motionSwing, period: 38, reach: 0.08, lean: 0.10, parts: []partSpec{{partSawdust, 2}}},
-	game.ActionSow:         {motion: motionReach, period: 48, reach: 0.05, lean: 0.06, squash: 0.14, parts: []partSpec{{partSoil, 3}}},
-	game.ActionHarvest:     {motion: motionReach, period: 44, reach: 0.07, lean: 0.06, squash: 0.10, parts: []partSpec{{partLeaf, 3}}},
+	game.ActionSmooth:      {Motion: motionSwing, Period: 40, reach: 0.08, lean: 0.10, Squash: 0.03, Parts: []partSpec{{partDust, 3}}},
+	game.ActionBreach:      {Motion: motionSwing, Period: 44, reach: 0.12, lean: 0.16, Squash: 0.03, Parts: []partSpec{{partSpark, 3}, {partDust, 4}}},
+	game.ActionBuild:       {Motion: motionSwing, Period: 34, reach: 0.08, lean: 0.10, Parts: []partSpec{{partSawdust, 3}}},
+	game.ActionDeconstruct: {Motion: motionSwing, Period: 34, reach: 0.08, lean: 0.10, Parts: []partSpec{{partSawdust, 3}}},
+	game.ActionRepair:      {Motion: motionSwing, Period: 38, reach: 0.08, lean: 0.10, Parts: []partSpec{{partSawdust, 2}}},
+	game.ActionSow:         {Motion: motionReach, Period: 48, reach: 0.05, lean: 0.06, Squash: 0.14, Parts: []partSpec{{partSoil, 3}}},
+	game.ActionHarvest:     {Motion: motionReach, Period: 44, reach: 0.07, lean: 0.06, Squash: 0.10, Parts: []partSpec{{partLeaf, 3}}},
 	// Sweeping (SIM-021): the low reach and a puff of dust.
-	game.ActionClean:    {motion: motionReach, period: 40, reach: 0.06, lean: 0.05, squash: 0.06, parts: []partSpec{{partDust, 2}}},
-	game.ActionCraft:    {motion: motionBench, period: 30, reach: 0.05, lean: 0.03, parts: []partSpec{{partShaving, 2}}},
-	game.ActionCook:     {motion: motionBench, period: 40, reach: 0.04, lean: 0.03, at: atStove, parts: []partSpec{{partSteam, 1}}},
-	game.ActionTailor:   {motion: motionBench, period: 44, reach: 0.05, lean: 0.03, parts: []partSpec{{partShaving, 1}}},
-	game.ActionButcher:  {motion: motionBench, period: 36, reach: 0.06, lean: 0.04, parts: []partSpec{{partBlood, 2}}},
-	game.ActionResearch: {motion: motionBench, period: 60, reach: 0.03, lean: 0.02},
-	game.ActionTend:     {motion: motionReach, period: 60, reach: 0.05, lean: 0.06, squash: 0.16},
-	game.ActionTame:     {motion: motionReach, period: 64, reach: 0.04, lean: 0.04, squash: 0.12},
+	game.ActionClean:    {Motion: motionReach, Period: 40, reach: 0.06, lean: 0.05, Squash: 0.06, Parts: []partSpec{{partDust, 2}}},
+	game.ActionCraft:    {Motion: motionBench, Period: 30, reach: 0.05, lean: 0.03, Parts: []partSpec{{partShaving, 2}}},
+	game.ActionCook:     {Motion: motionBench, Period: 40, reach: 0.04, lean: 0.03, At: atStove, Parts: []partSpec{{partSteam, 1}}},
+	game.ActionTailor:   {Motion: motionBench, Period: 44, reach: 0.05, lean: 0.03, Parts: []partSpec{{partShaving, 1}}},
+	game.ActionButcher:  {Motion: motionBench, Period: 36, reach: 0.06, lean: 0.04, Parts: []partSpec{{partBlood, 2}}},
+	game.ActionResearch: {Motion: motionBench, Period: 60, reach: 0.03, lean: 0.02},
+	game.ActionTend:     {Motion: motionReach, Period: 60, reach: 0.05, lean: 0.06, Squash: 0.16},
+	game.ActionTame:     {Motion: motionReach, Period: 64, reach: 0.04, lean: 0.04, Squash: 0.12},
 	// Milking kneels beside the animal; shearing works at its flank (SIM-026).
-	game.ActionMilk:  {motion: motionReach, period: 56, reach: 0.04, lean: 0.05, squash: 0.12},
-	game.ActionShear: {motion: motionReach, period: 40, reach: 0.06, lean: 0.05, squash: 0.08},
+	game.ActionMilk:  {Motion: motionReach, Period: 56, reach: 0.04, lean: 0.05, Squash: 0.12},
+	game.ActionShear: {Motion: motionReach, Period: 40, reach: 0.06, lean: 0.05, Squash: 0.08},
 	// Eating: nothing in hand, the head bobs to the meal.
-	game.ActionEat:    {motion: motionEat, period: 50, reach: 0.02},
-	game.ActionRefuel: {motion: motionBench, period: 40, reach: 0.06, lean: 0.04, parts: []partSpec{{partChip, 1}}},
+	game.ActionEat:    {Motion: motionEat, Period: 50, reach: 0.02},
+	game.ActionRefuel: {Motion: motionBench, Period: 40, reach: 0.06, lean: 0.04, Parts: []partSpec{{partChip, 1}}},
 	// Burial (SIM-017): digging swings like mining, kneeling to fill
 	// the grave, the bench motion at the pyre.
-	game.ActionDig:        {motion: motionSwing, period: 56, reach: 0.10, lean: 0.14, squash: 0.04, parts: []partSpec{{partSoil, 4}}},
-	game.ActionBury:       {motion: motionReach, period: 48, reach: 0.06, lean: 0.05, squash: 0.12, parts: []partSpec{{partSoil, 3}}},
-	game.ActionCremate:    {motion: motionBench, period: 44, reach: 0.04, lean: 0.03, parts: []partSpec{{partEmber, 2}, {partSmoke, 1}}},
-	game.ActionHorseshoes: {motion: motionSwing, period: 70, reach: 0.04, lean: 0.03, parts: []partSpec{{partDust, 3}}},
+	game.ActionDig:        {Motion: motionSwing, Period: 56, reach: 0.10, lean: 0.14, Squash: 0.04, Parts: []partSpec{{partSoil, 4}}},
+	game.ActionBury:       {Motion: motionReach, Period: 48, reach: 0.06, lean: 0.05, Squash: 0.12, Parts: []partSpec{{partSoil, 3}}},
+	game.ActionCremate:    {Motion: motionBench, Period: 44, reach: 0.04, lean: 0.03, Parts: []partSpec{{partEmber, 2}, {partSmoke, 1}}},
+	game.ActionHorseshoes: {Motion: motionSwing, Period: 70, reach: 0.04, lean: 0.03, Parts: []partSpec{{partDust, 3}}},
 }
 
 // legacyActions maps the old Acting strings (a fallback when the sim sets
@@ -171,17 +171,17 @@ func (r *Renderer) animateWork(w game.WorldView, pawns []game.PawnView) {
 		acting[p.ID] = true
 		prev, seen := st.PrevWork[p.ID]
 		st.PrevWork[p.ID] = t
-		if !seen || !workStrikeAt(prev, t, uint64(p.ID), d.period) {
+		if !seen || !workStrikeAt(prev, t, uint64(p.ID), d.Period) {
 			continue
 		}
 		if id, ok := actionSounds[act]; ok {
 			r.cue(id, float64(p.ActX)+0.5, float64(p.ActY)+0.5, 1)
 		}
-		if len(d.parts) == 0 {
+		if len(d.Parts) == 0 {
 			continue
 		}
 		x, y := workSpot(p)
-		switch d.at {
+		switch d.At {
 		case atStove:
 			x, y = float64(p.ActX)+0.7, float64(p.ActY)-0.1
 			if p.Acting == "work at campfire" {
@@ -191,13 +191,13 @@ func (r *Renderer) animateWork(w game.WorldView, pawns []game.PawnView) {
 			x, y = float64(p.ActX)+0.5, float64(p.ActY)-0.1
 		}
 		ux, uy := unit(float64(p.ActX-p.X), float64(p.ActY-p.Y))
-		for i, ps := range d.parts {
+		for i, ps := range d.Parts {
 			seed := uint64(p.ID)*7919 + r.present + uint64(i)*104729
-			if ps.kind == partSpark { // sparks glance back off the rock
-				r.burstDir(ps.kind, x, y, ps.count, seed, -ux, -uy, 0.02)
+			if ps.Kind == partSpark { // sparks glance back off the rock
+				r.burstDir(ps.Kind, x, y, ps.count, seed, -ux, -uy, 0.02)
 				continue
 			}
-			r.burst(ps.kind, x, y, ps.count, seed)
+			r.burst(ps.Kind, x, y, ps.count, seed)
 		}
 	}
 	for id := range st.PrevWork {
@@ -235,14 +235,14 @@ func (r *Renderer) carryPose(p game.PawnView, m moveState) actionPose {
 	if p.Carrying == "" {
 		return actionPose{}
 	}
-	a := actionPose{ok: true}
-	a.held = heldItem{set: true} // bare hands: the patient is drawn over the rescuer
+	a := actionPose{Ok: true}
+	a.Held = heldItem{Set: true} // bare hands: the patient is drawn over the rescuer
 	if p.Carrying != "pawn" {
 		key, cs := r.stoneItem(itemSprite(p.Carrying), p.Carrying, noCS) // stone takes its tint
 		if p.CarryingAnimal != "" {                                      // a carcass shows its species
 			key = "item/corpse_" + p.CarryingAnimal + "_v0"
 		}
-		a.held = heldItem{set: true, key: key, stance: stanceLoad, cs: cs}
+		a.Held = heldItem{Set: true, Key: key, Stance: stanceLoad, Cs: cs}
 	}
 	return a
 }
@@ -257,25 +257,25 @@ func (r *Renderer) workPose(p game.PawnView, m moveState) actionPose {
 		return actionPose{}
 	}
 	t := r.animT()
-	ph := workPhase(t, uint64(p.ID), d.period)
+	ph := workPhase(t, uint64(p.ID), d.Period)
 	ux, uy := unit(float64(p.ActX-p.X), float64(p.ActY-p.Y))
-	a := actionPose{ok: true}
-	switch d.motion {
+	a := actionPose{Ok: true}
+	switch d.Motion {
 	case motionSwing:
-		k := workSwing(t, uint64(p.ID), d.period)
-		a.squash = d.squash*(0.7+0.3*clamp01(k)) + swingSquash*clamp01(k)
-		a.dx, a.dy, a.rot = ux*d.reach*k, uy*d.reach*k, ux*d.lean*k
+		k := workSwing(t, uint64(p.ID), d.Period)
+		a.Squash = d.Squash*(0.7+0.3*clamp01(k)) + swingSquash*clamp01(k)
+		a.Dx, a.Dy, a.Rot = ux*d.reach*k, uy*d.reach*k, ux*d.lean*k
 	case motionReach:
 		k := dipK(ph)
-		a.squash = d.squash * (0.7 + 0.3*k) // held low, dipping deeper on the strike
-		a.dx, a.dy, a.rot = ux*d.reach*k, uy*d.reach*k+0.02*k, ux*d.lean*k
+		a.Squash = d.Squash * (0.7 + 0.3*k) // held low, dipping deeper on the strike
+		a.Dx, a.Dy, a.Rot = ux*d.reach*k, uy*d.reach*k+0.02*k, ux*d.lean*k
 	case motionBench:
 		k := dipK(ph)
-		a.squash = 0.02 * k
-		a.dx, a.dy, a.rot = ux*d.reach*k, uy*d.reach*k+0.015*k, ux*d.lean*k
+		a.Squash = 0.02 * k
+		a.Dx, a.Dy, a.Rot = ux*d.reach*k, uy*d.reach*k+0.015*k, ux*d.lean*k
 	case motionEat:
 		k := dipK(ph)
-		a.dx, a.dy = ux*d.reach, uy*d.reach+0.012*k // the head bows to the meal
+		a.Dx, a.Dy = ux*d.reach, uy*d.reach+0.012*k // the head bows to the meal
 	}
 	return a
 }

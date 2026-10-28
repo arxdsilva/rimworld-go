@@ -39,10 +39,10 @@ type homeDrawState struct {
 	valid  bool
 	ver    uint32
 	w, n   int
-	runs   []homeRun
-	edges  []homeEdge
-	builds int // how many times the cache was rebuilt (tests)
-	verts  int // vertices in the last drawn batch (tests)
+	Runs   []homeRun
+	Edges  []homeEdge
+	Builds int // how many times the cache was rebuilt (tests)
+	Verts  int // vertices in the last drawn batch (tests)
 	batch  triBatch
 }
 
@@ -55,11 +55,11 @@ func homeAt(home []uint8, w, x, y int) bool {
 	return i < len(home) && home[i] != 0
 }
 
-// rebuild recomputes the runs and the outline from w's Home grid.
-func (s *homeDrawState) rebuild(w game.WorldView) {
+// Rebuild recomputes the runs and the outline from w's Home grid.
+func (s *homeDrawState) Rebuild(w game.WorldView) {
 	s.valid, s.ver, s.w, s.n = true, w.HomeVer, w.TerrainW, len(w.Home)
-	s.runs, s.edges = s.runs[:0], s.edges[:0]
-	s.builds++
+	s.Runs, s.Edges = s.Runs[:0], s.Edges[:0]
+	s.Builds++
 	if w.TerrainW <= 0 {
 		return
 	}
@@ -73,7 +73,7 @@ func (s *homeDrawState) rebuild(w game.WorldView) {
 				start = x
 			}
 			if !in && start >= 0 {
-				s.runs = append(s.runs, homeRun{y, start, x})
+				s.Runs = append(s.Runs, homeRun{y, start, x})
 				start = -1
 			}
 			if !in {
@@ -81,7 +81,7 @@ func (s *homeDrawState) rebuild(w game.WorldView) {
 			}
 			for side, d := range nb {
 				if !homeAt(w.Home, w.TerrainW, x+d[0], y+d[1]) {
-					s.edges = append(s.edges, homeEdge{x, y, side})
+					s.Edges = append(s.Edges, homeEdge{x, y, side})
 				}
 			}
 		}
@@ -90,19 +90,19 @@ func (s *homeDrawState) rebuild(w game.WorldView) {
 
 // drawHomeOverlay draws the Home overlay when it is on, in one batch.
 func (r *Renderer) drawHomeOverlay(screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
-	st := &r.env.home
-	st.verts = 0
+	st := &r.env.Home
+	st.Verts = 0
 	if !r.homeOverlayOn() || len(w.Home) == 0 || w.TerrainW <= 0 {
 		return
 	}
 	if !st.valid || st.ver != w.HomeVer || st.w != w.TerrainW || st.n != len(w.Home) {
-		st.rebuild(w)
+		st.Rebuild(w)
 	}
 	r.setView(sw, sh, tile)
 	b := &st.batch
 	b.Reset()
 	a := homeFillA
-	for _, run := range st.runs {
+	for _, run := range st.Runs {
 		sx, sy := r.worldToScreen(run.x0, run.y)
 		wd := float64(run.x1-run.x0) * tile
 		if !visible(float32(sx), float32(sy), float32(wd), float32(tile), sw, sh) {
@@ -111,7 +111,7 @@ func (r *Renderer) drawHomeOverlay(screen *ebiten.Image, w game.WorldView, sw, s
 		b.Rect(float64(sx), float64(sy), wd, tile, homeFill, a, a, a, a)
 	}
 	ec := homeFill
-	for _, e := range st.edges {
+	for _, e := range st.Edges {
 		sx, sy := r.worldToScreen(e.x, e.y)
 		if !visible(float32(sx), float32(sy), float32(tile), float32(tile), sw, sh) {
 			continue
@@ -119,6 +119,6 @@ func (r *Renderer) drawHomeOverlay(screen *ebiten.Image, w game.WorldView, sw, s
 		ec.A = uint8(homeEdgeA * 255)
 		r.edgeStrip(b, float64(sx), float64(sy), tile, e.side, homeEdgePx, ec, 0, 1)
 	}
-	st.verts = len(b.Verts)
-	b.Flush(screen, r.env.whiteImg(), ebiten.BlendSourceOver)
+	st.Verts = len(b.Verts)
+	b.Flush(screen, r.env.WhiteImg(), ebiten.BlendSourceOver)
 }

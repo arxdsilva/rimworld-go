@@ -50,10 +50,10 @@ func (r *Renderer) speedRate() string {
 
 // floater is a number drifting up from a hit.
 type floater struct {
-	x, y float64 // tiles
-	text string
-	clr  color.RGBA
-	born uint64
+	X, Y float64 // tiles
+	Text string
+	Clr  color.RGBA
+	Born uint64
 }
 
 const floaterLife = 50 // frames
@@ -67,15 +67,15 @@ var (
 // floatTrace starts a floating number for a newly seen attack.
 func (r *Renderer) floatTrace(t game.TraceView, seed uint64) {
 	jx := float64(seed%7)/20 - 0.15
-	f := floater{x: float64(t.ToX) + 0.5 + jx, y: float64(t.ToY) - 0.1, born: r.present}
+	f := floater{X: float64(t.ToX) + 0.5 + jx, Y: float64(t.ToY) - 0.1, Born: r.present}
 	switch {
 	case t.Hit && t.Damage > 0:
-		f.text, f.clr = "-"+strconv.Itoa(t.Damage), floatHit
+		f.Text, f.Clr = "-"+strconv.Itoa(t.Damage), floatHit
 		if t.Building {
-			f.clr = floatBuilding
+			f.Clr = floatBuilding
 		}
 	case !t.Hit && !t.Melee:
-		f.text, f.clr = "miss", floatMiss
+		f.Text, f.Clr = "miss", floatMiss
 	default:
 		return
 	}
@@ -89,28 +89,28 @@ func (r *Renderer) floatTrace(t game.TraceView, seed uint64) {
 func (r *Renderer) drawFloaters(screen *ebiten.Image, tile float64) {
 	kept := r.floaters[:0]
 	for _, f := range r.floaters {
-		age := r.present - f.born
+		age := r.present - f.Born
 		if age >= floaterLife {
 			continue
 		}
 		kept = append(kept, f)
 		rise := float64(age) / floaterLife * 0.7
-		sx, sy := r.worldToScreenF(f.x, f.y-rise)
+		sx, sy := r.worldToScreenF(f.X, f.Y-rise)
 		// the anchor is world space (physical); the label is UI (logical)
 		ls := float32(uiScale())
 		sx, sy = sx/ls, sy/ls
 		// text scale follows the zoom, in half steps so few faces are cached
 		k := math.Round(min(3, max(1.5, tile/36))*2) / 2
 		st := textStyle{Size: tsSmall.Size * k, Bold: true, Align: alignCenter}
-		w := textW(f.text, st) + float32(6*k)
+		w := textW(f.Text, st) + float32(6*k)
 		h := lineStep(st)
 		fade := float32(1)
 		if age > floaterLife/2 {
 			fade = float32(floaterLife-age) / float32(floaterLife/2)
 		}
 		uiFillRect(screen, sx-w/2, sy-h/2, w, h, uiShade(uint8(170*fade)), false)
-		st.Color = color.NRGBA{f.clr.R, f.clr.G, f.clr.B, uint8(255 * fade)}
-		drawText(screen, f.text, float64(sx), float64(sy-h/2), st)
+		st.Color = color.NRGBA{f.Clr.R, f.Clr.G, f.Clr.B, uint8(255 * fade)}
+		drawText(screen, f.Text, float64(sx), float64(sy-h/2), st)
 	}
 	r.floaters = kept
 }

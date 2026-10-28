@@ -47,12 +47,12 @@ func TestStainAlphaIsAmount(t *testing.T) {
 	t.Parallel()
 	for _, a := range []float64{0, 0.1, 0.5, 1} {
 		l := stainLookOf(game.StainView{X: 3, Y: 4, Kind: "blood", Amount: a})
-		if math.Abs(float64(l.cs[3])-a*0.85) > 1e-6 {
-			t.Fatalf("amount %v: alpha %v", a, l.cs[3])
+		if math.Abs(float64(l.Cs[3])-a*0.85) > 1e-6 {
+			t.Fatalf("amount %v: alpha %v", a, l.Cs[3])
 		}
 	}
-	if l := stainLookOf(game.StainView{Amount: 3}); l.cs[3] > 0.85+1e-6 {
-		t.Fatalf("alpha capped at 0.85: %v", l.cs[3])
+	if l := stainLookOf(game.StainView{Amount: 3}); l.Cs[3] > 0.85+1e-6 {
+		t.Fatalf("alpha capped at 0.85: %v", l.Cs[3])
 	}
 }
 
@@ -81,8 +81,8 @@ func TestStainDriesDarker(t *testing.T) {
 	}
 	// a stain's look carries the colour (the tint), premultiplied later
 	l := stainLookOf(game.StainView{Kind: "blood", Amount: 0.5, AgeTicks: stainDryTicks})
-	if rgb8([3]float32{l.cs[0], l.cs[1], l.cs[2]}) != [3]int{0x4a, 0x1d, 0x1a} {
-		t.Fatalf("look colour %v", l.cs)
+	if rgb8([3]float32{l.Cs[0], l.Cs[1], l.Cs[2]}) != [3]int{0x4a, 0x1d, 0x1a} {
+		t.Fatalf("look colour %v", l.Cs)
 	}
 }
 
@@ -100,16 +100,16 @@ func TestStainRotationAndOffset(t *testing.T) {
 	t.Parallel()
 	for v := uint8(0); v < 6; v++ {
 		l := stainLookOf(game.StainView{X: 7, Y: 9, Amount: 0.4, Variant: v})
-		if math.Abs(l.rot-float64(v)*math.Pi/3) > 1e-9 {
-			t.Fatalf("variant %d: rot %v", v, l.rot)
+		if math.Abs(l.Rot-float64(v)*math.Pi/3) > 1e-9 {
+			t.Fatalf("variant %d: rot %v", v, l.Rot)
 		}
-		if math.Abs(l.cx-7.5) > 0.15+1e-9 || math.Abs(l.cy-9.5) > 0.15+1e-9 {
-			t.Fatalf("offset within ±0.15 tile: (%v, %v)", l.cx, l.cy)
+		if math.Abs(l.Cx-7.5) > 0.15+1e-9 || math.Abs(l.Cy-9.5) > 0.15+1e-9 {
+			t.Fatalf("offset within ±0.15 tile: (%v, %v)", l.Cx, l.Cy)
 		}
 	}
 	a := stainLookOf(game.StainView{X: 7, Y: 9, Amount: 0.4})
 	b := stainLookOf(game.StainView{X: 8, Y: 9, Amount: 0.4})
-	if a.cx-7 == b.cx-8 && a.cy == b.cy {
+	if a.Cx-7 == b.Cx-8 && a.Cy == b.Cy {
 		t.Fatal("offset varies by tile")
 	}
 }
@@ -188,10 +188,10 @@ func TestOffscreenStainsSkipped(t *testing.T) {
 	}}
 	r.view.W = w
 	var b stainBatch
-	if n := r.buildStains(&b, w, 320, 320, tile); n != 2 || len(b.verts) != 8 || len(b.idx) != 12 {
-		t.Fatalf("on screen: %d quads, %d verts, %d indices", n, len(b.verts), len(b.idx))
+	if n := r.buildStains(&b, w, 320, 320, tile); n != 2 || len(b.Verts) != 8 || len(b.Idx) != 12 {
+		t.Fatalf("on screen: %d quads, %d verts, %d indices", n, len(b.Verts), len(b.Idx))
 	}
-	for _, v := range b.verts {
+	for _, v := range b.Verts {
 		if v.Custom3 != 0 || v.Custom2 != 0 {
 			t.Fatalf("stains are lit flat and carry no figure blood: %+v", v)
 		}
@@ -210,8 +210,8 @@ func TestStainsLitByTheirTile(t *testing.T) {
 	var b stainBatch
 	r.buildStains(&b, w, 320, 320, r.tilePx())
 	sky, lamp := r.lightTile(0, 0)
-	if len(b.verts) != 4 || b.verts[0].Custom0 != sky || b.verts[0].Custom1 != lamp {
-		t.Fatalf("stain lit as its tile (%v, %v): %+v", sky, lamp, b.verts)
+	if len(b.Verts) != 4 || b.Verts[0].Custom0 != sky || b.Verts[0].Custom1 != lamp {
+		t.Fatalf("stain lit as its tile (%v, %v): %+v", sky, lamp, b.Verts)
 	}
 }
 

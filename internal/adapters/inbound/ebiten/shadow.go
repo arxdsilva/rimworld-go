@@ -46,7 +46,7 @@ func (h shadowHost) CastFigure(c *creatureCaster, cast *shadowCast, dst *ebiten.
 func (h shadowHost) VisibleTiles() (x0, y0, x1, y1 int) { return h.r.visibleTiles() }
 
 // White is the environment's white texel.
-func (h shadowHost) White() *ebiten.Image { return h.r.env.whiteImg() }
+func (h shadowHost) White() *ebiten.Image { return h.r.env.WhiteImg() }
 
 // footprintOf is a sprite's footprint in tiles (1x1 when unknown).
 func (r *Renderer) footprintOf(key string) (float64, float64) {
@@ -67,12 +67,12 @@ func skyOpen(w game.WorldView, x, y int) bool {
 // (widened by the longest shadow). Pawns and animals cast their own
 // silhouettes (creatureCasters).
 func (r *Renderer) shadowCasters(w game.WorldView, pawns []game.PawnView) []shadowCaster {
-	st := &r.env.shadow
+	st := &r.env.Shadow
 	out := st.Objects[:0]
-	v := r.env.view
+	v := r.env.View
 	m := shadowMaxLen + 1
 	inView := func(x, y, fw, fd float64) bool {
-		return v.empty() || x+fw >= v.x0-m && y+fd >= v.y0-m && x <= v.x1+m && y <= v.y1+m
+		return v.Empty() || x+fw >= v.X0-m && y+fd >= v.Y0-m && x <= v.X1+m && y <= v.Y1+m
 	}
 	addBox := func(key string, x, y, fw, fd float64, scale float64) {
 		s := st.SpecOf(r.art, key)
@@ -173,10 +173,10 @@ func (r *Renderer) addRockCasters(w game.WorldView, add func(key string, x, y, f
 		return i < len(w.Terrain) && isRockWallCode(w.Terrain[i])
 	}
 	x0, y0, x1, y1 := 0, 0, gw-1, gh-1
-	if v := r.env.view; !v.empty() {
+	if v := r.env.View; !v.Empty() {
 		m := shadowMaxLen + 1
-		x0, y0 = max(int(v.x0-m), 0), max(int(v.y0-m), 0)
-		x1, y1 = min(int(v.x1+m), gw-1), min(int(v.y1+m), gh-1)
+		x0, y0 = max(int(v.X0-m), 0), max(int(v.Y0-m), 0)
+		x1, y1 = min(int(v.X1+m), gw-1), min(int(v.Y1+m), gh-1)
 	}
 	for y := y0; y <= y1; y++ {
 		for x := x0; x <= x1; x++ {
@@ -193,12 +193,12 @@ func (r *Renderer) addRockCasters(w game.WorldView, add func(key string, x, y, f
 // draws them), or an embodied corpse, and with art. Each pawn's figure
 // pose is resolved here, once per frame, for its silhouettes.
 func (r *Renderer) creatureCasters(w game.WorldView, pawns []game.PawnView) []creatureCaster {
-	st := &r.env.shadow
+	st := &r.env.Shadow
 	out := st.Creatures[:0]
-	v := r.env.view
+	v := r.env.View
 	mg := shadowMaxLen + 1
 	inView := func(x, y float64) bool {
-		return v.empty() || x+1 >= v.x0-mg && y+1 >= v.y0-mg && x <= v.x1+mg && y <= v.y1+mg
+		return v.Empty() || x+1 >= v.X0-mg && y+1 >= v.Y0-mg && x <= v.X1+mg && y <= v.Y1+mg
 	}
 	add := func(c creatureCaster, key string, feetX, feetY float64) {
 		sp := r.art.Sprite(key)
@@ -236,12 +236,12 @@ func (r *Renderer) creatureCasters(w game.WorldView, pawns []game.PawnView) []cr
 		// cull on the cell first: the drawn position stays within a few
 		// tiles of it (interpolation and corrections), and most of a big
 		// map's animals are far off screen
-		if fx, fy := float64(an.X), float64(an.Y); !v.empty() &&
-			(fx+1+drawnReach < v.x0-ma || fy+1+drawnReach < v.y0-ma || fx-drawnReach > v.x1+ma || fy-drawnReach > v.y1+ma) {
+		if fx, fy := float64(an.X), float64(an.Y); !v.Empty() &&
+			(fx+1+drawnReach < v.X0-ma || fy+1+drawnReach < v.Y0-ma || fx-drawnReach > v.X1+ma || fy-drawnReach > v.Y1+ma) {
 			continue
 		}
 		wx, wy := r.interpAnimal(*an)
-		if !v.empty() && !(wx+1 >= v.x0-ma && wy+1 >= v.y0-ma && wx <= v.x1+ma && wy <= v.y1+ma) {
+		if !v.Empty() && !(wx+1 >= v.X0-ma && wy+1 >= v.Y0-ma && wx <= v.X1+ma && wy <= v.Y1+ma) {
 			continue
 		}
 		add(creatureCaster{Animal: an, WX: wx, WY: wy}, r.animalBaseKey(*an), figurePivotX, figurePivotY)

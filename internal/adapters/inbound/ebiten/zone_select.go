@@ -303,7 +303,7 @@ var growTempRange = sync.OnceValues(func() (lo, hi int) {
 // the range plants grow in.
 func (a *App) zoneClimateLine(z game.ZoneView) string {
 	g := a.renderer.zoneGeomOf(z)
-	x, y := min(max(int(g.ax), g.minX), g.maxX), min(max(int(g.ay), g.minY), g.maxY)
+	x, y := min(max(int(g.Ax), g.MinX), g.MaxX), min(max(int(g.Ay), g.MinY), g.MaxY)
 	t := a.renderer.game.TemperatureAt(x, y)
 	lo, hi := growTempRange()
 	switch {
@@ -329,11 +329,11 @@ func (a *App) zonePlantsLine(z game.ZoneView) string {
 	g := r.zoneGeomOf(z)
 	w := a.shell.World()
 	st := a.zoneSt()
-	st.plants = r.plantsOn(&w, g.minX, g.minY, g.maxX, g.maxY, st.plants[:0])
+	st.plants = r.plantsOn(&w, g.MinX, g.MinY, g.MaxX, g.MaxY, st.plants[:0])
 	sown, ripe, growth := 0, 0, 0
 	for _, i := range st.plants {
 		p := &w.Plants[i]
-		if !zoneOwnPlant(p) || !g.cells[[2]int{p.X, p.Y}] {
+		if !zoneOwnPlant(p) || !g.Cells[[2]int{p.X, p.Y}] {
 			continue
 		}
 		sown++

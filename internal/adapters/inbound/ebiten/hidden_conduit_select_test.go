@@ -14,7 +14,7 @@ func TestHiddenConduitSelectableOnlyInThePowerOverlay(t *testing.T) {
 	if a.sel.HasBuilding {
 		t.Fatal("a click selected an invisible hidden conduit")
 	}
-	a.renderer.pov.on = true
+	a.renderer.pov.On = true
 	clickTile(a, 9, 9)
 	if !a.sel.HasBuilding {
 		t.Fatal("with the power overlay on, a click selects the hidden conduit")

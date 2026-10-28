@@ -16,7 +16,7 @@ func TestSteamHissOncePerBurst(t *testing.T) {
 	}
 	r.steamHiss(start+period, x, y)
 	cues := r.takeCues()
-	if len(cues) != 1 || cues[0].id != "sfx.steam_vent" || cues[0].x != 8 || cues[0].y != 4 {
+	if len(cues) != 1 || cues[0].ID != "sfx.steam_vent" || cues[0].X != 8 || cues[0].Y != 4 {
 		t.Fatalf("next burst cues %+v", cues)
 	}
 	r.steamHiss(start+period, 20, 20) // another vent hisses on its own

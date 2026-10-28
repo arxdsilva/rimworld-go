@@ -33,35 +33,35 @@ const (
 
 // minimapState is the renderer's minimap.
 type minimapState struct {
-	off    bool // hidden by the player
+	Off    bool // hidden by the player
 	ver    uint64
-	img    *ebiten.Image
-	pix    []byte
-	w, h   int
+	Img    *ebiten.Image
+	Pix    []byte
+	W, h   int
 	fogVer uint64 // FogVer the image was built for
 	polled uint64 // present frame of the last poll
-	polls  int    // layer fetches that changed it (tests)
-	// globalH is the global controls' height (hud_global.go sets it): the
+	Polls  int    // layer fetches that changed it (tests)
+	// GlobalH is the global controls' height (hud_global.go sets it): the
 	// minimap sits above them.
-	globalH float32
+	GlobalH float32
 }
 
 // minimapOn reports the minimap is shown: a large map, not hidden.
 func (r *Renderer) minimapOn() bool {
-	return r != nil && !r.mini.off && max(r.game.Width(), r.game.Height()) > minimapMinSide
+	return r != nil && !r.mini.Off && max(r.game.Width(), r.game.Height()) > minimapMinSide
 }
 
 // toggleMinimap shows or hides the minimap (the Minimap action).
 func (r *Renderer) toggleMinimap() {
 	if r != nil {
-		r.mini.off = !r.mini.off
+		r.mini.Off = !r.mini.Off
 	}
 }
 
 // minimapRect is the minimap's box for the logical screen ui: the
 // layout's Minimap rect.
 func (r *Renderer) minimapRect(ui viewport) rect {
-	return computeHUDLayout(int(ui.X1), int(ui.Y1), hudState{MinimapOn: true, GlobalH: r.mini.globalH}).Minimap
+	return computeHUDLayout(int(ui.X1), int(ui.Y1), hudState{MinimapOn: true, GlobalH: r.mini.GlobalH}).Minimap
 }
 
 // minimapBox is the minimap's box and the map's rectangle inside it (the
@@ -145,7 +145,7 @@ func minimapColor(cell uint8) color.RGBA {
 // most every minimapPoll frames.
 func (r *Renderer) syncMinimap() {
 	m := &r.mini
-	if m.img != nil && r.present-m.polled < minimapPoll {
+	if m.Img != nil && r.present-m.polled < minimapPoll {
 		return
 	}
 	m.polled = r.present
@@ -159,26 +159,26 @@ func (r *Renderer) syncMinimap() {
 		return
 	}
 	m.ver, m.fogVer = v.Ver, fw.FogVer
-	if m.img == nil || m.w != v.W || m.h != v.H {
-		if m.img != nil {
-			m.img.Deallocate()
+	if m.Img == nil || m.W != v.W || m.h != v.H {
+		if m.Img != nil {
+			m.Img.Deallocate()
 		}
-		m.img, m.w, m.h = ebiten.NewImage(v.W, v.H), v.W, v.H
+		m.Img, m.W, m.h = ebiten.NewImage(v.W, v.H), v.W, v.H
 	}
 	n := v.W * v.H
-	if cap(m.pix) < 4*n {
-		m.pix = make([]byte, 4*n)
+	if cap(m.Pix) < 4*n {
+		m.Pix = make([]byte, 4*n)
 	}
-	m.pix = m.pix[:4*n]
+	m.Pix = m.Pix[:4*n]
 	for i, cell := range v.Cells[:n] {
 		c := minimapColor(cell)
 		if len(fw.Fog) > i && fw.Fog[i] != 0 && v.W == fw.TerrainW {
 			c = fogClr // unexplored: black
 		}
-		m.pix[4*i], m.pix[4*i+1], m.pix[4*i+2], m.pix[4*i+3] = c.R, c.G, c.B, 255
+		m.Pix[4*i], m.Pix[4*i+1], m.Pix[4*i+2], m.Pix[4*i+3] = c.R, c.G, c.B, 255
 	}
-	m.img.WritePixels(m.pix)
-	m.polls++
+	m.Img.WritePixels(m.Pix)
+	m.Polls++
 }
 
 // minimapView is the camera's view as a rectangle inside the map's
@@ -206,8 +206,8 @@ func (r *Renderer) drawMinimap(screen *ebiten.Image, ui, v viewport) {
 	m := &r.mini
 	bx, by, mx, my, mw, mh := r.minimapBox(ui)
 	drawPanel(screen, float32(bx), float32(by), minimapSide, minimapSide)
-	if m.img != nil {
-		uiImage(screen, m.img, mx, my, mw, mh, &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear})
+	if m.Img != nil {
+		uiImage(screen, m.Img, mx, my, mw, mh, &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear})
 	}
 	gw, gh := float64(r.game.Width()), float64(r.game.Height())
 	fw0 := r.game.World()

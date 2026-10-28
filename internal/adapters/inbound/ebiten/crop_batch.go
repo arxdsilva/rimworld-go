@@ -129,10 +129,10 @@ var cropBase = [5][][2]float64{
 // phase, the variant it draws (mod the stage's variants), mirrored or
 // not, and its drop-out rank (0 goes first under damage).
 type cropUnit struct {
-	dx, dy, trim, sway, phase float64
-	variant                   uint32
-	mirror                    bool
-	rank                      int
+	Dx, Dy, Trim, Sway, Phase float64
+	Variant                   uint32
+	Mirror                    bool
+	Rank                      int
 }
 
 // cropUnits appends tile (x, y)'s n units to out: a pure function of the
@@ -158,16 +158,16 @@ func cropUnits(x, y, n int, vertical bool, out []cropUnit) []cropUnit {
 			}
 		}
 		u := cropUnit{
-			trim:    0.9 + 0.2*f(32),
-			sway:    0.8 + 0.4*f(48),
-			phase:   2 * math.Pi * float64(h2&0xffffff) / float64(1<<24),
-			variant: uint32(h2 >> 24 & 0xff),
-			mirror:  h2>>40&1 != 0,
-			rank:    rank,
+			Trim:    0.9 + 0.2*f(32),
+			Sway:    0.8 + 0.4*f(48),
+			Phase:   2 * math.Pi * float64(h2&0xffffff) / float64(1<<24),
+			Variant: uint32(h2 >> 24 & 0xff),
+			Mirror:  h2>>40&1 != 0,
+			Rank:    rank,
 		}
-		u.dx, u.dy = along, across
+		u.Dx, u.Dy = along, across
 		if vertical {
-			u.dx, u.dy = across, along
+			u.Dx, u.Dy = across, along
 		}
 		out = append(out, u)
 	}
@@ -178,7 +178,7 @@ func cropUnits(x, y, n int, vertical bool, out []cropUnit) []cropUnit {
 // most four), so a nearer unit overlaps the one behind it.
 func sortCropUnits(us []cropUnit) {
 	for i := 1; i < len(us); i++ {
-		for j := i; j > 0 && us[j].dy < us[j-1].dy; j-- {
+		for j := i; j > 0 && us[j].Dy < us[j-1].Dy; j-- {
 			us[j], us[j-1] = us[j-1], us[j]
 		}
 	}
@@ -220,7 +220,7 @@ func cropSwayFactor(species string) float64 {
 // isCropPlant reports a sown or grown crop: a crop species, except a wild
 // healroot (one outside a grow zone).
 func isCropPlant(p *game.PlantView) bool {
-	if _, ok := plantKeys.crops[p.Species]; !ok {
+	if _, ok := plantKeys.Crops[p.Species]; !ok {
 		return false
 	}
 	return p.Species != "healroot" || p.Zone != ""
@@ -363,8 +363,8 @@ func cropMarkColor(p *game.PlantView) color.RGBA {
 // on the centre of its footprint, plant_base.py CX, CY = 0.5, -0.5), and
 // tiles per atlas pixel at scale 1.
 type cropSprite struct {
-	sx, sy, w, h float32
-	fx, fy       float32
+	Sx, Sy, W, H float32
+	fx, Fy       float32
 	k            float32
 }
 
@@ -380,8 +380,8 @@ type furrowSprite struct {
 // sprites (one per distinct variant that exists), and each stage's
 // nominal height in tiles above the root.
 type cropSet struct {
-	stages  [numCropStages][]int32
-	nominal [numCropStages]float32
+	Stages  [numCropStages][]int32
+	Nominal [numCropStages]float32
 }
 
 // cropAtlas packs the unit sprites of the species drawn so far, and the
@@ -389,8 +389,8 @@ type cropSet struct {
 type cropAtlas struct {
 	art     *artCatalog
 	img     *ebiten.Image
-	sprites []cropSprite
-	sets    map[string]*cropSet
+	Sprites []cropSprite
+	Sets    map[string]*cropSet
 	order   []string // species in the atlas, in the order they joined
 	furrows []furrowSprite
 }
@@ -401,7 +401,7 @@ func cropArtKey(c *artCatalog, key string) string {
 	if c.Has(key) {
 		return key
 	}
-	for _, k := range plantKeys.fallback[key] {
+	for _, k := range plantKeys.Fallback[key] {
 		if c.Has(k) {
 			return k
 		}
@@ -413,7 +413,7 @@ func cropArtKey(c *artCatalog, key string) string {
 // the furrow decals into one image. A species or stage without art has an
 // empty set (nothing is drawn for it).
 func buildCropAtlas(c *artCatalog, species []string) *cropAtlas {
-	a := &cropAtlas{art: c, sets: map[string]*cropSet{}, order: slices.Clone(species)}
+	a := &cropAtlas{art: c, Sets: map[string]*cropSet{}, order: slices.Clone(species)}
 	type item struct {
 		pix      *image.NRGBA
 		box      image.Rectangle
@@ -447,8 +447,8 @@ func buildCropAtlas(c *artCatalog, species []string) *cropAtlas {
 	}
 	for _, name := range species {
 		set := &cropSet{}
-		a.sets[name] = set
-		ks := plantKeys.crops[name]
+		a.Sets[name] = set
+		ks := plantKeys.Crops[name]
 		if ks == nil {
 			continue
 		}
@@ -473,22 +473,22 @@ func buildCropAtlas(c *artCatalog, species []string) *cropAtlas {
 					fw, fh := footprint(sp.Meta)
 					fx := (sp.Meta.Origin[0]+fw*artTilePx/2)/kpx - float64(box.Min.X)
 					fy := (sp.Meta.Origin[1]+fh*artTilePx/2)/kpx - float64(box.Min.Y)
-					idx = int32(len(a.sprites))
+					idx = int32(len(a.Sprites))
 					byKey[key] = idx
 					itemOf = append(itemOf, len(items))
-					a.sprites = append(a.sprites, cropSprite{})
+					a.Sprites = append(a.Sprites, cropSprite{})
 					items = append(items, item{pix: sp.Pix, box: box,
-						spr: cropSprite{w: float32(box.Dx()), h: float32(box.Dy()), fx: float32(fx), fy: float32(fy), k: float32(kpx / artTilePx)}})
+						spr: cropSprite{W: float32(box.Dx()), H: float32(box.Dy()), fx: float32(fx), Fy: float32(fy), k: float32(kpx / artTilePx)}})
 				}
-				if slices.Contains(set.stages[st], idx) {
+				if slices.Contains(set.Stages[st], idx) {
 					continue
 				}
-				set.stages[st] = append(set.stages[st], idx)
-				heights = append(heights, items[itemOf[idx]].spr.fy*items[itemOf[idx]].spr.k)
+				set.Stages[st] = append(set.Stages[st], idx)
+				heights = append(heights, items[itemOf[idx]].spr.Fy*items[itemOf[idx]].spr.k)
 			}
 			if len(heights) > 0 {
 				slices.Sort(heights)
-				set.nominal[st] = max(heights[len(heights)/2], 0.02)
+				set.Nominal[st] = max(heights[len(heights)/2], 0.02)
 			}
 		}
 	}
@@ -537,8 +537,8 @@ func buildCropAtlas(c *artCatalog, species []string) *cropAtlas {
 	}
 	for idx, ii := range itemOf {
 		s := items[ii].spr
-		s.sx, s.sy = float32(items[ii].x), float32(items[ii].y)
-		a.sprites[idx] = s
+		s.Sx, s.Sy = float32(items[ii].x), float32(items[ii].y)
+		a.Sprites[idx] = s
 	}
 	return a
 }
@@ -551,16 +551,16 @@ var cropAnchors = [...]struct {
 	g     float64
 }{{stSprout, 14}, {stYoung, 37.5}, {stMature, 77.5}, {stHarvestable, 100}}
 
-// height is the drawn height in tiles of a plant at growth percent g: the
+// Height is the drawn Height in tiles of a plant at growth percent g: the
 // stages' nominal heights joined by straight lines, so growth is
 // continuous whichever stage's sprite shows, and never falling, so a plant
 // does not shrink as it ripens (a ripe sprite drawn shorter than the
-// mature one, drooping ears, keeps the mature height).
-func (s *cropSet) height(g float64) float64 {
+// mature one, drooping ears, keeps the mature Height).
+func (s *cropSet) Height(g float64) float64 {
 	var pg, ph float64
 	have := false
 	for _, an := range cropAnchors {
-		n := float64(s.nominal[an.stage])
+		n := float64(s.Nominal[an.stage])
 		if n <= 0 {
 			continue
 		}
@@ -580,15 +580,15 @@ func (s *cropSet) height(g float64) float64 {
 	return ph
 }
 
-// scale is the size factor of a growth-stage sprite at growth percent g
+// Scale is the size factor of a growth-stage sprite at growth percent g
 // (the sprite's nominal height brought to the growth curve); sown seeds
 // stay as drawn.
-func (s *cropSet) scale(stage, growth int) float64 {
-	n := float64(s.nominal[stage])
+func (s *cropSet) Scale(stage, growth int) float64 {
+	n := float64(s.Nominal[stage])
 	if stage == stSown || n <= 0 {
 		return 1
 	}
-	return min(max(s.height(float64(growth))/n, cropScaleMin), cropScaleMax)
+	return min(max(s.Height(float64(growth))/n, cropScaleMin), cropScaleMax)
 }
 
 // --- the batch ------------------------------------------------------------------
@@ -597,24 +597,24 @@ func (s *cropSet) scale(stage, growth int) float64 {
 // batch and the furrow batch, the field-axis memo and counters the tests
 // read.
 type cropBatch struct {
-	atlas *cropAtlas
+	Atlas *cropAtlas
 	// pending units: flushed before any other object draws
-	verts []ebiten.Vertex
-	idx   []uint32
+	Verts []ebiten.Vertex
+	Idx   []uint32
 	units []cropUnit
 	// the last furrow pass (kept after it is drawn)
-	fverts []ebiten.Vertex
+	Fverts []ebiten.Vertex
 	fidx   []uint32
 	axes   cropAxes
-	// counters (tests): unit quads queued, unit batches drawn and furrow
-	// quads drawn since begin.
-	quads, flushes, furrows int
+	// counters (tests): unit Quads queued, unit batches drawn and furrow
+	// Quads drawn since begin.
+	Quads, Flushes, Furrows int
 }
 
-// begin starts a frame: counters at zero, nothing pending.
-func (cb *cropBatch) begin() {
-	cb.quads, cb.flushes, cb.furrows = 0, 0, 0
-	cb.verts, cb.idx = cb.verts[:0], cb.idx[:0]
+// Begin starts a frame: counters at zero, nothing pending.
+func (cb *cropBatch) Begin() {
+	cb.Quads, cb.Flushes, cb.Furrows = 0, 0, 0
+	cb.Verts, cb.Idx = cb.Verts[:0], cb.Idx[:0]
 }
 
 // cropAxes memoises which cells lie in a north-south grow zone (taller
@@ -665,15 +665,15 @@ func (r *Renderer) cropAtlas(dst *ebiten.Image) *cropAtlas {
 		return nil
 	}
 	cb := &r.lod.crops
-	if cb.atlas == nil || cb.atlas.art != r.art {
+	if cb.Atlas == nil || cb.Atlas.art != r.art {
 		var order []string
-		if cb.atlas != nil {
-			order = cb.atlas.order
+		if cb.Atlas != nil {
+			order = cb.Atlas.order
 		}
 		r.flushCrops(dst) // pending units index the old atlas
-		cb.atlas = buildCropAtlas(r.art, order)
+		cb.Atlas = buildCropAtlas(r.art, order)
 	}
-	return cb.atlas
+	return cb.Atlas
 }
 
 // cropAtlasFor is the atlas with species in it: a species that has not
@@ -684,10 +684,10 @@ func (r *Renderer) cropAtlasFor(dst *ebiten.Image, species string) *cropAtlas {
 	if a == nil {
 		return nil
 	}
-	if _, ok := a.sets[species]; !ok {
+	if _, ok := a.Sets[species]; !ok {
 		r.flushCrops(dst)
 		a = buildCropAtlas(r.art, append(slices.Clone(a.order), species))
-		r.lod.crops.atlas = a
+		r.lod.crops.Atlas = a
 	}
 	return a
 }
@@ -701,8 +701,8 @@ func (r *Renderer) drawCropObj(dst *ebiten.Image, w *game.WorldView, p *game.Pla
 	if a == nil || a.img == nil {
 		return
 	}
-	set := a.sets[p.Species]
-	sprites := set.stages[cropStage(*p)]
+	set := a.Sets[p.Species]
+	sprites := set.Stages[cropStage(*p)]
 	if len(sprites) == 0 {
 		return
 	}
@@ -710,7 +710,7 @@ func (r *Renderer) drawCropObj(dst *ebiten.Image, w *game.WorldView, p *game.Pla
 	n := cropUnitCount(p.Species)
 	cb.units = cropUnits(p.X, p.Y, n, r.cropVertical(w, p.X, p.Y), cb.units[:0])
 	units := cb.units
-	gs := set.scale(cropGrowthStage(*p), p.Growth)
+	gs := set.Scale(cropGrowthStage(*p), p.Growth)
 	tint := cropDamageTint(p.Damage, p.DamageKind)
 	live := tile >= lodLiveMin
 	repScale, repAlpha := 1.0, 1.0
@@ -718,13 +718,13 @@ func (r *Renderer) drawCropObj(dst *ebiten.Image, w *game.WorldView, p *game.Pla
 		last := units[0]
 		var sum float64
 		for _, u := range units {
-			if u.rank > last.rank {
+			if u.Rank > last.Rank {
 				last = u
 			}
-			_, al := cropUnitLook(p.Damage, u.rank, n)
+			_, al := cropUnitLook(p.Damage, u.Rank, n)
 			sum += al
 		}
-		last.dx, last.dy, last.trim = 0.5, 0.6, cropLODScale
+		last.Dx, last.Dy, last.Trim = 0.5, 0.6, cropLODScale
 		units = append(units[:0], last)
 		repScale, _ = cropUnitLook(p.Damage, 0, n)
 		repAlpha = sum / float64(n)
@@ -733,10 +733,10 @@ func (r *Renderer) drawCropObj(dst *ebiten.Image, w *game.WorldView, p *game.Pla
 	// shrinks it about its root), then drawn north to south
 	for i := range units {
 		u := &units[i]
-		sp := &a.sprites[sprites[int(u.variant)%len(sprites)]]
-		k := gs * u.trim * float64(sp.k)
-		root, f := cropFit(u.dy, float64(sp.fy)*k, float64(sp.h-sp.fy)*k)
-		u.dy, u.trim = root, u.trim*f
+		sp := &a.Sprites[sprites[int(u.Variant)%len(sprites)]]
+		k := gs * u.Trim * float64(sp.k)
+		root, f := cropFit(u.Dy, float64(sp.Fy)*k, float64(sp.H-sp.Fy)*k)
+		u.Dy, u.Trim = root, u.Trim*f
 	}
 	sortCropUnits(units)
 
@@ -752,48 +752,48 @@ func (r *Renderer) drawCropObj(dst *ebiten.Image, w *game.WorldView, p *game.Pla
 		u := &units[i]
 		sc, al := repScale, repAlpha
 		if live {
-			sc, al = cropUnitLook(p.Damage, u.rank, n)
+			sc, al = cropUnitLook(p.Damage, u.Rank, n)
 		}
 		if al < 1.0/255 {
 			continue
 		}
-		sp := &a.sprites[sprites[int(u.variant)%len(sprites)]]
-		ks := float32(gs*u.trim*sc) * tl * sp.k // screen px per atlas px
-		fx, fy := tx+float32(u.dx)*tl, ty+float32(u.dy)*tl
+		sp := &a.Sprites[sprites[int(u.Variant)%len(sprites)]]
+		ks := float32(gs*u.Trim*sc) * tl * sp.k // screen px per atlas px
+		fx, fy := tx+float32(u.Dx)*tl, ty+float32(u.Dy)*tl
 		uh := float32(hs) // the wind never stretches a unit past its tile's north edge
-		if up := sp.fy * ks; up > 0 {
-			uh = min(uh, float32(u.dy)*tl/up)
+		if up := sp.Fy * ks; up > 0 {
+			uh = min(uh, float32(u.Dy)*tl/up)
 		}
-		above, below := sp.fy*ks*uh, (sp.h-sp.fy)*ks
-		wq := sp.w * ks
+		above, below := sp.Fy*ks*uh, (sp.H-sp.Fy)*ks
+		wq := sp.W * ks
 		left := fx - sp.fx*ks
-		if u.mirror {
-			left = fx - (sp.w-sp.fx)*ks
+		if u.Mirror {
+			left = fx - (sp.W-sp.fx)*ks
 		}
-		l := min(max(lean*u.sway*swayK+cropWobble*swayK*math.Sin(t*2.1+u.phase), -cropLeanMax), cropLeanMax)
+		l := min(max(lean*u.Sway*swayK+cropWobble*swayK*math.Sin(t*2.1+u.Phase), -cropLeanMax), cropLeanMax)
 		tn := float32(l + l*l*l/3)
 		shT, shB := tn*above, -tn*below
 		top, bot := fy-above, fy+below
 		if bot < 0 || top > fsh || max(left+shT, left+shB)+wq < 0 || min(left+shT, left+shB) > fsw {
 			continue
 		}
-		if len(cb.verts) >= cropBatchQuads*4 {
+		if len(cb.Verts) >= cropBatchQuads*4 {
 			r.flushCrops(dst)
 		}
-		u0, u1 := sp.sx, sp.sx+sp.w
-		if u.mirror {
+		u0, u1 := sp.Sx, sp.Sx+sp.W
+		if u.Mirror {
 			u0, u1 = u1, u0
 		}
 		a32 := float32(al)
 		cr, cg, cbl := tint[0]*a32, tint[1]*a32, tint[2]*a32
-		n0 := uint32(len(cb.verts))
-		cb.verts = append(cb.verts,
-			ebiten.Vertex{DstX: left + shT, DstY: top, SrcX: u0, SrcY: sp.sy, ColorR: cr, ColorG: cg, ColorB: cbl, ColorA: a32, Custom0: sky, Custom1: lamp},
-			ebiten.Vertex{DstX: left + shT + wq, DstY: top, SrcX: u1, SrcY: sp.sy, ColorR: cr, ColorG: cg, ColorB: cbl, ColorA: a32, Custom0: sky, Custom1: lamp},
-			ebiten.Vertex{DstX: left + shB, DstY: bot, SrcX: u0, SrcY: sp.sy + sp.h, ColorR: cr, ColorG: cg, ColorB: cbl, ColorA: a32, Custom0: sky, Custom1: lamp},
-			ebiten.Vertex{DstX: left + shB + wq, DstY: bot, SrcX: u1, SrcY: sp.sy + sp.h, ColorR: cr, ColorG: cg, ColorB: cbl, ColorA: a32, Custom0: sky, Custom1: lamp})
-		cb.idx = append(cb.idx, n0, n0+1, n0+2, n0+1, n0+3, n0+2)
-		cb.quads++
+		n0 := uint32(len(cb.Verts))
+		cb.Verts = append(cb.Verts,
+			ebiten.Vertex{DstX: left + shT, DstY: top, SrcX: u0, SrcY: sp.Sy, ColorR: cr, ColorG: cg, ColorB: cbl, ColorA: a32, Custom0: sky, Custom1: lamp},
+			ebiten.Vertex{DstX: left + shT + wq, DstY: top, SrcX: u1, SrcY: sp.Sy, ColorR: cr, ColorG: cg, ColorB: cbl, ColorA: a32, Custom0: sky, Custom1: lamp},
+			ebiten.Vertex{DstX: left + shB, DstY: bot, SrcX: u0, SrcY: sp.Sy + sp.H, ColorR: cr, ColorG: cg, ColorB: cbl, ColorA: a32, Custom0: sky, Custom1: lamp},
+			ebiten.Vertex{DstX: left + shB + wq, DstY: bot, SrcX: u1, SrcY: sp.Sy + sp.H, ColorR: cr, ColorG: cg, ColorB: cbl, ColorA: a32, Custom0: sky, Custom1: lamp})
+		cb.Idx = append(cb.Idx, n0, n0+1, n0+2, n0+1, n0+3, n0+2)
+		cb.Quads++
 	}
 }
 
@@ -801,15 +801,15 @@ func (r *Renderer) drawCropObj(dst *ebiten.Image, w *game.WorldView, p *game.Pla
 // when the lit shader is missing). It is a no-op with nothing queued.
 func (r *Renderer) flushCrops(dst *ebiten.Image) {
 	cb := &r.lod.crops
-	if len(cb.idx) == 0 {
+	if len(cb.Idx) == 0 {
 		return
 	}
-	defer func() { cb.verts, cb.idx = cb.verts[:0], cb.idx[:0] }()
-	if cb.atlas == nil || cb.atlas.img == nil {
+	defer func() { cb.Verts, cb.Idx = cb.Verts[:0], cb.Idx[:0] }()
+	if cb.Atlas == nil || cb.Atlas.img == nil {
 		return
 	}
-	cb.flushes++
-	r.drawLitBatch(dst, cb.verts, cb.idx, cb.atlas.img)
+	cb.Flushes++
+	r.drawLitBatch(dst, cb.Verts, cb.Idx, cb.Atlas.img)
 }
 
 // drawLitBatch draws a triangle batch of vertices carrying per-vertex sky
@@ -835,8 +835,8 @@ func (r *Renderer) drawLitBatch(dst *ebiten.Image, verts []ebiten.Vertex, idx []
 // not the frame's world (tests).
 func (r *Renderer) drawFurrows(dst *ebiten.Image, w game.WorldView, tile float64) {
 	cb := &r.lod.crops
-	cb.fverts, cb.fidx = cb.fverts[:0], cb.fidx[:0]
-	cb.furrows = 0
+	cb.Fverts, cb.fidx = cb.Fverts[:0], cb.fidx[:0]
+	cb.Furrows = 0
 	a := r.cropAtlas(dst)
 	if a == nil || a.img == nil || len(a.furrows) == 0 {
 		return
@@ -851,19 +851,19 @@ func (r *Renderer) drawFurrows(dst *ebiten.Image, w game.WorldView, tile float64
 		sc := float32(tile) * fs.k // screen px per atlas px
 		vertical := r.cropVertical(&w, p.X, p.Y)
 		sky, lamp := r.lightTile(p.X, p.Y)
-		n0 := uint32(len(cb.fverts))
+		n0 := uint32(len(cb.Fverts))
 		for k := 0; k < 4; k++ {
 			ox, oy := float32(k&1)*fs.w-fs.cx, float32(k>>1)*fs.h-fs.cy
 			if vertical {
 				ox, oy = -oy, ox
 			}
 			dx, dy := cx+ox*sc, cy+oy*sc
-			cb.fverts = append(cb.fverts, ebiten.Vertex{DstX: dx, DstY: dy,
+			cb.Fverts = append(cb.Fverts, ebiten.Vertex{DstX: dx, DstY: dy,
 				SrcX: fs.sx + float32(k&1)*fs.w, SrcY: fs.sy + float32(k>>1)*fs.h,
 				ColorR: 1, ColorG: 1, ColorB: 1, ColorA: 1, Custom0: sky, Custom1: lamp})
 		}
 		cb.fidx = append(cb.fidx, n0, n0+1, n0+2, n0+1, n0+3, n0+2)
-		cb.furrows++
+		cb.Furrows++
 	}
 	if r.frameLists(&w) {
 		for _, cv := range r.lod.views {
@@ -879,6 +879,6 @@ func (r *Renderer) drawFurrows(dst *ebiten.Image, w game.WorldView, tile float64
 		}
 	}
 	if len(cb.fidx) > 0 {
-		r.drawLitBatch(dst, cb.fverts, cb.fidx, a.img)
+		r.drawLitBatch(dst, cb.Fverts, cb.fidx, a.img)
 	}
 }

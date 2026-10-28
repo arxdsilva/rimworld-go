@@ -148,7 +148,7 @@ func TestGeneratedArtCoversRenderer(t *testing.T) {
 		keys = append(keys, fmt.Sprintf("overlay/tilled_%d", v))
 	}
 	for _, c := range game.Crops() {
-		for _, row := range plantKeys.crops[c.Name] { // PLAY-016: every unit sprite crop_batch.go draws
+		for _, row := range plantKeys.Crops[c.Name] { // PLAY-016: every unit sprite crop_batch.go draws
 			keys = append(keys, row[:]...)
 		}
 		keys = append(keys, itemSprite(c.Label), "ui_icon/"+strings.ReplaceAll(c.Label, " ", "_"))

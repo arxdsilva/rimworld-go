@@ -67,11 +67,11 @@ func dirtTexIndex(n, variant int) int {
 // dirtLook is how one dirty tile is drawn: its texture, centre (world
 // tiles), size (tiles), rotation and colour scale (straight alpha).
 type dirtLook struct {
-	tex    int
-	cx, cy float64
-	size   float64
-	rot    float64
-	cs     colorScale
+	Tex    int
+	Cx, Cy float64
+	Size   float64
+	Rot    float64
+	Cs     colorScale
 }
 
 // dirtLookOf places and colours a dirty tile: prints (size 1) or a smudge
@@ -86,12 +86,12 @@ func dirtLookOf(d game.DirtView) dirtLook {
 	}
 	c := dirtColour(d.Amount)
 	return dirtLook{
-		tex:  dirtTexIndex(n, int(th>>9)),
-		cx:   float64(d.X) + 0.5 + 0.16*(hash01(th, 0xd1)-0.5),
-		cy:   float64(d.Y) + 0.5 + 0.16*(hash01(th, 0xd2)-0.5),
-		size: size,
-		rot:  2 * math.Pi * hash01(th, 0xd3),
-		cs:   colorScale{c[0], c[1], c[2], dirtAlpha(d.Amount)},
+		Tex:  dirtTexIndex(n, int(th>>9)),
+		Cx:   float64(d.X) + 0.5 + 0.16*(hash01(th, 0xd1)-0.5),
+		Cy:   float64(d.Y) + 0.5 + 0.16*(hash01(th, 0xd2)-0.5),
+		Size: size,
+		Rot:  2 * math.Pi * hash01(th, 0xd3),
+		Cs:   colorScale{c[0], c[1], c[2], dirtAlpha(d.Amount)},
 	}
 }
 
@@ -226,7 +226,7 @@ var dirtBatches = sync.Pool{New: func() any { return new(stainBatch) }}
 // buildDirt fills b with the visible dirty tiles of w as lit quads (flat,
 // sky and lamp from each tile) and returns how many it kept.
 func (r *Renderer) buildDirt(b *stainBatch, w game.WorldView, sw, sh int, tile float64) int {
-	b.verts, b.idx = b.verts[:0], b.idx[:0]
+	b.Verts, b.Idx = b.Verts[:0], b.Idx[:0]
 	if len(w.Dirt) == 0 || tile <= 0 {
 		return 0
 	}
@@ -243,21 +243,21 @@ func (r *Renderer) buildDirt(b *stainBatch, w game.WorldView, sw, sh int, tile f
 			continue
 		}
 		l := dirtLookOf(d)
-		sx, sy := r.worldToScreenF(l.cx, l.cy)
-		px := l.size * tile
-		rc := rects[l.tex]
+		sx, sy := r.worldToScreenF(l.Cx, l.Cy)
+		px := l.Size * tile
+		rc := rects[l.Tex]
 		tw, th := float64(rc.Dx()), float64(rc.Dy())
 		geo := ebiten.GeoM{}
 		geo.Translate(-tw/2, -th/2)
 		geo.Scale(px/tw, px/th)
-		geo.Rotate(l.rot)
+		geo.Rotate(l.Rot)
 		geo.Translate(float64(sx), float64(sy))
 		sky, lamp := r.lightTile(d.X, d.Y)
-		litQuad(&q, float32(rc.Min.X), float32(rc.Min.Y), float32(tw), float32(th), geo, l.cs, sky, lamp, 0)
-		base := uint32(len(b.verts))
-		b.verts = append(b.verts, q[:]...)
+		litQuad(&q, float32(rc.Min.X), float32(rc.Min.Y), float32(tw), float32(th), geo, l.Cs, sky, lamp, 0)
+		base := uint32(len(b.Verts))
+		b.Verts = append(b.Verts, q[:]...)
 		for _, i := range litIndices {
-			b.idx = append(b.idx, base+i)
+			b.Idx = append(b.Idx, base+i)
 		}
 		n++
 	}
@@ -279,10 +279,10 @@ func (r *Renderer) drawDirt(screen *ebiten.Image, w game.WorldView, sw, sh int, 
 	sh2 := r.litShader()
 	if sh2 == nil { // shader failed to compile: unlit
 		op := &ebiten.DrawTrianglesOptions{Filter: ebiten.FilterLinear, ColorScaleMode: ebiten.ColorScaleModePremultipliedAlpha}
-		screen.DrawTriangles32(b.verts, b.idx, atlas, op)
+		screen.DrawTriangles32(b.Verts, b.Idx, atlas, op)
 		return
 	}
 	r.lit.SyncUniforms()
 	r.lit.Opts.Images[0] = atlas
-	screen.DrawTrianglesShader32(b.verts, b.idx, sh2, &r.lit.Opts)
+	screen.DrawTrianglesShader32(b.Verts, b.Idx, sh2, &r.lit.Opts)
 }

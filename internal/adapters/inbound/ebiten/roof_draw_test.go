@@ -133,10 +133,10 @@ func TestEavesOnRoofedInteriorEdges(t *testing.T) {
 		}
 	}
 	for _, e := range edges {
-		if e.x == 3 && e.y == 3 {
+		if e.X == 3 && e.Y == 3 {
 			t.Errorf("eave on an unroofed tile: %+v", e)
 		}
-		if roomIDAt(w, e.x, e.y) == -2 {
+		if roomIDAt(w, e.X, e.Y) == -2 {
 			t.Errorf("eave on a wall: %+v", e)
 		}
 	}
@@ -156,8 +156,8 @@ func TestEavesOnRoofedInteriorEdges(t *testing.T) {
 	}
 	r := New(&stubSim{w: 9, h: 6})
 	r.drawEaves(ebiten.NewImage(640, 400), w, 640, 400, r.tilePx())
-	if len(r.env.roof.edges) != 18 {
-		t.Errorf("drawEaves found %d edges", len(r.env.roof.edges))
+	if len(r.env.Roof.Edges) != 18 {
+		t.Errorf("drawEaves found %d edges", len(r.env.Roof.Edges))
 	}
 }
 
@@ -167,12 +167,12 @@ func TestRoofOverlayColorsPerFlag(t *testing.T) {
 		c    uint8
 		want roofStyle
 	}{
-		{roofBuilt, roofStyle{fill: color.RGBA{90, 140, 210, 70}, border: color.RGBA{120, 170, 235, 150}}},
-		{roofBuilt | roofSupported, roofStyle{fill: color.RGBA{90, 140, 210, 70}, border: color.RGBA{120, 170, 235, 150}}},
-		{roofNatural, roofStyle{fill: color.RGBA{110, 110, 125, 85}, stipple: roofNaturalDots}},
-		{roofPlanBuild, roofStyle{fill: color.RGBA{235, 175, 60, 30}, dash: color.RGBA{235, 175, 60, 200}}},
-		{roofBuilt | roofPlanRemove, roofStyle{fill: color.RGBA{90, 140, 210, 70}, border: color.RGBA{120, 170, 235, 150},
-			hatch: color.RGBA{220, 70, 60, 120}}},
+		{roofBuilt, roofStyle{Fill: color.RGBA{90, 140, 210, 70}, Border: color.RGBA{120, 170, 235, 150}}},
+		{roofBuilt | roofSupported, roofStyle{Fill: color.RGBA{90, 140, 210, 70}, Border: color.RGBA{120, 170, 235, 150}}},
+		{roofNatural, roofStyle{Fill: color.RGBA{110, 110, 125, 85}, Stipple: roofNaturalDots}},
+		{roofPlanBuild, roofStyle{Fill: color.RGBA{235, 175, 60, 30}, Dash: color.RGBA{235, 175, 60, 200}}},
+		{roofBuilt | roofPlanRemove, roofStyle{Fill: color.RGBA{90, 140, 210, 70}, Border: color.RGBA{120, 170, 235, 150},
+			Hatch: color.RGBA{220, 70, 60, 120}}},
 		{roofSupported | roofNoAuto, roofStyle{}},
 	}
 	for _, c := range cases {
@@ -198,12 +198,12 @@ func TestOverlayOnlyWhenToggledOrForced(t *testing.T) {
 			t.Fatalf("%+v: roofOverlayOn %v", c, r.roofOverlayOn())
 		}
 		r.drawRoofOverlay(screen, w, 640, 400, r.tilePx())
-		if drew := r.env.roof.overlayVerts > 0; drew != c.want {
-			t.Fatalf("%+v: overlay drew %d vertices", c, r.env.roof.overlayVerts)
+		if drew := r.env.Roof.OverlayVerts > 0; drew != c.want {
+			t.Fatalf("%+v: overlay drew %d vertices", c, r.env.Roof.OverlayVerts)
 		}
 		// no roof data: nothing, even when on
 		r.drawRoofOverlay(screen, game.WorldView{TerrainW: 9}, 640, 400, r.tilePx())
-		if r.env.roof.overlayVerts != 0 {
+		if r.env.Roof.OverlayVerts != 0 {
 			t.Fatalf("%+v: overlay drew without roof data", c)
 		}
 	}
@@ -215,7 +215,7 @@ func TestOverlayOnlyWhenToggledOrForced(t *testing.T) {
 	r.roofOverlay = true
 	r.drawRoofOverlay(screen, w, 640, 400, r.tilePx())
 	r.drawRoofUnsupported(screen, 2, 2, r.tilePx())
-	if r.env.roof.overlayVerts == 0 {
+	if r.env.Roof.OverlayVerts == 0 {
 		t.Fatal("overlay drew nothing")
 	}
 }

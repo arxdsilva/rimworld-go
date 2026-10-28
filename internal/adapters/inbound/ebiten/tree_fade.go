@@ -21,13 +21,13 @@ const (
 // opaque. Settled opaque trees hold no entry; entries the view stops
 // drawing are dropped.
 type treeFadeState struct {
-	alpha float64
+	Alpha float64
 	at    uint64 // present frame of the last update
 }
 
 // treeFx is the renderer's see-through canopy state.
 type treeFx struct {
-	fades map[uint32]*treeFadeState
+	Fades map[uint32]*treeFadeState
 	focus [][2]int // hovered entity or Architect ghost tiles (SetTreeFocus)
 	swept uint64
 }
@@ -64,48 +64,48 @@ func (r *Renderer) treeCanopyAlpha(x, y int) float32 {
 	target := r.treeCanopyTarget(x, y)
 	fx := &r.treeFx
 	k := envTileKey(x, y)
-	st := fx.fades[k]
+	st := fx.Fades[k]
 	if st == nil {
 		if target == 1 {
 			return 1
 		}
-		if fx.fades == nil {
-			fx.fades = map[uint32]*treeFadeState{}
+		if fx.Fades == nil {
+			fx.Fades = map[uint32]*treeFadeState{}
 		}
-		st = &treeFadeState{alpha: 1, at: r.present}
+		st = &treeFadeState{Alpha: 1, at: r.present}
 		if r.reducedMotion {
-			st.alpha = target
+			st.Alpha = target
 		}
-		fx.fades[k] = st
+		fx.Fades[k] = st
 	}
 	if r.reducedMotion {
-		st.alpha = target
+		st.Alpha = target
 	} else if dt := r.present - st.at; dt > 0 {
 		step := math.Min(float64(dt), 12) / (treeFadeSecs * treeFadeFPS)
-		st.alpha += (target - st.alpha) * (1 - math.Exp(-3*step)) // ~95% in treeFadeSecs
-		if math.Abs(target-st.alpha) < 0.01 {
-			st.alpha = target
+		st.Alpha += (target - st.Alpha) * (1 - math.Exp(-3*step)) // ~95% in treeFadeSecs
+		if math.Abs(target-st.Alpha) < 0.01 {
+			st.Alpha = target
 		}
 	}
 	st.at = r.present
-	if st.alpha == 1 && target == 1 {
-		delete(fx.fades, k)
+	if st.Alpha == 1 && target == 1 {
+		delete(fx.Fades, k)
 		return 1
 	}
-	return float32(st.alpha)
+	return float32(st.Alpha)
 }
 
 // sweepTreeFades drops springs of trees no longer drawn (they left the
 // view): once per frame, from drawArt.
 func (r *Renderer) sweepTreeFades() {
 	fx := &r.treeFx
-	if len(fx.fades) == 0 || fx.swept == r.present {
+	if len(fx.Fades) == 0 || fx.swept == r.present {
 		return
 	}
 	fx.swept = r.present
-	for k, st := range fx.fades {
+	for k, st := range fx.Fades {
 		if r.present-st.at > 2 {
-			delete(fx.fades, k)
+			delete(fx.Fades, k)
 		}
 	}
 }

@@ -227,7 +227,7 @@ func TestBurstEmitsOnce(t *testing.T) {
 	r := combatRenderer(100, nil, game.WorldView{})
 	var tr burstTracker
 	ev := []burstEvent{{ID: 4, X: 6, Y: 7, Tick: 90}}
-	tr.emit(r, ev)
+	tr.Emit(r, ev)
 	n := len(r.parts)
 	if n < 10 {
 		t.Fatalf("a burst throws many particles, got %d", n)
@@ -241,18 +241,18 @@ func TestBurstEmitsOnce(t *testing.T) {
 			t.Errorf("missing particle kind %d", k)
 		}
 	}
-	tr.emit(r, ev)
+	tr.Emit(r, ev)
 	if len(r.parts) != n {
 		t.Fatalf("the same stamp does not burst twice: %d -> %d", n, len(r.parts))
 	}
-	tr.emit(r, append(ev, burstEvent{ID: 5, X: 1, Y: 1, Tick: 95}))
+	tr.Emit(r, append(ev, burstEvent{ID: 5, X: 1, Y: 1, Tick: 95}))
 	if len(r.parts) <= n {
 		t.Fatal("a new stamp bursts")
 	}
 	// determinism: the same stamp makes the same particles
 	r2 := combatRenderer(100, nil, game.WorldView{})
 	var tr2 burstTracker
-	tr2.emit(r2, ev)
+	tr2.Emit(r2, ev)
 	if fmt.Sprint(r2.parts) != fmt.Sprint(r.parts[:n]) {
 		t.Fatal("bursts are deterministic")
 	}
@@ -292,8 +292,8 @@ func TestCarriedCarcassShowsItsSpecies(t *testing.T) {
 	}
 	p := game.PawnView{Carrying: "animal corpse", CarryingAnimal: "capybara"}
 	r := &Renderer{art: c}
-	if a := r.carryPose(p, moveState{}); a.held.key != key {
-		t.Fatalf("held %q, want %q", a.held.key, key)
+	if a := r.carryPose(p, moveState{}); a.Held.Key != key {
+		t.Fatalf("held %q, want %q", a.Held.Key, key)
 	}
 }
 
@@ -353,12 +353,12 @@ func TestAnimalDensityKeepsTileSize(t *testing.T) {
 	r.art.Sprites["item/corpse_lo"] = &artSprite{Meta: artMeta{Canvas: [2]int{192, 80}, Origin: pt{64, 8}, PPT: 64}}
 	rig, ps := rigFor(r, faceSouth)
 	place := func(key string) [2]pt {
-		pl, ok := r.heldPlace(rig, heldItem{key: key, stance: stanceLoad}, 5, 5, 64, ps)
+		pl, ok := r.heldPlace(rig, heldItem{Key: key, Stance: stanceLoad}, 5, 5, 64, ps)
 		if !ok {
 			t.Fatalf("%s not placed", key)
 		}
 		m := r.art.Sprites[key].Meta
-		return [2]pt{apply(pl.g, pt{0, 0}), apply(pl.g, pt{float64(m.Canvas[0]), float64(m.Canvas[1])})}
+		return [2]pt{apply(pl.G, pt{0, 0}), apply(pl.G, pt{float64(m.Canvas[0]), float64(m.Canvas[1])})}
 	}
 	if a, b := place("item/corpse_hi"), place("item/corpse_lo"); !near2(a[0], b[0], 1e-6) || !near2(a[1], b[1], 1e-6) {
 		t.Fatalf("a carried carcass at 128 ppt spans %v, at 64 %v", a, b)

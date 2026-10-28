@@ -25,23 +25,23 @@ func TestShadowsOffSkipsTheLayer(t *testing.T) {
 	r.lit.Light = testLight(0.4, 0.4, 0.3)
 	dst := ebiten.NewImage(640, 400)
 	r.drawShadows(dst, w, 640, 400, r.tilePx())
-	if r.env.shadow.Composites != 1 || r.env.shadow.Layer == nil {
-		t.Fatalf("fixture: composites %d, layer %v; the shadow layer should draw with shadows on", r.env.shadow.Composites, r.env.shadow.Layer)
+	if r.env.Shadow.Composites != 1 || r.env.Shadow.Layer == nil {
+		t.Fatalf("fixture: composites %d, layer %v; the shadow layer should draw with shadows on", r.env.Shadow.Composites, r.env.Shadow.Layer)
 	}
-	r.env.shadow.SetOff(true)
-	if r.env.shadow.Layer != nil || r.env.shadow.Scratch != nil {
+	r.env.Shadow.SetOff(true)
+	if r.env.Shadow.Layer != nil || r.env.Shadow.Scratch != nil {
 		t.Fatal("turning shadows off should free the screen-sized layers")
 	}
 	for i := 0; i < 3; i++ {
 		r.drawShadows(dst, w, 640, 400, r.tilePx())
 	}
-	if r.env.shadow.Composites != 1 || r.env.shadow.Layer != nil {
-		t.Fatalf("shadows off still drew: composites %d, layer %v", r.env.shadow.Composites, r.env.shadow.Layer)
+	if r.env.Shadow.Composites != 1 || r.env.Shadow.Layer != nil {
+		t.Fatalf("shadows off still drew: composites %d, layer %v", r.env.Shadow.Composites, r.env.Shadow.Layer)
 	}
-	r.env.shadow.SetOff(false)
+	r.env.Shadow.SetOff(false)
 	r.drawShadows(dst, w, 640, 400, r.tilePx())
-	if r.env.shadow.Composites != 2 {
-		t.Fatalf("shadows back on: composites %d, want 2", r.env.shadow.Composites)
+	if r.env.Shadow.Composites != 2 {
+		t.Fatalf("shadows back on: composites %d, want 2", r.env.Shadow.Composites)
 	}
 }
 
@@ -136,14 +136,14 @@ func TestLightingOffGrassKeepsTuftsLitByTheTileLight(t *testing.T) {
 	r, _ := grassRenderer(w, 6, 6)
 	r.lit.Light = lightAt(8, summerDay, "clear", 0)
 	batchAt(r, 6, 6, 64, 9)
-	on := r.lod.grass.verts[0]
+	on := r.lod.grass.Verts[0]
 	if r.lit.Opts.Images[0] == nil {
 		t.Fatal("fixture: lit tufts should draw through the shader")
 	}
 	r.lit.Opts.Images[0] = nil
 	r.lit.Off = true
 	batchAt(r, 6, 6, 64, 9)
-	off := r.lod.grass.verts[0]
+	off := r.lod.grass.Verts[0]
 	if r.lit.Opts.Images[0] != nil {
 		t.Fatal("lighting off still drew tufts through lit.kage")
 	}
@@ -262,11 +262,11 @@ func waterRendererFixture() *Renderer {
 func TestSimpleWaterIsStillAndSkipsTheRippleShader(t *testing.T) {
 	t.Parallel()
 	r := waterRendererFixture()
-	r.water.simple = true
+	r.water.Simple = true
 	dst := ebiten.NewImage(64, 64)
 	keys := map[string]bool{}
 	shaderDraws := 0
-	r.water.onDraw = func(key string, shader bool) {
+	r.water.OnDraw = func(key string, shader bool) {
 		keys[key] = true
 		if shader {
 			shaderDraws++
@@ -276,8 +276,8 @@ func TestSimpleWaterIsStillAndSkipsTheRippleShader(t *testing.T) {
 		r.present = p
 		r.drawWaterTile(dst, "shallow_water", 0, 0, 32, 64, 64, noCS)
 	}
-	if shaderDraws != 0 || r.water.shader != nil || r.water.err != nil {
-		t.Fatalf("simple water used the ripple shader: %d draws, compiled %v err %v", shaderDraws, r.water.shader != nil, r.water.err)
+	if shaderDraws != 0 || r.water.Shader != nil || r.water.Err != nil {
+		t.Fatalf("simple water used the ripple shader: %d draws, compiled %v err %v", shaderDraws, r.water.Shader != nil, r.water.Err)
 	}
 	if len(keys) != 1 {
 		t.Fatalf("simple water showed %d frames, want one still frame", len(keys))
@@ -299,7 +299,7 @@ func TestAnimatedWaterStillRipples(t *testing.T) {
 	r := waterRendererFixture()
 	dst := ebiten.NewImage(64, 64)
 	shaderDraws := 0
-	r.water.onDraw = func(_ string, shader bool) {
+	r.water.OnDraw = func(_ string, shader bool) {
 		if shader {
 			shaderDraws++
 		}
@@ -319,7 +319,7 @@ func TestGrassDetailThinsTuftsPerTile(t *testing.T) {
 	r, _ := grassRenderer(w, 16, 16)
 	colours := map[string]map[[4]float32]bool{}
 	quads := func(level string) int {
-		r.lod.grass.level = level
+		r.lod.grass.Level = level
 		n := batchAt(r, 16, 16, 64, 9)
 		colours[level] = distinctTuftColours(r)
 		return n
@@ -359,7 +359,7 @@ func TestGrassDetailThinsTuftsPerTile(t *testing.T) {
 // distinctTuftColours is the set of vertex colours of the last tuft batch.
 func distinctTuftColours(r *Renderer) map[[4]float32]bool {
 	out := map[[4]float32]bool{}
-	for _, v := range r.lod.grass.verts {
+	for _, v := range r.lod.grass.Verts {
 		out[[4]float32{v.ColorR, v.ColorG, v.ColorB, v.ColorA}] = true
 	}
 	return out
@@ -402,7 +402,7 @@ func TestGrassDetailChangesTheChunkBakeKey(t *testing.T) {
 	r, _ := grassRenderer(w, 8, 8)
 	sigs := map[uint64]bool{}
 	for _, level := range []string{config.GrassFull, config.GrassReduced, config.GrassSparse} {
-		r.lod.grass.level = level
+		r.lod.grass.Level = level
 		sigs[r.grassLookSig(&w, 1)] = true
 	}
 	if len(sigs) != 3 {
@@ -428,7 +428,7 @@ func TestGraphicsPresetsDriveEveryKnob(t *testing.T) {
 			got := struct {
 				shadowsOff, lightingOff, simpleWater bool
 				grass                                string
-			}{r.env.shadow.Off, r.lit.Off, r.water.simple, r.lod.grass.level}
+			}{r.env.Shadow.Off, r.lit.Off, r.water.Simple, r.lod.grass.Level}
 			if got != want {
 				t.Fatalf("%s: knobs %+v, want %+v", tier, got, want)
 			}

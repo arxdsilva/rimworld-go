@@ -27,20 +27,20 @@ func TestFogCacheRebuildsOnlyOnFogVerChange(t *testing.T) {
 	screen := ebiten.NewImage(256, 256)
 	tile := r.cam.Tile()
 	r.drawFogLayer(screen, w.Fog, 1, 40, 40, tile, 256, 256)
-	first := r.fogc.bakes
+	first := r.fogc.Bakes
 	if first == 0 {
 		t.Fatal("first draw baked nothing")
 	}
 	r.drawFogLayer(screen, w.Fog, 1, 40, 40, tile, 256, 256)
-	if r.fogc.bakes != first {
-		t.Fatalf("same FogVer rebaked: %d -> %d", first, r.fogc.bakes)
+	if r.fogc.Bakes != first {
+		t.Fatalf("same FogVer rebaked: %d -> %d", first, r.fogc.Bakes)
 	}
 	r.drawFogLayer(screen, w.Fog, 2, 40, 40, tile, 256, 256)
-	if r.fogc.bakes != 2*first {
-		t.Fatalf("FogVer change rebaked %d chunks, want %d", r.fogc.bakes-first, first)
+	if r.fogc.Bakes != 2*first {
+		t.Fatalf("FogVer change rebaked %d chunks, want %d", r.fogc.Bakes-first, first)
 	}
 	r.drawFogLayer(screen, nil, 0, 40, 40, tile, 256, 256)
-	if r.fogc.chunks != nil {
+	if r.fogc.Chunks != nil {
 		t.Fatal("empty fog kept its bakes")
 	}
 }
@@ -53,10 +53,10 @@ func TestFogDrawsHiddenTilesNearBlack(t *testing.T) {
 	w := fogWorld(16, 16, 8)
 	var fc fogCache
 	var c fogChunk
-	fc.bake(&c, w.Fog, 16, 16, 0, 0)
+	fc.Bake(&c, w.Fog, 16, 16, 0, 0)
 	at := func(tx, ty int) [4]uint8 {
 		o := 4 * ((ty*fogPx+fogPx/2)*fogChunkPx + tx*fogPx + fogPx/2)
-		return [4]uint8{fc.pix[o], fc.pix[o+1], fc.pix[o+2], fc.pix[o+3]}
+		return [4]uint8{fc.Pix[o], fc.Pix[o+1], fc.Pix[o+2], fc.Pix[o+3]}
 	}
 	if got := at(12, 5); got != [4]uint8{0x0B, 0x0B, 0x0E, 255} {
 		t.Fatalf("hidden tile pixel = %v, want fog colour", got)
@@ -74,7 +74,7 @@ func TestFogNoFogDoesNothing(t *testing.T) {
 	r := New(&stubSim{w: 16, h: 16, world: game.WorldView{TerrainW: 16}})
 	screen := ebiten.NewImage(64, 64)
 	r.drawFog(screen, game.WorldView{TerrainW: 16}, 64, 64, 32)
-	if r.fogc.bakes != 0 || r.fogc.chunks != nil {
+	if r.fogc.Bakes != 0 || r.fogc.Chunks != nil {
 		t.Fatal("empty fog did work")
 	}
 }
@@ -114,11 +114,11 @@ func TestMinimapHidesFoggedTiles(t *testing.T) {
 	v := colonyViewport(1280, 800)
 	r.drawMinimap(screen, v, v)
 	i := 10*160 + 100
-	if got := [3]byte{r.mini.pix[4*i], r.mini.pix[4*i+1], r.mini.pix[4*i+2]}; got != [3]byte{fogClr.R, fogClr.G, fogClr.B} {
+	if got := [3]byte{r.mini.Pix[4*i], r.mini.Pix[4*i+1], r.mini.Pix[4*i+2]}; got != [3]byte{fogClr.R, fogClr.G, fogClr.B} {
 		t.Fatalf("hidden minimap pixel = %v", got)
 	}
 	j := 10*160 + 10
-	if r.mini.pix[4*j] == fogClr.R && r.mini.pix[4*j+1] == fogClr.G && r.mini.pix[4*j+2] == fogClr.B {
+	if r.mini.Pix[4*j] == fogClr.R && r.mini.Pix[4*j+1] == fogClr.G && r.mini.Pix[4*j+2] == fogClr.B {
 		t.Fatal("revealed minimap pixel is black")
 	}
 }

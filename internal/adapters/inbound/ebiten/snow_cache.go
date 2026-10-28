@@ -48,19 +48,19 @@ const (
 type snowChunk struct {
 	img    *ebiten.Image // the snow mask
 	wetImg *ebiten.Image // the wet veil, wetPx texels a tile (nil: none)
-	wetPx  int           // wet texels per tile baked at
+	WetPx  int           // wet texels per tile baked at
 	cells  []uint8       // the chunk's snow bytes and a one-tile ring (empty: legacy depth)
 	depth  uint8         // legacy uniform depth baked (no per-tile layer)
 	gen    uint64        // snowCache.gen baked at
 	ver    uint64        // SnowVer cells were last verified at
 	wet    uint8         // wetness bucket baked (wetBucket)
-	plants uint64        // crop key baked (puddleCropKey), while wet > 0
-	// pud is the puddle cover per wet texel (wetImgW(wetPx)²), nil when
+	Plants uint64        // crop key baked (puddleCropKey), while wet > 0
+	// Pud is the puddle cover per wet texel (wetImgW(wetPx)²), nil when
 	// the chunk holds no water: where raindrops ripple (puddleAt).
-	pud    []uint8
+	Pud    []uint8
 	seen   uint32 // the last pass that walked it (snowCache.pass)
 	built  bool
-	any    bool // some snow
+	Any    bool // some snow
 	anyWet bool // some wet veil
 }
 
@@ -89,7 +89,7 @@ func bakeCost(px int) int { return max(1, px*px/16) }
 
 // snowCache holds the baked chunks of the current map.
 type snowCache struct {
-	chunks map[int]*snowChunk
+	Chunks map[int]*snowChunk
 	w, h   int
 	// gen moves when what a chunk depends on besides its snow bytes moves:
 	// terrain and buildings (StructVer: floors too), the room grid or the
@@ -97,24 +97,24 @@ type snowCache struct {
 	// their content does).
 	gen    uint64
 	key    snowKey
-	pix    []byte    // the snow bake's texels
-	wpix   []byte    // the wet bake's texels
+	Pix    []byte    // the snow bake's texels
+	Wpix   []byte    // the wet bake's texels
 	height []float32 // the wet bake's texel heights (NaN: dry)
 	ring   []byte
 	corner []float64 // (snowRing+1)² corner veil alphas
 	open   []bool    // snowRing² open tiles
 	wb     wetBake   // the bake's wet inputs (puddle_veil.go)
-	// wantPx is the wet detail this pass bakes at (0: snowPx).
-	wantPx int
+	// WantPx is the wet detail this pass bakes at (0: snowPx).
+	WantPx int
 	// pass counts chunk walks; cropVer memoises each read-model chunk's
 	// PlantVer for the pass stamped in cropPass.
 	pass     uint32
 	cropVer  []uint64
 	cropPass []uint32
 	budget   int // bake cost this pass may still spend on rebakes
-	bakes    int // chunk bakes (tests)
-	draws    int // snow-pass draws of the last pass (tests)
-	wetDraws int // wet-veil draws of the last pass (tests)
+	Bakes    int // chunk bakes (tests)
+	Draws    int // snow-pass draws of the last pass (tests)
+	WetDraws int // wet-veil draws of the last pass (tests)
 }
 
 type snowKey struct {
@@ -125,19 +125,19 @@ type snowKey struct {
 
 // release drops every bake.
 func (sc *snowCache) release() {
-	for _, c := range sc.chunks {
+	for _, c := range sc.Chunks {
 		for _, img := range []*ebiten.Image{c.img, c.wetImg} {
 			if img != nil {
 				img.Deallocate()
 			}
 		}
 	}
-	sc.chunks = nil
+	sc.Chunks = nil
 }
 
 // evict drops the chunks no pass walked for snowEvictPasses.
 func (sc *snowCache) evict() {
-	for id, c := range sc.chunks {
+	for id, c := range sc.Chunks {
 		if sc.pass-c.seen <= snowEvictPasses {
 			continue
 		}
@@ -146,7 +146,7 @@ func (sc *snowCache) evict() {
 				img.Deallocate()
 			}
 		}
-		delete(sc.chunks, id)
+		delete(sc.Chunks, id)
 	}
 }
 
@@ -178,10 +178,10 @@ func (sc *snowCache) gather(cells []uint8, mw, mh, cx, cy int) []byte {
 // or its own snow differs from what it baked. The bytes are compared only
 // when SnowVer moved since the chunk last agreed with it.
 func (sc *snowCache) stale(c *snowChunk, w game.WorldView, depth, wet uint8, mw, mh, cx, cy int, plants func() uint64) bool {
-	if !c.built || c.gen != sc.gen || c.wet != wet || wet > 0 && c.wetPx != sc.wantPx {
+	if !c.built || c.gen != sc.gen || c.wet != wet || wet > 0 && c.WetPx != sc.WantPx {
 		return true
 	}
-	if wet > 0 && c.plants != plants() {
+	if wet > 0 && c.Plants != plants() {
 		return true
 	}
 	if len(w.Snow) == 0 {
@@ -208,10 +208,10 @@ func (r *Renderer) bakeSnowChunk(c *snowChunk, w game.WorldView, mw, mh, cx, cy 
 	if c.img == nil {
 		c.img = ebiten.NewImage(snowImgW, snowImgW)
 	}
-	if cap(sc.pix) < 4*snowImgW*snowImgW {
-		sc.pix = make([]byte, 4*snowImgW*snowImgW)
+	if cap(sc.Pix) < 4*snowImgW*snowImgW {
+		sc.Pix = make([]byte, 4*snowImgW*snowImgW)
 	}
-	pix := sc.pix[:4*snowImgW*snowImgW]
+	pix := sc.Pix[:4*snowImgW*snowImgW]
 	clear(pix)
 	if cap(sc.corner) < (snowRing+1)*(snowRing+1) {
 		sc.corner = make([]float64, (snowRing+1)*(snowRing+1))
@@ -220,7 +220,7 @@ func (r *Renderer) bakeSnowChunk(c *snowChunk, w game.WorldView, mw, mh, cx, cy 
 	corner, open := sc.corner[:(snowRing+1)*(snowRing+1)], sc.open[:snowRing*snowRing]
 	ox, oy := cx*snowChunkTiles-1, cy*snowChunkTiles-1 // tile of ring (0, 0)
 	perTile := len(w.Snow) > 0
-	c.any = false
+	c.Any = false
 	for ry := 0; ry < snowRing; ry++ {
 		for rx := 0; rx < snowRing; rx++ {
 			x, y := ox+rx, oy+ry
@@ -230,7 +230,7 @@ func (r *Renderer) bakeSnowChunk(c *snowChunk, w game.WorldView, mw, mh, cx, cy 
 	for ry := 0; ry <= snowRing; ry++ {
 		for rx := 0; rx <= snowRing; rx++ {
 			x, y := ox+rx, oy+ry
-			corner[ry*(snowRing+1)+rx] = snowField(float64(x), float64(y), e.snowCorner(x, y))
+			corner[ry*(snowRing+1)+rx] = snowField(float64(x), float64(y), e.SnowCorner(x, y))
 		}
 	}
 	eachTexel(snowPx, cx, cy, open, func(tx, ty, rx, ry int, u, v float64) {
@@ -240,7 +240,7 @@ func (r *Renderer) bakeSnowChunk(c *snowChunk, w game.WorldView, mw, mh, cx, cy 
 		if m := uint8(255*(top+(bot-top)*v) + 0.5); m > 0 {
 			o := 4 * (ty*snowImgW + tx)
 			pix[o], pix[o+1], pix[o+2], pix[o+3] = m, m, m, m
-			c.any = true
+			c.Any = true
 		}
 	})
 	c.img.WritePixels(pix)
@@ -251,25 +251,25 @@ func (r *Renderer) bakeSnowChunk(c *snowChunk, w game.WorldView, mw, mh, cx, cy 
 		c.depth = 0
 	} else {
 		c.cells = c.cells[:0]
-		c.depth = legacySnowByte(e.snow)
+		c.depth = legacySnowByte(e.Snow)
 	}
-	c.wet, c.plants = wet, 0
+	c.wet, c.Plants = wet, 0
 	if wet > 0 {
-		c.plants = r.puddleCropKey(cx, cy, mw, mh)
+		c.Plants = r.puddleCropKey(cx, cy, mw, mh)
 	}
 	c.ver, c.gen, c.built = w.SnowVer, sc.gen, true
-	sc.bakes++
+	sc.Bakes++
 }
 
 // bakeWet renders chunk (cx, cy)'s wet veil at wetness bucket wet into
 // c.wetImg, at sc.wantPx texels a tile; dry ground leaves no image.
 func (r *Renderer) bakeWet(c *snowChunk, w *game.WorldView, open []bool, mw, mh, cx, cy int, wet uint8) {
 	sc := &r.snowc
-	px := sc.wantPx
+	px := sc.WantPx
 	if px <= 0 {
 		px = snowPx
 	}
-	c.wetPx, c.anyWet = px, false
+	c.WetPx, c.anyWet = px, false
 	wb := &sc.wb
 	r.prepareWet(wb, w, open, mw, mh, cx, cy, wet)
 	if wb.aw <= 0 {
@@ -277,7 +277,7 @@ func (r *Renderer) bakeWet(c *snowChunk, w *game.WorldView, open []bool, mw, mh,
 			c.wetImg.Deallocate()
 			c.wetImg = nil
 		}
-		c.pud = nil
+		c.Pud = nil
 		return
 	}
 	iw := wetImgW(px)
@@ -288,12 +288,12 @@ func (r *Renderer) bakeWet(c *snowChunk, w *game.WorldView, open []bool, mw, mh,
 	if c.wetImg == nil {
 		c.wetImg = ebiten.NewImage(iw, iw)
 	}
-	if cap(sc.wpix) < 4*iw*iw {
-		sc.wpix = make([]byte, 4*iw*iw)
+	if cap(sc.Wpix) < 4*iw*iw {
+		sc.Wpix = make([]byte, 4*iw*iw)
 	}
-	wpix := sc.wpix[:4*iw*iw]
+	wpix := sc.Wpix[:4*iw*iw]
 	clear(wpix)
-	pud := c.pud[:0]
+	pud := c.Pud[:0]
 	if wb.pools {
 		if cap(pud) < iw*iw {
 			pud = make([]uint8, iw*iw)
@@ -357,9 +357,9 @@ func (r *Renderer) bakeWet(c *snowChunk, w *game.WorldView, open []bool, mw, mh,
 		}
 	})
 	c.wetImg.WritePixels(wpix)
-	c.pud = nil
+	c.Pud = nil
 	if anyPud {
-		c.pud = pud
+		c.Pud = pud
 	}
 }
 
@@ -395,9 +395,9 @@ func (r *Renderer) syncSnowCache(w game.WorldView) (mw, mh int) {
 	if w.TerrainW > 0 {
 		mw = w.TerrainW
 	}
-	if sc.chunks == nil || sc.w != mw || sc.h != mh {
+	if sc.Chunks == nil || sc.w != mw || sc.h != mh {
 		sc.release()
-		sc.chunks, sc.w, sc.h = map[int]*snowChunk{}, mw, mh
+		sc.Chunks, sc.w, sc.h = map[int]*snowChunk{}, mw, mh
 		sc.key = snowKey{}
 		sc.gen++
 	}
@@ -432,21 +432,21 @@ func (r *Renderer) eachSnowChunk(w game.WorldView, tile float64, crops bool, fn 
 		sc.evict()
 	}
 	sc.budget = puddleBakeBudget
-	sc.wantPx = wetPxFor(tile)
-	cost := bakeCost(sc.wantPx)
-	depth, wet := legacySnowByte(r.env.snow), wetBucket(w.Wetness)
+	sc.WantPx = wetPxFor(tile)
+	cost := bakeCost(sc.WantPx)
+	depth, wet := legacySnowByte(r.env.Snow), wetBucket(w.Wetness)
 	ncx := (mw + snowChunkTiles - 1) / snowChunkTiles
 	span := snowChunkTiles
 	for cy := y0 / span; cy <= y1/span; cy++ {
 		for cx := x0 / span; cx <= x1/span; cx++ {
 			id := cy*ncx + cx
-			c := sc.chunks[id]
+			c := sc.Chunks[id]
 			if c == nil {
 				c = &snowChunk{}
-				sc.chunks[id] = c
+				sc.Chunks[id] = c
 			}
 			c.seen = sc.pass
-			plants := func() uint64 { return c.plants }
+			plants := func() uint64 { return c.Plants }
 			if crops {
 				plants = func() uint64 { return r.puddleCropKey(cx, cy, mw, mh) }
 			}
@@ -480,13 +480,13 @@ func (r *Renderer) drawChunkMask(screen, img *ebiten.Image, px, cx, cy, tx0, ty0
 // drawPuddleVeil's (puddle_veil.go), earlier in the frame.
 func (r *Renderer) drawSnowLayer(screen *ebiten.Image, w game.WorldView, sw, sh int, tile, veil float64) {
 	sc := &r.snowc
-	sc.draws = 0
+	sc.Draws = 0
 	v := float32(veil)
 	snowCol := [4]float32{236.0 / 255 * v, 240.0 / 255 * v, 246.0 / 255 * v, v}
 	r.eachSnowChunk(w, tile, false, func(c *snowChunk, cx, cy, tx0, ty0, tx1, ty1 int) {
-		if v > 0 && c.any {
+		if v > 0 && c.Any {
 			r.drawChunkMask(screen, c.img, snowPx, cx, cy, tx0, ty0, tx1, ty1, tile, snowCol)
-			sc.draws++
+			sc.Draws++
 		}
 	})
 }

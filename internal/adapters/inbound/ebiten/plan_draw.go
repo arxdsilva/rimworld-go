@@ -26,18 +26,18 @@ type planDrawState struct {
 	valid  bool
 	ver    uint32
 	w, n   int
-	runs   []homeRun
-	edges  []homeEdge
-	builds int // rebuild count (tests)
-	verts  int // vertices in the last drawn batch (tests)
+	Runs   []homeRun
+	Edges  []homeEdge
+	Builds int // rebuild count (tests)
+	Verts  int // vertices in the last drawn batch (tests)
 	batch  triBatch
 }
 
-// rebuild recomputes the runs and the outline from the Plan grid.
-func (s *planDrawState) rebuild(w game.WorldView) {
+// Rebuild recomputes the runs and the outline from the Plan grid.
+func (s *planDrawState) Rebuild(w game.WorldView) {
 	s.valid, s.ver, s.w, s.n = true, w.PlanVer, w.TerrainW, len(w.Plan)
-	s.runs, s.edges = s.runs[:0], s.edges[:0]
-	s.builds++
+	s.Runs, s.Edges = s.Runs[:0], s.Edges[:0]
+	s.Builds++
 	if w.TerrainW <= 0 {
 		return
 	}
@@ -51,7 +51,7 @@ func (s *planDrawState) rebuild(w game.WorldView) {
 				start = x
 			}
 			if !in && start >= 0 {
-				s.runs = append(s.runs, homeRun{y, start, x})
+				s.Runs = append(s.Runs, homeRun{y, start, x})
 				start = -1
 			}
 			if !in {
@@ -59,7 +59,7 @@ func (s *planDrawState) rebuild(w game.WorldView) {
 			}
 			for side, d := range nb {
 				if !homeAt(w.Plan, w.TerrainW, x+d[0], y+d[1]) {
-					s.edges = append(s.edges, homeEdge{x, y, side})
+					s.Edges = append(s.Edges, homeEdge{x, y, side})
 				}
 			}
 		}
@@ -69,18 +69,18 @@ func (s *planDrawState) rebuild(w game.WorldView) {
 // drawPlanOverlay draws the Plan marks when the overlay is on, in one batch.
 func (r *Renderer) drawPlanOverlay(screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
 	st := &r.planDraw
-	st.verts = 0
+	st.Verts = 0
 	if !r.planOverlayOn() || len(w.Plan) == 0 || w.TerrainW <= 0 {
 		return
 	}
 	if !st.valid || st.ver != w.PlanVer || st.w != w.TerrainW || st.n != len(w.Plan) {
-		st.rebuild(w)
+		st.Rebuild(w)
 	}
 	r.setView(sw, sh, tile)
 	b := &st.batch
 	b.Reset()
 	a := alphaOf(uiPlanFill)
-	for _, run := range st.runs {
+	for _, run := range st.Runs {
 		sx, sy := r.worldToScreen(run.x0, run.y)
 		wd := float64(run.x1-run.x0) * tile
 		if !visible(float32(sx), float32(sy), float32(wd), float32(tile), sw, sh) {
@@ -88,7 +88,7 @@ func (r *Renderer) drawPlanOverlay(screen *ebiten.Image, w game.WorldView, sw, s
 		}
 		b.Rect(float64(sx), float64(sy), wd, tile, uiPlanFill, a, a, a, a)
 	}
-	for _, e := range st.edges {
+	for _, e := range st.Edges {
 		sx, sy := r.worldToScreen(e.x, e.y)
 		if !visible(float32(sx), float32(sy), float32(tile), float32(tile), sw, sh) {
 			continue
@@ -96,6 +96,6 @@ func (r *Renderer) drawPlanOverlay(screen *ebiten.Image, w game.WorldView, sw, s
 		r.edgeStrip(b, float64(sx), float64(sy), tile, e.side, planEdgePx, uiPlanEdge, 0, planDashEnd)
 		r.edgeStrip(b, float64(sx), float64(sy), tile, e.side, planEdgePx, uiPlanEdge, 1-planDashEnd, 1)
 	}
-	st.verts = len(b.Verts)
-	b.Flush(screen, r.env.whiteImg(), ebiten.BlendSourceOver)
+	st.Verts = len(b.Verts)
+	b.Flush(screen, r.env.WhiteImg(), ebiten.BlendSourceOver)
 }

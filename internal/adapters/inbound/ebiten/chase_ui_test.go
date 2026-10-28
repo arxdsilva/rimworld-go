@@ -288,7 +288,7 @@ func TestTameNameHiddenWhenZoomedOutOrUnnamed(t *testing.T) {
 func chaseCamera(cx, cy, ax, ay int) (*Renderer, game.WorldView) {
 	r := New(&stubSim{w: 64, h: 64, pawns: []game.PawnView{{ID: 1, Name: "Ada", X: cx, Y: cy}}})
 	r.cam = camera{Zoom: 1, Placed: true}
-	r.voice.view = viewport{X0: 0, Y0: 40, X1: 800, Y1: 560}
+	r.voice.View = viewport{X0: 0, Y0: 40, X1: 800, Y1: 560}
 	w := game.WorldView{
 		Animals: []game.AnimalView{{ID: 10, Species: "timber_wolf", Label: "timber wolf", Hostile: true, TargetID: 1, X: ax, Y: ay}},
 		Messages: []game.MessageView{
@@ -380,7 +380,7 @@ func TestThreatPauseIgnoresOtherDangers(t *testing.T) {
 func TestThreatPauseWithoutAViewportKeepsTheCamera(t *testing.T) {
 	t.Parallel()
 	r, w := chaseCamera(52, 50, 50, 50)
-	r.voice.view = viewport{} // no App has set the viewport yet
+	r.voice.View = viewport{} // no App has set the viewport yet
 	before := r.cam
 	r.onThreatPause(w, 5)
 	if r.cam != before {

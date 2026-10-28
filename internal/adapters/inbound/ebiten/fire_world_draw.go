@@ -256,7 +256,7 @@ func (r *Renderer) drawAshStains(screen *ebiten.Image, w game.WorldView, sw, sh 
 // the strike and the thunder rolling in after its delay.
 func (r *Renderer) onSimStrike(x, y int, tick uint64) {
 	e := &r.env
-	e.flashBucket, e.flashAt, e.flashSeen = tick/lightningBucket, r.present, true
+	e.FlashBucket, e.FlashAt, e.FlashSeen = tick/lightningBucket, r.present, true
 	r.thunderAt = r.present + thunderDelay(tick)
 	r.cue("sfx.lightning_strike", float64(x)+0.5, float64(y)+0.5, 1)
 }
@@ -342,7 +342,7 @@ func (r *Renderer) blazeAmbience(want map[string]loopWant, w game.WorldView, v v
 		if i == maxBlazeLoops {
 			break
 		}
-		want[h.key] = loopWant{id: "amb.fire", vol: h.vol, pan: h.pan}
+		want[h.key] = loopWant{ID: "amb.fire", Vol: h.vol, Pan: h.pan}
 	}
 }
 

@@ -295,38 +295,38 @@ func TestAreaOverlayBakesOnVerChangeAndUsesColour(t *testing.T) {
 		Bits: areaBits(10, 10, [2]int{1, 1}, [2]int{2, 1}, [2]int{3, 1}, [2]int{5, 4})}
 	// nothing armed: nothing drawn or baked
 	r.drawAreas(screen, w, []game.AreaView{ar}, 320, 320, tile)
-	if r.areaOv.verts != 0 || r.areaOv.builds != 0 {
-		t.Fatalf("unarmed overlay: %d verts, %d builds", r.areaOv.verts, r.areaOv.builds)
+	if r.areaOv.Verts != 0 || r.areaOv.Builds != 0 {
+		t.Fatalf("unarmed overlay: %d verts, %d builds", r.areaOv.Verts, r.areaOv.Builds)
 	}
-	r.areaOv.armed = 3
+	r.areaOv.Armed = 3
 	r.drawAreas(screen, w, []game.AreaView{ar}, 320, 320, tile)
-	if r.areaOv.builds != 1 || r.areaOv.verts != 4*2 { // two row runs
-		t.Fatalf("armed: %d builds %d verts, want 1 and 8", r.areaOv.builds, r.areaOv.verts)
+	if r.areaOv.Builds != 1 || r.areaOv.Verts != 4*2 { // two row runs
+		t.Fatalf("armed: %d builds %d verts, want 1 and 8", r.areaOv.Builds, r.areaOv.Verts)
 	}
-	if c := r.areaOv.tint; c.R != 200 || c.G != 60 || c.B != 20 {
+	if c := r.areaOv.Tint; c.R != 200 || c.G != 60 || c.B != 20 {
 		t.Fatalf("tint colour %v", c)
 	}
 	r.drawAreas(screen, w, []game.AreaView{ar}, 320, 320, tile)
-	if r.areaOv.builds != 1 {
-		t.Fatalf("redraw at the same Ver rebuilt: %d", r.areaOv.builds)
+	if r.areaOv.Builds != 1 {
+		t.Fatalf("redraw at the same Ver rebuilt: %d", r.areaOv.Builds)
 	}
 	ar.Ver = 2
 	ar.Bits = areaBits(10, 10, [2]int{1, 1})
 	r.drawAreas(screen, w, []game.AreaView{ar}, 320, 320, tile)
-	if r.areaOv.builds != 2 || r.areaOv.verts != 4 {
-		t.Fatalf("after Ver change: %d builds %d verts", r.areaOv.builds, r.areaOv.verts)
+	if r.areaOv.Builds != 2 || r.areaOv.Verts != 4 {
+		t.Fatalf("after Ver change: %d builds %d verts", r.areaOv.Builds, r.areaOv.Verts)
 	}
 	// a hovered (not armed) area shows too; no map width draws nothing
-	r.areaOv.armed, r.areaOv.hover = 0, 3
+	r.areaOv.Armed, r.areaOv.Hover = 0, 3
 	r.drawAreas(screen, w, []game.AreaView{ar}, 320, 320, tile)
-	if r.areaOv.verts == 0 {
+	if r.areaOv.Verts == 0 {
 		t.Fatal("hovered area not drawn")
 	}
 	r.drawAreas(screen, game.WorldView{}, []game.AreaView{ar}, 320, 320, tile)
-	if r.areaOv.verts != 0 {
+	if r.areaOv.Verts != 0 {
 		t.Fatal("no map drew")
 	}
-	r.areaOv.hover = 0
+	r.areaOv.Hover = 0
 	r.drawAreaOverlay(screen, w, 320, 320, tile)
 }
 
@@ -338,12 +338,12 @@ func TestAreaOverlayFollowsArmedTool(t *testing.T) {
 	a.selectArchTool("allowed_area")
 	press(t, a, f, "areapick.row.5")
 	f.Frame(t, a)
-	if a.renderer.areaOv.armed != 5 {
-		t.Fatalf("overlay armed on %d, want 5", a.renderer.areaOv.armed)
+	if a.renderer.areaOv.Armed != 5 {
+		t.Fatalf("overlay armed on %d, want 5", a.renderer.areaOv.Armed)
 	}
 	a.archTool = ""
 	f.Frame(t, a)
-	if a.renderer.areaOv.armed != 0 {
+	if a.renderer.areaOv.Armed != 0 {
 		t.Fatal("overlay stays armed after the tool is dropped")
 	}
 }

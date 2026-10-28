@@ -364,21 +364,21 @@ func TestSyncRendererReadsGraphics(t *testing.T) {
 	a := optionsApp(graphicsStore())
 	a.startGame()
 	r := a.renderer
-	if r.env.shadow.Off || r.lit.Off || r.water.simple || r.lod.grass.level != "" && r.lod.grass.level != config.GrassFull {
+	if r.env.Shadow.Off || r.lit.Off || r.water.Simple || r.lod.grass.Level != "" && r.lod.grass.Level != config.GrassFull {
 		t.Fatalf("high defaults should leave every knob at today's look")
 	}
 	s := a.settings
 	s.Graphics.Shadows, s.Graphics.Lighting = false, false
 	s.Graphics.Water, s.Graphics.Grass = config.WaterSimple, config.GrassSparse
 	a.setSettings(s)
-	if !r.env.shadow.Off || !r.lit.Off || !r.water.simple || r.lod.grass.level != config.GrassSparse {
+	if !r.env.Shadow.Off || !r.lit.Off || !r.water.Simple || r.lod.grass.Level != config.GrassSparse {
 		t.Fatalf("knobs not synced: shadows off %v lighting off %v simple water %v grass %q",
-			r.env.shadow.Off, r.lit.Off, r.water.simple, r.lod.grass.level)
+			r.env.Shadow.Off, r.lit.Off, r.water.Simple, r.lod.grass.Level)
 	}
 	s.Graphics.Shadows, s.Graphics.Lighting = true, true
 	s.Graphics.Water, s.Graphics.Grass = config.WaterAnimated, config.GrassFull
 	a.setSettings(s)
-	if r.env.shadow.Off || r.lit.Off || r.water.simple {
+	if r.env.Shadow.Off || r.lit.Off || r.water.Simple {
 		t.Fatal("knobs not restored")
 	}
 }

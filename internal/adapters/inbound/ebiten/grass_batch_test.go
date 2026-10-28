@@ -73,7 +73,7 @@ func batchAt(r *Renderer, mw, mh int, tile float64, limit int) int {
 	r.view.W = w
 	r.stepEnvironment(w, nil)
 	r.drawGrassBatch(ebiten.NewImage(max(sw, 1), max(sh, 1)), &w, 0, 0, mw-1, mh-1, tile, sw, sh, limit)
-	return r.lod.grass.quads
+	return r.lod.grass.Quads
 }
 
 func TestTuftCopiesFollowGrowth(t *testing.T) {
@@ -105,9 +105,9 @@ func TestGrassCopiesSpillPastEdge(t *testing.T) {
 		for x := 0; x < 40; x++ {
 			buf = grassCopies(x, y, 100, 9, x%3 == 0, buf[:0])
 			for _, c := range buf {
-				spill := max(-c.dx, c.dx-1, -c.dy, c.dy-1)
+				spill := max(-c.Dx, c.Dx-1, -c.Dy, c.Dy-1)
 				if spill > grassEdgeSpill+1e-9 {
-					t.Fatalf("tile (%d,%d): copy at (%.3f,%.3f) spills %.3f > %.2f", x, y, c.dx, c.dy, spill, grassEdgeSpill)
+					t.Fatalf("tile (%d,%d): copy at (%.3f,%.3f) spills %.3f > %.2f", x, y, c.Dx, c.Dy, spill, grassEdgeSpill)
 				}
 				maxSpill = max(maxSpill, spill)
 			}
@@ -120,8 +120,8 @@ func TestGrassCopiesSpillPastEdge(t *testing.T) {
 	for y := 0; y < 20; y++ {
 		for x := 0; x < 20; x++ {
 			c := grassCopies(x, y, 10, 9, false, nil)[0] // one copy: the centre cell
-			if math.Abs(c.dx-0.5) > grassCellJitter+1e-9 || math.Abs(c.dy-0.5) > grassCellJitter+1e-9 {
-				t.Fatalf("centre copy at (%.3f,%.3f)", c.dx, c.dy)
+			if math.Abs(c.Dx-0.5) > grassCellJitter+1e-9 || math.Abs(c.Dy-0.5) > grassCellJitter+1e-9 {
+				t.Fatalf("centre copy at (%.3f,%.3f)", c.Dx, c.Dy)
 			}
 		}
 	}
@@ -141,12 +141,12 @@ func TestGrassCopiesDeterministic(t *testing.T) {
 				if a[i] != b[i] {
 					t.Fatalf("tile (%d,%d) copy %d differs: %+v vs %+v", x, y, i, a[i], b[i])
 				}
-				if a[i].mirror {
+				if a[i].Mirror {
 					mirrored++
 				} else {
 					plain++
 				}
-				variants[a[i].variant%6] = true
+				variants[a[i].Variant%6] = true
 			}
 		}
 	}
@@ -167,13 +167,13 @@ func TestGrassScaleRanges(t *testing.T) {
 			for _, tall := range []bool{false, true} {
 				for _, c := range grassCopies(x, y, 100, 9, tall, nil) {
 					lo, hi := 0.45, 0.65
-					if c.tall {
+					if c.Tall {
 						lo, hi = 0.7, 0.9
 					}
-					if c.scale < lo-1e-9 || c.scale > hi+1e-9 {
-						t.Fatalf("tall=%v copy scale %.3f outside %.2f–%.2f", c.tall, c.scale, lo, hi)
+					if c.Scale < lo-1e-9 || c.Scale > hi+1e-9 {
+						t.Fatalf("tall=%v copy scale %.3f outside %.2f–%.2f", c.Tall, c.Scale, lo, hi)
 					}
-					if c.tall && !tall {
+					if c.Tall && !tall {
 						t.Fatal("tall copy on a short tile")
 					}
 				}
@@ -234,13 +234,13 @@ func TestGrassBatchIsOneDraw(t *testing.T) {
 			order = append(order, "object")
 		}
 	}
-	r.lod.grass.onFlush = func() { order = append(order, "grass") }
+	r.lod.grass.OnFlush = func() { order = append(order, "grass") }
 	lodFrame(r, 64) // 640×400: 10×6.25 tiles
-	if r.lod.grass.flushes != 1 {
-		t.Fatalf("tufts drawn in %d batches, want 1", r.lod.grass.flushes)
+	if r.lod.grass.Flushes != 1 {
+		t.Fatalf("tufts drawn in %d batches, want 1", r.lod.grass.Flushes)
 	}
-	if r.lod.grass.quads < 10*6*9 {
-		t.Fatalf("batch holds %d quads, want every copy of the view (≥ %d)", r.lod.grass.quads, 10*6*9)
+	if r.lod.grass.Quads < 10*6*9 {
+		t.Fatalf("batch holds %d quads, want every copy of the view (≥ %d)", r.lod.grass.Quads, 10*6*9)
 	}
 	at := -1
 	for i, n := range order {
@@ -283,7 +283,7 @@ func TestGrassSnowFade(t *testing.T) {
 	w := grassWorld(8, 8, 100)
 	r, sim := grassRenderer(w, 8, 8)
 	batchAt(r, 8, 8, 64, 9)
-	for _, v := range r.lod.grass.verts {
+	for _, v := range r.lod.grass.Verts {
 		if v.ColorA != 1 {
 			t.Fatalf("no snow: vertex alpha %v", v.ColorA)
 		}
@@ -293,7 +293,7 @@ func TestGrassSnowFade(t *testing.T) {
 	r2.art = grassTestArt()
 	n := batchAt(r2, 8, 8, 64, 9)
 	faded := 0
-	for _, v := range r2.lod.grass.verts {
+	for _, v := range r2.lod.grass.Verts {
 		if v.ColorA < 1 {
 			faded++
 		}
@@ -317,26 +317,26 @@ func TestGrassLODTiers(t *testing.T) {
 	w := grassWorld(64, 64, 100)
 	r, _ := grassRenderer(w, 64, 64)
 	lodFrame(r, 64)
-	if r.lod.grass.quads < 10*6*9 { // 640×400 shows 10×6 whole tiles
-		t.Fatalf("64 px: %d quads, want nine copies a tile (≥ %d)", r.lod.grass.quads, 10*6*9)
+	if r.lod.grass.Quads < 10*6*9 { // 640×400 shows 10×6 whole tiles
+		t.Fatalf("64 px: %d quads, want nine copies a tile (≥ %d)", r.lod.grass.Quads, 10*6*9)
 	}
 	lodFrame(r, 32)
 	tiles := (640/32 + 2) * (400/32 + 3)
-	if q := r.lod.grass.quads; q == 0 || q > 4*tiles {
+	if q := r.lod.grass.Quads; q == 0 || q > 4*tiles {
 		t.Fatalf("32 px: %d quads, want 1..%d (four a tile)", q, 4*tiles)
 	}
-	baked := r.lod.grass.baked
+	baked := r.lod.grass.Baked
 	lodFrame(r, 20)
-	if r.lod.grass.quads != 0 {
-		t.Fatalf("20 px drew %d live tuft quads, want them baked", r.lod.grass.quads)
+	if r.lod.grass.Quads != 0 {
+		t.Fatalf("20 px drew %d live tuft quads, want them baked", r.lod.grass.Quads)
 	}
-	if r.lod.grass.baked == baked {
+	if r.lod.grass.Baked == baked {
 		t.Fatal("20 px: no tufts baked into the chunk images")
 	}
-	tints := r.lod.grass.tinted
+	tints := r.lod.grass.Tinted
 	lodFrame(r, 8)
-	if r.lod.grass.quads != 0 || r.lod.grass.tinted == tints {
-		t.Fatalf("8 px: %d live quads, %d tint bakes", r.lod.grass.quads, r.lod.grass.tinted-tints)
+	if r.lod.grass.Quads != 0 || r.lod.grass.Tinted == tints {
+		t.Fatalf("8 px: %d live quads, %d tint bakes", r.lod.grass.Quads, r.lod.grass.Tinted-tints)
 	}
 }
 
@@ -410,6 +410,6 @@ func BenchmarkGrassBatch(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		frame()
 	}
-	b.ReportMetric(float64(r.lod.grass.quads), "quads/op")
+	b.ReportMetric(float64(r.lod.grass.Quads), "quads/op")
 	b.ReportMetric(1, "draw-calls/op")
 }

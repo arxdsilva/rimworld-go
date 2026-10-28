@@ -179,21 +179,21 @@ func (r *Renderer) lightTile(tx, ty int) (sky, lamp float32) {
 
 // shadowView is the visible rectangle (setView) as the shadow pass reads it.
 func (r *Renderer) shadowView() light.Rect {
-	v := r.env.view
-	return light.Rect{X0: v.x0, Y0: v.y0, X1: v.x1, Y1: v.y1}
+	v := r.env.View
+	return light.Rect{X0: v.X0, Y0: v.Y0, X1: v.X1, Y1: v.Y1}
 }
 
 // drawShadows draws the frame's shadow layer onto screen
 // (light.Shadows.Draw); the renderer lists the casters (shadow.go).
 func (r *Renderer) drawShadows(screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
 	r.setView(sw, sh, tile)
-	r.env.shadow.Draw(r.lightView(), r.litLayer(), shadowHost{r}, r.shadowView(), screen, w, sw, sh, tile)
+	r.env.Shadow.Draw(r.lightView(), r.litLayer(), shadowHost{r}, r.shadowView(), screen, w, sw, sh, tile)
 }
 
 // pointLights lists the frame's creature-shadow lights near the view
 // (light.Shadows.PointLights).
 func (r *Renderer) pointLights() []pointLight {
-	return r.env.shadow.PointLights(r.lightView(), r.litLayer(), r.shadowView())
+	return r.env.Shadow.PointLights(r.lightView(), r.litLayer(), r.shadowView())
 }
 
 // addBox queues a box caster's swept footprint (light.AddBox).

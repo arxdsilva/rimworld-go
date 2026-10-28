@@ -68,7 +68,7 @@ func artRenderer() *Renderer {
 func rigFor(r *Renderer, f facing) (heldRig, pose) {
 	rig := r.rigOf(game.PawnView{}, f)
 	ps := standPose()
-	if rig.mirror {
+	if rig.Mirror {
 		ps = mirrored(ps)
 	}
 	return rig, ps
@@ -78,8 +78,8 @@ func rigFor(r *Renderer, f facing) (heldRig, pose) {
 // pose ps.
 func bodyPoint(r *Renderer, rig heldRig, ps pose, name string, wx, wy, tile float64) pt {
 	sx, sy := r.worldToScreenF(wx, wy)
-	bx, by, s := artOrigin(rig.body.Meta, float64(sx), float64(sy), tile)
-	a := rig.body.Meta.Attach[name]
+	bx, by, s := artOrigin(rig.Body.Meta, float64(sx), float64(sy), tile)
+	a := rig.Body.Meta.Attach[name]
 	g := ps.Geo(float64(sx), float64(sy), tile)
 	return apply(g, pt{bx + a[0]*s, by + a[1]*s})
 }
@@ -93,13 +93,13 @@ func near2(a, b pt, tol float64) bool { return math.Hypot(a[0]-b[0], a[1]-b[1]) 
 
 // heldPivotOn is a placed held item's pivot on screen.
 func heldPivotOn(r *Renderer, pl heldPlacement, h heldItem) pt {
-	return apply(pl.g, heldPivot(r.art.Sprite(h.key), h.stance))
+	return apply(pl.G, heldPivot(r.art.Sprite(h.Key), h.Stance))
 }
 
 // bodyBox is the body's torso on screen (pre-pose canvas: the head's x
 // +-28 px, from the head down to the feet), as min/max corners.
 func bodyBox(r *Renderer, rig heldRig, ps pose, wx, wy, tile float64) (lo, hi pt) {
-	m := rig.body.Meta
+	m := rig.Body.Meta
 	head := m.Attach["head"]
 	feet := m.Origin[1] + pawnFeetY*artTilePx
 	sx, sy := r.worldToScreenF(wx, wy)
@@ -123,13 +123,13 @@ func TestNoWeaponWhenOffDuty(t *testing.T) {
 	walking := moveState{Blend: 1, Moving: true, Speed: 0.06}
 	for _, w := range []string{"rifle", "knife", "spear", "club", "fists"} {
 		for _, m := range []moveState{{}, walking} {
-			if h := r.idleHeld(game.PawnView{Weapon: w}, m); h.key != "" {
+			if h := r.idleHeld(game.PawnView{Weapon: w}, m); h.Key != "" {
 				t.Fatalf("%s off duty: nothing held: %+v", w, h)
 			}
 		}
 		for _, act := range []string{game.ActionChop, game.ActionEat, game.ActionSow, game.ActionCraft, ""} {
 			p := game.PawnView{ID: 3, X: 5, Y: 5, ActX: 6, ActY: 5, Weapon: w, Action: act}
-			if _, h := r.standingPose(p, moveState{}); h.key != "" {
+			if _, h := r.standingPose(p, moveState{}); h.Key != "" {
 				t.Fatalf("%s off duty, %q: nothing held: %+v", w, act, h)
 			}
 		}
@@ -141,14 +141,14 @@ func TestNoWeaponWhenOffDuty(t *testing.T) {
 		{Weapon: "knife", Action: game.ActionMelee},
 	} {
 		want, _ := heldWeaponKey(q.Weapon)
-		if h := r.idleHeld(q, moveState{}); h.key != want || h.stance != stanceCarried {
+		if h := r.idleHeld(q, moveState{}); h.Key != want || h.Stance != stanceCarried {
 			t.Fatalf("on duty (%+v) the weapon is carried: %+v", q, h)
 		}
 	}
-	if h := r.idleHeld(game.PawnView{Weapon: "rifle", Hostile: true, Fleeing: true}, moveState{}); h.key != "" {
+	if h := r.idleHeld(game.PawnView{Weapon: "rifle", Hostile: true, Fleeing: true}, moveState{}); h.Key != "" {
 		t.Fatal("a fleeing raider holds nothing")
 	}
-	if h := r.idleHeld(game.PawnView{Weapon: "fists", Drafted: true}, moveState{}); h.key != "" {
+	if h := r.idleHeld(game.PawnView{Weapon: "fists", Drafted: true}, moveState{}); h.Key != "" {
 		t.Fatal("fists: nothing held")
 	}
 	// the figure draw: body layers only
@@ -173,7 +173,7 @@ func TestCarriedWeaponOverlapsBody(t *testing.T) {
 		rig, ps := rigFor(r, f)
 		lo, hi := bodyBox(r, rig, ps, 3, 4, tile)
 		for _, key := range []string{"weapon/rifle_basic", "weapon/spear", "weapon/knife", "weapon/club"} {
-			h := heldItem{key: key, stance: stanceCarried}
+			h := heldItem{Key: key, Stance: stanceCarried}
 			pl, ok := r.heldPlace(rig, h, 3, 4, tile, ps)
 			if !ok {
 				t.Fatalf("%v %s: no placement", f, key)
@@ -190,14 +190,14 @@ func TestCarriedWeaponOverlapsBody(t *testing.T) {
 			if _, ok := sp["tip"]; ok {
 				end = sp["tip"]
 			}
-			e := apply(pl.g, end)
+			e := apply(pl.G, end)
 			if e[1] <= c[1] {
 				t.Fatalf("%v %s: the forward end points down: end %v centre %v", f, key, e, c)
 			}
 			if fwd := e[0] - c[0]; (f == faceWest) != (fwd < 0) {
 				t.Fatalf("%v %s: forward end on the wrong side: %v", f, key, fwd)
 			}
-			if mirrored := det(pl.g) < 0; mirrored != (f == faceWest) {
+			if mirrored := det(pl.G) < 0; mirrored != (f == faceWest) {
 				t.Fatalf("%v %s: mirrored=%v, want only west", f, key, mirrored)
 			}
 		}
@@ -205,7 +205,7 @@ func TestCarriedWeaponOverlapsBody(t *testing.T) {
 	// facing east the carried weapon sits forward of facing south's
 	rs, pss := rigFor(r, faceSouth)
 	re, pse := rigFor(r, faceEast)
-	h := heldItem{key: "weapon/rifle_basic", stance: stanceCarried}
+	h := heldItem{Key: "weapon/rifle_basic", Stance: stanceCarried}
 	ps1, _ := r.heldPlace(rs, h, 3, 4, tile, pss)
 	pe, _ := r.heldPlace(re, h, 3, 4, tile, pse)
 	if dx := heldPivotOn(r, pe, h)[0] - heldPivotOn(r, ps1, h)[0]; dx < 0.1*tile {
@@ -224,11 +224,11 @@ func TestHeldDraws(t *testing.T) {
 	r := artRenderer()
 	screen := ebiten.NewImage(256, 256)
 	items := []heldItem{
-		{key: "weapon/rifle_basic", stance: stanceAimed, aimX: 9, aimY: 2},
-		{key: "weapon/rifle_basic", stance: stanceAimed, aimX: -3, aimY: 1.2},
-		{key: "weapon/spear", stance: stanceCarried},
-		{key: "item/wood_pile", stance: stanceLoad},
-		{push: 0.1}, // a punch: nothing held
+		{Key: "weapon/rifle_basic", Stance: stanceAimed, AimX: 9, AimY: 2},
+		{Key: "weapon/rifle_basic", Stance: stanceAimed, AimX: -3, AimY: 1.2},
+		{Key: "weapon/spear", Stance: stanceCarried},
+		{Key: "item/wood_pile", Stance: stanceLoad},
+		{Push: 0.1}, // a punch: nothing held
 	}
 	var drawn []string
 	r.lit.OnDraw = func(img *ebiten.Image, _ float32) { drawn = append(drawn, keyOf(r.art, img)) }
@@ -239,7 +239,7 @@ func TestHeldDraws(t *testing.T) {
 			for _, behind := range []bool{true, false} {
 				r.drawHeld(screen, rig, h, 1, 1, 64, ps, behind)
 			}
-			if want := 1; h.key != "" && len(drawn)-n != want {
+			if want := 1; h.Key != "" && len(drawn)-n != want {
 				t.Fatalf("%v %+v: drawn %d times, want once (behind or in front)", f, h, len(drawn)-n)
 			}
 		}
@@ -254,12 +254,12 @@ func TestHeldDraws(t *testing.T) {
 	}
 	// a punch's reach pushes the bare hold point (the trail) along the facing
 	rest, _ := r.heldPoint(rig, heldItem{}, 1, 1, ps, "hold")
-	out, _ := r.heldPoint(rig, heldItem{push: 0.14}, 1, 1, ps, "hold")
+	out, _ := r.heldPoint(rig, heldItem{Push: 0.14}, 1, 1, ps, "hold")
 	if math.Abs(out.X-rest.X-0.14) > 1e-9 || out.Y != rest.Y {
 		t.Fatalf("punch reach 0.14 east: %v -> %v", rest, out)
 	}
 	// an unknown sprite places nothing
-	if _, ok := r.heldPlace(rig, heldItem{key: "weapon/none"}, 1, 1, 64, ps); ok {
+	if _, ok := r.heldPlace(rig, heldItem{Key: "weapon/none"}, 1, 1, 64, ps); ok {
 		t.Fatal("no sprite: no placement")
 	}
 }
@@ -278,7 +278,7 @@ func TestCarriedWeaponBehindFacingNorth(t *testing.T) {
 		p := game.PawnView{ID: 1, X: 2, Y: 2, Weapon: "rifle", Drafted: true}
 		var keys []string
 		r.lit.OnDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
-		r.drawPawnFigure(ebiten.NewImage(512, 512), p, 2, 2, 64, pawnFigurePose{face: c.f, ps: standPose(), held: readyHeld(p)})
+		r.drawPawnFigure(ebiten.NewImage(512, 512), p, 2, 2, 64, pawnFigurePose{Face: c.f, Ps: standPose(), Held: readyHeld(p)})
 		body := slices.IndexFunc(keys, func(k string) bool { return strings.HasPrefix(k, "pawn/body_") })
 		rifle := slices.Index(keys, "weapon/rifle_basic")
 		if body < 0 || rifle < 0 || (rifle < body) != c.behind {

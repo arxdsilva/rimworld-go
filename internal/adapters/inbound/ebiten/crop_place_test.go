@@ -83,14 +83,14 @@ func cropDrawEach(r *Renderer, mw, mh int, tile float64, fn func(p *game.PlantVi
 	r.stepEnvironment(w, nil)
 	dst := ebiten.NewImage(sw, sh)
 	defer dst.Deallocate()
-	r.lod.crops.begin()
+	r.lod.crops.Begin()
 	for i := range w.Plants {
-		n0, f0 := len(r.lod.crops.verts), r.lod.crops.flushes
+		n0, f0 := len(r.lod.crops.Verts), r.lod.crops.Flushes
 		r.drawCropObj(dst, &w, &w.Plants[i], tile)
-		if r.lod.crops.flushes != f0 { // the batch was drawn first: this plant's units start it
+		if r.lod.crops.Flushes != f0 { // the batch was drawn first: this plant's units start it
 			n0 = 0
 		}
-		fn(&w.Plants[i], r.lod.crops.verts[n0:])
+		fn(&w.Plants[i], r.lod.crops.Verts[n0:])
 	}
 }
 
@@ -203,15 +203,15 @@ func TestCropGrowthRisesStageToStage(t *testing.T) {
 	a := buildCropAtlas(art, names)
 	steps := []cropState{{"sown", 2, 0, 0}, {"sprout", 14, 0, 0}, {"young", 37, 1, 0}, {"mature", 77, 2, 0}, {"ripe", 100, 3, 0}}
 	for _, sp := range names {
-		set := a.sets[sp]
+		set := a.Sets[sp]
 		prev := 0.0
 		for g := 8; g <= 100; g++ {
 			st := cropGrowthStage(game.PlantView{Species: sp, Growth: g, Stage: stageOfGrowth(g)})
-			if set.nominal[st] <= 0 {
+			if set.Nominal[st] <= 0 {
 				t.Fatalf("%s: no %s sprite", sp, cropStageNames[st])
 			}
-			h := set.height(float64(g))
-			if got := float64(set.nominal[st]) * set.scale(st, g); math.Abs(got-h) > 1e-6 {
+			h := set.Height(float64(g))
+			if got := float64(set.Nominal[st]) * set.Scale(st, g); math.Abs(got-h) > 1e-6 {
 				t.Errorf("%s growth %d: the %s sprite draws %.3f tall, the growth curve says %.3f (the scale clamp binds)", sp, g, cropStageNames[st], got, h)
 			}
 			if h < prev-1e-9 {
@@ -219,8 +219,8 @@ func TestCropGrowthRisesStageToStage(t *testing.T) {
 			}
 			prev = h
 		}
-		if !(set.height(14) < set.height(37.5) && set.height(37.5) < set.height(77.5)) {
-			t.Errorf("%s: growth curve sprout %.3f, young %.3f, mature %.3f does not rise", sp, set.height(14), set.height(37.5), set.height(77.5))
+		if !(set.Height(14) < set.Height(37.5) && set.Height(37.5) < set.Height(77.5)) {
+			t.Errorf("%s: growth curve sprout %.3f, young %.3f, mature %.3f does not rise", sp, set.Height(14), set.Height(37.5), set.Height(77.5))
 		}
 		var hs []float64
 		for _, s := range steps {
@@ -234,16 +234,16 @@ func TestCropGrowthRisesStageToStage(t *testing.T) {
 					// the plant's height is its top's height above its root: the
 					// quad's bottom less the sprite's reach below the root
 					var spr *cropSprite
-					for i := range r.lod.crops.atlas.sprites {
-						if s := &r.lod.crops.atlas.sprites[i]; s.sx == min(vs[q].SrcX, vs[q+1].SrcX) && s.sy == vs[q].SrcY {
+					for i := range r.lod.crops.Atlas.Sprites {
+						if s := &r.lod.crops.Atlas.Sprites[i]; s.Sx == min(vs[q].SrcX, vs[q+1].SrcX) && s.Sy == vs[q].SrcY {
 							spr = s
 						}
 					}
 					if spr == nil {
 						t.Fatalf("%s: a unit quad matches no atlas sprite", sp)
 					}
-					ks := (vs[q+1].DstX - vs[q].DstX) / spr.w
-					root := max(vs[q+2].DstY, vs[q+3].DstY) - (spr.h-spr.fy)*ks
+					ks := (vs[q+1].DstX - vs[q].DstX) / spr.W
+					root := max(vs[q+2].DstY, vs[q+3].DstY) - (spr.H-spr.Fy)*ks
 					sum += float64(root-min(vs[q].DstY, vs[q+1].DstY)) / TileSize
 					units++
 				}
@@ -279,7 +279,7 @@ func TestCropSwayPivotsAtRoot(t *testing.T) {
 		}
 		r.present = present
 		cropDraw(r, 6, 6, 64)
-		return slices.Clone(r.lod.crops.verts)
+		return slices.Clone(r.lod.crops.Verts)
 	}
 	a, b := draw(40), draw(95)
 	if len(a) != 16 || len(b) != 16 {

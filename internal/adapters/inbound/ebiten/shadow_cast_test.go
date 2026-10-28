@@ -202,10 +202,10 @@ func TestPointLightsFromCampfiresAndLitLamps(t *testing.T) {
 	r.lit.Light = lightAt(23, 15, "clear", 0)
 	r.drawShadows(ebiten.NewImage(640, 400), w, 640, 400, r.tilePx())
 	// pawn 1: the moon and the fire; pawn 2: the lamp only
-	if r.env.shadow.Casts != 3 || r.env.shadow.Composites != 1 {
-		t.Fatalf("drew %d silhouettes, %d composites", r.env.shadow.Casts, r.env.shadow.Composites)
+	if r.env.Shadow.Casts != 3 || r.env.Shadow.Composites != 1 {
+		t.Fatalf("drew %d silhouettes, %d composites", r.env.Shadow.Casts, r.env.Shadow.Composites)
 	}
-	if n := len(r.env.shadow.Contacts.Verts); n != 0 {
+	if n := len(r.env.Shadow.Contacts.Verts); n != 0 {
 		t.Fatalf("contact batch not flushed: %d", n)
 	}
 	// Full daylight no longer empties the light list (the old "no point
@@ -214,8 +214,8 @@ func TestPointLightsFromCampfiresAndLitLamps(t *testing.T) {
 	// under the roof, keeps its lamp shadow.
 	r.lit.Light = lightAt(12, 15, "clear", 0)
 	r.drawShadows(ebiten.NewImage(640, 400), w, 640, 400, r.tilePx())
-	if r.env.shadow.Casts != 3+2 {
-		t.Fatalf("noon drew %d silhouettes, want the sun and the indoor lamp", r.env.shadow.Casts-3)
+	if r.env.Shadow.Casts != 3+2 {
+		t.Fatalf("noon drew %d silhouettes, want the sun and the indoor lamp", r.env.Shadow.Casts-3)
 	}
 }
 
@@ -229,7 +229,7 @@ func castsAt(t *testing.T, w game.WorldView, hour float64, pawns ...game.PawnVie
 	r.view.Pawns = pawns
 	r.lit.Light = lightAt(hour, 15, "clear", 0)
 	r.drawShadows(ebiten.NewImage(640, 400), w, 640, 400, r.tilePx())
-	return r.env.shadow.Casts
+	return r.env.Shadow.Casts
 }
 
 func TestOutdoorLampCastsCreatureShadowAtNight(t *testing.T) {

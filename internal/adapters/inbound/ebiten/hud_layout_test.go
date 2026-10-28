@@ -256,7 +256,7 @@ func TestLiveLayoutRegionsNeverOverlap(t *testing.T) { // not parallel: it sets 
 					for _, learn := range []bool{true, false} {
 						a, f := colonyApp(t, busyStub(n))
 						sw, sh := layoutScreen(t, a, sz[0], sz[1], ui)
-						a.renderer.mini.off = !minimap
+						a.renderer.mini.Off = !minimap
 						a.settings.Gameplay.ShowLearningHelper = learn
 						for _, c := range layoutCases() {
 							name := fmt.Sprintf("%dcol %dx%d ui%g minimap=%v learn=%v %s", n, sw, sh, ui, minimap, learn, c.name)

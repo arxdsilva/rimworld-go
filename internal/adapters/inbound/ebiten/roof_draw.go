@@ -86,8 +86,8 @@ func roofLabelAt(w game.WorldView, x, y int) string {
 // roofDrawState is the roof pass's reusable state (kept on envState).
 type roofDrawState struct {
 	batch        triBatch
-	edges        []eaveEdge
-	overlayVerts int // vertices the last overlay drew, for tests
+	Edges        []eaveEdge
+	OverlayVerts int // vertices the last overlay drew, for tests
 }
 
 // --- eaves ---------------------------------------------------------------------------
@@ -101,7 +101,7 @@ const (
 )
 
 // eaveEdge is a roofed tile's side against a wall.
-type eaveEdge struct{ x, y, side int }
+type eaveEdge struct{ X, Y, side int }
 
 // eaveEdges lists, in the tile range, every side of a roofed (non-wall)
 // tile that faces a wall: where the roof's eave shadow falls.
@@ -150,18 +150,18 @@ func (r *Renderer) drawEaves(screen *ebiten.Image, w game.WorldView, sw, sh int,
 		return
 	}
 	r.setView(sw, sh, tile)
-	st := &r.env.roof
+	st := &r.env.Roof
 	x0, y0, x1, y1 := r.visibleTiles()
-	st.edges = eaveEdges(w, x0, y0, x1, y1, st.edges)
-	if len(st.edges) == 0 {
+	st.Edges = eaveEdges(w, x0, y0, x1, y1, st.Edges)
+	if len(st.Edges) == 0 {
 		return
 	}
 	a := float64(eaveAlpha(r.lit.Light)) / 255
 	c := color.RGBA{shadowColorU8(0), shadowColorU8(1), shadowColorU8(2), 255}
 	b := &st.batch
 	b.Reset()
-	for _, e := range st.edges {
-		sx, sy := r.worldToScreen(e.x, e.y)
+	for _, e := range st.Edges {
+		sx, sy := r.worldToScreen(e.X, e.Y)
 		x, y := float64(sx), float64(sy)
 		px := eaveWidth(e.side, tile)
 		switch e.side {
@@ -175,7 +175,7 @@ func (r *Renderer) drawEaves(screen *ebiten.Image, w game.WorldView, sw, sh int,
 			b.Rect(x, y, px, tile, c, a, 0, a, 0)
 		}
 	}
-	b.Flush(screen, r.env.whiteImg(), ebiten.BlendSourceOver)
+	b.Flush(screen, r.env.WhiteImg(), ebiten.BlendSourceOver)
 }
 
 func shadowColorU8(i int) uint8 { return uint8(shadowColor[i]) }
@@ -184,11 +184,11 @@ func shadowColorU8(i int) uint8 { return uint8(shadowColor[i]) }
 
 // roofStyle is how the Roof overlay marks a tile; a zero colour is off.
 type roofStyle struct {
-	fill    color.RGBA // the tile fill
-	border  color.RGBA // solid edge where a built roof meets a non-built cell
-	stipple color.RGBA // diagonal dots (natural)
-	dash    color.RGBA // dashed outline (planned)
-	hatch   color.RGBA // diagonal hatch (removal planned)
+	Fill    color.RGBA // the tile fill
+	Border  color.RGBA // solid edge where a built roof meets a non-built cell
+	Stipple color.RGBA // diagonal dots (natural)
+	Dash    color.RGBA // dashed outline (planned)
+	Hatch   color.RGBA // diagonal hatch (removal planned)
 }
 
 var (
@@ -208,17 +208,17 @@ func roofStyleFor(c uint8) roofStyle {
 	var s roofStyle
 	switch {
 	case c&roofBuilt != 0:
-		s.fill, s.border = roofBuiltFill, roofBuiltBorder
+		s.Fill, s.Border = roofBuiltFill, roofBuiltBorder
 	case c&roofNatural != 0:
-		s.fill, s.stipple = roofNaturalFill, roofNaturalDots
+		s.Fill, s.Stipple = roofNaturalFill, roofNaturalDots
 	case c&roofPlanBuild != 0:
-		s.fill = roofPlanFill
+		s.Fill = roofPlanFill
 	}
 	if c&roofPlanBuild != 0 {
-		s.dash = roofPlanDash
+		s.Dash = roofPlanDash
 	}
 	if c&roofPlanRemove != 0 {
-		s.hatch = roofRemoveHatch
+		s.Hatch = roofRemoveHatch
 	}
 	return s
 }
@@ -233,8 +233,8 @@ func alphaOf(c color.RGBA) float64 { return float64(c.A) / 255 }
 func (r *Renderer) drawRoofOverlay(screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
 	r.drawHomeOverlay(screen, w, sw, sh, tile) // home_draw.go: under the roof tint
 	r.drawAreaOverlay(screen, w, sw, sh, tile) // area_overlay.go: the armed or hovered allowed area
-	st := &r.env.roof
-	st.overlayVerts = 0
+	st := &r.env.Roof
+	st.OverlayVerts = 0
 	if !r.roofOverlayOn() || len(w.RoofCells) == 0 {
 		return
 	}
@@ -255,45 +255,45 @@ func (r *Renderer) drawRoofOverlay(screen *ebiten.Image, w game.WorldView, sw, s
 			s := roofStyleFor(c)
 			sx, sy := r.worldToScreen(x, y)
 			X, Y := float64(sx), float64(sy)
-			if s.fill.A > 0 {
-				a := alphaOf(s.fill)
-				b.Rect(X, Y, tile, tile, s.fill, a, a, a, a)
+			if s.Fill.A > 0 {
+				a := alphaOf(s.Fill)
+				b.Rect(X, Y, tile, tile, s.Fill, a, a, a, a)
 			}
-			if s.stipple.A > 0 {
-				a, d := alphaOf(s.stipple), math.Max(1.5, 2.5*k)
+			if s.Stipple.A > 0 {
+				a, d := alphaOf(s.Stipple), math.Max(1.5, 2.5*k)
 				for i := 0; i < 4; i++ {
 					for j := 0; j < 4; j++ {
 						if (i+j)%2 == 0 {
-							b.Rect(X+(float64(i)+0.5)*tile/4-d/2, Y+(float64(j)+0.5)*tile/4-d/2, d, d, s.stipple, a, a, a, a)
+							b.Rect(X+(float64(i)+0.5)*tile/4-d/2, Y+(float64(j)+0.5)*tile/4-d/2, d, d, s.Stipple, a, a, a, a)
 						}
 					}
 				}
 			}
-			if s.hatch.A > 0 {
-				a := alphaOf(s.hatch)
+			if s.Hatch.A > 0 {
+				a := alphaOf(s.Hatch)
 				for t := 0.25; t < 2; t += 0.25 {
 					if t <= 1 {
-						b.Line(X+t*tile, Y, X, Y+t*tile, thin, s.hatch, a)
+						b.Line(X+t*tile, Y, X, Y+t*tile, thin, s.Hatch, a)
 					} else {
-						b.Line(X+tile, Y+(t-1)*tile, X+(t-1)*tile, Y+tile, thin, s.hatch, a)
+						b.Line(X+tile, Y+(t-1)*tile, X+(t-1)*tile, Y+tile, thin, s.Hatch, a)
 					}
 				}
 			}
 			for side, d := range nb {
 				n := roofCellAt(w, x+d[0], y+d[1])
-				if s.border.A > 0 && n&roofBuilt == 0 {
-					r.edgeStrip(b, X, Y, tile, side, edge, s.border, 0, 1)
+				if s.Border.A > 0 && n&roofBuilt == 0 {
+					r.edgeStrip(b, X, Y, tile, side, edge, s.Border, 0, 1)
 				}
-				if s.dash.A > 0 && n&roofPlanBuild == 0 {
+				if s.Dash.A > 0 && n&roofPlanBuild == 0 {
 					for t := 0.0; t < 1; t += 0.25 {
-						r.edgeStrip(b, X, Y, tile, side, edge, s.dash, t+0.03, t+0.16)
+						r.edgeStrip(b, X, Y, tile, side, edge, s.Dash, t+0.03, t+0.16)
 					}
 				}
 			}
 		}
 	}
-	st.overlayVerts = len(b.Verts)
-	b.Flush(screen, r.env.whiteImg(), ebiten.BlendSourceOver)
+	st.OverlayVerts = len(b.Verts)
+	b.Flush(screen, r.env.WhiteImg(), ebiten.BlendSourceOver)
 }
 
 // edgeStrip is a strip width px wide just inside a tile's side, from t0
@@ -316,7 +316,7 @@ func (r *Renderer) edgeStrip(b *triBatch, X, Y, tile float64, side int, width fl
 // drawRoofUnsupported marks tile (x, y) where a planned roof would have no
 // support: a red fill and an "×" (the roof tool's ghost, archtools.go).
 func (r *Renderer) drawRoofUnsupported(screen *ebiten.Image, x, y int, tile float64) {
-	b := &r.env.roof.batch
+	b := &r.env.Roof.batch
 	b.Reset()
 	sx, sy := r.worldToScreen(x, y)
 	X, Y := float64(sx), float64(sy)
@@ -325,5 +325,5 @@ func (r *Renderer) drawRoofUnsupported(screen *ebiten.Image, x, y int, tile floa
 	m, wd := 0.28*tile, math.Max(1.5, 3*tile/TileSize)
 	b.Line(X+m, Y+m, X+tile-m, Y+tile-m, wd, roofUnsupportMark, alphaOf(roofUnsupportMark))
 	b.Line(X+tile-m, Y+m, X+m, Y+tile-m, wd, roofUnsupportMark, alphaOf(roofUnsupportMark))
-	b.Flush(screen, r.env.whiteImg(), ebiten.BlendSourceOver)
+	b.Flush(screen, r.env.WhiteImg(), ebiten.BlendSourceOver)
 }

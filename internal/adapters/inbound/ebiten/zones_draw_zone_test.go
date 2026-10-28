@@ -111,7 +111,7 @@ func TestHiddenZoneLabelIsNotClickableUnlessSelected(t *testing.T) {
 	a, s, _ := zoneApp(t, z)
 	r := a.renderer
 	plan, _, _, _, _ := r.zoneLabelPlanFor(z, r.zoneGeomOf(z), r.tilePx())
-	cx, cy := plan.plate.Center()
+	cx, cy := plan.Plate.Center()
 	px, py := int(cx*float32(uiScale())), int(cy*float32(uiScale()))
 	if got, ok := r.zoneLabelAt(r.world(), px, py, r.tilePx(), 0); !ok || got.ID != 1 {
 		t.Fatal("a shown zone's label plate is clickable")

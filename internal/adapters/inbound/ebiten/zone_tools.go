@@ -209,7 +209,7 @@ func (a *App) zoneToolCells(z game.ZoneView) []ghostCell {
 	if st.tool == zoneToolExpand {
 		return zoneGhostCells(x0, y0, x1, y1, clip, func(x, y int) bool { return r.game.CanZoneAt(z.Kind, x, y) })
 	}
-	own := r.zoneGeomOf(z).cells
+	own := r.zoneGeomOf(z).Cells
 	var out []ghostCell
 	for _, c := range zoneGhostCells(x0, y0, x1, y1, clip, func(x, y int) bool { return own[[2]int{x, y}] }) {
 		if c.ok {
@@ -238,7 +238,7 @@ func (a *App) submitZoneTool(z game.ZoneView) {
 		}
 		a.shell.Enqueue(command.Command{Kind: command.ExpandZone, Target: uint64(z.ID), X: x0, Y: y0, X2: x1, Y2: y1})
 	case zoneToolShrink:
-		own := r.zoneGeomOf(z).cells
+		own := r.zoneGeomOf(z).Cells
 		if !anyZoneCell(x0, y0, x1, y1, func(x, y int) bool { return own[[2]int{x, y}] }) {
 			a.shell.Hint("none of this zone's tiles there")
 			return

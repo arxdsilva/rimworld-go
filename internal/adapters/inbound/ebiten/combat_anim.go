@@ -45,7 +45,7 @@ const minReactionFrames = 8
 // and born the sim tick it happened.
 type reactTrace struct {
 	game.TraceView
-	sim, frames float64
+	Sim, Frames float64
 	born        float64
 }
 
@@ -67,7 +67,7 @@ func reactionAge(sim, frames, dur float64) float64 {
 func attackReaction(traces []game.TraceView, x, y int) (dx, dy float64, flash float32) {
 	rs := make([]reactTrace, len(traces))
 	for i, t := range traces {
-		rs[i] = reactTrace{TraceView: t, sim: float64(t.Age), frames: math.Inf(1)}
+		rs[i] = reactTrace{TraceView: t, Sim: float64(t.Age), Frames: math.Inf(1)}
 	}
 	return attackReactionF(rs, x, y)
 }
@@ -87,11 +87,11 @@ func attackerNudge(traces []reactTrace, x, y int) (dx, dy float64) {
 		}
 		ux, uy := unit(float64(t.ToX-x), float64(t.ToY-y))
 		switch {
-		case t.Melee && reactionAge(t.sim, t.frames, 10) < 10:
-			k := math.Sin(math.Pi * reactionAge(t.sim, t.frames, 10) / 10)
+		case t.Melee && reactionAge(t.Sim, t.Frames, 10) < 10:
+			k := math.Sin(math.Pi * reactionAge(t.Sim, t.Frames, 10) / 10)
 			dx, dy = dx+ux*0.22*k, dy+uy*0.22*k
-		case !t.Melee && reactionAge(t.sim, t.frames, 6) < 6:
-			k := 1 - reactionAge(t.sim, t.frames, 6)/6
+		case !t.Melee && reactionAge(t.Sim, t.Frames, 6) < 6:
+			k := 1 - reactionAge(t.Sim, t.Frames, 6)/6
 			dx, dy = dx-ux*0.08*k, dy-uy*0.08*k
 		}
 	}
@@ -104,7 +104,7 @@ func struckNudge(traces []reactTrace, x, y int) (dx, dy float64, flash float32) 
 		if t.ToX != x || t.ToY != y || !t.Hit || (t.FromX == x && t.FromY == y) {
 			continue
 		}
-		if age := reactionAge(t.sim, t.frames, 12); age < 12 {
+		if age := reactionAge(t.Sim, t.Frames, 12); age < 12 {
 			k := 1 - age/12
 			ux, uy := unit(float64(x-t.FromX), float64(y-t.FromY))
 			dx, dy = dx+ux*0.1*k, dy+uy*0.1*k
@@ -120,9 +120,9 @@ func traceKey(t game.TraceView, tick uint64) [3]uint64 {
 	return [3]uint64{uint64(t.FromX)<<20 | uint64(t.FromY), uint64(t.ToX)<<20 | uint64(t.ToY), tick - uint64(t.Age)}
 }
 
-// trackReactions remembers every trace for minReactionFrames present
+// TrackReactions remembers every trace for minReactionFrames present
 // frames after the sim drops it.
-func (st *animState) trackReactions(traces []game.TraceView, tick, present uint64) {
+func (st *animState) TrackReactions(traces []game.TraceView, tick, present uint64) {
 	for _, rec := range st.Recs {
 		rec.live = false
 	}
@@ -142,12 +142,12 @@ func (st *animState) trackReactions(traces []game.TraceView, tick, present uint6
 	}
 }
 
-// reactions appends the tracked traces, aged for display.
-func (st *animState) reactions(present uint64, dst []reactTrace) []reactTrace {
+// Reactions appends the tracked traces, aged for display.
+func (st *animState) Reactions(present uint64, dst []reactTrace) []reactTrace {
 	for _, rec := range st.Recs {
-		rt := reactTrace{TraceView: rec.trace, sim: math.Inf(1), frames: float64(present - rec.seen), born: float64(rec.born)}
+		rt := reactTrace{TraceView: rec.trace, Sim: math.Inf(1), Frames: float64(present - rec.seen), born: float64(rec.born)}
 		if rec.live {
-			rt.sim = float64(rec.trace.Age)
+			rt.Sim = float64(rec.trace.Age)
 		}
 		dst = append(dst, rt)
 	}
@@ -174,7 +174,7 @@ func (r *Renderer) lastStrike(id entity.EntityID, x, y int, dur float64) (reactT
 		if !strikeBy(rt.TraceView, id, x, y) {
 			continue
 		}
-		if age := reactionAge(math.Max(0, now-rt.born), rt.frames, dur); age < bestAge {
+		if age := reactionAge(math.Max(0, now-rt.born), rt.Frames, dur); age < bestAge {
 			best, bestAge = rt, age
 		}
 	}
@@ -192,7 +192,7 @@ func (r *Renderer) hitAge(id entity.EntityID, hitTick uint64, x, y int) (float64
 	for _, rt := range r.traceList(r.view.W) {
 		mine := rt.Target == id || rt.Target == 0 && rt.ToX == x && rt.ToY == y
 		if mine && rt.Hit && math.Abs(rt.born-float64(hitTick)) <= 1 {
-			frames = math.Min(frames, rt.frames)
+			frames = math.Min(frames, rt.Frames)
 		}
 	}
 	return reactionAge(el, frames, staggerTicks), true
@@ -244,19 +244,19 @@ func (r *Renderer) hitReaction(p game.PawnView, m moveState) actionPose {
 	}
 	ux, uy := awayFrom(p.X, p.Y, p.HitFromX, p.HitFromY, m.Facing)
 	k := staggerK(age)
-	a := actionPose{ok: true,
-		dx: ux * staggerDist * k, dy: uy * staggerDist * k, rot: ux * 0.1 * k,
-		flash: float32(1 - age/hitTicks)}
+	a := actionPose{Ok: true,
+		Dx: ux * staggerDist * k, Dy: uy * staggerDist * k, Rot: ux * 0.1 * k,
+		Flash: float32(1 - age/hitTicks)}
 	// what the pawn holds is kept through the flinch: the aimed weapon,
 	// a hauled load, or the carried weapon on duty
 	for _, layer := range []func(game.PawnView, moveState) actionPose{r.combatPose, r.carryPose} {
-		if b := layer(p, m); b.ok && b.held.set {
-			a.held = b.held
+		if b := layer(p, m); b.Ok && b.Held.Set {
+			a.Held = b.Held
 			return a
 		}
 	}
 	if onDuty(p) {
-		a.held = readyHeld(p)
+		a.Held = readyHeld(p)
 	}
 	return a
 }
@@ -389,7 +389,7 @@ func (r *Renderer) combatPose(p game.PawnView, m moveState) actionPose {
 	if !struck && p.Action != game.ActionAim && p.Action != game.ActionMelee {
 		return actionPose{}
 	}
-	a := actionPose{ok: true, held: readyHeld(p)}
+	a := actionPose{Ok: true, Held: readyHeld(p)}
 	tgt, hasT := r.attackTarget(p, st, struck)
 	wx, wy := r.interpWorld(p)
 	ux, uy := facingUnit(m.Facing)
@@ -397,23 +397,23 @@ func (r *Renderer) combatPose(p game.PawnView, m moveState) actionPose {
 		if vx, vy := unit(tgt.X-wx-0.5, tgt.Y-wy-0.4); vx != 0 || vy != 0 {
 			ux, uy = vx, vy
 		}
-		a.held.stance, a.held.aimX, a.held.aimY = stanceAimed, tgt.X, tgt.Y
+		a.Held.Stance, a.Held.AimX, a.Held.AimY = stanceAimed, tgt.X, tgt.Y
 	}
 	moving := m.Blend >= minBlend
 	if p.Action == game.ActionAim || p.Action != game.ActionMelee && struck && !st.Melee {
-		a.held.angle = aimKick(age, struck)
+		a.Held.Angle = aimKick(age, struck)
 		if struck && age < recoilTicks {
 			k := 1 - age/recoilTicks
-			a.dx, a.dy = -ux*recoilDist*k, -uy*recoilDist*k
-			a.held.push = -recoilPull * k
+			a.Dx, a.Dy = -ux*recoilDist*k, -uy*recoilDist*k
+			a.Held.Push = -recoilPull * k
 		}
 		return a
 	}
 	lunge, angle, push := meleeMotion(p.Weapon, p.AttackCycle, age, struck)
-	a.held.angle, a.held.push = angle, push
+	a.Held.Angle, a.Held.Push = angle, push
 	if !moving {
 		reach := meleeReach(p.Weapon)
-		a.dx, a.dy, a.rot = ux*reach*lunge, uy*reach*lunge, ux*0.06*lunge
+		a.Dx, a.Dy, a.Rot = ux*reach*lunge, uy*reach*lunge, ux*0.06*lunge
 	}
 	return a
 }
@@ -425,7 +425,7 @@ func (r *Renderer) combatOffset(p game.PawnView) (dx, dy float64, flash float32)
 	if p.HitTick != 0 {
 		return 0, 0, 0
 	}
-	return struckNudge(r.animState().reactions(r.present, nil), p.X, p.Y)
+	return struckNudge(r.animState().Reactions(r.present, nil), p.X, p.Y)
 }
 
 // --- falling --------------------------------------------------------------
@@ -500,10 +500,10 @@ func (r *Renderer) pawnHeldPoint(p game.PawnView, attach string) (vec, bool) {
 	m.Facing = r.poseFacing(p, m)
 	ps, h := r.standingPose(p, m)
 	rig := r.rigOf(p, m.Facing)
-	if rig.mirror {
+	if rig.Mirror {
 		ps = mirrored(ps)
 	}
-	if h.key == "" {
+	if h.Key == "" {
 		attach = "hold"
 	}
 	return r.heldPoint(rig, h, wx, wy, ps, attach)
@@ -543,7 +543,7 @@ func casingDir(ux, uy float64) (float64, float64) {
 func (r *Renderer) animateCombat(w game.WorldView, pawns []game.PawnView) {
 	st := r.animState()
 	now := uint64(r.game.Tick())
-	st.trackReactions(w.Traces, now, r.present)
+	st.TrackReactions(w.Traces, now, r.present)
 	for _, t := range w.Traces {
 		key := traceKey(t, now)
 		if r.seenTrace[key] {

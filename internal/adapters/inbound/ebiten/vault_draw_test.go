@@ -95,18 +95,18 @@ func TestCasketOpenedCuesOnce(t *testing.T) {
 	open := sealed
 	open.Sealed = false
 	world := func(b game.BuildingView) game.WorldView { return game.WorldView{Buildings: []game.BuildingView{b}} }
-	if got := m.casketOpened(world(open)); len(got) != 0 { // first frame only records
+	if got := m.CasketOpened(world(open)); len(got) != 0 { // first frame only records
 		t.Errorf("first frame cued %v", got)
 	}
 	m = casketMemo{}
-	m.casketOpened(world(sealed))
-	if got := m.casketOpened(world(sealed)); len(got) != 0 {
+	m.CasketOpened(world(sealed))
+	if got := m.CasketOpened(world(sealed)); len(got) != 0 {
 		t.Errorf("still sealed cued %v", got)
 	}
-	if got := m.casketOpened(world(open)); len(got) != 1 || got[0].ID != 3 {
+	if got := m.CasketOpened(world(open)); len(got) != 1 || got[0].ID != 3 {
 		t.Errorf("opening cued %v", got)
 	}
-	if got := m.casketOpened(world(open)); len(got) != 0 {
+	if got := m.CasketOpened(world(open)); len(got) != 0 {
 		t.Errorf("an open casket cues once, got %v", got)
 	}
 }
@@ -119,7 +119,7 @@ func TestListenCasketsEmitsSound(t *testing.T) {
 	open.Sealed = false
 	r.listenCaskets(game.WorldView{Buildings: []game.BuildingView{sealed}})
 	r.listenCaskets(game.WorldView{Buildings: []game.BuildingView{open}})
-	if len(r.cues) != 1 || r.cues[0].id != "sfx.casket_open" || r.cues[0].x != 4.5 {
+	if len(r.cues) != 1 || r.cues[0].ID != "sfx.casket_open" || r.cues[0].X != 4.5 {
 		t.Errorf("cues = %+v", r.cues)
 	}
 }
@@ -172,17 +172,17 @@ func TestCasketOpenedInjected(t *testing.T) {
 	of := func(b game.BuildingView) bool { return sealed[b.ID] }
 	w := game.WorldView{Buildings: []game.BuildingView{{ID: 3, Kind: casketKind}, {ID: 4, Kind: casketKind}, {ID: 9, Kind: "wall"}}}
 	var m casketMemo
-	if got := m.opened(w, of); len(got) != 0 {
+	if got := m.Opened(w, of); len(got) != 0 {
 		t.Errorf("first frame cued %v", got)
 	}
-	if got := m.opened(w, of); len(got) != 0 {
+	if got := m.Opened(w, of); len(got) != 0 {
 		t.Errorf("unchanged cued %v", got)
 	}
 	sealed[3] = false
-	if got := m.opened(w, of); len(got) != 1 || got[0].ID != 3 {
+	if got := m.Opened(w, of); len(got) != 1 || got[0].ID != 3 {
 		t.Errorf("opening cued %v", got)
 	}
-	if got := m.opened(w, of); len(got) != 0 {
+	if got := m.Opened(w, of); len(got) != 0 {
 		t.Errorf("cues once, got %v", got)
 	}
 }

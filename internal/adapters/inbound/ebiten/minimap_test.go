@@ -58,25 +58,25 @@ func TestMinimapPollsLayer(t *testing.T) {
 	screen := ebiten.NewImage(1280, 800)
 	v := colonyViewport(1280, 800)
 	r.drawMinimap(screen, v, v)
-	if r.mini.polls != 1 || r.mini.img == nil || r.mini.w != 160 {
-		t.Fatalf("first draw: polls %d img %v", r.mini.polls, r.mini.img != nil)
+	if r.mini.Polls != 1 || r.mini.Img == nil || r.mini.W != 160 {
+		t.Fatalf("first draw: polls %d img %v", r.mini.Polls, r.mini.Img != nil)
 	}
 	r.present += minimapPoll
 	r.drawMinimap(screen, v, v)
-	if r.mini.polls != 1 {
+	if r.mini.Polls != 1 {
 		t.Fatal("an unchanged layer was rebuilt")
 	}
 	t2 := append([]uint8(nil), w.Terrain...)
 	t2[0] = 4
 	sim.world.Terrain, sim.world.StructVer = t2, 9
 	r.drawMinimap(screen, v, v) // within the poll interval: not asked yet
-	if r.mini.polls != 1 {
+	if r.mini.Polls != 1 {
 		t.Fatal("polled before the interval")
 	}
 	r.present += minimapPoll
 	r.drawMinimap(screen, v, v)
-	if r.mini.polls != 2 {
-		t.Fatalf("a changed ground was not picked up: polls %d", r.mini.polls)
+	if r.mini.Polls != 2 {
+		t.Fatalf("a changed ground was not picked up: polls %d", r.mini.Polls)
 	}
 	if c := minimapColor(game.MinimapStructure | 1); c != minimapStructureClr {
 		t.Fatal("structures take the structure colour")

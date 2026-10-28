@@ -30,11 +30,11 @@ type areaBake struct {
 // ids (0: none), set by the UI each frame; the bakes are rebuilt only when
 // an area's Ver changes.
 type areaOverlay struct {
-	armed, hover int
+	Armed, Hover int
 	bakes        map[uint16]*areaBake
-	builds       int        // bakes rebuilt (tests)
-	verts        int        // vertices in the last batch (tests)
-	tint         color.RGBA // the last tint drawn (tests)
+	Builds       int        // bakes rebuilt (tests)
+	Verts        int        // vertices in the last batch (tests)
+	Tint         color.RGBA // the last tint drawn (tests)
 	batch        triBatch
 }
 
@@ -70,8 +70,8 @@ func (b *areaBake) bake(ar game.AreaView, w int) {
 // hovered area, if any.
 func (r *Renderer) drawAreaOverlay(screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
 	st := &r.areaOv
-	st.verts = 0
-	if st.armed == 0 && st.hover == 0 {
+	st.Verts = 0
+	if st.Armed == 0 && st.Hover == 0 {
 		return
 	}
 	r.drawAreas(screen, w, r.game.Areas(), sw, sh, tile)
@@ -80,7 +80,7 @@ func (r *Renderer) drawAreaOverlay(screen *ebiten.Image, w game.WorldView, sw, s
 // drawAreas draws the overlay of the armed and hovered ids among areas.
 func (r *Renderer) drawAreas(screen *ebiten.Image, w game.WorldView, areas []game.AreaView, sw, sh int, tile float64) {
 	st := &r.areaOv
-	st.verts = 0
+	st.Verts = 0
 	if w.TerrainW <= 0 {
 		return
 	}
@@ -91,7 +91,7 @@ func (r *Renderer) drawAreas(screen *ebiten.Image, w game.WorldView, areas []gam
 	b := &st.batch
 	b.Reset()
 	for _, ar := range areas {
-		if int(ar.ID) != st.armed && int(ar.ID) != st.hover {
+		if int(ar.ID) != st.Armed && int(ar.ID) != st.Hover {
 			continue
 		}
 		bk := st.bakes[ar.ID]
@@ -101,10 +101,10 @@ func (r *Renderer) drawAreas(screen *ebiten.Image, w game.WorldView, areas []gam
 		}
 		if !bk.built || bk.ver != ar.Ver || bk.w != w.TerrainW || bk.n != len(ar.Bits) {
 			bk.bake(ar, w.TerrainW)
-			st.builds++
+			st.Builds++
 		}
 		c := color.RGBA{ar.Color[0], ar.Color[1], ar.Color[2], 255}
-		st.tint = c
+		st.Tint = c
 		for _, run := range bk.runs {
 			sx, sy := r.worldToScreen(run.x0, run.y)
 			wd := float64(run.x1-run.x0) * tile
@@ -114,8 +114,8 @@ func (r *Renderer) drawAreas(screen *ebiten.Image, w game.WorldView, areas []gam
 			b.Rect(float64(sx), float64(sy), wd, tile, c, areaOverlayA, areaOverlayA, areaOverlayA, areaOverlayA)
 		}
 	}
-	st.verts = len(b.Verts)
-	b.Flush(screen, r.env.whiteImg(), ebiten.BlendSourceOver)
+	st.Verts = len(b.Verts)
+	b.Flush(screen, r.env.WhiteImg(), ebiten.BlendSourceOver)
 }
 
 // syncAreaOverlay points the overlay at the area the armed Architect tool
@@ -128,5 +128,5 @@ func (a *App) syncAreaOverlay() {
 	if _, ok := areaToolPaints(a.archTool); ok && a.archOpen {
 		id = a.areaPaintIndex()
 	}
-	a.renderer.areaOv.armed = id
+	a.renderer.areaOv.Armed = id
 }

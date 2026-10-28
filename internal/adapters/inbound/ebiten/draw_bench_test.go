@@ -135,7 +135,7 @@ func benchDrawGrown(b *testing.B, side int) {
 				frame()
 			}
 			calls := r.lit.Calls
-			snowBakes, snowDraws := r.snowc.bakes, r.snowc.draws // snow_cache.go (PERF-002): 0 bakes/op once warm
+			snowBakes, snowDraws := r.snowc.Bakes, r.snowc.Draws // snow_cache.go (PERF-002): 0 bakes/op once warm
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
@@ -146,8 +146,8 @@ func benchDrawGrown(b *testing.B, side int) {
 				r.drawArt(screen, sw, sh, tile)
 			}
 			b.ReportMetric(float64(r.lit.Calls-calls)/float64(b.N), "draw-calls/op")
-			b.ReportMetric(float64(r.snowc.bakes-snowBakes)/float64(b.N), "snow-bakes/op")
-			b.ReportMetric(float64(r.snowc.draws-snowDraws)/float64(b.N), "snow-draws/op")
+			b.ReportMetric(float64(r.snowc.Bakes-snowBakes)/float64(b.N), "snow-bakes/op")
+			b.ReportMetric(float64(r.snowc.Draws-snowDraws)/float64(b.N), "snow-draws/op")
 		})
 	}
 }

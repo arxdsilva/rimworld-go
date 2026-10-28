@@ -93,14 +93,14 @@ func newPlantKey(p game.PlantView, h uint64) (string, float64, bool) {
 	v := int(h % 3)
 	switch p.Species {
 	case "pine":
-		return plantKeys.trees[2][v], 0.45 + 0.55*float64(p.Growth)/100, true
+		return plantKeys.Trees[2][v], 0.45 + 0.55*float64(p.Growth)/100, true
 	case "jungle_tree":
 		return artKey("plant", "tree_jungle", v), 0.45 + 0.55*float64(p.Growth)/100, true
 	}
 	if p.Species == "healroot" && p.Zone == "" { // wild healroot, not a sown crop
-		return groundPick(plantKeys.ground["healroot_wild"], p, h), bushScale(p), true
+		return groundPick(plantKeys.Ground["healroot_wild"], p, h), bushScale(p), true
 	}
-	if g, ok := plantKeys.ground[p.Species]; ok {
+	if g, ok := plantKeys.Ground[p.Species]; ok {
 		return groundPick(g, p, h), bushScale(p), true
 	}
 	return "", 0, false
@@ -109,10 +109,10 @@ func newPlantKey(p game.PlantView, h uint64) (string, float64, bool) {
 // addGroundPlantKeys builds the stage keys of every ground plant, their
 // fallbacks (variant 0, then the mature stage) and the winter dormant look.
 func addGroundPlantKeys(t *plantKeyTable) {
-	t.ground = map[string]*groundKeys{}
+	t.Ground = map[string]*groundKeys{}
 	for _, name := range groundPlants {
 		g := &groundKeys{}
-		t.ground[name] = g
+		t.Ground[name] = g
 		berry := name == "berry_bush"
 		for v := 0; v < groundVariants; v++ {
 			key := func(stage string) string { return fmt.Sprintf("plant/%s_%s_v%d", name, stage, v) }
@@ -123,16 +123,16 @@ func addGroundPlantKeys(t *plantKeyTable) {
 				return []string{fmt.Sprintf("plant/%s_%s_v0", name, stage)}
 			}
 			g.Young[v], g.Mature[v], g.Dormant[v] = key("young"), key("mature"), key("dormant")
-			t.fallback[g.Young[v]] = append(v0("young"), g.Mature[v])
-			t.fallback[g.Mature[v]] = v0("mature")
-			t.fallback[g.Dormant[v]] = append(v0("dormant"), g.Mature[v])
+			t.Fallback[g.Young[v]] = append(v0("young"), g.Mature[v])
+			t.Fallback[g.Mature[v]] = v0("mature")
+			t.Fallback[g.Dormant[v]] = append(v0("dormant"), g.Mature[v])
 			winter := g.Dormant[v]
-			t.seasonal[g.Young[v]] = [2]string{g.Young[v], winter}
-			t.seasonal[g.Mature[v]] = [2]string{g.Mature[v], winter}
+			t.Seasonal[g.Young[v]] = [2]string{g.Young[v], winter}
+			t.Seasonal[g.Mature[v]] = [2]string{g.Mature[v], winter}
 			if berry {
 				g.harvest[v] = key("harvestable")
-				t.fallback[g.harvest[v]] = append(v0("harvestable"), g.Mature[v])
-				t.seasonal[g.harvest[v]] = [2]string{g.harvest[v], winter}
+				t.Fallback[g.harvest[v]] = append(v0("harvestable"), g.Mature[v])
+				t.Seasonal[g.harvest[v]] = [2]string{g.harvest[v], winter}
 			}
 		}
 	}
@@ -144,11 +144,11 @@ func addBiomePlantFallbacks(t *plantKeyTable) {
 	oak := artKey("plant", "tree_oak", 0)
 	for v := 0; v < 3; v++ {
 		jt := artKey("plant", "tree_jungle", v)
-		t.fallback[jt] = []string{artKey("plant", "tree_oak", v), oak}
+		t.Fallback[jt] = []string{artKey("plant", "tree_oak", v), oak}
 		// pine stays green through the year but wears snow in winter
-		pk := t.trees[2][v]
-		t.seasonal[pk] = [2]string{pk, pk + "_snow"}
-		t.fallback[pk+"_snow"] = []string{pk}
+		pk := t.Trees[2][v]
+		t.Seasonal[pk] = [2]string{pk, pk + "_snow"}
+		t.Fallback[pk+"_snow"] = []string{pk}
 	}
 }
 

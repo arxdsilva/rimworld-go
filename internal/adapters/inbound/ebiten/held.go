@@ -77,20 +77,20 @@ const (
 // heldItem is what a pawn holds and how. set marks an action layer's
 // choice (even "nothing held").
 type heldItem struct {
-	set    bool
-	key    string // sprite key ("" none)
-	stance heldStance
-	// aimX, aimY is the aimed item's target in world tiles.
-	aimX, aimY float64
-	// angle turns the item about its centre, radians, positive raising its
+	Set    bool
+	Key    string // sprite key ("" none)
+	Stance heldStance
+	// AimX, AimY is the aimed item's target in world tiles.
+	AimX, AimY float64
+	// Angle turns the item about its centre, radians, positive raising its
 	// forward end (the muzzle kick, a club's arc).
-	angle float64
-	// push moves an aimed item along the aim (tiles): a thrust forward,
+	Angle float64
+	// Push moves an aimed item along the aim (tiles): a thrust forward,
 	// recoil back. With no item it is a punch's reach (heldPoint's hold
 	// point, for the melee trail).
-	push float64
-	// cs tints the item (a carried stone chunk's stone); zero is untinted.
-	cs colorScale
+	Push float64
+	// Cs tints the item (a carried stone chunk's stone); zero is untinted.
+	Cs colorScale
 }
 
 // onDuty: drafted, a raider on the attack, or fighting right now (a hunt
@@ -103,9 +103,9 @@ func onDuty(p game.PawnView) bool {
 func readyHeld(p game.PawnView) heldItem {
 	key, ok := heldWeaponKey(p.Weapon)
 	if !ok {
-		return heldItem{set: true}
+		return heldItem{Set: true}
 	}
-	return heldItem{set: true, key: key, stance: stanceCarried}
+	return heldItem{Set: true, Key: key, Stance: stanceCarried}
 }
 
 // idleHeld is what a pawn holds when no action layer says otherwise: on
@@ -115,15 +115,15 @@ func (r *Renderer) idleHeld(p game.PawnView, m moveState) heldItem {
 		return heldItem{}
 	}
 	h := readyHeld(p)
-	h.set = false
+	h.Set = false
 	return h
 }
 
 // heldRig is the pawn body a held item anchors on.
 type heldRig struct {
-	body   *artSprite      // the pawn's body (its build) in the drawn facing
+	Body   *artSprite      // the pawn's body (its build) in the drawn facing
 	face   facing          // drawn facing: south, east or north
-	mirror bool            // facing west: the pose flips the east art
+	Mirror bool            // facing west: the pose flips the east art
 	layers []portraitLayer // the figure's layers in the drawn facing, body first
 }
 
@@ -131,9 +131,9 @@ type heldRig struct {
 // body sprite they start with.
 func (r *Renderer) rigOf(p game.PawnView, f facing) heldRig {
 	fs, mirror := facingKey(f)
-	rig := heldRig{face: drawnFacing(f), mirror: mirror, layers: r.pawnFigureLayers(p, fs)}
+	rig := heldRig{face: drawnFacing(f), Mirror: mirror, layers: r.pawnFigureLayers(p, fs)}
 	if len(rig.layers) > 0 {
-		rig.body = r.art.Sprite(rig.layers[0].Key)
+		rig.Body = r.art.Sprite(rig.layers[0].Key)
 	}
 	return rig
 }
@@ -168,42 +168,42 @@ func heldPivot(sp *artSprite, st heldStance) [2]float64 {
 // heldPlacement is a held sprite's screen transform, its key, and whether
 // it is drawn before the body (hidden by it).
 type heldPlacement struct {
-	g      ebiten.GeoM
+	G      ebiten.GeoM
 	key    string
-	behind bool
+	Behind bool
 }
 
 // heldPlace places what h holds on the figure at (wx, wy) in pose ps.
 // Draw order: behind the body facing north; an aimed item only when it
 // aims into the north half.
 func (r *Renderer) heldPlace(rig heldRig, h heldItem, wx, wy, tile float64, ps pose) (heldPlacement, bool) {
-	if rig.body == nil || h.key == "" {
+	if rig.Body == nil || h.Key == "" {
 		return heldPlacement{}, false
 	}
-	sp, k := r.heldSprite(h.key)
+	sp, k := r.heldSprite(h.Key)
 	if sp == nil {
 		return heldPlacement{}, false
 	}
-	c, ok := bodyCentre(rig.body.Meta)
+	c, ok := bodyCentre(rig.Body.Meta)
 	if !ok {
 		return heldPlacement{}, false
 	}
 	sx, sy := r.worldToScreenF(wx, wy)
-	bx, by, s := artOrigin(rig.body.Meta, float64(sx), float64(sy), tile)
-	bp := rig.body.Meta.PxPerTile()
+	bx, by, s := artOrigin(rig.Body.Meta, float64(sx), float64(sy), tile)
+	bp := rig.Body.Meta.PxPerTile()
 	k *= bp / sp.Meta.PxPerTile() // the held sprite at its own density (s is the body's)
 	poseG := ps.Geo(float64(sx), float64(sy), tile)
-	pv := heldPivot(sp, h.stance)
+	pv := heldPivot(sp, h.Stance)
 	g := ebiten.GeoM{}
 	g.Translate(-pv[0], -pv[1])
-	switch h.stance {
+	switch h.Stance {
 	case stanceAimed:
 		px, py := poseG.Apply(bx+c[0]*s, by+c[1]*s)
-		tx, ty := r.worldToScreenF(h.aimX, h.aimY)
+		tx, ty := r.worldToScreenF(h.AimX, h.AimY)
 		dx, dy := float64(tx)-px, float64(ty)-py
 		if dx == 0 && dy == 0 { // on the body: along the facing
 			dx, dy = facingUnit(rig.face)
-			if rig.mirror {
+			if rig.Mirror {
 				dx = -dx
 			}
 		}
@@ -213,11 +213,11 @@ func (r *Renderer) heldPlace(rig heldRig, h heldItem, wx, wy, tile float64, ps p
 			g.Scale(1, -1)
 			side = -1
 		}
-		g.Rotate(theta - side*h.angle)
+		g.Rotate(theta - side*h.Angle)
 		g.Scale(s*k, s*k)
-		reach := (aimReach + h.push) * tile
+		reach := (aimReach + h.Push) * tile
 		g.Translate(px+math.Cos(theta)*reach, py+math.Sin(theta)*reach)
-		return heldPlacement{g: g, key: h.key, behind: math.Sin(theta) < 0}, true
+		return heldPlacement{G: g, key: h.Key, Behind: math.Sin(theta) < 0}, true
 	case stanceLoad:
 		g.Scale(s*k, s*k)
 		g.Translate(bx+c[0]*s, by+(c[1]+loadDrop*bp)*s)
@@ -226,27 +226,27 @@ func (r *Renderer) heldPlace(rig heldRig, h heldItem, wx, wy, tile float64, ps p
 		if rig.face == faceEast {
 			ahead = carriedAhead
 		}
-		g.Rotate(carriedTurn - h.angle)
+		g.Rotate(carriedTurn - h.Angle)
 		g.Scale(s*k, s*k)
 		g.Translate(bx+(c[0]+ahead*bp)*s, by+(c[1]+carriedDrop*bp)*s)
 	}
 	g.Concat(poseG)
-	return heldPlacement{g: g, key: h.key, behind: rig.face == faceNorth}, true
+	return heldPlacement{G: g, key: h.Key, Behind: rig.face == faceNorth}, true
 }
 
 // drawHeld draws the held item if it sits on this side of the body:
 // behind (before the body layers) or in front (after them).
 func (r *Renderer) drawHeld(screen *ebiten.Image, rig heldRig, h heldItem, wx, wy, tile float64, ps pose, behind bool) {
 	pl, ok := r.heldPlace(rig, h, wx, wy, tile, ps)
-	if !ok || pl.behind != behind {
+	if !ok || pl.Behind != behind {
 		return
 	}
 	cs := noCS
-	if h.cs != (colorScale{}) {
-		cs = h.cs
+	if h.Cs != (colorScale{}) {
+		cs = h.Cs
 	}
 	if img := r.art.Image(pl.key, color.NRGBA{}); img != nil {
-		r.drawLit(screen, img, pl.g, cs, wx, wy)
+		r.drawLit(screen, img, pl.G, cs, wx, wy)
 	}
 }
 
@@ -265,21 +265,21 @@ func wrapAngle(a float64) float64 {
 func (r *Renderer) heldPoint(rig heldRig, h heldItem, wx, wy float64, ps pose, attach string) (vec, bool) {
 	tile := r.tilePx()
 	var x, y float64
-	if h.key == "" {
-		if rig.body == nil {
+	if h.Key == "" {
+		if rig.Body == nil {
 			return vec{}, false
 		}
-		a, ok := rig.body.Meta.Attach[attach]
+		a, ok := rig.Body.Meta.Attach[attach]
 		if !ok {
 			return vec{}, false
 		}
-		if attach == "hold" && h.push != 0 {
+		if attach == "hold" && h.Push != 0 {
 			fx, fy := facingUnit(rig.face)
-			p := rig.body.Meta.PxPerTile()
-			a = [2]float64{a[0] + fx*h.push*p, a[1] + fy*h.push*p}
+			p := rig.Body.Meta.PxPerTile()
+			a = [2]float64{a[0] + fx*h.Push*p, a[1] + fy*h.Push*p}
 		}
 		sx, sy := r.worldToScreenF(wx, wy)
-		bx, by, s := artOrigin(rig.body.Meta, float64(sx), float64(sy), tile)
+		bx, by, s := artOrigin(rig.Body.Meta, float64(sx), float64(sy), tile)
 		g := ps.Geo(float64(sx), float64(sy), tile)
 		x, y = g.Apply(bx+a[0]*s, by+a[1]*s)
 	} else {
@@ -291,7 +291,7 @@ func (r *Renderer) heldPoint(rig heldRig, h heldItem, wx, wy float64, ps pose, a
 		if !ok {
 			return vec{}, false
 		}
-		x, y = pl.g.Apply(pt[0], pt[1])
+		x, y = pl.G.Apply(pt[0], pt[1])
 	}
 	return vec{(x + r.cam.OffsetX) / tile, (y + r.cam.OffsetY) / tile}, true
 }

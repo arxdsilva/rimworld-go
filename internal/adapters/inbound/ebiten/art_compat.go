@@ -73,11 +73,11 @@ func LocateArt() (string, error) { return art.Locate() }
 // (crop units and fallbacks, grass tufts); the catalog keeps their pixels.
 var cpuReadBack = sync.OnceValue(func() map[string]bool {
 	m := map[string]bool{}
-	for _, ks := range plantKeys.crops {
+	for _, ks := range plantKeys.Crops {
 		for st := range ks {
 			for _, k := range ks[st] {
 				m[k] = true
-				for _, fb := range plantKeys.fallback[k] {
+				for _, fb := range plantKeys.Fallback[k] {
 					m[fb] = true
 				}
 			}

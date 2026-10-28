@@ -35,9 +35,9 @@ const maxBurstsTracked = 256
 
 var burstFlashClr = color.RGBA{255, 168, 56, 255}
 
-// emit bursts every event it has not seen yet. Call it from advance with
+// Emit bursts every event it has not seen yet. Call it from advance with
 // the world's burst stamps.
-func (t *burstTracker) emit(r *Renderer, events []burstEvent) {
+func (t *burstTracker) Emit(r *Renderer, events []burstEvent) {
 	if t.seen == nil || len(t.seen) > maxBurstsTracked {
 		t.seen = map[burstKey]struct{}{}
 	}
@@ -85,5 +85,5 @@ func (r *Renderer) emitWorldBursts(w game.WorldView) {
 	for _, b := range w.Bursts {
 		evs = append(evs, burstEvent{ID: entity.EntityID(uint64(uint32(b.X))<<32 | uint64(uint32(b.Y))), X: b.X, Y: b.Y, Tick: b.Tick})
 	}
-	r.bursts.emit(r, evs)
+	r.bursts.Emit(r, evs)
 }

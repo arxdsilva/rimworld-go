@@ -100,7 +100,7 @@ func drawnKeys(r *Renderer, p game.PawnView, f facing) []string {
 	var keys []string
 	r.lit.OnDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
 	defer func() { r.lit.OnDraw = nil }()
-	r.drawPawnFigure(ebiten.NewImage(512, 512), p, 2, 2, 64, pawnFigurePose{face: f, ps: standPose(), held: r.idleHeld(p, moveState{})})
+	r.drawPawnFigure(ebiten.NewImage(512, 512), p, 2, 2, 64, pawnFigurePose{Face: f, Ps: standPose(), Held: r.idleHeld(p, moveState{})})
 	return keys
 }
 
@@ -132,7 +132,7 @@ func TestColonyUsesLookBuildAndBeard(t *testing.T) {
 	}
 	// the held item anchors on the build's own hold point
 	rig := r.rigOf(p, faceEast)
-	if rig.body != r.art.Sprite("pawn/body_f_heavy_east") {
+	if rig.Body != r.art.Sprite("pawn/body_f_heavy_east") {
 		t.Fatal("the rig is the build's body")
 	}
 	// raiders keep their look's build and hair in maroon and slate

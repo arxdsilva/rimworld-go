@@ -36,9 +36,9 @@ func shot(age int, melee bool) game.TraceView {
 // aimCentre is the posed body centre of an east-facing figure at (wx, wy)
 // on screen: where an aimed item is placed from.
 func aimCentre(r *Renderer, rig heldRig, ps pose, wx, wy, tile float64) pt {
-	c, _ := bodyCentre(rig.body.Meta)
+	c, _ := bodyCentre(rig.Body.Meta)
 	sx, sy := r.worldToScreenF(wx, wy)
-	bx, by, s := artOrigin(rig.body.Meta, float64(sx), float64(sy), tile)
+	bx, by, s := artOrigin(rig.Body.Meta, float64(sx), float64(sy), tile)
 	return apply(ps.Geo(float64(sx), float64(sy), tile), pt{bx + c[0]*s, by + c[1]*s})
 }
 
@@ -62,7 +62,7 @@ func TestAimBlendFollowsAttackCycle(t *testing.T) {
 	for i, c := range []float64{0, 0.3, 0.6, 0.99} {
 		p.AttackCycle = c
 		a := r.combatPose(p, eastIdle)
-		if !a.ok || a.held.key != "weapon/rifle_basic" || a.held.stance != stanceAimed || a.held.angle != 0 || a.held.push != 0 {
+		if !a.Ok || a.Held.Key != "weapon/rifle_basic" || a.Held.Stance != stanceAimed || a.Held.Angle != 0 || a.Held.Push != 0 {
 			t.Fatalf("cycle %.2f: aimed, steady: %+v", c, a)
 		}
 		if i == 0 {
@@ -72,10 +72,10 @@ func TestAimBlendFollowsAttackCycle(t *testing.T) {
 		}
 	}
 	// walking to the target: still aimed
-	if a := r.combatPose(p, moveState{Facing: faceEast, Blend: 1, Moving: true}); a.held.stance != stanceAimed || a.held.angle != 0 {
+	if a := r.combatPose(p, moveState{Facing: faceEast, Blend: 1, Moving: true}); a.Held.Stance != stanceAimed || a.Held.Angle != 0 {
 		t.Fatalf("walking while aiming keeps the aim: %+v", a)
 	}
-	if a := r.combatPose(game.PawnView{ID: 3, Weapon: "rifle"}, eastIdle); a.ok {
+	if a := r.combatPose(game.PawnView{ID: 3, Weapon: "rifle"}, eastIdle); a.Ok {
 		t.Fatal("not attacking: no combat layer")
 	}
 }
@@ -91,22 +91,22 @@ func TestFireAnchoredToTrace(t *testing.T) {
 	// the shot kicks the muzzle up from the trace's first sighting and
 	// settles by fireTicks; recoil pushes the body back from the target
 	// and pulls the rifle back along the aim at once
-	if a := angle(0); a.held.angle != 0 || a.dx >= 0 || a.held.push >= 0 {
+	if a := angle(0); a.Held.Angle != 0 || a.Dx >= 0 || a.Held.Push >= 0 {
 		t.Fatalf("age 0: on the target, recoiling: %+v", a)
 	}
 	mid := angle(4)
-	if mid.held.angle < 0.25 {
-		t.Fatalf("mid-shot muzzle kick: %v", mid.held.angle)
+	if mid.Held.Angle < 0.25 {
+		t.Fatalf("mid-shot muzzle kick: %v", mid.Held.Angle)
 	}
-	if a := angle(15); a.held.angle != 0 || a.dx != 0 || a.held.push != 0 {
+	if a := angle(15); a.Held.Angle != 0 || a.Dx != 0 || a.Held.Push != 0 {
 		t.Fatalf("settled after the shot: %+v", a)
 	}
 	// the pull moves the rifle back towards the shooter
 	r := combatRenderer(100, []game.PawnView{p, targetAt(9, 5)}, game.WorldView{})
 	rig, ps := rigFor(r, faceEast)
-	h := heldItem{key: "weapon/rifle_basic", stance: stanceAimed, aimX: 9.5, aimY: 5.4}
+	h := heldItem{Key: "weapon/rifle_basic", Stance: stanceAimed, AimX: 9.5, AimY: 5.4}
 	rest, _ := r.heldPoint(rig, h, 5, 5, ps, "muzzle")
-	h.push = angle(0).held.push
+	h.Push = angle(0).Held.Push
 	pulled, _ := r.heldPoint(rig, h, 5, 5, ps, "muzzle")
 	if pulled.X >= rest.X {
 		t.Fatalf("recoil pulls the rifle back: %v -> %v", rest, pulled)
@@ -114,10 +114,10 @@ func TestFireAnchoredToTrace(t *testing.T) {
 	// a fast sim cannot skip the shot: 2 frames after the first sighting
 	// it is still kicking even though 30 ticks went by
 	st := r.animState()
-	st.trackReactions([]game.TraceView{shot(1, false)}, 100, 50)
+	st.TrackReactions([]game.TraceView{shot(1, false)}, 100, 50)
 	r.game.(*stubSim).tick = 131
 	r.present = 52
-	if a := r.combatPose(p, eastIdle); a.held.angle <= 0 || a.dx >= 0 {
+	if a := r.combatPose(p, eastIdle); a.Held.Angle <= 0 || a.Dx >= 0 {
 		t.Fatalf("min visible frames: %+v", a)
 	}
 	// another pawn's shot does not fire this one
@@ -125,7 +125,7 @@ func TestFireAnchoredToTrace(t *testing.T) {
 	other.Attacker, other.FromX = 7, 6
 	r = combatRenderer(100, []game.PawnView{p}, game.WorldView{Traces: []game.TraceView{other}})
 	p.AttackCycle = 0.1
-	if a := r.combatPose(p, eastIdle); a.held.angle != 0 || a.dx != 0 || a.held.push != 0 {
+	if a := r.combatPose(p, eastIdle); a.Held.Angle != 0 || a.Dx != 0 || a.Held.Push != 0 {
 		t.Fatalf("someone else's trace: %+v", a)
 	}
 }
@@ -139,24 +139,24 @@ func TestRifleAimsAtTarget(t *testing.T) {
 	p.AttackCycle = 0.8
 	r := combatRenderer(100, []game.PawnView{p, targetAt(9, 3)}, game.WorldView{})
 	a := r.combatPose(p, eastIdle)
-	if a.held.stance != stanceAimed || a.held.aimX != 9.5 || a.held.aimY != 3.4 {
-		t.Fatalf("aims at the target's body: %+v", a.held)
+	if a.Held.Stance != stanceAimed || a.Held.AimX != 9.5 || a.Held.AimY != 3.4 {
+		t.Fatalf("aims at the target's body: %+v", a.Held)
 	}
 	sp := r.art.Sprite("weapon/rifle_basic").Meta.Attach
-	h := a.held
+	h := a.Held
 	for _, f := range []facing{faceEast, faceWest, faceSouth, faceNorth} {
 		rig, ps := rigFor(r, f)
 		c := aimCentre(r, rig, ps, 5, 5, 64)
 		for i := 0; i < 72; i++ {
 			// the target walks round the shooter
 			ang := 2*math.Pi*float64(i)/72 + 0.01
-			h.aimX, h.aimY = 5.5+4*math.Cos(ang), 5.0+4*math.Sin(ang)
+			h.AimX, h.AimY = 5.5+4*math.Cos(ang), 5.0+4*math.Sin(ang)
 			pl, ok := r.heldPlace(rig, h, 5, 5, 64, ps)
 			if !ok {
 				t.Fatal("placement")
 			}
-			gr, mz := apply(pl.g, sp["grip"]), apply(pl.g, sp["muzzle"])
-			tx, ty := r.worldToScreenF(h.aimX, h.aimY)
+			gr, mz := apply(pl.G, sp["grip"]), apply(pl.G, sp["muzzle"])
+			tx, ty := r.worldToScreenF(h.AimX, h.AimY)
 			want := math.Atan2(float64(ty)-c[1], float64(tx)-c[0])
 			if got := math.Atan2(mz[1]-c[1], mz[0]-c[0]); math.Abs(wrapAngle(got-want)) > 0.03 {
 				t.Fatalf("%v step %d: muzzle %.3f rad from the body centre, target %.3f", f, i, got, want)
@@ -168,13 +168,13 @@ func TestRifleAimsAtTarget(t *testing.T) {
 				t.Fatalf("%v step %d: the muzzle is out past %.2f tile: %.1f px", f, i, aimReach, d)
 			}
 			// upright: the sprite's top (towards smaller image y) stays up
-			pv := heldPivot(r.art.Sprite(h.key), h.stance)
-			top, mid := apply(pl.g, pt{pv[0], pv[1] - 10}), apply(pl.g, pt{pv[0], pv[1]})
+			pv := heldPivot(r.art.Sprite(h.Key), h.Stance)
+			top, mid := apply(pl.G, pt{pv[0], pv[1] - 10}), apply(pl.G, pt{pv[0], pv[1]})
 			if math.Abs(math.Cos(want)) > 0.2 && top[1] > mid[1] {
 				t.Fatalf("%v step %d (%.2f rad): upside down", f, i, want)
 			}
-			if north := math.Sin(want) < 0; pl.behind != north {
-				t.Fatalf("%v step %d: behind=%v, aiming north=%v", f, i, pl.behind, north)
+			if north := math.Sin(want) < 0; pl.Behind != north {
+				t.Fatalf("%v step %d: behind=%v, aiming north=%v", f, i, pl.Behind, north)
 			}
 		}
 	}
@@ -263,7 +263,7 @@ func TestStabAnchoredToTrace(t *testing.T) {
 	for _, c := range []float64{0.3, 0.7, 0.99} {
 		p.AttackCycle = c
 		r := combatRenderer(100, []game.PawnView{p, near}, game.WorldView{})
-		dxs = append(dxs, r.combatPose(p, eastIdle).dx)
+		dxs = append(dxs, r.combatPose(p, eastIdle).Dx)
 	}
 	if dxs[0] != 0 || dxs[1] >= 0 || dxs[2] <= dxs[1] {
 		t.Fatalf("guard, chamber back, step in: %v", dxs)
@@ -275,9 +275,9 @@ func TestStabAnchoredToTrace(t *testing.T) {
 		tr := game.TraceView{FromX: 5, FromY: 5, ToX: 6, ToY: 5, Age: age, Melee: true, Hit: true, Attacker: 1, Target: 2, Weapon: "knife"}
 		r := combatRenderer(100, []game.PawnView{p, near}, game.WorldView{Traces: []game.TraceView{tr}})
 		a := r.combatPose(p, eastIdle)
-		pushes = append(pushes, a.held.push)
+		pushes = append(pushes, a.Held.Push)
 		if age == 1 {
-			if a.held.stance != stanceAimed || a.held.key != "weapon/knife" || a.dx <= 0 {
+			if a.Held.Stance != stanceAimed || a.Held.Key != "weapon/knife" || a.Dx <= 0 {
 				t.Fatalf("the knife points at the target and the stab lunges: %+v", a)
 			}
 		}
@@ -297,14 +297,14 @@ func TestSpearThrustReach(t *testing.T) {
 	}
 	spear, r := lunge("spear")
 	knife, _ := lunge("knife")
-	if spear.dx <= knife.dx || spear.held.push <= knife.held.push {
-		t.Fatalf("the spear thrusts further: %.3f/%.3f vs knife %.3f/%.3f", spear.dx, spear.held.push, knife.dx, knife.held.push)
+	if spear.Dx <= knife.Dx || spear.Held.Push <= knife.Held.Push {
+		t.Fatalf("the spear thrusts further: %.3f/%.3f vs knife %.3f/%.3f", spear.Dx, spear.Held.Push, knife.Dx, knife.Held.Push)
 	}
 	rig, ps := rigFor(r, faceEast)
-	h := heldItem{key: "weapon/spear", stance: stanceAimed, aimX: 6.5, aimY: 5.4}
+	h := heldItem{Key: "weapon/spear", Stance: stanceAimed, AimX: 6.5, AimY: 5.4}
 	tip1, ok1 := r.heldPoint(rig, h, 5, 5, ps, "tip")
-	h.push = spear.held.push
-	ps.Dx = spear.dx
+	h.Push = spear.Held.Push
+	ps.Dx = spear.Dx
 	tip4, ok4 := r.heldPoint(rig, h, 5, 5, ps, "tip")
 	if !ok1 || !ok4 || tip4.X <= tip1.X+0.15 {
 		t.Fatalf("full reach drives the tip forward: %v -> %v", tip1, tip4)
@@ -333,11 +333,11 @@ func TestClubSwing(t *testing.T) {
 	r := artRenderer()
 	rig, ps := rigFor(r, faceEast)
 	sp := r.art.Sprite("weapon/club").Meta.Attach
-	h := heldItem{key: "weapon/club", stance: stanceAimed, aimX: 6.5, aimY: 2.4}
+	h := heldItem{Key: "weapon/club", Stance: stanceAimed, AimX: 6.5, AimY: 2.4}
 	at := func(angle float64) (tip, grip pt) {
-		h.angle = angle
+		h.Angle = angle
 		pl, _ := r.heldPlace(rig, h, 2, 2, 64, ps)
-		return apply(pl.g, sp["tip"]), apply(pl.g, sp["grip"])
+		return apply(pl.G, sp["tip"]), apply(pl.G, sp["grip"])
 	}
 	if tip, grip := at(raised); tip[1] >= grip[1] {
 		t.Fatal("wound up: the club is raised")
@@ -346,7 +346,7 @@ func TestClubSwing(t *testing.T) {
 		t.Fatal("struck: the club comes down forward")
 	}
 	// aimed west (flipped upright): raised is still up
-	h.aimX = -2.5
+	h.AimX = -2.5
 	if tip, grip := at(raised); tip[1] >= grip[1] || tip[0] >= grip[0] {
 		t.Fatal("aimed west: the club is raised, pointing west")
 	}
@@ -364,11 +364,11 @@ func TestPunch(t *testing.T) {
 	tr := game.TraceView{FromX: 5, FromY: 5, ToX: 6, ToY: 5, Age: 1, Melee: true, Attacker: 1, Target: 2}
 	r := combatRenderer(100, []game.PawnView{p, targetAt(6, 5)}, game.WorldView{Traces: []game.TraceView{tr}})
 	a := r.combatPose(p, eastIdle)
-	if a.held.key != "" || !a.held.set || a.held.push <= 0 || a.dx <= 0 {
+	if a.Held.Key != "" || !a.Held.Set || a.Held.Push <= 0 || a.Dx <= 0 {
 		t.Fatalf("a bare-handed punch: %+v", a)
 	}
 	rig, ps := rigFor(r, faceEast)
-	if _, ok := r.heldPlace(rig, a.held, 5, 5, 64, ps); ok {
+	if _, ok := r.heldPlace(rig, a.Held, 5, 5, 64, ps); ok {
 		t.Fatal("fists: no sprite drawn")
 	}
 	// the melee trail follows the punch's reach
@@ -385,30 +385,30 @@ func TestHitFlinchDirectional(t *testing.T) {
 		return combatRenderer(tick, []game.PawnView{q}, game.WorldView{}).hitReaction(q, eastIdle)
 	}
 	a := at(100, p)
-	if !a.ok || a.dx <= 0 || a.dy != 0 || a.rot <= 0 || a.flash <= 0 {
+	if !a.Ok || a.Dx <= 0 || a.Dy != 0 || a.Rot <= 0 || a.Flash <= 0 {
 		t.Fatalf("hit from the west: flinch, stagger east, flash: %+v", a)
 	}
-	if a.held.key != "weapon/rifle_basic" {
+	if a.Held.Key != "weapon/rifle_basic" {
 		t.Fatal("a drafted pawn keeps its rifle up while flinching")
 	}
-	if a := at(102, p); math.Abs(a.dx-staggerDist) > 1e-9 {
-		t.Fatalf("stagger peaks at %.2f tile: %v", staggerDist, a.dx)
+	if a := at(102, p); math.Abs(a.Dx-staggerDist) > 1e-9 {
+		t.Fatalf("stagger peaks at %.2f tile: %v", staggerDist, a.Dx)
 	}
-	if a, b := at(104, p), at(107, p); a.dx <= b.dx || b.dx <= 0 || a.flash <= b.flash {
+	if a, b := at(104, p), at(107, p); a.Dx <= b.Dx || b.Dx <= 0 || a.Flash <= b.Flash {
 		t.Fatalf("the stagger and flash ease out: %+v then %+v", a, b)
 	}
-	if a := at(109, p); a.dx != 0 {
-		t.Fatalf("stagger over by %v ticks: %v", staggerTicks, a.dx)
+	if a := at(109, p); a.Dx != 0 {
+		t.Fatalf("stagger over by %v ticks: %v", staggerTicks, a.Dx)
 	}
-	if a := at(130, p); a.ok {
+	if a := at(130, p); a.Ok {
 		t.Fatal("old hits do not flinch")
 	}
 	q := p
 	q.HitFromX, q.HitFromY = 5, 8
-	if a := at(101, q); a.dy >= 0 || a.dx != 0 {
+	if a := at(101, q); a.Dy >= 0 || a.Dx != 0 {
 		t.Fatalf("hit from the south: stagger north: %+v", a)
 	}
-	if a := at(101, game.PawnView{ID: 1}); a.ok {
+	if a := at(101, game.PawnView{ID: 1}); a.Ok {
 		t.Fatal("never hit: no flinch")
 	}
 	// hits are not double-counted by the old knockback
@@ -570,7 +570,7 @@ func TestAnimalFlinch(t *testing.T) {
 	// a sim without hit stamps: the trace knockback still applies
 	old := game.AnimalView{ID: 7, X: 6, Y: 5}
 	r = combatRenderer(100, nil, game.WorldView{})
-	r.animState().trackReactions([]game.TraceView{{FromX: 5, FromY: 5, ToX: 6, ToY: 5, Age: 1, Hit: true}}, 100, r.present)
+	r.animState().TrackReactions([]game.TraceView{{FromX: 5, FromY: 5, ToX: 6, ToY: 5, Age: 1, Hit: true}}, 100, r.present)
 	if ps := r.animalPose(old); ps.Dx <= 0 || ps.Flash <= 0 {
 		t.Fatalf("fallback knockback: %+v", ps)
 	}
@@ -583,22 +583,22 @@ func TestLoadKeptDuringFlinch(t *testing.T) {
 	p := game.PawnView{ID: 1, X: 5, Y: 5, Carrying: "wood", HitTick: 99, HitFromX: 3, HitFromY: 5}
 	r := combatRenderer(100, []game.PawnView{p}, game.WorldView{})
 	a := r.hitReaction(p, eastIdle)
-	if !a.ok || a.dx <= 0 || a.held.key != itemSprite("wood") || a.held.stance != stanceLoad {
+	if !a.Ok || a.Dx <= 0 || a.Held.Key != itemSprite("wood") || a.Held.Stance != stanceLoad {
 		t.Fatalf("the load is kept through the flinch: %+v", a)
 	}
-	if _, h := r.standingPose(p, eastIdle); h.key != itemSprite("wood") {
+	if _, h := r.standingPose(p, eastIdle); h.Key != itemSprite("wood") {
 		t.Fatalf("the drawn figure keeps its load: %+v", h)
 	}
 	q := shooter()
 	q.HitTick, q.HitFromX, q.HitFromY = 99, 3, 5
 	r = combatRenderer(100, []game.PawnView{q, targetAt(9, 5)}, game.WorldView{})
-	if a := r.hitReaction(q, eastIdle); a.held.stance != stanceAimed || a.held.key != "weapon/rifle_basic" {
-		t.Fatalf("an aiming pawn stays aimed through the flinch: %+v", a.held)
+	if a := r.hitReaction(q, eastIdle); a.Held.Stance != stanceAimed || a.Held.Key != "weapon/rifle_basic" {
+		t.Fatalf("an aiming pawn stays aimed through the flinch: %+v", a.Held)
 	}
 	// off duty and empty-handed: nothing
 	idle := game.PawnView{ID: 1, X: 5, Y: 5, Weapon: "rifle", HitTick: 99, HitFromX: 3, HitFromY: 5}
 	r = combatRenderer(100, []game.PawnView{idle}, game.WorldView{})
-	if a := r.hitReaction(idle, eastIdle); a.held.key != "" {
-		t.Fatalf("off duty: nothing held while flinching: %+v", a.held)
+	if a := r.hitReaction(idle, eastIdle); a.Held.Key != "" {
+		t.Fatalf("off duty: nothing held while flinching: %+v", a.Held)
 	}
 }

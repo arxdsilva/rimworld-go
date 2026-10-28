@@ -85,10 +85,10 @@ func stainColour(kind string, age uint64) [3]float32 {
 // tiles), size (tiles), rotation and colour scale (straight alpha).
 type stainLook struct {
 	tex    int // index into the stain atlas
-	cx, cy float64
+	Cx, Cy float64
 	size   float64
-	rot    float64
-	cs     colorScale
+	Rot    float64
+	Cs     colorScale
 }
 
 // stainLookOf places and colours a stain: rotated Variant·60°, offset up
@@ -99,11 +99,11 @@ func stainLookOf(s game.StainView) stainLook {
 	c := stainColour(s.Kind, s.AgeTicks)
 	return stainLook{
 		tex:  stainTexIndex(shape, int(s.Variant)),
-		cx:   float64(s.X) + 0.5 + 0.3*(hash01(th, 0x5a1)-0.5),
-		cy:   float64(s.Y) + 0.5 + 0.3*(hash01(th, 0x5a2)-0.5),
+		Cx:   float64(s.X) + 0.5 + 0.3*(hash01(th, 0x5a1)-0.5),
+		Cy:   float64(s.Y) + 0.5 + 0.3*(hash01(th, 0x5a2)-0.5),
 		size: size,
-		rot:  float64(s.Variant) * math.Pi / 3,
-		cs:   colorScale{c[0], c[1], c[2], float32(stainMaxAlpha * clamp01(s.Amount))},
+		Rot:  float64(s.Variant) * math.Pi / 3,
+		Cs:   colorScale{c[0], c[1], c[2], float32(stainMaxAlpha * clamp01(s.Amount))},
 	}
 }
 
@@ -253,8 +253,8 @@ func stainAtlasImg() (*ebiten.Image, *[splatN + poolN + dripN]image.Rectangle) {
 // stainBatch is one frame's stain vertices (pooled: renderers in
 // parallel tests never share one).
 type stainBatch struct {
-	verts []ebiten.Vertex
-	idx   []uint32
+	Verts []ebiten.Vertex
+	Idx   []uint32
 }
 
 var stainBatches = sync.Pool{New: func() any { return new(stainBatch) }}
@@ -262,7 +262,7 @@ var stainBatches = sync.Pool{New: func() any { return new(stainBatch) }}
 // buildStains fills b with the visible stains of w as lit quads (flat,
 // sky and lamp from each stain's tile) and returns how many it kept.
 func (r *Renderer) buildStains(b *stainBatch, w game.WorldView, sw, sh int, tile float64) int {
-	b.verts, b.idx = b.verts[:0], b.idx[:0]
+	b.Verts, b.Idx = b.Verts[:0], b.Idx[:0]
 	if len(w.Stains) == 0 || tile <= 0 {
 		return 0
 	}
@@ -274,7 +274,7 @@ func (r *Renderer) buildStains(b *stainBatch, w game.WorldView, sw, sh int, tile
 			continue
 		}
 		l := stainLookOf(s)
-		sx, sy := r.worldToScreenF(l.cx, l.cy)
+		sx, sy := r.worldToScreenF(l.Cx, l.Cy)
 		px := l.size * tile
 		if rad := float32(px * 0.75); !visible(sx-rad, sy-rad, 2*rad, 2*rad, sw, sh) {
 			continue
@@ -284,14 +284,14 @@ func (r *Renderer) buildStains(b *stainBatch, w game.WorldView, sw, sh int, tile
 		geo := ebiten.GeoM{}
 		geo.Translate(-tw/2, -th/2)
 		geo.Scale(px/tw, px/th)
-		geo.Rotate(l.rot)
+		geo.Rotate(l.Rot)
 		geo.Translate(float64(sx), float64(sy))
 		sky, lamp := r.lightTile(s.X, s.Y)
-		litQuad(&q, float32(rc.Min.X), float32(rc.Min.Y), float32(tw), float32(th), geo, l.cs, sky, lamp, 0)
-		base := uint32(len(b.verts))
-		b.verts = append(b.verts, q[:]...)
+		litQuad(&q, float32(rc.Min.X), float32(rc.Min.Y), float32(tw), float32(th), geo, l.Cs, sky, lamp, 0)
+		base := uint32(len(b.Verts))
+		b.Verts = append(b.Verts, q[:]...)
 		for _, i := range litIndices {
-			b.idx = append(b.idx, base+i)
+			b.Idx = append(b.Idx, base+i)
 		}
 		n++
 	}
@@ -314,12 +314,12 @@ func (r *Renderer) drawStains(screen *ebiten.Image, w game.WorldView, sw, sh int
 	sh2 := r.litShader()
 	if sh2 == nil { // shader failed to compile: unlit
 		op := &ebiten.DrawTrianglesOptions{Filter: ebiten.FilterLinear, ColorScaleMode: ebiten.ColorScaleModePremultipliedAlpha}
-		screen.DrawTriangles32(b.verts, b.idx, atlas, op)
+		screen.DrawTriangles32(b.Verts, b.Idx, atlas, op)
 		return
 	}
 	r.lit.SyncUniforms()
 	r.lit.Opts.Images[0] = atlas
-	screen.DrawTrianglesShader32(b.verts, b.idx, sh2, &r.lit.Opts)
+	screen.DrawTrianglesShader32(b.Verts, b.Idx, sh2, &r.lit.Opts)
 }
 
 // --- blood on creatures (C2) --------------------------------------------------

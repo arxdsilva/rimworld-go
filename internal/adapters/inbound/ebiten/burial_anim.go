@@ -25,7 +25,7 @@ const pyreFlameScale = 1.9
 // corpsePlan is how a human corpse lies: its standing south figure laid
 // on its side (lyingPose).
 type corpsePlan struct {
-	ps pose
+	Ps pose
 }
 
 // corpsePlanFor lays the deceased flat on a side that is stable per body,
@@ -41,7 +41,7 @@ func corpsePlanFor(c *artCatalog, it game.ItemView) corpsePlan {
 	}
 	ps := lyingPose(c, side)
 	ps.Cs = cs
-	return corpsePlan{ps: ps}
+	return corpsePlan{Ps: ps}
 }
 
 // deceasedOf finds the pawn a corpse belongs to (still in the snapshot).
@@ -117,7 +117,7 @@ func (r *Renderer) drawCorpseItem(screen *ebiten.Image, it game.ItemView, tile f
 		r.drawSpriteScaled(screen, itemSprite(it.Kind), color.NRGBA{}, wx, wy, tile, sw, sh, itemCS(it), 1)
 		return
 	}
-	r.drawFigure(screen, p, wx, wy, tile, corpsePlanFor(r.art, it).ps)
+	r.drawFigure(screen, p, wx, wy, tile, corpsePlanFor(r.art, it).Ps)
 	for _, f := range corpseFlies(it, r.present) {
 		fx, fy := r.worldToScreenF(f[0], f[1])
 		vector.FillCircle(screen, fx, fy, float32(math.Max(1.2, tile*0.025)), color.RGBA{24, 22, 20, 255}, true)

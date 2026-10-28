@@ -223,23 +223,23 @@ const (
 )
 
 // traceAge is the age an effect of dur ticks is drawn at.
-func traceAge(rt reactTrace, dur float64) float64 { return reactionAge(rt.sim, rt.frames, dur) }
+func traceAge(rt reactTrace, dur float64) float64 { return reactionAge(rt.Sim, rt.Frames, dur) }
 
 // traceList is the traces to draw: the tracked ones (kept on screen after
 // the sim drops them), or the sim's own when none are tracked (captures).
 // Oldest first (newest on top), in a stable order so overlapping effects
 // blend the same every frame.
 func (r *Renderer) traceList(w game.WorldView) []reactTrace {
-	rs := r.animState().reactions(r.present, nil)
+	rs := r.animState().Reactions(r.present, nil)
 	if len(rs) == 0 {
 		for _, t := range w.Traces {
 			born := float64(r.game.Tick()) - float64(t.Age)
-			rs = append(rs, reactTrace{TraceView: t, sim: float64(t.Age), frames: math.Inf(1), born: born})
+			rs = append(rs, reactTrace{TraceView: t, Sim: float64(t.Age), Frames: math.Inf(1), born: born})
 		}
 	}
 	slices.SortFunc(rs, func(a, b reactTrace) int {
-		ka := [6]float64{-a.sim, -a.frames, float64(a.FromX), float64(a.FromY), float64(a.ToX), float64(a.ToY)}
-		kb := [6]float64{-b.sim, -b.frames, float64(b.FromX), float64(b.FromY), float64(b.ToX), float64(b.ToY)}
+		ka := [6]float64{-a.Sim, -a.Frames, float64(a.FromX), float64(a.FromY), float64(a.ToX), float64(a.ToY)}
+		kb := [6]float64{-b.Sim, -b.Frames, float64(b.FromX), float64(b.FromY), float64(b.ToX), float64(b.ToY)}
 		for i := range ka {
 			if c := cmp.Compare(ka[i], kb[i]); c != 0 {
 				return c
@@ -395,17 +395,17 @@ func (r *Renderer) meleeTrail(tr game.TraceView) []vec {
 	m.Facing = r.poseFacing(p, m)
 	ps, h := r.standingPose(p, m)
 	rig := r.rigOf(p, m.Facing)
-	if rig.mirror {
+	if rig.Mirror {
 		ps = mirrored(ps)
 	}
 	attach := "tip"
-	if h.key == "" {
+	if h.Key == "" {
 		attach = "hold"
 	}
 	var pts []vec
 	lo, hi := vec{math.Inf(1), math.Inf(1)}, vec{math.Inf(-1), math.Inf(-1)}
 	for _, st := range meleeTrailSteps {
-		_, h.angle, h.push = meleeMotion(p.Weapon, st.cycle, st.age, st.struck)
+		_, h.Angle, h.Push = meleeMotion(p.Weapon, st.cycle, st.age, st.struck)
 		pt, ok := r.heldPoint(rig, h, wx, wy, ps, attach)
 		if !ok {
 			return nil
@@ -492,7 +492,7 @@ func (r *Renderer) animalFrame(an game.AnimalView) string {
 			return set + "2"
 		}
 	}
-	return show.suffix
+	return show.Suffix
 }
 
 // attackAction reports an Action that is a natural-weapon attack.
@@ -650,7 +650,7 @@ func (r *Renderer) animalPose(an game.AnimalView) pose {
 		ps.Dx, ps.Dy = ps.Dx+ux*0.2*k, ps.Dy+uy*0.2*k
 	}
 	if an.HitTick == 0 {
-		dx, dy, fl := struckNudge(r.animState().reactions(r.present, nil), an.X, an.Y)
+		dx, dy, fl := struckNudge(r.animState().Reactions(r.present, nil), an.X, an.Y)
 		ps.Dx, ps.Dy, ps.Flash = ps.Dx+dx, ps.Dy+dy, fl
 		return ps
 	}

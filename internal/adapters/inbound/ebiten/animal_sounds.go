@@ -98,29 +98,29 @@ type voicePlayed struct {
 
 // animalVoice is the renderer's memory of what each animal last did.
 type animalVoice struct {
-	// view is the colony viewport the App sets each frame; unset (zero)
+	// View is the colony viewport the App sets each frame; unset (zero)
 	// means "on screen" and leaves culling to the director.
-	view viewport
-	// frame counts listenAnimals calls (real frames); clock is the game
-	// speed clock the call timers run on (frozen while paused).
-	frame, clock uint64
-	nextCall     map[entity.EntityID]uint64
-	calls        map[entity.EntityID]uint64 // calls scheduled so far, per animal
-	fleeing      map[entity.EntityID]bool
-	last         map[entity.EntityID]voiceSeen
+	View viewport
+	// frame counts listenAnimals calls (real frames); Clock is the game
+	// speed Clock the call timers run on (frozen while paused).
+	frame, Clock uint64
+	NextCall     map[entity.EntityID]uint64
+	Calls        map[entity.EntityID]uint64 // calls scheduled so far, per animal
+	Fleeing      map[entity.EntityID]bool
+	Last         map[entity.EntityID]voiceSeen
 	recent       []voicePlayed
 	resolved     map[string]string          // key.event -> sound id ("" none)
-	byID         map[entity.EntityID]string // this frame's animals: species key
+	ByID         map[entity.EntityID]string // this frame's animals: species key
 }
 
 func (v *animalVoice) init() {
-	if v.nextCall == nil {
-		v.nextCall = map[entity.EntityID]uint64{}
-		v.calls = map[entity.EntityID]uint64{}
-		v.fleeing = map[entity.EntityID]bool{}
-		v.last = map[entity.EntityID]voiceSeen{}
+	if v.NextCall == nil {
+		v.NextCall = map[entity.EntityID]uint64{}
+		v.Calls = map[entity.EntityID]uint64{}
+		v.Fleeing = map[entity.EntityID]bool{}
+		v.Last = map[entity.EntityID]voiceSeen{}
 		v.resolved = map[string]string{}
-		v.byID = map[entity.EntityID]string{}
+		v.ByID = map[entity.EntityID]string{}
 	}
 }
 
@@ -148,7 +148,7 @@ func callInterval(an game.AnimalView, n uint64, first bool) uint64 {
 
 // audible reports whether a world point (tiles) is within earshot.
 func (r *Renderer) audible(x, y float64) bool {
-	v := r.voice.view
+	v := r.voice.View
 	if v.W() <= 0 || v.H() <= 0 {
 		return true
 	}
@@ -185,23 +185,23 @@ func (r *Renderer) listenAnimals(w game.WorldView) {
 	v := &r.voice
 	v.init()
 	v.frame++
-	v.clock += uint64(r.mo.Stepped) // ticks this advance ran (the Update budget may run fewer)
-	clear(v.byID)
+	v.Clock += uint64(r.mo.Stepped) // ticks this advance ran (the Update budget may run fewer)
+	clear(v.ByID)
 	for i := range w.Animals {
-		v.byID[w.Animals[i].ID] = w.Animals[i].Species
+		v.ByID[w.Animals[i].ID] = w.Animals[i].Species
 	}
 	// deaths: ids that were here last frame and are gone, with a corpse
-	for id, was := range v.last {
-		if _, here := v.byID[id]; here {
+	for id, was := range v.Last {
+		if _, here := v.ByID[id]; here {
 			continue
 		}
 		if corpseNear(w.Items, was) {
 			r.cueAnimal(was.key, voiceDie, was.x+0.5, was.y+0.5, volDie)
 		}
-		delete(v.nextCall, id)
-		delete(v.calls, id)
-		delete(v.fleeing, id)
-		delete(v.last, id)
+		delete(v.NextCall, id)
+		delete(v.Calls, id)
+		delete(v.Fleeing, id)
+		delete(v.Last, id)
 	}
 	for i := range w.Animals {
 		an := &w.Animals[i]
@@ -215,41 +215,41 @@ func (r *Renderer) listenAnimals(w game.WorldView) {
 			}
 			return x, y
 		}
-		_, seen := v.last[id]
-		v.last[id] = voiceSeen{key: an.Species, x: float64(an.X), y: float64(an.Y)}
+		_, seen := v.Last[id]
+		v.Last[id] = voiceSeen{key: an.Species, x: float64(an.X), y: float64(an.Y)}
 		if an.Mode == "fleeing" {
-			cry := seen && !v.fleeing[id] // an animal first seen already fleeing stays quiet
-			v.fleeing[id] = true
+			cry := seen && !v.Fleeing[id] // an animal first seen already fleeing stays quiet
+			v.Fleeing[id] = true
 			if cry {
 				if x, y := at(); r.audible(x, y) && r.cueAnimal(an.Species, voiceCall, x, y, volCall) {
 					v.recent = append(v.recent, voicePlayed{v.frame, an.Species})
 				}
-				v.calls[id]++
-				v.nextCall[id] = v.clock + callInterval(*an, v.calls[id], false)
+				v.Calls[id]++
+				v.NextCall[id] = v.Clock + callInterval(*an, v.Calls[id], false)
 			}
 			continue
 		}
-		v.fleeing[id] = false
-		next, ok := v.nextCall[id]
+		v.Fleeing[id] = false
+		next, ok := v.NextCall[id]
 		if !ok {
-			v.nextCall[id] = v.clock + callInterval(*an, 0, true)
+			v.NextCall[id] = v.Clock + callInterval(*an, 0, true)
 			continue
 		}
-		if v.clock < next {
+		if v.Clock < next {
 			continue
 		}
-		v.calls[id]++
-		n := v.calls[id]
+		v.Calls[id]++
+		n := v.Calls[id]
 		switch {
 		case an.Mode != "wandering" || !r.audible(at()):
-			v.nextCall[id] = v.clock + callInterval(*an, n, false)
+			v.NextCall[id] = v.Clock + callInterval(*an, n, false)
 		case !v.capsAllow(an.Species):
-			v.nextCall[id] = v.clock + deferMin + mix64(uint64(id)^n<<32)%deferSpan
+			v.NextCall[id] = v.Clock + deferMin + mix64(uint64(id)^n<<32)%deferSpan
 		default:
 			if x, y := at(); r.cueAnimal(an.Species, voiceCall, x, y, volCall) {
 				v.recent = append(v.recent, voicePlayed{v.frame, an.Species})
 			}
-			v.nextCall[id] = v.clock + callInterval(*an, n, false)
+			v.NextCall[id] = v.Clock + callInterval(*an, n, false)
 		}
 	}
 }

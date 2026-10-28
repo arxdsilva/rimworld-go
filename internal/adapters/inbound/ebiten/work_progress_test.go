@@ -28,17 +28,17 @@ func TestWorkProgressBarDrawnOverTarget(t *testing.T) {
 	}
 	b := got[0]
 	tx, ty := r.worldToScreenF(6, 5)
-	if cx := b.x + b.w/2; math.Abs(float64(cx-(tx+tile/2))) > 1e-3 {
+	if cx := b.X + b.W/2; math.Abs(float64(cx-(tx+tile/2))) > 1e-3 {
 		t.Fatalf("centred on the work tile: %v vs %v", cx, tx+tile/2)
 	}
-	if math.Abs(float64(b.w)-workBarW*tile) > 1e-3 || b.h < 3 || b.h > 0.1*tile {
+	if math.Abs(float64(b.W)-workBarW*tile) > 1e-3 || b.H < 3 || b.H > 0.1*tile {
 		t.Fatalf("a small bar: %+v", b)
 	}
-	if feet := ty + pawnFeetY*tile; b.y <= feet || b.y+b.h > ty+tile {
-		t.Fatalf("along the work tile's bottom, under the feet (%v): %v..%v, tile %v..%v", feet, b.y, b.y+b.h, ty, ty+tile)
+	if feet := ty + pawnFeetY*tile; b.Y <= feet || b.Y+b.H > ty+tile {
+		t.Fatalf("along the work tile's bottom, under the feet (%v): %v..%v, tile %v..%v", feet, b.Y, b.Y+b.H, ty, ty+tile)
 	}
-	if b.k != 0.4 {
-		t.Fatalf("filled to the progress: %v", b.k)
+	if b.K != 0.4 {
+		t.Fatalf("filled to the progress: %v", b.K)
 	}
 	// nothing for unknown, unstarted or finished jobs, eating, research,
 	// recreation, raiders, the downed and the carried
@@ -94,7 +94,7 @@ func TestWorkProgressBarOncePerTarget(t *testing.T) {
 	if len(got) != 2 {
 		t.Fatalf("one bar per work tile: %+v", got)
 	}
-	if got[0].k != 0.6 || got[1].k != 0.7 {
+	if got[0].K != 0.6 || got[1].K != 0.7 {
 		t.Fatalf("the shared frame shows its furthest progress: %+v", got)
 	}
 }

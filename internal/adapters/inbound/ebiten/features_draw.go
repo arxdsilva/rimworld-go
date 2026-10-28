@@ -64,13 +64,13 @@ func (r *Renderer) drawSteamPuffs(screen *ebiten.Image, w game.WorldView, tile f
 		return
 	}
 	now := uint64(r.game.Tick())
-	covers := r.power.covers[:0]
+	covers := r.power.Covers[:0]
 	for i := range w.Buildings {
 		if b := &w.Buildings[i]; b.Kind == geothermalKind {
 			covers = append(covers, [4]int{b.X, b.Y, max(b.W, 1), max(b.H, 1)})
 		}
 	}
-	r.power.covers = covers
+	r.power.Covers = covers
 	for i := range w.Buildings {
 		b := &w.Buildings[i]
 		if b.PowerOut > 0 && (b.Kind == woodGeneratorKind || b.Kind == geothermalKind) {
@@ -89,7 +89,7 @@ func (r *Renderer) drawSteamPuffs(screen *ebiten.Image, w game.WorldView, tile f
 			f = 1
 		}
 		sx, sy := r.worldToScreenF(float64(b.X)+1, float64(b.Y)+1) // footprint centre
-		if r.drawPuff(screen, f, sx, sy, tile, 1, colorScale{1, 1, 1, float32(a)}) && r.power.trace != nil {
+		if r.drawPuff(screen, f, sx, sy, tile, 1, colorScale{1, 1, 1, float32(a)}) && r.power.Trace != nil {
 			r.powerTrace("vent", ventTraceKey(f, b.X, b.Y))
 		}
 	}

@@ -84,43 +84,43 @@ type envState struct {
 	dx, dy               float64 // its direction (east when still)
 	celerity             float64 // gust front speed, tiles/s
 	h1, d1, h2, d2       float64 // spring gain and phase lag at each gust frequency
-	snow, wet            float64
-	snowCells            []uint8 // PLAY-015: per-tile snow depth 0..255 (WorldView.Snow), may be empty
+	Snow, wet            float64
+	SnowCells            []uint8 // PLAY-015: per-tile snow depth 0..255 (WorldView.Snow), may be empty
 	season               uint8
 	outdoorTemp          int
 	roomGrid             []int
 	roofs                []uint8 // roof flags per tile (SIM-018), may be empty
-	terrW                int
-	springs              map[uint32]*envSpring // contact springs by tile
+	TerrW                int
+	Springs              map[uint32]*envSpring // contact springs by tile
 	movers               []envMover
 	treeBuf              []int32 // treeAt's PlantsIn buffer
-	view                 envRect // visible world rectangle, tiles (set while drawing)
-	drops                []weatherDrop
+	View                 envRect // visible world rectangle, tiles (set while drawing)
+	Drops                []weatherDrop
 	seq                  uint64
 	keyArt               *artCatalog
 	keys                 map[seasonCacheKey]string
-	flashBucket, flashAt uint64
-	flashSeen            bool
+	FlashBucket, FlashAt uint64
+	FlashSeen            bool
 	white, dot           *ebiten.Image
 	verts                []ebiten.Vertex
 	idx                  []uint16
-	shadow               shadowState   // the shadow pass (shadow.go)
-	roof                 roofDrawState // eaves and the Roof overlay (roof_draw.go)
-	home                 homeDrawState // the Home overlay's cached outline (home_draw.go)
-	// snowClear is the snow clearing area overlay (snow_clear_draw.go).
-	snowClear snowClearDrawState
+	Shadow               shadowState   // the shadow pass (shadow.go)
+	Roof                 roofDrawState // eaves and the Roof overlay (roof_draw.go)
+	Home                 homeDrawState // the Home overlay's cached outline (home_draw.go)
+	// SnowClear is the snow clearing area overlay (snow_clear_draw.go).
+	SnowClear snowClearDrawState
 	// collapses are the roof-collapse stamps already shown as dust.
 	collapses map[game.RoofCollapseView]bool
 }
 
-type envRect struct{ x0, y0, x1, y1 float64 }
+type envRect struct{ X0, Y0, X1, Y1 float64 }
 
-func (v envRect) empty() bool { return v.x1 <= v.x0 || v.y1 <= v.y0 }
+func (v envRect) Empty() bool { return v.X1 <= v.X0 || v.Y1 <= v.Y0 }
 
 // envSpring is one plant's contact lean: a damped spring in fractions of
 // its kind's lean limit, pulled towards whatever creature pushes it.
 type envSpring struct {
-	cx, cy, vx, vy float64 // lean and lean rate
+	Cx, Cy, Vx, vy float64 // lean and lean rate
 	tx, ty         float64 // this frame's push target
 	touch, was     bool
 	shakeAt        uint64
@@ -214,15 +214,15 @@ func springResponse(w float64) (gain, lag float64) {
 	return springK / math.Hypot(re, im), math.Atan2(im, re)
 }
 
-// setWeather reads this frame's weather from the world.
-func (e *envState) setWeather(w game.WorldView) {
+// SetWeather reads this frame's weather from the world.
+func (e *envState) SetWeather(w game.WorldView) {
 	e.kind = parseWeather(w.Weather)
 	e.intensity = clamp01(w.WeatherIntensity)
-	e.snow, e.wet = clamp01(w.SnowDepth), clamp01(w.Wetness)
-	e.snowCells = w.Snow // snow_veil.go: the veil reads it per tile
+	e.Snow, e.wet = clamp01(w.SnowDepth), clamp01(w.Wetness)
+	e.SnowCells = w.Snow // snow_veil.go: the veil reads it per tile
 	e.season = seasonIndex(w.Season)
 	e.outdoorTemp = w.OutdoorTemp
-	e.roomGrid, e.terrW, e.roofs = w.RoomGrid, w.TerrainW, w.RoofCells
+	e.roomGrid, e.TerrW, e.roofs = w.RoomGrid, w.TerrainW, w.RoofCells
 	if w.WindX != e.wx || w.WindY != e.wy || e.dx == 0 && e.dy == 0 {
 		e.wx, e.wy = w.WindX, w.WindY
 		e.speed = math.Hypot(e.wx, e.wy)
@@ -245,7 +245,7 @@ func (r *Renderer) plantPose(x, y int, kind plantKind, amount, scale float64) po
 	ps := pose{Px: 0.5, Py: 1, Sx: scale, Sy: scale}
 	e := &r.env
 	fx, fy := float64(x), float64(y)
-	if v := e.view; !v.empty() && (fx < v.x0-2 || fx > v.x1+1 || fy < v.y0-1 || fy > v.y1+3) {
+	if v := e.View; !v.Empty() && (fx < v.X0-2 || fx > v.X1+1 || fy < v.Y0-1 || fy > v.Y1+3) {
 		return ps // off screen
 	}
 	if kind > kindTree {
@@ -266,9 +266,9 @@ func (r *Renderer) plantPose(x, y int, kind plantKind, amount, scale float64) po
 	wn := math.Sqrt(springK) * (0.85 + 0.3*float64(h>>24&0xff)/256)
 	fl := air * (0.12*math.Sin(wn*t+2*math.Pi*hp) + 0.05*math.Sin(1.7*wn*t+4*hp))
 	var cx, cy, shake float64
-	if len(e.springs) > 0 {
-		if s := e.springs[envTileKey(x, y)]; s != nil {
-			cx, cy = s.cx, s.cy
+	if len(e.Springs) > 0 {
+		if s := e.Springs[envTileKey(x, y)]; s != nil {
+			cx, cy = s.Cx, s.Cy
 			if s.shaking {
 				age := float64(r.present - s.shakeAt)
 				shake = 0.8 * math.Exp(-age/14) * math.Sin(age*2*math.Pi/9)
@@ -290,10 +290,10 @@ func (r *Renderer) plantPose(x, y int, kind plantKind, amount, scale float64) po
 	}
 	ps.Skew = -leanX                // GeoM skew: negative tips the top east
 	ps.Sy = scale * (1 - 0.6*leanY) // leaning south (towards the viewer) looks shorter
-	if kind == kindGrass && e.snow > 0 && e.outdoors(x, y) {
+	if kind == kindGrass && e.Snow > 0 && e.outdoors(x, y) {
 		thr := 0.15 + 0.6*float64(h>>8&0xffff)/65536
-		a := 1 - clamp01((e.snow-thr)/0.2)
-		ps.Sy *= 1 - 0.5*e.snow
+		a := 1 - clamp01((e.Snow-thr)/0.2)
+		ps.Sy *= 1 - 0.5*e.Snow
 		ps.Cs = colorScale{1, 1, 1, float32(a)}
 	}
 	return ps
@@ -304,10 +304,10 @@ func (r *Renderer) plantPose(x, y int, kind plantKind, amount, scale float64) po
 // stepEnvironment advances springs and weather particles once per frame.
 func (r *Renderer) stepEnvironment(w game.WorldView, pawns []game.PawnView) {
 	e := &r.env
-	if e.springs == nil {
-		e.springs = map[uint32]*envSpring{}
+	if e.Springs == nil {
+		e.Springs = map[uint32]*envSpring{}
 	}
-	e.setWeather(w)
+	e.SetWeather(w)
 	r.stepContacts(w, pawns)
 	r.stepWeather()
 	r.stepCollapses(w)
@@ -371,26 +371,26 @@ func (r *Renderer) stepContacts(w game.WorldView, pawns []game.PawnView) {
 		}
 	}
 	cd := 2 * springZeta * math.Sqrt(springK)
-	for k, s := range e.springs {
+	for k, s := range e.Springs {
 		if s.touch && !s.was && r.treeAt(&w, int(k&0xffff), int(k>>16)) {
 			s.shakeAt, s.shaking = r.present, true
 			if e.season == seasonFall {
 				r.dropLeaves(int(k&0xffff), int(k>>16))
 			}
 		}
-		ax := springK*(s.tx-s.cx) - cd*s.vx
-		ay := springK*(s.ty-s.cy) - cd*s.vy
-		s.vx += ax * frameDT
+		ax := springK*(s.tx-s.Cx) - cd*s.Vx
+		ay := springK*(s.ty-s.Cy) - cd*s.vy
+		s.Vx += ax * frameDT
 		s.vy += ay * frameDT
-		s.cx += s.vx * frameDT
-		s.cy += s.vy * frameDT
+		s.Cx += s.Vx * frameDT
+		s.Cy += s.vy * frameDT
 		s.was, s.touch, s.tx, s.ty = s.touch, false, 0, 0
 		if s.shaking && r.present-s.shakeAt >= shakeFrames {
 			s.shaking = false
 		}
-		if !s.was && !s.shaking && math.Abs(s.cx) < 0.004 && math.Abs(s.cy) < 0.004 &&
-			math.Abs(s.vx) < 0.02 && math.Abs(s.vy) < 0.02 {
-			delete(e.springs, k)
+		if !s.was && !s.shaking && math.Abs(s.Cx) < 0.004 && math.Abs(s.Cy) < 0.004 &&
+			math.Abs(s.Vx) < 0.02 && math.Abs(s.vy) < 0.02 {
+			delete(e.Springs, k)
 		}
 	}
 }
@@ -414,10 +414,10 @@ func (e *envState) push(tx, ty int, m envMover) {
 	}
 	mag := math.Min(contactPush*m.spd*smoothstep01(1-d/contactRadius)*n/2, contactCap)
 	k := envTileKey(tx, ty)
-	s := e.springs[k]
+	s := e.Springs[k]
 	if s == nil {
 		s = &envSpring{}
-		e.springs[k] = s
+		e.Springs[k] = s
 	}
 	if mag*mag > s.tx*s.tx+s.ty*s.ty {
 		s.tx, s.ty = mag*px/n, mag*py/n
@@ -490,12 +490,12 @@ func (r *Renderer) seasonKey(key string, w game.WorldView) string {
 	}
 	var cands []string
 	if ck.season != seasonNone {
-		if s, ok := plantKeys.seasonal[key]; ok {
+		if s, ok := plantKeys.Seasonal[key]; ok {
 			cands = append(cands, s[ck.season-1])
 		}
 	}
 	cands = append(cands, key)
-	cands = append(cands, plantKeys.fallback[key]...)
+	cands = append(cands, plantKeys.Fallback[key]...)
 	out := cands[0]
 	for _, c := range cands {
 		if r.art.Has(c) {
@@ -525,17 +525,17 @@ var treeSpecies = [...]string{"oak", "birch", "pine"}
 // plantKeyTable holds every plant sprite key, built once so drawing never
 // concatenates strings.
 type plantKeyTable struct {
-	crops    map[string]*[numCropStages][cropVariants]string
-	trees    [3][3]string
-	fallback map[string][]string
-	seasonal map[string][2]string // autumn, bare
-	ground   map[string]*groundKeys
+	Crops    map[string]*[numCropStages][cropVariants]string
+	Trees    [3][3]string
+	Fallback map[string][]string
+	Seasonal map[string][2]string // autumn, bare
+	Ground   map[string]*groundKeys
 }
 
 var plantKeys = buildPlantKeys()
 
 func buildPlantKeys() plantKeyTable {
-	t := plantKeyTable{crops: map[string]*[numCropStages][cropVariants]string{}, fallback: map[string][]string{}, seasonal: map[string][2]string{}}
+	t := plantKeyTable{Crops: map[string]*[numCropStages][cropVariants]string{}, Fallback: map[string][]string{}, Seasonal: map[string][2]string{}}
 	for _, c := range game.Crops() {
 		ks := &[numCropStages][cropVariants]string{}
 		for st, name := range cropStageNames {
@@ -553,20 +553,20 @@ func buildPlantKeys() plantKeyTable {
 					}
 				}
 				if len(fb) > 0 {
-					t.fallback[k] = fb
+					t.Fallback[k] = fb
 				}
 			}
 		}
-		t.crops[c.Name] = ks
+		t.Crops[c.Name] = ks
 	}
 	for s, sp := range treeSpecies {
 		for v := 0; v < 3; v++ {
 			k := artKey("plant", "tree_"+sp, v)
-			t.trees[s][v] = k
+			t.Trees[s][v] = k
 			if sp != "pine" {
-				t.seasonal[k] = [2]string{k + "_autumn", k + "_bare"}
-				t.fallback[k+"_autumn"] = []string{k}
-				t.fallback[k+"_bare"] = []string{k}
+				t.Seasonal[k] = [2]string{k + "_autumn", k + "_bare"}
+				t.Fallback[k+"_autumn"] = []string{k}
+				t.Fallback[k+"_bare"] = []string{k}
 			}
 		}
 	}
@@ -627,29 +627,29 @@ const (
 // weatherDrop is one weather particle: a falling drop or flake headed for
 // ground point (gx, gy), or a short landing effect there.
 type weatherDrop struct {
-	kind              dropKind
+	Kind              dropKind
 	v                 uint8 // sprite variant
-	age, life         uint16
-	gx, gy            float64 // landing point, world tiles
-	t, t0             float64 // seconds until it lands; its whole fall
-	vx, vy, vz        float64 // drift with the wind and fall speed, tiles/s
-	size              float32 // radius, tiles
+	Age, life         uint16
+	Gx, Gy            float64 // landing point, world tiles
+	T, t0             float64 // seconds until it lands; its whole fall
+	Vx, vy, Vz        float64 // drift with the wind and fall speed, tiles/s
+	Size              float32 // radius, tiles
 	amp, omega, phase float32 // snow flutter
 	alpha             float32
 }
 
-// screenVel is the drop's velocity on screen (tiles/s): its drift plus the
+// ScreenVel is the drop's velocity on screen (tiles/s): its drift plus the
 // fall, which projects to straight down.
-func (d *weatherDrop) screenVel() (float64, float64) { return d.vx, d.vy + d.vz }
+func (d *weatherDrop) ScreenVel() (float64, float64) { return d.Vx, d.vy + d.Vz }
 
-// posAt is where a falling drop is drawn t seconds before it lands: its
+// PosAt is where a falling drop is drawn t seconds before it lands: its
 // ground point back along its drift, raised by its height.
-func (d *weatherDrop) posAt(t float64) (float64, float64) {
-	x := d.gx - d.vx*t
-	if d.kind == dropSnow {
+func (d *weatherDrop) PosAt(t float64) (float64, float64) {
+	x := d.Gx - d.Vx*t
+	if d.Kind == dropSnow {
 		x += float64(d.amp) * (math.Sin(float64(d.omega)*t+float64(d.phase)) - math.Sin(float64(d.phase)))
 	}
-	return x, d.gy - (d.vy+d.vz)*t
+	return x, d.Gy - (d.vy+d.Vz)*t
 }
 
 // weatherDensity is falling drops per visible tile at full intensity.
@@ -677,18 +677,18 @@ func (r *Renderer) stepWeather() {
 		cap = snowCap
 	}
 	want := 0
-	if e.kind.falling() && !e.view.empty() {
-		area := (e.view.x1 - e.view.x0) * (e.view.y1 - e.view.y0)
+	if e.kind.falling() && !e.View.Empty() {
+		area := (e.View.X1 - e.View.X0) * (e.View.Y1 - e.View.Y0)
 		want = min(int(e.kind.density()*e.intensity*area*r.fxOr1()), cap*85/100)
 	}
 	room := cap - want // landing effects share what the drops leave
 	live, effects := 0, 0
-	kept := e.drops[:0]
-	for _, d := range e.drops {
-		switch d.kind {
+	kept := e.Drops[:0]
+	for _, d := range e.Drops {
+		switch d.Kind {
 		case dropRain, dropSnow:
-			d.t -= frameDT
-			if d.t > 0 {
+			d.T -= frameDT
+			if d.T > 0 {
 				live++
 				kept = append(kept, d)
 				continue
@@ -696,71 +696,71 @@ func (r *Renderer) stepWeather() {
 			if effects >= room {
 				continue
 			}
-			x, y := int(math.Floor(d.gx)), int(math.Floor(d.gy))
+			x, y := int(math.Floor(d.Gx)), int(math.Floor(d.Gy))
 			if !e.outdoors(x, y) { // roofed over since it spawned: nothing lands
 				continue
 			}
-			d.age, d.t = 0, 0
+			d.Age, d.T = 0, 0
 			switch {
-			case d.kind == dropSnow:
-				d.kind, d.life = dropSettled, 40
-			case e.wet > 0 && r.puddleAt(d.gx, d.gy) >= puddleRippleMin: // puddle_veil.go: in the water
-				d.kind, d.life = dropRipple, 26
+			case d.Kind == dropSnow:
+				d.Kind, d.life = dropSettled, 40
+			case e.wet > 0 && r.puddleAt(d.Gx, d.Gy) >= puddleRippleMin: // puddle_veil.go: in the water
+				d.Kind, d.life = dropRipple, 26
 			default:
-				d.kind, d.life = dropSplash, 9
+				d.Kind, d.life = dropSplash, 9
 			}
 		default:
-			d.age++
-			if d.age >= d.life {
+			d.Age++
+			if d.Age >= d.life {
 				continue
 			}
 		}
 		effects++
 		kept = append(kept, d)
 	}
-	e.drops = kept
+	e.Drops = kept
 	if live >= want {
 		return
 	}
-	for n := min(want-live, max(want/8, 8)); n > 0 && len(e.drops) < cap; n-- {
+	for n := min(want-live, max(want/8, 8)); n > 0 && len(e.Drops) < cap; n-- {
 		e.spawn()
 	}
 }
 
 // spawn adds one falling drop or flake over open ground in the view.
 func (e *envState) spawn() {
-	v := e.view
+	v := e.View
 	for try := 0; try < 3; try++ {
 		e.seq++
 		h := func(k uint64) float64 { return hash01(e.seq, k, 0x5eed) }
-		gx := v.x0 - 1 + h(1)*(v.x1-v.x0+2)
-		gy := v.y0 - 0.5 + h(2)*(v.y1-v.y0+3)
+		gx := v.X0 - 1 + h(1)*(v.X1-v.X0+2)
+		gy := v.Y0 - 0.5 + h(2)*(v.Y1-v.Y0+3)
 		if !e.outdoors(int(math.Floor(gx)), int(math.Floor(gy))) {
 			continue
 		}
-		d := weatherDrop{gx: gx, gy: gy}
+		d := weatherDrop{Gx: gx, Gy: gy}
 		if e.kind.frozen() {
-			d.kind = dropSnow
-			d.size = [...]float32{0.018, 0.018, 0.026, 0.026, 0.036, 0.05}[int(h(3)*6)%6]
+			d.Kind = dropSnow
+			d.Size = [...]float32{0.018, 0.018, 0.026, 0.026, 0.036, 0.05}[int(h(3)*6)%6]
 			d.v = uint8(h(4) * 4)
-			d.vz = 0.7 + 8*float64(d.size)
+			d.Vz = 0.7 + 8*float64(d.Size)
 			jit := 0.85 + 0.3*h(5)
-			d.vx, d.vy = e.wx*jit, e.wy*jit
+			d.Vx, d.vy = e.wx*jit, e.wy*jit
 			d.amp = float32(0.08 + 0.12*h(6))
 			d.omega = float32(3 + 2*h(7))
 			d.phase = float32(2 * math.Pi * h(8))
-			d.t0 = (1.5 + 4.5*h(9)) / d.vz
+			d.t0 = (1.5 + 4.5*h(9)) / d.Vz
 			d.alpha = float32(0.7 + 0.3*h(10))
 		} else {
-			d.kind = dropRain
-			d.vz = 13 + 4*h(3)
+			d.Kind = dropRain
+			d.Vz = 13 + 4*h(3)
 			jit := 1.5 * (0.9 + 0.2*h(5)) // windage, exaggerated a little for readability
-			d.vx, d.vy = e.wx*jit, e.wy*jit*0.6
+			d.Vx, d.vy = e.wx*jit, e.wy*jit*0.6
 			d.t0 = 0.1 + 0.25*h(9)
 			d.alpha = float32(0.45 + 0.3*h(10))
 		}
-		d.t = d.t0
-		e.drops = append(e.drops, d)
+		d.T = d.t0
+		e.Drops = append(e.Drops, d)
 		return
 	}
 }
@@ -769,13 +769,13 @@ func (e *envState) spawn() {
 // roofs (SIM-018) that is any unroofed tile but a wall; without roof data,
 // any tile outside a room.
 func (e *envState) outdoors(x, y int) bool {
-	if len(e.roomGrid) == 0 || e.terrW <= 0 {
+	if len(e.roomGrid) == 0 || e.TerrW <= 0 {
 		return true
 	}
-	if x < 0 || y < 0 || x >= e.terrW {
+	if x < 0 || y < 0 || x >= e.TerrW {
 		return true
 	}
-	i := y*e.terrW + x
+	i := y*e.TerrW + x
 	if i >= len(e.roomGrid) {
 		return true
 	}
@@ -892,15 +892,15 @@ func (r *Renderer) setView(sw, sh int, tile float64) {
 	if tile <= 0 {
 		return
 	}
-	r.env.view = envRect{r.cam.OffsetX / tile, r.cam.OffsetY / tile,
+	r.env.View = envRect{r.cam.OffsetX / tile, r.cam.OffsetY / tile,
 		(r.cam.OffsetX + float64(sw)) / tile, (r.cam.OffsetY + float64(sh)) / tile}
 }
 
 // visibleTiles is the on-map tile range in view.
 func (r *Renderer) visibleTiles() (x0, y0, x1, y1 int) {
-	v := r.env.view
-	x0, y0 = max(int(math.Floor(v.x0)), 0), max(int(math.Floor(v.y0)), 0)
-	x1, y1 = min(int(math.Ceil(v.x1)), r.game.Width()-1), min(int(math.Ceil(v.y1)), r.game.Height()-1)
+	v := r.env.View
+	x0, y0 = max(int(math.Floor(v.X0)), 0), max(int(math.Floor(v.Y0)), 0)
+	x1, y1 = min(int(math.Ceil(v.X1)), r.game.Width()-1), min(int(math.Ceil(v.Y1)), r.game.Height()-1)
 	return
 }
 
@@ -917,7 +917,7 @@ func (r *Renderer) drawGroundCover(screen *ebiten.Image, w game.WorldView, sw, s
 	if !anySnow && frost <= 0 {
 		return
 	}
-	e.setWeather(w)
+	e.SetWeather(w)
 	x0, y0, x1, y1 := r.visibleTiles()
 	veil := 0.85 // snow veil strength: all of it without decals, a base under them
 	if r.art.Has(snowCoverKeys[0]) && tile >= decalMinTile {
@@ -941,7 +941,7 @@ func (r *Renderer) drawGroundCover(screen *ebiten.Image, w game.WorldView, sw, s
 			if !open(x, y) {
 				continue
 			}
-			if d := e.snowDepthAt(x, y); d > 0 {
+			if d := e.SnowDepthAt(x, y); d > 0 {
 				k, a := snowCover(x, y, d)
 				// texture where the snow lies full; thin snow is the smooth veil alone
 				decal(k, x, y, 0.8*smoothstep01((a-0.6)/0.4))
@@ -981,7 +981,7 @@ func (r *Renderer) drawWeather(screen *ebiten.Image, w game.WorldView, sw, sh in
 	if fog.A > 0 {
 		vector.FillRect(screen, 0, 0, float32(sw), float32(sh), fog, false)
 	}
-	if len(e.drops) > 0 {
+	if len(e.Drops) > 0 {
 		r.drawDrops(screen, sw, sh, tile)
 	}
 	r.drawLightning(screen, w, sw, sh)
@@ -1002,10 +1002,10 @@ func (r *Renderer) fxOr1() float64 {
 func (r *Renderer) drawLightning(screen *ebiten.Image, w game.WorldView, sw, sh int) {
 	e := &r.env
 	r.showStrikes(w) // fire_world_draw.go: the sim's lightning drives the flash and thunder
-	if !e.flashSeen {
+	if !e.FlashSeen {
 		return
 	}
-	age := float64(r.present - e.flashAt)
+	age := float64(r.present - e.FlashAt)
 	var a float64
 	switch {
 	case age < 3:
@@ -1039,21 +1039,21 @@ func (r *Renderer) drawDrops(screen *ebiten.Image, sw, sh int, tile float64) {
 	// streaks, splash crowns and ripple rings share the white texture
 	e.beginBatch()
 	var flakes, splashes []int
-	for i := range e.drops {
-		d := &e.drops[i]
-		switch d.kind {
+	for i := range e.Drops {
+		d := &e.Drops[i]
+		switch d.Kind {
 		case dropRain:
-			wx, wy := d.posAt(d.t)
+			wx, wy := d.PosAt(d.T)
 			hx, hy := r.worldToScreenF(wx, wy)
 			if !inside(hx, hy) {
 				continue
 			}
-			vx, vy := d.screenVel()
-			fade := float64(d.alpha) * clamp01((d.t0-d.t)/0.08)
+			vx, vy := d.ScreenVel()
+			fade := float64(d.alpha) * clamp01((d.t0-d.T)/0.08)
 			e.streak(float64(hx), float64(hy), vx*blur*tile, vy*blur*tile, width, rainClr, fade)
 		case dropRipple:
-			sx, sy := r.worldToScreenF(d.gx, d.gy)
-			k := float64(d.age) / float64(d.life)
+			sx, sy := r.worldToScreenF(d.Gx, d.Gy)
+			k := float64(d.Age) / float64(d.life)
 			rad := (0.05 + 0.2*k) * tile
 			e.ring(float64(sx), float64(sy), rad, rad*0.45, math.Max(1, 0.015*tile), color.RGBA{214, 226, 240, 255}, 0.5*(1-k))
 		case dropSplash:
@@ -1061,8 +1061,8 @@ func (r *Renderer) drawDrops(screen *ebiten.Image, sw, sh int, tile float64) {
 				splashes = append(splashes, i)
 				continue
 			}
-			sx, sy := r.worldToScreenF(d.gx, d.gy)
-			k := float64(d.age) / float64(d.life)
+			sx, sy := r.worldToScreenF(d.Gx, d.Gy)
+			k := float64(d.Age) / float64(d.life)
 			for j := -1; j <= 1; j += 2 { // two droplets jump out
 				px := float64(sx) + float64(j)*(0.03+0.09*k)*tile
 				py := float64(sy) - (0.12*k-0.12*k*k)*tile
@@ -1072,11 +1072,11 @@ func (r *Renderer) drawDrops(screen *ebiten.Image, sw, sh int, tile float64) {
 			flakes = append(flakes, i)
 		}
 	}
-	e.flush(screen, e.whiteImg())
+	e.flush(screen, e.WhiteImg())
 	for _, i := range splashes {
-		d := &e.drops[i]
-		sx, sy := r.worldToScreenF(d.gx, d.gy)
-		k := float64(d.age) / float64(d.life)
+		d := &e.Drops[i]
+		sx, sy := r.worldToScreenF(d.Gx, d.Gy)
+		k := float64(d.Age) / float64(d.life)
 		r.drawCentered(screen, splashKeys[int(d.v)%3], float64(sx), float64(sy), tile*(0.2+0.18*k), 0.75*(1-k))
 	}
 	if len(flakes) == 0 {
@@ -1085,20 +1085,20 @@ func (r *Renderer) drawDrops(screen *ebiten.Image, sw, sh int, tile float64) {
 	useArt := r.art.Has(flakeKeys[0])
 	e.beginBatch()
 	for _, i := range flakes {
-		d := &e.drops[i]
-		wx, wy := d.gx, d.gy
+		d := &e.Drops[i]
+		wx, wy := d.Gx, d.Gy
 		a := float64(d.alpha)
-		if d.kind == dropSnow {
-			wx, wy = d.posAt(d.t)
-			a *= clamp01((d.t0 - d.t) / 0.4)
+		if d.Kind == dropSnow {
+			wx, wy = d.PosAt(d.T)
+			a *= clamp01((d.t0 - d.T) / 0.4)
 		} else {
-			a *= 1 - float64(d.age)/float64(d.life)
+			a *= 1 - float64(d.Age)/float64(d.life)
 		}
 		sx, sy := r.worldToScreenF(wx, wy)
 		if !inside(sx, sy) {
 			continue
 		}
-		rad := float64(d.size) * tile
+		rad := float64(d.Size) * tile
 		if useArt {
 			r.drawCentered(screen, flakeKeys[int(d.v)%4], float64(sx), float64(sy), rad*5, a)
 			continue
@@ -1128,7 +1128,7 @@ func (r *Renderer) drawCentered(screen *ebiten.Image, key string, sx, sy, size, 
 
 // --- triangle batching ----------------------------------------------------------------
 
-func (e *envState) whiteImg() *ebiten.Image {
+func (e *envState) WhiteImg() *ebiten.Image {
 	if e.white == nil {
 		img := ebiten.NewImage(3, 3)
 		img.Fill(color.White)

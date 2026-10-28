@@ -165,14 +165,14 @@ func (l *lodState) inView(x, y, pad, padS int) bool {
 // (ox, oy) of dst's coordinate space, unlit, the water as its baked
 // frame. sw and sh are dst's extent for culling.
 func (r *Renderer) withBake(dst *ebiten.Image, px float64, x0, y0 int, ox, oy float64, fn func(sw, sh int, tile float64)) {
-	cam, view, cast := r.cam, r.env.view, r.cast
+	cam, view, cast := r.cam, r.env.View, r.cast
 	r.cam = camera{Zoom: px / TileSize, OffsetX: float64(x0)*px - ox, OffsetY: float64(y0)*px - oy, Placed: true}
 	b := dst.Bounds()
 	r.setView(b.Max.X, b.Max.Y, px)
 	r.lod.baking = true
 	r.cast = &r.lod.bakeCast // water_draw.go draws its baked frame, not the shader
 	defer func() {
-		r.cam, r.env.view, r.cast = cam, view, cast
+		r.cam, r.env.View, r.cast = cam, view, cast
 		r.lod.baking = false
 	}()
 	fn(b.Max.X, b.Max.Y, px)
@@ -227,7 +227,7 @@ func (r *Renderer) bakeGround(dst *ebiten.Image, w *game.WorldView, x0, y0, x1, 
 					case b.Floor:
 						r.drawTile(dst, r.buildKey("floor", b.Stuff, "", 0, false, false), float64(b.X), float64(b.Y), tile, sw, sh, tintCS(r.stuffTint(b.Stuff)))
 					case b.Kind == bridgeKind:
-						r.drawBridgeCell(dst, *w, r.bridges.sync(*w), b, tile, sw, sh)
+						r.drawBridgeCell(dst, *w, r.bridges.Sync(*w), b, tile, sw, sh)
 					case b.Kind == "sleeping spot":
 						r.drawSprite(dst, buildSprite(b.Kind, b.Facing, 0, false, false), none, float64(b.X), float64(b.Y), tile, sw, sh)
 					case b.Kind == "carpet":
@@ -340,7 +340,7 @@ var wildMarkColors = map[string]color.RGBA{
 
 // isCropSpecies reports a sown crop.
 func isCropSpecies(s string) bool {
-	_, ok := plantKeys.crops[s]
+	_, ok := plantKeys.Crops[s]
 	return ok
 }
 

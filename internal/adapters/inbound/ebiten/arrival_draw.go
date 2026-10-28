@@ -25,10 +25,10 @@ const (
 // arrivalFx is one effect sprite to draw: key at the centre (x, y) of its
 // tile (tiles), alpha and scale.
 type arrivalFx struct {
-	key   string
-	x, y  float64
-	alpha float64
-	scale float64
+	Key   string
+	X, Y  float64
+	Alpha float64
+	Scale float64
 }
 
 // arrivalEffects lists the effect sprites of the pods at simulation tick
@@ -46,14 +46,14 @@ func arrivalEffects(pods []game.ArrivalView, now uint64, reduced bool) []arrival
 				continue
 			}
 			k := float64(left) / arrivalFallTicks // 1 at the start of the fall, 0 on landing
-			out = append(out, arrivalFx{key: "effect/pod_fall", x: cx, y: cy - k*arrivalFallTiles, alpha: 1 - 0.5*k, scale: 1})
+			out = append(out, arrivalFx{Key: "effect/pod_fall", X: cx, Y: cy - k*arrivalFallTiles, Alpha: 1 - 0.5*k, Scale: 1})
 		case now-p.Tick < arrivalDustTicks:
 			age := float64(now-p.Tick) / arrivalDustTicks
 			scale := 1.0
 			if !reduced {
 				scale = 0.45 + 0.9*age
 			}
-			out = append(out, arrivalFx{key: "effect/pod_dust", x: cx, y: cy, alpha: (1 - age) * 0.85, scale: scale})
+			out = append(out, arrivalFx{Key: "effect/pod_dust", X: cx, Y: cy, Alpha: (1 - age) * 0.85, Scale: scale})
 		}
 	}
 	return out
@@ -66,19 +66,19 @@ func (r *Renderer) drawArrivals(screen *ebiten.Image, w game.WorldView, tile flo
 		return
 	}
 	for _, fx := range arrivalEffects(w.Arrivals, uint64(r.game.Tick()), r.reducedMotion) {
-		sp := r.art.Sprite(fx.key)
-		img := r.art.Image(fx.key, color.NRGBA{})
+		sp := r.art.Sprite(fx.Key)
+		img := r.art.Image(fx.Key, color.NRGBA{})
 		if sp == nil || img == nil {
 			continue
 		}
-		sx, sy := r.worldToScreenF(fx.x, fx.y)
+		sx, sy := r.worldToScreenF(fx.X, fx.Y)
 		s := tile / artTilePx
 		geo := ebiten.GeoM{}
 		geo.Translate(-float64(sp.Meta.Origin[0]), -float64(sp.Meta.Origin[1]))
-		geo.Scale(s*fx.scale, s*fx.scale)
+		geo.Scale(s*fx.Scale, s*fx.Scale)
 		geo.Translate(float64(sx), float64(sy))
 		op := &ebiten.DrawImageOptions{GeoM: geo, Filter: ebiten.FilterLinear}
-		a := float32(fx.alpha)
+		a := float32(fx.Alpha)
 		op.ColorScale.Scale(a, a, a, a)
 		screen.DrawImage(img, op)
 	}

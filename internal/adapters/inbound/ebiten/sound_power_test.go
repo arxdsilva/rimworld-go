@@ -66,7 +66,7 @@ func TestMachineLoopsPlayWhileTheMachineRuns(t *testing.T) {
 			var got []string
 			for key, l := range want {
 				if len(key) > 6 && key[:6] == "power:" {
-					got = append(got, l.id)
+					got = append(got, l.ID)
 				}
 			}
 			switch {
@@ -134,8 +134,8 @@ func TestMachineLoopsAreSpatialAndCapped(t *testing.T) {
 			if key == "power:99" {
 				t.Fatal("a machine far off screen is not heard")
 			}
-			if l.vol <= 0 || l.vol > 1 {
-				t.Fatalf("%s volume %v", key, l.vol)
+			if l.Vol <= 0 || l.Vol > 1 {
+				t.Fatalf("%s volume %v", key, l.Vol)
 			}
 		}
 	}
@@ -145,7 +145,7 @@ func TestMachineLoopsAreSpatialAndCapped(t *testing.T) {
 	if _, ok := want["power:10"]; !ok {
 		t.Fatal("the generator in the middle of the view is the one heard")
 	}
-	if right := want["power:11"]; right.pan <= want["power:10"].pan {
+	if right := want["power:11"]; right.Pan <= want["power:10"].Pan {
 		t.Fatalf("a generator to the right pans right of the centre one: %+v vs %+v", right, want["power:10"])
 	}
 	r.cam.Zoom = r.MinZoomFor(a.mapViewport())
@@ -174,7 +174,7 @@ func TestSwitchClicksWhenPowerOnFlips(t *testing.T) {
 	}
 	r.listenWorld(sw(false), nil)
 	c := r.takeCues()
-	if len(c) != 1 || c[0].id != "sfx.switch_click" || c[0].x != 4.5 || c[0].y != 6.5 || c[0].global {
+	if len(c) != 1 || c[0].ID != "sfx.switch_click" || c[0].X != 4.5 || c[0].Y != 6.5 || c[0].Global {
 		t.Fatalf("a switch thrown off clicks where it stands, got %+v", c)
 	}
 	r.listenWorld(sw(false), nil)
@@ -182,7 +182,7 @@ func TestSwitchClicksWhenPowerOnFlips(t *testing.T) {
 		t.Fatalf("the click is heard once, got %+v", c)
 	}
 	r.listenWorld(sw(true), nil)
-	if c := r.takeCues(); len(c) != 1 || c[0].id != "sfx.switch_click" {
+	if c := r.takeCues(); len(c) != 1 || c[0].ID != "sfx.switch_click" {
 		t.Fatalf("a switch thrown on clicks too, got %+v", c)
 	}
 }
@@ -246,7 +246,7 @@ func TestShortCircuitSoundsOnItsLetterNotOnDeconstruction(t *testing.T) {
 	w.Letters = []game.LetterView{sndLetterAt(1, "Short circuit", 5, 5)}
 	r.listenWorld(w, nil)
 	c := r.takeCues()
-	if len(c) != 1 || c[0].id != "sfx.short_circuit" || c[0].x != 5.5 || c[0].y != 5.5 || c[0].global {
+	if len(c) != 1 || c[0].ID != "sfx.short_circuit" || c[0].X != 5.5 || c[0].Y != 5.5 || c[0].Global {
 		t.Fatalf("a short circuit zaps where the conduit was, got %+v", c)
 	}
 	// the letter stays in the stack: it is heard once
@@ -264,7 +264,7 @@ func TestShortCircuitSoundsOnItsLetterNotOnDeconstruction(t *testing.T) {
 	// a second circuit later is heard again
 	w.Letters = append(w.Letters, sndLetterAt(4, "Short circuit", 3, 5))
 	r.listenWorld(w, nil)
-	if c := r.takeCues(); len(c) != 1 || c[0].x != 3.5 {
+	if c := r.takeCues(); len(c) != 1 || c[0].X != 3.5 {
 		t.Fatalf("the next short circuit is heard, got %+v", c)
 	}
 }
@@ -307,7 +307,7 @@ func TestSolarFlareBuzzesOncePerFlare(t *testing.T) {
 	}
 	r.listenWorld(flare(true), nil)
 	c := r.takeCues()
-	if len(c) != 1 || c[0].id != "ui.solar_flare" || !c[0].global {
+	if len(c) != 1 || c[0].ID != "ui.solar_flare" || !c[0].Global {
 		t.Fatalf("the flare starts with one global buzz, got %+v", c)
 	}
 	for range 5 {

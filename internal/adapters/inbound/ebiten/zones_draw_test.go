@@ -72,7 +72,7 @@ func TestZoneEdgeRunsMergeConsecutiveCells(t *testing.T) {
 	}
 	long := 0
 	for _, r := range runs {
-		if r.y0 == r.y1 && r.x1-r.x0 == 3 {
+		if r.Y0 == r.Y1 && r.X1-r.X0 == 3 {
 			long++
 		}
 	}
@@ -154,8 +154,8 @@ func TestZoneLabelOncePerZone(t *testing.T) {
 		t.Fatal("label text")
 	}
 	g := (&Renderer{}).zoneGeomOf(z)
-	if len(g.cells) != 6 {
-		t.Fatalf("geom cells = %d", len(g.cells))
+	if len(g.Cells) != 6 {
+		t.Fatalf("geom cells = %d", len(g.Cells))
 	}
 }
 
@@ -227,10 +227,10 @@ func TestZoneLabelSizeGrowsWithZone(t *testing.T) {
 		prev, first := 0.0, 0.0
 		for side := 40.0; side <= 500; side += 10 {
 			p := zoneLabelLayout("Pen", side, side, side/2, side/2, zoneLabelMax)
-			if !p.ok {
+			if !p.Ok {
 				continue
 			}
-			sz := p.style.Size
+			sz := p.Style.Size
 			if sz < 11 || sz > 40 || math.Mod(sz*2, 1) != 0 {
 				t.Fatalf("ui %g side %g: size %g outside 11..40 or not a half step", ui, side, sz)
 			}
@@ -255,30 +255,30 @@ func TestZoneLabelFitsTheZoneWidth(t *testing.T) {
 			for w := 24.0; w <= 600; w += 6 {
 				for _, h := range []float64{30, 80, 400} {
 					p := zoneLabelLayout(text, w, h, w/2, h/2, zoneLabelMax)
-					if !p.ok {
+					if !p.Ok {
 						continue
 					}
-					if p.plate.W > float32(0.9*w)+0.01 {
-						t.Fatalf("ui %g %q in %gx%g: plate %g wide, over 90%% of the zone", ui, text, w, h, p.plate.W)
+					if p.Plate.W > float32(0.9*w)+0.01 {
+						t.Fatalf("ui %g %q in %gx%g: plate %g wide, over 90%% of the zone", ui, text, w, h, p.Plate.W)
 					}
-					if p.plate.X < 0 || p.plate.Y < 0 || p.plate.X+p.plate.W > float32(w) || p.plate.Y+p.plate.H > float32(h) {
-						t.Fatalf("ui %g %q in %gx%g: plate %+v sticks out of a zone it is centred in", ui, text, w, h, p.plate)
+					if p.Plate.X < 0 || p.Plate.Y < 0 || p.Plate.X+p.Plate.W > float32(w) || p.Plate.Y+p.Plate.H > float32(h) {
+						t.Fatalf("ui %g %q in %gx%g: plate %+v sticks out of a zone it is centred in", ui, text, w, h, p.Plate)
 					}
-					if tw := textW(p.text, p.style); tw > p.plate.W {
-						t.Fatalf("ui %g %q in %gx%g: text %g wide on a plate %g wide", ui, text, w, h, tw, p.plate.W)
+					if tw := textW(p.Text, p.Style); tw > p.Plate.W {
+						t.Fatalf("ui %g %q in %gx%g: text %g wide on a plate %g wide", ui, text, w, h, tw, p.Plate.W)
 					}
 					// ellipsized only at the 11 px floor
-					if p.text != text && p.style.Size != 11 {
-						t.Fatalf("ui %g %q in %gx%g: %q ellipsized at %g px, only 11 px may be", ui, text, w, h, p.text, p.style.Size)
+					if p.Text != text && p.Style.Size != 11 {
+						t.Fatalf("ui %g %q in %gx%g: %q ellipsized at %g px, only 11 px may be", ui, text, w, h, p.Text, p.Style.Size)
 					}
 					// shrunk only as far as needed: half a step more would not fit
 					want := math.Round(min(40, max(11, 0.45*min(w, h)))*2) / 2
-					if p.style.Size < want {
-						px, _ := zoneLabelPad(p.style.Size + 0.5)
-						up := p.style
+					if p.Style.Size < want {
+						px, _ := zoneLabelPad(p.Style.Size + 0.5)
+						up := p.Style
 						up.Size += 0.5
 						if tw := float64(textW(text, up)); tw+2*px <= 0.9*w {
-							t.Fatalf("ui %g %q in %gx%g: shrunk to %g although %g fits", ui, text, w, h, p.style.Size, up.Size)
+							t.Fatalf("ui %g %q in %gx%g: shrunk to %g although %g fits", ui, text, w, h, p.Style.Size, up.Size)
 						}
 					}
 				}
@@ -291,23 +291,23 @@ func TestZoneLabelEllipsizesThenHides(t *testing.T) {
 	withUIScale(t, 1.5)
 	// wide enough for the whole word (shrunk to fit)
 	wide := zoneLabelLayout("Stockpile", 110, 200, 55, 100, zoneLabelMax)
-	if !wide.ok || wide.text != "Stockpile" {
+	if !wide.Ok || wide.Text != "Stockpile" {
 		t.Fatalf("110 px wide: %+v", wide)
 	}
 	// too narrow for the word at 11 px: ellipsized at 11 px, still shown
 	narrow := zoneLabelLayout("Stockpile", 56, 200, 28, 100, zoneLabelMax)
-	if !narrow.ok || narrow.style.Size != 11 || narrow.text == "Stockpile" || narrow.text[len(narrow.text)-len("…"):] != "…" {
+	if !narrow.Ok || narrow.Style.Size != 11 || narrow.Text == "Stockpile" || narrow.Text[len(narrow.Text)-len("…"):] != "…" {
 		t.Fatalf("56 px wide: %+v", narrow)
 	}
 	// narrower than about two letters: hidden
-	if p := zoneLabelLayout("Stockpile", 16, 200, 8, 100, zoneLabelMax); p.ok {
+	if p := zoneLabelLayout("Stockpile", 16, 200, 8, 100, zoneLabelMax); p.Ok {
 		t.Fatalf("16 px wide must hide the label, got %+v", p)
 	}
 	// 11 px text cannot fit a zone shorter than its line
-	if p := zoneLabelLayout("Pen", 300, 10, 150, 5, zoneLabelMax); p.ok {
+	if p := zoneLabelLayout("Pen", 300, 10, 150, 5, zoneLabelMax); p.Ok {
 		t.Fatalf("a 10 px tall zone must hide the label, got %+v", p)
 	}
-	if p := zoneLabelLayout("", 300, 100, 150, 50, zoneLabelMax); p.ok {
+	if p := zoneLabelLayout("", 300, 100, 150, 50, zoneLabelMax); p.Ok {
 		t.Fatal("no text, no label")
 	}
 }
@@ -498,8 +498,8 @@ func TestZoneLabelCapFollowsZoom(t *testing.T) {
 	}
 	withUIScale(t, 1.5)
 	big := zoneLabelLayout("Stockpile", 300, 200, 150, 100, zoneLabelCap(43))
-	if !big.ok || big.style.Size > zoneLabelNear {
-		t.Fatalf("a big zone up close: size %g, want at most %g", big.style.Size, zoneLabelNear)
+	if !big.Ok || big.Style.Size > zoneLabelNear {
+		t.Fatalf("a big zone up close: size %g, want at most %g", big.Style.Size, zoneLabelNear)
 	}
 }
 

@@ -50,7 +50,7 @@ func (r *Renderer) animalMirrored(an game.AnimalView) bool {
 // animalResting reports an animal drawn lying down: a sleeper standing
 // still, once its body player has passed the neutral hold (animalShow).
 func (r *Renderer) animalResting(an game.AnimalView) bool {
-	return r.animalShow(an).rest
+	return r.animalShow(an).Rest
 }
 
 // animalRestFallback is true when a resting animal has no rest sprite and
@@ -186,7 +186,7 @@ const (
 // animalBody is one animal's walk phase and idle pose player, kept on its
 // motion track (moTrack.body), advanced once per animT (a draw).
 type animalBody struct {
-	ok     bool
+	Ok     bool
 	t      float64 // animT of the last advance
 	stride float64 // stride at t
 	ph     float64 // walk phase, cycles
@@ -201,10 +201,10 @@ type animalBody struct {
 
 // bodyShow is what the body player shows this draw.
 type bodyShow struct {
-	suffix string // "", "_walkNN", "_graze1" or "_graze2"
-	rest   bool   // lying (the rest frame)
-	walk   bool
-	ph     float64 // walk phase, while walk
+	Suffix string // "", "_walkNN", "_graze1" or "_graze2"
+	Rest   bool   // lying (the rest frame)
+	Walk   bool
+	Ph     float64 // walk phase, while walk
 }
 
 // bodyWant is the pose class an animal's view asks for.
@@ -248,7 +248,7 @@ func (r *Renderer) animalShow(an game.AnimalView) bodyShow {
 	b := &k.Body
 	want := bodyWant(an, m)
 	switch {
-	case !b.ok || t < b.t-1:
+	case !b.Ok || t < b.t-1:
 		b.start(an.ID, want, m, t)
 	case t > b.t:
 		b.advance(an.ID, want, m, r.animalGait(an), t)
@@ -260,7 +260,7 @@ func (r *Renderer) animalShow(an game.AnimalView) bodyShow {
 // as if it had held it a while (a capture's single frame shows it), a
 // grazer somewhere inside its bout.
 func (b *animalBody) start(id entity.EntityID, want bodyCls, m moveState, t float64) {
-	*b = animalBody{ok: true, t: t, stride: m.Stride, since: t - bodyNeutralHold}
+	*b = animalBody{Ok: true, t: t, stride: m.Stride, since: t - bodyNeutralHold}
 	switch want {
 	case clsWalk:
 		b.stage, b.ph = stWalk, walkStartPhase
@@ -398,13 +398,13 @@ func (b *animalBody) settle(dt float64) bool {
 func (b *animalBody) show() bodyShow {
 	switch b.stage {
 	case stWalk:
-		return bodyShow{suffix: trotSuffix(b.ph), walk: true, ph: b.ph}
+		return bodyShow{Suffix: trotSuffix(b.ph), Walk: true, Ph: b.ph}
 	case stReach, stRise:
-		return bodyShow{suffix: "_graze1"}
+		return bodyShow{Suffix: "_graze1"}
 	case stDown:
-		return bodyShow{suffix: "_graze2"}
+		return bodyShow{Suffix: "_graze2"}
 	case stRest:
-		return bodyShow{rest: true}
+		return bodyShow{Rest: true}
 	}
 	return bodyShow{}
 }
@@ -445,18 +445,18 @@ func staticShow(an game.AnimalView, m moveState, t, g float64) bodyShow {
 	switch bodyWant(an, m) {
 	case clsWalk:
 		ph := walkStartPhase + m.Stride/g
-		return bodyShow{suffix: trotSuffix(ph), walk: true, ph: ph}
+		return bodyShow{Suffix: trotSuffix(ph), Walk: true, Ph: ph}
 	case clsRest:
-		return bodyShow{rest: true}
+		return bodyShow{Rest: true}
 	case clsGraze:
 		down, look := float64(grazeDown(an.ID, 0)), float64(grazeLook(an.ID, 0))
 		period := down + look + 2*bodyReachTicks
 		u := math.Mod(t+hash01(uint64(an.ID), 0x67a2e)*period, period)
 		switch {
 		case u < bodyReachTicks || (u >= bodyReachTicks+down && u < 2*bodyReachTicks+down):
-			return bodyShow{suffix: "_graze1"}
+			return bodyShow{Suffix: "_graze1"}
 		case u < bodyReachTicks+down:
-			return bodyShow{suffix: "_graze2"}
+			return bodyShow{Suffix: "_graze2"}
 		}
 	}
 	return bodyShow{}

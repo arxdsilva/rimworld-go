@@ -37,8 +37,8 @@ type bridgeCache struct {
 	cells map[[2]int]bool
 }
 
-// sync returns the bridge cells of w; a zero StructVer rebuilds always.
-func (c *bridgeCache) sync(w game.WorldView) map[[2]int]bool {
+// Sync returns the bridge cells of w; a zero StructVer rebuilds always.
+func (c *bridgeCache) Sync(w game.WorldView) map[[2]int]bool {
 	if c.built && w.StructVer != 0 && w.StructVer == c.ver {
 		return c.cells
 	}
@@ -55,7 +55,7 @@ func (c *bridgeCache) sync(w game.WorldView) map[[2]int]bool {
 // bridgeCells is the set of bridge cells of w (uncached; tests, one-offs).
 func bridgeCells(w game.WorldView) map[[2]int]bool {
 	var c bridgeCache
-	return c.sync(w)
+	return c.Sync(w)
 }
 
 // bridgeWet reports (x, y) is water, marsh or mud: a side that bridge
@@ -126,7 +126,7 @@ func (r *Renderer) drawFoundation(screen *ebiten.Image, w game.WorldView, sw, sh
 	if r.lod.tier != lodLive || r.art == nil { // baked below 48 px (lod.go)
 		return
 	}
-	set := r.bridges.sync(w)
+	set := r.bridges.Sync(w)
 	if len(set) == 0 {
 		return
 	}

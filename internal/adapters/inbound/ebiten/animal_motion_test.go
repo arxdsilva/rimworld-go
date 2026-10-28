@@ -98,10 +98,10 @@ func TestAnimalFeetStayPlanted(t *testing.T) {
 		var dist float64
 		for i := 1; i < len(s); i++ {
 			a, b := s[i-1], s[i]
-			if !a.show.walk || !b.show.walk || !math.IsInf(b.m.Left, 1) || a.m.Blend < 1 || b.m.Blend < 1 {
+			if !a.show.Walk || !b.show.Walk || !math.IsInf(b.m.Left, 1) || a.m.Blend < 1 || b.m.Blend < 1 {
 				continue // starting, steering onto the stop, or stopped
 			}
-			dS, dPh := b.m.Stride-a.m.Stride, b.show.ph-a.show.ph
+			dS, dPh := b.m.Stride-a.m.Stride, b.show.Ph-a.show.Ph
 			if drift := dS - c.gait*dPh; math.Abs(drift) > 1e-9 {
 				t.Fatalf("%s: a planted foot drifts %.2g tiles at t=%.1f (dS %.4f, dph %.4f)", c.species, drift, b.t, dS, dPh)
 			}
@@ -143,18 +143,18 @@ func TestAnimalWalkStartsAndStopsOnNeutralFrames(t *testing.T) {
 				for i := 1; i < len(s); i++ {
 					a, b := s[i-1], s[i]
 					switch {
-					case !a.show.walk && b.show.walk:
+					case !a.show.Walk && b.show.Walk:
 						starts++
 						if b.frame != "_walk03" {
 							t.Fatalf("gait %v %dx n=%d: the walk starts on %s", gait, tpf, n, b.frame)
 						}
-					case a.show.walk && !b.show.walk:
+					case a.show.Walk && !b.show.Walk:
 						stops++
-						if !neutralFrame(a.show.ph) {
-							t.Fatalf("gait %v %dx n=%d: stopped from mid-stride %s (phase %.3f)", gait, tpf, n, a.frame, a.show.ph)
+						if !neutralFrame(a.show.Ph) {
+							t.Fatalf("gait %v %dx n=%d: stopped from mid-stride %s (phase %.3f)", gait, tpf, n, a.frame, a.show.Ph)
 						}
-					case a.show.walk && b.show.walk:
-						if d := b.show.ph - a.show.ph; d < 0 || d > maxPhasePerDraw+1e-9 {
+					case a.show.Walk && b.show.Walk:
+						if d := b.show.Ph - a.show.Ph; d < 0 || d > maxPhasePerDraw+1e-9 {
 							t.Fatalf("gait %v %dx n=%d: the phase jumps %.3f", gait, tpf, n, d)
 						}
 					}
@@ -178,7 +178,7 @@ func TestAnimalStopLandsWithTheBody(t *testing.T) {
 		if s[i-1].m.Blend >= minBlend && s[i].m.Blend < minBlend {
 			stopped = s[i].t
 		}
-		if stopped >= 0 && s[i-1].show.walk && !s[i].show.walk {
+		if stopped >= 0 && s[i-1].show.Walk && !s[i].show.Walk {
 			if d := s[i].t - stopped; d > 2 {
 				t.Fatalf("the legs finished %.0f ticks after the body stopped", d)
 			}
@@ -196,10 +196,10 @@ func TestAnimalWalkCappedAtSixTimes(t *testing.T) {
 	s := driveGait(r, 6, 80, []float64{0})
 	capped := false
 	for i := 1; i < len(s); i++ {
-		if !s[i-1].show.walk || !s[i].show.walk {
+		if !s[i-1].show.Walk || !s[i].show.Walk {
 			continue
 		}
-		d := s[i].show.ph - s[i-1].show.ph
+		d := s[i].show.Ph - s[i-1].show.Ph
 		if d > maxPhasePerDraw+1e-9 {
 			t.Fatalf("6x: the walk advanced %.3f cycles in one draw", d)
 		}
@@ -286,7 +286,7 @@ func frameRuns(s []gaitSample, frameOf func(gaitSample) string) []frameRun {
 }
 
 func bodyFrame(x gaitSample) string {
-	if x.show.rest {
+	if x.show.Rest {
 		return "rest"
 	}
 	return x.frame
@@ -461,7 +461,7 @@ func TestAnimalPoseStartsInItsClass(t *testing.T) {
 		t.Fatalf("a grazer first drawn shows %q, want its head down", f)
 	}
 	r.settleVisuals()
-	if k := r.mo.Tracks[entity.EntityID(7)]; k == nil || k.Body.ok {
+	if k := r.mo.Tracks[entity.EntityID(7)]; k == nil || k.Body.Ok {
 		t.Fatal("settle keeps the body player")
 	}
 	if f := r.animalFrame(an); f != "_graze2" {

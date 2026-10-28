@@ -27,29 +27,29 @@ const waterFrameTicks = 45
 
 // waterRenderer is the shader state the Renderer keeps between frames.
 type waterRenderer struct {
-	shader *ebiten.Shader
-	err    error
+	Shader *ebiten.Shader
+	Err    error
 	verts  [4]ebiten.Vertex
 	opts   ebiten.DrawTrianglesShaderOptions
 	time   []float32 // the Time uniform, reused
-	// simple draws still baked frames instead of the ripple shader.
-	simple bool
-	// onDraw, when set (tests), sees every water draw: shader true when it
+	// Simple draws still baked frames instead of the ripple shader.
+	Simple bool
+	// OnDraw, when set (tests), sees every water draw: shader true when it
 	// went through water.kage.
-	onDraw func(key string, shader bool)
+	OnDraw func(key string, shader bool)
 }
 
 // waterShader is water.kage, compiled on first use; nil when it fails.
 func (r *Renderer) waterShader() *ebiten.Shader {
-	if r.water.shader == nil && r.water.err == nil {
-		r.water.shader, r.water.err = ebiten.NewShader(waterKage)
+	if r.water.Shader == nil && r.water.Err == nil {
+		r.water.Shader, r.water.Err = ebiten.NewShader(waterKage)
 	}
-	return r.water.shader
+	return r.water.Shader
 }
 
 // waterStill reports water that does not move: Reduced Motion, or simple
 // water.
-func (r *Renderer) waterStill() bool { return r.reducedMotion || r.water.simple }
+func (r *Renderer) waterStill() bool { return r.reducedMotion || r.water.Simple }
 
 // waterClock is the Time uniform in seconds: the presentation clock at 60
 // frames a second, 0 (still) with Reduced Motion or simple water.
@@ -77,13 +77,13 @@ func (r *Renderer) waterFrameKey(t string, x, y int) string {
 func (r *Renderer) drawWaterTile(screen *ebiten.Image, t string, x, y int, tile float64, sw, sh int, cs colorScale) {
 	wx, wy := float64(x), float64(y)
 	var sh0 *ebiten.Shader
-	if !r.water.simple { // simple water never compiles the ripple shader
+	if !r.water.Simple { // simple water never compiles the ripple shader
 		sh0 = r.waterShader()
 	}
 	if sh0 == nil || r.cast != nil { // the baked frame, drawn like any ground tile
 		key := r.waterFrameKey(t, x, y)
-		if r.water.onDraw != nil {
-			r.water.onDraw(key, false)
+		if r.water.OnDraw != nil {
+			r.water.OnDraw(key, false)
 		}
 		r.drawTile(screen, key, wx, wy, tile, sw, sh, cs)
 		return
@@ -100,8 +100,8 @@ func (r *Renderer) drawWaterTile(screen *ebiten.Image, t string, x, y int, tile 
 		r.drawTile(screen, key, wx, wy, tile, sw, sh, cs) // missing art: the tinted fallback
 		return
 	}
-	if r.water.onDraw != nil {
-		r.water.onDraw(key, true)
+	if r.water.OnDraw != nil {
+		r.water.OnDraw(key, true)
 	}
 	k := size / float64(img.Bounds().Dx())
 	geo := ebiten.GeoM{}

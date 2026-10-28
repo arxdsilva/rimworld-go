@@ -82,14 +82,14 @@ func TestFireClustersOnePerBlaze(t *testing.T) {
 func TestStrikeFlashAndThunder(t *testing.T) {
 	r := &Renderer{present: 100}
 	r.onSimStrike(5, 6, 4000)
-	if !r.env.flashSeen || r.env.flashAt != 100 {
+	if !r.env.FlashSeen || r.env.FlashAt != 100 {
 		t.Errorf("flash %+v", r.env)
 	}
 	if r.thunderAt <= 100 {
 		t.Errorf("thunder at %d, want after the flash", r.thunderAt)
 	}
 	cues := r.takeCues()
-	if len(cues) != 1 || cues[0].id != "sfx.lightning_strike" || cues[0].x != 5.5 {
+	if len(cues) != 1 || cues[0].ID != "sfx.lightning_strike" || cues[0].X != 5.5 {
 		t.Errorf("cues %+v", cues)
 	}
 }
@@ -174,7 +174,7 @@ func TestBlazeAmbiencePerCluster(t *testing.T) {
 	a.colonyAmbience(want)
 	n := 0
 	for k, l := range want {
-		if l.id == "amb.fire" {
+		if l.ID == "amb.fire" {
 			n++
 			_ = k
 		}
@@ -186,7 +186,7 @@ func TestBlazeAmbiencePerCluster(t *testing.T) {
 	want = map[string]loopWant{}
 	a.colonyAmbience(want)
 	for _, l := range want {
-		if l.id == "amb.fire" {
+		if l.ID == "amb.fire" {
 			t.Fatal("silence after the fire is out")
 		}
 	}
@@ -255,7 +255,7 @@ func TestShowStrikesOncePerStrikeAndNotOldOnes(t *testing.T) {
 	r.showStrikes(w)
 	r.showStrikes(w) // the same view again: no second crack
 	cues := r.takeCues()
-	if len(cues) != 1 || cues[0].x != 2.5 || cues[0].y != 3.5 {
+	if len(cues) != 1 || cues[0].X != 2.5 || cues[0].Y != 3.5 {
 		t.Fatalf("cues %+v: want one crack, at the fresh strike", cues)
 	}
 }

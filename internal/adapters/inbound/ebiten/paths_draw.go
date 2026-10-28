@@ -21,12 +21,12 @@ type pathSeg struct{ ax, ay, bx, by float32 }
 // pawnPathPlan is what to draw for one colonist, in screen pixels.
 type pawnPathPlan struct {
 	id           uint64
-	drafted      bool
-	selected     bool
-	segs         []pathSeg // dashes, already culled to the screen
-	hasGoal      bool
+	Drafted      bool
+	Selected     bool
+	Segs         []pathSeg // dashes, already culled to the screen
+	HasGoal      bool
 	gx, gy       float32
-	hasDrop      bool
+	HasDrop      bool
 	dx, dy       float32
 	fromX, fromY float32
 	hasFrom      bool
@@ -49,7 +49,7 @@ func planPaths(pawns []game.PawnView, selected uint64, hasSelected bool, zoom fl
 		if p.Hostile || p.Embodied || len(p.Path) == 0 {
 			continue
 		}
-		pl := pawnPathPlan{id: uint64(p.ID), drafted: p.Drafted, selected: hasSelected && uint64(p.ID) == selected}
+		pl := pawnPathPlan{id: uint64(p.ID), Drafted: p.Drafted, Selected: hasSelected && uint64(p.ID) == selected}
 		cx, cy := pos(p)
 		prevX, prevY := toScreen(cx+0.5, cy+0.5)
 		lastX, lastY := prevX, prevY
@@ -60,26 +60,26 @@ func planPaths(pawns []game.PawnView, selected uint64, hasSelected bool, zoom fl
 			if zoom < pathMinZoom || !segOnScreen(s, sw, sh) {
 				continue
 			}
-			if !p.Drafted && !pl.selected { // dotted: the first 60% of each cell step
+			if !p.Drafted && !pl.Selected { // dotted: the first 60% of each cell step
 				s.bx = s.ax + (s.bx-s.ax)*0.6
 				s.by = s.ay + (s.by-s.ay)*0.6
 			}
-			pl.segs = append(pl.segs, s)
+			pl.Segs = append(pl.Segs, s)
 		}
 		gx, gy := lastX, lastY
 		if p.HasGoal {
 			gx, gy = toScreen(float64(p.GoalX)+0.5, float64(p.GoalY)+0.5)
-			pl.hasGoal, pl.gx, pl.gy = true, gx, gy
+			pl.HasGoal, pl.gx, pl.gy = true, gx, gy
 		}
 		if p.HasDrop {
-			pl.hasDrop = true
+			pl.HasDrop = true
 			pl.dx, pl.dy = toScreen(float64(p.DropX)+0.5, float64(p.DropY)+0.5)
 		}
-		if len(pl.segs) == 0 && !pl.hasGoal && !pl.hasDrop {
+		if len(pl.Segs) == 0 && !pl.HasGoal && !pl.HasDrop {
 			continue
 		}
-		if pl.hasGoal && !(gx >= -16 && gy >= -16 && gx <= float32(sw)+16 && gy <= float32(sh)+16) &&
-			len(pl.segs) == 0 && !pl.hasDrop {
+		if pl.HasGoal && !(gx >= -16 && gy >= -16 && gx <= float32(sw)+16 && gy <= float32(sh)+16) &&
+			len(pl.Segs) == 0 && !pl.HasDrop {
 			continue
 		}
 		out = append(out, pl)
@@ -106,7 +106,7 @@ func (r *Renderer) drawPaths(screen *ebiten.Image, sw, sh int, tile float64) {
 			if !match(pl) {
 				continue
 			}
-			for _, s := range pl.segs {
+			for _, s := range pl.Segs {
 				path.MoveTo(s.ax, s.ay)
 				path.LineTo(s.bx, s.by)
 				any = true
@@ -116,25 +116,25 @@ func (r *Renderer) drawPaths(screen *ebiten.Image, sw, sh int, tile float64) {
 			vector.StrokePath(screen, &path, &vector.StrokeOptions{Width: w}, &vector.DrawPathOptions{AntiAlias: true, ColorScale: colorScaleOf(c)})
 		}
 	}
-	style(func(p pawnPathPlan) bool { return !p.drafted && !p.selected }, th, color.NRGBA{255, 255, 255, 140})
-	style(func(p pawnPathPlan) bool { return p.drafted && !p.selected }, th*5/3, color.NRGBA{232, 90, 70, 217})
-	style(func(p pawnPathPlan) bool { return p.selected }, th*4/3, color.NRGBA{255, 255, 255, 235})
+	style(func(p pawnPathPlan) bool { return !p.Drafted && !p.Selected }, th, color.NRGBA{255, 255, 255, 140})
+	style(func(p pawnPathPlan) bool { return p.Drafted && !p.Selected }, th*5/3, color.NRGBA{232, 90, 70, 217})
+	style(func(p pawnPathPlan) bool { return p.Selected }, th*4/3, color.NRGBA{255, 255, 255, 235})
 	rad := float32(max(3*screenDev(), tile*0.16))
 	for _, pl := range plans {
 		c := color.NRGBA{255, 255, 255, 150}
 		switch {
-		case pl.selected:
+		case pl.Selected:
 			c = color.NRGBA{255, 255, 255, 240}
-		case pl.drafted:
+		case pl.Drafted:
 			c = color.NRGBA{232, 90, 70, 230}
 		}
-		if pl.hasGoal {
-			if pl.drafted {
+		if pl.HasGoal {
+			if pl.Drafted {
 				vector.FillCircle(screen, pl.gx, pl.gy, rad*0.8, c, true)
 			}
 			vector.StrokeCircle(screen, pl.gx, pl.gy, rad, th, c, true)
 		}
-		if pl.hasDrop {
+		if pl.HasDrop {
 			vector.StrokeRect(screen, pl.dx-rad, pl.dy-rad, rad*2, rad*2, th, c, false)
 		}
 	}

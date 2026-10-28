@@ -32,14 +32,14 @@ const (
 )
 
 type soundDirector struct {
-	frame uint64
+	Frame uint64
 	last  map[string]uint64 // frame each id last played
 	loops map[string]string // live loop emitter -> sound id
 }
 
 type loopWant struct {
-	id       string
-	vol, pan float64
+	ID       string
+	Vol, Pan float64
 }
 
 // zoomNear is the zoom at or closer than which effects play at full
@@ -95,13 +95,13 @@ func spatial(r *Renderer, x, y float64, v viewport) (vol, pan float64, ok bool) 
 // play rate-limits one sound id.
 func (a *App) play(id string, vol, pan float64) {
 	d := &a.snd
-	if last, ok := d.last[id]; ok && d.frame-last < cueGap {
+	if last, ok := d.last[id]; ok && d.Frame-last < cueGap {
 		return
 	}
 	if d.last == nil {
 		d.last = map[string]uint64{}
 	}
-	d.last[id] = d.frame
+	d.last[id] = d.Frame
 	a.cfg.Sound.Play(id, vol, pan)
 }
 
@@ -146,7 +146,7 @@ func (a *App) sliderCue(sp sliderSpec, lo, hi, old, cur float64) {
 // soundFrame runs the director once per Update.
 func (a *App) soundFrame() {
 	d := &a.snd
-	d.frame++
+	d.Frame++
 	want := map[string]loopWant{}
 	snd := a.cfg.Sound
 	if a.nav.screen() == screenColony && a.renderer != nil {
@@ -163,9 +163,9 @@ func (a *App) soundFrame() {
 		snd.Music(available(snd, track), vol)
 	} else {
 		if snd.Has("amb.night") {
-			want["menu:night"] = loopWant{id: "amb.night", vol: menuNightVol}
+			want["menu:night"] = loopWant{ID: "amb.night", Vol: menuNightVol}
 		}
-		want["menu:fire"] = loopWant{id: "amb.campfire", vol: menuFireVol}
+		want["menu:fire"] = loopWant{ID: "amb.campfire", Vol: menuFireVol}
 		track := trackMenu
 		if !snd.Has(trackMenu) {
 			track = trackCalm
@@ -195,11 +195,11 @@ func (a *App) setLoops(want map[string]loopWant) {
 	}
 	d.loops = map[string]string{}
 	for key, w := range want {
-		if !snd.Has(w.id) {
+		if !snd.Has(w.ID) {
 			continue
 		}
-		snd.Loop(key, w.id, w.vol, w.pan)
-		d.loops[key] = w.id
+		snd.Loop(key, w.ID, w.Vol, w.Pan)
+		d.loops[key] = w.ID
 	}
 }
 
@@ -217,17 +217,17 @@ func (a *App) colonyCues() {
 	}
 	var near []placed
 	for _, c := range r.takeCues() {
-		if c.global {
-			a.play(c.id, c.vol, 0)
+		if c.Global {
+			a.play(c.ID, c.Vol, 0)
 			continue
 		}
-		vol, pan, ok := spatial(r, c.x, c.y, v)
+		vol, pan, ok := spatial(r, c.X, c.Y, v)
 		if !ok {
 			continue
 		}
-		sx, sy := r.worldToScreenF(c.x, c.y)
+		sx, sy := r.worldToScreenF(c.X, c.Y)
 		dist := math.Hypot(float64(sx)-(v.X0+v.X1)/2, float64(sy)-(v.Y0+v.Y1)/2)
-		near = append(near, placed{c.id, vol * c.vol, pan, dist})
+		near = append(near, placed{c.ID, vol * c.Vol, pan, dist})
 	}
 	sort.SliceStable(near, func(i, j int) bool { return near[i].dist < near[j].dist })
 	if r.speed == speedVeryFast && len(near) > cueFastNear {
@@ -285,16 +285,16 @@ func (a *App) colonyAmbience(want map[string]loopWant) {
 	if winter {
 		birds = 0.6
 	}
-	want["amb.day"] = loopWant{id: "amb.day", vol: day * (1 - 0.5*rain) * birds * inside}
+	want["amb.day"] = loopWant{ID: "amb.day", Vol: day * (1 - 0.5*rain) * birds * inside}
 	crickets := 1.0
 	if winter || w.OutdoorTemp <= 80 {
 		crickets = 0
 	}
-	want["amb.night"] = loopWant{id: "amb.night", vol: (1 - day) * (1 - 0.5*rain) * crickets * inside}
-	want["amb.rain"] = loopWant{id: "amb.rain", vol: rain * inside}
+	want["amb.night"] = loopWant{ID: "amb.night", Vol: (1 - day) * (1 - 0.5*rain) * crickets * inside}
+	want["amb.rain"] = loopWant{ID: "amb.rain", Vol: rain * inside}
 	water, shore := r.waterOnScreen(w, v)
-	want["amb.water_river"] = loopWant{id: "amb.water_river", vol: math.Min(1, water*waterRiverGain) * inside}
-	want["amb.water_shore"] = loopWant{id: "amb.water_shore", vol: math.Min(1, shore*waterShoreGain) * inside}
+	want["amb.water_river"] = loopWant{ID: "amb.water_river", Vol: math.Min(1, water*waterRiverGain) * inside}
+	want["amb.water_shore"] = loopWant{ID: "amb.water_shore", Vol: math.Min(1, shore*waterShoreGain) * inside}
 	type fire struct {
 		key      string
 		vol, pan float64
@@ -314,12 +314,12 @@ func (a *App) colonyAmbience(want map[string]loopWant) {
 		if i == 2 {
 			break
 		}
-		want[f.key] = loopWant{id: "amb.campfire", vol: f.vol, pan: f.pan}
+		want[f.key] = loopWant{ID: "amb.campfire", Vol: f.vol, Pan: f.pan}
 	}
 	r.blazeAmbience(want, w, v)
 	r.machineAmbience(want, w, v)
 	for key, l := range want { // drop silent beds instead of keeping them at 0
-		if l.vol <= 0.001 {
+		if l.Vol <= 0.001 {
 			delete(want, key)
 		}
 	}
@@ -395,7 +395,7 @@ func (r *Renderer) machineAmbience(want map[string]loopWant, w game.WorldView, v
 			continue
 		}
 		count[h.id]++
-		want[h.key] = loopWant{id: h.id, vol: h.vol, pan: h.pan}
+		want[h.key] = loopWant{ID: h.id, Vol: h.vol, Pan: h.pan}
 	}
 }
 

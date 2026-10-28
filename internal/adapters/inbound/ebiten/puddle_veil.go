@@ -184,17 +184,17 @@ func puddleSky(l lightState) [4]float32 {
 // ground and under the grass tufts, at every zoom tier.
 func (r *Renderer) drawPuddleVeil(screen *ebiten.Image, w game.WorldView, sw, sh int, tile float64) {
 	sc := &r.snowc
-	sc.wetDraws = 0
+	sc.WetDraws = 0
 	if wetBucket(w.Wetness) == 0 {
 		return
 	}
 	r.setView(sw, sh, tile)
-	r.env.setWeather(w) // the bake reads its snow
+	r.env.SetWeather(w) // the bake reads its snow
 	col := puddleSky(r.lit.Light)
 	r.eachSnowChunk(w, tile, true, func(c *snowChunk, cx, cy, tx0, ty0, tx1, ty1 int) {
 		if c.anyWet && c.wetImg != nil {
-			r.drawChunkMask(screen, c.wetImg, c.wetPx, cx, cy, tx0, ty0, tx1, ty1, tile, col)
-			sc.wetDraws++
+			r.drawChunkMask(screen, c.wetImg, c.WetPx, cx, cy, tx0, ty0, tx1, ty1, tile, col)
+			sc.WetDraws++
 		}
 	})
 }
@@ -203,17 +203,17 @@ func (r *Renderer) drawPuddleVeil(screen *ebiten.Image, w game.WorldView, sw, sh
 // off the chunks baked so far.
 func (r *Renderer) puddleAt(fx, fy float64) float64 {
 	sc := &r.snowc
-	if sc.chunks == nil || fx < 0 || fy < 0 || fx >= float64(sc.w) || fy >= float64(sc.h) {
+	if sc.Chunks == nil || fx < 0 || fy < 0 || fx >= float64(sc.w) || fy >= float64(sc.h) {
 		return 0
 	}
 	cx, cy := int(fx)/snowChunkTiles, int(fy)/snowChunkTiles
-	c := sc.chunks[cy*((sc.w+snowChunkTiles-1)/snowChunkTiles)+cx]
-	if c == nil || c.pud == nil {
+	c := sc.Chunks[cy*((sc.w+snowChunkTiles-1)/snowChunkTiles)+cx]
+	if c == nil || c.Pud == nil {
 		return 0
 	}
-	tx := snowPad + int((fx-float64(cx*snowChunkTiles))*float64(c.wetPx))
-	ty := snowPad + int((fy-float64(cy*snowChunkTiles))*float64(c.wetPx))
-	return float64(c.pud[ty*wetImgW(c.wetPx)+tx]) / 255
+	tx := snowPad + int((fx-float64(cx*snowChunkTiles))*float64(c.WetPx))
+	ty := snowPad + int((fy-float64(cy*snowChunkTiles))*float64(c.WetPx))
+	return float64(c.Pud[ty*wetImgW(c.WetPx)+tx]) / 255
 }
 
 // --- the bake -----------------------------------------------------------------
@@ -272,14 +272,14 @@ func (r *Renderer) prepareWet(wb *wetBake, w *game.WorldView, open []bool, mw, m
 	if !any {
 		return
 	}
-	wb.fillLattices(float64(ox), float64(oy), float64(ox+snowRing), float64(oy+snowRing), puddleSalt(mw, mh))
+	wb.FillLattices(float64(ox), float64(oy), float64(ox+snowRing), float64(oy+snowRing), puddleSalt(mw, mh))
 	e := &r.env
 	for ry := 0; ry <= snowRing; ry++ {
 		for rx := 0; rx <= snowRing; rx++ {
 			x, y := ox+rx, oy+ry
 			k := ry*(snowRing+1) + rx
-			wb.field[k] = wb.relief(float64(x), float64(y))
-			wb.snow[k] = e.snowCorner(x, y)
+			wb.field[k] = wb.Relief(float64(x), float64(y))
+			wb.snow[k] = e.SnowCorner(x, y)
 		}
 	}
 	// a tile whose relief stays over the level, or under deep snow at
@@ -303,9 +303,9 @@ func (r *Renderer) prepareWet(wb *wetBake, w *game.WorldView, open []bool, mw, m
 	}
 }
 
-// fillLattices caches each octave's lattice over world rectangle
+// FillLattices caches each octave's lattice over world rectangle
 // [x0, x1] × [y0, y1].
-func (wb *wetBake) fillLattices(x0, y0, x1, y1 float64, salt uint64) {
+func (wb *wetBake) FillLattices(x0, y0, x1, y1 float64, salt uint64) {
 	for i := range puddleOctaves {
 		o := &puddleOctaves[i]
 		lx0, ly0, lx1, ly1 := math.Inf(1), math.Inf(1), math.Inf(-1), math.Inf(-1)
@@ -317,9 +317,9 @@ func (wb *wetBake) fillLattices(x0, y0, x1, y1 float64, salt uint64) {
 	}
 }
 
-// relief is the relief at world point (fx, fy), from the cached
+// Relief is the Relief at world point (fx, fy), from the cached
 // lattices (puddleField's value).
-func (wb *wetBake) relief(fx, fy float64) float64 {
+func (wb *wetBake) Relief(fx, fy float64) float64 {
 	f := 0.0
 	for i := range puddleOctaves {
 		o := &puddleOctaves[i]
@@ -367,7 +367,7 @@ func (wb *wetBake) wet(rx, ry int) bool { return wb.pools && !wb.dry[ry*snowRing
 // height is the relief at (u, v) of ring tile (rx, ry), raised toward
 // ground that takes no water so a shore curves away from it.
 func (wb *wetBake) height(rx, ry int, u, v float64) float64 {
-	g := wb.relief(float64(wb.ox+rx)+u, float64(wb.oy+ry)+v)
+	g := wb.Relief(float64(wb.ox+rx)+u, float64(wb.oy+ry)+v)
 	if dw := wb.wallDist(rx, ry, u, v); dw < puddleWallReach {
 		t := 1 - dw/puddleWallReach
 		g += puddleWall * t * t * (3 - 2*t)
