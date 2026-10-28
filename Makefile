@@ -3,7 +3,11 @@ BIN_DIR  := bin
 CMDS     := game simulate benchmark replay contentlint
 
 .PHONY: all
-all: fmt vet lint test build
+all: fmt vet lint arch test build
+
+.PHONY: arch
+arch:  ## the SOLID guard (.cursor/SOLID_GO.md §8): type, interface and package size, init(), globals, import direction
+	go test -count=1 ./internal/arch/
 
 .PHONY: build
 build:

@@ -43,6 +43,8 @@ Ports are consumer-owned and narrow.
 
 **Enforced rule (SOLID: DIP + ISP):** any consumer of an adapter — and any adapter that consumes the application layer — must depend on a small interface describing only the behavior it calls, never the concrete type. Construct concrete types exclusively at the composition root (`cmd/*`) or at the point an adapter wires its own dependency; everywhere else, pass the interface. This makes every adapter (renderer, save format, path worker, future network layer, etc.) swappable without touching its consumers, and makes the consumer trivially fakeable in tests.
 
+S, O, L and the numeric limits (methods per type, fields, interface width, package size, no `init()` registration, no runtime-assigned package vars) live in `.cursor/SOLID_GO.md` and are enforced by `internal/arch/solid_test.go` (`make arch`); its budget file only shrinks.
+
 Prefer:
 
 ```go
@@ -116,6 +118,7 @@ Reject or request redesign when:
 - an interface has broad CRUD merely for abstraction;
 - mutable stores are exposed across the UI boundary;
 - a package becomes a dumping ground;
+- a change raises a line in `internal/arch/solid_budget.txt`, adds an `init()`, or adds a method to a type or interface already over its `.cursor/SOLID_GO.md` §8 limit instead of splitting it;
 - shared primitives are duplicated;
 - technology dictates domain modeling;
 - a new abstraction adds indirection without boundary value.

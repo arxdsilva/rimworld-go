@@ -25,11 +25,12 @@ Read in this order only as needed:
 6. relevant `docs/adr/*.md`
 7. `.cursor/HEXAGONAL_ARCHITECTURE.md`
 8. `.cursor/GO_BEST_PRACTICES.md`
-9. `.cursor/MASTER_SPEC.md` only when broader product intent is required
-10. `.cursor/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` when scoping/ordering a gameplay feature
-11. `.cursor/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` when scoping/ordering a UI feature
-12. `.cursor/MAIN_UI_SCREENS_SPECIFICATION.md` when implementing or changing a player-facing screen, window, overlay, or HUD layout (via skill `rimworld-go-ui-screens`; load named sections only)
-13. `.cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md` when the task produces or changes player-visible art, renderer presentation, UI chrome, or asset-pipeline tooling (via skill `rimworld-go-art-assets`; load named sections only)
+9. `.cursor/SOLID_GO.md` when a change adds methods or fields to an existing large type, declares an interface, adds a package-level var or `init()`, or creates or splits a package
+10. `.cursor/MASTER_SPEC.md` only when broader product intent is required
+11. `.cursor/RIMWORLD_GO_VANILLA_FEATURE_IMPLEMENTATION_CHECKLIST.md` when scoping/ordering a gameplay feature
+12. `.cursor/RIMWORLD_GO_UI_UX_IMPLEMENTATION_CHECKLIST.md` when scoping/ordering a UI feature
+13. `.cursor/MAIN_UI_SCREENS_SPECIFICATION.md` when implementing or changing a player-facing screen, window, overlay, or HUD layout (via skill `rimworld-go-ui-screens`; load named sections only)
+14. `.cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md` when the task produces or changes player-visible art, renderer presentation, UI chrome, or asset-pipeline tooling (via skill `rimworld-go-art-assets`; load named sections only)
 
 Token/context policy is defined by `.cursor/AI_TOKEN_OPTIMIZATION.md`.
 
@@ -39,6 +40,7 @@ Token/context policy is defined by `.cursor/AI_TOKEN_OPTIMIZATION.md`.
 |---|---|
 | New feature or domain behavior | `rimworld-go-feature` |
 | Package/dependency/interface design | `rimworld-go-hexagonal` |
+| Splitting a god type, growing `App`/`Renderer`/`Game`, a failing `internal/arch` guard | `rimworld-go-hexagonal` + `.cursor/SOLID_GO.md` |
 | Tick order, RNG, authoritative state, replay determinism | `rimworld-go-determinism` |
 | Hot loops, scale, allocations, data layout | `rimworld-go-performance` |
 | Paths, regions, movement, congestion | `rimworld-go-pathing` |

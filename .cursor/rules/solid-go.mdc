@@ -1,0 +1,16 @@
+---
+description: Recognize and follow the rimworld-go SOLID rule whenever a change adds a method or field to an existing type, declares an interface, adds a package-level var or init(), or creates or splits a package — the limits are enforced by the arch guard and budgets only shrink.
+alwaysApply: true
+---
+
+# SOLID guard recognition
+
+Type, interface and package size limits, no `init()` registration and no runtime-assigned package state are the rule in `.cursor/SOLID_GO.md`, enforced by `internal/arch/solid_test.go` (`make arch`). Follow skill `rimworld-go-hexagonal` for the design side.
+
+When that work is in scope:
+
+1. Read `.cursor/SOLID_GO.md` §8 (the limits) and §10 (how to split a god type) before adding to `App`, `Renderer`, `Game` or any type or package that has a line in `internal/arch/solid_budget.txt`.
+2. Put new state and behaviour on its own type with a consumer-owned interface (≤8 methods) and a constructor called from the composition root; register tables there, never from `init()`; a test hook is a field, not a global.
+3. Run `go test ./internal/arch/` before committing. A budget line is only ever lowered or deleted, in the same commit as the split that earns it; new code never gets a budget line.
+
+Skip this for tasks that touch no type, interface, package-level var or package layout.

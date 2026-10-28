@@ -6,6 +6,7 @@ All canonical specs, rules, and agent-facing data live in [`.cursor/`](.cursor/D
 - `.cursor/MASTER_SPEC.md` — product/system scope.
 - `.cursor/HEXAGONAL_ARCHITECTURE.md` — dependency direction, ports/adapters, repository ownership.
 - `.cursor/GO_BEST_PRACTICES.md` — mandatory Go engineering rules.
+- `.cursor/SOLID_GO.md` — SOLID applied to Go here: type, interface and package size limits, no `init()` registration, no mutable package state; enforced by `internal/arch/solid_test.go` (`make arch`), budgets in `solid_budget.txt` only shrink.
 - `.cursor/AI_TOKEN_OPTIMIZATION.md` — context/token discipline.
 - `.cursor/ART_DIRECTION_AND_ASSET_PIPELINE.md` — visual production, sprites, icons, UI chrome, and asset pipeline (load only when that work is in scope; playbook: `.cursor/skills/rimworld-go-art-assets/SKILL.md`).
 - `.cursor/MAIN_UI_SCREENS_SPECIFICATION.md` — per-screen layout, navigation, commands, and states (load only when a player-facing screen is in scope; playbook: `.cursor/skills/rimworld-go-ui-screens/SKILL.md`).
@@ -24,6 +25,7 @@ Non-negotiable rules:
 - All external mutations enter as typed commands.
 - UI/rendering never mutates domain state directly.
 - Any code that depends on an adapter, or an adapter that depends on the application layer, must depend on a small, consumer-owned interface (the behavior it needs), never the concrete type directly — construct concrete types only at the composition root. This is SOLID's Dependency Inversion Principle; keep each such interface single-purpose per the Interface Segregation Principle. See `.cursor/HEXAGONAL_ARCHITECTURE.md` §6.
+- Type, interface and package size limits (`.cursor/SOLID_GO.md` §8: ≤40 methods per type, ≤25 fields on a type with behaviour, ≤8 methods per interface, ≤12k lines / 60 files per package) are enforced by `go test ./internal/arch/`. Never raise a line in `internal/arch/solid_budget.txt`, only lower or delete one; register nothing from `init()`; no package-level var assigned at runtime outside the documented exceptions.
 - No global RNG or wall-clock time in authoritative gameplay.
 - Avoid global scans; use indexes, batching, sleeping, and invalidation.
 - Animals make full decisions every 60 ticks through the bucket index (`internal/application/game/animal_index.go`, `animal_needs.go`); never scan all creatures per tick. Biome data lives in `internal/domain/world/biome`, nature-event definitions in `internal/domain/incident`.

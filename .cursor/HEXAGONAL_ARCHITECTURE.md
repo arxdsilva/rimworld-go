@@ -887,7 +887,7 @@ Use real domain objects whenever cheap.
 
 # 31. Architecture Lint
 
-Create `tools/archlint`.
+The lint exists as a test: `internal/arch/solid_test.go` (`make arch`, run by CI with everything else) checks the import edges below plus the size limits of `SOLID_GO.md` §8. `tools/archlint` is not needed.
 
 Rules should reject:
 

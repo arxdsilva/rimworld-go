@@ -1,0 +1,69 @@
+# SOLID guard budget (.cursor/SOLID_GO.md §8): the debt the tree carried when the guard landed (ARCH-001, 2026-10-28).
+# One line per violation: 'rule key ceiling' for the size rules, 'rule key' for init/global/imports.
+# Lines only shrink: lower a ceiling when a split lands, delete a line when the debt is paid. Never add or raise one.
+
+# --- size rules ---
+fields rimworld-go/internal/adapters/inbound/ebiten.App 111
+fields rimworld-go/internal/adapters/inbound/ebiten.Renderer 74
+fields rimworld-go/internal/adapters/inbound/ebiten.envState 40
+fields rimworld-go/internal/adapters/inbound/ebiten.globeView 51
+fields rimworld-go/internal/adapters/inbound/ebiten.newGameState 43
+fields rimworld-go/internal/adapters/inbound/ebiten.uiState 32
+fields rimworld-go/internal/application/game.Game 152
+fields rimworld-go/internal/domain/animal.State 60
+fields rimworld-go/internal/domain/world/planet.Planet 33
+files rimworld-go/internal/adapters/inbound/ebiten 212
+files rimworld-go/internal/application/game 185
+iface rimworld-go/internal/adapters/inbound/ebiten.Simulation 32
+lines rimworld-go/internal/adapters/inbound/ebiten 64178
+lines rimworld-go/internal/application/game 57019
+methods rimworld-go/internal/adapters/inbound/ebiten.App 950
+methods rimworld-go/internal/adapters/inbound/ebiten.Renderer 398
+methods rimworld-go/internal/application/game.Game 2105
+methods rimworld-go/internal/domain/pawn/body.Body 99
+
+# --- init(): registration from the composition root instead (SOLID_GO.md §4) ---
+init rimworld-go/internal/adapters/inbound/ebiten/alerts_allies.go
+init rimworld-go/internal/adapters/inbound/ebiten/colony_ui.go
+init rimworld-go/internal/adapters/inbound/ebiten/environment.go
+init rimworld-go/internal/adapters/inbound/ebiten/screen_landing.go
+init rimworld-go/internal/adapters/inbound/ebiten/screen_menu.go
+init rimworld-go/internal/adapters/inbound/ebiten/screen_pawns.go
+init rimworld-go/internal/adapters/inbound/ebiten/screen_scenario.go
+init rimworld-go/internal/adapters/inbound/ebiten/screen_scenario_editor.go
+init rimworld-go/internal/adapters/inbound/ebiten/screen_storyteller.go
+init rimworld-go/internal/adapters/inbound/ebiten/screen_worldgen.go
+init rimworld-go/internal/adapters/inbound/ebiten/story_tab.go
+init rimworld-go/internal/domain/difficulty/difficulty.go
+init rimworld-go/internal/domain/faction/faction.go
+init rimworld-go/internal/domain/incident/incident.go
+init rimworld-go/internal/domain/pawn/trait/trait.go
+init rimworld-go/internal/domain/world/biome/biome.go
+
+# --- runtime-assigned package state: becomes a field of its owner (SOLID_GO.md §9) ---
+global rimworld-go/internal/adapters/inbound/ebiten.alertExplanations
+global rimworld-go/internal/adapters/inbound/ebiten.animalMarkTrace
+global rimworld-go/internal/adapters/inbound/ebiten.appBackground
+global rimworld-go/internal/adapters/inbound/ebiten.appWindow
+global rimworld-go/internal/adapters/inbound/ebiten.canvasTrace
+global rimworld-go/internal/adapters/inbound/ebiten.curUIScale
+global rimworld-go/internal/adapters/inbound/ebiten.drawTrace
+global rimworld-go/internal/adapters/inbound/ebiten.flakeKeys
+global rimworld-go/internal/adapters/inbound/ebiten.frostKeys
+global rimworld-go/internal/adapters/inbound/ebiten.screenUIs
+global rimworld-go/internal/adapters/inbound/ebiten.snowBankKeys
+global rimworld-go/internal/adapters/inbound/ebiten.snowDriftKeys
+global rimworld-go/internal/adapters/inbound/ebiten.splashKeys
+global rimworld-go/internal/adapters/inbound/ebiten.tracePass
+global rimworld-go/internal/adapters/inbound/ebiten.traceVia
+global rimworld-go/internal/adapters/inbound/ebiten.worldDefer
+global rimworld-go/internal/adapters/inbound/ebiten.worldPassK
+global rimworld-go/internal/application/game.indexSelfCheck
+global rimworld-go/internal/application/game.regionsOffAll
+global rimworld-go/internal/application/game.selfCheckEvery
+global rimworld-go/internal/domain/difficulty.presets
+global rimworld-go/internal/domain/faction.defs
+global rimworld-go/internal/domain/incident.defs
+global rimworld-go/internal/domain/pawn/social.memDefs
+global rimworld-go/internal/domain/pawn/trait.defs
+global rimworld-go/internal/domain/world/biome.defs

@@ -131,6 +131,8 @@ type WorldService interface {
 
 Do not create `Fooer` interfaces for every concrete type preemptively.
 
+Size limits for types, interfaces and packages, and the guard that enforces them: `SOLID_GO.md` §8.
+
 ---
 
 # 6. Accept Interfaces, Return Concrete Types
@@ -1303,7 +1305,8 @@ Project-specific static checks should catch:
 - global `math/rand` in authoritative packages;
 - forbidden imports;
 - `utils` packages;
-- generated code edits if detectable.
+- generated code edits if detectable;
+- type, interface and package size budgets, `init()` registration and runtime-assigned package vars (`internal/arch/solid_test.go`, `SOLID_GO.md` §8).
 
 ---
 

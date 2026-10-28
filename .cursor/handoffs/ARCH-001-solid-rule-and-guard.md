@@ -1,0 +1,18 @@
+# ARCH-001: SOLID rule and the arch guard
+
+## Why
+`internal/adapters/inbound/ebiten` is one package of 212 files / 64k lines whose code is almost entirely methods on two types (`App`: 111 fields, 950 methods over 126 files; `Renderer`: 74 fields, 398 methods over 64 files), with a 32-method sim port, eleven `init()` registrations and a handful of runtime-assigned package globals. `game.Game` is worse (152 fields, 2105 methods). Before the decomposition (ARCH-002…006) the user asked for a repository rule on SOLID in Go, enforced automatically, so the split's progress is measurable and nothing grows back.
+
+## What exists now
+- **`.cursor/SOLID_GO.md`** — the Go reading of S/O/L/I/D with a good/bad example from this codebase for each, the measurable limits (§8), the mutable-state rule (§9), the "how to split a god type" recipe (§10) and the don'ts (§11). DIP stays owned by `HEXAGONAL_ARCHITECTURE.md` §6; the doc only references it.
+- **`internal/arch/solid_test.go`** (`make arch`, also part of `make all` and of CI's `go test ./...`): parses every non-test Go file under `internal/` and `cmd/` (syntax only, one goroutine per package, ≈0.3 s) and checks `methods` ≤40 per type, `fields` ≤25 for a struct with ≥5 methods, `iface` ≤8 explicit methods, `lines` ≤12,000 and `files` ≤60 per package, no `init()`, no package-level var assigned at runtime (by production or test code; `sync`/`atomic` values and a `var (…)` group holding one are exempt), and the forbidden import edges (domain → adapters/application/platform/ports/ebiten/os; application and ports → adapters; outbound → inbound; an ebiten sub-package → the ebiten root).
+- **`internal/arch/solid_budget.txt`** — 60 lines of recorded debt (4 `methods`, 9 `fields`, 1 `iface`, 2 `lines`, 2 `files`, 16 `init`, 26 `global`, 0 `imports`). The ratchet (`judge`, covered by `ratchet_test.go`): growth over a ceiling fails, a ceiling more than max(2, 5 %) above the measurement fails ("lower it to N"), a paid debt whose line remains fails, a new violation fails with the line to paste. Lines only shrink.
+- Registration: `DOCUMENT_INDEX.md` (row + loading-order item 6), root `AGENTS.md` (spec bullet + non-negotiable), router skill (canonical list item 9 + routing row), hexagonal skill (pointer + review-checklist item), `.cursor/rules/solid-go.mdc`, cross-references in `GO_BEST_PRACTICES.md` §5/§88 and `HEXAGONAL_ARCHITECTURE.md` §31 (the never-built `tools/archlint` is now this test).
+
+## Findings while recording the budget
+- The `global` rule's first pass flagged mutex-guarded caches (`areaPaint`, `worldPlanets`, `fontFaces`, `chunkStates`, `scenario.memos`, `planet.meshF`, the stain/dirt atlases); those are legitimate per §9, so a `var (…)` group that declares a `sync`/`atomic` value, or an anonymous struct holding one, counts as guarded. The remaining 26 `global` lines are real: the ebiten canvas/scale/trace state, the test hooks set only by tests (`appBackground`, `appWindow`, `canvasTrace`, `drawTrace`, `animalMarkTrace`), the `init()`-filled art-key tables in `environment.go`, three test knobs in `game`, and the self-indexing domain def tables.
+- `applyClick` has 23 prefix arms (an earlier estimate said 25); the doc quotes 23.
+- Blind spots, documented in the test: methods gained through an alias in another package are not counted, an embedded interface hides its methods (by design), build-tagged files all count.
+
+## Next
+ARCH-002 (in-package preparation: shell facade, `render.View` seam, click router, screen table, mixed-file splits), then ARCH-003…006 per the plan. Every wave lowers budget lines in the same commit; a stale-ceiling failure is the signal a commit forgot.

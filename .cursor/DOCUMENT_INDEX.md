@@ -7,6 +7,7 @@ All paths below are relative to this `.cursor/` folder unless noted.
 | Product/game scope | `MASTER_SPEC.md` |
 | Hexagonal architecture and repo boundaries | `HEXAGONAL_ARCHITECTURE.md` |
 | Go standards/performance/concurrency | `GO_BEST_PRACTICES.md` |
+| SOLID in Go: type/interface/package size limits, splitting god types, the arch guard | `SOLID_GO.md` (guard: `internal/arch/solid_test.go`, `make arch`) |
 | Efficient AI context usage | `AI_TOKEN_OPTIMIZATION.md` |
 | Visual production, sprites, icons, UI chrome, asset pipeline | `ART_DIRECTION_AND_ASSET_PIPELINE.md` (playbook: `skills/rimworld-go-art-assets/SKILL.md`) |
 | Per-screen layout, navigation, commands, and states | `MAIN_UI_SCREENS_SPECIFICATION.md` (playbook: `skills/rimworld-go-ui-screens/SKILL.md`) |
@@ -29,6 +30,7 @@ Recommended agent loading order:
 3. package `AGENTS.md`;
 4. interfaces/tests;
 5. relevant system doc/ADR;
-6. named `ART_DIRECTION_AND_ASSET_PIPELINE.md` sections when visual/asset work is in scope;
-7. named `MAIN_UI_SCREENS_SPECIFICATION.md` sections when a player-facing screen is in scope;
-8. only then broader documents.
+6. `SOLID_GO.md` §8–§10 when a change adds methods or fields to `App`, `Renderer` or `Game`, declares an interface, adds a package-level var or `init()`, or creates or splits a package (`make arch` tells you);
+7. named `ART_DIRECTION_AND_ASSET_PIPELINE.md` sections when visual/asset work is in scope;
+8. named `MAIN_UI_SCREENS_SPECIFICATION.md` sections when a player-facing screen is in scope;
+9. only then broader documents.
