@@ -140,8 +140,8 @@ func TestGroupCommandRunsLegacyMembersOneByOne(t *testing.T) {
 	if len(got) != 3 || got[0].Pawn != 1 || got[1].Pawn != 2 || got[2].Pawn != 3 {
 		t.Fatalf("ClearOrders for each member: %+v", s.cmds)
 	}
-	if !a.grouped() || len(a.group.Ids) != 3 {
-		t.Fatalf("the group survives the click: %+v", a.group)
+	if !a.grouped() || len(a.sel.Group.Ids) != 3 {
+		t.Fatalf("the group survives the click: %+v", a.sel.Group)
 	}
 }
 
@@ -240,7 +240,7 @@ func TestGroupPaneListsTheMembers(t *testing.T) {
 		if b.ID == "group.pick.2" {
 			click(t, a, "group.pick.2")
 			if a.grouped() || !a.renderer.HasSelect() || a.renderer.Selected() != 2 {
-				t.Fatalf("a row selects only that colonist: group=%+v", a.group)
+				t.Fatalf("a row selects only that colonist: group=%+v", a.sel.Group)
 			}
 			return
 		}

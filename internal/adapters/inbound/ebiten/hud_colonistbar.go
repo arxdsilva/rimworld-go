@@ -335,7 +335,7 @@ func (a *App) cycleHiddenColonist() {
 			}
 		}
 	}
-	a.selectCand(selCand{selPawn, hidden[next].ID})
+	a.selectCand(selCand{Kind: selPawn, ID: hidden[next].ID})
 }
 
 // barPawns are the colonists the colonist bar shows: everyone but

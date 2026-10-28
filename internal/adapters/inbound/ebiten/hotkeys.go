@@ -219,7 +219,7 @@ func (a *App) cycleColonist(d int) {
 		i = (i + d + len(pawns)) % len(pawns)
 	}
 	p := pawns[i]
-	a.selectCand(selCand{selPawn, p.ID})
+	a.selectCand(selCand{Kind: selPawn, ID: p.ID})
 	a.centreOnPawn(p.ID)
 }
 
@@ -263,17 +263,17 @@ func (a *App) selectedTile() (int, int, bool) {
 func (a *App) selectedCand() (selCand, bool) {
 	switch {
 	case a.renderer.HasSelect():
-		return selCand{selPawn, a.renderer.Selected()}, true
-	case a.hasAnimal:
-		return selCand{selAnimal, a.selAnimal}, true
-	case a.hasItem:
-		return selCand{selItem, a.selItem}, true
-	case a.hasBuilding:
-		return selCand{selBuilding, a.selBuilding}, true
-	case a.hasPlant:
-		return selCand{selPlant, a.selPlant}, true
-	case a.hasFrame:
-		return selCand{selFrame, a.selFrame}, true
+		return selCand{Kind: selPawn, ID: a.renderer.Selected()}, true
+	case a.sel.HasAnimal:
+		return selCand{Kind: selAnimal, ID: a.sel.SelAnimal}, true
+	case a.sel.HasItem:
+		return selCand{Kind: selItem, ID: a.sel.SelItem}, true
+	case a.sel.HasBuilding:
+		return selCand{Kind: selBuilding, ID: a.sel.SelBuilding}, true
+	case a.sel.HasPlant:
+		return selCand{Kind: selPlant, ID: a.sel.SelPlant}, true
+	case a.sel.HasFrame:
+		return selCand{Kind: selFrame, ID: a.sel.SelFrame}, true
 	}
 	return selCand{}, false
 }
@@ -298,7 +298,7 @@ func (a *App) cycleCell() {
 	}
 	i = (i + 1) % len(cands)
 	a.selectCand(cands[i])
-	a.selCycle = selCycle{Tile: [2]int{tx, ty}, Idx: i, N: len(cands), Ok: true}
+	a.sel.Cycle = selCycle{Tile: [2]int{tx, ty}, Idx: i, N: len(cands), Ok: true}
 }
 
 // cameraInput gathers this frame's camera intent.

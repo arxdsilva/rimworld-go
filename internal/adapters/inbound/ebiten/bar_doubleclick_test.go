@@ -111,15 +111,15 @@ func TestBarDoubleClickDoesNotChain(t *testing.T) {
 // selecting on the map does.
 func TestBarClickClearsOtherSelections(t *testing.T) {
 	a, f := barColony(t)
-	a.selAnimal, a.hasAnimal = 90, true
-	a.selItem, a.hasItem = 91, true
-	a.selPlant, a.hasPlant = 92, true
-	a.selFrame, a.hasFrame = 93, true
-	a.selBuilding, a.hasBuilding = 94, true
+	a.sel.SelAnimal, a.sel.HasAnimal = 90, true
+	a.sel.SelItem, a.sel.HasItem = 91, true
+	a.sel.SelPlant, a.sel.HasPlant = 92, true
+	a.sel.SelFrame, a.sel.HasFrame = 93, true
+	a.sel.SelBuilding, a.sel.HasBuilding = 94, true
 	clickBarSlot(t, a, f, barPawnID)
-	if a.hasAnimal || a.hasItem || a.hasPlant || a.hasFrame || a.hasBuilding {
+	if a.sel.HasAnimal || a.sel.HasItem || a.sel.HasPlant || a.sel.HasFrame || a.sel.HasBuilding {
 		t.Fatalf("selections left after a bar click: animal %v item %v plant %v frame %v building %v",
-			a.hasAnimal, a.hasItem, a.hasPlant, a.hasFrame, a.hasBuilding)
+			a.sel.HasAnimal, a.sel.HasItem, a.sel.HasPlant, a.sel.HasFrame, a.sel.HasBuilding)
 	}
 	if !a.renderer.HasSelect() || a.renderer.Selected() != barPawnID {
 		t.Fatal("the colonist should be the selection")

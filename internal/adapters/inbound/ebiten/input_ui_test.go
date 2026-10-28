@@ -217,7 +217,7 @@ func TestSearchFindsNamedColonist(t *testing.T) {
 	f.Key(t, a, "Z", 0)
 	f.TypeText(t, a, "bo")
 	hits := a.searchHits()
-	if len(hits) == 0 || hits[0].label != "Bo" || hits[0].c != (selCand{selPawn, 2}) {
+	if len(hits) == 0 || hits[0].label != "Bo" || hits[0].c != (selCand{Kind: selPawn, ID: 2}) {
 		t.Fatalf("hits = %+v", hits)
 	}
 	before := a.renderer.cam
@@ -260,8 +260,8 @@ func TestShiftClickBoxAndDoubleClickSelect(t *testing.T) {
 	f.MoveTo(a, 10, 4)
 	a.updates += doubleClickFrames // not a double click
 	f.Click(t, a, mbLeft, input.ModShift)
-	if !a.grouped() || len(a.group.Ids) != 2 {
-		t.Fatalf("Shift+click adds: group = %+v", a.group)
+	if !a.grouped() || len(a.sel.Group.Ids) != 2 {
+		t.Fatalf("Shift+click adds: group = %+v", a.sel.Group)
 	}
 	a.updates += doubleClickFrames
 	f.Click(t, a, mbLeft, input.ModShift)
@@ -269,8 +269,8 @@ func TestShiftClickBoxAndDoubleClickSelect(t *testing.T) {
 		t.Fatal("Shift+click again takes it out (one left: the single selection)")
 	}
 	f.Drag(t, a, mbLeft, 7, 3, 13, 5, 0)
-	if !a.grouped() || a.group.Kind != selPawn || len(a.group.Ids) != 3 {
-		t.Fatalf("box select = %+v", a.group)
+	if !a.grouped() || a.sel.Group.Kind != selPawn || len(a.sel.Group.Ids) != 3 {
+		t.Fatalf("box select = %+v", a.sel.Group)
 	}
 	a.updates += doubleClickFrames
 	f.MoveTo(a, 8, 4)
@@ -279,8 +279,8 @@ func TestShiftClickBoxAndDoubleClickSelect(t *testing.T) {
 		t.Fatal("a plain click goes back to one")
 	}
 	f.Click(t, a, mbLeft, 0) // a double click
-	if !a.grouped() || len(a.group.Ids) != 3 {
-		t.Fatalf("double click takes every colonist on screen: %+v", a.group)
+	if !a.grouped() || len(a.sel.Group.Ids) != 3 {
+		t.Fatalf("double click takes every colonist on screen: %+v", a.sel.Group)
 	}
 	if bs := a.groupButtons(); len(bs) == 0 {
 		t.Fatal("the group panel shows")
@@ -295,8 +295,8 @@ func TestDoubleClickSameSpecies(t *testing.T) {
 	f.MoveTo(a, 8, 4)
 	f.Click(t, a, mbLeft, 0)
 	f.Click(t, a, mbLeft, 0)
-	if !a.grouped() || a.group.Kind != selAnimal || len(a.group.Ids) != 2 {
-		t.Fatalf("double click on a deer takes the deer: %+v", a.group)
+	if !a.grouped() || a.sel.Group.Kind != selAnimal || len(a.sel.Group.Ids) != 2 {
+		t.Fatalf("double click on a deer takes the deer: %+v", a.sel.Group)
 	}
 }
 
@@ -542,7 +542,7 @@ func TestBillQuantityModifiers(t *testing.T) {
 	a, s, f := inputColony(t)
 	s.world.Buildings = []game.BuildingView{{ID: 30, Kind: "stove", X: 4, Y: 4, W: 2, H: 1, Bench: true,
 		Bills: []game.BillView{{Label: "Cook meal", Target: 5}}}}
-	a.selectCand(selCand{selBuilding, 30})
+	a.selectCand(selCand{Kind: selBuilding, ID: 30})
 	// the bills live in the pane's Bills tab (PLAY-018): open it with the mouse
 	pressButton(t, a, f, "inspector.bills")
 	if a.paneOpenTab() != "inspector.bills" {
@@ -701,14 +701,14 @@ func TestEscInMoveModeHandledOnce(t *testing.T) {
 	t.Parallel()
 	a, s, f := inputColony(t)
 	s.world.Buildings = []game.BuildingView{{ID: 40, Kind: "table", X: 6, Y: 6, W: 1, H: 1}}
-	a.selectCand(selCand{selBuilding, 40})
+	a.selectCand(selCand{Kind: selBuilding, ID: 40})
 	a.startMove(s.world.Buildings[0])
 	f.Frame(t, a) // the opening frame
 	f.Key(t, a, "Escape", 0)
 	if a.bldgMove.on {
 		t.Fatal("Esc leaves Move mode")
 	}
-	if !a.hasBuilding || a.nav.overlay() != overlayNone {
+	if !a.sel.HasBuilding || a.nav.overlay() != overlayNone {
 		t.Fatal("the same Esc must not also deselect or pause")
 	}
 }
@@ -718,9 +718,9 @@ func TestCycleCellKey(t *testing.T) {
 	a, s, f := inputColony(t)
 	s.world.Items = []game.ItemView{{ID: 80, Kind: "wood", Qty: 1, X: 7, Y: 7}}
 	s.world.Plants = []game.PlantView{{ID: 81, Species: "oak", X: 7, Y: 7}}
-	a.selectCand(selCand{selItem, 80})
+	a.selectCand(selCand{Kind: selItem, ID: 80})
 	f.Key(t, a, "NumpadMultiply", 0)
-	if !a.hasPlant || a.selPlant != 81 {
+	if !a.sel.HasPlant || a.sel.SelPlant != 81 {
 		t.Fatal("Numpad * goes to the next thing in the cell")
 	}
 }
@@ -729,7 +729,7 @@ func TestGizmoKeysPressInspectorButtons(t *testing.T) {
 	t.Parallel()
 	a, s, f := inputColony(t)
 	s.world.Items = []game.ItemView{{ID: 90, Kind: "wood", Qty: 3, X: 3, Y: 3}}
-	a.selectCand(selCand{selItem, 90})
+	a.selectCand(selCand{Kind: selItem, ID: 90})
 	cs := a.selectionCommands()
 	i := -1
 	for j, c := range cs {

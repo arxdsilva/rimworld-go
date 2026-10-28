@@ -107,18 +107,18 @@ func (a *App) selectionPane() paneSpec {
 		return a.groupPane()
 	case hasSel:
 		return a.paneFor(selPawn, selID)
-	case a.hasAnimal:
-		return a.paneFor(selAnimal, a.selAnimal)
-	case a.hasItem:
-		return a.paneFor(selItem, a.selItem)
-	case a.hasPlant:
-		return a.paneFor(selPlant, a.selPlant)
-	case a.hasBuilding:
-		return a.paneFor(selBuilding, a.selBuilding)
-	case a.hasFrame:
-		return a.paneFor(selFrame, a.selFrame)
-	case a.hasZone:
-		return a.paneFor(selZone, entity.EntityID(a.zoneSel))
+	case a.sel.HasAnimal:
+		return a.paneFor(selAnimal, a.sel.SelAnimal)
+	case a.sel.HasItem:
+		return a.paneFor(selItem, a.sel.SelItem)
+	case a.sel.HasPlant:
+		return a.paneFor(selPlant, a.sel.SelPlant)
+	case a.sel.HasBuilding:
+		return a.paneFor(selBuilding, a.sel.SelBuilding)
+	case a.sel.HasFrame:
+		return a.paneFor(selFrame, a.sel.SelFrame)
+	case a.sel.HasZone:
+		return a.paneFor(selZone, entity.EntityID(a.sel.ZoneSel))
 	}
 	return paneSpec{}
 }

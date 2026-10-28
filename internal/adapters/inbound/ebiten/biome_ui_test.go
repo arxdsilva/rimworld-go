@@ -354,8 +354,8 @@ func TestMessageFocusJumpsToTheCreature(t *testing.T) {
 		t.Fatal("a message with a Focus is clickable")
 	}
 	a.applyClick("msg.0")
-	if !a.hasAnimal || a.selAnimal != 5 {
-		t.Fatalf("selected animal = %v/%d", a.hasAnimal, a.selAnimal)
+	if !a.sel.HasAnimal || a.sel.SelAnimal != 5 {
+		t.Fatalf("selected animal = %v/%d", a.sel.HasAnimal, a.sel.SelAnimal)
 	}
 }
 

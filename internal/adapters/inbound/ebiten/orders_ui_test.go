@@ -255,7 +255,7 @@ func TestBenchBillsPanel(t *testing.T) {
 	// the bills live in the pane's Bills tab (PLAY-018)
 	f := fakeOn(a)
 	a.renderer.speed = speedPaused
-	tab, ok := bldTab(a.buildingPane(a.selBuilding), "inspector.bills")
+	tab, ok := bldTab(a.buildingPane(a.sel.SelBuilding), "inspector.bills")
 	if !ok {
 		t.Fatal("a stove has a Bills tab")
 	}
@@ -291,7 +291,7 @@ func TestBenchBillsPanel(t *testing.T) {
 	if b, _ = a.selectedBuilding(); len(b.Bills) != 0 {
 		t.Fatal("delete removes the bill")
 	}
-	dc, ok := bldCmd(a.buildingCommands(a.selBuilding), "bldg.deconstruct")
+	dc, ok := bldCmd(a.buildingCommands(a.sel.SelBuilding), "bldg.deconstruct")
 	if !ok {
 		t.Fatal("a stove can be deconstructed")
 	}
@@ -301,7 +301,7 @@ func TestBenchBillsPanel(t *testing.T) {
 		t.Fatal("deconstruct button marks the building")
 	}
 	a.pressEscape()
-	if a.hasBuilding {
+	if a.sel.HasBuilding {
 		t.Fatal("Escape clears the building selection")
 	}
 }

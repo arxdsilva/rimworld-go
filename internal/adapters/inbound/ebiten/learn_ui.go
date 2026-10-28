@@ -193,21 +193,21 @@ func (a *App) learnSelection() string {
 	r := a.renderer
 	switch {
 	case a.grouped():
-		return fmt.Sprintf("g%d:%v", a.group.Kind, a.group.Ids)
+		return fmt.Sprintf("g%d:%v", a.sel.Group.Kind, a.sel.Group.Ids)
 	case r.HasSelect():
 		return fmt.Sprintf("p%d", r.Selected())
-	case a.hasBuilding:
-		return fmt.Sprintf("b%d", a.selBuilding)
-	case a.hasAnimal:
-		return fmt.Sprintf("a%d", a.selAnimal)
-	case a.hasPlant:
-		return fmt.Sprintf("l%d", a.selPlant)
-	case a.hasItem:
-		return fmt.Sprintf("i%d", a.selItem)
-	case a.hasFrame:
-		return fmt.Sprintf("f%d", a.selFrame)
-	case a.hasZone:
-		return fmt.Sprintf("z%d", a.zoneSel)
+	case a.sel.HasBuilding:
+		return fmt.Sprintf("b%d", a.sel.SelBuilding)
+	case a.sel.HasAnimal:
+		return fmt.Sprintf("a%d", a.sel.SelAnimal)
+	case a.sel.HasPlant:
+		return fmt.Sprintf("l%d", a.sel.SelPlant)
+	case a.sel.HasItem:
+		return fmt.Sprintf("i%d", a.sel.SelItem)
+	case a.sel.HasFrame:
+		return fmt.Sprintf("f%d", a.sel.SelFrame)
+	case a.sel.HasZone:
+		return fmt.Sprintf("z%d", a.sel.ZoneSel)
 	}
 	return ""
 }

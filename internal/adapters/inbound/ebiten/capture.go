@@ -395,7 +395,7 @@ func (a *App) captureUI(ui string) {
 			}
 		}
 		if pick != nil {
-			a.selectCand(selCand{selFrame, pick.ID})
+			a.selectCand(selCand{Kind: selFrame, ID: pick.ID})
 			sw, sh := a.size()
 			a.renderer.centerOn(float64(pick.X)+3, float64(pick.Y), sw, sh)
 		}
@@ -410,7 +410,7 @@ func (a *App) captureUI(ui string) {
 		a.renderer.centerOn(float64(cx+6), float64(cy-5), sw, sh)
 		for _, it := range a.renderer.world().Items {
 			if it.Forbidden && !it.Carried {
-				a.selectCand(selCand{selItem, it.ID})
+				a.selectCand(selCand{Kind: selItem, ID: it.ID})
 				break
 			}
 		}
@@ -966,7 +966,7 @@ func (a *App) captureBiomeInspect(ui string) {
 	}
 	for _, an := range w.Animals {
 		if an.Tame {
-			a.selectCand(selCand{selAnimal, an.ID})
+			a.selectCand(selCand{Kind: selAnimal, ID: an.ID})
 			a.renderer.centerOn(float64(an.X)+0.5, float64(an.Y)+0.5, sw, sh)
 			return
 		}

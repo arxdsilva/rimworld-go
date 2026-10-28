@@ -4,13 +4,12 @@ import (
 	"fmt"
 	"math"
 	"strconv"
-	"strings"
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/inputframe"
 	"rimworld-go/internal/application/game"
-	"rimworld-go/internal/domain/sim/command"
 	"rimworld-go/internal/domain/sim/entity"
 	"rimworld-go/internal/platform/input"
 )
@@ -21,162 +20,18 @@ import (
 // or more replaces the single selections and gets its own panel; R, F and
 // right-click orders act on every member. Presentation state only.
 
-// selGroup is a multi-selection of one kind (colonists, animals or items).
-type selGroup struct {
-	Kind selKind
-	Ids  []entity.EntityID
-}
+// leftMouse adapts the input frame's left button to selection.Mouse.
+type leftMouse struct{ f *inputframe.Frame }
 
-// pressState is the map's left press: where it went down (for the drag
-// box) and the last click (for double clicks).
-type pressState struct {
-	on, box, shift bool
-	x, y           int
-	lastAt         uint64 // App.updates of the last map click
-	lastX, lastY   int
-}
-
-const (
-	boxMinPx          = 6  // drag this far before a press becomes a box
-	doubleClickFrames = 18 // two clicks this close (Update frames) are a double click
-	doubleClickPx     = 6
-)
-
-// grouped reports a multi-selection is active.
-func (a *App) grouped() bool { return len(a.group.Ids) >= 2 }
-
-// inGroup reports id is a member of a group of kind k.
-func (a *App) inGroup(k selKind, id entity.EntityID) bool {
-	if !a.grouped() || a.group.Kind != k {
-		return false
-	}
-	for _, g := range a.group.Ids {
-		if g == id {
-			return true
-		}
-	}
-	return false
-}
-
-// groupable kinds can form a group.
-func groupable(k selKind) bool { return k == selPawn || k == selAnimal || k == selItem }
-
-// setGroup selects ids of kind: nothing, one thing (the single panel) or
-// a group.
-func (a *App) setGroup(kind selKind, ids []entity.EntityID) {
-	var clean []entity.EntityID
-	seen := map[entity.EntityID]bool{}
-	for _, id := range ids {
-		if !seen[id] {
-			seen[id] = true
-			clean = append(clean, id)
-		}
-	}
-	switch len(clean) {
-	case 0:
-		a.clearSelections(selNone)
-	case 1:
-		a.selectCand(selCand{kind, clean[0]})
-	default:
-		a.clearSelections(selNone)
-		a.group = selGroup{Kind: kind, Ids: clean}
-	}
-}
-
-// selectionSet is the current selection as a kind and ids (a group or the
-// single selection of a groupable kind).
-func (a *App) selectionSet() (selKind, []entity.EntityID) {
-	if a.grouped() {
-		return a.group.Kind, append([]entity.EntityID(nil), a.group.Ids...)
-	}
-	if c, ok := a.selectedCand(); ok && groupable(c.Kind) {
-		return c.Kind, []entity.EntityID{c.ID}
-	}
-	return selNone, nil
-}
+func (m leftMouse) Clicked() bool { return m.f.Clicked(mbLeft) }
+func (m leftMouse) Take()         { m.f.Take(mbLeft) }
+func (m leftMouse) Down() bool    { return m.f.Down(mbLeft) }
+func (m leftMouse) Shift() bool   { return m.f.Shift() }
 
 // handleMapMouse is the map's left button (select, Shift-toggle, box,
 // double click) and then the right button (orders, formation.go).
 func (a *App) handleMapMouse() {
-	f := &a.in
-	mx, my := a.mapCursor() // the press, the box and the double click live in map pixels
-	// the thresholds scale like the screen, then into map pixels
-	sc := max(1, a.scale.S) * a.scale.WorldK()
-	boxMin, dblPx := int(boxMinPx*sc), int(doubleClickPx*sc)
-	switch {
-	case f.Clicked(mbLeft):
-		f.Take(mbLeft)
-		p := a.press
-		double := p.lastAt > 0 && a.updates-p.lastAt <= doubleClickFrames &&
-			abs(mx-p.lastX) <= dblPx && abs(my-p.lastY) <= dblPx
-		a.press = pressState{on: true, x: mx, y: my, shift: f.Shift(), lastAt: a.updates, lastX: mx, lastY: my}
-		switch {
-		case double:
-			a.press.lastAt = 0 // a third click starts over
-			a.selectSameOnScreen()
-		case f.Shift():
-			a.shiftClick()
-		default:
-			a.clickSelect()
-		}
-	case a.press.on && f.Down(mbLeft):
-		if !a.press.box && (abs(mx-a.press.x) > boxMin || abs(my-a.press.y) > boxMin) {
-			a.press.box = true
-		}
-	case a.press.on:
-		if a.press.box {
-			a.boxSelect(a.press.x, a.press.y, mx, my, a.press.shift)
-		}
-		a.press.on, a.press.box = false, false
-	}
-	a.handleOrders()
-}
-
-// candUnderCursor is what a plain click would select first.
-func (a *App) candUnderCursor() (selCand, bool) {
-	mx, my := a.mapCursor() // physical
-	if id, ok := a.renderer.pawnUnderCursor(mx, my); ok {
-		return selCand{selPawn, id}, true
-	}
-	tx, ty := a.shell.TileAt(mx, my)
-	if cands := a.selectables(a.shell.World(), tx, ty); len(cands) > 0 {
-		return cands[0], true
-	}
-	return selCand{}, false
-}
-
-// shiftClick adds the thing under the cursor to the selection, or takes
-// it out when it is already in. Other kinds start a new selection.
-func (a *App) shiftClick() {
-	c, ok := a.candUnderCursor()
-	if !ok || !groupable(c.Kind) {
-		a.clickSelect()
-		return
-	}
-	a.toggleInSet(c)
-}
-
-// toggleInSet adds c to the selection or takes it out (a different kind
-// starts over with c).
-func (a *App) toggleInSet(c selCand) {
-	kind, ids := a.selectionSet()
-	if kind != c.Kind {
-		a.setGroup(c.Kind, []entity.EntityID{c.ID})
-		return
-	}
-	out := ids[:0]
-	found := false
-	for _, id := range ids {
-		if id == c.ID {
-			found = true
-			continue
-		}
-		out = append(out, id)
-	}
-	if !found {
-		out = append(out, c.ID)
-	}
-	a.setGroup(kind, out)
+	a.sel.HandleMapMouse(leftMouse{&a.in}, a.selectSameOnScreen, a.boxSelect)
 }
 
 // screenRect normalizes two screen corners.
@@ -264,18 +119,7 @@ func (a *App) thingsIn(x0, y0, x1, y1 float32) (selKind, []entity.EntityID) {
 // a selection of the same kind.
 func (a *App) boxSelect(sx0, sy0, sx1, sy1 int, add bool) {
 	kind, ids := a.thingsIn(screenRect(sx0, sy0, sx1, sy1))
-	if kind == selNone {
-		if !add {
-			a.clearSelections(selNone)
-		}
-		return
-	}
-	if add {
-		if k, cur := a.selectionSet(); k == kind {
-			ids = append(cur, ids...)
-		}
-	}
-	a.setGroup(kind, ids)
+	a.sel.ApplyBox(kind, ids, add)
 }
 
 // selectSameOnScreen is the double click: every visible colonist, animal
@@ -316,81 +160,6 @@ func (a *App) selectSameOnScreen() {
 	a.setGroup(c.Kind, append([]entity.EntityID{c.ID}, ids...))
 }
 
-// selectedPawns is the selected colonists: the group's living members in
-// selection order, or the single selected colonist.
-func (a *App) selectedPawns() []game.PawnView {
-	if a.renderer == nil {
-		return nil
-	}
-	if !a.grouped() {
-		if p, ok := a.selectedPawn(); ok {
-			return []game.PawnView{p}
-		}
-		return nil
-	}
-	if a.group.Kind != selPawn {
-		return nil
-	}
-	byID := map[entity.EntityID]game.PawnView{}
-	for _, p := range a.shell.Pawns() {
-		byID[p.ID] = p
-	}
-	var out []game.PawnView
-	for _, id := range a.group.Ids {
-		if p, ok := byID[id]; ok {
-			out = append(out, p)
-		}
-	}
-	return out
-}
-
-// selectedItems is the selected ground stacks (group or single).
-func (a *App) selectedItems() []game.ItemView {
-	if a.renderer == nil {
-		return nil
-	}
-	if !a.grouped() {
-		if it, ok := a.selectedItem(); ok {
-			return []game.ItemView{it}
-		}
-		return nil
-	}
-	if a.group.Kind != selItem {
-		return nil
-	}
-	byID := map[entity.EntityID]game.ItemView{}
-	for _, it := range a.shell.World().Items {
-		if !it.Carried {
-			byID[it.ID] = it
-		}
-	}
-	var out []game.ItemView
-	for _, id := range a.group.Ids {
-		if it, ok := byID[id]; ok {
-			out = append(out, it)
-		}
-	}
-	return out
-}
-
-// selectedAnimals is the group's animals.
-func (a *App) selectedAnimals() []game.AnimalView {
-	if a.renderer == nil || !a.grouped() || a.group.Kind != selAnimal {
-		return nil
-	}
-	byID := map[entity.EntityID]game.AnimalView{}
-	for _, an := range a.shell.World().Animals {
-		byID[an.ID] = an
-	}
-	var out []game.AnimalView
-	for _, id := range a.group.Ids {
-		if an, ok := byID[id]; ok {
-			out = append(out, an)
-		}
-	}
-	return out
-}
-
 // groupRow is one member line of the group panel.
 type groupRow struct {
 	id    entity.EntityID
@@ -400,7 +169,7 @@ type groupRow struct {
 // groupRows lists the group's members (dropping ones that are gone).
 func (a *App) groupRows() []groupRow {
 	var out []groupRow
-	switch a.group.Kind {
+	switch a.sel.Group.Kind {
 	case selPawn:
 		for _, p := range a.selectedPawns() {
 			s := pawnLabel(p)
@@ -461,7 +230,7 @@ func (a *App) groupPane() paneSpec {
 		return paneSpec{} // pruneGroup falls back to one
 	}
 	spec := paneSpec{
-		Title:    groupNoun(a.group.Kind, len(rows)),
+		Title:    groupNoun(a.sel.Group.Kind, len(rows)),
 		Subtitle: "Shift+click adds or removes",
 		Close:    "group.close",
 	}
@@ -485,7 +254,7 @@ var groupOwnKeys = map[string]bool{
 // for colonists; Forbid, Allow and Mark for hauling for items. Draft and
 // Forbid show how many members already are (On: all, Mixed: some).
 func (a *App) groupOwnCommands() []cmdButton {
-	switch a.group.Kind {
+	switch a.sel.Group.Kind {
 	case selPawn:
 		pawns := a.selectedPawns()
 		on := 0
@@ -535,11 +304,11 @@ func (a *App) groupCommands() []cmdButton {
 // selection): the layout asks many times a frame.
 func (a *App) groupMerged() []cmdButton {
 	m := &a.hst.cmds.memo
-	if m.ok && m.updates == a.updates && m.kind == a.group.Kind && slicesEqualIDs(m.ids, a.group.Ids) {
+	if m.ok && m.updates == a.updates && m.kind == a.sel.Group.Kind && slicesEqualIDs(m.ids, a.sel.Group.Ids) {
 		return m.out
 	}
-	kind := a.group.Kind
-	ids := append([]entity.EntityID(nil), a.group.Ids...)
+	kind := a.sel.Group.Kind
+	ids := append([]entity.EntityID(nil), a.sel.Group.Ids...)
 	sets := make([][]cmdButton, len(ids))
 	for i, id := range ids {
 		for _, c := range a.commandsFor(kind, id) {
@@ -573,11 +342,11 @@ func (a *App) runMember(kind selKind, id entity.EntityID, c cmdButton) {
 		a.runCommand(c)
 		return
 	}
-	saved := a.group
-	a.selectCand(selCand{kind, id})
+	saved := a.sel.Group
+	a.selectCand(selCand{Kind: kind, ID: id})
 	a.applyClick(c.ID)
 	a.clearSelections(selNone)
-	a.group = saved
+	a.sel.Group = saved
 }
 
 // haulMarkable reports whether any stack in items was found on the map and
@@ -596,7 +365,7 @@ func haulMarkable(items []game.ItemView) bool {
 func (a *App) pruneGroup() {
 	if a.grouped() {
 		if rows := a.groupRows(); len(rows) < 2 {
-			a.setGroup(a.group.Kind, groupIDs(rows))
+			a.setGroup(a.sel.Group.Kind, groupIDs(rows))
 		}
 	}
 }
@@ -607,41 +376,6 @@ func groupIDs(rows []groupRow) []entity.EntityID {
 		out = append(out, r.id)
 	}
 	return out
-}
-
-// applyGroupClick handles a "group.*" button.
-func (a *App) applyGroupClick(id string) {
-	if a.renderer == nil {
-		return
-	}
-	switch id {
-	case "group.close":
-		a.clearSelections(selNone)
-	case "group.draft", "group.undraft":
-		on := id == "group.draft"
-		for _, p := range a.selectedPawns() {
-			if p.Drafted != on {
-				a.shell.Enqueue(command.Command{Kind: command.DraftPawn, Pawn: uint64(p.ID), Enabled: on})
-			}
-		}
-	case "group.forbid", "group.allow":
-		on := id == "group.forbid"
-		for _, it := range a.selectedItems() {
-			if it.Forbidden != on {
-				a.shell.Enqueue(command.Command{Kind: command.SetForbidden, Target: uint64(it.ID), Enabled: on})
-			}
-		}
-	case "group.haulmark":
-		for _, it := range a.selectedItems() {
-			if it.Unclaimed && !it.HaulMarked {
-				a.shell.Enqueue(command.Command{Kind: command.SetHaulMark, Target: uint64(it.ID), Enabled: true})
-			}
-		}
-	default:
-		if n, err := strconv.ParseUint(strings.TrimPrefix(id, "group.pick."), 10, 64); err == nil {
-			a.selectCand(selCand{a.group.Kind, entity.EntityID(n)})
-		}
-	}
 }
 
 // drawGroupMarks outlines every group member on the map.
@@ -655,7 +389,7 @@ func (a *App) drawGroupMarks(screen *ebiten.Image) {
 		sx, sy := r.worldToScreenF(wx, wy)
 		vector.StrokeRect(screen, sx+1, sy+1, tile-2, tile-2, 2, r.selectClr, false)
 	}
-	switch a.group.Kind {
+	switch a.sel.Group.Kind {
 	case selPawn:
 		for _, p := range a.selectedPawns() {
 			mark(r.interpWorld(p))
@@ -673,13 +407,13 @@ func (a *App) drawGroupMarks(screen *ebiten.Image) {
 
 // drawBoxSelect draws the drag box while the left button is held.
 func (a *App) drawBoxSelect(screen *ebiten.Image) {
-	if !a.press.on || !a.press.box {
+	if !a.sel.Press.On || !a.sel.Press.Box {
 		return
 	}
 	// The press and cursor are physical (map pixels); the box is UI-canvas
 	// drawing, so its corners go to logical.
 	pmx, pmy := a.mapCursor()
-	lx0, ly0 := a.mapToLogical(a.press.x, a.press.y)
+	lx0, ly0 := a.mapToLogical(a.sel.Press.X, a.sel.Press.Y)
 	lx1, ly1 := a.mapToLogical(pmx, pmy)
 	x0, y0, x1, y1 := screenRect(lx0, ly0, lx1, ly1)
 	fill := uiAccent

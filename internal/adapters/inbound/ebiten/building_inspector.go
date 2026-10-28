@@ -98,10 +98,10 @@ const (
 )
 
 func (a *App) selectedBuilding() (game.BuildingView, bool) {
-	if !a.hasBuilding {
+	if !a.sel.HasBuilding {
 		return game.BuildingView{}, false
 	}
-	return a.buildingView(a.selBuilding)
+	return a.buildingView(a.sel.SelBuilding)
 }
 
 // buildingAt is the completed object-layer building covering (x, y),
@@ -125,14 +125,14 @@ func buildingAt(w game.WorldView, x, y int) (game.BuildingView, bool) {
 func (a *App) selectBuildingAt(tx, ty int) bool {
 	b, ok := buildingAt(a.shell.World(), tx, ty)
 	if !ok {
-		a.hasBuilding = false
+		a.sel.HasBuilding = false
 		return false
 	}
-	a.selectCand(selCand{selBuilding, b.ID})
+	a.selectCand(selCand{Kind: selBuilding, ID: b.ID})
 	return true
 }
 
-func (a *App) clearBuilding() { a.hasBuilding = false }
+func (a *App) clearBuilding() { a.sel.HasBuilding = false }
 
 func buildingTitle(b game.BuildingView) string {
 	if b.Ruin {

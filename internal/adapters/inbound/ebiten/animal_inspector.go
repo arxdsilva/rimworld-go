@@ -30,25 +30,25 @@ func animalAt(w game.WorldView, x, y int) (game.AnimalView, bool) {
 func (a *App) selectAnimalAt(tx, ty int) bool {
 	an, ok := animalAt(a.shell.World(), tx, ty)
 	if !ok {
-		a.hasAnimal = false
+		a.sel.HasAnimal = false
 		return false
 	}
-	a.selectCand(selCand{selAnimal, an.ID})
+	a.selectCand(selCand{Kind: selAnimal, ID: an.ID})
 	return true
 }
 
-func (a *App) clearAnimal() { a.hasAnimal = false }
+func (a *App) clearAnimal() { a.sel.HasAnimal = false }
 
 func (a *App) selectedAnimal() (game.AnimalView, bool) {
-	if !a.hasAnimal || a.renderer == nil {
+	if !a.sel.HasAnimal || a.renderer == nil {
 		return game.AnimalView{}, false
 	}
 	for _, an := range a.shell.World().Animals {
-		if an.ID == a.selAnimal {
+		if an.ID == a.sel.SelAnimal {
 			return an, true
 		}
 	}
-	a.hasAnimal = false // it died or left
+	a.sel.HasAnimal = false // it died or left
 	return game.AnimalView{}, false
 }
 

@@ -24,7 +24,7 @@ const (
 // zone or group is selected.
 func (a *App) nothingSelected() bool {
 	return a.renderer != nil && !a.grouped() && !hasPawnSel(a) &&
-		!a.hasAnimal && !a.hasItem && !a.hasPlant && !a.hasBuilding && !a.hasFrame && !a.hasZone
+		!a.sel.HasAnimal && !a.sel.HasItem && !a.sel.HasPlant && !a.sel.HasBuilding && !a.sel.HasFrame && !a.sel.HasZone
 }
 
 // hoveredCell is the map cell under the cursor: not over the HUD, on the

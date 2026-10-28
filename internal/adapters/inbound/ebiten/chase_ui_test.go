@@ -56,8 +56,8 @@ func TestDangerMessageStaysClickable(t *testing.T) {
 	}
 	a.drawMessages(ebiten.NewImage(1280, 720))
 	a.applyClick("msg.0")
-	if !a.hasAnimal || a.selAnimal != 5 {
-		t.Fatalf("selected animal = %v/%d, want 5", a.hasAnimal, a.selAnimal)
+	if !a.sel.HasAnimal || a.sel.SelAnimal != 5 {
+		t.Fatalf("selected animal = %v/%d, want 5", a.sel.HasAnimal, a.sel.SelAnimal)
 	}
 }
 

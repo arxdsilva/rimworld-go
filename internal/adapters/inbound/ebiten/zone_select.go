@@ -58,16 +58,16 @@ func zoneHasCell(z *game.ZoneView, x, y int) bool {
 // gone (split, merged or deleted) is followed to the zone now holding the
 // last clicked cell, else the selection clears.
 func (a *App) selectedZone() (game.ZoneView, bool) {
-	if !a.hasZone || a.renderer == nil {
+	if !a.sel.HasZone || a.renderer == nil {
 		return game.ZoneView{}, false
 	}
 	w := a.shell.World()
-	if z, ok := zoneByID(w, a.zoneSel); ok {
+	if z, ok := zoneByID(w, a.sel.ZoneSel); ok {
 		return z, true
 	}
 	if st := a.zone; st != nil && st.hasCell {
 		if z, ok := zoneCellAt(w, st.cell[0], st.cell[1]); ok {
-			a.zoneSel = z.ID
+			a.sel.ZoneSel = z.ID
 			return z, true
 		}
 	}
@@ -81,7 +81,7 @@ func (a *App) zoneView(id uint16) (game.ZoneView, bool) {
 	if a.renderer == nil {
 		return game.ZoneView{}, false
 	}
-	if a.hasZone && a.zoneSel == id {
+	if a.sel.HasZone && a.sel.ZoneSel == id {
 		return a.selectedZone()
 	}
 	return zoneByID(a.shell.World(), id)
@@ -90,7 +90,7 @@ func (a *App) zoneView(id uint16) (game.ZoneView, bool) {
 // selectZone makes zone id the selection (the other kinds are cleared by
 // selectCand).
 func (a *App) selectZone(id uint16) {
-	a.zoneSel, a.hasZone = id, true
+	a.sel.ZoneSel, a.sel.HasZone = id, true
 	st := a.zoneSt()
 	st.tool, st.drag, st.fresh = zoneToolNone, false, false
 	// The cell to follow if the zone splits: the last click when it is
@@ -105,7 +105,7 @@ func (a *App) selectZone(id uint16) {
 
 // clearZone drops the zone selection and its tool.
 func (a *App) clearZone() {
-	a.hasZone, a.zoneSel = false, 0
+	a.sel.HasZone, a.sel.ZoneSel = false, 0
 	if st := a.zone; st != nil {
 		st.tool, st.drag, st.fresh = zoneToolNone, false, false
 	}
@@ -118,7 +118,7 @@ func (a *App) selectZoneLabel(w game.WorldView, mx, my, tx, ty int) bool {
 	if !ok {
 		return false
 	}
-	a.selectCand(selCand{selZone, entity.EntityID(z.ID)})
+	a.selectCand(selCand{Kind: selZone, ID: entity.EntityID(z.ID)})
 	if st := a.zoneSt(); zoneHasCell(&z, tx, ty) {
 		st.cell, st.hasCell = [2]int{tx, ty}, true
 	}
@@ -128,8 +128,8 @@ func (a *App) selectZoneLabel(w game.WorldView, mx, my, tx, ty int) bool {
 // shownHiddenZone is the id of the selected zone while it is hidden: the
 // one hidden zone whose label still shows (0: none).
 func (a *App) shownHiddenZone() uint16 {
-	if a.hasZone && a.renderer != nil {
-		if z, ok := zoneByID(a.shell.World(), a.zoneSel); ok && z.Hidden {
+	if a.sel.HasZone && a.renderer != nil {
+		if z, ok := zoneByID(a.shell.World(), a.sel.ZoneSel); ok && z.Hidden {
 			return z.ID
 		}
 	}

@@ -41,7 +41,7 @@ func TestItemEquipChipsPerColonist(t *testing.T) {
 	}
 	thingPress(a, equip) // the nearest colonist
 	click(t, a, "item.close")
-	if a.hasItem {
+	if a.sel.HasItem {
 		t.Fatal("close clears the selection")
 	}
 }
@@ -183,8 +183,8 @@ func TestItemFoodAndApparelRows(t *testing.T) {
 func TestItemPanelClosesWhenItemGone(t *testing.T) {
 	t.Parallel()
 	a, _, _ := liveColony(t, 0)
-	a.selItem, a.hasItem = 9999, true
-	if len(a.commandGridButtons()) != 0 || len(a.itemCommands(9999)) != 0 || a.itemPane(9999).Title != "" || a.hasItem {
+	a.sel.SelItem, a.sel.HasItem = 9999, true
+	if len(a.commandGridButtons()) != 0 || len(a.itemCommands(9999)) != 0 || a.itemPane(9999).Title != "" || a.sel.HasItem {
 		t.Fatal("panel must close")
 	}
 	a.applyItemClick("item.close")

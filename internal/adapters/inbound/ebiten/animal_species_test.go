@@ -389,7 +389,7 @@ func TestBigAnimalBodyTilesPick(t *testing.T) {
 	}
 	covers := func(tx, ty int) bool {
 		got := r.animalsCovering(w, tx, ty)
-		return len(got) == 1 && got[0] == (selCand{selAnimal, 5})
+		return len(got) == 1 && got[0] == (selCand{Kind: selAnimal, ID: 5})
 	}
 	for _, c := range [][2]int{{8, 9}, {12, 10}, {11, 9}, {9, 10}} {
 		if !covers(c[0], c[1]) {
@@ -436,10 +436,10 @@ func TestBodyPickComesAfterTheTilesOwnThings(t *testing.T) {
 	a := testApp(&stubSim{w: 40, h: 40, world: w})
 	a.renderer = pickRenderer(w)
 	got := a.selectables(w, 12, 10)
-	if len(got) != 3 || got[0].Kind != selItem || got[1] != (selCand{selAnimal, 5}) || got[2].Kind != selPlant {
+	if len(got) != 3 || got[0].Kind != selItem || got[1] != (selCand{Kind: selAnimal, ID: 5}) || got[2].Kind != selPlant {
 		t.Fatalf("item, then the body, then the grass: %+v", got)
 	}
-	if got := a.selectables(w, 11, 9); len(got) != 2 || got[0] != (selCand{selAnimal, 5}) {
+	if got := a.selectables(w, 11, 9); len(got) != 2 || got[0] != (selCand{Kind: selAnimal, ID: 5}) {
 		t.Fatalf("a flank tile with grass: %+v", got)
 	}
 }

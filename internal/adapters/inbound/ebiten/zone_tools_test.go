@@ -21,7 +21,7 @@ func toolApp(t *testing.T) (*App, *zoneSim, *fakeInput) {
 	a, s, f := zoneApp(t,
 		growZone(1, "potato", 8, 2, 11, 4),
 		rectZone(2, game.ZoneStockpile, 12, 2, 13, 4))
-	a.selectCand(selCand{selZone, 1})
+	a.selectCand(selCand{Kind: selZone, ID: 1})
 	f.Frame(t, a)
 	for _, p := range [][2]int{{8, 2}, {16, 5}, {8, 5}} {
 		if mx, my := a.renderer.worldToScreenF(float64(p[0])+0.5, float64(p[1])+0.5); a.colonyChromeHit(int(mx), int(my), a.sw, a.sh) {
@@ -62,7 +62,7 @@ func TestZoneToolGatesTheMapMouse(t *testing.T) {
 	// A click on empty ground with the tool on must not select anything.
 	f.MoveTo(a, 15, 5)
 	f.Click(t, a, mbLeft, 0)
-	if a.renderer.HasSelect() || a.hasPlant || !a.hasZone {
+	if a.renderer.HasSelect() || a.sel.HasPlant || !a.sel.HasZone {
 		t.Fatal("the tool took the click: the selection must not change")
 	}
 }
@@ -239,7 +239,7 @@ func TestZoneToolRightClickAndEscapeExit(t *testing.T) {
 		if a.zoneToolOn(zoneToolExpand) {
 			t.Fatalf("%s leaves the tool on", how)
 		}
-		if !a.hasZone {
+		if !a.sel.HasZone {
 			t.Fatalf("%s must only end the tool, the zone stays selected", how)
 		}
 		if a.handleZoneTool() {
@@ -251,7 +251,7 @@ func TestZoneToolRightClickAndEscapeExit(t *testing.T) {
 		// A second Escape then clears the zone.
 		if how == "escape" {
 			f.Key(t, a, "Escape", 0)
-			if a.hasZone {
+			if a.sel.HasZone {
 				t.Fatal("the next Escape clears the selection")
 			}
 		}
@@ -283,8 +283,8 @@ func TestZoneToolEndsWhenTheZoneVanishesOrAnotherPanelOpens(t *testing.T) {
 	armed(t, a, f, zoneToolShrink)
 	s.world.Zones = s.world.Zones[1:] // zone 1 is gone
 	f.Frame(t, a)
-	if a.hasZone || a.zoneToolOn(zoneToolShrink) {
-		t.Fatalf("zone selected=%v tool on=%v, want both gone", a.hasZone, a.zoneToolOn(zoneToolShrink))
+	if a.sel.HasZone || a.zoneToolOn(zoneToolShrink) {
+		t.Fatalf("zone selected=%v tool on=%v, want both gone", a.sel.HasZone, a.zoneToolOn(zoneToolShrink))
 	}
 	a, _, f = toolApp(t)
 	armed(t, a, f, zoneToolExpand)
@@ -305,7 +305,7 @@ func TestSelectingSomethingElseEndsTheTool(t *testing.T) {
 		t.Fatal("deselecting the zone ends its tool")
 	}
 	// And the tool of one zone is not the next zone's.
-	a.selectCand(selCand{selZone, 2})
+	a.selectCand(selCand{Kind: selZone, ID: 2})
 	if a.zoneToolOn(zoneToolExpand) {
 		t.Fatal("selecting another zone starts with no tool")
 	}

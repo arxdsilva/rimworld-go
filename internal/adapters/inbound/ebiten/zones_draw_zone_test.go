@@ -85,7 +85,7 @@ func TestSelectedHiddenZoneShowsItsNameAndAShownOneDoesNot(t *testing.T) {
 	z.Name = "Hidden plot"
 	z.Hidden = true
 	a, _, f := zoneApp(t, z)
-	a.selectCand(selCand{selZone, entity.EntityID(1)})
+	a.selectCand(selCand{Kind: selZone, ID: entity.EntityID(1)})
 	f.Frame(t, a)
 	got := wlTrace(t)
 	a.drawZoneSelection(ebiten.NewImage(64, 64))

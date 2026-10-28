@@ -103,7 +103,7 @@ func (m *Model) InGroup(k Kind, id entity.EntityID) bool {
 // whatever stands on the tile itself and before its plants, floors and
 // zone; a hidden conduit counts only while the power overlay shows.
 func (m *Model) Selectables(w game.WorldView, tx, ty int) []Cand {
-	cands, solid := selectablesSplit(w, m.sh.Pawns(), tx, ty)
+	cands, solid := SelectablesSplit(w, m.sh.Pawns(), tx, ty)
 	if !fogged(w, tx, ty) {
 		if body := m.host.AnimalsCovering(w, tx, ty); len(body) > 0 {
 			cands = slices.Insert(cands, solid, body...)
@@ -128,13 +128,13 @@ func (m *Model) Selectables(w game.WorldView, tx, ty int) []Cand {
 // SelectablesAt lists what a click on (tx, ty) can select, in precedence
 // pawn, animal, ground item, frame, building, plant, floor, zone.
 func SelectablesAt(w game.WorldView, pawns []game.PawnView, tx, ty int) []Cand {
-	out, _ := selectablesSplit(w, pawns, tx, ty)
+	out, _ := SelectablesSplit(w, pawns, tx, ty)
 	return out
 }
 
-// selectablesSplit is SelectablesAt and solid, the index where the things
+// SelectablesSplit is SelectablesAt and solid, the index where the things
 // standing on the tile end and its ground (plants, floors, zone) begins.
-func selectablesSplit(w game.WorldView, pawns []game.PawnView, tx, ty int) (out []Cand, solid int) {
+func SelectablesSplit(w game.WorldView, pawns []game.PawnView, tx, ty int) (out []Cand, solid int) {
 	if fogged(w, tx, ty) {
 		return nil, 0 // unexplored: nothing to pick
 	}

@@ -3,7 +3,7 @@
 # Lines only shrink: lower a ceiling when a split lands, delete a line when the debt is paid. Never add or raise one.
 
 # --- size rules ---
-fields rimworld-go/internal/adapters/inbound/ebiten.App 111
+fields rimworld-go/internal/adapters/inbound/ebiten.App 95
 fields rimworld-go/internal/adapters/inbound/ebiten.Renderer 72
 fields rimworld-go/internal/adapters/inbound/ebiten.envState 40
 fields rimworld-go/internal/adapters/inbound/ebiten/globe.View 51  # the same debt, moved with the type (ARCH-003)

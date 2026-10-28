@@ -10,7 +10,7 @@ Lead-only throughout: `renderer.go`, `render/view.go`, `draw_art.go` until wave 
 |---|---|---|---|
 | 4.1 | `render/motion` | R1 (opus) | done — `State[B]`/`Track[B]` (746 + 292 lines, 61.8 %): tracks, the animation clock, `Pose`, `Vec`, `MoveState`, gaits and easing; the type parameter is the root's animal body player, dropped when the creature layer moves; `animState`, particles, bursts and the sprite-pose draws stay in the root `anim.go` for `render/creature` |
 | 4.1 | `render/light` | R2 (opus) | done — `Lit` (`Draw`, `DrawGround`, `LightTile`, `LightFoot`, `Sync`, `SourceOf`, `GroundLamp`, `LitShader`, `SyncUniforms`; `Blaze` is the fire-light hook), `Grid`, `Shadows[F]` with its `Casters[F]` interface (the root's figure pose and caster lists stay root in a trimmed `shadow.go`), `Cast.Silhouette`, daylight, the two shaders (2,481 lines, 84 %). `LightGridLamps` rebuild 142–153 µs before, 139–142 µs after on a quiet run; 0 allocs; `Grid.AtF`/`LightTile`/`Lit.Draw` did not inline before either |
-| 4.2 | `render/sprite` | | |
+| 4.2 | `render/sprite` | R3 (opus) | done — `Painter{Art, Lit, Stone}` with `Draw/DrawCS/DrawScaled(v, Pass{Cast, Baking, Blood}, …)`, `DrawLinked*`, `LinkKey`, `StoneTint*`, `StuffTint`; `LinkGrid[K]` over the root's link kinds until the power overlay moves; `ColorScale` and its constants; the stone cache; the key helpers (1,036 lines + 702 of tests, 88.6 %). The placement ghost, `buildKey`, the terrain tables, the plant keys and the pawn layers stay root for the world pipeline (4.4). `Draw/DrawCS/DrawLinkedSprite` inline (cost 71/71/78); `DrawScaled` did not before either |
 | 4.3 | `render/env`, `render/creature`, `render/overlay`, `render/cue`, `render/minimap` | | |
 | 4.4 | `render/world` | | |
 

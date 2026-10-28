@@ -55,8 +55,8 @@ func TestJourneyHudBarSelectAndShift(t *testing.T) {
 	}
 	j.settle()
 	j.clickWith(bar(1), input.ModShift)
-	if !j.a.grouped() || len(j.a.group.Ids) != 2 {
-		t.Fatalf("Shift on the bar gave group %v, want both", j.a.group.Ids)
+	if !j.a.grouped() || len(j.a.sel.Group.Ids) != 2 {
+		t.Fatalf("Shift on the bar gave group %v, want both", j.a.sel.Group.Ids)
 	}
 }
 
@@ -186,7 +186,7 @@ func TestJourneyHudPowerKeyAndThermostat(t *testing.T) {
 		t.Fatal("no heater")
 	}
 	j.clickTile(12, 2, mbLeft, 0)
-	if !j.a.hasBuilding {
+	if !j.a.sel.HasBuilding {
 		t.Fatal("the heater did not select")
 	}
 	j.key("V", 0)
@@ -376,7 +376,7 @@ func TestJourneyHudHaulMark(t *testing.T) {
 	}
 	j.lookAt(tx, ty)
 	j.clickTile(tx, ty, mbLeft, 0)
-	if !j.a.hasItem {
+	if !j.a.sel.HasItem {
 		t.Fatal("the stack did not select")
 	}
 	if !j.clickID("item.haulmark") {

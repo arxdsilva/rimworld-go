@@ -52,7 +52,7 @@ func penSim() *stubSim {
 func penApp(t *testing.T, s *stubSim) *App {
 	t.Helper()
 	a, _ := colonyApp(t, s)
-	a.selBuilding, a.hasBuilding = 70, true
+	a.sel.SelBuilding, a.sel.HasBuilding = 70, true
 	return a
 }
 
@@ -60,7 +60,7 @@ func penApp(t *testing.T, s *stubSim) *App {
 func penTabApp(t *testing.T, s *stubSim) (*App, *fakeInput, rect) {
 	t.Helper()
 	a, f := colonyApp(t, s)
-	a.selBuilding, a.hasBuilding = 70, true
+	a.sel.SelBuilding, a.sel.HasBuilding = 70, true
 	tab, ok := bldTab(a.buildingPane(70), "inspector.pen")
 	if !ok {
 		t.Fatal("a pen marker has a Pen tab")
@@ -296,7 +296,7 @@ func TestPenMarkerHasNoGenericBuildingExtras(t *testing.T) {
 		t.Errorf("the Pen tab wants %v", tab.WantH)
 	}
 	// other buildings have no Pen tab
-	a.selBuilding = 71
+	a.sel.SelBuilding = 71
 	if got := a.buildingPane(71).Tabs; len(got) != 0 {
 		t.Errorf("a wall has tabs: %+v", got)
 	}
@@ -316,7 +316,7 @@ func TestPenOutlineEdgesAndToolGate(t *testing.T) {
 	if _, ok := a.penOutlined(); !ok {
 		t.Fatal("the selected marker's pen is outlined")
 	}
-	a.hasBuilding = false
+	a.sel.HasBuilding = false
 	if _, ok := a.penOutlined(); ok {
 		t.Fatal("nothing selected, no pen tool: no outline")
 	}

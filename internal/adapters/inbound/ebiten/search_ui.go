@@ -91,7 +91,7 @@ func searchResults(w game.WorldView, pawns []game.PawnView, q string) []searchHi
 	}
 	for _, p := range pawns {
 		if !p.Embodied {
-			add(pawnLabel(p), "colonist", selCand{selPawn, p.ID}, p.X, p.Y)
+			add(pawnLabel(p), "colonist", selCand{Kind: selPawn, ID: p.ID}, p.X, p.Y)
 		}
 	}
 	for _, an := range w.Animals {
@@ -99,21 +99,21 @@ func searchResults(w game.WorldView, pawns []game.PawnView, q string) []searchHi
 		if an.Name != "" {
 			label = an.Name + " (" + an.Label + ")"
 		}
-		add(label, "animal", selCand{selAnimal, an.ID}, an.X, an.Y, an.Label, an.Species)
+		add(label, "animal", selCand{Kind: selAnimal, ID: an.ID}, an.X, an.Y, an.Label, an.Species)
 	}
 	for _, it := range w.Items {
 		if !it.Carried {
-			add(fmt.Sprintf("%s x %d", titleCase(it.Kind), it.Qty), "item", selCand{selItem, it.ID}, it.X, it.Y)
+			add(fmt.Sprintf("%s x %d", titleCase(it.Kind), it.Qty), "item", selCand{Kind: selItem, ID: it.ID}, it.X, it.Y)
 		}
 	}
 	for _, b := range w.Buildings {
-		add(buildingTitle(b), "building", selCand{selBuilding, b.ID}, b.X, b.Y, b.Kind)
+		add(buildingTitle(b), "building", selCand{Kind: selBuilding, ID: b.ID}, b.X, b.Y, b.Kind)
 	}
 	for _, f := range w.Frames {
-		add(titleCase(f.Kind)+" blueprint", "blueprint", selCand{selFrame, f.ID}, f.X, f.Y)
+		add(titleCase(f.Kind)+" blueprint", "blueprint", selCand{Kind: selFrame, ID: f.ID}, f.X, f.Y)
 	}
 	for _, p := range w.Plants {
-		add(titleCase(strings.ReplaceAll(p.Species, "_", " ")), "plant", selCand{selPlant, p.ID}, p.X, p.Y)
+		add(titleCase(strings.ReplaceAll(p.Species, "_", " ")), "plant", selCand{Kind: selPlant, ID: p.ID}, p.X, p.Y)
 	}
 	sort.SliceStable(out, func(i, j int) bool {
 		hi, hj := out[i], out[j]

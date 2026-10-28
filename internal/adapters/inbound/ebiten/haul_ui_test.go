@@ -53,7 +53,7 @@ func TestItemHaulMarkButtonEmitsAndFlips(t *testing.T) {
 	t.Parallel()
 	a, s := stubColony(t)
 	s.world = game.WorldView{Items: foundItems()}
-	a.selectCand(selCand{selItem, 21})
+	a.selectCand(selCand{Kind: selItem, ID: 21})
 	b, ok := thingFind(a.itemCommands(21), "item.haulmark")
 	if !ok || b.Label != "Mark for hauling" {
 		t.Fatalf("unclaimed unmarked stack: command = %+v", b)
@@ -80,7 +80,7 @@ func TestItemHaulMarkButtonHiddenForColonyStacks(t *testing.T) {
 	t.Parallel()
 	a, s := stubColony(t)
 	s.world = game.WorldView{Items: foundItems()}
-	a.selectCand(selCand{selItem, 23})
+	a.selectCand(selCand{Kind: selItem, ID: 23})
 	if _, ok := thingFind(a.itemCommands(23), "item.haulmark"); ok {
 		t.Fatal("a claimed stack needs no mark button")
 	}
@@ -117,7 +117,7 @@ func TestItemInspectorKeepsForcedHaulChip(t *testing.T) {
 	s.world = game.WorldView{Items: foundItems()}
 	s.pawns = []game.PawnView{{ID: 1, Name: "Ada", X: 5, Y: 5, Status: "alive"}}
 	s.orders = []game.OrderOption{{Label: "Haul", Cmd: command.Command{Kind: command.Prioritize, Order: command.OrderHaul, Pawn: 1}}}
-	a.selectCand(selCand{selItem, 21})
+	a.selectCand(selCand{Kind: selItem, ID: 21})
 	it, _ := a.selectedItem()
 	if vs := itemVerbs(it, false); len(vs) != 1 || vs[0].id != "cmd.item.haul" {
 		t.Fatalf("a found stack still offers the forced Haul command: %+v", vs)
@@ -191,7 +191,7 @@ func TestItemInspectorAtScale1_5(t *testing.T) {
 		{Label: "Haul", Cmd: command.Command{Kind: command.Prioritize, Order: command.OrderHaul}},
 	}
 	s.pawns = []game.PawnView{{ID: 1, Name: "Ada", X: 5, Y: 5, Status: "alive"}, {ID: 2, Name: "Bo", X: 6, Y: 5, Status: "alive"}}
-	a.selectCand(selCand{selItem, 21})
+	a.selectCand(selCand{Kind: selItem, ID: 21})
 	cs := a.itemCommands(21)
 	if _, ok := thingFind(cs, "item.haulmark"); !ok {
 		t.Fatalf("no mark command: %v", thingIDs(cs))

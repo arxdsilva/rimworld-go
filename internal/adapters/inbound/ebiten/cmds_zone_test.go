@@ -17,7 +17,7 @@ func entityOf(id uint16) entity.EntityID { return entity.EntityID(id) }
 
 // zoneCmdsOf selects zone id and returns its commands.
 func zoneCmdsOf(a *App, id uint16) []cmdButton {
-	a.selectCand(selCand{selZone, entityOf(id)})
+	a.selectCand(selCand{Kind: selZone, ID: entityOf(id)})
 	return a.zoneCommands(id)
 }
 
@@ -198,7 +198,7 @@ func TestZoneDeleteEnqueuesAndClearsTheSelection(t *testing.T) {
 	if got := lastZoneCmd(t, s); got.Kind != command.DeleteZone || got.Target != 4 {
 		t.Fatalf("delete enqueued %+v", got)
 	}
-	if a.hasZone {
+	if a.sel.HasZone {
 		t.Fatal("Delete clears the selection")
 	}
 	if len(s.cmds) != 1 {
@@ -330,7 +330,7 @@ func TestZonePaneAndGridAtUIScales(t *testing.T) {
 			sw, sh := layoutScreen(t, a, sz[0], sz[1], ui)
 			for _, z := range zones {
 				name := zoneKindName(z) + " ui" + strconv.FormatFloat(ui, 'g', -1, 64) + " " + strconv.Itoa(sw) + "x" + strconv.Itoa(sh)
-				a.selectCand(selCand{selZone, entityOf(z.ID)})
+				a.selectCand(selCand{Kind: selZone, ID: entityOf(z.ID)})
 				f.Frame(t, a)
 				l := a.hud()
 				if l.Pane.Empty() || !a.paneShown() {

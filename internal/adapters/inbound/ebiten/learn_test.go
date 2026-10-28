@@ -283,7 +283,7 @@ func TestSelectLesson(t *testing.T) {
 		t.Parallel()
 		a, s, f := learnColony(t, learnStore(), nil)
 		s.world.Buildings = []game.BuildingView{{ID: 7}} // the panels drop a selection that is not in the world
-		a.selBuilding, a.hasBuilding = 7, true
+		a.sel.SelBuilding, a.sel.HasBuilding = 7, true
 		f.Frame(t, a)
 		if !learnDone(a, "select") {
 			t.Fatal("selecting a building should finish the lesson")
@@ -748,11 +748,11 @@ func TestHelperPanelDoesNotOverlapTheAlertsBelowIt(t *testing.T) {
 func TestSelectLessonSeesEveryKindOfSelection(t *testing.T) {
 	t.Parallel()
 	kinds := map[string]func(*App){
-		"animal": func(a *App) { a.selAnimal, a.hasAnimal = 3, true },
-		"plant":  func(a *App) { a.selPlant, a.hasPlant = 4, true },
-		"item":   func(a *App) { a.selItem, a.hasItem = 5, true },
-		"frame":  func(a *App) { a.selFrame, a.hasFrame = 6, true },
-		"group":  func(a *App) { a.group = selGroup{Kind: selPawn, Ids: []entity.EntityID{1, 2}} },
+		"animal": func(a *App) { a.sel.SelAnimal, a.sel.HasAnimal = 3, true },
+		"plant":  func(a *App) { a.sel.SelPlant, a.sel.HasPlant = 4, true },
+		"item":   func(a *App) { a.sel.SelItem, a.sel.HasItem = 5, true },
+		"frame":  func(a *App) { a.sel.SelFrame, a.sel.HasFrame = 6, true },
+		"group":  func(a *App) { a.sel.Group = selGroup{Kind: selPawn, Ids: []entity.EntityID{1, 2}} },
 	}
 	for name, sel := range kinds {
 		t.Run(name, func(t *testing.T) {

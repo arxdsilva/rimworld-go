@@ -49,8 +49,8 @@ func bldLines(p paneSpec) string { return strings.Join(p.Lines, "\n") }
 func bldApp(t *testing.T, s *stubSim, id entity.EntityID) (*App, *fakeInput) {
 	t.Helper()
 	a, f := colonyApp(t, s)
-	a.selectCand(selCand{selBuilding, id})
-	if !a.hasBuilding {
+	a.selectCand(selCand{Kind: selBuilding, ID: id})
+	if !a.sel.HasBuilding {
 		t.Fatalf("building %d is not selectable", id)
 	}
 	return a, f
@@ -674,12 +674,12 @@ func TestPaneCloseIDsClearTheSelection(t *testing.T) {
 	t.Parallel()
 	a, _ := bldApp(t, bldStub(game.BuildingView{ID: 9, Kind: "wall", W: 1, H: 1}), 9)
 	a.applyClick(a.buildingPane(9).Close)
-	if a.hasBuilding {
+	if a.sel.HasBuilding {
 		t.Fatal("closing the building pane keeps the building selected")
 	}
 	fa, _ := frameApp(t, wallFrame())
 	fa.applyClick(fa.framePane(7).Close)
-	if fa.hasFrame {
+	if fa.sel.HasFrame {
 		t.Fatal("closing the blueprint pane keeps the frame selected")
 	}
 }
@@ -795,7 +795,7 @@ func TestBlueprintSelectionThroughTheHUD(t *testing.T) {
 	s := bldStub()
 	s.world.Frames = []game.FrameView{wallFrame()}
 	a, f := colonyApp(t, s)
-	a.selectCand(selCand{selFrame, 7})
+	a.selectCand(selCand{Kind: selFrame, ID: 7})
 	f.Frame(t, a)
 	l := a.hud()
 	if l.Pane.Empty() || len(l.GridCells) != 1 {
@@ -806,7 +806,7 @@ func TestBlueprintSelectionThroughTheHUD(t *testing.T) {
 	if c := lastCmd(t, s); c.Kind != command.CancelFrame || c.Target != 7 {
 		t.Fatalf("cancel: %+v", c)
 	}
-	if a.hasFrame {
+	if a.sel.HasFrame {
 		t.Fatal("the pane stays up after Cancel")
 	}
 }

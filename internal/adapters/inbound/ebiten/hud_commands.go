@@ -99,18 +99,18 @@ func (a *App) selectionCommands() []cmdButton {
 		return a.groupCommands()
 	case hasSel:
 		return a.commandsFor(selPawn, selID)
-	case a.hasAnimal:
-		return a.commandsFor(selAnimal, a.selAnimal)
-	case a.hasItem:
-		return a.commandsFor(selItem, a.selItem)
-	case a.hasPlant:
-		return a.commandsFor(selPlant, a.selPlant)
-	case a.hasBuilding:
-		return a.commandsFor(selBuilding, a.selBuilding)
-	case a.hasFrame:
-		return a.commandsFor(selFrame, a.selFrame)
-	case a.hasZone:
-		return a.commandsFor(selZone, entity.EntityID(a.zoneSel))
+	case a.sel.HasAnimal:
+		return a.commandsFor(selAnimal, a.sel.SelAnimal)
+	case a.sel.HasItem:
+		return a.commandsFor(selItem, a.sel.SelItem)
+	case a.sel.HasPlant:
+		return a.commandsFor(selPlant, a.sel.SelPlant)
+	case a.sel.HasBuilding:
+		return a.commandsFor(selBuilding, a.sel.SelBuilding)
+	case a.sel.HasFrame:
+		return a.commandsFor(selFrame, a.sel.SelFrame)
+	case a.sel.HasZone:
+		return a.commandsFor(selZone, entity.EntityID(a.sel.ZoneSel))
 	}
 	return nil
 }

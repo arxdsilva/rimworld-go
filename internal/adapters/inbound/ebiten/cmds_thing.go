@@ -36,8 +36,8 @@ func (a *App) animalView(id entity.EntityID) (game.AnimalView, bool) {
 			return w.Animals[i], true
 		}
 	}
-	if a.hasAnimal && a.selAnimal == id {
-		a.hasAnimal = false // it died or left
+	if a.sel.HasAnimal && a.sel.SelAnimal == id {
+		a.sel.HasAnimal = false // it died or left
 	}
 	return game.AnimalView{}, false
 }
@@ -53,8 +53,8 @@ func (a *App) itemView(id entity.EntityID) (game.ItemView, bool) {
 			return w.Items[i], true
 		}
 	}
-	if a.hasItem && a.selItem == id {
-		a.hasItem = false // picked up, used or rotted away
+	if a.sel.HasItem && a.sel.SelItem == id {
+		a.sel.HasItem = false // picked up, used or rotted away
 	}
 	return game.ItemView{}, false
 }
@@ -70,8 +70,8 @@ func (a *App) plantView(id entity.EntityID) (game.PlantView, bool) {
 			return w.Plants[i], true
 		}
 	}
-	if a.hasPlant && a.selPlant == id {
-		a.hasPlant = false // cut, harvested or eaten
+	if a.sel.HasPlant && a.sel.SelPlant == id {
+		a.sel.HasPlant = false // cut, harvested or eaten
 	}
 	return game.PlantView{}, false
 }

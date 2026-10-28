@@ -44,7 +44,7 @@ func TestTamePredatorPaneHuntLine(t *testing.T) {
 		{ID: 2, Species: "husky", Label: "husky", Name: "Fido", Tame: true, State: "eating from the stockpile", Diet: "meat", Health: 100, Food: 50, Rest: 50, X: 4, Y: 3},
 	}}}
 	a, _ := colonyApp(t, s)
-	a.selectCand(selCand{selAnimal, 1})
+	a.selectCand(selCand{Kind: selAnimal, ID: 1})
 	sp := a.animalPane(1)
 	lines := sp.Lines
 	diet, note := -1, -1
@@ -67,7 +67,7 @@ func TestTamePredatorPaneHuntLine(t *testing.T) {
 			t.Errorf("bar %s = %+v (%v), want %d", label, b, ok, pct)
 		}
 	}
-	a.selectCand(selCand{selAnimal, 2})
+	a.selectCand(selCand{Kind: selAnimal, ID: 2})
 	pet := a.animalPane(2)
 	for _, l := range pet.Lines {
 		if l == "Hunts wild animals when hungry" {

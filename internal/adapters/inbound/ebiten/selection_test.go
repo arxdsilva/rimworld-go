@@ -52,11 +52,11 @@ func TestSelectingPlantClearsOthers(t *testing.T) {
 	if _, ok := a.selectedPlant(); !ok {
 		t.Fatal("clicking a crop selects it")
 	}
-	if a.renderer.HasSelect() || a.hasAnimal || a.hasBuilding || a.hasItem {
+	if a.renderer.HasSelect() || a.sel.HasAnimal || a.sel.HasBuilding || a.sel.HasItem {
 		t.Fatal("selecting a plant clears every other selection")
 	}
 	clickTile(a, 14, 14) // empty ground
-	if a.hasPlant {
+	if a.sel.HasPlant {
 		t.Fatal("clicking empty ground clears the selection")
 	}
 }

@@ -11,6 +11,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/mainmenu"
+	"rimworld-go/internal/adapters/inbound/ebiten/selection"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/clock"
@@ -181,21 +182,11 @@ type App struct {
 	archStuff                      string // picked material ("wood", "granite blocks", "steel", a carpet)
 	archCrop                       string // crop the growing-zone tool sows
 	float                          floatMenu
-	cursor                         *[2]int // capture-only synthetic cursor
-	selBuilding                    entity.EntityID
-	hasBuilding                    bool
-	selAnimal                      entity.EntityID
-	hasAnimal                      bool
-	selPlant, selItem              entity.EntityID // plant and item panels (selection.go)
-	hasPlant, hasItem              bool
-	selFrame                       entity.EntityID // blueprint/frame panel (frame_inspector.go)
-	hasFrame                       bool
-	zoneSel                        uint16 // the selected zone's id (zone_select.go, PLAY-020)
-	hasZone                        bool
-	zone                           *zoneState      // the selected zone's tools and last clicked cell (zone_tools.go)
-	selCycle                       selCycle        // last map click, for cycling a tile's stack
-	bldgMove                       bldgMoveState   // the building panel's Move mode (move_mode.go)
-	equipCache                     equipCacheState // the pawn Gear tab's nearby weapons (inspector.go)
+	cursor                         *[2]int          // capture-only synthetic cursor
+	sel                            *selection.Model // selection.Model owns what is selected (ARCH-005)
+	zone                           *zoneState       // the selected zone's tools and last clicked cell (zone_tools.go)
+	bldgMove                       bldgMoveState    // the building panel's Move mode (move_mode.go)
+	equipCache                     equipCacheState  // the pawn Gear tab's nearby weapons (inspector.go)
 	alertCycle                     map[string]int
 	archDrag                       bool
 	archX0, archY0, archX1, archY1 int
@@ -226,8 +217,6 @@ type App struct {
 	rebind  rebindState   // Options › Controls key capture (controls_ui.go)
 	search  searchState   // Z search box (search_ui.go)
 	form    formationDrag // drafted colonists' right-drag line (formation.go)
-	group   selGroup      // multi-selection (multiselect.go)
-	press   pressState    // the map left press: drag box and double click
 	midDrag midDragState  // middle-mouse camera drag
 	dev     devState      // developer mode panels (devmode.go)
 	toasts  []toast       // short notices (toast.go)
@@ -296,6 +285,7 @@ func NewApp(cfg AppConfig) *App {
 		devRaw: 1,
 	}
 	a.shell = newShell(a)
+	a.sel = selection.New(a.shell, selHost{a})
 	a.menuScreen = mainmenu.New(menuHost{a})
 	a.loadSettings()
 	a.applySettings()
@@ -452,15 +442,15 @@ func (a *App) handleColonyEscape() bool {
 	if a.closePaneTab() { // hud_inspect.go: an open inspector tab goes before the selection
 		return true
 	}
-	if a.hasBuilding {
+	if a.sel.HasBuilding {
 		a.clearBuilding()
 		return true
 	}
-	if a.hasFrame {
+	if a.sel.HasFrame {
 		a.clearFrame()
 		return true
 	}
-	if a.hasZone {
+	if a.sel.HasZone {
 		a.clearZone() // zone_select.go
 		return true
 	}

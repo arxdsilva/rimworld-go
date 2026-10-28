@@ -45,12 +45,12 @@ func bldgApp(t *testing.T, kind, stuff, facing string) (*App, *recSim, game.Buil
 	if !ok {
 		t.Fatalf("no %s built", kind)
 	}
-	a.selectCand(selCand{selBuilding, b.ID})
+	a.selectCand(selCand{Kind: selBuilding, ID: b.ID})
 	return a, rs, b
 }
 
 func findBtn(a *App, id string) (cmdButton, bool) {
-	return bldCmd(a.buildingCommands(a.selBuilding), id)
+	return bldCmd(a.buildingCommands(a.sel.SelBuilding), id)
 }
 
 func TestMoveButtonDisabledForWalls(t *testing.T) {

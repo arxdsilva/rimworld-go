@@ -73,7 +73,7 @@ func TestCellInfoOnlyWithNothingSelected(t *testing.T) {
 	}
 
 	// PLAY-020: a selected zone has its pane there too
-	a.zoneSel, a.hasZone = 1, true
+	a.sel.ZoneSel, a.sel.HasZone = 1, true
 	if got := a.cellInfoLines(); len(got) != 0 {
 		t.Errorf("a zone is selected, cell info = %q", got)
 	}

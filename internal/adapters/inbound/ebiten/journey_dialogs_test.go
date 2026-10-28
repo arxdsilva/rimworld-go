@@ -52,8 +52,8 @@ func TestJourneyDialogsBenchBills(t *testing.T) {
 	}
 	bench := dlgBuildingAt(j, 10, 5)
 	j.clickTile(10, 5, mbLeft, 0)
-	if !j.a.hasBuilding || uint64(j.a.selBuilding) != uint64(bench.ID) {
-		t.Fatalf("the click selected %v (has %v), want the workbench", j.a.selBuilding, j.a.hasBuilding)
+	if !j.a.sel.HasBuilding || uint64(j.a.sel.SelBuilding) != uint64(bench.ID) {
+		t.Fatalf("the click selected %v (has %v), want the workbench", j.a.sel.SelBuilding, j.a.sel.HasBuilding)
 	}
 	j.clickID("inspector.bills")
 	if j.a.paneOpenTab() != "inspector.bills" {
@@ -102,7 +102,7 @@ func TestJourneyDialogsBedOwnerMedicalPrisoners(t *testing.T) {
 	bed := dlgBuildingAt(j, 12, 5)
 	colonist := j.g.Snapshot()[0].ID
 	j.clickTile(12, 5, mbLeft, 0)
-	if !j.a.hasBuilding || j.a.selBuilding != bed.ID {
+	if !j.a.sel.HasBuilding || j.a.sel.SelBuilding != bed.ID {
 		t.Fatal("the click did not select the bed")
 	}
 

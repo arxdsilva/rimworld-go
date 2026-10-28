@@ -19,19 +19,19 @@ import (
 // the click handler and the text the pane is built from.
 
 func (a *App) selectedFrame() (game.FrameView, bool) {
-	if !a.hasFrame || a.renderer == nil {
+	if !a.sel.HasFrame || a.renderer == nil {
 		return game.FrameView{}, false
 	}
 	for _, f := range a.shell.World().Frames {
-		if f.ID == a.selFrame {
+		if f.ID == a.sel.SelFrame {
 			return f, true
 		}
 	}
-	a.hasFrame = false // finished, cancelled or removed
+	a.sel.HasFrame = false // finished, cancelled or removed
 	return game.FrameView{}, false
 }
 
-func (a *App) clearFrame() { a.hasFrame = false }
+func (a *App) clearFrame() { a.sel.HasFrame = false }
 
 // applyFrameClick handles a "frame.*" button.
 func (a *App) applyFrameClick(id string) {

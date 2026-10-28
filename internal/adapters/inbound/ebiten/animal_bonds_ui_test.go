@@ -97,7 +97,7 @@ func TestWildAnimalHasNoMasterRow(t *testing.T) {
 	}
 	st := &stubSim{world: game.WorldView{Animals: []game.AnimalView{an}}}
 	a, _ := colonyApp(t, st)
-	a.selectCand(selCand{selAnimal, 9})
+	a.selectCand(selCand{Kind: selAnimal, ID: 9})
 	for _, c := range a.animalCommands(9) {
 		if strings.Contains(c.ID, "master") || strings.Contains(c.ID, "train") {
 			t.Fatalf("no master or training command for a wild animal: %s", c.ID)
@@ -140,7 +140,7 @@ func TestAnimalTabBodiesStayInTheirPanel(t *testing.T) {
 	s := bondSim()
 	s.world.Animals[0].Log = thingLog(40)
 	a, _ := colonyApp(t, s)
-	a.selectCand(selCand{selAnimal, 50})
+	a.selectCand(selCand{Kind: selAnimal, ID: 50})
 	sp := a.animalPane(50)
 	for _, scale := range []float64{1, 1.5} {
 		withUIScale(t, scale)
@@ -201,7 +201,7 @@ func TestAnimalLogTabScrollsWithWheel(t *testing.T) {
 	s := bondSim()
 	s.world.Animals[0].Log = thingLog(80)
 	a, f := colonyApp(t, s)
-	a.selectCand(selCand{selAnimal, 50})
+	a.selectCand(selCand{Kind: selAnimal, ID: 50})
 	f.Frame(t, a)
 	a.selectPaneTab("inspector.log")
 	f.Frame(t, a)
@@ -221,7 +221,7 @@ func TestAnimalLogTabScrollsWithWheel(t *testing.T) {
 	}
 	// another animal starts at the top
 	s.world.Animals = append(s.world.Animals, game.AnimalView{ID: 51, Species: "labrador", Label: "labrador", X: 7, Y: 7, Tame: true, Name: "Ash", Log: thingLog(80)})
-	a.selectCand(selCand{selAnimal, 51})
+	a.selectCand(selCand{Kind: selAnimal, ID: 51})
 	f.Frame(t, a)
 	if off := a.uiSt().Scroll[animalLogID]; off != 0 {
 		t.Fatalf("a new animal's log scrolls from the top, got %v", off)

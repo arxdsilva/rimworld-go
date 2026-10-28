@@ -358,9 +358,9 @@ func (s shellDispatch) Do(it ports.Intent) {
 	case ports.CloseWindows:
 		a.workOpen = false
 	case ports.SelectPawn:
-		a.selectCand(selCand{selPawn, it.ID})
+		a.selectCand(selCand{Kind: selPawn, ID: it.ID})
 	case ports.TogglePawnInSet:
-		a.toggleInSet(selCand{selPawn, it.ID})
+		a.toggleInSet(selCand{Kind: selPawn, ID: it.ID})
 	case ports.ClearSelection:
 		a.clearSelections(selNone)
 	case ports.CenterOnPawn:
@@ -533,10 +533,10 @@ func clickBarPawn(a *App, id string) {
 	}
 	pid := entity.EntityID(n)
 	if a.in.Shift() {
-		a.toggleInSet(selCand{selPawn, pid})
+		a.toggleInSet(selCand{Kind: selPawn, ID: pid})
 		return
 	}
-	a.selectCand(selCand{selPawn, pid}) // clears every other selection
+	a.selectCand(selCand{Kind: selPawn, ID: pid}) // clears every other selection
 	if a.barDoubleClick(pid) {
 		a.centreOnPawn(pid)
 	}

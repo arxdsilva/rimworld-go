@@ -78,13 +78,13 @@ func TestJourneySelectSameTileCycle(t *testing.T) {
 	}
 	j.settle()
 	j.clickTile(px, py, mbLeft, 0)
-	if !j.a.hasItem || j.a.selItem != sid || j.a.renderer.HasSelect() {
-		t.Fatalf("the second click: item %v/%v pawn %v, want the stack %v", j.a.hasItem, j.a.selItem, j.a.renderer.HasSelect(), sid)
+	if !j.a.sel.HasItem || j.a.sel.SelItem != sid || j.a.renderer.HasSelect() {
+		t.Fatalf("the second click: item %v/%v pawn %v, want the stack %v", j.a.sel.HasItem, j.a.sel.SelItem, j.a.renderer.HasSelect(), sid)
 	}
 	j.f.MoveTo(j.a, 15, 7) // Numpad * acts on the selection, wherever the mouse is
 	j.key("NumpadMultiply", 0)
-	if !j.a.renderer.HasSelect() || j.a.renderer.Selected() != pid || j.a.hasItem {
-		t.Fatalf("Numpad * did not cycle back to the colonist (pawn %v item %v)", j.a.renderer.HasSelect(), j.a.hasItem)
+	if !j.a.renderer.HasSelect() || j.a.renderer.Selected() != pid || j.a.sel.HasItem {
+		t.Fatalf("Numpad * did not cycle back to the colonist (pawn %v item %v)", j.a.renderer.HasSelect(), j.a.sel.HasItem)
 	}
 }
 
@@ -102,18 +102,18 @@ func TestJourneySelectClickBuildingItemPlant(t *testing.T) {
 		t.Fatal(err)
 	}
 	j.clickTile(10, 2, mbLeft, 0)
-	if !j.a.hasBuilding {
+	if !j.a.sel.HasBuilding {
 		t.Fatal("a wall click did not select a building")
 	}
 	j.settle()
 	j.clickTile(12, 2, mbLeft, 0)
-	if !j.a.hasItem || j.a.selItem != sid || j.a.hasBuilding {
-		t.Fatalf("a stack click: item %v/%v building %v", j.a.hasItem, j.a.selItem, j.a.hasBuilding)
+	if !j.a.sel.HasItem || j.a.sel.SelItem != sid || j.a.sel.HasBuilding {
+		t.Fatalf("a stack click: item %v/%v building %v", j.a.sel.HasItem, j.a.sel.SelItem, j.a.sel.HasBuilding)
 	}
 	j.settle()
 	j.clickTile(14, 2, mbLeft, 0)
-	if !j.a.hasPlant || j.a.selPlant != pid || j.a.hasItem {
-		t.Fatalf("a plant click: plant %v/%v item %v", j.a.hasPlant, j.a.selPlant, j.a.hasItem)
+	if !j.a.sel.HasPlant || j.a.sel.SelPlant != pid || j.a.sel.HasItem {
+		t.Fatalf("a plant click: plant %v/%v item %v", j.a.sel.HasPlant, j.a.sel.SelPlant, j.a.sel.HasItem)
 	}
 	if !j.a.paneShown() {
 		t.Fatal("no pane for the plant")
@@ -131,13 +131,13 @@ func TestJourneySelectShiftClickAddsAndRemoves(t *testing.T) {
 	j.clickTile(ax, ay, mbLeft, 0)
 	j.settle()
 	j.clickTile(bx, by, mbLeft, input.ModShift)
-	if !j.a.grouped() || len(j.a.group.Ids) != 2 {
-		t.Fatalf("group %v after a Shift click, want both colonists", j.a.group.Ids)
+	if !j.a.grouped() || len(j.a.sel.Group.Ids) != 2 {
+		t.Fatalf("group %v after a Shift click, want both colonists", j.a.sel.Group.Ids)
 	}
 	j.settle()
 	j.clickTile(bx, by, mbLeft, input.ModShift)
 	if j.a.grouped() || !j.a.renderer.HasSelect() || j.a.renderer.Selected() != ids[0] {
-		t.Fatalf("after the second Shift click: group %v, selected %v", j.a.group.Ids, j.a.renderer.Selected())
+		t.Fatalf("after the second Shift click: group %v, selected %v", j.a.sel.Group.Ids, j.a.renderer.Selected())
 	}
 }
 
@@ -147,8 +147,8 @@ func TestJourneySelectBoxSelect(t *testing.T) {
 	t.Parallel()
 	j := newJourney(t, jPawns([2]int{8, 4}, [2]int{10, 4}, [2]int{12, 4}))
 	j.dragTiles(mbLeft, 7, 3, 13, 5, 0)
-	if !j.a.grouped() || len(j.a.group.Ids) != 3 || j.a.group.Kind != selPawn {
-		t.Fatalf("box select gave kind %v ids %v, want 3 colonists", j.a.group.Kind, j.a.group.Ids)
+	if !j.a.grouped() || len(j.a.sel.Group.Ids) != 3 || j.a.sel.Group.Kind != selPawn {
+		t.Fatalf("box select gave kind %v ids %v, want 3 colonists", j.a.sel.Group.Kind, j.a.sel.Group.Ids)
 	}
 }
 
@@ -160,8 +160,8 @@ func TestJourneySelectDoubleClickKind(t *testing.T) {
 	ax, ay := tileOf(j, 0)
 	j.clickTile(ax, ay, mbLeft, 0)
 	j.clickTile(ax, ay, mbLeft, 0)
-	if !j.a.grouped() || len(j.a.group.Ids) != 3 {
-		t.Fatalf("a double click grouped %v, want all 3 colonists", j.a.group.Ids)
+	if !j.a.grouped() || len(j.a.sel.Group.Ids) != 3 {
+		t.Fatalf("a double click grouped %v, want all 3 colonists", j.a.sel.Group.Ids)
 	}
 }
 

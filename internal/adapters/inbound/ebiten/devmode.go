@@ -369,7 +369,7 @@ func (a *App) debugInspectLines() []string {
 		return []string{fmt.Sprintf("frame #%d %s at (%d, %d)", f.ID, f.Kind, f.X, f.Y)}
 	}
 	if a.grouped() {
-		return []string{fmt.Sprintf("group of %d: %v", len(a.group.Ids), a.group.Ids)}
+		return []string{fmt.Sprintf("group of %d: %v", len(a.sel.Group.Ids), a.sel.Group.Ids)}
 	}
 	return []string{"nothing selected"}
 }

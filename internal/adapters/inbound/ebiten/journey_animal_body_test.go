@@ -35,8 +35,8 @@ func TestJourneyAnimalBodyClickSelectsBigAnimal(t *testing.T) {
 
 	// the flank: two tiles east of the cell, nothing else on it but grass
 	j.clickTile(ax+2, ay, mbLeft, 0)
-	if !j.a.hasAnimal || j.a.selAnimal != id {
-		t.Fatalf("a click on the flank selected animal %v (has %v), want the elephant %v", j.a.selAnimal, j.a.hasAnimal, id)
+	if !j.a.sel.HasAnimal || j.a.sel.SelAnimal != id {
+		t.Fatalf("a click on the flank selected animal %v (has %v), want the elephant %v", j.a.sel.SelAnimal, j.a.sel.HasAnimal, id)
 	}
 	if !j.a.paneShown() {
 		t.Fatal("no pane for the elephant")
@@ -49,13 +49,13 @@ func TestJourneyAnimalBodyClickSelectsBigAnimal(t *testing.T) {
 		t.Fatal(err)
 	}
 	j.clickTile(ax-1, ay-1, mbLeft, 0)
-	if !j.a.hasItem || j.a.selItem != sid || j.a.hasAnimal {
-		t.Fatalf("a stack on the body: item %v/%v, animal %v", j.a.hasItem, j.a.selItem, j.a.hasAnimal)
+	if !j.a.sel.HasItem || j.a.sel.SelItem != sid || j.a.sel.HasAnimal {
+		t.Fatalf("a stack on the body: item %v/%v, animal %v", j.a.sel.HasItem, j.a.sel.SelItem, j.a.sel.HasAnimal)
 	}
 	// clicking it again cycles on to the body over it
 	j.settle()
 	j.clickTile(ax-1, ay-1, mbLeft, 0)
-	if !j.a.hasAnimal || j.a.selAnimal != id {
+	if !j.a.sel.HasAnimal || j.a.sel.SelAnimal != id {
 		t.Fatal("a second click on the stack's tile does not reach the body over it")
 	}
 
@@ -67,14 +67,14 @@ func TestJourneyAnimalBodyClickSelectsBigAnimal(t *testing.T) {
 	}
 	j.update(1)
 	j.clickTile(ax+1, ay-1, mbLeft, 0)
-	if !j.a.renderer.HasSelect() || j.a.renderer.Selected() != pid || j.a.hasAnimal {
-		t.Fatalf("a colonist on the body: selected %v, animal %v", j.a.renderer.Selected(), j.a.hasAnimal)
+	if !j.a.renderer.HasSelect() || j.a.renderer.Selected() != pid || j.a.sel.HasAnimal {
+		t.Fatalf("a colonist on the body: selected %v, animal %v", j.a.renderer.Selected(), j.a.sel.HasAnimal)
 	}
 
 	// a box over the flank and the empty tile under it takes the animal
 	j.settle()
 	j.dragTiles(mbLeft, ax+2, ay+1, ax+2, ay, 0)
-	if !j.a.hasAnimal || j.a.selAnimal != id {
-		t.Fatalf("a box over the flank selected animal %v (has %v)", j.a.selAnimal, j.a.hasAnimal)
+	if !j.a.sel.HasAnimal || j.a.sel.SelAnimal != id {
+		t.Fatalf("a box over the flank selected animal %v (has %v)", j.a.sel.SelAnimal, j.a.sel.HasAnimal)
 	}
 }

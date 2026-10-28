@@ -392,7 +392,7 @@ func TestPowerToggleOverAGroup(t *testing.T) {
 	off.PowerOn, off.PowerWantOn, off.PowerOut = false, false, 0
 	a, s, _ := pwrApp(t, 0, on, off)
 	a.clearSelections(selNone)
-	a.group = selGroup{Kind: selBuilding, Ids: []entity.EntityID{on.ID, off.ID}}
+	a.sel.Group = selGroup{Kind: selBuilding, Ids: []entity.EntityID{on.ID, off.ID}}
 	merged := func() cmdButton {
 		c, ok := bldCmd(a.groupCommands(), "cmd.group.power.toggle")
 		if !ok {
@@ -442,7 +442,7 @@ func TestPowerPaneAndGridAtUIScales(t *testing.T) {
 			sw, sh := layoutScreen(t, a, sz[0], sz[1], ui)
 			for _, b := range bs {
 				name := b.Kind + " ui" + strconv.FormatFloat(ui, 'g', -1, 64) + " " + strconv.Itoa(sw) + "x" + strconv.Itoa(sh)
-				a.selectCand(selCand{selBuilding, b.ID})
+				a.selectCand(selCand{Kind: selBuilding, ID: b.ID})
 				f.Frame(t, a)
 				l := a.hud()
 				if l.Pane.Empty() || !a.paneShown() {

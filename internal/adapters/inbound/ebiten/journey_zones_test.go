@@ -57,8 +57,8 @@ func (j *journey) layZone(cat, tool string, x0, y0, x1, y1 int) game.ZoneView {
 	j.leaveArch()
 	j.settle()
 	j.clickTile(x0, y0, mbLeft, 0)
-	if !j.a.hasZone || j.a.zoneSel != z.ID {
-		j.t.Fatalf("clicking the zone selected %v/%d, want zone %d", j.a.hasZone, j.a.zoneSel, z.ID)
+	if !j.a.sel.HasZone || j.a.sel.ZoneSel != z.ID {
+		j.t.Fatalf("clicking the zone selected %v/%d, want zone %d", j.a.sel.HasZone, j.a.sel.ZoneSel, z.ID)
 	}
 	return z
 }

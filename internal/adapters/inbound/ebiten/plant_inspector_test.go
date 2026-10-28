@@ -176,7 +176,7 @@ func TestPlantNowChips(t *testing.T) {
 	click(t, a, "cmd.plant.now")
 	a.applyPlantClick("plant.now.notanumber")
 	a.applyPlantClick("plant.close")
-	if a.hasPlant {
+	if a.sel.HasPlant {
 		t.Fatal("close clears the selection")
 	}
 	a.applyPlantClick("plant.close") // nothing selected: no-op
@@ -193,11 +193,11 @@ func TestPlantPanelButtonsDisabledChip(t *testing.T) {
 func TestPlantPanelClosesWhenPlantGone(t *testing.T) {
 	t.Parallel()
 	a, _, _ := liveColony(t, 0)
-	a.selPlant, a.hasPlant = 9999, true
+	a.sel.SelPlant, a.sel.HasPlant = 9999, true
 	if _, ok := a.selectedPlant(); ok {
 		t.Fatal("a vanished plant is not selected")
 	}
-	if len(a.commandGridButtons()) != 0 || len(a.plantCommands(9999)) != 0 || a.plantPane(9999).Title != "" || a.hasPlant {
+	if len(a.commandGridButtons()) != 0 || len(a.plantCommands(9999)) != 0 || a.plantPane(9999).Title != "" || a.sel.HasPlant {
 		t.Fatal("panel must close with no buttons")
 	}
 	a.applyPlantClick("plant.harvest") // no-op, no panic

@@ -202,7 +202,7 @@ func (a *App) focusEntity(id entity.EntityID) bool {
 	}
 	for _, an := range a.shell.World().Animals {
 		if an.ID == id {
-			a.selectCand(selCand{selAnimal, an.ID})
+			a.selectCand(selCand{Kind: selAnimal, ID: an.ID})
 			a.centerOnMap(float64(an.X)+0.5, float64(an.Y)+0.5)
 			return true
 		}

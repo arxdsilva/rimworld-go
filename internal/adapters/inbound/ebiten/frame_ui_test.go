@@ -27,7 +27,7 @@ func TestFrameSelectionCycle(t *testing.T) {
 		},
 	}
 	got := selectablesAt(w, nil, 3, 3)
-	want := []selCand{{selItem, 1}, {selFrame, 5}, {selBuilding, 2}, {selBuilding, 3}, {selFrame, 4}}
+	want := []selCand{{Kind: selItem, ID: 1}, {Kind: selFrame, ID: 5}, {Kind: selBuilding, ID: 2}, {Kind: selBuilding, ID: 3}, {Kind: selFrame, ID: 4}}
 	if len(got) != len(want) {
 		t.Fatalf("cands = %v", got)
 	}
@@ -46,7 +46,7 @@ func TestFrameSelectionCycle(t *testing.T) {
 func frameApp(t *testing.T, f game.FrameView) (*App, *stubSim) {
 	a, s := stubColony(t)
 	s.world = game.WorldView{Frames: []game.FrameView{f}}
-	a.selectCand(selCand{selFrame, f.ID})
+	a.selectCand(selCand{Kind: selFrame, ID: f.ID})
 	return a, s
 }
 
@@ -101,7 +101,7 @@ func TestFrameCancelEmitsCancelFrame(t *testing.T) {
 	if c.Kind != command.CancelFrame || c.Target != 7 {
 		t.Fatalf("cmd = %+v", c)
 	}
-	if a.hasFrame {
+	if a.sel.HasFrame {
 		t.Fatal("panel stays open after cancel")
 	}
 }
@@ -110,12 +110,12 @@ func TestFrameEscClosesAndVanishedClears(t *testing.T) {
 	t.Parallel()
 	a, s := frameApp(t, wallFrame())
 	a.pressEscape()
-	if a.hasFrame {
+	if a.sel.HasFrame {
 		t.Fatal("Esc should close the frame panel")
 	}
-	a.selectCand(selCand{selFrame, 7})
+	a.selectCand(selCand{Kind: selFrame, ID: 7})
 	s.world = game.WorldView{}
-	if _, ok := a.selectedFrame(); ok || a.hasFrame {
+	if _, ok := a.selectedFrame(); ok || a.sel.HasFrame {
 		t.Fatal("a finished frame must deselect")
 	}
 }
@@ -235,7 +235,7 @@ func TestItemForbidToggle(t *testing.T) {
 	t.Parallel()
 	a, s := stubColony(t)
 	s.world = game.WorldView{Items: []game.ItemView{{ID: 11, Kind: "wood", Qty: 5, X: 2, Y: 2}}}
-	a.selectCand(selCand{selItem, 11})
+	a.selectCand(selCand{Kind: selItem, ID: 11})
 	click(t, a, "item.forbid")
 	if c := lastCmd(t, s); c.Kind != command.SetForbidden || c.Target != 11 || !c.Enabled {
 		t.Fatalf("cmd = %+v", c)

@@ -221,7 +221,7 @@ func TestNotConnectedAlertFollowsTheRealGrid(t *testing.T) {
 			heater = b
 		}
 	}
-	a.selectCand(selCand{selBuilding, heater.ID})
+	a.selectCand(selCand{Kind: selBuilding, ID: heater.ID})
 	if got := bldLines(a.buildingPane(heater.ID)); !strings.Contains(got, "No power: not connected") {
 		t.Fatalf("the heater's pane: %q", got)
 	}

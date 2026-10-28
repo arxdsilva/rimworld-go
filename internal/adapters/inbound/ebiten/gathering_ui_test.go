@@ -38,7 +38,7 @@ func TestBedInspectorOwnersAndPrisonerToggle(t *testing.T) {
 	s := bedStub()
 	a, f := colonyApp(t, s.stubSim)
 	a.renderer.game = s
-	a.selectCand(selCand{selBuilding, 40})
+	a.selectCand(selCand{Kind: selBuilding, ID: 40})
 	b, ok := a.selectedBuilding()
 	if !ok {
 		t.Fatal("bed not selected")
