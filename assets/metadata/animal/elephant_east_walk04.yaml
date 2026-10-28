@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/elephant_east_walk04"
 image: generated/world/animal/elephant_east_walk04.png
 scale: 2
-canvas: [388, 260]
+canvas: [384, 266]
 footprint: [1, 1]
-origin_px: [130, 118]
+origin_px: [150, 138]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 1.999
-  h: 1.226
-  d: 1.109
+  w: 2.961
+  h: 1.783
+  d: 1.664
+ppt: 84
 species: elephant
 facing: east
 frame: walk04
+gait: 1.1356

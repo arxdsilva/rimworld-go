@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/snowhare_north_walk01"
 image: generated/world/animal/snowhare_north_walk01.png
 scale: 2
-canvas: [156, 156]
+canvas: [72, 128]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [-24, 52]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.121
-  h: 0.278
-  d: 0.315
+  w: 0.332
+  h: 0.702
+  d: 0.912
+ppt: 128
 species: snowhare
 facing: north
 frame: walk01
+gait: 0.3109

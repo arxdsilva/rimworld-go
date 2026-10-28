@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/guinea_pig_north_graze1"
 image: generated/world/animal/guinea_pig_north_graze1.png
 scale: 2
-canvas: [156, 156]
+canvas: [68, 90]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [-30, 10]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.117
-  h: 0.131
-  d: 0.321
+  w: 0.385
+  h: 0.431
+  d: 1.059
+ppt: 128
 species: guinea_pig
 facing: north
 frame: graze1
+gait: 0.2148

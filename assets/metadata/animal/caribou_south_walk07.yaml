@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/caribou_south_walk07"
 image: generated/world/animal/caribou_south_walk07.png
 scale: 2
-canvas: [388, 312]
+canvas: [168, 378]
 footprint: [1, 1]
-origin_px: [130, 170]
+origin_px: [14, 298]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.642
-  h: 1.505
-  d: 1.463
+  w: 1.007
+  h: 2.422
+  d: 2.214
+ppt: 128
 species: caribou
 facing: south
 frame: walk07
+gait: 0.9209

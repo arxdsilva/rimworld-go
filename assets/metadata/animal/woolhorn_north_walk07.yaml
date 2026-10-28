@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/woolhorn_north_walk07"
 image: generated/world/animal/woolhorn_north_walk07.png
 scale: 2
-canvas: [220, 208]
+canvas: [144, 222]
 footprint: [1, 1]
-origin_px: [46, 66]
+origin_px: [8, 140]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.624
-  h: 0.858
-  d: 1.18
+  w: 0.981
+  h: 1.303
+  d: 1.895
+ppt: 128
 species: woolhorn
 facing: north
 frame: walk07
+gait: 0.8076

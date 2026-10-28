@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/rat_east_graze2"
 image: generated/world/animal/rat_east_graze2.png
 scale: 2
-canvas: [156, 156]
+canvas: [308, 98]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [90, 4]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.486
-  h: 0.112
-  d: 0.075
+  w: 1.602
+  h: 0.371
+  d: 0.247
+ppt: 128
 species: rat
 facing: east
 frame: graze2
+gait: 0.2336

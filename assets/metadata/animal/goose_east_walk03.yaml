@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/goose_east_walk03"
 image: generated/world/animal/goose_east_walk03.png
 scale: 2
-canvas: [156, 156]
+canvas: [300, 162]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [86, 86]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.417
-  h: 0.359
-  d: 0.13
+  w: 1.135
+  h: 0.975
+  d: 0.357
+ppt: 128
 species: goose
 facing: east
 frame: walk03
+gait: 0.3337

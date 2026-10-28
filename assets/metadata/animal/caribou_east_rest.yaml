@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/caribou_east_rest"
 image: generated/world/animal/caribou_east_rest.png
 scale: 2
-canvas: [388, 312]
+canvas: [384, 240]
 footprint: [1, 1]
-origin_px: [130, 170]
+origin_px: [152, 188]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 1.704
-  h: 0.848
-  d: 0.642
+  w: 2.677
+  h: 1.332
+  d: 1.008
+ppt: 80
 species: caribou
 facing: east
 frame: rest
+gait: 0.9209

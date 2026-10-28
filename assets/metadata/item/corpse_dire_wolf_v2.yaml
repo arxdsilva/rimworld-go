@@ -3,16 +3,17 @@ version: 1
 id: "core:item/corpse_dire_wolf_v2"
 image: generated/world/item/corpse_dire_wolf_v2.png
 scale: 2
-canvas: [156, 156]
+canvas: [216, 154]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [44, 22]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.974
-  h: 0.362
-  d: 0.691
+  w: 1.53
+  h: 0.569
+  d: 1.087
+ppt: 128
 item: dire wolf corpse
 species: dire_wolf
 variant: 2

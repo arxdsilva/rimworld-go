@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/cow_east_graze2"
 image: generated/world/animal/cow_east_graze2.png
 scale: 2
-canvas: [232, 212]
+canvas: [360, 268]
 footprint: [1, 1]
-origin_px: [52, 70]
+origin_px: [116, 142]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 1.116
-  h: 0.759
-  d: 0.392
+  w: 1.754
+  h: 1.193
+  d: 0.616
+ppt: 128
 species: cow
 facing: east
 frame: graze2
+gait: 0.7749

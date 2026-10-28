@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/turkey_east_flinch1"
 image: generated/world/animal/turkey_east_flinch1.png
 scale: 2
-canvas: [156, 156]
+canvas: [232, 172]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [52, 90]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.424
-  h: 0.344
-  d: 0.411
+  w: 1.167
+  h: 0.946
+  d: 1.132
+ppt: 128
 species: turkey
 facing: east
 frame: flinch1
+gait: 0.3224

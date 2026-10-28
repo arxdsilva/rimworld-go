@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/glimmerstag_east_gore2"
 image: generated/world/animal/glimmerstag_east_gore2.png
 scale: 2
-canvas: [512, 422]
+canvas: [384, 272]
 footprint: [1, 1]
-origin_px: [192, 280]
+origin_px: [160, 226]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 2.568
-  h: 1.65
-  d: 1.006
+  w: 3.852
+  h: 2.475
+  d: 1.508
+ppt: 64
 species: glimmerstag
 facing: east
 frame: gore2
+gait: 1.4902

@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/emu_east_kick3"
 image: generated/world/animal/emu_east_kick3.png
 scale: 2
-canvas: [156, 216]
+canvas: [288, 282]
 footprint: [1, 1]
-origin_px: [14, 74]
+origin_px: [80, 194]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.783
-  h: 0.964
-  d: 0.365
+  w: 1.483
+  h: 1.826
+  d: 0.692
+ppt: 128
 species: emu
 facing: east
 frame: kick3
+gait: 0.7169

@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/ibex_south_walk01"
 image: generated/world/animal/ibex_south_walk01.png
 scale: 2
-canvas: [168, 190]
+canvas: [86, 220]
 footprint: [1, 1]
-origin_px: [20, 48]
+origin_px: [-16, 142]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.212
-  h: 0.736
-  d: 0.635
+  w: 0.402
+  h: 1.337
+  d: 1.301
+ppt: 128
 species: ibex
 facing: south
 frame: walk01
+gait: 0.645

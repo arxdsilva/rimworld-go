@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/capybara_east_flinch2"
 image: generated/world/animal/capybara_east_flinch2.png
 scale: 2
-canvas: [156, 156]
+canvas: [280, 108]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [76, 26]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.764
-  h: 0.306
-  d: 0.204
+  w: 1.447
+  h: 0.579
+  d: 0.387
+ppt: 128
 species: capybara
 facing: east
 frame: flinch2
+gait: 0.29

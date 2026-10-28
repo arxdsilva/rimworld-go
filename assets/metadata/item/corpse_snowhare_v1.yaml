@@ -3,16 +3,17 @@ version: 1
 id: "core:item/corpse_snowhare_v1"
 image: generated/world/item/corpse_snowhare_v1.png
 scale: 2
-canvas: [156, 156]
+canvas: [156, 88]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [14, -2]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.385
-  h: 0.207
-  d: 0.178
+  w: 1.059
+  h: 0.57
+  d: 0.488
+ppt: 128
 item: snowhare corpse
 species: snowhare
 variant: 1

@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/dromedary_north_flinch2"
 image: generated/world/animal/dromedary_north_flinch2.png
 scale: 2
-canvas: [256, 240]
+canvas: [80, 270]
 footprint: [1, 1]
-origin_px: [64, 98]
+origin_px: [-24, 188]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.29
-  h: 1.059
-  d: 1.357
+  w: 0.456
+  h: 1.663
+  d: 2.132
+ppt: 128
 species: dromedary
 facing: north
 frame: flinch2
+gait: 1.1759

@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/emberbuck_east_walk06"
 image: generated/world/animal/emberbuck_east_walk06.png
 scale: 2
-canvas: [156, 188]
+canvas: [244, 218]
 footprint: [1, 1]
-origin_px: [14, 46]
+origin_px: [58, 140]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.697
-  h: 0.752
-  d: 0.192
+  w: 1.379
+  h: 1.371
+  d: 0.363
+ppt: 128
 species: emberbuck
 facing: east
 frame: walk06
+gait: 0.7551

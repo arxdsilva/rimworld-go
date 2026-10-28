@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/iguana_east_walk08"
 image: generated/world/animal/iguana_east_walk08.png
 scale: 2
-canvas: [156, 156]
+canvas: [352, 90]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [112, -2]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.717
-  h: 0.149
-  d: 0.31
+  w: 1.974
+  h: 0.38
+  d: 0.854
+ppt: 128
 species: iguana
 facing: east
 frame: walk08
+gait: 0.2065

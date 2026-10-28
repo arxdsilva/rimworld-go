@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/alpaca_east_walk07"
 image: generated/world/animal/alpaca_east_walk07.png
 scale: 2
-canvas: [156, 192]
+canvas: [304, 222]
 footprint: [1, 1]
-origin_px: [14, 50]
+origin_px: [88, 144]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.562
-  h: 0.798
-  d: 0.236
+  w: 1.046
+  h: 1.484
+  d: 0.446
+ppt: 128
 species: alpaca
 facing: east
 frame: walk07
+gait: 0.5862

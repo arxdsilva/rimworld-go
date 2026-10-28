@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/caribou_north_gore3"
 image: generated/world/animal/caribou_north_gore3.png
 scale: 2
-canvas: [388, 312]
+canvas: [168, 382]
 footprint: [1, 1]
-origin_px: [130, 170]
+origin_px: [26, 302]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.642
-  h: 1.29
-  d: 1.741
+  w: 1.008
+  h: 2.027
+  d: 2.735
+ppt: 128
 species: caribou
 facing: north
 frame: gore3
+gait: 0.9209

@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/goose_north_peck4"
 image: generated/world/animal/goose_north_peck4.png
 scale: 2
-canvas: [156, 156]
+canvas: [84, 162]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [-22, 86]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.146
-  h: 0.339
-  d: 0.463
+  w: 0.401
+  h: 0.932
+  d: 1.273
+ppt: 128
 species: goose
 facing: north
 frame: peck4
+gait: 0.3337

@@ -3,16 +3,17 @@ version: 1
 id: "core:item/corpse_hive_brute_v0"
 image: generated/world/item/corpse_hive_brute_v0.png
 scale: 2
-canvas: [176, 198]
+canvas: [272, 260]
 footprint: [1, 1]
-origin_px: [24, 56]
+origin_px: [72, 122]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 1.251
-  h: 1.326
-  d: 1.079
+  w: 1.967
+  h: 2.083
+  d: 1.695
+ppt: 128
 item: hive brute corpse
 species: hive_brute
 variant: 0

@@ -3,17 +3,19 @@ version: 1
 id: "core:animal/deer_f_east_kick3"
 image: generated/world/animal/deer_f_east_kick3.png
 scale: 2
-canvas: [156, 184]
+canvas: [252, 210]
 footprint: [1, 1]
-origin_px: [14, 42]
+origin_px: [62, 132]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.897
-  h: 0.629
-  d: 0.196
+  w: 1.7
+  h: 1.191
+  d: 0.371
+ppt: 128
 species: deer
 facing: east
 sex: female
 frame: kick3
+gait: 0.8156

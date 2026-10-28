@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/bison_east_walk03"
 image: generated/world/animal/bison_east_walk03.png
 scale: 2
-canvas: [232, 206]
+canvas: [360, 228]
 footprint: [1, 1]
-origin_px: [52, 64]
+origin_px: [116, 132]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 1.223
-  h: 0.889
-  d: 0.428
+  w: 1.908
+  h: 1.381
+  d: 0.671
+ppt: 128
 species: bison
 facing: east
 frame: walk03
+gait: 0.7903

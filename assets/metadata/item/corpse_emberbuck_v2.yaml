@@ -3,16 +3,17 @@ version: 1
 id: "core:item/corpse_emberbuck_v2"
 image: generated/world/item/corpse_emberbuck_v2.png
 scale: 2
-canvas: [156, 156]
+canvas: [224, 148]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [48, 20]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.838
-  h: 0.191
-  d: 0.52
+  w: 1.587
+  h: 0.361
+  d: 0.985
+ppt: 128
 item: emberbuck corpse
 species: emberbuck
 variant: 2

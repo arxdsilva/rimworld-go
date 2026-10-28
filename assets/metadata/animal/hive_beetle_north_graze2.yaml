@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/hive_beetle_north_graze2"
 image: generated/world/animal/hive_beetle_north_graze2.png
 scale: 2
-canvas: [156, 156]
+canvas: [148, 136]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [10, 54]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.296
-  h: 0.196
-  d: 0.486
+  w: 0.975
+  h: 0.647
+  d: 1.601
+ppt: 128
 species: hive_beetle
 facing: north
 frame: graze2
+gait: 0.204

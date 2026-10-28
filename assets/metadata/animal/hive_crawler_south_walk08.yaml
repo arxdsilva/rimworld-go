@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/hive_crawler_south_walk08"
 image: generated/world/animal/hive_crawler_south_walk08.png
 scale: 2
-canvas: [200, 156]
+canvas: [146, 100]
 footprint: [1, 1]
-origin_px: [36, 14]
+origin_px: [8, 26]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.376
-  h: 0.153
-  d: 1.123
+  w: 0.713
+  h: 0.291
+  d: 2.128
+ppt: 128
 species: hive_crawler
 facing: south
 frame: walk08
+gait: 0.3643

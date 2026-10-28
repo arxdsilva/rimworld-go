@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/cow_east_walk02"
 image: generated/world/animal/cow_east_walk02.png
 scale: 2
-canvas: [232, 212]
+canvas: [360, 268]
 footprint: [1, 1]
-origin_px: [52, 70]
+origin_px: [116, 142]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 1.36
-  h: 0.774
-  d: 0.392
+  w: 2.176
+  h: 1.19
+  d: 0.617
+ppt: 128
 species: cow
 facing: east
 frame: walk02
+gait: 0.7749

@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/donkey_east_flinch1"
 image: generated/world/animal/donkey_east_flinch1.png
 scale: 2
-canvas: [180, 198]
+canvas: [336, 268]
 footprint: [1, 1]
-origin_px: [26, 56]
+origin_px: [104, 158]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.831
-  h: 0.842
-  d: 0.269
+  w: 1.574
+  h: 1.596
+  d: 0.51
+ppt: 128
 species: donkey
 facing: east
 frame: flinch1
+gait: 0.8456

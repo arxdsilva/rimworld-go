@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/chinchilla_south_flinch1"
 image: generated/world/animal/chinchilla_south_flinch1.png
 scale: 2
-canvas: [156, 156]
+canvas: [76, 112]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [-26, 32]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.125
-  h: 0.195
-  d: 0.315
+  w: 0.412
+  h: 0.643
+  d: 1.038
+ppt: 128
 species: chinchilla
 facing: south
 frame: flinch1
+gait: 0.3242

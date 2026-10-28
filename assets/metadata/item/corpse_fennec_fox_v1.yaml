@@ -3,16 +3,17 @@ version: 1
 id: "core:item/corpse_fennec_fox_v1"
 image: generated/world/item/corpse_fennec_fox_v1.png
 scale: 2
-canvas: [156, 156]
+canvas: [220, 88]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [46, -8]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.478
-  h: 0.12
-  d: 0.153
+  w: 1.576
+  h: 0.396
+  d: 0.505
+ppt: 128
 item: fennec fox corpse
 species: fennec_fox
 variant: 1

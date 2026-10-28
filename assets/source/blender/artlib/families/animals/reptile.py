@@ -150,6 +150,12 @@ def snake_model(spec, p):
         unroll(p)
 
 
+# The walk advances the S-wave by one full wave per cycle: the wave stands
+# still on the ground while the body slides through it, so the ground
+# travel per cycle is one wavelength (snake_spine: 1.3 waves over 0.6 body).
+SNAKE_WAVE = 0.6 / 1.3
+
+
 def snake_poses(spec):
     out = {}
     for i in range(1, 9):
@@ -395,9 +401,12 @@ def _spec(row):
     b = Body(key=row.key, length=L, attack=row.attack, archetype=row.archetype, **kw)
     if row.key == "cobra":
         b.poses = snake_poses(b)
+        b.travel = SNAKE_WAVE
     elif row.key == "iguana":
+        b.dip = False   # lizard_walk scales the body dip: the stride must fit without it
         b.poses = {"walk%02d" % i: lizard_walk(b, i) for i in range(1, 9)}
     else:
+        b.dip = False   # likewise tortoise_poses
         b.poses = tortoise_poses(b)
     return b
 

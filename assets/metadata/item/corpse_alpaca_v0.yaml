@@ -3,16 +3,17 @@ version: 1
 id: "core:item/corpse_alpaca_v0"
 image: generated/world/item/corpse_alpaca_v0.png
 scale: 2
-canvas: [156, 156]
+canvas: [204, 198]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [38, 46]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.751
-  h: 0.25
-  d: 0.692
+  w: 1.423
+  h: 0.474
+  d: 1.312
+ppt: 128
 item: alpaca corpse
 species: alpaca
 variant: 0

@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/elephant_north_gore1"
 image: generated/world/animal/elephant_north_gore1.png
 scale: 2
-canvas: [388, 260]
+canvas: [230, 382]
 footprint: [1, 1]
-origin_px: [130, 118]
+origin_px: [50, 200]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 1.109
-  h: 1.305
-  d: 1.845
+  w: 1.664
+  h: 1.957
+  d: 2.767
+ppt: 122
 species: elephant
 facing: north
 frame: gore1
+gait: 1.1356

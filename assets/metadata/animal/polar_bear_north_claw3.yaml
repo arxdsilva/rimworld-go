@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/polar_bear_north_claw3"
 image: generated/world/animal/polar_bear_north_claw3.png
 scale: 2
-canvas: [268, 248]
+canvas: [124, 282]
 footprint: [1, 1]
-origin_px: [70, 106]
+origin_px: [-2, 202]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.494
-  h: 0.983
-  d: 1.38
+  w: 0.776
+  h: 1.545
+  d: 2.169
+ppt: 128
 species: polar_bear
 facing: north
 frame: claw3
+gait: 0.833

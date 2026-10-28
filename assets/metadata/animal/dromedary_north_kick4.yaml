@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/dromedary_north_kick4"
 image: generated/world/animal/dromedary_north_kick4.png
 scale: 2
-canvas: [256, 240]
+canvas: [80, 270]
 footprint: [1, 1]
-origin_px: [64, 98]
+origin_px: [-24, 188]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.29
-  h: 1.04
-  d: 1.403
+  w: 0.456
+  h: 1.634
+  d: 2.204
+ppt: 128
 species: dromedary
 facing: north
 frame: kick4
+gait: 1.1759

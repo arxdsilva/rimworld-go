@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/chinchilla_north_walk05"
 image: generated/world/animal/chinchilla_north_walk05.png
 scale: 2
-canvas: [156, 156]
+canvas: [76, 112]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [-26, 32]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.125
-  h: 0.186
-  d: 0.339
+  w: 0.412
+  h: 0.554
+  d: 1.111
+ppt: 128
 species: chinchilla
 facing: north
 frame: walk05
+gait: 0.3242

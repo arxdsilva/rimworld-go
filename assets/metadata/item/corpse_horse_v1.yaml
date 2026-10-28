@@ -3,16 +3,17 @@ version: 1
 id: "core:item/corpse_horse_v1"
 image: generated/world/item/corpse_horse_v1.png
 scale: 2
-canvas: [192, 156]
+canvas: [300, 166]
 footprint: [1, 1]
-origin_px: [32, 14]
+origin_px: [86, 32]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 1.386
-  h: 0.328
-  d: 0.694
+  w: 2.178
+  h: 0.515
+  d: 1.091
+ppt: 128
 item: horse corpse
 species: horse
 variant: 1

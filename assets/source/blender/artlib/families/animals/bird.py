@@ -21,16 +21,11 @@ from dataclasses import replace
 from mathutils import Matrix, Vector
 
 from .. import animal_roster as R
-from ... import stage as S
 from . import parts as P
 from . import rig
 from .rig import Body, Leg, Pose, Skel, attach, ik2
 
 ARCHETYPES = ("bird",)
-
-# outline width in @2x pixels by roster size class (default is 4)
-OUTLINE = {"XS": 2, "S": 3}
-
 
 # ------------------------------------------------------- shared helpers
 def basis(axis, up=(0, 0, 1)):
@@ -71,21 +66,12 @@ def lerp(a, b, t):
 
 
 def render(spec, static, size):
-    """rig.render_species with this species' outline width (the rig does
-    not pass one): a thin outline for XS and S sprites."""
-    width = OUTLINE.get(size.rstrip("+-"))
-    orig = S.render_asset
-
-    def wrapped(*a, **k):
-        if width is not None:
-            k.setdefault("outline_width", width)
-        return orig(*a, **k)
-
-    S.render_asset = wrapped
-    try:
-        return rig.render_species(spec, static=static)
-    finally:
-        S.render_asset = orig
+    """rig.render_species for the bird, reptile and insect builders. The
+    outline is the rig's (rig.outline_px: Body.outline, else the contracts
+    width, scaled by the sprite's ppt), as for quadrupeds; PLAY-022 dropped
+    the thin XS/S outline (an override this wrapper never managed to apply)
+    because those bodies are now 1.45-1.65 tiles long. `size` is unused."""
+    return rig.render_species(spec, static=static)
 
 
 # --------------------------------------------------------------- legs

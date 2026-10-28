@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/snowhare_south_bite4"
 image: generated/world/animal/snowhare_south_bite4.png
 scale: 2
-canvas: [156, 156]
+canvas: [72, 126]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [-32, 50]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.121
-  h: 0.238
-  d: 0.359
+  w: 0.332
+  h: 0.654
+  d: 0.988
+ppt: 128
 species: snowhare
 facing: south
 frame: bite4
+gait: 0.3109

@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/cobra_south_graze1"
 image: generated/world/animal/cobra_south_graze1.png
 scale: 2
-canvas: [156, 156]
+canvas: [174, 146]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [26, 70]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.201
-  h: 0.207
-  d: 0.541
+  w: 0.552
+  h: 0.571
+  d: 1.488
+ppt: 128
 species: cobra
 facing: south
 frame: graze1
+gait: 0.7006

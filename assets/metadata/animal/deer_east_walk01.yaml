@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/deer_east_walk01"
 image: generated/world/animal/deer_east_walk01.png
 scale: 2
-canvas: [180, 212]
+canvas: [332, 262]
 footprint: [1, 1]
-origin_px: [26, 70]
+origin_px: [102, 184]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.802
-  h: 0.858
-  d: 0.26
+  w: 1.669
+  h: 1.467
+  d: 0.493
+ppt: 128
 species: deer
 facing: east
 frame: walk01
+gait: 0.8156

@@ -3,16 +3,17 @@ version: 1
 id: "core:item/corpse_bison_v2"
 image: generated/world/item/corpse_bison_v2.png
 scale: 2
-canvas: [156, 156]
+canvas: [236, 184]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [54, 44]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 1.079
-  h: 0.424
-  d: 0.755
+  w: 1.696
+  h: 0.667
+  d: 1.187
+ppt: 128
 item: bison corpse
 species: bison
 variant: 2

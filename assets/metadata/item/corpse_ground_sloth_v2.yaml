@@ -3,16 +3,17 @@ version: 1
 id: "core:item/corpse_ground_sloth_v2"
 image: generated/world/item/corpse_ground_sloth_v2.png
 scale: 2
-canvas: [208, 172]
+canvas: [312, 238]
 footprint: [1, 1]
-origin_px: [40, 30]
+origin_px: [92, 76]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 1.512
-  h: 0.791
-  d: 1.114
+  w: 2.267
+  h: 1.186
+  d: 1.671
+ppt: 128
 item: ground sloth corpse
 species: ground_sloth
 variant: 2

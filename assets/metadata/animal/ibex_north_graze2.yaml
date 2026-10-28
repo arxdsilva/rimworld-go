@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/ibex_north_graze2"
 image: generated/world/animal/ibex_north_graze2.png
 scale: 2
-canvas: [168, 190]
+canvas: [86, 222]
 footprint: [1, 1]
-origin_px: [20, 48]
+origin_px: [-26, 144]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.212
-  h: 0.49
-  d: 0.666
+  w: 0.402
+  h: 0.928
+  d: 1.261
+ppt: 128
 species: ibex
 facing: north
 frame: graze2
+gait: 0.645

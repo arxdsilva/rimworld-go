@@ -3,16 +3,17 @@ version: 1
 id: "core:item/corpse_timbergnaw_v0"
 image: generated/world/item/corpse_timbergnaw_v0.png
 scale: 2
-canvas: [156, 156]
+canvas: [284, 108]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [78, 2]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 1.094
-  h: 0.256
-  d: 0.338
+  w: 2.073
+  h: 0.485
+  d: 0.639
+ppt: 128
 item: timbergnaw corpse
 species: timbergnaw
 variant: 0

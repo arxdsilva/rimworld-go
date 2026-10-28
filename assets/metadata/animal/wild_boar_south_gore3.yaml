@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/wild_boar_south_gore3"
 image: generated/world/animal/wild_boar_south_gore3.png
 scale: 2
-canvas: [156, 156]
+canvas: [78, 140]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [-28, 62]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.198
-  h: 0.464
-  d: 0.758
+  w: 0.375
+  h: 0.88
+  d: 1.436
+ppt: 128
 species: wild_boar
 facing: south
 frame: gore3
+gait: 0.532

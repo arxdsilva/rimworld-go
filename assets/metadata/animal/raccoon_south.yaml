@@ -3,15 +3,17 @@ version: 1
 id: "core:animal/raccoon_south"
 image: generated/world/animal/raccoon_south.png
 scale: 2
-canvas: [156, 156]
+canvas: [64, 134]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [-32, 34]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.126
-  h: 0.224
-  d: 0.512
+  w: 0.345
+  h: 0.616
+  d: 1.408
+ppt: 128
 species: raccoon
 facing: south
+gait: 0.404

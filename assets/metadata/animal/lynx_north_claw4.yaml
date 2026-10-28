@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/lynx_north_claw4"
 image: generated/world/animal/lynx_north_claw4.png
 scale: 2
-canvas: [156, 156]
+canvas: [70, 218]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [-28, 140]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.134
-  h: 0.394
-  d: 0.503
+  w: 0.368
+  h: 1.084
+  d: 1.384
+ppt: 128
 species: lynx
 facing: north
 frame: claw4
+gait: 0.6555

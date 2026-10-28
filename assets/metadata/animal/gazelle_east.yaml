@@ -3,15 +3,17 @@ version: 1
 id: "core:animal/gazelle_east"
 image: generated/world/animal/gazelle_east.png
 scale: 2
-canvas: [156, 168]
+canvas: [260, 250]
 footprint: [1, 1]
-origin_px: [14, 26]
+origin_px: [66, 172]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.475
-  h: 0.601
-  d: 0.12
+  w: 1.306
+  h: 1.652
+  d: 0.329
+ppt: 128
 species: gazelle
 facing: east
+gait: 0.8598

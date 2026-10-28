@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/donkey_north_rest"
 image: generated/world/animal/donkey_north_rest.png
 scale: 2
-canvas: [180, 198]
+canvas: [86, 270]
 footprint: [1, 1]
-origin_px: [26, 56]
+origin_px: [-18, 160]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.239
-  h: 0.478
-  d: 0.96
+  w: 0.453
+  h: 0.906
+  d: 1.819
+ppt: 128
 species: donkey
 facing: north
 frame: rest
+gait: 0.8456

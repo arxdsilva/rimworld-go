@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/glimmerstag_north_walk08"
 image: generated/world/animal/glimmerstag_north_walk08.png
 scale: 2
-canvas: [512, 422]
+canvas: [162, 378]
 footprint: [1, 1]
-origin_px: [192, 280]
+origin_px: [36, 318]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 1.006
-  h: 2.422
-  d: 1.944
+  w: 1.506
+  h: 3.542
+  d: 3.036
+ppt: 90
 species: glimmerstag
 facing: north
 frame: walk08
+gait: 1.4902

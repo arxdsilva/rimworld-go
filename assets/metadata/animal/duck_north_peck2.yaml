@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/duck_north_peck2"
 image: generated/world/animal/duck_north_peck2.png
 scale: 2
-canvas: [156, 156]
+canvas: [84, 106]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [-22, 30]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.131
-  h: 0.13
-  d: 0.351
+  w: 0.432
+  h: 0.43
+  d: 1.155
+ppt: 128
 species: duck
 facing: north
 frame: peck2
+gait: 0.2021

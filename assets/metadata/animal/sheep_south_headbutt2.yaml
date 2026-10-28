@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/sheep_south_headbutt2"
 image: generated/world/animal/sheep_south_headbutt2.png
 scale: 2
-canvas: [156, 156]
+canvas: [92, 160]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [-18, 76]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.204
-  h: 0.318
-  d: 0.434
+  w: 0.561
+  h: 0.874
+  d: 1.195
+ppt: 128
 species: sheep
 facing: south
 frame: headbutt2
+gait: 0.5708

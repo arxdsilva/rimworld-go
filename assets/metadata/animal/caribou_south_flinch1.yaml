@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/caribou_south_flinch1"
 image: generated/world/animal/caribou_south_flinch1.png
 scale: 2
-canvas: [388, 312]
+canvas: [168, 378]
 footprint: [1, 1]
-origin_px: [130, 170]
+origin_px: [14, 298]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.611
-  h: 1.681
-  d: 1.201
+  w: 0.961
+  h: 2.641
+  d: 1.887
+ppt: 128
 species: caribou
 facing: south
 frame: flinch1
+gait: 0.9209

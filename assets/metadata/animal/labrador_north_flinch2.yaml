@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/labrador_north_flinch2"
 image: generated/world/animal/labrador_north_flinch2.png
 scale: 2
-canvas: [156, 156]
+canvas: [66, 136]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [-30, 54]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.184
-  h: 0.405
-  d: 0.769
+  w: 0.35
+  h: 0.767
+  d: 1.458
+ppt: 128
 species: labrador
 facing: north
 frame: flinch2
+gait: 0.4687

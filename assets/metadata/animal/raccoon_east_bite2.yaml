@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/raccoon_east_bite2"
 image: generated/world/animal/raccoon_east_bite2.png
 scale: 2
-canvas: [156, 156]
+canvas: [236, 136]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [54, 34]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.542
-  h: 0.221
-  d: 0.126
+  w: 1.489
+  h: 0.607
+  d: 0.345
+ppt: 128
 species: raccoon
 facing: east
 frame: bite2
+gait: 0.404

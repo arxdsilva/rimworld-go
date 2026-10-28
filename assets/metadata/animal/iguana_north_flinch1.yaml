@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/iguana_north_flinch1"
 image: generated/world/animal/iguana_north_flinch1.png
 scale: 2
-canvas: [156, 156]
+canvas: [128, 94]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [0, 0]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.311
-  h: 0.192
-  d: 0.701
+  w: 0.855
+  h: 0.529
+  d: 1.928
+ppt: 128
 species: iguana
 facing: north
 frame: flinch1
+gait: 0.2065

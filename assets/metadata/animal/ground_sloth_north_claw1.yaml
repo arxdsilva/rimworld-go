@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/ground_sloth_north_claw1"
 image: generated/world/animal/ground_sloth_north_claw1.png
 scale: 2
-canvas: [276, 276]
+canvas: [172, 314]
 footprint: [1, 1]
-origin_px: [74, 134]
+origin_px: [22, 232]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.795
-  h: 1.161
-  d: 1.643
+  w: 1.193
+  h: 1.741
+  d: 2.465
+ppt: 128
 species: ground_sloth
 facing: north
 frame: claw1
+gait: 0.7584

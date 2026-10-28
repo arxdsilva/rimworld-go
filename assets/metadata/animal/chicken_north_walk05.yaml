@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/chicken_north_walk05"
 image: generated/world/animal/chicken_north_walk05.png
 scale: 2
-canvas: [156, 156]
+canvas: [92, 150]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [-18, 66]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.12
-  h: 0.256
-  d: 0.356
+  w: 0.395
+  h: 0.827
+  d: 1.172
+ppt: 128
 species: chicken
 facing: north
 frame: walk05
+gait: 0.2555

@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/sheep_east_walk08"
 image: generated/world/animal/sheep_east_walk08.png
 scale: 2
-canvas: [156, 156]
+canvas: [216, 160]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [44, 76]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.471
-  h: 0.338
-  d: 0.204
+  w: 1.285
+  h: 0.906
+  d: 0.56
+ppt: 128
 species: sheep
 facing: east
 frame: walk08
+gait: 0.5708

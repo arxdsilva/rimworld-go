@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/emu_north_walk08"
 image: generated/world/animal/emu_north_walk08.png
 scale: 2
-canvas: [156, 216]
+canvas: [108, 282]
 footprint: [1, 1]
-origin_px: [14, 74]
+origin_px: [-10, 194]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.34
-  h: 0.888
-  d: 0.816
+  w: 0.644
+  h: 1.646
+  d: 1.56
+ppt: 128
 species: emu
 facing: north
 frame: walk08
+gait: 0.7169

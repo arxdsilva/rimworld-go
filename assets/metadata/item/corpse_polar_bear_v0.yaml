@@ -3,16 +3,17 @@ version: 1
 id: "core:item/corpse_polar_bear_v0"
 image: generated/world/item/corpse_polar_bear_v0.png
 scale: 2
-canvas: [196, 156]
+canvas: [308, 200]
 footprint: [1, 1]
-origin_px: [34, 14]
+origin_px: [90, 56]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 1.424
-  h: 0.53
-  d: 0.839
+  w: 2.238
+  h: 0.832
+  d: 1.318
+ppt: 128
 item: polar bear corpse
 species: polar_bear
 variant: 0

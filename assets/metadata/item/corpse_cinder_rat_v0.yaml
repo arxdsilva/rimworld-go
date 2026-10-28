@@ -3,16 +3,17 @@ version: 1
 id: "core:item/corpse_cinder_rat_v0"
 image: generated/world/item/corpse_cinder_rat_v0.png
 scale: 2
-canvas: [156, 156]
+canvas: [236, 76]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [54, -20]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.509
-  h: 0.081
-  d: 0.124
+  w: 1.677
+  h: 0.267
+  d: 0.409
+ppt: 128
 item: cinder rat corpse
 species: cinder_rat
 variant: 0

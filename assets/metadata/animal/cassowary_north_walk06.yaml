@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/cassowary_north_walk06"
 image: generated/world/animal/cassowary_north_walk06.png
 scale: 2
-canvas: [184, 254]
+canvas: [156, 362]
 footprint: [1, 1]
-origin_px: [28, 112]
+origin_px: [14, 266]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.476
-  h: 1.111
-  d: 1.037
+  w: 0.901
+  h: 2.059
+  d: 1.982
+ppt: 128
 species: cassowary
 facing: north
 frame: walk06
+gait: 0.7919

@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/monkey_east_claw3"
 image: generated/world/animal/monkey_east_claw3.png
 scale: 2
-canvas: [156, 156]
+canvas: [180, 164]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [26, 88]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.369
-  h: 0.366
-  d: 0.099
+  w: 1.016
+  h: 1.006
+  d: 0.272
+ppt: 128
 species: monkey
 facing: east
 frame: claw3
+gait: 0.4511

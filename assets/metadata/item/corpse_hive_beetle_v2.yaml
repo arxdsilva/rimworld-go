@@ -3,16 +3,17 @@ version: 1
 id: "core:item/corpse_hive_beetle_v2"
 image: generated/world/item/corpse_hive_beetle_v2.png
 scale: 2
-canvas: [156, 156]
+canvas: [204, 160]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [38, 36]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.435
-  h: 0.222
-  d: 0.333
+  w: 1.435
+  h: 0.73
+  d: 1.097
+ppt: 128
 item: hive beetle corpse
 species: hive_beetle
 variant: 2

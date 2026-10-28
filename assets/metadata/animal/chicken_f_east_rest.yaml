@@ -3,17 +3,19 @@ version: 1
 id: "core:animal/chicken_f_east_rest"
 image: generated/world/animal/chicken_f_east_rest.png
 scale: 2
-canvas: [156, 156]
+canvas: [180, 136]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [26, 56]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.286
-  h: 0.184
-  d: 0.123
+  w: 0.943
+  h: 0.606
+  d: 0.405
+ppt: 128
 species: chicken
 facing: east
 sex: female
 frame: rest
+gait: 0.2555

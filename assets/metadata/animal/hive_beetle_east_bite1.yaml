@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/hive_beetle_east_bite1"
 image: generated/world/animal/hive_beetle_east_bite1.png
 scale: 2
-canvas: [156, 156]
+canvas: [340, 136]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [106, 54]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.429
-  h: 0.226
-  d: 0.296
+  w: 1.412
+  h: 0.744
+  d: 0.975
+ppt: 128
 species: hive_beetle
 facing: east
 frame: bite1
+gait: 0.204

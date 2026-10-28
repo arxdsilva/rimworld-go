@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/guinea_pig_south_rest"
 image: generated/world/animal/guinea_pig_south_rest.png
 scale: 2
-canvas: [156, 156]
+canvas: [68, 88]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [-30, 8]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.117
-  h: 0.127
-  d: 0.339
+  w: 0.385
+  h: 0.419
+  d: 1.117
+ppt: 128
 species: guinea_pig
 facing: south
 frame: rest
+gait: 0.2148

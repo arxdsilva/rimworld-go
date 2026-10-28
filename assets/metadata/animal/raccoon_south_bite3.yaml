@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/raccoon_south_bite3"
 image: generated/world/animal/raccoon_south_bite3.png
 scale: 2
-canvas: [156, 156]
+canvas: [64, 134]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [-32, 34]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.126
-  h: 0.215
-  d: 0.535
+  w: 0.345
+  h: 0.592
+  d: 1.472
+ppt: 128
 species: raccoon
 facing: south
 frame: bite3
+gait: 0.404

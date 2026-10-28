@@ -3,16 +3,17 @@ version: 1
 id: "core:item/corpse_ostrich_v0"
 image: generated/world/item/corpse_ostrich_v0.png
 scale: 2
-canvas: [216, 172]
+canvas: [336, 226]
 footprint: [1, 1]
-origin_px: [44, 30]
+origin_px: [104, 84]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 1.573
-  h: 0.918
-  d: 0.959
+  w: 2.472
+  h: 1.443
+  d: 1.507
+ppt: 128
 item: ostrich corpse
 species: ostrich
 variant: 0

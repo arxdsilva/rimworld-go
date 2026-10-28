@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/husky_east_walk02"
 image: generated/world/animal/husky_east_walk02.png
 scale: 2
-canvas: [156, 156]
+canvas: [264, 140]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [68, 64]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.662
-  h: 0.428
-  d: 0.168
+  w: 1.295
+  h: 0.786
+  d: 0.318
+ppt: 128
 species: husky
 facing: east
 frame: walk02
+gait: 0.4891

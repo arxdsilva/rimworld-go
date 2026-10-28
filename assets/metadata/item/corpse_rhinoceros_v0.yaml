@@ -3,16 +3,17 @@ version: 1
 id: "core:item/corpse_rhinoceros_v0"
 image: generated/world/item/corpse_rhinoceros_v0.png
 scale: 2
-canvas: [252, 174]
+canvas: [376, 234]
 footprint: [1, 1]
-origin_px: [62, 32]
+origin_px: [124, 78]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 1.852
-  h: 0.734
-  d: 1.047
+  w: 2.778
+  h: 1.101
+  d: 1.571
+ppt: 128
 item: rhinoceros corpse
 species: rhinoceros
 variant: 0

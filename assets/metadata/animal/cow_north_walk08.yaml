@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/cow_north_walk08"
 image: generated/world/animal/cow_north_walk08.png
 scale: 2
-canvas: [232, 212]
+canvas: [100, 270]
 footprint: [1, 1]
-origin_px: [52, 70]
+origin_px: [-14, 144]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.392
-  h: 0.795
-  d: 1.321
+  w: 0.615
+  h: 1.192
+  d: 2.062
+ppt: 128
 species: cow
 facing: north
 frame: walk08
+gait: 0.7749

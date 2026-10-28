@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/ground_sloth_south_flinch2"
 image: generated/world/animal/ground_sloth_south_flinch2.png
 scale: 2
-canvas: [276, 276]
+canvas: [172, 312]
 footprint: [1, 1]
-origin_px: [74, 134]
+origin_px: [22, 230]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.795
-  h: 1.108
-  d: 1.657
+  w: 1.193
+  h: 1.662
+  d: 2.485
+ppt: 128
 species: ground_sloth
 facing: south
 frame: flinch2
+gait: 0.7584

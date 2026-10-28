@@ -3,15 +3,17 @@ version: 1
 id: "core:animal/timbergnaw_east"
 image: generated/world/animal/timbergnaw_east.png
 scale: 2
-canvas: [188, 156]
+canvas: [348, 118]
 footprint: [1, 1]
-origin_px: [30, 14]
+origin_px: [110, 32]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 1.108
-  h: 0.322
-  d: 0.252
+  w: 2.099
+  h: 0.61
+  d: 0.477
+ppt: 128
 species: timbergnaw
 facing: east
+gait: 0.333

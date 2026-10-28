@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/emberbuck_north_kick4"
 image: generated/world/animal/emberbuck_north_kick4.png
 scale: 2
-canvas: [156, 188]
+canvas: [68, 218]
 footprint: [1, 1]
-origin_px: [14, 46]
+origin_px: [-30, 140]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.192
-  h: 0.697
-  d: 0.701
+  w: 0.363
+  h: 1.32
+  d: 1.328
+ppt: 128
 species: emberbuck
 facing: north
 frame: kick4
+gait: 0.7551

@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/cassowary_south_graze2"
 image: generated/world/animal/cassowary_south_graze2.png
 scale: 2
-canvas: [184, 254]
+canvas: [156, 362]
 footprint: [1, 1]
-origin_px: [28, 112]
+origin_px: [14, 266]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.476
-  h: 0.679
-  d: 1.115
+  w: 0.901
+  h: 1.286
+  d: 2.114
+ppt: 128
 species: cassowary
 facing: south
 frame: graze2
+gait: 0.7919

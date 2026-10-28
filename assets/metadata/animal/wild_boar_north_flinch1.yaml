@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/wild_boar_north_flinch1"
 image: generated/world/animal/wild_boar_north_flinch1.png
 scale: 2
-canvas: [156, 156]
+canvas: [78, 142]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [-22, 64]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.233
-  h: 0.462
-  d: 0.749
+  w: 0.442
+  h: 0.875
+  d: 1.419
+ppt: 128
 species: wild_boar
 facing: north
 frame: flinch1
+gait: 0.532

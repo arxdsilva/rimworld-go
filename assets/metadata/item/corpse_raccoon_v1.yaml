@@ -3,16 +3,17 @@ version: 1
 id: "core:item/corpse_raccoon_v1"
 image: generated/world/item/corpse_raccoon_v1.png
 scale: 2
-canvas: [156, 156]
+canvas: [180, 102]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [26, -6]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.453
-  h: 0.128
-  d: 0.221
+  w: 1.245
+  h: 0.352
+  d: 0.607
+ppt: 128
 item: raccoon corpse
 species: raccoon
 variant: 1

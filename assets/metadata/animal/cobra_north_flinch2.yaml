@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/cobra_north_flinch2"
 image: generated/world/animal/cobra_north_flinch2.png
 scale: 2
-canvas: [156, 156]
+canvas: [174, 148]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [20, 72]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.259
-  h: 0.309
-  d: 0.375
+  w: 0.711
+  h: 0.851
+  d: 1.03
+ppt: 128
 species: cobra
 facing: north
 frame: flinch2
+gait: 0.7006

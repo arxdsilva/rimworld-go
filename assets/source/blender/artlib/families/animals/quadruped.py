@@ -8,7 +8,7 @@ from .. import animal_roster as R
 from . import rig
 
 ARCHETYPES = ("quadruped", "primate")
-OUTLINE_PX = {"XS": 2, "S": 3}   # @2x outline width by size class; M and up keep the contracts default
+OUTLINE_PX = {}   # PLAY-022: XS and S are 1.3-1.5 tiles long now, so every class keeps the contracts outline
 
 COW_PATCHES = [(0.2, (25, 140), 0.075, 0.06), (0.42, (70, 160), 0.085, 0.07), (0.66, (15, 110), 0.07, 0.06),
                (0.82, (60, 200), 0.06, 0.05), (0.32, (-20, 205), 0.05, 0.04)]
@@ -208,7 +208,7 @@ SPECS.update({
         leg_r=(0.075, 0.065, 0.055, 0.052), foot="pad", hock=0.97, hind_r=1.05, neck_len=0.08, neck_angle=0,
         neck_r=(0.13, 0.11), neck_y=0.04, head=(0.08, 0.09, 0.07), head_angle=30, muzzle=(0.12, 0.06, 0.055),
         muzzle_drop=10, ears=("pointed", 0.8, 0), tail=("tufted", 0.7, 0), eye=0.006,
-        pal=dict(coat="skin_slate", hoof="skin_grey", tail_tip="fur_dark", nose=None),
+        pal=dict(coat="skin_slate", hoof="skin_grey", tail_tip="fur_dark", nose=None), nod=0.35,
         marks=(("nose_horns", "horn", 1.1), ("folds", "skin_slate", (0.78, 0.25), 1.05))),
     "sheep": dict(
         height=0.45, torso=0.55, chest=(0.1, 0.12), waist=(0.1, 0.12), hips=(0.1, 0.12), torso_p=2.8,

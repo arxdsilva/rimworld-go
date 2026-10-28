@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/gazelle_south_walk08"
 image: generated/world/animal/gazelle_south_walk08.png
 scale: 2
-canvas: [156, 168]
+canvas: [64, 250]
 footprint: [1, 1]
-origin_px: [14, 26]
+origin_px: [-32, 172]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.12
-  h: 0.61
-  d: 0.49
+  w: 0.329
+  h: 1.621
+  d: 1.347
+ppt: 128
 species: gazelle
 facing: south
 frame: walk08
+gait: 0.8598

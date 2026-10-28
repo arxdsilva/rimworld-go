@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/caribou_south_graze1"
 image: generated/world/animal/caribou_south_graze1.png
 scale: 2
-canvas: [388, 312]
+canvas: [168, 378]
 footprint: [1, 1]
-origin_px: [130, 170]
+origin_px: [14, 298]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.642
-  h: 0.797
-  d: 1.722
+  w: 1.008
+  h: 1.252
+  d: 2.706
+ppt: 128
 species: caribou
 facing: south
 frame: graze1
+gait: 0.9209

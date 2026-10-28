@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/polar_bear_south_walk03"
 image: generated/world/animal/polar_bear_south_walk03.png
 scale: 2
-canvas: [268, 248]
+canvas: [124, 280]
 footprint: [1, 1]
-origin_px: [70, 106]
+origin_px: [-2, 200]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.494
-  h: 0.88
-  d: 1.415
+  w: 0.784
+  h: 1.386
+  d: 2.232
+ppt: 128
 species: polar_bear
 facing: south
 frame: walk03
+gait: 0.833

@@ -299,6 +299,8 @@ class CrawlerPose(Pose):
 
 NSEG = 9
 SEG_Y = 0.105
+CRAWL_STEP = 0.055                 # half a leg's stance sweep (body lengths)
+CRAWL_TRAVEL = 4 * CRAWL_STEP      # ground travel per cycle: the full sweep over half a cycle
 
 
 def crawler_axis(p):
@@ -340,11 +342,17 @@ def crawler_model(spec, p):
             oell("seg", c, t, (w, SEG_Y * 0.62, 0.068), "chitin_ochre", segs=14, rings=8)
             oell("segband", c + t * SEG_Y * 0.5, t, (w * 0.97, 0.022, 0.066), "chitin_black", segs=12, rings=6)
             oell("segridge", c + Vector((0, 0, 0.05)), t, (0.03, SEG_Y * 0.5, 0.03), "chitin_ochre", segs=8, rings=5)
-            # leg pair: a wave of steps ripples from the head to the tail
+            # leg pair: a wave of steps ripples from the head to the tail;
+            # each foot is planted half the cycle, sliding back under the
+            # body at the ground speed (CRAWL_TRAVEL), then swings forward
             for sx in (-1, 1):
-                lp = (-ph / (2 * math.pi) + k * 0.12 + (0 if sx > 0 else 0.5)) % 1.0
-                step = 0.032 * math.sin(2 * math.pi * lp)
-                lift = max(0.0, -math.cos(2 * math.pi * lp)) * 0.03
+                q = (ph / (2 * math.pi) - k * 0.12 + (0 if sx > 0 else 0.5)) % 1.0
+                if q < 0.5:
+                    step, lift = lerp(-CRAWL_STEP, CRAWL_STEP, q / 0.5), 0.0
+                else:
+                    s = (q - 0.5) / 0.5
+                    step = lerp(CRAWL_STEP, -CRAWL_STEP, smooth(s))
+                    lift = 0.03 * math.sin(math.pi * s)
                 root = c + Vector((sx * w * 0.8, 0, -0.02))
                 if dead:
                     foot = root + Vector((sx * 0.06, 0.02 * (1 if k % 2 else -1), -0.05))
@@ -405,6 +413,8 @@ def _spec(row):
     fn = kw.pop("poses_fn")
     b = Body(key=row.key, length=R.body_length(row.size), attack=row.attack, archetype=row.archetype, ears=None,
              tail=None, pal=dict(coat="chitin_teal"), **kw)
+    if row.key == "hive_crawler":
+        b.travel = CRAWL_TRAVEL
     b.poses = fn(b)
     return b
 

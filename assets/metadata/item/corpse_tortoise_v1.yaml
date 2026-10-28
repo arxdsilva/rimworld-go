@@ -3,16 +3,17 @@ version: 1
 id: "core:item/corpse_tortoise_v1"
 image: generated/world/item/corpse_tortoise_v1.png
 scale: 2
-canvas: [156, 156]
+canvas: [212, 148]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [42, 32]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.542
-  h: 0.34
-  d: 0.351
+  w: 1.491
+  h: 0.936
+  d: 0.965
+ppt: 128
 item: tortoise corpse
 species: tortoise
 variant: 1

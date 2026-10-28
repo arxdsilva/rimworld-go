@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/tortoise_east_graze1"
 image: generated/world/animal/tortoise_east_graze1.png
 scale: 2
-canvas: [156, 156]
+canvas: [320, 120]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [96, 42]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.599
-  h: 0.264
-  d: 0.339
+  w: 1.647
+  h: 0.725
+  d: 0.933
+ppt: 128
 species: tortoise
 facing: east
 frame: graze1
+gait: 0.1084

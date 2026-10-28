@@ -3,16 +3,17 @@ version: 1
 id: "core:item/corpse_arctic_wolf_v2"
 image: generated/world/item/corpse_arctic_wolf_v2.png
 scale: 2
-canvas: [156, 156]
+canvas: [212, 140]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [42, 12]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.798
-  h: 0.226
-  d: 0.513
+  w: 1.511
+  h: 0.428
+  d: 0.971
+ppt: 128
 item: arctic wolf corpse
 species: arctic_wolf
 variant: 2

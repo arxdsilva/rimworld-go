@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/cat_east_flinch1"
 image: generated/world/animal/cat_east_flinch1.png
 scale: 2
-canvas: [156, 156]
+canvas: [240, 146]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [56, 70]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.514
-  h: 0.254
-  d: 0.102
+  w: 1.413
+  h: 0.699
+  d: 0.282
+ppt: 128
 species: cat
 facing: east
 frame: flinch1
+gait: 0.3891

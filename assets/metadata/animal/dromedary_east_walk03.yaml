@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/dromedary_east_walk03"
 image: generated/world/animal/dromedary_east_walk03.png
 scale: 2
-canvas: [256, 240]
+canvas: [382, 254]
 footprint: [1, 1]
-origin_px: [64, 98]
+origin_px: [130, 178]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 1.45
-  h: 1.082
-  d: 0.29
+  w: 2.318
+  h: 1.655
+  d: 0.456
+ppt: 122
 species: dromedary
 facing: east
 frame: walk03
+gait: 1.1759

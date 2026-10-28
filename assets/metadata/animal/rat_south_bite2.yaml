@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/rat_south_bite2"
 image: generated/world/animal/rat_south_bite2.png
 scale: 2
-canvas: [156, 156]
+canvas: [52, 96]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [-38, 4]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.075
-  h: 0.12
-  d: 0.537
+  w: 0.247
+  h: 0.396
+  d: 1.769
+ppt: 128
 species: rat
 facing: south
 frame: bite2
+gait: 0.2336

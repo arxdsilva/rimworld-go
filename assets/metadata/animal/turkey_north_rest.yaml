@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/turkey_north_rest"
 image: generated/world/animal/turkey_north_rest.png
 scale: 2
-canvas: [156, 156]
+canvas: [164, 172]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [18, 90]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.411
-  h: 0.272
-  d: 0.513
+  w: 1.132
+  h: 0.748
+  d: 1.41
+ppt: 128
 species: turkey
 facing: north
 frame: rest
+gait: 0.3224

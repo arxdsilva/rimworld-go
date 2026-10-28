@@ -3,17 +3,19 @@ version: 1
 id: "core:animal/elk_f_north_gore4"
 image: generated/world/animal/elk_f_north_gore4.png
 scale: 2
-canvas: [240, 248]
+canvas: [108, 282]
 footprint: [1, 1]
-origin_px: [56, 106]
+origin_px: [-10, 202]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.412
-  h: 1.092
-  d: 1.197
+  w: 0.647
+  h: 1.715
+  d: 1.881
+ppt: 128
 species: elk
 facing: north
 sex: female
 frame: gore4
+gait: 1.0898

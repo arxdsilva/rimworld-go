@@ -3,15 +3,17 @@ version: 1
 id: "core:animal/chinchilla_east"
 image: generated/world/animal/chinchilla_east.png
 scale: 2
-canvas: [156, 156]
+canvas: [184, 112]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [28, 32]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.339
-  h: 0.186
-  d: 0.125
+  w: 1.118
+  h: 0.614
+  d: 0.412
+ppt: 128
 species: chinchilla
 facing: east
+gait: 0.3242

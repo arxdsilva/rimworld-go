@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/cinder_rat_east_bite2"
 image: generated/world/animal/cinder_rat_east_bite2.png
 scale: 2
-canvas: [156, 156]
+canvas: [292, 94]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [82, 4]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.517
-  h: 0.12
-  d: 0.075
+  w: 1.703
+  h: 0.396
+  d: 0.247
+ppt: 128
 species: cinder_rat
 facing: east
 frame: bite2
+gait: 0.2336

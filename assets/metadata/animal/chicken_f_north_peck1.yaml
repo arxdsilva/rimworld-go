@@ -3,17 +3,19 @@ version: 1
 id: "core:animal/chicken_f_north_peck1"
 image: generated/world/animal/chicken_f_north_peck1.png
 scale: 2
-canvas: [156, 156]
+canvas: [92, 138]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [-18, 58]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.137
-  h: 0.248
-  d: 0.239
+  w: 0.453
+  h: 0.819
+  d: 0.787
+ppt: 128
 species: chicken
 facing: north
 sex: female
 frame: peck1
+gait: 0.2555

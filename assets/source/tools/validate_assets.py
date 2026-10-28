@@ -38,6 +38,10 @@ def tint_groups():
 
 TINT_GROUPS = tint_groups()
 PPT = 128
+# PLAY-022: animals and corpses carry their own density `ppt` (pixels per
+# tile, 64..128; the renderer scales them to the tile) and their canvas may
+# be tighter than the tile, so origin_px may lie outside it.
+MIN_PPT = 64
 ID = re.compile(r"^core:[a-z_]+/[a-z0-9_]+$")
 
 errors = []
@@ -77,8 +81,12 @@ def check_sprite(family, name, path):
         err("%s/%s: scale must be 2" % (family, name))
     fw, fh = ints(field(md, "footprint"))
     ox, oy = ints(field(md, "origin_px"))
-    if ox < 0 or oy < 0 or ox + fw * PPT > cw or oy + fh * PPT > ch:
-        err("%s/%s: footprint %dx%d at %s exceeds canvas" % (family, name, fw, fh, (ox, oy)))
+    ppt = field(md, "ppt")
+    if ppt is None:
+        if ox < 0 or oy < 0 or ox + fw * PPT > cw or oy + fh * PPT > ch:
+            err("%s/%s: footprint %dx%d at %s exceeds canvas" % (family, name, fw, fh, (ox, oy)))
+    elif not ppt.isdigit() or not MIN_PPT <= int(ppt) <= PPT:
+        err("%s/%s: ppt %s outside %d..%d" % (family, name, ppt, MIN_PPT, PPT))
     a = img.getchannel("A")
     if a.getextrema()[1] == 0:
         err("%s/%s: fully transparent" % (family, name))
@@ -359,14 +367,103 @@ def check_pawn_layers(atlas=None):
                 "%s (%s)" % (c, k) for c, k in sorted(seen.items()))))
 
 
-def _roster():
+def _roster_module():
     """The binding animal roster (ART-011), read from the Blender family."""
     sys.path.insert(0, os.path.join(ROOT, "source", "blender", "artlib", "families"))
     try:
         import animal_roster
     finally:
         sys.path.pop(0)
-    return animal_roster.ROSTER
+    return animal_roster
+
+
+def _roster():
+    return _roster_module().ROSTER
+
+
+# PLAY-022 memory budget: animal + corpse PNG pixels (colour + normal maps)
+# stay within ANIMAL_PX_CAP x the pre-PLAY-022 set (animal 281.2 M + corpse
+# 10.1 M); size classes hit their area (animal_roster.SIZE_AREA) within
+# AREA_TOL, measured on the east standing frame's alpha box at its ppt.
+ANIMAL_PX_BASELINE = 291.3e6
+ANIMAL_PX_CAP = 1.2
+AREA_TOL = 0.15
+AREA_ALPHA = 40
+
+
+def _sprite_meta(path):
+    """canvas, origin_px, ppt and gait of one metadata file (None if absent)."""
+    if not os.path.exists(path):
+        return None
+    md = open(path, encoding="utf-8").read()
+    ppt, gait = field(md, "ppt"), field(md, "gait")
+    return {"canvas": tuple(ints(field(md, "canvas"))), "origin": tuple(ints(field(md, "origin_px"))),
+            "ppt": int(ppt) if ppt and ppt.isdigit() else None, "gait": float(gait) if gait else None}
+
+
+def _edge_alpha(path):
+    """True when any pixel on the canvas border is not transparent: the
+    tight canvas (C2) clipped the sprite or its outline."""
+    a = Image.open(path).getchannel("A")
+    w, h = a.size
+    for box in ((0, 0, w, 1), (0, h - 1, w, h), (0, 0, 1, h), (w - 1, 0, w, h)):
+        if a.crop(box).getextrema()[1] > 0:
+            return True
+    return False
+
+
+def check_animal_density(roster, sizes):
+    """PLAY-022: every animal and corpse sprite declares ppt; every animal
+    file of a set declares the same gait; nothing touches the canvas
+    border; each size class's median east standing area is within
+    AREA_TOL of its target; and the pixel total stays within the budget."""
+    ad, idir = os.path.join(GEN, "animal"), os.path.join(GEN, "item")
+    for f in sorted(os.listdir(ad)) if os.path.isdir(ad) else ():
+        if f.endswith(".png") and not f.endswith(("_n.png", "_mask.png")) and _edge_alpha(os.path.join(ad, f)):
+            err("animal/%s: alpha on the canvas border (tight canvas clipped it)" % f[:-4])
+    for sp in roster:
+        for v in range(3):
+            name = "corpse_%s_v%d" % (sp.key, v)
+            m = _sprite_meta(os.path.join(META, "item", name + ".yaml"))
+            if m is None:
+                continue
+            if m["ppt"] is None:
+                err("item/%s: missing ppt" % name)
+            png = os.path.join(idir, name + ".png")
+            if os.path.exists(png) and _edge_alpha(png):
+                err("item/%s: alpha on the canvas border (tight canvas clipped it)" % name)
+    areas = {}
+    for sp in roster:
+        m = _sprite_meta(os.path.join(META, "animal", "%s_east.yaml" % sp.key))
+        png = os.path.join(ad, "%s_east.png" % sp.key)
+        if m is None or m["ppt"] is None or not os.path.exists(png):
+            continue
+        box = Image.open(png).getchannel("A").point(lambda v: 255 if v > AREA_ALPHA else 0).getbbox()
+        if box:
+            areas.setdefault(sp.size.rstrip("+-"), []).append(
+                (box[2] - box[0]) * (box[3] - box[1]) / float(m["ppt"] ** 2))
+    for cls, target in sizes.items():
+        got = sorted(areas.get(cls, []))
+        if not got:
+            continue
+        n = len(got)
+        med = got[n // 2] if n % 2 else (got[n // 2 - 1] + got[n // 2]) / 2
+        print("animal size %-2s median area %.2f tiles^2 (target %.1f, %+.0f%%, %d species)"
+              % (cls, med, target, 100 * (med / target - 1), n))
+        if abs(med / target - 1) > AREA_TOL:
+            err("animal size %s: median east standing area %.2f tiles^2 is not within %d%% of %.1f"
+                % (cls, med, AREA_TOL * 100, target))
+    total = 0
+    for d, pat in ((ad, r"\.png$"), (idir, r"^corpse_.*\.png$")):
+        for f in os.listdir(d) if os.path.isdir(d) else ():
+            if re.search(pat, f) and not f.endswith("_mask.png"):
+                w, h = Image.open(os.path.join(d, f)).size
+                total += w * h
+    print("animal + corpse pixels %.1f M (%.2fx the %.1f M baseline, cap %.1fx)"
+          % (total / 1e6, total / ANIMAL_PX_BASELINE, ANIMAL_PX_BASELINE / 1e6, ANIMAL_PX_CAP))
+    if total > ANIMAL_PX_CAP * ANIMAL_PX_BASELINE:
+        err("animal + corpse pixels %.1f M exceed %.1fx the %.1f M baseline"
+            % (total / 1e6, ANIMAL_PX_CAP, ANIMAL_PX_BASELINE / 1e6))
 
 
 def check_animals():
@@ -378,29 +475,46 @@ def check_animals():
     so a west sprite is a stale error. Sprites of species outside the
     roster are errors."""
     ad = os.path.join(GEN, "animal")
-    roster = _roster()
+    mod = _roster_module()
+    roster = mod.ROSTER
     bases = set()
     for sp in roster:
         frames = TROT_FRAMES + _set(sp.attack, 4) + ANIMAL_COMMON
         for base in [sp.key] + ([sp.key + "_f"] if sp.dimorphic else []):
             bases.add(base)
+            gaits = set()
             for facing in ANIMAL_FACINGS:
                 stand = os.path.join(ad, "%s_%s.png" % (base, facing))
                 if not os.path.exists(stand):
                     err("animal/%s_%s: missing standing frame" % (base, facing))
                     continue
                 size = Image.open(stand).size
-                mp = os.path.join(META, "animal", "%s_%s.yaml" % (base, facing))
-                if os.path.exists(mp):
-                    ox = ints(field(open(mp, encoding="utf-8").read(), "origin_px"))[0]
-                    if size[0] != 2 * ox + PPT:
+                sm = _sprite_meta(os.path.join(META, "animal", "%s_%s.yaml" % (base, facing)))
+                if sm is not None:
+                    # C2: one canvas, origin and ppt per species, sex and facing;
+                    # east is symmetric about the tile (the renderer mirrors it for west)
+                    if sm["ppt"] is None:
+                        err("animal/%s_%s: missing ppt" % (base, facing))
+                    elif facing == "east" and size[0] != 2 * sm["origin"][0] + sm["ppt"]:
                         err("animal/%s_%s: canvas not symmetric about the tile (west mirrors east)" % (base, facing))
+                    if not sm["gait"] or sm["gait"] <= 0:
+                        err("animal/%s_%s: missing gait (tiles per walk cycle)" % (base, facing))
+                    gaits.add(sm["gait"])
                 for fr in frames:
                     p = os.path.join(ad, "%s_%s_%s.png" % (base, facing, fr))
                     if not os.path.exists(p):
                         err("animal/%s_%s: missing frame %s" % (base, facing, fr))
-                    elif Image.open(p).size != size:
+                        continue
+                    if Image.open(p).size != size:
                         err("animal/%s_%s_%s: canvas differs from the standing frame" % (base, facing, fr))
+                    fm = _sprite_meta(os.path.join(META, "animal", "%s_%s_%s.yaml" % (base, facing, fr)))
+                    if sm is not None and fm is not None:
+                        for k in ("origin", "ppt", "gait"):
+                            if fm[k] != sm[k]:
+                                err("animal/%s_%s_%s: %s %s differs from the standing frame's %s"
+                                    % (base, facing, fr, k, fm[k], sm[k]))
+            if len(gaits) > 1:
+                err("animal/%s: gait differs between facings %s" % (base, sorted(g for g in gaits if g)))
         for v in range(3):
             if not os.path.exists(os.path.join(GEN, "item", "corpse_%s_v%d.png" % (sp.key, v))):
                 err("item/corpse_%s_v%d: missing corpse" % (sp.key, v))
@@ -416,6 +530,7 @@ def check_animals():
         m = re.match(r"^corpse_(\w+?)(?:_v\d)?\.png$", f)
         if m and not f.endswith("_n.png") and m.group(1) not in keys:
             err("item/%s: corpse of a species not in the roster" % f[:-4])
+    check_animal_density(roster, mod.SIZE_AREA)
 
 
 def _attach(text, key):

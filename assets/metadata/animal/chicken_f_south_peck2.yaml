@@ -3,17 +3,19 @@ version: 1
 id: "core:animal/chicken_f_south_peck2"
 image: generated/world/animal/chicken_f_south_peck2.png
 scale: 2
-canvas: [156, 156]
+canvas: [92, 136]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [-18, 56]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.143
-  h: 0.203
-  d: 0.289
+  w: 0.472
+  h: 0.669
+  d: 0.951
+ppt: 128
 species: chicken
 facing: south
 sex: female
 frame: peck2
+gait: 0.2555

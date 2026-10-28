@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/sheep_south_walk03"
 image: generated/world/animal/sheep_south_walk03.png
 scale: 2
-canvas: [156, 156]
+canvas: [92, 160]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [-18, 76]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.204
-  h: 0.342
-  d: 0.467
+  w: 0.564
+  h: 0.911
+  d: 1.305
+ppt: 128
 species: sheep
 facing: south
 frame: walk03
+gait: 0.5708

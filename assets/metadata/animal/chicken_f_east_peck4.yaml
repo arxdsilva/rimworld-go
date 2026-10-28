@@ -3,17 +3,19 @@ version: 1
 id: "core:animal/chicken_f_east_peck4"
 image: generated/world/animal/chicken_f_east_peck4.png
 scale: 2
-canvas: [156, 156]
+canvas: [180, 136]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [26, 56]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.267
-  h: 0.227
-  d: 0.13
+  w: 0.881
+  h: 0.749
+  d: 0.428
+ppt: 128
 species: chicken
 facing: east
 sex: female
 frame: peck4
+gait: 0.2555

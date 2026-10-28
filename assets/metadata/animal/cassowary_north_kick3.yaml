@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/cassowary_north_kick3"
 image: generated/world/animal/cassowary_north_kick3.png
 scale: 2
-canvas: [184, 254]
+canvas: [156, 362]
 footprint: [1, 1]
-origin_px: [28, 112]
+origin_px: [14, 266]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.554
-  h: 1.248
-  d: 0.912
+  w: 1.049
+  h: 2.364
+  d: 1.728
+ppt: 128
 species: cassowary
 facing: north
 frame: kick3
+gait: 0.7919

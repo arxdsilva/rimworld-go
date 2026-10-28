@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/hive_brute_east_walk05"
 image: generated/world/animal/hive_brute_east_walk05.png
 scale: 2
-canvas: [228, 280]
+canvas: [360, 350]
 footprint: [1, 1]
-origin_px: [50, 138]
+origin_px: [116, 252]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 1.456
-  h: 1.045
-  d: 1.022
+  w: 2.287
+  h: 1.617
+  d: 1.606
+ppt: 128
 species: hive_brute
 facing: east
 frame: walk05
+gait: 0.51

@@ -3,16 +3,17 @@ version: 1
 id: "core:item/corpse_cougar_v1"
 image: generated/world/item/corpse_cougar_v1.png
 scale: 2
-canvas: [156, 156]
+canvas: [264, 126]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [68, 6]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 1.001
-  h: 0.19
-  d: 0.431
+  w: 1.897
+  h: 0.359
+  d: 0.816
+ppt: 128
 item: cougar corpse
 species: cougar
 variant: 1

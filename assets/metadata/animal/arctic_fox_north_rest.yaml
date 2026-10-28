@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/arctic_fox_north_rest"
 image: generated/world/animal/arctic_fox_north_rest.png
 scale: 2
-canvas: [156, 156]
+canvas: [68, 186]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [-30, 56]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.099
-  h: 0.277
-  d: 0.637
+  w: 0.273
+  h: 0.761
+  d: 1.752
+ppt: 128
 species: arctic_fox
 facing: north
 frame: rest
+gait: 0.4462

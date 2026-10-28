@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/capybara_south_walk01"
 image: generated/world/animal/capybara_south_walk01.png
 scale: 2
-canvas: [156, 156]
+canvas: [68, 108]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [-30, 26]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.204
-  h: 0.294
-  d: 0.76
+  w: 0.387
+  h: 0.509
+  d: 1.428
+ppt: 128
 species: capybara
 facing: south
 frame: walk01
+gait: 0.29

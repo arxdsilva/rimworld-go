@@ -15,6 +15,13 @@ built where the posed bones put it. Legs are two-bone IK chains from a
 body-frame joint to a foot target, so feet stay planted while the body
 moves.
 
+PLAY-022: each facing gets its own tight canvas (the union of that
+facing's frames) at a per-sprite density `ppt` (pixels per tile, written
+to the metadata; large canvases render below contracts.PPT and the
+renderer scales them up). The walk plants every foot for DUTY of the
+cycle at one ground speed, and every animal sprite carries `gait`: the
+tiles an adult travels per 8-frame walk cycle (gait_tiles).
+
 Other archetypes (A2: bird, reptile, insect) reuse this module:
 - give Body a `legs` callable (spec -> [Leg]) to change the leg layout,
   and/or a `model` callable (spec, pose) that builds the geometry with the
@@ -24,6 +31,7 @@ Other archetypes (A2: bird, reptile, insect) reuse this module:
 """
 import math
 import os
+from collections import namedtuple
 from contextlib import contextmanager
 from dataclasses import dataclass, field, replace
 
@@ -43,7 +51,28 @@ ATTACK_KINDS = ("bite", "claw", "kick", "gore", "headbutt", "peck")
 GRAZE = ("graze1", "graze2")
 FLINCH = ("flinch1", "flinch2")
 CORPSE_VARIANTS = 3
-PAD = 0.05                # tiles of canvas padding beyond the measured pose extents
+PAD_PX = 3                # canvas pixels beyond the outline (its soft fringe, anti-aliasing, one spare)
+CANVAS_CAP = 384          # px: a facing canvas longer than this at contracts.PPT renders at a lower ppt
+MIN_PPT = 64              # never below half density
+
+# Walk (ART §27.1, PLAY-022). Diagonal pairs (fl+hr, fr+hl); every foot is
+# planted for DUTY of the cycle (5 of the 8 frames, then a toe-off and two
+# swing frames) and slides back under the body at the same rate, so the
+# body travels stride / DUTY per cycle with no foot skating.
+DUTY = 0.6
+STRIDE_K = 0.6            # quadrupeds: stance sweep / shoulder-hip height (about +-17 deg about the shoulder)
+STRIDE_LEG = 0.42         # other leg layouts: stance sweep / leg length
+LIFT_K = (0.14, 0.2)      # swing clearance / leg length: (quadruped, other layouts)
+BOB_MIN = 0.012           # body lengths: the least body dip at contact (walk01/05) that reads at game scale
+DROP_MAX = 0.04           # body lengths: the deepest dip allowed; a stride that needs more is narrowed
+WALK_PITCH = 4.0          # degrees nose-down at contact, level at passing (walk03/07)
+WALK_NOD = 9.0            # head nod (degrees, nose down at contact)
+WALK_NECK = 4.0           # neck dips at contact (degrees)
+WALK_ROLL = 1.5           # side-to-side weight shift, once per cycle (degrees)
+NOSE_MAX = 0.16           # the nose rises and falls at most this share of the withers height per cycle:
+                          # low-carried heads (dogs, cats, rodents) nod less than deer and horses
+TRUNK_SWING = 35.0        # a trunk keeps hanging under the nodding head and swings forward at contact (degrees),
+                          # so the dipping head never drives its tip into the ground
 
 
 # ------------------------------------------------------------------ specs
@@ -115,7 +144,11 @@ class Body:
     model: object = None                 # callable(spec, pose) builder (default quadruped)
     poses: dict = None                   # extra/override frames {name: Pose}
     corpse_scale: float = 1.0
-    outline: int = None                  # outline px (@2x); None = contracts default. Thinner for XS/S.
+    outline: int = None                  # outline px at contracts.PPT; None = contracts default. Thinner for XS/S.
+    stride: float = None                 # walk stance sweep (body lengths); None = from the legs (gait())
+    travel: float = None                 # ground travel per walk cycle (body lengths) for walks without feet
+    dip: bool = True                     # the walk may dip the body to keep planted feet in reach (gait())
+    nod: float = 1.0                     # walk head/neck nod scale (low-carried heads nod less)
 
     def c(self, role, default=KeyError):
         """Palette role -> material key. Unset roles fall back along
@@ -158,6 +191,7 @@ class Pose:
     paws: dict = field(default_factory=dict)   # leg -> (dy, dz): foot relative to the posed joint
     trunk: float = 0.0       # trunk raise (elephant)
     dead: int = -1           # corpse variant, -1 alive
+    swing: float = 0.0       # 0..1: how far the upper leg (root->joint) turns with the foot about the shoulder/hip
 
 
 # --------------------------------------------------------------- skeleton
@@ -248,7 +282,19 @@ class Skel:
         return self.head_world(self.head_geo()["tip"])
 
     def joint_world(self, leg):
-        return self.B @ Vector(leg.joint)
+        """The elbow/stifle where the leg's IK starts. With Pose.swing the
+        upper leg turns about the shoulder/hip (root) by that fraction of
+        the root->foot angle change, so the whole leg strides like a strut
+        instead of pivoting at the elbow (feet given by `paws` never swing)."""
+        j = self.B @ Vector(leg.joint)
+        p = self.p
+        if not p.swing or leg.name in p.paws:
+            return j
+        r = self.B @ Vector(leg.root)
+        t = self.foot_target(leg)
+        a0 = math.atan2(leg.foot[1] - r.y, r.z - leg.r[3])
+        a1 = math.atan2(t.y - r.y, r.z - t.z)
+        return (Matrix.Translation(r) @ Matrix.Rotation((a1 - a0) * p.swing, 4, "X") @ Matrix.Translation(-r)) @ j
 
     def foot_target(self, leg):
         p = self.p
@@ -372,7 +418,7 @@ def _leg_path(joint, knee, foot, r1, r2, r3, k):
 def build_leg(sk, leg):
     b = sk.b
     root = sk.B @ Vector(leg.root)
-    joint = sk.B @ Vector(leg.joint)
+    joint = sk.joint_world(leg)
     knee, foot = ik2(joint, sk.foot_target(leg), leg.l1, leg.l2, leg.bend)
     r0, r1, r2, r3 = leg.r
     k = b.muscle
@@ -409,6 +455,8 @@ def build_leg(sk, leg):
             P.claws(c + fwd * r3 * 1.0 + Vector((0, 0, r3 * 0.1)), fwd, 1.0, leg.foot_mat, n=3,
                     length=r3 * 4.2, spread=r3 * 0.6, curve=100)
     elif k == "pad":
+        if sk.p.swing and abs(foot.z - r3) < 1e-3:
+            d = Vector((0, 0, -1))   # a planted pad (walk) stands flat on its sole, not tilted with the leg
         P.tube("pad", [foot - d * r3 * 0.3, foot + d * r3 * 0.9], [r3 * 1.15, r3 * 1.2], leg.lower or leg.mat,
                segs=14, caps=(0, 0.1))
         for sx in (-1, 0, 1):
@@ -838,26 +886,161 @@ def quadruped(spec, pose):
 
 
 # ------------------------------------------------------------------ poses
-def trot_pose(spec, i):
-    """walk01..08 (ART §27.1): diagonal pairs, two bobs per cycle, head nod."""
+Gait = namedtuple("Gait", "stride lift drop swing base nod")
+_GAIT = {}
+
+
+def _walk(spec, i, g):
     ph = (i - 1) / TROT_N
-    legs = (spec.legs or quadruped_legs)(spec)
     feet = {}
-    for leg in legs:
-        L = leg.l1 + leg.l2
-        stride = 0.42 * L
-        lift = 0.2 * L
+    for leg in (spec.legs or quadruped_legs)(spec):
         q = (ph + leg.phase) % 1.0
-        duty = 0.55
-        if q < duty:
-            s = q / duty
-            feet[leg.name] = (P.lerp(-stride / 2, stride / 2, s), 0.0)
+        if q < DUTY:      # planted: slides back under the body at stride / DUTY per cycle
+            feet[leg.name] = (P.lerp(-g.stride / 2, g.stride / 2, q / DUTY), 0.0)
         else:
-            s = (q - duty) / (1 - duty)
-            feet[leg.name] = (P.lerp(stride / 2, -stride / 2, _smooth(s)), lift * math.sin(math.pi * s))
-    bob = 0.018 * (1 - math.cos(4 * math.pi * ph)) / 2
-    return Pose(bz=-bob, pitch=1.5 * math.sin(2 * math.pi * ph), head=3.5 * math.sin(4 * math.pi * ph),
-                tail=4 * math.sin(4 * math.pi * ph), sway=8 * math.sin(2 * math.pi * ph), feet=feet)
+            s = (q - DUTY) / (1 - DUTY)
+            feet[leg.name] = (P.lerp(g.stride / 2, -g.stride / 2, _smooth(s)),
+                              g.lift * (leg.l1 + leg.l2) * math.sin(math.pi * s))
+    c2 = math.cos(4 * math.pi * ph)        # +1 contact (walk01/05), -1 passing (walk03/07)
+    k = (1 + c2) / 2                       # 1 at contact, 0 at passing
+    s1 = math.sin(2 * math.pi * ph)
+    rock = 1.0 if g.swing else 0.0         # body pitch and roll: quadrupeds (other layouts add their own)
+    pitch, head = WALK_PITCH * k * rock, WALK_NOD * c2 * g.nod
+    # a trunk hangs under the nodding head like a pendulum instead of turning with it into the ground
+    trunk = pitch + head + TRUNK_SWING * k if any(m[0] == "trunk" for m in spec.marks) else 0.0
+    return Pose(bz=g.base + g.drop * k, pitch=pitch, neck=-WALK_NECK * c2 * g.nod, head=head, trunk=trunk,
+                tail=5 * math.sin(4 * math.pi * ph), sway=8 * s1, roll=WALK_ROLL * s1 * rock, swing=g.swing,
+                feet=feet)
+
+
+def _reach(sk, leg):
+    """How far (body lengths) the leg's foot target lies beyond its reach."""
+    return (sk.foot_target(leg) - sk.joint_world(leg)).length - 0.999 * (leg.l1 + leg.l2)
+
+
+HANG = 0.01   # body lengths: a leg that misses the ground standing by more than this is built short (hidden legs)
+
+
+def _shortfall(spec, pose, allow):
+    """How far (body lengths) the worst planted foot falls short of its
+    target, past what `allow` (per leg) lets it hang."""
+    sk = Skel(spec, pose)
+    worst = 0.0
+    for leg in sk.legs:
+        if pose.feet.get(leg.name, (0.0, 0.0))[1] > 1e-9:
+            continue
+        worst = max(worst, _reach(sk, leg) - allow[leg.name])
+    return worst
+
+
+def gait(spec):
+    """The walk's stride, swing lift (fraction of leg length), body dip at
+    contact and upper-leg swing for one Body (cached per spec object).
+
+    Quadrupeds stride STRIDE_K x their lowest shoulder/hip height, the
+    whole leg turning about the shoulder. Every planted foot must stay in
+    reach: the body sits `base` lower at passing if it has to, and dips at
+    contact just enough (at least BOB_MIN); a stride that would need more
+    than DROP_MAX is narrowed."""
+    hit = _GAIT.get(id(spec))
+    if hit and hit[0] is spec:
+        return hit[1]
+    legs = (spec.legs or quadruped_legs)(spec)
+    quad = spec.legs is None
+    if not legs:
+        g = Gait(0.0, 0.0, 0.0, 0.0, 0.0, spec.nod)
+    else:
+        if spec.stride is not None:
+            stride = spec.stride
+        elif quad:
+            z0 = spec.height - spec.chest[1]
+            stride = STRIDE_K * min(z0 + leg.root[2] - leg.r[3] for leg in legs)
+        else:
+            stride = STRIDE_LEG * min(leg.l1 + leg.l2 for leg in legs)
+        g = _fit(spec, Gait(stride, LIFT_K[0] if quad else LIFT_K[1], BOB_MIN, 1.0 if quad else 0.0, 0.0, spec.nod),
+                 spec.dip)
+        if quad:
+            g = _calm(spec, g)
+    _GAIT[id(spec)] = (spec, g)
+    return g
+
+
+def _nose_span(spec, g):
+    nz = [Skel(spec, _walk(spec, i, g)).nose_world().z for i in range(1, TROT_N + 1)]
+    return max(nz) - min(nz)
+
+
+def _calm(spec, g):
+    """Scale the nod down until the nose travels at most NOSE_MAX of the
+    withers height per cycle (the nod moves no foot: the fit holds)."""
+    while g.nod > 0.2 and _nose_span(spec, g) > NOSE_MAX * spec.height:
+        g = g._replace(nod=g.nod - 0.05)
+    return g
+
+
+def _fit(spec, g, dip=True):
+    """The widest stride (from g.stride down) whose planted feet all stay
+    in reach with a passing dip and a contact dip <= DROP_MAX (dip=False:
+    other leg layouts keep the BOB_MIN dip and only narrow the stride)."""
+    sk = Skel(spec, Pose())
+    rest = {leg.name: _reach(sk, leg) for leg in sk.legs}
+    # A leg that misses the ground standing hangs: a quadruped's only when
+    # it is built short (by more than HANG; a small miss is fixed by the
+    # dip), other layouts' always (they cannot dip).
+    allow = {n: (r if r > (HANG if dip else 0.0) else 0.0) for n, r in rest.items()}
+
+    def worst(gg, frames):
+        return max(_shortfall(spec, _walk(spec, i, gg), allow) for i in frames)
+
+    if not dip:
+        for _ in range(12):
+            if worst(g, range(1, TROT_N + 1)) <= 1e-4:
+                break
+            g = g._replace(stride=g.stride * 0.92)
+        return g
+    for _ in range(12):
+        base = 0.0
+        while base < DROP_MAX and worst(g._replace(base=base, drop=0.0), (3, 7)) > 1e-4:
+            base += 0.001
+        drop = BOB_MIN
+        while drop <= DROP_MAX and worst(g._replace(base=base, drop=drop), range(1, TROT_N + 1)) > 1e-4:
+            drop += 0.001
+        if drop <= DROP_MAX and base < DROP_MAX:
+            return g._replace(base=base, drop=drop)
+        g = g._replace(stride=g.stride * 0.92)
+    return g._replace(base=base, drop=min(drop, DROP_MAX))
+
+
+def trot_pose(spec, i):
+    """walk01..08 (ART §27.1, PLAY-022): diagonal pairs (fl+hr, fr+hl).
+    walk01/05 contact: the leading pair lands, the other pushes off; all
+    feet down, body at its lowest, nose and head dipped. walk03/07
+    passing: the stance pair upright, the other pair swinging under the
+    body; body back at its standing height (its rise peaks), head up.
+    Planted feet move back under the body at one rate (gait_tiles)."""
+    return _walk(spec, i, gait(spec))
+
+
+def gait_tiles(spec, poses):
+    """C3 `gait`: tiles an adult travels per 8-frame walk cycle, i.e. how
+    far a planted foot moves back under the body in one cycle (the same in
+    every facing). Measured from the walk frames' planted feet; walks with
+    no feet (snake, crawler) give Body.travel. None without walk frames."""
+    per = spec.travel
+    if per is None:
+        steps = []
+        walk = [poses.get(n) for n in WALK_FRAMES]
+        if any(p is None for p in walk):
+            return None
+        for n in walk[0].feet:
+            for i in range(TROT_N):
+                a, b = walk[i].feet.get(n), walk[(i + 1) % TROT_N].feet.get(n)
+                if a and b and a[1] <= 1e-9 and b[1] <= 1e-9:
+                    steps.append(b[0] - a[0])
+        if not steps:
+            return None
+        per = TROT_N * float(np.median(steps))
+    return round(per * spec.length * C.FIGURE_SCALE, 4)
 
 
 def graze_poses(spec):
@@ -1018,9 +1201,9 @@ def lean_matrix():
     return feet @ Matrix.Rotation(-t, 4, "X") @ Matrix.Scale(C.FIGURE_SCALE, 4) @ Matrix.Translation((-0.5, -CY, 0))
 
 
-def _extents():
-    lo = np.array([1e9, 1e9])
-    hi = np.array([-1e9, -1e9])
+def _points():
+    """Every mesh vertex on the stage, world space (N x 3)."""
+    out = []
     for ob in S.objects():
         n = len(ob.data.vertices)
         if not n:
@@ -1028,53 +1211,97 @@ def _extents():
         co = np.empty(n * 3, np.float32)
         ob.data.vertices.foreach_get("co", co)
         m = np.array(ob.matrix_world)
-        v = co.reshape(n, 3) @ m[:3, :3].T + m[:3, 3]
-        s = np.stack([v[:, 0], v[:, 1] + C.SHEAR_K * v[:, 2]], axis=1)
-        lo, hi = np.minimum(lo, s.min(axis=0)), np.maximum(hi, s.max(axis=0))
-    return lo, hi
+        out.append(co.reshape(n, 3) @ m[:3, :3].T + m[:3, 3])
+    return np.concatenate(out) if out else np.zeros((1, 3))
 
 
-def _margins(lo, hi, pad=PAD):
-    """Canvas margins (left, right, top, bottom; tiles) around the 1x1
-    footprint that hold the measured screen extents."""
-    snap = lambda v: math.ceil(max(0.1, v) * C.PPT / 2) * 2 / C.PPT  # noqa: E731
-    return (snap(-lo[0] + pad), snap(hi[0] - 1 + pad), snap(hi[1] + pad), snap(-1 - lo[1] + pad))
+def _screen_box(v):
+    """Sheared screen extents (lo, hi) of world points, in tiles."""
+    s = np.stack([v[:, 0], v[:, 1] + C.SHEAR_K * v[:, 2]], axis=1)
+    return s.min(axis=0), s.max(axis=0)
 
 
-def _probe_margins(spec, poses):
-    """One canvas per species: the union of a few extreme poses in every
-    facing (standing, trot extremes, the attack set, graze, flinch). The
-    left and right margins are equal, so the east sprite mirrored about
-    its canvas centre is the west sprite on the same tile anchor."""
-    names = [None, "walk03", "walk07", "graze2", "flinch1"] + [n for n in poses if n and n[-1].isdigit()
-                                                                 and not n.startswith(("walk", "graze", "flinch"))]
-    lo, hi = np.array([1e9, 1e9]), np.array([-1e9, -1e9])
-    for f in FACINGS:
-        for n in names:
-            if n not in poses:
-                continue
-            build(spec, poses[n])
-            S.face(S.objects(), f, (1, 1))
-            S.transform(S.objects(), lean_matrix())
-            a, b = _extents()
-            lo, hi = np.minimum(lo, a), np.maximum(hi, b)
-            S.clear()
-    l, r, t, b = _margins(lo, hi)
-    side = max(l, r)
-    return (side, side, t, b)
+def _extents():
+    return _screen_box(_points())
+
+
+def _facing_matrix(f):
+    """stage.face for a 1x1 footprint, then the figure lean."""
+    m = (Matrix.Translation((0.5, -0.5, 0)) @ Matrix.Rotation(math.radians(S.FACINGS[f]), 4, "Z")
+         @ Matrix.Translation((-0.5, 0.5, 0)))
+    return np.array(lean_matrix() @ m)
+
+
+def outline_px(spec, ppt):
+    """The baked outline width at this density: Body.outline (or the
+    contracts default) is in pixels at contracts.PPT, scaled by ppt so it
+    keeps its on-screen width."""
+    base = C.OUTLINE_PX if spec.outline is None else spec.outline
+    return max(1, int(round(base * ppt / C.PPT)))
+
+
+def _canvas(spec, lo, hi, symmetric):
+    """Margins (tiles, left/right/top/bottom around the 1x1 footprint; each
+    an even pixel count at the returned ppt, and negative where the canvas
+    is tighter than the tile) and ppt (C2) for screen extents lo..hi.
+
+    ppt is contracts.PPT unless the canvas's long side would exceed
+    CANVAS_CAP px there; then the even integer <= PPT * CAP / long side
+    (never below MIN_PPT). symmetric: equal left and right margins, so the
+    east sprite mirrored about its canvas centre is the west sprite."""
+    def margins(ppt):
+        pad = (outline_px(spec, ppt) + PAD_PX) / ppt
+        l, r = -lo[0] + pad, hi[0] - 1 + pad
+        if symmetric:
+            l = r = max(l, r)
+        return [int(math.ceil(v * ppt / 2 - 1e-6)) * 2 for v in (l, r, hi[1] + pad, -1 - lo[1] + pad)]
+
+    ppt = C.PPT
+    m = margins(ppt)
+    long_px = max(m[0] + ppt + m[1], m[2] + ppt + m[3])
+    if long_px > CANVAS_CAP:
+        ppt = max(MIN_PPT, int(C.PPT * CANVAS_CAP / long_px) // 2 * 2)
+        m = margins(ppt)
+    return tuple(v / ppt for v in m), ppt
+
+
+def _probe(spec, poses):
+    """Per facing, the screen extents (lo, hi) of every pose: each pose is
+    built once and turned to each facing in numpy."""
+    ext = {f: (np.full(2, 1e9), np.full(2, -1e9)) for f in FACINGS}
+    mats = {f: _facing_matrix(f) for f in FACINGS}
+    for pose in poses.values():
+        build(spec, pose)
+        v = _points()
+        S.clear()
+        for f, M in mats.items():
+            a, b = _screen_box(v @ M[:3, :3].T + M[:3, 3])
+            ext[f] = (np.minimum(ext[f][0], a), np.maximum(ext[f][1], b))
+    return ext
+
+
+def canvases(spec):
+    """{facing: (margins, ppt)}: one canvas per facing that holds all of
+    that facing's frames (C2); east is symmetric about the tile."""
+    return {f: _canvas(spec, lo, hi, f == "east") for f, (lo, hi) in _probe(spec, frame_poses(spec)).items()}
 
 
 def render_species(spec, static=False, suffix="", corpses=True):
-    """Render the full sprite set for one Body (and its female set)."""
+    """Render the full sprite set for one Body (and its female set).
+    The canvases always come from the full frame set, so a static or
+    single-frame render matches the full one."""
     out = []
+    full = frame_poses(spec)
+    boxes = canvases(spec)
+    walk = gait_tiles(spec, full)
     poses = frame_poses(spec, static)
-    margins = _probe_margins(spec, poses)
     only = only_frames()
     if only:
         poses = {n: p for n, p in poses.items() if n in only.split(",")}
         corpses = False
     base = spec.key + suffix
     for f in FACINGS:
+        margins, ppt = boxes[f]
         for fr, pose in poses.items():
             build(spec, pose)
             S.face(S.objects(), f, (1, 1))
@@ -1084,9 +1311,11 @@ def render_species(spec, static=False, suffix="", corpses=True):
                 extra["sex"] = "female"
             if fr:
                 extra["frame"] = fr
+            if walk:
+                extra["gait"] = walk
             name = "%s_%s" % (base, f) + ("_" + fr if fr else "")
             out.append(S.render_asset("animal", name, zmax=0.0, margins=margins, extra=extra,
-                                      outline_width=spec.outline))
+                                      outline_width=outline_px(spec, ppt), ppt=ppt))
     if corpses and not static and not suffix:
         out += render_corpses(spec)
     if spec.female is not None:
@@ -1137,15 +1366,16 @@ def _corpse(spec, v):
     pool = P.ell("pool", (0.5 + 0.04 * s * (v - 1), -0.5 + 0.02 * s, 0.0), (0.1 * s + 0.024, 0.066 * s + 0.018, 0.004),
                  "blood_dried", segs=22, rings=6)
     pool.material_slots[0].material = _translucent("blood_dried", POOL_ALPHA)
-    return _margins(*_extents())
+    return _extents()
 
 
 def render_corpses(spec):
+    """Corpses v0..v2: each its own tight canvas and ppt (C2)."""
     out = []
     for v in range(CORPSE_VARIANTS):
-        margins = _corpse(spec, v)
+        margins, ppt = _canvas(spec, *_corpse(spec, v), False)
         out.append(S.render_asset("item", "corpse_%s_v%d" % (spec.key, v), zmax=0.0, margins=margins,
-                                  outline_width=spec.outline,
+                                  outline_width=outline_px(spec, ppt), ppt=ppt,
                                   extra={"item": "%s corpse" % spec.key.replace("_", " "), "species": spec.key,
                                          "variant": v}))
     return out

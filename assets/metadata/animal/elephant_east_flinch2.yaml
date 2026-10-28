@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/elephant_east_flinch2"
 image: generated/world/animal/elephant_east_flinch2.png
 scale: 2
-canvas: [388, 260]
+canvas: [384, 266]
 footprint: [1, 1]
-origin_px: [130, 118]
+origin_px: [150, 138]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 1.99
-  h: 1.26
-  d: 1.098
+  w: 2.985
+  h: 1.89
+  d: 1.648
+ppt: 84
 species: elephant
 facing: east
 frame: flinch2
+gait: 1.1356

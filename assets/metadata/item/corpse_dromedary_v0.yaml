@@ -3,16 +3,17 @@ version: 1
 id: "core:item/corpse_dromedary_v0"
 image: generated/world/item/corpse_dromedary_v0.png
 scale: 2
-canvas: [204, 156]
+canvas: [316, 194]
 footprint: [1, 1]
-origin_px: [38, 14]
+origin_px: [94, 42]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 1.472
-  h: 0.349
-  d: 0.843
+  w: 2.314
+  h: 0.549
+  d: 1.325
+ppt: 128
 item: dromedary corpse
 species: dromedary
 variant: 0

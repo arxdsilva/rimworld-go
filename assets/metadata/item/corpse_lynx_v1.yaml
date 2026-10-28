@@ -3,16 +3,17 @@ version: 1
 id: "core:item/corpse_lynx_v1"
 image: generated/world/item/corpse_lynx_v1.png
 scale: 2
-canvas: [156, 156]
+canvas: [196, 124]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [34, 10]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.505
-  h: 0.166
-  d: 0.284
+  w: 1.388
+  h: 0.457
+  d: 0.781
+ppt: 128
 item: lynx corpse
 species: lynx
 variant: 1

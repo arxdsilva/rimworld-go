@@ -273,9 +273,10 @@ def _shear_all(sc):
             ob.data.update()
 
 
-def _rig(sc, x_min, y_max, w_px, h_px):
+def _rig(sc, x_min, y_max, w_px, h_px, ppt=C.PPT):
     """The canonical camera and sun; reused when the stage already has them
-    (multi-pass scene renders)."""
+    (multi-pass scene renders). ppt: pixels per tile (animals may render
+    below contracts.PPT; everything else keeps the default)."""
     cam = sc.camera if sc.camera is not None and sc.camera.name.startswith("rwg_cam") else None
     if cam is None:
         cam_data = bpy.data.cameras.new("rwg_cam")
@@ -291,8 +292,8 @@ def _rig(sc, x_min, y_max, w_px, h_px):
         sun = _link(bpy.data.objects.new("rwg_sun", sun_data))
         L = Vector(C.light_vector())
         sun.rotation_euler = Vector((0, 0, -1)).rotation_difference(-L).to_euler()
-    cam.data.ortho_scale = max(w_px, h_px) / C.PPT
-    cam.location = (x_min + w_px / C.PPT / 2, y_max - h_px / C.PPT / 2, 100)
+    cam.data.ortho_scale = max(w_px, h_px) / ppt
+    cam.location = (x_min + w_px / ppt / 2, y_max - h_px / ppt / 2, 100)
     sc.render.resolution_x = w_px
     sc.render.resolution_y = h_px
 
@@ -476,7 +477,7 @@ def _figure_cover(sc, family):
 
 def render_asset(family, name, footprint=(1, 1), zmax=1.0, margins=None,
                  outline=True, shadow=False, extra=None, keep=False,
-                 clip=(), zclip=None, tint=True, shadow_kind=None, outline_width=None):
+                 clip=(), zclip=None, tint=True, shadow_kind=None, outline_width=None, ppt=None):
     """Shear, frame, render, post-process, write PNG + metadata.
 
     footprint: (w, h) tiles. zmax: tallest point (m). margins: tiles
@@ -484,19 +485,30 @@ def render_asset(family, name, footprint=(1, 1), zmax=1.0, margins=None,
     shadow: bake a UI-art drop shadow (world sprites never do; the game
     casts sun shadows from the `shadow:` metadata). shadow_kind overrides
     the per-family caster kind (blob|box|none).
+    ppt: pixels per tile for this sprite (PLAY-022, animals and corpses);
+    written to the metadata. Its margins are exact pixel counts and may be
+    negative (a canvas tighter than the tile: origin_px outside it). None
+    keeps contracts.PPT and the old rounding, so other families are
+    unchanged.
     """
     sc = stage()
     shadow_meta = _shadow_meta(family, name, shadow_kind, footprint)
     w, h = footprint
     ml, mr, mt, mb = margins or (C.DEFAULT_MARGIN,) * 4
-    left = int(round(ml * C.PPT))
-    right = int(round(mr * C.PPT))
-    top = int(math.ceil((C.SHEAR_K * zmax + mt) * C.PPT))
-    bottom = int(round(mb * C.PPT))
-    W = left + w * C.PPT + right
-    H = top + h * C.PPT + bottom
+    d = C.PPT if ppt is None else ppt
+    left = int(round(ml * d))
+    right = int(round(mr * d))
+    if ppt is None:
+        top = int(math.ceil((C.SHEAR_K * zmax + mt) * C.PPT))
+    else:
+        top = int(round((C.SHEAR_K * zmax + mt) * d))
+    bottom = int(round(mb * d))
+    W = left + w * d + right
+    H = top + h * d + bottom
+    if W <= 0 or H <= 0:
+        raise ValueError("%s: empty canvas %dx%d" % (name, W, H))
     _shear_all(sc)
-    _rig(sc, -left / C.PPT, top / C.PPT, W, H)
+    _rig(sc, -left / d, top / d, W, H, d)
     groups = {g for g in (_tint_group(o) for o in sc.collection.all_objects if o.type == "MESH") if g}
     if len(groups) > 1:
         raise ValueError("%s: one tint group per sprite, got %s" % (name, sorted(groups)))
@@ -521,6 +533,8 @@ def render_asset(family, name, footprint=(1, 1), zmax=1.0, margins=None,
         "projection": {"shear_k": C.SHEAR_K},
         "shadow": shadow_meta,
     }
+    if ppt is not None:
+        data["ppt"] = int(ppt)
     if groups and tint:
         white, black = _flat("mask_on", (1, 1, 1)), _flat("mask_off", (0, 0, 0))
         hold = _flat("holdout", holdout=True)

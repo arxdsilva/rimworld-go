@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/woolhorn_east_graze2"
 image: generated/world/animal/woolhorn_east_graze2.png
 scale: 2
-canvas: [220, 208]
+canvas: [344, 220]
 footprint: [1, 1]
-origin_px: [46, 66]
+origin_px: [108, 138]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.991
-  h: 0.777
-  d: 0.624
+  w: 1.557
+  h: 1.221
+  d: 0.981
+ppt: 128
 species: woolhorn
 facing: east
 frame: graze2
+gait: 0.8076

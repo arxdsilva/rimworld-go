@@ -3,16 +3,17 @@ version: 1
 id: "core:item/corpse_labrador_v2"
 image: generated/world/item/corpse_labrador_v2.png
 scale: 2
-canvas: [156, 156]
+canvas: [184, 122]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [28, 2]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.67
-  h: 0.171
-  d: 0.432
+  w: 1.269
+  h: 0.323
+  d: 0.818
+ppt: 128
 item: labrador corpse
 species: labrador
 variant: 2

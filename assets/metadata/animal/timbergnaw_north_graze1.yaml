@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/timbergnaw_north_graze1"
 image: generated/world/animal/timbergnaw_north_graze1.png
 scale: 2
-canvas: [188, 156]
+canvas: [84, 122]
 footprint: [1, 1]
-origin_px: [30, 14]
+origin_px: [-22, 34]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.252
-  h: 0.317
-  d: 1.038
+  w: 0.477
+  h: 0.601
+  d: 1.967
+ppt: 128
 species: timbergnaw
 facing: north
 frame: graze1
+gait: 0.333

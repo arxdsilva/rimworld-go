@@ -3,16 +3,17 @@ version: 1
 id: "core:item/corpse_squirrel_v2"
 image: generated/world/item/corpse_squirrel_v2.png
 scale: 2
-canvas: [156, 156]
+canvas: [156, 192]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [14, 38]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.324
-  h: 0.1
-  d: 0.418
+  w: 1.068
+  h: 0.327
+  d: 1.377
+ppt: 128
 item: squirrel corpse
 species: squirrel
 variant: 2

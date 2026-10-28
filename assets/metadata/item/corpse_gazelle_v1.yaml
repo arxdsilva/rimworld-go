@@ -3,16 +3,17 @@ version: 1
 id: "core:item/corpse_gazelle_v1"
 image: generated/world/item/corpse_gazelle_v1.png
 scale: 2
-canvas: [156, 156]
+canvas: [224, 130]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [48, 10]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.582
-  h: 0.148
-  d: 0.329
+  w: 1.601
+  h: 0.408
+  d: 0.903
+ppt: 128
 item: gazelle corpse
 species: gazelle
 variant: 1

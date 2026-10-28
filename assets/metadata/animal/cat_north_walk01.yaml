@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/cat_north_walk01"
 image: generated/world/animal/cat_north_walk01.png
 scale: 2
-canvas: [156, 156]
+canvas: [56, 148]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [-36, 72]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.102
-  h: 0.233
-  d: 0.512
+  w: 0.282
+  h: 0.677
+  d: 1.395
+ppt: 128
 species: cat
 facing: north
 frame: walk01
+gait: 0.3891

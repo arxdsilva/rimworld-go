@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/guinea_pig_south_walk08"
 image: generated/world/animal/guinea_pig_south_walk08.png
 scale: 2
-canvas: [156, 156]
+canvas: [68, 88]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [-30, 8]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.117
-  h: 0.138
-  d: 0.349
+  w: 0.387
+  h: 0.427
+  d: 1.145
+ppt: 128
 species: guinea_pig
 facing: south
 frame: walk08
+gait: 0.2148

@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/bison_south_gore2"
 image: generated/world/animal/bison_south_gore2.png
 scale: 2
-canvas: [232, 206]
+canvas: [112, 226]
 footprint: [1, 1]
-origin_px: [52, 64]
+origin_px: [-8, 130]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.428
-  h: 0.787
-  d: 1.273
+  w: 0.672
+  h: 1.237
+  d: 2.0
+ppt: 128
 species: bison
 facing: south
 frame: gore2
+gait: 0.7903

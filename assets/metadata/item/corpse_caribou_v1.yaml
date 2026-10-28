@@ -3,16 +3,17 @@ version: 1
 id: "core:item/corpse_caribou_v1"
 image: generated/world/item/corpse_caribou_v1.png
 scale: 2
-canvas: [244, 162]
+canvas: [380, 160]
 footprint: [1, 1]
-origin_px: [58, 20]
+origin_px: [126, 66]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 1.8
-  h: 0.891
-  d: 0.681
+  w: 2.828
+  h: 1.401
+  d: 1.07
+ppt: 128
 item: caribou corpse
 species: caribou
 variant: 1

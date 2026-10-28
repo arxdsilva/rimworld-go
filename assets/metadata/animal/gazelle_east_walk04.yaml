@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/gazelle_east_walk04"
 image: generated/world/animal/gazelle_east_walk04.png
 scale: 2
-canvas: [156, 168]
+canvas: [260, 250]
 footprint: [1, 1]
-origin_px: [14, 26]
+origin_px: [66, 172]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.491
-  h: 0.602
-  d: 0.12
+  w: 1.347
+  h: 1.621
+  d: 0.329
+ppt: 128
 species: gazelle
 facing: east
 frame: walk04
+gait: 0.8598

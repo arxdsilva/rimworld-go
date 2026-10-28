@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/ground_sloth_north_walk01"
 image: generated/world/animal/ground_sloth_north_walk01.png
 scale: 2
-canvas: [276, 276]
+canvas: [172, 314]
 footprint: [1, 1]
-origin_px: [74, 134]
+origin_px: [22, 232]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.795
-  h: 1.095
-  d: 1.641
+  w: 1.193
+  h: 1.506
+  d: 2.414
+ppt: 128
 species: ground_sloth
 facing: north
 frame: walk01
+gait: 0.7584

@@ -3,15 +3,17 @@ version: 1
 id: "core:animal/horse_south"
 image: generated/world/animal/horse_south.png
 scale: 2
-canvas: [224, 238]
+canvas: [88, 306]
 footprint: [1, 1]
-origin_px: [48, 96]
+origin_px: [-20, 186]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.33
-  h: 1.103
-  d: 1.361
+  w: 0.518
+  h: 1.734
+  d: 2.139
+ppt: 128
 species: horse
 facing: south
+gait: 0.9837

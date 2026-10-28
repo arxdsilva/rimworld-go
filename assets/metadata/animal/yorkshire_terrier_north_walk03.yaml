@@ -3,16 +3,18 @@ version: 1
 id: "core:animal/yorkshire_terrier_north_walk03"
 image: generated/world/animal/yorkshire_terrier_north_walk03.png
 scale: 2
-canvas: [156, 156]
+canvas: [68, 126]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [-30, 50]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.106
-  h: 0.222
-  d: 0.304
+  w: 0.349
+  h: 0.727
+  d: 0.997
+ppt: 128
 species: yorkshire_terrier
 facing: north
 frame: walk03
+gait: 0.3655

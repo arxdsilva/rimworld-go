@@ -3,16 +3,17 @@ version: 1
 id: "core:item/corpse_goat_v0"
 image: generated/world/item/corpse_goat_v0.png
 scale: 2
-canvas: [156, 156]
+canvas: [196, 182]
 footprint: [1, 1]
-origin_px: [14, 14]
+origin_px: [34, 36]
 projection:
   shear_k: 0.35
 shadow:
   kind: blob
-  w: 0.495
-  h: 0.163
-  d: 0.433
+  w: 1.362
+  h: 0.447
+  d: 1.191
+ppt: 128
 item: goat corpse
 species: goat
 variant: 0
