@@ -15,14 +15,14 @@ func TestResearchTabPicksProjectAndLocksTools(t *testing.T) {
 	}
 	var gun, traps button
 	for _, b := range a.layoutButtons(a.sw, a.sh) {
-		switch b.id {
+		switch b.ID {
 		case "research.pick.4":
 			gun = b
 		case "research.pick.3":
 			traps = b
 		}
 	}
-	if !gun.disabled || !strings.Contains(gun.reason, "Traps") || traps.disabled {
+	if !gun.Disabled || !strings.Contains(gun.Reason, "Traps") || traps.Disabled {
 		t.Fatalf("gunsmithing waits on traps: %+v / %+v", gun, traps)
 	}
 	click(t, a, "research.pick.3")
@@ -34,7 +34,7 @@ func TestResearchTabPicksProjectAndLocksTools(t *testing.T) {
 	click(t, a, "tab.architect")
 	click(t, a, "arch.cat.security")
 	for _, b := range a.layoutButtons(a.sw, a.sh) {
-		if b.id == "arch.tool.spike_trap" && (!b.disabled || !strings.Contains(b.reason, "Traps")) {
+		if b.ID == "arch.tool.spike_trap" && (!b.Disabled || !strings.Contains(b.Reason, "Traps")) {
 			t.Fatalf("spike trap tool locked until researched: %+v", b)
 		}
 	}

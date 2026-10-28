@@ -50,7 +50,7 @@ func TestAnimalsTabAreaAndPenColumns(t *testing.T) {
 	f.Frame(t, a)
 	hits := map[string]bool{}
 	for _, b := range a.layoutHits(a.sw, a.sh) {
-		hits[b.id] = true
+		hits[b.ID] = true
 	}
 	if !hits["animals.area.52"] {
 		t.Fatal("a non-penned animal has an area dropdown")
@@ -130,7 +130,7 @@ func TestAnimalsTabFollowToggle(t *testing.T) {
 	id := "animals.follow." + strconv.FormatUint(uint64(s.world.Animals[0].ID), 10)
 	found := false
 	for _, b := range a.layoutHits(a.sw, a.sh) {
-		found = found || b.id == id
+		found = found || b.ID == id
 	}
 	if !found {
 		t.Fatal("trained animal has no Follow toggle")

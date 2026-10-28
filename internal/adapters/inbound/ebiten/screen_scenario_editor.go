@@ -277,7 +277,7 @@ func (a *App) validationPanel(ed *editorState, r rect, probs []scenario.Problem)
 		y += h
 	}
 	area := a.uiScrollArea("sced.problems", list, y, scrollOpts{Step: 40})
-	u.queue(func(dst *ebiten.Image) {
+	u.Queue(func(dst *ebiten.Image) {
 		sub := clipTo(dst, area.View)
 		for i, r := range rows {
 			ry := area.View.Y + r.y - area.Off
@@ -288,7 +288,7 @@ func (a *App) validationPanel(ed *editorState, r rect, probs []scenario.Problem)
 			if probs[i].Severity == scenario.Warning {
 				c = uiWarning
 			}
-			if u.hot == "sced.prob."+uiNum(i) {
+			if u.Hot == "sced.prob."+uiNum(i) {
 				fillRect(sub, rect{X: area.View.X, Y: ry, W: area.View.W, H: r.h}, uiBtnHover)
 			}
 			fillRect(sub, rect{X: area.View.X + 4, Y: ry + 5, W: 10, H: 10}, c)
@@ -311,11 +311,11 @@ func (a *App) validationPanel(ed *editorState, r rect, probs []scenario.Problem)
 			}
 			a.uiOK()
 		}
-		w := uiWidget{id: "sced.prob." + uiNum(i), r: hit, click: show}
+		w := uiWidget{ID: "sced.prob." + uiNum(i), R: hit, Click: show}
 		if probs[i].Part >= 0 {
-			w.tip = "Show the part\nScrolls to the part and opens it."
+			w.Tip = "Show the part\nScrolls to the part and opens it."
 		}
-		if u.add(w) && a.uiPress(hit) {
+		if u.Add(w) && a.uiPress(hit) {
 			show()
 		}
 	}
@@ -420,7 +420,7 @@ func (f *formCtx) sectionTitle(a *App, s string) {
 		hs := tsLabel
 		hs.Color = uiHeading
 		a.uiLabel(row.X, row.Y+4, s, hs)
-		a.uiSt().queue(func(dst *ebiten.Image) {
+		a.uiSt().Queue(func(dst *ebiten.Image) {
 			fillRect(dst, rect{X: row.X, Y: row.Bottom() - 2, W: row.W, H: 1}, uiPanelBorder)
 		})
 	}
@@ -439,14 +439,14 @@ func (a *App) partCard(f *formCtx, ng *newGameState, ed *editorState, i int, bad
 		btn := float32(28)
 		hdr := rect{X: row.X, Y: row.Y + 2, W: row.W - 3*(btn+4), H: edCardH - 4}
 		toggle := func() { ed.open[i] = !ed.open[i]; a.uiOK() }
-		w := uiWidget{id: "sced.card." + uiNum(i), r: hdr, label: p.Kind.Label(), click: toggle, focusable: true, tip: p.Kind.Label() + "\n" + p.Kind.Desc()}
-		if u.add(w) && (a.uiPress(hdr) || a.uiKeyAct(w.id)) {
+		w := uiWidget{ID: "sced.card." + uiNum(i), R: hdr, Label: p.Kind.Label(), Click: toggle, Focusable: true, Tip: p.Kind.Label() + "\n" + p.Kind.Desc()}
+		if u.Add(w) && (a.uiPress(hdr) || a.uiKeyAct(w.ID)) {
 			toggle()
 		}
 		sum := p.Summary()
-		u.queue(func(dst *ebiten.Image) {
+		u.Queue(func(dst *ebiten.Image) {
 			fill := uiBtn
-			if u.hot == w.id {
+			if u.Hot == w.ID {
 				fill = uiBtnHover
 			}
 			fillRect(dst, hdr, fill)
@@ -505,7 +505,7 @@ func (a *App) partCard(f *formCtx, ng *newGameState, ed *editorState, i int, bad
 	ed.cardEnd[i] = f.y
 	if ok {
 		barY, barH, barX := f.view.Y+top-f.off, f.y-top-4, f.x-3
-		u.queue(func(dst *ebiten.Image) { fillRect(dst, rect{X: barX, Y: barY, W: 2, H: barH}, uiPanelBorder) })
+		u.Queue(func(dst *ebiten.Image) { fillRect(dst, rect{X: barX, Y: barY, W: 2, H: barH}, uiPanelBorder) })
 	}
 	return changed
 }
@@ -690,8 +690,8 @@ func (a *App) openAddPart() {
 		total += headH + float32(len(c.Kinds))*kindH
 	}
 	a.uiPushModal(modal{
-		id: "sced.addpart", title: "Add part", w: 600, h: 520,
-		draw: func(a *App, body rect) {
+		ID: "sced.addpart", Title: "Add part", W: 600, H: 520,
+		Draw: func(a *App, body rect) {
 			u := a.uiSt()
 			area := a.uiScrollArea("modal.sced.addpart.scroll", body, total, scrollOpts{Step: kindH})
 			y := float32(0)
@@ -713,7 +713,7 @@ func (a *App) openAddPart() {
 					y += kindH
 				}
 			}
-			u.queue(func(dst *ebiten.Image) {
+			u.Queue(func(dst *ebiten.Image) {
 				sub := clipTo(dst, area.View)
 				for _, h := range heads {
 					hs := tsLabel
@@ -724,7 +724,7 @@ func (a *App) openAddPart() {
 				}
 				for _, k := range kinds {
 					row := rect{X: area.View.X, Y: area.View.Y + k.y - area.Off, W: area.View.W, H: kindH}
-					if u.hot == "sced.addkind."+k.info.Kind.Key() {
+					if u.Hot == "sced.addkind."+k.info.Kind.Key() {
 						fillRect(sub, row.Inset(1), uiBtnHover)
 					}
 					drawText(sub, k.info.Label, float64(row.X+12), float64(row.Y)+6, tsLabel)
@@ -745,13 +745,13 @@ func (a *App) openAddPart() {
 					continue
 				}
 				add := func() { a.addPart(k.info.Kind) }
-				w := uiWidget{id: "sced.addkind." + k.info.Kind.Key(), r: hit, label: k.info.Label, click: add}
-				if u.add(w) && a.uiPress(hit) {
+				w := uiWidget{ID: "sced.addkind." + k.info.Kind.Key(), R: hit, Label: k.info.Label, Click: add}
+				if u.Add(w) && a.uiPress(hit) {
 					add()
 				}
 			}
 		},
-		buttons: []modalButton{{id: "cancel", label: "Cancel", closes: true}},
+		Buttons: []modalButton{{ID: "cancel", Label: "Cancel", Closes: true}},
 	})
 }
 
@@ -830,8 +830,8 @@ func (a *App) editorLoad() {
 			Less: func(x, y int) bool { return files[x].Modified < files[y].Modified }},
 	}
 	a.uiPushModal(modal{
-		id: "sced.loadfile", title: "Load scenario", w: 560, h: 440,
-		draw: func(a *App, body rect) {
+		ID: "sced.loadfile", Title: "Load scenario", W: 560, H: 440,
+		Draw: func(a *App, body rect) {
 			ed := a.draft().ed
 			if ed == nil {
 				return
@@ -852,7 +852,7 @@ func (a *App) editorLoad() {
 				a.loadScenarioFile(files[row].Name)
 			}
 		},
-		buttons: []modalButton{{id: "cancel", label: "Cancel", closes: true}},
+		Buttons: []modalButton{{ID: "cancel", Label: "Cancel", Closes: true}},
 	})
 }
 

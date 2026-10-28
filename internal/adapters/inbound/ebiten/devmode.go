@@ -160,7 +160,7 @@ func (a *App) devMenuRect() button {
 	x, y := float32(a.dev.mx+8), float32(a.dev.my)
 	x = min(x, float32(sw)-w-4)
 	y = max(hudMargin, min(y, float32(sh)-tabsH-h-4)) // clear of the tab strip
-	return button{x: x, y: y, w: w, h: h}
+	return button{X: x, Y: y, W: w, H: h}
 }
 
 // devButtons are the debug menu's entries ("dev.act.N").
@@ -171,8 +171,8 @@ func (a *App) devButtons() []button {
 	r := a.devMenuRect()
 	var out []button
 	for i, act := range a.devActions(a.dev.tx, a.dev.ty) {
-		out = append(out, button{id: "dev.act." + strconv.Itoa(i), label: act.label, x: r.x + 4, y: r.y + 22 + float32(i*devRowH),
-			w: r.w - 8, h: devRowH - 2, disabled: act.reason != "", reason: act.reason, quiet: true})
+		out = append(out, button{ID: "dev.act." + strconv.Itoa(i), Label: act.label, X: r.X + 4, Y: r.Y + 22 + float32(i*devRowH),
+			W: r.W - 8, H: devRowH - 2, Disabled: act.reason != "", Reason: act.reason, Quiet: true})
 	}
 	return out
 }
@@ -204,13 +204,13 @@ func (a *App) drawDevPanels(screen *ebiten.Image, sw, sh int) {
 	mx, my := a.currentCursor()
 	if a.dev.menu {
 		r := a.devMenuRect()
-		drawPanel(screen, r.x, r.y, r.w, r.h)
-		drawText(screen, fmt.Sprintf("Debug actions at (%d, %d)", a.dev.tx, a.dev.ty), float64(r.x)+8, float64(r.y)+3, tsLabel)
+		drawPanel(screen, r.X, r.Y, r.W, r.H)
+		drawText(screen, fmt.Sprintf("Debug actions at (%d, %d)", a.dev.tx, a.dev.ty), float64(r.X)+8, float64(r.Y)+3, tsLabel)
 		acts := a.devActions(a.dev.tx, a.dev.ty)
 		for i, b := range a.devButtons() {
-			drawButton(screen, b, b.contains(mx, my))
+			drawButton(screen, b, b.Contains(mx, my))
 			if i < len(acts) && acts[i].icon != "" {
-				drawIcon(screen, a.icon(acts[i].icon), float64(b.x+b.w)-devRowH+2, float64(b.y), devRowH-4)
+				drawIcon(screen, a.icon(acts[i].icon), float64(b.X+b.W)-devRowH+2, float64(b.Y), devRowH-4)
 			}
 		}
 	}
@@ -417,19 +417,19 @@ func (a *App) openDevLosePicker(p game.PawnView, d devTools) {
 	parts := devLoseParts()
 	sel := -1
 	a.uiPushModal(modal{
-		id: devLosePickID, title: "Lose a part", w: 300, h: 420,
-		draw: func(a *App, r rect) {
+		ID: devLosePickID, Title: "Lose a part", W: 300, H: 420,
+		Draw: func(a *App, r rect) {
 			a.uiList(devLosePickList, r, len(parts), &sel, listSpec{RowH: 24, Label: func(i int) string { return parts[i] }})
 		},
-		buttons: []modalButton{
-			{id: "dev.lose.ok", label: "Lose it", style: btnDanger, closes: true,
-				disabled: func() string {
+		Buttons: []modalButton{
+			{ID: "dev.lose.ok", Label: "Lose it", Style: btnDanger, Closes: true,
+				Disabled: func() string {
 					if sel < 0 {
 						return "Pick a part first."
 					}
 					return ""
 				},
-				onClick: func() {
+				OnClick: func() {
 					if sel < 0 || sel >= len(parts) {
 						return
 					}
@@ -439,7 +439,7 @@ func (a *App) openDevLosePicker(p game.PawnView, d devTools) {
 						a.toast("Could not remove " + parts[sel])
 					}
 				}},
-			{id: "dev.lose.cancel", label: "Cancel", closes: true},
+			{ID: "dev.lose.cancel", Label: "Cancel", Closes: true},
 		},
 	})
 }

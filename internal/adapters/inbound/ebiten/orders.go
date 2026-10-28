@@ -69,7 +69,7 @@ func (a *App) floatRect() button {
 			y = tabsTop - float32(h) - 4
 		}
 	}
-	return button{x: x, y: y, w: float32(w), h: float32(h)}
+	return button{X: x, Y: y, W: float32(w), H: float32(h)}
 }
 
 func (a *App) floatButtons() []button {
@@ -80,9 +80,9 @@ func (a *App) floatButtons() []button {
 	out := make([]button, 0, len(a.float.opts))
 	for i, o := range a.float.opts {
 		out = append(out, button{
-			id: ids.PrefixFloat + strconv.Itoa(i), label: floatLabel(o),
-			x: r.x, y: r.y + float32(i*floatRowH), w: r.w, h: floatRowH,
-			disabled: o.Disabled, reason: o.Reason,
+			ID: ids.PrefixFloat + strconv.Itoa(i), Label: floatLabel(o),
+			X: r.X, Y: r.Y + float32(i*floatRowH), W: r.W, H: floatRowH,
+			Disabled: o.Disabled, Reason: o.Reason,
 		})
 	}
 	return out
@@ -93,28 +93,28 @@ func (a *App) drawFloat(screen *ebiten.Image) {
 		return
 	}
 	r := a.floatRect()
-	drawPanel(screen, r.x-2, r.y-2, r.w+4, r.h+4)
+	drawPanel(screen, r.X-2, r.Y-2, r.W+4, r.H+4)
 	if a.float.pick == nil {
-		drawText(screen, "Shift: queue (max 3)", float64(r.x)+10, float64(r.y+r.h)-floatHintH, withColor(tsSmall, uiTextDim))
+		drawText(screen, "Shift: queue (max 3)", float64(r.X)+10, float64(r.Y+r.H)-floatHintH, withColor(tsSmall, uiTextDim))
 	}
 	mx, my := a.currentCursor()
 	for i, b := range a.floatButtons() {
 		fill := uiBtn
-		if b.disabled {
+		if b.Disabled {
 			fill = uiBtnDisabled
-		} else if b.contains(mx, my) {
+		} else if b.Contains(mx, my) {
 			fill = uiBtnHover
 		}
-		uiFillRect(screen, b.x, b.y, b.w, b.h, fill, false)
-		uiStrokeRect(screen, b.x, b.y, b.w, b.h, 1, uiPanelBorder, false)
+		uiFillRect(screen, b.X, b.Y, b.W, b.H, fill, false)
+		uiStrokeRect(screen, b.X, b.Y, b.W, b.H, 1, uiPanelBorder, false)
 		ts := tsBody
-		if b.disabled {
+		if b.Disabled {
 			ts = withColor(tsBody, uiTextDim)
 		}
 		if ic := floatIcon(a.float.opts[i]); ic != "" {
-			drawIcon(screen, a.icon(ic), float64(b.x+b.w)-floatRowH+3, float64(b.y)+3, floatRowH-6)
+			drawIcon(screen, a.icon(ic), float64(b.X+b.W)-floatRowH+3, float64(b.Y)+3, floatRowH-6)
 		}
-		drawText(screen, ellipsize(b.label, ts, float64(b.w)-20), float64(b.x)+10, float64(b.y)+(float64(b.h)-lineH(ts))/2, ts)
+		drawText(screen, ellipsize(b.Label, ts, float64(b.W)-20), float64(b.X)+10, float64(b.Y)+(float64(b.H)-lineH(ts))/2, ts)
 	}
 }
 

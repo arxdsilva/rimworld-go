@@ -39,12 +39,12 @@ type formCaravan struct {
 func (a *App) openFormCaravan(st *worldUI) {
 	f := &formCaravan{picked: map[entity.EntityID]bool{}, dest: st.picked, world: st}
 	a.uiPushModal(modal{
-		id: formCaravanID, title: "Form caravan", w: formCaravanW, h: formCaravanH,
-		draw: func(a *App, body rect) { a.formCaravanBody(f, body) },
-		buttons: []modalButton{
-			{id: "form.send", label: "Send", style: btnPrimary, closes: true,
-				disabled: func() string { return f.reason() }, onClick: func() { a.sendCaravan(f) }},
-			{id: "form.cancel", label: "Cancel", closes: true},
+		ID: formCaravanID, Title: "Form caravan", W: formCaravanW, H: formCaravanH,
+		Draw: func(a *App, body rect) { a.formCaravanBody(f, body) },
+		Buttons: []modalButton{
+			{ID: "form.send", Label: "Send", Style: btnPrimary, Closes: true,
+				Disabled: func() string { return f.reason() }, OnClick: func() { a.sendCaravan(f) }},
+			{ID: "form.cancel", Label: "Cancel", Closes: true},
 		},
 	})
 }

@@ -290,7 +290,7 @@ func (a *App) goBack() {
 // popScreen pops one screen and tidies the draft: the editor's state goes
 // with the editor, and the main menu forgets the whole draft.
 func (a *App) popScreen() {
-	a.uiSt().modals = nil
+	a.uiSt().Modals = nil
 	was := a.nav.screen()
 	a.nav.pop()
 	switch {
@@ -332,8 +332,8 @@ func (a *App) ngClick(id string) bool {
 func (a *App) ngButton(id string, r rect, label string, o btnOpts, fn func()) {
 	u := a.uiSt()
 	pressed := a.uiButton(id, r, label, o)
-	if n := len(u.cur); n > 0 && u.cur[n-1].id == id {
-		u.cur[n-1].click = func() {
+	if n := len(u.Cur); n > 0 && u.Cur[n-1].ID == id {
+		u.Cur[n-1].Click = func() {
 			if o.Disabled {
 				a.uiDeny(o.Reason)
 				return
@@ -462,8 +462,8 @@ func (a *App) pushPicker(id, title string, opts []string, cur int, pick func(i i
 	h := float32(modalTitleH+2*modalPad) + min(float32(len(opts)), 12)*listRowH + 4
 	mid := "pick." + id
 	a.uiPushModal(modal{
-		id: mid, title: title, w: 380, h: h,
-		draw: func(a *App, body rect) {
+		ID: mid, Title: title, W: 380, H: h,
+		Draw: func(a *App, body rect) {
 			choice := -1
 			changed := a.uiList("modal."+mid+".list", body, len(opts), &choice, listSpec{
 				Draw: func(dst *ebiten.Image, i int, row rect, hover, selected bool) {
@@ -485,7 +485,7 @@ func (a *App) ngStepper(id string, r rect, v *int, lo, hi int) {
 	a.ngButton(id+".dec", rect{X: r.X, Y: r.Y, W: bw, H: r.H}, "-", btnOpts{Disabled: *v <= lo, Reason: fmt.Sprintf("The minimum is %d.", lo)}, func() { *v = max(lo, *v-1) })
 	a.ngButton(id+".inc", rect{X: r.X + bw + 56, Y: r.Y, W: bw, H: r.H}, "+", btnOpts{Disabled: *v >= hi, Reason: fmt.Sprintf("The maximum is %d.", hi)}, func() { *v = min(hi, *v+1) })
 	val := *v
-	a.uiSt().queue(func(dst *ebiten.Image) {
+	a.uiSt().Queue(func(dst *ebiten.Image) {
 		st := tsLabel
 		st.Align = alignCenter
 		drawText(dst, strconv.Itoa(val), float64(r.X+bw+28), float64(r.Y)+(float64(r.H)-lineH(st))/2, st)
@@ -505,7 +505,7 @@ func (a *App) ngNum(id string, r rect, v *int, lo, hi int) {
 		buf = new(string)
 		ng.bufs[id] = buf
 	}
-	if a.uiSt().edit.id != id { // not being typed into: follow the model
+	if a.uiSt().Edit.ID != id { // not being typed into: follow the model
 		*buf = strconv.Itoa(*v)
 	}
 	changed, committed := a.uiTextField(id, r, buf, textFieldSpec{MaxLen: 5, Valid: digitsOnly, Tip: fmt.Sprintf("%d to %d", lo, hi)})
@@ -564,4 +564,4 @@ var noTint color.NRGBA
 // the screen's own layer (0), so they stay dead and painted under an open
 // modal. uiBegin hands hooks the top layer, which would keep them live and
 // draw them over the dialog.
-func (a *App) declareOnScreenLayer() { a.uiSt().layer = 0 }
+func (a *App) declareOnScreenLayer() { a.uiSt().Layer = 0 }

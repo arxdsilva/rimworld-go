@@ -30,7 +30,7 @@ func TestAssignMedicalCareColumn(t *testing.T) {
 	a.renderer.game = s
 	a.openAssign()
 	f.Frame(t, a)
-	if w, ok := a.uiSt().find(assignCareID(1)); !ok || w.label != medcare.Best.Label() {
+	if w, ok := a.uiSt().Find(assignCareID(1)); !ok || w.Label != medcare.Best.Label() {
 		t.Fatalf("Ada's care button %+v", w)
 	}
 	if hasWidget(a, assignCareID(3)) {
@@ -40,7 +40,7 @@ func TestAssignMedicalCareColumn(t *testing.T) {
 	if c := lastOf(ps.stubSim, command.SetMedicalCare); c == nil || c.Pawn != 1 || medcare.Policy(c.Mode) != medcare.NoCare {
 		t.Fatalf("SetMedicalCare = %+v", c)
 	}
-	if w, _ := a.uiSt().find(assignDefCareID(medcare.Prisoners)); w.label != "Prisoners: Herbal" || w.disabled {
+	if w, _ := a.uiSt().Find(assignDefCareID(medcare.Prisoners)); w.Label != "Prisoners: Herbal" || w.Disabled {
 		t.Fatalf("prisoners' default %+v", w)
 	}
 	press(t, a, f, assignDefCareID(medcare.Prisoners))
@@ -57,8 +57,8 @@ func TestAssignDefaultCareWithoutReadModel(t *testing.T) {
 	a, f := colonyApp(t, ps.stubSim)
 	a.openAssign()
 	f.Frame(t, a)
-	w, ok := a.uiSt().find(assignDefCareID(medcare.Colonists))
-	if !ok || !w.disabled || w.reason == "" {
+	w, ok := a.uiSt().Find(assignDefCareID(medcare.Colonists))
+	if !ok || !w.Disabled || w.Reason == "" {
 		t.Fatalf("default care %+v: disabled with a reason", w)
 	}
 	if nextCare(medcare.Best) != medcare.NoCare || nextCare(medcare.NoCare) != medcare.NoMeds {

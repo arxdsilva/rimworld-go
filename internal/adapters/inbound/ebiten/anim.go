@@ -21,33 +21,33 @@ import (
 
 // pose is a transform applied to a whole figure (all of its layers).
 type pose struct {
-	dx, dy float64 // offset in tiles
-	rot    float64 // radians (screen, clockwise) about the pivot
-	px, py float64 // pivot in tiles from the sprite's tile top-left
-	sx, sy float64 // scale about the pivot; 0 means 1
-	cs     colorScale
-	flash  float32 // 0..1 hit flash
-	skew   float64 // horizontal shear about the pivot (wind sway)
+	Dx, Dy float64 // offset in tiles
+	Rot    float64 // radians (screen, clockwise) about the pivot
+	Px, Py float64 // pivot in tiles from the sprite's tile top-left
+	Sx, Sy float64 // scale about the pivot; 0 means 1
+	Cs     colorScale
+	Flash  float32 // 0..1 hit flash
+	Skew   float64 // horizontal shear about the pivot (wind sway)
 }
 
-// geo is the pose part of a sprite transform, for a tile whose
+// Geo is the pose part of a sprite transform, for a tile whose
 // top-left is at screen (sx, sy).
-func (p pose) geo(sx, sy, tile float64) ebiten.GeoM {
-	px, py := sx+p.px*tile, sy+p.py*tile
-	kx, ky := p.scale()
+func (p pose) Geo(sx, sy, tile float64) ebiten.GeoM {
+	px, py := sx+p.Px*tile, sy+p.Py*tile
+	kx, ky := p.Scale()
 	g := ebiten.GeoM{}
 	g.Translate(-px, -py)
-	if p.skew != 0 {
-		g.Skew(p.skew, 0)
+	if p.Skew != 0 {
+		g.Skew(p.Skew, 0)
 	}
 	g.Scale(kx, ky)
-	g.Rotate(p.rot)
-	g.Translate(px+p.dx*tile, py+p.dy*tile)
+	g.Rotate(p.Rot)
+	g.Translate(px+p.Dx*tile, py+p.Dy*tile)
 	return g
 }
 
-func (p pose) scale() (float64, float64) {
-	sx, sy := p.sx, p.sy
+func (p pose) Scale() (float64, float64) {
+	sx, sy := p.Sx, p.Sy
 	if sx == 0 {
 		sx = 1
 	}
@@ -79,7 +79,7 @@ func (r *Renderer) drawSpritePose(screen *ebiten.Image, key string, tint color.N
 	if img == nil {
 		return
 	}
-	cs := ps.cs
+	cs := ps.Cs
 	if cs == (colorScale{}) {
 		cs = noCS
 	}
@@ -92,8 +92,8 @@ func (r *Renderer) drawSpritePose(screen *ebiten.Image, key string, tint color.N
 	} else {
 		r.drawLit(screen, img, geo, cs, wx, wy)
 	}
-	if ps.flash > 0 {
-		f := ps.flash
+	if ps.Flash > 0 {
+		f := ps.Flash
 		fl := &ebiten.DrawImageOptions{GeoM: geo, Filter: ebiten.FilterLinear}
 		fl.ColorScale.Scale(1.9*f, 0.75*f, 0.7*f, f*0.55)
 		screen.DrawImage(img, fl)
@@ -108,7 +108,7 @@ func spritePoseGeo(m artMeta, sx, sy, tile float64, ps pose) ebiten.GeoM {
 	geo := ebiten.GeoM{}
 	geo.Scale(s, s)
 	geo.Translate(x, y)
-	geo.Concat(ps.geo(sx, sy, tile))
+	geo.Concat(ps.Geo(sx, sy, tile))
 	return geo
 }
 
@@ -229,12 +229,12 @@ func gaitLean(f facing, m moveState) float64 {
 func walkPose(f facing, m moveState) pose {
 	ps := standPose()
 	if m.Blend >= minBlend {
-		ps.dy = -bobRaise(m.Stride, m.Speed, m.Blend)
+		ps.Dy = -bobRaise(m.Stride, m.Speed, m.Blend)
 	}
 	if f == faceNorth || f == faceSouth {
-		ps.dx = gaitSway(m)
+		ps.Dx = gaitSway(m)
 	}
-	ps.rot = gaitLean(f, m)
+	ps.Rot = gaitLean(f, m)
 	return ps
 }
 
@@ -283,8 +283,8 @@ func footPoint(x, y float64, f facing, parity int) [2]float64 {
 // stepDust puffs dust at the foot for every contact the stride passed
 // since last time. The first sighting only records the stride.
 func (r *Renderer) stepDust(st *animState, id entity.EntityID, m moveState, heavy bool) {
-	prev, seen := st.prevStride[id]
-	st.prevStride[id] = m.Stride
+	prev, seen := st.PrevStride[id]
+	st.PrevStride[id] = m.Stride
 	if !seen || !m.Moving || m.Blend < 0.3 {
 		return
 	}
@@ -304,19 +304,19 @@ func (r *Renderer) stepDust(st *animState, id entity.EntityID, m moveState, heav
 
 // animState is per-Renderer bookkeeping for the animations here.
 type animState struct {
-	carryBorn  map[entity.EntityID]uint64  // present frame a patient was lifted
-	prevStride map[entity.EntityID]float64 // last stride seen, for contact dust
-	prevWork   map[entity.EntityID]float64 // last animT seen while working
-	recs       map[[3]uint64]*reactRec
+	CarryBorn  map[entity.EntityID]uint64  // present frame a patient was lifted
+	PrevStride map[entity.EntityID]float64 // last stride seen, for contact dust
+	PrevWork   map[entity.EntityID]float64 // last animT seen while working
+	Recs       map[[3]uint64]*reactRec
 }
 
 func (r *Renderer) animState() *animState {
 	if r.anims == nil {
 		r.anims = &animState{
-			carryBorn:  map[entity.EntityID]uint64{},
-			prevStride: map[entity.EntityID]float64{},
-			prevWork:   map[entity.EntityID]float64{},
-			recs:       map[[3]uint64]*reactRec{},
+			CarryBorn:  map[entity.EntityID]uint64{},
+			PrevStride: map[entity.EntityID]float64{},
+			PrevWork:   map[entity.EntityID]float64{},
+			Recs:       map[[3]uint64]*reactRec{},
 		}
 	}
 	return r.anims
@@ -334,19 +334,19 @@ func smoothEase(now, since uint64, frames float64) float64 {
 	return t * t * (3 - 2*t)
 }
 
-// carryEase is the lift progress of a carried patient (0 on the ground,
+// CarryEase is the lift progress of a carried patient (0 on the ground,
 // 1 slung); the first call for a patient starts the lift.
-func (st *animState) carryEase(id entity.EntityID, now uint64) float64 {
-	born, ok := st.carryBorn[id]
+func (st *animState) CarryEase(id entity.EntityID, now uint64) float64 {
+	born, ok := st.CarryBorn[id]
 	if !ok {
-		st.carryBorn[id] = now
+		st.CarryBorn[id] = now
 		return 0
 	}
 	return smoothEase(now, born, easeFrames)
 }
 
-// dropCarry forgets a patient that is no longer carried.
-func (st *animState) dropCarry(id entity.EntityID) { delete(st.carryBorn, id) }
+// DropCarry forgets a patient that is no longer carried.
+func (st *animState) DropCarry(id entity.EntityID) { delete(st.CarryBorn, id) }
 
 // lerpPose blends two poses (same pivot assumed from a).
 func lerpPose(a, b pose, k float64) pose {
@@ -357,13 +357,13 @@ func lerpPose(a, b pose, k float64) pose {
 		return b
 	}
 	l := func(x, y float64) float64 { return x*(1-k) + y*k }
-	ax, ay := a.scale()
-	bx, by := b.scale()
+	ax, ay := a.Scale()
+	bx, by := b.Scale()
 	return pose{
-		dx: l(a.dx, b.dx), dy: l(a.dy, b.dy), rot: l(a.rot, b.rot),
-		px: a.px, py: a.py,
-		sx: l(ax, bx), sy: l(ay, by),
-		cs: b.cs, flash: b.flash, skew: l(a.skew, b.skew),
+		Dx: l(a.Dx, b.Dx), Dy: l(a.Dy, b.Dy), Rot: l(a.Rot, b.Rot),
+		Px: a.Px, Py: a.Py,
+		Sx: l(ax, bx), Sy: l(ay, by),
+		Cs: b.Cs, Flash: b.Flash, Skew: l(a.Skew, b.Skew),
 	}
 }
 
@@ -409,15 +409,15 @@ const (
 )
 
 type particle struct {
-	kind   partKind
-	x, y   float64 // tiles
-	vx, vy float64 // tiles per frame
-	g      float64 // gravity, tiles per frame^2
-	grow   float64 // radius growth per frame
-	born   uint64
-	life   uint64
-	size   float64 // radius in tiles
-	clr    color.RGBA
+	Kind   partKind
+	X, Y   float64 // tiles
+	Vx, Vy float64 // tiles per frame
+	G      float64 // gravity, tiles per frame^2
+	Grow   float64 // radius growth per frame
+	Born   uint64
+	Life   uint64
+	Size   float64 // radius in tiles
+	Clr    color.RGBA
 }
 
 const maxParticles = 900
@@ -450,41 +450,41 @@ func (r *Renderer) burst(kind partKind, x, y float64, n int, seed uint64) {
 			return
 		}
 		h := func(k uint64) float64 { return hash01(seed, uint64(i), k) }
-		p := particle{kind: kind, x: x, y: y, born: r.present, clr: cols[int(h(1)*float64(len(cols)))%len(cols)]}
+		p := particle{Kind: kind, X: x, Y: y, Born: r.present, Clr: cols[int(h(1)*float64(len(cols)))%len(cols)]}
 		switch kind {
 		case partChip, partShaving:
-			p.vx, p.vy, p.g = (h(2)-0.5)*0.05, -0.03-h(3)*0.03, 0.0035
-			p.life, p.size = 22+uint64(h(4)*10), 0.035+h(5)*0.02
+			p.Vx, p.Vy, p.G = (h(2)-0.5)*0.05, -0.03-h(3)*0.03, 0.0035
+			p.Life, p.Size = 22+uint64(h(4)*10), 0.035+h(5)*0.02
 		case partDust:
-			p.vx, p.vy, p.g = (h(2)-0.5)*0.04, -0.015-h(3)*0.02, 0.0015
-			p.life, p.size, p.grow = 30+uint64(h(4)*14), 0.04+h(5)*0.03, 0.0015
+			p.Vx, p.Vy, p.G = (h(2)-0.5)*0.04, -0.015-h(3)*0.02, 0.0015
+			p.Life, p.Size, p.Grow = 30+uint64(h(4)*14), 0.04+h(5)*0.03, 0.0015
 		case partLeaf:
-			p.vx, p.vy, p.g = (h(2)-0.5)*0.03, -0.02-h(3)*0.015, 0.0012
-			p.life, p.size = 34+uint64(h(4)*14), 0.035
+			p.Vx, p.Vy, p.G = (h(2)-0.5)*0.03, -0.02-h(3)*0.015, 0.0012
+			p.Life, p.Size = 34+uint64(h(4)*14), 0.035
 		case partSoil:
-			p.vx, p.vy, p.g = (h(2)-0.5)*0.035, -0.025-h(3)*0.015, 0.003
-			p.life, p.size = 18+uint64(h(4)*8), 0.03
+			p.Vx, p.Vy, p.G = (h(2)-0.5)*0.035, -0.025-h(3)*0.015, 0.003
+			p.Life, p.Size = 18+uint64(h(4)*8), 0.03
 		case partSteam, partSmoke:
-			p.vx, p.vy = (h(2)-0.5)*0.006, -0.012-h(3)*0.006
-			p.life, p.size, p.grow = 50+uint64(h(4)*20), 0.06, 0.003
+			p.Vx, p.Vy = (h(2)-0.5)*0.006, -0.012-h(3)*0.006
+			p.Life, p.Size, p.Grow = 50+uint64(h(4)*20), 0.06, 0.003
 		case partBlood, partIchor:
-			p.vx, p.vy, p.g = (h(2)-0.5)*0.06, -0.025-h(3)*0.03, 0.004
-			p.life, p.size = 18+uint64(h(4)*8), 0.03+h(5)*0.015
+			p.Vx, p.Vy, p.G = (h(2)-0.5)*0.06, -0.025-h(3)*0.03, 0.004
+			p.Life, p.Size = 18+uint64(h(4)*8), 0.03+h(5)*0.015
 		case partStep:
-			p.vx, p.vy = (h(2)-0.5)*0.01, -0.004
-			p.life, p.size, p.grow = 18, 0.05, 0.004
+			p.Vx, p.Vy = (h(2)-0.5)*0.01, -0.004
+			p.Life, p.Size, p.Grow = 18, 0.05, 0.004
 		case partEmber:
-			p.vx, p.vy, p.g = (h(2)-0.5)*0.012, -0.016-h(3)*0.01, -0.0001
-			p.life, p.size = 36+uint64(h(4)*24), 0.014
+			p.Vx, p.Vy, p.G = (h(2)-0.5)*0.012, -0.016-h(3)*0.01, -0.0001
+			p.Life, p.Size = 36+uint64(h(4)*24), 0.014
 		case partSpark:
-			p.vx, p.vy, p.g = (h(2)-0.5)*0.09, -0.04-h(3)*0.04, 0.005
-			p.life, p.size = 8+uint64(h(4)*6), 0.012
+			p.Vx, p.Vy, p.G = (h(2)-0.5)*0.09, -0.04-h(3)*0.04, 0.005
+			p.Life, p.Size = 8+uint64(h(4)*6), 0.012
 		case partCasing:
-			p.vx, p.vy, p.g = (h(2)-0.5)*0.02, -0.05-h(3)*0.02, 0.006
-			p.life, p.size = 26, 0.016
+			p.Vx, p.Vy, p.G = (h(2)-0.5)*0.02, -0.05-h(3)*0.02, 0.006
+			p.Life, p.Size = 26, 0.016
 		case partSawdust:
-			p.vx, p.vy, p.g = (h(2)-0.5)*0.03, -0.012-h(3)*0.012, 0.0016
-			p.life, p.size = 26+uint64(h(4)*12), 0.018
+			p.Vx, p.Vy, p.G = (h(2)-0.5)*0.03, -0.012-h(3)*0.012, 0.0016
+			p.Life, p.Size = 26+uint64(h(4)*12), 0.018
 		}
 		r.parts = append(r.parts, p)
 	}
@@ -498,8 +498,8 @@ func (r *Renderer) burstDir(kind partKind, x, y float64, n int, seed uint64, dx,
 	r.burst(kind, x, y, n, seed)
 	ux, uy := unit(dx, dy)
 	for i := from; i < len(r.parts); i++ {
-		r.parts[i].vx += ux * speed
-		r.parts[i].vy += uy * speed
+		r.parts[i].Vx += ux * speed
+		r.parts[i].Vy += uy * speed
 	}
 }
 
@@ -508,17 +508,17 @@ func (r *Renderer) drawParticles(screen *ebiten.Image, tile float64) {
 	b := screen.Bounds()
 	kept := r.parts[:0]
 	for _, p := range r.parts {
-		age := float64(r.present - p.born)
-		if r.present < p.born || age >= float64(p.life) {
+		age := float64(r.present - p.Born)
+		if r.present < p.Born || age >= float64(p.Life) {
 			continue
 		}
 		kept = append(kept, p)
-		k := age / float64(p.life)
-		x := p.x + p.vx*age
-		y := p.y + p.vy*age + 0.5*p.g*age*age
-		rad := (p.size + p.grow*age) * tile
+		k := age / float64(p.Life)
+		x := p.X + p.Vx*age
+		y := p.Y + p.Vy*age + 0.5*p.G*age*age
+		rad := (p.Size + p.Grow*age) * tile
 		alpha := 1 - k
-		switch p.kind {
+		switch p.Kind {
 		case partSteam, partSmoke:
 			alpha *= 0.45
 		case partDust:
@@ -533,7 +533,7 @@ func (r *Renderer) drawParticles(screen *ebiten.Image, tile float64) {
 		if rr := float32(rad) + 1; sx+rr < float32(b.Min.X) || sx-rr > float32(b.Max.X) || sy+rr < float32(b.Min.Y) || sy-rr > float32(b.Max.Y) {
 			continue // off screen: kept, not drawn (a vector fill costs a tessellation and a draw call)
 		}
-		vector.FillCircle(screen, sx, sy, float32(rad), fade(p.clr, alpha), true)
+		vector.FillCircle(screen, sx, sy, float32(rad), fade(p.Clr, alpha), true)
 	}
 	r.parts = kept
 }
@@ -563,7 +563,7 @@ func (r *Renderer) animate(w game.WorldView, pawns []game.PawnView, running bool
 		case r.lod.inView(an.X, an.Y, motionViewPad, motionViewPad):
 			r.stepDust(st, an.ID, r.animalMotion(an.ID), true)
 		default: // no motion track off screen (syncAnimals): start afresh
-			delete(st.prevStride, an.ID)
+			delete(st.PrevStride, an.ID)
 		}
 	}
 	r.animateWork(w, pawns)
@@ -641,7 +641,7 @@ func (r *Renderer) drawWorkGlow(screen *ebiten.Image, tile float64) {
 func (r *Renderer) drawParticlesNoScreen() {
 	kept := r.parts[:0]
 	for _, p := range r.parts {
-		if r.present >= p.born && r.present-p.born < p.life {
+		if r.present >= p.Born && r.present-p.Born < p.Life {
 			kept = append(kept, p)
 		}
 	}

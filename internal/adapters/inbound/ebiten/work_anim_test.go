@@ -118,9 +118,9 @@ func TestWorkDrawsNoTool(t *testing.T) {
 			t.Fatalf("%s: holds %q", act, h.key)
 		}
 		var keys []string
-		r.lit.onDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
+		r.lit.OnDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
 		r.drawPawnFigure(ebiten.NewImage(512, 512), p, 2, 2, 64, pawnFigurePose{face: faceEast, ps: ps, held: h})
-		r.lit.onDraw = nil
+		r.lit.OnDraw = nil
 		for _, k := range keys {
 			if !strings.HasPrefix(k, "pawn/") || k == staleHandKey {
 				t.Fatalf("%s draws %s", act, k)
@@ -154,8 +154,8 @@ func TestWorkParticlesAtWorkSpot(t *testing.T) {
 				t.Fatalf("%s from (%d,%d): no particles", act, c.px, c.py)
 			}
 			for _, q := range r.parts {
-				if math.Abs(q.x-c.x) > 1e-9 || math.Abs(q.y-c.y) > 1e-9 {
-					t.Fatalf("%s from (%d,%d): particle at %v,%v, want %v,%v", act, c.px, c.py, q.x, q.y, c.x, c.y)
+				if math.Abs(q.X-c.x) > 1e-9 || math.Abs(q.Y-c.y) > 1e-9 {
+					t.Fatalf("%s from (%d,%d): particle at %v,%v, want %v,%v", act, c.px, c.py, q.X, q.Y, c.x, c.y)
 				}
 			}
 		}
@@ -176,12 +176,12 @@ func TestChopStrikeParticlesAtTrunk(t *testing.T) {
 		t.Fatalf("one swing throws 4 chips, got %d", len(r.parts))
 	}
 	for _, q := range r.parts {
-		if q.kind != partChip || q.x != 6.5-workFace || q.y != 5.45 {
+		if q.Kind != partChip || q.X != 6.5-workFace || q.Y != 5.45 {
 			t.Fatalf("chips fly from the trunk's face: %+v", q)
 		}
 	}
 	// the strike: leaning in, no axe drawn
-	r.mo.alpha = 0
+	r.mo.Alpha = 0
 	a := r.workPose(p, moveState{})
 	if a.held.key != "" {
 		t.Fatalf("chop pose: %+v", a)
@@ -200,11 +200,11 @@ func TestMineSparks(t *testing.T) {
 	r.animateWork(game.WorldView{}, []game.PawnView{p})
 	var sparks, dust int
 	for _, q := range r.parts {
-		switch q.kind {
+		switch q.Kind {
 		case partSpark:
 			sparks++
-			if q.vx > 0.05 { // worked tile is east: sparks glance back west
-				t.Fatalf("sparks glance back: vx=%v", q.vx)
+			if q.Vx > 0.05 { // worked tile is east: sparks glance back west
+				t.Fatalf("sparks glance back: vx=%v", q.Vx)
 			}
 		case partDust:
 			dust++
@@ -229,7 +229,7 @@ func TestSowKneels(t *testing.T) {
 	r.animateWork(game.WorldView{}, []game.PawnView{p})
 	sim.tick = clock.Tick(tickAt(3, 48, strikeAt) + 48)
 	r.animateWork(game.WorldView{}, []game.PawnView{p})
-	if len(r.parts) == 0 || r.parts[0].kind != partSoil || r.parts[0].x != 6.5-workFace || r.parts[0].y != 5.45 {
+	if len(r.parts) == 0 || r.parts[0].Kind != partSoil || r.parts[0].X != 6.5-workFace || r.parts[0].Y != 5.45 {
 		t.Fatalf("soil flies at the sown spot: %+v", r.parts)
 	}
 }
@@ -263,7 +263,7 @@ func TestHarvestPicks(t *testing.T) {
 	r.animateWork(game.WorldView{}, []game.PawnView{p})
 	sim.tick = clock.Tick(tickAt(3, 44, strikeAt) + 44)
 	r.animateWork(game.WorldView{}, []game.PawnView{p})
-	if len(r.parts) == 0 || r.parts[0].kind != partLeaf {
+	if len(r.parts) == 0 || r.parts[0].Kind != partLeaf {
 		t.Fatal("leaves fly")
 	}
 }
@@ -293,7 +293,7 @@ func TestBenchActions(t *testing.T) {
 			}
 			continue
 		}
-		if len(r.parts) == 0 || r.parts[0].kind != c.part {
+		if len(r.parts) == 0 || r.parts[0].Kind != c.part {
 			t.Fatalf("%s: want particle %v, got %+v", c.action, c.part, r.parts)
 		}
 	}
@@ -304,7 +304,7 @@ func TestBenchActions(t *testing.T) {
 	r.animateWork(game.WorldView{}, []game.PawnView{p})
 	sim.tick = clock.Tick(tickAt(3, 40, strikeAt) + 40)
 	r.animateWork(game.WorldView{}, []game.PawnView{p})
-	if r.parts[0].x != 6.5 || r.parts[0].y != 4.9 {
+	if r.parts[0].X != 6.5 || r.parts[0].Y != 4.9 {
 		t.Fatalf("steam rises over the campfire: %+v", r.parts[0])
 	}
 }
@@ -363,9 +363,9 @@ func TestLoadInFrontOfBody(t *testing.T) {
 	// the walking carrier still bobs: the pose stacks on the gait
 	m := walkingState
 	m.Stride = 0.5 / walkFrames * strideLen
-	r.mo.alpha = 0
+	r.mo.Alpha = 0
 	ps, h := r.standingPose(p, m)
-	if ps.dy >= 0 || h.stance != stanceLoad {
+	if ps.Dy >= 0 || h.stance != stanceLoad {
 		t.Fatalf("a walking carrier bobs with its load: %+v %+v", ps, h)
 	}
 	// placement: centred on the body, at the chest (just under the body
@@ -396,9 +396,9 @@ func TestLoadBehindFacingNorth(t *testing.T) {
 	for _, f := range []facing{faceNorth, faceSouth, faceEast, faceWest} {
 		ps, h := r.standingPose(p, moveState{Facing: f})
 		var keys []string
-		r.lit.onDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
+		r.lit.OnDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
 		r.drawPawnFigure(ebiten.NewImage(512, 512), p, 2, 2, 64, pawnFigurePose{face: f, ps: ps, held: h})
-		r.lit.onDraw = nil
+		r.lit.OnDraw = nil
 		body := slices.IndexFunc(keys, func(k string) bool { return strings.HasPrefix(k, "pawn/body_") })
 		load := slices.Index(keys, "item/wood_pile")
 		if body < 0 || load < 0 || (load < body) != (f == faceNorth) {

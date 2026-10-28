@@ -34,11 +34,11 @@ func TestAssignTabOpensPolicyTable(t *testing.T) {
 
 	var tab button
 	for _, b := range a.hudTabButtons(a.sw, a.sh) {
-		if b.id == "tab.assign" {
+		if b.ID == "tab.assign" {
 			tab = b
 		}
 	}
-	if tab.disabled || tab.label != "Assign" {
+	if tab.Disabled || tab.Label != "Assign" {
 		t.Fatalf("Assign tab = %+v, want enabled", tab)
 	}
 	press(t, a, f, "tab.assign")
@@ -52,8 +52,8 @@ func TestAssignTabOpensPolicyTable(t *testing.T) {
 	if hasWidget(a, assignDrugID(3)) {
 		t.Fatal("the dead get no row")
 	}
-	if w, _ := a.uiSt().find(assignDrugID(1)); w.label != "Social drinking" {
-		t.Fatalf("Ada's button %q", w.label)
+	if w, _ := a.uiSt().Find(assignDrugID(1)); w.Label != "Social drinking" {
+		t.Fatalf("Ada's button %q", w.Label)
 	}
 
 	// A click cycles to the next preset through a typed command.
@@ -83,8 +83,8 @@ func TestAssignTabWithoutPolicies(t *testing.T) {
 	a, f := colonyApp(t, s.stubSim)
 	a.openAssign()
 	f.Frame(t, a)
-	w, ok := a.uiSt().find(assignDrugID(1))
-	if !ok || !w.disabled || w.reason == "" {
+	w, ok := a.uiSt().Find(assignDrugID(1))
+	if !ok || !w.Disabled || w.Reason == "" {
 		t.Fatalf("button %+v: disabled with a reason", w)
 	}
 	press(t, a, f, assignDrugID(1))

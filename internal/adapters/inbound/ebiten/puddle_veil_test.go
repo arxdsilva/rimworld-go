@@ -401,10 +401,10 @@ func TestPuddleVeilDrawsFlatLitAtEveryTier(t *testing.T) {
 		r := New(puddleSim(w))
 		r.cam.Zoom = px / 64
 		screen := ebiten.NewImage(640, 400)
-		before := r.lit.calls
+		before := r.lit.Calls
 		r.drawPuddleVeil(screen, w, 640, 400, r.tilePx())
-		if r.snowc.wetDraws == 0 || r.lit.calls-before < r.snowc.wetDraws {
-			t.Fatalf("tile %v px: %d veil draws, %d lit calls", px, r.snowc.wetDraws, r.lit.calls-before)
+		if r.snowc.wetDraws == 0 || r.lit.Calls-before < r.snowc.wetDraws {
+			t.Fatalf("tile %v px: %d veil draws, %d lit calls", px, r.snowc.wetDraws, r.lit.Calls-before)
 		}
 		// lit flat like the ground: no normal map, a sky value per vertex
 		for _, v := range r.lod.verts {

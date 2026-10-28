@@ -93,7 +93,7 @@ func TestCaptureColonyStates(t *testing.T) {
 			}
 			hatched := 0
 			for _, b := range a.workButtons() {
-				if b.disabled {
+				if b.Disabled {
 					hatched++
 				}
 			}
@@ -131,8 +131,8 @@ func TestCaptureColonyStates(t *testing.T) {
 		{"arch-locked", 60, func(t *testing.T, a *App) {
 			captureCursorOnTool(t, a, "campfire")
 			for _, b := range a.commandGridButtons() { // the tools are command buttons
-				if b.id == "arch.tool.campfire" {
-					if !b.disabled || b.reason != game.ReasonScenario {
+				if b.ID == "arch.tool.campfire" {
+					if !b.Disabled || b.Reason != game.ReasonScenario {
 						t.Fatalf("campfire = %+v, want locked by the scenario", b)
 					}
 					return

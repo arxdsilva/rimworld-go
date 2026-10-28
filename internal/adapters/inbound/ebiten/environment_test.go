@@ -41,7 +41,7 @@ func envRenderer(w game.WorldView) *Renderer {
 // leanEast is how far a pose tips its top east, in radians. GeoM.Skew
 // shears x by tan(skew)*y about the pivot; above the pivot y < 0, so a
 // negative skew moves the top east.
-func leanEast(ps pose) float64 { return -ps.skew }
+func leanEast(ps pose) float64 { return -ps.Skew }
 
 // envArt is a catalog holding just these sprite keys.
 func envArt(keys ...string) *artCatalog {
@@ -147,18 +147,18 @@ func TestPlantLeanBoundedPerKind(t *testing.T) {
 			for x := 0; x < 30; x++ {
 				for k, lim := range leanLimit {
 					ps := r.plantPose(x, 3, k, amounts[k], 1)
-					if math.Abs(ps.skew) > lim+1e-9 {
-						t.Fatalf("kind %d leans %.3f > limit %.2f", k, ps.skew, lim)
+					if math.Abs(ps.Skew) > lim+1e-9 {
+						t.Fatalf("kind %d leans %.3f > limit %.2f", k, ps.Skew, lim)
 					}
-					peak[k] = math.Max(peak[k], math.Abs(ps.skew))
+					peak[k] = math.Max(peak[k], math.Abs(ps.Skew))
 				}
 			}
 		}
 		// a creature shoving hard still cannot break the limit
 		r.env.springs[envTileKey(4, 3)] = &envSpring{cx: 50, cy: -50, vx: 90}
 		for k, lim := range leanLimit {
-			if ps := r.plantPose(4, 3, k, amounts[k], 1); math.Abs(ps.skew) > lim+1e-9 || ps.sy <= 0 {
-				t.Fatalf("kind %d shoved: skew %.3f sy %.3f", k, ps.skew, ps.sy)
+			if ps := r.plantPose(4, 3, k, amounts[k], 1); math.Abs(ps.Skew) > lim+1e-9 || ps.Sy <= 0 {
+				t.Fatalf("kind %d shoved: skew %.3f sy %.3f", k, ps.Skew, ps.Sy)
 			}
 		}
 	}
@@ -220,7 +220,7 @@ func walkPast(t *testing.T, w game.WorldView, path []cell, px, py int, kind plan
 		with.advance()
 		ref.advance()
 		a, b := with.plantPose(px, py, kind, 0.055, 1), ref.plantPose(px, py, kind, 0.055, 1)
-		fn(f, with.pawnMotion(1), pose{skew: a.skew - b.skew, sy: a.sy - b.sy}, with, ref)
+		fn(f, with.pawnMotion(1), pose{Skew: a.Skew - b.Skew, Sy: a.Sy - b.Sy}, with, ref)
 	}
 }
 
@@ -240,7 +240,7 @@ func TestContactBendsAwayFromMover(t *testing.T) {
 	})
 	walkPast(t, w, line(7, 1, 0, 1, 10), 7, 5, kindCrop, 200, func(_ int, m moveState, d pose, _, _ *Renderer) {
 		if m.Y > 4.4 && m.Y < 5 {
-			south = math.Max(south, -d.sy) // leaning south shortens it on screen
+			south = math.Max(south, -d.Sy) // leaning south shortens it on screen
 		}
 	})
 	t.Logf("bend: east %.3f west %.3f south %.3f", east, west, south)
@@ -256,7 +256,7 @@ func TestContactSpringsBack(t *testing.T) {
 	last := -1
 	var with *Renderer
 	walkPast(t, w, line(2, 5, 1, 0, 10), 7, 5, kindCrop, 420, func(f int, m moveState, d pose, r, _ *Renderer) {
-		lean = append(lean, math.Abs(d.skew))
+		lean = append(lean, math.Abs(d.Skew))
 		if math.Hypot(m.X-7, m.Y-5) < contactRadius {
 			last = f
 		}
@@ -314,7 +314,7 @@ func TestTreeShakesWhenBrushed(t *testing.T) {
 		w.Plants = []game.PlantView{{ID: 50, X: 7, Y: 5, Species: "tree", Growth: 100}}
 		shake := 0.0
 		walkPast(t, w, line(2, 5, 1, 0, 10), 7, 5, kindTree, 200, func(_ int, _ moveState, d pose, _, _ *Renderer) {
-			shake = math.Max(shake, math.Abs(d.skew))
+			shake = math.Max(shake, math.Abs(d.Skew))
 		})
 		t.Logf("%s: shake %.4f", season, shake)
 		if shake < 0.01 || shake > leanLimit[kindTree] {
@@ -332,7 +332,7 @@ func TestTreeShakesWhenBrushed(t *testing.T) {
 			r.advance()
 			n := 0
 			for _, p := range r.parts {
-				if p.kind == partLeaf {
+				if p.Kind == partLeaf {
 					n++
 				}
 			}
@@ -733,11 +733,11 @@ func TestSnowCoverFollowsDepthWithVariants(t *testing.T) {
 		sum := 0.0
 		for x := 0; x < 40; x++ {
 			ps := r.plantPose(x, 7, kindGrass, 0.05, 1)
-			a := float64(ps.cs[3])
-			if ps.cs == (colorScale{}) {
+			a := float64(ps.Cs[3])
+			if ps.Cs == (colorScale{}) {
 				a = 1
 			}
-			sum += a * ps.sy
+			sum += a * ps.Sy
 		}
 		return sum / 40
 	}
@@ -957,10 +957,10 @@ func TestNoGroundCoverUnderRoof(t *testing.T) {
 	// grass under a roof is not buried in snow
 	under := r.plantPose(3, 3, kindGrass, 0.05, 1)
 	open := r.plantPose(45, 3, kindGrass, 0.05, 1)
-	if under.cs != (colorScale{}) && under.cs[3] != 1 || under.sy < open.sy {
+	if under.Cs != (colorScale{}) && under.Cs[3] != 1 || under.Sy < open.Sy {
 		t.Errorf("roofed grass buried: %+v vs open %+v", under, open)
 	}
-	if open.sy >= 1 {
+	if open.Sy >= 1 {
 		t.Errorf("open grass not pressed by snow: %+v", open)
 	}
 	// and a whole frame draws
@@ -1029,7 +1029,7 @@ func TestCollapseDustOncePerStamp(t *testing.T) {
 	count := func(k partKind) int {
 		n := 0
 		for _, p := range r.parts {
-			if p.kind == k {
+			if p.Kind == k {
 				n++
 			}
 		}
@@ -1039,8 +1039,8 @@ func TestCollapseDustOncePerStamp(t *testing.T) {
 		t.Fatalf("first frame: dust %d chips %d, want 12 and 4", count(partDust), count(partChip))
 	}
 	for _, p := range r.parts {
-		if p.x < 4 || p.x > 5 || p.y < 5 || p.y > 6 {
-			t.Fatalf("particle at %.2f,%.2f, want over tile 4,5", p.x, p.y)
+		if p.X < 4 || p.X > 5 || p.Y < 5 || p.Y > 6 {
+			t.Fatalf("particle at %.2f,%.2f, want over tile 4,5", p.X, p.Y)
 		}
 	}
 	stepFrames(r, w, 5)

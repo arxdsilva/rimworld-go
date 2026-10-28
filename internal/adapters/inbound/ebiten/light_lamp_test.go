@@ -277,27 +277,27 @@ func TestLightGridRebuildsOnlyOnStructureOrLampChange(t *testing.T) {
 	r := &Renderer{}
 	r.view.W = v
 	levelAt(r, 5, 5)
-	gen := r.lit.grid.gen
+	gen := r.lit.Grid.Gen
 	same := v
 	same.Buildings = []game.BuildingView{lampBuilding(1, 5, 5), {ID: 2, Kind: "chair", X: 9, Y: 9, W: 1, H: 1}}
 	r.view.W = same
 	levelAt(r, 5, 5)
-	if r.lit.grid.gen != gen {
+	if r.lit.Grid.Gen != gen {
 		t.Fatal("a new building list with the same lamps rebuilt the light")
 	}
 	moved := v
 	moved.Buildings = []game.BuildingView{lampBuilding(1, 6, 5)}
 	r.view.W = moved
-	if l := levelAt(r, 6, 5); l != 1 || r.lit.grid.gen == gen {
-		t.Fatalf("a moved lamp: level %v, generation kept %v", l, r.lit.grid.gen == gen)
+	if l := levelAt(r, 6, 5); l != 1 || r.lit.Grid.Gen == gen {
+		t.Fatalf("a moved lamp: level %v, generation kept %v", l, r.lit.Grid.Gen == gen)
 	}
-	gen = r.lit.grid.gen
+	gen = r.lit.Grid.Gen
 	walled := moved
 	walled.RoomGrid = append([]int(nil), moved.RoomGrid...)
 	walled.RoomGrid[5*20+7] = -2
 	r.view.W = walled
-	if l := levelAt(r, 8, 5); l != 0 || r.lit.grid.gen == gen {
-		t.Fatalf("a new wall: behind it %v, generation kept %v", l, r.lit.grid.gen == gen)
+	if l := levelAt(r, 8, 5); l != 0 || r.lit.Grid.Gen == gen {
+		t.Fatalf("a new wall: behind it %v, generation kept %v", l, r.lit.Grid.Gen == gen)
 	}
 }
 
@@ -318,7 +318,7 @@ func TestLightsComeOnlyFromLightSources(t *testing.T) {
 
 	r := shadowRenderer(t, v)
 	r.view.W = v
-	r.lit.grid.sources = func(dst []lightSource, _ *game.WorldView, _ float64) []lightSource {
+	r.lit.Grid.Sources = func(dst []lightSource, _ *game.WorldView, _ float64) []lightSource {
 		return append(dst, lightSource{ID: 9, X: 10, Y: 6, Radius: 6, Kind: lightLamp}) // where no lamp stands
 	}
 	if l := levelAt(r, 10, 6); l != 1 {
@@ -328,7 +328,7 @@ func TestLightsComeOnlyFromLightSources(t *testing.T) {
 		t.Fatalf("the grid lit an unlisted lamp building: %v", l)
 	}
 	pl := r.pointLights()
-	if len(pl) != 1 || pl[0].id != 9 || pl[0].x != 10.5 || pl[0].y != 6.5 {
+	if len(pl) != 1 || pl[0].ID != 9 || pl[0].X != 10.5 || pl[0].Y != 6.5 {
 		t.Fatalf("point lights %+v, want only the listed lamp", pl)
 	}
 
@@ -376,7 +376,7 @@ func BenchmarkLightGridLamps(b *testing.B) {
 	b.Run("rebuild", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			r.lit.grid.gen++ // every chunk stale, as after a change
+			r.lit.Grid.Gen++ // every chunk stale, as after a change
 			read()
 		}
 	})
@@ -451,11 +451,11 @@ func TestGroundLampLightInterpolatesAcrossTiles(t *testing.T) {
 		if k.x%8 != 0 || k.y%8 != 0 {
 			continue
 		}
-		if got := g.groundLevel(float64(k.x/8), float64(k.y/8)); math.Abs(float64(got-l)) > 1e-6 {
+		if got := g.GroundLevel(float64(k.x/8), float64(k.y/8)); math.Abs(float64(got-l)) > 1e-6 {
 			t.Fatalf("corner (%d, %d): live ground %v, bake %v", k.x/8, k.y/8, got, l)
 		}
 	}
-	if got, want := g.groundLevel(7.5, 5.5), levelAt(r, 7, 5); math.Abs(float64(got-want)) > 1e-6 {
+	if got, want := g.GroundLevel(7.5, 5.5), levelAt(r, 7, 5); math.Abs(float64(got-want)) > 1e-6 {
 		t.Fatalf("tile (7, 5)'s centre: %v, want its level %v", got, want)
 	}
 	var vs [4]ebiten.Vertex

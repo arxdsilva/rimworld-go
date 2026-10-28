@@ -156,7 +156,7 @@ func (r *Renderer) drawEaves(screen *ebiten.Image, w game.WorldView, sw, sh int,
 	if len(st.edges) == 0 {
 		return
 	}
-	a := float64(eaveAlpha(r.lit.light)) / 255
+	a := float64(eaveAlpha(r.lit.Light)) / 255
 	c := color.RGBA{shadowColorU8(0), shadowColorU8(1), shadowColorU8(2), 255}
 	b := &st.batch
 	b.Reset()

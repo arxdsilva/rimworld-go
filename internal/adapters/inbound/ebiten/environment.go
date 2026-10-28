@@ -242,7 +242,7 @@ func (e *envState) setWeather(w game.WorldView) {
 // frame: wind plus any creature brushing through. scale is its growth
 // scale; amount the call site's sway amount (taller crops sway more).
 func (r *Renderer) plantPose(x, y int, kind plantKind, amount, scale float64) pose {
-	ps := pose{px: 0.5, py: 1, sx: scale, sy: scale}
+	ps := pose{Px: 0.5, Py: 1, Sx: scale, Sy: scale}
 	e := &r.env
 	fx, fy := float64(x), float64(y)
 	if v := e.view; !v.empty() && (fx < v.x0-2 || fx > v.x1+1 || fy < v.y0-1 || fy > v.y1+3) {
@@ -288,13 +288,13 @@ func (r *Renderer) plantPose(x, y int, kind plantKind, amount, scale float64) po
 		leanX = L * math.Tanh((gain*(wx+fl*e.dx)+L*cx)/L)
 		leanY = L * math.Tanh((gain*(wy+0.5*fl*e.dy)+L*cy)/L)
 	}
-	ps.skew = -leanX                // GeoM skew: negative tips the top east
-	ps.sy = scale * (1 - 0.6*leanY) // leaning south (towards the viewer) looks shorter
+	ps.Skew = -leanX                // GeoM skew: negative tips the top east
+	ps.Sy = scale * (1 - 0.6*leanY) // leaning south (towards the viewer) looks shorter
 	if kind == kindGrass && e.snow > 0 && e.outdoors(x, y) {
 		thr := 0.15 + 0.6*float64(h>>8&0xffff)/65536
 		a := 1 - clamp01((e.snow-thr)/0.2)
-		ps.sy *= 1 - 0.5*e.snow
-		ps.cs = colorScale{1, 1, 1, float32(a)}
+		ps.Sy *= 1 - 0.5*e.snow
+		ps.Cs = colorScale{1, 1, 1, float32(a)}
 	}
 	return ps
 }
@@ -338,7 +338,7 @@ func (r *Renderer) stepCollapses(w game.WorldView) {
 func (r *Renderer) stepContacts(w game.WorldView, pawns []game.PawnView) {
 	e := &r.env
 	e.movers = e.movers[:0]
-	perSec := float64(r.mo.stepped) * 60 // tiles/tick -> on-screen tiles/s
+	perSec := float64(r.mo.Stepped) * 60 // tiles/tick -> on-screen tiles/s
 	add := func(m moveState) {
 		vx, vy := m.VX*perSec, m.VY*perSec
 		if spd := math.Hypot(vx, vy); spd >= contactMinSpd {
@@ -447,9 +447,9 @@ func (r *Renderer) dropLeaves(x, y int) {
 	from := len(r.parts)
 	r.burst(partLeaf, float64(x)+0.5, float64(y)-0.55, n, seed)
 	for i := from; i < len(r.parts); i++ {
-		r.parts[i].clr = autumnLeaves[int(hash01(seed, uint64(i), 9)*float64(len(autumnLeaves)))%len(autumnLeaves)]
-		r.parts[i].life += 30 // leaves flutter down slowly
-		r.parts[i].g *= 0.5
+		r.parts[i].Clr = autumnLeaves[int(hash01(seed, uint64(i), 9)*float64(len(autumnLeaves)))%len(autumnLeaves)]
+		r.parts[i].Life += 30 // leaves flutter down slowly
+		r.parts[i].G *= 0.5
 	}
 }
 
@@ -933,7 +933,7 @@ func (r *Renderer) drawGroundCover(screen *ebiten.Image, w game.WorldView, sw, s
 	none := color.NRGBA{}
 	decal := func(k string, x, y int, a float64) {
 		if a > 0 && r.art.Has(k) {
-			r.drawSpritePose(screen, k, none, float64(x), float64(y), tile, pose{cs: colorScale{1, 1, 1, float32(a)}})
+			r.drawSpritePose(screen, k, none, float64(x), float64(y), tile, pose{Cs: colorScale{1, 1, 1, float32(a)}})
 		}
 	}
 	for y := y0; y <= y1; y++ {

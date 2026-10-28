@@ -463,7 +463,7 @@ func TestPowerPaneAndGridAtUIScales(t *testing.T) {
 						t.Errorf("%s: %s has no hit target", name, cm.ID)
 						continue
 					}
-					if got := (rect{X: hb.x, Y: hb.y, W: hb.w, H: hb.h}); got != l.GridCells[i] {
+					if got := (rect{X: hb.X, Y: hb.Y, W: hb.W, H: hb.H}); got != l.GridCells[i] {
 						t.Errorf("%s: %s is at %+v, its cell is %+v", name, cm.ID, got, l.GridCells[i])
 					}
 				}
@@ -503,7 +503,7 @@ func TestSolarFlareChipIsInTheGlobalControls(t *testing.T) {
 	if len(rs) != 1 || rs[0].Empty() {
 		t.Fatalf("chip rects = %+v", rs)
 	}
-	if _, ok := a.uiSt().find("hud.chip.0"); !ok {
+	if _, ok := a.uiSt().Find("hud.chip.0"); !ok {
 		t.Fatal("the flare chip has no hover card")
 	}
 }

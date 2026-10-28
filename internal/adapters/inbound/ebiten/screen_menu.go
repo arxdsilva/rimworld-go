@@ -18,17 +18,17 @@ const (
 
 func (a *App) mainMenuButtons(sw, sh int) []button {
 	cx := menuRailX(sw)
-	cont := buttonSpec{id: ids.MenuContinue, label: "Continue", disabled: !a.hasSaves(), reason: "no saves yet"}
+	cont := buttonSpec{ID: ids.MenuContinue, Label: "Continue", Disabled: !a.hasSaves(), Reason: "no saves yet"}
 	specs := []buttonSpec{
-		{id: ids.MenuNewGame, label: "New Colony"},
-		{id: ids.MenuLoad, label: "Load Game"},
-		{id: "menu.plugins", label: "Plugins", disabled: true, reason: "not implemented"},
-		{id: ids.MenuOptions, label: "Options"},
-		{id: "menu.tutorial", label: "Tutorial / Help", disabled: true, reason: "not implemented"},
-		{id: ids.MenuCredits, label: "Credits"},
-		{id: ids.MenuQuit, label: "Quit"},
+		{ID: ids.MenuNewGame, Label: "New Colony"},
+		{ID: ids.MenuLoad, Label: "Load Game"},
+		{ID: "menu.plugins", Label: "Plugins", Disabled: true, Reason: "not implemented"},
+		{ID: ids.MenuOptions, Label: "Options"},
+		{ID: "menu.tutorial", Label: "Tutorial / Help", Disabled: true, Reason: "not implemented"},
+		{ID: ids.MenuCredits, Label: "Credits"},
+		{ID: ids.MenuQuit, Label: "Quit"},
 	}
-	if cont.disabled { // Continue leads the list only when it can be used
+	if cont.Disabled { // Continue leads the list only when it can be used
 		specs = append([]buttonSpec{specs[0], cont}, specs[1:]...)
 	} else {
 		specs = append([]buttonSpec{cont}, specs...)
@@ -76,7 +76,7 @@ func (a *App) ramNoticeCard(sw, sh int, text string) rect {
 	h := float32(2*ramCardPad+ramBtnH+8) + float32(len(lines))*float32(lineH(ramNoticeStyle()))
 	top := float32(0)
 	for _, b := range a.mainMenuButtons(sw, sh) {
-		top = max(top, b.y+b.h)
+		top = max(top, b.Y+b.H)
 	}
 	y := max(top+ramCardGap, float32(sh)-ramCardGap-h)
 	if y+h > float32(sh) { // a window under the minimum: stay on screen
@@ -95,7 +95,7 @@ func (a *App) mainMenuUI(sw, sh int) {
 	st := ramNoticeStyle()
 	lines := wrapPx(text, st, float64(card.W-2*ramCardPad-ramCardStripe))
 	a.uiPanel(card)
-	a.uiSt().queue(func(dst *ebiten.Image) {
+	a.uiSt().Queue(func(dst *ebiten.Image) {
 		fillRect(dst, rect{X: card.X, Y: card.Y, W: ramCardStripe, H: card.H}, uiWarning)
 		tx, ty := float64(card.X+ramCardPad+ramCardStripe), float64(card.Y+ramCardPad)
 		for i, l := range lines {
@@ -123,20 +123,20 @@ func (a *App) drawMainMenu(screen *ebiten.Image, sw, sh int) {
 	mx, my := a.currentCursor()
 	btns := a.mainMenuButtons(sw, sh)
 	for i, b := range btns {
-		drawMenuButton(screen, b, i == 0 && !b.disabled, b.contains(mx, my))
+		drawMenuButton(screen, b, i == 0 && !b.Disabled, b.Contains(mx, my))
 	}
 }
 
 // drawMenuButton is a main-menu rail button in the real font; the first
 // enabled one is the gold primary.
 func drawMenuButton(dst *ebiten.Image, b button, primary, hover bool) {
-	r := rect{X: b.x, Y: b.y, W: b.w, H: b.h}
+	r := rect{X: b.X, Y: b.Y, W: b.W, H: b.H}
 	style := btnNormal
 	if primary {
 		style = btnPrimary
 	}
-	fill, border, text := style.colors(hover && !b.disabled, false, false)
-	if b.disabled {
+	fill, border, text := style.Colors(hover && !b.Disabled, false, false)
+	if b.Disabled {
 		fill, border, text = uiBtnDisabled, uiBtnBorder, uiTextDisabled
 	}
 	fillRect(dst, r, fill)
@@ -144,17 +144,17 @@ func drawMenuButton(dst *ebiten.Image, b button, primary, hover bool) {
 	st := tsLarge
 	st.Color, st.Align = text, alignCenter
 	cx, cy := r.Center()
-	drawText(dst, b.label, float64(cx), float64(cy)-lineH(st)/2, st)
+	drawText(dst, b.Label, float64(cx), float64(cy)-lineH(st)/2, st)
 }
 
 func (a *App) creditsButtons(sw, sh int) []button {
 	return []button{{
-		id:    "credits.back",
-		label: "Back",
-		x:     40,
-		y:     footerY(sh),
-		w:     140,
-		h:     36,
+		ID:    "credits.back",
+		Label: "Back",
+		X:     40,
+		Y:     footerY(sh),
+		W:     140,
+		H:     36,
 	}}
 }
 

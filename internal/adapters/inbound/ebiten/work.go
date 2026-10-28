@@ -115,13 +115,13 @@ func (a *App) workIncapable(p game.PawnView, col int) (string, bool) {
 
 // workCellRect is the rectangle of colonist row's cell in column col.
 func workCellRect(r button, row, col int) rect {
-	hx := r.x + 12 + workNameW
-	y := r.y + 48 + float32(row*workRowH)
+	hx := r.X + 12 + workNameW
+	y := r.Y + 48 + float32(row*workRowH)
 	return rect{X: hx + float32(col*workCellW), Y: y, W: workCellW - 4, H: workRowH - 2}
 }
 
 // workRowShown reports the row fits the panel.
-func workRowShown(r button, row int) bool { return int(r.y)+48+row*workRowH <= int(r.y+r.h)-20 }
+func workRowShown(r button, row int) bool { return int(r.Y)+48+row*workRowH <= int(r.Y+r.H)-20 }
 
 // workCellTip is the hover card of a live cell: priority, skill, passion.
 func workCellTip(p game.PawnView, col int) string {
@@ -160,7 +160,7 @@ func (a *App) workTipsUI(sw, sh int) {
 	r := a.windowRect()
 	for col := range workColumns {
 		cr := workCellRect(r, 0, col)
-		a.uiTip("work.hdr."+uiNum(col), rect{X: cr.X, Y: r.y + 22, W: cr.W, H: 22}, workHelp[col])
+		a.uiTip("work.hdr."+uiNum(col), rect{X: cr.X, Y: r.Y + 22, W: cr.W, H: 22}, workHelp[col])
 	}
 	for row, p := range a.shell.Pawns() {
 		if !workRowShown(r, row) {
@@ -216,12 +216,12 @@ func (a *App) workButtons() []button {
 		return a.animalsTabButtons()
 	}
 	r := a.windowRect()
-	hx := int(r.x) + 12 + workNameW
+	hx := int(r.X) + 12 + workNameW
 	pawns := a.shell.Pawns()
 	out := make([]button, 0)
 	for row, p := range pawns {
-		y := int(r.y) + 48 + row*workRowH
-		if y > int(r.y+r.h)-20 {
+		y := int(r.Y) + 48 + row*workRowH
+		if y > int(r.Y+r.H)-20 {
 			break
 		}
 		for col := range workColumns {
@@ -229,17 +229,17 @@ func (a *App) workButtons() []button {
 				continue
 			}
 			b := button{
-				id:    ids.PrefixWorkCell + strconv.FormatUint(uint64(p.ID), 10) + "." + strconv.Itoa(col),
-				label: "",
-				x:     float32(hx + col*workCellW),
-				y:     float32(y),
-				w:     float32(workCellW - 4),
-				h:     float32(workRowH - 2),
+				ID:    ids.PrefixWorkCell + strconv.FormatUint(uint64(p.ID), 10) + "." + strconv.Itoa(col),
+				Label: "",
+				X:     float32(hx + col*workCellW),
+				Y:     float32(y),
+				W:     float32(workCellW - 4),
+				H:     float32(workRowH - 2),
 			}
 			if why, inc := a.workIncapable(p, col); inc {
 				// An incapable cell is hatched and can't be clicked: the
 				// reason shows as its tooltip (workTipsUI) and as the hint.
-				b.disabled, b.reason, b.quiet = true, why, true
+				b.Disabled, b.Reason, b.Quiet = true, why, true
 			}
 			out = append(out, b)
 		}
@@ -269,28 +269,28 @@ func (a *App) drawWork(screen *ebiten.Image, sw, sh int) {
 		return
 	}
 	r := a.windowRect()
-	drawPanel(screen, r.x, r.y, r.w, r.h)
-	drawText(screen, "Work priorities", float64(r.x)+12, float64(r.y)+8, withColor(tsLabel, uiHeading))
-	hintX := float64(r.x) + 12 + float64(textW("Work priorities", tsLabel)) + 16
-	drawText(screen, ellipsize("1 = do first ... 4 = do last, - = never; click a cell to change", tsSmall, float64(r.x+r.w)-12-hintX),
-		hintX, float64(r.y)+8+(lineH(tsLabel)-lineH(tsSmall))/2, withColor(tsSmall, uiTextDim))
-	hx := int(r.x) + 12 + workNameW
+	drawPanel(screen, r.X, r.Y, r.W, r.H)
+	drawText(screen, "Work priorities", float64(r.X)+12, float64(r.Y)+8, withColor(tsLabel, uiHeading))
+	hintX := float64(r.X) + 12 + float64(textW("Work priorities", tsLabel)) + 16
+	drawText(screen, ellipsize("1 = do first ... 4 = do last, - = never; click a cell to change", tsSmall, float64(r.X+r.W)-12-hintX),
+		hintX, float64(r.Y)+8+(lineH(tsLabel)-lineH(tsSmall))/2, withColor(tsSmall, uiTextDim))
+	hx := int(r.X) + 12 + workNameW
 	for i, col := range workColumns {
-		drawText(screen, col, float64(hx+i*workCellW)+float64(workCellW-4)/2, float64(r.y)+28, textStyle{Size: tsSmall.Size, Color: uiTextDim, Align: alignCenter})
+		drawText(screen, col, float64(hx+i*workCellW)+float64(workCellW-4)/2, float64(r.Y)+28, textStyle{Size: tsSmall.Size, Color: uiTextDim, Align: alignCenter})
 	}
 	pawns := a.shell.Pawns()
 	for row, p := range pawns {
-		y := int(r.y) + 48 + row*workRowH
-		if y > int(r.y+r.h)-20 {
+		y := int(r.Y) + 48 + row*workRowH
+		if y > int(r.Y+r.H)-20 {
 			break
 		}
-		drawText(screen, ellipsize(pawnLabel(p), tsBody, workNameW-8), float64(r.x)+12, float64(y)+(workRowH-2-lineH(tsBody))/2, tsBody)
+		drawText(screen, ellipsize(pawnLabel(p), tsBody, workNameW-8), float64(r.X)+12, float64(y)+(workRowH-2-lineH(tsBody))/2, tsBody)
 	}
 	mx, my := a.currentCursor()
 	a.drawButtons(screen, a.workButtons(), mx, my)
 	for row, p := range pawns {
-		y := int(r.y) + 48 + row*workRowH
-		if y > int(r.y+r.h)-20 {
+		y := int(r.Y) + 48 + row*workRowH
+		if y > int(r.Y+r.H)-20 {
 			break
 		}
 		for col := range workColumns {

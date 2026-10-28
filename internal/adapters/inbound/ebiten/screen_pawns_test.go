@@ -208,7 +208,7 @@ func TestReorderAndSwap(t *testing.T) {
 	if len(fp.moves) != 1 || fp.moves[0] != [2]int{1, 0} || a.ng.pawnSel != 0 {
 		t.Fatalf("up: moves %v sel %d", fp.moves, a.ng.pawnSel)
 	}
-	if w, _ := a.uiSt().find("pawns.up"); !w.disabled {
+	if w, _ := a.uiSt().Find("pawns.up"); !w.Disabled {
 		t.Fatal("Up is disabled on the first candidate")
 	}
 	click(t, a, "pawns.down")
@@ -228,13 +228,13 @@ func TestReorderAndSwap(t *testing.T) {
 	}
 	// Drag the first row below the Selected group: it moves to that row.
 	f.Frame(t, a)
-	r0, ok := a.uiSt().find("pawns.row.0")
-	r4, ok2 := a.uiSt().find("pawns.row.4")
+	r0, ok := a.uiSt().Find("pawns.row.0")
+	r4, ok2 := a.uiSt().Find("pawns.row.4")
 	if !ok || !ok2 {
 		t.Fatal("rows 0 and 4 should be visible")
 	}
-	x0, y0 := r0.r.Center()
-	_, y4 := r4.r.Center()
+	x0, y0 := r0.R.Center()
+	_, y4 := r4.R.Center()
 	f.Cur.Mx, f.Cur.My = int(x0), int(y0)
 	f.Cur.Press[mbLeft], f.Cur.Down[mbLeft] = true, true
 	f.Frame(t, a)
@@ -274,9 +274,9 @@ func TestNameValidationBlocksStart(t *testing.T) {
 	if ng.nameErr != game.ErrNickRequired.Error() {
 		t.Fatalf("nameErr = %q", ng.nameErr)
 	}
-	w, _ := a.uiSt().find("wizard.start")
-	if !w.disabled || w.reason != "Every colonist needs a nickname" {
-		t.Fatalf("Start: disabled=%v reason=%q", w.disabled, w.reason)
+	w, _ := a.uiSt().Find("wizard.start")
+	if !w.Disabled || w.Reason != "Every colonist needs a nickname" {
+		t.Fatalf("Start: disabled=%v reason=%q", w.Disabled, w.Reason)
 	}
 	if ng.pool.Views()[0].Nick != nick {
 		t.Fatal("the pool keeps the last valid nickname")

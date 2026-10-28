@@ -28,28 +28,28 @@ func TestHumanCorpseDrawsDeceasedLying(t *testing.T) {
 		t.Fatal("unknown deceased")
 	}
 	plan := corpsePlanFor(r.art, it)
-	side := math.Copysign(1, plan.ps.rot)
+	side := math.Copysign(1, plan.ps.Rot)
 	want := lyingPose(r.art, side)
-	want.cs = deadCS
-	if plan.ps != want || math.Abs(math.Abs(plan.ps.rot)-math.Pi/2) > 1e-9 {
+	want.Cs = deadCS
+	if plan.ps != want || math.Abs(math.Abs(plan.ps.Rot)-math.Pi/2) > 1e-9 {
 		t.Fatalf("the standing figure laid flat on its side: %+v", plan.ps)
 	}
-	if plan.ps.cs != deadCS {
-		t.Fatalf("dead tint: %v", plan.ps.cs)
+	if plan.ps.Cs != deadCS {
+		t.Fatalf("dead tint: %v", plan.ps.Cs)
 	}
 	it.Rotten = true
-	if corpsePlanFor(r.art, it).ps.cs != rottenCS {
+	if corpsePlanFor(r.art, it).ps.Cs != rottenCS {
 		t.Fatal("rotten tint")
 	}
 	// the side it fell on is stable per body
-	if corpsePlanFor(r.art, it).ps.rot != plan.ps.rot {
+	if corpsePlanFor(r.art, it).ps.Rot != plan.ps.Rot {
 		t.Fatal("stable lying side")
 	}
 	screen := ebiten.NewImage(512, 512)
 	var keys []string
-	r.lit.onDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
+	r.lit.OnDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
 	r.drawCorpseItem(screen, it, 64, 512, 512)
-	r.lit.onDraw = nil
+	r.lit.OnDraw = nil
 	if len(keys) == 0 || keys[0] != "pawn/body_south" {
 		t.Fatalf("the corpse is the deceased's south figure: %v", keys)
 	}
@@ -197,7 +197,7 @@ func TestPyreBurningDrawsFireAndSmoke(t *testing.T) {
 	}
 	kinds := map[partKind]int{}
 	for _, p := range hot.parts {
-		kinds[p.kind]++
+		kinds[p.Kind]++
 	}
 	if kinds[partSmoke] == 0 || kinds[partEmber] == 0 {
 		t.Fatalf("smoke and embers: %v", kinds)

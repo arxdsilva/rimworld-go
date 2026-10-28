@@ -93,18 +93,18 @@ func TestTabStripHasElevenEqualTabs(t *testing.T) {
 		}
 		w := float32(a.sw) / float32(len(want))
 		for i, b := range bs {
-			if b.id != want[i] {
-				t.Errorf("%v: tab %d is %q, want %q", size, i, b.id, want[i])
+			if b.ID != want[i] {
+				t.Errorf("%v: tab %d is %q, want %q", size, i, b.ID, want[i])
 			}
-			if math.Abs(float64(b.w-w)) > 0.01 || math.Abs(float64(b.x-float32(i)*w)) > 0.01 {
-				t.Errorf("%v: %s is x %v w %v, want x %v w %v", size, b.id, b.x, b.w, float32(i)*w, w)
+			if math.Abs(float64(b.W-w)) > 0.01 || math.Abs(float64(b.X-float32(i)*w)) > 0.01 {
+				t.Errorf("%v: %s is x %v w %v, want x %v w %v", size, b.ID, b.X, b.W, float32(i)*w, w)
 			}
-			if b.y != float32(a.sh-tabsH) || b.h != tabsH {
-				t.Errorf("%v: %s is y %v h %v, want y %d h %d", size, b.id, b.y, b.h, a.sh-tabsH, tabsH)
+			if b.Y != float32(a.sh-tabsH) || b.H != tabsH {
+				t.Errorf("%v: %s is y %v h %v, want y %d h %d", size, b.ID, b.Y, b.H, a.sh-tabsH, tabsH)
 			}
 		}
-		if last := bs[len(bs)-1]; math.Abs(float64(last.x+last.w-float32(a.sw))) > 0.01 {
-			t.Errorf("%v: the strip ends at %v, want the screen's edge", size, last.x+last.w)
+		if last := bs[len(bs)-1]; math.Abs(float64(last.X+last.W-float32(a.sw))) > 0.01 {
+			t.Errorf("%v: the strip ends at %v, want the screen's edge", size, last.X+last.W)
 		}
 	}
 }
@@ -117,8 +117,8 @@ func TestTabStripIsTheLayoutsTabsRect(t *testing.T) {
 		t.Fatalf("Tabs = %+v", tabs)
 	}
 	for _, b := range a.hudTabButtons(a.sw, a.sh) {
-		if !(rect{X: b.x, Y: b.y, W: b.w, H: b.h}).Intersect(tabs).Empty() && (b.y != tabs.Y || b.h != tabs.H) {
-			t.Errorf("%s leaves the Tabs rect: %+v", b.id, b)
+		if !(rect{X: b.X, Y: b.Y, W: b.W, H: b.H}).Intersect(tabs).Empty() && (b.Y != tabs.Y || b.H != tabs.H) {
+			t.Errorf("%s leaves the Tabs rect: %+v", b.ID, b)
 		}
 	}
 	assertChromeIsTheLayout(t, a) // the layout covers the strip
@@ -131,7 +131,7 @@ func TestTabStripShowsKeyHints(t *testing.T) {
 	a, _ := winApp(t, winStub(1))
 	tips := map[string]string{}
 	for _, b := range a.hudTabButtons(a.sw, a.sh) {
-		tips[b.id] = b.tip
+		tips[b.ID] = b.Tip
 	}
 	for id, key := range map[string]string{"tab.work": "[F1]", "tab.animals": "[F4]", "tab.wildlife": "[F5]", "tab.research": "[F6]", "tab.history": "[F9]"} {
 		if !strings.Contains(tips[id], key) {
@@ -163,7 +163,7 @@ func TestTabLabelsEllipsizeWhenNarrow(t *testing.T) {
 		}
 		in := false
 		for _, b := range bs {
-			if e.X >= b.x-0.5 && e.X+e.W <= b.x+b.w+0.5 && e.Y >= b.y-0.5 && e.Y+e.H <= b.y+b.h+0.5 {
+			if e.X >= b.X-0.5 && e.X+e.W <= b.X+b.W+0.5 && e.Y >= b.Y-0.5 && e.Y+e.H <= b.Y+b.H+0.5 {
 				in = true
 			}
 		}
@@ -192,11 +192,11 @@ func TestResearchTabShowsProgressFill(t *testing.T) {
 		a.drawTabs(img, a.sw, a.sh)
 		var out []traceEvent
 		for _, b := range a.hudTabButtons(a.sw, a.sh) {
-			if b.id != "tab.research" {
+			if b.ID != "tab.research" {
 				continue
 			}
 			for _, e := range ev {
-				if e.Kind == "fill" && e.H <= 4 && e.X >= b.x && e.X+e.W <= b.x+b.w+0.5 && e.Y >= b.y+b.h-8 {
+				if e.Kind == "fill" && e.H <= 4 && e.X >= b.X && e.X+e.W <= b.X+b.W+0.5 && e.Y >= b.Y+b.H-8 {
 					out = append(out, e)
 				}
 			}
@@ -229,7 +229,7 @@ func TestWildlifeTabOpensTheWildlifeList(t *testing.T) {
 	}
 	sel := map[string]bool{}
 	for _, b := range a.hudTabButtons(a.sw, a.sh) {
-		sel[b.id] = b.selected
+		sel[b.ID] = b.Selected
 	}
 	if !sel["tab.wildlife"] || sel["tab.animals"] {
 		t.Fatalf("selected tabs %v: only Wildlife", sel)
@@ -256,7 +256,7 @@ func TestAnimalsTabWhileWildlifeIsOpenShowsTheColony(t *testing.T) {
 	}
 	sel := map[string]bool{}
 	for _, b := range a.hudTabButtons(a.sw, a.sh) {
-		sel[b.id] = b.selected
+		sel[b.ID] = b.Selected
 	}
 	if !sel["tab.animals"] || sel["tab.wildlife"] {
 		t.Fatalf("selected tabs %v: only Animals", sel)
@@ -572,16 +572,16 @@ func TestWindowContentsLieInsideTheWindow(t *testing.T) {
 			n := 0
 			for _, b := range a.colonyButtons(a.sw, a.sh) {
 				for _, p := range c.prefixes {
-					if strings.HasPrefix(b.id, p) {
-						inside(b.id, rect{X: b.x, Y: b.y, W: b.w, H: b.h})
+					if strings.HasPrefix(b.ID, p) {
+						inside(b.ID, rect{X: b.X, Y: b.Y, W: b.W, H: b.H})
 						n++
 					}
 				}
 			}
-			for _, wd := range a.uiSt().cur {
+			for _, wd := range a.uiSt().Cur {
 				for _, p := range c.prefixes {
-					if strings.HasPrefix(wd.id, p) {
-						inside(wd.id, wd.r)
+					if strings.HasPrefix(wd.ID, p) {
+						inside(wd.ID, wd.R)
 						n++
 					}
 				}
@@ -651,7 +651,7 @@ func TestWorkWindowCellsStillToggle(t *testing.T) {
 	f.Frame(t, a)
 	n := 0
 	for _, b := range a.layoutHits(a.sw, a.sh) {
-		if strings.HasPrefix(b.id, "work.cell.") {
+		if strings.HasPrefix(b.ID, "work.cell.") {
 			n++
 		}
 	}
@@ -669,7 +669,7 @@ func TestScheduleWindowKeepsItsCells(t *testing.T) {
 	f.Frame(t, a)
 	have := map[string]bool{}
 	for _, b := range a.layoutHits(a.sw, a.sh) {
-		have[b.id] = true
+		have[b.ID] = true
 	}
 	for _, id := range []string{"sched.brush.0", "sched.cell.0.0", "sched.cell.0.23", "sched.cell.3.12"} {
 		if !have[id] {
@@ -685,7 +685,7 @@ func TestResearchWindowKeepsItsProjects(t *testing.T) {
 	f.Frame(t, a)
 	have := map[string]bool{}
 	for _, b := range a.layoutHits(a.sw, a.sh) {
-		have[b.id] = true
+		have[b.ID] = true
 	}
 	if !have["research.pick.0"] || !have["research.pick.3"] {
 		t.Fatal("the Research window lists its projects")
@@ -707,8 +707,8 @@ func TestAnimalsWindowFitsNarrowScreens(t *testing.T) {
 				n := 0
 				for _, b := range a.animalsTabButtons() {
 					n++
-					if b.x < w.X || b.x+b.w > w.Right() || b.y < w.Y || b.y+b.h > w.Bottom() {
-						t.Errorf("%s %+v leaves the window %+v", b.id, b, w)
+					if b.X < w.X || b.X+b.W > w.Right() || b.Y < w.Y || b.Y+b.H > w.Bottom() {
+						t.Errorf("%s %+v leaves the window %+v", b.ID, b, w)
 					}
 				}
 				if n < 3 {
@@ -760,7 +760,7 @@ func TestAnimalColumnsDropToFit(t *testing.T) {
 
 func TestModalsStayCentredWhenNotAnchored(t *testing.T) {
 	t.Parallel()
-	m := modal{id: "x", title: "X", w: 400, h: 300}
+	m := modal{ID: "x", Title: "X", W: 400, H: 300}
 	frame, title, body, footer := modalGeometry(1280, 720, m)
 	if frame != (rect{X: 440, Y: 210, W: 400, H: 300}) {
 		t.Fatalf("frame %+v, want centred", frame)
@@ -769,7 +769,7 @@ func TestModalsStayCentredWhenNotAnchored(t *testing.T) {
 		t.Fatalf("title %+v body %+v footer %+v", title, body, footer)
 	}
 	// a modal that is too big is shrunk to the screen edge clearance
-	frame, _, _, _ = modalGeometry(1280, 720, modal{id: "y", w: 5000, h: 5000})
+	frame, _, _, _ = modalGeometry(1280, 720, modal{ID: "y", W: 5000, H: 5000})
 	if frame != (rect{X: modalEdge, Y: modalEdge, W: 1280 - 2*modalEdge, H: 720 - 2*modalEdge}) {
 		t.Fatalf("big frame %+v", frame)
 	}
@@ -780,10 +780,10 @@ func TestAnchoredModalSitsOnItsAnchor(t *testing.T) {
 	a, f := winApp(t, winStub(1))
 	anchor := rect{X: 0, Y: 300, W: 500, H: 380}
 	var body rect
-	a.uiPushModal(modal{id: "anch", title: "Anchored", w: 900, h: 900,
-		anchor:  func(*App) rect { return anchor },
-		draw:    func(_ *App, b rect) { body = b },
-		buttons: []modalButton{{id: "ok", label: "OK", closes: true}},
+	a.uiPushModal(modal{ID: "anch", Title: "Anchored", W: 900, H: 900,
+		Anchor:  func(*App) rect { return anchor },
+		Draw:    func(_ *App, b rect) { body = b },
+		Buttons: []modalButton{{ID: "ok", Label: "OK", Closes: true}},
 	})
 	f.Frame(t, a)
 	if !a.uiModalOpen() || a.uiModalTop() != "anch" {
@@ -792,9 +792,9 @@ func TestAnchoredModalSitsOnItsAnchor(t *testing.T) {
 	if body.X != anchor.X+modalPad || body.Y != anchor.Y+modalTitleH+modalPad || body.W != anchor.W-2*modalPad {
 		t.Fatalf("body %+v in anchor %+v", body, anchor)
 	}
-	x, ok := a.uiSt().find("modal.anch.close")
-	if !ok || x.r.Right() > anchor.Right() || x.r.Y < anchor.Y || x.r.Bottom() > anchor.Y+modalTitleH {
-		t.Fatalf("the X %+v is not in the anchored title bar", x.r)
+	x, ok := a.uiSt().Find("modal.anch.close")
+	if !ok || x.R.Right() > anchor.Right() || x.R.Y < anchor.Y || x.R.Bottom() > anchor.Y+modalTitleH {
+		t.Fatalf("the X %+v is not in the anchored title bar", x.R)
 	}
 	// Esc closes it like any modal
 	f.Key(t, a, "Escape", 0)
@@ -810,8 +810,8 @@ func TestModelessModalIsAWindow(t *testing.T) {
 	t.Parallel()
 	a, f := winApp(t, winStub(2))
 	closed := 0
-	a.uiPushModal(modal{id: "win1", title: "One", w: 500, h: 300, modeless: true, anchor: (*App).windowAnchor,
-		draw: func(a *App, b rect) { a.uiLabel(b.X, b.Y, "hello", tsBody) }, onClose: func() { closed++ }})
+	a.uiPushModal(modal{ID: "win1", Title: "One", W: 500, H: 300, Modeless: true, Anchor: (*App).windowAnchor,
+		Draw: func(a *App, b rect) { a.uiLabel(b.X, b.Y, "hello", tsBody) }, OnClose: func() { closed++ }})
 	f.Frame(t, a)
 	if a.uiModalOpen() {
 		t.Fatal("a modeless modal is not on the stack")
@@ -828,12 +828,12 @@ func TestModelessModalIsAWindow(t *testing.T) {
 		t.Fatalf("Window %+v", w)
 	}
 	// a second one replaces it
-	a.uiPushModal(modal{id: "win2", title: "Two", w: 400, h: 300, modeless: true, anchor: (*App).windowAnchor})
+	a.uiPushModal(modal{ID: "win2", Title: "Two", W: 400, H: 300, Modeless: true, Anchor: (*App).windowAnchor})
 	if a.uiModalTop() != "win2" {
 		t.Fatalf("top %q, want the replacement", a.uiModalTop())
 	}
 	// a real modal opens over it
-	a.uiPushModal(modal{id: "dlg", title: "Dialog", w: 300, h: 200})
+	a.uiPushModal(modal{ID: "dlg", Title: "Dialog", W: 300, H: 200})
 	if a.uiModalTop() != "dlg" || !a.uiModalOpen() {
 		t.Fatalf("top %q", a.uiModalTop())
 	}
@@ -846,7 +846,7 @@ func TestModelessModalIsAWindow(t *testing.T) {
 		t.Fatalf("top %q open %v after closing the window", a.uiModalTop(), a.workOpen)
 	}
 	// onClose runs when the window is closed by uiCloseTop
-	a.uiPushModal(modal{id: "win3", title: "Three", w: 400, h: 300, modeless: true, anchor: (*App).windowAnchor, onClose: func() { closed++ }})
+	a.uiPushModal(modal{ID: "win3", Title: "Three", W: 400, H: 300, Modeless: true, Anchor: (*App).windowAnchor, OnClose: func() { closed++ }})
 	a.uiCloseTop()
 	if closed != 1 {
 		t.Fatalf("onClose ran %d times, want once (for win3)", closed)

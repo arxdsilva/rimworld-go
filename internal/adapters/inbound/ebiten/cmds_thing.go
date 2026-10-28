@@ -232,8 +232,8 @@ func (a *App) animalPane(id entity.EntityID) paneSpec {
 		return paneSpec{}
 	}
 	if a.animalLogFor != an.ID { // another animal: its log starts at the top
-		if u := a.uiSt(); u.scroll != nil {
-			u.scroll[animalLogID] = 0
+		if u := a.uiSt(); u.Scroll != nil {
+			u.Scroll[animalLogID] = 0
 		}
 		a.animalLogFor = an.ID
 	}

@@ -37,11 +37,11 @@ func colonyApp(t *testing.T, s *stubSim) (*App, *fakeInput) {
 // tipOf is the hover card of the widget id declared this frame.
 func tipOf(t *testing.T, a *App, id string) string {
 	t.Helper()
-	w, ok := a.uiSt().find(id)
+	w, ok := a.uiSt().Find(id)
 	if !ok {
 		t.Fatalf("no widget %q", id)
 	}
-	return w.tip
+	return w.Tip
 }
 
 // ---- Factions window ----------------------------------------------------
@@ -64,11 +64,11 @@ func TestColonyFactionsWindowReadsReadModel(t *testing.T) {
 
 	var tab button
 	for _, b := range a.hudTabButtons(a.sw, a.sh) {
-		if b.id == "tab.factions" {
+		if b.ID == "tab.factions" {
 			tab = b
 		}
 	}
-	if tab.disabled || tab.label != "Factions" {
+	if tab.Disabled || tab.Label != "Factions" {
 		t.Fatalf("Factions tab = %+v, want enabled", tab)
 	}
 	press(t, a, f, "tab.factions")
@@ -116,7 +116,7 @@ func TestFactionsTabDisabledWithoutFactions(t *testing.T) {
 	t.Parallel()
 	a, _ := colonyApp(t, &stubSim{})
 	for _, b := range a.hudTabButtons(a.sw, a.sh) {
-		if b.id == "tab.factions" && (!b.disabled || b.reason == "") {
+		if b.ID == "tab.factions" && (!b.Disabled || b.Reason == "") {
 			t.Fatalf("Factions tab = %+v, want disabled with a reason", b)
 		}
 	}
@@ -230,7 +230,7 @@ func TestBioTabFields(t *testing.T) {
 	if tab, ok := paneTabByID(a.pawnPane(1), "inspector.bio"); !ok || !tab.Disabled || tab.Reason == "" {
 		t.Fatalf("Bio tab = %+v (%v), want disabled with a reason", tab, ok)
 	}
-	if b, ok := hasButton(a.paneButtons(), "inspector.bio"); !ok || !b.disabled || b.reason == "" {
+	if b, ok := hasButton(a.paneButtons(), "inspector.bio"); !ok || !b.Disabled || b.Reason == "" {
 		t.Fatalf("Bio tab button = %+v (%v), want disabled with a reason", b, ok)
 	}
 	if a.bioTabOn() {
@@ -243,7 +243,7 @@ func TestColonistBarTooltipAgeAndTitle(t *testing.T) {
 	a, _ := colonyApp(t, bioSim())
 	var tip string
 	for _, b := range a.colonistBarButtons(a.sw, a.sh) {
-		tip = b.tip
+		tip = b.Tip
 	}
 	if tip != "Ada, 31, Convoy mechanic" {
 		t.Fatalf("bar tip = %q", tip)
@@ -272,12 +272,12 @@ func TestWorkTabIncapableCells(t *testing.T) {
 	haul, grow := "work.cell.1.6", "work.cell.1.2"
 	byID := map[string]button{}
 	for _, b := range a.workButtons() {
-		byID[b.id] = b
+		byID[b.ID] = b
 	}
-	if b := byID[haul]; !b.disabled || b.reason != why {
+	if b := byID[haul]; !b.Disabled || b.Reason != why {
 		t.Fatalf("incapable cell = %+v, want disabled with %q", b, why)
 	}
-	if byID[grow].disabled {
+	if byID[grow].Disabled {
 		t.Fatal("a capable cell must stay clickable")
 	}
 
@@ -430,8 +430,8 @@ func TestIntroLetterShownOnce(t *testing.T) {
 	if !strings.HasPrefix(a.uiModalTop(), "letter.") {
 		t.Fatalf("top modal = %q, want the intro letter", a.uiModalTop())
 	}
-	if len(a.uiSt().modals) != 1 || a.uiSt().modals[0].title != "Broken Hull" {
-		t.Fatalf("modals = %+v", a.uiSt().modals)
+	if len(a.uiSt().Modals) != 1 || a.uiSt().Modals[0].Title != "Broken Hull" {
+		t.Fatalf("modals = %+v", a.uiSt().Modals)
 	}
 	press(t, a, f, "modal."+a.uiModalTop()+".continue")
 	if a.uiModalOpen() {
@@ -450,7 +450,7 @@ func TestIntroLetterShownOnce(t *testing.T) {
 	s.world.Letters = append(s.world.Letters, game.LetterView{ID: 2, Tick: 8, Kind: "caution", Title: "Heat wave", Text: "A heat wave has settled.", X: -1, Y: -1})
 	f.Frame(t, a)
 	if a.uiModalOpen() {
-		t.Fatalf("modals = %+v: a new letter must wait in the stack", a.uiSt().modals)
+		t.Fatalf("modals = %+v: a new letter must wait in the stack", a.uiSt().Modals)
 	}
 	if n := len(a.letterRows(a.hud())); n != 2 {
 		t.Fatalf("the stack holds %d letters, want the intro and the heat wave", n)
@@ -471,7 +471,7 @@ func TestOldLettersAreNotReopened(t *testing.T) {
 	a, f := colonyApp(t, s)
 	f.Frame(t, a)
 	if a.uiModalOpen() {
-		t.Fatalf("stale letter opened: %+v", a.uiSt().modals)
+		t.Fatalf("stale letter opened: %+v", a.uiSt().Modals)
 	}
 	if got := messageLine(s.world.Messages[0]); got != "Letter: Broken Hull" {
 		t.Fatalf("message strip line = %q, want the letter's title", got)
@@ -502,17 +502,17 @@ func TestArchitectLockedByScenario(t *testing.T) {
 
 	var fire, lamp button
 	for _, b := range a.commandGridButtons() { // the tools are command buttons
-		switch b.id {
+		switch b.ID {
 		case "arch.tool.campfire":
 			fire = b
 		case "arch.tool.lamp":
 			lamp = b
 		}
 	}
-	if !fire.disabled || fire.reason != game.ReasonScenario {
+	if !fire.Disabled || fire.Reason != game.ReasonScenario {
 		t.Fatalf("campfire card = %+v, want disabled: %s", fire, game.ReasonScenario)
 	}
-	if lamp.disabled {
+	if lamp.Disabled {
 		t.Fatalf("lamp card = %+v, want enabled", lamp)
 	}
 	click(t, a, "arch.tool.campfire")
@@ -523,7 +523,7 @@ func TestArchitectLockedByScenario(t *testing.T) {
 	if a.archTool != "lamp" {
 		t.Fatalf("tool = %q, want lamp", a.archTool)
 	}
-	if lockWord(fire.reason) != "locked" || lockWord("Needs research: Fabrication") != "needs research" {
+	if lockWord(fire.Reason) != "locked" || lockWord("Needs research: Fabrication") != "needs research" {
 		t.Fatal("lockWord")
 	}
 }
@@ -567,7 +567,7 @@ func TestNewBuildingCards(t *testing.T) {
 		a.selectArchCategory(cat)
 		found := false
 		for _, b := range a.commandGridButtons() { // the tools are command buttons
-			found = found || b.id == "arch.tool."+id
+			found = found || b.ID == "arch.tool."+id
 		}
 		if !found {
 			t.Errorf("no %s card in %s", id, cat)
@@ -580,8 +580,8 @@ func TestNewBuildingCards(t *testing.T) {
 	if n := len(a.archToolCommands()); len(l.GridCells) != n {
 		t.Errorf("furniture has %d tools but the grid shows %d", n, len(l.GridCells))
 	}
-	if r := a.architectRect(); r.y+r.h > l.Tabs.Y {
-		t.Errorf("architect panel ends at %v, below the tab strip at %v", r.y+r.h, l.Tabs.Y)
+	if r := a.architectRect(); r.Y+r.H > l.Tabs.Y {
+		t.Errorf("architect panel ends at %v, below the tab strip at %v", r.Y+r.H, l.Tabs.Y)
 	}
 	if l.Grid.Bottom() > l.Tabs.Y {
 		t.Errorf("the tool grid ends at %v, below the tab strip at %v", l.Grid.Bottom(), l.Tabs.Y)

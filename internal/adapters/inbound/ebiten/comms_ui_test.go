@@ -26,24 +26,24 @@ func TestCommsDisabledReasons(t *testing.T) {
 	s := &dealSim{cv: testCommsView(), cok: true}
 	a, f := dealApp(t, s)
 	f.Frame(t, a)
-	w, ok := a.uiSt().find("comms.3.aid")
-	if !ok || !w.disabled || w.reason != "cooling down: 2 days" {
+	w, ok := a.uiSt().Find("comms.3.aid")
+	if !ok || !w.Disabled || w.Reason != "cooling down: 2 days" {
 		t.Fatalf("aid = %+v ok=%v", w, ok)
 	}
-	if w, _ := a.uiSt().find("comms.3.caravan"); w.disabled || w.label != "Request caravan · 12 goodwill" {
+	if w, _ := a.uiSt().Find("comms.3.caravan"); w.Disabled || w.Label != "Request caravan · 12 goodwill" {
 		t.Fatalf("caravan = %+v", w)
 	}
-	if _, ok := a.uiSt().find("comms.4.gift"); ok {
+	if _, ok := a.uiSt().Find("comms.4.gift"); ok {
 		t.Fatal("a hostile faction shows no actions")
 	}
 	s.cv.Orbital = game.OrbitalView{}
 	f.Frame(t, a)
-	if _, ok := a.uiSt().find("comms.call"); ok {
+	if _, ok := a.uiSt().Find("comms.call"); ok {
 		t.Fatal("no ship, no call button")
 	}
 	s.cv.Orbital = game.OrbitalView{Present: true, CallReason: "needs a trade beacon"}
 	f.Frame(t, a)
-	if w, _ := a.uiSt().find("comms.call"); !w.disabled || w.reason != "needs a trade beacon" {
+	if w, _ := a.uiSt().Find("comms.call"); !w.Disabled || w.Reason != "needs a trade beacon" {
 		t.Fatalf("call = %+v", w)
 	}
 }

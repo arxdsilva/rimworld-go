@@ -167,10 +167,10 @@ func TestSnowLayerDrawsLit(t *testing.T) {
 	r.art = envArt()
 	r.cam.OffsetX, r.cam.OffsetY = 0, 0
 	screen := ebiten.NewImage(640, 400)
-	before := r.lit.calls
+	before := r.lit.Calls
 	r.drawGroundCover(screen, w, 640, 400, r.tilePx())
-	if r.snowc.draws == 0 || r.lit.calls-before < r.snowc.draws {
-		t.Fatalf("lit calls %d for %d snow draws", r.lit.calls-before, r.snowc.draws)
+	if r.snowc.draws == 0 || r.lit.Calls-before < r.snowc.draws {
+		t.Fatalf("lit calls %d for %d snow draws", r.lit.Calls-before, r.snowc.draws)
 	}
 }
 

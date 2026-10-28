@@ -55,11 +55,11 @@ func TestMessagesFillTheLayoutsRectRightAligned(t *testing.T) {
 	// each row with a place is a click-to-focus button, ids msg.<i>
 	ids := map[string]button{}
 	for _, b := range a.rightColumnButtons(a.sw) {
-		ids[b.id] = b
+		ids[b.ID] = b
 	}
 	for i, r := range rows {
 		b, ok := ids[fmt.Sprintf("msg.%d", i)]
-		if !ok || b.x != r.r.X || b.y != r.r.Y || b.w != r.r.W || b.h != r.r.H {
+		if !ok || b.X != r.r.X || b.Y != r.r.Y || b.W != r.r.W || b.H != r.r.H {
 			t.Errorf("msg.%d button %+v (found %v), want %+v", i, b, ok, r.r)
 		}
 	}

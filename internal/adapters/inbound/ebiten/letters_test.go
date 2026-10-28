@@ -60,11 +60,11 @@ func TestLettersStackFromTheReadModel(t *testing.T) {
 	// every row is a button with the id letter.<ID>
 	ids := map[string]button{}
 	for _, b := range a.rightColumnButtons(a.sw) {
-		ids[b.id] = b
+		ids[b.ID] = b
 	}
 	for _, r := range rows {
 		b, ok := ids[fmt.Sprintf("letter.%d", r.letter.ID)]
-		if !ok || b.x != r.r.X || b.y != r.r.Y || b.w != r.r.W || b.h != r.r.H {
+		if !ok || b.X != r.r.X || b.Y != r.r.Y || b.W != r.r.W || b.H != r.r.H {
 			t.Errorf("letter.%d button %+v (found %v), want %+v", r.letter.ID, b, ok, r.r)
 		}
 	}
@@ -95,7 +95,7 @@ func TestLettersPlusNOlder(t *testing.T) {
 		}
 	}
 	for _, b := range a.rightColumnButtons(a.sw) {
-		if b.id == "letter.0" || strings.Contains(b.label, "older") {
+		if b.ID == "letter.0" || strings.Contains(b.Label, "older") {
 			t.Errorf("the +N older row is a button: %+v", b)
 		}
 	}
@@ -141,8 +141,8 @@ func TestLetterClickOpensTheLetterWindow(t *testing.T) {
 	if !strings.HasPrefix(top, "letter.") {
 		t.Fatalf("top modal = %q after clicking the letter", top)
 	}
-	if m := a.uiSt().modals[0]; m.title != "Quiet day" {
-		t.Fatalf("modal title %q", m.title)
+	if m := a.uiSt().Modals[0]; m.Title != "Quiet day" {
+		t.Fatalf("modal title %q", m.Title)
 	}
 	f.Frame(t, a)
 	if !hasWidget(a, "modal."+top+".continue") {
@@ -239,8 +239,8 @@ func TestIntroLetterOpensOnceFromTheStack(t *testing.T) {
 	if !strings.HasPrefix(a.uiModalTop(), "letter.") {
 		t.Fatalf("top modal = %q, want the intro letter", a.uiModalTop())
 	}
-	if len(a.uiSt().modals) != 1 || a.uiSt().modals[0].title != "Broken Hull" {
-		t.Fatalf("modals = %+v", a.uiSt().modals)
+	if len(a.uiSt().Modals) != 1 || a.uiSt().Modals[0].Title != "Broken Hull" {
+		t.Fatalf("modals = %+v", a.uiSt().Modals)
 	}
 	press(t, a, f, "modal."+a.uiModalTop()+".continue")
 	if a.uiModalOpen() {
@@ -261,7 +261,7 @@ func TestIntroLetterOpensOnceFromTheStack(t *testing.T) {
 	s.world.Letters[1].Tick, s.world.Letters[2].Tick = 9, 10
 	f.Frame(t, a)
 	if a.uiModalOpen() {
-		t.Fatalf("a new letter opened by itself: %+v", a.uiSt().modals)
+		t.Fatalf("a new letter opened by itself: %+v", a.uiSt().Modals)
 	}
 
 	// a colony started later shows its own intro
@@ -281,7 +281,7 @@ func TestOldIntroLetterStaysInTheStack(t *testing.T) {
 	a, f := colonyApp(t, s)
 	f.Frame(t, a)
 	if a.uiModalOpen() {
-		t.Fatalf("a stale intro opened: %+v", a.uiSt().modals)
+		t.Fatalf("a stale intro opened: %+v", a.uiSt().Modals)
 	}
 	if len(a.letterRows(a.hud())) != 1 {
 		t.Error("the stale intro is not in the stack")

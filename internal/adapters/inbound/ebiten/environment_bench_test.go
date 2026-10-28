@@ -48,7 +48,7 @@ func BenchmarkDrawPlants(b *testing.B) {
 	}
 	frame := func() {
 		r.present++
-		r.mo.stepped = 1
+		r.mo.Stepped = 1
 		r.stepEnvironment(w, r.game.Snapshot())
 		r.setView(1280, 800, tile)
 		for _, p := range w.Plants {

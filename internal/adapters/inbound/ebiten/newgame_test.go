@@ -110,11 +110,11 @@ func sizeTo(t *testing.T, a *App, f *fakeInput, w, h int) {
 // widgetAt is the centre of the widget id declared this frame.
 func widgetAt(t *testing.T, a *App, id string) (int, int) {
 	t.Helper()
-	w, ok := a.uiSt().find(id)
+	w, ok := a.uiSt().Find(id)
 	if !ok {
 		t.Fatalf("no widget %q on %s", id, a.nav.screen())
 	}
-	x, y := w.r.Center()
+	x, y := w.R.Center()
 	return int(x), int(y)
 }
 
@@ -129,7 +129,7 @@ func press(t *testing.T, a *App, f *fakeInput, id string) {
 
 // hasWidget reports id is declared this frame.
 func hasWidget(a *App, id string) bool {
-	_, ok := a.uiSt().find(id)
+	_, ok := a.uiSt().Find(id)
 	return ok
 }
 
@@ -153,19 +153,19 @@ func TestMainMenuNamesNewColonyAndKeepsIDs(t *testing.T) {
 	t.Parallel()
 	a, _, _ := ngTest(t, nil)
 	btns := a.mainMenuButtons(a.sw, a.sh)
-	if btns[0].id != "menu.newgame" || btns[0].label != "New Colony" {
+	if btns[0].ID != "menu.newgame" || btns[0].Label != "New Colony" {
 		t.Fatalf("first button = %+v, want New Colony on menu.newgame while there are no saves", btns[0])
 	}
-	if btns[1].id != "menu.continue" || !btns[1].disabled || btns[1].reason != "no saves yet" {
+	if btns[1].ID != "menu.continue" || !btns[1].Disabled || btns[1].Reason != "no saves yet" {
 		t.Fatalf("continue = %+v, want it disabled after New Colony", btns[1])
 	}
 	for _, b := range btns {
-		if b.w != menuRailW || b.h != menuBtnH || b.x != float32(a.sw-340) {
-			t.Fatalf("%s is %vx%v at x=%v, want 300x40 on the right rail", b.id, b.w, b.h, b.x)
+		if b.W != menuRailW || b.H != menuBtnH || b.X != float32(a.sw-340) {
+			t.Fatalf("%s is %vx%v at x=%v, want 300x40 on the right rail", b.ID, b.W, b.H, b.X)
 		}
 	}
-	if btns[0].y != 140 || btns[1].y != 140+menuBtnH+menuBtnGap {
-		t.Fatalf("rail starts at %v with a %v step", btns[0].y, btns[1].y-btns[0].y)
+	if btns[0].Y != 140 || btns[1].Y != 140+menuBtnH+menuBtnGap {
+		t.Fatalf("rail starts at %v with a %v step", btns[0].Y, btns[1].Y-btns[0].Y)
 	}
 }
 
@@ -241,7 +241,7 @@ func TestContinueLoadsNewestIncludingCommitment(t *testing.T) {
 		}
 	})
 	btns := a.mainMenuButtons(a.sw, a.sh)
-	if btns[0].id != "menu.continue" || btns[0].disabled {
+	if btns[0].ID != "menu.continue" || btns[0].Disabled {
 		t.Fatalf("with saves Continue leads the rail: %+v", btns[0])
 	}
 	click(t, a, "menu.continue")
@@ -286,7 +286,7 @@ func TestScenarioListShowsBuiltinsThenCustom(t *testing.T) {
 		}
 	}
 	// Every custom row has a delete button; built-ins do not.
-	a.uiSt().scroll["scen.list"] = 1000 // down to the last rows
+	a.uiSt().Scroll["scen.list"] = 1000 // down to the last rows
 	f.Frame(t, a)
 	for _, k := range []string{"file.alpha", "unsaved.0", "file.zeta"} {
 		if !hasWidget(a, "scen.del."+k) {
@@ -314,8 +314,8 @@ func TestScenarioListEmptyStates(t *testing.T) {
 	if hasWidget(a, "scen.import") {
 		f.Frame(t, a)
 	}
-	w, _ := a.uiSt().find("scen.import")
-	if !w.disabled {
+	w, _ := a.uiSt().Find("scen.import")
+	if !w.Disabled {
 		t.Fatal("Load file... needs a store")
 	}
 }
@@ -348,8 +348,8 @@ func TestScenarioSearchFilters(t *testing.T) {
 	a.ng.search = ""
 	f.Key(t, a, "F", input.ModCtrl)
 	f.Frame(t, a)
-	if a.uiSt().edit.id != "scen.search" {
-		t.Fatalf("Ctrl+F should focus the search field, editing %q", a.uiSt().edit.id)
+	if a.uiSt().Edit.ID != "scen.search" {
+		t.Fatalf("Ctrl+F should focus the search field, editing %q", a.uiSt().Edit.ID)
 	}
 	f.TypeText(t, a, "bare")
 	if a.ng.search != "bare" {
@@ -434,9 +434,9 @@ func TestInvalidScenarioBlocksNext(t *testing.T) {
 	if sel := a.ng.selected(); sel == nil || sel.key != "file.bad" {
 		t.Fatalf("the invalid scenario should still be selectable: %+v", sel)
 	}
-	w, _ := a.uiSt().find("wizard.next")
-	if !w.disabled || w.reason != "Fix 1 problem in the editor" {
-		t.Fatalf("Next = disabled %v reason %q", w.disabled, w.reason)
+	w, _ := a.uiSt().Find("wizard.next")
+	if !w.Disabled || w.Reason != "Fix 1 problem in the editor" {
+		t.Fatalf("Next = disabled %v reason %q", w.Disabled, w.Reason)
 	}
 	click(t, a, "wizard.next")
 	if a.nav.screen() != screenScenario {
@@ -461,17 +461,17 @@ func TestInvalidScenarioBlocksNext(t *testing.T) {
 	if junk.err == "" || !strings.Contains(junk.summary, "Can't read") {
 		t.Fatalf("junk entry = %+v", junk)
 	}
-	jw, _ := a.uiSt().find("scen.row.file.junk")
-	if !strings.Contains(jw.tip, "Can't read this file") {
-		t.Fatalf("tooltip = %q", jw.tip)
+	jw, _ := a.uiSt().Find("scen.row.file.junk")
+	if !strings.Contains(jw.Tip, "Can't read this file") {
+		t.Fatalf("tooltip = %q", jw.Tip)
 	}
 
 	// A valid selection enables Next, which stamps a copy into the draft.
 	press(t, a, f, "scen.row.ember_clan")
 	f.Frame(t, a)
-	w, _ = a.uiSt().find("wizard.next")
-	if w.disabled {
-		t.Fatalf("Next disabled for a valid scenario: %q", w.reason)
+	w, _ = a.uiSt().Find("wizard.next")
+	if w.Disabled {
+		t.Fatalf("Next disabled for a valid scenario: %q", w.Reason)
 	}
 	click(t, a, "wizard.next")
 	if a.nav.screen() != screenStoryteller || a.ng.scenario.Key != "ember_clan" || a.ng.scenario.People != 5 {
@@ -701,10 +701,10 @@ func TestCustomDifficultyCancelRestores(t *testing.T) {
 	f.Frame(t, a)
 
 	// Drag the Threat scale slider to its end.
-	w, _ := a.uiSt().find("diff.f.ts")
-	track := sliderTrack(w.r)
-	f.press(t, a, int(track.Right()), int(w.r.Y+9))
-	f.letGo(t, a, int(track.Right()), int(w.r.Y+9))
+	w, _ := a.uiSt().Find("diff.f.ts")
+	track := sliderTrack(w.R)
+	f.press(t, a, int(track.Right()), int(w.R.Y+9))
+	f.letGo(t, a, int(track.Right()), int(w.R.Y+9))
 	if ng.cd.s.ThreatScale != 400 {
 		t.Fatalf("dragged threat scale = %d, want 400", ng.cd.s.ThreatScale)
 	}
@@ -769,11 +769,11 @@ func TestDependentFieldsDisabled(t *testing.T) {
 	ng.cd.s.Adaptation, ng.cd.s.TimeEscalation, ng.cd.s.IgnoreWealth = false, false, true
 	f.Frame(t, a)
 	off := func(id string) (bool, string) {
-		w, ok := a.uiSt().find(id)
+		w, ok := a.uiSt().Find(id)
 		if !ok {
 			t.Fatalf("no widget %s", id)
 		}
-		return w.disabled, w.reason
+		return w.Disabled, w.Reason
 	}
 	if dis, _ := off("diff.f.as"); !dis {
 		t.Error("adaptation strength must be disabled while adaptation is off")

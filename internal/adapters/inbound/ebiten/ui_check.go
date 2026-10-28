@@ -29,7 +29,7 @@ func (a *App) uiCheck(id string, r rect, label string, val *bool, o checkOpts) b
 	if o.Disabled && o.Reason != "" {
 		tip = o.Reason
 	}
-	w := uiWidget{id: id, label: label, r: r, focusable: true, disabled: o.Disabled, reason: o.Reason, tip: tip}
+	w := uiWidget{ID: id, Label: label, R: r, Focusable: true, Disabled: o.Disabled, Reason: o.Reason, Tip: tip}
 	toggle := func() {
 		if o.Disabled {
 			a.uiDeny(o.Reason)
@@ -39,18 +39,18 @@ func (a *App) uiCheck(id string, r rect, label string, val *bool, o checkOpts) b
 		a.uiOK()
 		u.fire(id, evChanged)
 	}
-	w.click = toggle
+	w.Click = toggle
 	changed := false
-	if u.add(w) {
+	if u.Add(w) {
 		if a.uiPress(r) || (!o.Disabled && a.uiKeyAct(id)) {
 			toggle()
 		}
 		changed = u.take(id)&evChanged != 0
 	}
-	u.queue(func(dst *ebiten.Image) {
+	u.Queue(func(dst *ebiten.Image) {
 		box := rect{X: r.X, Y: r.Y + (r.H-checkBox)/2, W: checkBox, H: checkBox}
 		border := uiFieldBorder
-		if u.hot == id && !o.Disabled {
+		if u.Hot == id && !o.Disabled {
 			border = uiAccent
 		}
 		fillRect(dst, box, uiField)
@@ -102,7 +102,7 @@ func (a *App) uiRadio(id string, r rect, labels []string, sel *int, o radioOpts)
 			a.uiDeny(reason(i))
 			return
 		}
-		u.focus = id
+		u.Focus = id
 		if *sel != i {
 			*sel = i
 			u.fire(id, evChanged)
@@ -111,20 +111,20 @@ func (a *App) uiRadio(id string, r rect, labels []string, sel *int, o radioOpts)
 	}
 	rows := r.RowsN(len(labels), rowH, 0)
 	changed := false
-	if u.add(uiWidget{id: id, r: r, focusable: true}) {
+	if u.Add(uiWidget{ID: id, R: r, Focusable: true}) {
 		for i := range labels {
 			i := i
-			w := uiWidget{id: optID(id, i), label: labels[i], r: rows[i].Intersect(r), disabled: reason(i) != "", reason: reason(i), click: func() { choose(i) }}
-			w.tip = reason(i)
-			if w.tip == "" && i < len(o.Tips) {
-				w.tip = o.Tips[i]
+			w := uiWidget{ID: optID(id, i), Label: labels[i], R: rows[i].Intersect(r), Disabled: reason(i) != "", Reason: reason(i), Click: func() { choose(i) }}
+			w.Tip = reason(i)
+			if w.Tip == "" && i < len(o.Tips) {
+				w.Tip = o.Tips[i]
 			}
-			u.add(w)
-			if a.uiPress(w.r) {
+			u.Add(w)
+			if a.uiPress(w.R) {
 				choose(i)
 			}
 		}
-		if u.focus == id {
+		if u.Focus == id {
 			for _, d := range []struct {
 				key string
 				dir int
@@ -142,13 +142,13 @@ func (a *App) uiRadio(id string, r rect, labels []string, sel *int, o radioOpts)
 		}
 		changed = u.take(id)&evChanged != 0
 	}
-	u.queue(func(dst *ebiten.Image) {
+	u.Queue(func(dst *ebiten.Image) {
 		for i, l := range labels {
 			row := rows[i]
 			cx, cy := float32(row.X)+radioRadius+1, row.Y+row.H/2
 			dis := reason(i) != ""
 			border := uiFieldBorder
-			if u.hot == optID(id, i) && !dis {
+			if u.Hot == optID(id, i) && !dis {
 				border = uiAccent
 			}
 			uiFillCircle(dst, cx, cy, radioRadius, uiField, true)

@@ -36,8 +36,8 @@ func (a *App) openBillPicker(b game.BuildingView) {
 	recipes := a.recipesFor(b.Kind)
 	sel := -1
 	a.uiPushModal(modal{
-		id: billPickID, title: "Add bill", w: 360, h: 380,
-		draw: func(a *App, r rect) {
+		ID: billPickID, Title: "Add bill", W: 360, H: 380,
+		Draw: func(a *App, r rect) {
 			if len(recipes) == 0 {
 				a.uiLabel(r.X, r.Y, "This bench has no recipes.", dimText())
 				return
@@ -53,20 +53,20 @@ func (a *App) openBillPicker(b game.BuildingView) {
 				},
 			})
 		},
-		buttons: []modalButton{
-			{id: "bill.picker.ok", label: "Add", style: btnPrimary, closes: true,
-				disabled: func() string {
+		Buttons: []modalButton{
+			{ID: "bill.picker.ok", Label: "Add", Style: btnPrimary, Closes: true,
+				Disabled: func() string {
 					if sel < 0 || sel >= len(recipes) {
 						return "Pick a recipe first."
 					}
 					return ""
 				},
-				onClick: func() {
+				OnClick: func() {
 					if sel >= 0 && sel < len(recipes) {
 						a.applyBuildingClick("bill.add." + strconv.Itoa(int(recipes[sel].ID)))
 					}
 				}},
-			{id: "bill.picker.cancel", label: "Cancel", closes: true},
+			{ID: "bill.picker.cancel", Label: "Cancel", Closes: true},
 		},
 	})
 }
@@ -229,11 +229,11 @@ func billsBody(b game.BuildingView, viewW float32) tabBody {
 		}
 		body.labels = append(body.labels, tabLabel{text: billLine(bl), x: 8, y: y + 2, w: x - 8 - bodyGap, st: tsBody})
 		body.buttons = append(body.buttons,
-			button{id: "bill.minus." + ix, label: "-", x: x, y: y, w: 22, h: billBtnH, tip: "Fewer (Ctrl x10, Shift x100, both x1000)"},
-			button{id: "bill.plus." + ix, label: "+", x: x + 24, y: y, w: 22, h: billBtnH, tip: "More (Ctrl x10, Shift x100, both x1000)"},
-			button{id: "bill.mode." + ix, label: "M", x: x + 48, y: y, w: 22, h: billBtnH},
-			button{id: "bill.pause." + ix, label: "||", x: x + 72, y: y, w: 26, h: billBtnH, selected: bl.Suspended},
-			button{id: "bill.del." + ix, label: "x", x: x + 100, y: y, w: 22, h: billBtnH},
+			button{ID: "bill.minus." + ix, Label: "-", X: x, Y: y, W: 22, H: billBtnH, Tip: "Fewer (Ctrl x10, Shift x100, both x1000)"},
+			button{ID: "bill.plus." + ix, Label: "+", X: x + 24, Y: y, W: 22, H: billBtnH, Tip: "More (Ctrl x10, Shift x100, both x1000)"},
+			button{ID: "bill.mode." + ix, Label: "M", X: x + 48, Y: y, W: 22, H: billBtnH},
+			button{ID: "bill.pause." + ix, Label: "||", X: x + 72, Y: y, W: 26, H: billBtnH, Selected: bl.Suspended},
+			button{ID: "bill.del." + ix, Label: "x", X: x + 100, Y: y, W: 22, H: billBtnH},
 		)
 	}
 	body.h = float32(len(b.Bills)) * billRowH
@@ -547,9 +547,9 @@ func (a *App) applyBedClick(id string, b game.BuildingView) bool {
 // openBedOwnerPicker lists the living colonists (and nobody) for slot.
 func (a *App) openBedOwnerPicker(bed entity.EntityID, slot int) {
 	a.uiPushModal(modal{
-		id: bedOwnerModalID, title: "Bed owner", w: 320, h: 420,
-		draw:    func(a *App, body rect) { a.bedOwnerBody(body, bed, slot) },
-		buttons: []modalButton{{id: "close", label: "Cancel", style: btnNormal, closes: true}},
+		ID: bedOwnerModalID, Title: "Bed owner", W: 320, H: 420,
+		Draw:    func(a *App, body rect) { a.bedOwnerBody(body, bed, slot) },
+		Buttons: []modalButton{{ID: "close", Label: "Cancel", Style: btnNormal, Closes: true}},
 	})
 }
 

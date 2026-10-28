@@ -218,7 +218,7 @@ func TestOptionsGraphicsRowsRecordTheChoice(t *testing.T) {
 		if !slices.Contains(g.Chosen, c.key) || g.Quality != config.QualityCustom || store.saves != 1 {
 			t.Fatalf("%s: chosen %v quality %q saves %d; want recorded, custom, one save", c.row, g.Chosen, g.Quality, store.saves)
 		}
-		if got := optionBtn(t, a, "options.quality").label; got != "Custom" {
+		if got := optionBtn(t, a, "options.quality").Label; got != "Custom" {
 			t.Fatalf("%s: quality row reads %q, want Custom", c.row, got)
 		}
 	}
@@ -271,7 +271,7 @@ func TestOptionsQualityAppliesPresetAndClearsChoices(t *testing.T) {
 		if !s.check(g) || len(g.Chosen) != 0 {
 			t.Fatalf("step %d: graphics %+v, want the %s preset with no chosen rows", i, g, s.label)
 		}
-		if got := optionBtn(t, a, "options.quality").label; got != s.label {
+		if got := optionBtn(t, a, "options.quality").Label; got != s.label {
 			t.Fatalf("step %d: quality row reads %q, want %s", i, got, s.label)
 		}
 		if g.Detected != config.QualityHigh {
@@ -290,7 +290,7 @@ func TestOptionsDetectAgain(t *testing.T) {
 	a.devFn = func() float64 { return 1 }
 	a.optionsTab = "graphics"
 	a.applyOption("options.lighting") // a hand-picked row
-	if b := optionBtn(t, a, "options.quality.detect"); b.disabled || b.tip == "" {
+	if b := optionBtn(t, a, "options.quality.detect"); b.Disabled || b.Tip == "" {
 		t.Fatalf("detect button %+v", b)
 	}
 	saves := store.saves
@@ -314,7 +314,7 @@ func TestOptionsDetectAgainNeedsHardware(t *testing.T) {
 	a := optionsApp(graphicsStore())
 	a.optionsTab = "graphics"
 	b := optionBtn(t, a, "options.quality.detect")
-	if !b.disabled || b.reason == "" {
+	if !b.Disabled || b.Reason == "" {
 		t.Fatalf("detect button %+v, want it disabled with a reason", b)
 	}
 }
@@ -325,8 +325,8 @@ func TestOptionsGraphicsRowsHaveCostTips(t *testing.T) {
 	a := optionsApp(graphicsStore())
 	a.optionsTab = "graphics"
 	for _, id := range []string{"quality", "effects", "shadows", "lighting", "water", "grass", "hidpi", "vsync", "renderscale"} {
-		if b := optionBtn(t, a, "options."+id); len(b.tip) < 20 {
-			t.Fatalf("%s tip = %q, want a sentence", id, b.tip)
+		if b := optionBtn(t, a, "options."+id); len(b.Tip) < 20 {
+			t.Fatalf("%s tip = %q, want a sentence", id, b.Tip)
 		}
 	}
 }
@@ -351,8 +351,8 @@ func TestOptionsGraphicsLabelsFitTheirColumn(t *testing.T) {
 	}
 	a.optionsTab = "graphics"
 	for _, b := range a.optionsButtons(960, 540) {
-		if b.x+b.w > 960-40 { // inside the panel
-			t.Fatalf("%s ends at x=%v, outside the 960 px panel", b.id, b.x+b.w)
+		if b.X+b.W > 960-40 { // inside the panel
+			t.Fatalf("%s ends at x=%v, outside the 960 px panel", b.ID, b.X+b.W)
 		}
 	}
 }
@@ -364,21 +364,21 @@ func TestSyncRendererReadsGraphics(t *testing.T) {
 	a := optionsApp(graphicsStore())
 	a.startGame()
 	r := a.renderer
-	if r.env.shadow.off || r.lit.off || r.water.simple || r.lod.grass.level != "" && r.lod.grass.level != config.GrassFull {
+	if r.env.shadow.Off || r.lit.Off || r.water.simple || r.lod.grass.level != "" && r.lod.grass.level != config.GrassFull {
 		t.Fatalf("high defaults should leave every knob at today's look")
 	}
 	s := a.settings
 	s.Graphics.Shadows, s.Graphics.Lighting = false, false
 	s.Graphics.Water, s.Graphics.Grass = config.WaterSimple, config.GrassSparse
 	a.setSettings(s)
-	if !r.env.shadow.off || !r.lit.off || !r.water.simple || r.lod.grass.level != config.GrassSparse {
+	if !r.env.shadow.Off || !r.lit.Off || !r.water.simple || r.lod.grass.level != config.GrassSparse {
 		t.Fatalf("knobs not synced: shadows off %v lighting off %v simple water %v grass %q",
-			r.env.shadow.off, r.lit.off, r.water.simple, r.lod.grass.level)
+			r.env.shadow.Off, r.lit.Off, r.water.simple, r.lod.grass.level)
 	}
 	s.Graphics.Shadows, s.Graphics.Lighting = true, true
 	s.Graphics.Water, s.Graphics.Grass = config.WaterAnimated, config.GrassFull
 	a.setSettings(s)
-	if r.env.shadow.off || r.lit.off || r.water.simple {
+	if r.env.shadow.Off || r.lit.Off || r.water.simple {
 		t.Fatal("knobs not restored")
 	}
 }

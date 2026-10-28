@@ -27,14 +27,14 @@ func landingApp(t *testing.T) (*App, *fakeInput) {
 // nextState is the Next button's disabled reason ("" enabled).
 func nextState(t *testing.T, a *App) string {
 	t.Helper()
-	w, ok := a.uiSt().find("wizard.next")
+	w, ok := a.uiSt().Find("wizard.next")
 	if !ok {
 		t.Fatal("no Next button")
 	}
-	if !w.disabled {
+	if !w.Disabled {
 		return ""
 	}
-	return w.reason
+	return w.Reason
 }
 
 // selectTile selects tile i on the globe as a click would.

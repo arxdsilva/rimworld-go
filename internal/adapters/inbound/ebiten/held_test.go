@@ -80,7 +80,7 @@ func bodyPoint(r *Renderer, rig heldRig, ps pose, name string, wx, wy, tile floa
 	sx, sy := r.worldToScreenF(wx, wy)
 	bx, by, s := artOrigin(rig.body.Meta, float64(sx), float64(sy), tile)
 	a := rig.body.Meta.Attach[name]
-	g := ps.geo(float64(sx), float64(sy), tile)
+	g := ps.Geo(float64(sx), float64(sy), tile)
 	return apply(g, pt{bx + a[0]*s, by + a[1]*s})
 }
 
@@ -104,7 +104,7 @@ func bodyBox(r *Renderer, rig heldRig, ps pose, wx, wy, tile float64) (lo, hi pt
 	feet := m.Origin[1] + pawnFeetY*artTilePx
 	sx, sy := r.worldToScreenF(wx, wy)
 	bx, by, s := artOrigin(m, float64(sx), float64(sy), tile)
-	g := ps.geo(float64(sx), float64(sy), tile)
+	g := ps.Geo(float64(sx), float64(sy), tile)
 	a := apply(g, pt{bx + (head[0]-28)*s, by + head[1]*s})
 	b := apply(g, pt{bx + (head[0]+28)*s, by + feet*s})
 	return pt{math.Min(a[0], b[0]), math.Min(a[1], b[1])}, pt{math.Max(a[0], b[0]), math.Max(a[1], b[1])}
@@ -231,7 +231,7 @@ func TestHeldDraws(t *testing.T) {
 		{push: 0.1}, // a punch: nothing held
 	}
 	var drawn []string
-	r.lit.onDraw = func(img *ebiten.Image, _ float32) { drawn = append(drawn, keyOf(r.art, img)) }
+	r.lit.OnDraw = func(img *ebiten.Image, _ float32) { drawn = append(drawn, keyOf(r.art, img)) }
 	for _, h := range items {
 		for f := faceSouth; f <= faceWest; f++ {
 			rig, ps := rigFor(r, f)
@@ -244,7 +244,7 @@ func TestHeldDraws(t *testing.T) {
 			}
 		}
 	}
-	r.lit.onDraw = nil
+	r.lit.OnDraw = nil
 	if len(drawn) == 0 || slices.Contains(drawn, staleHandKey) {
 		t.Fatalf("items drawn, never a hand: %v", drawn)
 	}
@@ -255,7 +255,7 @@ func TestHeldDraws(t *testing.T) {
 	// a punch's reach pushes the bare hold point (the trail) along the facing
 	rest, _ := r.heldPoint(rig, heldItem{}, 1, 1, ps, "hold")
 	out, _ := r.heldPoint(rig, heldItem{push: 0.14}, 1, 1, ps, "hold")
-	if math.Abs(out.x-rest.x-0.14) > 1e-9 || out.y != rest.y {
+	if math.Abs(out.X-rest.X-0.14) > 1e-9 || out.Y != rest.Y {
 		t.Fatalf("punch reach 0.14 east: %v -> %v", rest, out)
 	}
 	// an unknown sprite places nothing
@@ -277,7 +277,7 @@ func TestCarriedWeaponBehindFacingNorth(t *testing.T) {
 		r.art = figureArt()
 		p := game.PawnView{ID: 1, X: 2, Y: 2, Weapon: "rifle", Drafted: true}
 		var keys []string
-		r.lit.onDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
+		r.lit.OnDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
 		r.drawPawnFigure(ebiten.NewImage(512, 512), p, 2, 2, 64, pawnFigurePose{face: c.f, ps: standPose(), held: readyHeld(p)})
 		body := slices.IndexFunc(keys, func(k string) bool { return strings.HasPrefix(k, "pawn/body_") })
 		rifle := slices.Index(keys, "weapon/rifle_basic")

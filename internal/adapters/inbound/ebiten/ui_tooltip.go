@@ -64,20 +64,20 @@ func tipLayout(tip string, sw, sh, mx, my int) tipCard {
 	return c
 }
 
-// tipVisible reports the pending tooltip has waited long enough.
-func (u *uiState) tipVisible() bool {
-	return u.tipText != "" && u.tipFrames >= tipDelay
+// TipVisible reports the pending tooltip has waited long enough.
+func (u *uiState) TipVisible() bool {
+	return u.tipText != "" && u.TipFrames >= tipDelay
 }
 
 // uiTip makes r a hover area with a tooltip and nothing else.
 func (a *App) uiTip(id string, r rect, tip string) {
-	a.uiSt().add(uiWidget{id: id, r: r, tip: tip})
+	a.uiSt().Add(uiWidget{ID: id, R: r, Tip: tip})
 }
 
 // uiPaintTooltip draws the pending tooltip over everything.
 func (a *App) uiPaintTooltip(dst *ebiten.Image) {
 	u := a.uiSt()
-	if !u.tipVisible() {
+	if !u.TipVisible() {
 		return
 	}
 	sw, sh := a.size()

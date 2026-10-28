@@ -88,7 +88,7 @@ func penBody(t *testing.T, a *App) tabBody {
 func penBodyButtons(body tabBody) map[string]button {
 	ids := map[string]button{}
 	for _, b := range body.buttons {
-		ids[b.id] = b
+		ids[b.ID] = b
 	}
 	return ids
 }
@@ -132,28 +132,28 @@ func TestPenInspectorListsPennedSpeciesOnly(t *testing.T) {
 		t.Error("a pet is not a penned species")
 	}
 	// cow: allowed, male only; chicken has no entry yet: default all on
-	if !ids["bldg.pen.sp.cow"].selected || !ids["bldg.pen.sp.cow.m"].selected || ids["bldg.pen.sp.cow.f"].selected {
+	if !ids["bldg.pen.sp.cow"].Selected || !ids["bldg.pen.sp.cow.m"].Selected || ids["bldg.pen.sp.cow.f"].Selected {
 		t.Errorf("cow checkboxes %+v %+v %+v", ids["bldg.pen.sp.cow"], ids["bldg.pen.sp.cow.m"], ids["bldg.pen.sp.cow.f"])
 	}
-	if !ids["bldg.pen.sp.chicken"].selected || !ids["bldg.pen.sp.chicken.m"].selected || !ids["bldg.pen.sp.chicken.f"].selected {
+	if !ids["bldg.pen.sp.chicken"].Selected || !ids["bldg.pen.sp.chicken.m"].Selected || !ids["bldg.pen.sp.chicken.f"].Selected {
 		t.Error("an unlisted species defaults to every sex allowed")
 	}
 	viewW := float32(penTabW - 2*paneInset - scrollBarW)
 	for _, b := range ids {
-		if b.y+b.h > body.h || b.x+b.w > viewW || b.x < 0 || b.y < 0 {
-			t.Errorf("button %s falls out of the tab body", b.id)
+		if b.Y+b.H > body.h || b.X+b.W > viewW || b.X < 0 || b.Y < 0 {
+			t.Errorf("button %s falls out of the tab body", b.ID)
 		}
 	}
 	// the live widgets sit inside the expanded panel too
 	a2, _, panel := penTabApp(t, penSim())
 	for _, id := range []string{"bldg.pen.sp.cow", "bldg.pen.all", "bldg.pen.cut.cactus"} {
-		w, ok := a2.uiSt().find(id)
+		w, ok := a2.uiSt().Find(id)
 		if !ok {
 			t.Errorf("no widget %s", id)
 			continue
 		}
-		if w.r.X < panel.X || w.r.Right() > panel.Right() || w.r.Y < panel.Y || w.r.Bottom() > panel.Bottom() {
-			t.Errorf("widget %s at %+v falls out of the panel %+v", id, w.r, panel)
+		if w.R.X < panel.X || w.R.Right() > panel.Right() || w.R.Y < panel.Y || w.R.Bottom() > panel.Bottom() {
+			t.Errorf("widget %s at %+v falls out of the panel %+v", id, w.R, panel)
 		}
 	}
 }
@@ -256,7 +256,7 @@ func TestPenAutoCutChecklist(t *testing.T) {
 	if _, ok := ids["bldg.pen.cut.moss"]; ok {
 		t.Error("a plant outside the pen is not listed")
 	}
-	if !ids["bldg.pen.cut.bramble"].selected || ids["bldg.pen.cut.cactus"].selected {
+	if !ids["bldg.pen.cut.bramble"].Selected || ids["bldg.pen.cut.cactus"].Selected {
 		t.Error("checked state follows Settings.AutoCut")
 	}
 	press(t, a, f, "bldg.pen.cut.cactus")

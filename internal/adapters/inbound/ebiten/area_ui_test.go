@@ -99,9 +99,9 @@ func TestAreaSubmenuWithoutAreasOnlyManages(t *testing.T) {
 	if !hasWidget(a, "areapick.manage") {
 		t.Fatal("no Manage row")
 	}
-	for _, w := range a.uiSt().cur {
-		if strings.HasPrefix(w.id, "areapick.row.") {
-			t.Fatalf("unexpected row %s", w.id)
+	for _, w := range a.uiSt().Cur {
+		if strings.HasPrefix(w.ID, "areapick.row.") {
+			t.Fatalf("unexpected row %s", w.ID)
 		}
 	}
 	press(t, a, f, "areapick.manage")
@@ -182,9 +182,9 @@ func TestAreaNewDisabledAtCap(t *testing.T) {
 	a, f := areaApp(t, s)
 	a.openAreaManager()
 	f.Frame(t, a)
-	w, ok := a.uiSt().find("modal." + areasModalID + ".areas.new")
-	if !ok || !w.disabled {
-		t.Fatalf("New area at the cap: found=%v disabled=%v", ok, w.disabled)
+	w, ok := a.uiSt().Find("modal." + areasModalID + ".areas.new")
+	if !ok || !w.Disabled {
+		t.Fatalf("New area at the cap: found=%v disabled=%v", ok, w.Disabled)
 	}
 	press(t, a, f, "modal."+areasModalID+".areas.new")
 	for _, c := range s.cmds {
@@ -200,12 +200,12 @@ func TestScheduleAllowedAreaDropdown(t *testing.T) {
 	a, f := areaApp(t, s)
 	a.workOpen, a.panelMode = true, "schedule"
 	f.Frame(t, a)
-	w, ok := a.uiSt().find("sched.area.1")
-	if !ok || !strings.HasPrefix(w.label, "Indoors") {
-		t.Fatalf("Ada's dropdown: found=%v label %q", ok, w.label)
+	w, ok := a.uiSt().Find("sched.area.1")
+	if !ok || !strings.HasPrefix(w.Label, "Indoors") {
+		t.Fatalf("Ada's dropdown: found=%v label %q", ok, w.Label)
 	}
-	if w2, _ := a.uiSt().find("sched.area.2"); !strings.HasPrefix(w2.label, "Unrestricted") {
-		t.Fatalf("Bo's dropdown label %q", w2.label)
+	if w2, _ := a.uiSt().Find("sched.area.2"); !strings.HasPrefix(w2.Label, "Unrestricted") {
+		t.Fatalf("Bo's dropdown label %q", w2.Label)
 	}
 	if hasWidget(a, "sched.area.0") {
 		t.Fatal("the Everyone row has an area")
@@ -241,9 +241,9 @@ func TestInspectorAreaLine(t *testing.T) {
 	a, f := areaApp(t, s)
 	a.renderer.Select(1)
 	f.Frame(t, a)
-	w, ok := a.uiSt().find("inspector.area")
-	if !ok || w.label != "Area: Indoors" {
-		t.Fatalf("inspector area line: found=%v label %q", ok, w.label)
+	w, ok := a.uiSt().Find("inspector.area")
+	if !ok || w.Label != "Area: Indoors" {
+		t.Fatalf("inspector area line: found=%v label %q", ok, w.Label)
 	}
 	click(t, a, "inspector.area") // the pane's chip answers through its widget
 	f.Frame(t, a)

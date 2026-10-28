@@ -35,8 +35,8 @@ func TestUpdateBudgetCarriesTicks(t *testing.T) {
 	if got := stepFrame(t, a, sim, f); got != 2 {
 		t.Fatalf("3 ms ticks under a 5 ms budget: stepped %d, want 2", got)
 	}
-	if a.debt.owed != 1 || a.debt.held != 1 || a.renderer.mo.stepped != 2 {
-		t.Fatalf("debt %+v stepped %d, want owed 1 held 1 stepped 2", a.debt, a.renderer.mo.stepped)
+	if a.debt.owed != 1 || a.debt.held != 1 || a.renderer.mo.Stepped != 2 {
+		t.Fatalf("debt %+v stepped %d, want owed 1 held 1 stepped 2", a.debt, a.renderer.mo.Stepped)
 	}
 	*d = 0
 	if got := stepFrame(t, a, sim, f); got != 4 {
@@ -148,8 +148,8 @@ func TestCaptureIgnoresBudget(t *testing.T) {
 	r.speed = speedVeryFast
 	s.onStep = func() { time.Sleep(time.Millisecond) }
 	r.advance()
-	if s.steps != r.ticksWanted() || r.mo.stepped != 6 {
-		t.Fatalf("advance stepped %d (stepped %d), want %d", s.steps, r.mo.stepped, r.ticksWanted())
+	if s.steps != r.ticksWanted() || r.mo.Stepped != 6 {
+		t.Fatalf("advance stepped %d (stepped %d), want %d", s.steps, r.mo.Stepped, r.ticksWanted())
 	}
 }
 
@@ -164,8 +164,8 @@ func TestDevSingleStepConsumedOnce(t *testing.T) {
 	}
 	r.advance()
 	r.advance()
-	if s.steps != 1 || r.stepTicks != 0 || r.mo.stepped != 0 {
-		t.Fatalf("single step: steps %d pending %d stepped %d", s.steps, r.stepTicks, r.mo.stepped)
+	if s.steps != 1 || r.stepTicks != 0 || r.mo.Stepped != 0 {
+		t.Fatalf("single step: steps %d pending %d stepped %d", s.steps, r.stepTicks, r.mo.Stepped)
 	}
 }
 

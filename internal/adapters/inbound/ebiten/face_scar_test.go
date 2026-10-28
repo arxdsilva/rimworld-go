@@ -23,8 +23,8 @@ func scarArt() *artCatalog {
 // figureKeys draws p's standing figure and lists the sprite keys in draw order.
 func figureKeys(r *Renderer, p game.PawnView) []string {
 	var keys []string
-	r.lit.onDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
-	defer func() { r.lit.onDraw = nil }()
+	r.lit.OnDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
+	defer func() { r.lit.OnDraw = nil }()
 	r.view.Pawns = []game.PawnView{p}
 	r.drawPawnFigure(ebiten.NewImage(512, 512), p, 2, 2, 64, r.pawnFigurePoseOf(p))
 	return keys
@@ -122,9 +122,9 @@ func TestFallingFigureFaceScar(t *testing.T) {
 	r.art = scarArt()
 	p := game.PawnView{ID: 1, X: 2, Y: 2, Health: 0, Status: "alive", Lying: true, Disfigured: true}
 	var keys []string
-	r.lit.onDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
+	r.lit.OnDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
 	r.drawFigureIn(ebiten.NewImage(512, 512), p, faceWest, 2, 2, 64, standPose())
-	r.lit.onDraw = nil
+	r.lit.OnDraw = nil
 	scar := slices.IndexFunc(keys, func(k string) bool { return k == "pawn/face_scar_east" })
 	hair := slices.IndexFunc(keys, func(k string) bool { return strings.HasPrefix(k, "pawn/hair_") })
 	if scar < 0 || hair < 0 || scar < hair {

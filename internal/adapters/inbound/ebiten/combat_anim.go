@@ -123,28 +123,28 @@ func traceKey(t game.TraceView, tick uint64) [3]uint64 {
 // trackReactions remembers every trace for minReactionFrames present
 // frames after the sim drops it.
 func (st *animState) trackReactions(traces []game.TraceView, tick, present uint64) {
-	for _, rec := range st.recs {
+	for _, rec := range st.Recs {
 		rec.live = false
 	}
 	for _, t := range traces {
 		k := traceKey(t, tick)
-		rec, ok := st.recs[k]
+		rec, ok := st.Recs[k]
 		if !ok {
 			rec = &reactRec{seen: present, born: k[2]}
-			st.recs[k] = rec
+			st.Recs[k] = rec
 		}
 		rec.trace, rec.live = t, true
 	}
-	for k, rec := range st.recs {
+	for k, rec := range st.Recs {
 		if !rec.live && present-rec.seen > 3*minReactionFrames {
-			delete(st.recs, k)
+			delete(st.Recs, k)
 		}
 	}
 }
 
 // reactions appends the tracked traces, aged for display.
 func (st *animState) reactions(present uint64, dst []reactTrace) []reactTrace {
-	for _, rec := range st.recs {
+	for _, rec := range st.Recs {
 		rt := reactTrace{TraceView: rec.trace, sim: math.Inf(1), frames: float64(present - rec.seen), born: float64(rec.born)}
 		if rec.live {
 			rt.sim = float64(rec.trace.Age)
@@ -394,10 +394,10 @@ func (r *Renderer) combatPose(p game.PawnView, m moveState) actionPose {
 	wx, wy := r.interpWorld(p)
 	ux, uy := facingUnit(m.Facing)
 	if hasT {
-		if vx, vy := unit(tgt.x-wx-0.5, tgt.y-wy-0.4); vx != 0 || vy != 0 {
+		if vx, vy := unit(tgt.X-wx-0.5, tgt.Y-wy-0.4); vx != 0 || vy != 0 {
 			ux, uy = vx, vy
 		}
-		a.held.stance, a.held.aimX, a.held.aimY = stanceAimed, tgt.x, tgt.y
+		a.held.stance, a.held.aimX, a.held.aimY = stanceAimed, tgt.X, tgt.Y
 	}
 	moving := m.Blend >= minBlend
 	if p.Action == game.ActionAim || p.Action != game.ActionMelee && struck && !st.Melee {
@@ -445,7 +445,7 @@ func (r *Renderer) fallPose(p game.PawnView, vis pawnVisual) pose {
 	if p.Status == "alive" {
 		k := easeOut(e / fallFrames)
 		lp := lyingPose(r.art, side)
-		ps.rot, ps.dx, ps.dy, ps.sy = lp.rot*k, lp.dx*k, lp.dy*k, breath
+		ps.Rot, ps.Dx, ps.Dy, ps.Sy = lp.Rot*k, lp.Dx*k, lp.Dy*k, breath
 		return ps
 	}
 	var ux, uy float64
@@ -460,19 +460,19 @@ func (r *Renderer) fallPose(p game.PawnView, vis pawnVisual) pose {
 	}
 	total := float64(buckleFrames + fallFrames)
 	drift := 0.12 * easeOut(e/total)
-	ps.dx, ps.dy = ux*drift, uy*drift
-	ps.flash = float32(0.5 * (1 - clamp01(e/total)))
+	ps.Dx, ps.Dy = ux*drift, uy*drift
+	ps.Flash = float32(0.5 * (1 - clamp01(e/total)))
 	if e < buckleFrames {
-		ps.sy = 1 - 0.06*e/buckleFrames
+		ps.Sy = 1 - 0.06*e/buckleFrames
 		return ps
 	}
 	k := easeOut((e - buckleFrames) / fallFrames)
 	lp := lyingPose(r.art, side)
-	ps.rot = lp.rot * k
-	ps.dx += lp.dx * k
-	ps.dy += lp.dy * k
+	ps.Rot = lp.Rot * k
+	ps.Dx += lp.Dx * k
+	ps.Dy += lp.Dy * k
 	if p.Status != "dead" {
-		ps.sy = breath
+		ps.Sy = breath
 	}
 	return ps
 }
@@ -515,7 +515,7 @@ func (r *Renderer) pawnHeldPoint(p game.PawnView, attach string) (vec, bool) {
 func (r *Renderer) shotPoints(t game.TraceView, pawns []game.PawnView) (muzzle, port vec) {
 	ux, uy := unit(float64(t.ToX-t.FromX), float64(t.ToY-t.FromY))
 	c := vec{float64(t.FromX) + 0.5, float64(t.FromY) + 0.3}
-	muzzle, port = vec{c.x + ux*0.5, c.y + uy*0.5}, vec{c.x + ux*0.2, c.y + uy*0.2}
+	muzzle, port = vec{c.X + ux*0.5, c.Y + uy*0.5}, vec{c.X + ux*0.2, c.Y + uy*0.2}
 	p, ok := pawnByStrike(pawns, t)
 	if !ok {
 		return muzzle, port
@@ -526,7 +526,7 @@ func (r *Renderer) shotPoints(t game.TraceView, pawns []game.PawnView) (muzzle, 
 	}
 	port = c
 	if g, okG := r.pawnHeldPoint(p, "grip"); okG {
-		port = vec{g.x + (mz.x-g.x)*0.25, g.y + (mz.y-g.y)*0.25}
+		port = vec{g.X + (mz.X-g.X)*0.25, g.Y + (mz.Y-g.Y)*0.25}
 	}
 	return mz, port
 }
@@ -570,9 +570,9 @@ func (r *Renderer) animateCombat(w game.WorldView, pawns []game.PawnView) {
 		}
 		if !t.Melee {
 			mz, port := r.shotPoints(t, pawns)
-			r.burstDir(partSmoke, mz.x, mz.y, 2, key[2], ux, uy, 0.004)
+			r.burstDir(partSmoke, mz.X, mz.Y, 2, key[2], ux, uy, 0.004)
 			cx, cy := casingDir(ux, uy)
-			r.burstDir(partCasing, port.x, port.y, 1, seed^0xca5e, cx, cy, casingSpeed)
+			r.burstDir(partCasing, port.X, port.Y, 1, seed^0xca5e, cx, cy, casingSpeed)
 		}
 	}
 	if len(r.seenTrace) > 256 {

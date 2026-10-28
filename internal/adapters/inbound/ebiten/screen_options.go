@@ -376,8 +376,8 @@ func (a *App) optionsButtons(sw, sh int) []button {
 	tab := a.currentOptionsTab()
 	var out []button
 	for i, t := range a.optionTabList() {
-		out = append(out, button{id: "options.tab." + t, label: optionTabLabels[t],
-			x: float32(56 + i*(optTabW+8)), y: optTabY, w: optTabW, h: optBtnH, selected: t == tab})
+		out = append(out, button{ID: "options.tab." + t, Label: optionTabLabels[t],
+			X: float32(56 + i*(optTabW+8)), Y: optTabY, W: optTabW, H: optBtnH, Selected: t == tab})
 	}
 	if tab == "controls" {
 		out = append(out, a.controlsButtons(sw, sh)...)
@@ -387,23 +387,23 @@ func (a *App) optionsButtons(sw, sh int) []button {
 		_, cx, y := optPos(rows, i)
 		if r.kind == rowStep {
 			out = append(out,
-				button{id: ids.PrefixOptions + r.key + ".dec", label: "-", x: cx, y: y, w: optBtnH, h: optBtnH},
-				button{id: ids.PrefixOptions + r.key + ".inc", label: "+", x: cx + optBtnH + 8 + optBarW + 8, y: y, w: optBtnH, h: optBtnH})
+				button{ID: ids.PrefixOptions + r.key + ".dec", Label: "-", X: cx, Y: y, W: optBtnH, H: optBtnH},
+				button{ID: ids.PrefixOptions + r.key + ".inc", Label: "+", X: cx + optBtnH + 8 + optBarW + 8, Y: y, W: optBtnH, H: optBtnH})
 			continue
 		}
 		lock := a.optionLock(r.key) // saves.go: developer mode is locked in commitment mode
-		out = append(out, button{id: ids.PrefixOptions + r.key, label: a.rowValue(r), x: cx, y: y, w: 160, h: optBtnH,
-			disabled: lock != "", reason: lock, tip: r.tip})
+		out = append(out, button{ID: ids.PrefixOptions + r.key, Label: a.rowValue(r), X: cx, Y: y, W: 160, H: optBtnH,
+			Disabled: lock != "", Reason: lock, Tip: r.tip})
 		if x := r.extra; x != nil {
 			off := ""
 			if x.off != nil {
 				off = x.off(a)
 			}
-			out = append(out, button{id: ids.PrefixOptions + r.key + "." + x.key, label: x.label, x: cx + 160 + 8, y: y, w: 150, h: optBtnH,
-				tip: x.tip, disabled: off != "", reason: off})
+			out = append(out, button{ID: ids.PrefixOptions + r.key + "." + x.key, Label: x.label, X: cx + 160 + 8, Y: y, W: 150, H: optBtnH,
+				Tip: x.tip, Disabled: off != "", Reason: off})
 		}
 	}
-	return append(out, button{id: ids.OptionsBack, label: "Back", x: 40, y: footerY(sh), w: 140, h: 36})
+	return append(out, button{ID: ids.OptionsBack, Label: "Back", X: 40, Y: footerY(sh), W: 140, H: 36})
 }
 
 // applyOption handles an options.* click: a tab, or a row's control.
@@ -470,7 +470,7 @@ func (a *App) drawOptions(screen *ebiten.Image, sw, sh int) {
 		a.drawControls(screen, sw, sh)
 		mx, my := a.currentCursor()
 		a.drawButtons(screen, a.optionsButtons(sw, sh)[:len(a.optionTabList())], mx, my)
-		a.drawButtons(screen, []button{{id: ids.OptionsBack, label: "Back", x: 40, y: footerY(sh), w: 140, h: 36}}, mx, my)
+		a.drawButtons(screen, []button{{ID: ids.OptionsBack, Label: "Back", X: 40, Y: footerY(sh), W: 140, H: 36}}, mx, my)
 		return
 	}
 	rows := optionRows(tab)

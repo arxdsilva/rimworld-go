@@ -37,16 +37,16 @@ func TestOptionTabsLayout(t *testing.T) {
 			bs := a.optionsButtons(size[0], size[1])
 			seen := map[string]bool{}
 			for i, b := range bs {
-				if seen[b.id] {
-					t.Fatalf("%s %v: duplicate id %s", tab, size, b.id)
+				if seen[b.ID] {
+					t.Fatalf("%s %v: duplicate id %s", tab, size, b.ID)
 				}
-				seen[b.id] = true
-				if b.x+b.w > float32(size[0]) || b.y+b.h > float32(size[1]) {
-					t.Fatalf("%s %v: %s off screen", tab, size, b.id)
+				seen[b.ID] = true
+				if b.X+b.W > float32(size[0]) || b.Y+b.H > float32(size[1]) {
+					t.Fatalf("%s %v: %s off screen", tab, size, b.ID)
 				}
 				for _, o := range bs[i+1:] {
-					if b.x < o.x+o.w && o.x < b.x+b.w && b.y < o.y+o.h && o.y < b.y+b.h {
-						t.Fatalf("%s %v: %s overlaps %s", tab, size, b.id, o.id)
+					if b.X < o.X+o.W && o.X < b.X+b.W && b.Y < o.Y+o.H && o.Y < b.Y+b.H {
+						t.Fatalf("%s %v: %s overlaps %s", tab, size, b.ID, o.ID)
 					}
 				}
 			}

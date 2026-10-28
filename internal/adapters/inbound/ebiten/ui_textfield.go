@@ -39,7 +39,7 @@ func digitsOnly(r rune) bool { return r >= '0' && r <= '9' }
 // textEdit is the field being edited. Its caret and selection also mirror
 // into uiState.caret, selStart and selEnd.
 type textEdit struct {
-	id      string
+	ID      string
 	val     *string
 	spec    textFieldSpec
 	orig    string // the value at focus time (Esc restores it)
@@ -52,34 +52,34 @@ type textEdit struct {
 // textBuf is the editable text with a caret and a selection anchor, in
 // runes. Selection is [min(caret, anchor), max(caret, anchor)).
 type textBuf struct {
-	rs            []rune
-	caret, anchor int
+	Rs            []rune
+	Caret, anchor int
 }
 
-func (b *textBuf) sel() (lo, hi int) {
-	lo, hi = b.caret, b.anchor
+func (b *textBuf) Sel() (lo, hi int) {
+	lo, hi = b.Caret, b.anchor
 	if lo > hi {
 		lo, hi = hi, lo
 	}
 	return lo, hi
 }
 
-func (b *textBuf) hasSel() bool { return b.caret != b.anchor }
+func (b *textBuf) hasSel() bool { return b.Caret != b.anchor }
 
-// move puts the caret at to, keeping the anchor when extending.
-func (b *textBuf) move(to int, extend bool) {
-	b.caret = max(0, min(len(b.rs), to))
+// Move puts the caret at to, keeping the anchor when extending.
+func (b *textBuf) Move(to int, extend bool) {
+	b.Caret = max(0, min(len(b.Rs), to))
 	if !extend {
-		b.anchor = b.caret
+		b.anchor = b.Caret
 	}
 }
 
-// insert replaces the selection with s, honouring maxLen (0: unlimited).
+// Insert replaces the selection with s, honouring maxLen (0: unlimited).
 // It reports whether anything changed.
-func (b *textBuf) insert(s []rune, maxLen int) bool {
-	lo, hi := b.sel()
+func (b *textBuf) Insert(s []rune, maxLen int) bool {
+	lo, hi := b.Sel()
 	if maxLen > 0 {
-		room := maxLen - (len(b.rs) - (hi - lo))
+		room := maxLen - (len(b.Rs) - (hi - lo))
 		if room < len(s) {
 			s = s[:max(0, room)]
 		}
@@ -87,34 +87,34 @@ func (b *textBuf) insert(s []rune, maxLen int) bool {
 	if len(s) == 0 && lo == hi {
 		return false
 	}
-	out := make([]rune, 0, len(b.rs)-(hi-lo)+len(s))
-	out = append(append(append(out, b.rs[:lo]...), s...), b.rs[hi:]...)
-	b.rs = out
-	b.caret = lo + len(s)
-	b.anchor = b.caret
+	out := make([]rune, 0, len(b.Rs)-(hi-lo)+len(s))
+	out = append(append(append(out, b.Rs[:lo]...), s...), b.Rs[hi:]...)
+	b.Rs = out
+	b.Caret = lo + len(s)
+	b.anchor = b.Caret
 	return true
 }
 
-// backspace deletes the selection, or the rune before the caret.
-func (b *textBuf) backspace() bool {
+// Backspace deletes the selection, or the rune before the caret.
+func (b *textBuf) Backspace() bool {
 	if !b.hasSel() {
-		if b.caret == 0 {
+		if b.Caret == 0 {
 			return false
 		}
-		b.anchor = b.caret - 1
+		b.anchor = b.Caret - 1
 	}
-	return b.insert(nil, 0)
+	return b.Insert(nil, 0)
 }
 
-// del deletes the selection, or the rune after the caret.
-func (b *textBuf) del() bool {
+// Del deletes the selection, or the rune after the caret.
+func (b *textBuf) Del() bool {
 	if !b.hasSel() {
-		if b.caret >= len(b.rs) {
+		if b.Caret >= len(b.Rs) {
 			return false
 		}
-		b.anchor = b.caret + 1
+		b.anchor = b.Caret + 1
 	}
-	return b.insert(nil, 0)
+	return b.Insert(nil, 0)
 }
 
 // printable reports r is a character a field accepts from typing.
@@ -126,7 +126,7 @@ func printable(r rune) bool {
 
 // textSpan is one visual line: runes [start, end) (the newline that ends
 // a hard line is not part of it).
-type textSpan struct{ start, end int }
+type textSpan struct{ Start, End int }
 
 type lineCache struct {
 	text  string
@@ -196,7 +196,7 @@ func (u *uiState) fieldLines(id string, rs []rune, w float32) []textSpan {
 func lineOf(spans []textSpan, c int) int {
 	k := 0
 	for i, sp := range spans {
-		if sp.start <= c {
+		if sp.Start <= c {
 			k = i
 		}
 	}
@@ -223,34 +223,34 @@ func (a *App) textCaretAt(id string, rs []rune, r rect, sp textFieldSpec, mx, my
 	u := a.uiSt()
 	in := fieldInner(r)
 	if !sp.Multiline {
-		return nearestIndex(rs, float64(float32(mx)-in.X+u.scroll[id+".x"]))
+		return nearestIndex(rs, float64(float32(mx)-in.X+u.Scroll[id+".x"]))
 	}
 	spans := u.fieldLines(id, rs, in.W)
 	lh := float32(lineH(tsBody))
-	k := int((float32(my) - in.Y + u.scroll[id+".y"]) / lh)
+	k := int((float32(my) - in.Y + u.Scroll[id+".y"]) / lh)
 	k = max(0, min(len(spans)-1, k))
 	sp2 := spans[k]
-	return sp2.start + nearestIndex(rs[sp2.start:sp2.end], float64(float32(mx)-in.X))
+	return sp2.Start + nearestIndex(rs[sp2.Start:sp2.End], float64(float32(mx)-in.X))
 }
 
 // ---- editing --------------------------------------------------------------
 
 func (u *uiState) buf() textBuf {
-	e := &u.edit
-	return textBuf{rs: []rune(*e.val), caret: u.caret, anchor: e.anchor}
+	e := &u.Edit
+	return textBuf{Rs: []rune(*e.val), Caret: u.Caret, anchor: e.anchor}
 }
 
 // store writes b back to the field's value and the mirrored caret state.
 func (a *App) textStore(b textBuf, changed bool) {
 	u := a.uiSt()
-	e := &u.edit
+	e := &u.Edit
 	if changed {
-		*e.val = string(b.rs)
-		u.fire(e.id, evChanged)
+		*e.val = string(b.Rs)
+		u.fire(e.ID, evChanged)
 	}
 	e.anchor = b.anchor
-	u.caret = b.caret
-	u.selStart, u.selEnd = b.sel()
+	u.Caret = b.Caret
+	u.SelStart, u.SelEnd = b.Sel()
 	e.blinkAt = a.updates
 	a.textReveal()
 }
@@ -259,18 +259,18 @@ func (a *App) textStore(b textBuf, changed bool) {
 // selected when all is set. Another field being edited is committed.
 func (a *App) textStart(id string, val *string, sp textFieldSpec, r rect, pos int, all bool) {
 	u := a.uiSt()
-	if u.edit.id != "" && u.edit.id != id {
+	if u.Edit.ID != "" && u.Edit.ID != id {
 		a.textEnd(true)
 	}
 	n := len([]rune(*val))
 	if pos < 0 || pos > n {
 		pos = n
 	}
-	u.edit = textEdit{id: id, val: val, spec: sp, orig: *val, r: r, seen: u.frame, blinkAt: a.updates}
-	u.focus = id
-	b := textBuf{rs: []rune(*val), caret: pos, anchor: pos}
+	u.Edit = textEdit{ID: id, val: val, spec: sp, orig: *val, r: r, seen: u.frame, blinkAt: a.updates}
+	u.Focus = id
+	b := textBuf{Rs: []rune(*val), Caret: pos, anchor: pos}
 	if all {
-		b.caret, b.anchor = n, 0
+		b.Caret, b.anchor = n, 0
 	}
 	a.textStore(b, false)
 }
@@ -279,46 +279,46 @@ func (a *App) textStart(id string, val *string, sp textFieldSpec, r rect, pos in
 // is restored to what it was at focus time.
 func (a *App) textEnd(commit bool) {
 	u := a.uiSt()
-	e := u.edit
-	if e.id == "" {
+	e := u.Edit
+	if e.ID == "" {
 		return
 	}
-	u.edit = textEdit{}
-	u.active = ""
-	u.caret, u.selStart, u.selEnd = 0, 0, 0
+	u.Edit = textEdit{}
+	u.Active = ""
+	u.Caret, u.SelStart, u.SelEnd = 0, 0, 0
 	if commit {
 		if e.spec.Normalize != nil {
 			if n := e.spec.Normalize(*e.val); n != *e.val {
 				*e.val = n
-				u.fire(e.id, evChanged)
+				u.fire(e.ID, evChanged)
 			}
 		}
-		u.fire(e.id, evCommit)
+		u.fire(e.ID, evCommit)
 		return
 	}
 	if *e.val != e.orig {
 		*e.val = e.orig
-		u.fire(e.id, evChanged)
+		u.fire(e.ID, evChanged)
 	}
-	u.fire(e.id, evCancel)
+	u.fire(e.ID, evCancel)
 }
 
 // textReveal scrolls the field so the caret shows.
 func (a *App) textReveal() {
 	u := a.uiSt()
-	e := &u.edit
-	if e.id == "" || e.val == nil {
+	e := &u.Edit
+	if e.ID == "" || e.val == nil {
 		return
 	}
-	if u.scroll == nil {
-		u.scroll = map[string]float32{}
+	if u.Scroll == nil {
+		u.Scroll = map[string]float32{}
 	}
 	in := fieldInner(e.r)
 	rs := []rune(*e.val)
 	if !e.spec.Multiline {
-		cx, _ := measure(string(rs[:min(u.caret, len(rs))]), tsBody)
+		cx, _ := measure(string(rs[:min(u.Caret, len(rs))]), tsBody)
 		tw, _ := measure(*e.val, tsBody)
-		sx := u.scroll[e.id+".x"]
+		sx := u.Scroll[e.ID+".x"]
 		switch {
 		case tw <= float64(in.W):
 			sx = 0
@@ -327,20 +327,20 @@ func (a *App) textReveal() {
 		case float32(cx) < sx:
 			sx = float32(cx)
 		}
-		u.scroll[e.id+".x"] = max(0, sx)
+		u.Scroll[e.ID+".x"] = max(0, sx)
 		return
 	}
-	spans := u.fieldLines(e.id, rs, in.W)
+	spans := u.fieldLines(e.ID, rs, in.W)
 	lh := float32(lineH(tsBody))
-	k := float32(lineOf(spans, u.caret))
-	sy := u.scroll[e.id+".y"]
+	k := float32(lineOf(spans, u.Caret))
+	sy := u.Scroll[e.ID+".y"]
 	switch {
 	case k*lh < sy:
 		sy = k * lh
 	case (k+1)*lh > sy+in.H:
 		sy = (k+1)*lh - in.H
 	}
-	u.scroll[e.id+".y"] = max(0, sy)
+	u.Scroll[e.ID+".y"] = max(0, sy)
 }
 
 func (a *App) metaHeld() bool {
@@ -356,8 +356,8 @@ func (a *App) metaHeld() bool {
 // while CtxText is on top).
 func (a *App) uiTextInput() {
 	u := a.uiSt()
-	e := &u.edit
-	if e.id == "" {
+	e := &u.Edit
+	if e.ID == "" {
 		return
 	}
 	if e.seen != u.frame { // its widget was not declared: the field is gone
@@ -376,7 +376,7 @@ func (a *App) uiTextInput() {
 	if !cmd {
 		for _, r := range a.in.Raw.Chars {
 			if printable(r) && (e.spec.Valid == nil || e.spec.Valid(r)) {
-				changed = b.insert([]rune{r}, e.spec.MaxLen) || changed
+				changed = b.Insert([]rune{r}, e.spec.MaxLen) || changed
 			}
 		}
 	}
@@ -390,18 +390,18 @@ func (a *App) uiTextInput() {
 			a.textEnd(true)
 			return
 		}
-		changed = b.insert([]rune{'\n'}, e.spec.MaxLen) || changed
+		changed = b.Insert([]rune{'\n'}, e.spec.MaxLen) || changed
 	case a.in.Key("Tab"):
 		a.textStore(b, changed)
 		a.textEnd(true)
 		u.cycleFocus(map[bool]int{false: 1, true: -1}[shift])
 		return
 	case cmd && a.in.Key("A"):
-		b.anchor, b.caret = 0, len(b.rs)
+		b.anchor, b.Caret = 0, len(b.Rs)
 	case a.keyRepeat("Backspace"):
-		changed = b.backspace() || changed
+		changed = b.Backspace() || changed
 	case a.keyRepeat("Delete"):
-		changed = b.del() || changed
+		changed = b.Del() || changed
 	case a.keyRepeat("ArrowLeft"):
 		a.textArrow(&b, -1, shift)
 	case a.keyRepeat("ArrowRight"):
@@ -411,9 +411,9 @@ func (a *App) uiTextInput() {
 	case e.spec.Multiline && a.keyRepeat("ArrowDown"):
 		a.textVertical(&b, 1, shift)
 	case a.in.Key("Home"):
-		b.move(a.textLineEdge(b, false), shift)
+		b.Move(a.textLineEdge(b, false), shift)
 	case a.in.Key("End"):
-		b.move(a.textLineEdge(b, true), shift)
+		b.Move(a.textLineEdge(b, true), shift)
 	}
 	a.textStore(b, changed)
 }
@@ -422,51 +422,51 @@ func (a *App) uiTextInput() {
 // collapses to its near edge.
 func (a *App) textArrow(b *textBuf, dir int, extend bool) {
 	if b.hasSel() && !extend {
-		lo, hi := b.sel()
+		lo, hi := b.Sel()
 		if dir < 0 {
-			b.move(lo, false)
+			b.Move(lo, false)
 		} else {
-			b.move(hi, false)
+			b.Move(hi, false)
 		}
 		return
 	}
-	b.move(b.caret+dir, extend)
+	b.Move(b.Caret+dir, extend)
 }
 
 // textLineEdge is the start or end of the caret's visual line.
 func (a *App) textLineEdge(b textBuf, end bool) int {
-	e := &a.uiSt().edit
+	e := &a.uiSt().Edit
 	if !e.spec.Multiline {
 		if end {
-			return len(b.rs)
+			return len(b.Rs)
 		}
 		return 0
 	}
-	spans := a.uiSt().fieldLines(e.id, b.rs, fieldInner(e.r).W)
-	sp := spans[lineOf(spans, b.caret)]
+	spans := a.uiSt().fieldLines(e.ID, b.Rs, fieldInner(e.r).W)
+	sp := spans[lineOf(spans, b.Caret)]
 	if end {
-		return sp.end
+		return sp.End
 	}
-	return sp.start
+	return sp.Start
 }
 
 // textVertical moves the caret to the same x on the line above or below.
 func (a *App) textVertical(b *textBuf, dir int, extend bool) {
 	u := a.uiSt()
-	e := &u.edit
-	spans := u.fieldLines(e.id, b.rs, fieldInner(e.r).W)
-	k := lineOf(spans, b.caret)
+	e := &u.Edit
+	spans := u.fieldLines(e.ID, b.Rs, fieldInner(e.r).W)
+	k := lineOf(spans, b.Caret)
 	switch {
 	case k+dir < 0:
-		b.move(0, extend)
+		b.Move(0, extend)
 		return
 	case k+dir >= len(spans):
-		b.move(len(b.rs), extend)
+		b.Move(len(b.Rs), extend)
 		return
 	}
 	cur, tgt := spans[k], spans[k+dir]
-	x, _ := measure(string(b.rs[cur.start:min(b.caret, cur.end)]), tsBody)
-	b.move(tgt.start+nearestIndex(b.rs[tgt.start:tgt.end], x), extend)
+	x, _ := measure(string(b.Rs[cur.Start:min(b.Caret, cur.End)]), tsBody)
+	b.Move(tgt.Start+nearestIndex(b.Rs[tgt.Start:tgt.End], x), extend)
 }
 
 // uiTextField is a text field bound to *val. It reports the value changed
@@ -478,17 +478,17 @@ func (a *App) uiTextField(id string, r rect, val *string, sp textFieldSpec) (cha
 	if sp.Disabled && sp.Reason != "" {
 		tip = sp.Reason
 	}
-	w := uiWidget{id: id, r: r, focusable: true, disabled: sp.Disabled, reason: sp.Reason, tip: tip}
-	w.click = func() {
+	w := uiWidget{ID: id, R: r, Focusable: true, Disabled: sp.Disabled, Reason: sp.Reason, Tip: tip}
+	w.Click = func() {
 		if !sp.Disabled {
 			a.textStart(id, val, sp, r, -1, false)
 		}
 	}
 	selID := id + ".sel"
-	if u.add(w) && !sp.Disabled {
-		editing := u.edit.id == id
+	if u.Add(w) && !sp.Disabled {
+		editing := u.Edit.ID == id
 		if editing {
-			u.edit.val, u.edit.spec, u.edit.r, u.edit.seen = val, sp, r, u.frame
+			u.Edit.val, u.Edit.spec, u.Edit.r, u.Edit.seen = val, sp, r, u.frame
 		}
 		mx, my := a.currentCursor()
 		switch {
@@ -498,37 +498,37 @@ func (a *App) uiTextField(id string, r rect, val *string, sp textFieldSpec) (cha
 				a.textStart(id, val, sp, r, pos, false)
 			} else {
 				b := u.buf()
-				b.move(pos, a.in.Shift())
+				b.Move(pos, a.in.Shift())
 				a.textStore(b, false)
 			}
-			u.active = selID
-		case u.tabTo == id && !editing:
-			u.tabTo = ""
+			u.Active = selID
+		case u.TabTo == id && !editing:
+			u.TabTo = ""
 			a.textStart(id, val, sp, r, -1, true)
 		}
-		if u.active == selID && u.edit.id == id {
+		if u.Active == selID && u.Edit.ID == id {
 			b := u.buf()
-			b.move(a.textCaretAt(id, b.rs, r, sp, mx, my), true)
+			b.Move(a.textCaretAt(id, b.Rs, r, sp, mx, my), true)
 			a.textStore(b, false)
 			if !a.in.Down(mbLeft) {
-				u.active = ""
+				u.Active = ""
 				a.uiRelease()
 			}
 		}
 	}
 	ev := u.take(id)
-	u.queue(func(dst *ebiten.Image) { a.drawTextField(dst, id, r, *val, sp) })
+	u.Queue(func(dst *ebiten.Image) { a.drawTextField(dst, id, r, *val, sp) })
 	return ev&evChanged != 0, ev&evCommit != 0
 }
 
 func (a *App) drawTextField(dst *ebiten.Image, id string, r rect, s string, sp textFieldSpec) {
 	u := a.uiSt()
-	editing := u.edit.id == id
+	editing := u.Edit.ID == id
 	border := uiFieldBorder
 	switch {
-	case editing || u.focus == id && u.kbd:
+	case editing || u.Focus == id && u.kbd:
 		border = uiFieldFocus
-	case u.hot == id && !sp.Disabled:
+	case u.Hot == id && !sp.Disabled:
 		border = uiBtnBorder
 	}
 	fillRect(dst, r, uiField)
@@ -547,7 +547,7 @@ func (a *App) drawTextField(dst *ebiten.Image, id string, r rect, s string, sp t
 		return
 	}
 	rs := []rune(s)
-	sx, sy := u.scroll[id+".x"], u.scroll[id+".y"]
+	sx, sy := u.Scroll[id+".x"], u.Scroll[id+".y"]
 	var spans []textSpan
 	switch {
 	case sp.Multiline:
@@ -565,36 +565,36 @@ func (a *App) drawTextField(dst *ebiten.Image, id string, r rect, s string, sp t
 	} else {
 		sx = 0
 	}
-	lo, hi := u.selStart, u.selEnd
+	lo, hi := u.SelStart, u.SelEnd
 	for i, ln := range spans {
 		y := ty + float32(i)*lh - sy
 		if y+lh < in.Y || y > in.Bottom() {
 			continue
 		}
 		x0 := in.X - sx
-		if editing && hi > lo && hi > ln.start && lo < ln.end+1 {
-			a0, a1 := max(lo, ln.start), min(hi, ln.end)
-			xa, _ := measure(string(rs[ln.start:a0]), tsBody)
-			xb, _ := measure(string(rs[ln.start:max(a0, a1)]), tsBody)
-			if hi > ln.end && ln.end < len(rs) { // the selected newline: a nub
+		if editing && hi > lo && hi > ln.Start && lo < ln.End+1 {
+			a0, a1 := max(lo, ln.Start), min(hi, ln.End)
+			xa, _ := measure(string(rs[ln.Start:a0]), tsBody)
+			xb, _ := measure(string(rs[ln.Start:max(a0, a1)]), tsBody)
+			if hi > ln.End && ln.End < len(rs) { // the selected newline: a nub
 				xb += 4
 			}
 			sel := uiBtnSelected
 			sel.A = 0xC0
 			fillRect(clip, rect{X: x0 + float32(xa), Y: y, W: float32(xb - xa), H: lh}, sel)
 		}
-		drawText(clip, string(rs[ln.start:ln.end]), float64(x0), float64(y), st)
+		drawText(clip, string(rs[ln.Start:ln.End]), float64(x0), float64(y), st)
 	}
 	if !editing {
 		return
 	}
-	blink := a.settings.Accessibility.ReducedMotion || ((a.updates-u.edit.blinkAt)/blinkFrames)%2 == 0
+	blink := a.settings.Accessibility.ReducedMotion || ((a.updates-u.Edit.blinkAt)/blinkFrames)%2 == 0
 	if !blink {
 		return
 	}
-	k := lineOf(spans, u.caret)
+	k := lineOf(spans, u.Caret)
 	ln := spans[k]
-	cx, _ := measure(string(rs[ln.start:max(ln.start, min(u.caret, ln.end))]), tsBody)
+	cx, _ := measure(string(rs[ln.Start:max(ln.Start, min(u.Caret, ln.End))]), tsBody)
 	cy := ty + float32(k)*lh - sy
 	x := in.X - sx + float32(cx)
 	uiLine(clip, x, cy+1, x, cy+lh-1, 1, uiAccent, false)

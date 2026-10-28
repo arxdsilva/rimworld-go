@@ -547,7 +547,7 @@ func (a *App) landInfoPanel(ng *newGameState, r rect, tile int, uncovered bool) 
 			a.uiTip(fmt.Sprintf("land.info.tip.%d", i), vis, b.tip)
 		}
 		b := b
-		a.uiSt().queue(func(dst *ebiten.Image) { b.draw(clipTo(dst, area.View), br) })
+		a.uiSt().Queue(func(dst *ebiten.Image) { b.draw(clipTo(dst, area.View), br) })
 	}
 }
 
@@ -643,7 +643,7 @@ func (a *App) legendRect(geo landGeo) rect {
 
 // landLegend paints the biome colours (or the data ramp) in r.
 func (a *App) landLegend(g *globeView, r rect) {
-	a.uiSt().queue(func(dst *ebiten.Image) {
+	a.uiSt().Queue(func(dst *ebiten.Image) {
 		drawPanel(dst, r.X, r.Y, r.W, r.H)
 		st := tsSmall
 		if g.Mode() == globeBiome {
@@ -710,11 +710,11 @@ func (a *App) pushLandingAdvanced() {
 	opts := mapSizeOptions()
 	h := float32(modalTitleH+modalFooterH+2*modalPad) + 26 + 5*radioRowH + 40 + 26 + float32(len(opts))*radioRowH
 	a.uiPushModal(modal{
-		id: "land.advanced", title: "Advanced", w: landModalW, h: h,
-		draw: func(a *App, body rect) { a.landingAdvancedBody(ng, body, opts) },
-		buttons: []modalButton{
-			{id: "close", label: "Close", style: btnPrimary, closes: true},
-			{id: "reset", label: "Reset", onClick: func() { ng.season, ng.mapSize = -1, defaultMapSideEnabled() }},
+		ID: "land.advanced", Title: "Advanced", W: landModalW, H: h,
+		Draw: func(a *App, body rect) { a.landingAdvancedBody(ng, body, opts) },
+		Buttons: []modalButton{
+			{ID: "close", Label: "Close", Style: btnPrimary, Closes: true},
+			{ID: "reset", Label: "Reset", OnClick: func() { ng.season, ng.mapSize = -1, defaultMapSideEnabled() }},
 		},
 	})
 }
@@ -772,7 +772,7 @@ func (a *App) landingAdvancedBody(ng *newGameState, body rect, opts []game.MapSi
 // stays selectable: this only draws.
 func (a *App) mapSizeWarnings(list rect, labels, notes []string) {
 	rows := list.RowsN(len(labels), radioRowH, 0)
-	a.uiSt().queue(func(dst *ebiten.Image) {
+	a.uiSt().Queue(func(dst *ebiten.Image) {
 		st := withColor(tsBody, uiWarning)
 		st.Align = alignRight
 		for i, note := range notes {

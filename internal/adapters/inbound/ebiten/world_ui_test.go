@@ -47,7 +47,7 @@ func TestWorldTabListsCaravansAndReturns(t *testing.T) {
 	a, f := colonyApp(t, s.stubSim)
 	a.renderer.game = s
 	for _, b := range a.hudTabButtons(a.sw, a.sh) {
-		if b.id == "tab.world" && b.disabled {
+		if b.ID == "tab.world" && b.Disabled {
 			t.Fatal("the World tab is disabled")
 		}
 	}
@@ -63,7 +63,7 @@ func TestWorldTabListsCaravansAndReturns(t *testing.T) {
 	if n := len(s.cmds); n != 1 || s.cmds[0].Kind != command.CaravanReturn || s.cmds[0].Target != 40 {
 		t.Fatalf("commands %+v, want CaravanReturn 40", s.cmds)
 	}
-	if w, _ := a.uiSt().find("modal." + worldModalID + ".world.form"); !w.disabled || !strings.Contains(w.reason, "no world map") {
+	if w, _ := a.uiSt().Find("modal." + worldModalID + ".world.form"); !w.Disabled || !strings.Contains(w.Reason, "no world map") {
 		t.Fatalf("Form caravan without a world map: %+v", w)
 	}
 }
@@ -76,18 +76,18 @@ func TestFormCaravanDialog(t *testing.T) {
 	a.openFormCaravan(&worldUI{picked: -1})
 	f.Frame(t, a)
 	send := "modal." + formCaravanID + ".form.send"
-	if w, _ := a.uiSt().find(send); !w.disabled || w.reason != formNoMembers {
+	if w, _ := a.uiSt().Find(send); !w.Disabled || w.Reason != formNoMembers {
 		t.Fatalf("Send with nothing picked: %+v", w)
 	}
-	if w, _ := a.uiSt().find("form.member.2"); !w.disabled {
+	if w, _ := a.uiSt().Find("form.member.2"); !w.Disabled {
 		t.Fatal("a downed colonist can be picked")
 	}
-	if w, _ := a.uiSt().find("form.dest.11"); !w.disabled {
+	if w, _ := a.uiSt().Find("form.dest.11"); !w.Disabled {
 		t.Fatal("a hostile settlement can be picked")
 	}
 	press(t, a, f, "form.member.1")
 	f.Frame(t, a)
-	if w, _ := a.uiSt().find(send); !w.disabled || w.reason != formNoDest {
+	if w, _ := a.uiSt().Find(send); !w.Disabled || w.Reason != formNoDest {
 		t.Fatalf("Send without a destination: %+v", w)
 	}
 	press(t, a, f, "form.dest.9")
@@ -163,7 +163,7 @@ func TestWorldTabChartsTheGlobe(t *testing.T) {
 	if st := a.uiModalTop(); st != worldModalID {
 		t.Fatalf("top modal after a draw %q", st)
 	}
-	if w, _ := a.uiSt().find("modal." + worldModalID + ".world.form"); w.disabled {
-		t.Fatalf("Form caravan disabled with a world map: %q", w.reason)
+	if w, _ := a.uiSt().Find("modal." + worldModalID + ".world.form"); w.Disabled {
+		t.Fatalf("Form caravan disabled with a world map: %q", w.Reason)
 	}
 }

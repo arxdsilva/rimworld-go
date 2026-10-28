@@ -507,9 +507,9 @@ func (r *Renderer) grassBatchOf(dst *ebiten.Image, w *game.WorldView, x0, y0, x1
 				sy, alpha = r.tuftSnow(x, y, snowQ)
 			} else {
 				ps := r.plantPose(x, y, kindGrass, 0.05, 1)
-				lean, sy = -ps.skew, ps.sy
-				if ps.cs != (colorScale{}) {
-					alpha = float64(ps.cs[3])
+				lean, sy = -ps.Skew, ps.Sy
+				if ps.Cs != (colorScale{}) {
+					alpha = float64(ps.Cs[3])
 				}
 				sky, lamp = r.lightTile(x, y)
 			}
@@ -518,8 +518,8 @@ func (r *Renderer) grassBatchOf(dst *ebiten.Image, w *game.WorldView, x0, y0, x1
 			}
 			a32 := float32(alpha)
 			cr, cg, cb := tint[0]*tint[3]*a32, tint[1]*tint[3]*a32, tint[2]*tint[3]*a32
-			if !baking && r.lit.off { // lighting off: the tile's flat light rides in the colour
-				f := litFactor(&r.lit.light, [3]float32{0, 0, 1}, sky, lamp)
+			if !baking && r.lit.Off { // lighting off: the tile's flat light rides in the colour
+				f := litFactor(&r.lit.Light, [3]float32{0, 0, 1}, sky, lamp)
 				cr, cg, cb = cr*f[0], cg*f[1], cb*f[2]
 			}
 			gb.copies = grassCopies(x, y, growth, keep, grassTallAt(code, x, y), gb.copies[:0])
@@ -592,8 +592,8 @@ func (r *Renderer) flushGrass(dst, src *ebiten.Image) {
 	if gb.onFlush != nil {
 		gb.onFlush()
 	}
-	r.lit.calls++
-	if r.lit.off { // lighting off: the vertex colours already carry the light
+	r.lit.Calls++
+	if r.lit.Off { // lighting off: the vertex colours already carry the light
 		dst.DrawTriangles32(gb.verts, gb.idx, src, &ebiten.DrawTrianglesOptions{Filter: ebiten.FilterLinear})
 		return
 	}
@@ -602,9 +602,9 @@ func (r *Renderer) flushGrass(dst, src *ebiten.Image) {
 		dst.DrawTriangles32(gb.verts, gb.idx, src, &ebiten.DrawTrianglesOptions{Filter: ebiten.FilterLinear})
 		return
 	}
-	r.lit.syncUniforms()
-	r.lit.opts.Images[0] = src
-	dst.DrawTrianglesShader32(gb.verts, gb.idx, sh, &r.lit.opts)
+	r.lit.SyncUniforms()
+	r.lit.Opts.Images[0] = src
+	dst.DrawTrianglesShader32(gb.verts, gb.idx, sh, &r.lit.Opts)
 }
 
 // grassSnowQ is the snow depth bakes use: quantised, so a slow snowfall

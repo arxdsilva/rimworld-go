@@ -227,7 +227,7 @@ func TestGrassBatchIsOneDraw(t *testing.T) {
 	for v := 0; v < 4; v++ {
 		ground[r.art.Image(artKey("terrain", "soil", v), color.NRGBA{})] = true
 	}
-	r.lit.onDraw = func(img *ebiten.Image, _ float32) {
+	r.lit.OnDraw = func(img *ebiten.Image, _ float32) {
 		if ground[img] {
 			order = append(order, "ground")
 		} else {

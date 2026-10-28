@@ -21,7 +21,7 @@ func (a *App) pollInput() {
 // keyRepeat reports the key went down this frame or is repeating while
 // held (first repeat after 24 frames, then every 3). Text fields and list
 // navigation read it.
-func (a *App) keyRepeat(name string) bool { return a.in.Key(name) || repeatFire(a.uiSt().heldN[name]) }
+func (a *App) keyRepeat(name string) bool { return a.in.Key(name) || repeatFire(a.uiSt().HeldN[name]) }
 
 // bindings are the live key bindings (the settings' overrides over the
 // defaults).
@@ -125,10 +125,10 @@ func (a *App) pressAccept() {
 	}
 	sw, sh := a.size()
 	for _, b := range a.layoutButtons(sw, sh) {
-		switch b.id {
+		switch b.ID {
 		case "wizard.next", "wizard.start", "world.generate":
-			if !b.disabled {
-				a.applyClick(b.id)
+			if !b.Disabled {
+				a.applyClick(b.ID)
 			}
 			return
 		}

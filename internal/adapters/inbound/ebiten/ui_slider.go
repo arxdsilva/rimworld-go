@@ -42,13 +42,13 @@ func (sp sliderSpec) bounds() (lo, hi float64) {
 	return lo, hi
 }
 
-func (sp sliderSpec) discrete() bool { return len(sp.Stops) >= 2 }
+func (sp sliderSpec) Discrete() bool { return len(sp.Stops) >= 2 }
 
 func (sp sliderSpec) format(v float64) string {
 	switch {
 	case sp.Format != nil:
 		return sp.Format(v)
-	case sp.discrete():
+	case sp.Discrete():
 		return sp.Stops[int(math.Round(v))]
 	}
 	return strconv.FormatFloat(math.Round(v*100)/100, 'f', -1, 64)
@@ -75,7 +75,7 @@ func (sp sliderSpec) valueAt(x float32, track rect) float64 {
 		t = math.Max(0, math.Min(1, float64(x-track.X)/float64(track.W)))
 	}
 	v := lo + t*(hi-lo)
-	if sp.discrete() {
+	if sp.Discrete() {
 		v = math.Round(v)
 	}
 	return v
@@ -90,13 +90,13 @@ func (a *App) uiSlider(id string, r rect, val *float64, sp sliderSpec) bool {
 	lo, hi := sp.bounds()
 	track := sliderTrack(r)
 	*val = math.Max(lo, math.Min(hi, *val))
-	if sp.discrete() {
+	if sp.Discrete() {
 		*val = math.Round(*val)
 	}
 	changed := false
 	set := func(v float64) {
 		v = math.Max(lo, math.Min(hi, v))
-		if sp.discrete() {
+		if sp.Discrete() {
 			v = math.Round(v)
 		}
 		if v != *val {
@@ -104,24 +104,24 @@ func (a *App) uiSlider(id string, r rect, val *float64, sp sliderSpec) bool {
 			*val, changed = v, true
 		}
 	}
-	w := uiWidget{id: id, r: r, focusable: true, disabled: sp.Disabled, reason: sp.Reason}
-	live := u.add(w)
-	idx := len(u.cur) - 1
+	w := uiWidget{ID: id, R: r, Focusable: true, Disabled: sp.Disabled, Reason: sp.Reason}
+	live := u.Add(w)
+	idx := len(u.Cur) - 1
 	if live && !sp.Disabled {
 		mx, _ := a.currentCursor()
 		if a.uiPress(r) {
-			u.active, u.focus = id, id
+			u.Active, u.Focus = id, id
 			set(sp.valueAt(float32(mx), track))
 		}
-		if u.active == id {
+		if u.Active == id {
 			set(sp.valueAt(float32(mx), track))
 			if !a.in.Down(mbLeft) {
-				u.active = ""
+				u.Active = ""
 				a.uiRelease() // the release must not click what is under the cursor
 			}
-		} else if u.focus == id {
+		} else if u.Focus == id {
 			step := sp.Step
-			if sp.discrete() {
+			if sp.Discrete() {
 				step = 1
 			} else if step <= 0 {
 				step = (hi - lo) / 20
@@ -149,9 +149,9 @@ func (a *App) uiSlider(id string, r rect, val *float64, sp sliderSpec) bool {
 		if sp.Disabled && sp.Reason != "" {
 			tip = sp.Reason
 		}
-		u.cur[idx].tip = tip
+		u.Cur[idx].Tip = tip
 	}
-	u.queue(func(dst *ebiten.Image) { drawSlider(dst, r, track, *val, sp, u.hot == id || u.active == id) })
+	u.Queue(func(dst *ebiten.Image) { drawSlider(dst, r, track, *val, sp, u.Hot == id || u.Active == id) })
 	return changed
 }
 

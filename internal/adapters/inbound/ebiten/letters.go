@@ -137,8 +137,8 @@ func (a *App) letterButtonsIn(l hudLayout) []button {
 		if row.older > 0 {
 			continue
 		}
-		out = append(out, button{id: ids.PrefixLetter + strconv.FormatUint(row.letter.ID, 10), label: letterRowLabel(row),
-			x: row.r.X, y: row.r.Y, w: row.r.W, h: row.r.H})
+		out = append(out, button{ID: ids.PrefixLetter + strconv.FormatUint(row.letter.ID, 10), Label: letterRowLabel(row),
+			X: row.r.X, Y: row.r.Y, W: row.r.W, H: row.r.H})
 	}
 	return out
 }
@@ -273,20 +273,20 @@ func (a *App) openLetterView(l game.LetterView) {
 	if l.ID != 0 {
 		id = fmt.Sprintf("letter.%d", l.ID)
 	}
-	buttons := []modalButton{{id: "continue", label: "Continue", style: btnPrimary, closes: true}}
+	buttons := []modalButton{{ID: "continue", Label: "Continue", Style: btnPrimary, Closes: true}}
 	if letterHasPlace(l) {
-		buttons = append(buttons, modalButton{id: "jump", label: "Jump to", closes: true, onClick: func() { a.jumpToLetter(l) }})
+		buttons = append(buttons, modalButton{ID: "jump", Label: "Jump to", Closes: true, OnClick: func() { a.jumpToLetter(l) }})
 	}
 	a.uiPushModal(modal{
-		id: id, title: title, w: letterW, h: h,
-		draw: func(a *App, body rect) {
+		ID: id, Title: title, W: letterW, H: h,
+		Draw: func(a *App, body rect) {
 			y := body.Y
 			for _, line := range lines {
 				a.uiLabel(body.X, y, line, tsBody)
 				y += float32(lineH(tsBody))
 			}
 		},
-		buttons: buttons,
+		Buttons: buttons,
 	})
 }
 

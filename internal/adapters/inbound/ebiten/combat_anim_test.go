@@ -39,7 +39,7 @@ func aimCentre(r *Renderer, rig heldRig, ps pose, wx, wy, tile float64) pt {
 	c, _ := bodyCentre(rig.body.Meta)
 	sx, sy := r.worldToScreenF(wx, wy)
 	bx, by, s := artOrigin(rig.body.Meta, float64(sx), float64(sy), tile)
-	return apply(ps.geo(float64(sx), float64(sy), tile), pt{bx + c[0]*s, by + c[1]*s})
+	return apply(ps.Geo(float64(sx), float64(sy), tile), pt{bx + c[0]*s, by + c[1]*s})
 }
 
 // The rifle is aimed at the target for the whole attack cycle (no low
@@ -108,7 +108,7 @@ func TestFireAnchoredToTrace(t *testing.T) {
 	rest, _ := r.heldPoint(rig, h, 5, 5, ps, "muzzle")
 	h.push = angle(0).held.push
 	pulled, _ := r.heldPoint(rig, h, 5, 5, ps, "muzzle")
-	if pulled.x >= rest.x {
+	if pulled.X >= rest.X {
 		t.Fatalf("recoil pulls the rifle back: %v -> %v", rest, pulled)
 	}
 	// a fast sim cannot skip the shot: 2 frames after the first sighting
@@ -194,18 +194,18 @@ func TestMuzzleFlashAtMuzzle(t *testing.T) {
 		t.Fatalf("flash at the drawn muzzle: %v %v", mz, want)
 	}
 	hand, _ := r.pawnHeldPoint(game.PawnView{ID: 9, X: 5, Y: 5}, "hold")
-	if math.Hypot(mz.x-hand.x, mz.y-hand.y) < 0.2 {
+	if math.Hypot(mz.X-hand.X, mz.Y-hand.Y) < 0.2 {
 		t.Fatalf("the muzzle is out at the barrel's end: %v vs hand %v", mz, hand)
 	}
-	if mz.x < 5.5+aimReach {
+	if mz.X < 5.5+aimReach {
 		t.Fatalf("the muzzle is out towards the target: %v", mz)
 	}
 	smoke := 0
 	for _, pt := range r.parts {
-		if pt.kind == partSmoke {
+		if pt.Kind == partSmoke {
 			smoke++
-			if math.Hypot(pt.x-mz.x, pt.y-mz.y) > 1e-9 {
-				t.Fatalf("smoke at the muzzle: %v,%v vs %v", pt.x, pt.y, mz)
+			if math.Hypot(pt.X-mz.X, pt.Y-mz.Y) > 1e-9 {
+				t.Fatalf("smoke at the muzzle: %v,%v vs %v", pt.X, pt.Y, mz)
 			}
 		}
 	}
@@ -217,7 +217,7 @@ func TestMuzzleFlashAtMuzzle(t *testing.T) {
 	// without art the shot leaves from in front of the shooter's tile
 	r.art = nil
 	m, _ := r.shotPoints(tr, r.view.Pawns)
-	if m.x != 6 || m.y != 5.3 {
+	if m.X != 6 || m.Y != 5.3 {
 		t.Fatalf("fallback muzzle %v", m)
 	}
 }
@@ -238,7 +238,7 @@ func TestShellCasingParticle(t *testing.T) {
 	count := func() int {
 		n := 0
 		for _, p := range r.parts {
-			if p.kind == partCasing {
+			if p.Kind == partCasing {
 				n++
 			}
 		}
@@ -304,12 +304,12 @@ func TestSpearThrustReach(t *testing.T) {
 	h := heldItem{key: "weapon/spear", stance: stanceAimed, aimX: 6.5, aimY: 5.4}
 	tip1, ok1 := r.heldPoint(rig, h, 5, 5, ps, "tip")
 	h.push = spear.held.push
-	ps.dx = spear.dx
+	ps.Dx = spear.dx
 	tip4, ok4 := r.heldPoint(rig, h, 5, 5, ps, "tip")
-	if !ok1 || !ok4 || tip4.x <= tip1.x+0.15 {
+	if !ok1 || !ok4 || tip4.X <= tip1.X+0.15 {
 		t.Fatalf("full reach drives the tip forward: %v -> %v", tip1, tip4)
 	}
-	if tip4.x < 6 {
+	if tip4.X < 6 {
 		t.Fatalf("the spear tip reaches the next tile: %v", tip4)
 	}
 }
@@ -372,7 +372,7 @@ func TestPunch(t *testing.T) {
 		t.Fatal("fists: no sprite drawn")
 	}
 	// the melee trail follows the punch's reach
-	if pts := r.meleeTrail(tr); len(pts) < 2 || pts[1].x <= pts[0].x {
+	if pts := r.meleeTrail(tr); len(pts) < 2 || pts[1].X <= pts[0].X {
 		t.Fatalf("trail out along the punch: %v", pts)
 	}
 	r.drawTraces(ebiten.NewImage(800, 600), r.view.W, 64)
@@ -428,8 +428,8 @@ func TestBloodSpraysAwayFromAttacker(t *testing.T) {
 		var sum float64
 		n := 0
 		for _, p := range r.parts {
-			if p.kind == partBlood {
-				sum += p.vx
+			if p.Kind == partBlood {
+				sum += p.Vx
 				n++
 			}
 		}
@@ -456,14 +456,14 @@ func TestFallRotatesThenLies(t *testing.T) {
 	}
 	// buckling: upright, squashing
 	for _, e := range []uint64{0, 4, 8, 15} {
-		if ps := at(e, p); ps.rot != 0 || (e > 0 && ps.sy >= 1) {
+		if ps := at(e, p); ps.Rot != 0 || (e > 0 && ps.Sy >= 1) {
 			t.Fatalf("buckling at %d: %+v", e, ps)
 		}
 	}
 	// then the rotation runs over fallFrames, monotonically
 	prev := 0.0
 	for e := uint64(buckleFrames); e <= buckleFrames+fallFrames; e++ {
-		rot := math.Abs(at(e, p).rot)
+		rot := math.Abs(at(e, p).Rot)
 		if rot < prev {
 			t.Fatalf("the fall turns back at %d: %v < %v", e, rot, prev)
 		}
@@ -472,18 +472,18 @@ func TestFallRotatesThenLies(t *testing.T) {
 	if math.Abs(prev-math.Pi/2) > 1e-9 {
 		t.Fatalf("flat after fallFrames: %v", prev)
 	}
-	if ps := at(200, p); math.Abs(ps.rot+math.Pi/2) > 1e-9 || math.Abs(ps.dx-lyingPose(r.art, -1).dx+0.12) > 1e-9 {
+	if ps := at(200, p); math.Abs(ps.Rot+math.Pi/2) > 1e-9 || math.Abs(ps.Dx-lyingPose(r.art, -1).Dx+0.12) > 1e-9 {
 		t.Fatalf("hit from the east: falls west, slid 0.12 away from the hit: %+v", ps)
 	}
 	p.HitFromX = 2
-	if ps := at(200, p); math.Abs(ps.rot-math.Pi/2) > 1e-9 {
-		t.Fatalf("hit from the west: falls east: %v", ps.rot)
+	if ps := at(200, p); math.Abs(ps.Rot-math.Pi/2) > 1e-9 {
+		t.Fatalf("hit from the west: falls east: %v", ps.Rot)
 	}
-	if ps := at(2, p); ps.dx <= 0 || ps.flash <= 0 {
+	if ps := at(2, p); ps.Dx <= 0 || ps.Flash <= 0 {
 		t.Fatalf("slides away from the hit and flashes while going down: %+v", ps)
 	}
 	// asleep on the ground: lies down at once, no buckle
-	if ps := at(2, game.PawnView{ID: 1, Lying: true, Status: "alive"}); ps.rot <= 0 {
+	if ps := at(2, game.PawnView{ID: 1, Lying: true, Status: "alive"}); ps.Rot <= 0 {
 		t.Fatalf("sleepers lie down without buckling: %+v", ps)
 	}
 	// every lying pawn draws its standing south figure, turned
@@ -492,9 +492,9 @@ func TestFallRotatesThenLies(t *testing.T) {
 		q := p
 		q.Status = st
 		var keys []string
-		r.lit.onDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
+		r.lit.OnDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
 		r.drawLyingPawn(screen, q, pawnVisual{facing: faceEast, lyingSince: r.present - 3}, 2, 2, 64)
-		r.lit.onDraw = nil
+		r.lit.OnDraw = nil
 		if len(keys) == 0 || keys[0] != "pawn/body_south" {
 			t.Fatalf("%s: lying figure is the south sprite: %v", st, keys)
 		}
@@ -517,8 +517,8 @@ func TestAnimalBiteKickSynced(t *testing.T) {
 	}
 	bite := game.TraceView{FromX: 5, FromY: 5, ToX: 6, ToY: 5, Age: 1, Melee: true, Hit: true, Attacker: 7, Target: 2, Weapon: "bite"}
 	s, ps := frame(wolf, bite)
-	if s != "_bite3" || ps.dx <= 0 {
-		t.Fatalf("the snap lands on the trace and lunges at the target: %s %v", s, ps.dx)
+	if s != "_bite3" || ps.Dx <= 0 {
+		t.Fatalf("the snap lands on the trace and lunges at the target: %s %v", s, ps.Dx)
 	}
 	bite.Age = 6
 	if s, _ := frame(wolf, bite); s != "_bite4" {
@@ -526,8 +526,8 @@ func TestAnimalBiteKickSynced(t *testing.T) {
 	}
 	buck := game.AnimalView{ID: 8, Species: "dustbuck", X: 5, Y: 5, Action: game.ActionKick, AttackCycle: 1}
 	kick := game.TraceView{FromX: 5, FromY: 5, ToX: 4, ToY: 5, Age: 1, Melee: true, Attacker: 8, Weapon: "hooves"}
-	if s, ps := frame(buck, kick); s != "_kick3" || ps.dx >= 0 {
-		t.Fatalf("kick west lands on the trace: %s %v", s, ps.dx)
+	if s, ps := frame(buck, kick); s != "_kick3" || ps.Dx >= 0 {
+		t.Fatalf("kick west lands on the trace: %s %v", s, ps.Dx)
 	}
 	buck.Action = ""
 	if s, _ := frame(buck, kick); s != "_kick3" {
@@ -556,7 +556,7 @@ func TestAnimalFlinch(t *testing.T) {
 	if s := r.animalFrame(an); s != "_flinch1" {
 		t.Fatalf("flinch1: %s", s)
 	}
-	if ps := r.animalPose(an); ps.dy <= 0 || ps.flash <= 0 {
+	if ps := r.animalPose(an); ps.Dy <= 0 || ps.Flash <= 0 {
 		t.Fatalf("hit from the north: staggers south and flashes: %+v", ps)
 	}
 	r = combatRenderer(105, nil, game.WorldView{Animals: []game.AnimalView{an}})
@@ -571,7 +571,7 @@ func TestAnimalFlinch(t *testing.T) {
 	old := game.AnimalView{ID: 7, X: 6, Y: 5}
 	r = combatRenderer(100, nil, game.WorldView{})
 	r.animState().trackReactions([]game.TraceView{{FromX: 5, FromY: 5, ToX: 6, ToY: 5, Age: 1, Hit: true}}, 100, r.present)
-	if ps := r.animalPose(old); ps.dx <= 0 || ps.flash <= 0 {
+	if ps := r.animalPose(old); ps.Dx <= 0 || ps.Flash <= 0 {
 		t.Fatalf("fallback knockback: %+v", ps)
 	}
 }

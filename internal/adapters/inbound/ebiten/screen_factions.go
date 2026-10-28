@@ -100,8 +100,8 @@ func (a *App) pushFactions(ng *newGameState, g *globeView) {
 	rows := factionRows(ng.planet.Factions)
 	ng.facSel = -1
 	a.uiPushModal(modal{
-		id: facModalID, title: "Factions", w: facModalMaxW, h: facModalH,
-		draw: func(a *App, body rect) {
+		ID: facModalID, Title: "Factions", W: facModalMaxW, H: facModalH,
+		Draw: func(a *App, body rect) {
 			tb, hint := body.SplitV(-24)
 			a.uiLabel(hint.X, hint.Y+6, "Click a faction to find its capital on the globe.", dimText())
 			a.factionsTable(rect{X: tb.X, Y: tb.Y, W: tb.W, H: tb.H}, rows, &ng.facSel, func(r facRow) {
@@ -115,6 +115,6 @@ func (a *App) pushFactions(ng *newGameState, g *globeView) {
 				}
 			})
 		},
-		buttons: []modalButton{{id: "close", label: "Close", style: btnPrimary, closes: true}},
+		Buttons: []modalButton{{ID: "close", Label: "Close", Style: btnPrimary, Closes: true}},
 	})
 }

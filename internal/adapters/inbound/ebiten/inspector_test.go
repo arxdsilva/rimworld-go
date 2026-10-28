@@ -36,19 +36,19 @@ func findButton(a *App, id string) (button, bool) {
 	}
 	for _, c := range a.pawnCommands(p.ID) {
 		if c.ID == id {
-			return button{id: c.ID, label: c.Label + a.keyHint(c.Hotkey), disabled: c.Disabled, reason: c.Reason, tip: c.Desc, selected: c.On}, true
+			return button{ID: c.ID, Label: c.Label + a.keyHint(c.Hotkey), Disabled: c.Disabled, Reason: c.Reason, Tip: c.Desc, Selected: c.On}, true
 		}
 	}
 	spec := a.pawnPane(p.ID)
 	for _, tb := range spec.Tabs {
 		if tb.ID == id {
-			return button{id: tb.ID, label: tb.Label, disabled: tb.Disabled, reason: tb.Reason,
-				selected: a.inspectTab == strings.TrimPrefix(tb.ID, "inspector.")}, true
+			return button{ID: tb.ID, Label: tb.Label, Disabled: tb.Disabled, Reason: tb.Reason,
+				Selected: a.inspectTab == strings.TrimPrefix(tb.ID, "inspector.")}, true
 		}
 	}
 	for _, c := range spec.Chips {
 		if c.ID == id {
-			return button{id: c.ID, label: c.Label, disabled: c.Disabled, reason: c.Reason, tip: c.Tip}, true
+			return button{ID: c.ID, Label: c.Label, Disabled: c.Disabled, Reason: c.Reason, Tip: c.Tip}, true
 		}
 	}
 	return button{}, false
@@ -102,19 +102,19 @@ func TestClearOrdersDisabledWhenEmpty(t *testing.T) {
 	a, g, id := liveColony(t, 0)
 	selectPawn(t, a, id)
 	b, _ := findButton(a, "pawn.clearorders")
-	if !b.disabled || b.reason != "no queued orders" {
+	if !b.Disabled || b.Reason != "no queued orders" {
 		t.Fatalf("empty queue: %+v", b)
 	}
 	g.Enqueue(command.Command{Kind: command.MovePawn, Pawn: uint64(id), X: 8, Y: 8})
 	g.Enqueue(command.Command{Kind: command.MovePawn, Pawn: uint64(id), X: 9, Y: 9, Queue: true})
 	g.ApplyPending()
 	b, _ = findButton(a, "pawn.clearorders")
-	if b.disabled {
+	if b.Disabled {
 		t.Fatalf("queued order should enable Clear orders: %+v", b)
 	}
 	a.applyClick("pawn.clearorders")
 	b, _ = findButton(a, "pawn.clearorders")
-	if !b.disabled {
+	if !b.Disabled {
 		t.Fatalf("queue should be empty after clearing: %+v", b)
 	}
 }
@@ -165,7 +165,7 @@ func TestEquipNearbyNoWeapons(t *testing.T) {
 	a, _, id := liveColony(t, 0)
 	selectPawn(t, a, id)
 	b, ok := findButton(a, "cmd.pawn.equip")
-	if !ok || !b.disabled || b.reason != "nothing to equip in reach" {
+	if !ok || !b.Disabled || b.Reason != "nothing to equip in reach" {
 		t.Fatalf("empty list = %+v ok=%v", b, ok)
 	}
 }

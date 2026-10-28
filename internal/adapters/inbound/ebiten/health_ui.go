@@ -216,7 +216,7 @@ func (a *App) healthCare(p game.PawnView, r rect, h game.HealthView) {
 		if a.renderer != nil && a.renderer.art != nil && bw >= 2*r.H {
 			if img := a.renderer.art.Image(careIcon(c), color.NRGBA{}); img != nil {
 				ix, iy, is := float64(x+3), float64(r.Y+3), float64(r.H-6)
-				u.queue(func(dst *ebiten.Image) { drawIconCS(dst, img, ix, iy, is, noCS) })
+				u.Queue(func(dst *ebiten.Image) { drawIconCS(dst, img, ix, iy, is, noCS) })
 			}
 		}
 		x += bw
@@ -241,7 +241,7 @@ func (a *App) healthArrow(id string, r rect, up bool, o btnOpts) bool {
 		c = uiTextDisabled
 	}
 	cx, cy := r.Center()
-	a.uiSt().queue(func(dst *ebiten.Image) {
+	a.uiSt().Queue(func(dst *ebiten.Image) {
 		if up {
 			uiFillPoly(dst, [][2]float32{{cx - 5, cy + 3}, {cx + 5, cy + 3}, {cx, cy - 4}}, c, true)
 			return
@@ -320,7 +320,7 @@ func (a *App) healthConds(r rect, conds []game.ConditionView) {
 		imm := rect{X: r.X, Y: sev.Bottom() + 2, W: r.W - 4, H: healthCondBarH}
 		sevW := sev.W * float32(min(max(c.SevPct, 0), 100)) / 100
 		immW := imm.W * float32(min(max(c.ImmPct, 0), 100)) / 100
-		u.queue(func(dst *ebiten.Image) {
+		u.Queue(func(dst *ebiten.Image) {
 			fillRect(dst, sev, uiSliderTrack)
 			fillRect(dst, imm, uiSliderTrack)
 			if sevW > 0 {
@@ -334,7 +334,7 @@ func (a *App) healthConds(r rect, conds []game.ConditionView) {
 		if due != "" {
 			label += ", " + due
 		}
-		u.add(uiWidget{id: healthCondID(i), r: rect{X: r.X, Y: y, W: r.W, H: healthCondRowH - 2}, label: label, tip: c.Tip})
+		u.Add(uiWidget{ID: healthCondID(i), R: rect{X: r.X, Y: y, W: r.W, H: healthCondRowH - 2}, Label: label, Tip: c.Tip})
 		y += healthCondRowH
 	}
 }
@@ -358,7 +358,7 @@ func (a *App) healthCaps(r rect, h game.HealthView) {
 		st := tsBody
 		st.Color = healthStateColor(h)
 		a.uiLabel(r.X, y, fitText(h.State, st, r.W-4), st)
-		u.add(uiWidget{id: healthStateID, r: rect{X: r.X, Y: y, W: r.W, H: step}, label: h.State, tip: healthStateTip(h)})
+		u.Add(uiWidget{ID: healthStateID, R: rect{X: r.X, Y: y, W: r.W, H: step}, Label: h.State, Tip: healthStateTip(h)})
 		y += step + 2
 	}
 	if (h.BloodLossPct > 0 || h.BleedPerDay > 0) && y+step+healthBloodBarH+2 <= r.Bottom() {
@@ -374,13 +374,13 @@ func (a *App) healthCaps(r rect, h game.HealthView) {
 		bar := rect{X: r.X, Y: y + step, W: r.W - 4, H: healthBloodBarH}
 		fill := bar
 		fill.W = bar.W * float32(min(max(h.BloodLossPct, 0), 100)) / 100
-		u.queue(func(dst *ebiten.Image) {
+		u.Queue(func(dst *ebiten.Image) {
 			fillRect(dst, bar, uiSliderTrack)
 			if fill.W > 0 {
 				fillRect(dst, fill, c)
 			}
 		})
-		u.add(uiWidget{id: healthBloodID, r: rect{X: r.X, Y: y, W: r.W, H: step + healthBloodBarH}, label: label, tip: healthBloodTip(h)})
+		u.Add(uiWidget{ID: healthBloodID, R: rect{X: r.X, Y: y, W: r.W, H: step + healthBloodBarH}, Label: label, Tip: healthBloodTip(h)})
 		y += step + healthBloodBarH + 4
 	}
 	line := func(label string, pct int, c color.RGBA) {
@@ -402,7 +402,7 @@ func (a *App) healthCaps(r rect, h game.HealthView) {
 		y0 := y
 		line(c.Label, c.Pct, healthCapColor(c.Pct))
 		if y > y0 && c.Tip != "" {
-			u.add(uiWidget{id: healthCapID(i), r: rect{X: r.X, Y: y0, W: r.W, H: step}, label: fmt.Sprintf("%s: %d%%", c.Label, c.Pct), tip: c.Tip})
+			u.Add(uiWidget{ID: healthCapID(i), R: rect{X: r.X, Y: y0, W: r.W, H: step}, Label: fmt.Sprintf("%s: %d%%", c.Label, c.Pct), Tip: c.Tip})
 		}
 	}
 	if len(h.Drugs) > 0 && y+2*step <= r.Bottom() {
@@ -444,7 +444,7 @@ func (a *App) healthParts(r rect, parts []game.PartView) {
 		}
 		shown = append(shown, vis{i, y})
 	}
-	u.queue(func(dst *ebiten.Image) {
+	u.Queue(func(dst *ebiten.Image) {
 		sub := clipTo(dst, area.View)
 		for _, v := range shown {
 			paintPartRow(sub, rect{X: area.View.X, Y: v.y, W: area.View.W, H: healthRowH}, parts[rows[v.i]], v.i%2 == 1)
@@ -463,7 +463,7 @@ func (a *App) healthParts(r rect, parts []game.PartView) {
 		if pt.TendTip != "" { // MED-02: each wound's tend quality
 			tip += "\n" + pt.TendTip
 		}
-		u.add(uiWidget{id: fmt.Sprintf("health.part.%d", rows[v.i]), r: hit, label: healthPartLine(pt), tip: tip})
+		u.Add(uiWidget{ID: fmt.Sprintf("health.part.%d", rows[v.i]), R: hit, Label: healthPartLine(pt), Tip: tip})
 	}
 }
 
@@ -532,7 +532,7 @@ func (a *App) healthOps(p game.PawnView, r rect, h game.HealthView) {
 			cs := tsBody
 			cs.Color, cs.Align = healthChanceColor(op.ChancePct), alignRight
 			a.uiLabel(cr.Right()-2, y+4, healthChanceText(op), cs)
-			a.uiSt().add(uiWidget{id: healthChanceID(op.Slot), r: cr, label: healthChanceText(op), tip: op.ChanceTip})
+			a.uiSt().Add(uiWidget{ID: healthChanceID(op.Slot), R: cr, Label: healthChanceText(op), Tip: op.ChanceTip})
 		}
 		downR := rect{X: upR.Right() + 2, Y: y, W: healthArrowW, H: healthOpRowH - 2}
 		upWhy, downWhy := "", ""
@@ -677,8 +677,8 @@ func (a *App) openHealthPicker(id entity.EntityID) {
 		return pickerOptions(h)
 	}
 	a.uiPushModal(modal{
-		id: healthPickID, title: "Add operation", w: healthPickW, h: healthPickH,
-		draw: func(a *App, r rect) {
+		ID: healthPickID, Title: "Add operation", W: healthPickW, H: healthPickH,
+		Draw: func(a *App, r rect) {
 			opts := options()
 			if sel >= len(opts) {
 				sel = -1
@@ -696,15 +696,15 @@ func (a *App) openHealthPicker(id entity.EntityID) {
 				Tip: func(i int) string { return healthOptionTip(opts[i]) },
 			})
 		},
-		buttons: []modalButton{
-			{id: "health.addop.ok", label: "Add", style: btnPrimary, closes: true,
-				disabled: func() string {
+		Buttons: []modalButton{
+			{ID: "health.addop.ok", Label: "Add", Style: btnPrimary, Closes: true,
+				Disabled: func() string {
 					if sel < 0 || sel >= len(options()) {
 						return "Pick an operation first."
 					}
 					return ""
 				},
-				onClick: func() {
+				OnClick: func() {
 					opts := options()
 					if sel < 0 || sel >= len(opts) {
 						return
@@ -713,7 +713,7 @@ func (a *App) openHealthPicker(id entity.EntityID) {
 					a.shell.Enqueue(command.Command{Kind: command.AddOperation, Pawn: uint64(id),
 						Index: int(o.op), Build: uint8(o.part), Stuff: uint8(o.item)})
 				}},
-			{id: "health.addop.cancel", label: "Cancel", closes: true},
+			{ID: "health.addop.cancel", Label: "Cancel", Closes: true},
 		},
 	})
 }

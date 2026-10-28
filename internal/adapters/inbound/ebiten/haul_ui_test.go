@@ -138,7 +138,7 @@ func TestGroupMarkForHaulingButton(t *testing.T) {
 		t.Fatal("no group")
 	}
 	b, ok := hasButton(a.groupButtons(), "group.haulmark")
-	if !ok || b.label != "Mark for hauling" {
+	if !ok || b.Label != "Mark for hauling" {
 		t.Fatalf("button = %+v", b)
 	}
 	click(t, a, "group.haulmark")
@@ -255,18 +255,18 @@ func TestGroupInspectorAtScale1_5(t *testing.T) {
 		t.Fatal("no group commands")
 	}
 	for i, b := range bs {
-		r := rect{X: b.x, Y: b.y, W: b.w, H: b.h}
+		r := rect{X: b.X, Y: b.Y, W: b.W, H: b.H}
 		if r.X < l.Pane.Right() || r.Right() > l.Global.X || r.Bottom() > l.Tabs.Y {
-			t.Errorf("%s (%+v) leaves the grid band", b.id, r)
+			t.Errorf("%s (%+v) leaves the grid band", b.ID, r)
 		}
-		for _, word := range strings.Fields(b.label) {
-			if w := textW(word, tsSmall); w > b.w-8 {
-				t.Errorf("%s label word %q (%.0fpx) does not fit %.0fpx", b.id, word, w, b.w)
+		for _, word := range strings.Fields(b.Label) {
+			if w := textW(word, tsSmall); w > b.W-8 {
+				t.Errorf("%s label word %q (%.0fpx) does not fit %.0fpx", b.ID, word, w, b.W)
 			}
 		}
 		for _, o := range bs[:i] {
-			if b.x < o.x+o.w && o.x < b.x+b.w && b.y < o.y+o.h && o.y < b.y+b.h {
-				t.Errorf("%s overlaps %s", b.id, o.id)
+			if b.X < o.X+o.W && o.X < b.X+b.W && b.Y < o.Y+o.H && o.Y < b.Y+b.H {
+				t.Errorf("%s overlaps %s", b.ID, o.ID)
 			}
 		}
 	}

@@ -128,7 +128,7 @@ func (r *Renderer) drawDefenseParts(dst *ebiten.Image, b *game.BuildingView, key
 		if !r.reducedMotion {
 			if p := recoilPush(b.ShotAge); p > 0 {
 				d := turretAimVec(aimFrame(b.AimDir))
-				wx, wy = wx-d.x*p, wy-d.y*p
+				wx, wy = wx-d.X*p, wy-d.Y*p
 			}
 		}
 		r.powerTrace("gun", gk)

@@ -120,7 +120,7 @@ func (a *App) scenarioUI(sw, sh int) {
 	u := a.uiSt()
 
 	if a.in.Ctrl() && a.in.Key("F") {
-		u.tabTo = "scen.search"
+		u.TabTo = "scen.search"
 	}
 	a.uiTextField("scen.search", L.search, &ng.search, textFieldSpec{MaxLen: 40, Placeholder: "Search scenarios (Ctrl+F)"})
 	a.scenarioList(ng, L.list)
@@ -200,7 +200,7 @@ func (a *App) scenarioList(ng *newGameState, r rect) {
 	u := a.uiSt()
 	rows, total := ng.rows(a.cfg.Scenarios != nil)
 	a.uiPanel(r)
-	if u.focus == "scen.list" && !a.uiModalOpen() {
+	if u.Focus == "scen.list" && !a.uiModalOpen() {
 		step := 0
 		switch {
 		case a.keyRepeat("ArrowUp"):
@@ -228,7 +228,7 @@ func (a *App) scenarioList(ng *newGameState, r rect) {
 	}
 	selKey := ng.selectedKey()
 	entries := ng.entries
-	u.queue(func(dst *ebiten.Image) {
+	u.Queue(func(dst *ebiten.Image) {
 		sub := clipTo(dst, area.View)
 		for _, v := range shown {
 			a.paintScenarioRow(sub, area.View, v.row, v.y, entries, selKey)
@@ -249,9 +249,9 @@ func (a *App) scenarioList(ng *newGameState, r rect) {
 		}
 		idx := v.row.entry
 		hit := row.Intersect(area.View)
-		w := uiWidget{id: "scen.row." + e.key, r: hit, label: e.name}
+		w := uiWidget{ID: "scen.row." + e.key, R: hit, Label: e.name}
 		pick := func() {
-			u.focus = "scen.list"
+			u.Focus = "scen.list"
 			if entries[idx].err != "" {
 				a.uiDeny("Can't read this file (" + entries[idx].err + ")")
 				return
@@ -259,11 +259,11 @@ func (a *App) scenarioList(ng *newGameState, r rect) {
 			ng.sel = idx
 			a.uiOK()
 		}
-		w.click = pick
+		w.Click = pick
 		if e.err != "" {
-			w.tip = "Can't read this file\n" + e.err
+			w.Tip = "Can't read this file\n" + e.err
 		}
-		if u.add(w) && a.uiPress(hit) {
+		if u.Add(w) && a.uiPress(hit) {
 			pick()
 		}
 	}
@@ -304,7 +304,7 @@ func (a *App) paintScenarioRow(dst *ebiten.Image, view rect, row scenRow, y floa
 		}
 	case rowEntry:
 		e := entries[row.entry]
-		hover := u.hot == "scen.row."+e.key
+		hover := u.Hot == "scen.row."+e.key
 		switch {
 		case e.key == selKey:
 			fillRect(dst, r.Inset(2), uiBtnSelected)
@@ -416,8 +416,8 @@ func (a *App) openScenarioFiles() {
 			Less: func(x, y int) bool { return files[x].Modified < files[y].Modified }},
 	}
 	a.uiPushModal(modal{
-		id: "scen.load", title: "Load scenario file", w: 560, h: 420,
-		draw: func(a *App, body rect) {
+		ID: "scen.load", Title: "Load scenario file", W: 560, H: 420,
+		Draw: func(a *App, body rect) {
 			tb := body
 			if msg != "" || len(files) == 0 {
 				note := msg
@@ -437,6 +437,6 @@ func (a *App) openScenarioFiles() {
 				ng.selectKey("file." + name)
 			}
 		},
-		buttons: []modalButton{{id: "cancel", label: "Cancel", closes: true}},
+		Buttons: []modalButton{{ID: "cancel", Label: "Cancel", Closes: true}},
 	})
 }

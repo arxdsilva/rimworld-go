@@ -124,7 +124,7 @@ func (a *App) uiTable(id string, r rect, cols []tableCol, n int, sel *int, rowH 
 			col, desc := a.uiTableSort(id)
 			a.uiTableSetSort(id, i, col == i && !desc)
 		}
-		if u.add(uiWidget{id: id + ".col." + c.ID, r: cr[i], click: cycle}) && a.uiPress(cr[i]) {
+		if u.Add(uiWidget{ID: id + ".col." + c.ID, R: cr[i], Click: cycle}) && a.uiPress(cr[i]) {
 			cycle()
 			a.uiOK()
 		}
@@ -166,25 +166,25 @@ func (a *App) uiTable(id string, r rect, cols []tableCol, n int, sel *int, rowH 
 	if changed && disp >= 0 && disp < len(order) {
 		*sel = order[disp]
 	}
-	first, last := listVisible(u.scroll[bodyID], body.H, rowH, n)
+	first, last := listVisible(u.Scroll[bodyID], body.H, rowH, n)
 	for ci, c := range cols {
 		if c.Tip == nil {
 			continue
 		}
 		for di := first; di <= last; di++ {
-			cell := rect{X: rcols[ci].X, Y: body.Y + float32(di)*rowH - u.scroll[bodyID], W: rcols[ci].W, H: rowH}
-			u.add(uiWidget{id: id + ".cell." + uiNum(di) + "." + c.ID, r: cell.Intersect(body), tip: c.Tip(order[di])})
+			cell := rect{X: rcols[ci].X, Y: body.Y + float32(di)*rowH - u.Scroll[bodyID], W: rcols[ci].W, H: rowH}
+			u.Add(uiWidget{ID: id + ".cell." + uiNum(di) + "." + c.ID, R: cell.Intersect(body), Tip: c.Tip(order[di])})
 		}
 	}
 	col, desc := a.uiTableSort(id)
-	u.queue(func(dst *ebiten.Image) {
+	u.Queue(func(dst *ebiten.Image) {
 		fillRect(dst, head, uiBtn)
 		strokeRect(dst, head, uiBtnBorder)
 		for i, c := range cols {
 			st := tsLabel
 			st.Color = uiHeading
 			cell := cr[i]
-			if c.Less != nil && u.hot == id+".col."+c.ID {
+			if c.Less != nil && u.Hot == id+".col."+c.ID {
 				fillRect(dst, cell, uiBtnHover)
 			}
 			drawCell(dst, cell, c.Title, c.Align, st)

@@ -49,8 +49,8 @@ func TestAlliesNotInColonistBar(t *testing.T) {
 		t.Fatalf("barPawns = %d, want 2", n)
 	}
 	for _, b := range a.colonistBarButtons(a.sw, a.sh) {
-		if b.id == barSlotID(3) || b.id == barSlotID(4) {
-			t.Fatalf("an ally has a bar slot: %s", b.id)
+		if b.ID == barSlotID(3) || b.ID == barSlotID(4) {
+			t.Fatalf("an ally has a bar slot: %s", b.ID)
 		}
 	}
 }
@@ -64,7 +64,7 @@ func TestCommsAidEmitsRequest(t *testing.T) {
 	s := &dealSim{cv: v, cok: true}
 	a, f := dealApp(t, s)
 	f.Frame(t, a)
-	if w, ok := a.uiSt().find("comms.3.aid"); !ok || w.disabled || w.label != "Request aid · 20 goodwill" {
+	if w, ok := a.uiSt().Find("comms.3.aid"); !ok || w.Disabled || w.Label != "Request aid · 20 goodwill" {
 		t.Fatalf("aid = %+v ok=%v", w, ok)
 	}
 	clickID(t, a, f, "comms.3.aid")

@@ -381,8 +381,8 @@ func TestOptionsRenderScaleRow(t *testing.T) {
 	a.LayoutF(1280, 720)
 	a.optionsTab = "graphics"
 	b := optionBtn(t, a, "options.renderscale")
-	if b.label != "Full" || !strings.Contains(b.tip, "Half") || a.scale.WorldK() != 1 {
-		t.Fatalf("row %q tip %q world %g", b.label, b.tip, a.scale.WorldK())
+	if b.Label != "Full" || !strings.Contains(b.Tip, "Half") || a.scale.WorldK() != 1 {
+		t.Fatalf("row %q tip %q world %g", b.Label, b.Tip, a.scale.WorldK())
 	}
 	for _, want := range []struct {
 		label string
@@ -390,7 +390,7 @@ func TestOptionsRenderScaleRow(t *testing.T) {
 	}{{"3/4", 0.75}, {"Half", 0.5}, {"Full", 1}} {
 		a.applyOption("options.renderscale")
 		g := store.s.Graphics
-		if got := optionBtn(t, a, "options.renderscale").label; got != want.label || g.RenderScale != want.k || a.scale.WorldK() != want.k {
+		if got := optionBtn(t, a, "options.renderscale").Label; got != want.label || g.RenderScale != want.k || a.scale.WorldK() != want.k {
 			t.Fatalf("after a click: %q, stored %g, world %g; want %q %g", got, g.RenderScale, a.scale.WorldK(), want.label, want.k)
 		}
 		if g.Quality != config.QualityCustom || !strings.Contains(strings.Join(g.Chosen, ","), "renderscale") {

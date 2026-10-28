@@ -237,12 +237,12 @@ func (a *App) openZoneRename(z game.ZoneView) {
 		a.shell.Enqueue(command.Command{Kind: command.RenameZone, Target: uint64(zid), Name: zoneRenameName(name)})
 	}
 	a.uiPushModal(modal{
-		id: zoneRenameModalID, title: "Rename " + strings.ToLower(zoneKindName(z)), w: 380, h: 150,
-		draw: func(a *App, body rect) {
+		ID: zoneRenameModalID, Title: "Rename " + strings.ToLower(zoneKindName(z)), W: 380, H: 150,
+		Draw: func(a *App, body rect) {
 			a.uiLabel(body.X, body.Y, "Name it, or leave it empty for the default.", dimText())
 			if !focused { // the field takes the keyboard on its first frame
 				focused = true
-				a.uiSt().tabTo = zoneRenameFieldID
+				a.uiSt().TabTo = zoneRenameFieldID
 			}
 			field := rect{X: body.X, Y: body.Y + 26, W: body.W, H: 28}
 			if _, committed := a.uiTextField(zoneRenameFieldID, field, &name, textFieldSpec{
@@ -251,9 +251,9 @@ func (a *App) openZoneRename(z game.ZoneView) {
 				a.uiCloseModal(zoneRenameModalID)
 			}
 		},
-		buttons: []modalButton{
-			{id: "ok", label: "Rename", style: btnPrimary, closes: true, onClick: func() { send(a) }},
-			{id: "cancel", label: "Cancel", closes: true},
+		Buttons: []modalButton{
+			{ID: "ok", Label: "Rename", Style: btnPrimary, Closes: true, OnClick: func() { send(a) }},
+			{ID: "cancel", Label: "Cancel", Closes: true},
 		},
 	})
 }

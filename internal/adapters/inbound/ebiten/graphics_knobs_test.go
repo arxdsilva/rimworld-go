@@ -22,26 +22,26 @@ func TestShadowsOffSkipsTheLayer(t *testing.T) {
 	w := shadowWorld(nil)
 	w.Buildings = []game.BuildingView{{Kind: "wall", X: 2, Y: 2, W: 1, H: 1}}
 	r := shadowRenderer(t, w)
-	r.lit.light = testLight(0.4, 0.4, 0.3)
+	r.lit.Light = testLight(0.4, 0.4, 0.3)
 	dst := ebiten.NewImage(640, 400)
 	r.drawShadows(dst, w, 640, 400, r.tilePx())
-	if r.env.shadow.composites != 1 || r.env.shadow.layer == nil {
-		t.Fatalf("fixture: composites %d, layer %v; the shadow layer should draw with shadows on", r.env.shadow.composites, r.env.shadow.layer)
+	if r.env.shadow.Composites != 1 || r.env.shadow.Layer == nil {
+		t.Fatalf("fixture: composites %d, layer %v; the shadow layer should draw with shadows on", r.env.shadow.Composites, r.env.shadow.Layer)
 	}
-	r.env.shadow.setOff(true)
-	if r.env.shadow.layer != nil || r.env.shadow.scratch != nil {
+	r.env.shadow.SetOff(true)
+	if r.env.shadow.Layer != nil || r.env.shadow.Scratch != nil {
 		t.Fatal("turning shadows off should free the screen-sized layers")
 	}
 	for i := 0; i < 3; i++ {
 		r.drawShadows(dst, w, 640, 400, r.tilePx())
 	}
-	if r.env.shadow.composites != 1 || r.env.shadow.layer != nil {
-		t.Fatalf("shadows off still drew: composites %d, layer %v", r.env.shadow.composites, r.env.shadow.layer)
+	if r.env.shadow.Composites != 1 || r.env.shadow.Layer != nil {
+		t.Fatalf("shadows off still drew: composites %d, layer %v", r.env.shadow.Composites, r.env.shadow.Layer)
 	}
-	r.env.shadow.setOff(false)
+	r.env.shadow.SetOff(false)
 	r.drawShadows(dst, w, 640, 400, r.tilePx())
-	if r.env.shadow.composites != 2 {
-		t.Fatalf("shadows back on: composites %d, want 2", r.env.shadow.composites)
+	if r.env.shadow.Composites != 2 {
+		t.Fatalf("shadows back on: composites %d, want 2", r.env.shadow.Composites)
 	}
 }
 
@@ -63,25 +63,25 @@ func TestLightingOffDrawsPlainWithoutPairs(t *testing.T) {
 	sprite := normalSprite(art)
 	r := &Renderer{art: art}
 	r.view.W = roomWorld()
-	r.lit.light = lightAt(12, summerDay, "clear", 0)
+	r.lit.Light = lightAt(12, summerDay, "clear", 0)
 	dst := ebiten.NewImage(64, 64)
-	r.lit.off = true
+	r.lit.Off = true
 	for i := 0; i < 3; i++ {
 		r.drawLit(dst, sprite, ebiten.GeoM{}, noCS, 0, 0)
 	}
-	if n := r.lit.pairs.size(); n != 0 {
+	if n := r.lit.Pairs.Size(); n != 0 {
 		t.Fatalf("lighting off made %d lit pairs", n)
 	}
-	if r.lit.opts.Images[0] != nil {
+	if r.lit.Opts.Images[0] != nil {
 		t.Fatal("lighting off still drew through lit.kage")
 	}
-	if r.lit.calls != 3 {
-		t.Fatalf("draw calls = %d, want the 3 plain draws counted", r.lit.calls)
+	if r.lit.Calls != 3 {
+		t.Fatalf("draw calls = %d, want the 3 plain draws counted", r.lit.Calls)
 	}
-	r.lit.off = false
+	r.lit.Off = false
 	r.drawLit(dst, sprite, ebiten.GeoM{}, noCS, 0, 0)
-	if n := r.lit.pairs.size(); n != 1 || r.lit.opts.Images[0] == nil {
-		t.Fatalf("lighting back on: %d pairs, shader image %v", n, r.lit.opts.Images[0])
+	if n := r.lit.Pairs.Size(); n != 1 || r.lit.Opts.Images[0] == nil {
+		t.Fatalf("lighting back on: %d pairs, shader image %v", n, r.lit.Opts.Images[0])
 	}
 }
 
@@ -94,12 +94,12 @@ func TestLightingOffBloodyFigureStillShades(t *testing.T) {
 	sprite := normalSprite(art)
 	r := &Renderer{art: art}
 	r.view.W = roomWorld()
-	r.lit.light = lightAt(12, summerDay, "clear", 0)
-	r.lit.off = true
+	r.lit.Light = lightAt(12, summerDay, "clear", 0)
+	r.lit.Off = true
 	r.figureBlood = 1.5
 	r.drawLit(ebiten.NewImage(64, 64), sprite, ebiten.GeoM{}, noCS, 0, 0)
-	if r.lit.opts.Images[0] != sprite || r.lit.pairs.size() != 0 {
-		t.Fatalf("bloody figure: shader image is the sprite %v, %d pairs; want a flat shader draw", r.lit.opts.Images[0] == sprite, r.lit.pairs.size())
+	if r.lit.Opts.Images[0] != sprite || r.lit.Pairs.Size() != 0 {
+		t.Fatalf("bloody figure: shader image is the sprite %v, %d pairs; want a flat shader draw", r.lit.Opts.Images[0] == sprite, r.lit.Pairs.Size())
 	}
 }
 
@@ -134,20 +134,20 @@ func TestLightingOffGrassKeepsTuftsLitByTheTileLight(t *testing.T) {
 	t.Parallel()
 	w := grassWorld(6, 6, 100)
 	r, _ := grassRenderer(w, 6, 6)
-	r.lit.light = lightAt(8, summerDay, "clear", 0)
+	r.lit.Light = lightAt(8, summerDay, "clear", 0)
 	batchAt(r, 6, 6, 64, 9)
 	on := r.lod.grass.verts[0]
-	if r.lit.opts.Images[0] == nil {
+	if r.lit.Opts.Images[0] == nil {
 		t.Fatal("fixture: lit tufts should draw through the shader")
 	}
-	r.lit.opts.Images[0] = nil
-	r.lit.off = true
+	r.lit.Opts.Images[0] = nil
+	r.lit.Off = true
 	batchAt(r, 6, 6, 64, 9)
 	off := r.lod.grass.verts[0]
-	if r.lit.opts.Images[0] != nil {
+	if r.lit.Opts.Images[0] != nil {
 		t.Fatal("lighting off still drew tufts through lit.kage")
 	}
-	f := litFactor(&r.lit.light, [3]float32{0, 0, 1}, 1, 0)
+	f := litFactor(&r.lit.Light, [3]float32{0, 0, 1}, 1, 0)
 	for i, got := range [3]float32{off.ColorR, off.ColorG, off.ColorB} {
 		want := [3]float32{on.ColorR, on.ColorG, on.ColorB}[i] * f[i]
 		if math.Abs(float64(got-want)) > 1e-5 {
@@ -166,25 +166,25 @@ func TestLitPairCacheEvictsLeastRecentlyUsed(t *testing.T) {
 	img := func() *ebiten.Image { return ebiten.NewImage(2, 2) }
 	a, b, c, d := img(), img(), img(), img()
 	pa, pb, pc, pd := img(), img(), img(), img()
-	cache := litPairCache{limit: 3}
-	cache.put(a, pa, 0)
-	cache.put(b, pb, 0)
-	cache.put(c, pc, 0)
-	if got, ok := cache.get(a, 0); !ok || got != pa { // a is now the most recent; b the oldest
+	cache := litPairCache{Limit: 3}
+	cache.Put(a, pa, 0)
+	cache.Put(b, pb, 0)
+	cache.Put(c, pc, 0)
+	if got, ok := cache.Get(a, 0); !ok || got != pa { // a is now the most recent; b the oldest
 		t.Fatalf("get(a) = %v %v", got, ok)
 	}
-	cache.put(d, pd, 0)
-	if cache.size() != 3 || cache.evicted != 1 {
-		t.Fatalf("size %d evicted %d, want 3 and 1", cache.size(), cache.evicted)
+	cache.Put(d, pd, 0)
+	if cache.Size() != 3 || cache.Evicted != 1 {
+		t.Fatalf("size %d evicted %d, want 3 and 1", cache.Size(), cache.Evicted)
 	}
-	if _, ok := cache.get(b, 0); ok {
+	if _, ok := cache.Get(b, 0); ok {
 		t.Fatal("the least recently used pair (b) should be gone")
 	}
 	for _, k := range []struct {
 		src, pair *ebiten.Image
 		name      string
 	}{{a, pa, "a"}, {c, pc, "c"}, {d, pd, "d"}} {
-		if got, ok := cache.get(k.src, 0); !ok || got != k.pair {
+		if got, ok := cache.Get(k.src, 0); !ok || got != k.pair {
 			t.Fatalf("%s lost: %v %v", k.name, got, ok)
 		}
 	}
@@ -204,11 +204,11 @@ func TestLitPairCapacityFollowsTheVisibleSprites(t *testing.T) {
 	// the cap follows last frame's distinct sprites
 	var c litPairCache
 	for i := 0; i < 400; i++ {
-		c.put(ebiten.NewImage(1, 1), ebiten.NewImage(1, 1), 1)
+		c.Put(ebiten.NewImage(1, 1), ebiten.NewImage(1, 1), 1)
 	}
-	c.put(ebiten.NewImage(1, 1), ebiten.NewImage(1, 1), 2) // a new frame: it now knows 400 were visible
-	if c.capacity() != 600 {
-		t.Fatalf("capacity after a 400-sprite frame = %d, want 600", c.capacity())
+	c.Put(ebiten.NewImage(1, 1), ebiten.NewImage(1, 1), 2) // a new frame: it now knows 400 were visible
+	if c.Capacity() != 600 {
+		t.Fatalf("capacity after a 400-sprite frame = %d, want 600", c.Capacity())
 	}
 }
 
@@ -220,26 +220,26 @@ func TestLitPairsStayBounded(t *testing.T) {
 	art := &artCatalog{}
 	r := &Renderer{art: art}
 	r.view.W = roomWorld()
-	r.lit.light = lightAt(12, summerDay, "clear", 0)
+	r.lit.Light = lightAt(12, summerDay, "clear", 0)
 	dst := ebiten.NewImage(64, 64)
 	n := litPairsMin + 60
 	sprites := make([]*ebiten.Image, n)
 	for i := range sprites {
 		sprites[i] = normalSprite(art)
 		r.drawLit(dst, sprites[i], ebiten.GeoM{}, noCS, 0, 0)
-		if sz := r.lit.pairs.size(); sz > litPairsMin {
+		if sz := r.lit.Pairs.Size(); sz > litPairsMin {
 			t.Fatalf("after %d sprites the cache holds %d pairs, bound %d", i+1, sz, litPairsMin)
 		}
 	}
-	if r.lit.pairs.evicted != n-litPairsMin {
-		t.Fatalf("evicted %d, want %d", r.lit.pairs.evicted, n-litPairsMin)
+	if r.lit.Pairs.Evicted != n-litPairsMin {
+		t.Fatalf("evicted %d, want %d", r.lit.Pairs.Evicted, n-litPairsMin)
 	}
 	r.drawLit(dst, sprites[0], ebiten.GeoM{}, noCS, 0, 0) // evicted: rebuilt, still bounded and correct
-	if pair := r.lit.opts.Images[0]; pair == sprites[0] || pair.Bounds().Dx() != 2*8+litGap {
+	if pair := r.lit.Opts.Images[0]; pair == sprites[0] || pair.Bounds().Dx() != 2*8+litGap {
 		t.Fatalf("an evicted sprite should draw from a rebuilt pair, got %v", pair.Bounds())
 	}
-	if r.lit.pairs.size() > litPairsMin {
-		t.Fatalf("cache grew to %d", r.lit.pairs.size())
+	if r.lit.Pairs.Size() > litPairsMin {
+		t.Fatalf("cache grew to %d", r.lit.Pairs.Size())
 	}
 }
 
@@ -248,7 +248,7 @@ func TestLitPairsStayBounded(t *testing.T) {
 func waterRendererFixture() *Renderer {
 	r := &Renderer{}
 	r.view.W = roomWorld()
-	r.lit.light = lightAt(12, summerDay, "clear", 0)
+	r.lit.Light = lightAt(12, summerDay, "clear", 0)
 	r.art = &artCatalog{Sprites: map[string]*artSprite{}}
 	for v := 0; v < soilVariants; v++ {
 		img := ebiten.NewImage(16, 16)
@@ -428,7 +428,7 @@ func TestGraphicsPresetsDriveEveryKnob(t *testing.T) {
 			got := struct {
 				shadowsOff, lightingOff, simpleWater bool
 				grass                                string
-			}{r.env.shadow.off, r.lit.off, r.water.simple, r.lod.grass.level}
+			}{r.env.shadow.Off, r.lit.Off, r.water.simple, r.lod.grass.level}
 			if got != want {
 				t.Fatalf("%s: knobs %+v, want %+v", tier, got, want)
 			}

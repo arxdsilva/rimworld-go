@@ -63,10 +63,10 @@ func TestUIContrast(t *testing.T) {
 	black := color.RGBA{0, 0, 0, 0xFF}
 	panelW, panelK := overOpaque(uiPanel, white), overOpaque(uiPanel, black)
 	tipW, tutorW := overOpaque(uiTooltip, white), overOpaque(uiTutorPanel, white)
-	kitHover, _, kitHoverText := btnNormal.colors(true, false, false)
-	kitSel, _, kitSelText := btnNormal.colors(false, false, true)
-	primary, _, primaryText := btnPrimary.colors(false, false, false)
-	primaryHover, _, _ := btnPrimary.colors(true, false, false)
+	kitHover, _, kitHoverText := btnNormal.Colors(true, false, false)
+	kitSel, _, kitSelText := btnNormal.Colors(false, false, true)
+	primary, _, primaryText := btnPrimary.Colors(false, false, false)
+	primaryHover, _, _ := btnPrimary.Colors(true, false, false)
 	type pair struct {
 		name   string
 		fg, bg color.RGBA
@@ -226,10 +226,10 @@ func TestButtonColorsStates(t *testing.T) {
 	}{
 		{"normal", button{}, false, uiBtn, uiBtnBorder, uiText},
 		{"hover", button{}, true, uiBtnHover, uiBtnBorder, uiText},
-		{"selected", button{selected: true}, false, uiBtnSelected, uiAccent, uiText},
-		{"selected hover", button{selected: true}, true, uiBtnSelected, uiAccent, uiText},
-		{"disabled", button{disabled: true}, true, uiBtnDisabled, uiBtnBorder, uiTextDisabled},
-		{"disabled selected", button{disabled: true, selected: true}, false, uiBtnDisabled, uiBtnBorder, uiTextDisabled},
+		{"selected", button{Selected: true}, false, uiBtnSelected, uiAccent, uiText},
+		{"selected hover", button{Selected: true}, true, uiBtnSelected, uiAccent, uiText},
+		{"disabled", button{Disabled: true}, true, uiBtnDisabled, uiBtnBorder, uiTextDisabled},
+		{"disabled selected", button{Disabled: true, Selected: true}, false, uiBtnDisabled, uiBtnBorder, uiTextDisabled},
 	}
 	for _, c := range cases {
 		fill, border, label := buttonColors(c.b, c.hover)

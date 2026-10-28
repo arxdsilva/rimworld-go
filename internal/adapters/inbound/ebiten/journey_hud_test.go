@@ -28,11 +28,11 @@ func (j *journey) clickWith(id string, mods input.Mod) {
 	j.t.Helper()
 	j.update(1)
 	for _, b := range j.a.layoutHits(j.a.sw, j.a.sh) {
-		if b.id != id {
+		if b.ID != id {
 			continue
 		}
 		s := float32(j.a.scale.S)
-		j.f.Cur.Mx, j.f.Cur.My = int((b.x+b.w/2)*s), int((b.y+b.h/2)*s)
+		j.f.Cur.Mx, j.f.Cur.My = int((b.X+b.W/2)*s), int((b.Y+b.H/2)*s)
 		j.f.Click(j.t, j.a, mbLeft, mods)
 		j.f.Cur.Mx, j.f.Cur.My = -50, -50
 		return
@@ -219,8 +219,8 @@ func TestJourneyHudResourcesCollapse(t *testing.T) {
 	j.update(1)
 	var id string
 	for _, b := range j.a.layoutHits(j.a.sw, j.a.sh) {
-		if strings.HasPrefix(b.id, "res.cat.") {
-			id = b.id
+		if strings.HasPrefix(b.ID, "res.cat.") {
+			id = b.ID
 			break
 		}
 	}
@@ -324,7 +324,7 @@ func TestJourneyHudAlertJump(t *testing.T) {
 	j.update(2)
 	id := ""
 	for _, b := range j.a.alertButtons(j.a.sw) {
-		id = b.id
+		id = b.ID
 		break
 	}
 	if id == "" {

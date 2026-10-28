@@ -125,29 +125,29 @@ func TestHUDRoofButtonToggles(t *testing.T) {
 	sw, sh := a.sw, a.sh
 	find := func() button {
 		for _, b := range a.colonyButtons(sw, sh) {
-			if b.id == roofButtonID {
+			if b.ID == roofButtonID {
 				return b
 			}
 		}
 		t.Fatal("hud.roof button missing")
 		return button{}
 	}
-	if find().selected {
+	if find().Selected {
 		t.Fatal("button active while overlay off")
 	}
 	click(t, a, roofButtonID)
-	if !a.renderer.roofOverlay || !find().selected {
+	if !a.renderer.roofOverlay || !find().Selected {
 		t.Fatal("click should turn the overlay on and show active")
 	}
 	click(t, a, roofButtonID)
-	if a.renderer.roofOverlay || find().selected {
+	if a.renderer.roofOverlay || find().Selected {
 		t.Fatal("second click should turn it off")
 	}
 	b := find()
-	if g := a.hud().Global; b.x < g.X || b.x+b.w > g.Right() || b.y < g.Y || b.y+b.h > g.Bottom() {
+	if g := a.hud().Global; b.X < g.X || b.X+b.W > g.Right() || b.Y < g.Y || b.Y+b.H > g.Bottom() {
 		t.Fatalf("button %+v should sit inside Global %+v", b, g)
 	}
-	if !a.colonyChromeHit(int(b.x)+1, int(b.y)+1, sw, sh) {
+	if !a.colonyChromeHit(int(b.X)+1, int(b.Y)+1, sw, sh) {
 		t.Fatal("button should consume the pointer")
 	}
 }

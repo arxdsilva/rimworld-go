@@ -73,11 +73,11 @@ func TestResourceRowsComeFromStoredGoods(t *testing.T) {
 	for i, b := range bs {
 		kind := []string{"wood", "steel", "meal"}[i]
 		label := []string{"Wood", "Steel", "Meal"}[i]
-		if b.id != "res.row."+kind || b.tip != label {
-			t.Errorf("button %d = %q tip %q, want res.row.%s tip %q", i, b.id, b.tip, kind, label)
+		if b.ID != "res.row."+kind || b.Tip != label {
+			t.Errorf("button %d = %q tip %q, want res.row.%s tip %q", i, b.ID, b.Tip, kind, label)
 		}
-		if r := (rect{X: b.x, Y: b.y, W: b.w, H: b.h}); r.X < l.Resources.X || r.Right() > l.Resources.Right() || r.Y < l.Resources.Y || r.Bottom() > l.Resources.Bottom() {
-			t.Errorf("button %s %+v leaves the list %+v", b.id, r, l.Resources)
+		if r := (rect{X: b.X, Y: b.Y, W: b.W, H: b.H}); r.X < l.Resources.X || r.Right() > l.Resources.Right() || r.Y < l.Resources.Y || r.Bottom() > l.Resources.Bottom() {
+			t.Errorf("button %s %+v leaves the list %+v", b.ID, r, l.Resources)
 		}
 	}
 	// the legacy chrome is gone: the layout covers the list
@@ -132,7 +132,7 @@ func TestResourcesCategorisedWithCollapsibleHeaders(t *testing.T) {
 	}
 	var ids []string
 	for _, b := range a.resourceButtons() {
-		ids = append(ids, b.id)
+		ids = append(ids, b.ID)
 	}
 	wantIDs := []string{"res.cat.Food", "res.row.meal", "res.row.meat", "res.cat.Materials", "res.row.wood", "res.row.steel", "res.cat.Zebra things", "res.row.odd"}
 	if !slices.Equal(ids, wantIDs) {
@@ -188,22 +188,22 @@ func TestResourcesScrollWithTheWheel(t *testing.T) {
 		if len(bs) == 0 {
 			return ""
 		}
-		return bs[0].id
+		return bs[0].ID
 	}
 	if got := first(); got != "res.row.kind00" {
 		t.Fatalf("first visible row = %q before scrolling", got)
 	}
 	// the buttons are the visible rows only, clipped to the list
 	for _, b := range a.resourceButtons() {
-		if b.y < r.Y-0.01 || b.y+b.h > r.Bottom()+0.01 {
-			t.Fatalf("button %s %v..%v leaves the list %v..%v", b.id, b.y, b.y+b.h, r.Y, r.Bottom())
+		if b.Y < r.Y-0.01 || b.Y+b.H > r.Bottom()+0.01 {
+			t.Fatalf("button %s %v..%v leaves the list %v..%v", b.ID, b.Y, b.Y+b.H, r.Y, r.Bottom())
 		}
 	}
 	zoom := a.renderer.smooth
 	f.Cur.Mx, f.Cur.My = int(r.X+20), int(r.Y+20)
 	f.Cur.WheelY = -1
 	f.Frame(t, a)
-	off := a.uiSt().scroll[resScrollID]
+	off := a.uiSt().Scroll[resScrollID]
 	if off <= 0 {
 		t.Fatalf("the wheel over the list left the offset at %v", off)
 	}
@@ -218,11 +218,11 @@ func TestResourcesScrollWithTheWheel(t *testing.T) {
 		f.Cur.WheelY = -1
 		f.Frame(t, a)
 	}
-	if off = a.uiSt().scroll[resScrollID]; off != maxOff {
+	if off = a.uiSt().Scroll[resScrollID]; off != maxOff {
 		t.Fatalf("offset = %v after scrolling to the end, want %v", off, maxOff)
 	}
 	bs := a.resourceButtons()
-	if last := bs[len(bs)-1]; last.id != "res.row.kind39" || last.y+last.h > r.Bottom()+0.01 {
+	if last := bs[len(bs)-1]; last.ID != "res.row.kind39" || last.Y+last.H > r.Bottom()+0.01 {
 		t.Fatalf("last row at the end = %+v", last)
 	}
 	// and back to the top
@@ -230,7 +230,7 @@ func TestResourcesScrollWithTheWheel(t *testing.T) {
 		f.Cur.WheelY = 1
 		f.Frame(t, a)
 	}
-	if off = a.uiSt().scroll[resScrollID]; off != 0 {
+	if off = a.uiSt().Scroll[resScrollID]; off != 0 {
 		t.Fatalf("offset = %v after scrolling back, want 0", off)
 	}
 	// a wheel away from the list belongs to the camera
@@ -238,7 +238,7 @@ func TestResourcesScrollWithTheWheel(t *testing.T) {
 	f.Cur.Mx, f.Cur.My = 640, 400
 	f.Cur.WheelY = -1
 	f.Frame(t, a)
-	if off = a.uiSt().scroll[resScrollID]; off != 0 {
+	if off = a.uiSt().Scroll[resScrollID]; off != 0 {
 		t.Fatalf("a wheel over the map scrolled the list to %v", off)
 	}
 	if a.renderer.smooth == before {
@@ -419,11 +419,11 @@ func TestResourceRowButtonsDoNotCollideWithEachOther(t *testing.T) {
 	a, _ := htResApp(t, game.WorldView{Stored: htManyStored(12)})
 	bs := a.resourceButtons()
 	for i := 1; i < len(bs); i++ {
-		if bs[i].y < bs[i-1].y+bs[i-1].h-0.01 {
-			t.Fatalf("buttons %s and %s overlap", bs[i-1].id, bs[i].id)
+		if bs[i].Y < bs[i-1].Y+bs[i-1].H-0.01 {
+			t.Fatalf("buttons %s and %s overlap", bs[i-1].ID, bs[i].ID)
 		}
 	}
-	if !strings.HasPrefix(bs[0].id, "res.row.") || strconv.Itoa(len(bs)) != "12" {
-		t.Fatalf("buttons = %d, first %q", len(bs), bs[0].id)
+	if !strings.HasPrefix(bs[0].ID, "res.row.") || strconv.Itoa(len(bs)) != "12" {
+		t.Fatalf("buttons = %d, first %q", len(bs), bs[0].ID)
 	}
 }

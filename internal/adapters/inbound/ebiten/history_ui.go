@@ -47,10 +47,10 @@ func historyRows(es []game.HistoryEntryView) []historyRow {
 // historyTabUI makes the HUD's History tab open the window.
 func (a *App) historyTabUI(sw, sh int) {
 	for _, b := range a.hudTabButtons(sw, sh) {
-		if b.id != ids.TabHistory || b.disabled {
+		if b.ID != ids.TabHistory || b.Disabled {
 			continue
 		}
-		a.uiSt().add(uiWidget{id: b.id, label: b.label, r: rect{X: b.x, Y: b.y, W: b.w, H: b.h}, click: a.toggleHistory})
+		a.uiSt().Add(uiWidget{ID: b.ID, Label: b.Label, R: rect{X: b.X, Y: b.Y, W: b.W, H: b.H}, Click: a.toggleHistory})
 	}
 }
 
@@ -64,9 +64,9 @@ func (a *App) openHistory() {
 		return
 	}
 	a.uiPushModal(modal{
-		id: historyModalID, title: "History", w: 640, h: 520,
-		modeless: true, anchor: (*App).windowAnchor,
-		draw: func(a *App, body rect) { a.historyBody(body) },
+		ID: historyModalID, Title: "History", W: 640, H: 520,
+		Modeless: true, Anchor: (*App).windowAnchor,
+		Draw: func(a *App, body rect) { a.historyBody(body) },
 	})
 }
 
@@ -93,7 +93,7 @@ func (a *App) historyBody(body rect) {
 		}
 		shown = append(shown, vis{i, y})
 	}
-	a.uiSt().queue(func(dst *ebiten.Image) {
+	a.uiSt().Queue(func(dst *ebiten.Image) {
 		sub := clipTo(dst, area.View)
 		for _, v := range shown {
 			r := rows[v.i]
@@ -114,15 +114,15 @@ func (a *App) historyBody(body rect) {
 	})
 	for _, v := range shown {
 		r := rows[v.i]
-		w := uiWidget{id: fmt.Sprintf("history.row.%d", v.i), label: r.Text,
-			r: rect{X: area.View.X, Y: v.y, W: area.View.W, H: historyRowH}.Intersect(area.View)}
+		w := uiWidget{ID: fmt.Sprintf("history.row.%d", v.i), Label: r.Text,
+			R: rect{X: area.View.X, Y: v.y, W: area.View.W, H: historyRowH}.Intersect(area.View)}
 		if len(r.Pawns) == 0 {
-			a.uiSt().add(w)
+			a.uiSt().Add(w)
 			continue
 		}
 		first := r.Pawns[0]
-		w.click = func() { a.focusHistoryPawn(first) }
-		if a.uiSt().add(w) && a.uiPress(w.r) {
+		w.Click = func() { a.focusHistoryPawn(first) }
+		if a.uiSt().Add(w) && a.uiPress(w.R) {
 			a.uiOK()
 			a.focusHistoryPawn(first)
 		}

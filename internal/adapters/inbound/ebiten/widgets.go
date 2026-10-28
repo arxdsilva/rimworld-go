@@ -164,26 +164,26 @@ func lerpRGBA(a, b color.RGBA, t float64) color.RGBA {
 }
 
 type button struct {
-	id       string
-	label    string
-	x, y     float32
-	w, h     float32
-	disabled bool
-	reason   string
-	selected bool
-	quiet    bool   // disabled without the "(disabled)" suffix (the reason shows on hover)
-	tip      string // hover line for an enabled button (e.g. its hotkey)
+	ID       string
+	Label    string
+	X, Y     float32
+	W, H     float32
+	Disabled bool
+	Reason   string
+	Selected bool
+	Quiet    bool   // disabled without the "(disabled)" suffix (the reason shows on hover)
+	Tip      string // hover line for an enabled button (e.g. its hotkey)
 }
 
-func (b button) contains(mx, my int) bool {
+func (b button) Contains(mx, my int) bool {
 	x, y := float32(mx), float32(my)
-	return x >= b.x && x < b.x+b.w && y >= b.y && y < b.y+b.h
+	return x >= b.X && x < b.X+b.W && y >= b.Y && y < b.Y+b.H
 }
 
 type buttonSpec struct {
-	id, label string
-	disabled  bool
-	reason    string
+	ID, Label string
+	Disabled  bool
+	Reason    string
 	selected  bool
 	w, h      float32
 }
@@ -200,15 +200,15 @@ func stackButtons(x, y, w, h, gap float32, specs []buttonSpec) []button {
 			bh = h
 		}
 		out = append(out, button{
-			id:       s.id,
-			label:    s.label,
-			x:        x,
-			y:        cy,
-			w:        bw,
-			h:        bh,
-			disabled: s.disabled,
-			reason:   s.reason,
-			selected: s.selected,
+			ID:       s.ID,
+			Label:    s.Label,
+			X:        x,
+			Y:        cy,
+			W:        bw,
+			H:        bh,
+			Disabled: s.Disabled,
+			Reason:   s.Reason,
+			Selected: s.selected,
 		})
 		cy += bh + gap
 	}
@@ -224,9 +224,9 @@ func drawPanel(dst *ebiten.Image, x, y, w, h float32) {
 // wins over selected (dim label, no accent edge), selected over hover.
 func buttonColors(b button, hover bool) (fill, border, label color.RGBA) {
 	switch {
-	case b.disabled:
+	case b.Disabled:
 		return uiBtnDisabled, uiBtnBorder, uiTextDisabled
-	case b.selected:
+	case b.Selected:
 		return uiBtnSelected, uiAccent, uiText
 	case hover:
 		return uiBtnHover, uiBtnBorder, uiText
@@ -236,11 +236,11 @@ func buttonColors(b button, hover bool) (fill, border, label color.RGBA) {
 
 func drawButton(dst *ebiten.Image, b button, hover bool) {
 	fill, border, _ := buttonColors(b, hover)
-	uiFillRect(dst, b.x, b.y, b.w, b.h, fill, false)
-	uiStrokeRect(dst, b.x, b.y, b.w, b.h, 1, border, false)
-	label := b.label
-	if b.disabled && label != "" && !b.quiet {
-		if w, _ := measure(label+"  (disabled)", tsBody); w <= float64(b.w)-16 {
+	uiFillRect(dst, b.X, b.Y, b.W, b.H, fill, false)
+	uiStrokeRect(dst, b.X, b.Y, b.W, b.H, 1, border, false)
+	label := b.Label
+	if b.Disabled && label != "" && !b.Quiet {
+		if w, _ := measure(label+"  (disabled)", tsBody); w <= float64(b.W)-16 {
 			label += "  (disabled)" // else the dimmed fill and the hover reason say it
 		}
 	}
@@ -252,20 +252,20 @@ func drawButton(dst *ebiten.Image, b button, hover bool) {
 // "-", "+", "x" stubs), else ellipsized.
 func drawButtonLabel(dst *ebiten.Image, label string, b button) {
 	tw, _ := measure(label, tsBody)
-	bw := float64(b.w)
-	x := float64(b.x) + 10
+	bw := float64(b.W)
+	x := float64(b.X) + 10
 	switch {
 	case tw <= bw-20:
 	case tw <= bw-4:
-		x = float64(b.x) + (bw-tw)/2
+		x = float64(b.X) + (bw-tw)/2
 	default:
 		label = ellipsize(label, tsBody, bw-8)
-		x = float64(b.x) + 4
+		x = float64(b.X) + 4
 	}
 	st := tsBody
 	_, _, c := buttonColors(b, false)
 	st.Color = c
-	drawText(dst, label, x, float64(b.y)+(float64(b.h)-lineH(tsBody))/2+1, st)
+	drawText(dst, label, x, float64(b.Y)+(float64(b.H)-lineH(tsBody))/2+1, st)
 }
 
 // drawCentered prints s in st centred on (cx, cy).
@@ -303,7 +303,7 @@ func drawLabel(dst *ebiten.Image, x, y int, text string) {
 
 func hitButton(buttons []button, mx, my int) (button, bool) {
 	for i := range buttons {
-		if buttons[i].contains(mx, my) {
+		if buttons[i].Contains(mx, my) {
 			return buttons[i], true
 		}
 	}

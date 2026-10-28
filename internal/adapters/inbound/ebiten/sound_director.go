@@ -108,9 +108,9 @@ func (a *App) play(id string, vol, pan float64) {
 // uiSound plays an interface sound for a click on b.
 func (a *App) uiSound(b button) {
 	switch {
-	case b.disabled:
+	case b.Disabled:
 		a.cfg.Sound.Play("ui.deny", 1, 0)
-	case strings.HasPrefix(b.id, "options.") && b.id != "options.back":
+	case strings.HasPrefix(b.ID, "options.") && b.ID != "options.back":
 		// applyOption plays its own toggle
 	default:
 		a.cfg.Sound.Play("ui.click", 1, 0)
@@ -129,7 +129,7 @@ const sliderTickSteps = 20
 // continuous one (or per sp.Step), so a drag ticks as it moves, not every
 // frame.
 func (a *App) sliderCue(sp sliderSpec, lo, hi, old, cur float64) {
-	if sp.discrete() {
+	if sp.Discrete() {
 		a.play("ui.slider_tick", 1, 0)
 		return
 	}

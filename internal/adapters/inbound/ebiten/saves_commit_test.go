@@ -139,10 +139,10 @@ func TestCommitmentPauseButtons(t *testing.T) {
 	if !lacksButton(bs, "pause.save") {
 		t.Fatal("commitment has no plain Save")
 	}
-	if b := buttonByID(t, bs, "pause.savequit"); b.label != "Save & Quit to Menu" || b.disabled {
+	if b := buttonByID(t, bs, "pause.savequit"); b.Label != "Save & Quit to Menu" || b.Disabled {
 		t.Fatalf("save & quit button %+v", b)
 	}
-	if b := buttonByID(t, bs, "pause.load"); !b.disabled || b.reason != "Commitment: one timeline" {
+	if b := buttonByID(t, bs, "pause.load"); !b.Disabled || b.Reason != "Commitment: one timeline" {
 		t.Fatalf("load button %+v", b)
 	}
 	click(t, a, "pause.load")
@@ -154,14 +154,14 @@ func TestCommitmentPauseButtons(t *testing.T) {
 	click(t, a, "pause.options")
 	click(t, a, "options.tab.gameplay")
 	dev := buttonByID(t, a.optionsButtons(a.size()), "options.devmode")
-	if !dev.disabled || dev.reason != "Commitment mode" {
+	if !dev.Disabled || dev.Reason != "Commitment mode" {
 		t.Fatalf("dev mode row %+v", dev)
 	}
 	click(t, a, "options.devmode")
 	if a.settings.Gameplay.DevMode || a.hint != "Commitment mode" {
 		t.Fatalf("dev mode toggled in commitment (hint %q)", a.hint)
 	}
-	if b := buttonByID(t, a.optionsButtons(a.size()), "options.autosave"); b.disabled {
+	if b := buttonByID(t, a.optionsButtons(a.size()), "options.autosave"); b.Disabled {
 		t.Fatal("only developer mode is locked")
 	}
 }
@@ -246,10 +246,10 @@ func TestReloadAnytimeUnchanged(t *testing.T) {
 	slot := a.saveSlot
 	a.apply(intent{kind: intentPause})
 	bs := a.pauseButtons(a.size())
-	if b := buttonByID(t, bs, "pause.save"); b.label != "Save" || b.disabled {
+	if b := buttonByID(t, bs, "pause.save"); b.Label != "Save" || b.Disabled {
 		t.Fatalf("save button %+v", b)
 	}
-	if b := buttonByID(t, bs, "pause.load"); b.disabled {
+	if b := buttonByID(t, bs, "pause.load"); b.Disabled {
 		t.Fatalf("load button %+v", b)
 	}
 	if !lacksButton(bs, "pause.savequit") {
@@ -279,7 +279,7 @@ func TestReloadAnytimeUnchanged(t *testing.T) {
 	a.apply(intent{kind: intentPause})
 	click(t, a, "pause.options")
 	click(t, a, "options.tab.gameplay")
-	if b := buttonByID(t, a.optionsButtons(a.size()), "options.devmode"); b.disabled {
+	if b := buttonByID(t, a.optionsButtons(a.size()), "options.devmode"); b.Disabled {
 		t.Fatal("developer mode locked without commitment")
 	}
 	_ = a.Update()
@@ -296,7 +296,7 @@ func TestLoadListTagsCommitment(t *testing.T) {
 	t.Parallel()
 	a := testApp(&stubSim{w: 4, h: 4})
 	a.slots = []SaveSlot{{Name: "a", Path: "a", Commitment: true}, {Name: "b", Path: "b"}}
-	if bs := a.loadButtons(1280, 720); len(bs) != 3 || bs[1].disabled {
+	if bs := a.loadButtons(1280, 720); len(bs) != 3 || bs[1].Disabled {
 		t.Fatalf("a commitment save is listed and loadable: %+v", bs)
 	}
 }

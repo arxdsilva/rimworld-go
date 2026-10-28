@@ -304,7 +304,7 @@ func (a *App) drawAnimalLogTab(screen *ebiten.Image, an game.AnimalView, inner r
 		return
 	}
 	lh := logLineH()
-	off := a.uiSt().scroll[animalLogID]
+	off := a.uiSt().Scroll[animalLogID]
 	for i, row := range rows {
 		y := inner.Y + float32(i*lh) - off
 		if y+float32(lh) < inner.Y || y > inner.Bottom() {

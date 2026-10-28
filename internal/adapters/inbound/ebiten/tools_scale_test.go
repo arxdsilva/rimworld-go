@@ -65,18 +65,18 @@ func TestArchitectCategoryClickAtScale(t *testing.T) {
 	a.openArchitect()
 	var cat button
 	for _, b := range a.architectButtons() {
-		if b.id == "arch.cat.zones" {
+		if b.ID == "arch.cat.zones" {
 			cat = b
 		}
 	}
-	if cat.id == "" {
+	if cat.ID == "" {
 		t.Fatal("no Zones button in the category panel")
 	}
 	l := a.hud()
-	if !l.ArchCats.Contains(cat.x+cat.w/2, cat.y+cat.h/2) {
+	if !l.ArchCats.Contains(cat.X+cat.W/2, cat.Y+cat.H/2) {
 		t.Fatalf("Zones button %+v is outside ArchCats %+v", cat, l.ArchCats)
 	}
-	clickAtLogical(t, a, f, cat.x+cat.w/2, cat.y+cat.h/2)
+	clickAtLogical(t, a, f, cat.X+cat.W/2, cat.Y+cat.H/2)
 	if a.archCat != "zones" {
 		t.Fatalf("archCat = %q after a category click at s=1.5, want zones", a.archCat)
 	}
@@ -108,15 +108,15 @@ func TestWorkCellClickAtScale(t *testing.T) {
 	a.workOpen, a.panelMode = true, "work"
 	var cell button
 	for _, b := range a.workButtons() {
-		if len(b.id) > 10 && b.id[:10] == "work.cell." && !b.disabled {
+		if len(b.ID) > 10 && b.ID[:10] == "work.cell." && !b.Disabled {
 			cell = b
 			break
 		}
 	}
-	if cell.id == "" {
+	if cell.ID == "" {
 		t.Fatal("no live work cell")
 	}
-	clickAtLogical(t, a, f, cell.x+cell.w/2, cell.y+cell.h/2)
+	clickAtLogical(t, a, f, cell.X+cell.W/2, cell.Y+cell.H/2)
 	n := 0
 	for _, c := range rs.cmds {
 		if c.Kind == command.SetWorkPriority {
@@ -147,7 +147,7 @@ func TestOrdersMenuEntryClickAtScale(t *testing.T) {
 		t.Fatal("no menu entries")
 	}
 	b := btns[0] // "Go here"
-	clickAtLogical(t, a, f, b.x+b.w/2, b.y+b.h/2)
+	clickAtLogical(t, a, f, b.X+b.W/2, b.Y+b.H/2)
 	if a.float.open {
 		t.Fatal("clicking an order entry at s=1.5 should close the menu")
 	}

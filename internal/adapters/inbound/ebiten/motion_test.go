@@ -647,10 +647,10 @@ func TestTracerFromInterpolatedShooter(t *testing.T) {
 	m := r.pawnMotion(1)
 	w := r.game.World()
 	from, to := traceEnds(r.traceSpots(w), game.TraceView{FromX: 6, FromY: 5, ToX: 9, ToY: 9})
-	if from.x != m.X+0.5 || from.y != m.Y+0.3 {
+	if from.X != m.X+0.5 || from.Y != m.Y+0.3 {
 		t.Fatalf("tracer leaves the drawn shooter: %+v vs %v,%v", from, m.X, m.Y)
 	}
-	if to.x != 9.5 || to.y != 9.4 {
+	if to.X != 9.5 || to.Y != 9.4 {
 		t.Fatalf("empty target cell: %+v", to)
 	}
 }
@@ -734,8 +734,8 @@ func TestAnimTUsesSteppedTicks(t *testing.T) {
 	r.advance()
 	r.setAlpha(alphaMax)
 	prev, prevTick := r.animT(), float64(r.game.Tick())
-	if got := r.advanceTicks(3, func(done int) bool { return done < 2 }); got != 2 || r.mo.stepped != 2 {
-		t.Fatalf("advanceTicks done %d stepped %d, want 2", got, r.mo.stepped)
+	if got := r.advanceTicks(3, func(done int) bool { return done < 2 }); got != 2 || r.mo.Stepped != 2 {
+		t.Fatalf("advanceTicks done %d stepped %d, want 2", got, r.mo.Stepped)
 	}
 	r.setAlpha(0)
 	if got, want := r.animT(), float64(r.game.Tick())-2; got != want {

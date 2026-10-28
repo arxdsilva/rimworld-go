@@ -49,7 +49,7 @@ func learnDone(a *App, id string) bool { return slices.Contains(learnedNow(a), i
 
 func learnHasButton(bs []button, id string) bool {
 	for _, b := range bs {
-		if b.id == id {
+		if b.ID == id {
 			return true
 		}
 	}
@@ -59,7 +59,7 @@ func learnHasButton(bs []button, id string) bool {
 func learnRowIDs(a *App) []string {
 	var out []string
 	for _, b := range a.learnButtons() {
-		if id, ok := strings.CutPrefix(b.id, "learn.lesson."); ok {
+		if id, ok := strings.CutPrefix(b.ID, "learn.lesson."); ok {
 			out = append(out, id)
 		}
 	}
@@ -409,7 +409,7 @@ func TestCollapseKeepsAHeaderOnlyAndPersists(t *testing.T) {
 		t.Fatalf("Learn rect = %+v", got)
 	}
 	bs := a.learnButtons()
-	if len(bs) != 1 || bs[0].id != "learn.toggle" {
+	if len(bs) != 1 || bs[0].ID != "learn.toggle" {
 		t.Fatalf("collapsed buttons = %+v, want only the toggle", bs)
 	}
 	if rc := a.learnChrome(); len(rc) != 0 {
@@ -606,8 +606,8 @@ func TestOptionsResetLessonsAction(t *testing.T) {
 		t.Fatal("reset must not turn the helper off")
 	}
 	for _, b := range a.optionsButtons(a.sw, a.sh) {
-		if b.id == "options.learnhelper.reset" {
-			if b.label != "Reset lessons" || b.tip == "" {
+		if b.ID == "options.learnhelper.reset" {
+			if b.Label != "Reset lessons" || b.Tip == "" {
 				t.Fatalf("reset button = %+v", b)
 			}
 			return
@@ -677,7 +677,7 @@ func TestDetailCardStaysLeftOfThePanelAndOnScreen(t *testing.T) {
 						t.Errorf("%s: Got it %+v is not inside the card %+v", l.id, done, card)
 					}
 					for _, b := range a.learnButtons() {
-						if b.id == "learn.done."+l.id && (b.x != done.X || b.y != done.Y || b.w != done.W || b.h != done.H) {
+						if b.ID == "learn.done."+l.id && (b.X != done.X || b.Y != done.Y || b.W != done.W || b.H != done.H) {
 							t.Errorf("%s: the Got it button %+v is not the laid-out rect %+v", l.id, b, done)
 						}
 					}

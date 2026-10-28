@@ -21,7 +21,7 @@ import (
 // Footstep dust comes from animate, at the feet on contact frames.
 func (r *Renderer) syncAnimals(w game.WorldView) {
 	tick := r.game.Tick()
-	running := r.mo.stepped > 0
+	running := r.mo.Stepped > 0
 	l := &r.lod
 	for i := range w.Animals {
 		an := &w.Animals[i]
@@ -33,12 +33,12 @@ func (r *Renderer) syncAnimals(w game.WorldView) {
 		}
 		prev, seen := r.last[an.ID]
 		v := nextVisualStep(prev, seen, an.X, an.Y, tick, r.present, an.StepTicks)
-		k := r.mo.observe(an.ID, animalMoView(*an), v.facing)
-		want, moving := k.wantFacing(r.mo.ref)
+		k := r.mo.Observe(an.ID, animalMoView(*an), v.facing)
+		want, moving := k.WantFacing(r.mo.Ref)
 		if !moving {
 			want = faceAttack(pawnVisual{facing: want}, w.Traces, an.X, an.Y).facing
 		}
-		v.facing = k.turn(want, an.ID, running)
+		v.facing = k.Turn(want, an.ID, running)
 		r.last[an.ID] = v
 	}
 }
@@ -102,10 +102,10 @@ func (r *Renderer) drawAnimalOverlays(screen *ebiten.Image, w game.WorldView, ti
 			}
 			r.drawHostileMarker(screen, game.PawnView{}, wx, wy, lift, tile)
 		case an.Designated: // the icon (a half-size tile) centred where the chevron would be
-			spin := pose{px: 0.5, py: 0.5, sx: 0.5, sy: 0.5, rot: float64(r.present) * 0.035}
+			spin := pose{Px: 0.5, Py: 0.5, Sx: 0.5, Sy: 0.5, Rot: float64(r.present) * 0.035}
 			r.drawSpritePose(screen, "overlay/designation_hunt", color.NRGBA{}, wx, wy-lift-0.5, tile, spin)
 		case an.TameMark:
-			bob := pose{px: 0.5, py: 0.5, sx: 0.5, sy: 0.5}
+			bob := pose{Px: 0.5, Py: 0.5, Sx: 0.5, Sy: 0.5}
 			r.drawSpritePose(screen, "overlay/designation_tame", color.NRGBA{}, wx, wy-lift-0.5-0.05*math.Sin(float64(r.present)*0.08), tile, bob)
 		}
 		if an.Tame && an.Name != "" && tile >= stackCountMinTile {
@@ -288,7 +288,7 @@ func traceEnds(spots map[[2]int]vec, tr game.TraceView) (from, to vec) {
 	if !ok {
 		to = vec{float64(tr.ToX), float64(tr.ToY)}
 	}
-	return vec{from.x + 0.5, from.y + 0.3}, vec{to.x + 0.5, to.y + 0.4}
+	return vec{from.X + 0.5, from.Y + 0.3}, vec{to.X + 0.5, to.Y + 0.4}
 }
 
 // drawTraces renders recent attacks: rifle tracers from the muzzle with
@@ -308,8 +308,8 @@ func (r *Renderer) drawTraces(screen *ebiten.Image, w game.WorldView, tile float
 	for _, rt := range rs {
 		tr := rt.TraceView
 		from, to := traceEnds(spots, tr)
-		fx, fy := r.worldToScreenF(from.x, from.y)
-		tx, ty := r.worldToScreenF(to.x, to.y)
+		fx, fy := r.worldToScreenF(from.X, from.Y)
+		tx, ty := r.worldToScreenF(to.X, to.Y)
 		if tr.Melee {
 			if age := traceAge(rt, swingTicks); age < swingTicks {
 				r.drawMeleeTrail(screen, tr, 1-age/swingTicks, tx, ty, t)
@@ -335,7 +335,7 @@ func (r *Renderer) drawTraces(screen *ebiten.Image, w game.WorldView, tile float
 		}
 		mx, my := fx+ux*t*0.5, fy+uy*t*0.5 // muzzle
 		if mz, ok := r.traceMuzzle(tr); ok {
-			mx, my = r.worldToScreenF(mz.x, mz.y)
+			mx, my = r.worldToScreenF(mz.X, mz.Y)
 		}
 		if age := traceAge(rt, tracerTicks); age < tracerTicks {
 			k := 1 - age/tracerTicks
@@ -411,10 +411,10 @@ func (r *Renderer) meleeTrail(tr game.TraceView) []vec {
 			return nil
 		}
 		pts = append(pts, pt)
-		lo = vec{math.Min(lo.x, pt.x), math.Min(lo.y, pt.y)}
-		hi = vec{math.Max(hi.x, pt.x), math.Max(hi.y, pt.y)}
+		lo = vec{math.Min(lo.X, pt.X), math.Min(lo.Y, pt.Y)}
+		hi = vec{math.Max(hi.X, pt.X), math.Max(hi.Y, pt.Y)}
 	}
-	if math.Hypot(hi.x-lo.x, hi.y-lo.y) < 0.08 {
+	if math.Hypot(hi.X-lo.X, hi.Y-lo.Y) < 0.08 {
 		return nil
 	}
 	return pts
@@ -425,8 +425,8 @@ func (r *Renderer) meleeTrail(tr game.TraceView) []vec {
 func (r *Renderer) drawMeleeTrail(screen *ebiten.Image, tr game.TraceView, k float64, tx, ty, t float32) {
 	if pts := r.meleeTrail(tr); pts != nil {
 		for i := 1; i < len(pts); i++ {
-			ax, ay := r.worldToScreenF(pts[i-1].x, pts[i-1].y)
-			bx, by := r.worldToScreenF(pts[i].x, pts[i].y)
+			ax, ay := r.worldToScreenF(pts[i-1].X, pts[i-1].Y)
+			bx, by := r.worldToScreenF(pts[i].X, pts[i].Y)
 			vector.StrokeLine(screen, ax, ay, bx, by, 3, fade(swingClr, k*float64(i)/float64(len(pts)-1)), true)
 		}
 		return
@@ -459,8 +459,8 @@ func (r *Renderer) settleVisuals() {
 		v.fromX, v.fromY = v.x, v.y
 		r.last[id] = v
 	}
-	for _, k := range r.mo.tracks {
-		k.settle()
+	for _, k := range r.mo.Tracks {
+		k.Settle()
 	}
 }
 
@@ -630,35 +630,35 @@ func breathe(h float64, p uint64, id entity.EntityID) float64 {
 // animalPose: idle breathing, a slight lean into a run, a lunge into each
 // bite or kick, and a stagger away from the attacker when hit.
 func (r *Renderer) animalPose(an game.AnimalView) pose {
-	ps := pose{px: figurePivotX, py: figurePivotY}
+	ps := pose{Px: figurePivotX, Py: figurePivotY}
 	m := r.animalMotion(an.ID)
 	if m.Blend >= minBlend {
 		if an.Gait == game.GaitRun {
 			switch m.Facing {
 			case faceEast:
-				ps.rot = runLean * gaitScale(m)
+				ps.Rot = runLean * gaitScale(m)
 			case faceWest:
-				ps.rot = -runLean * gaitScale(m)
+				ps.Rot = -runLean * gaitScale(m)
 			}
 		}
 	} else {
-		ps.sy = breathe(r.animalTop(an, 0)+figurePivotY, r.present, an.ID)
+		ps.Sy = breathe(r.animalTop(an, 0)+figurePivotY, r.present, an.ID)
 	}
 	if st, age, struck := r.lastStrike(an.ID, an.X, an.Y, meleeTicks); struck && age < meleeTicks {
 		k := math.Sin(math.Pi * age / meleeTicks)
 		ux, uy := unit(float64(st.ToX-st.FromX), float64(st.ToY-st.FromY))
-		ps.dx, ps.dy = ps.dx+ux*0.2*k, ps.dy+uy*0.2*k
+		ps.Dx, ps.Dy = ps.Dx+ux*0.2*k, ps.Dy+uy*0.2*k
 	}
 	if an.HitTick == 0 {
 		dx, dy, fl := struckNudge(r.animState().reactions(r.present, nil), an.X, an.Y)
-		ps.dx, ps.dy, ps.flash = ps.dx+dx, ps.dy+dy, fl
+		ps.Dx, ps.Dy, ps.Flash = ps.Dx+dx, ps.Dy+dy, fl
 		return ps
 	}
 	if age, ok := r.hitAge(an.ID, an.HitTick, an.X, an.Y); ok && age < hitTicks {
 		ux, uy := awayFrom(an.X, an.Y, an.HitFromX, an.HitFromY, m.Facing)
 		k := staggerK(age)
-		ps.dx, ps.dy = ps.dx+ux*staggerDist*k, ps.dy+uy*staggerDist*k
-		ps.flash = float32(1 - age/hitTicks)
+		ps.Dx, ps.Dy = ps.Dx+ux*staggerDist*k, ps.Dy+uy*staggerDist*k
+		ps.Flash = float32(1 - age/hitTicks)
 	}
 	return ps
 }

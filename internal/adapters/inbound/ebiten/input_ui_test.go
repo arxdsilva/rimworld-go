@@ -132,8 +132,8 @@ func TestRDraftsAndShiftRTogglesRoof(t *testing.T) {
 	if !a.renderer.roofOverlay || len(cmdsOf(s, command.DraftPawn)) != 1 {
 		t.Fatal("Shift+R toggles the roof overlay and drafts nobody")
 	}
-	if b, _ := findButton(a, "pawn.draft"); b.label != "Draft [R]" {
-		t.Fatalf("draft button = %q, want the live key", b.label)
+	if b, _ := findButton(a, "pawn.draft"); b.Label != "Draft [R]" {
+		t.Fatalf("draft button = %q, want the live key", b.Label)
 	}
 }
 
@@ -434,7 +434,7 @@ func TestRoomStatsOverlayAndCard(t *testing.T) {
 	if !a.rooms {
 		t.Fatal("G turns the room overlay on")
 	}
-	if b, ok := hasButton(a.colonyButtons(a.size()), roomsButtonID); !ok || !b.selected || !strings.Contains(b.tip, "[G]") {
+	if b, ok := hasButton(a.colonyButtons(a.size()), roomsButtonID); !ok || !b.Selected || !strings.Contains(b.Tip, "[G]") {
 		t.Fatalf("HUD rooms button %+v", b)
 	}
 	lines := roomCardLines(s.world.Rooms[0])
@@ -622,14 +622,14 @@ func TestControlsTabRebindsAndPersists(t *testing.T) {
 	click(t, a, "options.tab.controls")
 	slot := ctlSlotID(input.Draft, 0)
 	for _, b := range a.layoutButtons(1280, 720) {
-		if b.id == slot {
+		if b.ID == slot {
 			goto found
 		}
 	}
 	for a.rebind.page < ctlPages(720)-1 {
 		click(t, a, "options.ctl.next")
 		for _, b := range a.layoutButtons(1280, 720) {
-			if b.id == slot {
+			if b.ID == slot {
 				goto found
 			}
 		}

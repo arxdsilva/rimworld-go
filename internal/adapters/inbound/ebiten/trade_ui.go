@@ -262,14 +262,14 @@ func (a *App) openTrade(v game.TradeView) {
 	d := newTradeDraft(v)
 	a.dealings.trade = d
 	a.uiPushModal(modal{
-		id: tradeModalID, title: "Trade with " + v.Trader, w: tradeModalW, h: tradeModalH,
-		draw:    func(a *App, body rect) { a.tradeBody(d, body) },
-		onClose: a.dismissTrade,
-		buttons: []modalButton{
-			{id: "accept", label: "Accept", style: btnPrimary,
-				disabled: d.reason, onClick: func() { a.proposeTrade(d) }},
-			{id: "reset", label: "Reset", onClick: func() { clear(d.net) }},
-			{id: "cancel", label: "Cancel", closes: true, onClick: a.dismissTrade},
+		ID: tradeModalID, Title: "Trade with " + v.Trader, W: tradeModalW, H: tradeModalH,
+		Draw:    func(a *App, body rect) { a.tradeBody(d, body) },
+		OnClose: a.dismissTrade,
+		Buttons: []modalButton{
+			{ID: "accept", Label: "Accept", Style: btnPrimary,
+				Disabled: d.reason, OnClick: func() { a.proposeTrade(d) }},
+			{ID: "reset", Label: "Reset", OnClick: func() { clear(d.net) }},
+			{ID: "cancel", Label: "Cancel", Closes: true, OnClick: a.dismissTrade},
 		},
 	})
 }

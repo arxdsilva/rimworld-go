@@ -88,8 +88,8 @@ func pressButton(t *testing.T, a *App, f *fakeInput, id string) {
 	t.Helper()
 	f.Frame(t, a)
 	for _, b := range a.layoutHits(a.sw, a.sh) {
-		if b.id == id {
-			f.clickAt(t, a, int(b.x+b.w/2), int(b.y+b.h/2))
+		if b.ID == id {
+			f.clickAt(t, a, int(b.X+b.W/2), int(b.Y+b.H/2))
 			f.Cur.Mx, f.Cur.My = -50, -50
 			return
 		}
@@ -140,7 +140,7 @@ func TestRightHoverCardsForLettersAndFoldedRows(t *testing.T) {
 	}
 
 	// no card while a modal is up or the interface is hidden
-	b.uiPushModal(modal{id: "x", title: "x", w: 200, h: 120})
+	b.uiPushModal(modal{ID: "x", Title: "x", W: 200, H: 120})
 	if _, _, ok := b.rightHover(lay); ok {
 		t.Error("card over a modal")
 	}
@@ -173,7 +173,7 @@ func TestRightColumnWrappers(t *testing.T) {
 	s := rightWorld()
 	s.world.Letters = []game.LetterView{{ID: 7, Kind: "caution", Title: "Cold snap", Text: "It freezes.", X: -1, Y: -1}}
 	a, _ := colonyApp(t, s)
-	if len(a.alertButtons(a.sw)) == 0 || len(a.letterButtons()) != 1 || a.letterButtons()[0].id != "letter.7" {
+	if len(a.alertButtons(a.sw)) == 0 || len(a.letterButtons()) != 1 || a.letterButtons()[0].ID != "letter.7" {
 		t.Errorf("alert buttons %v, letter buttons %v", a.alertButtons(a.sw), a.letterButtons())
 	}
 	img := ebiten.NewImage(a.sw, a.sh)
@@ -183,13 +183,13 @@ func TestRightColumnWrappers(t *testing.T) {
 	assertChromeIsTheLayout(t, a) // the column has no legacy chrome
 	// a message that is a letter still opens its window through openLetter
 	a.openLetter(game.MessageView{Tick: 3, Title: "Heat wave", Letter: true, Text: "It is hot.", X: 4, Y: 5})
-	if m := a.uiSt().modals; len(m) != 1 || m[0].title != "Heat wave" || len(m[0].buttons) != 2 {
+	if m := a.uiSt().Modals; len(m) != 1 || m[0].Title != "Heat wave" || len(m[0].Buttons) != 2 {
 		t.Errorf("modals %+v, want the letter with Continue and Jump to", m)
 	}
 	// a letter id that is not a number, or not in the stack, does nothing
 	a.applyLetterClick("letter.older")
 	a.applyLetterClick("letter.999")
-	if len(a.uiSt().modals) != 1 {
-		t.Errorf("modals %d after clicks on nothing", len(a.uiSt().modals))
+	if len(a.uiSt().Modals) != 1 {
+		t.Errorf("modals %d after clicks on nothing", len(a.uiSt().Modals))
 	}
 }

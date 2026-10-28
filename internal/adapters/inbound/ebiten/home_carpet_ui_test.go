@@ -31,7 +31,7 @@ func lastCmd(t *testing.T, s *stubSim) command.Command {
 
 func hasButton(bs []button, id string) (button, bool) {
 	for _, b := range bs {
-		if b.id == id {
+		if b.ID == id {
 			return b, true
 		}
 	}
@@ -152,20 +152,20 @@ func TestHomeButtonToggle(t *testing.T) {
 		return b
 	}
 	b := find()
-	if b.selected {
+	if b.Selected {
 		t.Fatal("active while overlay off")
 	}
-	if rb, _ := hasButton(a.colonyButtons(sw, sh), roofButtonID); b.x < rb.x+rb.w {
+	if rb, _ := hasButton(a.colonyButtons(sw, sh), roofButtonID); b.X < rb.X+rb.W {
 		t.Fatalf("Home button %+v overlaps Roof %+v (Home follows Roof, left to right)", b, rb)
 	}
-	if g := a.hud().Global; b.x < g.X || b.x+b.w > g.Right() || b.y < g.Y || b.y+b.h > g.Bottom() {
+	if g := a.hud().Global; b.X < g.X || b.X+b.W > g.Right() || b.Y < g.Y || b.Y+b.H > g.Bottom() {
 		t.Fatalf("button %+v should sit inside Global %+v", b, g)
 	}
-	if !a.colonyChromeHit(int(b.x)+1, int(b.y)+1, sw, sh) {
+	if !a.colonyChromeHit(int(b.X)+1, int(b.Y)+1, sw, sh) {
 		t.Fatal("button should consume the pointer")
 	}
 	a.renderer.toggleHomeOverlayIfAny()
-	if !a.renderer.homeOverlay || !find().selected {
+	if !a.renderer.homeOverlay || !find().Selected {
 		t.Fatal("toggle should turn the overlay on and show active")
 	}
 	a.renderer.toggleHomeOverlayIfAny()
@@ -188,7 +188,7 @@ func TestCarpetToolAndMaterialButtons(t *testing.T) {
 	click(t, a, "arch.tool.carpet")
 	var stuffs []button
 	for _, b := range a.architectButtons() {
-		if strings.HasPrefix(b.id, "arch.stuff.") {
+		if strings.HasPrefix(b.ID, "arch.stuff.") {
 			stuffs = append(stuffs, b)
 		}
 	}
@@ -206,10 +206,10 @@ func TestCarpetToolAndMaterialButtons(t *testing.T) {
 			t.Fatalf("no button for %q in %v", w, stuffs)
 		}
 	}
-	if !stuffs[0].selected || a.toolStuff(tool) != bv.Stuffs[0] {
+	if !stuffs[0].Selected || a.toolStuff(tool) != bv.Stuffs[0] {
 		t.Fatalf("default material should be selected first: %q", a.toolStuff(tool))
 	}
-	if stuffs[0].x+stuffs[0].w > stuffs[1].x || stuffs[len(stuffs)-1].x+stuffs[len(stuffs)-1].w > a.hud().ArchDesc.Right() {
+	if stuffs[0].X+stuffs[0].W > stuffs[1].X || stuffs[len(stuffs)-1].X+stuffs[len(stuffs)-1].W > a.hud().ArchDesc.Right() {
 		t.Fatalf("buttons overlap or overflow the panel: %+v", stuffs)
 	}
 	click(t, a, "arch.stuff.cloth carpet")
@@ -229,16 +229,16 @@ func TestWallMaterialButtonsStillWoodStone(t *testing.T) {
 	r := a.architectRect()
 	n := 0
 	for _, b := range a.architectButtons() {
-		if !strings.HasPrefix(b.id, "arch.stuff.") {
+		if !strings.HasPrefix(b.ID, "arch.stuff.") {
 			continue
 		}
 		n++
-		s := strings.TrimPrefix(b.id, "arch.stuff.")
-		if want[s] == "" || b.label != want[s] {
-			t.Fatalf("unexpected wall material button %q (%q)", b.id, b.label)
+		s := strings.TrimPrefix(b.ID, "arch.stuff.")
+		if want[s] == "" || b.Label != want[s] {
+			t.Fatalf("unexpected wall material button %q (%q)", b.ID, b.Label)
 		}
-		if b.x+b.w > r.x+r.w || b.y+b.h > r.y+r.h || len(b.label)*6+12 > int(b.w) {
-			t.Fatalf("%q does not fit the panel: %+v", b.id, b)
+		if b.X+b.W > r.X+r.W || b.Y+b.H > r.Y+r.H || len(b.Label)*6+12 > int(b.W) {
+			t.Fatalf("%q does not fit the panel: %+v", b.ID, b)
 		}
 	}
 	if n != len(want) {
@@ -256,8 +256,8 @@ func TestWallMaterialButtonsStillWoodStone(t *testing.T) {
 	click(t, a, "arch.tool.door")
 	var door []string
 	for _, b := range a.architectButtons() {
-		if strings.HasPrefix(b.id, "arch.stuff.") {
-			door = append(door, strings.TrimPrefix(b.id, "arch.stuff."))
+		if strings.HasPrefix(b.ID, "arch.stuff.") {
+			door = append(door, strings.TrimPrefix(b.ID, "arch.stuff."))
 		}
 	}
 	if strings.Join(door, ",") != "wood,steel" {

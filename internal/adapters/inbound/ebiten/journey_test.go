@@ -198,20 +198,20 @@ func (j *journey) clickID(id string) bool {
 	var x, y float32
 	found := false
 	for _, b := range j.a.layoutHits(j.a.sw, j.a.sh) {
-		if b.id == id {
-			if b.disabled {
+		if b.ID == id {
+			if b.Disabled {
 				return false
 			}
-			x, y, found = b.x+b.w/2, b.y+b.h/2, true
+			x, y, found = b.X+b.W/2, b.Y+b.H/2, true
 			break
 		}
 	}
 	if !found {
-		w, ok := j.a.uiSt().find(id)
+		w, ok := j.a.uiSt().Find(id)
 		if !ok {
 			j.t.Fatalf("no button or widget %q on %s", id, j.a.nav.screen())
 		}
-		x, y = w.r.Center()
+		x, y = w.R.Center()
 	}
 	s := float32(j.a.scale.S)
 	j.f.clickAt(j.t, j.a, int(x*s), int(y*s))
@@ -224,10 +224,10 @@ func (j *journey) pick(label string) {
 	j.t.Helper()
 	var labels []string
 	for _, b := range j.a.floatButtons() {
-		labels = append(labels, b.label)
-		if strings.HasPrefix(b.label, label) {
+		labels = append(labels, b.Label)
+		if strings.HasPrefix(b.Label, label) {
 			s := float32(j.a.scale.S)
-			j.f.clickAt(j.t, j.a, int((b.x+b.w/2)*s), int((b.y+b.h/2)*s))
+			j.f.clickAt(j.t, j.a, int((b.X+b.W/2)*s), int((b.Y+b.H/2)*s))
 			j.f.Cur.Mx, j.f.Cur.My = -50, -50
 			return
 		}

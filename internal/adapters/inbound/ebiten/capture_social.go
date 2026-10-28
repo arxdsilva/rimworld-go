@@ -15,7 +15,7 @@ package ebiten
 // captureSocialUI opens the state's tab or window.
 func (a *App) captureSocialUI(ui string) {
 	sw, sh := a.size()
-	a.uiSt().lastScreen = a.nav.screen() // a window opened now must survive the kit's screen-change reset
+	a.uiSt().LastScreen = a.nav.screen() // a window opened now must survive the kit's screen-change reset
 	pick := func(name string) {
 		snap := a.renderer.snapshot()
 		for _, p := range snap {

@@ -64,5 +64,5 @@ func drawTooSmall(dst *ebiten.Image, sw, sh int) {
 
 // asButton is the rect as a button with id and label (the kit's type).
 func asButton(r rect, id, label string) button {
-	return button{id: id, label: label, x: r.X, y: r.Y, w: r.W, h: r.H}
+	return button{ID: id, Label: label, X: r.X, Y: r.Y, W: r.W, H: r.H}
 }

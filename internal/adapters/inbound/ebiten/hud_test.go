@@ -54,7 +54,7 @@ func TestWorkTabOpensOverlay(t *testing.T) {
 	}
 	found := false
 	for _, b := range a.hudTabButtons(a.sw, a.sh) {
-		if b.id == "tab.work" && b.selected {
+		if b.ID == "tab.work" && b.Selected {
 			found = true
 		}
 	}
@@ -205,7 +205,7 @@ func TestInspectorShowsNameAndJob(t *testing.T) {
 	}
 	found := false
 	for _, b := range a.paneButtons() {
-		if b.id == "inspector.needs" && !b.disabled {
+		if b.ID == "inspector.needs" && !b.Disabled {
 			found = true
 		}
 	}
@@ -229,7 +229,7 @@ func TestArchitectCategoriesListEveryTool(t *testing.T) {
 		}
 		// categories in ArchCats, the tools as command buttons in the grid
 		for _, b := range append(a.architectButtons(), a.commandGridButtons()...) {
-			seen[b.id] = true
+			seen[b.ID] = true
 		}
 	}
 	for _, tool := range allArchTools() {

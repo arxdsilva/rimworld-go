@@ -169,8 +169,8 @@ func (r *Renderer) animateWork(w game.WorldView, pawns []game.PawnView) {
 			continue
 		}
 		acting[p.ID] = true
-		prev, seen := st.prevWork[p.ID]
-		st.prevWork[p.ID] = t
+		prev, seen := st.PrevWork[p.ID]
+		st.PrevWork[p.ID] = t
 		if !seen || !workStrikeAt(prev, t, uint64(p.ID), d.period) {
 			continue
 		}
@@ -200,9 +200,9 @@ func (r *Renderer) animateWork(w game.WorldView, pawns []game.PawnView) {
 			r.burst(ps.kind, x, y, ps.count, seed)
 		}
 	}
-	for id := range st.prevWork {
+	for id := range st.PrevWork {
 		if !acting[id] {
-			delete(st.prevWork, id)
+			delete(st.PrevWork, id)
 		}
 	}
 }

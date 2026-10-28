@@ -51,10 +51,10 @@ func TestTurretDrawAimFrame(t *testing.T) {
 	if recoilPush(-1) != 0 || recoilPush(0) <= recoilPush(3) || recoilPush(turretRecoilTicks) != 0 {
 		t.Error("recoil should push at the shot, fade and end")
 	}
-	if v := turretAimVec(0); v.x != 0 || v.y != 1 {
+	if v := turretAimVec(0); v.X != 0 || v.Y != 1 {
 		t.Errorf("frame 0 should point south, got %v", v)
 	}
-	if v := turretAimVec(4); v.x > -0.99 {
+	if v := turretAimVec(4); v.X > -0.99 {
 		t.Errorf("frame 4 should point west (clockwise on screen), got %v", v)
 	}
 }
@@ -84,11 +84,11 @@ func TestTurretMuzzleFlashFromBuildingTrace(t *testing.T) {
 	px := float64(artTilePx)
 	wantX := 3 + (80-16)/px - (60-20)/px + (62-20)/px
 	wantY := 3 + (100-80)/px - (60-60)/px + (110-60)/px
-	if d := mz.x - wantX; d > 1e-9 || d < -1e-9 {
-		t.Errorf("muzzle x %v, want %v", mz.x, wantX)
+	if d := mz.X - wantX; d > 1e-9 || d < -1e-9 {
+		t.Errorf("muzzle x %v, want %v", mz.X, wantX)
 	}
-	if d := mz.y - wantY; d > 1e-9 || d < -1e-9 {
-		t.Errorf("muzzle y %v, want %v", mz.y, wantY)
+	if d := mz.Y - wantY; d > 1e-9 || d < -1e-9 {
+		t.Errorf("muzzle y %v, want %v", mz.Y, wantY)
 	}
 	if _, ok := r.traceMuzzle(game.TraceView{FromBuilding: true, Attacker: 99}); ok {
 		t.Error("an unknown turret has no muzzle")

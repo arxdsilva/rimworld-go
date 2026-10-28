@@ -179,7 +179,7 @@ func (a *App) perfRefresh(now time.Time) {
 	st := frameStats(fr, up, dr)
 	if !p.frozen {
 		if a.renderer != nil {
-			st.TicksPerUpdate = float64(a.renderer.mo.stepped)
+			st.TicksPerUpdate = float64(a.renderer.mo.Stepped)
 		}
 		st.Held = a.debt.held
 		a.perfHeap(now)

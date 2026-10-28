@@ -91,10 +91,10 @@ func colonyFactionRows(views []game.FactionView) []colFacRow {
 // button is drawn by the HUD, this widget answers its click.
 func (a *App) factionsTabUI(sw, sh int) {
 	for _, b := range a.hudTabButtons(sw, sh) {
-		if b.id != ids.TabFactions || b.disabled {
+		if b.ID != ids.TabFactions || b.Disabled {
 			continue
 		}
-		a.uiSt().add(uiWidget{id: b.id, label: b.label, r: rect{X: b.x, Y: b.y, W: b.w, H: b.h}, click: a.toggleColonyFactions})
+		a.uiSt().Add(uiWidget{ID: b.ID, Label: b.Label, R: rect{X: b.X, Y: b.Y, W: b.W, H: b.H}, Click: a.toggleColonyFactions})
 	}
 }
 
@@ -109,9 +109,9 @@ func (a *App) openColonyFactions() {
 	}
 	sel := 0
 	a.uiPushModal(modal{
-		id: colFacModalID, title: "Factions", w: colFacW, h: colFacH,
-		modeless: true, anchor: (*App).windowAnchor,
-		draw: func(a *App, body rect) { a.colonyFactionsBody(body, &sel) },
+		ID: colFacModalID, Title: "Factions", W: colFacW, H: colFacH,
+		Modeless: true, Anchor: (*App).windowAnchor,
+		Draw: func(a *App, body rect) { a.colonyFactionsBody(body, &sel) },
 	})
 }
 
@@ -160,7 +160,7 @@ func (a *App) colonyFactionDetail(r rect, row colFacRow) {
 	a.uiLabel(capR.X, capR.Y, "Goodwill, last 60 days", tsLabel)
 	plot := rect{X: capR.X + colFacAxisW, Y: capR.Y + 24, W: capR.W - colFacAxisW - 4, H: colFacChartH}
 	hist, relc := row.History, goodwillLineColor(row.Relation)
-	u.queue(func(dst *ebiten.Image) { drawGoodwillChart(dst, plot, hist, relc) })
+	u.Queue(func(dst *ebiten.Image) { drawGoodwillChart(dst, plot, hist, relc) })
 	a.uiTip("colfac.chart", plot, "Goodwill history\nOne point a day, from -100 (hostile) to +100 (friendly). Raids defeated and gifts move it; it drifts back toward the faction's usual mood.")
 
 	// The events.

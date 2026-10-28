@@ -85,14 +85,14 @@ func youngPose(ps pose, scale float64) pose {
 	if scale <= 0 || scale >= 1 {
 		return ps
 	}
-	if ps.sx == 0 {
-		ps.sx = 1
+	if ps.Sx == 0 {
+		ps.Sx = 1
 	}
-	if ps.sy == 0 {
-		ps.sy = 1
+	if ps.Sy == 0 {
+		ps.Sy = 1
 	}
-	ps.sx *= scale
-	ps.sy *= scale
+	ps.Sx *= scale
+	ps.Sy *= scale
 	return ps
 }
 
@@ -114,7 +114,7 @@ func (r *Renderer) drawAnimalFigure(dst *ebiten.Image, an game.AnimalView, wx, w
 		ps = mirrored(ps)
 	}
 	if cs, ok := r.animalFigureScale(an); ok {
-		ps.cs = cs
+		ps.Cs = cs
 	}
 	r.drawSpritePose(dst, r.animalFrameKey(an), color.NRGBA{}, wx, wy, tile, ps)
 	r.figureBlood = 0
@@ -241,11 +241,11 @@ func (r *Renderer) animalGait(an game.AnimalView) float64 {
 func (r *Renderer) animalShow(an game.AnimalView) bodyShow {
 	m, ok := r.motionOf(an.ID)
 	t := r.animT()
-	k := r.mo.tracks[an.ID]
+	k := r.mo.Tracks[an.ID]
 	if !ok || k == nil {
 		return staticShow(an, m, t, r.animalGait(an))
 	}
-	b := &k.body
+	b := &k.Body
 	want := bodyWant(an, m)
 	switch {
 	case !b.ok || t < b.t-1:

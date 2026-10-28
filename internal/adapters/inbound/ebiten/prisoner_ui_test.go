@@ -32,7 +32,7 @@ func TestPrisonerTabReplacesGearAndFits(t *testing.T) {
 		t.Fatal("a prisoner's Gear tab gives way to its Prisoner tab")
 	}
 	tab, ok := findButton(a, prisonerTabID)
-	if !ok || tab.disabled {
+	if !ok || tab.Disabled {
 		t.Fatalf("Prisoner tab %+v (%v)", tab, ok)
 	}
 	// the tab opens a panel above the pane that fits the layout's width range
@@ -44,10 +44,10 @@ func TestPrisonerTabReplacesGearAndFits(t *testing.T) {
 	if !a.prisonerTabOn() {
 		t.Fatalf("tab = %q", a.inspectTab)
 	}
-	if b, _ := findButton(a, prisonerTabID); !b.selected {
+	if b, _ := findButton(a, prisonerTabID); !b.Selected {
 		t.Fatal("the Prisoner tab is the selected one")
 	}
-	if b, _ := findButton(a, "inspector.needs"); b.selected {
+	if b, _ := findButton(a, "inspector.needs"); b.Selected {
 		t.Fatal("only the Prisoner tab is selected")
 	}
 	// a colonist has no Prisoner tab, and its pane falls back to no open tab
@@ -55,7 +55,7 @@ func TestPrisonerTabReplacesGearAndFits(t *testing.T) {
 	if _, ok := findButton(a, prisonerTabID); ok || a.prisonerTabOn() {
 		t.Fatal("no Prisoner tab for a colonist")
 	}
-	if b, ok := findButton(a, "inspector.gear"); !ok || b.disabled {
+	if b, ok := findButton(a, "inspector.gear"); !ok || b.Disabled {
 		t.Fatal("a colonist keeps Gear")
 	}
 }
@@ -73,7 +73,7 @@ func TestPrisonerTabModesAndRelease(t *testing.T) {
 			t.Fatalf("mode %s missing", m.label)
 		}
 	}
-	if w, _ := a.uiSt().find(prisonerRelease); w.disabled {
+	if w, _ := a.uiSt().Find(prisonerRelease); w.Disabled {
 		t.Fatal("a standing prisoner can be released")
 	}
 	a.uiClick(prisonerModeID(prisoner.Reduce))
@@ -124,7 +124,7 @@ func TestCaptureAndArrestActions(t *testing.T) {
 	a.renderer.Select(1)
 	f.Frame(t, a)
 	b, ok := findButton(a, prisonerCapture)
-	if !ok || b.disabled {
+	if !ok || b.Disabled {
 		t.Fatalf("Ada can capture the downed raider: %+v", b)
 	}
 	pressCmd(a, mustCmd(t, a.pawnCommands(1), prisonerCapture))
@@ -152,7 +152,7 @@ func TestCaptureNeedsADownedEnemy(t *testing.T) {
 	a, f := colonyApp(t, s)
 	a.renderer.Select(1)
 	f.Frame(t, a)
-	if b, _ := findButton(a, prisonerCapture); !b.disabled || b.reason != "no downed enemy to capture" {
+	if b, _ := findButton(a, prisonerCapture); !b.Disabled || b.Reason != "no downed enemy to capture" {
 		t.Fatalf("no one to capture: %+v", b)
 	}
 }

@@ -14,12 +14,12 @@ func TestMainMenuButtonsRightRail(t *testing.T) {
 	mid := float32(a.sw) / 2
 	found := 0
 	for _, b := range a.mainMenuButtons(a.sw, a.sh) {
-		if !strings.HasPrefix(b.id, "menu.") {
+		if !strings.HasPrefix(b.ID, "menu.") {
 			continue
 		}
 		found++
-		if b.x <= mid {
-			t.Fatalf("%s x=%v, want > %v", b.id, b.x, mid)
+		if b.X <= mid {
+			t.Fatalf("%s x=%v, want > %v", b.ID, b.X, mid)
 		}
 	}
 	if found < 8 {

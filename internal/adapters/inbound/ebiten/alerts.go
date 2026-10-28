@@ -394,7 +394,7 @@ func (a *App) alertButtonsIn(l hudLayout) []button {
 		if row.more > 0 {
 			continue // the count is not a place to jump to
 		}
-		out = append(out, button{id: ids.PrefixAlert + row.al.key, label: row.al.label, x: row.r.X, y: row.r.Y, w: row.r.W, h: row.r.H})
+		out = append(out, button{ID: ids.PrefixAlert + row.al.key, Label: row.al.label, X: row.r.X, Y: row.r.Y, W: row.r.W, H: row.r.H})
 	}
 	return out
 }

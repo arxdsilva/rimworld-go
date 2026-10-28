@@ -59,15 +59,15 @@ func (r *Renderer) emitBurst(ev burstEvent) {
 
 	// the flash: one big, short-lived ember that swells and fades
 	if len(r.parts) < maxParticles {
-		r.parts = append(r.parts, particle{kind: partEmber, x: x, y: y, born: r.present,
-			life: 9, size: 0.3, grow: 0.03, clr: burstFlashClr})
+		r.parts = append(r.parts, particle{Kind: partEmber, X: x, Y: y, Born: r.present,
+			Life: 9, Size: 0.3, Grow: 0.03, Clr: burstFlashClr})
 	}
 	spread := func(kind partKind, n int, s uint64, speed float64) {
 		from := len(r.parts)
 		r.burst(kind, x, y, n, s)
 		for i := from; i < len(r.parts); i++ {
-			r.parts[i].vx *= speed
-			r.parts[i].vy *= speed
+			r.parts[i].Vx *= speed
+			r.parts[i].Vy *= speed
 		}
 	}
 	spread(partEmber, 16, seed^0x1, 5)

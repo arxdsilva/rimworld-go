@@ -295,19 +295,19 @@ func TestAreaChipIsAButtonOnThePane(t *testing.T) {
 	f.Frame(t, a)
 	var chip button
 	for _, b := range a.paneButtons() {
-		if b.id == paneAreaChipID {
+		if b.ID == paneAreaChipID {
 			chip = b
 		}
 	}
-	if chip.w == 0 || chip.label != "Area: Indoors" {
+	if chip.W == 0 || chip.Label != "Area: Indoors" {
 		t.Fatalf("the pane has no area chip button: %+v", chip)
 	}
-	if !a.hud().Pane.Contains(chip.x+chip.w/2, chip.y+chip.h/2) {
+	if !a.hud().Pane.Contains(chip.X+chip.W/2, chip.Y+chip.H/2) {
 		t.Fatalf("chip %+v lies outside the pane %+v", chip, a.hud().Pane)
 	}
-	w, _ := a.uiSt().find(paneAreaChipID)
-	if w.r != (rect{X: chip.x, Y: chip.y, W: chip.w, H: chip.h}) {
-		t.Fatalf("the click widget %+v does not sit on the chip %+v", w.r, chip)
+	w, _ := a.uiSt().Find(paneAreaChipID)
+	if w.R != (rect{X: chip.X, Y: chip.Y, W: chip.W, H: chip.H}) {
+		t.Fatalf("the click widget %+v does not sit on the chip %+v", w.R, chip)
 	}
 	press(t, a, f, paneAreaChipID)
 	f.Frame(t, a)
@@ -519,7 +519,7 @@ func TestPawnCommandsAreGridCells(t *testing.T) {
 	a, _ := paneApp(t, s)
 	var ids []string
 	for _, b := range a.commandGridButtons() {
-		ids = append(ids, b.id)
+		ids = append(ids, b.ID)
 	}
 	for _, want := range []string{"pawn.draft", "pawn.clearorders", "cmd.pawn.equip", prisonerCapture, prisonerArrest} {
 		if !slices.Contains(ids, want) {
@@ -541,8 +541,8 @@ func TestPawnCommandsAreGridCells(t *testing.T) {
 	// the pane's tabs are its tab strip buttons
 	var tabs []string
 	for _, b := range a.paneButtons() {
-		if strings.HasPrefix(b.id, "inspector.") {
-			tabs = append(tabs, b.id)
+		if strings.HasPrefix(b.ID, "inspector.") {
+			tabs = append(tabs, b.ID)
 		}
 	}
 	for _, want := range []string{"inspector.needs", "inspector.bio", "inspector.health", "inspector.social", "inspector.gear", "inspector.log"} {
@@ -581,7 +581,7 @@ func expandedFor(sw, sh int, tb paneTab) rect {
 
 // bodyPaints drops what the frame already queued to paint (the pane's own
 // scroll bars and the like), so a trace sees only the body declared next.
-func bodyPaints(a *App) { a.uiSt().paints = a.uiSt().paints[:0] }
+func bodyPaints(a *App) { a.uiSt().Paints = a.uiSt().Paints[:0] }
 
 // innerFor is the rectangle the pane hands tab tb's body: the panel the
 // layout gives it, inset by paneInset.
@@ -681,16 +681,16 @@ func TestPawnTabBodiesSurviveASmallPanel(t *testing.T) {
 		tb, _ := paneTabByID(a.pawnPane(1), "inspector."+tab)
 		r := rect{X: 0, Y: 100, W: 400, H: 300}
 		img := ebiten.NewImage(800, 600)
-		before := len(a.uiSt().cur) // the HUD's own widgets are not the tab's
+		before := len(a.uiSt().Cur) // the HUD's own widgets are not the tab's
 		if tb.Draw != nil {
 			tb.Draw(img, r)
 		} else {
 			tb.Declare(r)
 			a.uiPaint(img)
 		}
-		for _, w := range a.uiSt().cur[before:] {
-			if w.r.W > 0 && (w.r.Y < r.Y-1 || w.r.Bottom() > r.Bottom()+1 || w.r.X < r.X-1 || w.r.Right() > r.Right()+1) {
-				t.Errorf("%s: widget %s at %+v lies outside the panel %+v", tab, w.id, w.r, r)
+		for _, w := range a.uiSt().Cur[before:] {
+			if w.R.W > 0 && (w.R.Y < r.Y-1 || w.R.Bottom() > r.Bottom()+1 || w.R.X < r.X-1 || w.R.Right() > r.Right()+1) {
+				t.Errorf("%s: widget %s at %+v lies outside the panel %+v", tab, w.ID, w.R, r)
 			}
 		}
 	}

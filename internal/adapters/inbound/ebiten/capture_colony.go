@@ -124,7 +124,7 @@ func captureHistory(fs []faction.Faction) {
 // captureColonyUI opens the state's UI once the colony has run.
 func (a *App) captureColonyUI(ui string) {
 	sw, sh := a.size()
-	a.uiSt().lastScreen = a.nav.screen() // a window opened now must survive the kit's screen-change reset
+	a.uiSt().LastScreen = a.nav.screen() // a window opened now must survive the kit's screen-change reset
 	pawns := a.renderer.snapshot()
 	cardAt := func(id string) { // the tool's command button in the grid
 		if c, ok := a.archToolCell(id); ok {

@@ -15,7 +15,7 @@ import (
 
 func btnByID(bs []button, id string) (button, bool) {
 	for _, b := range bs {
-		if b.id == id {
+		if b.ID == id {
 			return b, true
 		}
 	}

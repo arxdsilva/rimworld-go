@@ -52,7 +52,7 @@ func assertButtonsInRegions(t *testing.T, a *App) {
 	sw, sh := a.size()
 	regions := append(a.hud().Chrome(), a.learnChrome()...)
 	for _, b := range a.colonyButtons(sw, sh) {
-		br := rect{X: b.x, Y: b.y, W: b.w, H: b.h}
+		br := rect{X: b.X, Y: b.Y, W: b.W, H: b.H}
 		if br.Empty() {
 			continue
 		}
@@ -64,7 +64,7 @@ func assertButtonsInRegions(t *testing.T, a *App) {
 			}
 		}
 		if !in {
-			t.Errorf("button %s %+v lies outside every layout region", b.id, br)
+			t.Errorf("button %s %+v lies outside every layout region", b.ID, br)
 		}
 	}
 }
@@ -475,8 +475,8 @@ func TestKitWindowHasNoHiddenWorkCells(t *testing.T) {
 		t.Fatal("the History window is not open")
 	}
 	for _, b := range a.colonyButtons(a.sw, a.sh) {
-		if strings.HasPrefix(b.id, "work.") {
-			t.Fatalf("hidden Work button %s under the History window", b.id)
+		if strings.HasPrefix(b.ID, "work.") {
+			t.Fatalf("hidden Work button %s under the History window", b.ID)
 		}
 	}
 	w := a.hud().Window

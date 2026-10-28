@@ -329,7 +329,7 @@ func bloodArt() *artCatalog {
 // litLog records the Custom3 value of every lit draw by sprite key.
 func litLog(r *Renderer) map[string][]float32 {
 	got := map[string][]float32{}
-	r.lit.onDraw = func(img *ebiten.Image, blood float32) {
+	r.lit.OnDraw = func(img *ebiten.Image, blood float32) {
 		k := keyOf(r.art, img)
 		got[k] = append(got[k], blood)
 	}
@@ -449,14 +449,14 @@ func TestDrawLitWritesCustom3(t *testing.T) {
 	dst := ebiten.NewImage(16, 16)
 	r.figureBlood = encodeBlood(0.4, 3, true)
 	r.drawLit(dst, img, ebiten.GeoM{}, noCS, 0, 0)
-	for _, v := range r.lit.verts {
+	for _, v := range r.lit.Verts {
 		if v.Custom3 != r.figureBlood {
 			t.Fatalf("Custom3 %v, want %v", v.Custom3, r.figureBlood)
 		}
 	}
 	r.figureBlood = 0
 	r.drawLit(dst, img, ebiten.GeoM{}, noCS, 0, 0)
-	for _, v := range r.lit.verts {
+	for _, v := range r.lit.Verts {
 		if v.Custom3 != 0 {
 			t.Fatalf("Custom3 %v after reset", v.Custom3)
 		}
@@ -482,13 +482,13 @@ func TestBloodShaderCompiles(t *testing.T) {
 	// draw through it with blood set: compiles and runs on this backend
 	r := &Renderer{}
 	r.view.W = roomWorld()
-	r.lit.light = lightAt(12, summerDay, "clear", 0)
+	r.lit.Light = lightAt(12, summerDay, "clear", 0)
 	r.figureBlood = encodeBlood(0.6, 10, false)
 	img := ebiten.NewImage(8, 8)
 	img.Fill(color.White)
 	r.drawLit(ebiten.NewImage(16, 16), img, ebiten.GeoM{}, noCS, 0, 0)
-	if r.lit.err != nil {
-		t.Fatal(r.lit.err)
+	if r.lit.Err != nil {
+		t.Fatal(r.lit.Err)
 	}
 }
 
@@ -539,7 +539,7 @@ func sprayParts(t *testing.T, tr game.TraceView, w game.WorldView, kind partKind
 	r.animateCombat(w, nil)
 	var out []particle
 	for _, p := range r.parts {
-		if p.kind == kind {
+		if p.Kind == kind {
 			out = append(out, p)
 		}
 	}
@@ -558,7 +558,7 @@ func TestSprayScalesWithDamage(t *testing.T) {
 	}
 	light, heavy := sprayParts(t, shot(9, false), game.WorldView{}, partBlood), sprayParts(t, shot(10, false), game.WorldView{}, partBlood)
 	for i := range light {
-		if d := heavy[i].vx - light[i].vx; math.Abs(d-0.25*bloodSpeed) > 1e-9 {
+		if d := heavy[i].Vx - light[i].Vx; math.Abs(d-0.25*bloodSpeed) > 1e-9 {
 			t.Fatalf("drop %d: heavy hits spray 1.25× faster (Δvx %v)", i, d)
 		}
 	}
@@ -569,7 +569,7 @@ func TestSprayScalesWithDamage(t *testing.T) {
 	}
 	back := 0
 	for _, p := range m[8:] {
-		if p.vx < 0 {
+		if p.Vx < 0 {
 			back++
 		}
 	}

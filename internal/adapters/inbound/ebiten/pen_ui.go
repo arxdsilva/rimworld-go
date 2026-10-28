@@ -148,17 +148,17 @@ func penTabBody(w game.WorldView, pv game.PenView, viewW float32) tabBody {
 	y := float32(0)
 	body.labels = append(body.labels, tabLabel{text: "Animals", y: y, st: tsLabel})
 	body.buttons = append(body.buttons,
-		button{id: "bldg.pen.all", label: "All", x: viewW - 118, y: y, w: 56, h: penBtnH},
-		button{id: "bldg.pen.none", label: "None", x: viewW - 56, y: y, w: 56, h: penBtnH})
+		button{ID: "bldg.pen.all", Label: "All", X: viewW - 118, Y: y, W: 56, H: penBtnH},
+		button{ID: "bldg.pen.none", Label: "None", X: viewW - 56, Y: y, W: 56, H: penBtnH})
 	y += 24
 	rows := penSpeciesRows(w, pv)
 	for _, row := range rows {
 		body.buttons = append(body.buttons,
-			button{id: "bldg.pen.sp." + row.key, label: row.label, x: 0, y: y, w: 190, h: penBtnH, selected: row.set.Allow},
-			button{id: "bldg.pen.sp." + row.key + ".m", label: "M", x: 200, y: y, w: 44, h: penBtnH, selected: row.set.Male,
-				tip: "Males\nTake male " + row.label + " animals."},
-			button{id: "bldg.pen.sp." + row.key + ".f", label: "F", x: 250, y: y, w: 44, h: penBtnH, selected: row.set.Female,
-				tip: "Females\nTake female " + row.label + " animals."})
+			button{ID: "bldg.pen.sp." + row.key, Label: row.label, X: 0, Y: y, W: 190, H: penBtnH, Selected: row.set.Allow},
+			button{ID: "bldg.pen.sp." + row.key + ".m", Label: "M", X: 200, Y: y, W: 44, H: penBtnH, Selected: row.set.Male,
+				Tip: "Males\nTake male " + row.label + " animals."},
+			button{ID: "bldg.pen.sp." + row.key + ".f", Label: "F", X: 250, Y: y, W: 44, H: penBtnH, Selected: row.set.Female,
+				Tip: "Females\nTake female " + row.label + " animals."})
 		y += penRowH
 	}
 	if len(rows) == 0 {
@@ -174,8 +174,8 @@ func penTabBody(w game.WorldView, pv game.PenView, viewW float32) tabBody {
 	}
 	keys := penCutKeys(w, pv)
 	for i, k := range keys {
-		body.buttons = append(body.buttons, button{id: "bldg.pen.cut." + k, label: penPlantLabel(k),
-			x: float32(i%penCutCols) * 176, y: y + float32(i/penCutCols*penRowH), w: 170, h: penBtnH, selected: cut[k]})
+		body.buttons = append(body.buttons, button{ID: "bldg.pen.cut." + k, Label: penPlantLabel(k),
+			X: float32(i%penCutCols) * 176, Y: y + float32(i/penCutCols*penRowH), W: 170, H: penBtnH, Selected: cut[k]})
 	}
 	body.h = y + float32((len(keys)+penCutCols-1)/penCutCols*penRowH)
 	return body

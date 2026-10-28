@@ -101,10 +101,10 @@ func TestDevMenuStaysAboveTheTabStrip(t *testing.T) {
 	a.dev.menu, a.dev.mx, a.dev.my = true, a.sw-10, a.sh-5
 	r := a.devMenuRect()
 	l := a.hud()
-	if r.y < hudMargin || r.y+r.h > l.Tabs.Y {
+	if r.Y < hudMargin || r.Y+r.H > l.Tabs.Y {
 		t.Errorf("debug menu %+v runs past the tab strip at y=%v", r, l.Tabs.Y)
 	}
-	if r.x+r.w > float32(a.sw) {
+	if r.X+r.W > float32(a.sw) {
 		t.Errorf("debug menu %+v runs off the window", r)
 	}
 }

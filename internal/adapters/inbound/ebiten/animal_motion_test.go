@@ -225,10 +225,10 @@ func TestAnimalWalkHasNoRendererBob(t *testing.T) {
 		an := r.game.World().Animals[0]
 		m := r.animalMotion(an.ID)
 		ps := r.animalPose(an)
-		if m.Blend >= minBlend && ps.dy != 0 {
-			t.Fatalf("a walking animal bobs %v tiles", ps.dy)
+		if m.Blend >= minBlend && ps.Dy != 0 {
+			t.Fatalf("a walking animal bobs %v tiles", ps.Dy)
 		}
-		if m.Blend >= minBlend && m.Facing == faceEast && ps.rot > 0 && ps.rot <= runLean {
+		if m.Blend >= minBlend && m.Facing == faceEast && ps.Rot > 0 && ps.Rot <= runLean {
 			leaned = true
 		}
 	}
@@ -461,7 +461,7 @@ func TestAnimalPoseStartsInItsClass(t *testing.T) {
 		t.Fatalf("a grazer first drawn shows %q, want its head down", f)
 	}
 	r.settleVisuals()
-	if k := r.mo.tracks[entity.EntityID(7)]; k == nil || k.body.ok {
+	if k := r.mo.Tracks[entity.EntityID(7)]; k == nil || k.Body.ok {
 		t.Fatal("settle keeps the body player")
 	}
 	if f := r.animalFrame(an); f != "_graze2" {

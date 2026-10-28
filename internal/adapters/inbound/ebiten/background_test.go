@@ -48,18 +48,18 @@ func TestRunInBackgroundOptionRow(t *testing.T) {
 	a := optionsApp(store)
 	a.optionsTab = "gameplay"
 	b := optionBtn(t, a, "options.runinbackground")
-	if b.label != "Off" {
-		t.Fatalf("run in background shows %q by default, want Off", b.label)
+	if b.Label != "Off" {
+		t.Fatalf("run in background shows %q by default, want Off", b.Label)
 	}
 	const tip = "Keep the colony running while the window is in the background or minimised. Off: the game pauses until you come back."
-	if b.tip != tip {
-		t.Fatalf("tip = %q", b.tip)
+	if b.Tip != tip {
+		t.Fatalf("tip = %q", b.Tip)
 	}
 	a.applyOption("options.runinbackground")
 	if !a.settings.Gameplay.RunInBackground || !store.s.Gameplay.RunInBackground {
 		t.Fatalf("toggle did not set and store the option: %+v", store.s.Gameplay)
 	}
-	if got := optionBtn(t, a, "options.runinbackground").label; got != "On" {
+	if got := optionBtn(t, a, "options.runinbackground").Label; got != "On" {
 		t.Fatalf("label after toggle = %q", got)
 	}
 	// It survives a restart.

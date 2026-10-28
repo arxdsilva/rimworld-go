@@ -19,7 +19,7 @@ func TestSearchBoxClearOfTheTopRegions(t *testing.T) {
 			a, _ := htApp(t, &stubSim{pawns: htPawns(tc.n)}, tc.sw, tc.sh)
 			a.openSearch()
 			r := a.searchRect(tc.sw)
-			box := rect{X: r.x, Y: r.y, W: r.w, H: r.h}
+			box := rect{X: r.X, Y: r.Y, W: r.W, H: r.H}
 			l := a.hud()
 			for name, other := range map[string]rect{"bar": l.Bar, "resources": l.Resources, "right column": l.Right, "learning helper": l.Learn} {
 				if htOverlaps(box, other) {
@@ -37,8 +37,8 @@ func TestSearchBoxClearOfTheTopRegions(t *testing.T) {
 			}
 			// the result rows follow the box
 			for _, b := range a.searchButtons(tc.sw) {
-				if b.x < box.X || b.x+b.w > box.Right() || b.y < box.Y {
-					t.Errorf("search button %s %+v outside the box", b.id, b)
+				if b.X < box.X || b.X+b.W > box.Right() || b.Y < box.Y {
+					t.Errorf("search button %s %+v outside the box", b.ID, b)
 				}
 			}
 			// and the box blocks the map under it

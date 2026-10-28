@@ -71,10 +71,10 @@ type drugPolicyReader interface {
 // is drawn by the HUD, this widget answers its click.
 func (a *App) assignTabUI(sw, sh int) {
 	for _, b := range a.hudTabButtons(sw, sh) {
-		if b.id != ids.TabAssign || b.disabled {
+		if b.ID != ids.TabAssign || b.Disabled {
 			continue
 		}
-		a.uiSt().add(uiWidget{id: b.id, label: b.label, r: rect{X: b.x, Y: b.y, W: b.w, H: b.h}, click: a.toggleAssign})
+		a.uiSt().Add(uiWidget{ID: b.ID, Label: b.Label, R: rect{X: b.X, Y: b.Y, W: b.W, H: b.H}, Click: a.toggleAssign})
 	}
 }
 
@@ -88,9 +88,9 @@ func (a *App) openAssign() {
 		return
 	}
 	a.uiPushModal(modal{
-		id: assignModalID, title: "Assign", w: assignW, h: assignH,
-		modeless: true, anchor: (*App).windowAnchor,
-		draw: func(a *App, body rect) { a.assignBody(body) },
+		ID: assignModalID, Title: "Assign", W: assignW, H: assignH,
+		Modeless: true, Anchor: (*App).windowAnchor,
+		Draw: func(a *App, body rect) { a.assignBody(body) },
 	})
 }
 

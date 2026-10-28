@@ -61,8 +61,8 @@ func scrollOffFromThumb(bar rect, thumbH, y, maxOff float32) float32 {
 // area.View shifted up by area.Off and clipped to it.
 func (a *App) uiScrollArea(id string, r rect, contentH float32, o scrollOpts) scrollArea {
 	u := a.uiSt()
-	if u.scroll == nil {
-		u.scroll = map[string]float32{}
+	if u.Scroll == nil {
+		u.Scroll = map[string]float32{}
 	}
 	step := o.Step
 	if step <= 0 {
@@ -71,9 +71,9 @@ func (a *App) uiScrollArea(id string, r rect, contentH float32, o scrollOpts) sc
 	view := rect{X: r.X, Y: r.Y, W: max(0, r.W-scrollBarW), H: r.H}
 	bar := rect{X: r.Right() - scrollBarW, Y: r.Y, W: scrollBarW, H: r.H}
 	maxOff := max(0, contentH-r.H)
-	off := max(0, min(maxOff, u.scroll[id]))
+	off := max(0, min(maxOff, u.Scroll[id]))
 	thumbID := id + ".thumb"
-	if u.add(uiWidget{id: id, r: r, wheel: true, focusable: o.Focusable}) {
+	if u.Add(uiWidget{ID: id, R: r, Wheel: true, Focusable: o.Focusable}) {
 		mx, my := a.currentCursor()
 		hover := r.Hit(mx, my)
 		if hover && a.in.Raw.WheelY != 0 {
@@ -84,36 +84,36 @@ func (a *App) uiScrollArea(id string, r rect, contentH float32, o scrollOpts) sc
 			thumb := scrollThumb(bar, off, maxOff, contentH)
 			if a.uiPress(bar) {
 				if thumb.Hit(mx, my) {
-					u.active, u.dragY = thumbID, float32(my)-thumb.Y
+					u.Active, u.dragY = thumbID, float32(my)-thumb.Y
 				} else if float32(my) < thumb.Y {
 					off -= r.H * pageFrac
 				} else {
 					off += r.H * pageFrac
 				}
 			}
-			if u.active == thumbID {
+			if u.Active == thumbID {
 				off = scrollOffFromThumb(bar, thumb.H, float32(my)-u.dragY, maxOff)
 				if !a.in.Down(mbLeft) {
-					u.active = ""
+					u.Active = ""
 					a.uiRelease()
 				}
 			}
-			if u.pageDelta != 0 && (u.focus == id || hover) {
+			if u.pageDelta != 0 && (u.Focus == id || hover) {
 				off += float32(u.pageDelta) * r.H * pageFrac
 				u.pageDelta = 0
 			}
 		}
 	}
 	off = max(0, min(maxOff, off))
-	u.scroll[id] = off
-	u.queue(func(dst *ebiten.Image) {
+	u.Scroll[id] = off
+	u.Queue(func(dst *ebiten.Image) {
 		if maxOff <= 0 {
 			return
 		}
 		fillRect(dst, bar, uiScrollTrack)
-		thumb := scrollThumb(bar, u.scroll[id], maxOff, contentH)
+		thumb := scrollThumb(bar, u.Scroll[id], maxOff, contentH)
 		c := uiScrollThumb
-		if u.active == thumbID || u.hot == id && thumb.Hit(u.mx, u.my) {
+		if u.Active == thumbID || u.Hot == id && thumb.Hit(u.mx, u.my) {
 			c = lerpRGBA(c, uiText, 0.3)
 		}
 		fillRect(dst, thumb, c)
@@ -124,17 +124,17 @@ func (a *App) uiScrollArea(id string, r rect, contentH float32, o scrollOpts) sc
 // uiScrollReveal scrolls the view id so the content span [y0, y1) shows.
 func (a *App) uiScrollReveal(id string, viewH, y0, y1 float32) {
 	u := a.uiSt()
-	if u.scroll == nil {
-		u.scroll = map[string]float32{}
+	if u.Scroll == nil {
+		u.Scroll = map[string]float32{}
 	}
-	off := u.scroll[id]
+	off := u.Scroll[id]
 	switch {
 	case y0 < off:
 		off = y0
 	case y1 > off+viewH:
 		off = y1 - viewH
 	}
-	u.scroll[id] = max(0, off)
+	u.Scroll[id] = max(0, off)
 }
 
 // listSpec describes a list's rows.
@@ -192,7 +192,7 @@ func (a *App) uiList(id string, r rect, n int, sel *int, sp listSpec) bool {
 		}
 		a.uiOK()
 	}
-	if u.focus == id && u.layer == len(u.modals) && !u.suppress && n > 0 {
+	if u.Focus == id && u.Layer == len(u.Modals) && !u.Suppress && n > 0 {
 		next := *sel
 		switch {
 		case a.keyRepeat("ArrowUp"):
@@ -217,23 +217,23 @@ func (a *App) uiList(id string, r rect, n int, sel *int, sp listSpec) bool {
 	for i := first; i <= last; i++ {
 		i := i
 		hit := rowAt(i).Intersect(area.View)
-		w := uiWidget{id: optID(id, i), r: hit, disabled: disabled(i) != "", reason: disabled(i), click: func() { u.focus = id; pick(i) }}
+		w := uiWidget{ID: optID(id, i), R: hit, Disabled: disabled(i) != "", Reason: disabled(i), Click: func() { u.Focus = id; pick(i) }}
 		if sp.Tip != nil {
-			w.tip = sp.Tip(i)
+			w.Tip = sp.Tip(i)
 		}
-		if w.disabled {
-			w.tip = w.reason
+		if w.Disabled {
+			w.Tip = w.Reason
 		}
-		if u.add(w) && a.uiPress(hit) {
-			u.focus = id
+		if u.Add(w) && a.uiPress(hit) {
+			u.Focus = id
 			pick(i)
 		}
 	}
-	u.queue(func(dst *ebiten.Image) {
+	u.Queue(func(dst *ebiten.Image) {
 		sub := clipTo(dst, area.View)
 		for i := first; i <= last; i++ {
 			row := rowAt(i)
-			hover := u.hot == optID(id, i)
+			hover := u.Hot == optID(id, i)
 			selected := *sel == i
 			if sp.Draw != nil {
 				sp.Draw(sub, i, row, hover, selected)

@@ -40,7 +40,7 @@ func corpsePlanFor(c *artCatalog, it game.ItemView) corpsePlan {
 		cs = rottenCS
 	}
 	ps := lyingPose(c, side)
-	ps.cs = cs
+	ps.Cs = cs
 	return corpsePlan{ps: ps}
 }
 

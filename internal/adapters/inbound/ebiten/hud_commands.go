@@ -183,13 +183,13 @@ func (a *App) cellButtons() []button {
 	for _, c := range cells {
 		if c.cmd.Options != nil {
 			b := asButton(cmdArrowRect(c.r), cmdOptionsID(c.idx), "")
-			b.disabled, b.reason, b.quiet = c.cmd.Disabled, c.cmd.Reason, true
+			b.Disabled, b.Reason, b.Quiet = c.cmd.Disabled, c.cmd.Reason, true
 			out = append(out, b)
 		}
 	}
 	for _, c := range cells {
 		b := asButton(c.r, c.cmd.ID, c.cmd.Label)
-		b.disabled, b.reason, b.selected, b.quiet = c.cmd.Disabled, c.cmd.Reason, c.cmd.On, true
+		b.Disabled, b.Reason, b.Selected, b.Quiet = c.cmd.Disabled, c.cmd.Reason, c.cmd.On, true
 		out = append(out, b)
 	}
 	return out

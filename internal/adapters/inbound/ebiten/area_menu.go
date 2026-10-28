@@ -98,12 +98,12 @@ func (a *App) openAreaPicker(title string, cur int, base bool, pick func(ref int
 	}
 	reset := func() { a.renderer.areaOv.hover = 0 }
 	a.uiPushModal(modal{
-		id: areaPickID, title: title, w: areaPickW, h: 460,
-		draw: func(a *App, body rect) { a.areaPickBody(body, cur, base, pick) },
-		buttons: []modalButton{
-			{id: "close", label: "Close", style: btnPrimary, closes: true, onClick: reset},
+		ID: areaPickID, Title: title, W: areaPickW, H: 460,
+		Draw: func(a *App, body rect) { a.areaPickBody(body, cur, base, pick) },
+		Buttons: []modalButton{
+			{ID: "close", Label: "Close", Style: btnPrimary, Closes: true, OnClick: reset},
 		},
-		onClose: reset,
+		OnClose: reset,
 	})
 }
 
@@ -135,7 +135,7 @@ func (a *App) areaPickBody(body rect, cur int, base bool, pick func(ref int)) {
 		}
 		if o.has {
 			sw := o.swatch
-			a.uiSt().queue(func(dst *ebiten.Image) {
+			a.uiSt().Queue(func(dst *ebiten.Image) {
 				uiFillRect(dst, rr.X+8, rr.Y+(rr.H-areaSwatchW)/2, areaSwatchW, areaSwatchW, sw, false)
 				uiStrokeRect(dst, rr.X+8, rr.Y+(rr.H-areaSwatchW)/2, areaSwatchW, areaSwatchW, 1, uiPanelBorder, false)
 			})
@@ -167,7 +167,7 @@ func (a *App) areaDropdown(id string, r rect, ref int, pick func(ref int)) {
 	}
 	if ar, ok := areaByID(areas, areaRef(ref)); ok {
 		sw := areaTint(ar)
-		a.uiSt().queue(func(dst *ebiten.Image) {
+		a.uiSt().Queue(func(dst *ebiten.Image) {
 			uiFillRect(dst, r.X+5, r.Y+(r.H-10)/2, 10, 10, sw, false)
 		})
 	}

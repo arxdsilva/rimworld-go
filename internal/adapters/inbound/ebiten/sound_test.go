@@ -229,9 +229,9 @@ func TestClickSounds(t *testing.T) {
 	rec := &soundRecorder{}
 	a := testApp(&stubSim{w: 4, h: 4})
 	a.cfg.Sound = rec
-	a.uiSound(button{id: "menu.newgame"})
-	a.uiSound(button{id: "menu.plugins", disabled: true})
-	a.uiSound(button{id: "options.master.inc"})
+	a.uiSound(button{ID: "menu.newgame"})
+	a.uiSound(button{ID: "menu.plugins", Disabled: true})
+	a.uiSound(button{ID: "options.master.inc"})
 	if len(rec.played("ui.click")) != 1 || len(rec.played("ui.deny")) != 1 || len(rec.plays) != 2 {
 		t.Fatalf("plays: %+v", rec.plays)
 	}

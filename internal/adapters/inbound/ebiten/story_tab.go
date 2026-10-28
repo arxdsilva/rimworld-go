@@ -107,14 +107,14 @@ func (a *App) storytellerColumn(r rect, v game.StoryView) {
 		}
 		id := "opt.story.pick." + p.Key
 		pick := func() { a.setStoryteller(p.Key) }
-		w := uiWidget{id: id, r: cr, label: p.Name, focusable: true, click: func() { a.uiOK(); pick() },
-			tip: p.Name + ", " + p.Title + "\n" + modeCaption(p.Mode) + ". " + pacingTip(p)}
-		if u.add(w) && (a.uiPress(cr) || a.uiKeyAct(id)) {
+		w := uiWidget{ID: id, R: cr, Label: p.Name, Focusable: true, Click: func() { a.uiOK(); pick() },
+			Tip: p.Name + ", " + p.Title + "\n" + modeCaption(p.Mode) + ". " + pacingTip(p)}
+		if u.Add(w) && (a.uiPress(cr) || a.uiKeyAct(id)) {
 			a.uiOK()
 			pick()
 		}
 		selected := v.Storyteller == p.Name
-		u.queue(func(dst *ebiten.Image) { a.paintStoryCard(dst, cr, p, selected, u.hot == id) })
+		u.Queue(func(dst *ebiten.Image) { a.paintStoryCard(dst, cr, p, selected, u.Hot == id) })
 	}
 }
 
@@ -154,13 +154,13 @@ func (a *App) difficultyColumn(r rect, v game.StoryView) {
 			}
 			a.setDifficulty(rw.preset.Key())
 		}
-		w := uiWidget{id: rw.id, r: rw.r, label: rw.label, tip: rw.tip, focusable: true, click: func() { a.uiOK(); click() }}
-		if u.add(w) && (a.uiPress(rw.r) || a.uiKeyAct(rw.id)) {
+		w := uiWidget{ID: rw.id, R: rw.r, Label: rw.label, Tip: rw.tip, Focusable: true, Click: func() { a.uiOK(); click() }}
+		if u.Add(w) && (a.uiPress(rw.r) || a.uiKeyAct(rw.id)) {
 			a.uiOK()
 			click()
 		}
 		selected := rw.preset == cur
-		u.queue(func(dst *ebiten.Image) { paintDiffRow(dst, rw.r, rw.label, rw.desc, selected, u.hot == rw.id) })
+		u.Queue(func(dst *ebiten.Image) { paintDiffRow(dst, rw.r, rw.label, rw.desc, selected, u.Hot == rw.id) })
 	}
 }
 
@@ -229,12 +229,12 @@ func (a *App) openStoryCustom(v game.StoryView) {
 	cd := customDiff{s: v.Difficulty, from: from}
 	formH := new(float32)
 	a.uiPushModal(modal{
-		id: stCustomMod, title: "Custom difficulty", w: diffModalW, h: diffModalH,
-		draw: func(a *App, body rect) { a.storyCustomBody(body, &cd, formH) },
-		buttons: []modalButton{
-			{id: "accept", label: "Accept", style: btnPrimary, closes: true, onClick: func() { a.setDifficulty(customName(cd.s)) }},
-			{id: "reset", label: "Reset", onClick: func() { cd.s = difficulty.Of(cd.from) }},
-			{id: "cancel", label: "Cancel", closes: true},
+		ID: stCustomMod, Title: "Custom difficulty", W: diffModalW, H: diffModalH,
+		Draw: func(a *App, body rect) { a.storyCustomBody(body, &cd, formH) },
+		Buttons: []modalButton{
+			{ID: "accept", Label: "Accept", Style: btnPrimary, Closes: true, OnClick: func() { a.setDifficulty(customName(cd.s)) }},
+			{ID: "reset", Label: "Reset", OnClick: func() { cd.s = difficulty.Of(cd.from) }},
+			{ID: "cancel", Label: "Cancel", Closes: true},
 		},
 	})
 }

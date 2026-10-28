@@ -21,7 +21,7 @@ func newKit(t *testing.T) (*App, *fakeInput, *uiState) {
 	return a, f, a.uiSt()
 }
 
-func setHook(u *uiState, fn func(a *App)) { u.hook = func(a *App, _, _ int) { fn(a) } }
+func setHook(u *uiState, fn func(a *App)) { u.Hook = func(a *App, _, _ int) { fn(a) } }
 
 // press holds the left button down for one frame at (x, y).
 func (f *fakeInput) press(t *testing.T, a *App, x, y int) {
@@ -69,8 +69,8 @@ func TestSliderDragAndKeys(t *testing.T) {
 	at := func(frac float32) int { return int(track.X + track.W*frac) }
 
 	f.press(t, a, at(0.5), 110)
-	if !closeTo(val, 50, 0.01) || u.active != "s" || u.focus != "s" {
-		t.Fatalf("press on the track captures and jumps: val=%v active=%q focus=%q", val, u.active, u.focus)
+	if !closeTo(val, 50, 0.01) || u.Active != "s" || u.Focus != "s" {
+		t.Fatalf("press on the track captures and jumps: val=%v active=%q focus=%q", val, u.Active, u.Focus)
 	}
 	f.move(t, a, at(1)+40, 400) // far outside the slider: the capture still follows x
 	if val != 100 {
@@ -82,10 +82,10 @@ func TestSliderDragAndKeys(t *testing.T) {
 	}
 	f.move(t, a, at(0.5), 110)
 	f.letGo(t, a, at(0.5), 110)
-	if released || u.active != "" || !closeTo(val, 50, 0.01) {
-		t.Fatalf("release ends the capture and is consumed: released=%v active=%q val=%v", released, u.active, val)
+	if released || u.Active != "" || !closeTo(val, 50, 0.01) {
+		t.Fatalf("release ends the capture and is consumed: released=%v active=%q val=%v", released, u.Active, val)
 	}
-	if w, ok := u.find("s"); !ok || w.tip != "Rain\n50" {
+	if w, ok := u.Find("s"); !ok || w.Tip != "Rain\n50" {
 		t.Fatalf("tooltip shows the value: %+v", w)
 	}
 
@@ -126,8 +126,8 @@ func TestSliderDragAndKeys(t *testing.T) {
 	if stop != 1 {
 		t.Fatalf("Left = one stop back: %v", stop)
 	}
-	if w, _ := u.find("d"); w.tip != "Normal" {
-		t.Fatalf("stop tooltip = %q", w.tip)
+	if w, _ := u.Find("d"); w.Tip != "Normal" {
+		t.Fatalf("stop tooltip = %q", w.Tip)
 	}
 	n := 3
 	setHook(u, func(a *App) { a.uiSliderInt("i", dr, &n, sliderSpec{Min: 0, Max: 10}) })
@@ -154,18 +154,18 @@ func TestTextFieldEditing(t *testing.T) {
 	}
 
 	f.clickAt(t, a, 380, 216) // right of the text: caret at the end
-	if u.edit.id != "t" || u.caret != 2 || !a.textActive() || a.contextStack()[0] != input.CtxText {
-		t.Fatalf("click focuses with the caret at the end: edit=%q caret=%d", u.edit.id, u.caret)
+	if u.Edit.ID != "t" || u.Caret != 2 || !a.textActive() || a.contextStack()[0] != input.CtxText {
+		t.Fatalf("click focuses with the caret at the end: edit=%q caret=%d", u.Edit.ID, u.Caret)
 	}
 	f.TypeText(t, a, "cd")
-	if val != "abcd" || u.caret != 4 {
-		t.Fatalf("typing inserts at the caret: %q caret %d", val, u.caret)
+	if val != "abcd" || u.Caret != 4 {
+		t.Fatalf("typing inserts at the caret: %q caret %d", val, u.Caret)
 	}
 
 	f.Key(t, a, "Home", 0)
 	f.Key(t, a, "End", input.ModShift)
-	if u.caret != 4 || u.selStart != 0 || u.selEnd != 4 {
-		t.Fatalf("Home then Shift+End selects everything: caret=%d sel=[%d,%d)", u.caret, u.selStart, u.selEnd)
+	if u.Caret != 4 || u.SelStart != 0 || u.SelEnd != 4 {
+		t.Fatalf("Home then Shift+End selects everything: caret=%d sel=[%d,%d)", u.Caret, u.SelStart, u.SelEnd)
 	}
 	f.TypeText(t, a, "Z")
 	if val != "Z" {
@@ -196,8 +196,8 @@ func TestTextFieldEditing(t *testing.T) {
 	f.Frame(t, a)
 
 	f.Key(t, a, "A", input.ModCtrl)
-	if u.selStart != 0 || u.selEnd != len([]rune(val)) {
-		t.Fatalf("Ctrl+A selects all: [%d,%d)", u.selStart, u.selEnd)
+	if u.SelStart != 0 || u.SelEnd != len([]rune(val)) {
+		t.Fatalf("Ctrl+A selects all: [%d,%d)", u.SelStart, u.SelEnd)
 	}
 	f.TypeText(t, a, "Q")
 	if val != "Q" {
@@ -207,8 +207,8 @@ func TestTextFieldEditing(t *testing.T) {
 	changed = false
 	f.Key(t, a, "Escape", 0)
 	f.Frame(t, a)
-	if val != "ab" || u.edit.id != "" || a.textActive() || !changed {
-		t.Fatalf("Esc restores the value from focus time and ends the edit: %q edit=%q changed=%v", val, u.edit.id, changed)
+	if val != "ab" || u.Edit.ID != "" || a.textActive() || !changed {
+		t.Fatalf("Esc restores the value from focus time and ends the edit: %q edit=%q changed=%v", val, u.Edit.ID, changed)
 	}
 
 	// Click-away commits and keeps the edit.
@@ -217,22 +217,22 @@ func TestTextFieldEditing(t *testing.T) {
 	committed = false
 	f.clickAt(t, a, 700, 500)
 	f.Frame(t, a)
-	if val != "ab!" || u.edit.id != "" || !committed {
-		t.Fatalf("click elsewhere commits: %q edit=%q committed=%v", val, u.edit.id, committed)
+	if val != "ab!" || u.Edit.ID != "" || !committed {
+		t.Fatalf("click elsewhere commits: %q edit=%q committed=%v", val, u.Edit.ID, committed)
 	}
 
 	// Enter commits a single-line field and a caret click lands mid-text.
 	val = "hello"
 	f.clickAt(t, a, 100+fieldPad+1, 216)
-	if u.caret != 0 {
-		t.Fatalf("a click at the left edge puts the caret first: %d", u.caret)
+	if u.Caret != 0 {
+		t.Fatalf("a click at the left edge puts the caret first: %d", u.Caret)
 	}
 	f.TypeText(t, a, "X")
 	committed = false
 	f.Key(t, a, "Enter", 0)
 	f.Frame(t, a)
-	if val != "Xhello" || u.edit.id != "" || !committed {
-		t.Fatalf("Enter commits: %q edit=%q committed=%v", val, u.edit.id, committed)
+	if val != "Xhello" || u.Edit.ID != "" || !committed {
+		t.Fatalf("Enter commits: %q edit=%q committed=%v", val, u.Edit.ID, committed)
 	}
 	if a.textActive() {
 		t.Fatal("global shortcuts are back after the edit")
@@ -282,19 +282,19 @@ func TestTextFieldMultiline(t *testing.T) {
 	r := rect{X: 100, Y: 200, W: 240, H: 120}
 	setHook(u, func(a *App) { a.uiTextField("m", r, &val, textFieldSpec{Multiline: true}) })
 	f.clickAt(t, a, 330, 300) // below the text: caret at the end
-	if u.caret != len([]rune(val)) {
-		t.Fatalf("caret = %d", u.caret)
+	if u.Caret != len([]rune(val)) {
+		t.Fatalf("caret = %d", u.Caret)
 	}
 	f.Key(t, a, "ArrowUp", 0)
-	if u.caret > len("first line") {
-		t.Fatalf("Up moves to the first line: %d", u.caret)
+	if u.Caret > len("first line") {
+		t.Fatalf("Up moves to the first line: %d", u.Caret)
 	}
 	f.Key(t, a, "End", 0)
-	if u.caret != len("first line") {
-		t.Fatalf("End goes to the end of the visual line: %d", u.caret)
+	if u.Caret != len("first line") {
+		t.Fatalf("End goes to the end of the visual line: %d", u.Caret)
 	}
 	f.Key(t, a, "Enter", 0)
-	if val != "first line\n\nsecond" || u.edit.id != "m" {
+	if val != "first line\n\nsecond" || u.Edit.ID != "m" {
 		t.Fatalf("Enter inserts a newline in a multi-line field: %q", val)
 	}
 	f.TypeText(t, a, "this extra text wraps around the narrow field")
@@ -303,8 +303,8 @@ func TestTextFieldMultiline(t *testing.T) {
 		t.Fatalf("long text wraps into visual lines: %d", len(spans))
 	}
 	for _, sp := range spans {
-		if w, _ := measure(val[sp.start:sp.end], tsBody); w > float64(fieldInner(r).W)+0.5 {
-			t.Fatalf("line %q is %v wide", val[sp.start:sp.end], w)
+		if w, _ := measure(val[sp.Start:sp.End], tsBody); w > float64(fieldInner(r).W)+0.5 {
+			t.Fatalf("line %q is %v wide", val[sp.Start:sp.End], w)
 		}
 	}
 	f.Key(t, a, "Escape", 0)
@@ -315,30 +315,30 @@ func TestTextFieldMultiline(t *testing.T) {
 
 func TestTextBufEdits(t *testing.T) {
 	t.Parallel()
-	b := textBuf{rs: []rune("héllo")}
-	b.move(2, false)
-	b.insert([]rune("XY"), 0)
-	if string(b.rs) != "héXYllo" || b.caret != 4 {
-		t.Fatalf("%q %d", string(b.rs), b.caret)
+	b := textBuf{Rs: []rune("héllo")}
+	b.Move(2, false)
+	b.Insert([]rune("XY"), 0)
+	if string(b.Rs) != "héXYllo" || b.Caret != 4 {
+		t.Fatalf("%q %d", string(b.Rs), b.Caret)
 	}
-	b.move(0, true) // select to the start
-	if lo, hi := b.sel(); lo != 0 || hi != 4 {
+	b.Move(0, true) // select to the start
+	if lo, hi := b.Sel(); lo != 0 || hi != 4 {
 		t.Fatalf("sel [%d,%d)", lo, hi)
 	}
-	if !b.backspace() || string(b.rs) != "llo" {
-		t.Fatalf("backspace deletes the selection: %q", string(b.rs))
+	if !b.Backspace() || string(b.Rs) != "llo" {
+		t.Fatalf("backspace deletes the selection: %q", string(b.Rs))
 	}
-	if b.backspace() {
+	if b.Backspace() {
 		t.Fatal("nothing before the caret")
 	}
-	b.move(3, false)
-	if b.del() {
+	b.Move(3, false)
+	if b.Del() {
 		t.Fatal("nothing after the caret")
 	}
-	if b.insert([]rune("abcdef"), 5); string(b.rs) != "llo"+"ab" {
-		t.Fatalf("max length cuts the insert: %q", string(b.rs))
+	if b.Insert([]rune("abcdef"), 5); string(b.Rs) != "llo"+"ab" {
+		t.Fatalf("max length cuts the insert: %q", string(b.Rs))
 	}
-	if b.insert(nil, 0) {
+	if b.Insert(nil, 0) {
 		t.Fatal("inserting nothing changes nothing")
 	}
 	if got := nearestIndex([]rune("abc"), 0); got != 0 {
@@ -386,8 +386,8 @@ func TestScrollViewWheelAndThumb(t *testing.T) {
 		t.Fatalf("thumb = %+v", thumb)
 	}
 	f.press(t, a, 396, 110)
-	if u.active != "sv.thumb" {
-		t.Fatalf("press on the thumb captures: %q", u.active)
+	if u.Active != "sv.thumb" {
+		t.Fatalf("press on the thumb captures: %q", u.Active)
 	}
 	f.move(t, a, 396, 270) // grabbed 10 px down: the thumb's top is at 260 = the bottom stop
 	if area.Off != 800 {
@@ -398,8 +398,8 @@ func TestScrollViewWheelAndThumb(t *testing.T) {
 		t.Fatalf("dragging past the top: %v", area.Off)
 	}
 	f.letGo(t, a, 396, 5)
-	if u.active != "" {
-		t.Fatalf("release frees the capture: %q", u.active)
+	if u.Active != "" {
+		t.Fatalf("release frees the capture: %q", u.Active)
 	}
 
 	// A click on the track below the thumb pages down; PageDown over the view too.
@@ -431,8 +431,8 @@ func TestListSelectionAndKeys(t *testing.T) {
 	})
 	f.Frame(t, a)
 	f.clickAt(t, a, 150, 100+2*listRowH+5)
-	if sel != 2 || u.focus != "l" {
-		t.Fatalf("a click selects the row: sel=%d focus=%q", sel, u.focus)
+	if sel != 2 || u.Focus != "l" {
+		t.Fatalf("a click selects the row: sel=%d focus=%q", sel, u.Focus)
 	}
 	f.Key(t, a, "ArrowDown", 0)
 	if sel != 3 {
@@ -442,20 +442,20 @@ func TestListSelectionAndKeys(t *testing.T) {
 	if sel != 99 {
 		t.Fatalf("End = last row: %d", sel)
 	}
-	if off := u.scroll["l"]; off != 100*listRowH-r.H {
+	if off := u.Scroll["l"]; off != 100*listRowH-r.H {
 		t.Fatalf("the selection is kept visible: off=%v", off)
 	}
 	f.Key(t, a, "Home", 0)
-	if sel != 0 || u.scroll["l"] != 0 {
-		t.Fatalf("Home = first row, scrolled to the top: sel=%d off=%v", sel, u.scroll["l"])
+	if sel != 0 || u.Scroll["l"] != 0 {
+		t.Fatalf("Home = first row, scrolled to the top: sel=%d off=%v", sel, u.Scroll["l"])
 	}
 	first, last := listVisible(1000, 260, 26, 100)
 	if first != 38 || last != 48 {
 		t.Fatalf("only visible rows are laid out: %d..%d", first, last)
 	}
 	// virtualised: far fewer widgets than rows
-	if len(u.cur) > 14 {
-		t.Fatalf("%d widgets for 100 rows", len(u.cur))
+	if len(u.Cur) > 14 {
+		t.Fatalf("%d widgets for 100 rows", len(u.Cur))
 	}
 }
 
@@ -469,22 +469,22 @@ func TestTooltipDelayAndClamp(t *testing.T) {
 	for i := 1; i <= 23; i++ {
 		f.Frame(t, a)
 	}
-	if u.tipVisible() {
-		t.Fatalf("no tooltip before the delay (%d frames)", u.tipFrames)
+	if u.TipVisible() {
+		t.Fatalf("no tooltip before the delay (%d frames)", u.TipFrames)
 	}
 	for i := 0; i < 5; i++ {
 		f.Frame(t, a)
 	}
-	if !u.tipVisible() {
-		t.Fatalf("the tooltip shows after the delay (%d frames)", u.tipFrames)
+	if !u.TipVisible() {
+		t.Fatalf("the tooltip shows after the delay (%d frames)", u.TipFrames)
 	}
 	f.move(t, a, 600, 400)
 	f.Frame(t, a)
-	if u.tipVisible() {
+	if u.TipVisible() {
 		t.Fatal("moving off hides it")
 	}
 	f.move(t, a, 210, 210)
-	if u.tipVisible() {
+	if u.TipVisible() {
 		t.Fatal("coming back restarts the delay")
 	}
 	f.Cur.Press[mbLeft], f.Cur.Down[mbLeft] = true, true
@@ -492,7 +492,7 @@ func TestTooltipDelayAndClamp(t *testing.T) {
 		f.Frame(t, a)
 		f.Cur.Press[mbLeft] = false
 	}
-	if u.tipVisible() {
+	if u.TipVisible() {
 		t.Fatal("no tooltip while a button is down")
 	}
 	f.Cur.Down[mbLeft] = false
@@ -528,21 +528,21 @@ func TestModalEscClosesTopOnly(t *testing.T) {
 	closed := []string{}
 	for _, id := range []string{"one", "two"} {
 		id := id
-		a.uiPushModal(modal{id: id, title: id, w: 400, h: 200, onClose: func() { closed = append(closed, id) }})
+		a.uiPushModal(modal{ID: id, Title: id, W: 400, H: 200, OnClose: func() { closed = append(closed, id) }})
 	}
 	f.Frame(t, a)
 	if a.uiModalTop() != "two" || a.contextStack()[0] != input.CtxModal {
 		t.Fatalf("the modal is on top of the input stack: %v", a.contextStack())
 	}
 	for _, h := range a.layoutHits(a.size()) {
-		if h.id == "options.back" {
+		if h.ID == "options.back" {
 			t.Fatal("a modal hides the screen's buttons from the hit list")
 		}
 	}
 
 	f.Key(t, a, "Escape", 0)
-	if len(u.modals) != 1 || a.uiModalTop() != "one" || strings.Join(closed, ",") != "two" {
-		t.Fatalf("Esc closes only the top modal: %v closed=%v", u.modals, closed)
+	if len(u.Modals) != 1 || a.uiModalTop() != "one" || strings.Join(closed, ",") != "two" {
+		t.Fatalf("Esc closes only the top modal: %v closed=%v", u.Modals, closed)
 	}
 	if a.nav.screen() != screenOptions {
 		t.Fatalf("and does not go Back: %s", a.nav.screen())
@@ -550,15 +550,15 @@ func TestModalEscClosesTopOnly(t *testing.T) {
 
 	// A click on a button behind the modal does nothing.
 	f.clickAt(t, a, 50, int(footerY(a.sh))+10)
-	if a.nav.screen() != screenOptions || len(u.modals) != 1 {
-		t.Fatalf("clicks outside are ignored: %s, %d modals", a.nav.screen(), len(u.modals))
+	if a.nav.screen() != screenOptions || len(u.Modals) != 1 {
+		t.Fatalf("clicks outside are ignored: %s, %d modals", a.nav.screen(), len(u.Modals))
 	}
 
 	// The X closes the top one too.
-	_, tr, _, _ := modalGeometry(a.sw, a.sh, u.modals[0])
+	_, tr, _, _ := modalGeometry(a.sw, a.sh, u.Modals[0])
 	f.clickAt(t, a, int(tr.Right())-modalCloseW/2-8, int(tr.Y+tr.H/2))
-	if len(u.modals) != 0 || strings.Join(closed, ",") != "two,one" {
-		t.Fatalf("the X closes: %v closed=%v", u.modals, closed)
+	if len(u.Modals) != 0 || strings.Join(closed, ",") != "two,one" {
+		t.Fatalf("the X closes: %v closed=%v", u.Modals, closed)
 	}
 	if a.nav.screen() != screenOptions {
 		t.Fatal("still on Options")
@@ -575,33 +575,33 @@ func TestModalConfirmAndButtons(t *testing.T) {
 	ok := 0
 	a.uiConfirm("c", "Discard world?", "The generated world will be lost.", "Discard", true, func() { ok++ })
 	f.Frame(t, a)
-	if len(u.modals) != 1 {
+	if len(u.Modals) != 1 {
 		t.Fatal("confirm opens")
 	}
-	w, found := u.find("modal.c.ok")
+	w, found := u.Find("modal.c.ok")
 	if !found {
-		t.Fatalf("OK button is registered: %+v", u.cur)
+		t.Fatalf("OK button is registered: %+v", u.Cur)
 	}
-	cx, cy := w.r.Center()
+	cx, cy := w.R.Center()
 	f.clickAt(t, a, int(cx), int(cy))
-	if ok != 1 || len(u.modals) != 0 {
-		t.Fatalf("OK runs the action and closes: ok=%d modals=%d", ok, len(u.modals))
+	if ok != 1 || len(u.Modals) != 0 {
+		t.Fatalf("OK runs the action and closes: ok=%d modals=%d", ok, len(u.Modals))
 	}
 	a.uiConfirm("c", "Discard world?", "The generated world will be lost.", "Discard", false, func() { ok++ })
 	f.Frame(t, a)
-	w, _ = u.find("modal.c.cancel")
-	cx, cy = w.r.Center()
+	w, _ = u.Find("modal.c.cancel")
+	cx, cy = w.R.Center()
 	f.clickAt(t, a, int(cx), int(cy))
-	if ok != 1 || len(u.modals) != 0 {
+	if ok != 1 || len(u.Modals) != 0 {
 		t.Fatalf("Cancel closes without acting: ok=%d", ok)
 	}
-	a.uiPushModal(modal{id: "x", title: "X", w: 300, h: 200})
-	a.uiPushModal(modal{id: "x", title: "X", w: 300, h: 200})
-	if len(u.modals) != 1 {
+	a.uiPushModal(modal{ID: "x", Title: "X", W: 300, H: 200})
+	a.uiPushModal(modal{ID: "x", Title: "X", W: 300, H: 200})
+	if len(u.Modals) != 1 {
 		t.Fatal("a modal id opens once")
 	}
 	a.uiCloseModal("x")
-	if len(u.modals) != 0 {
+	if len(u.Modals) != 0 {
 		t.Fatal("closed by id")
 	}
 }
@@ -666,11 +666,11 @@ func TestTableSort(t *testing.T) {
 	}
 	// cell tooltip
 	f.move(t, a, scoreX, 100+tableHeaderH+5)
-	if u.hot == "" || !strings.Contains(u.hot, ".cell.0.score") {
-		t.Fatalf("hover is the score cell: %q", u.hot)
+	if u.Hot == "" || !strings.Contains(u.Hot, ".cell.0.score") {
+		t.Fatalf("hover is the score cell: %q", u.Hot)
 	}
-	if w, _ := u.find(u.hot); w.tip != "score of bea" {
-		t.Fatalf("cell tip = %q", w.tip)
+	if w, _ := u.Find(u.Hot); w.Tip != "score of bea" {
+		t.Fatalf("cell tip = %q", w.Tip)
 	}
 	a.uiTableSetSort("tb", -1, false)
 	if col, _ := a.uiTableSort("tb"); col != -1 {
@@ -694,24 +694,24 @@ func TestTabFocusOrder(t *testing.T) {
 	f.Frame(t, a)
 	step := func(mods input.Mod) string {
 		f.Key(t, a, "Tab", mods)
-		return u.focus
+		return u.Focus
 	}
 	for _, want := range []string{"a", "b", "c", "d", "a"} {
 		if got := step(0); got != want {
 			t.Fatalf("Tab -> %q, want %q", got, want)
 		}
-		if want == "c" && u.edit.id != "c" {
+		if want == "c" && u.Edit.ID != "c" {
 			t.Fatal("Tab onto a text field starts editing it")
 		}
 	}
 	if got := step(input.ModShift); got != "d" {
 		t.Fatalf("Shift+Tab wraps back to %q", got)
 	}
-	if u.edit.id != "" {
+	if u.Edit.ID != "" {
 		t.Fatal("moving off the field ended its edit")
 	}
-	if got := step(input.ModShift); got != "c" || u.edit.id != "c" {
-		t.Fatalf("Shift+Tab -> %q (edit %q)", got, u.edit.id)
+	if got := step(input.ModShift); got != "c" || u.Edit.ID != "c" {
+		t.Fatalf("Shift+Tab -> %q (edit %q)", got, u.Edit.ID)
 	}
 	if got := step(input.ModShift); got != "b" {
 		t.Fatalf("Shift+Tab out of a field -> %q", got)
@@ -720,8 +720,8 @@ func TestTabFocusOrder(t *testing.T) {
 	f.Key(t, a, "Tab", 0) // c
 	f.Key(t, a, "Tab", 0) // d
 	f.Key(t, a, "Tab", 0)
-	if u.focus != "a" {
-		t.Fatalf("e is disabled, so after d comes a: %q", u.focus)
+	if u.Focus != "a" {
+		t.Fatalf("e is disabled, so after d comes a: %q", u.Focus)
 	}
 	f.Key(t, a, "Space", 0)
 	if !on {
@@ -732,7 +732,7 @@ func TestTabFocusOrder(t *testing.T) {
 		t.Fatal("and back")
 	}
 	// Arrow keys inside the tab strip.
-	u.focus = "d"
+	u.Focus = "d"
 	f.Key(t, a, "ArrowRight", 0)
 	f.Key(t, a, "ArrowRight", 0)
 	f.Key(t, a, "ArrowRight", 0)
@@ -802,7 +802,7 @@ func TestCheckRadioAndButtons(t *testing.T) {
 	// The click path reaches widgets by id (uiClick), and layoutHits lists them.
 	found := false
 	for _, b := range a.layoutHits(a.size()) {
-		if b.id == "btn" {
+		if b.ID == "btn" {
 			found = true
 		}
 	}
@@ -827,8 +827,8 @@ func TestWheelRoutingMenuVsCamera(t *testing.T) {
 	f.Cur.Mx, f.Cur.My = 200, 200
 	f.Cur.WheelY = -2
 	f.Frame(t, a)
-	if left != 0 || u.scroll["menu"] != 2*scrollStep {
-		t.Fatalf("a hovered menu consumes the wheel: left=%v off=%v", left, u.scroll["menu"])
+	if left != 0 || u.Scroll["menu"] != 2*scrollStep {
+		t.Fatalf("a hovered menu consumes the wheel: left=%v off=%v", left, u.Scroll["menu"])
 	}
 
 	// Over the colony, a modal's list scrolls and the camera stays put; off
@@ -836,7 +836,7 @@ func TestWheelRoutingMenuVsCamera(t *testing.T) {
 	ca, _, cs := inputColony(t)
 	ca.renderer.smooth.Instant = true
 	lr := rect{X: 300, Y: 200, W: 300, H: 200}
-	ca.uiPushModal(modal{id: "list", title: "List", w: 400, h: 300, draw: func(a *App, body rect) {
+	ca.uiPushModal(modal{ID: "list", Title: "List", W: 400, H: 300, Draw: func(a *App, body rect) {
 		a.uiScrollArea("modal.list", lr, 900, scrollOpts{})
 	}})
 	cs.Frame(t, ca)
@@ -847,13 +847,13 @@ func TestWheelRoutingMenuVsCamera(t *testing.T) {
 	if ca.renderer.cam.Zoom != z {
 		t.Fatal("the wheel over a scroll view does not zoom the camera")
 	}
-	if ca.uiSt().scroll["modal.list"] != 0 {
+	if ca.uiSt().Scroll["modal.list"] != 0 {
 		t.Fatal("scrolling up at the top stays at the top")
 	}
 	cs.Cur.WheelY = -1
 	cs.Frame(t, ca)
-	if ca.uiSt().scroll["modal.list"] != scrollStep || ca.renderer.cam.Zoom != z {
-		t.Fatalf("it scrolls the list instead: off=%v zoom %v -> %v", ca.uiSt().scroll["modal.list"], z, ca.renderer.cam.Zoom)
+	if ca.uiSt().Scroll["modal.list"] != scrollStep || ca.renderer.cam.Zoom != z {
+		t.Fatalf("it scrolls the list instead: off=%v zoom %v -> %v", ca.uiSt().Scroll["modal.list"], z, ca.renderer.cam.Zoom)
 	}
 	cs.Cur.Mx, cs.Cur.My = 5, 5
 	cs.Cur.WheelY = 1
@@ -890,7 +890,7 @@ func TestSetupMinWindow(t *testing.T) {
 	})
 	hasBtn := func() bool {
 		for _, b := range a.layoutHits(a.size()) {
-			if b.id == "btn" {
+			if b.ID == "btn" {
 				return true
 			}
 		}
@@ -1093,17 +1093,17 @@ func TestRegisteredScreenUIAndPaintSmoke(t *testing.T) {
 	f.Cur.Held = []string{"Meta"}
 	f.Key(t, a, "A", 0)
 	f.Cur.Held = nil
-	if u.selStart != 0 || u.selEnd != len(text) {
-		t.Fatalf("Cmd+A selects all: [%d,%d)", u.selStart, u.selEnd)
+	if u.SelStart != 0 || u.SelEnd != len(text) {
+		t.Fatalf("Cmd+A selects all: [%d,%d)", u.SelStart, u.SelEnd)
 	}
 	f.Key(t, a, "ArrowLeft", 0)
-	if u.caret != 0 || u.selStart != u.selEnd {
-		t.Fatalf("Left collapses a selection to its start: caret=%d", u.caret)
+	if u.Caret != 0 || u.SelStart != u.SelEnd {
+		t.Fatalf("Left collapses a selection to its start: caret=%d", u.Caret)
 	}
 	f.Key(t, a, "ArrowRight", input.ModShift)
 	f.Key(t, a, "ArrowRight", 0)
-	if u.caret != 1 {
-		t.Fatalf("Right collapses to its end: %d", u.caret)
+	if u.Caret != 1 {
+		t.Fatalf("Right collapses to its end: %d", u.Caret)
 	}
 	a.settings.Accessibility.ReducedMotion = true
 	a.uiPaint(img)

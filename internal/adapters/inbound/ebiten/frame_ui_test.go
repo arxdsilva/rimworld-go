@@ -156,16 +156,16 @@ func TestCarpetMaterialButtonsShowCounts(t *testing.T) {
 	click(t, a, "arch.cat.furniture")
 	click(t, a, "arch.tool.carpet")
 	bs := a.architectButtons()
-	if b, _ := hasButton(bs, "arch.stuff.straw carpet"); b.label != "Straw (0)" {
-		t.Fatalf("label = %q", b.label)
+	if b, _ := hasButton(bs, "arch.stuff.straw carpet"); b.Label != "Straw (0)" {
+		t.Fatalf("label = %q", b.Label)
 	}
-	if b, _ := hasButton(bs, "arch.stuff.cloth carpet"); b.label != "Cloth (3)" {
-		t.Fatalf("label = %q", b.label)
+	if b, _ := hasButton(bs, "arch.stuff.cloth carpet"); b.Label != "Cloth (3)" {
+		t.Fatalf("label = %q", b.Label)
 	}
 	r := a.architectRect()
 	for _, b := range bs {
-		if strings.HasPrefix(b.id, "arch.stuff.") && b.y+b.h > r.y+r.h {
-			t.Fatalf("%s overflows the panel", b.id)
+		if strings.HasPrefix(b.ID, "arch.stuff.") && b.Y+b.H > r.Y+r.H {
+			t.Fatalf("%s overflows the panel", b.ID)
 		}
 	}
 }
@@ -241,8 +241,8 @@ func TestItemForbidToggle(t *testing.T) {
 		t.Fatalf("cmd = %+v", c)
 	}
 	s.world.Items[0].Forbidden = true
-	if b, _ := hasButton(a.commandGridButtons(), "item.forbid"); b.label != "Allow" { // the command button in the grid
-		t.Fatalf("label = %q", b.label)
+	if b, _ := hasButton(a.commandGridButtons(), "item.forbid"); b.Label != "Allow" { // the command button in the grid
+		t.Fatalf("label = %q", b.Label)
 	}
 	click(t, a, "item.forbid")
 	if c := lastCmd(t, s); c.Enabled {

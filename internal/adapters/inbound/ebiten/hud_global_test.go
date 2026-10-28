@@ -229,12 +229,12 @@ func TestGlobalToggleTooltipsShowKeys(t *testing.T) {
 	bs := a.colonyButtons(a.sw, a.sh)
 	for id, key := range map[string]string{"hud.roof": "[Shift+R]", "hud.rooms": "[G]"} {
 		b, ok := hasButton(bs, id)
-		if !ok || !strings.Contains(b.tip, key) {
-			t.Errorf("%s tip = %q, want it to show %s", id, b.tip, key)
+		if !ok || !strings.Contains(b.Tip, key) {
+			t.Errorf("%s tip = %q, want it to show %s", id, b.Tip, key)
 		}
 	}
 	for _, id := range []string{"hud.home", "hud.homeauto", "hud.plan"} {
-		if b, ok := hasButton(bs, id); !ok || b.tip == "" {
+		if b, ok := hasButton(bs, id); !ok || b.Tip == "" {
 			t.Errorf("%s has no tooltip", id)
 		}
 	}
@@ -270,32 +270,32 @@ func TestGlobalSpeedButtons(t *testing.T) {
 		key   string
 	}{{speedPaused, "[Space]"}, {speedNormal, "[1]"}, {speedFast, "[2]"}, {speedVeryFast, "[3]"}} {
 		b := find(i)
-		if b.w != 52 || b.h != 24 || b.x < g.X || b.x+b.w > g.Right() || b.y < g.Y || b.y+b.h > g.Bottom() {
+		if b.W != 52 || b.H != 24 || b.X < g.X || b.X+b.W > g.Right() || b.Y < g.Y || b.Y+b.H > g.Bottom() {
 			t.Errorf("speed.%d = %+v, want 52x24 inside Global %+v", i, b, g)
 		}
-		if !strings.Contains(b.tip, want.key) {
-			t.Errorf("speed.%d tip = %q, want it to show %s", i, b.tip, want.key)
+		if !strings.Contains(b.Tip, want.key) {
+			t.Errorf("speed.%d tip = %q, want it to show %s", i, b.Tip, want.key)
 		}
-		click(t, a, b.id)
+		click(t, a, b.ID)
 		if i == 0 {
 			// pause toggles: it was paused, so the click resumes at normal
 			if r.speed != speedNormal {
 				t.Errorf("clicking pause while paused: speed %v, want normal", r.speed)
 			}
-			click(t, a, b.id)
+			click(t, a, b.ID)
 		}
 		if r.speed != want.speed {
 			t.Errorf("speed.%d: speed %v, want %v", i, r.speed, want.speed)
 		}
 		for j := 0; j < 4; j++ {
-			if got := find(j).selected; got != (j == i) {
+			if got := find(j).Selected; got != (j == i) {
 				t.Errorf("after speed.%d: speed.%d selected = %v", i, j, got)
 			}
 		}
 	}
 	r.speed = speedUltra // developer ultrafast: no button lights up
 	for j := 0; j < 4; j++ {
-		if find(j).selected {
+		if find(j).Selected {
 			t.Errorf("ultrafast lit speed.%d", j)
 		}
 	}

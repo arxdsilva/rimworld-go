@@ -87,15 +87,15 @@ func (a *App) storytellerUI(sw, sh int) {
 		p := p
 		r := rect{X: L.left.X, Y: L.left.Y + float32(i)*(storyCardH+storyCardGap), W: storyLeftW, H: storyCardH}
 		pick := func() { ng.storyteller = p.Key }
-		w := uiWidget{id: "story.pick." + p.Key, r: r, label: p.Name, focusable: true, click: func() { a.uiOK(); pick() },
-			tip: p.Name + ", " + p.Title + "\n" + modeCaption(p.Mode)}
+		w := uiWidget{ID: "story.pick." + p.Key, R: r, Label: p.Name, Focusable: true, Click: func() { a.uiOK(); pick() },
+			Tip: p.Name + ", " + p.Title + "\n" + modeCaption(p.Mode)}
 		u := a.uiSt()
-		if u.add(w) && (a.uiPress(r) || a.uiKeyAct(w.id)) {
+		if u.Add(w) && (a.uiPress(r) || a.uiKeyAct(w.ID)) {
 			a.uiOK()
 			pick()
 		}
 		selected := ng.storyteller == p.Key
-		u.queue(func(dst *ebiten.Image) { a.paintStoryCard(dst, r, p, selected, u.hot == w.id) })
+		u.Queue(func(dst *ebiten.Image) { a.paintStoryCard(dst, r, p, selected, u.Hot == w.ID) })
 	}
 
 	a.storyCentre(L.centre, cur)
@@ -187,7 +187,7 @@ func (a *App) storyCentre(r rect, p storyteller.Profile) {
 	ph := max(float32(180), min(float32(330), in.H*0.46))
 	pr := rect{X: in.X, Y: in.Y, W: ph * 0.8, H: ph}
 	text := rect{X: pr.Right() + 16, Y: in.Y, W: in.Right() - pr.Right() - 16, H: ph}
-	u.queue(func(dst *ebiten.Image) {
+	u.Queue(func(dst *ebiten.Image) {
 		if img := a.portraitImage(p.Key, false); img != nil {
 			drawFit(dst, img, pr)
 		} else {
@@ -219,7 +219,7 @@ func (a *App) storyCentre(r rect, p storyteller.Profile) {
 		total += wrapHeight(para, tsBody, bw) + 8
 	}
 	area := a.uiScrollArea("story.bio", bio, total, scrollOpts{Step: 34})
-	u.queue(func(dst *ebiten.Image) {
+	u.Queue(func(dst *ebiten.Image) {
 		sub := clipTo(dst, area.View)
 		y := area.View.Y - area.Off
 		for _, para := range paras {
@@ -234,7 +234,7 @@ func (a *App) storyCentre(r rect, p storyteller.Profile) {
 	chart := rect{X: in.X, Y: in.Bottom() - sparkBlockH + 6, W: in.W, H: sparkBlockH - 6}
 	vals := pacingOf(p)
 	a.uiTip("story.pacing", chart, "Example pacing\nSixty days of one possible story. Each bar is a day; taller bars are bigger threats and gaps are quiet days.")
-	u.queue(func(dst *ebiten.Image) { drawPacing(dst, chart, vals) })
+	u.Queue(func(dst *ebiten.Image) { drawPacing(dst, chart, vals) })
 }
 
 // pacingTip describes how a storyteller paces threats, for the tooltip.
@@ -361,13 +361,13 @@ func (a *App) storyRight(ng *newGameState, r rect) {
 		if hit.Empty() {
 			continue
 		}
-		w := uiWidget{id: sr.id, r: hit, label: sr.label, tip: sr.tip, focusable: true, click: func() { a.uiOK(); sr.click() }}
-		if u.add(w) && (a.uiPress(hit) || a.uiKeyAct(sr.id)) {
+		w := uiWidget{ID: sr.id, R: hit, Label: sr.label, Tip: sr.tip, Focusable: true, Click: func() { a.uiOK(); sr.click() }}
+		if u.Add(w) && (a.uiPress(hit) || a.uiKeyAct(sr.id)) {
 			a.uiOK()
 			sr.click()
 		}
 	}
-	u.queue(func(dst *ebiten.Image) {
+	u.Queue(func(dst *ebiten.Image) {
 		sub := clipTo(dst, area.View)
 		top := area.View.Y - area.Off
 		drawText(sub, "Difficulty", float64(area.View.X+2), float64(top)+2, hs)
@@ -382,7 +382,7 @@ func (a *App) storyRight(ng *newGameState, r rect) {
 			if rr.Bottom() < area.View.Y || rr.Y > area.View.Bottom() {
 				continue
 			}
-			hot := u.hot == sr.id
+			hot := u.Hot == sr.id
 			switch {
 			case sr.selected:
 				fillRect(sub, rr.Inset(1), lerpRGBA(uiPanel, uiBtnSelected, 0.8))

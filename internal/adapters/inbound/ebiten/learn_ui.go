@@ -406,17 +406,17 @@ func (a *App) learnButtons() []button {
 	var out []button
 	if lay.open != nil && !lay.card.Empty() {
 		b := asButton(lay.gotIt, "learn.done."+lay.open.id, "Got it")
-		b.tip = "Mark this lesson learned"
+		b.Tip = "Mark this lesson learned"
 		out = append(out, b)
 	}
 	for _, rw := range lay.rows {
 		b := asButton(rw.r, "learn.lesson."+rw.l.id, rw.l.title)
-		b.selected = lay.open == rw.l
-		b.tip = "Read this lesson"
+		b.Selected = lay.open == rw.l
+		b.Tip = "Read this lesson"
 		out = append(out, b)
 	}
 	t := asButton(lay.header, "learn.toggle", "Learning helper")
-	t.tip = "Fold or unfold the lessons (Options › Gameplay turns them off)"
+	t.Tip = "Fold or unfold the lessons (Options › Gameplay turns them off)"
 	return append(out, t)
 }
 

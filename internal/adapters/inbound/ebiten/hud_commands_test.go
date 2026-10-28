@@ -59,7 +59,7 @@ func TestCommandGridCellsFollowTheLayout(t *testing.T) {
 		}
 		for i, b := range bs {
 			c := l.GridCells[i]
-			if b.id != fmt.Sprintf("cmd.test.c%d", i) || b.x != c.X || b.y != c.Y || b.w != c.W || b.h != c.H {
+			if b.ID != fmt.Sprintf("cmd.test.c%d", i) || b.X != c.X || b.Y != c.Y || b.W != c.W || b.H != c.H {
 				t.Errorf("%d commands: button %d = %+v, want id c%d at %+v", n, i, b, i, c)
 			}
 		}
@@ -241,7 +241,7 @@ func TestRightClickOpensTheOptionsMenu(t *testing.T) {
 	if a.float.opts[0].Label != "Ada" || !a.float.opts[2].Disabled || a.float.opts[2].Reason != "asleep" {
 		t.Fatalf("menu entries = %+v", a.float.opts)
 	}
-	if r := a.floatRect(); r.y+r.h > cells[0].Y+0.5 {
+	if r := a.floatRect(); r.Y+r.H > cells[0].Y+0.5 {
 		t.Errorf("the menu opens upward from the cell: menu %+v, cell %+v", r, cells[0])
 	}
 	click(t, a, "float.1")
@@ -335,9 +335,9 @@ func TestCommandTooltipsAreDeclared(t *testing.T) {
 	)
 	f.Frame(t, a)
 	tip := map[string]string{}
-	for _, w := range a.uiSt().cur {
-		if id, ok := strings.CutPrefix(w.id, "cmd.tip."); ok {
-			tip[id] = w.tip
+	for _, w := range a.uiSt().Cur {
+		if id, ok := strings.CutPrefix(w.ID, "cmd.tip."); ok {
+			tip[id] = w.Tip
 		}
 	}
 	ok, off := tip["cmd.test.ok"], tip["cmd.test.off"]

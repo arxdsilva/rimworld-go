@@ -237,7 +237,7 @@ func TestGroupPaneListsTheMembers(t *testing.T) {
 		}
 	}
 	for _, b := range a.paneButtons() {
-		if b.id == "group.pick.2" {
+		if b.ID == "group.pick.2" {
 			click(t, a, "group.pick.2")
 			if a.grouped() || !a.renderer.HasSelect() || a.renderer.Selected() != 2 {
 				t.Fatalf("a row selects only that colonist: group=%+v", a.group)

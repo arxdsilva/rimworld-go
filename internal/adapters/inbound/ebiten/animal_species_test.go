@@ -234,7 +234,7 @@ func TestBurstEmitsOnce(t *testing.T) {
 	}
 	kinds := map[partKind]bool{}
 	for _, p := range r.parts {
-		kinds[p.kind] = true
+		kinds[p.Kind] = true
 	}
 	for _, k := range []partKind{partEmber, partSmoke} {
 		if !kinds[k] {
@@ -333,8 +333,8 @@ func TestAnimalDensityKeepsTileSize(t *testing.T) {
 		x1, y1 := g.Apply(float64(m.Canvas[0]), float64(m.Canvas[1]))
 		return [4]float64{math.Min(x0, x1), math.Min(y0, y1), math.Max(x0, x1), math.Max(y0, y1)}
 	}
-	base := pose{px: figurePivotX, py: figurePivotY}
-	for _, ps := range []pose{base, mirrored(base), youngPose(base, 0.6), {px: 0.5, py: 0.55, rot: 0.1, sy: 1.02}} {
+	base := pose{Px: figurePivotX, Py: figurePivotY}
+	for _, ps := range []pose{base, mirrored(base), youngPose(base, 0.6), {Px: 0.5, Py: 0.55, Rot: 0.1, Sy: 1.02}} {
 		a, b := box(hi, ps), box(lo, ps)
 		for i := range a {
 			if math.Abs(a[i]-b[i]) > 1e-9 {

@@ -51,10 +51,10 @@ func (a *App) openComms(v game.CommsView) {
 	d := &commsDraft{view: v, gift: map[int]int{}}
 	a.dealings.comms = d
 	a.uiPushModal(modal{
-		id: commsModalID, title: "Radio console", w: commsModalW, h: commsModalH,
-		draw:    func(a *App, body rect) { a.commsBody(d, body) },
-		onClose: a.dismissComms,
-		buttons: []modalButton{{id: "close", label: "Close", closes: true, onClick: a.dismissComms}},
+		ID: commsModalID, Title: "Radio console", W: commsModalW, H: commsModalH,
+		Draw:    func(a *App, body rect) { a.commsBody(d, body) },
+		OnClose: a.dismissComms,
+		Buttons: []modalButton{{ID: "close", Label: "Close", Closes: true, OnClick: a.dismissComms}},
 	})
 }
 
@@ -112,7 +112,7 @@ func (a *App) commsBody(d *commsDraft, body rect) {
 		a.commsFaction(d, f, rect{X: area.View.X, Y: ry, W: area.View.W, H: commsRowH - 6})
 	}
 
-	a.uiSt().queue(func(dst *ebiten.Image) { strokeRect(dst, orb, uiPanelBorder) })
+	a.uiSt().Queue(func(dst *ebiten.Image) { strokeRect(dst, orb, uiPanelBorder) })
 	a.uiLabel(orb.X+10, orb.Y+8, "Orbital trader", withColor(tsLabel, uiHeading))
 	o := v.Orbital
 	if !o.Present {
@@ -136,7 +136,7 @@ func (a *App) commsBody(d *commsDraft, body rect) {
 
 // commsFaction declares one faction's row.
 func (a *App) commsFaction(d *commsDraft, f game.CommsFactionView, r rect) {
-	a.uiSt().queue(func(dst *ebiten.Image) { strokeRect(dst, r, uiPanelBorder) })
+	a.uiSt().Queue(func(dst *ebiten.Image) { strokeRect(dst, r, uiPanelBorder) })
 	a.uiLabel(r.X+10, r.Y+8, fitText(f.Name, tsLabel, 230), withColor(tsLabel, uiHeading))
 	rel := withColor(tsBody, uiTextDim)
 	switch f.Relation {
@@ -147,7 +147,7 @@ func (a *App) commsFaction(d *commsDraft, f game.CommsFactionView, r rect) {
 	}
 	a.uiLabel(r.X+250, r.Y+8, f.Relation, rel)
 	bar := rect{X: r.X + 340, Y: r.Y + 11, W: r.W - 340 - 70, H: 10}
-	a.uiSt().queue(func(dst *ebiten.Image) { goodwillBar(dst, bar, f.Goodwill) })
+	a.uiSt().Queue(func(dst *ebiten.Image) { goodwillBar(dst, bar, f.Goodwill) })
 	a.uiLabel(bar.Right()+8, r.Y+8, fmt.Sprintf("%+d", f.Goodwill), tsBody)
 	if f.Relation == "hostile" {
 		a.uiLabel(r.X+10, r.Y+40, "Hostile: they will not answer requests.", dimText())

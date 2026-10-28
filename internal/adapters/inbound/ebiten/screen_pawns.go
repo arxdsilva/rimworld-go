@@ -102,7 +102,7 @@ func (a *App) pawnsUI(sw, sh int) {
 	ng := a.draft()
 	if ng.load != nil {
 		a.loadingStep()
-		a.uiSt().suppress = true
+		a.uiSt().Suppress = true
 		return
 	}
 	a.ensurePool(ng)
@@ -237,10 +237,10 @@ func (a *App) pawnsRoster(ng *newGameState, r rect, views []game.CandidateView, 
 		if hit.Empty() {
 			continue
 		}
-		sel := func() { ng.pawnSel = pos; u.focus = pawnRosterID }
-		w := uiWidget{id: optID("pawns.row", pos), label: views[pos].Nick, r: hit, click: func() { a.uiOK(); sel() },
-			tip: views[pos].Nick + "\n" + candidateLine(views[pos])}
-		if u.add(w) && a.uiPress(hit) {
+		sel := func() { ng.pawnSel = pos; u.Focus = pawnRosterID }
+		w := uiWidget{ID: optID("pawns.row", pos), Label: views[pos].Nick, R: hit, Click: func() { a.uiOK(); sel() },
+			Tip: views[pos].Nick + "\n" + candidateLine(views[pos])}
+		if u.Add(w) && a.uiPress(hit) {
 			sel()
 			ng.drag = rosterDrag{on: true, from: pos, y0: my}
 		}
@@ -264,7 +264,7 @@ func (a *App) pawnsRoster(ng *newGameState, r rect, views []game.CandidateView, 
 	}
 	drag := ng.drag
 	selPos := ng.pawnSel
-	u.queue(func(dst *ebiten.Image) {
+	u.Queue(func(dst *ebiten.Image) {
 		sub := clipTo(dst, area.View)
 		hs := tsLabel
 		hs.Color = uiHeading
@@ -275,7 +275,7 @@ func (a *App) pawnsRoster(ng *newGameState, r rect, views []game.CandidateView, 
 			if rr.Bottom() < area.View.Y || rr.Y > area.View.Bottom() {
 				continue
 			}
-			a.paintRosterRow(sub, rr, v, pos == selPos, u.hot == optID("pawns.row", pos), pos >= nSel, drag.on && drag.moved && drag.from == pos)
+			a.paintRosterRow(sub, rr, v, pos == selPos, u.Hot == optID("pawns.row", pos), pos >= nSel, drag.on && drag.moved && drag.from == pos)
 		}
 		if drag.on && drag.moved {
 			to := rosterTarget(float32(my)-listR.Y+area.Off, n, nSel)
@@ -391,7 +391,7 @@ func (a *App) pawnsDetail(ng *newGameState, r rect, views []game.CandidateView) 
 	left := rect{X: in.X, Y: in.Y, W: in.W - pawnBigW - 16, H: in.H}
 	// The portrait.
 	pr := rect{X: in.Right() - pawnBigW, Y: in.Y, W: pawnBigW, H: pawnBigH}
-	u.queue(func(dst *ebiten.Image) {
+	u.Queue(func(dst *ebiten.Image) {
 		fillRect(dst, pr, uiField)
 		strokeRect(dst, pr, uiPanelBorder)
 		if !drawLookPortrait(dst, a.art, v.Look, float64(pr.X), float64(pr.Y), float64(pr.W), float64(pr.H)) {
@@ -443,7 +443,7 @@ func (a *App) pawnsDetail(ng *newGameState, r rect, views []game.CandidateView) 
 		badge = faction.DefOf(faction.Settlers)
 	}
 	by := y
-	u.queue(func(dst *ebiten.Image) {
+	u.Queue(func(dst *ebiten.Image) {
 		a.drawEmblem(dst, "ui_icon/faction_"+badge.Key, globeAccent(badge.Type), left.X, by-1, 18)
 		st := dimText()
 		drawText(dst, fmt.Sprintf("%s. Build: %s.", badge.Label, v.Build), float64(left.X+24), float64(by), st)
@@ -474,7 +474,7 @@ func (a *App) pawnsDetail(ng *newGameState, r rect, views []game.CandidateView) 
 	}
 	iy := y
 	a.uiLabel(left.X, iy, "Incapable of:", tsLabel)
-	u.queue(func(dst *ebiten.Image) {
+	u.Queue(func(dst *ebiten.Image) {
 		st := tsBody
 		st.Color = col
 		drawText(dst, fitText(incap, st, left.W-110), float64(left.X+104), float64(iy), st)
@@ -504,7 +504,7 @@ func (a *App) pawnsDetail(ng *newGameState, r rect, views []game.CandidateView) 
 	if len(v.Conditions) > 0 {
 		st.Color = uiWarning
 	}
-	a.uiSt().queue(func(dst *ebiten.Image) { drawText(dst, text, float64(in.X+64), float64(hy), st) })
+	a.uiSt().Queue(func(dst *ebiten.Image) { drawText(dst, text, float64(in.X+64), float64(hy), st) })
 }
 
 // syncNames loads the name drafts from the candidate when no field is
@@ -526,7 +526,7 @@ func (a *App) backstoryLine(x, y, w float32, label, title, desc, id string) {
 	}
 	a.uiLabel(x, y, label+":", tsLabel)
 	st := tsBody
-	a.uiSt().queue(func(dst *ebiten.Image) {
+	a.uiSt().Queue(func(dst *ebiten.Image) {
 		drawText(dst, fitText(title, st, w-100), float64(x+90), float64(y), st)
 	})
 	tip := ""
@@ -558,7 +558,7 @@ func (a *App) traitChips(x, y, w float32, v game.CandidateView) float32 {
 			tip += "\n" + t.Effects
 		}
 		a.uiTip(fmt.Sprintf("pawns.trait.%d", i), cr, tip)
-		a.uiSt().queue(func(dst *ebiten.Image) {
+		a.uiSt().Queue(func(dst *ebiten.Image) {
 			fillRect(dst, cr, uiBtn)
 			strokeRect(dst, cr, uiBtnBorder)
 			st := tsBody
@@ -610,7 +610,7 @@ func (a *App) skillsTable(r rect, v game.CandidateView, rowH float32) {
 		row := rect{X: r.X, Y: r.Y + pawnSkillHdrH + float32(i)*rowH, W: r.W, H: rowH}
 		a.uiTip(fmt.Sprintf("pawns.skill.%d", i), row, skillTip(s))
 	}
-	u.queue(func(dst *ebiten.Image) {
+	u.Queue(func(dst *ebiten.Image) {
 		hs := tsLabel
 		hs.Color = uiHeading
 		fillRect(dst, rect{X: r.X, Y: r.Y, W: r.W, H: pawnSkillHdrH}, uiBtn)
@@ -678,7 +678,7 @@ func (a *App) pawnsTeam(ng *newGameState, r rect) {
 		}
 		a.uiTip(fmt.Sprintf("pawns.team.%d", i), row, tip)
 		b := b
-		u.queue(func(dst *ebiten.Image) {
+		u.Queue(func(dst *ebiten.Image) {
 			st := tsBody
 			ty := float64(row.Y) + (rowH-lineH(st))/2
 			drawText(dst, b.Label, float64(row.X+2), ty, st)

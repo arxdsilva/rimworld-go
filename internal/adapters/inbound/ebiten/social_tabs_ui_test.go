@@ -20,7 +20,7 @@ func TestHealthSocialTabs(t *testing.T) {
 	f.Frame(t, a)
 	for _, tab := range []string{"health", "social"} {
 		id := "inspector." + tab
-		if b, ok := findButton(a, id); !ok || b.disabled {
+		if b, ok := findButton(a, id); !ok || b.Disabled {
 			t.Fatalf("%s is missing or disabled: %+v", id, b)
 		}
 		openPawnTab(t, a, tab) // the pane's tab click

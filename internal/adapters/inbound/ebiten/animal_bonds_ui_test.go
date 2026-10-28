@@ -123,8 +123,8 @@ func TestAnimalsTabMasterAndTrainingColumns(t *testing.T) {
 		t.Fatalf("no window at %d px: %+v", a.sw, w)
 	} else {
 		for _, b := range a.animalsTabButtons() {
-			if b.x < w.X-0.5 || b.x+b.w > w.Right()+0.5 || b.y < w.Y-0.5 || b.y+b.h > w.Bottom()+0.5 {
-				t.Errorf("%s %v,%v %vx%v runs out of the window %+v", b.id, b.x, b.y, b.w, b.h, w)
+			if b.X < w.X-0.5 || b.X+b.W > w.Right()+0.5 || b.Y < w.Y-0.5 || b.Y+b.H > w.Bottom()+0.5 {
+				t.Errorf("%s %v,%v %vx%v runs out of the window %+v", b.ID, b.X, b.Y, b.W, b.H, w)
 			}
 		}
 	}
@@ -213,7 +213,7 @@ func TestAnimalLogTabScrollsWithWheel(t *testing.T) {
 	zoom := a.renderer.cam.Zoom
 	f.Cur.Mx, f.Cur.My, f.Cur.WheelY = int(cx), int(cy), -1
 	f.Frame(t, a)
-	if off := a.uiSt().scroll[animalLogID]; off <= 0 {
+	if off := a.uiSt().Scroll[animalLogID]; off <= 0 {
 		t.Fatalf("the wheel scrolled the log by %v", off)
 	}
 	if a.renderer.cam.Zoom != zoom {
@@ -223,7 +223,7 @@ func TestAnimalLogTabScrollsWithWheel(t *testing.T) {
 	s.world.Animals = append(s.world.Animals, game.AnimalView{ID: 51, Species: "labrador", Label: "labrador", X: 7, Y: 7, Tame: true, Name: "Ash", Log: thingLog(80)})
 	a.selectCand(selCand{selAnimal, 51})
 	f.Frame(t, a)
-	if off := a.uiSt().scroll[animalLogID]; off != 0 {
+	if off := a.uiSt().Scroll[animalLogID]; off != 0 {
 		t.Fatalf("a new animal's log scrolls from the top, got %v", off)
 	}
 }

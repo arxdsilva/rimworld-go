@@ -158,11 +158,11 @@ func TestAnimalInspectorLines(t *testing.T) {
 
 func TestJuvenilePoseShrinks(t *testing.T) {
 	t.Parallel()
-	ps := youngPose(pose{px: 0.5, py: 0.55, sy: 1.01}, 0.6)
-	if ps.sx != 0.6 || ps.sy < 0.6 || ps.sy > 0.61 {
+	ps := youngPose(pose{Px: 0.5, Py: 0.55, Sy: 1.01}, 0.6)
+	if ps.Sx != 0.6 || ps.Sy < 0.6 || ps.Sy > 0.61 {
 		t.Fatalf("pose = %+v", ps)
 	}
-	if youngPose(pose{}, 1).sx != 0 || youngPose(pose{}, 0).sx != 0 {
+	if youngPose(pose{}, 1).Sx != 0 || youngPose(pose{}, 0).Sx != 0 {
 		t.Fatal("an adult keeps its pose")
 	}
 }
@@ -348,7 +348,7 @@ func TestMessageFocusJumpsToTheCreature(t *testing.T) {
 	a.sw, a.sh = 1280, 720
 	found := false
 	for _, b := range a.messageButtons(a.sw) {
-		found = found || b.id == "msg.0"
+		found = found || b.ID == "msg.0"
 	}
 	if !found {
 		t.Fatal("a message with a Focus is clickable")

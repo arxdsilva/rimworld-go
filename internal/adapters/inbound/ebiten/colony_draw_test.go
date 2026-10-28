@@ -67,7 +67,7 @@ func TestColonyHUDDrawsEveryState(t *testing.T) {
 	// The Work tab, with the cursor on an incapable cell and on a header.
 	a.workOpen, a.panelMode = true, "work"
 	r := a.windowRect()
-	for _, c := range []rect{workCellRect(r, 0, 6), workCellRect(r, 0, 2), {X: workCellRect(r, 0, 4).X, Y: r.y + 24, W: 30, H: 16}} {
+	for _, c := range []rect{workCellRect(r, 0, 6), workCellRect(r, 0, 2), {X: workCellRect(r, 0, 4).X, Y: r.Y + 24, W: 30, H: 16}} {
 		x, y := c.Center()
 		f.Cur.Mx, f.Cur.My = int(x), int(y)
 		for i := 0; i < tipDelay+2; i++ {

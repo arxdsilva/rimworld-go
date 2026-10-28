@@ -129,12 +129,12 @@ func (r *Renderer) drawWaterTile(screen *ebiten.Image, t string, x, y int, tile 
 // syncWaterUniforms copies this frame's light and clock into the water
 // draw's uniform map (the light names are lit.kage's).
 func (r *Renderer) syncWaterUniforms() {
-	r.lit.syncUniforms() // fills r.lit.uniforms from r.lit.light
+	r.lit.SyncUniforms() // fills r.lit.uniforms from r.lit.light
 	if r.water.opts.Uniforms == nil {
 		r.water.opts.Uniforms = map[string]any{}
 		r.water.time = make([]float32, 1)
 		for i, name := range [...]string{"SunL", "MoonL", "SunColor", "MoonColor", "SkyAmbient", "IndoorAmbient", "LampColor"} {
-			r.water.opts.Uniforms[name] = r.lit.uniforms[i]
+			r.water.opts.Uniforms[name] = r.lit.Uniforms[i]
 		}
 		r.water.opts.Uniforms["Time"] = float32(0)
 	}

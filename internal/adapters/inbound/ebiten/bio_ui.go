@@ -126,7 +126,7 @@ func (a *App) bioTab(id entity.EntityID, r rect) {
 	// Portrait and names.
 	pr := rect{X: in.X, Y: in.Y, W: bioPortW, H: bioPortH}
 	name := bioName(b)
-	u.queue(func(dst *ebiten.Image) {
+	u.Queue(func(dst *ebiten.Image) {
 		fillRect(dst, pr, uiField)
 		strokeRect(dst, pr, uiPanelBorder)
 		if !drawPortrait(dst, a.art, b.Look, p.Disfigured, float64(pr.X), float64(pr.Y), float64(pr.W), float64(pr.H)) {
@@ -163,7 +163,7 @@ func (a *App) bioTab(id entity.EntityID, r rect) {
 	}
 	iy := y
 	a.uiLabel(in.X, iy, "Incapable of:", tsLabel)
-	u.queue(func(dst *ebiten.Image) {
+	u.Queue(func(dst *ebiten.Image) {
 		st := tsBody
 		st.Color = col
 		drawText(dst, fitText(short, st, in.W-104), float64(in.X+104), float64(iy), st)
@@ -207,7 +207,7 @@ func (a *App) bioTab(id entity.EntityID, r rect) {
 	if len(b.Conditions) > 0 {
 		text, st.Color = strings.Join(b.Conditions, "\n"), uiWarning
 	}
-	u.queue(func(dst *ebiten.Image) { drawText(dst, text, float64(in.X+60), float64(cy)+1, st) })
+	u.Queue(func(dst *ebiten.Image) { drawText(dst, text, float64(in.X+60), float64(cy)+1, st) })
 }
 
 // bioRelationsH is the height of the Relations block for n summary lines.
@@ -242,7 +242,7 @@ func (a *App) bioSkills(r rect, b game.BioView, week [skill.NumSkills]int, rowH 
 		barX  = 164
 	)
 	barW := view.W - barX - 52
-	u.queue(func(dst *ebiten.Image) {
+	u.Queue(func(dst *ebiten.Image) {
 		hs := tsSmall
 		hs.Color = uiHeading
 		hr := rect{X: r.X, Y: r.Y, W: r.W, H: bioHdrH}

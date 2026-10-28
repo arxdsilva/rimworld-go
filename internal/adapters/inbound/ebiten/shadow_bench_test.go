@@ -40,7 +40,7 @@ func BenchmarkShadows(b *testing.B) {
 	r := benchShadowRenderer(mw, mh)
 	r.cam.Zoom = 0.5
 	r.view.Pawns = pawns
-	r.lit.light = testLight(0.5, 0.45, 0.3)
+	r.lit.Light = testLight(0.5, 0.45, 0.3)
 	screen := ebiten.NewImage(1280, 800)
 	tile := r.tilePx()
 	r.drawShadows(screen, w, 1280, 800, tile)
@@ -49,7 +49,7 @@ func BenchmarkShadows(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		r.drawShadows(screen, w, 1280, 800, tile)
 	}
-	lay := r.env.shadow.layer.Bounds()
+	lay := r.env.shadow.Layer.Bounds()
 	b.ReportMetric(float64(lay.Dx()*lay.Dy()), "layer-px/op")
 }
 
@@ -81,7 +81,7 @@ func BenchmarkShadowsHiDPI(b *testing.B) {
 	r.cam.Zoom = 0.5
 	r.cam.Dev = 2
 	r.view.Pawns = pawns
-	r.lit.light = testLight(0.5, 0.45, 0.3)
+	r.lit.Light = testLight(0.5, 0.45, 0.3)
 	screen := ebiten.NewImage(1280, 800)
 	tile := r.tilePx()
 	r.drawShadows(screen, w, 1280, 800, tile)
@@ -90,7 +90,7 @@ func BenchmarkShadowsHiDPI(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		r.drawShadows(screen, w, 1280, 800, tile)
 	}
-	lay := r.env.shadow.layer.Bounds()
+	lay := r.env.shadow.Layer.Bounds()
 	b.ReportMetric(float64(lay.Dx()*lay.Dy()), "layer-px/op")
 }
 
@@ -148,18 +148,18 @@ func BenchmarkCreatureShadows(b *testing.B) {
 	r.cam.Zoom = 0.5
 	r.view.Pawns = pawns
 	r.view.W = w
-	r.lit.light = testLight(0.5, 0.2, 0.3) // a low sun: point lights still cast
+	r.lit.Light = testLight(0.5, 0.2, 0.3) // a low sun: point lights still cast
 	screen := ebiten.NewImage(1280, 800)
 	tile := r.tilePx()
 	r.drawShadows(screen, w, 1280, 800, tile)
-	if want := 40 * 3; r.env.shadow.casts < want && r.art.Has("pawn/body_south") && r.art.Has("animal/"+species+"_south") {
-		b.Fatalf("drew %d silhouettes, want %d (sun and 2 campfires each)", r.env.shadow.casts, want)
+	if want := 40 * 3; r.env.shadow.Casts < want && r.art.Has("pawn/body_south") && r.art.Has("animal/"+species+"_south") {
+		b.Fatalf("drew %d silhouettes, want %d (sun and 2 campfires each)", r.env.shadow.Casts, want)
 	}
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		r.drawShadows(screen, w, 1280, 800, tile)
 	}
-	lay := r.env.shadow.layer.Bounds()
+	lay := r.env.shadow.Layer.Bounds()
 	b.ReportMetric(float64(lay.Dx()*lay.Dy()), "layer-px/op")
 }

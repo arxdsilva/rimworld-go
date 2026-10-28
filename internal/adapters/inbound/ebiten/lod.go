@@ -382,11 +382,11 @@ func (r *Renderer) drawBakedColor(screen, src *ebiten.Image, bx, by int, sx0, sy
 	tile := r.tilePx()
 	g := r.syncLight()
 	rows := &l.groundRows
-	rows[0] = g.levelRow(rows[0], tx0, tx1+1, ty0-1)
-	rows[1] = g.levelRow(rows[1], tx0, tx1+1, ty0)
+	rows[0] = g.LevelRow(rows[0], tx0, tx1+1, ty0-1)
+	rows[1] = g.LevelRow(rows[1], tx0, tx1+1, ty0)
 	top, bot := cornerRow(l.cornerTop, rows[0], rows[1]), l.cornerBot
 	for y := ty0; y <= ty1; y++ {
-		rows[2] = g.levelRow(rows[2], tx0, tx1+1, y+1)
+		rows[2] = g.LevelRow(rows[2], tx0, tx1+1, y+1)
 		bot = cornerRow(bot, rows[1], rows[2])
 		rows[0], rows[1], rows[2] = rows[1], rows[2], rows[0]
 		sy := float32(float64(y)*tile - r.cam.OffsetY)
@@ -396,14 +396,14 @@ func (r *Renderer) drawBakedColor(screen, src *ebiten.Image, bx, by int, sx0, sy
 			// a run of tiles lit alike, all its corners at one lamp level,
 			// is one quad (open ground under the sky mostly is): the same
 			// pixels, far fewer vertices
-			sky, _ := g.at(x, y)
+			sky, _ := g.At(x, y)
 			c := x - tx0
 			lv := [4]float32{top[c], top[c+1], bot[c], bot[c+1]}
 			xe := x
 			if lv[0] == lv[1] && lv[0] == lv[2] && lv[0] == lv[3] {
 				for xe < tx1 {
 					e := xe + 2 - tx0
-					if s, _ := g.at(xe+1, y); s != sky || top[e] != lv[0] || bot[e] != lv[0] {
+					if s, _ := g.At(xe+1, y); s != sky || top[e] != lv[0] || bot[e] != lv[0] {
 						break
 					}
 					xe++

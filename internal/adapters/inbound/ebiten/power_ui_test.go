@@ -743,7 +743,7 @@ func TestPowerLayoutAtScales(t *testing.T) {
 			}
 			for _, b := range archButtonsWith(a, "arch.cat.") {
 				if !within(b, l.ArchCats) {
-					t.Errorf("%s %+v outside ArchCats %+v", b.id, b, l.ArchCats)
+					t.Errorf("%s %+v outside ArchCats %+v", b.ID, b, l.ArchCats)
 				}
 			}
 			if cmds := a.archToolCommands(); len(l.GridCells) != len(cmds) || len(cmds) != len(toolsIn(archCatPower)) {

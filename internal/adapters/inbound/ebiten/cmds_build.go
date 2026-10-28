@@ -263,7 +263,7 @@ func (a *App) declareTabBody(scrollID string, outer rect, body tabBody, click fu
 			continue
 		}
 		r, c := rect{X: ox + f.r.X, Y: oy + f.r.Y, W: f.r.W, H: f.r.H}, f.c
-		u.queue(func(dst *ebiten.Image) { fillRect(dst, r, c) })
+		u.Queue(func(dst *ebiten.Image) { fillRect(dst, r, c) })
 	}
 	for _, l := range body.labels {
 		if !inView(l.y, lineStep(l.st)) {
@@ -276,12 +276,12 @@ func (a *App) declareTabBody(scrollID string, outer rect, body tabBody, click fu
 		a.uiLabel(ox+l.x, oy+l.y, text, l.st)
 	}
 	for _, bt := range body.buttons {
-		if !inView(bt.y, bt.h) {
+		if !inView(bt.Y, bt.H) {
 			continue
 		}
-		r := rect{X: ox + bt.x, Y: oy + bt.y, W: bt.w, H: bt.h}
-		if a.uiButton(bt.id, r, bt.label, btnOpts{Selected: bt.selected, Disabled: bt.disabled, Reason: bt.reason, Tip: bt.tip}) {
-			click(bt.id)
+		r := rect{X: ox + bt.X, Y: oy + bt.Y, W: bt.W, H: bt.H}
+		if a.uiButton(bt.ID, r, bt.Label, btnOpts{Selected: bt.Selected, Disabled: bt.Disabled, Reason: bt.Reason, Tip: bt.Tip}) {
+			click(bt.ID)
 		}
 	}
 }

@@ -339,7 +339,7 @@ func (r *Renderer) advanceTicks(want int, more func(done int) bool) (done int) {
 			break
 		}
 	}
-	r.mo.stepped = done
+	r.mo.Stepped = done
 	r.syncPawns()
 	w := r.game.World()
 	r.animate(w, r.game.Snapshot(), done > 0)
@@ -358,20 +358,20 @@ func (r *Renderer) advanceTicks(want int, more func(done int) bool) (done int) {
 func (r *Renderer) syncPawns() {
 	tick := r.game.Tick()
 	w := r.game.World()
-	r.mo.beginSync(tick)
-	running := r.mo.stepped > 0
+	r.mo.BeginSync(tick)
+	running := r.mo.Stepped > 0
 	for _, p := range r.game.Snapshot() {
 		prev, seen := r.last[p.ID]
 		v := nextVisual(prev, seen, p.X, p.Y, tick, r.present)
-		k := r.mo.observe(p.ID, pawnMoView(p), v.facing)
-		want, moving := k.wantFacing(r.mo.ref)
+		k := r.mo.Observe(p.ID, pawnMoView(p), v.facing)
+		want, moving := k.WantFacing(r.mo.Ref)
 		if !moving { // standing: attacks and work turn it
 			want = faceAttack(pawnVisual{facing: want}, w.Traces, p.X, p.Y).facing
 			if p.Acting != "" && (p.ActX != p.X || p.ActY != p.Y) {
 				want = facingFor(p.ActX-p.X, p.ActY-p.Y, want)
 			}
 		}
-		v.facing = k.turn(want, p.ID, running)
+		v.facing = k.Turn(want, p.ID, running)
 		if p.Lying && !v.lying {
 			v.lyingSince = r.present
 		}
@@ -380,7 +380,7 @@ func (r *Renderer) syncPawns() {
 	}
 	r.syncAnimals(w)
 	r.syncItems(w)
-	r.mo.endSync()
+	r.mo.EndSync()
 }
 
 // Speed and camera intents (UI-016): the App resolves the keys and the
@@ -563,10 +563,11 @@ func (r *Renderer) Draw(screen *ebiten.Image) {
 	// the world and pawns it reads
 	v := &r.view
 	v.SW, v.SH, v.Tile = sw, sh, tile
+	v.Cam, v.Art = r.cam, r.art
 	v.Zoom, v.Dev = r.cam.Zoom, r.cam.Dev
 	v.MapW, v.MapH = r.game.Width(), r.game.Height()
 	v.Tick = r.game.Tick()
-	v.Present, v.AnimT, v.Alpha = r.present, r.animT(), r.mo.alpha
+	v.Present, v.AnimT, v.Alpha = r.present, r.animT(), r.mo.Alpha
 	v.Paused = r.speed == speedPaused
 	v.Fx, v.ReducedMotion, v.ReducedFlashing, v.Cached = r.fx, r.reducedMotion, r.reducedFlashing, r.viewCached
 	v.Selected, v.HasSelect = r.selected, r.hasSelect

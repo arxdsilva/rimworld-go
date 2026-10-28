@@ -20,37 +20,37 @@ import (
 // uiState is everything the kit remembers between frames. The zero value
 // is usable; App reaches it through uiSt (ui_state.go).
 type uiState struct {
-	// hot is the topmost widget under the cursor this frame; active the
+	// Hot is the topmost widget under the cursor this frame; Active the
 	// widget that captured the mouse (slider knob, scroll thumb, text
-	// selection drag); focus the keyboard-focused widget.
-	hot, active, focus string
-	// scroll holds the scroll offsets by widget id.
-	scroll map[string]float32
-	// caret and the selection [selStart, selEnd) of the text field being
+	// selection drag); Focus the keyboard-focused widget.
+	Hot, Active, Focus string
+	// Scroll holds the Scroll offsets by widget id.
+	Scroll map[string]float32
+	// Caret and the selection [SelStart, SelEnd) of the text field being
 	// edited, in runes.
-	caret, selStart, selEnd int
+	Caret, SelStart, SelEnd int
 	// tipID is the widget whose tooltip is pending; tipFrames the frames
 	// the cursor has rested on it.
 	tipID     string
-	tipFrames int
+	TipFrames int
 	// dragY is the grab offset of the active scrollbar drag.
 	dragY float32
 
 	frame      uint64
 	mx, my     int
-	layer      int  // the layer widgets are being declared into: 0 screen, i+1 modal i
-	suppress   bool // the screen is too small: no widgets this frame
+	Layer      int  // the layer widgets are being declared into: 0 screen, i+1 modal i
+	Suppress   bool // the screen is too small: no widgets this frame
 	kbd        bool // focus came from the keyboard: draw the focus ring
-	tabTo      string
-	lastScreen screenID
-	hook       func(a *App, sw, sh int) // test and capture override of the screen hook
+	TabTo      string
+	LastScreen screenID
+	Hook       func(a *App, sw, sh int) // test and capture override of the screen hook
 
-	cur, last []uiWidget
-	paints    []paintCmd
+	Cur, last []uiWidget
+	Paints    []paintCmd
 	events    map[string]uiEventRec
-	heldN     map[string]int // frames each key has been held (keyRepeat)
-	edit      textEdit
-	modals    []modal
+	HeldN     map[string]int // frames each key has been held (keyRepeat)
+	Edit      textEdit
+	Modals    []modal
 	sorts     map[string]sortState
 	lines     map[string]lineCache
 	tipText   string
@@ -61,16 +61,16 @@ type uiState struct {
 
 // uiWidget is one registered hit rectangle.
 type uiWidget struct {
-	id        string
-	label     string
-	r         rect
+	ID        string
+	Label     string
+	R         rect
 	layer     int
-	focusable bool
-	disabled  bool
-	reason    string // why it is disabled
-	tip       string // "Title\nbody": the hover card
-	wheel     bool   // a scroll view: it owns the mouse wheel over r
-	click     func() // what a click on the id does (applyClick path)
+	Focusable bool
+	Disabled  bool
+	Reason    string // why it is disabled
+	Tip       string // "Title\nbody": the hover card
+	Wheel     bool   // a scroll view: it owns the mouse wheel over r
+	Click     func() // what a click on the id does (applyClick path)
 }
 
 // paintCmd is a queued drawing.
@@ -93,34 +93,34 @@ type uiEventRec struct {
 	frame uint64
 }
 
-// add registers a widget in the layer being declared. It reports whether
+// Add registers a widget in the layer being declared. It reports whether
 // the widget is live (accepts input): widgets under a modal or on a
 // screen that is too small are not.
-func (u *uiState) add(w uiWidget) bool {
-	if u.suppress || u.layer != len(u.modals) {
+func (u *uiState) Add(w uiWidget) bool {
+	if u.Suppress || u.Layer != len(u.Modals) {
 		return false
 	}
-	w.layer = u.layer
-	u.cur = append(u.cur, w)
-	if w.r.Hit(u.mx, u.my) {
-		u.hot = w.id
+	w.layer = u.Layer
+	u.Cur = append(u.Cur, w)
+	if w.R.Hit(u.mx, u.my) {
+		u.Hot = w.ID
 	}
 	return true
 }
 
-// queue adds a drawing to the layer being declared.
-func (u *uiState) queue(fn func(dst *ebiten.Image)) {
-	if u.suppress {
+// Queue adds a drawing to the layer being declared.
+func (u *uiState) Queue(fn func(dst *ebiten.Image)) {
+	if u.Suppress {
 		return
 	}
-	u.paints = append(u.paints, paintCmd{layer: u.layer, fn: fn})
+	u.Paints = append(u.Paints, paintCmd{layer: u.Layer, fn: fn})
 }
 
-// find returns the registered widget with id (this frame's).
-func (u *uiState) find(id string) (uiWidget, bool) {
-	for i := len(u.cur) - 1; i >= 0; i-- {
-		if u.cur[i].id == id {
-			return u.cur[i], true
+// Find returns the registered widget with id (this frame's).
+func (u *uiState) Find(id string) (uiWidget, bool) {
+	for i := len(u.Cur) - 1; i >= 0; i-- {
+		if u.Cur[i].ID == id {
+			return u.Cur[i], true
 		}
 	}
 	return uiWidget{}, false
@@ -155,20 +155,20 @@ func (u *uiState) take(id string) uint8 {
 
 // reset forgets focus, drags and any edit (a screen change).
 func (u *uiState) reset() {
-	u.hot, u.active, u.focus = "", "", ""
-	u.tipID, u.tipFrames, u.tipText = "", 0, ""
-	u.kbd, u.tabTo = false, ""
-	u.edit = textEdit{}
-	u.modals = nil
+	u.Hot, u.Active, u.Focus = "", "", ""
+	u.tipID, u.TipFrames, u.tipText = "", 0, ""
+	u.kbd, u.TabTo = false, ""
+	u.Edit = textEdit{}
+	u.Modals = nil
 	u.events = nil
 }
 
 // focusables are the widgets Tab visits, in declaration order.
 func (u *uiState) focusables() []string {
 	var out []string
-	for _, w := range u.cur {
-		if w.focusable && !w.disabled {
-			out = append(out, w.id)
+	for _, w := range u.Cur {
+		if w.Focusable && !w.Disabled {
+			out = append(out, w.ID)
 		}
 	}
 	return out
@@ -183,7 +183,7 @@ func (u *uiState) cycleFocus(dir int) {
 	}
 	i := -1
 	for k, id := range ids {
-		if id == u.focus {
+		if id == u.Focus {
 			i = k
 		}
 	}
@@ -195,8 +195,8 @@ func (u *uiState) cycleFocus(dir int) {
 	default:
 		i = (i + dir + len(ids)) % len(ids)
 	}
-	u.focus = ids[i]
-	u.tabTo = ids[i]
+	u.Focus = ids[i]
+	u.TabTo = ids[i]
 	u.kbd = true
 }
 
@@ -218,17 +218,17 @@ func (a *App) uiPress(r rect) bool {
 }
 
 // uiHot reports the cursor's topmost widget is id (hover drawing).
-func (a *App) uiHot(id string) bool { return a.uiSt().hot == id }
+func (a *App) uiHot(id string) bool { return a.uiSt().Hot == id }
 
 // uiFocused reports id has keyboard focus.
-func (a *App) uiFocused(id string) bool { return a.uiSt().focus == id }
+func (a *App) uiFocused(id string) bool { return a.uiSt().Focus == id }
 
 // uiRelease consumes this frame's left release so nothing else sees it.
 func (a *App) uiRelease() { a.in.Raw.Release[mbLeft] = false }
 
 // uiKeyAct reports Space went down on the focused widget.
 func (a *App) uiKeyAct(id string) bool {
-	return a.uiSt().focus == id && a.in.Key("Space")
+	return a.uiSt().Focus == id && a.in.Key("Space")
 }
 
 // uiDeny is a click on a disabled widget: the reason is shown and a deny
@@ -263,7 +263,7 @@ type btnOpts struct {
 	Selected bool
 }
 
-func (s btnStyle) colors(hover, down, selected bool) (fill, border, text color.RGBA) {
+func (s btnStyle) Colors(hover, down, selected bool) (fill, border, text color.RGBA) {
 	switch s {
 	case btnPrimary:
 		fill, border, text = lerpRGBA(uiBtnSelected, uiAccent, 0.6), uiAccent, uiField
@@ -292,9 +292,9 @@ func (a *App) uiButton(id string, r rect, label string, o btnOpts) bool {
 	if o.Disabled && o.Reason != "" {
 		tip = o.Reason
 	}
-	w := uiWidget{id: id, label: label, r: r, focusable: true, disabled: o.Disabled, reason: o.Reason, tip: tip}
+	w := uiWidget{ID: id, Label: label, R: r, Focusable: true, Disabled: o.Disabled, Reason: o.Reason, Tip: tip}
 	clicked := false
-	w.click = func() {
+	w.Click = func() {
 		if o.Disabled {
 			a.uiDeny(o.Reason)
 			return
@@ -302,23 +302,23 @@ func (a *App) uiButton(id string, r rect, label string, o btnOpts) bool {
 		a.uiOK()
 		u.fire(id, evClick)
 	}
-	if u.add(w) {
+	if u.Add(w) {
 		switch {
 		case a.uiPress(r):
-			w.click()
+			w.Click()
 			clicked = !o.Disabled
 		case !o.Disabled && a.uiKeyAct(id):
-			w.click()
+			w.Click()
 			clicked = true
 		}
 		if u.take(id)&evClick != 0 {
 			clicked = true // the click path got there first
 		}
 	}
-	u.queue(func(dst *ebiten.Image) {
-		hover := u.hot == id && !o.Disabled
-		down := hover && a.in.Down(mbLeft) && u.active == ""
-		fill, border, text := o.Style.colors(hover, down, o.Selected)
+	u.Queue(func(dst *ebiten.Image) {
+		hover := u.Hot == id && !o.Disabled
+		down := hover && a.in.Down(mbLeft) && u.Active == ""
+		fill, border, text := o.Style.Colors(hover, down, o.Selected)
 		if o.Disabled {
 			fill, border, text = uiBtnDisabled, uiBtnBorder, uiTextDisabled
 		}
@@ -335,12 +335,12 @@ func (a *App) uiButton(id string, r rect, label string, o btnOpts) bool {
 // uiLabel draws s at (x, y) in style st (queued, so it layers with the
 // widgets).
 func (a *App) uiLabel(x, y float32, s string, st textStyle) {
-	a.uiSt().queue(func(dst *ebiten.Image) { drawText(dst, s, float64(x), float64(y), st) })
+	a.uiSt().Queue(func(dst *ebiten.Image) { drawText(dst, s, float64(x), float64(y), st) })
 }
 
 // uiPanel queues a panel background.
 func (a *App) uiPanel(r rect) {
-	a.uiSt().queue(func(dst *ebiten.Image) { drawPanel(dst, r.X, r.Y, r.W, r.H) })
+	a.uiSt().Queue(func(dst *ebiten.Image) { drawPanel(dst, r.X, r.Y, r.W, r.H) })
 }
 
 // strokeRect outlines r with a 1 px line.

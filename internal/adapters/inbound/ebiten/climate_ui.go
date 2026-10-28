@@ -189,7 +189,7 @@ func (a *App) messageButtonsIn(l hudLayout) []button {
 		if row.msg.Focus == 0 && row.msg.X == 0 && row.msg.Y == 0 {
 			continue
 		}
-		out = append(out, button{id: ids.PrefixMsg + strconv.Itoa(row.idx), x: row.r.X, y: row.r.Y, w: row.r.W, h: row.r.H})
+		out = append(out, button{ID: ids.PrefixMsg + strconv.Itoa(row.idx), X: row.r.X, Y: row.r.Y, W: row.r.W, H: row.r.H})
 	}
 	return out
 }

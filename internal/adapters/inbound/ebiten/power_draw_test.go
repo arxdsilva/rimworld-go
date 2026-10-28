@@ -501,7 +501,7 @@ func TestSwitchSpriteFollowsActualState(t *testing.T) {
 		w := game.WorldView{Buildings: []game.BuildingView{b}}
 		r, _ := pdRenderer(t, w)
 		var drawn []string
-		r.lit.onDraw = func(img *ebiten.Image, _ float32) { drawn = append(drawn, keyOf(r.art, img)) }
+		r.lit.OnDraw = func(img *ebiten.Image, _ float32) { drawn = append(drawn, keyOf(r.art, img)) }
 		r.drawBuildingObj(ebiten.NewImage(640, 400), &w.Buildings[0], r.tilePx(), 640, 400)
 		want := map[bool]string{true: "power/power_switch_on", false: "power/power_switch_off"}[on]
 		if len(drawn) != 1 || drawn[0] != want {
@@ -794,7 +794,7 @@ func TestPowerPassesInTheFrame(t *testing.T) {
 	var order []string
 	r.view.Trace = &render.Trace{Layer: func(n string) { order = append(order, n) }}
 	conduitDraws := 0
-	r.lit.onDraw = func(img *ebiten.Image, _ float32) {
+	r.lit.OnDraw = func(img *ebiten.Image, _ float32) {
 		if strings.HasPrefix(keyOf(r.art, img), "power/power_conduit_") {
 			conduitDraws++
 		}

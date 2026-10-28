@@ -250,7 +250,7 @@ func (a *App) worldRight(ng *newGameState, col rect) {
 	// The Swarm is always present.
 	sw := rect{X: in.X, Y: y, W: in.W, H: worldFacRowH}
 	a.uiTip("world.fac.swarm", sw, "Always present\nHive swarms are part of every world. They are always hostile and have no settlements.")
-	a.uiSt().queue(func(dst *ebiten.Image) {
+	a.uiSt().Queue(func(dst *ebiten.Image) {
 		fillRect(dst, sw, uiField)
 		strokeRect(dst, sw, uiPanelBorder)
 		a.drawEmblem(dst, "ui_icon/faction_swarm", globeAccent(faction.Swarm), sw.X+8, sw.Y+(sw.H-24)/2, 24)
@@ -288,7 +288,7 @@ func (a *App) worldRight(ng *newGameState, col rect) {
 const noHostileWarning = "No faction can raid you. Raids will be replaced by other threats."
 
 func (a *App) worldFacRow(row rect, d faction.Def, s *faction.Slot, i int) {
-	a.uiSt().queue(func(dst *ebiten.Image) {
+	a.uiSt().Queue(func(dst *ebiten.Image) {
 		fillRect(dst, row, uiField)
 		strokeRect(dst, row, uiPanelBorder)
 		a.drawEmblem(dst, "ui_icon/faction_"+d.Key, globeAccent(d.Type), row.X+8, row.Y+(row.H-24)/2, 24)
@@ -356,12 +356,12 @@ func (a *App) worldGenerate() {
 	ng.builder = game.NewPlanetBuilder(p)
 	ng.genStep, ng.genPhase, ng.genFrac, ng.genErr = worldStepStart, planet.PhaseShape, 0, ""
 	a.uiPushModal(modal{
-		id: worldProgress, title: "Generating world", w: 520, h: 190,
-		draw: func(a *App, body rect) { a.worldProgressBody(body) },
-		buttons: []modalButton{
-			{id: "cancel", label: "Cancel", closes: true, onClick: a.cancelWorld},
+		ID: worldProgress, Title: "Generating world", W: 520, H: 190,
+		Draw: func(a *App, body rect) { a.worldProgressBody(body) },
+		Buttons: []modalButton{
+			{ID: "cancel", Label: "Cancel", Closes: true, OnClick: a.cancelWorld},
 		},
-		onClose: a.cancelWorld,
+		OnClose: a.cancelWorld,
 	})
 }
 
@@ -386,7 +386,7 @@ func (a *App) worldProgressBody(body rect) {
 	}
 	phase, frac := worldPhaseName(ng.genPhase), float64(ng.genFrac)
 	r := rect{X: body.X, Y: body.Y + 8, W: body.W, H: 44}
-	a.uiSt().queue(func(dst *ebiten.Image) { drawProgress(dst, r, phase, frac, "") })
+	a.uiSt().Queue(func(dst *ebiten.Image) { drawProgress(dst, r, phase, frac, "") })
 }
 
 // worldStep advances the builder by this frame's work-unit budget. The

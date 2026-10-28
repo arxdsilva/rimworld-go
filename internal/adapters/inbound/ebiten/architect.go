@@ -77,7 +77,7 @@ func (a *App) architectRect() button {
 	}
 	l := a.hud()
 	r := boundsOf([]rect{l.ArchCats, l.ArchDesc})
-	return button{x: r.X, y: r.Y, w: r.W, h: r.H}
+	return button{X: r.X, Y: r.Y, W: r.W, H: r.H}
 }
 
 // architectButtons are the category buttons and, for the armed tool, its
@@ -95,10 +95,10 @@ func (a *App) architectButtons() []button {
 	for i, c := range archCategories {
 		col, row := i%2, i/2
 		out = append(out, button{
-			id: ids.PrefixArchCat + c.id, label: c.label,
-			x: l.ArchCats.X + archPad + float32(col)*(archCatW+archCatGap),
-			y: l.ArchCats.Y + archPad + float32(row)*(archCatH+archCatGap),
-			w: archCatW, h: archCatH, selected: a.archCat == c.id,
+			ID: ids.PrefixArchCat + c.id, Label: c.label,
+			X: l.ArchCats.X + archPad + float32(col)*(archCatW+archCatGap),
+			Y: l.ArchCats.Y + archPad + float32(row)*(archCatH+archCatGap),
+			W: archCatW, H: archCatH, Selected: a.archCat == c.id,
 		})
 	}
 	if !l.ArchDesc.Empty() {
@@ -333,7 +333,7 @@ func (a *App) drawArchitect(screen *ebiten.Image) {
 	}
 	mx, my := a.currentCursor()
 	for _, b := range a.architectButtons() {
-		drawButton(screen, b, b.contains(mx, my))
+		drawButton(screen, b, b.Contains(mx, my))
 	}
 }
 

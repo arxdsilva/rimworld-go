@@ -197,7 +197,7 @@ func TestButtonDrawnAndHitAtScale(t *testing.T) {
 	withUIScale(t, 1.5)
 	got := traceCanvas(t)
 	img := ebiten.NewImage(300, 150)
-	drawButton(img, button{x: 20, y: 20, w: 100, h: 40, label: "New Colony"}, true)
+	drawButton(img, button{X: 20, Y: 20, W: 100, H: 40, Label: "New Colony"}, true)
 	want := []string{"fill 30,30 150x60", "stroke 30,30 150x60"}
 	if len(*got) != 2 || (*got)[0] != want[0] || (*got)[1] != want[1] {
 		t.Fatalf("drawButton at s=1.5 drew %q, want %q", *got, want)
@@ -213,11 +213,11 @@ func TestButtonDrawnAndHitAtScale(t *testing.T) {
 	f := fakeOn(a)
 	var b button
 	for _, x := range a.mainMenuButtons(a.sw, a.sh) {
-		if x.id == "menu.newgame" {
+		if x.ID == "menu.newgame" {
 			b = x
 		}
 	}
-	cx, cy := b.x+b.w/2, b.y+b.h/2
+	cx, cy := b.X+b.W/2, b.Y+b.H/2
 	f.Cur.Mx, f.Cur.My = int(cx*1.5), int(cy*1.5)
 	f.Cur.Press[mbLeft], f.Cur.Down[mbLeft] = true, true
 	if err := a.Update(); err != nil {

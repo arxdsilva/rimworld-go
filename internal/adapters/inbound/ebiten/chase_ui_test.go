@@ -49,7 +49,7 @@ func TestDangerMessageStaysClickable(t *testing.T) {
 	a.sw, a.sh = 1280, 720
 	found := false
 	for _, b := range a.messageButtons(a.sw) {
-		found = found || b.id == "msg.0"
+		found = found || b.ID == "msg.0"
 	}
 	if !found {
 		t.Fatal("a danger message with a Focus is clickable")
@@ -152,9 +152,9 @@ func TestChaseLineEndsAtTheDrawnPositions(t *testing.T) {
 	r.view.Pawns, r.view.W = pawns, w
 	// both creatures are drawn off the tile the read model reports (as
 	// mid-step): the line follows what is drawn
-	r.mo.tracks = map[entity.EntityID]*moTrack{
-		10: {x: 8, y: 5},
-		1:  {x: 6, y: 6},
+	r.mo.Tracks = map[entity.EntityID]*moTrack{
+		10: {X: 8, Y: 5},
+		1:  {X: 6, Y: 6},
 	}
 	marks := traceMarks(t, r)
 	r.drawAnimalOverlays(ebiten.NewImage(1024, 768), w, 64, 1024, 768)

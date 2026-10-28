@@ -123,7 +123,7 @@ func TestDraftButtonAndOrderMenu(t *testing.T) {
 	}
 	labels := []string{}
 	for _, b := range a.floatButtons() {
-		labels = append(labels, b.label)
+		labels = append(labels, b.Label)
 	}
 	joined := strings.Join(labels, "|")
 	if !strings.HasPrefix(joined, "Go here") || !strings.Contains(joined, "Eat food") ||

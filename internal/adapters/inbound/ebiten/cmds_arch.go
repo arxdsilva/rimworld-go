@@ -304,7 +304,7 @@ func (a *App) archDescButtons(r rect) []button {
 	plan := a.archPlan()
 	var out []button
 	add := func(b button) {
-		if b.y+b.h <= r.Bottom() {
+		if b.Y+b.H <= r.Bottom() {
 			out = append(out, b)
 		}
 	}
@@ -317,10 +317,10 @@ func (a *App) archDescButtons(r rect) []button {
 				label = fmt.Sprintf("%s (%d)", label, stockOf(a.shell.World(), s))
 			}
 			add(button{
-				id: ids.PrefixArchStuff + s, label: label,
-				x: r.X + archPad + float32(col)*(plan.stuffW+archBtnGap),
-				y: r.Y + plan.stuffTop + float32(row)*(archBtnH+archBtnGap),
-				w: plan.stuffW, h: archBtnH, selected: sel == s,
+				ID: ids.PrefixArchStuff + s, Label: label,
+				X: r.X + archPad + float32(col)*(plan.stuffW+archBtnGap),
+				Y: r.Y + plan.stuffTop + float32(row)*(archBtnH+archBtnGap),
+				W: plan.stuffW, H: archBtnH, Selected: sel == s,
 			})
 		}
 	}
@@ -329,13 +329,13 @@ func (a *App) archDescButtons(r rect) []button {
 		for i, c := range zoneSpecies() {
 			col, row := i%plan.cropCols, i/plan.cropCols
 			b := button{
-				id: ids.PrefixArchCrop + c.Name, label: cropLabel(c.Name),
-				x: r.X + archPad + float32(col)*(plan.cropW+archBtnGap),
-				y: r.Y + plan.cropTop + float32(row)*(archBtnH+archBtnGap),
-				w: plan.cropW, h: archBtnH, selected: c.Name == sel,
+				ID: ids.PrefixArchCrop + c.Name, Label: cropLabel(c.Name),
+				X: r.X + archPad + float32(col)*(plan.cropW+archBtnGap),
+				Y: r.Y + plan.cropTop + float32(row)*(archBtnH+archBtnGap),
+				W: plan.cropW, H: archBtnH, Selected: c.Name == sel,
 			}
 			if p := a.lockedBy("crop:" + c.Name); p != "" {
-				b.disabled, b.reason, b.selected, b.quiet = true, "Needs research: "+p, false, true
+				b.Disabled, b.Reason, b.Selected, b.Quiet = true, "Needs research: "+p, false, true
 			}
 			add(b)
 		}

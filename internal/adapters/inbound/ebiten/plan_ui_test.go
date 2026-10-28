@@ -83,25 +83,25 @@ func TestPlanButtonToggle(t *testing.T) {
 		return b
 	}
 	b := find()
-	if !b.selected {
+	if !b.Selected {
 		t.Fatal("overlay is on by default")
 	}
 	// left to right in Global: Roof, Home, Auto home, Plans, Rooms; none shares a rect
 	for _, o := range []string{homeButtonID, roomsButtonID} {
 		ob, _ := hasButton(a.colonyButtons(sw, sh), o)
-		if i := (rect{X: b.x, Y: b.y, W: b.w, H: b.h}).Intersect(rect{X: ob.x, Y: ob.y, W: ob.w, H: ob.h}); i.W > 0 && i.H > 0 {
+		if i := (rect{X: b.X, Y: b.Y, W: b.W, H: b.H}).Intersect(rect{X: ob.X, Y: ob.Y, W: ob.W, H: ob.H}); i.W > 0 && i.H > 0 {
 			t.Fatalf("Plans button %+v overlaps %s %+v", b, o, ob)
 		}
 	}
-	if g := a.hud().Global; b.x < g.X || b.x+b.w > g.Right() || b.y < g.Y || b.y+b.h > g.Bottom() {
+	if g := a.hud().Global; b.X < g.X || b.X+b.W > g.Right() || b.Y < g.Y || b.Y+b.H > g.Bottom() {
 		t.Fatalf("Plans button %+v is outside Global %+v", b, g)
 	}
 	click(t, a, planButtonID)
-	if !a.renderer.planHidden || find().selected {
+	if !a.renderer.planHidden || find().Selected {
 		t.Fatal("click hides the overlay")
 	}
 	click(t, a, planButtonID)
-	if a.renderer.planHidden || !find().selected {
+	if a.renderer.planHidden || !find().Selected {
 		t.Fatal("second click shows it again")
 	}
 	var nilR *Renderer

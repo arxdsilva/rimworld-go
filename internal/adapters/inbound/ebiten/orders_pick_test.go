@@ -42,13 +42,13 @@ func TestFloatPickHasNoQueueFooter(t *testing.T) {
 	t.Parallel()
 	a, _, _ := inputColony(t, [2]int{3, 3})
 	a.openPick(300, 300, false, pickEntries(), func(int) {})
-	if r := a.floatRect(); r.h != float32(3*floatRowH) {
-		t.Fatalf("a pick menu is only its rows (no Shift-queue footer): h=%v", r.h)
+	if r := a.floatRect(); r.H != float32(3*floatRowH) {
+		t.Fatalf("a pick menu is only its rows (no Shift-queue footer): h=%v", r.H)
 	}
 	a.closeFloat()
 	a.float = floatMenu{open: true, x: 300, y: 300, opts: pickEntries()}
-	if r := a.floatRect(); r.h != float32(3*floatRowH+floatHintH) {
-		t.Fatalf("the order menu keeps its footer: h=%v", r.h)
+	if r := a.floatRect(); r.H != float32(3*floatRowH+floatHintH) {
+		t.Fatalf("the order menu keeps its footer: h=%v", r.H)
 	}
 }
 
@@ -57,7 +57,7 @@ func TestFloatOpensUpwardFromTheAnchor(t *testing.T) {
 	a, _, _ := inputColony(t, [2]int{3, 3})
 	a.openPick(300, 400, true, pickEntries(), func(int) {})
 	r := a.floatRect()
-	if r.y+r.h != 400 {
+	if r.Y+r.H != 400 {
 		t.Fatalf("an upward menu ends at its anchor: %+v", r)
 	}
 }
@@ -71,7 +71,7 @@ func TestFloatStaysAboveTheTabStrip(t *testing.T) {
 		if up {
 			a.float.y = tabs.Y + 100 // an anchor below the strip
 		}
-		if r := a.floatRect(); r.y+r.h > tabs.Y {
+		if r := a.floatRect(); r.Y+r.H > tabs.Y {
 			t.Fatalf("up=%v: menu %+v overlaps the tab strip at y=%v", up, r, tabs.Y)
 		}
 	}

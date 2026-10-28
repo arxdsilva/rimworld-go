@@ -142,27 +142,27 @@ func TestLightGridBuildsOnlyReadChunks(t *testing.T) {
 	r.view.W = v
 	r.lightTile(1, 1)
 	built := 0
-	for _, b := range r.lit.grid.built {
-		if b == r.lit.grid.gen {
+	for _, b := range r.lit.Grid.Built {
+		if b == r.lit.Grid.Gen {
 			built++
 		}
 	}
 	if built != 1 {
 		t.Fatalf("%d chunks built for one read", built)
 	}
-	gen := r.lit.grid.gen
+	gen := r.lit.Grid.Gen
 	v2 := v
 	v2.Buildings = []game.BuildingView{{Kind: "wall", X: 5, Y: 5}} // a new list, no light change
 	r.view.W = v2
 	r.lightTile(1, 1)
-	if r.lit.grid.gen != gen {
+	if r.lit.Grid.Gen != gen {
 		t.Fatal("a new building list without fires or lit rooms rebuilt the light")
 	}
 	v3 := v2
 	v3.Buildings = []game.BuildingView{{Kind: "campfire", X: 5, Y: 5, Burning: true, Glow: true, GlowRadius: 5}}
 	r.view.W = v3
-	if _, l := r.lightTile(5, 6); l <= 0 || r.lit.grid.gen == gen {
-		t.Fatalf("a lit campfire: lamp %v, generation kept %v", l, r.lit.grid.gen == gen)
+	if _, l := r.lightTile(5, 6); l <= 0 || r.lit.Grid.Gen == gen {
+		t.Fatalf("a lit campfire: lamp %v, generation kept %v", l, r.lit.Grid.Gen == gen)
 	}
 }
 
@@ -201,7 +201,7 @@ func TestBigAnimalOffScreenStillDraws(t *testing.T) {
 		r.art.Sprites[k] = sp
 	}
 	drawn := map[*ebiten.Image]int{}
-	r.lit.onDraw = func(img *ebiten.Image, _ float32) { drawn[img]++ }
+	r.lit.OnDraw = func(img *ebiten.Image, _ float32) { drawn[img]++ }
 	r.cam.Zoom, r.cam.OffsetX, r.cam.OffsetY = 1, 10*TileSize, 10*TileSize // the view starts at tile (10, 10)
 	screen := ebiten.NewImage(640, 400)
 	r.advance()

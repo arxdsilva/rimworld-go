@@ -115,9 +115,9 @@ func TestGenerateSameParamsSkips(t *testing.T) {
 	if a.nav.screen() != screenWorldGen || ng.planet != p {
 		t.Fatalf("Back keeps the planet: screen=%s", a.nav.screen())
 	}
-	w, ok := a.uiSt().find("world.generate")
-	if !ok || w.label != "Next" {
-		t.Fatalf("the forward button says %q, want Next for a matching world", w.label)
+	w, ok := a.uiSt().Find("world.generate")
+	if !ok || w.Label != "Next" {
+		t.Fatalf("the forward button says %q, want Next for a matching world", w.Label)
 	}
 	click(t, a, "world.generate")
 	if a.nav.screen() != screenLanding || ng.planet != p || ng.builder != nil || a.uiModalOpen() {
@@ -142,8 +142,8 @@ func TestParamsChangeMarksPlanetStale(t *testing.T) {
 	if ng.worldReady() || ng.tile != -1 || ng.planet == nil {
 		t.Fatalf("ready=%v tile=%d planet=%v: a changed setting makes the world stale and clears the tile", ng.worldReady(), ng.tile, ng.planet != nil)
 	}
-	if w, _ := a.uiSt().find("world.generate"); w.label != "Generate" {
-		t.Fatalf("label = %q, want Generate", w.label)
+	if w, _ := a.uiSt().Find("world.generate"); w.Label != "Generate" {
+		t.Fatalf("label = %q, want Generate", w.Label)
 	}
 	ng.world.Rain = 2 // back to what the planet was made from
 	f.Frame(t, a)

@@ -59,13 +59,13 @@ func facingKey(f facing) (key string, mirror bool) {
 
 // mirrored flips a pose left-right about its pivot.
 func mirrored(ps pose) pose {
-	kx, ky := ps.scale()
-	ps.sx, ps.sy = -kx, ky
+	kx, ky := ps.Scale()
+	ps.Sx, ps.Sy = -kx, ky
 	return ps
 }
 
 // standPose is the untransformed pose of an upright pawn.
-func standPose() pose { return pose{px: pawnFeetX, py: pawnFeetY} }
+func standPose() pose { return pose{Px: pawnFeetX, Py: pawnFeetY} }
 
 // bodyAttach is attachment name of a body sprite in tiles from its tile's
 // top-left (canvas px relative to origin_px, over artTilePx).
@@ -95,7 +95,7 @@ func pawnHead(c *artCatalog) (x, y float64) {
 func lyingPose(c *artCatalog, side float64) pose {
 	_, hy := pawnHead(c)
 	shift := (pawnFeetY - hy) * lyingCentreK
-	return pose{px: pawnFeetX, py: pawnFeetY, rot: side * math.Pi / 2, dx: -side * shift, dy: lyingDrop}
+	return pose{Px: pawnFeetX, Py: pawnFeetY, Rot: side * math.Pi / 2, Dx: -side * shift, Dy: lyingDrop}
 }
 
 // poseFacing is the facing to draw: the motion's smoothed facing, turned
@@ -153,7 +153,7 @@ func (r *Renderer) standingPose(p game.PawnView, m moveState) (pose, heldItem) {
 	ps := walkPose(m.Facing, m)
 	if m.Blend < minBlend {
 		b := math.Sin(2 * math.Pi * float64(r.present+uint64(p.ID)*37) / 150)
-		ps.sy = 1 + 0.012*b
+		ps.Sy = 1 + 0.012*b
 	}
 	held := r.idleHeld(p, m)
 	for _, layer := range []func(game.PawnView, moveState) actionPose{r.hitReaction, r.combatPose, r.carryPose, r.workPose} {
@@ -164,22 +164,22 @@ func (r *Renderer) standingPose(p game.PawnView, m moveState) (pose, heldItem) {
 		if a.held.set {
 			held = a.held
 		}
-		ps.dx += a.dx
-		ps.dy += a.dy
-		ps.rot += a.rot
+		ps.Dx += a.dx
+		ps.Dy += a.dy
+		ps.Rot += a.rot
 		if a.squash != 0 {
-			_, sy := ps.scale()
-			ps.sy = sy * (1 - a.squash)
+			_, sy := ps.Scale()
+			ps.Sy = sy * (1 - a.squash)
 		}
-		if a.flash > ps.flash {
-			ps.flash = a.flash
+		if a.flash > ps.Flash {
+			ps.Flash = a.flash
 		}
 		break
 	}
 	dx, dy, fl := r.combatOffset(p)
-	ps.dx, ps.dy = ps.dx+dx, ps.dy+dy
-	if fl > ps.flash {
-		ps.flash = fl
+	ps.Dx, ps.Dy = ps.Dx+dx, ps.Dy+dy
+	if fl > ps.Flash {
+		ps.Flash = fl
 	}
 	return ps, held
 }
@@ -191,7 +191,7 @@ func (r *Renderer) drawPawnArt(screen *ebiten.Image, p game.PawnView, wx, wy, ti
 	if p.CarriedBy != 0 {
 		return // drawn over its rescuer
 	}
-	r.animState().dropCarry(p.ID)
+	r.animState().DropCarry(p.ID)
 	fp := r.pawnFigurePoseOf(p)
 	r.drawPawnFigure(screen, p, wx, wy, tile, fp)
 	if p.Lying {
@@ -199,11 +199,11 @@ func (r *Renderer) drawPawnArt(screen *ebiten.Image, p game.PawnView, wx, wy, ti
 	}
 	ps := fp.ps
 	if p.Hostile {
-		r.drawHostileMarker(screen, p, wx+ps.dx, wy+ps.dy, pawnMarkerLift(r.art), tile)
+		r.drawHostileMarker(screen, p, wx+ps.Dx, wy+ps.Dy, pawnMarkerLift(r.art), tile)
 	}
 	if p.Drafted {
 		if img := r.art.Image("ui_icon/draft", color.NRGBA{}); img != nil {
-			sx, sy := r.worldToScreenF(wx+0.62+ps.dx, wy-pawnMarkerLift(r.art)+ps.dy)
+			sx, sy := r.worldToScreenF(wx+0.62+ps.Dx, wy-pawnMarkerLift(r.art)+ps.Dy)
 			worldIcon(screen, img, float64(sx), float64(sy), tile*0.3/uiScale()) // tile is physical
 		}
 	}
@@ -249,7 +249,7 @@ func (r *Renderer) drawPawnFigure(dst *ebiten.Image, p game.PawnView, wx, wy, ti
 	}
 	ps, item := fp.ps, fp.held
 	if r.cast != nil {
-		ps.flash = 0 // a light effect, not part of the shape
+		ps.Flash = 0 // a light effect, not part of the shape
 	}
 	rig := r.rigOf(p, fp.face)
 	if rig.mirror {
@@ -273,7 +273,7 @@ func (r *Renderer) drawPawnFigure(dst *ebiten.Image, p game.PawnView, wx, wy, ti
 func (r *Renderer) drawCarriedBy(dst *ebiten.Image, p game.PawnView, fp pawnFigurePose, wx, wy, tile float64) {
 	for _, q := range r.view.Pawns {
 		if q.CarriedBy != 0 && q.CarriedBy == p.ID {
-			r.drawCarried(dst, q, fp.face, wx+fp.ps.dx, wy+fp.ps.dy, tile)
+			r.drawCarried(dst, q, fp.face, wx+fp.ps.Dx, wy+fp.ps.Dy, tile)
 		}
 	}
 }
@@ -324,9 +324,9 @@ func (r *Renderer) drawLyingPawn(screen *ebiten.Image, p game.PawnView, vis pawn
 		}
 	}
 	ps := r.fallPose(p, vis)
-	ps.cs = cs
+	ps.Cs = cs
 	if r.cast != nil {
-		ps.flash = 0
+		ps.Flash = 0
 	}
 	r.drawFigure(screen, p, wx, wy, tile, ps)
 }
@@ -381,12 +381,12 @@ func (r *Renderer) drawInBed(screen *ebiten.Image, p game.PawnView, b game.Build
 		sy = 0.72 // lying flat along the floor, seen from above
 	}
 	headX, headY := pawnHead(r.art)
-	ps := pose{px: headX, py: headY, rot: rot, sx: 0.85, sy: sy * breath, cs: cs}
+	ps := pose{Px: headX, Py: headY, Rot: rot, Sx: 0.85, Sy: sy * breath, Cs: cs}
 	// lie down over easeFrames: from standing on the tile to the bed pose
 	k := smoothEase(r.present, since, easeFrames)
 	ox, oy := hx-headX, hy-headY
 	if k < 1 {
-		stand := pose{px: headX, py: headY, sx: 1, sy: 1, cs: cs}
+		stand := pose{Px: headX, Py: headY, Sx: 1, Sy: 1, Cs: cs}
 		ps = lerpPose(stand, ps, k)
 		ox, oy = float64(p.X)*(1-k)+ox*k, float64(p.Y)*(1-k)+oy*k
 	}
@@ -405,7 +405,7 @@ func (r *Renderer) drawInBed(screen *ebiten.Image, p game.PawnView, b game.Build
 	if k < 1 {
 		bcs[3] *= float32(k) // the blanket settles over the sleeper
 	}
-	r.drawSpritePose(screen, key, r.bedTint(b), x0, y0, tile, pose{cs: bcs})
+	r.drawSpritePose(screen, key, r.bedTint(b), x0, y0, tile, pose{Cs: bcs})
 }
 
 // bedTint is the per-bed blanket colour (stable by building id).
@@ -441,8 +441,8 @@ func carryPoses(c *artCatalog, f facing) (ground, slung pose) {
 		backY = y
 	}
 	shift := (pawnFeetY - hy) * lyingCentreK * slungScale
-	slung = pose{px: pawnFeetX, py: pawnFeetY, rot: math.Pi / 2, sx: slungScale, sy: slungScale,
-		dx: -shift, dy: backY - pawnFeetY - slungLift}
+	slung = pose{Px: pawnFeetX, Py: pawnFeetY, Rot: math.Pi / 2, Sx: slungScale, Sy: slungScale,
+		Dx: -shift, Dy: backY - pawnFeetY - slungLift}
 	return ground, slung
 }
 
@@ -453,8 +453,8 @@ func (r *Renderer) drawCarried(screen *ebiten.Image, q game.PawnView, f facing, 
 	st := r.animState()
 	var k float64
 	if r.cast == nil {
-		k = st.carryEase(q.ID, r.present) // the first sighting starts the lift
-	} else if born, ok := st.carryBorn[q.ID]; ok {
+		k = st.CarryEase(q.ID, r.present) // the first sighting starts the lift
+	} else if born, ok := st.CarryBorn[q.ID]; ok {
 		k = smoothEase(r.present, born, easeFrames) // shadow pass: read only
 	}
 	r.drawFigure(screen, q, wx, wy, tile, lerpPose(ground, slung, k))

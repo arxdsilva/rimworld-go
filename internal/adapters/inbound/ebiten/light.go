@@ -274,45 +274,45 @@ func decodeNormal(texel [4]float32, has bool) [3]float32 {
 
 // litShader is lit.kage, compiled on first use.
 func (r *Renderer) litShader() *ebiten.Shader {
-	if r.lit.shader == nil && r.lit.err == nil {
-		r.lit.shader, r.lit.err = ebiten.NewShader(litKage)
+	if r.lit.Shader == nil && r.lit.Err == nil {
+		r.lit.Shader, r.lit.Err = ebiten.NewShader(litKage)
 	}
-	return r.lit.shader
+	return r.lit.Shader
 }
 
 // litRenderer is the lighting state the Renderer keeps between frames.
 type litRenderer struct {
-	shader *ebiten.Shader
-	err    error
-	light  lightState // this frame's light (set at the start of drawArt)
+	Shader *ebiten.Shader
+	Err    error
+	Light  lightState // this frame's light (set at the start of drawArt)
 
-	grid lightGrid
-	// pairs holds, for each sprite with a normal map, one image with the
+	Grid lightGrid
+	// Pairs holds, for each sprite with a normal map, one image with the
 	// sprite at x 0 and its normal map litGap pixels to its right, so a
 	// lit draw samples both from one texture and needs no per-sprite
 	// uniforms (which would break Ebiten's batching).
-	pairs    litPairCache
-	verts    [4]ebiten.Vertex
-	opts     ebiten.DrawTrianglesShaderOptions
-	uniforms [8][]float32
+	Pairs    litPairCache
+	Verts    [4]ebiten.Vertex
+	Opts     ebiten.DrawTrianglesShaderOptions
+	Uniforms [8][]float32
 	// radArt is the catalog the grid's lamp radius was read from (radOK:
 	// read at all), so a new catalog re-reads light_radius.
 	radArt *artCatalog
 	radOK  bool
-	// off turns the normal-map lighting off (Options > Graphics, PLAY-019):
+	// Off turns the normal-map lighting Off (Options > Graphics, PLAY-019):
 	// sprites draw plain with the daylight as a colour scale, and no pair
 	// images are made.
-	off bool
+	Off bool
 	// plain is the reused option block of the plain (lighting off) draws.
 	plain ebiten.DrawImageOptions
-	// onDraw, when set (tests), sees every lit draw's image and its
+	// OnDraw, when set (tests), sees every lit draw's image and its
 	// Custom3 blood value.
-	onDraw func(img *ebiten.Image, blood float32)
+	OnDraw func(img *ebiten.Image, blood float32)
 	// ground marks the next drawLit as a ground plane (drawLitGround).
 	ground bool
-	// calls counts world draw calls (lit sprites, water tiles, baked
+	// Calls counts world draw Calls (lit sprites, water tiles, baked
 	// chunk and map pages) for the draw benchmarks; it only ever grows.
-	calls int
+	Calls int
 }
 
 // litGap is the transparent column between a sprite and its normal map
@@ -343,18 +343,18 @@ type lightGrid struct {
 	// id at each source's tile (-1 outdoors).
 	srcs    []lightSource
 	srcRoom []int
-	// sources lists the light sources; nil is appendLightSources (tests
+	// Sources lists the light Sources; nil is appendLightSources (tests
 	// substitute it to prove every light comes from that one helper).
-	sources func(dst []lightSource, w *game.WorldView, lampRadius float64) []lightSource
+	Sources func(dst []lightSource, w *game.WorldView, lampRadius float64) []lightSource
 	lampR   float64   // a lamp's radius (its sprite's light_radius)
 	near    []int32   // the sources reaching the chunk being built
 	blaze   []float32 // lamp light of burning cells per tile (fire_world_draw.go)
 	keyFire uint64    // WorldView.FireVer the blaze was built from
-	// built[c] is the generation chunk c was last built at; gen moves
+	// Built[c] is the generation chunk c was last Built at; gen moves
 	// whenever an input changes, so every chunk goes stale at once and is
 	// rebuilt when next read.
-	built []uint64
-	gen   uint64
+	Built []uint64
+	Gen   uint64
 	view  *game.WorldView // the view the chunks are built from
 	// key is the view the inputs were last checked against (identity of
 	// the shared layers and lists, plus their lengths); sum is the content
@@ -391,13 +391,13 @@ const (
 func (g *lightGrid) sync(w *game.WorldView) {
 	g.view = w
 	lens := [4]int{len(w.RoomGrid), len(w.RoofCells), len(w.Buildings), w.TerrainW}
-	if g.built != nil && g.keyRooms == litFirst(w.RoomGrid) && g.keyRoofs == litFirst(w.RoofCells) &&
+	if g.Built != nil && g.keyRooms == litFirst(w.RoomGrid) && g.keyRoofs == litFirst(w.RoofCells) &&
 		g.keyBlds == litFirst(w.Buildings) && g.keyLens == lens && g.keyFire == w.FireVer && g.keyR == g.lampR {
 		return
 	}
 	g.keyRooms, g.keyRoofs, g.keyBlds, g.keyLens = litFirst(w.RoomGrid), litFirst(w.RoofCells), litFirst(w.Buildings), lens
 	g.keyFire, g.keyR = w.FireVer, g.lampR
-	list := g.sources
+	list := g.Sources
 	if list == nil {
 		list = appendLightSources
 	}
@@ -429,17 +429,17 @@ func (g *lightGrid) sync(w *game.WorldView) {
 	n := g.w * g.h
 	g.blaze = blazeLight(g.blaze, w.Fires, g.w, g.h)
 	nc := g.cw * ((g.h + chunkTiles - 1) / chunkTiles)
-	if sum != g.sum || !layersSame || g.w != w0 || g.h != h0 || len(g.built) != nc {
+	if sum != g.sum || !layersSame || g.w != w0 || g.h != h0 || len(g.Built) != nc {
 		g.sum = sum
-		g.gen++
+		g.Gen++
 		g.sky = litGrow(g.sky, n)
 		g.lamp = litGrow(g.lamp, n)
 		g.dom = litGrow(g.dom, n)
 		g.other = litGrow(g.other, n)
-		if cap(g.built) < nc {
-			g.built = make([]uint64, nc)
+		if cap(g.Built) < nc {
+			g.Built = make([]uint64, nc)
 		}
-		g.built = g.built[:nc]
+		g.Built = g.Built[:nc]
 	}
 }
 
@@ -539,7 +539,7 @@ func (g *lightGrid) buildChunk(c int) {
 			g.dom[i], g.other[i] = int32(k), other
 		}
 	}
-	g.built[c] = g.gen
+	g.Built[c] = g.Gen
 }
 
 func litGrow[T float32 | int32](s []T, n int) []T {
@@ -549,12 +549,12 @@ func litGrow[T float32 | int32](s []T, n int) []T {
 	return s[:n]
 }
 
-// at is the light at (tx, ty); off the map is open sky without lamps.
-func (g *lightGrid) at(tx, ty int) (sky, lamp float32) {
+// At is the light At (tx, ty); off the map is open sky without lamps.
+func (g *lightGrid) At(tx, ty int) (sky, lamp float32) {
 	if tx < 0 || ty < 0 || tx >= g.w || ty >= g.h {
 		return 1, 0
 	}
-	if c := (ty/chunkTiles)*g.cw + tx/chunkTiles; g.built[c] != g.gen {
+	if c := (ty/chunkTiles)*g.cw + tx/chunkTiles; g.Built[c] != g.Gen {
 		g.buildChunk(c)
 	}
 	i := ty*g.w + tx
@@ -573,7 +573,7 @@ func (g *lightGrid) at(tx, ty int) (sky, lamp float32) {
 // the grid's value, as does a foot exactly on a tile's corner.
 func (g *lightGrid) atF(fx, fy float64) (sky, lamp float32) {
 	tx, ty := int(math.Floor(fx)), int(math.Floor(fy))
-	sky, lamp = g.at(tx, ty)
+	sky, lamp = g.At(tx, ty)
 	if fx == float64(tx) && fy == float64(ty) || tx < 0 || ty < 0 || tx >= g.w || ty >= g.h {
 		return sky, lamp
 	}
@@ -595,9 +595,9 @@ type groundTile struct {
 	kind uint8
 }
 
-// levelRow is dst refilled with tiles x0-1..x1 of row y (x1-x0+2 values),
+// LevelRow is dst refilled with tiles x0-1..x1 of row y (x1-x0+2 values),
 // each looked up once, for cornerRow.
-func (g *lightGrid) levelRow(dst []groundTile, x0, x1, y int) []groundTile {
+func (g *lightGrid) LevelRow(dst []groundTile, x0, x1, y int) []groundTile {
 	dst = dst[:0]
 	if y < 0 || y >= g.h {
 		for x := x0 - 1; x <= x1; x++ {
@@ -612,7 +612,7 @@ func (g *lightGrid) levelRow(dst []groundTile, x0, x1, y int) []groundTile {
 			dst = append(dst, groundTile{kind: 2})
 			continue
 		}
-		_, lamp := g.at(x, y)
+		_, lamp := g.At(x, y)
 		t := groundTile{l: lamp}
 		if lamp >= 4 { // a packed direction: keep the level
 			t.l = lampLevel(lamp)
@@ -653,13 +653,13 @@ func cornerRow(dst []float32, above, below []groundTile) []float32 {
 	return dst
 }
 
-// groundLevel is the plain lamp level of the ground at world point (px,
+// GroundLevel is the plain lamp level of the ground at world point (px,
 // py) in tile coordinates (tile x spans x..x+1): bilinear between the
 // centres of the four tiles around it, dropping boundary (walls, doors,
 // rock) and off-map tiles and renormalising, so it never bleeds past the
 // far side of a wall; among boundary tiles only, the brightest. At a tile
 // corner it is cornerRow's value, so live ground and the bakes agree.
-func (g *lightGrid) groundLevel(px, py float64) float32 {
+func (g *lightGrid) GroundLevel(px, py float64) float32 {
 	u, v := px-0.5, py-0.5
 	x0, y0 := int(math.Floor(u)), int(math.Floor(v))
 	fx, fy := float32(u-float64(x0)), float32(v-float64(y0))
@@ -680,7 +680,7 @@ func (g *lightGrid) groundLevel(px, py float64) float32 {
 		if wt <= 0 || x < 0 || y < 0 || x >= g.w || y >= g.h {
 			continue
 		}
-		_, lamp := g.at(x, y)
+		_, lamp := g.At(x, y)
 		l := lampLevel(lamp)
 		if walls && rg[y*g.w+x] == room.Wall {
 			peak = max(peak, l)
@@ -705,7 +705,7 @@ func (r *Renderer) groundLamp(vs *[4]ebiten.Vertex) {
 		return
 	}
 	for i := range vs {
-		vs[i].Custom1 = g.groundLevel((float64(vs[i].DstX)+r.cam.OffsetX)/tile, (float64(vs[i].DstY)+r.cam.OffsetY)/tile)
+		vs[i].Custom1 = g.GroundLevel((float64(vs[i].DstX)+r.cam.OffsetX)/tile, (float64(vs[i].DstY)+r.cam.OffsetY)/tile)
 	}
 }
 
@@ -719,7 +719,7 @@ func (r *Renderer) lightFoot(wx, wy float64) (sky, lamp float32) {
 // the lamp radius from the art's metadata (re-read when the catalog
 // changes), and returns it.
 func (r *Renderer) syncLight() *lightGrid {
-	g := &r.lit.grid
+	g := &r.lit.Grid
 	if !r.lit.radOK || r.lit.radArt != r.art {
 		r.lit.radArt, r.lit.radOK = r.art, true
 		g.lampR = lampRadiusOf(r.art)
@@ -732,7 +732,7 @@ func (r *Renderer) syncLight() *lightGrid {
 // a roof; lamp the packed lamp value (light_lamp.go) from lamps, nearby
 // campfires and burning cells, passed through as the Custom1 vertex value.
 func (r *Renderer) lightTile(tx, ty int) (sky, lamp float32) {
-	return r.syncLight().at(tx, ty)
+	return r.syncLight().At(tx, ty)
 }
 
 // litQuad writes the four vertices (top-left, top-right, bottom-left,
@@ -785,7 +785,7 @@ func decodeNormalMirrored(texel [4]float32, has, mirror bool) [3]float32 {
 // pyramids, harshest under the low dawn and dusk sun. ground reports one,
 // so drawLit ramps its lamp light per vertex.
 func (r *Renderer) litSource(img *ebiten.Image) (src *ebiten.Image, off float32, ground bool) {
-	if r.lit.off { // lighting off: nothing is paired, the sprite is lit flat
+	if r.lit.Off { // lighting off: nothing is paired, the sprite is lit flat
 		return img, 0, false
 	}
 	n := r.art.NormalOf(img)
@@ -794,14 +794,14 @@ func (r *Renderer) litSource(img *ebiten.Image) (src *ebiten.Image, off float32,
 	}
 	b := img.Bounds()
 	off = float32(b.Dx() + litGap)
-	if p, ok := r.lit.pairs.get(img, r.present); ok {
+	if p, ok := r.lit.Pairs.Get(img, r.present); ok {
 		if p == img {
 			return img, 0, true
 		}
 		return p, off, false
 	}
 	if groundPlane(r.art, img) {
-		r.lit.pairs.put(img, img, r.present)
+		r.lit.Pairs.Put(img, img, r.present)
 		return img, 0, true
 	}
 	p := ebiten.NewImage(2*b.Dx()+litGap, b.Dy())
@@ -809,7 +809,7 @@ func (r *Renderer) litSource(img *ebiten.Image) (src *ebiten.Image, off float32,
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Translate(float64(off), 0)
 	p.DrawImage(n, op)
-	r.lit.pairs.put(img, p, r.present)
+	r.lit.Pairs.Put(img, p, r.present)
 	return p, off, false
 }
 
@@ -837,13 +837,13 @@ func litPairCapFor(visible int) int {
 type litPairCache struct {
 	m     map[*ebiten.Image]*list.Element
 	order list.List
-	// limit, when above 0, replaces the visible-sprite capacity (tests).
-	limit int
+	// Limit, when above 0, replaces the visible-sprite capacity (tests).
+	Limit int
 	// frame is the presentation frame of the last use; seen counts the
 	// distinct sprites used in it, and prevSeen in the frame before.
 	frame          uint64
 	seen, prevSeen int
-	evicted        int // pairs dropped to stay within capacity, for tests
+	Evicted        int // pairs dropped to stay within capacity, for tests
 }
 
 type litPairEntry struct {
@@ -851,13 +851,13 @@ type litPairEntry struct {
 	frame     uint64 // the last frame this entry was used in
 }
 
-// size is how many sprites the cache holds.
-func (c *litPairCache) size() int { return len(c.m) }
+// Size is how many sprites the cache holds.
+func (c *litPairCache) Size() int { return len(c.m) }
 
-// capacity is how many entries the cache may hold now.
-func (c *litPairCache) capacity() int {
-	if c.limit > 0 {
-		return c.limit
+// Capacity is how many entries the cache may hold now.
+func (c *litPairCache) Capacity() int {
+	if c.Limit > 0 {
+		return c.Limit
 	}
 	return litPairCapFor(c.prevSeen)
 }
@@ -879,8 +879,8 @@ func (c *litPairCache) touch(e *list.Element, frame uint64) {
 	}
 }
 
-// get is src's pair (src itself: lit flat), refreshing its place.
-func (c *litPairCache) get(src *ebiten.Image, frame uint64) (*ebiten.Image, bool) {
+// Get is src's pair (src itself: lit flat), refreshing its place.
+func (c *litPairCache) Get(src *ebiten.Image, frame uint64) (*ebiten.Image, bool) {
 	e, ok := c.m[src]
 	if !ok {
 		return nil, false
@@ -889,9 +889,9 @@ func (c *litPairCache) get(src *ebiten.Image, frame uint64) (*ebiten.Image, bool
 	return e.Value.(*litPairEntry).pair, true
 }
 
-// put stores src's pair and drops the least recently used entries beyond
+// Put stores src's pair and drops the least recently used entries beyond
 // the capacity; their pair images are deallocated.
-func (c *litPairCache) put(src, pair *ebiten.Image, frame uint64) {
+func (c *litPairCache) Put(src, pair *ebiten.Image, frame uint64) {
 	if c.m == nil {
 		c.m = map[*ebiten.Image]*list.Element{}
 	}
@@ -903,7 +903,7 @@ func (c *litPairCache) put(src, pair *ebiten.Image, frame uint64) {
 	}
 	c.m[src] = c.order.PushFront(&litPairEntry{src: src, pair: pair, frame: frame})
 	c.seen++
-	for len(c.m) > max(c.capacity(), 1) {
+	for len(c.m) > max(c.Capacity(), 1) {
 		old := c.order.Back()
 		en := old.Value.(*litPairEntry)
 		c.order.Remove(old)
@@ -911,7 +911,7 @@ func (c *litPairCache) put(src, pair *ebiten.Image, frame uint64) {
 		if en.pair != en.src {
 			en.pair.Deallocate()
 		}
-		c.evicted++
+		c.Evicted++
 	}
 }
 
@@ -942,23 +942,23 @@ func groundPlane(c *artCatalog, img *ebiten.Image) bool {
 	return false
 }
 
-// syncUniforms copies this frame's light into the reused uniform map.
-func (l *litRenderer) syncUniforms() {
-	if l.opts.Uniforms == nil {
-		l.opts.Uniforms = map[string]any{}
+// SyncUniforms copies this frame's light into the reused uniform map.
+func (l *litRenderer) SyncUniforms() {
+	if l.Opts.Uniforms == nil {
+		l.Opts.Uniforms = map[string]any{}
 		for i, name := range [...]string{"SunL", "MoonL", "SunColor", "MoonColor", "SkyAmbient", "IndoorAmbient", "LampColor", "LampSky"} {
-			l.uniforms[i] = make([]float32, 3)
+			l.Uniforms[i] = make([]float32, 3)
 			if name == "LampSky" { // a float: one value (a slice, so no boxing per draw)
-				l.uniforms[i] = l.uniforms[i][:1]
+				l.Uniforms[i] = l.Uniforms[i][:1]
 			}
-			l.opts.Uniforms[name] = l.uniforms[i]
+			l.Opts.Uniforms[name] = l.Uniforms[i]
 		}
 	}
-	ls := &l.light
+	ls := &l.Light
 	for i, v := range [...]*[3]float32{&ls.SunL, &ls.MoonL, &ls.SunColor, &ls.MoonColor, &ls.SkyAmbient, &ls.IndoorAmbient, &ls.LampColor} {
-		copy(l.uniforms[i], v[:])
+		copy(l.Uniforms[i], v[:])
 	}
-	l.uniforms[7][0] = ls.LampSky
+	l.Uniforms[7][0] = ls.LampSky
 }
 
 // drawLitGround is drawLit for a ground plane (terrain tiles and edges,
@@ -986,17 +986,17 @@ func (r *Renderer) drawLit(dst, img *ebiten.Image, geo ebiten.GeoM, cs colorScal
 		r.castSilhouette(img, geo)
 		return
 	}
-	if r.lit.onDraw != nil {
-		r.lit.onDraw(img, r.figureBlood)
+	if r.lit.OnDraw != nil {
+		r.lit.OnDraw(img, r.figureBlood)
 	}
-	r.lit.calls++
+	r.lit.Calls++
 	if cs == (colorScale{}) {
 		cs = noCS
 	}
 	// Lighting off (Options > Graphics): no shader and no pair image; the
 	// tile's daylight is a plain colour scale. A bloody figure keeps the
 	// shader, which paints the blood (flat: litSource pairs nothing).
-	plain := r.lit.off && r.figureBlood == 0
+	plain := r.lit.Off && r.figureBlood == 0
 	var sh *ebiten.Shader
 	if !plain {
 		sh = r.litShader()
@@ -1007,7 +1007,7 @@ func (r *Renderer) drawLit(dst, img *ebiten.Image, geo ebiten.GeoM, cs colorScal
 		op.ColorScale.Reset()
 		if plain {
 			sky, lamp := r.lightFoot(wx, wy)
-			k := flatLitScale(&r.lit.light, cs, sky, lamp)
+			k := flatLitScale(&r.lit.Light, cs, sky, lamp)
 			op.ColorScale.Scale(k[0], k[1], k[2], k[3])
 		} else if cs != noCS {
 			op.ColorScale.Scale(cs[0]*cs[3], cs[1]*cs[3], cs[2]*cs[3], cs[3])
@@ -1023,16 +1023,16 @@ func (r *Renderer) drawLit(dst, img *ebiten.Image, geo ebiten.GeoM, cs colorScal
 	if src != img {
 		sx, sy = 0, 0
 	}
-	litQuad(&r.lit.verts, sx, sy, float32(b.Dx()), float32(b.Dy()), geo, cs, sky, lamp, mirrorNormalOff(off, geo))
-	for i := range r.lit.verts { // Custom3: the figure's blood (blood_draw.go), 0 for everything else
-		r.lit.verts[i].Custom3 = r.figureBlood
+	litQuad(&r.lit.Verts, sx, sy, float32(b.Dx()), float32(b.Dy()), geo, cs, sky, lamp, mirrorNormalOff(off, geo))
+	for i := range r.lit.Verts { // Custom3: the figure's blood (blood_draw.go), 0 for everything else
+		r.lit.Verts[i].Custom3 = r.figureBlood
 	}
 	if ground { // flat on the ground: the lamp light ramps across it, as on the bakes
-		r.groundLamp(&r.lit.verts)
+		r.groundLamp(&r.lit.Verts)
 	}
-	r.lit.syncUniforms()
-	r.lit.opts.Images[0] = src
-	dst.DrawTrianglesShader32(r.lit.verts[:], litIndices[:], sh, &r.lit.opts)
+	r.lit.SyncUniforms()
+	r.lit.Opts.Images[0] = src
+	dst.DrawTrianglesShader32(r.lit.Verts[:], litIndices[:], sh, &r.lit.Opts)
 }
 
 // flatLitScale is the colour scale a sprite draws with when lighting is

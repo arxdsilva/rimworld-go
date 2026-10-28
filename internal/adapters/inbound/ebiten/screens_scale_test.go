@@ -40,8 +40,8 @@ func checkScaledScreen(t *testing.T, a *App, f *fakeInput, s float64, forward st
 	n := 0
 	for _, h := range a.layoutHits(a.sw, a.sh) {
 		n++
-		if h.w <= 0 || h.h <= 0 || h.x < 0 || h.y < 0 || h.x+h.w > float32(a.sw) || h.y+h.h > float32(a.sh) {
-			t.Errorf("%s at x%v: hit %q %+v is outside the %dx%d logical screen", a.nav.screen(), s, h.id, h, a.sw, a.sh)
+		if h.W <= 0 || h.H <= 0 || h.X < 0 || h.Y < 0 || h.X+h.W > float32(a.sw) || h.Y+h.H > float32(a.sh) {
+			t.Errorf("%s at x%v: hit %q %+v is outside the %dx%d logical screen", a.nav.screen(), s, h.ID, h, a.sw, a.sh)
 		}
 	}
 	if n == 0 {
@@ -53,14 +53,14 @@ func checkScaledScreen(t *testing.T, a *App, f *fakeInput, s float64, forward st
 	var fb button
 	found := false
 	for _, h := range a.layoutHits(a.sw, a.sh) {
-		if h.id == forward {
+		if h.ID == forward {
 			fb, found = h, true
 		}
 	}
 	if !found {
 		t.Fatalf("%s at x%v: no hit %q", a.nav.screen(), s, forward)
 	}
-	cx, cy := fb.x+fb.w/2, fb.y+fb.h/2
+	cx, cy := fb.X+fb.W/2, fb.Y+fb.H/2
 	f.Cur.Mx, f.Cur.My = int(cx*float32(s)), int(cy*float32(s)) // raw cursor is physical
 	f.Frame(t, a)
 	f.Frame(t, a)
@@ -69,9 +69,9 @@ func checkScaledScreen(t *testing.T, a *App, f *fakeInput, s float64, forward st
 		t.Errorf("%s at x%v: raw cursor maps to logical (%d,%d), want (%v,%v)", a.nav.screen(), s, mx, my, cx, cy)
 	}
 	for _, h := range a.layoutHits(a.sw, a.sh) { // topmost first
-		if cx >= h.x && cx < h.x+h.w && cy >= h.y && cy < h.y+h.h {
-			if h.id != forward {
-				t.Errorf("%s at x%v: %q is covered by %q at its logical centre", a.nav.screen(), s, forward, h.id)
+		if cx >= h.X && cx < h.X+h.W && cy >= h.Y && cy < h.Y+h.H {
+			if h.ID != forward {
+				t.Errorf("%s at x%v: %q is covered by %q at its logical centre", a.nav.screen(), s, forward, h.ID)
 			}
 			break
 		}

@@ -13,7 +13,7 @@ func TestCropPickerListsTrees(t *testing.T) {
 	click(t, a, "arch.cat.zones")
 	click(t, a, "arch.tool.grow")
 	b, ok := btnByID(a.architectButtons(), "arch.crop.tree")
-	if !ok || b.disabled {
+	if !ok || b.Disabled {
 		t.Fatalf("tree entry missing or locked: %+v ok=%v", b, ok)
 	}
 	if td, _ := toolByID("grow"); len(td.desc) < 21 || td.desc[:21] != "Pick a crop or trees " {

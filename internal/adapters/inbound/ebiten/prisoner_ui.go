@@ -130,7 +130,7 @@ func (a *App) queueIcon(key string, x, y float32) {
 	if img == nil {
 		return
 	}
-	a.uiSt().queue(func(dst *ebiten.Image) { drawIcon(dst, img, float64(x), float64(y), prisonerIcon) })
+	a.uiSt().Queue(func(dst *ebiten.Image) { drawIcon(dst, img, float64(x), float64(y), prisonerIcon) })
 }
 
 // prisonerTab declares and paints prisoner p's tab in the content rect in:
@@ -150,7 +150,7 @@ func (a *App) prisonerTab(p game.PawnView, in rect) {
 	a.uiLabel(in.X, y, fmt.Sprintf("Resistance %d", v.Resistance), tsBody)
 	bar := rect{X: in.X + 120, Y: y + 4, W: in.W - 120, H: 10}
 	frac := min(float32(v.Resistance)/float32(prisonerResMax), 1)
-	a.uiSt().queue(func(dst *ebiten.Image) {
+	a.uiSt().Queue(func(dst *ebiten.Image) {
 		fillRect(dst, bar, uiSliderTrack)
 		fillRect(dst, rect{X: bar.X, Y: bar.Y, W: bar.W * frac, H: bar.H}, uiSliderFill)
 	})

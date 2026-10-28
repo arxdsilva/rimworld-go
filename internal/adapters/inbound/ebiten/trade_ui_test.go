@@ -48,11 +48,11 @@ func testTradeView() game.TradeView {
 
 func clickID(t *testing.T, a *App, f *fakeInput, id string) {
 	t.Helper()
-	w, ok := a.uiSt().find(id)
+	w, ok := a.uiSt().Find(id)
 	if !ok {
 		t.Fatalf("no widget %q", id)
 	}
-	cx, cy := w.r.Center()
+	cx, cy := w.R.Center()
 	f.clickAt(t, a, int(cx), int(cy))
 }
 

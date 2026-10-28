@@ -146,13 +146,13 @@ func (a *App) colonyChromeHit(mx, my, sw, sh int) bool {
 	if mx < 0 || my < 0 || mx >= sw || my >= sh {
 		return true // off the window: never the map
 	}
-	if a.search.open && a.searchRect(sw).contains(mx, my) {
+	if a.search.open && a.searchRect(sw).Contains(mx, my) {
 		return true
 	}
-	if a.dev.menu && a.devMenuRect().contains(mx, my) {
+	if a.dev.menu && a.devMenuRect().Contains(mx, my) {
 		return true
 	}
-	if a.float.open && a.floatRect().contains(mx, my) {
+	if a.float.open && a.floatRect().Contains(mx, my) {
 		return true
 	}
 	x, y := float32(mx), float32(my)

@@ -1070,7 +1070,7 @@ func TestThingPanesAndGridThroughTheLayout(t *testing.T) {
 				t.Errorf("%v: command %s has no hit target", c.sel, cm.ID)
 				continue
 			}
-			if got := (rect{X: b.x, Y: b.y, W: b.w, H: b.h}); got != l.GridCells[i] {
+			if got := (rect{X: b.X, Y: b.Y, W: b.W, H: b.H}); got != l.GridCells[i] {
 				t.Errorf("%v: %s is at %+v, its cell is %+v", c.sel, cm.ID, got, l.GridCells[i])
 			}
 		}

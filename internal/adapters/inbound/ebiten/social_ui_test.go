@@ -214,7 +214,7 @@ func TestHistoryTab(t *testing.T) {
 	}
 	a, f := colonyApp(t, s)
 	for _, b := range a.hudTabButtons(a.sw, a.sh) {
-		if b.id == "tab.history" && b.disabled {
+		if b.ID == "tab.history" && b.Disabled {
 			t.Fatal("history tab disabled")
 		}
 	}

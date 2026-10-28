@@ -48,18 +48,18 @@ func (a *App) scheduleButtons() []button {
 	r := a.windowRect()
 	var out []button
 	for i, b := range schedBrushes {
-		out = append(out, button{id: ids.PrefixSchedBrush + strconv.Itoa(int(b)), label: b.String(),
-			x: r.x + 12 + float32(i*118), y: r.y + 30, w: 112, h: 26, selected: a.schedBrush == b})
+		out = append(out, button{ID: ids.PrefixSchedBrush + strconv.Itoa(int(b)), Label: b.String(),
+			X: r.X + 12 + float32(i*118), Y: r.Y + 30, W: 112, H: 26, Selected: a.schedBrush == b})
 	}
-	gx := r.x + 12 + workNameW
+	gx := r.X + 12 + workNameW
 	for row, id := range a.scheduleRows() {
-		y := r.y + schedTop + float32(row*schedRowH)
-		if y > r.y+r.h-20 {
+		y := r.Y + schedTop + float32(row*schedRowH)
+		if y > r.Y+r.H-20 {
 			break
 		}
 		for h := 0; h < 24; h++ {
-			out = append(out, button{id: ids.PrefixSchedCell + strconv.FormatUint(id, 10) + "." + strconv.Itoa(h),
-				x: gx + float32(h*schedCellW), y: y, w: schedCellW - 2, h: schedRowH - 3})
+			out = append(out, button{ID: ids.PrefixSchedCell + strconv.FormatUint(id, 10) + "." + strconv.Itoa(h),
+				X: gx + float32(h*schedCellW), Y: y, W: schedCellW - 2, H: schedRowH - 3})
 		}
 	}
 	return out
@@ -89,23 +89,23 @@ func (a *App) scheduleWant() (float32, float32) {
 
 func (a *App) drawSchedule(screen *ebiten.Image, sw, sh int) {
 	r := a.windowRect()
-	drawPanel(screen, r.x, r.y, r.w, r.h)
-	drawText(screen, "Schedule", float64(r.x)+12, float64(r.y)+6, withColor(tsLabel, uiHeading))
-	hintX := float64(r.x) + 12 + float64(textW("Schedule", tsLabel)) + 16
-	drawText(screen, ellipsize("pick an activity, then click or drag across the hours", tsSmall, float64(r.x+r.w)-12-hintX),
-		hintX, float64(r.y)+6+(lineH(tsLabel)-lineH(tsSmall))/2, withColor(tsSmall, uiTextDim))
+	drawPanel(screen, r.X, r.Y, r.W, r.H)
+	drawText(screen, "Schedule", float64(r.X)+12, float64(r.Y)+6, withColor(tsLabel, uiHeading))
+	hintX := float64(r.X) + 12 + float64(textW("Schedule", tsLabel)) + 16
+	drawText(screen, ellipsize("pick an activity, then click or drag across the hours", tsSmall, float64(r.X+r.W)-12-hintX),
+		hintX, float64(r.Y)+6+(lineH(tsLabel)-lineH(tsSmall))/2, withColor(tsSmall, uiTextDim))
 	mx, my := a.currentCursor()
 	for _, b := range a.scheduleButtons() {
-		if !strings.HasPrefix(b.id, ids.PrefixSchedBrush) {
+		if !strings.HasPrefix(b.ID, ids.PrefixSchedBrush) {
 			continue
 		}
-		drawButton(screen, b, b.contains(mx, my))
-		v, _ := strconv.Atoi(strings.TrimPrefix(b.id, ids.PrefixSchedBrush))
-		uiFillRect(screen, b.x+b.w-16, b.y+8, 10, 10, schedColor(schedule.Activity(v)), false)
+		drawButton(screen, b, b.Contains(mx, my))
+		v, _ := strconv.Atoi(strings.TrimPrefix(b.ID, ids.PrefixSchedBrush))
+		uiFillRect(screen, b.X+b.W-16, b.Y+8, 10, 10, schedColor(schedule.Activity(v)), false)
 	}
-	gx := int(r.x) + 12 + workNameW
+	gx := int(r.X) + 12 + workNameW
 	for h := 0; h < 24; h += 3 {
-		drawText(screen, fmt.Sprintf("%02d", h), float64(gx+h*schedCellW+2), float64(int(r.y)+schedTop)-lineH(tsSmall)-1, withColor(tsSmall, uiTextDim))
+		drawText(screen, fmt.Sprintf("%02d", h), float64(gx+h*schedCellW+2), float64(int(r.Y)+schedTop)-lineH(tsSmall)-1, withColor(tsSmall, uiTextDim))
 	}
 	byID := map[uint64]game.PawnView{}
 	for _, p := range a.shell.Pawns() {
@@ -113,8 +113,8 @@ func (a *App) drawSchedule(screen *ebiten.Image, sw, sh int) {
 	}
 	now := a.shell.Date().Hour
 	for row, id := range a.scheduleRows() {
-		y := int(r.y) + schedTop + row*schedRowH
-		if y > int(r.y+r.h)-20 {
+		y := int(r.Y) + schedTop + row*schedRowH
+		if y > int(r.Y+r.H)-20 {
 			break
 		}
 		name := "Everyone"
@@ -122,7 +122,7 @@ func (a *App) drawSchedule(screen *ebiten.Image, sw, sh int) {
 		if p, ok := byID[id]; ok {
 			name, grid = pawnLabel(p), p.Schedule
 		}
-		drawText(screen, ellipsize(name, tsBody, workNameW-8), float64(r.x)+12, float64(y)+(schedRowH-3-lineH(tsBody))/2, tsBody)
+		drawText(screen, ellipsize(name, tsBody, workNameW-8), float64(r.X)+12, float64(y)+(schedRowH-3-lineH(tsBody))/2, tsBody)
 		for h := 0; h < 24; h++ {
 			x := float32(gx + h*schedCellW)
 			c := uiBtnDisabled
@@ -164,10 +164,10 @@ func (a *App) handleScheduleDrag() {
 		return
 	}
 	mx, my := a.currentCursor()
-	if b, ok := hitButton(a.scheduleButtons(), mx, my); ok && strings.HasPrefix(b.id, ids.PrefixSchedCell) {
-		if b.id != a.lastPainted {
-			a.lastPainted = b.id
-			a.paintSchedule(b.id)
+	if b, ok := hitButton(a.scheduleButtons(), mx, my); ok && strings.HasPrefix(b.ID, ids.PrefixSchedCell) {
+		if b.ID != a.lastPainted {
+			a.lastPainted = b.ID
+			a.paintSchedule(b.ID)
 		}
 		return
 	}

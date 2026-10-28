@@ -143,8 +143,8 @@ func TestJourneyTabsResearchPick(t *testing.T) {
 	}
 	var pick string
 	for _, b := range j.a.researchButtons() {
-		if !b.disabled && !b.selected {
-			pick = b.id
+		if !b.Disabled && !b.Selected {
+			pick = b.ID
 			break
 		}
 	}
@@ -237,17 +237,17 @@ func clickIDWith(j *journey, id string, mods input.Mod) {
 	var x, y float32
 	found := false
 	for _, b := range j.a.layoutHits(j.a.sw, j.a.sh) {
-		if b.id == id {
-			x, y, found = b.x+b.w/2, b.y+b.h/2, true
+		if b.ID == id {
+			x, y, found = b.X+b.W/2, b.Y+b.H/2, true
 			break
 		}
 	}
 	if !found {
-		w, ok := j.a.uiSt().find(id)
+		w, ok := j.a.uiSt().Find(id)
 		if !ok {
 			j.t.Fatalf("no button or widget %q", id)
 		}
-		x, y = w.r.Center()
+		x, y = w.R.Center()
 	}
 	s := float32(j.a.scale.S)
 	j.f.Cur.Mx, j.f.Cur.My = int(x*s), int(y*s)

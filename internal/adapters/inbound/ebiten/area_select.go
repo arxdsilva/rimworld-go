@@ -37,12 +37,12 @@ func (a *App) areaSelectorsUI(sw, sh int) {
 // tab (row 0, Everyone, has none); ok false when the panel is too narrow.
 func (a *App) scheduleAreaRect(row int) (rect, bool) {
 	r := a.windowRect()
-	x := r.x + 12 + workNameW + 24*schedCellW + schedAreaGap
-	w := min(schedAreaW, r.x+r.w-12-x)
+	x := r.X + 12 + workNameW + 24*schedCellW + schedAreaGap
+	w := min(schedAreaW, r.X+r.W-12-x)
 	if w < schedAreaMinW {
 		return rect{}, false
 	}
-	y := r.y + schedTop + float32(row*schedRowH)
+	y := r.Y + schedTop + float32(row*schedRowH)
 	return rect{X: x, Y: y, W: w, H: schedRowH - 3}, true
 }
 
@@ -61,7 +61,7 @@ func (a *App) scheduleAreaUI() {
 			continue
 		}
 		br, ok := a.scheduleAreaRect(row)
-		if !ok || br.Y > r.y+r.h-20 {
+		if !ok || br.Y > r.Y+r.H-20 {
 			break
 		}
 		pawn := entity.EntityID(id)
@@ -105,13 +105,13 @@ func (a *App) inspectorAreaUI() {
 	}
 	var r rect
 	for _, b := range a.paneButtons() {
-		if b.id == chip.ID {
-			r = rect{X: b.x, Y: b.y, W: b.w, H: b.h}
+		if b.ID == chip.ID {
+			r = rect{X: b.X, Y: b.Y, W: b.W, H: b.H}
 			break
 		}
 	}
 	pawn := p.ID
-	a.uiSt().add(uiWidget{id: chip.ID, label: chip.Label, r: r, click: func() { a.openAreaChip(pawn) }})
+	a.uiSt().Add(uiWidget{ID: chip.ID, Label: chip.Label, R: r, Click: func() { a.openAreaChip(pawn) }})
 }
 
 // openAreaChip opens colonist id's allowed-area picker; a pick emits

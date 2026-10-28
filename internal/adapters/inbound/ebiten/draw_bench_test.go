@@ -134,7 +134,7 @@ func benchDrawGrown(b *testing.B, side int) {
 			for i := 0; i < 60; i++ { // textures uploaded, atlas pages cut, bakes made
 				frame()
 			}
-			calls := r.lit.calls
+			calls := r.lit.Calls
 			snowBakes, snowDraws := r.snowc.bakes, r.snowc.draws // snow_cache.go (PERF-002): 0 bakes/op once warm
 			b.ReportAllocs()
 			b.ResetTimer()
@@ -145,7 +145,7 @@ func benchDrawGrown(b *testing.B, side int) {
 				r.setView(sw, sh, tile)
 				r.drawArt(screen, sw, sh, tile)
 			}
-			b.ReportMetric(float64(r.lit.calls-calls)/float64(b.N), "draw-calls/op")
+			b.ReportMetric(float64(r.lit.Calls-calls)/float64(b.N), "draw-calls/op")
 			b.ReportMetric(float64(r.snowc.bakes-snowBakes)/float64(b.N), "snow-bakes/op")
 			b.ReportMetric(float64(r.snowc.draws-snowDraws)/float64(b.N), "snow-draws/op")
 		})

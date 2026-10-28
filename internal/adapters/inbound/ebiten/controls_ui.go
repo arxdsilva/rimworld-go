@@ -81,14 +81,14 @@ func (a *App) controlsButtons(sw, sh int) []button {
 			if slot < len(keys) {
 				label = keys[slot].Label()
 			}
-			bt := button{id: ctlSlotID(d.ID, slot), label: label, x: float32(ctlSlotX + slot*(ctlSlotW+8)), y: y, w: ctlSlotW, h: ctlBtnH}
+			bt := button{ID: ctlSlotID(d.ID, slot), Label: label, X: float32(ctlSlotX + slot*(ctlSlotW+8)), Y: y, W: ctlSlotW, H: ctlBtnH}
 			switch {
 			case a.rebind.on && a.rebind.act == d.ID && a.rebind.slot == slot:
-				bt.label, bt.selected = "press a key...", true
+				bt.Label, bt.Selected = "press a key...", true
 			case d.Fixed && slot > 0:
 				continue
 			case d.Fixed:
-				bt.disabled, bt.reason, bt.quiet = true, "held with the mouse; not rebindable", true
+				bt.Disabled, bt.Reason, bt.Quiet = true, "held with the mouse; not rebindable", true
 			}
 			out = append(out, bt)
 		}
@@ -96,14 +96,14 @@ func (a *App) controlsButtons(sw, sh int) []button {
 	if p := a.rebind.pending; p != nil {
 		y := float32(ctlTop + ctlRowsPerPage(sh)*ctlRowH + 2)
 		out = append(out,
-			button{id: "options.ctl.swap", label: "Swap", x: float32(sw) - 260, y: y, w: 90, h: ctlBtnH},
-			button{id: "options.ctl.keep", label: "Cancel", x: float32(sw) - 162, y: y, w: 90, h: ctlBtnH})
+			button{ID: "options.ctl.swap", Label: "Swap", X: float32(sw) - 260, Y: y, W: 90, H: ctlBtnH},
+			button{ID: "options.ctl.keep", Label: "Cancel", X: float32(sw) - 162, Y: y, W: 90, H: ctlBtnH})
 	}
 	fy := footerY(sh)
 	out = append(out,
-		button{id: "options.ctl.prev", label: "< Prev", x: 196, y: fy, w: 90, h: 36, disabled: a.rebind.page == 0, quiet: true, reason: "first page"},
-		button{id: "options.ctl.next", label: "Next >", x: 294, y: fy, w: 90, h: 36, disabled: a.rebind.page >= ctlPages(sh)-1, quiet: true, reason: "last page"},
-		button{id: "options.ctl.reset", label: "Reset to defaults", x: float32(sw) - 220, y: fy, w: 180, h: 36})
+		button{ID: "options.ctl.prev", Label: "< Prev", X: 196, Y: fy, W: 90, H: 36, Disabled: a.rebind.page == 0, Quiet: true, Reason: "first page"},
+		button{ID: "options.ctl.next", Label: "Next >", X: 294, Y: fy, W: 90, H: 36, Disabled: a.rebind.page >= ctlPages(sh)-1, Quiet: true, Reason: "last page"},
+		button{ID: "options.ctl.reset", Label: "Reset to defaults", X: float32(sw) - 220, Y: fy, W: 180, H: 36})
 	return out
 }
 

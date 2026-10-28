@@ -269,19 +269,19 @@ func TestLowRAMNoticeDoesNotCoverTheMenuButtons(t *testing.T) {
 		t.Fatalf("%d menu buttons", len(btns))
 	}
 	for _, b := range btns {
-		if rectsOverlap(card, rect{X: b.x, Y: b.y, W: b.w, H: b.h}) {
-			t.Errorf("the notice %+v covers the %q button", card, b.id)
+		if rectsOverlap(card, rect{X: b.X, Y: b.Y, W: b.W, H: b.H}) {
+			t.Errorf("the notice %+v covers the %q button", card, b.ID)
 		}
 	}
 	if card.X < 0 || card.Y < 0 || card.Right() > float32(a.sw) || card.Bottom() > float32(a.sh) {
 		t.Errorf("the notice %+v leaves the %dx%d screen", card, a.sw, a.sh)
 	}
-	w, ok := a.uiSt().find(ramDismissID)
+	w, ok := a.uiSt().Find(ramDismissID)
 	if !ok {
 		t.Fatal("no Got it button")
 	}
-	if w.r.X < card.X || w.r.Y < card.Y || w.r.Right() > card.Right() || w.r.Bottom() > card.Bottom() {
-		t.Errorf("Got it %+v is outside its card %+v", w.r, card)
+	if w.R.X < card.X || w.R.Y < card.Y || w.R.Right() > card.Right() || w.R.Bottom() > card.Bottom() {
+		t.Errorf("Got it %+v is outside its card %+v", w.R, card)
 	}
 }
 
@@ -365,22 +365,22 @@ func TestLowRAMNoticeAtUIScales(t *testing.T) {
 				t.Error("no notice text found in the card")
 			}
 			for _, h := range a.layoutHits(a.sw, a.sh) {
-				if h.id == ramDismissID && (h.x < 0 || h.y < 0 || h.x+h.w > float32(a.sw) || h.y+h.h > float32(a.sh)) {
+				if h.ID == ramDismissID && (h.X < 0 || h.Y < 0 || h.X+h.W > float32(a.sw) || h.Y+h.H > float32(a.sh)) {
 					t.Errorf("Got it %+v is outside the logical screen", h)
 				}
 			}
 			// The hit is reachable: the cursor over its centre makes it the hot widget.
 			var btn button
 			for _, h := range a.layoutHits(a.sw, a.sh) {
-				if h.id == ramDismissID {
+				if h.ID == ramDismissID {
 					btn = h
 				}
 			}
-			f.Cur.Mx, f.Cur.My = int((btn.x+btn.w/2)*float32(s)), int((btn.y+btn.h/2)*float32(s))
+			f.Cur.Mx, f.Cur.My = int((btn.X+btn.W/2)*float32(s)), int((btn.Y+btn.H/2)*float32(s))
 			f.Frame(t, a)
 			f.Frame(t, a)
-			if a.uiSt().hot != ramDismissID {
-				t.Errorf("the cursor over Got it hits %q", a.uiSt().hot)
+			if a.uiSt().Hot != ramDismissID {
+				t.Errorf("the cursor over Got it hits %q", a.uiSt().Hot)
 			}
 		})
 	}
@@ -398,14 +398,14 @@ func sizeRows(t *testing.T, a *App) (opts []game.MapSizeView, rows []rect, drawn
 	opts = mapSizeOptions()
 	ev := drawnText(t, a, a.sw, a.sh)
 	for i := range opts {
-		w, ok := a.uiSt().find(optID("land.mapsize", i))
+		w, ok := a.uiSt().Find(optID("land.mapsize", i))
 		if !ok {
 			t.Fatalf("no size row %d", i)
 		}
-		rows = append(rows, w.r)
+		rows = append(rows, w.R)
 		var on []traceEvent
 		for _, e := range ev {
-			if e.Y >= w.r.Y && e.Y+e.H <= w.r.Bottom()+0.5 && e.X >= w.r.X && e.X+e.W <= w.r.Right()+0.5 {
+			if e.Y >= w.R.Y && e.Y+e.H <= w.R.Bottom()+0.5 && e.X >= w.R.X && e.X+e.W <= w.R.Right()+0.5 {
 				on = append(on, e)
 			}
 		}
@@ -481,9 +481,9 @@ func TestWarnedSizesStaySelectable(t *testing.T) {
 		if mapSizeNote(o.Side, total) == "" || !o.Enabled {
 			continue
 		}
-		w, ok := a.uiSt().find(optID("land.mapsize", i))
-		if !ok || w.disabled {
-			t.Fatalf("%d: warned size row present=%v disabled=%v", o.Side, ok, w.disabled)
+		w, ok := a.uiSt().Find(optID("land.mapsize", i))
+		if !ok || w.Disabled {
+			t.Fatalf("%d: warned size row present=%v disabled=%v", o.Side, ok, w.Disabled)
 		}
 		press(t, a, f, optID("land.mapsize", i))
 		if a.ng.mapSize != o.Side {
@@ -545,9 +545,9 @@ func TestSizeWarningsAtUIScales(t *testing.T) {
 				found++
 				var row rect
 				for i := range mapSizeOptions() {
-					w, _ := a.uiSt().find(optID("land.mapsize", i))
-					if e.Y >= w.r.Y*float32(s)-0.5 && e.Y+e.H <= w.r.Bottom()*float32(s)+0.5 {
-						row = w.r
+					w, _ := a.uiSt().Find(optID("land.mapsize", i))
+					if e.Y >= w.R.Y*float32(s)-0.5 && e.Y+e.H <= w.R.Bottom()*float32(s)+0.5 {
+						row = w.R
 					}
 				}
 				if row.Empty() {

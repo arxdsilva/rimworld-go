@@ -133,7 +133,7 @@ func (a *App) socialRows(r rect, rels []game.RelationRowView) {
 		}
 		shown = append(shown, vis{i, y})
 	}
-	u.queue(func(dst *ebiten.Image) {
+	u.Queue(func(dst *ebiten.Image) {
 		sub := clipTo(dst, area.View)
 		for _, v := range shown {
 			paintRelationRow(sub, rect{X: area.View.X, Y: v.y, W: area.View.W, H: socialRowH}, rels[v.i], v.i%2 == 1)
@@ -141,7 +141,7 @@ func (a *App) socialRows(r rect, rels []game.RelationRowView) {
 	})
 	for _, v := range shown {
 		hit := rect{X: area.View.X, Y: v.y, W: area.View.W, H: socialRowH}.Intersect(area.View)
-		a.uiSt().add(uiWidget{id: fmt.Sprintf("social.row.%d", v.i), r: hit, label: relationLine(rels[v.i]), tip: relationTip(rels[v.i])})
+		a.uiSt().Add(uiWidget{ID: fmt.Sprintf("social.row.%d", v.i), R: hit, Label: relationLine(rels[v.i]), Tip: relationTip(rels[v.i])})
 	}
 }
 
@@ -201,7 +201,7 @@ func (a *App) socialLog(r rect, log []game.SocialLogLineView) {
 	lines := logNewestFirst(log)
 	area := a.uiScrollArea(socialLogID, r, float32(len(lines))*socialLogRowH, scrollOpts{Step: socialLogRowH * 2})
 	art := a.art
-	a.uiSt().queue(func(dst *ebiten.Image) {
+	a.uiSt().Queue(func(dst *ebiten.Image) {
 		sub := clipTo(dst, area.View)
 		for i, l := range lines {
 			y := area.View.Y + float32(i)*socialLogRowH - area.Off

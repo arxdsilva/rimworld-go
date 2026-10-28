@@ -62,7 +62,7 @@ func (a *App) tabOn(id string) bool {
 
 // kitWindowOn reports the kit window id is the open one.
 func (a *App) kitWindowOn(id string) bool {
-	return a.windowKitOpen() && a.hst.win.kit.id == id
+	return a.windowKitOpen() && a.hst.win.kit.ID == id
 }
 
 func (a *App) hudTabButtons(sw, sh int) []button {
@@ -75,26 +75,26 @@ func (a *App) hudTabButtons(sw, sh int) []button {
 	out := make([]button, 0, n)
 	for i, t := range hudTabSpecs {
 		b := button{
-			id:       t.id,
-			label:    t.label,
-			x:        tr.X + float32(i)*w,
-			y:        tr.Y,
-			w:        w,
-			h:        tr.H,
-			selected: a.tabOn(t.id),
+			ID:       t.id,
+			Label:    t.label,
+			X:        tr.X + float32(i)*w,
+			Y:        tr.Y,
+			W:        w,
+			H:        tr.H,
+			Selected: a.tabOn(t.id),
 		}
 		if t.key != "" {
-			b.tip = t.label + a.keyHint(t.key)
+			b.Tip = t.label + a.keyHint(t.key)
 		}
 		switch t.id {
 		case ids.TabResearch:
 			if name, pct, ok := a.researchUnderWay(); ok {
-				b.tip = fmt.Sprintf("%s: %s %d%%", b.tip, name, pct)
+				b.Tip = fmt.Sprintf("%s: %s %d%%", b.Tip, name, pct)
 			}
 		case ids.TabFactions:
 			if a.renderer != nil && len(a.renderer.game.Factions()) == 0 {
-				b.disabled, b.reason = true, "no other peoples in this colony"
-				b.selected = false
+				b.Disabled, b.Reason = true, "no other peoples in this colony"
+				b.Selected = false
 			}
 		}
 		out = append(out, b)
@@ -129,10 +129,10 @@ func (a *App) drawTabs(screen *ebiten.Image, sw, sh int) {
 		return
 	}
 	for _, b := range bs {
-		if b.id != ids.TabResearch {
+		if b.ID != ids.TabResearch {
 			continue
 		}
-		track := rect{X: b.x + 4, Y: b.y + b.h - 6, W: b.w - 8, H: 3}
+		track := rect{X: b.X + 4, Y: b.Y + b.H - 6, W: b.W - 8, H: 3}
 		uiFillRect(screen, track.X, track.Y, track.W, track.H, uiSliderTrack, false)
 		uiFillRect(screen, track.X, track.Y, track.W*float32(pct)/100, track.H, uiAccent, false)
 	}

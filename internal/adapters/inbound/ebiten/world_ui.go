@@ -65,10 +65,10 @@ type worldUI struct {
 // colony's widget hook).
 func (a *App) worldTabUI(sw, sh int) {
 	for _, b := range a.hudTabButtons(sw, sh) {
-		if b.id != ids.TabWorld || b.disabled {
+		if b.ID != ids.TabWorld || b.Disabled {
 			continue
 		}
-		a.uiSt().add(uiWidget{id: b.id, label: b.label, r: rect{X: b.x, Y: b.y, W: b.w, H: b.h}, click: a.toggleWorld})
+		a.uiSt().Add(uiWidget{ID: b.ID, Label: b.Label, R: rect{X: b.X, Y: b.Y, W: b.W, H: b.H}, Click: a.toggleWorld})
 	}
 }
 
@@ -86,16 +86,16 @@ func (a *App) openWorld() {
 		st.params, st.hasMap = src.WorldParams()
 	}
 	a.uiPushModal(modal{
-		id: worldModalID, title: "World", w: worldW, h: worldH,
-		modeless: true, anchor: (*App).windowAnchor,
-		draw: func(a *App, body rect) { a.worldBody(st, body) },
-		buttons: []modalButton{
-			{id: "world.form", label: "Form caravan", style: btnPrimary, disabled: func() string {
+		ID: worldModalID, Title: "World", W: worldW, H: worldH,
+		Modeless: true, Anchor: (*App).windowAnchor,
+		Draw: func(a *App, body rect) { a.worldBody(st, body) },
+		Buttons: []modalButton{
+			{ID: "world.form", Label: "Form caravan", Style: btnPrimary, Disabled: func() string {
 				if !st.hasMap {
 					return worldNoMap
 				}
 				return ""
-			}, onClick: func() { a.openFormCaravan(st) }},
+			}, OnClick: func() { a.openFormCaravan(st) }},
 		},
 	})
 }
@@ -182,7 +182,7 @@ func (a *App) worldGlobe(st *worldUI, r rect, view game.WorldMapView) {
 	sw, sh := a.sw, a.sh
 	art := a.art
 	caravans := view.Caravans
-	a.uiSt().queue(func(dst *ebiten.Image) {
+	a.uiSt().Queue(func(dst *ebiten.Image) {
 		sub := clipTo(dst, r)
 		fillRect(sub, r, uiSpace)
 		g.Sw, g.Sh = sw, sh

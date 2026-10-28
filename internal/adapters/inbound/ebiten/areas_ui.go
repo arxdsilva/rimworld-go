@@ -59,16 +59,16 @@ func (a *App) openAreaManager() {
 	}
 	names := map[int]*string{}
 	a.uiPushModal(modal{
-		id: areasModalID, title: "Allowed areas", w: areasW, h: areasH,
-		draw: func(a *App, body rect) { a.areasBody(body, names) },
-		buttons: []modalButton{
-			{id: "close", label: "Close", style: btnPrimary, closes: true},
-			{id: "areas.new", label: "New area", disabled: func() string {
+		ID: areasModalID, Title: "Allowed areas", W: areasW, H: areasH,
+		Draw: func(a *App, body rect) { a.areasBody(body, names) },
+		Buttons: []modalButton{
+			{ID: "close", Label: "Close", Style: btnPrimary, Closes: true},
+			{ID: "areas.new", Label: "New area", Disabled: func() string {
 				if len(a.renderer.game.Areas()) >= areasMax {
 					return areasCapWhy
 				}
 				return ""
-			}, onClick: a.newArea},
+			}, OnClick: a.newArea},
 		},
 	})
 }
@@ -138,7 +138,7 @@ func (a *App) areasBody(body rect, names map[int]*string) {
 		}
 		id := int(ar.ID)
 		tint := areaTint(ar)
-		a.uiSt().queue(func(dst *ebiten.Image) {
+		a.uiSt().Queue(func(dst *ebiten.Image) {
 			uiFillRect(dst, rr.X, rr.Y+3, 20, rr.H-6, tint, false)
 			uiStrokeRect(dst, rr.X, rr.Y+3, 20, rr.H-6, 1, uiPanelBorder, false)
 		})
@@ -156,7 +156,7 @@ func (a *App) areasBody(body rect, names map[int]*string) {
 			MaxLen: 24, Placeholder: "Area name", Normalize: strings.TrimSpace})
 		if committed && *v != "" && *v != ar.Name {
 			a.shell.Enqueue(command.Command{Kind: command.RenameArea, Index: id, Name: *v})
-		} else if a.uiSt().edit.id != fid {
+		} else if a.uiSt().Edit.ID != fid {
 			*v = ar.Name
 		}
 		a.uiLabel(fr.Right()+8, rr.Y+(rr.H-float32(lineH(tsSmall)))/2, fmt.Sprintf("%d cells", ar.Cells), withColor(tsSmall, uiTextDim))

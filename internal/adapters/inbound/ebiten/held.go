@@ -192,7 +192,7 @@ func (r *Renderer) heldPlace(rig heldRig, h heldItem, wx, wy, tile float64, ps p
 	bx, by, s := artOrigin(rig.body.Meta, float64(sx), float64(sy), tile)
 	bp := rig.body.Meta.PxPerTile()
 	k *= bp / sp.Meta.PxPerTile() // the held sprite at its own density (s is the body's)
-	poseG := ps.geo(float64(sx), float64(sy), tile)
+	poseG := ps.Geo(float64(sx), float64(sy), tile)
 	pv := heldPivot(sp, h.stance)
 	g := ebiten.GeoM{}
 	g.Translate(-pv[0], -pv[1])
@@ -280,7 +280,7 @@ func (r *Renderer) heldPoint(rig heldRig, h heldItem, wx, wy float64, ps pose, a
 		}
 		sx, sy := r.worldToScreenF(wx, wy)
 		bx, by, s := artOrigin(rig.body.Meta, float64(sx), float64(sy), tile)
-		g := ps.geo(float64(sx), float64(sy), tile)
+		g := ps.Geo(float64(sx), float64(sy), tile)
 		x, y = g.Apply(bx+a[0]*s, by+a[1]*s)
 	} else {
 		pl, ok := r.heldPlace(rig, h, wx, wy, tile, ps)

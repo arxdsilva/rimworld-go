@@ -270,7 +270,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 	none := color.NRGBA{}
 	w := r.game.World()
 	r.view.W, r.view.Pawns = w, r.game.Snapshot() // this frame's world and pawns, for every layer
-	r.lit.light = lightAt(w.Hour, w.DayOfYear, w.Weather, w.WeatherIntensity)
+	r.lit.Light = lightAt(w.Hour, w.DayOfYear, w.Weather, w.WeatherIntensity)
 	r.setView(sw, sh, tile)
 	r.links.sync(w, r.game.Width(), r.game.Height()) // linkgrid.go: rebuilt only on StructVer
 	r.lod.tier = lodFor(tile)
@@ -491,7 +491,7 @@ func (r *Renderer) drawArt(screen *ebiten.Image, sw, sh int, tile float64) {
 				wx, wy := r.interpWorld(p)
 				wx, wy = creatureAt(wx, wy, tile, ct)
 				k := 1 + 0.045*math.Sin(float64(r.present)/7)
-				r.drawSpritePose(screen, "overlay/selection", none, wx, wy, ct, pose{px: 0.5, py: 0.5, sx: k, sy: k})
+				r.drawSpritePose(screen, "overlay/selection", none, wx, wy, ct, pose{Px: 0.5, Py: 0.5, Sx: k, Sy: k})
 			}
 		}
 	}
@@ -660,8 +660,8 @@ func (r *Renderer) drawPlantObj(dst *ebiten.Image, w *game.WorldView, p *game.Pl
 	}
 	ps := r.plantPose(p.X, p.Y, kind, amount, scale)
 	dcs, dk := plantDamageLook(*p)
-	ps.cs = dcs
-	ps.sx, ps.sy = ps.sx*dk, ps.sy*dk
+	ps.Cs = dcs
+	ps.Sx, ps.Sy = ps.Sx*dk, ps.Sy*dk
 	if kind == kindTree {
 		if trunk, canopy, ok := r.treePartKeys(key); ok {
 			// PLAY-010 2.9: the trunk stays opaque, the canopy turns
@@ -669,7 +669,7 @@ func (r *Renderer) drawPlantObj(dst *ebiten.Image, w *game.WorldView, p *game.Pl
 			r.layer("tree_trunk")
 			r.drawSpritePose(dst, trunk, color.NRGBA{}, float64(p.X), float64(p.Y), tile, ps)
 			if a := r.treeCanopyAlpha(p.X, p.Y); a < 1 {
-				ps.cs = mulCS(ps.cs, colorScale{1, 1, 1, a})
+				ps.Cs = mulCS(ps.Cs, colorScale{1, 1, 1, a})
 			}
 			r.layer("tree_canopy")
 			r.drawSpritePose(dst, canopy, color.NRGBA{}, float64(p.X), float64(p.Y), tile, ps)
@@ -985,7 +985,7 @@ func (r *Renderer) drawGroundTile(screen *ebiten.Image, w *game.WorldView, x, y 
 		tcs = mulCS(tcs, tintCS(r.stoneTintAt(*w, x, y)))
 	}
 	if ok && isWaterCode[code] {
-		r.lit.calls++
+		r.lit.Calls++
 		r.drawWaterTile(screen, terrainNames[code], x, y, tile, sw, sh, tcs) // water_draw.go
 	} else {
 		r.drawTile(screen, key, float64(x), float64(y), tile, sw, sh, tcs)

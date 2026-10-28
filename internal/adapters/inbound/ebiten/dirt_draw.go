@@ -282,7 +282,7 @@ func (r *Renderer) drawDirt(screen *ebiten.Image, w game.WorldView, sw, sh int, 
 		screen.DrawTriangles32(b.verts, b.idx, atlas, op)
 		return
 	}
-	r.lit.syncUniforms()
-	r.lit.opts.Images[0] = atlas
-	screen.DrawTrianglesShader32(b.verts, b.idx, sh2, &r.lit.opts)
+	r.lit.SyncUniforms()
+	r.lit.Opts.Images[0] = atlas
+	screen.DrawTrianglesShader32(b.verts, b.idx, sh2, &r.lit.Opts)
 }

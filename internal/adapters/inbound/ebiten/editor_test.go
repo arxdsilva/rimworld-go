@@ -108,10 +108,10 @@ func TestEditorAddMoveRemoveParts(t *testing.T) {
 		t.Fatalf("after moving down: %v", got)
 	}
 	// The ends can't move further.
-	if w, _ := a.uiSt().find("sced.up.0"); !w.disabled {
+	if w, _ := a.uiSt().Find("sced.up.0"); !w.Disabled {
 		t.Error("the first part can't move up")
 	}
-	if w, _ := a.uiSt().find("sced.down.2"); !w.disabled {
+	if w, _ := a.uiSt().Find("sced.down.2"); !w.Disabled {
 		t.Error("the last part can't move down")
 	}
 	// Remove the middle one.
@@ -167,10 +167,10 @@ func TestEditorCardsToggleAndEditValues(t *testing.T) {
 	f.Frame(t, a)
 	idx := indexWhere(len(edItems), func(i int) bool { return edItems[i] == item.Steel })
 	// Scroll the list so the row is declared, then click it.
-	a.uiSt().scroll["modal.pick.sced.p.0.item.list.scroll"] = 0
+	a.uiSt().Scroll["modal.pick.sced.p.0.item.list.scroll"] = 0
 	id := "modal.pick.sced.p.0.item.list." + uiNum(idx)
 	for i := 0; i < 60 && !hasWidget(a, id); i++ {
-		a.uiSt().scroll["modal.pick.sced.p.0.item.list"] += 3 * listRowH
+		a.uiSt().Scroll["modal.pick.sced.p.0.item.list"] += 3 * listRowH
 		f.Frame(t, a)
 	}
 	press(t, a, f, id)
@@ -243,9 +243,9 @@ func TestEditorValidationLinksToPart(t *testing.T) {
 		t.Fatal("the part starts collapsed")
 	}
 	// Until it is fixed, Done is blocked by the error and says how many.
-	w, _ := a.uiSt().find("sced.done")
-	if !w.disabled || w.reason != "Fix 1 problem" {
-		t.Fatalf("Done: disabled=%v reason=%q", w.disabled, w.reason)
+	w, _ := a.uiSt().Find("sced.done")
+	if !w.Disabled || w.Reason != "Fix 1 problem" {
+		t.Fatalf("Done: disabled=%v reason=%q", w.Disabled, w.Reason)
 	}
 	press(t, a, f, "sced.prob.0")
 	f.Frame(t, a)
@@ -253,7 +253,7 @@ func TestEditorValidationLinksToPart(t *testing.T) {
 	if !ed.open[last] {
 		t.Fatal("clicking a problem expands its part")
 	}
-	if a.uiSt().scroll["sced.form"] <= 0 {
+	if a.uiSt().Scroll["sced.form"] <= 0 {
 		t.Fatal("clicking a problem scrolls to its part")
 	}
 	if !hasWidget(a, "sced.card."+uiNum(last)) || !hasWidget(a, "sced.p."+uiNum(last)+".chance") {
@@ -272,16 +272,16 @@ func TestEditorDoneBlockedByErrorsNotWarnings(t *testing.T) {
 	if len(probs) != 1 || probs[0].Severity != scenario.Warning {
 		t.Fatalf("problems = %+v, want one warning", probs)
 	}
-	w, _ := a.uiSt().find("sced.done")
-	if w.disabled {
-		t.Fatalf("warnings must not block Done: %q", w.reason)
+	w, _ := a.uiSt().Find("sced.done")
+	if w.Disabled {
+		t.Fatalf("warnings must not block Done: %q", w.Reason)
 	}
 	// An error blocks it.
 	ed.def.Name = ""
 	f.Frame(t, a)
-	w, _ = a.uiSt().find("sced.done")
-	if !w.disabled || !strings.HasPrefix(w.reason, "Fix ") {
-		t.Fatalf("an error must block Done: disabled=%v %q", w.disabled, w.reason)
+	w, _ = a.uiSt().Find("sced.done")
+	if !w.Disabled || !strings.HasPrefix(w.Reason, "Fix ") {
+		t.Fatalf("an error must block Done: disabled=%v %q", w.Disabled, w.Reason)
 	}
 	click(t, a, "sced.done")
 	if a.nav.screen() != screenScenarioEditor {
@@ -414,9 +414,9 @@ func TestEditorSaveNeedsAStoreAndAValidScenario(t *testing.T) {
 	ed := a.ng.ed
 	ed.def.Name = ""
 	f.Frame(t, a)
-	w, _ := a.uiSt().find("sced.save")
-	if !w.disabled || !strings.Contains(w.reason, "Fix 1 problem") {
-		t.Fatalf("save with errors: %v %q", w.disabled, w.reason)
+	w, _ := a.uiSt().Find("sced.save")
+	if !w.Disabled || !strings.Contains(w.Reason, "Fix 1 problem") {
+		t.Fatalf("save with errors: %v %q", w.Disabled, w.Reason)
 	}
 	ed.def.Name = "Disk test"
 	st.saveErr = errTest
@@ -428,7 +428,7 @@ func TestEditorSaveNeedsAStoreAndAValidScenario(t *testing.T) {
 	a.cfg.Scenarios = nil
 	f.Frame(t, a)
 	for _, id := range []string{"sced.save", "sced.load"} {
-		if w, _ := a.uiSt().find(id); !w.disabled {
+		if w, _ := a.uiSt().Find(id); !w.Disabled {
 			t.Errorf("%s needs a scenario store", id)
 		}
 	}
@@ -526,14 +526,14 @@ func TestEditorEveryPartKindDraws(t *testing.T) {
 	for _, size := range [][2]int{{1920, 1080}, {1280, 720}} {
 		sizeTo(t, a, f, size[0], size[1])
 		for off := float32(0); off < 3000; off += 400 {
-			a.uiSt().scroll["sced.form"] = off
+			a.uiSt().Scroll["sced.form"] = off
 			f.Frame(t, a)
 			a.Draw(ebiten.NewImage(size[0], size[1]))
 		}
 	}
 	// At 1080p, with the form scrolled to the top, the first controls exist.
 	sizeTo(t, a, f, 1920, 1080)
-	a.uiSt().scroll["sced.form"] = 0
+	a.uiSt().Scroll["sced.form"] = 0
 	f.Frame(t, a)
 	if !hasWidget(a, "sced.p.0.trait") || !hasWidget(a, "sced.p.0.chance") {
 		t.Fatal("the forced trait controls are declared")

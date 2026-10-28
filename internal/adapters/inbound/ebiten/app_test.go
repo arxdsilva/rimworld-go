@@ -254,11 +254,11 @@ func clickDirect(t *testing.T, a *App, id string) {
 	t.Helper()
 	settleUI(t, a)
 	for _, b := range a.layoutHits(a.sw, a.sh) {
-		if b.id != id {
+		if b.ID != id {
 			continue
 		}
-		if b.disabled {
-			a.hint = b.reason
+		if b.Disabled {
+			a.hint = b.Reason
 			return
 		}
 		a.applyClick(id)
@@ -280,12 +280,12 @@ func fakeFor(a *App) *fakeInput {
 func elementAt(a *App, id string) (x, y float32, disabled bool, reason string, ok bool) {
 	sw, sh := a.size() // the size Update hit-tests with (a test may never Layout)
 	for _, b := range a.layoutHits(sw, sh) {
-		if b.id == id {
-			return b.x + b.w/2, b.y + b.h/2, b.disabled, b.reason, true
+		if b.ID == id {
+			return b.X + b.W/2, b.Y + b.H/2, b.Disabled, b.Reason, true
 		}
 	}
-	if w, found := a.uiSt().find(id); found {
-		x, y = w.r.Center()
+	if w, found := a.uiSt().Find(id); found {
+		x, y = w.R.Center()
 		return x, y, false, "", true
 	}
 	return 0, 0, false, "", false
@@ -561,12 +561,12 @@ func TestWorldGenerateStaysInFooter(t *testing.T) {
 		t.Fatalf("screen = %s, want world_gen", a.nav.screen())
 	}
 	settleUI(t, a)
-	w, ok := a.uiSt().find("world.generate")
+	w, ok := a.uiSt().Find("world.generate")
 	if !ok {
 		t.Fatal("missing world.generate")
 	}
 	_, _, _, footer := dialogFrame(a.sw, a.sh)
-	if w.disabled || w.r.Y < footer.Y || w.r.Bottom() > footer.Bottom() {
-		t.Fatalf("Generate at %+v should be enabled in the footer %+v", w.r, footer)
+	if w.Disabled || w.R.Y < footer.Y || w.R.Bottom() > footer.Bottom() {
+		t.Fatalf("Generate at %+v should be enabled in the footer %+v", w.R, footer)
 	}
 }

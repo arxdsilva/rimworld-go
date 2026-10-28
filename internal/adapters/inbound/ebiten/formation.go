@@ -256,7 +256,7 @@ func (a *App) handleOrders() {
 		return
 	}
 	sw, sh := a.size()
-	if a.colonyChromeHit(mx, my, sw, sh) && !a.floatRect().contains(mx, my) {
+	if a.colonyChromeHit(mx, my, sw, sh) && !a.floatRect().Contains(mx, my) {
 		return
 	}
 	f.Take(mbRight)

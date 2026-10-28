@@ -142,11 +142,11 @@ func TestLyingPoseFlat(t *testing.T) {
 // --- point lights --------------------------------------------------------
 
 func fire(id uint64, x, y float64) pointLight {
-	return pointLight{id: id, x: x, y: y, h: campfireLightH, reach: campfireLightReach}
+	return pointLight{ID: id, X: x, Y: y, H: campfireLightH, Reach: campfireLightReach}
 }
 
 func lamp(id uint64, x, y float64) pointLight {
-	return pointLight{id: id, x: x, y: y, h: lampLightH, reach: lampLightReach}
+	return pointLight{ID: id, X: x, Y: y, H: lampLightH, Reach: lampLightReach}
 }
 
 func TestPointLightDirectionAwayFromFire(t *testing.T) {
@@ -157,11 +157,11 @@ func TestPointLightDirectionAwayFromFire(t *testing.T) {
 			t.Fatalf("no shadow at %v", c)
 		}
 		ux, uy := unit(c[0]-5, c[1]-5)
-		if !near(cl.dirX, ux, 1e-9) || !near(cl.dirY, uy, 1e-9) {
-			t.Fatalf("at %v the shadow points (%.2f, %.2f), want away from the fire (%.2f, %.2f)", c, cl.dirX, cl.dirY, ux, uy)
+		if !near(cl.DirX, ux, 1e-9) || !near(cl.DirY, uy, 1e-9) {
+			t.Fatalf("at %v the shadow points (%.2f, %.2f), want away from the fire (%.2f, %.2f)", c, cl.DirX, cl.DirY, ux, uy)
 		}
-		if cl.alpha <= 0 || cl.alpha > pointShadowAlpha {
-			t.Fatalf("alpha %v", cl.alpha)
+		if cl.Alpha <= 0 || cl.Alpha > pointShadowAlpha {
+			t.Fatalf("alpha %v", cl.Alpha)
 		}
 	}
 	if _, ok := pointCast(10, 5, 0.948, fire(1, 5, 5), 0); ok {
@@ -180,7 +180,7 @@ func TestPointLightLengthShrinksNearLight(t *testing.T) {
 		if !ok {
 			t.Fatalf("no shadow at %v", d)
 		}
-		return cl.m * h
+		return cl.M * h
 	}
 	t1, t15, t3 := tip(1), tip(1.5), tip(3)
 	if !(t1 < t15 && t15 < t3) {
@@ -193,8 +193,8 @@ func TestPointLightLengthShrinksNearLight(t *testing.T) {
 		t.Fatal("tip not clamped to [0.3h, 3]")
 	}
 	// a caster taller than the light: the longest shadow
-	if cl, _ := pointCast(6, 5, 0.948, fire(1, 5, 5), 0); !near(cl.m*0.948, shadowMaxLen, 1e-9) {
-		t.Fatalf("over a low fire the shadow is %.2f long", cl.m*0.948)
+	if cl, _ := pointCast(6, 5, 0.948, fire(1, 5, 5), 0); !near(cl.M*0.948, shadowMaxLen, 1e-9) {
+		t.Fatalf("over a low fire the shadow is %.2f long", cl.M*0.948)
 	}
 }
 
@@ -205,12 +205,12 @@ func TestTwoNearestLightsOnly(t *testing.T) {
 	n := nearestLights(5, 5, lights, &idx)
 	// three lights at distance 2 (ids 2, 4, 7): ties break by id; the
 	// fire at distance 5 is out of reach
-	if n != 2 || lights[idx[0]].id != 2 || lights[idx[1]].id != 4 {
-		t.Fatalf("picked %d: %v %v", n, lights[idx[0]].id, lights[idx[1]].id)
+	if n != 2 || lights[idx[0]].ID != 2 || lights[idx[1]].ID != 4 {
+		t.Fatalf("picked %d: %v %v", n, lights[idx[0]].ID, lights[idx[1]].ID)
 	}
 	pl := planCreature(5, 5, 0.948, true, lightState{}, 0, lights)
-	if pl.np != 2 {
-		t.Fatalf("planned %d point-light shadows, want 2", pl.np)
+	if pl.Np != 2 {
+		t.Fatalf("planned %d point-light shadows, want 2", pl.Np)
 	}
 	if n := nearestLights(5, 5, []pointLight{fire(1, 20, 20)}, &idx); n != 0 {
 		t.Fatal("a light out of reach was picked")
@@ -223,14 +223,14 @@ func TestIndoorNoSunShadowButContactAndLamp(t *testing.T) {
 	t.Parallel()
 	l := lightAt(21, 15, "clear", 0) // the moon is up
 	pl := planCreature(5, 5, 0.948, false, l, 0, []pointLight{lamp(1, 3, 4)})
-	if pl.sun {
+	if pl.Sun {
 		t.Fatal("a roofed creature casts a moon shadow")
 	}
-	if pl.np != 1 || pl.points[0].dirX <= 0 {
+	if pl.Np != 1 || pl.Points[0].DirX <= 0 {
 		t.Fatalf("lamp shadow %+v", pl)
 	}
-	if !near(pl.contact, contactRoofAlpha, 1e-9) {
-		t.Fatalf("contact under a roof %.3f", pl.contact)
+	if !near(pl.Contact, contactRoofAlpha, 1e-9) {
+		t.Fatalf("contact under a roof %.3f", pl.Contact)
 	}
 }
 
@@ -239,11 +239,11 @@ func TestContactShadowAtNight(t *testing.T) {
 	l := lightAt(2, 15, "clear", 0)
 	l.ShadowAlpha = 0 // moonless
 	pl := planCreature(5, 5, 0.948, true, l, 0, nil)
-	if pl.sun || pl.np != 0 {
+	if pl.Sun || pl.Np != 0 {
 		t.Fatalf("a shadow with no light: %+v", pl)
 	}
-	if !near(pl.contact, contactMinAlpha, 1e-9) {
-		t.Fatalf("night contact %.3f, want %.2f", pl.contact, contactMinAlpha)
+	if !near(pl.Contact, contactMinAlpha, 1e-9) {
+		t.Fatalf("night contact %.3f, want %.2f", pl.Contact, contactMinAlpha)
 	}
 }
 
@@ -251,13 +251,13 @@ func TestStormFadesSunNotContact(t *testing.T) {
 	t.Parallel()
 	clear := planCreature(5, 5, 0.948, true, lightAt(10, 15, "clear", 0), 1, nil)
 	storm := planCreature(5, 5, 0.948, true, lightAt(10, 15, "storm", 1), 1, nil)
-	if !clear.sun || !storm.sun || !(storm.sunCast.alpha < clear.sunCast.alpha) {
-		t.Fatalf("sun alpha clear %.3f storm %.3f", clear.sunCast.alpha, storm.sunCast.alpha)
+	if !clear.Sun || !storm.Sun || !(storm.SunCast.Alpha < clear.SunCast.Alpha) {
+		t.Fatalf("sun alpha clear %.3f storm %.3f", clear.SunCast.Alpha, storm.SunCast.Alpha)
 	}
-	if storm.contact < contactMinAlpha || !near(storm.contact, math.Max(contactSunK*storm.sunCast.alpha, contactMinAlpha), 1e-9) {
-		t.Fatalf("storm contact %.3f", storm.contact)
+	if storm.Contact < contactMinAlpha || !near(storm.Contact, math.Max(contactSunK*storm.SunCast.Alpha, contactMinAlpha), 1e-9) {
+		t.Fatalf("storm contact %.3f", storm.Contact)
 	}
-	if clear.contact < storm.contact {
+	if clear.Contact < storm.Contact {
 		t.Fatal("contact darker in the storm")
 	}
 }
@@ -269,9 +269,9 @@ func TestHeightEncodedInRed(t *testing.T) {
 	// a 10x40 px sprite standing on the pivot line (y 200), 40 px tall
 	var geo ebiten.GeoM
 	geo.Translate(100, 160)
-	c := &shadowCast{alpha: 0.5, pivotY: 200, heightPx: 40}
+	c := &shadowCast{Alpha: 0.5, PivotY: 200, HeightPx: 40}
 	l := testLight(1, 0.6, 0.3)
-	c.proj = shadowProjection(105, 200, 1, l, 1, 1)
+	c.Proj = shadowProjection(105, 200, 1, l, 1, 1)
 	var vs [4]ebiten.Vertex
 	castQuad(&vs, 0, 0, 10, 40, geo, c)
 	for i, v := range vs {
@@ -370,7 +370,7 @@ func keyOf(c *artCatalog, img *ebiten.Image) string {
 func castAll(r *Renderer, p game.PawnView) map[string]int {
 	got := map[string]int{}
 	layer := ebiten.NewImage(512, 512)
-	r.cast = &shadowCast{layer: layer, alpha: 0.3, onDraw: func(img *ebiten.Image) { got[keyOf(r.art, img)]++ }}
+	r.cast = &shadowCast{Layer: layer, Alpha: 0.3, OnDraw: func(img *ebiten.Image) { got[keyOf(r.art, img)]++ }}
 	defer func() { r.cast = nil }()
 	r.drawPawnFigure(ebiten.NewImage(512, 512), p, 2, 2, castTile, r.pawnFigurePoseOf(p))
 	return got
@@ -421,12 +421,12 @@ func TestFigureDrawIsPure(t *testing.T) {
 	r.view.Pawns = []game.PawnView{rescuer, patient, downed}
 	r.last[5] = pawnVisual{facing: faceEast, lyingSince: 90}
 	st := r.animState()
-	st.prevStride[3] = 0.25
+	st.PrevStride[3] = 0.25
 	type snap struct {
 		carry, stride, work, recs, last, parts, floaters int
 	}
 	take := func() snap {
-		return snap{len(st.carryBorn), len(st.prevStride), len(st.prevWork), len(st.recs), len(r.last), len(r.parts), len(r.floaters)}
+		return snap{len(st.CarryBorn), len(st.PrevStride), len(st.PrevWork), len(st.Recs), len(r.last), len(r.parts), len(r.floaters)}
 	}
 	before := take()
 	for _, p := range []game.PawnView{rescuer, downed} {
@@ -437,12 +437,12 @@ func TestFigureDrawIsPure(t *testing.T) {
 	if after := take(); after != before {
 		t.Fatalf("a cast draw wrote renderer state: %+v -> %+v", before, after)
 	}
-	if _, lifted := st.carryBorn[entity.EntityID(4)]; lifted {
+	if _, lifted := st.CarryBorn[entity.EntityID(4)]; lifted {
 		t.Fatal("the cast pass started the patient's lift")
 	}
 	// the normal draw still starts it
 	r.drawPawnArt(ebiten.NewImage(512, 512), rescuer, 2, 2, castTile, 512, 512)
-	if _, lifted := st.carryBorn[entity.EntityID(4)]; !lifted {
+	if _, lifted := st.CarryBorn[entity.EntityID(4)]; !lifted {
 		t.Fatal("the object pass no longer lifts the patient")
 	}
 	// pawns in bed cast nothing; the figure draws no extras (markers, icons)
@@ -478,11 +478,11 @@ func TestPointLightsFromCampfiresAndLitLamps(t *testing.T) {
 	// PLAY-020 §3b, PLAY-021: every lamp that glows (powered) is a light,
 	// not only those in a room the sim calls lit; the banked campfire is out.
 	got := r.pointLights()
-	if len(got) != 3 || got[0].id != 1 || got[0].h != campfireLightH || got[1].id != 3 || got[1].h != lampLightH ||
-		got[2].id != 4 || got[1].reach != lampLightReach {
+	if len(got) != 3 || got[0].ID != 1 || got[0].H != campfireLightH || got[1].ID != 3 || got[1].H != lampLightH ||
+		got[2].ID != 4 || got[1].Reach != lampLightReach {
 		t.Fatalf("lights %+v", got)
 	}
-	if got[0].x != 2.5 || got[0].y != 8.5 {
+	if got[0].X != 2.5 || got[0].Y != 8.5 {
 		t.Fatalf("a light sits at its tile centre: %+v", got[0])
 	}
 	// the night pass: a pawn by the fire and one in the lamp-lit room
@@ -497,23 +497,23 @@ func TestPointLightsFromCampfiresAndLitLamps(t *testing.T) {
 	}
 	r.view.W = w
 	r.view.Pawns = []game.PawnView{{ID: 1, X: 3, Y: 8}, {ID: 2, X: 9, Y: 3}}
-	r.lit.light = lightAt(23, 15, "clear", 0)
+	r.lit.Light = lightAt(23, 15, "clear", 0)
 	r.drawShadows(ebiten.NewImage(640, 400), w, 640, 400, r.tilePx())
 	// pawn 1: the moon and the fire; pawn 2: the lamp only
-	if r.env.shadow.casts != 3 || r.env.shadow.composites != 1 {
-		t.Fatalf("drew %d silhouettes, %d composites", r.env.shadow.casts, r.env.shadow.composites)
+	if r.env.shadow.Casts != 3 || r.env.shadow.Composites != 1 {
+		t.Fatalf("drew %d silhouettes, %d composites", r.env.shadow.Casts, r.env.shadow.Composites)
 	}
-	if n := len(r.env.shadow.contacts.Verts); n != 0 {
+	if n := len(r.env.shadow.Contacts.Verts); n != 0 {
 		t.Fatalf("contact batch not flushed: %d", n)
 	}
 	// Full daylight no longer empties the light list (the old "no point
 	// lights at daylight 1"): it washes out only open-sky creatures. At
 	// noon pawn 1 casts the sun only (its fire shadow is gone) and pawn 2,
 	// under the roof, keeps its lamp shadow.
-	r.lit.light = lightAt(12, 15, "clear", 0)
+	r.lit.Light = lightAt(12, 15, "clear", 0)
 	r.drawShadows(ebiten.NewImage(640, 400), w, 640, 400, r.tilePx())
-	if r.env.shadow.casts != 3+2 {
-		t.Fatalf("noon drew %d silhouettes, want the sun and the indoor lamp", r.env.shadow.casts-3)
+	if r.env.shadow.Casts != 3+2 {
+		t.Fatalf("noon drew %d silhouettes, want the sun and the indoor lamp", r.env.shadow.Casts-3)
 	}
 }
 
@@ -525,9 +525,9 @@ func castsAt(t *testing.T, w game.WorldView, hour float64, pawns ...game.PawnVie
 	r.art = figureArt()
 	r.view.W = w
 	r.view.Pawns = pawns
-	r.lit.light = lightAt(hour, 15, "clear", 0)
+	r.lit.Light = lightAt(hour, 15, "clear", 0)
 	r.drawShadows(ebiten.NewImage(640, 400), w, 640, 400, r.tilePx())
-	return r.env.shadow.casts
+	return r.env.shadow.Casts
 }
 
 func TestOutdoorLampCastsCreatureShadowAtNight(t *testing.T) {

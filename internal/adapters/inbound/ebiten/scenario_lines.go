@@ -267,7 +267,7 @@ func (a *App) detailView(id string, r rect, d scenario.Def, lines []game.DetailL
 			a.uiTip(id+".tip."+uiNum(i), rr, row.tip)
 		}
 	}
-	u.queue(func(dst *ebiten.Image) {
+	u.Queue(func(dst *ebiten.Image) {
 		sub := clipTo(dst, area.View)
 		for _, row := range L.rows {
 			y := area.View.Y + row.y - area.Off

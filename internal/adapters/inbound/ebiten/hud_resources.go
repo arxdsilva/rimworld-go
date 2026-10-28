@@ -164,7 +164,7 @@ func (a *App) resourceViewport(r rect, contentH float32) (view rect, off float32
 		return r, 0
 	}
 	view = rect{X: r.X, Y: r.Y, W: max(0, r.W-scrollBarW), H: r.H}
-	off = max(0, min(contentH-r.H, a.uiSt().scroll[resScrollID]))
+	off = max(0, min(contentH-r.H, a.uiSt().Scroll[resScrollID]))
 	return view, off
 }
 
@@ -179,7 +179,7 @@ func (a *App) resourcesUI(sw, sh int) {
 		a.uiScrollArea(resScrollID, r, ch, scrollOpts{Step: resourceRowH * 3})
 		return
 	}
-	delete(a.uiSt().scroll, resScrollID)
+	delete(a.uiSt().Scroll, resScrollID)
 }
 
 // ---- buttons ---------------------------------------------------------------
@@ -202,15 +202,15 @@ func (a *App) resourceButtons() []button {
 		if rr.Empty() {
 			continue
 		}
-		b := button{x: rr.X, y: rr.Y, w: rr.W, h: rr.H}
+		b := button{X: rr.X, Y: rr.Y, W: rr.W, H: rr.H}
 		if row.header {
-			b.id = resCatPrefix + row.cat
-			b.tip = row.cat + " (click to fold)"
+			b.ID = resCatPrefix + row.cat
+			b.Tip = row.cat + " (click to fold)"
 			if a.hst.res.collapsed[row.cat] {
-				b.tip = row.cat + " (click to unfold)"
+				b.Tip = row.cat + " (click to unfold)"
 			}
 		} else {
-			b.id, b.tip = resRowPrefix+row.kind, row.label
+			b.ID, b.Tip = resRowPrefix+row.kind, row.label
 		}
 		out = append(out, b)
 	}

@@ -21,8 +21,8 @@ const (
 // focus.
 func (a *App) uiPreInput(raw *rawInput) {
 	u := a.uiSt()
-	if u.heldN == nil {
-		u.heldN = map[string]int{}
+	if u.HeldN == nil {
+		u.HeldN = map[string]int{}
 	}
 	now := map[string]bool{}
 	for _, k := range raw.Held {
@@ -31,13 +31,13 @@ func (a *App) uiPreInput(raw *rawInput) {
 	for _, k := range raw.Pressed {
 		now[k] = true
 	}
-	for k := range u.heldN {
+	for k := range u.HeldN {
 		if !now[k] {
-			delete(u.heldN, k)
+			delete(u.HeldN, k)
 		}
 	}
 	for k := range now {
-		u.heldN[k]++
+		u.HeldN[k]++
 	}
 	u.pageDelta = 0
 	if a.textActive() {
@@ -52,13 +52,13 @@ func (a *App) uiPreInput(raw *rawInput) {
 			key string
 			dir int
 		}{{"PageUp", -1}, {"PageDown", 1}} {
-			if repeatFire(u.heldN[k.key]) {
+			if repeatFire(u.HeldN[k.key]) {
 				u.pageDelta += k.dir
 			}
 			dropPressed(raw, k.key)
 		}
 	}
-	if len(u.modals) > 0 && rawPressed(raw, "Escape") {
+	if len(u.Modals) > 0 && rawPressed(raw, "Escape") {
 		a.uiCloseTop()
 		dropPressed(raw, "Escape")
 	}
@@ -75,8 +75,8 @@ func (a *App) uiPreInput(raw *rawInput) {
 // pageOwner reports a scroll view is focused or under the cursor, so it
 // takes PageUp and PageDown.
 func (u *uiState) pageOwner(mx, my int) bool {
-	for _, w := range u.cur {
-		if w.wheel && (u.focus == w.id || w.r.Hit(mx, my)) {
+	for _, w := range u.Cur {
+		if w.Wheel && (u.Focus == w.ID || w.R.Hit(mx, my)) {
 			return true
 		}
 	}
@@ -110,34 +110,34 @@ func (a *App) uiBegin() {
 	u := a.uiSt()
 	u.frame++
 	mx, my := a.currentCursor()
-	if scr := a.nav.screen(); scr != u.lastScreen {
-		u.lastScreen = scr
+	if scr := a.nav.screen(); scr != u.LastScreen {
+		u.LastScreen = scr
 		u.reset()
-		u.cur = nil
+		u.Cur = nil
 	}
 	pressing := a.in.Down(mbLeft) || a.in.Down(mbRight)
 	u.tipTick(mx, my, pressing)
-	if u.active != "" && !a.in.Down(mbLeft) && !a.in.Released(mbLeft) {
-		u.active = "" // a drag whose release was missed
+	if u.Active != "" && !a.in.Down(mbLeft) && !a.in.Released(mbLeft) {
+		u.Active = "" // a drag whose release was missed
 	}
 	if pressing {
-		u.tabTo = ""
+		u.TabTo = ""
 	}
-	u.last, u.cur = u.cur, u.last[:0]
-	u.paints = u.paints[:0]
-	u.hot, u.layer, u.suppress = "", 0, false
+	u.last, u.Cur = u.Cur, u.last[:0]
+	u.Paints = u.Paints[:0]
+	u.Hot, u.Layer, u.Suppress = "", 0, false
 	u.mx, u.my = mx, my
 
 	a.syncDealings() // trade_ui.go: open/close the trade and comms dialogs
 	a.uiRunModals()
-	u.layer = 0 // screen widgets sit under every modal (modals declare their own layers above)
+	u.Layer = 0 // screen widgets sit under every modal (modals declare their own layers above)
 	if a.nav.overlay() != overlayNone || a.nav.screen() == screenBoot {
 		return
 	}
 	sw, sh := a.size()
 	switch {
-	case u.hook != nil:
-		u.hook(a, sw, sh)
+	case u.Hook != nil:
+		u.Hook(a, sw, sh)
 	case a.shell.screens[a.nav.screen()] != nil:
 		a.shell.screens[a.nav.screen()](a, sw, sh)
 	}
@@ -145,31 +145,31 @@ func (a *App) uiBegin() {
 
 // tipTick advances the tooltip timer from the frame that just ended.
 func (u *uiState) tipTick(mx, my int, pressing bool) {
-	id := u.hot
+	id := u.Hot
 	dragging := false
-	if u.active != "" { // a captured widget keeps its tooltip while it is dragged
-		if _, ok := u.find(u.active); ok {
-			id, dragging = u.active, true
+	if u.Active != "" { // a captured widget keeps its tooltip while it is dragged
+		if _, ok := u.Find(u.Active); ok {
+			id, dragging = u.Active, true
 		}
 	}
 	if id == "" || pressing && !dragging {
-		u.tipID, u.tipFrames, u.tipText = "", 0, ""
+		u.tipID, u.TipFrames, u.tipText = "", 0, ""
 		u.tipX, u.tipY = mx, my
 		return
 	}
 	moved := abs(mx-u.tipX) > 3 || abs(my-u.tipY) > 3
 	if id != u.tipID || moved {
-		u.tipID, u.tipFrames = id, 1
+		u.tipID, u.TipFrames = id, 1
 		u.tipX, u.tipY = mx, my
 	} else {
-		u.tipFrames++
+		u.TipFrames++
 	}
 	u.tipText = ""
-	if w, ok := u.find(id); ok {
-		u.tipText = w.tip
+	if w, ok := u.Find(id); ok {
+		u.tipText = w.Tip
 	}
 	if dragging {
-		u.tipFrames = max(u.tipFrames, tipDelay) // a dragged slider shows its value at once
+		u.TipFrames = max(u.TipFrames, tipDelay) // a dragged slider shows its value at once
 	}
 }
 
@@ -177,8 +177,8 @@ func (u *uiState) tipTick(mx, my int, pressing bool) {
 // and the tooltip. App.Draw calls it after the screen's own drawing.
 func (a *App) uiPaint(dst *ebiten.Image) {
 	u := a.uiSt()
-	for layer := 0; layer <= len(u.modals); layer++ {
-		for _, p := range u.paints {
+	for layer := 0; layer <= len(u.Modals); layer++ {
+		for _, p := range u.Paints {
 			if p.layer == layer {
 				p.fn(dst)
 			}
@@ -195,16 +195,16 @@ func (a *App) uiPaint(dst *ebiten.Image) {
 func (a *App) layoutHits(sw, sh int) []button {
 	u := a.uiSt()
 	var out []button
-	for i := len(u.cur) - 1; i >= 0; i-- {
-		w := u.cur[i]
-		if w.click == nil {
+	for i := len(u.Cur) - 1; i >= 0; i-- {
+		w := u.Cur[i]
+		if w.Click == nil {
 			continue
 		}
-		b := asButton(w.r, w.id, w.label)
-		b.disabled, b.reason = w.disabled, w.reason
+		b := asButton(w.R, w.ID, w.Label)
+		b.Disabled, b.Reason = w.Disabled, w.Reason
 		out = append(out, b)
 	}
-	if len(u.modals) == 0 {
+	if len(u.Modals) == 0 {
 		out = append(out, a.layoutButtons(sw, sh)...)
 	}
 	return out
@@ -213,8 +213,8 @@ func (a *App) layoutHits(sw, sh int) []button {
 // uiClick runs a clicked widget id's action (applyClick calls it first);
 // it reports the id was a widget's.
 func (a *App) uiClick(id string) bool {
-	if w, ok := a.uiSt().find(id); ok && w.click != nil {
-		w.click()
+	if w, ok := a.uiSt().Find(id); ok && w.Click != nil {
+		w.Click()
 		return true
 	}
 	return false
@@ -223,8 +223,8 @@ func (a *App) uiClick(id string) bool {
 // uiWheelOver reports the cursor is over a scroll view, which owns the
 // mouse wheel there (the colony camera does not zoom).
 func (a *App) uiWheelOver(mx, my int) bool {
-	for _, w := range a.uiSt().cur {
-		if w.wheel && w.r.Hit(mx, my) {
+	for _, w := range a.uiSt().Cur {
+		if w.Wheel && w.R.Hit(mx, my) {
 			return true
 		}
 	}
@@ -232,10 +232,10 @@ func (a *App) uiWheelOver(mx, my int) bool {
 }
 
 // uiModalOpen reports a kit modal is on screen.
-func (a *App) uiModalOpen() bool { return len(a.uiSt().modals) > 0 }
+func (a *App) uiModalOpen() bool { return len(a.uiSt().Modals) > 0 }
 
 // uiTextEditing reports a kit text field has the keyboard.
-func (a *App) uiTextEditing() bool { return a.uiSt().edit.id != "" }
+func (a *App) uiTextEditing() bool { return a.uiSt().Edit.ID != "" }
 
 // setupTooSmall reports the window is below the setup minimum and, if so,
 // turns this frame's widget declarations into no-ops. Screens call it
@@ -244,18 +244,18 @@ func (a *App) setupTooSmall(sw, sh int) bool {
 	if !tooSmall(sw, sh) {
 		return false
 	}
-	a.uiSt().suppress = true
+	a.uiSt().Suppress = true
 	return true
 }
 
 // paintFocusRing outlines the keyboard-focused widget of a layer.
 func (u *uiState) paintFocusRing(dst *ebiten.Image, layer int) {
-	if !u.kbd || u.focus == "" || u.suppress {
+	if !u.kbd || u.Focus == "" || u.Suppress {
 		return
 	}
-	for _, w := range u.cur {
-		if w.id == u.focus && w.layer == layer && w.focusable {
-			strokeRect(dst, w.r.Inset(-2), uiFieldFocus)
+	for _, w := range u.Cur {
+		if w.ID == u.Focus && w.layer == layer && w.Focusable {
+			strokeRect(dst, w.R.Inset(-2), uiFieldFocus)
 			return
 		}
 	}

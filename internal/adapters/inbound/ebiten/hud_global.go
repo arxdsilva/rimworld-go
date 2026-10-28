@@ -269,7 +269,7 @@ func (a *App) globalToggleRect(id string) (rect, bool) {
 // toggleButton is toggle i as a button at r.
 func (a *App) toggleButton(i int, r rect) button {
 	tg := globalToggleList[i]
-	return button{id: tg.id, label: tg.short, x: r.X, y: r.Y, w: r.W, h: r.H, selected: tg.on(a), tip: tg.tip(a)}
+	return button{ID: tg.id, Label: tg.short, X: r.X, Y: r.Y, W: r.W, H: r.H, Selected: tg.on(a), Tip: tg.tip(a)}
 }
 
 // globalButtons are the global controls' buttons: the legacy overlay
@@ -287,8 +287,8 @@ func (a *App) globalButtons(sw int) []button {
 	}
 	for i, sb := range speedButtons {
 		r := rows.Speed[i]
-		out = append(out, button{id: sb.id, label: sb.short, x: r.X, y: r.Y, w: r.W, h: r.H,
-			selected: speed(a.shell.SpeedTier()) == sb.speed, tip: sb.name + a.keyHint(sb.act)})
+		out = append(out, button{ID: sb.id, Label: sb.short, X: r.X, Y: r.Y, W: r.W, H: r.H,
+			Selected: speed(a.shell.SpeedTier()) == sb.speed, Tip: sb.name + a.keyHint(sb.act)})
 	}
 	return out
 }
@@ -324,7 +324,7 @@ func (a *App) globalUI(sw, sh int) {
 		if tg.run == nil {
 			continue
 		}
-		u.add(uiWidget{id: tg.id, label: tg.short, r: rows.Toggles[i], tip: tg.tip(a), click: func() { tg.run(a) }})
+		u.Add(uiWidget{ID: tg.id, Label: tg.short, R: rows.Toggles[i], Tip: tg.tip(a), Click: func() { tg.run(a) }})
 	}
 	w := a.shell.World()
 	a.uiTip("hud.tip.hour", rows.Hour, "Time\n"+a.hudTimeText())
@@ -478,8 +478,8 @@ func (a *App) drawGlobalControls(screen *ebiten.Image, sw, sh int) {
 // drawGlobalButton draws a square or speed button: its icon, or its short
 // label while the icon is not drawn yet.
 func (a *App) drawGlobalButton(screen *ebiten.Image, r rect, id, icon, short string, on bool, mx, my int) {
-	b := button{id: id, x: r.X, y: r.Y, w: r.W, h: r.H, selected: on}
-	drawButton(screen, b, b.contains(mx, my))
+	b := button{ID: id, X: r.X, Y: r.Y, W: r.W, H: r.H, Selected: on}
+	drawButton(screen, b, b.Contains(mx, my))
 	if img := a.icon(icon); img != nil && icon != "" {
 		size := min(r.W, r.H) - 4
 		drawIcon(screen, img, float64(r.X+(r.W-size)/2), float64(r.Y+(r.H-size)/2), float64(size))

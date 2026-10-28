@@ -82,8 +82,8 @@ func TestWalkBobFollowsStride(t *testing.T) {
 	up := walkPose(faceSouth, m)
 	m.Stride += contactEvery / 2
 	down := walkPose(faceSouth, m)
-	if up.dy >= down.dy || up.dy >= 0 {
-		t.Fatalf("raised at the footfall (%v), lower between (%v)", up.dy, down.dy)
+	if up.Dy >= down.Dy || up.Dy >= 0 {
+		t.Fatalf("raised at the footfall (%v), lower between (%v)", up.Dy, down.Dy)
 	}
 }
 
@@ -91,7 +91,7 @@ func TestWalkBlendIdle(t *testing.T) {
 	t.Parallel()
 	m := walkingState
 	m.Stride, m.Blend = 0.1, 0
-	if ps := walkPose(faceEast, m); ps.dy != 0 {
+	if ps := walkPose(faceEast, m); ps.Dy != 0 {
 		t.Fatalf("blend 0 is the static pose, got %+v", ps)
 	}
 	if bobRaise(0, m.Speed, 0) != 0 {
@@ -155,8 +155,8 @@ func TestHairFollowsHead(t *testing.T) {
 		r.art.Sprites[k] = fakeSprite([2]int{160, 297}, pt{16, 153}, nil)
 	}
 	ps := standPose()
-	ps.rot, ps.sy, ps.dx = 0.3, 0.9, 0.1
-	r.lit.onDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
+	ps.Rot, ps.Sy, ps.Dx = 0.3, 0.9, 0.1
+	r.lit.OnDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
 	r.drawFigure(ebiten.NewImage(256, 256), p, 2, 2, 64, ps)
 	for _, k := range []string{"pawn/body_south", "pawn/beard_short_south", "pawn/hair_short_south", "pawn/tuque_knit_south"} {
 		if !slices.Contains(keys, k) {
@@ -169,7 +169,7 @@ func TestHairFollowsHead(t *testing.T) {
 	g := func(key string) pt {
 		sp := r.art.Sprite(key)
 		x, y, s := artOrigin(sp.Meta, float64(sx), float64(sy), 64)
-		pg := ps.geo(float64(sx), float64(sy), 64)
+		pg := ps.Geo(float64(sx), float64(sy), 64)
 		return apply(pg, pt{x + 80*s, y + 122*s})
 	}
 	if a, b := g("pawn/body_south"), g("pawn/hair_short_south"); !near2(a, b, 1e-9) {
@@ -188,15 +188,15 @@ func TestBedTransitionEases(t *testing.T) {
 	if smoothEase(101, 100, 12) >= 1.0/12 || smoothEase(111, 100, 12) <= 11.0/12 {
 		t.Fatal("slow at both ends (smoothstep), not linear")
 	}
-	a := pose{px: 0.5, py: 0.55, rot: 0, sx: 1, sy: 1}
-	b := pose{px: 0.5, py: 0.55, rot: math.Pi / 2, sx: 0.85, sy: 0.85, dx: 1, dy: 2}
+	a := pose{Px: 0.5, Py: 0.55, Rot: 0, Sx: 1, Sy: 1}
+	b := pose{Px: 0.5, Py: 0.55, Rot: math.Pi / 2, Sx: 0.85, Sy: 0.85, Dx: 1, Dy: 2}
 	if got := lerpPose(a, b, 0); got != a {
 		t.Fatalf("k=0 is the standing pose: %+v", got)
 	}
 	if got := lerpPose(a, b, 1); got != b {
 		t.Fatalf("k=1 is the bed pose: %+v", got)
 	}
-	if got := lerpPose(a, b, 0.5); math.Abs(got.rot-math.Pi/4) > 1e-9 || math.Abs(got.dx-0.5) > 1e-9 {
+	if got := lerpPose(a, b, 0.5); math.Abs(got.Rot-math.Pi/4) > 1e-9 || math.Abs(got.Dx-0.5) > 1e-9 {
 		t.Fatalf("midway = %+v", got)
 	}
 }
@@ -205,17 +205,17 @@ func TestCarryLiftEases(t *testing.T) {
 	t.Parallel()
 	r := &Renderer{present: 50}
 	st := r.animState()
-	if k := st.carryEase(7, 50); k != 0 {
+	if k := st.CarryEase(7, 50); k != 0 {
 		t.Fatalf("lift starts on the ground: %v", k)
 	}
-	if k := st.carryEase(7, 56); math.Abs(k-0.5) > 1e-9 {
+	if k := st.CarryEase(7, 56); math.Abs(k-0.5) > 1e-9 {
 		t.Fatalf("halfway after 6 frames: %v", k)
 	}
-	if k := st.carryEase(7, 80); k != 1 {
+	if k := st.CarryEase(7, 80); k != 1 {
 		t.Fatalf("fully slung: %v", k)
 	}
-	st.dropCarry(7)
-	if k := st.carryEase(7, 90); k != 0 {
+	st.DropCarry(7)
+	if k := st.CarryEase(7, 90); k != 0 {
 		t.Fatal("a new pickup restarts the lift")
 	}
 	c := fakeCombatArt()
@@ -225,14 +225,14 @@ func TestCarryLiftEases(t *testing.T) {
 	}
 	// lying on the ground on its side; slung over the rescuer's back
 	// attachment, a little above it
-	if math.Abs(ground.rot-math.Pi/2) > 1e-9 || ground != lyingPose(c, 1) {
+	if math.Abs(ground.Rot-math.Pi/2) > 1e-9 || ground != lyingPose(c, 1) {
 		t.Fatalf("ground pose lies on its side: %+v", ground)
 	}
-	if wg, _ := carryPoses(c, faceWest); math.Abs(wg.rot+math.Pi/2) > 1e-9 {
+	if wg, _ := carryPoses(c, faceWest); math.Abs(wg.Rot+math.Pi/2) > 1e-9 {
 		t.Fatalf("facing west it lies the other way: %+v", wg)
 	}
 	_, backY, _ := bodyAttach(c.Sprite("pawn/body_south"), "back")
-	if top := pawnFeetY + slung.dy; top >= backY || top < backY-0.2 {
+	if top := pawnFeetY + slung.Dy; top >= backY || top < backY-0.2 {
 		t.Fatalf("slung across the back (%v) at %v", backY, top)
 	}
 }
@@ -263,7 +263,7 @@ func TestDustAtFootOnContact(t *testing.T) {
 	r.stepDust(st, 9, m, false) // first sighting: no puff
 	m.Stride = 0.9
 	r.stepDust(st, 9, m, false)
-	if len(r.parts) != 1 || r.parts[0].kind != partStep {
+	if len(r.parts) != 1 || r.parts[0].Kind != partStep {
 		t.Fatalf("a contact puffs one step particle, got %d", len(r.parts))
 	}
 	r.stepDust(st, 9, m, false)
@@ -348,8 +348,8 @@ func TestTrotEightFrames(t *testing.T) {
 	r := combatRenderer(100, nil, game.WorldView{})
 	for _, gt := range []string{game.GaitAmble, game.GaitWalk, game.GaitRun} {
 		an := game.AnimalView{ID: 3, X: 4, Y: 4, Gait: gt, Mode: "fleeing"}
-		if ps := r.animalPose(an); ps.dy != 0 {
-			t.Fatalf("%s: the renderer bobs an animal by %v", gt, ps.dy)
+		if ps := r.animalPose(an); ps.Dy != 0 {
+			t.Fatalf("%s: the renderer bobs an animal by %v", gt, ps.Dy)
 		}
 	}
 }
@@ -375,14 +375,14 @@ func TestStandingPoseUsesMotion(t *testing.T) {
 	m := walkingState
 	m.Stride = 0.1 // near contact
 	ps := walkPose(faceEast, m)
-	if ps.dy >= 0 || ps.rot <= 0 {
+	if ps.Dy >= 0 || ps.Rot <= 0 {
 		t.Fatalf("east walker bobs up and leans forward: %+v", ps)
 	}
 	ps = walkPose(faceNorth, moveState{Stride: 0.4, Speed: walkingState.Speed, Blend: 1, Moving: true})
-	if ps.dx == 0 {
+	if ps.Dx == 0 {
 		t.Fatal("north walker sways sideways")
 	}
-	if idle := walkPose(faceEast, moveState{}); idle.dx != 0 || idle.dy != 0 || idle.rot != 0 {
+	if idle := walkPose(faceEast, moveState{}); idle.Dx != 0 || idle.Dy != 0 || idle.Rot != 0 {
 		t.Fatalf("idle has no gait motion: %+v", idle)
 	}
 }

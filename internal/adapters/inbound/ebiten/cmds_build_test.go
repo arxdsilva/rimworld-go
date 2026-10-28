@@ -514,24 +514,24 @@ func TestBillsTabDeclaresEveryRowControlInsideThePanel(t *testing.T) {
 	}
 	ids = append(ids, billPickBtn)
 	for _, id := range ids {
-		w, ok := a.uiSt().find(id)
+		w, ok := a.uiSt().Find(id)
 		if !ok {
 			t.Errorf("no widget %s", id)
 			continue
 		}
-		if w.r.X < panel.X || w.r.Y < panel.Y || w.r.Right() > panel.Right() || w.r.Bottom() > panel.Bottom() {
-			t.Errorf("%s at %+v falls out of the panel %+v", id, w.r, panel)
+		if w.R.X < panel.X || w.R.Y < panel.Y || w.R.Right() > panel.Right() || w.R.Bottom() > panel.Bottom() {
+			t.Errorf("%s at %+v falls out of the panel %+v", id, w.R, panel)
 		}
 	}
 	// no two controls overlap (the scroll view's own widget aside)
-	cur := a.uiSt().cur
+	cur := a.uiSt().Cur
 	for i, p := range cur {
 		for _, q := range cur[i+1:] {
-			if p.id == "bill.rows" || q.id == "bill.rows" {
+			if p.ID == "bill.rows" || q.ID == "bill.rows" {
 				continue
 			}
-			if p.r.X < q.r.Right() && q.r.X < p.r.Right() && p.r.Y < q.r.Bottom() && q.r.Y < p.r.Bottom() {
-				t.Errorf("%s overlaps %s", p.id, q.id)
+			if p.R.X < q.R.Right() && q.R.X < p.R.Right() && p.R.Y < q.R.Bottom() && q.R.Y < p.R.Bottom() {
+				t.Errorf("%s overlaps %s", p.ID, q.ID)
 			}
 		}
 	}
@@ -605,12 +605,12 @@ func TestBillsTabScrollsLongLists(t *testing.T) {
 		t.Fatal("the first row and the Add button stay reachable")
 	}
 	for _, id := range []string{"bill.plus.0", "bill.plus.1"} {
-		w, _ := a.uiSt().find(id)
-		if w.r.Bottom() > panel.Bottom() {
-			t.Fatalf("%s spills out of the panel: %+v", id, w.r)
+		w, _ := a.uiSt().Find(id)
+		if w.R.Bottom() > panel.Bottom() {
+			t.Fatalf("%s spills out of the panel: %+v", id, w.R)
 		}
 	}
-	a.uiSt().scroll["bill.rows"] = 1e6 // the wheel to the end
+	a.uiSt().Scroll["bill.rows"] = 1e6 // the wheel to the end
 	f.Frame(t, a)
 	if !hasWidget(a, "bill.plus.29") || hasWidget(a, "bill.plus.0") {
 		t.Fatal("scrolled to the end shows the last rows")
@@ -637,10 +637,10 @@ func TestBillsBodyNotesAnEmptyBench(t *testing.T) {
 	}
 	// the paused bill's pause button reads as pressed
 	for _, bt := range body.buttons {
-		if bt.id == "bill.pause.2" && !bt.selected {
+		if bt.ID == "bill.pause.2" && !bt.Selected {
 			t.Error("a suspended bill's pause button is selected")
 		}
-		if bt.id == "bill.pause.0" && bt.selected {
+		if bt.ID == "bill.pause.0" && bt.Selected {
 			t.Error("a running bill's pause button is not selected")
 		}
 	}
@@ -706,9 +706,9 @@ func TestBillsTabFitsItsWantedPanel(t *testing.T) {
 				t.Errorf("%d bills: row %d is not live in its wanted panel", n, i)
 			}
 		}
-		w, ok := a.uiSt().find(billPickBtn)
-		if !ok || w.r.Bottom() > inner.Bottom()+0.01 || w.r.Y < inner.Y {
-			t.Errorf("%d bills: Add bill at %+v, inner %+v", n, w.r, inner)
+		w, ok := a.uiSt().Find(billPickBtn)
+		if !ok || w.R.Bottom() > inner.Bottom()+0.01 || w.R.Y < inner.Y {
+			t.Errorf("%d bills: Add bill at %+v, inner %+v", n, w.R, inner)
 		}
 	}
 }
@@ -754,12 +754,12 @@ func TestBenchSelectionThroughTheHUD(t *testing.T) {
 		t.Fatal("clicking the Bills tab opens its panel")
 	}
 	for _, id := range []string{"bill.minus.0", "bill.plus.1", "bill.del.1", billPickBtn} {
-		w, ok := a.uiSt().find(id)
+		w, ok := a.uiSt().Find(id)
 		if !ok {
 			t.Fatalf("no widget %s with the Bills tab open", id)
 		}
-		if w.r.X < l.Expanded.X || w.r.Right() > l.Expanded.Right() || w.r.Y < l.Expanded.Y || w.r.Bottom() > l.Expanded.Bottom() {
-			t.Errorf("%s at %+v falls out of the expanded panel %+v", id, w.r, l.Expanded)
+		if w.R.X < l.Expanded.X || w.R.Right() > l.Expanded.Right() || w.R.Y < l.Expanded.Y || w.R.Bottom() > l.Expanded.Bottom() {
+			t.Errorf("%s at %+v falls out of the expanded panel %+v", id, w.R, l.Expanded)
 		}
 	}
 	press(t, a, f, "bill.plus.1")

@@ -44,15 +44,15 @@ func TestWizardNextOrder(t *testing.T) {
 func TestHitButton(t *testing.T) {
 	t.Parallel()
 	buttons := []button{
-		{id: "a", x: 10, y: 10, w: 40, h: 20},
-		{id: "b", x: 10, y: 40, w: 40, h: 20, disabled: true, reason: "nope"},
+		{ID: "a", X: 10, Y: 10, W: 40, H: 20},
+		{ID: "b", X: 10, Y: 40, W: 40, H: 20, Disabled: true, Reason: "nope"},
 	}
 	got, ok := hitButton(buttons, 15, 15)
-	if !ok || got.id != "a" {
+	if !ok || got.ID != "a" {
 		t.Fatalf("expected button a, got %+v ok=%v", got, ok)
 	}
 	got, ok = hitButton(buttons, 15, 45)
-	if !ok || got.id != "b" || !got.disabled {
+	if !ok || got.ID != "b" || !got.Disabled {
 		t.Fatalf("expected disabled b, got %+v ok=%v", got, ok)
 	}
 	if _, ok := hitButton(buttons, 0, 0); ok {

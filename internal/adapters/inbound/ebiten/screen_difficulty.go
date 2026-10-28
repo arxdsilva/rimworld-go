@@ -41,12 +41,12 @@ func (a *App) openCustomDifficulty() {
 		ng.cd = customDiff{s: difficulty.Of(ng.preset), from: from}
 	}
 	a.uiPushModal(modal{
-		id: "diff.custom", title: "Custom difficulty", w: diffModalW, h: diffModalH,
-		draw: func(a *App, body rect) { a.customDifficultyBody(body) },
-		buttons: []modalButton{
-			{id: "accept", label: "Accept", style: btnPrimary, closes: true, onClick: a.acceptCustomDifficulty},
-			{id: "reset", label: "Reset", onClick: func() { a.draft().cd.s = difficulty.Of(a.draft().cd.from) }},
-			{id: "cancel", label: "Cancel", closes: true},
+		ID: "diff.custom", Title: "Custom difficulty", W: diffModalW, H: diffModalH,
+		Draw: func(a *App, body rect) { a.customDifficultyBody(body) },
+		Buttons: []modalButton{
+			{ID: "accept", Label: "Accept", Style: btnPrimary, Closes: true, OnClick: a.acceptCustomDifficulty},
+			{ID: "reset", Label: "Reset", OnClick: func() { a.draft().cd.s = difficulty.Of(a.draft().cd.from) }},
+			{ID: "cancel", Label: "Cancel", Closes: true},
 		},
 	})
 }

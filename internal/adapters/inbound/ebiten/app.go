@@ -344,11 +344,11 @@ func (a *App) Update() error {
 			if b, ok := hitButton(a.layoutHits(sw, sh), mx, my); ok {
 				a.in.Take(mbLeft)
 				a.uiSound(b)
-				if b.disabled {
-					a.hint = b.reason
+				if b.Disabled {
+					a.hint = b.Reason
 				} else {
 					a.hint = ""
-					a.applyClick(b.id)
+					a.applyClick(b.ID)
 				}
 			} else if a.colonyLive() && a.colonyChromeHit(mx, my, sw, sh) {
 				a.in.Take(mbLeft)
@@ -779,12 +779,12 @@ func (a *App) drawHoverHint(screen *ebiten.Image, sw, sh int) {
 	}
 	mx, my := a.currentCursor()
 	if b, ok := hitButton(a.layoutHits(sw, sh), mx, my); ok {
-		if b.disabled && b.reason != "" {
-			a.drawBottomHint(screen, b.reason, sh)
+		if b.Disabled && b.Reason != "" {
+			a.drawBottomHint(screen, b.Reason, sh)
 			return
 		}
-		if b.tip != "" { // a small card by the cursor, clear of the tab strip
-			tw, _ := measure(b.tip, tsBody)
+		if b.Tip != "" { // a small card by the cursor, clear of the tab strip
+			tw, _ := measure(b.Tip, tsBody)
 			w := int(tw) + 16
 			ch := int(lineH(tsBody)) + 6
 			x, y := min(mx+14, sw-w-4), my+20
@@ -792,7 +792,7 @@ func (a *App) drawHoverHint(screen *ebiten.Image, sw, sh int) {
 				y = my - ch - 8
 			}
 			drawPanel(screen, float32(x), float32(y), float32(w), float32(ch))
-			drawText(screen, b.tip, float64(x+8), float64(y+3), tsBody)
+			drawText(screen, b.Tip, float64(x+8), float64(y+3), tsBody)
 		}
 	}
 	if a.hint != "" {
@@ -851,7 +851,7 @@ func (a *App) layoutButtons(sw, sh int) []button {
 
 func (a *App) drawButtons(screen *ebiten.Image, buttons []button, mx, my int) {
 	for _, b := range buttons {
-		drawButton(screen, b, b.contains(mx, my))
+		drawButton(screen, b, b.Contains(mx, my))
 	}
 }
 
@@ -860,7 +860,7 @@ func footerY(sh int) float32 {
 }
 
 func isFooterButton(b button, sh int) bool {
-	return b.y >= footerY(sh)-1
+	return b.Y >= footerY(sh)-1
 }
 
 // bodyOrigin puts copy to the right of left-rail buttons so it is not
@@ -872,7 +872,7 @@ func bodyOrigin(buttons []button, sh int) (x, y int) {
 		if isFooterButton(b, sh) {
 			continue
 		}
-		if right := int(b.x + b.w); right > maxRight {
+		if right := int(b.X + b.W); right > maxRight {
 			maxRight = right
 		}
 	}

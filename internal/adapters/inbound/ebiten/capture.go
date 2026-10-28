@@ -259,7 +259,7 @@ func (a *App) captureStep(step string) {
 		for ng.builder != nil { // run the generation to the end at once
 			a.worldStep()
 		}
-		a.uiSt().modals = nil
+		a.uiSt().Modals = nil
 		if ng.planet != nil {
 			ng.tile = ng.planet.RandomLanding(0)
 			if ng.tile >= 0 {

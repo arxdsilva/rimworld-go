@@ -314,7 +314,7 @@ func paneTabRects(strip rect, tabs []paneTab) []rect {
 }
 
 // paneBodyOff is the body's scroll offset.
-func (a *App) paneBodyOff() float32 { return a.uiSt().scroll[paneBodyID] }
+func (a *App) paneBodyOff() float32 { return a.uiSt().Scroll[paneBodyID] }
 
 // paneButtons are the pane's buttons: close, chips, tabs and body rows.
 func (a *App) paneButtons() []button {
@@ -333,7 +333,7 @@ func (a *App) paneButtons() []button {
 	}
 	for i, c := range g.chips {
 		b := asButton(c, spec.Chips[i].ID, spec.Chips[i].Label)
-		b.disabled, b.reason, b.tip, b.quiet = spec.Chips[i].Disabled, spec.Chips[i].Reason, spec.Chips[i].Tip, true
+		b.Disabled, b.Reason, b.Tip, b.Quiet = spec.Chips[i].Disabled, spec.Chips[i].Reason, spec.Chips[i].Tip, true
 		out = append(out, b)
 	}
 	out = append(out, a.paneTabButtons(l.PaneTabs, spec)...)
@@ -346,7 +346,7 @@ func (a *App) paneButtons() []button {
 				continue
 			}
 			b := asButton(r, row.ID, row.Label)
-			b.tip = row.Tip
+			b.Tip = row.Tip
 			out = append(out, b)
 		}
 	}
@@ -360,8 +360,8 @@ func (a *App) paneTabButtons(strip rect, spec paneSpec) []button {
 	for i, r := range rs {
 		t := spec.Tabs[i]
 		out[i] = asButton(r, t.ID, t.Label)
-		out[i].disabled, out[i].reason, out[i].quiet = t.Disabled, t.Reason, true
-		out[i].selected = t.ID == a.hst.pane.openTab && !t.Disabled
+		out[i].Disabled, out[i].Reason, out[i].Quiet = t.Disabled, t.Reason, true
+		out[i].Selected = t.ID == a.hst.pane.openTab && !t.Disabled
 	}
 	return out
 }
@@ -378,7 +378,7 @@ func (a *App) drawPane(screen *ebiten.Image) {
 	}
 	mx, my := a.currentCursor()
 	for _, b := range a.paneTabButtons(l.PaneTabs, spec) {
-		drawButton(screen, b, b.contains(mx, my))
+		drawButton(screen, b, b.Contains(mx, my))
 	}
 	if t, open := a.openTabOf(spec); open && !l.Expanded.Empty() {
 		drawPanel(screen, l.Expanded.X, l.Expanded.Y, l.Expanded.W, l.Expanded.H)
@@ -407,8 +407,8 @@ func (a *App) drawPane(screen *ebiten.Image) {
 	for i, r := range g.chips {
 		c := spec.Chips[i]
 		b := asButton(r, c.ID, c.Label)
-		b.disabled, b.quiet = c.Disabled, true
-		drawButton(screen, b, b.contains(mx, my))
+		b.Disabled, b.Quiet = c.Disabled, true
+		drawButton(screen, b, b.Contains(mx, my))
 	}
 	if g.body.Empty() {
 		return
@@ -510,16 +510,16 @@ func (a *App) paneUI(sw, sh int) {
 	u := a.uiSt()
 	if spec.Title != st.lastTitle {
 		st.lastTitle = spec.Title
-		if u.scroll != nil {
-			u.scroll[paneBodyID] = 0
+		if u.Scroll != nil {
+			u.Scroll[paneBodyID] = 0
 		}
 	}
-	u.add(uiWidget{id: paneFrameID, r: l.Pane, wheel: true}) // the wheel never reaches the camera here
+	u.Add(uiWidget{ID: paneFrameID, R: l.Pane, Wheel: true}) // the wheel never reaches the camera here
 	if g := paneLayout(l.Pane, spec); !g.body.Empty() {
 		a.uiScrollArea(paneBodyID, g.body, g.contentH, scrollOpts{Step: lineStep(tsBody) * 3})
 	}
 	if t, open := a.openTabOf(spec); open && !l.Expanded.Empty() {
-		u.add(uiWidget{id: paneExpID, r: l.Expanded, wheel: true})
+		u.Add(uiWidget{ID: paneExpID, R: l.Expanded, Wheel: true})
 		if t.Declare != nil {
 			t.Declare(l.Expanded.Inset(paneInset))
 		}

@@ -87,14 +87,14 @@ const (
 // shadowCast, while set on the renderer, makes drawLit draw silhouettes
 // into the shadow layer instead of lit sprites onto the screen.
 type shadowCast struct {
-	layer *ebiten.Image // the frame's shadow layer
-	proj  ebiten.GeoM   // pivot-anchored projection for the current caster
-	alpha float32       // this light's strength (sun, moon or a point light)
-	// pivotY and heightPx encode height in red: 0 on the caster's ground
-	// line (screen y, before the projection), 1 heightPx above it.
-	pivotY, heightPx float64
-	// onDraw, when set (tests), sees every image drawn in cast mode.
-	onDraw func(img *ebiten.Image)
+	Layer *ebiten.Image // the frame's shadow layer
+	Proj  ebiten.GeoM   // pivot-anchored projection for the current caster
+	Alpha float32       // this light's strength (sun, moon or a point light)
+	// PivotY and HeightPx encode height in red: 0 on the caster's ground
+	// line (screen y, before the projection), 1 HeightPx above it.
+	PivotY, HeightPx float64
+	// OnDraw, when set (tests), sees every image drawn in cast mode.
+	OnDraw func(img *ebiten.Image)
 
 	shader *ebiten.Shader
 	verts  [4]ebiten.Vertex
@@ -105,17 +105,17 @@ type shadowCast struct {
 // r.cast's layer: unlit, max-blended, height in R for the blur.
 func (r *Renderer) castSilhouette(img *ebiten.Image, geo ebiten.GeoM) {
 	c := r.cast
-	if c.onDraw != nil {
-		c.onDraw(img)
+	if c.OnDraw != nil {
+		c.OnDraw(img)
 	}
-	if c.shader == nil || c.layer == nil || c.alpha <= 0 {
+	if c.shader == nil || c.Layer == nil || c.Alpha <= 0 {
 		return
 	}
 	b := img.Bounds()
 	castQuad(&c.verts, float32(b.Min.X), float32(b.Min.Y), float32(b.Dx()), float32(b.Dy()), geo, c)
 	c.opts.Images[0] = img
 	c.opts.Blend = shadowBlend
-	c.layer.DrawTrianglesShader32(c.verts[:], litIndices[:], c.shader, &c.opts)
+	c.Layer.DrawTrianglesShader32(c.verts[:], litIndices[:], c.shader, &c.opts)
 }
 
 // castQuad writes the silhouette vertices (top-left, top-right,
@@ -124,15 +124,15 @@ func (r *Renderer) castSilhouette(img *ebiten.Image, geo ebiten.GeoM) {
 // premultiplied, where H is the vertex's height above c's ground line
 // as a share of c.heightPx (clamped 0..1).
 func castQuad(vs *[4]ebiten.Vertex, sx, sy, w, h float32, geo ebiten.GeoM, c *shadowCast) {
-	a := c.alpha
+	a := c.Alpha
 	for i := range vs {
 		u, v := float32(i&1)*w, float32(i>>1)*h
 		x, y := geo.Apply(float64(u), float64(v))
 		hgt := 0.0
-		if c.heightPx > 0 {
-			hgt = clamp01((c.pivotY - y) / c.heightPx)
+		if c.HeightPx > 0 {
+			hgt = clamp01((c.PivotY - y) / c.HeightPx)
 		}
-		dx, dy := c.proj.Apply(x, y)
+		dx, dy := c.Proj.Apply(x, y)
 		vs[i] = ebiten.Vertex{
 			DstX: float32(dx), DstY: float32(dy),
 			SrcX: sx + u, SrcY: sy + v,
@@ -188,24 +188,24 @@ func shadowProjection(pivotX, pivotY, kappa float64, light lightState, hRef, rho
 // lamp, 1 + its index in the light grid's sources (0: a campfire, whose
 // reach no wall stops).
 type pointLight struct {
-	id                 uint64
-	x, y, h, reach, fl float64
+	ID                 uint64
+	X, Y, H, Reach, fl float64
 	lamp               int
 }
 
 // castLight is one silhouette to draw: the shadow's direction, slope and
 // alpha.
 type castLight struct {
-	dirX, dirY, m, alpha float64
+	DirX, DirY, M, Alpha float64
 }
 
 // creaturePlan is what one creature casts this frame.
 type creaturePlan struct {
-	sun     bool // a sun or moon silhouette (drawn before the roof clear)
-	sunCast castLight
-	points  [2]castLight // point-light silhouettes (after the clear)
-	np      int
-	contact float64 // the contact pool's alpha
+	Sun     bool // a sun or moon silhouette (drawn before the roof clear)
+	SunCast castLight
+	Points  [2]castLight // point-light silhouettes (after the clear)
+	Np      int
+	Contact float64 // the contact pool's alpha
 }
 
 // planCreature plans a creature h tiles tall standing at (px, py) (its
@@ -217,22 +217,22 @@ func planCreature(px, py, h float64, sky bool, l lightState, daylight float64, l
 	var pl creaturePlan
 	sa := clamp01(l.ShadowAlpha)
 	if sky && sa > 0 && l.ShadowLen != nil && h > 0 {
-		pl.sun = true
-		pl.sunCast = castLight{l.ShadowDir[0], l.ShadowDir[1], l.ShadowLen(h) / h, sa}
+		pl.Sun = true
+		pl.SunCast = castLight{l.ShadowDir[0], l.ShadowDir[1], l.ShadowLen(h) / h, sa}
 	}
 	if daylight < 1 && h > 0 {
 		var idx [2]int
 		n := nearestLights(px, py, lights, &idx)
 		for i := 0; i < n; i++ {
 			if cl, ok := pointCast(px, py, h, lights[idx[i]], daylight); ok {
-				pl.points[pl.np] = cl
-				pl.np++
+				pl.Points[pl.Np] = cl
+				pl.Np++
 			}
 		}
 	}
-	pl.contact = contactRoofAlpha
+	pl.Contact = contactRoofAlpha
 	if sky {
-		pl.contact = math.Max(contactSunK*sa, contactMinAlpha)
+		pl.Contact = math.Max(contactSunK*sa, contactMinAlpha)
 	}
 	return pl
 }
@@ -243,24 +243,24 @@ func nearestLights(px, py float64, lights []pointLight, out *[2]int) int {
 	n := 0
 	var dist [2]float64
 	better := func(d float64, id uint64, j int) bool {
-		return d < dist[j] || d == dist[j] && id < lights[out[j]].id
+		return d < dist[j] || d == dist[j] && id < lights[out[j]].ID
 	}
 	for i, L := range lights {
-		d := math.Hypot(px-L.x, py-L.y)
-		if d > L.reach {
+		d := math.Hypot(px-L.X, py-L.Y)
+		if d > L.Reach {
 			continue
 		}
 		switch {
 		case n < 2:
 			out[n], dist[n] = i, d
 			n++
-			if n == 2 && better(dist[1], lights[out[1]].id, 0) {
+			if n == 2 && better(dist[1], lights[out[1]].ID, 0) {
 				out[0], out[1], dist[0], dist[1] = out[1], out[0], dist[1], dist[0]
 			}
-		case better(d, L.id, 0):
+		case better(d, L.ID, 0):
 			out[1], dist[1] = out[0], dist[0]
 			out[0], dist[0] = i, d
-		case better(d, L.id, 1):
+		case better(d, L.ID, 1):
 			out[1], dist[1] = i, d
 		}
 	}
@@ -272,21 +272,21 @@ func nearestLights(px, py float64, lights []pointLight, out *[2]int) int {
 // the light is no higher than the caster), clamped to [0.3h, 3] tiles,
 // at 0.30·falloff·(1−daylight); flicker sways both.
 func pointCast(px, py, h float64, L pointLight, daylight float64) (castLight, bool) {
-	dx, dy := px-L.x, py-L.y
+	dx, dy := px-L.X, py-L.Y
 	d := math.Hypot(dx, dy)
-	if d > L.reach || d < 1e-6 || h <= 0 {
+	if d > L.Reach || d < 1e-6 || h <= 0 {
 		return castLight{}, false
 	}
-	a := pointShadowAlpha * (1 - d/L.reach) * (1 - clamp01(daylight)) * (1 + flickerAlpha*L.fl)
+	a := pointShadowAlpha * (1 - d/L.Reach) * (1 - clamp01(daylight)) * (1 + flickerAlpha*L.fl)
 	if a <= 0.005 {
 		return castLight{}, false
 	}
 	tip := shadowMaxLen
-	if h < L.h {
-		tip = d * h / (L.h - h)
+	if h < L.H {
+		tip = d * h / (L.H - h)
 	}
 	tip = math.Min(math.Max(tip*(1+flickerLen*L.fl), pointMinTipK*h), shadowMaxLen)
-	return castLight{dirX: dx / d, dirY: dy / d, m: tip / h, alpha: a}, true
+	return castLight{DirX: dx / d, DirY: dy / d, M: tip / h, Alpha: a}, true
 }
 
 // sunElevation is the sun's elevation (radians) in l, 0 below the
@@ -326,7 +326,7 @@ func fireFlicker(t float64) float64 {
 
 // creatureCaster is a pawn or animal casting this frame.
 type creatureCaster struct {
-	pawn   *game.PawnView   // or nil
+	Pawn   *game.PawnView   // or nil
 	animal *game.AnimalView // or nil
 	wx, wy float64          // drawn tile corner (interpolated)
 	px, py float64          // the feet: the ground pivot, tiles
@@ -334,7 +334,7 @@ type creatureCaster struct {
 	opaque float64          // opaque height, source px (κ = h/opaque)
 	ppt    float64          // the sprite's px per tile (artMeta.pxPerTile)
 	lying  bool             // flat on the ground
-	sky    bool             // on open-sky ground
+	Sky    bool             // on open-sky ground
 	tx, ty int              // the tile it stands on (sky, lamp reach)
 	fp     pawnFigurePose
 }
@@ -356,13 +356,13 @@ func (r *Renderer) creatureCasters(w game.WorldView, pawns []game.PawnView) []cr
 			return // no art (the fallback marker casts nothing)
 		}
 		s := r.shadowSpecOf(key)
-		if s.h <= 0 {
+		if s.H <= 0 {
 			return
 		}
-		c.w, c.h, c.opaque, c.ppt = s.w, s.h, sp.OpaqueHeightPx(), sp.Meta.PxPerTile()
+		c.w, c.h, c.opaque, c.ppt = s.W, s.H, sp.OpaqueHeightPx(), sp.Meta.PxPerTile()
 		c.px, c.py = c.wx+feetX, c.wy+feetY
 		c.tx, c.ty = int(math.Floor(c.wx+0.5)), int(math.Floor(c.wy+0.5))
-		c.sky = skyOpen(w, c.tx, c.ty)
+		c.Sky = skyOpen(w, c.tx, c.ty)
 		out = append(out, c)
 	}
 	for i := range pawns {
@@ -374,7 +374,7 @@ func (r *Renderer) creatureCasters(w game.WorldView, pawns []game.PawnView) []cr
 		if !inView(wx, wy) {
 			continue
 		}
-		add(creatureCaster{pawn: p, wx: wx, wy: wy, lying: figureLying(*p), fp: r.pawnFigurePoseOf(*p)}, "pawn/body_south", pawnFeetX, pawnFeetY)
+		add(creatureCaster{Pawn: p, wx: wx, wy: wy, lying: figureLying(*p), fp: r.pawnFigurePoseOf(*p)}, "pawn/body_south", pawnFeetX, pawnFeetY)
 	}
 	// an animal's silhouette reaches past its cell by its body (PLAY-022:
 	// up to about 2.5 tiles for the longest canvases) before the shadow
@@ -415,22 +415,22 @@ func (r *Renderer) castCreature(w game.WorldView, c creatureCaster, cl castLight
 	if c.lying {
 		k *= lyingKappa
 	}
-	cs.layer = st.layer
-	cs.proj = castProjection(float64(sx), float64(sy), k, cl.dirX, cl.dirY, cl.m, shadowRho)
+	cs.Layer = st.Layer
+	cs.Proj = castProjection(float64(sx), float64(sy), k, cl.DirX, cl.DirY, cl.M, shadowRho)
 	if k := st.scale; k != 0 && k != 1 {
-		cs.proj.Scale(k, k) // the layer is smaller than the screen
+		cs.Proj.Scale(k, k) // the layer is smaller than the screen
 	}
-	cs.alpha = float32(cl.alpha)
-	cs.pivotY = float64(sy)
-	cs.heightPx = c.opaque * tile / cmp.Or(c.ppt, artTilePx)
+	cs.Alpha = float32(cl.Alpha)
+	cs.PivotY = float64(sy)
+	cs.HeightPx = c.opaque * tile / cmp.Or(c.ppt, artTilePx)
 	r.cast = cs
-	if c.pawn != nil {
-		r.drawPawnFigure(st.scratch, *c.pawn, c.wx, c.wy, tile, c.fp)
+	if c.Pawn != nil {
+		r.drawPawnFigure(st.Scratch, *c.Pawn, c.wx, c.wy, tile, c.fp)
 	} else {
-		r.drawAnimalFigure(st.scratch, *c.animal, c.wx, c.wy, tile)
+		r.drawAnimalFigure(st.Scratch, *c.animal, c.wx, c.wy, tile)
 	}
 	r.cast = nil
-	st.casts++
+	st.Casts++
 }
 
 // addContact queues c's contact pool: a soft ellipse under the feet at
@@ -465,16 +465,16 @@ func (r *Renderer) pointLights() []pointLight {
 		var L pointLight
 		switch s.Kind {
 		case lightCampfire:
-			L = pointLight{h: campfireLightH, reach: campfireLightReach, fl: fireFlicker(float64(r.present) + float64(s.ID)*17)}
+			L = pointLight{H: campfireLightH, Reach: campfireLightReach, fl: fireFlicker(float64(r.present) + float64(s.ID)*17)}
 		case lightLamp:
-			L = pointLight{h: lampLightH, reach: s.Radius, lamp: 1 + k}
+			L = pointLight{H: lampLightH, Reach: s.Radius, lamp: 1 + k}
 		default:
 			continue
 		}
-		L.id = s.ID
-		L.x, L.y = float64(s.X)+0.5, float64(s.Y)+0.5
-		mg := L.reach + shadowMaxLen + 1
-		if !v.empty() && (L.x < v.x0-mg || L.y < v.y0-mg || L.x > v.x1+mg || L.y > v.y1+mg) {
+		L.ID = s.ID
+		L.X, L.Y = float64(s.X)+0.5, float64(s.Y)+0.5
+		mg := L.Reach + shadowMaxLen + 1
+		if !v.empty() && (L.X < v.x0-mg || L.Y < v.y0-mg || L.X > v.x1+mg || L.Y > v.y1+mg) {
 			continue
 		}
 		out = append(out, L)
@@ -489,7 +489,7 @@ func (r *Renderer) pointLights() []pointLight {
 // them.
 func (r *Renderer) creatureLights(c creatureCaster, ls []pointLight) []pointLight {
 	st := &r.env.shadow
-	g := &r.lit.grid
+	g := &r.lit.Grid
 	vis := st.vis[:0]
 	for _, L := range ls {
 		if L.lamp == 0 || g.lampReaches(L.lamp-1, c.tx, c.ty) {

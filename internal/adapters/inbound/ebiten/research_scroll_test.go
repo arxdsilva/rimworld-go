@@ -29,8 +29,8 @@ func researchStub(n, current int) *stubSim {
 func pickIDs(a *App) map[string]button {
 	out := map[string]button{}
 	for _, b := range a.layoutHits(a.sw, a.sh) {
-		if len(b.id) > 14 && b.id[:14] == "research.pick." {
-			out[b.id] = b
+		if len(b.ID) > 14 && b.ID[:14] == "research.pick." {
+			out[b.ID] = b
 		}
 	}
 	return out
@@ -77,11 +77,11 @@ func TestResearchWindowScrollsToTheLastProject(t *testing.T) { // sets the UI sc
 			if !ok {
 				t.Fatalf("the wheel never reached the last project: %v", pickIDs(a))
 			}
-			if !w.Contains(last.x, last.y) || !w.Contains(last.x+last.w, last.y+last.h) {
+			if !w.Contains(last.X, last.Y) || !w.Contains(last.X+last.W, last.Y+last.H) {
 				t.Fatalf("the last project's button %+v is outside the window %+v", last, w)
 			}
 			// a real click on it picks it
-			bx, by := last.x+last.w/2, last.y+last.h/2
+			bx, by := last.X+last.W/2, last.Y+last.H/2
 			f.Cur.Mx, f.Cur.My = int(float64(bx)*a.scale.S), int(float64(by)*a.scale.S)
 			f.Click(t, a, mbLeft, 0)
 			s := a.renderer.game.(*stubSim)
@@ -109,12 +109,12 @@ func TestResearchScrollBarAppearsOnlyWhenNeeded(t *testing.T) {
 	a.applyClick("tab.research")
 	f.Frame(t, a)
 	w := a.hud().Window
-	bar, ok := a.uiSt().find("research.scroll")
+	bar, ok := a.uiSt().Find("research.scroll")
 	if !ok {
 		t.Fatal("no research.scroll widget")
 	}
-	if bar.r.Right() > w.Right()+0.01 || bar.r.Y < w.Y || bar.r.Bottom() > w.Bottom()+0.01 {
-		t.Fatalf("scroll area %+v is outside the window %+v", bar.r, w)
+	if bar.R.Right() > w.Right()+0.01 || bar.R.Y < w.Y || bar.R.Bottom() > w.Bottom()+0.01 {
+		t.Fatalf("scroll area %+v is outside the window %+v", bar.R, w)
 	}
 	if len(pickIDs(a)) >= 16 {
 		t.Skip("everything fits; nothing to scroll")
@@ -183,13 +183,13 @@ func TestResearchScrollBarClickPages(t *testing.T) {
 	if len(pickIDs(a)) >= 16 {
 		t.Skip("everything fits; nothing to scroll")
 	}
-	bar, ok := a.uiSt().find("research.scroll")
+	bar, ok := a.uiSt().Find("research.scroll")
 	if !ok {
 		t.Fatal("no research.scroll widget")
 	}
 	before := len(pickIDs(a))
 	// a click on the track near the bottom pages down
-	f.Cur.Mx, f.Cur.My = int(bar.r.Right()-3), int(bar.r.Bottom()-3)
+	f.Cur.Mx, f.Cur.My = int(bar.R.Right()-3), int(bar.R.Bottom()-3)
 	f.Click(t, a, mbLeft, 0)
 	if _, ok := pickIDs(a)["research.pick.0"]; ok {
 		t.Fatalf("a click below the thumb did not page down: %v", pickIDs(a))
@@ -233,7 +233,7 @@ func TestResearchWindowDrawsInsideAtEveryOffset(t *testing.T) {
 				}
 				winReport(t, "scroll step "+strconv.Itoa(step), bad)
 				for id, b := range pickIDs(a) {
-					if b.y < w.Y || b.y+b.h > w.Bottom() {
+					if b.Y < w.Y || b.Y+b.H > w.Bottom() {
 						t.Fatalf("%s %+v is not wholly inside the window %+v", id, b, w)
 					}
 				}

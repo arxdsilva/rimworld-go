@@ -57,11 +57,11 @@ const sideBias = 1.4
 // motionState is the Renderer's presentation motion bookkeeping: the
 // clocks (C7) and one track per creature.
 type motionState struct {
-	tracks  map[entity.EntityID]*moTrack
-	alpha   float64 // fraction of the current update interval elapsed
-	stepped int     // ticks the latest advance stepped (0 paused)
+	Tracks  map[entity.EntityID]*moTrack
+	Alpha   float64 // fraction of the current update interval elapsed
+	Stepped int     // ticks the latest advance stepped (0 paused)
 	now     float64 // sim tick at the latest sync
-	ref     float64 // animT the previous draws ended at
+	Ref     float64 // animT the previous draws ended at
 	synced  bool
 	gen     uint64
 }
@@ -71,7 +71,7 @@ func (r *Renderer) setAlpha(a float64) {
 	if a < 0 || math.IsNaN(a) {
 		a = 0
 	}
-	r.mo.alpha = math.Min(a, alphaMax)
+	r.mo.Alpha = math.Min(a, alphaMax)
 }
 
 // animT is sim-scaled presentation time in ticks: it freezes when paused and
@@ -86,7 +86,7 @@ func (r *Renderer) animT() float64 {
 	if r.game == nil {
 		return 0
 	}
-	return float64(r.game.Tick()) - (1-r.mo.alpha)*float64(r.mo.stepped)
+	return float64(r.game.Tick()) - (1-r.mo.Alpha)*float64(r.mo.Stepped)
 }
 
 // pawnMotion is the on-screen motion of a colonist or raider.
@@ -102,7 +102,7 @@ func (r *Renderer) animalMotion(id entity.EntityID) moveState {
 }
 
 func (r *Renderer) motionOf(id entity.EntityID) (moveState, bool) {
-	k := r.mo.tracks[id]
+	k := r.mo.Tracks[id]
 	if k == nil {
 		return moveState{}, false
 	}
@@ -151,59 +151,59 @@ func animalMoView(an game.AnimalView) moView {
 		legacy: an.StepTick == 0, defDur: max(an.StepTicks, 1), animal: true}
 }
 
-// beginSync starts a sync at sim tick now.
-func (mo *motionState) beginSync(now clock.Tick) {
-	if mo.tracks == nil {
-		mo.tracks = map[entity.EntityID]*moTrack{}
+// BeginSync starts a sync at sim tick now.
+func (mo *motionState) BeginSync(now clock.Tick) {
+	if mo.Tracks == nil {
+		mo.Tracks = map[entity.EntityID]*moTrack{}
 	}
 	t := float64(now)
-	mo.ref = t
+	mo.Ref = t
 	if mo.synced {
-		mo.ref = mo.now
+		mo.Ref = mo.now
 	}
 	mo.now, mo.synced = t, true
 	mo.gen++
 }
 
-// endSync drops creatures that are gone.
-func (mo *motionState) endSync() {
-	for id, k := range mo.tracks {
+// EndSync drops creatures that are gone.
+func (mo *motionState) EndSync() {
+	for id, k := range mo.Tracks {
 		if k.gen != mo.gen {
-			delete(mo.tracks, id)
+			delete(mo.Tracks, id)
 		}
 	}
 }
 
 // corrMax is the longest correction blend at the current speed.
 func (mo *motionState) corrMax() float64 {
-	return float64(corrFrames * max(mo.stepped, 1))
+	return float64(corrFrames * max(mo.Stepped, 1))
 }
 
-// observe folds one read model into the creature's track. Anything that
+// Observe folds one read model into the creature's track. Anything that
 // changes what was already drawn is blended out from the previous draw
 // (position, velocity, stride and walk blend stay continuous).
-func (mo *motionState) observe(id entity.EntityID, v moView, face facing) *moTrack {
-	k := mo.tracks[id]
+func (mo *motionState) Observe(id entity.EntityID, v moView, face facing) *moTrack {
+	k := mo.Tracks[id]
 	if k == nil {
-		k = &moTrack{x: v.x, y: v.y, fac: face, turnTo: face, side: v.animal}
-		mo.tracks[id] = k
+		k = &moTrack{X: v.x, Y: v.y, fac: face, turnTo: face, side: v.animal}
+		mo.Tracks[id] = k
 		k.plan(v, mo.now)
 		k.gen = mo.gen
 		return k
 	}
 	k.gen = mo.gen
-	ref := mo.ref
+	ref := mo.Ref
 	oldDrawn := k.drawn(ref)
 	oldDrawnV := oldDrawn.sub(k.drawn(ref - velH)).scale(1 / velH)
 	oldModel := k.model(ref)
 	oldModelV := k.model(ref + velH).sub(oldModel).scale(1 / velH)
 
-	if v.x != k.x || v.y != k.y {
-		if abs(v.x-k.x) > 1 || abs(v.y-k.y) > 1 {
+	if v.x != k.X || v.y != k.Y {
+		if abs(v.x-k.X) > 1 || abs(v.y-k.Y) > 1 {
 			// teleported or several steps unseen: snap
 			k.rest = k.model(mo.now).stride
 			k.segs, k.corr = nil, moCorr{}
-			k.x, k.y = v.x, v.y
+			k.X, k.Y = v.x, v.y
 			k.plan(v, mo.now)
 			return k
 		}
@@ -235,14 +235,14 @@ func (k *moTrack) step(v moView, mo *motionState) {
 	switch {
 	case !v.legacy && v.stepTick > 0 && float64(v.stepTick) <= mo.now:
 		start = float64(v.stepTick)
-	case last != nil && !last.final && last.end() >= mo.ref && last.end() <= mo.now:
+	case last != nil && !last.final && last.end() >= mo.Ref && last.end() <= mo.now:
 		start = last.end() // a walker steps the moment its last step ends
 	}
 	dur := float64(v.defDur)
 	if !v.legacy && v.stepTicks > 0 {
 		dur = float64(v.stepTicks)
 	}
-	s := moSeg{fx: k.x, fy: k.y, tx: v.x, ty: v.y, start: start, dur: math.Max(dur, 1), base: k.rest}
+	s := moSeg{fx: k.X, fy: k.Y, tx: v.x, ty: v.y, start: start, dur: math.Max(dur, 1), base: k.rest}
 	if last != nil {
 		if s.start <= last.start {
 			s.start = last.start + 1
@@ -273,7 +273,7 @@ func (k *moTrack) step(v moView, mo *motionState) {
 	if n > maxSegs {
 		k.segs = append(k.segs[:0], k.segs[n-maxSegs:]...)
 	}
-	k.x, k.y = v.x, v.y
+	k.X, k.Y = v.x, v.y
 }
 
 // plan takes the view's next cell and decides whether the latest step
@@ -296,15 +296,15 @@ func (k *moTrack) plan(v moView, now float64) {
 
 // --- facing -------------------------------------------------------------
 
-// wantFacing is the movement facing at the latest sync: towards whatever
+// WantFacing is the movement facing at the latest sync: towards whatever
 // blocks the way, else along the travel over a window two steps long (a
 // zig-zag's full period, so it averages out), with axis hysteresis. The
 // window ends no later than the known path, centred when it can be.
 // moving is false when the creature is not travelling; the caller then
 // decides.
-func (k *moTrack) wantFacing(ref float64) (facing, bool) {
-	if k.blocked != 0 && k.hasNext && (k.nx != k.x || k.ny != k.y) {
-		return facingFor(k.nx-k.x, k.ny-k.y, k.turnTo), true
+func (k *moTrack) WantFacing(ref float64) (facing, bool) {
+	if k.blocked != 0 && k.hasNext && (k.nx != k.X || k.ny != k.Y) {
+		return facingFor(k.nx-k.X, k.ny-k.Y, k.turnTo), true
 	}
 	n := len(k.segs)
 	if n == 0 {
@@ -349,10 +349,10 @@ func hystFacing(vx, vy float64, prev facing) facing {
 	}
 }
 
-// turn moves the shown facing towards want. A north<->south reversal shows
+// Turn moves the shown facing towards want. A north<->south reversal shows
 // a side facing for turnFrames updates first; the countdown only runs
 // while the game does (paused freezes it).
-func (k *moTrack) turn(want facing, id entity.EntityID, running bool) facing {
+func (k *moTrack) Turn(want facing, id entity.EntityID, running bool) facing {
 	if k.turnLeft > 0 {
 		if want != k.turnTo {
 			k.fac, k.turnTo, k.turnLeft = want, want, 0
@@ -378,14 +378,14 @@ func (k *moTrack) turn(want facing, id entity.EntityID, running bool) facing {
 	return k.fac
 }
 
-// settle finishes in-flight motion: the creature rests on its cell.
-func (k *moTrack) settle() {
+// Settle finishes in-flight motion: the creature rests on its cell.
+func (k *moTrack) Settle() {
 	if n := len(k.segs); n > 0 {
 		k.rest = k.segs[n-1].base + k.segLen(n-1)
 	}
 	k.segs, k.corr = nil, moCorr{}
 	k.turnLeft, k.fac = 0, k.turnTo
-	k.body = animalBody{} // the next draw starts the animal's pose afresh, at rest
+	k.Body = animalBody{} // the next draw starts the animal's pose afresh, at rest
 	k.memo = moMemo{}
 }
 
@@ -411,7 +411,7 @@ func (s *moSeg) diag() bool { return s.fx != s.tx && s.fy != s.ty }
 // moTrack is one creature's presentation motion.
 type moTrack struct {
 	segs        []moSeg
-	x, y        int // current cell
+	X, Y        int // current cell
 	nx, ny      int // planned next cell, when hasNext
 	hasNext     bool
 	blocked     entity.EntityID
@@ -423,8 +423,8 @@ type moTrack struct {
 	side        bool // an animal: favour side facings (sideBias)
 	gen         uint64
 	lens        [maxSegs + 1]geomLen // arc-length memo per step index (lengths)
-	// body is an animal's walk phase and idle pose player (animal_figure.go).
-	body animalBody
+	// Body is an animal's walk phase and idle pose player (animal_figure.go).
+	Body animalBody
 	memo moMemo // motionOf's last sample
 }
 
@@ -510,7 +510,7 @@ func (k *moTrack) drawn(t float64) moSample { return k.model(t).add(k.corr.at(t)
 // model is the path the read models describe, before corrections.
 func (k *moTrack) model(t float64) moSample {
 	if len(k.segs) == 0 {
-		return moSample{x: float64(k.x), y: float64(k.y), stride: k.rest}
+		return moSample{x: float64(k.X), y: float64(k.Y), stride: k.rest}
 	}
 	first := &k.segs[0]
 	if t <= first.start {
@@ -693,15 +693,15 @@ func (g moGeom) evalL(s *moSeg, t, l1 float64) moSample {
 	} else {
 		p, l = g.h2.at(2*w-1), l1+g.h2.arc(2*w-1)
 	}
-	return moSample{x: p.x, y: p.y, stride: s.base + l}
+	return moSample{x: p.X, y: p.Y, stride: s.base + l}
 }
 
-type vec struct{ x, y float64 }
+type vec struct{ X, Y float64 }
 
-func (a vec) add(b vec) vec             { return vec{a.x + b.x, a.y + b.y} }
-func (a vec) scale(k float64) vec       { return vec{a.x * k, a.y * k} }
-func (a vec) mid(b vec) vec             { return vec{(a.x + b.x) / 2, (a.y + b.y) / 2} }
-func (a vec) lerp(b vec, t float64) vec { return vec{a.x + (b.x-a.x)*t, a.y + (b.y-a.y)*t} }
+func (a vec) add(b vec) vec             { return vec{a.X + b.X, a.Y + b.Y} }
+func (a vec) scale(k float64) vec       { return vec{a.X * k, a.Y * k} }
+func (a vec) mid(b vec) vec             { return vec{(a.X + b.X) / 2, (a.Y + b.Y) / 2} }
+func (a vec) lerp(b vec, t float64) vec { return vec{a.X + (b.X-a.X)*t, a.Y + (b.Y-a.Y)*t} }
 
 // quad is a quadratic Bézier.
 type quad struct{ a, b, c vec }
@@ -710,7 +710,7 @@ func (q quad) at(s float64) vec { return q.a.lerp(q.b, s).lerp(q.b.lerp(q.c, s),
 
 func (q quad) speed(s float64) float64 {
 	d := q.b.add(q.a.scale(-1)).scale(2 * (1 - s)).add(q.c.add(q.b.scale(-1)).scale(2 * s))
-	return math.Hypot(d.x, d.y)
+	return math.Hypot(d.X, d.Y)
 }
 
 // Gauss-Legendre nodes and weights on [-1, 1].

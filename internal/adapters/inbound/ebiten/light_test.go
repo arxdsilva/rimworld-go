@@ -372,33 +372,33 @@ func TestDrawLitFlatAndNormalPaths(t *testing.T) {
 	w := roomWorld()
 	w.Buildings = []game.BuildingView{{ID: 1, Kind: "lamp", Glow: true, GlowRadius: 6, X: 1, Y: 1, W: 1, H: 1}}
 	r.view.W = w
-	r.lit.light = lightAt(12, summerDay, "clear", 0)
+	r.lit.Light = lightAt(12, summerDay, "clear", 0)
 	dst := ebiten.NewImage(64, 64)
 
 	r.drawLit(dst, plain, ebiten.GeoM{}, noCS, 1, 1)
-	if r.lit.err != nil {
-		t.Fatal(r.lit.err)
+	if r.lit.Err != nil {
+		t.Fatal(r.lit.Err)
 	}
-	if v := r.lit.verts[0]; v.Custom2 != 0 || v.Custom0 != 0 || v.Custom1 != 1 {
+	if v := r.lit.Verts[0]; v.Custom2 != 0 || v.Custom0 != 0 || v.Custom1 != 1 {
 		t.Fatalf("flat sprite in a lit roofed room: custom (%v, %v, %v)", v.Custom0, v.Custom1, v.Custom2)
 	}
-	if r.lit.opts.Images[0] != plain {
+	if r.lit.Opts.Images[0] != plain {
 		t.Fatal("a sprite without a normal map draws from itself")
 	}
-	if got := r.lit.uniforms[4]; got[0] != r.lit.light.SkyAmbient[0] {
-		t.Fatalf("uniform SkyAmbient %v, want %v", got, r.lit.light.SkyAmbient)
+	if got := r.lit.Uniforms[4]; got[0] != r.lit.Light.SkyAmbient[0] {
+		t.Fatalf("uniform SkyAmbient %v, want %v", got, r.lit.Light.SkyAmbient)
 	}
 
 	r.drawLit(dst, sprite, ebiten.GeoM{}, colorScale{}, 0, 0)
-	pair := r.lit.opts.Images[0]
+	pair := r.lit.Opts.Images[0]
 	if pair == sprite || pair.Bounds().Dx() != 2*8+litGap || pair.Bounds().Dy() != 6 {
 		t.Fatalf("normal-mapped sprite should draw from its pair image, got %v", pair.Bounds())
 	}
-	if v := r.lit.verts[3]; v.Custom2 != 8+litGap || v.SrcX != 8 || v.SrcY != 6 || v.Custom0 != 1 || v.ColorA != 1 {
+	if v := r.lit.Verts[3]; v.Custom2 != 8+litGap || v.SrcX != 8 || v.SrcY != 6 || v.Custom0 != 1 || v.ColorA != 1 {
 		t.Fatalf("normal path vertex %+v", v)
 	}
 	r.drawLit(dst, sprite, ebiten.GeoM{}, noCS, 0, 0)
-	if r.lit.opts.Images[0] != pair {
+	if r.lit.Opts.Images[0] != pair {
 		t.Fatal("pair image should be built once")
 	}
 
@@ -406,10 +406,10 @@ func TestDrawLitFlatAndNormalPaths(t *testing.T) {
 	sh := r.litShader()
 	pair2, _, _ := r.litSource(sprite)
 	ebitenOnly := testing.AllocsPerRun(500, func() {
-		r.lit.opts.Images[0] = pair2
-		dst.DrawTrianglesShader32(r.lit.verts[:], litIndices[:], sh, &r.lit.opts)
-		r.lit.opts.Images[0] = plain
-		dst.DrawTrianglesShader32(r.lit.verts[:], litIndices[:], sh, &r.lit.opts)
+		r.lit.Opts.Images[0] = pair2
+		dst.DrawTrianglesShader32(r.lit.Verts[:], litIndices[:], sh, &r.lit.Opts)
+		r.lit.Opts.Images[0] = plain
+		dst.DrawTrianglesShader32(r.lit.Verts[:], litIndices[:], sh, &r.lit.Opts)
 	})
 	allocs := testing.AllocsPerRun(500, func() {
 		r.drawLit(dst, sprite, ebiten.GeoM{}, noCS, 0, 0)
@@ -547,11 +547,11 @@ func TestShadowFields(t *testing.T) {
 
 func TestDrawLitFallsBackWhenShaderFails(t *testing.T) {
 	r := &Renderer{}
-	r.lit.err = errors.New("no shader")
+	r.lit.Err = errors.New("no shader")
 	dst, img := ebiten.NewImage(16, 16), ebiten.NewImage(4, 4)
 	r.drawLit(dst, img, ebiten.GeoM{}, colorScale{1, 0.5, 0.5, 0.5}, 0, 0)
 	r.drawLit(dst, img, ebiten.GeoM{}, noCS, 0, 0)
-	if r.lit.shader != nil || r.lit.opts.Images[0] != nil {
+	if r.lit.Shader != nil || r.lit.Opts.Images[0] != nil {
 		t.Fatal("a failed shader should take the unlit DrawImage path")
 	}
 }
@@ -576,7 +576,7 @@ func BenchmarkDrawArtLitAB(b *testing.B) {
 			r.art = art
 			r.cam.Zoom = 0.6
 			if mode == "unlit" {
-				r.lit.err = errors.New("benchmark: unlit")
+				r.lit.Err = errors.New("benchmark: unlit")
 			}
 			screen := ebiten.NewImage(1280, 800)
 			tile := r.tilePx()

@@ -68,7 +68,7 @@ func (a *App) windowWant() (float32, float32) {
 	}
 	if a.windowKitOpen() {
 		k := a.hst.win.kit
-		return k.w, k.h
+		return k.W, k.H
 	}
 	return 0, 0
 }
@@ -77,7 +77,7 @@ func (a *App) windowWant() (float32, float32) {
 // (zero while no window is open).
 func (a *App) windowRect() button {
 	w := a.hud().Window
-	return button{x: w.X, y: w.Y, w: w.W, h: w.H}
+	return button{X: w.X, Y: w.Y, W: w.W, H: w.H}
 }
 
 // windowAnchor is the anchor kit windows give their modal: the Window rect.
@@ -133,17 +133,17 @@ func (a *App) toggleAnimalsTab() {
 // windowKitOpen reports a kit window is the open main-tab window.
 func (a *App) windowKitOpen() bool {
 	k := a.hst.win.kit
-	return k != nil && a.workOpen && a.panelMode == k.id
+	return k != nil && a.workOpen && a.panelMode == k.ID
 }
 
 // uiOpenWindow opens the modeless modal m as the main-tab window,
 // replacing whichever is open (the same one already open: nothing).
 func (a *App) uiOpenWindow(m modal) {
-	if a.windowKitOpen() && a.hst.win.kit.id == m.id {
+	if a.windowKitOpen() && a.hst.win.kit.ID == m.ID {
 		return
 	}
 	a.hst.win.kit = &m
-	a.showWindow(m.id)
+	a.showWindow(m.ID)
 }
 
 // uiCloseWindow closes the kit window, running its onClose.
@@ -153,8 +153,8 @@ func (a *App) uiCloseWindow() {
 	}
 	k := a.hst.win.kit
 	a.closeWindowQuietly()
-	if k.onClose != nil {
-		k.onClose()
+	if k.OnClose != nil {
+		k.OnClose()
 	}
 }
 
@@ -167,7 +167,7 @@ func (a *App) closeWindowQuietly() {
 // toggleKitWindow closes the kit window id when it is the open one, else
 // runs open.
 func (a *App) toggleKitWindow(id string, open func()) {
-	if a.windowKitOpen() && a.hst.win.kit.id == id {
+	if a.windowKitOpen() && a.hst.win.kit.ID == id {
 		a.uiCloseWindow()
 		return
 	}
@@ -185,14 +185,14 @@ func (a *App) mainWindowUI(sw, sh int) {
 		w.kit = nil // Escape or another tab closed it
 	}
 	for _, b := range a.hudTabButtons(sw, sh) {
-		if b.id == ids.TabAnimals && !b.disabled { // app.go's toggle does not know Wildlife
-			a.uiSt().add(uiWidget{id: b.id, label: b.label, r: rect{X: b.x, Y: b.y, W: b.w, H: b.h}, tip: b.tip, click: a.toggleAnimalsTab})
+		if b.ID == ids.TabAnimals && !b.Disabled { // app.go's toggle does not know Wildlife
+			a.uiSt().Add(uiWidget{ID: b.ID, Label: b.Label, R: rect{X: b.X, Y: b.Y, W: b.W, H: b.H}, Tip: b.Tip, Click: a.toggleAnimalsTab})
 		}
 	}
 	if a.workOpen {
 		// the wheel over any window scrolls it (or does nothing), never the map
 		if r := a.hud().Window; !r.Empty() {
-			a.uiSt().add(uiWidget{id: "window.area", r: r, wheel: true})
+			a.uiSt().Add(uiWidget{ID: "window.area", R: r, Wheel: true})
 		}
 	}
 	if w.kit != nil {

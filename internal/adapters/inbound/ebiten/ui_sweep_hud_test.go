@@ -38,12 +38,12 @@ func TestColonyHUDDrawsAtScale(t *testing.T) {
 		t.Fatal("no HUD hit targets")
 	}
 	for _, b := range hits {
-		cx, cy := b.x+b.w/2, b.y+b.h/2
+		cx, cy := b.X+b.W/2, b.Y+b.H/2
 		if cx > float32(a.sw) || cy > float32(a.sh) {
-			t.Errorf("%s centre (%v,%v) outside the logical screen", b.id, cx, cy)
+			t.Errorf("%s centre (%v,%v) outside the logical screen", b.ID, cx, cy)
 		}
-		if !b.contains(int(cx), int(cy)) {
-			t.Errorf("%s does not contain its own centre", b.id)
+		if !b.Contains(int(cx), int(cy)) {
+			t.Errorf("%s does not contain its own centre", b.ID)
 		}
 	}
 }

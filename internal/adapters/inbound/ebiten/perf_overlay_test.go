@@ -224,11 +224,11 @@ func TestOptionsPerfOverlayToggle(t *testing.T) {
 	a := optionsApp(store)
 	a.optionsTab = "graphics"
 	b := optionBtn(t, a, "options.perfoverlay")
-	if b.label != "Off" || b.tip == "" {
+	if b.Label != "Off" || b.Tip == "" {
 		t.Fatalf("perf overlay button %+v", b)
 	}
 	a.applyOption("options.perfoverlay")
-	if !store.s.Graphics.PerfOverlay || optionBtn(t, a, "options.perfoverlay").label != "On" {
+	if !store.s.Graphics.PerfOverlay || optionBtn(t, a, "options.perfoverlay").Label != "On" {
 		t.Fatal("overlay should be on and saved")
 	}
 }

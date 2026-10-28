@@ -238,11 +238,11 @@ func TestAlertRowsFillTheLayoutsAlertsRect(t *testing.T) {
 	// each row is a button with the legacy id
 	ids := map[string]button{}
 	for _, b := range a.rightColumnButtons(a.sw) {
-		ids[b.id] = b
+		ids[b.ID] = b
 	}
 	for _, r := range rows {
 		b, ok := ids["alert."+r.al.key]
-		if !ok || b.x != r.r.X || b.y != r.r.Y || b.w != r.r.W || b.h != r.r.H {
+		if !ok || b.X != r.r.X || b.Y != r.r.Y || b.W != r.r.W || b.H != r.r.H {
 			t.Errorf("alert.%s button = %+v (found %v), want the row %+v", r.al.key, b, ok, r.r)
 		}
 	}
@@ -282,7 +282,7 @@ func TestAlertsPlusNMore(t *testing.T) {
 	}
 	// the "+N more" row is not a button: only real alerts jump
 	for _, b := range a.alertButtonsIn(l) {
-		if strings.Contains(b.label, "more") {
+		if strings.Contains(b.Label, "more") {
 			t.Errorf("button %+v for the +N row", b)
 		}
 	}

@@ -54,20 +54,20 @@ func (a *App) researchWant() (float32, float32) {
 // researchShown is how many whole rows of n projects the window r shows
 // (at least one).
 func researchShown(r button, n int) int {
-	rows := max(1, int((r.h-researchTop-researchBottomPad)/researchRowH))
+	rows := max(1, int((r.H-researchTop-researchBottomPad)/researchRowH))
 	return min(rows, n)
 }
 
 // researchFirst is the index of the first project shown: the scroll
 // offset in whole rows, kept inside the list.
 func (a *App) researchFirst(n, shown int) int {
-	off := a.uiSt().scroll[researchScrollID]
+	off := a.uiSt().Scroll[researchScrollID]
 	return max(0, min(n-shown, int(math.Round(float64(off)/researchRowH))))
 }
 
 // researchList is the rows' rectangle in the window r.
 func researchList(r button, shown int) rect {
-	return rect{X: r.x, Y: r.y + researchTop, W: r.w, H: float32(shown) * researchRowH}
+	return rect{X: r.X, Y: r.Y + researchTop, W: r.W, H: float32(shown) * researchRowH}
 }
 
 // researchUI declares the project list's scroll view (the wheel, the bar,
@@ -76,13 +76,13 @@ func researchList(r button, shown int) rect {
 func (a *App) researchUI(sw, sh int) {
 	u := a.uiSt()
 	if a.renderer == nil || !a.workOpen || a.panelMode != "research" {
-		delete(u.scroll, researchCurKey) // the next opening starts afresh
-		delete(u.scroll, researchScrollID)
+		delete(u.Scroll, researchCurKey) // the next opening starts afresh
+		delete(u.Scroll, researchScrollID)
 		return
 	}
 	views := a.shell.World().Research
 	r := a.windowRect()
-	if len(views) == 0 || r.w <= 0 {
+	if len(views) == 0 || r.W <= 0 {
 		return
 	}
 	shown := researchShown(r, len(views))
@@ -94,17 +94,17 @@ func (a *App) researchUI(sw, sh int) {
 			break
 		}
 	}
-	if note := float32(cur + 1); u.scroll[researchCurKey] != note {
-		if u.scroll == nil {
-			u.scroll = map[string]float32{}
+	if note := float32(cur + 1); u.Scroll[researchCurKey] != note {
+		if u.Scroll == nil {
+			u.Scroll = map[string]float32{}
 		}
-		u.scroll[researchCurKey] = note
+		u.Scroll[researchCurKey] = note
 		if cur >= 0 {
 			a.uiScrollReveal(researchScrollID, list.H, float32(cur)*researchRowH, float32(cur+1)*researchRowH)
 		}
 	}
 	area := a.uiScrollArea(researchScrollID, list, float32(len(views))*researchRowH, scrollOpts{Step: researchRowH})
-	u.scroll[researchScrollID] = float32(math.Round(float64(area.Off)/researchRowH)) * researchRowH
+	u.Scroll[researchScrollID] = float32(math.Round(float64(area.Off)/researchRowH)) * researchRowH
 }
 
 func (a *App) researchButtons() []button {
@@ -115,14 +115,14 @@ func (a *App) researchButtons() []button {
 	var out []button
 	for i := first; i < first+shown; i++ {
 		p := views[i]
-		y := r.y + researchTop + float32((i-first)*researchRowH)
-		b := button{id: ids.PrefixResearchPick + strconv.Itoa(int(p.ID)), x: r.x + 12, y: y, w: 220, h: researchRowH - 8,
-			label: p.Label, selected: p.Current, quiet: true}
+		y := r.Y + researchTop + float32((i-first)*researchRowH)
+		b := button{ID: ids.PrefixResearchPick + strconv.Itoa(int(p.ID)), X: r.X + 12, Y: y, W: 220, H: researchRowH - 8,
+			Label: p.Label, Selected: p.Current, Quiet: true}
 		switch {
 		case p.Done:
-			b.disabled, b.reason = true, p.Label+" is already researched"
+			b.Disabled, b.Reason = true, p.Label+" is already researched"
 		case !p.Available:
-			b.disabled, b.reason = true, "Needs "+strings.Join(p.Requires, ", ")+" first"
+			b.Disabled, b.Reason = true, "Needs "+strings.Join(p.Requires, ", ")+" first"
 		}
 		out = append(out, b)
 	}
@@ -139,26 +139,26 @@ func (a *App) pickResearch(id string) {
 
 func (a *App) drawResearch(screen *ebiten.Image, sw, sh int) {
 	r := a.windowRect()
-	drawPanel(screen, r.x, r.y, r.w, r.h)
-	drawText(screen, "Research", float64(r.x)+12, float64(r.y)+6, withColor(tsLabel, uiHeading))
-	hintX := float64(r.x) + 12 + float64(textW("Research", tsLabel)) + 16
-	drawText(screen, ellipsize("pick a project; colonists with Research work study it at a research bench", tsSmall, float64(r.x+r.w)-12-hintX),
-		hintX, float64(r.y)+6+(lineH(tsLabel)-lineH(tsSmall))/2, withColor(tsSmall, uiTextDim))
+	drawPanel(screen, r.X, r.Y, r.W, r.H)
+	drawText(screen, "Research", float64(r.X)+12, float64(r.Y)+6, withColor(tsLabel, uiHeading))
+	hintX := float64(r.X) + 12 + float64(textW("Research", tsLabel)) + 16
+	drawText(screen, ellipsize("pick a project; colonists with Research work study it at a research bench", tsSmall, float64(r.X+r.W)-12-hintX),
+		hintX, float64(r.Y)+6+(lineH(tsLabel)-lineH(tsSmall))/2, withColor(tsSmall, uiTextDim))
 	if !a.hasResearchBench() {
-		drawText(screen, "No research bench yet: build one from Architect > Production.", float64(r.x)+12, float64(r.y)+25, withColor(tsSmall, uiWarning))
+		drawText(screen, "No research bench yet: build one from Architect > Production.", float64(r.X)+12, float64(r.Y)+25, withColor(tsSmall, uiWarning))
 	}
 	mx, my := a.currentCursor()
 	views := a.shell.World().Research
 	shown := researchShown(r, len(views))
 	first := a.researchFirst(len(views), shown)
-	right := float64(r.x+r.w) - 12
+	right := float64(r.X+r.W) - 12
 	if len(views) > shown {
 		right -= scrollBarW // the scroll bar's lane
 	}
 	for k, b := range a.researchButtons() {
 		p := views[first+k]
-		drawButton(screen, b, b.contains(mx, my) && !b.disabled)
-		x, y := int(b.x+b.w)+14, int(b.y)
+		drawButton(screen, b, b.Contains(mx, my) && !b.Disabled)
+		x, y := int(b.X+b.W)+14, int(b.Y)
 		status := "available"
 		switch {
 		case p.Done:

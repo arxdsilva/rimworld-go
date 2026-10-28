@@ -190,7 +190,7 @@ func (r *Renderer) drawPuddleVeil(screen *ebiten.Image, w game.WorldView, sw, sh
 	}
 	r.setView(sw, sh, tile)
 	r.env.setWeather(w) // the bake reads its snow
-	col := puddleSky(r.lit.light)
+	col := puddleSky(r.lit.Light)
 	r.eachSnowChunk(w, tile, true, func(c *snowChunk, cx, cy, tx0, ty0, tx1, ty1 int) {
 		if c.anyWet && c.wetImg != nil {
 			r.drawChunkMask(screen, c.wetImg, c.wetPx, cx, cy, tx0, ty0, tx1, ty1, tile, col)

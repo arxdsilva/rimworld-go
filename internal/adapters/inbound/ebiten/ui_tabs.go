@@ -54,21 +54,21 @@ func (a *App) uiTabs(id string, r rect, labels []string, sel *int, o tabsOpts) b
 	}
 	rects := tabRects(r, labels)
 	changed := false
-	if u.add(uiWidget{id: id, r: r, focusable: true}) {
+	if u.Add(uiWidget{ID: id, R: r, Focusable: true}) {
 		for i := range labels {
 			i := i
-			w := uiWidget{id: optID(id, i), label: labels[i], r: rects[i], disabled: reason(i) != "", reason: reason(i), click: func() { u.focus = id; choose(i) }}
-			w.tip = reason(i)
-			if w.tip == "" && i < len(o.Tips) {
-				w.tip = o.Tips[i]
+			w := uiWidget{ID: optID(id, i), Label: labels[i], R: rects[i], Disabled: reason(i) != "", Reason: reason(i), Click: func() { u.Focus = id; choose(i) }}
+			w.Tip = reason(i)
+			if w.Tip == "" && i < len(o.Tips) {
+				w.Tip = o.Tips[i]
 			}
-			u.add(w)
+			u.Add(w)
 			if a.uiPress(rects[i]) {
-				u.focus = id
+				u.Focus = id
 				choose(i)
 			}
 		}
-		if u.focus == id {
+		if u.Focus == id {
 			for _, d := range []struct {
 				key string
 				dir int
@@ -86,11 +86,11 @@ func (a *App) uiTabs(id string, r rect, labels []string, sel *int, o tabsOpts) b
 		}
 		changed = u.take(id)&evChanged != 0
 	}
-	u.queue(func(dst *ebiten.Image) {
+	u.Queue(func(dst *ebiten.Image) {
 		for i, l := range labels {
 			tr := rects[i]
 			dis := reason(i) != ""
-			fill, border, text := btnNormal.colors(u.hot == optID(id, i) && !dis, false, *sel == i)
+			fill, border, text := btnNormal.Colors(u.Hot == optID(id, i) && !dis, false, *sel == i)
 			if dis {
 				fill, border, text = uiBtnDisabled, uiBtnBorder, uiTextDisabled
 			}

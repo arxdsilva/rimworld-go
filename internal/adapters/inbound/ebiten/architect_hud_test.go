@@ -53,7 +53,7 @@ func archPick(t *testing.T, a *App, tool string) {
 func archButtonsWith(a *App, prefix string) []button {
 	var out []button
 	for _, b := range a.architectButtons() {
-		if strings.HasPrefix(b.id, prefix) {
+		if strings.HasPrefix(b.ID, prefix) {
 			out = append(out, b)
 		}
 	}
@@ -70,11 +70,11 @@ func archDescText(a *App) []string {
 }
 
 func within(b button, r rect) bool {
-	return b.x >= r.X && b.y >= r.Y && b.x+b.w <= r.Right() && b.y+b.h <= r.Bottom()
+	return b.X >= r.X && b.Y >= r.Y && b.X+b.W <= r.Right() && b.Y+b.H <= r.Bottom()
 }
 
 func overlap(a, b button) bool {
-	return a.x < b.x+b.w && b.x < a.x+a.w && a.y < b.y+b.h && b.y < a.y+a.h
+	return a.X < b.X+b.W && b.X < a.X+a.W && a.Y < b.Y+b.H && b.Y < a.Y+a.H
 }
 
 func TestArchitectCategoriesInTwoColumns(t *testing.T) {
@@ -90,25 +90,25 @@ func TestArchitectCategoriesInTwoColumns(t *testing.T) {
 	}
 	cols := map[float32]bool{}
 	for i, b := range cats {
-		if want := "arch.cat." + archCategories[i].id; b.id != want {
-			t.Errorf("category %d id = %q, want %q (catalog order)", i, b.id, want)
+		if want := "arch.cat." + archCategories[i].id; b.ID != want {
+			t.Errorf("category %d id = %q, want %q (catalog order)", i, b.ID, want)
 		}
 		if !within(b, l.ArchCats) {
-			t.Errorf("%s %+v is outside ArchCats %+v", b.id, b, l.ArchCats)
+			t.Errorf("%s %+v is outside ArchCats %+v", b.ID, b, l.ArchCats)
 		}
-		if b.w < 92 || b.w > 104 || b.h != 28 {
-			t.Errorf("%s is %vx%v, want about 100x28", b.id, b.w, b.h)
+		if b.W < 92 || b.W > 104 || b.H != 28 {
+			t.Errorf("%s is %vx%v, want about 100x28", b.ID, b.W, b.H)
 		}
-		if b.selected != (archCategories[i].id == a.archCat) {
-			t.Errorf("%s selected = %v with archCat %q", b.id, b.selected, a.archCat)
+		if b.Selected != (archCategories[i].id == a.archCat) {
+			t.Errorf("%s selected = %v with archCat %q", b.ID, b.Selected, a.archCat)
 		}
-		if b.label != archCategories[i].label {
-			t.Errorf("%s label = %q", b.id, b.label)
+		if b.Label != archCategories[i].label {
+			t.Errorf("%s label = %q", b.ID, b.Label)
 		}
-		cols[b.x] = true
+		cols[b.X] = true
 		for _, o := range cats[:i] {
 			if overlap(b, o) {
-				t.Errorf("%s overlaps %s", b.id, o.id)
+				t.Errorf("%s overlaps %s", b.ID, o.ID)
 			}
 		}
 	}
@@ -128,7 +128,7 @@ func TestArchitectNoLegacyToolCards(t *testing.T) {
 	// description box and the categories, from the layout.
 	l := a.hud()
 	r := a.architectRect()
-	if r.x > l.ArchCats.X || r.x+r.w < l.ArchCats.Right() || r.y+r.h != l.ArchCats.Bottom() {
+	if r.X > l.ArchCats.X || r.X+r.W < l.ArchCats.Right() || r.Y+r.H != l.ArchCats.Bottom() {
 		t.Fatalf("architectRect %+v does not cover ArchCats %+v", r, l.ArchCats)
 	}
 }
@@ -187,8 +187,8 @@ func TestArchitectCategoryClickSelectsAndCollapses(t *testing.T) {
 	}
 	// The categories stay, none selected.
 	for _, b := range archButtonsWith(a, "arch.cat.") {
-		if b.selected {
-			t.Errorf("%s selected with no category open", b.id)
+		if b.Selected {
+			t.Errorf("%s selected with no category open", b.ID)
 		}
 	}
 	a.applyClick("arch.cat.orders")
@@ -422,14 +422,14 @@ func TestArchitectDescriptionMaterialRow(t *testing.T) {
 	}
 	for i, b := range stuffs {
 		if !within(b, l.ArchDesc) {
-			t.Errorf("%s %+v outside ArchDesc %+v", b.id, b, l.ArchDesc)
+			t.Errorf("%s %+v outside ArchDesc %+v", b.ID, b, l.ArchDesc)
 		}
-		if b.selected != (bv.Stuffs[i] == a.toolStuff(archTool{build: "wall"})) {
-			t.Errorf("%s selected = %v", b.id, b.selected)
+		if b.Selected != (bv.Stuffs[i] == a.toolStuff(archTool{build: "wall"})) {
+			t.Errorf("%s selected = %v", b.ID, b.Selected)
 		}
 		for _, o := range stuffs[:i] {
 			if overlap(b, o) {
-				t.Errorf("%s overlaps %s", b.id, o.id)
+				t.Errorf("%s overlaps %s", b.ID, o.ID)
 			}
 		}
 	}
@@ -464,14 +464,14 @@ func TestArchitectDescriptionCropPicker(t *testing.T) {
 	sel := 0
 	for i, b := range crops {
 		if !within(b, l.ArchDesc) {
-			t.Errorf("%s %+v outside ArchDesc %+v", b.id, b, l.ArchDesc)
+			t.Errorf("%s %+v outside ArchDesc %+v", b.ID, b, l.ArchDesc)
 		}
-		if b.selected {
+		if b.Selected {
 			sel++
 		}
 		for _, o := range crops[:i] {
 			if overlap(b, o) {
-				t.Errorf("%s overlaps %s", b.id, o.id)
+				t.Errorf("%s overlaps %s", b.ID, o.ID)
 			}
 		}
 	}
@@ -544,12 +544,12 @@ func TestArchitectBoxFitsEveryToolAtEverySize(t *testing.T) {
 				}
 				for _, b := range archButtonsWith(a, "arch.stuff.") {
 					if !within(b, l.ArchDesc) {
-						t.Errorf("%dx%d %s: %s %+v outside the box %+v", sz[0], sz[1], tool.id, b.id, b, l.ArchDesc)
+						t.Errorf("%dx%d %s: %s %+v outside the box %+v", sz[0], sz[1], tool.id, b.ID, b, l.ArchDesc)
 					}
 				}
 				for _, b := range archButtonsWith(a, "arch.crop.") {
 					if !within(b, l.ArchDesc) {
-						t.Errorf("%dx%d %s: %s %+v outside the box %+v", sz[0], sz[1], tool.id, b.id, b, l.ArchDesc)
+						t.Errorf("%dx%d %s: %s %+v outside the box %+v", sz[0], sz[1], tool.id, b.ID, b, l.ArchDesc)
 					}
 				}
 			}
@@ -659,16 +659,16 @@ func TestArchitectToolClickThroughTheGrid(t *testing.T) {
 	}
 	var cell button
 	for _, b := range a.commandGridButtons() {
-		if b.id == "arch.tool.wall" {
+		if b.ID == "arch.tool.wall" {
 			cell = b
 		}
 	}
-	if cell.id == "" {
+	if cell.ID == "" {
 		t.Fatalf("no arch.tool.wall hit target in the command grid (%d cells)", len(l.GridCells))
 	}
 	inGrid := false
 	for _, r := range l.GridCells {
-		inGrid = inGrid || r.Contains(cell.x+cell.w/2, cell.y+cell.h/2)
+		inGrid = inGrid || r.Contains(cell.X+cell.W/2, cell.Y+cell.H/2)
 	}
 	if !inGrid {
 		t.Fatalf("wall button %+v is not in a grid cell", cell)
@@ -694,8 +694,8 @@ func TestArchitectDraws(t *testing.T) {
 		for _, id := range []string{"arch.cat.zones", "arch.stuff.steel", "arch.crop.potato"} {
 			f.Cur.Mx, f.Cur.My = -50, -50
 			for _, b := range a.architectButtons() {
-				if b.id == id {
-					f.Cur.Mx, f.Cur.My = int(b.x+b.w/2), int(b.y+b.h/2)
+				if b.ID == id {
+					f.Cur.Mx, f.Cur.My = int(b.X+b.W/2), int(b.Y+b.H/2)
 				}
 			}
 			drawFrame(t, a, f)

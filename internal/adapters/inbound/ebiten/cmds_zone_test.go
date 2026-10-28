@@ -351,7 +351,7 @@ func TestZonePaneAndGridAtUIScales(t *testing.T) {
 						t.Errorf("%s: %s has no hit target", name, cm.ID)
 						continue
 					}
-					if got := (rect{X: b.x, Y: b.y, W: b.w, H: b.h}); got != l.GridCells[i] {
+					if got := (rect{X: b.X, Y: b.Y, W: b.W, H: b.H}); got != l.GridCells[i] {
 						t.Errorf("%s: %s is at %+v, its cell is %+v", name, cm.ID, got, l.GridCells[i])
 					}
 					if cell := l.GridCells[i]; cell.X < l.Pane.Right() || cell.Right() > l.Global.X {

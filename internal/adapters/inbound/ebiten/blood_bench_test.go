@@ -62,7 +62,7 @@ func BenchmarkDrawStains(b *testing.B) {
 	tile := r.tilePx()
 	r.setView(1280, 800, tile)
 	r.view.W = r.game.World()
-	r.lit.light = lightAt(12, summerDay, "clear", 0)
+	r.lit.Light = lightAt(12, summerDay, "clear", 0)
 	for i := 0; i < 5; i++ {
 		r.drawStains(screen, r.view.W, 1280, 800, tile)
 	}

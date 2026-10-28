@@ -278,13 +278,13 @@ func (a *App) colonistBarButtons(sw, sh int) []button {
 	for i, p := range pawns[:n] {
 		slot := l.BarSlots[i]
 		out = append(out, button{
-			id:       barSlotID(p.ID),
-			tip:      barSlotTip(p, a.barStatusesWith(p, fires)),
-			x:        slot.X,
-			y:        slot.Y,
-			w:        slot.W,
-			h:        slot.H,
-			selected: a.barSelected(p.ID),
+			ID:       barSlotID(p.ID),
+			Tip:      barSlotTip(p, a.barStatusesWith(p, fires)),
+			X:        slot.X,
+			Y:        slot.Y,
+			W:        slot.W,
+			H:        slot.H,
+			Selected: a.barSelected(p.ID),
 		})
 	}
 	return out
@@ -308,10 +308,10 @@ func (a *App) colonistBarUI(sw, sh int) {
 	if !ok {
 		return
 	}
-	a.uiSt().add(uiWidget{
-		id: barMoreID, label: fmt.Sprintf("+%d", l.BarMore), r: slot,
-		tip:   fmt.Sprintf("%d more colonists\nClick to select the next one that has no slot.", l.BarMore),
-		click: a.cycleHiddenColonist,
+	a.uiSt().Add(uiWidget{
+		ID: barMoreID, Label: fmt.Sprintf("+%d", l.BarMore), R: slot,
+		Tip:   fmt.Sprintf("%d more colonists\nClick to select the next one that has no slot.", l.BarMore),
+		Click: a.cycleHiddenColonist,
 	})
 }
 

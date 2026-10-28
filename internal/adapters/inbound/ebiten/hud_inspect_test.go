@@ -126,7 +126,7 @@ func TestPaneTabsAreMeasuredAndReportTheirState(t *testing.T) {
 	l := a.hud()
 	var tabs []button
 	for _, b := range a.paneButtons() {
-		if strings.HasPrefix(b.id, "inspector.") && b.id != "inspector.close" {
+		if strings.HasPrefix(b.ID, "inspector.") && b.ID != "inspector.close" {
 			tabs = append(tabs, b)
 		}
 	}
@@ -134,21 +134,21 @@ func TestPaneTabsAreMeasuredAndReportTheirState(t *testing.T) {
 		t.Fatalf("tab buttons = %+v", tabs)
 	}
 	for i, b := range tabs {
-		r := rect{X: b.x, Y: b.y, W: b.w, H: b.h}
+		r := rect{X: b.X, Y: b.Y, W: b.W, H: b.H}
 		if r.X < l.PaneTabs.X || r.Right() > l.PaneTabs.Right()+0.01 || r.Y < l.PaneTabs.Y || r.Bottom() > l.PaneTabs.Bottom()+0.01 {
 			t.Errorf("tab %d %+v leaves the tab strip %+v", i, r, l.PaneTabs)
 		}
-		if i > 0 && b.x < tabs[i-1].x+tabs[i-1].w {
+		if i > 0 && b.X < tabs[i-1].X+tabs[i-1].W {
 			t.Errorf("tab %d overlaps tab %d", i, i-1)
 		}
 	}
-	if !(tabs[1].w > tabs[0].w) {
-		t.Errorf("widths follow the label: %.0f vs %.0f", tabs[0].w, tabs[1].w)
+	if !(tabs[1].W > tabs[0].W) {
+		t.Errorf("widths follow the label: %.0f vs %.0f", tabs[0].W, tabs[1].W)
 	}
-	if w, _ := measure("A rather long tab label", tsBody); float64(tabs[1].w) < w {
-		t.Errorf("tab width %.0f is narrower than its label (%.0f)", tabs[1].w, w)
+	if w, _ := measure("A rather long tab label", tsBody); float64(tabs[1].W) < w {
+		t.Errorf("tab width %.0f is narrower than its label (%.0f)", tabs[1].W, w)
 	}
-	if !tabs[2].disabled || tabs[2].reason != "nobody to dress" {
+	if !tabs[2].Disabled || tabs[2].Reason != "nobody to dress" {
 		t.Errorf("a disabled tab reports its reason: %+v", tabs[2])
 	}
 	click(t, a, "inspector.c")
@@ -159,7 +159,7 @@ func TestPaneTabsAreMeasuredAndReportTheirState(t *testing.T) {
 	a2 := a.paneButtons()
 	sel := 0
 	for _, b := range a2 {
-		if b.selected {
+		if b.Selected {
 			sel++
 		}
 	}
@@ -261,13 +261,13 @@ func TestPaneButtonsStayInsideThePane(t *testing.T) {
 	l := a.hud()
 	ids := map[string]bool{}
 	for _, b := range a.paneButtons() {
-		ids[b.id] = true
-		if strings.HasPrefix(b.id, "inspector.") && b.id != "inspector.close" {
+		ids[b.ID] = true
+		if strings.HasPrefix(b.ID, "inspector.") && b.ID != "inspector.close" {
 			continue // tabs live in the strip above
 		}
-		r := rect{X: b.x, Y: b.y, W: b.w, H: b.h}
+		r := rect{X: b.X, Y: b.Y, W: b.W, H: b.H}
 		if r.X < l.Pane.X || r.Y < l.Pane.Y || r.Right() > l.Pane.Right()+0.01 || r.Bottom() > l.Pane.Bottom()+0.01 {
-			t.Errorf("%s %+v leaves the pane %+v", b.id, r, l.Pane)
+			t.Errorf("%s %+v leaves the pane %+v", b.ID, r, l.Pane)
 		}
 	}
 	for _, id := range []string{"inspector.close", "pane.area", "pane.c2", "pane.c3", "pane.c4"} {
@@ -276,8 +276,8 @@ func TestPaneButtonsStayInsideThePane(t *testing.T) {
 		}
 	}
 	for _, b := range a.paneButtons() {
-		if b.id == "pane.area" && b.tip != "Where Ada may go" {
-			t.Errorf("chip tip = %q", b.tip)
+		if b.ID == "pane.area" && b.Tip != "Where Ada may go" {
+			t.Errorf("chip tip = %q", b.Tip)
 		}
 	}
 }
@@ -299,7 +299,7 @@ func TestPaneBodyScrollsAndOwnsTheWheel(t *testing.T) {
 	f.Cur.Mx, f.Cur.My = int(g.body.X+20), int(g.body.Y+20)
 	f.Cur.WheelY = -1
 	f.Frame(t, a)
-	if off := a.uiSt().scroll[paneBodyID]; off <= 0 {
+	if off := a.uiSt().Scroll[paneBodyID]; off <= 0 {
 		t.Fatalf("the wheel over the body scrolls it, offset %v", off)
 	}
 	if a.renderer.cam.Zoom != z {
@@ -325,26 +325,26 @@ func TestPaneRowsAreClickableAndScroll(t *testing.T) {
 	g := paneLayout(l.Pane, spec)
 	vis := map[string]button{}
 	for _, b := range a.paneButtons() {
-		if strings.HasPrefix(b.id, "pane.row.") {
-			vis[b.id] = b
+		if strings.HasPrefix(b.ID, "pane.row.") {
+			vis[b.ID] = b
 		}
 	}
 	if len(vis) == 0 || len(vis) >= 30 {
 		t.Fatalf("only the rows in view are targets: %d of 30", len(vis))
 	}
 	for id, b := range vis {
-		if b.y < g.body.Y-0.01 || b.y+b.h > g.body.Bottom()+0.01 {
+		if b.Y < g.body.Y-0.01 || b.Y+b.H > g.body.Bottom()+0.01 {
 			t.Errorf("%s %+v leaves the body %+v", id, b, g.body)
 		}
 	}
 	if _, ok := vis["pane.row.0"]; !ok {
 		t.Fatal("the first row is in view")
 	}
-	a.uiSt().scroll[paneBodyID] = 10 * paneRowH
+	a.uiSt().Scroll[paneBodyID] = 10 * paneRowH
 	again := map[string]button{}
 	for _, b := range a.paneButtons() {
-		if strings.HasPrefix(b.id, "pane.row.") {
-			again[b.id] = b
+		if strings.HasPrefix(b.ID, "pane.row.") {
+			again[b.ID] = b
 		}
 	}
 	if _, ok := again["pane.row.0"]; ok {
@@ -440,7 +440,7 @@ func TestDrawPaneBodyWithRowsAndAMenu(t *testing.T) {
 	img := ebiten.NewImage(1280, 720)
 	g := paneLayout(a.hud().Pane, spec)
 	a.cursor = &[2]int{int(g.body.X) + 10, int(g.body.Y+g.rowsY0) + 5} // hover the first row
-	a.uiSt().scroll[paneBodyID] = paneRowH
+	a.uiSt().Scroll[paneBodyID] = paneRowH
 	a.drawPane(img)
 	a.openPick(300, 300, false, pickEntries(), func(int) {})
 	a.drawFloat(img) // the pick menu draws without the queue footer

@@ -741,7 +741,7 @@ func (r *Renderer) drawCropObj(dst *ebiten.Image, w *game.WorldView, p *game.Pla
 	sortCropUnits(units)
 
 	ps := r.plantPose(p.X, p.Y, kindCrop, cropSwayAmount(p.Species), 1)
-	lean, hs := -ps.skew, min(max(ps.sy, 0.5), 1.25)
+	lean, hs := -ps.Skew, min(max(ps.Sy, 0.5), 1.25)
 	swayK := cropSwayFactor(p.Species)
 	t := r.envTime()
 	sky, lamp := r.lightTile(p.X, p.Y)
@@ -815,15 +815,15 @@ func (r *Renderer) flushCrops(dst *ebiten.Image) {
 // drawLitBatch draws a triangle batch of vertices carrying per-vertex sky
 // and lamp light through the lit shader.
 func (r *Renderer) drawLitBatch(dst *ebiten.Image, verts []ebiten.Vertex, idx []uint32, src *ebiten.Image) {
-	r.lit.calls++
+	r.lit.Calls++
 	sh := r.litShader()
 	if sh == nil { // no shader: unlit
 		dst.DrawTriangles32(verts, idx, src, &ebiten.DrawTrianglesOptions{Filter: ebiten.FilterLinear})
 		return
 	}
-	r.lit.syncUniforms()
-	r.lit.opts.Images[0] = src
-	dst.DrawTrianglesShader32(verts, idx, sh, &r.lit.opts)
+	r.lit.SyncUniforms()
+	r.lit.Opts.Images[0] = src
+	dst.DrawTrianglesShader32(verts, idx, sh, &r.lit.Opts)
 }
 
 // --- furrows --------------------------------------------------------------------

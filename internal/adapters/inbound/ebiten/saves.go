@@ -202,16 +202,16 @@ const (
 const commitTag = "Commitment"
 
 func (a *App) loadButtons(sw, sh int) []button {
-	out := []button{{id: "load.back", label: "Back", x: 40, y: footerY(sh), w: 140, h: 36}}
+	out := []button{{ID: "load.back", Label: "Back", X: 40, Y: footerY(sh), W: 140, H: 36}}
 	x := float32(sw)/2 - 300
 	for i, sl := range a.slots {
 		if i >= slotRows {
 			break
 		}
 		// the row's text is drawn by drawLoad (proportional columns)
-		out = append(out, button{id: ids.PrefixLoadSlot + strconv.Itoa(i), quiet: true,
-			x: x, y: float32(120 + i*(slotRowH+6)), w: 600, h: slotRowH,
-			disabled: sl.Err != "", reason: sl.Err})
+		out = append(out, button{ID: ids.PrefixLoadSlot + strconv.Itoa(i), Quiet: true,
+			X: x, Y: float32(120 + i*(slotRowH+6)), W: 600, H: slotRowH,
+			Disabled: sl.Err != "", Reason: sl.Err})
 	}
 	return out
 }
@@ -228,8 +228,8 @@ func (a *App) drawLoad(screen *ebiten.Image, sw, sh int) {
 			break
 		}
 		b := buttons[i+1]
-		bx, by := float64(b.x), float64(b.y)
-		right := float64(b.x+b.w) - 12
+		bx, by := float64(b.X), float64(b.Y)
+		right := float64(b.X+b.W) - 12
 		if !sl.Modified.IsZero() {
 			when := sl.Modified.Format("Jan 2 15:04")
 			drawText(screen, when, right, by+4, textStyle{Size: tsSmall.Size, Color: uiTextDim, Align: alignRight})
@@ -244,6 +244,6 @@ func (a *App) drawLoad(screen *ebiten.Image, sw, sh int) {
 		if sl.Err != "" {
 			sub, c = "cannot load: "+sl.Err, uiDanger
 		}
-		drawText(screen, ellipsize(sub, tsSmall, float64(b.w)-24), bx+12, by+float64(b.h)-lineH(tsSmall)-2, withColor(tsSmall, c))
+		drawText(screen, ellipsize(sub, tsSmall, float64(b.W)-24), bx+12, by+float64(b.H)-lineH(tsSmall)-2, withColor(tsSmall, c))
 	}
 }

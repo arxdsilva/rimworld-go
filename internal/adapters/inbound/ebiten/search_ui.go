@@ -200,7 +200,7 @@ func (a *App) searchRect(sw int) button {
 	w := max(min(searchW, float32(sw)-2*side), searchMinW)
 	x := (float32(sw) - w) / 2
 	x = max(min(x, float32(sw)-side-w), hudMargin+resourcesW+hudMargin) // a narrow window pushes it left of the right column
-	return button{x: float32(int(x)), y: y + hudMargin, w: w, h: float32(46 + max(n, 1)*searchRowH)}
+	return button{X: float32(int(x)), Y: y + hudMargin, W: w, H: float32(46 + max(n, 1)*searchRowH)}
 }
 
 // searchButtons are the result rows ("search.pick.N").
@@ -211,10 +211,10 @@ func (a *App) searchButtons(sw int) []button {
 	r := a.searchRect(sw)
 	out := []button{}
 	for i, h := range a.searchHits() {
-		out = append(out, button{id: "search.pick." + strconv.Itoa(i), label: h.label,
-			x: r.x + 8, y: r.y + 40 + float32(i*searchRowH), w: r.w - 16, h: searchRowH - 2, selected: i == a.search.idx})
+		out = append(out, button{ID: "search.pick." + strconv.Itoa(i), Label: h.label,
+			X: r.X + 8, Y: r.Y + 40 + float32(i*searchRowH), W: r.W - 16, H: searchRowH - 2, Selected: i == a.search.idx})
 	}
-	return append(out, button{id: "search.box", x: r.x, y: r.y, w: r.w, h: 38})
+	return append(out, button{ID: "search.box", X: r.X, Y: r.Y, W: r.W, H: 38})
 }
 
 // applySearchClick picks a clicked result.
@@ -230,25 +230,25 @@ func (a *App) drawSearch(screen *ebiten.Image, sw int) {
 		return
 	}
 	r := a.searchRect(sw)
-	drawPanel(screen, r.x, r.y, r.w, r.h)
-	uiFillRect(screen, r.x+8, r.y+8, r.w-16, 24, uiSpace, false)
-	uiStrokeRect(screen, r.x+8, r.y+8, r.w-16, 24, 1, uiAccent, false)
+	drawPanel(screen, r.X, r.Y, r.W, r.H)
+	uiFillRect(screen, r.X+8, r.Y+8, r.W-16, 24, uiSpace, false)
+	uiStrokeRect(screen, r.X+8, r.Y+8, r.W-16, 24, 1, uiAccent, false)
 	cursor := ""
 	if (a.updates/30)%2 == 0 {
 		cursor = "_"
 	}
 	query := []rune(a.search.text)
-	for len(query) > 1 && textW("Search: "+string(query)+cursor, tsBody) > r.w-28 {
+	for len(query) > 1 && textW("Search: "+string(query)+cursor, tsBody) > r.W-28 {
 		query = query[1:] // keep the end of a long query, where the player is typing
 	}
-	drawText(screen, "Search: "+string(query)+cursor, float64(r.x)+14, float64(r.y)+8+(24-lineH(tsBody))/2, tsBody)
+	drawText(screen, "Search: "+string(query)+cursor, float64(r.X)+14, float64(r.Y)+8+(24-lineH(tsBody))/2, tsBody)
 	hits := a.searchHits()
 	if len(hits) == 0 {
 		msg := "Type a name, species, item or building"
 		if a.search.text != "" {
 			msg = "Nothing matches"
 		}
-		drawText(screen, msg, float64(r.x)+16, float64(r.y)+42, withColor(tsBody, uiTextDim))
+		drawText(screen, msg, float64(r.X)+16, float64(r.Y)+42, withColor(tsBody, uiTextDim))
 	}
 	mx, my := a.currentCursor()
 	for i, b := range a.searchButtons(sw) {
@@ -257,16 +257,16 @@ func (a *App) drawSearch(screen *ebiten.Image, sw int) {
 		}
 		fill := uiPanel
 		switch {
-		case b.selected:
+		case b.Selected:
 			fill = uiBtnSelected
-		case b.contains(mx, my):
+		case b.Contains(mx, my):
 			fill = uiBtnHover
 		}
-		uiFillRect(screen, b.x, b.y, b.w, b.h, fill, false)
+		uiFillRect(screen, b.X, b.Y, b.W, b.H, fill, false)
 		kind := hits[i].kind
-		ty := float64(b.y) + (float64(b.h)-lineH(tsBody))/2
+		ty := float64(b.Y) + (float64(b.H)-lineH(tsBody))/2
 		kw := float64(textW(kind, tsSmall))
-		drawText(screen, ellipsize(hits[i].label, tsBody, float64(b.w)-kw-26), float64(b.x)+6, ty, tsBody)
-		drawText(screen, kind, float64(b.x+b.w)-8, float64(b.y)+(float64(b.h)-lineH(tsSmall))/2, textStyle{Size: tsSmall.Size, Color: uiTextDim, Align: alignRight})
+		drawText(screen, ellipsize(hits[i].label, tsBody, float64(b.W)-kw-26), float64(b.X)+6, ty, tsBody)
+		drawText(screen, kind, float64(b.X+b.W)-8, float64(b.Y)+(float64(b.H)-lineH(tsSmall))/2, textStyle{Size: tsSmall.Size, Color: uiTextDim, Align: alignRight})
 	}
 }

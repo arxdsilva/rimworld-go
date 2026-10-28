@@ -75,7 +75,7 @@ func TestWestMirrorsEast(t *testing.T) {
 	}
 	em, _ := r.heldPoint(er, h, 2, 2, eps, "muzzle")
 	wm, _ := r.heldPoint(wr, h, 2, 2, wps, "muzzle")
-	if math.Abs((em.x-2-pawnFeetX)+(wm.x-2-pawnFeetX)) > 1e-9 || wm.x >= 2+pawnFeetX {
+	if math.Abs((em.X-2-pawnFeetX)+(wm.X-2-pawnFeetX)) > 1e-9 || wm.X >= 2+pawnFeetX {
 		t.Fatalf("the muzzle points west: east %v west %v", em, wm)
 	}
 	// animals too: a west-facing animal draws its east art, mirrored
@@ -86,9 +86,9 @@ func TestWestMirrorsEast(t *testing.T) {
 		t.Fatalf("west animal: %s mirrored=%v", k, r.animalMirrored(an))
 	}
 	var got []string
-	r.lit.onDraw = func(img *ebiten.Image, _ float32) { got = append(got, keyOf(r.art, img)) }
+	r.lit.OnDraw = func(img *ebiten.Image, _ float32) { got = append(got, keyOf(r.art, img)) }
 	r.drawAnimalFigure(ebiten.NewImage(256, 256), an, 2, 2, 64)
-	r.lit.onDraw = nil
+	r.lit.OnDraw = nil
 	if !slices.Equal(got, []string{"animal/deer_east"}) {
 		t.Fatalf("west animal drew %v", got)
 	}
@@ -98,8 +98,8 @@ func TestWestMirrorsEast(t *testing.T) {
 // in draw order.
 func drawnKeys(r *Renderer, p game.PawnView, f facing) []string {
 	var keys []string
-	r.lit.onDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
-	defer func() { r.lit.onDraw = nil }()
+	r.lit.OnDraw = func(img *ebiten.Image, _ float32) { keys = append(keys, keyOf(r.art, img)) }
+	defer func() { r.lit.OnDraw = nil }()
 	r.drawPawnFigure(ebiten.NewImage(512, 512), p, 2, 2, 64, pawnFigurePose{face: f, ps: standPose(), held: r.idleHeld(p, moveState{})})
 	return keys
 }
@@ -198,17 +198,17 @@ func TestMirroredDrawInvertsNormalX(t *testing.T) {
 	sprite, normal := ebiten.NewImage(8, 8), ebiten.NewImage(8, 8)
 	r := &Renderer{art: &artCatalog{Normals: map[*ebiten.Image]*ebiten.Image{sprite: normal}}}
 	r.view.W = roomWorld()
-	r.lit.light = lightAt(8, summerDay, "clear", 0)
+	r.lit.Light = lightAt(8, summerDay, "clear", 0)
 	dst := ebiten.NewImage(32, 32)
 	for _, c := range []struct {
 		g    ebiten.GeoM
 		want float32
 	}{{ebiten.GeoM{}, 8 + litGap}, {flip, -(8 + litGap)}} {
 		r.drawLit(dst, sprite, c.g, noCS, 0, 0)
-		if r.lit.err != nil {
-			t.Fatal(r.lit.err)
+		if r.lit.Err != nil {
+			t.Fatal(r.lit.Err)
 		}
-		for i, v := range r.lit.verts {
+		for i, v := range r.lit.Verts {
 			if v.Custom2 != c.want {
 				t.Fatalf("vertex %d Custom2 %v, want %v", i, v.Custom2, c.want)
 			}
@@ -216,7 +216,7 @@ func TestMirroredDrawInvertsNormalX(t *testing.T) {
 	}
 	// a mirrored pose (west) gives drawSpritePose a mirroring GeoM
 	ps := mirrored(standPose())
-	if g := ps.geo(0, 0, 64); g.Element(0, 0)*g.Element(1, 1)-g.Element(0, 1)*g.Element(1, 0) >= 0 {
+	if g := ps.Geo(0, 0, 64); g.Element(0, 0)*g.Element(1, 1)-g.Element(0, 1)*g.Element(1, 0) >= 0 {
 		t.Fatal("a west pose mirrors")
 	}
 }

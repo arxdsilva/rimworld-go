@@ -90,11 +90,11 @@ func TestBarSlotsFollowTheLayout(t *testing.T) {
 				}
 				for i, b := range buttons {
 					slot := l.BarSlots[i]
-					if b.x != slot.X || b.y != slot.Y || b.w != slot.W || b.h != slot.H {
-						t.Errorf("button %s = (%v,%v,%v,%v), want slot %+v", b.id, b.x, b.y, b.w, b.h, slot)
+					if b.X != slot.X || b.Y != slot.Y || b.W != slot.W || b.H != slot.H {
+						t.Errorf("button %s = (%v,%v,%v,%v), want slot %+v", b.ID, b.X, b.Y, b.W, b.H, slot)
 					}
-					if want := barSlotID(entity.EntityID(i + 1)); b.id != want {
-						t.Errorf("button %d id = %q, want %q", i, b.id, want)
+					if want := barSlotID(entity.EntityID(i + 1)); b.ID != want {
+						t.Errorf("button %d id = %q, want %q", i, b.ID, want)
 					}
 				}
 				// the bar stays clear of the resources and the right column
@@ -155,7 +155,7 @@ func TestBarHiddenWhenTheSettingIsOff(t *testing.T) {
 	if bs := a.colonistBarButtons(a.sw, a.sh); len(bs) != 0 {
 		t.Fatalf("%d bar buttons with the bar off", len(bs))
 	}
-	if _, ok := a.uiSt().find(barMoreID); ok {
+	if _, ok := a.uiSt().Find(barMoreID); ok {
 		t.Fatal("the +N slot is declared with the bar off")
 	}
 	ev := htTrace(t, func() { a.drawColonistBar(ebiten.NewImage(1280, 720), 1280, 720) })
@@ -172,7 +172,7 @@ func TestBarLeavesOutPrisoners(t *testing.T) {
 		t.Fatalf("barCount = %d, want 3 (the prisoner is not on the bar)", n)
 	}
 	for _, b := range a.colonistBarButtons(a.sw, a.sh) {
-		if b.id == barSlotID(2) {
+		if b.ID == barSlotID(2) {
 			t.Fatal("the prisoner has a bar slot")
 		}
 	}
@@ -340,12 +340,12 @@ func TestBarTooltipNamesTheStatuses(t *testing.T) {
 	ps[0].Drafted, ps[0].Lying = true, true
 	a, _ := htApp(t, &stubSim{pawns: ps}, 1280, 720)
 	bs := a.colonistBarButtons(a.sw, a.sh)
-	if want := "Pawn01 (drafted, sleeping)"; bs[0].tip != want {
-		t.Errorf("tip = %q, want %q", bs[0].tip, want)
+	if want := "Pawn01 (drafted, sleeping)"; bs[0].Tip != want {
+		t.Errorf("tip = %q, want %q", bs[0].Tip, want)
 	}
 	// a plain colonist keeps the legacy line (name, age, title)
-	if bs[1].tip != barTip(ps[1]) || bs[1].tip != "Pawn02" {
-		t.Errorf("plain tip = %q, want %q", bs[1].tip, barTip(ps[1]))
+	if bs[1].Tip != barTip(ps[1]) || bs[1].Tip != "Pawn02" {
+		t.Errorf("plain tip = %q, want %q", bs[1].Tip, barTip(ps[1]))
 	}
 }
 
@@ -426,16 +426,16 @@ func TestBarMoreSlotCyclesTheHiddenColonists(t *testing.T) {
 		t.Fatalf("setup: %d hidden, want an overflowing bar", l.BarMore)
 	}
 	shown := len(l.BarSlots) - 1 // the last slot is the "+N"
-	w, ok := a.uiSt().find(barMoreID)
+	w, ok := a.uiSt().Find(barMoreID)
 	if !ok {
 		t.Fatal("no +N widget")
 	}
 	last := l.BarSlots[len(l.BarSlots)-1]
-	if w.r != last {
-		t.Errorf("+N widget %+v, want the last slot %+v", w.r, last)
+	if w.R != last {
+		t.Errorf("+N widget %+v, want the last slot %+v", w.R, last)
 	}
-	if want := fmt.Sprintf("%d more colonists", l.BarMore); !strings.HasPrefix(w.tip, want) {
-		t.Errorf("+N tip = %q, want it to start with %q", w.tip, want)
+	if want := fmt.Sprintf("%d more colonists", l.BarMore); !strings.HasPrefix(w.Tip, want) {
+		t.Errorf("+N tip = %q, want it to start with %q", w.Tip, want)
 	}
 	click(t, a, barMoreID)
 	if !a.renderer.HasSelect() || a.renderer.Selected() != entity.EntityID(shown+1) {
@@ -474,11 +474,11 @@ func TestBarShiftClickAndHoverStillWork(t *testing.T) {
 		t.Fatalf("bar click selected %d", a.renderer.Selected())
 	}
 	for _, b := range a.colonistBarButtons(a.sw, a.sh) {
-		if b.id == barSlotID(2) && !b.selected {
+		if b.ID == barSlotID(2) && !b.Selected {
 			t.Error("the selected colonist's button is not marked selected")
 		}
-		if b.id != barSlotID(2) && b.selected {
-			t.Errorf("%s is marked selected", b.id)
+		if b.ID != barSlotID(2) && b.Selected {
+			t.Errorf("%s is marked selected", b.ID)
 		}
 	}
 }
