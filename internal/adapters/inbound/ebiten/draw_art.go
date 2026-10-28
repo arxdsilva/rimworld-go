@@ -4,7 +4,6 @@ import (
 	"cmp"
 	"image/color"
 	"math"
-	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"slices"
 	"strconv"
 	"strings"
@@ -12,6 +11,7 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
 	"rimworld-go/internal/application/game"
 )
 
@@ -61,21 +61,6 @@ func sortDraws(draws []artDraw) {
 	})
 }
 
-// colorScale is a per-draw RGBA multiplier (ghosts, blueprints).
-type colorScale [4]float32
-
-var (
-	noCS        = colorScale{1, 1, 1, 1}
-	blueprintCS = colorScale{0.55, 0.85, 1.25, 0.5}
-	ghostOKCS   = colorScale{0.7, 1.25, 0.7, 0.65}
-	ghostBadCS  = colorScale{1.3, 0.45, 0.4, 0.6}
-	ghostSameCS = colorScale{0.9, 0.9, 0.9, 0.5}
-	// driedCS browns and darkens food that came off a drying rack;
-	// rottenCS sickens a rotten corpse.
-	driedCS  = colorScale{0.86, 0.68, 0.48, 1}
-	rottenCS = colorScale{0.62, 0.74, 0.5, 1}
-)
-
 // drawRackLoad lays a drying batch along the rack's slats, browning as it
 // dries.
 func (r *Renderer) drawRackLoad(screen *ebiten.Image, b game.BuildingView, tile float64, sw, sh int) {
@@ -91,74 +76,6 @@ func (r *Renderer) drawRackLoad(screen *ebiten.Image, b game.BuildingView, tile 
 
 // rackSlatLift raises rack contents (in tiles) to sit on the slats.
 const rackSlatLift = 0.3
-
-// itemCS is the colour treatment for a ground stack.
-func itemCS(it game.ItemView) colorScale {
-	switch {
-	case it.Dried:
-		return driedCS
-	case it.Rotten:
-		return rottenCS
-	}
-	return noCS
-}
-
-// lerpCS blends from a to b by t in [0, 1].
-func lerpCS(a, b colorScale, t float64) colorScale {
-	var out colorScale
-	for i := range out {
-		out[i] = a[i] + (b[i]-a[i])*float32(t)
-	}
-	return out
-}
-
-func (r *Renderer) drawSprite(screen *ebiten.Image, key string, tint color.NRGBA, wx, wy, tile float64, sw, sh int) {
-	r.drawSpriteCS(screen, key, tint, wx, wy, tile, sw, sh, noCS)
-}
-
-func (r *Renderer) drawSpriteCS(screen *ebiten.Image, key string, tint color.NRGBA, wx, wy, tile float64, sw, sh int, cs colorScale) {
-	r.drawSpriteScaled(screen, key, tint, wx, wy, tile, sw, sh, cs, 1)
-}
-
-// drawSpriteScaled draws a sprite scaled by k about its footprint's
-// bottom-centre (ground origin), e.g. young trees.
-func (r *Renderer) drawSpriteScaled(screen *ebiten.Image, key string, tint color.NRGBA, wx, wy, tile float64, sw, sh int, cs colorScale, k float64) {
-	sp := r.art.Sprite(key)
-	if sp == nil {
-		return
-	}
-	sx, sy := r.worldToScreenF(wx, wy)
-	x, y, s := artOrigin(sp.Meta, float64(sx), float64(sy), tile)
-	if k != 1 {
-		px := float64(sx) + float64(sp.Meta.Footprint[0])*tile/2
-		py := float64(sy) + float64(sp.Meta.Footprint[1])*tile
-		x, y, s = px+(x-px)*k, py+(y-py)*k, s*k
-	}
-	w, h := float64(sp.Meta.Canvas[0])*s, float64(sp.Meta.Canvas[1])*s
-	if !visible(float32(x), float32(y), float32(w), float32(h), sw, sh) {
-		return
-	}
-	img := r.art.Image(key, tint)
-	if img == nil {
-		return
-	}
-	op := &ebiten.DrawImageOptions{}
-	op.GeoM.Scale(s, s)
-	op.GeoM.Translate(x, y)
-	op.Filter = ebiten.FilterLinear
-	if !strings.HasPrefix(key, "overlay/") { // zones and markers stay unlit
-		if isGroundKey(key) { // terrain edges: the lamp light ramps like the tile under them
-			r.drawLitGround(screen, img, op.GeoM, cs, wx, wy)
-			return
-		}
-		r.drawLit(screen, img, op.GeoM, cs, wx, wy)
-		return
-	}
-	if cs != noCS {
-		op.ColorScale.Scale(cs[0]*cs[3], cs[1]*cs[3], cs[2]*cs[3], cs[3])
-	}
-	screen.DrawImage(img, op)
-}
 
 // drawPlacementGhost previews a build tool: the real sprite per cell,
 // green when placeable, red when not. Walls and conduits autotile among
@@ -243,10 +160,6 @@ func ghostFill(c ghostCell) color.RGBA {
 	}
 	return color.RGBA{90, 200, 90, 120}
 }
-
-// doorAxisEW is the door sprite axis for a stored facing: South/North
-// doors span east-west ("ew"), East/West doors north-south ("ns").
-func doorAxisEW(facing string) bool { return facing != "east" && facing != "west" }
 
 // buildKey is buildSpriteStuff with a fallback to the wood sprite when a
 // material's art (steel doors, stone fences) is missing.

@@ -14,6 +14,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"rimworld-go/internal/adapters/inbound/ebiten/render"
+	"rimworld-go/internal/adapters/inbound/ebiten/render/sprite"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/ai/work"
 	"rimworld-go/internal/domain/pawn/schedule"
@@ -548,9 +549,8 @@ func (r *Renderer) tilePx() float64 {
 	return r.cam.Tile()
 }
 
-func visible(x, y, w, h float32, sw, sh int) bool {
-	return x+w >= 0 && y+h >= 0 && x < float32(sw) && y < float32(sh)
-}
+// visible reports a sprite box touches the screen (sprite.Visible).
+func visible(x, y, w, h float32, sw, sh int) bool { return sprite.Visible(x, y, w, h, sw, sh) }
 
 // Draw renders terrain, pawns, and selection. HUD chrome is App-owned.
 func (r *Renderer) Draw(screen *ebiten.Image) {

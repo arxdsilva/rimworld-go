@@ -10,6 +10,7 @@ import (
 
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/mainmenu"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/clock"
@@ -150,10 +151,8 @@ type App struct {
 	// treeFocus / treeSel are reused buffers for the see-through canopy
 	// focus (tree_focus.go).
 	treeFocus, treeSel [][2]int
-	splash             *ebiten.Image
-	menu               *menuDiorama
-	menuTried          bool
-	menuTick           uint64 // drives menu motion; counts while no colony is shown
+	menuTick           uint64           // drives menu motion; counts while no colony is shown
+	menuScreen         *mainmenu.Screen // mainmenu.Screen owns the main menu (ARCH-005)
 	sessionErr         string
 	hint               string
 	shouldQuit         bool
@@ -297,6 +296,7 @@ func NewApp(cfg AppConfig) *App {
 		devRaw: 1,
 	}
 	a.shell = newShell(a)
+	a.menuScreen = mainmenu.New(menuHost{a})
 	a.loadSettings()
 	a.applySettings()
 	return a

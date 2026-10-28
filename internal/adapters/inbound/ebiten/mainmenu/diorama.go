@@ -1,4 +1,4 @@
-package ebiten
+package mainmenu
 
 import (
 	"bufio"
@@ -14,6 +14,9 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
+	"rimworld-go/internal/adapters/inbound/ebiten/art"
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/platform/config"
 )
 
@@ -22,21 +25,22 @@ import (
 // presentation-only motion on top: a slow pan and zoom, lamp and fire
 // glow layers, the campfire flame, embers and dust. No simulation runs.
 
-// menuDioramaMetaRel is the diorama's metadata, relative to the assets root.
-const menuDioramaMetaRel = "metadata/" + menuMetaFamily + "/menu_diorama.yaml"
+// DioramaMetaRel is the diorama's metadata, relative to the assets root.
+const DioramaMetaRel = "metadata/" + MetaFamily + "/menu_diorama.yaml"
 
-// menuMetaFamily is the metadata family of menu art; the sprite catalog
+// MetaFamily is the metadata family of menu art; the sprite catalog
 // skips it.
-const menuMetaFamily = "ui_menu"
+const MetaFamily = "ui_menu"
 
 const (
-	menuDriftPeriod          = 90 * 60 // ticks per zoom cycle
-	menuZoomMin, menuZoomMax = 1.04, 1.10
-	menuMotes, menuEmbers    = 36, 8
-	menuScrimDiv             = 4 // scrim resolution divisor
+	driftPeriod           = 90 * 60 // ticks per zoom cycle
+	zoomMin, zoomMax      = 1.04, 1.10
+	MoteCount, EmberCount = 36, 8
+	scrimDiv              = 4 // scrim resolution divisor
 )
 
-type menuDiorama struct {
+// Diorama is the menu's background scene.
+type Diorama struct {
 	Levels       []*ebiten.Image // full, 1/2, 1/4: no shimmer when the pan minifies
 	Lamp, Fire   *ebiten.Image   // additive glow, half resolution
 	W, H         int
@@ -47,28 +51,28 @@ type menuDiorama struct {
 	scrimH       int
 }
 
-// loadMenuDiorama reads the diorama metadata and images under root (the
+// LoadDiorama reads the diorama metadata and images under root (the
 // assets directory).
-func loadMenuDiorama(root string) (*menuDiorama, error) {
-	raw, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(menuDioramaMetaRel)))
+func LoadDiorama(root string) (*Diorama, error) {
+	raw, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(DioramaMetaRel)))
 	if err != nil {
 		return nil, err
 	}
-	m, err := parseArtMeta(string(raw))
+	m, err := art.ParseMeta(string(raw))
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", menuDioramaMetaRel, err)
+		return nil, fmt.Errorf("%s: %w", DioramaMetaRel, err)
 	}
 	img := func(rel string) (*ebiten.Image, error) {
 		if rel == "" {
 			return nil, nil
 		}
-		return loadPNG(filepath.Join(root, filepath.FromSlash(rel)))
+		return LoadPNG(filepath.Join(root, filepath.FromSlash(rel)))
 	}
 	base, err := img(m.Image)
 	if err != nil {
 		return nil, err
 	}
-	d := &menuDiorama{Levels: []*ebiten.Image{base}, W: m.Canvas[0], H: m.Canvas[1], TilePx: artTilePx}
+	d := &Diorama{Levels: []*ebiten.Image{base}, W: m.Canvas[0], H: m.Canvas[1], TilePx: art.TilePx}
 	if d.Lamp, err = img(metaScalar(string(raw), "glow_lamp")); err != nil {
 		return nil, err
 	}
@@ -119,15 +123,15 @@ func metaScalar(src, key string) string {
 	return ""
 }
 
-// menuView places an iw x ih image over an sw x sh screen at tick t:
+// view places an iw x ih image over an sw x sh screen at tick t:
 // cover-fit, eased zoom, and a Lissajous drift that never uncovers an edge.
-func menuView(iw, ih, sw, sh int, t float64) (scale, ox, oy float64) {
+func view(iw, ih, sw, sh int, t float64) (scale, ox, oy float64) {
 	if iw < 1 || ih < 1 {
 		return 1, 0, 0
 	}
 	cover := math.Max(float64(sw)/float64(iw), float64(sh)/float64(ih))
-	ph := 2 * math.Pi * t / menuDriftPeriod
-	z := menuZoomMin + (menuZoomMax-menuZoomMin)*(0.5-0.5*math.Cos(ph))
+	ph := 2 * math.Pi * t / driftPeriod
+	z := zoomMin + (zoomMax-zoomMin)*(0.5-0.5*math.Cos(ph))
 	scale = cover * z
 	slackX := float64(iw)*scale - float64(sw)
 	slackY := float64(ih)*scale - float64(sh)
@@ -136,14 +140,14 @@ func menuView(iw, ih, sw, sh int, t float64) (scale, ox, oy float64) {
 	return scale, ox, oy
 }
 
-// menuFlicker is the campfire flicker of fire.go, 0.5..1.
-func menuFlicker(t float64, seed int) float64 {
+// flicker is the campfire flicker of fire.go, 0.5..1.
+func flicker(t float64, seed int) float64 {
 	t += float64(seed) * 17
 	return 0.75 + 0.25*math.Sin(t*0.31)*math.Sin(t*0.13+2)
 }
 
-// menuLampBreath is a slow lamp pulse, 0.9..1.
-func menuLampBreath(t float64) float64 {
+// lampBreath is a slow lamp pulse, 0.9..1.
+func lampBreath(t float64) float64 {
 	return 0.95 + 0.05*math.Sin(2*math.Pi*t/240)
 }
 
@@ -152,11 +156,11 @@ func hashUnit(h uint64) float64 { return float64(h>>11) / (1 << 53) }
 
 func fract(x float64) float64 { return x - math.Floor(x) }
 
-// menuMote is dust speck i at tick t: drifts right and up, wraps, and
+// mote is dust speck i at tick t: drifts right and up, wraps, and
 // fades out before the button rail.
-func menuMote(i int, t float64, sw, sh int) (x, y, r float32, alpha float64) {
-	h := mix64(uint64(i)*0x9E3779B97F4A7C15 + 0x4D)
-	bx, by, f := hashUnit(h), hashUnit(mix64(h)), hashUnit(mix64(h^0xA5A5))
+func mote(i int, t float64, sw, sh int) (x, y, r float32, alpha float64) {
+	h := art.Mix64(uint64(i)*0x9E3779B97F4A7C15 + 0x4D)
+	bx, by, f := hashUnit(h), hashUnit(art.Mix64(h)), hashUnit(art.Mix64(h^0xA5A5))
 	vx := (0.4 + 0.6*f) / 7200
 	vy := (0.2 + 0.4*f) / 7200
 	fx := fract(bx + t*vx)
@@ -165,22 +169,33 @@ func menuMote(i int, t float64, sw, sh int) (x, y, r float32, alpha float64) {
 	y = float32(fy*float64(sh) + 6*math.Sin(t/90+f*6))
 	r = float32(1 + 1.5*f)
 	alpha = 0.10 + 0.14*f
-	rail := float64(menuRailX(sw))
-	alpha *= clamp01((rail - 20 - float64(x)) / 160)
+	rail := float64(RailX(sw))
+	alpha *= gfx.Clamp01((rail - 20 - float64(x)) / 160)
 	return x, y, r, alpha
 }
 
+// fade scales a colour by k (0..1).
+func fade(c color.RGBA, k float64) color.RGBA {
+	if k <= 0 {
+		return color.RGBA{}
+	}
+	if k > 1 {
+		k = 1
+	}
+	return color.RGBA{uint8(float64(c.R) * k), uint8(float64(c.G) * k), uint8(float64(c.B) * k), uint8(float64(c.A) * k)}
+}
+
 func smooth(e0, e1, v float64) float64 {
-	k := clamp01((v - e0) / (e1 - e0))
+	k := gfx.Clamp01((v - e0) / (e1 - e0))
 	return k * k * (3 - 2*k)
 }
 
-// menuScrimAlpha darkens where the menu chrome sits: the title band, the
+// scrimAlpha darkens where the menu chrome sits: the title band, the
 // button rail, the bust at the bottom-left, and the corners.
-func menuScrimAlpha(x, y float64, sw, sh int) float64 {
+func scrimAlpha(x, y float64, sw, sh int) float64 {
 	w, h := float64(sw), float64(sh)
 	top := 0.55 * (1 - smooth(0, 140, y))
-	rail := 0.6 * smooth(w-500, float64(menuRailX(sw)), x)
+	rail := 0.6 * smooth(w-500, float64(RailX(sw)), x)
 	bust := 0.3 * (1 - smooth(0, w*0.45, x)) * smooth(h*0.3, h, y)
 	dx, dy := (x-w/2)/(w/2), (y-h/2)/(h/2)
 	vig := 0.35 * smooth(0.55, 1.45, math.Hypot(dx, dy))
@@ -188,66 +203,57 @@ func menuScrimAlpha(x, y float64, sw, sh int) float64 {
 	return 1 - keep
 }
 
-// buildMenuScrim is menuScrimAlpha at 1/menuScrimDiv resolution, in ui.space.
-func buildMenuScrim(sw, sh int) *image.NRGBA {
-	w, h := max(1, sw/menuScrimDiv), max(1, sh/menuScrimDiv)
+// buildScrim is scrimAlpha at 1/scrimDiv resolution, in ui.space.
+func buildScrim(sw, sh int) *image.NRGBA {
+	w, h := max(1, sw/scrimDiv), max(1, sh/scrimDiv)
 	img := image.NewNRGBA(image.Rect(0, 0, w, h))
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
-			a := menuScrimAlpha((float64(x)+0.5)*menuScrimDiv, (float64(y)+0.5)*menuScrimDiv, sw, sh)
-			img.SetNRGBA(x, y, color.NRGBA{uiSpace.R, uiSpace.G, uiSpace.B, uint8(a*255 + 0.5)})
+			a := scrimAlpha((float64(x)+0.5)*scrimDiv, (float64(y)+0.5)*scrimDiv, sw, sh)
+			img.SetNRGBA(x, y, color.NRGBA{uikit.Space.R, uikit.Space.G, uikit.Space.B, uint8(a*255 + 0.5)})
 		}
 	}
 	return img
 }
 
-// menuParticles is how many embers per fire and dust motes the menu
+// Particles is how many embers per fire and dust motes the menu
 // draws under the Options effects and motion settings.
-func menuParticles(s config.Settings) (embers, motes int) {
+func Particles(s config.Settings) (embers, motes int) {
 	if s.Accessibility.ReducedMotion {
 		return 0, 0
 	}
 	fx := s.Graphics.FX()
-	return int(math.Round(menuEmbers * fx)), int(math.Round(menuMotes * fx))
+	return int(math.Round(EmberCount * fx)), int(math.Round(MoteCount * fx))
 }
 
-func (a *App) loadMenuScene() {
-	if a.menuTried || a.cfg.LoadMenuScene == nil {
-		return
-	}
-	a.menuTried = true
-	if d, err := a.cfg.LoadMenuScene(); err == nil {
-		a.menu = d
-	}
-}
-
-// drawMenuDiorama draws the diorama dimmed by dim (0..1); false when
+// DrawDiorama draws the diorama dimmed by dim (0..1); false when
 // there is none and the caller should draw the gradient backdrop.
 //
 // It is a full-screen background: it fills the screen at its physical
 // size, whatever the UI scale (sw, sh, the logical size, are ignored
 // unless the screen is empty).
-func (a *App) drawMenuDiorama(screen *ebiten.Image, sw, sh int, dim float64) bool {
+func (s *Screen) DrawDiorama(screen *ebiten.Image, sw, sh int, dim float64) bool {
 	if b := screen.Bounds(); b.Dx() > 0 && b.Dy() > 0 {
 		sw, sh = b.Dx(), b.Dy()
 	}
-	d := a.menu
+	d := s.diorama
 	if d == nil || len(d.Levels) == 0 || sw < 1 || sh < 1 {
 		return false
 	}
-	t := float64(a.menuTick)
-	embers, motes := menuParticles(a.settings)
-	view := t
-	if a.settings.Accessibility.ReducedMotion { // still frame; the fire still burns
-		view = 0
+	t := float64(s.sh.MenuTick())
+	set := s.sh.Settings()
+	embers, motes := Particles(set)
+	vt := t
+	if set.Accessibility.ReducedMotion { // still frame; the fire still burns
+		vt = 0
 	}
-	s, ox, oy := menuView(d.W, d.H, sw, sh, view)
+	sc, ox, oy := view(d.W, d.H, sw, sh, vt)
 	lv := 0
-	for lv+1 < len(d.Levels) && s*float64(int(1)<<(lv+1)) <= 1 {
+	for lv+1 < len(d.Levels) && sc*float64(int(1)<<(lv+1)) <= 1 {
 		lv++
 	}
 	op := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear}
-	op.GeoM.Scale(s*float64(int(1)<<lv), s*float64(int(1)<<lv))
+	op.GeoM.Scale(sc*float64(int(1)<<lv), sc*float64(int(1)<<lv))
 	op.GeoM.Translate(ox, oy)
 	screen.DrawImage(d.Levels[lv], op)
 	glow := func(img *ebiten.Image, k float64) {
@@ -256,41 +262,41 @@ func (a *App) drawMenuDiorama(screen *ebiten.Image, sw, sh int, dim float64) boo
 		}
 		op := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear, Blend: ebiten.BlendLighter}
 		f := float64(d.W) / float64(img.Bounds().Dx())
-		op.GeoM.Scale(s*f, s*f)
+		op.GeoM.Scale(sc*f, sc*f)
 		op.GeoM.Translate(ox, oy)
 		op.ColorScale.ScaleAlpha(float32(k))
 		screen.DrawImage(img, op)
 	}
-	glow(d.Lamp, menuLampBreath(t))
-	glow(d.Fire, menuFlicker(t, 0))
-	tile := d.TilePx * s
+	glow(d.Lamp, lampBreath(t))
+	glow(d.Fire, flicker(t, 0))
+	tile := d.TilePx * sc
 	for i, p := range d.Fires {
-		sx, sy := float32(ox+p[0]*s), float32(oy+p[1]*s)
-		drawFlameScreen(screen, sx, sy, t+float64(i)*17, tile, 1)
+		sx, sy := float32(ox+p[0]*sc), float32(oy+p[1]*sc)
+		s.sh.DrawFlame(screen, sx, sy, t+float64(i)*17, tile, 1)
 		for e := 0; e < embers; e++ {
-			h := mix64(uint64(i*menuEmbers+e) + 0x51)
+			h := art.Mix64(uint64(i*EmberCount+e) + 0x51)
 			ph := fract(t/150 + hashUnit(h))
-			ex := sx + float32(tile*((hashUnit(mix64(h))-0.5)*0.3+0.08*math.Sin(t/40+float64(e))))
+			ex := sx + float32(tile*((hashUnit(art.Mix64(h))-0.5)*0.3+0.08*math.Sin(t/40+float64(e))))
 			ey := sy - float32(tile*(0.25+1.3*ph))
 			vector.FillCircle(screen, ex, ey, float32(math.Max(1, tile*0.022)), fade(color.RGBA{255, 170, 80, 255}, 0.8*(1-ph)), true)
 		}
 	}
 	for i := 0; i < motes; i++ {
-		x, y, r, al := menuMote(i, t, sw, sh)
-		c := uiAccent
+		x, y, r, al := mote(i, t, sw, sh)
+		c := uikit.Accent
 		if i%3 == 0 {
-			c = uiDust
+			c = uikit.Dust
 		}
 		vector.FillCircle(screen, x, y, r, fade(c, al), true)
 	}
 	if d.scrim == nil || d.scrimW != sw || d.scrimH != sh {
-		d.scrim = ebiten.NewImageFromImage(buildMenuScrim(sw, sh))
+		d.scrim = ebiten.NewImageFromImage(buildScrim(sw, sh))
 		d.scrimW, d.scrimH = sw, sh
 	}
 	op = &ebiten.DrawImageOptions{}
 	screen.DrawImage(d.scrim, op)
 	if dim > 0 {
-		vector.FillRect(screen, 0, 0, float32(sw), float32(sh), fade(uiSpace, dim), false)
+		vector.FillRect(screen, 0, 0, float32(sw), float32(sh), fade(uikit.Space, dim), false)
 	}
 	return true
 }

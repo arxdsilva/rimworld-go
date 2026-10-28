@@ -14,22 +14,6 @@ import (
 // while a creature stands in it. Every key may be missing from the art
 // catalog: the vector fallbacks below keep nothing invisible.
 
-const (
-	fenceKind = "fence"
-	gateKind  = "fence gate"
-)
-
-func isFenceKind(kind string) bool { return kind == fenceKind || kind == gateKind }
-
-// fenceSprite is structure/fence_<wood|stone>_<mask>.
-func fenceSprite(stuff string, mask int) string {
-	m := "wood"
-	if isStoneStuff(stuff) {
-		m = "stone"
-	}
-	return "structure/fence_" + m + "_" + twoDigits(mask)
-}
-
 // gateSprite is structure/fence_gate[_open]_<facing>.
 func gateSprite(facing string, open bool) string {
 	if open {
@@ -52,41 +36,6 @@ func fenceLabelAt(w game.WorldView, x, y int) string {
 		}
 	}
 	return ""
-}
-
-// drawFenceVector is the plain-shape fence used when the art has no
-// sprite for it: a post with rails toward each joined neighbour; a gate
-// is two posts with a bar across (swung aside when open).
-func drawFenceVector(screen *ebiten.Image, sx, sy, tile float32, kind string, mask int, open, stone bool, alpha uint8) {
-	wood := color.RGBA{R: 140, G: 100, B: 60, A: alpha}
-	if stone {
-		wood = color.RGBA{R: 140, G: 140, B: 145, A: alpha}
-	}
-	cx, cy := sx+tile/2, sy+tile/2
-	th := max(tile/10, 2)
-	if kind == gateKind {
-		vector.FillRect(screen, sx+tile*0.08, sy+tile*0.2, th*1.5, tile*0.6, wood, false)
-		vector.FillRect(screen, sx+tile*0.92-th*1.5, sy+tile*0.2, th*1.5, tile*0.6, wood, false)
-		if open {
-			vector.FillRect(screen, sx+tile*0.08, sy+tile*0.2, th, tile*0.2, wood, false)
-		} else {
-			vector.FillRect(screen, sx+tile*0.08, cy-th/2, tile*0.84, th, wood, false)
-		}
-		return
-	}
-	vector.FillRect(screen, cx-th, cy-th, th*2, th*2, wood, false)
-	if mask&wallN != 0 {
-		vector.FillRect(screen, cx-th/2, sy, th, tile/2, wood, false)
-	}
-	if mask&wallS != 0 {
-		vector.FillRect(screen, cx-th/2, cy, th, tile/2, wood, false)
-	}
-	if mask&wallW != 0 {
-		vector.FillRect(screen, sx, cy-th/2, tile/2, th, wood, false)
-	}
-	if mask&wallE != 0 {
-		vector.FillRect(screen, cx, cy-th/2, tile/2, th, wood, false)
-	}
 }
 
 // forbiddenKey is the red no-entry chip drawn over a forbidden stack.

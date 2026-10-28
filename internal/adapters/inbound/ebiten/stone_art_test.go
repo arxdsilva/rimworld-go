@@ -9,24 +9,6 @@ import (
 	"rimworld-go/internal/domain/sim/command"
 )
 
-func TestStuffMaterial(t *testing.T) {
-	t.Parallel()
-	for in, want := range map[string]string{
-		"": "wood", "wood": "wood", "stone": "stone", "granite blocks": "stone",
-		"marble blocks": "stone", "steel": "steel", "cloth carpet": "wood",
-	} {
-		if got := stuffMaterial(in); got != want {
-			t.Fatalf("stuffMaterial(%q) = %q, want %q", in, got, want)
-		}
-	}
-	if isStoneStuff("granite chunk") || !isStoneStuff("slate blocks") || !isStoneStuff("stone") || isStoneStuff("steel") {
-		t.Fatal("isStoneStuff: blocks and legacy stone only")
-	}
-	if stuffStone("limestone blocks") != "limestone" || stuffStone("stone") != "granite" || stuffStone("wood") != "" {
-		t.Fatal("stuffStone")
-	}
-}
-
 func TestStuffTitles(t *testing.T) {
 	t.Parallel()
 	cases := []struct{ kind, stuff, want string }{
@@ -129,63 +111,6 @@ func testStoneArt(keys ...string) *Renderer {
 		c.Sprites[k] = &artSprite{}
 	}
 	return &Renderer{art: c}
-}
-
-func TestStoneTints(t *testing.T) {
-	t.Parallel()
-	r := testStoneArt()
-	want := colorScale{0x69 / 255.0, 0x5f / 255.0, 0x61 / 255.0, 1}
-	if got := tintCS(r.stuffTint("granite blocks")); got != want {
-		t.Fatalf("granite cs = %v, want %v", got, want)
-	}
-	if r.stuffTint("stone") != r.stuffTint("granite blocks") {
-		t.Fatal("legacy stone draws as granite")
-	}
-	if r.stuffTint("wood") != (color.NRGBA{}) || r.stuffTint("steel") != (color.NRGBA{}) {
-		t.Fatal("wood and steel are not stone-tinted")
-	}
-	if tintCS(color.NRGBA{}) != noCS {
-		t.Fatal("no tint is the identity scale")
-	}
-	marble := uint8(slices.Index(stoneNames, "marble"))
-	if r.stoneTint(marble) != (color.NRGBA{0x84, 0x87, 0x84, 255}) {
-		t.Fatal("cell stone tint")
-	}
-	if r.stoneTint(0) != r.stuffTint("granite blocks") {
-		t.Fatal("rock with no stone data draws as granite")
-	}
-	if got := mulCS(want, blueprintCS); got[3] != blueprintCS[3] || got[0] != want[0]*blueprintCS[0] {
-		t.Fatalf("mulCS = %v", got)
-	}
-}
-
-func TestLinkKeyFallback(t *testing.T) { // not parallel: AllocsPerRun
-	r := testStoneArt("rock/rock_wall_15", "rock/rock_wall_15_cf", "structure/wall_stone_06")
-	if got := r.linkKey("rock/rock_wall", 15, 15); got != "rock/rock_wall_15_cf" {
-		t.Fatalf("baked corner variant: %s", got)
-	}
-	if got := r.linkKey("rock/rock_wall", 15, cornerNE); got != "rock/rock_wall_15" {
-		t.Fatalf("missing corner variant falls back to the mask: %s", got)
-	}
-	if got := r.linkKey("rock/ore_steel", 15, 15); got != "rock/rock_wall_15_cf" {
-		t.Fatalf("missing ore art falls back to rock: %s", got)
-	}
-	if got := r.linkKey("rock/rock_smooth", 15, 0); got != "rock/rock_wall_15" {
-		t.Fatalf("missing smooth art falls back to rock: %s", got)
-	}
-	if got := r.linkKey("structure/wall_steel", 6, cornerSE); got != "structure/wall_stone_06" {
-		t.Fatalf("missing steel walls fall back to stone: %s", got)
-	}
-	if got := r.linkKey("structure/wall_wood", 6, 0); got != "" {
-		t.Fatalf("nothing to draw: %q", got)
-	}
-	if n := testing.AllocsPerRun(50, func() { r.linkKey("rock/rock_wall", 15, 15) }); n != 0 {
-		t.Fatalf("resolved keys are cached: %v allocs", n)
-	}
-	if rockPrefix("rock", "") != "rock/rock_wall" || rockPrefix("rock", "steel") != "rock/ore_steel" ||
-		rockPrefix("rock_smooth", "") != "rock/rock_smooth" {
-		t.Fatal("rockPrefix")
-	}
 }
 
 func TestArchStockLineShowsSelectedStuff(t *testing.T) {

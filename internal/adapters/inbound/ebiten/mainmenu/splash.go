@@ -1,4 +1,4 @@
-package ebiten
+package mainmenu
 
 import (
 	"fmt"
@@ -6,9 +6,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"rimworld-go/internal/platform/assetroot"
-
 	ebiten "github.com/hajimehoshi/ebiten/v2"
+
+	"rimworld-go/internal/adapters/inbound/ebiten/gfx"
+	"rimworld-go/internal/platform/assetroot"
 )
 
 // DefaultMenuSplashRel is the original main-menu colonist illustration,
@@ -16,17 +17,20 @@ import (
 const DefaultMenuSplashRel = "assets/source/raster/ui/main_menu_colonist.png"
 
 const (
-	menuRailW   = 300
-	menuRailPad = 40
-	splashTop   = 24
+	// RailW is the button rail's width.
+	RailW     = 300
+	railPad   = 40
+	splashTop = 24
 )
 
-func menuRailX(sw int) float32 {
-	return float32(sw - menuRailPad - menuRailW)
+// RailX is the rail's left edge on a screen sw wide.
+func RailX(sw int) float32 {
+	return float32(sw - railPad - RailW)
 }
 
-func menuTitleX(sw int, title string) int {
-	return (sw - int(textW(title, tsHuge))) / 2
+// TitleX is the left edge that centres title on a screen sw wide.
+func TitleX(sw int, title string) int {
+	return (sw - int(gfx.TextW(title, gfx.Huge))) / 2
 }
 
 // LocateMenuSplash walks parents of cwd looking for DefaultMenuSplashRel.
@@ -38,7 +42,8 @@ func LocateMenuSplash() (string, error) {
 	return p, nil
 }
 
-func loadPNG(path string) (*ebiten.Image, error) {
+// LoadPNG reads a PNG file as an image.
+func LoadPNG(path string) (*ebiten.Image, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -51,30 +56,32 @@ func loadPNG(path string) (*ebiten.Image, error) {
 	return ebiten.NewImageFromImage(src), nil
 }
 
-func (a *App) loadSplash() {
-	if a.splash != nil || a.cfg.LoadSplash == nil {
+// LoadSplash reads the hero illustration once; a failure leaves the menu
+// without it.
+func (s *Screen) LoadSplash() {
+	if s.splash != nil {
 		return
 	}
-	img, err := a.cfg.LoadSplash()
+	img, err := s.sh.LoadSplash()
 	if err != nil || img == nil {
 		return
 	}
-	a.splash = img
+	s.splash = img
 }
 
-func (a *App) drawMenuSplash(screen *ebiten.Image, sw, sh int) {
-	if a.splash == nil {
+func (s *Screen) drawSplash(screen *ebiten.Image, sw, sh int) {
+	if s.splash == nil {
 		return
 	}
 	// Full-screen background: physical size, unscaled.
 	if b := screen.Bounds(); b.Dx() > 0 && b.Dy() > 0 {
 		sw, sh = b.Dx(), b.Dy()
 	}
-	iw, ih := a.splash.Bounds().Dx(), a.splash.Bounds().Dy()
+	iw, ih := s.splash.Bounds().Dx(), s.splash.Bounds().Dy()
 	if iw < 1 || ih < 1 {
 		return
 	}
-	h := float64(sh) - splashTop*uiScale()
+	h := float64(sh) - splashTop*gfx.UIScale()
 	w := h * float64(iw) / float64(ih)
 	maxW := float64(sw) * 0.55
 	if w > maxW {
@@ -85,5 +92,8 @@ func (a *App) drawMenuSplash(screen *ebiten.Image, sw, sh int) {
 	if y < 0 {
 		y = 0
 	}
-	drawImage(screen, a.splash, 0, y, w, h, false)
+	op := &ebiten.DrawImageOptions{Filter: ebiten.FilterLinear}
+	op.GeoM.Scale(w/float64(iw), h/float64(ih))
+	op.GeoM.Translate(0, y)
+	screen.DrawImage(s.splash, op)
 }

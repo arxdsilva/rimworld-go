@@ -14,32 +14,6 @@ import (
 // terrains, plants, troughs and items, each with a fallback so the game
 // draws before (or without) the art for it.
 
-// grassTints colours the grass tufts per biome: lush green, boreal dark
-// green, moss olive, dry gold, jungle saturated. Temperate forest keeps
-// the original art untinted.
-var grassTints = map[string]colorScale{
-	"temperate_forest":    noCS,
-	"temperate_swamp":     {0.95, 1.1, 0.9, 1},   // lush
-	"boreal_forest":       {0.68, 0.9, 0.78, 1},  // boreal dark green
-	"cold_bog":            {0.86, 0.9, 0.62, 1},  // moss
-	"tundra":              {0.88, 0.9, 0.66, 1},  // moss
-	"ice_sheet":           {0.8, 0.95, 0.9, 1},   // pale
-	"sea_ice":             {0.8, 0.95, 0.9, 1},   // pale
-	"arid_shrubland":      {1.22, 1.05, 0.58, 1}, // dry gold
-	"desert":              {1.28, 1.02, 0.5, 1},  // dry gold
-	"extreme_desert":      {1.3, 1.0, 0.48, 1},   // dry gold
-	"tropical_swamp":      {0.78, 1.18, 0.7, 1},  // jungle
-	"tropical_rainforest": {0.72, 1.25, 0.62, 1}, // jungle
-}
-
-// grassTint is the biome's grass colour scale (none for an unknown key).
-func grassTint(biomeKey string) colorScale {
-	if cs, ok := grassTints[biomeKey]; ok {
-		return cs
-	}
-	return noCS
-}
-
 // terrainTile is how a terrain is drawn: the sprite family name, and the
 // fallback (a tinted soil or gravel tile) when its art is missing.
 type terrainFallback struct {
@@ -76,12 +50,6 @@ func (r *Renderer) terrainTileKey(t string, v int) (string, colorScale) {
 		return artKey("terrain", terrainSprite[fb.base], v), fb.cs
 	}
 	return k, noCS
-}
-
-// isTreePlant reports species that are trees: they shake in the wind and
-// get the tree lean.
-func isTreePlant(species string) bool {
-	return species == "tree" || species == "pine" || species == "jungle_tree"
 }
 
 // groundVariants is how many art variants each ground plant has.
@@ -191,21 +159,6 @@ func troughKey(b game.BuildingView) string {
 		state = "full"
 	}
 	return "furniture/feeding_trough_" + state + "_" + facingOr(b.Facing)
-}
-
-// biomeItemSprite is the sprite of the new products, "" for other kinds.
-func biomeItemSprite(kind string) string {
-	switch kind {
-	case "fertile egg":
-		return "item/fertile_egg"
-	case "ember oil":
-		return "item/ember_oil"
-	case "wool parka":
-		return "item/parka_wool"
-	case "wool carpet":
-		return "item/carpet_wool_rolled"
-	}
-	return ""
 }
 
 // drawTroughFallback draws a feeding trough as a plain wooden box (full

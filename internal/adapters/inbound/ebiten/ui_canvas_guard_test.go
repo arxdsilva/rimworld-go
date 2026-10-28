@@ -71,8 +71,7 @@ var canvasExempt = map[string]string{
 	"renderer.go:drawWorld":                  "world: the no-art objects",
 	"draw_art.go:drawItemObj":                "world: ground items",
 	"draw_art.go:drawPlacementGhost":         "world: the building ghost on tiles",
-	"draw_art.go:drawSpriteScaled":           "world: sprite blit at a tile position",
-	"sprites.go:drawImage":                   "world sprite blit (UI callers use uiImage)",
+	"render/sprite/sprite.go:DrawScaled":     "world: sprite blit at a tile position",
 	"lod.go:drawPlantMark":                   "world: plant marks on tiles",
 	"lod.go:drawUnlit":                       "world: unlit sprite blit",
 	"lod.go:solidRect":                       "world: a tile-space rectangle as a sprite",
@@ -107,7 +106,7 @@ var canvasExempt = map[string]string{
 	"zones_draw.go:zoneFill":                 "world: zone fill batch",
 	"zones_draw.go:drawZones":                "world: zone tiles",
 	"zones_draw.go:drawZoneHighlight":        "world: the selected zone's brighter fill and outline on tiles",
-	"fence.go:drawFenceVector":               "world: fences on tiles",
+	"render/sprite/fence.go:DrawFenceVector": "world: fences on tiles",
 	"fence.go:drawForbiddenMark":             "world: forbidden marks on tiles",
 	"draw_combat.go:drawMeleeTrail":          "world: combat effects",
 	"draw_combat.go:drawTraces":              "world: combat effects",
@@ -144,8 +143,9 @@ var canvasExempt = map[string]string{
 	"world_ui.go:drawCaravanMarks": "globe overlay: caravan marks drawn on the globe surface",
 
 	// full-screen backgrounds, physical size, unscaled
-	"menu_diorama.go:drawMenuDiorama": "full-screen background (physical size, unscaled)",
-	"menu_diorama.go:loadMenuDiorama": "full-screen background bake (physical size, unscaled)",
+	"mainmenu/diorama.go:DrawDiorama": "full-screen background (physical size, unscaled)",
+	"mainmenu/diorama.go:LoadDiorama": "full-screen background bake (physical size, unscaled)",
+	"mainmenu/splash.go:drawSplash":   "full-screen background (physical size, unscaled)",
 	"setup_backdrop.go:drawPlanet":    "full-screen background (physical size, unscaled)",
 	"setup_backdrop.go:drawStars":     "full-screen background (physical size, unscaled)",
 }
@@ -175,7 +175,7 @@ var logicalDraws = map[string]bool{
 // portrait bug.
 var worldPixelHelpers = map[string]bool{
 	"drawSprite": true, "drawSpritePose": true, "drawSpriteScaled": true,
-	"solidRect": true, "drawImage": true, "drawUnlit": true, "drawBaked": true,
+	"solidRect": true, "drawUnlit": true, "drawBaked": true,
 }
 
 // hudFiles are the HUD, inspector, panel and screen files (globs): all
