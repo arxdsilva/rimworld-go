@@ -207,7 +207,7 @@ This is the minimum UI required to interact with a running simulation.
 
 ## 2.1 Main game viewport
 
--   [-] **Map viewport** (grid, pawns, stockpiles, plants, items, frames, buildings from read models; curved, eased, sub-frame pawn/animal motion) (SIM-018, ART-010: roof overlay and sprite lighting done; ART-012: creatures cast their own animated silhouette shadows; MAPGEN-2: fog of war over unexplored tiles, black on the minimap)
+-   [-] **Map viewport** (grid, pawns, stockpiles, plants, items, frames, buildings from read models; curved, eased, sub-frame pawn/animal motion) (SIM-018, ART-010: roof overlay and sprite lighting done; ART-012: creatures cast their own animated silhouette shadows; MAPGEN-2: fog of war over unexplored tiles, black on the minimap; PLAY-022: animals drawn at their body's area and picked by any tile of it, walking with planted feet)
     -   Occupies the central play area.
     -   Draw terrain, roofs/visibility treatment, structures, items,
         plants, pawns, effects and selection markers.

@@ -39,6 +39,7 @@ Canonical sources (read by section, never paste whole files):
 - [ ] `animal_roster.py`: the mirrored row with a **features** brief (silhouette, proportions, palette, signature traits) and the `attack` field matching Go.
 - [ ] Builder spec in `families/animals/<archetype>.py` (`quadruped.py`, `bird.py`, `reptile.py`, `insect.py`); new materials additively (`materials.yaml` or a `materials_*.yaml` extension).
 - [ ] Render with a private temp dir: `TMPDIR=<scratch>/tmp ANIMALS=<key> make art FAMILIES=animal`, then `FAMILIES=overlay` for the icon. Full set per rendered facing (south, east, north; west is mirrored by the renderer): standing, `walk01..08`, attack set `<attack>1..4`, `graze1..2`, `flinch1..2`; corpses `v0..v2`; `_f` set when dimorphic.
+- [ ] Size is the AREA the body covers (PLAY-022, ART §11.1): the size class sets the length from `SIZE_LENGTH`, and `validate_assets.py` checks each class median against `SIZE_AREA`. The rig writes `ppt` (the facing's density) and `gait` (ground per walk cycle, so the feet stay planted) into every sprite's metadata. Don't hand-tune either.
 - [ ] `make normals` and `make art-check` (0 errors); review a contact sheet + 64 px silhouette + in-game `-scenario zoo` capture by eye.
 
 ### 3. Sounds (generated, mandatory)

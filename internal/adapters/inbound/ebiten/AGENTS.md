@@ -239,7 +239,7 @@ CI (`.github/workflows/test.yml`) runs everything on every push.
 - When `assets/metadata` exists the renderer draws generated art only
   (`drawArt`); if art loading fails it draws plain coloured terrain and
   pawn squares (the vendor pack was removed in PLAY-010).
-- Placement: sprite top-left = footprint top-left - `origin_px` * (tile/128).
+- Placement: sprite top-left = footprint top-left - `origin_px` * (tile/ppt), ppt the sprite's metadata `ppt` (128 when absent).
 - Draw order: terrain -> grass decals -> floors -> zones/blueprint -> objects
   and pawns sorted by row then column -> designations -> selection -> daylight.
 - Linked rendering (ART-015, `linkgrid.go`): walls, doors, fences and rock
@@ -315,7 +315,16 @@ CI (`.github/workflows/test.yml`) runs everything on every push.
 - Pawns have no frames (ART-025): walk bob, sway and lean follow stride (one
   cycle per 1.6 tiles); per-action lunges, recoil, lean and dip run on
   `animT`; a fall is a buckle then a rotation. Strikes land at trace age 0.
-  Animal trot `walk01..walk08` advances with stride. Hair and hats follow the
+  Animal trot `walk01..walk08` advances by distance over the set's
+  metadata `gait`, so the feet stay planted (PLAY-022,
+  `animal_figure.go`): walks start and stop on the standing-height frames,
+  stand/graze/rest hold before changing, the art carries the bob, and the
+  phase advances at most 0.3 cycle per drawn frame.
+- Animal art may bake below 128 px per tile (metadata `ppt`): place,
+  mirror, cull and cast through `artMeta.pxPerTile()`, never `artTilePx`.
+  Cell culls use `animalPads`, measured from the animal art at load. A
+  click or box select on any tile a body covers picks the animal, after
+  whatever stands on that tile. Hair and hats follow the
   body's `head` attachment. Held items (`held.go`, ART-027, user decision:
   RimWorld-faithful) are placed by their centre from the body centre (head
   x, halfway head to feet): a weapon only on duty (`onDuty`), carried low

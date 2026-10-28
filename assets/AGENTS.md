@@ -59,6 +59,12 @@ Rules:
   (+ `stock`). ART-027 (2026-10-26, user decision): no tool sprites and no
   slung rifle; the renderer draws a weapon only on duty and never a tool. Animals keep frames: trot
   `walk01..walk08` and a `rest` pose (all animal sets), S/E/N only.
+- Animals (PLAY-022): sizes are the area a body covers (XS ≈ 1 … XL ≈ 6
+  tiles²). Each facing has its own tight canvas and a `ppt` density (128,
+  down to 64 for the longest bodies, which the renderer scales up), and
+  every sprite carries `gait`, the ground one walk cycle covers.
+- Puddles are not sprites: the renderer bakes them with the wet ground
+  (`puddle_veil.go`). Snow cover and frost lie flat (no normal maps).
 - Renders are reproducible to ±1/255 per channel (GPU float noise).
 
 ## Layout

@@ -476,7 +476,17 @@ silhouettes.
   - emberbuck, cinder_rat, woolhorn, glimmerstag, timbergnaw
   - hive_beetle, hive_brute, hive_crawler
   - ground_sloth and dire_wolf (both real extinct animals)
-- **Sizes** are body lengths in tiles: XS 0.44 (raised from 0.35 in PLAY-010; XS+ stays below S-), S 0.6, M 0.95, L 1.4, XL 2.0, with `+`/`-` meaning ±15%. Large animals overhang their tile.
+- **Sizes are the AREA a body covers** (PLAY-022, user decision, the way RimWorld draws big creatures over one tile):
+  - The class median of the east standing frame's alpha box covers about XS 1, S 1.5, M 2, L 4 and XL 6 tiles² (`SIZE_AREA`). An elephant is about 3 tiles long and 2 tall.
+  - Body lengths that reach those areas, measured on the render: XS 1.45, S 1.65, M 1.8, L 2.2, XL 3.0 tiles (`SIZE_LENGTH`, mirrored by Go `sizeLength`). `+`/`-` still mean ±15%.
+  - An XS+ may be longer than an S-: areas, not lengths, order the classes (a rat is long and low, a hare short and tall).
+  - The simulation footprint stays one tile; big animals overhang it.
+  - `validate_assets.py` fails a class whose median strays more than 15% from its area.
+- **Canvas and density** (PLAY-022):
+  - Each species, sex and facing has its own canvas: the union of that facing's poses plus padding. All frames of a facing share it, `origin_px` and `ppt`.
+  - East margins are symmetric about the footprint centre, so west is east mirrored. `origin_px` may fall outside the canvas.
+  - `ppt` (metadata, pixels per tile) is 128, unless a facing's long side would pass 384 px. Then it drops to keep the canvas there, never below 64, and the renderer scales the sprite up. Baked outlines scale by ppt/128.
+  - Animal and corpse pixels (colour and normals) stay ≤ 1.2× the 291.3 M of before PLAY-022; they measured 0.88×.
 - **One parametric builder:** `families/animals/` (`rig.py` plus archetype modules). Archetypes:
 
   | Archetype | Species |
@@ -489,7 +499,7 @@ silhouettes.
   | tortoise | |
   | beetle, brute, crawler | hive insects |
 
-- **Per species and rendered facing (south/east/north; west is east mirrored by the renderer; canvases are centred on the tile, lean `ANIMAL_LEAN_DEG` 70):**
+- **Per species and rendered facing (south/east/north; west is east mirrored by the renderer; one canvas per facing, lean `ANIMAL_LEAN_DEG` 70):**
 
   | Sprite | Frames |
   |---|---|
@@ -617,13 +627,19 @@ Weather (family `weather`, driven by `WorldView.Weather`,
 `WeatherIntensity`, `WindX/WindY`, `SnowDepth`, `Wetness`):
 
 - Rain: thin streaks angled by the wind, density by intensity, small
-  splash sprites where drops land, ripples on puddles. Storms darken the
-  scene and flash rare lightning.
+  splash sprites where drops land, ripples only where puddles hold water.
+  Storms darken the scene and flash rare lightning.
 - Snow: flakes of a few sizes that flutter and drift with the wind,
   settling into snow cover; blizzards cut visibility.
 - Ground: `snow_cover_00..05` and `snow_drift_00..03` by `SnowDepth`,
-  `puddle_00..05` by `Wetness`, `frost_00..03` on freezing mornings, each
-  picked per tile by hash.
+  and `frost_00..03` on freezing mornings, each picked per tile by hash.
+  Snow cover and frost lie flat: they have no normal maps (drifts keep
+  theirs).
+- Puddles (PLAY-022) are not sprites. They are a veil baked per chunk with the wet-ground darkening (`puddle_veil.go`, `snow_cache.go`):
+  - A low-frequency relief per map holds water below a level that rises with `Wetness`. Puddles grow from the same hollows as it rains and shrink as the ground dries.
+  - Shores are soft, with no rim.
+  - Only open soil, rich soil and gravel hold water: never water, ice, sand, mud, marsh, floors, crops, roofed cells or rock.
+  - The veil darkens the ground with a sky tint that follows daylight. It is lit flat, under the grass tufts, at every zoom tier, and fades out as snow deepens.
 - Particle textures: `raindrop`, `splash_00..02`, `snowflake_00..03`.
 
 Roofs and interiors (§16.1, SIM-018): roofs are never drawn as tiles.
@@ -1017,7 +1033,7 @@ are kept.
 | Set | Frames | Notes |
 |---|---|---|
 | Pawn | none | standing sprite per layer and facing (S/E/N, west mirrored); the renderer moves the whole figure |
-| Animal trot | `walk01`..`walk08` | per species; diagonal leg pairs, body bob, head nod |
+| Animal trot | `walk01`..`walk08` | per species; diagonal leg pairs, body rise and pitch (peaks walk03/07), head nod; metadata `gait` |
 | Animal rest | `rest` | lying pose, all animal sets |
 
 Pawn attachments are `head` (hair, hats; the body centre for held items,
@@ -1046,8 +1062,18 @@ Path and gait:
 - Starting from rest and stopping (arrival or blocked) ease with
   smoothstep; the walk pose blends in and out over 0.3 tiles.
 - The walk phase advances with distance travelled along the drawn path:
-  one cycle per 1.6 tiles, so the bob never slides against the ground on
-  diagonals (animal trot frames advance with the same stride).
+  a pawn's cycle spans 1.6 tiles, so the bob never slides against the
+  ground on diagonals.
+- Animals (PLAY-022) walk with planted feet:
+  - Trot frames advance by distance ÷ the set's metadata `gait` (the ground one 8-frame cycle covers, scaled by the young's `Scale`; 1.6 when absent).
+  - A walk starts on `walk03` (the frame at standing height) and stops on `walk03` or `walk07`, steered to land as the body comes to rest. It never cuts to standing from mid-stride.
+  - Standing, grazing and resting each hold a minimum time before they change.
+  - Graze bouts run 3–8 s head down, then a 1–2 s look up, timed per animal.
+  - The body rise, pitch and head nod are baked in the frames: the renderer adds no animal bob, only a slight forward lean at a run.
+  - Breathing scales with the drawn body.
+  - On a diagonal an animal faces sideways.
+  - The cycle never advances more than 0.3 per drawn frame, so 3× and faster never alias.
+- Animal gaits come from the sim (`AnimalView.Gait`): wandering, grazing and milling amble at twice the walking step; errands walk; fleeing runs (hunting and charging keep the walking step).
 - The pawn bob peaks once per footfall; sway (north/south facing) and
   forward lean (east/west) scale with speed; a short lean-back on
   deceleration.
@@ -1274,12 +1300,12 @@ resolve metadata conflicts, and update the catalog.
 
 ### ART Wave 7 --- Animals/biomes
 
--   [x] domestic animals (ART-011 roster: 61 species incl. domestic; ART-013 adds a rest pose for all 64 animal sets)
+-   [x] domestic animals (ART-011 roster: 61 species incl. domestic; ART-013 adds a rest pose for all 64 animal sets; PLAY-022: sized by drawn area, per-facing canvases with `ppt`, planted-foot walk with `gait`)
 -   [x] wildlife/predators (ART-011 roster; ART-013 rest pose)
 -   [x] juvenile variants (scaled at runtime from the adult set, not separate art, per section 11)
 -   [x] biome plants (ART-013: pine with snow, jungle tree, cactus with dry, shrub with dry, reeds; terrains sand, marsh, ice with edges; 12 biome icons)
 -   [x] rock/resource variants (rough and smoothed rock and steel/silver/gold ore, 47 linked variants each, tinted per stone; stone chunk, stone blocks, steel, silver and gold items; ART-015)
--   [x] snow/weather (rain, storm and snow particles; snow cover, drifts, puddles and frost; wind-driven plant motion)
+-   [x] snow/weather (rain, storm and snow particles; snow cover, drifts, puddles and frost; wind-driven plant motion; PLAY-022: puddles are a flat-lit veil in the ground's hollows)
 
 ### ART Wave 8 --- World/factions
 
