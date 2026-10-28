@@ -3,6 +3,7 @@ package ebiten
 import (
 	"fmt"
 	"image/color"
+	"rimworld-go/internal/adapters/inbound/ebiten/ports"
 	"strconv"
 	"strings"
 	"time"
@@ -15,18 +16,8 @@ import (
 // Saved games. The app only sees saves through these hooks (wired in
 // main to the file store), so it never touches files or game internals.
 
-// SaveSlot is one save as the load screen lists it.
-type SaveSlot struct {
-	Name      string
-	Path      string
-	Date      string // in-game date
-	Colonists int
-	Modified  time.Time
-	Err       string // not loadable, and why
-	// Commitment marks a commitment colony's one save (tagged in the list;
-	// it loads like any other).
-	Commitment bool
-}
+// SaveSlot is one save as the load screen lists it (ports.SaveSlot).
+type SaveSlot = ports.SaveSlot
 
 // SaveHooks connects the UI to saved-game storage. Any nil hook disables
 // that feature.

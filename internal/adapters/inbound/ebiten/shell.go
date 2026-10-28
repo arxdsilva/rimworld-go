@@ -6,6 +6,7 @@ import (
 
 	"rimworld-go/internal/adapters/inbound/ebiten/ids"
 	"rimworld-go/internal/adapters/inbound/ebiten/ports"
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/pawn/schedule"
 	"rimworld-go/internal/domain/sim/clock"
@@ -36,6 +37,8 @@ type shell struct {
 	shellSpeed
 	shellSettings
 	shellPanels
+	shellWidgets
+	shellSaves
 	shellDispatch
 
 	screens map[screenID]func(a *App, sw, sh int) // uiBegin: each screen's widgets
@@ -45,7 +48,7 @@ type shell struct {
 func newShell(a *App) shell {
 	return shell{
 		shellHint{a}, shellSize{a}, shellCmd{a}, shellWorld{a}, shellView{a}, shellSel{a},
-		shellOverlay{a}, shellSpeed{a}, shellSettings{a}, shellPanels{a}, shellDispatch{a},
+		shellOverlay{a}, shellSpeed{a}, shellSettings{a}, shellPanels{a}, shellWidgets{a}, shellSaves{a}, shellDispatch{a},
 		screenTable(), clickRoutes(),
 	}
 }
@@ -61,6 +64,8 @@ var (
 	_ ports.Speed      = shellSpeed{}
 	_ ports.Settings   = shellSettings{}
 	_ ports.Panels     = shellPanels{}
+	_ ports.Widgets    = shellWidgets{}
+	_ ports.Saves      = shellSaves{}
 	_ ports.Dispatcher = shellDispatch{}
 )
 
@@ -316,6 +321,23 @@ func (s shellPanels) WindowMode() (mode string, open bool) { return s.a.panelMod
 // UIHidden reports F11 hid the interface.
 func (s shellPanels) UIHidden() bool { return s.a.uiHidden() }
 
+// ---- Widgets
+
+type shellWidgets struct{ a *App }
+
+// Kit is the immediate-mode widget kit.
+func (s shellWidgets) Kit() *uikit.Kit { return s.a.uiSt() }
+
+// ---- Saves
+
+type shellSaves struct{ a *App }
+
+// Slots is the load screen's list (RefreshSlots reads it from disk).
+func (s shellSaves) Slots() []ports.SaveSlot { return s.a.slots }
+func (s shellSaves) RefreshSlots()           { s.a.refreshSlots() }
+func (s shellSaves) LoadSlot(i int)          { s.a.loadSlot(i) }
+func (s shellSaves) NewestSlot() int         { return s.a.newestSlot() }
+
 // ---- Dispatcher
 
 type shellDispatch struct{ a *App }
@@ -343,6 +365,20 @@ func (s shellDispatch) Do(it ports.Intent) {
 		a.clearSelections(selNone)
 	case ports.CenterOnPawn:
 		a.centreOnPawn(it.ID)
+	case ports.Push:
+		a.apply(intent{kind: intentPush, screen: it.Screen})
+	case ports.Back:
+		a.apply(intent{kind: intentBack})
+	case ports.StartGame:
+		a.apply(intent{kind: intentStartGame})
+	case ports.Quit:
+		a.apply(intent{kind: intentQuit})
+	case ports.ReturnToMenu:
+		a.apply(intent{kind: intentReturnToMenu})
+	case ports.Resume:
+		a.apply(intent{kind: intentResume})
+	case ports.Pause:
+		a.apply(intent{kind: intentPause})
 	}
 }
 

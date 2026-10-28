@@ -1,56 +1,25 @@
 package ebiten
 
-// screenID is a full-screen route. Presentation-only; it never exists in
-// the domain.
-type screenID int
+import "rimworld-go/internal/adapters/inbound/ebiten/ports"
+
+// screenID is a full-screen route (ports.Screen). Presentation-only; it
+// never exists in the domain.
+type screenID = ports.Screen
 
 const (
-	screenBoot screenID = iota
-	screenMainMenu
-	screenScenario
-	screenStoryteller
-	screenWorldGen
-	screenLanding
-	screenPawns
-	screenColony
-	screenOptions
-	screenLoad
-	screenCredits
-	// screenScenarioEditor is the Scenario Editor, pushed from Choose
-	// Scenario (NG-1 §2.3).
-	screenScenarioEditor
+	screenBoot           = ports.ScreenBoot
+	screenMainMenu       = ports.ScreenMainMenu
+	screenScenario       = ports.ScreenScenario
+	screenStoryteller    = ports.ScreenStoryteller
+	screenWorldGen       = ports.ScreenWorldGen
+	screenLanding        = ports.ScreenLanding
+	screenPawns          = ports.ScreenPawns
+	screenColony         = ports.ScreenColony
+	screenOptions        = ports.ScreenOptions
+	screenLoad           = ports.ScreenLoad
+	screenCredits        = ports.ScreenCredits
+	screenScenarioEditor = ports.ScreenScenarioEditor
 )
-
-func (s screenID) String() string {
-	switch s {
-	case screenBoot:
-		return "boot"
-	case screenMainMenu:
-		return "main_menu"
-	case screenScenario:
-		return "scenario"
-	case screenStoryteller:
-		return "storyteller"
-	case screenWorldGen:
-		return "world_gen"
-	case screenLanding:
-		return "landing"
-	case screenPawns:
-		return "pawns"
-	case screenColony:
-		return "colony"
-	case screenOptions:
-		return "options"
-	case screenLoad:
-		return "load"
-	case screenCredits:
-		return "credits"
-	case screenScenarioEditor:
-		return "scenario_editor"
-	default:
-		return "unknown"
-	}
-}
 
 // overlayID is a modal layer on top of the current full screen.
 type overlayID int

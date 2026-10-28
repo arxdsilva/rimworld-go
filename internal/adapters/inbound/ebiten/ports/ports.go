@@ -8,6 +8,9 @@
 package ports
 
 import (
+	"time"
+
+	"rimworld-go/internal/adapters/inbound/ebiten/uikit"
 	"rimworld-go/internal/application/game"
 	"rimworld-go/internal/domain/sim/clock"
 	"rimworld-go/internal/domain/sim/command"
@@ -153,3 +156,113 @@ func (SelectPawn) isIntent()      {}
 func (TogglePawnInSet) isIntent() {}
 func (ClearSelection) isIntent()  {}
 func (CenterOnPawn) isIntent()    {}
+
+// Screen is a full-screen route of the client (presentation only; it never
+// exists in the domain). The root's screenID is this type.
+type Screen int
+
+const (
+	ScreenBoot Screen = iota
+	ScreenMainMenu
+	ScreenScenario
+	ScreenStoryteller
+	ScreenWorldGen
+	ScreenLanding
+	ScreenPawns
+	ScreenColony
+	ScreenOptions
+	ScreenLoad
+	ScreenCredits
+	// ScreenScenarioEditor is the Scenario Editor, pushed from Choose
+	// Scenario (NG-1 §2.3).
+	ScreenScenarioEditor
+)
+
+func (s Screen) String() string {
+	switch s {
+	case ScreenBoot:
+		return "boot"
+	case ScreenMainMenu:
+		return "main_menu"
+	case ScreenScenario:
+		return "scenario"
+	case ScreenStoryteller:
+		return "storyteller"
+	case ScreenWorldGen:
+		return "world_gen"
+	case ScreenLanding:
+		return "landing"
+	case ScreenPawns:
+		return "pawns"
+	case ScreenColony:
+		return "colony"
+	case ScreenOptions:
+		return "options"
+	case ScreenLoad:
+		return "load"
+	case ScreenCredits:
+		return "credits"
+	case ScreenScenarioEditor:
+		return "scenario_editor"
+	}
+	return "unknown"
+}
+
+// Navigation intents: a screen asks the shell to route; the shell's
+// navigator applies them (nav.go).
+
+// Push opens a screen on top of the current one.
+type Push struct{ Screen Screen }
+
+// Back returns to the previous screen.
+type Back struct{}
+
+// StartGame leaves the wizard for the colony.
+type StartGame struct{}
+
+// Quit ends the game.
+type Quit struct{}
+
+// ReturnToMenu drops the colony and returns to the main menu.
+type ReturnToMenu struct{}
+
+// Resume closes the pause overlay.
+type Resume struct{}
+
+// Pause opens the pause overlay.
+type Pause struct{}
+
+func (Push) isIntent()         {}
+func (Back) isIntent()         {}
+func (StartGame) isIntent()    {}
+func (Quit) isIntent()         {}
+func (ReturnToMenu) isIntent() {}
+func (Resume) isIntent()       {}
+func (Pause) isIntent()        {}
+
+// Widgets is the immediate-mode kit a screen declares its widgets into.
+type Widgets interface {
+	Kit() *uikit.Kit
+}
+
+// SaveSlot is one save as the load screen lists it.
+type SaveSlot struct {
+	Name      string
+	Path      string
+	Date      string // in-game date
+	Colonists int
+	Modified  time.Time
+	Err       string // not loadable, and why
+	// Commitment marks a commitment colony's one save (tagged in the list;
+	// it loads like any other).
+	Commitment bool
+}
+
+// Saves is the load screen's view of the save slots and the two actions
+// on them.
+type Saves interface {
+	Slots() []SaveSlot
+	RefreshSlots()
+	LoadSlot(i int)
+	NewestSlot() int
+}
